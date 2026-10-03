@@ -317,3 +317,42 @@ Simulated standing slugfests (480 fights, no dodging): you beat frail NPCs 100% 
 - **Release step:** run `node tools/stamp-version.mjs` before committing (it rewrites `version.json`).
 - **Controllers that report triggers as axes:** some browser/OS combinations expose an Xbox pad without the standard mapping, with triggers on axes 2 and 5 resting at -1 and the right stick on axes 3/4. These are now detected, so RT/LT work there too. Tested with both layouts in the automated browser: RT accelerates, LT brakes and then reverses.
 - Hard steering no longer scales the gas down in trigger-driving mode.
+
+## 2026-10-03 · Destructible streets, signal poles, traffic loop fix, cash drops, smoother driving
+
+**Destructible props.** About 60 kinds of street furniture now break:
+- trees and palms
+- lamp posts and hydrants
+- bins, benches, planters and bushes
+- newsstands, vending machines and mailboxes
+- cones, barriers, pallets, drums, spools, carts and umbrellas
+
+How it works:
+- A car above roughly 85 px/s ploughs through instead of bouncing off, and loses some speed doing it. Trees, lamp posts and hydrants dent the car.
+- Explosions also smash props in their radius.
+- Breaks are server-authoritative and broadcast to everyone, and late joiners get the list in their welcome message. The ground is re-drawn with debris. Trees topple over beside a stump, lamp posts lie in the street, and smashed hydrants spout a geyser that drags passing cars.
+- A tidy-up crew restores props after 4 minutes, but only when no player is within view.
+- Fountains, dumpsters, ATMs and market stalls stay solid.
+
+**Poles.**
+- Traffic signals hang from mast arms: a pole on each corner with an arm over the approaching lanes and a 3-lamp head. The signal lamps glow at night.
+- Street lights are poles with an arm over the road. The lamp head is lit at night, the light pool comes from the head, and they can be knocked down.
+- Traffic cameras sit on yellow-banded poles with a white housing pointing at the junction.
+
+**Traffic stuck in circles.** A waypoint inside a car's turning circle made drivers orbit forever. Drivers now drop that waypoint after about one lap, and re-join the road network at the nearest junction after about two. In a 4-minute simulation with 3 players, 10 of 154 traffic cars were caught orbiting before the fix and 0 of 230 after.
+
+**Backwards vehicles.** The bus and the armored truck were cut from the sheet facing the wrong way. Fixed.
+
+**Cash drops.**
+- Not every NPC carries money: about 90% of executives do, but only about 30% of drunks.
+- When the only loot is cash, it drops as a little pile of bills you scoop up by walking over it, with a floating "+$N".
+- Bags are kept for item loot.
+
+**Smoother driving.**
+- When the server catches up on a backed-up input queue, it now gives the car the extra physics step the client already predicted. This removes a steady source of corrections.
+- Heading corrections are eased instead of snapped.
+- In a car, position corrections ease over about 150 ms.
+- The camera's look-ahead follows smoothed velocity instead of the raw heading.
+
+![Smashed lamp post + hydrant geyser](screenshots/smashed-lamp-hydrant.png)
+![Signal mast arms, lamp poles, camera pole](screenshots/signals-lamps-camera.png)

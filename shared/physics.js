@@ -112,6 +112,7 @@ export function collideCircle(s, r, map, block) {
       }
       const props = map.solidProps.get(ty * map.w + tx);
       if (props) for (const p of props) {
+        if (p.off) continue;
         const dx = s.x - p.x, dy = s.y - p.y, rr = r + p.r;
         const d2 = dx * dx + dy * dy;
         if (d2 < rr * rr && d2 > 1e-6) {
@@ -125,6 +126,9 @@ export function collideCircle(s, r, map, block) {
 
 // ---------------------------------------------------------------------------
 // Vehicles: arcade top-down model with lateral grip (drift) and rain friction.
+
+// Vehicles faster than this plough through breakable street furniture instead of bouncing off.
+export const SMASH_SPEED = 85;
 
 export function newVehState(x, y, a) { return { x, y, a, vx: 0, vy: 0, av: 0 }; }
 
@@ -219,6 +223,7 @@ export function collideVehicleTiles(s, def, map, block) {
       }
       const props = map.solidProps.get(ty * map.w + tx);
       if (props) for (const p of props) {
+        if (p.off || (p.brk && Math.abs(s.vx) + Math.abs(s.vy) > SMASH_SPEED)) continue; // smashes through (server breaks it)
         const h = circleVsObb(p.x, p.y, p.r, s.x, s.y, s.a, hl, hw);
         if (h && (!best || h.depth > best.depth)) best = { nx: -h.nx, ny: -h.ny, depth: h.depth };
       }

@@ -19,7 +19,7 @@ function descriptor(e) {
     case K.PED: return { id: e.id, k: K.PED, app: e.app, n: e.player ? e.player.name : '', pl: !!e.player, ar: e.archetype, v: e.appVer || 0 };
     case K.VEH: return { id: e.id, k: K.VEH, m: e.def.i, p: e.paint, vr: e.variant, o: e.ownerName || '', v: e.descVer || 0 };
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
-    case K.BAG: return { id: e.id, k: K.BAG, t: e.tier, val: e.value };
+    case K.BAG: return { id: e.id, k: K.BAG, t: e.cashOnly ? 0 : e.tier, val: e.value };
     case K.PROJ: return { id: e.id, k: K.PROJ, w: WEAPONS[e.weapon]?.i ?? 12 };
     default: return null;
   }
@@ -31,7 +31,7 @@ function fields(world, e) {
     case K.PED: return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId, WEAPONS[e.weapon]?.i ?? 0];
     case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), 0, 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
-    case K.BAG: return [0, 1, 0, e.tier];
+    case K.BAG: return [0, 1, 0, e.cashOnly ? 0 : e.tier];
     case K.PROJ: return [0, 1, 0, 0];
     default: return [0, 0, 0, 0];
   }

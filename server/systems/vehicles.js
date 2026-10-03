@@ -8,7 +8,6 @@ import * as cargo from './cargo.js';
 import * as law from './law.js';
 import * as npc from './npc.js';
 
-const hydrantBurst = new Map(); // prop index -> time
 
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
 export function speedOf(v) { return Math.hypot(v.vx, v.vy); }
@@ -53,7 +52,6 @@ export function update(world, dt) {
     }
     // keep occupants and attached cargo glued to the vehicle
     for (const sid of v.seats) if (sid) { const p = world.get(sid); if (p) { p.x = v.x; p.y = v.y; p.vx = v.vx; p.vy = v.vy; } }
-    if (speedOf(v) > 160 && v.def.kind !== 'boat') checkHydrants(world, v, now);
   }
 
   // vehicle vs vehicle
@@ -160,27 +158,6 @@ function bikeCrash(world, v, impact) {
   }
 }
 
-function checkHydrants(world, v, now) {
-  const props = world.map.props;
-  const idx = world.map.hydrantIndex || (world.map.hydrantIndex = props.map((p, i) => (p.t === 'hydrant' ? i : -1)).filter((i) => i >= 0));
-  for (const i of idx) {
-    const p = props[i];
-    if (Math.abs(p.x - v.x) > 70 || Math.abs(p.y - v.y) > 70) continue;
-    if (circleVsObb(p.x, p.y, 8, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2)) {
-      if ((hydrantBurst.get(i) || -99) + 20 < now) {
-        hydrantBurst.set(i, now);
-        world.emit(p.x, p.y, { e: 'geyser', x: p.x, y: p.y, d: 12 });
-      }
-      v.vx *= 0.85; v.vy *= 0.85; // GDD: geysers add high friction drag to passing cars
-    }
-  }
-  for (const [i, t] of hydrantBurst) {
-    if (now - t < 12) {
-      const p = props[i];
-      if (Math.abs(p.x - v.x) < 60 && Math.abs(p.y - v.y) < 60) { v.vx *= 0.9; v.vy *= 0.9; }
-    }
-  }
-}
 
 export function damageVehicle(world, v, amount, attackerPed) {
   if (v.wreckAt || amount <= 0) return;

@@ -149,7 +149,8 @@ export class CityMap {
     this.pois = [];
     this.homes = [];
     this.props = [];
-    this.solidProps = new Map(); // tile index -> [{x,y,r}]
+    this.solidProps = new Map(); // tile index -> [{x,y,r,pi,off}]
+    this.propSolid = new Map();  // prop index -> its solid entry (toggled when the prop is smashed)
     this.parking = [];
     this.stalls = [];
     this.marina = [];
@@ -189,7 +190,9 @@ export class CityMap {
     const k = ty * MAP_W + tx;
     let arr = this.solidProps.get(k);
     if (!arr) { arr = []; this.solidProps.set(k, arr); }
-    arr.push({ x, y, r });
+    const e = { x, y, r, pi: -1, off: false };
+    arr.push(e);
+    return e;
   }
   // Line of sight across tiles (buildings block sight).
   los(x1, y1, x2, y2) { return this.rayTiles(x1, y1, x2, y2) >= 1; }
@@ -391,6 +394,7 @@ export function generateCity(seed = 1337) {
   buildWaterfronts(m, rand);
   buildRefuge(m, rand);
   buildStreetProps(m);
+  aimLamps(m);
   buildLaneGraph(m);
   buildCameras(m, rand);
 
@@ -687,9 +691,36 @@ function addProp(m, t, x, y, solidR = 0, extra = null) {
   const p = { t, x, y };
   if (extra) Object.assign(p, extra);
   m.props.push(p);
-  if (solidR > 0) m.addSolidProp(x, y, solidR);
+  if (t === 'lamp' && !solidR) solidR = 5; // lamp posts are solid poles (and can be knocked down)
+  if (solidR > 0) { const e = m.addSolidProp(x, y, solidR); e.pi = m.props.length - 1; e.brk = BREAKABLE.has(t); m.propSolid.set(e.pi, e); }
   if (t === 'lamp') m.lamps.push(p);
   return p;
+}
+
+// Street furniture vehicles can smash through. Heavy items slow the car more; everything not
+// listed (fountains, dumpsters, ATMs, market stalls, flat beds) stays put.
+export const BREAKABLE = new Set([
+  'tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c',
+  'hydrant', 'hydrant_y', 'trashcan', 'bench_a', 'bench_b', 'bench_m', 'pbench', 'planter_sq', 'planter_g', 'planter_fl', 'potted',
+  'news_a', 'news_b', 'news_c', 'mailbox', 'vend_a', 'vend_cola', 'vend_c', 'bikerack', 'cone', 'barrier', 'drum', 'pallet', 'pallet_b',
+  'pallet_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'foodcart', 'foodcart_b', 'tires', 'bags', 'spool',
+  'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b',
+]);
+export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y']);
+
+// Point every lamp's arm at the nearest road so the head hangs over the street.
+function aimLamps(m) {
+  for (const l of m.lamps) {
+    const tx = Math.floor(l.x / TILE), ty = Math.floor(l.y / TILE);
+    let best = null, bd = 1e9;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const t = m.tileAt(tx + dx, ty + dy);
+      if (t !== T.ROAD && t !== T.BRIDGE) continue;
+      const d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = [dx, dy]; }
+    }
+    l.a = best ? Math.atan2(Math.abs(best[0]) >= Math.abs(best[1]) ? 0 : best[1], Math.abs(best[0]) >= Math.abs(best[1]) ? best[0] : 0) : -Math.PI / 2;
+  }
 }
 
 // ---------------------------------------------------------------------------

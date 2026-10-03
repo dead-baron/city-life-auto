@@ -6,6 +6,7 @@ import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
 import * as cargo from './cargo.js';
+import * as props from './props.js';
 import * as law from './law.js';
 import * as npc from './npc.js';
 
@@ -208,6 +209,7 @@ function causeText(cause) {
 }
 
 export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0) {
+  props.blastBreak(world, x, y, r * 0.8);
   for (const e of world.query(x, y, r)) {
     const d = Math.hypot(e.x - x, e.y - y);
     const f = 1 - d / r;

@@ -32,7 +32,14 @@ export function update(world, dt) {
         if (e.expires && now > e.expires) world.remove(e);
       }
     } else if (e.kind === K.BAG) {
-      if (now > e.expires) world.remove(e);
+      if (now > e.expires) { world.remove(e); continue; }
+      if (e.cashOnly) {
+        for (const p of world.query(e.x, e.y, 26, K.PED)) {
+          if (!p.player || p.dead || p.vehId) continue;
+          lootBag(world, p.player, e);
+          break;
+        }
+      }
     }
   }
 }
@@ -193,9 +200,10 @@ function fallOff(world, v, i) {
 }
 
 // ---- Loot bags -------------------------------------------------------------
-export function nearestBag(world, ped) {
+export function nearestBag(world, ped, skipCash = false) {
   let best = null, bd = 40 * 40;
   for (const b of world.query(ped.x, ped.y, 60, K.BAG)) {
+    if (skipCash && b.cashOnly) continue;
     const d = (b.x - ped.x) ** 2 + (b.y - ped.y) ** 2;
     if (d < bd) { bd = d; best = b; }
   }
@@ -212,8 +220,8 @@ export function lootBag(world, p, bag) {
     if (!had && WEAPONS[k].mag) p.ped.mag[k] = Math.min(WEAPONS[k].mag, prof.weapons[k]);
   }
   world.remove(bag);
-  world.emit(bag.x, bag.y, { e: 'loot', x: bag.x, y: bag.y });
-  world.notify(p, `Looted $${bag.cash}${bag.ownerName ? ' from ' + bag.ownerName : ''}.`, 'good');
+  world.emit(bag.x, bag.y, { e: 'loot', x: bag.x, y: bag.y, n: bag.cash });
+  if (!bag.cashOnly) world.notify(p, `Looted $${bag.cash}${bag.ownerName ? ' from ' + bag.ownerName : ''}.`, 'good');
   p.meDirty = true;
 }
 
@@ -243,5 +251,8 @@ export function dropEverything(world, ped, ownerName) {
 export function npcDrop(world, ped, cash, item) {
   if (cash <= 0 && !item) return null;
   const items = item ? { [item]: 1 } : {};
-  return world.spawnBag(ped.x + 6, ped.y + 4, { cash, items, weapons: {}, itemValue: item ? (ITEMS[item]?.sell || 10) : 0 }, '');
+  const bag = world.spawnBag(ped.x + 6, ped.y + 4, { cash, items, weapons: {}, itemValue: item ? (ITEMS[item]?.sell || 10) : 0 }, '');
+  // just cash: a little pile of bills you scoop up by walking over it (no bag, no button)
+  if (!item) bag.cashOnly = true;
+  return bag;
 }

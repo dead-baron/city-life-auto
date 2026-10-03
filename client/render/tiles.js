@@ -83,11 +83,83 @@ export class GroundCache {
     for (const r of this.roofs.get(k) || []) drawRoof(g, r);
     for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
     for (const b of this.signs.get(k) || []) for (const s of b.signs) drawSign(g, s);
-    for (const p of this.lowProps.get(k) || []) drawProp(g, p);
+    for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
+    for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
     g.restore();
     return cv;
   }
+  // a smashed / restored prop changes the baked ground: drop the cached chunks it touches
+  invalidateAt(x, y, r = 90) {
+    for (let cy = Math.floor((y - r) / CHUNK_PX); cy <= Math.floor((y + r) / CHUNK_PX); cy++)
+      for (let cx = Math.floor((x - r) / CHUNK_PX); cx <= Math.floor((x + r) / CHUNK_PX); cx++) this.cache.delete(this.key(cx, cy));
+  }
 }
+
+// ---- smashed street furniture --------------------------------------------------------------
+const WOOD = new Set(['bench_a', 'bench_b', 'bench_m', 'pbench', 'pallet', 'pallet_b', 'pallet_s', 'lumber', 'planks', 'spool', 'cart', 'foodcart', 'foodcart_b', 'wheelbarrow']);
+const GREEN = new Set(['shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c', 'flowers_a', 'flowers_big', 'planter_g', 'planter_fl', 'planter_sq', 'potted', 'produce_a', 'produce_b']);
+export function debrisColors(t) {
+  if (WOOD.has(t)) return ['#7a5230', '#a87444', '#5a3a1e'];
+  if (GREEN.has(t) || t.startsWith('tree') || t.startsWith('palm')) return ['#2f6a24', '#4f8f3c', '#6a4a2a'];
+  if (t.startsWith('hydrant')) return ['#c8262b', '#e8e8e8', '#7a1d24'];
+  if (t.startsWith('umbrella')) return ['#c8262b', '#2350c8', '#f2c21b'];
+  if (t === 'cone' || t === 'barrier') return ['#ef7a1a', '#ffffff', '#c85a10'];
+  return ['#6a6e76', '#9aa0aa', '#3a3d44'];
+}
+function drawDebris(g, p) {
+  const c = debrisColors(p.t);
+  const s = PROP_SIZES[p.t] || [24, 24];
+  const r = Math.max(8, Math.min(22, Math.max(s[0], s[1]) * 0.45));
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(p.x, p.y, r, r * 0.7, 0, 0, 6.28); g.fill();
+  for (let k = 0; k < 9; k++) {
+    const h = hash2(p.x + k * 7, p.y - k * 3, 11), h2 = hash2(p.y + k * 5, p.x + k, 13);
+    g.fillStyle = c[k % 3];
+    const a = h * 6.28, d = h2 * r;
+    g.fillRect(Math.round(p.x + Math.cos(a) * d), Math.round(p.y + Math.sin(a) * d), 2 + (k % 3), 2 + ((k + 1) % 2));
+  }
+  if (p.t.startsWith('hydrant')) { g.fillStyle = '#5a1418'; g.fillRect(p.x - 4, p.y - 4, 8, 8); g.fillStyle = '#222'; g.fillRect(p.x - 2, p.y - 2, 4, 4); }
+}
+function drawFallen(g, p) {
+  const a = p.broken && p.broken.a !== undefined ? p.broken.a : 0;
+  if (p.t === 'lamp') {
+    // the post lies along the impact direction, head smashed at the far end
+    g.save(); g.translate(p.x, p.y); g.rotate(a);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(2, -1, 44, 6);
+    g.fillStyle = '#2b2f38'; g.fillRect(0, -2, 42, 4); g.fillStyle = '#4a505c'; g.fillRect(0, -2, 42, 1);
+    g.fillStyle = '#1c1f26'; g.fillRect(40, -5, 8, 10); g.fillStyle = '#9fd3ff'; g.fillRect(48, -3, 3, 2); g.fillRect(50, 2, 2, 2);
+    g.fillStyle = '#3a3d44'; g.beginPath(); g.arc(0, 0, 4, 0, 6.28); g.fill();
+    g.restore();
+    return;
+  }
+  const fr = atlas.ready ? atlas.frames['prop_' + p.t] : null;
+  const s = PROP_SIZES[p.t] || [40, 40];
+  // stump where it stood
+  g.fillStyle = '#4a3220'; g.beginPath(); g.arc(p.x, p.y, 5, 0, 6.28); g.fill();
+  g.fillStyle = '#7a5a3a'; g.beginPath(); g.arc(p.x, p.y, 3, 0, 6.28); g.fill();
+  if (!fr) return;
+  g.save(); g.translate(p.x + Math.cos(a) * s[0] * 0.45, p.y + Math.sin(a) * s[0] * 0.45); g.rotate(a + Math.PI / 2);
+  g.globalAlpha = 0.9; g.filter = 'brightness(.75) saturate(.8)';
+  g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, -s[0] * 0.45, -s[1] * 0.45, s[0] * 0.9, s[1] * 0.9);
+  g.filter = 'none'; g.globalAlpha = 1;
+  g.restore();
+}
+
+// ---- lamp post: base on the sidewalk, arm over the street, lamp head lit at night -------------
+function drawLamp(g, p) {
+  const a = p.a ?? -Math.PI / 2, L = 26;
+  const c = Math.cos(a), s = Math.sin(a);
+  g.save(); g.translate(p.x, p.y); g.rotate(a);
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(3, 2, L, 4); g.beginPath(); g.arc(4, 4, 5, 0, 6.28); g.fill();
+  g.fillStyle = '#23262e'; g.fillRect(0, -1.5, L, 3);
+  g.fillStyle = '#4a505c'; g.fillRect(0, -1.5, L, 1);
+  g.fillStyle = '#1c1f26'; g.fillRect(L - 2, -4, 11, 8);
+  g.fillStyle = p.night ? '#fff2b0' : '#aeb6c2'; g.fillRect(L, -2.5, 7, 5);
+  g.fillStyle = '#30343e'; g.beginPath(); g.arc(0, 0, 4.5, 0, 6.28); g.fill();
+  g.fillStyle = '#5a606c'; g.beginPath(); g.arc(-1, -1, 2, 0, 6.28); g.fill();
+  g.restore();
+  void c; void s;
+}
+export function lampHead(p) { const a = p.a ?? -Math.PI / 2; return { x: p.x + Math.cos(a) * 30, y: p.y + Math.sin(a) * 30 }; }
 
 // ---------------------------------------------------------------------------
 function tex(g, name, tx, ty, x, y, tint = null) {
@@ -418,16 +490,12 @@ export function drawProp(g, p) {
     g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, p.x - s[0] / 2, p.y - s[1] / 2, s[0], s[1]);
     return;
   }
-  if (p.t === 'lamp') {
-    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.arc(p.x + 3, p.y + 3, 5, 0, 6.28); g.fill();
-    g.fillStyle = '#2b2f38'; g.beginPath(); g.arc(p.x, p.y, 5, 0, 6.28); g.fill();
-    g.fillStyle = p.night ? '#fff2b0' : '#9aa0aa'; g.beginPath(); g.arc(p.x, p.y, 3, 0, 6.28); g.fill();
-    return;
-  }
+  if (p.t === 'lamp') { drawLamp(g, p); return; }
   g.fillStyle = '#666'; g.fillRect(p.x - 6, p.y - 6, 12, 12);
 }
 
 export function drawOverheadProp(g, p, night) {
+  if (p.broken) return;
   if (p.t === 'lamp') { p.night = night; drawProp(g, p); return; }
   drawProp(g, p);
 }

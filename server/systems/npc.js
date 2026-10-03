@@ -245,7 +245,9 @@ export function onDeath(world, ped, attacker) {
   const n = ped.npc;
   if (!n) return;
   const a = ARCHETYPES[n.archetype] || ARCHETYPES.casual;
-  const cash = a.cash ? Math.round(a.cash[0] + rng() * (a.cash[1] - a.cash[0])) : 0;
+  // not everyone carries cash: well-off types usually do, seniors and drunks often don't
+  const carries = { executive: 0.9, socialite: 0.85, hustler: 0.8, syndicate: 0.75, casual: 0.55, construction: 0.5, athlete: 0.35, sweeper: 0.4, senior: 0.45, drunk: 0.3, mugger: 0.7 }[n.archetype] ?? 0.5;
+  const cash = a.cash && rng() < carries ? Math.max(1, Math.round(a.cash[0] + rng() * (a.cash[1] - a.cash[0]))) : 0;
   let item = a.item && rng() < a.item[1] ? a.item[0] : null;
   if (n.hasPurse) { item = 'purse'; n.hasPurse = false; }
   cargo.npcDrop(world, ped, cash, item);

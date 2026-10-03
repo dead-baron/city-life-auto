@@ -164,9 +164,21 @@ function steerTraffic(world, v, t) {
   if (!ai.pts || !ai.pts.length) extendRoute(world, v);
   let wp = ai.pts[0];
   const d = Math.hypot(wp.x - v.x, wp.y - v.y);
-  if (d < 26 || passed(v, wp)) {
+  // orbit guard: a waypoint inside the turning circle makes a car loop around it forever.
+  // Count how far the car has turned since it last reached a waypoint; after ~1 full lap give
+  // up on that point, and after ~2 re-plan from the nearest junction in the direction it faces.
+  if (ai.lastA === undefined) ai.lastA = v.a;
+  let da = v.a - ai.lastA;
+  while (da > Math.PI) da -= Math.PI * 2;
+  while (da < -Math.PI) da += Math.PI * 2;
+  ai.lastA = v.a;
+  ai.turned = (ai.turned || 0) + Math.abs(da);
+  const beside = d < 50 && Math.abs(angleDiff(v.a, Math.atan2(wp.y - v.y, wp.x - v.x))) > 1.25;
+  if (ai.turned > Math.PI * 3.6) { replanFromHere(world, v); ai.turned = 0; return; }
+  if (d < 26 || passed(v, wp) || beside || ai.turned > Math.PI * 1.9) {
+    ai.turned = 0;
     ai.pts.shift();
-    if (wp.last) { ai.from = ai.to; ai.dir = ai.nextDir; extendRoute(world, v); }
+    if (wp.last) { ai.from = ai.to; ai.dir = ai.nextDir; ai.replans = 0; extendRoute(world, v); }
     if (!ai.pts.length) extendRoute(world, v);
     wp = ai.pts[0];
   }
@@ -183,6 +195,28 @@ function steerTraffic(world, v, t) {
   }
   if (ai.pts.length > 1 && ai.pts[0].stop && ai.nextDir !== ai.dir) desired = Math.min(desired, 170);
   driveToward(world, v, wp.x, wp.y, desired, { ignoreObstacles: panic });
+}
+
+// Re-join the road graph at the nearest junction, leaving in the link that best matches the
+// car's heading (how a lost driver "gets themselves out" of a loop).
+function replanFromHere(world, v) {
+  const ai = v.ai;
+  const n = world.map.nearestNode(v.x, v.y);
+  if (!n) return;
+  let best = null, bd = Infinity;
+  for (const dir of Object.keys(n.links)) {
+    const d = DIRS[dir];
+    const diff = Math.abs(angleDiff(v.a, Math.atan2(d.dy, d.dx)));
+    if (diff < bd) { bd = diff; best = dir; }
+  }
+  if (!best) return;
+  ai.from = n.id; ai.dir = best; ai.pts = null;
+  extendRoute(world, v);
+  // skip the stop line behind us at that junction: start from the lane entry ahead
+  const e = laneEntry(n, best);
+  ai.pts.unshift(e);
+  ai.replans = (ai.replans || 0) + 1;
+  if (ai.replans > 4) { v.ai = null; v.despawnable = true; } // hopeless: park it and let the cleanup take it
 }
 
 function passed(v, wp) {

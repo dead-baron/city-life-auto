@@ -14,6 +14,7 @@ import * as economy from './systems/economy.js';
 import * as jobs from './systems/jobs.js';
 import * as env from './systems/environment.js';
 import * as homes from './systems/homes.js';
+import * as props from './systems/props.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -25,6 +26,7 @@ const SYSTEMS = [
   ['police', police.update],        // NPC police dispatch / pursuit
   ['ems', ems.update],              // ambulances + 45s cleanup loop
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
+  ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
   ['cargo', cargo.update],          // crates, loot bags
   ['law', law.update],              // heat decay, search circles, bounties

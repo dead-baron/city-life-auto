@@ -11,7 +11,7 @@ import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
 import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus } from './input.js';
-import { GroundCache, drawOverheadProp, drawPrefabGlow } from './render/tiles.js';
+import { GroundCache, drawOverheadProp, drawPrefabGlow, debrisColors, lampHead } from './render/tiles.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
@@ -111,6 +111,9 @@ function onText(m) {
       document.body.classList.toggle('practice', !!m.practice);
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
       S.ents.clear(); S.pred = null; S.pending = [];
+      for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
+      for (const i of m.broken || []) setPropBroken(i, 0, false);
+      S.ground.cache.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
       $('play').disabled = false;
       if (S.playing) startPlaying();
@@ -168,7 +171,7 @@ function reconcile(s) {
   const switched = !S.pred || S.pred.kind !== kind || S.ctrlId !== s.ctrlId;
   S.ctrlKind = s.ctrlKind; S.ctrlId = s.ctrlId;
   if (kind === 'ped') S.myPedId = s.ctrlId;
-  const old = S.pred ? { x: S.pred.s.x, y: S.pred.s.y } : null;
+  const old = S.pred ? { x: S.pred.s.x, y: S.pred.s.y, a: S.pred.s.a } : null;
   let st;
   if (kind === 'ped') {
     st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits };
@@ -177,7 +180,7 @@ function reconcile(s) {
     const e = S.ents.get(s.ctrlId);
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: S.pred && S.pred.kind === 'veh' ? S.pred.s.rev : false };
     S.pred = { kind, s: st, def, prev: null };
   }
   for (const p of S.pending) stepPred(p);
@@ -185,7 +188,12 @@ function reconcile(s) {
   if (old && !switched) {
     const ex = old.x - S.pred.s.x, ey = old.y - S.pred.s.y;
     if (ex * ex + ey * ey < 140 * 140) { S.smooth.x += ex; S.smooth.y += ey; } else { S.smooth.x = 0; S.smooth.y = 0; }
-  } else { S.smooth.x = 0; S.smooth.y = 0; }
+    // heading corrections are eased too (snapping the car's angle reads as jitter)
+    let ea = old.a - S.pred.s.a;
+    while (ea > Math.PI) ea -= Math.PI * 2;
+    while (ea < -Math.PI) ea += Math.PI * 2;
+    S.smooth.a = Math.abs(ea) < 0.6 ? (S.smooth.a || 0) + ea : 0;
+  } else { S.smooth.x = 0; S.smooth.y = 0; S.smooth.a = 0; }
 }
 
 function stepPred(inp) {
@@ -239,6 +247,23 @@ function fixedStep() {
 
 // ---------------------------------------------------------------------------
 // Events from the server
+function setPropBroken(i, a, withFx) {
+  const p = S.map.props[i];
+  if (!p || p.broken) return;
+  p.broken = { a };
+  const se = S.map.propSolid.get(i);
+  if (se) se.off = true;
+  S.ground.invalidateAt(p.x, p.y);
+  if (!withFx) return;
+  const c = debrisColors(p.t);
+  for (let k = 0; k < 14; k++) {
+    const aa = a + (Math.random() - 0.5) * 1.8, sp = 60 + Math.random() * 180;
+    S.fx.spawn(4, p.x, p.y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.5 + Math.random() * 0.4, 2 + Math.random() * 2.5, c[k % 3], 0, 60 + Math.random() * 90);
+  }
+  if (p.t.startsWith('tree') || p.t.startsWith('palm') || p.t.startsWith('shrub') || p.t.startsWith('bush')) for (let k = 0; k < 10; k++) S.fx.spawn(4, p.x + (Math.random() - 0.5) * 30, p.y + (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60, 1 + Math.random(), 3, Math.random() < 0.5 ? '#3f7f2c' : '#5fa03a', 0, 20);
+  sfx('hit', distVol(p.x, p.y) * 1.3);
+}
+
 function distVol(x, y) { const d = Math.hypot(x - S.cam.x, y - S.cam.y); return Math.max(0, 1 - d / 1100); }
 
 function onEvent(ev) {
@@ -283,11 +308,17 @@ function onEvent(ev) {
       break;
     }
     case 'foot': fx.decal(2, ev.x, ev.y, ev.a, 1, '#7a0d12', now, 0.8); break;
+    case 'propbreak': setPropBroken(ev.i, ev.a, true); break;
+    case 'propfix': {
+      const p = S.map.props[ev.i];
+      if (p) { delete p.broken; const se = S.map.propSolid.get(ev.i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); }
+      break;
+    }
     case 'geyser': S.geysers.push({ x: ev.x, y: ev.y, until: performance.now() + ev.d * 1000 }); fx.splash(ev.x, ev.y, 14); break;
     case 'splash': fx.splash(ev.x, ev.y); sfx('splash', distVol(ev.x, ev.y)); break;
     case 'thud': sfx('thud', distVol(ev.x, ev.y)); break;
     case 'door': sfx('door', distVol(ev.x, ev.y)); break;
-    case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); break;
+    case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); if (ev.n) fx.floatText(ev.x, ev.y - 18, `+$${ev.n}`, '#7fe07f'); break;
     case 'camera': S.camAlert.set(ev.id, performance.now() + 2500); sfx('camera', distVol(S.map.cameras[ev.id].x, S.map.cameras[ev.id].y)); break;
     case 'revive': fx.ring(ev.x, ev.y, 30, 'rgba(120,255,160,', 3); fx.floatText(ev.x, ev.y - 20, '+', '#3ddc84'); break;
     case 'poof': case 'fade': if (ev.x !== undefined) fx.ring(ev.x, ev.y, 24, 'rgba(255,255,255,'); break;
@@ -525,7 +556,7 @@ function selfPos() {
   if (P) {
     const a = Math.min(1, S.acc / DT);
     const pr = P.prev || P.s;
-    return { x: lerp(pr.x, P.s.x, a) + S.smooth.x, y: lerp(pr.y, P.s.y, a) + S.smooth.y, a: lerpAngle(pr.a, P.s.a, a) };
+    return { x: lerp(pr.x, P.s.x, a) + S.smooth.x, y: lerp(pr.y, P.s.y, a) + S.smooth.y, a: lerpAngle(pr.a, P.s.a, a) + (S.smooth.a || 0) };
   }
   const e = S.ents.get(S.ctrlId);
   if (e) return { x: e.rx, y: e.ry, a: e.ra };
@@ -590,8 +621,9 @@ function frame(nowMs) {
     if (S.renderTick > S.latestTick) S.renderTick = S.latestTick;
     S.loopTime += dt;
     S.loopClock = (S.loopClock || 0) + dt;
-    const k = Math.exp(-10 * dt);
-    S.smooth.x *= k; S.smooth.y *= k;
+    // corrections decay over ~150 ms in a car (smoother), ~100 ms on foot (snappier)
+    const k = Math.exp(-(S.pred && S.pred.kind === 'veh' ? 7 : 10) * dt);
+    S.smooth.x *= k; S.smooth.y *= k; S.smooth.a = (S.smooth.a || 0) * k;
     if (nowMs - pingAt > 2000) { pingAt = nowMs; send({ t: 'ping', ts: performance.now() }); }
     render(dt);
   } else {
@@ -637,8 +669,15 @@ function render(dt) {
   else if (S.ctrlKind === CTRL.PASSENGER) { const e = S.ents.get(S.ctrlId); if (e && e.buf.length > 1) { const b = e.buf; speed = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20; } }
   const targetZoom = baseZoom() / (1 + Math.min(0.5, speed / 1300));
   S.cam.zoom += (targetZoom - S.cam.zoom) * Math.min(1, dt * 2.5);
-  const lead = Math.min(140, speed * 0.25);
-  const tx = sp.x + Math.cos(sp.a) * lead, ty = sp.y + Math.sin(sp.a) * lead;
+  // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
+  // and server corrections don't shake the camera
+  let lvx = 0, lvy = 0;
+  if (S.pred && S.pred.kind === 'veh') { lvx = S.pred.s.vx; lvy = S.pred.s.vy; }
+  const lk = 1 - Math.exp(-3 * dt);
+  S.camLead = S.camLead || { x: 0, y: 0 };
+  S.camLead.x += (Math.max(-560, Math.min(560, lvx)) * 0.25 - S.camLead.x) * lk;
+  S.camLead.y += (Math.max(-560, Math.min(560, lvy)) * 0.25 - S.camLead.y) * lk;
+  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y;
   if (Math.hypot(tx - S.cam.x, ty - S.cam.y) > 1500) { S.cam.x = tx; S.cam.y = ty; }
   S.cam.x += (tx - S.cam.x) * Math.min(1, dt * 8);
   S.cam.y += (ty - S.cam.y) * Math.min(1, dt * 8);
@@ -896,26 +935,60 @@ function drawPed(p, now) {
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
 
+// Traffic signals on mast arms: a pole on the near-right corner of every approach with an arm
+// reaching over the incoming lanes and a 3-lamp head facing the drivers. Cameras sit on poles.
+const SIG_COL = { G: '#3ddc84', Y: '#ffc23d', R: '#ff3b3b' };
 function drawSignals(view) {
+  const dirs = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
+  S.sigHeads = [];
   for (const n of S.map.nodes) {
-    if (!n.light || n.x < view.x0 - 100 || n.x > view.x1 + 100 || n.y < view.y0 - 100 || n.y > view.y1 + 100) continue;
+    if (!n.light || n.x < view.x0 - 160 || n.x > view.x1 + 160 || n.y < view.y0 - 160 || n.y > view.y1 + 160) continue;
     const ls = lightState(n, S.loopTime);
-    const col = (s) => (s === 'G' ? '#3ddc84' : s === 'Y' ? '#ffc23d' : '#ff3b3b');
-    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const x = n.x + dx * 78, y = n.y + dy * 78;
-      g.fillStyle = '#111'; g.fillRect(x - 5, y - 5, 10, 10);
-      // corner head faces the approaching N/S traffic on one side and E/W on the other
-      g.fillStyle = col((dx * dy > 0) ? ls.ns : ls.ew);
-      g.beginPath(); g.arc(x, y, 3.2, 0, 6.28); g.fill();
+    for (const [dir, [dx, dy]] of Object.entries(dirs)) {
+      // traffic travelling `dir` arrives from the opposite link
+      const from = { N: 'S', S: 'N', E: 'W', W: 'E' }[dir];
+      if (n.links[from] === undefined) continue;
+      const st = dir === 'N' || dir === 'S' ? ls.ns : ls.ew;
+      const rx = -dy, ry = dx; // right-hand side of travel
+      const lane = n.lane[dir] ?? n.lane[from] ?? 32;
+      const px = n.x - dx * (n.half + 14) + rx * (n.half + 12), py = n.y - dy * (n.half + 14) + ry * (n.half + 12);
+      const hx = n.x - dx * (n.half + 14) + rx * lane * 0.55, hy = n.y - dy * (n.half + 14) + ry * lane * 0.55;
+      // arm + shadow
+      g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 4; g.beginPath(); g.moveTo(px + 4, py + 4); g.lineTo(hx + 4, hy + 4); g.stroke();
+      g.strokeStyle = '#2a2d35'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(px, py); g.lineTo(hx, hy); g.stroke();
+      g.strokeStyle = '#4c5260'; g.lineWidth = 1; g.beginPath(); g.moveTo(px, py - 1); g.lineTo(hx, hy - 1); g.stroke();
+      g.fillStyle = '#30343e'; g.beginPath(); g.arc(px, py, 5, 0, 6.28); g.fill();
+      g.fillStyle = '#555b68'; g.beginPath(); g.arc(px - 1, py - 1, 2, 0, 6.28); g.fill();
+      // head: three lamps in a row across the arm, lit lamp facing the drivers
+      S.sigHeads.push({ x: hx, y: hy, c: SIG_COL[st] });
+      g.save(); g.translate(hx, hy); g.rotate(Math.atan2(ry, rx));
+      g.fillStyle = '#14161b'; g.fillRect(-14, -5, 28, 10);
+      g.fillStyle = '#e8b923'; g.fillRect(-14, -5, 28, 1.5);
+      ['R', 'Y', 'G'].forEach((c, k) => {
+        const on = st === c;
+        g.fillStyle = on ? SIG_COL[c] : 'rgba(80,80,80,.9)';
+        g.beginPath(); g.arc(-8 + k * 8, 0.5, 3, 0, 6.28); g.fill();
+        if (on) { g.fillStyle = SIG_COL[c] + '55'; g.beginPath(); g.arc(-8 + k * 8, 0.5, 6, 0, 6.28); g.fill(); }
+      });
+      g.restore();
     }
   }
   const nowMs = performance.now();
   for (const c of S.map.cameras) {
-    if (c.x < view.x0 || c.x > view.x1 || c.y < view.y0 || c.y > view.y1) continue;
+    if (c.x < view.x0 - 60 || c.x > view.x1 + 60 || c.y < view.y0 - 60 || c.y > view.y1 + 60) continue;
     const alert = (S.camAlert.get(c.id) || 0) > nowMs;
-    g.fillStyle = '#2a2d36'; g.fillRect(c.x - 7, c.y - 5, 14, 10); g.fillStyle = '#555'; g.fillRect(c.x + 5, c.y - 2, 6, 4);
+    // pole on the corner, short arm reaching toward the junction, camera housing at the end
+    const a = 3 * Math.PI / 4, ex = c.x + Math.cos(a) * 24, ey = c.y + Math.sin(a) * 24;
+    g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 4; g.beginPath(); g.moveTo(c.x + 4, c.y + 4); g.lineTo(ex + 4, ey + 4); g.stroke();
+    g.strokeStyle = '#2a2d35'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(c.x, c.y); g.lineTo(ex, ey); g.stroke();
+    g.fillStyle = '#30343e'; g.beginPath(); g.arc(c.x, c.y, 5.5, 0, 6.28); g.fill();
+    g.fillStyle = '#f2c21b'; g.beginPath(); g.arc(c.x, c.y, 2.2, 0, 6.28); g.fill();
+    g.save(); g.translate(ex, ey); g.rotate(a);
+    g.fillStyle = '#d8dce4'; g.fillRect(-6, -5, 16, 10); g.fillStyle = '#9aa0aa'; g.fillRect(-6, 3, 16, 2);
+    g.fillStyle = '#1a1c22'; g.fillRect(10, -3.5, 4, 7);
+    g.restore();
     const on = alert ? Math.floor(nowMs / 120) % 2 : Math.floor(nowMs / 900) % 2;
-    if (on) { g.fillStyle = alert ? '#ff2a2a' : '#3b8aff'; g.beginPath(); g.arc(c.x - 3, c.y, 2.5, 0, 6.28); g.fill(); }
+    if (on) { g.fillStyle = alert ? '#ff2a2a' : '#3b8aff'; g.beginPath(); g.arc(ex, ey, 2.5, 0, 6.28); g.fill(); }
     if (alert) { g.fillStyle = 'rgba(255,40,40,.12)'; g.beginPath(); g.arc(c.x, c.y, c.r * 0.6, 0, 6.28); g.fill(); }
   }
 }
@@ -982,7 +1055,7 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
     lg.fillStyle = gr; lg.fillRect(lx - rr, ly - rr, rr * 2, rr * 2);
   };
   if (dark > 0.02) {
-    for (const l of S.map.lamps) if (l.x > view.x0 - 120 && l.x < view.x1 + 120 && l.y > view.y0 - 120 && l.y < view.y1 + 120) hole(l.x, l.y, 120, 0.85);
+    for (const l of S.map.lamps) if (!l.broken && l.x > view.x0 - 120 && l.x < view.x1 + 120 && l.y > view.y0 - 120 && l.y < view.y1 + 120) { const h = lampHead(l); hole(h.x, h.y, 120, 0.85); }
     for (const p of S.map.pois) if (p.x > view.x0 - 100 && p.x < view.x1 + 100 && p.y > view.y0 - 100 && p.y < view.y1 + 100) hole(p.x, p.y - 20, 95, 0.75);
     for (const v of vehs) {
       if (!(v.flags & VF.LIGHTS)) continue;
@@ -1009,11 +1082,17 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
   if (dark > 0.02) {
     g.globalCompositeOperation = 'lighter';
     for (const l of S.map.lamps) {
-      if (l.x < view.x0 || l.x > view.x1 || l.y < view.y0 || l.y > view.y1) continue;
-      const s = worldToScreen(l);
+      if (l.broken || l.x < view.x0 || l.x > view.x1 || l.y < view.y0 || l.y > view.y1) continue;
+      const s = worldToScreen(lampHead(l));
       const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, 95 * z);
       gr.addColorStop(0, `rgba(255,196,96,${0.3 * dark})`); gr.addColorStop(0.5, `rgba(255,170,70,${0.1 * dark})`); gr.addColorStop(1, 'rgba(255,170,70,0)');
       g.fillStyle = gr; g.fillRect(s.x - 95 * z, s.y - 95 * z, 190 * z, 190 * z);
+    }
+    for (const h of S.sigHeads || []) { // signal lamps glow after dark
+      const s = worldToScreen(h);
+      const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, 22 * z);
+      gr.addColorStop(0, h.c + 'cc'); gr.addColorStop(1, h.c + '00');
+      g.globalAlpha = dark; g.fillStyle = gr; g.fillRect(s.x - 22 * z, s.y - 22 * z, 44 * z, 44 * z); g.globalAlpha = 1;
     }
     for (const v of vehs) {
       if (!(v.flags & VF.SIREN)) continue;
@@ -1078,7 +1157,7 @@ function drawWetReflections(view, vehs, dark, now, dt) {
     }
   }
   if (dark > 0.05) {
-    for (const l of S.map.lamps) if (l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) reflect(l.x, l.y + 10, 55, 10, '255,200,110', 0.35 * dark);
+    for (const l of S.map.lamps) if (!l.broken && l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) { const h = lampHead(l); reflect(h.x, h.y + 10, 55, 10, '255,200,110', 0.35 * dark); }
     for (const p of S.map.pois) if (p.x > view.x0 && p.x < view.x1 && p.y > view.y0 - 40 && p.y < view.y1) reflect(p.x, p.y + 6, 50, 26, '255,190,100', 0.22 * dark);
   }
   g.restore();

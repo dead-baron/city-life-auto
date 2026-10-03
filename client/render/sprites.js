@@ -126,11 +126,26 @@ export function drawCrate(g, tier, label, t) {
 }
 
 export function drawBag(g, tier, t) {
+  if (tier === 0) { drawCash(g, t); return; }
   const fr = frame(`bag${tier}`);
   const s = 24;
   if (fr) g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, -s / 2, -s / 2 * (fr.h / fr.w), s, s * (fr.h / fr.w));
   else { g.fillStyle = ['', '#8a6a3a', '#1d3a8a', '#6a6e76', '#e8b923'][tier]; g.fillRect(-11, -8, 22, 16); }
   if (tier >= 3) { g.globalAlpha = 0.35 + 0.25 * Math.sin(t * 6); g.strokeStyle = tier === 4 ? '#ffd36b' : '#c07aff'; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 16, 0, 6.28); g.stroke(); g.globalAlpha = 1; }
+}
+
+// Dropped cash: a few green bills with a gentle shine (picked up by walking over it).
+function drawCash(g, t) {
+  const bills = [[-6, -3, 0.3], [3, -1, -0.4], [-1, 4, 0.9]];
+  for (const [x, y, a] of bills) {
+    g.save(); g.translate(x, y); g.rotate(a);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-6, -2, 13, 7);
+    g.fillStyle = '#3f9a4a'; g.fillRect(-7, -4, 13, 7);
+    g.fillStyle = '#7fd08a'; g.fillRect(-6, -3, 11, 5);
+    g.fillStyle = '#2f7a3a'; g.fillRect(-2, -2, 3, 3);
+    g.restore();
+  }
+  g.globalAlpha = 0.35 + 0.35 * Math.sin(t * 5); g.fillStyle = '#fff'; g.fillRect(-1, -6, 2, 2); g.globalAlpha = 1;
 }
 
 // ---------------------------------------------------------------------------

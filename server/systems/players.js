@@ -1,9 +1,9 @@
 // Player sessions: join/leave (30-second Ghost State), input application, context
 // interactions, death + respawn, persistence sync and HUD prompts.
-import { PF, FACTION, TILE } from '../../shared/constants.js';
+import { PF, FACTION, TILE, WEATHER } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
-import { pedStep, driveInput } from '../../shared/physics.js';
+import { pedStep, driveInput, vehStep } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
@@ -151,6 +151,12 @@ export function processInputs(world, dt) {
       const pressed = inp.bits & ~p.prevBits;
       p.prevBits = inp.bits;
       applyInput(world, p, ped, inp, pressed, dt);
+      // catching up on a backed-up queue: the client predicted one vehicle step per input, so
+      // the car gets the extra physics step here too (the vehicles system does the last one)
+      if (k < n - 1 && ped.vehId && ped.seat === 0) {
+        const v = world.get(ped.vehId);
+        if (v && !v.wreckAt) vehStep(v, v.input, dt, world.map, v.def, { rain: world.weather === WEATHER.RAIN });
+      }
     }
   }
 }
@@ -226,7 +232,7 @@ export function findInteraction(world, p) {
     if (target) return { label: `Arrest ${target.name || 'suspect'}`, run: () => law.arrest(world, p, target) };
   }
 
-  const bag = cargo.nearestBag(world, ped);
+  const bag = cargo.nearestBag(world, ped, true);
   if (bag) return { label: `Grab loot ($${bag.cash}${Object.keys(bag.items).length || Object.keys(bag.weapons).length ? ' + items' : ''})`, run: () => cargo.lootBag(world, p, bag) };
 
   const crate = cargo.nearestCrate(world, ped);

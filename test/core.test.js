@@ -389,3 +389,43 @@ test('fist fights: frail NPCs drop fast, average ones are winnable, builds scale
   assert.ok(avg <= 13, `average took ${avg}`);
   assert.ok(brute > avg, 'brutes soak more');
 });
+
+test('destructible props: a fast car smashes a lamp post (synced, passable) and it comes back later', async () => {
+  const props = await import('../server/systems/props.js');
+  const w = makeWorld();
+  const i = w.map.props.findIndex((p) => p.t === 'lamp' && w.map.propSolid.get(w.map.props.indexOf(p)));
+  const lamp = w.map.props[i];
+  const v = w.spawnVehicle('sedan', lamp.x - 60, lamp.y, 0, { npcOwned: false });
+  v.vx = 400; v.vy = 0;
+  for (let k = 0; k < 20 && !(w.brokenProps && w.brokenProps.has(i)); k++) { v.input = { throttle: 1, steer: 0, hb: false }; w.step(); v.y = lamp.y; v.a = 0; }
+  assert.ok(w.brokenProps.has(i), 'lamp smashed');
+  assert.ok(w.map.propSolid.get(i).off, 'no longer solid');
+  assert.ok(Math.hypot(v.vx, v.vy) > 150, 'car keeps going');
+  assert.ok(props.brokenList(w).includes(i));
+  // respawns once the tidy-up timer passes and no player is around
+  w.time += 400;
+  for (let k = 0; k < 45; k++) w.step();
+  assert.ok(!w.brokenProps.has(i), 'lamp restored');
+  assert.ok(!w.map.propSolid.get(i).off);
+});
+
+test('NPC loot: cash-only drops are a pile you walk over; not every NPC carries cash', async () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w, { cash: 0 });
+  const sp = w.map.spawns.hospital;
+  teleport(w, p.ped, sp.x, sp.y);
+  let none = 0, piles = 0;
+  for (let k = 0; k < 40; k++) {
+    const n = spawnNpc(w, 'casual', sp.x + 200 + (k % 8) * 60, sp.y + Math.floor(k / 8) * 60, 'civ');
+    combat.kill(w, n, null, 'melee', 0);
+  }
+  for (const e of w.entities.values()) if (e.kind === K.BAG) { if (e.cashOnly) piles++; }
+  none = 40 - [...w.entities.values()].filter((e) => e.kind === K.BAG).length;
+  assert.ok(none > 5, `some NPCs carried nothing (${none})`);
+  assert.ok(piles > 5, 'cash-only piles');
+  const pile = [...w.entities.values()].find((e) => e.kind === K.BAG && e.cashOnly);
+  const amt = pile.cash;
+  teleport(w, p.ped, pile.x, pile.y);
+  run(w, 0.2);
+  assert.equal(prof.cash, amt, 'walked over the cash and picked it up');
+});

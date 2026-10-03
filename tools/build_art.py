@@ -39,8 +39,8 @@ AREAS = {'compact': 84 * 44, 'sedan': 100 * 48, 'taxi': 100 * 48, 'sports': 96 *
 
 # Vehicles cut from a box on a sheet (largest object inside the box): (sheet, box, front, model)
 VEHICLE_BOXES = [
-    ('ae847b9b-image.png', (512, 180, 580, 334), 'up', 'bus'),
-    ('ae847b9b-image.png', (376, 178, 436, 336), 'up', 'armored'),
+    ('ae847b9b-image.png', (512, 180, 580, 334), 'down', 'bus'),
+    ('ae847b9b-image.png', (376, 178, 436, 336), 'down', 'armored'),
 ]
 
 VEHICLE_SOURCES = [
