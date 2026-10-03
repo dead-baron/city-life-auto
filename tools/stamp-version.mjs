@@ -20,6 +20,7 @@ const walk = (d) => {
   }
 };
 for (const d of DIRS) walk(d);
+for (const f of ['index.html', 'manifest.webmanifest']) files.push(f);
 files.sort();
 const h = createHash('sha1');
 for (const f of files) { h.update(f); h.update(readFileSync(join(ROOT, f))); }

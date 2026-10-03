@@ -356,3 +356,13 @@ How it works:
 
 ![Smashed lamp post + hydrant geyser](screenshots/smashed-lamp-hydrant.png)
 ![Signal mast arms, lamp poles, camera pole](screenshots/signals-lamps-camera.png)
+
+## 2026-10-03 · Installable app (separate from the other deadbaron.com games)
+
+City Life Auto now installs as its own app from Chrome (Android "Install app", or the ⬇ INSTALL APP button on the title screen when Chrome offers it):
+- **No overlap with the other games.** `manifest.webmanifest` has `id` and `scope` `/city-life-auto/` and start URL `/city-life-auto/?source=app`, so it installs next to Neon Asteroids (`/neon-asteroids/`) and Gear Bugs (`/gear-bugs/`) without clashing.
+- **Display:** fullscreen, landscape.
+- **Icons:** made from the logo, including maskable versions for Android's icon shapes, plus an iOS home-screen icon.
+- **Service worker (`sw.js`):** scoped to `/city-life-auto/` and only ever clears its own `city-life-auto-` caches. It's network-first, so updates still land immediately, and keeps the cached copy as an offline fallback.
+- **Offline practice:** after one online visit, Practice works with no connection, because the boot loader's version check pre-loads every game file.
+- **Verified in Chromium:** no manifest errors, no installability errors, the service worker controls only `/city-life-auto/`, and offline practice runs after a reload with the network cut.

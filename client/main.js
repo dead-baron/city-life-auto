@@ -406,6 +406,25 @@ function toggleFullscreen(force) {
 for (const id of ['b-fs', 't-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 document.addEventListener('fullscreenchange', () => document.body.classList.toggle('fs', isFullscreen()));
 
+// ---- installable app (PWA): its own manifest id + scope /city-life-auto/, so it installs
+// separately from the other deadbaron.com games -----------------------------------------------
+const standalone = matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+document.body.classList.toggle('installed', standalone);
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  // main.js is imported by boot.js, often after the load event already fired
+  const reg = () => navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
+  if (document.readyState === 'complete') reg(); else addEventListener('load', reg);
+}
+let installEvt = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (!standalone) $('t-install').classList.remove('hidden'); });
+addEventListener('appinstalled', () => { installEvt = null; $('t-install').classList.add('hidden'); S.hud?.toast('City Life Auto is installed - open it from your home screen.', 'good'); });
+$('t-install').onclick = async () => {
+  if (!installEvt) return;
+  installEvt.prompt();
+  try { await installEvt.userChoice; } catch { /* dismissed */ }
+  installEvt = null; $('t-install').classList.add('hidden');
+};
+
 let landTipShown = false;
 function maybeLandscapeTip() {
   if (landTipShown || input.device !== 'touch' || innerHeight <= innerWidth) return;
