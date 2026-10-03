@@ -393,3 +393,9 @@ City Life Auto now installs as its own app from Chrome (Android "Install app", o
 
 ![World map](screenshots/world-map.png)
 ![Police dispatch map](screenshots/police-dispatch-map.png)
+
+## 2026-10-03 · Rotation in fullscreen and in the installed app
+
+- The game now asks the phone to follow its rotation sensor (`screen.orientation.lock('any')`) whenever it is fullscreen, and at launch when running as the installed app. This overrides an install made while the manifest still said landscape-only; Android only refreshes an installed app's manifest after about a day.
+- Rotation re-fits the canvas and switches between the landscape and portrait HUD and touch layouts. The game listens for `resize`, `orientationchange`, `screen.orientation` change and `visualViewport` resize, because a rotation in fullscreen doesn't always fire `resize`. Canvas sizes are only reset when they actually change.
+- Tested in headless Chromium by rotating mid-game from landscape (844×390) to portrait (390×844) and back: the canvas and portrait layout switched each time.

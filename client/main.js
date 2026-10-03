@@ -400,12 +400,22 @@ function toggleFullscreen(force) {
   const el = document.documentElement;
   if (want && !isFullscreen()) {
     const req = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen();
-    Promise.resolve(req).catch(() => {}); // any orientation: portrait fullscreen is fine too
+    Promise.resolve(req).then(followRotation).catch(() => {});
   } else if (!want && isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
 }
 for (const id of ['b-fs', 't-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) toggleMap(!S.bigmap); };
-document.addEventListener('fullscreenchange', () => document.body.classList.toggle('fs', isFullscreen()));
+document.addEventListener('fullscreenchange', () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });
+
+// Let the phone rotate freely, even in fullscreen and in the installed app. 'any' follows the
+// rotation sensor and overrides an older landscape-only install (Android only refreshes an installed
+// app's settings after a day or so). Browsers that refuse orientation locking just ignore this.
+function followRotation() {
+  const o = screen.orientation;
+  if (!o || !o.lock) return;
+  o.lock('any').catch(() => { try { o.unlock(); } catch { /* not allowed here */ } });
+}
+if (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches) followRotation();
 
 // ---- installable app (PWA): its own manifest id + scope /city-life-auto/, so it installs
 // separately from the other deadbaron.com games -----------------------------------------------
@@ -555,13 +565,19 @@ $('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.pla
 let W = 0, H = 0, DPR = 1;
 function onResize() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
-  W = innerWidth; H = innerHeight;
+  const nw = innerWidth, nh = innerHeight;
+  if (nw === W && nh === H && canvas.width === Math.round(W * DPR)) return;
+  W = nw; H = nh;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   lightCv.width = Math.ceil(W / 2); lightCv.height = Math.ceil(H / 2);
   document.body.classList.toggle('portrait', H > W);
   if (S.playing) maybeLandscapeTip();
 }
 addEventListener('resize', onResize);
+// rotating a phone in fullscreen doesn't always fire 'resize' right away: catch every signal
+addEventListener('orientationchange', () => { onResize(); setTimeout(onResize, 120); setTimeout(onResize, 400); });
+screen.orientation?.addEventListener?.('change', () => { onResize(); setTimeout(onResize, 120); });
+window.visualViewport?.addEventListener('resize', onResize);
 onResize();
 
 function baseZoom() {

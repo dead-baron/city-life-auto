@@ -203,7 +203,7 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 body.touch #weapon { pointer-events: auto; cursor: pointer; }
 .touch #helpbox, .touch #toasts { margin-left: 58px; }
 #tbtns .map { display: none; }
-#dev-btn { top: 8px; left: calc(50% + 46px); width: 50px !important; height: 34px !important; border-radius: 8px !important; font-size: 11px !important; }
+#dev-btn { top: 8px; left: calc(50% + 72px); width: 50px !important; height: 34px !important; border-radius: 8px !important; font-size: 11px !important; }
 #tbtns .veh { display: none; }
 body.in-veh #tbtns .dive .foot { display: none; } body.in-veh #tbtns .dive .veh { display: inline; }
 body:not(.in-veh) #tbtns .horn, body.in-veh #tbtns .sprint, body:not(.carrying) #tbtns .throw, body:not(.armed) #tbtns .reload { display: none; }
