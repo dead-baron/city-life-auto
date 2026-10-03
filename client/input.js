@@ -3,7 +3,7 @@
 import { IN } from '../shared/input.js';
 
 const keys = new Set();
-const mouse = { x: 0, y: 0, down: false, movedAt: -1e9, wheel: 0 };
+const mouse = { x: 0, y: 0, down: false, clicked: false, movedAt: -1e9, wheel: 0 };
 const touch = { active: false, lx: 0, ly: 0, rx: 0, ry: 0, rOn: false, btn: new Set(), tapped: new Set() };
 const pressedOnce = new Set();
 const tappedKeys = new Set(); // keys pressed since the last sample (so quick taps are never missed)
@@ -26,7 +26,7 @@ export function initInput(canvas, hooks) {
   addEventListener('keyup', (e) => keys.delete(e.code));
   addEventListener('blur', () => { keys.clear(); mouse.down = false; });
   canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.movedAt = performance.now(); });
-  canvas.addEventListener('mousedown', (e) => { if (e.button === 0) { mouse.down = true; mouse.movedAt = performance.now(); } });
+  canvas.addEventListener('mousedown', (e) => { if (e.button === 0) { mouse.down = true; mouse.clicked = true; mouse.movedAt = performance.now(); } });
   addEventListener('mouseup', (e) => { if (e.button === 0) mouse.down = false; });
   canvas.addEventListener('wheel', (e) => { mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -133,8 +133,9 @@ export function sample(view) {
   if ((mouseFresh || mouse.down) && view.selfScreen && !input.usingTouch) {
     aim = Math.atan2(mouse.y - view.selfScreen.y, mouse.x - view.selfScreen.x);
     bits |= IN.AIMING;
-    if (mouse.down) bits |= IN.FIRE;
+    if (mouse.down || mouse.clicked) bits |= IN.FIRE;
   }
+  mouse.clicked = false;
 
   const p = readPad();
   input.menuNav = 0; input.menuSelect = false; input.menuBack = false;

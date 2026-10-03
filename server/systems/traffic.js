@@ -9,8 +9,6 @@ import { vehForwardSpeed } from '../../shared/physics.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 
-const LANE = 32;
-const STOP_BACK = 84;
 const rng = mulberry32(4242);
 
 function weighted(mix) {
@@ -22,12 +20,16 @@ function weighted(mix) {
 }
 
 const right = (d) => ({ x: -d.dy, y: d.dx });
+// Lane offset (px from road center) for travel leaving node n in direction dir.
+const laneOf = (n, dir) => n.lane[dir] ?? n.lane[DIRS[dir].opp] ?? 32;
 
-function laneEntry(n, dir) { const d = DIRS[dir], r = right(d); return { x: n.x + d.dx * 80 + r.x * LANE, y: n.y + d.dy * 80 + r.y * LANE }; }
-function stopPoint(n, dir) { const d = DIRS[dir], r = right(d); return { x: n.x - d.dx * STOP_BACK + r.x * LANE, y: n.y - d.dy * STOP_BACK + r.y * LANE }; }
+function laneEntry(n, dir) { const d = DIRS[dir], r = right(d), l = laneOf(n, dir); return { x: n.x + d.dx * (n.half + 16) + r.x * l, y: n.y + d.dy * (n.half + 16) + r.y * l }; }
+// stop line when arriving at n while travelling in direction dir
+function stopPoint(n, dir) { const d = DIRS[dir], r = right(d), l = laneOf(n, d.opp); return { x: n.x - d.dx * (n.half + 22) + r.x * l, y: n.y - d.dy * (n.half + 22) + r.y * l }; }
 function cornerPoint(n, dIn, dOut) {
   const a = DIRS[dIn], b = DIRS[dOut], ra = right(a), rb = right(b);
-  return { x: a.dx === 0 ? n.x + ra.x * LANE : n.x + rb.x * LANE, y: a.dy === 0 ? n.y + ra.y * LANE : n.y + rb.y * LANE };
+  const la = laneOf(n, a.opp), lb = laneOf(n, dOut);
+  return { x: a.dx === 0 ? n.x + ra.x * la : n.x + rb.x * lb, y: a.dy === 0 ? n.y + ra.y * la : n.y + rb.y * lb };
 }
 
 // Waypoints through node `n` arriving with heading dIn and leaving on dOut.
@@ -229,11 +231,11 @@ function manage(world) {
     for (let i = 0; i < spots.length; i++) {
       const sp = spots[i];
       if (world.parked.has(i)) continue;
-      if (hash2(i, 7, world.map.seed) > (sp.res ? 0.45 : 0.6)) continue;
+      if (hash2(i, 7, world.map.seed) > 0.7) continue;
       const d2 = (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2;
       if (d2 > 1150 * 1150) continue;
-      const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3;
-      if (d2 < 700 * 700 && !fresh) continue;
+      const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
+      if (d2 < 520 * 520 && !fresh) continue;
       if (world.npcCount + world.trafficCount > world.npcBudget) break;
       const v = world.spawnVehicle(weighted(PARKED_MIX), sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
       world.parked.set(i, v.id);

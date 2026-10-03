@@ -57,6 +57,14 @@ export class FX {
   geyser(x, y, rand = Math.random) {
     for (let i = 0; i < 4; i++) this.spawn(6, x + (rand() - 0.5) * 6, y + (rand() - 0.5) * 6, (rand() - 0.5) * 40, (rand() - 0.5) * 40, 0.9, 3 + rand() * 3, rand() < 0.5 ? '#ffffff' : '#7ac8ff', 6, 120 + rand() * 80);
   }
+  // melee impact: white-yellow star burst + ring, like a 16-bit "POW"
+  impact(x, y, a, rand = Math.random) {
+    for (let i = 0; i < 8; i++) {
+      const aa = a + (rand() - 0.5) * 2.4, sp = 90 + rand() * 140;
+      this.spawn(4, x, y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.18 + rand() * 0.1, 2.5, i % 2 ? '#fff6c0' : '#ffffff');
+    }
+    this.rings.push({ x, y, t: 0, max: 0.22, r: 16, color: 'rgba(255,250,210,' });
+  }
   tracer(x1, y1, x2, y2, color = 'rgba(255,240,170,') { this.tracers.push({ x1, y1, x2, y2, t: 0, color }); }
   ring(x, y, r, color, max = 0.6) { this.rings.push({ x, y, t: 0, max, r, color }); }
   floatText(x, y, text, color) { this.texts.push({ x, y, text, color, t: 0 }); }

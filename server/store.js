@@ -19,6 +19,8 @@ export function defaultProfile(pid) {
     inventory: { bandage: 1 },
     outfit: null,
     vehicles: [],
+    homes: [],
+    spawnHome: null,
     pos: null,
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },
   };
@@ -31,6 +33,7 @@ export class MemoryStore {
   touch() { this.dirty = true; }
   async flush() { this.dirty = false; }
   flushSync() { this.dirty = false; }
+  all() { return this.profiles.values(); }
   get count() { return this.profiles.size; }
 }
 
@@ -42,5 +45,6 @@ export const store = {
   touch: () => impl.touch(),
   flush: () => impl.flush(),
   flushSync: () => impl.flushSync(),
+  all: () => impl.all(),
   get count() { return impl.count; },
 };

@@ -49,6 +49,7 @@ export class FileStore {
     renameSync(FILE + '.tmp', FILE);
     this.dirty = false;
   }
+  all() { return this.profiles.values(); }
   get count() { return this.profiles.size; }
 }
 

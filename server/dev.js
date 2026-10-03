@@ -74,7 +74,7 @@ export function command(world, p, c, msg) {
     }
     case 'drop': jobs.spawnDrop(world, Number(msg.n) === 4 ? 4 : 3); break;
     case 'heal': if (ped) { ped.hp = ped.maxHp; ped.bleeding = false; } break;
-    case 'tp': if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; } break;
+    case 'tp': if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; p.teleportAt = world.time; } break;
     default: world.notify(p, `[dev] unknown command ${c}. Try: ${DEV_COMMANDS.join(', ')}`, 'warn'); return;
   }
   world.loopTime %= DAY_LOOP_S;

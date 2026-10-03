@@ -65,7 +65,26 @@ export class HUD {
     if (me.fishing) { fb.classList.remove('hidden'); fb.classList.toggle('bite', me.fishing.bite); fb.textContent = me.fishing.bite ? 'BITE! PRESS E' : 'Waiting for a bite...'; } else fb.classList.add('hidden');
     // death
     const d = $('death');
-    if (me.dead) { d.classList.remove('hidden'); $('d-cause').textContent = me.deathCause || ''; $('d-timer').textContent = me.respawnIn > 0 ? `Respawning at St. Neon General in ${Math.ceil(me.respawnIn)}...` : ''; } else d.classList.add('hidden');
+    if (me.dead) {
+      d.classList.remove('hidden');
+      $('d-cause').textContent = me.deathCause || '';
+      const opts = me.spawnOpts || [];
+      const chosen = opts.find((o) => o.id === me.spawnChoice);
+      $('d-timer').textContent = me.respawnIn > 0 ? `Waking up${chosen ? ' at ' + chosen.label : ''} in ${Math.ceil(me.respawnIn)}...` : '';
+      const box = $('d-spawn');
+      const sig = opts.map((o) => o.id).join() + '|' + me.spawnChoice;
+      if (box.dataset.sig !== sig) {
+        box.dataset.sig = sig;
+        box.innerHTML = opts.length ? '<div class="d-lbl">Choose where to wake up:</div>' : '';
+        for (const o of opts) {
+          const b = document.createElement('button');
+          b.className = 'spawn-opt' + (o.id === me.spawnChoice ? ' on' : '');
+          b.textContent = (o.kind === 'home' ? '⌂ ' : '✚ ') + o.label;
+          b.onclick = () => this.onRespawn?.(o.id);
+          box.appendChild(b);
+        }
+      }
+    } else d.classList.add('hidden');
     void prev;
   }
 
@@ -147,6 +166,11 @@ export class HUD {
       g.fillStyle = icon[1]; g.fillText(icon[0], x, y + 1);
     }
     if (me) {
+      for (const h of me.homes || []) {
+        const [x, y] = toR(h.x, h.y);
+        g.fillStyle = '#000'; g.fillRect(x - (big ? 8 : 5), y - (big ? 8 : 5), big ? 16 : 10, big ? 16 : 10);
+        g.fillStyle = '#3ddc84'; g.fillText('⌂', x, y + 1);
+      }
       // rumor + radar pings
       if (me.rumor) { const [x, y] = toR(me.rumor.x, me.rumor.y); g.strokeStyle = me.rumor.t === 4 ? '#ffd36b' : '#c07aff'; g.lineWidth = 2; g.setLineDash([4, 3]); g.beginPath(); g.arc(x, y, me.rumor.r * scale, 0, 6.28); g.stroke(); g.setLineDash([]); }
       for (const r of me.radar || []) {
@@ -183,6 +207,15 @@ export class HUD {
   }
 
   setNet(text) { $('net').textContent = text; }
+
+  // GTA-style district title card when you cross into a new part of town
+  showDistrict(name) {
+    const el = $('district');
+    el.textContent = name;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+  }
 }
 
 const POI_ICON = {

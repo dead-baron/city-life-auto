@@ -62,7 +62,8 @@ export function tryAttack(world, ped, aim) {
 function melee(world, ped, w, aim) {
   const now = world.time;
   ped.nextAttack = now + w.cd;
-  ped.attackAnimUntil = now + 0.25;
+  ped.attackAnimUntil = now + 0.3;
+  ped.swingSide = (ped.swingSide || 0) ^ 1;
   let best = null, bestD = Infinity;
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
     if (o === ped || o.dead || o.vehId) continue;
@@ -71,13 +72,16 @@ function melee(world, ped, w, aim) {
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 4) continue;
     if (d < bestD) { bestD = d; best = o; }
   }
-  if (!best) { world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y }); return true; }
+  world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
+  if (!best) return true;
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
-  best.vx += Math.cos(dir) * 140; best.vy += Math.sin(dir) * 140;
+  best.vx += Math.cos(dir) * 170; best.vy += Math.sin(dir) * 170;
+  best.flinchUntil = now + 0.25;
   if (w.knock) best.downUntil = now + 1.3;
   if (w.stunChance && world.rand() < w.stunChance) best.stunUntil = now + 2;
   if (w.bleed && world.rand() < 0.6) best.bleeding = true;
-  world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 3 : 6 });
+  world.emit(best.x, best.y, { e: 'hit', x: best.x, y: best.y, a: dir, id: best.id, w: w.i });
+  if (w.id !== 'fists' || world.rand() < 0.35) world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 2 : 6 });
   damage(world, best, w.dmg * (0.85 + world.rand() * 0.3), ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
   return true;
 }

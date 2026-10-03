@@ -74,7 +74,7 @@ JSON text frames:
 | Topic | Decision |
 |---|---|
 | Disconnect | 30 s ghost body (GDD §9). Reconnecting inside the window resumes it; otherwise everything carried drops in a value-tiered bag. Bank money is always safe. |
-| Death | Respawn at St. Neon General after 5 s; badge and hunter license stripped; peak wanted memory reset. |
+| Death | Pick where to wake up on the WASTED screen: any of the 3 hospitals or an owned home (default: your home, else a hospital away from where you died). Badge and hunter license stripped; peak wanted memory reset. |
 | Self-defense | Whoever is struck first may retaliate for 60 s without a report. Attacking flagged outlaws/bounty targets and gang members in turf is immune. Turf attacks alert the gang. |
 | Heat | Stars at 10/30/60/100/160 heat. Out of sight 3 s → search circle grows; heat decays, faster after 20 s unseen. |
 | Peak wanted | Survives logout; cleared by death or arrest; decays one star per 10 min clean. |

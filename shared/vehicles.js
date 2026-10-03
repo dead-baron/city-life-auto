@@ -1,3 +1,5 @@
+import { VEHICLE_ART_SIZE } from './prefab-data.js';
+
 // Vehicle fleet registry. Sizes in world pixels (L = length along forward axis, W = width).
 // Speeds px/s (1 px ~ 4.5 cm). Cargo slots are local offsets [forward, right] in px.
 
@@ -20,7 +22,17 @@ export const VEHICLES = {
 };
 
 export const VEHICLE_BY_INDEX = [];
-for (const [id, v] of Object.entries(VEHICLES)) { v.id = id; VEHICLE_BY_INDEX[v.i] = v; }
+for (const [id, v] of Object.entries(VEHICLES)) {
+  v.id = id;
+  VEHICLE_BY_INDEX[v.i] = v;
+  // Models with concept art use the art's own proportions: the collision box IS the sprite.
+  const art = VEHICLE_ART_SIZE[id];
+  if (art) {
+    const k = art[0] / v.L;
+    v.L = art[0]; v.W = art[1];
+    v.slots = v.slots.map(([f, r]) => [Math.round(f * k), Math.round(r * (art[1] / (v.W || art[1])))]);
+  }
+}
 
 // Paint palette used for procedural placeholder sprites and NPC traffic variety.
 export const PAINTS = [

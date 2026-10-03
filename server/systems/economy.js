@@ -11,6 +11,7 @@ import { store } from '../store.js';
 import * as law from './law.js';
 import * as jobs from './jobs.js';
 import * as combat from './combat.js';
+import * as homes from './homes.js';
 
 const HOSPITAL_FEE = 150;
 const rng = mulberry32(77);
@@ -18,6 +19,13 @@ const rng = mulberry32(77);
 export function poiLabel(world, p, poi) {
   switch (poi.kind) {
     case 'delivery': case 'evidence': case 'reception': return null;
+    case 'home': {
+      const h = world.map.homes[poi.home];
+      const owner = world.homeOwner.get(h.id);
+      if (owner === p.pid) return `Your ${h.kind} (rest, garage, spawn)`;
+      if (owner) return null;
+      return `For sale: ${h.name} - $${h.price.toLocaleString()}`;
+    }
     case 'atm': return 'Use ATM';
     case 'vending': return 'Buy an Energy Drink';
     case 'police': return p.badge ? 'Police HQ (duty desk)' : 'Police HQ (apply / badge)';
@@ -121,6 +129,22 @@ export function buildMenu(world, p, poi) {
         opts.push({ id: `vb:${o.id}`, label: `${d.name}${d.slots.length ? ` (${d.slots.length} cargo slot${d.slots.length > 1 ? 's' : ''})` : ''}`, price: d.price });
       }
       ownedVehicleOpts(prof, opts, kind === 'marina');
+      break;
+    }
+    case 'home': {
+      const h = world.map.homes[poi.home];
+      const mine = world.homeOwner.get(h.id) === p.pid;
+      title = h.name;
+      if (!mine) {
+        sub = `A ${h.kind} with a ${h.slots}-car garage. Owning it makes it a respawn point (no more waking up at the hospital) and stores vehicles you park out front.`;
+        opts.push({ id: 'hbuy', label: `Buy this ${h.kind}`, price: h.price });
+      } else {
+        sub = `Garage: ${prof.vehicles.length}/${homes.garageCap(world, prof)} vehicles. Drive any car up to the driveway and press E to park it here.`;
+        opts.push({ id: 'hrest', label: 'Rest (full health, stop bleeding)' });
+        opts.push({ id: 'hspawn', label: prof.spawnHome === h.id ? 'Respawn point: HERE' : 'Make this my respawn point', dis: prof.spawnHome === h.id });
+        prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: `Take out ${d.name}`, note: 'garage' }); });
+        opts.push({ id: 'hsell', label: `Sell (+$${Math.round(h.price * 0.6).toLocaleString()} to bank)` });
+      }
       break;
     }
     case 'warehouse':
@@ -328,7 +352,7 @@ function execute(world, p, poi, opt) {
     case 'vb': {
       const d = VEHICLES[parts[1]];
       if (!d || !d.price) return 'Not for sale.';
-      if (prof.vehicles.length >= 6) return 'Garage full (6 vehicles max).';
+      if (prof.vehicles.length >= homes.garageCap(world, prof)) return `Garage full (${prof.vehicles.length}/${homes.garageCap(world, prof)}). Buy a home for more garage space.`;
       if (!pay(p, d.price)) return 'Not enough money (cash + bank).';
       prof.vehicles.push({ model: parts[1], paint: Math.floor(rng() * PAINTS.length) });
       store.touch();
@@ -337,6 +361,16 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'vg': return spawnOwned(world, p, poi, Number(parts[1]));
+    case 'hbuy': return homes.buy(world, p, world.map.homes[poi.home], pay);
+    case 'hsell': return homes.sell(world, p, world.map.homes[poi.home]);
+    case 'hspawn': { prof.spawnHome = poi.home; store.touch(); world.notify(p, 'You will wake up here after you die.', 'good'); return null; }
+    case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = 100; world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
+    case 'hcar': {
+      const h = world.map.homes[poi.home];
+      const e = homes.spawnOwnedAt(world, p, Number(parts[1]), h.garage);
+      if (!e) world.notify(p, 'Your ride is in the driveway.', 'good');
+      return e;
+    }
     case 'job': {
       if (parts[1] === 'quit') { jobs.failJob(world, p, 'Job abandoned.'); return null; }
       if (p.job) return 'Finish your current job first.';
@@ -349,27 +383,13 @@ function execute(world, p, poi, opt) {
 function spawnOwned(world, p, poi, idx) {
   const ov = p.profile.vehicles[idx];
   if (!ov) return 'No such vehicle.';
-  const d = VEHICLES[ov.model];
-  const old = world.get(p.activeVehicle);
-  if (old && !old.wreckAt) {
-    if (old.seats.some((s) => s && s !== p.ped.id)) return 'Your other vehicle is occupied.';
-    for (const cid of old.cargo) if (cid) { const c = world.get(cid); if (c) { c.state = 'ground'; c.parent = 0; } }
-    world.remove(old);
-  }
   let spot;
-  if (d.kind === 'boat') {
+  if (VEHICLES[ov.model].kind === 'boat') {
     let best = null, bd = Infinity;
     for (const m of world.map.marina) { const dd = Math.hypot(m.x - poi.x, m.y - poi.y); if (dd < bd) { bd = dd; best = m; } }
     spot = best;
-    for (const e of world.query(spot.x, spot.y, 60, K.VEH)) world.remove(e);
-  } else {
-    spot = poi.spawnLot || { x: poi.x, y: poi.y + 90, a: -Math.PI / 2 };
-    for (const e of world.query(spot.x, spot.y, 70, K.VEH)) if (!e.seats.some((s) => s)) world.remove(e);
-  }
-  const v = world.spawnVehicle(ov.model, spot.x, spot.y, spot.a ?? 0, { paint: ov.paint, owner: p.pid, ownerName: p.name, npcOwned: false });
-  v.despawnable = false;
-  p.activeVehicle = v.id;
-  return null;
+  } else spot = poi.spawnLot || { x: poi.x, y: poi.y + 90, a: -Math.PI / 2 };
+  return homes.spawnOwnedAt(world, p, idx, spot);
 }
 
 function disguiseBlocked(world, p) {

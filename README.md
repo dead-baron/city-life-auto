@@ -54,7 +54,7 @@ client/               browser client: input, prediction, renderer, HUD, audio
 shared/               code used by BOTH server and client (map generator, physics, protocol, items)
 server/               authoritative Node.js server: world tick, systems/, WebSocket, auth, saving
 assets/               sprite atlas cut from the concept art + logo
-tools/                bots.js load tester, concept-art sprite extractor
+tools/                bots.js load tester, build_art.py (builds every asset from the concept sheets)
 test/                 node:test suites
 deploy/               systemd unit, Caddyfile, Oracle setup script
 docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY

@@ -19,7 +19,11 @@ test('city generation is deterministic and spawns are walkable', () => {
   const a = generateCity(1337), b = generateCity(1337);
   assert.deepEqual(Buffer.from(a.tiles), Buffer.from(b.tiles));
   assert.equal(a.pois.length, b.pois.length);
+  assert.equal(JSON.stringify(a.props), JSON.stringify(b.props), 'props identical on server and client');
+  assert.equal(JSON.stringify(a.prefabs), JSON.stringify(b.prefabs));
   for (const s of Object.values(a.spawns)) assert.equal(PED_BLOCK[a.tileAtPx(s.x, s.y)], 0);
+  assert.ok(a.hospitals.length >= 3, 'several hospitals to respawn at');
+  assert.ok(a.homes.length >= 20, 'buyable homes');
   for (const kind of ['hospital', 'police', 'bank', 'gunshop', 'pawn', 'fence', 'garage', 'clothing', 'dealer', 'warehouse', 'farm', 'grocery', 'fishmarket', 'marina', 'courthouse'])
     assert.ok(a.pois.some((p) => p.kind === kind), `missing POI ${kind}`);
 });
@@ -155,9 +159,9 @@ test('open cargo: carry slows by 40%, crates load into visible vehicle slots and
 test('rain: asphalt braking distance roughly doubles', () => {
   const m = generateCity(1337);
   const def = VEHICLES.sedan;
-  const n = m.nodes.find((q) => q.i === 1 && q.j === 1);
+  const ave = m.roads.find((r) => r.axis === 'h' && r.y === 108); // Bridge Ave, 6 tiles wide
   const brake = (rain) => {
-    const s = newVehState(n.x + 300, n.y + 32, 0);
+    const s = newVehState(20 * 32, (ave.y + 4.5) * 32, 0);
     s.vx = 400;
     let d = 0;
     for (let i = 0; i < 400 && Math.hypot(s.vx, s.vy) > 5; i++) { const x0 = s.x; vehStep(s, { throttle: -1, steer: 0, hb: false }, 0.05, m, def, { rain }); d += s.x - x0; }
@@ -268,4 +272,48 @@ test('world tick stays fast with NPC population around players', () => {
   let npcs = 0; for (const e of w.entities.values()) if (e.npc) npcs++;
   assert.ok(npcs > 10, 'city is populated');
   void T;
+});
+
+test('homes: buy a house, respawn there, park a car in its garage and take it back out', async () => {
+  const homes = await import('../server/systems/homes.js');
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w, { cash: 0, bank: 40000 });
+  const home = w.map.homes.find((h) => h.kind === 'house');
+  const poi = w.map.pois.find((q) => q.kind === 'home' && q.home === home.id);
+  teleport(w, p.ped, poi.x, poi.y);
+  economy.handleMenu(w, p, poi.id, 'hbuy');
+  assert.equal(w.homeOwner.get(home.id), prof.pid);
+  assert.equal(prof.spawnHome, home.id);
+  assert.equal(prof.bank, 40000 - home.price);
+  // a second player can't buy it
+  const other = joinPlayer(w, { bank: 90000 });
+  teleport(w, other.p.ped, poi.x, poi.y);
+  economy.handleMenu(w, other.p, poi.id, 'hbuy');
+  assert.equal(w.homeOwner.get(home.id), prof.pid);
+  // die -> wake up at home
+  combat.kill(w, p.ped, null, 'melee', 0);
+  run(w, 8);
+  assert.ok(Math.hypot(p.ped.x - home.x, p.ped.y - home.y) < 60, 'respawned at home');
+  // drive a stolen car up to the garage and park it
+  const v = w.spawnVehicle('sedan', home.garage.x, home.garage.y, 0, { npcOwned: false });
+  assert.ok(vehicles.tryEnter(w, p.ped));
+  const act = homes.vehicleInteraction(w, p);
+  assert.ok(act && /garage/.test(act.label));
+  act.run();
+  assert.equal(prof.vehicles.length, 1);
+  assert.ok(!w.entities.has(v.id));
+  teleport(w, p.ped, poi.x, poi.y);
+  economy.handleMenu(w, p, poi.id, 'hcar:0');
+  const out = [...w.entities.values()].find((e) => e.def && e.owner === prof.pid);
+  assert.ok(out && out.model === 'sedan', 'car comes back out of the garage');
+});
+
+test('respawn picker: players can choose any hospital', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  combat.kill(w, p.ped, null, 'melee', 0);
+  const target = w.map.hospitals[2];
+  p.respawnChoice = 'h:2';
+  run(w, 8);
+  assert.ok(Math.hypot(p.ped.x - target.x, p.ped.y - target.y) < 60);
 });

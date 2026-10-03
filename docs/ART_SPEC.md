@@ -1,6 +1,16 @@
 # Art spec: what final sprites must look like to drop straight in
 
-The current build uses **sprites cut from your concept sheets** (`tools/extract_concept_art.py`) plus **procedural placeholders** (characters, tiles, buildings, flatbed, bus, armored van). Replace any of them by delivering art to this spec.
+The current build is assembled from your concept sheets by `tools/build_art.py`:
+
+| Asset | Source sheet | Output |
+|---|---|---|
+| 27 building lots (houses, apartments, towers, hotel, hospital, police, fire, gas, shops, strip mall, supermarket, restaurants, club, bank, dealership, auto repair, warehouse, industrial, construction, church, school, park) | building sheet | `assets/prefabs.png` + generated `shared/prefab-data.js` (footprints, doors) |
+| asphalt, worn asphalt, concrete sidewalk, red brick, slate plaza, water, deep water | style-guide tile sheets, waterfront sheet | `assets/ground.png` (seamless 128 px) |
+| ~70 street props (trees, palms, benches, hydrants, dumpsters, planters, fountain, umbrellas, vending, pallets...) | street props sheet | `assets/atlas0.png` |
+| 14 vehicle models (drawn at the art's own proportions; the collision box is the sprite) | vehicle sheets | `assets/atlas0.png` |
+
+Still procedural (code-drawn) for now: characters, grass/sand/dirt/fields, lamps, flatbed truck. Re-run after adding or changing sheets:
+`python3 tools/build_art.py <folder with the concept PNGs>`. Replace any of them by delivering art to this spec.
 
 ## Camera and scale
 
@@ -47,5 +57,6 @@ The current build uses **sprites cut from your concept sheets** (`tools/extract_
 
 ## Map
 
-- Buildings are drawn as flat rooftops sized in whole tiles (shop 7×6, business 8×6–12×9, tower ~16×11), with the door on the south face. Rooftop AC units, signage and helipads are welcome.
+- Buildings are whole lots drawn at 2 world px per sheet px (e.g. a 120x230 px house lot = 7x14 tiles), entrance at the bottom; the generator rotates back-row lots 180°. New lots: add the crop box, footprint fractions and door positions to `PREFABS` in `tools/build_art.py`.
+- (older guidance) Buildings are drawn as flat rooftops sized in whole tiles (shop 7×6, business 8×6–12×9, tower ~16×11), with the door on the south face. Rooftop AC units, signage and helipads are welcome.
 - Ground tiles 32×32, seamless: asphalt (clean + worn), sidewalk with curb edges, brick plaza, parking lot, grass, sand, dock planks, dirt, field rows, water (3 animation frames), deep water, shoreline transitions.

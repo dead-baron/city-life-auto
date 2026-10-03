@@ -8,12 +8,14 @@
 import { mkdirSync, appendFileSync } from 'node:fs';
 import { encodeInput, decodeSnapshot, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis } from '../shared/input.js';
+import { generateCity } from '../shared/map.js';
 
 const COUNT = Number(process.argv.slice(2).filter((a) => !a.startsWith('--'))[0] || 20);
 const SECONDS = Number(process.argv.slice(2).filter((a) => !a.startsWith('--'))[1] || 60);
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const SPREAD = process.argv.includes('--spread');
 const URL_WS = args[2] || 'ws://localhost:8080/ws';
+const NODES = SPREAD ? generateCity(Number(process.env.CLA_SEED || 1337)).nodes.filter((n) => !n.island) : [];
 const HTTP = URL_WS.replace(/^ws/, 'http').replace(/\/ws$/, '');
 
 mkdirSync('logs', { recursive: true });
@@ -34,10 +36,9 @@ function startBot(i) {
       if (m.t === 'welcome') {
         totals.welcomed++;
         if (SPREAD) {
-          // ROAD_X / ROAD_Y grid from shared/map.js: random intersection, offset onto the sidewalk
-          const rx = [4, 28, 52, 76, 100, 124, 148, 172], ry = [4, 28, 52, 76, 100, 124, 148, 172, 196];
-          const x = (rx[Math.floor(Math.random() * rx.length)] + 5) * 32, y = (ry[Math.floor(Math.random() * ry.length)] + 5) * 32;
-          ws.send(JSON.stringify({ t: 'dev', c: 'tp', x, y }));
+          // dev servers only: teleport to a random intersection corner (on the sidewalk)
+          const n = NODES[Math.floor(Math.random() * NODES.length)];
+          ws.send(JSON.stringify({ t: 'dev', c: 'tp', x: n.x + n.half + 40, y: n.y + n.half + 40 }));
         }
         timer = setInterval(tick, 50);
       }

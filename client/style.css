@@ -132,3 +132,16 @@ body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 #title { justify-content: safe center; }
 @media (max-height: 500px) { #logo { width: min(260px, 40vh * 1.3); } #t-help { display: none; } #title { gap: 8px; } }
 .touch #dev { top: 70px; right: 150px; max-height: 62vh; overflow-y: auto; width: 170px; z-index: 12; }
+
+/* ---- respawn picker + district title ---- */
+#death { pointer-events: auto; }
+#d-spawn { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 620px; margin: 0 auto; }
+#d-spawn .d-lbl { width: 100%; font-size: 14px; color: #fff; text-shadow: 2px 2px 0 #000; }
+.spawn-opt { font: inherit; font-size: 14px; font-weight: bold; color: #fff; background: rgba(12,14,24,.85); border: 2px solid #fff4; padding: 8px 14px; cursor: pointer; }
+.spawn-opt:hover { border-color: var(--accent); }
+.spawn-opt.on { background: var(--accent); border-color: #fff; }
+#district { position: absolute; left: 50%; top: 26%; transform: translateX(-50%); font-size: 42px; font-weight: bold; letter-spacing: 3px; color: #ffd36b;
+  text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 0 0 18px rgba(255,62,138,.7); pointer-events: none; opacity: 0; white-space: nowrap; z-index: 6; }
+#district.show { animation: district 3.2s ease-out; }
+@keyframes district { 0% { opacity: 0; transform: translateX(-50%) scale(1.4); } 12% { opacity: 1; transform: translateX(-50%) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
+@media (max-height: 500px) { #district { font-size: 26px; top: 20%; } }

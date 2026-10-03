@@ -1,4 +1,4 @@
-"""Shared sprite segmentation helpers for tools/extract_concept_art.py."""
+"""Shared sprite segmentation helpers for tools/build_art.py."""
 import numpy as np
 from PIL import Image
 from scipy import ndimage

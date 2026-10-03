@@ -5,13 +5,14 @@ import { VEHICLE_BY_INDEX, PAINTS } from '../../shared/vehicles.js';
 import { shade } from './tiles.js';
 
 const SKINS = ['#f1c9a5', '#e0ac7e', '#c68953', '#a86b3c', '#7d4a26', '#4f2f1a'];
-export const atlas = { ready: false, imgs: [], frames: {}, variants: {}, scale: 2 };
+export const atlas = { ready: false, imgs: [], frames: {}, variants: {}, scale: 2, ground: null, prefabs: null };
 
 export async function loadAtlas(base = 'assets/') {
   try {
     const meta = await (await fetch(base + 'sprites.json')).json();
     atlas.frames = meta.frames; atlas.variants = meta.variants; atlas.scale = meta.scale;
-    atlas.imgs = await Promise.all(meta.atlases.map((f) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = base + f; })));
+    const load = (f) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = base + f; });
+    [atlas.imgs, atlas.ground, atlas.prefabs] = await Promise.all([Promise.all(meta.atlases.map(load)), load('ground.png'), load('prefabs.png')]);
     atlas.ready = true;
   } catch (e) { console.warn('atlas unavailable, using procedural sprites', e); }
 }
@@ -77,6 +78,28 @@ function procVehicle(def, paint) {
   return cv;
 }
 
+// Soft drop shadow in the exact silhouette of the vehicle art (no rectangles).
+const shadowCache = new Map();
+export function drawVehicleShadow(g, desc, def) {
+  const n = atlas.variants[def.id] || 0;
+  const name = n ? `veh_${def.id}_${(desc.vr || 0) % n}` : null;
+  const fr = name ? frame(name) : null;
+  const L = def.L, W = def.W;
+  if (!fr) { g.fillStyle = 'rgba(0,0,0,.3)'; rr(g, -L / 2 + 3, -W / 2 + 3, L, W, 8); g.fill(); return; }
+  let sc = shadowCache.get(name);
+  if (!sc) {
+    sc = document.createElement('canvas');
+    sc.width = fr.w; sc.height = fr.h;
+    const sg = sc.getContext('2d');
+    sg.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, 0, 0, fr.w, fr.h);
+    sg.globalCompositeOperation = 'source-in';
+    sg.fillStyle = 'rgba(0,0,0,0.38)';
+    sg.fillRect(0, 0, fr.w, fr.h);
+    shadowCache.set(name, sc);
+  }
+  g.drawImage(sc, -L / 2 + 4, -W / 2 + 5, L, W);
+}
+
 // ---------------------------------------------------------------------------
 // Crates & bags
 const CRATE_COL = [null, ['#9a6a3a', '#5a3a1a'], ['#4a6a3a', '#2a3a1e'], ['#6a6e76', '#3a3d44'], ['#1e1e24', '#e8b923']];
@@ -120,13 +143,37 @@ export function pedSprite(app, pose, frameN, weapon) {
   cv.width = cv.height = PSIZE * PS;
   const g = cv.getContext('2d');
   g.scale(PS, PS);
-  g.translate(PSIZE / 2, PSIZE / 2);
-  drawPedFigure(g, app || {}, pose, frameN, weapon);
-  if (pedCache.size > 900) pedCache.delete(pedCache.keys().next().value);
+  // draw the figure, then add a 1px dark outline behind it (concept-art style)
+  const tmp = scratchCanvas();
+  const tg = tmp.getContext('2d');
+  tg.setTransform(1, 0, 0, 1, 0, 0);
+  tg.clearRect(0, 0, tmp.width, tmp.height);
+  tg.scale(PS, PS);
+  tg.translate(PSIZE / 2, PSIZE / 2);
+  drawPedFigure(tg, app || {}, pose, frameN, weapon);
+  const sil = scratchCanvas(1);
+  const sg = sil.getContext('2d');
+  sg.setTransform(1, 0, 0, 1, 0, 0);
+  sg.clearRect(0, 0, sil.width, sil.height);
+  sg.globalCompositeOperation = 'source-over';
+  sg.drawImage(tmp, 0, 0);
+  sg.globalCompositeOperation = 'source-in';
+  sg.fillStyle = 'rgba(16,12,20,.9)';
+  sg.fillRect(0, 0, sil.width, sil.height);
+  sg.globalCompositeOperation = 'source-over';
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.drawImage(sil, ox * PS, oy * PS);
+  g.drawImage(tmp, 0, 0);
+  if (pedCache.size > 1400) pedCache.delete(pedCache.keys().next().value);
   pedCache.set(key, cv);
   return cv;
 }
 export const PED_BOX = PSIZE;
+const scratch = [];
+function scratchCanvas(i = 0) {
+  if (!scratch[i]) { scratch[i] = document.createElement('canvas'); scratch[i].width = scratch[i].height = PSIZE * PS; }
+  return scratch[i];
+}
 
 function appKey(a) { return a ? `${a.s}${a.h}${a.hc}${a.t}${a.tc}${a.tc2}${a.l}${a.sh}${a.ht}${a.htc}${a.b}${a.bandana ? 1 : 0}` : 'x'; }
 
@@ -192,6 +239,24 @@ function drawPedFigure(g, a, pose, fr, weapon) {
       g.fillStyle = a.t === 0 || a.t === 5 ? skin : top;
       g.fillRect(0, -3, 12, 4); g.fillRect(0, 0, 12, 4);
     }
+  } else if (pose === 'punch') {
+    // 4-frame jab: wind-up, extend, full extension (impact), recoil; fr bit 2 = which arm
+    const side = fr >> 2, f = fr & 3;
+    const ext = [2, 12, 18, 9][f];
+    const py = side ? 7 : -9, gy = side ? -9 : 7;
+    g.fillRect(-1, py - 2, 7 + ext, 5);                          // punching arm
+    g.fillRect(-1, gy - 2, 7, 5);                                 // guard arm
+    g.fillStyle = skin;
+    g.beginPath(); g.arc(7 + ext, py + 0.5, f === 2 ? 3.6 : 3, 0, 6.28); g.fill();   // fist
+    g.beginPath(); g.arc(7, gy + 0.5, 2.6, 0, 6.28); g.fill();
+    g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 1;
+    g.beginPath(); g.arc(7 + ext, py + 0.5, f === 2 ? 3.6 : 3, 0, 6.28); g.stroke();
+  } else if (pose === 'swing') {
+    // both hands on the weapon at the pivot; weapon drawn rotated below
+    const f = fr & 3, ang = [-1.5, -0.6, 0.45, 1.25][f] * ((fr >> 2) ? -1 : 1);
+    const hx = 6 + Math.cos(ang) * 6, hy = Math.sin(ang) * 6;
+    g.fillRect(-1, -9, 8, 4); g.fillRect(-1, 5, 8, 4);
+    g.fillStyle = skin; g.beginPath(); g.arc(hx + 2, hy, 3, 0, 6.28); g.fill();
   } else {
     g.fillRect(-2 + armSwing, -13, 8, 4); g.fillRect(-2 - armSwing, 9, 8, 4);
     g.fillStyle = skin; g.beginPath(); g.arc(6 + armSwing, -11, 2.4, 0, 6.28); g.arc(6 - armSwing, 11, 2.4, 0, 6.28); g.fill();
@@ -231,7 +296,14 @@ function drawPedFigure(g, a, pose, fr, weapon) {
     else if (ht === 4) { g.beginPath(); g.arc(0, 0, 6.6, 0, 6.28); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; for (let k = -4; k <= 4; k += 2) g.fillRect(-6, k, 12, 1); }
     else if (ht === 5) { g.beginPath(); g.arc(0.5, 0, 7.4, 0, 6.28); g.fill(); g.fillStyle = '#4a6a8a'; g.fillRect(4, -4, 3, 8); }
   }
-  if (pose === 'carry') return;
+  if (pose === 'carry' || pose === 'punch') return;
+  if (pose === 'swing') {
+    const f = fr & 3, ang = [-1.5, -0.6, 0.45, 1.25][f] * ((fr >> 2) ? -1 : 1);
+    const wd2 = WEAPON_DRAW[weapon];
+    if (wd2) { g.save(); g.translate(6, 0); g.rotate(ang); g.translate(-6, -6); wd2(g); g.restore(); }
+    if (f === 2) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2; g.beginPath(); g.arc(6, 0, 20, ang - 1.1 * ((fr >> 2) ? -1 : 1), ang, !!(fr >> 2)); g.stroke(); }
+    return;
+  }
   const wd = WEAPON_DRAW[weapon];
   if (wd && (pose === 'aim' || pose === 'attack' || weapon <= 6 || pose === 'fish')) {
     g.save(); if (pose !== 'aim' && pose !== 'attack' && pose !== 'fish') g.translate(-2, 6); wd(g); g.restore();

@@ -14,9 +14,10 @@ import * as cargo from './cargo.js';
 import * as law from './law.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
+import * as homes from './homes.js';
 
 export const GHOST_SECONDS = 30;
-export const RESPAWN_SECONDS = 5;
+export const RESPAWN_SECONDS = 7;
 
 export function join(world, conn, profile) {
   let p = world.players.get(profile.pid);
@@ -54,9 +55,15 @@ function validSpawn(world, pos) {
   return !PED_BLOCK[t] && pos.x > 0 && pos.y > 0 && pos.x < world.map.w * TILE && pos.y < world.map.h * TILE;
 }
 
-export function spawnPlayerPed(world, p, useSaved) {
+export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
   const prof = p.profile;
-  const pos = useSaved && validSpawn(world, prof.pos) ? prof.pos : world.map.spawns.hospital;
+  let pos;
+  if (useSaved && validSpawn(world, prof.pos)) pos = prof.pos;
+  else {
+    pos = homes.resolveSpawn(world, p, p.respawnChoice, deathPos);
+    p.lastSpawnName = pos.name;
+    p.respawnChoice = null;
+  }
   const ped = world.spawnPed(pos.x + (world.rand() - 0.5) * 30, pos.y + (world.rand() - 0.5) * 20, {
     hp: 100, app: { ...prof.outfit }, archetype: 'player', name: p.name,
   });
@@ -108,7 +115,13 @@ function finalizeLogout(world, p, dropLoot) {
 export function queueInput(p, inp) {
   if (inp.seq <= p.ack) return;
   p.inputQ.push(inp);
-  if (p.inputQ.length > 8) p.inputQ.splice(0, p.inputQ.length - 8);
+  if (p.inputQ.length > 8) {
+    // never lose a one-shot press (punch, interact, enter car) when trimming a backed-up queue
+    const dropped = p.inputQ.splice(0, p.inputQ.length - 8);
+    let bits = 0;
+    for (const d of dropped) bits |= d.bits;
+    p.inputQ[0] = { ...p.inputQ[0], bits: p.inputQ[0].bits | bits };
+  }
 }
 
 export function pedMods(world, ped) {
@@ -165,6 +178,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       if (w && (w.type === 'gun')) combat.tryAttack(world, ped, inp.aim);
     }
     if (pressed & IN.VEHICLE) vehicles.exitVehicle(world, ped);
+    if (pressed & IN.ACTION) { const act = homes.vehicleInteraction(world, p); if (act) act.run(); }
     return;
   }
 
@@ -187,7 +201,8 @@ function applyInput(world, p, ped, inp, pressed, dt) {
 // Context-sensitive interaction (GDD §13: E key manages context interactions)
 export function findInteraction(world, p) {
   const ped = p.ped;
-  if (!ped || ped.dead || ped.vehId) return null;
+  if (!ped || ped.dead) return null;
+  if (ped.vehId) return homes.vehicleInteraction(world, p);
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
 
@@ -273,8 +288,8 @@ export function update(world, dt) {
       body.dead = true; body.deadAt = now; body.a = ped.a; body.corpseOf = p.pid;
       world.bodies.add(body);
       world.remove(ped);
-      spawnPlayerPed(world, p, false);
-      world.notify(p, 'You woke up at St. Neon General. Everything you carried was left behind.', 'bad');
+      spawnPlayerPed(world, p, false, { x: ped.x, y: ped.y });
+      world.notify(p, `You woke up at ${p.lastSpawnName || 'the hospital'}. Everything you carried was left behind.`, 'bad');
       continue;
     }
     if (!ped || ped.dead) continue;
@@ -338,6 +353,9 @@ export function buildMe(world, p) {
     reloading: ped ? world.time < ped.reloadUntil : false,
     buffs: ped ? { coffee: Math.max(0, (ped.buffs.coffee || 0) - world.time), energy: Math.max(0, (ped.buffs.energy || 0) - world.time) } : {},
     vehicles: prof.vehicles.map((v) => v.model),
+    garageCap: homes.garageCap(world, prof),
+    homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
+    spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, spawnChoice: p.respawnChoice || null,
     dev: p.dev,
   };
 }

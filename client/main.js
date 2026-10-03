@@ -12,7 +12,7 @@ import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { initInput, sample, input, takeNumberPick } from './input.js';
 import { GroundCache, drawOverheadProp } from './render/tiles.js';
-import { loadAtlas, drawVehicle, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
+import { loadAtlas, drawVehicle, drawVehicleShadow, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { initAudio, sfx } from './audio.js';
@@ -208,6 +208,16 @@ function fixedStep() {
   S.pending.push(dq);
   if (S.pending.length > 60) S.pending.shift();
   if (S.pred) { S.pred.prev = { ...S.pred.s }; stepPred(dq); }
+  // predict our own melee swing so punches animate the instant you click
+  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead) {
+    const w = WEAPONS[S.me.weapon];
+    if (w && w.type === 'melee' && S.loopClock >= (S.localSwingReady || 0)) {
+      const e = S.ents.get(S.ctrlId);
+      if (e) { e.swingAt = S.loopClock; e.swingSide = (e.swingSide || 0) ^ 1; e.localSwing = S.loopClock; }
+      S.localSwingReady = S.loopClock + w.cd;
+      sfx('swing', 1);
+    }
+  }
   // menu navigation by gamepad / number keys
   if (S.hud.menuOpen) {
     if (input.menuNav) S.hud.navMenu(input.menuNav);
@@ -244,7 +254,21 @@ function onEvent(ev) {
     case 'explode': fx.explosion(ev.x, ev.y, ev.r, now); sfx('explode', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 14 * distVol(ev.x, ev.y)); S.flashes.push({ x: ev.x, y: ev.y, t: 0.5, r: ev.r * 3 }); break;
     case 'spark': fx.sparks(ev.x, ev.y, 3); break;
     case 'taser': fx.tracer(ev.x1, ev.y1, ev.x2, ev.y2, 'rgba(120,200,255,'); fx.sparks(ev.x2, ev.y2, 4); sfx('taser', distVol(ev.x1, ev.y1)); break;
-    case 'swing': sfx('swing', distVol(ev.x, ev.y)); break;
+    case 'swing': {
+      if (ev.id !== S.myPedId) sfx('swing', distVol(ev.x, ev.y));
+      const a = S.ents.get(ev.id);
+      if (a && !(a.localSwing && S.loopClock - a.localSwing < 0.6)) { a.swingAt = S.loopClock; a.swingSide = ev.side || 0; }
+      break;
+    }
+    case 'hit': {
+      const v = S.ents.get(ev.id);
+      if (v) { v.hitAt = S.loopClock; v.hitA = ev.a; }
+      fx.impact(ev.x, ev.y, ev.a);
+      sfx('hit', distVol(ev.x, ev.y) * 1.2);
+      if (ev.id === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 5);
+      else if (distVol(ev.x, ev.y) > 0.9) S.cam.shake = Math.max(S.cam.shake, 2);
+      break;
+    }
     case 'foot': fx.decal(2, ev.x, ev.y, ev.a, 1, '#7a0d12', now, 0.8); break;
     case 'geyser': S.geysers.push({ x: ev.x, y: ev.y, until: performance.now() + ev.d * 1000 }); fx.splash(ev.x, ev.y, 14); break;
     case 'splash': fx.splash(ev.x, ev.y); sfx('splash', distVol(ev.x, ev.y)); break;
@@ -271,6 +295,7 @@ function setupWorld(seed) {
   S.map = generateCity(seed);
   S.ground = new GroundCache(S.map);
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
+  S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
 }
 
 function startPlaying() {
@@ -370,6 +395,7 @@ function interp(e, rt) {
   e.rx = x; e.ry = y; e.ra = a;
 }
 
+const SWING_TIME = 0.3;
 function pedPose(e) {
   const f = e.flags;
   if (f & PF.DEAD) return 'dead';
@@ -377,7 +403,12 @@ function pedPose(e) {
   if (f & PF.ROLL) return 'roll';
   if (f & PF.FISHING) return 'fish';
   if (f & PF.CARRY) return 'carry';
-  if (f & PF.ATTACK) { const w = WEAPON_BY_INDEX[e.extra]; return w && w.type === 'melee' ? 'attack' : 'aim'; }
+  const w = WEAPON_BY_INDEX[e.extra];
+  const meleeW = w && w.type === 'melee';
+  if (meleeW && e.swingAt !== undefined && S.loopClock - e.swingAt < SWING_TIME) return e.extra === 0 ? 'punch' : 'swing';
+  if (f & PF.ATTACK) {
+    if (!meleeW) return 'aim';
+  }
   if (f & PF.AIM) return 'aim';
   if (f & PF.MOVING) return f & PF.SPRINT ? 'run' : 'walk';
   return 'idle';
@@ -437,6 +468,12 @@ function render(dt) {
   if (Math.hypot(tx - S.cam.x, ty - S.cam.y) > 1500) { S.cam.x = tx; S.cam.y = ty; }
   S.cam.x += (tx - S.cam.x) * Math.min(1, dt * 8);
   S.cam.y += (ty - S.cam.y) * Math.min(1, dt * 8);
+  {
+    // keep the camera inside the world (no black void past the map edge)
+    const hw = W / 2 / S.cam.zoom, hh = H / 2 / S.cam.zoom, WW = MAP_W * TILE, WH = MAP_H * TILE;
+    S.cam.x = hw * 2 >= WW ? WW / 2 : Math.max(hw, Math.min(WW - hw, S.cam.x));
+    S.cam.y = hh * 2 >= WH ? WH / 2 : Math.max(hh, Math.min(WH - hh, S.cam.y));
+  }
   S.cam.shake *= Math.exp(-6 * dt);
   const shx = (Math.random() - 0.5) * S.cam.shake, shy = (Math.random() - 0.5) * S.cam.shake;
 
@@ -506,6 +543,11 @@ function render(dt) {
   if (rain) drawRain(dt);
 
   // HUD bits
+  const dist = S.map.districtAt(sp.x, sp.y);
+  if (dist.name !== S.district) {
+    if (S.distCand === dist.name) { if (performance.now() - S.distCandAt > 600) { S.district = dist.name; S.hud.showDistrict(dist.name); } }
+    else { S.distCand = dist.name; S.distCandAt = performance.now(); }
+  }
   S.hud.setClock(S.loopTime, S.weather);
   S.hud.drawRadar(sp.x, sp.y, sp.a);
   if (S.bigmap) S.hud.drawBigMap(sp.x, sp.y, sp.a);
@@ -580,7 +622,7 @@ function drawVehicleEnt(v, now, dt) {
   g.save();
   g.translate(v.rx, v.ry);
   g.rotate(v.ra);
-  if (def.kind !== 'boat') { g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(-def.L / 2 + 4, -def.W / 2 + 4, def.L, def.W); }
+  if (def.kind !== 'boat') drawVehicleShadow(g, v.d, def);
   drawVehicle(g, v.d, def, f);
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }
@@ -628,14 +670,18 @@ function drawPed(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
   const pose = pedPose(p);
-  const fr = pose === 'walk' || pose === 'run' || pose === 'carry' ? Math.floor(p.walk / (pose === 'run' ? 14 : 10)) % 4 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
+  let fr = pose === 'walk' || pose === 'run' || pose === 'carry' ? Math.floor(p.walk / (pose === 'run' ? 14 : 10)) % 4 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
+  if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   const spr = pedSprite(p.d.app, pose === 'run' ? 'run' : pose, fr, p.extra);
+  const hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
   g.save();
-  g.translate(p.rx, p.ry);
-  g.rotate(p.ra);
+  g.translate(p.rx + (hitK ? Math.cos(p.hitA) * 5 * hitK : 0), p.ry + (hitK ? Math.sin(p.hitA) * 5 * hitK : 0));
+  g.rotate(p.ra + (hitK ? 0.25 * hitK : 0));
+  if (pose === 'punch' && (fr & 3) === 2) { g.translate(3, 0); }
   if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);
   g.scale(PED_SCALE, PED_SCALE);
   g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX);
+  if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = (hitK - 0.4); g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
   if (pose === 'fish') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(24, -6); g.lineTo(44, 0); g.stroke(); }
   g.restore();
   if (f & PF.UMBRELLA) { g.fillStyle = ['#c8262b', '#2350c8', '#f2c21b', '#2f9a3a'][p.id % 4]; g.globalAlpha = 0.9; g.beginPath(); g.arc(p.rx, p.ry, 17, 0, 6.28); g.fill(); g.strokeStyle = 'rgba(255,255,255,.5)'; g.beginPath(); for (let k = 0; k < 4; k++) { g.moveTo(p.rx, p.ry); g.lineTo(p.rx + Math.cos(k * 1.57 + 0.4) * 17, p.ry + Math.sin(k * 1.57 + 0.4) * 17); } g.stroke(); g.globalAlpha = 1; }

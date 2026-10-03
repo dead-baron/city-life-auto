@@ -13,6 +13,7 @@ import * as ems from './systems/ems.js';
 import * as economy from './systems/economy.js';
 import * as jobs from './systems/jobs.js';
 import * as env from './systems/environment.js';
+import * as homes from './systems/homes.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -57,6 +58,7 @@ export class World {
     this.dev = !!opts.dev;
     this.npcBudget = opts.npcBudget ?? 700;
     env.init(this);
+    homes.init(this);
     jobs.init(this);
   }
 
