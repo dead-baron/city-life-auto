@@ -478,3 +478,62 @@ test('police dispatch: witnessed crimes reach on-duty officers, unseen ones do n
   assert.equal(crook.profile.felonies, 0);
   assert.equal(crook.wanted, 0);
 });
+
+test('police cruisers: on duty = behind the wheel, 15s re-call after loss, delivered + locked, towed when abandoned', async () => {
+  const dev = await import('../server/dev.js');
+  const cruiser = await import('../server/systems/cruiser.js');
+  const w = makeWorld();
+  const cop = joinPlayer(w).p, other = joinPlayer(w).p;
+  const n = w.map.nodes.find((q) => Math.hypot(q.x - w.map.spawns.default.x, q.y - w.map.spawns.default.y) < 3000) || w.map.nodes[0];
+  teleport(w, cop.ped, n.x + 32, n.y + 32);
+  teleport(w, other.ped, n.x + 32, n.y + 32);
+  dev.command(w, cop, 'cop', {});
+  const v1 = w.get(cop.ped.vehId);
+  assert.ok(v1 && v1.def.police, 'becoming a cop puts you straight into a cruiser');
+  assert.equal(cop.dutyVehicle, v1.id);
+  assert.equal(players.buildMe(w, cop).cruiser.s, 'in');
+  // wrecked -> 15 s cooldown before dispatch sends another
+  vehicles.exitVehicle(w, cop.ped);
+  vehicles.explode(w, v1, null);
+  run(w, 1);
+  assert.equal(cop.dutyVehicle, 0);
+  assert.ok(players.buildMe(w, cop).cruiser.cd > 0, 'cooldown shown');
+  assert.match(cruiser.call(w, cop), /in \d+s/);
+  run(w, 15);
+  teleport(w, cop.ped, n.x + 32, n.y + 32);
+  assert.equal(cruiser.call(w, cop), null, 'call allowed after 15 s');
+  const v2 = w.get(cop.dutyVehicle);
+  assert.ok(v2 && v2.ai && v2.ai.kind === 'delivery', 'an NPC officer drives it over');
+  assert.equal(players.buildMe(w, cop).cruiser.s, 'coming');
+  assert.ok(cruiser.call(w, cop), 'no second cruiser while one is coming');
+  for (let i = 0; i < 60 && v2.ai; i++) run(w, 1);
+  assert.ok(!v2.ai, 'delivery finished');
+  assert.ok(Math.hypot(v2.x - cop.ped.x, v2.y - cop.ped.y) < 260, 'parked near the officer');
+  assert.ok(!v2.seats.some((s) => s), 'driver got out');
+  assert.equal(players.buildMe(w, cop).cruiser.s, 'parked');
+  // locked for everyone else
+  teleport(w, other.ped, v2.x + 30, v2.y);
+  assert.equal(vehicles.tryEnter(w, other.ped), false, 'locked for other players');
+  teleport(w, cop.ped, v2.x + 30, v2.y);
+  assert.equal(vehicles.tryEnter(w, cop.ped), true, 'unlocked for its officer');
+  assert.equal(cop.wanted, 0, 'no theft for taking your own cruiser');
+  run(w, 1);
+  vehicles.exitVehicle(w, cop.ped);
+  // walk away -> towed, and a new one can be called immediately
+  teleport(w, cop.ped, v2.x + 1300, v2.y);
+  teleport(w, other.ped, v2.x + 1300, v2.y);
+  run(w, 27);
+  assert.equal(cop.dutyVehicle, 0, 'abandoned cruiser towed');
+  assert.ok(!w.get(v2.id), 'towed car removed');
+  assert.equal(players.buildMe(w, cop).cruiser.cd, 0, 'no cooldown after a tow');
+  // stolen -> lost
+  assert.equal(cruiser.call(w, cop), null);
+  const v3 = w.get(cop.dutyVehicle);
+  for (let i = 0; i < 60 && v3.ai; i++) run(w, 1);
+  teleport(w, cop.ped, v3.x + 30, v3.y); vehicles.tryEnter(w, cop.ped); run(w, 0.6); vehicles.exitVehicle(w, cop.ped);
+  teleport(w, other.ped, v3.x + 30, v3.y);
+  assert.equal(vehicles.tryEnter(w, other.ped), true, 'unlocked once the officer has used it - can be stolen');
+  run(w, 1);
+  assert.equal(cop.dutyVehicle, 0, 'stolen cruiser is lost');
+  assert.ok(players.buildMe(w, cop).cruiser.cd > 0);
+});

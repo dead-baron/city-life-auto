@@ -73,6 +73,17 @@ export class HUD {
     // job
     const jb = $('job');
     if (me.job) { jb.textContent = '▶ ' + me.job.text; jb.classList.remove('hidden'); } else jb.classList.add('hidden');
+    // personal police cruiser
+    const cr = me.cruiser, ch = $('cruiser-hint'), cb = $('b-cruiser');
+    document.body.classList.toggle('can-call', !!(cr && cr.s === 'none' && !me.dead));
+    if (cr && !me.dead && cr.s !== 'in') {
+      const html = cr.s === 'none' ? (cr.cd > 0 ? `Cruiser lost - dispatch can send another in ${cr.cd}s` : `${glyph('cruiser')} <span>Call in a police cruiser</span>`)
+        : cr.s === 'coming' ? 'Cruiser on its way to you - follow the blue arrow' : 'Your cruiser is waiting - follow the blue arrow';
+      if (ch.dataset.h !== html) { ch.dataset.h = html; ch.innerHTML = html; }
+      ch.classList.remove('hidden');
+    } else ch.classList.add('hidden');
+    cb.textContent = cr && cr.cd > 0 ? `COP CAR ${cr.cd}` : 'COP CAR';
+    cb.classList.toggle('cooling', !!(cr && cr.cd > 0));
     // weapon
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;
     $('w-name').textContent = w.name;
@@ -202,6 +213,13 @@ export class HUD {
         else if (r.k === 'wanted') { g.fillStyle = (performance.now() / 200 | 0) % 2 ? '#ff3b3b' : '#3b6bff'; g.beginPath(); g.arc(x, y, big ? 7 : 4, 0, 6.28); g.fill(); }
         else if (r.k === 'bounty') { g.strokeStyle = '#ffc23d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(5, r.r * scale), 0, 6.28); g.stroke(); if (big) { g.fillStyle = '#ffc23d'; g.fillText(`${r.n} $${r.b}`, x, y - r.r * scale - 8); } }
       }
+      if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') {
+        let [x, y] = toR(me.cruiser.x, me.cruiser.y);
+        const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 8;
+        if (d > lim && !big) { x = size / 2 + dx / d * lim; y = size / 2 + dy / d * lim; }
+        const q = big ? 7 : 4.5;
+        g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.fillRect(x - q, y - q, q * 2, q * 2); g.strokeRect(x - q, y - q, q * 2, q * 2);
+      }
       if (me.job) {
         let [x, y] = toR(me.job.x, me.job.y);
         const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 8;
@@ -260,6 +278,7 @@ export class HUD {
     if (me) {
       for (const hm of me.homes || []) { const [x, y] = P(hm.x, hm.y); g.fillStyle = '#000'; g.fillRect(x - ic / 2, y - ic / 2, ic, ic); g.fillStyle = '#3ddc84'; g.fillText('⌂', x, y + 1); }
       if (me.rumor) { const [x, y] = P(me.rumor.x, me.rumor.y); g.strokeStyle = '#ffd36b'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, me.rumor.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
+      if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') { const [x, y] = P(me.cruiser.x, me.cruiser.y); g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); }
       if (me.job) { const [x, y] = P(me.job.x, me.job.y); g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); }
       // police / bounty intel (server already applies the visibility rules)
       for (const r of me.radar || []) {

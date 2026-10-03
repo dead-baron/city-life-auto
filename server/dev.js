@@ -1,31 +1,18 @@
 // Playtest/debug commands, only accepted when the server runs with CLA_DEV=1.
 import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
-import { collideVehicleTiles } from '../shared/physics.js';
-import { CAR_BLOCK } from '../shared/map.js';
 import { WEAPONS } from '../shared/items.js';
 import { store } from './store.js';
 import * as env from './systems/environment.js';
 import * as jobs from './systems/jobs.js';
 import * as law from './systems/law.js';
+import * as cruiser from './systems/cruiser.js';
+
+const { clearSpot } = cruiser;
 
 export const DEV_COMMANDS = ['cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp'];
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
-function clearSpot(world, ped, def) {
-  for (let ring = 0; ring < 4; ring++) {
-    for (let k = 0; k < 12; k++) {
-      const a = ped.a + (k * Math.PI) / 6;
-      const d = 90 + ring * 50 + def.L / 2;
-      const x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
-      const s = { x, y, a: 0, vx: 0, vy: 0 };
-      const ox = x, oy = y;
-      collideVehicleTiles(s, def, world.map, CAR_BLOCK);
-      if (Math.hypot(s.x - ox, s.y - oy) < 0.5 && !world.query(x, y, def.L, 2).length) return { x, y, a: 0 };
-    }
-  }
-  return { x: ped.x, y: ped.y + 80, a: 0 };
-}
 
 export function command(world, p, c, msg) {
   const ped = p.ped;
@@ -50,6 +37,7 @@ export function command(world, p, c, msg) {
       law.clearWanted(world, p); prof.peakWanted = 0; prof.felonies = 0; prof.firedUntil = 0;
       prof.samaritan = Math.max(prof.samaritan, law.ENFORCER_MIN_SAMARITAN + 10);
       const err = p.badge ? null : law.goOnDuty(world, p);
+      if (!err && !(ped && ped.vehId && world.get(ped.vehId)?.cruiserOf === p.pid)) cruiser.issueNow(world, p);
       world.notify(p, err ? `[dev] ${err}` : `[dev] On duty as ${law.POLICE_RANKS[law.policeRank(prof)].name}. Dispatch map: M / Start → Map / tap the radar.`, err ? 'bad' : 'good');
       break;
     }

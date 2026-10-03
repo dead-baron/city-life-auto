@@ -65,6 +65,9 @@ body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 /* mission line = bottom subtitle */
 #job { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: 700; text-align: center; max-width: 56vw; color: #fff; text-shadow: var(--outline-s), 0 0 8px #000; }
 #job::first-letter { color: var(--warn); }
+#cruiser-hint { position: absolute; bottom: 62px; left: 50%; transform: translateX(-50%); font-size: 17px; font-weight: 700; text-align: center; max-width: 60vw; color: #9fbaff; text-shadow: var(--outline-s), 0 0 8px #000; pointer-events: none; }
+.touch #cruiser-hint { bottom: auto; top: 76px; font-size: 13px; max-width: 40vw; }
+body.portrait.touch #cruiser-hint { top: auto; bottom: 330px; max-width: 86vw; }
 
 /* radar + vitals (bottom left) */
 #radar-wrap { position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: 14px; width: 170px; pointer-events: auto; }
@@ -203,6 +206,9 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 body.touch #weapon { pointer-events: auto; cursor: pointer; }
 .touch #helpbox, .touch #toasts { margin-left: 58px; }
 #tbtns .map { display: none; }
+#tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 182px); top: 10px; width: 84px; height: 30px; border-radius: 15px; font-size: 11px; background: rgba(40,70,190,.75); }
+#tbtns .cruiser.cooling { background: rgba(0,0,0,.5); color: #aab; }
+body:not(.can-call) #tbtns .cruiser { display: none; }
 #dev-btn { top: 8px; left: calc(50% + 72px); width: 50px !important; height: 34px !important; border-radius: 8px !important; font-size: 11px !important; }
 #tbtns .veh { display: none; }
 body.in-veh #tbtns .dive .foot { display: none; } body.in-veh #tbtns .dive .veh { display: inline; }
@@ -249,6 +255,7 @@ body.portrait.touch #job { top: auto; bottom: 300px; max-width: 86vw; }
 body.portrait.touch #tbtns .sprint { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 186px; }
 body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
 body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: 160px; }
+body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: 160px; }
 body.portrait.touch #helpbox, body.portrait.touch #toasts { margin-left: 0; }
 body.portrait.touch #zone-l { top: 50%; width: 50%; }
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: 64px; } #district { font-size: 34px; } }

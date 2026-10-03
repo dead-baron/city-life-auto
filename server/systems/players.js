@@ -15,6 +15,7 @@ import * as law from './law.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as homes from './homes.js';
+import * as cruiser from './cruiser.js';
 
 export const GHOST_SECONDS = 30;
 export const RESPAWN_SECONDS = 7;
@@ -364,6 +365,7 @@ export function buildMe(world, p) {
     garageCap: homes.garageCap(world, prof),
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
     spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, spawnChoice: p.respawnChoice || null,
+    cruiser: cruiser.stateFor(world, p),
     dev: p.dev,
   };
 }

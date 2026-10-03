@@ -42,6 +42,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Dive roll / handbrake | Space | A | ROLL |
 | Throw / drop crate | Q | Y | THROW |
 | Reload / horn & siren | R / H | — / D-pad up | — / HORN |
+| Call police cruiser (on duty) | V | D-pad down | COP CAR (shows when you have no cruiser) |
 | Heal (bandage / medkit) | X | Back | HEAL |
 | Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN |
 | City map | M | — | — |

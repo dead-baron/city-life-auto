@@ -199,6 +199,7 @@ export function tryEnter(world, ped) {
   if (!v) return false;
   const p = ped.player;
   if (v.wreckAt) { if (p) world.notify(p, 'That vehicle is wrecked.', 'bad'); return false; }
+  if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
   if (ped.carrying) cargo.dropCrate(world, ped);
   let seat = -1;
   const driver = driverOf(world, v);

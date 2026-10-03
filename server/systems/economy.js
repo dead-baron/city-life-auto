@@ -12,6 +12,7 @@ import * as law from './law.js';
 import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
+import * as cruiser from './cruiser.js';
 
 const HOSPITAL_FEE = 150;
 const rng = mulberry32(77);
@@ -288,24 +289,19 @@ function execute(world, p, poi, opt) {
       if (parts[1] === 'on') {
         const e = law.goOnDuty(world, p);
         if (e) return e;
-        world.notify(p, 'Badge on. You are now an Enforcer. Taser, baton and sidearm issued.', 'good');
+        const v = cruiser.issueNow(world, p);
+        world.notify(p, v ? 'Badge on. Taser, baton and sidearm issued - your Interceptor is gassed up and you\'re behind the wheel.' : 'Badge on. You are now an Enforcer. Taser, baton and sidearm issued.', 'good');
       } else {
-        law.goOffDuty(world, p);
-        const dv = world.get(p.dutyVehicle);
-        if (dv && !dv.seats.some((s) => s)) world.remove(dv);
+        law.goOffDuty(world, p); // the cruiser system returns the car to the pool
         world.notify(p, 'Off duty.', 'info');
       }
       return null;
     }
     case 'cruiser': {
       if (!p.badge) return 'On-duty officers only.';
-      const old = world.get(p.dutyVehicle);
-      if (old && !old.seats.some((s) => s)) world.remove(old);
       const lot = poi.spawnLot || { x: poi.x, y: poi.y + 80, a: 0 };
-      const v = world.spawnVehicle('police', lot.x, lot.y, lot.a, {});
-      v.issuedTo = p.pid; v.despawnable = false; v.npcOwned = false;
-      p.dutyVehicle = v.id;
-      world.notify(p, 'Interceptor waiting in the HQ lot. H toggles the siren.', 'good');
+      cruiser.issueAt(world, p, lot.x, lot.y, lot.a);
+      world.notify(p, 'Interceptor waiting in the HQ lot - follow the arrow. H toggles the siren.', 'good');
       return null;
     }
     case 'hunter': {

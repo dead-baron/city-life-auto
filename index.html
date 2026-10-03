@@ -32,6 +32,7 @@
     <div id="helpbox" class="hidden"></div>
     <div id="toasts"></div>
     <div id="job" class="hidden"></div>
+    <div id="cruiser-hint" class="hidden"></div>
     <div id="radar-wrap">
       <canvas id="radar" width="168" height="168"></canvas>
       <div id="vitals"><div class="vbar"><div id="hp-fill" class="fill hp"></div></div><div class="vbar"><div id="st-fill" class="fill st"></div></div></div>
@@ -60,6 +61,7 @@
       <button data-b="use" class="heal">HEAL</button>
       <button data-b="horn" class="horn">HORN</button>
       <button data-b="map" class="map">MAP</button>
+      <button data-b="cruiser" class="cruiser" id="b-cruiser">COP CAR</button>
       <button data-b="dev" id="dev-btn" class="hidden">DEV</button>
     </div>
   </div>
@@ -82,8 +84,8 @@
     </div>
     <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="pad-only">Start → Debug / cheats</span><span class="touch-only">the DEV button</span>.</div>
     <div id="t-help">
-      <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move &amp; drive (point where you want to go) · Mouse aim · Click shoot / punch · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · H horn · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
-      <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster) · right stick aim · RT fire · LT sprint · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, push it all the way to fire drive-by · D-pad up horn / siren · Menu pause menu (map, settings, controls, debug)</div>
+      <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move &amp; drive (point where you want to go) · Mouse aim · Click shoot / punch · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · H horn / siren · V call cruiser (police) · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
+      <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster) · right stick aim · RT fire · LT sprint · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, push it all the way to fire drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
       <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire · ACT interact · CAR get in/out</div>
     </div>
     <div id="t-tools"><button id="t-install" class="hidden">⬇ INSTALL APP</button><button id="t-settings">⚙ SETTINGS</button><button id="t-fs">⛶ FULLSCREEN</button></div>
@@ -115,6 +117,7 @@
     <div class="m-opts">
       <button class="opt" data-p="resume">Resume</button>
       <button class="opt" data-p="map">Map</button>
+      <button class="opt cop-only" data-p="cruiser">Call police cruiser</button>
       <button class="opt" data-p="settings">Settings</button>
       <button class="opt" data-p="controls">Controls</button>
       <button class="opt" data-p="fullscreen">Toggle fullscreen</button>

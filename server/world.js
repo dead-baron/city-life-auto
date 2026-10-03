@@ -9,6 +9,7 @@ import * as law from './systems/law.js';
 import * as npc from './systems/npc.js';
 import * as traffic from './systems/traffic.js';
 import * as police from './systems/police.js';
+import * as cruiser from './systems/cruiser.js';
 import * as ems from './systems/ems.js';
 import * as economy from './systems/economy.js';
 import * as jobs from './systems/jobs.js';
@@ -24,6 +25,7 @@ const SYSTEMS = [
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['police', police.update],        // NPC police dispatch / pursuit
+  ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
   ['ems', ems.update],              // ambulances + 45s cleanup loop
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up

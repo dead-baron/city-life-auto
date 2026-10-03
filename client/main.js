@@ -212,6 +212,7 @@ function fixedStep() {
   const inOverlay = overlayPad();
   if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
+  if (!inOverlay && input.padCall && S.playing && !S.hud.menuOpen && !S.bigmap) callCruiser();
   if (!S.playing || S.hud.menuOpen || S.bigmap || inOverlay || performance.now() < (S.inputMuteUntil || 0)) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
   if (inp.bits & IN.AIMING) { S.lastAim = inp.aim; S.lastAimAt = performance.now(); S.lastFire = !!(inp.bits & IN.FIRE); }
   S.seq++;
@@ -377,11 +378,13 @@ initInput(canvas, {
   onKey(k) {
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
+    if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
     if (k === 'Backquote' && S.dev) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
   onDev() { if (S.dev) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); } },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
+  onCruiser() { if (S.playing) callCruiser(); },
   onSettings() { openSettings(true); },
   onFullscreen() { toggleFullscreen(); },
 });
@@ -524,7 +527,7 @@ function openOverlay(id) {
   if (topOverlay() === id) return;
   if (id === 'settings') syncSettings();
   if (id === 'controls') $('c-body').innerHTML = $('t-help').innerHTML;
-  if (id === 'pause') { document.querySelectorAll('#pause .dev-only').forEach((b) => b.classList.toggle('hidden', !S.dev)); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
+  if (id === 'pause') { document.querySelectorAll('#pause .dev-only').forEach((b) => b.classList.toggle('hidden', !S.dev)); document.querySelectorAll('#pause .cop-only').forEach((b) => b.classList.toggle('hidden', !(S.me && S.me.cruiser))); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
   overlays.push(id);
   $(id).classList.remove('hidden');
   if (id === 'dev') $('dev').classList.add('as-overlay');
@@ -605,6 +608,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     const a = b.dataset.p;
     if (a === 'resume') closeOverlay('pause');
     else if (a === 'map') { closeOverlay('pause'); toggleMap(true); }
+    else if (a === 'cruiser') { closeOverlay('pause'); callCruiser(); }
     else if (a === 'settings') openOverlay('settings');
     else if (a === 'controls') openOverlay('controls');
     else if (a === 'fullscreen') toggleFullscreen();
@@ -655,6 +659,36 @@ function baseZoom() {
   return long / (VIEW_H * 16 / 9);
 }
 
+// ---- personal police cruiser: radio dispatch, then an arrow leads you to it ------------------
+function callCruiser() {
+  const c = S.me && S.me.cruiser;
+  if (!c) return;
+  if (c.s === 'none' && c.cd > 0) { S.hud.toast(`Dispatch can send a new cruiser in ${c.cd}s.`, 'warn'); return; }
+  send({ t: 'cruiser' });
+}
+function cruiserPos(c) {
+  const e = S.ents.get(c.id);
+  return e && e.rx !== undefined ? { x: e.rx, y: e.ry } : { x: c.x, y: c.y };
+}
+function drawCruiserGuide(g, c, z, now) {
+  const me = selfPos();
+  const t = cruiserPos(c);
+  const dx = t.x - me.x, dy = t.y - me.y, d = Math.hypot(dx, dy);
+  const blink = (now * 4 | 0) % 2;
+  // marker over the car
+  const bob = Math.sin(now * 4) * 5;
+  g.fillStyle = blink ? '#3b6bff' : '#ff3b3b'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
+  g.beginPath(); g.moveTo(t.x, t.y - 26 + bob); g.lineTo(t.x - 11, t.y - 46 + bob); g.lineTo(t.x + 11, t.y - 46 + bob); g.closePath(); g.fill(); g.stroke();
+  if (d < 110) return;
+  // chevron orbiting the player, pointing at the car
+  const a = Math.atan2(dy, dx), r = 62 / z + 18;
+  const cx = me.x + Math.cos(a) * r, cy = me.y + Math.sin(a) * r;
+  const s = 20 / Math.max(0.6, z);
+  g.save(); g.translate(cx, cy); g.rotate(a);
+  g.fillStyle = '#5b8cff'; g.strokeStyle = '#fff'; g.lineWidth = 2.5 / z;
+  g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.7, -s * 0.75); g.lineTo(-s * 0.3, 0); g.lineTo(-s * 0.7, s * 0.75); g.closePath(); g.fill(); g.stroke();
+  g.restore();
+}
 function selfPos() {
   const P = S.pred;
   if (P) {
@@ -1131,6 +1165,7 @@ function drawWorldLabels(peds, vehs, now, z) {
     g.strokeStyle = r.t === 4 ? '#ffd36b' : '#c07aff'; g.lineWidth = 4 / z; g.setLineDash([12 / z, 10 / z]);
     g.beginPath(); g.arc(r.x, r.y, r.r, 0, 6.28); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
   }
+  if (me && me.cruiser && (me.cruiser.s === 'parked' || me.cruiser.s === 'coming')) drawCruiserGuide(g, me.cruiser, z, now);
   if (me && me.job) {
     g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     const bob = Math.sin(now * 4) * 5;
