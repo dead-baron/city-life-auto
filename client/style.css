@@ -252,3 +252,10 @@ body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); t
 body.portrait.touch #helpbox, body.portrait.touch #toasts { margin-left: 0; }
 body.portrait.touch #zone-l { top: 50%; width: 50%; }
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: 64px; } #district { font-size: 34px; } }
+
+#install { position: absolute; inset: 0; z-index: 42; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+#install .panel { width: min(460px, 92vw); max-height: 86vh; overflow: auto; background: rgba(0,0,0,.88); }
+.ibody { padding: 6px 16px 0; color: #e8e8e8; font-size: 15px; line-height: 1.45; }
+.ibody h3 { margin: 12px 0 4px; font-size: 15px; color: #ffd36b; letter-spacing: 1px; }
+.ibody ol { margin: 0; padding-left: 20px; }
+.ibody b { color: #fff; }

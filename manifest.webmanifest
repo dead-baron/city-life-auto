@@ -1,23 +1,61 @@
 {
-  "id": "/city-life-auto/",
+  "id": "/city-life-auto/app",
   "name": "City Life Auto",
   "short_name": "City Life Auto",
   "description": "Top-down 16-bit multiplayer city sandbox: drive, brawl, run jobs and heists in a living GTA-style city. Practice offline any time.",
-  "start_url": "/city-life-auto/?source=app",
+  "start_url": "/city-life-auto/?source=pwa",
   "scope": "/city-life-auto/",
   "display": "fullscreen",
-  "display_override": ["fullscreen", "standalone"],
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
   "orientation": "any",
   "background_color": "#0b0d14",
   "theme_color": "#0b0d14",
-  "categories": ["games", "entertainment"],
+  "categories": [
+    "games",
+    "entertainment"
+  ],
   "icons": [
-    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "assets/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "screenshots": [
-    { "src": "docs/screenshots/mobile-hud-landscape.png", "sizes": "1688x780", "type": "image/png", "form_factor": "wide", "label": "City Life Auto on a phone" }
+    {
+      "src": "docs/screenshots/mobile-hud-landscape.png",
+      "sizes": "1688x780",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "City Life Auto on a phone"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://deadbaron.com/city-life-auto/manifest.webmanifest"
+    }
   ]
 }

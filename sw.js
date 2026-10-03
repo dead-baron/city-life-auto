@@ -5,7 +5,7 @@
    Network-first for this game's files, so online players always get the newest build (the boot
    loader's version.json check keeps working); the cached copy is just the offline fallback.
    Requests to other origins (the game server's WebSocket, fonts CDNs, analytics) are left alone. */
-const CACHE = 'city-life-auto-v1';
+const CACHE = 'city-life-auto-v2';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'client/boot.js', 'assets/logo.png', 'assets/icons/icon-192.png', 'assets/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -14,6 +14,11 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('city-life-auto-') && k !== CACHE).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
+});
+// the page's "Repair install" button asks every copy of this worker to drop its caches
+self.addEventListener('message', (e) => {
+  if (e.data !== 'cla-reset') return;
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('city-life-auto-')).map((k) => caches.delete(k)))));
 });
 self.addEventListener('fetch', (e) => {
   const req = e.request;

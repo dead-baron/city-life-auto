@@ -426,15 +426,83 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   const reg = () => navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
   if (document.readyState === 'complete') reg(); else addEventListener('load', reg);
 }
+// Install flow. Chrome only fires beforeinstallprompt when it thinks the app isn't installed, and
+// after an uninstall it can keep that belief for a while (stale WebAPK record, old service worker).
+// So the install button is always there outside the app: it uses the native prompt when Chrome
+// offers one, otherwise it opens a help sheet with the manual steps plus a "Repair install" that
+// wipes only this game's service worker + caches (never the other deadbaron.com games).
 let installEvt = null;
-addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (!standalone) $('t-install').classList.remove('hidden'); });
-addEventListener('appinstalled', () => { installEvt = null; $('t-install').classList.add('hidden'); S.hud?.toast('City Life Auto is installed - open it from your home screen.', 'good'); });
-$('t-install').onclick = async () => {
-  if (!installEvt) return;
-  installEvt.prompt();
-  try { await installEvt.userChoice; } catch { /* dismissed */ }
-  installEvt = null; $('t-install').classList.add('hidden');
-};
+let relatedInstalled = false;
+const UA = navigator.userAgent;
+const IS_IOS = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_ANDROID = /Android/.test(UA);
+const IS_SAMSUNG = /SamsungBrowser/.test(UA);
+const IS_FIREFOX = /Firefox|FxiOS/.test(UA);
+if (!standalone) $('t-install').classList.remove('hidden');
+if (!standalone && navigator.getInstalledRelatedApps) {
+  navigator.getInstalledRelatedApps().then((apps) => { relatedInstalled = apps.some((a) => a.platform === 'webapp'); }).catch(() => {});
+}
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; relatedInstalled = false; if (!standalone) $('t-install').classList.remove('hidden'); });
+addEventListener('appinstalled', () => { installEvt = null; relatedInstalled = true; closeOverlay('install'); S.hud?.toast('City Life Auto is installed - open it from your home screen.', 'good'); });
+
+function installSteps() {
+  if (IS_IOS) return `<h3>iPhone / iPad (Safari)</h3><ol><li>Tap the <b>Share</b> button.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol><p>Reinstalling after a delete works the same way - iOS keeps no install record.</p>`;
+  if (IS_SAMSUNG) return `<h3>Samsung Internet</h3><ol><li>Tap the <b>☰ menu</b>.</li><li>Choose <b>Add page to</b> → <b>Apps screen</b> (or <b>Home screen</b>).</li></ol>`;
+  if (IS_FIREFOX && IS_ANDROID) return `<h3>Firefox for Android</h3><ol><li>Tap the <b>⋮ menu</b>.</li><li>Choose <b>Install</b> (or <b>Add to Home screen</b>).</li></ol>`;
+  if (IS_ANDROID) return `<h3>Chrome on Android</h3><ol><li>Tap the <b>⋮ menu</b> (top right).</li><li>Choose <b>Install app</b> (older Chrome: <b>Add to Home screen</b> → <b>Install</b>).</li></ol>`;
+  return `<h3>Desktop Chrome / Edge</h3><ol><li>Click the <b>install icon</b> at the right end of the address bar, or open the <b>⋮ / … menu</b>.</li><li>Choose <b>Install City Life Auto</b> (Edge: <b>Apps → Install this site as an app</b>).</li></ol>`;
+}
+function stuckSteps() {
+  if (IS_IOS) return '';
+  const android = IS_ANDROID && !IS_FIREFOX;
+  return `<h3>Says "already installed" after you removed it?</h3><ol>
+    ${android ? '<li>Make sure it is really gone: phone <b>Settings → Apps → City Life Auto → Uninstall</b>. Removing only the home-screen icon can leave the app installed.</li>' : '<li>Make sure it is really gone: open <b>chrome://apps</b> (Edge: <b>edge://apps</b>), right-click City Life Auto → <b>Uninstall</b>.</li>'}
+    <li>Tap <b>Repair install and reload</b> below. It clears only this game's offline copy - your saves and other games are untouched.</li>
+    <li>${android ? 'Fully close Chrome (swipe it away in recent apps), reopen it' : 'Restart the browser'} and come back to this page, then install again.</li>
+  </ol>`;
+}
+function openInstall() {
+  if (installEvt && !relatedInstalled) { nativeInstall(); return; }
+  $('i-sub').textContent = relatedInstalled
+    ? 'Your browser reports City Life Auto as already installed - open it from your home screen / app list.'
+    : 'Your browser didn’t offer its install prompt, so here are the steps.';
+  $('i-body').innerHTML = installSteps() + stuckSteps();
+  $('i-go').classList.toggle('hidden', !installEvt);
+  openOverlay('install');
+}
+async function nativeInstall() {
+  const evt = installEvt;
+  if (!evt) return;
+  installEvt = null;
+  evt.prompt();
+  try { await evt.userChoice; } catch { /* dismissed */ }
+  closeOverlay('install');
+}
+async function repairInstall() {
+  const scopePath = new URL('./', location.href).pathname;
+  try {
+    if (navigator.serviceWorker) {
+      for (const r of await navigator.serviceWorker.getRegistrations()) {
+        if (new URL(r.scope).pathname !== scopePath) continue; // never touch the other games
+        try { (r.active || r.waiting || r.installing)?.postMessage('cla-reset'); } catch { /* gone */ }
+        await r.unregister();
+      }
+    }
+    if (self.caches) for (const k of await caches.keys()) if (k.startsWith('city-life-auto-')) await caches.delete(k);
+  } catch { /* best effort */ }
+  try { localStorage.removeItem('cla.build'); } catch { /* storage blocked */ }
+  const u = new URL(location.href);
+  u.searchParams.set('fresh', Date.now().toString(36));
+  location.replace(u.href);
+}
+$('t-install').onclick = openInstall;
+$('s-install').onclick = openInstall;
+$('i-go').onclick = nativeInstall;
+$('s-repair').onclick = repairInstall;
+$('i-repair').onclick = repairInstall;
+if (standalone) $('s-install').classList.add('hidden');
+// drop the one-off ?fresh= marker so it doesn't stick to bookmarks
+if (new URLSearchParams(location.search).has('fresh')) { const u = new URL(location.href); u.searchParams.delete('fresh'); history.replaceState(null, '', u.href); }
 
 let landTipShown = false;
 function maybeLandscapeTip() {
