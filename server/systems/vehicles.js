@@ -12,6 +12,22 @@ import * as npc from './npc.js';
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
 export function speedOf(v) { return Math.hypot(v.vx, v.vy); }
 
+// One physics step + crash consequences. Player-driven cars get exactly one of these per input
+// the server receives - the same steps the driver's client predicted - so prediction and server
+// never drift apart (that drift was the "car vibrating back and forth" bug).
+export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHER.RAIN }) {
+  const moving = Math.abs(v.vx) + Math.abs(v.vy) > 0.5 || Math.abs(v.input.throttle) > 0.05;
+  if (!moving) return;
+  const impact = vehStep(v, v.input, dt, world.map, v.def, env);
+  if (impact > 160) {
+    const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);
+    damageVehicle(world, v, dmg, null);
+    world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: Math.min(1, impact / 500) });
+    if (v.def.kind === 'bike' && impact > 280) bikeCrash(world, v, impact);
+    if (impact > 330) cargo.knockOff(world, v, impact);
+  }
+}
+
 export function update(world, dt) {
   const now = world.time;
   const env = { rain: world.weather === WEATHER.RAIN };
@@ -28,17 +44,8 @@ export function update(world, dt) {
       if (driver && driver.dead) ejectPed(world, driver, true);
       v.input.throttle = 0; v.input.steer = 0; v.input.hb = false;
     }
-    const moving = Math.abs(v.vx) + Math.abs(v.vy) > 0.5 || Math.abs(v.input.throttle) > 0.05;
-    if (moving) {
-      const impact = vehStep(v, v.input, dt, world.map, v.def, env);
-      if (impact > 160) {
-        const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);
-        damageVehicle(world, v, dmg, null);
-        world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: Math.min(1, impact / 500) });
-        if (v.def.kind === 'bike' && impact > 280) bikeCrash(world, v, impact);
-        if (impact > 330) cargo.knockOff(world, v, impact);
-      }
-    }
+    // player-driven cars were already stepped once per received input (players.processInputs)
+    if (v.ownStepTick !== world.tick) stepVehicle(world, v, dt, env);
     const fwd = vehForwardSpeed(v);
     v.brake = v.input.throttle < -0.1 && fwd > 20;
     v.reverse = fwd < -10;

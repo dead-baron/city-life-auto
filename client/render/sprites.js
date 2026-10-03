@@ -84,6 +84,30 @@ function procVehicle(def, paint) {
 
 // Soft drop shadow in the exact silhouette of the vehicle art (no rectangles).
 const shadowCache = new Map();
+// Burnt-out wreck: the car's own sprite charred dark (pixels only - no box around it).
+const wreckCache = new Map();
+export function drawVehicleWreck(g, desc, def) {
+  const n = atlas.variants[def.id] || 0;
+  const name = n ? `veh_${def.id}_${(desc.vr || 0) % n}` : `${def.id}|${desc.p}`;
+  let wc = wreckCache.get(name);
+  if (!wc) {
+    const pad = 4;
+    wc = document.createElement('canvas');
+    wc.width = Math.ceil(def.L + pad * 2); wc.height = Math.ceil(def.W + pad * 2);
+    const wg = wc.getContext('2d');
+    wg.translate(wc.width / 2, wc.height / 2);
+    drawVehicle(wg, desc, def, 0);
+    wg.setTransform(1, 0, 0, 1, 0, 0);
+    wg.globalCompositeOperation = 'source-atop';
+    wg.fillStyle = 'rgba(14,11,8,0.8)';
+    wg.fillRect(0, 0, wc.width, wc.height);
+    // a few soot streaks and a burnt-through roof
+    wg.fillStyle = 'rgba(0,0,0,0.35)';
+    wg.beginPath(); wg.ellipse(wc.width * 0.5, wc.height * 0.5, wc.width * 0.22, wc.height * 0.3, 0, 0, 6.28); wg.fill();
+    wreckCache.set(name, wc);
+  }
+  g.drawImage(wc, -wc.width / 2, -wc.height / 2);
+}
 export function drawVehicleShadow(g, desc, def) {
   const n = atlas.variants[def.id] || 0;
   const name = n ? `veh_${def.id}_${(desc.vr || 0) % n}` : null;

@@ -1,9 +1,9 @@
 // Player sessions: join/leave (30-second Ghost State), input application, context
 // interactions, death + respawn, persistence sync and HUD prompts.
-import { PF, FACTION, TILE, WEATHER } from '../../shared/constants.js';
+import { PF, FACTION, TILE } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
-import { pedStep, driveInput, vehStep, TUMBLE_FRICTION } from '../../shared/physics.js';
+import { pedStep, driveInput, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
@@ -139,25 +139,29 @@ export function pedMods(world, ped) {
   };
 }
 
+const HOLD_TICKS = 5; // wait up to 250 ms for a late input before extrapolating
+
 export function processInputs(world, dt) {
   for (const p of world.players.values()) {
-    // consume one input per tick; catch up by two when the client's queue backs up
+    // One simulation step per input, exactly like the client's prediction: consume one input per
+    // tick, two when the client's queue backs up, and if this tick's input is late (phone timer
+    // jitter, network hiccup) hold the character / car for up to HOLD_TICKS instead of guessing
+    // with the last input - guessing put the server a step ahead and made the car jitter.
     const n = p.inputQ.length > 3 ? 2 : 1;
+    const ped = p.ped;
+    const drivingV = ped && ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
+    if (drivingV && !drivingV.wreckAt) drivingV.ownStepTick = world.tick;
     for (let k = 0; k < n; k++) {
-      const ped = p.ped;
       let inp;
-      if (p.inputQ.length) { inp = p.inputQ.shift(); p.ack = inp.seq; p.lastInput = inp; }
+      if (p.inputQ.length) { inp = p.inputQ.shift(); p.ack = inp.seq; p.lastInput = inp; p.starve = 0; }
+      else if (p.conn && (p.starve || 0) < HOLD_TICKS) { p.starve = (p.starve || 0) + 1; break; }
       else inp = p.conn ? p.lastInput : { seq: p.ack, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
       if (!ped || ped.dead || ped.removed) { p.prevBits = inp.bits; continue; }
       const pressed = inp.bits & ~p.prevBits;
       p.prevBits = inp.bits;
       applyInput(world, p, ped, inp, pressed, dt);
-      // catching up on a backed-up queue: the client predicted one vehicle step per input, so
-      // the car gets the extra physics step here too (the vehicles system does the last one)
-      if (k < n - 1 && ped.vehId && ped.seat === 0) {
-        const v = world.get(ped.vehId);
-        if (v && !v.wreckAt) vehStep(v, v.input, dt, world.map, v.def, { rain: world.weather === WEATHER.RAIN });
-      }
+      const v = ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
+      if (v && !v.wreckAt) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); }
     }
   }
 }

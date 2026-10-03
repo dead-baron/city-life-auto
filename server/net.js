@@ -84,7 +84,7 @@ export function send(world) {
     const spawns = [];
     let ctrl = CTRL.NONE, ctrlId = 0, self = null, sflags = 0;
     if (ped && !ped.dead) {
-      if (veh) { ctrl = ped.seat === 0 ? CTRL.DRIVER : CTRL.PASSENGER; ctrlId = veh.id; self = veh; }
+      if (veh) { ctrl = ped.seat === 0 ? CTRL.DRIVER : CTRL.PASSENGER; ctrlId = veh.id; self = veh; sflags = veh.rev ? 32 : 0; } // reverse-gear state keeps point-to-drive prediction exact
       else {
         ctrl = CTRL.PED; ctrlId = ped.id;
         const mods = players.pedMods(world, ped);

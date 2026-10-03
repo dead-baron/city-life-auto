@@ -12,7 +12,7 @@ import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus } from './input.js';
 import { GroundCache, drawOverheadProp, drawPrefabGlow, debrisColors, lampHead } from './render/tiles.js';
-import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
+import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
@@ -35,6 +35,7 @@ const S = {
   cam: { x: 4400, y: 2200, zoom: 1, shake: 0 }, smooth: { x: 0, y: 0 }, geysers: [], flashes: [], camAlert: new Map(),
   rtt: 0, bigmap: false, rain: [], fps: 0,
 };
+if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 
 try { S.token = localStorage.getItem(TOKEN_KEY); } catch { S.token = null; }
 
@@ -183,7 +184,7 @@ function reconcile(s) {
     const e = S.ents.get(s.ctrlId);
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: S.pred && S.pred.kind === 'veh' ? S.pred.s.rev : false };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32) };
     S.pred = { kind, s: st, def, prev: null };
   }
   for (const p of S.pending) stepPred(p);
@@ -1041,7 +1042,7 @@ function drawVehicleEnt(v, now, dt) {
   g.translate(v.rx, v.ry);
   g.rotate(v.ra);
   if (def.kind !== 'boat') drawVehicleShadow(g, v.d, def);
-  drawVehicle(g, v.d, def, f);
+  if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }
   if (f & VF.BRAKE) { g.fillStyle = 'rgba(255,40,40,.9)'; g.fillRect(-L / 2 - 1, -Wd / 2 + 4, 3, 6); g.fillRect(-L / 2 - 1, Wd / 2 - 10, 3, 6); }
@@ -1053,7 +1054,6 @@ function drawVehicleEnt(v, now, dt) {
     g.fillStyle = ph ? '#2a6aff' : '#ff2a2a'; g.beginPath(); g.arc(-2, 6, 6, 0, 6.28); g.fill();
     g.globalAlpha = 1;
   }
-  if (f & VF.WRECK) { g.fillStyle = 'rgba(10,8,6,.62)'; g.fillRect(-L / 2, -Wd / 2, L, Wd); }
   g.restore();
   // riders on bikes are visible
   if (def.kind === 'bike') {

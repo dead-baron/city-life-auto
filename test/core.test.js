@@ -617,6 +617,7 @@ test('arrests: suspect must be knocked out, officer walks up to cuff; bodies are
   // tackle: dive into them
   cop.ped.a = 0; cop.ped.rollT = 0.3; cop.ped.rdx = 1; cop.ped.rdy = 0;
   teleport(w, crook.ped, cop.ped.x + 18, cop.ped.y);
+  cop.inputQ.push({ seq: cop.ack + 1, bits: 0, mx: 1, my: 0, aim: 0 });
   players.processInputs(w, 0.05);
   assert.ok(w.time < crook.ped.downUntil, 'tackled to the ground');
   assert.ok(crook.ped.downUntil - w.time > 4, 'subdued long enough to walk up');
@@ -649,4 +650,27 @@ test('police HQ armory restocks the service pistol', async () => {
   assert.equal(law.restockService(w, cop), null);
   assert.equal(cop.profile.weapons.service, law.SERVICE_AMMO);
   assert.match(law.restockService(w, cop), /already/);
+});
+
+test('driving: server steps the car once per received input, matching client prediction under jitter', async () => {
+  const { vehStep, driveInput } = await import('../shared/physics.js');
+  const { DT } = await import('../shared/constants.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const n = w.map.nodes[20];
+  teleport(w, p.ped, n.x + 40, n.y + 40);
+  const v = w.spawnVehicle('sedan', p.ped.x, p.ped.y, 0, { npcOwned: false });
+  vehicles.tryEnter(w, p.ped);
+  w.step();
+  const start = { x: v.x, y: v.y, a: v.a, vx: v.vx, vy: v.vy, av: v.av || 0 };
+  const sent = [];
+  let seq = p.ack;
+  const pattern = [1, 0, 2, 1, 1, 0, 2, 1, 0, 1, 3, 0, 1];
+  for (let k = 0; k < 50; k++) {
+    for (let c = 0; c < pattern[k % pattern.length]; c++) { const inp = { seq: ++seq, bits: IN.TANK, mx: 0.25, my: -1, aim: 0 }; p.inputQ.push(inp); sent.push(inp); }
+    w.step();
+    const s = { ...start };
+    for (const inp of sent) if (inp.seq <= p.ack) vehStep(s, driveInput(s, inp), DT, w.map, v.def, { rain: w.weather === 1 });
+    assert.ok(Math.hypot(s.x - v.x, s.y - v.y) < 0.01, `tick ${k}: prediction ${s.x.toFixed(1)},${s.y.toFixed(1)} vs server ${v.x.toFixed(1)},${v.y.toFixed(1)}`);
+  }
 });

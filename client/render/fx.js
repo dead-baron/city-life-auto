@@ -3,6 +3,29 @@
 // allocation on the hot path (GDD §14C, project rule: object pooling).
 
 const MAX_P = 900;
+
+// Scorch mark texture, built once: a soft sooty blotch with ragged edges and spatter, so an
+// explosion leaves a believable burn instead of a flat dark disc.
+let scorchTex = null;
+function scorchTexture() {
+  if (scorchTex) return scorchTex;
+  const S = 128, c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  const g = c.getContext('2d');
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const blob = (x, y, r, a) => {
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, `rgba(12,10,8,${a})`); gr.addColorStop(0.55, `rgba(20,16,12,${a * 0.6})`); gr.addColorStop(1, 'rgba(20,16,12,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill();
+  };
+  blob(64, 64, 46, 0.75);
+  for (let i = 0; i < 14; i++) { const a = rnd() * 6.28, d = 14 + rnd() * 26; blob(64 + Math.cos(a) * d, 64 + Math.sin(a) * d, 10 + rnd() * 16, 0.35 + rnd() * 0.3); }
+  g.fillStyle = 'rgba(14,12,10,0.7)';
+  for (let i = 0; i < 40; i++) { const a = rnd() * 6.28, d = 30 + rnd() * 30, r = 0.8 + rnd() * 2.2; g.beginPath(); g.arc(64 + Math.cos(a) * d, 64 + Math.sin(a) * d, r, 0, 6.28); g.fill(); }
+  scorchTex = c;
+  return c;
+}
 const MAX_D = 700;
 
 export class FX {
@@ -52,7 +75,7 @@ export class FX {
     for (let i = 0; i < 40; i++) { const a = rand() * 6.28, s = 40 + rand() * r * 2.2; this.spawn(3, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.4 + rand() * 0.5, 6 + rand() * 8, rand() < 0.5 ? '#ff7a1a' : '#ffd23a', 10); }
     for (let i = 0; i < 20; i++) this.smoke(x + (rand() - 0.5) * r, y + (rand() - 0.5) * r, true, rand);
     this.rings.push({ x, y, t: 0, max: 0.5, r: r * 1.4, color: 'rgba(255,220,140,' });
-    this.decal(3, x, y, rand() * 6.28, r * 0.6, '#111', now, 0.6);
+    this.decal(3, x, y, rand() * 6.28, r * 0.5, '#111', now, 0.7);
   }
   geyser(x, y, rand = Math.random) {
     for (let i = 0; i < 4; i++) this.spawn(6, x + (rand() - 0.5) * 6, y + (rand() - 0.5) * 6, (rand() - 0.5) * 40, (rand() - 0.5) * 40, 0.9, 3 + rand() * 3, rand() < 0.5 ? '#ffffff' : '#7ac8ff', 6, 120 + rand() * 80);
@@ -104,7 +127,9 @@ export class FX {
       } else if (d.type === 2) { // footprint
         g.save(); g.translate(d.x, d.y); g.rotate(d.a); g.fillRect(-3, -2, 6, 3); g.restore();
       } else if (d.type === 3) { // scorch
-        g.beginPath(); g.arc(d.x, d.y, d.size, 0, 6.28); g.fill();
+        g.save(); g.translate(d.x, d.y); g.rotate(d.a);
+        g.drawImage(scorchTexture(), -d.size * 1.2, -d.size * 1.2, d.size * 2.4, d.size * 2.4);
+        g.restore();
       } else if (d.type === 4) { // skid
         g.save(); g.translate(d.x, d.y); g.rotate(d.a); g.fillRect(-4, -1.5, 8, 3); g.restore();
       } else if (d.type === 5) { // body blood pool
