@@ -147,7 +147,7 @@ export function pedSprite(app, pose, frameN, weapon) {
   cv = document.createElement('canvas');
   cv.width = cv.height = CHAR_GRID * PS;
   paintCharacter(cv, PS, app, pose, frameN, weapon);
-  if (pedCache.size > 1600) pedCache.delete(pedCache.keys().next().value);
+  if (pedCache.size > 3000) pedCache.delete(pedCache.keys().next().value);
   pedCache.set(key, cv);
   return cv;
 }

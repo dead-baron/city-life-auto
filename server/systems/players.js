@@ -3,7 +3,7 @@
 import { PF, FACTION, TILE } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
-import { pedStep } from '../../shared/physics.js';
+import { pedStep, driveInput } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
@@ -167,9 +167,10 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     const v = world.get(ped.vehId);
     if (!v) { ped.vehId = 0; ped.seat = -1; return; }
     if (ped.seat === 0) {
-      v.input.throttle = -inp.my;
-      v.input.steer = inp.mx;
-      v.input.hb = !!(inp.bits & IN.DIVE);
+      const di = driveInput(v, inp);
+      v.input.throttle = di.throttle;
+      v.input.steer = di.steer;
+      v.input.hb = di.hb;
       if (inp.bits & IN.HORN) v.hornUntil = world.time + 0.2;
       if ((pressed & IN.HORN) && v.def.police) v.sirenOn = !v.sirenOn;
     }
@@ -184,7 +185,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
 
   // on foot
   if (ped.fishing && (Math.abs(inp.mx) > 0.3 || Math.abs(inp.my) > 0.3)) jobs.cancelFishing(world, p, 'You reeled in your line.');
-  pedStep(ped, inp, dt, world.map, pedMods(world, ped));
+  pedStep(ped, inp, dt, world.map, { ...pedMods(world, ped), analog: true });
   if (inp.bits & IN.FIRE) {
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);

@@ -9,7 +9,18 @@ import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 export const PED = {
   walk: 115, sprint: 195, accel: 14, rollSpeed: 300, rollTime: 0.45, rollCost: 30,
   staminaMax: 100, sprintDrain: 22, regen: 14,
+  // player analog curve: stick 0..WALK_AT ramps up to a walk, WALK_AT..1 blends walk -> run,
+  // sprint (button, uses stamina) adds a burst on top. Ease in, glide out (momentum).
+  aWalk: 100, aRun: 178, aSprint: 222, WALK_AT: 0.6, easeIn: 8.5, easeOut: 4.2, turnRate: 13,
 };
+
+// Analog stick magnitude (0..1) -> target ground speed for players.
+export function analogSpeed(m, sprint) {
+  if (m <= 0.02) return 0;
+  if (sprint) return PED.aSprint * Math.max(m, PED.WALK_AT);
+  if (m <= PED.WALK_AT) return PED.aWalk * (m / PED.WALK_AT);
+  return PED.aWalk + (PED.aRun - PED.aWalk) * ((m - PED.WALK_AT) / (1 - PED.WALK_AT));
+}
 
 export function newPedState(x, y) {
   return { x, y, a: 0, vx: 0, vy: 0, stamina: PED.staminaMax, rollT: 0, rdx: 0, rdy: 0, prevBits: 0 };
@@ -38,14 +49,37 @@ export function pedStep(s, inp, dt, map, mods) {
       s.vx = s.rdx * PED.rollSpeed; s.vy = s.rdy * PED.rollSpeed;
     } else {
       const sprint = (bits & IN.SPRINT) && s.stamina > 1 && ml > 0.1 && mods.canSprint;
-      const spd = (sprint ? PED.sprint : PED.walk) * mods.speedMul;
-      const k = 1 - Math.exp(-PED.accel * dt);
-      s.vx += (mx * spd - s.vx) * k;
-      s.vy += (my * spd - s.vy) * k;
-      if (sprint) s.stamina = Math.max(0, s.stamina - PED.sprintDrain * dt);
-      else s.stamina = Math.min(smax, s.stamina + PED.regen * (mods.regenMul || 1) * dt);
-      if (bits & IN.AIMING) s.a = inp.aim;
-      else if (ml > 0.15) s.a = Math.atan2(my, mx);
+      if (mods.analog) {
+        // players: analog walk/run, eased acceleration and a short glide when the stick is released
+        const spd = analogSpeed(ml, sprint) * mods.speedMul;
+        const dirx = ml > 1e-3 ? mx / ml : 0, diry = ml > 1e-3 ? my / ml : 0;
+        const tvx = dirx * spd, tvy = diry * spd;
+        const cur = Math.hypot(s.vx, s.vy);
+        const rate = spd >= cur - 1 ? PED.easeIn : PED.easeOut;
+        const k = 1 - Math.exp(-rate * dt);
+        s.vx += (tvx - s.vx) * k;
+        s.vy += (tvy - s.vy) * k;
+        if (Math.hypot(s.vx, s.vy) < 3 && ml < 0.02) { s.vx = 0; s.vy = 0; }
+        if (sprint && ml > 0.1) s.stamina = Math.max(0, s.stamina - PED.sprintDrain * dt);
+        else s.stamina = Math.min(smax, s.stamina + PED.regen * (mods.regenMul || 1) * dt);
+        if (bits & IN.AIMING) s.a = inp.aim;
+        else {
+          const sp = Math.hypot(s.vx, s.vy);
+          const want = ml > 0.1 ? Math.atan2(my, mx) : sp > 25 ? Math.atan2(s.vy, s.vx) : s.a;
+          const d = wrapAngle(want - s.a);
+          const step = PED.turnRate * dt;
+          s.a = wrapAngle(Math.abs(d) <= step ? want : s.a + Math.sign(d) * step);
+        }
+      } else {
+        const spd = (sprint ? PED.sprint : PED.walk) * mods.speedMul;
+        const k = 1 - Math.exp(-PED.accel * dt);
+        s.vx += (mx * spd - s.vx) * k;
+        s.vy += (my * spd - s.vy) * k;
+        if (sprint) s.stamina = Math.max(0, s.stamina - PED.sprintDrain * dt);
+        else s.stamina = Math.min(smax, s.stamina + PED.regen * (mods.regenMul || 1) * dt);
+        if (bits & IN.AIMING) s.a = inp.aim;
+        else if (ml > 0.15) s.a = Math.atan2(my, mx);
+      }
     }
   }
   if (s.stamina > smax) s.stamina = smax;
@@ -121,12 +155,15 @@ export function vehStep(s, inp, dt, map, def, env) {
 
   const t = inp.throttle;
   const maxEff = def.max * surf[0];
+  // analog throttle also sets a cruising speed: a light push drives slowly, full stick flat out
+  const cap = maxEff * Math.min(1, 0.18 + 0.82 * Math.abs(t));
   if (t > 0.05) {
     if (fwd < -15) fwd = Math.min(0, fwd + def.brake * brakeMul * t * dt);
-    else fwd += def.accel * t * dt * clamp(1 - fwd / maxEff, 0, 1) * 1.6;
+    else if (fwd > cap) fwd -= (fwd - cap) * 1.6 * dt;
+    else fwd += def.accel * Math.max(t, 0.6) * dt * clamp(1 - fwd / cap, 0, 1) * 1.6;
   } else if (t < -0.05) {
     if (fwd > 15) fwd = Math.max(0, fwd - def.brake * brakeMul * -t * dt);
-    else fwd = Math.max(-def.rev, fwd - def.accel * 0.6 * -t * dt);
+    else fwd = Math.max(-def.rev * Math.min(1, 0.3 + 0.7 * -t), fwd - def.accel * 0.6 * -t * dt);
   } else {
     fwd *= 1 - (isBoat ? 0.9 : 0.7) * dt;
     if (Math.abs(fwd) < 4) fwd = 0;
@@ -140,6 +177,31 @@ export function vehStep(s, inp, dt, map, def, env) {
   s.vy = sn * fwd + c * lat;
   s.x += s.vx * dt; s.y += s.vy * dt;
   return collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);
+}
+
+// Direction-based driving: the stick points where you want to go. Throttle follows how far it is
+// pushed; steering turns the car toward the stick. Point well behind the car to brake, then reverse
+// (the rear swings toward the stick). Tank mode (IN.TANK, optional for keyboards): up/down = gas /
+// brake, left/right = steer, like the classic games.
+export function driveInput(s, inp) {
+  const hb = !!(inp.bits & IN.DIVE);
+  if (inp.bits & IN.TANK) return { throttle: -inp.my, steer: inp.mx, hb };
+  const m = Math.min(1, Math.hypot(inp.mx, inp.my));
+  if (m < 0.08) { s.rev = false; return { throttle: 0, steer: 0, hb }; }
+  const want = Math.atan2(inp.my, inp.mx);
+  const d = wrapAngle(want - s.a);
+  const fwd = s.vx * Math.cos(s.a) + s.vy * Math.sin(s.a);
+  // hysteresis so the car doesn't flip between forward and reverse
+  if (!s.rev && Math.abs(d) > 2.35 && fwd < 60) s.rev = true;
+  else if (s.rev && Math.abs(d) < 1.75) s.rev = false;
+  if (s.rev) {
+    const dr = wrapAngle(want - (s.a + Math.PI));
+    return { throttle: -m, steer: clamp(-dr * 2.2, -1, 1), hb };
+  }
+  if (Math.abs(d) > 2.35) return { throttle: -m, steer: 0, hb }; // pulling back hard at speed = brake
+  const steer = clamp(d * 2.4, -1, 1);
+  const throttle = m * (Math.abs(d) > 1.3 ? 0.55 : 1);
+  return { throttle, steer, hb };
 }
 
 export function collideVehicleTiles(s, def, map, block) {

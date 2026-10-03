@@ -205,13 +205,16 @@ function paint(P, a, pose, fr, w) {
     P.p(12 - Math.cos(ang) * 4, 12 - Math.sin(ang) * 4, hex(a.sh || '#222'));
     return;
   }
-  const walkCycle = [0, 1, 2, 3, 3, 2, 1, 0].map((v, i) => (i < 4 ? v : -v));
-  let stride = 0;
-  if (pose === 'walk' || pose === 'carry') stride = Math.round(walkCycle[fr & 7] * 1.5);
-  if (pose === 'run') stride = Math.round(walkCycle[fr & 7] * 2.1);
-  legs(P, a, stride, pose === 'run');
+  // smooth looping gait: stride follows a sine over the 8 frames (0, +, max, +, 0, -, min, -),
+  // amplitude grows with speed level move0 (stroll) .. move3 (full run)
+  if (pose === 'walk') pose = 'move1';
+  if (pose === 'run') pose = 'move3';
+  const lvl = pose.startsWith('move') ? Number(pose[4]) || 0 : -1;
+  const amp = lvl >= 0 ? [1.3, 2.0, 2.7, 3.4][lvl] : pose === 'carry' ? 1.5 : 0;
+  const stride = amp ? Math.round(amp * Math.sin(((fr & 7) * Math.PI) / 4)) : 0;
+  legs(P, a, stride, lvl >= 2);
 
-  const armSw = pose === 'walk' ? -Math.round(stride * 0.6) : pose === 'run' ? -Math.round(stride * 0.6) : 0;
+  const armSw = lvl >= 0 ? -Math.round(stride * (lvl >= 2 ? 0.75 : 0.6)) : 0;
   let hands = null;
   if (pose === 'punch') {
     const side = fr >> 2, f = fr & 3;
@@ -244,7 +247,7 @@ function paint(P, a, pose, fr, w) {
     const r = arm(P, a, 1, 1 - armSw, 0);
     // holstered / held melee weapon hangs from the right hand
     if (w > 0 && w <= 6) weapon(P, w, r.hx - 1, r.hy + 1, 0.5);
-    else if (w >= 7 && w <= 12 && pose !== 'run') weapon(P, w, r.hx - 1, r.hy + 1, 0.15);
+    else if (w >= 7 && w <= 12 && lvl < 3) weapon(P, w, r.hx - 1, r.hy + 1, 0.15);
     if (a.b === 1) { P.r(r.hx - 3, r.hy + 1.5, 4, 3, '#3a2414'); P.r(r.hx - 2, r.hy + 1.5, 2, 1, '#6b4a2a'); }   // briefcase
   }
   head(P, a);
@@ -280,3 +283,30 @@ export function paintCharacter(out, scale, app, pose, fr, weapon) {
 }
 
 export const CHAR_GRID = G;
+
+// HUD weapon icon: the same pixel weapon the characters hold, drawn large with an outline.
+const iconCache = new Map();
+export function weaponIcon(wIndex) {
+  if (iconCache.has(wIndex)) return iconCache.get(wIndex);
+  const g = art.getContext('2d', { willReadFrequently: true });
+  g.clearRect(0, 0, G, G);
+  const P = new Px(g);
+  if (!wIndex) { // fist
+    P.blob(12, 12, 4.5, 3.6, '#e0ac7e');
+    for (let k = 0; k < 4; k++) P.r(13 + (k & 1), 9 + k * 1.6, 3, 1, '#a8774c');
+    P.r(8, 13, 4, 2, '#c68953');
+  } else weapon(P, wIndex, wIndex >= 9 && wIndex <= 12 ? 5 : 7, 12, 0);
+  const img = g.getImageData(0, 0, G, G), d = img.data;
+  const solid = (x, y) => x >= 0 && y >= 0 && x < G && y < G && d[(y * G + x) * 4 + 3] > 40;
+  const edge = [];
+  for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) if (!solid(x, y) && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))) edge.push(x, y);
+  g.fillStyle = '#fff';
+  for (let i = 0; i < edge.length; i += 2) g.fillRect(edge[i], edge[i + 1], 1, 1);
+  const out = document.createElement('canvas');
+  out.width = 96; out.height = 48;
+  const o = out.getContext('2d');
+  o.imageSmoothingEnabled = false;
+  o.drawImage(art, 0, 6, G, 12, 0, 0, 96, 48);
+  iconCache.set(wIndex, out);
+  return out;
+}

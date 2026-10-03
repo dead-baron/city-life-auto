@@ -13,6 +13,7 @@ export const IN = {
   USE: 512,      // X - use best healing item
   NEXTW: 1024,   // next weapon
   PREVW: 2048,   // previous weapon
+  TANK: 4096,    // classic tank-style driving (optional keyboard setting)
 };
 
 export function quantizeAngle(a) {

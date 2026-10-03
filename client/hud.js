@@ -2,6 +2,9 @@
 // job tracker, weapon panel, fishing cue, shop menus, death screen, radar + big map.
 import { WEAPONS, ITEMS } from '../shared/items.js';
 import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER } from '../shared/constants.js';
+import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
+import { input } from './input.js';
+import { weaponIcon } from './render/peds.js';
 
 const $ = (id) => document.getElementById(id);
 const WEAPON_BY_ID = WEAPONS;
@@ -26,30 +29,46 @@ export class HUD {
     this.me = me;
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
-    $('hp-text').textContent = `${me.hp}${me.bleeding ? ' BLEEDING' : ''}`;
+    $('hp-fill').classList.toggle('low', hpPct < 30);
     $('cash').textContent = '$' + me.cash.toLocaleString();
-    $('bank').textContent = `bank $${me.bank.toLocaleString()}`;
+    $('bank').textContent = `BANK $${me.bank.toLocaleString()}`;
     const st = [];
-    st.push(`EXP ${me.cexp} · SAM ${me.sam}`);
-    if (me.peak > 0) st.push(`Record on file: ${'★'.repeat(me.peak)}${me.disguised ? ' (disguised)' : ''}`);
-    if (me.bounty > 0) st.push(`BOUNTY ON YOU: $${me.bounty}`);
-    if (me.buffs?.coffee > 0) st.push(`Coffee ${Math.ceil(me.buffs.coffee)}s`);
-    if (me.buffs?.energy > 0) st.push(`Energy ${Math.ceil(me.buffs.energy)}s`);
-    if (me.ghost) st.push('GHOST STATE');
-    $('status').innerHTML = st.join('<br>');
-    // stars
+    if (me.bleeding) st.push('<span class="bad">BLEEDING</span>');
+    if (me.peak > 0) st.push(`RECORD ${'★'.repeat(me.peak)}${me.disguised ? ' (DISGUISED)' : ''}`);
+    if (me.bounty > 0) st.push(`<span class="bad">BOUNTY $${me.bounty}</span>`);
+    if (me.buffs?.coffee > 0) st.push(`COFFEE ${Math.ceil(me.buffs.coffee)}s`);
+    if (me.buffs?.energy > 0) st.push(`ENERGY ${Math.ceil(me.buffs.energy)}s`);
+    if (me.ghost) st.push('GHOST');
+    st.push(`<span class="dim">EXP ${me.cexp} · SAM ${me.sam}</span>`);
+    $('status').innerHTML = st.join(' · ');
+    // stars (GTA style: outlined when empty, gold and flashing when fresh)
     const flashing = this.flareUntil && performance.now() < this.flareUntil;
     let s = '';
     for (let i = 1; i <= 5; i++) s += `<span class="${i <= me.wanted ? 'on' + (flashing ? ' flash' : '') : ''}">★</span>`;
     $('stars').innerHTML = s;
+    $('stars').classList.toggle('wanted', me.wanted > 0);
     if (me.wanted > this.lastStars) this.flareUntil = performance.now() + 3000;
     this.lastStars = me.wanted;
     const f = $('faction');
     f.className = me.faction;
     f.textContent = { citizen: 'CITIZEN', criminal: 'CRIMINAL', enforcer: 'ENFORCER ON DUTY', hunter: 'BOUNTY HUNTER' }[me.faction];
-    // prompt
-    const pr = $('prompt');
-    if (me.prompt && !me.dead) { pr.textContent = me.prompt; pr.classList.remove('hidden'); } else pr.classList.add('hidden');
+    // prompt -> GTA help box with the right button for this device; matching touch button pulses
+    const pr = $('helpbox');
+    const sig = (me.prompt || '') + '|' + input.device;
+    if (me.prompt && !me.dead) {
+      if (pr.dataset.sig !== sig) {
+        pr.dataset.sig = sig;
+        const fp = formatPrompt(me.prompt);
+        pr.innerHTML = fp.html;
+        document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse'));
+        if (fp.action) document.querySelector(`#tbtns [data-b="${fp.action}"]`)?.classList.add('pulse');
+      }
+      pr.classList.remove('hidden');
+    } else if (!pr.classList.contains('hidden')) {
+      pr.classList.add('hidden'); pr.dataset.sig = '';
+      document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse'));
+    }
+    document.body.classList.toggle('carrying', !!me.carrying);
     // job
     const jb = $('job');
     if (me.job) { jb.textContent = '▶ ' + me.job.text; jb.classList.remove('hidden'); } else jb.classList.add('hidden');
@@ -57,12 +76,15 @@ export class HUD {
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;
     $('w-name').textContent = w.name;
     const ow = me.weapons.find((x) => x.id === me.weapon);
-    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING...' : `${ow ? ow.mag : 0} / ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : `${me.weapons.length} weapon${me.weapons.length === 1 ? '' : 's'} · ${document.body.classList.contains('touch') ? 'WPN' : 'Tab'} to switch`;
+    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? 'tap to switch' : `${keyName('nextw')} to switch`) : '');
+    const wi = $('w-icon');
+    if (wi.dataset.w !== String(w.i)) { wi.dataset.w = String(w.i); wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i)); }
+    document.body.classList.toggle('armed', w.type !== 'melee' && w.type !== 'tool');
     const inv = Object.entries(me.inv).filter(([k]) => ITEMS[k]).map(([k, n]) => `${ITEMS[k].name} x${n}`);
     $('w-carry').textContent = (me.carrying ? `Carrying ${['', 'Wood Box', 'Steel Barrel', 'Iron Vault', 'Carbon-Gold Case'][me.carrying]} · ` : '') + (inv.length ? inv.slice(0, 3).join(', ') : '');
     // fishing
     const fb = $('fishbar');
-    if (me.fishing) { fb.classList.remove('hidden'); fb.classList.toggle('bite', me.fishing.bite); fb.textContent = me.fishing.bite ? 'BITE! PRESS E' : 'Waiting for a bite...'; } else fb.classList.add('hidden');
+    if (me.fishing) { fb.classList.remove('hidden'); fb.classList.toggle('bite', me.fishing.bite); fb.innerHTML = me.fishing.bite ? `BITE! ${glyph('action')}` : 'Waiting for a bite...'; } else fb.classList.add('hidden');
     // death
     const d = $('death');
     if (me.dead) {
@@ -97,7 +119,7 @@ export class HUD {
   toast(text, tone = 'info') {
     const el = document.createElement('div');
     el.className = 'toast ' + tone;
-    el.textContent = text;
+    el.textContent = localizeText(text);
     $('toasts').appendChild(el);
     this.toastEls.push(el);
     while (this.toastEls.length > 5) this.toastEls.shift().remove();
@@ -109,7 +131,7 @@ export class HUD {
     this.menu = m;
     $('menu').classList.remove('hidden');
     $('m-title').textContent = m.title;
-    $('m-sub').textContent = m.sub || '';
+    $('m-sub').textContent = localizeText(m.sub || '');
     $('m-money').textContent = `Wallet $${m.cash.toLocaleString()} · Bank $${m.bank.toLocaleString()}`;
     const box = $('m-opts');
     box.innerHTML = '';

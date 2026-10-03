@@ -228,3 +228,52 @@ Load test, 100 bots spread over the new map: 13–14 ms per tick (of a 50 ms bud
 
 ![Hospital, day](screenshots/hospital-day.png)
 ![Hospital, night + rain](screenshots/hospital-night-rain.png)
+
+## 2026-10-03 · Twin-stick controls, smooth movement, mobile UX, GTA-style HUD
+
+**Animation fix.** The 8-frame gait jumped from the full stride on one side straight to the other side, so walk and run never looped cleanly. Stride now follows a sine over the 8 frames. Each ped also has a walk phase driven by how far it actually moved on screen. Stride length and leg amplitude blend across four speed levels (stroll, walk, jog, run), so walking eases into running without the loop resetting.
+
+**Movement feel.** How far you push now sets your speed:
+- a light push walks, full push runs, and sprint adds a stamina burst on top
+- speeding up eases in; letting go glides a short way before stopping
+- the character turns smoothly instead of snapping
+
+On keyboard, C or Ctrl walks.
+
+**Driving.** The stick, keys or thumb point where you want to go:
+- the car steers toward that direction, and push depth sets cruising speed
+- pull back hard to brake, then reverse with the rear swinging round
+- Settings has "Classic tank" driving for keyboard players who prefer W = gas, A/D = steer
+
+**Twin-stick aiming.**
+- Keyboard + mouse: WASD moves and the cursor aims. With a gun out you always face the cursor. Unarmed, you face where you walk and turn to the cursor to punch.
+- Gamepad: the left stick moves or drives and the right stick aims. RT fires, LT sprints on foot or works as the handbrake in a car. A rolls, B interacts, X gets in or out, Y throws, LB/RB switch weapons, R3 reloads, Menu opens the map.
+- Touch:
+  - the left thumb-stick appears wherever you touch the left side
+  - the right stick aims, shown with an aim line
+  - firing is deliberate: tap the big FIRE button (it uses your last aim for about a second), or push the aim stick into its red outer ring, which buzzes when it engages
+  - the ring can be turned off in Settings
+
+**Device-aware hints.** The game detects touch devices and shows touch controls and help from the title screen onward. Prompts are GTA-style help boxes showing the right button for your device: a key cap, an Xbox-colour face button, or the on-screen button name. On touch, the matching button pulses. Contextual buttons:
+- THROW appears only when carrying
+- RELOAD only when armed
+- HORN and BRAKE only in a car
+
+Tap the weapon box to switch weapons and the radar to open the map.
+
+**Fullscreen and landscape.**
+- Mobile goes fullscreen when you press play, and there are ⛶ buttons on the title screen and in the HUD.
+- Android also locks to landscape.
+- iPhone gets an Add-to-Home-Screen hint.
+- In portrait, a "landscape shows more" tip appears once and fades out.
+
+**GTA-style HUD.**
+- Fonts: Anton and Barlow Condensed, self-hosted.
+- Top-right: weapon pixel icon and ammo, big outlined green money, white wanted stars.
+- Bottom-left: circular radar with health and stamina bars.
+- Help box and notifications top-left.
+- Interaction-style shop menus.
+- WASTED card over a desaturated screen.
+- Skewed title buttons.
+
+![Mobile landscape HUD](screenshots/mobile-hud-landscape.png)

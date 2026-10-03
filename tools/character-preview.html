@@ -6,7 +6,7 @@
 import { pedSprite } from '../client/render/sprites.js';
 import { ARCHETYPES, makeAppearance, playerOutfit } from '../server/entities.js';
 import { mulberry32 } from '../shared/rng.js';
-const poses = [['idle',0,0],['walk',1,0],['walk',3,0],['walk',5,0],['run',2,0],['punch',2,0],['punch',6,0],['swing',2,1],['aim',0,7],['aim',0,10],['carry',2,0],['roll',1,0],['down',1,0],['dead',0,0]];
+const poses = [['idle',0,0],['move1',0,0],['move1',1,0],['move1',2,0],['move1',3,0],['move1',4,0],['move1',5,0],['move1',6,0],['move1',7,0],['move3',2,0],['move3',6,0],['punch',2,0],['punch',6,0],['swing',2,1],['aim',0,7],['aim',0,10],['carry',2,0],['roll',1,0],['down',1,0],['dead',0,0]];
 const rows = Object.keys(ARCHETYPES).map((k) => [k, makeAppearance(mulberry32(k.length * 97 + 3), k)]);
 for (let i = 0; i < 4; i++) rows.push(['player ' + i, playerOutfit(mulberry32(i * 31 + 7))]);
 let html = '<table><tr><td></td>' + poses.map((p) => `<td>${p[0]}</td>`).join('') + '</tr>';

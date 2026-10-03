@@ -66,3 +66,18 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): server/client split, tick order, wire protocol, design decisions
 - [docs/ART_SPEC.md](docs/ART_SPEC.md): sprite sizes, directions, layers and palette for final art
 - [docs/DEPLOY.md](docs/DEPLOY.md): Oracle Cloud server + `play.deadbaron.com` + GitHub Pages at `deadbaron.com/city-life-auto`
+
+## Controls
+
+| | Keyboard + mouse | Gamepad | Touch |
+|---|---|---|---|
+| Move / drive (point where to go; further = faster) | WASD / arrows (C or Ctrl = walk) | Left stick | Left thumb anywhere on the left half |
+| Aim | Mouse cursor | Right stick | Right stick |
+| Fire / punch | Click | RT | FIRE button, or push the aim stick into its red ring |
+| Sprint | Shift | LT / L3 | SPRINT |
+| Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
+| Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
+| Weapons · reload · heal | Tab, wheel, 1-9 · R · X | LB/RB · R3 · View | tap the weapon box · RELOAD · HEAL |
+| Map | M | Menu | tap the radar |
+
+Settings (⚙) include classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen.

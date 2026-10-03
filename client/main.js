@@ -3,14 +3,14 @@
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
 import { generateCity, lightState } from '../shared/map.js';
-import { pedStep, vehStep } from '../shared/physics.js';
+import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
 import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
-import { initInput, sample, input, takeNumberPick } from './input.js';
+import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap } from './input.js';
 import { GroundCache, drawOverheadProp, drawPrefabGlow } from './render/tiles.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
@@ -158,7 +158,7 @@ function onBinary(buf) {
 // ---------------------------------------------------------------------------
 // Client-side prediction for the local character / driven vehicle
 function pedModsFrom(flags, speedMul) {
-  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100 };
+  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, analog: true };
 }
 
 function reconcile(s) {
@@ -192,15 +192,18 @@ function stepPred(inp) {
   const P = S.pred;
   if (!P) return;
   if (P.kind === 'ped') pedStep(P.s, inp, DT, S.map, P.mods);
-  else vehStep(P.s, { throttle: -inp.my, steer: inp.mx, hb: !!(inp.bits & IN.DIVE) }, DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
+  else vehStep(P.s, driveInput(P.s, inp), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
 }
 
 function fixedStep() {
   if (!S.welcomed) return;
   const selfScreen = worldToScreen(selfPos());
-  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, lastAim: S.lastAim });
+  const wcur = S.me ? WEAPONS[S.me.weapon] : null;
+  const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
+  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, lastAim: S.lastAim, armed });
+  if (input.padStart && S.playing) toggleMap(!S.bigmap);
   if (!S.playing || S.hud.menuOpen || S.bigmap) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
-  if (inp.bits & IN.AIMING) S.lastAim = inp.aim;
+  if (inp.bits & IN.AIMING) { S.lastAim = inp.aim; S.lastAimAt = performance.now(); S.lastFire = !!(inp.bits & IN.FIRE); }
   S.seq++;
   const mxq = quantizeAxis(inp.mx), myq = quantizeAxis(inp.my), aq = quantizeAngle(inp.aim);
   send(encodeInput(S.seq, inp.bits, mxq, myq, aq));
@@ -223,6 +226,7 @@ function fixedStep() {
     if (input.menuNav) S.hud.navMenu(input.menuNav);
     if (input.menuSelect) S.hud.choose(S.hud.menuFocus);
     if (input.menuBack) S.hud.closeMenu();
+  } else if (S.bigmap && input.menuBack) { toggleMap(false);
   }
   const n = takeNumberPick();
   if (n !== null) {
@@ -301,6 +305,8 @@ function setupWorld(seed) {
 function startPlaying() {
   S.playing = true;
   initAudio();
+  if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true);
+  setTimeout(maybeLandscapeTip, 600);
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (S.me) S.hud.setMe(S.me);
@@ -324,22 +330,75 @@ function setupDev() {
   if (S.playing) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Press ` (or DEV) for the cheats panel.' : 'Dev mode: press ` (backtick) for the playtest panel.', 'info');
 }
 
-$('practice').onclick = () => { initAudio(); startPractice(); };
+$('practice').onclick = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); setTimeout(maybeLandscapeTip, 1500); startPractice(); };
 $('play').onclick = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
 
 initInput(canvas, {
   onKey(k) {
-    if (k === 'Escape') { if (S.hud?.menuOpen) S.hud.closeMenu(); if (S.bigmap) toggleMap(false); }
+    if (k === 'Escape') { if (S.hud?.menuOpen) S.hud.closeMenu(); if (S.bigmap) toggleMap(false); openSettings(false); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
     if (k === 'Backquote' && S.dev) $('dev').classList.toggle('hidden');
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
-  onTouchMode() { onResize(); },
   onDev() { if (S.dev) $('dev').classList.toggle('hidden'); },
+  onMap() { if (S.playing) toggleMap(!S.bigmap); },
+  onSettings() { openSettings(true); },
+  onFullscreen() { toggleFullscreen(); },
 });
+input.onDevice = () => setTimeout(() => { onResize(); if (S.hud && S.me) { $('helpbox').dataset.sig = ''; S.hud.setMe(S.me); } }, 0);
+detectDevice();
 
-function toggleMap(on) { S.bigmap = on; $('bigmap').classList.toggle('hidden', !on); }
+// ---- fullscreen, landscape tip, settings ------------------------------------------------------
+const fsSupported = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFullscreen(force) {
+  const want = force ?? !isFullscreen();
+  if (!fsSupported) {
+    S.hud?.toast('This browser can\'t go fullscreen from a page. On iPhone: Share → Add to Home Screen, then open City Life Auto from your home screen.', 'info');
+    return;
+  }
+  const el = document.documentElement;
+  if (want && !isFullscreen()) {
+    const req = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen();
+    Promise.resolve(req).then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
+  } else if (!want && isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+}
+for (const id of ['b-fs', 't-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
+document.addEventListener('fullscreenchange', () => document.body.classList.toggle('fs', isFullscreen()));
+
+let landTipShown = false;
+function maybeLandscapeTip() {
+  if (landTipShown || input.device !== 'touch' || innerHeight <= innerWidth) return;
+  landTipShown = true;
+  const el = $('land-tip');
+  el.classList.remove('hidden', 'fade');
+  setTimeout(() => el.classList.add('fade'), 4200);
+  setTimeout(() => el.classList.add('hidden'), 5600);
+}
+
+function openSettings(on) {
+  $('settings').classList.toggle('hidden', !on);
+  if (!on) return;
+  $('s-kbdrive').value = settings.kbDrive;
+  $('s-edgefire').checked = settings.touchEdgeFire;
+  $('s-padfire').checked = settings.padStickFire;
+  $('s-vibrate').checked = settings.vibrate;
+  $('s-autofs').checked = settings.autoFullscreen !== false;
+}
+$('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettings(); };
+$('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; saveSettings(); };
+$('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
+$('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
+$('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
+$('s-close').onclick = () => openSettings(false);
+$('settings').onclick = (e) => { if (e.target.id === 'settings') openSettings(false); };
+for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
+
+function toggleMap(on) { S.bigmap = on; $('bigmap').classList.toggle('hidden', !on); $('bigmap-hint').textContent = input.device === 'touch' ? 'Tap anywhere to close' : input.device === 'gamepad' ? 'Menu / B to close' : 'M / Esc to close'; }
 $('bigmap').onclick = () => toggleMap(false);
+$('radar').onclick = () => { if (S.playing) toggleMap(true); };
+$('weapon').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) virtualTap('nextw'); }, { passive: false });
+$('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) toggleMap(true); }, { passive: false });
 
 // ---------------------------------------------------------------------------
 // Rendering
@@ -349,7 +408,8 @@ function onResize() {
   W = innerWidth; H = innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   lightCv.width = Math.ceil(W / 2); lightCv.height = Math.ceil(H / 2);
-  $('rotate').classList.toggle('hidden', !(input.usingTouch && H > W));
+  document.body.classList.toggle('portrait', H > W);
+  if (S.playing) maybeLandscapeTip();
 }
 addEventListener('resize', onResize);
 onResize();
@@ -410,7 +470,7 @@ function pedPose(e) {
     if (!meleeW) return 'aim';
   }
   if (f & PF.AIM) return 'aim';
-  if (f & PF.MOVING) return f & PF.SPRINT ? 'run' : 'walk';
+  if (e.as > 14 || ((f & PF.MOVING) && e.as === undefined)) return 'move';
   return 'idle';
 }
 
@@ -456,6 +516,19 @@ function render(dt) {
         if (sl) { const [x, y] = localToWorld(sp.x, sp.y, sp.a, sl[0], sl[1]); e.rx = x; e.ry = y; e.ra = sp.a; }
       }
     }
+  }
+  // walk-cycle phase from how far each ped actually moved on screen this frame: continuous
+  // across walk <-> run (stride length eases with speed), so the loop never jumps
+  for (const e of S.ents.values()) {
+    if (e.kind !== K.PED) continue;
+    if (e.ax === undefined) { e.ax = e.rx; e.ay = e.ry; e.as = 0; e.phase = 0; continue; }
+    let d = Math.hypot(e.rx - e.ax, e.ry - e.ay);
+    if (d > 60) d = 0; // teleport / respawn
+    e.ax = e.rx; e.ay = e.ry;
+    const v = d / Math.max(dt, 1e-3);
+    e.as += (v - e.as) * (1 - Math.exp(-(v > e.as ? 12 : 7) * dt));
+    const blend = Math.max(0, Math.min(1, (e.as - 70) / 110));
+    e.phase = (e.phase + d / (4.6 + blend * 2.4)) % 8;
   }
   // camera
   let speed = 0;
@@ -540,6 +613,20 @@ function render(dt) {
   fx.update(dt);
   fx.drawParticles(g);
 
+  // aim sight for sticks / touch (the mouse has its own cursor)
+  if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
+    const ta = touchAimState();
+    const fire = S.lastFire || ta.firing;
+    const a = S.lastAim, x0 = sp.x + Math.cos(a) * 22, y0 = sp.y + Math.sin(a) * 22;
+    g.save();
+    g.strokeStyle = fire ? 'rgba(255,70,60,.85)' : 'rgba(255,255,255,.55)';
+    g.lineWidth = 2; g.setLineDash([6, 6]); g.lineDashOffset = -now * 40;
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(sp.x + Math.cos(a) * 190, sp.y + Math.sin(a) * 190); g.stroke();
+    g.setLineDash([]);
+    g.beginPath(); g.arc(sp.x + Math.cos(a) * 190, sp.y + Math.sin(a) * 190, fire ? 7 : 5, 0, 6.28); g.stroke();
+    g.restore();
+  }
+
   // name tags + public flares + rumor marker
   drawWorldLabels(peds, vehs, now, z);
 
@@ -555,6 +642,15 @@ function render(dt) {
   }
   S.hud.setClock(S.loopTime, S.weather);
   S.hud.drawRadar(sp.x, sp.y, sp.a);
+  {
+    const showTouch = input.device === 'touch' && S.playing;
+    if (showTouch !== S.uiTouch) { S.uiTouch = showTouch; $('touch').classList.toggle('hidden', !showTouch); }
+    const inVeh = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER;
+    if (inVeh !== S.uiInVeh) { S.uiInVeh = inVeh; document.body.classList.toggle('in-veh', inVeh); }
+    const dead = !!(S.me && S.me.dead);
+    if (dead !== S.uiDead) { S.uiDead = dead; document.body.classList.toggle('dead', dead); }
+    if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
+  }
   if (S.bigmap) S.hud.drawBigMap(sp.x, sp.y, sp.a);
   if ((nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
 }
@@ -675,9 +771,10 @@ function drawPed(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
   const pose = pedPose(p);
-  let fr = pose === 'walk' || pose === 'run' || pose === 'carry' ? Math.floor(p.walk / (pose === 'run' ? 7 : 5)) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
+  let fr = pose === 'move' || pose === 'carry' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
-  const spr = pedSprite(p.d.app, pose === 'run' ? 'run' : pose, fr, p.extra);
+  const lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
+  const spr = pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra);
   const hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
   g.save();
   g.translate(p.rx + (hitK ? Math.cos(p.hitA) * 5 * hitK : 0), p.ry + (hitK ? Math.sin(p.hitA) * 5 * hitK : 0));

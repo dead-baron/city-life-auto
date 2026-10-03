@@ -6,6 +6,7 @@ import { gameClock, K, T, STAR_HEAT } from '../shared/constants.js';
 import { encodeInput, decodeInput, SnapshotWriter, decodeSnapshot } from '../shared/protocol.js';
 import { vehStep, newVehState } from '../shared/physics.js';
 import { VEHICLES } from '../shared/vehicles.js';
+import { IN } from '../shared/input.js';
 import { issueToken, verifyToken } from '../server/auth.js';
 import * as law from '../server/systems/law.js';
 import * as cargo from '../server/systems/cargo.js';
@@ -316,4 +317,48 @@ test('respawn picker: players can choose any hospital', () => {
   p.respawnChoice = 'h:2';
   run(w, 8);
   assert.ok(Math.hypot(p.ped.x - target.x, p.ped.y - target.y) < 60);
+});
+
+test('analog movement: light push walks, full push runs, sprint is faster, release glides then stops', async () => {
+  const { pedStep, newPedState, analogSpeed, PED } = await import('../shared/physics.js');
+  const m = generateCity(1337);
+  const sp = m.spawns.hospital;
+  const mods = { canMove: true, canSprint: true, speedMul: 1, regenMul: 1, staminaMax: 100, analog: true };
+  const run = (mag, bits, secs) => {
+    const s = newPedState(sp.x, sp.y);
+    for (let i = 0; i < secs * 20; i++) pedStep(s, { bits, mx: 0, my: mag, aim: 0 }, 0.05, m, mods);
+    return s;
+  };
+  assert.ok(analogSpeed(0.3, false) < analogSpeed(0.6, false) && analogSpeed(0.6, false) < analogSpeed(1, false));
+  assert.ok(analogSpeed(1, true) > analogSpeed(1, false));
+  const walk = Math.hypot(...Object.values((({ vx, vy }) => ({ vx, vy }))(run(0.4, 0, 1))));
+  const jog = Math.hypot(...Object.values((({ vx, vy }) => ({ vx, vy }))(run(1, 0, 1))));
+  assert.ok(walk > 40 && walk < PED.aWalk, `walk ${walk}`);
+  assert.ok(jog > PED.aWalk + 40, `run ${jog}`);
+  // release: keeps sliding a little (ease-out), then comes to rest
+  const s = run(1, 0, 1);
+  const y0 = s.y;
+  pedStep(s, { bits: 0, mx: 0, my: 0, aim: 0 }, 0.05, m, mods);
+  assert.ok(s.y - y0 > 3, 'glides past release');
+  for (let i = 0; i < 40; i++) pedStep(s, { bits: 0, mx: 0, my: 0, aim: 0 }, 0.05, m, mods);
+  assert.equal(Math.hypot(s.vx, s.vy), 0);
+});
+
+test('direction driving: the car turns toward the stick, light push cruises slower, pulling back reverses', async () => {
+  const { driveInput, vehStep, newVehState } = await import('../shared/physics.js');
+  const m = generateCity(1337);
+  const ave = m.roads.find((r) => r.axis === 'h' && r.y === 80);
+  const def = VEHICLES.sedan;
+  const drive = (mx, my, secs, s = newVehState((ave.x + 10) * 32, (ave.y + 3) * 32, 0)) => {
+    for (let i = 0; i < secs * 20; i++) vehStep(s, driveInput(s, { bits: 0, mx, my, aim: 0 }), 0.05, m, def, { rain: false });
+    return s;
+  };
+  const slow = drive(0.35, 0, 4), fast = drive(1, 0, 4);
+  assert.ok(Math.hypot(fast.vx, fast.vy) > Math.hypot(slow.vx, slow.vy) * 1.6, 'analog throttle');
+  const di = driveInput(newVehState(0, 0, 0), { bits: 0, mx: 0, my: -1, aim: 0 });
+  assert.ok(di.steer < -0.5 && di.throttle > 0, 'stick up while facing east steers left (north)');
+  const back = driveInput(newVehState(0, 0, 0), { bits: 0, mx: -1, my: 0, aim: 0 });
+  assert.ok(back.throttle < 0, 'stick behind a stopped car reverses');
+  const tank = driveInput(newVehState(0, 0, 0), { bits: IN.TANK, mx: 1, my: -1, aim: 0 });
+  assert.equal(tank.throttle, 1); assert.equal(tank.steer, 1);
 });
