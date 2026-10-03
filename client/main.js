@@ -15,6 +15,7 @@ import { GroundCache, drawOverheadProp, drawPrefabGlow, debrisColors, lampHead }
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
+import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -371,11 +372,14 @@ function setupDev() {
   if (S.playing) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Press ` (or DEV) for the cheats panel.' : 'Dev mode: press ` (backtick) for the playtest panel.', 'info');
 }
 
-$('practice').onclick = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); setTimeout(maybeLandscapeTip, 1500); startPractice(); };
-$('play').onclick = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
+const practiceGo = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); setTimeout(maybeLandscapeTip, 1500); startPractice(); };
+const playGo = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
+$('practice').onclick = firstPlay(practiceGo);
+$('play').onclick = firstPlay(playGo);
 
 initInput(canvas, {
   onKey(k) {
+    if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
@@ -390,6 +394,36 @@ initInput(canvas, {
 });
 input.onDevice = () => setTimeout(() => { onResize(); if (S.hud && S.me) { $('helpbox').dataset.sig = ''; S.hud.setMe(S.me); } }, 0);
 detectDevice();
+
+// ---- tutorial: guided tour over the live city map ---------------------------------------------
+let tutMap = null;
+// `then` runs once the tour is finished or skipped (first play: tour first, then into the city)
+function openTutorial(chapter, then) {
+  const map = S.map || (tutMap ||= generateCity(1337));
+  $('tut-offer').classList.add('hidden');
+  openOverlay('tutorial');
+  startTutorial({ map, fallback: S.hud ? S.hud.mini : null, chapter, onClose: () => { if (overlays.includes('tutorial')) closeOverlay('tutorial'); if (then) setTimeout(then, 0); } });
+}
+// first-time players see the tour before their first game (SKIP is always there)
+function firstPlay(go) {
+  return () => {
+    if (tutorialSeen()) { go(); return; }
+    if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); // needs this tap's user gesture
+    openTutorial(null, go);
+  };
+}
+$('t-tutorial').onclick = () => openTutorial();
+$('tut-watch').onclick = () => openTutorial();
+$('tut-skip-offer').onclick = () => { markTutorialSeen(); $('tut-offer').classList.add('hidden'); };
+$('tut-next').onclick = () => tutorialNext();
+$('tut-prev').onclick = () => tutorialPrev();
+$('tut-pause').onclick = () => tutorialTogglePause();
+$('tut-skip').onclick = () => closeOverlay('tutorial');
+$('tut-cv').addEventListener('click', () => tutorialNext());
+if (!tutorialSeen()) {
+  if (tutorialSeenOld()) { $('tut-offer-h').textContent = 'The city tour has been updated'; $('tut-offer-p').textContent = 'New places, rules and features since you last watched it.'; }
+  $('tut-offer').classList.remove('hidden');
+}
 
 // ---- fullscreen, landscape tip, settings ------------------------------------------------------
 const fsSupported = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
@@ -539,6 +573,7 @@ function closeOverlay(id = topOverlay()) {
   if (i >= 0) overlays.splice(i, 1);
   $(id).classList.add('hidden');
   if (id === 'dev') $('dev').classList.remove('as-overlay');
+  if (id === 'tutorial') stopTutorial();
   S.inputMuteUntil = performance.now() + 300; // the A press that closed the menu shouldn't roll you
   ovFocus = 0; focusOverlay();
 }
@@ -560,6 +595,7 @@ function overlayPad() {
   if (!topOverlay()) return false;
   const f = focusables();
   const el = f[ovFocus];
+  if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
   if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
   if (el && input.menuLR) {
     if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + input.menuLR + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); }
@@ -611,6 +647,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'cruiser') { closeOverlay('pause'); callCruiser(); }
     else if (a === 'settings') openOverlay('settings');
     else if (a === 'controls') openOverlay('controls');
+    else if (a === 'tutorial') { closeOverlay('pause'); openTutorial(); }
     else if (a === 'fullscreen') toggleFullscreen();
     else if (a === 'dev') openOverlay('dev');
     else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; }
@@ -762,7 +799,7 @@ function frame(nowMs) {
     const k = Math.exp(-(S.pred && S.pred.kind === 'veh' ? 7 : 10) * dt);
     S.smooth.x *= k; S.smooth.y *= k; S.smooth.a = (S.smooth.a || 0) * k;
     if (nowMs - pingAt > 2000) { pingAt = nowMs; send({ t: 'ping', ts: performance.now() }); }
-    render(dt);
+    if (!tutorialActive()) render(dt);
   } else {
     g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height);
     // title screen before the city connects: the pad still drives the menus

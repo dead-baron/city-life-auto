@@ -14,7 +14,7 @@ import * as combat from './combat.js';
 import * as homes from './homes.js';
 import * as cruiser from './cruiser.js';
 
-const HOSPITAL_FEE = 150;
+import { HOSPITAL_FEE } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {

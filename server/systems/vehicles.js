@@ -185,7 +185,8 @@ export function explode(world, v, attackerPed) {
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
-export const BAIL_SPEED = 140;
+import { BAIL_SPEED } from '../../shared/rules.js';
+export { BAIL_SPEED };
 function bail(world, ped, v, spd) {
   const a = Math.atan2(v.vy, v.vx);
   // out of the driver's door, carried along by the car's momentum

@@ -23,13 +23,11 @@ export const CRIMES = {
   possession:  { heat: 20, label: 'Contraband possession' },
 };
 
-export const ENFORCER_MIN_SAMARITAN = 25;
+import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR } from '../../shared/rules.js';
+export { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, SERVICE_AMMO, SUBDUE_S, POLICE_RANKS };
 
 // Police misconduct grace: officers can get away with a few offences; each one is forgotten
 // after MISCONDUCT_RESET_MS. Going over the limit costs the badge.
-export const MISCONDUCT_GRACE = 3;
-export const MISCONDUCT_RESET_MS = 10 * 60 * 1000;
-const MISCONDUCT_WEIGHT = { murder: 2, copMurder: 3, vehKill: 2 };
 function pruneMisconduct(prof) {
   const now = Date.now();
   prof.misconduct = (prof.misconduct || []).filter((t) => now - t < MISCONDUCT_RESET_MS);
@@ -51,10 +49,6 @@ export function misconductFor(p) {
 
 // Police career: rank comes from service points (arrests, bounties, stops). Shown in the HUD;
 // every rank gets the dispatch map, higher ranks see crime reports for longer.
-export const POLICE_RANKS = [
-  { name: 'Officer', pts: 0 }, { name: 'Senior Officer', pts: 40 }, { name: 'Sergeant', pts: 120 },
-  { name: 'Lieutenant', pts: 260 }, { name: 'Captain', pts: 480 }, { name: 'Chief of Police', pts: 800 },
-];
 export function policeRank(prof) {
   const pts = prof.policePts || 0;
   let r = 0;
@@ -83,7 +77,6 @@ export function dispatchFor(world, p) {
   const ttl = DISPATCH_TTL + policeRank(p.profile) * 60;
   return world.dispatch.filter((d) => world.time - d.t < ttl && d.who !== p.pid).map((d) => ({ id: d.id, x: d.x, y: d.y, l: d.l, s: d.s, via: d.via, age: Math.round(world.time - d.t) }));
 }
-export const HUNTER_MIN_SAMARITAN = 10;
 
 function isCop(ped) { return !!ped && ((ped.npc && (ped.npc.role === 'cop')) || (ped.player && ped.player.badge)); }
 function isFlagged(world, ped) {
@@ -157,7 +150,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
       return;
     }
     goOffDuty(world, p, true);
-    p.profile.firedUntil = Date.now() + 10 * 60 * 1000;
+    p.profile.firedUntil = Date.now() + FIRED_LOCKOUT_MS;
     p.profile.misconduct = [];
     world.notify(p, 'Too much misconduct - you have been FIRED from the force. Badge and uniform revoked.', 'bad');
   }
@@ -374,7 +367,6 @@ export function arrestTarget(world, p) {
 
 // Officer (or anyone hunting a wanted suspect) puts a suspect on the floor: they stay out long
 // enough for the arrest walk-up.
-export const SUBDUE_S = 6;
 export function subdue(world, by, target) {
   if (!by || !target || target.dead) return;
   const p = by.player;
@@ -433,12 +425,12 @@ export function arrest(world, cop, target) {
   if (target.player) {
     const t = target.player;
     const stars = Math.max(1, t.wanted);
-    const fine = Math.min(t.profile.cash, 250 * stars);
+    const fine = Math.min(t.profile.cash, BUST_FINE_PER_STAR * stars);
     t.profile.cash -= fine;
     for (const id of ['smg', 'rocket']) if (t.profile.weapons[id] !== undefined) delete t.profile.weapons[id];
     if (target.carrying) { const c = world.get(target.carrying); target.carrying = 0; if (c) world.remove(c); }
     if (target.weapon === 'smg' || target.weapon === 'rocket') target.weapon = 'fists';
-    const reward = 150 * stars;
+    const reward = ARREST_REWARD_PER_STAR * stars;
     if (cop && cop.player) {
       if (t.bounty > 0) claimBounty(world, cop.player, t);
       cop.player.profile.cash += reward + fine;
@@ -517,7 +509,7 @@ export function goOnDuty(world, p) {
   p.ped.appVer = (p.ped.appVer || 0) + 1;
   prof.weapons.taser = prof.weapons.taser ?? 0;
   prof.weapons.baton = prof.weapons.baton ?? 0;
-  if (prof.weapons.service === undefined || prof.weapons.service < SERVICE_AMMO) { prof.weapons.service = SERVICE_AMMO; p.ped.mag.service = WEAPONS_MAG_SERVICE; }
+  if (prof.weapons.service === undefined || prof.weapons.service < SERVICE_AMMO) { prof.weapons.service = SERVICE_AMMO; p.ped.mag.service = SERVICE_MAG; }
   p.ped.weapon = 'service';
   p.meDirty = true;
   store.touch();
@@ -525,8 +517,6 @@ export function goOnDuty(world, p) {
 }
 
 // Department-issued gear: handed out on duty, handed back off duty (or lost on death).
-export const SERVICE_AMMO = 75;
-const WEAPONS_MAG_SERVICE = 15;
 export function stripPoliceGear(p) {
   for (const id of ['taser', 'baton', 'service']) delete p.profile.weapons[id];
   if (p.ped && ['taser', 'baton', 'service'].includes(p.ped.weapon)) p.ped.weapon = 'fists';
@@ -536,9 +526,9 @@ export function restockService(world, p) {
   if (!p.badge) return 'On-duty officers only.';
   const prof = p.profile;
   const have = prof.weapons.service ?? 0;
-  if (have >= SERVICE_AMMO && p.ped.mag.service >= WEAPONS_MAG_SERVICE) return 'Your service pistol is already fully stocked.';
+  if (have >= SERVICE_AMMO && p.ped.mag.service >= SERVICE_MAG) return 'Your service pistol is already fully stocked.';
   prof.weapons.service = Math.max(have, SERVICE_AMMO);
-  p.ped.mag.service = WEAPONS_MAG_SERVICE;
+  p.ped.mag.service = SERVICE_MAG;
   world.notify(p, `Armory: service pistol restocked (${SERVICE_AMMO} rounds).`, 'good');
   p.meDirty = true;
   store.touch();

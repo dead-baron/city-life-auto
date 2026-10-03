@@ -1,0 +1,272 @@
+// The guided tour ("tutorial cut scene"). Pure data + resolvers, shared by the client (which
+// flies a camera over the real, live-rendered city) and the test suite (which fails the build
+// when the tour falls out of date).
+//
+// Keeping it current:
+//  * Places are referenced by POI kind / district / island, never by coordinates. They are
+//    resolved against generateCity() at play time, so moving or renaming a building moves the
+//    camera and the labels with it. {{kind}} in text becomes that place's in-game name.
+//  * Numbers come from shared/rules.js and the shop catalog, so balance changes update the text.
+//  * [[action]] becomes the right key / button / touch label for the player's device
+//    (shared/controls.js).
+//  * test/tutorial.test.js requires every POI kind, island, gang turf, control action and rule
+//    to be covered here - add a place type or control and the tests tell you to teach it.
+import { ISLANDS, DISTRICTS } from './map.js';
+import { TILE, MAP_W, MAP_H, STAR_HEAT, DAY_LOOP_S, DAY_PART_S } from './constants.js';
+import { SHOPS, WEAPONS } from './items.js';
+import {
+  ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS,
+  SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
+  RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE,
+} from './rules.js';
+
+// Bump when the tour changes enough that returning players should be offered it again.
+export const TUTORIAL_VERSION = 1;
+
+const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
+const min = (ms) => Math.round(ms / 60000);
+const dayMin = Math.round(DAY_PART_S / 60), nightMin = Math.round((DAY_LOOP_S - DAY_PART_S) / 60);
+const isle = (k) => ISLANDS[k].name;
+
+export const CHAPTERS = [
+  { id: 'city', title: 'The City' },
+  { id: 'basics', title: 'Survival Basics' },
+  { id: 'citizen', title: 'Citizen Path' },
+  { id: 'criminal', title: 'Criminal Path' },
+  { id: 'police', title: 'Police Path' },
+  { id: 'end', title: 'Your Move' },
+];
+
+// at: what the camera frames. One of
+//   { city: 1 } | { island: 'D' } | { district: 'Neon Strip' } | { poi: kind } | { pois: kind }
+//   { spawn: 'default' } | { cameras: 1 } | { dropSites: 1 } | { turf: 1 } | { homes: districtName }
+// route: an animated vehicle driving the road network between two targets (optional chaser).
+export const STEPS = [
+  // ---- the city ------------------------------------------------------------------------------
+  { ch: 'city', title: 'Welcome to the city', at: { city: 1 },
+    text: `Four islands joined by bridges: ${isle('I')}, ${isle('R')}, ${isle('D')} and the quiet ${isle('F')}. Everyone shares one living city - other players, traffic, cops and crooks. Live as a citizen, a criminal or a police officer, and switch whenever you like.` },
+  { ch: 'city', title: isle('D'), at: { island: 'D' },
+    text: `The heart of the city: offices, shops, government and the bright lights of the Neon Strip.` },
+  { ch: 'city', title: isle('R'), at: { island: 'R' },
+    text: `Houses and apartments you can buy, beaches and quiet streets. A home becomes your respawn point and your garage.` },
+  { ch: 'city', title: isle('I'), at: { island: 'I' },
+    text: `Docks, cranes, warehouses and rail yards - where the city's cargo comes and goes.` },
+  { ch: 'city', title: isle('F'), at: { island: 'F' },
+    text: `Farmland across the water from the city. The {{farm}} pays you to haul fresh produce back to town.` },
+
+  // ---- basics --------------------------------------------------------------------------------
+  { ch: 'basics', title: 'Moving and driving', at: { spawn: 'default' },
+    text: `Move with [[move]] - push further to run. [[sprint]] sprints, [[dive]] dives out of the way. Walk up to any vehicle and press [[vehicle]] to get in: parked cars, traffic, even boats. [[gas]] accelerates, [[brake]] brakes and reverses. Taking one that isn't yours is a crime if anyone sees it. Bail out of a fast car and you tumble along the road - hit a wall at speed and it can kill you.` },
+  { ch: 'basics', title: 'Fighting', at: { spawn: 'default' },
+    text: `Aim with [[aim]] and attack with [[fire]]. Land punches in quick succession to floor someone - 3 hits for most people, 4 for tough guys. [[nextw]] switches weapons, [[reload]] reloads, [[throw]] throws what you're carrying.` },
+  { ch: 'basics', title: 'Your HUD and the map', at: { city: 1 },
+    text: `The HUD shows your weapon, cash on hand, bank balance, wanted stars and the clock, plus the radar in the corner. [[map]] opens the full city map and [[pause]] the pause menu (settings, controls and this tour). A day lasts ${dayMin} minutes and night ${nightMin} - at night witnesses see less and rain makes the roads slick.` },
+  { ch: 'basics', title: 'Hospitals', at: { pois: 'hospital' },
+    text: `Hurt? Step onto the {{reception}} mat at any hospital for full treatment ($${HOSPITAL_FEE}). Below 30% health you bleed - [[use]] uses a med kit or bandage from the {{pharmacy}}. {{vending}}s sell energy drinks. If you die you wake up at a hospital after ${RESPAWN_SECONDS} seconds and everything you carried stays on the street.` },
+  { ch: 'basics', title: 'Cash vs. bank', at: { poi: 'bank' },
+    text: `Cash on you is lost when you die or get robbed. Deposit it at the {{bank}} or any {{atm}}. Your bank balance is always safe. Log out mid-fight and your body stays in the world for ${GHOST_SECONDS} seconds.` },
+
+  // ---- citizen -------------------------------------------------------------------------------
+  { ch: 'citizen', title: 'The honest living', at: { poi: 'warehouse' }, route: { from: { poi: 'warehouse' }, to: { poi: 'delivery' }, veh: 'van' },
+    text: `Grab a courier contract at {{warehouse}} in {{warehouse:where}} and haul crates to a {{delivery}} across the city. Cargo rides in the open on pickups and flatbeds - anyone can see it and ambush you, so drive smart.` },
+  { ch: 'citizen', title: 'Harvest contracts', at: { poi: 'farm' }, route: { from: { poi: 'farm' }, to: { poi: 'grocery' }, veh: 'pickup' },
+    text: `Load produce boxes into an open-cargo vehicle at the {{farm}} and deliver them to {{grocery}} in {{grocery:where}}.` },
+  { ch: 'citizen', title: 'Fishing', at: { poi: 'fishmarket' },
+    text: `Buy a fishing pole at the {{fishmarket}} in {{fishmarket:where}} ($${price('fishmarket', 'rod')}) or {{sports}} ($${price('sports', 'rod')}), cast at the water's edge and strike when it bites. Night brings catfish. Sell your catch back at the market.` },
+  { ch: 'citizen', title: 'Shopping', at: { poi: 'coffee' },
+    text: `{{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons, {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
+  { ch: 'citizen', title: 'Homes and wheels', at: { homes: 'Pine Hills' },
+    text: `Buy a {{home}} to respawn there, rest to full health and park cars in its garage. New cars at {{dealer}}, boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
+  { ch: 'citizen', title: 'Good Samaritan points', at: { poi: 'evidence' },
+    text: `Doing good earns Samaritan points: finish deliveries, return a snatched purse to its owner, or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
+
+  // ---- criminal ------------------------------------------------------------------------------
+  { ch: 'criminal', title: 'Crime needs a witness', at: { cameras: 1 },
+    text: `Assault, theft, carjacking, murder - a crime only counts if someone sees it: a pedestrian, a cop, or one of the traffic cameras on poles at junctions. Nobody around? Nobody knows. Night shortens how far witnesses can see.` },
+  { ch: 'criminal', title: 'Wanted stars', at: { district: 'Civic Center' }, route: { from: { poi: 'bank' }, to: { district: 'Southside' }, veh: 'sports', chaser: 'police' },
+    text: `A reported crime earns wanted stars (★ at ${STAR_HEAT[1]} heat up to ★★★★★ at ${STAR_HEAT[5]}). Police come for you - tasers at low stars, guns from 3, SWAT at 4-5. Break line of sight and they only know a search circle that grows; stay hidden and the heat fades.` },
+  { ch: 'criminal', title: 'Lying low', at: { poi: 'clothing' },
+    text: `A new outfit at {{clothing}} ($${price('clothing', 'outfit')}) drops your public wanted level - but only if no cop is watching. The city remembers your peak: commit even a small crime in disguise and the heat spikes straight back. A respray at {{garage}} ($${price('garage', 'respray')}) hides a hot car and cleans the blood off the hood.` },
+  { ch: 'criminal', title: 'Contraband drops', at: { dropSites: 1 }, route: { from: { dropSites: 1 }, to: { poi: 'fence' }, veh: 'flatbed', chaser: 'police' },
+    text: `Every few minutes rare crates land at a drop site - watch the radar for a rumor circle. Iron vaults and carbon-gold cases are worth a fortune at {{fence}} in {{fence:where}}, the black market (it also sells a Micro SMG for $${price('fence', 'smg')}). Everyone else wants them too.` },
+  { ch: 'criminal', title: 'Gang turf', at: { turf: 1 },
+    text: `{{turfs}} belong to the syndicate. Their members attack outsiders, and fighting back on their turf isn't a crime. Muggers also prowl the streets - drop one and return the purse for Samaritan points.` },
+  { ch: 'criminal', title: 'Busted or wasted', at: { poi: 'police' },
+    text: `Get knocked out by a cop and cuffed and you're BUSTED: fined $${BUST_FINE_PER_STAR} per star, illegal weapons and contraband confiscated. Die and your wanted level is wiped, but you drop everything you carried. Felonies stay on your record and keep you off the police force.` },
+
+  // ---- police --------------------------------------------------------------------------------
+  { ch: 'police', title: 'Joining the force', at: { poi: 'police' },
+    text: `Walk into {{police}} in {{police:where}} with ${ENFORCER_MIN_SAMARITAN}+ Samaritan points and zero felonies to pick up a badge. You get a uniform, taser, nightstick and the ${WEAPONS.service.name} (${SERVICE_MAG}-round mag, ${SERVICE_AMMO} rounds) - and you start behind the wheel of your own cruiser. Your own weapons still work.` },
+  { ch: 'police', title: 'Your cruiser', at: { poi: 'police' }, route: { from: { poi: 'police' }, to: { district: 'Neon Strip' }, veh: 'police', siren: 1 },
+    text: `[[horn]] toggles the siren. Your cruiser is the blue square on your map. Wrecked or stolen? After ${CALL_COOLDOWN_S} seconds press [[cruiser]] and dispatch drives a new one to you, locked just for you. Leave it behind for long and it's towed back to HQ.` },
+  { ch: 'police', title: 'Dispatch', at: { district: 'Downtown' },
+    text: `On duty, [[map]] becomes the dispatch map: every crime that was witnessed or reported, live suspects you can see, and the search area for ones you can't. Crimes near you pulse red on the radar, and criminals in sight wear a small flashing marker.` },
+  { ch: 'police', title: 'Making an arrest', at: { district: 'Midtown' },
+    text: `A suspect must be knocked out before you can cuff them: floor them with punches, tase them, tackle them with [[dive]], or run them down. They stay down for ${SUBDUE_S} seconds - walk up and press [[action]] to cuff them for $${ARREST_REWARD_PER_STAR} per star. Even a dead suspect's body has to be booked.` },
+  { ch: 'police', title: 'Code of conduct', at: { poi: 'police' },
+    text: `Officers get ${MISCONDUCT_GRACE} strikes of misconduct (killing someone counts ${MISCONDUCT_WEIGHT.murder}, killing a cop ${MISCONDUCT_WEIGHT.copMurder}); each is forgotten after ${min(MISCONDUCT_RESET_MS)} minutes. Your HUD shows the count and warns you at the last one. One more and you're fired for ${min(FIRED_LOCKOUT_MS)} minutes - and that crime counts like anyone's.` },
+  { ch: 'police', title: 'Armory and promotions', at: { poi: 'police' },
+    text: `The HQ armory restocks your service pistol for free. Arrests and bounties earn promotions: ${POLICE_RANKS.map((r) => r.name).join(' → ')}. Higher ranks keep crime reports on the map longer.` },
+  { ch: 'police', title: 'Bounty hunting', at: { poi: 'courthouse' },
+    text: `Not a cop? Register at {{courthouse}} in {{courthouse:where}} as a bounty hunter (${HUNTER_MIN_SAMARITAN}+ Samaritan, not wanted). Bounty targets show as rough pings on your radar. Robbed by another player? Put a price on their head here.` },
+
+  // ---- end -----------------------------------------------------------------------------------
+  { ch: 'end', title: 'Pick your path', at: { city: 1 },
+    text: `Earn honestly, live outside the law, or keep the streets clean. Watch this tour again any time from the title screen or the pause menu. See you on the streets.` },
+];
+
+// ---- resolvers -----------------------------------------------------------------------------
+const WW = MAP_W * TILE, WH = MAP_H * TILE;
+function box(pts, pad = 0) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of pts) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 };
+}
+function districtTiles(map, d) {
+  let sx = 0, sy = 0, n = 0, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let ty = 0; ty < MAP_H; ty += 2) for (let tx = 0; tx < MAP_W; tx += 2) {
+    if (map.dist[ty * MAP_W + tx] !== d) continue;
+    sx += tx; sy += ty; n++;
+    x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty);
+  }
+  if (!n) return null;
+  return { x: (sx / n + 0.5) * TILE, y: (sy / n + 0.5) * TILE, w: (x1 - x0 + 2) * TILE, h: (y1 - y0 + 2) * TILE };
+}
+const poiMark = (p) => ({ x: p.x, y: p.y, label: p.label, kind: p.kind });
+
+// Where a step points the camera: { x, y, w, h } in world px plus labelled markers.
+export function resolveTarget(map, at, ref) {
+  if (!at || at.city) return { x: WW / 2, y: WH / 2, w: WW, h: WH, marks: [] };
+  if (at.island) {
+    const I = ISLANDS[at.island];
+    if (!I) return null;
+    const [x0, y0, x1, y1] = I.box;
+    return { x: (x0 + x1) / 2 * TILE, y: (y0 + y1) / 2 * TILE, w: (x1 - x0) * TILE, h: (y1 - y0) * TILE, marks: islandMarks(map, at.island), label: I.name };
+  }
+  if (at.district) {
+    const d = DISTRICTS.findIndex((q) => q.name === at.district);
+    const r = d >= 0 ? districtTiles(map, d) : null;
+    return r ? { ...r, w: Math.min(r.w, 2600), h: Math.min(r.h, 2000), marks: [], label: at.district } : null;
+  }
+  if (at.poi) {
+    const list = map.pois.filter((p) => p.kind === at.poi);
+    if (!list.length) return null;
+    // with a reference point (route ends), pick the nearest; otherwise the first one
+    let p = list[0];
+    if (ref) p = list.reduce((b, q) => (Math.hypot(q.x - ref.x, q.y - ref.y) < Math.hypot(b.x - ref.x, b.y - ref.y) ? q : b), list[0]);
+    if (at.poi === 'delivery' && ref) p = list.filter((q) => Math.hypot(q.x - ref.x, q.y - ref.y) > 1800).sort((a, b) => Math.hypot(a.x - ref.x, a.y - ref.y) - Math.hypot(b.x - ref.x, b.y - ref.y))[0] || p;
+    return { x: p.x, y: p.y, w: 900, h: 620, marks: [poiMark(p)] };
+  }
+  if (at.pois) {
+    const list = map.pois.filter((p) => p.kind === at.pois);
+    if (!list.length) return null;
+    return { ...box(list, 500), marks: list.map(poiMark) };
+  }
+  if (at.spawn) {
+    const s = map.spawns[at.spawn];
+    return s ? { x: s.x, y: s.y, w: 700, h: 480, marks: [] } : null;
+  }
+  if (at.cameras) {
+    const hq = map.pois.find((p) => p.kind === 'police') || { x: WW / 2, y: WH / 2 };
+    const cams = [...map.cameras].sort((a, b) => Math.hypot(a.x - hq.x, a.y - hq.y) - Math.hypot(b.x - hq.x, b.y - hq.y)).slice(0, 3);
+    if (!cams.length) return null;
+    return { ...box(cams, 450), marks: cams.map((c) => ({ x: c.x, y: c.y, label: 'Traffic camera', kind: 'camera' })) };
+  }
+  if (at.dropSites) {
+    if (!map.dropSites.length) return null;
+    if (ref) { const s = map.dropSites.reduce((b, q) => (Math.hypot(q.x - ref.x, q.y - ref.y) < Math.hypot(b.x - ref.x, b.y - ref.y) ? q : b)); return { x: s.x, y: s.y, w: 900, h: 600, marks: [{ x: s.x, y: s.y, label: 'Drop site', kind: 'drop' }] }; }
+    return { ...box(map.dropSites, 900), marks: map.dropSites.map((s) => ({ x: s.x, y: s.y, label: 'Drop site', kind: 'drop' })) };
+  }
+  if (at.turf) {
+    const parts = DISTRICTS.map((q, i) => (q.turf ? districtTiles(map, i) : null)).filter(Boolean);
+    if (!parts.length) return null;
+    const names = DISTRICTS.filter((q) => q.turf).map((q) => q.name);
+    return { ...box(parts.flatMap((r) => [{ x: r.x - r.w / 2, y: r.y - r.h / 2 }, { x: r.x + r.w / 2, y: r.y + r.h / 2 }])), marks: parts.map((r, i) => ({ x: r.x, y: r.y, label: names[i], kind: 'turf' })) };
+  }
+  if (at.homes) {
+    const d = DISTRICTS.findIndex((q) => q.name === at.homes);
+    const list = map.pois.filter((p) => p.kind === 'home' && (d < 0 || map.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === d)).slice(0, 4);
+    if (!list.length) return null;
+    return { ...box(list, 350), marks: list.map(poiMark) };
+  }
+  return null;
+}
+
+// Road route between two targets (BFS over the junction graph), as a polyline in world px.
+export function resolveRoute(map, route) {
+  const a = resolveTarget(map, route.from);
+  if (!a) return null;
+  const from = a.marks[0] || a;
+  const b = resolveTarget(map, route.to, from);
+  if (!b) return null;
+  const to = b.marks[0] || b;
+  const s = map.nearestNode(from.x, from.y), g = map.nearestNode(to.x, to.y);
+  if (!s || !g) return null;
+  const prev = new Map([[s.id, -1]]);
+  const q = [s.id];
+  while (q.length) {
+    const id = q.shift();
+    if (id === g.id) break;
+    for (const nid of Object.values(map.nodes[id].links)) if (!prev.has(nid)) { prev.set(nid, id); q.push(nid); }
+  }
+  const chain = [];
+  for (let id = g.id; id !== -1 && id !== undefined; id = prev.get(id)) chain.unshift(map.nodes[id]);
+  if (chain[0] !== s) return null;
+  const pts = [{ x: from.x, y: from.y }, ...chain.map((n) => ({ x: n.x, y: n.y })), { x: to.x, y: to.y }];
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  return { pts, len, veh: route.veh, chaser: route.chaser || null, siren: !!route.siren, end: to };
+}
+
+// Which district / island a world point is in.
+export function districtAt(map, x, y) {
+  const d = map.dist[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)];
+  return DISTRICTS[d] ? DISTRICTS[d].name : null;
+}
+export function islandAt(x, y) {
+  const tx = x / TILE, ty = y / TILE;
+  for (const I of Object.values(ISLANDS)) { const [x0, y0, x1, y1] = I.box; if (tx >= x0 && tx < x1 && ty >= y0 && ty < y1) return I.name; }
+  return null;
+}
+const turfNames = () => DISTRICTS.filter((q) => q.turf).map((q) => q.name);
+const andList = (l) => (l.length <= 1 ? l.join('') : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1]);
+
+// {{kind}} -> in-game name of that place, {{kind:where}} -> its district, {{turfs}} -> gang turf
+export function fillNames(map, text) {
+  return text.replace(/\{\{(\w+)(?::(\w+))?\}\}/g, (s, kind, mod) => {
+    if (kind === 'turfs') return andList(turfNames());
+    const p = map.pois.find((q) => q.kind === kind);
+    if (!p) return s;
+    if (mod === 'where') return districtAt(map, p.x, p.y) || islandAt(p.x, p.y) || 'the city';
+    if (kind === 'home') return 'home';
+    if (kind === 'delivery') return 'storefront';
+    return p.label;
+  });
+}
+
+// Island steps list what is actually there today (read from the map, never typed by hand).
+const MINOR = new Set(['delivery', 'home', 'vending', 'atm', 'reception', 'evidence']);
+export function stepExtra(map, step) {
+  if (!step.at || !step.at.island) return '';
+  const I = ISLANDS[step.at.island];
+  const [x0, y0, x1, y1] = I.box;
+  const inside = (p) => p.x / TILE >= x0 && p.x / TILE < x1 && p.y / TILE >= y0 && p.y / TILE < y1;
+  const here = map.pois.filter((p) => !MINOR.has(p.kind) && inside(p)).map((p) => p.label);
+  const homes = map.pois.filter((p) => p.kind === 'home' && inside(p)).length;
+  const turf = DISTRICTS.filter((q, i) => q.turf && map.pois.length && (() => { for (let ty = y0; ty < y1; ty += 4) for (let tx = x0; tx < x1; tx += 4) if (map.dist[ty * MAP_W + tx] === i) return true; return false; })()).map((q) => q.name);
+  const parts = [];
+  if (here.length) parts.push('Here: ' + andList([...new Set(here)]) + '.');
+  if (homes) parts.push(`${homes} homes for sale.`);
+  if (turf.length) parts.push(`Gang turf: ${andList(turf)}.`);
+  return parts.join(' ');
+}
+
+// Labels for an island step: every notable place on it.
+export function islandMarks(map, k) {
+  const I = ISLANDS[k];
+  const [x0, y0, x1, y1] = I.box;
+  return map.pois.filter((p) => !MINOR.has(p.kind) && p.x / TILE >= x0 && p.x / TILE < x1 && p.y / TILE >= y0 && p.y / TILE < y1).map(poiMark);
+}
+
+export function actionsIn(text) { return [...text.matchAll(/\[\[(\w+)\]\]/g)].map((m) => m[1]); }
+export function placesIn(text) { return [...text.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]); }

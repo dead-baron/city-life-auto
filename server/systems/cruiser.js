@@ -14,7 +14,8 @@ import { spawnNpc } from './npc.js';
 import { driveToward, planRoute, removeVehicle } from './traffic.js';
 import * as vehicles from './vehicles.js';
 
-export const CALL_COOLDOWN_S = 15;
+import { CALL_COOLDOWN_S } from '../../shared/rules.js';
+export { CALL_COOLDOWN_S };
 const FAR_PX = 900;          // further than this from your parked cruiser starts the tow timer
 const TOW_AFTER_S = 25;      // ...and after this long it is towed away
 const TOW_NOW_PX = 2400;     // way across town: towed after a short grace

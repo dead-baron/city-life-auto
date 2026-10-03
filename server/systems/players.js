@@ -17,8 +17,8 @@ import * as jobs from './jobs.js';
 import * as homes from './homes.js';
 import * as cruiser from './cruiser.js';
 
-export const GHOST_SECONDS = 30;
-export const RESPAWN_SECONDS = 7;
+import { GHOST_SECONDS, RESPAWN_SECONDS } from '../../shared/rules.js';
+export { GHOST_SECONDS, RESPAWN_SECONDS };
 
 export function join(world, conn, profile) {
   let p = world.players.get(profile.pid);

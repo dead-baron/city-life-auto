@@ -88,7 +88,8 @@
       <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster) · right stick aim · RT fire · LT sprint · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, push it all the way to fire drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
       <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire · ACT interact · CAR get in/out</div>
     </div>
-    <div id="t-tools"><button id="t-install" class="hidden">⬇ INSTALL APP</button><button id="t-settings">⚙ SETTINGS</button><button id="t-fs">⛶ FULLSCREEN</button></div>
+    <div id="tut-offer" class="hidden"><b id="tut-offer-h">First time in the city?</b><span id="tut-offer-p">A guided tour of the city: where everything is, how the law works, and the citizen, criminal and police paths. It plays before your first game - or watch it now.</span><div><button id="tut-watch">▶ WATCH TUTORIAL</button><button id="tut-skip-offer">SKIP</button></div></div>
+    <div id="t-tools"><button id="t-tutorial">📖 VIEW TUTORIAL</button><button id="t-install" class="hidden">⬇ INSTALL APP</button><button id="t-settings">⚙ SETTINGS</button><button id="t-fs">⛶ FULLSCREEN</button></div>
     <div id="t-ver"></div>
     <div id="t-note">Online progress saves automatically to this browser. Account sign-in and chat are coming later.</div>
   </div>
@@ -111,6 +112,23 @@
     <button id="i-go" class="sbtn hidden">⬇ Install now</button>
     <button id="i-repair" class="sbtn">↻ Repair install and reload</button>
   </div></div>
+  <div id="tutorial" class="hidden overlay">
+    <canvas id="tut-cv"></canvas>
+    <div id="tut-panel">
+      <div id="tut-kicker"></div>
+      <h2 id="tut-title"></h2>
+      <div id="tut-text"></div>
+      <div id="tut-progress"><div id="tut-bar"></div></div>
+      <div id="tut-btns">
+        <button id="tut-next">NEXT ▶</button>
+        <button id="tut-prev">◀ BACK</button>
+        <button id="tut-pause">❚❚ PAUSE</button>
+        <span id="tut-count"></span>
+        <button id="tut-skip">SKIP TUTORIAL ✕</button>
+      </div>
+    </div>
+    <div id="tut-chapters"></div>
+  </div>
   <div id="pause" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>PAUSED</h2><button class="x" data-close>✕</button></div>
     <p class="msub" id="p-sub">Game menu</p>
@@ -120,6 +138,7 @@
       <button class="opt cop-only" data-p="cruiser">Call police cruiser</button>
       <button class="opt" data-p="settings">Settings</button>
       <button class="opt" data-p="controls">Controls</button>
+      <button class="opt" data-p="tutorial">Tutorial (city tour)</button>
       <button class="opt" data-p="fullscreen">Toggle fullscreen</button>
       <button class="opt dev-only" data-p="dev">Debug / cheats menu</button>
       <button class="opt" data-p="title">Back to title screen</button>
