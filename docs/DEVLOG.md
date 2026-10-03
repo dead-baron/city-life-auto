@@ -119,6 +119,20 @@ Playtest:
 - Bridges don't open (drawbridges), no jet skis or lost-pet events yet, gang alignment perks are basic (≥200 Criminal EXP stops gangs reacting to gunfire).
 - NPC traffic uses straight lane graphs; police can drive onto sidewalks during direct pursuit (intended), and occasionally get wedged on corners (they reverse out).
 
+---
+
+## 2026-10-03 · Offline practice mode
+
+**Built:** a **PRACTICE OFFLINE** button on the title screen. It runs the complete authoritative city simulation (the same `server/` code) inside a Web Worker on your own device. It needs no server and no internet once the page has loaded. You start with $2,000 cash and $5,000 bank, and the cheats panel is always on (` key, or the DEV button on phones). Nothing is saved, and your online guest token/profile is never touched.
+
+Code changes: `server/session.js` (handshake + message routing shared by the Node server and the worker), `server/store.js` (environment-neutral profile store; the Node server plugs in `server/file-store.js`), `client/practice-worker.js`, and a WebSocket-compatible worker transport in `client/main.js`.
+
+Playtest:
+1. Open https://deadbaron.com/city-life-auto/ (even before the Oracle server exists) → title says the online city isn't reachable → press **PRACTICE OFFLINE** → you're in.
+2. HUD shows *CITIZEN · PRACTICE*. Press ` (or DEV) → spawn the loaded flatbed, give weapons, start rain, etc.
+3. Reload the page → practice money/items are gone (by design). Your online guest (once the server is live) is unaffected.
+4. On a phone: same flow; the DEV button sits under the touch buttons.
+
 ### Screenshots from the automated browser playtest (2026-10-03)
 ![Street, day, loaded flatbed](screenshots/street-day-cargo.jpg)
 ![Night + rain driving](screenshots/night-rain-driving.jpg)

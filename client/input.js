@@ -44,7 +44,7 @@ function initTouch(hooks) {
   bindStick(document.getElementById('stick-r'), (x, y, on) => { touch.rx = x; touch.ry = y; touch.rOn = on; });
   for (const b of document.querySelectorAll('#tbtns button')) {
     const name = b.dataset.b;
-    const down = (e) => { e.preventDefault(); if (name === 'sprint') { if (touch.btn.has('sprint')) { touch.btn.delete('sprint'); b.classList.remove('on'); } else { touch.btn.add('sprint'); b.classList.add('on'); } } else { touch.btn.add(name); touch.tapped.add(name); b.classList.add('on'); } };
+    const down = (e) => { e.preventDefault(); if (name === 'dev') { hooks.onDev?.(); return; } if (name === 'sprint') { if (touch.btn.has('sprint')) { touch.btn.delete('sprint'); b.classList.remove('on'); } else { touch.btn.add('sprint'); b.classList.add('on'); } } else { touch.btn.add(name); touch.tapped.add(name); b.classList.add('on'); } };
     const up = (e) => { e.preventDefault(); if (name !== 'sprint') { touch.btn.delete(name); b.classList.remove('on'); } };
     b.addEventListener('touchstart', down, { passive: false });
     b.addEventListener('touchend', up, { passive: false });

@@ -5,6 +5,10 @@ Open the page, you're in the city as a guest. No download, no sign-up.
 
 **Status:** milestones M0–M8 built (foundations → economy). See [docs/DEVLOG.md](docs/DEVLOG.md).
 
+## Play without a server: offline practice
+
+Open the page (https://deadbaron.com/city-life-auto/ or a local copy) and press **PRACTICE OFFLINE**. The whole city simulation runs inside your browser, with the cheats panel on and nothing saved.
+
 ## Run it on your computer (2 minutes)
 
 You only need **Node.js 20 or newer** (https://nodejs.org). There are **no packages to install**.

@@ -1,6 +1,8 @@
 // Playtest/debug commands, only accepted when the server runs with CLA_DEV=1.
 import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
+import { collideVehicleTiles } from '../shared/physics.js';
+import { CAR_BLOCK } from '../shared/map.js';
 import { WEAPONS } from '../shared/items.js';
 import { store } from './store.js';
 import * as env from './systems/environment.js';
@@ -8,6 +10,22 @@ import * as jobs from './systems/jobs.js';
 import * as law from './systems/law.js';
 
 export const DEV_COMMANDS = ['cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp'];
+
+// Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
+function clearSpot(world, ped, def) {
+  for (let ring = 0; ring < 4; ring++) {
+    for (let k = 0; k < 12; k++) {
+      const a = ped.a + (k * Math.PI) / 6;
+      const d = 90 + ring * 50 + def.L / 2;
+      const x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
+      const s = { x, y, a: 0, vx: 0, vy: 0 };
+      const ox = x, oy = y;
+      collideVehicleTiles(s, def, world.map, CAR_BLOCK);
+      if (Math.hypot(s.x - ox, s.y - oy) < 0.5 && !world.query(x, y, def.L, 2).length) return { x, y, a: 0 };
+    }
+  }
+  return { x: ped.x, y: ped.y + 80, a: 0 };
+}
 
 export function command(world, p, c, msg) {
   const ped = p.ped;
@@ -29,7 +47,8 @@ export function command(world, p, c, msg) {
     case 'car': {
       if (!ped) break;
       const model = VEHICLES[msg.m] ? msg.m : 'pickup';
-      const v = world.spawnVehicle(model, ped.x + Math.cos(ped.a) * 90, ped.y + Math.sin(ped.a) * 90, ped.a, { npcOwned: false });
+      const sp = clearSpot(world, ped, VEHICLES[model]);
+      const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
       v.issuedTo = p.pid;
       break;
     }
@@ -44,7 +63,8 @@ export function command(world, p, c, msg) {
     case 'cargo': {
       // a flatbed pre-loaded with one crate of every tier, for open-cargo playtests
       if (!ped) break;
-      const v = world.spawnVehicle('flatbed', ped.x + Math.cos(ped.a) * 120, ped.y + Math.sin(ped.a) * 120, ped.a, { npcOwned: false });
+      const sp = clearSpot(world, ped, VEHICLES.flatbed);
+      const v = world.spawnVehicle('flatbed', sp.x, sp.y, sp.a, { npcOwned: false });
       v.issuedTo = p.pid;
       [1, 2, 3, 4, 1, 2].forEach((tier, i) => {
         const c = world.spawnCrate(tier, v.x, v.y, { owner: p.pid, contraband: false });

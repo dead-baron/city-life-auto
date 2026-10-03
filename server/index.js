@@ -7,23 +7,22 @@ import { join, normalize, extname } from 'node:path';
 import { config } from './config.js';
 import { attachWebSocketServer } from './ws.js';
 import { issueToken, verifyToken, newPlayerId } from './auth.js';
-import { store } from './store.js';
+import { store, useStore } from './store.js';
+import { FileStore } from './file-store.js';
+import { createSession } from './session.js';
 import { World } from './world.js';
 import { generateCity } from '../shared/map.js';
 import { TICK_MS } from '../shared/constants.js';
-import { decodeInput, MSG_INPUT } from '../shared/protocol.js';
-import * as players from './systems/players.js';
-import * as combat from './systems/combat.js';
-import * as economy from './systems/economy.js';
-import * as dev from './dev.js';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8',
 };
-const STATIC_ROOTS = ['client/', 'shared/', 'assets/'];
+// server/ is served so the offline practice worker can run the simulation in the browser
+const STATIC_ROOTS = ['client/', 'shared/', 'assets/', 'server/'];
 
+useStore(new FileStore());
 const map = generateCity(config.seed);
 const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget });
 const startedAt = Date.now();
@@ -39,7 +38,7 @@ const server = createServer(async (req, res) => {
   }
   if (path === '/' || path === '') path = '/index.html';
   const rel = normalize(path).replace(/^([/\\])+/, '');
-  if (rel.includes('..') || !(rel === 'index.html' || STATIC_ROOTS.some((r) => rel.startsWith(r)))) {
+  if (rel.includes('..') || rel.startsWith('server/config') || rel.startsWith('server/auth') || !(rel === 'index.html' || STATIC_ROOTS.some((r) => rel.startsWith(r)))) {
     res.writeHead(404); res.end('not found'); return;
   }
   const file = join(config.root, rel);
@@ -63,41 +62,19 @@ attachWebSocketServer(server, {
   path: '/ws',
   allowOrigin: originAllowed,
   onConnection(conn) {
-    let player = null;
-    let msgBudget = 0, budgetAt = Date.now();
-    conn.on('message', (data, isBinary) => {
-      // simple flood guard: 120 messages/sec
-      const t = Date.now();
-      if (t - budgetAt > 1000) { budgetAt = t; msgBudget = 0; }
-      if (++msgBudget > 120) return;
-      if (isBinary) {
-        if (!player || data.length < 11) return;
-        const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
-        if (dv.getUint8(0) === MSG_INPUT) players.queueInput(player, decodeInput(dv));
-        return;
-      }
-      let msg;
-      try { msg = JSON.parse(data); } catch { return; }
-      if (!msg || typeof msg !== 'object') return;
-      if (msg.t === 'hello') {
-        if (player) return;
-        const online = [...world.players.values()].filter((p) => p.conn).length;
-        if (online >= config.maxPlayers) { conn.sendJSON({ t: 'full', max: config.maxPlayers }); conn.close(4001, 'full'); return; }
-        let profile = null, token = msg.token;
+    const session = createSession(world, conn, {
+      seed: config.seed, dev: config.dev, maxPlayers: config.maxPlayers, label: 'City Life Auto 0.8',
+      login(token) {
         const v = verifyToken(token);
-        if (v) profile = store.get(v.pid);
-        if (!profile) { const pid = v ? v.pid : newPlayerId(); profile = store.get(pid) || store.create(pid); token = issueToken(pid); }
-        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: config.seed, tick: world.tick, dev: config.dev, server: 'City Life Auto 0.8' });
-        player = players.join(world, conn, profile);
-        return;
-      }
-      if (!player) return;
-      if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
-      if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
-      if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
-      if (msg.t === 'dev' && config.dev) { dev.command(world, player, String(msg.c || ''), msg); return; }
+        let profile = v ? store.get(v.pid) : null;
+        if (profile) return { profile, token };
+        const pid = v ? v.pid : newPlayerId();
+        profile = store.get(pid) || store.create(pid);
+        return { profile, token: issueToken(pid) };
+      },
     });
-    conn.on('close', () => { if (player && player.conn === conn) players.leave(world, player); });
+    conn.on('message', (data, isBinary) => session.onMessage(data, isBinary));
+    conn.on('close', () => session.onClose());
   },
 });
 

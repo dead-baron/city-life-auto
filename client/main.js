@@ -39,7 +39,37 @@ try { S.token = localStorage.getItem(TOKEN_KEY); } catch { S.token = null; }
 
 // ---------------------------------------------------------------------------
 // Networking
+// Offline practice transport: a Web Worker running the server simulation locally,
+// exposed with the same interface as a WebSocket.
+class WorkerSocket {
+  constructor() {
+    this.readyState = 0;
+    this.binaryType = 'arraybuffer';
+    this.w = new Worker(new URL('./practice-worker.js', import.meta.url), { type: 'module' });
+    this.w.onmessage = (e) => {
+      if (e.data === '{"t":"ready"}') { this.readyState = 1; this.onopen && this.onopen(); return; }
+      this.onmessage && this.onmessage({ data: e.data });
+    };
+    this.w.onerror = (e) => { console.error('practice worker error', e.message || e); $('t-status').textContent = 'Offline practice failed to start: ' + (e.message || 'unknown error'); };
+  }
+  send(d) { if (d instanceof ArrayBuffer) this.w.postMessage(d, [d]); else this.w.postMessage(d); }
+  close() { this.readyState = 3; this.w.terminate(); }
+}
+
+function startPractice() {
+  S.practice = true;
+  if (S.ws) { const old = S.ws; S.ws = null; try { old.close(); } catch { /* closing */ } }
+  S.welcomed = false;
+  $('t-status').textContent = 'Starting offline practice city on this device...';
+  const ws = new WorkerSocket();
+  S.ws = ws;
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'hello', token: null }));
+  ws.onmessage = (ev) => { if (typeof ev.data !== 'string') onBinary(ev.data); else { let m; try { m = JSON.parse(ev.data); } catch { return; } onText(m); } };
+  S.playing = true; // jump straight in once the local city says welcome
+}
+
 function connect() {
+  if (S.practice) return;
   const url = serverUrl();
   $('t-status').textContent = `Connecting to ${url.replace(/^wss?:\/\//, '').replace(/\/ws$/, '')}...`;
   let ws;
@@ -57,12 +87,15 @@ function connect() {
 }
 
 function scheduleReconnect(why) {
+  if (S.practice) return;
   S.welcomed = false;
   S.ws = null;
   $('title').classList.remove('hidden');
   $('hud').classList.add('hidden');
   $('play').disabled = true;
-  $('t-status').textContent = `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`;
+  $('t-status').textContent = S.everConnected
+    ? `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`
+    : `The online city isn't reachable right now (retrying every few seconds). Try PRACTICE OFFLINE below.`;
   setTimeout(connect, S.reconnectIn);
   S.reconnectIn = Math.min(15000, S.reconnectIn * 1.6);
 }
@@ -73,10 +106,12 @@ function onText(m) {
   switch (m.t) {
     case 'welcome':
       S.welcomed = true; S.pid = m.pid; S.dev = !!m.dev;
-      if (m.token) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
+      if (!m.practice) S.everConnected = true;
+      if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
+      document.body.classList.toggle('practice', !!m.practice);
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
       S.ents.clear(); S.pred = null; S.pending = [];
-      $('t-status').textContent = `Signed in as ${m.name}`;
+      $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
       $('play').disabled = false;
       if (S.playing) startPlaying();
       setupDev();
@@ -260,9 +295,11 @@ function setupDev() {
     box.appendChild(b);
   }
   box.classList.add('hidden');
-  if (S.playing) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info');
+  $('dev-btn').classList.remove('hidden');
+  if (S.playing) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Press ` (or DEV) for the cheats panel.' : 'Dev mode: press ` (backtick) for the playtest panel.', 'info');
 }
 
+$('practice').onclick = () => { initAudio(); startPractice(); };
 $('play').onclick = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
 
 initInput(canvas, {
@@ -273,6 +310,7 @@ initInput(canvas, {
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
   onTouchMode() { onResize(); },
+  onDev() { if (S.dev) $('dev').classList.toggle('hidden'); },
 });
 
 function toggleMap(on) { S.bigmap = on; $('bigmap').classList.toggle('hidden', !on); }
@@ -471,7 +509,7 @@ function render(dt) {
   S.hud.setClock(S.loopTime, S.weather);
   S.hud.drawRadar(sp.x, sp.y, sp.a);
   if (S.bigmap) S.hud.drawBigMap(sp.x, sp.y, sp.a);
-  if ((nowMs | 0) % 500 < 20) S.hud.setNet(`${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
+  if ((nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
 }
 
 // Urban wildlife (GDD §10): client-side pigeons/gulls that scatter from cars and runners.

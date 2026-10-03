@@ -87,8 +87,19 @@ def main():
         w, h = (size, size / ratio) if ratio >= 1 else (size * ratio, size)
         sprites.append((name, fit(c, w * SCALE, h * SCALE)))
 
-    # logo
-    logo = Image.open(os.path.join(SRC, '1245b1cc-image.png')).convert('RGBA')
+    # logo: knock out the white sheet background so it sits on the dark title screen
+    import numpy as np
+    from scipy import ndimage
+    lim, llab, lobjs = segment(os.path.join(SRC, '1245b1cc-image.png'), thresh=18, min_area=500)
+    mask = np.zeros(llab.shape, bool)
+    for o in lobjs:
+        if o['area'] > 2000:
+            mask |= (llab == o['label'])
+    mask = ndimage.binary_fill_holes(mask)
+    arr = np.array(lim.convert('RGBA'))
+    arr[..., 3] = (mask * 255).astype('uint8')
+    logo = Image.fromarray(arr)
+    logo = logo.crop(logo.getbbox())
     logo.thumbnail((640, 640), Image.LANCZOS)
     os.makedirs(OUT, exist_ok=True)
     logo.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(os.path.join(OUT, 'logo.png'), optimize=True)
