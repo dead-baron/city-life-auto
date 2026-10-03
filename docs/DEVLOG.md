@@ -163,3 +163,25 @@ Playtest (offline practice works for all of these):
 ![Gun shop menu](screenshots/gun-shop-menu.jpg)
 ![Busted at Police HQ](screenshots/busted-at-pd.jpg)
 ![Mobile landscape + portrait](screenshots/mobile-landscape-portrait.jpg)
+
+## 2026-10-03 · Character redraw
+
+Players and every NPC archetype are now redrawn as top-down 16-bit pixel art in the concept-sheet style: a 24x24 art grid (1 art px = 2 world px, the same scale as the buildings), 3-tone shading, and a dark outline. They are drawn crisp, with no blur. Outfits are layered from the appearance the server already sends, so each archetype reads at a glance:
+- suit and tie (executives)
+- hard hat and hi-vis vest (construction)
+- sun hat and dress (socialites)
+- uniform and badge (cops)
+- helmet and visor (SWAT)
+- red bandana (gang)
+- fur coat, hoodie, cardigan, briefcase, purse and tool bag
+
+Animations:
+- 8-frame walk and run, with legs that visibly step out
+- breathing idle
+- left/right jabs, where the fist extends past the body
+- melee arc swing with weapons in hand
+- aim, carry, fishing, dive roll, knocked down and dead
+
+Each sprite is cached per look, pose and frame. You can preview every archetype and pose at `/tools/character-preview.html`.
+
+![Character lineup](screenshots/characters-lineup.png)

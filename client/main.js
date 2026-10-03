@@ -670,7 +670,7 @@ function drawPed(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
   const pose = pedPose(p);
-  let fr = pose === 'walk' || pose === 'run' || pose === 'carry' ? Math.floor(p.walk / (pose === 'run' ? 14 : 10)) % 4 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
+  let fr = pose === 'walk' || pose === 'run' || pose === 'carry' ? Math.floor(p.walk / (pose === 'run' ? 7 : 5)) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   const spr = pedSprite(p.d.app, pose === 'run' ? 'run' : pose, fr, p.extra);
   const hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
@@ -680,8 +680,10 @@ function drawPed(p, now) {
   if (pose === 'punch' && (fr & 3) === 2) { g.translate(3, 0); }
   if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);
   g.scale(PED_SCALE, PED_SCALE);
+  g.imageSmoothingEnabled = false; // crisp pixel-art characters
   g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX);
   if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = (hitK - 0.4); g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  g.imageSmoothingEnabled = true;
   if (pose === 'fish') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(24, -6); g.lineTo(44, 0); g.stroke(); }
   g.restore();
   if (f & PF.UMBRELLA) { g.fillStyle = ['#c8262b', '#2350c8', '#f2c21b', '#2f9a3a'][p.id % 4]; g.globalAlpha = 0.9; g.beginPath(); g.arc(p.rx, p.ry, 17, 0, 6.28); g.fill(); g.strokeStyle = 'rgba(255,255,255,.5)'; g.beginPath(); for (let k = 0; k < 4; k++) { g.moveTo(p.rx, p.ry); g.lineTo(p.rx + Math.cos(k * 1.57 + 0.4) * 17, p.ry + Math.sin(k * 1.57 + 0.4) * 17); } g.stroke(); g.globalAlpha = 1; }

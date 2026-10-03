@@ -1,0 +1,22 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Character preview</title>
+<style>body{background:#3d4048;color:#eee;font:12px monospace;margin:10px} canvas{image-rendering:pixelated} td{padding:2px 6px;text-align:center}</style></head>
+<body><h3>City Life Auto - character lineup (open via the dev server: /tools/character-preview.html)</h3><div id="out"></div>
+<script type="module">
+import { pedSprite } from '../client/render/sprites.js';
+import { ARCHETYPES, makeAppearance, playerOutfit } from '../server/entities.js';
+import { mulberry32 } from '../shared/rng.js';
+const poses = [['idle',0,0],['walk',1,0],['walk',3,0],['walk',5,0],['run',2,0],['punch',2,0],['punch',6,0],['swing',2,1],['aim',0,7],['aim',0,10],['carry',2,0],['roll',1,0],['down',1,0],['dead',0,0]];
+const rows = Object.keys(ARCHETYPES).map((k) => [k, makeAppearance(mulberry32(k.length * 97 + 3), k)]);
+for (let i = 0; i < 4; i++) rows.push(['player ' + i, playerOutfit(mulberry32(i * 31 + 7))]);
+let html = '<table><tr><td></td>' + poses.map((p) => `<td>${p[0]}</td>`).join('') + '</tr>';
+html += rows.map(([k], r) => `<tr><td>${k}</td>` + poses.map((_, c) => `<td><canvas id="c${r}_${c}" width="72" height="72"></canvas></td>`).join('') + '</tr>').join('');
+document.getElementById('out').innerHTML = html + '</table>';
+rows.forEach(([, app], r) => poses.forEach(([pose, fr, w], c) => {
+  const cv = document.getElementById(`c${r}_${c}`), g = cv.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.fillStyle = (r + c) % 2 ? '#8e8e88' : '#7b7b76'; g.fillRect(0, 0, 72, 72);
+  g.drawImage(pedSprite(app, pose, fr, w), 0, 0, 72, 72);
+}));
+window.done = true;
+</script></body></html>

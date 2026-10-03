@@ -9,7 +9,7 @@ The current build is assembled from your concept sheets by `tools/build_art.py`:
 | ~70 street props (trees, palms, benches, hydrants, dumpsters, planters, fountain, umbrellas, vending, pallets...) | street props sheet | `assets/atlas0.png` |
 | 14 vehicle models (drawn at the art's own proportions; the collision box is the sprite) | vehicle sheets | `assets/atlas0.png` |
 
-Still procedural (code-drawn) for now: characters, grass/sand/dirt/fields, lamps, flatbed truck. Re-run after adding or changing sheets:
+Characters are hand-authored 24x24 pixel art painted in code (`client/render/peds.js`, 3-tone shading + dark outline like the concept sheets, outfits layered from the server's appearance record); preview every archetype and pose at `/tools/character-preview.html`. Still procedural: grass/sand/dirt/fields, lamps, flatbed truck. Re-run after adding or changing sheets:
 `python3 tools/build_art.py <folder with the concept PNGs>`. Replace any of them by delivering art to this spec.
 
 ## Camera and scale
