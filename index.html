@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>City Life Auto</title>
+<meta name="description" content="City Life Auto - a top-down multiplayer extraction life-sim sandbox in your browser. No download, play as a guest instantly.">
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="client/style.css">
+</head>
+<body>
+<div id="game">
+  <canvas id="view"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="hud-tl">
+      <div class="bar"><div id="hp-fill" class="fill hp"></div><span id="hp-text"></span></div>
+      <div class="bar small"><div id="st-fill" class="fill st"></div></div>
+      <div id="money"><span id="cash">$0</span> <span id="bank" class="dim">bank $0</span></div>
+      <div id="status"></div>
+    </div>
+    <div id="hud-tr">
+      <div id="stars"></div>
+      <div id="clock"></div>
+      <div id="faction"></div>
+    </div>
+    <div id="toasts"></div>
+    <div id="job" class="hidden"></div>
+    <div id="prompt" class="hidden"></div>
+    <canvas id="radar" width="168" height="168"></canvas>
+    <div id="weapon"><div id="w-name">Fists</div><div id="w-ammo"></div><div id="w-carry"></div></div>
+    <div id="fishbar" class="hidden"></div>
+    <div id="net"></div>
+  </div>
+
+  <div id="touch" class="hidden">
+    <div id="stick-l" class="stick"><div class="knob"></div></div>
+    <div id="stick-r" class="stick"><div class="knob"></div></div>
+    <div id="tbtns">
+      <button data-b="action">E</button>
+      <button data-b="vehicle">CAR</button>
+      <button data-b="sprint">RUN</button>
+      <button data-b="dive">ROLL</button>
+      <button data-b="throw">THROW</button>
+      <button data-b="use">HEAL</button>
+      <button data-b="nextw">WPN</button>
+      <button data-b="horn">HORN</button>
+    </div>
+  </div>
+
+  <div id="menu" class="hidden"><div class="panel"><div class="mhead"><h2 id="m-title"></h2><button id="m-close">✕</button></div><p id="m-sub"></p><div id="m-money"></div><div id="m-opts"></div></div></div>
+
+  <div id="death" class="hidden"><div><h1>WASTED</h1><p id="d-cause"></p><p id="d-timer"></p></div></div>
+
+  <div id="bigmap" class="hidden"><canvas id="bigmap-c"></canvas><p>M / ESC to close</p></div>
+
+  <div id="dev" class="hidden"></div>
+
+  <div id="title">
+    <img id="logo" src="assets/logo.png" alt="City Life Auto">
+    <div id="t-status">Connecting to the city...</div>
+    <button id="play" disabled>PLAY AS GUEST</button>
+    <div id="t-help">
+      <b>Keyboard</b> WASD move · Mouse aim · Click attack · E interact · F car · Shift sprint · Space roll / handbrake · Q throw · R reload · H horn/siren · X heal · Tab / wheel / 1-9 weapons · M map<br>
+      <b>Gamepad</b> LS move · RS aim + auto-fire · RT fire / gas · LT brake · X car · B interact · A roll · Y throw · LB/RB weapons<br>
+      <b>Touch</b> left stick move · right stick aim + fire · buttons on the right
+    </div>
+    <div id="t-note">Progress saves automatically to this browser. Account sign-in and chat are coming later.</div>
+  </div>
+  <div id="rotate" class="hidden">Rotate your phone to landscape for the full view</div>
+</div>
+<script type="module" src="client/main.js"></script>
+</body>
+</html>

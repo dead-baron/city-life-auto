@@ -1,0 +1,139 @@
+// Object-pooled particles (blood sprays, smoke, sparks, water, fire) and a ring buffer of
+// persistent ground decals (blood pools, red footprints, skid marks, scorch) — no per-frame
+// allocation on the hot path (GDD §14C, project rule: object pooling).
+
+const MAX_P = 900;
+const MAX_D = 700;
+
+export class FX {
+  constructor() {
+    this.p = new Array(MAX_P);
+    for (let i = 0; i < MAX_P; i++) this.p[i] = { on: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: 1, color: '', type: 0, grow: 0, z: 0, vz: 0 };
+    this.pi = 0;
+    this.d = new Array(MAX_D);
+    for (let i = 0; i < MAX_D; i++) this.d[i] = { on: false, x: 0, y: 0, a: 0, type: 0, size: 1, alpha: 1, born: 0, color: '' };
+    this.di = 0;
+    this.tracers = [];
+    this.rings = [];
+    this.texts = [];
+  }
+  spawn(type, x, y, vx, vy, life, size, color, grow = 0, vz = 0) {
+    const o = this.p[this.pi];
+    this.pi = (this.pi + 1) % MAX_P;
+    o.on = true; o.type = type; o.x = x; o.y = y; o.vx = vx; o.vy = vy; o.life = life; o.max = life; o.size = size; o.color = color; o.grow = grow; o.z = 0; o.vz = vz;
+    return o;
+  }
+  decal(type, x, y, a, size, color, now, alpha = 1) {
+    const o = this.d[this.di];
+    this.di = (this.di + 1) % MAX_D;
+    o.on = true; o.type = type; o.x = x; o.y = y; o.a = a; o.size = size; o.color = color; o.born = now; o.alpha = alpha;
+  }
+  blood(x, y, a, n, now, rand = Math.random) {
+    for (let i = 0; i < n; i++) {
+      const sp = 60 + rand() * 180, aa = a + (rand() - 0.5) * 1.1;
+      this.spawn(1, x, y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.35 + rand() * 0.3, 1.5 + rand() * 2, rand() < 0.5 ? '#8a0f14' : '#b0141c', 0, 80 + rand() * 60);
+    }
+    this.decal(1, x + Math.cos(a) * 12, y + Math.sin(a) * 12, a, 5 + n * 0.7, '#7a0d12', now, 0.85);
+  }
+  smoke(x, y, dark, rand = Math.random) {
+    this.spawn(2, x + (rand() - 0.5) * 8, y + (rand() - 0.5) * 8, (rand() - 0.5) * 20, (rand() - 0.5) * 20 - 10, 1.2 + rand(), 6 + rand() * 4, dark ? 'rgba(40,40,40,' : 'rgba(170,170,170,', 14);
+  }
+  fire(x, y, rand = Math.random) {
+    this.spawn(3, x + (rand() - 0.5) * 18, y + (rand() - 0.5) * 18, (rand() - 0.5) * 30, (rand() - 0.5) * 30, 0.4 + rand() * 0.3, 5 + rand() * 4, rand() < 0.5 ? '#ff9a1a' : '#ffd23a', -6);
+  }
+  sparks(x, y, n = 5, rand = Math.random) {
+    for (let i = 0; i < n; i++) { const a = rand() * 6.28, s = 80 + rand() * 160; this.spawn(4, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.2 + rand() * 0.2, 1.5, '#ffe58a'); }
+  }
+  splash(x, y, n = 10, rand = Math.random) {
+    for (let i = 0; i < n; i++) { const a = rand() * 6.28, s = 30 + rand() * 90; this.spawn(5, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.5 + rand() * 0.3, 2 + rand() * 2, '#d8f0ff', 0, 60); }
+    this.rings.push({ x, y, t: 0, max: 0.9, r: 22, color: 'rgba(220,240,255,' });
+  }
+  explosion(x, y, r, now, rand = Math.random) {
+    for (let i = 0; i < 40; i++) { const a = rand() * 6.28, s = 40 + rand() * r * 2.2; this.spawn(3, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.4 + rand() * 0.5, 6 + rand() * 8, rand() < 0.5 ? '#ff7a1a' : '#ffd23a', 10); }
+    for (let i = 0; i < 20; i++) this.smoke(x + (rand() - 0.5) * r, y + (rand() - 0.5) * r, true, rand);
+    this.rings.push({ x, y, t: 0, max: 0.5, r: r * 1.4, color: 'rgba(255,220,140,' });
+    this.decal(3, x, y, rand() * 6.28, r * 0.6, '#111', now, 0.6);
+  }
+  geyser(x, y, rand = Math.random) {
+    for (let i = 0; i < 4; i++) this.spawn(6, x + (rand() - 0.5) * 6, y + (rand() - 0.5) * 6, (rand() - 0.5) * 40, (rand() - 0.5) * 40, 0.9, 3 + rand() * 3, rand() < 0.5 ? '#ffffff' : '#7ac8ff', 6, 120 + rand() * 80);
+  }
+  tracer(x1, y1, x2, y2, color = 'rgba(255,240,170,') { this.tracers.push({ x1, y1, x2, y2, t: 0, color }); }
+  ring(x, y, r, color, max = 0.6) { this.rings.push({ x, y, t: 0, max, r, color }); }
+  floatText(x, y, text, color) { this.texts.push({ x, y, text, color, t: 0 }); }
+
+  update(dt) {
+    for (let i = 0; i < MAX_P; i++) {
+      const o = this.p[i];
+      if (!o.on) continue;
+      o.life -= dt;
+      if (o.life <= 0) { o.on = false; continue; }
+      o.x += o.vx * dt; o.y += o.vy * dt;
+      const f = o.type === 2 ? 0.98 : 0.92;
+      o.vx *= f; o.vy *= f;
+      o.size += o.grow * dt;
+      if (o.vz || o.z) { o.vz -= 400 * dt; o.z += o.vz * dt; if (o.z < 0) { o.z = 0; o.vz = 0; if (o.type === 1) { o.on = false; } } }
+    }
+    for (const arr of [this.tracers, this.rings, this.texts]) {
+      for (let i = arr.length - 1; i >= 0; i--) { arr[i].t += dt; if (arr[i].t > (arr[i].max || (arr === this.tracers ? 0.08 : 1.4))) arr.splice(i, 1); }
+    }
+  }
+
+  drawDecals(g, view, now, wet) {
+    for (let i = 0; i < MAX_D; i++) {
+      const d = this.d[i];
+      if (!d.on) continue;
+      if (d.x < view.x0 || d.x > view.x1 || d.y < view.y0 || d.y > view.y1) continue;
+      const age = now - d.born;
+      let a = d.alpha * (age > 240 ? Math.max(0, 1 - (age - 240) / 60) : 1);
+      if (wet && d.type !== 3) a *= 0.995; // rain slowly washes stains
+      if (wet && d.type !== 3) d.alpha *= 0.9995;
+      if (a <= 0.02) { d.on = false; continue; }
+      g.globalAlpha = a;
+      g.fillStyle = d.color;
+      if (d.type === 1) { // blood splat
+        g.beginPath(); g.ellipse(d.x, d.y, d.size, d.size * 0.7, d.a, 0, 6.28); g.fill();
+        g.beginPath(); g.arc(d.x + Math.cos(d.a) * d.size, d.y + Math.sin(d.a) * d.size, d.size * 0.35, 0, 6.28); g.fill();
+      } else if (d.type === 2) { // footprint
+        g.save(); g.translate(d.x, d.y); g.rotate(d.a); g.fillRect(-3, -2, 6, 3); g.restore();
+      } else if (d.type === 3) { // scorch
+        g.beginPath(); g.arc(d.x, d.y, d.size, 0, 6.28); g.fill();
+      } else if (d.type === 4) { // skid
+        g.save(); g.translate(d.x, d.y); g.rotate(d.a); g.fillRect(-4, -1.5, 8, 3); g.restore();
+      } else if (d.type === 5) { // body blood pool
+        g.beginPath(); g.ellipse(d.x, d.y, d.size, d.size * 0.8, d.a, 0, 6.28); g.fill();
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  drawParticles(g) {
+    for (let i = 0; i < MAX_P; i++) {
+      const o = this.p[i];
+      if (!o.on) continue;
+      const k = o.life / o.max;
+      if (o.type === 2) { g.fillStyle = o.color + (0.45 * k).toFixed(3) + ')'; g.beginPath(); g.arc(o.x, o.y, o.size, 0, 6.28); g.fill(); continue; }
+      g.globalAlpha = o.type === 3 ? Math.min(1, k * 1.5) : Math.min(1, k * 2);
+      g.fillStyle = o.color;
+      const s = o.size;
+      g.fillRect(o.x - s / 2, o.y - s / 2 - o.z * 0.3, s, s);
+    }
+    g.globalAlpha = 1;
+    g.lineWidth = 2;
+    for (const t of this.tracers) {
+      g.strokeStyle = t.color + (1 - t.t / 0.08).toFixed(2) + ')';
+      g.beginPath(); g.moveTo(t.x1, t.y1); g.lineTo(t.x2, t.y2); g.stroke();
+    }
+    for (const r of this.rings) {
+      const k = r.t / r.max;
+      g.strokeStyle = r.color + (1 - k).toFixed(2) + ')'; g.lineWidth = 3;
+      g.beginPath(); g.arc(r.x, r.y, r.r * (0.3 + k), 0, 6.28); g.stroke();
+    }
+    g.font = 'bold 13px monospace'; g.textAlign = 'center';
+    for (const t of this.texts) {
+      g.globalAlpha = Math.max(0, 1 - t.t / 1.4);
+      g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y - t.t * 30 + 1);
+      g.fillStyle = t.color; g.fillText(t.text, t.x, t.y - t.t * 30);
+    }
+    g.globalAlpha = 1;
+  }
+}

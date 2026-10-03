@@ -1,0 +1,31 @@
+# systemd unit for the City Life Auto game server.
+# Install: sudo cp deploy/city-life-auto.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#          sudo systemctl enable --now city-life-auto
+[Unit]
+Description=City Life Auto authoritative game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/city-life-auto
+ExecStart=/usr/bin/node server/index.js
+Restart=always
+RestartSec=2
+# SIGTERM -> server saves all profiles before exiting
+KillSignal=SIGTERM
+TimeoutStopSec=15
+Environment=NODE_ENV=production
+Environment=PORT=8080
+Environment=HOST=127.0.0.1
+Environment=CLA_DATA_DIR=/home/ubuntu/cla-data
+Environment=CLA_ORIGINS=https://deadbaron.com,https://www.deadbaron.com,https://play.deadbaron.com
+Environment=CLA_MAX_PLAYERS=120
+# Optional: a fixed secret keeps guest tokens valid if the data dir is ever rebuilt
+# Environment=CLA_SECRET=change-me-to-a-long-random-string
+NoNewPrivileges=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

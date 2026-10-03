@@ -1,0 +1,6 @@
+# Caddy reverse proxy: automatic HTTPS + WebSocket upgrade for the game server.
+# Install to /etc/caddy/Caddyfile, then: sudo systemctl reload caddy
+play.deadbaron.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8080
+}
