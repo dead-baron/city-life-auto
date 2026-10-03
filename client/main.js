@@ -357,7 +357,7 @@ function setupDev() {
   if (!S.dev) { box.classList.add('hidden'); return; }
   box.innerHTML = '<b>DEV / PLAYTEST CHEATS</b>';
   const cmds = [['rain', 'Start rain'], ['clear', 'Stop rain'], ['night', 'Jump to night'], ['day', 'Jump to day'], ['money', '+$25k'], ['guns', 'Give weapons'],
-    ['samaritan', '+50 Samaritan'], ['wanted', '2 stars', { n: 2 }], ['wanted', '4 stars', { n: 4 }], ['clean', 'Clear wanted'],
+    ['samaritan', '+50 Samaritan'], ['wanted', '2 stars', { n: 2 }], ['wanted', '4 stars', { n: 4 }], ['clean', 'Clear wanted'], ['record', 'Wipe criminal record (felonies)'], ['cop', 'Join the police (badge + rank)'], ['promote', 'Promote police rank'],
     ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['heal', 'Heal']];
   for (const [c, label, extra] of cmds) {
     const b = document.createElement('button');
@@ -400,10 +400,11 @@ function toggleFullscreen(force) {
   const el = document.documentElement;
   if (want && !isFullscreen()) {
     const req = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen();
-    Promise.resolve(req).then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
+    Promise.resolve(req).catch(() => {}); // any orientation: portrait fullscreen is fine too
   } else if (!want && isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
 }
 for (const id of ['b-fs', 't-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
+$('b-map').onclick = () => { if (S.playing) toggleMap(!S.bigmap); };
 document.addEventListener('fullscreenchange', () => document.body.classList.toggle('fs', isFullscreen()));
 
 // ---- installable app (PWA): its own manifest id + scope /city-life-auto/, so it installs

@@ -9,7 +9,7 @@ import * as env from './systems/environment.js';
 import * as jobs from './systems/jobs.js';
 import * as law from './systems/law.js';
 
-export const DEV_COMMANDS = ['cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp'];
+export const DEV_COMMANDS = ['cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp'];
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 function clearSpot(world, ped, def) {
@@ -43,6 +43,22 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'clean': law.clearWanted(world, p); prof.peakWanted = 0; break;
+    case 'record': // wipe the criminal record: no wanted level, no felonies, no peak-wanted memory
+      law.clearWanted(world, p); prof.peakWanted = 0; prof.felonies = 0; prof.firedUntil = 0; p.disguised = false;
+      world.notify(p, '[dev] Criminal record wiped - no felonies on file.', 'info'); p.meDirty = true; break;
+    case 'cop': { // join the force on the spot (record wiped, enough Samaritan points), keep current rank
+      law.clearWanted(world, p); prof.peakWanted = 0; prof.felonies = 0; prof.firedUntil = 0;
+      prof.samaritan = Math.max(prof.samaritan, law.ENFORCER_MIN_SAMARITAN + 10);
+      const err = p.badge ? null : law.goOnDuty(world, p);
+      world.notify(p, err ? `[dev] ${err}` : `[dev] On duty as ${law.POLICE_RANKS[law.policeRank(prof)].name}. Dispatch map: M / Start → Map / tap the radar.`, err ? 'bad' : 'good');
+      break;
+    }
+    case 'promote': { // jump to the next police rank
+      const r = law.policeRank(prof);
+      if (r < law.POLICE_RANKS.length - 1) law.addPolicePts(world, p, law.POLICE_RANKS[r + 1].pts - (prof.policePts || 0));
+      else world.notify(p, '[dev] Already Chief of Police.', 'info');
+      break;
+    }
     case 'samaritan': prof.samaritan += 50; world.notify(p, '[dev] +50 Samaritan', 'info'); break;
     case 'car': {
       if (!ped) break;

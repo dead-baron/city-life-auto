@@ -366,3 +366,30 @@ City Life Auto now installs as its own app from Chrome (Android "Install app", o
 - **Service worker (`sw.js`):** scoped to `/city-life-auto/` and only ever clears its own `city-life-auto-` caches. It's network-first, so updates still land immediately, and keeps the cached copy as an offline fallback.
 - **Offline practice:** after one online visit, Practice works with no connection, because the boot loader's version check pre-loads every game file.
 - **Verified in Chromium:** no manifest errors, no installability errors, the service worker controls only `/city-life-auto/`, and offline practice runs after a reload with the network cut.
+
+## 2026-10-03 · Cop-car theft, world map, police ranks + dispatch map, debug tools, portrait fullscreen
+
+- **Stealing police cars works.** When you jacked a crewed cruiser, the officer you threw out was immediately able to drag you back out (NPCs pull drivers from slow cars). Now:
+  - A jacked driver is knocked to the ground for about 1.6 s.
+  - NPC passengers bail out too.
+  - Officers from a hijacked unit chase and shoot instead of dragging you out.
+  - Civilians only try to drag you out once every 6 s.
+- **World map.** `assets/worldmap.webp` is baked from the game's own renderer (`python3 tools/build-worldmap.py`). It opens with M, the new ▦ HUD button, a tap on the radar, or Start → Map, and shows:
+  - district names
+  - shops and services
+  - your homes, job and drop rumors
+  - you
+- **Police ranks.** Officer → Senior Officer → Sergeant → Lieutenant → Captain → Chief of Police. Ranks come from service points: arrests (10 × stars), NPC custody (4) and bounties (15). Promotions are announced, and the HUD shows "POLICE · RANK".
+- **Police dispatch map.** On duty, the world map becomes dispatch:
+  - **Crime reports:** only crimes a witness, camera or officer actually reported, plus purse-snatching calls. Each shows its age, and higher ranks keep reports longer.
+  - **Live suspect markers:** only while someone can currently see them.
+  - **Last-known search areas:** once a suspect slips out of sight. Nothing shows once they're gone.
+  - **Fleeing NPC muggers:** while you have line of sight.
+- **Debug menu:**
+  - "Wipe criminal record (felonies)": clears wanted level, felonies, peak-wanted memory and any firing.
+  - "Join the police (badge + rank)"
+  - "Promote police rank"
+- **Fullscreen in portrait:** the landscape lock is gone, and the installed app's manifest orientation is now "any".
+
+![World map](screenshots/world-map.png)
+![Police dispatch map](screenshots/police-dispatch-map.png)

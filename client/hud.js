@@ -4,6 +4,7 @@ import { WEAPONS, ITEMS } from '../shared/items.js';
 import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
 import { input } from './input.js';
+import { DISTRICTS } from '../shared/map.js';
 import { weaponIcon } from './render/peds.js';
 
 const $ = (id) => document.getElementById(id);
@@ -51,7 +52,7 @@ export class HUD {
     this.lastStars = me.wanted;
     const f = $('faction');
     f.className = me.faction;
-    f.textContent = { citizen: 'CITIZEN', criminal: 'CRIMINAL', enforcer: 'ENFORCER ON DUTY', hunter: 'BOUNTY HUNTER' }[me.faction];
+    f.textContent = me.faction === 'enforcer' ? `POLICE · ${(me.rank || 'Officer').toUpperCase()}` : { citizen: 'CITIZEN', criminal: 'CRIMINAL', hunter: 'BOUNTY HUNTER' }[me.faction] + (me.felonies > 0 && me.faction !== 'criminal' ? ` · ${me.felonies} FELON${me.felonies === 1 ? 'Y' : 'IES'}` : '');
     // prompt -> GTA help box with the right button for this device; matching touch button pulses
     const pr = $('helpbox');
     const sig = (me.prompt || '') + '|' + input.device;
@@ -215,17 +216,95 @@ export class HUD {
     g.restore();
   }
 
+  // ---- world map (full city) ------------------------------------------------------------
+  // The baked city image (assets/worldmap.webp, rendered by the game's own chunk baker) with
+  // district names, places, your homes and job on top. On duty, it becomes the police dispatch
+  // map: reported crimes, live suspects you can currently see, and last-known search areas.
   drawBigMap(cx, cy, heading) {
     const c = $('bigmap-c');
-    const size = Math.min(innerWidth * 0.9, innerHeight * 0.82) | 0;
-    if (c.width !== size) { c.width = size; c.height = size; }
-    this.drawRadar(MAP_W * TILE / 2, MAP_H * TILE / 2, 0, c.getContext('2d'), size, MAP_W * TILE / 2, true);
+    const me = this.me;
+    const police = !!(me && me.faction === 'enforcer');
+    const WW = MAP_W * TILE, WH = MAP_H * TILE;
+    const maxW = innerWidth * 0.96, maxH = innerHeight * 0.86;
+    const sc = Math.min(maxW / WW, maxH / WH);
+    const w = Math.round(WW * sc), h = Math.round(WH * sc);
+    const dpr = Math.min(2, devicePixelRatio || 1);
+    if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px'; }
     const g = c.getContext('2d');
-    const s = size / (MAP_W * TILE);
-    g.save(); g.translate(cx * s, cy * s); g.rotate(heading);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const img = worldMapImage(this.map);
+    if (img) { g.imageSmoothingEnabled = true; g.drawImage(img, 0, 0, w, h); }
+    else { g.imageSmoothingEnabled = false; g.drawImage(this.mini, 0, 0, w, h); }
+    if (police) { g.fillStyle = 'rgba(8,16,40,.35)'; g.fillRect(0, 0, w, h); }
+    const P = (x, y) => [x * sc, y * sc];
+    const now = performance.now();
+    // district names
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const fs = Math.max(9, Math.min(15, w / 70));
+    g.font = `${fs}px Anton, Impact, sans-serif`;
+    for (const d of districtCentroids(this.map)) {
+      const [x, y] = P(d.x, d.y);
+      g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(d.name.toUpperCase(), x, y);
+      g.fillStyle = d.turf ? '#ff8a7a' : '#fff4c8'; g.fillText(d.name.toUpperCase(), x, y);
+    }
+    // places
+    const ic = Math.max(11, Math.min(16, w / 60));
+    g.font = `bold ${ic - 3}px monospace`;
+    for (const p of this.map.pois) {
+      const icon = POI_ICON[p.kind];
+      if (!icon) continue;
+      const [x, y] = P(p.x, p.y);
+      g.fillStyle = '#000'; g.fillRect(x - ic / 2, y - ic / 2, ic, ic);
+      g.fillStyle = icon[1]; g.fillText(icon[0], x, y + 1);
+    }
+    if (me) {
+      for (const hm of me.homes || []) { const [x, y] = P(hm.x, hm.y); g.fillStyle = '#000'; g.fillRect(x - ic / 2, y - ic / 2, ic, ic); g.fillStyle = '#3ddc84'; g.fillText('⌂', x, y + 1); }
+      if (me.rumor) { const [x, y] = P(me.rumor.x, me.rumor.y); g.strokeStyle = '#ffd36b'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, me.rumor.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
+      if (me.job) { const [x, y] = P(me.job.x, me.job.y); g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); }
+      // police / bounty intel (server already applies the visibility rules)
+      for (const r of me.radar || []) {
+        const [x, y] = P(r.x, r.y);
+        if (r.k === 'search') {
+          g.fillStyle = 'rgba(255,60,60,.16)'; g.strokeStyle = '#ff5a5a'; g.lineWidth = 1.5; g.setLineDash([4, 3]);
+          g.beginPath(); g.arc(x, y, Math.max(6, r.r * sc), 0, 6.28); g.fill(); g.stroke(); g.setLineDash([]);
+          label(g, x, y - Math.max(6, r.r * sc) - 8, `LAST SEEN ${'★'.repeat(r.s)}`, '#ff9a9a');
+        } else if (r.k === 'wanted') {
+          g.fillStyle = (now / 200 | 0) % 2 ? '#ff3b3b' : '#3b6bff'; g.beginPath(); g.arc(x, y, 6, 0, 6.28); g.fill();
+          g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke();
+          label(g, x, y - 13, `SUSPECT ${'★'.repeat(r.s)}`, '#ffffff');
+        } else if (r.k === 'bounty') {
+          g.strokeStyle = '#ffc23d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(6, r.r * sc), 0, 6.28); g.stroke();
+          label(g, x, y - Math.max(6, r.r * sc) - 8, `${r.n} $${r.b}`, '#ffc23d');
+        }
+      }
+      if (police) for (const d of me.dispatch || []) {
+        const [x, y] = P(d.x, d.y);
+        const fresh = d.age < 30;
+        const pulse = fresh ? 4 + 4 * ((now / 600) % 1) : 0;
+        g.globalAlpha = Math.max(0.35, 1 - d.age / 400);
+        g.fillStyle = '#ff9a2a'; g.strokeStyle = '#000'; g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(x, y - 7); g.lineTo(x + 6, y + 5); g.lineTo(x - 6, y + 5); g.closePath(); g.fill(); g.stroke();
+        if (pulse) { g.strokeStyle = '#ff9a2a'; g.beginPath(); g.arc(x, y, 8 + pulse, 0, 6.28); g.stroke(); }
+        label(g, x, y + 14, `${d.l} · ${d.age < 60 ? d.age + 's' : Math.round(d.age / 60) + 'm'} ago`, '#ffd0a0');
+        g.globalAlpha = 1;
+      }
+    }
+    // you
+    const [px, py] = P(cx, cy);
+    g.save(); g.translate(px, py); g.rotate(heading);
     g.fillStyle = '#ff3e8a'; g.strokeStyle = '#fff'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(12, 0); g.lineTo(-8, -8); g.lineTo(-4, 0); g.lineTo(-8, 8); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(11, 0); g.lineTo(-7, -7); g.lineTo(-3, 0); g.lineTo(-7, 7); g.closePath(); g.fill(); g.stroke();
     g.restore();
+    // header
+    const title = police ? `POLICE DISPATCH · ${(me.rank || 'Officer').toUpperCase()}` : 'CITY MAP';
+    g.font = `${Math.max(14, w / 38)}px Anton, Impact, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'top';
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.strokeText(title, 10, 8);
+    g.fillStyle = police ? '#7ab0ff' : '#ffffff'; g.fillText(title, 10, 8);
+    if (police) {
+      const n = (me.dispatch || []).length, sus = (me.radar || []).filter((r) => r.k === 'wanted' || r.k === 'search').length;
+      g.font = 'bold 12px monospace'; g.fillStyle = '#ffd0a0';
+      g.fillText(`${n} report${n === 1 ? '' : 's'} · ${sus} active suspect${sus === 1 ? '' : 's'} (only what witnesses, cameras and officers can see)`, 10, 8 + Math.max(14, w / 38) + 6);
+    }
   }
 
   setNet(text) { $('net').textContent = text; }
@@ -239,6 +318,33 @@ export class HUD {
     void el.offsetWidth;
     el.classList.add('show');
   }
+}
+
+function label(g, x, y, text, color) {
+  g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(text, x, y);
+  g.fillStyle = color; g.fillText(text, x, y);
+}
+
+// baked city image (only valid for the default seed it was rendered from)
+let wmImg = null, wmState = 0;
+function worldMapImage(map) {
+  if (map.seed !== 1337) return null;
+  if (wmState === 0) { wmState = 1; wmImg = new Image(); wmImg.onload = () => { wmState = 2; }; wmImg.onerror = () => { wmState = 3; }; wmImg.src = 'assets/worldmap.webp'; }
+  return wmState === 2 ? wmImg : null;
+}
+let centroids = null;
+function districtCentroids(map) {
+  if (centroids) return centroids;
+  const acc = new Map();
+  for (let ty = 0; ty < MAP_H; ty += 3) for (let tx = 0; tx < MAP_W; tx += 3) {
+    const d = map.dist[ty * MAP_W + tx];
+    if (d === 13) continue;
+    const a = acc.get(d) || acc.set(d, [0, 0, 0]).get(d);
+    a[0] += tx; a[1] += ty; a[2]++;
+  }
+  centroids = [...acc].map(([d, [x, y, n]]) => ({ name: DISTRICTS[d].name, turf: DISTRICTS[d].turf, x: (x / n + 0.5) * TILE, y: (y / n + 0.5) * TILE }));
+  return centroids;
 }
 
 const POI_ICON = {

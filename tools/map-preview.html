@@ -28,6 +28,7 @@ for (let cy = 0; cy < ny; cy++) for (let cx = 0; cx < nx; cx++) {
 g.save(); g.scale(scale, scale);
 for (const p of map.props) if (OVERHEAD.has(p.t) && p.t !== 'lamp') drawProp(g, p);
 g.restore();
+if (q.get('labels') === '0') { window.done = true; throw new Error('labels off'); }
 // district labels at the centroid of each district's land
 const sums = DISTRICTS.map(() => [0, 0, 0]);
 for (let ty = 0; ty < MAP_H; ty += 2) for (let tx = 0; tx < MAP_W; tx += 2) { const d = map.dist[ty * MAP_W + tx]; if (d === 13) continue; const s = sums[d]; s[0] += tx; s[1] += ty; s[2]++; }

@@ -429,3 +429,52 @@ test('NPC loot: cash-only drops are a pile you walk over; not every NPC carries 
   run(w, 0.2);
   assert.equal(prof.cash, amt, 'walked over the cash and picked it up');
 });
+
+test('stealing a crewed police cruiser: the officers are thrown clear and you can drive off', async () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const ave = w.map.roads.find((r) => r.axis === 'h' && r.y === 80);
+  const v = w.spawnVehicle('police', (ave.x + 40) * 32, (ave.y + 3) * 32, 0, {});
+  for (let i = 0; i < 2; i++) { const c = spawnNpc(w, 'cop', v.x, v.y, 'cop'); c.npc.unit = v.id; c.vehId = v.id; c.seat = i; v.seats[i] = c.id; }
+  v.ai = { kind: 'police', target: p.pid, mode: 'drive', route: null, routeAt: 0 };
+  (w.police ||= new Set()).add(v.id);
+  teleport(w, p.ped, v.x, v.y + 40);
+  assert.ok(vehicles.tryEnter(w, p.ped));
+  for (let i = 0; i < 60; i++) { players.queueInput(p, { seq: p.ack + 1, bits: IN.TANK, mx: 0, my: -1, aim: 0 }); w.step(); }
+  assert.equal(p.ped.vehId, v.id, 'still behind the wheel');
+  assert.ok(Math.hypot(v.vx, v.vy) > 200, 'driving away');
+  assert.ok(!v.seats.slice(1).some((s) => s && w.get(s)?.npc), 'no officers left inside');
+});
+
+test('police dispatch: witnessed crimes reach on-duty officers, unseen ones do not; dev record wipe + join police', async () => {
+  const law = await import('../server/systems/law.js');
+  const dev = await import('../server/dev.js');
+  const w = makeWorld();
+  const cop = joinPlayer(w).p, crook = joinPlayer(w).p;
+  dev.command(w, cop, 'cop', {});
+  assert.ok(cop.badge, 'dev join police');
+  assert.equal(players.buildMe(w, cop).rank, 'Officer');
+  dev.command(w, cop, 'promote', {});
+  assert.equal(players.buildMe(w, cop).rank, 'Senior Officer');
+  const sp = w.map.spawns.hospital;
+  teleport(w, crook.ped, sp.x, sp.y);
+  // unseen: nobody around at night in the middle of nowhere
+  law.crime(w, crook.ped, 'theft', null, 100, 100, {});
+  assert.equal((law.dispatchFor(w, cop) || []).length, 0, 'unwitnessed crime stays off the map');
+  // reported: a tip (contraband check path) always reaches dispatch
+  law.crime(w, crook.ped, 'possession', null, crook.ped.x, crook.ped.y, { silentCheck: false });
+  const d = law.dispatchFor(w, cop);
+  assert.equal(d.length, 1);
+  assert.equal(d[0].l, 'Contraband possession');
+  // suspect visibility: seen -> live marker, not seen for a while -> only the last-known search area
+  crook.seenAt = w.time;
+  assert.ok(law.radarFor(w, cop).some((r) => r.k === 'wanted'));
+  crook.seenAt = w.time - 10;
+  const r = law.radarFor(w, cop);
+  assert.ok(!r.some((q) => q.k === 'wanted') && r.some((q) => q.k === 'search'), 'out of sight: last known area only');
+  // dev wipe record clears felonies
+  crook.profile.felonies = 3;
+  dev.command(w, crook, 'record', {});
+  assert.equal(crook.profile.felonies, 0);
+  assert.equal(crook.wanted, 0);
+});

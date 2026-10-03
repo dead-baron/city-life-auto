@@ -24,6 +24,41 @@ export const CRIMES = {
 };
 
 export const ENFORCER_MIN_SAMARITAN = 25;
+
+// Police career: rank comes from service points (arrests, bounties, stops). Shown in the HUD;
+// every rank gets the dispatch map, higher ranks see crime reports for longer.
+export const POLICE_RANKS = [
+  { name: 'Officer', pts: 0 }, { name: 'Senior Officer', pts: 40 }, { name: 'Sergeant', pts: 120 },
+  { name: 'Lieutenant', pts: 260 }, { name: 'Captain', pts: 480 }, { name: 'Chief of Police', pts: 800 },
+];
+export function policeRank(prof) {
+  const pts = prof.policePts || 0;
+  let r = 0;
+  for (let i = 0; i < POLICE_RANKS.length; i++) if (pts >= POLICE_RANKS[i].pts) r = i;
+  return r;
+}
+export function addPolicePts(world, p, n) {
+  const before = policeRank(p.profile);
+  p.profile.policePts = (p.profile.policePts || 0) + n;
+  const after = policeRank(p.profile);
+  if (after > before) world.notify(p, `PROMOTED to ${POLICE_RANKS[after].name}!`, 'good');
+  p.meDirty = true;
+}
+
+// Dispatch log: every crime that someone actually saw or reported (witness, cop or camera).
+// Unwitnessed crimes never reach the police map.
+const DISPATCH_TTL = 300;
+export function logDispatch(world, type, x, y, p, stars, via) {
+  world.dispatch ??= [];
+  world.dispatch.push({ id: (world.dispatchSeq = (world.dispatchSeq || 0) + 1), t: world.time, x: Math.round(x), y: Math.round(y), l: CRIMES[type]?.label || ({ mugging: 'Purse snatching' })[type] || type, s: stars, via, who: p ? p.pid : null });
+  if (world.dispatch.length > 60) world.dispatch.splice(0, world.dispatch.length - 60);
+  for (const q of world.players.values()) if (q.badge) q.meDirty = true;
+}
+export function dispatchFor(world, p) {
+  if (!p.badge || !world.dispatch) return null;
+  const ttl = DISPATCH_TTL + policeRank(p.profile) * 60;
+  return world.dispatch.filter((d) => world.time - d.t < ttl && d.who !== p.pid).map((d) => ({ id: d.id, x: d.x, y: d.y, l: d.l, s: d.s, via: d.via, age: Math.round(world.time - d.t) }));
+}
 export const HUNTER_MIN_SAMARITAN = 10;
 
 function isCop(ped) { return !!ped && ((ped.npc && (ped.npc.role === 'cop')) || (ped.player && ped.player.badge)); }
@@ -107,7 +142,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   if (spec.felony) p.profile.felonies++;
   if (victim && victim.player) victim.player.robbedBy.set(p.pid, now);
   store.touch();
-  if (opts.silentCheck === false) { addHeat(world, p, spec.heat, x, y); return; }
+  if (opts.silentCheck === false) { addHeat(world, p, spec.heat, x, y); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return; }
   const w = witnesses(world, x, y, ped, victim, type === 'brandish' || type === 'murder');
   if (w.count === 0) {
     if (now - (p.lastSilentMsg || 0) > 6) { p.lastSilentMsg = now; world.notify(p, `${spec.label} - nobody saw it.`, 'info'); }
@@ -115,6 +150,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
     return;
   }
   addHeat(world, p, spec.heat, x, y);
+  logDispatch(world, type, x, y, p, p.wanted, w.cam ? 'camera' : w.cop ? 'officer' : 'witness');
   world.notify(p, `${spec.label} reported${w.cam ? ' by a traffic camera' : w.cop ? ' by police' : ''}!`, 'bad');
 }
 
@@ -267,7 +303,12 @@ function checkContraband(world, p, ped) {
 export function radarFor(world, p) {
   const out = [];
   const now = world.time;
-  if (p.badge) {
+  if (p.badge && p.ped) {
+    // NPC muggers on the run, only while an officer (you) can actually see them
+    for (const e of world.query(p.ped.x, p.ped.y, 900, K.PED)) {
+      if (!e.npc || e.dead || !e.npc.flagged || e.npc.role !== 'mugger') continue;
+      if (world.map.los(p.ped.x, p.ped.y, e.x, e.y)) out.push({ k: 'wanted', x: Math.round(e.x), y: Math.round(e.y), s: 1 });
+    }
     for (const q of world.players.values()) {
       if (q === p || q.wanted <= 0 || !q.ped) continue;
       if (now - q.seenAt < 3) out.push({ k: 'wanted', x: Math.round(q.ped.x), y: Math.round(q.ped.y), s: q.wanted });
@@ -313,6 +354,7 @@ export function arrest(world, cop, target) {
       cop.player.profile.cash += reward + fine;
       cop.player.profile.samaritan += 5 * stars;
       cop.player.profile.stats.arrests++;
+      if (cop.player.badge) addPolicePts(world, cop.player, 10 * stars);
       world.notify(cop.player, `Arrested ${t.name}! +$${reward + fine}, +${5 * stars} Samaritan`, 'good');
       cop.player.meDirty = true;
     }
@@ -332,6 +374,7 @@ export function arrest(world, cop, target) {
     world.remove(target);
     if (cop && cop.player) {
       cop.player.profile.cash += 60; cop.player.profile.samaritan += 4;
+      if (cop.player.badge) addPolicePts(world, cop.player, 4);
       world.notify(cop.player, 'Suspect taken into custody. +$60, +4 Samaritan', 'good');
       cop.player.meDirty = true;
     }
@@ -343,6 +386,7 @@ export function claimBounty(world, hunter, target) {
   if (amount <= 0) return;
   hunter.profile.cash += amount;
   hunter.profile.samaritan += 10;
+  if (hunter.badge) addPolicePts(world, hunter, 15);
   world.notify(hunter, `Bounty on ${target.name} claimed: +$${amount}`, 'good');
   world.notify(target, 'The bounty on your head was collected.', 'bad');
   target.placedBounty = 0; target.cityBounty = 0; target.bounty = 0; target.placedBountyUntil = 0;

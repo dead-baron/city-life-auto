@@ -355,6 +355,7 @@ export function buildMe(world, p) {
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, job: p.job ? { text: p.job.text, x: p.job.tx, y: p.job.ty } : null,
     radar: law.radarFor(world, p), bounty: p.bounty,
+    dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: ped && ped.fishing ? { bite: !!(ped.fishing.biteAt && world.time >= ped.fishing.biteAt) } : null,
     reloading: ped ? world.time < ped.reloadUntil : false,

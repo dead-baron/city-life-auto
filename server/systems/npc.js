@@ -9,6 +9,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { ARCHETYPES, makeAppearance, BUILDS, rollBuild } from '../entities.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
+import * as law from './law.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 
@@ -181,7 +182,8 @@ function fight(world, ped, now) {
   if (t.vehId) {
     const v = world.get(t.vehId);
     // GDD: angry drivers pull the player back out of the seat and beat them up
-    if (v && d < v.def.L / 2 + 20 && Math.hypot(v.vx, v.vy) < 70 && n.role !== 'gang') {
+    if (v && d < v.def.L / 2 + 20 && Math.hypot(v.vx, v.vy) < 40 && n.role !== 'gang' && !n.exCop && now - (n.draggedAt || -99) > 6) {
+      n.draggedAt = now;
       vehicles.ejectPed(world, t, true);
       t.downUntil = now + 0.8;
       if (t.player) world.notify(t.player, 'You got dragged out of the car!', 'bad');
@@ -365,6 +367,7 @@ function mugRun(world, ped, now) {
       v.npc.state = 'waitHelp'; v.npc.until = now + 150; v.npc.robbed = true; v.npc.keep = true; v.npc.robbedBy = ped.id;
       v.a = Math.atan2(ped.y - v.y, ped.x - v.x);
       world.emit(v.x, v.y, { e: 'scream', x: v.x, y: v.y });
+      law.logDispatch(world, 'mugging', v.x, v.y, null, 1, 'witness');
       for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - v.x, p.ped.y - v.y) < 900) world.notify(p, 'Snatch-and-grab! A mugger grabbed a purse - stop them (no penalty).', 'warn');
       n.fx = v.x; n.fy = v.y;
       return NO_INPUT;

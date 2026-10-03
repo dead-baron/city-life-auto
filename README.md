@@ -80,7 +80,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
 | Weapons · reload · heal | Tab, wheel, 1-9 · R · X | LB/RB · R3 · View | tap the weapon box · RELOAD · HEAL |
-| Map | M | Pause menu → Map | tap the radar |
+| World map (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
 | Pause menu (map, settings, controls, debug/cheats) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ⚙ |
 
 Settings (⚙) include classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen.

@@ -81,7 +81,7 @@ function runUnit(world, v, dt) {
   const drv = v.seats[0] ? world.get(v.seats[0]) : null;
   if (drv && drv.player) {
     // cruiser hijacked by a player: the crew goes after the thief, unit is dissolved
-    for (const c of crew) { c.npc.role = 'civ'; c.npc.unit = 0; c.weapon = 'pistol'; startFight(world, c, drv, 25); }
+    for (const c of crew) { c.npc.role = 'civ'; c.npc.exCop = true; c.npc.unit = 0; c.weapon = 'pistol'; if (c.vehId) vehicles.ejectPed(world, c, true); startFight(world, c, drv, 25); }
     world.police.delete(v.id);
     v.ai = null; v.despawnable = true; v.sirenOn = false;
     return;

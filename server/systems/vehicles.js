@@ -233,6 +233,14 @@ export function tryEnter(world, ped) {
 
 function carjack(world, ped, v, driver) {
   ejectPed(world, driver, true);
+  // yanked out onto the pavement: a moment on the ground gives the thief time to pull away
+  driver.downUntil = world.time + 1.6;
+  driver.vx = -Math.sin(v.a) * 120; driver.vy = Math.cos(v.a) * 120;
+  // NPC passengers bail out too (a stolen cruiser shouldn't keep its officers on board)
+  for (let i = 1; i < v.seats.length; i++) {
+    const q = v.seats[i] ? world.get(v.seats[i]) : null;
+    if (q && q.npc) { ejectPed(world, q, true); q.downUntil = world.time + 0.8; }
+  }
   v.carjacked = true;
   law.crime(world, ped, 'carjack', driver, v.x, v.y);
   if (driver.npc) npc.onCarjacked(world, driver, ped);
