@@ -11,8 +11,8 @@ import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
 import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { initInput, sample, input, takeNumberPick } from './input.js';
-import { GroundCache, drawOverheadProp } from './render/tiles.js';
-import { loadAtlas, drawVehicle, drawVehicleShadow, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
+import { GroundCache, drawOverheadProp, drawPrefabGlow } from './render/tiles.js';
+import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { initAudio, sfx } from './audio.js';
@@ -489,9 +489,11 @@ function render(dt) {
   // so minified art doesn't shimmer
   g.imageSmoothingEnabled = z < 0.92;
   g.setTransform(DPR * z, 0, 0, DPR * z, DPR * (W / 2 - S.cam.x * z + shx), DPR * (H / 2 - S.cam.y * z + shy));
+  S.worldTf = [DPR * z, 0, 0, DPR * z, DPR * (W / 2 - S.cam.x * z + shx), DPR * (H / 2 - S.cam.y * z + shy)];
 
   // ground chunks
   const cx0 = Math.floor(view.x0 / CHUNK_PX), cx1 = Math.floor(view.x1 / CHUNK_PX), cy0 = Math.floor(view.y0 / CHUNK_PX), cy1 = Math.floor(view.y1 / CHUNK_PX);
+  S.chunkView = [cx0, cx1, cy0, cy1];
   for (let cy = Math.max(0, cy0); cy <= Math.min(Math.ceil(MAP_H * TILE / CHUNK_PX) - 1, cy1); cy++)
     for (let cx = Math.max(0, cx0); cx <= Math.min(Math.ceil(MAP_W * TILE / CHUNK_PX) - 1, cx1); cx++)
       g.drawImage(S.ground.get(cx, cy), cx * CHUNK_PX, cy * CHUNK_PX, CHUNK_PX + 0.5, CHUNK_PX + 0.5);
@@ -512,6 +514,7 @@ function render(dt) {
     else if (e.kind === K.BAG) bags.push(e);
     else if (e.kind === K.PROJ) projs.push(e);
   }
+  if (rain) drawWetReflections(view, vehs, clock.dark, now, dt);
 
   for (const b of bags) { g.save(); g.translate(b.rx, b.ry); g.rotate(b.ra); drawBag(g, b.d.t, now); g.restore(); }
   for (const c of crates) if ((c.flags & 3) === 0) drawCrateEnt(c, now);
@@ -688,7 +691,7 @@ function drawPed(p, now) {
   g.imageSmoothingEnabled = true;
   if (pose === 'fish') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(24, -6); g.lineTo(44, 0); g.stroke(); }
   g.restore();
-  if (f & PF.UMBRELLA) { g.fillStyle = ['#c8262b', '#2350c8', '#f2c21b', '#2f9a3a'][p.id % 4]; g.globalAlpha = 0.9; g.beginPath(); g.arc(p.rx, p.ry, 17, 0, 6.28); g.fill(); g.strokeStyle = 'rgba(255,255,255,.5)'; g.beginPath(); for (let k = 0; k < 4; k++) { g.moveTo(p.rx, p.ry); g.lineTo(p.rx + Math.cos(k * 1.57 + 0.4) * 17, p.ry + Math.sin(k * 1.57 + 0.4) * 17); } g.stroke(); g.globalAlpha = 1; }
+  if (f & PF.UMBRELLA) { const u = umbrellaSprite(p.id % UMBRELLA_COLORS.length); g.drawImage(u, p.rx - 21, p.ry - 23, 40, 40); }
   if ((f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
@@ -794,15 +797,16 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
   lg.globalCompositeOperation = 'source-over';
   g.imageSmoothingEnabled = true;
   g.drawImage(lightCv, 0, 0, W, H);
+  if (dark > 0.05) drawNightGlow(dark);
   // additive colour: lamp glow, sirens, neon
   if (dark > 0.02) {
     g.globalCompositeOperation = 'lighter';
     for (const l of S.map.lamps) {
       if (l.x < view.x0 || l.x > view.x1 || l.y < view.y0 || l.y > view.y1) continue;
       const s = worldToScreen(l);
-      const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, 70 * z);
-      gr.addColorStop(0, `rgba(255,200,90,${0.22 * dark})`); gr.addColorStop(1, 'rgba(255,200,90,0)');
-      g.fillStyle = gr; g.fillRect(s.x - 70 * z, s.y - 70 * z, 140 * z, 140 * z);
+      const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, 95 * z);
+      gr.addColorStop(0, `rgba(255,196,96,${0.3 * dark})`); gr.addColorStop(0.5, `rgba(255,170,70,${0.1 * dark})`); gr.addColorStop(1, 'rgba(255,170,70,0)');
+      g.fillStyle = gr; g.fillRect(s.x - 95 * z, s.y - 95 * z, 190 * z, 190 * z);
     }
     for (const v of vehs) {
       if (!(v.flags & VF.SIREN)) continue;
@@ -817,6 +821,95 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
   void peds;
 }
 
+// ---- night: lit windows, neon and lobby light from the per-lot emissive layer ------------------
+function drawNightGlow(dark) {
+  if (!S.worldTf || !atlas.prefabGlow || !atlas.prefabGlow.length) return;
+  g.save();
+  g.setTransform(...S.worldTf);
+  g.globalCompositeOperation = 'lighter';
+  g.globalAlpha = Math.min(1, dark * 0.85);
+  g.imageSmoothingEnabled = true;
+  const [cx0, cx1, cy0, cy1] = S.chunkView;
+  const seen = new Set();
+  for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
+    for (const p of S.ground.prefabsAt(cx, cy)) { if (seen.has(p)) continue; seen.add(p); drawPrefabGlow(g, p); }
+  g.restore();
+}
+
+// ---- rain: broken light streaks reflected in wet asphalt (head/tail lights, lamps, shopfronts) ------
+function reflect(x, y, len, w, rgb, a) {
+  for (let k = 0, n = Math.max(3, len / 5 | 0); k < n; k++) {
+    const t = k / n, j = Math.sin(x * 0.7 + y * 1.3 + k * 2.1 + S.loopClock * 9) * 0.5 + 0.5;
+    const ww = w * (1 - t * 0.7) * (0.55 + 0.45 * j);
+    g.fillStyle = `rgba(${rgb},${(a * (1 - t) * (0.6 + 0.4 * j)).toFixed(3)})`;
+    g.fillRect(x - ww / 2 + (j - 0.5) * 3, y + k * 5, ww, 3);
+  }
+}
+function drawWetReflections(view, vehs, dark, now, dt) {
+  const k = 0.35 + 0.65 * dark;
+  g.save();
+  g.globalCompositeOperation = 'lighter';
+  for (const v of vehs) {
+    const def = VEHICLE_BY_INDEX[v.d.m];
+    if (!def || def.kind === 'boat') continue;
+    const c = Math.cos(v.ra), sn = Math.sin(v.ra), L = def.L / 2 - 3, Wd = def.W / 2 - 6;
+    const lit = v.flags & VF.LIGHTS, brake = v.flags & VF.BRAKE;
+    for (const side of [-1, 1]) {
+      const hx = v.rx + c * L - sn * Wd * side, hy = v.ry + sn * L + c * Wd * side;
+      const tx = v.rx - c * L - sn * Wd * side, ty = v.ry - sn * L + c * Wd * side;
+      if (lit) reflect(hx, hy + 4, 70, 9, '255,226,150', 0.42 * k);
+      reflect(tx, ty + 4, brake ? 60 : 38, 7, '255,40,40', (brake ? 0.55 : 0.3) * k);
+    }
+    if (v.flags & VF.SIREN) reflect(v.rx, v.ry + 8, 60, 14, Math.floor(S.loopClock * 6) % 2 ? '255,40,40' : '60,110,255', 0.45 * k);
+    // tyre spray when moving
+    const sp = v._lx !== undefined ? Math.hypot(v.rx - v._lx, v.ry - v._ly) / Math.max(dt, 1e-3) : 0;
+    v._lx = v.rx; v._ly = v.ry;
+    if (sp > 140 && Math.random() < 0.7) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const tx = v.rx - c * L - sn * Wd * side, ty = v.ry - sn * L + c * Wd * side;
+      S.fx.spawn(5, tx, ty, -c * sp * 0.25 + (Math.random() - 0.5) * 40, -sn * sp * 0.25 + (Math.random() - 0.5) * 40, 0.35, 2, '#cfe6ff', 0, 30);
+    }
+  }
+  if (dark > 0.05) {
+    for (const l of S.map.lamps) if (l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) reflect(l.x, l.y + 10, 55, 10, '255,200,110', 0.35 * dark);
+    for (const p of S.map.pois) if (p.x > view.x0 && p.x < view.x1 && p.y > view.y0 - 40 && p.y < view.y1) reflect(p.x, p.y + 6, 50, 26, '255,190,100', 0.22 * dark);
+  }
+  g.restore();
+  void now;
+}
+
+// ---- umbrellas (pixel-art canopy, cached per colour) -------------------------------------------
+const UMBRELLA_COLORS = ['#2f5fc8', '#c8262b', '#2b2b33', '#2f9a5a', '#e8b923', '#7a3ac8'];
+const umbrellaCache = [];
+function umbrellaSprite(i) {
+  if (umbrellaCache[i]) return umbrellaCache[i];
+  const N = 20, cv = document.createElement('canvas'); cv.width = cv.height = N;
+  const u = cv.getContext('2d');
+  const base = UMBRELLA_COLORS[i];
+  const n = parseInt(base.slice(1), 16), rgb = [n >> 16, (n >> 8) & 255, n & 255];
+  const tone = (f) => `rgb(${rgb.map((q) => Math.max(0, Math.min(255, Math.round(f > 0 ? q + (255 - q) * f : q * (1 + f))))).join(',')})`;
+  const cx = 9.5, cy = 9.5, R = 8.6;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+    // octagonal canopy edge
+    const ang = Math.atan2(dy, dx), oct = R * Math.cos(Math.PI / 8) / Math.cos(((ang % (Math.PI / 4)) + Math.PI / 4) % (Math.PI / 4) - Math.PI / 8);
+    if (d > oct + 0.4) continue;
+    const panel = Math.floor(((ang + Math.PI) / (Math.PI / 4)) + 0.5) % 2;
+    const light = -(dx * 0.6 + dy * 0.8) / R;
+    let f = panel ? -0.12 : 0.06;
+    f += light * 0.3;
+    if (d > oct - 1.1) f = -0.55; // rim
+    u.fillStyle = tone(f); u.fillRect(x, y, 1, 1);
+  }
+  // ribs + tip
+  u.fillStyle = tone(-0.45);
+  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + Math.PI / 8; for (let r = 2; r < R - 1; r++) u.fillRect(Math.round(cx + Math.cos(a) * r - 0.5), Math.round(cy + Math.sin(a) * r - 0.5), 1, 1); }
+  u.fillStyle = '#ddd'; u.fillRect(9, 9, 2, 2);
+  u.fillStyle = 'rgba(255,255,255,.35)'; u.fillRect(5, 5, 3, 1); u.fillRect(5, 6, 1, 2);
+  umbrellaCache[i] = cv;
+  return cv;
+}
+
 function drawRain(dt) {
   if (S.rain.length < 220) for (let i = S.rain.length; i < 220; i++) S.rain.push({ x: Math.random() * W, y: Math.random() * H, s: 600 + Math.random() * 400 });
   g.strokeStyle = 'rgba(180,200,255,.35)'; g.lineWidth = 1;
@@ -827,6 +920,9 @@ function drawRain(dt) {
     g.moveTo(r.x, r.y); g.lineTo(r.x + 3, r.y - 14);
   }
   g.stroke();
+  // drops hitting the ground
+  g.fillStyle = 'rgba(210,225,255,.38)';
+  for (let i = 0; i < 26; i++) { const x = Math.random() * W, y = Math.random() * H; g.fillRect(x - 2, y, 4, 1); g.fillRect(x, y - 1, 1, 1); }
 }
 
 // ---------------------------------------------------------------------------

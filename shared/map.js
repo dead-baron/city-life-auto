@@ -54,7 +54,7 @@ SURFACE[T.LOT] = [1, 1, 1];
 // walk: sidewalk texture, plaza: interior plaza texture, road: asphalt variant, ground: default interior tile
 export const DISTRICTS = [
   { id: 0, name: 'Pine Hills', isl: 'Residential', style: 'houses', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 1, name: 'Midtown', isl: 'Downtown', style: 'commercial', walk: 'concrete', plaza: 'brick', road: 'asphalt', ground: T.LOT, turf: false },
+  { id: 1, name: 'Midtown', isl: 'Downtown', style: 'commercial', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.PLAZA, turf: false },
   { id: 2, name: 'Northgate', isl: 'Residential', style: 'apartments', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
   { id: 3, name: 'The Yards', isl: 'Industrial', style: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: true },
   { id: 4, name: 'Downtown', isl: 'Downtown', style: 'towers', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.PLAZA, turf: false },
@@ -506,7 +506,9 @@ function placePrefab(m, row, key, x, special, rand) {
     const back = { d: row.d, y: row.face === 'S' ? row.y : row.y + pf.th, h: left, face: row.face === 'S' ? 'N' : 'S' };
     filler(m, back, x, pf.tw, STYLE[DISTRICTS[row.d].style], rand, true);
   }
-  const groundT = { lot: T.LOT, plaza: T.PLAZA, grass: T.GRASS, dirt: T.DIRT }[pf.ground] ?? T.LOT;
+  // the lot sits on the district's own paving/lawn so its feathered edges melt into the block
+  const dg = DISTRICTS[row.d].ground;
+  const groundT = pf.ground === 'dirt' ? T.DIRT : pf.ground === 'grass' ? T.GRASS : dg === T.SAND || dg === T.WATER ? T.PLAZA : dg;
   m.fill(x, y, pf.tw, pf.th, groundT);
   let [sx0, sy0, sx1, sy1] = pf.solid;
   if (rot === 2) [sx0, sy0, sx1, sy1] = [pf.tw - sx1, pf.th - sy1, pf.tw - sx0, pf.th - sy0];
@@ -546,7 +548,17 @@ function placePrefab(m, row, key, x, special, rand) {
       if (kind === 'police' || kind === 'dealer' || kind === 'garage') poi.spawnLot = { x: (x + pf.tw * 0.8) * TILE, y: (y + pf.th - 2) * TILE, a: -Math.PI / 2 };
       if (kind === 'warehouse') poi.cargoPad = { x: (x + pf.tw * 0.25) * TILE, y: (y + pf.th - 1.2) * TILE };
       if (kind === 'police') m.pois.push({ id: m.pois.length, kind: 'evidence', label: 'Evidence Locker', x: (x + pf.tw - 1) * TILE, y: dd.py, r: 56, b: bid });
-      if (kind === 'hospital') m.pois.push({ id: m.pois.length, kind: 'reception', label: 'ER Reception', x: dd.px, y: dd.py, r: 36, b: bid });
+      if (kind === 'hospital') {
+        m.pois.push({ id: m.pois.length, kind: 'reception', label: 'ER Reception', x: dd.px, y: dd.py, r: 36, b: bid });
+        // forecourt like the reference: paved apron, tree planters either side of the doors, lamps, benches
+        const fy0 = rot === 0 ? b.ty + b.th : y, fy1 = rot === 0 ? y + pf.th : b.ty;
+        m.fill(x, fy0, pf.tw, fy1 - fy0, T.PLAZA);
+        const py = ((fy0 + fy1) / 2) * TILE;
+        for (const fx of [0.16, 0.36, 0.64, 0.84]) addProp(m, 'planter_g', (x + pf.tw * fx) * TILE, py, 12);
+        for (const fx of [0.06, 0.94]) addProp(m, 'lamp', (x + pf.tw * fx) * TILE, py);
+        addProp(m, 'bench_m', (x + pf.tw * 0.26) * TILE, py + 6, 0);
+        addProp(m, 'bench_m', (x + pf.tw * 0.74) * TILE, py + 6, 0);
+      }
       if (kind === 'bank') {
         const ax = dd.px - 64;
         m.props.push({ t: 'atm', x: ax, y: dd.py - 8 });

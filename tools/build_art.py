@@ -18,7 +18,7 @@ import os
 import sys
 import tempfile
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scipy import ndimage
 from segment import segment, crop
@@ -106,7 +106,7 @@ PREFABS = {
     'tower1': ((725, 43, 882, 280), (.14, .02, .92, .80), [.5], 'plaza', True),
     'tower2': ((891, 43, 1006, 280), (.06, .02, .93, .86), [.5], 'plaza', True),
     'hotel': ((1021, 43, 1196, 280), (.12, .02, .84, .64), [.5], 'plaza', False),
-    'hospital': ((1211, 43, 1438, 262), (.07, .02, .93, .74), [.5], 'plaza', False),
+    'hospital': ('REF', (.01, .0, .99, .80), [.5], 'plaza', False),   # composed by make_hospital()
     'police': ((11, 325, 208, 480), (.13, .05, .88, .86), [.5], 'lot', False),
     'fire': ((221, 325, 418, 466), (.16, .05, .95, .97), [.4], 'lot', False),
     'gas': ((433, 325, 638, 546), (.67, .01, .93, .20), [.8], 'lot', False),
@@ -320,22 +320,113 @@ def sharpen_lot(img, tw, th):
     return out.filter(ImageFilter.UnsharpMask(radius=1.0, percent=60, threshold=2))
 
 
+# Hospital: front facade cut from the rainy-night street reference (lit lobby, red cross, entrance
+# canopy, planter beds) under a procedural parapet roof with a helipad, AC and tanks.
+HOSPITAL_REF = '6835c658-image.png'
+HOSPITAL_FACADE = (362, 0, 1448, 186)
+HOSPITAL_TILES = (18, 15)
+
+
+def make_hospital():
+    tw, th = HOSPITAL_TILES
+    W, H = tw * TILE, th * TILE
+    fac = Image.open(find_src(HOSPITAL_REF)).convert('RGB').crop(HOSPITAL_FACADE)
+    fh = round(fac.height * W / fac.width)
+    fac = fac.resize((W, fh), Image.LANCZOS)
+    roof_h = round(H * 0.80) - fh
+    out = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    rng = np.random.default_rng(42)
+    roof = np.zeros((roof_h, W, 3), np.uint8)
+    roof[:] = (84, 85, 90)
+    speck = rng.random((roof_h, W))
+    roof[speck > 0.93] = (98, 99, 104)
+    roof[speck < 0.05] = (70, 71, 76)
+    r = Image.fromarray(roof)
+    d = ImageDraw.Draw(r)
+    d.rectangle([0, 0, W - 1, roof_h - 1], outline=(26, 27, 32))
+    for k in range(1, 9):  # parapet with bevel
+        c = (176, 174, 168) if k < 3 else (150, 148, 142) if k < 7 else (110, 110, 112)
+        d.rectangle([k, k, W - 1 - k, roof_h + 20], outline=c)
+    d.rectangle([9, 9, W - 10, 12], fill=(60, 61, 66))
+    mods = Image.open(find_src(ROOF_SHEET)).convert('RGB')
+    def stamp(name, cx, cy, size):
+        box, _ = ROOF_MODULES[name]
+        c = mods.crop(box)
+        rr = c.width / c.height
+        w, h = (size, round(size / rr)) if rr >= 1 else (round(size * rr), size)
+        im = feather(c.resize((w, h), Image.LANCZOS), 8)
+        r.paste(im, (int(cx - w / 2), int(cy - h / 2)), im)
+    stamp('heli', W * 0.26, roof_h * 0.47, 170)
+    stamp('ac', W * 0.58, roof_h * 0.33, 96)
+    stamp('ac', W * 0.74, roof_h * 0.33, 96)
+    stamp('tanks', W * 0.86, roof_h * 0.62, 90)
+    stamp('sky', W * 0.62, roof_h * 0.70, 110)
+    # roof-top red cross beacon so the hospital reads from above too
+    cx, cy, a, b2 = int(W * 0.44), int(roof_h * 0.72), 22, 7
+    d = ImageDraw.Draw(r)
+    d.rectangle([cx - a - 4, cy - a - 4, cx + a + 4, cy + a + 4], fill=(236, 236, 232), outline=(40, 40, 44))
+    d.rectangle([cx - a, cy - b2, cx + a, cy + b2], fill=(206, 24, 34))
+    d.rectangle([cx - b2, cy - a, cx + b2, cy + a], fill=(206, 24, 34))
+    out.paste(r, (0, 0))
+    out.paste(fac, (0, roof_h))
+    return out, tw, th
+
+
+def emissive(img, solid, tw, th):
+    """Night layer for a lot: facade windows turn warm, lit windows and neon signs keep their
+    colour, plus a soft halo. Drawn additively by the client after dark."""
+    a = np.asarray(img.convert('RGB'), np.float32) / 255
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    v = a.max(-1)
+    s = (v - a.min(-1)) / np.maximum(v, 1e-3)
+    H, W = r.shape
+    y0 = int((solid[1] + 0.68 * (solid[3] - solid[1])) * H)
+    y1 = min(H, int(solid[3] * H + TILE * 0.6))
+    fac = np.zeros_like(r, bool)
+    fac[y0:y1] = True
+    glass = (b > r + 0.05) & (b >= g - 0.03) & (v > 0.1) & (v < 0.8) & (s > 0.25) & fac
+    warm = (r > 0.8) & (g > 0.6) & (b < 0.55) & (s > 0.45) & fac
+    neon = (s > 0.62) & (v > 0.78)
+    glass = ndimage.binary_opening(glass, np.ones((2, 2)))
+    neon = ndimage.binary_opening(neon, np.ones((2, 2)))
+    out = np.zeros_like(a)
+    out[glass] = np.array([1.0, 0.76, 0.40]) * (0.75 + 0.25 * v[glass, None])
+    out[warm] = a[warm]
+    out[neon] = a[neon]
+    halo = np.stack([ndimage.gaussian_filter(out[..., k], 4) for k in range(3)], -1)
+    res = np.clip(out * 0.8 + halo * 0.8, 0, 1)
+    if 'A' in img.getbands():
+        res *= (np.asarray(img.getchannel('A'), np.float32) / 255)[..., None]
+    return Image.fromarray((res * 255).astype(np.uint8), 'RGB')
+
+
 def build_prefabs():
     src = Image.open(find_src(BUILDINGS)).convert('RGB')
-    items, meta = [], {}
+    items, meta, glows = [], {}, {}
     for key, (box, solid, doors, ground, rot) in PREFABS.items():
-        img = src.crop(box)
-        sw, sh = img.size
-        tw = max(1, round(sw * PREFAB_SCALE / TILE))
-        th = max(1, round(sh * PREFAB_SCALE / TILE))
+        if box == 'REF':
+            lot, tw, th = make_hospital()
+        else:
+            img = src.crop(box)
+            sw, sh = img.size
+            tw = max(1, round(sw * PREFAB_SCALE / TILE))
+            th = max(1, round(sh * PREFAB_SCALE / TILE))
+            # soft lot edges so each lot melts into the surrounding paving / lawn
+            lot = feather(sharpen_lot(img, tw, th), 5)
         sx0, sy0, sx1, sy1 = solid
         so = [int(np.floor(sx0 * tw)), int(np.floor(sy0 * th)), int(np.ceil(sx1 * tw)), int(np.ceil(sy1 * th))]
         print('  prefab', key, tw, th)
-        items.append((key, sharpen_lot(img, tw, th).convert('RGBA')))
+        items.append((key, lot))
+        glows[key] = emissive(lot, solid, tw, th)
         meta[key] = {'tw': tw, 'th': th, 'solid': so, 'doors': doors, 'ground': ground, 'rot': rot}
     frames, sheets = shelf_pack(items, width=2048)
     for i, sh in enumerate(sheets):
-        sh.convert('RGB').save(os.path.join(ASSETS, f'prefabs{i}.webp'), quality=93, method=6)
+        sh.save(os.path.join(ASSETS, f'prefabs{i}.webp'), quality=93, method=6)
+        gl = Image.new('RGB', sh.size, (0, 0, 0))
+        for k, f in frames.items():
+            if f['a'] == i:
+                gl.paste(glows[k], (f['x'], f['y']))
+        gl.save(os.path.join(ASSETS, f'prefabs{i}_glow.webp'), quality=88, method=6)
     for k, f in frames.items():
         meta[k]['src'] = [f['a'], f['x'], f['y'], f['w'], f['h']]
     return meta, len(sheets)

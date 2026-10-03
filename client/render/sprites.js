@@ -7,7 +7,7 @@ import { paintCharacter, CHAR_GRID } from './peds.js';
 import { PREFAB_SHEETS } from '../../shared/prefab-data.js';
 
 const SKINS = ['#f1c9a5', '#e0ac7e', '#c68953', '#a86b3c', '#7d4a26', '#4f2f1a'];
-export const atlas = { ready: false, imgs: [], frames: {}, variants: {}, scale: 2, ground: null, prefabs: null };
+export const atlas = { ready: false, imgs: [], frames: {}, variants: {}, scale: 2, ground: null, prefabs: null, prefabGlow: null };
 
 export async function loadAtlas(base = 'assets/') {
   try {
@@ -16,6 +16,8 @@ export async function loadAtlas(base = 'assets/') {
     const load = (f) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = base + f; });
     [atlas.imgs, atlas.ground, atlas.prefabs] = await Promise.all([Promise.all(meta.atlases.map(load)), load('ground.png'), Promise.all(Array.from({ length: PREFAB_SHEETS }, (_, i) => load(`prefabs${i}.webp`)))]);
     atlas.ready = true;
+    // night emissive sheets load after the day art (not needed for the first frame)
+    Promise.all(Array.from({ length: PREFAB_SHEETS }, (_, i) => load(`prefabs${i}_glow.webp`))).then((a) => { atlas.prefabGlow = a; }).catch(() => {});
   } catch (e) { console.warn('atlas unavailable, using procedural sprites', e); }
 }
 

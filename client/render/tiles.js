@@ -58,6 +58,7 @@ export class GroundCache {
     return c;
   }
   overhead(cx, cy) { return this.highProps.get(this.key(cx, cy)) || []; }
+  prefabsAt(cx, cy) { return this.prefabs.get(this.key(cx, cy)) || []; }
 
   bake(cx, cy) {
     const cv = document.createElement('canvas');
@@ -389,6 +390,17 @@ function drawRoof(g, r) {
     g.fillStyle = '#3a3b3f'; g.fillRect(vx + 2, vy + 2, sz - 4, sz - 4);
     if (big2) { g.fillStyle = '#9b9a96'; for (let j = vy + 4; j < vy + sz - 2; j += 3) g.fillRect(vx + 2, j, sz - 4, 1); }
   }
+}
+
+// Night emissive layer of a lot (same geometry as drawPrefab), drawn additively after dark.
+export function drawPrefabGlow(g, p) {
+  const pf = PREFABS[p.key];
+  const [si, sx, sy, sw, sh] = pf.src;
+  const img = atlas.prefabGlow && atlas.prefabGlow[si];
+  if (!img) return;
+  const x = p.tx * TILE, y = p.ty * TILE, w = p.tw * TILE, h = p.th * TILE;
+  if (p.rot === 2) { g.save(); g.translate(x + w, y + h); g.rotate(Math.PI); g.drawImage(img, sx, sy, sw, sh, 0, 0, w, h); g.restore(); }
+  else g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
 function drawSign(g, s) {

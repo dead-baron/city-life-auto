@@ -319,7 +319,7 @@ function spawnByDemographic(world, x, y, night) {
     if (r <= 0) {
       const ped = spawnNpc(world, k, x, y, 'civ');
       if (k === 'drunk' && rng() < 0.5) { ped.npc.state = 'passed'; ped.downUntil = 0; ped.passedOut = true; }
-      ped.npc.umbrellaType = (k === 'socialite' || k === 'executive' || k === 'casual') && rng() < 0.5;
+      ped.npc.umbrellaType = k !== 'gang' && k !== 'drunk' && k !== 'athlete' && k !== 'construction' && rng() < 0.75;
       return ped;
     }
   }

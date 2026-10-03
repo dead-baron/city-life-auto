@@ -5,6 +5,8 @@ The current build is assembled from your concept sheets by `tools/build_art.py`:
 | Asset | Source sheet | Output |
 |---|---|---|
 | 27 building lots (houses, apartments, towers, hotel, hospital, police, fire, gas, shops, strip mall, supermarket, restaurants, club, bank, dealership, auto repair, warehouse, industrial, construction, church, school, park) | building sheet, upscaled 4x with Real-ESRGAN (`tools/sr_upscale.py`, a numpy port that needs no torch) then stored at 1 art px per world px | `assets/prefabs0.webp`, `prefabs1.webp` + generated `shared/prefab-data.js` (footprints, doors) |
+| Hospital lot: lobby facade cut from the rainy-night street reference + procedural roof (`make_hospital`) | street reference | in `prefabs*.webp` |
+| Night emissive layer per lot (warm windows, neon, halo) | derived automatically (`emissive`) | `assets/prefabs*_glow.webp` |
 | 5 rooftop equipment modules (AC unit, helipad, tanks, skylight, roof access) stamped onto procedural flat roofs | style-guide roof tiles | `assets/atlas0.png` (`prop_roof_*`) |
 | grass, sand, dirt (seamless, generated in the concept palette) | `tools/build_art.py` | `assets/ground.png` |
 | asphalt, worn asphalt, concrete sidewalk, red brick, slate plaza, water, deep water | style-guide tile sheets, waterfront sheet | `assets/ground.png` (seamless 128 px) |

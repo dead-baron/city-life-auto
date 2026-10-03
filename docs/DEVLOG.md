@@ -208,3 +208,23 @@ The district title now shows the island under it. Crossing a bridge shows "Liber
 Load test, 100 bots spread over the new map: 13–14 ms per tick (of a 50 ms budget), about 15 KB/s per player, 0 errors. All 21 tests pass.
 
 ![City map](screenshots/city-map.jpg)
+
+## 2026-10-03 · Art pass: blended blocks, reference hospital, night + rain
+
+**Blocks blend together.** There are no more asphalt or odd-coloured patches between buildings. Every lot now sits on its district's own paving or lawn: Midtown is continuous concrete like its sidewalks, Downtown slate, the Neon Strip brick, and Pine Hills lawns. Each concept lot has feathered edges, so it fades into the surrounding paving instead of reading as a pasted rectangle.
+
+**New hospital (all three hospitals),** built from the rainy-night street reference:
+- the reference's lobby facade: lit glass, red-cross sign, entrance canopy and planter beds
+- a parapet roof with a helipad, AC units, tanks, a skylight and a rooftop red cross
+- a paved forecourt with tree planters, lamps and benches either side of the doors
+
+**Night.** Every building lot has a generated emissive layer: facade glass turns warm yellow, lit windows and neon signs keep their colour, with a soft halo. It is drawn additively after dark. Street-lamp pools are bigger and warmer.
+
+**Rain.**
+- Wet asphalt reflects headlights (warm), tail and brake lights (red), sirens, street lamps and lit shopfronts as broken vertical streaks.
+- Cars throw tyre spray.
+- Drops splash on the ground.
+- Most pedestrians now open umbrellas, drawn as pixel-art canopies in six colours.
+
+![Hospital, day](screenshots/hospital-day.png)
+![Hospital, night + rain](screenshots/hospital-night-rain.png)

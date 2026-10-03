@@ -21,7 +21,7 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   0,
+   450,
    964,
    224,
    448
@@ -43,7 +43,7 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   226,
+   676,
    964,
    224,
    448
@@ -65,7 +65,7 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   452,
+   902,
    964,
    192,
    448
@@ -182,13 +182,13 @@ export const PREFABS = {
   ]
  },
  "hospital": {
-  "tw": 14,
-  "th": 14,
+  "tw": 18,
+  "th": 15,
   "solid": [
    0,
    0,
-   14,
-   11
+   18,
+   12
   ],
   "doors": [
    0.5
@@ -197,10 +197,10 @@ export const PREFABS = {
   "rot": false,
   "src": [
    0,
-   646,
-   964,
-   448,
-   448
+   0,
+   482,
+   576,
+   480
   ]
  },
  "police": {
@@ -220,7 +220,7 @@ export const PREFABS = {
   "src": [
    0,
    1094,
-   1414,
+   1446,
    384,
    320
   ]
@@ -377,7 +377,7 @@ export const PREFABS = {
   "src": [
    0,
    0,
-   1414,
+   1446,
    288,
    416
   ]
@@ -399,7 +399,7 @@ export const PREFABS = {
   "src": [
    0,
    290,
-   1414,
+   1446,
    352,
    416
   ]
@@ -421,7 +421,7 @@ export const PREFABS = {
   "src": [
    0,
    644,
-   1414,
+   1446,
    448,
    416
   ]
@@ -465,7 +465,7 @@ export const PREFABS = {
   "src": [
    0,
    1480,
-   1414,
+   1446,
    416,
    320
   ]
@@ -508,7 +508,7 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   0,
+   578,
    482,
    608,
    480
@@ -530,7 +530,7 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   610,
+   1188,
    482,
    480,
    480
@@ -552,7 +552,7 @@ export const PREFABS = {
   "rot": false,
   "src": [
    0,
-   1092,
+   1670,
    482,
    320,
    480
@@ -596,8 +596,8 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   1414,
-   482,
+   0,
+   964,
    448,
    480
   ]
