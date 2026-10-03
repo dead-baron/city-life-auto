@@ -10,7 +10,7 @@ import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
 import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap } from './input.js';
+import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus } from './input.js';
 import { GroundCache, drawOverheadProp, drawPrefabGlow } from './render/tiles.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
@@ -200,9 +200,10 @@ function fixedStep() {
   const selfScreen = worldToScreen(selfPos());
   const wcur = S.me ? WEAPONS[S.me.weapon] : null;
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
-  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, lastAim: S.lastAim, armed });
+  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed });
   const inOverlay = overlayPad();
   if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
+  if (!inOverlay && !S.playing) titlePad();
   if (!S.playing || S.hud.menuOpen || S.bigmap || inOverlay || performance.now() < (S.inputMuteUntil || 0)) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
   if (inp.bits & IN.AIMING) { S.lastAim = inp.aim; S.lastAimAt = performance.now(); S.lastFire = !!(inp.bits & IN.FIRE); }
   S.seq++;
@@ -441,8 +442,29 @@ function overlayPad() {
   if (input.padStart) { while (topOverlay()) closeOverlay(); }
   return true;
 }
+// Title screen with a gamepad: D-pad / stick between the buttons, A (or Start) to press.
+let titleFocus = -1;
+function titlePad() {
+  if ($('title').classList.contains('hidden')) return;
+  const btns = [...document.querySelectorAll('#title button')].filter((b) => !b.disabled && b.offsetParent !== null);
+  if (!btns.length) return;
+  if (titleFocus < 0) {
+    if (input.device !== 'gamepad') return;
+    titleFocus = 0; markTitle(btns); return; // highlight PLAY as soon as a pad is in use
+  }
+  if (input.menuNav || input.menuLR) titleFocus = (titleFocus + (input.menuNav || input.menuLR) + btns.length) % btns.length;
+  titleFocus = Math.min(titleFocus, btns.length - 1);
+  markTitle(btns);
+  if (input.menuSelect || input.padStart) btns[titleFocus].click();
+}
+function markTitle(btns) {
+  document.querySelectorAll('#title .pfocus').forEach((b) => b.classList.remove('pfocus'));
+  btns[Math.max(0, titleFocus)].classList.add('pfocus');
+}
+
 function syncSettings() {
   $('s-kbdrive').value = settings.kbDrive;
+  $('s-paddrive').value = settings.padDrive || 'triggers';
   $('s-edgefire').checked = settings.touchEdgeFire;
   $('s-padfire').checked = settings.padStickFire;
   $('s-vibrate').checked = settings.vibrate;
@@ -464,6 +486,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
 for (const x of document.querySelectorAll('.overlay [data-close]')) x.onclick = () => closeOverlay(x.closest('.overlay').id);
 for (const id of ['pause', 'settings', 'controls']) $(id).addEventListener('click', (e) => { if (e.target.id === id) closeOverlay(id); });
 $('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettings(); };
+$('s-paddrive').onchange = (e) => { settings.padDrive = e.target.value; saveSettings(); };
 $('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; saveSettings(); };
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
@@ -573,6 +596,8 @@ function frame(nowMs) {
     render(dt);
   } else {
     g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height);
+    // title screen before the city connects: the pad still drives the menus
+    if (pollPadForMenus() && !overlayPad()) titlePad();
   }
   requestAnimationFrame(frame);
 }

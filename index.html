@@ -76,10 +76,10 @@
       <button id="play" disabled>PLAY AS GUEST</button>
       <button id="practice">PRACTICE OFFLINE</button>
     </div>
-    <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="not-kbm">the DEV button</span>.</div>
+    <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="pad-only">Start → Debug / cheats</span><span class="touch-only">the DEV button</span>.</div>
     <div id="t-help">
       <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move &amp; drive (point where you want to go) · Mouse aim · Click shoot / punch · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · H horn · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
-      <div class="pad-only"><b>Gamepad</b> Left stick move &amp; drive (push further = faster) · Right stick aim · RT fire · LT sprint / handbrake · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal · D-pad up horn · Menu pause menu (map, settings, controls, debug)</div>
+      <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster) · right stick aim · RT fire · LT sprint · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, push it all the way to fire drive-by · D-pad up horn / siren · Menu pause menu (map, settings, controls, debug)</div>
       <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire · ACT interact · CAR get in/out</div>
     </div>
     <div id="t-tools"><button id="t-settings">⚙ SETTINGS</button><button id="t-fs">⛶ FULLSCREEN</button></div>
@@ -88,6 +88,7 @@
   <div id="settings" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>SETTINGS</h2><button id="s-close" class="x" data-close>✕</button></div>
     <label class="srow"><span>Keyboard driving</span><select id="s-kbdrive"><option value="direction">Direction (point where to go)</option><option value="tank">Classic tank (W gas, A/D steer)</option></select></label>
+    <label class="srow"><span>Gamepad driving</span><select id="s-paddrive"><option value="triggers">Classic: RT gas, LT brake, stick steers</option><option value="stick">Point the left stick where to go</option></select></label>
     <label class="srow"><span>Touch: aim stick outer ring fires</span><input type="checkbox" id="s-edgefire"></label>
     <label class="srow"><span>Gamepad: right stick full push fires</span><input type="checkbox" id="s-padfire"></label>
     <label class="srow"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>

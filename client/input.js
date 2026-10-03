@@ -27,7 +27,7 @@ export const input = {
 };
 
 // ---- player settings (per browser) ----------------------------------------------------------
-export const settings = { kbDrive: 'direction', touchEdgeFire: true, padStickFire: false, vibrate: true };
+export const settings = { kbDrive: 'direction', padDrive: 'triggers', touchEdgeFire: true, padStickFire: false, vibrate: true };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('cla.settings') || '{}')); } catch { /* private mode */ }
 export function saveSettings() { try { localStorage.setItem('cla.settings', JSON.stringify(settings)); } catch { /* ignore */ } }
 
@@ -222,7 +222,7 @@ function readPad() {
 }
 
 // Build the action state for this tick.
-// view: { selfScreen: {x,y}, inVehicle, armed (gun equipped), lastAim }
+// view: { selfScreen: {x,y}, inVehicle, driver, armed (gun equipped), lastAim }
 export function sample(view) {
   let bits = 0, mx = 0, my = 0, aim = view.lastAim || 0;
   const k = (c) => keys.has(c) || tappedKeys.has(c);
@@ -274,7 +274,13 @@ export function sample(view) {
     if (p.aEdge) input.menuSelect = true;
     if (p.bEdge) input.menuBack = true;
     if (p.start) input.padStart = true;
-    if (Math.abs(p.lx) + Math.abs(p.ly) > 0) { mx = p.lx; my = p.ly; }
+    const driving = view.driver && settings.padDrive !== 'stick';
+    if (driving) {
+      // GTA1/2-style car controls: RT gas, LT brake / reverse, left stick steers, A handbrake.
+      // The right stick aims drive-by fire; pushing it all the way out shoots.
+      bits |= IN.TANK;
+      mx = p.lx; my = -(p.rt - p.lt);
+    } else if (Math.abs(p.lx) + Math.abs(p.ly) > 0) { mx = p.lx; my = p.ly; }
     if (p.a) bits |= IN.DIVE;
     if (p.bb) bits |= IN.ACTION;
     if (p.x) bits |= IN.VEHICLE;
@@ -284,13 +290,13 @@ export function sample(view) {
     if (p.r3) bits |= IN.RELOAD;
     if (p.back) bits |= IN.USE;
     if (p.up) bits |= IN.HORN;
-    if (view.inVehicle) { if (p.lt > 0.4) bits |= IN.DIVE; } // LT = handbrake when driving
+    if (view.inVehicle) { if (!driving && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
     else if (p.l3 || p.lt > 0.4) bits |= IN.SPRINT;
     const rmag = Math.hypot(p.rx, p.ry);
     if (rmag > 0.15) { padAim = Math.atan2(p.ry, p.rx); padAimUntil = performance.now() + 450; }
     if (performance.now() < padAimUntil) { aim = padAim; bits |= IN.AIMING; }
-    if (p.rt > 0.35) { bits |= IN.FIRE; if (!(bits & IN.AIMING) && view.armed) { bits |= IN.AIMING; aim = view.lastAim || 0; } }
-    if (settings.padStickFire && rmag > 0.9) bits |= IN.FIRE;
+    if (!driving && p.rt > 0.35) { bits |= IN.FIRE; if (!(bits & IN.AIMING) && view.armed) { bits |= IN.AIMING; aim = view.lastAim || 0; } }
+    if ((driving || settings.padStickFire) && rmag > 0.9) bits |= IN.FIRE;
   }
 
   if (input.device === 'touch') {
@@ -321,3 +327,20 @@ export function mouseScreen() { return mouse; }
 export function touchAimState() { return { on: touch.rOn, firing: touch.firing, aim: touch.aim, recent: performance.now() - touch.aimAt < 1200 }; }
 // on-screen elements other than #tbtns (e.g. tapping the weapon box) can press a touch action
 export function virtualTap(name) { touch.tapped.add(name); }
+
+// Title screen / menus before the game loop is running: read only the pad's menu edges.
+export function pollPadForMenus() {
+  input.menuNav = 0; input.menuLR = 0; input.menuSelect = false; input.menuBack = false; input.padStart = false;
+  const p = readPad();
+  if (!p) return false;
+  if (p.dUpEdge) input.menuNav = -1;
+  if (p.dDownEdge) input.menuNav = 1;
+  if (p.stickNav) input.menuNav = p.stickNav;
+  if (p.dLeftEdge) input.menuLR = -1;
+  if (p.dRightEdge) input.menuLR = 1;
+  if (p.stickLR) input.menuLR = p.stickLR;
+  if (p.aEdge) input.menuSelect = true;
+  if (p.bEdge) input.menuBack = true;
+  if (p.start) input.padStart = true;
+  return true;
+}

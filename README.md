@@ -71,9 +71,11 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 
 | | Keyboard + mouse | Gamepad | Touch |
 |---|---|---|---|
-| Move / drive (point where to go; further = faster) | WASD / arrows (C or Ctrl = walk) | Left stick | Left thumb anywhere on the left half |
+| Move (further = faster) | WASD / arrows (C or Ctrl = walk) | Left stick | Left thumb anywhere on the left half |
+| Drive | WASD: point where to go (or classic tank in Settings) | RT gas · LT brake/reverse · left stick steer · A handbrake (GTA-style; stick-pointing option in Settings) | Left thumb: point where to go |
+| Drive-by | Mouse aim + click | Right stick aim, push all the way to fire | Aim stick / FIRE |
 | Aim | Mouse cursor | Right stick | Right stick |
-| Fire / punch | Click | RT | FIRE button, or push the aim stick into its red ring |
+| Fire / punch (on foot) | Click | RT | FIRE button, or push the aim stick into its red ring |
 | Sprint | Shift | LT / L3 | SPRINT |
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |

@@ -300,3 +300,13 @@ Tap the weapon box to switch weapons and the radar to open the map.
 Simulated standing slugfests (480 fights, no dodging): you beat frail NPCs 100% of the time in about 4 punches, average 99% in about 8, tough about 88% in about 13, and brutes about 32%. Rolling and footwork improve those odds.
 
 **Gamepad pause menu.** Start/Menu (or Esc) opens a GTA-style pause menu: Resume, Map, Settings, Controls, Toggle fullscreen, the Debug / cheats menu (dev and practice), and Back to title. The D-pad or left stick moves, A selects, left/right changes a setting, B goes back. The settings and debug panels are fully navigable with the pad.
+
+## 2026-10-03 · Gamepad title screen + GTA-style trigger driving
+
+- **Title screen:** the pad now works from the start. The D-pad or left stick moves between PLAY, PRACTICE, SETTINGS and FULLSCREEN, A or Start presses, and settings opened from the title are navigable too (B closes).
+- **Driving with a pad is back to triggers, GTA1/2-style:**
+  - RT gas and LT brake, then reverse (both analog, so a light squeeze cruises)
+  - left stick steers, A handbrake
+  - right stick aims drive-by fire, and pushing it all the way out shoots
+  - a "point the stick where to go" option remains under Settings → Gamepad driving
+- On foot nothing changes: left stick moves, right stick aims, RT fires.
