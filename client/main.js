@@ -15,6 +15,7 @@ import { GroundCache, drawOverheadProp, drawPrefabGlow, debrisColors, lampHead }
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
+import { createPhone } from './phone.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
@@ -130,6 +131,7 @@ function onText(m) {
     case 'me': S.me = m; S.hud && S.hud.setMe(m); break;
     case 'menu': S.hud.openMenu(m); break;
     case 'pong': S.rtt = performance.now() - m.ts; break;
+    case 'board': phone.onBoard(m); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     default: break;
@@ -219,6 +221,7 @@ function fixedStep() {
   if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
   if (!inOverlay && input.padCall && S.playing && !S.hud.menuOpen && !S.bigmap) callCruiser();
+  if (!inOverlay && input.padPhone && S.playing && !S.hud.menuOpen && !S.bigmap) openPhone();
   if (!S.playing || S.hud.menuOpen || S.bigmap || inOverlay || performance.now() < (S.inputMuteUntil || 0)) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
   if (inp.bits & IN.AIMING) { S.lastAim = inp.aim; S.lastAimAt = performance.now(); S.lastFire = !!(inp.bits & IN.FIRE); }
   S.seq++;
@@ -387,6 +390,8 @@ $('play').onclick = firstPlay(playGo);
 initInput(canvas, {
   onKey(k) {
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
+    if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
+    if (k === 'KeyP' && S.playing && !topOverlay()) { openPhone(); return; }
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
@@ -396,6 +401,7 @@ initInput(canvas, {
   onDev() { if (S.dev) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); } },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
+  onPhone() { if (S.playing) openPhone(); },
   onSettings() { openSettings(true); },
   onFullscreen() { toggleFullscreen(); },
 });
@@ -411,6 +417,23 @@ function deathPad() {
   if (step) S.deathFocus = (S.deathFocus + step + btns.length) % btns.length;
   btns.forEach((b, i) => b.classList.toggle('pfocus', input.device === 'gamepad' && i === S.deathFocus));
   if (input.menuSelect) btns[S.deathFocus].click();
+}
+
+// ---- phone + waypoints ---------------------------------------------------------------------------
+const phone = createPhone({
+  map: () => S.map, pos: () => selfPos(), isCop: () => !!(S.me && S.me.faction === 'enforcer'), send: (o) => send(o),
+  setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; },
+  waypoint: () => S.waypoint,
+  toast: (t, tone) => S.hud && S.hud.toast(t, tone),
+  refocus: () => { ovFocus = 0; focusOverlay(); },
+  close: () => closeOverlay('phone'),
+});
+function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
+// arrive at a phone waypoint -> it clears itself
+function checkWaypoint() {
+  if (!S.waypoint || !S.playing) return;
+  const p = selfPos();
+  if (Math.hypot(p.x - S.waypoint.x, p.y - S.waypoint.y) < 140) { S.hud.toast(`Arrived: ${S.waypoint.label}`, 'good'); S.waypoint = null; S.hud.waypoint = null; }
 }
 
 // ---- tutorial: guided tour over the live city map ---------------------------------------------
@@ -460,6 +483,8 @@ function toggleFullscreen(force) {
 }
 for (const id of ['b-fs', 't-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) toggleMap(!S.bigmap); };
+$('b-phone').onclick = () => openPhone();
+$('ph-back').onclick = () => phone.back();
 document.addEventListener('fullscreenchange', () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });
 
 // Let the phone rotate freely, even in fullscreen and in the installed app. 'any' follows the
@@ -613,6 +638,7 @@ function overlayPad() {
   if (!topOverlay()) return false;
   const f = focusables();
   const el = f[ovFocus];
+  if (topOverlay() === 'phone' && input.menuBack && phone.screen !== 'home') { phone.back(); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
   if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
   if (el && input.menuLR) {
@@ -662,6 +688,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     const a = b.dataset.p;
     if (a === 'resume') closeOverlay('pause');
     else if (a === 'map') { closeOverlay('pause'); toggleMap(true); }
+    else if (a === 'phone') { closeOverlay('pause'); openPhone(); }
     else if (a === 'cruiser') { closeOverlay('pause'); callCruiser(); }
     else if (a === 'settings') openOverlay('settings');
     else if (a === 'controls') openOverlay('controls');
@@ -863,6 +890,7 @@ function frame(nowMs) {
     S.smooth.x *= k; S.smooth.y *= k; S.smooth.a = (S.smooth.a || 0) * k;
     if (nowMs - pingAt > 2000) { pingAt = nowMs; send({ t: 'ping', ts: performance.now() }); }
     if (!tutorialActive()) render(dt);
+    checkWaypoint();
   } else {
     g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height);
     // title screen before the city connects: the pad still drives the menus
@@ -1340,6 +1368,11 @@ function drawWorldLabels(peds, vehs, now, z) {
   }
   if (me && me.suspects && me.suspects.length) drawSuspectMarks(g, me.suspects, z, now);
   if (me && me.happen) drawEventArrows(g, me.happen, z, now);
+  if (S.waypoint) { // subtle diamond on the spot itself
+    const w = S.waypoint, bob = Math.sin(now * 3) * 3;
+    g.save(); g.globalAlpha = 0.85; g.fillStyle = '#4fd6ff'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
+    g.beginPath(); g.moveTo(w.x, w.y - 30 + bob); g.lineTo(w.x + 8, w.y - 20 + bob); g.lineTo(w.x, w.y - 10 + bob); g.lineTo(w.x - 8, w.y - 20 + bob); g.closePath(); g.fill(); g.stroke(); g.restore();
+  }
   if (me && me.job) {
     g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     const bob = Math.sin(now * 4) * 5;

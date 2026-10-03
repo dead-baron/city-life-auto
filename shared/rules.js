@@ -24,3 +24,13 @@ export const RESPAWN_SECONDS = 7;
 export const GHOST_SECONDS = 30;              // a disconnected player's body lingers this long
 export const HOSPITAL_FEE = 150;
 export const BAIL_SPEED = 140;                // bailing out faster than this means a tumble
+
+// Phone job board: delivery jobs are priced by distance. $ = across the neighbourhood,
+// $$ = across town, $$$ = island to island. Pay = base + distance * perPx; limit = seconds.
+export const JOB_TIERS = [
+  { name: '$', minDist: 0, maxDist: 3000, base: 120, perPx: 0.03, limit: 360 },
+  { name: '$$', minDist: 3000, maxDist: 6500, base: 250, perPx: 0.05, limit: 540 },
+  { name: '$$$', minDist: 6500, maxDist: 30000, base: 450, perPx: 0.07, limit: 780 },
+];
+export const PATROL_PAY = [250, 450];        // police patrol call reward range (paid to the bank)
+export const PATROL_SEARCH_S = [6, 14];      // how long you look around before the crime kicks off

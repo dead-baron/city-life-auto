@@ -56,17 +56,20 @@ function pickDestination(world, from, minDist) {
   return dests[Math.floor(rng() * dests.length)] || world.map.pois.find((q) => q.kind === 'delivery');
 }
 
-export function startCourier(world, p, poi) {
-  const pad = poi.cargoPad || { x: poi.x, y: poi.y + 60 };
-  const tier = rng() < 0.7 ? 1 : 2;
-  const c = world.spawnCrate(tier, pad.x, pad.y, { owner: p.pid, job: { type: 'courier', pid: p.pid } });
-  const dest = pickDestination(world, pad, 1200);
+// opts (from the phone board): { dest, pay, limit, tier } - pickup is at that storefront's door
+export function startCourier(world, p, poi, opts = {}) {
+  const pad = poi.cargoPad || { x: poi.x + 18, y: poi.y + 14 };
+  const tier = opts.pay ? (opts.pay >= 400 ? 2 : 1) : (rng() < 0.7 ? 1 : 2);
+  const c = world.spawnCrate(tier, pad.x, pad.y, { owner: p.pid, job: { type: 'courier', pid: p.pid }, ...(opts.pay ? { value: opts.pay } : {}) });
+  const dest = opts.dest || pickDestination(world, pad, 1200);
+  const name = tier === 1 ? 'Wood Box' : 'Steel Barrel';
   p.job = {
-    type: 'courier', crates: [c.id], dest: dest.id, tx: dest.x, ty: dest.y, expires: world.time + 900,
-    text: `Deliver the ${tier === 1 ? 'Wood Box' : 'Steel Barrel'} ($${c.value}) to ${dest.label}`,
+    type: 'courier', crates: [c.id], dest: dest.id, tx: dest.x, ty: dest.y, expires: world.time + (opts.limit || 900),
+    text: `Deliver the ${name} ($${c.value}) to ${dest.label}`,
+    pickupText: `Pick up the ${name} at ${poi.label}`,
   };
   c.job.dest = dest.id;
-  world.notify(p, 'Contract accepted. Your crate is on the loading pad - grab a vehicle with open cargo slots.', 'good');
+  world.notify(p, opts.dest ? `Job accepted: pick up the ${name} at ${poi.label} - it's marked on your map.` : 'Contract accepted. Your crate is on the loading pad - grab a vehicle with open cargo slots.', 'good');
   return null;
 }
 
@@ -81,7 +84,7 @@ export function startFarm(world, p, poi) {
   // a farm pickup waits nearby to help haul
   const truck = world.spawnVehicle('pickup', pad.x + 110, pad.y, -Math.PI / 2, { npcOwned: false });
   truck.issuedTo = p.pid; truck.despawnable = true;
-  p.job = { type: 'farm', crates: ids, dest: grocery.id, tx: grocery.x, ty: grocery.y, expires: world.time + 1200, text: 'Haul 4 Produce Boxes to FreshHub Grocery in the city' };
+  p.job = { type: 'farm', crates: ids, dest: grocery.id, tx: grocery.x, ty: grocery.y, expires: world.time + 1200, text: `Haul 4 Produce Boxes to ${grocery.label} in the city`, pickupText: `Load the 4 Produce Boxes at ${poi.label}` };
   world.notify(p, 'Harvest contract! 4 Produce Boxes are in the field by the farm road. A co-op pickup is parked next to them.', 'good');
   return null;
 }
@@ -142,10 +145,10 @@ function deliverLegit(world, p, crate, type) {
 function fence(world, p, crate, mult) {
   const prof = p.profile;
   const gain = Math.round(crate.value * mult);
-  prof.cash += gain;
+  prof.bank += gain; // sales go straight to the bank
   prof.criminalExp += Math.round(gain / 100);
   consume(world, p, crate);
-  world.notify(p, `The Exchange paid $${gain}. +${Math.round(gain / 100)} Criminal EXP.`, 'good');
+  world.notify(p, `The Exchange wired $${gain} to your bank. +${Math.round(gain / 100)} Criminal EXP.`, 'good');
   if (crate.job) { const owner = world.players.get(crate.job.pid); if (owner && owner.job) failJob(world, owner, 'Your cargo was fenced by a thief. Contract lost.'); }
   store.touch();
 }

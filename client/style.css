@@ -304,3 +304,28 @@ body.portrait.touch #zone-l { top: 50%; width: 50%; }
 body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
 
 #d-spawn .spawn-opt.pfocus { outline: 3px solid #fff; outline-offset: 3px; transform: scale(1.06); }
+
+/* ---- phone ---- */
+#phone { position: absolute; inset: 0; z-index: 41; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: flex-end; padding-right: max(24px, env(safe-area-inset-right)); }
+.ph-body { width: min(340px, 92vw); height: min(620px, 88vh); background: #10131c; border: 3px solid #2c3142; border-radius: 26px; box-shadow: 0 12px 40px rgba(0,0,0,.7), inset 0 0 0 2px #000; display: flex; flex-direction: column; overflow: hidden; }
+.ph-top { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px; background: #1a1f2c; border-bottom: 1px solid #2c3142; color: #9aa; font: 600 13px Rubik, sans-serif; }
+.ph-top #ph-clock { flex: 1; text-align: center; letter-spacing: 1px; }
+.ph-top button { background: none; border: 0; color: #fff; font-size: 18px; cursor: pointer; padding: 2px 6px; }
+#ph-screen { flex: 1; overflow-y: auto; padding: 10px 12px 14px; color: #e8e8ee; font: 14px Rubik, system-ui, sans-serif; }
+#ph-screen h3 { margin: 12px 2px 6px; font: 15px Anton, Impact, sans-serif; letter-spacing: 1px; color: #ffd400; }
+.ph-apps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.ph-app { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px; border-radius: 14px; border: 1px solid #2c3142; background: #1b2130; color: #fff; font: 600 13px Rubik, sans-serif; cursor: pointer; }
+.ph-app b { font-size: 26px; }
+.ph-row { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 8px; margin: 3px 0; border-radius: 10px; border: 1px solid transparent; background: #171c28; color: #fff; font: 14px Rubik, sans-serif; cursor: pointer; }
+.ph-row:disabled { opacity: .45; cursor: default; }
+.ph-row .ic { width: 28px; text-align: center; font-weight: 700; color: #ffd400; }
+.ph-row .ic.tier { font: 15px Anton, Impact, sans-serif; color: #3ddc84; }
+.ph-row .nm { flex: 1; display: flex; flex-direction: column; }
+.ph-row small { color: #8a90a2; font-size: 12px; }
+.ph-row .d { color: #9fd4ff; font-weight: 700; }
+.ph-row.pfocus, .ph-app.pfocus { border-color: #fff; outline: 2px solid #fff; }
+.ph-card { margin: 10px 0; padding: 10px; border-radius: 12px; background: #1f2636; border-left: 3px solid #4fd6ff; font-size: 13px; }
+.ph-card.job { border-left-color: #ffd400; }
+.ph-card button { display: block; margin-top: 8px; width: 100%; padding: 7px; border-radius: 8px; border: 1px solid #ff5a4a; background: rgba(255,90,74,.15); color: #fff; font: 600 13px Rubik, sans-serif; cursor: pointer; }
+.ph-hint, .ph-empty { color: #8a90a2; font-size: 12.5px; margin: 6px 2px; }
+body.portrait #phone { justify-content: center; padding: 0; }

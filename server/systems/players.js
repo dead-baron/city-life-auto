@@ -17,6 +17,7 @@ import * as jobs from './jobs.js';
 import * as homes from './homes.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
+import * as phone from './phone.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS } from '../../shared/rules.js';
 export { GHOST_SECONDS, RESPAWN_SECONDS };
@@ -408,7 +409,7 @@ export function buildMe(world, p) {
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false,
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, job: p.job ? { text: p.job.text, x: p.job.tx, y: p.job.ty } : null,
+    prompt: p.prompt, job: phone.jobTarget(world, p),
     radar: law.radarFor(world, p), bounty: p.bounty,
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

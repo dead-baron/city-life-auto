@@ -93,6 +93,7 @@ function slotNear(world, x, y, r) {
 }
 
 function attach(world, c, v, i) {
+  c.touched = true;
   c.state = 'loaded'; c.parent = v.id; c.slot = i; c.z = 0; c.vx = 0; c.vy = 0; c.vz = 0;
   v.cargo[i] = c.id;
   c.expires = 0;
@@ -145,6 +146,7 @@ export function pickUp(world, ped, c) {
     law.crime(world, ped, 'cargoTheft', ownerP ? ownerP.ped : null, c.x, c.y);
     if (ownerP) world.notify(ownerP, `Someone is stealing your ${['', 'wood box', 'steel barrel', 'iron vault', 'carbon-gold case'][c.tier]}!`, 'bad');
   }
+  c.touched = true;
   c.state = 'carried'; c.parent = ped.id; c.z = 10; c.vx = 0; c.vy = 0; c.vz = 0; c.expires = 0;
   ped.carrying = c.id;
   if (p && c.contraband) c.holder = p.pid;

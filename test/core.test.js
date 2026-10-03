@@ -784,3 +784,72 @@ test('world events: snatch-and-grab shows for nearby players, then a return-to t
   const me = players.buildMe(w, p);
   assert.ok((me.happen || []).some((e) => e.k === 'ret'), 'arrow back to the robbed victim');
 });
+
+test('phone: job board with $/$$/$$$ deliveries, take one (pickup then drop-off waypoint), one at a time, cancel', async () => {
+  const phone = await import('../server/systems/phone.js');
+  const { JOB_TIERS } = await import('../shared/rules.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  run(w, 2);
+  const board = phone.handle(w, p, { a: 'board' });
+  const dels = board.jobs.filter((j) => j.kind === 'delivery');
+  assert.ok(dels.length >= 5, 'deliveries on the board');
+  assert.ok(new Set(dels.map((j) => j.tier)).size >= 2, 'mixed price tiers');
+  for (const j of dels) { const d = Math.hypot(j.tx - j.x, j.ty - j.y); assert.ok(d >= JOB_TIERS[j.tier].minDist && d < JOB_TIERS[j.tier].maxDist, 'tier matches distance'); }
+  assert.ok(board.jobs.some((j) => j.kind === 'farm'));
+  assert.ok(!board.jobs.some((j) => j.kind === 'patrol'), 'no patrols for civilians');
+  const job = dels[0];
+  const r = phone.handle(w, p, { a: 'take', id: job.id });
+  assert.ok(r.ok && p.job, 'job taken');
+  const tgt = phone.jobTarget(w, p);
+  assert.equal(tgt.stage, 'pickup');
+  assert.ok(Math.hypot(tgt.x - job.x, tgt.y - job.y) < 80, 'waypoint at the pickup first');
+  assert.match(phone.handle(w, p, { a: 'take', id: dels[1].id }).err, /already/, 'one job at a time');
+  // pick the crate up -> waypoint moves to the drop-off
+  const crate = w.get(p.job.crates[0]);
+  teleport(w, p.ped, crate.x, crate.y);
+  cargo.pickUp(w, p.ped, crate);
+  const t2 = phone.jobTarget(w, p);
+  assert.ok(Math.hypot(t2.x - job.tx, t2.y - job.ty) < 2, 'then the destination');
+  phone.handle(w, p, { a: 'cancel' });
+  assert.equal(p.job, null, 'cancelled from the phone');
+});
+
+test('police patrol call: drive there, look around, a crime starts, stop the suspect, get paid', async () => {
+  const phone = await import('../server/systems/phone.js');
+  const dev = await import('../server/dev.js');
+  const w = makeWorld();
+  const cop = joinPlayer(w).p;
+  dev.command(w, cop, 'cop', {});
+  vehicles.exitVehicle(w, cop.ped);
+  run(w, 2);
+  const pat = phone.handle(w, cop, { a: 'board' }).jobs.find((j) => j.kind === 'patrol');
+  assert.ok(pat, 'patrol calls on the cop board');
+  assert.ok(phone.handle(w, cop, { a: 'take', id: pat.id }).ok);
+  teleport(w, cop.ped, pat.x, pat.y);
+  let thief = null;
+  for (let i = 0; i < 25 && !thief; i++) { run(w, 1); if (cop.job && cop.job.stage === 'crime') thief = w.get(cop.job.thief); }
+  assert.ok(thief, 'a crime kicked off nearby');
+  assert.ok(Math.hypot(phone.jobTarget(w, cop).x - thief.x, phone.jobTarget(w, cop).y - thief.y) < 40, 'waypoint follows the suspect');
+  const bank = cop.profile.bank;
+  thief.npc.flagged = true; thief.downUntil = w.time + 5;
+  law.arrest(w, cop.ped, thief);
+  assert.equal(cop.job, null, 'patrol complete');
+  assert.ok(cop.profile.bank >= bank + 250, 'reward paid to the bank');
+});
+
+test('more banks and ATMs around the city; shop sales are paid into the bank', () => {
+  const w = makeWorld();
+  const banks = w.map.pois.filter((q) => q.kind === 'bank'), atms = w.map.pois.filter((q) => q.kind === 'atm');
+  assert.ok(banks.length >= 3, `${banks.length} banks`);
+  assert.ok(atms.length >= 10, `${atms.length} ATMs`);
+  assert.ok(w.map.pois.filter((q) => q.kind === 'gang').length >= 2, 'gang HQs on the map');
+  const { p } = joinPlayer(w);
+  p.profile.inventory.jewelry = 2;
+  const pawn = w.map.pois.find((q) => q.kind === 'pawn');
+  teleport(w, p.ped, pawn.x, pawn.y);
+  const cash = p.profile.cash, bank = p.profile.bank;
+  economy.handleMenu(w, p, pawn.id, 's:jewelry');
+  assert.equal(p.profile.cash, cash, 'nothing in your pocket');
+  assert.ok(p.profile.bank > bank, 'paid into the bank');
+});

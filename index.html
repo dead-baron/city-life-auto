@@ -41,7 +41,7 @@
     <div id="w-carry"></div>
     <div id="fishbar" class="hidden"></div>
     <div id="net"></div>
-    <div id="hud-btns"><button id="b-map" title="World map">▦</button><button id="b-settings" title="Settings">⚙</button><button id="b-fs" title="Fullscreen">⛶</button></div>
+    <div id="hud-btns"><button id="b-phone" title="Phone">📱</button><button id="b-map" title="World map">▦</button><button id="b-settings" title="Settings">⚙</button><button id="b-fs" title="Fullscreen">⛶</button></div>
   </div>
   <span id="hp-text" class="hidden"></span>
 
@@ -129,12 +129,17 @@
     </div>
     <div id="tut-chapters"></div>
   </div>
+  <div id="phone" class="hidden overlay"><div class="ph-body">
+    <div class="ph-top"><button id="ph-back" class="hidden">◀</button><span id="ph-clock">CityPhone</span><button class="x" data-close>✕</button></div>
+    <div id="ph-screen"></div>
+  </div></div>
   <div id="pause" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>PAUSED</h2><button class="x" data-close>✕</button></div>
     <p class="msub" id="p-sub">Game menu</p>
     <div class="m-opts">
       <button class="opt dev-only" data-p="dev">Debug / cheats menu</button>
       <button class="opt" data-p="resume">Resume</button>
+      <button class="opt" data-p="phone">Phone (places, jobs, waypoints)</button>
       <button class="opt" data-p="map">Map</button>
       <button class="opt cop-only" data-p="cruiser">Call police cruiser</button>
       <button class="opt" data-p="settings">Settings</button>

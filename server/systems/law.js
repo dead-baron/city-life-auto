@@ -6,6 +6,7 @@ import { angleDiff } from '../../shared/math.js';
 import { isTurf } from '../../shared/map.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
+import * as phone from './phone.js';
 
 export const CRIMES = {
   assault:     { heat: 15, label: 'Assault' },
@@ -405,6 +406,7 @@ function bookBody(world, cop, body) {
       t.meDirty = true;
     }
   }
+  phone.onCriminalStopped(world, cop, body);
   if (body.player) { body.bookable = null; } else { world.bodies.delete(body); world.remove(body); }
   if (cop && cop.player) {
     const stars = b ? b.stars : 1;
@@ -452,6 +454,7 @@ export function arrest(world, cop, target) {
     store.touch();
   } else {
     // NPC suspect taken into custody
+    phone.onCriminalStopped(world, cop, target);
     world.emit(target.x, target.y, { e: 'poof', x: target.x, y: target.y });
     world.remove(target);
     if (cop && cop.player) {

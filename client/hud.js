@@ -249,12 +249,22 @@ export class HUD {
         const q = big ? 7 : 4.5;
         g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.fillRect(x - q, y - q, q * 2, q * 2); g.strokeRect(x - q, y - q, q * 2, q * 2);
       }
-      if (me.job) {
-        let [x, y] = toR(me.job.x, me.job.y);
-        const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 8;
-        if (d > lim && !big) { x = size / 2 + dx / d * lim; y = size / 2 + dy / d * lim; }
-        g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, big ? 8 : 5, 0, 6.28); g.fill(); g.stroke();
-      }
+      // job target (yellow) and phone waypoint (cyan): a blip when in range, an arrow on the rim
+      // pointing the way when not
+      const target = (tx, ty, col) => {
+        let [x, y] = toR(tx, ty);
+        const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 9;
+        g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 1.5;
+        if (d > lim && !big) {
+          const a = Math.atan2(dy, dx);
+          x = size / 2 + Math.cos(a) * lim; y = size / 2 + Math.sin(a) * lim;
+          g.save(); g.translate(x, y); g.rotate(a);
+          g.beginPath(); g.moveTo(6, 0); g.lineTo(-4, -5); g.lineTo(-2, 0); g.lineTo(-4, 5); g.closePath(); g.fill(); g.stroke();
+          g.restore();
+        } else { g.beginPath(); g.arc(x, y, big ? 7 : 4.5, 0, 6.28); g.fill(); g.stroke(); }
+      };
+      if (me.job) target(me.job.x, me.job.y, '#ffd400');
+      if (this.waypoint) target(this.waypoint.x, this.waypoint.y, '#4fd6ff');
     }
     // player arrow
     g.translate(size / 2, size / 2); g.rotate(heading);
@@ -309,6 +319,7 @@ export class HUD {
       if (me.rumor) { const [x, y] = P(me.rumor.x, me.rumor.y); g.strokeStyle = '#ffd36b'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, me.rumor.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
       if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') { const [x, y] = P(me.cruiser.x, me.cruiser.y); g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); }
       for (const ev of me.happen || []) { const kind = EVENT_KINDS[ev.k]; if (!kind) continue; const [x, y] = P(ev.x, ev.y); g.fillStyle = kind.color; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(kind.label, x, y - 12); }
+      if (this.waypoint) { const [x, y] = P(this.waypoint.x, this.waypoint.y); g.fillStyle = '#4fd6ff'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 7, y); g.lineTo(x, y + 9); g.lineTo(x - 7, y); g.closePath(); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(this.waypoint.label, x, y - 14); }
       if (me.job) { const [x, y] = P(me.job.x, me.job.y); g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); }
       // police / bounty intel (server already applies the visibility rules)
       for (const r of me.radar || []) {

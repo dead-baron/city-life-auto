@@ -103,6 +103,7 @@ function initTouch(hooks) {
       if (name === 'dev') { hooks.onDev?.(); return; }
       if (name === 'map') { hooks.onMap?.(); return; }
       if (name === 'cruiser') { hooks.onCruiser?.(); return; }
+      if (name === 'phone') { hooks.onPhone?.(); return; }
       if (name === 'settings') { hooks.onSettings?.(); return; }
       if (name === 'fullscreen') { hooks.onFullscreen?.(); return; }
       touch.btn.add(name); touch.tapped.add(name); b.classList.add('on');
@@ -273,7 +274,7 @@ export function sample(view) {
   mouse.clicked = false;
 
   const p = readPad();
-  input.menuNav = 0; input.menuLR = 0; input.menuSelect = false; input.menuBack = false; input.padStart = false; input.padCall = false;
+  input.menuNav = 0; input.menuLR = 0; input.menuSelect = false; input.menuBack = false; input.padStart = false; input.padCall = false; input.padPhone = false;
   if (p) {
     if (p.dUpEdge) input.menuNav = -1;
     if (p.dDownEdge) input.menuNav = 1;
@@ -285,6 +286,7 @@ export function sample(view) {
     if (p.bEdge) input.menuBack = true;
     if (p.start) input.padStart = true;
     if (p.dDownEdge) input.padCall = true;
+    if (p.dLeftEdge) input.padPhone = true;
     const driving = view.driver && settings.padDrive !== 'stick';
     if (driving) {
       // GTA1/2-style car controls: RT gas, LT brake / reverse, left stick steers, A handbrake.

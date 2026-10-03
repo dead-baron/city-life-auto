@@ -18,11 +18,11 @@ import { EVENT_KINDS, ARROW_SHOW_S } from './worldevents.js';
 import {
   ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS,
   SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
-  RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE,
+  RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE, JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 2;
+export const TUTORIAL_VERSION = 3;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -64,10 +64,12 @@ export const STEPS = [
     text: `Aim with [[aim]] and attack with [[fire]]. Land punches in quick succession to floor someone - 3 hits for most people, 4 for tough guys. [[nextw]] switches weapons, [[reload]] reloads, [[throw]] throws what you're carrying.` },
   { ch: 'basics', title: 'Your HUD and the map', at: { city: 1 },
     text: `The HUD shows your weapon, cash on hand, bank balance, wanted stars and the clock, plus the radar in the corner. [[map]] opens the full city map and [[pause]] the pause menu (settings, controls and this tour). A day lasts ${dayMin} minutes and night ${nightMin} - at night witnesses see less and rain makes the roads slick.` },
+  { ch: 'basics', title: 'Your phone', at: { city: 1 },
+    text: `[[phone]] opens your phone. Places finds the nearest hospital, bank, ATM, shop, place to sell, garage or gang HQ and sets a waypoint - a subtle blip on your radar, or an arrow on its rim when it's far. Jobs lists deliveries priced ${JOB_TIERS.map((t) => t.name).join(' / ')} by distance (about $${Math.round(JOB_TIERS[0].base + JOB_TIERS[0].maxDist * 0.6 * JOB_TIERS[0].perPx)} to $${Math.round(JOB_TIERS[2].base + 9000 * JOB_TIERS[2].perPx)}) and farm harvests. One job at a time - cancel it from the phone and take another.` },
   { ch: 'basics', title: 'Hospitals', at: { pois: 'hospital' },
     text: `Hurt? Step onto the {{reception}} mat at any hospital for full treatment ($${HOSPITAL_FEE}). Below 30% health you bleed - [[use]] uses a med kit or bandage from the {{pharmacy}}. {{vending}}s sell energy drinks. If you die you wake up at a hospital after ${RESPAWN_SECONDS} seconds and everything you carried stays on the street.` },
   { ch: 'basics', title: 'Cash vs. bank', at: { poi: 'bank' },
-    text: `Cash on you is lost when you die or get robbed. Deposit it at the {{bank}} or any {{atm}}. Your bank balance is always safe. Log out mid-fight and your body stays in the world for ${GHOST_SECONDS} seconds.` },
+    text: `Cash on you is lost when you die or get robbed. Deposit it at the {{bank}} or any {{atm}}. Your bank balance is always safe, and anything you sell at a shop is paid straight into it. Log out mid-fight and your body stays in the world for ${GHOST_SECONDS} seconds.` },
 
   // ---- citizen -------------------------------------------------------------------------------
   { ch: 'citizen', title: 'The honest living', at: { poi: 'warehouse' }, route: { from: { poi: 'warehouse' }, to: { poi: 'delivery' }, veh: 'van' },
@@ -93,7 +95,7 @@ export const STEPS = [
   { ch: 'criminal', title: 'Contraband drops', at: { dropSites: 1 }, route: { from: { dropSites: 1 }, to: { poi: 'fence' }, veh: 'flatbed', chaser: 'police' },
     text: `Every few minutes rare crates land at a drop site - a ${EVENT_KINDS.drop.label.toLowerCase()} shows as a purple blip and rumor circle on the radar. Event arrows fade after ${ARROW_SHOW_S} seconds; the blips stay. Iron vaults and carbon-gold cases are worth a fortune at {{fence}} in {{fence:where}}, the black market (it also sells a Micro SMG for $${price('fence', 'smg')}). Everyone else wants them too.` },
   { ch: 'criminal', title: 'Gang turf', at: { turf: 1 },
-    text: `{{turfs}} belong to the syndicate. Their members attack outsiders, and fighting back on their turf isn't a crime. Muggers also prowl the streets - drop one and return the purse for Samaritan points.` },
+    text: `{{turfs}} belong to the syndicate, run from headquarters like {{gang}} - your phone shows where. Their members attack outsiders, and fighting back on their turf isn't a crime. Muggers also prowl the streets - drop one and return the purse for Samaritan points.` },
   { ch: 'criminal', title: 'Busted or wasted', at: { poi: 'police' },
     text: `Get knocked out by a cop and cuffed and you're BUSTED: fined $${BUST_FINE_PER_STAR} per star, illegal weapons and contraband confiscated. Die and your wanted level is wiped, but you drop everything you carried. Felonies stay on your record and keep you off the police force.` },
 
@@ -104,6 +106,8 @@ export const STEPS = [
     text: `[[horn]] toggles the siren. Your cruiser is the blue square on your map. Wrecked or stolen? After ${CALL_COOLDOWN_S} seconds press [[cruiser]] and dispatch drives a new one to you, locked just for you. Leave it behind for long and it's towed back to HQ.` },
   { ch: 'police', title: 'Dispatch', at: { district: 'Downtown' },
     text: `On duty, [[map]] becomes the dispatch map: every crime that was witnessed or reported, live suspects you can see, and the search area for ones you can't. Crimes near you pulse red on the radar, and criminals in sight wear a small flashing marker.` },
+  { ch: 'police', title: 'Patrol calls', at: { district: 'Neon Strip' },
+    text: `On duty, your phone's Jobs app lists patrol calls. Drive to the district, look around for ${PATROL_SEARCH_S[0]}-${PATROL_SEARCH_S[1]} seconds and a crime kicks off nearby - stop the suspect for $${PATROL_PAY[0]}-${PATROL_PAY[1]}, paid to your bank.` },
   { ch: 'police', title: 'Making an arrest', at: { district: 'Midtown' },
     text: `A suspect must be knocked out before you can cuff them: floor them with punches, tase them, tackle them with [[dive]], or run them down. They stay down for ${SUBDUE_S} seconds - walk up and press [[action]] to cuff them for $${ARREST_REWARD_PER_STAR} per star. Even a dead suspect's body has to be booked.` },
   { ch: 'police', title: 'Code of conduct', at: { poi: 'police' },

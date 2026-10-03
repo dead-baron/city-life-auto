@@ -19,7 +19,7 @@ const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
   switch (poi.kind) {
-    case 'delivery': case 'evidence': case 'reception': return null;
+    case 'delivery': case 'evidence': case 'reception': case 'gang': return null;
     case 'home': {
       const h = world.map.homes[poi.home];
       const owner = world.homeOwner.get(h.id);
@@ -250,8 +250,8 @@ function execute(world, p, poi, opt) {
       if (n <= 0) return 'Nothing to sell.';
       const gain = ITEMS[id].sell * n;
       prof.inventory[id] = 0;
-      prof.cash += gain;
-      world.notify(p, `Sold ${n}x ${ITEMS[id].name} for $${gain}.`, 'good');
+      prof.bank += gain; // shop sales are paid straight into the bank
+      world.notify(p, `Sold ${n}x ${ITEMS[id].name}: $${gain} deposited to your bank.`, 'good');
       store.touch();
       return null;
     }
@@ -262,7 +262,8 @@ function execute(world, p, poi, opt) {
       delete prof.weapons[id];
       delete ped.mag[id];
       if (ped.weapon === id) ped.weapon = 'fists';
-      prof.cash += gain;
+      prof.bank += gain;
+      world.notify(p, `Sold the ${WEAPONS[id].name}: $${gain} deposited to your bank.`, 'good');
       store.touch();
       return null;
     }

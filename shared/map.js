@@ -424,6 +424,8 @@ export function generateCity(seed = 1337) {
   buildWaterfronts(m, rand);
   buildRefuge(m, rand);
   buildStreetProps(m);
+  buildBanking(m);
+  buildGangHQs(m);
   aimLamps(m);
   buildLaneGraph(m);
   buildCameras(m, rand);
@@ -636,6 +638,61 @@ function roofBuilding(m, row, x, y, w, h, st, rand) {
   m.roofs.push(r);
   m.buildings.push({ id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind: 'roof', name: 'Building', business: null, signs: [] });
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * MAP_W + tx] = bid; }
+}
+
+// Bank branches (one per island that lacks one) and street ATMs (up to two per district), made
+// from existing storefronts so the city layout doesn't move. Deterministic, like everything here.
+function buildBanking(m) {
+  const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
+  const walk = (x, y) => { const t = m.tileAtPx(x, y); return t === T.SIDEWALK || t === T.PLAZA || t === T.LOT; };
+  const addAtm = (x, y) => { m.props.push({ t: 'atm', x, y: y - 14 }); m.pois.push({ id: m.pois.length, kind: 'atm', label: 'ATM', x, y, r: 36 }); };
+  const shops = () => m.pois.filter((p) => p.kind === 'delivery' && p.b !== undefined);
+  const main = m.pois.find((p) => p.kind === 'bank');
+  for (const I of Object.values(ISLANDS)) {
+    const [x0, y0, x1, y1] = I.box;
+    const inIsl = (p) => p.x / TILE >= x0 && p.x / TILE < x1 && p.y / TILE >= y0 && p.y / TILE < y1;
+    if (main && inIsl(main)) continue;
+    const cx = (x0 + x1) / 2 * TILE, cy = (y0 + y1) / 2 * TILE;
+    const heavy = (p) => /warehouse|factory|depot|plant|yard/i.test(p.label) ? 1 : 0; // a bank in a factory would be odd
+    const c = shops().filter((p) => inIsl(p) && walk(p.x - 40, p.y)).sort((a, b) => heavy(a) - heavy(b) || Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy))[0];
+    if (!c) continue;
+    const old = c.label;
+    const dname = DISTRICTS[distOf(c)] ? DISTRICTS[distOf(c)].name : I.name;
+    c.kind = 'bank'; c.label = `First Pixel Bank - ${dname}`; c.r = 48;
+    const b = m.buildings[c.b];
+    if (b) for (const s of b.signs) if (s.text === old) s.text = 'First Pixel Bank';
+    addAtm(c.x - 40, c.y + 6);
+  }
+  DISTRICTS.forEach((d, di) => {
+    const cands = shops().filter((p) => distOf(p) === di && walk(p.x + 40, p.y));
+    cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 17) - hash2(b.x | 0, b.y | 0, 17));
+    const picked = [];
+    for (const c of cands) {
+      if (picked.length >= 2) break;
+      if (picked.some((q) => Math.hypot(q.x - c.x, q.y - c.y) < 1200)) continue;
+      if (m.pois.some((q) => q.kind === 'atm' && Math.hypot(q.x - c.x, q.y - c.y) < 600)) continue;
+      picked.push(c);
+      addAtm(c.x + 40, c.y + 6);
+    }
+  });
+}
+
+// One syndicate headquarters per gang-turf district: the storefront nearest the district's heart.
+function buildGangHQs(m) {
+  DISTRICTS.forEach((d, di) => {
+    if (!d.turf) return;
+    let sx = 0, sy = 0, n = 0;
+    for (let ty = 0; ty < MAP_H; ty += 3) for (let tx = 0; tx < MAP_W; tx += 3) if (m.dist[ty * MAP_W + tx] === di) { sx += tx; sy += ty; n++; }
+    if (!n) return;
+    const cx = (sx / n) * TILE, cy = (sy / n) * TILE;
+    const c = m.pois.filter((p) => p.kind === 'delivery' && p.b !== undefined && m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === di)
+      .sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy))[0];
+    if (!c) return;
+    const old = c.label;
+    c.kind = 'gang'; c.label = `Syndicate HQ - ${d.name}`;
+    const b = m.buildings[c.b];
+    if (b) for (const s of b.signs) if (s.text === old) s.text = 'Syndicate HQ';
+  });
 }
 
 function filler(m, row, x, w, st, rand, backLot = false) {

@@ -6,6 +6,7 @@ import * as combat from './systems/combat.js';
 import * as economy from './systems/economy.js';
 import * as dev from './dev.js';
 import * as cruiser from './systems/cruiser.js';
+import * as phone from './systems/phone.js';
 import { brokenList } from './systems/props.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
@@ -40,6 +41,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
       if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
       if (msg.t === 'respawn' && typeof msg.choice === 'string' && msg.choice.length < 20) { player.respawnChoice = msg.choice; player.meDirty = true; if (player.ped && player.ped.dead && player.respawnAt) player.respawnAt = Math.min(player.respawnAt, world.time + 1.5); return; }
+      if (msg.t === 'phone') { const r = phone.handle(world, player, msg); if (r) conn.sendJSON(r); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'dev' && opts.dev) { dev.command(world, player, String(msg.c || ''), msg); }
     },
