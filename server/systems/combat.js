@@ -102,7 +102,9 @@ function melee(world, ped, w, aim) {
   if (w.bleed && world.rand() < 0.6) best.bleeding = true;
   world.emit(best.x, best.y, { e: 'hit', x: best.x, y: best.y, a: dir, id: best.id, w: w.i });
   if (w.id !== 'fists' || world.rand() < 0.35) world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 2 : 6 });
+  const floored = now < best.downUntil || now < best.stunUntil;
   damage(world, best, w.dmg * mult * (0.85 + world.rand() * 0.3), ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
+  if (floored) law.subdue(world, ped, best);
   return true;
 }
 
@@ -116,6 +118,7 @@ function taser(world, ped, w, aim) {
     target.downUntil = world.time + w.stun;
     target.rollT = 0;
     damage(world, target, w.dmg, ped, 'nonlethal', aim);
+    law.subdue(world, ped, target);
   }
 }
 
@@ -214,7 +217,7 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0) {
     const d = Math.hypot(e.x - x, e.y - y);
     const f = 1 - d / r;
     if (f <= 0) continue;
-    if (e.kind === K.PED && !e.dead && !e.vehId) {
+    if (e.kind === K.PED && !e.dead && !e.vehId && !(e.blastSafeUntil > world.time)) {
       const a = Math.atan2(e.y - y, e.x - x);
       e.vx += Math.cos(a) * 300 * f; e.vy += Math.sin(a) * 300 * f;
       e.downUntil = world.time + 1.5;

@@ -161,7 +161,7 @@ function onBinary(buf) {
 // ---------------------------------------------------------------------------
 // Client-side prediction for the local character / driven vehicle
 function pedModsFrom(flags, speedMul) {
-  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, analog: true };
+  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, tumble: !!(flags & 16), analog: true };
 }
 
 function reconcile(s) {
@@ -666,28 +666,27 @@ function callCruiser() {
   if (c.s === 'none' && c.cd > 0) { S.hud.toast(`Dispatch can send a new cruiser in ${c.cd}s.`, 'warn'); return; }
   send({ t: 'cruiser' });
 }
-function cruiserPos(c) {
-  const e = S.ents.get(c.id);
-  return e && e.rx !== undefined ? { x: e.rx, y: e.ry } : { x: c.x, y: c.y };
-}
-function drawCruiserGuide(g, c, z, now) {
-  const me = selfPos();
-  const t = cruiserPos(c);
-  const dx = t.x - me.x, dy = t.y - me.y, d = Math.hypot(dx, dy);
-  const blink = (now * 4 | 0) % 2;
-  // marker over the car
-  const bob = Math.sin(now * 4) * 5;
-  g.fillStyle = blink ? '#3b6bff' : '#ff3b3b'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
-  g.beginPath(); g.moveTo(t.x, t.y - 26 + bob); g.lineTo(t.x - 11, t.y - 46 + bob); g.lineTo(t.x + 11, t.y - 46 + bob); g.closePath(); g.fill(); g.stroke();
-  if (d < 110) return;
-  // chevron orbiting the player, pointing at the car
-  const a = Math.atan2(dy, dx), r = 62 / z + 18;
-  const cx = me.x + Math.cos(a) * r, cy = me.y + Math.sin(a) * r;
-  const s = 20 / Math.max(0.6, z);
-  g.save(); g.translate(cx, cy); g.rotate(a);
-  g.fillStyle = '#5b8cff'; g.strokeStyle = '#fff'; g.lineWidth = 2.5 / z;
-  g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.7, -s * 0.75); g.lineTo(-s * 0.3, 0); g.lineTo(-s * 0.7, s * 0.75); g.closePath(); g.fill(); g.stroke();
-  g.restore();
+// Officers see a small red/blue chevron over criminals they can see; it turns into a pulsing
+// "cuff" ring once the suspect is on the ground (walk up and press interact).
+function drawSuspectMarks(g, ids, z, now) {
+  for (const id of ids) {
+    const e = S.ents.get(id);
+    if (!e || e.rx === undefined || (e.flags & PF.INVEH)) continue;
+    const down = e.flags & (PF.DOWN | PF.STUN | PF.DEAD);
+    const y = e.ry - 22;
+    g.save();
+    if (down) {
+      g.globalAlpha = 0.55 + 0.35 * Math.sin(now * 6);
+      g.strokeStyle = '#7ab0ff'; g.lineWidth = 2 / z;
+      g.beginPath(); g.arc(e.rx, e.ry, 17, 0, 6.28); g.stroke();
+    } else {
+      g.globalAlpha = 0.7;
+      g.fillStyle = (now * 2 | 0) % 2 ? '#ff4a4a' : '#5b8cff';
+      g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 1.2 / z;
+      g.beginPath(); g.moveTo(e.rx, y + 5); g.lineTo(e.rx - 4.5, y - 1); g.lineTo(e.rx + 4.5, y - 1); g.closePath(); g.fill(); g.stroke();
+    }
+    g.restore();
+  }
 }
 function selfPos() {
   const P = S.pred;
@@ -1049,7 +1048,8 @@ function drawVehicleEnt(v, now, dt) {
 function drawPed(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
-  const pose = pedPose(p);
+  let pose = pedPose(p);
+  if (pose === 'down' && !(f & PF.DEAD) && (p.as || 0) > 70) pose = 'roll'; // tumbling out of a fast car
   let fr = pose === 'move' || pose === 'carry' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   const lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
@@ -1165,7 +1165,7 @@ function drawWorldLabels(peds, vehs, now, z) {
     g.strokeStyle = r.t === 4 ? '#ffd36b' : '#c07aff'; g.lineWidth = 4 / z; g.setLineDash([12 / z, 10 / z]);
     g.beginPath(); g.arc(r.x, r.y, r.r, 0, 6.28); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
   }
-  if (me && me.cruiser && (me.cruiser.s === 'parked' || me.cruiser.s === 'coming')) drawCruiserGuide(g, me.cruiser, z, now);
+  if (me && me.suspects && me.suspects.length) drawSuspectMarks(g, me.suspects, z, now);
   if (me && me.job) {
     g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     const bob = Math.sin(now * 4) * 5;

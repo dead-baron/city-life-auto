@@ -25,6 +25,30 @@ export const CRIMES = {
 
 export const ENFORCER_MIN_SAMARITAN = 25;
 
+// Police misconduct grace: officers can get away with a few offences; each one is forgotten
+// after MISCONDUCT_RESET_MS. Going over the limit costs the badge.
+export const MISCONDUCT_GRACE = 3;
+export const MISCONDUCT_RESET_MS = 10 * 60 * 1000;
+const MISCONDUCT_WEIGHT = { murder: 2, copMurder: 3, vehKill: 2 };
+function pruneMisconduct(prof) {
+  const now = Date.now();
+  prof.misconduct = (prof.misconduct || []).filter((t) => now - t < MISCONDUCT_RESET_MS);
+  return prof.misconduct;
+}
+function addMisconduct(world, p, type) {
+  const list = pruneMisconduct(p.profile);
+  const w = MISCONDUCT_WEIGHT[type] || 1;
+  for (let i = 0; i < w; i++) list.push(Date.now());
+  void world;
+  return list.length;
+}
+export function misconductFor(p) {
+  if (!p.badge) return null;
+  const list = pruneMisconduct(p.profile);
+  if (!list.length) return { n: 0, max: MISCONDUCT_GRACE, reset: 0 };
+  return { n: list.length, max: MISCONDUCT_GRACE, reset: Math.ceil((list[0] + MISCONDUCT_RESET_MS - Date.now()) / 1000) };
+}
+
 // Police career: rank comes from service points (arrests, bounties, stops). Shown in the HUD;
 // every rank gets the dispatch map, higher ranks see crime reports for longer.
 export const POLICE_RANKS = [
@@ -121,22 +145,23 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   if (imm === 'turf') npc.gangAlert(world, ped);
   if (imm) return;
 
-  if (p.badge) {
-    // enforcer code of conduct: demerits instead of heat for lesser offences
-    const demerit = { assault: 10, ram: 5, hitrun: 10, brandish: 0, murder: 30, vehKill: 25, theft: 5 }[type] ?? 10;
-    if (demerit) {
-      p.profile.samaritan -= demerit;
-      world.notify(p, `Misconduct: ${spec.label} on a clean citizen (-${demerit} Samaritan)`, 'bad');
-      if (p.profile.samaritan < ENFORCER_MIN_SAMARITAN) {
-        goOffDuty(world, p, true);
-        p.profile.firedUntil = Date.now() + 10 * 60 * 1000;
-        world.notify(p, 'You have been FIRED from the force. Badge and uniform revoked.', 'bad');
-      }
-      store.touch();
+  if (p.badge && type !== 'brandish') {
+    // enforcer code of conduct: a few slips are forgiven (they expire after a while), then the
+    // badge goes and the crime counts like anybody else's
+    const n = addMisconduct(world, p, type);
+    if (n <= MISCONDUCT_GRACE) {
+      const left = MISCONDUCT_GRACE - n;
+      world.notify(p, `Misconduct ${n}/${MISCONDUCT_GRACE}: ${spec.label}. ${left === 0 ? 'ONE MORE and you lose your badge!' : `${left + 1} more and you lose your badge.`}`, left === 0 ? 'bad' : 'warn');
       p.meDirty = true;
+      store.touch();
+      return;
     }
-    if (!spec.felony) return;
+    goOffDuty(world, p, true);
+    p.profile.firedUntil = Date.now() + 10 * 60 * 1000;
+    p.profile.misconduct = [];
+    world.notify(p, 'Too much misconduct - you have been FIRED from the force. Badge and uniform revoked.', 'bad');
   }
+  if (p.badge && type === 'brandish') return;
 
   p.profile.criminalExp += Math.round(spec.heat / 2);
   if (spec.felony) p.profile.felonies++;
@@ -327,19 +352,84 @@ export function radarFor(world, p) {
 }
 
 // ---------------------------------------------------------------------------
+// Arrests need the suspect knocked out: floored by a combo, tased, tackled, run down - or dead.
+// The officer still has to walk up and cuff them (or book the body).
+export function arrestable(world, e) {
+  const now = world.time;
+  if (e.vehId) return false;
+  if (e.dead) return !!(e.bookable || (e.npc && e.npc.flagged && e.npc.role !== 'gang'));
+  if (!isFlagged(world, e) || (e.npc && e.npc.role === 'gang')) return false;
+  return now < e.downUntil || now < e.stunUntil || !!e.passedOut;
+}
 export function arrestTarget(world, p) {
   const ped = p.ped;
-  const now = world.time;
-  for (const e of world.query(ped.x, ped.y, 40, K.PED)) {
-    if (e === ped || e.dead || e.vehId) continue;
-    if (!isFlagged(world, e) || (e.npc && e.npc.role === 'gang')) continue;
-    if (now < e.downUntil || now < e.stunUntil || e.hp < e.maxHp * 0.3) return e;
+  let best = null, bd = 52;
+  for (const e of world.query(ped.x, ped.y, 52, K.PED)) {
+    if (e === ped || !arrestable(world, e)) continue;
+    const d = Math.hypot(e.x - ped.x, e.y - ped.y);
+    if (d < bd) { bd = d; best = e; }
   }
-  return null;
+  return best;
+}
+
+// Officer (or anyone hunting a wanted suspect) puts a suspect on the floor: they stay out long
+// enough for the arrest walk-up.
+export const SUBDUE_S = 6;
+export function subdue(world, by, target) {
+  if (!by || !target || target.dead) return;
+  const p = by.player;
+  if (!p || !(p.badge || p.hunter) || !isFlagged(world, target)) return;
+  target.downUntil = Math.max(target.downUntil || 0, world.time + SUBDUE_S);
+  target.subduedBy = by.id;
+}
+export function isSuspectFor(world, p, e) { return isFlagged(world, e) && !(e.npc && e.npc.role === 'gang') && e !== p.ped; }
+
+// Criminals an officer can see right now (ids for the subtle overhead marker).
+export function suspectsFor(world, p) {
+  if (!p.badge || !p.ped) return null;
+  const out = [];
+  for (const e of world.query(p.ped.x, p.ped.y, 900, K.PED)) {
+    if (e === p.ped || (e.dead && !e.bookable)) continue;
+    if (!e.dead && !isSuspectFor(world, p, e)) continue;
+    if (e.dead && !e.bookable && !(e.npc && e.npc.flagged)) continue;
+    if (!world.map.los(p.ped.x, p.ped.y, e.x, e.y)) continue;
+    out.push(e.id);
+    if (out.length >= 24) break;
+  }
+  return out;
+}
+
+function bookBody(world, cop, body) {
+  const now = world.time;
+  const b = body.bookable;
+  world.emit(body.x, body.y, { e: 'poof', x: body.x, y: body.y });
+  if (b) {
+    const t = world.players.get(b.pid);
+    if (t) {
+      const fine = Math.min(t.profile.cash, 150 * b.stars);
+      t.profile.cash -= fine;
+      for (const id of ['smg', 'rocket']) if (t.profile.weapons[id] !== undefined) delete t.profile.weapons[id];
+      world.notify(t, `Your body was booked by ${cop && cop.player ? cop.player.name : 'the police'}: fined $${fine}, illegal weapons confiscated.`, 'bad');
+      t.meDirty = true;
+    }
+  }
+  if (body.player) { body.bookable = null; } else { world.bodies.delete(body); world.remove(body); }
+  if (cop && cop.player) {
+    const stars = b ? b.stars : 1;
+    const reward = b ? 75 * stars : 30;
+    cop.player.profile.cash += reward;
+    cop.player.profile.stats.arrests++;
+    if (cop.player.badge) addPolicePts(world, cop.player, b ? 5 * stars : 2);
+    world.notify(cop.player, `Suspect's body booked. +$${reward}`, 'good');
+    cop.player.meDirty = true;
+  }
+  void now;
+  store.touch();
 }
 
 export function arrest(world, cop, target) {
   const now = world.time;
+  if (target.dead) { bookBody(world, cop, target); return; }
   if (target.player) {
     const t = target.player;
     const stars = Math.max(1, t.wanted);
@@ -427,7 +517,29 @@ export function goOnDuty(world, p) {
   p.ped.appVer = (p.ped.appVer || 0) + 1;
   prof.weapons.taser = prof.weapons.taser ?? 0;
   prof.weapons.baton = prof.weapons.baton ?? 0;
-  if (prof.weapons.pistol === undefined) { prof.weapons.pistol = 36; p.ped.mag.pistol = 12; }
+  if (prof.weapons.service === undefined || prof.weapons.service < SERVICE_AMMO) { prof.weapons.service = SERVICE_AMMO; p.ped.mag.service = WEAPONS_MAG_SERVICE; }
+  p.ped.weapon = 'service';
+  p.meDirty = true;
+  store.touch();
+  return null;
+}
+
+// Department-issued gear: handed out on duty, handed back off duty (or lost on death).
+export const SERVICE_AMMO = 75;
+const WEAPONS_MAG_SERVICE = 15;
+export function stripPoliceGear(p) {
+  for (const id of ['taser', 'baton', 'service']) delete p.profile.weapons[id];
+  if (p.ped && ['taser', 'baton', 'service'].includes(p.ped.weapon)) p.ped.weapon = 'fists';
+  p.meDirty = true;
+}
+export function restockService(world, p) {
+  if (!p.badge) return 'On-duty officers only.';
+  const prof = p.profile;
+  const have = prof.weapons.service ?? 0;
+  if (have >= SERVICE_AMMO && p.ped.mag.service >= WEAPONS_MAG_SERVICE) return 'Your service pistol is already fully stocked.';
+  prof.weapons.service = Math.max(have, SERVICE_AMMO);
+  p.ped.mag.service = WEAPONS_MAG_SERVICE;
+  world.notify(p, `Armory: service pistol restocked (${SERVICE_AMMO} rounds).`, 'good');
   p.meDirty = true;
   store.touch();
   return null;
@@ -438,8 +550,7 @@ export function goOffDuty(world, p, fired = false) {
   p.badge = false;
   p.faction = FACTION.CITIZEN;
   if (p.civvies && p.ped) { p.ped.app = p.civvies; p.ped.appVer = (p.ped.appVer || 0) + 1; }
-  delete p.profile.weapons.taser; delete p.profile.weapons.baton;
-  if (p.ped && (p.ped.weapon === 'taser' || p.ped.weapon === 'baton')) p.ped.weapon = 'fists';
+  stripPoliceGear(p);
   p.meDirty = true;
   void fired;
   void world;

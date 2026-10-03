@@ -78,6 +78,7 @@ function weapon(P, w, hx, hy, ang) {
     case 11: L(5, '#1e1e24', 2); P.p(hx + Math.cos(ang + 1.57) * 2, hy + Math.sin(ang + 1.57) * 2, '#1e1e24'); break; // smg
     case 12: P.line(hx - Math.cos(ang) * 5, hy - Math.sin(ang) * 5, ang, 14, '#4a5a2a', 2); P.p(hx + Math.cos(ang) * 9, hy + Math.sin(ang) * 9, '#c8262b'); break; // bazooka
     case 13: L(10, '#3a2a1a'); break;                                                          // fishing rod
+    case 14: L(5, '#14161c', 2); P.p(hx + Math.cos(ang) * 2, hy + Math.sin(ang) * 2, '#3b6bff'); break; // police service pistol
     default: break;
   }
 }

@@ -89,7 +89,7 @@ export function send(world) {
         ctrl = CTRL.PED; ctrlId = ped.id;
         const mods = players.pedMods(world, ped);
         self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, av: 0, stamina: ped.stamina, rollT: ped.rollT, rdx: ped.rdx, rdy: ped.rdy, speedMul: mods.speedMul };
-        sflags = (mods.canMove ? 1 : 0) | (mods.canSprint ? 2 : 0) | (mods.regenMul > 1 ? 4 : 0) | (mods.staminaMax > 100 ? 8 : 0);
+        sflags = (mods.canMove ? 1 : 0) | (mods.canSprint ? 2 : 0) | (mods.regenMul > 1 ? 4 : 0) | (mods.staminaMax > 100 ? 8 : 0) | (mods.tumble ? 16 : 0);
       }
     } else if (ped) { ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: 0, vy: 0 }; }
     writer.begin(tick, p.ack, world.loopTime, world.weather, ctrl, ctrlId, self, sflags, ped ? ped.prevBits : 0);

@@ -15,6 +15,7 @@ export const WEAPONS = {
   smg:      { i: 11, name: 'Micro SMG',        type: 'gun', dmg: 11, range: 380, spread: 0.1, cd: 0.085, mag: 30, illegal: true },
   rocket:   { i: 12, name: 'Bazooka',          type: 'rocket', dmg: 130, radius: 110, range: 720, cd: 1.6, mag: 1, illegal: true },
   rod:      { i: 13, name: 'Fishing Pole',     type: 'tool' },
+  service:  { i: 14, name: 'Police Service Pistol', type: 'gun', dmg: 20, range: 470, spread: 0.04, cd: 0.26, mag: 15, police: true },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }

@@ -43,6 +43,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Throw / drop crate | Q | Y | THROW |
 | Reload / horn & siren | R / H | — / D-pad up | — / HORN |
 | Call police cruiser (on duty) | V | D-pad down | COP CAR (shows when you have no cruiser) |
+| Tackle a suspect (on duty) | Space (dive) into them | A | ROLL |
+| Cuff / book a downed suspect | E | B | ACT |
 | Heal (bandage / medkit) | X | Back | HEAL |
 | Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN |
 | City map | M | — | — |

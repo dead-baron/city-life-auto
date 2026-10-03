@@ -94,7 +94,7 @@ export function buildMenu(world, p, poi) {
     case 'police':
       sub = p.badge ? 'On duty. Arrest wanted suspects, seize contraband, keep it clean.' : `Badge requirements: ${law.ENFORCER_MIN_SAMARITAN} Samaritan points, zero felonies. You: ${prof.samaritan} pts, ${prof.felonies} felonies.`;
       if (!p.badge) opts.push({ id: 'duty:on', label: 'Pick up badge, uniform & keys' });
-      else { opts.push({ id: 'cruiser', label: 'Requisition a Police Interceptor' }); opts.push({ id: 'duty:off', label: 'Go off duty' }); }
+      else { opts.push({ id: 'armory', label: 'Armory: restock service pistol ammo', note: 'free' }); opts.push({ id: 'cruiser', label: 'Requisition a Police Interceptor' }); opts.push({ id: 'duty:off', label: 'Go off duty' }); }
       break;
     case 'courthouse': {
       sub = p.hunter ? 'Licensed Bounty Hunter: targets appear as radar pings.' : `Register as a Bounty Hunter (${law.HUNTER_MIN_SAMARITAN}+ Samaritan, not wanted).`;
@@ -297,6 +297,7 @@ function execute(world, p, poi, opt) {
       }
       return null;
     }
+    case 'armory': return law.restockService(world, p);
     case 'cruiser': {
       if (!p.badge) return 'On-duty officers only.';
       const lot = poi.spawnLot || { x: poi.x, y: poi.y + 80, a: 0 };

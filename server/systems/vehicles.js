@@ -142,6 +142,7 @@ function strikePed(world, v, ped, vn, h) {
   const killed = combat.damage(world, ped, dmg, driver, 'vehicle', Math.atan2(v.vy, v.vx));
   if (killed) v.bloody = true;
   if (driver) law.hitAndRun(world, driver, ped, killed, v);
+  if (driver && !killed) law.subdue(world, driver, ped);
   if (ped.npc) npc.onAttacked(world, ped, driver);
 }
 
@@ -175,11 +176,44 @@ export function explode(world, v, attackerPed) {
     if (!sid) continue;
     const ped = world.get(sid);
     if (!ped) continue;
-    ejectPed(world, ped, true);
-    combat.damage(world, ped, 999, attackerPed, 'explosion', 0);
+    blownOut(world, ped, v, attackerPed);
   }
   cargo.spillCargo(world, v);
   combat.blast(world, v.x, v.y, v.def.kind === 'bike' ? 60 : 110, 70, attackerPed, v.id);
+}
+
+// Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
+// longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
+// can finish you off.
+export const BAIL_SPEED = 140;
+function bail(world, ped, v, spd) {
+  const a = Math.atan2(v.vy, v.vx);
+  // out of the driver's door, carried along by the car's momentum
+  const side = a + Math.PI / 2 * (ped.seat === 1 ? 1 : -1);
+  ped.vx = v.vx * 0.78 + Math.cos(side) * 60; ped.vy = v.vy * 0.78 + Math.sin(side) * 60;
+  const t = Math.min(2.6, 0.7 + spd / 380);
+  ped.downUntil = world.time + t;
+  ped.tumbleUntil = world.time + t;
+  ped.rollT = 0;
+  if (spd > 230) combat.damage(world, ped, (spd - 210) * 0.1, null, 'bail', a);
+}
+
+// Caught in your own car blowing up: thrown clear, then either dead or barely hanging on.
+function blownOut(world, ped, v, attackerPed) {
+  ejectPed(world, ped, true);
+  ped.blastSafeUntil = world.time + 0.2; // the car's own blast already did its worst
+  const a = world.rand() * Math.PI * 2;
+  ped.x = v.x + Math.cos(a) * (v.def.W / 2 + 18); ped.y = v.y + Math.sin(a) * (v.def.W / 2 + 18);
+  world.place(ped);
+  ped.vx = Math.cos(a) * 320 + v.vx * 0.5; ped.vy = Math.sin(a) * 320 + v.vy * 0.5;
+  world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a, n: 12 });
+  if (world.rand() < 0.5) { combat.damage(world, ped, 999, attackerPed, 'explosion', a); return; }
+  ped.downUntil = world.time + 3.5;
+  ped.tumbleUntil = world.time + 1.4;
+  ped.rollT = 0;
+  const left = ped.maxHp * (0.06 + world.rand() * 0.1);
+  combat.damage(world, ped, Math.max(1, ped.hp - left), attackerPed, 'explosion', a);
+  if (!ped.dead) { ped.bleeding = true; ped.burnUntil = world.time + 2; if (ped.player) world.notify(ped.player, 'Blown clear of the wreck - badly hurt. Heal up fast!', 'bad'); }
 }
 
 export function nearestVehicle(world, ped, range) {
@@ -257,11 +291,7 @@ export function exitVehicle(world, ped) {
     if (!spot) { if (ped.player) world.notify(ped.player, 'Too far from shore to get out.', 'warn'); return; }
   }
   ejectPed(world, ped, false);
-  if (spd > 220) {
-    ped.downUntil = world.time + 1.2;
-    ped.vx = v.vx * 0.6; ped.vy = v.vy * 0.6;
-    combat.damage(world, ped, (spd - 200) * 0.08, null, 'bail', 0);
-  }
+  if (spd > BAIL_SPEED && v.def.kind !== 'boat') bail(world, ped, v, spd);
 }
 
 function findExitSpot(world, v, ped, maxR) {

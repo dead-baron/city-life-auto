@@ -232,9 +232,24 @@ test('enforcer badge needs Samaritan points; misconduct gets you fired', () => {
   const ped = p.ped;
   teleport(w, ped, 96, 96);
   const victim = spawnNpc(w, 'casual', ped.x + 20, ped.y, 'civ');
+  assert.equal(ped.weapon, 'service', 'issued a police service pistol');
+  assert.ok(prof.weapons.service >= law.SERVICE_AMMO);
+  prof.weapons.bat = 0; // own weapons still usable on duty
+  for (let i = 1; i <= law.MISCONDUCT_GRACE; i++) {
+    law.crime(w, ped, 'assault', victim);
+    assert.equal(p.badge, true, `grace ${i}/${law.MISCONDUCT_GRACE}`);
+    assert.equal(players.buildMe(w, p).misconduct.n, i);
+    assert.equal(p.wanted, 0, 'graced crimes carry no heat');
+  }
   law.crime(w, ped, 'assault', victim);
-  assert.equal(p.badge, false, 'dropping below the threshold triggers server-firing');
+  assert.equal(p.badge, false, 'one too many: badge revoked');
   assert.ok(prof.firedUntil > Date.now());
+  assert.equal(prof.weapons.service, undefined, 'department gear handed back');
+  assert.ok(prof.weapons.bat !== undefined, 'own weapons kept');
+  // misconduct expires
+  prof.misconduct = [Date.now() - law.MISCONDUCT_RESET_MS - 1];
+  p.badge = true;
+  assert.equal(law.misconductFor(p).n, 0, 'old misconduct forgotten');
 });
 
 test('bounty: robbed citizen can place a bounty, criminals cannot', () => {
@@ -257,9 +272,21 @@ test('vehicle entry from foot and wreck ejection', () => {
   assert.ok(vehicles.tryEnter(w, ped));
   assert.equal(ped.vehId, v.id);
   vehicles.explode(w, v, null);
-  assert.equal(ped.vehId, 0);
-  assert.equal(ped.dead, true);
+  assert.equal(ped.vehId, 0, 'thrown out of the car');
   assert.ok(v.wreckAt > 0);
+  assert.ok(ped.dead || (ped.hp < ped.maxHp * 0.2 && w.time < ped.downUntil), 'dead or severely hurt on the ground');
+  // many runs: both outcomes happen
+  let dead = 0, hurt = 0;
+  for (let i = 0; i < 40; i++) {
+    const q = joinPlayer(w).p;
+    const nd = w.map.nodes[(i * 13) % w.map.nodes.length];
+    teleport(w, q.ped, nd.x + 32, nd.y + 32);
+    const c = w.spawnVehicle('sedan', q.ped.x + 40, q.ped.y, 0, { npcOwned: false });
+    if (!vehicles.tryEnter(w, q.ped) || q.ped.vehId !== c.id) continue;
+    vehicles.explode(w, c, null);
+    if (q.ped.dead) dead++; else { hurt++; assert.ok(q.ped.hp >= 1 && q.ped.hp < q.ped.maxHp * 0.2 && q.ped.bleeding, `survivor hp ${q.ped.hp} bleed ${q.ped.bleeding} veh ${q.ped.vehId}`); }
+  }
+  assert.ok(dead > 5 && hurt > 5, `dead ${dead} / hurt ${hurt}`);
 });
 
 test('world tick stays fast with NPC population around players', () => {
@@ -536,4 +563,90 @@ test('police cruisers: on duty = behind the wheel, 15s re-call after loss, deliv
   run(w, 1);
   assert.equal(cop.dutyVehicle, 0, 'stolen cruiser is lost');
   assert.ok(players.buildMe(w, cop).cruiser.cd > 0);
+});
+
+test('bailing out of a fast car: roll and slide, hurts with speed, can kill', () => {
+  const w = makeWorld();
+  const res = [];
+  for (const spd of [100, 300, 700]) {
+    const { p } = joinPlayer(w);
+    const n = w.map.nodes[5];
+    teleport(w, p.ped, n.x + 32, n.y + 32);
+    const v = w.spawnVehicle('sedan', p.ped.x, p.ped.y, 0, { npcOwned: false });
+    vehicles.tryEnter(w, p.ped);
+    v.vx = spd; v.vy = 0;
+    const x0 = v.x;
+    vehicles.exitVehicle(w, p.ped);
+    const hp0 = p.ped.hp;
+    run(w, 3);
+    res.push({ spd, slid: p.ped.x - x0, lost: hp0 === 0 ? 0 : 100 - p.ped.hp, dead: p.ped.dead, down: w.time < p.ped.downUntil });
+  }
+  assert.ok(res[0].lost === 0 && res[0].slid < 60, 'slow: just step out');
+  assert.ok(res[1].slid > 60, `fast: tumbles along (${res[1].slid})`);
+  assert.ok(res[2].dead || res[2].lost > res[1].lost, 'faster hurts more');
+  // slamming into a wall while tumbling
+  const { p } = joinPlayer(w);
+  const ped = p.ped;
+  ped.tumbleUntil = w.time + 2; ped.downUntil = w.time + 2;
+  let wx = 0, wy = 0;
+  outer: for (let ty = 2; ty < w.map.h - 2; ty++) for (let tx = 2; tx < w.map.w - 6; tx++) {
+    if (!PED_BLOCK[w.map.tileAt(tx, ty)] && !PED_BLOCK[w.map.tileAt(tx + 1, ty)] && !PED_BLOCK[w.map.tileAt(tx + 2, ty)] && PED_BLOCK[w.map.tileAt(tx + 3, ty)] && ty > 40) { wx = tx * 32 + 16; wy = ty * 32 + 16; break outer; }
+  }
+  teleport(w, ped, wx, wy);
+  ped.vx = 650; ped.vy = 0;
+  const before = ped.hp;
+  run(w, 0.5);
+  assert.ok(ped.dead || ped.hp < before - 30, `wall impact hurts (${before} -> ${ped.hp})`);
+});
+
+test('arrests: suspect must be knocked out, officer walks up to cuff; bodies are booked; tackles', async () => {
+  const dev = await import('../server/dev.js');
+  const w = makeWorld();
+  const cop = joinPlayer(w).p, crook = joinPlayer(w).p;
+  dev.command(w, cop, 'cop', {});
+  vehicles.exitVehicle(w, cop.ped);
+  const n = w.map.nodes[9];
+  teleport(w, cop.ped, n.x + 32, n.y + 32);
+  teleport(w, crook.ped, n.x + 62, n.y + 32);
+  law.addHeat(w, crook, STAR_HEAT[2] + 1, crook.ped.x, crook.ped.y);
+  assert.ok(crook.wanted >= 2);
+  assert.ok(players.buildMe(w, cop).suspects.includes(crook.ped.id), 'criminal marked for the officer');
+  assert.equal(law.arrestTarget(w, cop), null, 'standing suspect cannot be cuffed');
+  crook.ped.hp = crook.ped.maxHp * 0.2;
+  assert.equal(law.arrestTarget(w, cop), null, 'hurt is not enough - must be knocked out');
+  // tackle: dive into them
+  cop.ped.a = 0; cop.ped.rollT = 0.3; cop.ped.rdx = 1; cop.ped.rdy = 0;
+  teleport(w, crook.ped, cop.ped.x + 18, cop.ped.y);
+  players.processInputs(w, 0.05);
+  assert.ok(w.time < crook.ped.downUntil, 'tackled to the ground');
+  assert.ok(crook.ped.downUntil - w.time > 4, 'subdued long enough to walk up');
+  run(w, 1);
+  teleport(w, cop.ped, crook.ped.x + 30, crook.ped.y);
+  const act = players.findInteraction(w, cop);
+  assert.match(act.label, /Cuff/);
+  act.run();
+  assert.equal(crook.wanted, 0, 'busted');
+  // a dead wanted suspect's body still needs booking
+  const crook2 = joinPlayer(w).p;
+  teleport(w, crook2.ped, cop.ped.x + 30, cop.ped.y);
+  law.addHeat(w, crook2, STAR_HEAT[1] + 1, crook2.ped.x, crook2.ped.y);
+  combat.damage(w, crook2.ped, 999, null, 'melee', 0);
+  assert.ok(crook2.ped.dead && crook2.ped.bookable);
+  const cash = cop.profile.cash;
+  const act2 = players.findInteraction(w, cop);
+  assert.match(act2.label, /Book/);
+  act2.run();
+  assert.ok(cop.profile.cash > cash, 'reward for booking the body');
+  assert.equal(players.findInteraction(w, cop)?.label?.match(/Book/) ?? null, null, 'booked once');
+});
+
+test('police HQ armory restocks the service pistol', async () => {
+  const dev = await import('../server/dev.js');
+  const w = makeWorld();
+  const cop = joinPlayer(w).p;
+  dev.command(w, cop, 'cop', {});
+  cop.profile.weapons.service = 3; cop.ped.mag.service = 0;
+  assert.equal(law.restockService(w, cop), null);
+  assert.equal(cop.profile.weapons.service, law.SERVICE_AMMO);
+  assert.match(law.restockService(w, cop), /already/);
 });

@@ -52,7 +52,7 @@ export class HUD {
     this.lastStars = me.wanted;
     const f = $('faction');
     f.className = me.faction;
-    f.textContent = me.faction === 'enforcer' ? `POLICE · ${(me.rank || 'Officer').toUpperCase()}` : { citizen: 'CITIZEN', criminal: 'CRIMINAL', hunter: 'BOUNTY HUNTER' }[me.faction] + (me.felonies > 0 && me.faction !== 'criminal' ? ` · ${me.felonies} FELON${me.felonies === 1 ? 'Y' : 'IES'}` : '');
+    f.innerHTML = me.faction === 'enforcer' ? `POLICE · ${(me.rank || 'Officer').toUpperCase()}${me.misconduct && me.misconduct.n ? ` · <span class="misc${me.misconduct.n >= me.misconduct.max ? ' last' : ''}">MISCONDUCT ${me.misconduct.n}/${me.misconduct.max}</span>` : ''}` : { citizen: 'CITIZEN', criminal: 'CRIMINAL', hunter: 'BOUNTY HUNTER' }[me.faction] + (me.felonies > 0 && me.faction !== 'criminal' ? ` · ${me.felonies} FELON${me.felonies === 1 ? 'Y' : 'IES'}` : '');
     // prompt -> GTA help box with the right button for this device; matching touch button pulses
     const pr = $('helpbox');
     const sig = (me.prompt || '') + '|' + input.device;
@@ -78,7 +78,7 @@ export class HUD {
     document.body.classList.toggle('can-call', !!(cr && cr.s === 'none' && !me.dead));
     if (cr && !me.dead && cr.s !== 'in') {
       const html = cr.s === 'none' ? (cr.cd > 0 ? `Cruiser lost - dispatch can send another in ${cr.cd}s` : `${glyph('cruiser')} <span>Call in a police cruiser</span>`)
-        : cr.s === 'coming' ? 'Cruiser on its way to you - follow the blue arrow' : 'Your cruiser is waiting - follow the blue arrow';
+        : cr.s === 'coming' ? 'Cruiser on its way to you - it\'s the blue square on your map' : 'Your cruiser is the blue square on your map';
       if (ch.dataset.h !== html) { ch.dataset.h = html; ch.innerHTML = html; }
       ch.classList.remove('hidden');
     } else ch.classList.add('hidden');
@@ -212,6 +212,21 @@ export class HUD {
         if (r.k === 'search') { g.fillStyle = `rgba(255,60,60,${0.12 + 0.2 * r.f})`; g.strokeStyle = '#ff3b3b'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, Math.max(4, r.r * scale), 0, 6.28); g.fill(); g.stroke(); }
         else if (r.k === 'wanted') { g.fillStyle = (performance.now() / 200 | 0) % 2 ? '#ff3b3b' : '#3b6bff'; g.beginPath(); g.arc(x, y, big ? 7 : 4, 0, 6.28); g.fill(); }
         else if (r.k === 'bounty') { g.strokeStyle = '#ffc23d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(5, r.r * scale), 0, 6.28); g.stroke(); if (big) { g.fillStyle = '#ffc23d'; g.fillText(`${r.n} $${r.b}`, x, y - r.r * scale - 8); } }
+      }
+      // crimes reported near you (police): pulsing blips, fresher = brighter
+      if (me.dispatch) {
+        const t = performance.now() / 1000;
+        for (const d of me.dispatch) {
+          if (d.age > 120) continue;
+          const [x, y] = toR(d.x, d.y);
+          if ((x - size / 2) ** 2 + (y - size / 2) ** 2 > (size / 2 - 4) ** 2) continue;
+          const fresh = 1 - d.age / 120;
+          const ph = (t * 1.6 + d.id * 0.37) % 1;
+          g.strokeStyle = `rgba(255,70,70,${(0.9 * (1 - ph) * fresh).toFixed(3)})`; g.lineWidth = 2;
+          g.beginPath(); g.arc(x, y, 3 + ph * (big ? 16 : 10), 0, 6.28); g.stroke();
+          g.fillStyle = `rgba(255,${d.age < 20 ? 220 : 90},70,${(0.45 + 0.55 * fresh).toFixed(3)})`;
+          g.beginPath(); g.arc(x, y, big ? 4 : 2.6, 0, 6.28); g.fill();
+        }
       }
       if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') {
         let [x, y] = toR(me.cruiser.x, me.cruiser.y);

@@ -3,7 +3,7 @@
 import { PF, FACTION, TILE, WEATHER } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
-import { pedStep, driveInput, vehStep } from '../../shared/physics.js';
+import { pedStep, driveInput, vehStep, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
@@ -133,7 +133,7 @@ export function pedMods(world, ped) {
   if (ped.buffs.energy > now) speedMul *= 1.15;
   if (ped.fishing) speedMul *= 0;
   return {
-    canMove, canSprint: !ped.carrying, speedMul,
+    canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0),
     regenMul: ped.buffs.coffee > now ? 2.2 : 1,
     staminaMax: ped.buffs.energy > now ? 140 : 100,
   };
@@ -192,7 +192,11 @@ function applyInput(world, p, ped, inp, pressed, dt) {
 
   // on foot
   if (ped.fishing && (Math.abs(inp.mx) > 0.3 || Math.abs(inp.my) > 0.3)) jobs.cancelFishing(world, p, 'You reeled in your line.');
+  const tumbling = world.time < (ped.tumbleUntil || 0);
+  const v0 = tumbling ? Math.hypot(ped.vx, ped.vy) : 0;
   pedStep(ped, inp, dt, world.map, { ...pedMods(world, ped), analog: true });
+  if (tumbling) tumbleImpact(world, ped, v0, dt);
+  if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
   if (inp.bits & IN.FIRE) {
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
@@ -202,6 +206,48 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (pressed & IN.ACTION) {
     const act = findInteraction(world, p);
     if (act) act.run();
+  }
+}
+
+// Sliding along the tarmac after bailing out / being blown out of a car: slamming into a wall,
+// a car or a lamp post at speed hurts, a lot.
+function tumbleImpact(world, ped, v0, dt) {
+  const expect = v0 * Math.exp(-TUMBLE_FRICTION * dt);
+  let v1 = Math.hypot(ped.vx, ped.vy);
+  let lost = expect - v1;
+  // parked / moving cars and solid props stop you too
+  if (v1 > 60) {
+    for (const e of world.query(ped.x, ped.y, 40, 2)) {
+      if (e.removed || ped.vehId === e.id) continue;
+      if (Math.hypot(e.x - ped.x, e.y - ped.y) > Math.max(e.def.L, e.def.W) / 2 + 6) continue;
+      lost = Math.max(lost, v1 - 20);
+      const a = Math.atan2(ped.y - e.y, ped.x - e.x);
+      ped.vx = Math.cos(a) * 40; ped.vy = Math.sin(a) * 40;
+      v1 = 40;
+      break;
+    }
+  }
+  if (lost < 90) return;
+  world.emit(ped.x, ped.y, { e: 'crash', x: ped.x, y: ped.y, p: Math.min(0.6, lost / 700) });
+  world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: Math.atan2(ped.vy, ped.vx), n: 6 });
+  ped.tumbleUntil = 0;
+  ped.downUntil = Math.max(ped.downUntil, world.time + 1.2);
+  combat.damage(world, ped, (lost - 70) * 0.22, null, 'bail', Math.atan2(ped.vy, ped.vx));
+}
+
+// Diving into a wanted suspect tackles them to the ground (officers and bounty hunters).
+function tackle(world, ped) {
+  for (const e of world.query(ped.x, ped.y, 26, 1)) {
+    if (e === ped || e.dead || e.vehId || world.time < e.downUntil) continue;
+    if (!law.isSuspectFor(world, ped.player, e)) continue;
+    const a = Math.atan2(e.y - ped.y, e.x - ped.x);
+    e.vx = Math.cos(a) * 180; e.vy = Math.sin(a) * 180;
+    e.downUntil = world.time + 1.5; e.rollT = 0;
+    law.subdue(world, ped, e);
+    ped.rollT = 0; ped.vx *= 0.2; ped.vy *= 0.2;
+    world.emit(e.x, e.y, { e: 'knockdown', x: e.x, y: e.y, id: e.id });
+    world.notify(ped.player, 'Tackled! Walk up and cuff them.', 'good');
+    return;
   }
 }
 
@@ -230,7 +276,7 @@ export function findInteraction(world, p) {
 
   if (p.badge) {
     const target = law.arrestTarget(world, p);
-    if (target) return { label: `Arrest ${target.name || 'suspect'}`, run: () => law.arrest(world, p, target) };
+    if (target) return { label: target.dead ? 'Book the suspect\'s body' : `Cuff ${target.name || 'suspect'}`, run: () => law.arrest(world, ped, target) };
   }
 
   const bag = cargo.nearestBag(world, ped, true);
@@ -269,7 +315,8 @@ export function onPedDeath(world, ped, killer, cause) {
   p.respawnAt = world.time + RESPAWN_SECONDS;
   p.deathCause = cause || 'You flatlined.';
   p.profile.stats.deaths++;
-  if (p.badge) world.notify(p, 'Your badge was stripped. Return to Police HQ to re-deploy.', 'bad');
+  if (p.badge) { world.notify(p, 'Your badge was stripped. Return to Police HQ to re-deploy.', 'bad'); law.stripPoliceGear(p); }
+  ped.bookable = p.wanted > 0 ? { pid: p.pid, stars: p.wanted } : null; // police can still book the body
   p.badge = false; p.hunter = false; p.faction = FACTION.CITIZEN;
   p.profile.peakWanted = 0;
   p.heat = 0; p.wanted = 0; p.disguised = false;
@@ -293,7 +340,7 @@ export function update(world, dt) {
       if (!p.conn) { finalizeLogout(world, p, false); continue; }
       // leave a body for EMS, respawn clean at hospital
       const body = world.spawnPed(ped.x, ped.y, { hp: 100, app: ped.app, archetype: 'casual', name: '' });
-      body.dead = true; body.deadAt = now; body.a = ped.a; body.corpseOf = p.pid;
+      body.dead = true; body.deadAt = now; body.a = ped.a; body.corpseOf = p.pid; body.bookable = ped.bookable || null;
       world.bodies.add(body);
       world.remove(ped);
       spawnPlayerPed(world, p, false, { x: ped.x, y: ped.y });
@@ -365,7 +412,7 @@ export function buildMe(world, p) {
     garageCap: homes.garageCap(world, prof),
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
     spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, spawnChoice: p.respawnChoice || null,
-    cruiser: cruiser.stateFor(world, p),
+    cruiser: cruiser.stateFor(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev,
   };
 }

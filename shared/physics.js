@@ -27,13 +27,16 @@ export function newPedState(x, y) {
 }
 
 // mods: { speedMul, canMove, canSprint, regenMul, staminaMax }
+export const TUMBLE_FRICTION = 2.2;
 export function pedStep(s, inp, dt, map, mods) {
   const bits = inp.bits;
   const pressed = bits & ~s.prevBits;
   s.prevBits = bits;
   const smax = mods.staminaMax || PED.staminaMax;
   if (!mods.canMove) {
-    s.vx *= 0.5; s.vy *= 0.5; s.rollT = 0;
+    // knocked down: stop dead; tumbling (bailed out of a fast car / blown out of one): slide and roll
+    if (mods.tumble) { const k = Math.exp(-TUMBLE_FRICTION * dt); s.vx *= k; s.vy *= k; } else { s.vx *= 0.5; s.vy *= 0.5; }
+    s.rollT = 0;
   } else if (s.rollT > 0) {
     s.rollT -= dt;
     s.vx = s.rdx * PED.rollSpeed; s.vy = s.rdy * PED.rollSpeed;
