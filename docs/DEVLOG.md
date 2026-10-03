@@ -277,3 +277,26 @@ Tap the weapon box to switch weapons and the radar to open the map.
 - Skewed title buttons.
 
 ![Mobile landscape HUD](screenshots/mobile-hud-landscape.png)
+
+## 2026-10-03 · NPC toughness + fist fights, gamepad pause menu
+
+**Why punched NPCs didn't die.** Fists did 8 damage against about 100 HP. Every punch shoved the target out of reach, and anyone who fled sprinted faster than you could chase. So a fist fight in practice never ended.
+
+**Builds.** Every NPC now rolls a build, weighted by type: seniors are mostly frail, construction workers often tough, Syndicate heavies often brutes. Brutes are drawn bigger and frail people smaller, so you can size up a fight before you start it.
+
+| Build | Health | Hits back with | Notes |
+|---|---|---|---|
+| Frail | 0.55x | 0.65x | flees more |
+| Average | 1x | 1x | |
+| Tough | 1.45x | 1.4x | more likely to fight back |
+| Brute | 1.8x | 1.6x | needs 4-hit combos to floor |
+
+**Fist fighting.**
+- Fists hit for 10, with a shorter shove scaled by your strength against their poise, so you can keep a combo going.
+- Three hits in quick succession is a KNOCKDOWN (four against brutes, and four against players). Hits on someone who's down do 1.5x.
+- NPC brawlers swing a little slower than players.
+- A health bar appears over whoever you're fighting, tagged TOUGH or BRUTE.
+
+Simulated standing slugfests (480 fights, no dodging): you beat frail NPCs 100% of the time in about 4 punches, average 99% in about 8, tough about 88% in about 13, and brutes about 32%. Rolling and footwork improve those odds.
+
+**Gamepad pause menu.** Start/Menu (or Esc) opens a GTA-style pause menu: Resume, Map, Settings, Controls, Toggle fullscreen, the Debug / cheats menu (dev and practice), and Back to title. The D-pad or left stick moves, A selects, left/right changes a setting, B goes back. The settings and debug panels are fully navigable with the pad.

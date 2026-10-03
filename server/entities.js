@@ -41,6 +41,27 @@ export const ARCHETYPES = {
 
 function pickA(r, arr) { return arr[Math.floor(r() * arr.length) % arr.length]; }
 
+// Body builds: how much punishment an NPC takes and how hard they hit back. Weighted per
+// archetype so seniors are mostly frail and Syndicate heavies are often brutes. Brutes are drawn
+// a little bigger and frail folks a little smaller (appearance field bd), so you can size up a fight.
+export const BUILDS = [
+  { id: 'frail', hp: 0.55, str: 0.65, poise: 0.6, fight: -0.25 },
+  { id: 'average', hp: 1.0, str: 1.0, poise: 1.0, fight: 0 },
+  { id: 'tough', hp: 1.45, str: 1.4, poise: 1.35, fight: 0.15 },
+  { id: 'brute', hp: 1.8, str: 1.6, poise: 1.75, fight: 0.3 },
+];
+const BUILD_WEIGHTS = {
+  senior: [8, 2, 0, 0], drunk: [5, 4, 1, 0], socialite: [5, 4, 1, 0], executive: [4, 5, 1, 0], sweeper: [2, 6, 2, 0],
+  casual: [2, 6, 2, 0.6], athlete: [0, 4, 5, 1], construction: [0, 3, 5, 2], hustler: [1, 4, 4, 1], mugger: [1, 5, 3, 1],
+  syndicate: [0, 3, 5, 3], cop: [0, 4, 5, 1], swat: [0, 2, 5, 3], medic: [1, 6, 2, 0],
+};
+export function rollBuild(r, archetype) {
+  const w = BUILD_WEIGHTS[archetype] || [2, 6, 2, 0.5];
+  let t = w.reduce((a, b) => a + b, 0) * r();
+  for (let i = 0; i < 4; i++) { t -= w[i]; if (t <= 0) return i; }
+  return 1;
+}
+
 export function makeAppearance(r, archetype) {
   const a = ARCHETYPES[archetype] || ARCHETYPES.casual;
   const base = { s: Math.floor(r() * SKINS.length), h: Math.floor(r() * 6), hc: pickA(r, HAIR) };

@@ -1,7 +1,7 @@
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
 export const WEAPONS = {
-  fists:    { i: 0,  name: 'Fists',            type: 'melee', dmg: 8,  range: 26, arc: 1.3, cd: 0.45 },
+  fists:    { i: 0,  name: 'Fists',            type: 'melee', dmg: 10, range: 28, arc: 1.4, cd: 0.42, push: 95 },
   bat:      { i: 1,  name: 'Baseball Bat',     type: 'melee', dmg: 22, range: 36, arc: 1.5, cd: 0.6 },
   knife:    { i: 2,  name: 'Knife',            type: 'melee', dmg: 26, range: 26, arc: 1.1, cd: 0.4, bleed: true },
   crowbar:  { i: 3,  name: 'Crowbar',          type: 'melee', dmg: 24, range: 32, arc: 1.3, cd: 0.55 },

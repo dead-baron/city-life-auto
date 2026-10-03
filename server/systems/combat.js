@@ -61,7 +61,8 @@ export function tryAttack(world, ped, aim) {
 
 function melee(world, ped, w, aim) {
   const now = world.time;
-  ped.nextAttack = now + w.cd;
+  // NPC brawlers wind up slower than players, so footwork and combos can beat a bigger guy
+  ped.nextAttack = now + w.cd * (ped.player ? 1 : 1.45);
   ped.attackAnimUntil = now + 0.3;
   ped.swingSide = (ped.swingSide || 0) ^ 1;
   let best = null, bestD = Infinity;
@@ -75,14 +76,32 @@ function melee(world, ped, w, aim) {
   world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
   if (!best) return true;
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
-  best.vx += Math.cos(dir) * 170; best.vy += Math.sin(dir) * 170;
+  const poise = best.build ? best.build.poise : 1;
+  const str = ped.build ? ped.build.str : 1;
+  const push = (w.push || 170) * str / poise;
+  best.vx += Math.cos(dir) * push; best.vy += Math.sin(dir) * push;
   best.flinchUntil = now + 0.25;
+  // combos: landing hits in quick succession on the same target staggers then floors them
+  // (3 hits, 4 for brutes / tough guys you out-muscle less), so a fist fight can actually be won
+  if (ped.comboTarget === best.id && now - (ped.comboAt || 0) < 1.15) ped.combo = (ped.combo || 0) + 1;
+  else ped.combo = 1;
+  ped.comboTarget = best.id; ped.comboAt = now;
+  const onGround = now < best.downUntil;
+  const needed = poise >= 1.7 || best.player ? 4 : 3; // players get a little more poise
+  let mult = str * (onGround ? 1.5 : 1);
+  if (ped.combo >= needed && !onGround) {
+    best.downUntil = now + 1.6 / Math.sqrt(poise);
+    best.rollT = 0;
+    mult *= 1.3;
+    ped.combo = 0;
+    world.emit(best.x, best.y, { e: 'knockdown', x: best.x, y: best.y, id: best.id });
+  }
   if (w.knock) best.downUntil = now + 1.3;
   if (w.stunChance && world.rand() < w.stunChance) best.stunUntil = now + 2;
   if (w.bleed && world.rand() < 0.6) best.bleeding = true;
   world.emit(best.x, best.y, { e: 'hit', x: best.x, y: best.y, a: dir, id: best.id, w: w.i });
   if (w.id !== 'fists' || world.rand() < 0.35) world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 2 : 6 });
-  damage(world, best, w.dmg * (0.85 + world.rand() * 0.3), ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
+  damage(world, best, w.dmg * mult * (0.85 + world.rand() * 0.3), ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
   return true;
 }
 

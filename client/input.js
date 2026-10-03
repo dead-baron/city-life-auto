@@ -194,7 +194,7 @@ function radial(x, y, d) {
   return [x * k, y * k];
 }
 let padPrev = [];
-let padAimUntil = 0, padAim = 0;
+let padAimUntil = 0, padAim = 0, stickNavY = 0, stickNavX = 0;
 
 function readPad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -210,8 +210,12 @@ function readPad() {
   const out = {
     lx, ly, rx, ry,
     a: b(0), bb: b(1), x: b(2), y: b(3), lb: edge(4), rb: edge(5), lt: v(6), rt: v(7), back: b(8), start: edge(9), l3: b(10), r3: edge(11),
-    up: b(12), dUpEdge: edge(12), dDownEdge: edge(13), aEdge: edge(0), bEdge: edge(1),
+    up: b(12), dUpEdge: edge(12), dDownEdge: edge(13), dLeftEdge: edge(14), dRightEdge: edge(15), aEdge: edge(0), bEdge: edge(1),
   };
+  // left stick also navigates menus (edge-triggered when it crosses 0.6)
+  const sy = ly > 0.6 ? 1 : ly < -0.6 ? -1 : 0, sx = lx > 0.6 ? 1 : lx < -0.6 ? -1 : 0;
+  out.stickNav = sy !== stickNavY ? sy : 0; out.stickLR = sx !== stickNavX ? sx : 0;
+  stickNavY = sy; stickNavX = sx;
   if (now.some((x) => x) || Math.abs(lx) + Math.abs(ly) + Math.abs(rx) + Math.abs(ry) > 0) setDevice('gamepad');
   padPrev = now;
   return out;
@@ -259,10 +263,14 @@ export function sample(view) {
   mouse.clicked = false;
 
   const p = readPad();
-  input.menuNav = 0; input.menuSelect = false; input.menuBack = false; input.padStart = false;
+  input.menuNav = 0; input.menuLR = 0; input.menuSelect = false; input.menuBack = false; input.padStart = false;
   if (p) {
     if (p.dUpEdge) input.menuNav = -1;
     if (p.dDownEdge) input.menuNav = 1;
+    if (p.stickNav) input.menuNav = p.stickNav;
+    if (p.dLeftEdge) input.menuLR = -1;
+    if (p.dRightEdge) input.menuLR = 1;
+    if (p.stickLR) input.menuLR = p.stickLR;
     if (p.aEdge) input.menuSelect = true;
     if (p.bEdge) input.menuBack = true;
     if (p.start) input.padStart = true;

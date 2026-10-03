@@ -6,7 +6,7 @@ import { IN } from '../../shared/input.js';
 import { pedStep } from '../../shared/physics.js';
 import { isTurf, PED_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { ARCHETYPES, makeAppearance } from '../entities.js';
+import { ARCHETYPES, makeAppearance, BUILDS, rollBuild } from '../entities.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import * as cargo from './cargo.js';
@@ -20,10 +20,16 @@ let rng = mulberry32(99);
 
 export function spawnNpc(world, archetype, x, y, role = 'civ') {
   const a = ARCHETYPES[archetype] || ARCHETYPES.casual;
-  const ped = world.spawnPed(x, y, { hp: a.hp, app: makeAppearance(rng, archetype), archetype, a: rng() * Math.PI * 2 });
+  const bi = rollBuild(rng, archetype);
+  const b = BUILDS[bi];
+  const app = makeAppearance(rng, archetype);
+  app.bd = bi;
+  const hp = Math.round(a.hp * b.hp * (0.9 + rng() * 0.2));
+  const ped = world.spawnPed(x, y, { hp, app, archetype, a: rng() * Math.PI * 2 });
+  ped.build = b;
   ped.npc = {
     role, archetype, state: 'wander', target: 0, until: 0, wx: x, wy: y, nextThink: 0,
-    reflex: a.reflex, fight: a.fight, speed: a.speed, sway: !!a.sway, flagged: false, keep: false,
+    reflex: a.reflex, fight: Math.max(0, Math.min(1, a.fight + b.fight)), speed: a.speed * (bi === 3 ? 0.92 : bi === 0 ? 0.95 : 1), sway: !!a.sway, flagged: false, keep: false,
     lastDiveCheck: 0, diveCooldown: 0,
   };
   if (a.armed) { ped.weapon = a.armed; }

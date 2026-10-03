@@ -201,8 +201,9 @@ function fixedStep() {
   const wcur = S.me ? WEAPONS[S.me.weapon] : null;
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
   let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, lastAim: S.lastAim, armed });
-  if (input.padStart && S.playing) toggleMap(!S.bigmap);
-  if (!S.playing || S.hud.menuOpen || S.bigmap) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
+  const inOverlay = overlayPad();
+  if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
+  if (!S.playing || S.hud.menuOpen || S.bigmap || inOverlay || performance.now() < (S.inputMuteUntil || 0)) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
   if (inp.bits & IN.AIMING) { S.lastAim = inp.aim; S.lastAimAt = performance.now(); S.lastFire = !!(inp.bits & IN.FIRE); }
   S.seq++;
   const mxq = quantizeAxis(inp.mx), myq = quantizeAxis(inp.my), aq = quantizeAngle(inp.aim);
@@ -222,7 +223,7 @@ function fixedStep() {
     }
   }
   // menu navigation by gamepad / number keys
-  if (S.hud.menuOpen) {
+  if (inOverlay) { /* overlay consumed the pad */ } else if (S.hud.menuOpen) {
     if (input.menuNav) S.hud.navMenu(input.menuNav);
     if (input.menuSelect) S.hud.choose(S.hud.menuFocus);
     if (input.menuBack) S.hud.closeMenu();
@@ -264,9 +265,16 @@ function onEvent(ev) {
       if (a && !(a.localSwing && S.loopClock - a.localSwing < 0.6)) { a.swingAt = S.loopClock; a.swingSide = ev.side || 0; }
       break;
     }
+    case 'knockdown': {
+      fx.ring(ev.x, ev.y, 30, 'rgba(255,230,120,', 0.4);
+      fx.floatText(ev.x, ev.y - 26, 'KNOCKDOWN!', '#ffd36b');
+      sfx('hit', distVol(ev.x, ev.y) * 1.5);
+      if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, 6);
+      break;
+    }
     case 'hit': {
       const v = S.ents.get(ev.id);
-      if (v) { v.hitAt = S.loopClock; v.hitA = ev.a; }
+      if (v) { v.hitAt = S.loopClock; v.hitA = ev.a; v.barUntil = S.loopClock + 4; }
       fx.impact(ev.x, ev.y, ev.a);
       sfx('hit', distVol(ev.x, ev.y) * 1.2);
       if (ev.id === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 5);
@@ -315,7 +323,7 @@ function startPlaying() {
 function setupDev() {
   const box = $('dev');
   if (!S.dev) { box.classList.add('hidden'); return; }
-  box.innerHTML = '<b>DEV / PLAYTEST (` to hide)</b>';
+  box.innerHTML = '<b>DEV / PLAYTEST CHEATS</b>';
   const cmds = [['rain', 'Start rain'], ['clear', 'Stop rain'], ['night', 'Jump to night'], ['day', 'Jump to day'], ['money', '+$25k'], ['guns', 'Give weapons'],
     ['samaritan', '+50 Samaritan'], ['wanted', '2 stars', { n: 2 }], ['wanted', '4 stars', { n: 4 }], ['clean', 'Clear wanted'],
     ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['heal', 'Heal']];
@@ -335,12 +343,12 @@ $('play').onclick = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: pr
 
 initInput(canvas, {
   onKey(k) {
-    if (k === 'Escape') { if (S.hud?.menuOpen) S.hud.closeMenu(); if (S.bigmap) toggleMap(false); openSettings(false); }
+    if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
-    if (k === 'Backquote' && S.dev) $('dev').classList.toggle('hidden');
+    if (k === 'Backquote' && S.dev) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
-  onDev() { if (S.dev) $('dev').classList.toggle('hidden'); },
+  onDev() { if (S.dev) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); } },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onSettings() { openSettings(true); },
   onFullscreen() { toggleFullscreen(); },
@@ -376,22 +384,90 @@ function maybeLandscapeTip() {
   setTimeout(() => el.classList.add('hidden'), 5600);
 }
 
-function openSettings(on) {
-  $('settings').classList.toggle('hidden', !on);
-  if (!on) return;
+// ---- overlays: pause menu, settings, controls, dev panel - all navigable with a gamepad --------
+// Start (or Esc) opens the pause menu; D-pad / left stick moves, A selects, left/right changes a
+// setting, B goes back. Mouse and touch just click.
+const overlays = [];
+let ovFocus = 0;
+function topOverlay() { return overlays[overlays.length - 1] || null; }
+function openOverlay(id) {
+  if (topOverlay() === id) return;
+  if (id === 'settings') syncSettings();
+  if (id === 'controls') $('c-body').innerHTML = $('t-help').innerHTML;
+  if (id === 'pause') { document.querySelectorAll('#pause .dev-only').forEach((b) => b.classList.toggle('hidden', !S.dev)); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
+  overlays.push(id);
+  $(id).classList.remove('hidden');
+  if (id === 'dev') $('dev').classList.add('as-overlay');
+  ovFocus = 0; focusOverlay();
+}
+function closeOverlay(id = topOverlay()) {
+  if (!id) return;
+  const i = overlays.lastIndexOf(id);
+  if (i >= 0) overlays.splice(i, 1);
+  $(id).classList.add('hidden');
+  if (id === 'dev') $('dev').classList.remove('as-overlay');
+  S.inputMuteUntil = performance.now() + 300; // the A press that closed the menu shouldn't roll you
+  ovFocus = 0; focusOverlay();
+}
+function focusables() {
+  const id = topOverlay();
+  if (!id) return [];
+  return [...$(id).querySelectorAll('button, select, input')].filter((el) => !el.disabled && el.offsetParent !== null && !el.classList.contains('x'));
+}
+function focusOverlay() {
+  document.querySelectorAll('.pfocus').forEach((el) => el.classList.remove('pfocus'));
+  const f = focusables();
+  if (!f.length) return;
+  ovFocus = (ovFocus + f.length) % f.length;
+  const el = f[ovFocus];
+  (el.closest('.srow') || el).classList.add('pfocus');
+  el.scrollIntoView({ block: 'nearest' });
+}
+function overlayPad() {
+  if (!topOverlay()) return false;
+  const f = focusables();
+  const el = f[ovFocus];
+  if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
+  if (el && input.menuLR) {
+    if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + input.menuLR + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); }
+    else if (el.type === 'checkbox') { el.checked = input.menuLR > 0; el.dispatchEvent(new Event('change')); }
+  }
+  if (el && input.menuSelect) {
+    if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + 1) % el.options.length; el.dispatchEvent(new Event('change')); }
+    else if (el.type === 'checkbox') { el.checked = !el.checked; el.dispatchEvent(new Event('change')); }
+    else el.click();
+  }
+  if (input.menuBack) closeOverlay();
+  if (input.padStart) { while (topOverlay()) closeOverlay(); }
+  return true;
+}
+function syncSettings() {
   $('s-kbdrive').value = settings.kbDrive;
   $('s-edgefire').checked = settings.touchEdgeFire;
   $('s-padfire').checked = settings.padStickFire;
   $('s-vibrate').checked = settings.vibrate;
   $('s-autofs').checked = settings.autoFullscreen !== false;
 }
+function openSettings(on) { if (on) openOverlay('settings'); else closeOverlay('settings'); }
+for (const b of document.querySelectorAll('#pause [data-p]')) {
+  b.onclick = () => {
+    const a = b.dataset.p;
+    if (a === 'resume') closeOverlay('pause');
+    else if (a === 'map') { closeOverlay('pause'); toggleMap(true); }
+    else if (a === 'settings') openOverlay('settings');
+    else if (a === 'controls') openOverlay('controls');
+    else if (a === 'fullscreen') toggleFullscreen();
+    else if (a === 'dev') openOverlay('dev');
+    else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; }
+  };
+}
+for (const x of document.querySelectorAll('.overlay [data-close]')) x.onclick = () => closeOverlay(x.closest('.overlay').id);
+for (const id of ['pause', 'settings', 'controls']) $(id).addEventListener('click', (e) => { if (e.target.id === id) closeOverlay(id); });
 $('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettings(); };
 $('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; saveSettings(); };
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
-$('s-close').onclick = () => openSettings(false);
-$('settings').onclick = (e) => { if (e.target.id === 'settings') openSettings(false); };
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
 
 function toggleMap(on) { S.bigmap = on; $('bigmap').classList.toggle('hidden', !on); $('bigmap-hint').textContent = input.device === 'touch' ? 'Tap anywhere to close' : input.device === 'gamepad' ? 'Menu / B to close' : 'M / Esc to close'; }
@@ -716,6 +792,7 @@ function drawCrateEnt(c, now) {
 
 const SEAT_BIKE = [[2, 0], [-12, 0]];
 const PED_SCALE = 1.35; // characters read at ~40% of a sedan's length, like the concept scenes
+const PED_BUILD_SCALE = [0.92, 1, 1.07, 1.16]; // frail, average, tough, brute
 function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
@@ -781,7 +858,8 @@ function drawPed(p, now) {
   g.rotate(p.ra + (hitK ? 0.25 * hitK : 0));
   if (pose === 'punch' && (fr & 3) === 2) { g.translate(3, 0); }
   if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);
-  g.scale(PED_SCALE, PED_SCALE);
+  const bs = PED_BUILD_SCALE[p.d.app && p.d.app.bd !== undefined ? p.d.app.bd : 1] || 1;
+  g.scale(PED_SCALE * bs, PED_SCALE * bs);
   g.imageSmoothingEnabled = false; // crisp pixel-art characters
   g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX);
   if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = (hitK - 0.4); g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
@@ -829,6 +907,13 @@ function drawWorldLabels(peds, vehs, now, z) {
       g.fillStyle = '#000'; g.font = `bold ${30 / z}px monospace`; g.fillText('!', p.rx + 1.5 / z, p.ry - 30 / z + bob + 1.5 / z);
       g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, p.ry - 30 / z + bob);
       g.font = `bold ${fs}px monospace`;
+    }
+    if (!p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
+      // health bar over whoever you're brawling with; tough/brute builds get a tag so you can size them up
+      const y = p.ry - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
+      g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect(p.rx - 16 / z, y, 32 / z, 5 / z);
+      g.fillStyle = p.hp < 0.3 ? '#ff4d5e' : '#7fe07f'; g.fillRect(p.rx - 15 / z, y + 1 / z, 30 / z * p.hp, 3 / z);
+      if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `bold ${11 / z}px monospace`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `bold ${fs}px monospace`; }
     }
     if (p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = p.ry - 26 / z;

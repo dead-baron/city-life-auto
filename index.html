@@ -78,21 +78,38 @@
     </div>
     <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="not-kbm">the DEV button</span>.</div>
     <div id="t-help">
-      <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move &amp; drive (point where you want to go) · Mouse aim · Click shoot / punch · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · H horn · Tab / wheel / 1-9 weapons · M map</div>
-      <div class="pad-only"><b>Gamepad</b> Left stick move &amp; drive (push further = faster) · Right stick aim · RT fire · LT sprint / handbrake · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal · D-pad up horn · Menu map</div>
+      <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move &amp; drive (point where you want to go) · Mouse aim · Click shoot / punch · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · H horn · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
+      <div class="pad-only"><b>Gamepad</b> Left stick move &amp; drive (push further = faster) · Right stick aim · RT fire · LT sprint / handbrake · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal · D-pad up horn · Menu pause menu (map, settings, controls, debug)</div>
       <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire · ACT interact · CAR get in/out</div>
     </div>
     <div id="t-tools"><button id="t-settings">⚙ SETTINGS</button><button id="t-fs">⛶ FULLSCREEN</button></div>
     <div id="t-note">Online progress saves automatically to this browser. Account sign-in and chat are coming later.</div>
   </div>
-  <div id="settings" class="hidden"><div class="panel">
-    <div class="mhead"><h2>SETTINGS</h2><button id="s-close">✕</button></div>
+  <div id="settings" class="hidden overlay"><div class="panel">
+    <div class="mhead"><h2>SETTINGS</h2><button id="s-close" class="x" data-close>✕</button></div>
     <label class="srow"><span>Keyboard driving</span><select id="s-kbdrive"><option value="direction">Direction (point where to go)</option><option value="tank">Classic tank (W gas, A/D steer)</option></select></label>
     <label class="srow"><span>Touch: aim stick outer ring fires</span><input type="checkbox" id="s-edgefire"></label>
     <label class="srow"><span>Gamepad: right stick full push fires</span><input type="checkbox" id="s-padfire"></label>
     <label class="srow"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>
     <label class="srow"><span>Fullscreen when playing on mobile</span><input type="checkbox" id="s-autofs"></label>
     <button id="s-fs" class="sbtn">⛶ Toggle fullscreen</button>
+  </div></div>
+  <div id="pause" class="hidden overlay"><div class="panel">
+    <div class="mhead"><h2>PAUSED</h2><button class="x" data-close>✕</button></div>
+    <p class="msub" id="p-sub">Game menu</p>
+    <div class="m-opts">
+      <button class="opt" data-p="resume">Resume</button>
+      <button class="opt" data-p="map">Map</button>
+      <button class="opt" data-p="settings">Settings</button>
+      <button class="opt" data-p="controls">Controls</button>
+      <button class="opt" data-p="fullscreen">Toggle fullscreen</button>
+      <button class="opt dev-only" data-p="dev">Debug / cheats menu</button>
+      <button class="opt" data-p="title">Back to title screen</button>
+    </div>
+  </div></div>
+  <div id="controls" class="hidden overlay"><div class="panel">
+    <div class="mhead"><h2>CONTROLS</h2><button class="x" data-close>✕</button></div>
+    <div id="c-body" class="cbody"></div>
   </div></div>
   <div id="land-tip" class="hidden"><span>⟲</span> Turn your phone sideways: landscape shows more of the city</div>
 </div>

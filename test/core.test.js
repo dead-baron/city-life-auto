@@ -362,3 +362,30 @@ test('direction driving: the car turns toward the stick, light push cruises slow
   const tank = driveInput(newVehState(0, 0, 0), { bits: IN.TANK, mx: 1, my: -1, aim: 0 });
   assert.equal(tank.throttle, 1); assert.equal(tank.steer, 1);
 });
+
+test('fist fights: frail NPCs drop fast, average ones are winnable, builds scale health', async () => {
+  const { BUILDS } = await import('../server/entities.js');
+  const punchesToKill = (build) => {
+    const w = makeWorld();
+    const { p } = joinPlayer(w);
+    const me = p.ped;
+    const sp = w.map.spawns.hospital;
+    teleport(w, me, sp.x, sp.y);
+    const n = spawnNpc(w, 'casual', sp.x + 22, sp.y, 'civ');
+    n.build = BUILDS[build]; n.maxHp = n.hp = Math.round(100 * BUILDS[build].hp);
+    n.npc.fight = 0; // just takes it
+    me.hp = me.maxHp = 1e6;
+    let punches = 0;
+    for (let i = 0; i < 20 * 60 && !n.dead; i++) {
+      if (Math.hypot(n.x - me.x, n.y - me.y) > 24) teleport(w, me, n.x - 20, n.y);
+      if (combat.tryAttack(w, me, Math.atan2(n.y - me.y, n.x - me.x))) punches++;
+      w.step();
+    }
+    assert.ok(n.dead, `build ${build} never went down`);
+    return punches;
+  };
+  const frail = punchesToKill(0), avg = punchesToKill(1), brute = punchesToKill(3);
+  assert.ok(frail <= 7, `frail took ${frail}`);
+  assert.ok(avg <= 13, `average took ${avg}`);
+  assert.ok(brute > avg, 'brutes soak more');
+});
