@@ -18,6 +18,7 @@ import * as homes from './homes.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
+import * as props from './props.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS } from '../../shared/rules.js';
 export { GHOST_SECONDS, RESPAWN_SECONDS };
@@ -164,7 +165,7 @@ export function processInputs(world, dt) {
       p.prevBits = inp.bits;
       applyInput(world, p, ped, inp, pressed, dt);
       const v = ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
-      if (v && !v.wreckAt) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); }
+      if (v && !v.wreckAt) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); props.smashFor(world, v); }
     }
   }
 }

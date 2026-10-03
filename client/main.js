@@ -4,6 +4,7 @@
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
 import { generateCity, lightState, WATER_T } from '../shared/map.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
+import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
@@ -36,6 +37,7 @@ const S = {
   ctrlKind: 0, ctrlId: 0, me: null, seq: 0, pending: [], pred: null, acc: 0, lastAim: 0,
   cam: { x: 4400, y: 2200, zoom: 1, shake: 0 }, smooth: { x: 0, y: 0 }, geysers: [], flashes: [], camAlert: new Map(),
   rtt: 0, bigmap: false, rain: [], fps: 0,
+  confirmedBreaks: new Set(), predBreaks: new Map(), // street furniture smashed: server-confirmed / predicted
 };
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 
@@ -118,7 +120,8 @@ function onText(m) {
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
       S.ents.clear(); S.pred = null; S.pending = [];
       for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
-      for (const i of m.broken || []) setPropBroken(i, 0, false);
+      S.confirmedBreaks.clear(); S.predBreaks.clear();
+      for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       S.ground.cache.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
       $('play').disabled = false;
@@ -179,7 +182,11 @@ function reconcile(s) {
   const switched = !S.pred || S.pred.kind !== kind || S.ctrlId !== s.ctrlId;
   S.ctrlKind = s.ctrlKind; S.ctrlId = s.ctrlId;
   if (kind === 'ped') S.myPedId = s.ctrlId;
-  const old = S.pred ? { x: S.pred.s.x, y: S.pred.s.y, a: S.pred.s.a } : null;
+  // Where the character is drawn right now (interpolated between the last two steps). The new
+  // prediction must keep drawing from the same spot, or every snapshot makes it hop.
+  const alpha = Math.min(1, S.acc / DT);
+  const drawn = (P) => { const pr = P.prev || P.s; return { x: lerp(pr.x, P.s.x, alpha), y: lerp(pr.y, P.s.y, alpha), a: lerpAngle(pr.a, P.s.a, alpha) }; };
+  const old = S.pred && !switched ? drawn(S.pred) : null;
   let st;
   if (kind === 'ped') {
     st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits, under: !!(S.ents.get(s.ctrlId) || {}).swim };
@@ -191,13 +198,16 @@ function reconcile(s) {
     st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32) };
     S.pred = { kind, s: st, def, prev: null };
   }
-  for (const p of S.pending) stepPred(p);
-  S.pred.prev = { ...S.pred.s };
+  // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
+  // interpolation continues exactly as fixedStep would have left it
+  for (let i = 0; i < S.pending.length; i++) { if (i === S.pending.length - 1) S.pred.prev = { ...S.pred.s }; stepPred(S.pending[i]); }
+  if (!S.pending.length) S.pred.prev = { ...S.pred.s };
   if (old && !switched) {
-    const ex = old.x - S.pred.s.x, ey = old.y - S.pred.s.y;
+    const now = drawn(S.pred);
+    const ex = old.x - now.x, ey = old.y - now.y;
     if (ex * ex + ey * ey < 140 * 140) { S.smooth.x += ex; S.smooth.y += ey; } else { S.smooth.x = 0; S.smooth.y = 0; }
     // heading corrections are eased too (snapping the car's angle reads as jitter)
-    let ea = old.a - S.pred.s.a;
+    let ea = old.a - now.a;
     while (ea > Math.PI) ea -= Math.PI * 2;
     while (ea < -Math.PI) ea += Math.PI * 2;
     S.smooth.a = Math.abs(ea) < 0.6 ? (S.smooth.a || 0) + ea : 0;
@@ -208,7 +218,23 @@ function stepPred(inp) {
   const P = S.pred;
   if (!P) return;
   if (P.kind === 'ped') pedStep(P.s, inp, DT, S.map, P.mods);
-  else vehStep(P.s, driveInput(P.s, inp), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
+  else {
+    vehStep(P.s, driveInput(P.s, inp), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
+    // predict smashing street furniture exactly like the server does (same momentum loss), so
+    // clipping a lamp post doesn't cause a correction. A break predicted during an input that
+    // is being replayed counts as not-yet-happened, so the replay re-applies it.
+    smashProps(S.map, P.s, P.def,
+      (i) => S.confirmedBreaks.has(i) || (S.predBreaks.has(i) && S.predBreaks.get(i).seq < inp.seq),
+      (i) => {
+        if (!S.predBreaks.has(i) || S.predBreaks.get(i).seq >= inp.seq) S.predBreaks.set(i, { seq: inp.seq, at: performance.now() });
+        const pr = S.map.props[i];
+        if (isHydrant(pr.t) && !S.geysers.some((g) => Math.hypot(g.x - pr.x, g.y - pr.y) < 4)) S.geysers.push({ x: pr.x, y: pr.y, until: performance.now() + GEYSER_S * 1000, seq: inp.seq });
+        else if (isHydrant(pr.t)) { const g = S.geysers.find((q) => Math.hypot(q.x - pr.x, q.y - pr.y) < 4); if (g.seq !== undefined && g.seq > inp.seq) g.seq = inp.seq; }
+        if (!pr.broken) setPropBroken(i, P.s.a, true);
+      });
+    // hydrant spray drags the car (a geyser predicted during a later input doesn't apply yet)
+    if (S.geysers.length) geyserDrag(P.s, S.geysers, DT, (g) => g.seq === undefined || g.seq <= inp.seq);
+  }
 }
 
 function fixedStep() {
@@ -319,13 +345,14 @@ function onEvent(ev) {
       break;
     }
     case 'foot': fx.decal(2, ev.x, ev.y, ev.a, 1, '#7a0d12', now, 0.8); break;
-    case 'propbreak': setPropBroken(ev.i, ev.a, true); break;
+    case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
     case 'propfix': {
       const p = S.map.props[ev.i];
+      S.confirmedBreaks.delete(ev.i); S.predBreaks.delete(ev.i);
       if (p) { delete p.broken; const se = S.map.propSolid.get(ev.i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); }
       break;
     }
-    case 'geyser': S.geysers.push({ x: ev.x, y: ev.y, until: performance.now() + ev.d * 1000 }); fx.splash(ev.x, ev.y, 14); break;
+    case 'geyser': { const g = S.geysers.find((q) => Math.hypot(q.x - ev.x, q.y - ev.y) < 4); if (g) delete g.seq; else S.geysers.push({ x: ev.x, y: ev.y, until: performance.now() + ev.d * 1000 }); fx.splash(ev.x, ev.y, 14); break; }
     case 'splash': fx.splash(ev.x, ev.y, ev.n || 10); sfx('splash', distVol(ev.x, ev.y)); break;
     case 'sinkboom': fx.splash(ev.x, ev.y, 44); fx.ring(ev.x, ev.y, 60, 'rgba(220,240,255,', 1.2); fx.ring(ev.x, ev.y, 36, 'rgba(255,190,90,', 0.5); for (let i = 0; i < 14; i++) fx.smoke(ev.x + (Math.random() - 0.5) * 50, ev.y + (Math.random() - 0.5) * 50, false); sfx('explode', distVol(ev.x, ev.y) * 0.45); S.cam.shake = Math.max(S.cam.shake, 6 * distVol(ev.x, ev.y)); break;
     case 'thud': sfx('thud', distVol(ev.x, ev.y)); break;
@@ -430,6 +457,18 @@ const phone = createPhone({
 });
 function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
 // arrive at a phone waypoint -> it clears itself
+// a predicted smash the server never confirmed (rare: it decided we missed) is put back
+function expirePredictedBreaks() {
+  if (!S.predBreaks.size) return;
+  const now = performance.now();
+  for (const [i, b] of S.predBreaks) {
+    if (now - b.at < 2000) continue;
+    S.predBreaks.delete(i);
+    if (S.confirmedBreaks.has(i)) continue;
+    const p = S.map.props[i];
+    if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); }
+  }
+}
 function checkWaypoint() {
   if (!S.waypoint || !S.playing) return;
   const p = selfPos();
@@ -891,6 +930,7 @@ function frame(nowMs) {
     if (nowMs - pingAt > 2000) { pingAt = nowMs; send({ t: 'ping', ts: performance.now() }); }
     if (!tutorialActive()) render(dt);
     checkWaypoint();
+    expirePredictedBreaks();
   } else {
     g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height);
     // title screen before the city connects: the pad still drives the menus
@@ -933,7 +973,7 @@ function render(dt) {
   if (S.pred && S.pred.kind === 'veh') speed = Math.hypot(S.pred.s.vx, S.pred.s.vy);
   else if (S.ctrlKind === CTRL.PASSENGER) { const e = S.ents.get(S.ctrlId); if (e && e.buf.length > 1) { const b = e.buf; speed = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20; } }
   const targetZoom = baseZoom() / (1 + Math.min(0.5, speed / 1300));
-  S.cam.zoom += (targetZoom - S.cam.zoom) * Math.min(1, dt * 2.5);
+  S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-2.5 * dt));
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
   // and server corrections don't shake the camera
   let lvx = 0, lvy = 0;
@@ -943,9 +983,10 @@ function render(dt) {
   S.camLead.x += (Math.max(-560, Math.min(560, lvx)) * 0.25 - S.camLead.x) * lk;
   S.camLead.y += (Math.max(-560, Math.min(560, lvy)) * 0.25 - S.camLead.y) * lk;
   const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y;
-  if (Math.hypot(tx - S.cam.x, ty - S.cam.y) > 1500) { S.cam.x = tx; S.cam.y = ty; }
-  S.cam.x += (tx - S.cam.x) * Math.min(1, dt * 8);
-  S.cam.y += (ty - S.cam.y) * Math.min(1, dt * 8);
+  // The camera is locked to the (already smoothed) character + a smoothed look-ahead: a
+  // chasing camera with a frame-time-dependent lag made the car slide around on screen when
+  // frame times vary (phones). Teleports / respawns still snap.
+  S.cam.x = tx; S.cam.y = ty;
   {
     // keep the camera inside the world (no black void past the map edge)
     const hw = W / 2 / S.cam.zoom, hh = H / 2 / S.cam.zoom, WW = MAP_W * TILE, WH = MAP_H * TILE;
@@ -966,8 +1007,11 @@ function render(dt) {
   // crisp nearest-neighbour pixels at gameplay zoom; filtered only when zoomed out (fast driving)
   // so minified art doesn't shimmer
   g.imageSmoothingEnabled = z < 0.92;
-  g.setTransform(DPR * z, 0, 0, DPR * z, DPR * (W / 2 - S.cam.x * z + shx), DPR * (H / 2 - S.cam.y * z + shy));
-  S.worldTf = [DPR * z, 0, 0, DPR * z, DPR * (W / 2 - S.cam.x * z + shx), DPR * (H / 2 - S.cam.y * z + shy)];
+  // snap the world offset to whole device pixels: pixel-art ground and sprites then round the
+  // same way every frame instead of shimmering by a pixel against each other
+  const offX = Math.round(DPR * (W / 2 - S.cam.x * z + shx)), offY = Math.round(DPR * (H / 2 - S.cam.y * z + shy));
+  g.setTransform(DPR * z, 0, 0, DPR * z, offX, offY);
+  S.worldTf = [DPR * z, 0, 0, DPR * z, offX, offY];
 
   // ground chunks
   const cx0 = Math.floor(view.x0 / CHUNK_PX), cx1 = Math.floor(view.x1 / CHUNK_PX), cy0 = Math.floor(view.y0 / CHUNK_PX), cy1 = Math.floor(view.y1 / CHUNK_PX);
