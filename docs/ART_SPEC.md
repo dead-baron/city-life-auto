@@ -4,13 +4,15 @@ The current build is assembled from your concept sheets by `tools/build_art.py`:
 
 | Asset | Source sheet | Output |
 |---|---|---|
-| 27 building lots (houses, apartments, towers, hotel, hospital, police, fire, gas, shops, strip mall, supermarket, restaurants, club, bank, dealership, auto repair, warehouse, industrial, construction, church, school, park) | building sheet | `assets/prefabs.png` + generated `shared/prefab-data.js` (footprints, doors) |
+| 27 building lots (houses, apartments, towers, hotel, hospital, police, fire, gas, shops, strip mall, supermarket, restaurants, club, bank, dealership, auto repair, warehouse, industrial, construction, church, school, park) | building sheet, upscaled 4x with Real-ESRGAN (`tools/sr_upscale.py`, a numpy port that needs no torch) then stored at 1 art px per world px | `assets/prefabs0.webp`, `prefabs1.webp` + generated `shared/prefab-data.js` (footprints, doors) |
+| 5 rooftop equipment modules (AC unit, helipad, tanks, skylight, roof access) stamped onto procedural flat roofs | style-guide roof tiles | `assets/atlas0.png` (`prop_roof_*`) |
+| grass, sand, dirt (seamless, generated in the concept palette) | `tools/build_art.py` | `assets/ground.png` |
 | asphalt, worn asphalt, concrete sidewalk, red brick, slate plaza, water, deep water | style-guide tile sheets, waterfront sheet | `assets/ground.png` (seamless 128 px) |
 | ~70 street props (trees, palms, benches, hydrants, dumpsters, planters, fountain, umbrellas, vending, pallets...) | street props sheet | `assets/atlas0.png` |
 | 14 vehicle models (drawn at the art's own proportions; the collision box is the sprite) | vehicle sheets | `assets/atlas0.png` |
 
-Characters are hand-authored 24x24 pixel art painted in code (`client/render/peds.js`, 3-tone shading + dark outline like the concept sheets, outfits layered from the server's appearance record); preview every archetype and pose at `/tools/character-preview.html`. Still procedural: grass/sand/dirt/fields, lamps, flatbed truck. Re-run after adding or changing sheets:
-`python3 tools/build_art.py <folder with the concept PNGs>`. Replace any of them by delivering art to this spec.
+Characters are hand-authored 24x24 pixel art painted in code (`client/render/peds.js`, 3-tone shading + dark outline like the concept sheets, outfits layered from the server's appearance record); preview every archetype and pose at `/tools/character-preview.html`. Still procedural: crop fields, lamps, flatbed truck, and the filler rooftops (parapet, tar/gravel/metal/glass/terracotta surfaces) that pack the dense GTA-style blocks. Re-run after adding or changing sheets:
+`python3 tools/build_art.py <folder with the concept PNGs>`. The building upscaler needs `tools/weights/realesr-general-x4v3.pth` (download from github.com/xinntao/Real-ESRGAN releases v0.2.5.0; BSD-3). Without it the build falls back to Lanczos + sharpen. Replace any of them by delivering art to this spec.
 
 ## Camera and scale
 

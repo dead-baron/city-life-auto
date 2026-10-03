@@ -1,0 +1,53 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>City map preview</title>
+<style>body{background:#0b1830;color:#eee;font:12px monospace;margin:0} canvas{display:block} #info{position:fixed;left:8px;top:6px;background:rgba(0,0,0,.6);padding:4px 8px}</style></head>
+<body><div id="info">baking city... (open via the dev server: /tools/map-preview.html?scale=0.125&amp;seed=1337)</div><canvas id="cv"></canvas>
+<script type="module">
+// Bird's-eye render of the whole generated city using the game's own chunk baker, with
+// district labels - the GTA-style "level map". Every chunk is baked, drawn scaled, then dropped.
+import { generateCity, DISTRICTS, ISLANDS } from '../shared/map.js';
+import { CHUNK_PX, MAP_W, MAP_H, TILE } from '../shared/constants.js';
+import { GroundCache, drawProp, OVERHEAD } from '../client/render/tiles.js';
+import { loadAtlas } from '../client/render/sprites.js';
+
+const q = new URLSearchParams(location.search);
+const scale = Number(q.get('scale') || 0.125);
+const seed = Number(q.get('seed') || 1337);
+await loadAtlas('../assets/');
+const map = generateCity(seed);
+const gc = new GroundCache(map, 2);
+const cv = document.getElementById('cv');
+cv.width = Math.round(MAP_W * TILE * scale); cv.height = Math.round(MAP_H * TILE * scale);
+const g = cv.getContext('2d');
+g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+const nx = Math.ceil(MAP_W * TILE / CHUNK_PX), ny = Math.ceil(MAP_H * TILE / CHUNK_PX);
+for (let cy = 0; cy < ny; cy++) for (let cx = 0; cx < nx; cx++) {
+  const c = gc.bake(cx, cy);
+  g.drawImage(c, cx * CHUNK_PX * scale, cy * CHUNK_PX * scale, CHUNK_PX * scale, CHUNK_PX * scale);
+}
+g.save(); g.scale(scale, scale);
+for (const p of map.props) if (OVERHEAD.has(p.t) && p.t !== 'lamp') drawProp(g, p);
+g.restore();
+// district labels at the centroid of each district's land
+const sums = DISTRICTS.map(() => [0, 0, 0]);
+for (let ty = 0; ty < MAP_H; ty += 2) for (let tx = 0; tx < MAP_W; tx += 2) { const d = map.dist[ty * MAP_W + tx]; if (d === 13) continue; const s = sums[d]; s[0] += tx; s[1] += ty; s[2]++; }
+g.textAlign = 'center'; g.textBaseline = 'middle';
+const fs = Math.max(10, 190 * scale);
+g.font = `bold ${fs}px monospace`;
+sums.forEach(([sx, sy, n], d) => {
+  if (!n) return;
+  const x = sx / n * TILE * scale, y = sy / n * TILE * scale;
+  g.lineWidth = fs / 4; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(DISTRICTS[d].name.toUpperCase(), x, y);
+  g.fillStyle = DISTRICTS[d].turf ? '#ff7a6b' : '#ffd36b'; g.fillText(DISTRICTS[d].name.toUpperCase(), x, y);
+});
+g.font = `bold ${fs * 1.6}px monospace`;
+for (const I of Object.values(ISLANDS)) {
+  if (DISTRICTS.some((d) => d.name === I.name)) continue;
+  const [x0, y0, x1, y1] = I.box;
+  const x = (x0 + x1) / 2 * TILE * scale, y = (I.name === 'Downtown' ? y0 - 6 : y1 + 7) * TILE * scale;
+  g.lineWidth = fs / 3; g.strokeStyle = 'rgba(0,0,0,.9)'; g.strokeText(I.name.toUpperCase(), x, y);
+  g.fillStyle = '#ffffff'; g.fillText(I.name.toUpperCase(), x, y);
+}
+document.getElementById('info').textContent = `seed ${seed} · ${map.blocks.length} blocks · ${map.prefabs.length} lots · ${map.roofs.length} rooftops · ${map.nodes.length} junctions`;
+window.done = true;
+</script></body></html>

@@ -209,9 +209,10 @@ export class HUD {
   setNet(text) { $('net').textContent = text; }
 
   // GTA-style district title card when you cross into a new part of town
-  showDistrict(name) {
+  showDistrict(name, island = '') {
     const el = $('district');
     el.textContent = name;
+    if (island && island !== name) { const sub = document.createElement('small'); sub.textContent = island === 'Rural' ? 'Countryside' : `${island} Island`; el.appendChild(sub); }
     el.classList.remove('show');
     void el.offsetWidth;
     el.classList.add('show');

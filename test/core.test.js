@@ -159,7 +159,7 @@ test('open cargo: carry slows by 40%, crates load into visible vehicle slots and
 test('rain: asphalt braking distance roughly doubles', () => {
   const m = generateCity(1337);
   const def = VEHICLES.sedan;
-  const ave = m.roads.find((r) => r.axis === 'h' && r.y === 108); // Bridge Ave, 6 tiles wide
+  const ave = m.roads.find((r) => r.axis === 'h' && r.y === 80); // Bay Bridge avenue, 6 tiles wide
   const brake = (rain) => {
     const s = newVehState(20 * 32, (ave.y + 4.5) * 32, 0);
     s.vx = 400;

@@ -1,9 +1,9 @@
 // Shared constants used by both the authoritative server and the browser client.
 
 export const TILE = 32;                 // world pixels per tile
-export const MAP_W = 384;               // tiles
-export const MAP_H = 352;               // tiles
-export const WORLD_W = MAP_W * TILE;    // 12288 px
+export const MAP_W = 432;               // tiles
+export const MAP_H = 416;               // tiles
+export const WORLD_W = MAP_W * TILE;    // 13824 px
 export const WORLD_H = MAP_H * TILE;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px

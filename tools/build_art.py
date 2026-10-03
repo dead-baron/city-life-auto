@@ -18,7 +18,8 @@ import os
 import sys
 import tempfile
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scipy import ndimage
 from segment import segment, crop
 
@@ -196,6 +197,25 @@ def shelf_pack(items, width=2048, pad=2):
 def save_png(img, path, colors=256):
     img.quantize(colors=colors, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(path, optimize=True)
 
+# Rooftop equipment modules cut from the style-guide roof tiles (inside the parapet), stamped onto
+# procedural flat roofs: name -> (sheet, box, longest side in world px)
+ROOF_SHEET = '1000056778.png'
+ROOF_MODULES = {
+    'ac': ((604, 38, 840, 240), 92), 'heli': ((606, 598, 842, 776), 150), 'tanks': ((904, 596, 1122, 776), 96),
+    'sky': ((1180, 598, 1410, 772), 104), 'access': ((1180, 842, 1410, 1016), 90),
+}
+
+
+def feather(img, px):
+    """Fade the outer px pixels to transparent so a module blends into the roof surface."""
+    w, h = img.size
+    xx = np.minimum(np.arange(w), np.arange(w)[::-1])[None, :]
+    yy = np.minimum(np.arange(h), np.arange(h)[::-1])[:, None]
+    a = np.clip(np.minimum(xx, yy) / px, 0, 1)
+    out = img.convert('RGBA')
+    out.putalpha(Image.fromarray((a * 255).astype(np.uint8)))
+    return out
+
 
 def build_sprites():
     sprites, counts, aspects = [], {}, {}
@@ -260,6 +280,14 @@ def build_sprites():
         w, h = (size, size / r) if r >= 1 else (size * r, size)
         prop_sizes[name] = [round(w), round(h)]
         sprites.append(('prop_' + name, fit(c, w * SCALE, h * SCALE)))
+    roof_src = Image.open(find_src(ROOF_SHEET)).convert('RGB')
+    for name, (box, size) in ROOF_MODULES.items():
+        c = roof_src.crop(box)
+        r = c.width / c.height
+        w, h = (size, size / r) if r >= 1 else (size * r, size)
+        prop_sizes['roof_' + name] = [round(w), round(h)]
+        sprites.append(('prop_roof_' + name, feather(fit(c, w * SCALE, h * SCALE), 10)))
+        print('  roof module', name, 'mean', tuple(int(v) for v in np.asarray(c).reshape(-1, 3).mean(0)))
     frames, sheets = shelf_pack(sprites)
     files = []
     for i, a in enumerate(sheets):
@@ -272,6 +300,26 @@ def build_sprites():
     return lengths, prop_sizes
 
 
+SR_WEIGHTS = os.environ.get('SR_WEIGHTS', os.path.join(ROOT, 'tools', 'weights', 'realesr-general-x4v3.pth'))
+
+
+def sharpen_lot(img, tw, th):
+    """Concept-sheet lot -> crisp art at 1 art px per world px (tw*32 x th*32).
+
+    The sheet stores each lot at ~half world resolution; stretching it 2x looked soft in game.
+    Real-ESRGAN (numpy port in sr_upscale.py) upscales 4x with clean edges, then we downsample
+    to exact world size so every building pixel maps 1:1 to a world pixel."""
+    W, H = tw * TILE, th * TILE
+    if os.path.exists(SR_WEIGHTS):
+        from sr_upscale import upscale_pil
+        up = upscale_pil(img, SR_WEIGHTS).convert('RGB')
+    else:
+        print('  (no SR weights at', SR_WEIGHTS, '- falling back to Lanczos + unsharp)')
+        up = img.resize((img.width * 4, img.height * 4), Image.LANCZOS)
+    out = up.resize((W, H), Image.LANCZOS)
+    return out.filter(ImageFilter.UnsharpMask(radius=1.0, percent=60, threshold=2))
+
+
 def build_prefabs():
     src = Image.open(find_src(BUILDINGS)).convert('RGB')
     items, meta = [], {}
@@ -282,14 +330,49 @@ def build_prefabs():
         th = max(1, round(sh * PREFAB_SCALE / TILE))
         sx0, sy0, sx1, sy1 = solid
         so = [int(np.floor(sx0 * tw)), int(np.floor(sy0 * th)), int(np.ceil(sx1 * tw)), int(np.ceil(sy1 * th))]
-        items.append((key, img.convert('RGBA')))
+        print('  prefab', key, tw, th)
+        items.append((key, sharpen_lot(img, tw, th).convert('RGBA')))
         meta[key] = {'tw': tw, 'th': th, 'solid': so, 'doors': doors, 'ground': ground, 'rot': rot}
     frames, sheets = shelf_pack(items, width=2048)
-    assert len(sheets) == 1, 'prefabs must fit one sheet'
-    save_png(sheets[0].convert('RGB'), os.path.join(ASSETS, 'prefabs.png'))
+    for i, sh in enumerate(sheets):
+        sh.convert('RGB').save(os.path.join(ASSETS, f'prefabs{i}.webp'), quality=93, method=6)
     for k, f in frames.items():
-        meta[k]['src'] = [f['x'], f['y'], f['w'], f['h']]
-    return meta
+        meta[k]['src'] = [f['a'], f['x'], f['y'], f['w'], f['h']]
+    return meta, len(sheets)
+
+
+# Seamless 128px pixel-art ground textures in the palette of the concept "park / greenery" and
+# beach tiles (the sheets have no clean patch big enough to tile): periodic value noise quantized
+# to 4 tones at 2 world px per art px, plus blade/grain highlights.
+NATURAL = {
+    'grass': (['#2f5c21', '#3a6e28', '#467f2e', '#559036'], ['#72ad42', '#8cc04c'], '#24481b'),
+    'sand': (['#c9ab72', '#d6ba80', '#e0c68f', '#ead3a0'], ['#f4e3bb', '#fff1cf'], '#a98b56'),
+    'dirt': (['#6d5232', '#7c5f3b', '#8a6a44', '#98774e'], ['#a8875c', '#b4936a'], '#4d3a22'),
+}
+
+
+def natural_tex(name, n=64, seed=7):
+    tones, hl, dark = NATURAL[name]
+    rng = np.random.default_rng(seed + len(name))
+    yy, xx = np.mgrid[0:n, 0:n] / n * 2 * np.pi
+    v = np.zeros((n, n))
+    for _ in range(14):
+        fx, fy = rng.integers(1, 7, 2)
+        v += rng.uniform(0.3, 1) * np.sin(fx * xx + rng.uniform(0, 6.3)) * np.sin(fy * yy + rng.uniform(0, 6.3))
+    v += rng.normal(0, 0.55, (n, n))
+    q = np.digitize(v, np.quantile(v, [0.25, 0.5, 0.78]))
+    pal = np.array([[int(c[i:i + 2], 16) for i in (1, 3, 5)] for c in tones], np.uint8)
+    img = pal[q]
+    # highlights (blade tips / bright grains) and dark specks, sparse
+    for c, frac in ((hl[0], 0.05), (hl[1], 0.02), (dark, 0.04)):
+        m = rng.random((n, n)) < frac
+        img[m] = [int(c[i:i + 2], 16) for i in (1, 3, 5)]
+    if name == 'grass':  # short blades: a bright pixel with a darker one under it
+        ys, xs = np.nonzero(rng.random((n, n)) < 0.035)
+        for y, x in zip(ys, xs):
+            img[y, x] = [156, 204, 82]
+            img[(y + 1) % n, x] = [44, 90, 31]
+    return Image.fromarray(img).resize((n * 2, n * 2), Image.NEAREST)
 
 
 def build_ground():
@@ -298,6 +381,8 @@ def build_ground():
         img = Image.open(find_src(sheet)).convert('RGB').crop(box)
         img = seamless(img.resize((128, 128), Image.LANCZOS))
         tiles.append((name, img))
+    for name in ('grass', 'sand', 'dirt'):
+        tiles.append((name, natural_tex(name)))
     out = Image.new('RGB', (128 * len(tiles), 128))
     rects = {}
     for i, (name, img) in enumerate(tiles):
@@ -325,13 +410,14 @@ def build_logo():
 def main():
     os.makedirs(ASSETS, exist_ok=True)
     lengths, prop_sizes = build_sprites()
-    prefabs = build_prefabs()
+    prefabs, nsheets = build_prefabs()
     ground = build_ground()
     build_logo()
     js = ('// GENERATED by tools/build_art.py - do not edit by hand.\n'
           '// Building prefabs cut from the concept building sheet. Sizes/footprints are in tiles\n'
-          '// (32 world px); src is the rect inside assets/prefabs.png (drawn at '
-          f'{PREFAB_SCALE} world px per source px).\n'
+          '// (32 world px); src is [sheet, x, y, w, h] inside assets/prefabs<sheet>.webp, stored at\n'
+          '// 1 art px per world px (Real-ESRGAN upscaled from the concept sheet).\n'
+          f'export const PREFAB_SHEETS = {nsheets};\n'
           f'export const PREFAB_SCALE = {PREFAB_SCALE};\n'
           f'export const PREFABS = {json.dumps(prefabs, indent=1)};\n'
           f'export const GROUND_TEX = {json.dumps(ground)};\n'

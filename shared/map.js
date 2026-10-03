@@ -1,19 +1,29 @@
-// Deterministic GTA-style city generator + tile queries. Server and client both call
+// Deterministic GTA1/GTA2-style city generator + tile queries. Server and client both call
 // generateCity(seed) and get byte-identical maps, so the map is never sent over the wire.
 //
-// Layout: arterial avenues split the mainland into nine districts. Each district is cut
-// into irregular blocks by recursive subdivision with mixed street widths (T-junctions,
-// long and short blocks, no perfect grid), then blocks are filled with building prefabs
-// cut from the concept building sheet. A river separates rural Refuge Island; the south
-// coast has beaches, a boardwalk and piers.
+// Layout (after the GTA2 level maps): three city islands separated by water channels and
+// joined by bridges - the Industrial island (north-west), the Residential island (south-west)
+// and Downtown (east) - plus rural Refuge Island off Downtown's south shore. Each island has a
+// coast ring road with a waterfront strip outside it (quays, promenades, beach, piers) and a
+// hand-laid avenue network inside (full crossings, T-junction stubs, a big park cell). Every
+// rectangular cell between avenues is cut into irregular blocks by recursive subdivision with
+// mixed street widths, then blocks are lined with concept-art building lots and packed with
+// procedural rooftops so the city reads dense, like the originals.
 
 import { T, TILE, MAP_W, MAP_H } from './constants.js';
 import { mulberry32, hash2 } from './rng.js';
 import { PREFABS } from './prefab-data.js';
 
-export const RIVER_X0 = 300, RIVER_X1 = 311;
-export const ISLAND_ROAD_X = 340;
-export const COAST_ROAD_Y = 282;
+// The channel between the west islands and Downtown (fishing calls it the "river").
+export const RIVER_X0 = 200, RIVER_X1 = 213;
+
+// Island outlines (tile rects [x0, y0, x1, y1), exclusive ends) and their coast ring roads.
+export const ISLANDS = {
+  I: { name: 'Industrial', box: [8, 8, 200, 160], ring: [14, 14, 194, 154] },
+  R: { name: 'Residential', box: [8, 174, 200, 388], ring: [14, 180, 194, 364] },
+  D: { name: 'Downtown', box: [214, 36, 408, 330], ring: [220, 42, 402, 320] },
+  F: { name: 'Refuge Island', box: [232, 346, 410, 396], ring: null },
+};
 
 export const PED_BLOCK = new Uint8Array(16);
 export const CAR_BLOCK = new Uint8Array(16);
@@ -40,36 +50,50 @@ SURFACE[T.BRIDGE] = [1, 1, 1];
 SURFACE[T.LOT] = [1, 1, 1];
 
 // ---------------------------------------------------------------------------
-// Districts. Materials pick concept textures in the renderer.
+// Districts. Materials pick concept textures in the renderer; isl = island shown under the title.
 // walk: sidewalk texture, plaza: interior plaza texture, road: asphalt variant, ground: default interior tile
 export const DISTRICTS = [
-  { id: 0, name: 'Pine Hills', style: 'houses', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 1, name: 'Midtown', style: 'commercial', walk: 'concrete', plaza: 'brick', road: 'asphalt', ground: T.LOT, turf: false },
-  { id: 2, name: 'Northgate', style: 'apartments', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 3, name: 'The Yards', style: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: true },
-  { id: 4, name: 'Downtown', style: 'towers', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 5, name: 'Civic Center', style: 'civic', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 6, name: 'Southside', style: 'southside', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: true },
-  { id: 7, name: 'Neon Strip', style: 'nightlife', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 8, name: 'Harbor', style: 'harbor', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
-  { id: 9, name: 'Refuge Island', style: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 10, name: 'Sunset Beach', style: 'beach', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
+  { id: 0, name: 'Pine Hills', isl: 'Residential', style: 'houses', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 1, name: 'Midtown', isl: 'Downtown', style: 'commercial', walk: 'concrete', plaza: 'brick', road: 'asphalt', ground: T.LOT, turf: false },
+  { id: 2, name: 'Northgate', isl: 'Residential', style: 'apartments', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 3, name: 'The Yards', isl: 'Industrial', style: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: true },
+  { id: 4, name: 'Downtown', isl: 'Downtown', style: 'towers', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.PLAZA, turf: false },
+  { id: 5, name: 'Civic Center', isl: 'Downtown', style: 'civic', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 6, name: 'Southside', isl: 'Residential', style: 'southside', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: true },
+  { id: 7, name: 'Neon Strip', isl: 'Downtown', style: 'nightlife', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
+  { id: 8, name: 'Harbor', isl: 'Industrial', style: 'harbor', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
+  { id: 9, name: 'Refuge Island', isl: 'Rural', style: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 10, name: 'Sunset Beach', isl: 'Residential', style: 'beach', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
+  { id: 11, name: 'Ironworks', isl: 'Industrial', style: 'factory', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.LOT, turf: false },
+  { id: 12, name: 'Greenfield Park', isl: 'Industrial', style: 'park', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 13, name: 'Liberty Bay', isl: '', style: 'water', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.WATER, turf: false },
 ];
+const WATER_D = 13;
 
-const COLS = [[8, 98], [104, 196], [202, 292]];
-const ROWS = [[8, 108], [114, 204], [210, 282]];
+// District paint order per island (later rects override earlier ones).
+const DIST_RECTS = [
+  [11, 0, 0, 205, 168], [12, 73, 0, 133, 83], [8, 133, 0, 205, 83], [3, 0, 83, 133, 168],
+  [0, 0, 168, 137, 303], [2, 137, 168, 205, 400], [6, 0, 303, 137, 364], [10, 0, 364, 205, 416],
+  [5, 207, 30, 343, 113], [4, 273, 113, 343, 253], [4, 343, 30, 432, 183], [1, 207, 113, 273, 253], [7, 207, 253, 432, 336], [7, 343, 183, 432, 253],
+  [9, 226, 340, 432, 416],
+];
+// Syndicate turf (tiles): The Yards and Southside.
+const TURF_RECTS = [[0, 83, 133, 168], [0, 303, 137, 364]];
+// Big park cells (tiles) - left as parks instead of being subdivided.
+const PARK_CELLS = [{ x: 76, y: 18, label: 'Greenfield Park', pond: true }, { x: 276, y: 46, label: 'Central Park', pond: false }];
 
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
-  houses: { minW: 18, minH: 18, maxW: 40, maxH: 34, streets: [4, 3, 3], gen: { house1: 3, house2: 3, house3: 3, apt2: 1, rest2: 0.4 }, filler: 'park' },
-  commercial: { minW: 22, minH: 16, maxW: 46, maxH: 32, streets: [4, 4, 3], gen: { conv: 2, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.5, tower2: 1 }, filler: 'parking' },
-  apartments: { minW: 18, minH: 19, maxW: 40, maxH: 36, streets: [4, 3], gen: { apt1: 3, apt2: 3, house2: 1, conv: 1, tower2: 1 }, filler: 'park' },
-  industrial: { minW: 24, minH: 16, maxW: 52, maxH: 36, streets: [4, 3], gen: { warehouse: 3, industrial: 2, repair: 1 }, filler: 'yard' },
-  towers: { minW: 18, minH: 19, maxW: 42, maxH: 36, streets: [4, 4, 3], gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1 }, filler: 'plaza' },
-  civic: { minW: 20, minH: 18, maxW: 44, maxH: 38, streets: [4, 3], gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1 }, filler: 'park' },
-  southside: { minW: 18, minH: 18, maxW: 42, maxH: 34, streets: [3, 3, 4], gen: { house1: 2, house3: 2, warehouse: 1, industrial: 1, apt2: 1 }, filler: 'yard' },
-  nightlife: { minW: 20, minH: 18, maxW: 44, maxH: 36, streets: [4, 3], gen: { club: 3, rest1: 2, rest2: 2, hotel: 1, conv: 1 }, filler: 'plaza' },
-  harbor: { minW: 22, minH: 16, maxW: 50, maxH: 34, streets: [4, 3], gen: { warehouse: 4, industrial: 1, repair: 1 }, filler: 'yard' },
+  houses: { minW: 16, minH: 18, maxW: 38, maxH: 34, streets: [4, 3, 3], gen: { house1: 3, house2: 3, house3: 3, apt2: 1, rest2: 0.4 }, filler: 'park', roof: 0.08, roofKinds: ['tile'] },
+  commercial: { minW: 12, minH: 12, maxW: 40, maxH: 34, streets: [4, 4, 3], gen: { conv: 2, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.5, tower2: 1 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
+  apartments: { minW: 14, minH: 14, maxW: 38, maxH: 36, streets: [4, 3], gen: { apt1: 3, apt2: 3, house2: 1, conv: 1, tower2: 1 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
+  industrial: { minW: 14, minH: 13, maxW: 44, maxH: 34, streets: [4, 3], gen: { warehouse: 3, industrial: 2, repair: 1 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
+  factory: { minW: 14, minH: 13, maxW: 46, maxH: 34, streets: [4, 4, 3], gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
+  towers: { minW: 11, minH: 11, maxW: 38, maxH: 36, streets: [4, 4, 3], gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1 }, filler: 'plaza', roof: 0.75, roofKinds: ['glass', 'gravel', 'tar'] },
+  civic: { minW: 14, minH: 14, maxW: 42, maxH: 38, streets: [4, 3], gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
+  southside: { minW: 14, minH: 14, maxW: 40, maxH: 34, streets: [3, 3, 4], gen: { house1: 2, house3: 2, warehouse: 1, industrial: 1, apt2: 1 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
+  nightlife: { minW: 12, minH: 12, maxW: 40, maxH: 36, streets: [4, 3], gen: { club: 3, rest1: 2, rest2: 2, hotel: 1, conv: 1 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  harbor: { minW: 14, minH: 13, maxW: 46, maxH: 34, streets: [4, 3], gen: { warehouse: 4, industrial: 1, repair: 1 }, filler: 'yard', roof: 0.55, roofKinds: ['metal', 'tar'] },
 };
 
 // Every business the game systems rely on, placed in a specific district.
@@ -77,7 +101,7 @@ const STYLE = {
 const SPECIALS = [
   { d: 5, prefab: 'hospital', biz: ['hospital'], names: ['St. Neon General'] },
   { d: 0, prefab: 'hospital', biz: ['hospital'], names: ['Westside Medical'] },
-  { d: 6, prefab: 'hospital', biz: ['hospital'], names: ['Southside Clinic'] },
+  { d: 11, prefab: 'hospital', biz: ['hospital'], names: ['Ironworks Clinic'] },
   { d: 4, prefab: 'police', biz: ['police'], names: ['Metro City PD - HQ'] },
   { d: 4, prefab: 'bank', biz: ['bank'], names: ['First Pixel Bank'] },
   { d: 4, prefab: 'bank', biz: ['courthouse'], names: ['Hall of Justice'] },
@@ -115,7 +139,7 @@ export class CityMap {
     this.seed = seed >>> 0;
     this.w = MAP_W; this.h = MAP_H;
     this.tiles = new Uint8Array(MAP_W * MAP_H);
-    this.dist = new Uint8Array(MAP_W * MAP_H).fill(9);
+    this.dist = new Uint8Array(MAP_W * MAP_H).fill(WATER_D);
     this.roadAxis = new Uint8Array(MAP_W * MAP_H); // bit1 vertical road, bit2 horizontal road
     this.bld = new Int16Array(MAP_W * MAP_H).fill(-1);
     this.buildings = [];
@@ -134,6 +158,7 @@ export class CityMap {
     this.nodes = [];
     this.lamps = [];
     this.fields = [];
+    this.roofs = [];
     this.hospitals = [];
     this.spawns = {};
   }
@@ -150,7 +175,7 @@ export class CityMap {
   }
   districtAt(x, y) {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return DISTRICTS[9];
+    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return DISTRICTS[WATER_D];
     return DISTRICTS[this.dist[ty * MAP_W + tx]];
   }
   buildingAtPx(x, y) {
@@ -203,7 +228,9 @@ export class CityMap {
 }
 
 export function isTurf(x, y) { // syndicate gang territory (pixels): The Yards + Southside
-  return x < 98 * TILE && y > 108 * TILE && y < COAST_ROAD_Y * TILE;
+  const tx = x / TILE, ty = y / TILE;
+  for (const [x0, y0, x1, y1] of TURF_RECTS) if (tx >= x0 && tx < x1 && ty >= y0 && ty < y1) return true;
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -225,37 +252,40 @@ export const DIRS = {
   E: { dx: 1, dy: 0, opp: 'W' }, W: { dx: -1, dy: 0, opp: 'E' },
 };
 
-export function coastY(tx) {
-  return 300 + Math.round(4 * Math.sin(tx / 17) + 3 * Math.sin(tx / 7.3 + 1));
+// Coast wobble so islands don't read as perfect rectangles (stays within +-2 tiles).
+function wob(t, k) { return Math.round(1.3 * Math.sin(t / 6.1 + k) + 0.8 * Math.sin(t / 2.3 + k * 2.7)); }
+function onIsland(box, tx, ty, k) {
+  const [x0, y0, x1, y1] = box;
+  if (tx < x0 + wob(ty, k) || tx >= x1 + wob(ty, k + 1) || ty < y0 + wob(tx, k + 2) || ty >= y1 + wob(tx, k + 3)) return false;
+  const r = 6; // rounded corners
+  const cx = tx < x0 + r ? x0 + r : tx >= x1 - r ? x1 - r - 1 : tx;
+  const cy = ty < y0 + r ? y0 + r : ty >= y1 - r ? y1 - r - 1 : ty;
+  return (tx - cx) ** 2 + (ty - cy) ** 2 <= r * r + 2;
 }
 
-// ---------------------------------------------------------------------------
 export function generateCity(seed = 1337) {
   const m = new CityMap(seed);
   const rand = mulberry32(seed);
+  const isl = Object.values(ISLANDS);
 
-  // --- terrain --------------------------------------------------------------
-  m.fill(0, 0, MAP_W, MAP_H, T.GRASS);
-  for (let tx = 0; tx < MAP_W; tx++) {
-    const cy = coastY(tx);
-    for (let ty = cy - 8; ty < MAP_H; ty++) {
-      if (ty < cy) m.set(tx, ty, T.SAND);
-      else if (ty < cy + 9) m.set(tx, ty, T.WATER);
-      else m.set(tx, ty, T.DEEP);
-    }
-    m.setDist(tx, COAST_ROAD_Y + 4, 1, MAP_H, 10);
+  // --- terrain: open water, islands, shallows -------------------------------------------
+  m.fill(0, 0, MAP_W, MAP_H, T.DEEP);
+  isl.forEach((I, k) => {
+    const [x0, y0, x1, y1] = I.box;
+    for (let ty = y0 - 3; ty < y1 + 3; ty++) for (let tx = x0 - 3; tx < x1 + 3; tx++) if (onIsland(I.box, tx, ty, k * 1.7)) m.set(tx, ty, I.ring ? T.SIDEWALK : T.GRASS);
+  });
+  const land = (t) => t !== T.DEEP && t !== T.WATER;
+  for (let ty = 0; ty < MAP_H; ty++) for (let tx = 0; tx < MAP_W; tx++) {
+    if (m.tileAt(tx, ty) !== T.DEEP) continue;
+    let near = false;
+    for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3; dx++) if (land(m.tileAt(tx + dx, ty + dy)) && m.tileAt(tx + dx, ty + dy) !== T.WALL) { near = true; break; }
+    if (near) m.set(tx, ty, T.WATER);
   }
-  for (let ty = 0; ty < MAP_H; ty++) {
-    const wob = Math.round(1.5 * Math.sin(ty / 9));
-    for (let tx = RIVER_X0 + wob; tx <= RIVER_X1 + wob; tx++) {
-      const t = m.tileAt(tx, ty);
-      if (t === T.DEEP) continue;
-      m.set(tx, ty, tx - RIVER_X0 - wob >= 3 && tx - RIVER_X0 - wob <= 8 ? T.DEEP : T.WATER);
-    }
+  for (const [d, x0, y0, x1, y1] of DIST_RECTS) for (let ty = y0; ty < Math.min(MAP_H, y1); ty++) for (let tx = x0; tx < Math.min(MAP_W, x1); tx++) {
+    if (land(m.tileAt(tx, ty))) m.dist[ty * MAP_W + tx] = d;
   }
-  m.setDist(RIVER_X1 + 2, 0, MAP_W, COAST_ROAD_Y + 4, 9);
 
-  // --- arterial roads -------------------------------------------------------
+  // --- roads ---------------------------------------------------------------------------------
   const road = (x, y, w, h, width, axis, kind = 'ave') => {
     const r = { id: m.roads.length, x, y, w, h, width, axis, kind };
     m.roads.push(r);
@@ -267,27 +297,67 @@ export function generateCity(seed = 1337) {
     }
     return r;
   };
-  road(4, 4, 4, COAST_ROAD_Y + 4 - 4, 4, 'v');            // west edge
-  road(98, 4, 6, COAST_ROAD_Y + 4 - 4, 6, 'v');           // Westlake Ave
-  road(196, 4, 6, COAST_ROAD_Y + 4 - 4, 6, 'v');          // Central Ave
-  road(292, 4, 4, COAST_ROAD_Y + 4 - 4, 4, 'v');          // River Rd
-  road(4, 4, 292, 4, 4, 'h');                              // north edge
-  road(4, 108, ISLAND_ROAD_X + 4 - 4, 6, 6, 'h');          // Bridge Ave (north bridge)
-  road(4, 204, ISLAND_ROAD_X + 4 - 4, 6, 6, 'h');          // Harbor Blvd (south bridge)
-  road(4, COAST_ROAD_Y, 292, 4, 4, 'h');                   // Ocean Drive
-  road(ISLAND_ROAD_X, 16, 4, 278, 4, 'v', 'rural');         // island road
+  const ring = ([x0, y0, x1, y1]) => {
+    road(x0, y0, 4, y1 - y0, 4, 'v', 'st'); road(x1 - 4, y0, 4, y1 - y0, 4, 'v', 'st');
+    road(x0, y0, x1 - x0, 4, 4, 'h', 'st'); road(x0, y1 - 4, x1 - x0, 4, 4, 'h', 'st');
+  };
+  for (const I of isl) if (I.ring) ring(I.ring);
+  // Industrial island: two full avenues each way, a stub west of the Yards, a street east.
+  road(70, 14, 6, 170, 6, 'v');                // Foundry Ave, crosses the north channel to Residential
+  road(130, 14, 6, 140, 6, 'v');               // Mill St
+  road(14, 80, 210, 6, 6, 'h');                // Bay Bridge: Industrial -> Downtown
+  road(14, 118, 62, 6, 6, 'h');                // Yards Rd (T at Foundry Ave)
+  road(160, 80, 4, 104, 4, 'v', 'st');         // Dock St, crosses to Residential (second north bridge)
+  // Residential island
+  road(78, 180, 6, 184, 6, 'v');               // Pine Ave
+  road(134, 180, 6, 184, 6, 'v');              // Elm Ave
+  road(14, 240, 210, 6, 6, 'h');               // Hill Bridge: Residential -> Downtown
+  road(14, 300, 210, 6, 6, 'h');               // Southside Bridge: Residential -> Downtown
+  road(134, 330, 60, 4, 4, 'h', 'st');         // Northgate Ln
+  road(46, 180, 4, 66, 4, 'v', 'st');          // Cedar St
+  // Downtown island
+  road(270, 42, 6, 278, 6, 'v');               // Broadway
+  road(340, 42, 6, 322, 6, 'v');               // Neon Blvd, continues over the causeway to Refuge Island
+  road(220, 110, 182, 6, 6, 'h');              // Capitol Ave
+  road(220, 180, 182, 6, 6, 'h');              // Market St
+  road(220, 250, 182, 6, 6, 'h');              // Sunset Blvd
+  road(305, 110, 4, 76, 4, 'v', 'st');         // Wall St
+  road(340, 285, 62, 4, 4, 'h', 'st');         // Marina Way
+  // Refuge Island farm road
+  road(236, 360, 170, 4, 4, 'h', 'rural');
 
-  // --- districts + blocks ----------------------------------------------------
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
-    const d = r * 3 + c;
-    const [x0, x1] = COLS[c], [y0, y1] = ROWS[r];
-    m.setDist(x0 - 2, y0 - 2, x1 - x0 + 4, y1 - y0 + 4, d);
-    const st = STYLE[DISTRICTS[d].style];
-    const dr = mulberry32(seed ^ (d * 7919 + 13));
-    subdivide(m, road, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, st, dr, d, 0);
+  // --- cells between avenues -> blocks ---------------------------------------------------------
+  for (const I of isl) {
+    if (!I.ring) continue;
+    const [x0, y0, x1, y1] = I.ring;
+    const seen = new Uint8Array(MAP_W * MAP_H);
+    for (let ty = y0 + 4; ty < y1 - 4; ty++) for (let tx = x0 + 4; tx < x1 - 4; tx++) {
+      if (seen[ty * MAP_W + tx] || m.tileAt(tx, ty) === T.ROAD) continue;
+      // flood the cell
+      let minx = tx, maxx = tx, miny = ty, maxy = ty, n = 0;
+      const st = [[tx, ty]];
+      seen[ty * MAP_W + tx] = 1;
+      while (st.length) {
+        const [cx, cy] = st.pop();
+        n++;
+        minx = Math.min(minx, cx); maxx = Math.max(maxx, cx); miny = Math.min(miny, cy); maxy = Math.max(maxy, cy);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = cx + dx, ny = cy + dy;
+          if (seen[ny * MAP_W + nx] || m.tileAt(nx, ny) === T.ROAD || m.tileAt(nx, ny) === T.BRIDGE) continue;
+          seen[ny * MAP_W + nx] = 1;
+          st.push([nx, ny]);
+        }
+      }
+      const rc = { x: minx, y: miny, w: maxx - minx + 1, h: maxy - miny + 1 };
+      if (rc.w * rc.h !== n) throw new Error(`city generator: cell at ${tx},${ty} is not rectangular`);
+      const d = m.dist[(miny + (rc.h >> 1)) * MAP_W + minx + (rc.w >> 1)];
+      const park = PARK_CELLS.find((p) => p.x === minx && p.y === miny);
+      if (park) { m.blocks.push({ ...rc, d, park }); continue; }
+      subdivide(m, road, rc, STYLE[DISTRICTS[d].style], mulberry32(seed ^ (minx * 7919 + miny * 104729)), d, 0);
+    }
   }
 
-  // --- fill blocks with prefabs ---------------------------------------------
+  // --- fill blocks with prefabs + rooftops ----------------------------------------------------
   const rows = [];
   for (const b of m.blocks) {
     const st = STYLE[DISTRICTS[b.d].style];
@@ -297,6 +367,14 @@ export function generateCity(seed = 1337) {
     m.fill(ix, iy, iw, ih, DISTRICTS[b.d].ground);
     if (b.park) continue;
     const minH = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].th));
+    const minW = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].tw));
+    if (ih < minH || iw < minW) {
+      // too small for a concept lot: one solid building (GTA-style city block) or a pocket park/plaza
+      const row = { b, d: b.d, x: ix, y: iy, w: iw, h: ih, face: 'S' };
+      if (st.roof) roofBuilding(m, row, ix, iy, iw, ih, st, mulberry32(seed ^ (ix * 131 + iy * 7)));
+      else filler(m, row, ix, iw, st, mulberry32(seed ^ (ix * 131 + iy * 7)));
+      continue;
+    }
     if (ih >= minH * 2 + 1) {
       const hs = Math.ceil(ih / 2);
       rows.push({ b, d: b.d, x: ix, y: iy + ih - hs, w: iw, h: hs, face: 'S', iv: [[ix, ix + iw]] });
@@ -307,20 +385,11 @@ export function generateCity(seed = 1337) {
   }
   placeSpecials(m, rows, rand);
   for (const row of rows) fillRow(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
-  for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)));
+  for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)), b.park);
 
-  // --- district ids for the arterial roads between districts -------------------
-  for (let ty = 0; ty < MAP_H; ty++) for (let tx = 0; tx < RIVER_X0 - 2; tx++) {
-    const i = ty * MAP_W + tx;
-    if (m.dist[i] !== 9) continue;
-    if (ty >= COAST_ROAD_Y + 2) { m.dist[i] = 10; continue; }
-    const c = tx < 101 ? 0 : tx < 199 ? 1 : 2, r = ty < 111 ? 0 : ty < 207 ? 1 : 2;
-    m.dist[i] = r * 3 + c;
-  }
-
-  // --- coast, island, street furniture, traffic graph -----------------------
-  buildCoast(m, rand);
-  buildIsland(m, rand);
+  // --- waterfronts, Refuge Island, street furniture, traffic graph -----------------------------
+  buildWaterfronts(m, rand);
+  buildRefuge(m, rand);
   buildStreetProps(m);
   buildLaneGraph(m);
   buildCameras(m, rand);
@@ -339,7 +408,7 @@ function subdivide(m, road, rc, st, rand, d, depth) {
   const canV = rc.w >= st.minW * 2 + 3, canH = rc.h >= st.minH * 2 + 3;
   const needV = rc.w > st.maxW, needH = rc.h > st.maxH;
   const big = rc.w > st.maxW * 0.75 || rc.h > st.maxH * 0.8;
-  const chance = !needV && !needH ? (big && depth < 3 ? 0.35 : 0) : 1;
+  const chance = !needV && !needH ? (big && depth < 4 ? 0.55 : depth < 3 ? 0.3 : 0) : 1;
   if ((!canV && !canH) || rand() >= chance) {
     m.blocks.push({ x: rc.x, y: rc.y, w: rc.w, h: rc.h, d });
     return;
@@ -511,9 +580,22 @@ function placePrefab(m, row, key, x, special, rand) {
   return b;
 }
 
+// Procedural flat-roof building filling a leftover lot (GTA-style dense blocks). The renderer
+// draws the roof (parapet, texture, AC units, vents, skylights, helipads) from r.kind + r.seed.
+function roofBuilding(m, row, x, y, w, h, st, rand) {
+  const kinds = st.roofKinds || ['tar'];
+  const kind = kinds[Math.floor(rand() * kinds.length)];
+  const bid = m.buildings.length;
+  const r = { tx: x, ty: y, tw: w, th: h, kind, seed: Math.floor(rand() * 1e9), d: row.d, b: bid };
+  m.roofs.push(r);
+  m.buildings.push({ id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind: 'roof', name: 'Building', business: null, signs: [] });
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * MAP_W + tx] = bid; }
+}
+
 function filler(m, row, x, w, st, rand, backLot = false) {
   if (w <= 0) return;
   const x0 = x, y0 = row.y, h = row.h;
+  if (st.roof && w >= 4 && h >= 4 && rand() < (backLot ? Math.max(st.roof, 0.7) : st.roof)) { roofBuilding(m, row, x0, y0, w, h, st, rand); return; }
   let kind = w >= 5 && (st.filler === 'parking' || st.filler === 'yard' || (st.filler === 'plaza' && rand() < 0.4)) ? 'parking' : st.filler;
   if (backLot && kind === 'parking' && h < 4) kind = st.filler === 'parking' ? 'plaza' : st.filler;
   if (backLot && st.filler === 'yard' && rand() < 0.5 && h >= 4) kind = 'parking';
@@ -559,22 +641,34 @@ function filler(m, row, x, w, st, rand, backLot = false) {
   }
 }
 
-function buildPark(m, b, rand) {
+function buildPark(m, b, rand, info) {
   const { ix, iy, iw, ih } = b;
   m.fill(ix, iy, iw, ih, T.GRASS);
   const cx = ix + Math.floor(iw / 2), cy = iy + Math.floor(ih / 2);
+  // winding-free GTA park: cross paths, a plaza with a fountain, a ring path
   m.fill(ix, cy - 1, iw, 2, T.PLAZA);
   m.fill(cx - 1, iy, 2, ih, T.PLAZA);
+  for (let x = ix + 4; x < ix + iw - 4; x++) { m.set(x, iy + 4, T.PLAZA); m.set(x, iy + ih - 5, T.PLAZA); }
+  for (let y = iy + 4; y < iy + ih - 4; y++) { m.set(ix + 4, y, T.PLAZA); m.set(ix + iw - 5, y, T.PLAZA); }
   m.fill(cx - 4, cy - 4, 8, 8, T.PLAZA);
   addProp(m, 'fountain', cx * TILE, cy * TILE, 36);
   for (const [dx, dy] of [[-5, -2.5], [5, -2.5], [-5, 2.5], [5, 2.5]]) addProp(m, 'pbench', (cx + dx) * TILE, (cy + dy) * TILE, 0);
-  for (let k = 0; k < (iw * ih) / 14; k++) {
+  if (info.pond) {
+    // duck pond in the north-east quarter (fishable)
+    const px = cx + Math.floor(iw / 4), py = cy - Math.floor(ih / 4), rx = Math.floor(iw / 6), ry = Math.floor(ih / 7);
+    for (let y = py - ry; y <= py + ry; y++) for (let x = px - rx; x <= px + rx; x++) {
+      const k = ((x - px) / rx) ** 2 + ((y - py) / ry) ** 2;
+      if (k <= 1 && m.tileAt(x, y) === T.GRASS) m.set(x, y, k < 0.45 ? T.DEEP : T.WATER);
+    }
+  }
+  for (let k = 0; k < (iw * ih) / 12; k++) {
     const tx = ix + 1 + Math.floor(rand() * (iw - 2)), ty = iy + 1 + Math.floor(rand() * (ih - 2));
     if (m.tileAt(tx, ty) !== T.GRASS) continue;
-    const t = ['tree_a', 'tree_b', 'tree_a', 'shrub_a', 'flowers_a', 'flowers_big', 'mosaic'][Math.floor(rand() * 7)];
+    const t = ['tree_a', 'tree_b', 'tree_a', 'tree_b', 'shrub_a', 'flowers_a', 'flowers_big', 'mosaic'][Math.floor(rand() * 8)];
     addProp(m, t, (tx + 0.5) * TILE, (ty + 0.5) * TILE, t.startsWith('tree') ? 12 : 0);
   }
-  m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Central Park', x: cx * TILE, y: (cy + 4.5) * TILE, r: 48 });
+  for (let x = ix + 6; x < ix + iw - 6; x += 9) { addProp(m, 'lamp', (x + 0.5) * TILE, (iy + 4.5) * TILE); addProp(m, 'lamp', (x + 0.5) * TILE, (iy + ih - 4.5) * TILE); }
+  m.pois.push({ id: m.pois.length, kind: 'delivery', label: info.label, x: cx * TILE, y: (cy + 4.5) * TILE, r: 48 });
 }
 
 function addProp(m, t, x, y, solidR = 0, extra = null) {
@@ -587,56 +681,93 @@ function addProp(m, t, x, y, solidR = 0, extra = null) {
 }
 
 // ---------------------------------------------------------------------------
-function buildCoast(m, rand) {
-  // boardwalk strip under Ocean Drive, then sand, palms and piers
-  for (let tx = 4; tx < RIVER_X0 - 2; tx++) {
-    for (let ty = COAST_ROAD_Y + 4; ty < COAST_ROAD_Y + 6; ty++) if (m.tileAt(tx, ty) !== T.ROAD) m.set(tx, ty, T.SIDEWALK);
-    for (let ty = COAST_ROAD_Y + 6; ty < coastY(tx) - 6; ty++) m.set(tx, ty, tx > 104 && tx < 196 ? T.PLAZA : T.SAND);
+// Strip between each coast ring road and the water: Industrial quays, Downtown promenade,
+// Residential lawns and Sunset Beach, with piers and marina berths.
+function buildWaterfronts(m, rand) {
+  const isRoad = (t) => t === T.ROAD || t === T.BRIDGE;
+  for (const [key, I] of Object.entries(ISLANDS)) {
+    if (!I.ring) continue;
+    const [x0, y0, x1, y1] = I.ring;
+    const [bx0, by0, bx1, by1] = I.box;
+    for (let ty = by0 - 3; ty < by1 + 3; ty++) for (let tx = bx0 - 3; tx < bx1 + 3; tx++) {
+      if (tx >= x0 && tx < x1 && ty >= y0 && ty < y1) continue;
+      const t = m.tileAt(tx, ty);
+      if (t !== T.SIDEWALK) continue;
+      const out = Math.max(x0 - 1 - tx, tx - x1, y0 - 1 - ty, ty - y1); // tiles beyond the ring road
+      if (out < 2) continue;
+      if (key === 'R' && ty >= y1) m.set(tx, ty, T.SAND);
+      else if (key === 'I') m.set(tx, ty, T.LOT);
+      else if (key === 'D') m.set(tx, ty, T.PLAZA);
+      else m.set(tx, ty, T.GRASS);
+    }
+    // dressing along the outer edge of the strip
+    for (let ty = by0; ty < by1; ty += 3) for (let tx = bx0; tx < bx1; tx += 3) {
+      const t = m.tileAt(tx, ty);
+      if (t !== T.LOT && t !== T.PLAZA && t !== T.GRASS && t !== T.SAND) continue;
+      if (tx >= x0 && tx < x1 && ty >= y0 && ty < y1) continue;
+      let nearRoad = false;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (isRoad(m.tileAt(tx + dx, ty + dy))) nearRoad = true;
+      if (nearRoad) continue;
+      const h = hash2(tx, ty, 91);
+      const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
+      if (key === 'I') { if (h < 0.22) addProp(m, ['pallet', 'drum', 'spool', 'pallet_b', 'dump_b', 'pipes'][Math.floor(h * 27) % 6], x, y, 10); }
+      else if (key === 'D') { if (h < 0.18) addProp(m, ['palm_a', 'palm_b', 'bench_m', 'palm_c', 'planter_sq'][Math.floor(h * 28) % 5], x, y, h < 0.1 ? 10 : 0); else if (h > 0.93) addProp(m, 'lamp', x, y); }
+      else if (key === 'R' && t === T.SAND) { if (h < 0.08) addProp(m, ['palm_a', 'palm_b', 'palm_c', 'palm_d'][Math.floor(h * 50) % 4], x, y, 10); else if (h > 0.95) addProp(m, ['umbrella_r', 'umbrella_y', 'umbrella_b', 'umbrella_g'][Math.floor(h * 400) % 4], x, y, 0); }
+      else if (h < 0.2) addProp(m, h < 0.12 ? 'tree_b' : 'shrub_a', x, y, h < 0.12 ? 12 : 0);
+    }
   }
-  for (let tx = 8; tx < RIVER_X0 - 4; tx += 7 + Math.floor(rand() * 4)) {
-    const y = (coastY(tx) - 6.5) * TILE;
-    if (m.tileAt(tx, Math.floor(y / TILE)) === T.SAND || m.tileAt(tx, Math.floor(y / TILE)) === T.PLAZA) addProp(m, ['palm_a', 'palm_b', 'palm_c', 'palm_d'][Math.floor(rand() * 4)], (tx + 0.5) * TILE, y, 10);
-  }
-  for (let tx = 20; tx < RIVER_X0 - 10; tx += 23) addProp(m, ['umbrella_r', 'umbrella_y', 'umbrella_b', 'umbrella_g'][tx % 4], (tx + 3.5) * TILE, (coastY(tx) - 3) * TILE, 0);
-  const piers = [60, 150, 222, 250, 274];
-  for (const px of piers) {
-    const top = COAST_ROAD_Y + 6, len = coastY(px) + 14 - top;
-    m.fill(px, top, 3, len, T.DOCK);
-    m.fill(px - 3, top + len - 3, 9, 3, T.DOCK);
-    addProp(m, 'lamp', (px + 1.5) * TILE, (top + len - 2) * TILE);
-    const wy = (coastY(px) + 4) * TILE;
+  // Sunset Beach piers into the open sea (vertical); the first is the public fishing pier
+  const R = ISLANDS.R;
+  const beachTop = R.ring[3] + 2;
+  for (const px of [40, 104, 166]) {
+    let bottom = beachTop;
+    while (m.tileAt(px + 1, bottom) !== T.DEEP && bottom < MAP_H - 6) bottom++;
+    const len = bottom + 8 - beachTop;
+    m.fill(px, beachTop, 3, len, T.DOCK);
+    m.fill(px - 3, beachTop + len - 3, 9, 3, T.DOCK);
+    addProp(m, 'lamp', (px + 1.5) * TILE, (beachTop + len - 2) * TILE);
+    const wy = (bottom + 3) * TILE;
     m.marina.push({ x: (px + 5.5) * TILE, y: wy, a: Math.PI / 2 });
     m.marina.push({ x: (px - 2.5) * TILE, y: wy, a: Math.PI / 2 });
   }
-  m.dropSites.push({ x: (piers[0] + 1.5) * TILE, y: (coastY(piers[0]) + 11) * TILE, name: 'the end of the public pier' });
+  m.dropSites.push({ x: 41.5 * TILE, y: (m.marina[0].y / TILE + 4) * TILE, name: 'the end of the public pier' });
+  // Harbor docks: piers from the Industrial quay into the channel (horizontal), boats berthed alongside
+  const qx = ISLANDS.I.ring[2] + 2;
+  for (const py of [22, 38, 54, 68]) {
+    m.fill(qx, py, RIVER_X0 + 7 - qx, 3, T.DOCK);
+    addProp(m, 'lamp', (RIVER_X0 + 6) * TILE, (py + 1.5) * TILE);
+    m.marina.push({ x: (RIVER_X0 + 4) * TILE, y: (py - 1.6) * TILE, a: 0 });
+    m.marina.push({ x: (RIVER_X0 + 4) * TILE, y: (py + 4.6) * TILE, a: 0 });
+  }
+  // Downtown east-shore marina
+  const ex = ISLANDS.D.ring[2] + 2;
+  for (const py of [130, 160, 200]) {
+    m.fill(ex, py, ISLANDS.D.box[2] + 9 - ex, 3, T.DOCK);
+    m.marina.push({ x: (ISLANDS.D.box[2] + 5) * TILE, y: (py - 1.6) * TILE, a: 0 });
+    m.marina.push({ x: (ISLANDS.D.box[2] + 5) * TILE, y: (py + 4.6) * TILE, a: 0 });
+  }
 }
 
-function buildIsland(m, rand) {
-  const x0 = RIVER_X1 + 4;
-  const fields = [[x0 + 1, 34, 20, 30], [x0 + 1, 120, 20, 40], [ISLAND_ROAD_X + 6, 40, 30, 60], [ISLAND_ROAD_X + 6, 120, 30, 70], [x0 + 1, 216, 20, 50]];
+// Rural Refuge Island: farm road, crop fields, the co-op farmhouse and woods.
+function buildRefuge(m, rand) {
+  const F = ISLANDS.F;
+  const fields = [[238, 349, 96, 9], [352, 349, 52, 9], [238, 367, 52, 24], [314, 367, 26, 24], [346, 367, 56, 24]];
   for (const [fx, fy, fw, fh] of fields) {
-    m.fill(fx, fy, fw, fh, T.FIELD);
+    for (let y = fy; y < fy + fh; y++) for (let x = fx; x < fx + fw; x++) if (m.tileAt(x, y) === T.GRASS) m.set(x, y, T.FIELD);
     m.fields.push({ x: fx * TILE, y: fy * TILE, w: fw * TILE, h: fh * TILE });
   }
-  // farm co-op: farmhouse prefab beside the island road
   const pf = PREFABS.house2;
-  const fx = ISLAND_ROAD_X - pf.tw - 3, fy = 16;
-  m.fill(fx - 1, fy, pf.tw + 2, pf.th + 3, T.DIRT);
-  const row = { d: 9, x: fx, y: fy, w: pf.tw, h: pf.th, face: 'S' };
-  const b = placePrefab(m, row, "house2", fx, { biz: ["farm"], names: ["Refuge Farm Co-op"] }, rand);
+  const fx = 296, fy = 366;
+  m.fill(fx - 4, fy, pf.tw + 8, pf.th + 2, T.DIRT);
+  const row = { d: 9, x: fx, y: fy, w: pf.tw, h: pf.th, face: 'N' };
+  placePrefab(m, row, 'house2', fx, { biz: ['farm'], names: ['Refuge Farm Co-op'] }, rand);
   const farm = m.pois.find((p) => p.kind === 'farm');
-  farm.cargoPad = { x: (fx - 3) * TILE, y: (fy + pf.th + 1.5) * TILE };
-  m.fill(fx - 6, fy + pf.th, pf.tw + 9, 4, T.DIRT);
-  void b;
-  for (let k = 0; k < 70; k++) {
-    const tx = x0 + Math.floor(rand() * (MAP_W - x0 - 2)), ty = 2 + Math.floor(rand() * 290);
+  farm.cargoPad = { x: (fx - 2.5) * TILE, y: (fy + 3) * TILE };
+  for (let k = 0; k < 60; k++) {
+    const tx = F.box[0] + Math.floor(rand() * (F.box[2] - F.box[0])), ty = F.box[1] + Math.floor(rand() * (F.box[3] - F.box[1]));
     if (m.tileAt(tx, ty) === T.GRASS) addProp(m, rand() < 0.8 ? 'tree_b' : 'shrub_b', (tx + 0.5) * TILE, (ty + 0.5) * TILE, 12);
   }
-  m.dropSites.push({ x: (ISLAND_ROAD_X + 2) * TILE, y: 270 * TILE, name: 'the Refuge Island boonies' });
-  // mainland outskirts tree line (north and west edges)
-  for (let ty = 0; ty < COAST_ROAD_Y; ty += 2) for (let tx = 0; tx < RIVER_X0; tx += 2) {
-    if ((tx < 4 || ty < 4) && m.tileAt(tx, ty) === T.GRASS && hash2(tx, ty, m.seed) < 0.5) addProp(m, 'tree_b', (tx + 0.5) * TILE, (ty + 0.5) * TILE, 12);
-  }
+  m.dropSites.push({ x: 400 * TILE, y: 362 * TILE, name: 'the Refuge Island boonies' });
 }
 
 function buildStreetProps(m) {
@@ -663,7 +794,7 @@ function buildStreetProps(m) {
         houses: ['tree_a', 'shrub_a', 'mailbox', 'bush_a'], apartments: ['tree_b', 'bench_a', 'bush_b', 'trashcan'], civic: ['tree_a', 'bench_b', 'planter_sq'],
         towers: ['planter_sq', 'bench_m', 'news_a', 'news_b', 'trashcan', 'palm_s'], commercial: ['news_c', 'trashcan', 'bench_a', 'planter_g', 'bikerack'],
         nightlife: ['palm_s', 'palm_d', 'trashcan', 'news_b', 'foodcart'], industrial: ['dump_g', 'drum', 'pallet_s', 'cone'],
-        southside: ['bags', 'dump_o', 'tires', 'shrub_b'], harbor: ['drum', 'pallet', 'spool', 'dump_b'],
+        southside: ['bags', 'dump_o', 'tires', 'shrub_b'], harbor: ['drum', 'pallet', 'spool', 'dump_b'], factory: ['dump_g', 'drum', 'pallet_s', 'cone', 'tires'], park: ['tree_a', 'bench_a', 'shrub_a'],
       }[d.style] || ['trashcan'];
       const t = pool[Math.floor(hash2(tx, ty, 5) * pool.length)];
       addProp(m, t, x, y, t.startsWith('tree') || t.startsWith('dump') ? 10 : 0);
@@ -711,7 +842,7 @@ function buildCameras(m, rand) {
   const lit = m.nodes.filter((n) => n.light);
   const picks = [];
   // spread cameras: prefer avenue crossings in each district
-  for (let d = 0; d < 9; d++) {
+  for (let d = 0; d < DISTRICTS.length; d++) {
     const inD = lit.filter((n) => m.districtAt(n.x, n.y).id === d);
     if (!inD.length) continue;
     picks.push(inD[Math.floor(rand() * inD.length)]);

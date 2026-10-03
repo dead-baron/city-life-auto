@@ -3,7 +3,7 @@
 // asphalt, concrete/brick/slate sidewalks, water; building prefabs; road markings, curbs,
 // crosswalks, parking stalls and low street props.
 import { T, TILE, CHUNK_PX, MAP_W, MAP_H } from '../../shared/constants.js';
-import { hash2 } from '../../shared/rng.js';
+import { hash2, mulberry32 } from '../../shared/rng.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
 import { atlas } from './sprites.js';
@@ -40,6 +40,7 @@ export class GroundCache {
     const propRect = (p) => { const s = PROP_SIZES[p.t] || [40, 40]; return [p.x - s[0] / 2, p.y - s[1] / 2, p.x + s[0] / 2, p.y + s[1] / 2]; };
     this.lowProps = this.byChunk(map.props.filter((p) => !OVERHEAD.has(p.t)), propRect);
     this.highProps = this.byChunk(map.props.filter((p) => OVERHEAD.has(p.t)), propRect);
+    this.roofs = this.byChunk(map.roofs || [], (r) => [r.tx * TILE - 2, r.ty * TILE - 2, (r.tx + r.tw) * TILE + 10, (r.ty + r.th) * TILE + 10]);
     this.prefabs = this.byChunk(map.prefabs, (p) => [p.tx * TILE, p.ty * TILE, (p.tx + p.tw) * TILE, (p.ty + p.th) * TILE]);
     this.stalls = this.byChunk(map.stalls, (s) => [s.x, s.y, s.x + s.w, s.y + s.h]);
     this.signs = this.byChunk(map.buildings.filter((b) => b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]);
@@ -78,6 +79,7 @@ export class GroundCache {
     for (const r of this.roads.get(k) || []) drawRoadMarkings(g, m, r, cx, cy);
     for (const nd of this.nodes.get(k) || []) drawCrosswalks(g, m, nd);
     for (const s of this.stalls.get(k) || []) drawStall(g, s);
+    for (const r of this.roofs.get(k) || []) drawRoof(g, r);
     for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
     for (const b of this.signs.get(k) || []) for (const s of b.signs) drawSign(g, s);
     for (const p of this.lowProps.get(k) || []) drawProp(g, p);
@@ -136,6 +138,7 @@ function drawTile(g, m, tx, ty, x, y) {
       tex(g, d.plaza, tx, ty, x, y) || (g.fillStyle = '#8c6e5c', g.fillRect(x, y, TILE, TILE));
       break;
     case T.GRASS:
+      if (tex(g, 'grass', tx, ty, x, y)) break;
       g.fillStyle = pick(C.grass, tx, ty); g.fillRect(x, y, TILE, TILE);
       speckle(g, x, y, '#2f6a24', tx, ty, 12, 0.55);
       speckle(g, x, y, '#78b85a', tx, ty + 7, 7, 0.45);
@@ -147,6 +150,7 @@ function drawTile(g, m, tx, ty, x, y) {
       drawShore(g, m, tx, ty, x, y);
       break;
     case T.SAND:
+      if (tex(g, 'sand', tx, ty, x, y)) break;
       g.fillStyle = pick(C.sand, tx, ty); g.fillRect(x, y, TILE, TILE);
       speckle(g, x, y, '#a88f5a', tx, ty, 10, 0.45, 1);
       speckle(g, x, y, '#fff3d0', tx, ty + 3, 5, 0.5, 1);
@@ -159,6 +163,7 @@ function drawTile(g, m, tx, ty, x, y) {
       g.fillStyle = 'rgba(40,25,10,.6)'; g.fillRect(x + (hash2(tx, ty, 2) * 20 | 0), y + 3, 2, 2); g.fillRect(x + (hash2(tx, ty, 4) * 20 | 0) + 6, y + 19, 2, 2);
       break;
     case T.DIRT:
+      if (tex(g, 'dirt', tx, ty, x, y)) break;
       g.fillStyle = pick(C.dirt, tx, ty); g.fillRect(x, y, TILE, TILE);
       speckle(g, x, y, '#5a4428', tx, ty, 10, 0.45);
       break;
@@ -260,11 +265,130 @@ function drawPrefab(g, p) {
   const pf = PREFABS[p.key];
   const x = p.tx * TILE, y = p.ty * TILE, w = p.tw * TILE, h = p.th * TILE;
   if (!atlas.prefabs) { g.fillStyle = '#8a8278'; g.fillRect(x, y, w, h); return; }
-  const [sx, sy, sw, sh] = pf.src;
+  const [si, sx, sy, sw, sh] = pf.src;
+  const img = atlas.prefabs[si];
   g.save();
-  if (p.rot === 2) { g.translate(x + w, y + h); g.rotate(Math.PI); g.drawImage(atlas.prefabs, sx, sy, sw, sh, 0, 0, w, h); }
-  else g.drawImage(atlas.prefabs, sx, sy, sw, sh, x, y, w, h);
+  if (p.rot === 2) { g.translate(x + w, y + h); g.rotate(Math.PI); g.drawImage(img, sx, sy, sw, sh, 0, 0, w, h); }
+  else g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   g.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Procedural flat roofs (GTA-style dense blocks): drop shadow, concrete parapet with bevel,
+// roof surface by kind, rooftop equipment modules cut from the concept roof tiles, vents.
+const ROOF = {
+  tar: { base: '#58595d', rim: '#a9a6a0', speck: ['#67686c', '#4b4c50', '#727377'] },
+  gravel: { base: '#626264', rim: '#b4b1aa', speck: ['#717173', '#545456', '#7e7d7a'] },
+  metal: { base: '#5f7469', rim: '#8f9a94', speck: null },
+  glass: { base: '#3f5a74', rim: '#9fa4ab', speck: null },
+  tile: { base: '#9b5034', rim: '#7b3a24', speck: null },
+};
+const METAL_TINTS = ['#5f7469', '#6d6457', '#596a7d', '#7a5545', '#6f7270'];
+
+function drawRoof(g, r) {
+  const x = r.tx * TILE, y = r.ty * TILE, w = r.tw * TILE, h = r.th * TILE;
+  const rnd = mulberry32(r.seed);
+  const pal = ROOF[r.kind] || ROOF.tar;
+  const base = r.kind === 'metal' ? METAL_TINTS[r.seed % METAL_TINTS.length] : pal.base;
+  // cast shadow onto the street (down-right)
+  g.fillStyle = 'rgba(8,10,16,.38)';
+  g.fillRect(x + 8, y + h, w, 8); g.fillRect(x + w, y + 8, 8, h);
+  // body
+  g.fillStyle = '#1a1b20'; g.fillRect(x, y, w, h);
+  g.fillStyle = base; g.fillRect(x + 1, y + 1, w - 2, h - 2);
+  const ix = x + 7, iy = y + 7, iw = w - 14, ih = h - 14;
+  if (r.kind === 'metal') {
+    // corrugated sheet along the long axis, a ridge cap in the middle
+    const horiz = w >= h;
+    for (let k = 0; k < (horiz ? ih : iw); k += 4) {
+      g.fillStyle = shade(base, k % 8 < 4 ? 14 : -10);
+      if (horiz) g.fillRect(x + 1, iy + k, w - 2, 2); else g.fillRect(ix + k, y + 1, 2, h - 2);
+    }
+    g.fillStyle = shade(base, -30);
+    if (horiz) g.fillRect(x + 1, y + (h >> 1) - 2, w - 2, 4); else g.fillRect(x + (w >> 1) - 2, y + 1, 4, h - 2);
+    for (let k = 0; k < 3 + (rnd() * 4 | 0); k++) { // skylight strips and rust patches
+      g.fillStyle = rnd() < 0.5 ? 'rgba(170,210,230,.55)' : 'rgba(120,60,30,.35)';
+      const sw = horiz ? 12 : 26, sh = horiz ? 26 : 12;
+      g.fillRect(x + 10 + Math.floor(rnd() * Math.max(1, w - 20 - sw)), y + 10 + Math.floor(rnd() * Math.max(1, h - 20 - sh)), sw, sh);
+    }
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x + 1, y + h - 4, w - 2, 3); g.fillRect(x + w - 4, y + 1, 3, h - 2);
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x + 1, y + 1, w - 2, 2); g.fillRect(x + 1, y + 1, 2, h - 2);
+    return;
+  }
+  if (r.kind === 'tile') {
+    // pitched terracotta: two slopes, ridge, tile courses
+    const horiz = w >= h;
+    const half = horiz ? h >> 1 : w >> 1;
+    g.fillStyle = shade(base, 18); horiz ? g.fillRect(x + 1, y + 1, w - 2, half - 1) : g.fillRect(x + 1, y + 1, half - 1, h - 2);
+    g.fillStyle = shade(base, -16); horiz ? g.fillRect(x + 1, y + half, w - 2, h - half - 1) : g.fillRect(x + half, y + 1, w - half - 1, h - 2);
+    g.fillStyle = shade(base, -42);
+    for (let k = 6; k < (horiz ? h : w) - 2; k += 6) horiz ? g.fillRect(x + 1, y + k, w - 2, 1) : g.fillRect(x + k, y + 1, 1, h - 2);
+    for (let k = 0; k < (horiz ? w : h); k += 10) for (let j = 3; j < (horiz ? h : w); j += 12)
+      horiz ? g.fillRect(x + k + ((j / 6) & 1) * 5, y + j, 1, 5) : g.fillRect(x + j, y + k + ((j / 6) & 1) * 5, 5, 1);
+    g.fillStyle = '#5a2414'; horiz ? g.fillRect(x + 1, y + half - 2, w - 2, 4) : g.fillRect(x + half - 2, y + 1, 4, h - 2);
+    if (rnd() < 0.6) { // chimney
+      const cx = x + 12 + Math.floor(rnd() * (w - 34)), cy = y + 10 + Math.floor(rnd() * (h - 30));
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(cx + 4, cy + 4, 12, 12);
+      g.fillStyle = '#7d6e66'; g.fillRect(cx, cy, 12, 12); g.fillStyle = '#2a2420'; g.fillRect(cx + 3, cy + 3, 6, 6);
+    }
+    return;
+  }
+  // flat concrete-parapet roofs: tar / gravel / glass
+  if (pal.speck) {
+    for (let ty = 0; ty < h; ty += 8) for (let tx = 0; tx < w; tx += 8) {
+      const hh = hash2(r.tx * 64 + tx, r.ty * 64 + ty, 17);
+      if (hh < 0.45) continue;
+      g.fillStyle = pal.speck[(hh * 30 | 0) % 3];
+      g.fillRect(x + tx + ((hh * 97) | 0) % 6, y + ty + ((hh * 61) | 0) % 6, 2, 2);
+    }
+  } else { // glass curtain roof: panel grid + diagonal sheen
+    for (let k = 16; k < iw; k += 16) { g.fillStyle = '#2a3c4e'; g.fillRect(ix + k, iy, 1, ih); }
+    for (let k = 16; k < ih; k += 16) { g.fillStyle = '#2a3c4e'; g.fillRect(ix, iy + k, iw, 1); }
+    g.save();
+    g.beginPath(); g.rect(ix, iy, iw, ih); g.clip();
+    g.fillStyle = 'rgba(190,225,255,.13)';
+    g.beginPath();
+    for (let k = -ih; k < iw; k += 48) { g.moveTo(ix + k, iy + ih); g.lineTo(ix + k + 16, iy + ih); g.lineTo(ix + k + 16 + ih, iy); g.lineTo(ix + k + ih, iy); g.closePath(); }
+    g.fill();
+    g.restore();
+  }
+  // parapet rim with bevel + inner shadow
+  g.fillStyle = pal.rim;
+  g.fillRect(x + 1, y + 1, w - 2, 6); g.fillRect(x + 1, y + h - 7, w - 2, 6); g.fillRect(x + 1, y + 1, 6, h - 2); g.fillRect(x + w - 7, y + 1, 6, h - 2);
+  g.fillStyle = shade(pal.rim.length === 7 ? pal.rim : '#a9a6a0', 26); g.fillRect(x + 1, y + 1, w - 2, 2); g.fillRect(x + 1, y + 1, 2, h - 2);
+  g.fillStyle = shade(pal.rim.length === 7 ? pal.rim : '#a9a6a0', -44); g.fillRect(x + 1, y + h - 3, w - 2, 2); g.fillRect(x + w - 3, y + 1, 2, h - 2);
+  for (let k = x + 16; k < x + w - 8; k += 24) { g.fillRect(k, y + 1, 1, 6); g.fillRect(k, y + h - 7, 1, 6); } // coping joints
+  g.fillStyle = 'rgba(0,0,0,.32)'; g.fillRect(ix, iy, iw, 3); g.fillRect(ix, iy, 3, ih);
+  // equipment modules from the concept roof tiles, placed on a coarse grid without overlap
+  const mods = [];
+  const big = iw >= 180 && ih >= 160;
+  const wants = [];
+  if (big && r.kind !== 'tar' && rnd() < 0.55) wants.push('heli');
+  const pool = r.kind === 'glass' ? ['sky', 'ac', 'access'] : ['ac', 'tanks', 'access', 'sky', 'ac'];
+  const n = Math.min(5, Math.floor((iw * ih) / 26000) + (rnd() < 0.6 ? 1 : 0));
+  for (let k = 0; k < n; k++) wants.push(pool[Math.floor(rnd() * pool.length)]);
+  for (const t of wants) {
+    const s = PROP_SIZES['roof_' + t];
+    if (!s || s[0] > iw - 6 || s[1] > ih - 6) continue;
+    for (let tries = 0; tries < 8; tries++) {
+      const mx = ix + 3 + Math.floor(rnd() * (iw - s[0] - 6)), my = iy + 3 + Math.floor(rnd() * (ih - s[1] - 6));
+      if (mods.some((q) => mx < q[0] + q[2] + 4 && mx + s[0] + 4 > q[0] && my < q[1] + q[3] + 4 && my + s[1] + 4 > q[1])) continue;
+      mods.push([mx, my, s[0], s[1]]);
+      drawProp(g, { t: 'roof_' + t, x: mx + s[0] / 2, y: my + s[1] / 2 });
+      break;
+    }
+  }
+  // small vents / hatches in the gaps
+  for (let k = 0; k < 2 + Math.floor((iw * ih) / 9000); k++) {
+    const vx = ix + 4 + Math.floor(rnd() * (iw - 16)), vy = iy + 4 + Math.floor(rnd() * (ih - 16));
+    if (mods.some((q) => vx < q[0] + q[2] && vx + 12 > q[0] && vy < q[1] + q[3] && vy + 12 > q[1])) continue;
+    const big2 = rnd() < 0.3;
+    const sz = big2 ? 14 : 8;
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(vx + 2, vy + 2, sz, sz);
+    g.fillStyle = '#9b9a96'; g.fillRect(vx, vy, sz, sz);
+    g.fillStyle = '#3a3b3f'; g.fillRect(vx + 2, vy + 2, sz - 4, sz - 4);
+    if (big2) { g.fillStyle = '#9b9a96'; for (let j = vy + 4; j < vy + sz - 2; j += 3) g.fillRect(vx + 2, j, sz - 4, 1); }
+  }
 }
 
 function drawSign(g, s) {

@@ -185,3 +185,26 @@ Animations:
 Each sprite is cached per look, pose and frame. You can preview every archetype and pose at `/tools/character-preview.html`.
 
 ![Character lineup](screenshots/characters-lineup.png)
+
+## 2026-10-03 · GTA2-style city layout + sharp art
+
+**World layout (modelled on the GTA1/GTA2 level maps).** The city is now three islands separated by water channels and joined by bridges, plus a farm island:
+- **Industrial:** Harbor docks, Ironworks, Greenfield Park with a pond, and The Yards (gang turf).
+- **Residential:** Pine Hills, Northgate, Southside (gang turf) and Sunset Beach with piers.
+- **Downtown:** Civic Center with Central Park, the Downtown towers, Midtown shops and the Neon Strip.
+- **Refuge Island:** reached over a causeway from Neon Blvd; farm, fields and woods.
+
+Each island has a coast ring road with a waterfront outside it: quays, promenade, lawns or beach, with piers and marinas. Inside, a hand-laid avenue grid has T-junction stubs, and every cell is cut into irregular blocks of mixed sizes. Blocks are lined with the concept building lots. Leftover lots and small blocks become solid rooftop buildings, so the city reads dense like the originals:
+- tar, gravel, corrugated metal, glass or terracotta roofs
+- parapets
+- AC units, tanks, skylights and helipads cut from the concept roof tiles
+
+The district title now shows the island under it. Crossing a bridge shows "Liberty Bay". The map is 432x416 tiles, up from 384x352. Three hospitals, one per island: St. Neon General, Westside Medical and Ironworks Clinic.
+
+**Sharper graphics.** Buildings were blurry because the concept-sheet lots were stretched 2x at runtime. The art build now upscales them 4x with Real-ESRGAN, using a small torch-free numpy port in `tools/sr_upscale.py`. It then stores them at exactly 1 art px per world px, drawn nearest-neighbour. Grass, sand and dirt are new seamless pixel-art textures. The world only uses smoothing while zoomed out at speed, to avoid shimmer.
+
+**Tools.** `/tools/map-preview.html?scale=0.125` renders the whole city with the game's own chunk baker, plus district labels.
+
+Load test, 100 bots spread over the new map: 13–14 ms per tick (of a 50 ms budget), about 15 KB/s per player, 0 errors. All 21 tests pass.
+
+![City map](screenshots/city-map.jpg)

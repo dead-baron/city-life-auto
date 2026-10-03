@@ -485,7 +485,9 @@ function render(dt) {
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.fillStyle = '#10141c'; g.fillRect(0, 0, W, H);
-  g.imageSmoothingEnabled = false;
+  // crisp nearest-neighbour pixels at gameplay zoom; filtered only when zoomed out (fast driving)
+  // so minified art doesn't shimmer
+  g.imageSmoothingEnabled = z < 0.92;
   g.setTransform(DPR * z, 0, 0, DPR * z, DPR * (W / 2 - S.cam.x * z + shx), DPR * (H / 2 - S.cam.y * z + shy));
 
   // ground chunks
@@ -545,7 +547,7 @@ function render(dt) {
   // HUD bits
   const dist = S.map.districtAt(sp.x, sp.y);
   if (dist.name !== S.district) {
-    if (S.distCand === dist.name) { if (performance.now() - S.distCandAt > 600) { S.district = dist.name; S.hud.showDistrict(dist.name); } }
+    if (S.distCand === dist.name) { if (performance.now() - S.distCandAt > 600) { S.district = dist.name; S.hud.showDistrict(dist.name, dist.isl); } }
     else { S.distCand = dist.name; S.distCandAt = performance.now(); }
   }
   S.hud.setClock(S.loopTime, S.weather);
