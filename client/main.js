@@ -72,12 +72,13 @@ function startPractice() {
 function connect() {
   if (S.practice) return;
   const url = serverUrl();
-  $('t-status').textContent = `Connecting to ${url.replace(/^wss?:\/\//, '').replace(/\/ws$/, '')}...`;
+  // only announce the first attempt: rewriting the status on every retry made the title screen jump
+  if (!S.connectFailed) $('t-status').textContent = `Connecting to ${url.replace(/^wss?:\/\//, '').replace(/\/ws$/, '')}...`;
   let ws;
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
   S.ws = ws;
-  ws.onopen = () => { S.reconnectIn = 1000; ws.send(JSON.stringify({ t: 'hello', token: S.token })); };
+  ws.onopen = () => { S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token })); };
   ws.onmessage = (ev) => {
     if (typeof ev.data !== 'string') { onBinary(ev.data); return; }
     let m; try { m = JSON.parse(ev.data); } catch { return; }
@@ -91,6 +92,7 @@ function scheduleReconnect(why) {
   if (S.practice) return;
   S.welcomed = false;
   S.ws = null;
+  S.connectFailed = true;
   $('title').classList.remove('hidden');
   $('hud').classList.add('hidden');
   $('play').disabled = true;
