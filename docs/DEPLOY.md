@@ -57,3 +57,7 @@ Environment variables (in `deploy/city-life-auto.service`): `PORT`, `HOST`, `CLA
 - Oracle's free egress is 10 TB/month, roughly 75 players online 24/7 at that rate. Real usage is far lower.
 - There is no DDoS protection on the free tier. Before a public launch, put Cloudflare (free) in front of `play.deadbaron.com` (WebSockets are supported) or move to a VPS that includes it.
 - Moving servers: copy `~/cla-data/` (profiles + `secret.key`, which keeps everyone's guest tokens valid) to the new machine, run the same setup script, and point the `play` DNS record at it.
+
+## Releasing a client update
+
+Run `node tools/stamp-version.mjs` before committing. It hashes every file the browser loads into `version.json`; `client/boot.js` sees the new hash and refreshes the browser's cached copies, so players get the update immediately instead of after GitHub Pages' 10-minute cache.

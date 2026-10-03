@@ -310,3 +310,10 @@ Simulated standing slugfests (480 fights, no dodging): you beat frail NPCs 100% 
   - right stick aims drive-by fire, and pushing it all the way out shoots
   - a "point the stick where to go" option remains under Settings → Gamepad driving
 - On foot nothing changes: left stick moves, right stick aims, RT fires.
+
+## 2026-10-03 · Updates go live instantly + controller trigger fix
+
+- **Why the RT driving fix seemed missing:** GitHub Pages lets browsers cache the game's JavaScript for 10 minutes, so right after a push you could still be running the previous controls code. `client/boot.js` now checks `version.json` uncached on every launch. When the build changed, it re-downloads every game file fresh before starting. The title screen shows the build id and time, so you can see which version you're on.
+- **Release step:** run `node tools/stamp-version.mjs` before committing (it rewrites `version.json`).
+- **Controllers that report triggers as axes:** some browser/OS combinations expose an Xbox pad without the standard mapping, with triggers on axes 2 and 5 resting at -1 and the right stick on axes 3/4. These are now detected, so RT/LT work there too. Tested with both layouts in the automated browser: RT accelerates, LT brakes and then reverses.
+- Hard steering no longer scales the gas down in trigger-driving mode.

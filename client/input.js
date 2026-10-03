@@ -205,11 +205,20 @@ function readPad() {
   const v = (i) => (pad.buttons[i] ? pad.buttons[i].value : 0);
   const now = pad.buttons.map((x) => x.pressed);
   const edge = (i) => now[i] && !padPrev[i];
-  const [lx, ly] = radial(pad.axes[0] || 0, pad.axes[1] || 0, 0.16);
-  const [rx, ry] = radial(pad.axes[2] || 0, pad.axes[3] || 0, 0.22);
+  // Standard mapping (Chrome, Edge, Safari, Firefox on Windows): sticks on axes 0-3, triggers are
+  // analog buttons 6/7. Some browsers/OSes expose an Xbox pad without the standard mapping:
+  // triggers become axes 2 and 5 (resting at -1) and the right stick moves to axes 3/4.
+  const ax = pad.axes;
+  let rxRaw = ax[2] || 0, ryRaw = ax[3] || 0, lt = v(6), rt = v(7);
+  if (pad.mapping !== 'standard' && ax.length >= 6 && !(pad.buttons[7] && pad.buttons[7].value > 0)) {
+    rxRaw = ax[3] || 0; ryRaw = ax[4] || 0;
+    lt = Math.max(0, ((ax[2] ?? -1) + 1) / 2); rt = Math.max(0, ((ax[5] ?? -1) + 1) / 2);
+  }
+  const [lx, ly] = radial(ax[0] || 0, ax[1] || 0, 0.16);
+  const [rx, ry] = radial(rxRaw, ryRaw, 0.22);
   const out = {
     lx, ly, rx, ry,
-    a: b(0), bb: b(1), x: b(2), y: b(3), lb: edge(4), rb: edge(5), lt: v(6), rt: v(7), back: b(8), start: edge(9), l3: b(10), r3: edge(11),
+    a: b(0), bb: b(1), x: b(2), y: b(3), lb: edge(4), rb: edge(5), lt: lt > 0.06 ? lt : 0, rt: rt > 0.06 ? rt : 0, back: b(8), start: edge(9), l3: b(10), r3: edge(11),
     up: b(12), dUpEdge: edge(12), dDownEdge: edge(13), dLeftEdge: edge(14), dRightEdge: edge(15), aEdge: edge(0), bEdge: edge(1),
   };
   // left stick also navigates menus (edge-triggered when it crosses 0.6)
@@ -318,7 +327,7 @@ export function sample(view) {
     tt.clear();
   }
   const ml = Math.hypot(mx, my);
-  if (ml > 1) { mx /= ml; my /= ml; }
+  if (ml > 1 && !(bits & IN.TANK)) { mx /= ml; my /= ml; } // tank: steer and gas are independent axes
   return { bits, mx, my, aim };
 }
 
