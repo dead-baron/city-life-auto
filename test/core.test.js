@@ -674,3 +674,113 @@ test('driving: server steps the car once per received input, matching client pre
     assert.ok(Math.hypot(s.x - v.x, s.y - v.y) < 0.01, `tick ${k}: prediction ${s.x.toFixed(1)},${s.y.toFixed(1)} vs server ${v.x.toFixed(1)},${v.y.toFixed(1)}`);
   }
 });
+
+test('water: cars drive onto docks, sink and blow up in the water; drivers swim ashore; NPCs too', async () => {
+  const { T: TT } = await import('../shared/constants.js');
+  const { isSwimming } = await import('../shared/map.js');
+  const w = makeWorld(); const m = w.map;
+  let spot = null;
+  for (let ty = 0; ty < m.h && !spot; ty++) for (let tx = 2; tx < m.w - 8; tx++) {
+    if (m.tileAt(tx, ty) === TT.DOCK && m.tileAt(tx - 1, ty) === TT.DOCK && [1, 2, 3, 4, 5, 6].every((k) => [TT.WATER, TT.DEEP].includes(m.tileAt(tx + k, ty)))) { spot = { x: (tx - 1) * 32 + 16, y: ty * 32 + 16 }; break; }
+  }
+  assert.ok(spot, 'a dock edge exists');
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, spot.x - 60, spot.y);
+  const v = w.spawnVehicle('sedan', spot.x - 60, spot.y, 0, { npcOwned: false });
+  assert.ok(vehicles.tryEnter(w, p.ped));
+  let seq = p.ack;
+  for (let i = 0; i < 40 && !v.sinkAt; i++) { p.inputQ.push({ seq: ++seq, bits: IN.TANK, mx: 0, my: -1, aim: 0 }); w.step(); }
+  assert.ok(v.sinkAt, 'drove over the dock and off the edge');
+  assert.equal(p.ped.vehId, 0, 'driver spilled into the water');
+  assert.ok(isSwimming(m, p.ped), 'swimming');
+  for (let i = 0; i < 80; i++) { p.inputQ.push({ seq: ++seq, bits: 0, mx: 0, my: 0, aim: 0 }); w.step(); }
+  assert.ok(!w.get(v.id), 'the car sank and blew up underwater');
+  assert.ok(!p.ped.dead, 'the swimmer survives');
+  // swimming is slower than walking and you can't fight in the water
+  assert.equal(combat.tryAttack(w, p.ped, 0), false);
+  const x0 = p.ped.x;
+  for (let i = 0; i < 20; i++) { p.inputQ.push({ seq: ++seq, bits: 0, mx: -1, my: 0, aim: 0 }); w.step(); }
+  const swum = x0 - p.ped.x;
+  assert.ok(swum > 20 && swum < 110, `swim speed ${swum} px/s`);
+  // an NPC dumped in the water heads for shore
+  const n = spawnNpc(w, 'casual', spot.x + 150, spot.y, 'civ');
+  for (let i = 0; i < 400 && isSwimming(m, n); i++) w.step();
+  assert.ok(!isSwimming(m, n), 'NPC climbed out');
+});
+
+test('bridges are two layers: from the road you walk the deck, from the water you swim under it', async () => {
+  const { T: TT } = await import('../shared/constants.js');
+  const { isSwimming } = await import('../shared/map.js');
+  const w = makeWorld(); const m = w.map;
+  const { p } = joinPlayer(w);
+  // tile (206, 80) is the north edge of a river bridge; (206, 78) is open water above it
+  assert.equal(m.tileAt(206, 80), TT.BRIDGE);
+  teleport(w, p.ped, 206 * 32 + 16, 78 * 32);
+  let seq = p.ack;
+  const go = (n, my) => { for (let i = 0; i < n; i++) { p.inputQ.push({ seq: ++seq, bits: 0, mx: 0, my, aim: 0 }); w.step(); } };
+  go(3, 0);
+  go(30, 1);
+  assert.equal(m.tileAtPx(p.ped.x, p.ped.y), TT.BRIDGE, 'reached the bridge tiles');
+  assert.ok(isSwimming(m, p.ped), 'still swimming - under the deck');
+  // a pedestrian arriving along the road is on top
+  const q = joinPlayer(w).p;
+  teleport(w, q.ped, 198 * 32, 82 * 32);
+  let s2 = q.ack;
+  for (let i = 0; i < 30; i++) { q.inputQ.push({ seq: ++s2, bits: 0, mx: 1, my: 0, aim: 0 }); w.step(); }
+  assert.equal(m.tileAtPx(q.ped.x, q.ped.y), TT.BRIDGE);
+  assert.ok(!isSwimming(m, q.ped), 'walking on the deck');
+});
+
+test('flung out of fast vehicles: airborne, then roll / faceplant / slide; slow exits just step out', async () => {
+  const w = makeWorld();
+  const kinds = new Set();
+  for (let i = 0; i < 24; i++) {
+    const { p } = joinPlayer(w);
+    const n = w.map.nodes[(i * 7) % w.map.nodes.length];
+    teleport(w, p.ped, n.x + 32, n.y + 32);
+    const v = w.spawnVehicle('sedan', p.ped.x, p.ped.y, 0, { npcOwned: false });
+    if (!vehicles.tryEnter(w, p.ped) || p.ped.vehId !== v.id) continue;
+    v.vx = 520; v.vy = 0;
+    w.events.length = 0;
+    vehicles.exitVehicle(w, p.ped);
+    const ev = w.events.find((e) => e.ev.e === 'fling');
+    assert.ok(ev, 'fling event for the client animation');
+    kinds.add(ev.ev.k);
+    assert.ok(w.time < p.ped.airUntil, 'airborne');
+    assert.ok(p.ped.downUntil > p.ped.airUntil, 'lands and stays down a moment');
+  }
+  assert.deepEqual([...kinds].sort(), ['face', 'roll', 'slide'], 'all three landings happen');
+  // slow exit: no fling, no knockdown
+  const { p } = joinPlayer(w);
+  const v = w.spawnVehicle('sedan', p.ped.x + 30, p.ped.y, 0, { npcOwned: false });
+  vehicles.tryEnter(w, p.ped);
+  v.vx = 60;
+  vehicles.exitVehicle(w, p.ped);
+  assert.ok(!(w.time < (p.ped.airUntil || 0)) && !(w.time < p.ped.downUntil), 'stepped out normally');
+  // carjacked at low speed: a stumble, not a flight
+  const thief = joinPlayer(w).p;
+  const npcDriver = spawnNpc(w, 'casual', p.ped.x + 200, p.ped.y, 'driver');
+  const car = w.spawnVehicle('sedan', npcDriver.x, npcDriver.y, 0, {});
+  npcDriver.vehId = car.id; npcDriver.seat = 0; car.seats[0] = npcDriver.id;
+  teleport(w, thief.ped, car.x + 20, car.y + 30);
+  assert.ok(vehicles.tryEnter(w, thief.ped));
+  assert.ok(!(w.time < (npcDriver.airUntil || 0)) && npcDriver.downUntil - w.time <= 0.61, 'stumbled out');
+});
+
+test('world events: snatch-and-grab shows for nearby players, then a return-to target once you hold the purse', async () => {
+  const npcMod = await import('../server/systems/npc.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const n = w.map.nodes[30];
+  teleport(w, p.ped, n.x + 32, n.y + 32);
+  npcMod.snatchEvent(w, p);
+  let ev = null;
+  for (let i = 0; i < 300 && !ev; i++) { w.step(); ev = (players.buildMe(w, p).happen || []).find((e) => e.k === 'snatch'); }
+  assert.ok(ev, 'snatch event visible to the nearby player');
+  const thief = [...w.entities.values()].find((e) => e.npc && e.npc.role === 'mugger' && e.npc.hasPurse);
+  assert.ok(thief);
+  // take the purse back
+  p.profile.inventory.purse = 1;
+  const me = players.buildMe(w, p);
+  assert.ok((me.happen || []).some((e) => e.k === 'ret'), 'arrow back to the robbed victim');
+});

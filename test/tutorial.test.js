@@ -66,3 +66,9 @@ test('every gameplay rule is explained (numbers come from shared/rules.js)', () 
     assert.ok(new RegExp(`\\$\\{[^}]*\\b${name}\\b`).test(src), `rule ${name} is not used in the tutorial text`);
   }
 });
+
+test('every world event type is explained', async () => {
+  const { EVENT_KINDS } = await import('../shared/worldevents.js');
+  const all = STEPS.map((s) => s.text).join(' ').toLowerCase() + src.toLowerCase();
+  for (const [k, e] of Object.entries(EVENT_KINDS)) assert.ok(all.includes(`event_kinds.${k}`) || all.includes(e.label.toLowerCase()), `event "${e.label}" is not in the tutorial`);
+});

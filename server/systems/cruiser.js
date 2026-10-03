@@ -8,7 +8,7 @@
 import { K } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { collideVehicleTiles } from '../../shared/physics.js';
-import { CAR_BLOCK } from '../../shared/map.js';
+import { CAR_SPAWN_BLOCK, BOAT_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc } from './npc.js';
 import { driveToward, planRoute, removeVehicle } from './traffic.js';
@@ -32,7 +32,7 @@ export function clearSpot(world, ped, def) {
       const d = 90 + ring * 50 + def.L / 2;
       const x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
       const s = { x, y, a: 0, vx: 0, vy: 0 };
-      collideVehicleTiles(s, def, world.map, CAR_BLOCK);
+      collideVehicleTiles(s, def, world.map, def.kind === 'boat' ? BOAT_BLOCK : CAR_SPAWN_BLOCK);
       if (Math.hypot(s.x - x, s.y - y) < 0.5 && !world.query(x, y, def.L, K.VEH).length) return { x, y, a: 0 };
     }
   }

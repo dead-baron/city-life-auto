@@ -2,7 +2,9 @@
 import { K, VF, WEATHER } from '../../shared/constants.js';
 import { vehStep, vehLateralSpeed, vehForwardSpeed } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
-import { PED_BLOCK } from '../../shared/map.js';
+import { PED_BLOCK, WATER_T } from '../../shared/map.js';
+
+export const SINK_S = 3.2; // a car that drove into the water sinks, then blows up underwater
 import * as combat from './combat.js';
 import * as cargo from './cargo.js';
 import * as law from './law.js';
@@ -46,6 +48,15 @@ export function update(world, dt) {
     }
     // player-driven cars were already stepped once per received input (players.processInputs)
     if (v.ownStepTick !== world.tick) stepVehicle(world, v, dt, env);
+    // land vehicles that end up in the water sink
+    if (v.def.kind !== 'boat') {
+      if (!v.sinkAt && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
+      if (v.sinkAt) {
+        v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);
+        v.input.throttle = 0;
+        if (now - v.sinkAt > SINK_S) { sinkBoom(world, v); continue; }
+      }
+    }
     const fwd = vehForwardSpeed(v);
     v.brake = v.input.throttle < -0.1 && fwd > 20;
     v.reverse = fwd < -10;
@@ -160,9 +171,9 @@ function bikeCrash(world, v, impact) {
     const ped = world.get(sid);
     if (!ped) continue;
     ejectPed(world, ped, true);
-    ped.vx = v.vx * 0.8; ped.vy = v.vy * 0.8;
-    ped.downUntil = world.time + 2;
-    combat.damage(world, ped, (impact - 200) * 0.45, null, 'crash', Math.atan2(v.vy, v.vx));
+    // over the handlebars
+    fling(world, ped, v.vx * 0.9, v.vy * 0.9, null, 'crash');
+    combat.damage(world, ped, (impact - 200) * 0.3, null, 'crash', Math.atan2(v.vy, v.vx));
   }
 }
 
@@ -194,16 +205,34 @@ export function explode(world, v, attackerPed) {
 // can finish you off.
 import { BAIL_SPEED } from '../../shared/rules.js';
 export { BAIL_SPEED };
-function bail(world, ped, v, spd) {
+function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
-  // out of the driver's door, carried along by the car's momentum
-  const side = a + Math.PI / 2 * (ped.seat === 1 ? 1 : -1);
-  ped.vx = v.vx * 0.78 + Math.cos(side) * 60; ped.vy = v.vy * 0.78 + Math.sin(side) * 60;
-  const t = Math.min(2.6, 0.7 + spd / 380);
-  ped.downUntil = world.time + t;
-  ped.tumbleUntil = world.time + t;
-  ped.rollT = 0;
-  if (spd > 230) combat.damage(world, ped, (spd - 210) * 0.1, null, 'bail', a);
+  // out of the door, carried along by the car's momentum
+  const side = a + Math.PI / 2 * (seat % 2 === 1 ? 1 : -1);
+  fling(world, ped, v.vx * 0.8 + Math.cos(side) * 70, v.vy * 0.8 + Math.sin(side) * 70, null, 'bail');
+}
+
+// Thrown through the air: a short arc (airborne, barely slowing), then one of a few landings -
+// tuck and roll, a faceplant, or sliding along on your back - and the hurt that goes with it.
+// Clients animate the arc from the 'fling' event; the server owns the path and the damage.
+export const LANDINGS = ['roll', 'face', 'slide'];
+export function fling(world, ped, vx, vy, attacker = null, cause = 'bail', dmgMul = 1) {
+  const now = world.time;
+  const spd = Math.hypot(vx, vy);
+  const kind = LANDINGS[Math.floor(world.rand() * LANDINGS.length)];
+  const air = Math.max(0.28, Math.min(0.75, 0.2 + spd / 1100)) * (0.85 + world.rand() * 0.3);
+  const slide = kind === 'face' ? 0.25 : kind === 'roll' ? Math.min(1.4, 0.5 + spd / 700) : Math.min(1.8, 0.6 + spd / 600);
+  const getUp = kind === 'face' ? 1.1 : 0.7;
+  ped.vx = vx; ped.vy = vy; ped.rollT = 0;
+  ped.airUntil = now + air;
+  ped.tumbleUntil = now + air + slide;
+  ped.downUntil = Math.max(ped.downUntil || 0, now + air + slide + getUp);
+  ped.a = Math.atan2(vy, vx);
+  world.emit(ped.x, ped.y, { e: 'fling', id: ped.id, d: +air.toFixed(2), k: kind, x: ped.x, y: ped.y });
+  // landing hurts more the faster you were going; a faceplant a little extra
+  const dmg = Math.max(0, spd - 200) * 0.1 * (kind === 'face' ? 1.25 : 1) * dmgMul;
+  if (dmg > 0) combat.damage(world, ped, dmg, attacker, cause, ped.a);
+  return kind;
 }
 
 // Caught in your own car blowing up: thrown clear, then either dead or barely hanging on.
@@ -213,15 +242,38 @@ function blownOut(world, ped, v, attackerPed) {
   const a = world.rand() * Math.PI * 2;
   ped.x = v.x + Math.cos(a) * (v.def.W / 2 + 18); ped.y = v.y + Math.sin(a) * (v.def.W / 2 + 18);
   world.place(ped);
-  ped.vx = Math.cos(a) * 320 + v.vx * 0.5; ped.vy = Math.sin(a) * 320 + v.vy * 0.5;
   world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a, n: 12 });
+  fling(world, ped, Math.cos(a) * 340 + v.vx * 0.5, Math.sin(a) * 340 + v.vy * 0.5, attackerPed, 'explosion', 0);
   if (world.rand() < 0.5) { combat.damage(world, ped, 999, attackerPed, 'explosion', a); return; }
-  ped.downUntil = world.time + 3.5;
-  ped.tumbleUntil = world.time + 1.4;
-  ped.rollT = 0;
+  ped.downUntil = Math.max(ped.downUntil, world.time + 3.5);
   const left = ped.maxHp * (0.06 + world.rand() * 0.1);
   combat.damage(world, ped, Math.max(1, ped.hp - left), attackerPed, 'explosion', a);
   if (!ped.dead) { ped.bleeding = true; ped.burnUntil = world.time + 2; if (ped.player) world.notify(ped.player, 'Blown clear of the wreck - badly hurt. Heal up fast!', 'bad'); }
+}
+
+// Drove off a dock or a bridge-less shore: everyone spills into the water and swims for it.
+function startSink(world, v) {
+  v.sinkAt = world.time;
+  v.sirenOn = false;
+  world.emit(v.x, v.y, { e: 'splash', x: v.x, y: v.y, n: 30 });
+  for (let i = 0; i < v.seats.length; i++) {
+    const q = v.seats[i] ? world.get(v.seats[i]) : null;
+    if (!q) continue;
+    v.seats[i] = 0;
+    q.vehId = 0; q.seat = -1; q.prevBits = 0;
+    const side = v.a + (i % 2 ? Math.PI / 2 : -Math.PI / 2);
+    q.x = v.x + Math.cos(side) * (v.def.W / 2 + 12); q.y = v.y + Math.sin(side) * (v.def.W / 2 + 12);
+    q.vx = v.vx * 0.3; q.vy = v.vy * 0.3;
+    world.place(q);
+    if (q.npc && q.npc.role === 'driver') { q.npc.role = 'civ'; q.npc.state = 'wander'; }
+    if (q.player) { q.player.meDirty = true; world.notify(q.player, 'Your vehicle is sinking - swim for the shore!', 'bad'); }
+  }
+  v.input = { throttle: 0, steer: 0, hb: false };
+}
+function sinkBoom(world, v) {
+  world.emit(v.x, v.y, { e: 'sinkboom', x: v.x, y: v.y });
+  for (const cid of v.cargo) if (cid) { const c = world.get(cid); if (c) world.remove(c); }
+  world.remove(v);
 }
 
 export function nearestVehicle(world, ped, range) {
@@ -241,6 +293,7 @@ export function tryEnter(world, ped) {
   if (!v) return false;
   const p = ped.player;
   if (v.wreckAt) { if (p) world.notify(p, 'That vehicle is wrecked.', 'bad'); return false; }
+  if (v.sinkAt) return false;
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
   if (ped.carrying) cargo.dropCrate(world, ped);
   let seat = -1;
@@ -275,14 +328,15 @@ export function tryEnter(world, ped) {
 }
 
 function carjack(world, ped, v, driver) {
+  const spd = speedOf(v);
   ejectPed(world, driver, true);
-  // yanked out onto the pavement: a moment on the ground gives the thief time to pull away
-  driver.downUntil = world.time + 1.6;
-  driver.vx = -Math.sin(v.a) * 120; driver.vy = Math.cos(v.a) * 120;
+  // yanked out: at speed they go flying; slow, they just stumble out onto the pavement
+  if (spd > BAIL_SPEED) bail(world, driver, v, spd, 0);
+  else { driver.downUntil = world.time + 0.6; driver.vx = -Math.sin(v.a) * 90; driver.vy = Math.cos(v.a) * 90; }
   // NPC passengers bail out too (a stolen cruiser shouldn't keep its officers on board)
   for (let i = 1; i < v.seats.length; i++) {
     const q = v.seats[i] ? world.get(v.seats[i]) : null;
-    if (q && q.npc) { ejectPed(world, q, true); q.downUntil = world.time + 0.8; }
+    if (q && q.npc) { ejectPed(world, q, true); if (spd > BAIL_SPEED) bail(world, q, v, spd, i); }
   }
   v.carjacked = true;
   law.crime(world, ped, 'carjack', driver, v.x, v.y);
@@ -294,12 +348,14 @@ export function exitVehicle(world, ped) {
   const v = world.get(ped.vehId);
   if (!v) { ped.vehId = 0; ped.seat = -1; return; }
   const spd = speedOf(v);
-  if (v.def.kind === 'boat') {
-    const spot = findExitSpot(world, v, ped, 150);
-    if (!spot) { if (ped.player) world.notify(ped.player, 'Too far from shore to get out.', 'warn'); return; }
-  }
+  if (v.def.kind === 'boat' && !findExitSpot(world, v, ped, 150) && ped.player) world.notify(ped.player, 'Over the side - swim for it!', 'info');
   ejectPed(world, ped, false);
   if (spd > BAIL_SPEED && v.def.kind !== 'boat') bail(world, ped, v, spd);
+}
+
+function sideSpot(v, ped) {
+  const side = v.a + (ped.seat % 2 ? Math.PI / 2 : -Math.PI / 2);
+  return { x: v.x + Math.cos(side) * (v.def.W / 2 + 14), y: v.y + Math.sin(side) * (v.def.W / 2 + 14) };
 }
 
 function findExitSpot(world, v, ped, maxR) {
@@ -324,7 +380,8 @@ export function ejectPed(world, ped, force) {
   if (v) {
     const i = v.seats.indexOf(ped.id);
     if (i >= 0) v.seats[i] = 0;
-    const spot = findExitSpot(world, v, ped, force ? 400 : 150) || world.map.spawns.default;
+    // nowhere dry nearby (out on the water): over the side, into the water beside the vehicle
+    const spot = findExitSpot(world, v, ped, v.def.kind === 'boat' ? 150 : force ? 400 : 150) || sideSpot(v, ped);
     ped.x = spot.x; ped.y = spot.y;
     ped.a = v.a;
     if (ped.player) { ped.player.meDirty = true; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }

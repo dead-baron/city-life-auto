@@ -189,16 +189,7 @@ function drawTile(g, m, tx, ty, x, y) {
   switch (t) {
     case T.ROAD: case T.BRIDGE: {
       tex(g, d.road, tx, ty, x, y) || (g.fillStyle = '#3a3b40', g.fillRect(x, y, TILE, TILE));
-      if (t === T.BRIDGE) {
-        const up = m.tileAt(tx, ty - 1) !== T.BRIDGE && m.tileAt(tx, ty - 1) !== T.ROAD;
-        const down = m.tileAt(tx, ty + 1) !== T.BRIDGE && m.tileAt(tx, ty + 1) !== T.ROAD;
-        g.fillStyle = '#9a9ca3';
-        if (up) g.fillRect(x, y, TILE, 6);
-        if (down) g.fillRect(x, y + TILE - 6, TILE, 6);
-        g.fillStyle = '#55575e';
-        if (up) { g.fillRect(x, y + 5, TILE, 1); if (tx % 2 === 0) g.fillRect(x + 12, y, 5, 8); }
-        if (down) { g.fillRect(x, y + TILE - 6, TILE, 1); if (tx % 2 === 0) g.fillRect(x + 12, y + TILE - 8, 5, 8); }
-      }
+      if (t === T.BRIDGE) drawBridgeEdges(g, m, tx, ty, x, y);
       break;
     }
     case T.LOT:
@@ -221,6 +212,7 @@ function drawTile(g, m, tx, ty, x, y) {
     case T.WATER: case T.DEEP:
       tex(g, t === T.DEEP ? 'deep' : 'water', tx, ty, x, y) || (g.fillStyle = '#1f5aa8', g.fillRect(x, y, TILE, TILE));
       drawShore(g, m, tx, ty, x, y);
+      drawBridgeShadow(g, m, tx, ty, x, y);
       break;
     case T.SAND:
       if (tex(g, 'sand', tx, ty, x, y)) break;
@@ -252,6 +244,60 @@ function drawTile(g, m, tx, ty, x, y) {
       break;
     default:
       g.fillStyle = '#111'; g.fillRect(x, y, TILE, TILE);
+  }
+}
+
+// Bridges read as raised decks: concrete walkway + railing (with posts) on every side over the
+// water, a dark lip, and on the water below a visible side face plus a shadow (light from the
+// north-west, so it falls south / east).
+const isWet = (q) => q === T.WATER || q === T.DEEP;
+export function drawBridgeEdges(g, m, tx, ty, x, y) {
+  const sides = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+  for (const [dx, dy] of sides) {
+    if (!isWet(m.tileAt(tx + dx, ty + dy))) continue;
+    const horiz = dy !== 0;
+    const along = horiz ? tx : ty;
+    // walkway slab
+    g.fillStyle = '#a3a5ab';
+    if (horiz) g.fillRect(x, dy < 0 ? y : y + TILE - 8, TILE, 8); else g.fillRect(dx < 0 ? x : x + TILE - 8, y, 8, TILE);
+    g.fillStyle = 'rgba(255,255,255,.18)';
+    if (horiz) g.fillRect(x, dy < 0 ? y + 2 : y + TILE - 7, TILE, 1); else g.fillRect(dx < 0 ? x + 2 : x + TILE - 7, y, 1, TILE);
+    // railing: rail line + posts every half tile
+    g.fillStyle = '#3e4046';
+    if (horiz) g.fillRect(x, dy < 0 ? y + 1 : y + TILE - 2, TILE, 1.5); else g.fillRect(dx < 0 ? x + 1 : x + TILE - 2, y, 1.5, TILE);
+    for (let k = 0; k < 2; k++) {
+      const o = k * 16 + 6;
+      if (horiz) g.fillRect(x + o, dy < 0 ? y : y + TILE - 3, 2, 3); else g.fillRect(dx < 0 ? x : x + TILE - 3, y + o, 3, 2);
+    }
+    // inner curb against the roadway
+    g.fillStyle = 'rgba(0,0,0,.35)';
+    if (horiz) g.fillRect(x, dy < 0 ? y + 8 : y + TILE - 9, TILE, 1); else g.fillRect(dx < 0 ? x + 8 : x + TILE - 9, y, 1, TILE);
+    // a lamp every few tiles
+    if (along % 6 === 0) { g.fillStyle = '#26282d'; if (horiz) g.fillRect(x + 15, dy < 0 ? y + 2 : y + TILE - 6, 3, 4); else g.fillRect(dx < 0 ? x + 2 : x + TILE - 6, y + 15, 4, 3); }
+  }
+}
+function drawBridgeShadow(g, m, tx, ty, x, y) {
+  const n = m.tileAt(tx, ty - 1) === T.BRIDGE, w = m.tileAt(tx - 1, ty) === T.BRIDGE;
+  const s = m.tileAt(tx, ty + 1) === T.BRIDGE, e = m.tileAt(tx + 1, ty) === T.BRIDGE;
+  if (n) { // deck to the north: its side face, then its shadow on the water
+    g.fillStyle = '#4c4e55'; g.fillRect(x, y, TILE, 5);
+    g.fillStyle = '#2f3136'; g.fillRect(x, y + 5, TILE, 1);
+    const gr = g.createLinearGradient(0, y + 6, 0, y + 26);
+    gr.addColorStop(0, 'rgba(0,10,25,.5)'); gr.addColorStop(1, 'rgba(0,10,25,0)');
+    g.fillStyle = gr; g.fillRect(x, y + 6, TILE, 20);
+  }
+  if (w) {
+    g.fillStyle = '#4c4e55'; g.fillRect(x, y, 4, TILE);
+    const gr = g.createLinearGradient(x + 4, 0, x + 20, 0);
+    gr.addColorStop(0, 'rgba(0,10,25,.45)'); gr.addColorStop(1, 'rgba(0,10,25,0)');
+    g.fillStyle = gr; g.fillRect(x + 4, y, 16, TILE);
+  }
+  if (s) { g.fillStyle = 'rgba(0,10,25,.22)'; g.fillRect(x, y + TILE - 4, TILE, 4); }
+  if (e) { g.fillStyle = 'rgba(0,10,25,.22)'; g.fillRect(x + TILE - 3, y, 3, TILE); }
+  // support piers peeking out from under the deck
+  if ((n && tx % 7 === 0) || (w && ty % 7 === 0)) {
+    g.fillStyle = '#6b6e75';
+    if (n) g.fillRect(x + 10, y + 5, 12, 4); else g.fillRect(x + 4, y + 10, 4, 12);
   }
 }
 

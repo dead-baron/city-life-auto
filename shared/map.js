@@ -28,8 +28,16 @@ export const ISLANDS = {
 export const PED_BLOCK = new Uint8Array(16);
 export const CAR_BLOCK = new Uint8Array(16);
 export const BOAT_BLOCK = new Uint8Array(16).fill(1);
+// PED_BLOCK: where people can't *walk* (NPC pathing, spawns, exits). Players can still swim
+// (SWIM_BLOCK). Cars can drive onto docks and off the edge into water (they sink); spawns use
+// CAR_SPAWN_BLOCK so nothing is ever placed in the water.
+export const SWIM_BLOCK = new Uint8Array(16);
+export const CAR_SPAWN_BLOCK = new Uint8Array(16);
+export const WATER_T = new Uint8Array(16);
+WATER_T[T.WATER] = 1; WATER_T[T.DEEP] = 1;
 for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP]) PED_BLOCK[t] = 1;
-for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP, T.DOCK]) CAR_BLOCK[t] = 1;
+for (const t of [T.WALL, T.BUILDING]) { SWIM_BLOCK[t] = 1; CAR_BLOCK[t] = 1; }
+for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP]) CAR_SPAWN_BLOCK[t] = 1;
 BOAT_BLOCK[T.WATER] = 0; BOAT_BLOCK[T.DEEP] = 0; BOAT_BLOCK[T.BRIDGE] = 0;
 
 // Surface handling multipliers: [speedMul, gripMul, isAsphalt]
@@ -40,8 +48,8 @@ SURFACE[T.SIDEWALK] = [0.95, 0.95, 1];
 SURFACE[T.ROAD] = [1, 1, 1];
 SURFACE[T.PLAZA] = [0.95, 0.95, 1];
 SURFACE[T.BUILDING] = [1, 1, 0];
-SURFACE[T.WATER] = [1, 1, 0];
-SURFACE[T.DEEP] = [1, 1, 0];
+SURFACE[T.WATER] = [0.3, 0.35, 0]; // a car that drove off the edge wallows and sinks
+SURFACE[T.DEEP] = [0.3, 0.35, 0];
 SURFACE[T.SAND] = [0.5, 0.6, 0];
 SURFACE[T.DOCK] = [0.9, 0.9, 0];
 SURFACE[T.DIRT] = [0.85, 0.8, 0];
@@ -228,6 +236,28 @@ export class CityMap {
     return best;
   }
   poisOf(kind) { return this.pois.filter((p) => p.kind === kind); }
+}
+
+// Nearest walkable land to a point (for swimmers heading ashore), ring search in tiles.
+export function isSwimming(map, ped) {
+  const t = map.tileAtPx(ped.x, ped.y);
+  return WATER_T[t] === 1 || (t === T.BRIDGE && !!ped.under);
+}
+
+export function nearestLand(map, x, y, maxTiles = 24) {
+  const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
+  for (let r = 0; r <= maxTiles; r++) {
+    let best = null, bd = Infinity;
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      const t = map.tileAt(cx + dx, cy + dy);
+      if (PED_BLOCK[t] || t === T.BRIDGE) continue;
+      const px = (cx + dx + 0.5) * TILE, py = (cy + dy + 0.5) * TILE, d = (px - x) ** 2 + (py - y) ** 2;
+      if (d < bd) { bd = d; best = { x: px, y: py }; }
+    }
+    if (best) return best;
+  }
+  return null;
 }
 
 export function isTurf(x, y) { // syndicate gang territory (pixels): The Yards + Southside

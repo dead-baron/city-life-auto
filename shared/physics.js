@@ -1,8 +1,8 @@
 // Shared movement physics. The server runs these authoritatively; the client runs the
 // exact same functions to predict its own character/vehicle between snapshots.
 
-import { TILE, PED_RADIUS } from './constants.js';
-import { PED_BLOCK, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './map.js';
+import { TILE, PED_RADIUS, T } from './constants.js';
+import { PED_BLOCK, SWIM_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './map.js';
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 
@@ -28,14 +28,23 @@ export function newPedState(x, y) {
 
 // mods: { speedMul, canMove, canSprint, regenMul, staminaMax }
 export const TUMBLE_FRICTION = 2.2;
+export const AIR_FRICTION = 0.35;   // flung out of a car: barely slows until you hit the ground
+export const SWIM_SPEED = 0.42;     // swimming speed vs walking
 export function pedStep(s, inp, dt, map, mods) {
   const bits = inp.bits;
   const pressed = bits & ~s.prevBits;
   s.prevBits = bits;
   const smax = mods.staminaMax || PED.staminaMax;
+  // swimming (players, and NPCs who ended up in the water): slow, no sprint, no dive-roll
+  // Bridge tiles are two layers: the deck (reached from the road) and the water under it
+  // (reached by swimming in). s.under remembers which one this ped is on.
+  const tile = map.tileAtPx(s.x, s.y);
+  if (WATER_T[tile]) s.under = true; else if (tile !== T.BRIDGE) s.under = false;
+  const swim = !!mods.canSwim && (WATER_T[tile] === 1 || (tile === T.BRIDGE && !!s.under));
   if (!mods.canMove) {
     // knocked down: stop dead; tumbling (bailed out of a fast car / blown out of one): slide and roll
-    if (mods.tumble) { const k = Math.exp(-TUMBLE_FRICTION * dt); s.vx *= k; s.vy *= k; } else { s.vx *= 0.5; s.vy *= 0.5; }
+    if (mods.air) { const k = Math.exp(-AIR_FRICTION * dt); s.vx *= k; s.vy *= k; }
+    else if (mods.tumble) { const k = Math.exp(-(swim ? 6 : TUMBLE_FRICTION) * dt); s.vx *= k; s.vy *= k; } else { s.vx *= 0.5; s.vy *= 0.5; }
     s.rollT = 0;
   } else if (s.rollT > 0) {
     s.rollT -= dt;
@@ -45,16 +54,17 @@ export function pedStep(s, inp, dt, map, mods) {
     let mx = inp.mx, my = inp.my;
     const ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
-    if ((pressed & IN.DIVE) && s.stamina >= PED.rollCost && ml > 0.2) {
+    if ((pressed & IN.DIVE) && !swim && s.stamina >= PED.rollCost && ml > 0.2) {
       s.rollT = PED.rollTime; s.rdx = mx / Math.max(ml, 1e-6); s.rdy = my / Math.max(ml, 1e-6);
       if (Math.hypot(s.rdx, s.rdy) > 1.01) { const l = Math.hypot(s.rdx, s.rdy); s.rdx /= l; s.rdy /= l; }
       s.stamina -= PED.rollCost;
       s.vx = s.rdx * PED.rollSpeed; s.vy = s.rdy * PED.rollSpeed;
     } else {
-      const sprint = (bits & IN.SPRINT) && s.stamina > 1 && ml > 0.1 && mods.canSprint;
+      const sprint = (bits & IN.SPRINT) && s.stamina > 1 && ml > 0.1 && mods.canSprint && !swim;
+      const smul = mods.speedMul * (swim ? SWIM_SPEED : 1);
       if (mods.analog) {
         // players: analog walk/run, eased acceleration and a short glide when the stick is released
-        const spd = analogSpeed(ml, sprint) * mods.speedMul;
+        const spd = analogSpeed(ml, sprint) * smul;
         const dirx = ml > 1e-3 ? mx / ml : 0, diry = ml > 1e-3 ? my / ml : 0;
         const tvx = dirx * spd, tvy = diry * spd;
         const cur = Math.hypot(s.vx, s.vy);
@@ -74,7 +84,7 @@ export function pedStep(s, inp, dt, map, mods) {
           s.a = wrapAngle(Math.abs(d) <= step ? want : s.a + Math.sign(d) * step);
         }
       } else {
-        const spd = (sprint ? PED.sprint : PED.walk) * mods.speedMul;
+        const spd = (sprint ? PED.sprint : PED.walk) * smul;
         const k = 1 - Math.exp(-PED.accel * dt);
         s.vx += (mx * spd - s.vx) * k;
         s.vy += (my * spd - s.vy) * k;
@@ -87,7 +97,7 @@ export function pedStep(s, inp, dt, map, mods) {
   }
   if (s.stamina > smax) s.stamina = smax;
   s.x += s.vx * dt; s.y += s.vy * dt;
-  collideCircle(s, PED_RADIUS, map, PED_BLOCK);
+  collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK);
 }
 
 export function collideCircle(s, r, map, block) {

@@ -1,8 +1,8 @@
 // City Life Auto browser client: a "dumb window" that sends input vectors, predicts only
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
-import { TILE, CHUNK_PX, DT, K, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
-import { generateCity, lightState } from '../shared/map.js';
+import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
+import { generateCity, lightState, WATER_T } from '../shared/map.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
@@ -15,6 +15,7 @@ import { GroundCache, drawOverheadProp, drawPrefabGlow, debrisColors, lampHead }
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
+import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
 
@@ -157,7 +158,8 @@ function onBinary(buf) {
     if (lastS && s.tick - lastS.t > 2) e.buf.push({ t: s.tick - 1, x: lastS.x, y: lastS.y, a: lastS.a });
     e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a });
     if (e.buf.length > 5) e.buf.shift();
-    e.flags = it.flags; e.hp = it.hp; e.parent = it.parent; e.extra = it.extra;
+    e.flags = it.flags; e.hp = it.hp; e.parent = it.parent;
+    if (it.kind === K.PED) { e.extra = it.extra & 127; e.swim = (it.extra & 128) !== 0; } else e.extra = it.extra;
   }
   reconcile(s);
 }
@@ -165,7 +167,7 @@ function onBinary(buf) {
 // ---------------------------------------------------------------------------
 // Client-side prediction for the local character / driven vehicle
 function pedModsFrom(flags, speedMul) {
-  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, tumble: !!(flags & 16), analog: true };
+  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, tumble: !!(flags & 16), air: !!(flags & 32), canSwim: true, analog: true };
 }
 
 function reconcile(s) {
@@ -178,7 +180,7 @@ function reconcile(s) {
   const old = S.pred ? { x: S.pred.s.x, y: S.pred.s.y, a: S.pred.s.a } : null;
   let st;
   if (kind === 'ped') {
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits, under: !!(S.ents.get(s.ctrlId) || {}).swim };
     S.pred = { kind, s: st, mods: pedModsFrom(s.selfFlags, s.self.speedMul), prev: null };
   } else {
     const e = S.ents.get(s.ctrlId);
@@ -242,7 +244,7 @@ function fixedStep() {
     if (input.menuSelect) S.hud.choose(S.hud.menuFocus);
     if (input.menuBack) S.hud.closeMenu();
   } else if (S.bigmap && input.menuBack) { toggleMap(false);
-  }
+  } else if (S.me && S.me.dead) deathPad();
   const n = takeNumberPick();
   if (n !== null) {
     if (S.hud.menuOpen) S.hud.choose(n);
@@ -296,6 +298,7 @@ function onEvent(ev) {
       if (a && !(a.localSwing && S.loopClock - a.localSwing < 0.6)) { a.swingAt = S.loopClock; a.swingSide = ev.side || 0; }
       break;
     }
+    case 'fling': { const e = S.ents.get(ev.id); if (e) { e.flingAt = S.loopClock; e.flingDur = ev.d; e.flingK = ev.k; e.flingLanded = false; } break; }
     case 'knockdown': {
       fx.ring(ev.x, ev.y, 30, 'rgba(255,230,120,', 0.4);
       fx.floatText(ev.x, ev.y - 26, 'KNOCKDOWN!', '#ffd36b');
@@ -320,7 +323,8 @@ function onEvent(ev) {
       break;
     }
     case 'geyser': S.geysers.push({ x: ev.x, y: ev.y, until: performance.now() + ev.d * 1000 }); fx.splash(ev.x, ev.y, 14); break;
-    case 'splash': fx.splash(ev.x, ev.y); sfx('splash', distVol(ev.x, ev.y)); break;
+    case 'splash': fx.splash(ev.x, ev.y, ev.n || 10); sfx('splash', distVol(ev.x, ev.y)); break;
+    case 'sinkboom': fx.splash(ev.x, ev.y, 44); fx.ring(ev.x, ev.y, 60, 'rgba(220,240,255,', 1.2); fx.ring(ev.x, ev.y, 36, 'rgba(255,190,90,', 0.5); for (let i = 0; i < 14; i++) fx.smoke(ev.x + (Math.random() - 0.5) * 50, ev.y + (Math.random() - 0.5) * 50, false); sfx('explode', distVol(ev.x, ev.y) * 0.45); S.cam.shake = Math.max(S.cam.shake, 6 * distVol(ev.x, ev.y)); break;
     case 'thud': sfx('thud', distVol(ev.x, ev.y)); break;
     case 'door': sfx('door', distVol(ev.x, ev.y)); break;
     case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); if (ev.n) fx.floatText(ev.x, ev.y - 18, `+$${ev.n}`, '#7fe07f'); break;
@@ -361,9 +365,9 @@ function setupDev() {
   const box = $('dev');
   if (!S.dev) { box.classList.add('hidden'); return; }
   box.innerHTML = '<b>DEV / PLAYTEST CHEATS</b>';
-  const cmds = [['rain', 'Start rain'], ['clear', 'Stop rain'], ['night', 'Jump to night'], ['day', 'Jump to day'], ['money', '+$25k'], ['guns', 'Give weapons'],
+  const cmds = [['guns', 'Give weapons'], ['rain', 'Start rain'], ['clear', 'Stop rain'], ['night', 'Jump to night'], ['day', 'Jump to day'], ['money', '+$25k'],
     ['samaritan', '+50 Samaritan'], ['wanted', '2 stars', { n: 2 }], ['wanted', '4 stars', { n: 4 }], ['clean', 'Clear wanted'], ['record', 'Wipe criminal record (felonies)'], ['cop', 'Join the police (badge + rank)'], ['promote', 'Promote police rank'],
-    ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['heal', 'Heal']];
+    ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['snatch', 'Snatch-and-grab nearby'], ['heal', 'Heal'], ['die', 'Die (respawn test)']];
   for (const [c, label, extra] of cmds) {
     const b = document.createElement('button');
     b.textContent = label;
@@ -397,6 +401,17 @@ initInput(canvas, {
 });
 input.onDevice = () => setTimeout(() => { onResize(); if (S.hud && S.me) { $('helpbox').dataset.sig = ''; S.hud.setMe(S.me); } }, 0);
 detectDevice();
+
+// Death screen with a controller: D-pad / stick picks where to wake up, A confirms.
+function deathPad() {
+  const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];
+  if (!btns.length) return;
+  if (S.deathFocus === undefined || S.deathFocus >= btns.length) S.deathFocus = Math.max(0, btns.findIndex((b) => b.classList.contains('on')));
+  const step = input.menuNav || input.menuLR;
+  if (step) S.deathFocus = (S.deathFocus + step + btns.length) % btns.length;
+  btns.forEach((b, i) => b.classList.toggle('pfocus', input.device === 'gamepad' && i === S.deathFocus));
+  if (input.menuSelect) btns[S.deathFocus].click();
+}
 
 // ---- tutorial: guided tour over the live city map ---------------------------------------------
 let tutMap = null;
@@ -706,6 +721,51 @@ function callCruiser() {
   if (c.s === 'none' && c.cd > 0) { S.hud.toast(`Dispatch can send a new cruiser in ${c.cd}s.`, 'warn'); return; }
   send({ t: 'cruiser' });
 }
+// World events: a coloured arrow around the player points at each one (and a ring marks it
+// when it's on screen). Each arrow shows for ARROW_SHOW_S seconds from when it first appeared
+// and then fades, so an ignored event doesn't nag forever; the radar blip stays.
+const evSeen = new Map();
+function drawEventArrows(g, list, z, now) {
+  const me = selfPos();
+  const tNow = performance.now() / 1000;
+  const live = new Set();
+  let slot = 0;
+  for (const ev of list) {
+    const kind = EVENT_KINDS[ev.k];
+    if (!kind) continue;
+    live.add(ev.id);
+    if (!evSeen.has(ev.id)) evSeen.set(ev.id, tNow);
+    const age = tNow - evSeen.get(ev.id);
+    const alpha = age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);
+    if (alpha <= 0) continue;
+    const dx = ev.x - me.x, dy = ev.y - me.y, d = Math.hypot(dx, dy);
+    g.save();
+    g.globalAlpha = alpha;
+    // ring on the event itself
+    const ph = (now * 1.4) % 1;
+    g.strokeStyle = kind.color; g.lineWidth = 3 / z;
+    g.beginPath(); g.arc(ev.x, ev.y, (18 + ph * 22) / Math.max(z, 0.5), 0, 6.28); g.stroke();
+    if (d > 150) {
+      const a = Math.atan2(dy, dx), r = (78 + slot * 6) / z;
+      const ax = me.x + Math.cos(a) * r, ay = me.y + Math.sin(a) * r, s = 15 / z;
+      g.translate(ax, ay);
+      g.save(); g.rotate(a);
+      g.fillStyle = kind.color; g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineWidth = 2 / z;
+      g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.7, -s * 0.8); g.lineTo(-s * 0.3, 0); g.lineTo(-s * 0.7, s * 0.8); g.closePath(); g.fill(); g.stroke();
+      g.restore();
+      const txt = `${kind.label} · ${Math.round(d / 32)}m`;
+      g.font = `600 ${12 / z}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const ly = (Math.sin(a) > 0 ? 1 : -1) * 22 / z;
+      g.lineWidth = 3 / z; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(txt, 0, ly);
+      g.fillStyle = kind.color; g.fillText(txt, 0, ly);
+    }
+    g.restore();
+    slot++;
+  }
+  // remember dismissed arrows for a while, so walking out of range and back doesn't re-nag
+  for (const [id, t0] of evSeen) if (!live.has(id) && tNow - t0 > 600) evSeen.delete(id);
+}
+
 // Officers see a small red/blue chevron over criminals they can see; it turns into a pulsing
 // "cuff" ring once the suspect is on the ground (walk up and press interact).
 function drawSuspectMarks(g, ids, z, now) {
@@ -908,11 +968,23 @@ function render(dt) {
 
   for (const b of bags) { g.save(); g.translate(b.rx, b.ry); g.rotate(b.ra); drawBag(g, b.d.t, now); g.restore(); }
   for (const c of crates) if ((c.flags & 3) === 0) drawCrateEnt(c, now);
+  // water level first: swimmers, then boats - and the bridge decks drawn back over them, so
+  // anything passing under a bridge really is under it
+  const inWater = (e) => WATER_T[S.map.tileAtPx(e.rx, e.ry)] === 1 || S.map.tileAtPx(e.rx, e.ry) === T.BRIDGE;
+  const swimmers = peds.filter((p) => !(p.flags & PF.INVEH) && p.swim);
+  const boats = vehs.filter((v) => VEHICLE_BY_INDEX[v.d.m] && VEHICLE_BY_INDEX[v.d.m].kind === 'boat');
+  for (const p of swimmers) drawPed(p, now);
+  for (const v of boats) drawVehicleEnt(v, now, dt);
+  for (const v of boats) if (inWater(v)) coverWithBridge(v.rx, v.ry, 80);
+  for (const p of swimmers) coverWithBridge(p.rx, p.ry, 20);
   // downed / dead peds under vehicles
-  for (const p of peds) if (p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) drawPed(p, now);
-  for (const v of vehs) drawVehicleEnt(v, now, dt);
+  for (const p of peds) if ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p)) drawPed(p, now);
+  for (const v of vehs) if (!boats.includes(v)) drawVehicleEnt(v, now, dt);
   for (const c of crates) if ((c.flags & 3) === 2) drawCrateEnt(c, now);
-  for (const p of peds) if (!(p.flags & (PF.DEAD | PF.DOWN | PF.STUN))) drawPed(p, now);
+  for (const p of peds) if (!(p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p)) drawPed(p, now);
+  // your own boat stays readable under a bridge: a faint outline through the deck
+  if (S.pred && S.pred.kind === 'veh') { const me = S.ents.get(S.ctrlId); const d = me && me.d ? VEHICLE_BY_INDEX[me.d.m] : null; if (d && d.kind === 'boat' && underBridge(me.rx, me.ry, d.L / 2)) outlineVehicle(me, d); }
+  else if (S.pred) { const me = S.ents.get(S.ctrlId); if (me && me.swim && S.map.tileAtPx(me.rx, me.ry) === T.BRIDGE) { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); } }
   for (const c of crates) if ((c.flags & 3) === 1) drawCrateEnt(c, now);
   for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
 
@@ -1034,14 +1106,41 @@ function drawCrateEnt(c, now) {
 const SEAT_BIKE = [[2, 0], [-12, 0]];
 const PED_SCALE = 1.35; // characters read at ~40% of a sedan's length, like the concept scenes
 const PED_BUILD_SCALE = [0.92, 1, 1.07, 1.16]; // frail, average, tough, brute
+// Re-draw the baked bridge-deck tiles around a point (over a boat / swimmer beneath them).
+function coverWithBridge(x, y, r) {
+  const t0x = Math.floor((x - r) / TILE), t1x = Math.floor((x + r) / TILE), t0y = Math.floor((y - r) / TILE), t1y = Math.floor((y + r) / TILE);
+  for (let ty = t0y; ty <= t1y; ty++) for (let tx = t0x; tx <= t1x; tx++) {
+    if (S.map.tileAt(tx, ty) !== T.BRIDGE) continue;
+    const cx = Math.floor(tx * TILE / CHUNK_PX), cy = Math.floor(ty * TILE / CHUNK_PX);
+    const ch = S.ground.get(cx, cy);
+    g.drawImage(ch, tx * TILE - cx * CHUNK_PX, ty * TILE - cy * CHUNK_PX, TILE, TILE, tx * TILE, ty * TILE, TILE, TILE);
+  }
+}
+function underBridge(x, y, r) {
+  for (const [dx, dy] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) if (S.map.tileAtPx(x + dx, y + dy) === T.BRIDGE) return true;
+  return false;
+}
+function outlineVehicle(v, def) {
+  g.save(); g.translate(v.rx, v.ry); g.rotate(v.ra);
+  g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2; g.setLineDash([6, 5]);
+  g.strokeRect(-def.L / 2, -def.W / 2, def.L, def.W);
+  g.restore();
+}
+
 function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
   const f = v.flags;
+  // a land vehicle in the water is sinking: it settles, darkens and fades, bubbling
+  const sinking = def.kind !== 'boat' && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+  v.sinkT = sinking ? (v.sinkT || 0) + dt : 0;
+  const sk = Math.min(1, v.sinkT / 3);
+  if (sinking && Math.random() < 0.5) S.fx.splash(v.rx + (Math.random() - 0.5) * def.L * 0.6, v.ry + (Math.random() - 0.5) * def.W * 0.6, 1);
   g.save();
   g.translate(v.rx, v.ry);
   g.rotate(v.ra);
-  if (def.kind !== 'boat') drawVehicleShadow(g, v.d, def);
+  if (sinking) { g.globalAlpha = 1 - 0.75 * sk; g.scale(1 - 0.18 * sk, 1 - 0.18 * sk); }
+  if (def.kind !== 'boat' && !sinking) drawVehicleShadow(g, v.d, def);
   if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }
@@ -1084,19 +1183,54 @@ function drawVehicleEnt(v, now, dt) {
   void dt;
 }
 
+// rings on the water around a swimmer, plus a little splash while they paddle
+function drawSwimRipples(p, now) {
+  g.save();
+  g.strokeStyle = 'rgba(220,240,255,.55)'; g.lineWidth = 1.5;
+  for (let k = 0; k < 2; k++) {
+    const ph = (now * 0.9 + k * 0.5 + p.id * 0.13) % 1;
+    g.globalAlpha = 1 - ph;
+    g.beginPath(); g.ellipse(p.rx, p.ry, 12 + ph * 16, 9 + ph * 12, 0, 0, 6.28); g.stroke();
+  }
+  g.globalAlpha = 0.35; g.fillStyle = '#0c3a66';
+  g.beginPath(); g.ellipse(p.rx, p.ry + 2, 13, 10, 0, 0, 6.28); g.fill();
+  g.restore();
+  if ((p.as || 0) > 30 && Math.random() < 0.12 && S.map.tileAtPx(p.rx, p.ry) !== T.BRIDGE) S.fx.splash(p.rx, p.ry, 2);
+}
+
 function drawPed(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
   let pose = pedPose(p);
-  if (pose === 'down' && !(f & PF.DEAD) && (p.as || 0) > 70) pose = 'roll'; // tumbling out of a fast car
+  // thrown from a vehicle: airborne arc, then a roll / faceplant / slide on the back
+  const flT = p.flingAt !== undefined ? now - p.flingAt : 99;
+  const flying = flT < (p.flingDur || 0);
+  const flK = p.flingK;
+  const flRecent = flT < (p.flingDur || 0) + 3;
+  if (!flying && flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
+  if (flying) pose = flK === 'roll' ? 'roll' : 'down';
+  else if (pose === 'down' && !(f & PF.DEAD) && (p.as || 0) > 70 && !(flRecent && flK !== 'roll')) pose = 'roll'; // tumbling along
   let fr = pose === 'move' || pose === 'carry' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   const lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
   const spr = pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra);
   const hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
+  const swimming = !(f & PF.INVEH) && !!p.swim;
+  if (swimming) drawSwimRipples(p, now);
   g.save();
-  g.translate(p.rx + (hitK ? Math.cos(p.hitA) * 5 * hitK : 0), p.ry + (hitK ? Math.sin(p.hitA) * 5 * hitK : 0));
-  g.rotate(p.ra + (hitK ? 0.25 * hitK : 0));
+  if (swimming) g.globalAlpha = f & PF.DEAD ? 0.5 : 0.72; // body under the surface, head above
+  let lift = 0, spin = 0, grow = 1;
+  if (flying) {
+    const k = flT / p.flingDur, h = Math.sin(Math.PI * k);
+    lift = h * 20; grow = 1 + 0.4 * h;
+    spin = flK === 'roll' ? k * Math.PI * 3 : flK === 'slide' ? k * Math.PI : 0;
+    // shadow stays on the ground while the body flies
+    g.save(); g.globalAlpha = 0.35 * (1 - 0.5 * h); g.fillStyle = '#000';
+    g.beginPath(); g.ellipse(p.rx + h * 6, p.ry + h * 10, 11 * (1 - 0.3 * h), 7 * (1 - 0.3 * h), 0, 0, 6.28); g.fill(); g.restore();
+  } else if (flRecent && flK === 'slide' && (f & PF.DOWN)) spin = Math.PI; // landed on the back
+  g.translate(p.rx + (hitK ? Math.cos(p.hitA) * 5 * hitK : 0), p.ry - lift + (hitK ? Math.sin(p.hitA) * 5 * hitK : 0));
+  g.rotate(p.ra + spin + (hitK ? 0.25 * hitK : 0));
+  if (grow !== 1) g.scale(grow, grow);
   if (pose === 'punch' && (fr & 3) === 2) { g.translate(3, 0); }
   if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);
   const bs = PED_BUILD_SCALE[p.d.app && p.d.app.bd !== undefined ? p.d.app.bd : 1] || 1;
@@ -1205,6 +1339,7 @@ function drawWorldLabels(peds, vehs, now, z) {
     g.beginPath(); g.arc(r.x, r.y, r.r, 0, 6.28); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
   }
   if (me && me.suspects && me.suspects.length) drawSuspectMarks(g, me.suspects, z, now);
+  if (me && me.happen) drawEventArrows(g, me.happen, z, now);
   if (me && me.job) {
     g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     const bob = Math.sin(now * 4) * 5;

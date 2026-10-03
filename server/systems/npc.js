@@ -4,12 +4,13 @@
 import { K, T, WEATHER } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { pedStep } from '../../shared/physics.js';
-import { isTurf, PED_BLOCK } from '../../shared/map.js';
+import { isTurf, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { ARCHETYPES, makeAppearance, BUILDS, rollBuild } from '../entities.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import * as law from './law.js';
+import * as events from './events.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 
@@ -69,6 +70,11 @@ export function update(world, dt) {
     if (n.role === 'cop' || n.role === 'medic' || n.role === 'driver') continue; // other systems drive these
     if (now < ped.downUntil || now < ped.stunUntil) continue;
     if (n.state === 'passed') { ped.vx = 0; ped.vy = 0; continue; }
+    // ended up in the water (thrown from a car, knocked off a dock): swim for the nearest shore
+    if (isSwimming(world.map, ped)) {
+      if (!n.shore || now > (n.shoreAt || 0)) { n.shore = nearestLand(world.map, ped.x, ped.y); n.shoreAt = now + 2; }
+      if (n.shore) { pedStep(ped, seek(ped, n.shore.x, n.shore.y, true), dt, world.map, walkMods(world, ped, 1)); continue; }
+    }
     if (n.role === 'civ' || n.role === 'mugger') checkDive(world, ped, now);
     let inp = NO_INPUT, factor = 0.55;
     switch (n.state) {
@@ -337,14 +343,16 @@ function spawnByDemographic(world, x, y, night) {
 }
 
 // ---- Snatch-and-grab (GDD §12) ---------------------------------------------------
-function snatchEvent(world) {
+export function snatchEvent(world, force = null) {
   world.nextSnatch ??= world.time + 40;
-  if (world.time < world.nextSnatch) return;
+  if (world.time < world.nextSnatch && !force) return;
   world.nextSnatch = world.time + 70 + rng() * 60;
   const online = [...world.players.values()].filter((p) => p.conn && p.ped && !p.ped.dead);
   if (!online.length) return;
-  const p = online[Math.floor(rng() * online.length)];
-  const victims = world.query(p.ped.x, p.ped.y, 650, K.PED).filter((e) => e.npc && e.npc.role === 'civ' && !e.dead && (e.npc.archetype === 'socialite' || e.npc.archetype === 'executive') && e.npc.state === 'wander');
+  const p = force || online[Math.floor(rng() * online.length)];
+  if (force && !online.includes(force)) return;
+  let victims = world.query(p.ped.x, p.ped.y, 650, K.PED).filter((e) => e.npc && e.npc.role === 'civ' && !e.dead && (e.npc.archetype === 'socialite' || e.npc.archetype === 'executive') && e.npc.state === 'wander');
+  if (!victims.length && force) { const sp = spawnNpc(world, 'socialite', p.ped.x + 160, p.ped.y, 'civ'); victims = [sp]; }
   if (!victims.length) return;
   const victim = victims[Math.floor(rng() * victims.length)];
   const ang = rng() * Math.PI * 2;
@@ -369,6 +377,7 @@ function mugRun(world, ped, now) {
       world.emit(v.x, v.y, { e: 'scream', x: v.x, y: v.y });
       law.logDispatch(world, 'mugging', v.x, v.y, null, 1, 'witness');
       for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - v.x, p.ped.y - v.y) < 900) world.notify(p, 'Snatch-and-grab! A mugger grabbed a purse - stop them (no penalty).', 'warn');
+      events.add(world, { kind: 'snatch', x: ped.x, y: ped.y, thief: ped.id, victim: v.id, until: now + 150 });
       n.fx = v.x; n.fy = v.y;
       return NO_INPUT;
     }

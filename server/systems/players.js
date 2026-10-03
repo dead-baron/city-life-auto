@@ -3,8 +3,8 @@
 import { PF, FACTION, TILE } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
-import { pedStep, driveInput, TUMBLE_FRICTION } from '../../shared/physics.js';
-import { PED_BLOCK } from '../../shared/map.js';
+import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
+import { PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
 import { store } from '../store.js';
@@ -16,6 +16,7 @@ import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as homes from './homes.js';
 import * as cruiser from './cruiser.js';
+import * as events from './events.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS } from '../../shared/rules.js';
 export { GHOST_SECONDS, RESPAWN_SECONDS };
@@ -133,7 +134,8 @@ export function pedMods(world, ped) {
   if (ped.buffs.energy > now) speedMul *= 1.15;
   if (ped.fishing) speedMul *= 0;
   return {
-    canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0),
+    canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),
+    canSwim: !!ped.player || isSwimming(world.map, ped), // players swim anywhere; NPCs only get out of water
     regenMul: ped.buffs.coffee > now ? 2.2 : 1,
     staminaMax: ped.buffs.energy > now ? 140 : 100,
   };
@@ -197,9 +199,10 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   // on foot
   if (ped.fishing && (Math.abs(inp.mx) > 0.3 || Math.abs(inp.my) > 0.3)) jobs.cancelFishing(world, p, 'You reeled in your line.');
   const tumbling = world.time < (ped.tumbleUntil || 0);
+  const fr = world.time < (ped.airUntil || 0) ? AIR_FRICTION : TUMBLE_FRICTION;
   const v0 = tumbling ? Math.hypot(ped.vx, ped.vy) : 0;
   pedStep(ped, inp, dt, world.map, { ...pedMods(world, ped), analog: true });
-  if (tumbling) tumbleImpact(world, ped, v0, dt);
+  if (tumbling) tumbleImpact(world, ped, v0, dt, fr);
   if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
   if (inp.bits & IN.FIRE) {
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
@@ -215,8 +218,8 @@ function applyInput(world, p, ped, inp, pressed, dt) {
 
 // Sliding along the tarmac after bailing out / being blown out of a car: slamming into a wall,
 // a car or a lamp post at speed hurts, a lot.
-function tumbleImpact(world, ped, v0, dt) {
-  const expect = v0 * Math.exp(-TUMBLE_FRICTION * dt);
+export function tumbleImpact(world, ped, v0, dt, friction = TUMBLE_FRICTION) {
+  const expect = v0 * Math.exp(-friction * dt);
   let v1 = Math.hypot(ped.vx, ped.vy);
   let lost = expect - v1;
   // parked / moving cars and solid props stop you too
@@ -234,7 +237,7 @@ function tumbleImpact(world, ped, v0, dt) {
   if (lost < 90) return;
   world.emit(ped.x, ped.y, { e: 'crash', x: ped.x, y: ped.y, p: Math.min(0.6, lost / 700) });
   world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: Math.atan2(ped.vy, ped.vx), n: 6 });
-  ped.tumbleUntil = 0;
+  ped.tumbleUntil = 0; ped.airUntil = 0;
   ped.downUntil = Math.max(ped.downUntil, world.time + 1.2);
   combat.damage(world, ped, (lost - 70) * 0.22, null, 'bail', Math.atan2(ped.vy, ped.vx));
 }
@@ -416,7 +419,7 @@ export function buildMe(world, p) {
     garageCap: homes.garageCap(world, prof),
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
     spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, spawnChoice: p.respawnChoice || null,
-    cruiser: cruiser.stateFor(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
+    cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev,
   };
 }

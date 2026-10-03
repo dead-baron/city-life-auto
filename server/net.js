@@ -5,6 +5,7 @@
 import { K, CHUNK_PX } from '../shared/constants.js';
 import { SnapshotWriter, CTRL, SNAP_ENTITY } from '../shared/protocol.js';
 import { WEAPONS } from '../shared/items.js';
+import { isSwimming } from '../shared/map.js';
 import * as players from './systems/players.js';
 import * as vehicles from './systems/vehicles.js';
 
@@ -28,7 +29,7 @@ function descVersion(e) { return e.kind === K.PED ? (e.appVer || 0) : e.kind ===
 
 function fields(world, e) {
   switch (e.kind) {
-    case K.PED: return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId, WEAPONS[e.weapon]?.i ?? 0];
+    case K.PED: return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId, (WEAPONS[e.weapon]?.i ?? 0) | (!e.vehId && isSwimming(world.map, e) ? 128 : 0)]; // bit 7: in the water (incl. under a bridge)
     case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), 0, 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [0, 1, 0, e.cashOnly ? 0 : e.tier];
@@ -89,7 +90,7 @@ export function send(world) {
         ctrl = CTRL.PED; ctrlId = ped.id;
         const mods = players.pedMods(world, ped);
         self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, av: 0, stamina: ped.stamina, rollT: ped.rollT, rdx: ped.rdx, rdy: ped.rdy, speedMul: mods.speedMul };
-        sflags = (mods.canMove ? 1 : 0) | (mods.canSprint ? 2 : 0) | (mods.regenMul > 1 ? 4 : 0) | (mods.staminaMax > 100 ? 8 : 0) | (mods.tumble ? 16 : 0);
+        sflags = (mods.canMove ? 1 : 0) | (mods.canSprint ? 2 : 0) | (mods.regenMul > 1 ? 4 : 0) | (mods.staminaMax > 100 ? 8 : 0) | (mods.tumble ? 16 : 0) | (mods.air ? 32 : 0);
       }
     } else if (ped) { ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: 0, vy: 0 }; }
     writer.begin(tick, p.ack, world.loopTime, world.weather, ctrl, ctrlId, self, sflags, ped ? ped.prevBits : 0);

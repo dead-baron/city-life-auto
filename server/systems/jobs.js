@@ -6,6 +6,7 @@ import { RIVER_X0, RIVER_X1 } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
+import * as events from './events.js';
 
 const rng = mulberry32(5150);
 
@@ -45,6 +46,7 @@ export function spawnDrop(world, forceTier = 0) {
   c.expires = world.time + 900;
   const name = tier === 4 ? 'Legendary Carbon-Gold Case' : 'Secure Iron Vault';
   world.dropRumor = { x: site.x, y: site.y, until: world.time + 120, tier };
+  events.add(world, { kind: 'drop', x: site.x, y: site.y, until: world.time + 120 });
   world.broadcast({ e: 'toast', text: `Rumor: a ${name} was spotted near ${site.name}. Fence it, or turn it in.`, tone: 'warn' });
   return c;
 }

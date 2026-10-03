@@ -14,6 +14,7 @@
 import { ISLANDS, DISTRICTS } from './map.js';
 import { TILE, MAP_W, MAP_H, STAR_HEAT, DAY_LOOP_S, DAY_PART_S } from './constants.js';
 import { SHOPS, WEAPONS } from './items.js';
+import { EVENT_KINDS, ARROW_SHOW_S } from './worldevents.js';
 import {
   ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS,
   SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
@@ -21,7 +22,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 1;
+export const TUTORIAL_VERSION = 2;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -57,6 +58,8 @@ export const STEPS = [
   // ---- basics --------------------------------------------------------------------------------
   { ch: 'basics', title: 'Moving and driving', at: { spawn: 'default' },
     text: `Move with [[move]] - push further to run. [[sprint]] sprints, [[dive]] dives out of the way. Walk up to any vehicle and press [[vehicle]] to get in: parked cars, traffic, even boats. [[gas]] accelerates, [[brake]] brakes and reverses. Taking one that isn't yours is a crime if anyone sees it. Bail out of a fast car and you tumble along the road - hit a wall at speed and it can kill you.` },
+  { ch: 'basics', title: 'Into the water', at: { poi: 'marina' },
+    text: `Cars can drive right onto the docks - and off the end. A car in the water sinks and blows up, but you climb out and swim: slower, no running or fighting, and you can climb ashore anywhere. Boats from {{marina}} slip under the bridges; swim or sail under one and you're hidden beneath the deck.` },
   { ch: 'basics', title: 'Fighting', at: { spawn: 'default' },
     text: `Aim with [[aim]] and attack with [[fire]]. Land punches in quick succession to floor someone - 3 hits for most people, 4 for tough guys. [[nextw]] switches weapons, [[reload]] reloads, [[throw]] throws what you're carrying.` },
   { ch: 'basics', title: 'Your HUD and the map', at: { city: 1 },
@@ -78,7 +81,7 @@ export const STEPS = [
   { ch: 'citizen', title: 'Homes and wheels', at: { homes: 'Pine Hills' },
     text: `Buy a {{home}} to respawn there, rest to full health and park cars in its garage. New cars at {{dealer}}, boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
   { ch: 'citizen', title: 'Good Samaritan points', at: { poi: 'evidence' },
-    text: `Doing good earns Samaritan points: finish deliveries, return a snatched purse to its owner, or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
+    text: `Doing good earns Samaritan points: finish deliveries, stop a ${EVENT_KINDS.snatch.label.toLowerCase()} (an orange blip and arrow), then ${EVENT_KINDS.ret.label.toLowerCase()} to its owner (green), or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
 
   // ---- criminal ------------------------------------------------------------------------------
   { ch: 'criminal', title: 'Crime needs a witness', at: { cameras: 1 },
@@ -88,7 +91,7 @@ export const STEPS = [
   { ch: 'criminal', title: 'Lying low', at: { poi: 'clothing' },
     text: `A new outfit at {{clothing}} ($${price('clothing', 'outfit')}) drops your public wanted level - but only if no cop is watching. The city remembers your peak: commit even a small crime in disguise and the heat spikes straight back. A respray at {{garage}} ($${price('garage', 'respray')}) hides a hot car and cleans the blood off the hood.` },
   { ch: 'criminal', title: 'Contraband drops', at: { dropSites: 1 }, route: { from: { dropSites: 1 }, to: { poi: 'fence' }, veh: 'flatbed', chaser: 'police' },
-    text: `Every few minutes rare crates land at a drop site - watch the radar for a rumor circle. Iron vaults and carbon-gold cases are worth a fortune at {{fence}} in {{fence:where}}, the black market (it also sells a Micro SMG for $${price('fence', 'smg')}). Everyone else wants them too.` },
+    text: `Every few minutes rare crates land at a drop site - a ${EVENT_KINDS.drop.label.toLowerCase()} shows as a purple blip and rumor circle on the radar. Event arrows fade after ${ARROW_SHOW_S} seconds; the blips stay. Iron vaults and carbon-gold cases are worth a fortune at {{fence}} in {{fence:where}}, the black market (it also sells a Micro SMG for $${price('fence', 'smg')}). Everyone else wants them too.` },
   { ch: 'criminal', title: 'Gang turf', at: { turf: 1 },
     text: `{{turfs}} belong to the syndicate. Their members attack outsiders, and fighting back on their turf isn't a crime. Muggers also prowl the streets - drop one and return the purse for Samaritan points.` },
   { ch: 'criminal', title: 'Busted or wasted', at: { poi: 'police' },

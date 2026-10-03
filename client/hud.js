@@ -4,6 +4,7 @@ import { WEAPONS, ITEMS } from '../shared/items.js';
 import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
 import { input } from './input.js';
+import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/map.js';
 import { weaponIcon } from './render/peds.js';
 
@@ -106,10 +107,10 @@ export class HUD {
       const chosen = opts.find((o) => o.id === me.spawnChoice);
       $('d-timer').textContent = me.respawnIn > 0 ? `Waking up${chosen ? ' at ' + chosen.label : ''} in ${Math.ceil(me.respawnIn)}...` : '';
       const box = $('d-spawn');
-      const sig = opts.map((o) => o.id).join() + '|' + me.spawnChoice;
+      const sig = opts.map((o) => o.id).join() + '|' + me.spawnChoice + '|' + input.device;
       if (box.dataset.sig !== sig) {
         box.dataset.sig = sig;
-        box.innerHTML = opts.length ? '<div class="d-lbl">Choose where to wake up:</div>' : '';
+        box.innerHTML = opts.length ? `<div class="d-lbl">Choose where to wake up${input.device === 'gamepad' ? ` <span class="g-pad g-sys">D-PAD</span> pick · ${glyph('dive')} select` : ':'}</div>` : '';
         for (const o of opts) {
           const b = document.createElement('button');
           b.className = 'spawn-opt' + (o.id === me.spawnChoice ? ' on' : '');
@@ -228,6 +229,19 @@ export class HUD {
           g.beginPath(); g.arc(x, y, big ? 4 : 2.6, 0, 6.28); g.fill();
         }
       }
+      // world events: colour-coded pulsing blips (pinned to the rim when out of range)
+      for (const ev of me.happen || []) {
+        const kind = EVENT_KINDS[ev.k];
+        if (!kind) continue;
+        let [x, y] = toR(ev.x, ev.y);
+        const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 7;
+        if (d > lim && !big) { x = size / 2 + dx / d * lim; y = size / 2 + dy / d * lim; }
+        const ph = (performance.now() / 900) % 1;
+        g.strokeStyle = kind.color; g.globalAlpha = 1 - ph; g.lineWidth = 2;
+        g.beginPath(); g.arc(x, y, 3 + ph * (big ? 14 : 9), 0, 6.28); g.stroke(); g.globalAlpha = 1;
+        g.fillStyle = kind.color; g.strokeStyle = '#000'; g.lineWidth = 1.5;
+        g.beginPath(); g.arc(x, y, big ? 6 : 4, 0, 6.28); g.fill(); g.stroke();
+      }
       if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') {
         let [x, y] = toR(me.cruiser.x, me.cruiser.y);
         const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 8;
@@ -294,6 +308,7 @@ export class HUD {
       for (const hm of me.homes || []) { const [x, y] = P(hm.x, hm.y); g.fillStyle = '#000'; g.fillRect(x - ic / 2, y - ic / 2, ic, ic); g.fillStyle = '#3ddc84'; g.fillText('⌂', x, y + 1); }
       if (me.rumor) { const [x, y] = P(me.rumor.x, me.rumor.y); g.strokeStyle = '#ffd36b'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, me.rumor.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
       if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') { const [x, y] = P(me.cruiser.x, me.cruiser.y); g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); }
+      for (const ev of me.happen || []) { const kind = EVENT_KINDS[ev.k]; if (!kind) continue; const [x, y] = P(ev.x, ev.y); g.fillStyle = kind.color; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(kind.label, x, y - 12); }
       if (me.job) { const [x, y] = P(me.job.x, me.job.y); g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); }
       // police / bounty intel (server already applies the visibility rules)
       for (const r of me.radar || []) {

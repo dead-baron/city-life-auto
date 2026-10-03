@@ -302,3 +302,5 @@ body.portrait.touch #zone-l { top: 50%; width: 50%; }
   #tut-btns button { font-size: 13px; padding: 4px 10px; } .tut-ch { font-size: 13px; padding: 2px 8px; }
 }
 body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
+
+#d-spawn .spawn-opt.pfocus { outline: 3px solid #fff; outline-offset: 3px; transform: scale(1.06); }

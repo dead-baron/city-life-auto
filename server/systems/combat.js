@@ -1,6 +1,8 @@
 // Combat: melee arcs, hitscan ballistics, tasers, rockets, damage, death, bleeding,
 // regeneration and blood-trail footprints (GDD §14C combat feedback).
-import { K, T, WEATHER } from '../../shared/constants.js';
+import { K, T, WEATHER, PED_RADIUS } from '../../shared/constants.js';
+import { isSwimming, SWIM_BLOCK } from '../../shared/map.js';
+import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { WEAPONS } from '../../shared/items.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
@@ -21,6 +23,7 @@ export function tryAttack(world, ped, aim) {
   const now = world.time;
   if (ped.dead || now < ped.nextAttack || now < ped.reloadUntil || now < ped.stunUntil || now < ped.downUntil) return false;
   if (ped.rollT > 0) return false;
+  if (!ped.vehId && isSwimming(world.map, ped)) return false; // can't fight while swimming
   const w = WEAPONS[ped.weapon] || WEAPONS.fists;
   if (w.type === 'tool') return false;
   ped.a = ped.vehId ? ped.a : aim;
@@ -292,7 +295,16 @@ export function update(world, dt) {
     }
     e.lastStepX = e.x; e.lastStepY = e.y;
     // knockback friction for peds not driven by pedStep this tick
-    if (!e.player && (now < e.downUntil || now < e.stunUntil)) { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; }
+    if (!e.player && (now < e.downUntil || now < e.stunUntil)) {
+      // NPCs thrown from a car fly and slide like players do (and walls / cars hurt)
+      const air = now < (e.airUntil || 0), tum = now < (e.tumbleUntil || 0);
+      if (air || tum) {
+        const fr = air ? AIR_FRICTION : TUMBLE_FRICTION, v0 = Math.hypot(e.vx, e.vy), k = Math.exp(-fr * dt);
+        e.vx *= k; e.vy *= k; e.x += e.vx * dt; e.y += e.vy * dt;
+        collideCircle(e, PED_RADIUS, world.map, SWIM_BLOCK);
+        if (!e.dead) players.tumbleImpact(world, e, v0, dt, fr);
+      } else { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; }
+    }
   }
 }
 
