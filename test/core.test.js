@@ -853,3 +853,45 @@ test('more banks and ATMs around the city; shop sales are paid into the bank', (
   assert.equal(p.profile.cash, cash, 'nothing in your pocket');
   assert.ok(p.profile.bank > bank, 'paid into the bank');
 });
+
+test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-shots cars, armored takes two; cars are tougher, bikes not', async () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const n = w.map.nodes[40];
+  teleport(w, p.ped, n.x + 32, n.y + 32);
+  p.profile.weapons.pistol = 999; p.ped.mag.pistol = 999; p.ped.weapon = 'pistol';
+  const shotsToDrop = (target) => {
+    let shots = 0;
+    while (!target.dead && shots < 20) {
+      teleport(w, target, p.ped.x + 60, p.ped.y); target.vx = 0; target.vy = 0;
+      p.ped.nextAttack = 0; p.ped.mag.pistol = 99;
+      combat.tryAttack(w, p.ped, 0); shots++;
+    }
+    return shots;
+  };
+  const civ = [], cops = [];
+  for (let i = 0; i < 12; i++) civ.push(shotsToDrop(spawnNpc(w, 'casual', p.ped.x + 60, p.ped.y, 'civ')));
+  for (let i = 0; i < 8; i++) cops.push(shotsToDrop(spawnNpc(w, 'cop', p.ped.x + 60, p.ped.y, 'cop')));
+  const swat = shotsToDrop(spawnNpc(w, 'swat', p.ped.x + 60, p.ped.y, 'cop'));
+  assert.ok(Math.max(...civ) <= 3 && civ.filter((s) => s <= 2).length >= 9, `civilians: ${civ}`);
+  assert.ok(Math.max(...cops) <= 3, `cops: ${cops}`);
+  assert.ok(swat <= 4, `swat: ${swat}`);
+  const other = joinPlayer(w).p;
+  assert.ok(shotsToDrop(other.ped) >= 4, 'players take a few more shots');
+  // bazooka
+  const rocketAt = (v) => combat.blast(w, v.x, v.y, 110, 130, p.ped, 0, true);
+  const car = w.spawnVehicle('sedan', p.ped.x + 400, p.ped.y, 0, {});
+  rocketAt(car);
+  assert.ok(car.wreckAt, 'one rocket wrecks a car');
+  const van = w.spawnVehicle('armored', p.ped.x + 800, p.ped.y, 0, {});
+  rocketAt(van);
+  assert.ok(!van.wreckAt, 'armored van survives the first rocket');
+  rocketAt(van);
+  assert.ok(van.wreckAt, 'and not the second');
+  // sturdier cars, fragile bikes
+  const sedan = w.spawnVehicle('sedan', p.ped.x, p.ped.y + 600, 0, {});
+  const bike = w.spawnVehicle('bike', p.ped.x + 200, p.ped.y + 600, 0, {});
+  vehicles.damageVehicle(w, sedan, 50, null); vehicles.damageVehicle(w, bike, 50, null);
+  assert.ok(sedan.def.hp - sedan.hp < 40, 'cars soak up some of the damage');
+  assert.equal(bike.def.hp - bike.hp, 50, 'bikes take it all');
+});

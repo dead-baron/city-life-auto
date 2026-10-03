@@ -322,6 +322,7 @@ export function onPedDeath(world, ped, killer, cause) {
   const p = ped.player;
   if (!p) return;
   p.respawnAt = world.time + RESPAWN_SECONDS;
+  p.respawnChoice = homes.defaultChoice(world, p, { x: ped.x, y: ped.y }); // pre-selected; change it on the death screen
   p.deathCause = cause || 'You flatlined.';
   p.profile.stats.deaths++;
   if (p.badge) { world.notify(p, 'Your badge was stripped. Return to Police HQ to re-deploy.', 'bad'); law.stripPoliceGear(p); }

@@ -100,6 +100,7 @@ function scheduleReconnect(why) {
   S.connectFailed = true;
   $('title').classList.remove('hidden');
   $('hud').classList.add('hidden');
+  $('t-resume').classList.add('hidden');
   $('play').disabled = true;
   $('t-status').textContent = S.everConnected
     ? `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`
@@ -248,7 +249,13 @@ function fixedStep() {
   if (!inOverlay && !S.playing) titlePad();
   if (!inOverlay && input.padCall && S.playing && !S.hud.menuOpen && !S.bigmap) callCruiser();
   if (!inOverlay && input.padPhone && S.playing && !S.hud.menuOpen && !S.bigmap) openPhone();
-  if (!S.playing || S.hud.menuOpen || S.bigmap || inOverlay || performance.now() < (S.inputMuteUntil || 0)) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
+  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay;
+  // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
+  // ignore the action buttons until they're released, or B would instantly reopen the shop menu
+  if (S.menuWasUp && !menuUp) S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
+  S.menuWasUp = menuUp;
+  if (menuUp || performance.now() < (S.inputMuteUntil || 0)) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
+  if (S.suppressBits) { const held = inp.bits & S.suppressBits; inp.bits &= ~S.suppressBits; S.suppressBits &= held; }
   if (inp.bits & IN.AIMING) { S.lastAim = inp.aim; S.lastAimAt = performance.now(); S.lastFire = !!(inp.bits & IN.FIRE); }
   S.seq++;
   const mxq = quantizeAxis(inp.mx), myq = quantizeAxis(inp.my), aq = quantizeAngle(inp.aim);
@@ -417,7 +424,15 @@ $('play').onclick = firstPlay(playGo);
 initInput(canvas, {
   onKey(k) {
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
+    if (S.playing && S.me && S.me.dead && !topOverlay() && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { cycleDeathChoice(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
+    // menus with the keyboard: W/S or arrows move, Enter / Space / E selects, A/D or arrows change a setting
+    if (topOverlay() && topOverlay() !== 'tutorial' && menuKey(k)) return;
+    if (!topOverlay() && S.hud && S.hud.menuOpen) {
+      if (k === 'ArrowUp' || k === 'KeyW') { S.hud.navMenu(-1); return; }
+      if (k === 'ArrowDown' || k === 'KeyS') { S.hud.navMenu(1); return; }
+      if (k === 'Enter' || k === 'Space') { S.hud.choose(S.hud.menuFocus); return; }
+    }
     if (k === 'KeyP' && S.playing && !topOverlay()) { openPhone(); return; }
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
@@ -435,15 +450,19 @@ initInput(canvas, {
 input.onDevice = () => setTimeout(() => { onResize(); if (S.hud && S.me) { $('helpbox').dataset.sig = ''; S.hud.setMe(S.me); } }, 0);
 detectDevice();
 
+function cycleDeathChoice(step) {
+  const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];
+  if (!btns.length) return;
+  const cur = Math.max(0, btns.findIndex((b) => b.classList.contains('on')));
+  const i = (cur + step + btns.length) % btns.length;
+  S.deathFocus = i; btns[i].click();
+}
 // Death screen with a controller: D-pad / stick picks where to wake up, A confirms.
 function deathPad() {
   const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];
   if (!btns.length) return;
-  if (S.deathFocus === undefined || S.deathFocus >= btns.length) S.deathFocus = Math.max(0, btns.findIndex((b) => b.classList.contains('on')));
   const step = input.menuNav || input.menuLR;
-  if (step) S.deathFocus = (S.deathFocus + step + btns.length) % btns.length;
-  btns.forEach((b, i) => b.classList.toggle('pfocus', input.device === 'gamepad' && i === S.deathFocus));
-  if (input.menuSelect) btns[S.deathFocus].click();
+  if (step) cycleDeathChoice(step); // moving the highlight picks it
 }
 
 // ---- phone + waypoints ---------------------------------------------------------------------------
@@ -480,7 +499,6 @@ let tutMap = null;
 // `then` runs once the tour is finished or skipped (first play: tour first, then into the city)
 function openTutorial(chapter, then) {
   const map = S.map || (tutMap ||= generateCity(1337));
-  $('tut-offer').classList.add('hidden');
   openOverlay('tutorial');
   startTutorial({ map, fallback: S.hud ? S.hud.mini : null, chapter, onClose: () => { if (overlays.includes('tutorial')) closeOverlay('tutorial'); if (then) setTimeout(then, 0); } });
 }
@@ -489,21 +507,29 @@ function firstPlay(go) {
   return () => {
     if (tutorialSeen()) { go(); return; }
     if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); // needs this tap's user gesture
-    openTutorial(null, go);
+    // ask in a popup (nothing on the title screen moves around)
+    tutAskGo = go;
+    if (tutorialSeenOld()) { $('tut-ask-h').textContent = 'THE CITY TOUR HAS BEEN UPDATED'; $('tut-ask-p').textContent = 'New places, rules and features since you last watched it. Take the tour?'; }
+    openOverlay('tut-ask');
   };
 }
+let tutAskGo = null;
+$('tut-ask-watch').onclick = () => { const go = tutAskGo; tutAskGo = null; closeOverlay('tut-ask'); openTutorial(null, go); };
+$('tut-ask-skip').onclick = () => { const go = tutAskGo; tutAskGo = null; markTutorialSeen(); closeOverlay('tut-ask'); if (go) go(); };
 $('t-tutorial').onclick = () => openTutorial();
-$('tut-watch').onclick = () => openTutorial();
-$('tut-skip-offer').onclick = () => { markTutorialSeen(); $('tut-offer').classList.add('hidden'); };
+// back to the game you left (the city kept running while you were on the title screen)
+$('t-resume').onclick = () => {
+  if (!S.welcomed) { $('t-resume').classList.add('hidden'); return; }
+  $('t-resume').classList.add('hidden');
+  $('title').classList.add('hidden'); $('hud').classList.remove('hidden');
+  S.playing = true;
+  S.inputMuteUntil = performance.now() + 300;
+};
 $('tut-next').onclick = () => tutorialNext();
 $('tut-prev').onclick = () => tutorialPrev();
 $('tut-pause').onclick = () => tutorialTogglePause();
 $('tut-skip').onclick = () => closeOverlay('tutorial');
 $('tut-cv').addEventListener('click', () => tutorialNext());
-if (!tutorialSeen()) {
-  if (tutorialSeenOld()) { $('tut-offer-h').textContent = 'The city tour has been updated'; $('tut-offer-p').textContent = 'New places, rules and features since you last watched it.'; }
-  $('tut-offer').classList.remove('hidden');
-}
 
 // ---- fullscreen, landscape tip, settings ------------------------------------------------------
 const fsSupported = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
@@ -664,6 +690,26 @@ function focusables() {
   if (!id) return [];
   return [...$(id).querySelectorAll('button, select, input')].filter((el) => !el.disabled && el.offsetParent !== null && !el.classList.contains('x'));
 }
+function menuKey(k) {
+  const f = focusables();
+  if (!f.length) return false;
+  const el = f[(ovFocus + f.length) % f.length];
+  if (k === 'ArrowUp' || k === 'KeyW') { ovFocus--; focusOverlay(); return true; }
+  if (k === 'ArrowDown' || k === 'KeyS') { ovFocus++; focusOverlay(); return true; }
+  if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'KeyA' || k === 'KeyD') {
+    const d = k === 'ArrowLeft' || k === 'KeyA' ? -1 : 1;
+    if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + d + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); return true; }
+    if (el.type === 'checkbox') { el.checked = d > 0; el.dispatchEvent(new Event('change')); return true; }
+    return false;
+  }
+  if (k === 'Enter' || k === 'Space' || k === 'KeyE') {
+    if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + 1) % el.options.length; el.dispatchEvent(new Event('change')); }
+    else if (el.type === 'checkbox') { el.checked = !el.checked; el.dispatchEvent(new Event('change')); }
+    else el.click();
+    return true;
+  }
+  return false;
+}
 function focusOverlay() {
   document.querySelectorAll('.pfocus').forEach((el) => el.classList.remove('pfocus'));
   const f = focusables();
@@ -734,7 +780,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'tutorial') { closeOverlay('pause'); openTutorial(); }
     else if (a === 'fullscreen') toggleFullscreen();
     else if (a === 'dev') openOverlay('dev');
-    else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; }
+    else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }
   };
 }
 for (const x of document.querySelectorAll('.overlay [data-close]')) x.onclick = () => closeOverlay(x.closest('.overlay').id);

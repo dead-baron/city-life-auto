@@ -178,9 +178,10 @@ function bikeCrash(world, v, impact) {
 }
 
 
-export function damageVehicle(world, v, amount, attackerPed) {
+export function damageVehicle(world, v, amount, attackerPed, raw = false) {
   if (v.wreckAt || amount <= 0) return;
-  v.hp -= amount;
+  // cars and boats are built a little tougher; motorcycles stay fragile
+  v.hp -= raw || v.def.kind === 'bike' ? amount : amount / VEHICLE_TOUGHNESS;
   if (attackerPed) v.lastAttacker = attackerPed.id;
   if (v.hp <= 0) explode(world, v, attackerPed);
 }
@@ -203,7 +204,7 @@ export function explode(world, v, attackerPed) {
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
-import { BAIL_SPEED } from '../../shared/rules.js';
+import { BAIL_SPEED, VEHICLE_TOUGHNESS } from '../../shared/rules.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);

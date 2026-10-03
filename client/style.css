@@ -156,9 +156,11 @@ body.kbm #b-fs { display: none; }
 #logo { width: min(440px, 70vw, 46vh); filter: drop-shadow(0 10px 24px #000); }
 #t-status { color: var(--dim); font-size: 16px; font-weight: 600; line-height: 1.35; min-height: 2.7em; display: flex; align-items: center; justify-content: center; } /* fixed height: status changes never shift the menu */
 #t-buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
-#play, #practice { font-family: var(--display); font-size: 26px; letter-spacing: 1.5px; color: #fff; border: none; padding: 12px 34px; cursor: pointer; transform: skewX(-10deg); box-shadow: 6px 6px 0 #000; }
+#play, #practice, #t-resume { font-family: var(--display); font-size: 26px; letter-spacing: 1.5px; color: #fff; border: none; padding: 12px 34px; cursor: pointer; transform: skewX(-10deg); box-shadow: 6px 6px 0 #000; }
 #play { background: linear-gradient(120deg, var(--accent), #ff7a3e); }
 #practice { background: #2b2f45; font-size: 22px; }
+#t-resume { background: #ffd400; color: #111; }
+#t-resume.hidden { display: none; }
 #play:disabled { opacity: .45; cursor: wait; }
 #play:not(:disabled):hover, #practice:hover { transform: skewX(-10deg) translateY(-2px); }
 #t-practice { font-size: 14px; color: var(--dim); max-width: 560px; line-height: 1.45; margin-top: -4px; }
@@ -291,12 +293,6 @@ body.portrait.touch #zone-l { top: 50%; width: 50%; }
 #tut-next { order: 4; background: #ffd400 !important; color: #111 !important; border-color: #ffd400 !important; }
 #tut-prev { order: 1; } #tut-pause { order: 2; } #tut-count { order: 3; margin-left: auto; color: #889; font-size: 13px; } #tut-skip { order: 5; }
 #tut-btns .pfocus { outline: 3px solid #fff; outline-offset: 2px; }
-#tut-offer { max-width: 520px; background: rgba(6,8,14,.88); border: 1px solid rgba(255,212,0,.6); border-left: 4px solid #ffd400; padding: 10px 14px; color: #ddd; font-size: 14px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
-#tut-offer.hidden { display: none; }
-#tut-offer b { font: 20px Anton, Impact, sans-serif; letter-spacing: 1px; color: #fff; }
-#tut-offer div { display: flex; gap: 8px; }
-#tut-offer button { font: 16px Anton, Impact, sans-serif; letter-spacing: 1px; padding: 6px 14px; cursor: pointer; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: #fff; }
-#tut-watch { background: #ffd400 !important; color: #111 !important; border-color: #ffd400 !important; }
 @media (max-height: 500px) {
   #tut-title { font-size: 22px; margin: 0 0 3px; } #tut-text { font-size: 13.5px; max-height: 30vh; } #tut-panel { padding: 8px 12px 8px; } #tut-progress { margin: 6px 0; }
   #tut-btns button { font-size: 13px; padding: 4px 10px; } .tut-ch { font-size: 13px; padding: 2px 8px; }
@@ -313,9 +309,9 @@ body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
 .ph-top button { background: none; border: 0; color: #fff; font-size: 18px; cursor: pointer; padding: 2px 6px; }
 #ph-screen { flex: 1; overflow-y: auto; padding: 10px 12px 14px; color: #e8e8ee; font: 14px Rubik, system-ui, sans-serif; }
 #ph-screen h3 { margin: 12px 2px 6px; font: 15px Anton, Impact, sans-serif; letter-spacing: 1px; color: #ffd400; }
-.ph-apps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
-.ph-app { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px; border-radius: 14px; border: 1px solid #2c3142; background: #1b2130; color: #fff; font: 600 13px Rubik, sans-serif; cursor: pointer; }
-.ph-app b { font-size: 26px; }
+.ph-apps { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.ph-app { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid #2c3142; background: #1b2130; color: #fff; font: 600 15px Rubik, sans-serif; cursor: pointer; text-align: left; }
+.ph-app b { font-size: 22px; width: 30px; text-align: center; }
 .ph-row { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 8px; margin: 3px 0; border-radius: 10px; border: 1px solid transparent; background: #171c28; color: #fff; font: 14px Rubik, sans-serif; cursor: pointer; }
 .ph-row:disabled { opacity: .45; cursor: default; }
 .ph-row .ic { width: 28px; text-align: center; font-weight: 700; color: #ffd400; }
@@ -329,3 +325,6 @@ body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
 .ph-card button { display: block; margin-top: 8px; width: 100%; padding: 7px; border-radius: 8px; border: 1px solid #ff5a4a; background: rgba(255,90,74,.15); color: #fff; font: 600 13px Rubik, sans-serif; cursor: pointer; }
 .ph-hint, .ph-empty { color: #8a90a2; font-size: 12.5px; margin: 6px 2px; }
 body.portrait #phone { justify-content: center; padding: 0; }
+
+#tut-ask { position: absolute; inset: 0; z-index: 44; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
+#tut-ask .panel { width: min(460px, 92vw); }

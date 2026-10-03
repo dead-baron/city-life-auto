@@ -14,15 +14,17 @@
 import { ISLANDS, DISTRICTS } from './map.js';
 import { TILE, MAP_W, MAP_H, STAR_HEAT, DAY_LOOP_S, DAY_PART_S } from './constants.js';
 import { SHOPS, WEAPONS } from './items.js';
+import { VEHICLES } from './vehicles.js';
 import { EVENT_KINDS, ARROW_SHOW_S } from './worldevents.js';
 import {
   ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS,
   SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
   RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE, JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S,
+  NPC_GUN_MULT, VEHICLE_TOUGHNESS, ARMORED_ROCKETS, ARMORED_VEHICLES,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 3;
+export const TUTORIAL_VERSION = 4;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -61,7 +63,7 @@ export const STEPS = [
   { ch: 'basics', title: 'Into the water', at: { poi: 'marina' },
     text: `Cars can drive right onto the docks - and off the end. A car in the water sinks and blows up, but you climb out and swim: slower, no running or fighting, and you can climb ashore anywhere. Boats from {{marina}} slip under the bridges; swim or sail under one and you're hidden beneath the deck.` },
   { ch: 'basics', title: 'Fighting', at: { spawn: 'default' },
-    text: `Aim with [[aim]] and attack with [[fire]]. Land punches in quick succession to floor someone - 3 hits for most people, 4 for tough guys. [[nextw]] switches weapons, [[reload]] reloads, [[throw]] throws what you're carrying.` },
+    text: `Aim with [[aim]] and attack with [[fire]]. Land punches in quick succession to floor someone - 3 hits for most people, 4 for tough guys. [[nextw]] switches weapons, [[reload]] reloads, [[throw]] throws what you're carrying. Guns are deadly: a pistol drops most people in ${Math.ceil(70 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))}-${Math.ceil(140 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))} shots and a cop in ${Math.ceil(140 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))}-${Math.ceil(203 / (WEAPONS.pistol.dmg * NPC_GUN_MULT * 0.9))}, SWAT in ${Math.ceil(220 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))} or more. A bazooka rocket wrecks any vehicle in one hit - the ${ARMORED_VEHICLES.map((id) => VEHICLES[id].name).join(' and the ')} take ${ARMORED_ROCKETS}. Cars shrug off ${Math.round((1 - 1 / VEHICLE_TOUGHNESS) * 100)}% of crash and gunfire damage; motorcycles don't, and a hard crash throws you off.` },
   { ch: 'basics', title: 'Your HUD and the map', at: { city: 1 },
     text: `The HUD shows your weapon, cash on hand, bank balance, wanted stars and the clock, plus the radar in the corner. [[map]] opens the full city map and [[pause]] the pause menu (settings, controls and this tour). A day lasts ${dayMin} minutes and night ${nightMin} - at night witnesses see less and rain makes the roads slick.` },
   { ch: 'basics', title: 'Your phone', at: { city: 1 },

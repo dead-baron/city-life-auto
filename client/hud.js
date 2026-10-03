@@ -110,12 +110,12 @@ export class HUD {
       const sig = opts.map((o) => o.id).join() + '|' + me.spawnChoice + '|' + input.device;
       if (box.dataset.sig !== sig) {
         box.dataset.sig = sig;
-        box.innerHTML = opts.length ? `<div class="d-lbl">Choose where to wake up${input.device === 'gamepad' ? ` <span class="g-pad g-sys">D-PAD</span> pick · ${glyph('dive')} select` : ':'}</div>` : '';
+        box.innerHTML = opts.length ? '<div class="d-lbl">Wake up at:</div>' : '';
         for (const o of opts) {
           const b = document.createElement('button');
           b.className = 'spawn-opt' + (o.id === me.spawnChoice ? ' on' : '');
           b.textContent = (o.kind === 'home' ? '⌂ ' : '✚ ') + o.label;
-          b.onclick = () => this.onRespawn?.(o.id);
+          b.onclick = () => { box.querySelectorAll('.spawn-opt').forEach((x) => x.classList.remove('on')); b.classList.add('on'); this.onRespawn?.(o.id); };
           box.appendChild(b);
         }
       }

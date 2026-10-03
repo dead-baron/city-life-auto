@@ -34,3 +34,9 @@ export const JOB_TIERS = [
 ];
 export const PATROL_PAY = [250, 450];        // police patrol call reward range (paid to the bank)
 export const PATROL_SEARCH_S = [6, 14];      // how long you look around before the crime kicks off
+
+// Combat balance
+export const NPC_GUN_MULT = 6;          // gun damage vs NPCs and police (1-2 shots most people, ~3 for SWAT / brutes)
+export const VEHICLE_TOUGHNESS = 1.35;  // cars and boats take this much less damage (motorcycles stay fragile)
+export const ARMORED_ROCKETS = 2;       // rockets to destroy an armored van / SWAT truck (everything else: one)
+export const ARMORED_VEHICLES = ['armored', 'swat'];

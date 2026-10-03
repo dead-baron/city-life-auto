@@ -59,6 +59,18 @@ export function spawnOptions(world, p) {
   return opts;
 }
 
+// The pre-selected wake-up spot shown on the death screen: your chosen home, else a random
+// hospital away from where you died (same rule resolveSpawn uses).
+export function defaultChoice(world, p, deathPos) {
+  const prof = p.profile;
+  if (prof.spawnHome != null && world.homeOwner.get(prof.spawnHome) === prof.pid) return `home:${prof.spawnHome}`;
+  const hs = world.map.hospitals;
+  let cands = hs.map((h, i) => ({ h, i })).filter(({ h }) => h.name !== p.lastSpawnName);
+  if (!cands.length) cands = hs.map((h, i) => ({ h, i }));
+  if (deathPos) cands = cands.sort((a, b) => Math.hypot(b.h.x - deathPos.x, b.h.y - deathPos.y) - Math.hypot(a.h.x - deathPos.x, a.h.y - deathPos.y)).slice(0, 2);
+  return `h:${cands[Math.floor(world.rand() * cands.length)].i}`;
+}
+
 // Pick where a player wakes up. choice: 'h:<i>' | 'home:<id>' | null (default).
 export function resolveSpawn(world, p, choice, deathPos) {
   const prof = p.profile;

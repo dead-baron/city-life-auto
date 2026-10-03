@@ -4,6 +4,7 @@ import { K, T, WEATHER, PED_RADIUS } from '../../shared/constants.js';
 import { isSwimming, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { WEAPONS } from '../../shared/items.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -157,7 +158,9 @@ function hitscan(world, ped, w, a) {
   if (hit.kind === K.PED) {
     world.emit(hx, hy, { e: 'blood', x: hx, y: hy, a, n: 7 });
     if (world.rand() < 0.35) hit.bleeding = true;
-    damage(world, hit, w.dmg * (0.9 + world.rand() * 0.2), ped, 'gun', a);
+    // guns are deadly against NPCs / police (1-3 shots); players keep more staying power
+    const mult = hit.player ? 1 : NPC_GUN_MULT;
+    damage(world, hit, w.dmg * mult * (0.9 + world.rand() * 0.2), ped, 'gun', a);
     return true;
   }
   if (hit.kind === K.VEH) {
@@ -214,7 +217,7 @@ function causeText(cause) {
   return ({ vehicle: 'Flattened by traffic.', crash: 'Wiped out at speed.', explosion: 'Caught in an explosion.', bail: 'Bailed out too fast.' })[cause] || 'You flatlined.';
 }
 
-export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0) {
+export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = false) {
   props.blastBreak(world, x, y, r * 0.8);
   for (const e of world.query(x, y, r)) {
     const d = Math.hypot(e.x - x, e.y - y);
@@ -228,7 +231,11 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0) {
     } else if (e.kind === K.VEH && e.id !== excludeVehId && !e.wreckAt) {
       const a = Math.atan2(e.y - y, e.x - x);
       e.vx += Math.cos(a) * 220 * f / e.def.mass; e.vy += Math.sin(a) * 220 * f / e.def.mass;
-      vehicles.damageVehicle(world, e, dmg * 1.6 * f, attacker);
+      // a rocket landing on / next to a vehicle destroys it outright (armored ones take two)
+      if (rocket && f > 0.25) {
+        const armored = ARMORED_VEHICLES.includes(e.def.id);
+        vehicles.damageVehicle(world, e, armored ? e.def.hp / ARMORED_ROCKETS + 1 : e.hp + 1, attacker, true);
+      } else vehicles.damageVehicle(world, e, dmg * 1.6 * f, attacker);
     } else if (e.kind === K.CRATE && e.state === 'ground') {
       const a = Math.atan2(e.y - y, e.x - x);
       e.vx += Math.cos(a) * 200 * f; e.vy += Math.sin(a) * 200 * f; e.vz = 160 * f;
@@ -318,7 +325,7 @@ function stepProjectile(world, p, dt) {
     const ex = p.x + (nx - p.x) * t, ey = p.y + (ny - p.y) * t;
     const w = WEAPONS[p.weapon];
     world.emit(ex, ey, { e: 'explode', x: ex, y: ey, r: w.radius });
-    blast(world, ex, ey, w.radius, w.dmg, owner, 0);
+    blast(world, ex, ey, w.radius, w.dmg, owner, 0, true);
     world.remove(p);
     return;
   }

@@ -79,6 +79,7 @@
     <img id="logo" src="assets/logo.png" alt="City Life Auto">
     <div id="t-status">Connecting to the city...</div>
     <div id="t-buttons">
+      <button id="t-resume" class="hidden">▶ RESUME GAME</button>
       <button id="play" disabled>PLAY AS GUEST</button>
       <button id="practice">PRACTICE OFFLINE</button>
     </div>
@@ -88,7 +89,6 @@
       <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster) · right stick aim · RT fire · LT sprint · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, push it all the way to fire drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
       <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire · ACT interact · CAR get in/out</div>
     </div>
-    <div id="tut-offer" class="hidden"><b id="tut-offer-h">First time in the city?</b><span id="tut-offer-p">A guided tour of the city: where everything is, how the law works, and the citizen, criminal and police paths. It plays before your first game - or watch it now.</span><div><button id="tut-watch">▶ WATCH TUTORIAL</button><button id="tut-skip-offer">SKIP</button></div></div>
     <div id="t-tools"><button id="t-tutorial">📖 VIEW TUTORIAL</button><button id="t-install" class="hidden">⬇ INSTALL APP</button><button id="t-settings">⚙ SETTINGS</button><button id="t-fs">⛶ FULLSCREEN</button></div>
     <div id="t-ver"></div>
     <div id="t-note">Online progress saves automatically to this browser. Account sign-in and chat are coming later.</div>
@@ -111,6 +111,14 @@
     <div class="ibody" id="i-body"></div>
     <button id="i-go" class="sbtn hidden">⬇ Install now</button>
     <button id="i-repair" class="sbtn">↻ Repair install and reload</button>
+  </div></div>
+  <div id="tut-ask" class="hidden overlay"><div class="panel">
+    <div class="mhead"><h2 id="tut-ask-h">FIRST TIME IN THE CITY?</h2><button class="x" data-close>✕</button></div>
+    <p class="msub" id="tut-ask-p">A quick guided tour shows where everything is, how the law works, and the citizen, criminal and police paths. You can watch it again any time from the title screen.</p>
+    <div class="m-opts">
+      <button class="opt" id="tut-ask-watch">▶ Watch the tutorial</button>
+      <button class="opt" id="tut-ask-skip">Skip - straight into the city</button>
+    </div>
   </div></div>
   <div id="tutorial" class="hidden overlay">
     <canvas id="tut-cv"></canvas>
