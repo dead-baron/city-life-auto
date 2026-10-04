@@ -22,8 +22,10 @@ if ! command -v caddy >/dev/null; then
 fi
 
 echo "== firewall: Oracle images block 80/443 in iptables even when the VCN allows them =="
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+# Insert at the top of INPUT: the image's own rules end in a catch-all REJECT, and a rule added
+# after it never matches. (-C first so re-running the script doesn't pile up duplicates.)
+sudo iptables -C INPUT -p tcp -m state --state NEW -m multiport --dports 80,443 -j ACCEPT 2>/dev/null \
+  || sudo iptables -I INPUT 1 -p tcp -m state --state NEW -m multiport --dports 80,443 -j ACCEPT
 sudo netfilter-persistent save || sudo sh -c 'iptables-save > /etc/iptables/rules.v4'
 
 echo "== data dir + service =="
