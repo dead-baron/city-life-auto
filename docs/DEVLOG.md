@@ -622,3 +622,46 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
 - **Knife backstab:** one stab kills anyone hit from behind, or any unaware NPC (not cops or gang).
 - **Record keeping:** felonies only go on your record when someone saw the crime (or when the robbery alarm trips), matching the "crime needs a witness" rule. A lethal hit is reported as the killing, not also as an assault.
 - Tutorial v9 ("Silent and deadly", "Holding up a store"). New `test/crime.test.js`.
+
+## Trains: the rail loop, the subway, level crossings, the mail-train job
+- **The railway** (`buildRailway` in `shared/map.js`, `map.rail`): one ~48,500 px loop of track. It runs on a timber trestle off the west coast, along the channel, through Industrial, under Downtown in a subway tunnel and across Refuge Island, back over the bay.
+  - Arc-length points (`pts`, with `under` for the tunnel) and `railAt(rail, s)`. Corners have a 7-tile radius.
+  - Seven stations (POI kind `station`, with a timetable menu). Midtown Underground is a subway stop whose stairway entrance is on the pavement above.
+  - Four level crossings (`crossings`, with road half-width `hw`); one is on a new farm lane down to Refuge Halt.
+  - `rural`: the long Eastport → Refuge Halt run across the fields.
+- **Trains** (`server/systems/trains.js`, entity `K.TRAIN`, one per car): two trains run the loop.
+  - The mail train is a loco, two coaches and a mail car; the commuter is a loco and three coaches.
+  - They run at `TRAIN_SPEED`, brake to stop with their middle at each platform and wait `TRAIN_DWELL_S`. Cars bend around curves (each car is posed on a chord).
+- **Nothing stops a train:**
+  - Vehicles that touch it are shoved aside. A vehicle on the engine's nose is pinned and dragged: it explodes after `TRAIN_DRAG_EXPLODE_S` unless someone steers it off. Wrecks are shoved off the line.
+  - Pedestrians are thrown and badly hurt. NPCs on the line ahead jump clear.
+- **Riding:**
+  - Board at a door on the platform while a train waits (or down the stairs at the subway), or hop on from alongside when your speed is close, on foot or from a vehicle.
+  - Riders (`ped.onTrain = {t, c, ox, oy}`) walk around inside, pass through the gangways into the next car (never the cab), and shoot.
+  - F gets you off at a station, or jumps you off a moving train with a tumble. The doors stay shut in the tunnel.
+  - New control kind `CTRL.RIDER`: no prediction, and the camera follows your ped. The client draws your train with its interior (seats, aisle, door vestibules, the mail car's sacks and strongbox) and everyone else's with roofs.
+- **The subway is its own level** (`e.sub`):
+  - Net culling hides underground entities from the street, and the street from riders underground.
+  - Bullets, melee, witnesses, traffic cameras and police sight only work within the same level.
+  - Riding through the tunnel, the client blacks out the city and draws the tunnel walls with passing lamps.
+  - Portal regions redraw the ground over cars that have already entered.
+- **Passengers:**
+  - NPC commuters sit (seat-facing) or stand and glance around. They get off at their stop, and new ones walk from the platform to the doors and board.
+  - Trains are populated only while a player is near. The dead are carried off at the next stop.
+- **Police on board:** a wanted rider gets 2-4 officers boarding at the next station. They work through the cars and shoot. Sight on a train is limited to the same car.
+- **Level crossings:**
+  - Gates drop when a train is within `CROSSING_WARN_PX` or on the crossing; the arms animate, lights flash and a bell rings. State is broadcast as `xing` events and sent in `welcome`.
+  - Driving through a lowered arm breaks it (repaired 40 s after the gates lift).
+  - Every AI driver uses `crossingLimit` (in the shared `driveToward`): most stop at the arm, a few gamble. Chasing police / EMS with sirens judge whether they can beat the train, and sometimes get it wrong.
+- **Mail-train job:**
+  - Offered at the fence. Guards (role `railguard`) hold the mail car and shoot anyone who comes in.
+  - Stand by the strongbox for `STRONGBOX_CRACK_S` and it's heaved out beside the line. It's worth `TRAIN_JOB_PAY` fenced (half without the job).
+  - Do it on the rural run: in town the alarm bell puts you on `TRAIN_ALARM_STARS` stars.
+  - New crime `trainRobbery`. The job tracker leads you to the mail car, then the box, then a fence.
+- **Client:**
+  - Track, ties, trestle decks, crossing panels, tunnel portals, platforms (safety line, shelter, name board) and the subway entrance are baked into the ground.
+  - Train sprites are procedural (lit windows at night, doors open at stations), and the locomotive's headlight beam is drawn at night.
+  - The rail line appears on the radar and map, with stations marked ≡.
+  - HUD train bar shows the next stop, ETA, the subway and strongbox progress. New sounds: horn, crossing bell, rumble.
+  - Dev command `train` boards the nearest train.
+- Tutorial v10 ("The railway", "Level crossings", "The mail train"). New `test/trains.test.js` (9 tests). World map rebuilt. The idle-pedestrian test now places its NPC on open pavement (it was flaky).

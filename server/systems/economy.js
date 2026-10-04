@@ -15,8 +15,9 @@ import * as homes from './homes.js';
 import * as station from './station.js';
 import * as gang from './gang.js';
 import * as cruiser from './cruiser.js';
+import * as trains from './trains.js';
 
-import { HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY } from '../../shared/rules.js';
+import { HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
@@ -25,6 +26,7 @@ export function poiLabel(world, p, poi) {
     case 'gang': return gang.isMember(p) ? 'Syndicate HQ (members)' : 'Syndicate HQ (join the gang)';
     case 'smuggler': return "Smuggler's Den";
     case 'charter': return 'Charter desk (deep-sea fishing)';
+    case 'station': return `${poi.label} - timetable`;
     case 'home': {
       const h = world.map.homes[poi.home];
       const owner = world.homeOwner.get(h.id);
@@ -224,8 +226,16 @@ export function buildMenu(world, p, poi) {
       opts.push({ id: 'close', label: 'OK' });
       break;
     case 'fence':
-      sub = 'Carry contraband or stolen cargo to the door to sell it. No questions asked.';
+      sub = 'Carry contraband or stolen cargo to the door to sell it. No questions asked. Word is the mail train carries a strongbox...';
+      opts.push({ id: 'trainjob', label: 'Job: rob the mail train', price: -TRAIN_JOB_PAY, dis: !!p.job, note: p.job ? 'busy' : 'when fenced' });
+      if (p.job && p.job.type === 'trainjob') opts.push({ id: 'job:quit', label: 'Abandon current job' });
       break;
+    case 'station': {
+      const b = trains.stationBoard(world, poi);
+      title = b.title; sub = b.sub;
+      opts.push({ id: 'close', label: 'OK' });
+      break;
+    }
     case 'gang':
       title = 'Syndicate HQ';
       if (!gang.isMember(p)) {
@@ -302,6 +312,7 @@ function execute(world, p, poi, opt) {
   if (valid.dis) return 'Not available.';
   switch (parts[0]) {
     case 'close': return null;
+    case 'trainjob': return trains.startTrainJob(world, p);
     case 'w': {
       const id = parts[1], price = Number(parts[2]);
       if (!pay(p, price)) return 'Not enough money.';

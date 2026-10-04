@@ -445,6 +445,7 @@ export function generateCity(seed = 1337) {
   buildCornerStores(m);
   buildInteriors(m);
   buildDealerLots(m);
+  buildRailway(m);
   buildOffshore(m, rand);
   for (const c of VOLLEY_COURTS) volleyCourt(m, c.name, ...c.at);
   aimLamps(m);
@@ -1036,6 +1037,147 @@ function volleyCourt(m, name, x, y, w, h) {
   const netX = rect.x + rect.w / 2;
   m.addSolidProp(netX, rect.y - 6, 5); m.addSolidProp(netX, rect.y + rect.h + 6, 5);
   m.venues.push({ id: m.venues.length, kind: 'volley', name, rect, netX });
+}
+
+// ---- the railway ------------------------------------------------------------------------------
+// One big loop around the city: on a trestle over the water off the west coast and through the
+// channels (level crossings on the road bridges), under Downtown in a subway tunnel, and across
+// the open fields of Refuge Island (the long rural stretch). Trains follow `rail.pts` by arc
+// length; stations, crossings and the tunnel are positions along it.
+export const RAIL_GAUGE = 52;         // px between the outer rails' ties (track bed width ~2 tiles)
+// Rolling stock (wire index = position here). Coaches: seat rows either side of the aisle, doors
+// in the middle; the mail car carries the strongbox at its back end.
+export const TRAIN_CARS = [
+  { kind: 'loco', name: 'Locomotive', L: 196, W: 70 },
+  { kind: 'coach', name: 'Passenger coach', L: 212, W: 76 },
+  { kind: 'mail', name: 'Mail car', L: 188, W: 76 },
+];
+export const COACH_SEATS = [-84, -60, -36, 36, 60, 84].flatMap((ox) => [[ox, -23], [ox, 23]]);
+export const COACH_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-48, 0], [48, 0], [72, 0]];
+export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towards the back of the mail car)
+export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards stand
+export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre
+const RAIL_ROUTE = [ // [tx, ty, flag] corners (track centre between tile tx-1 and tx); flag 'sub' = may run underground
+  [4, 393], [4, 167], [207, 167], [207, 32], [300, 32, 'sub'], [300, 200, 'sub'], [412, 200, 'sub'], [412, 393],
+];
+const RAIL_STATIONS = [ // [name, tx, ty] nearest point on the line becomes the stop
+  ['Westside', 4, 280], ['Channel Street', 140, 167], ['Northshore', 250, 32], ['Midtown Underground', 300, 120], ['Eastport', 412, 270], ['Refuge Halt', 300, 393], ['Sunset Pier', 70, 393],
+];
+function buildRailway(m) {
+  // a farm lane from Refuge Island's main road down to the halt (its level crossing is the rural one)
+  for (let lx = 296; lx <= 312; lx++) {
+    let clear = true;
+    for (let y = 364; y < 395 && clear; y++) for (let k = 0; k < 3; k++) { const t = m.tileAt(lx + k, y); if (t === T.BUILDING || t === T.WALL || m.bld[y * MAP_W + lx + k] >= 0) clear = false; }
+    if (!clear) continue;
+    for (let y = 364; y < 397; y++) for (let k = 0; k < 3; k++) { if (m.tileAt(lx + k, y) === T.WATER || m.tileAt(lx + k, y) === T.DEEP) continue; m.set(lx + k, y, T.ROAD); m.roadAxis[y * MAP_W + lx + k] |= 1; }
+    m.farmLane = { x: (lx + 1.5) * TILE };
+    break;
+  }
+  const R = 7 * TILE; // corner radius (long cars need gentle curves)
+  const C = RAIL_ROUTE.map(([x, y, f]) => ({ x: x * TILE, y: y * TILE, sub: f === 'sub' }));
+  const n = C.length;
+  const pts = [];
+  const push = (x, y, sub) => { const last = pts[pts.length - 1]; if (last && Math.hypot(last.x - x, last.y - y) < 4) return; pts.push({ x, y, sub }); };
+  for (let i = 0; i < n; i++) {
+    const p0 = C[(i - 1 + n) % n], p1 = C[i], p2 = C[(i + 1) % n];
+    const din = { x: Math.sign(p1.x - p0.x), y: Math.sign(p1.y - p0.y) }, dout = { x: Math.sign(p2.x - p1.x), y: Math.sign(p2.y - p1.y) };
+    const a = { x: p1.x - din.x * R, y: p1.y - din.y * R }, b = { x: p1.x + dout.x * R, y: p1.y + dout.y * R };
+    for (let k = 0; k <= 12; k++) { const t = k / 12, u = 1 - t; push(u * u * a.x + 2 * u * t * p1.x + t * t * b.x, u * u * a.y + 2 * u * t * p1.y + t * t * b.y, p1.sub); }
+    // straight run to the next corner's arc
+    const end = { x: p2.x - dout.x * R, y: p2.y - dout.y * R };
+    const len = Math.hypot(end.x - b.x, end.y - b.y);
+    for (let d = 8; d < len; d += 8) push(b.x + dout.x * d, b.y + dout.y * d, p1.sub && p2.sub);
+  }
+  // cumulative arc length
+  let s = 0;
+  for (let i = 0; i < pts.length; i++) { if (i) s += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); pts[i].s = s; }
+  const total = s + Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y);
+  // which points are underground: on a 'sub' stretch and under land
+  const wet = (x, y) => { const t = m.tileAtPx(x, y); return t === T.WATER || t === T.DEEP; };
+  for (const p of pts) p.under = !!p.sub && !wet(p.x, p.y) && m.tileAtPx(p.x, p.y) !== T.BRIDGE;
+  // lay the track bed: a trestle (bridge deck) over water, ballast (dirt) on land; road crossings stay road
+  const crossings = [];
+  for (const p of pts) {
+    if (p.under) continue;
+    for (const [dx, dy] of [[-24, -24], [24, -24], [-24, 24], [24, 24], [0, 0]]) {
+      const tx = Math.floor((p.x + dx) / TILE), ty = Math.floor((p.y + dy) / TILE);
+      const t = m.tileAt(tx, ty);
+      if (t === T.ROAD || (t === T.BRIDGE && m.roadAxis[ty * MAP_W + tx])) {
+        const last = crossings[crossings.length - 1];
+        if (!last || p.s - last.s1 > 40) crossings.push({ s0: p.s, s1: p.s, x: p.x, y: p.y });
+        else { last.s1 = p.s; }
+        continue;
+      }
+      if (t === T.WATER || t === T.DEEP) m.set(tx, ty, T.BRIDGE);
+      else if (t !== T.BRIDGE && t !== T.DOCK && t !== T.BUILDING && t !== T.WALL) m.set(tx, ty, T.DIRT);
+    }
+  }
+  for (const c of crossings) {
+    const mid = (c.s0 + c.s1) / 2; const q = railAt({ pts, len: total }, mid); c.s = mid; c.x = q.x; c.y = q.y; c.a = q.a;
+    // how wide the road is where it crosses (measured along the track)
+    const onRoad = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), t = m.tileAt(tx, ty); return t === T.ROAD || (t === T.BRIDGE && !!m.roadAxis[ty * MAP_W + tx]); };
+    let hw = 16;
+    for (const sg of [-1, 1]) { let d = 0; while (d < 200 && onRoad(q.x + Math.cos(q.a) * sg * (d + 8), q.y + Math.sin(q.a) * sg * (d + 8))) d += 8; hw = Math.max(hw, d + 4); }
+    c.hw = hw;
+  }
+  // stations: platform beside the track, joined to the nearest land (a short pier / paved apron)
+  const stations = [];
+  for (const [name, tx, ty] of RAIL_STATIONS) {
+    let best = null, bd = Infinity;
+    for (const p of pts) { const d = Math.hypot(p.x - tx * TILE, p.y - ty * TILE); if (d < bd) { bd = d; best = p; } }
+    const q = railAt({ pts, len: total }, best.s);
+    // platform on the side with land nearer
+    const nx = -Math.sin(q.a), ny = Math.cos(q.a);
+    const landDist = (sx) => { for (let d = 40; d < 900; d += 16) { const t = m.tileAtPx(q.x + nx * sx * d, q.y + ny * sx * d); if (t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE) return d; } return 9999; };
+    const side = best.under ? 1 : landDist(1) <= landDist(-1) ? 1 : -1;
+    const st = { name: `${name} Station`, s: best.s, x: q.x, y: q.y, a: q.a, side, under: !!best.under };
+    if (!best.under) {
+      // platform: 7 tiles along the track, 2 deep, then a walkway to land
+      const ax = Math.cos(q.a), ay = Math.sin(q.a);
+      for (let along = -112; along <= 112; along += 16) for (let off = 40; off <= 88; off += 16) {
+        const x = q.x + ax * along + nx * side * off, y = q.y + ay * along + ny * side * off;
+        const t = m.tileAtPx(x, y);
+        if (t === T.WATER || t === T.DEEP) m.set(Math.floor(x / TILE), Math.floor(y / TILE), T.DOCK);
+        else if (t !== T.BUILDING && t !== T.WALL && t !== T.ROAD && t !== T.BRIDGE) m.set(Math.floor(x / TILE), Math.floor(y / TILE), T.PLAZA);
+      }
+      const far = Math.min(900, landDist(side));
+      for (let d = 88; d <= far + 16; d += 16) for (const w of [-16, 0, 16]) {
+        const x = q.x + nx * side * d + ax * w, y = q.y + ny * side * d + ay * w;
+        const t = m.tileAtPx(x, y);
+        if (t === T.WATER || t === T.DEEP) m.set(Math.floor(x / TILE), Math.floor(y / TILE), T.DOCK);
+      }
+      st.platform = { x: q.x + nx * side * 64, y: q.y + ny * side * 64 };
+    } else {
+      // underground: the entrance is on the nearest pavement up top
+      let ent = null;
+      for (let r = 32; r < 600 && !ent; r += 16) for (let k = 0; k < 16; k++) {
+        const x = q.x + Math.cos(k / 16 * 6.283) * r, y = q.y + Math.sin(k / 16 * 6.283) * r;
+        if (m.tileAtPx(x, y) === T.SIDEWALK) { ent = { x, y }; break; }
+      }
+      st.platform = ent || { x: q.x, y: q.y };
+    }
+    st.poi = m.pois.length;
+    m.pois.push({ id: m.pois.length, kind: 'station', label: st.name, x: st.platform.x, y: st.platform.y, r: 70, station: stations.length });
+    stations.push(st);
+  }
+  stations.sort((a, b) => a.s - b.s);
+  stations.forEach((st, i) => { m.pois[st.poi].station = i; });
+  // the long rural run across Refuge Island (train robbery country): Eastport -> Refuge Halt
+  const east = stations.find((q) => q.name.startsWith('Eastport')), halt = stations.find((q) => q.name.startsWith('Refuge'));
+  const ruralPts = pts.filter((p) => p.s > east.s && p.s < halt.s && m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === 9);
+  m.rail = { pts, len: total, stations, crossings, rural: ruralPts.length ? { s0: ruralPts[0].s + 200, s1: ruralPts[ruralPts.length - 1].s - 100 } : null };
+}
+
+// Position + heading at arc length s along the loop (wraps).
+export function railAt(rail, s) {
+  const pts = rail.pts, L = rail.len;
+  s = ((s % L) + L) % L;
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid].s <= s) lo = mid; else hi = mid - 1; }
+  const a = pts[lo], b = pts[(lo + 1) % pts.length];
+  const segLen = (lo + 1 < pts.length ? b.s : L) - a.s || 1;
+  const t = Math.min(1, (s - a.s) / segLen);
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x), under: !!(a.under && b.under), i: lo };
 }
 
 // ---- out on the water ------------------------------------------------------------------------

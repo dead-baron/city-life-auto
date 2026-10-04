@@ -10,6 +10,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as events from './events.js';
+import * as trains from './trains.js';
 
 const rng = mulberry32(5150);
 const BAIT_ORDER = ['squid', 'glowlure', 'shrimp', 'lure', 'worms'];
@@ -182,6 +183,7 @@ function fence(world, p, crate, mult) {
   prof.bank += gain; // sales go straight to the bank
   prof.criminalExp += Math.round(gain / 100);
   consume(world, p, crate);
+  trains.onFenced(world, p, crate);
   world.notify(p, `The Exchange wired $${gain} to your bank. +${Math.round(gain / 100)} Criminal EXP.`, 'good');
   if (crate.job) { const owner = world.players.get(crate.job.pid); if (owner && owner.job) failJob(world, owner, 'Your cargo was fenced by a thief. Contract lost.'); }
   store.touch();

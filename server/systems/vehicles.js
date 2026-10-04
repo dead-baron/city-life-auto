@@ -96,7 +96,7 @@ export function update(world, dt) {
     const spd = speedOf(v);
     const near = world.query(v.x, v.y, v.def.L / 2 + 16, K.PED);
     for (const ped of near) {
-      if (ped.vehId || ped.dead) continue;
+      if (ped.vehId || ped.dead || ped.onTrain) continue;
       const h = circleVsObb(ped.x, ped.y, ped.r, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
       if (!h) continue;
       const vn = (v.vx - ped.vx) * h.nx + (v.vy - ped.vy) * h.ny;

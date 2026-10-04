@@ -25,6 +25,7 @@ export const CRIMES = {
   possession:  { heat: 20, label: 'Contraband possession' },
   poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true },
   robbery:     { heat: 30, label: 'Armed robbery', felony: true },
+  trainRobbery: { heat: 50, label: 'Train robbery', felony: true },
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR } from '../../shared/rules.js';
@@ -97,6 +98,7 @@ export function witnesses(world, x, y, perp, victim, loud = false) {
   const res = { count: 0, cop: false, cam: false };
   for (const e of world.query(x, y, Math.max(pedRange, 420), K.PED)) {
     if (e === perp || e.dead || (e.npc && e.npc.blind)) continue; // blind: the clerk being robbed doesn't count as a witness
+    if (!!e.sub !== !!(perp && perp.sub)) continue; // nobody up on the street sees into the subway (or vice versa)
     if (world.time < e.downUntil && e !== victim) continue;
     const d = Math.hypot(e.x - x, e.y - y);
     const cop = isCop(e);
@@ -107,11 +109,12 @@ export function witnesses(world, x, y, perp, victim, loud = false) {
       const facing = Math.abs(angleDiff(e.a, Math.atan2(y - e.y, x - e.x))) < (cop ? 1.4 : 1.3);
       if (!facing && !(loud && d < 220) && e !== victim) continue;
     }
-    if (!world.map.los(e.x, e.y, x, y)) continue;
+    if (!sameTrain(e, perp) && !world.map.los(e.x, e.y, x, y)) continue;
     res.count++;
     if (cop) res.cop = true;
   }
   for (const c of world.map.cameras) {
+    if (perp && perp.sub) break;
     const d = Math.hypot(c.x - x, c.y - y);
     if (d <= c.r * camFactor && world.map.los(c.x, c.y, x, y)) {
       res.cam = true; res.count++;
@@ -120,6 +123,10 @@ export function witnesses(world, x, y, perp, victim, loud = false) {
   }
   return res;
 }
+
+// Riders in the same train car see each other whatever the street around them is doing.
+function sameTrain(a, b) { return !!(a && b && a.onTrain && b.onTrain && a.onTrain.t === b.onTrain.t && a.onTrain.c === b.onTrain.c); }
+function canSee(world, e, ped) { return !!e.sub === !!ped.sub && (sameTrain(e, ped) || world.map.los(e.x, e.y, ped.x, ped.y)); }
 
 function immune(world, perp, victim) {
   if (!victim) return false;
@@ -267,9 +274,9 @@ export function update(world, dt) {
       let seen = false;
       if (!ped.hidden) for (const e of world.query(ped.x, ped.y, 420, K.PED)) {
         if (!isCop(e) || e.dead || e === ped) continue;
-        if (world.map.los(e.x, e.y, ped.x, ped.y)) { seen = true; break; }
+        if (canSee(world, e, ped)) { seen = true; break; }
       }
-      if (!seen && !ped.hidden && world.tick % 10 === 0) {
+      if (!seen && !ped.hidden && !ped.sub && world.tick % 10 === 0) {
         for (const c of world.map.cameras) {
           if (Math.hypot(c.x - ped.x, c.y - ped.y) < c.r * (world.clock.isNight ? 0.75 : 1) && world.map.los(c.x, c.y, ped.x, ped.y)) {
             seen = true; world.emit(c.x, c.y, { e: 'camera', id: c.id });

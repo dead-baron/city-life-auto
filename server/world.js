@@ -28,6 +28,7 @@ import * as gang from './systems/gang.js';
 import * as races from './systems/races.js';
 import * as minigames from './systems/minigames.js';
 import * as robbery from './systems/robbery.js';
+import * as trains from './systems/trains.js';
 import * as props from './systems/props.js';
 import * as net from './net.js';
 
@@ -43,6 +44,7 @@ const SYSTEMS = [
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
+  ['trains', trains.update],        // the rail loop: trains, riders, crossings, the mail-car strongbox
   ['police', police.update],        // NPC police dispatch / pursuit
   ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
   ['gang', gang.update],            // Syndicate membership: Smuggler's Rock guards
@@ -96,6 +98,7 @@ export class World {
     minigames.init(this);
     dealer.init(this);
     jobs.init(this);
+    trains.init(this);
   }
 
   get clock() { return gameClock(this.loopTime); }

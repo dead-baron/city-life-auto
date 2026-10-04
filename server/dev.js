@@ -10,10 +10,11 @@ import * as combat from './systems/combat.js';
 import * as npc from './systems/npc.js';
 import * as gangwar from './systems/gangwar.js';
 import * as cruiser from './systems/cruiser.js';
+import * as trains from './systems/trains.js';
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp'];
+export const DEV_COMMANDS = ['shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train'];
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 
@@ -84,7 +85,18 @@ export function command(world, p, c, msg) {
     }
     case 'drop': jobs.spawnDrop(world, Number(msg.n) === 4 ? 4 : 3); break;
     case 'heal': if (ped) { ped.hp = ped.maxHp; ped.bleeding = false; } break;
-    case 'tp': if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; p.teleportAt = world.time; } break;
+    case 'train': { // hop aboard a train right now (nearest, or msg.n), in car msg.car (default: the first coach)
+      if (!ped || ped.dead || !world.trains.length) break;
+      if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
+      let t = world.trains[Number(msg.n)] || null;
+      if (!t) { let bd = Infinity; for (const q of world.trains) { const e = world.get(q.cars[0].id); const d = Math.hypot(e.x - ped.x, e.y - ped.y); if (d < bd) { bd = d; t = q; } } }
+      const ci = Math.max(1, Math.min(t.cars.length - 1, Number(msg.car) || 1));
+      trains.board(world, ped, t, ci, 0, 0, 0);
+      world.notify(p, `[dev] Aboard train ${t.i}, car ${ci}.`, 'info');
+      break;
+    }
+    case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
+      if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; p.teleportAt = world.time; } break;
     default: world.notify(p, `[dev] unknown command ${c}. Try: ${DEV_COMMANDS.join(', ')}`, 'warn'); return;
   }
   world.loopTime %= DAY_LOOP_S;

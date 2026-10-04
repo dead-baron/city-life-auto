@@ -7,6 +7,7 @@ import { hash2, mulberry32 } from '../../shared/rng.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
 import { atlas } from './sprites.js';
+import { railIndex, drawRailChunk, drawPortals, drawStation } from './trains.js';
 
 export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp']);
 
@@ -46,6 +47,7 @@ export class GroundCache {
     this.signs = this.byChunk(map.buildings.filter((b) => b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]);
     this.roads = this.byChunk(map.roads, (r) => [r.x * TILE, r.y * TILE, (r.x + r.w) * TILE, (r.y + r.h) * TILE]);
     this.nodes = this.byChunk(map.nodes, (n) => [n.x - 200, n.y - 200, n.x + 200, n.y + 200]);
+    this.rail = railIndex(map, (cx, cy) => this.key(cx, cy));
   }
   key(cx, cy) { return cy * 1000 + cx; }
   get(cx, cy) {
@@ -79,8 +81,11 @@ export class GroundCache {
     drawCurbs(g, m, tx0, ty0, n);
     for (const r of this.roads.get(k) || []) drawRoadMarkings(g, m, r, cx, cy);
     for (const nd of this.nodes.get(k) || []) drawCrosswalks(g, m, nd);
+    drawRailChunk(g, m, this.rail.get(k));
+    for (const st of (m.rail && m.rail.stations) || []) drawStation(g, st, cx, cy);
     for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawRoof(g, r);
+    drawPortals(g, m, cx, cy);
     for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
     for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
     for (const mn of m.mansions || []) drawMansion(g, mn, cx, cy);

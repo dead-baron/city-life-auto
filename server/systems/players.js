@@ -24,6 +24,7 @@ import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
 import * as props from './props.js';
+import * as trains from './trains.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS } from '../../shared/rules.js';
 export { GHOST_SECONDS, RESPAWN_SECONDS };
@@ -137,7 +138,7 @@ export function queueInput(p, inp) {
 
 export function pedMods(world, ped) {
   const now = world.time;
-  const canMove = !ped.dead && now >= ped.downUntil && now >= ped.stunUntil && !ped.vehId && !ped.hidden;
+  const canMove = !ped.dead && now >= ped.downUntil && now >= ped.stunUntil && !ped.vehId && !ped.hidden && !ped.onTrain;
   let speedMul = 1;
   if (ped.carrying) speedMul *= 0.6; // GDD: carrying scales walking speed down by 40%
   if (ped.buffs.energy > now) speedMul *= 1.15;
@@ -188,6 +189,8 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (pressed & IN.PREVW) combat.cycleWeapon(world, ped, -1);
   if (pressed & IN.RELOAD) combat.reload(world, ped);
   if (pressed & IN.USE) economy.useHealItem(world, p);
+
+  if (ped.onTrain) { trains.riderInput(world, p, ped, inp, pressed, dt); return; }
 
   if (ped.vehId) {
     const v = world.get(ped.vehId);
@@ -280,7 +283,10 @@ export function findInteraction(world, p) {
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
+  if (ped.onTrain) return trains.interaction(world, p);
   if (ped.vehId) {
+    const hop = trains.interaction(world, p);
+    if (hop) return hop;
     if (ped.fishing) {
       if (ped.fishing.biteAt && world.time >= ped.fishing.biteAt && world.time <= ped.fishing.biteAt + ped.fishing.window) return { label: 'REEL IN NOW!', run: () => jobs.reelIn(world, p) };
       return { label: 'Waiting for a bite... (drive off to stop)', run: () => jobs.reelIn(world, p) };
@@ -321,6 +327,9 @@ export function findInteraction(world, p) {
 
   const victim = jobs.purseVictimNear(world, p);
   if (victim) return { label: 'Return the purse (+Samaritan)', run: () => jobs.returnPurse(world, p, victim) };
+
+  const train = trains.interaction(world, p);
+  if (train) return train;
 
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
@@ -432,7 +441,7 @@ export function buildMe(world, p) {
   return {
     t: 'me',
     name: p.name, hp: ped ? Math.round(ped.hp) : 0, maxHp: ped ? ped.maxHp : 100,
-    rob: robbery.hudFor(world, p), pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
+    rob: robbery.hudFor(world, p), train: trains.meInfo(world, p), pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
     cash: prof.cash, bank: prof.bank, cexp: prof.criminalExp, sam: prof.samaritan,
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),

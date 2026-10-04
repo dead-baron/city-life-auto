@@ -8,6 +8,7 @@ import { TRAFFIC_MIX, PARKED_MIX } from '../../shared/vehicles.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
+import { crossingLimit } from './trains.js';
 
 const rng = mulberry32(4242);
 
@@ -83,6 +84,7 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
   let speed = desired;
   if (Math.abs(diff) > 0.9) speed = Math.min(speed, 140);
   if (!opts.ignoreObstacles) speed = Math.min(speed, obstacleSpeed(world, v, fwd));
+  if (!opts.ignoreCrossings) speed = Math.min(speed, crossingLimit(world, v, fwd)); // level-crossing gates down: stop (or gamble)
   let throttle = clamp((speed - fwd) / 90, -1, 1);
   if (speed < 6 && fwd < 12) throttle = 0;
   // reverse out when wedged

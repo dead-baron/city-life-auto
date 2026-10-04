@@ -355,5 +355,9 @@ body.portrait #bm-panel { width: calc(100vw - 24px); max-height: 34vh; }
 #rob { position: absolute; left: 50%; top: 118px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.78); padding: 8px 14px; border: 2px solid #ffd400; font-family: var(--display); color: #ffd400; letter-spacing: 1px; pointer-events: none; }
 #rob .rob-bar { width: 140px; height: 10px; background: #333; } #rob-fill { display: block; height: 100%; width: 0; background: #ffd400; transition: width .2s; }
 #rob span { font-family: var(--ui, sans-serif); font-weight: 800; color: #7fe07f; min-width: 90px; }
+#trainbar { position: absolute; left: 50%; top: 118px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.72); padding: 6px 12px; border: 2px solid #9ad0ff; font-family: var(--display); color: #9ad0ff; letter-spacing: 1px; pointer-events: none; font-size: 13px; }
+#trainbar span { font-family: var(--ui, sans-serif); font-weight: 700; color: #fff; }
+#trainbar.sub { border-color: #ffd36b; color: #ffd36b; }
+#trainbar .rob-bar { width: 110px; height: 8px; background: #333; } #tb-fill { display: block; height: 100%; width: 0; background: #ffd36b; transition: width .2s; }
 #rob.alarm { border-color: #ff3b3b; color: #ff3b3b; animation: robflash .5s steps(2) infinite; } #rob.alarm span { color: #ff7070; }
 @keyframes robflash { 50% { background: rgba(120,0,0,.85); } }

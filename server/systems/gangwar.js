@@ -65,7 +65,7 @@ export function update(world, dt) {
     }
   }
   // NPC cops at war with the gang
-  for (const c of world.entities.values()) if (c.kind === K.PED && c.npc && c.npc.role === 'cop' && c.npc.war && !c.dead) copWar(world, c, dt, t);
+  for (const c of world.entities.values()) if (c.kind === K.PED && c.npc && c.npc.role === 'cop' && c.npc.war && !c.dead && !c.onTrain) copWar(world, c, dt, t);
   // random shootouts near turf
   world.nextShootout ??= t + SHOOTOUT_EVERY_S[0];
   if (t >= world.nextShootout) {

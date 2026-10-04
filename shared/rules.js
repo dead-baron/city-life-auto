@@ -80,3 +80,12 @@ export const ROB_TAKE = { convenience: 25, gasstation: 25, bank: 120, default: 3
 export const ROB_ALARM_S = [10, 15, 20];  // the silent alarm trips after one of these (you never know which)
 export const ROB_RESPONSE_S = [10, 15];   // squad cars arrive this long after the alarm
 export const ROB_ALARM_STARS = 3;         // wanted level the alarm puts you on
+
+// Trains
+export const TRAIN_SPEED = 430;          // cruising speed (px/s) - nothing stops it, nothing damages it
+export const TRAIN_DWELL_S = 10;         // stop at each station this long
+export const TRAIN_DRAG_EXPLODE_S = 3.5; // a vehicle shoved along in front of the engine this long blows up
+export const CROSSING_WARN_PX = 900;     // crossing gates come down when a train is this close
+export const TRAIN_JOB_PAY = 3000;       // the mail-car strongbox, fenced
+export const STRONGBOX_CRACK_S = 5;      // stay on the mail car this long to crack it
+export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Refuge Island run) and the alarm bell puts you here

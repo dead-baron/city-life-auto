@@ -45,6 +45,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Rob a store (gun on the clerk; lower it to stop) | Hold right mouse / aim at the clerk | LT aimed at the clerk | aim stick at the clerk |
 | Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
 | Fish over the side (still boat, far out at sea) | E | B | ACT |
+| Train: board at a station / hop on alongside · walk through the cars · get off or jump off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
 | Police HQ: walk in (front desk → armory → motor pool) | E at the door, E inside for the desk | B / A | ACT, or the ▲ Front desk button |
 | Navigate menus (pause, phone, shops, settings) | W/S or ↑/↓, Enter / Space / E to pick, Esc back | D-pad / stick, A pick, B back | tap |
 | Phone (places, jobs, waypoints) | P | D-pad ← | 📱 |

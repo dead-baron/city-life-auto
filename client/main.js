@@ -2,7 +2,7 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
-import { generateCity, lightState, WATER_T } from '../shared/map.js';
+import { generateCity, lightState, WATER_T, TRAIN_CARS } from '../shared/map.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
@@ -22,6 +22,7 @@ import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
+import { drawTrainCar, drawCoupling, drawCrossing, drawTunnel, portalCovers } from './render/trains.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -43,6 +44,7 @@ const S = {
   bayOpen: {}, bayAnim: {}, // paint-shop shutters
   garageOpen: {}, garageAnim: {}, // home garage doors
   gateOpen: {}, gateAnim: {}, // police motor pool gates
+  xing: [], xingAnim: [], // level crossings: { d: gates down, b: [arm broken, arm broken] }
 };
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 
@@ -131,6 +133,8 @@ function onText(m) {
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
+      S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
+      S.portals = portalCovers(S.map);
       S.ground.cache.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
       $('play').disabled = false;
@@ -192,7 +196,7 @@ function pedModsFrom(flags, speedMul) {
 function reconcile(s) {
   S.pending = S.pending.filter((p) => p.seq > s.ack);
   const kind = s.ctrlKind === CTRL.PED ? 'ped' : s.ctrlKind === CTRL.DRIVER ? 'veh' : null;
-  if (!kind) { S.pred = null; S.ctrlKind = s.ctrlKind; S.ctrlId = s.ctrlId; if (s.ctrlKind === CTRL.NONE && s.ctrlId) S.myPedId = s.ctrlId; return; }
+  if (!kind) { S.pred = null; S.ctrlKind = s.ctrlKind; S.ctrlId = s.ctrlId; if ((s.ctrlKind === CTRL.NONE || s.ctrlKind === CTRL.RIDER) && s.ctrlId) S.myPedId = s.ctrlId; return; }
   const switched = !S.pred || S.pred.kind !== kind || S.ctrlId !== s.ctrlId;
   S.ctrlKind = s.ctrlKind; S.ctrlId = s.ctrlId;
   if (kind === 'ped') S.myPedId = s.ctrlId;
@@ -368,6 +372,9 @@ function onEvent(ev) {
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
+    case 'xing': S.xing[ev.i] = { d: ev.d, b: ev.b }; break;
+    case 'gatebreak': fx.sparks(ev.x, ev.y, 6); for (let k = 0; k < 6; k++) fx.spawn(4, ev.x, ev.y, Math.cos(ev.a + (Math.random() - 0.5)) * 160, Math.sin(ev.a + (Math.random() - 0.5)) * 160, 0.5, 3, k % 2 ? '#f4f4f4' : '#c8262b'); sfx('crash', distVol(ev.x, ev.y) * 0.6); break;
+    case 'trainhorn': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y); sfx(ev.s === 2 ? 'trainhorn' : 'trainhornshort', Math.max(0, 1 - d / 2400)); break; }
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
     case 'alarm': sfx('alert', distVol(ev.x, ev.y)); S.alarms = (S.alarms || []).concat([{ x: ev.x, y: ev.y, until: performance.now() + 20000 }]); break;
     case 'goal': sfx('cash', 1); S.cam.shake = Math.max(S.cam.shake, 3); break;
@@ -1059,9 +1066,15 @@ function render(dt) {
   }
   // walk-cycle phase from how far each ped actually moved on screen this frame: continuous
   // across walk <-> run (stride length eases with speed), so the loop never jumps
+  for (const e of S.ents.values()) { // train cars: how far each moved this frame (riders walk relative to it)
+    if (e.kind !== K.TRAIN) continue;
+    e.fdx = e.px === undefined ? 0 : e.rx - e.px; e.fdy = e.py === undefined ? 0 : e.ry - e.py; e.px = e.rx; e.py = e.ry;
+  }
   for (const e of S.ents.values()) {
     if (e.kind !== K.PED) continue;
     if (e.ax === undefined) { e.ax = e.rx; e.ay = e.ry; e.as = 0; e.phase = 0; continue; }
+    const car = e.parent ? S.ents.get(e.parent) : null;
+    if (car && car.kind === K.TRAIN) { e.ax += car.fdx || 0; e.ay += car.fdy || 0; }
     let d = Math.hypot(e.rx - e.ax, e.ry - e.ay);
     if (d > 60) d = 0; // teleport / respawn
     e.ax = e.rx; e.ay = e.ry;
@@ -1073,7 +1086,7 @@ function render(dt) {
   // camera
   let speed = 0;
   if (S.pred && S.pred.kind === 'veh') speed = Math.hypot(S.pred.s.vx, S.pred.s.vy);
-  else if (S.ctrlKind === CTRL.PASSENGER) { const e = S.ents.get(S.ctrlId); if (e && e.buf.length > 1) { const b = e.buf; speed = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20; } }
+  else if (S.ctrlKind === CTRL.PASSENGER || S.ctrlKind === CTRL.RIDER) { const e = S.ents.get(S.ctrlId); if (e && e.buf.length > 1) { const b = e.buf; speed = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20; } }
   const targetZoom = baseZoom() / (1 + Math.min(0.5, speed / 1300));
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-2.5 * dt));
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -1126,14 +1139,22 @@ function render(dt) {
   // animated water glints
   drawWaterGlints(view, now);
   if (rain) { g.fillStyle = 'rgba(30,50,80,0.16)'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
-  fx.drawDecals(g, view, now, rain);
-  const insideB = drawInteriorView(sp);
+  // the train I'm riding (if any), and whether it's down in the subway right now
+  const meEnt = S.ents.get(S.myPedId);
+  const myCar = S.ctrlKind === CTRL.RIDER && meEnt && meEnt.parent ? S.ents.get(meEnt.parent) : null;
+  const myTrain = myCar && myCar.kind === K.TRAIN && myCar.d ? myCar.d.tr : -1;
+  const sub = !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1));
+  if (sub) drawTunnel(g, S.map, view, now);
+  else fx.drawDecals(g, view, now, rain);
+  const insideB = sub ? null : drawInteriorView(sp);
 
-  const vis = (e) => e.rx > view.x0 - 100 && e.rx < view.x1 + 100 && e.ry > view.y0 - 100 && e.ry < view.y1 + 100;
-  const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [];
+  const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
+  const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
-    if (e.kind === K.PED) peds.push(e);
+    if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
+    if (e.kind === K.TRAIN) cars.push(e);
+    else if (e.kind === K.PED) peds.push(e);
     else if (e.kind === K.VEH) vehs.push(e);
     else if (e.kind === K.CRATE) crates.push(e);
     else if (e.kind === K.BAG) bags.push(e);
@@ -1162,8 +1183,9 @@ function render(dt) {
   if (S.pred && S.pred.kind === 'veh') { const me = S.ents.get(S.ctrlId); const d = me && me.d ? VEHICLE_BY_INDEX[me.d.m] : null; if (d && d.kind === 'boat' && underBridge(me.rx, me.ry, d.L / 2)) outlineVehicle(me, d); }
   else if (S.pred) { const me = S.ents.get(S.ctrlId); if (me && me.swim && S.map.tileAtPx(me.rx, me.ry) === T.BRIDGE) { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); } }
   for (const c of crates) if ((c.flags & 3) === 1) drawCrateEnt(c, now);
+  drawTrains(cars, riders, myTrain, sub, now);
   for (const b of balls) drawBall(b);
-  coverWalkIns(view, peds, insideB, dt);
+  if (!sub) coverWalkIns(view, peds, insideB, dt);
   for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
 
   // geysers
@@ -1171,16 +1193,20 @@ function render(dt) {
   S.geysers = S.geysers.filter((gy) => gy.until > nowMs);
   for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
 
-  drawBays(view, dt);
-  drawGarageDoors(view, dt);
-  drawGates(view, dt);
-  drawBuoys(view, now);
-  // traffic lights, cameras, overhead canopy
-  drawSignals(view);
-  for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
-    for (const p of S.ground.overhead(cx, cy)) if (p.x > view.x0 - 40 && p.x < view.x1 + 40 && p.y > view.y0 - 40 && p.y < view.y1 + 40) drawOverheadProp(g, p, clock.dark > 0.3);
-
-  updateBirds(dt, view, vehs, peds);
+  if (!sub) {
+    drawBays(view, dt);
+    drawGarageDoors(view, dt);
+    drawGates(view, dt);
+    drawCrossings(view, dt, now);
+    drawBuoys(view, now);
+  }
+  // traffic lights, cameras, overhead canopy (none of it down in the subway)
+  if (!sub) {
+    drawSignals(view);
+    for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
+      for (const p of S.ground.overhead(cx, cy)) if (p.x > view.x0 - 40 && p.x < view.x1 + 40 && p.y > view.y0 - 40 && p.y < view.y1 + 40) drawOverheadProp(g, p, clock.dark > 0.3);
+    updateBirds(dt, view, vehs, peds);
+  }
   fx.update(dt);
   fx.drawParticles(g);
 
@@ -1202,8 +1228,9 @@ function render(dt) {
   drawWorldLabels(peds, vehs, now, z);
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  drawLighting(clock.dark, view, vehs, peds, z, dt);
-  if (rain) drawRain(dt);
+  S.trainCars = cars;
+  if (!sub) drawLighting(clock.dark, view, vehs, peds, z, dt);
+  if (rain && !sub) drawRain(dt);
 
   // HUD bits
   const dist = S.map.districtAt(sp.x, sp.y);
@@ -1363,7 +1390,7 @@ function walkInAt(x, y) {
   return b && b.walkIn ? b : null;
 }
 function drawInteriorView(sp) {
-  const b = S.playing ? walkInAt(sp.x, sp.y) : null;
+  const b = S.playing && S.ctrlKind !== CTRL.RIDER ? walkInAt(sp.x, sp.y) : null; // riding the subway under a shop doesn't open it
   S.roofFade ??= {};
   for (const id of S.map.walkIns || []) {
     const want = b && b.id === id ? 1 : 0;
@@ -1471,6 +1498,51 @@ function drawGates(view, dt) {
     g.restore();
   }
 }
+// Trains: couplings, then the cars (lit interiors for the train you're riding, roofs for the
+// rest), the people aboard yours, and finally the ground drawn back over anything that has
+// already slid into a tunnel mouth.
+function drawTrains(cars, riders, myTrain, sub, now) {
+  if (!cars.length && !riders.length) return;
+  const byId = new Map(cars.map((c) => [c.id, c]));
+  for (const c of cars) { const ahead = c.parent ? byId.get(c.parent) : null; if (ahead) drawCoupling(g, ahead, c); }
+  for (const c of cars) drawTrainCar(g, c, c.d.tr === myTrain, now);
+  for (const p of riders) { g.save(); g.translate(p.rx, p.ry); g.scale(0.8, 0.8); g.translate(-p.rx, -p.ry); drawPed(p, now); g.restore(); } // a touch smaller, so two fit abreast
+  if (!sub) for (const pc of S.portals || []) {
+    if (!cars.some((c) => c.rx > pc.x0 - 120 && c.rx < pc.x1 + 120 && c.ry > pc.y0 - 120 && c.ry < pc.y1 + 120)) continue;
+    coverGround(pc.x0, pc.y0, pc.x1, pc.y1);
+  }
+  // the horn and the rumble
+  for (const c of cars) {
+    if (c.d.c !== 0) continue;
+    const moving = c.buf.length > 1 && Math.hypot(c.buf[c.buf.length - 1].x - c.buf[c.buf.length - 2].x, c.buf[c.buf.length - 1].y - c.buf[c.buf.length - 2].y) > 4;
+    if (moving) sfx('rumble', distVol(c.rx, c.ry) * 0.6);
+  }
+}
+
+// Redraw a rectangle of the baked ground on top of whatever is there.
+function coverGround(x0, y0, x1, y1) {
+  for (let cy = Math.floor(y0 / CHUNK_PX); cy <= Math.floor((y1 - 1) / CHUNK_PX); cy++)
+    for (let cx = Math.floor(x0 / CHUNK_PX); cx <= Math.floor((x1 - 1) / CHUNK_PX); cx++) {
+      const bx = cx * CHUNK_PX, by = cy * CHUNK_PX;
+      const sx = Math.max(x0, bx), sy = Math.max(y0, by), ex = Math.min(x1, bx + CHUNK_PX), ey = Math.min(y1, by + CHUNK_PX);
+      if (ex <= sx || ey <= sy) continue;
+      g.drawImage(S.ground.get(cx, cy), sx - bx, sy - by, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);
+    }
+}
+
+// Level crossings: gate arms swing down when the server says a train is coming; the bell rings.
+function drawCrossings(view, dt, now) {
+  const xs = (S.map.rail && S.map.rail.crossings) || [];
+  xs.forEach((c, i) => {
+    const st = S.xing[i] || { d: 0, b: [0, 0] };
+    const a = S.xingAnim[i] ?? 0;
+    S.xingAnim[i] = a + ((st.d ? 1 : 0) - a) * (1 - Math.exp(-3.5 * dt));
+    if (c.x < view.x0 - 260 || c.x > view.x1 + 260 || c.y < view.y0 - 260 || c.y > view.y1 + 260) return;
+    drawCrossing(g, c, S.xingAnim[i], st.b || [0, 0], !!st.d, now);
+    if (st.d) sfx('bell', distVol(c.x, c.y) * 0.7);
+  });
+}
+
 function setGate(i, open) {
   S.gateOpen[i] = open;
   const gt = S.map.gates && S.map.gates[i];
@@ -1774,6 +1846,20 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
       lg.moveTo(def.L / 2 * zz, -w0); lg.lineTo(def.L / 2 * zz + len, -w1); lg.lineTo(def.L / 2 * zz + len, w1); lg.lineTo(def.L / 2 * zz, w0); lg.closePath(); lg.fill();
       lg.restore();
       hole(v.rx, v.ry, def.L * 0.7, 0.5);
+    }
+    for (const c of S.trainCars || []) {
+      if (!(c.flags & 8)) continue;
+      const def = TRAIN_CARS[c.d.c];
+      hole(c.rx, c.ry, def.L * 0.6, 0.55);
+      if (c.d.c === 0) { // the locomotive's headlight throws a long beam down the line
+        const [lx, ly] = toL(c.rx, c.ry);
+        lg.save(); lg.translate(lx, ly); lg.rotate(c.ra);
+        const len = 420 * zz, x0 = def.L / 2 * zz;
+        const gr = lg.createLinearGradient(x0, 0, x0 + len, 0);
+        gr.addColorStop(0, 'rgba(0,0,0,.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        lg.fillStyle = gr; lg.beginPath(); lg.moveTo(x0, -10 * zz); lg.lineTo(x0 + len, -90 * zz); lg.lineTo(x0 + len, 90 * zz); lg.lineTo(x0, 10 * zz); lg.closePath(); lg.fill();
+        lg.restore();
+      }
     }
     const sp = selfPos();
     hole(sp.x, sp.y, 70, 0.35);

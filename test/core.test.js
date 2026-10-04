@@ -715,9 +715,9 @@ test('bridges are two layers: from the road you walk the deck, from the water yo
   const { isSwimming } = await import('../shared/map.js');
   const w = makeWorld(); const m = w.map;
   const { p } = joinPlayer(w);
-  // tile (206, 80) is the north edge of a river bridge; (206, 78) is open water above it
-  assert.equal(m.tileAt(206, 80), TT.BRIDGE);
-  teleport(w, p.ped, 206 * 32 + 16, 78 * 32);
+  // tile (210, 80) is the north edge of a river bridge; (210, 78) is open water above it (east of the rail trestle)
+  assert.equal(m.tileAt(210, 80), TT.BRIDGE);
+  teleport(w, p.ped, 210 * 32 + 16, 78 * 32);
   let seq = p.ack;
   const go = (n, my) => { for (let i = 0; i < n; i++) { p.inputQ.push({ seq: ++seq, bits: 0, mx: 0, my, aim: 0 }); w.step(); } };
   go(3, 0);

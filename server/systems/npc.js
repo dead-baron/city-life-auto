@@ -66,7 +66,7 @@ export function update(world, dt) {
   if (world.tick % 20 === 5) snatchEvent(world);
   const rain = world.weather === WEATHER.RAIN;
   for (const ped of world.entities.values()) {
-    if (ped.kind !== K.PED || !ped.npc || ped.dead || ped.vehId) continue;
+    if (ped.kind !== K.PED || !ped.npc || ped.dead || ped.vehId || ped.onTrain || ped.npc.boardTrain) continue; // train riders + boarders: trains.js
     const n = ped.npc;
     if (n.guard && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch
       const dd = Math.hypot(ped.x - n.guard.x, ped.y - n.guard.y);

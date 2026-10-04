@@ -24,6 +24,7 @@ function descriptor(e) {
     case K.BAG: return { id: e.id, k: K.BAG, t: e.cashOnly ? 0 : e.tier, val: e.value };
     case K.PROJ: return { id: e.id, k: K.PROJ, w: WEAPONS[e.weapon]?.i ?? 12 };
     case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'volley' ? 1 : 0 };
+    case K.TRAIN: return { id: e.id, k: K.TRAIN, c: e.carType, tr: e.train, n: e.car };
     default: return null;
   }
 }
@@ -32,12 +33,15 @@ function descVersion(e) { return e.kind === K.PED ? (e.appVer || 0) : e.kind ===
 function fields(world, e) {
   switch (e.kind) {
     // extra: bits 0-4 weapon, 5-6 blink (1 slow, 2 fast, 3 hidden indoors), bit 7 in the water (incl. under a bridge)
-    case K.PED: return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId, (WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && isSwimming(world.map, e) ? 128 : 0)];
+    // parent: the vehicle you're in, or the train car you're riding
+    case K.PED: return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0), (WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && isSwimming(world.map, e) ? 128 : 0)];
     case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), 0, 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [0, 1, 0, e.cashOnly ? 0 : e.tier];
     case K.PROJ: return [0, 1, 0, 0];
     case K.BALL: return [0, 1, 0, Math.max(0, Math.min(255, Math.round(e.z / 2)))]; // extra: height above the ground / 2
+    // train car flags: 1 underground, 2 doors open, 4 horn, 8 lights on, 16 strongbox gone (mail car); parent: the car ahead
+    case K.TRAIN: return [(e.sub ? 1 : 0) | (e.doors ? 2 : 0) | (e.horn ? 4 : 0) | (e.lit ? 8 : 0) | (e.boxGone ? 16 : 0), 1, e.car ? world.trains[e.train].cars[e.car - 1].id : 0, 0];
     default: return [0, 0, 0, 0];
   }
 }
@@ -88,7 +92,8 @@ export function send(world) {
 
     const spawns = [];
     let ctrl = CTRL.NONE, ctrlId = 0, self = null, sflags = 0;
-    if (ped && !ped.dead) {
+    if (ped && !ped.dead && ped.onTrain) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy }; }
+    else if (ped && !ped.dead) {
       if (veh) { ctrl = ped.seat === 0 && !veh.scripted ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = veh; sflags = veh.rev ? 32 : 0; } // reverse-gear state keeps point-to-drive prediction exact
       else {
         ctrl = CTRL.PED; ctrlId = ped.id;
@@ -99,8 +104,14 @@ export function send(world) {
     } else if (ped) { ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: 0, vy: 0 }; }
     writer.begin(tick, p.ack, world.loopTime, world.weather, ctrl, ctrlId, self, sflags, ped ? ped.prevBits : 0);
 
+    // the subway is its own level: underground you only see your own train; up top, nothing below
+    const myTrain = ped && ped.onTrain ? ped.onTrain.t : -1, mySub = !!(ped && ped.sub);
     const visit = (e) => {
       if (e._mark === mark && e._markP === p) return;
+      if ((e.sub || mySub) && e !== ped) {
+        const et = e.kind === K.TRAIN ? e.train : e.onTrain ? e.onTrain.t : -2;
+        if (et !== myTrain) return;
+      }
       e._mark = mark; e._markP = p;
       let k = p.known.get(e.id);
       const ver = descVersion(e);

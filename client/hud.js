@@ -80,6 +80,15 @@ export class HUD {
       $('rob-fill').style.width = Math.round(me.rob.warm * 100) + '%';
       $('rob-take').textContent = me.rob.alarm ? `ALARM! $${me.rob.take} - get out!` : me.rob.warm < 1 ? 'Hands up...' : `$${me.rob.take}`;
     } else rb.classList.add('hidden');
+    // riding a train: next stop, the tunnel, the strongbox
+    const tb = $('trainbar'), tr = me.train;
+    if (tr && !me.dead) {
+      tb.classList.remove('hidden'); tb.classList.toggle('sub', !!tr.sub);
+      $('tb-where').textContent = tr.car === 'mail' ? 'MAIL CAR' : tr.sub ? 'SUBWAY' : tr.rural ? 'RURAL RUN' : 'ON THE TRAIN';
+      $('tb-next').textContent = tr.at ? `At ${tr.next} - F to get off` : `Next: ${tr.next} · ${tr.eta}s`;
+      $('tb-crack').classList.toggle('hidden', tr.crack === null);
+      if (tr.crack !== null) $('tb-fill').style.width = Math.round(tr.crack * 100) + '%';
+    } else tb.classList.add('hidden');
     // personal police cruiser
     const cr = me.cruiser, ch = $('cruiser-hint'), cb = $('b-cruiser');
     document.body.classList.toggle('can-call', !!(cr && cr.s === 'none' && !me.dead));
@@ -431,7 +440,7 @@ const POI_ICON = {
   sports: ['S', '#7de0ff'], hardware: ['T', '#ff9a3a'], pharmacy: ['+', '#3ddc84'], coffee: ['C', '#c89a6a'], garage: ['R', '#ffd400'],
   clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
   fishmarket: ['≈', '#25b8c0'], marina: ['B', '#7de0ff'], farm: ['¥', '#b8e02a'], courthouse: ['J', '#e8d8a8'],
-  charter: ['≈', '#7de0ff'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'],
+  charter: ['≈', '#7de0ff'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'], station: ['≡', '#f0f0f0'],
 };
 
 function buildMinimap(map) {
@@ -449,6 +458,22 @@ function buildMinimap(map) {
     img.data[i * 4] = c3[0]; img.data[i * 4 + 1] = c3[1]; img.data[i * 4 + 2] = c3[2]; img.data[i * 4 + 3] = 255;
   }
   g.putImageData(img, 0, 0);
+  // the railway: a dark line round the loop, dashed where it runs underground
+  if (map.rail) {
+    const pts = map.rail.pts;
+    g.lineWidth = 1.4; g.strokeStyle = '#2a2420';
+    for (const under of [false, true]) {
+      g.setLineDash(under ? [2, 2] : []);
+      g.beginPath();
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i], q = pts[(i + 1) % pts.length];
+        if (!!p.under !== under) continue;
+        g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE);
+      }
+      g.stroke();
+    }
+    g.setLineDash([]);
+  }
   return c;
 }
 

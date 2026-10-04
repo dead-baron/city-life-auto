@@ -23,11 +23,12 @@ import {
   NPC_GUN_MULT, VEHICLE_TOUGHNESS, ARMORED_ROCKETS, ARMORED_VEHICLES,
   ROB_WARMUP_S, ROB_TOSS_S, ROB_TAKE, ROB_ALARM_S, ROB_RESPONSE_S, ROB_ALARM_STARS,
   MATCH_COUNTDOWN_S, SOCCER_GOALS, SOCCER_MATCH_S, VOLLEY_POINTS, MATCH_PRIZE,
+  TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS,
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 9;
+export const TUTORIAL_VERSION = 10;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -48,6 +49,7 @@ export const CHAPTERS = [
 // at: what the camera frames. One of
 //   { city: 1 } | { island: 'D' } | { district: 'Neon Strip' } | { poi: kind } | { pois: kind }
 //   { spawn: 'default' } | { cameras: 1 } | { dropSites: 1 } | { turf: 1 } | { homes: districtName } | { estates: 1 }
+//   { crossings: 1 } (level crossings) | { rural: 1 } (the long rural run of the railway)
 // route: an animated vehicle driving the road network between two targets (optional chaser).
 export const STEPS = [
   // ---- the city ------------------------------------------------------------------------------
@@ -66,6 +68,10 @@ export const STEPS = [
   { ch: 'city', title: isle('C'), at: { island: 'C' },
     text: `The Syndicate's island fortress. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
+  { ch: 'city', title: 'The railway', at: { pois: 'station' },
+    text: `Two trains run one big loop round the city at up to ${kmh(TRAIN_SPEED)} km/h - over the trestle off the west coast, through the channels, under Downtown in the subway and across the fields of ${isle('F')} - stopping ${TRAIN_DWELL_S} seconds at every {{station}} (check the timetable on the platform). Stand by a door while a train is in and press [[action]] to board; at Midtown Underground take the stairs down. Walk through the cars, sit back and watch the city go by, then [[vehicle]] gets you off at a station - or jump off a moving train and tumble. In the tunnel the doors stay shut. Running alongside a slow train, or driving level with it, you can hop on too.` },
+  { ch: 'city', title: 'Level crossings', at: { crossings: 1 },
+    text: `Where the line crosses a road the gates drop when a train is within ${Math.round(CROSSING_WARN_PX / TILE)} m. Most drivers wait; some gamble, and cops on a chase often try to beat the train. You can smash straight through the arms. Nothing stops a train and nothing hurts it: anyone on the tracks gets thrown, and a car caught on the front of the engine is dragged along - steer it off within ${TRAIN_DRAG_EXPLODE_S} seconds or it blows up.` },
   // ---- basics --------------------------------------------------------------------------------
   { ch: 'basics', title: 'Moving and driving', at: { spawn: 'default' },
     text: `Move with [[move]] - push further to run. [[sprint]] sprints, [[dive]] dives out of the way. Walk up to any vehicle and press [[vehicle]] to get in: parked cars, traffic, even boats. [[gas]] accelerates, [[brake]] brakes and reverses. Taking one that isn't yours is a crime if anyone sees it. Bail out of a fast car and you tumble along the road - hit a wall at speed and it can kill you.` },
@@ -111,6 +117,8 @@ export const STEPS = [
     text: `A ${WEAPONS.spistol.name.toLowerCase()} from {{fence}} only makes a cough - nobody hears it, so a kill only counts if someone actually watches. A ${WEAPONS.knife.name.toLowerCase()} in the back (or into someone who never saw you coming) kills in one stab, quietly.` },
   { ch: 'criminal', title: 'Holding up a store', at: { poi: 'gasstation' },
     text: `Walk into a {{convenience}}, a {{gasstation}}, any shop or a bank and point a gun at the clerk: hands go up, and after ${ROB_WARMUP_S} seconds they start throwing cash at you - a wad every ${ROB_TOSS_S} seconds (about $${ROB_TAKE.convenience}, more each time, ~$${ROB_TAKE.bank} at a bank). Somewhere ${ROB_ALARM_S.join(', ')} seconds in, a silent alarm trips: you jump to ${ROB_ALARM_STARS} stars, a ${EVENT_KINDS.robbery.label.toLowerCase()} shows on every radar, and squad cars pull up ${ROB_RESPONSE_S[0]}-${ROB_RESPONSE_S[1]} seconds later. How long do you dare stay? Anyone else who sees it reports you either way.` },
+  { ch: 'criminal', title: 'The mail train', at: { rural: 1 },
+    text: `One train hauls a mail car with a strongbox and two armed guards. Take the job at {{fence}} (or just do it), get aboard - at a station, or climb on from a car driving alongside - work back to the mail car and crack the box: ${STRONGBOX_CRACK_S} seconds next to it and it goes over the side. Jump off, grab it and fence it for $${TRAIN_JOB_PAY}. Do it out here on the long run across ${isle('F')} where nobody hears the alarm; crack it in town and the bell puts you on ${TRAIN_ALARM_STARS} stars. Wanted on a train? Police board at the next station.` },
   { ch: 'criminal', title: 'Wanted stars', at: { district: 'Civic Center' }, route: { from: { poi: 'bank' }, to: { district: 'Southside' }, veh: 'sports', chaser: 'police' },
     text: `A reported crime earns wanted stars (★ at ${STAR_HEAT[1]} heat up to ★★★★★ at ${STAR_HEAT[5]}). Police come for you - tasers at low stars, guns from 3, SWAT at 4-5. Break line of sight and they only know a search circle that grows; stay hidden and the heat fades.` },
   { ch: 'criminal', title: 'Lying low', at: { poi: 'clothing' },
@@ -199,6 +207,19 @@ export function resolveTarget(map, at, ref) {
     const list = map.pois.filter((p) => p.kind === at.pois);
     if (!list.length) return null;
     return { ...box(list, 500), marks: list.map(poiMark) };
+  }
+  if (at.crossings) {
+    const xs = (map.rail && map.rail.crossings) || [];
+    if (!xs.length) return null;
+    const c = xs.reduce((b, q) => (q.y < b.y ? q : b), xs[0]);
+    return { x: c.x, y: c.y, w: 900, h: 620, marks: xs.map((q) => ({ x: q.x, y: q.y, label: 'Level crossing', kind: 'camera' })) };
+  }
+  if (at.rural) {
+    const r = map.rail && map.rail.rural;
+    if (!r) return null;
+    const pts = map.rail.pts.filter((p) => p.s > r.s0 && p.s < r.s1);
+    const mid = pts[Math.floor(pts.length / 2)];
+    return { ...box(pts, 500), marks: [{ x: mid.x, y: mid.y, label: 'The rural run - robbery country', kind: 'drop' }] };
   }
   if (at.spawn) {
     const s = map.spawns[at.spawn];

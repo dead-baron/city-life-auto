@@ -6,7 +6,7 @@ import { quantizeAngle, dequantizeAngle, dequantizeAxis } from './input.js';
 export const MSG_INPUT = 1;
 export const MSG_SNAPSHOT = 2;
 
-export const CTRL = { NONE: 0, PED: 1, DRIVER: 2, PASSENGER: 3 };
+export const CTRL = { NONE: 0, PED: 1, DRIVER: 2, PASSENGER: 3, RIDER: 4 }; // RIDER: on a train (no prediction; camera follows your ped)
 
 // ---- Client -> server input (11 bytes) -------------------------------------
 export function encodeInput(seq, bits, mxq, myq, aimq) {

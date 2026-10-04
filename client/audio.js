@@ -68,6 +68,10 @@ export function sfx(name, vol = 1) {
     case 'bad': if (throttle('bad', 300)) tone(180, 0.25, 0.15 * vol, 'sawtooth', -60); break;
     case 'camera': if (throttle('camera', 400)) { tone(1500, 0.06, 0.08 * vol); setTimeout(() => tone(1500, 0.06, 0.08 * vol), 120); } break;
     case 'thud': if (throttle('thud', 80)) tone(110, 0.12, 0.25 * vol, 'sine', -50); break;
+    // diesel air horn: a low two-note chord, long or short
+    case 'trainhorn': case 'trainhornshort': if (throttle('trainhorn', 700)) { const d = name === 'trainhorn' ? 1.1 : 0.5; tone(277, d, 0.11 * vol, 'sawtooth'); tone(349, d, 0.09 * vol, 'sawtooth'); tone(415, d, 0.06 * vol, 'square'); } break;
+    case 'bell': if (throttle('bell', 480)) { tone(1245, 0.18, 0.09 * vol, 'triangle'); tone(2490, 0.1, 0.03 * vol, 'sine'); } break;
+    case 'rumble': if (throttle('rumble', 260)) noise(0.3, 160, 0.8, 0.22 * vol); break;
     default: break;
   }
 }

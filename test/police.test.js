@@ -168,7 +168,15 @@ test('courier jobs come with a company flatbed you can take without stealing', (
 test('idle pedestrians look around and then walk off; stranded drivers walk away', () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
-  const ped = spawnNpc(w, 'casual', p.ped.x + 200, p.ped.y, 'civ');
+  // somewhere with pavement all round (a random spot can be a dead end between buildings)
+  let spot = { x: p.ped.x + 200, y: p.ped.y };
+  outer: for (let r = 160; r < 900; r += 32) for (let k = 0; k < 24; k++) {
+    const x = p.ped.x + Math.cos(k / 24 * 6.283) * r, y = p.ped.y + Math.sin(k / 24 * 6.283) * r;
+    let ok = true;
+    for (let dy = -2; dy <= 2 && ok; dy++) for (let dx = -2; dx <= 2 && ok; dx++) if (![T.SIDEWALK, T.PLAZA, T.GRASS].includes(w.map.tileAtPx(x + dx * 32, y + dy * 32))) ok = false;
+    if (ok) { spot = { x, y }; break outer; }
+  }
+  const ped = spawnNpc(w, 'casual', spot.x, spot.y, 'civ');
   ped.npc.state = 'idle'; ped.npc.until = w.time + 3; ped.npc.lookAt = w.time;
   const a0 = ped.a, x0 = ped.x, y0 = ped.y;
   run(w, 1);
