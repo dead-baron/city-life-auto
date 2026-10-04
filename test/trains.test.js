@@ -11,6 +11,7 @@ import * as trains from '../server/systems/trains.js';
 import * as players from '../server/systems/players.js';
 import * as economy from '../server/systems/economy.js';
 import * as cargo from '../server/systems/cargo.js';
+import * as combat from '../server/systems/combat.js';
 import { IN } from '../shared/input.js';
 
 const mod = (a, n) => ((a % n) + n) % n;
@@ -30,48 +31,51 @@ function runUpTo(w, t, s, ahead) { t.s = mod(s - ahead, w.map.rail.len); t.v = T
 let seq = 1;
 function press(w, p, bits, n = 1, extra = {}) { for (let i = 0; i < n; i++) { players.queueInput(p, { seq: seq++, bits: i === 0 ? bits : 0, mx: 0, my: 0, aim: 0, ...extra }); w.step(); } }
 
-test('the railway: one huge loop through the core of every main island, all of it above ground', () => {
+test('the railway: one huge loop through every main island - subway under the core, short tunnels under the highways', () => {
   const w = makeWorld();
   const r = w.map.rail;
   assert.ok(r.len > 90000, `a long loop (${Math.round(r.len / 32)} tiles)`);
-  assert.ok(r.stations.length >= 12, `${r.stations.length} stations`);
-  assert.ok(r.pts.every((p) => !p.under) && r.stations.every((s) => !s.under), 'no tunnels, no underground stations');
+  assert.ok(r.stations.length >= 10 && r.stations.length <= 14, `${r.stations.length} stations`);
+  assert.ok(r.stations.filter((s) => s.under).length >= 2, 'subway stations under the core');
+  assert.ok(r.pts.some((p) => p.subway), 'a subway section');
+  assert.ok(r.pts.some((p) => p.underpass), 'tunnels under the highways it meets');
   // a few stops on every main (road-connected) island; none on the boat-only ones
   const perIsle = {};
   for (const s of r.stations) { const k = w.map.islandAt(s.x, s.y); perIsle[k] = (perIsle[k] || 0) + 1; }
-  for (const k of ['W', 'N', 'D', 'R', 'S']) assert.ok(perIsle[k] >= 2, `${ISLANDS[k].name}: ${perIsle[k] || 0} stops`);
-  assert.ok(perIsle.F >= 1, 'a stop out in Dry Creek');
+  for (const k of ['W', 'N', 'D']) assert.ok(perIsle[k] >= 2, `${ISLANDS[k].name}: ${perIsle[k] || 0} stops`);
+  for (const k of ['F', 'R', 'S']) assert.ok(perIsle[k] >= 1, `a stop on ${ISLANDS[k].name}`);
   for (const [k, I] of Object.entries(ISLANDS)) if (I.boatOnly) assert.ok(!perIsle[k], `no line out to ${I.name}`);
   // close to every major district
   const dists = new Set(r.stations.map((s) => w.map.districtAt(s.platform.x, s.platform.y).name));
-  for (const d of ['Westport Center', 'Northshore', 'Old Town', 'Civic Center', 'Downtown', 'Midtown', 'The Yards', 'Pine Hills', 'Southside', 'Dry Creek', 'Lake District', 'Cedar Falls'])
+  for (const d of ['Westport Center', 'Northshore', 'Old Town', 'Civic Center', 'Downtown', 'Midtown', 'The Yards', 'Southside', 'Dry Creek', 'Cedar Falls'])
     assert.ok(dists.has(d) || r.stations.some((s) => s.name.startsWith(d)), `a stop in ${d} (${[...dists]})`);
   // one loop that links the islands: it leaves and comes back to each over a bridge
   const seq = [];
   for (const p of r.pts) { const k = w.map.islandAt(p.x, p.y); if (k && k !== seq[seq.length - 1]) seq.push(k); }
   for (const k of ['W', 'N', 'D', 'R', 'F', 'S']) assert.ok(seq.includes(k), `the line reaches ${ISLANDS[k].name}`);
   // it runs through the middle of things, not round the outskirts: hardly any of it hugs a coast
-  const land = r.pts.filter((p) => !p.bridge && !p.deck);
+  const land = r.pts.filter((p) => !p.bridge && !p.deck && !p.under);
   const shore = land.filter((p) => w.map.distSea[Math.floor(p.y / 32) * w.map.w + Math.floor(p.x / 32)] <= 6 * 4).length;
   assert.ok(shore < land.length * 0.04, `${Math.round(shore / land.length * 100)}% along the shore`);
   // every street it meets is a level crossing (none closed off): there are lots of them, on roads
-  assert.ok(r.crossings.length >= 40, `${r.crossings.length} crossings`);
+  assert.ok(r.crossings.length >= 30, `${r.crossings.length} crossings`);
   for (const c of r.crossings) assert.ok([T.ROAD, T.BRIDGE].includes(w.map.tileAtPx(c.x, c.y)), 'crossings are on roads');
   assert.ok(r.rural && r.rural.s1 - r.rural.s0 > 2500, 'long rural stretch');
-  for (const p of r.pts) assert.notEqual(w.map.tileAtPx(p.x, p.y), T.BUILDING, 'no track through buildings');
+  for (const p of r.pts) if (!p.under) assert.notEqual(w.map.tileAtPx(p.x, p.y), T.BUILDING, 'no track through buildings');
   // the line runs on land; open water is crossed on bridges between the islands
   let run = 0, longest = 0, total = 0;
   for (const p of r.pts) {
     const tx = Math.floor(p.x / 32), ty = Math.floor(p.y / 32), t = w.map.tileAt(tx, ty);
     const deck = t === T.BRIDGE && !w.map.roadAxis[ty * w.map.w + tx];
     if (deck) { run += 8; total += 8; longest = Math.max(longest, run); } else run = 0;
-    assert.ok(![T.WATER, T.DEEP].includes(t), 'never laid in the water');
+    if (!p.under) assert.ok(![T.WATER, T.DEEP].includes(t), 'never laid in the water');
   }
   assert.ok(longest <= RAIL_MAX_BRIDGE_TILES * 32, `longest bridge ${Math.round(longest / 32)} tiles`);
   assert.ok(total < r.len * 0.12, `${Math.round(total / r.len * 100)}% of the line is bridge`);
   // open-air platforms as long as a train, beside the track, that you can stand on
   for (const s of r.stations) {
     assert.ok(w.map.pois[s.poi].kind === 'station');
+    if (s.under) { assert.equal(w.map.tileAtPx(s.platform.x, s.platform.y), T.SIDEWALK, `${s.name}: stairs on the pavement`); continue; }
     assert.equal(s.half, PLATFORM_HALF);
     let ok = 0, n = 0;
     for (let d = -PLATFORM_HALF; d <= PLATFORM_HALF; d += 40) {
@@ -83,7 +87,7 @@ test('the railway: one huge loop through the core of every main island, all of i
   assert.ok(Math.max(...w.trains.map((t) => t.len)) <= PLATFORM_HALF * 2 + 40, 'a whole train fits along the platform');
   // about one train a minute at every station: the fleet fits the loop's run time
   assert.ok(Math.abs(w.railLap / w.trains.length - TRAIN_HEADWAY_S) < TRAIN_HEADWAY_S * 0.25, `${w.trains.length} trains on a ${Math.round(w.railLap)}s loop`);
-  assert.ok(w.trains.every((t) => t.cars.length === CONSIST.length), 'five-car trains');
+  assert.ok(w.trains.every((t) => t.cars.length === CONSIST.length), 'three-car trains');
   assert.ok(w.trains.some((t) => t.mail >= 0), 'a mail train');
 });
 
@@ -229,6 +233,47 @@ test('boarding is easy: anywhere on the platform while a train is in, with a cle
   // and the station board explains it for desktop and touch
   const board = economy.poiLabel(w, p, w.map.pois[st.poi]);
   assert.ok(/station/i.test(board), board);
+});
+
+test('the subway: riders underground are a level of their own; the stairs bring you up to the street', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const { p: other } = joinPlayer(w);
+  const rail = w.map.rail;
+  const t = w.trains[1];
+  const si = rail.stations.findIndex((s) => s.under);
+  const st = rail.stations[si];
+  w.trains.forEach((u, k) => { if (u !== t) { u.s = mod(st.s + 9000 + k * 1500, rail.len); u.dwellUntil = w.time + 9999; u.stop = (si + 3) % rail.stations.length; } }); // the others well away
+  // pull the train into the underground station
+  t.s = mod(st.s + t.len / 2, rail.len); t.v = 0; t.stop = si; t.dwellUntil = w.time + TRAIN_DWELL_S;
+  teleport(w, p.ped, st.platform.x, st.platform.y);
+  w.step();
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /stairs/.test(act.label), act && act.label);
+  act.run();
+  w.step();
+  assert.ok(p.ped.sub, 'underground');
+  assert.notEqual(w.map.tileAtPx(p.ped.x, p.ped.y), T.WATER);
+  // someone standing on the street right above can't see or shoot you
+  teleport(w, other.ped, p.ped.x + 30, p.ped.y);
+  other.profile.weapons.pistol = 50; other.ped.mag.pistol = 12; other.ped.weapon = 'pistol';
+  const hp = p.ped.hp;
+  other.ped.protectUntil = 0;
+  for (let i = 0; i < 5; i++) { other.ped.nextAttack = 0; combat.tryAttack(w, other.ped, Math.atan2(p.ped.y - other.ped.y, p.ped.x - other.ped.x)); }
+  assert.equal(p.ped.hp, hp, 'bullets from the street don\'t reach the subway');
+  w.step();
+  const seen = [...other.known.keys()];
+  assert.ok(!seen.includes(p.ped.id), 'not sent to the street');
+  assert.ok(!seen.includes(t.cars[1].id), 'the train down there is not sent either');
+  // the doors stay shut in the tunnel
+  run(w, TRAIN_DWELL_S + 1.5);
+  if (w.get(t.cars[p.ped.onTrain.c].id).sub) { press(w, p, IN.VEHICLE, 2); assert.ok(p.ped.onTrain, 'no jumping off in the tunnel'); }
+  // ride round to the underground station again and take the stairs up
+  t.s = mod(st.s + t.len / 2, rail.len); t.v = 0; t.stop = si; t.dwellUntil = w.time + TRAIN_DWELL_S;
+  w.step();
+  press(w, p, IN.VEHICLE, 2);
+  assert.ok(!p.ped.onTrain && !p.ped.sub, 'up on the street');
+  assert.ok(Math.hypot(p.ped.x - st.platform.x, p.ped.y - st.platform.y) < 40, 'at the entrance');
 });
 
 test('level crossings: gates come down, traffic waits, a car can smash through the arm', () => {

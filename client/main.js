@@ -24,7 +24,7 @@ import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
-import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue } from './render/trains.js';
+import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
@@ -144,6 +144,7 @@ function onText(m) {
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
       S.tt = { l: m.tt || [], at: performance.now() / 1000 };
+      S.portals = portalCovers(S.map);
       S.ground.cache.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
       $('play').disabled = false;
@@ -1275,12 +1276,14 @@ function render(dt) {
   const meEnt = S.ents.get(S.myPedId);
   const myCar = S.ctrlKind === CTRL.RIDER && meEnt && meEnt.parent ? S.ents.get(meEnt.parent) : null;
   const myTrain = myCar && myCar.kind === K.TRAIN && myCar.d ? myCar.d.tr : -1;
-  fx.drawDecals(g, view, now, rain);
+  const sub = !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
+  if (sub) drawTunnel(g, S.map, view, now);
+  else fx.drawDecals(g, view, now, rain);
   // the elevated highway: its shadow and the ramps' feet lie on the ground
-  const hv = S.highway.visible(view);
+  const hv = sub ? { slabs: [], pillars: [] } : S.highway.visible(view);
   S.highway.drawShadows(g, hv.slabs, clock.dark);
   S.highway.drawLow(g, hv.slabs);
-  const insideB = drawInteriorView(sp);
+  const insideB = sub ? null : drawInteriorView(sp);
 
   const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
@@ -1311,12 +1314,12 @@ function render(dt) {
   // downed / dead peds lie on the ground under everything that stands
   const up = (e) => (e.rz || 0) > 0.01;
   for (const p of peds) if ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p) && !up(p)) drawPed(p, now);
-  drawTrains(cars, riders, myTrain, now);
+  drawTrains(cars, riders, myTrain, sub, now);
   for (const b of balls) drawBall(b);
   // 3/4 view: buildings, vehicles, people, carried crates, trees and lamp posts drawn in order of
   // where they stand (north first), so whatever is behind a building is hidden by it
   const items = [];
-  const bl = S.buildings.inView(view);
+  const bl = sub ? [] : S.buildings.inView(view);
   S.bFade ??= new Map();
   for (const it of bl) {
     const inFade = (S.roofFade && S.roofFade[it.b.id]) || 0;
@@ -1331,7 +1334,7 @@ function render(dt) {
   for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pz = par ? par.rz || 0 : 0; items.push({ y: levelKey(par ? par.ry : c.ry, pz) + 0.5, c, z: pz }); }
   S.highway.items(hv.slabs, hv.pillars, items);
   for (const c of crates) if ((c.flags & 3) === 1) items.push({ y: c.ry + 1, c });
-  for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
+  if (!sub) for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
     for (const p of S.ground.overhead(cx, cy)) if (p.x > view.x0 - 40 && p.x < view.x1 + 40 && p.y > view.y0 - 40 && p.y < view.y1 + 90) items.push({ y: p.y + 8, o: p });
   items.sort((a, b) => a.y - b.y);
   const nightLit = clock.dark > 0.3;
@@ -1359,7 +1362,7 @@ function render(dt) {
       else { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); }
     }
   }
-  coverWalkIns(view, peds, insideB, dt);
+  if (!sub) coverWalkIns(view, peds, insideB, dt);
   for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
 
   // geysers
@@ -1367,15 +1370,16 @@ function render(dt) {
   S.geysers = S.geysers.filter((gy) => gy.until > nowMs);
   for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
 
-  drawBays(view, dt);
-  drawGarageDoors(view, dt);
-  drawGates(view, dt);
-  drawCrossings(view, dt, now);
-  drawStationClocks(view, now);
-  drawBuoys(view, now);
-  // traffic lights, cameras, birds
-  drawSignals(view);
-  updateBirds(dt, view, vehs, peds);
+  if (!sub) { // (none of it down in the subway)
+    drawBays(view, dt);
+    drawGarageDoors(view, dt);
+    drawGates(view, dt);
+    drawCrossings(view, dt, now);
+    drawStationClocks(view, now);
+    drawBuoys(view, now);
+    drawSignals(view);
+    updateBirds(dt, view, vehs, peds);
+  }
   fx.update(dt);
   fx.drawParticles(g);
 
@@ -1398,8 +1402,8 @@ function render(dt) {
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   S.trainCars = cars;
-  drawLighting(clock.dark, view, vehs, peds, z, dt);
-  if (rain) drawRain(dt);
+  if (!sub) drawLighting(clock.dark, view, vehs, peds, z, dt);
+  if (rain && !sub) drawRain(dt);
 
   // HUD bits
   const dist = S.map.districtAt(sp.x, sp.y);
@@ -1667,19 +1671,35 @@ function drawGates(view, dt) {
   }
 }
 // Trains: couplings, then the cars (lit interiors for the train you're riding, roofs for the
-// rest) and the people aboard yours.
-function drawTrains(cars, riders, myTrain, now) {
+// rest), the people aboard yours, and the ground drawn back over anything that has already slid
+// into a tunnel mouth.
+function drawTrains(cars, riders, myTrain, sub, now) {
   if (!cars.length && !riders.length) return;
   const byId = new Map(cars.map((c) => [c.id, c]));
   for (const c of cars) { const ahead = c.parent ? byId.get(c.parent) : null; if (ahead) drawCoupling(g, ahead, c); }
   for (const c of cars) drawTrainCar(g, c, c.d.tr === myTrain, now);
   for (const p of riders) { g.save(); g.translate(p.rx, p.ry); g.scale(0.8, 0.8); g.translate(-p.rx, -p.ry); drawPed(p, now); g.restore(); } // a touch smaller, so two fit abreast
+  if (!sub) for (const pc of S.portals || []) {
+    if (!cars.some((c) => c.rx > pc.x0 - 120 && c.rx < pc.x1 + 120 && c.ry > pc.y0 - 120 && c.ry < pc.y1 + 120)) continue;
+    coverGround(pc.x0, pc.y0, pc.x1, pc.y1);
+  }
   // the horn and the rumble
   for (const c of cars) {
     if (c.d.c !== 0) continue;
     const moving = c.buf.length > 1 && Math.hypot(c.buf[c.buf.length - 1].x - c.buf[c.buf.length - 2].x, c.buf[c.buf.length - 1].y - c.buf[c.buf.length - 2].y) > 4;
     if (moving) sfx('rumble', distVol(c.rx, c.ry) * 0.6);
   }
+}
+
+// Redraw a rectangle of the baked ground on top of whatever is there.
+function coverGround(x0, y0, x1, y1) {
+  for (let cy = Math.floor(y0 / CHUNK_PX); cy <= Math.floor((y1 - 1) / CHUNK_PX); cy++)
+    for (let cx = Math.floor(x0 / CHUNK_PX); cx <= Math.floor((x1 - 1) / CHUNK_PX); cx++) {
+      const bx = cx * CHUNK_PX, by = cy * CHUNK_PX;
+      const sx = Math.max(x0, bx), sy = Math.max(y0, by), ex = Math.min(x1, bx + CHUNK_PX), ey = Math.min(y1, by + CHUNK_PX);
+      if (ex <= sx || ey <= sy) continue;
+      g.drawImage(S.ground.get(cx, cy), sx - bx, sy - by, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);
+    }
 }
 
 // Level crossings: gate arms swing down when the server says a train is coming; the bell rings.
@@ -1702,7 +1722,8 @@ function drawStationClocks(view, now) {
   const tt = S.tt || { l: [], at: 0 };
   const since = performance.now() / 1000 - tt.at;
   sts.forEach((st, i) => {
-    if (st.x < view.x0 - 600 || st.x > view.x1 + 600 || st.y < view.y0 - 600 || st.y > view.y1 + 600) return;
+    const cx = st.under ? st.platform.x : st.x, cy = st.under ? st.platform.y : st.y;
+    if (cx < view.x0 - 600 || cx > view.x1 + 600 || cy < view.y0 - 600 || cy > view.y1 + 600) return;
     const v = tt.l[i];
     const secs = v === undefined ? -1 : v === 0 ? 0 : Math.max(0.01, v - since);
     if (secs === 0 && S.ctrlKind !== CTRL.RIDER) drawBoardingCue(g, S.map.rail, st, now); // a train is in: the platform lights up

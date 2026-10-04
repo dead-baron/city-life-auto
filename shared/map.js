@@ -1993,7 +1993,7 @@ export const TRAIN_CARS = [
   { kind: 'mail', name: 'Mail car', L: 188, W: 76 },
 ];
 // What a train is made of (by kind; every third train swaps its last coach for the mail car).
-export const CONSIST = ['loco', 'coach', 'coach', 'coach', 'coach'];
+export const CONSIST = ['loco', 'coach', 'coach']; // short enough to stand between two streets at a station
 export const CAR_GAP = 10;               // px between coupled cars
 export const TRAIN_LEN = CONSIST.reduce((a, k) => a + TRAIN_CARS.find((c) => c.kind === k).L, 0) + CAR_GAP * (CONSIST.length - 1);
 export const COACH_SEATS = [-84, -60, -36, 36, 60, 84].flatMap((ox) => [[ox, -23], [ox, 23]]);
@@ -2001,40 +2001,52 @@ export const COACH_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-
 export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towards the back of the mail car)
 export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards stand
 export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre
-const RAIL_ROUTE = [ // [tx, ty] corners of the one big loop (rounded); everything runs at grade
+const RAIL_ROUTE = [ // [tx, ty, 'sub'] corners of the one big loop (rounded); between two 'sub' corners it's a subway tunnel
   [302, 620], [302, 240], [362, 165], [482, 143], [545, 141], [560, 212], [640, 212], [800, 212], [880, 216], [975, 216],
-  [975, 432], [1094, 440], [1094, 765], [885, 765], [885, 487], [705, 487], [705, 917],
+  [975, 432], [1094, 440], [1094, 765], [885, 765], [885, 628, 'sub'], [885, 487, 'sub'], [705, 487, 'sub'], [705, 612, 'sub'], [705, 917],
   [372, 917], [372, 850], [330, 790], [326, 700],
 ];
 const RAIL_STATIONS = [ // [name, tx, ty] nearest point on the line becomes the stop
-  ['West Hills', 302, 585], ['Lakeview', 302, 470], ['Westport Center', 302, 325], ['Granite Peaks', 640, 212], ['Northshore', 915, 215],
-  ['Old Town', 975, 375], ['Dry Creek', 1094, 510], ['Southside', 995, 765], ['Pine Hills', 885, 740], ['Civic Center', 885, 520],
-  ['Downtown', 806, 487], ['Midtown', 705, 540], ['The Yards', 705, 690], ['Cedar Farms', 705, 880], ['Lake District', 600, 917],
-  ['Cedar Falls', 450, 917],
+  ['West Hills', 302, 585], ['Westport Center', 302, 325], ['Granite Peaks', 640, 212], ['Northshore', 915, 215],
+  ['Old Town', 975, 375], ['Dry Creek', 1094, 510], ['Southside', 995, 765], ['Civic Center', 885, 540],
+  ['Downtown', 806, 487], ['Midtown', 705, 540], ['The Yards', 705, 680], ['Cedar Falls', 450, 917],
 ];
+export const UNDERPASS_RAMP = 9 * TILE; // the line dips into a short tunnel this far either side of a highway it meets
 export const RAIL_MAX_BRIDGE_TILES = 115; // the longest stretch of open water the line may cross (on a bridge)
 
 function railLine(m) {
-  const C = RAIL_ROUTE.map(([x, y]) => ({ x: x * TILE, y: y * TILE }));
+  const C = RAIL_ROUTE.map(([x, y, f]) => ({ x: x * TILE, y: y * TILE, sub: f === 'sub' }));
   const loop = rounded(C, 12 * TILE, true, 14);
+  // a point is in the subway when the corners either side of its stretch of the route both are
+  const subAt = (p) => {
+    let best = false, bd = Infinity;
+    for (let i = 0; i < C.length; i++) {
+      const a = C[i], b = C[(i + 1) % C.length];
+      const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2));
+      const d = Math.hypot(a.x + dx * t - p.x, a.y + dy * t - p.y);
+      if (d < bd) { bd = d; best = a.sub && b.sub; }
+    }
+    return best;
+  };
   const pts = [];
   for (let k = 0; k < loop.length - 1; k++) {
     const a = loop[k], b = loop[k + 1];
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     const steps = Math.max(1, Math.ceil(len / 8));
-    for (let j = 0; j < steps; j++) { const t = j / steps; pts.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }); }
+    for (let j = 0; j < steps; j++) { const t = j / steps; const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; p.under = subAt(p); p.subway = p.under; pts.push(p); }
   }
   let s = 0;
   for (let i = 0; i < pts.length; i++) { if (i) s += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); pts[i].s = s; }
   // where the line passes under the elevated ring highway (slip ramps keep clear of it)
   m.railRingCross = [];
-  if (m.ring) for (const p of pts) if (m.ringD && m.ringD[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === 0) { const pr = project(m.ring, p); if (pr && !m.railRingCross.some((q) => Math.abs(q - pr.s) < 600)) m.railRingCross.push(pr.s); }
+  if (m.ring) for (const p of pts) if (!p.under && m.ringD && m.ringD[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === 0) { const pr = project(m.ring, p); if (pr && !m.railRingCross.some((q) => Math.abs(q - pr.s) < 600)) m.railRingCross.push(pr.s); }
   return pts;
 }
 
 // Keep the at-grade track bed free of buildings (roads it crosses stay roads: level crossings),
 // and a platform's worth of room either side of every station.
-export const PLATFORM_HALF = Math.ceil(TRAIN_LEN / 2) + 16; // px either side of the station mark - as long as a train
+export const PLATFORM_HALF = Math.ceil(TRAIN_LEN / 2) + 4; // px either side of the station mark - as long as a train
 const PLATFORM_IN = 40, PLATFORM_OUT = 104; // the platform runs from this far off the track centre to this far
 // Where each station stands on the line: near its named spot, on the stretch between level
 // crossings that best fits a whole platform - a train waiting at a station shouldn't sit across
@@ -2044,6 +2056,8 @@ function stationIndex(m, pts) {
   if (m.railStationIdx) return m.railStationIdx;
   const n = pts.length;
   const roadPt = pts.map((p) => {
+    if (p.underpass) return 1;
+    if (p.under) return 0;
     for (const [dx, dy] of [[0, 0], [-24, 0], [24, 0], [0, -24], [0, 24]]) {
       const tx = Math.floor((p.x + dx) / TILE), ty = Math.floor((p.y + dy) / TILE), t = m.tileAt(tx, ty);
       if (t === T.ROAD || (t === T.BRIDGE && m.roadAxis[ty * MAP_W + tx])) return 1;
@@ -2074,8 +2088,36 @@ function stationIndex(m, pts) {
   m.railStationIdx = out;
   return out;
 }
+// Where the line meets a highway at ground level it dips under it in a short tunnel (no level
+// crossing on a highway) - unless that would put the tunnel under water or a station.
+function markUnderpasses(m, pts) {
+  const hwy = new Set();
+  for (const e of m.edges || []) {
+    if ((e.kind !== 'hwy' && e.kind !== 'ramp') || e.lvl) continue;
+    const r = (e.w || 128) / 2 + 20;
+    for (let k = 0; k < e.pts.length - 1; k++) {
+      const a = e.pts[k], b = e.pts[k + 1], len = Math.hypot(b.x - a.x, b.y - a.y);
+      for (let d = 0; d <= len; d += 16) {
+        const x = a.x + (b.x - a.x) * d / len, y = a.y + (b.y - a.y) * d / len;
+        for (let oy = -r; oy <= r; oy += 16) for (let ox = -r; ox <= r; ox += 16) if (ox * ox + oy * oy <= r * r) hwy.add(Math.floor((y + oy) / TILE) * MAP_W + Math.floor((x + ox) / TILE));
+      }
+    }
+  }
+  const n = pts.length, step = Math.ceil(UNDERPASS_RAMP / 8);
+  const onHwy = pts.map((p) => !p.under && hwy.has(Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)));
+  const wet = (p) => { const t = m.tileAtPx(p.x, p.y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; };
+  for (let i = 0; i < n; i++) {
+    if (!onHwy[i] || onHwy[(i - 1 + n) % n]) continue;
+    let j = i; while (onHwy[(j + 1) % n] && j - i < n) j++;
+    const range = []; for (let k = i - step; k <= j + step; k++) range.push(pts[(k + n) % n]);
+    if (range.some(wet)) continue;
+    for (const p of range) { p.under = true; p.underpass = true; }
+  }
+}
 function reserveRail(m, pts) {
+  markUnderpasses(m, pts);
   for (const p of pts) {
+    if (p.under) continue;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const tx = Math.floor(p.x / TILE) + dx, ty = Math.floor(p.y / TILE) + dy;
       if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) continue;
@@ -2088,6 +2130,7 @@ function reserveRail(m, pts) {
   }
   const n = pts.length;
   for (const { i } of stationIndex(m, pts)) {
+    if (pts[i].under) continue; // subway stations need nothing up top but a stairway
     const span = Math.ceil((PLATFORM_HALF + 48) / 8);
     for (let k = -span; k <= span; k++) {
       const p = pts[(i + k + n) % n], q = pts[(i + k + 1 + n) % n];
@@ -2107,13 +2150,14 @@ function buildRailway(m, pts) {
   const wetT = (t) => t === T.WATER || t === T.DEEP;
   let run = [];
   const closeRun = () => { const len = run.length ? run[run.length - 1].s - run[0].s : 0; for (const q of run) q.bridge = len > 5 * TILE; run = []; };
-  for (const p of pts) { if (wetT(m.tileAtPx(p.x, p.y))) run.push(p); else closeRun(); }
+  for (const p of pts) { if (!p.under && wetT(m.tileAtPx(p.x, p.y))) run.push(p); else closeRun(); }
   closeRun();
-  for (let i = 0; i < pts.length; i++) if (pts[i].bridge) for (let k = -6; k <= 6; k++) pts[(i + k + pts.length) % pts.length].deck = true;
+  for (let i = 0; i < pts.length; i++) if (pts[i].bridge) for (let k = -6; k <= 6; k++) { const q = pts[(i + k + pts.length) % pts.length]; if (!q.under) q.deck = true; }
   // lay the track bed: ballast (dirt) on land and embankment, a deck on the bridges; road crossings stay road
   const crossings = [];
   const OFFS = [[-24, -24], [24, -24], [-24, 24], [24, 24], [0, 0], [-24, 0], [24, 0], [0, -24], [0, 24]];
   for (const p of pts) {
+    if (p.under) continue;
     for (const [dx, dy] of OFFS) {
       const tx = Math.floor((p.x + dx) / TILE), ty = Math.floor((p.y + dy) / TILE);
       const t = m.tileAt(tx, ty);
@@ -2144,6 +2188,21 @@ function buildRailway(m, pts) {
   for (const { name, i } of stationIndex(m, pts)) {
     const best = pts[i];
     const q = railAt(rail0, best.s);
+    if (best.under) {
+      // a subway station: the platform is down below; the way in is a stairway on the nearest
+      // pavement up top (not under the elevated highway)
+      let ent = null;
+      for (let r = 48; r < 700 && !ent; r += 16) for (let k = 0; k < 16; k++) {
+        const x = q.x + Math.cos(k / 16 * 6.283) * r, y = q.y + Math.sin(k / 16 * 6.283) * r;
+        if (m.tileAtPx(x, y) === T.SIDEWALK && !m.deck[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)]) { ent = { x, y }; break; }
+      }
+      const st = { name: `${name} Station`, s: best.s, x: q.x, y: q.y, a: q.a, side: 1, half: PLATFORM_HALF, inner: PLATFORM_IN, outer: PLATFORM_OUT, under: true, clockD: 0 };
+      st.platform = ent || { x: q.x, y: q.y };
+      st.poi = m.pois.length;
+      m.pois.push({ id: m.pois.length, kind: 'station', label: st.name, x: st.platform.x, y: st.platform.y, r: 70, station: stations.length });
+      stations.push(st);
+      continue;
+    }
     const bad = (sd) => { let n = 0; along(best.s, (r, nx, ny) => { for (let off = PLATFORM_IN; off <= PLATFORM_OUT; off += 16) { const t = m.tileAtPx(r.x + nx * sd * off, r.y + ny * sd * off); if (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.BRIDGE) n++; else if (t === T.WATER || t === T.DEEP) n += 0.5; } }); return n; };
     const side = bad(1) <= bad(-1) ? 1 : -1;
     along(best.s, (r, nx, ny) => {
@@ -2173,7 +2232,7 @@ function buildRailway(m, pts) {
   // the long rural run: the stretch of line through Dry Creek's fields, clear of the station
   const nearStation = (p) => stations.some((st) => { const d = Math.abs(p.s - st.s); return Math.min(d, total - d) < PLATFORM_HALF + 900; });
   const RURAL = new Set([9, 41, 42]); // Dry Creek's farms, the desert and the airstrip
-  const ruralIdx = pts.map((p, i) => (RURAL.has(m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)]) && !nearStation(p) ? i : -1)).filter((i) => i >= 0);
+  const ruralIdx = pts.map((p, i) => (!p.under && RURAL.has(m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)]) && !nearStation(p) ? i : -1)).filter((i) => i >= 0);
   let rural = null;
   if (ruralIdx.length) {
     let bestRun = null, cur = [ruralIdx[0]];
@@ -2188,8 +2247,8 @@ function buildRailway(m, pts) {
 // referenced by index on the wire, and both ends build the map the same way).
 function clearPropsOnRail(m, pts) {
   const grid = new Set();
-  for (const p of pts) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) grid.add((Math.floor(p.y / TILE) + dy) * MAP_W + Math.floor(p.x / TILE) + dx);
-  const near = (x, y) => { if (!grid.has(Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE))) return false; for (const p of pts) if (Math.abs(p.x - x) < 46 && Math.abs(p.y - y) < 46 && Math.hypot(p.x - x, p.y - y) < 46) return true; return false; };
+  for (const p of pts) if (!p.under) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) grid.add((Math.floor(p.y / TILE) + dy) * MAP_W + Math.floor(p.x / TILE) + dx);
+  const near = (x, y) => { if (!grid.has(Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE))) return false; for (const p of pts) if (!p.under && Math.abs(p.x - x) < 46 && Math.abs(p.y - y) < 46 && Math.hypot(p.x - x, p.y - y) < 46) return true; return false; };
   const keep = [], remap = new Map(), gone = new Set();
   m.props.forEach((pr, i) => { if (near(pr.x, pr.y)) { gone.add(pr); return; } remap.set(i, keep.length); keep.push(pr); });
   if (!gone.size) return;
@@ -2212,7 +2271,7 @@ export function railAt(rail, s) {
   const a = pts[lo], b = pts[(lo + 1) % pts.length];
   const segLen = (lo + 1 < pts.length ? b.s : L) - a.s || 1;
   const t = Math.min(1, (s - a.s) / segLen);
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x), i: lo };
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x), under: !!(a.under && b.under), i: lo };
 }
 
 // ---- out on the water ------------------------------------------------------------------------

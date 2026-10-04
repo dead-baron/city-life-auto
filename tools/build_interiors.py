@@ -42,7 +42,6 @@ SCENES = {
     'golf': ('4d9b4746-image.png', (0, 0, 1536, 950), 1536),   # clubhouse, fairways, bunkers, ponds, a creek
     'cay': ('564860fe-image.png', (0, 0, 1448, 1086), 1160),   # a palm island with a cabin and a jetty
     'canyon': ('d5c71092-image.png', (0, 0, 1536, 1024), 1200),  # desert canyon: mesas, a homestead, a dirt road
-    'coach': ('9038c592-image.png', (70, 200, 1470, 740), 900),  # inside a passenger coach (the riding view)
 }
 # Scenes that reshape the ground under them: the painting is sampled into a tile mask (cols x
 # rows) - '.' water, 's' sand/dirt, 'g' grass, 'd' jetty, '#' solid (cliffs, buildings).

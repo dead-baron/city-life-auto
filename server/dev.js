@@ -109,7 +109,7 @@ export function command(world, p, c, msg) {
       if (r) world.notify(p, `[dev] A train is waiting at ${r.st.name}.`, 'info');
       break;
     }
-    case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
+    case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y); if (ped) ped.sub = false;
       if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; ped.lz = msg.lz === 1 && surfaceZ(world.map, msg.x, msg.y, 1) !== null ? 1 : 0; p.teleportAt = world.time; } break; // lz: 1 = up on the highway deck
     case 'god': devmode.setInvincible(world, p, null); break;              // invincible (toggle)
     case 'godp': devmode.setInvincible(world, p, msg.pid); break;          // make another player invincible (toggle)

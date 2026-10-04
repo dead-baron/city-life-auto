@@ -8,7 +8,7 @@ import { DISTRICTS } from '../../shared/map.js';
 import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
 import { INTERIOR_RECTS, INTERIOR_KINDS, SCENE_RECTS } from '../../shared/interior-art.js';
 import { atlas } from './sprites.js';
-import { railIndex, drawRailChunk, drawStation } from './trains.js';
+import { railIndex, drawRailChunk, drawStation, drawPortals } from './trains.js';
 import { drawRoads, edgeRect } from './roads.js';
 import { Shores } from './shore.js';
 
@@ -97,6 +97,7 @@ export class GroundCache {
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, m, st, cx, cy);
     for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawBuildingBase(g, r); // the roof itself is lifted onto its walls (render/buildings.js)
+    drawPortals(g, m, cx, cy);
     for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
     for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
     for (const mn of m.mansions || []) drawMansion(g, mn, cx, cy);

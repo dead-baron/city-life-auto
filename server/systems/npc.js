@@ -14,6 +14,7 @@ import * as events from './events.js';
 import * as gangwar from './gangwar.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
+import * as trains from './trains.js';
 import { inAnyView } from '../view.js';
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED } from '../../shared/rules.js';
 
@@ -111,13 +112,19 @@ export function update(world, dt) {
       case 'wander': inp = wander(world, ped, now); factor = rain && !ped.umbrella ? 0.85 : 0.55; break;
       case 'idle': inp = idle(world, ped, now); break;
       case 'flee': {
+        if (n.railFlee && n.railSafe) { // getting off the line: to the spot picked beside it, then wait there
+          if (Math.hypot(n.railSafe.x - ped.x, n.railSafe.y - ped.y) > 6) inp = seek(ped, n.railSafe.x, n.railSafe.y, true);
+          factor = 1;
+          if (now > n.until && !trains.railThreat(world, ped.x, ped.y)) { n.state = 'wander'; n.railFlee = false; n.railSafe = null; }
+          break;
+        }
         const fx = n.fx ?? ped.x, fy = n.fy ?? ped.y;
         const away = Math.atan2(ped.y - fy, ped.x - fx) + (n.fleeBias || 0);
         const tx = ped.x + Math.cos(away) * 80, ty = ped.y + Math.sin(away) * 80;
         if (PED_BLOCK[world.map.tileAtPx(tx, ty)]) n.fleeBias = (n.fleeBias || 0) + 0.6;
         inp = seek(ped, tx, ty, true);
         factor = 1;
-        if (now > n.until) { n.state = 'wander'; n.fleeBias = 0; }
+        if (now > n.until) { n.state = 'wander'; n.fleeBias = 0; n.railFlee = false; }
         break;
       }
       case 'fight': inp = fight(world, ped, now); factor = 1; break;
@@ -129,6 +136,18 @@ export function update(world, dt) {
         break;
       }
       default: n.state = 'wander';
+    }
+    // commuters heading for a platform to wait for the train
+    if (n.waitTrain !== undefined && (n.state === 'wander' || n.state === 'idle')) {
+      const d = Math.hypot(n.waitX - ped.x, n.waitY - ped.y);
+      if (now > n.waitGiveUp) { n.waitTrain = undefined; n.keep = false; }
+      else if (d > 8) { inp = seek(ped, n.waitX, n.waitY, false); n.state = 'wander'; n.until = now + 60; }
+      else { inp = NO_INPUT; ped.vx = 0; ped.vy = 0; if (now >= (n.lookAt || 0)) { ped.a += (rng() - 0.5) * 1.4; n.lookAt = now + 1.5 + rng() * 2; } }
+    }
+    // don't step onto the line in front of a train (or into one standing at a platform)
+    if ((inp.mx || inp.my) && !n.railFlee && world.map.rail && now >= (n.railBlindUntil || 0)) {
+      const m = Math.hypot(inp.mx, inp.my) || 1;
+      if (trains.railThreat(world, ped.x + inp.mx / m * 26, ped.y + inp.my / m * 26, 4.5, true) && !trains.railThreat(world, ped.x, ped.y, 4.5, true)) inp = NO_INPUT;
     }
     if (n.sway && (inp.mx || inp.my)) { const s = Math.sin(now * 3 + ped.id) * 0.6; const mx = inp.mx, my = inp.my; inp = { ...inp, mx: mx - my * s, my: my + mx * s }; }
     pedStep(ped, inp, dt, world.map, walkMods(world, ped, factor));

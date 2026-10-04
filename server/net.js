@@ -44,7 +44,7 @@ function fields(world, e) {
     case K.PROJ: return [0, 1, 0, 0];
     case K.BALL: return [0, 1, 0, Math.max(0, Math.min(255, Math.round(e.z / 2)))]; // extra: height above the ground / 2
     // train car flags: 1 underground, 2 doors open, 4 horn, 8 lights on, 16 strongbox gone (mail car); parent: the car ahead
-    case K.TRAIN: return [(e.doors ? 2 : 0) | (e.horn ? 4 : 0) | (e.lit ? 8 : 0) | (e.boxGone ? 16 : 0), 1, e.car ? world.trains[e.train].cars[e.car - 1].id : 0, 0];
+    case K.TRAIN: return [(e.sub ? 1 : 0) | (e.doors ? 2 : 0) | (e.horn ? 4 : 0) | (e.lit ? 8 : 0) | (e.boxGone ? 16 : 0), 1, e.car ? world.trains[e.train].cars[e.car - 1].id : 0, 0];
     default: return [0, 0, 0, 0];
   }
 }
@@ -110,12 +110,18 @@ export function send(world) {
     } else if (ped) { ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: 0, vy: 0, lz: ped.lz || 0 }; }
     writer.begin(tick, p.ack, world.loopTime, world.weather, ctrl, ctrlId, self, sflags, ped ? ped.prevBits : 0);
 
+    // the subway is its own level: underground you only see your own train; up top, nothing below
+    const myTrain = ped && ped.onTrain ? ped.onTrain.t : -1, mySub = !!(ped && ped.sub);
     const visit = (e, check) => {
       if (e._mark === mark && e._markP === p) return;
       if (check) { // inside the window, or already known and not yet past the keep margin
         const x = e.x, y = e.y;
         if (x < kx0 || x > kx1 || y < ky0 || y > ky1) return;
         if ((x < minX || x > maxX || y < minY || y > maxY) && !p.known.has(e.id)) return;
+      }
+      if ((e.sub || mySub) && e !== ped) {
+        const et = e.kind === K.TRAIN ? e.train : e.onTrain ? e.onTrain.t : -2;
+        if (et !== myTrain) return;
       }
       e._mark = mark; e._markP = p;
       let k = p.known.get(e.id);

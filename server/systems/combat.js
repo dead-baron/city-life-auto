@@ -76,7 +76,7 @@ function melee(world, ped, w, aim) {
   ped.swingSide = (ped.swingSide || 0) ^ 1;
   let best = null, bestD = Infinity;
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
-    if (o === ped || o.dead || o.vehId || !sameLevel(o.lz, ped.lz)) continue; // the highway deck is another level
+    if (o === ped || o.dead || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 4) continue;
@@ -143,12 +143,13 @@ function taser(world, ped, w, aim) {
 
 // Returns the first ped or vehicle along the segment before any wall, or null.
 function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true) {
-  const tWall = world.map.rayTiles(x1, y1, x2, y2);
+  const sub = !!shooter.sub; // down in the subway the city's walls don't apply, only the tunnel's own level
+  const tWall = sub ? 1 : world.map.rayTiles(x1, y1, x2, y2);
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
   const r = Math.hypot(x2 - x1, y2 - y1) / 2 + 80;
   let best = null, bestT = tWall;
   for (const e of world.query(mx, my, r)) {
-    if (e === shooter || !sameLevel(e.lz, shooter.lz)) continue;
+    if (e === shooter || !!e.sub !== sub || !sameLevel(e.lz, shooter.lz)) continue;
     let t = -1;
     if (e.kind === K.PED) {
       if (e.dead || e.vehId || e.rollT > 0) continue;
@@ -345,7 +346,7 @@ export function update(world, dt) {
 function stepProjectile(world, p, dt) {
   const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
   const owner = world.get(p.owner);
-  const hit = traceTarget(world, owner ? { ...owner, lz: p.lz || 0, id: owner.id, vehId: owner.vehId, npc: owner.npc } : { id: -1, vehId: 0, lz: p.lz || 0 }, p.x, p.y, nx, ny, true);
+  const hit = traceTarget(world, owner ? { ...owner, lz: p.lz || 0, id: owner.id, vehId: owner.vehId, npc: owner.npc, sub: owner.sub } : { id: -1, vehId: 0, lz: p.lz || 0 }, p.x, p.y, nx, ny, true);
   p.dist += Math.hypot(nx - p.x, ny - p.y);
   if ((hit.kind && hit.id !== p.owner) || hit.hitT < 1 || p.dist > p.maxDist) {
     const t = hit.hitT < 1 ? hit.hitT : 1;

@@ -4,8 +4,6 @@
 // board here" glow are drawn live. All procedural canvas drawing - no image assets.
 import { T, TILE, CHUNK_PX, MAP_W } from '../../shared/constants.js';
 import { TRAIN_CARS, COACH_SEATS, MAIL_BOX, CROSSING_ARM, railAt } from '../../shared/map.js';
-import { SCENE_RECTS } from '../../shared/interior-art.js';
-import { atlas } from './sprites.js';
 
 const TIE_STEP = 18, RAIL_OFF = 12;
 
@@ -34,6 +32,7 @@ export function drawRailChunk(g, m, idx) {
   // ballast shoulder + ties (timber deck over the water, nothing on the road panels)
   for (const i of idx) {
     const { p, q, a, len } = seg(i);
+    if (p.under || q.under) continue;
     for (let s = Math.ceil(p.s / TIE_STEP) * TIE_STEP; s < p.s + len; s += TIE_STEP) {
       const k = (s - p.s) / len, x = p.x + (q.x - p.x) * k, y = p.y + (q.y - p.y) * k;
       if (roadAt(m, x, y)) {
@@ -62,7 +61,7 @@ export function drawRailChunk(g, m, idx) {
       g.beginPath();
       for (const i of idx) {
         const { p, q, a } = seg(i);
-        if (!wetAt(m, p.x, p.y) || !wetAt(m, q.x, q.y) || roadAt(m, p.x, p.y)) continue;
+        if (p.under || q.under || !wetAt(m, p.x, p.y) || !wetAt(m, q.x, q.y) || roadAt(m, p.x, p.y)) continue;
         const nx = -Math.sin(a) * side * off, ny = Math.cos(a) * side * off;
         g.moveTo(p.x + nx + (off === 34 ? 4 : 0), p.y + ny + (off === 34 ? 5 : 0)); g.lineTo(q.x + nx + (off === 34 ? 4 : 0), q.y + ny + (off === 34 ? 5 : 0));
       }
@@ -76,11 +75,43 @@ export function drawRailChunk(g, m, idx) {
       g.beginPath();
       for (const i of idx) {
         const { p, q, a } = seg(i);
+        if (p.under || q.under) continue;
         const nx = -Math.sin(a) * side * RAIL_OFF, ny = Math.cos(a) * side * RAIL_OFF;
         g.moveTo(p.x + nx, p.y + ny); g.lineTo(q.x + nx, q.y + ny);
       }
       g.stroke();
     }
+  }
+}
+
+// Tunnel mouths: the line runs down a short cutting between concrete retaining walls into a
+// portal (the subway under the core, the little underpasses under the highways).
+export function drawPortals(g, m, cx, cy) {
+  if (!m.rail) return;
+  const pts = m.rail.pts, n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], q = pts[(i + 1) % n];
+    if (!!p.under === !!q.under) continue;
+    if (p.x < cx * CHUNK_PX - 260 || p.x > (cx + 1) * CHUNK_PX + 260 || p.y < cy * CHUNK_PX - 260 || p.y > (cy + 1) * CHUNK_PX + 260) continue;
+    const a = Math.atan2(q.y - p.y, q.x - p.x) + (p.under ? Math.PI : 0); // pointing into the tunnel
+    g.save(); g.translate(p.x, p.y); g.rotate(a);
+    // the cutting: the track sinks between walls over the last ~180 px before the mouth
+    const gr = g.createLinearGradient(-180, 0, 0, 0);
+    gr.addColorStop(0, 'rgba(8,9,12,0)'); gr.addColorStop(1, 'rgba(8,9,12,.75)');
+    g.fillStyle = gr; g.fillRect(-180, -30, 180, 60);
+    for (const sd of [-1, 1]) {
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-180, sd * 34 - (sd < 0 ? 4 : 0), 180, 4);
+      g.fillStyle = '#9a9890'; g.fillRect(-180, sd < 0 ? -40 : 32, 180, 8);         // retaining walls
+      g.fillStyle = '#b8b6ae'; g.fillRect(-180, sd < 0 ? -40 : 38, 180, 2);
+      for (let k = -176; k < 0; k += 22) { g.fillStyle = '#86847c'; g.fillRect(k, sd < 0 ? -40 : 32, 2, 8); }
+    }
+    // the mouth
+    g.fillStyle = '#07080b'; g.fillRect(0, -30, 60, 60);
+    g.fillStyle = '#8a8a86'; g.fillRect(-6, -44, 12, 88);                            // the concrete portal
+    g.fillStyle = '#b4b4ae'; g.fillRect(-6, -44, 3, 88);
+    g.fillStyle = '#5a5a56'; g.fillRect(-6, -48, 28, 8); g.fillRect(-6, 40, 28, 8);   // wing walls
+    g.fillStyle = '#ffd400'; for (let k = -40; k < 40; k += 12) g.fillRect(-5, k, 4, 6);  // hazard paint
+    g.restore();
   }
 }
 
@@ -90,6 +121,19 @@ export function drawRailChunk(g, m, idx) {
 const PLAT_STEP = 16;
 export function drawStation(g, m, st, cx, cy) {
   const L = st.half || 112, sd = st.side, x0 = cx * CHUNK_PX, y0 = cy * CHUNK_PX;
+  if (st.under) { // the subway stairway down from the pavement, with its sign
+    const { x, y } = st.platform;
+    if (x + 80 < x0 || x - 80 > x0 + CHUNK_PX || y + 80 < y0 || y - 80 > y0 + CHUNK_PX) return;
+    g.save(); g.translate(x, y);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(-20, -14, 44, 32);
+    g.fillStyle = '#26282e'; g.fillRect(-22, -16, 44, 32);
+    for (let k = 0; k < 6; k++) { g.fillStyle = k % 2 ? '#3a3d45' : '#30333a'; g.fillRect(-16, -12 + k * 4.4, 32, 4.4); }
+    g.fillStyle = '#9aa0a8'; g.fillRect(-22, -16, 3, 32); g.fillRect(19, -16, 3, 32);
+    g.fillStyle = '#1f6f3a'; g.fillRect(-26, -34, 52, 14); g.fillStyle = '#fff';
+    g.font = 'bold 9px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SUBWAY', 0, -27);
+    g.restore();
+    return;
+  }
   if (st.x + L + 140 < x0 || st.x - L - 140 > x0 + CHUNK_PX || st.y + L + 140 < y0 || st.y - L - 140 > y0 + CHUNK_PX) return;
   const at = (d, off) => { const q = railAt(m.rail, st.s + d); const nx = -Math.sin(q.a) * sd, ny = Math.cos(q.a) * sd; return { x: q.x + nx * off, y: q.y + ny * off, a: q.a }; };
   const blocked = (x, y) => { const t = m.tileAtPx(x, y); return t === T.ROAD || t === T.BUILDING || t === T.WALL; };
@@ -140,6 +184,10 @@ export function drawStation(g, m, st, cx, cy) {
 // A train standing at the platform: the platform edge glows green and chevrons point at the
 // doors, so it's obvious where to stand and that now is the time to get on.
 export function drawBoardingCue(g, rail, st, now) {
+  if (st.under) { // the stairway glows instead
+    g.save(); g.strokeStyle = `rgba(90,255,120,${0.45 + 0.35 * Math.sin(now * 6)})`; g.lineWidth = 5; g.strokeRect(st.platform.x - 26, st.platform.y - 20, 52, 40); g.restore();
+    return;
+  }
   const L = st.half || 112, sd = st.side, inner = st.inner || 40;
   const pulse = 0.45 + 0.35 * Math.sin(now * 6);
   g.save();
@@ -163,10 +211,13 @@ export function drawBoardingCue(g, rail, st, now) {
 // one is in). secs < 0: no timetable yet.
 export function drawStationClock(g, rail, st, secs, now) {
   g.save();
-  const q = railAt(rail, st.s + (st.clockD || 0));
-  g.translate(q.x, q.y); g.rotate(q.a);
-  g.translate(0, st.side * 72);
-  if (Math.cos(q.a) < -0.1 || (Math.abs(Math.cos(q.a)) <= 0.1 && Math.sin(q.a) > 0)) g.rotate(Math.PI); // upright text
+  if (st.under) { g.translate(st.platform.x + 44, st.platform.y - 26); g.scale(1.2, 1.2); }
+  else {
+    const q = railAt(rail, st.s + (st.clockD || 0));
+    g.translate(q.x, q.y); g.rotate(q.a);
+    g.translate(0, st.side * 72);
+    if (Math.cos(q.a) < -0.1 || (Math.abs(Math.cos(q.a)) <= 0.1 && Math.sin(q.a) > 0)) g.rotate(Math.PI); // upright text
+  }
   g.scale(1.3, 1.3);
   g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(-27, -9, 58, 22);
   g.fillStyle = '#5a5e66'; g.fillRect(-2, 8, 4, 10);                      // post
@@ -227,9 +278,6 @@ function carCanvas(type, mode) {
         g.fillStyle = '#8a8f99'; g.fillRect(ox - 10, oy + (oy < 0 ? -11 : 10), 20, 1);
       }
       g.fillStyle = '#c0c4cc'; g.fillRect(-1, -hw + 8, 2, W - 16);                               // grab pole
-      // the concept painting of a coach's inside (seats, poles, adverts, doors) over the plain fit-out
-      const r = SCENE_RECTS.coach;
-      if (r && atlas.scenes) { g.imageSmoothingEnabled = true; g.drawImage(atlas.scenes, r[0], r[1], r[2], r[3], -hl + 3, -hw + 3, L - 6, W - 6); if (lit) { g.fillStyle = 'rgba(255,220,140,.12)'; g.fillRect(-hl + 3, -hw + 3, L - 6, W - 6); } }
     } else {
       for (const [sx, sy] of [[44, -26], [56, 24], [68, -14], [20, 26], [76, 10], [6, -26]]) { g.fillStyle = '#b89a6a'; g.beginPath(); g.ellipse(sx, sy, 9, 7, 0.3, 0, 6.28); g.fill(); g.fillStyle = '#8a7048'; g.fillRect(sx - 2, sy - 6, 4, 3); }
       g.fillStyle = '#4a3a2a'; g.fillRect(hl - 12, -hw + 6, 6, W - 12);                          // shelves
@@ -317,4 +365,54 @@ export function drawCrossing(g, c, anim, broken, down, now) {
     }
     g.restore();
   }
+}
+
+// ---- underground ----------------------------------------------------------------------------------
+// Riding through the subway: the city goes black; the tunnel walls and their lamps slide past.
+export function drawTunnel(g, map, view, now) {
+  g.fillStyle = '#050608'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0);
+  if (!map.rail) return;
+  const pts = map.rail.pts, n = pts.length;
+  const inView = (p) => p.x > view.x0 - 200 && p.x < view.x1 + 200 && p.y > view.y0 - 200 && p.y < view.y1 + 200;
+  const pass = (w, col) => {
+    g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.beginPath();
+    for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; if (!p.under || !q.under || !inView(p)) continue; g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); }
+    g.stroke();
+  };
+  pass(96, '#1e2026'); pass(78, '#14151a'); pass(60, '#24262c');
+  for (let i = 0; i < n; i++) { // wall lamps every ~150 px
+    const p = pts[i];
+    if (!p.under || !inView(p) || Math.round(p.s) % 150 >= 8) continue;
+    const q = pts[(i + 1) % n], a = Math.atan2(q.y - p.y, q.x - p.x), nx = -Math.sin(a), ny = Math.cos(a);
+    for (const sd of [-1, 1]) {
+      const lx = p.x + nx * sd * 44, ly = p.y + ny * sd * 44;
+      const gr = g.createRadialGradient(lx, ly, 0, lx, ly, 40);
+      gr.addColorStop(0, 'rgba(255,214,140,.45)'); gr.addColorStop(1, 'rgba(255,214,140,0)');
+      g.fillStyle = gr; g.fillRect(lx - 40, ly - 40, 80, 80);
+      g.fillStyle = '#ffe2a0'; g.fillRect(lx - 3, ly - 2, 6, 4);
+    }
+  }
+  // rails underfoot
+  for (const side of [-1, 1]) {
+    g.strokeStyle = '#5a5e66'; g.lineWidth = 2; g.beginPath();
+    for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; if (!p.under || !q.under || !inView(p)) continue; const a = Math.atan2(q.y - p.y, q.x - p.x), nx = -Math.sin(a) * side * RAIL_OFF, ny = Math.cos(a) * side * RAIL_OFF; g.moveTo(p.x + nx, p.y + ny); g.lineTo(q.x + nx, q.y + ny); }
+    g.stroke();
+  }
+  void now;
+}
+
+// The tunnel's portal regions, for hiding the part of a train that has already gone underground.
+export function portalCovers(map) {
+  const out = [];
+  if (!map.rail) return out;
+  const pts = map.rail.pts, n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], q = pts[(i + 1) % n];
+    if (!!p.under === !!q.under) continue;
+    const a = Math.atan2(q.y - p.y, q.x - p.x) + (p.under ? Math.PI : 0);
+    const dx = Math.round(Math.cos(a)), dy = Math.round(Math.sin(a));
+    const x0 = p.x + (dx < 0 ? -260 : dx > 0 ? 6 : -40), y0 = p.y + (dy < 0 ? -260 : dy > 0 ? 6 : -40);
+    out.push({ x0, y0, x1: x0 + (dx ? 254 : 80), y1: y0 + (dy ? 254 : 80), px: p.x, py: p.y, a });
+  }
+  return out;
 }
