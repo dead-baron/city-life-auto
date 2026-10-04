@@ -1,8 +1,10 @@
 // Abuse and cost guards for the public server (no dependencies).
+// Every limit is off unless configured (0 = off); the data meter always runs, so /stats shows
+// how much of the month's allowance has gone either way.
 //  - Monthly outbound-data cap: everything the server sends is metered per calendar month (UTC)
 //    and persisted, so a restart doesn't reset it. Near the cap new players are turned away;
 //    at the cap everyone is disconnected until the 1st of next month. Oracle's free tier
-//    includes 10 TB/month of outbound data, so the default cap (9,000 GB) keeps the bill at $0
+//    includes 10 TB/month of outbound data, so a 9,000 GB cap keeps the bill at $0
 //    however popular the game gets (or however hard someone hammers it).
 //  - Per-IP limits: at most N simultaneous game connections and M new connections a minute
 //    from one address, and a cap on plain HTTP requests, so one script can't fill the city or
@@ -15,11 +17,11 @@ const monthKey = (ms) => new Date(ms).toISOString().slice(0, 7); // "2026-10"
 export function createLimits(opts = {}) {
   const now = opts.now || Date.now;
   const file = opts.dataDir ? join(opts.dataDir, 'traffic.json') : null;
-  const capBytes = (opts.monthlyGB ?? 9000) * 1e9;
+  const capBytes = opts.monthlyGB > 0 ? opts.monthlyGB * 1e9 : Infinity; // 0 / unset: meter only, no cap
   const overhead = opts.overhead ?? 1.12;          // TCP/IP + TLS + WebSocket framing on top of what we count
-  const maxPerIp = opts.maxPerIp ?? 6;
-  const connPerMinute = opts.connPerMinute ?? 20;
-  const httpPerMinute = opts.httpPerMinute ?? 300;
+  const maxPerIp = opts.maxPerIp || Infinity;           // 0 / unset: off
+  const connPerMinute = opts.connPerMinute || Infinity;
+  const httpPerMinute = opts.httpPerMinute || Infinity;
   const closeAt = opts.closeAt ?? 0.95;            // share of the cap where new players are turned away
 
   let meter = { month: monthKey(now()), bytes: 0 };
@@ -63,7 +65,7 @@ export function createLimits(opts = {}) {
     save() { if (!file) return; try { writeFileSync(file, JSON.stringify(meter)); } catch { /* best effort */ } },
     summary() {
       roll();
-      return { month: meter.month, gbUsed: +(meter.bytes / 1e9).toFixed(2), gbCap: +(capBytes / 1e9).toFixed(0), state: this.state(), ips: open.size };
+      return { month: meter.month, gbUsed: +(meter.bytes / 1e9).toFixed(2), gbCap: Number.isFinite(capBytes) ? +(capBytes / 1e9).toFixed(0) : 'off', perIpLimit: Number.isFinite(maxPerIp) ? maxPerIp : 'off', state: this.state(), ips: open.size };
     },
   };
 }

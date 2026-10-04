@@ -27,7 +27,8 @@ useStore(new FileStore());
 const map = generateCity(config.seed);
 const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget });
 const startedAt = Date.now();
-const limits = config.monthlyGB > 0 || config.maxPerIp > 0 ? createLimits({ dataDir: config.dataDir, monthlyGB: config.monthlyGB > 0 ? config.monthlyGB : Infinity, maxPerIp: config.maxPerIp, connPerMinute: config.connPerMinute, httpPerMinute: config.httpPerMinute }) : null;
+// always on for metering; each limit only acts when configured (see config.js)
+const limits = createLimits({ dataDir: config.dataDir, monthlyGB: config.monthlyGB, maxPerIp: config.maxPerIp, connPerMinute: config.connPerMinute, httpPerMinute: config.httpPerMinute });
 const QUOTA_MSG = 'The city is closed for the rest of the month (monthly data limit reached). It reopens on the 1st!';
 
 const server = createServer(async (req, res) => {

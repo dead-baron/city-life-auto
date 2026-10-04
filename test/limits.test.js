@@ -35,7 +35,7 @@ test('overhead is added to what the server counts', () => {
 
 test('per-IP: limited simultaneous connections and connection rate; other addresses unaffected', () => {
   let t = 0;
-  const L = createLimits({ monthlyGB: 100, maxPerIp: 3, connPerMinute: 5, now: () => t });
+  const L = createLimits({ monthlyGB: 100, maxPerIp: 3, connPerMinute: 5, httpPerMinute: 300, now: () => t });
   for (let i = 0; i < 3; i++) { assert.equal(L.checkUpgrade('9.9.9.9'), null); L.track('9.9.9.9'); }
   assert.equal(L.checkUpgrade('9.9.9.9'), 'per-ip', 'fourth at once is refused');
   assert.equal(L.checkUpgrade('8.8.8.8'), null, 'someone else is fine');
@@ -46,6 +46,15 @@ test('per-IP: limited simultaneous connections and connection rate; other addres
   assert.equal(L.checkUpgrade('9.9.9.9'), 'per-ip', 'rate window resets (still 3 open)');
   for (let i = 0; i < 400; i++) L.checkHttp('7.7.7.7');
   assert.equal(L.checkHttp('7.7.7.7'), 'rate', 'HTTP hammering is throttled');
+});
+
+test('everything is off unless configured - but the meter still counts', () => {
+  const L = createLimits({});
+  for (let i = 0; i < 50; i++) { assert.equal(L.checkUpgrade('5.5.5.5'), null); L.track('5.5.5.5'); }
+  for (let i = 0; i < 1000; i++) assert.equal(L.checkHttp('5.5.5.5'), null);
+  L.addBytes(50e12);
+  assert.equal(L.state(), 'ok', 'no cap');
+  assert.ok(L.summary().gbUsed > 49000 && L.summary().gbCap === 'off');
 });
 
 test('client IP: the proxy header is only trusted behind the local proxy', () => {

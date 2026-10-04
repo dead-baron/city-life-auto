@@ -22,13 +22,15 @@ Environment=HOST=127.0.0.1
 Environment=CLA_DATA_DIR=/home/ubuntu/cla-data
 Environment=CLA_ORIGINS=https://deadbaron.com,https://www.deadbaron.com,https://play.deadbaron.com
 Environment=CLA_MAX_PLAYERS=120
-# Cost guard: stop sending at 9,000 GB of outbound data a month (Oracle includes 10 TB free),
-# so the bill stays $0 however busy it gets. Near the cap new players are turned away; at it
-# the city closes until the 1st. Progress shows in /stats ("traffic").
-Environment=CLA_MONTHLY_GB=9000
-# Abuse guard: max simultaneous game connections and new connections a minute per IP address
-Environment=CLA_MAX_PER_IP=6
-Environment=CLA_CONN_PER_MIN=20
+# Cost / abuse guards - OFF for now. Monthly data use is always shown in /stats ("traffic").
+# To switch on, remove the # in front of these lines, then: sudo systemctl daemon-reload &&
+# sudo systemctl restart city-life-auto  (or re-run deploy/setup-oracle.sh)
+# Stop sending at 9,000 GB of outbound data a month (Oracle includes 10 TB free) so the bill stays $0:
+#Environment=CLA_MONTHLY_GB=9000
+# Max simultaneous game connections / new connections a minute / HTTP requests a minute per IP:
+#Environment=CLA_MAX_PER_IP=6
+#Environment=CLA_CONN_PER_MIN=20
+#Environment=CLA_HTTP_PER_MIN=300
 # Optional: a fixed secret keeps guest tokens valid if the data dir is ever rebuilt
 # Environment=CLA_SECRET=change-me-to-a-long-random-string
 NoNewPrivileges=true
