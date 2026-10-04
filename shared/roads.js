@@ -30,7 +30,13 @@ export const ROAD_KINDS = {
   rural: { w: 4, nl: 1, median: 0, light: false },
   ramp: { w: 4, nl: 1, median: 0, light: false, oneway: true },
   front: { w: 6, nl: 2, median: 0, light: true, oneway: true }, // frontage roads beside the ring, one-way
+  art: { w: 7, nl: 1, median: 0, light: true },    // minor arterial: ring roads, harbor and airport roads, bridges to small towns
+  dirt: { w: 4, nl: 1, median: 0, light: false },  // unpaved tracks in the woods, the hills and the desert
 };
+
+// The road hierarchy, highest first: highway, major arterial, minor arterial / collector, street,
+// county road, local road, dirt track. Roads join roads near their own rank (see map.js repair).
+export const ROAD_RANK = { hwy: 6, ramp: 6, ave: 5, blvd: 5, front: 4, art: 4, drive: 4, st: 3, rural: 3, minor: 2, dirt: 1 };
 
 export const LIGHT_CYCLE = 24; // divides the 1200 s chrono loop evenly
 
@@ -179,7 +185,7 @@ export function buildNetwork(lines, seed = 1) {
       const zb = l.lvl === 'ramp' ? l.z0 + (l.z1 - l.z0) * (c1.s / l.len) : l.lvl;
       const e = {
         id: edges.length, a: na.id, b: nb.id, pts, len: 0, kind: l.kind, lvl, za, zb, name: l.name || '',
-        w: K.w * TILE, hw: (K.w * TILE) / 2, nl: K.nl, median: K.median, oneway: !!(l.oneway || K.oneway), bridge: false,
+        w: K.w * TILE, hw: (K.w * TILE) / 2, nl: K.nl, median: K.median, oneway: !!(l.oneway || K.oneway), bridge: false, culdesac: !!l.culdesac,
       };
       e.len = measure(e.pts);
       edges.push(e);

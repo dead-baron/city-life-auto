@@ -1,0 +1,120 @@
+// The road network and the elevated highway: every ramp can be driven, the barriers hold at
+// normal speeds and give way when rammed, and the roads hang together the way they would in a
+// real city (nothing just stops in the middle of nowhere, one-ways never trap you).
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { makeWorld, joinPlayer } from './helpers.js';
+import { pointAt, measure } from '../shared/geom.js';
+import { edgeZ, ROAD_RANK } from '../shared/roads.js';
+import { BARRIER_BREAK_SPEED } from '../shared/rules.js';
+
+function drive(w, p, car, pts, maxTicks = 500) {
+  let seq = p.ack || 0;
+  const L = pts[pts.length - 1].s;
+  for (let i = 0; i < maxTicks; i++) {
+    let best = 0, bd = 1e9;
+    for (let s = 0; s <= L; s += 8) { const q = pointAt(pts, s); const d = Math.hypot(q.x - car.x, q.y - car.y); if (d < bd) { bd = d; best = s; } }
+    const tgt = pointAt(pts, Math.min(L, best + 120));
+    let dx = tgt.x - car.x, dy = tgt.y - car.y;
+    if (best >= L - 20) { const t = pointAt(pts, L); dx = t.tx; dy = t.ty; }
+    const l = Math.hypot(dx, dy) || 1;
+    p.inputQ.push({ seq: ++seq, bits: 0, mx: dx / l, my: dy / l, aim: 0 });
+    w.step();
+    const end = pointAt(pts, L);
+    if (Math.hypot(end.x - car.x, end.y - car.y) < 90) return true;
+  }
+  return false;
+}
+function seat(w, p, car) { p.ped.vehId = car.id; p.ped.seat = 0; car.seats[0] = p.ped.id; p.ped.x = car.x; p.ped.y = car.y; p.ped.lz = car.lz; w.place(p.ped); }
+
+test('every highway ramp can be driven, from the lane that feeds it to where it lands', () => {
+  const w = makeWorld();
+  const m = w.map;
+  const { p } = joinPlayer(w);
+  const ramps = m.edges.filter((e) => e.lvl === 'ramp');
+  assert.ok(ramps.length >= 10, `ramps on the ring (${ramps.length})`);
+  const bad = [];
+  for (const e of ramps) {
+    const z0 = edgeZ(e, e.a, 0), z1 = edgeZ(e, e.a, e.len);
+    const rd = Math.atan2(e.pts[1].y - e.pts[0].y, e.pts[1].x - e.pts[0].x);
+    const feed = m.edges.filter((q) => q.id !== e.id && q.lvl !== 'ramp' && (q.b === e.a || (!q.oneway && q.a === e.a))).find((q) => {
+      const fp = q.b === e.a ? q.pts : q.pts.slice().reverse(); const n = fp.length;
+      const fd = Math.atan2(fp[n - 1].y - fp[n - 2].y, fp[n - 1].x - fp[n - 2].x);
+      return Math.abs(Math.atan2(Math.sin(fd - rd), Math.cos(fd - rd))) < 1;
+    });
+    let pre = [];
+    if (feed) {
+      const fp = feed.b === e.a ? feed.pts : feed.pts.slice().reverse();
+      const lane = feed.kind === 'hwy' ? 189 : 0;
+      const off = fp.map((q, i) => { const a = fp[Math.max(0, i - 1)], b = fp[Math.min(fp.length - 1, i + 1)]; const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1; return { x: q.x - (dy / l) * lane, y: q.y + (dx / l) * lane }; });
+      const L = measure(off);
+      pre = off.filter((q) => q.s > L - 900 && q.s < L - 60).map((q) => ({ x: q.x, y: q.y }));
+    }
+    const path = pre.concat(e.pts.map((q) => ({ x: q.x, y: q.y })));
+    measure(path);
+    const a = pointAt(path, 4);
+    const car = w.spawnVehicle('sedan', a.x, a.y, Math.atan2(a.ty, a.tx), {});
+    car.lz = z0; car.vx = a.tx * 300; car.vy = a.ty * 300;
+    seat(w, p, car);
+    const ok = drive(w, p, car, path);
+    if (!ok || Math.abs(car.lz - z1) > 0.2) bad.push(`ramp ${e.id} at ${Math.round(e.pts[0].x / 32)},${Math.round(e.pts[0].y / 32)} (z ${car.lz.toFixed(2)})`);
+    p.ped.vehId = 0; w.remove(car);
+  }
+  assert.deepEqual(bad, [], 'ramps you can\'t get along');
+});
+
+test('highway barriers hold at normal speeds, give way when rammed, and you drop to the street', () => {
+  const w = makeWorld();
+  const m = w.map;
+  const { p } = joinPlayer(w);
+  // a straight stretch of deck
+  const sg = m.levels.segs.find((q) => !q.ramp && q.len > 200 && Math.abs(q.uy) < 0.05);
+  assert.ok(sg, 'a straight deck stretch');
+  const mx = (sg.ax + sg.bx) / 2, my = (sg.ay + sg.by) / 2;
+  const nx = -sg.uy, ny = sg.ux; // towards one barrier
+  const ram = (speed) => {
+    const car = w.spawnVehicle('sedan', mx + nx * 100, my + ny * 100, Math.atan2(ny, nx), {});
+    car.lz = 1; car.vx = nx * speed; car.vy = ny * speed;
+    seat(w, p, car);
+    let seq = p.ack || 0;
+    for (let i = 0; i < 40; i++) { p.inputQ.push({ seq: ++seq, bits: 0, mx: nx, my: ny, aim: 0 }); w.step(); }
+    return car;
+  };
+  const slow = ram(160);
+  assert.ok(slow.lz > 0.9, 'a gentle bump: still up on the deck');
+  assert.ok(Math.hypot(slow.x - mx, slow.y - my) < sg.hw, 'held inside the barrier');
+  p.ped.vehId = 0; w.remove(slow);
+  const told = [];
+  const bc = w.broadcast.bind(w);
+  w.broadcast = (ev) => { told.push(ev); return bc(ev); };
+  const fast = ram(BARRIER_BREAK_SPEED + 260);
+  assert.ok(w.brokenBarriers.size >= 1, 'the barrier gave way');
+  assert.ok(told.some((ev) => ev.e === 'barrier' && ev.k.length), 'everyone hears about it');
+  assert.ok(fast.lz < 0.05, 'over the edge and down on the street');
+  assert.ok(Math.hypot(fast.x - mx, fast.y - my) > sg.hw, 'outside the deck');
+  // the gap stays open for the next car through
+  const key = [...w.brokenBarriers.keys()][0];
+  assert.ok(m.levels.broken.has(key));
+});
+
+test('roads hang together: no stray dead ends, one-ways never trap you', () => {
+  const w = makeWorld();
+  const m = w.map;
+  const stray = m.nodes.filter((n) => n.lvl === 0 && n.edges.length === 1 && !n.culdesac).map((n) => m.edges[n.edges[0]]).filter((e) => !['rural', 'dirt'].includes(e.kind) && !e.culdesac);
+  assert.deepEqual(stray.map((e) => `${e.kind} ${e.name}`), [], 'roads that just stop');
+  // strongly connected: from any junction you can drive to any other (boat-only islands apart)
+  const N = m.nodes.length;
+  const reach = (start, rev) => { const seen = new Uint8Array(N); const st = [start]; seen[start] = 1; while (st.length) { const u = st.pop(); const nb = rev ? m.nodes.filter((q) => Object.values(q.links).includes(u)).map((q) => q.id) : Object.values(m.nodes[u].links); for (const v of nb) if (!seen[v]) { seen[v] = 1; st.push(v); } } return seen; };
+  const start = m.nodes.findIndex((n) => n.lvl === 0 && Math.hypot(n.x - 800 * 32, n.y - 520 * 32) < 40 * 32);
+  const f = reach(start, false), b = reach(start, true);
+  const islandOf = (n) => m.islandAt(n.x, n.y);
+  const cut = m.nodes.filter((n) => !(f[n.id] && b[n.id]) && !['G', 'C'].includes(islandOf(n)));
+  assert.deepEqual(cut.map((n) => `${Math.round(n.x / 32)},${Math.round(n.y / 32)}`), [], 'junctions you can\'t drive to and back from');
+  // the hierarchy: a highway only ever meets arterials, county roads and ramps
+  for (const n of m.nodes) {
+    const kinds = n.edges.map((id) => m.edges[id].kind);
+    if (!kinds.includes('hwy') || n.lvl !== 0) continue;
+    for (const k of kinds) assert.ok(['hwy', 'ave', 'blvd', 'art', 'rural', 'front', 'ramp'].includes(k), `a ${k} joins a highway at ${Math.round(n.x / 32)},${Math.round(n.y / 32)}`);
+  }
+  for (const e of m.edges) if (e.kind === 'dirt') for (const id of [e.a, e.b]) for (const o of m.nodes[id].edges) assert.ok(ROAD_RANK[m.edges[o].kind] <= 4, `a dirt track runs straight into a ${m.edges[o].kind}`);
+});

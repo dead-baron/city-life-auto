@@ -10,22 +10,22 @@
 
 export const CW = 32, CH = 44;          // art grid
 export const FOOT_Y = 42;               // the feet's ground line in art px
-const SKINS = ['#f1c9a5', '#e0ac7e', '#c68953', '#a86b3c', '#7d4a26', '#4f2f1a'];
-const OUTLINE = '#1a1220';
+export const SKINS = ['#f1c9a5', '#e0ac7e', '#c68953', '#a86b3c', '#7d4a26', '#4f2f1a'];
+export const OUTLINE = '#1a1220';
 
-function hex(c) {
+export function hex(c) {
   if (!c) return '#888888';
   if (c.length === 4) return '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3];
   return c;
 }
-function tone(c, amt) {
+export function tone(c, amt) {
   const n = parseInt(hex(c).slice(1), 16);
   const f = (v) => Math.max(0, Math.min(255, Math.round(amt >= 0 ? v + (255 - v) * amt : v * (1 + amt))));
   return `#${((f(n >> 16) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).padStart(6, '0')}`;
 }
-const hi = (c) => tone(c, 0.3), lo = (c) => tone(c, -0.3), dk = (c) => tone(c, -0.5);
+export const hi = (c) => tone(c, 0.3), lo = (c) => tone(c, -0.3), dk = (c) => tone(c, -0.5);
 
-class P {
+export class P {
   constructor(g) { this.g = g; }
   p(x, y, c) { if (x < 0 || y < 0 || x >= CW || y >= CH) return; this.g.fillStyle = c; this.g.fillRect(Math.round(x), Math.round(y), 1, 1); }
   r(x, y, w, h, c) { if (w <= 0 || h <= 0) return; this.g.fillStyle = c; this.g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
@@ -61,7 +61,7 @@ const DIRV = [[0, 1], [-0.75, 0.66], [-1, 0], [-0.75, -0.66], [0, -1]];
 const FRONT = (d) => d <= 1, BACK = (d) => d >= 3;
 
 // ---- weapons (art px, held at hx,hy pointing along ang) ------------------------------------
-function weapon(Pp, w, hx, hy, ang) {
+export function weapon(Pp, w, hx, hy, ang) {
   const L = (len, c, wid = 1) => Pp.line(hx, hy, ang, len, c, wid);
   const back = (len, c, wid = 2) => Pp.line(hx - Math.cos(ang) * len, hy - Math.sin(ang) * len, ang, len, c, wid);
   switch (w) {

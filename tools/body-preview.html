@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Body preview</title>
+<style>body{background:#3d4048;color:#eee;font:12px monospace;margin:10px} canvas{image-rendering:pixelated} td{padding:1px 3px;text-align:center}</style></head>
+<body><h3>City Life Auto - concept-art bodies: archetypes x 8 directions, and poses (open via a static server on the repo root)</h3><div id="out"></div>
+<script type="module">
+import { bodySprite, loadBodies, bodiesReady } from '../client/render/body.js';
+import { ARCHETYPES, makeAppearance, playerOutfit } from '../server/entities.js';
+import { mulberry32 } from '../shared/rng.js';
+loadBodies('../assets/');
+while (!bodiesReady()) await new Promise((r) => setTimeout(r, 50));
+const cols = [...Array(8).keys()].map((d) => ['idle', d, 0, 0]).concat([['move1', 0, 1, 0], ['move1', 0, 5, 0], ['move3', 2, 2, 0], ['move3', 2, 6, 0], ['aim', 0, 0, 7], ['aim', 6, 0, 10], ['punch', 1, 2, 0], ['swing', 7, 1, 1], ['carry', 0, 0, 0], ['aim', 4, 0, 7]]);
+const rows = Object.keys(ARCHETYPES).map((k) => [k, makeAppearance(mulberry32(k.length * 97 + 3), k)]);
+for (let i = 0; i < 4; i++) rows.push(['player ' + i, playerOutfit(mulberry32(i * 31 + 7))]);
+const Z = 2;
+let html = '<table><tr><td></td>' + cols.map((c) => `<td>${c[0]} ${c[1]}</td>`).join('') + '</tr>';
+html += rows.map(([k], r) => `<tr><td>${k}</td>` + cols.map((_, c) => `<td><canvas id="c${r}_${c}" width="${32 * Z}" height="${44 * Z}"></canvas></td>`).join('') + '</tr>').join('');
+document.getElementById('out').innerHTML = html + '</table>';
+rows.forEach(([, app], r) => cols.forEach(([pose, d, fr, w], c) => {
+  const cv = document.getElementById(`c${r}_${c}`), g = cv.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.fillStyle = (r + c) % 2 ? '#8e8e88' : '#7b7b76'; g.fillRect(0, 0, cv.width, cv.height);
+  g.drawImage(bodySprite(app, d, pose, fr, w), 0, 0, 32 * Z, 44 * Z);
+}));
+window.done = true;
+</script></body></html>

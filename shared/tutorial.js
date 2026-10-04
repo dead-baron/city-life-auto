@@ -24,12 +24,12 @@ import {
   ROB_WARMUP_S, ROB_TOSS_S, ROB_TAKE, ROB_ALARM_S, ROB_RESPONSE_S, ROB_ALARM_STARS,
   MATCH_COUNTDOWN_S, SOCCER_GOALS, SOCCER_MATCH_S, VOLLEY_POINTS, MATCH_PRIZE,
   TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, TRAINS_ON_LINE, MAIL_WARN_S,
-  BAIL_HURT_SPEED, NPC_GRIT, NPC_CRITICAL, HIGHWAY_SPEED,
+  BAIL_HURT_SPEED, NPC_GRIT, NPC_CRITICAL, HIGHWAY_SPEED, BARRIER_BREAK_SPEED, BARRIER_REPAIR_S,
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 13;
+export const TUTORIAL_VERSION = 14;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -55,17 +55,27 @@ export const CHAPTERS = [
 export const STEPS = [
   // ---- the city ------------------------------------------------------------------------------
   { ch: 'city', title: 'Welcome to the city', at: { city: 1 },
-    text: `${isle('D')} fills the big island in the middle of the bay: towers inside a ring highway, ${isle('R')} across the river, the farms of ${isle('F')} out east, and ${isle('P')} and ${isle('C')} out on the water. Long bridges lead to the wild islands beyond - empty for now, waiting to be built. Everyone shares one living city - other players, traffic, cops and crooks. Live as a citizen, a criminal or a police officer, and switch whenever you like.` },
+    text: `${isle('D')} fills the big island in the middle of the bay: towers inside a ring highway, ${isle('R')} across the river, the farms and desert of ${isle('F')} out east. Highways run out over long bridges to ${isle('W')} in the west, ${isle('N')} in the north and ${isle('S')} in the south, and one more bridge to the little town on ${isle('P')}; ${isle('G')} and ${isle('C')} you reach by boat. Everyone shares one living world - other players, traffic, cops and crooks. Live as a citizen, a criminal or a police officer, and switch whenever you like.` },
   { ch: 'city', title: isle('D'), at: { island: 'D' },
     text: `The heart of it all. Downtown's towers and the Civic Center inside the ring, Broadway cutting across the grid on the diagonal, the Neon Strip and the Pink Mile toward the river, Bayside Heights' crescents and villas, Old Town's worn brick up north, the docks of the Harbor and the rough Yards in the south-west. The richer the street, the more people carry - and the faster the police turn up.` },
   { ch: 'city', title: 'The ring highway', at: { ring: 1 },
-    text: `An elevated highway loops around downtown on concrete pillars, three lanes each way. Get on from the one-way frontage roads that run beside it: an on-ramp climbs up and merges from the right, exits peel off to the right and drop back down. Up on the deck there are no lights and no crossings - just traffic doing ${kmh(HIGHWAY_SPEED)} km/h (you can walk up a ramp, but mind the traffic). Down below, the avenues pass underneath it; anything up top is a level of its own, so you can't shoot or hit people on the street below.` },
+    text: `An elevated highway loops around downtown on concrete pillars, three lanes each way. Get on from the one-way frontage roads that run beside it: an on-ramp climbs up and merges from the right, exits peel off to the right and drop back down. Up on the deck there are no lights and no crossings - just traffic doing ${kmh(HIGHWAY_SPEED)} km/h (you can walk up a ramp, but mind the traffic). Down below, the avenues pass underneath it; anything up top is a level of its own, so you can't shoot or hit people on the street below. The concrete barriers hold at normal speeds, but ram one head-on faster than about ${kmh(BARRIER_BREAK_SPEED)} km/h and it gives way - over the edge you go, a hard drop onto the street below. The road crew puts a smashed barrier back after ${Math.round(BARRIER_REPAIR_S / 60)} minutes.` },
   { ch: 'city', title: isle('R'), at: { island: 'R' },
     text: `Across the river bridges: the winding streets and cul-de-sacs of Pine Hills, where houses and apartments are for sale, and the gang-run grid of Southside. A home becomes your respawn point and your garage.` },
   { ch: 'city', title: isle('F'), at: { island: 'F' },
-    text: `Farm country east of the city: fields, farmhouses and the {{farm}}, which pays you to haul fresh produce back to town. The county road runs out here from the ring road.` },
+    text: `Farm country east of the city: fields, farmhouses and the {{farm}}, which pays you to haul fresh produce back to town. Past the fields the desert takes over - mesas, cactus, a mirage of a lake and a little airstrip - with the Desert Highway looping round it from the county road to the Eastern Parkway, where every street of town ends.` },
+  { ch: 'city', title: isle('W'), at: { island: 'W' },
+    text: `The second city, over the Bay Bridge from Sunset Beach. Westport Center's towers, Lakeview's villas round the lake in Lakeview Park, the stadium, the brick lanes of the Old Quarter and the houses of West Hills sit inside the Westport Beltway. Down the south-west coast the piers of Port Westport (gang turf) run out to sea beside {{airport}} - ship cargo to the terminal like any delivery. North of town the Highland Road climbs into the Highland Woods, where dirt tracks lead to cabins for sale.` },
+  { ch: 'city', title: isle('N'), at: { island: 'N' },
+    text: `Two bridges run north from Old Town straight up into the grid of Northshore, inside the Northshore Loop, with big houses round The Bluffs to the east. West of town the Northern Causeway runs along the foot of the Granite Peaks to Westport; dirt trails climb to a mountain lodge and a tarn up in the rocks.` },
+  { ch: 'city', title: isle('S'), at: { island: 'S' },
+    text: `Over the Cedar Bridge from The Yards (or the Strait Bridge from Westport): the small town of Cedar Falls, the winding drives of the Lake District between its lakes, the fields of Cedar Farms with their own market stand that takes harvests, and the quays of South Port, all inside the Cedar Isle Loop. Dirt tracks run up into the Cedar Hills.` },
   { ch: 'city', title: isle('P'), at: { island: 'P' },
-    text: `Out in the bay, only by boat: beaches, a beach bar and the {{charter}} dock with jet skis tied up. Jet ski and boat races start from the buoys off its shore.` },
+    text: `Over Pelican Way from Westport: a few streets of little shops and houses, and at the beach end a beach bar and the {{charter}} dock with jet skis tied up. Jet ski and boat races start from the buoys off its shore.` },
+  { ch: 'city', title: isle('G'), at: { island: 'G' },
+    text: `Two little islands far out in the south - the villages of Gull Harbor and Coral Cay, each round its village green. No bridge reaches them: take a boat.` },
+  { ch: 'city', title: 'The roads', at: { city: 1 },
+    text: `Roads join up the way they would in a real city: highways meet major avenues and arterials at signalled junctions, those feed the streets, streets feed the little residential roads and cul-de-sacs, and out in the country the county roads lead off them to dirt tracks into the woods, the hills and the desert. A dirt track is slow going for anything but a pickup or a bike.` },
   { ch: 'city', title: isle('C'), at: { island: 'C' },
     text: `The Syndicate's island fortress, off the far shore of ${isle('F')}. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
@@ -107,7 +117,7 @@ export const STEPS = [
   { ch: 'citizen', title: 'Homes', at: { homes: 'Pine Hills' },
     text: `Buy a {{home}} - as many as you like. Each can be your respawn point (you can still pick a hospital when you die), adds garage space, and lets you rest, bank your cash and stash items and guns. Stand at your door and go inside: you blink for ${HIDE_TIME_S} seconds, slowly then fast, and you're hidden - nobody can see or hurt you, and the police lose track of you. Step out and you blink for ${SPAWN_PROTECT_S} seconds of protection. Inside you can change your outfit, check what you're carrying, and pick any car from your garage: say you're ready, the garage door rolls up and you ease out, blinking, before you take the wheel.` },
   { ch: 'citizen', title: 'Estates and garages', at: { estates: 1 },
-    text: `A ${estate('farmhouse')} or a ${estate('cottage')} out in ${isle('F')}, a ${estate('beach')} on Sunset Beach and the ${estate('mansion')} up in Bayside Heights with its huge walled yard and pool. Pull up to any of your garages and the door rolls open to take your car; every car you own can be taken out at any home you own. New cars at {{dealer}} - walk its lot and buy whatever's in stock off the price tags, or order from the showroom - boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
+    text: `A ${estate('farmhouse')} or a ${estate('cottage')} out in ${isle('F')}, on Cedar Farms, in the Highland Woods and the Cedar Hills or up in the Granite Peaks, a ${estate('beach')} on Sunset Beach and the ${estate('mansion')} up in Bayside Heights with its huge walled yard and pool. Pull up to any of your garages and the door rolls open to take your car; every car you own can be taken out at any home you own. New cars at {{dealer}} - walk its lot and buy whatever's in stock off the price tags, or order from the showroom - boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
   { ch: 'citizen', title: 'Good Samaritan points', at: { poi: 'evidence' },
     text: `Doing good earns Samaritan points: finish deliveries, stop a ${EVENT_KINDS.snatch.label.toLowerCase()} (an orange blip and arrow), then ${EVENT_KINDS.ret.label.toLowerCase()} to its owner (green), or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
 

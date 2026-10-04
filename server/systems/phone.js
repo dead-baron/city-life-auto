@@ -12,7 +12,7 @@ import { spawnNpc } from './npc.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
-const DROP_KINDS = new Set(['delivery', 'convenience', 'gasstation']); // storefronts that take deliveries
+const DROP_KINDS = new Set(['delivery', 'convenience', 'gasstation', 'airport']); // storefronts that take deliveries
 const PATROLS = 3;             // police patrol calls kept on the board
 const REFRESH_S = 75;          // stale offers rotate out
 
@@ -54,7 +54,7 @@ function newDelivery(world) {
 }
 
 function newPatrol(world) {
-  const ds = DISTRICTS.map((d, i) => i).filter((i) => !['water', 'wild', 'rural', 'rocky'].includes(DISTRICTS[i].style) && !DISTRICTS[i].turf && DISTRICTS[i].isl !== 'Pelican Key' && districtCentre(world.map, i));
+  const ds = DISTRICTS.map((d, i) => i).filter((i) => !['water', 'wild', 'rural', 'rocky', 'desert', 'airport'].includes(DISTRICTS[i].style) && !DISTRICTS[i].turf && DISTRICTS[i].isl !== 'Pelican Key' && districtCentre(world.map, i));
   const di = ds[Math.floor(rng() * ds.length)];
   const c = districtCentre(world.map, di);
   if (!c) return null;
@@ -142,8 +142,11 @@ function describe(world, j) {
   return null;
 }
 
+// The farm that takes harvest contracts nearest to you (Dry Creek's co-op, the Cedar Farms stand).
+const nearestFarm = (world, p) => world.map.pois.filter((q) => q.kind === 'farm').sort((a, b) => Math.hypot(a.x - p.ped.x, a.y - p.ped.y) - Math.hypot(b.x - p.ped.x, b.y - p.ped.y))[0];
+
 export function boardFor(world, p) {
-  const farm = world.map.pois.find((q) => q.kind === 'farm');
+  const farm = p.ped ? nearestFarm(world, p) : world.map.pois.find((q) => q.kind === 'farm');
   const list = (world.jobBoard || []).filter((j) => j.kind === 'delivery' || (j.kind === 'patrol' && p.badge)).map((j) => describe(world, j));
   if (farm) list.push({ id: 'farm', kind: 'farm', pay: 4 * 140 + 200, title: 'Harvest contract at ' + farm.label, x: farm.x, y: farm.y });
   return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null };
@@ -167,7 +170,7 @@ export function handle(world, p, msg) {
 function take(world, p, id) {
   if (!p.ped || p.ped.dead) return 'Not right now.';
   if (p.job) return 'You already have a job - cancel it first.';
-  if (id === 'farm') return jobs.startFarm(world, p, world.map.pois.find((q) => q.kind === 'farm'));
+  if (id === 'farm') return jobs.startFarm(world, p, nearestFarm(world, p));
   const j = (world.jobBoard || []).find((q) => q.id === Number(id));
   if (!j) return 'That job was taken.';
   if (j.kind === 'patrol') {

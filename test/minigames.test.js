@@ -8,16 +8,18 @@ import * as minigames from '../server/systems/minigames.js';
 import * as combat from '../server/systems/combat.js';
 import { ISLANDS } from '../shared/map.js';
 
-const venue = (w, kind) => w.map.venues.find((v) => v.kind === kind);
+const venue = (w, kind) => w.map.venues.find((v) => v.kind === kind && (kind !== 'soccer' || /Greenfield/.test(v.name)));
 const ballFor = (w, v) => w.get(w.matchState[v.id].ball);
 
-test('venues: a soccer pitch in Greenfield Park, volleyball courts on Sunset Beach and Pelican Key', () => {
+test('venues: soccer pitches in Greenfield Park and Westport Stadium, volleyball courts on Sunset Beach and Pelican Key', () => {
   const w = makeWorld();
   const pitch = venue(w, 'soccer');
   assert.ok(pitch && /Greenfield/.test(pitch.name));
-  for (const [k, arr] of w.map.solidProps) for (const sp of arr) {
+  const pitches = w.map.venues.filter((v) => v.kind === 'soccer');
+  assert.ok(pitches.some((v) => /Stadium/.test(v.name)), 'the stadium has a pitch too');
+  for (const pv of pitches) for (const [k, arr] of w.map.solidProps) for (const sp of arr) {
     if (sp.off) continue;
-    assert.ok(!(sp.x > pitch.rect.x && sp.x < pitch.rect.x + pitch.rect.w && sp.y > pitch.rect.y && sp.y < pitch.rect.y + pitch.rect.h), `nothing solid on the pitch (${k})`);
+    assert.ok(!(sp.x > pv.rect.x && sp.x < pv.rect.x + pv.rect.w && sp.y > pv.rect.y && sp.y < pv.rect.y + pv.rect.h), `nothing solid on ${pv.name} (${k})`);
   }
   const courts = w.map.venues.filter((v) => v.kind === 'volley');
   assert.equal(courts.length, 2);

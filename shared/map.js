@@ -2,13 +2,14 @@
 // and get byte-identical maps, so the map is never sent over the wire.
 //
 // The world follows the world map concept (tools/data/worldmap-concept.webp, one pixel = one
-// tile): a big central island and wild islands around it. On the central island stands Metro
-// City (see citylayout.js for the plan): a street grid with a diagonal boulevard, an elevated
-// ring highway with slip ramps, curving coast and river drives, wealth tiers that blend into
-// each other from the downtown towers and Bayside Heights' crescents to the rough Yards and
-// Southside; across the river the winding streets of Southbank, east of town the farms of Dry
-// Creek. Pelican Key and Smuggler's Rock are boat-only islands. The other islands are wild for
-// now (built one by one in later rounds), reached over long bridges.
+// tile). On the central island stands Metro City (see citylayout.js for the plan): a street grid
+// with a diagonal boulevard, an elevated ring highway with slip ramps, curving coast and river
+// drives, wealth tiers that blend into each other from the downtown towers and Bayside Heights'
+// crescents to the rough Yards and Southside; across the river the winding streets of Southbank,
+// east of town the farms and desert of Dry Creek. Around it (islands.js): Westport with its port
+// and international airport on the west island, Northshore under the Granite Peaks in the north,
+// Cedar Isle in the south, the little town on Pelican Key, all joined by highways over long
+// bridges; the Gull Isles villages and Smuggler's Rock are reached by boat.
 //
 // Roads are polylines at any angle (roads.js); tiles are rasterized from them for collision and
 // surfaces, and the renderer draws the roads as curves.
@@ -18,12 +19,14 @@ import { mulberry32, hash2 } from './rng.js';
 import { PREFABS } from './prefab-data.js';
 import { LAND, TERRAIN, TERRAIN_CELL } from './worldmask.js';
 import { buildNetwork, stampEdge, stampLine, edgeZ } from './roads.js';
-import { measure, pointAt, rounded, project, cubic, quad } from './geom.js';
+import { measure, pointAt, rounded, project, cubic, quad, segX } from './geom.js';
 import {
   Z, BAND, GRID_X, GRID_Y, AVE_X, AVE_Y, RIVER_BRIDGES, PARK, CRESCENT, BROADWAY, SEEDS,
   clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, slipRamp, acrossWater,
 } from './citylayout.js';
 import { buildLevels } from './levels.js';
+import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS } from './islands.js';
+import { ROAD_RANK } from './roads.js';
 
 export { Z };
 
@@ -33,14 +36,15 @@ export const ISLANDS = {
   D: { name: 'Metro City', box: [559, 251, 1045, 745], zone: Z.CITY },
   R: { name: 'Southbank', box: [770, 655, 1045, 900], zone: Z.SOUTH },
   F: { name: 'Dry Creek', box: [1045, 251, 1296, 958], zone: Z.EAST },
-  P: { name: 'Pelican Key', box: [542, 305, 682, 403], zone: Z.KEY, boatOnly: true },
+  P: { name: 'Pelican Key', box: [542, 305, 682, 403], zone: Z.KEY },
   C: { name: "Smuggler's Rock", box: [1205, 953, 1259, 1004], zone: Z.ROCK, boatOnly: true, gang: 'syndicate' },
+  W: { name: 'Westport', box: [31, 71, 497, 917], zone: Z.WEST },
+  N: { name: 'Northshore', box: [459, 17, 1207, 287], zone: Z.NORTH },
+  S: { name: 'Cedar Isle', box: [270, 784, 991, 1158], zone: Z.ISLE },
+  G: { name: 'Gull Isles', box: [40, 939, 1197, 1142], zone: Z.GULL, boatOnly: true },
 };
-// The wild islands (built up in later rounds): a land point on each and its district.
-const WILD_ISLES = [
-  { at: [300, 500], d: 19 }, { at: [800, 150], d: 20 }, { at: [620, 1000], d: 21 },
-  { at: [120, 1020], d: 22 }, { at: [1120, 1070], d: 22 },
-];
+// Which land component is which part of the world: a land point on each.
+const ISLAND_AT = [[[300, 500], Z.WEST], [[800, 150], Z.NORTH], [[620, 1000], Z.ISLE], [[120, 1020], Z.GULL], [[1120, 1070], Z.GULL], [[600, 360], Z.KEY], [[1230, 978], Z.ROCK]];
 
 export const PED_BLOCK = new Uint8Array(16);
 export const CAR_BLOCK = new Uint8Array(16);
@@ -101,13 +105,37 @@ export const DISTRICTS = [
   { id: 16, name: 'Bayside Heights', isl: 'Metro City', style: 'luxury', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
   { id: 17, name: 'The Pink Mile', isl: 'Metro City', style: 'redlight', tier: 'red', walk: 'brick', plaza: 'brick', road: 'asphalt_worn', ground: T.PLAZA, turf: false },
   { id: 18, name: 'Old Town', isl: 'Metro City', style: 'oldtown', tier: 'low', walk: 'brick', plaza: 'brick', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 19, name: 'Westward Isle', isl: 'The wild islands', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 20, name: 'Pike Island', isl: 'The wild islands', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 21, name: 'Cedar Isle', isl: 'The wild islands', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 22, name: 'Gull Isles', isl: 'The wild islands', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 19, name: 'Lighthouse Rock', isl: '', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 20, name: 'The Islets', isl: '', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 21, name: 'The Islets', isl: '', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 22, name: 'Gull Isles', isl: 'Gull Isles', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 23, name: 'Westport Center', isl: 'Westport', style: 'towers', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.PLAZA, turf: false },
+  { id: 24, name: 'Lakeview', isl: 'Westport', style: 'luxury', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 25, name: 'Stadium District', isl: 'Westport', style: 'commercial', tier: 'mid', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.PLAZA, turf: false },
+  { id: 26, name: 'Port Westport', isl: 'Westport', style: 'harbor', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: true },
+  { id: 27, name: 'Westport International', isl: 'Westport', style: 'airport', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.LOT, turf: false },
+  { id: 28, name: 'West Hills', isl: 'Westport', style: 'houses', tier: 'suburb', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 29, name: 'Highland Woods', isl: 'Westport', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 30, name: 'Old Quarter', isl: 'Westport', style: 'oldtown', tier: 'low', walk: 'brick', plaza: 'brick', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 31, name: 'Northshore', isl: 'Northshore', style: 'commercial', tier: 'mid', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.PLAZA, turf: false },
+  { id: 32, name: 'North Point', isl: 'Northshore', style: 'apartments', tier: 'mid', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 33, name: 'Granite Peaks', isl: 'Northshore', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 34, name: 'The Bluffs', isl: 'Northshore', style: 'luxury', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 35, name: 'Cedar Falls', isl: 'Cedar Isle', style: 'houses', tier: 'suburb', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 36, name: 'Falls Center', isl: 'Cedar Isle', style: 'commercial', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
+  { id: 37, name: 'Lake District', isl: 'Cedar Isle', style: 'luxury', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
+  { id: 38, name: 'Cedar Farms', isl: 'Cedar Isle', style: 'rural', tier: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 39, name: 'South Port', isl: 'Cedar Isle', style: 'harbor', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
+  { id: 40, name: 'Cedar Hills', isl: 'Cedar Isle', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
+  { id: 41, name: 'Dry Creek Desert', isl: 'Dry Creek', style: 'desert', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false },
+  { id: 42, name: 'Dry Creek Airstrip', isl: 'Dry Creek', style: 'airport', tier: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
+  { id: 43, name: 'Gull Harbor', isl: 'Gull Isles', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
+  { id: 44, name: 'Coral Cay', isl: 'Gull Isles', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
 ];
 const WATER_D = 13;
-export const WILD_DISTRICTS = new Set([19, 20, 21, 22]);
+// Districts nobody builds in: woods, hills, mountains, farmland, desert, airfields.
+export const WILD_STYLES = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
+export const WILD_DISTRICTS = new Set(DISTRICTS.filter((d) => WILD_STYLES.has(d.style)).map((d) => d.id));
 
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
@@ -162,6 +190,28 @@ const SPECIALS = [
   { d: 17, prefab: 'hotel', biz: ['delivery'], names: ['Hourly Hearts Motel'] },
   { d: 18, prefab: 'conv', biz: ['delivery'], names: ['Rusty Anchor Motel'] },
   { d: 16, prefab: 'hotel', biz: ['delivery'], names: ['The Bayside Ritz'] },
+  // Westport
+  { d: 23, prefab: 'hospital', biz: ['hospital'], names: ['Westport General'] },
+  { d: 23, prefab: 'police', biz: ['police'], names: ['Westport PD'] },
+  { d: 23, prefab: 'hotel', biz: ['delivery'], names: ['The Westport Grand'] },
+  { d: 23, prefab: 'bank', biz: ['delivery'], names: ['Westport Trade Center'] },
+  { d: 25, prefab: 'market', biz: ['delivery'], names: ['Stadium Megastore'] },
+  { d: 25, prefab: 'club', biz: ['delivery'], names: ['The Turnstile Bar'] },
+  { d: 30, prefab: 'strip', biz: ['delivery', 'delivery', 'delivery', 'delivery'], names: ['Old Quarter Books', 'Salt & Pepper Diner', 'Harborview Tattoo', 'Corner Laundry'] },
+  { d: 30, prefab: 'church', biz: ['delivery'], names: ['St. Brine Chapel'] },
+  { d: 26, prefab: 'warehouse', biz: ['delivery'], names: ['Westport Freight'] },
+  { d: 28, prefab: 'school', biz: ['delivery'], names: ['West Hills Academy'] },
+  // Northshore
+  { d: 31, prefab: 'hospital', biz: ['hospital'], names: ['Northshore Medical'] },
+  { d: 31, prefab: 'police', biz: ['police'], names: ['Northshore Sheriff'] },
+  { d: 31, prefab: 'fire', biz: ['delivery'], names: ['Fire Station 12'] },
+  { d: 32, prefab: 'hotel', biz: ['delivery'], names: ['Peakview Lodge Hotel'] },
+  // Cedar Isle
+  { d: 36, prefab: 'hospital', biz: ['hospital'], names: ['Cedar Falls Clinic'] },
+  { d: 36, prefab: 'police', biz: ['police'], names: ['Cedar Falls Police'] },
+  { d: 36, prefab: 'strip', biz: ['delivery', 'delivery', 'delivery', 'delivery'], names: ['Falls Hardware', 'Main Street Diner', 'Cedar Books', 'Pine & Petal Florist'] },
+  { d: 35, prefab: 'school', biz: ['delivery'], names: ['Cedar Falls High'] },
+  { d: 39, prefab: 'warehouse', biz: ['delivery'], names: ['South Port Cannery'] },
 ];
 
 const GENERIC_NAMES = {
@@ -181,7 +231,7 @@ export class CityMap {
     this.dist = new Uint8Array(N).fill(WATER_D);
     this.zone = new Uint8Array(N);
     this.river = new Uint8Array(N);       // 1 = river water (fishing, bridges)
-    this.reserve = new Uint8Array(N);     // bit flags: 1 highway band, 2 railway, 4 waterfront strip, 8 under a ramp
+    this.reserve = new Uint8Array(N);     // bit flags: 1 highway band, 2 railway, 4 waterfront strip, 8 under a ramp, 16 kept open (Pelican Key beach)
     this.deck = new Uint8Array(N);        // 1 = under the elevated highway
     this.lvl0Block = new Uint8Array(N);   // 1 = solid at ground level (a ramp's embankment)
     this.roadAxis = new Uint8Array(N);    // bit1 vertical-ish road, bit2 horizontal-ish, 3 = junction box
@@ -340,12 +390,18 @@ export function generateCity(seed = 1337) {
   paintDistricts(m);
   turfMap = m.dist;
   const lines = layoutRoads(m, rand);
-  const net = buildNetwork(lines, seed);
+  const net = repairRoads(m, lines, seed);
   m.net = net; m.nodes = net.nodes; m.edges = net.edges; m.roads = net.edges;
   rasterRoads(m);
   const railPts = m.railPts;
   reserveRail(m, railPts);
   waterfrontStrip(m);
+  // Pelican Key's beach end (the bar, the charter dock, the court) stays open; the town is east of it
+  {
+    const [px0, py0, px1, py1] = ISLANDS.P.box;
+    const pcx = Math.floor((px0 + px1) / 2), pcy = Math.floor((py0 + py1) / 2);
+    for (let y = pcy - 20; y < pcy + 24; y++) for (let x = pcx - 34; x < pcx + 16; x++) { const i = y * MAP_W + x; if (m.zone[i] === Z.KEY && m.tiles[i] === T.GRASS) m.reserve[i] |= 16; }
+  }
 
   // --- blocks -> rows -> concept-art lots and rooftops ------------------------------------------
   findBlocks(m);
@@ -375,9 +431,16 @@ export function generateCity(seed = 1337) {
     if (!st) { m.fill(b.x, b.y, b.w, b.h, DISTRICTS[b.d].ground === T.WATER ? T.GRASS : DISTRICTS[b.d].ground); continue; }
     m.fill(b.x, b.y, b.w, b.h, DISTRICTS[b.d].ground);
     if (b.park) continue;
+    if (b.green) { filler(m, { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, b.x, b.w, STYLE.park, mulberry32(seed ^ (b.x * 17 + b.y))); continue; }
     const minH = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].th));
     const minW = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].tw));
     const fS = facesStreet(m, b, 'S'), fN = facesStreet(m, b, 'N');
+    // land no street reaches (behind the ring roads, along wild coasts): left as greenery
+    const sideways = !fS && !fN && (facesStreet(m, b, 'E') || facesStreet(m, b, 'W'));
+    if ((!fS && !fN && !sideways) || (sideways && (b.w > 20 || b.h > 20) && ['houses', 'beach', 'luxury'].includes(DISTRICTS[b.d].style))) {
+      filler(m, { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, b.x, b.w, STYLE.park, mulberry32(seed ^ (b.x * 29 + b.y * 3)));
+      continue;
+    }
     if (b.h < minH || b.w < minW || (!fS && !fN)) {
       // too small (or nowhere for a door): one solid building or a pocket park / plaza
       const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' };
@@ -406,6 +469,7 @@ export function generateCity(seed = 1337) {
   // --- waterfronts, farms, islands, street furniture, traffic graph ------------------------------
   buildWaterfronts(m, rand);
   buildFarm(m, rand);
+  buildAirports(m);
   buildEstates(m, rand);
   buildWilds(m, rand);
   buildStreetProps(m);
@@ -447,10 +511,10 @@ function decodeLand() {
 function decodeTerrain() {
   const cw = Math.floor(MAP_W / TERRAIN_CELL), ch = Math.floor(MAP_H / TERRAIN_CELL);
   const cls = new Uint8Array(cw * ch);
-  const code = { w: 0, g: 1, f: 2, d: 3, r: 4, s: 5 };
+  const code = { W: 0, G: 1, F: 2, D: 3, R: 4, S: 5 };
   TERRAIN.split('|').forEach((row, y) => {
     let x = 0;
-    for (const m of row.matchAll(/([a-z])([0-9a-z]+)/g)) { const n = parseInt(m[2], 36); cls.fill(code[m[1]], y * cw + x, y * cw + x + n); x += n; }
+    for (const m of row.matchAll(/([A-Z])([0-9a-z]+)/g)) { const n = parseInt(m[2], 36); cls.fill(code[m[1]], y * cw + x, y * cw + x + n); x += n; }
   });
   return { cls, cw, ch };
 }
@@ -542,14 +606,12 @@ function terrain(m) {
   };
   m.yRiver = yRiver;
   // zones
-  const keyComp = compAt(600, 360), rockComp = compAt(1230, 978);
+  const compZone = new Map(ISLAND_AT.map(([[x, y], z]) => [compAt(x, y), z]));
   for (let i = 0; i < N; i++) {
     if (!land[i]) continue;
     const c = lab[i], x = i % W, y = (i / W) | 0;
     if (c === main) m.zone[i] = x >= 1045 ? Z.EAST : y < yRiver(x) ? Z.CITY : Z.SOUTH;
-    else if (c === keyComp) m.zone[i] = Z.KEY;
-    else if (c === rockComp) m.zone[i] = Z.ROCK;
-    else m.zone[i] = Z.WILD;
+    else m.zone[i] = compZone.get(c) ?? Z.WILD;
   }
   // island boxes for the tour and the map
   const box = {};
@@ -578,22 +640,18 @@ function terrain(m) {
     const z = m.zone[i];
     if (z === Z.CITY || z === Z.SOUTH) { m.tiles[i] = T.GRASS; continue; }
     if (nearSea && (z !== Z.EAST || c !== 4)) { m.tiles[i] = T.SAND; continue; }
-    m.tiles[i] = c === 3 ? (hash2(x >> 2, y >> 2, 5) < 0.3 ? T.SAND : T.DIRT) : c === 4 ? T.DIRT : T.GRASS;
+    m.tiles[i] = c === 3 ? (hash2(x >> 4, y >> 4, 5) < 0.35 ? T.SAND : T.DIRT) : c === 4 ? T.DIRT : T.GRASS;
   }
   m.terrainCls = { cls, cw };
-  // districts outside the city: farm country, the wild islands, the two boat islands
+  // districts of the places without seeds: Smuggler's Rock, the lighthouse rock, the islets
+  const lighthouse = compAt(300, 70);
   for (let i = 0; i < N; i++) {
     const z = m.zone[i];
     if (z === Z.EAST) m.dist[i] = 9;
     else if (z === Z.KEY) m.dist[i] = 14;
     else if (z === Z.ROCK) m.dist[i] = 15;
-    else if (z === Z.WILD) m.dist[i] = 22;
-  }
-  for (const wi of WILD_ISLES) {
-    const c = compAt(wi.at[0], wi.at[1]);
-    if (c < 0) continue;
-    const [x0, y0, x1, y1] = comps[c].box;
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (lab[y * W + x] === c) m.dist[y * W + x] = wi.d;
+    else if (z === Z.GULL) m.dist[i] = 22;
+    else if (z === Z.WILD) m.dist[i] = lab[i] === lighthouse ? 19 : 20;
   }
   m.comps = comps; m.compLab = lab;
 }
@@ -602,11 +660,12 @@ function terrain(m) {
 // little noise so they don't run along straight lines; the park is a hard rectangle.
 function paintDistricts(m) {
   const W = MAP_W;
-  const seeds = SEEDS.map(([d, x, y]) => ({ d, x, y, z: m.zone[y * W + x] }));
+  const seeds = SEEDS.concat(ISLAND_SEEDS).map(([d, x, y]) => ({ d, x, y, z: m.zone[y * W + x] })).filter((s) => s.z);
+  const seeded = new Set(seeds.map((s) => s.z));
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
     const z = m.zone[i];
-    if (z !== Z.CITY && z !== Z.SOUTH) continue;
+    if (!seeded.has(z)) continue;
     if (x >= PARK.x0 + 3 && x < PARK.x1 - 3 && y >= PARK.y0 + 3 && y < PARK.y1 - 3) { m.dist[i] = 12; continue; }
     const wx = x + 7 * Math.sin(y / 17.3) + 4 * Math.sin((x + y) / 9.1), wy = y + 7 * Math.sin(x / 15.7) + 4 * Math.cos((x - y) / 8.3);
     let best = null, bd = Infinity;
@@ -616,6 +675,26 @@ function paintDistricts(m) {
       if (d < bd) { bd = d; best = s; }
     }
     if (best) m.dist[i] = best.d;
+  }
+  // built-up districts start out as plain ground for the streets and lots; the rest keeps its
+  // woods, scrub and sand
+  for (let i = 0; i < W * MAP_H; i++) {
+    if (!m.land[i]) continue;
+    const st = DISTRICTS[m.dist[i]].style;
+    if (STYLE[st] && st !== 'beach') m.tiles[i] = T.GRASS;
+    else if (st === 'beach' && m.zone[i] !== Z.CITY && m.tiles[i] !== T.SAND) m.tiles[i] = T.GRASS;
+    else if (st === 'airport') m.tiles[i] = m.distSea[i] <= 8 ? T.SAND : T.GRASS;
+  }
+  // inland lakes (fresh water: fishable like the river)
+  m.lake = new Uint8Array(W * MAP_H);
+  for (const [lx, ly, rx, ry] of LAKES) {
+    for (let y = Math.floor(ly - ry - 1); y <= ly + ry + 1; y++) for (let x = Math.floor(lx - rx - 1); x <= lx + rx + 1; x++) {
+      const k = ((x - lx) / rx) ** 2 + ((y - ly) / ry) ** 2 + 0.12 * Math.sin(x * 0.7 + y * 0.4);
+      const i = y * W + x;
+      if (k > 1 || !m.land[i]) continue;
+      m.lake[i] = 1; m.river[i] = 1;
+      m.tiles[i] = k < 0.4 ? T.DEEP : T.WATER;
+    }
   }
 }
 
@@ -785,31 +864,154 @@ function layoutRoads(m, rand) {
     }
   }
 
-  // bridges out to the wild islands (ground level, over the water) and roads into the farms
-  const extend = (match, dx, dy, name) => {
-    const g = gridLines.find(match);
-    if (!g) return;
-    const end = dx + dy > 0 ? g.pts[g.pts.length - 1] : g.pts[0];
-    const ex = end.x / TILE, ey = end.y / TILE;
-    const w = acrossWater((x, y) => isLand(x, y), ex, ey, dx, dy, 300);
-    if (!w) return;
-    const far = { x: (w.x + dx * 4) * TILE, y: (w.y + dy * 4) * TILE };
-    lines.push({ pts: [{ x: end.x, y: end.y }, far], kind: g.kind, lvl: 0, name });
-    // a country road on into the island
-    const into = [far, { x: far.x + dx * 30 * TILE + dy * 12 * TILE, y: far.y + dy * 30 * TILE + dx * 12 * TILE }, { x: far.x + dx * 60 * TILE - dy * 6 * TILE, y: far.y + dy * 60 * TILE - dx * 6 * TILE }];
-    for (const p of clipLine(into, (x, y) => isLand(x, y) && zoneOf(x, y) === Z.WILD, 10 * TILE, 12).slice(0, 1)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: `${name} Road` });
-  };
-  extend((q) => q.hy === 556 && q.pts[0].x < 640 * TILE, -1, 0, 'Westward Bridge');
-  extend((q) => q.vx === 958 && q.pts[0].y < 380 * TILE, 0, -1, 'Pike Island Bridge');
-  extend((q) => q.vx === 868 && q.pts[q.pts.length - 1].y > 760 * TILE, 0, 1, 'Cedar Isle Bridge');
   // Dry Creek: the county road east, the farm road north-south, back into Southside
   const ruralOk = (x, y) => isLand(x, y) && seaD(x, y) >= 6;
   const county = [{ x: 1036 * TILE, y: 528 * TILE }, { x: 1140 * TILE, y: 528 * TILE }, { x: 1200 * TILE, y: 514 * TILE }];
   for (const p of clipLine(county, ruralOk, 10 * TILE)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'County Road' });
   const farmRd = [{ x: 1140 * TILE, y: 452 * TILE }, { x: 1140 * TILE, y: 690 * TILE }, { x: 1110 * TILE, y: 730 * TILE }, { x: 1040 * TILE, y: 734 * TILE }];
   for (const p of clipLine(rounded(farmRd, 18 * TILE), ruralOk, 10 * TILE)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'Farm Road' });
-  void rand;
+  // the Eastern Parkway: where town meets the country, every street from the grid ends on it
+  for (const p of clipLine([{ x: 1047 * TILE, y: 296 * TILE }, { x: 1047 * TILE, y: 910 * TILE }], (x, y) => isLand(x, y) && seaD(x, y) >= 4 && !m.river[at(x, y)], 10 * TILE)) lines.push({ pts: p, kind: 'art', lvl: 0, name: 'Eastern Parkway' });
+
+  // the other islands, the highways and bridges between them (islands.js)
+  const vEnds = (x) => gridLines.filter((q) => q.vx === x);
+  const ctx = {
+    m, lines, rand, Z, isLand, zoneOf, seaD,
+    lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; },
+    metroWestEnd: (() => { const g = gridLines.filter((q) => q.hy === 556).sort((p, q) => p.pts[0].x - q.pts[0].x)[0]; return g && g.pts[0]; })(),
+    metroNorthEnd: (x) => { const g = vEnds(x).sort((p, q) => p.pts[0].y - q.pts[0].y)[0]; return g && g.pts[0]; },
+    metroSouthEnd: (x) => { const g = vEnds(x).sort((p, q) => q.pts[q.pts.length - 1].y - p.pts[p.pts.length - 1].y)[0]; return g && g.pts[g.pts.length - 1]; },
+  };
+  m.islandRings = islandRoads(ctx);
   return lines;
+}
+
+// Make the network hang together: a road that just stops gets joined to the nearest road ahead
+// of it of about its own rank (a street to a street or an avenue, a dirt track to a county road;
+// only arterials and county roads meet a highway), then the graph is rebuilt. Designed dead ends
+// (cul-de-sacs, lanes to the shore) are left alone. Finally a one-way piece you could drive into
+// but not out of becomes two-way.
+const CONNECT_R = { hwy: 40, ave: 36, blvd: 36, art: 30, front: 30, drive: 28 }; // tiles; everything else 22
+const ONTO_HWY = new Set(['ave', 'blvd', 'art', 'rural', 'front']);
+// Streets and lanes don't cross a ground-level highway: they stop short of it (and get joined
+// to something else or turned into a cul-de-sac); arterials and county roads cross at junctions.
+const CROSS_HWY = new Set(['ave', 'blvd', 'art', 'rural', 'front', 'hwy', 'ramp']);
+function clipAtHighways(lines) {
+  const hw = lines.filter((l) => l.kind === 'hwy' && l.lvl === 0);
+  const boxOf = (pts) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of pts) { if (p.x < x0) x0 = p.x; if (p.y < y0) y0 = p.y; if (p.x > x1) x1 = p.x; if (p.y > y1) y1 = p.y; } return { x0, y0, x1, y1 }; };
+  for (const h of hw) h.box = boxOf(h.pts);
+  const out = [];
+  for (const l of lines) {
+    if (CROSS_HWY.has(l.kind) || l.lvl !== 0) { out.push(l); continue; }
+    const pts = l.pts.map((p) => ({ x: p.x, y: p.y }));
+    const L = measure(pts);
+    const lb = boxOf(pts);
+    const cuts = [];
+    for (const h of hw) {
+      if (lb.x1 < h.box.x0 - 300 || lb.x0 > h.box.x1 + 300 || lb.y1 < h.box.y0 - 300 || lb.y0 > h.box.y1 + 300) continue;
+      for (let i = 0; i + 1 < pts.length; i++) for (let j = 0; j + 1 < h.pts.length; j++) {
+        const x = segX(pts[i], pts[i + 1], h.pts[j], h.pts[j + 1]);
+        if (x) cuts.push(pts[i].s + (pts[i + 1].s - pts[i].s) * x.t);
+      }
+    }
+    const gap = 14 * TILE / 2 + 3 * TILE;
+    // an end that stops right beside a highway is pulled back too (it would snap onto it)
+    const near = (q) => hw.some((h) => { if (q.x < h.box.x0 - gap || q.x > h.box.x1 + gap || q.y < h.box.y0 - gap || q.y > h.box.y1 + gap) return false; const pr = project(h.pts, q); return pr && pr.d < gap; });
+    if (near(pts[0])) { let s1 = 0; while (s1 < L && near(pointAt(pts, s1))) s1 += 16; cuts.push(Math.min(L, s1) - gap); }
+    if (near(pts[pts.length - 1])) { let s1 = L; while (s1 > 0 && near(pointAt(pts, s1))) s1 -= 16; cuts.push(Math.max(0, s1) + gap); }
+    if (!cuts.length) { out.push(l); continue; }
+    let s0 = 0;
+    const keep = [];
+    for (const c of cuts.sort((a, b) => a - b)) { if (c - gap > s0) keep.push([s0, c - gap]); s0 = Math.max(s0, c + gap); }
+    if (s0 < L) keep.push([s0, L]);
+    for (const [a0, a1] of keep) {
+      if (a1 - a0 < 6 * TILE) continue;
+      const piece = [pointAt(pts, a0)];
+      for (const p of pts) if (p.s > a0 && p.s < a1) piece.push({ x: p.x, y: p.y });
+      piece.push(pointAt(pts, a1));
+      out.push({ ...l, pts: piece.map((p) => ({ x: p.x, y: p.y })) });
+    }
+  }
+  lines.length = 0;
+  lines.push(...out);
+}
+
+function repairRoads(m, lines, seed) {
+  const W = MAP_W;
+  clipAtHighways(lines);
+  const wetAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= W || ty >= MAP_H || !m.land[ty * W + tx] || !!m.lake[ty * W + tx]; };
+  const lower = (a, b) => { let k = (ROAD_RANK[a] ?? 3) <= (ROAD_RANK[b] ?? 3) ? a : b; if (k === 'hwy' || k === 'ramp') k = k === a ? b : a; if (k === 'hwy' || k === 'ramp') k = 'art'; return k === 'front' ? 'art' : k; };
+  let net = null;
+  const hwys = lines.filter((l) => l.kind === 'hwy' && l.lvl === 0);
+  const crossesHwy = (a, b) => hwys.some((h) => { for (let j = 0; j + 1 < h.pts.length; j++) if (segX(a, b, h.pts[j], h.pts[j + 1])) return true; return false; });
+  for (let iter = 0; iter < 4; iter++) {
+    net = buildNetwork(lines, seed);
+    const add = [];
+    for (const n of net.nodes) {
+      if (n.lvl !== 0 || n.edges.length !== 1) continue;
+      const e = net.edges[n.edges[0]];
+      if (e.lvl !== 0 || e.culdesac || e.kind === 'ramp') continue;
+      const pts = e.a === n.id ? e.pts : e.pts.slice().reverse();
+      let k = 1;
+      while (k < pts.length - 1 && Math.hypot(pts[k].x - pts[0].x, pts[k].y - pts[0].y) < 64) k++;
+      let ox = pts[0].x - pts[k].x, oy = pts[0].y - pts[k].y;
+      const ol = Math.hypot(ox, oy) || 1; ox /= ol; oy /= ol;
+      const rank = ROAD_RANK[e.kind] ?? 3;
+      const R = (CONNECT_R[e.kind] || 22) * TILE;
+      let best = null;
+      for (const o of net.edges) {
+        if (o === e || o.lvl !== 0) continue;
+        const ro = ROAD_RANK[o.kind] ?? 3;
+        if (o.kind === 'hwy' || e.kind === 'hwy' ? !(ONTO_HWY.has(e.kind) || ONTO_HWY.has(o.kind) || (o.kind === 'hwy' && e.kind === 'hwy')) : Math.abs(ro - rank) > 2) continue;
+        const bb = o.bb || (o.bb = { x0: Math.min(...o.pts.map((q) => q.x)), y0: Math.min(...o.pts.map((q) => q.y)), x1: Math.max(...o.pts.map((q) => q.x)), y1: Math.max(...o.pts.map((q) => q.y)) });
+        if (n.x < bb.x0 - R || n.x > bb.x1 + R || n.y < bb.y0 - R || n.y > bb.y1 + R) continue;
+        const pr = project(o.pts, n);
+        if (!pr || pr.d > R || pr.d < 6) continue;
+        const dx = pr.x - n.x, dy = pr.y - n.y;
+        const cos = (dx * ox + dy * oy) / pr.d;
+        if (cos < 0.25) continue;
+        let dry = true;
+        for (let t = 16; t < pr.d; t += 16) if (wetAt(n.x + dx * t / pr.d, n.y + dy * t / pr.d)) { dry = false; break; }
+        if (!dry) continue;
+        const kind = lower(e.kind, o.kind);
+        if (!CROSS_HWY.has(kind) && o.kind !== 'hwy' && crossesHwy(n, { x: pr.x, y: pr.y })) continue;
+        const score = pr.d * (1.8 - cos);
+        if (!best || score < best.score) best = { score, x: pr.x + (dx / pr.d) * 4, y: pr.y + (dy / pr.d) * 4, o };
+      }
+      if (best) add.push({ pts: [{ x: n.x, y: n.y }, { x: best.x, y: best.y }], kind: lower(e.kind, best.o.kind), lvl: 0, name: e.name || best.o.name });
+    }
+    if (!add.length) break;
+    lines.push(...add);
+  }
+  fixOneWays(net);
+  return net;
+}
+
+// One-way edges whose ends aren't mutually reachable become two-way (so nothing gets trapped).
+function fixOneWays(net) {
+  for (let pass = 0; pass < 3; pass++) {
+    const N = net.nodes.length;
+    const adj = net.nodes.map((n) => Object.values(n.links));
+    const radj = net.nodes.map(() => []);
+    adj.forEach((l, i) => l.forEach((j) => radj[j].push(i)));
+    const order = [], seen = new Uint8Array(N);
+    for (let s0 = 0; s0 < N; s0++) {
+      if (seen[s0]) continue;
+      const st = [[s0, 0]]; seen[s0] = 1;
+      while (st.length) { const top = st[st.length - 1]; if (top[1] < adj[top[0]].length) { const v = adj[top[0]][top[1]++]; if (!seen[v]) { seen[v] = 1; st.push([v, 0]); } } else { order.push(top[0]); st.pop(); } }
+    }
+    const comp = new Int32Array(N).fill(-1);
+    let c = 0;
+    for (let k = N - 1; k >= 0; k--) { const s0 = order[k]; if (comp[s0] >= 0) continue; const st = [s0]; comp[s0] = c; while (st.length) { const u = st.pop(); for (const v of radj[u]) if (comp[v] < 0) { comp[v] = c; st.push(v); } } c++; }
+    let changed = false;
+    for (const e of net.edges) {
+      if (!e.oneway || e.lvl !== 0 || comp[e.a] === comp[e.b]) continue;
+      e.oneway = false; e.nl = 1;
+      net.nodes[e.a].links[e.id] = e.b; net.nodes[e.b].links[e.id] = e.a;
+      changed = true;
+    }
+    if (!changed) break;
+  }
 }
 
 function nearLine(lines, x, y, r, except) {
@@ -831,7 +1033,7 @@ function nearLine(lines, x, y, r, except) {
 // ---------------------------------------------------------------------------
 // Tiles from the road network: asphalt (bridge decks over water), sidewalks along city roads,
 // the strip under and beside the elevated highway, ramp embankments, pillars.
-const CITY_KINDS = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front']);
+const CITY_KINDS = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 function rasterRoads(m) {
   const W = MAP_W;
   const at = (tx, ty) => (tx < 0 || ty < 0 || tx >= W || ty >= MAP_H ? -1 : ty * W + tx);
@@ -849,30 +1051,40 @@ function rasterRoads(m) {
     });
   }
   for (const e of ground) {
+    if (e.kind === 'dirt') { // unpaved: packed dirt, no kerbs
+      stampEdge(e, e.hw - 12, (tx, ty) => { const i = at(tx, ty); if (i >= 0 && !isWet(m.tiles[i]) && m.tiles[i] !== T.ROAD && m.tiles[i] !== T.BRIDGE) { m.tiles[i] = T.DIRT; m.reserve[i] &= ~1; } });
+      continue;
+    }
+    // roads with no pavement beside them only take the tiles well inside their edge, so the
+    // smooth road drawn over them covers every asphalt tile (no staircase showing at the side)
+    const hwT = CITY_KINDS.has(e.kind) ? e.hw : e.hw - 14;
     stampEdge(e, e.hw, (tx, ty, d, horiz) => {
       const i = at(tx, ty);
       if (i < 0) return;
       const t = m.tiles[i];
+      if (d > hwT && !isWet(t) && t !== T.BRIDGE) return;
       if (isWet(t) || t === T.BRIDGE) { m.tiles[i] = T.BRIDGE; e.bridge = true; } else m.tiles[i] = T.ROAD;
       m.roadAxis[i] |= horiz ? 2 : 1;
       m.reserve[i] &= ~1;
     });
     if (e.kind === 'rural') stampEdge(e, e.hw + 20, (tx, ty, d) => { const i = at(tx, ty); if (i >= 0 && d > e.hw && m.tiles[i] === T.GRASS) m.tiles[i] = T.DIRT; });
   }
-  // cul-de-sac bulbs at dead ends
+  // cul-de-sac bulbs (turning circles) at the dead ends of town streets
   for (const n of m.nodes) {
     if (n.lvl !== 0 || n.edges.length !== 1) continue;
     const e = m.edges[n.edges[0]];
-    if (e.kind !== 'minor') continue;
+    if (!CITY_KINDS.has(e.kind)) continue;
+    if (!m.land[at(Math.floor(n.x / TILE), Math.floor(n.y / TILE))]) continue;
     const cx = n.x / TILE, cy = n.y / TILE;
-    for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) {
+    const rr = Math.max(3.6, e.hw / TILE + 0.8), R = rr + 2;
+    for (let dy = -Math.ceil(R); dy <= Math.ceil(R); dy++) for (let dx = -Math.ceil(R); dx <= Math.ceil(R); dx++) {
       const i = at(Math.floor(cx + dx), Math.floor(cy + dy));
-      if (i < 0 || !m.land[i]) continue;
+      if (i < 0 || !m.land[i] || m.deck[i]) continue;
       const d = Math.hypot(dx, dy);
-      if (d <= 3.6) m.tiles[i] = T.ROAD;
-      else if (d <= 5.6 && m.tiles[i] !== T.ROAD) m.tiles[i] = T.SIDEWALK;
+      if (d <= rr) m.tiles[i] = T.ROAD;
+      else if (d <= R && m.tiles[i] !== T.ROAD) m.tiles[i] = T.SIDEWALK;
     }
-    n.culdesac = true;
+    n.culdesac = true; n.bulb = rr * TILE;
   }
   // junction boxes (no lane markings across them)
   for (const n of m.nodes) {
@@ -925,11 +1137,12 @@ function rasterRoads(m) {
 }
 
 // Keep the land along every shore free for promenades, beaches and quays.
+const BUILT_ZONES = new Set([Z.CITY, Z.SOUTH, Z.WEST, Z.NORTH, Z.ISLE, Z.KEY, Z.GULL]);
+const builtAt = (m, i) => BUILT_ZONES.has(m.zone[i]) && !!STYLE[DISTRICTS[m.dist[i]].style];
 function waterfrontStrip(m) {
   const W = MAP_W;
   for (let i = 0; i < W * MAP_H; i++) {
-    const z = m.zone[i];
-    if (z !== Z.CITY && z !== Z.SOUTH) continue;
+    if (!builtAt(m, i) || m.lake[i]) continue;
     if (!m.land[i] || m.reserve[i]) continue;
     const t = m.tiles[i];
     if (t !== T.GRASS) continue;
@@ -949,10 +1162,10 @@ function waterfrontStrip(m) {
 // corners left over become pocket parks, plazas or yards.
 function findBlocks(m) {
   const W = MAP_W;
+  ALL_PARKS = [{ ...PARK, pond: true, pitch: true }, ...PARKS.map((q) => ({ ...q, pond: !q.lake && !q.pitch }))];
   const free = new Uint8Array(W * MAP_H);
   for (let i = 0; i < W * MAP_H; i++) {
-    const z = m.zone[i];
-    if ((z === Z.CITY || z === Z.SOUTH) && m.tiles[i] === T.GRASS && !m.reserve[i]) free[i] = 1;
+    if (builtAt(m, i) && m.tiles[i] === T.GRASS && !m.reserve[i]) free[i] = 1;
   }
   const lab = new Int32Array(W * MAP_H).fill(-1);
   const st = new Int32Array(W * MAP_H);
@@ -994,7 +1207,11 @@ function findBlocks(m) {
       for (let y = best.y; y < best.y + best.h; y++) for (let x = best.x; x < best.x + best.w; x++) free[y * W + x] = 0;
       const d = m.dist[(best.y + (best.h >> 1)) * W + best.x + (best.w >> 1)];
       const blk = { x: best.x, y: best.y, w: best.w, h: best.h, d };
-      if (d === 12 && best.w >= 30 && best.h >= 30 && !m.blocks.some((q) => q.park)) blk.park = { label: PARK.label, pond: true, pitch: true };
+      // parks and the stadium: the first big block inside one is laid out; any others stay green
+      const pk = ALL_PARKS.find((q) => best.x >= q.x0 - 3 && best.x + best.w <= q.x1 + 3 && best.y >= q.y0 - 3 && best.y + best.h <= q.y1 + 3);
+      if (pk) {
+        if (!pk.used && best.w >= 24 && best.h >= 24) { pk.used = true; blk.park = { label: pk.label, pond: !!pk.pond, pitch: !!pk.pitch }; } else blk.green = true;
+      }
       m.blocks.push(blk);
     }
     nreg++;
@@ -1010,8 +1227,16 @@ function findBlocks(m) {
   }
 }
 
+let ALL_PARKS = [];
+
 // A block side "faces a street" when the tiles just outside it are mostly pavement or road.
 function facesStreet(m, b, face) {
+  if (face === 'E' || face === 'W') {
+    const x = face === 'E' ? b.x + b.w : b.x - 1;
+    let ok = 0;
+    for (let y = b.y; y < b.y + b.h; y++) { const t = m.tileAt(x, y), t2 = m.tileAt(face === 'E' ? x + 1 : x - 1, y); if (t === T.SIDEWALK || t === T.ROAD || t === T.PLAZA || t2 === T.ROAD) ok++; }
+    return ok >= b.h * 0.35;
+  }
   const y = face === 'S' ? b.y + b.h : b.y - 1;
   let ok = 0;
   for (let x = b.x; x < b.x + b.w; x++) {
@@ -1303,6 +1528,13 @@ function buildEstates(m, rand) {
     m.fill(x - 1, y - 1, pf.tw + 6, pf.th + 2, T.GRASS);
     estateHouse(m, rand, type, key, x, y, south);
   }
+  // cabins, lodges and farmhouses out on the other islands
+  for (const [type, key, x, y, south] of ISLAND_ESTATES) {
+    const pf = PREFABS[key];
+    clearArea(m, x - 2, y - 2, pf.tw + 8, pf.th + 4);
+    m.fill(x - 1, y - 1, pf.tw + 6, pf.th + 2, T.GRASS);
+    estateHouse(m, rand, type, key, x, y, south);
+  }
   // no lot for it in town: the mansion goes up on the hill above Dry Creek
   if (!m.mansions.length) {
     m.fill(1196, 480, MANSION_SIZE[0], MANSION_SIZE[1], T.GRASS);
@@ -1454,7 +1686,7 @@ function buildPaintShops(m) {
   const isl = (p) => m.zoneAt(p.x, p.y);
   // one per part of the world first, then anywhere
   for (const pass of [0, 1]) for (const c of cands) {
-    if (picked.length >= 4) break;
+    if (picked.length >= 7) break;
     if (picked.includes(c) || picked.some((q) => distOf(q) === distOf(c) || Math.hypot(q.x - c.x, q.y - c.y) < 4000)) continue;
     if (pass === 0 && picked.some((q) => isl(q) === isl(c))) continue;
     const b = m.buildings[c.b];
@@ -1575,7 +1807,7 @@ function buildCornerStores(m) {
   m.pumps = [];
   const gas = [];
   for (const p of [...conv].sort((a, b) => hash2(a.x | 0, a.y | 0, 41) - hash2(b.x | 0, b.y | 0, 41))) {
-    if (gas.length >= 6 || gas.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 3500)) continue;
+    if (gas.length >= 11 || gas.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 3500)) continue;
     // needs open paving in front for the pumps
     const ok = [-48, 48].every((dx) => [40, 64].every((dy) => { const t = m.tileAtPx(p.x + dx, p.y + (p.y > m.buildings[p.b].ty * TILE ? dy : -dy)); return t === T.SIDEWALK || t === T.PLAZA || t === T.LOT; }));
     if (ok) gas.push(p);
@@ -1654,6 +1886,20 @@ function buildDealerLots(m) {
   for (const d of m.pois.filter((q) => q.kind === 'dealer')) {
     const b = m.buildings[d.b];
     if (!b) continue;
+    // no open lot round the showroom: the plain building next door is knocked down for one
+    let lot = 0;
+    for (let ty = b.ty - 8; ty < b.ty + b.th + 8; ty++) for (let tx = b.tx - 8; tx < b.tx + b.tw + 8; tx++) if (m.tileAt(tx, ty) === T.LOT) lot++;
+    if (lot < 140) {
+      const busy = new Set(m.pois.map((q) => q.b).filter((x) => x !== undefined));
+      const nb = m.buildings.filter((o) => !o.gone && o.id !== b.id && !busy.has(o.id) && o.home === undefined && Math.max(0, o.tx - (b.tx + b.tw), b.tx - (o.tx + o.tw)) <= 2 && Math.max(0, o.ty - (b.ty + b.th), b.ty - (o.ty + o.th)) <= 2)
+        .sort((p2, q2) => q2.tw * q2.th - p2.tw * p2.th)[0];
+      if (nb) {
+        nb.gone = true;
+        if (nb.roof >= 0 && m.roofs[nb.roof]) m.roofs[nb.roof].gone = true;
+        if (nb.prefab >= 0 && m.prefabs[nb.prefab]) m.prefabs[nb.prefab] = { ...m.prefabs[nb.prefab], gone: true, tw: 0, th: 0 };
+        for (let ty = nb.ty; ty < nb.ty + nb.th; ty++) for (let tx = nb.tx; tx < nb.tx + nb.tw; tx++) { m.bld[ty * MAP_W + tx] = -1; m.set(tx, ty, T.LOT); }
+      }
+    }
     const slots = [];
     const free = (x, y, a) => {
       const hl = (a ? W : L) / 2, hw = (a ? L : W) / 2;
@@ -1903,6 +2149,8 @@ function shoreSand(m, box, ground, zone) {
   for (let ty = y0 - 4; ty < y1 + 4; ty++) for (let tx = x0 - 4; tx < x1 + 4; tx++) {
     const i = ty * MAP_W + tx;
     if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H || m.zone[i] !== zone) continue;
+    const t0 = m.tiles[i];
+    if (t0 !== T.GRASS && t0 !== T.SAND && t0 !== T.DIRT) continue; // leave streets and lots alone
     let near = false;
     for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3; dx++) if (isWater(m.tileAt(tx + dx, ty + dy))) { near = true; break; }
     m.set(tx, ty, near ? T.SAND : ground);
@@ -1932,7 +2180,7 @@ function buildOffshore(m, rand) {
   const court = [pcx - 30, pcy + 8, 16, 8];
   volleyCourt(m, 'Pelican Key Volleyball', ...court);
   const onCourt = (tx, ty) => tx >= court[0] - 2 && tx <= court[0] + court[2] + 1 && ty >= court[1] - 2 && ty <= court[1] + court[3] + 1;
-  m.fill(pcx - 2, pcy - 20, 4, 40, T.PLAZA);
+  m.fill(pcx - 2, pcy - 16, 4, 36, T.PLAZA);
   const bar = simpleBuilding(m, pcx + 3, pcy - 9, 9, 6, 'Pelican Key Beach Bar', 'beachbar', 14, 'tile', { x: (pcx + 7.5) * TILE, y: (pcy - 2.6) * TILE, text: 'Beach Bar' });
   m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Pelican Key Beach Bar', x: (pcx + 7.5) * TILE, y: (pcy - 2.3) * TILE, r: 44, b: bar.id });
   const tip = jetty(m, pcx, pcy, 0, -1, 9);
@@ -1943,7 +2191,7 @@ function buildOffshore(m, rand) {
   for (let k = 0; k < 2; k++) m.marina.push({ x: (tip.x - 2.6) * TILE, y: (tip.y + 2 + k * 3.2) * TILE, a: Math.PI, kind: 'jetski' });
   for (let k = 0; k < 120; k++) {
     const tx = px0 + Math.floor(rand() * (px1 - px0)), ty = py0 + Math.floor(rand() * (py1 - py0));
-    if (m.zone[ty * MAP_W + tx] !== Z.KEY) continue;
+    if (m.zone[ty * MAP_W + tx] !== Z.KEY || tx > pcx + 14) continue;
     const t = m.tileAt(tx, ty);
     if (onCourt(tx, ty)) continue;
     if (t === T.SAND && rand() < 0.5) addProp(m, ['palm_a', 'palm_b', 'palm_c', 'umbrella_r', 'umbrella_y'][Math.floor(rand() * 5)], (tx + 0.5) * TILE, (ty + 0.5) * TILE, 0);
@@ -2016,7 +2264,7 @@ function buildTackleShops(m) {
   cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 23) - hash2(b.x | 0, b.y | 0, 23));
   const picked = [];
   for (const c of cands) {
-    if (picked.length >= 3) break;
+    if (picked.length >= 6) break;
     if (picked.some((q) => distOf(q) === distOf(c) || Math.hypot(q.x - c.x, q.y - c.y) < 1600)) continue;
     picked.push(c);
   }
@@ -2150,7 +2398,7 @@ export const BREAKABLE = new Set([
   'hydrant', 'hydrant_y', 'trashcan', 'bench_a', 'bench_b', 'bench_m', 'pbench', 'planter_sq', 'planter_g', 'planter_fl', 'potted',
   'news_a', 'news_b', 'news_c', 'mailbox', 'vend_a', 'vend_cola', 'vend_c', 'bikerack', 'cone', 'barrier', 'drum', 'pallet', 'pallet_b',
   'pallet_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'foodcart', 'foodcart_b', 'tires', 'bags', 'spool',
-  'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b',
+  'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b', 'cactus',
 ]);
 export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y']);
 
@@ -2193,9 +2441,11 @@ function buildWaterfronts(m, rand) {
   m.seawall = [];
   // Harbor piers: out from the quays into the bay, boats berthed alongside
   const piers = [];
-  for (let ty = 560; ty < 800; ty += 2) for (let tx = 560; tx < 820; tx += 2) {
+  const perD = new Map();
+  for (let ty = 2; ty < MAP_H - 2; ty += 2) for (let tx = 2; tx < W - 2; tx += 2) {
     const i = ty * W + tx;
-    if (piers.length >= 5 || (m.dist[i] !== 8 && m.dist[i] !== 3) || !(m.reserve[i] & 4) || m.reserve[i] & 3) continue;
+    const dd = m.dist[i];
+    if ((DISTRICTS[dd].style !== 'harbor' && dd !== 3) || (perD.get(dd) || 0) >= 5 || !(m.reserve[i] & 4) || m.reserve[i] & 3) continue;
     if (piers.some((p) => Math.abs(p.tx - tx) + Math.abs(p.ty - ty) < 18)) continue;
     for (const [dx, dy] of [[-1, 0], [0, 1], [1, 0], [0, -1]]) {
       if (!isWater(m.tileAt(tx + dx, ty + dy))) continue;
@@ -2203,6 +2453,7 @@ function buildWaterfronts(m, rand) {
       if (k < 20) continue;
       const tip = jetty(m, tx, ty, dx, dy, 13);
       piers.push({ tx, ty });
+      perD.set(dd, (perD.get(dd) || 0) + 1);
       addProp(m, 'lamp', (tip.x + 0.5) * TILE, (tip.y + 0.5) * TILE);
       const px = -dy, py = dx; // either side of the pier
       for (const sd of [-1, 1]) m.marina.push({ x: (tip.x - dx * 4 + px * sd * 2.6 + 0.5) * TILE, y: (tip.y - dy * 4 + py * sd * 2.6 + 0.5) * TILE, a: Math.atan2(dy, dx) });
@@ -2255,7 +2506,48 @@ function buildFarm(m, rand) {
   const farm = m.pois.find((p) => p.kind === 'farm');
   farm.cargoPad = { x: (fx - 2.5) * TILE, y: (fy + 3) * TILE };
   // the drop site out in the boonies, and woods
-  m.dropSites.push({ x: 1200 * TILE, y: 650 * TILE, name: 'the Dry Creek boonies' });
+  m.dropSites.push({ x: 1176 * TILE, y: 760 * TILE, name: 'the Dry Creek boonies' });
+  // Cedar Farms: fields between the section roads and a market stand that takes harvests
+  for (const [fx2, fy2, fw, fh] of FIELDS) {
+    let n = 0;
+    for (let y = fy2; y < fy2 + fh; y++) for (let x = fx2; x < fx2 + fw; x++) {
+      const i = y * W + x;
+      if (m.dist[i] === 38 && (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !m.reserve[i] && !m.lake[i]) { m.tiles[i] = T.FIELD; n++; }
+    }
+    if (n > 200) m.fields.push({ x: fx2 * TILE, y: fy2 * TILE, w: fw * TILE, h: fh * TILE });
+  }
+  for (const [sx, sy, name, south] of FARM_STANDS) {
+    const pf2 = PREFABS.house2;
+    clearArea(m, sx - 3, sy - 3, pf2.tw + 6, pf2.th + 6);
+    m.fill(sx - 3, sy - 1, pf2.tw + 6, pf2.th + 2, T.DIRT);
+    placePrefab(m, { d: m.dist[sy * W + sx], x: sx, y: sy, w: pf2.tw, h: pf2.th, face: south ? 'S' : 'N' }, 'house2', sx, { biz: ['farm'], names: [name] }, rand);
+    const st = m.pois.filter((p) => p.kind === 'farm').pop();
+    st.cargoPad = { x: (sx - 2) * TILE, y: (sy + pf2.th / 2) * TILE };
+  }
+}
+
+// Airports: the runway, taxiway and apron, the terminal and hangars, aircraft on the stands.
+function buildAirports(m) {
+  m.airports = [];
+  for (const A of AIRPORTS) {
+    const [rx, ry, rw, rh] = A.runway, [ax, ay, aw, ah] = A.apron, [tx2, ty2, tw, th] = A.terminal;
+    const tax = A.taxi;
+    clearArea(m, Math.min(rx, ax) - 2, Math.min(ry, ay) - 2, Math.max(rx + rw, ax + aw) - Math.min(rx, ax) + 4, Math.max(ry + rh, ay + ah) - Math.min(ry, ay) + 4);
+    const paint = (x, y, w, h, t) => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const t0 = m.tileAt(xx, yy); if (t0 !== T.ROAD && t0 !== T.BRIDGE && t0 !== T.WATER && t0 !== T.DEEP) m.set(xx, yy, t); } };
+    paint(rx - 3, ry - 3, rw + 6, rh + 6, T.GRASS);
+    paint(rx, ry, rw, rh, T.LOT);
+    paint(tax[0], tax[1], tax[2], tax[3], T.LOT);
+    paint(ax, ay, aw, ah, T.LOT);
+    // links from the taxiway to the apron every so often
+    for (let y = tax[1] + 10; y < tax[1] + tax[3] - 6; y += 40) paint(Math.min(tax[0], ax), y, Math.abs(ax - tax[0]) + 2, 4, T.LOT);
+    const term = simpleBuilding(m, tx2, ty2, tw, th, A.name, 'terminal', m.dist[ty2 * MAP_W + tx2], 'glass', { x: (tx2 + tw / 2) * TILE, y: (ty2 + th) * TILE, text: A.name });
+    for (const [hx, hy, hw, hh] of A.hangars) simpleBuilding(m, hx, hy, hw, hh, 'Hangar', 'hangar', m.dist[hy * MAP_W + hx], 'metal');
+    const [px, py] = A.poiAt;
+    m.pois.push({ id: m.pois.length, kind: 'airport', label: A.name, x: px * TILE, y: py * TILE, r: 56, b: term.id });
+    const planes = [];
+    for (const [qx, qy] of A.planes) { addProp(m, 'plane', qx * TILE, qy * TILE, 40, { a: -Math.PI / 2 }); planes.push({ x: qx * TILE, y: qy * TILE }); }
+    m.airports.push({ name: A.name, runway: { x: rx * TILE, y: ry * TILE, w: rw * TILE, h: rh * TILE }, taxi: { x: tax[0] * TILE, y: tax[1] * TILE, w: tax[2] * TILE, h: tax[3] * TILE }, planes });
+  }
 }
 
 // Wild ground everywhere that isn't built: woods on green land, scrub and rocks in the desert,
@@ -2265,8 +2557,7 @@ function buildWilds(m, rand) {
   const { cls, cw } = m.terrainCls;
   for (let ty = 2; ty < MAP_H - 2; ty += 3) for (let tx = 2; tx < W - 2; tx += 3) {
     const i = ty * W + tx;
-    const z = m.zone[i];
-    if (z !== Z.WILD && z !== Z.EAST) continue;
+    if (!m.land[i] || !WILD_STYLES.has(DISTRICTS[m.dist[i]].style) || DISTRICTS[m.dist[i]].style === 'airport') continue;
     if (m.reserve[i] || m.fields.some((f) => tx * TILE >= f.x - 32 && tx * TILE < f.x + f.w + 32 && ty * TILE >= f.y - 32 && ty * TILE < f.y + f.h + 32)) continue;
     const t = m.tiles[i];
     if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
@@ -2279,8 +2570,8 @@ function buildWilds(m, rand) {
     if (t === T.SAND) { if (h < 0.025) addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(h * 120) % 3], x, y, 10); continue; }
     if (c === 2) { if (h < 0.22) addProp(m, h < 0.16 ? (h < 0.08 ? 'tree_a' : 'tree_b') : 'shrub_b', x, y, h < 0.16 ? 12 : 0); }
     else if (c === 1) { if (h < 0.035) addProp(m, h < 0.02 ? 'tree_b' : 'bush_c', x, y, h < 0.02 ? 12 : 0); }
-    else if (c === 3) { if (h < 0.02) addProp(m, h < 0.01 ? 'rubble' : 'bush_a', x, y, 0); }
-    else if (c === 4) { if (h < 0.04) addProp(m, 'gravel', x, y, 0); }
+    else if (c === 3) { if (h < 0.035) addProp(m, h < 0.015 ? 'cactus' : h < 0.025 ? 'bush_a' : 'boulder', x, y, h < 0.015 ? 8 : h < 0.025 ? 0 : 14); }
+    else if (c === 4) { if (h < 0.09) addProp(m, h < 0.05 ? 'boulder' : 'gravel', x, y, h < 0.05 ? 14 : 0); }
   }
   void rand;
 }

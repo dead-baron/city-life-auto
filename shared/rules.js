@@ -99,3 +99,5 @@ export const TRAIN_JOB_PAY = 3000;       // the mail-car strongbox, fenced
 export const STRONGBOX_CRACK_S = 5;      // stay on the mail car this long to crack it
 export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Dry Creek run) and the alarm bell puts you here
 export const HIGHWAY_SPEED = 560;          // traffic cruising speed up on the ring highway (px/s)
+export const BARRIER_BREAK_SPEED = 300;    // ram a highway barrier this fast (px/s, straight into it) and it gives way
+export const BARRIER_REPAIR_S = 300;       // the road crew puts a smashed barrier back after this long (when nobody's looking)

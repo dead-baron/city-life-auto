@@ -12,6 +12,7 @@ export const MAP_GROUPS = [
   ...PLACE_GROUPS,
   { id: 'fishing', icon: '🎣', title: 'Fishing & boats', kinds: ['tackle', 'fishmarket', 'marina', 'charter'] },
   { id: 'homes', icon: '⌂', title: 'Homes for sale', kinds: ['home'] },
+  { id: 'travel', icon: '✈', title: 'Stations & airports', kinds: ['station', 'airport'] },
 ];
 
 export const ROLE_ICON = { citizen: '•', criminal: '☠', police: '★', hunter: '◎' };

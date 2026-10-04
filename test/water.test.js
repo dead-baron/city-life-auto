@@ -18,14 +18,15 @@ import { COUNTDOWN_S } from '../server/systems/races.js';
 const poiOf = (w, kind) => w.map.pois.find((q) => q.kind === kind);
 function board(w, p, v) { p.ped.vehId = v.id; p.ped.seat = 0; v.seats[0] = p.ped.id; p.ped.x = v.x; p.ped.y = v.y; }
 
-test('Pelican Key and Smuggler\'s Rock: boat-only islands with a charter dock and the Den', () => {
+test('Pelican Key (a bridge from Westport, a charter dock) and Smuggler\'s Rock (boat only, the Den)', () => {
   const w = makeWorld();
   for (const k of ['P', 'C']) {
     const [x0, y0, x1, y1] = ISLANDS[k].box;
-    let land = 0, road = 0;
-    for (let ty = y0 - 6; ty < y1 + 6; ty++) for (let tx = x0 - 6; tx < x1 + 6; tx++) { const t = w.map.tileAt(tx, ty); if (t === T.ROAD || t === T.BRIDGE) road++; if (t !== T.WATER && t !== T.DEEP) land++; }
+    let land = 0, road = 0, bridge = 0;
+    for (let ty = y0 - 6; ty < y1 + 6; ty++) for (let tx = x0 - 6; tx < x1 + 6; tx++) { const t = w.map.tileAt(tx, ty); if (t === T.ROAD) road++; if (t === T.BRIDGE) bridge++; if (t !== T.WATER && t !== T.DEEP) land++; }
     assert.ok(land > 1000, `${ISLANDS[k].name} has land`);
-    assert.equal(road, 0, `${ISLANDS[k].name} has no road or bridge to it`);
+    if (k === 'C') assert.equal(road + bridge, 0, `${ISLANDS[k].name} has no road or bridge to it`);
+    else assert.ok(road > 200 && bridge > 50, 'Pelican Key: streets, and the bridge over from Westport');
   }
   assert.ok(poiOf(w, 'charter') && poiOf(w, 'smuggler'));
   assert.ok(w.map.offshore.length > 50, 'offshore fishing grounds');

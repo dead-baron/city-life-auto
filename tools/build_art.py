@@ -35,7 +35,9 @@ TILE = 32
 # (no stretching), so the collision box is exactly the sprite's outline.
 AREAS = {'compact': 84 * 44, 'sedan': 100 * 48, 'taxi': 100 * 48, 'sports': 96 * 48, 'pickup': 110 * 50,
          'van': 112 * 54, 'police': 100 * 48, 'swat': 120 * 58, 'ambulance': 116 * 54, 'bike': 48 * 20,
-         'speedboat': 104 * 48, 'dinghy': 80 * 40, 'bus': 190 * 60, 'armored': 118 * 56}
+         'speedboat': 104 * 48, 'dinghy': 80 * 40, 'bus': 190 * 60, 'armored': 118 * 56,
+         'flatbed': 150 * 56, 'boxtruck': 150 * 58, 'dumptruck': 140 * 60, 'mixer': 146 * 60, 'tanker': 160 * 58,
+         'garbage': 140 * 60, 'firetruck': 176 * 64, 'towtruck': 134 * 58}
 
 # Vehicles cut from a box on a sheet (largest object inside the box): (sheet, box, front, model)
 VEHICLE_BOXES = [
@@ -58,6 +60,21 @@ VEHICLE_SOURCES = [
     ('7254f892-image.png', 'up', 'bike', None, []),
     ('75494cb5-image.png', 'up', 'speedboat', None, []),
     ('75494cb5-image.png', 'up', 'dinghy', [0, 3, 6, 9], []),
+    # the work-truck sheets (cab at the top on c4f76655, at the bottom on 75d72db4)
+    ('c4f76655-image.png', 'up', 'flatbed', [27, 28], []),
+    ('c4f76655-image.png', 'up', 'boxtruck', [0, 1], []),
+    ('75d72db4-image.png', 'down', 'boxtruck', [14, 15], []),
+    ('75d72db4-image.png', 'down', 'dumptruck', [0, 1, 2], []),
+    ('c4f76655-image.png', 'up', 'dumptruck', [3, 4, 20, 21, 22], []),
+    ('75d72db4-image.png', 'down', 'mixer', [3, 4], []),
+    ('c4f76655-image.png', 'up', 'mixer', [5], []),
+    ('75d72db4-image.png', 'down', 'tanker', [5, 6, 7, 21], []),
+    ('c4f76655-image.png', 'up', 'tanker', [2, 23, 24], []),
+    ('c4f76655-image.png', 'up', 'garbage', [25], []),
+    ('c4f76655-image.png', 'up', 'towtruck', [10], []),
+    ('a1ca5305-image.png', 'down', 'firetruck', [21, 22, 23, 24], []),
+    ('a1ca5305-image.png', 'down', 'police', [3, 4, 5], []),
+    ('fdea928c-image.png', 'up', 'pickup', None, []),
 ]
 
 ITEM_SOURCES = [
@@ -138,6 +155,9 @@ GROUND = {
     'water': ('d46d170d-image.png', (141, 468, 259, 584)),
     'deep': ('d46d170d-image.png', (268, 723, 382, 845)),
 }
+
+
+DECK_SRC = ('69353c0e-image.png', (220, 399, 390, 416))
 
 
 def find_src(name):
@@ -474,6 +494,15 @@ def build_ground():
         tiles.append((name, img))
     for name in ('grass', 'sand', 'dirt'):
         tiles.append((name, natural_tex(name)))
+    # the elevated highway's deck: the asphalt of the concept's highway scene - its colours (four
+    # tones by brightness, plus its light grains) laid out as seamless grain noise
+    src = np.asarray(Image.open(find_src(DECK_SRC[0])).convert('RGB').crop(DECK_SRC[1])).reshape(-1, 3).astype(float)
+    lum = src @ [0.3, 0.59, 0.11]
+    qs = np.quantile(lum, [0, 0.2, 0.45, 0.7, 0.92, 1])
+    tones = ['#%02x%02x%02x' % tuple(int(v) for v in src[(lum >= qs[k]) & (lum <= qs[k + 1])].mean(0)) for k in range(4)]
+    grain = '#%02x%02x%02x' % tuple(int(v) for v in src[lum >= qs[4]].mean(0))
+    NATURAL['deck'] = (tones, [grain, grain], tones[0])
+    tiles.append(('deck', natural_tex('deck')))
     out = Image.new('RGB', (128 * len(tiles), 128))
     rects = {}
     for i, (name, img) in enumerate(tiles):

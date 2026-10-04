@@ -3,9 +3,10 @@
 // by where they stand, so cars driving under the deck disappear beneath it and cars up on it are
 // drawn on top. Concrete girder faces on the side facing the camera, parapets, lane markings,
 // the median barrier, pillars, and the deck's shadow on the ground below.
-import { DECK_LIFT } from '../../shared/levels.js';
+import { DECK_LIFT, BARRIER_PIECE } from '../../shared/levels.js';
 import { edgeZ, laneOffset } from '../../shared/roads.js';
 import { pointAt } from '../../shared/geom.js';
+import { pattern } from './roads.js';
 
 const PIECE = 48;        // slab length (px along the road)
 const CELL = 512;        // view culling grid
@@ -47,6 +48,22 @@ export class Highway {
             if (!l) this.grid.set(key, (l = []));
             l.push(sl);
           }
+      }
+    }
+    // where a ramp peels off or merges, the deck's parapet on that side is open
+    // (a side is open where it lies inside another road's corridor at about the same height)
+    const segs = map.levels ? map.levels.segs : [];
+    for (const sl of this.slabs) {
+      const z = (sl.z0 + sl.z1) / 2;
+      for (const [P, key] of [[sl.L, 'openL'], [sl.R, 'openR']]) {
+        const mx = (P[0] + P[2]) / 2, my = (P[1] + P[3]) / 2;
+        for (const q of segs) {
+          if (q.edge === sl.e.id) continue;
+          let t = (mx - q.ax) * q.ux + (my - q.ay) * q.uy;
+          t = Math.max(0, Math.min(q.len, t));
+          const qz = q.za + (q.zb - q.za) * (t / q.len);
+          if (Math.abs(qz - z) < 0.25 && Math.hypot(mx - q.ax - q.ux * t, my - q.ay - q.uy * t) < q.hw - 2) { sl[key] = true; break; }
+        }
       }
     }
     this.pillars = map.pillars || [];
@@ -124,8 +141,8 @@ export class Highway {
       g.moveTo(P[0], P[1] - l0 + d0 * 0.6); g.lineTo(P[2], P[3] - l1 + d1 * 0.6);
       g.lineTo(P[2], P[3] - l1 + d1); g.lineTo(P[0], P[1] - l0 + d0); g.closePath(); g.fill();
     }
-    // road surface
-    g.fillStyle = '#45464d';
+    // road surface (the concept's highway asphalt)
+    g.fillStyle = pattern(g, 'deck') || '#45464d';
     g.beginPath();
     g.moveTo(L[0], L[1] - l0); g.lineTo(L[2], L[3] - l1); g.lineTo(R[2], R[3] - l1); g.lineTo(R[0], R[1] - l0); g.closePath();
     g.fill();
@@ -156,9 +173,22 @@ export class Highway {
     } else {
       for (const s of [1, -1]) along(s * (e.hw - 8), 2, white);
     }
-    // parapets on both edges (only where the slab is off the ground)
+    // parapets on both edges (only where the slab is off the ground): open where a ramp leaves,
+    // smashed where somebody went through
     if (Math.max(sl.z0, sl.z1) > 0.12) {
-      for (const P of [L, R]) {
+      const broken = this.map.levels ? this.map.levels.broken : null;
+      for (const [P, side, open] of [[L, 1, sl.openL], [R, -1, sl.openR]]) {
+        if (open) continue;
+        let smashed = false;
+        if (broken && broken.size) for (let k = Math.floor(sl.s0 / BARRIER_PIECE); k <= Math.floor((sl.s1 - 1) / BARRIER_PIECE); k++) if (broken.has(`${e.id}:${side}:${k}`)) smashed = true;
+        if (smashed) {
+          // jagged stubs and rebar where the parapet was
+          g.strokeStyle = '#8d8f95'; g.lineWidth = 4;
+          for (const f of [0.08, 0.92]) { const x = P[0] + (P[2] - P[0]) * f, y = P[1] + (P[3] - P[1]) * f - (l0 + (l1 - l0) * f) - 2; g.beginPath(); g.moveTo(x - 3, y); g.lineTo(x + 3, y + 2); g.stroke(); }
+          g.strokeStyle = 'rgba(60,40,30,.8)'; g.lineWidth = 1;
+          for (const f of [0.3, 0.55, 0.75]) { const x = P[0] + (P[2] - P[0]) * f, y = P[1] + (P[3] - P[1]) * f - (l0 + (l1 - l0) * f); g.beginPath(); g.moveTo(x, y); g.lineTo(x + 4, y - 5); g.stroke(); }
+          continue;
+        }
         g.strokeStyle = '#b4b6bb'; g.lineWidth = 5;
         g.beginPath(); g.moveTo(P[0], P[1] - l0 - 2); g.lineTo(P[2], P[3] - l1 - 2); g.stroke();
         g.strokeStyle = '#d6d8dc'; g.lineWidth = 1.5;

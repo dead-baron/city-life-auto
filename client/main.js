@@ -27,6 +27,7 @@ import { initAudio, sfx } from './audio.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawTunnel, portalCovers, drawStationClock } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
+import { bodySprite, loadBodies } from './render/body.js';
 import { BuildingLayer } from './render/buildings.js';
 import { Highway, liftOf, levelKey } from './render/highway.js';
 import { underDeck } from '../shared/levels.js';
@@ -140,6 +141,7 @@ function onText(m) {
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
+      if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
       S.tt = { l: m.tt || [], at: performance.now() / 1000 };
       S.portals = portalCovers(S.map);
@@ -396,6 +398,14 @@ function onEvent(ev) {
     case 'teams': { S.venueTeams ??= {}; S.venueTeams[ev.v] = ev.t; S.pedTeam = new Map(); for (const t of Object.values(S.venueTeams)) t.forEach((ids, k) => { for (const id of ids) S.pedTeam.set(id, k); }); break; }
     case 'raceGo': S.fx.ring(ev.x, ev.y, 60, 'rgba(255,220,80,'); sfx('cash', 1); break;
     case 'checkpoint': S.fx.ring(ev.x, ev.y, 40, 'rgba(120,255,160,'); sfx('cash', 0.6); break;
+    case 'barrier': { // a highway barrier smashed through
+      for (const k of ev.k) S.map.levels.broken.set(k, true);
+      fx.sparks(ev.x, ev.y, 10);
+      for (let k = 0; k < 16; k++) { const a = ev.a + (Math.random() - 0.5) * 1.6, sp = 80 + Math.random() * 200; fx.spawn(4, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 0.6 + Math.random() * 0.4, 3, k % 3 ? '#b4b6bb' : '#7d7f86'); }
+      sfx('crash', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 6 * distVol(ev.x, ev.y));
+      break;
+    }
+    case 'barrierfix': for (const k of ev.k) S.map.levels.broken.delete(k); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
     case 'propfix': {
       const p = S.map.props[ev.i];
@@ -1894,8 +1904,11 @@ const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;
   const d8 = dir8(p.ra);
-  const [d, mirror] = baseDir(d8);
-  const spr = charSprite(p.d.app, d, pose, fr, p.extra);
+  // concept-art body (all 8 directions drawn); the procedural painter until it has loaded
+  const body = bodySprite(p.d.app, d8, pose, fr, p.extra);
+  const [d, mirror0] = baseDir(d8);
+  const mirror = body ? false : mirror0;
+  const spr = body || charSprite(p.d.app, d, pose, fr, p.extra);
   const bs = PED_BUILD_SCALE[p.d.app && p.d.app.bd !== undefined ? p.d.app.bd : 1] || 1;
   const sc = CSCALE * (0.92 + 0.08 * bs) ;
   const limp = p.d && !p.d.pl && p.hp < NPC_CRITICAL && pose.startsWith('move') && !(f & PF.DEAD) ? Math.sin((p.phase || 0) * Math.PI / 4) : 0;
@@ -2219,6 +2232,7 @@ function drawRain(dt) {
 }
 
 // ---------------------------------------------------------------------------
+loadBodies('assets/');
 loadAtlas('assets/').finally(() => { connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console

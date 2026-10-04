@@ -7,7 +7,7 @@ import { K, T } from '../../shared/constants.js';
 import { lanePath, turnPath, exitsFrom, signalFor, edgeZ, nearestEdge } from '../../shared/roads.js';
 import { pointAt, measure } from '../../shared/geom.js';
 import { angleDiff, clamp } from '../../shared/math.js';
-import { TRAFFIC_MIX, PARKED_MIX } from '../../shared/vehicles.js';
+import { TRAFFIC_MIX, PARKED_MIX, TRUCK_MODELS } from '../../shared/vehicles.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
@@ -27,7 +27,7 @@ function weighted(mix) {
 }
 
 // cruising speed by road class (px/s)
-const CRUISE = { hwy: HIGHWAY_SPEED, ramp: 330, ave: 290, blvd: 290, front: 290, st: 245, drive: 255, minor: 170, rural: 330 };
+const CRUISE = { hwy: HIGHWAY_SPEED, ramp: 330, ave: 290, blvd: 290, front: 290, st: 245, drive: 255, minor: 170, rural: 330, art: 275, dirt: 150 };
 
 function nearestAnchor(world, x, y) {
   let best = null, bd = Infinity;
@@ -399,7 +399,9 @@ function manage(world) {
       const z = edgeZ(e, from, from === e.a ? s : e.len - s);
       if (z > 0.05 && z < 0.95) continue; // not halfway up a ramp
       if (world.query(p.x, p.y, 90, K.VEH).some((q) => sameLevel(q.lz, z))) continue;
-      const model = weighted(e.kind === 'hwy' ? TRAFFIC_MIX.filter(([id]) => id !== 'bike') : TRAFFIC_MIX);
+      const st = world.map.districtAt(p.x, p.y).style;
+      const heavy = e.kind === 'hwy' || st === 'harbor' || st === 'industrial' || st === 'factory' || st === 'airport';
+      const model = weighted(TRAFFIC_MIX.filter(([id]) => !(id === 'bike' && e.kind === 'hwy') && !(e.kind === 'dirt' && TRUCK_MODELS.has(id))).map(([id, wt]) => [id, heavy && TRUCK_MODELS.has(id) ? wt * 3 : wt]));
       const v = world.spawnVehicle(model, p.x, p.y, Math.atan2(p.ty, p.tx), {});
       v.lz = z;
       const sp0 = Math.min(CRUISE[e.kind] || 250, 300) * 0.6;

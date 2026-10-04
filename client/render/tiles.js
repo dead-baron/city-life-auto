@@ -40,7 +40,7 @@ export class GroundCache {
       }
       return out;
     };
-    const propRect = (p) => { const s = PROP_SIZES[p.t] || [40, 40]; return [p.x - s[0] / 2, p.y - s[1] / 2, p.x + s[0] / 2, p.y + s[1] / 2]; };
+    const propRect = (p) => { const s = PROP_SIZES[p.t] || (p.t === 'plane' ? [140, 140] : [40, 40]); return [p.x - s[0] / 2, p.y - s[1] / 2, p.x + s[0] / 2, p.y + s[1] / 2]; };
     this.lowProps = this.byChunk(map.props.filter((p) => !OVERHEAD.has(p.t)), propRect);
     this.highProps = this.byChunk(map.props.filter((p) => OVERHEAD.has(p.t)), propRect);
     this.roofs = this.byChunk((map.roofs || []).filter((r) => !r.gone), (r) => [r.tx * TILE - 2, r.ty * TILE - 2, (r.tx + r.tw) * TILE + 10, (r.ty + r.th) * TILE + 10]);
@@ -90,6 +90,7 @@ export class GroundCache {
     }
     drawCurbs(g, m, tx0, ty0, n);
     drawRoads(g, m, this.roads.get(k) || [], this.culdesacs.get(k) || []);
+    for (const ap of m.airports || []) drawAirport(g, ap, cx, cy);
     drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, st, cx, cy);
     for (const s of this.stalls.get(k) || []) drawStall(g, s);
@@ -654,7 +655,65 @@ export function drawProp(g, p) {
     return;
   }
   if (p.t === 'lamp') { drawLamp(g, p); return; }
+  if (p.t === 'boulder') { drawBoulder(g, p); return; }
+  if (p.t === 'cactus') { drawCactus(g, p); return; }
+  if (p.t === 'plane') { drawPlane(g, p); return; }
   g.fillStyle = '#666'; g.fillRect(p.x - 6, p.y - 6, 12, 12);
+}
+
+// Airfields: a dark runway with threshold bars, numbers and a dashed centre line, the yellow
+// taxiway line, and parking stands on the apron by each aircraft.
+function drawAirport(g, ap, cx, cy) {
+  const r = ap.runway, t = ap.taxi;
+  if (!inChunk(r.x - 200, r.y - 200, Math.max(r.w, t.x + t.w - r.x) + 600, r.h + 400, cx, cy)) return;
+  g.save();
+  g.fillStyle = '#34363b'; g.fillRect(r.x, r.y, r.w, r.h);
+  g.fillStyle = 'rgba(255,255,255,.04)'; for (let y = r.y; y < r.y + r.h; y += 64) g.fillRect(r.x, y, r.w, 2);
+  g.fillStyle = '#e8e8e2';
+  g.fillRect(r.x + 6, r.y, 4, r.h); g.fillRect(r.x + r.w - 10, r.y, 4, r.h); // edge lines
+  for (let y = r.y + 140; y < r.y + r.h - 140; y += 90) g.fillRect(r.x + r.w / 2 - 3, y, 6, 50); // centre dashes
+  for (const [y0, dir] of [[r.y + 14, 1], [r.y + r.h - 14, -1]]) {
+    for (let x = r.x + 18; x < r.x + r.w - 22; x += 22) g.fillRect(x, dir > 0 ? y0 : y0 - 60, 12, 60); // threshold piano keys
+    g.save(); g.translate(r.x + r.w / 2, y0 + dir * 100); if (dir < 0) g.rotate(Math.PI);
+    g.font = 'bold 40px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(dir > 0 ? '36' : '18', 0, 0);
+    g.restore();
+  }
+  g.fillStyle = '#e3b324';
+  g.fillRect(t.x + t.w / 2 - 2, t.y, 4, t.h); // taxiway centre line
+  for (const p of ap.planes) { // stand: lead-in line and a stop bar
+    g.fillRect(p.x - 2, p.y - 90, 4, 180);
+    g.fillRect(p.x - 40, p.y + 70, 80, 4);
+  }
+  g.restore();
+}
+
+// Procedural stand-ins for props that have no atlas art yet.
+function drawBoulder(g, p) {
+  const k = hash2(p.x | 0, p.y | 0, 7), r = 11 + k * 7;
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(p.x + 4, p.y + 5, r, r * 0.6, 0, 0, 6.283); g.fill();
+  g.fillStyle = '#7d7468'; g.beginPath(); g.ellipse(p.x, p.y, r, r * 0.78, k, 0, 6.283); g.fill();
+  g.fillStyle = '#9a9184'; g.beginPath(); g.ellipse(p.x - r * 0.25, p.y - r * 0.25, r * 0.55, r * 0.4, k, 0, 6.283); g.fill();
+  g.strokeStyle = '#4e463d'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(p.x, p.y, r, r * 0.78, k, 0, 6.283); g.stroke();
+}
+function drawCactus(g, p) {
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.x + 3, p.y + 4, 9, 5, 0, 0, 6.283); g.fill();
+  g.fillStyle = '#3f7a3a'; g.fillRect(p.x - 3, p.y - 16, 6, 20); g.fillRect(p.x - 10, p.y - 10, 4, 8); g.fillRect(p.x + 6, p.y - 13, 4, 9);
+  g.fillRect(p.x - 10, p.y - 4, 8, 3); g.fillRect(p.x + 2, p.y - 6, 8, 3);
+  g.fillStyle = '#5ea054'; g.fillRect(p.x - 2, p.y - 16, 2, 19); g.fillRect(p.x - 9, p.y - 10, 1, 7); g.fillRect(p.x + 7, p.y - 13, 1, 8);
+}
+function drawPlane(g, p) {
+  g.save(); g.translate(p.x, p.y); g.rotate(p.a || 0);
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(10, 12, 60, 14, 0, 0, 6.283); g.fill();
+  g.fillStyle = '#e9edf2';
+  g.beginPath(); g.moveTo(-8, -8); g.lineTo(-8, -58); g.lineTo(6, -58); g.lineTo(14, -8); g.closePath(); g.fill();   // wings
+  g.beginPath(); g.moveTo(-8, 8); g.lineTo(-8, 58); g.lineTo(6, 58); g.lineTo(14, 8); g.closePath(); g.fill();
+  g.beginPath(); g.ellipse(0, 0, 62, 9, 0, 0, 6.283); g.fill();                                                       // fuselage
+  g.beginPath(); g.moveTo(-50, -4); g.lineTo(-62, -22); g.lineTo(-54, -22); g.lineTo(-42, -4); g.closePath(); g.fill(); // tail
+  g.beginPath(); g.moveTo(-50, 4); g.lineTo(-62, 22); g.lineTo(-54, 22); g.lineTo(-42, 4); g.closePath(); g.fill();
+  g.fillStyle = '#2f6fd6'; g.fillRect(-40, -2, 92, 4);
+  g.fillStyle = '#9aa3ad'; g.fillRect(-6, -34, 10, 6); g.fillRect(-6, 28, 10, 6);
+  g.fillStyle = '#2a3440'; g.beginPath(); g.ellipse(52, 0, 6, 5, 0, 0, 6.283); g.fill();
+  g.restore();
 }
 
 export function drawOverheadProp(g, p, night) {

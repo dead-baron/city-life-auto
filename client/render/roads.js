@@ -9,7 +9,7 @@ import { laneOffset } from '../../shared/roads.js';
 import { offset, measure, pointAt } from '../../shared/geom.js';
 import { atlas } from './sprites.js';
 
-const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front']);
+const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 const YELLOW = '#e8b923', WHITE = 'rgba(232,230,222,.88)';
 
 // Repeating patterns cut from the ground texture atlas (anchored to world 0,0 so chunks meet).
@@ -69,7 +69,7 @@ export function drawRoads(g, m, edges, nodes) {
   for (const n of nodes) if (n.culdesac) { // turning circle: pavement ring
     const d = distAt(m, n.x, n.y);
     g.fillStyle = pattern(g, d.walk) || '#a9a9a4';
-    g.beginPath(); g.arc(n.x, n.y, 5.6 * TILE, 0, 6.283); g.fill();
+    g.beginPath(); g.arc(n.x, n.y, (n.bulb || 3.6 * TILE) + 2 * TILE, 0, 6.283); g.fill();
   }
   // 2. kerbs, just outside the asphalt (the asphalt of crossing streets then paints over them
   // inside junctions, so they stop at the corners)
@@ -83,13 +83,13 @@ export function drawRoads(g, m, edges, nodes) {
     const G = geo(e);
     const mid = e.pts[Math.floor(e.pts.length / 2)];
     const d = distAt(m, mid.x, mid.y);
-    g.fillStyle = pattern(g, e.kind === 'rural' ? 'asphalt_worn' : d.road) || '#3a3b40';
+    g.fillStyle = (e.kind === 'dirt' ? pattern(g, 'dirt') : pattern(g, e.kind === 'rural' ? 'asphalt_worn' : e.kind === 'hwy' ? 'deck' : d.road)) || (e.kind === 'dirt' ? '#8a6a44' : '#3a3b40');
     poly(g, G.road); g.fill();
   }
   for (const n of nodes) if (n.culdesac) {
     const d = distAt(m, n.x, n.y);
     g.fillStyle = pattern(g, d.road) || '#3a3b40';
-    g.beginPath(); g.arc(n.x, n.y, 3.6 * TILE, 0, 6.283); g.fill();
+    g.beginPath(); g.arc(n.x, n.y, n.bulb || 3.6 * TILE, 0, 6.283); g.fill();
     g.strokeStyle = '#cfcdc4'; g.lineWidth = 4; g.stroke();
   }
   // 4. kerb shadow, lane markings, stop lines and crossings
@@ -141,6 +141,21 @@ function markings(g, m, e) {
     dashed(between(m, e, 0), 'rgba(232,230,222,.8)', 2, 14, 20);
   } else if (e.kind === 'rural') {
     dashed(between(m, e, 0), 'rgba(232,185,35,.75)', 2, 24, 30);
+  } else if (e.kind === 'art') {
+    // minor arterial: double yellow centre line, white edge lines
+    solid(between(m, e, 3), YELLOW, 2.5); solid(between(m, e, -3), YELLOW, 2.5);
+    for (const s of [1, -1]) solid(between(m, e, s * (e.hw - 9)), 'rgba(232,230,222,.7)', 2);
+  } else if (e.kind === 'hwy') {
+    // the ground-level highways between the islands: a median, three lanes each way
+    solid(between(m, e, 0), 'rgba(166,168,173,.95)', e.median - 8);
+    for (const s of [1, -1]) {
+      solid(between(m, e, s * (e.median / 2 - 2)), YELLOW, 2.5);
+      for (let k = 0; k + 1 < e.nl; k++) dashed(between(m, e, s * (laneOffset(e, k) + laneOffset(e, k + 1)) / 2), WHITE, 3, 26, 30);
+      solid(between(m, e, s * (e.hw - 9)), 'rgba(232,230,222,.8)', 2.5);
+    }
+  } else if (e.kind === 'dirt') {
+    // wheel ruts
+    for (const s of [1, -1]) { const q = between(m, e, s * 22); if (q) { g.strokeStyle = 'rgba(70,50,28,.35)'; g.lineWidth = 6; line(g, q); g.stroke(); } }
   }
   // stop lines and zebra crossings where the edge meets a signalled / busy junction
   for (const end of [e.a, e.b]) {
@@ -155,7 +170,7 @@ function markings(g, m, e) {
     const at = pointAt(pp, t + 2);
     const nx = -at.ty, ny = at.tx; // left of travel away from the node
     // crossing: stripes across the whole carriageway, just outside the junction box
-    if (CITY.has(e.kind) && e.w >= 5 * TILE) {
+    if (CITY.has(e.kind) && e.w >= 5 * TILE && n.light) {
       const c = pointAt(pp, t + 16);
       g.fillStyle = 'rgba(236,234,226,.9)';
       g.save(); g.translate(c.x, c.y); g.rotate(Math.atan2(c.ty, c.tx));

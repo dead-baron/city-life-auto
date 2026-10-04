@@ -8,22 +8,43 @@
 // barriers push back like walls, and z follows the ramp you're on. Everything is geometry, so
 // curved and diagonal decks have smooth barriers. Server and client run the same code.
 import { edgeZ } from './roads.js';
+import { BARRIER_BREAK_SPEED } from './rules.js';
 
 export const GROUND_Z = 0.3;  // below this you're on the ground (tile collisions apply)
 export const DECK_LIFT = 44;  // screen px a thing on the deck is drawn above its ground position (render only)
 const CELL = 256;
+// Barriers (parapets) come in pieces this long; a piece smashed through stays open until the
+// road crew put it back. Key: "<edge>:<side>:<piece>" (side +1 = right of the edge's direction).
+export const BARRIER_PIECE = 96;
+export const barrierKey = (edge, side, s) => `${edge}:${side > 0 ? 1 : -1}:${Math.floor(s / BARRIER_PIECE)}`;
+const FALL_STEP = 0.07;       // lz lost per physics step while dropping off the deck (~0.7 s from the top)
+export const LAND_IMPACT = 300; // what hitting the ground from the deck feels like (crash damage)
 
 export function buildLevels(m) {
   const segs = [];
   for (const e of m.edges) {
     if (e.lvl !== 1 && e.lvl !== 'ramp') continue;
+    // a ramp's deck end continues a little way along the deck, so the corridor doesn't end in a
+    // rounded cap you can wedge against while peeling off (or merging on)
+    if (e.lvl === 'ramp') {
+      const P = e.pts, n = P.length;
+      for (const [end, z] of [[0, edgeZ(e, e.a, 0)], [1, edgeZ(e, e.a, e.len)]]) {
+        if (z < 0.5) continue;
+        const p = end ? P[n - 1] : P[0], q = end ? P[n - 2] : P[1];
+        const l = Math.hypot(p.x - q.x, p.y - q.y) || 1;
+        const ux = (p.x - q.x) / l, uy = (p.y - q.y) / l; // pointing out of the ramp, along the deck
+        const ext = 200;
+        const a = end ? p : { x: p.x + ux * ext, y: p.y + uy * ext }, b = end ? { x: p.x + ux * ext, y: p.y + uy * ext } : p;
+        segs.push({ ax: a.x, ay: a.y, bx: b.x, by: b.y, len: ext, ux: (b.x - a.x) / ext, uy: (b.y - a.y) / ext, hw: e.hw, za: z, zb: z, ramp: true, edge: e.id, s0: end ? e.len : -ext });
+      }
+    }
     for (let k = 0; k + 1 < e.pts.length; k++) {
       const a = e.pts[k], b = e.pts[k + 1];
       const len = Math.hypot(b.x - a.x, b.y - a.y);
       if (len < 0.5) continue;
       segs.push({
         ax: a.x, ay: a.y, bx: b.x, by: b.y, len, ux: (b.x - a.x) / len, uy: (b.y - a.y) / len,
-        hw: e.hw, za: edgeZ(e, e.a, a.s), zb: edgeZ(e, e.a, b.s), ramp: e.lvl === 'ramp', edge: e.id,
+        hw: e.hw, za: edgeZ(e, e.a, a.s), zb: edgeZ(e, e.a, b.s), ramp: e.lvl === 'ramp', edge: e.id, s0: a.s,
       });
     }
   }
@@ -38,7 +59,7 @@ export function buildLevels(m) {
         l.push(i);
       }
   });
-  return { segs, grid };
+  return { segs, grid, broken: new Map() };
 }
 
 // Deck / ramp segments near a point.
@@ -52,7 +73,7 @@ function probe(sg, x, y) {
   t = t < 0 ? 0 : t > sg.len ? sg.len : t;
   const qx = sg.ax + sg.ux * t, qy = sg.ay + sg.uy * t;
   const dx = x - qx, dy = y - qy;
-  return { qx, qy, d: Math.hypot(dx, dy), dx, dy, z: sg.za + (sg.zb - sg.za) * (t / sg.len) };
+  return { qx, qy, d: Math.hypot(dx, dy), dx, dy, t, z: sg.za + (sg.zb - sg.za) * (t / sg.len) };
 }
 
 // Height of the road surface under a point for something currently at height z (null when
@@ -77,10 +98,18 @@ export function underDeck(m, x, y) {
 }
 
 // After moving: work out z and keep things on the deck inside its barriers. r: half width of
-// the body. Returns the impact speed into a barrier (0 when nothing was hit).
-export function levelStep(m, s, r) {
+// the body; breaker: a vehicle, which smashes through a barrier it hits hard enough (anything
+// going over the edge then drops to the ground). Returns the impact speed into a barrier or the
+// ground (0 when nothing was hit).
+export function levelStep(m, s, r, breaker = false) {
   const L = m.levels;
   if (!L) { s.lz = 0; return 0; }
+  if (s.falling) {
+    s.lz = (s.lz || 0) - FALL_STEP;
+    if (s.lz > 0.02) return 0;
+    s.lz = 0; s.falling = false;
+    return LAND_IMPACT;
+  }
   const z = s.lz || 0;
   const near = segsAt(L, s.x, s.y);
   if (z <= GROUND_Z) {
@@ -109,20 +138,39 @@ export function levelStep(m, s, r) {
   let impact = 0;
   const lim = sg.hw - r;
   if (p.d > lim && p.d > 1e-6) {
-    // over the barrier line: back inside, bounce like off a wall
     const nx = p.dx / p.d, ny = p.dy / p.d;
-    s.x = p.qx + nx * Math.max(0, lim);
-    s.y = p.qy + ny * Math.max(0, lim);
+    const side = sg.ux * p.dy - sg.uy * p.dx > 0 ? 1 : -1;
+    const key = barrierKey(sg.edge, side, (sg.s0 || 0) + p.t);
     const vn = (s.vx || 0) * nx + (s.vy || 0) * ny;
-    if (vn > 0) {
-      s.vx -= 1.25 * vn * nx; s.vy -= 1.25 * vn * ny;
-      impact = vn;
-      if (s.av !== undefined) s.av *= 0.5;
+    if (!L.broken.has(key) && breaker && vn > BARRIER_BREAK_SPEED && p.z > GROUND_Z + 0.1) {
+      // smashed through: this piece and its neighbours are gone, the car keeps going (slower)
+      const k0 = Math.floor(((sg.s0 || 0) + p.t) / BARRIER_PIECE);
+      const keys = [k0 - 1, k0, k0 + 1].map((k) => `${sg.edge}:${side}:${k}`);
+      for (const k of keys) L.broken.set(k, true);
+      if (L.onBreak) L.onBreak(keys, s.x, s.y, Math.atan2(ny, nx));
+      s.vx *= 0.7; s.vy *= 0.7;
+      impact = vn * 0.55;
+    }
+    if (L.broken.has(key)) {
+      // an open gap: past the edge you go over it
+      if (p.d > sg.hw + r * 0.3) { s.falling = true; s.lz = p.z; return impact; }
+    } else {
+      // over the barrier line: back inside, bounce like off a wall
+      s.x = p.qx + nx * Math.max(0, lim);
+      s.y = p.qy + ny * Math.max(0, lim);
+      if (vn > 0) {
+        s.vx -= 1.25 * vn * nx; s.vy -= 1.25 * vn * ny;
+        impact = vn;
+        if (s.av !== undefined) s.av *= 0.5;
+      }
     }
   }
   s.lz = p.z <= GROUND_Z ? Math.max(0, p.z) : p.z;
   return impact;
 }
+
+// Is the barrier piece at arc position s along edge (side +1/-1) smashed?
+export function barrierOpen(m, edge, side, s) { return !!(m.levels && m.levels.broken.has(barrierKey(edge, side, s))); }
 
 // Level of an entity for "same level" checks: 0 ground, 1 up (deck or upper ramp).
 export const lvlOf = (e) => ((e && e.lz) > 0.5 ? 1 : 0);

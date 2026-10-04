@@ -12,6 +12,7 @@ import * as station from './systems/station.js';
 import * as gates from './systems/gates.js';
 import * as trains from './systems/trains.js';
 import { brokenList } from './systems/props.js';
+import { brokenBarrierList } from './systems/barriers.js';
 import { setView } from './view.js';
 import * as devmode from './devmode.js';
 
@@ -40,7 +41,7 @@ export function createSession(world, conn, opts) {
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const { profile, token } = opts.login(msg.token);
-        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world), tt: trains.timetable(world) });
+        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world), tt: trains.timetable(world) });
         player = players.join(world, conn, profile);
         return;
       }

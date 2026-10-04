@@ -41,7 +41,7 @@ g.textAlign = 'center'; g.textBaseline = 'middle';
 const fs = Math.max(10, 190 * scale);
 g.font = `bold ${fs}px monospace`;
 sums.forEach(([sx, sy, n], d) => {
-  if (!n) return;
+  if (!n || (DISTRICTS[d].tier === 'wild' && map.dist[Math.round(sy / n) * MAP_W + Math.round(sx / n)] !== d)) return;
   const x = sx / n * TILE * scale, y = sy / n * TILE * scale;
   g.lineWidth = fs / 4; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(DISTRICTS[d].name.toUpperCase(), x, y);
   g.fillStyle = DISTRICTS[d].turf ? '#ff7a6b' : '#ffd36b'; g.fillText(DISTRICTS[d].name.toUpperCase(), x, y);

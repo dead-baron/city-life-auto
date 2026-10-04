@@ -24,6 +24,14 @@ export const VEHICLES = {
   jetski:    { i: 16, name: 'Wave Jet Ski',    kind: 'boat', L: 46,  W: 22, max: 690, accel: 520, brake: 300, rev: 90,  turn: 3.2, grip: 3.2, drift: 1.6, mass: 0.5, hp: 110, seats: 2, slots: [[-15, 0]], price: 3500 },
   policeboat: { i: 17, name: 'Harbor Patrol Boat', kind: 'boat', L: 104, W: 48, max: 650, accel: 320, brake: 280, rev: 130, turn: 2.1, grip: 2.6, drift: 1.2, mass: 1.8, hp: 420, seats: 4, slots: [[-24, 0]], police: true, art: 'speedboat' },
   policebike: { i: 15, name: 'Police Motorcycle', kind: 'bike', L: 50, W: 20, max: 780, accel: 570, brake: 820, rev: 80, turn: 3.6, grip: 10.5, drift: 3.0, mass: 0.45, hp: 130, seats: 1, slots: [[-19, 0]], police: true, art: 'bike' },
+  // work trucks (traffic on the highways and in the industrial districts)
+  boxtruck:  { i: 18, name: 'Box Truck',        kind: 'car',  L: 150, W: 58, max: 450, accel: 200, brake: 540, rev: 130, turn: 1.9, grip: 7.4, drift: 2.4, mass: 2.8, hp: 420, seats: 2, slots: [[-20, 0]], price: 11000 },
+  dumptruck: { i: 19, name: 'Dump Truck',       kind: 'car',  L: 140, W: 60, max: 420, accel: 190, brake: 520, rev: 120, turn: 1.9, grip: 7.4, drift: 2.4, mass: 3.4, hp: 520, seats: 2, slots: [[-6, -14], [-6, 14], [-30, -14], [-30, 14], [-54, -14], [-54, 14]], price: 14000 },
+  mixer:     { i: 20, name: 'Cement Mixer',     kind: 'car',  L: 146, W: 60, max: 400, accel: 180, brake: 500, rev: 120, turn: 1.8, grip: 7.2, drift: 2.4, mass: 3.6, hp: 540, seats: 2, slots: [[-56, 0]] },
+  tanker:    { i: 21, name: 'Tanker Truck',     kind: 'car',  L: 160, W: 58, max: 430, accel: 180, brake: 500, rev: 120, turn: 1.8, grip: 7.2, drift: 2.4, mass: 3.6, hp: 460, seats: 2, slots: [[-64, 0]] },
+  garbage:   { i: 22, name: 'Garbage Truck',    kind: 'car',  L: 140, W: 60, max: 380, accel: 170, brake: 500, rev: 120, turn: 1.8, grip: 7.2, drift: 2.4, mass: 3.4, hp: 520, seats: 2, slots: [[-50, 0]] },
+  firetruck: { i: 23, name: 'Fire Engine',      kind: 'car',  L: 176, W: 64, max: 470, accel: 200, brake: 520, rev: 120, turn: 1.7, grip: 7.2, drift: 2.4, mass: 4.0, hp: 700, seats: 4, slots: [[-30, -15], [-30, 15], [-60, -15], [-60, 15]] },
+  towtruck:  { i: 24, name: 'Tow Truck',        kind: 'car',  L: 134, W: 58, max: 480, accel: 220, brake: 560, rev: 140, turn: 2.0, grip: 7.6, drift: 2.4, mass: 2.6, hp: 400, seats: 2, slots: [[-34, -13], [-34, 13]], price: 9500 },
 };
 
 export const VEHICLE_BY_INDEX = [];
@@ -47,6 +55,8 @@ export const PAINTS = [
 
 export const TRAFFIC_MIX = [
   ['sedan', 30], ['compact', 25], ['taxi', 10], ['pickup', 12], ['van', 8], ['sports', 4],
-  ['flatbed', 5], ['bike', 4], ['bus', 2],
+  ['flatbed', 4], ['bike', 4], ['bus', 2], ['boxtruck', 3], ['dumptruck', 1.5], ['mixer', 1], ['tanker', 1.5], ['garbage', 1], ['towtruck', 1], ['firetruck', 0.4],
 ];
+// heavier on the highways and in the docks, yards and industrial districts
+export const TRUCK_MODELS = new Set(['flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'towtruck']);
 export const PARKED_MIX = [['sedan', 30], ['compact', 30], ['pickup', 15], ['van', 8], ['sports', 6], ['bike', 6], ['flatbed', 5]];

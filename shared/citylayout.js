@@ -11,7 +11,7 @@ import { TILE } from './constants.js';
 import { rounded, offset, measure, pointAt, chaikin, simplify, cubic, dirOf, project } from './geom.js';
 
 // Zones (map.zone): which part of the world a tile belongs to.
-export const Z = { SEA: 0, CITY: 1, SOUTH: 2, EAST: 3, WILD: 4, KEY: 5, ROCK: 6 };
+export const Z = { SEA: 0, CITY: 1, SOUTH: 2, EAST: 3, WILD: 4, KEY: 5, ROCK: 6, WEST: 7, NORTH: 8, ISLE: 9, GULL: 10 };
 
 // The ring highway (centre line corners, clockwise) and the frontage roads either side of it.
 export const RING = [[648, 650], [648, 482], [716, 430], [1022, 430], [1022, 520], [990, 548], [955, 578], [932, 612], [900, 634], [850, 644], [760, 652]];

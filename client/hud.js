@@ -459,9 +459,8 @@ function label(g, x, y, text, color) {
   g.fillStyle = color; g.fillText(text, x, y);
 }
 
-// The part of the world the city map shows (px): Metro City, Southbank, Dry Creek and the two
-// small islands off them. The wild islands further out are reached by bridge and come later.
-export const MAP_FRAME = [520 * TILE, 220 * TILE, 1300 * TILE, 1012 * TILE];
+// The part of the world the city map shows (px): every island, trimmed of open sea at the edges.
+export const MAP_FRAME = [24 * TILE, 10 * TILE, 1304 * TILE, 1170 * TILE];
 
 // baked city image (only valid for the default seed it was rendered from)
 let wmImg = null, wmState = 0;
@@ -480,7 +479,9 @@ function districtCentroids(map) {
     const a = acc.get(d) || acc.set(d, [0, 0, 0]).get(d);
     a[0] += tx; a[1] += ty; a[2]++;
   }
-  centroids = [...acc].map(([d, [x, y, n]]) => ({ name: DISTRICTS[d].name, turf: DISTRICTS[d].turf, x: (x / n + 0.5) * TILE, y: (y / n + 0.5) * TILE }));
+  // a district scattered over many islets has its middle out at sea: no label for it
+  centroids = [...acc].filter(([d, [x, y, n]]) => map.dist[Math.round(y / n) * MAP_W + Math.round(x / n)] === d || DISTRICTS[d].tier !== 'wild')
+    .map(([d, [x, y, n]]) => ({ name: DISTRICTS[d].name, turf: DISTRICTS[d].turf, x: (x / n + 0.5) * TILE, y: (y / n + 0.5) * TILE }));
   return centroids;
 }
 
@@ -490,6 +491,7 @@ const POI_ICON = {
   clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
   fishmarket: ['≈', '#25b8c0'], marina: ['B', '#7de0ff'], farm: ['¥', '#b8e02a'], courthouse: ['J', '#e8d8a8'],
   charter: ['≈', '#7de0ff'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'], station: ['≡', '#f0f0f0'],
+  airport: ['✈', '#9fd0ff'],
 };
 
 function buildMinimap(map) {

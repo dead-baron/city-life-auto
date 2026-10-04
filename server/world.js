@@ -30,6 +30,7 @@ import * as minigames from './systems/minigames.js';
 import * as robbery from './systems/robbery.js';
 import * as trains from './systems/trains.js';
 import * as props from './systems/props.js';
+import * as barriers from './systems/barriers.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -57,6 +58,7 @@ const SYSTEMS = [
   ['ems', ems.update],              // ambulances + 45s cleanup loop
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
+  ['barriers', barriers.update],    // smashed highway barriers: the road crew puts them back
   ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
   ['cargo', cargo.update],          // crates, loot bags
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
@@ -99,6 +101,7 @@ export class World {
     dealer.init(this);
     jobs.init(this);
     trains.init(this);
+    barriers.init(this);
   }
 
   get clock() { return gameClock(this.loopTime); }

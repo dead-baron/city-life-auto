@@ -5,7 +5,7 @@ import { TILE, PED_RADIUS, T } from './constants.js';
 import { PED_BLOCK, SWIM_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './map.js';
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
-import { levelStep, GROUND_Z } from './levels.js';
+import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
 
 // Ground tile under a moving thing - up on the highway deck it's always road.
 const up = (s) => (s.lz || 0) > GROUND_Z;
@@ -107,7 +107,7 @@ export function pedStep(s, inp, dt, map, mods) {
   if (s.stamina > smax) s.stamina = smax;
   s.x += s.vx * dt; s.y += s.vy * dt;
   collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK);
-  if (map.levels) levelStep(map, s, PED_RADIUS);
+  if (map.levels && levelStep(map, s, PED_RADIUS) >= LAND_IMPACT) s.hardLanding = true; // dropped off the deck
 }
 
 export function collideCircle(s, r, map, block) {
@@ -220,7 +220,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   s.x += s.vx * dt; s.y += s.vy * dt;
   const hit = collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);
   if (!map.levels || isBoat) return hit;
-  return Math.max(hit, levelStep(map, s, def.W / 2));
+  return Math.max(hit, levelStep(map, s, def.W / 2, true));
 }
 
 // Direction-based driving: the stick points where you want to go. Throttle follows how far it is
