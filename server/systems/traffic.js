@@ -392,7 +392,7 @@ function manage(world) {
     for (let i = 0; i < spots.length; i++) {
       const sp = spots[i];
       if (world.parked.has(i)) continue;
-      if (hash2(i, 7, world.map.seed) > 0.7) continue;
+      if (hash2(i, 7, world.map.seed) > (sp.sparse ? 0.3 : 0.7)) continue;
       const d2 = (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2;
       if (d2 > 1150 * 1150) continue;
       const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;

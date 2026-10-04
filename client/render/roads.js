@@ -2,7 +2,7 @@
 // and pavements along diagonal and curving roads, kerbs, lane markings, stop lines, zebra
 // crossings and cul-de-sac turning circles. The tile map underneath still decides collisions;
 // this just makes it look like real roads instead of staircases.
-import { TILE } from '../../shared/constants.js';
+import { TILE, T } from '../../shared/constants.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { GROUND_TEX } from '../../shared/prefab-data.js';
 import { laneOffset } from '../../shared/roads.js';
@@ -51,11 +51,66 @@ function line(g, pts) {
 
 const distAt = (m, x, y) => DISTRICTS[m.dist[Math.min(m.h - 1, Math.max(0, Math.floor(y / TILE))) * m.w + Math.min(m.w - 1, Math.max(0, Math.floor(x / TILE)))]];
 
+// The stretches of a road that are out over water (with a little run onto each bank), as
+// polylines - where it gets a bridge deck.
+function overWater(m, e) {
+  if (e._wet !== undefined) return e._wet;
+  const pts = e.pts.map((p) => ({ x: p.x, y: p.y }));
+  const L = measure(pts), wet = [];
+  let s0 = -1;
+  for (let s = 0; s <= L + 8; s += 12) {
+    const p = pointAt(pts, Math.min(s, L));
+    const t = m.tileAtPx(p.x, p.y);
+    const w = s <= L && (t === T.BRIDGE || t === T.WATER || t === T.DEEP);
+    if (w && s0 < 0) s0 = s;
+    if (!w && s0 >= 0) { wet.push([Math.max(0, s0 - 40), Math.min(L, s + 28)]); s0 = -1; }
+  }
+  e._wet = wet.map(([a, b]) => { const out = []; for (let s = a; s < b; s += 10) { const p = pointAt(pts, s); out.push({ x: p.x, y: p.y }); } const p = pointAt(pts, b); out.push({ x: p.x, y: p.y }); return out; }).filter((q) => q.length > 2);
+  return e._wet;
+}
+
+// Bridge decks under the roads that cross water: a smooth concrete deck following the road's
+// own curve (no tile staircases), its side face and shadow on the water, piers, the walkway and
+// parapet rails with posts, and lamp posts.
+function drawDecks(g, m, edges) {
+  const band = (pts, d) => offset(pts, d).concat(offset(pts, -d).reverse());
+  for (const e of edges) {
+    if (!e.bridge || e.lvl !== 0) continue;
+    for (const pts of overWater(m, e)) {
+      const hw = e.hw + 10;
+      // shadow on the water (light from the north-west), then piers standing in it
+      g.save(); g.translate(12, 16); g.fillStyle = 'rgba(0,8,22,.42)'; poly(g, band(pts, hw)); g.fill(); g.restore();
+      const L = measure(pts);
+      for (let s = 60; s < L - 40; s += 190) {
+        const p = pointAt(pts, s), nx = -p.ty, ny = p.tx;
+        for (const sd of [-1, 1]) {
+          g.fillStyle = '#5a5d64'; g.beginPath(); g.ellipse(p.x + nx * sd * (hw - 14) + 6, p.y + ny * sd * (hw - 14) + 10, 9, 6, Math.atan2(p.ty, p.tx), 0, 6.283); g.fill();
+        }
+      }
+      // side face, then the deck
+      g.save(); g.translate(0, 6); g.fillStyle = '#4e5158'; poly(g, band(pts, hw)); g.fill(); g.restore();
+      g.fillStyle = '#9a9ca3'; poly(g, band(pts, hw)); g.fill();
+      g.fillStyle = '#b3b5ba'; poly(g, band(pts, hw - 3)); g.fill();
+      // parapets: a dark rail on the outer edge with posts, and a lip against the roadway
+      for (const sd of [-1, 1]) {
+        g.strokeStyle = '#3c3e44'; g.lineWidth = 2.5; line(g, offset(pts, sd * (hw - 1))); g.stroke();
+        g.strokeStyle = '#2c2e33'; g.lineWidth = 4; g.setLineDash([3, 13]); line(g, offset(pts, sd * (hw - 1))); g.stroke(); g.setLineDash([]);
+        g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1.5; line(g, offset(pts, sd * (e.hw + 1))); g.stroke();
+      }
+      for (let s = 30; s < L; s += 220) { // lamps
+        const p = pointAt(pts, s), nx = -p.ty, ny = p.tx;
+        for (const sd of [-1, 1]) { g.fillStyle = '#26282d'; g.fillRect(p.x + nx * sd * (hw - 5) - 2, p.y + ny * sd * (hw - 5) - 2, 4, 4); }
+      }
+    }
+  }
+}
+
 // Every ground-level road touching a chunk, in three passes so junctions overlap cleanly.
 export function drawRoads(g, m, edges, nodes) {
   if (!edges.length && !nodes.length) return;
   g.save();
   g.lineJoin = 'round';
+  drawDecks(g, m, edges);
   // 1. pavements (the smooth inner and outer edges along curves and diagonals)
   for (const e of edges) {
     const G = geo(e);

@@ -419,6 +419,7 @@ export function generateCity(seed = 1337) {
   rasterRoads(m);
   const railPts = m.railPts;
   reserveRail(m, railPts);
+  buildStationLots(m);
   waterfrontStrip(m);
   // Pelican Key's beach end (the bar, the charter dock, the court) stays open; the town is east of it
   {
@@ -922,7 +923,65 @@ function layoutRoads(m, rand) {
     metroSouthEnd: (x) => { const g = vEnds(x).sort((p, q) => q.pts[q.pts.length - 1].y - p.pts[p.pts.length - 1].y)[0]; return g && g.pts[g.pts.length - 1]; },
   };
   m.islandRings = islandRoads(ctx);
+  stationAccess(m, lines, isLand, seaD);
   return lines;
+}
+
+// The car parks beside the country stations: asphalt, and a row of spaces down each long side
+// that parked cars turn up in now and then.
+function buildStationLots(m) {
+  for (const l of m.stationLots || []) {
+    for (let y = l.y; y < l.y + l.h; y++) for (let x = l.x; x < l.x + l.w; x++) {
+      const i = y * MAP_W + x;
+      if (!m.land[i] || m.tiles[i] === T.ROAD) continue;
+      m.tiles[i] = T.LOT; m.reserve[i] |= 16;
+    }
+    const spots = [];
+    if (l.along) for (let x = l.x + 1.5; x < l.x + l.w - 1; x += 2) { spots.push({ x: x * TILE, y: (l.y + 1.3) * TILE, a: Math.PI / 2 }); spots.push({ x: x * TILE, y: (l.y + l.h - 1.3) * TILE, a: -Math.PI / 2 }); }
+    else for (let y = l.y + 1.5; y < l.y + l.h - 1; y += 2) { spots.push({ x: (l.x + 1.3) * TILE, y: y * TILE, a: 0 }); spots.push({ x: (l.x + l.w - 1.3) * TILE, y: y * TILE, a: Math.PI }); }
+    l.spots = spots;
+    for (const sp of spots) m.parking.push({ ...sp, sparse: true }); // a country car park: only a car or two
+  }
+}
+
+// Stations out in open country (no road anywhere near the platform) get a car park beside the
+// track and a county road out to the nearest road of the network, so you can drive to the train
+// and maybe find a car to take when you get off.
+const STATION_LOT = { w: 14, h: 8 };
+function stationAccess(m, lines, isLand, seaD) {
+  m.stationLots = [];
+  const pts = m.railPts;
+  const ok = (l) => l.lvl === 0 && !['hwy', 'ramp', 'front'].includes(l.kind);
+  for (const [name, tx, ty] of RAIL_STATIONS) {
+    let best = null, bd = Infinity;
+    for (const p of pts) { const d = Math.hypot(p.x - tx * TILE, p.y - ty * TILE); if (d < bd) { bd = d; best = p; } }
+    if (!best || best.under) continue;
+    let near = Infinity, tgt = null;
+    for (const l of lines) {
+      if (!ok(l)) continue;
+      for (let k = 0; k < l.pts.length - 1; k++) {
+        const a = l.pts[k], b = l.pts[k + 1], dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1;
+        const t = Math.max(0, Math.min(1, ((best.x - a.x) * dx + (best.y - a.y) * dy) / l2));
+        const x = a.x + dx * t, y = a.y + dy * t, d = Math.hypot(x - best.x, y - best.y);
+        if (d < near) { near = d; tgt = { x, y }; }
+      }
+    }
+    if (near < 16 * TILE || !tgt) continue; // in town: the streets come right up to it
+    // the car park on the dry side of the track, a little off it
+    const i = pts.indexOf(best), q = pts[(i + 1) % pts.length];
+    const a = Math.atan2(q.y - best.y, q.x - best.x), nx = -Math.sin(a), ny = Math.cos(a);
+    const score = (sd) => { let n = 0; for (let d = 140; d <= 460; d += 32) { const x = best.x + nx * sd * d, y = best.y + ny * sd * d; if (isLand(Math.floor(x / TILE), Math.floor(y / TILE)) && seaD(Math.floor(x / TILE), Math.floor(y / TILE)) > 4) n++; } return n - (Math.sign((tgt.x - best.x) * nx + (tgt.y - best.y) * ny) === sd ? 0 : 0.5); };
+    const side = score(1) >= score(-1) ? 1 : -1;
+    const cx = best.x + nx * side * (PLATFORM_OUT + 6 * TILE), cy = best.y + ny * side * (PLATFORM_OUT + 6 * TILE);
+    const along = Math.abs(Math.cos(a)) >= 0.7; // the long side of the car park lies along the track
+    const lw = along ? STATION_LOT.w : STATION_LOT.h, lh = along ? STATION_LOT.h : STATION_LOT.w;
+    const lot = { name, x: Math.round(cx / TILE - lw / 2), y: Math.round(cy / TILE - lh / 2), w: lw, h: lh, side, along };
+    m.stationLots.push(lot);
+    // the access road: from the car park's entrance (its far side from the track) out to the network
+    const ex = (lot.x + lot.w / 2) * TILE + nx * side * (STATION_LOT.h / 2 + 1) * TILE, ey = (lot.y + lot.h / 2) * TILE + ny * side * (STATION_LOT.h / 2 + 1) * TILE;
+    const road = rounded([{ x: (lot.x + lot.w / 2) * TILE, y: (lot.y + lot.h / 2) * TILE }, { x: ex, y: ey }, { x: tgt.x, y: tgt.y }], 6 * TILE);
+    lines.push({ pts: road, kind: 'rural', lvl: 0, name: `${name} Station Road`, culdesac: true });
+  }
 }
 
 // Make the network hang together: a road that just stops gets joined to the nearest road ahead
@@ -2204,7 +2263,8 @@ function buildRailway(m, pts) {
       continue;
     }
     const bad = (sd) => { let n = 0; along(best.s, (r, nx, ny) => { for (let off = PLATFORM_IN; off <= PLATFORM_OUT; off += 16) { const t = m.tileAtPx(r.x + nx * sd * off, r.y + ny * sd * off); if (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.BRIDGE) n++; else if (t === T.WATER || t === T.DEEP) n += 0.5; } }); return n; };
-    const side = bad(1) <= bad(-1) ? 1 : -1;
+    const lot = (m.stationLots || []).find((l) => l.name === name);
+    const side = lot ? lot.side : bad(1) <= bad(-1) ? 1 : -1;
     along(best.s, (r, nx, ny) => {
       for (let off = PLATFORM_IN; off <= PLATFORM_OUT; off += 12) {
         const x = r.x + nx * side * off, y = r.y + ny * side * off;

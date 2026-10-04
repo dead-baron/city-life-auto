@@ -29,6 +29,12 @@ export function drawRailChunk(g, m, idx) {
   if (!idx || !idx.length || !m.rail) return;
   const pts = m.rail.pts, n = pts.length;
   const seg = (i) => { const p = pts[i], q = pts[(i + 1) % n]; return { p, q, a: Math.atan2(q.y - p.y, q.x - p.x), len: Math.hypot(q.x - p.x, q.y - p.y) }; };
+  // over the water: the bridge's shadow and its deck, drawn smooth along the line
+  for (const [dx, dy, w, col] of [[12, 16, 70, 'rgba(0,8,22,.42)'], [0, 5, 64, '#3a3f48'], [0, 0, 62, '#5b6068']]) {
+    g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt'; g.beginPath();
+    for (const i of idx) { const { p, q } = seg(i); if (p.under || q.under || !wetAt(m, p.x, p.y) || !wetAt(m, q.x, q.y) || roadAt(m, p.x, p.y)) continue; g.moveTo(p.x + dx, p.y + dy); g.lineTo(q.x + dx, q.y + dy); }
+    g.stroke();
+  }
   // ballast shoulder + ties (timber deck over the water, nothing on the road panels)
   for (const i of idx) {
     const { p, q, a, len } = seg(i);
