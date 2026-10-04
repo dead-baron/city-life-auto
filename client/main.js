@@ -2275,7 +2275,7 @@ function drawAtmMarks(view, now) {
     const near = Math.hypot(a.x - me.x, a.y - me.y) < 420;
     const bob = Math.sin(now * 2.6 + a.x * 0.01) * (target ? 6 : 2.5);
     const r = target ? 15 : 8;
-    const y = a.y - (target ? 74 : 46) + bob;
+    const y = a.y - (target ? 112 : 88) + bob; // above the machine (the POI is where you stand, in front of it)
     g.save();
     g.globalAlpha = target ? 1 : cash && near ? 0.9 : 0.5;
     if (target) {

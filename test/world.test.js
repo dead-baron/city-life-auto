@@ -79,7 +79,7 @@ test('bicycles: sold at the dealership, slower than a motorcycle, and they buckl
   assert.ok(!p.ped.dead);
 });
 
-test('ATMs in every district with streets; walking up to one banks your cash; the city feed logs events', async () => {
+test('ATMs in every district with streets (set into building fronts, a few inside); walking up to one banks your cash; the city feed logs events', async () => {
   const { DISTRICTS } = await import('../shared/map.js');
   const events = await import('../server/systems/events.js');
   const phone = await import('../server/systems/phone.js');
@@ -90,10 +90,15 @@ test('ATMs in every district with streets; walking up to one banks your cash; th
   DISTRICTS.forEach((d, di) => {
     let road = 0;
     for (let i = 0; i < m.tiles.length && road < 40; i++) if (m.dist[i] === di && m.tiles[i] === 3) road++;
-    if (road >= 40 && d.style !== 'rocky') assert.ok(per.get(di) >= 1, `${d.name} has an ATM`);
+    if (road >= 40 && d.style !== 'rocky' && d.style !== 'wild') assert.ok(per.get(di) >= 1, `${d.name} has an ATM`);
   });
   assert.ok(m.atms.length >= 90, `plenty of ATMs (${m.atms.length})`);
   assert.ok([...per.values()].filter((n) => n >= 3).length >= 15, 'busy districts have several');
+  // a cash machine stands against a building front (or inside one), not out on the pavement
+  const machines = m.props.filter((q) => q.t === 'atmw');
+  const walled = machines.filter((q) => q.inside !== undefined || m.tileAtPx(q.x, q.y - 12) === 5);
+  assert.ok(walled.length >= machines.length - 4, `${machines.length - walled.length} freestanding`);
+  assert.ok(machines.some((q) => q.inside !== undefined), 'some are inside clubs and stores');
   const { p, prof } = joinPlayer(w, { cash: 750, bank: 100 });
   const atm = m.atms[0];
   teleport(w, p.ped, atm.x + 120, atm.y);

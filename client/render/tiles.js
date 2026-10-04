@@ -12,7 +12,7 @@ import { railIndex, drawRailChunk, drawStation, drawPortals } from './trains.js'
 import { drawRoads, edgeRect } from './roads.js';
 import { Shores } from './shore.js';
 
-export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole']);
+export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw']);
 
 const C = {
   grass: ['#4f8f3c', '#4a8838', '#559643', '#45812f'],
@@ -698,6 +698,23 @@ function drawAirport(g, ap, cx, cy) {
   g.restore();
 }
 
+// A cash machine set against a building front: its base on the pavement at (x, y), the unit
+// rising up the wall behind it (depth-sorted with people, so it stands in front of the facade).
+// After dark the screen glows.
+export function drawAtm(g, p, night) {
+  const k = 'atm_' + (p.v || 'blue');
+  const fr = atlas.ready ? atlas.frames['prop_' + k] : null;
+  const s = PROP_SIZES[k] || [34, 46];
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(p.x - s[0] / 2 + 2, p.y - 3, s[0], 6);
+  if (fr) g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, p.x - s[0] / 2, p.y - s[1], s[0], s[1]);
+  else { g.fillStyle = '#2b2f38'; g.fillRect(p.x - 16, p.y - 44, 32, 44); g.fillStyle = '#3d8bff'; g.fillRect(p.x - 9, p.y - 30, 18, 8); }
+  if (night) {
+    g.save(); g.globalCompositeOperation = 'lighter';
+    g.fillStyle = 'rgba(80,160,255,.22)'; g.beginPath(); g.ellipse(p.x, p.y - s[1] * 0.45, 20, 14, 0, 0, 6.283); g.fill();
+    g.restore();
+  }
+}
+
 // Procedural stand-ins for props that have no atlas art yet.
 function drawBoulder(g, p) {
   const k = hash2(p.x | 0, p.y | 0, 7), r = 11 + k * 7;
@@ -729,6 +746,7 @@ function drawPlane(g, p) {
 
 export function drawOverheadProp(g, p, night) {
   if (p.broken || p.t === 'sigpole') return; // signal poles are drawn live with their lights (client/main.js)
+  if (p.t === 'atmw') { drawAtm(g, p, night); return; }
   if (p.t === 'lamp') { p.night = night; drawProp(g, p); return; }
   drawProp(g, p);
 }

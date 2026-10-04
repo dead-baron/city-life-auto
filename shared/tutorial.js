@@ -30,7 +30,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 19;
+export const TUTORIAL_VERSION = 20;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -98,7 +98,7 @@ export const STEPS = [
   { ch: 'basics', title: 'Hospitals', at: { pois: 'hospital' },
     text: `Hurt? Step onto the {{reception}} mat at any hospital for full treatment ($${HOSPITAL_FEE}). Below 30% health you bleed - [[use]] uses a med kit or bandage from the {{pharmacy}}. {{vending}}s sell energy drinks. If you die you wake up after ${RESPAWN_SECONDS} seconds - at any hospital you choose, or a home you own - and everything you carried stays on the street. You appear at one of several spots around the building, blinking for ${SPAWN_PROTECT_S} seconds: you can move, but you can't shoot or be hurt.` },
   { ch: 'basics', title: 'Cash vs. bank', at: { poi: 'bank' },
-    text: `Cash on you is lost when you die or get robbed. Deposit it at the {{bank}} or any {{atm}} - there are cash machines in every district, marked by a little green $, and just walking up to one (within ${Math.round(ATM_DEPOSIT_PX / TILE * 10) / 10} m) banks everything you're carrying. The phone's Nearest ATM button sets a waypoint to the closest one. Your bank balance is always safe, and anything you sell at a shop is paid straight into it. Log out mid-fight and your body stays in the world for ${GHOST_SECONDS} seconds. Wedged somewhere you can't walk out of? The menu's Stuck? button nudges you to open ground after ${UNSTUCK_S} seconds of standing still - not while wanted, and not within ${UNSTUCK_CALM_S} seconds of a fight. Surrender starts you over: a wanted player turns themself in (fined like a bust), anyone else wakes up as if they'd died. Your character is saved to this browser with no sign-up; to carry it to another device, copy the transfer code from Settings and paste it there.` },
+    text: `Cash on you is lost when you die or get robbed. Deposit it at the {{bank}} or any {{atm}} - there are cash machines set into shop, bank and bar fronts in every district (and inside the nightclubs and some corner stores), marked by a little green $, and just walking up to one (within ${Math.round(ATM_DEPOSIT_PX / TILE * 10) / 10} m) banks everything you're carrying. The phone's Nearest ATM button sets a waypoint to the closest one. Your bank balance is always safe, and anything you sell at a shop is paid straight into it. Log out mid-fight and your body stays in the world for ${GHOST_SECONDS} seconds. Wedged somewhere you can't walk out of? The menu's Stuck? button nudges you to open ground after ${UNSTUCK_S} seconds of standing still - not while wanted, and not within ${UNSTUCK_CALM_S} seconds of a fight. Surrender starts you over: a wanted player turns themself in (fined like a bust), anyone else wakes up as if they'd died. Your character is saved to this browser with no sign-up; to carry it to another device, copy the transfer code from Settings and paste it there.` },
 
   // ---- citizen -------------------------------------------------------------------------------
   { ch: 'citizen', title: 'The honest living', at: { poi: 'warehouse' }, route: { from: { poi: 'warehouse' }, to: { poi: 'delivery' }, veh: 'van' },

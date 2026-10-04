@@ -1574,9 +1574,9 @@ function placePrefab(m, row, key, x, special, rand) {
         addProp(m, 'bench_m', (x + pf.tw * 0.74) * TILE, py + 6, 0);
       }
       if (kind === 'bank') {
-        const ax = dd.px - 64;
-        m.props.push({ t: 'atm', x: ax, y: dd.py - 8 });
-        m.pois.push({ id: m.pois.length, kind: 'atm', label: 'ATM', x: ax, y: dd.py + 6, r: 36 });
+        // the branch's cash machine: the one painted beside its door, or one set into the wall
+        if (PAINTED_ATM[key] !== undefined) m.pois.push({ id: m.pois.length, kind: 'atm', label: 'ATM', x: (x + PAINTED_ATM[key] * pf.tw) * TILE, y: (b.ty + b.th) * TILE + 26, r: 36 });
+        else if (![-64, 64, -100, 100].some((dx) => wallAtm(m, b, dd.px + dx, 'bank'))) wallAtm(m, b, dd.px + (dd.px - 64 > b.tx * TILE + 20 ? -64 : 64), 'bank', true);
       }
       if (kind === 'coffee' || kind === 'sports' || kind === 'pharmacy') {
         const vx = dd.px + 56, vy = dd.py + 12;
@@ -1631,7 +1631,7 @@ function roofBuilding(m, row, x, y, w, h, st, rand) {
 function buildBanking(m) {
   const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
   const walk = (x, y) => { const t = m.tileAtPx(x, y); return t === T.SIDEWALK || t === T.PLAZA || t === T.LOT || t === T.GRASS; };
-  const addAtm = (x, y) => { m.props.push({ t: 'atm', x, y: y - 14 }); m.pois.push({ id: m.pois.length, kind: 'atm', label: 'ATM', x, y, r: 36 }); };
+  const addAtm = (b, x, side) => { if (b && ![1.6, -1.6, 2.4, -2.4].some((k) => wallAtm(m, b, x + side * k, 'bank'))) wallAtm(m, b, x + side * 1.6, 'bank', true); };
   const shops = () => m.pois.filter((p) => p.kind === 'delivery' && p.b !== undefined && !p.fixed);
   // a branch in each part of the world, and in the outlying neighbourhoods of the big city
   const areas = Object.values(ISLANDS).filter((I) => !I.boatOnly).map((I) => ({ name: I.name, box: I.box, inside: (p) => m.zoneAt(p.x, p.y) === I.zone }));
@@ -1651,60 +1651,125 @@ function buildBanking(m) {
     c.kind = 'bank'; c.label = `First Pixel Bank - ${dname}`; c.r = 48;
     const b = m.buildings[c.b];
     if (b) for (const s of b.signs) if (s.text === old) s.text = 'First Pixel Bank';
-    addAtm(c.x + side, c.y + 6);
+    addAtm(b, c.x, side);
   }
-  DISTRICTS.forEach((d, di) => {
-    const cands = shops().filter((p) => distOf(p) === di && walk(p.x + 40, p.y));
-    cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 17) - hash2(b.x | 0, b.y | 0, 17));
-    const picked = [];
-    for (const c of cands) {
-      if (picked.length >= 2) break;
-      if (picked.some((q) => Math.hypot(q.x - c.x, q.y - c.y) < 1200)) continue;
-      if (m.pois.some((q) => q.kind === 'atm' && Math.hypot(q.x - c.x, q.y - c.y) < 600)) continue;
-      picked.push(c);
-      addAtm(c.x + 40, c.y + 6);
-    }
-  });
 }
 
-// Street ATMs everywhere people go: every district with streets gets a few (busy districts more),
-// standing on the pavement beside the road, spread out, preferring spots near shops and
-// landmarks. Deposits are quick (see server/systems/economy.js), so cash need never be carried far.
+// Cash machines. Nearly all of them are set into a building front: against the wall beside a
+// shop, bank or bar door, on the pavement in front (wallAtm). Every district with streets gets a
+// few - busy districts more - spread out and preferring spots near shops and landmarks; the
+// nightclubs and some corner stores have one inside. Only where a district has no building
+// front to use at all does a freestanding kiosk go up, at the edge of the pavement. Deposits are
+// quick (see server/systems/economy.js), so cash need never be carried far.
 const ATM_TARGET = { towers: 5, commercial: 5, nightlife: 4, redlight: 4, oldtown: 4, civic: 4, apartments: 4, southside: 4, houses: 3, luxury: 3, beach: 3, harbor: 3, industrial: 3, factory: 2, park: 2, airport: 2, rural: 2, desert: 2, rocky: 0, wild: 1, water: 0 };
 const ATM_SPACING = 700;
+// lots with a cash machine painted beside the door: x fraction of the lot (no sprite needed)
+const PAINTED_ATM = { bank2: 0.488 };
+const ATM_LOOKS = ['blue', 'red', 'green', 'gold', 'grey', 'canopy', 'leaf', 'hood', 'recess', 'cash', 'wood', 'frame'];
+const NO_ATM_FRONT = /^(house|apt|shanty|shack|farm|estate|church|school|park|construction|site|junkyard|pool)/;
+const FOOT = new Set([T.SIDEWALK, T.PLAZA, T.LOT]);
+
+// Can a cash machine stand against building b's front at x (world px)? Its base is on paving
+// right below the wall, clear of doors, other machines and street furniture.
+const FOOT_LOOSE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DIRT, T.GRASS, T.SAND]);
+function atmSpot(m, b, x, loose = false) {
+  const F = loose ? FOOT_LOOSE : FOOT;
+  const wy = (b.ty + b.th) * TILE;
+  if (x < b.tx * TILE + 22 || x > (b.tx + b.tw) * TILE - 22) return false;
+  for (const dx of [-18, 0, 18]) if (m.tileAtPx(x + dx, wy - 6) !== T.BUILDING || !F.has(m.tileAtPx(x + dx, wy + 8))) return false;
+  if (!FOOT_LOOSE.has(m.tileAtPx(x, wy + 36))) return false; // room to stand at it
+  for (const p of m.pois) if (Math.abs(p.x - x) < 52 && p.y > wy - 8 && p.y < wy + 60) return false; // a door (or another ATM) right there
+  for (const q of m.props) if (Math.abs(q.x - x) < 30 && Math.abs(q.y - wy) < 40) return false;
+  for (const pu of m.pumps || []) if (Math.hypot(pu.x - x, pu.y - wy) < 60) return false;
+  return true;
+}
+function wallAtm(m, b, x, look, force = false, loose = false) {
+  if (!force && !atmSpot(m, b, x, loose)) return null;
+  const wy = (b.ty + b.th) * TILE;
+  addProp(m, 'atmw', x, wy + 5, 11, { v: look });
+  const poi = { id: m.pois.length, kind: 'atm', label: 'ATM', x, y: wy + 28, r: 36 };
+  m.pois.push(poi);
+  return poi;
+}
+
 function buildStreetAtms(m) {
   const atms = m.pois.filter((p) => p.kind === 'atm');
-  const roadNear = (tx, ty) => { for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.ROAD) return true; } return false; };
+  const distAt = (x, y) => m.dist[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)];
+  // inside: every nightclub, and every other corner store ("ATM inside")
+  let shop = 0;
+  for (const bid of m.walkIns || []) {
+    const b = m.buildings[bid], wi = b.walkIn;
+    for (const u of wi.units) {
+      if (u.kind !== 'club' && !(u.kind === 'convenience' && shop++ % 2 === 0)) continue;
+      const dir = wi.south ? 1 : -1;
+      const row = u.counterRow + dir * 2; // in the room, a step out from the counter
+      if (row < wi.y0 || row > wi.y1) continue;
+      const doorX = u.door.tx + 1;
+      const col = Math.abs(u.x0 - doorX) >= 3 ? u.x0 : Math.abs(u.x1 - doorX) >= 3 ? u.x1 : -1;
+      if (col < 0) continue;
+      const x = (col + 0.5) * TILE + (col === u.x0 ? 2 : -2), y = (row + 1) * TILE - 3;
+      addProp(m, 'atmw', x, y, 11, { v: u.kind === 'club' ? 'neon' : 'allday', inside: bid });
+      const poi = { id: m.pois.length, kind: 'atm', label: 'ATM', x, y: y + 22, r: 36, b: bid };
+      m.pois.push(poi);
+      atms.push(poi);
+    }
+  }
+  // building fronts: three spots along each one that isn't a home / chapel / yard
   const cands = DISTRICTS.map(() => []);
-  for (let ty = 2; ty < MAP_H - 2; ty++) for (let tx = 2; tx < MAP_W - 2; tx++) {
-    const i = ty * MAP_W + tx;
-    const t = m.tiles[i];
-    const paved = t === T.SIDEWALK || t === T.PLAZA || t === T.LOT;
-    if (!paved && t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
-    if (m.reserve[i] & 3 || m.deck[i] || !roadNear(tx, ty)) continue;
-    // open pavement all round (never in a doorway or squeezed against a wall)
-    let ok = true;
-    for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1; dx++) { const q = m.tileAt(tx + dx, ty + dy); if (q === T.BUILDING || q === T.WALL || q === T.WATER || q === T.DEEP || q === T.DOCK) { ok = false; break; } }
-    if (!ok || hash2(tx, ty, 41) > 0.25) continue;
-    cands[m.dist[i]].push({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, paved });
+  // (out in the country, where the stores front onto dirt and grass, the base may stand on that)
+  const strict = DISTRICTS.map(() => 0);
+  for (const loose of [false, true]) for (const b of m.buildings) {
+    if (b.gone || b.tw < 3 || b.walkIn && b.walkIn.units.some((u) => u.kind === 'club') || NO_ATM_FRONT.test(b.kind)) continue;
+    for (const fx of [0.18, 0.5, 0.82]) {
+      const x = Math.round((b.tx + fx * b.tw) * 2) / 2 * TILE;
+      const di = distAt(x, (b.ty + b.th) * TILE + 8);
+      if (loose && (strict[di] || !['rural', 'desert', 'wild', 'park', 'beach', 'airport', 'factory'].includes(DISTRICTS[di].style))) continue;
+      if (!atmSpot(m, b, x, loose)) continue;
+      cands[di].push({ b, x, y: (b.ty + b.th) * TILE + 28, prefab: b.prefab >= 0, loose });
+      if (!loose) strict[di]++;
+    }
   }
   const busy = (c) => m.pois.reduce((n, p) => n + (p.kind !== 'atm' && Math.abs(p.x - c.x) < 360 && Math.abs(p.y - c.y) < 360 ? 1 : 0), 0);
   DISTRICTS.forEach((d, di) => {
     const want = ATM_TARGET[d.style] ?? 2;
-    let have = atms.filter((p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === di).length;
-    if (have >= want || !cands[di].length) return;
-    const list = cands[di].map((c) => ({ ...c, w: busy(c) + hash2(c.x | 0, c.y | 0, 7) + (c.paved ? 50 : 0) })).sort((a, b) => b.w - a.w); // pavement first, verges if that's all there is
+    let have = atms.filter((p) => distAt(p.x, p.y) === di).length;
+    if (have >= want) return;
+    const list = cands[di].map((c) => ({ ...c, w: busy(c) + hash2(c.x | 0, c.y | 0, 7) + (c.prefab ? 2 : 0) })).sort((a, b) => b.w - a.w);
     for (const c of list) {
       if (have >= want) break;
       if (atms.some((q) => Math.hypot(q.x - c.x, q.y - c.y) < ATM_SPACING)) continue;
-      if (m.pois.some((q) => q.kind !== 'atm' && Math.hypot(q.x - c.x, q.y - c.y) < 50)) continue; // not on anyone's doorstep
-      addProp(m, 'atm', c.x, c.y - 10, 7);
-      const poi = { id: m.pois.length, kind: 'atm', label: 'ATM', x: c.x, y: c.y + 4, r: 36 };
-      m.pois.push(poi);
+      const look = d.style === 'nightlife' || d.style === 'redlight' ? (hash2(c.x | 0, c.y | 0, 3) < 0.5 ? 'neon' : 'cash')
+        : ATM_LOOKS[Math.floor(hash2(c.x | 0, c.y | 0, 5) * ATM_LOOKS.length)];
+      const poi = wallAtm(m, c.b, c.x, look, false, c.loose);
+      if (!poi) continue;
       atms.push(poi);
       have++;
     }
+    if (!have && d.style !== 'wild' && d.style !== 'rocky') kioskAtm(m, di, atms, ['rural', 'desert'].includes(d.style));
   });
+}
+
+// A district with streets but not one building front to use (farm country, the desert): a
+// freestanding kiosk at the back edge of the pavement or verge, never out in the middle of it.
+// The wild places - woods, peaks, the islets - have none.
+function kioskAtm(m, di, atms, loose) {
+  const F = loose ? FOOT_LOOSE : FOOT;
+  for (let ty = 2; ty < MAP_H - 2; ty++) for (let tx = 2; tx < MAP_W - 2; tx++) {
+    const i = ty * MAP_W + tx;
+    if (m.dist[i] !== di || !F.has(m.tiles[i]) || m.reserve[i] & 3 || m.deck[i] || hash2(tx, ty, 41) > 0.3) continue;
+    // pavement with the road in front (south) and no pavement behind it: the back edge
+    if (m.tileAt(tx, ty + 2) !== T.ROAD && m.tileAt(tx, ty + 1) !== T.ROAD) continue;
+    const back = m.tileAt(tx, ty - 1);
+    if ((!loose && FOOT.has(back)) || back === T.ROAD || back === T.WATER || back === T.DEEP) continue;
+    if (m.tileAt(tx - 1, ty) === T.ROAD || m.tileAt(tx + 1, ty) === T.ROAD) continue;
+    const x = (tx + 0.5) * TILE, y = ty * TILE + 4;
+    if (m.props.some((q) => Math.abs(q.x - x) < 40 && Math.abs(q.y - y) < 40)) continue;
+    addProp(m, 'atmw', x, y + 20, 11, { v: 'kiosk' });
+    const poi = { id: m.pois.length, kind: 'atm', label: 'ATM', x, y: y + 42, r: 36 };
+    m.pois.push(poi);
+    atms.push(poi);
+    return;
+  }
 }
 
 // ---- estates: homes outside the city grid -----------------------------------------------------

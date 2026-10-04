@@ -86,6 +86,19 @@ ITEM_SOURCES = [
 ]
 
 # ----------------------------------------------------------------------------- street props
+# Cash machines from the ATM concept sheet: each unit cut tight to its housing (the wall, bins and
+# plants around it left out) so it can stand against any building front. name -> source box.
+# Units with real-world bank / shop branding (the slashed logos, the bullseye) and the
+# drive-through are left out. 'kiosk' is the one freestanding unit.
+ATM_SHEET = '67874749-image.png'
+ATM_ART = {
+    'blue': (86, 32, 214, 200), 'red': (364, 32, 480, 204), 'green': (650, 32, 774, 210), 'gold': (86, 290, 210, 480),
+    'grey': (372, 304, 490, 480), 'bank': (948, 40, 1070, 200), 'allday': (1244, 34, 1362, 188), 'canopy': (952, 300, 1074, 472),
+    'leaf': (1248, 302, 1358, 480), 'neon': (78, 598, 210, 740), 'hood': (372, 560, 484, 740), 'recess': (92, 864, 200, 984),
+    'cash': (952, 572, 1078, 740), 'wood': (964, 848, 1076, 1008), 'frame': (1242, 860, 1362, 1004), 'kiosk': (1236, 568, 1368, 736),
+}
+ATM_W = 40   # world px wide (a bit wider than a person); height follows the art
+
 PROPS_SHEET = 'ae847b9b-image.png'
 PANELS = {'furn': (602, 42, 1052, 350), 'env': (585, 390, 1025, 622), 'food': (1035, 390, 1440, 622),
           'park': (1100, 660, 1440, 862), 'trash': (392, 660, 730, 862), 'ind': (740, 660, 1095, 862)}
@@ -493,6 +506,12 @@ def build_sprites():
         w, h = (size, size / r) if r >= 1 else (size * r, size)
         prop_sizes[name] = [round(w), round(h)]
         sprites.append(('prop_' + name, fit(c, w * SCALE, h * SCALE)))
+    atm_src = Image.open(find_src(ATM_SHEET)).convert('RGB')
+    for name, box in ATM_ART.items():
+        c = atm_src.crop(box)
+        h = ATM_W * c.height / c.width
+        prop_sizes['atm_' + name] = [ATM_W, round(h)]
+        sprites.append(('prop_atm_' + name, fit(c, ATM_W * SCALE, h * SCALE)))
     roof_src = Image.open(find_src(ROOF_SHEET)).convert('RGB')
     for name, (box, size) in ROOF_MODULES.items():
         c = roof_src.crop(box)

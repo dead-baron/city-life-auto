@@ -1077,3 +1077,22 @@ Playtest:
   - The client picks the frame by speed. A pet that has stood still for over a second sits down, and lost pets now sometimes stop and sit a while between sniffs.
   - New dev command: 🐶 Lost pet nearby.
 - **Tutorial:** the traffic-light and lost-pet stops are updated (`TUTORIAL_VERSION` 19). `assets/worldmap.webp` was rebaked for the new layout.
+
+## 2026-10-04 · Round 8b: cash machines in the walls
+
+- **ATMs stand against buildings now**, not out on the pavement.
+  - Each one is set against a building front: a shop, bank, bar or office, beside the door, with its base on the pavement under the wall (`wallAtm` / `atmSpot` in `shared/map.js`).
+  - A spot is used only where the paving is clear: away from doors, other machines, street furniture and gas pumps. Homes, chapels, schools, parks and yards don't get one.
+  - A bank's machine goes beside its door. First City Bank (`bank2`) already has one painted into its front, so that painted machine is the real ATM there.
+  - Every nightclub has one inside (a neon unit by the dance floor). So does every other corner store (an "ATM inside" 24/7 unit).
+  - In farm country and the desert, where the stores front onto dirt or grass, the machine may stand on that.
+  - A freestanding kiosk is used only where a farming or desert district has no building front at all. It stands at the back edge of the verge. The woods, peaks and islets have none.
+  - Counts: about 97 machines, 21 of them indoors, and 3 kiosks.
+- **New art:** 16 machines from the ATM concept sheet: blue, red, green, gold, grey, a BANK unit, 24/7, a blue canopy, the green leaf, neon, a hooded unit, a recessed one, CASH, wood-panelled, a framed unit and the freestanding kiosk.
+  - Each is cut tight to its housing, so it fits any wall, and drawn 40 px wide.
+  - Machines with real-world branding (the slashed logos, the bullseye) and the drive-through are left out.
+  - Nightlife districts get the neon and CASH units, banks the BANK unit, everywhere else a mix.
+  - The screens glow after dark.
+- The machines are drawn in the depth-sorted pass, so they stand in front of the facade and you can walk in front of them. They're solid.
+- The green $ marker now floats above the machine instead of covering it.
+- Tutorial text updated (`TUTORIAL_VERSION` 20).

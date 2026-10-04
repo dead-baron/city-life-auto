@@ -46,6 +46,10 @@ Walk into any of these and the roof lifts off onto the painted interior:
 - **Paradise Cay** - the palm-island painting raised out of the bay between Westport and Metro City: the land, beaches and jetty follow the painting exactly (sampled into a tile mask), the cabin is solid. Boat-only.
 - **Red Rock Canyon** - the desert canyon painting in the Dry Creek desert: the mesas and cliffs are solid where they're painted, plus the homestead and water tower.
 
+## Cash machines (`assets/atlas*.png`, `prop_atm_*`)
+
+16 ATM units from the ATM concept sheet: blue, red, green, gold, grey, BANK, 24/7, canopy, leaf, neon, hood, recess, CASH, wood, frame, plus the freestanding kiosk. Each is cut tight to its housing (`ATM_ART` in `tools/build_art.py`) so it stands against any building front. The units with real-world branding and the drive-through are not used.
+
 ## Animals (`assets/animals.png`, `tools/build_animals.py`)
 
 Lost pets: two top-down dogs (golden, black), two spaniels, a retriever and three cats (black, grey, ginger) cut from the character sheets. Each has idle, walk (4), run (4) and sit frames. These are **placeholders generated from the single concept pose**: paws swing under the top-down dogs, and the sitting 3/4 views stand up and step. Birds are still **procedural**.
