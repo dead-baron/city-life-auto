@@ -17,7 +17,7 @@ import * as station from '../server/systems/station.js';
 import * as homes from '../server/systems/homes.js';
 import { spawnNpc } from '../server/systems/npc.js';
 
-const hq = (w) => w.map.pois.find((q) => q.kind === 'police');
+const hq = (w) => w.map.pois.find((q) => q.kind === 'police' && /HQ/.test(q.label));
 const poolVehicles = (w, i) => [...w.entities.values()].filter((e) => e.kind === K.VEH && e.motorPool === i);
 
 test('motor pool: fenced lot beside HQ, stocked with cruisers and police motorcycles', () => {

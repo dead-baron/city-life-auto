@@ -144,6 +144,36 @@ PREFABS = {
     'park': ((1221, 835, 1438, 1076), (.30, .11, .66, .46), [.5], 'grass', True),
 }
 
+# ----------------------------------------------------------------------------- scene lots
+# Whole lots cut from the concept scene paintings (a house with its garden and driveway, a club
+# with its red carpet, a police station with its steps). key: (sheet, box, solid fractions,
+# door x fractions, ground, rotatable, target width in tiles). The scale per scene follows from
+# the target width; the lot's height from the crop's aspect.
+SCENE_PREFABS = {
+    'fuel':       ('e71fca5d-image.png', (330, 120, 1360, 560), (.60, .05, .98, .85), [.8], 'lot', False, 19),
+    'clubnova':   ('00ceb559-image.png', (150, 20, 1300, 760), (.03, .0, .97, .62), [.5], 'plaza', False, 18),
+    'clubeclipse':('34eae673-image.png', (380, 40, 1300, 640), (.03, .0, .97, .78), [.5], 'plaza', False, 17),
+    'police2':    ('6fed2123-image.png', (150, 30, 1000, 700), (.03, .03, .97, .75), [.5], 'plaza', False, 16),
+    'police3':    ('a3d2f043-image.png', (40, 40, 700, 760), (.05, .08, .95, .82), [.6], 'plaza', False, 12),
+    'motors':     ('6d268385-image.png', (380, 40, 1220, 760), (.11, .05, .88, .5), [.5], 'lot', False, 15),
+    'trail':      ('66327ad5-image.png', (380, 40, 1110, 560), (.03, .04, .97, .9), [.5], 'lot', False, 15),
+    'boutique':   ('3c723498-image.png', (290, 0, 1210, 600), (.03, .0, .97, .78), [.5], 'plaza', False, 17),
+    'quickstop':  ('f3c20cb7-image.png', (420, 100, 1060, 650), (.05, .05, .95, .86), [.45], 'lot', False, 13),
+    'apt3':       ('d1c9a548-image.png', (180, 0, 1440, 620), (.0, .0, 1.0, .62), [.25], 'plaza', True, 19),
+    'apt4':       ('2ec4379d-image.png', (380, 40, 1420, 760), (.03, .22, .97, .9), [.45], 'grass', True, 18),
+    'house4':     ('1715a193-image.png', (340, 40, 1200, 800), (.03, .22, .97, .67), [.34], 'grass', True, 15),
+    'house5':     ('f98d9a92-image.png', (380, 40, 1420, 800), (.02, .32, .70, .74), [.4], 'grass', True, 14),
+    'house6':     ('9fb6ffb3-image.png', (100, 40, 1380, 820), (.15, .2, .85, .65), [.5], 'grass', True, 19),
+    'bank2':      ('ae8c09d0-image.png', (540, 0, 1536, 420), (.03, .0, .97, .72), [.45], 'plaza', False, 19),
+    'junkyard':   ('30cb641b-image.png', (0, 0, 1536, 800), (.02, .02, .2, .3), [.25], 'dirt', True, 19),
+    'tackle2':    ('e9e1ec76-image.png', (200, 80, 1300, 640), (.1, .1, .75, .55), [.45], 'dirt', False, 17),
+    'shack':      ('63fc3283-image.png', (480, 260, 1200, 760), (.05, .05, .95, .65), [.5], 'dirt', True, 14),
+    'farmstead':  ('2f8031eb-image.png', (150, 40, 1448, 700), (.58, .1, .85, .45), [.2], 'dirt', True, 19),
+    'site':       ('94484028-image.png', (380, 20, 1400, 760), (.02, .02, .25, .3), [.15], 'dirt', True, 18),
+    'beachbar':   ('5841fda7-image.png', (300, 60, 1460, 720), (.25, .12, .62, .5), [.45], 'sand', True, 18),
+    'pool':       ('d638bb4b-image.png', (240, 60, 1520, 740), (.0, .0, .25, .45), [.12], 'grass', True, 19),
+}
+
 # ----------------------------------------------------------------------------- ground textures
 # name: (sheet, box, extra brightness) -> seamless 128x128 at 1 px per world px
 GROUND = {
@@ -439,6 +469,17 @@ def build_prefabs():
         items.append((key, lot))
         glows[key] = emissive(lot, solid, tw, th)
         meta[key] = {'tw': tw, 'th': th, 'solid': so, 'doors': doors, 'ground': ground, 'rot': rot}
+    for key, (sheet, box, solid, doors, ground, rot, tw) in SCENE_PREFABS.items():
+        img = Image.open(find_src(sheet)).convert('RGB').crop(box)
+        th = max(1, round(tw * img.height / img.width))
+        lot = img.resize((tw * TILE, th * TILE), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=0.8, percent=50, threshold=2))
+        lot = feather(lot, 5)
+        sx0, sy0, sx1, sy1 = solid
+        so = [int(np.floor(sx0 * tw)), int(np.floor(sy0 * th)), int(np.ceil(sx1 * tw)), int(np.ceil(sy1 * th))]
+        print('  scene lot', key, tw, th)
+        items.append((key, lot))
+        glows[key] = emissive(lot, solid, tw, th)
+        meta[key] = {'tw': tw, 'th': th, 'solid': so, 'doors': doors, 'ground': ground, 'rot': rot, 'scene': True}
     frames, sheets = shelf_pack(items, width=2048)
     for i, sh in enumerate(sheets):
         sh.save(os.path.join(ASSETS, f'prefabs{i}.webp'), quality=93, method=6)
@@ -499,8 +540,10 @@ def build_ground():
     src = np.asarray(Image.open(find_src(DECK_SRC[0])).convert('RGB').crop(DECK_SRC[1])).reshape(-1, 3).astype(float)
     lum = src @ [0.3, 0.59, 0.11]
     qs = np.quantile(lum, [0, 0.2, 0.45, 0.7, 0.92, 1])
-    tones = ['#%02x%02x%02x' % tuple(int(v) for v in src[(lum >= qs[k]) & (lum <= qs[k + 1])].mean(0)) for k in range(4)]
-    grain = '#%02x%02x%02x' % tuple(int(v) for v in src[lum >= qs[4]].mean(0))
+    # (the scene is lit for night: lifted to daylight brightness)
+    lift = lambda c: tuple(min(255, int(v * 1.45 + 6)) for v in c)
+    tones = ['#%02x%02x%02x' % lift(src[(lum >= qs[k]) & (lum <= qs[k + 1])].mean(0)) for k in range(4)]
+    grain = '#%02x%02x%02x' % lift(src[lum >= qs[4]].mean(0))
     NATURAL['deck'] = (tones, [grain, grain], tones[0])
     tiles.append(('deck', natural_tex('deck')))
     out = Image.new('RGB', (128 * len(tiles), 128))

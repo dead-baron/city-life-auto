@@ -139,20 +139,20 @@ export const WILD_DISTRICTS = new Set(DISTRICTS.filter((d) => WILD_STYLES.has(d.
 
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
-  houses: { minW: 16, minH: 18, gen: { house1: 3, house2: 3, house3: 3, apt2: 0.6, rest2: 0.3 }, filler: 'park', roof: 0.06, roofKinds: ['tile'] },
-  commercial: { minW: 12, minH: 12, gen: { conv: 2, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.5, tower2: 1 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
-  apartments: { minW: 14, minH: 14, gen: { apt1: 3, apt2: 3, house2: 1, conv: 1, tower2: 1 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
-  industrial: { minW: 14, minH: 13, gen: { warehouse: 3, industrial: 2, repair: 1 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
-  factory: { minW: 14, minH: 13, gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
-  towers: { minW: 11, minH: 11, gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1 }, filler: 'plaza', roof: 0.78, roofKinds: ['glass', 'gravel', 'tar'] },
-  civic: { minW: 14, minH: 14, gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1, church: 0.3 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
-  southside: { minW: 14, minH: 14, gen: { house1: 2, house3: 2, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
-  nightlife: { minW: 12, minH: 12, gen: { club: 3, rest1: 2, rest2: 2, hotel: 1, conv: 1 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
-  harbor: { minW: 14, minH: 13, gen: { warehouse: 4, industrial: 1, repair: 1 }, filler: 'yard', roof: 0.55, roofKinds: ['metal', 'tar'] },
-  luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
-  redlight: { minW: 12, minH: 12, gen: { club: 3, rest1: 1, conv: 1, hotel: 1, apt2: 1 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
-  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 1.5, rest1: 1.5, club: 0.4, repair: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
-  beach: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, rest2: 1.5, rest1: 1, hotel: 0.6, conv: 0.5 }, filler: 'plaza', roof: 0.15, roofKinds: ['tile'] },
+  houses: { minW: 16, minH: 18, gen: { house1: 3, house2: 3, house3: 3, apt2: 0.6, rest2: 0.3, house4: 2, house5: 2 }, filler: 'park', roof: 0.06, roofKinds: ['tile'] },
+  commercial: { minW: 12, minH: 12, gen: { conv: 2, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.5, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
+  apartments: { minW: 14, minH: 14, gen: { apt1: 3, apt2: 3, house2: 1, conv: 1, tower2: 1, apt3: 1.5, apt4: 1.5 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
+  industrial: { minW: 14, minH: 13, gen: { warehouse: 3, industrial: 2, repair: 1, junkyard: 0.6, site: 0.4 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
+  factory: { minW: 14, minH: 13, gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4, junkyard: 0.5, site: 0.5 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
+  towers: { minW: 11, minH: 11, gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1, bank2: 0.5, apt3: 0.5 }, filler: 'plaza', roof: 0.78, roofKinds: ['glass', 'gravel', 'tar'] },
+  civic: { minW: 14, minH: 14, gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1, church: 0.3, bank2: 0.6, apt4: 0.5 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
+  southside: { minW: 14, minH: 14, gen: { house1: 2, house3: 2, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5, quickstop: 0.8, junkyard: 0.5, house5: 0.6 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
+  nightlife: { minW: 12, minH: 12, gen: { club: 3, rest1: 2, rest2: 2, hotel: 1, conv: 1, clubnova: 1, clubeclipse: 1 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  harbor: { minW: 14, minH: 13, gen: { warehouse: 4, industrial: 1, repair: 1, junkyard: 0.3 }, filler: 'yard', roof: 0.55, roofKinds: ['metal', 'tar'] },
+  luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5, house6: 1.5, house4: 1, house5: 1 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
+  redlight: { minW: 12, minH: 12, gen: { club: 3, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.4, quickstop: 0.5 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
+  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 1.5, rest1: 1.5, club: 0.4, repair: 0.6, quickstop: 1, apt3: 0.6, boutique: 0.4 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  beach: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, rest2: 1.5, rest1: 1, hotel: 0.6, conv: 0.5, beachbar: 1.2, house5: 0.6 }, filler: 'plaza', roof: 0.15, roofKinds: ['tile'] },
   park: { minW: 14, minH: 14, gen: { rest2: 1 }, filler: 'park', roof: 0, roofKinds: ['tile'] },
 };
 
@@ -192,7 +192,7 @@ const SPECIALS = [
   { d: 16, prefab: 'hotel', biz: ['delivery'], names: ['The Bayside Ritz'] },
   // Westport
   { d: 23, prefab: 'hospital', biz: ['hospital'], names: ['Westport General'] },
-  { d: 23, prefab: 'police', biz: ['police'], names: ['Westport PD'] },
+  { d: 23, prefab: 'police2', biz: ['police'], names: ['Westport PD'] },
   { d: 23, prefab: 'hotel', biz: ['delivery'], names: ['The Westport Grand'] },
   { d: 23, prefab: 'bank', biz: ['delivery'], names: ['Westport Trade Center'] },
   { d: 25, prefab: 'market', biz: ['delivery'], names: ['Stadium Megastore'] },
@@ -203,15 +203,25 @@ const SPECIALS = [
   { d: 28, prefab: 'school', biz: ['delivery'], names: ['West Hills Academy'] },
   // Northshore
   { d: 31, prefab: 'hospital', biz: ['hospital'], names: ['Northshore Medical'] },
-  { d: 31, prefab: 'police', biz: ['police'], names: ['Northshore Sheriff'] },
+  { d: 31, prefab: 'police3', biz: ['police'], names: ['Northshore Sheriff'] },
   { d: 31, prefab: 'fire', biz: ['delivery'], names: ['Fire Station 12'] },
   { d: 32, prefab: 'hotel', biz: ['delivery'], names: ['Peakview Lodge Hotel'] },
   // Cedar Isle
   { d: 36, prefab: 'hospital', biz: ['hospital'], names: ['Cedar Falls Clinic'] },
-  { d: 36, prefab: 'police', biz: ['police'], names: ['Cedar Falls Police'] },
+  { d: 36, prefab: 'police3', biz: ['police'], names: ['Cedar Falls Police'] },
   { d: 36, prefab: 'strip', biz: ['delivery', 'delivery', 'delivery', 'delivery'], names: ['Falls Hardware', 'Main Street Diner', 'Cedar Books', 'Pine & Petal Florist'] },
   { d: 35, prefab: 'school', biz: ['delivery'], names: ['Cedar Falls High'] },
   { d: 39, prefab: 'warehouse', biz: ['delivery'], names: ['South Port Cannery'] },
+  { d: 37, prefab: 'tackle2', biz: ['tackle'], names: ['Lakeside Bait & Tackle'] },
+  { d: 24, prefab: 'pool', biz: ['delivery'], names: ['Lakeview Community Pool'] },
+  { d: 25, prefab: 'motors', biz: ['delivery'], names: ['Westport Motors'] },
+  { d: 25, prefab: 'trail', biz: ['delivery'], names: ['Trail & Field Outfitters'] },
+  { d: 23, prefab: 'boutique', biz: ['delivery'], names: ['Crown Boutique'] },
+  { d: 30, prefab: 'clubeclipse', biz: ['delivery'], names: ['Club Eclipse'] },
+  { d: 31, prefab: 'clubnova', biz: ['delivery'], names: ['Club Nova'] },
+  { d: 35, prefab: 'fuel', biz: ['delivery'], names: ['FuelMax Cedar Falls'] },
+  { d: 26, prefab: 'junkyard', biz: ['delivery'], names: ['J&R Salvage'] },
+  { d: 30, prefab: 'site', biz: ['delivery'], names: ['Old Quarter Redevelopment'] },
 ];
 
 const GENERIC_NAMES = {
@@ -219,6 +229,12 @@ const GENERIC_NAMES = {
   rest2: ['Cafe Retro', 'Noodle House', 'The Brick Oven'], club: ['Club Neon', 'Bass Cave', 'Pink Flamingo'], gas: ['Gas-N-Go', 'Fuel Stop'],
   tower1: ['Office Tower'], tower2: ['Glass Tower'], hotel: ['Hotel'], warehouse: ['Warehouse'], industrial: ['Factory'], repair: ['Auto Repair'],
   apt1: ['Apartments'], apt2: ['Apartments'], house1: ['Residence'], house2: ['Residence'], house3: ['Residence'], church: ['Chapel'],
+  // lots cut from the concept scene paintings
+  fuel: ['FuelMax'], clubnova: ['Club Nova'], clubeclipse: ['Club Eclipse'], motors: ['Riverside Motors'], trail: ['Trail & Field'],
+  boutique: ['Crown Boutique'], quickstop: ['Quick Stop'], apt3: ['Pinecrest Apartments'], apt4: ['Apartments'], house4: ['Residence'],
+  house5: ['Residence'], house6: ['Villa'], bank2: ['First City Bank'], junkyard: ['J&R Salvage'], site: ['Construction Site'],
+  beachbar: ['Beach Shack'], pool: ['Community Pool'], tackle2: ['Bait & Tackle'], shack: ['Homestead'], farmstead: ['Farmstead'],
+  police2: ['Police Station'], police3: ['Police Station'],
 };
 
 // ---------------------------------------------------------------------------
@@ -471,6 +487,7 @@ export function generateCity(seed = 1337) {
   buildFarm(m, rand);
   buildAirports(m);
   buildEstates(m, rand);
+  buildOutposts(m, rand);
   buildWilds(m, rand);
   buildStreetProps(m);
   buildBanking(m);
@@ -517,6 +534,18 @@ function decodeTerrain() {
     for (const m of row.matchAll(/([A-Z])([0-9a-z]+)/g)) { const n = parseInt(m[2], 36); cls.fill(code[m[1]], y * cw + x, y * cw + x + n); x += n; }
   });
   return { cls, cw, ch };
+}
+
+// The wild terrain class at a tile: the 4x4-tile cells of the map concept, sampled through a
+// wobble of smooth and fine noise so the patches of desert, rock and forest get ragged, natural
+// edges instead of square blocks.
+function terrainAt(cls, cw, x, y) {
+  const n1 = Math.sin(x * 0.11 + Math.sin(y * 0.07) * 2) + Math.sin(y * 0.13 + Math.sin(x * 0.05) * 2);
+  const n2 = Math.sin(x * 0.09 - y * 0.05 + 1.7) + Math.cos(y * 0.1 + x * 0.04);
+  const jx = x + n1 * 3.2 + (hash2(x, y, 11) - 0.5) * 3, jy = y + n2 * 3.2 + (hash2(x, y, 13) - 0.5) * 3;
+  const cx = Math.max(0, Math.min(cw - 1, Math.floor(jx / TERRAIN_CELL))), ch = Math.floor(cls.length / cw);
+  const cy = Math.max(0, Math.min(ch - 1, Math.floor(jy / TERRAIN_CELL)));
+  return cls[cy * cw + cx];
 }
 
 // Chamfer distance (in quarter tiles, capped at 255) to the tiles where src is set.
@@ -635,12 +664,12 @@ function terrain(m) {
   for (let i = 0; i < N; i++) {
     const x = i % W, y = (i / W) | 0;
     if (!land[i]) { m.tiles[i] = toLand[i] <= 12 || m.river[i] ? T.WATER : T.DEEP; continue; }
-    const c = cls[Math.min(cls.length - 1, ((y / TERRAIN_CELL) | 0) * cw + ((x / TERRAIN_CELL) | 0))];
+    const c = terrainAt(cls, cw, x, y);
     const nearSea = m.distSea[i] <= 10;
     const z = m.zone[i];
     if (z === Z.CITY || z === Z.SOUTH) { m.tiles[i] = T.GRASS; continue; }
     if (nearSea && (z !== Z.EAST || c !== 4)) { m.tiles[i] = T.SAND; continue; }
-    m.tiles[i] = c === 3 ? (hash2(x >> 4, y >> 4, 5) < 0.35 ? T.SAND : T.DIRT) : c === 4 ? T.DIRT : T.GRASS;
+    m.tiles[i] = c === 3 ? (Math.sin(x * 0.045 + Math.cos(y * 0.06) * 2) + Math.sin(y * 0.05 - x * 0.02) + (hash2(x, y, 5) - 0.5) * 0.5 > 0.9 ? T.SAND : T.DIRT) : c === 4 ? T.DIRT : T.GRASS;
   }
   m.terrainCls = { cls, cw };
   // districts of the places without seeds: Smuggler's Rock, the lighthouse rock, the islets
@@ -1342,7 +1371,7 @@ function fillRow(m, row, rand) {
       const sty = near.length && rand() < 0.3 ? near[Math.floor(rand() * near.length)] : st;
       if (rem >= 6 && rand() < 0.12) { const gw = Math.min(rem, 4 + Math.floor(rand() * 4)); filler(m, row, x, gw, sty, rand); x += gw; continue; }
       const keys = Object.keys(sty.gen);
-      const fits = keys.filter((k) => rowFits(row, k, [x, b]));
+      const fits = keys.filter((k) => rowFits(row, k, [x, b]) && !(PREFABS[k].scene && !PREFABS[k].rot && row.face === 'N'));
       if (!fits.length) { filler(m, row, x, rem, st, rand); break; }
       let tot = 0;
       for (const k of fits) tot += sty.gen[k];
@@ -1779,12 +1808,19 @@ function buildMotorPools(m) {
 }
 // A lot for the motor pool right beside a station that has no plain building next to it.
 function carvePoolLot(m, sb) {
-  for (const side of [1, -1]) {
+  // anything standing there may go, unless it's a business or someone's home
+  const busy = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
+  const keep = (bi) => bi >= 0 && (busy.has(bi) || m.buildings[bi].home !== undefined || bi === sb.id);
+  const spots = [];
+  for (const side of [1, -1]) for (const gap of [1, 2, 3, 0]) {
     const w = 8, h = 12;
-    const x0 = side > 0 ? sb.tx + sb.tw + 1 : sb.tx - w - 1;
-    for (const y0 of [sb.ty + sb.th - h, sb.ty]) {
+    const x0 = side > 0 ? sb.tx + sb.tw + gap : sb.tx - w - gap;
+    for (const y0 of [sb.ty + sb.th - h, sb.ty, sb.ty + sb.th - h + 2, sb.ty - 2]) spots.push([x0, y0, w, h]);
+  }
+  for (const [x0, y0, w, h] of spots) {
+    {
       let ok = true;
-      for (let ty = y0; ty < y0 + h && ok; ty++) for (let tx = x0; tx < x0 + w; tx++) { const t = m.tileAt(tx, ty); if (t === T.ROAD || t === T.BRIDGE || t === T.WATER || t === T.DEEP || m.bld[ty * MAP_W + tx] >= 0 && m.buildings[m.bld[ty * MAP_W + tx]].kind !== 'roof') ok = false; }
+      for (let ty = y0; ty < y0 + h && ok; ty++) for (let tx = x0; tx < x0 + w; tx++) { const t = m.tileAt(tx, ty); if (t === T.ROAD || t === T.BRIDGE || t === T.WATER || t === T.DEEP || keep(m.bld[ty * MAP_W + tx])) ok = false; }
       if (!ok) continue;
       const south = [1, 2, 3, 4].some((k) => { const t = m.tileAt(x0 + 4, y0 + h - 1 + k); return t === T.ROAD; });
       const north = [1, 2, 3, 4].some((k) => { const t = m.tileAt(x0 + 4, y0 - k); return t === T.ROAD; });
@@ -2517,12 +2553,63 @@ function buildFarm(m, rand) {
     if (n > 200) m.fields.push({ x: fx2 * TILE, y: fy2 * TILE, w: fw * TILE, h: fh * TILE });
   }
   for (const [sx, sy, name, south] of FARM_STANDS) {
-    const pf2 = PREFABS.house2;
-    clearArea(m, sx - 3, sy - 3, pf2.tw + 6, pf2.th + 6);
-    m.fill(sx - 3, sy - 1, pf2.tw + 6, pf2.th + 2, T.DIRT);
-    placePrefab(m, { d: m.dist[sy * W + sx], x: sx, y: sy, w: pf2.tw, h: pf2.th, face: south ? 'S' : 'N' }, 'house2', sx, { biz: ['farm'], names: [name] }, rand);
+    // the farmstead from the concept painting: farmhouse, barn, silos, paddock
+    const pf2 = PREFABS.farmstead || PREFABS.house2, key = PREFABS.farmstead ? 'farmstead' : 'house2';
+    clearArea(m, sx, sy, pf2.tw, pf2.th);
+    m.fill(sx, sy, pf2.tw, pf2.th, T.DIRT);
+    placePrefab(m, { d: m.dist[sy * W + sx], x: sx, y: sy, w: pf2.tw, h: pf2.th, face: south ? 'S' : 'N' }, key, sx, { biz: ['farm'], names: [name] }, rand);
     const st = m.pois.filter((p) => p.kind === 'farm').pop();
-    st.cargoPad = { x: (sx - 2) * TILE, y: (sy + pf2.th / 2) * TILE };
+    st.cargoPad = { x: (sx + 3) * TILE, y: (south ? sy + pf2.th - 1.5 : sy + 1.5) * TILE };
+  }
+}
+
+// Out at the end of the dirt tracks: a cabin for sale in the woods and hills, a homestead
+// shack in the desert, a lighthouse on Lighthouse Rock. Gives every track somewhere to go.
+function buildOutposts(m, rand) {
+  const W = MAP_W;
+  const free = (x, y, w, h) => {
+    for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) {
+      if (tx < 0 || ty < 0 || tx >= W || ty >= MAP_H) return false;
+      const i = ty * W + tx, t = m.tiles[i];
+      if (!m.land[i] || m.lake[i] || m.reserve[i] || t === T.ROAD || t === T.BRIDGE || t === T.BUILDING || t === T.WATER || t === T.DEEP || t === T.FIELD || t === T.LOT) return false;
+    }
+    return true;
+  };
+  let cabins = 0;
+  for (const n of m.nodes) {
+    if (n.lvl !== 0 || n.edges.length !== 1) continue;
+    const e = m.edges[n.edges[0]];
+    if (e.kind !== 'dirt') continue;
+    const tx = Math.floor(n.x / TILE), ty = Math.floor(n.y / TILE);
+    const st = DISTRICTS[m.dist[ty * W + tx]].style;
+    const desert = st === 'desert' || (m.terrainCls && terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty) === 3);
+    const key = desert ? 'shack' : cabins % 2 ? 'house3' : 'house1';
+    const pf = PREFABS[key];
+    if (!pf) continue;
+    // the lot beside the end of the track, its front facing it
+    const spots = [[tx - (pf.tw >> 1), ty - pf.th - 1, true], [tx - (pf.tw >> 1), ty + 2, false], [tx + 2, ty - (pf.th >> 1), true], [tx - pf.tw - 2, ty - (pf.th >> 1), true]];
+    const spot = spots.find(([x, y]) => free(x - 1, y - 1, pf.tw + (desert ? 2 : 6), pf.th + 2));
+    if (!spot) continue;
+    const [x, y, south] = spot;
+    m.fill(x - 1, y - 1, pf.tw + (desert ? 2 : 6), pf.th + 2, desert ? T.DIRT : T.GRASS);
+    if (desert) {
+      placePrefab(m, { d: m.dist[ty * W + tx], x, y, w: pf.tw, h: pf.th, face: south ? 'S' : 'N' }, key, x, null, rand);
+      for (const [dx, dy, t] of [[-2, 2, 'drum'], [pf.tw + 1, 3, 'tires'], [pf.tw + 1, pf.th - 2, 'pallet']]) addProp(m, t, (x + dx) * TILE, (y + dy) * TILE, 10);
+    } else {
+      estateHouse(m, rand, 'cottage', key, x, y, south);
+      cabins++;
+    }
+    for (let k = 0; k < Math.min(6, Math.abs(Math.round((south ? y + pf.th : y) - ty))); k++) m.set(tx, south ? ty - 1 - k : ty + 1 + k, T.DIRT); // the track runs up to the door
+  }
+  // the lighthouse on its rock off the north-west coast
+  const comp = m.compLab[70 * W + 300];
+  if (comp >= 0) {
+    const [x0, y0, x1, y1] = m.comps[comp].box;
+    const cx = Math.floor((x0 + x1) / 2), cy = Math.floor((y0 + y1) / 2);
+    m.fill(cx - 6, cy - 6, 12, 12, T.PLAZA);
+    simpleBuilding(m, cx - 2, cy - 2, 5, 5, 'Lighthouse', 'lighthouse', m.dist[cy * W + cx], 'tile', { x: (cx + 0.5) * TILE, y: (cy + 3.4) * TILE, text: 'Lighthouse' });
+    addProp(m, 'lamp', (cx + 4.5) * TILE, (cy + 4.5) * TILE);
+    jetty(m, cx, cy + 6, 0, 1, 6);
   }
 }
 
@@ -2564,13 +2651,13 @@ function buildWilds(m, rand) {
     let nearRoad = false;
     for (let dy = -2; dy <= 2 && !nearRoad; dy++) for (let dx = -2; dx <= 2; dx++) { const q = m.tileAt(tx + dx, ty + dy); if (q === T.ROAD || q === T.BRIDGE || q === T.BUILDING || q === T.FIELD || q === T.LOT) { nearRoad = true; break; } }
     if (nearRoad) continue;
-    const c = cls[((ty / 4) | 0) * cw + ((tx / 4) | 0)];
+    const c = terrainAt(cls, cw, tx, ty);
     const h = hash2(tx, ty, 61);
     const x = (tx + 0.5 + (hash2(tx, ty, 3) - 0.5)) * TILE, y = (ty + 0.5 + (hash2(tx, ty, 4) - 0.5)) * TILE;
     if (t === T.SAND) { if (h < 0.025) addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(h * 120) % 3], x, y, 10); continue; }
     if (c === 2) { if (h < 0.22) addProp(m, h < 0.16 ? (h < 0.08 ? 'tree_a' : 'tree_b') : 'shrub_b', x, y, h < 0.16 ? 12 : 0); }
     else if (c === 1) { if (h < 0.035) addProp(m, h < 0.02 ? 'tree_b' : 'bush_c', x, y, h < 0.02 ? 12 : 0); }
-    else if (c === 3) { if (h < 0.035) addProp(m, h < 0.015 ? 'cactus' : h < 0.025 ? 'bush_a' : 'boulder', x, y, h < 0.015 ? 8 : h < 0.025 ? 0 : 14); }
+    else if (c === 3) { if (h < 0.06) addProp(m, h < 0.025 ? 'cactus' : h < 0.04 ? 'bush_a' : 'boulder', x, y, h < 0.025 ? 8 : h < 0.04 ? 0 : 14); }
     else if (c === 4) { if (h < 0.09) addProp(m, h < 0.05 ? 'boulder' : 'gravel', x, y, h < 0.05 ? 14 : 0); }
   }
   void rand;

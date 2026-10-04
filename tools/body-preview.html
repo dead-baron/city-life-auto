@@ -8,7 +8,7 @@ import { ARCHETYPES, makeAppearance, playerOutfit } from '../server/entities.js'
 import { mulberry32 } from '../shared/rng.js';
 loadBodies('../assets/');
 while (!bodiesReady()) await new Promise((r) => setTimeout(r, 50));
-const cols = [...Array(8).keys()].map((d) => ['idle', d, 0, 0]).concat([['move1', 0, 1, 0], ['move1', 0, 5, 0], ['move3', 2, 2, 0], ['move3', 2, 6, 0], ['aim', 0, 0, 7], ['aim', 6, 0, 10], ['punch', 1, 2, 0], ['swing', 7, 1, 1], ['carry', 0, 0, 0], ['aim', 4, 0, 7]]);
+const cols = [...Array(8).keys()].map((d) => ['idle', d, 0, 0]).concat([...Array(8).keys()].map((d) => ['move1', d, 2, 0])).concat([['move1', 0, 1, 0], ['move1', 0, 5, 0], ['move3', 2, 2, 0], ['move3', 2, 6, 0], ['aim', 0, 0, 7], ['aim', 6, 0, 10], ['punch', 1, 2, 0], ['swing', 7, 1, 1], ['carry', 0, 0, 0], ['aim', 4, 0, 7]]);
 const rows = Object.keys(ARCHETYPES).map((k) => [k, makeAppearance(mulberry32(k.length * 97 + 3), k)]);
 for (let i = 0; i < 4; i++) rows.push(['player ' + i, playerOutfit(mulberry32(i * 31 + 7))]);
 const Z = 2;

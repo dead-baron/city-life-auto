@@ -842,3 +842,25 @@ Playtest:
 3. Drive over the Bay Bridge to Westport, round the beltway to the airport, then the Northern Causeway to Northshore.
 4. Follow a dirt track into the Highland Woods or the desert.
 5. Look at people from all sides. Every outfit should have a matching back and side view.
+
+## World rebuild, round 3: drawn walk cycles, lying bodies, concept-art buildings across the islands
+- **Walk cycles from the concept art** (`tools/build_chars.py`): the "BASE FEMALE CHARACTER" sheet's 4-frame walk in all 8 directions is cut to native pixel size and labelled (skin, top, trousers, shoes, hair).
+  - People with long hair, a bun or a dress use that body and its drawn walk.
+  - Everyone else walks on the same drawn legs under the male body from the 8-direction sheet, with arms swinging.
+  - Outfits recolour both bodies, and hats, sunglasses, ties and the rest are added on top. Aiming, punching, swinging, fishing and carrying still reach out with a separately drawn arm.
+- **Lying down:** knocked-down and dead people lie as the drawn bodies from the animation sheet's "knocked down" and "passed out" frames, in their own colours.
+- **22 new building lots cut from the scene paintings** (`SCENE_PREFABS` in `tools/build_art.py`): FuelMax gas station, Club Nova, Club Eclipse, two police stations, Riverside Motors, Trail & Field, a boutique, Quick Stop, Pinecrest Apartments, a second apartment block, three suburban houses with gardens and driveways, a villa, First City Bank, J&R Salvage, a lakeside Bait & Tackle, a desert homestead, a farmstead, a construction site, a beach shack and a community pool.
+  - They mix into every district style: villas in the luxury districts, clubs on the Neon Strip, houses with pools in the suburbs, the salvage yard and building sites in the industrial districts.
+  - **On the new islands:**
+    - Westport: the police station, the boutique, Westport Motors, Trail & Field and the Lakeview pool.
+    - Northshore: Club Nova.
+    - Cedar Isle: FuelMax and the lakeside tackle shop.
+    - Cedar Farms: the farmstead as its harvest stand.
+- **Outposts:** every dirt track now leads somewhere. There are 11 cabins for sale in the woods and hills, homestead shacks in the desert, and a lighthouse with a jetty on Lighthouse Rock.
+- **Terrain:** desert, rock and forest patches have ragged natural edges instead of square blocks; the desert has more cactus and boulders; sand dunes are shaped.
+- **Fixes:**
+  - County roads use clean asphalt.
+  - The highway deck is lifted to daylight brightness.
+  - Every police station gets a motor pool, clearing a plain building next door if it has to.
+  - The dealership gets a lot.
+- World map re-baked.

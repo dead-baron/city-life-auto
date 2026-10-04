@@ -27,7 +27,7 @@ import { initAudio, sfx } from './audio.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawTunnel, portalCovers, drawStationClock } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
-import { bodySprite, loadBodies } from './render/body.js';
+import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
 import { BuildingLayer } from './render/buildings.js';
 import { Highway, liftOf, levelKey } from './render/highway.js';
 import { underDeck } from '../shared/levels.js';
@@ -1864,6 +1864,25 @@ function drawPed(p, now) {
   if (team !== undefined) { g.strokeStyle = team === 0 ? '#ff3b3b' : '#3b8bff'; g.lineWidth = 3; g.beginPath(); g.ellipse(p.rx, p.ry + 4, 13, 8, 0, 0, 6.28); g.stroke(); }
   // standing people: the 3/4-view character, upright on screen, facing one of 8 directions
   if (UPRIGHT.has(pose) && !flying) { drawUpright(p, pose === 'move' ? 'move' + lvl : pose, fr, hitK, swimming, now); return; }
+  // lying still on the ground (down or dead, not tumbling or flying): the drawn body from the
+  // animation sheet, lying along the way they faced
+  if ((pose === 'down' || pose === 'dead') && !flying && !swimming) {
+    const ly = lyingSprite(p.d.app, pose === 'dead' ? 1 : 0);
+    if (ly) {
+      g.save();
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 3, 24, 10, p.ra, 0, 6.28); g.fill();
+      g.translate(p.rx, p.ry); g.rotate(p.ra + Math.PI);
+      const sc = 1.25;
+      g.imageSmoothingEnabled = false;
+      if (f & PF.GHOST) g.globalAlpha = 0.45;
+      g.drawImage(ly, -LW * sc / 2, -LH * sc / 2, LW * sc, LH * sc);
+      if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = hitK - 0.4; g.drawImage(ly, -LW * sc / 2, -LH * sc / 2, LW * sc, LH * sc); g.globalCompositeOperation = 'source-over'; }
+      g.imageSmoothingEnabled = true;
+      g.restore();
+      if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
+      return;
+    }
+  }
   const spr = pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra);
   g.save();
   if (swimming) g.globalAlpha = f & PF.DEAD ? 0.5 : 0.72; // body under the surface, head above

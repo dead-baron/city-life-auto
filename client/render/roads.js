@@ -83,7 +83,7 @@ export function drawRoads(g, m, edges, nodes) {
     const G = geo(e);
     const mid = e.pts[Math.floor(e.pts.length / 2)];
     const d = distAt(m, mid.x, mid.y);
-    g.fillStyle = (e.kind === 'dirt' ? pattern(g, 'dirt') : pattern(g, e.kind === 'rural' ? 'asphalt_worn' : e.kind === 'hwy' ? 'deck' : d.road)) || (e.kind === 'dirt' ? '#8a6a44' : '#3a3b40');
+    g.fillStyle = (e.kind === 'dirt' ? pattern(g, 'dirt') : pattern(g, e.kind === 'rural' ? 'asphalt' : e.kind === 'hwy' ? 'deck' : d.road)) || (e.kind === 'dirt' ? '#8a6a44' : '#3a3b40');
     poly(g, G.road); g.fill();
   }
   for (const n of nodes) if (n.culdesac) {

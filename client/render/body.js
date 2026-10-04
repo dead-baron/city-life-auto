@@ -8,12 +8,16 @@
 // Falls back to the procedural painter (chars.js) until the template has loaded.
 import { CW, CH, SKINS, OUTLINE, hex, hi, lo, P, weapon } from './chars.js';
 
-const PART = { NONE: 0, LINE: 1, SKIN: 2, SHIRT: 3, PANTS: 4, SHOES: 5 };
+const PART = { NONE: 0, LINE: 1, SKIN: 2, SHIRT: 3, PANTS: 4, SHOES: 5, HAIR: 6 };
+// rows of assets/chars/body.png: male idle, female idle, female walk frames 1-4
+const ROW = { MALE: 0, FEMALE: 1, WALK: 2, MWALK: 6 }; // MWALK: composed at load (his top, the drawn legs)
+export const LW = 56, LH = 32; // lying-down cells (assets/chars/lying.png): knocked down, passed out
 // facing vector on screen for d8 (0 S, 1 SW, 2 W, 3 NW, 4 N, 5 NE, 6 E, 7 SE)
 const FV = [[0, 1], [-0.75, 0.66], [-1, 0], [-0.75, -0.66], [0, -1], [0.75, -0.66], [1, 0], [0.75, 0.66]];
 const FRONT = (d) => d === 0 || d === 1 || d === 7, BACKD = (d) => d >= 3 && d <= 5, SIDE = (d) => d === 2 || d === 6;
 
-let T = null; // per direction: { part, shade, info }
+let T = null; // T[row][d] = { part, shade, info }
+let LY = null; // lying poses: [{ part, shade }]
 let loading = false;
 
 export function loadBodies(base = 'assets/') {
@@ -25,20 +29,69 @@ export function loadBodies(base = 'assets/') {
     const g = c.getContext('2d', { willReadFrequently: true });
     g.drawImage(im, 0, 0);
     const px = g.getImageData(0, 0, im.width, im.height).data;
-    const dirs = [];
-    for (let d = 0; d < 8; d++) {
-      const part = new Uint8Array(CW * CH), shade = new Uint8Array(CW * CH);
-      for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
-        const i = (y * im.width + d * CW + x) * 4;
-        if (px[i + 3] < 128) continue;
-        part[y * CW + x] = px[i]; shade[y * CW + x] = px[i + 1];
+    const rows = [];
+    for (let r = 0; r < Math.floor(im.height / CH); r++) {
+      const dirs = [];
+      for (let d = 0; d < 8; d++) {
+        const part = new Uint8Array(CW * CH), shade = new Uint8Array(CW * CH);
+        for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
+          const i = ((r * CH + y) * im.width + d * CW + x) * 4;
+          if (px[i + 3] < 128) continue;
+          part[y * CW + x] = px[i]; shade[y * CW + x] = px[i + 1];
+        }
+        dirs.push({ part, shade, info: analyse(part, d) });
       }
-      dirs.push({ part, shade, info: analyse(part, d) });
+      rows.push(dirs);
     }
-    T = dirs;
+    // the male walk: his upper body over the legs of the drawn walk cycle (same height, feet on
+    // the same line), one row per frame
+    if (rows.length > ROW.WALK + 3) {
+      for (let f = 0; f < 4; f++) {
+        const dirs = [];
+        for (let d = 0; d < 8; d++) {
+          const M = rows[ROW.MALE][d], F = rows[ROW.WALK + f][d];
+          const cut = Math.max(M.info.waist + 2, F.info.waist + 2);
+          const part = new Uint8Array(CW * CH), shade = new Uint8Array(CW * CH);
+          // centre the legs under his hips
+          const off = Math.round(((M.info.lx0 + M.info.lx1) - (rows[ROW.FEMALE][d].info.lx0 + rows[ROW.FEMALE][d].info.lx1)) / 2);
+          for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
+            const i = y * CW + x;
+            if (y < cut) { part[i] = M.part[i]; shade[i] = M.shade[i]; continue; }
+            const sx = x - off;
+            if (sx < 0 || sx >= CW) continue;
+            const j = y * CW + sx;
+            let p = F.part[j];
+            if (p === PART.SKIN || p === PART.SHIRT) p = PART.PANTS; // her hands by her hips -> his trouser legs
+            if (p === PART.HAIR) p = 0;
+            part[i] = p; shade[i] = F.shade[j];
+          }
+          dirs.push({ part, shade, info: analyse(part, d) });
+        }
+        rows.push(dirs);
+      }
+    }
+    T = rows;
   };
   im.onerror = () => { loading = false; };
   im.src = base + 'chars/body.png';
+  const ly = new Image();
+  ly.onload = () => {
+    const c = document.createElement('canvas'); c.width = ly.width; c.height = ly.height;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(ly, 0, 0);
+    const px = g.getImageData(0, 0, ly.width, ly.height).data;
+    LY = [];
+    for (let k = 0; k < Math.floor(ly.width / LW); k++) {
+      const part = new Uint8Array(LW * LH), shade = new Uint8Array(LW * LH);
+      for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) {
+        const i = (y * ly.width + k * LW + x) * 4;
+        if (px[i + 3] < 128) continue;
+        part[y * LW + x] = px[i]; shade[y * LW + x] = px[i + 1];
+      }
+      LY.push({ part, shade });
+    }
+  };
+  ly.src = base + 'chars/lying.png';
 }
 export const bodiesReady = () => !!T;
 
@@ -53,6 +106,7 @@ function analyse(part, d) {
   // head: skin above the neck
   let hx0 = CW, hx1 = 0;
   for (let y = top; y < neck; y++) for (let x = 0; x < CW; x++) if (at(x, y) === PART.SKIN) { hx0 = Math.min(hx0, x); hx1 = Math.max(hx1, x); }
+  if (hx1 < hx0) for (let y = top; y < neck; y++) for (let x = 0; x < CW; x++) if (at(x, y) === PART.HAIR) { hx0 = Math.min(hx0, x); hx1 = Math.max(hx1, x); }
   // the legs: trousers below the waist, split down the middle
   let sx = 0, n = 0, lx0 = CW, lx1 = 0;
   for (let y = waist; y <= bottom; y++) for (let x = 0; x < CW; x++) if (at(x, y) === PART.PANTS || at(x, y) === PART.SHOES) { sx += x; n++; lx0 = Math.min(lx0, x); lx1 = Math.max(lx1, x); }
@@ -63,6 +117,7 @@ function analyse(part, d) {
     for (let y = neck + 1; y < Math.min(bottom, waist + 7); y++) for (let x = 0; x < CW; x++) {
       const p = at(x, y);
       if (p !== PART.SKIN && p !== PART.SHIRT && p !== PART.LINE) continue;
+      if (y < neck + 1) continue;
       if (x < lx0 - 0.5) arms[0].push(y * CW + x);
       else if (x > lx1 + 0.5) arms[1].push(y * CW + x);
     }
@@ -98,6 +153,9 @@ const appKey = (a) => (a ? `${a.s}${a.h}${a.hc}${a.t}${a.tc}${a.tc2}${a.l}${a.sh
 const art = typeof document !== 'undefined' ? document.createElement('canvas') : null;
 if (art) { art.width = CW; art.height = CH; }
 
+// Long hair, a bun or a dress: the female body (with its drawn walk cycle).
+export const isFemale = (a) => !!a && (a.h === 2 || a.h === 5 || a.t === 5);
+
 export function bodySprite(app, d8, pose, fr, w) {
   if (!T) return null;
   const key = `${appKey(app)}|${d8}|${pose}|${fr}|${w}`;
@@ -121,10 +179,14 @@ export function bodySprite(app, d8, pose, fr, w) {
 }
 
 function paintBody(g, a, d, pose, fr, w) {
-  const B = T[d], I = B.info, pal = palette(a);
+  const fem = isFemale(a) && T.length > ROW.WALK;
   const lvl = pose.startsWith('move') ? Number(pose[4]) || 0 : -1;
+  // the female body walks with its own drawn frames; everyone else is animated by moving parts
+  const drawn = lvl >= 0 && T.length > (fem ? ROW.WALK : ROW.MWALK) + 3;
+  const wf = (fr >> 1) & 3;
+  const B = T[drawn ? (fem ? ROW.WALK : ROW.MWALK) + wf : fem ? ROW.FEMALE : ROW.MALE][d], I = B.info, pal = palette(a);
   const ph = ((fr & 7) * Math.PI) / 4;
-  const amp = lvl >= 0 ? [1, 1.4, 2, 2.6][lvl] : pose === 'carry' ? 1 : 0;
+  const amp = drawn ? 0 : lvl >= 0 ? [1, 1.4, 2, 2.6][lvl] : pose === 'carry' ? 1 : 0;
   const s = Math.sin(ph);
   const bob = lvl >= 0 ? -Math.round(Math.abs(s) * (lvl >= 2 ? 1.4 : 0.8)) : pose === 'idle' && (fr & 4) ? -1 : 0;
   const Pp = new P(g);
@@ -154,6 +216,7 @@ function paintBody(g, a, d, pose, fr, w) {
       case PART.SHIRT: return shadeOf(pal.shirt, sh);
       case PART.PANTS: return shadeOf(pal.pants, sh);
       case PART.SHOES: return shadeOf(pal.shoes, sh);
+      case PART.HAIR: return (a.ht && y < I.top + 4) ? shadeOf(pal.hat, sh) : shadeOf(pal.hair, sh);
       default: return null;
     }
   };
@@ -182,7 +245,7 @@ function paintBody(g, a, d, pose, fr, w) {
   };
   drawLegs(0); drawLegs(1);
   // 2. body above the legs (bobbing), arms swinging with the stride
-  const swing = lvl >= 0 ? Math.round(s * Math.min(2, amp)) : 0;
+  const swing = lvl >= 0 && !(drawn && fem) ? Math.round(s * Math.min(2, lvl >= 0 ? [1, 1.4, 2, 2.6][lvl] : 0)) : 0;
   for (let y = 0; y < legTop; y++) for (let x = 0; x < CW; x++) {
     const i = y * CW + x;
     if (!B.part[i]) continue;
@@ -204,8 +267,8 @@ function paintBody(g, a, d, pose, fr, w) {
   }
   // 3. details of the top
   top(Pp, a, d, I, pal, bob);
-  // 4. head: hair, face, hats
-  head(Pp, B, a, d, I, pal, bob);
+  // 4. head: hair, face, hats (the female body has its hair and face drawn: only hats go on)
+  head(Pp, B, a, d, I, pal, bob, fem);
   // 5. reaching arm and anything held
   if (act || (w > 0 && w !== 13)) holds(Pp, a, d, I, pal, bob, pose, fr, w, actArm);
 }
@@ -227,13 +290,13 @@ function top(Pp, a, d, I, pal, bob) {
   if (a.b === 3) Pp.box(I.lx1 - 1, I.waist + bob - 3, 4, 4, '#555555'); // tool bag
 }
 
-function head(Pp, B, a, d, I, pal, bob) {
+function head(Pp, B, a, d, I, pal, bob, fem = false) {
   const g = Pp.g;
   const hs = a.h ?? 0, ht = a.ht || 0;
   const y0 = I.top, y1 = I.neck, hh = Math.max(1, y1 - y0);
   const cx = I.hcx, hw = Math.max(1, (I.hx1 - I.hx0) / 2);
   const front = FRONT(d), back = BACKD(d), side = SIDE(d);
-  const skinAt = (x, y) => B.part[y * CW + x] === 2 && y < y1;
+  const skinAt = (x, y) => (B.part[y * CW + x] === 2 || (fem && B.part[y * CW + x] === 6)) && y < y1;
   const paintOver = (test, color) => {
     for (let y = y0; y < y1; y++) for (let x = 0; x < CW; x++) {
       if (!skinAt(x, y) || !test(x, y, (x - cx) / hw, (y - y0) / hh)) continue;
@@ -241,6 +304,11 @@ function head(Pp, B, a, d, I, pal, bob) {
     }
   };
   const faceSide = side ? (d === 2 ? -1 : 1) : d === 1 ? -1 : d === 7 ? 1 : 0;
+  if (fem) {
+    if (ht) paintOver((x, y, nx, ny) => ny < 0.42, pal.hat);
+    if (a.b === 4 && !back) { const ey = Math.round(y0 + hh * 0.6) + bob; Pp.r(Math.round(cx - hw + 1), ey, Math.round(hw * 2 - 1), 1, '#14161a'); }
+    return;
+  }
   // long hair falls behind the shoulders
   if (!ht && (hs === 2 || hs === 5) && (back || side)) {
     if (hs === 2) for (let y = y1; y < y1 + 5; y++) for (let x = Math.round(cx - hw + 1 + (side ? -faceSide * 2 : 0)); x <= Math.round(cx + hw - 1 + (side ? -faceSide * 2 : 0)); x++) Pp.p(x, y + bob, lo(pal.hair));
@@ -338,3 +406,34 @@ function holds(Pp, a, d, I, pal, bob, pose, fr, w, actArm) {
   }
 }
 
+// Lying on the ground (knocked down: kind 0, passed out / dead: kind 1), head to the left, in
+// the person's colours. Drawn rotated by the caller.
+const lyCache = new Map();
+export function lyingSprite(app, kind) {
+  if (!LY || !LY[kind]) return null;
+  const key = `${appKey(app)}|${kind}`;
+  let cv = lyCache.get(key);
+  if (cv) return cv;
+  const a = app || {}, pal = palette(a), L = LY[kind];
+  cv = document.createElement('canvas'); cv.width = LW; cv.height = LH;
+  const g = cv.getContext('2d');
+  for (let i = 0; i < LW * LH; i++) {
+    const p = L.part[i];
+    if (!p) continue;
+    const sh = L.shade[i];
+    const c = p === PART.LINE ? OUTLINE : p === PART.SKIN ? shadeOf(pal.skin, sh) : p === PART.SHIRT ? shadeOf(pal.shirt, sh) : p === PART.PANTS ? shadeOf(pal.pants, sh) : p === PART.SHOES ? shadeOf(pal.shoes, sh) : shadeOf(pal.hair, sh);
+    g.fillStyle = c; g.fillRect(i % LW, (i / LW) | 0, 1, 1);
+  }
+  // hair on the head (the left end) unless bald
+  if ((a.h ?? 0) !== 3 || a.ht) {
+    let x0 = LW, y0 = LH, y1 = 0;
+    for (let i = 0; i < LW * LH; i++) if (L.part[i] === PART.SKIN) { const x = i % LW, y = (i / LW) | 0; if (x < x0) x0 = x; }
+    for (let i = 0; i < LW * LH; i++) if (L.part[i] === PART.SKIN && i % LW < x0 + 9) { const y = (i / LW) | 0; y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    g.fillStyle = a.ht ? pal.hat : pal.hair;
+    for (let i = 0; i < LW * LH; i++) { const x = i % LW, y = (i / LW) | 0; if (L.part[i] === PART.SKIN && x < x0 + 4 && y >= y0 && y <= y1) g.fillRect(x, y, 1, 1); }
+    if (a.h === 2 && !a.ht) { g.fillStyle = lo(pal.hair); g.fillRect(Math.max(0, x0 - 4), Math.round((y0 + y1) / 2) - 2, 5, 5); }
+  }
+  if (lyCache.size > 2000) lyCache.delete(lyCache.keys().next().value);
+  lyCache.set(key, cv);
+  return cv;
+}

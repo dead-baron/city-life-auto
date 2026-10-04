@@ -56,11 +56,11 @@ export const ISLAND_ESTATES = [
   ['cottage', 'house2', 690, 98, true],                                              // Granite Peaks lodge
   ['farmhouse', 'house3', 752, 1052, false], ['farmhouse', 'house1', 838, 940, true], // Cedar Farms
   ['cottage', 'house1', 936, 984, true],                                             // Cedar Hills
-  ['farmhouse', 'house2', 1214, 838, true],                                          // desert ranch
+  ['farmhouse', 'shack', 1206, 834, true],                                           // desert ranch
 ];
 
 // Farm stands (the harvest contracts besides Dry Creek's co-op): [x, y, name, door faces south]
-export const FARM_STANDS = [[760, 938, 'Cedar Farms Market', true]];
+export const FARM_STANDS = [[724, 943, 'Cedar Farms Market', false]];
 
 // Places the Gull Isles villages sit round: [x, y, radius]
 export const VILLAGES = [[118, 1028, 20, 'Gull Harbor'], [1118, 1066, 18, 'Coral Cay']];
