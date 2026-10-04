@@ -25,7 +25,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 6;
+export const TUTORIAL_VERSION = 7;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -84,11 +84,11 @@ export const STEPS = [
   { ch: 'citizen', title: 'Fishing', at: { pois: 'tackle' },
     text: `Buy a fishing pole at a {{tackle}} shop like the one in {{tackle:where}} ($${price('tackle', 'rod')}), the {{fishmarket}} ($${price('fishmarket', 'rod')}) or {{sports}} ($${price('sports', 'rod')}), cast at the water's edge and strike when it bites. Bait changes what bites: ${ITEMS.worms.name.toLowerCase()} for bass, ${ITEMS.shrimp.name.toLowerCase()} for salmon, ${ITEMS.squid.name.toLowerCase()} for tuna, a ${ITEMS.glowlure.name.toLowerCase()} for catfish at night. Sell your catch at any tackle shop or the market.` },
   { ch: 'citizen', title: 'Shopping', at: { poi: 'coffee' },
-    text: `{{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons, {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
+    text: `Shops, banks, hospitals, the courthouse and police stations are walk-in: the doors slide open, the roof fades away while you're inside, and you deal with the clerk across the counter (the pawn shop and bank serve you through glass). {{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons, {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
   { ch: 'citizen', title: 'Homes', at: { homes: 'Pine Hills' },
-    text: `Buy a {{home}} - as many as you like. Each can be your respawn point (you can still pick a hospital when you die), adds garage space, and lets you rest, bank your cash and stash items and guns. Stand at your door and go inside: you blink for ${HIDE_TIME_S} seconds, slowly then fast, and you're hidden - nobody can see or hurt you, and the police lose track of you. Step out and you blink for ${SPAWN_PROTECT_S} seconds of protection.` },
+    text: `Buy a {{home}} - as many as you like. Each can be your respawn point (you can still pick a hospital when you die), adds garage space, and lets you rest, bank your cash and stash items and guns. Stand at your door and go inside: you blink for ${HIDE_TIME_S} seconds, slowly then fast, and you're hidden - nobody can see or hurt you, and the police lose track of you. Step out and you blink for ${SPAWN_PROTECT_S} seconds of protection. Inside you can change your outfit, check what you're carrying, and pick any car from your garage: say you're ready, the garage door rolls up and you ease out, blinking, before you take the wheel.` },
   { ch: 'citizen', title: 'Estates and garages', at: { estates: 1 },
-    text: `Out past the city: a ${estate('farmhouse')}, the ${estate('cottage')}, a ${estate('beach')} on the sand and the ${estate('mansion')} with its huge yard and pool. Pull up to any of your garages and the door rolls open to take your car; every car you own can be taken out at any home you own. New cars at {{dealer}}, boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
+    text: `Out past the city: a ${estate('farmhouse')}, the ${estate('cottage')}, a ${estate('beach')} on the sand and the ${estate('mansion')} with its huge yard and pool. Pull up to any of your garages and the door rolls open to take your car; every car you own can be taken out at any home you own. New cars at {{dealer}} - walk its lot and buy whatever's in stock off the price tags, or order from the showroom - boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
   { ch: 'citizen', title: 'Good Samaritan points', at: { poi: 'evidence' },
     text: `Doing good earns Samaritan points: finish deliveries, stop a ${EVENT_KINDS.snatch.label.toLowerCase()} (an orange blip and arrow), then ${EVENT_KINDS.ret.label.toLowerCase()} to its owner (green), or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
 

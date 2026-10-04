@@ -12,7 +12,7 @@ import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
 import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus } from './input.js';
-import { GroundCache, drawOverheadProp, drawPrefabGlow, debrisColors, lampHead } from './render/tiles.js';
+import { GroundCache, drawOverheadProp, drawPrefabGlow, debrisColors, lampHead, interiorArt, drawRoofClip, drawShopDoor } from './render/tiles.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
@@ -1120,6 +1120,7 @@ function render(dt) {
   drawWaterGlints(view, now);
   if (rain) { g.fillStyle = 'rgba(30,50,80,0.16)'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
   fx.drawDecals(g, view, now, rain);
+  const insideB = drawInteriorView(sp);
 
   const vis = (e) => e.rx > view.x0 - 100 && e.rx < view.x1 + 100 && e.ry > view.y0 - 100 && e.ry < view.y1 + 100;
   const peds = [], vehs = [], crates = [], bags = [], projs = [];
@@ -1153,6 +1154,7 @@ function render(dt) {
   if (S.pred && S.pred.kind === 'veh') { const me = S.ents.get(S.ctrlId); const d = me && me.d ? VEHICLE_BY_INDEX[me.d.m] : null; if (d && d.kind === 'boat' && underBridge(me.rx, me.ry, d.L / 2)) outlineVehicle(me, d); }
   else if (S.pred) { const me = S.ents.get(S.ctrlId); if (me && me.swim && S.map.tileAtPx(me.rx, me.ry) === T.BRIDGE) { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); } }
   for (const c of crates) if ((c.flags & 3) === 1) drawCrateEnt(c, now);
+  coverWalkIns(view, peds, insideB, dt);
   for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
 
   // geysers
@@ -1327,6 +1329,49 @@ function drawBays(view, dt) {
   }
 }
 
+// Walk-in buildings. Inside one, its floor plan shows under a faded roof; from outside, the roof
+// is drawn back over anyone in there, and the sliding doors open as people come and go.
+function walkInAt(x, y) {
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  const t = S.map.tileAt(tx, ty);
+  if (t !== T.FLOOR && t !== T.COUNTER) return null;
+  const b = S.map.buildings[S.map.bld[ty * S.map.w + tx]];
+  return b && b.walkIn ? b : null;
+}
+function drawInteriorView(sp) {
+  const b = S.playing ? walkInAt(sp.x, sp.y) : null;
+  S.roofFade ??= {};
+  for (const id of S.map.walkIns || []) {
+    const want = b && b.id === id ? 1 : 0;
+    const cur = S.roofFade[id] || 0;
+    if (!want && cur < 0.01) continue;
+    S.roofFade[id] = cur + (want - cur) * 0.15;
+    const bb = S.map.buildings[id];
+    const k = S.roofFade[id];
+    g.drawImage(interiorArt(S.map, bb), bb.tx * TILE, bb.ty * TILE);
+    drawRoofClip(g, S.map, bb, 1 - k * 0.88);
+  }
+  return b;
+}
+function coverWalkIns(view, peds, insideB, dt) {
+  S.doorAnim ??= {};
+  for (const id of S.map.walkIns || []) {
+    const b = S.map.buildings[id];
+    const x0 = b.tx * TILE, y0 = b.ty * TILE, x1 = x0 + b.tw * TILE, y1 = y0 + b.th * TILE;
+    if (x1 < view.x0 || x0 > view.x1 || y1 < view.y0 || y0 > view.y1) continue;
+    const fade = (S.roofFade && S.roofFade[id]) || 0;
+    if (!(insideB && insideB.id === id) && fade < 0.05 && peds.some((p) => p.rx > x0 && p.rx < x1 && p.ry > y0 && p.ry < y1)) drawRoofClip(g, S.map, b, 1);
+    for (let i = 0; i < b.walkIn.units.length; i++) {
+      const u = b.walkIn.units[i];
+      const dx = (u.door.tx + u.door.w / 2) * TILE, dy = (u.door.ty + 0.5) * TILE;
+      const near = peds.some((p) => !(p.flags & PF.INVEH) && Math.hypot(p.rx - dx, p.ry - dy) < 56);
+      const key = id * 16 + i;
+      S.doorAnim[key] = (S.doorAnim[key] || 0) + ((near ? 1 : 0) - (S.doorAnim[key] || 0)) * (1 - Math.exp(-9 * dt));
+      drawShopDoor(g, u, b.walkIn.south, S.doorAnim[key]);
+    }
+  }
+}
+
 // Inside a police station: the lobby / armory art covers the city view while the menu is used.
 let intShown = null, intDrawnAt = 0;
 function tickInterior() {
@@ -1398,6 +1443,7 @@ function outlineVehicle(v, def) {
   g.restore();
 }
 
+function driverBlinks(v) { for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.blink) return true; return false; }
 function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
@@ -1411,6 +1457,7 @@ function drawVehicleEnt(v, now, dt) {
   g.translate(v.rx, v.ry);
   g.rotate(v.ra);
   if (sinking) { g.globalAlpha = 1 - 0.75 * sk; g.scale(1 - 0.18 * sk, 1 - 0.18 * sk); }
+  if (v.blinkUntil > now || driverBlinks(v)) g.globalAlpha *= Math.floor(now * 10) % 2 ? 0.25 : 1; // pulling out of a garage
   if (def.kind !== 'boat' && !sinking) drawVehicleShadow(g, v.d, def);
   if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
   const L = def.L, Wd = def.W;
@@ -1426,6 +1473,15 @@ function drawVehicleEnt(v, now, dt) {
     g.globalAlpha = 1;
   }
   g.restore();
+  if (v.d.fs) { // dealership price tag on the windscreen
+    const txt = `$${v.d.fs.toLocaleString()}`;
+    g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    const w = g.measureText(txt).width + 10;
+    g.fillStyle = '#fff8d0'; g.fillRect(v.rx - w / 2, v.ry - 9, w, 18);
+    g.strokeStyle = '#c8262b'; g.lineWidth = 2; g.strokeRect(v.rx - w / 2, v.ry - 9, w, 18);
+    g.fillStyle = '#c8262b'; g.fillText(txt, v.rx, v.ry + 4);
+    g.font = 'bold 8px monospace'; g.fillStyle = '#1b2333'; g.fillText('FOR SALE', v.rx, v.ry - 12);
+  }
   // riders on bikes are visible
   if (def.kind === 'bike') {
     for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) {

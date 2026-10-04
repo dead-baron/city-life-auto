@@ -552,3 +552,20 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
   - A stray "Practice" name lying in the street: the client now drops any entity the server hasn't mentioned for 4 s, and the server sends your own ped id.
   - The previous build broke the extra byte for non-ped entities, so loaded crates all drew in slot 0; restored. The ped weapon index is now 5 bits.
 - Tutorial v6 (sign-up, armory, motor pool, sirens, motorcycles, company flatbeds). New `test/police.test.js` (7 tests).
+
+## Walk-in buildings, dealership lots, home garage drive-out
+- **Walk-in buildings** (`shared/map.js` `buildInteriors`): every shop, bank, hospital, the courthouse and police stations now have a real interior.
+  - New tiles `FLOOR` (people walk on it, cars can't) and `COUNTER` (blocks people, not line of sight).
+  - Interior layout: a wall ring, partitions between the units of a strip mall, a 2-tile doorway per unit, and a counter.
+  - Each unit's interaction point moves in front of its counter. The hospital ER mat moved inside, by the desk.
+- **Rendering:** each interior's floor plan is painted once per building into a cached canvas.
+  - Inside: the plan shows under the roof art, which fades to ~12%.
+  - Outside: the roof is redrawn over anyone in there.
+  - Glass doors slide open when someone is within ~56 px.
+- **Staff** (`server/systems/interiors.js`): a clerk, teller, nurse or desk sergeant behind every counter while a player is near. Staff who are attacked run (a desk cop fights back) and are replaced after 60 s. Pedestrians now browse shop floors too.
+- **Police station:** the lobby is now a walk-in room. The front desk handles sign-up, fines and going off duty. Signing up (or "Armory & motor pool" on duty) is the only overlay left: the locked armory, then out to the motor pool.
+- **Dealership lots** (`buildDealerLots`, `server/systems/dealer.js`): up to 6 display spaces on the lot. Each holds a random car from a weighted stock list at ±15% of list price, with a price tag on the windscreen.
+  - Interact next to one to buy it: it's yours on the spot and added to your garage list. It can't be entered before it's bought.
+  - Sold spaces restock after 60 s when nobody is close.
+- **Homes:** inside, you can change your outfit (free, and nobody sees you change), see what you're carrying, and pick a car from your garage. A "Ready?" confirmation follows, then the garage door rolls up and the car eases out on its own over 2.2 s while you blink, untouchable. The client just watches (no prediction) during the drive-out.
+- Tutorial v7. New `test/world.test.js`, plus a walk-in test in police tests.

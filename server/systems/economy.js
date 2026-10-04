@@ -30,11 +30,14 @@ export function poiLabel(world, p, poi) {
     }
     case 'atm': return 'Use ATM';
     case 'vending': return 'Buy an Energy Drink';
-    case 'police': return p.badge ? 'Enter Police HQ (desk, armory, motor pool)' : 'Enter Police HQ (front desk)';
-    case 'courthouse': return 'Courthouse (bounties)';
+    case 'police': return p.badge ? 'Front desk (armory, motor pool, off duty)' : 'Front desk (join the police)';
+    case 'courthouse': return 'Courthouse desk (bounties, fines)';
+    case 'hospital': return 'Hospital front desk';
+    case 'bank': return 'Bank teller';
+    case 'pawn': return 'Pawn window';
     case 'farm': return 'Farm Co-op (harvest contracts)';
     case 'warehouse': return 'Portside Logistics (courier jobs)';
-    default: return `Enter ${poi.label}`;
+    default: return poi.outside ? `Counter - ${poi.label}` : `Enter ${poi.label}`;
   }
 }
 
@@ -45,6 +48,7 @@ function recordOption(p, opts) {
   opts.push({ id: 'payrecord', label: `Pay felony fines - clear your record (${n} felon${n === 1 ? 'y' : 'ies'})`, price: n * FELONY_FINE, dis: p.wanted > 0, note: p.wanted > 0 ? 'not while wanted' : '' });
 }
 
+export function payFrom(p, amount) { return pay(p, amount); }
 function pay(p, amount) {
   const prof = p.profile;
   if (prof.cash + prof.bank < amount) return false;
@@ -115,14 +119,13 @@ export function buildMenu(world, p, poi) {
           opts.push({ id: `arm:${id}`, label: `${has ? 'Restock' : 'Take'} ${WEAPONS[id].name}`, note: has ? `carrying ${(prof.weapons[id] || 0) + (p.ped.mag[id] || 0)} rds` : `${WEAPONS[id].mag}-round mag` });
         }
         opts.push({ id: 'armexit', label: 'Out the back door to the motor pool ▶' });
-        opts.push({ id: 'armlobby', label: 'Back to the front desk' });
+        opts.push({ id: 'sleave', label: 'Back out to the front desk' });
       } else {
-        title = poi.label + (where ? ' - front desk' : '');
+        title = poi.label + ' - front desk';
         sub = p.badge ? 'On duty. Arrest wanted suspects, seize contraband, keep it clean. Your gear and vehicles are through the armory.' : `Sign-up requirements: ${law.ENFORCER_MIN_SAMARITAN} Samaritan points, zero felonies. You: ${prof.samaritan} pts, ${prof.felonies} felonies.`;
         recordOption(p, opts);
         if (!p.badge) opts.push({ id: 'duty:on', label: 'Sign up as a police officer' });
         else { opts.push({ id: 'armgo', label: 'Armory & motor pool (weapons, vehicles)' }); opts.push({ id: 'duty:off', label: 'Go off duty' }); }
-        if (where) opts.push({ id: 'sleave', label: 'Leave the station' });
       }
       break;
     }
@@ -182,13 +185,22 @@ export function buildMenu(world, p, poi) {
         opts.push({ id: 'hrest', label: 'Rest (full health, stop bleeding)' });
         if (prof.cash > 0) opts.push({ id: 'dep:all', label: `Deposit cash ($${prof.cash}) to the bank` });
         if (inside) {
+          const inv = Object.entries(prof.inventory).filter(([id, n]) => n > 0 && ITEMS[id]).map(([id, n]) => `${ITEMS[id].name} x${n}`);
+          const guns = Object.keys(prof.weapons).filter((id) => id !== 'fists' && WEAPONS[id]).map((id) => WEAPONS[id].name);
+          sub += ` Carrying: ${[...inv, ...guns].join(', ') || 'nothing'}.`;
+          if (p.pendingCar != null && prof.vehicles[p.pendingCar] && h.garage) {
+            const d = VEHICLES[prof.vehicles[p.pendingCar].model];
+            opts.unshift({ id: 'hcarno', label: 'Not yet - stay inside' });
+            opts.unshift({ id: `hcargo:${p.pendingCar}`, label: `Ready? Head out in the ${d.name} ▶`, note: 'garage door opens' });
+          }
+          opts.push({ id: 'houtfit', label: 'Change outfit', note: p.badge ? 'off duty only' : 'free', dis: p.badge });
           for (const [id, n] of Object.entries(prof.inventory)) if (n > 0 && ITEMS[id]) opts.push({ id: `hst:${id}`, label: `Stash ${ITEMS[id].name} x${n}` });
           for (const id of Object.keys(prof.weapons)) if (!NO_STASH.has(id) && WEAPONS[id]) opts.push({ id: `hsw:${id}`, label: `Stash ${WEAPONS[id].name}`, note: WEAPONS[id].mag ? `${prof.weapons[id]} rds` : '' });
           for (const [id, n] of Object.entries(st.items || {})) if (n > 0 && ITEMS[id]) opts.push({ id: `htk:${id}`, label: `Take ${ITEMS[id].name} x${n}`, note: 'stash' });
           for (const id of Object.keys(st.weapons || {})) if (WEAPONS[id]) opts.push({ id: `htw:${id}`, label: `Take ${WEAPONS[id].name}`, note: 'stash' });
         }
         opts.push({ id: 'hspawn', label: prof.spawnHome === h.id ? 'Respawn point: HERE' : 'Make this my respawn point', dis: prof.spawnHome === h.id });
-        if (h.garage) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: `Take out ${d.name}`, note: 'garage' }); });
+        if (h.garage) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: inside ? `Garage: ${d.name}` : `Take out ${d.name}`, note: inside ? 'drive out' : 'garage' }); });
         if (!inside) opts.push({ id: 'hsell', label: `Sell (+$${Math.round(h.price * 0.6).toLocaleString()} to bank)` });
       }
       break;
@@ -242,7 +254,6 @@ function myVehicleNear(world, p, poi) {
 
 export function openMenu(world, p, poi) {
   if (!p.conn) return;
-  if (poi.kind === 'police' && !(p.ped && p.ped.interior)) { const err = station.enter(world, p, poi); if (err) world.notify(p, err, 'warn'); return; }
   p.menu = { poi: poi.id };
   p.conn.sendJSON(buildMenu(world, p, poi));
 }
@@ -255,7 +266,7 @@ export function handleMenu(world, p, poiId, optId) {
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
   p.meDirty = true;
-  if (!['close', 'hhide', 'hleave', 'armexit', 'sleave'].includes(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
+  if (!['close', 'hhide', 'hleave', 'armexit', 'sleave'].includes(optId) && !optId.startsWith('hcargo') && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
 function execute(world, p, poi, opt) {
@@ -339,7 +350,7 @@ function execute(world, p, poi, opt) {
       if (parts[1] === 'on') {
         const e = law.goOnDuty(world, p);
         if (e) return e;
-        station.toArmory(world, p);
+        station.toArmory(world, p, poi);
         world.notify(p, 'Sworn in! Badge, uniform, taser, nightstick and service pistol issued. You\'re in the armory - pick a weapon, then out back to the motor pool.', 'good');
       } else {
         law.goOffDuty(world, p); // the cruiser system returns the car to the pool
@@ -347,8 +358,7 @@ function execute(world, p, poi, opt) {
       }
       return null;
     }
-    case 'armgo': return station.toArmory(world, p);
-    case 'armlobby': { if (ped.interior) ped.interior.kind = 'lobby'; return null; }
+    case 'armgo': return station.toArmory(world, p, poi);
     case 'arm': return station.takeWeapon(world, p, parts[1]);
     case 'armexit': station.toMotorPool(world, p); return null;
     case 'sleave': station.leave(world, p); return null;
@@ -467,10 +477,30 @@ function execute(world, p, poi, opt) {
       world.notify(p, `Took the ${w.name}.`, 'good');
       return null;
     }
+    case 'hcarno': p.pendingCar = null; return null;
+    case 'hcargo': {
+      const h = world.map.homes[poi.home];
+      const idx = Number(parts[1]);
+      p.pendingCar = null;
+      if (!ped.hidden || !h.garage) return 'Not right now.';
+      return homes.driveOut(world, p, h, idx);
+    }
+    case 'houtfit': {
+      if (p.badge) return 'Hand in the uniform (go off duty) first.';
+      const fresh = playerOutfit(rng);
+      fresh.s = prof.outfit ? prof.outfit.s : fresh.s;
+      prof.outfit = fresh;
+      ped.app = { ...fresh };
+      ped.appVer = (ped.appVer || 0) + 1;
+      if (ped.hidden) applyDisguise(world, p); // nobody saw you change
+      store.touch();
+      world.notify(p, 'New outfit on.', 'good');
+      return null;
+    }
     case 'hcar': {
       const h = world.map.homes[poi.home];
       if (!h.garage) return 'This place has no garage.';
-      if (ped.hidden) homes.leaveHome(world, p);
+      if (ped.hidden) { p.pendingCar = Number(parts[1]); return null; } // inside: confirm first
       const e = homes.spawnOwnedAt(world, p, Number(parts[1]), { ...h.garage, home: h.id });
       if (!e) world.notify(p, 'Your ride is in the driveway.', 'good');
       return e;

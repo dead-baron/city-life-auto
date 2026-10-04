@@ -35,9 +35,10 @@ export const SWIM_BLOCK = new Uint8Array(16);
 export const CAR_SPAWN_BLOCK = new Uint8Array(16);
 export const WATER_T = new Uint8Array(16);
 WATER_T[T.WATER] = 1; WATER_T[T.DEEP] = 1;
-for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP]) PED_BLOCK[t] = 1;
-for (const t of [T.WALL, T.BUILDING]) { SWIM_BLOCK[t] = 1; CAR_BLOCK[t] = 1; }
-for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP]) CAR_SPAWN_BLOCK[t] = 1;
+for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP, T.COUNTER]) PED_BLOCK[t] = 1;
+for (const t of [T.WALL, T.BUILDING, T.COUNTER]) SWIM_BLOCK[t] = 1;
+for (const t of [T.WALL, T.BUILDING, T.FLOOR, T.COUNTER]) CAR_BLOCK[t] = 1;
+for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP, T.FLOOR, T.COUNTER]) CAR_SPAWN_BLOCK[t] = 1;
 BOAT_BLOCK[T.WATER] = 0; BOAT_BLOCK[T.DEEP] = 0; BOAT_BLOCK[T.BRIDGE] = 0;
 
 // Surface handling multipliers: [speedMul, gripMul, isAsphalt]
@@ -53,6 +54,8 @@ SURFACE[T.DEEP] = [0.3, 0.35, 0];
 SURFACE[T.SAND] = [0.5, 0.6, 0];
 SURFACE[T.DOCK] = [0.9, 0.9, 0];
 SURFACE[T.DIRT] = [0.85, 0.8, 0];
+SURFACE[T.FLOOR] = [1, 1, 0];
+SURFACE[T.COUNTER] = [1, 1, 0];
 SURFACE[T.FIELD] = [0.5, 0.65, 0];
 SURFACE[T.BRIDGE] = [1, 1, 1];
 SURFACE[T.LOT] = [1, 1, 1];
@@ -430,6 +433,8 @@ export function generateCity(seed = 1337) {
   buildTackleShops(m);
   buildPaintShops(m);
   buildMotorPools(m);
+  buildInteriors(m);
+  buildDealerLots(m);
   aimLamps(m);
   buildLaneGraph(m);
   buildCameras(m, rand);
@@ -902,6 +907,84 @@ function buildMotorPools(m) {
     const exit = { x: (x0 + w - 2) * TILE, y: (far + 0.5) * TILE + dir * 20 };
     m.motorPools.push({ station: st.id, b: b.id, tx: x0, ty: y0, tw: w, th: h, south, gate, spots, exit });
     st.pool = m.motorPools.length - 1;
+  }
+}
+
+// Walk-in buildings: shops, banks, hospitals, the courthouse and police stations get a real
+// interior behind their front door - a one-tile wall ring, a floor, partition walls between the
+// units of a strip mall, and a counter with a clerk behind it. The roof art fades out while you
+// are inside (client). The place's interaction point moves in front of its counter.
+export const WALK_IN = new Set(['hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle']);
+const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
+function buildInteriors(m) {
+  m.walkIns = [];
+  const byB = new Map();
+  for (const p of m.pois) if (p.b !== undefined) { if (!byB.has(p.b)) byB.set(p.b, []); byB.get(p.b).push(p); }
+  const bays = new Set((m.bays || []).map((bay) => m.bld[bay.ty * MAP_W + bay.tx]));
+  for (const [bid, list] of byB) {
+    const b = m.buildings[bid];
+    if (!b || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
+    const main = list.filter((p) => WALK_IN.has(p.kind) || p.kind === 'delivery');
+    if (!main.some((p) => WALK_IN.has(p.kind)) || list.some((p) => !WALK_IN.has(p.kind) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery')) continue;
+    const south = m.prefabs[b.prefab].rot === 0;
+    const x0 = b.tx + 1, x1 = b.tx + b.tw - 2, y0 = b.ty + 1, y1 = b.ty + b.th - 2; // interior (inclusive)
+    main.sort((a, c) => a.x - c.x);
+    const depth = y1 - y0 + 1;
+    const back = south ? y0 : y1, dir = south ? 1 : -1;
+    const counterRow = back + dir * Math.max(1, Math.min(3, Math.floor(depth * 0.3)));
+    const units = [];
+    main.forEach((p, i) => {
+      const dc = Math.max(x0, Math.min(x1, Math.floor(p.x / TILE)));
+      const ux0 = i === 0 ? x0 : Math.floor((Math.floor(main[i - 1].x / TILE) + dc) / 2) + 1;
+      const ux1 = i === main.length - 1 ? x1 : Math.floor((dc + Math.floor(main[i + 1].x / TILE)) / 2) - 1;
+      if (!WALK_IN.has(p.kind) || ux1 - ux0 < 1) return; // other storefronts in the row stay closed
+      for (let ty = y0; ty <= y1; ty++) for (let tx = ux0; tx <= ux1; tx++) m.set(tx, ty, T.FLOOR);
+      // the doorway: two tiles of the front wall
+      const fy = south ? b.ty + b.th - 1 : b.ty;
+      const d2 = dc - 1 >= ux0 ? dc - 1 : dc + 1;
+      const dx0 = Math.min(dc, d2);
+      m.set(dc, fy, T.FLOOR); if (d2 <= ux1) m.set(d2, fy, T.FLOOR);
+      // the counter, with a gap at the far end so staff could get round (not on tiny units)
+      const cw = ux1 - ux0 + 1;
+      for (let tx = ux0; tx <= ux1; tx++) if (cw < 4 || tx !== ux1) m.set(tx, counterRow, T.COUNTER);
+      const cx = (ux0 + ux1 + 1) / 2 * TILE;
+      const staffY = (counterRow - dir + 0.5) * TILE, frontY = (counterRow + dir + 0.55) * TILE;
+      p.outside = { x: p.x, y: p.y };
+      p.x = cx; p.y = frontY; p.r = Math.max(p.r || 40, 40);
+      units.push({ poi: p.id, kind: p.kind, x0: ux0, x1: ux1, counterRow, clerk: { x: cx, y: staffY, a: south ? Math.PI / 2 : -Math.PI / 2 }, door: { tx: dx0, ty: fy, w: 2 } });
+      // a hospital's ER mat sits beside its desk
+      for (const q of list) if (q.kind === 'reception') { q.x = cx - 48; q.y = frontY + dir * 10; }
+    });
+    if (!units.length) continue;
+    b.walkIn = { south, units, x0, x1, y0, y1 };
+    m.walkIns.push(bid);
+  }
+}
+
+// Dealership display lots: parking spaces on the open lot around each dealership where cars
+// in stock wait with price tags. Walk up to one to buy it.
+function buildDealerLots(m) {
+  m.dealerLots = [];
+  const L = 108, W = 62; // a parking space (a little bigger than a sedan)
+  for (const d of m.pois.filter((q) => q.kind === 'dealer')) {
+    const b = m.buildings[d.b];
+    if (!b) continue;
+    const slots = [];
+    const free = (x, y, a) => {
+      const hl = (a ? W : L) / 2, hw = (a ? L : W) / 2;
+      for (let yy = y - hw; yy <= y + hw; yy += 8) for (let xx = x - hl; xx <= x + hl; xx += 8) if (m.tileAtPx(xx, yy) !== T.LOT) return false;
+      return !slots.some((s) => Math.abs(s.x - x) < ((s.a ? W : L) + (a ? W : L)) / 2 + 4 && Math.abs(s.y - y) < ((s.a ? L : W) + (a ? L : W)) / 2 + 4);
+    };
+    const cands = [];
+    for (let y = (b.ty - 8) * TILE; y <= (b.ty + b.th + 8) * TILE; y += 16) for (let x = (b.tx - 8) * TILE; x <= (b.tx + b.tw + 8) * TILE; x += 16) cands.push({ x, y, d: Math.hypot(x - d.x, y - d.y) });
+    cands.sort((a, c) => a.d - c.d);
+    for (const c of cands) {
+      if (slots.length >= 6) break;
+      if (free(c.x, c.y, 0)) slots.push({ x: c.x, y: c.y, a: 0 });
+      else if (free(c.x, c.y, 1)) slots.push({ x: c.x, y: c.y, a: 1 });
+    }
+    m.dealerLots.push({ poi: d.id, slots: slots.map((s) => ({ x: s.x, y: s.y, a: s.a ? Math.PI / 2 : 0 })) });
+    m.parking = m.parking.filter((s) => !slots.some((q) => Math.hypot(q.x - s.x, q.y - s.y) < 80)); // the lot is the dealer's now
   }
 }
 

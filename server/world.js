@@ -20,6 +20,8 @@ import * as jobs from './systems/jobs.js';
 import * as env from './systems/environment.js';
 import * as homes from './systems/homes.js';
 import * as station from './systems/station.js';
+import * as interiors from './systems/interiors.js';
+import * as dealer from './systems/dealer.js';
 import * as props from './systems/props.js';
 import * as net from './net.js';
 
@@ -28,7 +30,9 @@ const SYSTEMS = [
   ['environment', env.update],      // chrono loop + rain
   ['inputs', players.processInputs],// player-controlled peds + vehicle inputs
   ['homes', homes.update],          // going inside your home (hide), step-out protection
-  ['station', station.update],      // police motor pool gates + restocking
+  ['station', station.update],
+  ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking
+  ['interiors', interiors.update],  // shop clerks / desk staff in walk-in buildings
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['police', police.update],        // NPC police dispatch / pursuit
@@ -75,6 +79,7 @@ export class World {
     env.init(this);
     homes.init(this);
     station.init(this);
+    dealer.init(this);
     jobs.init(this);
   }
 

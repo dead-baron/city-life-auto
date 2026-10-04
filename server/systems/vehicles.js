@@ -296,6 +296,7 @@ export function tryEnter(world, ped) {
   const p = ped.player;
   if (v.wreckAt) { if (p) world.notify(p, 'That vehicle is wrecked.', 'bad'); return false; }
   if (v.sinkAt) return false;
+  if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
   if (ped.carrying) cargo.dropCrate(world, ped);
   let seat = -1;

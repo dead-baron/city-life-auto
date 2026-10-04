@@ -15,7 +15,7 @@ import * as gangwar from './gangwar.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 
-const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT]);
+const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
 const CIV_TARGET_DAY = 30, CIV_TARGET_NIGHT = 20;
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
@@ -68,6 +68,12 @@ export function update(world, dt) {
   for (const ped of world.entities.values()) {
     if (ped.kind !== K.PED || !ped.npc || ped.dead || ped.vehId) continue;
     const n = ped.npc;
+    if (n.desk) { // shop / desk staff stay behind their counter
+      const dd = Math.hypot(ped.x - n.desk.x, ped.y - n.desk.y);
+      if (dd > 6) pedStep(ped, seek(ped, n.desk.x, n.desk.y, false), dt, world.map, walkMods(world, ped, 0.5));
+      else { ped.vx = 0; ped.vy = 0; ped.a = n.desk.a + Math.sin(now * 0.4 + ped.id) * 0.25; }
+      continue;
+    }
     if (n.role === 'driver') { n.role = 'civ'; n.state = 'wander'; } // a driver left on foot (car gone) walks off
     if (n.role === 'cop' && !n.war && !n.shootout) {
       const u = n.unit ? world.get(n.unit) : null;
@@ -246,6 +252,11 @@ function fight(world, ped, now) {
 export function onAttacked(world, ped, attacker) {
   if (!ped.npc || ped.dead || !attacker || attacker === ped) return;
   const n = ped.npc;
+  if (n.desk) { // staff behind a counter: a desk cop fights back, everyone else runs
+    n.desk = null; n.keep = false;
+    if (n.role === 'cop') { ped.weapon = 'pistol'; startFight(world, ped, attacker, 30); } else flee(world, ped, attacker.x, attacker.y, 10);
+    return;
+  }
   if (n.role === 'cop' && attacker.npc && attacker.npc.role === 'gang') { gangwar.copAttackedByGang(world, ped, attacker); return; }
   if (n.role === 'cop' || n.role === 'medic') return;
   if (n.state === 'passed') { ped.passedOut = false; n.state = 'flee'; n.fx = attacker.x; n.fy = attacker.y; n.until = world.time + 6; return; }

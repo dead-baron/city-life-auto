@@ -10,7 +10,6 @@ import * as homes from './homes.js';
 import * as combat from './combat.js';
 
 const TILE = 32;
-const IN_FIGHT_S = 6;        // can't duck into the station this soon after fighting
 const GATE_CLOSE_S = 1.2;    // gate stays open this long after the last officer clears it
 const REFILL_EVERY_S = 20;   // empty bays are restocked when nobody is watching
 
@@ -94,31 +93,20 @@ export function openInterior(world, p) {
   p.conn.sendJSON(menuBuilder(world, p, poi));
 }
 
-// Walk in through the front door: the lobby and its front desk.
-export function enter(world, p, poi) {
+// Through the door behind the front desk (on duty only): the locked armory room. The lobby
+// itself is a real walk-in interior in the city now.
+export function toArmory(world, p, poi) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId) return 'Not right now.';
-  if (p.wanted > 0) return 'The desk sergeant takes one look at you and reaches for the cuffs - not while you\'re wanted.';
-  if (world.time - Math.max(ped.lastCombatAt || -99, ped.lastHitAt || -99) < IN_FIGHT_S) return 'You can\'t duck inside in the middle of a fight.';
+  if (!p.badge) return 'Officers only past this door.';
+  poi ||= ped.interior ? world.map.pois[ped.interior.poi] : null;
+  if (!poi) return 'Not at a station desk.';
   if (ped.carrying) return 'Set the crate down first.';
   ped.hidden = true; ped.inside = null;
-  ped.interior = { kind: 'lobby', poi: poi.id };
+  ped.interior = { kind: 'armory', poi: poi.id };
   ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.fishing = null;
-  ped.x = poi.x; ped.y = poi.y;
-  world.place(ped); // out of the spatial grid right away
-  world.emit(poi.x, poi.y, { e: 'door', x: poi.x, y: poi.y });
-  p.meDirty = true;
-  openInterior(world, p);
-  return null;
-}
-
-export function toArmory(world, p) {
-  const ped = p.ped;
-  if (!ped || !ped.interior) return 'Not inside a station.';
-  if (!p.badge) return 'Officers only past this door.';
-  ped.interior.kind = 'armory';
-  const poi = world.map.pois[ped.interior.poi];
-  if (poi && poi.pool !== undefined) refill(world, poi.pool, true); // fresh vehicles for the new shift
+  world.place(ped);
+  if (poi.pool !== undefined) refill(world, poi.pool, true); // fresh vehicles for the new shift
   p.meDirty = true;
   return null;
 }
@@ -133,12 +121,12 @@ function stepOut(world, p, x, y) {
   p.meDirty = true;
 }
 
-// Leave by the front door.
+// Back out to the front desk.
 export function leave(world, p) {
   const ped = p.ped;
   if (!ped || !ped.interior) return;
   const poi = world.map.pois[ped.interior.poi];
-  stepOut(world, p, poi.x + (world.rand() - 0.5) * 24, poi.y + 14);
+  stepOut(world, p, poi.x + (world.rand() - 0.5) * 16, poi.y);
 }
 
 // Out of the armory's back door into the motor pool.

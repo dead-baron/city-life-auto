@@ -24,6 +24,7 @@ export const DAY_PART_S = 900;
 export const T = {
   WALL: 0, GRASS: 1, SIDEWALK: 2, ROAD: 3, PLAZA: 4, BUILDING: 5, WATER: 6, DEEP: 7,
   SAND: 8, DOCK: 9, DIRT: 10, FIELD: 11, BRIDGE: 12, LOT: 13,
+  FLOOR: 14, COUNTER: 15, // inside walk-in buildings: shop floor (walkable) and the counter (blocks people, not sight)
 };
 
 // Weather

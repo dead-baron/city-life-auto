@@ -661,3 +661,90 @@ export function shade(hex, amt) {
   const r = Math.max(0, Math.min(255, (n >> 16) + amt)), gg = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt)), b = Math.max(0, Math.min(255, (n & 255) + amt));
   return `rgb(${r},${gg},${b})`;
 }
+
+// ---- walk-in interiors ---------------------------------------------------------------------
+// Each walk-in building gets its floor plan painted once (floor by business type, walls,
+// partitions, the counter and some furnishings) into a cached canvas. The game shows it under a
+// faded roof while you're inside, and puts the roof back over anyone inside when you're not.
+const FLOOR_STYLE = {
+  hospital: ['#e4ecee', '#d6e0e3'], police: ['#c9c4b6', '#bdb7a8'], bank: ['#d8cfb8', '#cabf9f'], courthouse: ['#b89a74', '#a98a64'],
+  gunshop: ['#6b6258', '#5f564c'], sports: ['#a8c4a0', '#9ab894'], hardware: ['#a39a88', '#968d7b'], clothing: ['#d6c2c8', '#cab4bb'],
+  grocery: ['#e3e0d2', '#d6d2c2'], pawn: ['#7a6a52', '#6c5c46'], pharmacy: ['#e6eef2', '#d8e2e8'], fence: ['#3a3438', '#2e292c'],
+  fishmarket: ['#b9cfd6', '#aac2ca'], coffee: ['#8a6446', '#7c583c'], tackle: ['#9fb4a6', '#91a698'],
+};
+const DECOR = {
+  gunshop: ['#2a2a30', '#5a4a3a'], sports: ['#c8262b', '#2350c8'], hardware: ['#ef7a1a', '#6a6e76'], clothing: ['#e04a9a', '#7a3ac8'],
+  grocery: ['#2f9a3a', '#f2c21b'], pawn: ['#c8a040', '#8a6a3a'], pharmacy: ['#2f9a3a', '#e8e8e8'], fence: ['#7a1d24', '#444'],
+  fishmarket: ['#25b8c0', '#e8e8e8'], coffee: ['#4a3020', '#c8a070'], tackle: ['#2f6a24', '#c8a040'], bank: ['#f2c21b', '#2a5a2a'],
+  courthouse: ['#5a3a22', '#e8e2d0'], hospital: ['#c8262b', '#7fb8d0'], police: ['#1d3a8a', '#f2c21b'],
+};
+const artCache = new Map();
+export function interiorArt(m, b) {
+  let cv = artCache.get(b.id);
+  if (cv) return cv;
+  cv = document.createElement('canvas');
+  cv.width = b.tw * TILE; cv.height = b.th * TILE;
+  const g = cv.getContext('2d');
+  const ox = b.tx * TILE, oy = b.ty * TILE;
+  for (let ty = b.ty; ty < b.ty + b.th; ty++) for (let tx = b.tx; tx < b.tx + b.tw; tx++) {
+    const t = m.tileAt(tx, ty), x = tx * TILE - ox, y = ty * TILE - oy;
+    const u = b.walkIn.units.find((q) => tx >= q.x0 - 1 && tx <= q.x1 + 1);
+    const fs = FLOOR_STYLE[u ? u.kind : 'police'] || ['#ccc', '#bbb'];
+    if (t === T.FLOOR || t === T.COUNTER) {
+      g.fillStyle = (tx + ty) & 1 ? fs[0] : fs[1]; g.fillRect(x, y, TILE, TILE);
+      g.fillStyle = 'rgba(0,0,0,.05)'; g.fillRect(x, y + TILE - 1, TILE, 1);
+    } else { g.fillStyle = '#3a3a42'; g.fillRect(x, y, TILE, TILE); g.fillStyle = '#4c4c56'; g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4); }
+  }
+  for (const u of b.walkIn.units) {
+    const dc = DECOR[u.kind] || ['#888', '#666'];
+    const x0 = u.x0 * TILE - ox, x1 = (u.x1 + 1) * TILE - ox, cy = u.counterRow * TILE - oy;
+    // counter: wood top, front panel, a till
+    g.fillStyle = u.kind === 'pawn' || u.kind === 'bank' ? '#8fb8c8' : '#6b4a2a'; g.fillRect(x0, cy + 4, x1 - x0, TILE - 8);
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x0, cy + 4, x1 - x0, 3);
+    if (u.kind === 'pawn' || u.kind === 'bank') { g.strokeStyle = 'rgba(220,240,255,.8)'; g.lineWidth = 2; g.strokeRect(x0 + 2, cy + 6, x1 - x0 - 4, TILE - 12); } // security glass
+    g.fillStyle = '#20232b'; g.fillRect((x0 + x1) / 2 + 10, cy + 8, 12, 10); g.fillStyle = '#7fd0ff'; g.fillRect((x0 + x1) / 2 + 12, cy + 10, 8, 5);
+    // shelves / racks along the side walls, in the business's colours
+    const back = b.walkIn.south ? b.walkIn.y0 : b.walkIn.y1, dir = b.walkIn.south ? 1 : -1;
+    const custRows = [];
+    for (let ty = u.counterRow + dir * 2; b.walkIn.south ? ty <= b.walkIn.y1 - 1 : ty >= b.walkIn.y0 + 1; ty += dir) custRows.push(ty);
+    for (const ty of custRows) {
+      const y = ty * TILE - oy;
+      for (const [sx, k] of [[x0 + 3, 0], [x1 - 11, 1]]) {
+        if (x1 - x0 < 3 * TILE) continue;
+        g.fillStyle = '#4a3a2a'; g.fillRect(sx, y + 2, 8, TILE - 4);
+        for (let k2 = 0; k2 < 3; k2++) { g.fillStyle = dc[(k + k2) & 1]; g.fillRect(sx + 1, y + 4 + k2 * 9, 6, 6); }
+      }
+    }
+    // a staff area detail behind the counter
+    const by = back * TILE - oy;
+    g.fillStyle = dc[0]; g.fillRect(x0 + 4, by + 6, Math.min(40, x1 - x0 - 8), 8);
+    g.fillStyle = dc[1]; g.fillRect(x1 - 26, by + 6, 20, 14);
+    // floor logo / mat inside the door
+    const dx = u.door.tx * TILE - ox, dy = (u.door.ty + (b.walkIn.south ? -1 : 1)) * TILE - oy;
+    g.fillStyle = 'rgba(30,30,40,.35)'; g.fillRect(dx + 4, dy + 6, u.door.w * TILE - 8, TILE - 12);
+  }
+  artCache.set(b.id, cv);
+  return cv;
+}
+
+// The building's roof art, clipped to its footprint (the lot in front stays as baked).
+export function drawRoofClip(g, m, b, alpha = 1) {
+  const p = m.prefabs[b.prefab];
+  if (!p) return;
+  g.save();
+  g.beginPath(); g.rect(b.tx * TILE, b.ty * TILE, b.tw * TILE, b.th * TILE); g.clip();
+  g.globalAlpha = alpha;
+  drawPrefab(g, p);
+  g.restore();
+}
+
+// Sliding glass doors: k = 0 closed .. 1 open.
+export function drawShopDoor(g, u, south, k) {
+  const x = u.door.tx * TILE, y = u.door.ty * TILE + (south ? TILE - 8 : 0), w = u.door.w * TILE;
+  const pw = w / 2, slide = pw * 0.92 * k;
+  g.fillStyle = '#2a2c31'; g.fillRect(x - 2, y - 1, w + 4, 10);
+  g.fillStyle = 'rgba(160,210,235,.75)';
+  g.fillRect(x - slide, y + 1, pw - 1, 6);
+  g.fillRect(x + pw + 1 + slide, y + 1, pw - 1, 6);
+  g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(x - slide + 3, y + 2, 4, 2); g.fillRect(x + pw + 4 + slide, y + 2, 4, 2);
+}

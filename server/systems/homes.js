@@ -224,6 +224,7 @@ export function leaveHome(world, p) {
 }
 
 export function update(world) {
+  stepScripted(world);
   const now = world.time;
   for (const p of world.players.values()) {
     const ped = p.ped;
@@ -247,4 +248,46 @@ export function blinkState(world, ped) {
   if (ped.entering) return world.time - ped.entering.at < HIDE_TIME_S * 0.55 ? 1 : 2;
   if (world.time < (ped.protectUntil || 0)) return 2;
   return 0;
+}
+
+// ---- driving out of the garage --------------------------------------------------------------
+// Pick a car from inside: you're put behind the wheel inside the garage, the door rolls up and the
+// car eases out on its own (blinking, untouchable) before you get the controls.
+const DRIVE_OUT_S = 2.2;
+export function driveOut(world, p, h, idx) {
+  const ped = p.ped;
+  const ov = p.profile.vehicles[idx];
+  if (!ov || !VEHICLES[ov.model] || VEHICLES[ov.model].kind === 'boat') return 'No such car.';
+  const g = h.garage;
+  const ax = Math.cos(g.a), ay = Math.sin(g.a);
+  const len = VEHICLES[ov.model].L;
+  const start = h.garageDoor ? { x: h.garageDoor.x - ax * (len / 2 + 6), y: h.garageDoor.y - ay * (len / 2 + 6) } : { x: g.x - ax * 50, y: g.y - ay * 50 };
+  ped.inside = null; ped.hidden = false;
+  const err = spawnOwnedAt(world, p, idx, { x: start.x, y: start.y, a: g.a, home: h.id });
+  if (err) { ped.inside = h.id; ped.hidden = true; return err; }
+  const v = world.get(p.activeVehicle);
+  v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0;
+  ped.x = v.x; ped.y = v.y; ped.vx = 0; ped.vy = 0;
+  v.lastDriver = ped.id; p.lastVehicle = v.id;
+  v.scripted = { x0: start.x, y0: start.y, x1: g.x, y1: g.y, t0: world.time, dur: DRIVE_OUT_S };
+  world.place(ped);
+  protect(world, ped, DRIVE_OUT_S);
+  p.meDirty = true;
+  return null;
+}
+
+// Move cars that are easing out of a garage (they ignore the walls they start inside).
+export function stepScripted(world) {
+  for (const v of world.entities.values()) {
+    if (v.kind !== K.VEH || !v.scripted) continue;
+    const s = v.scripted;
+    const k = Math.min(1, (world.time - s.t0) / s.dur);
+    const e = k * k * (3 - 2 * k);
+    const nx = s.x0 + (s.x1 - s.x0) * e, ny = s.y0 + (s.y1 - s.y0) * e;
+    v.vx = (nx - v.x) / 0.05; v.vy = (ny - v.y) / 0.05;
+    v.x = nx; v.y = ny;
+    v.ownStepTick = world.tick; // no physics this tick
+    v.input = { throttle: 0, steer: 0, hb: false };
+    if (k >= 1) { v.scripted = null; v.vx *= 0.5; v.vy *= 0.5; }
+  }
 }

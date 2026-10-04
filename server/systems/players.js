@@ -16,6 +16,7 @@ import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as homes from './homes.js';
 import * as station from './station.js';
+import * as dealer from './dealer.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -157,7 +158,7 @@ export function processInputs(world, dt) {
     const n = p.inputQ.length > 3 ? 2 : 1;
     const ped = p.ped;
     const drivingV = ped && ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
-    if (drivingV && !drivingV.wreckAt) drivingV.ownStepTick = world.tick;
+    if (drivingV && !drivingV.wreckAt && !drivingV.scripted) drivingV.ownStepTick = world.tick;
     for (let k = 0; k < n; k++) {
       let inp;
       if (p.inputQ.length) { inp = p.inputQ.shift(); p.ack = inp.seq; p.lastInput = inp; p.starve = 0; }
@@ -168,7 +169,7 @@ export function processInputs(world, dt) {
       p.prevBits = inp.bits;
       applyInput(world, p, ped, inp, pressed, dt);
       const v = ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
-      if (v && !v.wreckAt) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); props.smashFor(world, v); }
+      if (v && !v.wreckAt && !v.scripted) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); props.smashFor(world, v); }
     }
   }
 }
@@ -200,7 +201,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       const w = WEAPONS[ped.weapon];
       if (w && (w.type === 'gun')) combat.tryAttack(world, ped, inp.aim);
     }
-    if (pressed & IN.VEHICLE) vehicles.exitVehicle(world, ped);
+    if ((pressed & IN.VEHICLE) && !v.scripted) vehicles.exitVehicle(world, ped);
     if (pressed & IN.ACTION) { const act = homes.vehicleInteraction(world, p); if (act) act.run(); }
     return;
   }
@@ -318,6 +319,8 @@ export function findInteraction(world, p) {
     if (spot) return { label: 'Cast fishing line', run: () => jobs.castLine(world, p, spot) };
   }
 
+  const sale = dealer.saleNear(world, ped);
+  if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
   const v = vehicles.nearestVehicle(world, ped, 56);
   if (v) return { label: `Enter ${v.def.name}`, key: 'F', run: () => vehicles.tryEnter(world, ped) };
   return null;

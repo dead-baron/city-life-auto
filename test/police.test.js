@@ -3,7 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
-import { K } from '../shared/constants.js';
+import { K, T } from '../shared/constants.js';
+import { CAR_BLOCK } from '../shared/map.js';
+import * as players from '../server/systems/players.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { WEAPONS } from '../shared/items.js';
 import { POLICE_ARMORY, ENFORCER_MIN_SAMARITAN } from '../shared/rules.js';
@@ -34,11 +36,10 @@ test('station: walk in, sign up at the desk, pick an armory weapon, out to the m
   const { p, prof } = joinPlayer(w, { samaritan: ENFORCER_MIN_SAMARITAN + 5, felonies: 0 });
   const st = hq(w);
   teleport(w, p.ped, st.x, st.y);
+  assert.equal(w.map.tileAtPx(st.x, st.y), T.FLOOR, 'the front desk is inside the building');
   economy.openMenu(w, p, st);
-  assert.ok(p.ped.hidden && p.ped.interior.kind === 'lobby', 'inside the lobby');
-  assert.ok(!w.query(st.x, st.y, 100, K.PED).includes(p.ped), 'out of sight indoors');
+  assert.ok(!p.ped.hidden, 'the lobby is a real room - you are still in the world');
   const lobby = p.conn.sent.filter((m) => m && m.t === 'menu').pop();
-  assert.equal(lobby.interior, 'lobby');
   assert.ok(lobby.opts.some((o) => o.id === 'duty:on'));
   economy.handleMenu(w, p, st.id, 'duty:on');
   assert.ok(p.badge, 'sworn in');
@@ -99,23 +100,33 @@ test('the gate stays shut for civilians; taking a pool car is police-vehicle the
   assert.ok(p.heat > heat0 || p.profile.felonies > 0 || p.wanted > 0, 'stealing a police car is a crime');
 });
 
-test('no hiding in the station: not while wanted or straight out of a fight', () => {
+test('walk-in buildings: doors, floor, counter, a clerk behind it, and the desk menu inside', () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
-  const st = hq(w);
-  teleport(w, p.ped, st.x, st.y);
-  p.ped.lastHitAt = w.time;
-  economy.openMenu(w, p, st);
-  assert.ok(!p.ped.hidden, 'mid-fight');
-  p.ped.lastHitAt = -99; p.ped.lastCombatAt = -99;
-  p.wanted = 2; p.heat = 40;
-  economy.openMenu(w, p, st);
-  assert.ok(!p.ped.hidden, 'wanted');
-  p.wanted = 0; p.heat = 0;
-  economy.openMenu(w, p, st);
-  assert.ok(p.ped.hidden);
-  economy.handleMenu(w, p, st.id, 'sleave');
-  assert.ok(!p.ped.hidden && Math.hypot(p.ped.x - st.x, p.ped.y - st.y) < 60);
+  const shop = w.map.pois.find((q) => q.kind === 'gunshop');
+  const b = w.map.buildings[shop.b];
+  assert.ok(b.walkIn, 'gun shop is walk-in');
+  const u = b.walkIn.units.find((q) => q.poi === shop.id);
+  for (let k = 0; k < u.door.w; k++) assert.equal(w.map.tileAt(u.door.tx + k, u.door.ty), T.FLOOR, 'doorway open');
+  assert.equal(w.map.tileAt(Math.floor(u.clerk.x / 32), u.counterRow), T.COUNTER);
+  // walk in through the door
+  const dx = (u.door.tx + 1) * 32, outY = (u.door.ty + (b.walkIn.south ? 1.6 : -0.6)) * 32;
+  teleport(w, p.ped, dx, outY);
+  for (let i = 0; i < 40; i++) players.queueInput(p, { seq: i + 1, bits: 0, mx: 0, my: b.walkIn.south ? -1 : 1, aim: 0 });
+  run(w, 1.6);
+  assert.equal(w.map.tileAtPx(p.ped.x, p.ped.y), T.FLOOR, 'walked inside');
+  run(w, 1.2);
+  const clerk = [...w.entities.values()].find((e) => e.kind === K.PED && e.npc && e.npc.desk && Math.hypot(e.x - u.clerk.x, e.y - u.clerk.y) < 20);
+  assert.ok(clerk, 'clerk behind the counter');
+  teleport(w, p.ped, shop.x, shop.y);
+  economy.openMenu(w, p, shop);
+  assert.ok(p.conn.sent.some((m) => m && m.t === 'menu' && m.poi === shop.id));
+  // cars can't drive in
+  assert.equal(CAR_BLOCK[T.FLOOR], 1);
+  // the hospital ER mat is inside by the desk
+  const hosp = w.map.pois.find((q) => q.kind === 'hospital');
+  const mat = w.map.pois.find((q) => q.kind === 'reception' && Math.hypot(q.x - hosp.x, q.y - hosp.y) < 120);
+  assert.ok(mat && w.map.tileAtPx(mat.x, mat.y) === T.FLOOR);
 });
 
 test('sirens: traffic ahead slows and eases over; no siren, no yielding', () => {
@@ -159,11 +170,12 @@ test('idle pedestrians look around and then walk off; stranded drivers walk away
   const { p } = joinPlayer(w);
   const ped = spawnNpc(w, 'casual', p.ped.x + 200, p.ped.y, 'civ');
   ped.npc.state = 'idle'; ped.npc.until = w.time + 3; ped.npc.lookAt = w.time;
-  const a0 = ped.a;
+  const a0 = ped.a, x0 = ped.x, y0 = ped.y;
   run(w, 1);
   assert.notEqual(ped.a, a0, 'looks around');
-  run(w, 3);
-  assert.equal(ped.npc.state === 'idle' ? 'idle' : 'moved on', 'moved on');
+  let moved = false;
+  for (let k = 0; k < 20 && !moved; k++) { run(w, 0.5); moved = Math.hypot(ped.x - x0, ped.y - y0) > 20; }
+  assert.ok(moved, 'walks off eventually');
   const drv = spawnNpc(w, 'casual', p.ped.x - 200, p.ped.y, 'driver');
   run(w, 0.2);
   assert.equal(drv.npc.role, 'civ');

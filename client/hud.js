@@ -164,7 +164,7 @@ export class HUD {
     if (!o || o.dis) return;
     if (o.id === 'close') { this.closeMenu(); return; }
     this.sendMenu(this.menu.poi, o.id);
-    if (['hhide', 'hleave', 'armexit', 'sleave'].includes(o.id)) this.closeMenu(); // going in blinks you out; stepping out drops you at the door
+    if (['hhide', 'hleave', 'armexit', 'sleave'].includes(o.id) || o.id.startsWith('hcargo')) this.closeMenu(); // going in blinks you out; stepping out drops you at the door
   }
   navMenu(d) {
     if (!this.menu) return;

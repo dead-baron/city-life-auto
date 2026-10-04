@@ -19,7 +19,7 @@ let recDv = new DataView(recBuf.buffer);
 function descriptor(e) {
   switch (e.kind) {
     case K.PED: return { id: e.id, k: K.PED, app: e.app, n: e.player ? e.player.name : '', pl: !!e.player, ar: e.archetype, v: e.appVer || 0 };
-    case K.VEH: return { id: e.id, k: K.VEH, m: e.def.i, p: e.paint, vr: e.variant, o: e.ownerName || '', v: e.descVer || 0 };
+    case K.VEH: return { id: e.id, k: K.VEH, m: e.def.i, p: e.paint, vr: e.variant, o: e.ownerName || '', v: e.descVer || 0, fs: e.forSale ? e.forSale.price : 0 };
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: e.cashOnly ? 0 : e.tier, val: e.value };
     case K.PROJ: return { id: e.id, k: K.PROJ, w: WEAPONS[e.weapon]?.i ?? 12 };
@@ -87,7 +87,7 @@ export function send(world) {
     const spawns = [];
     let ctrl = CTRL.NONE, ctrlId = 0, self = null, sflags = 0;
     if (ped && !ped.dead) {
-      if (veh) { ctrl = ped.seat === 0 ? CTRL.DRIVER : CTRL.PASSENGER; ctrlId = veh.id; self = veh; sflags = veh.rev ? 32 : 0; } // reverse-gear state keeps point-to-drive prediction exact
+      if (veh) { ctrl = ped.seat === 0 && !veh.scripted ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = veh; sflags = veh.rev ? 32 : 0; } // reverse-gear state keeps point-to-drive prediction exact
       else {
         ctrl = CTRL.PED; ctrlId = ped.id;
         const mods = players.pedMods(world, ped);
