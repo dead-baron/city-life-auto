@@ -87,7 +87,7 @@ export const ROB_RESPONSE_S = [10, 15];   // squad cars arrive this long after t
 export const ROB_ALARM_STARS = 3;         // wanted level the alarm puts you on
 
 // Trains
-export const TRAINS_ON_LINE = 8;         // trains running the loop at once, spaced out around it
+export const TRAIN_HEADWAY_S = 60;       // a train pulls into each station about this often (the fleet size follows from the loop's run time)
 export const TRAIN_SPEED = 560;          // cruising speed (px/s) - as quick as a fast car; nothing stops it, nothing damages it
 export const TRAIN_ACCEL = 85;           // pulling away (px/s^2) - eased in and out, no lurch
 export const TRAIN_BRAKE = 115;          // braking into a station

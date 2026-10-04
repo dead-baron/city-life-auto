@@ -4,8 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K, T } from '../shared/constants.js';
-import { railAt, CROSSING_ARM, MAIL_BOX, RAIL_MAX_BRIDGE_TILES, PLATFORM_HALF, ISLANDS } from '../shared/map.js';
-import { TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAINS_ON_LINE, TRAIN_ACCEL, TRAIN_BRAKE, MAIL_WARN_S, BAIL_HURT_SPEED } from '../shared/rules.js';
+import { railAt, CROSSING_ARM, MAIL_BOX, RAIL_MAX_BRIDGE_TILES, PLATFORM_HALF, ISLANDS, CONSIST } from '../shared/map.js';
+import { TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_HEADWAY_S, TRAIN_ACCEL, TRAIN_BRAKE, MAIL_WARN_S, BAIL_HURT_SPEED } from '../shared/rules.js';
 import { CTRL } from '../shared/protocol.js';
 import * as trains from '../server/systems/trains.js';
 import * as players from '../server/systems/players.js';
@@ -81,13 +81,16 @@ test('the railway: one huge loop through the core of every main island, all of i
     assert.ok(ok >= n * 0.8, `${s.name}: platform ${ok}/${n}`);
   }
   assert.ok(Math.max(...w.trains.map((t) => t.len)) <= PLATFORM_HALF * 2 + 40, 'a whole train fits along the platform');
-  assert.equal(w.trains.length, TRAINS_ON_LINE);
+  // about one train a minute at every station: the fleet fits the loop's run time
+  assert.ok(Math.abs(w.railLap / w.trains.length - TRAIN_HEADWAY_S) < TRAIN_HEADWAY_S * 0.25, `${w.trains.length} trains on a ${Math.round(w.railLap)}s loop`);
+  assert.ok(w.trains.every((t) => t.cars.length === CONSIST.length), 'five-car trains');
   assert.ok(w.trains.some((t) => t.mail >= 0), 'a mail train');
 });
 
 test('trains run the loop and stop at every station for the dwell time', () => {
   const w = makeWorld();
   const t = w.trains[1];
+  t.dwellUntil = w.time + TRAIN_DWELL_S; // (at the start trains are held at their stations to space them out)
   const first = t.stop;
   run(w, TRAIN_DWELL_S + 1);
   assert.ok(!t.dwellUntil && t.v > 0, 'departed');
@@ -173,6 +176,7 @@ test('ride: board at a station, walk through the cars, get off at the next stop'
   const w = makeWorld();
   const { p, conn } = joinPlayer(w);
   const t = w.trains[1];
+  t.dwellUntil = w.time + TRAIN_DWELL_S;
   const st = w.map.rail.stations[t.stop];
   teleport(w, p.ped, st.platform.x, st.platform.y);
   w.step();

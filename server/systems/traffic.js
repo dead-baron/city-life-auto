@@ -153,9 +153,10 @@ function pedals(v, wx, wy, speed, reversing) {
   let steer = clamp(diff * 2.4 - (v.av || 0) * 0.12, -1, 1);
   const err = speed - fwd;
   let throttle = err > 0 ? clamp(err / 90, 0, 1) : clamp(err / (fwd > 300 ? 70 : 90), -1, 0);
-  if (speed < 6 && fwd < 12) throttle = 0;
-  if (reversing) { throttle = -0.8; steer = -clamp(diff * 2.4, -1, 1); }
-  v.input.throttle = throttle; v.input.steer = steer; v.input.hb = false;
+  let hb = false;
+  if (speed < 6 && fwd < 40) { throttle = 0; hb = Math.abs(fwd) > 0.5; } // stopped: hold it on the brake, no creeping over the line
+  if (reversing) { throttle = -0.8; steer = -clamp(diff * 2.4, -1, 1); hb = false; }
+  v.input.throttle = throttle; v.input.steer = steer; v.input.hb = hb;
 }
 
 // Between physics sub-steps: re-aim at the same target with the car's new heading and speed.

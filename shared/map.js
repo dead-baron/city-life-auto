@@ -1982,6 +1982,10 @@ export const TRAIN_CARS = [
   { kind: 'coach', name: 'Passenger coach', L: 212, W: 76 },
   { kind: 'mail', name: 'Mail car', L: 188, W: 76 },
 ];
+// What a train is made of (by kind; every third train swaps its last coach for the mail car).
+export const CONSIST = ['loco', 'coach', 'coach', 'coach', 'coach'];
+export const CAR_GAP = 10;               // px between coupled cars
+export const TRAIN_LEN = CONSIST.reduce((a, k) => a + TRAIN_CARS.find((c) => c.kind === k).L, 0) + CAR_GAP * (CONSIST.length - 1);
 export const COACH_SEATS = [-84, -60, -36, 36, 60, 84].flatMap((ox) => [[ox, -23], [ox, 23]]);
 export const COACH_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-48, 0], [48, 0], [72, 0]];
 export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towards the back of the mail car)
@@ -2020,7 +2024,7 @@ function railLine(m) {
 
 // Keep the at-grade track bed free of buildings (roads it crosses stay roads: level crossings),
 // and a platform's worth of room either side of every station.
-export const PLATFORM_HALF = 320;   // px either side of the station mark - as long as a train
+export const PLATFORM_HALF = Math.ceil(TRAIN_LEN / 2) + 16; // px either side of the station mark - as long as a train
 const PLATFORM_IN = 40, PLATFORM_OUT = 104; // the platform runs from this far off the track centre to this far
 // Where each station stands on the line: near its named spot, on the stretch between level
 // crossings that best fits a whole platform - a train waiting at a station shouldn't sit across
@@ -2142,7 +2146,14 @@ function buildRailway(m, pts) {
     });
     const nx = -Math.sin(q.a), ny = Math.cos(q.a);
     const st = { name: `${name} Station`, s: best.s, x: q.x, y: q.y, a: q.a, side, half: PLATFORM_HALF, inner: PLATFORM_IN, outer: PLATFORM_OUT };
-    st.platform = { x: q.x + nx * side * 72, y: q.y + ny * side * 72 };
+    // the platform clock (and the station's map point) stand where the platform isn't a street
+    st.clockD = 0;
+    for (const d of [0, 110, -110, 220, -220, 330, -330]) {
+      const r = railAt(rail0, best.s + d), t = m.tileAtPx(r.x - Math.sin(r.a) * side * 72, r.y + Math.cos(r.a) * side * 72);
+      if (t !== T.ROAD && t !== T.BRIDGE) { st.clockD = d; break; }
+    }
+    const qc = railAt(rail0, best.s + st.clockD);
+    st.platform = { x: qc.x - Math.sin(qc.a) * side * 72, y: qc.y + Math.cos(qc.a) * side * 72 };
     st.poi = m.pois.length;
     m.pois.push({ id: m.pois.length, kind: 'station', label: st.name, x: st.platform.x, y: st.platform.y, r: 150, station: stations.length });
     stations.push(st);

@@ -11,9 +11,9 @@
 import { inAnyView } from '../view.js';
 import { K } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
-import { railAt, TRAIN_CARS, COACH_SEATS, COACH_STAND, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
+import { railAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
-import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAINS_ON_LINE, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, BAIL_SPEED } from '../../shared/rules.js';
+import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, BAIL_SPEED } from '../../shared/rules.js';
 import { STAR_HEAT } from '../../shared/constants.js';
 import { KB, TOUCH } from '../../shared/controls.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -24,12 +24,12 @@ import * as cargo from './cargo.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 
 const rng = mulberry32(8080);
-const GAP = 10;
+const GAP = CAR_GAP;
 const JERK = 150;          // how quickly the acceleration itself changes (px/s^3): smooth pull-away and stop
 const HEADWAY_PX = 520;    // never closer than this to the back of the train ahead (block signalling)
 const TIMING_STEP = 64;    // px between samples in the precomputed run-time tables (station clocks)
 // every third train hauls the mail car
-const CONSISTS = Array.from({ length: TRAINS_ON_LINE }, (_, i) => (i % 3 === 0 ? ['loco', 'coach', 'mail'] : ['loco', 'coach', 'coach'])); // short enough to stop between two streets
+const consistFor = (i) => (i % 3 === 0 ? [...CONSIST.slice(0, -1), 'mail'] : CONSIST); // every third train hauls the mail car at the back
 const CAR_IDX = { loco: 0, coach: 1, mail: 2 };
 const WALK = 95, RUN = 150;
 const POP_NEAR = 1500, POP_FAR = 2600;
@@ -47,7 +47,21 @@ export function init(world) {
   const rail = world.map.rail;
   if (!rail) return;
   const sts = rail.stations;
-  CONSISTS.forEach((cons, ti) => {
+  world.railTiming = buildTiming(rail);
+  // As many trains as it takes for one to reach each station about every TRAIN_HEADWAY_S, spread
+  // evenly round the timetable: train k starts at the station it would depart from k/n of the way
+  // round, held there until its slot comes up.
+  const T = world.railTiming, dep = [0];
+  for (let i = 0; i < sts.length; i++) dep.push(dep[i] + T[i].total + TRAIN_DWELL_S); // dep[i]: leaves station i this long after leaving station 0
+  const lap = dep[sts.length];
+  const n = Math.max(3, Math.round(lap / TRAIN_HEADWAY_S));
+  world.railLap = lap;
+  for (let ti = 0; ti < n; ti++) {
+    const cons = consistFor(ti);
+    const phase = ti * lap / n;
+    let si = dep.findIndex((d) => d >= phase);
+    if (si < 0 || si >= sts.length) si = 0;
+    const hold = Math.max(0.5, (si === 0 && phase > 0 ? lap : dep[si]) - phase);
     const cars = [];
     let off = 0;
     cons.forEach((kind, ci) => {
@@ -57,16 +71,14 @@ export function init(world) {
       off += def.L + GAP;
     });
     const len = off - GAP;
-    const si = Math.floor(ti * sts.length / CONSISTS.length);
     const t = {
-      i: ti, cars, len, s: mod(sts[si].s + len / 2, rail.len), v: 0, acc: 0, stop: si, dwellUntil: world.time + TRAIN_DWELL_S * (1 - 0.5 * ti / CONSISTS.length),
+      i: ti, cars, len, s: mod(sts[si].s + len / 2, rail.len), v: 0, acc: 0, stop: si, dwellUntil: world.time + hold,
       riders: new Set(), boarding: new Set(), mail: cons.indexOf('mail'), boxReadyAt: 0, hornUntil: 0, hornedFor: -1, hadPlayer: false,
     };
     world.trains.push(t);
     placeCars(world, t);
-  });
+  }
   world.xing = rail.crossings.map(() => ({ down: false, eta: 99, closure: 0, broken: [0, 0] }));
-  world.railTiming = buildTiming(rail);
 }
 
 // ---- driving ----------------------------------------------------------------------------------
@@ -612,33 +624,78 @@ function hornForCrossings(world, t) {
   });
 }
 
-// Drivers' judgement at a crossing whose gates are down: most stop at the arm; a few gamble
-// (chasing cops far more often - and some of them misjudge it). Returns a speed cap.
+// Drivers at level crossings. Each crossing is a box: the road's width along the track by the
+// gate arms either side of it. A driver looks along the way they're actually going (their route
+// through the junction, not just straight ahead) for crossings coming up:
+//  * gates down: most stop at the line before the arm and stay stopped until the gates lift; a few
+//    gamble (chasing cops far more often - and some of them misjudge it);
+//  * gates up: they still won't roll onto the rails unless there's room to get all the way across
+//    (a queue on the far side means wait at the line - nobody stops on the tracks).
+// Returns a speed cap.
+const XING_STEP = 16;
+function drivePath(v, reach) {
+  const out = [{ x: v.x, y: v.y, d: 0 }];
+  let px = v.x, py = v.y, d = 0;
+  const pts = v.ai && v.ai.pts && v.ai.pts.length ? v.ai.pts : [{ x: v.x + Math.cos(v.a) * reach, y: v.y + Math.sin(v.a) * reach }];
+  for (const q of pts) {
+    const len = Math.hypot(q.x - px, q.y - py);
+    for (let k = XING_STEP; k <= len && d + k <= reach; k += XING_STEP) out.push({ x: px + (q.x - px) * k / len, y: py + (q.y - py) * k / len, d: d + k });
+    d += len; px = q.x; py = q.y;
+    if (d >= reach) break;
+  }
+  if (d < reach && pts.length) { const a = Math.atan2(py - (out[out.length - 2] || out[0]).y, px - (out[out.length - 2] || out[0]).x); for (let k = XING_STEP; d + k <= reach; k += XING_STEP) out.push({ x: px + Math.cos(a) * k, y: py + Math.sin(a) * k, d: d + k }); }
+  return out;
+}
+function throughCrossing(path, c) {
+  const tx = Math.cos(c.a), ty = Math.sin(c.a);
+  let din = -1, dout = -1;
+  for (const p of path) {
+    const dx = p.x - c.x, dy = p.y - c.y;
+    const inside = Math.abs(dx * tx + dy * ty) < c.hw + 16 && Math.abs(-dx * ty + dy * tx) < CROSSING_ARM;
+    if (inside && din < 0) din = p.d;
+    if (!inside && din >= 0) { dout = p.d; break; }
+  }
+  return din < 0 ? null : { din, dout: dout < 0 ? din + 2 * CROSSING_ARM : dout };
+}
+function queueBeyond(world, v, path, from, len) {
+  for (const p of path) {
+    if (p.d < from || p.d > from + len) continue;
+    for (const o of world.query(p.x, p.y, 40, K.VEH)) if (o !== v && !o.removed && Math.hypot(o.vx, o.vy) < 60 && (o.lz || 0) < 0.3) return true;
+  }
+  return false;
+}
 export function crossingLimit(world, v, fwd) {
   if (!world.xing || !world.xing.length) return Infinity;
   const rail = world.map.rail;
-  const ca = Math.cos(v.a), sa = Math.sin(v.a);
-  let limit = Infinity;
+  const reach = 320 + Math.max(0, fwd) * 0.8 + v.def.L / 2;
+  let limit = Infinity, path = null;
   for (let i = 0; i < rail.crossings.length; i++) {
-    const st = world.xing[i];
-    if (!st.down) continue;
     const c = rail.crossings[i];
-    const dx = c.x - v.x, dy = c.y - v.y;
-    const lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
-    if (lx < 0 || lx > 320 + Math.max(0, fwd) * 0.8 || Math.abs(ly) > c.hw + 40) continue;
-    // already past the arm (on the crossing): keep going
-    const gap = lx - v.def.L / 2 - CROSSING_ARM - 14;
-    if (gap < -6) continue;
+    if (Math.abs(c.x - v.x) > reach + c.hw + 80 || Math.abs(c.y - v.y) > reach + c.hw + 80) continue;
+    path ??= drivePath(v, reach);
+    const hit = throughCrossing(path, c);
+    if (!hit) continue;
+    const front = hit.din - v.def.L / 2;       // bumper to the edge of the crossing box
+    if (front < 0) continue;                   // already on it: get across, never stop there
+    const gap = front - 14;                    // ...and to the stop line
+    const st = world.xing[i];
+    if (!st.down) {
+      if (queueBeyond(world, v, path, hit.dout, v.def.L + 30)) limit = Math.min(limit, Math.max(0, gap * 1.6));
+      continue;
+    }
     const key = i * 100000 + st.closure;
     if (v.xingKey !== key) {
       v.xingKey = key;
-      const chasing = !!(v.ai && (v.ai.kind === 'police' || v.ai.kind === 'ems') && v.siren);
-      const needS = (lx + 120) / Math.max(150, fwd, 1) + 0.8;
-      const clear = st.eta > needS;
-      v.xingGo = chasing ? (clear ? rng() < 0.85 : rng() < 0.3) : (clear ? rng() < 0.1 : rng() < 0.03);
+      if (gap < -6) v.xingGo = true;           // already past the line when the gates came down: clear the crossing
+      else {
+        const chasing = !!(v.ai && (v.ai.kind === 'police' || v.ai.kind === 'ems') && v.siren);
+        const needS = (hit.din + 120) / Math.max(150, fwd, 1) + 0.8;
+        const clear = st.eta > needS;
+        v.xingGo = chasing ? (clear ? rng() < 0.85 : rng() < 0.3) : (clear ? rng() < 0.1 : rng() < 0.03);
+      }
     }
     if (v.xingGo) continue;
-    limit = Math.min(limit, Math.max(0, gap * 1.6));
+    limit = Math.min(limit, Math.max(0, gap * 1.6)); // a driver who stopped stays stopped until the gates lift
   }
   return limit;
 }

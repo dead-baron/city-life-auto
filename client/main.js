@@ -1706,7 +1706,7 @@ function drawStationClocks(view, now) {
     const v = tt.l[i];
     const secs = v === undefined ? -1 : v === 0 ? 0 : Math.max(0.01, v - since);
     if (secs === 0 && S.ctrlKind !== CTRL.RIDER) drawBoardingCue(g, S.map.rail, st, now); // a train is in: the platform lights up
-    drawStationClock(g, st, secs, now);
+    drawStationClock(g, S.map.rail, st, secs, now);
   });
 }
 

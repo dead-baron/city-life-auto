@@ -110,15 +110,16 @@ export function drawStation(g, m, st, cx, cy) {
   for (let d = -L + 8; d < L; d += 12) { const p = at(d, inner + 14); if (!blocked(p.x, p.y)) g.fillRect(p.x - 1.5, p.y - 1.5, 3, 3); }
   // furniture, placed in the platform's local frame (x along the track, y away from it)
   const place = (d, off, fn) => { const p = at(d, off); if (blocked(p.x, p.y)) return; g.save(); g.translate(p.x, p.y); g.rotate(p.a); if (sd < 0) g.scale(1, -1); fn(); g.restore(); };
-  for (const d of [-300, 300]) place(d, 78, () => {       // shelter: roof with ribs and a shadow
+  const at_ = (fs) => fs.map((f) => Math.round(f * L));
+  for (const d of at_([-0.72, -0.3, 0.3, 0.72])) place(d, 78, () => {       // shelter: roof with ribs and a shadow
     g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(-50, -10, 104, 30);
     g.fillStyle = '#2f5a4a'; g.fillRect(-52, -14, 104, 28);
     g.fillStyle = '#3d7360'; for (let k = -48; k < 50; k += 12) g.fillRect(k, -12, 8, 24);
     g.fillStyle = '#244538'; g.fillRect(-52, -14, 104, 3);
   });
-  for (const d of [-380, -210, -72, 72, 210, 380]) place(d, 66, () => { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-13, 1, 28, 7); g.fillStyle = '#6b4a2a'; g.fillRect(-14, -3, 28, 7); g.fillStyle = '#86603a'; g.fillRect(-14, -3, 28, 2); }); // benches
-  for (const d of [-400, -150, 150, 400]) place(d, 96, () => { g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-2, 0, 6, 6); g.fillStyle = '#4a4e56'; g.fillRect(-3, -3, 6, 6); g.fillStyle = '#ffe8a8'; g.fillRect(-2, -2, 4, 4); }); // lamp posts
-  for (const d of [-150, 150]) place(d, 52, () => {         // name boards
+  for (const d of at_([-0.9, -0.51, -0.12, 0.12, 0.51, 0.9])) place(d, 66, () => { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-13, 1, 28, 7); g.fillStyle = '#6b4a2a'; g.fillRect(-14, -3, 28, 7); g.fillStyle = '#86603a'; g.fillRect(-14, -3, 28, 2); }); // benches
+  for (const d of at_([-0.96, -0.6, -0.08, 0.2, 0.6, 0.96])) place(d, 96, () => { g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-2, 0, 6, 6); g.fillStyle = '#4a4e56'; g.fillRect(-3, -3, 6, 6); g.fillStyle = '#ffe8a8'; g.fillRect(-2, -2, 4, 4); }); // lamp posts
+  for (const d of at_([-0.42, 0.42])) place(d, 52, () => {         // name boards
     g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-44, -3, 92, 14);
     g.fillStyle = '#1c2a44'; g.fillRect(-46, -6, 92, 13);
     g.fillStyle = '#e8eef8'; g.fillRect(-46, -6, 92, 1.5);
@@ -158,11 +159,12 @@ export function drawBoardingCue(g, rail, st, now) {
 
 // The platform clock: an LED board on a post counting down to the next train ("BOARDING" while
 // one is in). secs < 0: no timetable yet.
-export function drawStationClock(g, st, secs, now) {
+export function drawStationClock(g, rail, st, secs, now) {
   g.save();
-  g.translate(st.x, st.y); g.rotate(st.a);
+  const q = railAt(rail, st.s + (st.clockD || 0));
+  g.translate(q.x, q.y); g.rotate(q.a);
   g.translate(0, st.side * 72);
-  if (Math.cos(st.a) < -0.1 || (Math.abs(Math.cos(st.a)) <= 0.1 && Math.sin(st.a) > 0)) g.rotate(Math.PI); // upright text
+  if (Math.cos(q.a) < -0.1 || (Math.abs(Math.cos(q.a)) <= 0.1 && Math.sin(q.a) > 0)) g.rotate(Math.PI); // upright text
   g.scale(1.3, 1.3);
   g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(-27, -9, 58, 22);
   g.fillStyle = '#5a5e66'; g.fillRect(-2, 8, 4, 10);                      // post
