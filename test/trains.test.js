@@ -430,3 +430,19 @@ test('jumping off a train: slow, you just roll; at full speed the landing hurts'
   assert.equal(tryJump(260), 0, 'at a jog: tuck and roll, unhurt');
   assert.ok(tryJump(TRAIN_SPEED) > 0, 'at full speed: hurt');
 });
+
+test('the subway has a visible way in and out: each portal stands in the open, not under a highway deck', async () => {
+  const { generateCity } = await import('../shared/map.js');
+  const m = generateCity();
+  const P = m.rail.pts, n = P.length;
+  const portals = [];
+  for (let i = 0; i < n; i++) { const p = P[i], q = P[(i + 1) % n]; if (!!p.under !== !!q.under && (p.subway || q.subway)) portals.push({ p, q }); }
+  assert.equal(portals.length, 2, 'an entrance and an exit');
+  for (const { p, q } of portals) {
+    const a = Math.atan2(q.y - p.y, q.x - p.x) + (p.under ? Math.PI : 0);
+    for (let d = 0; d <= 64; d += 16) {
+      const x = p.x - Math.cos(a) * d, y = p.y - Math.sin(a) * d;
+      assert.ok(!m.deck[Math.floor(y / 32) * m.w + Math.floor(x / 32)], `portal at ${Math.round(p.x)},${Math.round(p.y)} is in the open`);
+    }
+  }
+});

@@ -512,6 +512,8 @@ export function generateCity(seed = 1337) {
   buildOffshore(m, rand);
   buildBoatDocks(m);
   buildSignals(m);
+  buildStreetAtms(m);
+  m.atms = m.pois.filter((p) => p.kind === 'atm');
   aimLamps(m);
   m.levels = buildLevels(m);
   buildCameras(m, rand);
@@ -1605,6 +1607,46 @@ function buildBanking(m) {
   });
 }
 
+// Street ATMs everywhere people go: every district with streets gets a few (busy districts more),
+// standing on the pavement beside the road, spread out, preferring spots near shops and
+// landmarks. Deposits are quick (see server/systems/economy.js), so cash need never be carried far.
+const ATM_TARGET = { towers: 5, commercial: 5, nightlife: 4, redlight: 4, oldtown: 4, civic: 4, apartments: 4, southside: 4, houses: 3, luxury: 3, beach: 3, harbor: 3, industrial: 3, factory: 2, park: 2, airport: 2, rural: 2, desert: 2, rocky: 0, wild: 1, water: 0 };
+const ATM_SPACING = 700;
+function buildStreetAtms(m) {
+  const atms = m.pois.filter((p) => p.kind === 'atm');
+  const roadNear = (tx, ty) => { for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.ROAD) return true; } return false; };
+  const cands = DISTRICTS.map(() => []);
+  for (let ty = 2; ty < MAP_H - 2; ty++) for (let tx = 2; tx < MAP_W - 2; tx++) {
+    const i = ty * MAP_W + tx;
+    const t = m.tiles[i];
+    const paved = t === T.SIDEWALK || t === T.PLAZA || t === T.LOT;
+    if (!paved && t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
+    if (m.reserve[i] & 3 || m.deck[i] || !roadNear(tx, ty)) continue;
+    // open pavement all round (never in a doorway or squeezed against a wall)
+    let ok = true;
+    for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1; dx++) { const q = m.tileAt(tx + dx, ty + dy); if (q === T.BUILDING || q === T.WALL || q === T.WATER || q === T.DEEP || q === T.DOCK) { ok = false; break; } }
+    if (!ok || hash2(tx, ty, 41) > 0.25) continue;
+    cands[m.dist[i]].push({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, paved });
+  }
+  const busy = (c) => m.pois.reduce((n, p) => n + (p.kind !== 'atm' && Math.abs(p.x - c.x) < 360 && Math.abs(p.y - c.y) < 360 ? 1 : 0), 0);
+  DISTRICTS.forEach((d, di) => {
+    const want = ATM_TARGET[d.style] ?? 2;
+    let have = atms.filter((p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === di).length;
+    if (have >= want || !cands[di].length) return;
+    const list = cands[di].map((c) => ({ ...c, w: busy(c) + hash2(c.x | 0, c.y | 0, 7) + (c.paved ? 50 : 0) })).sort((a, b) => b.w - a.w); // pavement first, verges if that's all there is
+    for (const c of list) {
+      if (have >= want) break;
+      if (atms.some((q) => Math.hypot(q.x - c.x, q.y - c.y) < ATM_SPACING)) continue;
+      if (m.pois.some((q) => q.kind !== 'atm' && Math.hypot(q.x - c.x, q.y - c.y) < 50)) continue; // not on anyone's doorstep
+      addProp(m, 'atm', c.x, c.y - 10, 7);
+      const poi = { id: m.pois.length, kind: 'atm', label: 'ATM', x: c.x, y: c.y + 4, r: 36 };
+      m.pois.push(poi);
+      atms.push(poi);
+      have++;
+    }
+  });
+}
+
 // ---- estates: homes outside the city grid -----------------------------------------------------
 // Farmhouses and cottages out in Dry Creek, the mansion up in Bayside Heights, beach houses on
 // Sunset Beach. Each has a detached garage (a door that opens for its owner) and a driveway.
@@ -2064,7 +2106,7 @@ export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards st
 export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre
 const RAIL_ROUTE = [ // [tx, ty, 'sub'] corners of the one big loop (rounded); between two 'sub' corners it's a subway tunnel
   [302, 620], [302, 240], [362, 165], [482, 143], [545, 141], [560, 212], [640, 212], [800, 212], [880, 216], [975, 216],
-  [975, 432], [1094, 440], [1094, 765], [885, 765], [885, 628, 'sub'], [885, 487, 'sub'], [705, 487, 'sub'], [705, 612, 'sub'], [705, 917],
+  [975, 432], [1094, 440], [1094, 765], [885, 765], [885, 647, 'sub'], [885, 487, 'sub'], [705, 487, 'sub'], [705, 612, 'sub'], [705, 917],
   [372, 917], [372, 850], [330, 790], [326, 700],
 ];
 const RAIL_STATIONS = [ // [name, tx, ty] nearest point on the line becomes the stop

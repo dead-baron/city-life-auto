@@ -2,7 +2,10 @@
 // return a recovered purse). Clients get a small list in their `me` payload and draw blips +
 // a fading arrow (client/hud.js, client/main.js).
 import { K } from '../../shared/constants.js';
-import { EVENT_RANGE } from '../../shared/worldevents.js';
+import { EVENT_RANGE, EVENT_KINDS, FEED_MAX, FEED_KEEP_S } from '../../shared/worldevents.js';
+
+// Event text for the city feed when the caller doesn't give one.
+const FEED_TEXT = { snatch: 'Purse snatched', drop: 'Contraband crate spotted', shootout: 'Gang shootout with the police', robbery: 'Store robbery - alarm tripped' };
 
 export function add(world, ev) {
   world.happenings ??= [];
@@ -10,7 +13,26 @@ export function add(world, ev) {
   const e = { id: world.happeningSeq, t: world.time, ...ev };
   world.happenings.push(e);
   for (const p of world.players.values()) p.meDirty = true;
+  feed(world, { kind: ev.kind, text: ev.text || FEED_TEXT[ev.kind] || (EVENT_KINDS[ev.kind] || {}).label || 'Something happened', x: ev.x, y: ev.y });
   return e;
+}
+
+// The city feed: a running log of what's going on anywhere in the world, read on the phone.
+export function feed(world, item) {
+  world.feed ??= [];
+  const d = item.x !== undefined ? world.map.districtAt(item.x, item.y) : null;
+  world.feed.push({ t: world.time, kind: item.kind || 'news', text: item.text, x: item.x !== undefined ? Math.round(item.x) : null, y: item.y !== undefined ? Math.round(item.y) : null, where: d ? d.name : '' });
+  if (world.feed.length > FEED_MAX) world.feed.splice(0, world.feed.length - FEED_MAX);
+}
+
+export function feedFor(world) {
+  const now = world.time;
+  return { t: 'feed', items: (world.feed || []).filter((f) => now - f.t < FEED_KEEP_S).map((f) => ({ ago: Math.round(now - f.t), kind: f.kind, text: f.text, where: f.where, x: f.x, y: f.y })).reverse() };
+}
+
+// Tell the players near (x, y); everyone else can read it in the city feed.
+export function tellNear(world, x, y, text, tone = 'info', r = EVENT_RANGE) {
+  for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - x, p.ped.y - y) < r) world.notify(p, text, tone);
 }
 
 export function update(world) {

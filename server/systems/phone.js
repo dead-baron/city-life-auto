@@ -8,6 +8,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
+import * as events from './events.js';
 import { spawnNpc } from './npc.js';
 
 const rng = mulberry32(7331);
@@ -155,6 +156,7 @@ export function boardFor(world, p) {
 export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
+  if (a === 'feed') return events.feedFor(world);
   if (a === 'cancel') {
     if (!p.job) return { ...boardFor(world, p), err: 'You have no job.' };
     jobs.failJob(world, p, 'Job cancelled.');

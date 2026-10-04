@@ -78,3 +78,34 @@ test('bicycles: sold at the dealership, slower than a motorcycle, and they buckl
   assert.equal(p.ped.vehId, 0, 'rider thrown off');
   assert.ok(!p.ped.dead);
 });
+
+test('ATMs in every district with streets; walking up to one banks your cash; the city feed logs events', async () => {
+  const { DISTRICTS } = await import('../shared/map.js');
+  const events = await import('../server/systems/events.js');
+  const phone = await import('../server/systems/phone.js');
+  const w = makeWorld();
+  const m = w.map;
+  const per = new Map();
+  for (const a of m.atms) { const d = m.districtAt(a.x, a.y).id; per.set(d, (per.get(d) || 0) + 1); }
+  DISTRICTS.forEach((d, di) => {
+    let road = 0;
+    for (let i = 0; i < m.tiles.length && road < 40; i++) if (m.dist[i] === di && m.tiles[i] === 3) road++;
+    if (road >= 40 && d.style !== 'rocky') assert.ok(per.get(di) >= 1, `${d.name} has an ATM`);
+  });
+  assert.ok(m.atms.length >= 90, `plenty of ATMs (${m.atms.length})`);
+  assert.ok([...per.values()].filter((n) => n >= 3).length >= 15, 'busy districts have several');
+  const { p, prof } = joinPlayer(w, { cash: 750, bank: 100 });
+  const atm = m.atms[0];
+  teleport(w, p.ped, atm.x + 120, atm.y);
+  run(w, 0.5);
+  assert.equal(prof.cash, 750, 'not banked from across the street');
+  teleport(w, p.ped, atm.x + 10, atm.y + 4);
+  run(w, 0.5);
+  assert.equal(prof.cash, 0);
+  assert.equal(prof.bank, 850, 'walked up and banked it');
+  // feed: events anywhere show up on the phone, with a place to go
+  events.add(w, { kind: 'robbery', x: 20000, y: 20000, until: w.time + 60 });
+  const f = phone.handle(w, p, { a: 'feed' });
+  assert.equal(f.t, 'feed');
+  assert.ok(f.items[0].text && f.items[0].x === 20000 && f.items[0].where, 'the newest item first, with where it is');
+});

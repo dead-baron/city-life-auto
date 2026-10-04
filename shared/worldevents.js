@@ -7,6 +7,8 @@ export const EVENT_KINDS = {
   shootout: { color: '#ff3b3b', label: 'Gang shootout', hint: 'Syndicate vs police' },
   robbery: { color: '#ffd400', label: 'Store robbery', hint: 'Alarm tripped - police responding' },
 };
-export const EVENT_RANGE = 2200;    // events further away than this aren't shown
+export const EVENT_RANGE = 1300;    // events further away than this aren't popped up on screen (the phone's city feed has them all)
+export const FEED_MAX = 40;         // the city feed keeps this many recent items
+export const FEED_KEEP_S = 900;     // ...for at most this long
 export const ARROW_SHOW_S = 10;     // the guide arrow fades out after this long
 export const ARROW_FADE_S = 2;

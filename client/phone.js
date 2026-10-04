@@ -25,9 +25,11 @@ const KIND_NOTE = {
   farm: 'harvest jobs', convenience: 'snacks, drinks, bandages', gasstation: 'snacks, drinks, bandages', courthouse: 'bounties', gang: 'syndicate turf / join the gang', smuggler: 'members only - boat to the Rock', charter: 'deep-sea charters (boat)',
 };
 
+const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '🚨', arrest: '🚓', bounty: '🎯', wanted: '★' };
+
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
-  let screen = 'home', group = null, board = null;
+  let screen = 'home', group = null, board = null, feed = null;
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
 
@@ -41,6 +43,8 @@ export function createPhone(ctx) {
         <div class="ph-apps">
           <button class="ph-app" data-go="places"><b>📍</b>Places</button>
           <button class="ph-app" data-go="jobs"><b>💼</b>Jobs${ctx.isCop() ? ' & patrols' : ''}</button>
+          <button class="ph-app atm" data-act="atm"><b>$</b>Nearest ATM</button>
+          <button class="ph-app" data-go="feed"><b>📰</b>City feed</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
         </div>
         ${wp ? `<div class="ph-card">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</div>` : ''}
@@ -53,6 +57,11 @@ export function createPhone(ctx) {
       const pois = map.pois.filter((p) => g.kinds.includes(p.kind)).map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d);
       el.innerHTML = `<h3>${g.title}</h3>` + (pois.length ? pois.map(({ p, d }, i) =>
         `<button class="ph-row" data-poi="${p.id}"><span class="ic">${i === 0 ? '★' : '•'}</span><span class="nm">${esc(p.label)}<small>${esc(KIND_NOTE[p.kind] || '')} · ${esc(districtAt(map, p.x, p.y) || '')}</small></span><span class="d">${m(d)}</span></button>`).join('') : '<p class="ph-empty">None in the city yet.</p>');
+    } else if (screen === 'feed') {
+      const ago = (s) => (s < 60 ? `${s}s ago` : `${Math.round(s / 60)} min ago`);
+      el.innerHTML = '<h3>City feed</h3><p class="ph-hint">What\'s going on anywhere in the city. Tap one to set a waypoint.</p>' + (!feed ? '<p class="ph-empty">Loading…</p>'
+        : feed.length ? feed.map((f, i) => `<button class="ph-row feed ${esc(f.kind)}" data-feed="${i}"${f.x === null ? ' disabled' : ''}><span class="ic">${FEED_ICON[f.kind] || '•'}</span><span class="nm">${esc(f.text)}<small>${esc(f.where || 'the city')} · ${ago(f.ago)}</small></span><span class="d">${f.x === null ? '' : m(dist(f))}</span></button>`).join('')
+          : '<p class="ph-empty">Quiet out there right now.</p>');
     } else if (screen === 'jobs') {
       if (!board) { el.innerHTML = '<p class="ph-empty">Loading jobs…</p>'; return; }
       const job = board.job;
@@ -68,7 +77,24 @@ export function createPhone(ctx) {
   }
 
   function wire(el) {
-    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); render(); };
+    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } render(); };
+    for (const b of el.querySelectorAll('[data-feed]')) b.onclick = () => {
+      const f = feed && feed[Number(b.dataset.feed)];
+      if (!f || f.x === null) return;
+      ctx.setWaypoint({ x: f.x, y: f.y, label: f.text });
+      ctx.toast(`Waypoint set: ${f.text}`, 'info');
+      ctx.close();
+    };
+    for (const b of el.querySelectorAll('[data-act="atm"]')) b.onclick = () => {
+      // the nearest cash machine (a bank counter does the same job)
+      const me = ctx.pos();
+      let best = null, bd = Infinity;
+      for (const p of ctx.map().pois) { if (p.kind !== 'atm' && p.kind !== 'bank') continue; const d = Math.hypot(p.x - me.x, p.y - me.y); if (d < bd) { bd = d; best = p; } }
+      if (!best) { ctx.toast('No ATM anywhere near.', 'warn'); return; }
+      ctx.setWaypoint({ x: best.x, y: best.y, label: best.kind === 'atm' ? 'Nearest ATM' : best.label, atm: true });
+      ctx.toast(`Nearest ATM: ${m(bd)} away - follow the green $`, 'good');
+      ctx.close();
+    };
     for (const b of el.querySelectorAll('[data-group]')) b.onclick = () => { group = b.dataset.group; screen = 'group'; render(); };
     for (const b of el.querySelectorAll('[data-poi]')) b.onclick = () => {
       const p = ctx.map().pois[Number(b.dataset.poi)];
@@ -84,6 +110,7 @@ export function createPhone(ctx) {
   return {
     open() { screen = 'home'; group = null; render(); ctx.send({ t: 'phone', a: 'board' }); },
     back() { if (screen === 'group') screen = 'places'; else screen = 'home'; render(); return true; },
+    onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
     onBoard(msg) {
       board = msg;
       if (msg.err) ctx.toast(msg.err, 'warn');

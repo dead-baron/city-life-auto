@@ -53,8 +53,8 @@ export function spawnDrop(world, forceTier = 0) {
   c.expires = world.time + 900;
   const name = tier === 4 ? 'Legendary Carbon-Gold Case' : 'Secure Iron Vault';
   world.dropRumor = { x: site.x, y: site.y, until: world.time + 120, tier };
-  events.add(world, { kind: 'drop', x: site.x, y: site.y, until: world.time + 120 });
-  world.broadcast({ e: 'toast', text: `Rumor: a ${name} was spotted near ${site.name}. Fence it, or turn it in.`, tone: 'warn' });
+  events.add(world, { kind: 'drop', x: site.x, y: site.y, until: world.time + 120, text: `Rumor: a ${name} near ${site.name}` });
+  events.tellNear(world, site.x, site.y, `Rumor: a ${name} was spotted near ${site.name}. Fence it, or turn it in.`, 'warn');
   return c;
 }
 

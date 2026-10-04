@@ -408,3 +408,6 @@ body.portrait #bm-panel { width: calc(100vw - 24px); max-height: 34vh; }
 .sacct { border-top: 1px solid rgba(255,255,255,.15); margin-top: 6px; padding-top: 4px; }
 .sacct #s-code-msg { min-height: 1em; color: #9fe0a0; }
 #s-code-in { flex: 1; font-size: 15px; padding: 8px 10px; background: #111; color: #fff; border: 1px solid #555; border-radius: 6px; min-width: 0; }
+.ph-app.atm b { color: #3ddc84; font-weight: 800; text-shadow: 0 0 6px rgba(61,220,132,.6); }
+.ph-row.feed .ic { font-size: 16px; }
+.ph-row.feed.wanted .ic { color: #ff4d5e; }

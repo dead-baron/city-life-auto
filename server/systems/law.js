@@ -8,6 +8,7 @@ import { WEAPONS } from '../../shared/items.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as phone from './phone.js';
+import * as events from './events.js';
 
 export const CRIMES = {
   assault:     { heat: 15, label: 'Assault' },
@@ -193,7 +194,9 @@ export function addHeat(world, p, amount, x, y) {
     world.notify(p, `Disguise blown! Your ${prof.peakWanted}-star record was recognized.`, 'bad');
   }
   p.heat = Math.min(STAR_HEAT[5] + 60, p.heat + amount);
+  const before = p.wanted;
   p.wanted = Math.min(5, starsForHeat(p.heat));
+  if (p.wanted >= 3 && before < p.wanted) events.feed(world, { kind: 'wanted', text: `Police hunting ${p.name}: ${'★'.repeat(p.wanted)}`, x, y });
   p.flareUntil = now + 3;
   if (p.ped) p.ped.flareUntil = now + 3;
   p.lastSeenX = x; p.lastSeenY = y; p.seenAt = now; p.searchR = 60;
@@ -457,7 +460,7 @@ export function arrest(world, cop, target) {
     t.profile.peakWanted = 0;
     t.disguised = false;
     const s = world.map.spawns.police;
-    if (target.vehId) { /* already ejected by caller */ }
+    events.feed(world, { kind: 'arrest', text: `${t.name} was busted${cop?.player ? ' by ' + cop.player.name : ''}`, x: target.x, y: target.y });
     target.x = s.x; target.y = s.y; target.vx = 0; target.vy = 0;
     target.stunUntil = now + 1; target.downUntil = 0;
     world.notify(t, `BUSTED${cop?.player ? ' by ' + cop.player.name : ''}. Fined $${fine}; contraband and illegal weapons confiscated.`, 'bad');
@@ -485,6 +488,7 @@ export function claimBounty(world, hunter, target) {
   if (hunter.badge) addPolicePts(world, hunter, 15);
   world.notify(hunter, `Bounty on ${target.name} claimed: +$${amount}`, 'good');
   world.notify(target, 'The bounty on your head was collected.', 'bad');
+  events.feed(world, { kind: 'bounty', text: `${hunter.name} collected the $${amount} bounty on ${target.name}`, x: target.ped ? target.ped.x : undefined, y: target.ped ? target.ped.y : undefined });
   target.placedBounty = 0; target.cityBounty = 0; target.bounty = 0; target.placedBountyUntil = 0;
   hunter.meDirty = true; target.meDirty = true;
   store.touch();
@@ -504,6 +508,7 @@ export function placeBounty(world, p, targetPid, amount) {
   t.bounty = t.placedBounty + (t.cityBounty || 0);
   world.notify(t, `A $${amount} bounty was placed on your head!`, 'bad');
   for (const q of world.players.values()) if (q.hunter) world.notify(q, `New contract: $${t.bounty} on ${t.name}`, 'info');
+  events.feed(world, { kind: 'bounty', text: `$${t.bounty} bounty posted on ${t.name}` });
   p.meDirty = true; t.meDirty = true;
   store.touch();
   return null;

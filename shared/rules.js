@@ -109,3 +109,6 @@ export const BOAT_RENTAL_PRICE = { jetski: 120, dinghy: 150, speedboat: 350 }; /
 
 // Police gear
 export const SPIKE_STRIP_S = 45;           // a deployed spike strip stays across the road this long (one per officer)
+
+// Money
+export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with cash on you and it's banked automatically

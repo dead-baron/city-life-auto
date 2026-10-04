@@ -98,25 +98,45 @@ export function drawPortals(g, m, cx, cy) {
   for (let i = 0; i < n; i++) {
     const p = pts[i], q = pts[(i + 1) % n];
     if (!!p.under === !!q.under) continue;
-    if (p.x < cx * CHUNK_PX - 260 || p.x > (cx + 1) * CHUNK_PX + 260 || p.y < cy * CHUNK_PX - 260 || p.y > (cy + 1) * CHUNK_PX + 260) continue;
+    if (p.x < cx * CHUNK_PX - 300 || p.x > (cx + 1) * CHUNK_PX + 300 || p.y < cy * CHUNK_PX - 300 || p.y > (cy + 1) * CHUNK_PX + 300) continue;
     const a = Math.atan2(q.y - p.y, q.x - p.x) + (p.under ? Math.PI : 0); // pointing into the tunnel
-    g.save(); g.translate(p.x, p.y); g.rotate(a);
-    // the cutting: the track sinks between walls over the last ~180 px before the mouth
-    const gr = g.createLinearGradient(-180, 0, 0, 0);
-    gr.addColorStop(0, 'rgba(8,9,12,0)'); gr.addColorStop(1, 'rgba(8,9,12,.75)');
-    g.fillStyle = gr; g.fillRect(-180, -30, 180, 60);
-    for (const sd of [-1, 1]) {
-      g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-180, sd * 34 - (sd < 0 ? 4 : 0), 180, 4);
-      g.fillStyle = '#9a9890'; g.fillRect(-180, sd < 0 ? -40 : 32, 180, 8);         // retaining walls
-      g.fillStyle = '#b8b6ae'; g.fillRect(-180, sd < 0 ? -40 : 38, 180, 2);
-      for (let k = -176; k < 0; k += 22) { g.fillStyle = '#86847c'; g.fillRect(k, sd < 0 ? -40 : 32, 2, 8); }
+    const metro = !!(p.subway || q.subway);
+    // the cutting runs back from the mouth until a street (or a building) gets in the way
+    let L = 40;
+    while (L < 210) {
+      const t = m.tileAtPx(p.x - Math.cos(a) * (L + 16), p.y - Math.sin(a) * (L + 16));
+      if (t === T.ROAD || t === T.BUILDING || t === T.BRIDGE) break;
+      L += 8;
     }
-    // the mouth
-    g.fillStyle = '#07080b'; g.fillRect(0, -30, 60, 60);
-    g.fillStyle = '#8a8a86'; g.fillRect(-6, -44, 12, 88);                            // the concrete portal
-    g.fillStyle = '#b4b4ae'; g.fillRect(-6, -44, 3, 88);
-    g.fillStyle = '#5a5a56'; g.fillRect(-6, -48, 28, 8); g.fillRect(-6, 40, 28, 8);   // wing walls
-    g.fillStyle = '#ffd400'; for (let k = -40; k < 40; k += 12) g.fillRect(-5, k, 4, 6);  // hazard paint
+    g.save(); g.translate(p.x, p.y); g.rotate(a);
+    // the track sinks between walls: darker the deeper it gets
+    const gr = g.createLinearGradient(-L, 0, 0, 0);
+    gr.addColorStop(0, 'rgba(8,9,12,0)'); gr.addColorStop(1, 'rgba(8,9,12,.8)');
+    g.fillStyle = gr; g.fillRect(-L, -30, L, 60);
+    for (const sd of [-1, 1]) {
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-L, sd * 34 - (sd < 0 ? 4 : 0), L, 4);
+      g.fillStyle = '#9a9890'; g.fillRect(-L, sd < 0 ? -40 : 32, L, 8);           // retaining walls
+      g.fillStyle = '#b8b6ae'; g.fillRect(-L, sd < 0 ? -40 : 38, L, 2);
+      for (let k = -L + 4; k < 0; k += 22) { g.fillStyle = '#86847c'; g.fillRect(k, sd < 0 ? -40 : 32, 2, 8); }
+      g.fillStyle = '#4a4a46'; g.fillRect(-L, sd < 0 ? -42 : 40, L, 2);           // railing
+    }
+    // the mouth: black, with the first few metres of tunnel lit
+    g.fillStyle = '#07080b'; g.fillRect(0, -32, 70, 64);
+    for (let k = 10; k < 70; k += 18) { g.fillStyle = 'rgba(255,214,140,.35)'; g.fillRect(k, -30, 4, 3); g.fillRect(k, 27, 4, 3); }
+    // concrete headwall over the mouth, wing walls, hazard paint on the lip
+    g.fillStyle = '#7d7d78'; g.fillRect(-8, -50, 26, 100);
+    g.fillStyle = '#a9a9a2'; g.fillRect(-8, -50, 4, 100);
+    g.fillStyle = '#5a5a56'; g.fillRect(-8, -56, 40, 8); g.fillRect(-8, 48, 40, 8);
+    g.fillStyle = '#ffd400'; for (let k = -44; k < 44; k += 12) g.fillRect(-7, k, 4, 6);
+    if (metro) {
+      // the line's name plate across the headwall, a lamp either side
+      g.save(); g.translate(5, 0); g.rotate(Math.PI / 2);
+      g.fillStyle = '#1f6f3a'; g.fillRect(-30, -7, 60, 14);
+      g.fillStyle = '#e8f5ec'; g.fillRect(-30, -7, 60, 2);
+      g.fillStyle = '#fff'; g.font = 'bold 9px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('METRO', 0, 1);
+      g.restore();
+      for (const sd of [-1, 1]) { g.fillStyle = '#2a2d35'; g.fillRect(-4, sd * 40 - 3, 6, 6); g.fillStyle = '#ffe2a0'; g.fillRect(-3, sd * 40 - 2, 4, 4); }
+    }
     g.restore();
   }
 }
@@ -375,6 +395,15 @@ export function drawCrossing(g, c, anim, broken, down, now) {
 
 // ---- underground ----------------------------------------------------------------------------------
 // Riding through the subway: the city goes black; the tunnel walls and their lamps slide past.
+let glowCv = null;
+function lampGlow() {
+  if (glowCv) return glowCv;
+  glowCv = document.createElement('canvas'); glowCv.width = glowCv.height = 80;
+  const c = glowCv.getContext('2d'), gr = c.createRadialGradient(40, 40, 0, 40, 40, 40);
+  gr.addColorStop(0, 'rgba(255,214,140,.45)'); gr.addColorStop(1, 'rgba(255,214,140,0)');
+  c.fillStyle = gr; c.fillRect(0, 0, 80, 80);
+  return glowCv;
+}
 export function drawTunnel(g, map, view, now) {
   g.fillStyle = '#050608'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0);
   if (!map.rail) return;
@@ -392,9 +421,7 @@ export function drawTunnel(g, map, view, now) {
     const q = pts[(i + 1) % n], a = Math.atan2(q.y - p.y, q.x - p.x), nx = -Math.sin(a), ny = Math.cos(a);
     for (const sd of [-1, 1]) {
       const lx = p.x + nx * sd * 44, ly = p.y + ny * sd * 44;
-      const gr = g.createRadialGradient(lx, ly, 0, lx, ly, 40);
-      gr.addColorStop(0, 'rgba(255,214,140,.45)'); gr.addColorStop(1, 'rgba(255,214,140,0)');
-      g.fillStyle = gr; g.fillRect(lx - 40, ly - 40, 80, 80);
+      g.drawImage(lampGlow(), lx - 40, ly - 40, 80, 80);
       g.fillStyle = '#ffe2a0'; g.fillRect(lx - 3, ly - 2, 6, 4);
     }
   }

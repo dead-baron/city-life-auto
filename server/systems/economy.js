@@ -18,7 +18,7 @@ import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
 
-import { HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY } from '../../shared/rules.js';
+import { ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
@@ -611,6 +611,25 @@ export function applyBuff(world, ped, buff) {
   if (buff === 'energy') { ped.buffs.energy = world.time + 60; ped.stamina = 140; }
 }
 
+// Walk up to a cash machine with money on you and it goes straight into the bank.
+function quickDeposits(world) {
+  for (const p of world.players.values()) {
+    const ped = p.ped;
+    if (!ped || ped.dead || ped.vehId || ped.hidden || p.profile.cash <= 0) { if (p) p.atAtm = null; continue; }
+    let at = null;
+    for (const q of world.map.atms) if (Math.abs(q.x - ped.x) < ATM_DEPOSIT_PX && Math.abs(q.y - ped.y) < ATM_DEPOSIT_PX && Math.hypot(q.x - ped.x, q.y - ped.y) < ATM_DEPOSIT_PX) { at = q; break; }
+    if (!at) { p.atAtm = null; continue; }
+    if (p.atAtm === at.id) continue; // once per visit
+    p.atAtm = at.id;
+    const amt = p.profile.cash;
+    p.profile.cash = 0; p.profile.bank += amt;
+    store.touch();
+    p.meDirty = true;
+    world.emit(at.x, at.y, { e: 'deposit', x: at.x, y: at.y, n: amt });
+    world.notify(p, `ATM: deposited $${amt.toLocaleString()} - bank $${p.profile.bank.toLocaleString()}.`, 'good');
+  }
+}
+
 export function useHealItem(world, p) {
   const ped = p.ped;
   const inv = p.profile.inventory;
@@ -633,6 +652,7 @@ export function useHealItem(world, p) {
 export function update(world) {
   if (world.tick % 5 !== 0) return;
   const now = world.time;
+  quickDeposits(world);
   for (const poi of world.map.pois) {
     if (poi.kind !== 'reception') continue;
     for (const p of world.players.values()) {

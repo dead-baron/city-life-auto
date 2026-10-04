@@ -163,6 +163,7 @@ function onText(m) {
     case 'menu': S.hud.openMenu(m); break;
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'board': phone.onBoard(m); break;
+    case 'feed': phone.onFeed(m); break;
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
@@ -425,6 +426,7 @@ function onEvent(ev) {
     case 'sinkboom': fx.splash(ev.x, ev.y, 44); fx.ring(ev.x, ev.y, 60, 'rgba(220,240,255,', 1.2); fx.ring(ev.x, ev.y, 36, 'rgba(255,190,90,', 0.5); for (let i = 0; i < 14; i++) fx.smoke(ev.x + (Math.random() - 0.5) * 50, ev.y + (Math.random() - 0.5) * 50, false); sfx('explode', distVol(ev.x, ev.y) * 0.45); S.cam.shake = Math.max(S.cam.shake, 6 * distVol(ev.x, ev.y)); break;
     case 'thud': sfx('thud', distVol(ev.x, ev.y)); break;
     case 'door': sfx('door', distVol(ev.x, ev.y)); break;
+    case 'deposit': fx.ring(ev.x, ev.y - 20, 26, 'rgba(61,220,132,'); sfx('cash', distVol(ev.x, ev.y)); fx.floatText(ev.x, ev.y - 40, `Banked $${ev.n}`, '#3ddc84'); break;
     case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); if (ev.n) fx.floatText(ev.x, ev.y - 18, `+$${ev.n}`, '#7fe07f'); break;
     case 'camera': S.camAlert.set(ev.id, performance.now() + 2500); sfx('camera', distVol(S.map.cameras[ev.id].x, S.map.cameras[ev.id].y)); break;
     case 'revive': fx.ring(ev.x, ev.y, 30, 'rgba(120,255,160,', 3); fx.floatText(ev.x, ev.y - 20, '+', '#3ddc84'); break;
@@ -1414,6 +1416,7 @@ function render(dt) {
     drawGarageDoors(view, dt);
     drawBoathouseRoofs(view, dt, vehs);
     drawSpikes(view);
+    drawAtmMarks(view, now);
     drawGates(view, dt);
     drawCrossings(view, dt, now);
     drawStationClocks(view, now);
@@ -1443,6 +1446,7 @@ function render(dt) {
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   S.trainCars = cars;
+  if (sub) drawSubwayLights(myCar, z, dt);
   if (!sub) drawLighting(clock.dark, view, vehs, peds, z, dt);
   if (rain && !sub) drawRain(dt);
 
@@ -2140,6 +2144,75 @@ function drawSignals(view) {
     const on = alert ? Math.floor(nowMs / 120) % 2 : Math.floor(nowMs / 900) % 2;
     if (on) { g.fillStyle = alert ? '#ff2a2a' : '#3b8aff'; g.beginPath(); g.arc(ex, ey, 2.5, 0, 6.28); g.fill(); }
     if (alert) { g.fillStyle = 'rgba(255,40,40,.12)'; g.beginPath(); g.arc(c.x, c.y, c.r * 0.6, 0, 6.28); g.fill(); }
+  }
+}
+
+// Riding the subway: the tunnel lamps sweep past the windows - warm bands of light run back
+// along the carriage, one per lamp, faster the faster the train goes, with a faint flicker.
+const SUB_LAMP_GAP = 150; // world px between tunnel lamps (render/trains.js drawTunnel)
+let subBand = null;
+function drawSubwayLights(car, z, dt) {
+  const prev = S.subPrev;
+  S.subPrev = { x: car.rx, y: car.ry, id: car.id };
+  if (!prev || prev.id !== car.id || dt <= 0) return;
+  const v = Math.min(900, Math.hypot(car.rx - prev.x, car.ry - prev.y) / dt);
+  S.subSpeed = (S.subSpeed || 0) + (v - (S.subSpeed || 0)) * Math.min(1, dt * 4);
+  const spd = S.subSpeed;
+  S.subPhase = ((S.subPhase || 0) + (spd * dt) / SUB_LAMP_GAP) % 1;
+  const k = Math.min(1, spd / 260); // 0 standing at a platform .. 1 at speed
+  const ux = Math.cos(car.ra), uy = Math.sin(car.ra);
+  const cxs = W / 2, cys = H / 2, gap = SUB_LAMP_GAP * z, reach = Math.hypot(W, H);
+  if (!subBand) { // one soft band, drawn once and stretched across the screen for every lamp
+    subBand = document.createElement('canvas'); subBand.width = 64; subBand.height = 4;
+    const bg = subBand.getContext('2d');
+    const gr = bg.createLinearGradient(0, 0, 64, 0);
+    gr.addColorStop(0, 'rgba(255,205,130,0)'); gr.addColorStop(0.5, 'rgba(255,205,130,1)'); gr.addColorStop(1, 'rgba(255,205,130,0)');
+    bg.fillStyle = gr; bg.fillRect(0, 0, 64, 4);
+  }
+  g.save();
+  g.globalCompositeOperation = 'lighter';
+  g.globalAlpha = 0.07 + 0.17 * k;
+  const w = gap * 0.32, ang = Math.atan2(uy, ux);
+  for (let i = -Math.ceil(reach / gap) - 1; i <= Math.ceil(reach / gap) + 1; i++) {
+    const d = (i - S.subPhase) * gap; // bands drift backwards along the train
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.translate(cxs + ux * d, cys + uy * d); g.rotate(ang);
+    g.drawImage(subBand, -w, -reach, w * 2, reach * 2);
+  }
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.globalAlpha = 1;
+  // the whole carriage brightens a touch each time a lamp goes by
+  const pulse = Math.pow(Math.max(0, Math.cos(S.subPhase * Math.PI * 2)), 6) * 0.08 * k + (Math.random() < 0.02 * k ? 0.04 : 0);
+  if (pulse > 0.002) { g.fillStyle = `rgba(255,220,160,${pulse.toFixed(3)})`; g.fillRect(0, 0, W, H); }
+  g.restore();
+}
+
+// A subtle green $ hovering over every cash machine (brighter when you have cash on you and are
+// close), and a big bouncing one with a light beam over the ATM the phone sent you to.
+function drawAtmMarks(view, now) {
+  const me = selfPos();
+  const cash = S.me && S.me.cash > 0;
+  const wp = S.waypoint && S.waypoint.atm ? S.waypoint : null;
+  for (const a of S.map.atms || []) {
+    if (a.x < view.x0 - 60 || a.x > view.x1 + 60 || a.y < view.y0 - 80 || a.y > view.y1 + 60) continue;
+    const target = wp && Math.abs(wp.x - a.x) < 1 && Math.abs(wp.y - a.y) < 1;
+    const near = Math.hypot(a.x - me.x, a.y - me.y) < 420;
+    const bob = Math.sin(now * 2.6 + a.x * 0.01) * (target ? 6 : 2.5);
+    const r = target ? 15 : 8;
+    const y = a.y - (target ? 74 : 46) + bob;
+    g.save();
+    g.globalAlpha = target ? 1 : cash && near ? 0.9 : 0.5;
+    if (target) {
+      const beam = g.createLinearGradient(0, y, 0, a.y);
+      beam.addColorStop(0, 'rgba(61,220,132,.0)'); beam.addColorStop(1, 'rgba(61,220,132,.35)');
+      g.fillStyle = beam; g.fillRect(a.x - 9, y, 18, a.y - y);
+    }
+    g.fillStyle = 'rgba(61,220,132,.25)'; g.beginPath(); g.arc(a.x, y, r + 5, 0, 6.28); g.fill();
+    g.fillStyle = '#17803f'; g.beginPath(); g.arc(a.x, y, r, 0, 6.28); g.fill();
+    g.strokeStyle = '#7ff0a8'; g.lineWidth = target ? 2.5 : 1.5; g.stroke();
+    g.fillStyle = '#eafff1'; g.font = `800 ${target ? 20 : 11}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('$', a.x, y + 1);
+    g.restore();
   }
 }
 
