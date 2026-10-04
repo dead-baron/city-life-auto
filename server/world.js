@@ -30,6 +30,7 @@ import * as minigames from './systems/minigames.js';
 import * as robbery from './systems/robbery.js';
 import * as trains from './systems/trains.js';
 import * as rentals from './systems/rentals.js';
+import * as spikes from './systems/spikes.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
 import * as net from './net.js';
@@ -59,6 +60,7 @@ const SYSTEMS = [
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
+  ['spikes', spikes.update],        // police spike strips: shredded tyres
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['barriers', barriers.update],    // smashed highway barriers: the road crew puts them back
   ['combat', combat.update],        // projectiles, bleeding, regen, stun timers

@@ -12,6 +12,7 @@ import * as vehicles from './vehicles.js';
 import * as cargo from './cargo.js';
 import * as props from './props.js';
 import * as law from './law.js';
+import * as spikes from './spikes.js';
 import * as npc from './npc.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
@@ -57,6 +58,8 @@ export function tryAttack(world, ped, aim) {
     return true;
   }
   if (w.type === 'taser') { taser(world, ped, w, aim); return true; }
+  if (w.type === 'spray') { spray(world, ped, w, aim); return true; }
+  if (w.type === 'deploy') { spikes.deploy(world, ped, aim); return true; }
   const pellets = w.pellets || 1;
   let hitAny = false;
   for (let k = 0; k < pellets; k++) {
@@ -138,6 +141,26 @@ function taser(world, ped, w, aim) {
     target.rollT = 0;
     damage(world, target, w.dmg, ped, 'nonlethal', aim);
     law.subdue(world, ped, target);
+  }
+}
+
+// Pepper spray: a short cone; everyone caught in it is blinded - doubled over, out of the fight
+// for a few seconds. Non-lethal, and legal to carry.
+function spray(world, ped, w, aim) {
+  const now = world.time;
+  world.emit(ped.x, ped.y, { e: 'spray', x: ped.x + Math.cos(aim) * 12, y: ped.y + Math.sin(aim) * 12, a: aim });
+  for (const o of world.query(ped.x, ped.y, w.range + 20, K.PED)) {
+    if (o === ped || o.dead || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue;
+    const d = Math.hypot(o.x - ped.x, o.y - ped.y);
+    if (d > w.range + o.r) continue;
+    if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 6) continue;
+    if (!world.map.los(ped.x, ped.y, o.x, o.y)) continue;
+    o.stunUntil = Math.max(o.stunUntil || 0, now + w.stun);
+    o.rollT = 0;
+    o.vx *= 0.2; o.vy *= 0.2;
+    damage(world, o, w.dmg, ped, 'nonlethal', aim);
+    law.subdue(world, ped, o);
+    if (o.player) world.notify(o.player, 'Pepper spray! You can\'t see a thing...', 'bad');
   }
 }
 

@@ -46,7 +46,7 @@ const S = {
   map: null, ground: null, hud: null, fx: new FX(),
   ents: new Map(), latestTick: 0, renderTick: 0, loopTime: 60, weather: 0,
   ctrlKind: 0, ctrlId: 0, me: null, seq: 0, pending: [], pred: null, acc: 0, lastAim: 0,
-  cam: { x: 4400, y: 2200, zoom: 1, shake: 0 }, smooth: { x: 0, y: 0 }, geysers: [], flashes: [], camAlert: new Map(),
+  cam: { x: 4400, y: 2200, zoom: 1, shake: 0 }, smooth: { x: 0, y: 0 }, geysers: [], flashes: [], camAlert: new Map(), spikes: new Map(),
   rtt: 0, bigmap: false, rain: [], fps: 0,
   confirmedBreaks: new Set(), predBreaks: new Map(), // street furniture smashed: server-confirmed / predicted
   bayOpen: {}, bayAnim: {}, // paint-shop shutters
@@ -229,7 +229,7 @@ function reconcile(s) {
     const e = S.ents.get(s.ctrlId);
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT) };
     S.pred = { kind, s: st, def, prev: null };
   }
   // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
@@ -362,6 +362,12 @@ function onEvent(ev) {
     case 'explode': fx.explosion(ev.x, ev.y, ev.r, now); sfx('explode', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 14 * distVol(ev.x, ev.y)); S.flashes.push({ x: ev.x, y: ev.y, t: 0.5, r: ev.r * 3 }); break;
     case 'spark': fx.sparks(ev.x, ev.y, 3); break;
     case 'taser': fx.tracer(ev.x1, ev.y1, ev.x2, ev.y2, 'rgba(120,200,255,'); fx.sparks(ev.x2, ev.y2, 4); sfx('taser', distVol(ev.x1, ev.y1)); break;
+    case 'spray': // pepper spray: an orange mist cone
+      for (let k = 0; k < 18; k++) { const aa = ev.a + (Math.random() - 0.5) * 0.8, sp = 120 + Math.random() * 160; fx.spawn(5, ev.x, ev.y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.45 + Math.random() * 0.25, 2 + Math.random() * 2, k & 1 ? 'rgba(255,150,60,.75)' : 'rgba(255,205,120,.7)', 9); }
+      sfx('spray', distVol(ev.x, ev.y)); break;
+    case 'spikes': S.spikes.set(ev.id, { x: ev.x, y: ev.y, a: ev.a, half: ev.half, until: performance.now() + ev.left * 1000 }); break;
+    case 'spikesgone': S.spikes.delete(ev.id); break;
+    case 'pop': fx.sparks(ev.x, ev.y, 6); fx.smoke(ev.x, ev.y, false); sfx('pop', distVol(ev.x, ev.y)); break;
     case 'swing': {
       if (ev.id !== S.myPedId) sfx('swing', distVol(ev.x, ev.y));
       const a = S.ents.get(ev.id);
@@ -1407,6 +1413,7 @@ function render(dt) {
     drawBays(view, dt);
     drawGarageDoors(view, dt);
     drawBoathouseRoofs(view, dt, vehs);
+    drawSpikes(view);
     drawGates(view, dt);
     drawCrossings(view, dt, now);
     drawStationClocks(view, now);
@@ -2133,6 +2140,22 @@ function drawSignals(view) {
     const on = alert ? Math.floor(nowMs / 120) % 2 : Math.floor(nowMs / 900) % 2;
     if (on) { g.fillStyle = alert ? '#ff2a2a' : '#3b8aff'; g.beginPath(); g.arc(ex, ey, 2.5, 0, 6.28); g.fill(); }
     if (alert) { g.fillStyle = 'rgba(255,40,40,.12)'; g.beginPath(); g.arc(c.x, c.y, c.r * 0.6, 0, 6.28); g.fill(); }
+  }
+}
+
+// Spike strips lying across the road: a black band of steel teeth, yellow tips at the ends.
+function drawSpikes(view) {
+  const nowMs = performance.now();
+  for (const [id, s] of S.spikes) {
+    if (nowMs > s.until) { S.spikes.delete(id); continue; }
+    if (s.x < view.x0 - 100 || s.x > view.x1 + 100 || s.y < view.y0 - 100 || s.y > view.y1 + 100) continue;
+    g.save(); g.translate(s.x, s.y); g.rotate(s.a);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-s.half + 2, -3, s.half * 2, 9);
+    g.fillStyle = '#1c1e24'; g.fillRect(-s.half, -4, s.half * 2, 8);
+    g.fillStyle = '#d8dde2';
+    for (let x = -s.half + 4; x < s.half - 2; x += 7) { g.beginPath(); g.moveTo(x, -4); g.lineTo(x + 3, -8); g.lineTo(x + 6, -4); g.fill(); g.beginPath(); g.moveTo(x, 4); g.lineTo(x + 3, 8); g.lineTo(x + 6, 4); g.fill(); }
+    g.fillStyle = '#f2c21b'; g.fillRect(-s.half - 3, -5, 4, 10); g.fillRect(s.half - 1, -5, 4, 10);
+    g.restore();
   }
 }
 

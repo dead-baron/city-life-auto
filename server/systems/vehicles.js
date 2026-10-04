@@ -437,5 +437,6 @@ export function vehFlags(world, v) {
   if (v.bloody) f |= VF.BLOODY;
   if (v.seats[0]) f |= VF.DRIVER;
   if (v.owner) f |= VF.OWNED;
+  if (v.flat) f |= VF.FLAT;
   return f;
 }

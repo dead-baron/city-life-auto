@@ -21,6 +21,8 @@ export const WEAPONS = {
   passault: { i: 17, name: 'Police Semi-Auto Assault Rifle', type: 'gun', dmg: 19, range: 600, spread: 0.05, cd: 0.13, mag: 30, police: true },
   spistol:  { i: 19, name: 'Silenced Pistol',        type: 'gun', dmg: 22, range: 380, spread: 0.04, cd: 0.42, mag: 10, silenced: true, illegal: true },
   pshotgun: { i: 18, name: 'Police Shotgun',          type: 'gun', dmg: 11, range: 300, spread: 0.2, cd: 0.85, mag: 7, pellets: 7, police: true },
+  pepper:   { i: 20, name: 'Pepper Spray',    type: 'spray', dmg: 1, range: 95, arc: 0.95, cd: 0.9, stun: 3, mag: 6, nonLethal: true },
+  spikes:   { i: 21, name: 'Spike Strip',     type: 'deploy', cd: 2, police: true },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -75,9 +77,11 @@ export const SHOPS = {
     { kind: 'weapon', id: 'shotgun', price: 950 }, { kind: 'weapon', id: 'rifle', price: 1600 },
     { kind: 'ammo', id: 'pistol', price: 30, qty: 12 }, { kind: 'ammo', id: 'revolver', price: 30, qty: 6 },
     { kind: 'ammo', id: 'shotgun', price: 40, qty: 6 }, { kind: 'ammo', id: 'rifle', price: 60, qty: 20 },
+    { kind: 'weapon', id: 'pepper', price: 80 }, { kind: 'ammo', id: 'pepper', price: 15, qty: 6 },
   ] },
   sports: { title: 'Home Run Sports', buy: [
     { kind: 'weapon', id: 'bat', price: 120 }, { kind: 'weapon', id: 'rod', price: 60 },
+    { kind: 'weapon', id: 'pepper', price: 70 }, { kind: 'ammo', id: 'pepper', price: 15, qty: 6 },
     { kind: 'item', id: 'lure', price: 20, qty: 3 },
   ] },
   hardware: { title: 'Nail & Gear Hardware', buy: [

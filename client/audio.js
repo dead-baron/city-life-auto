@@ -54,6 +54,8 @@ export function sfx(name, vol = 1) {
     case 'shot': if (throttle('shot', 40)) noise(0.12, 2200, 0.7, 0.5 * vol); break;
     case 'heavy': if (throttle('heavy', 60)) { noise(0.25, 900, 0.7, 0.7 * vol); tone(90, 0.2, 0.3 * vol, 'sine', -40); } break;
     case 'taser': if (throttle('taser', 80)) tone(1800, 0.25, 0.12 * vol, 'sawtooth', -600); break;
+    case 'spray': if (throttle('spray', 120)) noise(0.35, 3200, 0.8, 0.25 * vol, 'highpass'); break;
+    case 'pop': if (throttle('pop', 90)) { noise(0.1, 1600, 0.6, 0.6 * vol); setTimeout(() => noise(0.5, 2400, 0.4, 0.25 * vol, 'highpass'), 60); } break;
     case 'swing': if (throttle('swing', 80)) noise(0.08, 800, 2, 0.2 * vol, 'bandpass'); break;
     case 'hit': if (throttle('hit', 50)) noise(0.06, 500, 1, 0.4 * vol); break;
     case 'crash': if (throttle('crash', 120)) { noise(0.35, 600, 0.6, 0.8 * vol); tone(70, 0.25, 0.3 * vol, 'triangle', -30); } break;

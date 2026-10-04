@@ -181,6 +181,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   const tile = up(s) ? T.ROAD : map.tileAtPx(s.x, s.y);
   const surf = isBoat ? [1, 1, 0] : (SURFACE[tile] || SURFACE[1]);
   let gripMul = surf[1], brakeMul = 1;
+  if (s.flat) gripMul *= 0.55; // tyres shredded by a spike strip
   if (env.rain) {
     if (isBoat) gripMul *= 0.8;
     else if (surf[2]) { gripMul *= 0.65; brakeMul = 0.5; } // GDD: friction -35%, braking distance doubled
@@ -242,7 +243,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   lat = -s.vx * sn + s.vy * c;
 
   // -- longitudinal: engine, brakes, burnouts --
-  const maxEff = def.max * surf[0];
+  const maxEff = def.max * surf[0] * (s.flat ? 0.45 : 1);
   // analog throttle also sets a cruising speed: a light push drives slowly, full stick flat out
   const cap = maxEff * Math.min(1, 0.18 + 0.82 * Math.abs(t));
   let launch = s.launch || 0, spin = s.spin || 0;

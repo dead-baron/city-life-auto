@@ -524,6 +524,7 @@ export function goOnDuty(world, p) {
   p.ped.appVer = (p.ped.appVer || 0) + 1;
   prof.weapons.taser = prof.weapons.taser ?? 0;
   prof.weapons.baton = prof.weapons.baton ?? 0;
+  prof.weapons.spikes = prof.weapons.spikes ?? 0;
   if (prof.weapons.service === undefined || prof.weapons.service < SERVICE_AMMO) { prof.weapons.service = SERVICE_AMMO; p.ped.mag.service = SERVICE_MAG; }
   p.ped.weapon = 'service';
   p.meDirty = true;

@@ -190,3 +190,43 @@ test('idle pedestrians look around and then walk off; stranded drivers walk away
   run(w, 0.2);
   assert.equal(drv.npc.role, 'civ');
 });
+
+test('pepper spray blinds whoever is in front of you; a spike strip shreds the tyres of a car driven over it', async () => {
+  const combat = await import('../server/systems/combat.js');
+  const { SPIKE_STRIP_S } = await import('../shared/rules.js');
+  const w = makeWorld();
+  const road = straightRoad(w.map, 1200);
+  const { p, prof } = joinPlayer(w, { cash: 500 });
+  teleport(w, p.ped, road.x + 300, road.y);
+  // pepper spray (bought at a sports shop)
+  const sports = w.map.pois.find((q) => q.kind === 'sports');
+  assert.ok(economy.buildMenu(w, p, sports).opts.some((o) => o.label === WEAPONS.pepper.name), 'sold at the sports shop');
+  prof.weapons.pepper = 6; p.ped.mag.pepper = 6; p.ped.weapon = 'pepper';
+  const victim = spawnNpc(w, 'casual', p.ped.x + 50, p.ped.y, 'civ');
+  w.time += 2;
+  assert.ok(combat.tryAttack(w, p.ped, 0));
+  assert.ok(victim.stunUntil > w.time + 2, 'blinded');
+  assert.ok(!victim.dead && victim.hp > victim.maxHp * 0.9, 'non-lethal');
+  // spike strip: police only
+  p.ped.weapon = 'spikes'; prof.weapons.spikes = 0;
+  w.time += 2;
+  combat.tryAttack(w, p.ped, 0);
+  assert.ok(!(w.spikes || []).length, 'civilians cannot lay one');
+  p.badge = true;
+  w.time += 3;
+  assert.ok(combat.tryAttack(w, p.ped, 0));
+  assert.equal(w.spikes.length, 1);
+  const s = w.spikes[0];
+  // a car driven over it at speed
+  const car = w.spawnVehicle('sedan', s.x - 160, s.y, 0, { npcOwned: true });
+  for (let k = 0; k < 40 && !car.flat; k++) { car.vx = 380; car.vy = 0; car.a = 0; car.y = s.y; car.input = { throttle: 1, steer: 0, hb: false }; w.step(); }
+  assert.ok(car.flat, 'tyres shredded');
+  // flat tyres cap the speed
+  const { vehStep } = await import('../shared/physics.js');
+  const a = { x: road.x + 40, y: road.y, a: 0, vx: 0, vy: 0, av: 0 }, b = { ...a, flat: true };
+  for (let k = 0; k < 40; k++) { for (const s2 of [a, b]) { vehStep(s2, { throttle: 1, steer: 0 }, 1 / 20, w.map, VEHICLES.sedan, {}); s2.y = road.y; s2.x = road.x + 40; } }
+  assert.ok(Math.hypot(b.vx, b.vy) < Math.hypot(a.vx, a.vy) * 0.6, 'flat tyres: much slower');
+  // the strip is picked up after its time
+  w.time += SPIKE_STRIP_S + 1; w.step(); w.step();
+  assert.equal(w.spikes.length, 0);
+});

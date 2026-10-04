@@ -44,7 +44,7 @@ PF.PASSENGER = PF.SPRINT; // in a vehicle the sprint bit means "not the driver's
 // Vehicle flag bits (wire)
 export const VF = {
   LIGHTS: 1, SIREN: 2, BRAKE: 4, REVERSE: 8, WRECK: 16, BURN: 32, SMOKE: 64, DRIFT: 128,
-  HORN: 256, BLOODY: 512, DRIVER: 1024, OWNED: 2048,
+  HORN: 256, BLOODY: 512, DRIVER: 1024, OWNED: 2048, FLAT: 4096,
 };
 
 // Factions

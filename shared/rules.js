@@ -106,3 +106,6 @@ export const BARRIER_REPAIR_S = 300;       // the road crew puts a smashed barri
 export const BOAT_RENTAL_S = 300;          // a hired boat or jet ski is yours this long; bring it back to any rental dock
 export const BOAT_RENTAL_GRACE_S = 45;     // overdue this long and the hire company reports it stolen
 export const BOAT_RENTAL_PRICE = { jetski: 120, dinghy: 150, speedboat: 350 }; // per hire
+
+// Police gear
+export const SPIKE_STRIP_S = 45;           // a deployed spike strip stays across the road this long (one per officer)

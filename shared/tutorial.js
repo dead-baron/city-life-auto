@@ -26,7 +26,7 @@ import {
   TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, TRAIN_HEADWAY_S, MAIL_WARN_S,
   BAIL_HURT_SPEED, NPC_GRIT, NPC_CRITICAL, HIGHWAY_SPEED, BARRIER_BREAK_SPEED, BARRIER_REPAIR_S,
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
-  BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE,
+  BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE, SPIKE_STRIP_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
@@ -116,7 +116,7 @@ export const STEPS = [
   { ch: 'citizen', title: 'Soccer and volleyball', at: { district: 'Greenfield Park' },
     text: `The ball is always out on the Greenfield Park pitch and the beach volleyball courts (Sunset Beach, Pelican Key) - kick it about any time with [[fire]] next to it. When two or more players are on, a match starts after ${MATCH_COUNTDOWN_S} seconds, sides picked by where you stand: soccer is first to ${SOCCER_GOALS} goals or the lead after ${Math.round(SOCCER_MATCH_S / 60)} minutes, volleyball first to ${VOLLEY_POINTS} points. Winners get $${MATCH_PRIZE}. Walk off and you forfeit; late arrivals play the next round. Weapons still work - if one side is wiped out, the last team standing wins.` },
   { ch: 'citizen', title: 'Shopping', at: { poi: 'coffee' },
-    text: `Shops, banks, hospitals, the courthouse and police stations are walk-in: the doors slide open, the roof fades away while you're inside, and you deal with the clerk across the counter (the pawn shop and bank serve you through glass). {{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons, {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
+    text: `Shops, banks, hospitals, the courthouse and police stations are walk-in: the doors slide open, the roof fades away while you're inside, and you deal with the clerk across the counter (the pawn shop and bank serve you through glass). {{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons (and {{sports}} a can of ${WEAPONS.pepper.name.toLowerCase()} - a squirt blinds anyone in front of you for ${WEAPONS.pepper.stun} seconds, perfectly legal), {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
   { ch: 'citizen', title: 'Homes', at: { homes: 'Pine Hills' },
     text: `Buy a {{home}} - as many as you like. Each can be your respawn point (you can still pick a hospital when you die), adds garage space, and lets you rest, bank your cash and stash items and guns. Stand at your door and go inside: you blink for ${HIDE_TIME_S} seconds, slowly then fast, and you're hidden - nobody can see or hurt you, and the police lose track of you. Step out and you blink for ${SPAWN_PROTECT_S} seconds of protection. Inside you can change your outfit, check what you're carrying, and pick any car from your garage: say you're ready, the garage door rolls up and you ease out, blinking, before you take the wheel.` },
   { ch: 'citizen', title: 'Estates and garages', at: { estates: 1 },
@@ -152,7 +152,7 @@ export const STEPS = [
 
   // ---- police --------------------------------------------------------------------------------
   { ch: 'police', title: 'Joining the force', at: { poi: 'police' },
-    text: `Walk in the front door of {{police}} in {{police:where}} and sign up at the front desk (${ENFORCER_MIN_SAMARITAN}+ Samaritan points, zero felonies). You get a uniform, taser, nightstick and the ${WEAPONS.service.name} (${SERVICE_MAG}-round mag, ${SERVICE_AMMO} rounds), then the door locks behind you in the armory: check out one of the ${POLICE_ARMORY.filter((id) => id !== 'service').map((id) => WEAPONS[id].name.replace(/^Police /, '').toLowerCase()).join(', ')}. Your own weapons still work. No ducking inside mid-fight, and not while you're wanted.` },
+    text: `Walk in the front door of {{police}} in {{police:where}} and sign up at the front desk (${ENFORCER_MIN_SAMARITAN}+ Samaritan points, zero felonies). You get a uniform, taser, nightstick, a ${WEAPONS.spikes.name.toLowerCase()} (throw it across the road ahead of a fleeing car: anything driven over it has its tyres shredded, and it stays ${SPIKE_STRIP_S} seconds) and the ${WEAPONS.service.name} (${SERVICE_MAG}-round mag, ${SERVICE_AMMO} rounds), then the door locks behind you in the armory: check out one of the ${POLICE_ARMORY.filter((id) => id !== 'service').map((id) => WEAPONS[id].name.replace(/^Police /, '').toLowerCase()).join(', ')}. Your own weapons still work. No ducking inside mid-fight, and not while you're wanted.` },
   { ch: 'police', title: 'The motor pool', at: { poi: 'police' },
     text: `Out the armory's back door is the fenced motor pool: cruisers and police motorcycles, free to take - pick whichever you like. The sliding gate opens for officers only. Come back any time and drive in to swap; new recruits always find fresh vehicles waiting. Anyone else who takes one is stealing a police vehicle.` },
   { ch: 'police', title: 'Your cruiser', at: { poi: 'police' }, route: { from: { poi: 'police' }, to: { district: 'Neon Strip' }, veh: 'police', siren: 1 },

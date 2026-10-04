@@ -471,8 +471,8 @@ function execute(world, p, poi, opt) {
         world.notify(p, 'Squeaky clean.', 'good');
       } else {
         if (!pay(p, 300)) return 'Not enough money.';
-        v.hp = v.def.hp; v.burnUntil = 0;
-        world.notify(p, 'Body work done.', 'good');
+        v.hp = v.def.hp; v.burnUntil = 0; v.flat = false;
+        world.notify(p, 'Body work done (and new tyres).', 'good');
       }
       return null;
     }

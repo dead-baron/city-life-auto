@@ -84,6 +84,8 @@ function weapon(P, w, hx, hy, ang) {
     case 16: P.line(hx - Math.cos(ang) * 4, hy - Math.sin(ang) * 4, ang, 4, '#3a3f2a', 2); L(13, '#22252c', 2); P.p(hx + Math.cos(ang) * 5 + Math.cos(ang - 1.57), hy + Math.sin(ang) * 5 + Math.sin(ang - 1.57), '#8fd0ff'); break; // marksman rifle (scope glint)
     case 17: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 3, '#1d2a5a', 2); L(9, '#1a1c22', 2); P.p(hx + Math.cos(ang + 1.57) * 2, hy + Math.sin(ang + 1.57) * 2, '#1a1c22'); break; // assault rifle (magazine)
     case 18: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 3, '#1d2a5a', 2); L(8, '#2c2f36', 2); P.p(hx + Math.cos(ang) * 8, hy + Math.sin(ang) * 8, '#f2c21b'); break; // police shotgun
+    case 20: L(4, '#c8262b', 2); P.p(hx + Math.cos(ang) * 4, hy + Math.sin(ang) * 4, '#f0f0ec'); break; // pepper spray
+    case 21: P.line(hx - Math.cos(ang) * 5, hy - Math.sin(ang) * 5, ang, 11, '#2a2a30', 3); for (let k = -4; k <= 5; k += 3) P.p(hx + Math.cos(ang) * k, hy + Math.sin(ang) * k - 2, '#d8dde2'); break; // spike strip
     default: break;
   }
 }

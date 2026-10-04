@@ -80,6 +80,8 @@ export function weapon(Pp, w, hx, hy, ang) {
     case 11: L(6, '#1e1e24', 2); break;                                                           // smg
     case 12: back(5, '#4a5a2a'); L(10, '#4a5a2a', 2); break;                                      // bazooka
     case 13: L(14, '#3a2a1a'); break;                                                             // rod
+    case 20: L(4, '#c8262b', 2); Pp.p(hx + Math.cos(ang) * 4, hy + Math.sin(ang) * 4, '#f0f0ec'); break; // pepper spray canister
+    case 21: back(4, '#2a2a30', 3); L(6, '#c9c5bb', 3); break;                                    // spike strip (folded)
     default: break;
   }
 }
