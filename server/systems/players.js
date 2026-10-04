@@ -422,7 +422,7 @@ export function pedFlags(world, ped) {
   if (ped.dead) f |= PF.DEAD;
   if (now < ped.downUntil || ped.passedOut) f |= PF.DOWN;
   if (now < ped.stunUntil) f |= PF.STUN;
-  if (ped.prevBits & IN.SPRINT && Math.hypot(ped.vx, ped.vy) > 140) f |= PF.SPRINT;
+  if (ped.vehId) { if (ped.seat > 0) f |= PF.PASSENGER; } else if (ped.prevBits & IN.SPRINT && Math.hypot(ped.vx, ped.vy) > 140) f |= PF.SPRINT;
   if (now < ped.attackAnimUntil) f |= PF.ATTACK;
   if (now < ped.aimUntil) f |= PF.AIM;
   if (ped.rollT > 0) f |= PF.ROLL;

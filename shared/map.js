@@ -3107,7 +3107,7 @@ function buildSignals(m) {
     }
     // corners: between each pair of neighbouring streets, out past the junction box
     const dirs = n.edges.map((id) => n.dirs[id]).sort((a, b) => a - b);
-    const reach = Math.max(...n.edges.map((id) => n.trim[id] || n.half || 60)) * 1.15 + 34;
+    const reach = Math.min(240, Math.max(...n.edges.map((id) => n.trim[id] || n.half || 60)) * 1.15 + 34);
     const corners = [];
     for (let k = 0; k < dirs.length; k++) {
       const a0 = dirs[k], a1 = dirs[(k + 1) % dirs.length] + (k + 1 === dirs.length ? Math.PI * 2 : 0);
@@ -3140,4 +3140,25 @@ function buildCameras(m, rand) {
     if ((d === 4 || d === 1) && inD.length > 2) picks.push(inD[Math.floor(rand() * inD.length)]);
   }
   for (const n of picks) m.cameras.push({ id: m.cameras.length, x: n.x + Math.min(n.half, 200) + 20, y: n.y - Math.min(n.half, 200) - 20, r: 300 });
+  // toll cameras: a gantry over the road at each end of every long road bridge
+  for (const e of m.edges) {
+    if (!e.bridge || e.lvl !== 0) continue;
+    const pts = e.pts.map((p) => ({ x: p.x, y: p.y }));
+    const L = measure(pts);
+    let run = null;
+    const close = (s1) => {
+      if (run && s1 - run.s0 > 20 * TILE) {
+        for (const s of [run.s0 + 2 * TILE, s1 - 2 * TILE]) {
+          const p = pointAt(pts, s);
+          m.cameras.push({ id: m.cameras.length, x: p.x, y: p.y, r: 340, toll: true, a: Math.atan2(p.ty, p.tx), hw: e.hw });
+        }
+      }
+      run = null;
+    };
+    for (let s = 0; s <= L; s += TILE / 2) {
+      const p = pointAt(pts, s);
+      if (m.tileAtPx(p.x, p.y) === T.BRIDGE) { if (!run) run = { s0: s }; } else close(s);
+    }
+    close(L);
+  }
 }

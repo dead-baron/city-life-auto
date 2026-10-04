@@ -99,4 +99,4 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
 | Pause menu (map, players online, settings, controls, Dev Debug Mode) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
 
-Settings (⚙) include classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen.
+Settings (⚙) include classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen, plus your account transfer code: copy it on one device and paste it on another to play the same character there.

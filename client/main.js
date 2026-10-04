@@ -815,7 +815,7 @@ let ovFocus = 0;
 function topOverlay() { return overlays[overlays.length - 1] || null; }
 function openOverlay(id) {
   if (topOverlay() === id) return;
-  if (id === 'settings') syncSettings();
+  if (id === 'settings') { syncSettings(); syncAccount(); }
   if (id === 'controls') $('c-body').innerHTML = $('t-help').innerHTML;
   if (id === 'players' || id === 'bigmap' || id === 'dev') requestPlayers();
   if (id === 'pause') {
@@ -927,6 +927,39 @@ function syncSettings() {
   $('s-vibrate').checked = settings.vibrate;
   $('s-autofs').checked = settings.autoFullscreen !== false;
 }
+// Account transfer: the login token is the account. Copy it here, paste it on another device;
+// the one it replaces is kept so a wrong paste can be undone.
+const PREV_TOKEN_KEY = TOKEN_KEY + '.prev';
+const codeMsg = (t) => { $('s-code-msg').textContent = t; };
+function syncAccount() {
+  let prev = null;
+  try { prev = localStorage.getItem(PREV_TOKEN_KEY); } catch { prev = null; }
+  $('s-code-back').classList.toggle('hidden', !prev || prev === S.token);
+  codeMsg('');
+}
+$('s-code-copy').onclick = async () => {
+  if (!S.token) { codeMsg('Play online once first - your character gets its code then.'); return; }
+  try { await navigator.clipboard.writeText(S.token); codeMsg('Copied. Paste it into Settings on your other device. Keep it private: whoever has it plays as you.'); }
+  catch { $('s-code-in').value = S.token; $('s-code-in').select(); codeMsg('Copy the code from the box above (it\'s selected). Keep it private.'); }
+};
+function switchAccount(token, note) {
+  try { if (S.token && S.token !== token) localStorage.setItem(PREV_TOKEN_KEY, S.token); localStorage.setItem(TOKEN_KEY, token); }
+  catch { codeMsg('This browser blocks storage, so the code cannot be saved here.'); return; }
+  codeMsg(note);
+  setTimeout(() => location.reload(), 700);
+}
+$('s-code-use').onclick = () => {
+  const t = $('s-code-in').value.trim();
+  if (!/^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/.test(t)) { codeMsg('That doesn\'t look like a transfer code.'); return; }
+  if (t === S.token) { codeMsg('That\'s the character you\'re already playing.'); return; }
+  switchAccount(t, 'Switching character...');
+};
+$('s-code-back').onclick = () => {
+  let prev = null;
+  try { prev = localStorage.getItem(PREV_TOKEN_KEY); } catch { prev = null; }
+  if (prev) switchAccount(prev, 'Going back to your previous character...');
+};
+
 function openSettings(on) { if (on) openOverlay('settings'); else closeOverlay('settings'); }
 for (const b of document.querySelectorAll('#pause [data-p]')) {
   b.onclick = () => {
@@ -1488,6 +1521,27 @@ function drawCrateEnt(c, now) {
 }
 
 const SEAT_BIKE = [[2, 0], [-12, 0]];
+const SEAT_JETSKI = [[-2, 0], [-14, 0]];
+const RIDER_H = 28; // art rows from the top of the head down to the hips
+// A rider astride a bike or jet ski: the upper body of the drawn character, facing the way the
+// vehicle points, sat on the saddle (legs hidden by the bodywork).
+function drawRider(p, v, def, seat) {
+  const [x, y0] = localToWorld(v.rx, v.ry, v.ra, seat[0], seat[1]);
+  const d8 = dir8(v.ra);
+  const body = bodySprite(p.d.app, d8, 'idle', 0, 0);
+  const lift = vehLift(def) + 2;
+  if (body) {
+    const sc = CSCALE * 0.92;
+    g.save(); g.translate(x, y0 - lift); g.scale(sc, sc);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(body, 0, 0, CW, RIDER_H, -CW / 2, -RIDER_H + 4, CW, RIDER_H);
+    g.imageSmoothingEnabled = true;
+    g.restore();
+    return;
+  }
+  const spr = pedSprite(p.d.app, 'idle', 0, 0);
+  g.save(); g.translate(x, y0 - lift); g.rotate(v.ra); g.drawImage(spr, -PED_BOX / 2 * 0.9, -PED_BOX / 2 * 0.9, PED_BOX * 0.9, PED_BOX * 0.9); g.restore();
+}
 const PED_SCALE = 1.18; // characters a touch smaller than before (was 1.35) - purely visual, physics radius unchanged
 const PED_BUILD_SCALE = [0.92, 1, 1.07, 1.16]; // frail, average, tough, brute
 // Home garage doors: roll up when your car pulls up to a garage you own (or when the server says
@@ -1856,15 +1910,10 @@ function drawVehicleEnt(v, now, dt) {
     g.fillStyle = '#c8262b'; g.fillText(txt, v.rx, v.ry + 4);
     g.font = 'bold 8px monospace'; g.fillStyle = '#1b2333'; g.fillText('FOR SALE', v.rx, v.ry - 12);
   }
-  // riders on bikes are visible
-  if (def.kind === 'bike') {
-    for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) {
-      const seat = SEAT_BIKE[0];
-      const [x, y0] = localToWorld(v.rx, v.ry, v.ra, seat[0], seat[1]);
-      const y = y0 - vehLift(def);
-      const spr = pedSprite(p.d.app, 'idle', 0, 0);
-      g.save(); g.translate(x, y); g.rotate(v.ra); g.drawImage(spr, -PED_BOX / 2 * 0.9, -PED_BOX / 2 * 0.9, PED_BOX * 0.9, PED_BOX * 0.9); g.restore();
-    }
+  // riders on bikes and jet skis sit in the open: driver up front, a passenger behind
+  if (def.kind === 'bike' || def.id === 'jetski') {
+    const seats = def.kind === 'bike' ? SEAT_BIKE : SEAT_JETSKI;
+    for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) drawRider(p, v, def, seats[(p.flags & PF.PASSENGER) ? 1 : 0]);
   }
   // particles: smoke, fire, drift, boat wake, siren audio
   const fwdX = Math.cos(v.ra), fwdY = Math.sin(v.ra);
@@ -1947,10 +1996,13 @@ function drawPed(p, now) {
       return;
     }
   }
-  const spr = pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra);
+  // diving, tumbling or thrown through the air: the drawn body, tucked up and turning over
+  const tuck = !swimming ? lyingSprite(p.d.app, pose === 'dead' ? 1 : 0) : null;
+  const spr = tuck ? null : pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra);
   g.save();
   if (swimming) g.globalAlpha = f & PF.DEAD ? 0.5 : 0.72; // body under the surface, head above
   let lift = 0, spin = 0, grow = 1;
+  if (tuck && pose === 'roll' && !flying) spin = (now * 15 + p.id) % (Math.PI * 2); // rolling along the ground
   if (flying) {
     const k = flT / p.flingDur, h = Math.sin(Math.PI * k);
     lift = h * 20; grow = 1 + 0.4 * h;
@@ -1969,10 +2021,19 @@ function drawPed(p, now) {
   if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);
   if (p.blink) g.globalAlpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1; // going indoors (slow, then fast) / spawn protection
   const bs = PED_BUILD_SCALE[p.d.app && p.d.app.bd !== undefined ? p.d.app.bd : 1] || 1;
-  g.scale(PED_SCALE * bs, PED_SCALE * bs);
   g.imageSmoothingEnabled = false; // crisp pixel-art characters
-  g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX);
-  if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = (hitK - 0.4); g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  if (tuck) {
+    // the lying-down body, squeezed into a ball for a roll, stretched out flat when flung
+    g.rotate(Math.PI);
+    const sq = pose === 'roll' ? 0.58 : 1;
+    g.scale(1.15 * bs * sq, 1.15 * bs);
+    g.drawImage(tuck, -LW / 2, -LH / 2, LW, LH);
+    if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = (hitK - 0.4); g.drawImage(tuck, -LW / 2, -LH / 2, LW, LH); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  } else {
+    g.scale(PED_SCALE * bs, PED_SCALE * bs);
+    g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX);
+    if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = (hitK - 0.4); g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  }
   g.imageSmoothingEnabled = true;
   if (pose === 'fish') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(24, -6); g.lineTo(44, 0); g.stroke(); }
   g.restore();
@@ -2058,6 +2119,7 @@ function drawSignals(view) {
   for (const c of S.map.cameras) {
     if (c.x < view.x0 - 60 || c.x > view.x1 + 60 || c.y < view.y0 - 60 || c.y > view.y1 + 60) continue;
     const alert = (S.camAlert.get(c.id) || 0) > nowMs;
+    if (c.toll) { drawTollGantry(c, alert, nowMs); continue; }
     // pole on the corner, short arm reaching toward the junction, camera housing at the end
     const a = 3 * Math.PI / 4, ex = c.x + Math.cos(a) * 24, ey = c.y + Math.sin(a) * 24;
     g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 4; g.beginPath(); g.moveTo(c.x + 4, c.y + 4); g.lineTo(ex + 4, ey + 4); g.stroke();
@@ -2071,6 +2133,26 @@ function drawSignals(view) {
     const on = alert ? Math.floor(nowMs / 120) % 2 : Math.floor(nowMs / 900) % 2;
     if (on) { g.fillStyle = alert ? '#ff2a2a' : '#3b8aff'; g.beginPath(); g.arc(ex, ey, 2.5, 0, 6.28); g.fill(); }
     if (alert) { g.fillStyle = 'rgba(255,40,40,.12)'; g.beginPath(); g.arc(c.x, c.y, c.r * 0.6, 0, 6.28); g.fill(); }
+  }
+}
+
+// Bridge toll camera: a steel gantry spanning the road with a camera over each direction.
+function drawTollGantry(c, alert, nowMs) {
+  const nx = -Math.sin(c.a), ny = Math.cos(c.a), ux = Math.cos(c.a), uy = Math.sin(c.a);
+  const r = c.hw + 14;
+  const ax = c.x - nx * r, ay = c.y - ny * r, bx = c.x + nx * r, by = c.y + ny * r;
+  g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 7; g.beginPath(); g.moveTo(ax + 6, ay + 8); g.lineTo(bx + 6, by + 8); g.stroke();
+  g.strokeStyle = '#3a3f4a'; g.lineWidth = 6; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+  g.strokeStyle = '#6a7180'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(ax, ay - 2); g.lineTo(bx, by - 2); g.stroke();
+  for (const [px, py] of [[ax, ay], [bx, by]]) { g.fillStyle = '#2a2d35'; g.fillRect(px - 5, py - 5, 10, 10); g.fillStyle = '#f2c21b'; g.fillRect(px - 2, py - 2, 4, 4); }
+  const on = alert ? Math.floor(nowMs / 120) % 2 : Math.floor(nowMs / 900) % 2;
+  for (const s of [-0.45, 0.45]) {
+    const hx = c.x + nx * c.hw * s, hy = c.y + ny * c.hw * s, dir = s < 0 ? 1 : -1;
+    g.save(); g.translate(hx, hy); g.rotate(c.a + (dir < 0 ? Math.PI : 0));
+    g.fillStyle = '#d8dce4'; g.fillRect(-4, -5, 14, 10); g.fillStyle = '#9aa0aa'; g.fillRect(-4, 3, 14, 2);
+    g.fillStyle = '#1a1c22'; g.fillRect(10, -3.5, 4, 7);
+    g.restore();
+    if (on) { g.fillStyle = alert ? '#ff2a2a' : '#3b8aff'; g.beginPath(); g.arc(hx + ux * dir * 12, hy + uy * dir * 12, 2.5, 0, 6.28); g.fill(); }
   }
 }
 
@@ -2114,22 +2196,23 @@ function drawWorldLabels(peds, vehs, now, z) {
   g.font = `bold ${fs}px monospace`;
   for (const p of peds) {
     if (p.flags & PF.INVEH && !p.d.pl) continue;
+    const py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
     if (p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;
-      g.fillStyle = '#000'; g.font = `bold ${30 / z}px monospace`; g.fillText('!', p.rx + 1.5 / z, p.ry - 30 / z + bob + 1.5 / z);
-      g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, p.ry - 30 / z + bob);
+      g.fillStyle = '#000'; g.font = `bold ${30 / z}px monospace`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
+      g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, py - 30 / z + bob);
       g.font = `bold ${fs}px monospace`;
     }
     if (!p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
       // health bar over whoever you're brawling with; tough/brute builds get a tag so you can size them up
-      const y = p.ry - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
+      const y = py - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
       g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect(p.rx - 16 / z, y, 32 / z, 5 / z);
       g.fillStyle = p.hp < 0.3 ? '#ff4d5e' : '#7fe07f'; g.fillRect(p.rx - 15 / z, y + 1 / z, 30 / z * p.hp, 3 / z);
       if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `bold ${11 / z}px monospace`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `bold ${fs}px monospace`; }
     }
     if (p.d.pl && p.d.n && p.id !== S.myPedId) {
-      const y = p.ry - 26 / z;
+      const y = py - 26 / z;
       g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.d.n, p.rx + 1 / z, y + 1 / z);
       g.fillStyle = p.flags & PF.BADGE ? '#7ab0ff' : '#fff'; g.fillText(p.d.n, p.rx, y);
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
@@ -2182,7 +2265,8 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
     for (const v of vehs) {
       if (!(v.flags & VF.LIGHTS)) continue;
       const def = VEHICLE_BY_INDEX[v.d.m];
-      const [lx, ly] = toL(v.rx, v.ry);
+      const vy = v.ry - (v.rz ? liftOf(v.rz) : 0); // up on the highway deck: lit where it's drawn
+      const [lx, ly] = toL(v.rx, vy);
       lg.save(); lg.translate(lx, ly); lg.rotate(v.ra);
       const len = 260 * zz, w0 = def.W * 0.4 * zz, w1 = 120 * zz;
       const gr = lg.createLinearGradient(def.L / 2 * zz, 0, def.L / 2 * zz + len, 0);
@@ -2190,7 +2274,7 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
       lg.fillStyle = gr; lg.beginPath();
       lg.moveTo(def.L / 2 * zz, -w0); lg.lineTo(def.L / 2 * zz + len, -w1); lg.lineTo(def.L / 2 * zz + len, w1); lg.lineTo(def.L / 2 * zz, w0); lg.closePath(); lg.fill();
       lg.restore();
-      hole(v.rx, v.ry, def.L * 0.7, 0.5);
+      hole(v.rx, vy, def.L * 0.7, 0.5);
     }
     for (const c of S.trainCars || []) {
       if (!(c.flags & 8)) continue;
@@ -2207,7 +2291,7 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
       }
     }
     const sp = selfPos();
-    hole(sp.x, sp.y, 70, 0.35);
+    hole(sp.x, sp.y - (sp.z ? liftOf(sp.z) : 0), 70, 0.35);
   }
   for (const f of S.flashes) hole(f.x, f.y, f.r || 90, Math.min(1, f.t * 10));
   lg.globalCompositeOperation = 'source-over';

@@ -98,7 +98,7 @@ export const STEPS = [
   { ch: 'basics', title: 'Hospitals', at: { pois: 'hospital' },
     text: `Hurt? Step onto the {{reception}} mat at any hospital for full treatment ($${HOSPITAL_FEE}). Below 30% health you bleed - [[use]] uses a med kit or bandage from the {{pharmacy}}. {{vending}}s sell energy drinks. If you die you wake up after ${RESPAWN_SECONDS} seconds - at any hospital you choose, or a home you own - and everything you carried stays on the street. You appear at one of several spots around the building, blinking for ${SPAWN_PROTECT_S} seconds: you can move, but you can't shoot or be hurt.` },
   { ch: 'basics', title: 'Cash vs. bank', at: { poi: 'bank' },
-    text: `Cash on you is lost when you die or get robbed. Deposit it at the {{bank}} or any {{atm}}. Your bank balance is always safe, and anything you sell at a shop is paid straight into it. Log out mid-fight and your body stays in the world for ${GHOST_SECONDS} seconds.` },
+    text: `Cash on you is lost when you die or get robbed. Deposit it at the {{bank}} or any {{atm}}. Your bank balance is always safe, and anything you sell at a shop is paid straight into it. Log out mid-fight and your body stays in the world for ${GHOST_SECONDS} seconds. Your character is saved to this browser with no sign-up; to carry it to another device, copy the transfer code from Settings and paste it there.` },
 
   // ---- citizen -------------------------------------------------------------------------------
   { ch: 'citizen', title: 'The honest living', at: { poi: 'warehouse' }, route: { from: { poi: 'warehouse' }, to: { poi: 'delivery' }, veh: 'van' },
@@ -126,7 +126,7 @@ export const STEPS = [
 
   // ---- criminal ------------------------------------------------------------------------------
   { ch: 'criminal', title: 'Crime needs a witness', at: { cameras: 1 },
-    text: `Assault, theft, carjacking, murder - a crime only counts if someone sees it: a pedestrian, a cop, or one of the traffic cameras on poles at junctions. Nobody around? Nobody knows. Night shortens how far witnesses can see.` },
+    text: `Assault, theft, carjacking, murder - a crime only counts if someone sees it: a pedestrian, a cop, or one of the traffic cameras on poles at junctions. The long road bridges have toll cameras on gantries at each end too: cross one with a wanted level and the police know where you are. Nobody around? Nobody knows. Night shortens how far witnesses can see.` },
   { ch: 'criminal', title: 'Silent and deadly', at: { poi: 'fence' },
     text: `A ${WEAPONS.spistol.name.toLowerCase()} from {{fence}} only makes a cough - nobody hears it, so a kill only counts if someone actually watches. A ${WEAPONS.knife.name.toLowerCase()} in the back (or into someone who never saw you coming) kills in one stab, quietly.` },
   { ch: 'criminal', title: 'Holding up a store', at: { poi: 'gasstation' },
@@ -248,7 +248,7 @@ export function resolveTarget(map, at, ref) {
   }
   if (at.cameras) {
     const hq = map.pois.find((p) => p.kind === 'police') || { x: WW / 2, y: WH / 2 };
-    const cams = [...map.cameras].sort((a, b) => Math.hypot(a.x - hq.x, a.y - hq.y) - Math.hypot(b.x - hq.x, b.y - hq.y)).slice(0, 3);
+    const cams = map.cameras.filter((c) => !c.toll).sort((a, b) => Math.hypot(a.x - hq.x, a.y - hq.y) - Math.hypot(b.x - hq.x, b.y - hq.y)).slice(0, 3);
     if (!cams.length) return null;
     return { ...box(cams, 450), marks: cams.map((c) => ({ x: c.x, y: c.y, label: 'Traffic camera', kind: 'camera' })) };
   }

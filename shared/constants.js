@@ -39,6 +39,7 @@ export const PF = {
   INVEH: 256, BLEED: 512, GHOST: 1024, FLARE: 2048, BADGE: 4096, MOVING: 8192,
   FISHING: 16384, UMBRELLA: 32768,
 };
+PF.PASSENGER = PF.SPRINT; // in a vehicle the sprint bit means "not the driver's seat"
 
 // Vehicle flag bits (wire)
 export const VF = {

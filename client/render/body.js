@@ -271,6 +271,16 @@ function paintBody(g, a, d, pose, fr, w) {
   head(Pp, B, a, d, I, pal, bob, fem);
   // 5. reaching arm and anything held
   if (act || (w > 0 && w !== 13)) holds(Pp, a, d, I, pal, bob, pose, fr, w, actArm);
+  else if (a.b === 1) {
+    // executive's briefcase, swinging in the hanging hand on the near side
+    const k = I.armBox[actArm >= 0 ? actArm : 1] ? (actArm >= 0 ? actArm : 1) : 0;
+    const bx = I.armBox[k];
+    if (bx) {
+      const hy = bx.y1 + bob + (k === 0 ? swing : -swing);
+      Pp.box(Math.round(bx.cx) - 2, hy, 5, 4, '#3a2414');
+      Pp.r(Math.round(bx.cx) - 1, hy - 1, 3, 1, '#6b4a2a');
+    }
+  }
 }
 
 function top(Pp, a, d, I, pal, bob) {
@@ -304,17 +314,13 @@ function head(Pp, B, a, d, I, pal, bob, fem = false) {
     }
   };
   const faceSide = side ? (d === 2 ? -1 : 1) : d === 1 ? -1 : d === 7 ? 1 : 0;
-  if (fem) {
-    if (ht) paintOver((x, y, nx, ny) => ny < 0.42, pal.hat);
-    if (a.b === 4 && !back) { const ey = Math.round(y0 + hh * 0.6) + bob; Pp.r(Math.round(cx - hw + 1), ey, Math.round(hw * 2 - 1), 1, '#14161a'); }
-    return;
-  }
+  // (the female body has its hair and face drawn on: it only takes the accessories)
   // long hair falls behind the shoulders
-  if (!ht && (hs === 2 || hs === 5) && (back || side)) {
+  if (!fem && !ht && (hs === 2 || hs === 5) && (back || side)) {
     if (hs === 2) for (let y = y1; y < y1 + 5; y++) for (let x = Math.round(cx - hw + 1 + (side ? -faceSide * 2 : 0)); x <= Math.round(cx + hw - 1 + (side ? -faceSide * 2 : 0)); x++) Pp.p(x, y + bob, lo(pal.hair));
   }
   // hair
-  if (hs !== 3 && !ht) {
+  if (!fem && hs !== 3 && !ht) {
     const fringe = hs === 1 ? 0.48 : hs === 4 ? 0.2 : 0.38;
     if (back) paintOver((x, y, nx, ny) => ny < 0.9, pal.hair);
     else if (side) paintOver((x, y, nx, ny) => ny < fringe + 0.05 || nx * faceSide < -0.15, pal.hair);
@@ -325,13 +331,13 @@ function head(Pp, B, a, d, I, pal, bob, fem = false) {
   }
   // face
   if (!back) {
-    const ey = Math.round(y0 + hh * 0.56) + bob;
+    const ey = Math.round(y0 + hh * (fem ? 0.6 : 0.56)) + bob;
     const eye = '#20161a';
-    if (side) {
+    if (side && !fem) {
       const ex = Math.round(cx + faceSide * (hw - 2.2));
       Pp.r(ex, ey, 1, 2, eye);
       Pp.p(Math.round(cx + faceSide * (hw - 1.5)), ey + 3, lo(pal.skin));
-    } else {
+    } else if (!fem) {
       const sh = faceSide * 1.6;
       const lx = Math.round(cx - 2.2 + sh), rx = Math.round(cx + 2.2 + sh);
       Pp.r(lx, ey, 1, 2, eye); Pp.r(rx, ey, 1, 2, eye);

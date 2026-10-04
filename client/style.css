@@ -405,3 +405,6 @@ body.portrait #bm-panel { width: calc(100vw - 24px); max-height: 34vh; }
 @media (max-width: 560px) { #dev .dev-cols { grid-template-columns: 1fr; } #dev #dev-players { border-left: 0; padding-left: 0; border-top: 1px solid #333; } }
 
 #trainbar.sub { border-color: #ffd36b; color: #ffd36b; }
+.sacct { border-top: 1px solid rgba(255,255,255,.15); margin-top: 6px; padding-top: 4px; }
+.sacct #s-code-msg { min-height: 1em; color: #9fe0a0; }
+#s-code-in { flex: 1; font-size: 15px; padding: 8px 10px; background: #111; color: #fff; border: 1px solid #555; border-radius: 6px; min-width: 0; }

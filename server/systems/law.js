@@ -280,7 +280,7 @@ export function update(world, dt) {
         for (const c of world.map.cameras) {
           if (Math.hypot(c.x - ped.x, c.y - ped.y) < c.r * (world.clock.isNight ? 0.75 : 1) && world.map.los(c.x, c.y, ped.x, ped.y)) {
             seen = true; world.emit(c.x, c.y, { e: 'camera', id: c.id });
-            if (now - (p.lastCamPing || -99) > 8) { p.lastCamPing = now; world.notify(p, 'Traffic camera pinged your position to the Police Network!', 'bad'); }
+            if (now - (p.lastCamPing || -99) > 8) { p.lastCamPing = now; world.notify(p, c.toll ? 'A bridge toll camera logged you crossing - the police know where you are!' : 'Traffic camera pinged your position to the Police Network!', 'bad'); }
           }
         }
       }
