@@ -16,7 +16,8 @@ test('dealership lot: cars in stock with price tags; walk up and buy one on the 
   const stock = [...w.entities.values()].filter((e) => e.kind === K.VEH && e.forSale);
   assert.equal(stock.length, lot.slots.length, 'every space stocked');
   const { p, prof } = joinPlayer(w, { cash: 0, bank: 50000 });
-  const car = stock[0];
+  // a car with room beside it (the lot's layout varies with the map), stood next to on its open side
+  const car = stock.find((c) => stock.every((o) => o === c || Math.hypot(o.x - c.x, o.y - c.y) > 110)) || stock.slice().sort((a, b) => b.def.W - a.def.W)[0];
   teleport(w, p.ped, car.x + car.def.W / 2 + 20, car.y + car.def.W / 2 + 10);
   assert.equal(vehicles.tryEnter(w, p.ped), false, 'locked until bought');
   const act = players.findInteraction(w, p);

@@ -4,6 +4,8 @@
 // board here" glow are drawn live. All procedural canvas drawing - no image assets.
 import { T, TILE, CHUNK_PX, MAP_W } from '../../shared/constants.js';
 import { TRAIN_CARS, COACH_SEATS, MAIL_BOX, CROSSING_ARM, railAt } from '../../shared/map.js';
+import { SCENE_RECTS } from '../../shared/interior-art.js';
+import { atlas } from './sprites.js';
 
 const TIE_STEP = 18, RAIL_OFF = 12;
 
@@ -225,6 +227,9 @@ function carCanvas(type, mode) {
         g.fillStyle = '#8a8f99'; g.fillRect(ox - 10, oy + (oy < 0 ? -11 : 10), 20, 1);
       }
       g.fillStyle = '#c0c4cc'; g.fillRect(-1, -hw + 8, 2, W - 16);                               // grab pole
+      // the concept painting of a coach's inside (seats, poles, adverts, doors) over the plain fit-out
+      const r = SCENE_RECTS.coach;
+      if (r && atlas.scenes) { g.imageSmoothingEnabled = true; g.drawImage(atlas.scenes, r[0], r[1], r[2], r[3], -hl + 3, -hw + 3, L - 6, W - 6); if (lit) { g.fillStyle = 'rgba(255,220,140,.12)'; g.fillRect(-hl + 3, -hw + 3, L - 6, W - 6); } }
     } else {
       for (const [sx, sy] of [[44, -26], [56, 24], [68, -14], [20, 26], [76, 10], [6, -26]]) { g.fillStyle = '#b89a6a'; g.beginPath(); g.ellipse(sx, sy, 9, 7, 0.3, 0, 6.28); g.fill(); g.fillStyle = '#8a7048'; g.fillRect(sx - 2, sy - 6, 4, 3); }
       g.fillStyle = '#4a3a2a'; g.fillRect(hl - 12, -hw + 6, 6, W - 12);                          // shelves

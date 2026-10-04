@@ -241,7 +241,7 @@ export const PREFABS = {
   "rot": false,
   "src": [
    2,
-   610,
+   1060,
    0,
    384,
    288
@@ -285,7 +285,7 @@ export const PREFABS = {
   "rot": false,
   "src": [
    2,
-   996,
+   1446,
    0,
    416,
    288
@@ -310,8 +310,8 @@ export const PREFABS = {
   "rot": false,
   "src": [
    2,
-   1414,
    0,
+   322,
    544,
    288
   ]
@@ -332,7 +332,7 @@ export const PREFABS = {
   "rot": false,
   "src": [
    2,
-   0,
+   546,
    322,
    544,
    288
@@ -442,7 +442,7 @@ export const PREFABS = {
   "rot": false,
   "src": [
    2,
-   546,
+   1092,
    322,
    480,
    288
@@ -486,7 +486,7 @@ export const PREFABS = {
   "rot": false,
   "src": [
    2,
-   1028,
+   1574,
    322,
    384,
    288
@@ -574,8 +574,8 @@ export const PREFABS = {
   "rot": false,
   "src": [
    2,
-   1414,
-   322,
+   0,
+   612,
    448,
    288
   ]
@@ -619,8 +619,8 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   1156,
-   612,
+   0,
+   902,
    608,
    256
   ]
@@ -826,7 +826,7 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   0,
+   450,
    612,
    608,
    288
@@ -941,7 +941,7 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   0,
+   610,
    902,
    608,
    256
@@ -987,7 +987,7 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   610,
+   1060,
    612,
    544,
    288
@@ -1106,6 +1106,83 @@ export const PREFABS = {
    0,
    608,
    320
+  ]
+ },
+ "liquor": {
+  "tw": 14,
+  "th": 10,
+  "solid": [
+   0,
+   0,
+   13,
+   9
+  ],
+  "doors": [
+   0.28
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   2,
+   610,
+   0,
+   448,
+   320
+  ]
+ },
+ "shops1": {
+  "tw": 24,
+  "th": 7,
+  "solid": [
+   0,
+   0,
+   24,
+   6
+  ],
+  "doors": [
+   0.1,
+   0.31,
+   0.53,
+   0.7,
+   0.88
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   2,
+   1220,
+   902,
+   768,
+   224
+  ]
+ },
+ "shops2": {
+  "tw": 25,
+  "th": 7,
+  "solid": [
+   0,
+   0,
+   25,
+   6
+  ],
+  "doors": [
+   0.1,
+   0.31,
+   0.57,
+   0.74,
+   0.91
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   2,
+   0,
+   1160,
+   800,
+   224
   ]
  }
 };

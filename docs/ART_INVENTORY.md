@@ -11,7 +11,8 @@ concept palette and is a placeholder until real art arrives (see `ART_NEEDS.md`)
 | Group | Lots | Source |
 |---|---|---|
 | Building sheet (upscaled) | house1-3, apt1-2, tower1-2, hotel, hospital, police, fire, gas, conv, strip mall, market, rest1-2, club, bank, dealer, repair, warehouse, industrial, construction, church, school, park | building concept sheet |
-| Whole scene lots (a building with its own yard, lot, driveway) | fuel (FuelMax), clubnova, clubeclipse, police2, police3, motors (Riverside Motors), trail (Trail & Field), boutique, quickstop, apt3, apt4, house4, house5, house6, bank2, junkyard, tackle2, shack, farmstead, site (construction), beachbar, pool | the scene paintings, one lot each |
+| Whole scene lots (a building with its own yard, lot, driveway) | fuel (FuelMax), clubnova, clubeclipse, police2, police3, motors (Riverside Motors), trail (Trail & Field), boutique, quickstop, apt3, apt4, house4, house5, house6, bank2, junkyard, tackle2, shack, farmstead, site (construction), beachbar, pool, **liquor** (liquor store with the garage and flats above - a walk-in convenience store with the liquor-store interior) | the scene paintings, one lot each |
+| Storefront rows (one walk-in business behind each door) | **shops1**: Joe's Burgers, Riverside Books, Pixel Tech, Thread & Co., Brew Haven (Westport Center, Northshore); **shops2**: Pizza, 24/7 Mart, Bean There coffee, Urban Wear, Pharmacy (Falls Center, Old Quarter) | the two high-street paintings |
 | Night glow per lot | every lot above | derived from the day art |
 | Rooftop modules (AC, helipad, tanks, skylight, hatch) | stamped on procedural roofs | style-guide roof tiles |
 
@@ -37,6 +38,9 @@ The police station lobby / armory screens shown while you use the front desk are
 ## Outdoor scene paintings (`assets/scenes.webp`) - new this round
 
 - **Cedar Hills Golf Club** - the whole golf course painting (clubhouse, carts, fairways, bunkers, ponds, creek) laid over open countryside on Cedar Isle; the clubhouse is solid.
+- **Paradise Cay** - the palm-island painting raised out of the bay between Westport and Metro City: the land, beaches and jetty follow the painting exactly (sampled into a tile mask), the cabin is solid. Boat-only.
+- **Red Rock Canyon** - the desert canyon painting in the Dry Creek desert: the mesas and cliffs are solid where they're painted, plus the homestead and water tower.
+- **Train coach interior** - the coach painting is the inside view of every passenger coach while you ride.
 
 ## Ground (`assets/ground.png`)
 
@@ -62,7 +66,6 @@ Track, ties, bridge decks and girders, level crossings (gates, lights, crossbuck
 
 ## Concepts not used yet (candidates for later rounds)
 
-- Train coach interior (seats, standees, doors) - for the riding view of the coaches.
 - Central Station / elevated station / metro station buildings - a grand station building beside a platform.
-- Riverside Mall with its car park; the airport terminal; the soccer stadium and park soccer field (both have painted players, need clean versions); beach boardwalks; the tropical island; desert canyon road; neon strip blocks; the night club interior (no walk-in clubs yet).
+- Riverside Mall with its car park; the airport terminal; the Syndicate's purple gang compound (for the gang HQs); the neon strip and luxury boulevard street scenes; the marina; the canal and river bridges; the soccer stadium and park soccer field (both have painted players, need clean versions); beach boardwalks; the tropical island; desert canyon road; neon strip blocks; the night club interior (no walk-in clubs yet).
 - Character part sheets (bodies in 8 directions, hair/hat/top/bottom/shoe overlays) - the base for a full layered character system once animation frames exist.

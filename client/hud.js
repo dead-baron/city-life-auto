@@ -332,6 +332,14 @@ export class HUD {
       g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(d.name.toUpperCase(), x, y);
       g.fillStyle = d.turf ? '#ff8a7a' : '#fff4c8'; g.fillText(d.name.toUpperCase(), x, y);
     }
+    // landmarks painted whole from the concepts (the golf club, the canyon, the island)
+    g.font = `${Math.max(8, fs - 3)}px Anton, Impact, sans-serif`;
+    for (const pt of this.map.paintings || []) {
+      if (!pt.name) continue;
+      const [x, y] = P(pt.x + pt.w / 2, pt.y + pt.h + 40);
+      g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(pt.name.toUpperCase(), x, y);
+      g.fillStyle = '#bfe9ff'; g.fillText(pt.name.toUpperCase(), x, y);
+    }
     // the railway: a dark line with white ties, round the whole loop (drawn under the district names' level of detail)
     if (this.map.rail) {
       const rp = this.map.rail.pts;

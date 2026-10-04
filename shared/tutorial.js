@@ -29,7 +29,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 15;
+export const TUTORIAL_VERSION = 16;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -63,7 +63,7 @@ export const STEPS = [
   { ch: 'city', title: isle('R'), at: { island: 'R' },
     text: `Across the river bridges: the winding streets and cul-de-sacs of Pine Hills, where houses and apartments are for sale, and the gang-run grid of Southside. A home becomes your respawn point and your garage.` },
   { ch: 'city', title: isle('F'), at: { island: 'F' },
-    text: `Farm country east of the city: fields, farmhouses and the {{farm}}, which pays you to haul fresh produce back to town. Past the fields the desert takes over - mesas, cactus, a mirage of a lake and a little airstrip - with the Desert Highway looping round it from the county road to the Eastern Parkway, where every street of town ends.` },
+    text: `Farm country east of the city: fields, farmhouses and the {{farm}}, which pays you to haul fresh produce back to town. Past the fields the desert takes over - mesas, cactus, a mirage of a lake, the cliffs and lonely homestead of Red Rock Canyon, and a little airstrip - with the Desert Highway looping round it from the county road to the Eastern Parkway, where every street of town ends.` },
   { ch: 'city', title: isle('W'), at: { island: 'W' },
     text: `The second city, over the Bay Bridge from Sunset Beach. Westport Center's towers, Lakeview's villas round the lake in Lakeview Park, the stadium, the brick lanes of the Old Quarter and the houses of West Hills sit inside the Westport Beltway. Down the south-west coast the piers of Port Westport (gang turf) run out to sea beside {{airport}} - ship cargo to the terminal like any delivery. North of town the Highland Road climbs into the Highland Woods, where dirt tracks lead to cabins for sale.` },
   { ch: 'city', title: isle('N'), at: { island: 'N' },
@@ -73,7 +73,7 @@ export const STEPS = [
   { ch: 'city', title: isle('P'), at: { island: 'P' },
     text: `Over Pelican Way from Westport: a few streets of little shops and houses, and at the beach end a beach bar and the {{charter}} dock with jet skis tied up. Jet ski and boat races start from the buoys off its shore.` },
   { ch: 'city', title: isle('G'), at: { island: 'G' },
-    text: `Two little islands far out in the south - the villages of Gull Harbor and Coral Cay, each round its village green. No bridge reaches them: take a boat.` },
+    text: `Two little islands far out in the south - the villages of Gull Harbor and Coral Cay, each round its village green. No bridge reaches them: take a boat. Out in the bay between Westport and Metro City lies Paradise Cay, a palm island with a beach camp, a cabin and a jetty to tie up at.` },
   { ch: 'city', title: 'The roads', at: { city: 1 },
     text: `Roads join up the way they would in a real city: highways meet major avenues and arterials at signalled junctions, those feed the streets, streets feed the little residential roads and cul-de-sacs, and out in the country the county roads lead off them to dirt tracks into the woods, the hills and the desert. A dirt track is slow going for anything but a pickup or a bike.` },
   { ch: 'city', title: isle('C'), at: { island: 'C' },

@@ -905,3 +905,27 @@ Playtest:
    - Do a burnout and a launch.
    - Spin donuts in a car park.
 5. Walk into a FreshMart, a bank and a pawn shop.
+
+## 2026-10-04 · Round 5: five-car trains on a one-minute timetable, safer crossings, more concept art in the world
+
+- **Trains:**
+  - Every train now has five cars, and every third one hauls the mail car.
+  - The fleet size follows the loop's run time (`TRAIN_HEADWAY_S` = 60): 7 trains, spread evenly round the timetable at start-up. A simulation of 15 minutes saw 62 s between trains at every station, every time.
+  - Platforms are as long as the longer trains. In the downtown grids a waiting train stands across one street, and that street's gates stay down while it waits, as at a real street-running station.
+  - The platform clock stands where the platform isn't a street.
+- **Level crossings:**
+  - All 68 crossings were checked: every road under the track is inside a crossing, and the gates were down every time a train was over one (20,000 checks in the simulation).
+  - Drivers now look along their actual route, including turns at junctions, for crossings ahead. They stop at the line and stay stopped (holding the brake, with no creeping) until the gates lift.
+  - Drivers never roll onto the rails without room on the far side.
+  - Cars hit by trains near three busy crossings over 5 minutes: 4-6 before, 1-2 after.
+- **New art from the concepts:**
+  - Two painted storefront rows:
+    - Joe's Burgers / Riverside Books / Pixel Tech / Thread & Co. / Brew Haven, in Westport Center and Northshore.
+    - Pizza / 24/7 Mart / Bean There / Urban Wear / Pharmacy, in Falls Center and the Old Quarter.
+    - Each door is a real business you can walk into.
+  - A liquor store lot, with a garage and flats above. It is a walk-in convenience store with the matching painted liquor-store interior, found in Old Town, Southside, the Neon Strip and commercial districts.
+  - **Paradise Cay:** the palm-island painting raised out of the bay between Westport and Metro City. Its land, beaches and jetty follow the painting's shape, the cabin is solid, and it has its own district name.
+  - **Red Rock Canyon:** the desert canyon painting in the Dry Creek desert. The mesas and cliffs you see are the ones you can't drive through.
+  - The passenger-coach painting is now the riding view inside every coach.
+  - Landmarks are labelled on the world map, and the world map was re-baked.
+- `tools/build_interiors.py` now also samples paintings into tile masks (water / sand / grass / jetty / solid), so a whole scene can reshape the ground under it.

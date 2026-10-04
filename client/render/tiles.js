@@ -770,7 +770,7 @@ const artCache = new Map();
 function paintedInterior(g, b, u, ox, oy) {
   const opts = INTERIOR_KINDS[u.kind];
   if (!opts || !atlas.interiors) return false;
-  const r = INTERIOR_RECTS[opts[b.id % opts.length]];
+  const r = INTERIOR_RECTS[b.kind === 'liquor' && u.kind === 'convenience' ? 'liquor' : opts[b.id % opts.length]];
   if (!r) return false;
   const wi = b.walkIn;
   const x0 = u.x0 * TILE - ox, y0 = wi.y0 * TILE - oy, w = (u.x1 - u.x0 + 1) * TILE, h = (wi.y1 - wi.y0 + 1) * TILE;

@@ -35,7 +35,7 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 - Light overlays: headlights, brake lights, reverse lights, police/ambulance/fire light bars (2 frames each).
 - Doors-open frames (left/right) for the enter/exit animation.
 - Police motorcycle, police boat, jetski, a proper dinghy with outboard - currently recoloured or procedural.
-- Trains: locomotive, passenger coach, mail car - roof view AND interior view (seats, aisle, doors), at 196x70 / 212x76 / 188x76 world px. The coach-interior concept can be cut down for this if you don't redraw it.
+- Trains: locomotive, passenger coach, mail car - roof views at 196x70 / 212x76 / 188x76 world px, plus a mail-car interior. (The coach interior now uses your coach painting; a version without painted passengers would let the real riders stand out.)
 - Optional: a light aircraft and an airliner for the airports (static props now).
 
 ## 3. Railway
@@ -47,7 +47,7 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 ## 4. Buildings
 
 - More whole-lot paintings in the current style for each district type (each one: building + its yard/lot, drawn so the front faces the street at the bottom): suburban houses x4, apartment blocks x3, office towers x3, strip mall, mall with car park, motel, diner, fast food, cinema, arcade, car wash, gym, laundromat, church, school, library, fire station, warehouse/industrial x3, farm buildings (barn, silo, farmhouse), desert shacks/ranch, beach houses, lighthouse.
-- Interior paintings for walk-in businesses still on the plain fit-out: coffee shop, fish market, pharmacy (currently reuses the hospital lobby), courthouse (reuses the bank hall), gun shop (reuses the outfitter), hardware store. Same layout as the existing ones: back wall + counter at the top, shop floor in the middle, glass front + door at the bottom.
+- Interior paintings for walk-in businesses still on the plain fit-out: coffee shop (now in both storefront rows), fish market, pharmacy (currently reuses the hospital lobby), courthouse (reuses the bank hall), gun shop (reuses the outfitter), hardware store. Same layout as the existing ones: back wall + counter at the top, shop floor in the middle, glass front + door at the bottom.
 - Police station lobby (front desk) and armory full-screen interiors (currently procedural).
 - Night versions are generated automatically; no need to draw them.
 

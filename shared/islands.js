@@ -272,4 +272,11 @@ export const ISLAND_SEEDS = [
 // the painted buildings you can't walk through (fractions of the painting: x0, y0, x1, y1).
 export const SCENE_SPOTS = [
   { key: 'golf', name: 'Cedar Hills Golf Club', dist: 40, w: 54, h: 36, near: [620, 1110], solid: [[0.03, 0.14, 0.19, 0.37], [0.09, 0.27, 0.25, 0.39]] },
+  // the ground follows the painting's own mask (shared/interior-art.js SCENE_MASKS): cliffs and the homestead are solid
+  { key: 'canyon', name: 'Red Rock Canyon', dist: 41, masked: true, near: [1190, 800] },
+];
+// Whole islands raised out of open sea in the shape of a painting (beach, palms, a cabin, a jetty):
+// key, name, the spot to put it nearest to (it goes in the closest stretch of clear water).
+export const SCENE_ISLANDS = [
+  { key: 'cay', name: 'Paradise Cay', near: [540, 690] },
 ];
