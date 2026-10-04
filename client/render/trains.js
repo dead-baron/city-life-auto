@@ -54,6 +54,20 @@ export function drawRailChunk(g, m, idx) {
       g.restore();
     }
   }
+  // bridge spans: steel girders along both edges of the deck, with a shadow on the water
+  for (const [off, w, col] of [[34, 6, 'rgba(0,0,0,.28)'], [30, 4, '#3a3f48'], [30, 1.5, '#8a909a']]) {
+    g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt';
+    for (const side of [-1, 1]) {
+      g.beginPath();
+      for (const i of idx) {
+        const { p, q, a } = seg(i);
+        if (p.under || q.under || !wetAt(m, p.x, p.y) || !wetAt(m, q.x, q.y) || roadAt(m, p.x, p.y)) continue;
+        const nx = -Math.sin(a) * side * off, ny = Math.cos(a) * side * off;
+        g.moveTo(p.x + nx + (off === 34 ? 4 : 0), p.y + ny + (off === 34 ? 5 : 0)); g.lineTo(q.x + nx + (off === 34 ? 4 : 0), q.y + ny + (off === 34 ? 5 : 0));
+      }
+      g.stroke();
+    }
+  }
   // the two rails
   for (const [w, col] of [[4, '#2a2622'], [2, '#b8bcc4']]) {
     g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt';

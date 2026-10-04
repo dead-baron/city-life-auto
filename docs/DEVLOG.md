@@ -665,3 +665,19 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
   - HUD train bar shows the next stop, ETA, the subway and strongbox progress. New sounds: horn, crossing bell, rumble.
   - Dev command `train` boards the nearest train.
 - Tutorial v10 ("The railway", "Level crossings", "The mail train"). New `test/trains.test.js` (9 tests). World map rebuilt. The idle-pedestrian test now places its NPC on open pavement (it was flaky).
+
+## Railway moved onto dry land
+- **The line no longer runs out in the water.** It now:
+  - follows Downtown's waterfronts on a ballast embankment, with a grass shoulder on the water side;
+  - dives under Downtown in the subway;
+  - crosses the channel to Refuge Island on two short bridges (17 and 20 tiles) with steel girders;
+  - takes the long rural straight along Refuge Island's south fields.
+  - It no longer goes round Industrial and Residential.
+- **Bed laying (`buildRailway`):** a long run of water under the centre line becomes a bridge deck (`RAIL_MAX_BRIDGE_TILES` caps it). Short ragged waterfront edges are filled in as embankment.
+  - Lamps, trees and benches on the bed are removed (props are re-indexed).
+  - A place where the line only clips the dead end of a lane becomes ballast instead of a crossing.
+- **Level crossings** are now where the three road bridges come ashore on Downtown's west side, plus the Refuge Halt farm lane.
+- **Stations:** Northshore, Midtown Underground, Eastport, Refuge Halt, Refuge West, Southbank and Harbor Street.
+  - Each platform picks the side with room, so on a waterfront it can be a pier.
+  - The timetable lists the stations from the map.
+- Tutorial v11 (railway text). The railway test now checks that no track is laid in water, the longest bridge, and the bridge share of the line. The drag test moved to the rural straight. World map rebuilt.

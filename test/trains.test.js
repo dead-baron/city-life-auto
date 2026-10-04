@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K, T } from '../shared/constants.js';
-import { railAt, CROSSING_ARM, MAIL_BOX } from '../shared/map.js';
+import { railAt, CROSSING_ARM, MAIL_BOX, RAIL_MAX_BRIDGE_TILES } from '../shared/map.js';
 import { TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, TRAIN_JOB_PAY, STRONGBOX_CRACK_S } from '../shared/rules.js';
 import { CTRL } from '../shared/protocol.js';
 import * as trains from '../server/systems/trains.js';
@@ -31,6 +31,16 @@ test('railway: one loop, seven stations (one underground), level crossings and a
   for (const c of r.crossings) assert.ok([T.ROAD, T.BRIDGE].includes(w.map.tileAtPx(c.x, c.y)), 'crossings are on roads');
   assert.ok(r.rural && r.rural.s1 - r.rural.s0 > 2500, 'long rural stretch');
   for (const p of r.pts) if (!p.under) assert.notEqual(w.map.tileAtPx(p.x, p.y), T.BUILDING, 'no track through buildings');
+  // the line runs on land: open water is only ever crossed on a short bridge
+  let run = 0, longest = 0, total = 0;
+  for (const p of r.pts) {
+    const tx = Math.floor(p.x / 32), ty = Math.floor(p.y / 32), t = w.map.tileAt(tx, ty);
+    const deck = t === T.BRIDGE && !w.map.roadAxis[ty * 512 + tx];
+    if (deck) { run += 8; total += 8; longest = Math.max(longest, run); } else run = 0;
+    assert.ok(![T.WATER, T.DEEP].includes(t), 'never laid in the water');
+  }
+  assert.ok(longest <= RAIL_MAX_BRIDGE_TILES * 32, `longest bridge ${Math.round(longest / 32)} tiles`);
+  assert.ok(total < r.len * 0.06, `${Math.round(total / r.len * 100)}% of the line is bridge`);
   for (const s of r.stations) assert.ok(w.map.pois[s.poi].kind === 'station');
   assert.equal(w.trains.length, 2);
   assert.ok(w.trains.some((t) => t.mail >= 0), 'a mail train');
@@ -55,7 +65,7 @@ test('nothing stops a train: a car on the line is dragged along and blows up; a 
   const w = makeWorld();
   const t = w.trains[0];
   const rail = w.map.rail;
-  const s = rail.rural.s0 + 600;
+  const s = rail.rural.s0 + 1800; // on the long straight across the fields
   runUpTo(w, t, s, 400);
   const q = railAt(rail, s);
   const { p } = joinPlayer(w); // someone watching (or the car is tidied away)

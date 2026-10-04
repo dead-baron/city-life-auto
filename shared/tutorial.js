@@ -28,7 +28,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 10;
+export const TUTORIAL_VERSION = 11;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -69,7 +69,7 @@ export const STEPS = [
     text: `The Syndicate's island fortress. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
   { ch: 'city', title: 'The railway', at: { pois: 'station' },
-    text: `Two trains run one big loop round the city at up to ${kmh(TRAIN_SPEED)} km/h - over the trestle off the west coast, through the channels, under Downtown in the subway and across the fields of ${isle('F')} - stopping ${TRAIN_DWELL_S} seconds at every {{station}} (check the timetable on the platform). Stand by a door while a train is in and press [[action]] to board; at Midtown Underground take the stairs down. Walk through the cars, sit back and watch the city go by, then [[vehicle]] gets you off at a station - or jump off a moving train and tumble. In the tunnel the doors stay shut. Running alongside a slow train, or driving level with it, you can hop on too.` },
+    text: `Two trains run one big loop at up to ${kmh(TRAIN_SPEED)} km/h - along ${isle('D')}'s waterfronts, under its streets in the subway and over two short bridges to the fields of ${isle('F')} - stopping ${TRAIN_DWELL_S} seconds at every {{station}} (check the timetable on the platform). Stand by a door while a train is in and press [[action]] to board; at Midtown Underground take the stairs down. Walk through the cars, sit back and watch the city go by, then [[vehicle]] gets you off at a station - or jump off a moving train and tumble. In the tunnel the doors stay shut. Running alongside a slow train, or driving level with it, you can hop on too.` },
   { ch: 'city', title: 'Level crossings', at: { crossings: 1 },
     text: `Where the line crosses a road the gates drop when a train is within ${Math.round(CROSSING_WARN_PX / TILE)} m. Most drivers wait; some gamble, and cops on a chase often try to beat the train. You can smash straight through the arms. Nothing stops a train and nothing hurts it: anyone on the tracks gets thrown, and a car caught on the front of the engine is dragged along - steer it off within ${TRAIN_DRAG_EXPLODE_S} seconds or it blows up.` },
   // ---- basics --------------------------------------------------------------------------------

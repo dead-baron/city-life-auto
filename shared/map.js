@@ -1040,10 +1040,11 @@ function volleyCourt(m, name, x, y, w, h) {
 }
 
 // ---- the railway ------------------------------------------------------------------------------
-// One big loop around the city: on a trestle over the water off the west coast and through the
-// channels (level crossings on the road bridges), under Downtown in a subway tunnel, and across
-// the open fields of Refuge Island (the long rural stretch). Trains follow `rail.pts` by arc
-// length; stations, crossings and the tunnel are positions along it.
+// One big loop on dry land: along Downtown's waterfronts on a ballast embankment (level
+// crossings where the road bridges come ashore), under Downtown in a subway tunnel, across the
+// channel to Refuge Island on two short bridges, and over its open fields (the long rural
+// stretch). Water is only ever crossed on a short bridge. Trains follow `rail.pts` by arc length;
+// stations, crossings and the tunnel are positions along it.
 export const RAIL_GAUGE = 52;         // px between the outer rails' ties (track bed width ~2 tiles)
 // Rolling stock (wire index = position here). Coaches: seat rows either side of the aisle, doors
 // in the middle; the mail car carries the strongbox at its back end.
@@ -1058,11 +1059,12 @@ export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towar
 export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards stand
 export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre
 const RAIL_ROUTE = [ // [tx, ty, flag] corners (track centre between tile tx-1 and tx); flag 'sub' = may run underground
-  [4, 393], [4, 167], [207, 167], [207, 32], [300, 32, 'sub'], [300, 200, 'sub'], [412, 200, 'sub'], [412, 393],
+  [216, 38], [300, 38, 'sub'], [300, 200, 'sub'], [406, 200, 'sub'], [406, 392], [235, 392], [235, 325], [216, 325],
 ];
 const RAIL_STATIONS = [ // [name, tx, ty] nearest point on the line becomes the stop
-  ['Westside', 4, 280], ['Channel Street', 140, 167], ['Northshore', 250, 32], ['Midtown Underground', 300, 120], ['Eastport', 412, 270], ['Refuge Halt', 300, 393], ['Sunset Pier', 70, 393],
+  ['Northshore', 252, 38], ['Midtown Underground', 300, 120], ['Eastport', 406, 270], ['Refuge Halt', 300, 392], ['Refuge West', 235, 372], ['Southbank', 216, 272], ['Harbor Street', 216, 160],
 ];
+export const RAIL_MAX_BRIDGE_TILES = 22; // the longest stretch of open water the line may cross (on a bridge)
 function buildRailway(m) {
   // a farm lane from Refuge Island's main road down to the halt (its level crossing is the rural one)
   for (let lx = 296; lx <= 312; lx++) {
@@ -1095,11 +1097,22 @@ function buildRailway(m) {
   // which points are underground: on a 'sub' stretch and under land
   const wet = (x, y) => { const t = m.tileAtPx(x, y); return t === T.WATER || t === T.DEEP; };
   for (const p of pts) p.under = !!p.sub && !wet(p.x, p.y) && m.tileAtPx(p.x, p.y) !== T.BRIDGE;
-  // lay the track bed: a trestle (bridge deck) over water, ballast (dirt) on land; road crossings stay road
+  // Where the line meets open water: a long run of water under the centre line is a channel
+  // crossing (a bridge deck); anything else - the ragged edge of a waterfront - is filled in as a
+  // ballast embankment, so the track always runs on land beside the water, never out in it.
+  const wetT = (t) => t === T.WATER || t === T.DEEP;
+  let run = [];
+  const closeRun = () => { const len = run.length ? run[run.length - 1].s - run[0].s : 0; for (const q of run) q.bridge = len > 5 * TILE; run = []; };
+  for (const p of pts) { if (!p.under && wetT(m.tileAtPx(p.x, p.y))) run.push(p); else closeRun(); }
+  closeRun();
+  // a bridge deck reaches a little past the water's edge at both ends
+  for (let i = 0; i < pts.length; i++) if (pts[i].bridge) for (let k = -6; k <= 6; k++) { const q = pts[(i + k + pts.length) % pts.length]; if (!q.under) q.deck = true; }
+  // lay the track bed: ballast (dirt) on land and embankment, a deck on the bridges; road crossings stay road
   const crossings = [];
+  const OFFS = [[-24, -24], [24, -24], [-24, 24], [24, 24], [0, 0], [-24, 0], [24, 0], [0, -24], [0, 24]];
   for (const p of pts) {
     if (p.under) continue;
-    for (const [dx, dy] of [[-24, -24], [24, -24], [-24, 24], [24, 24], [0, 0]]) {
+    for (const [dx, dy] of OFFS) {
       const tx = Math.floor((p.x + dx) / TILE), ty = Math.floor((p.y + dy) / TILE);
       const t = m.tileAt(tx, ty);
       if (t === T.ROAD || (t === T.BRIDGE && m.roadAxis[ty * MAP_W + tx])) {
@@ -1108,10 +1121,14 @@ function buildRailway(m) {
         else { last.s1 = p.s; }
         continue;
       }
-      if (t === T.WATER || t === T.DEEP) m.set(tx, ty, T.BRIDGE);
+      if (wetT(t)) m.set(tx, ty, p.deck ? T.BRIDGE : T.DIRT);
       else if (t !== T.BRIDGE && t !== T.DOCK && t !== T.BUILDING && t !== T.WALL) m.set(tx, ty, T.DIRT);
     }
+    // the embankment gets a shoulder a tile wider each side, so it reads as solid ground
+    if (!p.deck) for (const [dx, dy] of [[-40, 0], [40, 0], [0, -40], [0, 40]]) { const tx = Math.floor((p.x + dx) / TILE), ty = Math.floor((p.y + dy) / TILE); if (wetT(m.tileAt(tx, ty))) m.set(tx, ty, T.GRASS); }
   }
+  // nothing planted on the line: lamps, trees, benches and the like in the way are cleared
+  clearPropsOnRail(m, pts);
   for (const c of crossings) {
     const mid = (c.s0 + c.s1) / 2; const q = railAt({ pts, len: total }, mid); c.s = mid; c.x = q.x; c.y = q.y; c.a = q.a;
     // how wide the road is where it crosses (measured along the track)
@@ -1119,6 +1136,11 @@ function buildRailway(m) {
     let hw = 16;
     for (const sg of [-1, 1]) { let d = 0; while (d < 200 && onRoad(q.x + Math.cos(q.a) * sg * (d + 8), q.y + Math.sin(q.a) * sg * (d + 8))) d += 8; hw = Math.max(hw, d + 4); }
     c.hw = hw;
+  }
+  // the line only clipping the dead end of a lane isn't a crossing: that bit of road becomes ballast
+  for (const c of crossings.filter((q) => q.hw < 28)) {
+    for (const p of pts) if (p.s > c.s0 - 48 && p.s < c.s1 + 48) for (const [dx, dy] of OFFS) { const tx = Math.floor((p.x + dx) / TILE), ty = Math.floor((p.y + dy) / TILE); if (m.tileAt(tx, ty) === T.ROAD) { m.set(tx, ty, T.DIRT); m.roadAxis[ty * MAP_W + tx] = 0; } }
+    crossings.splice(crossings.indexOf(c), 1);
   }
   // stations: platform beside the track, joined to the nearest land (a short pier / paved apron)
   const stations = [];
@@ -1129,7 +1151,10 @@ function buildRailway(m) {
     // platform on the side with land nearer
     const nx = -Math.sin(q.a), ny = Math.cos(q.a);
     const landDist = (sx) => { for (let d = 40; d < 900; d += 16) { const t = m.tileAtPx(q.x + nx * sx * d, q.y + ny * sx * d); if (t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE) return d; } return 9999; };
-    const side = best.under ? 1 : landDist(1) <= landDist(-1) ? 1 : -1;
+    // the platform goes on whichever side has room (no road or buildings in its footprint);
+    // on a waterfront that's often a pier out over the water
+    const bad = (sd) => { let n = 0; for (let along = -112; along <= 112; along += 16) for (let off = 40; off <= 88; off += 16) { const t = m.tileAtPx(q.x + Math.cos(q.a) * along + nx * sd * off, q.y + Math.sin(q.a) * along + ny * sd * off); if (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.BRIDGE) n++; } return n; };
+    const side = best.under ? 1 : bad(1) !== bad(-1) ? (bad(1) < bad(-1) ? 1 : -1) : landDist(1) <= landDist(-1) ? 1 : -1;
     const st = { name: `${name} Station`, s: best.s, x: q.x, y: q.y, a: q.a, side, under: !!best.under };
     if (!best.under) {
       // platform: 7 tiles along the track, 2 deep, then a walkway to land
@@ -1140,7 +1165,7 @@ function buildRailway(m) {
         if (t === T.WATER || t === T.DEEP) m.set(Math.floor(x / TILE), Math.floor(y / TILE), T.DOCK);
         else if (t !== T.BUILDING && t !== T.WALL && t !== T.ROAD && t !== T.BRIDGE) m.set(Math.floor(x / TILE), Math.floor(y / TILE), T.PLAZA);
       }
-      const far = Math.min(900, landDist(side));
+      const far = landDist(side) < 400 ? landDist(side) : 0; // a pier platform is reached across the tracks
       for (let d = 88; d <= far + 16; d += 16) for (const w of [-16, 0, 16]) {
         const x = q.x + nx * side * d + ax * w, y = q.y + ny * side * d + ay * w;
         const t = m.tileAtPx(x, y);
@@ -1166,6 +1191,25 @@ function buildRailway(m) {
   const east = stations.find((q) => q.name.startsWith('Eastport')), halt = stations.find((q) => q.name.startsWith('Refuge'));
   const ruralPts = pts.filter((p) => p.s > east.s && p.s < halt.s && m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === 9);
   m.rail = { pts, len: total, stations, crossings, rural: ruralPts.length ? { s0: ruralPts[0].s + 200, s1: ruralPts[ruralPts.length - 1].s - 100 } : null };
+}
+
+// Clear street furniture standing on the track bed (and re-index what's left: props are
+// referenced by index on the wire, and both ends build the map the same way).
+function clearPropsOnRail(m, pts) {
+  const grid = new Set();
+  for (const p of pts) if (!p.under) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) grid.add((Math.floor(p.y / TILE) + dy) * MAP_W + Math.floor(p.x / TILE) + dx);
+  const near = (x, y) => { if (!grid.has(Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE))) return false; for (const p of pts) if (!p.under && Math.abs(p.x - x) < 46 && Math.abs(p.y - y) < 46 && Math.hypot(p.x - x, p.y - y) < 46) return true; return false; };
+  const keep = [], remap = new Map(), gone = new Set();
+  m.props.forEach((pr, i) => { if (near(pr.x, pr.y)) { gone.add(pr); return; } remap.set(i, keep.length); keep.push(pr); });
+  if (!gone.size) return;
+  m.props = keep;
+  m.lamps = m.lamps.filter((l) => !gone.has(l));
+  m.propSolid = new Map();
+  for (const [k, arr] of m.solidProps) {
+    const kept = arr.filter((e) => e.pi < 0 ? !near(e.x, e.y) : remap.has(e.pi));
+    for (const e of kept) if (e.pi >= 0) { e.pi = remap.get(e.pi); m.propSolid.set(e.pi, e); }
+    if (kept.length) m.solidProps.set(k, kept); else m.solidProps.delete(k);
+  }
 }
 
 // Position + heading at arc length s along the loop (wraps).

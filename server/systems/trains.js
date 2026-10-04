@@ -781,7 +781,7 @@ export function stationBoard(world, poi) {
     const eta = etaTo(world, t, si);
     return `${t.mail >= 0 ? 'Mail train' : 'Commuter'}: ${eta < 1 ? 'AT THE PLATFORM - board now' : `${Math.round(eta)}s`}`;
   });
-  return { title: sts[si].name, sub: `${sts[si].under ? 'Subway - take the stairs down when a train is in. ' : ''}Trains run the whole loop: Westside, Channel Street, Northshore, Midtown Underground, Eastport, Refuge Halt, Sunset Pier. ${lines.join(' · ')}` };
+  return { title: sts[si].name, sub: `${sts[si].under ? 'Subway - take the stairs down when a train is in. ' : ''}Trains run the whole loop: ${sts.map((q) => q.name.replace(/ Station$/, '')).join(', ')}. ${lines.join(' · ')}` };
 }
 
 export function meInfo(world, p) {
