@@ -22,6 +22,10 @@ import * as homes from './systems/homes.js';
 import * as station from './systems/station.js';
 import * as interiors from './systems/interiors.js';
 import * as dealer from './systems/dealer.js';
+import * as gates from './systems/gates.js';
+import * as boats from './systems/boats.js';
+import * as gang from './systems/gang.js';
+import * as races from './systems/races.js';
 import * as props from './systems/props.js';
 import * as net from './net.js';
 
@@ -30,15 +34,19 @@ const SYSTEMS = [
   ['environment', env.update],      // chrono loop + rain
   ['inputs', players.processInputs],// player-controlled peds + vehicle inputs
   ['homes', homes.update],          // going inside your home (hide), step-out protection
+  ['gates', gates.update],          // sliding gates (motor pools, Syndicate compound)
   ['station', station.update],
   ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking
   ['interiors', interiors.update],  // shop clerks / desk staff in walk-in buildings
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
+  ['boats', boats.update],          // NPC boaters + harbor police patrol boats
   ['police', police.update],        // NPC police dispatch / pursuit
   ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
+  ['gang', gang.update],            // Syndicate membership: Smuggler's Rock guards
   ['gangwar', gangwar.update],      // gangs vs police: provocation + shootouts near turf
   ['paint', paint.update],          // Spray & Go paint shop bays
+  ['races', races.update],          // jetski / boat races
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop
@@ -78,7 +86,9 @@ export class World {
     this.npcBudget = opts.npcBudget ?? 700;
     env.init(this);
     homes.init(this);
+    gates.init(this);
     station.init(this);
+    races.init(this);
     dealer.init(this);
     jobs.init(this);
   }

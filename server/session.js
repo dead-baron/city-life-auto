@@ -9,6 +9,7 @@ import * as cruiser from './systems/cruiser.js';
 import * as phone from './systems/phone.js';
 import * as paint from './systems/paint.js';
 import * as station from './systems/station.js';
+import * as gates from './systems/gates.js';
 import { brokenList } from './systems/props.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
@@ -34,7 +35,7 @@ export function createSession(world, conn, opts) {
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const { profile, token } = opts.login(msg.token);
-        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), bays: paint.closedBays(world), gates: station.gatesOpen(world) });
+        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world) });
         player = players.join(world, conn, profile);
         return;
       }

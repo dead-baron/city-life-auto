@@ -522,6 +522,7 @@ test('police cruisers: on duty = behind the wheel, 15s re-call after loss, deliv
   assert.equal(players.buildMe(w, cop).cruiser.s, 'in');
   // wrecked -> 15 s cooldown before dispatch sends another
   vehicles.exitVehicle(w, cop.ped);
+  cop.ped.protectUntil = w.time + 1; // the blast right next to the officer used to kill them now and then
   vehicles.explode(w, v1, null);
   run(w, 1);
   assert.equal(cop.dutyVehicle, 0);
@@ -863,6 +864,7 @@ test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-
   p.profile.weapons.pistol = 999; p.ped.mag.pistol = 999; p.ped.weapon = 'pistol';
   const shotsToDrop = (target) => {
     let shots = 0;
+    for (const v of w.query(p.ped.x + 30, p.ped.y, 200, K.VEH)) w.remove(v); // a parked car in the line of fire made this flaky
     while (!target.dead && shots < 20) {
       teleport(w, target, p.ped.x + 60, p.ped.y); target.vx = 0; target.vy = 0;
       p.ped.nextAttack = 0; p.ped.mag.pistol = 99;

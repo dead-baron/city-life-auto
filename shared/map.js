@@ -23,6 +23,8 @@ export const ISLANDS = {
   R: { name: 'Residential', box: [8, 174, 200, 388], ring: [14, 180, 194, 364] },
   D: { name: 'Downtown', box: [214, 36, 408, 330], ring: [220, 42, 402, 320] },
   F: { name: 'Refuge Island', box: [232, 346, 410, 396], ring: null },
+  P: { name: 'Pelican Key', box: [440, 34, 498, 118], ring: null, boatOnly: true },
+  C: { name: "Smuggler's Rock", box: [444, 224, 500, 312], ring: null, boatOnly: true, gang: 'syndicate' },
 };
 
 export const PED_BLOCK = new Uint8Array(16);
@@ -78,6 +80,8 @@ export const DISTRICTS = [
   { id: 11, name: 'Ironworks', isl: 'Industrial', style: 'factory', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.LOT, turf: false },
   { id: 12, name: 'Greenfield Park', isl: 'Industrial', style: 'park', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
   { id: 13, name: 'Liberty Bay', isl: '', style: 'water', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.WATER, turf: false },
+  { id: 14, name: 'Pelican Key', isl: 'Pelican Key', style: 'beach', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
+  { id: 15, name: "Smuggler's Rock", isl: "Smuggler's Rock", style: 'rocky', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: true },
 ];
 const WATER_D = 13;
 
@@ -87,9 +91,10 @@ const DIST_RECTS = [
   [0, 0, 168, 137, 303], [2, 137, 168, 205, 400], [6, 0, 303, 137, 364], [10, 0, 364, 205, 416],
   [5, 207, 30, 343, 113], [4, 273, 113, 343, 253], [4, 343, 30, 432, 183], [1, 207, 113, 273, 253], [7, 207, 253, 432, 336], [7, 343, 183, 432, 253],
   [9, 226, 340, 432, 416],
+  [14, 430, 24, 512, 128], [15, 432, 212, 512, 330],
 ];
 // Syndicate turf (tiles): The Yards and Southside.
-const TURF_RECTS = [[0, 83, 133, 168], [0, 303, 137, 364]];
+const TURF_RECTS = [[0, 83, 133, 168], [0, 303, 137, 364], [436, 216, 508, 320]];
 // Big park cells (tiles) - left as parks instead of being subdivided.
 const PARK_CELLS = [{ x: 76, y: 18, label: 'Greenfield Park', pond: true }, { x: 276, y: 46, label: 'Central Park', pond: false }];
 
@@ -165,6 +170,7 @@ export class CityMap {
     this.parking = [];
     this.stalls = [];
     this.marina = [];
+    this.gates = []; // sliding gates (police motor pools, the Syndicate compound)
     this.dropSites = [];
     this.cameras = [];
     this.nodes = [];
@@ -435,6 +441,7 @@ export function generateCity(seed = 1337) {
   buildMotorPools(m);
   buildInteriors(m);
   buildDealerLots(m);
+  buildOffshore(m, rand);
   aimLamps(m);
   buildLaneGraph(m);
   buildCameras(m, rand);
@@ -887,7 +894,8 @@ function buildMotorPools(m) {
       if (isRoad(x0 + Math.floor(w / 2), yy)) break;
       for (let tx = x0 + 1; tx < x0 + w - 1; tx++) { const t = m.tileAt(tx, yy); if (t !== T.ROAD && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP) m.set(tx, yy, T.LOT); }
     }
-    const gate = { x: (x0 + w / 2) * TILE, y: (gy + 0.5) * TILE, w: (w - 2) * TILE, south, props: [] };
+    const gate = { x: (x0 + w / 2) * TILE, y: (gy + 0.5) * TILE, w: (w - 2) * TILE, south, props: [], rule: 'police', rect: { tx: x0, ty: y0, tw: w, th: h } };
+    m.gates.push(gate);
     for (let px = (x0 + 1) * TILE + 8; px <= (x0 + w - 1) * TILE - 8; px += 14) {
       const e = m.addSolidProp(px, gate.y, 10);
       e.gate = m.motorPools.length;
@@ -905,7 +913,7 @@ function buildMotorPools(m) {
     }
     // where a new officer walks out of the armory: the station-side corner, away from the cars
     const exit = { x: (x0 + w - 2) * TILE, y: (far + 0.5) * TILE + dir * 20 };
-    m.motorPools.push({ station: st.id, b: b.id, tx: x0, ty: y0, tw: w, th: h, south, gate, spots, exit });
+    m.motorPools.push({ station: st.id, b: b.id, tx: x0, ty: y0, tw: w, th: h, south, gate, gateIdx: m.gates.length - 1, spots, exit });
     st.pool = m.motorPools.length - 1;
   }
 }
@@ -986,6 +994,125 @@ function buildDealerLots(m) {
     m.dealerLots.push({ poi: d.id, slots: slots.map((s) => ({ x: s.x, y: s.y, a: s.a ? Math.PI / 2 : 0 })) });
     m.parking = m.parking.filter((s) => !slots.some((q) => Math.hypot(q.x - s.x, q.y - s.y) < 80)); // the lot is the dealer's now
   }
+}
+
+// ---- out on the water ------------------------------------------------------------------------
+// Two islands you can only reach by boat (Pelican Key: beach, bar, charter dock; Smuggler's Rock:
+// the Syndicate's walled compound), open-sea waypoints for boats, offshore fishing grounds and
+// the race courses.
+function simpleBuilding(m, x, y, w, h, name, kind, d, roofKind = 'tar', sign = null) {
+  const bid = m.buildings.length;
+  m.roofs.push({ tx: x, ty: y, tw: w, th: h, kind: roofKind, seed: (x * 7919 + y * 104729) | 0, d, b: bid });
+  const b = { id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind, name, business: null, signs: [] };
+  if (sign) b.signs.push(sign);
+  m.buildings.push(b);
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * MAP_W + tx] = bid; }
+  return b;
+}
+const isWater = (t) => t === T.WATER || t === T.DEEP;
+function shoreSand(m, box, ground) {
+  const [x0, y0, x1, y1] = box;
+  for (let ty = y0 - 4; ty < y1 + 4; ty++) for (let tx = x0 - 4; tx < x1 + 4; tx++) {
+    const t = m.tileAt(tx, ty);
+    if (t !== T.GRASS) continue;
+    let near = false;
+    for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3; dx++) if (isWater(m.tileAt(tx + dx, ty + dy))) { near = true; break; }
+    m.set(tx, ty, near ? T.SAND : ground);
+  }
+}
+// A jetty from the shore at (sx, sy) heading dx/dy until it is `len` tiles into the water.
+function jetty(m, sx, sy, dx, dy, len, w = 3) {
+  let x = sx, y = sy, k = 0;
+  while (k < 40 && !isWater(m.tileAt(x, y))) { x += dx; y += dy; k++; }
+  const px = dy !== 0 ? 1 : 0, py = dx !== 0 ? 1 : 0;
+  const tip = { x, y };
+  for (let i = -2; i < len; i++) for (let o = 0; o < w; o++) {
+    const tx = x + dx * i + px * (o - 1), ty = y + dy * i + py * (o - 1);
+    if (isWater(m.tileAt(tx, ty)) || i < 0) m.set(tx, ty, T.DOCK);
+    tip.x = x + dx * i; tip.y = y + dy * i;
+  }
+  return tip;
+}
+
+function buildOffshore(m, rand) {
+  // --- Pelican Key: beach island with a bar, a charter dock and jetskis -------------------------
+  const P = ISLANDS.P;
+  shoreSand(m, P.box, T.GRASS);
+  const [px0, py0, px1, py1] = P.box;
+  const pcx = Math.floor((px0 + px1) / 2), pcy = Math.floor((py0 + py1) / 2);
+  m.fill(pcx - 8, pcy - 2, 16, 4, T.PLAZA); // boardwalk
+  m.fill(pcx - 2, py0 + 6, 4, py1 - py0 - 12, T.PLAZA);
+  const bar = simpleBuilding(m, pcx + 3, pcy - 9, 9, 6, 'Pelican Key Beach Bar', 'beachbar', 14, 'tile', { x: (pcx + 7.5) * TILE, y: (pcy - 2.6) * TILE, text: 'Beach Bar' });
+  m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Pelican Key Beach Bar', x: (pcx + 7.5) * TILE, y: (pcy - 2.3) * TILE, r: 44, b: bar.id });
+  const tip = jetty(m, px0 + 6, pcy, -1, 0, 9);
+  const charter = simpleBuilding(m, px0 + 6, pcy + 4, 6, 4, 'Pelican Key Charters', 'charter', 14, 'metal', { x: (px0 + 9) * TILE, y: (pcy + 3.4) * TILE, text: 'Charters' });
+  m.pois.push({ id: m.pois.length, kind: 'charter', label: 'Pelican Key Charters', x: (px0 + 9) * TILE, y: (pcy + 3.1) * TILE, r: 44, b: charter.id });
+  // jetskis and a speedboat tied up along the jetty
+  for (let k = 0; k < 4; k++) m.marina.push({ x: (tip.x + 2 + k * 2.2) * TILE, y: (pcy + 2.6) * TILE, a: Math.PI / 2, kind: k < 3 ? 'jetski' : 'speedboat' });
+  for (let k = 0; k < 2; k++) m.marina.push({ x: (tip.x + 2 + k * 3.2) * TILE, y: (pcy - 2.6) * TILE, a: -Math.PI / 2, kind: 'jetski' });
+  for (let k = 0; k < 40; k++) {
+    const tx = px0 + Math.floor(rand() * (px1 - px0)), ty = py0 + Math.floor(rand() * (py1 - py0));
+    const t = m.tileAt(tx, ty);
+    if (t === T.SAND && rand() < 0.5) addProp(m, ['palm_a', 'palm_b', 'palm_c', 'umbrella_r', 'umbrella_y'][Math.floor(rand() * 5)], (tx + 0.5) * TILE, (ty + 0.5) * TILE, 0);
+    else if (t === T.GRASS) addProp(m, rand() < 0.7 ? 'palm_d' : 'shrub_a', (tx + 0.5) * TILE, (ty + 0.5) * TILE, 10);
+  }
+  m.pelican = { x: pcx * TILE, y: pcy * TILE, dock: { x: tip.x * TILE, y: pcy * TILE } };
+
+  // --- Smuggler's Rock: rocky island, walled Syndicate compound, gate for members only --------
+  const C = ISLANDS.C;
+  shoreSand(m, C.box, T.DIRT);
+  const [cx0, cy0, cx1, cy1] = C.box;
+  const ccx = Math.floor((cx0 + cx1) / 2), ccy = Math.floor((cy0 + cy1) / 2);
+  const W = 26, H = 22, wx = ccx - 11, wy = ccy - H / 2;
+  m.fill(wx, wy, W, H, T.LOT);
+  for (let x = wx; x < wx + W; x++) { m.set(x, wy, T.WALL); m.set(x, wy + H - 1, T.WALL); }
+  for (let y = wy; y < wy + H; y++) { m.set(wx, y, T.WALL); m.set(wx + W - 1, y, T.WALL); }
+  const gy0 = ccy - 2; // the gate: 4 tiles of the west wall, facing the dock
+  for (let y = gy0; y < gy0 + 4; y++) m.set(wx, y, T.LOT);
+  m.fill(wx - 14, gy0, 14, 4, T.DIRT); // track down to the dock
+  const den = simpleBuilding(m, wx + 12, wy + 3, 11, 7, 'Syndicate Den', 'den', 15, 'metal', { x: (wx + 17.5) * TILE, y: (wy + 10.4) * TILE, text: 'NO TRESPASSING' });
+  m.pois.push({ id: m.pois.length, kind: 'smuggler', label: "Smuggler's Den", x: (wx + 17.5) * TILE, y: (wy + 10.8) * TILE, r: 46, b: den.id });
+  const ctip = jetty(m, wx - 12, gy0 + 1, -1, 0, 8);
+  for (let k = 0; k < 3; k++) m.marina.push({ x: (ctip.x + 2 + k * 3) * TILE, y: (gy0 - 1.6) * TILE, a: -Math.PI / 2, kind: k === 2 ? 'speedboat' : 'dinghy', gang: true });
+  for (const [x, y] of [[wx + 4, wy + 14], [wx + 6, wy + 16], [wx + 20, wy + 15], [wx + 3, wy + 3]]) addProp(m, ['pallet', 'drum', 'spool', 'pallet_b'][Math.floor(rand() * 4)], (x + 0.5) * TILE, (y + 0.5) * TILE, 10);
+  const gate = { x: (wx + 0.5) * TILE, y: (gy0 + 2) * TILE, w: 4 * TILE, vertical: true, props: [], rule: 'gang', rect: { tx: wx, ty: wy, tw: W, th: H } };
+  for (let py = gy0 * TILE + 8; py <= (gy0 + 4) * TILE - 8; py += 14) { const e = m.addSolidProp(gate.x, py, 10); gate.props.push(e); }
+  m.gates.push(gate);
+  m.rock = { x: ccx * TILE, y: ccy * TILE, compound: { tx: wx, ty: wy, tw: W, th: H }, dock: { x: ctip.x * TILE, y: (gy0 + 1) * TILE },
+    guards: [[wx - 3, gy0 - 1], [wx - 3, gy0 + 4], [wx + 3, gy0 + 1], [wx + 8, wy + 5], [wx + 9, wy + H - 4], [ctip.x + 1, gy0 + 1]].map(([x, y]) => ({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE })) };
+
+  // --- open-sea waypoints, offshore grounds ----------------------------------------------------
+  m.seaPoints = []; m.offshore = [];
+  for (let ty = 4; ty < MAP_H - 4; ty += 8) for (let tx = 4; tx < MAP_W - 4; tx += 8) {
+    let ok = true;
+    for (let dy = -3; dy <= 3 && ok; dy++) for (let dx = -3; dx <= 3; dx++) if (!isWater(m.tileAt(tx + dx, ty + dy))) { ok = false; break; }
+    if (!ok) continue;
+    const p = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE };
+    m.seaPoints.push(p);
+    let far = true;
+    for (let dy = -14; dy <= 14 && far; dy += 2) for (let dx = -14; dx <= 14; dx += 2) { const t = m.tileAt(tx + dx, ty + dy); if (!isWater(t) && t !== T.WALL) { far = false; break; } }
+    if (far) m.offshore.push(p);
+  }
+
+  // --- race courses: buoys in open water around Pelican Key -------------------------------------
+  const ring = (pad, n, phase) => {
+    const pts = [];
+    const rx = (px1 - px0) / 2 + pad, ry = (py1 - py0) / 2 + pad;
+    for (let k = 0; k < n; k++) {
+      const a = phase + (k / n) * Math.PI * 2;
+      let x = pcx + Math.cos(a) * rx, y = pcy + Math.sin(a) * ry;
+      for (let tries = 0; tries < 12 && !(isWater(m.tileAt(Math.floor(x), Math.floor(y))) && isWater(m.tileAt(Math.floor(x) + 2, Math.floor(y))) && isWater(m.tileAt(Math.floor(x) - 2, Math.floor(y)))); tries++) { x += Math.cos(a) * 2; y += Math.sin(a) * 2; }
+      x = Math.min(MAP_W - 3, Math.max(2, x)); y = Math.min(MAP_H - 3, Math.max(2, y));
+      pts.push({ x: x * TILE, y: y * TILE });
+    }
+    return pts;
+  };
+  const jetCourse = ring(9, 8, Math.PI);
+  const boatCourse = ring(26, 10, Math.PI);
+  m.races = [
+    { id: 0, name: 'Pelican Key Jetski Sprint', kind: 'jetski', start: jetCourse[0], cps: jetCourse.slice(1).concat([jetCourse[0]]), prize: 400 },
+    { id: 1, name: 'Bay Boat Classic', kind: 'boat', start: boatCourse[0], cps: boatCourse.slice(1).concat([boatCourse[0]]), prize: 700 },
+  ];
 }
 
 // Bait & tackle shops: storefronts close to the water, in different districts, spread apart.

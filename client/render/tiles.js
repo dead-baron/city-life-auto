@@ -199,9 +199,8 @@ function drawMotorPool(g, mp, cx, cy) {
   fence(x + w - half, y + half, x + w - half, y + h - half);
   const back = mp.south ? y + half : y + h - half;
   fence(x + half, back, x + w - half, back);
-  // gate rail + posts on the street side
+  // gate rail on the street side (posts are drawn with the gate)
   const gy = mp.gate.y;
-  g.fillStyle = '#2a2c31'; g.fillRect(x + TILE - 6, gy - 7, 8, 14); g.fillRect(x + w - TILE - 2, gy - 7, 8, 14);
   g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x + TILE, gy - 1, w - 2 * TILE, 2);
 }
 

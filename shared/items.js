@@ -39,6 +39,9 @@ export const ITEMS = {
   catfish: { name: 'Night Catfish',     fish: 2, sell: 70 },
   salmon:  { name: 'Rare Silver Salmon', fish: 3, sell: 120 },
   tuna:    { name: 'Legendary Bluefin Tuna', fish: 4, sell: 480 },
+  grouper: { name: 'Giant Grouper',     fish: 3, deep: true, sell: 150 },
+  swordfish: { name: 'Swordfish',       fish: 4, deep: true, sell: 260 },
+  marlin:  { name: 'Blue Marlin',       fish: 5, deep: true, sell: 420 },
   purse:   { name: 'Snatched Purse',    loot: true, sell: 180 },
   bonds:   { name: 'Bearer Bonds',      loot: true, sell: 140 },
   jewelry: { name: 'Diamond Earrings',  loot: true, sell: 220 },
@@ -95,12 +98,18 @@ export const SHOPS = {
   tackle: { title: 'Hook & Line Bait and Tackle', buy: [
     { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'worms', price: 10, qty: 5 }, { kind: 'item', id: 'shrimp', price: 20, qty: 5 },
     { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'glowlure', price: 30, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 },
-  ], sells: ['bass', 'catfish', 'salmon', 'tuna'] },
-  fishmarket: { title: 'Dockside Fish Market', buy: [{ kind: 'weapon', id: 'rod', price: 75 }, { kind: 'item', id: 'lure', price: 25, qty: 3 }], sells: ['bass', 'catfish', 'salmon', 'tuna'] },
+  ], sells: ['bass', 'catfish', 'salmon', 'tuna', 'grouper', 'swordfish', 'marlin'] },
+  fishmarket: { title: 'Dockside Fish Market', buy: [{ kind: 'weapon', id: 'rod', price: 75 }, { kind: 'item', id: 'lure', price: 25, qty: 3 }], sells: ['bass', 'catfish', 'salmon', 'tuna', 'grouper', 'swordfish', 'marlin'] },
+  charter: { title: 'Pelican Key Charters', buy: [{ kind: 'weapon', id: 'rod', price: 90 }, { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 }], sells: ['grouper', 'swordfish', 'marlin', 'tuna', 'salmon'] },
+  smuggler: { title: "Smuggler's Den (members only)", buy: [
+    { kind: 'weapon', id: 'smg', price: 1100 }, { kind: 'ammo', id: 'smg', price: 45, qty: 30 },
+    { kind: 'weapon', id: 'rocket', price: 5200 }, { kind: 'ammo', id: 'rocket', price: 350, qty: 1 },
+    { kind: 'weapon', id: 'shotgun', price: 700 }, { kind: 'ammo', id: 'shotgun', price: 40, qty: 12 },
+  ], sells: ['purse', 'bonds', 'jewelry'] },
   clothing: { title: 'Threads Outfitters', buy: [{ kind: 'service', id: 'outfit', price: 120 }] },
   garage: { title: 'Fresh Coat Garage', buy: [{ kind: 'service', id: 'respray', price: 250 }, { kind: 'service', id: 'wash', price: 20 }, { kind: 'service', id: 'repair', price: 300 }, { kind: 'service', id: 'garage', price: 0 }] },
   dealer: { title: 'Motor Row Dealership', buy: ['compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports'].map((id) => ({ kind: 'vehicle', id })) },
-  marina: { title: 'Harbor Marina', buy: ['dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },
+  marina: { title: 'Harbor Marina', buy: ['jetski', 'dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },
 };
 
 export const FISH_TABLE = {
@@ -108,4 +117,6 @@ export const FISH_TABLE = {
   shore: [70, 0, 25, 5],
   river: [60, 0, 35, 5],
   deep: [45, 0, 40, 15],
+  offshore: [50, 32, 18], // out at sea from a boat: [grouper, swordfish, marlin]
 };
+export const OFFSHORE_FISH = ['grouper', 'swordfish', 'marlin'];

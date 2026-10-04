@@ -29,7 +29,7 @@ const procCache = new Map();
 const liveryCache = new Map();
 // Police motorcycle: the sport bike's art in black-and-white police livery with a light bar.
 function policeBike(fr, L, W) {
-  const key = `${fr.a}|${fr.x}|${fr.y}`;
+  const key = `${fr.a}|${fr.x}|${fr.y}|${L}`;
   let cv = liveryCache.get(key);
   if (cv) return cv;
   const S = 3;
@@ -51,7 +51,7 @@ export function drawVehicle(g, desc, def, f) {
   const n = atlas.variants[artId] || 0;
   const fr = n ? frame(`veh_${artId}_${(desc.vr || 0) % n}`) : null;
   const L = def.L, W = def.W;
-  if (fr && def.id === 'policebike') { g.drawImage(policeBike(fr, L, W), -L / 2, -W / 2, L, W); return; }
+  if (fr && (def.id === 'policebike' || def.id === 'policeboat')) { g.drawImage(policeBike(fr, L, W), -L / 2, -W / 2, L, W); return; }
   if (fr) {
     g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, -L / 2, -W / 2, L, W);
   } else {
@@ -73,6 +73,14 @@ function procVehicle(def, paint) {
   g.fillStyle = '#111'; rr(g, 0, 0, L, W, 6); g.fill();
   if (def.id === 'bus') paint = '#f2c21b';
   if (def.id === 'armored') paint = '#d8dbe0';
+  if (def.id === 'jetski') { // stubby hull, seat, handlebars
+    g.clearRect(-2, -2, L + 4, W + 4);
+    g.fillStyle = paint; g.beginPath(); g.moveTo(0, 3); g.lineTo(L - 12, 1); g.quadraticCurveTo(L, W / 2, L - 12, W - 1); g.lineTo(0, W - 3); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(4, W / 2 - 1, L - 18, 2);
+    g.fillStyle = '#1b1d22'; rr(g, 8, W / 2 - 4, 16, 8, 3); g.fill();
+    g.fillStyle = '#333'; g.fillRect(L - 18, 3, 2, W - 6);
+    return cv;
+  }
   if (def.id === 'flatbed') {
     g.fillStyle = paint; rr(g, L - 38, 2, 36, W - 4, 5); g.fill();
     g.fillStyle = '#1b2333'; g.fillRect(L - 14, 6, 8, W - 12);

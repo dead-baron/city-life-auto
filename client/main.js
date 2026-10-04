@@ -128,7 +128,7 @@ function onText(m) {
       for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
-      S.gateOpen = {}; S.gateAnim = {}; for (const mp of S.map.motorPools || []) for (const pr of mp.gate.props) pr.off = false;
+      S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       S.ground.cache.clear();
@@ -367,6 +367,8 @@ function onEvent(ev) {
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
+    case 'raceGo': S.fx.ring(ev.x, ev.y, 60, 'rgba(255,220,80,'); sfx('cash', 1); break;
+    case 'checkpoint': S.fx.ring(ev.x, ev.y, 40, 'rgba(120,255,160,'); sfx('cash', 0.6); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
     case 'propfix': {
       const p = S.map.props[ev.i];
@@ -1165,6 +1167,7 @@ function render(dt) {
   drawBays(view, dt);
   drawGarageDoors(view, dt);
   drawGates(view, dt);
+  drawBuoys(view, now);
   // traffic lights, cameras, overhead canopy
   drawSignals(view);
   for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
@@ -1396,30 +1399,61 @@ function tickInterior() {
 }
 $('int-open').onclick = () => send({ t: 'interior' });
 
-// Motor pool gates: a sliding steel gate with blue-and-white panels that rolls aside for officers.
+// Race buoys: a big start float with a chequered flag, numbered checkpoint buoys bobbing.
+function drawBuoys(view, now) {
+  const inView = (p) => p.x > view.x0 - 60 && p.x < view.x1 + 60 && p.y > view.y0 - 60 && p.y < view.y1 + 60;
+  for (const race of S.map.races || []) {
+    const bob = (k) => Math.sin(now * 2 + k) * 1.5;
+    race.cps.forEach((c, k) => {
+      if (!inView(c)) return;
+      g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.ellipse(c.x, c.y + 4, 14, 6, 0, 0, 6.28); g.fill();
+      g.fillStyle = k % 2 ? '#ffffff' : '#e8382b'; g.beginPath(); g.arc(c.x, c.y + bob(k), 9, 0, 6.28); g.fill();
+      g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
+      g.fillStyle = k % 2 ? '#e8382b' : '#fff'; g.font = 'bold 10px monospace'; g.textAlign = 'center'; g.fillText(String(k + 1), c.x, c.y + bob(k) + 4);
+    });
+    const s = race.start;
+    if (!inView(s)) continue;
+    g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.ellipse(s.x, s.y + 6, 26, 9, 0, 0, 6.28); g.fill();
+    g.fillStyle = '#ff9a1a'; g.beginPath(); g.arc(s.x, s.y + bob(9), 14, 0, 6.28); g.fill();
+    g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
+    g.fillStyle = '#1b2333'; g.fillRect(s.x - 1, s.y - 30, 2, 28);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { g.fillStyle = (r + c) % 2 ? '#fff' : '#111'; g.fillRect(s.x + 1 + c * 4, s.y - 30 + r * 4, 4, 4); }
+    g.font = 'bold 12px monospace'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(race.name, s.x + 1, s.y + 31);
+    g.fillStyle = '#fff'; g.fillText(race.name, s.x, s.y + 30);
+    g.font = 'bold 10px monospace'; g.fillStyle = '#ffd36b'; g.fillText(race.kind === 'jetski' ? 'START - jet skis' : 'START - boats', s.x, s.y + 44);
+  }
+}
+
+// Sliding gates (motor pools, the Syndicate compound): steel panels that roll aside.
 function drawGates(view, dt) {
-  for (let i = 0; i < (S.map.motorPools || []).length; i++) {
-    const gt = S.map.motorPools[i].gate;
-    const x0 = gt.x - gt.w / 2, x1 = gt.x + gt.w / 2;
-    if (x1 < view.x0 - 200 || x0 > view.x1 + 200 || gt.y < view.y0 - 40 || gt.y > view.y1 + 40) continue;
+  const list = S.map.gates || [];
+  for (let i = 0; i < list.length; i++) {
+    const gt = list[i];
+    if (Math.abs(gt.x - (view.x0 + view.x1) / 2) > (view.x1 - view.x0) / 2 + 250 || Math.abs(gt.y - (view.y0 + view.y1) / 2) > (view.y1 - view.y0) / 2 + 250) continue;
     const want = S.gateOpen[i] ? 1 : 0;
     S.gateAnim[i] = (S.gateAnim[i] ?? want) + (want - (S.gateAnim[i] ?? want)) * (1 - Math.exp(-4 * dt));
     const k = S.gateAnim[i];
-    const gx = x0 + gt.w * k * 0.92; // slides toward the right post
-    const gw = gt.w;
     g.save();
-    g.beginPath(); g.rect(x0, gt.y - 10, gt.w, 20); g.clip();
-    g.fillStyle = '#d8dce4'; g.fillRect(gx, gt.y - 5, gw, 10);
-    g.fillStyle = '#1d3a8a'; for (let px = gx + 6; px < gx + gw - 4; px += 24) g.fillRect(px, gt.y - 4, 10, 8);
-    g.fillStyle = '#2a2c31'; g.fillRect(gx, gt.y - 6, 4, 12);
+    g.translate(gt.x, gt.y);
+    if (gt.vertical) g.rotate(Math.PI / 2);
+    const x0 = -gt.w / 2;
+    const gx = x0 + gt.w * k * 0.92; // slides toward one post
+    const police = gt.rule === 'police';
+    g.save();
+    g.beginPath(); g.rect(x0, -10, gt.w, 20); g.clip();
+    g.fillStyle = police ? '#d8dce4' : '#5a5048'; g.fillRect(gx, -5, gt.w, 10);
+    g.fillStyle = police ? '#1d3a8a' : '#c8262b'; for (let px = gx + 6; px < gx + gt.w - 4; px += 24) g.fillRect(px, -4, 10, 8);
+    g.fillStyle = '#2a2c31'; g.fillRect(gx, -6, 4, 12);
     g.restore();
-    if (k > 0.05 && k < 0.95) { g.fillStyle = Math.floor(S.loopClock * 6) % 2 ? '#ffb000' : '#5a3a00'; g.beginPath(); g.arc(x1 + 6, gt.y - 10, 4, 0, 6.28); g.fill(); }
+    g.fillStyle = '#2a2c31'; g.fillRect(x0 - 8, -8, 8, 16); g.fillRect(-x0, -8, 8, 16);
+    if (k > 0.05 && k < 0.95) { g.fillStyle = Math.floor(S.loopClock * 6) % 2 ? '#ffb000' : '#5a3a00'; g.beginPath(); g.arc(-x0 + 6, -10, 4, 0, 6.28); g.fill(); }
+    g.restore();
   }
 }
 function setGate(i, open) {
   S.gateOpen[i] = open;
-  const mp = S.map.motorPools && S.map.motorPools[i];
-  if (mp) for (const pr of mp.gate.props) pr.off = !!open;
+  const gt = S.map.gates && S.map.gates[i];
+  if (gt) for (const pr of gt.props) pr.off = !!open;
 }
 
 // Re-draw the baked bridge-deck tiles around a point (over a boat / swimmer beneath them).

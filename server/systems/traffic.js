@@ -325,7 +325,7 @@ function manage(world) {
     world.map.marina.forEach((sp, i) => {
       if (world.marinaParked.has(i) && world.get(world.marinaParked.get(i))) return;
       if ((sp.x - a.x) ** 2 + (sp.y - a.y) ** 2 > 1100 * 1100) return;
-      const v = world.spawnVehicle(i % 3 === 0 ? 'speedboat' : 'dinghy', sp.x, sp.y, sp.a, { parked: true });
+      const v = world.spawnVehicle(sp.kind || (i % 3 === 0 ? 'speedboat' : i % 3 === 1 ? 'jetski' : 'dinghy'), sp.x, sp.y, sp.a, { parked: true });
       world.marinaParked.set(i, v.id);
     });
   }

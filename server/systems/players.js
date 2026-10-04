@@ -17,6 +17,7 @@ import * as jobs from './jobs.js';
 import * as homes from './homes.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
+import * as races from './races.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -202,7 +203,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       if (w && (w.type === 'gun')) combat.tryAttack(world, ped, inp.aim);
     }
     if ((pressed & IN.VEHICLE) && !v.scripted) vehicles.exitVehicle(world, ped);
-    if (pressed & IN.ACTION) { const act = homes.vehicleInteraction(world, p); if (act) act.run(); }
+    if (pressed & IN.ACTION) { const act = findInteraction(world, p); if (act) act.run(); }
     return;
   }
 
@@ -276,7 +277,17 @@ export function findInteraction(world, p) {
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
-  if (ped.vehId) return homes.vehicleInteraction(world, p);
+  if (ped.vehId) {
+    if (ped.fishing) {
+      if (ped.fishing.biteAt && world.time >= ped.fishing.biteAt && world.time <= ped.fishing.biteAt + ped.fishing.window) return { label: 'REEL IN NOW!', run: () => jobs.reelIn(world, p) };
+      return { label: 'Waiting for a bite... (drive off to stop)', run: () => jobs.reelIn(world, p) };
+    }
+    if (p.profile.weapons.rod !== undefined) {
+      const spot = jobs.boatFishingSpot(world, ped);
+      if (spot) return { label: 'Fish offshore (deep-sea)', run: () => jobs.castLine(world, p, spot) };
+    }
+    return homes.vehicleInteraction(world, p);
+  }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
 
@@ -424,7 +435,7 @@ export function buildMe(world, p) {
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false,
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, job: phone.jobTarget(world, p),
+    prompt: p.prompt, job: races.targetFor(world, p) || phone.jobTarget(world, p),
     radar: law.radarFor(world, p), bounty: p.bounty,
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

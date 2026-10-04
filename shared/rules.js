@@ -58,3 +58,10 @@ export const SPAWN_PROTECT_S = 2;    // after spawning or stepping out of a home
 
 // Police stations
 export const POLICE_ARMORY = ['service', 'prifle', 'psniper', 'passault', 'pshotgun']; // department weapons in the HQ armory
+
+// Out on the water
+export const GANG_JOIN_FEE = 500;                       // Syndicate initiation (at any gang HQ) - opens the Smuggler's Rock compound
+export const POACH_PAY = { turtle: 900, dolphin: 1300 }; // illegal hauls sold at the Smuggler's Den (a felony if anyone sees the netting)
+export const NET_TIME_S = 4;                            // hold your boat still over the spot this long to haul the catch in
+export const DEEPSEA_CATCH = 3;                         // offshore fish a deep-sea charter asks for
+export const DEEPSEA_PAY = 500;                         // charter bonus on top of selling the fish

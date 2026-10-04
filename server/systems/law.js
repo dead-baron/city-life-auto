@@ -23,6 +23,7 @@ export const CRIMES = {
   cargoTheft:  { heat: 15, label: 'Cargo theft' },
   ram:         { heat: 8,  label: 'Reckless ramming' },
   possession:  { heat: 20, label: 'Contraband possession' },
+  poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true },
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR } from '../../shared/rules.js';
@@ -505,6 +506,7 @@ export function goOnDuty(world, p) {
   if (p.wanted > 0) return 'Wanted suspects cannot pick up a badge.';
   if (Date.now() < (prof.firedUntil || 0)) return 'You were fired recently. Come back later.';
   if (prof.felonies > 0) return `Applicants need an unblemished felony record (you have ${prof.felonies}).`;
+  if (prof.gang) return 'Known Syndicate members can\'t join the force - leave the gang first.';
   if (prof.samaritan < ENFORCER_MIN_SAMARITAN && !p.dev) return `You need ${ENFORCER_MIN_SAMARITAN} Good Samaritan Points (you have ${prof.samaritan}).`;
   p.badge = true; p.hunter = false;
   p.faction = FACTION.ENFORCER;

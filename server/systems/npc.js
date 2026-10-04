@@ -68,6 +68,12 @@ export function update(world, dt) {
   for (const ped of world.entities.values()) {
     if (ped.kind !== K.PED || !ped.npc || ped.dead || ped.vehId) continue;
     const n = ped.npc;
+    if (n.guard && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch
+      const dd = Math.hypot(ped.x - n.guard.x, ped.y - n.guard.y);
+      if (dd > 10) pedStep(ped, seek(ped, n.guard.x, n.guard.y, false), dt, world.map, walkMods(world, ped, 0.6));
+      else { ped.vx = 0; ped.vy = 0; if (now >= (n.lookAt || 0)) { n.guard.a += (rng() - 0.5) * 2.4; n.lookAt = now + 1.5 + rng() * 2; } ped.a = n.guard.a; }
+      continue;
+    }
     if (n.desk) { // shop / desk staff stay behind their counter
       const dd = Math.hypot(ped.x - n.desk.x, ped.y - n.desk.y);
       if (dd > 6) pedStep(ped, seek(ped, n.desk.x, n.desk.y, false), dt, world.map, walkMods(world, ped, 0.5));
@@ -320,7 +326,7 @@ function flee(world, ped, fx, fy, secs) {
   n.state = 'flee'; n.fx = fx; n.fy = fy; n.until = world.time + secs;
 }
 
-function aligned(p) { return p.profile.criminalExp >= 200 && !p.badge; }
+function aligned(p) { return p.profile.gang === 'syndicate' || (p.profile.criminalExp >= 200 && !p.badge); }
 
 // Syndicate territory defense force (GDD §4B, §7)
 export function gangAlert(world, perp) {

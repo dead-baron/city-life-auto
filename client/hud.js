@@ -404,7 +404,7 @@ let wmImg = null, wmState = 0;
 function worldMapImage(map) {
   if (map.seed !== 1337) return null;
   if (wmState === 0) { wmState = 1; wmImg = new Image(); wmImg.onload = () => { wmState = 2; }; wmImg.onerror = () => { wmState = 3; }; wmImg.src = 'assets/worldmap.webp'; }
-  return wmState === 2 ? wmImg : null;
+  return wmState === 2 && Math.abs(wmImg.width / wmImg.height - MAP_W / MAP_H) < 0.02 ? wmImg : null; // a stale bake (old map size) falls back to the minimap
 }
 let centroids = null;
 function districtCentroids(map) {
@@ -425,6 +425,7 @@ const POI_ICON = {
   sports: ['S', '#7de0ff'], hardware: ['T', '#ff9a3a'], pharmacy: ['+', '#3ddc84'], coffee: ['C', '#c89a6a'], garage: ['R', '#ffd400'],
   clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
   fishmarket: ['≈', '#25b8c0'], marina: ['B', '#7de0ff'], farm: ['¥', '#b8e02a'], courthouse: ['J', '#e8d8a8'],
+  charter: ['≈', '#7de0ff'], smuggler: ['☠', '#ff5a5a'],
 };
 
 function buildMinimap(map) {

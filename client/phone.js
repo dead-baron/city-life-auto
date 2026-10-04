@@ -16,13 +16,13 @@ export const PLACE_GROUPS = [
   { id: 'sell', icon: '⇄', title: 'Sell stuff', kinds: ['pawn', 'fence', 'fishmarket', 'tackle'] },
   { id: 'cars', icon: '🔧', title: 'Cars & boats', kinds: ['garage', 'dealer', 'marina'] },
   { id: 'work', icon: '💼', title: 'Work & law', kinds: ['warehouse', 'farm', 'courthouse'] },
-  { id: 'gang', icon: '☠', title: 'Gang headquarters', kinds: ['gang'] },
+  { id: 'gang', icon: '☠', title: 'Gang headquarters', kinds: ['gang', 'smuggler'] },
 ];
 const KIND_NOTE = {
   hospital: 'heal up', police: 'badge, evidence', bank: 'deposit / withdraw', atm: 'deposit / withdraw', gunshop: 'guns & ammo', sports: 'bats, fishing',
   hardware: 'melee tools', pharmacy: 'med kits', coffee: 'stamina', grocery: 'produce drop-off', clothing: 'new outfit / disguise', pawn: 'buy & sell gear',
   fence: 'black market', fishmarket: 'sell fish, rods', tackle: 'rods, bait, sell fish', paint: 'respray & lose the heat', garage: 'repair, respray', dealer: 'buy cars', marina: 'buy boats', warehouse: 'courier jobs',
-  farm: 'harvest jobs', courthouse: 'bounties', gang: 'syndicate turf - careful',
+  farm: 'harvest jobs', courthouse: 'bounties', gang: 'syndicate turf / join the gang', smuggler: 'members only - boat to the Rock', charter: 'deep-sea charters (boat)',
 };
 
 export function createPhone(ctx) {

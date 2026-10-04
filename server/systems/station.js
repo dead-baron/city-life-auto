@@ -10,12 +10,10 @@ import * as homes from './homes.js';
 import * as combat from './combat.js';
 
 const TILE = 32;
-const GATE_CLOSE_S = 1.2;    // gate stays open this long after the last officer clears it
 const REFILL_EVERY_S = 20;   // empty bays are restocked when nobody is watching
 
 export function init(world) {
-  world.poolState = (world.map.motorPools || []).map(() => ({ open: false, closeAt: 0 }));
-  for (let i = 0; i < world.poolState.length; i++) refill(world, i, true);
+  for (let i = 0; i < pools(world).length; i++) refill(world, i, true);
 }
 
 const pools = (world) => world.map.motorPools || [];
@@ -43,40 +41,7 @@ export function refill(world, i, force = false) {
   return n;
 }
 
-export function gatesOpen(world) { return (world.poolState || []).map((s, i) => (s.open ? i : -1)).filter((i) => i >= 0); }
-
-function setGate(world, i, open) {
-  const st = world.poolState[i];
-  if (st.open === open) return;
-  st.open = open;
-  for (const pr of pools(world)[i].gate.props) pr.off = open;
-  world.broadcast({ e: 'gate', i, open });
-}
-
 export function update(world) {
-  if (!world.poolState) return;
-  const now = world.time;
-  if (world.tick % 4 === 2) {
-    pools(world).forEach((mp, i) => {
-      const g = mp.gate;
-      let want = false;
-      const nearGate = (x, y, reach) => Math.abs(x - g.x) < g.w / 2 + 60 && Math.abs(y - g.y) < reach;
-      for (const p of world.players.values()) {
-        const ped = p.ped;
-        if (!ped || ped.dead || ped.hidden) continue;
-        const v = ped.vehId ? world.get(ped.vehId) : null;
-        const x = v ? v.x : ped.x, y = v ? v.y : ped.y;
-        if (p.badge && nearGate(x, y, 170)) want = true;                // officers in or out
-        else if (poolOf(world, x, y) === i && nearGate(x, y, 130)) want = true; // anyone inside can leave
-      }
-      for (const v of world.query(g.x, g.y, 200, K.VEH)) if (v.ai && v.ai.kind === 'police' && nearGate(v.x, v.y, 170)) want = true;
-      // never close on someone standing or parked in the gateway
-      const inGateway = world.query(g.x, g.y, g.w / 2 + 30).some((e) => (e.kind === K.PED || e.kind === K.VEH) && !e.removed && !e.dead && Math.abs(e.y - g.y) < (e.kind === K.VEH ? e.def.L / 2 + 6 : 20) && Math.abs(e.x - g.x) < g.w / 2);
-      const st = world.poolState[i];
-      if (want || inGateway) { st.closeAt = now + GATE_CLOSE_S; setGate(world, i, true); }
-      else if (st.open && now >= st.closeAt) setGate(world, i, false);
-    });
-  }
   if (world.tick % (REFILL_EVERY_S * 20) === 7) for (let i = 0; i < pools(world).length; i++) refill(world, i, false);
 }
 

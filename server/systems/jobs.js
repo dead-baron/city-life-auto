@@ -1,7 +1,9 @@
 // Professions & extraction loops: courier contracts, Refuge Island harvests (GDD §5),
 // contraband drops for the black market / evidence locker, and the deep-sim fishing loop.
 import { K, T } from '../../shared/constants.js';
-import { ITEMS, FISH_TABLE } from '../../shared/items.js';
+import { ITEMS, FISH_TABLE, OFFSHORE_FISH } from '../../shared/items.js';
+import { POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY } from '../../shared/rules.js';
+import * as law from './law.js';
 import { RIVER_X0, RIVER_X1, CAR_SPAWN_BLOCK } from '../../shared/map.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -31,7 +33,9 @@ export function update(world) {
   // jobs: expiry
   for (const p of world.players.values()) {
     if (p.job && now > p.job.expires) failJob(world, p, 'Contract expired.');
+    if (p.job && p.job.type === 'poach') stepPoach(world, p, 0.05);
     const ped = p.ped;
+    if (ped && ped.fishing && ped.vehId) { const bv = world.get(ped.vehId); if (!bv || Math.hypot(bv.vx, bv.vy) > 60) cancelFishing(world, p, 'You pulled your line in.'); }
     if (ped && ped.fishing) {
       const f = ped.fishing;
       if (!f.notified && now >= f.biteAt) { f.notified = true; p.meDirty = true; world.emit(f.x, f.y, { e: 'bite', x: f.x, y: f.y }); }
@@ -135,9 +139,10 @@ export function deliveryZoneFor(world, p, crate) {
     const dest = world.map.pois[crate.job.dest];
     if (dest && Math.hypot(dest.x - ped.x, dest.y - ped.y) < 70) return { label: `Deliver (+$${crate.value})`, run: () => deliverLegit(world, p, crate, 'courier') };
   }
+  if (crate.job && crate.job.type === 'poach' && near('smuggler', 80)) return { label: `Sell the haul to the Den (+$${crate.value})`, run: () => deliverPoach(world, p, crate) };
   if (crate.label === 'Produce Box' && near('grocery', 80)) return { label: `Sell produce to FreshHub (+$${crate.value})`, run: () => deliverLegit(world, p, crate, 'farm') };
   if (crate.contraband) {
-    if (near('fence')) return { label: `Sell to the Black Market (+$${crate.value})`, run: () => fence(world, p, crate, 1) };
+    if (near('fence') || near('smuggler', 80)) return { label: `Sell to the Black Market (+$${crate.value})`, run: () => fence(world, p, crate, 1) };
     if (near('evidence') || near('police')) return { label: `Turn in as evidence (+$${Math.round(crate.value * 0.5)}, +15 Samaritan)`, run: () => evidence(world, p, crate) };
   } else if (crate.job && crate.job.pid !== p.pid && near('fence')) {
     return { label: `Fence stolen cargo (+$${Math.round(crate.value * 0.6)})`, run: () => fence(world, p, crate, 0.6) };
@@ -246,24 +251,107 @@ export function reelIn(world, p) {
   if (now < f.biteAt) { cancelFishing(world, p, 'Too early - you spooked the fish.'); return; }
   if (now > f.biteAt + f.window) { cancelFishing(world, p, 'Too slow - it got away.'); return; }
   const prof = p.profile;
+  const offshore = f.kind === 'offshore';
   const w = [...FISH_TABLE[f.kind]];
-  if (world.clock.isNight) w[1] = 35; // catfish spike at night
+  if (world.clock.isNight && !offshore) w[1] = 35; // catfish spike at night
   // bait: your chosen one if you have it, otherwise the best you're carrying
-  const ids = ['bass', 'catfish', 'salmon', 'tuna'];
+  const ids = offshore ? OFFSHORE_FISH : ['bass', 'catfish', 'salmon', 'tuna'];
   const night = world.clock.isNight;
   const usable = (id) => (prof.inventory[id] || 0) > 0 && ITEMS[id] && ITEMS[id].bait && (!ITEMS[id].night || night);
   const bait = usable(prof.bait) ? prof.bait : BAIT_ORDER.find(usable) || null;
-  if (bait) { for (const [fish, m] of Object.entries(ITEMS[bait].bait)) w[ids.indexOf(fish)] *= m; prof.inventory[bait]--; }
+  if (bait) { for (const [fish, m] of Object.entries(ITEMS[bait].bait)) if (ids.includes(fish)) w[ids.indexOf(fish)] *= m; prof.inventory[bait]--; }
+  if (offshore && bait === 'squid') w[2] *= 2; // marlin love squid
   const total = w.reduce((a, b) => a + b, 0);
   let r = rng() * total;
   let caught = ids[0];
-  for (let i = 0; i < 4; i++) { r -= w[i]; if (r <= 0) { caught = ids[i]; break; } }
+  for (let i = 0; i < ids.length; i++) { r -= w[i]; if (r <= 0) { caught = ids[i]; break; } }
   prof.inventory[caught] = (prof.inventory[caught] || 0) + 1;
   prof.stats.fish++;
   ped.fishing = null;
   world.emit(f.x, f.y, { e: 'catch', x: f.x, y: f.y, fish: caught });
   world.notify(p, `Caught a ${ITEMS[caught].name}!${bait ? ` (${ITEMS[bait].name} used)` : ''} Sell it at a bait shop or the fish market.`, 'good');
+  if (offshore && p.job && p.job.type === 'deepsea') {
+    p.job.got++;
+    if (p.job.got >= p.job.need) { prof.bank += p.job.pay; prof.samaritan += 2; world.notify(p, `Charter complete! +$${p.job.pay} to your bank. Sell the catch at the charter dock or the fish market.`, 'good'); p.job = null; }
+    else p.job.text = `Deep-sea charter: ${p.job.got}/${p.job.need} offshore fish`;
+  }
   p.meDirty = true;
+  store.touch();
+}
+
+// ---- out on the water ------------------------------------------------------------------------
+const TILE_PX = 32;
+const isWaterT = (t) => t === T.WATER || t === T.DEEP;
+// Far enough out at sea for the big ones: no land within ~12 tiles.
+export function offshoreAt(world, x, y) {
+  const tx = Math.floor(x / TILE_PX), ty = Math.floor(y / TILE_PX);
+  for (let dy = -12; dy <= 12; dy += 2) for (let dx = -12; dx <= 12; dx += 2) if (!isWaterT(world.map.tileAt(tx + dx, ty + dy))) return false;
+  return true;
+}
+// Fishing over the side of a boat that's sitting still out at sea.
+export function boatFishingSpot(world, ped) {
+  const v = ped.vehId ? world.get(ped.vehId) : null;
+  if (!v || v.def.kind !== 'boat' || Math.hypot(v.vx, v.vy) > 40) return null;
+  if (!offshoreAt(world, v.x, v.y)) return null;
+  const a = v.a + Math.PI / 2;
+  return { x: v.x + Math.cos(a) * (v.def.W / 2 + 20), y: v.y + Math.sin(a) * (v.def.W / 2 + 20), kind: 'offshore', a };
+}
+function nearestOffshore(world, x, y, minD, maxD) {
+  const list = (world.map.offshore || []).filter((q) => { const d = Math.hypot(q.x - x, q.y - y); return d >= minD && d <= maxD; });
+  return list.length ? list[Math.floor(rng() * list.length)] : (world.map.offshore || [])[0];
+}
+
+export function startDeepSea(world, p, poi) {
+  if (p.job) return 'You already have a job - cancel it first.';
+  const spot = nearestOffshore(world, poi.x, poi.y, 900, 3000);
+  if (!spot) return 'No charters today.';
+  p.job = { type: 'deepsea', need: DEEPSEA_CATCH, got: 0, pay: DEEPSEA_PAY, tx: spot.x, ty: spot.y, expires: world.time + 1500, text: `Deep-sea charter: 0/${DEEPSEA_CATCH} offshore fish` };
+  world.notify(p, `Charter booked: take a boat out to the deep water (marked) and land ${DEEPSEA_CATCH} offshore fish - grouper, swordfish or marlin. Squid brings in the marlin.`, 'good');
+  p.meDirty = true;
+  return null;
+}
+
+export function startPoach(world, p, poi, species) {
+  if (p.job) return 'You already have a job - cancel it first.';
+  if (!POACH_PAY[species]) return 'No such job.';
+  const spot = nearestOffshore(world, poi.x, poi.y, 1200, 3600);
+  if (!spot) return 'Nothing out there today.';
+  const what = species === 'turtle' ? 'sea turtles' : 'dolphins';
+  p.job = { type: 'poach', species, stage: 'go', net: 0, pay: POACH_PAY[species], dest: poi.id, tx: spot.x, ty: spot.y, expires: world.time + 1200, failOnDeath: true, text: `Find the ${what} (marked) - hold a cargo boat still over them to net the haul` };
+  world.notify(p, `Job on: a pod of ${what} is out past the reef. Needs a boat with cargo space (dinghy or speedboat). Police boats patrol the bay - don't get seen.`, 'warn');
+  p.meDirty = true;
+  return null;
+}
+
+function stepPoach(world, p, dt) {
+  const j = p.job, ped = p.ped;
+  if (!ped || ped.dead || j.stage !== 'go') return;
+  const v = ped.vehId ? world.get(ped.vehId) : null;
+  if (!v || v.def.kind !== 'boat' || ped.seat !== 0 || Math.hypot(v.x - j.tx, v.y - j.ty) > 170 || Math.hypot(v.vx, v.vy) > 70) { if (j.net) { j.net = 0; p.meDirty = true; } return; }
+  const slot = v.cargo.findIndex((c, i) => !c && i < v.def.slots.length);
+  if (slot < 0) { if (world.time - (j.warnAt || -99) > 8) { j.warnAt = world.time; world.notify(p, 'No room on this boat for the haul - you need a dinghy or speedboat with free cargo space.', 'warn'); } return; }
+  j.net += dt;
+  if (j.net < NET_TIME_S) return;
+  const label = j.species === 'turtle' ? 'Poached Sea Turtles' : 'Dolphin Catch';
+  const c = world.spawnCrate(3, v.x, v.y, { label, contraband: true, value: j.pay, owner: p.pid, job: { type: 'poach', pid: p.pid, dest: j.dest } });
+  c.state = 'loaded'; c.parent = v.id; c.slot = slot; v.cargo[slot] = c.id;
+  j.stage = 'deliver'; j.crates = [c.id];
+  const den = world.map.pois[j.dest];
+  j.tx = den.x; j.ty = den.y;
+  j.text = `Get the ${label.toLowerCase()} to the Smuggler's Den on Smuggler's Rock`;
+  law.crime(world, ped, 'poaching', null, v.x, v.y);
+  world.emit(v.x, v.y, { e: 'splash', x: v.x, y: v.y, n: 16 });
+  world.notify(p, 'Haul netted and loaded. Now get it to the Den - unload it at the door.', 'good');
+  p.meDirty = true;
+}
+
+export function deliverPoach(world, p, crate) {
+  const prof = p.profile;
+  prof.cash += crate.value;
+  prof.criminalExp = (prof.criminalExp || 0) + 40;
+  consume(world, p, crate);
+  world.notify(p, `The Den pays out: +$${crate.value} cash. No questions asked.`, 'good');
+  if (p.job && p.job.type === 'poach') { p.job = null; p.meDirty = true; }
   store.touch();
 }
 

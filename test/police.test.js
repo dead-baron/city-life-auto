@@ -65,7 +65,7 @@ test('station: walk in, sign up at the desk, pick an armory weapon, out to the m
   // the gate opens for the officer riding up to it
   teleport(w, p.ped, p.ped.x, p.ped.y); bike.x = mp.gate.x; bike.y = mp.gate.y - 60;
   run(w, 0.5);
-  assert.ok(w.poolState[st.pool].open, 'gate open for an officer');
+  assert.ok(w.gateState[w.map.motorPools[st.pool].gateIdx].open, 'gate open for an officer');
   assert.ok(mp.gate.props.every((pr) => pr.off));
   // a fresh bike is waiting for the next recruit
   bike.x = mp.gate.x; bike.y = mp.gate.y + 600; w.place(bike);
@@ -87,11 +87,11 @@ test('the gate stays shut for civilians; taking a pool car is police-vehicle the
   const mp = w.map.motorPools[st.pool];
   teleport(w, p.ped, mp.gate.x, mp.gate.y + 70);
   run(w, 1);
-  assert.ok(!w.poolState[st.pool].open, 'closed to a civilian');
+  assert.ok(!w.gateState[w.map.motorPools[st.pool].gateIdx].open, 'closed to a civilian');
   // someone already inside can leave
   teleport(w, p.ped, mp.gate.x, mp.gate.y - 70);
   run(w, 0.5);
-  assert.ok(w.poolState[st.pool].open, 'opens to let people out');
+  assert.ok(w.gateState[w.map.motorPools[st.pool].gateIdx].open, 'opens to let people out');
   const car = poolVehicles(w, st.pool).find((v) => v.model === 'police');
   teleport(w, p.ped, car.x + 40, car.y);
   spawnNpc(w, 'casual', car.x + 120, car.y, 'civ').a = Math.PI;

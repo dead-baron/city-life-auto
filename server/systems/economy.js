@@ -13,14 +13,18 @@ import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
 import * as station from './station.js';
+import * as gang from './gang.js';
 import * as cruiser from './cruiser.js';
 
-import { HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY } from '../../shared/rules.js';
+import { HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
   switch (poi.kind) {
-    case 'delivery': case 'evidence': case 'reception': case 'gang': case 'paint': return null;
+    case 'delivery': case 'evidence': case 'reception': case 'paint': return null;
+    case 'gang': return gang.isMember(p) ? 'Syndicate HQ (members)' : 'Syndicate HQ (join the gang)';
+    case 'smuggler': return "Smuggler's Den";
+    case 'charter': return 'Charter desk (deep-sea fishing)';
     case 'home': {
       const h = world.map.homes[poi.home];
       const owner = world.homeOwner.get(h.id);
@@ -73,7 +77,7 @@ export function buildMenu(world, p, poi) {
   const opts = [];
   let title = poi.label, sub = '', interior = null;
   const shopKey = kind === 'vending' ? 'vending' : kind;
-  const shop = SHOPS[shopKey];
+  const shop = kind === 'smuggler' && !gang.isMember(p) ? null : SHOPS[shopKey];
   if (shop && kind !== 'dealer' && kind !== 'marina' && kind !== 'garage' && kind !== 'clothing') {
     title = shop.title;
     for (const o of shop.buy) {
@@ -222,6 +226,26 @@ export function buildMenu(world, p, poi) {
     case 'fence':
       sub = 'Carry contraband or stolen cargo to the door to sell it. No questions asked.';
       break;
+    case 'gang':
+      title = 'Syndicate HQ';
+      if (!gang.isMember(p)) {
+        sub = `Join the Syndicate: the turf leaves you alone, and the gate to the compound on Smuggler's Rock opens for you (boat only). Initiation $${GANG_JOIN_FEE}. Cops need not apply.`;
+        opts.push({ id: 'gjoin', label: 'Join the Syndicate', price: GANG_JOIN_FEE, dis: p.badge, note: p.badge ? 'not while on duty' : '' });
+      } else {
+        sub = 'You\'re one of us. Work comes out of the Den on Smuggler\'s Rock - take a boat east across the bay.';
+        opts.push({ id: 'gleave', label: 'Leave the Syndicate' });
+      }
+      break;
+    case 'smuggler':
+      if (!gang.isMember(p)) { title = "Smuggler's Den"; sub = '"Members only. Get off my rock."'; break; }
+      sub = 'Hardware, and work nobody else will give you. Poached sea life is a felony if anyone sees you net it.';
+      opts.push({ id: 'poach:turtle', label: 'Job: net a pod of sea turtles', price: -POACH_PAY.turtle, dis: !!p.job, note: p.job ? 'busy' : 'paid in cash' });
+      opts.push({ id: 'poach:dolphin', label: 'Job: dolphin hunt', price: -POACH_PAY.dolphin, dis: !!p.job, note: p.job ? 'busy' : 'paid in cash' });
+      break;
+    case 'charter':
+      sub += ` Deep water starts well away from land: sit still in a boat out there and fish over the side. Squid brings in the marlin.`;
+      opts.unshift({ id: 'deepsea', label: `Deep-sea charter: land ${DEEPSEA_CATCH} offshore fish`, price: -DEEPSEA_PAY, dis: !!p.job, note: p.job ? 'busy' : 'bonus' });
+      break;
     default: break;
   }
   if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
@@ -359,6 +383,10 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'armgo': return station.toArmory(world, p, poi);
+    case 'gjoin': return gang.join(world, p, pay);
+    case 'gleave': return gang.leave(world, p);
+    case 'poach': return jobs.startPoach(world, p, poi, parts[1]);
+    case 'deepsea': return jobs.startDeepSea(world, p, poi);
     case 'arm': return station.takeWeapon(world, p, parts[1]);
     case 'armexit': station.toMotorPool(world, p); return null;
     case 'sleave': station.leave(world, p); return null;

@@ -21,7 +21,7 @@ import {
   SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
   RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE, JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S,
   NPC_GUN_MULT, VEHICLE_TOUGHNESS, ARMORED_ROCKETS, ARMORED_VEHICLES,
-  POLICE_ARMORY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
+  POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
@@ -59,6 +59,10 @@ export const STEPS = [
     text: `Docks, cranes, warehouses and rail yards - where the city's cargo comes and goes.` },
   { ch: 'city', title: isle('F'), at: { island: 'F' },
     text: `Farmland across the water from the city. The {{farm}} pays you to haul fresh produce back to town.` },
+  { ch: 'city', title: isle('P'), at: { island: 'P' },
+    text: `Out in the bay, only by boat: beaches, a beach bar and the {{charter}} dock with jet skis tied up. Jet ski and boat races start from the buoys off its shore.` },
+  { ch: 'city', title: isle('C'), at: { island: 'C' },
+    text: `The Syndicate's island fortress. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
   // ---- basics --------------------------------------------------------------------------------
   { ch: 'basics', title: 'Moving and driving', at: { spawn: 'default' },
@@ -83,6 +87,10 @@ export const STEPS = [
     text: `Load produce boxes into an open-cargo vehicle at the {{farm}} and deliver them to {{grocery}} in {{grocery:where}}.` },
   { ch: 'citizen', title: 'Fishing', at: { pois: 'tackle' },
     text: `Buy a fishing pole at a {{tackle}} shop like the one in {{tackle:where}} ($${price('tackle', 'rod')}), the {{fishmarket}} ($${price('fishmarket', 'rod')}) or {{sports}} ($${price('sports', 'rod')}), cast at the water's edge and strike when it bites. Bait changes what bites: ${ITEMS.worms.name.toLowerCase()} for bass, ${ITEMS.shrimp.name.toLowerCase()} for salmon, ${ITEMS.squid.name.toLowerCase()} for tuna, a ${ITEMS.glowlure.name.toLowerCase()} for catfish at night. Sell your catch at any tackle shop or the market.` },
+  { ch: 'citizen', title: 'Out on the water', at: { poi: 'charter' },
+    text: `Buy a jet ski, dinghy or speedboat at {{marina}}, or borrow one from a dock. NPC boaters cruise the bay and harbor police patrol it. Book a deep-sea charter at {{charter}}: head far from land, sit still and fish over the side for grouper, swordfish and marlin - land ${DEEPSEA_CATCH} for a $${DEEPSEA_PAY} bonus.` },
+  { ch: 'citizen', title: 'Races', at: { island: 'P' },
+    text: `Pull up to a start buoy on a jet ski (jet ski sprint) or in a boat (boat classic) to enter. A countdown lets others join, then it's buoy to buoy - the arrow on your radar shows the next one. Prize money goes to the top three; turn up mid-race and you're in the next round. Leave your craft and you forfeit.` },
   { ch: 'citizen', title: 'Shopping', at: { poi: 'coffee' },
     text: `Shops, banks, hospitals, the courthouse and police stations are walk-in: the doors slide open, the roof fades away while you're inside, and you deal with the clerk across the counter (the pawn shop and bank serve you through glass). {{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons, {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
   { ch: 'citizen', title: 'Homes', at: { homes: 'Pine Hills' },
@@ -107,6 +115,8 @@ export const STEPS = [
     text: `{{turfs}} belong to the syndicate, run from headquarters like {{gang}} - your phone shows where. Their members attack outsiders, and fighting back on their turf isn't a crime. Muggers also prowl the streets - drop one and return the purse for Samaritan points.` },
   { ch: 'criminal', title: 'Gangs vs. police', at: { pois: 'gang' },
     text: `The syndicate leaves cops alone until provoked: an officer tearing past them faster than about ${kmh(GANG_PROVOKE_SPEED)} km/h, or shooting nearby, and they open fire - and the cops fight back. Every ${Math.round(SHOOTOUT_EVERY_S[0] / 60)}-${Math.round(SHOOTOUT_EVERY_S[1] / 60)} minutes a ${EVENT_KINDS.shootout.label.toLowerCase()} breaks out near the turf (a red blip and arrow). Stay clear, or pick a side.` },
+  { ch: 'criminal', title: 'Join the Syndicate', at: { island: 'C' },
+    text: `Walk into any {{gang}} and pay $${GANG_JOIN_FEE} to join (no cops). Members are left alone on the turf and the gate on Smuggler's Rock opens for them. The {{smuggler}} sells heavy hardware and hands out dirty work: net a pod of sea turtles ($${POACH_PAY.turtle}) or hunt dolphins ($${POACH_PAY.dolphin}) - hold a cargo boat still over the spot for ${NET_TIME_S} seconds, then bring the haul in. It's a felony if anyone sees you, and police boats patrol the bay.` },
   { ch: 'criminal', title: 'Busted or wasted', at: { poi: 'police' },
     text: `Get knocked out by a cop and cuffed and you're BUSTED: fined $${BUST_FINE_PER_STAR} per star, illegal weapons and contraband confiscated. Die and your wanted level is wiped, but you drop everything you carried. Felonies stay on your record and keep you off the police force - until you pay the fines ($${FELONY_FINE} per felony, not while wanted) at {{police}} or {{courthouse}} for a clean record.` },
 
