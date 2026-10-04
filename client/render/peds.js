@@ -79,6 +79,7 @@ function weapon(P, w, hx, hy, ang) {
     case 12: P.line(hx - Math.cos(ang) * 5, hy - Math.sin(ang) * 5, ang, 14, '#4a5a2a', 2); P.p(hx + Math.cos(ang) * 9, hy + Math.sin(ang) * 9, '#c8262b'); break; // bazooka
     case 13: L(10, '#3a2a1a'); break;                                                          // fishing rod
     case 14: L(5, '#14161c', 2); P.p(hx + Math.cos(ang) * 2, hy + Math.sin(ang) * 2, '#3b6bff'); break; // police service pistol
+    case 19: L(5, '#2a2a30', 2); P.line(hx + Math.cos(ang) * 5, hy + Math.sin(ang) * 5, ang, 4, '#55585f', 2); break; // silenced pistol (long suppressor)
     case 15: P.line(hx - Math.cos(ang) * 4, hy - Math.sin(ang) * 4, ang, 4, '#1d2a5a', 2); L(10, '#1c1f26', 2); P.p(hx + Math.cos(ang) * 3, hy + Math.sin(ang) * 3, '#3b6bff'); break; // police patrol rifle
     case 16: P.line(hx - Math.cos(ang) * 4, hy - Math.sin(ang) * 4, ang, 4, '#3a3f2a', 2); L(13, '#22252c', 2); P.p(hx + Math.cos(ang) * 5 + Math.cos(ang - 1.57), hy + Math.sin(ang) * 5 + Math.sin(ang - 1.57), '#8fd0ff'); break; // marksman rifle (scope glint)
     case 17: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 3, '#1d2a5a', 2); L(9, '#1a1c22', 2); P.p(hx + Math.cos(ang + 1.57) * 2, hy + Math.sin(ang + 1.57) * 2, '#1a1c22'); break; // assault rifle (magazine)

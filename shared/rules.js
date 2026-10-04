@@ -72,3 +72,11 @@ export const SOCCER_GOALS = 3;        // first to this many goals (or most after
 export const SOCCER_MATCH_S = 180;
 export const VOLLEY_POINTS = 5;       // first to this many points
 export const MATCH_PRIZE = 100;       // each winner, paid to the bank
+
+// Store robberies
+export const ROB_WARMUP_S = 1.5;          // gun on the clerk this long before the money starts coming
+export const ROB_TOSS_S = 0.8;            // the clerk throws another wad of cash this often
+export const ROB_TAKE = { convenience: 25, gasstation: 25, bank: 120, default: 35 }; // per toss (it creeps up the longer you stay)
+export const ROB_ALARM_S = [10, 15, 20];  // the silent alarm trips after one of these (you never know which)
+export const ROB_RESPONSE_S = [10, 15];   // squad cars arrive this long after the alarm
+export const ROB_ALARM_STARS = 3;         // wanted level the alarm puts you on

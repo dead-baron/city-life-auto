@@ -21,12 +21,13 @@ import {
   SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
   RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE, JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S,
   NPC_GUN_MULT, VEHICLE_TOUGHNESS, ARMORED_ROCKETS, ARMORED_VEHICLES,
+  ROB_WARMUP_S, ROB_TOSS_S, ROB_TAKE, ROB_ALARM_S, ROB_RESPONSE_S, ROB_ALARM_STARS,
   MATCH_COUNTDOWN_S, SOCCER_GOALS, SOCCER_MATCH_S, VOLLEY_POINTS, MATCH_PRIZE,
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 8;
+export const TUTORIAL_VERSION = 9;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -106,6 +107,10 @@ export const STEPS = [
   // ---- criminal ------------------------------------------------------------------------------
   { ch: 'criminal', title: 'Crime needs a witness', at: { cameras: 1 },
     text: `Assault, theft, carjacking, murder - a crime only counts if someone sees it: a pedestrian, a cop, or one of the traffic cameras on poles at junctions. Nobody around? Nobody knows. Night shortens how far witnesses can see.` },
+  { ch: 'criminal', title: 'Silent and deadly', at: { poi: 'fence' },
+    text: `A ${WEAPONS.spistol.name.toLowerCase()} from {{fence}} only makes a cough - nobody hears it, so a kill only counts if someone actually watches. A ${WEAPONS.knife.name.toLowerCase()} in the back (or into someone who never saw you coming) kills in one stab, quietly.` },
+  { ch: 'criminal', title: 'Holding up a store', at: { poi: 'gasstation' },
+    text: `Walk into a {{convenience}}, a {{gasstation}}, any shop or a bank and point a gun at the clerk: hands go up, and after ${ROB_WARMUP_S} seconds they start throwing cash at you - a wad every ${ROB_TOSS_S} seconds (about $${ROB_TAKE.convenience}, more each time, ~$${ROB_TAKE.bank} at a bank). Somewhere ${ROB_ALARM_S.join(', ')} seconds in, a silent alarm trips: you jump to ${ROB_ALARM_STARS} stars, a ${EVENT_KINDS.robbery.label.toLowerCase()} shows on every radar, and squad cars pull up ${ROB_RESPONSE_S[0]}-${ROB_RESPONSE_S[1]} seconds later. How long do you dare stay? Anyone else who sees it reports you either way.` },
   { ch: 'criminal', title: 'Wanted stars', at: { district: 'Civic Center' }, route: { from: { poi: 'bank' }, to: { district: 'Southside' }, veh: 'sports', chaser: 'police' },
     text: `A reported crime earns wanted stars (★ at ${STAR_HEAT[1]} heat up to ★★★★★ at ${STAR_HEAT[5]}). Police come for you - tasers at low stars, guns from 3, SWAT at 4-5. Break line of sight and they only know a search circle that grows; stay hidden and the heat fades.` },
   { ch: 'criminal', title: 'Lying low', at: { poi: 'clothing' },

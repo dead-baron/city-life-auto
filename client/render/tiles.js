@@ -87,6 +87,7 @@ export class GroundCache {
     for (const gr of m.garages || []) drawGarage(g, gr, cx, cy);
     for (const mp of m.motorPools || []) drawMotorPool(g, mp, cx, cy);
     for (const v of m.venues || []) drawVenue(g, v, cx, cy);
+    for (const pu of m.pumps || []) drawPump(g, pu, cx, cy);
     for (const b of this.signs.get(k) || []) for (const s of b.signs) drawSign(g, s);
     for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
     for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
@@ -169,6 +170,17 @@ function drawBayFloor(g, bay, cx, cy) {
   g.fillRect(x - 3, back ? y + h - 3 : y, w + 6, 3);
   // spray nozzles on the walls
   g.fillStyle = '#c8262b'; for (let k = 0; k < 3; k++) { g.fillRect(x - 2, y + 18 + k * 26, 4, 4); g.fillRect(x + w - 2, y + 18 + k * 26, 4, 4); }
+}
+
+// Gas 'n Go pump: an island with a pump, a hose and a price display.
+function drawPump(g, p, cx, cy) {
+  if (p.x + 40 < cx * CHUNK_PX || p.x - 40 > (cx + 1) * CHUNK_PX || p.y + 40 < cy * CHUNK_PX || p.y - 40 > (cy + 1) * CHUNK_PX) return;
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(p.x - 13, p.y - 7, 30, 20);
+  g.fillStyle = '#c8c8c0'; g.fillRect(p.x - 16, p.y - 10, 32, 20);
+  g.fillStyle = '#c8262b'; g.fillRect(p.x - 7, p.y - 8, 14, 16);
+  g.fillStyle = '#e8e8e8'; g.fillRect(p.x - 5, p.y - 6, 10, 5);
+  g.fillStyle = '#1b2333'; g.fillRect(p.x - 4, p.y - 5, 8, 3);
+  g.strokeStyle = '#222'; g.lineWidth = 2; g.beginPath(); g.moveTo(p.x + 7, p.y + 2); g.quadraticCurveTo(p.x + 14, p.y + 4, p.x + 12, p.y + 9); g.stroke();
 }
 
 // Mini-game venues: a striped, lined soccer pitch with goals; a roped sand court with a net.

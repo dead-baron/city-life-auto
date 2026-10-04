@@ -58,7 +58,7 @@ export function spawnDrop(world, forceTier = 0) {
 }
 
 function pickDestination(world, from, minDist) {
-  const dests = world.map.pois.filter((q) => q.kind === 'delivery' && Math.hypot(q.x - from.x, q.y - from.y) > minDist);
+  const dests = world.map.pois.filter((q) => (q.kind === 'delivery' || q.kind === 'convenience' || q.kind === 'gasstation') && Math.hypot(q.x - from.x, q.y - from.y) > minDist);
   return dests[Math.floor(rng() * dests.length)] || world.map.pois.find((q) => q.kind === 'delivery');
 }
 

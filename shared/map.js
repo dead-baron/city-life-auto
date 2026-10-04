@@ -442,6 +442,7 @@ export function generateCity(seed = 1337) {
   buildTackleShops(m);
   buildPaintShops(m);
   buildMotorPools(m);
+  buildCornerStores(m);
   buildInteriors(m);
   buildDealerLots(m);
   buildOffshore(m, rand);
@@ -922,11 +923,39 @@ function buildMotorPools(m) {
   }
 }
 
+// Corner stores: the convenience-store storefronts become real shops you can walk into (and
+// rob). A few of them, out on the main roads, are Gas 'n Go stations with pumps out front.
+function buildCornerStores(m) {
+  const conv = m.pois.filter((p) => p.kind === 'delivery' && m.buildings[p.b] && m.buildings[p.b].kind === 'conv');
+  const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
+  m.pumps = [];
+  const gas = [];
+  for (const p of [...conv].sort((a, b) => hash2(a.x | 0, a.y | 0, 41) - hash2(b.x | 0, b.y | 0, 41))) {
+    if (gas.length >= 4 || gas.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 2500)) continue;
+    // needs open paving in front for the pumps
+    const ok = [-48, 48].every((dx) => [40, 64].every((dy) => { const t = m.tileAtPx(p.x + dx, p.y + (p.y > m.buildings[p.b].ty * TILE ? dy : -dy)); return t === T.SIDEWALK || t === T.PLAZA || t === T.LOT; }));
+    if (ok) gas.push(p);
+  }
+  for (const p of conv) {
+    const d = DISTRICTS[distOf(p)];
+    if (gas.includes(p)) {
+      p.kind = 'gasstation'; p.label = `Gas 'n Go - ${d.name}`;
+      const south = p.y > m.buildings[p.b].ty * TILE;
+      for (const dx of [-48, 48]) {
+        const x = p.x + dx, y = p.y + (south ? 52 : -52);
+        m.pumps.push({ x, y });
+        m.addSolidProp(x, y, 9);
+      }
+    } else p.kind = 'convenience';
+    for (const s of m.buildings[p.b].signs) if (s.text === p.label || gas.includes(p)) s.text = gas.includes(p) ? "Gas 'n Go" : s.text;
+  }
+}
+
 // Walk-in buildings: shops, banks, hospitals, the courthouse and police stations get a real
 // interior behind their front door - a one-tile wall ring, a floor, partition walls between the
 // units of a strip mall, and a counter with a clerk behind it. The roof art fades out while you
 // are inside (client). The place's interaction point moves in front of its counter.
-export const WALK_IN = new Set(['hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle']);
+export const WALK_IN = new Set(['convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle']);
 const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
 function buildInteriors(m) {
   m.walkIns = [];

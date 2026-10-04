@@ -19,6 +19,7 @@ import * as station from './station.js';
 import * as dealer from './dealer.js';
 import * as races from './races.js';
 import * as minigames from './minigames.js';
+import * as robbery from './robbery.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -407,7 +408,7 @@ export function pedFlags(world, ped) {
   if (now < ped.attackAnimUntil) f |= PF.ATTACK;
   if (now < ped.aimUntil) f |= PF.AIM;
   if (ped.rollT > 0) f |= PF.ROLL;
-  if (ped.carrying) f |= PF.CARRY;
+  if (ped.carrying || ped.handsUp) f |= PF.CARRY; // carry pose doubles as hands-up for a held-up clerk
   if (ped.vehId) f |= PF.INVEH;
   if (ped.bleeding) f |= PF.BLEED;
   if (ped.player && ped.player.ghostUntil) f |= PF.GHOST;
@@ -431,7 +432,7 @@ export function buildMe(world, p) {
   return {
     t: 'me',
     name: p.name, hp: ped ? Math.round(ped.hp) : 0, maxHp: ped ? ped.maxHp : 100,
-    pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
+    rob: robbery.hudFor(world, p), pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
     cash: prof.cash, bank: prof.bank, cexp: prof.criminalExp, sam: prof.samaritan,
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),

@@ -38,20 +38,26 @@ function dispatch(world) {
   }
 }
 
-function spawnUnit(world, p) {
+// A robbery alarm: several squad cars sent straight at the scene, from close by.
+export function respondTo(world, p, x, y, count = 3) {
+  for (let i = 0; i < count; i++) spawnUnit(world, p, { at: { x, y }, minD: 380, maxD: 950, clearPx: 300, noMoto: true });
+}
+
+function spawnUnit(world, p, o = {}) {
   const m = world.map;
-  const tx = p.seenAt && world.time - p.seenAt < 3 ? p.ped.x : p.lastSeenX;
-  const ty = p.seenAt && world.time - p.seenAt < 3 ? p.ped.y : p.lastSeenY;
+  const tx = o.at ? o.at.x : p.seenAt && world.time - p.seenAt < 3 ? p.ped.x : p.lastSeenX;
+  const ty = o.at ? o.at.y : p.seenAt && world.time - p.seenAt < 3 ? p.ped.y : p.lastSeenY;
   const cands = m.nodes.filter((n) => {
     const d = Math.hypot(n.x - tx, n.y - ty);
-    if (d < 750 || d > 1400) return false;
-    for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - n.x, q.ped.y - n.y) < 650) return false;
+    if (d < (o.minD || 750) || d > (o.maxD || 1400)) return false;
+    for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - n.x, q.ped.y - n.y) < (o.clearPx || 650)) return false;
+    if (world.query(n.x + 32, n.y + 32, 80, K.VEH).length) return false;
     return true;
   });
   if (!cands.length) return;
   const n = cands[Math.floor(rng() * cands.length)];
   const swat = p.wanted >= 4 && rng() < 0.5;
-  const moto = !swat && p.wanted <= 3 && rng() < 0.3; // motorcycle cops: one rider, fast, fragile
+  const moto = !o.noMoto && !swat && p.wanted <= 3 && rng() < 0.3; // motorcycle cops: one rider, fast, fragile
   const a = Math.atan2(ty - n.y, tx - n.x);
   const v = world.spawnVehicle(swat ? 'swat' : moto ? 'policebike' : 'police', n.x + 32, n.y + 32, a, {});
   v.despawnable = false;

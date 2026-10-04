@@ -608,3 +608,17 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
   - Late arrivals are told they're in the next round. Winners get `MATCH_PRIZE`.
   - Your HUD tracker shows the score, your team and time left.
 - Tutorial v8 (soccer and volleyball, plus the water features). New `test/minigames.test.js`. World map rebuilt.
+
+## Crime: store hold-ups, silenced pistol, knife backstabs
+- **Corner stores and gas stations** (`buildCornerStores`): the convenience-store storefronts are now walk-in **corner stores** (energy drinks, coffee, bandages; they also take courier deliveries). Four of them are **Gas 'n Go** stations, with two pumps out front (solid, drawn in the ground bake).
+- **Robbery** (`server/systems/robbery.js`): aim a gun at any counter clerk (not the police desk) within ~300 px with line of sight.
+  - The clerk's hands go up (the carry pose doubles as hands-up), and the HUD bar fills for `ROB_WARMUP_S`.
+  - Then a wad of cash flies over every `ROB_TOSS_S`, starting from `ROB_TAKE` and growing ~12% each time.
+  - A silent alarm trips at a random one of `ROB_ALARM_S` (10/15/20 s): you go to `ROB_ALARM_STARS`, a yellow "Store robbery" world event appears, the robbery goes on your record, and 3 squad cars are dispatched from close by (`police.respondTo`) after `ROB_RESPONSE_S`.
+  - Lower the gun for 1.6 s, walk out, or have the clerk go down, and it's over. The clerk can't be robbed again for 2 minutes.
+  - The clerk is never a witness, but anyone else (or a camera) reports the robbery straight away.
+- **Silenced pistol** (`spistol`, black market / Smuggler's Den): no gunfire report and no muzzle flash, and only people within ~70 px react.
+  - Kills and assaults with quiet weapons are only reported by people actually facing them; the "heard it" radius doesn't apply.
+- **Knife backstab:** one stab kills anyone hit from behind, or any unaware NPC (not cops or gang).
+- **Record keeping:** felonies only go on your record when someone saw the crime (or when the robbery alarm trips), matching the "crime needs a witness" rule. A lethal hit is reported as the killing, not also as an assault.
+- Tutorial v9 ("Silent and deadly", "Holding up a store"). New `test/crime.test.js`.

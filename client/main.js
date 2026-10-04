@@ -329,9 +329,10 @@ function onEvent(ev) {
     case 'shot': {
       const w = WEAPON_BY_INDEX[ev.w];
       fx.tracer(ev.x1, ev.y1, ev.x2, ev.y2);
+      if (w && w.silenced) { sfx('swing', distVol(ev.x1, ev.y1) * 0.5); break; } // a suppressed cough, no muzzle flash
       S.flashes.push({ x: ev.x1, y: ev.y1, t: 0.06 });
       fx.spawn(4, ev.x1, ev.y1, 0, 0, 0.05, 6, '#fff3b0');
-      sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
+      sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
     }
     case 'blood': fx.blood(ev.x, ev.y, ev.a, ev.n, now); sfx('hit', distVol(ev.x, ev.y)); break;
@@ -368,6 +369,7 @@ function onEvent(ev) {
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
+    case 'alarm': sfx('alert', distVol(ev.x, ev.y)); S.alarms = (S.alarms || []).concat([{ x: ev.x, y: ev.y, until: performance.now() + 20000 }]); break;
     case 'goal': sfx('cash', 1); S.cam.shake = Math.max(S.cam.shake, 3); break;
     case 'teams': { S.venueTeams ??= {}; S.venueTeams[ev.v] = ev.t; S.pedTeam = new Map(); for (const t of Object.values(S.venueTeams)) t.forEach((ids, k) => { for (const id of ids) S.pedTeam.set(id, k); }); break; }
     case 'raceGo': S.fx.ring(ev.x, ev.y, 60, 'rgba(255,220,80,'); sfx('cash', 1); break;

@@ -24,6 +24,7 @@ export const CRIMES = {
   ram:         { heat: 8,  label: 'Reckless ramming' },
   possession:  { heat: 20, label: 'Contraband possession' },
   poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true },
+  robbery:     { heat: 30, label: 'Armed robbery', felony: true },
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR } from '../../shared/rules.js';
@@ -95,7 +96,7 @@ export function witnesses(world, x, y, perp, victim, loud = false) {
   const camFactor = night ? 0.75 : 1;           // GDD: camera radii -25% at night
   const res = { count: 0, cop: false, cam: false };
   for (const e of world.query(x, y, Math.max(pedRange, 420), K.PED)) {
-    if (e === perp || e.dead) continue;
+    if (e === perp || e.dead || (e.npc && e.npc.blind)) continue; // blind: the clerk being robbed doesn't count as a witness
     if (world.time < e.downUntil && e !== victim) continue;
     const d = Math.hypot(e.x - x, e.y - y);
     const cop = isCop(e);
@@ -160,16 +161,16 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   if (p.badge && type === 'brandish') return;
 
   p.profile.criminalExp += Math.round(spec.heat / 2);
-  if (spec.felony) p.profile.felonies++;
   if (victim && victim.player) victim.player.robbedBy.set(p.pid, now);
   store.touch();
-  if (opts.silentCheck === false) { addHeat(world, p, spec.heat, x, y); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return; }
-  const w = witnesses(world, x, y, ped, victim, type === 'brandish' || type === 'murder');
+  if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return; }
+  const w = witnesses(world, x, y, ped, victim, (type === 'brandish' || type === 'murder') && !opts.quiet);
   if (w.count === 0) {
     if (now - (p.lastSilentMsg || 0) > 6) { p.lastSilentMsg = now; world.notify(p, `${spec.label} - nobody saw it.`, 'info'); }
     p.meDirty = true;
     return;
   }
+  if (spec.felony) p.profile.felonies++; // only crimes someone saw go on your record
   addHeat(world, p, spec.heat, x, y);
   logDispatch(world, type, x, y, p, p.wanted, w.cam ? 'camera' : w.cop ? 'officer' : 'witness');
   world.notify(p, `${spec.label} reported${w.cam ? ' by a traffic camera' : w.cop ? ' by police' : ''}!`, 'bad');
@@ -212,11 +213,12 @@ export function onDamage(world, attacker, victim, amount, cause) {
   const now = world.time;
   victim.aggressors.set(attacker.id, now);
   if (!attacker.player || cause === 'vehicle') return;
+  if (victim.hp <= 0) return; // a lethal hit is reported (or not) as the killing itself
   attacker.recentAssault = attacker.recentAssault || new Map();
   const last = attacker.recentAssault.get(victim.id) || -99;
   if (now - last < 5) return;
   attacker.recentAssault.set(victim.id, now);
-  crime(world, attacker, isCop(victim) ? 'copAssault' : 'assault', victim, victim.x, victim.y);
+  crime(world, attacker, isCop(victim) ? 'copAssault' : 'assault', victim, victim.x, victim.y, { quiet: !!attacker.quietWeapon });
 }
 
 export function onKill(world, attacker, victim, cause) {
@@ -226,7 +228,7 @@ export function onKill(world, attacker, victim, cause) {
   if (victim.player && victim.player.bounty > 0 && (p.hunter || p.badge)) claimBounty(world, p, victim.player);
   const type = cause === 'vehicle' ? 'vehKill' : (isCop(victim) ? 'copMurder' : 'murder');
   attacker.recentAssault?.set(victim.id, world.time);
-  crime(world, attacker, type, victim, victim.x, victim.y);
+  crime(world, attacker, type, victim, victim.x, victim.y, { quiet: !!attacker.quietWeapon && cause !== 'vehicle' });
 }
 
 export function gunfire(world, ped, hitSomeone) {

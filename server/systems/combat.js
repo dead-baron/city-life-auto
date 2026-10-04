@@ -29,6 +29,7 @@ export function tryAttack(world, ped, aim) {
   const w = WEAPONS[ped.weapon] || WEAPONS.fists;
   if (w.type === 'tool') return false;
   ped.a = ped.vehId ? ped.a : aim;
+  ped.quietWeapon = !!(w.silenced || w.quiet); // knives and suppressors: kills are only noticed by people who actually see them
   if (w.type === 'melee') return melee(world, ped, w, aim);
   if (w.mag) {
     const inMag = ped.player ? (ped.mag[w.id] || 0) : 99;
@@ -60,8 +61,8 @@ export function tryAttack(world, ped, aim) {
     const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0);
     if (hitscan(world, ped, w, a)) hitAny = true;
   }
-  law.gunfire(world, ped, hitAny);
-  npc.onGunfire(world, ped.x, ped.y, ped);
+  if (w.silenced) npc.onGunfire(world, ped.x, ped.y, ped, 70); // a suppressor's cough: only people right there notice
+  else { law.gunfire(world, ped, hitAny); npc.onGunfire(world, ped.x, ped.y, ped); }
   return true;
 }
 
@@ -108,9 +109,20 @@ function melee(world, ped, w, aim) {
   world.emit(best.x, best.y, { e: 'hit', x: best.x, y: best.y, a: dir, id: best.id, w: w.i });
   if (w.id !== 'fists' || world.rand() < 0.35) world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 2 : 6 });
   const floored = now < best.downUntil || now < best.stunUntil;
+  // a knife from behind (or into someone who never saw it coming) kills outright
+  if (w.backstab && !best.dead && backstabbable(world, ped, best)) { world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: 10 }); damage(world, best, 9999, ped, 'melee', dir); return true; }
   damage(world, best, w.dmg * mult * (0.85 + world.rand() * 0.3), ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
   if (floored) law.subdue(world, ped, best);
   return true;
+}
+
+function backstabbable(world, attacker, victim) {
+  const fromVictim = Math.atan2(attacker.y - victim.y, attacker.x - victim.x);
+  const behind = Math.abs(angleDiff(victim.a, fromVictim)) > 1.9;
+  if (victim.player) return behind && world.time - (victim.lastCombatAt || -99) > 5; // players: only a true stab in the back
+  const n = victim.npc;
+  const unaware = !n || (n.state !== 'fight' && n.state !== 'flee' && n.state !== 'chase');
+  return behind || (unaware && !(n && (n.role === 'cop' || n.role === 'gang')));
 }
 
 function taser(world, ped, w, aim) {

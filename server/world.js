@@ -27,6 +27,7 @@ import * as boats from './systems/boats.js';
 import * as gang from './systems/gang.js';
 import * as races from './systems/races.js';
 import * as minigames from './systems/minigames.js';
+import * as robbery from './systems/robbery.js';
 import * as props from './systems/props.js';
 import * as net from './net.js';
 
@@ -56,6 +57,7 @@ const SYSTEMS = [
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
   ['cargo', cargo.update],          // crates, loot bags
+  ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
   ['law', law.update],              // heat decay, search circles, bounties
   ['jobs', jobs.update],            // contraband drops, fishing, jobs
   ['economy', economy.update],      // auto-heal at ER reception

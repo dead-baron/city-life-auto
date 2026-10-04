@@ -287,10 +287,9 @@ export function onVehicleHit(world, v, attacker) {
   void attacker;
 }
 
-export function onGunfire(world, x, y, shooter) {
-  world.shotLog.push({ x, y, t: world.time });
-  if (world.shotLog.length > 64) world.shotLog.splice(0, world.shotLog.length - 64);
-  for (const e of world.query(x, y, 360, K.PED)) {
+export function onGunfire(world, x, y, shooter, radius = 360) {
+  if (radius >= 360) { world.shotLog.push({ x, y, t: world.time }); if (world.shotLog.length > 64) world.shotLog.splice(0, world.shotLog.length - 64); }
+  for (const e of world.query(x, y, radius, K.PED)) {
     if (!e.npc || e.dead || e === shooter) continue;
     const n = e.npc;
     if (n.role === 'gang') {

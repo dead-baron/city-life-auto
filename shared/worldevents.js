@@ -5,6 +5,7 @@ export const EVENT_KINDS = {
   drop: { color: '#c07aff', label: 'Contraband drop', hint: 'Rare crate landed' },
   ret: { color: '#3ddc84', label: 'Return the purse', hint: 'Take it back to its owner' },
   shootout: { color: '#ff3b3b', label: 'Gang shootout', hint: 'Syndicate vs police' },
+  robbery: { color: '#ffd400', label: 'Store robbery', hint: 'Alarm tripped - police responding' },
 };
 export const EVENT_RANGE = 2200;    // events further away than this aren't shown
 export const ARROW_SHOW_S = 10;     // the guide arrow fades out after this long

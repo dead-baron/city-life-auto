@@ -74,6 +74,12 @@ export class HUD {
     // job
     const jb = $('job');
     if (me.job) { jb.textContent = '▶ ' + me.job.text; jb.classList.remove('hidden'); } else jb.classList.add('hidden');
+    const rb = $('rob');
+    if (me.rob) {
+      rb.classList.remove('hidden'); rb.classList.toggle('alarm', !!me.rob.alarm);
+      $('rob-fill').style.width = Math.round(me.rob.warm * 100) + '%';
+      $('rob-take').textContent = me.rob.alarm ? `ALARM! $${me.rob.take} - get out!` : me.rob.warm < 1 ? 'Hands up...' : `$${me.rob.take}`;
+    } else rb.classList.add('hidden');
     // personal police cruiser
     const cr = me.cruiser, ch = $('cruiser-hint'), cb = $('b-cruiser');
     document.body.classList.toggle('can-call', !!(cr && cr.s === 'none' && !me.dead));
@@ -425,7 +431,7 @@ const POI_ICON = {
   sports: ['S', '#7de0ff'], hardware: ['T', '#ff9a3a'], pharmacy: ['+', '#3ddc84'], coffee: ['C', '#c89a6a'], garage: ['R', '#ffd400'],
   clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
   fishmarket: ['≈', '#25b8c0'], marina: ['B', '#7de0ff'], farm: ['¥', '#b8e02a'], courthouse: ['J', '#e8d8a8'],
-  charter: ['≈', '#7de0ff'], smuggler: ['☠', '#ff5a5a'],
+  charter: ['≈', '#7de0ff'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'],
 };
 
 function buildMinimap(map) {

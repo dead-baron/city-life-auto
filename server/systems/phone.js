@@ -12,6 +12,7 @@ import { spawnNpc } from './npc.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
+const DROP_KINDS = new Set(['delivery', 'convenience', 'gasstation']); // storefronts that take deliveries
 const PATROLS = 3;             // police patrol calls kept on the board
 const REFRESH_S = 75;          // stale offers rotate out
 
@@ -27,12 +28,12 @@ function districtCentre(map, di) {
 }
 
 function newDelivery(world) {
-  const shops = world.map.pois.filter((q) => q.kind === 'delivery' || q.kind === 'warehouse');
+  const shops = world.map.pois.filter((q) => DROP_KINDS.has(q.kind) || q.kind === 'warehouse');
   const from = shops[Math.floor(rng() * shops.length)];
   // aim for an even spread of $, $$ and $$$ jobs
   const want = Math.floor(rng() * JOB_TIERS.length);
   const t = JOB_TIERS[want];
-  const dests = world.map.pois.filter((q) => q.kind === 'delivery' && q !== from && (() => { const d = Math.hypot(q.x - from.x, q.y - from.y); return d >= t.minDist && d < t.maxDist; })());
+  const dests = world.map.pois.filter((q) => DROP_KINDS.has(q.kind) && q !== from && (() => { const d = Math.hypot(q.x - from.x, q.y - from.y); return d >= t.minDist && d < t.maxDist; })());
   const to = dests.length ? dests[Math.floor(rng() * dests.length)] : null;
   if (!to) return null;
   const d = Math.hypot(to.x - from.x, to.y - from.y);
