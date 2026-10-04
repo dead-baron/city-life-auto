@@ -332,6 +332,18 @@ export class HUD {
       g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(d.name.toUpperCase(), x, y);
       g.fillStyle = d.turf ? '#ff8a7a' : '#fff4c8'; g.fillText(d.name.toUpperCase(), x, y);
     }
+    // the railway: a dark line with white ties, round the whole loop (drawn under the district names' level of detail)
+    if (this.map.rail) {
+      const rp = this.map.rail.pts;
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      for (const [lw, col, dash] of [[3.6, 'rgba(20,16,12,.9)', []], [1.4, '#e8e0cc', [2, 4]]]) {
+        g.lineWidth = lw; g.strokeStyle = col; g.setLineDash(dash);
+        g.beginPath();
+        for (let i = 0; i < rp.length; i += 4) { const [x, y] = P(rp[i].x, rp[i].y); if (i) g.lineTo(x, y); else g.moveTo(x, y); }
+        g.closePath(); g.stroke();
+      }
+      g.setLineDash([]);
+    }
     // the elevated ring highway and its ramps
     g.lineCap = 'round'; g.lineJoin = 'round';
     for (const [wd, colr] of [[2.5, 'rgba(0,0,0,.6)'], [0, '#f0c050']]) {

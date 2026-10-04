@@ -204,6 +204,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       v.input.steer = di.steer;
       v.input.hb = di.hb;
       v.input.slide = di.slide;
+      v.input.drv = di.drv;
       if (inp.bits & IN.HORN) v.hornUntil = world.time + 0.2;
       if ((pressed & IN.HORN) && v.def.police) v.sirenOn = !v.sirenOn;
     }

@@ -864,3 +864,44 @@ Playtest:
   - Every police station gets a motor pool, clearing a plain building next door if it has to.
   - The dealership gets a lot.
 - World map re-baked.
+
+## 2026-10-04 · Round 4: debug menu on mobile, the world railway, driving feel, painted interiors
+
+- **Debug menu, reachable from mobile:**
+  - A 🛠 button sits on the HUD next to ☰ while dev mode is on.
+  - No password: Pause → Dev Debug Mode turns it on and opens the menu straight away.
+  - The commands run from "Give weapons" at the top to "Leave dev mode" at the bottom.
+  - Players online are listed to the right, each with Go to, Bring, Weapons, Heal, Invincible and Give dev buttons.
+  - Every button visibly presses in, plays a small click and pops a note saying what it did.
+  - New commands: **Invincible**, for yourself or any player (they can't be killed or bleed), and **Call a train to this station**.
+- **The railway, rebuilt as one huge loop round the whole map, all of it above ground.** The subway is gone.
+  - The route: through the middle of Westport (West Hills, Lakeview, Westport Center), then over a long bay bridge to Granite Peaks. From there it runs through Northshore and over the channel into Old Town, then east and down through the Dry Creek fields (the mail train's robbery run).
+  - It comes back west through Southside and Pine Hills, then up through the core (Civic Center, Downtown, Midtown) under the elevated Metro Ring. It runs down through The Yards, over the river mouth to Cedar Isle (Cedar Farms, Lake District, Cedar Falls), and across the strait home to Westport.
+  - 16 open-air stations, with a few stops on every road-connected island.
+  - Each station sits on the stretch between two streets that fits a whole train, so a waiting train never blocks a road. The gates ahead stay up until the train is about to leave.
+  - **Every** road the line meets is a level crossing with gates and lights: 68 of them, including the island ring roads. Short narrow streets are no longer closed off.
+  - Platforms are as long as a train and follow the track round bends. They have a white coping, a yellow safety line, tactile strip, shelters, benches, lamps, name boards and stairs at each end.
+  - **Boarding:**
+    - While a train is in, the platform edge glows green and arrows point at the doors.
+    - Standing anywhere on the platform gives "E: Board the train - next stop …". On touch, the ACT button pulses.
+    - Between trains the station shows when the next train is due.
+  - The fleet is now 8 trains of 3 cars.
+- **Driving:**
+  - A new handling model with grip limits (understeer if you ask too much, more in the rain) and weight transfer (the nose bites under braking and goes light under power).
+  - Real drifts: kick the tail out with the handbrake, by braking into a turn, or by flooring it through a tight turn (power oversteer). Hold the drift on the gas and counter-steer, and lift off to grip again; sliding scrubs speed.
+  - **Burnouts:** handbrake + gas at a standstill makes the tyres smoke; let go for a launch.
+  - **Donuts:** handbrake + gas + wheel pivots the car round its front wheels.
+  - AI drivers get two physics sub-steps per tick with their wheel and pedals re-trimmed in between. They also aim at a look-ahead point on their path and damp their steering. In a downtown sample, weaving fell by about 20%.
+- **Painted interiors:** walk into a shop and the roof lifts off onto the concept painting of that kind of business, mirrored for shops that face north. There are paintings for the liquor store, the corner store, FuelMart, FreshMart, the pawn shop, the boutique, Trail & Field, the bank hall, the hospital lobby and the police station (`tools/build_interiors.py`).
+- **Cedar Hills Golf Club:** the whole golf-course concept painting is laid over open countryside on Cedar Isle, and its clubhouse is solid.
+- **Art lists:** `docs/ART_INVENTORY.md` lists everything in the game and where it came from. `docs/ART_NEEDS.md` lists the art still needed.
+
+**Playtest checklist**
+1. On a phone: ☰ → Dev Debug Mode. Check that the 🛠 button appears, presses, clicks and pops notes. Make a friend invincible from the players column.
+2. Ride the whole loop once, getting off at a station on each island. Watch a crossing's gates come down and go back up.
+3. At a platform with no train, use 🚉 Call a train. Board from the far end of the platform.
+4. In the Street Racer:
+   - Flick the handbrake into a turn, then hold the drift on the gas.
+   - Do a burnout and a launch.
+   - Spin donuts in a car park.
+5. Walk into a FreshMart, a bank and a pawn shop.

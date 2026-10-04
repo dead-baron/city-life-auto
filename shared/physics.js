@@ -149,19 +149,33 @@ export function collideCircle(s, r, map, block) {
 }
 
 // ---------------------------------------------------------------------------
-// Vehicles: arcade top-down model with lateral grip (drift) and rain friction.
+// Vehicles: a top-down handling model with tyre grip, weight transfer and drifting.
 
 // Vehicles faster than this plough through breakable street furniture instead of bouncing off.
 export const SMASH_SPEED = 85;
+export const DRIFT_ENTER = 150;   // sideways speed (px/s) at which a human-driven car is sliding
+export const DRIFT_EXIT = 50;     // ...and below which the tyres have hooked up again
 
-export function newVehState(x, y, a) { return { x, y, a, vx: 0, vy: 0, av: 0 }; }
+export function newVehState(x, y, a) { return { x, y, a, vx: 0, vy: 0, av: 0, slip: 0, spin: 0, launch: 0 }; }
 
-// inp: { throttle -1..1, steer -1..1, hb bool, slide bool }, env: { rain bool }
-// Driving feel: the handbrake (hb) is a hard e-brake that kicks the tail out - flick it with the
-// wheel turned at speed for a sharp skid turn. Braking while steering at speed (or asking for a
-// turn far sharper than the wheels allow: slide) also breaks the rear loose into a drift. The
-// handbrake held with the gas floored at low speed spins the car on the spot (donuts).
-// returns impact speed (px/s) of the hardest wall hit this step (0 if none)
+// inp: { throttle -1..1, steer -1..1, hb bool, slide bool, drv bool (a person at the wheel) },
+// env: { rain bool }. Returns the impact speed (px/s) of the hardest wall hit this step (0 if none).
+//
+// The car moves in its own frame: fwd along the nose, lat sideways, and a yaw rate (av).
+//  * Steering asks for a yaw rate from the wheel angle and speed; the front tyres can only deliver
+//    so much sideways force, so asking for too much at speed just pushes wide (understeer) - more
+//    so in the rain.
+//  * Weight transfer: braking loads the nose (it turns in harder, the tail goes light); flooring it
+//    loads the tail (the nose washes wide a little).
+//  * The rear can break loose: the handbrake, braking hard while turning (slide), or - for a person
+//    at the wheel - flooring it through a tight fast turn (power oversteer), or just arriving very
+//    sideways. Then the car DRIFTS: the tyres slide (low grip), the tail stays out while you keep
+//    the gas on, steering into the turn swings it further, counter-steering catches it, and
+//    lifting off lets the tyres grip again. Sliding scrubs speed.
+//  * Handbrake + gas at a standstill, wheel straight: a BURNOUT - the tyres smoke while the car
+//    strains on the spot; let go of the handbrake for a launch. Add the wheel: DONUTS, the rear
+//    swinging round the front wheels.
+// AI drivers never set slide or drv, so traffic stays planted.
 export function vehStep(s, inp, dt, map, def, env) {
   const isBoat = def.kind === 'boat';
   const tile = up(s) ? T.ROAD : map.tileAtPx(s.x, s.y);
@@ -171,34 +185,83 @@ export function vehStep(s, inp, dt, map, def, env) {
     if (isBoat) gripMul *= 0.8;
     else if (surf[2]) { gripMul *= 0.65; brakeMul = 0.5; } // GDD: friction -35%, braking distance doubled
   }
+  const human = !!inp.drv && !isBoat;
+  const t = inp.throttle, steer = inp.steer;
   let c = Math.cos(s.a), sn = Math.sin(s.a);
   let fwd = s.vx * c + s.vy * sn;
+  let lat = -s.vx * sn + s.vy * c;
+  const speed = Math.hypot(fwd, lat);
+  const steering = Math.abs(steer) > 0.2;
+  const brakeSlide = !isBoat && fwd > 160 && steering && !!inp.slide;
+  const burnout = !isBoat && !!inp.hb && t > 0.5 && !steering && Math.abs(fwd) < 70;
+  const donut = !isBoat && !!inp.hb && t > 0.5 && steering && speed < 240;
+  const braking = t < -0.05 && fwd > 15;
+  const powering = t > 0.6 && fwd > 40;
+  // power oversteer: a person flooring it through a tight turn at a decent lick lights up the rear
+  const powerOver = human && t > 0.85 && Math.abs(steer) > 0.7 && fwd > def.max * 0.3;
+  // -- the drift state (0 gripping .. 1 fully sideways) --
+  let drift = s.slip || 0;
+  if (!isBoat) {
+    const loose = (inp.hb && speed > 110) || brakeSlide || powerOver || (human && Math.abs(lat) > DRIFT_ENTER && speed > 180);
+    if (loose) drift = Math.min(1, drift + 5 * dt);
+    else if (Math.abs(lat) < DRIFT_EXIT || speed < 90) drift = Math.max(0, drift - 4 * dt);
+    else drift = Math.max(0, drift - (t > 0.4 ? 0.6 : 2.4) * dt); // gas on: the slide is held; lift: it grips up
+  }
+  s.slip = drift;
 
-  const steering = Math.abs(inp.steer) > 0.2;
-  const brakeSlide = !isBoat && fwd > 160 && steering && !!inp.slide; // (players only: AI drivers never set slide)
-  const donut = !isBoat && inp.hb && inp.throttle > 0.5 && Math.abs(fwd) < 160;
-  // sliding, the car keeps rotating on its momentum even as the wheels stop rolling forward
-  const spd = (inp.hb || brakeSlide) && !isBoat ? Math.hypot(s.vx, s.vy) : Math.abs(fwd);
-  const speedFactor = clamp(spd / 120, 0, 1);
-  const hiSpeed = 1 - 0.35 * clamp(spd / def.max, 0, 1);
-  const dirSign = (inp.hb || brakeSlide) ? (fwd >= -20 ? 1 : -1) : (fwd >= 0 ? 1 : -1);
-  const turnMul = inp.hb ? (isBoat ? 1.3 : 1.6) : brakeSlide ? 1.5 : 1;
-  const turnTarget = donut ? def.turn * 1.15 * inp.steer : def.turn * inp.steer * speedFactor * hiSpeed * dirSign * turnMul;
-  s.av += (turnTarget - s.av) * Math.min(1, 10 * dt);
+  // -- steering / yaw --
+  const speedFactor = clamp(speed / 120, 0, 1);
+  const hiSpeed = 1 - 0.35 * clamp(speed / def.max, 0, 1);
+  const sliding = inp.hb || brakeSlide || drift > 0.3;
+  const dirSign = sliding ? (fwd >= -20 ? 1 : -1) : (fwd >= 0 ? 1 : -1);
+  let turnTarget;
+  if (donut) turnTarget = Math.sign(steer) * def.turn * 1.45;
+  else if (burnout) turnTarget = 0;
+  else {
+    const bite = braking ? 1.12 : powering ? 0.93 : 1;                     // weight on the nose / on the tail
+    const turnMul = inp.hb ? (isBoat ? 1.3 : 1.6) : brakeSlide ? 1.5 : 1;
+    turnTarget = def.turn * steer * speedFactor * hiSpeed * dirSign * turnMul * bite;
+    if (drift > 0.3 && !inp.hb) {
+      // in a slide: steering into it swings the tail further, counter-steering (wheel pointing
+      // the way the car is sliding) catches it gently instead of snapping back
+      const counter = steer * lat > 0;
+      turnTarget *= counter ? 0.55 : 1.2;
+    }
+    if (!sliding && !isBoat) {
+      // the front tyres' limit: centripetal acceleration they can hold (understeer beyond it)
+      const aMax = def.grip * 110 * gripMul * bite;
+      const lim = aMax / Math.max(60, Math.abs(fwd));
+      if (Math.abs(turnTarget) > lim) turnTarget = Math.sign(turnTarget) * (lim + (Math.abs(turnTarget) - lim) * 0.25);
+    }
+  }
+  s.av += (turnTarget - s.av) * Math.min(1, (donut ? 7 : 10) * dt);
   s.a = wrapAngle(s.a + s.av * dt);
 
   c = Math.cos(s.a); sn = Math.sin(s.a);
   fwd = s.vx * c + s.vy * sn;
-  let lat = -s.vx * sn + s.vy * c;
+  lat = -s.vx * sn + s.vy * c;
 
-  const t = inp.throttle;
+  // -- longitudinal: engine, brakes, burnouts --
   const maxEff = def.max * surf[0];
   // analog throttle also sets a cruising speed: a light push drives slowly, full stick flat out
   const cap = maxEff * Math.min(1, 0.18 + 0.82 * Math.abs(t));
-  if (t > 0.05) {
+  let launch = s.launch || 0, spin = s.spin || 0;
+  if (burnout) spin = Math.min(2, spin + dt);
+  else if (spin > 0) { if (t > 0.5 && !inp.hb) launch = Math.min(1.2, spin); spin = 0; }   // let go of the handbrake: launch
+  launch = Math.max(0, launch - dt);
+  s.spin = spin; s.launch = launch;
+  const accel = def.accel * (1 + 0.8 * launch) * (drift > 0.3 ? 0.75 : 1);   // spinning tyres put less down
+  if (burnout) {
+    fwd += (0 - fwd) * Math.min(1, 6 * dt); // straining against the brake, tyres smoking
+  } else if (donut) {
+    // pivot round the front wheels: the rear swings out sideways, the car barely moves forward
+    const r = def.L * 0.32;
+    lat += (-r * s.av - lat) * Math.min(1, 8 * dt);
+    fwd += (24 - fwd) * Math.min(1, 4 * dt);
+  } else if (t > 0.05) {
     if (fwd < -15) fwd = Math.min(0, fwd + def.brake * brakeMul * t * dt);
     else if (fwd > cap) fwd -= (fwd - cap) * 1.6 * dt;
-    else fwd += def.accel * Math.max(t, 0.6) * dt * clamp(1 - fwd / cap, 0, 1) * 1.6;
+    else fwd += accel * Math.max(t, 0.6) * dt * clamp(1 - fwd / cap, 0, 1) * 1.6;
   } else if (t < -0.05) {
     if (fwd > 15) fwd = Math.max(0, fwd - def.brake * brakeMul * -t * (brakeSlide ? 0.55 : 1) * dt); // locked up in a skid it scrubs off less
     else fwd = Math.max(-def.rev * Math.min(1, 0.3 + 0.7 * -t), fwd - def.accel * 0.6 * -t * dt);
@@ -207,13 +270,17 @@ export function vehStep(s, inp, dt, map, def, env) {
     if (Math.abs(fwd) < 4) fwd = 0;
   }
   if (fwd > maxEff) fwd -= (fwd - maxEff) * 3 * dt;
-  if (inp.hb && !donut) { // e-brake: a hard stop with the tail sliding out
+  if (inp.hb && !donut && !burnout) { // e-brake: a hard stop with the tail sliding out
     if (isBoat) fwd *= 1 - 1.4 * dt;
     else fwd = fwd > 0 ? Math.max(0, fwd - def.brake * 0.5 * brakeMul * dt) : Math.min(0, fwd + def.brake * 0.5 * brakeMul * dt);
   }
-  if (donut) fwd = Math.min(fwd, 90); // wheelspin: the rear just smokes round
-  const grip = (inp.hb || donut ? def.drift : brakeSlide ? def.drift * 1.6 : def.grip) * gripMul;
-  lat *= Math.max(0, 1 - grip * dt);
+  // -- lateral: the tyres pull the velocity round towards the nose (slowly when sliding) --
+  if (!donut) {
+    const slideGrip = def.drift + (def.grip - def.drift) * (1 - drift) * 0.35;
+    const grip = (inp.hb || burnout ? def.drift : brakeSlide ? def.drift * 1.6 : drift > 0.05 ? slideGrip : def.grip) * gripMul;
+    lat *= Math.max(0, 1 - grip * dt);
+    if (drift > 0.05 && !isBoat) { const scrub = Math.max(0, 1 - 0.22 * drift * dt); fwd *= scrub; lat *= scrub; } // sliding tyres scrub speed
+  }
 
   s.vx = c * fwd - sn * lat;
   s.vy = sn * fwd + c * lat;
@@ -229,9 +296,9 @@ export function vehStep(s, inp, dt, map, def, env) {
 // brake, left/right = steer, like the classic games.
 export function driveInput(s, inp) {
   const hb = !!(inp.bits & IN.DIVE);
-  if (inp.bits & IN.TANK) return { throttle: -inp.my, steer: inp.mx, hb, slide: -inp.my < -0.3 && Math.abs(inp.mx) > 0.2 }; // brake + steer = skid turn
+  if (inp.bits & IN.TANK) return { throttle: -inp.my, steer: inp.mx, hb, slide: -inp.my < -0.3 && Math.abs(inp.mx) > 0.2, drv: true }; // brake + steer = skid turn
   const m = Math.min(1, Math.hypot(inp.mx, inp.my));
-  if (m < 0.08) { s.rev = false; return { throttle: 0, steer: 0, hb, slide: false }; }
+  if (m < 0.08) { s.rev = false; return { throttle: 0, steer: 0, hb, slide: false, drv: true }; }
   const want = Math.atan2(inp.my, inp.mx);
   const d = wrapAngle(want - s.a);
   const fwd = s.vx * Math.cos(s.a) + s.vy * Math.sin(s.a);
@@ -240,18 +307,18 @@ export function driveInput(s, inp) {
   else if (s.rev && Math.abs(d) < 1.75) s.rev = false;
   if (s.rev) {
     const dr = wrapAngle(want - (s.a + Math.PI));
-    return { throttle: -m, steer: clamp(-dr * 2.2, -1, 1), hb, slide: false };
+    return { throttle: -m, steer: clamp(-dr * 2.2, -1, 1), hb, slide: false, drv: true };
   }
   if (Math.abs(d) > 2.35) { // pulling back at speed = brake; pulled back to one side = brake into a skid turn
     const skid = Math.abs(d) < 2.95 && fwd > 160;
-    return { throttle: -m, steer: skid ? Math.sign(d) : 0, hb, slide: skid };
+    return { throttle: -m, steer: skid ? Math.sign(d) : 0, hb, slide: skid, drv: true };
   }
   const steer = clamp(d * 2.4, -1, 1);
   const sharp = Math.abs(d) > 1.3;
   // a turn far sharper than the wheels can take at this speed: lift off and let the tail slide round
-  if (sharp && fwd > 300) return { throttle: 0.25 * m, steer, hb, slide: true };
+  if (sharp && fwd > 300) return { throttle: 0.25 * m, steer, hb, slide: true, drv: true };
   const throttle = m * (sharp ? 0.55 : 1);
-  return { throttle, steer, hb, slide: false };
+  return { throttle, steer, hb, slide: false, drv: true };
 }
 
 export function collideVehicleTiles(s, def, map, block) {

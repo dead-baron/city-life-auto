@@ -25,7 +25,7 @@ import {
   clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, slipRamp, acrossWater,
 } from './citylayout.js';
 import { buildLevels } from './levels.js';
-import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS } from './islands.js';
+import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS, SCENE_SPOTS } from './islands.js';
 import { ROAD_RANK } from './roads.js';
 
 export { Z };
@@ -488,6 +488,7 @@ export function generateCity(seed = 1337) {
   buildAirports(m);
   buildEstates(m, rand);
   buildOutposts(m, rand);
+  buildScenePaintings(m);
   buildWilds(m, rand);
   buildStreetProps(m);
   buildBanking(m);
@@ -2641,6 +2642,35 @@ function buildOutposts(m, rand) {
 }
 
 // Airports: the runway, taxiway and apron, the terminal and hangars, aircraft on the stands.
+// Whole scene paintings from the concepts (a golf course...) on open wild ground: the biggest
+// clear stretch of the district nearest the preferred spot - all land, no roads, buildings,
+// fields or lakes - kept free of the scattered wild trees and rocks.
+function buildScenePaintings(m) {
+  m.paintings = [];
+  const W = MAP_W;
+  for (const sp of SCENE_SPOTS) {
+    // summed-area table of "can't paint here" tiles
+    const sat = new Int32Array((W + 1) * (MAP_H + 1));
+    for (let y = 0; y < MAP_H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x, t = m.tiles[i];
+      const bad = !m.land[i] || m.lake[i] || m.dist[i] !== sp.dist || m.reserve[i] || (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) ? 1 : 0;
+      sat[(y + 1) * (W + 1) + x + 1] = bad + sat[y * (W + 1) + x + 1] + sat[(y + 1) * (W + 1) + x] - sat[y * (W + 1) + x];
+    }
+    const badIn = (x, y, w, h) => sat[(y + h) * (W + 1) + x + w] - sat[y * (W + 1) + x + w] - sat[(y + h) * (W + 1) + x] + sat[y * (W + 1) + x];
+    let best = null, bd = Infinity;
+    for (let y = 2; y + sp.h + 4 < MAP_H; y += 2) for (let x = 2; x + sp.w + 4 < W; x += 2) {
+      if (badIn(x - 2, y - 2, sp.w + 4, sp.h + 4)) continue;
+      const d = Math.hypot(x + sp.w / 2 - sp.near[0], y + sp.h / 2 - sp.near[1]);
+      if (d < bd) { bd = d; best = { x, y }; }
+    }
+    if (!best) continue;
+    for (let y = best.y; y < best.y + sp.h; y++) for (let x = best.x; x < best.x + sp.w; x++) { m.tiles[y * W + x] = T.GRASS; m.reserve[y * W + x] |= 16; }
+    for (const [fx0, fy0, fx1, fy1] of sp.solid || []) // the painted clubhouse etc. is solid (its art comes from the painting)
+      for (let y = best.y + Math.round(fy0 * sp.h); y < best.y + Math.round(fy1 * sp.h); y++) for (let x = best.x + Math.round(fx0 * sp.w); x < best.x + Math.round(fx1 * sp.w); x++) m.tiles[y * W + x] = T.WALL;
+    m.paintings.push({ key: sp.key, name: sp.name, x: best.x * TILE, y: best.y * TILE, w: sp.w * TILE, h: sp.h * TILE });
+  }
+}
+
 function buildAirports(m) {
   m.airports = [];
   for (const A of AIRPORTS) {

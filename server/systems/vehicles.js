@@ -11,6 +11,7 @@ import * as cargo from './cargo.js';
 import * as law from './law.js';
 import * as npc from './npc.js';
 import * as cruiser from './cruiser.js';
+import * as traffic from './traffic.js';
 
 
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
@@ -54,8 +55,13 @@ export function update(world, dt) {
       if (driver && driver.dead) ejectPed(world, driver, true);
       v.input.throttle = 0; v.input.steer = 0; v.input.hb = false;
     }
-    // player-driven cars were already stepped once per received input (players.processInputs)
-    if (v.ownStepTick !== world.tick) stepVehicle(world, v, dt, env);
+    // player-driven cars were already stepped once per received input (players.processInputs);
+    // AI drivers get two physics sub-steps a tick with their wheel and pedals re-trimmed in
+    // between, so they correct twice as often - smoother lines, steadier speeds
+    if (v.ownStepTick !== world.tick) {
+      if (v.ai && v.ai.ctl && driver && driver.npc) { stepVehicle(world, v, dt / 2, env); traffic.trim(v); stepVehicle(world, v, dt / 2, env); }
+      else stepVehicle(world, v, dt, env);
+    }
     // land vehicles that end up in the water sink
     if (v.def.kind !== 'boat') {
       if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
@@ -69,7 +75,7 @@ export function update(world, dt) {
     v.brake = v.input.throttle < -0.1 && fwd > 20;
     v.reverse = fwd < -10;
     // tyre smoke + skid marks: sliding, e-braking, donuts, or a full-throttle launch (burnout)
-    v.drift = Math.abs(vehLateralSpeed(v)) > 110 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player);
+    v.drift = Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player);
     v.lights = (night && !!driver) || (v.def.police && v.sirenOn);
     v.siren = !!(v.def.police && v.sirenOn && driver);
     // burning / smoke

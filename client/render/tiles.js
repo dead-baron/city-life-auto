@@ -6,6 +6,7 @@ import { T, TILE, CHUNK_PX, MAP_W, MAP_H } from '../../shared/constants.js';
 import { hash2, mulberry32 } from '../../shared/rng.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
+import { INTERIOR_RECTS, INTERIOR_KINDS, SCENE_RECTS } from '../../shared/interior-art.js';
 import { atlas } from './sprites.js';
 import { railIndex, drawRailChunk, drawStation } from './trains.js';
 import { drawRoads, edgeRect } from './roads.js';
@@ -91,6 +92,7 @@ export class GroundCache {
     drawCurbs(g, m, tx0, ty0, n);
     drawRoads(g, m, this.roads.get(k) || [], this.culdesacs.get(k) || []);
     for (const ap of m.airports || []) drawAirport(g, ap, cx, cy);
+    for (const pt of m.paintings || []) drawPainting(g, pt, cx, cy);
     drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, m, st, cx, cy);
     for (const s of this.stalls.get(k) || []) drawStall(g, s);
@@ -195,6 +197,24 @@ function drawPump(g, p, cx, cy) {
   g.fillStyle = '#e8e8e8'; g.fillRect(p.x - 5, p.y - 6, 10, 5);
   g.fillStyle = '#1b2333'; g.fillRect(p.x - 4, p.y - 5, 8, 3);
   g.strokeStyle = '#222'; g.lineWidth = 2; g.beginPath(); g.moveTo(p.x + 7, p.y + 2); g.quadraticCurveTo(p.x + 14, p.y + 4, p.x + 12, p.y + 9); g.stroke();
+}
+
+// A whole concept scene painting laid over its patch of ground (soft-edged so it melts into the
+// grass round it).
+function drawPainting(g, pt, cx, cy) {
+  const r = SCENE_RECTS[pt.key];
+  if (!r || !atlas.scenes) return;
+  if (pt.x + pt.w < cx * CHUNK_PX || pt.x > (cx + 1) * CHUNK_PX || pt.y + pt.h < cy * CHUNK_PX || pt.y > (cy + 1) * CHUNK_PX) return;
+  g.save();
+  g.imageSmoothingEnabled = true;
+  g.drawImage(atlas.scenes, r[0], r[1], r[2], r[3], pt.x, pt.y, pt.w, pt.h);
+  // feather the edge: a few px of the surrounding grass drawn back over the border
+  const e = 10;
+  for (let k = 0; k < e; k += 2) {
+    g.strokeStyle = `rgba(74,122,52,${0.5 * (1 - k / e)})`; g.lineWidth = 2;
+    g.strokeRect(pt.x + k, pt.y + k, pt.w - 2 * k, pt.h - 2 * k);
+  }
+  g.restore();
 }
 
 // Mini-game venues: a striped, lined soccer pitch with goals; a roped sand court with a net.
@@ -744,9 +764,32 @@ const DECOR = {
   courthouse: ['#5a3a22', '#e8e2d0'], hospital: ['#c8262b', '#7fb8d0'], police: ['#1d3a8a', '#f2c21b'],
 };
 const artCache = new Map();
+// The painted interior for a walk-in unit (from the concept interiors), fitted to the unit: the
+// painting's back wall at the unit's back wall, its shop door at the street side (flipped for
+// shops that face north), scaled to the unit's depth and cropped / stretched a little across.
+function paintedInterior(g, b, u, ox, oy) {
+  const opts = INTERIOR_KINDS[u.kind];
+  if (!opts || !atlas.interiors) return false;
+  const r = INTERIOR_RECTS[opts[b.id % opts.length]];
+  if (!r) return false;
+  const wi = b.walkIn;
+  const x0 = u.x0 * TILE - ox, y0 = wi.y0 * TILE - oy, w = (u.x1 - u.x0 + 1) * TILE, h = (wi.y1 - wi.y0 + 1) * TILE;
+  const sc = h / r[3];
+  let sx = r[0], sw = r[2];
+  if (r[2] * sc > w * 1.25) { sw = w * 1.25 / sc; sx = r[0] + (r[2] - sw) / 2; } // too wide: keep the middle
+  g.save();
+  g.beginPath(); g.rect(x0, y0, w, h); g.clip();
+  if (!wi.south) { g.translate(0, y0 * 2 + h); g.scale(1, -1); } // door at the top: mirror it
+  g.imageSmoothingEnabled = true;
+  g.drawImage(atlas.interiors, sx, r[1], sw, r[3], x0, y0, w, h);
+  g.restore();
+  return true;
+}
+
 export function interiorArt(m, b) {
   let cv = artCache.get(b.id);
-  if (cv) return cv;
+  const ver = atlas.interiors ? 2 : 1; // rebuilt once the interior paintings arrive
+  if (cv && cv.ver === ver) return cv;
   cv = document.createElement('canvas');
   cv.width = b.tw * TILE; cv.height = b.th * TILE;
   const g = cv.getContext('2d');
@@ -787,7 +830,13 @@ export function interiorArt(m, b) {
     // floor logo / mat inside the door
     const dx = u.door.tx * TILE - ox, dy = (u.door.ty + (b.walkIn.south ? -1 : 1)) * TILE - oy;
     g.fillStyle = 'rgba(30,30,40,.35)'; g.fillRect(dx + 4, dy + 6, u.door.w * TILE - 8, TILE - 12);
+    // the concept painting of this kind of shop, when there is one, over the plain fit-out
+    if (paintedInterior(g, b, u, ox, oy)) {
+      // the counter you can't walk through, as a soft shadow line so it reads in the painting
+      g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(x0, cy + TILE - 6, x1 - x0, 4);
+    }
   }
+  cv.ver = ver;
   artCache.set(b.id, cv);
   return cv;
 }

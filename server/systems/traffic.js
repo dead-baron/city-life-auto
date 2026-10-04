@@ -121,25 +121,63 @@ function crossJunction(world, v) {
 }
 
 // ---- shared driving controller ----------------------------------------------------
+// Decides the speed (bends, obstacles, crossings) once a tick; the steering and pedals are then
+// trimmed again between the physics sub-steps (trim) so AI drivers react twice as often.
 export function driveToward(world, v, wx, wy, desired, opts = {}) {
   const fwd = vehForwardSpeed(v);
   const want = Math.atan2(wy - v.y, wx - v.x);
   const diff = angleDiff(v.a, want);
-  let steer = clamp(diff * 2.4, -1, 1);
   let speed = desired;
   if (Math.abs(diff) > 0.9) speed = Math.min(speed, 140);
   if (!opts.ignoreObstacles) speed = Math.min(speed, obstacleSpeed(world, v, fwd));
   if (!opts.ignoreCrossings && (v.lz || 0) < 0.3) speed = Math.min(speed, crossingLimit(world, v, fwd)); // level-crossing gates down: stop (or gamble)
-  let throttle = clamp((speed - fwd) / 90, -1, 1);
-  if (speed < 6 && fwd < 12) throttle = 0;
   // reverse out when wedged
   const ai = v.ai;
+  let reversing = false;
   if (ai) {
     if (Math.abs(fwd) < 12 && desired > 60 && speed > 40) ai.stuck = (ai.stuck || 0) + 0.05; else ai.stuck = Math.max(0, (ai.stuck || 0) - 0.1);
     if (ai.stuck > 2.5) { ai.reverseUntil = world.time + 1.3; ai.stuck = 0; }
-    if (ai.reverseUntil && world.time < ai.reverseUntil) { throttle = -0.8; steer = -steer; }
+    reversing = !!(ai.reverseUntil && world.time < ai.reverseUntil);
+    ai.ctl = { wx, wy, speed, reversing };
   }
+  pedals(v, wx, wy, speed, reversing);
+}
+
+// Steering and pedals toward (wx, wy) at `speed`: the wheel eases toward the target heading with
+// a damping term on the yaw rate (no weaving), and the throttle anticipates - it lifts early
+// when the car is coming up to the speed it wants, and brakes progressively harder the further
+// over it is.
+function pedals(v, wx, wy, speed, reversing) {
+  const fwd = vehForwardSpeed(v);
+  const diff = angleDiff(v.a, Math.atan2(wy - v.y, wx - v.x));
+  let steer = clamp(diff * 2.4 - (v.av || 0) * 0.12, -1, 1);
+  const err = speed - fwd;
+  let throttle = err > 0 ? clamp(err / 90, 0, 1) : clamp(err / (fwd > 300 ? 70 : 90), -1, 0);
+  if (speed < 6 && fwd < 12) throttle = 0;
+  if (reversing) { throttle = -0.8; steer = -clamp(diff * 2.4, -1, 1); }
   v.input.throttle = throttle; v.input.steer = steer; v.input.hb = false;
+}
+
+// Between physics sub-steps: re-aim at the same target with the car's new heading and speed.
+export function trim(v) {
+  const c = v.ai && v.ai.ctl;
+  if (!c || v.wreckAt) return;
+  pedals(v, c.wx, c.wy, c.speed, c.reversing);
+}
+
+// The point a smooth driver looks at: `look` px ahead along the path (the car's position, then
+// the waypoints in order). Steering at it rather than at the next waypoint takes bends in one
+// clean arc instead of a series of little corrections.
+function lookAhead(v, pts, look) {
+  let px = v.x, py = v.y, left = look;
+  for (let i = 0; i < Math.min(pts.length, 6); i++) {
+    const q = pts[i];
+    const d = Math.hypot(q.x - px, q.y - py);
+    if (d >= left) return { x: px + (q.x - px) * left / d, y: py + (q.y - py) * left / d };
+    left -= d; px = q.x; py = q.y;
+    if (q.stop || q.final) break;
+  }
+  return { x: px, y: py };
 }
 
 function obstacleSpeed(world, v, fwd) {
@@ -276,7 +314,8 @@ function steerTraffic(world, v, t) {
     driveToward(world, v, room && !busy ? tx : wp.x, room && !busy ? ty : wp.y, Math.min(desired, 40), {});
     return;
   }
-  driveToward(world, v, wp.x, wp.y, desired, { ignoreObstacles: panic });
+  const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190));
+  driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic });
 }
 
 // Is a vehicle running its siren coming up behind us (or straight at us down the same road)?

@@ -100,7 +100,7 @@ export function send(world) {
     let ctrl = CTRL.NONE, ctrlId = 0, self = null, sflags = 0;
     if (ped && !ped.dead && ped.onTrain) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: 0 }; }
     else if (ped && !ped.dead) {
-      if (veh) { ctrl = ped.seat === 0 && !veh.scripted ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = veh; sflags = veh.rev ? 32 : 0; } // reverse-gear state keeps point-to-drive prediction exact
+      if (veh) { ctrl = ped.seat === 0 && !veh.scripted ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = { x: veh.x, y: veh.y, a: veh.a, vx: veh.vx, vy: veh.vy, av: veh.av, stamina: veh.slip || 0, rollT: veh.spin || 0, rdx: veh.launch || 0, lz: veh.lz || 0 }; sflags = veh.rev ? 32 : 0; } // (a vehicle's slide / burnout / launch state rides in the ped-only slots) // reverse-gear state keeps point-to-drive prediction exact
       else {
         ctrl = CTRL.PED; ctrlId = ped.id;
         const mods = players.pedMods(world, ped);

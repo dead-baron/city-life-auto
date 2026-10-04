@@ -77,6 +77,36 @@ test('driving: the handbrake at speed spins the car round in a skid; brake + ste
   assert.ok(ai.lat < tank.lat, 'traffic stays planted');
 });
 
+test('driving feel: power oversteer for a person at the wheel (traffic stays planted), drifts hold on the gas, burnouts launch, donuts pivot', () => {
+  const map = { tileAtPx: () => 3, tileAt: () => 3, solidProps: new Map(), w: 512 };
+  const d = VEHICLES.sports;
+  const sim = (s, f, secs) => { let yaw = 0, lat = 0; for (let t = 0; t < secs; t += 0.05) { const a0 = s.a; vehStep(s, f(t), 0.05, map, d, {}); let da = s.a - a0; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; yaw += da; lat = Math.max(lat, Math.abs(-s.vx * Math.sin(s.a) + s.vy * Math.cos(s.a))); } return { yaw: Math.abs(yaw) * 57.3, lat, speed: Math.hypot(s.vx, s.vy), s }; };
+  const moving = () => ({ x: 0, y: 0, a: 0, vx: d.max * 0.6, vy: 0, av: 0 });
+  const still = () => ({ x: 0, y: 0, a: 0, vx: 0, vy: 0, av: 0 });
+  // floored through a tight turn: a person kicks the tail out, traffic just turns
+  const human = sim(moving(), () => ({ throttle: 1, steer: 1, hb: false, drv: true }), 1);
+  const ai = sim(moving(), () => ({ throttle: 1, steer: 1, hb: false }), 1);
+  assert.ok(human.lat > 150 && ai.lat < 80, `power oversteer: human ${human.lat.toFixed(0)} vs traffic ${ai.lat.toFixed(0)} px/s sideways`);
+  // a drift held on the gas stays sideways longer than one where you lift
+  const flick = (after) => sim(moving(), (t) => (t < 0.3 ? { throttle: 0.4, steer: 1, hb: true, drv: true } : after), 1.2);
+  const held = flick({ throttle: 1, steer: 0.5, hb: false, drv: true }), lifted = flick({ throttle: 0, steer: 0, hb: false, drv: true });
+  assert.ok((held.s.slip || 0) > (lifted.s.slip || 0) && held.speed > lifted.speed, 'gas holds the slide and the speed');
+  // the brake is still the brake: understeer limit doesn't stop a slow car turning tightly
+  const slow = sim({ x: 0, y: 0, a: 0, vx: 150, vy: 0, av: 0 }, () => ({ throttle: 0.4, steer: 1, hb: false }), 1);
+  assert.ok(slow.yaw > 90, `a slow car turns tight (${slow.yaw.toFixed(0)} deg)`);
+  // burnout: handbrake + gas, wheel straight - stays put, tyres spinning; let go and it launches harder than a plain start
+  const bo = sim(still(), () => ({ throttle: 1, steer: 0, hb: true, drv: true }), 1.5);
+  assert.ok(bo.speed < 20 && bo.s.spin > 1, 'burnout: straining on the spot');
+  const launched = sim(bo.s, () => ({ throttle: 1, steer: 0, hb: false, drv: true }), 0.8);
+  const plain = sim(still(), () => ({ throttle: 1, steer: 0, hb: false, drv: true }), 0.8);
+  assert.ok(launched.speed > plain.speed * 1.1, `launch ${launched.speed.toFixed(0)} vs ${plain.speed.toFixed(0)}`);
+  // donuts: spins round and round without going anywhere
+  const dn = sim(still(), () => ({ throttle: 1, steer: 1, hb: true, drv: true }), 3);
+  assert.ok(dn.yaw > 360 && Math.hypot(dn.s.x, dn.s.y) < 160, `donuts: ${dn.yaw.toFixed(0)} deg, drifted ${Math.hypot(dn.s.x, dn.s.y).toFixed(0)} px`);
+  // and it's the same code the client predicts with: driveInput marks a person at the wheel
+  assert.ok(driveInput({ x: 0, y: 0, a: 0, vx: 0, vy: 0 }, { bits: 0, mx: 1, my: 0 }).drv);
+});
+
 test('gunshots: a blood spray off the victim; some people drop at once, some take more; the critically hurt limp off bleeding', () => {
   const w = makeWorld({ npcBudget: 200 });
   const { p } = joinPlayer(w);

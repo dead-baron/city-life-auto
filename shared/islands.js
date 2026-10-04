@@ -266,3 +266,10 @@ export const ISLAND_SEEDS = [
   [43, 118, 1028], [43, 90, 980], [43, 160, 1060], [44, 1118, 1066], [44, 1080, 1040], [44, 1160, 1100],
   [14, 600, 350], [14, 660, 350],
 ];
+
+// Whole concept scene paintings laid over open wild ground (walkable, no collision of their own):
+// key (in assets/scenes.webp), name, district to find room in, size in tiles, preferred spot, and
+// the painted buildings you can't walk through (fractions of the painting: x0, y0, x1, y1).
+export const SCENE_SPOTS = [
+  { key: 'golf', name: 'Cedar Hills Golf Club', dist: 40, w: 54, h: 36, near: [620, 1110], solid: [[0.03, 0.14, 0.19, 0.37], [0.09, 0.27, 0.25, 0.39]] },
+];
