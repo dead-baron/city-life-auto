@@ -26,10 +26,11 @@ import {
   TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, TRAIN_HEADWAY_S, MAIL_WARN_S,
   BAIL_HURT_SPEED, NPC_GRIT, NPC_CRITICAL, HIGHWAY_SPEED, BARRIER_BREAK_SPEED, BARRIER_REPAIR_S,
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
+  BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 16;
+export const TUTORIAL_VERSION = 17;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -75,7 +76,7 @@ export const STEPS = [
   { ch: 'city', title: isle('G'), at: { island: 'G' },
     text: `Two little islands far out in the south - the villages of Gull Harbor and Coral Cay, each round its village green. No bridge reaches them: take a boat. Out in the bay between Westport and Metro City lies Paradise Cay, a palm island with a beach camp, a cabin and a jetty to tie up at.` },
   { ch: 'city', title: 'The roads', at: { city: 1 },
-    text: `Roads join up the way they would in a real city: highways meet major avenues and arterials at signalled junctions, those feed the streets, streets feed the little residential roads and cul-de-sacs, and out in the country the county roads lead off them to dirt tracks into the woods, the hills and the desert. A dirt track is slow going for anything but a pickup or a bike.` },
+    text: `Roads join up the way they would in a real city: highways meet major avenues and arterials at signalled junctions, those feed the streets, streets feed the little residential roads and cul-de-sacs, and out in the country the county roads lead off them to dirt tracks into the woods, the hills and the desert. A dirt track is slow going for anything but a pickup or a bike. Downtown the traffic lights hang from wires strung between the buildings; elsewhere they stand on poles at the kerb - and a pole, like a lamp post, goes over if you hit it hard enough.` },
   { ch: 'city', title: isle('C'), at: { island: 'C' },
     text: `The Syndicate's island fortress, off the far shore of ${isle('F')}. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
@@ -108,6 +109,8 @@ export const STEPS = [
     text: `Buy a fishing pole at a {{tackle}} shop like the one in {{tackle:where}} ($${price('tackle', 'rod')}), the {{fishmarket}} ($${price('fishmarket', 'rod')}) or {{sports}} ($${price('sports', 'rod')}), cast at the water's edge and strike when it bites. Bait changes what bites: ${ITEMS.worms.name.toLowerCase()} for bass, ${ITEMS.shrimp.name.toLowerCase()} for salmon, ${ITEMS.squid.name.toLowerCase()} for tuna, a ${ITEMS.glowlure.name.toLowerCase()} for catfish at night. Sell your catch at any tackle shop or the market.` },
   { ch: 'citizen', title: 'Out on the water', at: { poi: 'charter' },
     text: `Buy a jet ski, dinghy or speedboat at {{marina}}, or borrow one from a dock. NPC boaters cruise the bay and harbor police patrol it. Book a deep-sea charter at {{charter}}: head far from land, sit still and fish over the side for grouper, swordfish and marlin - land ${DEEPSEA_CATCH} for a $${DEEPSEA_PAY} bonus.` },
+  { ch: 'citizen', title: 'Boat hire and boathouses', at: { poi: 'rental' },
+    text: `No boat of your own? Hire one at {{rental}} or any other rental dock: a jet ski ($${BOAT_RENTAL_PRICE.jetski}), a dock motorboat ($${BOAT_RENTAL_PRICE.dinghy}) or a speedboat ($${BOAT_RENTAL_PRICE.speedboat}, not on the lakes) for ${Math.round(BOAT_RENTAL_S / 60)} minutes. Hand it back at any rental dock; leave it lying about and the company tows it home, but stay out more than ${BOAT_RENTAL_GRACE_S} seconds past your time and it's reported stolen. Some homes sit right on the water with a private pier and a boathouse: pull a boat you own into the slip to moor it, and take any of your boats out from the house.` },
   { ch: 'citizen', title: 'Races', at: { island: 'P' },
     text: `Pull up to a start buoy on a jet ski (jet ski sprint) or in a boat (boat classic) to enter. A countdown lets others join, then it's buoy to buoy - the arrow on your radar shows the next one. Prize money goes to the top three; turn up mid-race and you're in the next round. Leave your craft and you forfeit.` },
   { ch: 'citizen', title: 'Soccer and volleyball', at: { district: 'Greenfield Park' },

@@ -5,7 +5,7 @@
 import { TILE, T } from '../../shared/constants.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { GROUND_TEX } from '../../shared/prefab-data.js';
-import { laneOffset } from '../../shared/roads.js';
+import { laneOffset, zebraCrossings } from '../../shared/roads.js';
 import { offset, measure, pointAt } from '../../shared/geom.js';
 import { atlas } from './sprites.js';
 
@@ -225,10 +225,11 @@ function markings(g, m, e) {
     const at = pointAt(pp, t + 2);
     const nx = -at.ty, ny = at.tx; // left of travel away from the node
     // crossing: stripes across the whole carriageway, just outside the junction box
-    if (CITY.has(e.kind) && e.w >= 5 * TILE && n.light) {
-      const c = pointAt(pp, t + 16);
+    // (only where it doesn't pile onto another crossing or another street: shared/roads.js)
+    const xc = zebraCrossings(m).get(`${e.id}:${end}`);
+    if (xc) {
       g.fillStyle = 'rgba(236,234,226,.9)';
-      g.save(); g.translate(c.x, c.y); g.rotate(Math.atan2(c.ty, c.tx));
+      g.save(); g.translate(xc.x, xc.y); g.rotate(xc.a);
       for (let k = -e.hw + 10; k < e.hw - 12; k += 14) g.fillRect(-11, k, 22, 8);
       g.restore();
     }

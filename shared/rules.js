@@ -101,3 +101,8 @@ export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Dry Creek 
 export const HIGHWAY_SPEED = 560;          // traffic cruising speed up on the ring highway (px/s)
 export const BARRIER_BREAK_SPEED = 300;    // ram a highway barrier this fast (px/s, straight into it) and it gives way
 export const BARRIER_REPAIR_S = 300;       // the road crew puts a smashed barrier back after this long (when nobody's looking)
+
+// Boats
+export const BOAT_RENTAL_S = 300;          // a hired boat or jet ski is yours this long; bring it back to any rental dock
+export const BOAT_RENTAL_GRACE_S = 45;     // overdue this long and the hire company reports it stolen
+export const BOAT_RENTAL_PRICE = { jetski: 120, dinghy: 150, speedboat: 350 }; // per hire

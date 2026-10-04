@@ -19,7 +19,7 @@ test('estates: farmhouses, cottages, beach houses and a mansion, each with a rea
     const list = w.map.homes.filter((h) => h.kind === k);
     assert.ok(list.length >= 1, `no ${k} on the map`);
     for (const h of list) {
-      assert.equal(h.price, ESTATE_TYPES[k].price);
+      assert.equal(h.price, h.dock ? Math.round((ESTATE_TYPES[k].price * 1.3) / 500) * 500 : ESTATE_TYPES[k].price);
       assert.equal(PED_BLOCK[w.map.tileAtPx(h.x, h.y)], 0, `${h.name}: door blocked`);
       assert.ok(h.garage, `${h.name}: no garage`);
       assert.equal(CAR_SPAWN_BLOCK[w.map.tileAtPx(h.garage.x, h.garage.y)], 0, `${h.name}: garage spot not drivable`);

@@ -12,7 +12,7 @@ import { railIndex, drawRailChunk, drawStation, drawPortals } from './trains.js'
 import { drawRoads, edgeRect } from './roads.js';
 import { Shores } from './shore.js';
 
-export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp']);
+export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole']);
 
 const C = {
   grass: ['#4f8f3c', '#4a8838', '#559643', '#45812f'],
@@ -102,6 +102,7 @@ export class GroundCache {
     for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
     for (const mn of m.mansions || []) drawMansion(g, mn, cx, cy);
     for (const gr of m.garages || []) drawGarage(g, gr, cx, cy);
+    for (const bh of m.boathouses || []) drawBoathouseBase(g, bh, cx, cy);
     for (const mp of m.motorPools || []) drawMotorPool(g, mp, cx, cy);
     for (const v of m.venues || []) drawVenue(g, v, cx, cy);
     for (const pu of m.pumps || []) drawPump(g, pu, cx, cy);
@@ -144,6 +145,35 @@ function drawGarage(g, gr, cx, cy) {
   // door frame on the driveway side (the door itself is drawn live, it opens)
   const dy = gr.south ? y + h - 7 : y;
   g.fillStyle = '#d8d4cb'; g.fillRect(x + 2, dy, w - 4, 7);
+}
+
+// A waterfront home's boathouse, at water level: catwalks down both sides of the slip, pilings,
+// and the back wall on the shore end (the roof is drawn live over the boat - client/main.js).
+function drawBoathouseBase(g, bh, cx, cy) {
+  const x = bh.tx * TILE, y = bh.ty * TILE, w = bh.tw * TILE, h = bh.th * TILE;
+  if (!inChunk(x - 8, y - 8, w + 16, h + 16, cx, cy)) return;
+  const along = bh.dx !== 0; // the slip runs east-west
+  g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x - 3, y - 3, w + 6, h + 6);
+  g.fillStyle = 'rgba(10,40,60,.35)'; g.fillRect(x, y, w, h); // shade under the roof
+  const plank = (px, py, pw, ph) => {
+    g.fillStyle = '#8a6a48'; g.fillRect(px, py, pw, ph);
+    g.fillStyle = 'rgba(0,0,0,.25)';
+    if (along) for (let k = px; k < px + pw; k += 7) g.fillRect(k, py, 1, ph);
+    else for (let k = py; k < py + ph; k += 7) g.fillRect(px, k, pw, 1);
+  };
+  if (along) { plank(x, y - 4, w, 6); plank(x, y + h - 2, w, 6); } else { plank(x - 4, y, 6, h); plank(x + w - 2, y, 6, h); }
+  // back wall on the shore end
+  g.fillStyle = '#5a4430';
+  if (along) g.fillRect(bh.dx > 0 ? x - 4 : x + w - 2, y - 4, 6, h + 8);
+  else g.fillRect(x - 4, bh.dy > 0 ? y - 4 : y + h - 2, w + 8, 6);
+  // pilings
+  g.fillStyle = '#3f2f20';
+  const n = Math.max(2, Math.round((along ? w : h) / 48));
+  for (let k = 0; k <= n; k++) {
+    const t = k / n;
+    if (along) { g.fillRect(x + t * (w - 6), y - 6, 6, 6); g.fillRect(x + t * (w - 6), y + h, 6, 6); }
+    else { g.fillRect(x - 6, y + t * (h - 6), 6, 6); g.fillRect(x + w, y + t * (h - 6), 6, 6); }
+  }
 }
 
 function drawMansion(g, mn, cx, cy) {
@@ -319,6 +349,18 @@ function drawFallen(g, p) {
     g.fillStyle = '#2b2f38'; g.fillRect(0, -2, 42, 4); g.fillStyle = '#4a505c'; g.fillRect(0, -2, 42, 1);
     g.fillStyle = '#1c1f26'; g.fillRect(40, -5, 8, 10); g.fillStyle = '#9fd3ff'; g.fillRect(48, -3, 3, 2); g.fillRect(50, 2, 2, 2);
     g.fillStyle = '#3a3d44'; g.beginPath(); g.arc(0, 0, 4, 0, 6.28); g.fill();
+    g.restore();
+    return;
+  }
+  if (p.t === 'sigpole') {
+    // the mast arm lies in the road where it fell, the signal head smashed at the end
+    g.save(); g.translate(p.x, p.y); g.rotate(a);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(2, -1, 50, 6);
+    g.fillStyle = '#2a2d35'; g.fillRect(0, -2.5, 48, 5); g.fillStyle = '#4c5260'; g.fillRect(0, -2.5, 48, 1);
+    g.fillStyle = '#14161b'; g.fillRect(44, -6, 10, 12); g.fillStyle = '#e8b923'; g.fillRect(44, -6, 10, 1.5);
+    g.fillStyle = 'rgba(200,40,30,.8)'; g.fillRect(46, -3, 3, 3); g.fillStyle = 'rgba(120,120,120,.8)'; g.fillRect(50, 1, 3, 3);
+    g.fillStyle = '#30343e'; g.beginPath(); g.arc(0, 0, 5, 0, 6.28); g.fill();
+    g.fillStyle = '#9aa0aa'; g.fillRect(-2, -1, 4, 2);
     g.restore();
     return;
   }
@@ -686,7 +728,7 @@ function drawPlane(g, p) {
 }
 
 export function drawOverheadProp(g, p, night) {
-  if (p.broken) return;
+  if (p.broken || p.t === 'sigpole') return; // signal poles are drawn live with their lights (client/main.js)
   if (p.t === 'lamp') { p.night = night; drawProp(g, p); return; }
   drawProp(g, p);
 }

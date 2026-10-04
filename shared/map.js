@@ -510,6 +510,8 @@ export function generateCity(seed = 1337) {
   buildDealerLots(m);
   buildRailway(m, railPts);
   buildOffshore(m, rand);
+  buildBoatDocks(m);
+  buildSignals(m);
   aimLamps(m);
   m.levels = buildLevels(m);
   buildCameras(m, rand);
@@ -2602,9 +2604,9 @@ export const BREAKABLE = new Set([
   'hydrant', 'hydrant_y', 'trashcan', 'bench_a', 'bench_b', 'bench_m', 'pbench', 'planter_sq', 'planter_g', 'planter_fl', 'potted',
   'news_a', 'news_b', 'news_c', 'mailbox', 'vend_a', 'vend_cola', 'vend_c', 'bikerack', 'cone', 'barrier', 'drum', 'pallet', 'pallet_b',
   'pallet_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'foodcart', 'foodcart_b', 'tires', 'bags', 'spool',
-  'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b', 'cactus',
+  'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b', 'cactus', 'sigpole',
 ]);
-export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y']);
+export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole']);
 
 // Point every lamp's arm at the nearest road so the head hangs over the street.
 function aimLamps(m) {
@@ -2676,6 +2678,7 @@ function buildWaterfronts(m, rand) {
     for (let y = pier.ty; y < pier.ty + 3; y++) for (let x = pier.tx - 18; x < pier.tx + 2; x++) if (!isWater(m.tileAt(x, y)) && m.tileAt(x, y) !== T.DOCK) m.set(x, y, T.DOCK);
     addProp(m, 'lamp', (pier.tx - 19.5) * TILE, (pier.ty + 1.5) * TILE);
     m.marina.push({ x: (pier.tx - 14) * TILE, y: (pier.ty - 1.6) * TILE, a: Math.PI });
+    m.publicPier = { x: pier.tx * TILE, y: (pier.ty + 1.5) * TILE };
     m.dropSites.push({ x: (pier.tx - 19) * TILE, y: (pier.ty + 1.5) * TILE, name: 'the end of the public pier' });
   }
   // a beach volleyball court on the widest sand
@@ -2814,6 +2817,127 @@ function raiseSceneIslands(m, land) {
 // Whole scene paintings from the concepts (a golf course...) on open wild ground: the biggest
 // clear stretch of the district nearest the preferred spot - all land, no roads, buildings,
 // fields or lakes - kept free of the scattered wild trees and rocks.
+// ---- boat docks ----------------------------------------------------------------------------------
+// Homes near open water get a private pier with a covered boat slip (their boat garage); a few
+// beaches, the harbor and the bigger lakes get a rental dock (a kiosk, a pier, boats for hire).
+const LAUNCH_LAND = new Set([T.GRASS, T.SAND, T.DIRT, T.PLAZA, T.LOT, T.SIDEWALK]);
+const DIRS4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const WATERFRONT_MAX = 14;
+const tileIdx = (tx, ty) => (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H ? -1 : ty * MAP_W + tx);
+
+// A shore tile near (cx, cy) with a straight run of open water ahead: nothing over it (no road or
+// rail bridge, no highway deck) and wide enough for a pier with a slip on one side.
+function findLaunch(m, cx, cy, R, run, used, half = 3) {
+  let best = null, bd = Infinity;
+  for (let ty = cy - R; ty <= cy + R; ty++) for (let tx = cx - R; tx <= cx + R; tx++) {
+    const i = tileIdx(tx, ty);
+    if (i < 0 || !LAUNCH_LAND.has(m.tiles[i]) || m.reserve[i] & 11 || m.deck[i]) continue;
+    const d0 = Math.hypot(tx - cx, ty - cy);
+    if (d0 > R || d0 >= bd) continue;
+    if (used.some((u) => Math.abs(u.tx - tx) + Math.abs(u.ty - ty) < 16)) continue;
+    for (const [dx, dy] of DIRS4) {
+      const px = -dy, py = dx;
+      // the tile behind is land too, so the pier starts from a real shore
+      const back = tileIdx(tx - dx, ty - dy);
+      if (back < 0 || isWater(m.tiles[back]) || m.tiles[back] === T.BRIDGE) continue;
+      let ok = true;
+      for (let k = 1; k <= run && ok; k++) for (let o = -half; o <= half; o++) {
+        const j = tileIdx(tx + dx * k + px * o, ty + dy * k + py * o);
+        if (j < 0 || !isWater(m.tiles[j]) || m.reserve[j] & 2 || m.deck[j]) { ok = false; break; }
+      }
+      if (!ok) continue;
+      best = { tx, ty, dx, dy };
+      bd = d0;
+      break;
+    }
+  }
+  return best;
+}
+
+// Lay a 2-wide pier `len` tiles out from the launch tile. side: which side the berths are on
+// (+1 / -1 along the perpendicular); the pier itself takes the launch line and the other side.
+function layPier(m, L, len, side) {
+  const { tx, ty, dx, dy } = L;
+  const px = -dy, py = dx;
+  for (let k = 0; k <= len; k++) for (const o of [0, -side]) {
+    const x = tx + dx * k + px * o, y = ty + dy * k + py * o;
+    if (k === 0 || isWater(m.tileAt(x, y))) m.set(x, y, T.DOCK);
+  }
+}
+// World position of a berth beside a pier: k tiles out, 1.5 tiles off the pier line on `side`.
+function berth(L, k, side) {
+  const px = -L.dy, py = L.dx;
+  return { x: (L.tx + 0.5 + L.dx * k + px * 1.5 * side) * TILE, y: (L.ty + 0.5 + L.dy * k + py * 1.5 * side) * TILE, a: Math.atan2(L.dy, L.dx) };
+}
+
+function buildBoatDocks(m) {
+  m.boathouses = [];
+  m.rentals = [];
+  const used = [];
+  // --- waterfront homes: a private pier and a covered slip ---------------------------------------
+  const cands = m.homes.filter((h) => !h.gone && h.kind !== 'apartment')
+    .map((h) => ({ h, L: findLaunch(m, Math.floor(h.x / TILE), Math.floor(h.y / TILE), 22, 9, used) }))
+    .filter((c) => c.L)
+    .sort((a, b) => Math.hypot(a.L.tx * TILE - a.h.x, a.L.ty * TILE - a.h.y) - Math.hypot(b.L.tx * TILE - b.h.x, b.L.ty * TILE - b.h.y));
+  for (const { h } of cands) {
+    if (m.homes.filter((q) => q.dock).length >= WATERFRONT_MAX) break;
+    // re-check: an earlier pier may have taken this stretch of shore
+    const L = findLaunch(m, Math.floor(h.x / TILE), Math.floor(h.y / TILE), 22, 9, used);
+    if (!L) continue;
+    used.push(L);
+    const side = (L.tx + L.ty) % 2 ? 1 : -1;
+    layPier(m, L, 6, side);
+    const px = -L.dy, py = L.dx;
+    // the boathouse: a roofed slip two tiles wide, four long, beside the pier
+    const a = { x: L.tx + L.dx * 1 + px * side, y: L.ty + L.dy * 1 + py * side };
+    const b = { x: L.tx + L.dx * 4 + px * 2 * side, y: L.ty + L.dy * 4 + py * 2 * side };
+    m.boathouses.push({ home: h.id, tx: Math.min(a.x, b.x), ty: Math.min(a.y, b.y), tw: Math.abs(b.x - a.x) + 1, th: Math.abs(b.y - a.y) + 1, dx: L.dx, dy: L.dy });
+    h.dock = berth(L, 2.5, side);
+    h.dock.walk = { x: (L.tx + 0.5 - L.dx * 0.2) * TILE, y: (L.ty + 0.5 - L.dy * 0.2) * TILE };
+    h.waterfront = true;
+    h.slots += 1;
+    h.price = Math.round((h.price * 1.3) / 500) * 500;
+    addProp(m, 'lamp', (L.tx + 0.5 + L.dx * 6 - px * side) * TILE, (L.ty + 0.5 + L.dy * 6 - py * side) * TILE);
+  }
+  // --- rental docks ------------------------------------------------------------------------------
+  const anchors = [];
+  const marinaPoi = m.pois.find((p) => p.kind === 'marina');
+  if (m.publicPier) anchors.push({ x: m.publicPier.x, y: m.publicPier.y + 6 * TILE, name: 'Sunset Beach Boat Rentals' });
+  if (marinaPoi) anchors.push({ x: marinaPoi.x, y: marinaPoi.y, name: 'Harbor Boat & Jet Ski Hire' });
+  if (m.pelican) anchors.push({ x: m.pelican.dock.x, y: m.pelican.dock.y, name: 'Pelican Key Jet Skis' });
+  for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: (lk[0] + lk[2] / 2) * TILE, y: (lk[1] + lk[3] / 2) * TILE, name: `${lk[4]} Boat Hire`, lake: true });
+  for (const an of anchors) {
+    const cx = Math.floor(an.x / TILE), cy = Math.floor(an.y / TILE);
+    const L = findLaunch(m, cx, cy, an.lake ? 22 : 34, an.lake ? 6 : 8, used, 2);
+    if (!L) continue;
+    used.push(L);
+    const len = an.lake ? 5 : 8;
+    // berths on both sides: the pier is the launch line plus one tile to the right
+    layPier(m, L, len, -1);
+    const px = -L.dy, py = L.dx;
+    // kiosk ashore behind the pier if there's room, else a booth on the pier head
+    const kx = L.tx - L.dx * 3 + Math.min(0, px) * 2 - (px === 0 ? 1 : 0), ky = L.ty - L.dy * 3 + Math.min(0, py) * 2 - (py === 0 ? 1 : 0);
+    let room = true;
+    for (let y = ky; y < ky + 2 && room; y++) for (let x = kx; x < kx + 3; x++) { const i = tileIdx(x, y); if (i < 0 || !LAUNCH_LAND.has(m.tiles[i]) || m.reserve[i] & 11 || m.bld[i] >= 0) { room = false; break; } }
+    let bid;
+    if (room) bid = simpleBuilding(m, kx, ky, 3, 2, an.name, 'charter', m.dist[tileIdx(kx, ky)], 'metal', { x: (kx + 1.5) * TILE, y: (ky + 2.4) * TILE, text: 'Rentals' }).id;
+    const door = { x: (L.tx + 0.5 - L.dx * 0.6) * TILE, y: (L.ty + 0.5 - L.dy * 0.6) * TILE };
+    const poi = { id: m.pois.length, kind: 'rental', label: an.name, x: door.x, y: door.y, r: 48, ...(bid !== undefined ? { b: bid } : {}) };
+    m.pois.push(poi);
+    const spots = [];
+    // the pier covers offsets 0 and +1: berths at -1.5 on one side and +2.5 on the other
+    for (let k = 2; k <= len - 1; k += 2.5) for (const sd of [-1, 1]) {
+      const s = berth(L, k, sd);
+      if (sd > 0) { s.x += px * TILE; s.y += py * TILE; }
+      spots.push(s);
+    }
+    m.rentals.push({ poi: poi.id, name: an.name, spots, lake: !!an.lake, dock: door });
+    // a couple of hire boats tied up for show (and for the light-fingered)
+    if (spots.length > 2) m.marina.push({ ...spots[spots.length - 1], kind: 'jetski' });
+    addProp(m, 'lamp', (L.tx + 0.5 + L.dx * len) * TILE, (L.ty + 0.5 + L.dy * len) * TILE);
+  }
+}
+
 function buildScenePaintings(m) {
   m.paintings = [];
   const W = MAP_W;
@@ -2937,6 +3061,71 @@ function buildStreetProps(m) {
       const t = pool[Math.floor(hash2(tx, ty, 5) * pool.length)];
       addProp(m, t, x, y, t.startsWith('tree') || t.startsWith('dump') ? 10 : 0);
     }
+  }
+}
+
+// ---- traffic signals ---------------------------------------------------------------------------
+// Every signalled ground-level junction gets its lights one of two ways: in the dense districts,
+// heads hang from span wires strung corner to corner (from the buildings, or slim posts); out
+// elsewhere each approach has a mast-arm pole on the kerb, reaching over its lanes - and a pole is
+// street furniture: hit it hard enough and it goes over.
+const SPAN_WIRE_STYLES = new Set(['towers', 'commercial', 'nightlife', 'oldtown', 'redlight', 'civic', 'apartments']);
+const POLE_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.GRASS, T.LOT, T.DIRT, T.SAND]);
+
+// Where the pole for one approach stands, and where its head hangs (the same geometry the
+// renderer uses). Returns null when the kerb spot isn't open ground.
+export function signalArm(m, n, id) {
+  const e = m.edges[id];
+  const oa = n.dirs[id], ox = Math.cos(oa), oy = Math.sin(oa);
+  const rx = oy, ry = -ox; // right-hand side for traffic arriving (heading -o)
+  const back = (n.trim[id] || n.half || 60) + 14;
+  const bx = n.x + ox * back, by = n.y + oy * back;
+  const lanes = e.oneway ? 0 : (e.median / 2 + e.hw) / 2;
+  for (const extra of [12, 22, 32]) {
+    const px = bx + rx * (e.hw + extra), py = by + ry * (e.hw + extra);
+    if (POLE_GROUND.has(m.tileAtPx(px, py))) return { x: px, y: py, hx: bx + rx * lanes, hy: by + ry * lanes, a: Math.atan2(ry, rx) };
+  }
+  return null;
+}
+
+function buildSignals(m) {
+  m.signals = [];
+  for (const n of m.nodes) {
+    if (!n.light || n.lvl !== 0) continue;
+    const ins = n.edges.filter((id) => !(m.edges[id].oneway && m.edges[id].b !== n.id));
+    if (!ins.length) continue;
+    const st = DISTRICTS[m.districtAt(n.x, n.y).id].style;
+    const arms = ins.map((id) => ({ id, arm: signalArm(m, n, id) }));
+    // span wires downtown, or anywhere a kerb has no room for a pole
+    const wire = SPAN_WIRE_STYLES.has(st) || arms.some((a) => !a.arm);
+    if (!wire) {
+      for (const { id, arm } of arms) {
+        const p = addProp(m, 'sigpole', arm.x, arm.y, 5, { a: arm.a });
+        m.signals.push({ node: n.id, edge: id, x: arm.x, y: arm.y, hx: arm.hx, hy: arm.hy, pi: m.props.indexOf(p) });
+      }
+      continue;
+    }
+    // corners: between each pair of neighbouring streets, out past the junction box
+    const dirs = n.edges.map((id) => n.dirs[id]).sort((a, b) => a - b);
+    const reach = Math.max(...n.edges.map((id) => n.trim[id] || n.half || 60)) * 1.15 + 34;
+    const corners = [];
+    for (let k = 0; k < dirs.length; k++) {
+      const a0 = dirs[k], a1 = dirs[(k + 1) % dirs.length] + (k + 1 === dirs.length ? Math.PI * 2 : 0);
+      const mid = (a0 + a1) / 2;
+      let cx = n.x + Math.cos(mid) * reach, cy = n.y + Math.sin(mid) * reach;
+      // tie off on a building wall if there's one just behind the corner, else on a slim post
+      let wall = false;
+      for (let r = 0; r <= 3 * TILE && !wall; r += 8) {
+        const qx = cx + Math.cos(mid) * r, qy = cy + Math.sin(mid) * r;
+        if (m.tileAtPx(qx, qy) === T.BUILDING) { cx = qx - Math.cos(mid) * 4; cy = qy - Math.sin(mid) * 4; wall = true; }
+      }
+      corners.push({ x: cx, y: cy, wall });
+    }
+    const heads = ins.map((id) => {
+      const oa = n.dirs[id];
+      return { edge: id, x: n.x + Math.cos(oa) * 20, y: n.y + Math.sin(oa) * 20, a: oa };
+    });
+    m.signals.push({ node: n.id, wire: true, x: n.x, y: n.y, corners, heads });
   }
 }
 

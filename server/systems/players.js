@@ -15,6 +15,7 @@ import * as law from './law.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as homes from './homes.js';
+import * as rentals from './rentals.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
 import * as races from './races.js';
@@ -125,6 +126,7 @@ function finalizeLogout(world, p, dropLoot) {
   store.touch();
   world.players.delete(p.pid);
   law.onPlayerGone(world, p);
+  rentals.onPlayerGone(world, p);
 }
 
 export function queueInput(p, inp) {
@@ -302,7 +304,7 @@ export function findInteraction(world, p) {
       const spot = jobs.boatFishingSpot(world, ped);
       if (spot) return { label: 'Fish offshore (deep-sea)', run: () => jobs.castLine(world, p, spot) };
     }
-    return homes.vehicleInteraction(world, p);
+    return rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p);
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;

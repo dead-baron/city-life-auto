@@ -10,7 +10,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // map categories = the phone's place groups plus homes and fishing spots
 export const MAP_GROUPS = [
   ...PLACE_GROUPS,
-  { id: 'fishing', icon: '🎣', title: 'Fishing & boats', kinds: ['tackle', 'fishmarket', 'marina', 'charter'] },
+  { id: 'fishing', icon: '🎣', title: 'Fishing & boats', kinds: ['tackle', 'fishmarket', 'marina', 'rental', 'charter'] },
   { id: 'homes', icon: '⌂', title: 'Homes for sale', kinds: ['home'] },
   { id: 'travel', icon: '✈', title: 'Stations & airports', kinds: ['station', 'airport'] },
 ];

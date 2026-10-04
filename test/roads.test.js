@@ -118,3 +118,35 @@ test('roads hang together: no stray dead ends, one-ways never trap you', () => {
   }
   for (const e of m.edges) if (e.kind === 'dirt') for (const id of [e.a, e.b]) for (const o of m.nodes[id].edges) assert.ok(ROAD_RANK[m.edges[o].kind] <= 4, `a dirt track runs straight into a ${m.edges[o].kind}`);
 });
+
+test('intersections: zebra crossings never overlap; lights hang from span wires downtown or stand on knock-down poles', async () => {
+  const { zebraCrossings } = await import('../shared/roads.js');
+  const w = makeWorld();
+  const m = w.map;
+  const xs = [...zebraCrossings(m).values()];
+  assert.ok(xs.length > 800, `crossings (${xs.length})`);
+  // no two crossings' stripe boxes touch
+  const box = (c) => { const ux = Math.cos(c.a), uy = Math.sin(c.a); return [[c.hl, c.hw], [c.hl, -c.hw], [-c.hl, -c.hw], [-c.hl, c.hw]].map(([a, b]) => ({ x: c.x + ux * a - uy * b, y: c.y + uy * a + ux * b })); };
+  const sep = (A, B) => { for (const P of [A, B]) for (let i = 0; i < 4; i++) { const p = P[i], q = P[(i + 1) % 4]; const nx = q.y - p.y, ny = p.x - q.x; const pa = A.map((v) => v.x * nx + v.y * ny), pb = B.map((v) => v.x * nx + v.y * ny); if (Math.max(...pa) < Math.min(...pb) || Math.max(...pb) < Math.min(...pa)) return true; } return false; };
+  for (let i = 0; i < xs.length; i++) for (let j = i + 1; j < xs.length; j++) {
+    if (Math.hypot(xs[i].x - xs[j].x, xs[i].y - xs[j].y) > 400) continue;
+    assert.ok(sep(box(xs[i]), box(xs[j])), `crossings overlap near ${Math.round(xs[i].x)},${Math.round(xs[i].y)}`);
+  }
+  // every signalled ground junction has its lights one way or the other
+  const lit = m.nodes.filter((n) => n.light && n.lvl === 0);
+  const covered = new Set(m.signals.map((s) => s.node));
+  assert.ok(lit.every((n) => covered.has(n.id)), 'every signalled junction has lights');
+  const wires = m.signals.filter((s) => s.wire), poles = m.signals.filter((s) => !s.wire);
+  assert.ok(wires.length > 50 && poles.length > 100, `span wires ${wires.length}, poles ${poles.length}`);
+  assert.ok(wires.some((s) => s.corners.some((c) => c.wall)), 'some wires are tied to buildings');
+  // a pole is solid and breakable: ram it and it goes over
+  const props = await import('../server/systems/props.js');
+  const sg = poles.find((s) => { const e = m.propSolid.get(s.pi); return e && e.brk; });
+  const pole = m.props[sg.pi];
+  assert.equal(pole.t, 'sigpole');
+  const v = w.spawnVehicle('sedan', pole.x - 70, pole.y, 0, { npcOwned: false });
+  v.vx = 420; v.vy = 0;
+  for (let k = 0; k < 24 && !(w.brokenProps && w.brokenProps.has(sg.pi)); k++) { v.input = { throttle: 1, steer: 0, hb: false }; w.step(); v.y = pole.y; v.a = 0; v.vy = 0; }
+  assert.ok(w.brokenProps.has(sg.pi), 'signal pole knocked over');
+  assert.ok(props.brokenList(w).includes(sg.pi));
+});

@@ -1373,6 +1373,7 @@ function render(dt) {
   if (!sub) { // (none of it down in the subway)
     drawBays(view, dt);
     drawGarageDoors(view, dt);
+    drawBoathouseRoofs(view, dt, vehs);
     drawGates(view, dt);
     drawCrossings(view, dt, now);
     drawStationClocks(view, now);
@@ -1513,6 +1514,44 @@ function drawGarageDoors(view, dt) {
     g.fillStyle = '#c9c5bb'; g.fillRect(x, gr.south ? dy : dy, w, dh);
     g.fillStyle = 'rgba(0,0,0,.18)'; for (let yy = 0; yy < dh; yy += 4) g.fillRect(x, (gr.south ? dy : dy) + yy, w, 1);
     g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1.5; g.strokeRect(x, y0, w, depth);
+  }
+}
+
+// Boathouse roofs over the waterfront homes' slips: a gabled tin roof that turns see-through
+// while a boat (or anybody) is underneath, so you can see what's moored there.
+function drawBoathouseRoofs(view, dt, vehs) {
+  S.bhFade ??= [];
+  const list = S.map.boathouses || [];
+  for (let i = 0; i < list.length; i++) {
+    const bh = list[i];
+    const x = bh.tx * TILE - 6, y = bh.ty * TILE - 6, w = bh.tw * TILE + 12, h = bh.th * TILE + 12;
+    if (x > view.x1 || x + w < view.x0 || y > view.y1 || y + h < view.y0) continue;
+    let under = false;
+    for (const v of vehs) if (v.rx > x - 20 && v.rx < x + w + 20 && v.ry > y - 20 && v.ry < y + h + 20) { under = true; break; }
+    const me = S.ents.get(S.ctrlId);
+    if (me && me.rx > x - 30 && me.rx < x + w + 30 && me.ry > y - 30 && me.ry < y + h + 30) under = true;
+    const cur = S.bhFade[i] || 0;
+    const k = cur + ((under ? 1 : 0) - cur) * (1 - Math.exp(-6 * dt));
+    S.bhFade[i] = k;
+    g.save();
+    g.globalAlpha = 1 - k * 0.72;
+    const along = bh.dx !== 0;
+    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x + 6, y + 8, w, h);
+    // two pitches either side of the ridge, corrugated
+    const lit = '#9aa3a8', dark = '#737c82';
+    if (along) {
+      g.fillStyle = lit; g.fillRect(x, y, w, h / 2);
+      g.fillStyle = dark; g.fillRect(x, y + h / 2, w, h / 2);
+      g.fillStyle = 'rgba(0,0,0,.14)'; for (let k2 = x + 3; k2 < x + w; k2 += 6) g.fillRect(k2, y, 2, h);
+      g.fillStyle = '#c4ccd0'; g.fillRect(x, y + h / 2 - 1.5, w, 3);
+    } else {
+      g.fillStyle = lit; g.fillRect(x, y, w / 2, h);
+      g.fillStyle = dark; g.fillRect(x + w / 2, y, w / 2, h);
+      g.fillStyle = 'rgba(0,0,0,.14)'; for (let k2 = y + 3; k2 < y + h; k2 += 6) g.fillRect(x, k2, w, 2);
+      g.fillStyle = '#c4ccd0'; g.fillRect(x + w / 2 - 1.5, y, 3, h);
+    }
+    g.strokeStyle = 'rgba(30,34,38,.7)'; g.lineWidth = 2; g.strokeRect(x, y, w, h);
+    g.restore();
   }
 }
 
@@ -1985,21 +2024,17 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
 const SIG_COL = { G: '#3ddc84', Y: '#ffc23d', R: '#ff3b3b' };
 function drawSignals(view) {
   S.sigHeads = [];
-  const edges = S.map.edges;
-  for (const n of S.map.nodes) {
-    if (!n.light || n.lvl !== 0 || n.x < view.x0 - 200 || n.x > view.x1 + 200 || n.y < view.y0 - 200 || n.y > view.y1 + 200) continue;
-    for (const id of n.edges) {
-      const e = edges[id];
-      if (e.oneway && e.b !== n.id) continue; // nobody arrives along a one-way leaving here
-      // drivers arrive heading opposite to the edge's outgoing direction at this node
-      const oa = n.dirs[id], ox = Math.cos(oa), oy = Math.sin(oa);
-      const dx = -ox, dy = -oy, rx = -dy, ry = dx; // travel direction and its right-hand side
-      const back = (n.trim[id] || n.half || 60) + 14;
-      const bx = n.x + ox * back, by = n.y + oy * back; // stop line centre (on the road's centre line)
+  for (const sg of S.map.signals || []) {
+    if (sg.x < view.x0 - 260 || sg.x > view.x1 + 260 || sg.y < view.y0 - 260 || sg.y > view.y1 + 260) continue;
+    const n = S.map.nodes[sg.node];
+    if (sg.wire) { drawSpanWire(sg, n); continue; }
+    {
+      const pr = S.map.props[sg.pi];
+      if (pr && pr.broken) continue; // knocked over: it lies in the road (baked into the ground)
+      const id = sg.edge;
       const st = signalFor(n, id, S.loopTime);
-      const lanes = e.oneway ? 0 : (e.median / 2 + e.hw) / 2;
-      const px = bx + rx * (e.hw + 12), py = by + ry * (e.hw + 12);
-      const hx = bx + rx * lanes, hy = by + ry * lanes;
+      const px = sg.x, py = sg.y, hx = sg.hx, hy = sg.hy;
+      const rx = (px - hx) / (Math.hypot(px - hx, py - hy) || 1), ry = (py - hy) / (Math.hypot(px - hx, py - hy) || 1);
       g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 4; g.beginPath(); g.moveTo(px + 4, py + 4); g.lineTo(hx + 4, hy + 4); g.stroke();
       g.strokeStyle = '#2a2d35'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(px, py); g.lineTo(hx, hy); g.stroke();
       g.strokeStyle = '#4c5260'; g.lineWidth = 1; g.beginPath(); g.moveTo(px, py - 1); g.lineTo(hx, hy - 1); g.stroke();
@@ -2036,6 +2071,40 @@ function drawSignals(view) {
     const on = alert ? Math.floor(nowMs / 120) % 2 : Math.floor(nowMs / 900) % 2;
     if (on) { g.fillStyle = alert ? '#ff2a2a' : '#3b8aff'; g.beginPath(); g.arc(ex, ey, 2.5, 0, 6.28); g.fill(); }
     if (alert) { g.fillStyle = 'rgba(255,40,40,.12)'; g.beginPath(); g.arc(c.x, c.y, c.r * 0.6, 0, 6.28); g.fill(); }
+  }
+}
+
+// Span-wire signals: cables from the corners (building walls or slim posts) meet over the middle
+// of the junction, and a head hangs off the hub facing each approach.
+function drawSpanWire(sg, n) {
+  const hub = { x: sg.x, y: sg.y };
+  for (const c of sg.corners) {
+    // cable (with its shadow on the road), sagging a touch toward the hub
+    const mx = (c.x + hub.x) / 2 + 3, my = (c.y + hub.y) / 2 + 6;
+    g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(c.x + 6, c.y + 8); g.quadraticCurveTo(mx + 6, my + 8, hub.x + 6, hub.y + 8); g.stroke();
+    g.strokeStyle = '#1b1d22'; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(c.x, c.y); g.quadraticCurveTo(mx, my, hub.x, hub.y); g.stroke();
+    if (c.wall) { g.fillStyle = '#3a3d44'; g.fillRect(c.x - 3, c.y - 3, 6, 6); }
+    else { g.fillStyle = '#30343e'; g.beginPath(); g.arc(c.x, c.y, 3.5, 0, 6.28); g.fill(); g.fillStyle = '#5a606c'; g.beginPath(); g.arc(c.x - 1, c.y - 1, 1.4, 0, 6.28); g.fill(); }
+  }
+  g.fillStyle = '#22252b'; g.beginPath(); g.arc(hub.x, hub.y, 4, 0, 6.28); g.fill();
+  for (const h of sg.heads) {
+    const st = signalFor(n, h.edge, S.loopTime);
+    S.sigHeads.push({ x: h.x, y: h.y, c: SIG_COL[st] });
+    g.strokeStyle = '#1b1d22'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(hub.x, hub.y); g.lineTo(h.x, h.y); g.stroke();
+    // a vertical-ish box hanging off the hub, its lit lamp facing the drivers coming in
+    g.save(); g.translate(h.x, h.y); g.rotate(h.a + Math.PI / 2);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-10, -3, 24, 10);
+    g.fillStyle = '#14161b'; g.fillRect(-12, -5, 24, 10);
+    g.fillStyle = '#e8b923'; g.fillRect(-12, 3.5, 24, 1.5);
+    ['R', 'Y', 'G'].forEach((c, k) => {
+      const on = st === c;
+      g.fillStyle = on ? SIG_COL[c] : 'rgba(80,80,80,.9)';
+      g.beginPath(); g.arc(-7 + k * 7, -0.5, 2.6, 0, 6.28); g.fill();
+      if (on) { g.fillStyle = SIG_COL[c] + '55'; g.beginPath(); g.arc(-7 + k * 7, -0.5, 5.5, 0, 6.28); g.fill(); }
+    });
+    g.restore();
   }
 }
 

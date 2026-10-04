@@ -101,10 +101,23 @@ export function nearOwnGarage(world, p, x, y, r = 170) {
   return null;
 }
 
+// A waterfront home of yours whose boathouse is within reach of (x, y).
+export function nearOwnDock(world, p, x, y, r = 150) {
+  for (const h of ownedHomes(world, p.profile)) if (h.dock && Math.hypot(h.dock.x - x, h.dock.y - y) < r) return h;
+  return null;
+}
+
 export function vehicleInteraction(world, p) {
   const ped = p.ped;
   const v = world.get(ped.vehId);
-  if (!v || ped.seat !== 0 || v.wreckAt || v.def.kind === 'boat') return null;
+  if (!v || ped.seat !== 0 || v.wreckAt) return null;
+  if (v.def.kind === 'boat') {
+    if (v.def.police || v.rentedBy) return null;
+    const h = nearOwnDock(world, p, v.x, v.y);
+    if (!h) return null;
+    if (Math.hypot(v.vx, v.vy) > 60) return { label: 'Slow down to moor in your boathouse', run: () => {} };
+    return { label: `Moor ${v.def.name} in your boathouse`, run: () => storeVehicle(world, p, v, h) };
+  }
   if (v.def.police || v.model === 'ambulance' || v.model === 'swat') return null;
   const h = nearOwnGarage(world, p, v.x, v.y);
   if (!h) return null;
@@ -114,19 +127,47 @@ export function vehicleInteraction(world, p) {
 
 export function storeVehicle(world, p, v, home) {
   const prof = p.profile;
-  if (prof.vehicles.length >= garageCap(world, prof)) { world.notify(p, `Garage full (${prof.vehicles.length}/${garageCap(world, prof)}). Buy another home for more space.`, 'warn'); return; }
+  if (v.owner !== p.pid && prof.vehicles.length >= garageCap(world, prof)) { world.notify(p, `Garage full (${prof.vehicles.length}/${garageCap(world, prof)}). Buy another home for more space.`, 'warn'); return; }
   if (v.seats.some((s, i) => i > 0 && s)) { world.notify(p, 'Passengers have to get out first.', 'warn'); return; }
-  for (const cid of v.cargo) if (cid) { const c = world.get(cid); if (c) { c.state = 'ground'; c.parent = 0; c.x = home.garage.x + 60; c.y = home.garage.y; } }
+  const boat = v.def.kind === 'boat';
+  const drop = boat ? home.dock.walk : { x: home.garage.x + 60, y: home.garage.y };
+  for (const cid of v.cargo) if (cid) { const c = world.get(cid); if (c) { c.state = 'ground'; c.parent = 0; c.x = drop.x; c.y = drop.y; } }
   const ped = p.ped;
-  world.emit(v.x, v.y, { e: 'garagedoor', home: home.id });
+  if (!boat) world.emit(v.x, v.y, { e: 'garagedoor', home: home.id });
   ped.vehId = 0; ped.seat = -1;
-  ped.x = home.x; ped.y = home.y + 10;
-  prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant });
+  if (boat) { ped.x = home.dock.walk.x; ped.y = home.dock.walk.y; } else { ped.x = home.x; ped.y = home.y + 10; }
+  // one of your own (taken out of a garage, or bought) is already on your list; anything else is added
+  if (v.owner !== p.pid) prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant });
   if (p.activeVehicle === v.id) p.activeVehicle = 0;
   world.remove(v);
   store.touch();
   p.meDirty = true;
-  world.notify(p, `${v.def.name} stored in your garage (${prof.vehicles.length}/${garageCap(world, prof)}).`, 'good');
+  world.notify(p, `${v.def.name} ${boat ? 'moored in your boathouse' : 'stored in your garage'} (${prof.vehicles.length}/${garageCap(world, prof)}).`, 'good');
+}
+
+// Take a boat out of a waterfront home's boathouse: it's waiting in the slip and you're at the
+// helm (from inside the house you walk straight down to it).
+export function boatOut(world, p, h, idx) {
+  const ped = p.ped;
+  const ov = p.profile.vehicles[idx];
+  if (!ped || ped.dead || !ov || !VEHICLES[ov.model] || VEHICLES[ov.model].kind !== 'boat') return 'No such boat.';
+  if (!h.dock) return 'This place has no boat dock.';
+  const wasInside = !!ped.hidden;
+  const err = spawnOwnedAt(world, p, idx, h.dock);
+  if (err) return err;
+  const v = world.get(p.activeVehicle);
+  // you head down to the slip and take the helm
+  if (wasInside) { ped.inside = null; ped.hidden = false; }
+  if (!ped.vehId) {
+    v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0;
+    ped.x = v.x; ped.y = v.y; ped.vx = 0; ped.vy = 0;
+    v.lastDriver = ped.id; p.lastVehicle = v.id;
+    world.place(ped);
+    protect(world, ped);
+    p.meDirty = true;
+  }
+  world.notify(p, `Your ${v.def.name} is out of the boathouse.`, 'good');
+  return null;
 }
 
 // Spawn an owned vehicle at a garage / lot spot, clearing empty parked cars there.

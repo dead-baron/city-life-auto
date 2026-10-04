@@ -29,6 +29,7 @@ import * as races from './systems/races.js';
 import * as minigames from './systems/minigames.js';
 import * as robbery from './systems/robbery.js';
 import * as trains from './systems/trains.js';
+import * as rentals from './systems/rentals.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
 import * as net from './net.js';
@@ -45,6 +46,7 @@ const SYSTEMS = [
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
+  ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
   ['trains', trains.update],        // the rail loop: trains, riders, crossings, the mail-car strongbox
   ['police', police.update],        // NPC police dispatch / pursuit
   ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow

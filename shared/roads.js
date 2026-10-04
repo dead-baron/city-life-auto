@@ -440,3 +440,92 @@ export function stampLine(pts, pad, fn) {
   }
   for (const v of best.values()) fn(v[0], v[1], v[2], v[3], v[4]);
 }
+
+// ---- zebra crossings --------------------------------------------------------------------------
+// One across each city street where it meets a signalled junction - except where it would pile
+// onto another crossing (two junctions close together, a short link between them, a skewed
+// corner) or lie across another street's asphalt. Decided once per map, busiest junctions first,
+// so the renderer never stacks stripes on stripes.
+const XING_STREETS = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
+const XING_HL = 11; // half the stripe length (along the road)
+
+function obbOverlap(a, b, pad) {
+  const axes = [a.a, a.a + Math.PI / 2, b.a, b.a + Math.PI / 2];
+  const ext = (r, ax) => {
+    const c = Math.cos(ax), s = Math.sin(ax);
+    const ca = Math.abs(Math.cos(r.a - ax)), sa = Math.abs(Math.sin(r.a - ax));
+    return { p: r.x * c + r.y * s, h: r.hl * ca + r.hw * sa };
+  };
+  for (const ax of axes) {
+    const A = ext(a, ax), B = ext(b, ax);
+    if (Math.abs(A.p - B.p) > A.h + B.h + pad) return false;
+  }
+  return true;
+}
+
+export function zebraCrossings(m) {
+  if (m._xings) return m._xings;
+  const cands = [];
+  for (const e of m.edges) {
+    if (e.lvl !== 0 || !XING_STREETS.has(e.kind) || e.w < 5 * TILE || e.bridge) continue;
+    for (const end of [e.a, e.b]) {
+      const n = m.nodes[end];
+      if (n.lvl !== 0 || n.edges.length < 3 || n.island || !n.light) continue;
+      const t = n.trim[e.id] || 0;
+      if (t < 8) continue;
+      const fwd = end === e.a;
+      const pp = (fwd ? e.pts : e.pts.slice().reverse()).map((p) => ({ x: p.x, y: p.y }));
+      const L = measure(pp);
+      const far = m.nodes[fwd ? e.b : e.a];
+      if (t + 16 + XING_HL + 24 > L - (far.trim[e.id] || 0)) continue; // no room on a short link
+      const c = pointAt(pp, t + 16);
+      cands.push({ key: `${e.id}:${end}`, edge: e.id, node: end, x: c.x, y: c.y, a: Math.atan2(c.ty, c.tx), hl: XING_HL, hw: e.hw - 4, rank: n.edges.length * 1e4 + e.w });
+    }
+  }
+  cands.sort((a, b) => b.rank - a.rank);
+  // nearby streets, for the "lies on another street" check
+  const CELL = 512, grid = new Map();
+  for (const e of m.edges) {
+    if (e.lvl !== 0) continue;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of e.pts) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+    for (let cy = Math.floor((y0 - e.hw) / CELL); cy <= Math.floor((y1 + e.hw) / CELL); cy++)
+      for (let cx = Math.floor((x0 - e.hw) / CELL); cx <= Math.floor((x1 + e.hw) / CELL); cx++) {
+        const k = cy * 8192 + cx;
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(e);
+      }
+  }
+  const onOther = (c) => {
+    const nx = -Math.sin(c.a), ny = Math.cos(c.a);
+    const nn = m.nodes[c.node];
+    for (const f of [-0.85, -0.45, 0, 0.45, 0.85]) {
+      const px = c.x + nx * c.hw * f, py = c.y + ny * c.hw * f;
+      for (const o of grid.get(Math.floor(py / CELL) * 8192 + Math.floor(px / CELL)) || []) {
+        if (o.id === c.edge) continue;
+        // a twin of this street leaving the same junction the same way shares its asphalt
+        if (nn.edges.includes(o.id) && Math.abs(Math.atan2(Math.sin(nn.dirs[o.id] - nn.dirs[c.edge]), Math.cos(nn.dirs[o.id] - nn.dirs[c.edge]))) < 0.35) continue;
+        for (let i = 0; i + 1 < o.pts.length; i++) {
+          const q = closestOnSeg({ x: px, y: py }, o.pts[i], o.pts[i + 1]);
+          if ((i === 0 && q.t <= 0) || (i + 2 === o.pts.length && q.t >= 1)) continue; // past the street's end (its junction)
+          if (Math.hypot(q.x - px, q.y - py) < o.hw - 10) {
+            // inside the junction box itself is fine (that's where the streets meet)
+            if (Math.hypot(px - nn.x, py - nn.y) < (nn.trim[o.id] || 0) - 2) continue;
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+  const kept = new Map();
+  const list = [];
+  for (const c of cands) {
+    if (list.some((k) => Math.hypot(k.x - c.x, k.y - c.y) < k.hw + c.hw + 40 && obbOverlap(k, c, 6))) continue;
+    if (onOther(c)) continue;
+    list.push(c);
+    kept.set(c.key, c);
+  }
+  m._xings = kept;
+  return kept;
+}

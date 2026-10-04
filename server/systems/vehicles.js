@@ -336,7 +336,7 @@ export function tryEnter(world, ped) {
   }
   if (seat < 0) return false;
   if (seat === 0 && p) {
-    const mine = v.owner === p.pid || v.issuedTo === p.pid || (v.motorPool !== undefined && p.badge);
+    const mine = v.owner === p.pid || v.rentedBy === p.pid || v.issuedTo === p.pid || (v.motorPool !== undefined && p.badge);
     const already = v.stolenBy && v.stolenBy.has(p.pid);
     if (!mine && !already && !v.carjacked) {
       if (v.def.police && !p.badge) law.crime(world, ped, 'policeTheft', null, v.x, v.y);

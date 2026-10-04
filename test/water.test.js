@@ -142,3 +142,78 @@ test('jet ski race: enter at the start buoy, checkpoint to checkpoint, prize at 
   assert.ok(prof.bank > 0, 'prize paid');
   assert.equal(w.raceState[race.id].racers.get(p.pid).place, 1);
 });
+
+test('boat hire: rent at a rental dock, it waits at the pier, hand it back; overdue = reported stolen', async () => {
+  const { BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE } = await import('../shared/rules.js');
+  const w = makeWorld();
+  assert.ok(w.map.rentals.length >= 4, 'several rental docks');
+  assert.ok(w.map.rentals.some((r) => r.lake) && w.map.rentals.some((r) => !r.lake), 'on the sea and on the lakes');
+  for (const r of w.map.rentals) for (const s of r.spots) assert.ok([T.WATER, T.DEEP].includes(w.map.tileAtPx(s.x, s.y)), `${r.name} berth is in the water`);
+  const r = w.map.rentals.find((q) => !q.lake);
+  const poi = w.map.pois[r.poi];
+  assert.equal(poi.kind, 'rental');
+  const { p, prof } = joinPlayer(w, { cash: 1000, bank: 0 });
+  teleport(w, p.ped, poi.x, poi.y);
+  const menu = economy.buildMenu(w, p, poi);
+  assert.ok(menu.opts.some((o) => o.id === 'rent:jetski' && o.price === BOAT_RENTAL_PRICE.jetski));
+  assert.equal(economy.handleMenu(w, p, poi.id, 'rent:jetski') ?? null, null);
+  assert.equal(prof.cash, 1000 - BOAT_RENTAL_PRICE.jetski);
+  const v = w.get(p.rental.vid);
+  assert.ok(v && v.model === 'jetski' && v.rentedBy === prof.pid);
+  assert.ok(Math.hypot(v.x - poi.x, v.y - poi.y) < 400, 'waiting at the pier');
+  teleport(w, p.ped, v.x + 20, v.y);
+  assert.ok(vehicles.tryEnter(w, p.ped), 'climb aboard');
+  assert.equal(p.heat, 0, 'not stealing');
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /Hand back/.test(act.label), act && act.label);
+  act.run();
+  assert.ok(!w.get(v.id), 'returned');
+  assert.equal(p.ped.vehId, 0);
+  // hire again and stay out past the time
+  economy.handleMenu(w, p, poi.id, 'rent:dinghy');
+  const v2 = w.get(p.rental.vid);
+  board(w, p, v2);
+  w.time = p.rental.until + 1; run(w, 1);
+  assert.ok(p.rental && p.rental.overdue, 'overdue warning');
+  w.time = p.rental.until + BOAT_RENTAL_GRACE_S + 2; run(w, 1);
+  assert.equal(p.rental, null);
+  assert.equal(v2.rentedBy, 0, 'reported stolen');
+  assert.ok(p.wanted >= 1, 'the company tipped off the police');
+  void BOAT_RENTAL_S;
+});
+
+test('waterfront homes: a private pier and boathouse; moor a boat there and take it out again', () => {
+  const w = makeWorld();
+  const wf = w.map.homes.filter((h) => h.dock);
+  assert.ok(wf.length >= 6, `waterfront homes (${wf.length})`);
+  assert.equal(w.map.boathouses.length, wf.length);
+  for (const h of wf) {
+    assert.ok([T.WATER, T.DEEP].includes(w.map.tileAtPx(h.dock.x, h.dock.y)), `${h.name}: the slip is in the water`);
+    assert.equal(w.map.tileAtPx(h.dock.walk.x, h.dock.walk.y), T.DOCK, `${h.name}: the pier starts ashore`);
+  }
+  const h = wf[0];
+  const poi = w.map.pois.find((q) => q.kind === 'home' && q.home === h.id);
+  const { p, prof } = joinPlayer(w, { bank: 1e6 });
+  teleport(w, p.ped, h.x, h.y);
+  economy.handleMenu(w, p, poi.id, 'hbuy');
+  assert.ok(w.homeOwner.get(h.id) === prof.pid);
+  assert.ok(/waterfront|boat/.test(economy.buildMenu(w, p, poi).sub));
+  prof.vehicles.push({ model: 'speedboat', paint: 0 });
+  const idx = prof.vehicles.length - 1;
+  const m = economy.buildMenu(w, p, poi);
+  assert.ok(m.opts.some((o) => o.id === `hboat:${idx}`), 'boats come out of the boathouse');
+  assert.equal(economy.handleMenu(w, p, poi.id, `hboat:${idx}`) ?? null, null);
+  const v = w.get(p.ped.vehId);
+  assert.ok(v && v.model === 'speedboat' && v.owner === prof.pid, 'at the helm of your boat');
+  assert.equal(prof.vehicles.length, idx + 1);
+  // the stored list keeps the boat; take a spin and moor it back
+  v.vx = 0; v.vy = 0;
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /boathouse/.test(act.label), act && act.label);
+  const before = prof.vehicles.length;
+  act.run();
+  assert.equal(prof.vehicles.length, before, 'moored (still one boat on your list)');
+  assert.ok(!w.get(v.id), 'in the boathouse');
+  assert.equal(p.ped.vehId, 0);
+  assert.equal(w.map.tileAtPx(p.ped.x, p.ped.y), T.DOCK, 'you step off onto the pier');
+});
