@@ -32,6 +32,7 @@ export const ITEMS = {
   bandage: { name: 'Field Bandage', heal: 15, stopBleed: true, sell: 8 },
   coffee:  { name: 'Hot Coffee',    stamina: true, buff: 'coffee', sell: 0 },
   energy:  { name: 'Energy Drink',  stamina: true, buff: 'energy', sell: 0 },
+  cocktail: { name: 'Neon Cocktail', stamina: true, buff: 'energy', sell: 0 },
   // bait: multiplies the odds of a fish (one bait is used per catch)
   lure:    { name: 'Shiny Lure',    bait: { salmon: 1.6, tuna: 1.8 }, sell: 5 },
   worms:   { name: 'Nightcrawler Worms', bait: { bass: 1.8 }, sell: 1 },
@@ -94,6 +95,7 @@ export const SHOPS = {
   coffee: { title: 'Bean Machine Coffee', buy: [{ kind: 'item', id: 'coffee', price: 6, qty: 1 }] },
   convenience: { title: 'Corner Store', buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }] },
   gasstation: { title: "Gas 'n Go", buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }] },
+  club: { title: 'The Club', buy: [{ kind: 'item', id: 'cocktail', price: 18, qty: 1 }, { kind: 'item', id: 'energy', price: 12, qty: 1 }] },
   vending: { title: 'Vending Machine', buy: [{ kind: 'item', id: 'energy', price: 8, qty: 1 }] },
   pawn: { title: 'Second Chance Pawn', buy: [
     { kind: 'weapon', id: 'pistol', price: 320 }, { kind: 'weapon', id: 'bat', price: 80 }, { kind: 'weapon', id: 'knife', price: 60 },

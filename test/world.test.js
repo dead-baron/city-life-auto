@@ -109,3 +109,58 @@ test('ATMs in every district with streets; walking up to one banks your cash; th
   assert.equal(f.t, 'feed');
   assert.ok(f.items[0].text && f.items[0].x === 20000 && f.items[0].where, 'the newest item first, with where it is');
 });
+
+test('lost pets: one runs off near you, take its collar, walk it to the owner for a reward', async () => {
+  const pets = await import('../server/systems/pets.js');
+  const { PET_REWARD, PET_SAMARITAN } = await import('../shared/rules.js');
+  const combat = await import('../server/systems/combat.js');
+  const w = makeWorld();
+  const shop = w.map.pois.find((q) => q.kind === 'coffee');
+  const { p, prof } = joinPlayer(w, { cash: 0 });
+  teleport(w, p.ped, shop.x, shop.y + 40);
+  let pet = null;
+  for (let k = 0; k < 20 && !pet; k++) pet = pets.spawnLost(w, p);
+  assert.ok(pet, 'a pet went missing');
+  const owner = w.get(pet.pet.owner);
+  assert.ok(owner && owner.npc.petOwner === pet.id);
+  assert.ok(w.happenings.some((e) => e.kind === 'pet'), 'on the radar');
+  assert.equal(combat.damage(w, pet, 50, p.ped, 'melee'), false, 'nobody hurts a lost pet');
+  teleport(w, p.ped, pet.x + 20, pet.y);
+  let act = players.findInteraction(w, p);
+  assert.ok(act && /collar/.test(act.label), act && act.label);
+  act.run();
+  assert.equal(pet.pet.follow, p.ped.id);
+  // walk to the owner: the pet follows at heel
+  for (let k = 0; k < 120; k++) {
+    const dx = owner.x - p.ped.x, dy = owner.y - p.ped.y, d = Math.hypot(dx, dy);
+    if (d < 60) break;
+    teleport(w, p.ped, p.ped.x + dx / d * Math.min(40, d - 50), p.ped.y + dy / d * Math.min(40, d - 50));
+    run(w, 0.5);
+    assert.equal(pet.pet.follow, p.ped.id, 'still on the collar');
+  }
+  assert.ok(Math.hypot(pet.x - p.ped.x, pet.y - p.ped.y) < 200, 'it kept up');
+  act = players.findInteraction(w, p);
+  assert.ok(act && /Give .* back/.test(act.label), act && act.label);
+  act.run();
+  assert.equal(prof.cash, PET_REWARD);
+  assert.ok(prof.samaritan >= PET_SAMARITAN);
+  assert.ok(!w.get(pet.id), 'home again');
+});
+
+test('nightclubs: shutters down by day, open after dark, a bar inside', async () => {
+  const { DAY_PART_S } = await import('../shared/constants.js');
+  const w = makeWorld();
+  const clubs = w.map.pois.filter((q) => q.kind === 'club');
+  assert.ok(clubs.length >= 3, `clubs (${clubs.length})`);
+  const club = clubs.find((c) => c.gate !== undefined);
+  assert.ok(club, 'a club with a shutter');
+  const gate = w.map.gates[club.gate];
+  w.loopTime = 90; run(w, 0.5);
+  assert.ok(gate.props.every((pr) => !pr.off), 'shut by day');
+  w.loopTime = DAY_PART_S + 5; run(w, 0.5);
+  assert.ok(w.clock.isNight);
+  assert.ok(gate.props.every((pr) => pr.off), 'open at night');
+  const { p } = joinPlayer(w, { cash: 100 });
+  const menu = economy.buildMenu(w, p, club);
+  assert.ok(menu.opts.some((o) => /Cocktail/.test(o.label)), 'cocktails at the bar');
+});

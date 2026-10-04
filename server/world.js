@@ -31,6 +31,7 @@ import * as robbery from './systems/robbery.js';
 import * as trains from './systems/trains.js';
 import * as rentals from './systems/rentals.js';
 import * as spikes from './systems/spikes.js';
+import * as pets from './systems/pets.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
 import * as net from './net.js';
@@ -45,6 +46,7 @@ const SYSTEMS = [
   ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking
   ['interiors', interiors.update],  // shop clerks / desk staff in walk-in buildings
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
+  ['pets', pets.update],            // lost pets wandering, led home on a collar
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
@@ -176,7 +178,14 @@ export class World {
 
   get(id) { return id ? this.entities.get(id) || null : null; }
 
-  emit(x, y, ev) { this.events.push({ x, y, ev }); }
+  emit(x, y, ev) {
+    this.events.push({ x, y, ev });
+    // a big splash of blood leaves a pool people can tread in (combat.js: bloody footprints)
+    if (ev.e === 'blood' && (ev.n || 0) >= 6) {
+      (this.bloodPools ||= []).push({ x: ev.x, y: ev.y, t: this.time });
+      if (this.bloodPools.length > 120) this.bloodPools.shift();
+    }
+  }
   broadcast(ev) { this.globalEvents.push(ev); }
   notify(player, text, tone = 'info') { if (player && player.conn) player.toasts.push({ text, tone }); }
 

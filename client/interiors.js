@@ -5,6 +5,8 @@ import { pedSprite, PED_BOX } from './render/sprites.js';
 import { weaponIcon } from './render/peds.js';
 import { POLICE_ARMORY } from '../shared/rules.js';
 import { WEAPONS } from '../shared/items.js';
+import { atlas } from './render/sprites.js';
+import { INTERIOR_RECTS } from '../shared/interior-art.js';
 
 const UNIFORM = { t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', ht: 1, htc: '#1d2a5a' };
 const SHORT = { service: 'PISTOL', prifle: 'RIFLE', psniper: 'MARKSMAN', passault: 'ASSAULT', pshotgun: 'SHOTGUN' };
@@ -104,5 +106,29 @@ export function drawInterior(cv, kind, me, t) {
   const rw = Math.min(wide ? W * 0.52 : W * 0.9, 720), rh = Math.min(H * 0.78, rw * 0.72);
   const x = wide ? W - rw - Math.max(30, W * 0.06) : (W - rw) / 2;
   const y = wide ? (H - rh) / 2 : H - rh - 20;
+  // the concept painting of the station's front desk / armory cage when it has loaded
+  const art = atlas.interiors && INTERIOR_RECTS[kind === 'armory' ? 'armory' : 'policedesk'];
+  if (art) { painted(g, art, x, y, rw, rh, kind, t); return; }
   if (kind === 'armory') armory(g, x, y, rw, rh, me, t); else lobby(g, x, y, rw, rh, me, t);
+}
+
+// The painting fitted into the room box (letterboxed, crisp), with the room's name and the
+// way on (motor pool / armory) labelled over it.
+function painted(g, [sx, sy, sw, sh], x, y, w, h, kind, t) {
+  const k = Math.min(w / sw, h / sh);
+  const dw = sw * k, dh = sh * k, dx = x + (w - dw) / 2, dy = y + (h - dh) / 2;
+  g.fillStyle = '#14161c'; g.fillRect(dx - 8, dy - 8, dw + 16, dh + 16);
+  g.imageSmoothingEnabled = k < 1;
+  g.drawImage(atlas.interiors, sx, sy, sw, sh, dx, dy, dw, dh);
+  g.imageSmoothingEnabled = true;
+  const lit = Math.floor(t * 2) % 2;
+  if (kind === 'armory') {
+    label(g, 'HQ ARMORY', dx + dw / 2, dy - 18, '#f2c21b', 14);
+    g.fillStyle = lit ? '#30ff60' : '#107a30'; g.fillRect(dx + dw - 14, dy + dh / 2 - 4, 8, 8);
+    label(g, 'MOTOR POOL ▶', dx + dw - 60, dy + dh + 18, '#9fffb0', 12);
+  } else {
+    label(g, 'FRONT DESK', dx + dw / 2, dy - 18, '#f2c21b', 14);
+    g.fillStyle = lit ? '#ff3030' : '#801010'; g.fillRect(dx + dw + 2, dy + dh * 0.25, 6, 6);
+    label(g, 'ARMORY ▶', dx + dw + 44, dy + dh * 0.25 + 3, '#9fb7ff', 11);
+  }
 }

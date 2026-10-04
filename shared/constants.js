@@ -40,6 +40,7 @@ export const PF = {
   FISHING: 16384, UMBRELLA: 32768,
 };
 PF.PASSENGER = PF.SPRINT; // in a vehicle the sprint bit means "not the driver's seat"
+PF.KNEEL = PF.FISHING;    // on a medic: kneeling beside someone
 
 // Vehicle flag bits (wire)
 export const VF = {

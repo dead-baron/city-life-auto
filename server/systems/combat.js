@@ -16,6 +16,7 @@ import * as spikes from './spikes.js';
 import * as npc from './npc.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
+const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
 
 function ammoOf(ped, id) {
   if (!ped.player) return 9999;
@@ -219,7 +220,7 @@ function hitscan(world, ped, w, a) {
 export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (!ped || ped.dead || amount <= 0) return false;
   const now = world.time;
-  if (ped.hidden || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection
+  if (ped.hidden || ped.pet || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet
   if (ped.player && ped.player.invincible) return false;          // dev: invincible
   ped.hp -= amount;
   ped.lastHitAt = now;
@@ -328,6 +329,22 @@ export function update(world, dt) {
       if (w && e.player) e.mag[w.id] = Math.min(w.mag, ammoOf(e, w.id));
       e.pendingReload = null;
       if (e.player) e.player.meDirty = true;
+    }
+    // walking through a pool of blood (or past a body): a few bloody footprints after
+    if (!e.vehId && !e.onTrain && world.tick % 4 === (e.id & 3)) {
+      for (const bp of world.bloodPools || []) {
+        if (now - bp.t > BLOOD_POOL_S) continue;
+        if (Math.abs(bp.x - e.x) < 18 && Math.abs(bp.y - e.y) < 18) { e.bloodyFeet = 12; break; }
+      }
+    }
+    if (!e.bleeding && e.bloodyFeet > 0 && !e.vehId && !e.onTrain) {
+      const moved = Math.hypot(e.x - e.lastStepX, e.y - e.lastStepY);
+      if (moved < 40) e.footAcc += moved;
+      if (e.footAcc > 24) {
+        e.footAcc = 0;
+        e.bloodyFeet--;
+        if (dryWeather && DRY_CONCRETE.has(world.map.tileAtPx(e.x, e.y))) world.emit(e.x, e.y, { e: 'foot', x: e.x, y: e.y, a: Math.atan2(e.vy, e.vx), f: +(e.bloodyFeet / 12).toFixed(2) });
+      }
     }
     // bleeding drain, a trail of drips wherever they go + bloody footprints on dry concrete
     if (e.bleeding) {

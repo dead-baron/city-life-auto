@@ -108,7 +108,7 @@ function runAmbulance(world, v, dt, now) {
       const d = Math.hypot(body.x - c.x, body.y - c.y);
       const inp = d > 20 ? seek(c, body.x + (c === crew[0] ? -14 : 14), body.y, true) : { bits: 0, mx: 0, my: 0, aim: Math.atan2(body.y - c.y, body.x - c.x) };
       pedStep(c, inp, dt, world.map, players.pedMods(world, c));
-      if (d < 26) atBody++;
+      if (d < 26) { atBody++; c.kneelUntil = now + 0.5; c.a = Math.atan2(body.y - c.y, body.x - c.x); } // down on one knee beside them
     }
     if (atBody > 0) {
       if (!body.reviving) { body.reviving = now; world.emit(body.x, body.y, { e: 'revive', x: body.x, y: body.y, id: body.id }); }

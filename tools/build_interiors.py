@@ -36,6 +36,9 @@ CROPS = {
     'bank':     ('832ce44d-image.png', (236, 38, 1344, 576)),     # bank hall
     'hospital': ('3f2693ed-image.png', (300, 0, 1236, 900)),      # hospital lobby
     'police':   ('904b7cc6-image.png', (38, 254, 1500, 768)),     # police station floor
+    'club':     ('3b027043-image.png', (33, 13, 1428, 1066)),     # nightclub: bar, dance floor, VIP booths, the red carpet in
+    'policedesk': ('904b7cc6-image.png', (614, 251, 928, 977)),   # the station's front desk and lobby (the sign-up screen)
+    'armory':   ('904b7cc6-image.png', (935, 272, 1173, 482)),    # the armory cage (the weapon checkout screen)
 }
 # outdoor scenes: key -> (concept file, crop box, width to keep in px)
 SCENES = {
@@ -55,7 +58,7 @@ KINDS = {
     'convenience': ['liquor', 'corner'], 'gasstation': ['fuelmart'], 'grocery': ['freshmart'],
     'pawn': ['pawn'], 'fence': ['pawn'], 'clothing': ['boutique'],
     'sports': ['outfitter'], 'hardware': ['outfitter'], 'gunshop': ['outfitter'], 'tackle': ['outfitter'],
-    'bank': ['bank'], 'courthouse': ['bank'], 'hospital': ['hospital'], 'pharmacy': ['hospital'], 'police': ['police'],
+    'bank': ['bank'], 'courthouse': ['bank'], 'hospital': ['hospital'], 'pharmacy': ['hospital'], 'police': ['police'], 'club': ['club'],
 }
 
 

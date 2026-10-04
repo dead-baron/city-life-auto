@@ -137,7 +137,8 @@ export function storeVehicle(world, p, v, home) {
   ped.vehId = 0; ped.seat = -1;
   if (boat) { ped.x = home.dock.walk.x; ped.y = home.dock.walk.y; } else { ped.x = home.x; ped.y = home.y + 10; }
   // one of your own (taken out of a garage, or bought) is already on your list; anything else is added
-  if (v.owner !== p.pid) prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant });
+  if (v.owner !== p.pid) prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant, ...(v.tint !== undefined ? { tint: v.tint } : {}) });
+  else { const ov = prof.vehicles.find((o) => o.model === v.model && o.variant === v.variant) || prof.vehicles.find((o) => o.model === v.model); if (ov) { ov.paint = v.paint; ov.variant = v.variant; if (v.tint !== undefined) ov.tint = v.tint; } }
   if (p.activeVehicle === v.id) p.activeVehicle = 0;
   world.remove(v);
   store.touch();
@@ -182,6 +183,7 @@ export function spawnOwnedAt(world, p, idx, spot) {
   }
   for (const e of world.query(spot.x, spot.y, 80, K.VEH)) if (!e.seats.some((s) => s)) world.remove(e);
   const v = world.spawnVehicle(ov.model, spot.x, spot.y, spot.a ?? 0, { paint: ov.paint, variant: ov.variant, owner: p.pid, ownerName: p.name, npcOwned: false });
+  if (ov.tint !== undefined) v.tint = ov.tint;
   v.despawnable = false;
   if (spot.home != null) world.emit(spot.x, spot.y, { e: 'garagedoor', home: spot.home });
   p.activeVehicle = v.id;

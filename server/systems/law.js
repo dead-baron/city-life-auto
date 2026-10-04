@@ -98,7 +98,7 @@ export function witnesses(world, x, y, perp, victim, loud = false) {
   const camFactor = night ? 0.75 : 1;           // GDD: camera radii -25% at night
   const res = { count: 0, cop: false, cam: false };
   for (const e of world.query(x, y, Math.max(pedRange, 420), K.PED)) {
-    if (e === perp || e.dead || (e.npc && e.npc.blind)) continue; // blind: the clerk being robbed doesn't count as a witness
+    if (e === perp || e.dead || e.pet || (e.npc && e.npc.blind)) continue; // blind: the clerk being robbed doesn't count as a witness
     if (!!e.sub !== !!(perp && perp.sub)) continue; // nobody up on the street sees into the subway (or vice versa)
     if (world.time < e.downUntil && e !== victim) continue;
     const d = Math.hypot(e.x - x, e.y - y);

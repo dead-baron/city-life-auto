@@ -4,7 +4,7 @@
 // police HQ badge desk and the courthouse bounty office.
 import { K } from '../../shared/constants.js';
 import { WEAPONS, ITEMS, SHOPS } from '../../shared/items.js';
-import { VEHICLES, PAINTS } from '../../shared/vehicles.js';
+import { VEHICLES, PAINTS, respray } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
 import { store } from '../store.js';
@@ -36,6 +36,7 @@ export function poiLabel(world, p, poi) {
       return `For sale: ${h.name} - $${h.price.toLocaleString()}`;
     }
     case 'atm': return 'Use ATM';
+    case 'club': return `Bar - ${poi.label}`;
     case 'vending': return 'Buy an Energy Drink';
     case 'police': return p.badge ? 'Front desk (armory, motor pool, off duty)' : 'Front desk (join the police)';
     case 'courthouse': return 'Courthouse desk (bounties, fines)';
@@ -95,6 +96,10 @@ export function buildMenu(world, p, poi) {
       if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));
       else if (o.kind === 'ammo') opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? 'need weapon' : `have ${prof.weapons[o.id]}` });
       else if (o.kind === 'item') opts.push({ id: `i:${o.id}:${o.price}:${o.qty}`, label: `${ITEMS[o.id].name}${o.qty > 1 ? ' x' + o.qty : ''}`, price: o.price, note: prof.inventory[o.id] ? `have ${prof.inventory[o.id]}` : '' });
+    }
+    if (kind === 'club') {
+      title = poi.label;
+      sub = 'The bar. A cocktail fills your stamina past full for a minute. Open from dusk till dawn.';
     }
     if (kind === 'tackle') {
       sub = 'Bait changes what bites: worms for bass, shrimp for salmon, squid for tuna, a glow lure for catfish at night.';
@@ -276,7 +281,7 @@ export function buildMenu(world, p, poi) {
   return { t: 'menu', poi: poi.id, title, sub, opts, cash: prof.cash, bank: prof.bank, interior };
 }
 
-const KIND_NAME = { farmhouse: 'farmhouse', cottage: 'coastal cottage', beach: 'beach house', mansion: 'mansion', house: 'house', apartment: 'apartment' };
+const KIND_NAME = { farmhouse: 'farmhouse', cottage: 'coastal cottage', beach: 'beach house', mansion: 'mansion', house: 'house', apartment: 'apartment', shack: 'shack' };
 const NO_STASH = new Set(['fists', 'taser', 'baton', 'service']);
 
 function ownedVehicleOpts(prof, opts, boats) {
@@ -461,9 +466,7 @@ function execute(world, p, poi, opt) {
         const blocked = disguiseBlocked(world, p);
         if (blocked) return blocked;
         if (!pay(p, 250)) return 'Not enough money.';
-        v.paint = (v.paint + 1 + Math.floor(rng() * (PAINTS.length - 1))) % PAINTS.length;
-        v.variant = Math.floor(rng() * 1000);
-        v.bloody = false; v.descVer = (v.descVer || 0) + 1;
+        respray(v, rng);
         applyDisguise(world, p);
       } else if (parts[0] === 'wash') {
         if (!pay(p, 20)) return 'Not enough money.';

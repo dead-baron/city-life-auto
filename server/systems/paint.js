@@ -2,7 +2,7 @@
 // a cop or a traffic camera) can see you, the shutter stays up. Otherwise it rolls down, the car
 // comes out a new colour - not repaired - and the police lose your description.
 import { K } from '../../shared/constants.js';
-import { PAINTS } from '../../shared/vehicles.js';
+import { respray } from '../../shared/vehicles.js';
 import { PAINT_PRICE, PAINT_TIME_S } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
@@ -70,9 +70,7 @@ function finish(world, b, i, st) {
   st.closedUntil = 0; st.done = st.v; st.v = 0; // one coat per visit: drive out and back in for another
   world.broadcast({ e: 'baydoor', i, open: true });
   if (!v) return;
-  v.paint = (v.paint + 1 + Math.floor(rng() * (PAINTS.length - 1))) % PAINTS.length;
-  v.variant = Math.floor(rng() * 1000);
-  v.bloody = false; v.descVer = (v.descVer || 0) + 1;
+  respray(v, rng);
   const d = v.seats[0] ? world.get(v.seats[0]) : null;
   const p = d && d.player;
   if (!p) return;

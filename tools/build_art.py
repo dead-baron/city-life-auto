@@ -115,28 +115,15 @@ PROPS = {
 BUILDINGS = 'a750d4b7-image.png'
 # key: (src box, solid fractions x0,y0,x1,y1, door x fractions, ground, rotatable)
 PREFABS = {
-    'house1': ((13, 43, 128, 270), (.13, .22, .88, .63), [.5], 'lot', True),
-    'house2': ((138, 43, 245, 270), (.09, .21, .94, .65), [.5], 'lot', True),
-    'house3': ((253, 43, 352, 270), (.12, .21, .92, .63), [.5], 'lot', True),
     'apt1': ((368, 43, 530, 276), (.18, .08, .90, .78), [.5], 'lot', True),
     'apt2': ((543, 43, 710, 276), (.12, .04, .88, .80), [.5], 'lot', True),
-    'tower1': ((725, 43, 882, 280), (.14, .02, .92, .80), [.5], 'plaza', True),
-    'tower2': ((891, 43, 1006, 280), (.06, .02, .93, .86), [.5], 'plaza', True),
-    'hotel': ((1021, 43, 1196, 280), (.12, .02, .84, .64), [.5], 'plaza', False),
     'hospital': ('REF', (.01, .0, .99, .80), [.5], 'plaza', False),   # composed by make_hospital()
-    'police': ((11, 325, 208, 480), (.13, .05, .88, .86), [.5], 'lot', False),
     'fire': ((221, 325, 418, 466), (.16, .05, .95, .97), [.4], 'lot', False),
     'gas': ((433, 325, 638, 546), (.67, .01, .93, .20), [.8], 'lot', False),
-    'conv': ((653, 325, 863, 476), (.12, .04, .93, .85), [.5], 'lot', False),
     'strip': ((876, 325, 1153, 474), (.04, .15, .96, .82), [.17, .39, .61, .83], 'lot', False),
-    'market': ((1165, 325, 1438, 470), (.06, .04, .95, .88), [.5], 'lot', False),
-    'rest1': ((11, 588, 168, 793), (.17, .07, .78, .52), [.45], 'plaza', False),
-    'rest2': ((178, 588, 323, 793), (.07, .07, .90, .65), [.5], 'plaza', False),
     'club': ((338, 588, 520, 793), (.10, .05, .86, .71), [.45], 'plaza', False),
-    'bank': ((533, 588, 750, 793), (.14, .04, .88, .86), [.5], 'plaza', False),
     'dealer': ((765, 588, 998, 733), (.22, .05, .92, .89), [.57], 'lot', False),
     'repair': ((1011, 588, 1226, 743), (.15, .06, .80, .84), [.4], 'lot', False),
-    'warehouse': ((1241, 588, 1438, 736), (.06, .03, .95, .78), [.5], 'lot', False),
     'industrial': ((11, 835, 316, 1076), (.05, .03, .96, .68), [.5], 'lot', True),
     'construction': ((558, 835, 793, 1076), (.29, .07, .96, .68), [.15], 'dirt', True),
     'church': ((806, 835, 970, 1076), (.13, .03, .90, .68), [.5], 'plaza', False),
@@ -175,7 +162,47 @@ SCENE_PREFABS = {
     'liquor':     ('a8217af8-image.png', (200, 20, 1300, 780), (.04, .02, .92, .84), [.28], 'plaza', False, 14),
     'shops1':     ('4bb52753-image.png', (0, 0, 1440, 400), (.0, .0, 1.0, .72), [.10, .31, .53, .70, .88], 'plaza', False, 24),
     'shops2':     ('9cec10ef-image.png', (0, 0, 1536, 400), (.0, .0, 1.0, .72), [.10, .31, .57, .74, .91], 'plaza', False, 25),
+    # round 7: the building-sheet lots that looked smeared when upscaled, redrawn from the concept scenes
+    'house1'     : ('bfa2eaae-image.png', (149, 61, 600, 395), (0.02, 0.02, 0.8, 0.62), [0.49], 'grass', True, 12),  # suburban house, pool and patio
+    'house2'     : ('bfa2eaae-image.png', (900, 70, 1290, 395), (0.11, 0.02, 0.75, 0.62), [0.6], 'grass', True, 10),  # house with a pickup in the drive
+    'house3'     : ('bfa2eaae-image.png', (1300, 61, 1645, 395), (0.12, 0.18, 0.81, 0.72), [0.49], 'grass', True, 9),  # house with two cars out front
+    'house7'     : ('bfa2eaae-image.png', (0, 520, 420, 924), (0.36, 0.06, 0.86, 0.56), [0.64], 'grass', True, 11),  # house with a fenced side yard
+    'house8'     : ('bfa2eaae-image.png', (430, 520, 800, 924), (0.03, 0.16, 0.73, 0.63), [0.38], 'grass', True, 10),  # house, two cars on the drive
+    'house9'     : ('bfa2eaae-image.png', (961, 559, 1380, 909), (0.25, 0.06, 0.72, 0.67), [0.38], 'grass', True, 11),  # brick-roofed house with a pergola
+    'conv'       : ('c23df171-image.png', (46, 0, 471, 289), (0, 0, 1, 0.62), [0.5], 'plaza', False, 13),  # corner convenience store
+    'rest1'      : ('a7108177-image.png', (1178, 0, 1649, 258), (0, 0, 1, 0.42), [0.45], 'plaza', False, 14),  # awning restaurant with a patio
+    'rest2'      : ('1b15795c-image.png', (0, 0, 391, 335), (0, 0, 1, 0.72), [0.55], 'plaza', False, 12),  # coffee shop
+    'diner'      : ('1b15795c-image.png', (1040, 0, 1375, 279), (0, 0, 1, 0.78), [0.45], 'plaza', False, 10),  # City Diner
+    'hotel'      : ('da2b614f-image.png', (714, 0, 1117, 289), (0, 0, 1, 0.6), [0.5], 'plaza', False, 13),  # Grand Palace hotel
+    'bank'       : ('8e6fd787-image.png', (607, 0, 1075, 461), (0, 0, 1, 0.66), [0.5], 'plaza', False, 13),  # First National Bank
+    'warehouse'  : ('1f061cf5-image.png', (182, 0, 532, 327), (0, 0, 1, 0.8), [0.78], 'lot', False, 10),  # brick warehouse, loading door
+    'tower2'     : ('69353c0e-image.png', (77, 0, 363, 195), (0, 0, 1, 0.8), [0.5], 'plaza', False, 9),  # office block
+    'tower1'     : ('69353c0e-image.png', (915, 0, 1145, 195), (0, 0, 1, 0.8), [0.5], 'plaza', False, 8),  # office block
+    'police'     : ('03063643-image.png', (380, 38, 1140, 456), (0, 0, 1, 0.68), [0.5], 'plaza', False, 13),  # police station front, flags and steps
+    'bistro'     : ('da2b614f-image.png', (410, 0, 646, 289), (0, 0, 1, 0.4), [0.5], 'plaza', False, 7),  # Le Petit Bistro
+    'royale'     : ('da2b614f-image.png', (91, 0, 327, 289), (0, 0, 1, 0.62), [0.5], 'plaza', False, 7),  # Royale fashion
+    'vellori'    : ('8e6fd787-image.png', (328, 0, 607, 461), (0, 0, 1, 0.72), [0.5], 'plaza', False, 9),  # Vellori boutique
+    'monarch'    : ('8e6fd787-image.png', (1082, 0, 1424, 461), (0, 0, 1, 0.72), [0.5], 'plaza', False, 11),  # Monarch boutique
+    'shanty1'    : ('3a84dd63-image.png', (21, 77, 356, 384), (0.05, 0, 0.95, 0.7), [0.45], 'dirt', True, 8),  # shanty, tin roofs
+    'shanty2'    : ('3a84dd63-image.png', (461, 0, 838, 384), (0, 0, 1, 0.8), [0.5], 'dirt', True, 9),  # tarp shacks
+    'shanty3'    : ('3a84dd63-image.png', (838, 0, 1243, 384), (0, 0, 1, 0.75), [0.6], 'dirt', True, 9),  # shanty with a graffiti roof
+    # round 7: the neon strip (walk-in clubs after dark) and the boulevard shopfronts
+    'neonclub'   : ('a1c88191-image.png', (49, 0, 405, 349), (0, 0, 1, 0.72), [0.45], 'plaza', False, 10),  # CLUB - dance drink repeat
+    'neontap'    : ('a1c88191-image.png', (482, 0, 824, 349), (0, 0, 1, 0.72), [0.45], 'plaza', False, 10),  # Neon Tap bar
+    'midnight'   : ('a1c88191-image.png', (1040, 0, 1446, 349), (0, 0, 1, 0.72), [0.58], 'plaza', False, 11),  # The Midnight cocktail club
+    'luna'       : ('a1c88191-image.png', (447, 649, 866, 984), (0, 0, 1, 0.62), [0.42], 'plaza', False, 11),  # Luna Lounge
+    'arcade'     : ('a1c88191-image.png', (866, 649, 1117, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 7),  # arcade
+    'latebite'   : ('a1c88191-image.png', (1110, 649, 1382, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 8),  # Late Bite burgers
+    'tattoo'     : ('a1c88191-image.png', (84, 649, 391, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 8),  # tattoo parlour
+    'crown'      : ('59f534a1-image.png', (24, 0, 379, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 8),  # Crown boutique
+    'greenbistro': ('59f534a1-image.png', (387, 0, 685, 323), (0, 0, 1, 0.6), [0.5], 'plaza', False, 7),  # bistro, green awnings
+    'theatre'    : ('59f534a1-image.png', (685, 0, 1113, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 10),  # the arched theatre
+    'diamond'    : ('59f534a1-image.png', (1113, 0, 1443, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 8),  # jeweller
+    'redawning'  : ('59f534a1-image.png', (1443, 0, 1774, 323), (0, 0, 1, 0.62), [0.5], 'plaza', False, 8),  # red-awning cafe
+    'market'     : ('ee728fc6-image.png', (175, 30, 1482, 600), (0.04, 0.04, 0.96, 0.9), [0.5], 'plaza', False, 20),  # FreshMart supermarket front
 }
+
+NO_GLOW = {'market'}
 
 # ----------------------------------------------------------------------------- ground textures
 # name: (sheet, box, extra brightness) -> seamless 128x128 at 1 px per world px
@@ -375,9 +402,10 @@ def sharpen_lot(img, tw, th):
 
 # Hospital: front facade cut from the rainy-night street reference (lit lobby, red cross, entrance
 # canopy, planter beds) under a procedural parapet roof with a helipad, AC and tanks.
-HOSPITAL_REF = '6835c658-image.png'
-HOSPITAL_FACADE = (362, 0, 1448, 186)
+HOSPITAL_REF = 'd6e9ec95-image.png'         # the rainy-night hospital street scene
+HOSPITAL_FACADE = (213, 0, 1520, 300)        # lit lobby, red cross, canopy, planters and the pavement in front
 HOSPITAL_TILES = (18, 15)
+ROOF_TEX = ('1b15795c-image.png', (100, 20, 330, 120))  # a patch of the concept's tar-and-gravel roof
 
 
 def make_hospital():
@@ -388,13 +416,16 @@ def make_hospital():
     fac = fac.resize((W, fh), Image.LANCZOS)
     roof_h = round(H * 0.80) - fh
     out = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    rng = np.random.default_rng(42)
-    roof = np.zeros((roof_h, W, 3), np.uint8)
-    roof[:] = (84, 85, 90)
-    speck = rng.random((roof_h, W))
-    roof[speck > 0.93] = (98, 99, 104)
-    roof[speck < 0.05] = (70, 71, 76)
-    r = Image.fromarray(roof)
+    # the roof surface: the concept painting's own roofing, tiled (mirrored so the seams match)
+    tex = Image.open(find_src(ROOF_TEX[0])).convert('RGB').crop(ROOF_TEX[1])
+    tex = tex.resize((tex.width * 3 // 4, tex.height * 3 // 4), Image.LANCZOS)
+    tile = Image.new('RGB', (tex.width * 2, tex.height * 2))
+    tile.paste(tex, (0, 0)); tile.paste(tex.transpose(Image.FLIP_LEFT_RIGHT), (tex.width, 0))
+    tile.paste(tex.transpose(Image.FLIP_TOP_BOTTOM), (0, tex.height)); tile.paste(tex.transpose(Image.ROTATE_180), (tex.width, tex.height))
+    r = Image.new('RGB', (W, roof_h))
+    for yy in range(0, roof_h, tile.height):
+        for xx in range(0, W, tile.width):
+            r.paste(tile, (xx, yy))
     d = ImageDraw.Draw(r)
     d.rectangle([0, 0, W - 1, roof_h - 1], outline=(26, 27, 32))
     for k in range(1, 9):  # parapet with bevel
@@ -481,7 +512,8 @@ def build_prefabs():
         so = [int(np.floor(sx0 * tw)), int(np.floor(sy0 * th)), int(np.ceil(sx1 * tw)), int(np.ceil(sy1 * th))]
         print('  scene lot', key, tw, th)
         items.append((key, lot))
-        glows[key] = emissive(lot, solid, tw, th)
+        # a cutaway (the supermarket shows its aisles) has no windows to light: its glow would be noise
+        glows[key] = Image.new('RGB', lot.size, (0, 0, 0)) if key in NO_GLOW else emissive(lot, solid, tw, th)
         meta[key] = {'tw': tw, 'th': th, 'solid': so, 'doors': doors, 'ground': ground, 'rot': rot, 'scene': True}
     frames, sheets = shelf_pack(items, width=2048)
     for i, sh in enumerate(sheets):

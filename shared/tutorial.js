@@ -26,11 +26,11 @@ import {
   TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, TRAIN_HEADWAY_S, MAIL_WARN_S,
   BAIL_HURT_SPEED, NPC_GRIT, NPC_CRITICAL, HIGHWAY_SPEED, BARRIER_BREAK_SPEED, BARRIER_REPAIR_S,
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
-  BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE, SPIKE_STRIP_S, ATM_DEPOSIT_PX,
+  BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE, SPIKE_STRIP_S, ATM_DEPOSIT_PX, PET_EVERY_S, PET_REWARD, PET_SAMARITAN,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 17;
+export const TUTORIAL_VERSION = 18;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -115,6 +115,8 @@ export const STEPS = [
     text: `Pull up to a start buoy on a jet ski (jet ski sprint) or in a boat (boat classic) to enter. A countdown lets others join, then it's buoy to buoy - the arrow on your radar shows the next one. Prize money goes to the top three; turn up mid-race and you're in the next round. Leave your craft and you forfeit.` },
   { ch: 'citizen', title: 'Soccer and volleyball', at: { district: 'Greenfield Park' },
     text: `The ball is always out on the Greenfield Park pitch and the beach volleyball courts (Sunset Beach, Pelican Key) - kick it about any time with [[fire]] next to it. When two or more players are on, a match starts after ${MATCH_COUNTDOWN_S} seconds, sides picked by where you stand: soccer is first to ${SOCCER_GOALS} goals or the lead after ${Math.round(SOCCER_MATCH_S / 60)} minutes, volleyball first to ${VOLLEY_POINTS} points. Winners get $${MATCH_PRIZE}. Walk off and you forfeit; late arrivals play the next round. Weapons still work - if one side is wiped out, the last team standing wins.` },
+  { ch: 'citizen', title: 'Nightlife', at: { poi: 'club' },
+    text: `The clubs - {{club}} in {{club:where}} and the rest along the Neon Strip - keep their shutters down all day and open at dusk. Walk in for the dance floor, the VIP booths and the bar: a cocktail tops your stamina up past full for a minute. Out by dawn - the shutters come down again.` },
   { ch: 'citizen', title: 'Shopping', at: { poi: 'coffee' },
     text: `Shops, banks, hospitals, the courthouse and police stations are walk-in: the doors slide open, the roof fades away while you're inside, and you deal with the clerk across the counter (the pawn shop and bank serve you through glass). {{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons (and {{sports}} a can of ${WEAPONS.pepper.name.toLowerCase()} - a squirt blinds anyone in front of you for ${WEAPONS.pepper.stun} seconds, perfectly legal), {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
   { ch: 'citizen', title: 'Homes', at: { homes: 'Pine Hills' },
@@ -123,6 +125,8 @@ export const STEPS = [
     text: `A ${estate('farmhouse')} or a ${estate('cottage')} out in ${isle('F')}, on Cedar Farms, in the Highland Woods and the Cedar Hills or up in the Granite Peaks, a ${estate('beach')} on Sunset Beach and the ${estate('mansion')} up in Bayside Heights with its huge walled yard and pool. Pull up to any of your garages and the door rolls open to take your car; every car you own can be taken out at any home you own. New cars (and city bicycles - slow, but quiet and nimble) at {{dealer}} - walk its lot and buy whatever's in stock off the price tags, or order from the showroom - boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
   { ch: 'citizen', title: 'Good Samaritan points', at: { poi: 'evidence' },
     text: `Doing good earns Samaritan points: finish deliveries, stop a ${EVENT_KINDS.snatch.label.toLowerCase()} (an orange blip and arrow), then ${EVENT_KINDS.ret.label.toLowerCase()} to its owner (green), or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
+  { ch: 'citizen', title: 'Lost pets', at: { poi: 'home' },
+    text: `Every ${Math.round(PET_EVERY_S / 60)} minutes or so a dog or a cat runs off somewhere near someone - a ${EVENT_KINDS.pet.label.toLowerCase()} shows as a light-blue blip and arrow. Find it, take its collar and it trots along at your heel; a green arrow (${EVENT_KINDS.petret.label.toLowerCase()}) leads you to the owner, who's out calling for it. Hand it back for $${PET_REWARD} and ${PET_SAMARITAN} Samaritan points. Get in a car and it slips away again.` },
 
   // ---- criminal ------------------------------------------------------------------------------
   { ch: 'criminal', title: 'Crime needs a witness', at: { cameras: 1 },

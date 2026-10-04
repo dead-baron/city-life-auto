@@ -88,7 +88,7 @@ export function update(world, dt) {
     if (n.desk) { // shop / desk staff stay behind their counter
       const dd = Math.hypot(ped.x - n.desk.x, ped.y - n.desk.y);
       if (dd > 6) pedStep(ped, seek(ped, n.desk.x, n.desk.y, false), dt, world.map, walkMods(world, ped, 0.5));
-      else { ped.vx = 0; ped.vy = 0; ped.a = n.desk.a + Math.sin(now * 0.4 + ped.id) * 0.25; }
+      else { ped.vx = 0; ped.vy = 0; ped.a = n.dancer ? n.desk.a + Math.sin(now * 3 + ped.id) * 1.3 : n.desk.a + Math.sin(now * 0.4 + ped.id) * 0.25; }
       continue;
     }
     if (n.role === 'driver') { n.role = 'civ'; n.state = 'wander'; } // a driver left on foot (car gone) walks off

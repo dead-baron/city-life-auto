@@ -7,7 +7,7 @@ import { paintCharacter, CHAR_GRID } from './peds.js';
 import { PREFAB_SHEETS } from '../../shared/prefab-data.js';
 
 const SKINS = ['#f1c9a5', '#e0ac7e', '#c68953', '#a86b3c', '#7d4a26', '#4f2f1a'];
-export const atlas = { ready: false, imgs: [], frames: {}, variants: {}, scale: 2, ground: null, prefabs: null, prefabGlow: null, interiors: null, scenes: null };
+export const atlas = { ready: false, imgs: [], frames: {}, variants: {}, scale: 2, ground: null, prefabs: null, prefabGlow: null, interiors: null, scenes: null, animals: null };
 
 export async function loadAtlas(base = 'assets/') {
   try {
@@ -19,6 +19,7 @@ export async function loadAtlas(base = 'assets/') {
     // night emissive sheets load after the day art (not needed for the first frame)
     Promise.all(Array.from({ length: PREFAB_SHEETS }, (_, i) => load(`prefabs${i}_glow.webp`))).then((a) => { atlas.prefabGlow = a; }).catch(() => {});
     load('interiors.webp').then((im) => { atlas.interiors = im; }).catch(() => {}); // shop interiors (only needed once you walk in)
+    load('animals.png').then((im) => { atlas.animals = im; }).catch(() => {}); // lost pets
   } catch (e) { console.warn('atlas unavailable, using procedural sprites', e); }
 }
 
@@ -54,6 +55,7 @@ export function drawVehicle(g, desc, def, f) {
   const L = def.L, W = def.W;
   if (fr && (def.id === 'policebike' || def.id === 'policeboat')) { g.drawImage(policeBike(fr, L, W), -L / 2, -W / 2, L, W); return; }
   if (fr) {
+    if (desc.tn >= 0) { g.drawImage(tinted(fr, desc.tn), -L / 2, -W / 2, L, W); return; } // resprayed
     g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, -L / 2, -W / 2, L, W);
   } else {
     const key = `${def.id}|${desc.p}`;
@@ -61,6 +63,36 @@ export function drawVehicle(g, desc, def, f) {
     if (!cv) { cv = procVehicle(def, PAINTS[desc.p % PAINTS.length] || '#888'); procCache.set(key, cv); }
     g.drawImage(cv, -L / 2 - 2, -W / 2 - 2, L + 4, W + 4);
   }
+}
+
+// A painted vehicle in a new colour: the bodywork (saturated, mid-bright pixels) takes the paint's
+// hue while glass, tyres, chrome and lights keep theirs. Cached per frame + colour.
+const tintCache = new Map();
+function tinted(fr, p) {
+  const key = `${fr.a}:${fr.x}:${fr.y}:${p}`;
+  let cv = tintCache.get(key);
+  if (cv) return cv;
+  cv = document.createElement('canvas'); cv.width = fr.w; cv.height = fr.h;
+  const g = cv.getContext('2d', { willReadFrequently: true });
+  g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, 0, 0, fr.w, fr.h);
+  const img = g.getImageData(0, 0, fr.w, fr.h), d = img.data;
+  const hex = PAINTS[p % PAINTS.length] || '#888888';
+  const pr = parseInt(hex.slice(1, 3), 16), pg = parseInt(hex.slice(3, 5), 16), pb = parseInt(hex.slice(5, 7), 16);
+  const pl = (Math.max(pr, pg, pb) + Math.min(pr, pg, pb)) / 2 || 1;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < 30) continue;
+    const r = d[i], gg = d[i + 1], b = d[i + 2];
+    const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), l = (mx + mn) / 2, sat = mx - mn;
+    // bodywork: coloured paint, or a white / silver / black body panel that isn't glass-blue
+    const glass = b > r + 25 && b > gg + 5 && l < 140;
+    if (glass || l < 28 || (sat < 22 && (l < 70 || l > 235))) continue;
+    const k = l / pl;
+    d[i] = Math.min(255, pr * k); d[i + 1] = Math.min(255, pg * k); d[i + 2] = Math.min(255, pb * k);
+  }
+  g.putImageData(img, 0, 0);
+  if (tintCache.size > 300) tintCache.delete(tintCache.keys().next().value);
+  tintCache.set(key, cv);
+  return cv;
 }
 
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }

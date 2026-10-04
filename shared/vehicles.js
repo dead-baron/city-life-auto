@@ -62,3 +62,14 @@ export const TRAFFIC_MIX = [
 // heavier on the highways and in the docks, yards and industrial districts
 export const TRUCK_MODELS = new Set(['flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'towtruck']);
 export const PARKED_MIX = [['sedan', 30], ['compact', 30], ['pickup', 15], ['van', 8], ['sports', 6], ['bike', 6], ['flatbed', 5]];
+
+// A respray: a new paint colour and a different painted variant of the model, and the new colour
+// laid over the bodywork (tint) so even a model with only one or two painted variants plainly
+// changes colour. rand: () => 0..1.
+export function respray(v, rand) {
+  v.paint = (v.paint + 1 + Math.floor(rand() * (PAINTS.length - 1))) % PAINTS.length;
+  v.variant = Math.floor(rand() * 1000);
+  v.tint = v.paint;
+  v.bloody = false;
+  v.descVer = (v.descVer || 0) + 1;
+}

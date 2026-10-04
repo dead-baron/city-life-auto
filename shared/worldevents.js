@@ -6,6 +6,8 @@ export const EVENT_KINDS = {
   ret: { color: '#3ddc84', label: 'Return the purse', hint: 'Take it back to its owner' },
   shootout: { color: '#ff3b3b', label: 'Gang shootout', hint: 'Syndicate vs police' },
   robbery: { color: '#ffd400', label: 'Store robbery', hint: 'Alarm tripped - police responding' },
+  pet: { color: '#7fd8ff', label: 'Lost pet', hint: 'Find it and walk it home' },
+  petret: { color: '#3ddc84', label: 'Pet\'s owner', hint: 'Walk the pet home' },
 };
 export const EVENT_RANGE = 1300;    // events further away than this aren't popped up on screen (the phone's city feed has them all)
 export const FEED_MAX = 40;         // the city feed keeps this many recent items

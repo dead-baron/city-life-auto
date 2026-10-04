@@ -28,6 +28,7 @@ import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardin
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
+import { ANIMAL_ART } from '../shared/animal-art.js';
 import { BuildingLayer } from './render/buildings.js';
 import { Highway, liftOf, levelKey } from './render/highway.js';
 import { underDeck } from '../shared/levels.js';
@@ -392,7 +393,7 @@ function onEvent(ev) {
       else if (distVol(ev.x, ev.y) > 0.9) S.cam.shake = Math.max(S.cam.shake, 2);
       break;
     }
-    case 'foot': fx.decal(2, ev.x, ev.y, ev.a, 1, '#7a0d12', now, 0.8); break;
+    case 'foot': fx.decal(2, ev.x, ev.y, ev.a, 1, '#7a0d12', now, ev.f !== undefined ? 0.25 + 0.55 * ev.f : 0.8); break; // tracked prints fade as the soles dry
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
@@ -1174,7 +1175,7 @@ function pedPose(e) {
   if (f & PF.DEAD) return 'dead';
   if (f & (PF.DOWN | PF.STUN)) return 'down';
   if (f & PF.ROLL) return 'roll';
-  if (f & PF.FISHING) return 'fish';
+  if (f & PF.FISHING) return e.d && e.d.ar === 'medic' ? 'kneel' : 'fish';
   if (f & PF.CARRY) return 'carry';
   const w = WEAPON_BY_INDEX[e.extra];
   const meleeW = w && w.type === 'melee';
@@ -1757,6 +1758,7 @@ function drawGates(view, dt) {
     const want = S.gateOpen[i] ? 1 : 0;
     S.gateAnim[i] = (S.gateAnim[i] ?? want) + (want - (S.gateAnim[i] ?? want)) * (1 - Math.exp(-4 * dt));
     const k = S.gateAnim[i];
+    if (gt.club) { drawClubShutter(gt, k); continue; }
     g.save();
     g.translate(gt.x, gt.y);
     if (gt.vertical) g.rotate(Math.PI / 2);
@@ -1774,6 +1776,21 @@ function drawGates(view, dt) {
     g.restore();
   }
 }
+// A club's roller shutter: rolls up into its box over the door at dusk, down again at dawn;
+// "CLOSED - OPENS AT DUSK" while it's down.
+function drawClubShutter(gt, k) {
+  const w = gt.w, x0 = gt.x - w / 2, y0 = gt.y - 12;
+  const h = 24 * (1 - k);
+  g.save();
+  g.fillStyle = '#3a3d44'; g.fillRect(x0 - 2, y0 - 6, w + 4, 6); // the shutter box
+  if (h > 1) {
+    g.fillStyle = '#8a8d94'; g.fillRect(x0, y0, w, h);
+    g.fillStyle = 'rgba(0,0,0,.25)'; for (let yy = 2; yy < h; yy += 3) g.fillRect(x0, y0 + yy, w, 1);
+    if (k < 0.2) { g.fillStyle = '#ff4fd8'; g.font = 'bold 7px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('OPENS AT DUSK', gt.x, gt.y); }
+  }
+  g.restore();
+}
+
 // Trains: couplings, then the cars (lit interiors for the train you're riding, roofs for the
 // rest), the people aboard yours, and the ground drawn back over anything that has already slid
 // into a tunnel mouth.
@@ -1965,9 +1982,33 @@ function drawSwimRipples(p, now) {
   if ((p.as || 0) > 30 && Math.random() < 0.12 && S.map.tileAtPx(p.rx, p.ry) !== T.BRIDGE) S.fx.splash(p.rx, p.ry, 2);
 }
 
+// A lost pet: the drawn dog or cat. Top-down art turns to face where it's going; the 3/4 art
+// faces the camera and mirrors left / right. A little bob while it trots.
+function drawAnimal(p, now) {
+  const key = p.d.ar.slice(4), art = ANIMAL_ART[key];
+  const moving = (p.as || 0) > 12;
+  g.save();
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 4, 13, 6, 0, 0, 6.28); g.fill();
+  if (!art || !atlas.animals) { g.fillStyle = '#a0703a'; g.beginPath(); g.ellipse(p.rx, p.ry, 12, 7, p.ra, 0, 6.28); g.fill(); g.restore(); return; }
+  const [sx, sy, sw, sh] = art.r;
+  const bob = moving ? Math.abs(Math.sin(now * 14 + p.id)) * 1.5 : 0;
+  g.imageSmoothingEnabled = false;
+  if (art.view === 'top') {
+    g.translate(p.rx, p.ry - bob); g.rotate(p.ra);
+    const k = 0.9; g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -sh * k / 2, sw * k, sh * k);
+  } else {
+    const k = 0.75, flip = Math.cos(p.ra) < -0.2;
+    g.translate(p.rx, p.ry + 4 - bob); if (flip) g.scale(-1, 1);
+    g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -sh * k, sw * k, sh * k);
+  }
+  g.imageSmoothingEnabled = true;
+  g.restore();
+}
+
 function drawPed(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
+  if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { drawAnimal(p, now); return; }
   if (p.blink === 3) return; // inside a home
   let pose = pedPose(p);
   // thrown from a vehicle: airborne arc, then a roll / faceplant / slide on the back
@@ -2054,12 +2095,14 @@ function drawPed(p, now) {
 }
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
-const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'carry', 'fish']);
+const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'carry', 'fish', 'kneel']);
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;
   const d8 = dir8(p.ra);
   // concept-art body (all 8 directions drawn); the procedural painter until it has loaded
+  const kneel = pose === 'kneel';
+  if (kneel) { pose = 'carry'; fr = 0; } // reaching both hands down to the patient
   const body = bodySprite(p.d.app, d8, pose, fr, p.extra);
   const [d, mirror0] = baseDir(d8);
   const mirror = body ? false : mirror0;
@@ -2081,6 +2124,8 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   if (swimming) { // only head and shoulders above the water
     g.globalAlpha *= f & PF.DEAD ? 0.5 : 0.9;
     g.drawImage(spr, 0, 0, CW, 26, -CW / 2, -FOOT_Y + 12, CW, 26);
+  } else if (kneel) { // down on one knee: the body sinks, the shins fold under (hidden by the thigh line)
+    g.drawImage(spr, 0, 0, CW, 34, -CW / 2, -FOOT_Y + 10, CW, 34);
   } else g.drawImage(spr, -CW / 2, -FOOT_Y);
   if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = hitK - 0.4; g.drawImage(spr, -CW / 2, -FOOT_Y); g.globalCompositeOperation = 'source-over'; }
   g.imageSmoothingEnabled = true;
@@ -2393,7 +2438,7 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
   lg.globalCompositeOperation = 'source-over';
   g.imageSmoothingEnabled = true;
   g.drawImage(lightCv, 0, 0, W, H);
-  if (dark > 0.05) drawNightGlow(dark);
+  if (dark > 0.05) drawNightGlow(dark, peds, vehs);
   // additive colour: lamp glow, sirens, neon
   if (dark > 0.02) {
     g.globalCompositeOperation = 'lighter';
@@ -2424,14 +2469,38 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
 }
 
 // ---- night: lit windows, neon and lobby light from the per-lot emissive layer ------------------
-function drawNightGlow(dark) {
+// The lit windows / neon of every lot after dark. Drawn into its own layer first, with the people
+// and cars standing in front of it cut out, so the glow lights the street but doesn't wash over
+// someone walking past a shopfront.
+let glowCv = null, gg2 = null;
+function drawNightGlow(dark, peds, vehs) {
   if (!S.worldTf || !S.viewRect) return;
+  const cw = g.canvas.width, ch = g.canvas.height;
+  if (!glowCv || glowCv.width !== cw || glowCv.height !== ch) { glowCv = document.createElement('canvas'); glowCv.width = cw; glowCv.height = ch; gg2 = glowCv.getContext('2d'); }
+  gg2.setTransform(1, 0, 0, 1, 0, 0);
+  gg2.clearRect(0, 0, cw, ch);
+  gg2.setTransform(...S.worldTf);
+  gg2.globalCompositeOperation = 'source-over';
+  gg2.imageSmoothingEnabled = true;
+  let any = false;
+  for (const it of S.buildings.inView(S.viewRect)) { if (S.roofFade && (S.roofFade[it.b.id] || 0) > 0.3) continue; S.buildings.drawGlow(gg2, it); any = true; } // (not over a building you're inside)
+  if (!any) return;
+  gg2.globalCompositeOperation = 'destination-out';
+  gg2.fillStyle = '#000';
+  for (const p of peds || []) {
+    if (p.flags & PF.INVEH) continue;
+    gg2.beginPath(); gg2.ellipse(p.rx, p.ry - 18, 11, 26, 0, 0, 6.28); gg2.fill(); // an upright figure
+  }
+  for (const v of vehs || []) {
+    const def = v.d ? VEHICLE_BY_INDEX[v.d.m] : null;
+    if (!def) continue;
+    gg2.save(); gg2.translate(v.rx, v.ry); gg2.rotate(v.ra); gg2.fillRect(-def.L / 2, -def.W / 2, def.L, def.W); gg2.restore();
+  }
   g.save();
-  g.setTransform(...S.worldTf);
+  g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = 'lighter';
   g.globalAlpha = Math.min(1, dark * 0.85);
-  g.imageSmoothingEnabled = true;
-  for (const it of S.buildings.inView(S.viewRect)) S.buildings.drawGlow(g, it);
+  g.drawImage(glowCv, 0, 0);
   g.restore();
 }
 

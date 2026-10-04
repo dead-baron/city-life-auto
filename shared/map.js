@@ -141,20 +141,20 @@ export const WILD_DISTRICTS = new Set(DISTRICTS.filter((d) => WILD_STYLES.has(d.
 
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
-  houses: { minW: 16, minH: 18, gen: { house1: 3, house2: 3, house3: 3, apt2: 0.6, rest2: 0.3, house4: 2, house5: 2 }, filler: 'park', roof: 0.06, roofKinds: ['tile'] },
-  commercial: { minW: 12, minH: 12, gen: { conv: 2, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.5, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
+  houses: { minW: 16, minH: 18, gen: { house1: 3, house2: 3, house3: 3, apt2: 0.6, rest2: 0.3, house4: 2, house5: 2, house7: 2.5, house8: 2.5, house9: 2.5 }, filler: 'park', roof: 0.06, roofKinds: ['tile'] },
+  commercial: { minW: 12, minH: 12, gen: { conv: 2, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.3, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5, diner: 1, latebite: 0.6, arcade: 0.5, tattoo: 0.4, redawning: 0.6, greenbistro: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
   apartments: { minW: 14, minH: 14, gen: { apt1: 3, apt2: 3, house2: 1, conv: 1, tower2: 1, apt3: 1.5, apt4: 1.5 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
   industrial: { minW: 14, minH: 13, gen: { warehouse: 3, industrial: 2, repair: 1, junkyard: 0.6, site: 0.4 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
   factory: { minW: 14, minH: 13, gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4, junkyard: 0.5, site: 0.5 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
-  towers: { minW: 11, minH: 11, gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1, bank2: 0.5, apt3: 0.5 }, filler: 'plaza', roof: 0.78, roofKinds: ['glass', 'gravel', 'tar'] },
-  civic: { minW: 14, minH: 14, gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1, church: 0.3, bank2: 0.6, apt4: 0.5 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
-  southside: { minW: 14, minH: 14, gen: { house1: 2, house3: 2, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5, quickstop: 0.8, junkyard: 0.5, house5: 0.6, liquor: 0.8 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
-  nightlife: { minW: 12, minH: 12, gen: { club: 3, rest1: 2, rest2: 2, hotel: 1, conv: 1, clubnova: 1, clubeclipse: 1 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  towers: { minW: 11, minH: 11, gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1, bank2: 0.5, apt3: 0.5, vellori: 0.6, monarch: 0.6, theatre: 0.4, diamond: 0.5 }, filler: 'plaza', roof: 0.78, roofKinds: ['glass', 'gravel', 'tar'] },
+  civic: { minW: 14, minH: 14, gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1, church: 0.3, bank2: 0.6, apt4: 0.5, theatre: 0.5, greenbistro: 0.5, house8: 0.6 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
+  southside: { minW: 14, minH: 14, gen: { house1: 1, house3: 1, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5, quickstop: 0.8, junkyard: 0.5, house5: 0.6, liquor: 0.8, shanty2: 0.5, shanty3: 0.5, tattoo: 0.4 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
+  nightlife: { minW: 10, minH: 10, gen: { club: 1, rest1: 1, rest2: 1, hotel: 1, conv: 1, clubnova: 1, clubeclipse: 1, neonclub: 1.4, neontap: 1.2, midnight: 1.2, luna: 1.2, arcade: 0.8, latebite: 0.8, tattoo: 0.6 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
   harbor: { minW: 14, minH: 13, gen: { warehouse: 4, industrial: 1, repair: 1, junkyard: 0.3 }, filler: 'yard', roof: 0.55, roofKinds: ['metal', 'tar'] },
-  luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5, house6: 1.5, house4: 1, house5: 1 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
-  redlight: { minW: 12, minH: 12, gen: { club: 3, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.4, quickstop: 0.5, liquor: 0.6 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
-  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 1.5, rest1: 1.5, club: 0.4, repair: 0.6, quickstop: 1, apt3: 0.6, boutique: 0.4, liquor: 0.8 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
-  beach: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, rest2: 1.5, rest1: 1, hotel: 0.6, conv: 0.5, beachbar: 1.2, house5: 0.6 }, filler: 'plaza', roof: 0.15, roofKinds: ['tile'] },
+  luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5, house6: 1.5, house4: 1, house5: 1, house9: 1.2, royale: 0.6, bistro: 0.6, crown: 0.5 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
+  redlight: { minW: 12, minH: 12, gen: { club: 1, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.4, quickstop: 0.5, liquor: 0.6, neonclub: 1, luna: 1, tattoo: 0.8, shanty1: 0.4 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
+  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 1.5, rest1: 1.5, club: 0.3, repair: 0.6, quickstop: 1, apt3: 0.6, boutique: 0.4, liquor: 0.8, neontap: 0.5, diner: 0.6, greenbistro: 0.5, house7: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  beach: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, rest2: 1.5, rest1: 1, hotel: 0.6, conv: 0.5, beachbar: 1.2, house5: 0.6, house9: 0.8, diner: 0.6 }, filler: 'plaza', roof: 0.15, roofKinds: ['tile'] },
   park: { minW: 14, minH: 14, gen: { rest2: 1 }, filler: 'park', roof: 0, roofKinds: ['tile'] },
 };
 
@@ -185,7 +185,16 @@ const SPECIALS = [
   { d: 2, prefab: 'school', biz: ['delivery'], names: ['Northgate High'] },
   { d: 2, prefab: 'fire', biz: ['delivery'], names: ['Fire Station 7'] },
   { d: 5, prefab: 'church', biz: ['delivery'], names: ['St. Pixel Chapel'] },
-  { d: 7, prefab: 'club', biz: ['delivery'], names: ['Club Ultraviolet'] },
+  { d: 7, prefab: 'neonclub', biz: ['delivery'], names: ['Club Ultraviolet'] },
+  { d: 7, prefab: 'midnight', biz: ['delivery'], names: ['The Midnight'] },
+  { d: 7, prefab: 'luna', biz: ['delivery'], names: ['Luna Lounge'] },
+  { d: 7, prefab: 'neontap', biz: ['delivery'], names: ['Neon Tap'] },
+  { d: 7, prefab: 'arcade', biz: ['delivery'], names: ['Pixel Arcade'] },
+  { d: 17, prefab: 'luna', biz: ['delivery'], names: ['Pink Moon Lounge'] },
+  { d: 4, prefab: 'theatre', biz: ['delivery'], names: ['The Grand Theatre'] },
+  { d: 4, prefab: 'vellori', biz: ['delivery'], names: ['Vellori'] },
+  { d: 16, prefab: 'monarch', biz: ['delivery'], names: ['Monarch'] },
+  { d: 16, prefab: 'diamond', biz: ['delivery'], names: ['Diamond & Co.'] },
   { d: 7, prefab: 'club', biz: ['delivery'], names: ['The Velvet Room'] },
   { d: 7, prefab: 'hotel', biz: ['delivery'], names: ['Neon Palms Hotel'] },
   { d: 17, prefab: 'club', biz: ['delivery'], names: ['The Pink Pussycat Lounge'] },
@@ -243,7 +252,15 @@ const GENERIC_NAMES = {
   beachbar: ['Beach Shack'], pool: ['Community Pool'], tackle2: ['Bait & Tackle'], shack: ['Homestead'], farmstead: ['Farmstead'],
   police2: ['Police Station'], police3: ['Police Station'], liquor: ['Liquor Mart', 'Corner Liquor', 'Spirits & More', 'Beer Wine Spirits'],
   shops1: ['Storefronts'], shops2: ['Storefronts'],
+  // round 7 lots
+  house7: ['Residence'], house8: ['Residence'], house9: ['Residence'], diner: ['City Diner', 'Eat Drink Local'], bistro: ['Le Petit Bistro'],
+  royale: ['Royale Fashion'], vellori: ['Vellori'], monarch: ['Monarch'], shanty1: ['Shack'], shanty2: ['Shack'], shanty3: ['Shack'],
+  neonclub: ['Club Neon', 'The Strip Club', 'Dance Drink Repeat'], neontap: ['Neon Tap'], midnight: ['The Midnight'], luna: ['Luna Lounge'],
+  arcade: ['Pixel Arcade', 'Game Zone'], latebite: ['Late Bite'], tattoo: ['Bold Ink Tattoo'], crown: ['Crown Couture'], greenbistro: ['Garden Bistro'],
+  theatre: ['The Grand Theatre'], diamond: ['Diamond & Co.'], redawning: ['Cafe Rouge'], market: ['FreshMart'],
 };
+// Lots with a nightclub inside: walk in after dark (closed by day)
+export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse', 'neonclub', 'midnight', 'luna']);
 
 // ---------------------------------------------------------------------------
 export class CityMap {
@@ -1496,7 +1513,7 @@ function placePrefab(m, row, key, x, special, rand) {
     return { tx: dx, px, py };
   });
   b.door = { tx: doors[0].tx, ty: rot === 0 ? b.ty + b.th : b.ty - 1 };
-  const isHome = !special && (key.startsWith('house') || key.startsWith('apt'));
+  const isHome = !special && (key.startsWith('house') || key.startsWith('apt') || key.startsWith('shanty'));
   if (special) {
     special.biz.forEach((kind, i) => {
       const dd = doors[Math.min(i, doors.length - 1)];
@@ -1539,10 +1556,11 @@ function placePrefab(m, row, key, x, special, rand) {
     const dd = doors[0];
     const apt = key.startsWith('apt');
     const dist = DISTRICTS[row.d];
-    const price = apt ? (dist.tier === 'lux' ? 30000 : dist.tier === 'low' || dist.tier === 'rough' ? 11000 : 15000) : (dist.turf ? 12000 : dist.tier === 'lux' ? 60000 : 25000);
+    const shack = key.startsWith('shanty');
+    const price = shack ? 6000 : apt ? (dist.tier === 'lux' ? 30000 : dist.tier === 'low' || dist.tier === 'rough' ? 11000 : 15000) : (dist.turf ? 12000 : dist.tier === 'lux' ? 60000 : 25000);
     const gx = (x + (rot === 0 ? pf.tw * 0.22 : pf.tw * 0.78)) * TILE;
     const gy = rot === 0 ? (y + pf.th - 2.2) * TILE : (y + 2.2) * TILE;
-    const home = { id, kind: apt ? 'apartment' : 'house', name: `${dist.name} ${apt ? 'Apt' : 'House'} #${id + 1}`, price, slots: apt ? 2 : 3, x: dd.px, y: dd.py, garage: { x: gx, y: gy, a: rot === 0 ? -Math.PI / 2 : Math.PI / 2 }, b: bid };
+    const home = { id, kind: apt ? 'apartment' : shack ? 'shack' : 'house', name: `${dist.name} ${apt ? 'Apt' : shack ? 'Shack' : 'House'} #${id + 1}`, price, slots: apt ? 2 : shack ? 1 : 3, x: dd.px, y: dd.py, garage: { x: gx, y: gy, a: rot === 0 ? -Math.PI / 2 : Math.PI / 2 }, b: bid };
     m.homes.push(home);
     m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: dd.px, y: dd.py, r: 40, b: bid });
     b.home = id;
@@ -1981,10 +1999,15 @@ function buildCornerStores(m) {
 // interior behind their front door - a one-tile wall ring, a floor, partition walls between the
 // units of a strip mall, and a counter with a clerk behind it. The roof art fades out while you
 // are inside (client). The place's interaction point moves in front of its counter.
-export const WALK_IN = new Set(['convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle']);
+export const WALK_IN = new Set(['club', 'convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle']);
 const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
 function buildInteriors(m) {
   m.walkIns = [];
+  // the nightclubs become walk-ins (their doors open after dark)
+  for (const p of m.pois) {
+    const b = p.b !== undefined ? m.buildings[p.b] : null;
+    if (b && p.kind === 'delivery' && CLUB_LOTS.has(b.kind)) p.kind = 'club';
+  }
   const byB = new Map();
   for (const p of m.pois) if (p.b !== undefined) { if (!byB.has(p.b)) byB.set(p.b, []); byB.get(p.b).push(p); }
   const bays = new Set((m.bays || []).map((bay) => m.bld[bay.ty * MAP_W + bay.tx]));
@@ -2019,6 +2042,13 @@ function buildInteriors(m) {
       p.outside = { x: p.x, y: p.y };
       p.x = cx; p.y = frontY; p.r = Math.max(p.r || 40, 40);
       units.push({ poi: p.id, kind: p.kind, x0: ux0, x1: ux1, counterRow, clerk: { x: cx, y: staffY, a: south ? Math.PI / 2 : -Math.PI / 2 }, door: { tx: dx0, ty: fy, w: 2 } });
+      if (p.kind === 'club') {
+        // a roller shutter over the club's doors: down all day, up from dusk till dawn
+        const gate = { x: (dx0 + 1) * TILE, y: (fy + 0.5) * TILE, w: 2 * TILE, props: [], rule: 'night', club: true, rect: { tx: b.tx, ty: b.ty, tw: b.tw, th: b.th } };
+        for (let gx = dx0 * TILE + 8; gx <= (dx0 + 2) * TILE - 8; gx += 14) gate.props.push(m.addSolidProp(gx, gate.y, 9));
+        m.gates.push(gate);
+        p.gate = m.gates.length - 1;
+      }
       // a hospital's ER mat sits beside its desk
       for (const q of list) if (q.kind === 'reception') { q.x = cx - 48; q.y = frontY + dir * 10; }
     });
@@ -2532,14 +2562,38 @@ function buildGangHQs(m) {
     for (let ty = 0; ty < MAP_H; ty += 3) for (let tx = 0; tx < MAP_W; tx += 3) if (m.dist[ty * MAP_W + tx] === di) { sx += tx; sy += ty; n++; }
     if (!n) return;
     const cx = (sx / n) * TILE, cy = (sy / n) * TILE;
-    const c = m.pois.filter((p) => p.kind === 'delivery' && p.b !== undefined && !p.fixed && m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === di)
+    let c = m.pois.filter((p) => p.kind === 'delivery' && p.b !== undefined && !p.fixed && m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === di)
       .sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy))[0];
+    if (!c) c = hqInPlainBuilding(m, di, cx, cy); // no storefront on the turf: they hole up in a plain building
     if (!c) return;
     const old = c.label;
     c.kind = 'gang'; c.label = `Syndicate HQ - ${d.name}`;
     const b = m.buildings[c.b];
     if (b) for (const s of b.signs) if (s.text === old) s.text = 'Syndicate HQ';
   });
+}
+
+// A door on the street side of an ordinary (procedural-roof) building in district di, nearest
+// (cx, cy), made into a delivery-style POI the caller can take over.
+function hqInPlainBuilding(m, di, cx, cy) {
+  const used = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
+  const walk = (tx, ty) => { const t = m.tileAt(tx, ty); return t === T.SIDEWALK || t === T.PLAZA || t === T.LOT; };
+  const cands = [];
+  for (const b of m.buildings) {
+    if (b.gone || b.kind !== 'roof' || used.has(b.id) || b.tw < 5 || b.th < 5) continue;
+    if (m.dist[(b.ty + (b.th >> 1)) * MAP_W + b.tx + (b.tw >> 1)] !== di) continue;
+    const mx = b.tx + (b.tw >> 1);
+    const side = walk(mx, b.ty + b.th) ? 1 : walk(mx, b.ty - 1) ? -1 : 0;
+    if (!side) continue;
+    const x = (mx + 0.5) * TILE, y = side > 0 ? (b.ty + b.th + 0.7) * TILE : (b.ty - 0.7) * TILE;
+    cands.push({ b, x, y, d: Math.hypot(x - cx, y - cy) });
+  }
+  cands.sort((a, b) => a.d - b.d);
+  const best = cands[0];
+  if (!best) return null;
+  const poi = { id: m.pois.length, kind: 'delivery', label: 'Building', x: best.x, y: best.y, r: 44, b: best.b.id };
+  m.pois.push(poi);
+  return poi;
 }
 
 function filler(m, row, x, w, st, rand, backLot = false) {

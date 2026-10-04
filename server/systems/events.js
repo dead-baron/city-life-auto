@@ -4,6 +4,9 @@
 import { K } from '../../shared/constants.js';
 import { EVENT_RANGE, EVENT_KINDS, FEED_MAX, FEED_KEEP_S } from '../../shared/worldevents.js';
 
+let petTarget = () => null; // set by pets.js (it imports this module)
+export function setPetTarget(fn) { petTarget = fn; }
+
 // Event text for the city feed when the caller doesn't give one.
 const FEED_TEXT = { snatch: 'Purse snatched', drop: 'Contraband crate spotted', shootout: 'Gang shootout with the police', robbery: 'Store robbery - alarm tripped' };
 
@@ -62,6 +65,8 @@ export function forPlayer(world, p) {
     if (Math.hypot(e.x - ped.x, e.y - ped.y) > EVENT_RANGE) continue;
     out.push({ id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y) });
   }
+  const home = petTarget(world, p);
+  if (home) out.push(home);
   if ((p.profile.inventory.purse || 0) > 0) {
     let best = null, bd = EVENT_RANGE * 1.5;
     for (const e of world.query(ped.x, ped.y, bd, K.PED)) {

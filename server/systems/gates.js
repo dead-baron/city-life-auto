@@ -28,6 +28,7 @@ export function update(world) {
     const rel = (x, y) => (g.vertical ? { along: y - g.y, depth: x - g.x } : { along: x - g.x, depth: y - g.y });
     const near = (x, y, reach) => { const r = rel(x, y); return Math.abs(r.along) < g.w / 2 + 60 && Math.abs(r.depth) < reach; };
     let want = false;
+    if (g.rule === 'night' && world.clock.isNight) want = true; // the clubs are open all night
     for (const p of world.players.values()) {
       const ped = p.ped;
       if (!ped || ped.dead || ped.hidden) continue;

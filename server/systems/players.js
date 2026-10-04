@@ -16,6 +16,7 @@ import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as homes from './homes.js';
 import * as rentals from './rentals.js';
+import * as pets from './pets.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
 import * as races from './races.js';
@@ -334,6 +335,9 @@ export function findInteraction(world, p) {
   const crate = cargo.nearestCrate(world, ped);
   if (crate) return { label: crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`, run: () => cargo.pickUp(world, ped, crate) };
 
+  const pet = pets.interaction(world, p);
+  if (pet) return pet;
+
   const victim = jobs.purseVictimNear(world, p);
   if (victim) return { label: 'Return the purse (+Samaritan)', run: () => jobs.returnPurse(world, p, victim) };
 
@@ -434,7 +438,7 @@ export function pedFlags(world, ped) {
   if (ped.player && ped.player.badge) f |= PF.BADGE;
   if (ped.npc && ped.npc.role === 'cop') f |= PF.BADGE;
   if (Math.abs(ped.vx) + Math.abs(ped.vy) > 20) f |= PF.MOVING;
-  if (ped.fishing) f |= PF.FISHING;
+  if (ped.fishing || now < (ped.kneelUntil || 0)) f |= PF.FISHING; // (a medic kneeling at a body shares the fishing bit; the client tells them apart)
   if (ped.umbrella) f |= PF.UMBRELLA;
   return f;
 }
