@@ -706,4 +706,5 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
   - if the new version doesn't come up, resets to the previous commit, restarts that, and remembers the bad commit so it isn't retried every 2 minutes (the next push is).
   - Log: `journalctl -u cla-update`.
 - **`setup-oracle.sh` re-runs now restart the game service**, so changed service settings take effect.
+- **60-second warning:** when players are online, `auto-update.sh` writes the restart time to `<data>/update-at` and waits a minute. The server shows everyone a countdown ("Server updating in 60 seconds - your progress is saved, you'll reconnect automatically", then 30, 10, 5, 3, 2, 1). With nobody online it restarts straight away.
 

@@ -3,6 +3,7 @@
 // persists profiles. Zero third-party dependencies: `node server/index.js`.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import { readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { join, normalize, extname } from 'node:path';
 import { config } from './config.js';
 import { attachWebSocketServer, wsStats } from './ws.js';
@@ -127,6 +128,26 @@ function loop() {
 }
 
 setInterval(() => store.flush(), config.saveIntervalMs).unref();
+
+// Update warning: deploy/auto-update.sh writes the restart time (epoch ms) to <data>/update-at
+// a minute before it restarts the server with a new version; everyone online gets a countdown.
+const UPDATE_FILE = join(config.dataDir, 'update-at');
+try { if (existsSync(UPDATE_FILE)) unlinkSync(UPDATE_FILE); } catch { /* not ours to remove */ } // a fresh start: any old notice is done
+const WARN_AT = [60, 30, 10, 5, 3, 2, 1];
+let updateAt = 0, warned = new Set();
+setInterval(() => {
+  let at = 0;
+  try { at = existsSync(UPDATE_FILE) ? Number(readFileSync(UPDATE_FILE, 'utf8').trim()) || 0 : 0; } catch { at = 0; }
+  if (at !== updateAt) { updateAt = at; warned = new Set(); }
+  if (!updateAt) return;
+  const left = Math.ceil((updateAt - Date.now()) / 1000);
+  for (const s of WARN_AT) {
+    if (left > s || warned.has(s) || left < s - 1) continue;
+    warned.add(s);
+    const text = s >= 10 ? `Server updating in ${s} seconds - your progress is saved, you'll reconnect automatically.` : `Server updating in ${s}...`;
+    for (const p of world.players.values()) if (p.conn) world.notify(p, text, 'warn');
+  }
+}, 500).unref();
 // data meter: fold in what the WebSockets sent; at the monthly cap, close the city
 let lastWs = 0;
 if (limits) {

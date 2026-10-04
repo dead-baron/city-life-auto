@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Auto-deploy: run every 2 minutes by cla-update.timer (installed by setup-oracle.sh).
 # If GitHub's main branch has new commits it pulls them. When server code changed it restarts
-# the game (player progress is saved first); if the server doesn't come back healthy it rolls
+# the game - after a 60-second in-game countdown if anyone is online (progress is saved first); if the server doesn't come back healthy it rolls
 # back to the previous version and restarts that instead. Client-only changes need no restart
 # (players get those from GitHub Pages). Log: journalctl -u cla-update
 set -euo pipefail
@@ -33,6 +33,13 @@ healthy() {
   return 1
 }
 
+# Players online? Give them a minute's warning first (the server shows a countdown).
+ONLINE=$(curl -sf -m 2 http://127.0.0.1:8080/stats | grep -o '"online":[0-9]*' | cut -d: -f2 || true)
+if [ "${ONLINE:-0}" -gt 0 ]; then
+  echo "auto-update: ${ONLINE} player(s) online - restarting in 60 s"
+  echo $(( ($(date +%s) + 60) * 1000 )) > "${CLA_DATA_DIR:-/home/ubuntu/cla-data}/update-at"
+  sleep 60
+fi
 sudo systemctl restart city-life-auto
 if healthy; then
   echo "auto-update: ${OLD:0:7} -> ${NEW:0:7}, server restarted OK"
