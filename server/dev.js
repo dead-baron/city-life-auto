@@ -8,11 +8,12 @@ import * as jobs from './systems/jobs.js';
 import * as law from './systems/law.js';
 import * as combat from './systems/combat.js';
 import * as npc from './systems/npc.js';
+import * as gangwar from './systems/gangwar.js';
 import * as cruiser from './systems/cruiser.js';
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp'];
+export const DEV_COMMANDS = ['shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp'];
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 
@@ -49,6 +50,7 @@ export function command(world, p, c, msg) {
       else world.notify(p, '[dev] Already Chief of Police.', 'info');
       break;
     }
+    case 'shootout': world.notify(p, gangwar.startShootout(world, p) ? '[dev] Shootout started nearby.' : '[dev] No gang turf near you - go toward The Yards or Southside.', 'info'); break;
     case 'die': if (ped && !ped.dead) combat.damage(world, ped, 99999, null, 'crash', 0); break;
     case 'snatch': npc.snatchEvent(world, p); world.notify(p, '[dev] A mugger is on the way to a nearby pedestrian.', 'info'); break;
     case 'samaritan': prof.samaritan += 50; world.notify(p, '[dev] +50 Samaritan', 'info'); break;

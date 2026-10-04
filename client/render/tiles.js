@@ -82,6 +82,9 @@ export class GroundCache {
     for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawRoof(g, r);
     for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
+    for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
+    for (const mn of m.mansions || []) drawMansion(g, mn, cx, cy);
+    for (const gr of m.garages || []) drawGarage(g, gr, cx, cy);
     for (const b of this.signs.get(k) || []) for (const s of b.signs) drawSign(g, s);
     for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
     for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
@@ -93,6 +96,77 @@ export class GroundCache {
     for (let cy = Math.floor((y - r) / CHUNK_PX); cy <= Math.floor((y + r) / CHUNK_PX); cy++)
       for (let cx = Math.floor((x - r) / CHUNK_PX); cx <= Math.floor((x + r) / CHUNK_PX); cx++) this.cache.delete(this.key(cx, cy));
   }
+}
+
+const inChunk = (x, y, w, h, cx, cy) => !(x + w < cx * CHUNK_PX || x > (cx + 1) * CHUNK_PX || y + h < cy * CHUNK_PX || y > (cy + 1) * CHUNK_PX);
+
+// A pitched (hip) roof seen from above: four shaded faces meeting at a ridge.
+function hipRoof(g, x, y, w, h, base, dark, light) {
+  const r = Math.min(w, h) / 2, rx0 = x + r, rx1 = x + w - r, ry = y + h / 2;
+  const face = (pts, col) => { g.fillStyle = col; g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.closePath(); g.fill(); };
+  face([[x, y], [x + w, y], [rx1, ry], [rx0, ry]], light);           // north face (lit)
+  face([[x, y + h], [x + w, y + h], [rx1, ry], [rx0, ry]], dark);     // south face
+  face([[x, y], [rx0, ry], [x, y + h]], base);                         // west
+  face([[x + w, y], [rx1, ry], [x + w, y + h]], dark);                 // east
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(x, y); g.lineTo(rx0, ry); g.lineTo(rx1, ry); g.lineTo(x + w, y); g.moveTo(x, y + h); g.lineTo(rx0, ry); g.moveTo(rx1, ry); g.lineTo(x + w, y + h); g.stroke();
+  // shingle rows
+  g.strokeStyle = 'rgba(0,0,0,.12)'; g.lineWidth = 1;
+  for (let k = 6; k < h / 2; k += 6) { g.beginPath(); g.moveTo(x + k, y + k); g.lineTo(x + w - k, y + k); g.moveTo(x + k, y + h - k); g.lineTo(x + w - k, y + h - k); g.stroke(); }
+  g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2; g.strokeRect(x, y, w, h);
+}
+
+function drawGarage(g, gr, cx, cy) {
+  const x = gr.tx * TILE, y = gr.ty * TILE, w = gr.tw * TILE, h = gr.th * TILE;
+  if (!inChunk(x - 4, y - 4, w + 8, h + 8, cx, cy)) return;
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x + 4, y + 5, w, h);
+  hipRoof(g, x, y, w, h, '#6b6e75', '#55585f', '#7d8189');
+  // door frame on the driveway side (the door itself is drawn live, it opens)
+  const dy = gr.south ? y + h - 7 : y;
+  g.fillStyle = '#d8d4cb'; g.fillRect(x + 2, dy, w - 4, 7);
+}
+
+function drawMansion(g, mn, cx, cy) {
+  const L = mn.lot;
+  const lx = L.tx * TILE, ly = L.ty * TILE, lw = L.tw * TILE, lh = L.th * TILE;
+  if (!inChunk(lx, ly, lw, lh, cx, cy)) return;
+  // pool
+  if (mn.pool) {
+    const px = mn.pool.tx * TILE, py = mn.pool.ty * TILE, pw = mn.pool.tw * TILE, ph = mn.pool.th * TILE;
+    g.fillStyle = '#e8e4da'; g.fillRect(px - 6, py - 6, pw + 12, ph + 12);
+    const wg = g.createLinearGradient(px, py, px + pw, py + ph);
+    wg.addColorStop(0, '#3fc4e8'); wg.addColorStop(1, '#1e8fc4');
+    g.fillStyle = wg; g.fillRect(px, py, pw, ph);
+    g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 1.5;
+    for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(px + 6, py + 10 + k * 26); g.quadraticCurveTo(px + pw / 2, py + 4 + k * 26, px + pw - 6, py + 10 + k * 26); g.stroke(); }
+    g.fillStyle = '#ffffff'; g.fillRect(px + pw - 10, py + 4, 6, 2); g.fillRect(px + pw - 10, py + 10, 6, 2);
+  }
+  // the house: terracotta hip roof with a portico and chimneys
+  const x = mn.tx * TILE, y = mn.ty * TILE, w = mn.tw * TILE, h = mn.th * TILE;
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x + 8, y + 10, w, h);
+  hipRoof(g, x, y, w, h, '#b5563a', '#8e3f2a', '#cf6a4a');
+  hipRoof(g, x + w / 2 - 52, y - 30, 104, 44, '#c25e40', '#99452e', '#d97455'); // portico
+  g.fillStyle = '#f2ece0'; for (const cxp of [x + w / 2 - 44, x + w / 2 - 14, x + w / 2 + 14, x + w / 2 + 44]) { g.beginPath(); g.arc(cxp, y - 2, 4, 0, 6.28); g.fill(); }
+  g.fillStyle = '#5a3a2a'; g.fillRect(x + 40, y + 30, 14, 18); g.fillRect(x + w - 54, y + 40, 14, 18);
+  g.fillStyle = '#333'; g.fillRect(x + 42, y + 32, 10, 4); g.fillRect(x + w - 52, y + 42, 10, 4);
+}
+
+// Paint-shop bay floor (baked): concrete, oil stains, yellow guide lines, a dark interior.
+function drawBayFloor(g, bay, cx, cy) {
+  const x = bay.tx * TILE, y = bay.ty * TILE, w = bay.tw * TILE, h = bay.th * TILE;
+  if (x + w < cx * CHUNK_PX || x > (cx + 1) * CHUNK_PX || y + h < cy * CHUNK_PX || y > (cy + 1) * CHUNK_PX) return;
+  g.fillStyle = '#4a4d54'; g.fillRect(x, y, w, h);
+  const back = bay.south ? 0 : 1;
+  const gr = g.createLinearGradient(0, bay.south ? y : y + h, 0, bay.south ? y + h : y);
+  gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(x, y, w, h);
+  g.fillStyle = '#ffd400'; g.fillRect(x + 6, y + 4, 3, h - 8); g.fillRect(x + w - 9, y + 4, 3, h - 8);
+  g.fillStyle = 'rgba(20,20,24,.5)';
+  g.beginPath(); g.ellipse(x + w / 2, y + h / 2, 18, 11, 0.3, 0, 6.28); g.fill();
+  g.fillStyle = '#2a2c31'; g.fillRect(x - 3, y, 3, h); g.fillRect(x + w, y, 3, h);
+  g.fillRect(x - 3, back ? y + h - 3 : y, w + 6, 3);
+  // spray nozzles on the walls
+  g.fillStyle = '#c8262b'; for (let k = 0; k < 3; k++) { g.fillRect(x - 2, y + 18 + k * 26, 4, 4); g.fillRect(x + w - 2, y + 18 + k * 26, 4, 4); }
 }
 
 // ---- smashed street furniture --------------------------------------------------------------

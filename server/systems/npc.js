@@ -11,6 +11,7 @@ import * as players from './players.js';
 import * as combat from './combat.js';
 import * as law from './law.js';
 import * as events from './events.js';
+import * as gangwar from './gangwar.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 
@@ -211,6 +212,7 @@ function fight(world, ped, now) {
 export function onAttacked(world, ped, attacker) {
   if (!ped.npc || ped.dead || !attacker || attacker === ped) return;
   const n = ped.npc;
+  if (n.role === 'cop' && attacker.npc && attacker.npc.role === 'gang') { gangwar.copAttackedByGang(world, ped, attacker); return; }
   if (n.role === 'cop' || n.role === 'medic') return;
   if (n.state === 'passed') { ped.passedOut = false; n.state = 'flee'; n.fx = attacker.x; n.fy = attacker.y; n.until = world.time + 6; return; }
   if (n.role === 'mugger') { onMuggerDowned(world, ped); flee(world, ped, attacker.x, attacker.y, 8); return; }
@@ -241,6 +243,7 @@ export function onGunfire(world, x, y, shooter) {
     if (!e.npc || e.dead || e === shooter) continue;
     const n = e.npc;
     if (n.role === 'gang') {
+      if (gangwar.isCopPed(shooter) && n.state !== 'fight') { gangwar.provoke(world, shooter, e.x, e.y, 'shots fired near them'); continue; }
       if (isTurf(e.x, e.y) && shooter && shooter.player && !aligned(shooter.player)) startFight(world, e, shooter, 25);
       continue;
     }

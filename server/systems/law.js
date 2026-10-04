@@ -261,11 +261,11 @@ export function update(world, dt) {
     if (!ped || ped.dead) continue;
     if (p.wanted > 0) {
       let seen = false;
-      for (const e of world.query(ped.x, ped.y, 420, K.PED)) {
+      if (!ped.hidden) for (const e of world.query(ped.x, ped.y, 420, K.PED)) {
         if (!isCop(e) || e.dead || e === ped) continue;
         if (world.map.los(e.x, e.y, ped.x, ped.y)) { seen = true; break; }
       }
-      if (!seen && world.tick % 10 === 0) {
+      if (!seen && !ped.hidden && world.tick % 10 === 0) {
         for (const c of world.map.cameras) {
           if (Math.hypot(c.x - ped.x, c.y - ped.y) < c.r * (world.clock.isNight ? 0.75 : 1) && world.map.los(c.x, c.y, ped.x, ped.y)) {
             seen = true; world.emit(c.x, c.y, { e: 'camera', id: c.id });

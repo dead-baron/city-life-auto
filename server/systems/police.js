@@ -117,7 +117,7 @@ function runUnit(world, v, dt) {
 
   // on foot
   for (const c of crew) {
-    if (c.vehId) continue;
+    if (c.vehId || c.npc.war) continue; // busy in a gang fight (gangwar.js drives them)
     const d = Math.hypot(t.x - c.x, t.y - c.y);
     let inp;
     if (t.vehId && Math.hypot(t.x - v.x, t.y - v.y) > 260) {
@@ -163,7 +163,7 @@ function standDown(world, v, crew, dt) {
   const now = world.time;
   v.sirenOn = false;
   for (const c of crew) {
-    if (c.vehId) continue;
+    if (c.vehId || c.npc.war) continue;
     const inp = seek(c, v.x, v.y, false);
     if (now >= c.downUntil && now >= c.stunUntil) pedStep(c, inp, dt, world.map, players.pedMods(world, c));
     if (Math.hypot(v.x - c.x, v.y - c.y) < v.def.L / 2 + 26 || PED_BLOCK[world.map.tileAtPx(c.x, c.y)]) {

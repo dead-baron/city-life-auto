@@ -14,12 +14,12 @@ import * as combat from './combat.js';
 import * as homes from './homes.js';
 import * as cruiser from './cruiser.js';
 
-import { HOSPITAL_FEE } from '../../shared/rules.js';
+import { HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
   switch (poi.kind) {
-    case 'delivery': case 'evidence': case 'reception': case 'gang': return null;
+    case 'delivery': case 'evidence': case 'reception': case 'gang': case 'paint': return null;
     case 'home': {
       const h = world.map.homes[poi.home];
       const owner = world.homeOwner.get(h.id);
@@ -35,6 +35,13 @@ export function poiLabel(world, p, poi) {
     case 'warehouse': return 'Portside Logistics (courier jobs)';
     default: return `Enter ${poi.label}`;
   }
+}
+
+// Pay off your felony record (courthouse or Police HQ) - a clean record lets you join the force.
+function recordOption(p, opts) {
+  const n = p.profile.felonies || 0;
+  if (n <= 0) return;
+  opts.push({ id: 'payrecord', label: `Pay felony fines - clear your record (${n} felon${n === 1 ? 'y' : 'ies'})`, price: n * FELONY_FINE, dis: p.wanted > 0, note: p.wanted > 0 ? 'not while wanted' : '' });
 }
 
 function pay(p, amount) {
@@ -56,6 +63,7 @@ function weaponOffer(o, prof) {
 
 export function buildMenu(world, p, poi) {
   const prof = p.profile;
+  const ped = () => p.ped;
   const kind = poi.kind;
   const opts = [];
   let title = poi.label, sub = '';
@@ -67,6 +75,10 @@ export function buildMenu(world, p, poi) {
       if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));
       else if (o.kind === 'ammo') opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? 'need weapon' : `have ${prof.weapons[o.id]}` });
       else if (o.kind === 'item') opts.push({ id: `i:${o.id}:${o.price}:${o.qty}`, label: `${ITEMS[o.id].name}${o.qty > 1 ? ' x' + o.qty : ''}`, price: o.price, note: prof.inventory[o.id] ? `have ${prof.inventory[o.id]}` : '' });
+    }
+    if (kind === 'tackle') {
+      sub = 'Bait changes what bites: worms for bass, shrimp for salmon, squid for tuna, a glow lure for catfish at night.';
+      for (const id of ['worms', 'shrimp', 'squid', 'glowlure', 'lure']) if ((prof.inventory[id] || 0) > 0) opts.push({ id: `bait:${id}`, label: `Fish with ${ITEMS[id].name}`, note: prof.bait === id ? 'selected' : `have ${prof.inventory[id]}`, dis: prof.bait === id });
     }
     for (const id of shop.sells || []) {
       const n = prof.inventory[id] || 0;
@@ -93,11 +105,13 @@ export function buildMenu(world, p, poi) {
       break;
     case 'police':
       sub = p.badge ? 'On duty. Arrest wanted suspects, seize contraband, keep it clean.' : `Badge requirements: ${law.ENFORCER_MIN_SAMARITAN} Samaritan points, zero felonies. You: ${prof.samaritan} pts, ${prof.felonies} felonies.`;
+      recordOption(p, opts);
       if (!p.badge) opts.push({ id: 'duty:on', label: 'Pick up badge, uniform & keys' });
       else { opts.push({ id: 'armory', label: 'Armory: restock service pistol ammo', note: 'free' }); opts.push({ id: 'cruiser', label: 'Requisition a Police Interceptor' }); opts.push({ id: 'duty:off', label: 'Go off duty' }); }
       break;
     case 'courthouse': {
       sub = p.hunter ? 'Licensed Bounty Hunter: targets appear as radar pings.' : `Register as a Bounty Hunter (${law.HUNTER_MIN_SAMARITAN}+ Samaritan, not wanted).`;
+      recordOption(p, opts);
       opts.push(p.hunter ? { id: 'hunter:off', label: 'Hand in hunter license' } : { id: 'hunter:on', label: 'Register as Bounty Hunter' });
       for (const [pid, t] of p.robbedBy) {
         const q = world.players.get(pid);
@@ -135,16 +149,30 @@ export function buildMenu(world, p, poi) {
     case 'home': {
       const h = world.map.homes[poi.home];
       const mine = world.homeOwner.get(h.id) === p.pid;
-      title = h.name;
+      const inside = !!(ped() && ped().hidden && ped().inside === h.id);
+      title = inside ? `${h.name} - inside` : h.name;
       if (!mine) {
-        sub = `A ${h.kind} with a ${h.slots}-car garage. Owning it makes it a respawn point (no more waking up at the hospital) and stores vehicles you park out front.`;
-        opts.push({ id: 'hbuy', label: `Buy this ${h.kind}`, price: h.price });
+        sub = `A ${KIND_NAME[h.kind] || h.kind} with a ${h.slots}-car garage. Own as many homes as you like: each one is a respawn point, a safe place to hide and stash things, and adds garage space you can reach from any of your homes.`;
+        opts.push({ id: 'hbuy', label: `Buy this ${KIND_NAME[h.kind] || h.kind}`, price: h.price });
       } else {
-        sub = `Garage: ${prof.vehicles.length}/${homes.garageCap(world, prof)} vehicles. Drive any car up to the driveway and press E to park it here.`;
+        const st = prof.stash || {};
+        const stashed = Object.entries(st.items || {}).filter(([, n]) => n > 0).length + Object.keys(st.weapons || {}).length;
+        sub = inside
+          ? `You're hidden inside - nobody can see you or hurt you. Wallet $${prof.cash}, bank $${prof.bank}. Stash: ${stashed} kind${stashed === 1 ? '' : 's'} of things.`
+          : `Garage: ${prof.vehicles.length}/${homes.garageCap(world, prof)} vehicles (shared by all your homes)${h.garage ? '. Drive up to the garage door to park' : ''}. Go inside to hide, stash things and rest.`;
+        if (inside) opts.push({ id: 'hleave', label: 'Step outside' });
+        else opts.push({ id: 'hhide', label: 'Go inside (hide)', note: `${HIDE_TIME_S}s`, dis: p.wanted > 0 && world.time - (p.seenAt || -99) < 1.5 });
         opts.push({ id: 'hrest', label: 'Rest (full health, stop bleeding)' });
+        if (prof.cash > 0) opts.push({ id: 'dep:all', label: `Deposit cash ($${prof.cash}) to the bank` });
+        if (inside) {
+          for (const [id, n] of Object.entries(prof.inventory)) if (n > 0 && ITEMS[id]) opts.push({ id: `hst:${id}`, label: `Stash ${ITEMS[id].name} x${n}` });
+          for (const id of Object.keys(prof.weapons)) if (!NO_STASH.has(id) && WEAPONS[id]) opts.push({ id: `hsw:${id}`, label: `Stash ${WEAPONS[id].name}`, note: WEAPONS[id].mag ? `${prof.weapons[id]} rds` : '' });
+          for (const [id, n] of Object.entries(st.items || {})) if (n > 0 && ITEMS[id]) opts.push({ id: `htk:${id}`, label: `Take ${ITEMS[id].name} x${n}`, note: 'stash' });
+          for (const id of Object.keys(st.weapons || {})) if (WEAPONS[id]) opts.push({ id: `htw:${id}`, label: `Take ${WEAPONS[id].name}`, note: 'stash' });
+        }
         opts.push({ id: 'hspawn', label: prof.spawnHome === h.id ? 'Respawn point: HERE' : 'Make this my respawn point', dis: prof.spawnHome === h.id });
-        prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: `Take out ${d.name}`, note: 'garage' }); });
-        opts.push({ id: 'hsell', label: `Sell (+$${Math.round(h.price * 0.6).toLocaleString()} to bank)` });
+        if (h.garage) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: `Take out ${d.name}`, note: 'garage' }); });
+        if (!inside) opts.push({ id: 'hsell', label: `Sell (+$${Math.round(h.price * 0.6).toLocaleString()} to bank)` });
       }
       break;
     }
@@ -170,6 +198,9 @@ export function buildMenu(world, p, poi) {
   if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
   return { t: 'menu', poi: poi.id, title, sub, opts, cash: prof.cash, bank: prof.bank };
 }
+
+const KIND_NAME = { farmhouse: 'farmhouse', cottage: 'coastal cottage', beach: 'beach house', mansion: 'mansion', house: 'house', apartment: 'apartment' };
+const NO_STASH = new Set(['fists', 'taser', 'baton', 'service']);
 
 function ownedVehicleOpts(prof, opts, boats) {
   prof.vehicles.forEach((ov, i) => {
@@ -206,7 +237,7 @@ export function handleMenu(world, p, poiId, optId) {
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
   p.meDirty = true;
-  if (optId !== 'close' && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
+  if (optId !== 'close' && optId !== 'hhide' && optId !== 'hleave' && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
 function execute(world, p, poi, opt) {
@@ -298,6 +329,18 @@ function execute(world, p, poi, opt) {
       }
       return null;
     }
+    case 'payrecord': {
+      const n = prof.felonies || 0;
+      if (n <= 0) return 'Your record is already clean.';
+      if (p.wanted > 0) return 'Turn yourself in first - you are wanted right now.';
+      if (!pay(p, n * FELONY_FINE)) return `You need $${n * FELONY_FINE} (cash or bank).`;
+      prof.felonies = 0; prof.peakWanted = 0;
+      world.notify(p, `Fines paid: $${n * FELONY_FINE}. Your record is clean.`, 'good');
+      p.meDirty = true;
+      store.touch();
+      return null;
+    }
+    case 'bait': { if (!ITEMS[parts[1]] || !ITEMS[parts[1]].bait) return 'Not bait.'; prof.bait = parts[1]; world.notify(p, `You'll fish with ${ITEMS[parts[1]].name} while you have it.`, 'info'); return null; }
     case 'armory': return law.restockService(world, p);
     case 'cruiser': {
       if (!p.badge) return 'On-duty officers only.';
@@ -363,9 +406,49 @@ function execute(world, p, poi, opt) {
     case 'hsell': return homes.sell(world, p, world.map.homes[poi.home]);
     case 'hspawn': { prof.spawnHome = poi.home; store.touch(); world.notify(p, 'You will wake up here after you die.', 'good'); return null; }
     case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = 100; world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
+    case 'hhide': return homes.beginEnter(world, p, world.map.homes[poi.home]);
+    case 'hleave': homes.leaveHome(world, p); return null;
+    case 'hst': case 'htk': {
+      const id = parts[1];
+      const st = (prof.stash ||= { items: {}, weapons: {} }); st.items ||= {};
+      const [from, to] = parts[0] === 'hst' ? [prof.inventory, st.items] : [st.items, prof.inventory];
+      const n = from[id] || 0;
+      if (n <= 0) return 'Nothing there.';
+      from[id] = 0; to[id] = (to[id] || 0) + n;
+      if (parts[0] === 'hst' && prof.bait === id) prof.bait = null;
+      store.touch();
+      world.notify(p, parts[0] === 'hst' ? `Stashed ${n}x ${ITEMS[id].name}.` : `Took ${n}x ${ITEMS[id].name}.`, 'good');
+      return null;
+    }
+    case 'hsw': {
+      const id = parts[1];
+      if (prof.weapons[id] === undefined || NO_STASH.has(id)) return 'You do not have that.';
+      const st = (prof.stash ||= { items: {}, weapons: {} }); st.weapons ||= {};
+      st.weapons[id] = (st.weapons[id] || 0) + (prof.weapons[id] || 0) + (ped.mag[id] || 0);
+      delete prof.weapons[id]; delete ped.mag[id];
+      if (ped.weapon === id) ped.weapon = 'fists';
+      store.touch();
+      world.notify(p, `Stashed the ${WEAPONS[id].name}.`, 'good');
+      return null;
+    }
+    case 'htw': {
+      const id = parts[1];
+      const st = prof.stash || {};
+      if (!st.weapons || st.weapons[id] === undefined) return 'Not in your stash.';
+      const rounds = st.weapons[id];
+      delete st.weapons[id];
+      const w = WEAPONS[id];
+      if (w.mag) { const inMag = Math.min(w.mag, rounds); ped.mag[id] = Math.max(ped.mag[id] || 0, inMag); prof.weapons[id] = (prof.weapons[id] || 0) + rounds - inMag; }
+      else prof.weapons[id] = prof.weapons[id] || 0;
+      store.touch();
+      world.notify(p, `Took the ${w.name}.`, 'good');
+      return null;
+    }
     case 'hcar': {
       const h = world.map.homes[poi.home];
-      const e = homes.spawnOwnedAt(world, p, Number(parts[1]), h.garage);
+      if (!h.garage) return 'This place has no garage.';
+      if (ped.hidden) homes.leaveHome(world, p);
+      const e = homes.spawnOwnedAt(world, p, Number(parts[1]), { ...h.garage, home: h.id });
       if (!e) world.notify(p, 'Your ride is in the driveway.', 'good');
       return e;
     }
@@ -453,3 +536,5 @@ export function update(world) {
     }
   }
 }
+
+homes.setMenuBuilder(buildMenu);

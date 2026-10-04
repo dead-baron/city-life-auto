@@ -11,6 +11,8 @@ import * as traffic from './systems/traffic.js';
 import * as police from './systems/police.js';
 import * as cruiser from './systems/cruiser.js';
 import * as events from './systems/events.js';
+import * as gangwar from './systems/gangwar.js';
+import * as paint from './systems/paint.js';
 import * as phone from './systems/phone.js';
 import * as ems from './systems/ems.js';
 import * as economy from './systems/economy.js';
@@ -24,12 +26,15 @@ import * as net from './net.js';
 const SYSTEMS = [
   ['environment', env.update],      // chrono loop + rain
   ['inputs', players.processInputs],// player-controlled peds + vehicle inputs
+  ['homes', homes.update],          // going inside your home (hide), step-out protection
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['police', police.update],        // NPC police dispatch / pursuit
-  ['cruiser', cruiser.update],
-  ['events', events.update],
-  ['phone', phone.update],          // phone job board + police patrol calls        // world events (snatch-and-grabs, drops) for blips + arrows      // player officers' personal cruisers: delivery, loss, tow
+  ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
+  ['gangwar', gangwar.update],      // gangs vs police: provocation + shootouts near turf
+  ['paint', paint.update],          // Spray & Go paint shop bays
+  ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
+  ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
@@ -83,6 +88,11 @@ export class World {
     e.removed = true;
   }
   place(e) {
+    if (e.hidden) { // inside a home: out of the spatial grid, so nobody can see, hit or query it
+      if (e.cx >= 0) { const old = this.chunks.get(e.cy * CHUNKS_X + e.cx); if (old) old.delete(e); }
+      e.cx = -1; e.cy = -1;
+      return;
+    }
     let cx = Math.floor(e.x / CHUNK_PX), cy = Math.floor(e.y / CHUNK_PX);
     if (cx < 0) cx = 0; else if (cx >= CHUNKS_X) cx = CHUNKS_X - 1;
     if (cy < 0) cy = 0; else if (cy >= CHUNKS_Y) cy = CHUNKS_Y - 1;

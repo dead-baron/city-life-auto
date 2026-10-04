@@ -423,9 +423,12 @@ export function generateCity(seed = 1337) {
   // --- waterfronts, Refuge Island, street furniture, traffic graph -----------------------------
   buildWaterfronts(m, rand);
   buildRefuge(m, rand);
+  buildEstates(m, rand);
   buildStreetProps(m);
   buildBanking(m);
   buildGangHQs(m);
+  buildTackleShops(m);
+  buildPaintShops(m);
   aimLamps(m);
   buildLaneGraph(m);
   buildCameras(m, rand);
@@ -677,6 +680,188 @@ function buildBanking(m) {
   });
 }
 
+// ---- estates: homes outside the city grid -----------------------------------------------------
+// Farmhouses and a mansion out on Refuge Island, cottages on its north shore, beach houses on
+// Sunset Beach. Each has a detached garage (a door that opens for its owner) and a driveway.
+export const ESTATE_TYPES = {
+  farmhouse: { name: 'Farmhouse', price: 18000, slots: 3 },
+  cottage: { name: 'Bayview Cottage', price: 30000, slots: 2 },
+  beach: { name: 'Beach House', price: 45000, slots: 3 },
+  mansion: { name: 'Hilltop Mansion', price: 150000, slots: 6 },
+};
+const HOUSE_KEYS = ['house1', 'house2', 'house3'];
+
+// [type, house prefab, x, y, door faces south?]
+const ESTATE_PLAN = [
+  ['farmhouse', 'house2', 250, 366, false], ['farmhouse', 'house1', 320, 366, false], ['farmhouse', 'house3', 262, 346, true],
+  ['cottage', 'house1', 382, 346, true], ['cottage', 'house3', 240, 346, true],
+  ['beach', 'house2', 64, 366, false], ['beach', 'house1', 128, 366, false], ['beach', 'house3', 186, 366, false],
+];
+const MANSION_AT = [362, 366], MANSION_SIZE = [26, 24];
+// Estate lots (house + garage), so earlier passes don't dress them with beach umbrellas and palms.
+function inEstateLot(tx, ty) {
+  for (const [, key, x, y] of ESTATE_PLAN) { const pf = PREFABS[key]; if (tx >= x - 1 && tx <= x + pf.tw + 3 && ty >= y - 1 && ty <= y + pf.th) return true; }
+  return tx >= MANSION_AT[0] - 1 && tx <= MANSION_AT[0] + MANSION_SIZE[0] && ty >= MANSION_AT[1] - 1 && ty <= MANSION_AT[1] + MANSION_SIZE[1];
+}
+
+function buildEstates(m, rand) {
+  m.garages = [];
+  m.mansions = [];
+  for (const [type, key, x, y, south] of ESTATE_PLAN) estateHouse(m, rand, type, key, x, y, south);
+  mansion(m, rand, MANSION_AT[0], MANSION_AT[1]);
+}
+
+const nearestDist = (m, x, y) => m.dist[Math.min(MAP_H - 1, y) * MAP_W + Math.min(MAP_W - 1, x)];
+
+// carve a driveway from (x0..x0+w-1, y) toward the road, straight up or down
+function driveway(m, x0, w, y, dir) {
+  for (let k = 0; k < 24; k++) {
+    const yy = y + k * dir;
+    if ([...Array(w).keys()].some((i) => { const t = m.tileAt(x0 + i, yy); return t === T.ROAD || t === T.BRIDGE; })) return true;
+    for (let i = 0; i < w; i++) { const t = m.tileAt(x0 + i, yy); if (t !== T.WATER && t !== T.DEEP && t !== T.BUILDING) m.set(x0 + i, yy, T.LOT); }
+  }
+  return false;
+}
+
+function addGarage(m, home, tx, ty, south, w = 3) {
+  for (let y = ty; y < ty + 3; y++) for (let x = tx; x < tx + w; x++) m.set(x, y, T.BUILDING);
+  const g = { tx, ty, tw: w, th: 3, south, home: home.id };
+  m.garages.push(g);
+  // pull up in front of the door
+  home.garage = { x: (tx + w / 2) * TILE, y: (south ? ty + 4.2 : ty - 1.2) * TILE, a: south ? Math.PI / 2 : -Math.PI / 2 };
+  home.garageDoor = { x: (tx + w / 2) * TILE, y: (south ? ty + 3 : ty) * TILE, w: w * TILE };
+  driveway(m, tx, w, south ? ty + 3 : ty - 1, south ? 1 : -1);
+}
+
+function estateHouse(m, rand, type, key, x, y, south) {
+  const pf = PREFABS[key];
+  const d = nearestDist(m, x + 3, y + 7);
+  const before = m.homes.length;
+  placePrefab(m, { d, y, h: pf.th, face: south ? 'S' : 'N' }, key, x, null, rand);
+  const home = m.homes[before];
+  if (!home) return;
+  const T_ = ESTATE_TYPES[type];
+  const n = m.homes.filter((h) => h.kind === type).length + 1;
+  home.kind = type; home.name = `${T_.name} #${n}`; home.price = T_.price; home.slots = T_.slots;
+  const poi = m.pois.find((q) => q.kind === 'home' && q.home === home.id);
+  if (poi) poi.label = home.name;
+  // the house's own walk to its door connects to the road too
+  driveway(m, Math.floor(home.x / TILE), 1, Math.floor(home.y / TILE) + (south ? 1 : -1), south ? 1 : -1);
+  addGarage(m, home, x + pf.tw, south ? y + pf.th - 3 : y, south);
+  // yard dressing
+  const yard = type === 'beach' ? ['palm_a', 'palm_b', 'umbrella_r', 'umbrella_y'] : type === 'farmhouse' ? ['tree_a', 'pallet', 'drum', 'wheelbarrow'] : ['tree_b', 'shrub_a', 'flowers_a', 'bush_c'];
+  for (let k = 0; k < 4; k++) {
+    // somewhere open in the yard - never on the roof, the path or the driveway
+    for (let tries = 0; tries < 16; tries++) {
+      const px = (x + 0.8 + rand() * (pf.tw - 1.6)) * TILE, py = (y + 0.8 + rand() * (pf.th - 1.6)) * TILE;
+      const t = m.tileAtPx(px, py);
+      if (t !== T.GRASS && t !== T.SAND && t !== T.DIRT) continue;
+      if ([[-14, 0], [14, 0], [0, -14], [0, 14]].some(([dx, dy]) => m.tileAtPx(px + dx, py + dy) === T.BUILDING)) continue;
+      addProp(m, yard[k], px, py, yard[k].startsWith('tree') || yard[k].startsWith('palm') ? 12 : 0);
+      break;
+    }
+  }
+}
+
+// A mansion: big hip-roofed house on a walled lawn with a fountain, pool, hedges and a
+// three-car garage at the end of a long driveway.
+function mansion(m, rand, x, y) {
+  const [W, H] = MANSION_SIZE;
+  const d = nearestDist(m, x + 8, y + 8);
+  m.fill(x, y, W, H, T.GRASS);
+  const bx = x + 7, by = y + 9, bw = 12, bh = 8; // the house
+  for (let yy = by; yy < by + bh; yy++) for (let xx = bx; xx < bx + bw; xx++) m.set(xx, yy, T.BUILDING);
+  const bid = m.buildings.length;
+  const b = { id: bid, prefab: -1, roof: -1, tx: bx, ty: by, tw: bw, th: bh, kind: 'mansion', name: 'Mansion', business: null, signs: [] };
+  m.buildings.push(b);
+  for (let yy = by; yy < by + bh; yy++) for (let xx = bx; xx < bx + bw; xx++) m.bld[yy * MAP_W + xx] = bid;
+  m.mansions.push({ tx: bx, ty: by, tw: bw, th: bh, lot: { tx: x, ty: y, tw: W, th: H } });
+  // front terrace + walk to the gate (door faces north, toward the island road)
+  m.fill(bx + 4, y + 1, 4, by - y - 1, T.PLAZA);
+  const id = m.homes.length;
+  const T_ = ESTATE_TYPES.mansion;
+  const door = { x: (bx + 6) * TILE, y: (by - 1.5) * TILE }; // on the terrace, in front of the portico
+  const home = { id, kind: 'mansion', name: `${T_.name}`, price: T_.price, slots: T_.slots, x: door.x, y: door.y, garage: null, b: bid };
+  m.homes.push(home);
+  m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: door.x, y: door.y, r: 44, b: bid });
+  b.home = id;
+  driveway(m, bx + 5, 2, y - 1, -1);
+  // three-car garage to the side, its own driveway out to the road
+  addGarage(m, home, x + W - 6, y + 2, false, 5);
+  // grounds: fountain, pool deck, hedges around the lot, trees, lamps
+  addProp(m, 'fountain', (bx + 6) * TILE, (y + 5) * TILE, 36);
+  m.fill(x + 2, by + 1, 4, 6, T.PLAZA);
+  m.mansions[m.mansions.length - 1].pool = { tx: x + 2.5, ty: by + 1.5, tw: 3, th: 5 };
+  for (let k = 0; k < W; k += 3) { addProp(m, 'shrub_a', (x + k + 0.5) * TILE, (y + H - 0.6) * TILE, 0); }
+  for (let k = 3; k < H - 2; k += 3) { addProp(m, 'shrub_b', (x + 0.6) * TILE, (y + k) * TILE, 0); addProp(m, 'shrub_b', (x + W - 0.6) * TILE, (y + k) * TILE, 0); }
+  for (const [tx, ty] of [[x + 3, y + 3], [x + 20, y + 20], [x + 3, y + 21], [x + 22, y + 13], [x + 14, y + 20], [x + 9, y + 21]]) addProp(m, rand() < 0.5 ? 'tree_a' : 'tree_b', tx * TILE, ty * TILE, 12);
+  for (const fy of [y + 2, y + 5]) { addProp(m, 'lamp', (bx + 3.6) * TILE, fy * TILE); addProp(m, 'lamp', (bx + 8.4) * TILE, fy * TILE); }
+  addProp(m, 'flowers_big', (bx + 2) * TILE, (by - 1.5) * TILE, 0);
+  addProp(m, 'flowers_big', (bx + 10) * TILE, (by - 1.5) * TILE, 0);
+  void d;
+}
+
+// Paint shops ("Spray & Go"): a storefront gets a 3x3-tile drive-in bay carved into its front.
+// Drive in, and if nobody is watching the shutter comes down and the car gets a new colour.
+function buildPaintShops(m) {
+  m.bays = [];
+  const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
+  const road = (tx, ty) => { const t = m.tileAt(tx, ty); return t === T.ROAD || t === T.LOT || t === T.SIDEWALK || t === T.PLAZA; };
+  const cands = m.pois.filter((p) => {
+    if (p.kind !== 'delivery' || p.b === undefined) return false;
+    const b = m.buildings[p.b];
+    return b && b.tw >= 5 && b.th >= 5;
+  });
+  cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 31) - hash2(b.x | 0, b.y | 0, 31));
+  const picked = [];
+  const isl = (p) => Object.keys(ISLANDS).find((k) => { const [x0, y0, x1, y1] = ISLANDS[k].box; return p.x / TILE >= x0 && p.x / TILE < x1 && p.y / TILE >= y0 && p.y / TILE < y1; });
+  // one per island first, then anywhere
+  for (const pass of [0, 1]) for (const c of cands) {
+    if (picked.length >= 3) break;
+    if (picked.includes(c) || picked.some((q) => distOf(q) === distOf(c) || Math.hypot(q.x - c.x, q.y - c.y) < 2500)) continue;
+    if (pass === 0 && picked.some((q) => isl(q) === isl(c))) continue;
+    const b = m.buildings[c.b];
+    const south = c.y > (b.ty + b.th / 2) * TILE; // door on the south edge
+    const dtx = Math.floor(c.x / TILE);
+    const tx0 = Math.max(b.tx, Math.min(b.tx + b.tw - 3, dtx - 1));
+    const ty0 = south ? b.ty + b.th - 3 : b.ty;
+    // the tiles in front of the bay must be drivable
+    const fy = south ? b.ty + b.th : b.ty - 1;
+    if (![0, 1, 2].every((k) => road(tx0 + k, fy))) continue;
+    picked.push(c);
+    for (let y = ty0; y < ty0 + 3; y++) for (let x = tx0; x < tx0 + 3; x++) m.set(x, y, T.LOT);
+    const old = c.label;
+    c.kind = 'paint'; c.label = `Spray & Go - ${DISTRICTS[distOf(c)].name}`;
+    c.x = (tx0 + 1.5) * TILE; c.y = south ? (ty0 + 3.6) * TILE : (ty0 - 0.6) * TILE;
+    if (b) for (const s of b.signs) if (s.text === old) s.text = 'Spray & Go';
+    m.bays.push({ poi: c.id, tx: tx0, ty: ty0, tw: 3, th: 3, south });
+  }
+}
+
+// Bait & tackle shops: storefronts close to the water, in different districts, spread apart.
+function buildTackleShops(m) {
+  const nearWater = (p) => {
+    const cx = Math.floor(p.x / TILE), cy = Math.floor(p.y / TILE);
+    for (let dy = -18; dy <= 18; dy += 2) for (let dx = -18; dx <= 18; dx += 2) { const t = m.tileAt(cx + dx, cy + dy); if (t === T.WATER || t === T.DEEP) return true; }
+    return false;
+  };
+  const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
+  const cands = m.pois.filter((p) => p.kind === 'delivery' && p.b !== undefined && nearWater(p) && !DISTRICTS[distOf(p)].turf && !/warehouse|factory/i.test(p.label));
+  cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 23) - hash2(b.x | 0, b.y | 0, 23));
+  const picked = [];
+  for (const c of cands) {
+    if (picked.length >= 3) break;
+    if (picked.some((q) => distOf(q) === distOf(c) || Math.hypot(q.x - c.x, q.y - c.y) < 2200)) continue;
+    picked.push(c);
+  }
+  for (const c of picked) {
+    const old = c.label;
+    c.kind = 'tackle'; c.label = `Hook & Line Bait - ${DISTRICTS[distOf(c)].name}`;
+    const b = m.buildings[c.b];
+    if (b) for (const s of b.signs) if (s.text === old) s.text = 'Bait & Tackle';
+  }
+}
+
 // One syndicate headquarters per gang-turf district: the storefront nearest the district's heart.
 function buildGangHQs(m) {
   DISTRICTS.forEach((d, di) => {
@@ -837,7 +1022,7 @@ function buildWaterfronts(m, rand) {
       if (tx >= x0 && tx < x1 && ty >= y0 && ty < y1) continue;
       let nearRoad = false;
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (isRoad(m.tileAt(tx + dx, ty + dy))) nearRoad = true;
-      if (nearRoad) continue;
+      if (nearRoad || inEstateLot(tx, ty)) continue;
       const h = hash2(tx, ty, 91);
       const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
       if (key === 'I') { if (h < 0.22) addProp(m, ['pallet', 'drum', 'spool', 'pallet_b', 'dump_b', 'pipes'][Math.floor(h * 27) % 6], x, y, 10); }

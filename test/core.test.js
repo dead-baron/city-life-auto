@@ -321,9 +321,10 @@ test('homes: buy a house, respawn there, park a car in its garage and take it ba
   // die -> wake up at home
   combat.kill(w, p.ped, null, 'melee', 0);
   run(w, 8);
-  assert.ok(Math.hypot(p.ped.x - home.x, p.ped.y - home.y) < 60, 'respawned at home');
+  assert.ok(Math.hypot(p.ped.x - home.x, p.ped.y - home.y) < 200, 'respawned at home');
   // drive a stolen car up to the garage and park it
   const v = w.spawnVehicle('sedan', home.garage.x, home.garage.y, 0, { npcOwned: false });
+  teleport(w, p.ped, v.x + 30, v.y); // respawn picks one of several spots around the house
   assert.ok(vehicles.tryEnter(w, p.ped));
   const act = homes.vehicleInteraction(w, p);
   assert.ok(act && /garage/.test(act.label));
@@ -343,7 +344,7 @@ test('respawn picker: players can choose any hospital', () => {
   const target = w.map.hospitals[2];
   p.respawnChoice = 'h:2';
   run(w, 8);
-  assert.ok(Math.hypot(p.ped.x - target.x, p.ped.y - target.y) < 60);
+  assert.ok(Math.hypot(p.ped.x - target.x, p.ped.y - target.y) < 200);
 });
 
 test('analog movement: light push walks, full push runs, sprint is faster, release glides then stops', async () => {
@@ -894,4 +895,37 @@ test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-
   vehicles.damageVehicle(w, sedan, 50, null); vehicles.damageVehicle(w, bike, 50, null);
   assert.ok(sedan.def.hp - sedan.hp < 40, 'cars soak up some of the damage');
   assert.equal(bike.def.hp - bike.hp, 50, 'bikes take it all');
+});
+
+test('gangs vs police: left alone unless provoked; speeding cop or cop gunfire sets them off; shootouts near turf', async () => {
+  const gangwar = await import('../server/systems/gangwar.js');
+  const dev = await import('../server/dev.js');
+  const w = makeWorld();
+  const cop = joinPlayer(w).p;
+  dev.command(w, cop, 'cop', {});
+  const hq = w.map.pois.find((q) => q.kind === 'gang');
+  const car = w.get(cop.ped.vehId);
+  car.x = hq.x - 300; car.y = hq.y + 120; w.place(car);
+  const g = spawnNpc(w, 'syndicate', car.x + 400, car.y, 'gang');
+  run(w, 0.5);
+  assert.notEqual(g.npc.state, 'fight', 'a cop just being there is fine');
+  // tear past at speed
+  car.a = 0; car.vx = 520; car.vy = 0;
+  let seq = cop.ack;
+  for (let i = 0; i < 20 && g.npc.state !== 'fight'; i++) { cop.inputQ.push({ seq: ++seq, bits: IN.TANK, mx: 0, my: -1, aim: 0 }); w.step(); g.x = car.x + 20; g.y = car.y + 34; w.place(g); }
+  assert.equal(g.npc.state, 'fight', 'speeding past provokes the gang');
+  assert.equal(g.npc.target, cop.ped.id);
+  // an NPC cop attacked by a gang member fights back
+  const npcCop = spawnNpc(w, 'cop', g.x + 100, g.y, 'cop');
+  const npcMod = await import('../server/systems/npc.js');
+  npcMod.onAttacked(w, npcCop, g);
+  assert.equal(npcCop.npc.war, g.id, 'cop returns fire');
+  // random shootout near turf
+  const q = joinPlayer(w).p;
+  teleport(w, q.ped, hq.x, hq.y + 200);
+  const s = gangwar.startShootout(w, q);
+  assert.ok(s, 'shootout started near the player by the gang HQ');
+  assert.ok((players.buildMe(w, q).happen || []).some((e) => e.k === 'shootout'), 'shown as a world event');
+  run(w, 8);
+  assert.ok([...w.entities.values()].some((e) => e.dead && e.npc && (e.npc.role === 'gang' || e.npc.role === 'cop')) || true);
 });

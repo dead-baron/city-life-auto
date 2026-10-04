@@ -9,6 +9,7 @@ import * as npc from './npc.js';
 import * as events from './events.js';
 
 const rng = mulberry32(5150);
+const BAIT_ORDER = ['squid', 'glowlure', 'shrimp', 'lure', 'worms'];
 
 export function init(world) {
   world.nextDropAt = world.time + 90;
@@ -219,18 +220,21 @@ export function reelIn(world, p) {
   const prof = p.profile;
   const w = [...FISH_TABLE[f.kind]];
   if (world.clock.isNight) w[1] = 35; // catfish spike at night
-  const lure = (prof.inventory.lure || 0) > 0;
-  if (lure) { w[2] *= 1.6; w[3] *= 1.8; prof.inventory.lure--; }
+  // bait: your chosen one if you have it, otherwise the best you're carrying
+  const ids = ['bass', 'catfish', 'salmon', 'tuna'];
+  const night = world.clock.isNight;
+  const usable = (id) => (prof.inventory[id] || 0) > 0 && ITEMS[id] && ITEMS[id].bait && (!ITEMS[id].night || night);
+  const bait = usable(prof.bait) ? prof.bait : BAIT_ORDER.find(usable) || null;
+  if (bait) { for (const [fish, m] of Object.entries(ITEMS[bait].bait)) w[ids.indexOf(fish)] *= m; prof.inventory[bait]--; }
   const total = w.reduce((a, b) => a + b, 0);
   let r = rng() * total;
-  const ids = ['bass', 'catfish', 'salmon', 'tuna'];
   let caught = ids[0];
   for (let i = 0; i < 4; i++) { r -= w[i]; if (r <= 0) { caught = ids[i]; break; } }
   prof.inventory[caught] = (prof.inventory[caught] || 0) + 1;
   prof.stats.fish++;
   ped.fishing = null;
   world.emit(f.x, f.y, { e: 'catch', x: f.x, y: f.y, fish: caught });
-  world.notify(p, `Caught a ${ITEMS[caught].name}!${lure ? ' (lure used)' : ''} Sell at the Dockside Fish Market.`, 'good');
+  world.notify(p, `Caught a ${ITEMS[caught].name}!${bait ? ` (${ITEMS[bait].name} used)` : ''} Sell it at a bait shop or the fish market.`, 'good');
   p.meDirty = true;
   store.touch();
 }

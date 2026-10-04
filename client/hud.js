@@ -164,6 +164,7 @@ export class HUD {
     if (!o || o.dis) return;
     if (o.id === 'close') { this.closeMenu(); return; }
     this.sendMenu(this.menu.poi, o.id);
+    if (o.id === 'hhide' || o.id === 'hleave') this.closeMenu(); // going in blinks you out; stepping out drops you at the door
   }
   navMenu(d) {
     if (!this.menu) return;
@@ -282,8 +283,10 @@ export class HUD {
     const me = this.me;
     const police = !!(me && me.faction === 'enforcer');
     const WW = MAP_W * TILE, WH = MAP_H * TILE;
-    const maxW = innerWidth * 0.96, maxH = innerHeight * 0.86;
+    const panel = $('bm-panel'), portrait = innerHeight > innerWidth;
+    const maxW = (innerWidth - (portrait ? 0 : (panel ? panel.offsetWidth + 24 : 0))) * 0.96, maxH = (innerHeight - (portrait && panel ? panel.offsetHeight + 16 : 0)) * 0.86;
     const sc = Math.min(maxW / WW, maxH / WH);
+    this.bigmapScale = sc;
     const w = Math.round(WW * sc), h = Math.round(WH * sc);
     const dpr = Math.min(2, devicePixelRatio || 1);
     if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px'; }
@@ -319,6 +322,16 @@ export class HUD {
       if (me.rumor) { const [x, y] = P(me.rumor.x, me.rumor.y); g.strokeStyle = '#ffd36b'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, me.rumor.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
       if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') { const [x, y] = P(me.cruiser.x, me.cruiser.y); g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); }
       for (const ev of me.happen || []) { const kind = EVENT_KINDS[ev.k]; if (!kind) continue; const [x, y] = P(ev.x, ev.y); g.fillStyle = kind.color; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(kind.label, x, y - 12); }
+      // places of the category picked in the waypoint panel: numbered pins
+      if (this.mapFilter) {
+        g.font = '700 10px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        this.mapFilter.forEach((p, i) => {
+          const [x, y] = P(p.x, p.y);
+          g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2;
+          g.beginPath(); g.arc(x, y, 8, 0, 6.28); g.fill(); g.stroke();
+          g.fillStyle = '#111'; g.fillText(String(i + 1), x, y + 0.5);
+        });
+      }
       if (this.waypoint) { const [x, y] = P(this.waypoint.x, this.waypoint.y); g.fillStyle = '#4fd6ff'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 7, y); g.lineTo(x, y + 9); g.lineTo(x - 7, y); g.closePath(); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(this.waypoint.label, x, y - 14); }
       if (me.job) { const [x, y] = P(me.job.x, me.job.y); g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); }
       // police / bounty intel (server already applies the visibility rules)

@@ -23,6 +23,7 @@ function ammoOf(ped, id) {
 export function tryAttack(world, ped, aim) {
   const now = world.time;
   if (ped.dead || now < ped.nextAttack || now < ped.reloadUntil || now < ped.stunUntil || now < ped.downUntil) return false;
+  if (ped.hidden || now < (ped.protectUntil || 0)) return false; // spawn / step-out protection: no shooting
   if (ped.rollT > 0) return false;
   if (!ped.vehId && isSwimming(world.map, ped)) return false; // can't fight while swimming
   const w = WEAPONS[ped.weapon] || WEAPONS.fists;
@@ -140,6 +141,7 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true) {
       t = segCircle(x1, y1, x2, y2, e.x, e.y, e.r + 2);
     } else if (e.kind === K.VEH && includeVehicles) {
       if (shooter.vehId === e.id) continue;
+      if (shooter.npc && (shooter.npc.coverCar === e.id || shooter.npc.unit === e.id)) continue; // cops fire over their own cruiser
       t = segObb(x1, y1, x2, y2, e.x, e.y, e.a, e.def.L / 2, e.def.W / 2);
     }
     if (t >= 0 && t < bestT) { bestT = t; best = e; }
@@ -159,7 +161,7 @@ function hitscan(world, ped, w, a) {
     world.emit(hx, hy, { e: 'blood', x: hx, y: hy, a, n: 7 });
     if (world.rand() < 0.35) hit.bleeding = true;
     // guns are deadly against NPCs / police (1-3 shots); players keep more staying power
-    const mult = hit.player ? 1 : NPC_GUN_MULT;
+    const mult = hit.player || !ped.player ? 1 : NPC_GUN_MULT; // your shots are deadly; NPC-vs-NPC gunfights last a while
     damage(world, hit, w.dmg * mult * (0.9 + world.rand() * 0.2), ped, 'gun', a);
     return true;
   }
@@ -178,6 +180,7 @@ function hitscan(world, ped, w, a) {
 export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (!ped || ped.dead || amount <= 0) return false;
   const now = world.time;
+  if (ped.hidden || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection
   ped.hp -= amount;
   ped.lastHitAt = now;
   ped.lastCombatAt = now;

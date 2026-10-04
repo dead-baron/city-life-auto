@@ -68,7 +68,8 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
     p.lastSpawnName = pos.name;
     p.respawnChoice = null;
   }
-  const ped = world.spawnPed(pos.x + (world.rand() - 0.5) * 30, pos.y + (world.rand() - 0.5) * 20, {
+  const at = useSaved && pos === prof.pos ? { x: pos.x, y: pos.y } : homes.spawnSpot(world, pos.x, pos.y);
+  const ped = world.spawnPed(at.x, at.y, {
     hp: 100, app: { ...prof.outfit }, archetype: 'player', name: p.name,
   });
   ped.player = p;
@@ -78,6 +79,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
     if (w && w.mag) ped.mag[id] = Math.min(w.mag, prof.weapons[id] || 0);
   }
   p.ped = ped;
+  homes.protect(world, ped); // ~2 s of blinking: move freely, can't shoot or be hurt
   p.faction = FACTION.CITIZEN; p.badge = false; p.hunter = false;
   p.heat = 0; p.wanted = 0; p.flareUntil = 0; p.disguised = false;
   p.respawnAt = 0;
@@ -130,7 +132,7 @@ export function queueInput(p, inp) {
 
 export function pedMods(world, ped) {
   const now = world.time;
-  const canMove = !ped.dead && now >= ped.downUntil && now >= ped.stunUntil && !ped.vehId;
+  const canMove = !ped.dead && now >= ped.downUntil && now >= ped.stunUntil && !ped.vehId && !ped.hidden;
   let speedMul = 1;
   if (ped.carrying) speedMul *= 0.6; // GDD: carrying scales walking speed down by 40%
   if (ped.buffs.energy > now) speedMul *= 1.15;
@@ -171,6 +173,10 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
+  if (ped.hidden) { // inside your home: E brings up the home menu (Leave is on it)
+    if (pressed & (IN.ACTION | IN.VEHICLE)) homes.openInside(world, p);
+    return;
+  }
   ped.aimAngle = inp.aim;
   if (inp.bits & IN.AIMING) ped.aimUntil = world.time + 0.3;
   if (pressed & IN.NEXTW) combat.cycleWeapon(world, ped, 1);
@@ -265,6 +271,8 @@ function tackle(world, ped) {
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return null;
+  if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
+  if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
   if (ped.vehId) return homes.vehicleInteraction(world, p);
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;

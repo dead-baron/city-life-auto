@@ -29,6 +29,7 @@ export function joinPlayer(world, overrides = {}) {
   Object.assign(prof, overrides);
   const conn = fakeConn();
   const p = players.join(world, conn, prof);
+  if (!overrides.keepSpawnProtection) p.ped.protectUntil = 0; // tests start fighting straight away
   return { p, conn, prof };
 }
 

@@ -11,9 +11,9 @@
 //    (shared/controls.js).
 //  * test/tutorial.test.js requires every POI kind, island, gang turf, control action and rule
 //    to be covered here - add a place type or control and the tests tell you to teach it.
-import { ISLANDS, DISTRICTS } from './map.js';
+import { ISLANDS, DISTRICTS, ESTATE_TYPES } from './map.js';
 import { TILE, MAP_W, MAP_H, STAR_HEAT, DAY_LOOP_S, DAY_PART_S } from './constants.js';
-import { SHOPS, WEAPONS } from './items.js';
+import { SHOPS, WEAPONS, ITEMS } from './items.js';
 import { VEHICLES } from './vehicles.js';
 import { EVENT_KINDS, ARROW_SHOW_S } from './worldevents.js';
 import {
@@ -21,15 +21,18 @@ import {
   SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
   RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE, JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S,
   NPC_GUN_MULT, VEHICLE_TOUGHNESS, ARMORED_ROCKETS, ARMORED_VEHICLES,
+  FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 4;
+export const TUTORIAL_VERSION = 5;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
 const dayMin = Math.round(DAY_PART_S / 60), nightMin = Math.round((DAY_LOOP_S - DAY_PART_S) / 60);
 const isle = (k) => ISLANDS[k].name;
+const kmh = (pxPerS) => Math.round((pxPerS / TILE) * 3.6); // 1 tile = 1 m
+const estate = (k) => `${ESTATE_TYPES[k].name} ($${Math.round(ESTATE_TYPES[k].price / 1000)}k)`;
 
 export const CHAPTERS = [
   { id: 'city', title: 'The City' },
@@ -42,7 +45,7 @@ export const CHAPTERS = [
 
 // at: what the camera frames. One of
 //   { city: 1 } | { island: 'D' } | { district: 'Neon Strip' } | { poi: kind } | { pois: kind }
-//   { spawn: 'default' } | { cameras: 1 } | { dropSites: 1 } | { turf: 1 } | { homes: districtName }
+//   { spawn: 'default' } | { cameras: 1 } | { dropSites: 1 } | { turf: 1 } | { homes: districtName } | { estates: 1 }
 // route: an animated vehicle driving the road network between two targets (optional chaser).
 export const STEPS = [
   // ---- the city ------------------------------------------------------------------------------
@@ -65,11 +68,11 @@ export const STEPS = [
   { ch: 'basics', title: 'Fighting', at: { spawn: 'default' },
     text: `Aim with [[aim]] and attack with [[fire]]. Land punches in quick succession to floor someone - 3 hits for most people, 4 for tough guys. [[nextw]] switches weapons, [[reload]] reloads, [[throw]] throws what you're carrying. Guns are deadly: a pistol drops most people in ${Math.ceil(70 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))}-${Math.ceil(140 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))} shots and a cop in ${Math.ceil(140 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))}-${Math.ceil(203 / (WEAPONS.pistol.dmg * NPC_GUN_MULT * 0.9))}, SWAT in ${Math.ceil(220 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))} or more. A bazooka rocket wrecks any vehicle in one hit - the ${ARMORED_VEHICLES.map((id) => VEHICLES[id].name).join(' and the ')} take ${ARMORED_ROCKETS}. Cars shrug off ${Math.round((1 - 1 / VEHICLE_TOUGHNESS) * 100)}% of crash and gunfire damage; motorcycles don't, and a hard crash throws you off.` },
   { ch: 'basics', title: 'Your HUD and the map', at: { city: 1 },
-    text: `The HUD shows your weapon, cash on hand, bank balance, wanted stars and the clock, plus the radar in the corner. [[map]] opens the full city map and [[pause]] the pause menu (settings, controls and this tour). A day lasts ${dayMin} minutes and night ${nightMin} - at night witnesses see less and rain makes the roads slick.` },
+    text: `The HUD shows your weapon, cash on hand, bank balance, wanted stars and the clock, plus the radar in the corner. [[map]] opens the full city map: pick a category - hospitals and police, banks and ATMs, shops, places to sell, garages, jobs, fishing, gang HQs, homes - to number every match on the map, choose one to set a waypoint, or tap anywhere on the map to drop your own. [[pause]] opens the pause menu (settings, controls and this tour). A day lasts ${dayMin} minutes and night ${nightMin} - at night witnesses see less and rain makes the roads slick.` },
   { ch: 'basics', title: 'Your phone', at: { city: 1 },
     text: `[[phone]] opens your phone. Places finds the nearest hospital, bank, ATM, shop, place to sell, garage or gang HQ and sets a waypoint - a subtle blip on your radar, or an arrow on its rim when it's far. Jobs lists deliveries priced ${JOB_TIERS.map((t) => t.name).join(' / ')} by distance (about $${Math.round(JOB_TIERS[0].base + JOB_TIERS[0].maxDist * 0.6 * JOB_TIERS[0].perPx)} to $${Math.round(JOB_TIERS[2].base + 9000 * JOB_TIERS[2].perPx)}) and farm harvests. One job at a time - cancel it from the phone and take another.` },
   { ch: 'basics', title: 'Hospitals', at: { pois: 'hospital' },
-    text: `Hurt? Step onto the {{reception}} mat at any hospital for full treatment ($${HOSPITAL_FEE}). Below 30% health you bleed - [[use]] uses a med kit or bandage from the {{pharmacy}}. {{vending}}s sell energy drinks. If you die you wake up at a hospital after ${RESPAWN_SECONDS} seconds and everything you carried stays on the street.` },
+    text: `Hurt? Step onto the {{reception}} mat at any hospital for full treatment ($${HOSPITAL_FEE}). Below 30% health you bleed - [[use]] uses a med kit or bandage from the {{pharmacy}}. {{vending}}s sell energy drinks. If you die you wake up after ${RESPAWN_SECONDS} seconds - at any hospital you choose, or a home you own - and everything you carried stays on the street. You appear at one of several spots around the building, blinking for ${SPAWN_PROTECT_S} seconds: you can move, but you can't shoot or be hurt.` },
   { ch: 'basics', title: 'Cash vs. bank', at: { poi: 'bank' },
     text: `Cash on you is lost when you die or get robbed. Deposit it at the {{bank}} or any {{atm}}. Your bank balance is always safe, and anything you sell at a shop is paid straight into it. Log out mid-fight and your body stays in the world for ${GHOST_SECONDS} seconds.` },
 
@@ -78,12 +81,14 @@ export const STEPS = [
     text: `Grab a courier contract at {{warehouse}} in {{warehouse:where}} and haul crates to a {{delivery}} across the city. Cargo rides in the open on pickups and flatbeds - anyone can see it and ambush you, so drive smart.` },
   { ch: 'citizen', title: 'Harvest contracts', at: { poi: 'farm' }, route: { from: { poi: 'farm' }, to: { poi: 'grocery' }, veh: 'pickup' },
     text: `Load produce boxes into an open-cargo vehicle at the {{farm}} and deliver them to {{grocery}} in {{grocery:where}}.` },
-  { ch: 'citizen', title: 'Fishing', at: { poi: 'fishmarket' },
-    text: `Buy a fishing pole at the {{fishmarket}} in {{fishmarket:where}} ($${price('fishmarket', 'rod')}) or {{sports}} ($${price('sports', 'rod')}), cast at the water's edge and strike when it bites. Night brings catfish. Sell your catch back at the market.` },
+  { ch: 'citizen', title: 'Fishing', at: { pois: 'tackle' },
+    text: `Buy a fishing pole at a {{tackle}} shop like the one in {{tackle:where}} ($${price('tackle', 'rod')}), the {{fishmarket}} ($${price('fishmarket', 'rod')}) or {{sports}} ($${price('sports', 'rod')}), cast at the water's edge and strike when it bites. Bait changes what bites: ${ITEMS.worms.name.toLowerCase()} for bass, ${ITEMS.shrimp.name.toLowerCase()} for salmon, ${ITEMS.squid.name.toLowerCase()} for tuna, a ${ITEMS.glowlure.name.toLowerCase()} for catfish at night. Sell your catch at any tackle shop or the market.` },
   { ch: 'citizen', title: 'Shopping', at: { poi: 'coffee' },
     text: `{{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons, {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
-  { ch: 'citizen', title: 'Homes and wheels', at: { homes: 'Pine Hills' },
-    text: `Buy a {{home}} to respawn there, rest to full health and park cars in its garage. New cars at {{dealer}}, boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
+  { ch: 'citizen', title: 'Homes', at: { homes: 'Pine Hills' },
+    text: `Buy a {{home}} - as many as you like. Each can be your respawn point (you can still pick a hospital when you die), adds garage space, and lets you rest, bank your cash and stash items and guns. Stand at your door and go inside: you blink for ${HIDE_TIME_S} seconds, slowly then fast, and you're hidden - nobody can see or hurt you, and the police lose track of you. Step out and you blink for ${SPAWN_PROTECT_S} seconds of protection.` },
+  { ch: 'citizen', title: 'Estates and garages', at: { estates: 1 },
+    text: `Out past the city: a ${estate('farmhouse')}, the ${estate('cottage')}, a ${estate('beach')} on the sand and the ${estate('mansion')} with its huge yard and pool. Pull up to any of your garages and the door rolls open to take your car; every car you own can be taken out at any home you own. New cars at {{dealer}}, boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
   { ch: 'citizen', title: 'Good Samaritan points', at: { poi: 'evidence' },
     text: `Doing good earns Samaritan points: finish deliveries, stop a ${EVENT_KINDS.snatch.label.toLowerCase()} (an orange blip and arrow), then ${EVENT_KINDS.ret.label.toLowerCase()} to its owner (green), or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
 
@@ -94,12 +99,16 @@ export const STEPS = [
     text: `A reported crime earns wanted stars (★ at ${STAR_HEAT[1]} heat up to ★★★★★ at ${STAR_HEAT[5]}). Police come for you - tasers at low stars, guns from 3, SWAT at 4-5. Break line of sight and they only know a search circle that grows; stay hidden and the heat fades.` },
   { ch: 'criminal', title: 'Lying low', at: { poi: 'clothing' },
     text: `A new outfit at {{clothing}} ($${price('clothing', 'outfit')}) drops your public wanted level - but only if no cop is watching. The city remembers your peak: commit even a small crime in disguise and the heat spikes straight back. A respray at {{garage}} ($${price('garage', 'respray')}) hides a hot car and cleans the blood off the hood.` },
+  { ch: 'criminal', title: 'Spray & Go', at: { pois: 'paint' },
+    text: `Drive into the bay at a {{paint}} shop and stop. If nobody is watching, the shutter comes down for ${PAINT_TIME_S} seconds and you roll out in a new colour ($${PAINT_PRICE}, no repairs) - and with a clean wanted level. Seen going in while you're wanted? They won't touch it. Unload your cargo first.` },
   { ch: 'criminal', title: 'Contraband drops', at: { dropSites: 1 }, route: { from: { dropSites: 1 }, to: { poi: 'fence' }, veh: 'flatbed', chaser: 'police' },
     text: `Every few minutes rare crates land at a drop site - a ${EVENT_KINDS.drop.label.toLowerCase()} shows as a purple blip and rumor circle on the radar. Event arrows fade after ${ARROW_SHOW_S} seconds; the blips stay. Iron vaults and carbon-gold cases are worth a fortune at {{fence}} in {{fence:where}}, the black market (it also sells a Micro SMG for $${price('fence', 'smg')}). Everyone else wants them too.` },
   { ch: 'criminal', title: 'Gang turf', at: { turf: 1 },
     text: `{{turfs}} belong to the syndicate, run from headquarters like {{gang}} - your phone shows where. Their members attack outsiders, and fighting back on their turf isn't a crime. Muggers also prowl the streets - drop one and return the purse for Samaritan points.` },
+  { ch: 'criminal', title: 'Gangs vs. police', at: { pois: 'gang' },
+    text: `The syndicate leaves cops alone until provoked: an officer tearing past them faster than about ${kmh(GANG_PROVOKE_SPEED)} km/h, or shooting nearby, and they open fire - and the cops fight back. Every ${Math.round(SHOOTOUT_EVERY_S[0] / 60)}-${Math.round(SHOOTOUT_EVERY_S[1] / 60)} minutes a ${EVENT_KINDS.shootout.label.toLowerCase()} breaks out near the turf (a red blip and arrow). Stay clear, or pick a side.` },
   { ch: 'criminal', title: 'Busted or wasted', at: { poi: 'police' },
-    text: `Get knocked out by a cop and cuffed and you're BUSTED: fined $${BUST_FINE_PER_STAR} per star, illegal weapons and contraband confiscated. Die and your wanted level is wiped, but you drop everything you carried. Felonies stay on your record and keep you off the police force.` },
+    text: `Get knocked out by a cop and cuffed and you're BUSTED: fined $${BUST_FINE_PER_STAR} per star, illegal weapons and contraband confiscated. Die and your wanted level is wiped, but you drop everything you carried. Felonies stay on your record and keep you off the police force - until you pay the fines ($${FELONY_FINE} per felony, not while wanted) at {{police}} or {{courthouse}} for a clean record.` },
 
   // ---- police --------------------------------------------------------------------------------
   { ch: 'police', title: 'Joining the force', at: { poi: 'police' },
@@ -191,6 +200,11 @@ export function resolveTarget(map, at, ref) {
     if (!parts.length) return null;
     const names = DISTRICTS.filter((q) => q.turf).map((q) => q.name);
     return { ...box(parts.flatMap((r) => [{ x: r.x - r.w / 2, y: r.y - r.h / 2 }, { x: r.x + r.w / 2, y: r.y + r.h / 2 }])), marks: parts.map((r, i) => ({ x: r.x, y: r.y, label: names[i], kind: 'turf' })) };
+  }
+  if (at.estates) {
+    const list = map.homes.filter((h) => ESTATE_TYPES[h.kind]);
+    if (!list.length) return null;
+    return { ...box(list, 400), marks: list.map((h) => ({ x: h.x, y: h.y, label: h.name, kind: 'home' })) };
   }
   if (at.homes) {
     const d = DISTRICTS.findIndex((q) => q.name === at.homes);

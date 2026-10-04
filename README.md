@@ -50,7 +50,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Cuff / book a downed suspect | E | B | ACT |
 | Heal (bandage / medkit) | X | Back | HEAL |
 | Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN |
-| City map | M | — | — |
+| City map + waypoints (pick a category / place, or click the map) | M | Pause → Map (D-pad / stick, A pick, B back) | tap the radar or ▦, then tap |
 
 ## Project layout
 
@@ -86,7 +86,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
 | Weapons · reload · heal | Tab, wheel, 1-9 · R · X | LB/RB · R3 · View | tap the weapon box · RELOAD · HEAL |
-| World map (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
+| World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
 | Pause menu (map, settings, controls, debug/cheats) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ⚙ |
 
 Settings (⚙) include classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen.

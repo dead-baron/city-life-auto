@@ -17,6 +17,7 @@ import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, dra
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { createPhone } from './phone.js';
+import { createMapWaypoints } from './mapwaypoints.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
@@ -38,6 +39,8 @@ const S = {
   cam: { x: 4400, y: 2200, zoom: 1, shake: 0 }, smooth: { x: 0, y: 0 }, geysers: [], flashes: [], camAlert: new Map(),
   rtt: 0, bigmap: false, rain: [], fps: 0,
   confirmedBreaks: new Set(), predBreaks: new Map(), // street furniture smashed: server-confirmed / predicted
+  bayOpen: {}, bayAnim: {}, // paint-shop shutters
+  garageOpen: {}, garageAnim: {}, // home garage doors
 };
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 
@@ -122,6 +125,7 @@ function onText(m) {
       S.ents.clear(); S.pred = null; S.pending = [];
       for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
+      S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       S.ground.cache.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
@@ -165,7 +169,7 @@ function onBinary(buf) {
     e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a });
     if (e.buf.length > 5) e.buf.shift();
     e.flags = it.flags; e.hp = it.hp; e.parent = it.parent;
-    if (it.kind === K.PED) { e.extra = it.extra & 127; e.swim = (it.extra & 128) !== 0; } else e.extra = it.extra;
+    if (it.kind === K.PED) { e.extra = it.extra & 15; e.blink = (it.extra >> 4) & 3; e.swim = (it.extra & 128) !== 0; } // weapon | blink | in water else e.extra = it.extra;
   }
   reconcile(s);
 }
@@ -279,7 +283,6 @@ function fixedStep() {
     if (input.menuNav) S.hud.navMenu(input.menuNav);
     if (input.menuSelect) S.hud.choose(S.hud.menuFocus);
     if (input.menuBack) S.hud.closeMenu();
-  } else if (S.bigmap && input.menuBack) { toggleMap(false);
   } else if (S.me && S.me.dead) deathPad();
   const n = takeNumberPick();
   if (n !== null) {
@@ -352,6 +355,8 @@ function onEvent(ev) {
       break;
     }
     case 'foot': fx.decal(2, ev.x, ev.y, ev.a, 1, '#7a0d12', now, 0.8); break;
+    case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
+    case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
     case 'propfix': {
       const p = S.map.props[ev.i];
@@ -404,7 +409,7 @@ function setupDev() {
   box.innerHTML = '<b>DEV / PLAYTEST CHEATS</b>';
   const cmds = [['guns', 'Give weapons'], ['rain', 'Start rain'], ['clear', 'Stop rain'], ['night', 'Jump to night'], ['day', 'Jump to day'], ['money', '+$25k'],
     ['samaritan', '+50 Samaritan'], ['wanted', '2 stars', { n: 2 }], ['wanted', '4 stars', { n: 4 }], ['clean', 'Clear wanted'], ['record', 'Wipe criminal record (felonies)'], ['cop', 'Join the police (badge + rank)'], ['promote', 'Promote police rank'],
-    ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['snatch', 'Snatch-and-grab nearby'], ['heal', 'Heal'], ['die', 'Die (respawn test)']];
+    ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['snatch', 'Snatch-and-grab nearby'], ['shootout', 'Gang vs police shootout nearby'], ['heal', 'Heal'], ['die', 'Die (respawn test)']];
   for (const [c, label, extra] of cmds) {
     const b = document.createElement('button');
     b.textContent = label;
@@ -426,6 +431,7 @@ initInput(canvas, {
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (S.playing && S.me && S.me.dead && !topOverlay() && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { cycleDeathChoice(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
+    if (k === 'Escape' && topOverlay() === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
     // menus with the keyboard: W/S or arrows move, Enter / Space / E selects, A/D or arrows change a setting
     if (topOverlay() && topOverlay() !== 'tutorial' && menuKey(k)) return;
     if (!topOverlay() && S.hud && S.hud.menuOpen) {
@@ -473,6 +479,14 @@ const phone = createPhone({
   toast: (t, tone) => S.hud && S.hud.toast(t, tone),
   refocus: () => { ovFocus = 0; focusOverlay(); },
   close: () => closeOverlay('phone'),
+});
+const mapwp = createMapWaypoints({
+  map: () => S.map, pos: () => selfPos(),
+  setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; if (w) S.hud.toast(`Waypoint set: ${w.label}`, 'info'); },
+  waypoint: () => S.waypoint,
+  refocus: () => { ovFocus = 0; focusOverlay(); },
+  setFilter: (list) => { if (S.hud) S.hud.mapFilter = list; },
+  myHomes: () => (S.me && S.me.homes) || [],
 });
 function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
 // arrive at a phone waypoint -> it clears itself
@@ -673,6 +687,7 @@ function openOverlay(id) {
   overlays.push(id);
   $(id).classList.remove('hidden');
   if (id === 'dev') $('dev').classList.add('as-overlay');
+  if (id === 'bigmap') S.bigmap = true;
   ovFocus = 0; focusOverlay();
 }
 function closeOverlay(id = topOverlay()) {
@@ -682,6 +697,7 @@ function closeOverlay(id = topOverlay()) {
   $(id).classList.add('hidden');
   if (id === 'dev') $('dev').classList.remove('as-overlay');
   if (id === 'tutorial') stopTutorial();
+  if (id === 'bigmap') { S.bigmap = false; if (S.hud) S.hud.mapFilter = null; }
   S.inputMuteUntil = performance.now() + 300; // the A press that closed the menu shouldn't roll you
   ovFocus = 0; focusOverlay();
 }
@@ -724,6 +740,7 @@ function overlayPad() {
   const f = focusables();
   const el = f[ovFocus];
   if (topOverlay() === 'phone' && input.menuBack && phone.screen !== 'home') { phone.back(); return true; }
+  if (topOverlay() === 'bigmap' && input.menuBack && mapwp.inGroup) { mapwp.back(); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
   if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
   if (el && input.menuLR) {
@@ -793,8 +810,27 @@ $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSett
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
 
-function toggleMap(on) { S.bigmap = on; $('bigmap').classList.toggle('hidden', !on); $('bigmap-hint').textContent = input.device === 'touch' ? 'Tap anywhere to close' : input.device === 'gamepad' ? 'Menu / B to close' : 'M / Esc to close'; }
-$('bigmap').onclick = () => toggleMap(false);
+function toggleMap(on) {
+  if (on) {
+    if (topOverlay() !== 'bigmap') openOverlay('bigmap');
+    $('bigmap-hint').textContent = input.device === 'touch' ? 'Tap the map to drop a marker · tap outside to close' : input.device === 'gamepad' ? 'Pick a place on the left · B to close' : 'Click the map to drop a marker · M / Esc to close';
+    mapwp.open();
+  } else if (overlays.includes('bigmap')) closeOverlay('bigmap');
+}
+// clicking the dark backdrop closes; clicking the map itself drops a waypoint there
+$('bigmap').onclick = (e) => { if (e.target === $('bigmap')) toggleMap(false); };
+$('bigmap-c').onclick = (e) => {
+  const sc = S.hud && S.hud.bigmapScale;
+  if (!sc) return;
+  const r = $('bigmap-c').getBoundingClientRect();
+  const x = (e.clientX - r.left) / sc, y = (e.clientY - r.top) / sc;
+  // snap to a highlighted place if the click is close to one
+  let label = 'Marked spot', bx = x, by = y, bd = 24 / sc;
+  for (const p of (S.hud.mapFilter || [])) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; bx = p.x; by = p.y; label = p.label; } }
+  S.waypoint = { x: bx, y: by, label }; S.hud.waypoint = S.waypoint;
+  S.hud.toast(`Waypoint set: ${label}`, 'info');
+  mapwp.refresh();
+};
 $('radar').onclick = () => { if (S.playing) toggleMap(true); };
 $('weapon').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) virtualTap('nextw'); }, { passive: false });
 $('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) toggleMap(true); }, { passive: false });
@@ -1111,6 +1147,8 @@ function render(dt) {
   S.geysers = S.geysers.filter((gy) => gy.until > nowMs);
   for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
 
+  drawBays(view, dt);
+  drawGarageDoors(view, dt);
   // traffic lights, cameras, overhead canopy
   drawSignals(view);
   for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
@@ -1222,8 +1260,59 @@ function drawCrateEnt(c, now) {
 }
 
 const SEAT_BIKE = [[2, 0], [-12, 0]];
-const PED_SCALE = 1.35; // characters read at ~40% of a sedan's length, like the concept scenes
+const PED_SCALE = 1.18; // characters a touch smaller than before (was 1.35) - purely visual, physics radius unchanged
 const PED_BUILD_SCALE = [0.92, 1, 1.07, 1.16]; // frail, average, tough, brute
+// Home garage doors: roll up when your car pulls up to a garage you own (or when the server says
+// a car was just parked / taken out).
+function drawGarageDoors(view, dt) {
+  const mine = new Set(((S.me && S.me.homes) || []).map((h) => h.id));
+  const myCar = S.pred && S.pred.kind === 'veh' ? S.pred.s : null;
+  for (const gr of S.map.garages || []) {
+    const h = S.map.homes[gr.home];
+    if (!h || !h.garageDoor) continue;
+    const d = h.garageDoor;
+    if (d.x < view.x0 - 100 || d.x > view.x1 + 100 || d.y < view.y0 - 100 || d.y > view.y1 + 100) continue;
+    const near = myCar && mine.has(gr.home) && Math.hypot(myCar.x - h.garage.x, myCar.y - h.garage.y) < 170;
+    const want = near || (S.garageOpen[gr.home] || 0) > performance.now() ? 1 : 0;
+    S.garageAnim[gr.home] = (S.garageAnim[gr.home] || 0) + (want - (S.garageAnim[gr.home] || 0)) * (1 - Math.exp(-4 * dt));
+    const k = S.garageAnim[gr.home];
+    const x = d.x - d.w / 2 + 3, w = d.w - 6, depth = 22;
+    const y0 = gr.south ? d.y - depth : d.y;
+    // dark interior shows as the door lifts
+    g.fillStyle = '#16171b'; g.fillRect(x, y0, w, depth);
+    // the door: corrugated panel, shrinking toward the top as it rolls up
+    const dh = depth * (1 - k);
+    const dy = gr.south ? d.y - depth : d.y + (depth - dh);
+    g.fillStyle = '#c9c5bb'; g.fillRect(x, gr.south ? dy : dy, w, dh);
+    g.fillStyle = 'rgba(0,0,0,.18)'; for (let yy = 0; yy < dh; yy += 4) g.fillRect(x, (gr.south ? dy : dy) + yy, w, 1);
+    g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1.5; g.strokeRect(x, y0, w, depth);
+  }
+}
+
+// Paint-shop shutters: roll down over the bay (and the car in it) while it's being sprayed.
+function drawBays(view, dt) {
+  for (let i = 0; i < (S.map.bays || []).length; i++) {
+    const b = S.map.bays[i];
+    const x = b.tx * TILE, y = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE;
+    if (x > view.x1 || x + w < view.x0 || y > view.y1 || y + h < view.y0) continue;
+    const want = S.bayOpen[i] === false ? 1 : 0;
+    S.bayAnim[i] = (S.bayAnim[i] || 0) + (want - (S.bayAnim[i] || 0)) * (1 - Math.exp(-5 * dt));
+    const k = S.bayAnim[i];
+    // shutter rolled up at the entrance
+    const fy = b.south ? y + h : y;
+    g.fillStyle = '#6b6f78'; g.fillRect(x - 2, b.south ? fy - 5 : fy, w + 4, 5);
+    if (k < 0.01) continue;
+    // closed (or closing): corrugated shutter + roof over the whole bay
+    const ch = h * k;
+    const cy = b.south ? y : y + h - ch;
+    g.fillStyle = '#7a7f88'; g.fillRect(x - 2, cy, w + 4, ch);
+    g.fillStyle = 'rgba(0,0,0,.25)';
+    for (let yy = cy + 3; yy < cy + ch; yy += 6) g.fillRect(x - 2, yy, w + 4, 2);
+    g.fillStyle = '#ffd400'; g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    if (k > 0.7) g.fillText('SPRAY & GO', x + w / 2, cy + ch / 2 + 4);
+  }
+}
+
 // Re-draw the baked bridge-deck tiles around a point (over a boat / swimmer beneath them).
 function coverWithBridge(x, y, r) {
   const t0x = Math.floor((x - r) / TILE), t1x = Math.floor((x + r) / TILE), t0y = Math.floor((y - r) / TILE), t1y = Math.floor((y + r) / TILE);
@@ -1319,6 +1408,7 @@ function drawSwimRipples(p, now) {
 function drawPed(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
+  if (p.blink === 3) return; // inside a home
   let pose = pedPose(p);
   // thrown from a vehicle: airborne arc, then a roll / faceplant / slide on the back
   const flT = p.flingAt !== undefined ? now - p.flingAt : 99;
@@ -1351,6 +1441,7 @@ function drawPed(p, now) {
   if (grow !== 1) g.scale(grow, grow);
   if (pose === 'punch' && (fr & 3) === 2) { g.translate(3, 0); }
   if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);
+  if (p.blink) g.globalAlpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1; // going indoors (slow, then fast) / spawn protection
   const bs = PED_BUILD_SCALE[p.d.app && p.d.app.bd !== undefined ? p.d.app.bd : 1] || 1;
   g.scale(PED_SCALE * bs, PED_SCALE * bs);
   g.imageSmoothingEnabled = false; // crisp pixel-art characters
@@ -1359,7 +1450,7 @@ function drawPed(p, now) {
   g.imageSmoothingEnabled = true;
   if (pose === 'fish') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(24, -6); g.lineTo(44, 0); g.stroke(); }
   g.restore();
-  if (f & PF.UMBRELLA) { const u = umbrellaSprite(p.id % UMBRELLA_COLORS.length); g.drawImage(u, p.rx - 21, p.ry - 23, 40, 40); }
+  if (f & PF.UMBRELLA) { const u = umbrellaSprite(p.id % UMBRELLA_COLORS.length); g.drawImage(u, p.rx - 18, p.ry - 20, 35, 35); }
   if ((f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }

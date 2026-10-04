@@ -143,7 +143,9 @@ body.kbm #b-fs { display: none; }
 .spawn-opt:hover { border-color: #fff; }
 .spawn-opt.on { background: #f2f2f2; color: #111; border-color: #fff; }
 
-#bigmap { position: absolute; inset: 0; background: rgba(0,0,0,.82); z-index: 18; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#bigmap { position: absolute; inset: 0; background: rgba(0,0,0,.82); z-index: 18; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 16px; padding: 0 max(12px, env(safe-area-inset-left)); }
+#bm-mapwrap { display: flex; flex-direction: column; align-items: center; }
+#bigmap canvas { cursor: crosshair; }
 #bigmap canvas { border: 4px solid #000; box-shadow: 0 0 0 2px rgba(255,255,255,.2); background: #0b1830; }
 #bigmap p { color: var(--dim); font-size: 14px; font-weight: 600; }
 
@@ -328,3 +330,18 @@ body.portrait #phone { justify-content: center; padding: 0; }
 
 #tut-ask { position: absolute; inset: 0; z-index: 44; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
 #tut-ask .panel { width: min(460px, 92vw); }
+
+/* world-map waypoint panel */
+#bm-panel { width: 230px; max-height: 86vh; overflow-y: auto; background: rgba(10,13,22,.92); border: 1px solid #2c3142; border-radius: 12px; padding: 8px; flex: 0 0 auto; }
+#bm-panel h3 { margin: 4px 4px 8px; font: 16px Anton, Impact, sans-serif; letter-spacing: 1px; color: #ffd400; }
+.bm-row { width: 100%; display: flex; align-items: center; gap: 8px; text-align: left; padding: 7px 8px; margin: 2px 0; border-radius: 8px; border: 1px solid transparent; background: #171c28; color: #fff; font: 13.5px Rubik, sans-serif; cursor: pointer; }
+.bm-row .ic { width: 22px; text-align: center; color: #ffd400; font-weight: 700; }
+.bm-row .nm { flex: 1; display: flex; flex-direction: column; }
+.bm-row small { color: #8a90a2; font-size: 11.5px; }
+.bm-row .d { color: #9fd4ff; font-weight: 700; font-size: 12px; }
+.bm-row.back { color: #ffd400; font-weight: 700; }
+.bm-row.clear { color: #ff8a7a; flex-wrap: wrap; }
+.bm-row.pfocus { border-color: #fff; outline: 2px solid #fff; }
+.bm-hint { color: #8a90a2; font-size: 12px; margin: 8px 4px; }
+body.portrait #bigmap { flex-direction: column; justify-content: flex-start; padding-top: 12px; }
+body.portrait #bm-panel { width: calc(100vw - 24px); max-height: 34vh; }

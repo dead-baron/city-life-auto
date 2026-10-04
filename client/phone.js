@@ -12,8 +12,8 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 export const PLACE_GROUPS = [
   { id: 'emergency', icon: '✚', title: 'Hospitals & police', kinds: ['hospital', 'police'] },
   { id: 'money', icon: '$', title: 'Banks & ATMs', kinds: ['bank', 'atm'] },
-  { id: 'shops', icon: '🛒', title: 'Shops', kinds: ['gunshop', 'sports', 'hardware', 'pharmacy', 'coffee', 'grocery', 'clothing'] },
-  { id: 'sell', icon: '⇄', title: 'Sell stuff', kinds: ['pawn', 'fence', 'fishmarket'] },
+  { id: 'shops', icon: '🛒', title: 'Shops', kinds: ['gunshop', 'sports', 'hardware', 'pharmacy', 'coffee', 'grocery', 'clothing', 'tackle'] },
+  { id: 'sell', icon: '⇄', title: 'Sell stuff', kinds: ['pawn', 'fence', 'fishmarket', 'tackle'] },
   { id: 'cars', icon: '🔧', title: 'Cars & boats', kinds: ['garage', 'dealer', 'marina'] },
   { id: 'work', icon: '💼', title: 'Work & law', kinds: ['warehouse', 'farm', 'courthouse'] },
   { id: 'gang', icon: '☠', title: 'Gang headquarters', kinds: ['gang'] },
@@ -21,7 +21,7 @@ export const PLACE_GROUPS = [
 const KIND_NOTE = {
   hospital: 'heal up', police: 'badge, evidence', bank: 'deposit / withdraw', atm: 'deposit / withdraw', gunshop: 'guns & ammo', sports: 'bats, fishing',
   hardware: 'melee tools', pharmacy: 'med kits', coffee: 'stamina', grocery: 'produce drop-off', clothing: 'new outfit / disguise', pawn: 'buy & sell gear',
-  fence: 'black market', fishmarket: 'sell fish, rods', garage: 'repair, respray', dealer: 'buy cars', marina: 'buy boats', warehouse: 'courier jobs',
+  fence: 'black market', fishmarket: 'sell fish, rods', tackle: 'rods, bait, sell fish', paint: 'respray & lose the heat', garage: 'repair, respray', dealer: 'buy cars', marina: 'buy boats', warehouse: 'courier jobs',
   farm: 'harvest jobs', courthouse: 'bounties', gang: 'syndicate turf - careful',
 };
 

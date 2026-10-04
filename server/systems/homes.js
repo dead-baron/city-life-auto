@@ -2,6 +2,8 @@
 // Ownership is persisted on profiles (profile.homes) and indexed in world.homeOwner.
 import { K } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
+import { PED_BLOCK } from '../../shared/map.js';
+import { HIDE_TIME_S, SPAWN_PROTECT_S } from '../../shared/rules.js';
 import { store } from '../store.js';
 
 const BASE_GARAGE = 2;
@@ -22,19 +24,18 @@ export function ownedHomes(world, prof) {
 export function garageCap(world, prof) {
   let cap = BASE_GARAGE;
   for (const h of ownedHomes(world, prof)) cap += h.slots;
-  return Math.min(12, cap);
+  return Math.min(60, cap);
 }
 
 export function buy(world, p, home, pay) {
   const prof = p.profile;
   if (world.homeOwner.has(home.id)) return 'Someone already owns this place.';
-  if ((prof.homes || []).length >= 3) return 'You can own up to 3 homes.';
   if (!pay(p, home.price)) return `You need $${home.price.toLocaleString()} (cash + bank).`;
   (prof.homes ||= []).push(home.id);
   world.homeOwner.set(home.id, prof.pid);
   if (prof.spawnHome == null) prof.spawnHome = home.id;
   store.touch();
-  world.notify(p, `You bought ${home.name}! It's your respawn point now, and its garage holds ${home.slots} more vehicles.`, 'good');
+  world.notify(p, prof.spawnHome === home.id ? `You bought ${home.name}! It's your respawn point now, and its garage holds ${home.slots} more vehicles.` : `You bought ${home.name}! +${home.slots} garage spaces - your cars can be taken out at any home you own.`, 'good');
   return null;
 }
 
@@ -117,6 +118,7 @@ export function storeVehicle(world, p, v, home) {
   if (v.seats.some((s, i) => i > 0 && s)) { world.notify(p, 'Passengers have to get out first.', 'warn'); return; }
   for (const cid of v.cargo) if (cid) { const c = world.get(cid); if (c) { c.state = 'ground'; c.parent = 0; c.x = home.garage.x + 60; c.y = home.garage.y; } }
   const ped = p.ped;
+  world.emit(v.x, v.y, { e: 'garagedoor', home: home.id });
   ped.vehId = 0; ped.seat = -1;
   ped.x = home.x; ped.y = home.y + 10;
   prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant });
@@ -140,6 +142,108 @@ export function spawnOwnedAt(world, p, idx, spot) {
   for (const e of world.query(spot.x, spot.y, 80, K.VEH)) if (!e.seats.some((s) => s)) world.remove(e);
   const v = world.spawnVehicle(ov.model, spot.x, spot.y, spot.a ?? 0, { paint: ov.paint, variant: ov.variant, owner: p.pid, ownerName: p.name, npcOwned: false });
   v.despawnable = false;
+  if (spot.home != null) world.emit(spot.x, spot.y, { e: 'garagedoor', home: spot.home });
   p.activeVehicle = v.id;
   return null;
+}
+
+// ---- spawn spots ----------------------------------------------------------------------
+// Every spawn location has a handful of spots (centre, left, right, behind, the side street):
+// you wake up at a random free one, preferring spots with no other player standing right there,
+// so nobody can camp a single doorway.
+const SPOT_OFFSETS = [[0, 0], [-90, 0], [90, 0], [0, 80], [-150, 50], [150, 50], [0, -70], [-60, 110], [60, 110]];
+export function spawnSpot(world, x, y, rand = world.rand) {
+  const ok = [];
+  for (const [dx, dy] of SPOT_OFFSETS) {
+    const sx = x + dx, sy = y + dy;
+    if (PED_BLOCK[world.map.tileAtPx(sx, sy)] || PED_BLOCK[world.map.tileAtPx(sx + 8, sy)] || PED_BLOCK[world.map.tileAtPx(sx - 8, sy)]) continue;
+    let crowd = 0;
+    for (const q of world.players.values()) if (q.ped && !q.ped.dead && Math.hypot(q.ped.x - sx, q.ped.y - sy) < 160) crowd++;
+    ok.push({ x: sx, y: sy, crowd });
+  }
+  if (!ok.length) return { x, y };
+  const least = Math.min(...ok.map((o) => o.crowd));
+  const best = ok.filter((o) => o.crowd === least);
+  const o = best[Math.floor(rand() * best.length)];
+  return { x: o.x + (rand() - 0.5) * 16, y: o.y + (rand() - 0.5) * 12 };
+}
+
+// Spawn / step-out protection: blinking, can move, can't shoot, can't be hurt.
+export function protect(world, ped, s = SPAWN_PROTECT_S) { ped.protectUntil = world.time + s; }
+export const isProtected = (world, ped) => !!ped && (!!ped.hidden || world.time < (ped.protectUntil || 0));
+
+// ---- going inside -----------------------------------------------------------------------
+export const homePoi = (world, h) => world.map.pois.find((q) => q.kind === 'home' && q.home === h.id);
+
+export function beginEnter(world, p, h) {
+  const ped = p.ped;
+  if (!ped || ped.dead || ped.vehId) return 'Not right now.';
+  if (world.homeOwner.get(h.id) !== p.pid) return 'You do not own this place.';
+  if (ped.carrying) return 'Set the crate down first.';
+  if (p.wanted > 0 && world.time - (p.seenAt || -99) < 1.5) return 'Not with the police watching you!';
+  ped.entering = { home: h.id, at: world.time, x: ped.x, y: ped.y };
+  ped.vx = 0; ped.vy = 0;
+  world.notify(p, 'Unlocking the door... (stand still)', 'info');
+  return null;
+}
+
+function goInside(world, p, h) {
+  const ped = p.ped;
+  ped.entering = null;
+  ped.inside = h.id; ped.hidden = true;
+  ped.vx = 0; ped.vy = 0; ped.rollT = 0;
+  ped.x = h.x; ped.y = h.y;
+  ped.fishing = null;
+  world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
+  world.notify(p, `You're inside ${h.name}. Nobody can see or hurt you in here.`, 'good');
+  p.meDirty = true;
+  openInside(world, p);
+}
+
+export function openInside(world, p) {
+  const ped = p.ped;
+  const h = ped && ped.hidden ? world.map.homes[ped.inside] : null;
+  if (!h || !p.conn) return;
+  const poi = homePoi(world, h);
+  if (poi) { p.menu = { poi: poi.id }; p.conn.sendJSON({ ...menuBuilder(world, p, poi), inside: true }); }
+}
+let menuBuilder = () => ({ t: 'menu', opts: [] });
+export function setMenuBuilder(fn) { menuBuilder = fn; }
+
+export function leaveHome(world, p) {
+  const ped = p.ped;
+  if (!ped || !ped.hidden) return;
+  const h = world.map.homes[ped.inside];
+  ped.inside = null; ped.hidden = false;
+  ped.vx = 0; ped.vy = 0;
+  if (h) { ped.x = h.x + (world.rand() - 0.5) * 20; ped.y = h.y + 10; world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y }); }
+  world.place(ped);
+  protect(world, ped);
+  p.meDirty = true;
+}
+
+export function update(world) {
+  const now = world.time;
+  for (const p of world.players.values()) {
+    const ped = p.ped;
+    if (!ped) continue;
+    if (ped.dead) { ped.entering = null; continue; }
+    if (!ped.entering) continue;
+    const h = world.map.homes[ped.entering.home];
+    if (!h || ped.vehId || now < ped.downUntil || now < ped.stunUntil || Math.hypot(ped.x - ped.entering.x, ped.y - ped.entering.y) > 14) {
+      ped.entering = null;
+      world.notify(p, 'You stepped away from the door.', 'warn');
+      continue;
+    }
+    if (p.wanted > 0 && now - (p.seenAt || -99) < 0.2) { ped.entering = null; world.notify(p, 'The police spotted you - no time to get inside!', 'bad'); continue; }
+    if (now - ped.entering.at >= HIDE_TIME_S) goInside(world, p, h);
+  }
+}
+
+// blink state for the wire: 0 none, 1 slow, 2 fast, 3 hidden inside
+export function blinkState(world, ped) {
+  if (ped.hidden) return 3;
+  if (ped.entering) return world.time - ped.entering.at < HIDE_TIME_S * 0.55 ? 1 : 2;
+  if (world.time < (ped.protectUntil || 0)) return 2;
+  return 0;
 }

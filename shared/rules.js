@@ -40,3 +40,18 @@ export const NPC_GUN_MULT = 6;          // gun damage vs NPCs and police (1-2 sh
 export const VEHICLE_TOUGHNESS = 1.35;  // cars and boats take this much less damage (motorcycles stay fragile)
 export const ARMORED_ROCKETS = 2;       // rockets to destroy an armored van / SWAT truck (everything else: one)
 export const ARMORED_VEHICLES = ['armored', 'swat'];
+
+// Clearing your record: pay the fines at the courthouse or Police HQ (not while wanted)
+export const FELONY_FINE = 750;
+
+// Gangs vs police
+export const GANG_PROVOKE_SPEED = 330;     // a cop driving faster than this right past gang members sets them off
+export const SHOOTOUT_EVERY_S = [180, 300]; // how often a gang-police shootout breaks out near turf (if a player is around)
+
+// Spray & Go paint shops
+export const PAINT_PRICE = 150;      // a new colour (no repairs)
+export const PAINT_TIME_S = 3.5;     // shutter down this long while they spray
+
+// Homes
+export const HIDE_TIME_S = 2.5;      // standing at your own front door this long gets you inside (move = cancel)
+export const SPAWN_PROTECT_S = 2;    // after spawning or stepping out of a home: you can move, but can't shoot or be hurt
