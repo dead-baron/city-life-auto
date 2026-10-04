@@ -32,9 +32,16 @@ echo "== data dir + service =="
 mkdir -p /home/ubuntu/cla-data
 sudo cp deploy/city-life-auto.service /etc/systemd/system/city-life-auto.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now city-life-auto
+sudo systemctl enable city-life-auto
+sudo systemctl restart city-life-auto
 sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
 sudo systemctl reload caddy
+
+echo "== auto-update: pull new versions from GitHub every 2 minutes =="
+chmod +x deploy/auto-update.sh
+sudo cp deploy/cla-update.service deploy/cla-update.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now cla-update.timer
 
 echo "== nightly backup of player profiles (keeps 14 days) =="
 # (a brand-new server has no crontab yet: `crontab -l` / `grep` fail, which must not stop the script)

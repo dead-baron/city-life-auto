@@ -1,0 +1,10 @@
+# One auto-update check (see deploy/auto-update.sh). Triggered by cla-update.timer.
+[Unit]
+Description=City Life Auto auto-update from GitHub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/city-life-auto/deploy/auto-update.sh

@@ -698,3 +698,12 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
   - The service file sets the new limits.
 - New `test/limits.test.js` (4 tests).
 
+## Auto-deploy to the live server
+- **`deploy/auto-update.sh`** runs every 2 minutes from a systemd timer (`cla-update.timer` + `cla-update.service`, installed by `setup-oracle.sh`):
+  - fetches `main` and fast-forwards;
+  - restarts the game only when `server/`, `shared/` or `package.json` changed (players are saved first; client-only changes come from GitHub Pages);
+  - waits up to 15 s for `/health`;
+  - if the new version doesn't come up, resets to the previous commit, restarts that, and remembers the bad commit so it isn't retried every 2 minutes (the next push is).
+  - Log: `journalctl -u cla-update`.
+- **`setup-oracle.sh` re-runs now restart the game service**, so changed service settings take effect.
+
