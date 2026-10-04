@@ -148,16 +148,28 @@
     <div class="mhead"><h2>PAUSED</h2><button class="x" data-close>✕</button></div>
     <p class="msub" id="p-sub">Game menu</p>
     <div class="m-opts">
-      <button class="opt dev-only" data-p="dev">Debug / cheats menu</button>
+      <button class="opt dev-only" data-p="dev">🛠 Debug menu</button>
       <button class="opt" data-p="resume">Resume</button>
       <button class="opt" data-p="phone">Phone (places, jobs, waypoints)</button>
       <button class="opt" data-p="map">Map</button>
+      <button class="opt" data-p="players" id="p-players">Players online</button>
       <button class="opt cop-only" data-p="cruiser">Call police cruiser</button>
       <button class="opt" data-p="settings">Settings</button>
       <button class="opt" data-p="controls">Controls</button>
       <button class="opt" data-p="fullscreen">Toggle fullscreen</button>
+      <button class="opt online-only" data-p="devmode" id="p-devmode">Dev Debug Mode</button>
       <button class="opt" data-p="title">Back to title screen</button>
     </div>
+  </div></div>
+  <div id="players" class="hidden overlay"><div class="panel">
+    <div class="mhead"><h2>PLAYERS ONLINE</h2><button class="x" data-close>✕</button></div>
+    <p class="msub" id="pl-sub">Everyone in the city right now.</p>
+    <div class="m-opts" id="pl-list"></div>
+  </div></div>
+  <div id="devpw" class="hidden overlay"><div class="panel">
+    <div class="mhead"><h2>DEV DEBUG MODE</h2><button class="x" data-close>✕</button></div>
+    <p class="msub">For testing on the live server. Nothing you do in dev mode is saved: leaving it - or quitting - puts your character back exactly as it was when you went in.</p>
+    <div class="m-opts devpw-row"><input id="devpw-in" type="password" placeholder="Password" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="opt" id="devpw-go">Unlock</button></div>
   </div></div>
   <div id="controls" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>CONTROLS</h2><button class="x" data-close>✕</button></div>

@@ -60,7 +60,7 @@ test('every island and gang turf is shown', () => {
 
 test('every gameplay rule is explained (numbers come from shared/rules.js)', () => {
   // rules that are deliberately not player-facing
-  const internal = new Set(['BAIL_SPEED']);
+  const internal = new Set(['BAIL_SPEED', 'BAIL_HURT_PER_PX', 'TRAIN_ACCEL', 'TRAIN_BRAKE', 'LIMP_SPEED']);
   for (const name of Object.keys(rules)) {
     if (internal.has(name)) continue;
     assert.ok(new RegExp(`\\$\\{[^}]*\\b${name}\\b`).test(src), `rule ${name} is not used in the tutorial text`);

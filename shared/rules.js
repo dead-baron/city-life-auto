@@ -23,7 +23,9 @@ export const ARREST_REWARD_PER_STAR = 150;
 export const RESPAWN_SECONDS = 7;
 export const GHOST_SECONDS = 30;              // a disconnected player's body lingers this long
 export const HOSPITAL_FEE = 150;
-export const BAIL_SPEED = 140;                // bailing out faster than this means a tumble
+export const BAIL_SPEED = 140;                // bailing out faster than this means a tumble (slower: you just step out)
+export const BAIL_HURT_SPEED = 330;           // ...but below this you only tuck and roll - no injury at all
+export const BAIL_HURT_PER_PX = 0.2;          // above it, landing damage per px/s over the line (a faceplant hurts more)
 
 // Phone job board: delivery jobs are priced by distance. $ = across the neighbourhood,
 // $$ = across town, $$$ = island to island. Pay = base + distance * perPx; limit = seconds.
@@ -37,6 +39,9 @@ export const PATROL_SEARCH_S = [6, 14];      // how long you look around before 
 
 // Combat balance
 export const NPC_GUN_MULT = 6;          // gun damage vs NPCs and police (1-2 shots most people, ~3 for SWAT / brutes)
+export const NPC_GRIT = [[0.75, 30], [1, 45], [1.6, 17], [2.5, 8]]; // [how much more a bullet takes to drop them, % of people]: some go down at the first shot, a few take three or four
+export const NPC_CRITICAL = 0.3;        // below this share of health people bleed; NPCs stop fighting and limp off
+export const LIMP_SPEED = 0.35;         // a critically hurt NPC limps along at this fraction of walking pace
 export const VEHICLE_TOUGHNESS = 1.35;  // cars and boats take this much less damage (motorcycles stay fragile)
 export const ARMORED_ROCKETS = 2;       // rockets to destroy an armored van / SWAT truck (everything else: one)
 export const ARMORED_VEHICLES = ['armored', 'swat'];
@@ -82,10 +87,14 @@ export const ROB_RESPONSE_S = [10, 15];   // squad cars arrive this long after t
 export const ROB_ALARM_STARS = 3;         // wanted level the alarm puts you on
 
 // Trains
-export const TRAIN_SPEED = 430;          // cruising speed (px/s) - nothing stops it, nothing damages it
-export const TRAIN_DWELL_S = 10;         // stop at each station this long
+export const TRAINS_ON_LINE = 6;         // trains running the loop at once, spaced out around it
+export const TRAIN_SPEED = 560;          // cruising speed (px/s) - as quick as a fast car; nothing stops it, nothing damages it
+export const TRAIN_ACCEL = 85;           // pulling away (px/s^2) - eased in and out, no lurch
+export const TRAIN_BRAKE = 115;          // braking into a station
+export const TRAIN_DWELL_S = 8;          // stop at each station this long
 export const TRAIN_DRAG_EXPLODE_S = 3.5; // a vehicle shoved along in front of the engine this long blows up
-export const CROSSING_WARN_PX = 900;     // crossing gates come down when a train is this close
+export const CROSSING_WARN_PX = 2600;    // crossing gates come down when a train is this close
+export const MAIL_WARN_S = 4;            // mail-car guards order you out this long before they open fire
 export const TRAIN_JOB_PAY = 3000;       // the mail-car strongbox, fenced
 export const STRONGBOX_CRACK_S = 5;      // stay on the mail car this long to crack it
 export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Refuge Island run) and the alarm bell puts you here

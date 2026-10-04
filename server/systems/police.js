@@ -12,6 +12,7 @@ import * as combat from './combat.js';
 import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import { IN } from '../../shared/input.js';
+import { inAnyView } from '../view.js';
 
 const rng = mulberry32(911);
 
@@ -55,7 +56,9 @@ function spawnUnit(world, p, o = {}) {
     return true;
   });
   if (!cands.length) return;
-  const n = cands[Math.floor(rng() * cands.length)];
+  const hidden = cands.filter((n) => !inAnyView(world, n.x + 32, n.y + 32, 100)); // roll in from off screen when possible
+  const pool = hidden.length ? hidden : cands;
+  const n = pool[Math.floor(rng() * pool.length)];
   const swat = p.wanted >= 4 && rng() < 0.5;
   const moto = !o.noMoto && !swat && p.wanted <= 3 && rng() < 0.3; // motorcycle cops: one rider, fast, fragile
   const a = Math.atan2(ty - n.y, tx - n.x);

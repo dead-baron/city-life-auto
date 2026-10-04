@@ -21,6 +21,12 @@ export function speedOf(v) { return Math.hypot(v.vx, v.vy); }
 export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHER.RAIN }) {
   const moving = Math.abs(v.vx) + Math.abs(v.vy) > 0.5 || Math.abs(v.input.throttle) > 0.05;
   if (!moving) return;
+  // pinned broadside to the nose of a train: carried along with it (tyres can't grip that) -
+  // unless whoever's at the wheel powers it off the line
+  if (world.time - (v.trainDragAt || -9) < 0.12 && Math.abs(v.input.throttle) < 0.3 && !v.wreckAt) {
+    v.x += v.vx * dt; v.y += v.vy * dt; v.a += (v.av || 0) * dt;
+    return;
+  }
   const impact = vehStep(v, v.input, dt, world.map, v.def, env);
   if (impact > 160) {
     const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);
@@ -61,7 +67,8 @@ export function update(world, dt) {
     const fwd = vehForwardSpeed(v);
     v.brake = v.input.throttle < -0.1 && fwd > 20;
     v.reverse = fwd < -10;
-    v.drift = Math.abs(vehLateralSpeed(v)) > 110 || (v.input.hb && Math.abs(fwd) > 120);
+    // tyre smoke + skid marks: sliding, e-braking, donuts, or a full-throttle launch (burnout)
+    v.drift = Math.abs(vehLateralSpeed(v)) > 110 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player);
     v.lights = (night && !!driver) || (v.def.police && v.sirenOn);
     v.siren = !!(v.def.police && v.sirenOn && driver);
     // burning / smoke
@@ -205,12 +212,14 @@ export function explode(world, v, attackerPed) {
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
-import { BAIL_SPEED, VEHICLE_TOUGHNESS } from '../../shared/rules.js';
+import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGHNESS } from '../../shared/rules.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
-  // out of the door, carried along by the car's momentum
+  // out of the door, carried along by the vehicle's momentum (clear of it: you don't tumble into
+  // your own bike)
   const side = a + Math.PI / 2 * (seat % 2 === 1 ? 1 : -1);
+  ped.bailFrom = v.id; ped.bailFromUntil = world.time + 1.5;
   fling(world, ped, v.vx * 0.8 + Math.cos(side) * 70, v.vy * 0.8 + Math.sin(side) * 70, null, 'bail');
 }
 
@@ -221,7 +230,13 @@ export const LANDINGS = ['roll', 'face', 'slide'];
 export function fling(world, ped, vx, vy, attacker = null, cause = 'bail', dmgMul = 1) {
   const now = world.time;
   const spd = Math.hypot(vx, vy);
-  const kind = LANDINGS[Math.floor(world.rand() * LANDINGS.length)];
+  // Bailing out: slow, you just tuck and roll and come up unhurt (even if you roll into
+  // something); fast, the landing is a gamble - the faster you were going the likelier it's a
+  // faceplant, and the harder it hits.
+  const soft = cause === 'bail' && spd < BAIL_HURT_SPEED;
+  ped.tumbleSoft = soft;
+  const over = cause === 'bail' ? Math.max(0, (spd - BAIL_HURT_SPEED) / 400) : 0;
+  const kind = soft ? 'roll' : cause === 'bail' ? (world.rand() < 0.25 + over * 0.45 ? 'face' : world.rand() < 0.5 ? 'roll' : 'slide') : LANDINGS[Math.floor(world.rand() * LANDINGS.length)];
   const air = Math.max(0.28, Math.min(0.75, 0.2 + spd / 1100)) * (0.85 + world.rand() * 0.3);
   const slide = kind === 'face' ? 0.25 : kind === 'roll' ? Math.min(1.4, 0.5 + spd / 700) : Math.min(1.8, 0.6 + spd / 600);
   const getUp = kind === 'face' ? 1.1 : 0.7;
@@ -232,7 +247,9 @@ export function fling(world, ped, vx, vy, attacker = null, cause = 'bail', dmgMu
   ped.a = Math.atan2(vy, vx);
   world.emit(ped.x, ped.y, { e: 'fling', id: ped.id, d: +air.toFixed(2), k: kind, x: ped.x, y: ped.y });
   // landing hurts more the faster you were going; a faceplant a little extra
-  const dmg = Math.max(0, spd - 200) * 0.1 * (kind === 'face' ? 1.25 : 1) * dmgMul;
+  const dmg = cause === 'bail'
+    ? Math.max(0, spd - BAIL_HURT_SPEED) * BAIL_HURT_PER_PX * (kind === 'face' ? 1.4 : kind === 'roll' ? 0.8 : 1) * dmgMul
+    : Math.max(0, spd - 200) * 0.1 * (kind === 'face' ? 1.25 : 1) * dmgMul;
   if (dmg > 0) combat.damage(world, ped, dmg, attacker, cause, ped.a);
   return kind;
 }

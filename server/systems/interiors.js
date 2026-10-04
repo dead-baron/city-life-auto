@@ -3,6 +3,7 @@
 // only exist while a player is nearby, and a clerk who was hurt or killed is replaced a minute
 // later.
 import { spawnNpc, despawnNpc } from './npc.js';
+import { inAnyView } from '../view.js';
 
 const NEAR_PX = 1100, FAR_PX = 1500, REPLACE_S = 60;
 const STAFF = {
@@ -29,6 +30,7 @@ export function update(world) {
       if (onDuty && d > FAR_PX) { despawnNpc(world, ped); st.ped = 0; st.goneAt = 0; return; }
       if (onDuty || d > NEAR_PX) return;
       if (st.goneAt && world.time - st.goneAt < REPLACE_S) return;
+      if (st.goneAt > 0 && inAnyView(world, u.clerk.x, u.clerk.y, 40)) return; // the replacement turns up while nobody's looking
       const [arch, role] = STAFF[u.kind] || ['casual', 'civ'];
       const c = spawnNpc(world, arch, u.clerk.x, u.clerk.y, role);
       c.npc.desk = { x: u.clerk.x, y: u.clerk.y, a: u.clerk.a };

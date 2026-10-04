@@ -9,6 +9,8 @@ import { DISTRICTS } from '../shared/map.js';
 import { weaponIcon } from './render/peds.js';
 
 const $ = (id) => document.getElementById(id);
+const thumbs = new Map();
+function weaponThumb(i) { if (!thumbs.has(i)) thumbs.set(i, weaponIcon(i).toDataURL()); return thumbs.get(i); }
 const WEAPON_BY_ID = WEAPONS;
 
 export class HUD {
@@ -168,7 +170,12 @@ export class HUD {
       b.className = 'opt' + (i === this.menuFocus ? ' focus' : '');
       b.disabled = !!o.dis;
       const price = o.price === undefined ? '' : o.price < 0 ? `<span class="price sell">+$${-o.price}</span>` : `<span class="price">$${o.price.toLocaleString()}</span>`;
-      b.innerHTML = `<span>${esc(o.label)}${o.note ? `<span class="note">${esc(o.note)}</span>` : ''}</span>${price}`;
+      // weapon offers carry a picture (placeholder pixel art until the final weapon art lands) and,
+      // in the armory, rough stat bars
+      const pic = o.wpn !== undefined ? `<img class="wpn" alt="" src="${weaponThumb(o.wpn)}">` : '';
+      const bars = o.stats ? `<span class="stats">${[['PWR', o.stats.pow], ['RNG', o.stats.rng], ['ACC', o.stats.acc]].map(([k, v]) => `<i>${k}<b style="width:${v * 8}px"></b></i>`).join('')}</span>` : '';
+      if (pic) b.classList.add('has-wpn');
+      b.innerHTML = `${pic}<span>${esc(o.label)}${o.note ? `<span class="note">${esc(o.note)}</span>` : ''}${bars}</span>${price}`;
       b.onclick = () => this.choose(i);
       box.appendChild(b);
     });
@@ -322,6 +329,22 @@ export class HUD {
       g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(d.name.toUpperCase(), x, y);
       g.fillStyle = d.turf ? '#ff8a7a' : '#fff4c8'; g.fillText(d.name.toUpperCase(), x, y);
     }
+    // the railway loop (dashed where it runs underground) - every station is a stop
+    if (this.map.rail) {
+      const pts = this.map.rail.pts;
+      for (const [under, col, wd] of [[false, 'rgba(0,0,0,.55)', 4], [false, '#e0b070', 2], [true, '#e0b070', 2]]) {
+        g.strokeStyle = col; g.lineWidth = wd; g.setLineDash(under ? [4, 4] : []);
+        g.beginPath();
+        for (let i = 0; i <= pts.length; i++) {
+          const a = pts[i % pts.length], b = pts[(i + 1) % pts.length];
+          if (!!a.under !== under || i === pts.length) continue;
+          const [x1, y1] = P(a.x, a.y), [x2, y2] = P(b.x, b.y);
+          g.moveTo(x1, y1); g.lineTo(x2, y2);
+        }
+        g.stroke();
+      }
+      g.setLineDash([]);
+    }
     // places
     const ic = Math.max(11, Math.min(16, w / 60));
     g.font = `bold ${ic - 3}px monospace`;
@@ -348,6 +371,14 @@ export class HUD {
         });
       }
       if (this.waypoint) { const [x, y] = P(this.waypoint.x, this.waypoint.y); g.fillStyle = '#4fd6ff'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 7, y); g.lineTo(x, y + 9); g.lineTo(x - 7, y); g.closePath(); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(this.waypoint.label, x, y - 14); }
+      // other players (positions only reach devs; everyone else gets the list with districts)
+      for (const q of this.plist || []) {
+        if (q.me || q.x === undefined) continue;
+        const [x, y] = P(q.x, q.y);
+        g.fillStyle = q.dead ? '#888' : '#5dff9a'; g.strokeStyle = '#000'; g.lineWidth = 2;
+        g.beginPath(); g.arc(x, y, 5, 0, 6.28); g.fill(); g.stroke();
+        g.font = '600 11px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#c8ffd8'; g.fillText(q.n, x, y - 11);
+      }
       if (me.job) { const [x, y] = P(me.job.x, me.job.y); g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); }
       // police / bounty intel (server already applies the visibility rules)
       for (const r of me.radar || []) {

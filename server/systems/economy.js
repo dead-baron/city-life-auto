@@ -66,10 +66,18 @@ function pay(p, amount) {
   return true;
 }
 
+// Rough 0-5 bars for the armory cards: damage per second, range, accuracy.
+function weaponStats(id) {
+  const w = WEAPONS[id];
+  const dps = (w.dmg * (w.pellets || 1)) / (w.cd || 1);
+  const bar = (v, max) => Math.max(1, Math.min(5, Math.round((v / max) * 5)));
+  return { pow: bar(dps, 150), rng: bar(w.range || 0, 1050), acc: bar(0.22 - (w.spread || 0), 0.22) };
+}
+
 function weaponOffer(o, prof) {
   const w = WEAPONS[o.id];
   const owned = prof.weapons[o.id] !== undefined;
-  return { id: `w:${o.id}:${o.price}`, label: w.name, price: o.price, dis: owned, note: owned ? 'owned' : (w.illegal ? 'illegal' : '') };
+  return { id: `w:${o.id}:${o.price}`, label: w.name, price: o.price, dis: owned, note: owned ? 'owned' : (w.illegal ? 'illegal' : ''), wpn: w.i };
 }
 
 export function buildMenu(world, p, poi) {
@@ -98,7 +106,7 @@ export function buildMenu(world, p, poi) {
     if (shop.sellsWeapons) {
       for (const id of Object.keys(prof.weapons)) {
         if (id === 'fists' || id === 'taser' || id === 'baton') continue;
-        opts.push({ id: `sw:${id}`, label: `Sell ${WEAPONS[id].name}`, price: -Math.round(weaponPrice(id) * 0.4) });
+        opts.push({ id: `sw:${id}`, label: `Sell ${WEAPONS[id].name}`, price: -Math.round(weaponPrice(id) * 0.4), wpn: WEAPONS[id].i });
       }
     }
   }
@@ -122,7 +130,7 @@ export function buildMenu(world, p, poi) {
         sub = 'The door locks behind you. Check out one long gun (your service pistol always comes along), then head out back to the motor pool and take any cruiser or motorcycle.';
         for (const id of POLICE_ARMORY) {
           const has = prof.weapons[id] !== undefined;
-          opts.push({ id: `arm:${id}`, label: `${has ? 'Restock' : 'Take'} ${WEAPONS[id].name}`, note: has ? `carrying ${(prof.weapons[id] || 0) + (p.ped.mag[id] || 0)} rds` : `${WEAPONS[id].mag}-round mag` });
+          opts.push({ id: `arm:${id}`, label: `${has ? 'Restock' : 'Take'} ${WEAPONS[id].name}`, note: has ? `carrying ${(prof.weapons[id] || 0) + (p.ped.mag[id] || 0)} rds` : `${WEAPONS[id].mag}-round mag`, wpn: WEAPONS[id].i, stats: weaponStats(id) });
         }
         opts.push({ id: 'armexit', label: 'Out the back door to the motor pool ▶' });
         opts.push({ id: 'sleave', label: 'Back out to the front desk' });
@@ -201,9 +209,9 @@ export function buildMenu(world, p, poi) {
           }
           opts.push({ id: 'houtfit', label: 'Change outfit', note: p.badge ? 'off duty only' : 'free', dis: p.badge });
           for (const [id, n] of Object.entries(prof.inventory)) if (n > 0 && ITEMS[id]) opts.push({ id: `hst:${id}`, label: `Stash ${ITEMS[id].name} x${n}` });
-          for (const id of Object.keys(prof.weapons)) if (!NO_STASH.has(id) && WEAPONS[id]) opts.push({ id: `hsw:${id}`, label: `Stash ${WEAPONS[id].name}`, note: WEAPONS[id].mag ? `${prof.weapons[id]} rds` : '' });
+          for (const id of Object.keys(prof.weapons)) if (!NO_STASH.has(id) && WEAPONS[id]) opts.push({ id: `hsw:${id}`, label: `Stash ${WEAPONS[id].name}`, note: WEAPONS[id].mag ? `${prof.weapons[id]} rds` : '', wpn: WEAPONS[id].i });
           for (const [id, n] of Object.entries(st.items || {})) if (n > 0 && ITEMS[id]) opts.push({ id: `htk:${id}`, label: `Take ${ITEMS[id].name} x${n}`, note: 'stash' });
-          for (const id of Object.keys(st.weapons || {})) if (WEAPONS[id]) opts.push({ id: `htw:${id}`, label: `Take ${WEAPONS[id].name}`, note: 'stash' });
+          for (const id of Object.keys(st.weapons || {})) if (WEAPONS[id]) opts.push({ id: `htw:${id}`, label: `Take ${WEAPONS[id].name}`, note: 'stash', wpn: WEAPONS[id].i });
         }
         opts.push({ id: 'hspawn', label: prof.spawnHome === h.id ? 'Respawn point: HERE' : 'Make this my respawn point', dis: prof.spawnHome === h.id });
         if (h.garage) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: inside ? `Garage: ${d.name}` : `Take out ${d.name}`, note: inside ? 'drive out' : 'garage' }); });

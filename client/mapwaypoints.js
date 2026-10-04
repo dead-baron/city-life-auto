@@ -14,8 +14,11 @@ export const MAP_GROUPS = [
   { id: 'homes', icon: '⌂', title: 'Homes for sale', kinds: ['home'] },
 ];
 
+export const ROLE_ICON = { citizen: '•', criminal: '☠', police: '★', hunter: '◎' };
+export const ROLE_NAME = { citizen: 'Citizen', criminal: 'Wanted', police: 'Police', hunter: 'Bounty hunter' };
+
 export function createMapWaypoints(ctx) {
-  // ctx: { map(), pos(), setWaypoint(w|null), waypoint(), refocus(), setFilter(list|null), myHomes() }
+  // ctx: { map(), pos(), setWaypoint(w|null), waypoint(), refocus(), setFilter(list|null), myHomes(), players() }
   let group = null;
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const fmt = (d) => `${Math.round(d / 32)}m`;
@@ -39,8 +42,16 @@ export function createMapWaypoints(ctx) {
       el.innerHTML = '<h3>Set a waypoint</h3>'
         + (wp ? `<button class="bm-row clear" data-clear="1">✕ Clear waypoint <small>${esc(wp.label)}</small></button>` : '')
         + (mine.length ? `<button class="bm-row" data-mine="1"><span class="ic">⌂</span>My homes</button>` : '')
+        + `<button class="bm-row" data-players="1"><span class="ic">👥</span>Players online${ctx.players().length ? ` (${ctx.players().length})` : ''}</button>`
         + MAP_GROUPS.map((g) => `<button class="bm-row" data-group="${g.id}"><span class="ic">${g.icon}</span>${g.title}</button>`).join('')
         + '<p class="bm-hint">…or click / tap anywhere on the map to drop a marker.</p>';
+    } else if (group === 'players') {
+      // everyone online: name, role and district (devs also get their spot on the map)
+      ctx.setFilter(null);
+      const ps = ctx.players();
+      el.innerHTML = `<button class="bm-row back" data-back="1">◀ Players online (${ps.length})</button>`
+        + (ps.length ? ps.map((q, i) => `<button class="bm-row" data-pl="${i}"${q.x === undefined ? ' disabled' : ''}><span class="ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm ? ' [dev]' : ''}<small>${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}</small></span></button>`).join('') : '<p class="bm-hint">Just you.</p>');
+      el.querySelectorAll('[data-pl]').forEach((b) => { b.onclick = () => { const q = ps[Number(b.dataset.pl)]; if (q && q.x !== undefined) { ctx.setWaypoint({ x: q.x, y: q.y, label: q.n }); render(); } }; });
     } else {
       const list = group === 'mine'
         ? ctx.myHomes().map((h) => ({ p: { id: -1, x: h.x, y: h.y, label: h.name, home: h.id }, d: dist(h) }))
@@ -53,6 +64,7 @@ export function createMapWaypoints(ctx) {
     }
     el.querySelectorAll('[data-group]').forEach((b) => { b.onclick = () => { group = b.dataset.group; render(); }; });
     el.querySelectorAll('[data-mine]').forEach((b) => { b.onclick = () => { group = 'mine'; render(); }; });
+    el.querySelectorAll('[data-players]').forEach((b) => { b.onclick = () => { group = 'players'; render(); }; });
     el.querySelectorAll('[data-back]').forEach((b) => { b.onclick = () => { group = null; render(); }; });
     el.querySelectorAll('[data-clear]').forEach((b) => { b.onclick = () => { ctx.setWaypoint(null); render(); }; });
     ctx.refocus();
@@ -62,6 +74,7 @@ export function createMapWaypoints(ctx) {
     open() { group = null; render(); },
     back() { if (group) { group = null; render(); return true; } return false; },
     refresh: render,
+    refreshPlayers() { if (group === 'players' || !group) render(); },
     get inGroup() { return !!group; },
   };
 }

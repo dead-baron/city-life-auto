@@ -171,10 +171,11 @@ function hitscan(world, ped, w, a) {
   const hx = x1 + (x2 - x1) * t, hy = y1 + (y2 - y1) * t;
   world.emit(x1, y1, { e: 'shot', x1, y1, x2: hx, y2: hy, w: w.i, h: hit.kind || 0 });
   if (hit.kind === K.PED) {
-    world.emit(hx, hy, { e: 'blood', x: hx, y: hy, a, n: 7 });
+    world.emit(hx, hy, { e: 'blood', x: hx, y: hy, a, n: 9, g: 1 }); // g: a bullet - spray out the far side, splats on the ground
     if (world.rand() < 0.35) hit.bleeding = true;
-    // guns are deadly against NPCs / police (1-3 shots); players keep more staying power
-    const mult = hit.player || !ped.player ? 1 : NPC_GUN_MULT; // your shots are deadly; NPC-vs-NPC gunfights last a while
+    // guns are deadly against NPCs / police (1-3 shots); players keep more staying power; some
+    // people are just harder to put down (grit)
+    const mult = hit.player || !ped.player ? 1 : NPC_GUN_MULT / (hit.grit || 1); // your shots are deadly; NPC-vs-NPC gunfights last a while
     damage(world, hit, w.dmg * mult * (0.9 + world.rand() * 0.2), ped, 'gun', a);
     return true;
   }
@@ -300,13 +301,18 @@ export function update(world, dt) {
       e.pendingReload = null;
       if (e.player) e.player.meDirty = true;
     }
-    // bleeding drain + bloody footprints on dry concrete
+    // bleeding drain, a trail of drips wherever they go + bloody footprints on dry concrete
     if (e.bleeding) {
       if (e.hp > 8) e.hp -= 0.5 * dt;
-      if (!e.vehId && dryWeather) {
+      if (!e.vehId && !e.onTrain) {
         const moved = Math.hypot(e.x - e.lastStepX, e.y - e.lastStepY);
-        e.footAcc += moved;
-        if (e.footAcc > 22) {
+        if (moved < 40) { e.footAcc += moved; e.dripAcc = (e.dripAcc || 0) + moved; } // (not a teleport)
+        if (e.dripAcc > 15) {
+          e.dripAcc = 0;
+          const tl = world.map.tileAtPx(e.x, e.y);
+          if (tl !== T.WATER && tl !== T.DEEP) world.emit(e.x, e.y, { e: 'drip', x: Math.round(e.x), y: Math.round(e.y) });
+        }
+        if (e.footAcc > 22 && dryWeather) {
           e.footAcc = 0;
           if (DRY_CONCRETE.has(world.map.tileAtPx(e.x, e.y))) world.emit(e.x, e.y, { e: 'foot', x: e.x, y: e.y, a: Math.atan2(e.vy, e.vx) });
         }

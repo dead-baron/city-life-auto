@@ -6,6 +6,7 @@ import { angleDiff, clamp } from '../../shared/math.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
+import { inAnyView } from '../view.js';
 import * as combat from './combat.js';
 
 const rng = mulberry32(6060);
@@ -62,7 +63,7 @@ function spawnPoint(world, a) {
   const pts = (world.map.seaPoints || []).filter((p) => { const d = Math.hypot(p.x - a.x, p.y - a.y); return d > 750 && d < 1400; });
   for (let k = 0; k < 8 && pts.length; k++) {
     const p = pts[Math.floor(rng() * pts.length)];
-    if ([...world.players.values()].every((q) => !q.ped || Math.hypot(q.ped.x - p.x, q.ped.y - p.y) > 650) && !world.query(p.x, p.y, 120, K.VEH).length) return p;
+    if ([...world.players.values()].every((q) => !q.ped || Math.hypot(q.ped.x - p.x, q.ped.y - p.y) > 500) && !inAnyView(world, p.x, p.y, 120) && !world.query(p.x, p.y, 120, K.VEH).length) return p;
   }
   return null;
 }

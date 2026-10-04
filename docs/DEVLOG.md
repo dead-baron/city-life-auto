@@ -708,3 +708,52 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
 - **`setup-oracle.sh` re-runs now restart the game service**, so changed service settings take effect.
 - **60-second warning:** when players are online, `auto-update.sh` writes the restart time to `<data>/update-at` and waits a minute. The server shows everyone a countdown ("Server updating in 60 seconds - your progress is saved, you'll reconnect automatically", then 30, 10, 5, 3, 2, 1). With nobody online it restarts straight away.
 
+
+## Gameplay notes pass: spawning, cargo, trains, bailing, blood, drifting, players list, Dev Debug Mode
+- **Nothing pops in on screen any more.**
+  - The client tells the server how much world its screen shows (`{t:'view'}`). `server/view.js` mirrors the camera: speed zoom-out plus look-ahead.
+  - Net culling sends the camera rectangle plus a 360 px margin, stretched ~0.9 s ahead of a moving vehicle. It replaces the fixed 3×3 chunk window, so things are on the client before they scroll into view. Already-known entities stay until 200 px further out.
+  - Every spawner skips points inside anyone's view: traffic, pedestrians, parked cars, marina boats, police units, ambulances, boaters, motor-pool restocks and replacement shop clerks. Things only despawn off screen.
+- **Crates on every vehicle.**
+  - Bikes, jet skis, cars and police cars: 1 (rear mount, trunk or roof).
+  - Vans: 2. Pickups: 4. Flatbeds: 8. SWAT trucks: 8. City buses: 8 (roof rack). Armored trucks: 10.
+  - Slot widths now scale correctly with the art.
+- **Trains.**
+  - **Route:** one loop around the whole world. It runs along the outer shores of Industrial and Residential and the length of Sunset Beach, then crosses the channels on short bridges, goes through the Downtown subway and across Refuge Island.
+  - **Stations (12):** Ironworks, Harbor, Northshore, Midtown Underground, Eastport, Refuge Halt, Refuge West, Northgate, Sunset Beach, Southside, Pine Hills and The Yards.
+  - **Service:** 6 trains (every third hauls the mail car) at 560 px/s, about car speed.
+  - **Easing:** a jerk-limited drive model gives a smooth pull-away and an exact, gentle stop at the platform (it arrives below 10 px/s).
+  - **Spacing:** block signalling keeps 520 px behind the train ahead.
+  - **Platform clocks:** an LED countdown on every platform. Run times come from the same drive model, and `{e:'tt'}` is broadcast every second. Accurate to within 3 s in the test.
+  - A car caught on the engine's nose is now carried straight ahead, so a fast train can't knock it aside. Crossing gates drop earlier (2,600 px) for the faster trains.
+- **Riding.**
+  - **The "riding kills you" bug:** most likely the mail-car guards. They opened fire 2 s after anyone stepped into the mail car, unseen under the roof. Now they draw on you and give you 4 s (`MAIL_WARN_S`) to leave, and let you go if you do. They stay hostile only if you crack the box or shoot them.
+  - The roof-off interior is confirmed working. Commuters no longer appear inside a car you're riding.
+  - Leaping off uses the bail rules below.
+- **Bailing out by speed.**
+  - **Slow:** below `BAIL_HURT_SPEED` (330 px/s landing speed, about 410 px/s vehicle speed) you always tuck and roll, with no damage, even if you roll into something.
+  - **Fast:** damage grows with speed (`BAIL_HURT_PER_PX`), and a faceplant gets likelier and hurts more.
+  - The vehicle you just left (your own motorcycle) no longer counts as something you crash into. That was the slow-bike death.
+- **Blood and hurt NPCs.**
+  - Bullet hits throw a cone of droplets out of the far side, plus back-spatter, a red puff and splats on the ground. Droplets leave spots where they land.
+  - Bleeding people leave a drip trail on any ground.
+  - **Grit (`NPC_GRIT`):** about 30% of people drop at the first shot, a few take 3-4. Not rolled for police.
+  - Below `NPC_CRITICAL` (30%), NPCs stop fighting and limp away bleeding, in a halting gait at `LIMP_SPEED`. The client draws the limp.
+- **Driving.**
+  - **Brake:** hard; braking while steering at speed breaks the tail loose into a drift.
+  - **Handbrake (Space / A / BRAKE):** a hard e-brake that kicks the tail out for skid turns. Held with the gas floored, it spins donuts.
+  - **Point-to-drive:** pulling back to one side at speed is a brake-skid, and asking for a far sharper turn than the wheels allow slides the car round.
+  - **Smoke:** burnouts and slides smoke.
+  - AI drivers never trigger the skids.
+- **Police armory / shops:** weapon offers show a picture, and the armory adds power/range/accuracy bars. The pictures are placeholder pixel art until the final weapon art is in.
+- **Players online:**
+  - In the pause menu and on the map: name, role and district.
+  - Only devs see exact positions (map markers) and get Go to / Bring / Give dev buttons.
+  - The world map shows the railway loop.
+- **Dev Debug Mode online:**
+  - Pause → Dev Debug Mode → password (`GODMODE`, or `CLA_DEV_PASSWORD` on the server; 5 tries a minute).
+  - The debug menu then sits at the top of Options and has a player list (go to, bring, give dev).
+  - Entering snapshots the player (profile, rank and wanted level, health, ammo and position), and the game runs on a throwaway copy of the profile. The save file never sees it.
+  - Leaving, or disconnecting, restores everything. Granted players get a notice that their progress won't be saved.
+- Tutorial v12. The world map was re-baked.
+- **Tests:** `test/view.test.js` (no in-view spawns, nothing unsent on screen, prefetch ahead) and `test/gameplay.test.js` (bailing, crate capacity, drifting, blood/grit/limp, players list, dev mode save isolation). New train tests cover easing, clocks, headway and speed, guard warnings, and jumping off.

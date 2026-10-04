@@ -4,6 +4,7 @@
 import { pedStep } from '../../shared/physics.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc, seek } from './npc.js';
+import { inAnyView } from '../view.js';
 import { driveToward, planRoute } from './traffic.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -49,7 +50,7 @@ function dispatch(world, now) {
       const d = Math.hypot(n.x - b.x, n.y - b.y);
       if (d < 650 || d > 1300) return false;
       for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - n.x, p.ped.y - n.y) < 620) return false;
-      return true;
+      return !inAnyView(world, n.x + 32, n.y + 32, 100);
     });
     if (!cands.length) continue;
     const n = cands[Math.floor(rng() * cands.length)];

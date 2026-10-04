@@ -1,4 +1,5 @@
-// Playtest/debug commands, only accepted when the server runs with CLA_DEV=1.
+// Playtest/debug commands: accepted when the server runs with CLA_DEV=1 (offline practice), or
+// online from a player in Dev Debug Mode (devmode.js - nothing they do there is saved).
 import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { WEAPONS } from '../shared/items.js';
@@ -11,10 +12,11 @@ import * as npc from './systems/npc.js';
 import * as gangwar from './systems/gangwar.js';
 import * as cruiser from './systems/cruiser.js';
 import * as trains from './systems/trains.js';
+import * as devmode from './devmode.js';
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train'];
+export const DEV_COMMANDS = ['shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train', 'goto', 'bring', 'grant'];
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 
@@ -97,6 +99,9 @@ export function command(world, p, c, msg) {
     }
     case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
       if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; p.teleportAt = world.time; } break;
+    case 'goto': devmode.goTo(world, p, msg.pid); break;     // teleport to an online player
+    case 'bring': devmode.bring(world, p, msg.pid); break;   // fetch an online player to you
+    case 'grant': devmode.grant(world, p, msg.pid); break;   // give someone Dev Debug Mode (their progress stops saving too)
     default: world.notify(p, `[dev] unknown command ${c}. Try: ${DEV_COMMANDS.join(', ')}`, 'warn'); return;
   }
   world.loopTime %= DAY_LOOP_S;

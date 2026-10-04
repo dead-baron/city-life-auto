@@ -1,6 +1,7 @@
-// Trains. Two trains run one big loop around the city - over the trestle off the west coast,
-// through the channels, under Downtown in the subway tunnel and across the open fields of
-// Refuge Island - stopping at every station. Nothing stops them and nothing hurts them: a car on
+// Trains. Six trains run one big loop around the whole world - along the outer shores of the
+// Industrial and Residential islands and Sunset Beach, over short bridges across the channels,
+// under Downtown in the subway tunnel and across the open fields of Refuge Island - easing in and
+// out of every station. Each platform has a clock counting down to the next train. Nothing stops them and nothing hurts them: a car on
 // the line gets shoved along in front of the engine and blows up if it can't get off; people get
 // thrown. Anyone can ride: players, NPC commuters (seated or standing), and cops who come aboard
 // at the next station for a wanted passenger. Level crossings drop their gates when a train is
@@ -10,7 +11,7 @@ import { K } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { railAt, TRAIN_CARS, COACH_SEATS, COACH_STAND, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
-import { TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS } from '../../shared/rules.js';
+import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAINS_ON_LINE, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, BAIL_SPEED } from '../../shared/rules.js';
 import { STAR_HEAT } from '../../shared/constants.js';
 import { mulberry32 } from '../../shared/rng.js';
 import * as vehicles from './vehicles.js';
@@ -20,8 +21,12 @@ import * as cargo from './cargo.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 
 const rng = mulberry32(8080);
-const GAP = 10, ACC = 70, DEC = 110;
-const CONSISTS = [['loco', 'coach', 'coach', 'mail'], ['loco', 'coach', 'coach', 'coach']];
+const GAP = 10;
+const JERK = 150;          // how quickly the acceleration itself changes (px/s^3): smooth pull-away and stop
+const HEADWAY_PX = 520;    // never closer than this to the back of the train ahead (block signalling)
+const TIMING_STEP = 64;    // px between samples in the precomputed run-time tables (station clocks)
+// every third train hauls the mail car
+const CONSISTS = Array.from({ length: TRAINS_ON_LINE }, (_, i) => (i % 3 === 0 ? ['loco', 'coach', 'coach', 'mail'] : ['loco', 'coach', 'coach', 'coach']));
 const CAR_IDX = { loco: 0, coach: 1, mail: 2 };
 const WALK = 95, RUN = 150;
 const POP_NEAR = 1500, POP_FAR = 2600;
@@ -50,13 +55,56 @@ export function init(world) {
     const len = off - GAP;
     const si = Math.floor(ti * sts.length / CONSISTS.length);
     const t = {
-      i: ti, cars, len, s: mod(sts[si].s + len / 2, rail.len), v: 0, stop: si, dwellUntil: world.time + TRAIN_DWELL_S * (ti ? 0.6 : 1),
+      i: ti, cars, len, s: mod(sts[si].s + len / 2, rail.len), v: 0, acc: 0, stop: si, dwellUntil: world.time + TRAIN_DWELL_S * (1 - 0.5 * ti / CONSISTS.length),
       riders: new Set(), boarding: new Set(), mail: cons.indexOf('mail'), boxReadyAt: 0, hornUntil: 0, hornedFor: -1, hadPlayer: false,
     };
     world.trains.push(t);
     placeCars(world, t);
   });
   world.xing = rail.crossings.map(() => ({ down: false, eta: 99, closure: 0, broken: [0, 0] }));
+  world.railTiming = buildTiming(rail);
+}
+
+// ---- driving ----------------------------------------------------------------------------------
+// One tick of the drive, d px short of the next stop and gap px behind the train ahead: ease
+// towards the speed the remaining distance allows, with the acceleration itself changing
+// gradually - a smooth pull-away and a gentle stop at the platform. Returns how far it moved.
+function drive(t, d, gap, dt) {
+  // braking that stops the train exactly at the platform mark; it starts a touch early and eases on
+  const aReq = (t.v * t.v) / (2 * Math.max(1, d - 2));
+  if (aReq > TRAIN_BRAKE * 0.8) t.braking = true;
+  let want = TRAIN_SPEED;
+  if (gap < Infinity) want = Math.min(want, Math.sqrt(2 * TRAIN_BRAKE * Math.max(0, gap - HEADWAY_PX)));
+  let accWant = clamp((want - t.v) * 1.6, -TRAIN_BRAKE * 1.5, TRAIN_ACCEL);
+  if (t.braking) accWant = Math.min(accWant, -aReq);
+  // jerk limit on easing in (pulling away, starting to brake); tracking the stop curve is exact
+  if (t.braking && accWant < t.acc) t.acc = Math.max(accWant, t.acc - JERK * 4 * dt);
+  else t.acc += clamp(accWant - t.acc, -JERK * dt, JERK * dt);
+  t.v = clamp(t.v + t.acc * dt, 0, TRAIN_SPEED);
+  if (d > 2 && t.v < 8 && gap > HEADWAY_PX) { t.v = 8; if (t.acc < 0) t.acc = 0; } // creep the last few metres in
+  return Math.min(d, t.v * dt);
+}
+
+// Run time between each pair of stations, sampled along the way, from the same drive model the
+// trains use - what the platform clocks count down with.
+function buildTiming(rail) {
+  const sts = rail.stations, out = [];
+  for (let k = 0; k < sts.length; k++) {
+    const D = mod(sts[(k + 1) % sts.length].s - sts[k].s, rail.len);
+    const t = { v: 0, acc: 0, braking: false }, times = [0];
+    let x = 0, time = 0;
+    for (let guard = 0; guard < 20000 && D - x >= 1.5; guard++) {
+      x += drive(t, D - x, Infinity, 0.05); time += 0.05;
+      while (times.length * TIMING_STEP <= x) times.push(time);
+    }
+    out.push({ total: time, times });
+  }
+  return out;
+}
+function runTimeAt(seg, x) {
+  const i = Math.floor(x / TIMING_STEP), f = x / TIMING_STEP - i;
+  if (i >= seg.times.length - 1) return seg.total;
+  return seg.times[i] + (seg.times[i + 1] - seg.times[i]) * f;
 }
 
 // ---- per tick ---------------------------------------------------------------------------------
@@ -72,6 +120,7 @@ export function update(world, dt) {
   }
   updateCrossings(world);
   if (world.tick % 20 === 7) for (const t of world.trains) populate(world, t);
+  if (world.tick % 20 === 11) world.broadcast({ e: 'tt', l: timetable(world) }); // the platform clocks
   stepCracking(world);
   updateJobs(world);
 }
@@ -85,12 +134,11 @@ function stepTrain(world, t, dt) {
   }
   const target = sts[t.stop].s + t.len / 2;
   const d = mod(target - t.s, rail.len);
-  const want = Math.min(TRAIN_SPEED, Math.sqrt(2 * DEC * Math.max(0, d - 1)));
-  if (t.v < want) t.v = Math.min(want, t.v + ACC * dt); else t.v = Math.max(want, t.v - DEC * 1.6 * dt);
-  if (d > 2 && t.v < 14) t.v = 14; // crawl the last few metres into the platform
-  const step = Math.min(d, t.v * dt);
+  let gap = Infinity; // to the back of the nearest train ahead
+  for (const u of world.trains) if (u !== t) gap = Math.min(gap, mod(u.s - u.len - t.s, rail.len));
+  const step = drive(t, d, gap, dt);
   t.s = mod(t.s + step, rail.len);
-  if (d - step < 1.5) { t.s = mod(target, rail.len); t.v = 0; t.dwellUntil = now + TRAIN_DWELL_S; arrived(world, t); }
+  if (d - step < 1.5) { t.s = mod(target, rail.len); t.v = 0; t.acc = 0; t.braking = false; t.dwellUntil = now + TRAIN_DWELL_S; arrived(world, t); }
 }
 
 function carPose(rail, t, c) {
@@ -150,7 +198,7 @@ function stepRiders(world, t, dt) {
     if (p.npc && !p.dead && r.la !== undefined) p.a = e.a + r.la;
     if (p.player) {
       const inMail = r.c === t.mail;
-      if (inMail && !r.mailSince) { r.mailSince = now; world.notify(p.player, 'MAIL CAR - authorised staff only. The guards are armed!', 'warn'); }
+      if (inMail && !r.mailSince) { r.mailSince = now; world.notify(p.player, `MAIL CAR - "Authorised staff only! Get out or we shoot!" You have ${MAIL_WARN_S} seconds.`, 'bad'); }
       else if (!inMail) r.mailSince = 0;
     }
   }
@@ -224,8 +272,10 @@ function jumpOff(world, ped) {
   const nx = -Math.sin(e.a) * side, ny = Math.cos(e.a) * side;
   const [x, y] = localToWorld(e.x, e.y, e.a, r.ox, side * (t.cars[r.c].def.W / 2 + 14));
   alight(world, ped, x, y);
-  if (t.v > 40) vehicles.fling(world, ped, e.vx * 0.75 + nx * 120, e.vy * 0.75 + ny * 120, null, 'bail');
-  else { ped.vx = nx * 60; ped.vy = ny * 60; }
+  // like bailing out of a car: barely moving you just step down, at a jog you tuck and roll
+  // unhurt, at full speed the landing can break you
+  if (t.v > BAIL_SPEED) vehicles.fling(world, ped, e.vx * 0.75 + nx * 120, e.vy * 0.75 + ny * 120, null, 'bail');
+  else { ped.vx = nx * 60 + e.vx * 0.5; ped.vy = ny * 60 + e.vy * 0.5; }
 }
 
 // NPC behaviour on board: commuters sit or stand and glance around; spooked ones run down the
@@ -234,11 +284,22 @@ function jumpOff(world, ped) {
 function npcRide(world, t, p, dt) {
   const n = p.npc, r = p.onTrain, now = world.time;
   if (n.role === 'cop' || n.role === 'railguard') {
-    let target = n.target ? world.get(n.target) : null;
+    let target = n.target ? world.get(n.target) : null, warning = false;
     if (n.role === 'railguard') {
+      // a trespasser who walks back out of the mail car is let go - unless they cracked the box
+      // or shot at the guards (hostile)
+      if (target && !n.hostile && (!target.onTrain || target.onTrain.c !== t.mail)) target = null;
       if (!target || target.dead || !target.onTrain || target.onTrain.t !== t.i) {
         target = null;
-        for (const id of t.riders) { const q = world.get(id); if (q && q.player && !q.dead && q.onTrain.c === t.mail && now - (q.onTrain.mailSince || now) > 2) { target = q; break; } }
+        for (const id of t.riders) {
+          const q = world.get(id);
+          if (!q || !q.player || q.dead || q.onTrain.c !== t.mail) continue;
+          if (now - (q.onTrain.mailSince || now) > MAIL_WARN_S) { target = q; break; }
+          // the warning: guns drawn and pointed at you, but no shots yet
+          const aim = Math.atan2(q.y - p.y, q.x - p.x);
+          p.aimUntil = now + 0.3; p.aimAngle = aim; r.la = aim - world.get(t.cars[r.c].id).a;
+          warning = true;
+        }
       }
     } else if (target && (target.dead || !target.player || target.player.wanted <= 0)) target = null;
     if (target && target.onTrain && target.onTrain.t === t.i) {
@@ -255,7 +316,7 @@ function npcRide(world, t, p, dt) {
     }
     n.target = 0;
     if (n.role === 'railguard' && n.post) { const du = (t.cars[n.post.c].off - n.post.ox) - uOf(t, r); if (Math.abs(du) > 4) walk(t, r, Math.sign(du) * Math.min(Math.abs(du), WALK * dt), clamp((n.post.oy - r.oy) * 0.2, -2, 2)); }
-    if (now >= (n.lookAt || 0)) { r.la = (r.la || 0) + (rng() - 0.5) * 1.6; n.lookAt = now + 1.5 + rng() * 2.5; }
+    if (!warning && now >= (n.lookAt || 0)) { r.la = (r.la || 0) + (rng() - 0.5) * 1.6; n.lookAt = now + 1.5 + rng() * 2.5; }
     return;
   }
   // commuters
@@ -370,7 +431,7 @@ function populate(world, t) {
     for (const id of [...t.riders]) { const q = world.get(id); if (q && q.npc) { t.riders.delete(id); world.bodies.delete(q); despawnNpc(world, q); } }
     return;
   }
-  if (playerAboard(world, t) && !t.dwellUntil) return; // nobody pops into existence in front of a passenger
+  if (playerAboard(world, t)) return; // nobody pops into existence in front of a passenger (with the roof off they'd see it) - new riders walk on at stations
   if (!close && t.riders.size) return;
   if (world.npcCount + world.trafficCount > world.npcBudget) return;
   for (let ci = 1; ci < t.cars.length; ci++) {
@@ -411,10 +472,13 @@ function collide(world, t, dt) {
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     for (const v of world.query(e.x, e.y, hl + 80, K.VEH)) {
       if (v.removed || v.def.kind === 'boat' || v.sinkAt) continue;
-      const hit = obbVsObb(e.x, e.y, e.a, hl, hw, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
-      if (!hit) continue;
       const lx = (v.x - e.x) * ca + (v.y - e.y) * sa, ly = -(v.x - e.x) * sa + (v.y - e.y) * ca;
-      const ahead = ci === 0 && lx > hl - 8 && t.v > 15;
+      const rel = v.a - e.a, ext = Math.abs(Math.cos(rel)) * v.def.L / 2 + Math.abs(Math.sin(rel)) * v.def.W / 2;
+      // caught on the nose (touching, or riding just in front of it): shoved straight ahead - a
+      // fast train must not knock it aside
+      const ahead = ci === 0 && lx > hl - 20 && Math.abs(ly) < hw && lx - ext <= hl + 6 && t.v > 15;
+      const hit = ahead ? { nx: -ca, ny: -sa, depth: Math.max(0, hl + ext - lx) } : obbVsObb(e.x, e.y, e.a, hl, hw, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
+      if (!hit) continue;
       v.x -= hit.nx * hit.depth; v.y -= hit.ny * hit.depth;
       const closing = (v.vx - e.vx) * hit.nx + (v.vy - e.vy) * hit.ny; // >0: the train is running into it
       if (closing > 0) {
@@ -436,8 +500,8 @@ function collide(world, t, dt) {
         // pinned to the nose: it only comes free if someone at the wheel steers (and powers) it off
         if (Math.abs(v.input.throttle) < 0.3) {
           const lat = -v.vx * sa + v.vy * ca, latE = -e.vx * sa + e.vy * ca;
-          v.vx -= -sa * (lat - latE) * 0.5; v.vy -= ca * (lat - latE) * 0.5;
-          v.av *= 0.6;
+          v.vx -= -sa * (lat - latE); v.vy -= ca * (lat - latE);
+          v.av *= 0.3;
         }
         vehicles.damageVehicle(world, v, v.def.hp * 0.09 * dt, null, true);
         if ((world.tick + v.id) % 4 === 0) world.emit(v.x, v.y, { e: 'spark', x: v.x, y: v.y });
@@ -713,7 +777,7 @@ function crackOpen(world, p, t) {
     if (need > 0) law.addHeat(world, p, need, ped.x, ped.y);
     law.logDispatch(world, 'trainRobbery', ped.x, ped.y, p, p.wanted, 'alarm');
   }
-  for (const id of t.riders) { const q = world.get(id); if (q && q.npc && q.npc.role === 'railguard' && !q.dead) { q.npc.target = ped.id; } }
+  for (const id of t.riders) { const q = world.get(id); if (q && q.npc && q.npc.role === 'railguard' && !q.dead) { q.npc.target = ped.id; q.npc.hostile = true; } }
 }
 
 // ---- the train-robbery job (offered by the fence) ----------------------------------------------
@@ -761,26 +825,40 @@ function updateJobs(world) {
 }
 
 // ---- HUD + station boards -----------------------------------------------------------------------
-// Seconds until train t pulls in at station si (rough: cruise speed plus the stops in between).
+// Seconds until train t pulls in at station si (from the precomputed run times).
 function etaTo(world, t, si) {
-  const rail = world.map.rail, sts = rail.stations, now = world.time;
+  const rail = world.map.rail, sts = rail.stations, n = sts.length, T = world.railTiming, now = world.time;
   if (t.dwellUntil && t.stop === si) return 0;
-  let s = t.s, eta = t.dwellUntil ? t.dwellUntil - now : 0, k = t.stop;
-  for (let guard = 0; guard < sts.length + 1; guard++) {
-    const target = sts[k].s + t.len / 2;
-    eta += mod(target - s, rail.len) / (TRAIN_SPEED * 0.85);
+  let eta, k;
+  if (t.dwellUntil) { eta = Math.max(0, t.dwellUntil - now) + T[t.stop].total; k = (t.stop + 1) % n; }
+  else {
+    const prev = (t.stop - 1 + n) % n;
+    eta = Math.max(0, T[prev].total - runTimeAt(T[prev], mod(t.s - (sts[prev].s + t.len / 2), rail.len)));
+    k = t.stop;
+  }
+  for (let guard = 0; guard < n; guard++) {
     if (k === si) return eta;
-    eta += TRAIN_DWELL_S; s = target; k = (k + 1) % sts.length;
+    eta += TRAIN_DWELL_S + T[k].total; k = (k + 1) % n;
   }
   return eta;
+}
+
+// Every station's clock: seconds until the next train (0 = one is at the platform now).
+export function timetable(world) {
+  if (!world.trains || !world.trains.length) return [];
+  return world.map.rail.stations.map((_, si) => {
+    let best = Infinity;
+    for (const t of world.trains) best = Math.min(best, etaTo(world, t, si));
+    return Math.round(best);
+  });
 }
 
 export function stationBoard(world, poi) {
   const si = poi.station, sts = world.map.rail.stations;
   const lines = world.trains.map((t) => {
     const eta = etaTo(world, t, si);
-    return `${t.mail >= 0 ? 'Mail train' : 'Commuter'}: ${eta < 1 ? 'AT THE PLATFORM - board now' : `${Math.round(eta)}s`}`;
-  });
+    return { eta, text: `${t.mail >= 0 ? 'Mail train' : 'Commuter'}: ${eta < 1 ? 'AT THE PLATFORM - board now' : `${Math.round(eta)}s`}` };
+  }).sort((a, b) => a.eta - b.eta).slice(0, 3).map((q) => q.text);
   return { title: sts[si].name, sub: `${sts[si].under ? 'Subway - take the stairs down when a train is in. ' : ''}Trains run the whole loop: ${sts.map((q) => q.name.replace(/ Station$/, '')).join(', ')}. ${lines.join(' · ')}` };
 }
 

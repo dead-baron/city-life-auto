@@ -17,12 +17,14 @@ import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, dra
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { createPhone } from './phone.js';
-import { createMapWaypoints } from './mapwaypoints.js';
+import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
-import { drawTrainCar, drawCoupling, drawCrossing, drawTunnel, portalCovers } from './render/trains.js';
+import { drawTrainCar, drawCoupling, drawCrossing, drawTunnel, portalCovers, drawStationClock } from './render/trains.js';
+import { NPC_CRITICAL } from '../shared/rules.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -134,20 +136,26 @@ function onText(m) {
       for (const i of m.gates || []) setGate(i, true);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
+      S.tt = { l: m.tt || [], at: performance.now() / 1000 };
       S.portals = portalCovers(S.map);
       S.ground.cache.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
       $('play').disabled = false;
       if (S.playing) startPlaying();
       setupDev();
+      sendView();
       break;
     case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); e.d = d; } break;
     case 'ds': for (const id of m.ids) S.ents.delete(id); break;
     case 'ev': for (const ev of m.l) onEvent(ev); break;
-    case 'me': S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m); break;
+    case 'me':
+      S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
+      if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); }
+      break;
     case 'menu': S.hud.openMenu(m); break;
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'board': phone.onBoard(m); break;
+    case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     default: break;
@@ -339,7 +347,8 @@ function onEvent(ev) {
       sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
     }
-    case 'blood': fx.blood(ev.x, ev.y, ev.a, ev.n, now); sfx('hit', distVol(ev.x, ev.y)); break;
+    case 'blood': if (ev.g) fx.bulletHit(ev.x, ev.y, ev.a, now); else fx.blood(ev.x, ev.y, ev.a, ev.n, now); sfx('hit', distVol(ev.x, ev.y)); break;
+    case 'drip': fx.drip(ev.x, ev.y, now); break; // a bleeding person's trail
     case 'death': fx.decal(5, ev.x - Math.cos(ev.a) * 4, ev.y - Math.sin(ev.a) * 4, ev.a, 14, '#6a0a10', now, 0.9); break;
     case 'crash': fx.sparks(ev.x, ev.y, 4 + Math.round(ev.p * 8)); sfx('crash', distVol(ev.x, ev.y) * (0.4 + ev.p)); if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, ev.p * 6); break;
     case 'explode': fx.explosion(ev.x, ev.y, ev.r, now); sfx('explode', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 14 * distVol(ev.x, ev.y)); S.flashes.push({ x: ev.x, y: ev.y, t: 0.5, r: ev.r * 3 }); break;
@@ -373,6 +382,7 @@ function onEvent(ev) {
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
     case 'xing': S.xing[ev.i] = { d: ev.d, b: ev.b }; break;
+    case 'tt': S.tt = { l: ev.l, at: performance.now() / 1000 }; break; // station clocks
     case 'gatebreak': fx.sparks(ev.x, ev.y, 6); for (let k = 0; k < 6; k++) fx.spawn(4, ev.x, ev.y, Math.cos(ev.a + (Math.random() - 0.5)) * 160, Math.sin(ev.a + (Math.random() - 0.5)) * 160, 0.5, 3, k % 2 ? '#f4f4f4' : '#c8262b'); sfx('crash', distVol(ev.x, ev.y) * 0.6); break;
     case 'trainhorn': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y); sfx(ev.s === 2 ? 'trainhorn' : 'trainhornshort', Math.max(0, 1 - d / 2400)); break; }
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
@@ -429,21 +439,77 @@ function startPlaying() {
 
 function setupDev() {
   const box = $('dev');
-  if (!S.dev) { box.classList.add('hidden'); return; }
-  box.innerHTML = '<b>DEV / PLAYTEST CHEATS</b>';
+  if (!S.dev && !S.devMode) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
+  box.innerHTML = S.devMode ? '<b>DEV DEBUG MODE (nothing is saved)</b>' : '<b>DEV / PLAYTEST CHEATS</b>';
+  if (S.devMode) {
+    const leave = document.createElement('button');
+    leave.textContent = '⏏ Leave dev mode (restore my progress)'; leave.className = 'dev-leave';
+    leave.onclick = () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); };
+    box.appendChild(leave);
+  }
   const cmds = [['guns', 'Give weapons'], ['rain', 'Start rain'], ['clear', 'Stop rain'], ['night', 'Jump to night'], ['day', 'Jump to day'], ['money', '+$25k'],
     ['samaritan', '+50 Samaritan'], ['wanted', '2 stars', { n: 2 }], ['wanted', '4 stars', { n: 4 }], ['clean', 'Clear wanted'], ['record', 'Wipe criminal record (felonies)'], ['cop', 'Join the police (badge + rank)'], ['promote', 'Promote police rank'],
-    ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['snatch', 'Snatch-and-grab nearby'], ['shootout', 'Gang vs police shootout nearby'], ['heal', 'Heal'], ['die', 'Die (respawn test)']];
+    ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['snatch', 'Snatch-and-grab nearby'], ['shootout', 'Gang vs police shootout nearby'], ['train', 'Hop on the nearest train'], ['heal', 'Heal'], ['die', 'Die (respawn test)']];
   for (const [c, label, extra] of cmds) {
     const b = document.createElement('button');
     b.textContent = label;
     b.onclick = () => send({ t: 'dev', c, ...(extra || {}) });
     box.appendChild(b);
   }
+  // everyone online: teleport to them, fetch them, or give them dev mode too
+  const pl = document.createElement('div'); pl.id = 'dev-players'; box.appendChild(pl);
+  renderDevPlayers();
   box.classList.add('hidden');
   $('dev-btn').classList.remove('hidden');
-  if (S.playing) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Press ` (or DEV) for the cheats panel.' : 'Dev mode: press ` (backtick) for the playtest panel.', 'info');
+  if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Press ` (or DEV) for the cheats panel.' : 'Dev mode: press ` (backtick) for the playtest panel.', 'info');
 }
+function renderDevPlayers() {
+  const el = $('dev-players');
+  if (!el) return;
+  const ps = ((S.plist && S.plist.l) || []).filter((q) => !q.me);
+  el.innerHTML = `<b>PLAYERS ONLINE (${ps.length + 1})</b>` + (ps.length ? '' : '<p class="dev-none">Just you.</p>');
+  for (const q of ps) {
+    const row = document.createElement('div'); row.className = 'dev-pl';
+    row.innerHTML = `<span>${esc(q.n)}${q.dm ? ' [dev]' : ''}<small>${esc(q.d || '')}</small></span>`;
+    for (const [c, label] of [['goto', 'Go to'], ['bring', 'Bring'], ...(q.dm ? [] : [['grant', 'Give dev']])]) {
+      const b = document.createElement('button'); b.textContent = label;
+      b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') closeOverlay('dev'); setTimeout(requestPlayers, 300); };
+      row.appendChild(b);
+    }
+    el.appendChild(row);
+  }
+}
+// Players online (options menu). Devs get teleport / fetch / grant buttons on each row.
+function renderPlayers() {
+  const el = $('pl-list');
+  if (!el) return;
+  const ps = (S.plist && S.plist.l) || [];
+  $('p-players').textContent = `Players online${ps.length ? ` (${ps.length})` : ''}`;
+  if (topOverlay() !== 'players') return;
+  $('pl-sub').textContent = S.practice ? 'Offline practice - just you in this city.' : `${ps.length} in the city right now.`;
+  el.innerHTML = '';
+  for (const q of ps) {
+    const row = document.createElement('div'); row.className = 'pl-row';
+    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm ? ' <i>dev</i>' : ''}<small>${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
+    if (S.plist.dev && !q.me && q.id) for (const [c, label] of [['goto', 'Go to'], ['bring', 'Bring'], ...(q.dm ? [] : [['grant', 'Give dev']])]) {
+      const b = document.createElement('button'); b.className = 'pl-btn'; b.textContent = label;
+      b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') { closeOverlay('players'); closeOverlay('pause'); } setTimeout(requestPlayers, 300); };
+      row.appendChild(b);
+    }
+    el.appendChild(row);
+  }
+}
+function requestPlayers() { if (S.welcomed) send({ t: 'plist' }); }
+// keep the lists fresh while one is on screen
+setInterval(() => { if (S.playing && overlays.some((o) => o === 'players' || o === 'bigmap' || o === 'dev' || o === 'pause')) requestPlayers(); }, 2500);
+function submitDevPw() {
+  const pw = $('devpw-in').value;
+  if (!pw) return;
+  send({ t: 'devmode', pw });
+  $('devpw-in').value = '';
+}
+$('devpw-go').onclick = submitDevPw;
+$('devpw-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitDevPw(); } else if (e.key === 'Escape') closeOverlay('devpw'); });
 
 const practiceGo = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); setTimeout(maybeLandscapeTip, 1500); startPractice(); };
 const playGo = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
@@ -467,10 +533,10 @@ initInput(canvas, {
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
-    if (k === 'Backquote' && S.dev) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); }
+    if (k === 'Backquote' && (S.dev || S.devMode)) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
-  onDev() { if (S.dev) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); } },
+  onDev() { if (S.dev || S.devMode) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); } },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
   onPhone() { if (S.playing) openPhone(); },
@@ -511,6 +577,7 @@ const mapwp = createMapWaypoints({
   refocus: () => { ovFocus = 0; focusOverlay(); },
   setFilter: (list) => { if (S.hud) S.hud.mapFilter = list; },
   myHomes: () => (S.me && S.me.homes) || [],
+  players: () => (S.plist && S.plist.l) || [],
 });
 function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
 // arrive at a phone waypoint -> it clears itself
@@ -707,7 +774,16 @@ function openOverlay(id) {
   if (topOverlay() === id) return;
   if (id === 'settings') syncSettings();
   if (id === 'controls') $('c-body').innerHTML = $('t-help').innerHTML;
-  if (id === 'pause') { document.querySelectorAll('#pause .dev-only').forEach((b) => b.classList.toggle('hidden', !S.dev)); document.querySelectorAll('#pause .cop-only').forEach((b) => b.classList.toggle('hidden', !(S.me && S.me.cruiser))); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
+  if (id === 'players' || id === 'bigmap' || id === 'dev') requestPlayers();
+  if (id === 'pause') {
+    requestPlayers();
+    document.querySelectorAll('#pause .online-only').forEach((b) => b.classList.toggle('hidden', !!S.practice));
+    $('p-devmode').textContent = S.devMode ? '⏏ Leave Dev Debug Mode (restore my progress)' : 'Dev Debug Mode';
+    // the debug menu goes to the top of the options while you're in dev mode
+    const dbg = document.querySelector('#pause [data-p="dev"]'); dbg.parentNode.insertBefore(dbg, dbg.parentNode.firstChild);
+    document.querySelectorAll('#pause .dev-only').forEach((b) => b.classList.toggle('hidden', !S.dev && !S.devMode));
+  }
+  if (id === 'pause') { document.querySelectorAll('#pause .cop-only').forEach((b) => b.classList.toggle('hidden', !(S.me && S.me.cruiser))); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
   overlays.push(id);
   $(id).classList.remove('hidden');
   if (id === 'dev') $('dev').classList.add('as-overlay');
@@ -820,11 +896,13 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'controls') openOverlay('controls');
     else if (a === 'fullscreen') toggleFullscreen();
     else if (a === 'dev') openOverlay('dev');
+    else if (a === 'players') { closeOverlay('pause'); openOverlay('players'); renderPlayers(); }
+    else if (a === 'devmode') { closeOverlay('pause'); if (S.devMode) send({ t: 'devmode', leave: true }); else { openOverlay('devpw'); setTimeout(() => $('devpw-in').focus(), 50); } }
     else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }
   };
 }
 for (const x of document.querySelectorAll('.overlay [data-close]')) x.onclick = () => closeOverlay(x.closest('.overlay').id);
-for (const id of ['pause', 'settings', 'controls']) $(id).addEventListener('click', (e) => { if (e.target.id === id) closeOverlay(id); });
+for (const id of ['pause', 'settings', 'controls', 'players', 'devpw']) $(id).addEventListener('click', (e) => { if (e.target.id === id) closeOverlay(id); });
 $('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettings(); };
 $('s-paddrive').onchange = (e) => { settings.padDrive = e.target.value; saveSettings(); };
 $('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; saveSettings(); };
@@ -870,6 +948,14 @@ function onResize() {
   lightCv.width = Math.ceil(W / 2); lightCv.height = Math.ceil(H / 2);
   document.body.classList.toggle('portrait', H > W);
   if (S.playing) maybeLandscapeTip();
+  sendView();
+}
+// Tell the server how much world this screen shows at rest, so it spawns things just out of
+// sight and sends them before they scroll into view.
+function sendView() {
+  if (!W || !H) return;
+  const z = baseZoom();
+  send({ t: 'view', hw: Math.round(W / 2 / z), hh: Math.round(H / 2 / z) });
 }
 addEventListener('resize', onResize);
 // rotating a phone in fullscreen doesn't always fire 'resize' right away: catch every signal
@@ -1198,6 +1284,7 @@ function render(dt) {
     drawGarageDoors(view, dt);
     drawGates(view, dt);
     drawCrossings(view, dt, now);
+    drawStationClocks(view, now);
     drawBuoys(view, now);
   }
   // traffic lights, cameras, overhead canopy (none of it down in the subway)
@@ -1543,6 +1630,20 @@ function drawCrossings(view, dt, now) {
   });
 }
 
+// Each platform's countdown to the next train (the server sends the timetable every second;
+// the boards tick down smoothly in between).
+function drawStationClocks(view, now) {
+  const sts = (S.map.rail && S.map.rail.stations) || [];
+  const tt = S.tt || { l: [], at: 0 };
+  const since = performance.now() / 1000 - tt.at;
+  sts.forEach((st, i) => {
+    const x = st.under ? st.platform.x : st.x, y = st.under ? st.platform.y : st.y;
+    if (x < view.x0 - 200 || x > view.x1 + 200 || y < view.y0 - 200 || y > view.y1 + 200) return;
+    const v = tt.l[i];
+    drawStationClock(g, st, v === undefined ? -1 : v === 0 ? 0 : Math.max(0.01, v - since), now);
+  });
+}
+
 function setGate(i, open) {
   S.gateOpen[i] = open;
   const gt = S.map.gates && S.map.gates[i];
@@ -1686,8 +1787,11 @@ function drawPed(p, now) {
     g.save(); g.globalAlpha = 0.35 * (1 - 0.5 * h); g.fillStyle = '#000';
     g.beginPath(); g.ellipse(p.rx + h * 6, p.ry + h * 10, 11 * (1 - 0.3 * h), 7 * (1 - 0.3 * h), 0, 0, 6.28); g.fill(); g.restore();
   } else if (flRecent && flK === 'slide' && (f & PF.DOWN)) spin = Math.PI; // landed on the back
+  // a critically hurt NPC limps: the body lurches to one side on every other step
+  const limp = p.d && !p.d.pl && p.hp < NPC_CRITICAL && pose === 'move' && !(f & PF.DEAD) ? Math.sin((p.phase || 0) * Math.PI / 4) : 0;
   g.translate(p.rx + (hitK ? Math.cos(p.hitA) * 5 * hitK : 0), p.ry - lift + (hitK ? Math.sin(p.hitA) * 5 * hitK : 0));
-  g.rotate(p.ra + spin + (hitK ? 0.25 * hitK : 0));
+  g.rotate(p.ra + spin + (hitK ? 0.25 * hitK : 0) + limp * 0.28);
+  if (limp) g.translate(0, Math.max(0, limp) * 2.5);
   if (grow !== 1) g.scale(grow, grow);
   if (pose === 'punch' && (fr & 3) === 2) { g.translate(3, 0); }
   if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);

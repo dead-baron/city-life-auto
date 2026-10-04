@@ -12,6 +12,8 @@ import * as station from './systems/station.js';
 import * as gates from './systems/gates.js';
 import * as trains from './systems/trains.js';
 import { brokenList } from './systems/props.js';
+import { setView } from './view.js';
+import * as devmode from './devmode.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
 export function createSession(world, conn, opts) {
@@ -38,11 +40,12 @@ export function createSession(world, conn, opts) {
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const { profile, token } = opts.login(msg.token);
-        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world) });
+        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world), tt: trains.timetable(world) });
         player = players.join(world, conn, profile);
         return;
       }
       if (!player) return;
+      if (msg.t === 'view') { setView(player, msg.hw, msg.hh); return; } // how much world the screen shows
       if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
       if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
       if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
@@ -50,7 +53,9 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'phone') { const r = phone.handle(world, player, msg); if (r) conn.sendJSON(r); return; }
       if (msg.t === 'interior' && player.ped && player.ped.interior) { station.openInterior(world, player); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }
-      if (msg.t === 'dev' && opts.dev) { dev.command(world, player, String(msg.c || ''), msg); }
+      if (msg.t === 'plist') { conn.sendJSON(devmode.playerList(world, player)); return; } // who's online (options / map)
+      if (msg.t === 'devmode') { if (msg.leave) devmode.exit(world, player); else if (!player.devMode) devmode.tryPassword(world, player, msg.pw); return; }
+      if (msg.t === 'dev' && (opts.dev || player.devMode)) { dev.command(world, player, String(msg.c || ''), msg); }
     },
     onClose() { if (player && player.conn === conn) players.leave(world, player); },
   };

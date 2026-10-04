@@ -102,7 +102,7 @@ export function startFarm(world, p, poi) {
 export function workTruck(world, p, pad, model = 'flatbed', always = false) {
   if (!always) {
     for (const v of world.query(pad.x, pad.y, 320, K.VEH)) {
-      if (v.wreckAt || v.seats.some((x) => x) || !v.def.slots.length || v.cargo.every((c) => c)) continue;
+      if (v.wreckAt || v.seats.some((x) => x) || v.def.slots.length < 4 || v.cargo.every((c) => c)) continue; // a truck, not any car with a trunk
       if (!v.npcOwned || v.issuedTo === p.pid) return null; // a free one is already here
     }
   }

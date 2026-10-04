@@ -27,7 +27,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 |---|---|
 | `npm run dev` | Server with the dev/playtest panel (press `` ` `` in game) |
 | `npm start` | Production server (no cheats) |
-| `npm test` | 19 automated rule tests + a chaos simulation |
+| `npm test` | Automated rule tests (100+) + a chaos simulation |
 | `npm run bots -- 50 60 ws://localhost:8080/ws --spread` | 50 simulated players for 60 s, prints tick time + bandwidth, writes `logs/bots-*.log` |
 
 ## Controls
@@ -39,13 +39,16 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Interact (shops, crates, loot, arrest, fishing) | E | B | E |
 | Enter / exit vehicle | F | X | CAR |
 | Sprint | Shift | L3 / LT | RUN (toggle) |
-| Dive roll / handbrake | Space | A | ROLL |
+| Dive roll / handbrake (in a car: e-brake skid turn; held with gas = donuts) | Space | A | ROLL / BRAKE |
+| Drift: brake while steering at speed | S + A/D (tank) · pull back to one side (point) | LT + stick | pull back to one side |
 | Throw / drop crate | Q | Y | THROW |
 | Reload / horn & siren (siren on: traffic pulls over) | R / H | — / D-pad up | — / HORN |
 | Rob a store (gun on the clerk; lower it to stop) | Hold right mouse / aim at the clerk | LT aimed at the clerk | aim stick at the clerk |
 | Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
 | Fish over the side (still boat, far out at sea) | E | B | ACT |
-| Train: board at a station / hop on alongside · walk through the cars · get off or jump off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
+| Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
+| Players online (names, roles, districts) | Esc → Players online, or M → Players online | Start → Players online | ⚙ → Players online |
+| Dev Debug Mode (online testing, password; nothing is saved) | Esc → Dev Debug Mode, then ` for the debug menu | Start → Dev Debug Mode | ⚙ → Dev Debug Mode, then DEV |
 | Police HQ: walk in (front desk → armory → motor pool) | E at the door, E inside for the desk | B / A | ACT, or the ▲ Front desk button |
 | Navigate menus (pause, phone, shops, settings) | W/S or ↑/↓, Enter / Space / E to pick, Esc back | D-pad / stick, A pick, B back | tap |
 | Phone (places, jobs, waypoints) | P | D-pad ← | 📱 |
@@ -92,6 +95,6 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
 | Weapons · reload · heal | Tab, wheel, 1-9 · R · X | LB/RB · R3 · View | tap the weapon box · RELOAD · HEAL |
 | World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
-| Pause menu (map, settings, controls, debug/cheats) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ⚙ |
+| Pause menu (map, players online, settings, controls, Dev Debug Mode) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ⚙ |
 
 Settings (⚙) include classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen.

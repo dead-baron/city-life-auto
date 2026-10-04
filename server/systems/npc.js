@@ -14,6 +14,8 @@ import * as events from './events.js';
 import * as gangwar from './gangwar.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
+import { inAnyView } from '../view.js';
+import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
@@ -30,6 +32,14 @@ export function spawnNpc(world, archetype, x, y, role = 'civ') {
   const hp = Math.round(a.hp * b.hp * (0.9 + rng() * 0.2));
   const ped = world.spawnPed(x, y, { hp, app, archetype, a: rng() * Math.PI * 2 });
   ped.build = b;
+  // grit: how many bullets it takes - some drop at the first shot, a few keep going after three
+  // (police, guards and medics are drilled to a standard: no grit roll)
+  ped.grit = 1;
+  if (role !== 'cop' && role !== 'railguard' && role !== 'medic') {
+    let gr = rng() * 100;
+    ped.grit = NPC_GRIT[NPC_GRIT.length - 1][0];
+    for (const [g, w] of NPC_GRIT) { gr -= w; if (gr <= 0) { ped.grit = g; break; } }
+  }
   ped.npc = {
     role, archetype, state: 'wander', target: 0, until: 0, wx: x, wy: y, nextThink: 0,
     reflex: a.reflex, fight: Math.max(0, Math.min(1, a.fight + b.fight)), speed: a.speed * (bi === 3 ? 0.92 : bi === 0 ? 0.95 : 1), sway: !!a.sway, flagged: false, keep: false,
@@ -88,6 +98,8 @@ export function update(world, dt) {
     if ((n.role === 'cop' && !n.beat) || n.role === 'medic') continue; // other systems drive these
     if (now < ped.downUntil || now < ped.stunUntil) continue;
     if (n.state === 'passed') { ped.vx = 0; ped.vy = 0; continue; }
+    // critically hurt: no more fighting - limp away from the trouble, bleeding
+    if (n.state !== 'limp' && n.role !== 'cop' && ped.hp < ped.maxHp * NPC_CRITICAL) startLimp(world, ped, n.fx ?? ped.x + 1, n.fy ?? ped.y);
     // ended up in the water (thrown from a car, knocked off a dock): swim for the nearest shore
     if (isSwimming(world.map, ped)) {
       if (!n.shore || now > (n.shoreAt || 0)) { n.shore = nearestLand(world.map, ped.x, ped.y); n.shoreAt = now + 2; }
@@ -109,6 +121,7 @@ export function update(world, dt) {
         break;
       }
       case 'fight': inp = fight(world, ped, now); factor = 1; break;
+      case 'limp': inp = limp(world, ped, now); factor = LIMP_SPEED; break;
       case 'mug': inp = mugRun(world, ped, now); factor = 1; break;
       case 'waitHelp': {
         if (now > n.until) { n.state = 'wander'; n.keep = false; n.robbed = false; }
@@ -122,6 +135,31 @@ export function update(world, dt) {
     if (inp.bits & IN.FIRE) combat.tryAttack(world, ped, inp.aim);
     ped.umbrella = rain && n.umbrellaType && n.state === 'wander';
   }
+}
+
+// Limping off: away from whoever hurt them, then slowly on along the pavement, in a halting gait
+// (the pace surges and drags with every step). They don't recover - the bleeding only stops at a
+// hospital - so they stay this way until the ambulance or the morgue van gets them.
+function startLimp(world, ped, fx, fy) {
+  const n = ped.npc;
+  n.state = 'limp'; n.fx = fx; n.fy = fy; n.until = world.time + 8 + rng() * 6; n.target = 0;
+  ped.bleeding = true;
+}
+function limp(world, ped, now) {
+  const n = ped.npc;
+  let inp;
+  if (now < n.until) {
+    const away = Math.atan2(ped.y - n.fy, ped.x - n.fx) + (n.fleeBias || 0);
+    const tx = ped.x + Math.cos(away) * 80, ty = ped.y + Math.sin(away) * 80;
+    if (PED_BLOCK[world.map.tileAtPx(tx, ty)]) n.fleeBias = (n.fleeBias || 0) + 0.6;
+    inp = seek(ped, tx, ty, false);
+  } else {
+    if (Math.hypot(n.wx - ped.x, n.wy - ped.y) < 10 || now > (n.limpPick || 0)) { pickWaypoint(world, ped); n.limpPick = now + 12; }
+    inp = seek(ped, n.wx, n.wy, false);
+  }
+  const gait = 0.45 + 0.55 * Math.abs(Math.sin(now * 4.2 + ped.id)); // step, drag, step, drag
+  inp.mx *= gait; inp.my *= gait;
+  return inp;
 }
 
 function wander(world, ped, now) {
@@ -264,7 +302,9 @@ export function onAttacked(world, ped, attacker) {
     return;
   }
   if (n.role === 'cop' && attacker.npc && attacker.npc.role === 'gang') { gangwar.copAttackedByGang(world, ped, attacker); return; }
+  if (n.role === 'railguard') { n.target = attacker.id; n.hostile = true; return; } // shoot at the mail guards and they shoot back
   if (n.role === 'cop' || n.role === 'medic') return;
+  if (ped.hp < ped.maxHp * NPC_CRITICAL && n.role !== 'gang') { startLimp(world, ped, attacker.x, attacker.y); return; } // too hurt to fight back
   if (n.state === 'passed') { ped.passedOut = false; n.state = 'flee'; n.fx = attacker.x; n.fy = attacker.y; n.until = world.time + 6; return; }
   if (n.role === 'mugger') { onMuggerDowned(world, ped); flee(world, ped, attacker.x, attacker.y, 8); return; }
   if (n.role === 'gang') { startFight(world, ped, attacker, 30); gangAlert(world, attacker); return; }
@@ -350,22 +390,22 @@ function manageDensity(world) {
     if (e.npc.keep || (e.npc.role === 'cop' && !e.npc.beat) || e.npc.role === 'medic' || e.npc.role === 'driver') continue;
     let near = false;
     for (const a of anchors) if ((a.x - e.x) ** 2 + (a.y - e.y) ** 2 < 1500 * 1500) { near = true; break; }
-    if (!near && !(e.dead && world.bodies.has(e))) despawnNpc(world, e);
+    if (!near && !(e.dead && world.bodies.has(e)) && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e);
   }
   if (world.npcCount >= world.npcBudget * 0.6) return;
   const target = night ? CIV_TARGET_NIGHT : CIV_TARGET_DAY;
   for (const a of anchors) {
     let count = 0;
-    for (const e of world.query(a.x, a.y, 1000, K.PED)) if (e.npc && !e.dead) count++;
+    for (const e of world.query(a.x, a.y, 1200, K.PED)) if (e.npc && !e.dead) count++;
     if (count >= target) continue;
-    for (let tries = 0; tries < 6; tries++) {
-      const ang = rng() * Math.PI * 2, d = 600 + rng() * 300;
+    for (let tries = 0; tries < 12; tries++) {
+      const ang = rng() * Math.PI * 2, d = 450 + rng() * 800;
       const x = a.x + Math.cos(ang) * d, y = a.y + Math.sin(ang) * d;
       const t = world.map.tileAtPx(x, y);
       if (!WALK_TILES.has(t) || t === T.DIRT) continue;
       let tooClose = false;
-      for (const b of anchors) if ((b.x - x) ** 2 + (b.y - y) ** 2 < 580 * 580) { tooClose = true; break; }
-      if (tooClose) continue;
+      for (const b of anchors) if ((b.x - x) ** 2 + (b.y - y) ** 2 < 400 * 400) { tooClose = true; break; }
+      if (tooClose || inAnyView(world, x, y, 64)) continue; // just off screen: they walk into view
       spawnByDemographic(world, x, y, night);
       break;
     }
@@ -408,10 +448,15 @@ export function snatchEvent(world, force = null) {
   if (!victims.length && force) { const sp = spawnNpc(world, 'socialite', p.ped.x + 160, p.ped.y, 'civ'); victims = [sp]; }
   if (!victims.length) return;
   const victim = victims[Math.floor(rng() * victims.length)];
-  const ang = rng() * Math.PI * 2;
-  let sx = victim.x + Math.cos(ang) * 260, sy = victim.y + Math.sin(ang) * 260;
-  if (PED_BLOCK[world.map.tileAtPx(sx, sy)]) { sx = victim.x - Math.cos(ang) * 200; sy = victim.y - Math.sin(ang) * 200; }
-  if (PED_BLOCK[world.map.tileAtPx(sx, sy)]) return;
+  // the mugger comes from somewhere walkable a little way off (try a few directions)
+  const ang0 = rng() * Math.PI * 2;
+  let sx = 0, sy = 0, ok = false;
+  for (let k = 0; k < 12 && !ok; k++) {
+    const ang = ang0 + k * 0.52, d = k % 2 ? 200 : 260;
+    sx = victim.x + Math.cos(ang) * d; sy = victim.y + Math.sin(ang) * d;
+    ok = !PED_BLOCK[world.map.tileAtPx(sx, sy)];
+  }
+  if (!ok) return;
   const m = spawnNpc(world, 'mugger', sx, sy, 'mugger');
   m.npc.state = 'mug'; m.npc.target = victim.id; m.npc.until = world.time + 40; m.npc.keep = true;
   victim.npc.keep = true;

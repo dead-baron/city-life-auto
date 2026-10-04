@@ -8,6 +8,7 @@ import { SPAWN_PROTECT_S, POLICE_ARMORY } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as combat from './combat.js';
+import { inAnyView } from '../view.js';
 
 const TILE = 32;
 const REFILL_EVERY_S = 20;   // empty bays are restocked when nobody is watching
@@ -33,7 +34,7 @@ export function refill(world, i, force = false) {
   let n = 0;
   for (const sp of mp.spots) {
     if (world.query(sp.x, sp.y, 44, K.VEH).length) continue;
-    if (!force && [...world.players.values()].some((q) => q.ped && Math.hypot(q.ped.x - sp.x, q.ped.y - sp.y) < 520)) continue;
+    if (!force && inAnyView(world, sp.x, sp.y, 80)) continue;
     const v = world.spawnVehicle(sp.model, sp.x, sp.y, sp.a, {});
     v.despawnable = false; v.motorPool = i; v.parked = true;
     n++;

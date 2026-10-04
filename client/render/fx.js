@@ -58,6 +58,24 @@ export class FX {
     }
     this.decal(1, x + Math.cos(a) * 12, y + Math.sin(a) * 12, a, 5 + n * 0.7, '#7a0d12', now, 0.85);
   }
+  // A bullet hit (16-bit style): a cone of droplets out the far side, a little back-spatter, a
+  // red puff, and splats on the ground behind the victim. Droplets that land leave spots too.
+  bulletHit(x, y, a, now, rand = Math.random) {
+    for (let i = 0; i < 14; i++) {
+      const aa = a + (rand() - 0.5) * 0.9, sp = 140 + rand() * 260;
+      this.spawn(1, x, y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.45 + rand() * 0.35, 2 + rand() * 2.5, rand() < 0.5 ? '#8a0f14' : '#c0161f', 0, 60 + rand() * 90);
+    }
+    for (let i = 0; i < 4; i++) {
+      const aa = a + Math.PI + (rand() - 0.5) * 1.4, sp = 50 + rand() * 80;
+      this.spawn(1, x, y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.3 + rand() * 0.2, 1.5 + rand() * 1.5, '#a0121a', 0, 40 + rand() * 40);
+    }
+    this.rings.push({ x, y, t: 0, max: 0.18, r: 9, color: 'rgba(200,24,32,' });
+    for (let k = 0, n = 2 + Math.floor(rand() * 2); k < n; k++) {
+      const d = 12 + rand() * 34, aa = a + (rand() - 0.5) * 0.6;
+      this.decal(1, x + Math.cos(aa) * d, y + Math.sin(aa) * d, aa, 3 + rand() * 5, '#7a0d12', now, 0.85);
+    }
+  }
+  drip(x, y, now, rand = Math.random) { this.decal(1, x + (rand() - 0.5) * 6, y + (rand() - 0.5) * 6, rand() * 6.28, 1.6 + rand() * 1.8, '#7a0d12', now, 0.8); }
   smoke(x, y, dark, rand = Math.random) {
     this.spawn(2, x + (rand() - 0.5) * 8, y + (rand() - 0.5) * 8, (rand() - 0.5) * 20, (rand() - 0.5) * 20 - 10, 1.2 + rand(), 6 + rand() * 4, dark ? 'rgba(40,40,40,' : 'rgba(170,170,170,', 14);
   }
@@ -102,7 +120,13 @@ export class FX {
       const f = o.type === 2 ? 0.98 : 0.92;
       o.vx *= f; o.vy *= f;
       o.size += o.grow * dt;
-      if (o.vz || o.z) { o.vz -= 400 * dt; o.z += o.vz * dt; if (o.z < 0) { o.z = 0; o.vz = 0; if (o.type === 1) { o.on = false; } } }
+      if (o.vz || o.z) {
+        o.vz -= 400 * dt; o.z += o.vz * dt;
+        if (o.z < 0) {
+          o.z = 0; o.vz = 0;
+          if (o.type === 1) { o.on = false; if (Math.random() < 0.3) this.decal(1, o.x, o.y, Math.random() * 6.28, 1.2 + o.size * 0.5, '#7a0d12', this.now || 0, 0.8); } // a droplet lands
+        }
+      }
     }
     for (const arr of [this.tracers, this.rings, this.texts]) {
       for (let i = arr.length - 1; i >= 0; i--) { arr[i].t += dt; if (arr[i].t > (arr[i].max || (arr === this.tracers ? 0.08 : 1.4))) arr.splice(i, 1); }
@@ -110,6 +134,7 @@ export class FX {
   }
 
   drawDecals(g, view, now, wet) {
+    this.now = now;
     for (let i = 0; i < MAX_D; i++) {
       const d = this.d[i];
       if (!d.on) continue;

@@ -109,10 +109,19 @@ body.kbm #b-fs { display: none; }
 .opt[disabled] { opacity: .4; cursor: default; }
 .opt .price { color: var(--money); font-weight: 700; } .opt:hover .price, .opt.focus .price { color: #1d7d2a; }
 .opt .price.sell { color: var(--gold); } .opt .note { color: var(--dim); font-size: 14px; margin-left: 8px; }
+.opt.has-wpn { justify-content: flex-start; gap: 12px; }
+.opt.has-wpn > span:nth-of-type(1) { flex: 1; }
+.opt img.wpn { width: 72px; height: 36px; image-rendering: pixelated; background: rgba(255,255,255,.06); border-radius: 4px; flex: none; }
+.opt:hover img.wpn, .opt.focus img.wpn { background: #2a2e38; }
+.opt .stats { display: flex; gap: 8px; margin-top: 4px; }
+.opt .stats i { font-style: normal; font-size: 10px; letter-spacing: .5px; color: var(--dim); display: flex; align-items: center; gap: 4px; }
+.opt .stats i::after { content: ''; }
+.opt .stats b { display: inline-block; height: 5px; width: 0; max-width: 40px; background: #6fa8ff; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,.15); }
+.opt .stats i { min-width: 74px; }
 
 /* ---- overlays: pause / settings / controls (gamepad focus = .pfocus) ---- */
-#pause, #controls { position: absolute; inset: 0; z-index: 40; background: rgba(0,0,0,.55); display: flex; align-items: flex-start; justify-content: flex-start; padding: 60px 0 0 max(24px, env(safe-area-inset-left)); }
-#pause .panel, #controls .panel { width: min(440px, 92vw); max-height: 86vh; overflow: auto; }
+#pause, #controls, #players, #devpw { position: absolute; inset: 0; z-index: 40; background: rgba(0,0,0,.55); display: flex; align-items: flex-start; justify-content: flex-start; padding: 60px 0 0 max(24px, env(safe-area-inset-left)); }
+#pause .panel, #controls .panel, #players .panel, #devpw .panel { width: min(440px, 92vw); max-height: 86vh; overflow: auto; }
 .msub { margin: 0; padding: 8px 14px; background: #000; color: #ddd; font-size: 15px; font-weight: 600; }
 .m-opts { background: rgba(0,0,0,.78); }
 .cbody { background: rgba(0,0,0,.82); padding: 12px 16px; font-size: 16px; line-height: 1.6; color: #ddd; }
@@ -361,3 +370,22 @@ body.portrait #bm-panel { width: calc(100vw - 24px); max-height: 34vh; }
 #trainbar .rob-bar { width: 110px; height: 8px; background: #333; } #tb-fill { display: block; height: 100%; width: 0; background: #ffd36b; transition: width .2s; }
 #rob.alarm { border-color: #ff3b3b; color: #ff3b3b; animation: robflash .5s steps(2) infinite; } #rob.alarm span { color: #ff7070; }
 @keyframes robflash { 50% { background: rgba(120,0,0,.85); } }
+
+/* players online (options) + dev mode password */
+#pl-list .pl-row { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+#pl-list .pl-ic { width: 20px; text-align: center; color: var(--gold); }
+#pl-list .pl-nm { flex: 1; font-size: 16px; font-weight: 600; }
+#pl-list .pl-nm i { font-style: normal; font-size: 11px; color: var(--warn); border: 1px solid var(--warn); border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+#pl-list .pl-nm small { display: block; color: var(--dim); font-size: 13px; font-weight: 500; }
+#pl-list .pl-btn { background: #222; color: #fff; border: 1px solid #555; border-radius: 6px; padding: 5px 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+#pl-list .pl-btn:hover, #pl-list .pl-btn.pfocus { background: #f2f2f2; color: #111; }
+.devpw-row { display: flex; gap: 8px; padding: 10px 14px; }
+#devpw-in { flex: 1; font-size: 18px; padding: 8px 10px; background: #111; color: #fff; border: 1px solid #555; border-radius: 6px; letter-spacing: 2px; text-transform: uppercase; min-width: 0; }
+.devpw-row .opt { width: auto; border: 1px solid #555; border-radius: 6px; }
+#dev .dev-leave { background: #5a1a1a !important; border-color: var(--warn) !important; color: #fff !important; }
+#dev .dev-pl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #333; }
+#dev .dev-pl span { flex: 1 0 100%; font-size: 13px; font-weight: 600; }
+#dev .dev-pl span small { color: #999; margin-left: 6px; font-weight: 500; }
+#dev .dev-pl button { display: inline-block; width: auto; flex: 1; margin-top: 0; font-size: 12px; }
+#dev .dev-none { color: #999; font-size: 12px; margin: 4px 0; }
+#dev > b { display: block; margin-top: 6px; }

@@ -4,8 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K, T } from '../shared/constants.js';
-import { railAt, CROSSING_ARM, MAIL_BOX, RAIL_MAX_BRIDGE_TILES } from '../shared/map.js';
-import { TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, TRAIN_JOB_PAY, STRONGBOX_CRACK_S } from '../shared/rules.js';
+import { railAt, CROSSING_ARM, MAIL_BOX, RAIL_MAX_BRIDGE_TILES, DISTRICTS } from '../shared/map.js';
+import { TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAINS_ON_LINE, TRAIN_ACCEL, TRAIN_BRAKE, MAIL_WARN_S, BAIL_HURT_SPEED } from '../shared/rules.js';
 import { CTRL } from '../shared/protocol.js';
 import * as trains from '../server/systems/trains.js';
 import * as players from '../server/systems/players.js';
@@ -16,18 +16,24 @@ import { IN } from '../shared/input.js';
 
 const mod = (a, n) => ((a % n) + n) % n;
 // put train t so that its nose is `ahead` px before arc position s, running at full speed
-function runUpTo(w, t, s, ahead) { t.s = mod(s - ahead, w.map.rail.len); t.v = TRAIN_SPEED; t.dwellUntil = 0; const sts = w.map.rail.stations; t.stop = sts.findIndex((q) => mod(q.s + t.len / 2 - t.s, w.map.rail.len) === Math.min(...sts.map((r) => mod(r.s + t.len / 2 - t.s, w.map.rail.len)))); }
+function runUpTo(w, t, s, ahead) { t.s = mod(s - ahead, w.map.rail.len); t.v = TRAIN_SPEED; t.acc = 0; t.braking = false; t.dwellUntil = 0; const sts = w.map.rail.stations; t.stop = sts.findIndex((q) => mod(q.s + t.len / 2 - t.s, w.map.rail.len) === Math.min(...sts.map((r) => mod(r.s + t.len / 2 - t.s, w.map.rail.len)))); }
 let seq = 1;
 function press(w, p, bits, n = 1, extra = {}) { for (let i = 0; i < n; i++) { players.queueInput(p, { seq: seq++, bits: i === 0 ? bits : 0, mx: 0, my: 0, aim: 0, ...extra }); w.step(); } }
 
-test('railway: one loop, seven stations (one underground), level crossings and a long rural run', () => {
+test('railway: one loop around the whole world, stations on every island (one underground), a crossing and a long rural run', () => {
   const w = makeWorld();
   const r = w.map.rail;
-  assert.ok(r.len > 30000, 'a big loop');
-  assert.equal(r.stations.length, 7);
+  assert.ok(r.len > 45000, 'a big loop');
+  assert.ok(r.stations.length >= 10, `${r.stations.length} stations`);
   assert.equal(r.stations.filter((s) => s.under).length, 1, 'Midtown Underground');
+  // stops on every island the line reaches, and in most districts
+  const isles = new Set(), dists = new Set();
+  for (const s of r.stations) { const d = w.map.districtAt(s.platform.x, s.platform.y); isles.add(d.isl); dists.add(d.name); }
+  for (const isl of ['Industrial', 'Residential', 'Downtown', 'Rural']) assert.ok(isles.has(isl), `a station on ${isl} (${[...isles]})`);
+  assert.ok(dists.has('The Yards') || dists.has('Ironworks'), 'an industrial stop');
+  assert.ok(dists.has('Pine Hills') && dists.has('Southside'), 'residential stops');
   assert.ok(r.pts.some((p) => p.under) && r.pts.some((p) => !p.under), 'part of it is a tunnel');
-  assert.ok(r.crossings.length >= 4);
+  assert.ok(r.crossings.length >= 1);
   for (const c of r.crossings) assert.ok([T.ROAD, T.BRIDGE].includes(w.map.tileAtPx(c.x, c.y)), 'crossings are on roads');
   assert.ok(r.rural && r.rural.s1 - r.rural.s0 > 2500, 'long rural stretch');
   for (const p of r.pts) if (!p.under) assert.notEqual(w.map.tileAtPx(p.x, p.y), T.BUILDING, 'no track through buildings');
@@ -42,7 +48,7 @@ test('railway: one loop, seven stations (one underground), level crossings and a
   assert.ok(longest <= RAIL_MAX_BRIDGE_TILES * 32, `longest bridge ${Math.round(longest / 32)} tiles`);
   assert.ok(total < r.len * 0.06, `${Math.round(total / r.len * 100)}% of the line is bridge`);
   for (const s of r.stations) assert.ok(w.map.pois[s.poi].kind === 'station');
-  assert.equal(w.trains.length, 2);
+  assert.equal(w.trains.length, TRAINS_ON_LINE);
   assert.ok(w.trains.some((t) => t.mail >= 0), 'a mail train');
 });
 
@@ -52,21 +58,62 @@ test('trains run the loop and stop at every station for the dwell time', () => {
   const first = t.stop;
   run(w, TRAIN_DWELL_S + 1);
   assert.ok(!t.dwellUntil && t.v > 0, 'departed');
-  assert.equal(t.stop, (first + 1) % 7);
-  let stopped = false;
-  for (let i = 0; i < 20 * 120 && !stopped; i++) { w.step(); if (t.dwellUntil) stopped = true; }
+  assert.equal(t.stop, (first + 1) % w.map.rail.stations.length);
+  let stopped = false, prevV = 0, maxAcc = 0, maxDec = 0, top = 0, arriveV = 0;
+  for (let i = 0; i < 20 * 120 && !stopped; i++) {
+    const v0 = t.v;
+    w.step();
+    if (t.dwellUntil) { stopped = true; arriveV = v0; break; }
+    const a = (t.v - prevV) * 20; prevV = t.v;
+    if (i > 0) { maxAcc = Math.max(maxAcc, a); maxDec = Math.min(maxDec, a); }
+    top = Math.max(top, t.v);
+  }
   assert.ok(stopped, 'pulled into the next station');
   const st = w.map.rail.stations[t.stop];
   const mid = mod(t.s - t.len / 2, w.map.rail.len);
   assert.ok(Math.abs(mid - st.s) < 3, 'stopped with its middle at the platform');
+  // eased in and out: no lurch pulling away, no slam into the platform
+  assert.ok(maxAcc <= TRAIN_ACCEL + 1, `pull-away ${maxAcc.toFixed(0)}`);
+  assert.ok(maxDec >= -TRAIN_BRAKE * 1.5, `braking ${maxDec.toFixed(0)}`);
+  assert.ok(arriveV < 12, `rolled in gently (${arriveV.toFixed(1)} px/s)`);
+});
+
+test('trains run at car speed, keep their distance, and every platform clock counts down to the next one', () => {
+  const w = makeWorld();
+  const rail = w.map.rail, L = rail.len;
+  assert.ok(TRAIN_SPEED >= 520, 'as quick as a fast car');
+  // the clocks: predict when the next train reaches each station, then watch it arrive
+  const tt0 = trains.timetable(w);
+  assert.equal(tt0.length, rail.stations.length);
+  const target = tt0.map((v, i) => (v > 5 ? { i, at: w.time + v } : null)).filter(Boolean);
+  assert.ok(target.length > 2);
+  const seen = new Map();
+  let minGap = Infinity, maxWait = 0;
+  for (let k = 0; k < 20 * 320; k++) {
+    w.step();
+    for (const t of w.trains) {
+      if (t.dwellUntil && !seen.has(`${t.stop}@${Math.round(t.dwellUntil)}`)) seen.set(`${t.stop}@${Math.round(t.dwellUntil)}`, { si: t.stop, at: w.time });
+      for (const u of w.trains) if (u !== t) minGap = Math.min(minGap, mod(u.s - u.len - t.s, L));
+    }
+    if (k % 20 === 0) maxWait = Math.max(maxWait, ...trains.timetable(w));
+  }
+  for (const q of target) {
+    const arr = [...seen.values()].filter((a) => a.si === q.i).sort((a, b) => a.at - b.at)[0];
+    assert.ok(arr, `a train reached station ${q.i}`);
+    assert.ok(Math.abs(arr.at - q.at) < 3, `clock at ${rail.stations[q.i].name}: predicted ${q.at.toFixed(1)}, arrived ${arr.at.toFixed(1)}`);
+  }
+  assert.ok(minGap > 400, `trains keep their distance (${minGap.toFixed(0)} px)`);
+  assert.ok(maxWait < 90, `trains come often (longest wait ${maxWait}s)`);
 });
 
 test('nothing stops a train: a car on the line is dragged along and blows up; a pedestrian is thrown', () => {
   const w = makeWorld();
   const t = w.trains[0];
   const rail = w.map.rail;
-  const s = rail.rural.s0 + 1800; // on the long straight across the fields
+  const s = rail.stations.find((q) => q.name.startsWith('Refuge Halt')).s - 2600; // on the long straight across the fields
+  w.trains.forEach((u, k) => { if (u !== t) { u.s = mod(s - 9000 - k * 1500, rail.len); u.dwellUntil = w.time + 9999; } }); // just this one on this stretch
   runUpTo(w, t, s, 400);
+  t.stop = (t.stop + 2) % rail.stations.length; // and not stopping anywhere near here
   const q = railAt(rail, s);
   const { p } = joinPlayer(w); // someone watching (or the car is tidied away)
   teleport(w, p.ped, q.x - Math.sin(q.a) * 300, q.y + Math.cos(q.a) * 300);
@@ -267,4 +314,50 @@ test('rider control kind: the client is told you are on a train', () => {
   const me = players.buildMe(w, p);
   assert.ok(me.train && me.train.next, 'HUD: next station');
   assert.equal(CTRL.RIDER, 4);
+});
+
+test('mail car guards order you out before they shoot - and let you go if you leave', () => {
+  const w = makeWorld({ npcBudget: 200 });
+  const { p } = joinPlayer(w);
+  const t = w.trains.find((q) => q.mail >= 0);
+  const mail = w.get(t.cars[t.mail].id);
+  teleport(w, p.ped, mail.x + 400, mail.y);
+  run(w, 1.2); // the guards man their posts while someone's around
+  const guards = [...t.riders].map((id) => w.get(id)).filter((q) => q && q.npc && q.npc.role === 'railguard');
+  assert.ok(guards.length >= 1, 'guards aboard');
+  trains.board(w, p.ped, t, t.mail, 20, 0, 0);
+  const hp0 = p.ped.hp;
+  run(w, MAIL_WARN_S - 1);
+  assert.equal(p.ped.hp, hp0, 'a warning first, no shots');
+  assert.ok(guards.some((g) => w.time < (g.aimUntil || 0)), 'guns drawn on you');
+  p.ped.onTrain.c = t.mail - 1; // back out into the coach
+  run(w, MAIL_WARN_S + 1);
+  assert.equal(p.ped.hp, hp0, 'left in time: they let you go');
+  p.ped.onTrain.c = t.mail; p.ped.onTrain.ox = 20;
+  run(w, MAIL_WARN_S + 2.5);
+  assert.ok(p.ped.hp < hp0 || p.ped.dead, 'stayed: they open fire');
+});
+
+test('jumping off a train: slow, you just roll; at full speed the landing hurts', () => {
+  const w = makeWorld();
+  const rail = w.map.rail;
+  const t = w.trains[0];
+  w.trains.forEach((u, k) => { if (u !== t) { u.s = mod(t.s - 9000 - k * 1500, rail.len); u.dwellUntil = w.time + 9999; } });
+  const halt = rail.stations.find((q) => q.name.startsWith('Refuge Halt'));
+  const tryJump = (v) => {
+    const { p } = joinPlayer(w);
+    runUpTo(w, t, halt.s - 2600, 0);
+    t.stop = (t.stop + 2) % rail.stations.length;
+    t.v = v;
+    trains.board(w, p.ped, t, 1, 0, 0, 0);
+    w.step();
+    const hp0 = p.ped.hp;
+    trains.getOff(w, p);
+    assert.ok(!p.ped.onTrain, 'off');
+    run(w, 2.5);
+    return hp0 - p.ped.hp;
+  };
+  assert.equal(tryJump(100), 0, 'barely moving: step down');
+  assert.equal(tryJump(260), 0, 'at a jog: tuck and roll, unhurt');
+  assert.ok(tryJump(TRAIN_SPEED) > 0, 'at full speed: hurt');
 });

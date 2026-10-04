@@ -1,5 +1,6 @@
 // Network fan-out with spatial net-culling (GDD §15): each client only receives entities,
-// spawn descriptors and events inside its active chunk + the 8 adjacent chunks.
+// spawn descriptors and events inside its camera view plus a prefetch margin (view.js), so
+// things arrive before they scroll on screen. Entities are looked up through the chunk grid.
 // Each entity is encoded ONCE per tick; per client we copy only records that changed since
 // that client's previous snapshot (static entities refresh at 1 Hz).
 import { K, CHUNK_PX } from '../shared/constants.js';
@@ -9,10 +10,12 @@ import { isSwimming } from '../shared/map.js';
 import * as players from './systems/players.js';
 import * as vehicles from './systems/vehicles.js';
 import { blinkState } from './systems/homes.js';
+import { netRect, NET_KEEP } from './view.js';
 
 const writer = new SnapshotWriter(1500);
 const MAX_BUFFERED = 512 * 1024;
 const REFRESH_TICKS = 20;
+const rect = {};
 let recBuf = new Uint8Array(SNAP_ENTITY * 4096);
 let recDv = new DataView(recBuf.buffer);
 
@@ -83,8 +86,9 @@ export function send(world) {
     const veh = ped && ped.vehId ? world.get(ped.vehId) : null;
     const focus = veh || ped;
     if (!focus) continue;
-    const cx = Math.floor(focus.x / CHUNK_PX), cy = Math.floor(focus.y / CHUNK_PX);
-    const minX = (cx - 1) * CHUNK_PX, maxX = (cx + 2) * CHUNK_PX, minY = (cy - 1) * CHUNK_PX, maxY = (cy + 2) * CHUNK_PX;
+    const r = netRect(world, p, rect);
+    const minX = r.x0, maxX = r.x1, minY = r.y0, maxY = r.y1;
+    const kx0 = minX - NET_KEEP, kx1 = maxX + NET_KEEP, ky0 = minY - NET_KEEP, ky1 = maxY + NET_KEEP;
     const tick = world.tick;
     const lastSnap = p.lastSnapTick || 0;
     p.seenMark = (p.seenMark || 0) + 1;
@@ -106,8 +110,13 @@ export function send(world) {
 
     // the subway is its own level: underground you only see your own train; up top, nothing below
     const myTrain = ped && ped.onTrain ? ped.onTrain.t : -1, mySub = !!(ped && ped.sub);
-    const visit = (e) => {
+    const visit = (e, check) => {
       if (e._mark === mark && e._markP === p) return;
+      if (check) { // inside the window, or already known and not yet past the keep margin
+        const x = e.x, y = e.y;
+        if (x < kx0 || x > kx1 || y < ky0 || y > ky1) return;
+        if ((x < minX || x > maxX || y < minY || y > maxY) && !p.known.has(e.id)) return;
+      }
       if ((e.sub || mySub) && e !== ped) {
         const et = e.kind === K.TRAIN ? e.train : e.onTrain ? e.onTrain.t : -2;
         if (et !== myTrain) return;
@@ -127,9 +136,9 @@ export function send(world) {
         k.sent = tick;
       }
     };
-    for (const e of world.inChunks(cx - 1, cy - 1, cx + 1, cy + 1)) visit(e);
-    if (ped) visit(ped);
-    if (veh) visit(veh);
+    for (const e of world.inChunks(Math.floor(kx0 / CHUNK_PX), Math.floor(ky0 / CHUNK_PX), Math.floor(kx1 / CHUNK_PX), Math.floor(ky1 / CHUNK_PX))) visit(e, true);
+    if (ped) visit(ped, false);
+    if (veh) visit(veh, false);
 
     const gone = [];
     for (const [id, k] of p.known) if (k.seen !== mark) { gone.push(id); p.known.delete(id); }

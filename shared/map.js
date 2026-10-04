@@ -1040,10 +1040,10 @@ function volleyCourt(m, name, x, y, w, h) {
 }
 
 // ---- the railway ------------------------------------------------------------------------------
-// One big loop on dry land: along Downtown's waterfronts on a ballast embankment (level
-// crossings where the road bridges come ashore), under Downtown in a subway tunnel, across the
-// channel to Refuge Island on two short bridges, and over its open fields (the long rural
-// stretch). Water is only ever crossed on a short bridge. Trains follow `rail.pts` by arc length;
+// One big loop around the whole world on dry land: along the outer shores of the Industrial and
+// Residential islands and Sunset Beach, across the channels to Downtown and Refuge Island on
+// short bridges, under Downtown in a subway tunnel, and over Refuge Island's open fields (the
+// long rural stretch). Water is only ever crossed on a short bridge. Trains follow `rail.pts` by arc length;
 // stations, crossings and the tunnel are positions along it.
 export const RAIL_GAUGE = 52;         // px between the outer rails' ties (track bed width ~2 tiles)
 // Rolling stock (wire index = position here). Coaches: seat rows either side of the aisle, doors
@@ -1058,11 +1058,12 @@ export const COACH_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-
 export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towards the back of the mail car)
 export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards stand
 export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre
-const RAIL_ROUTE = [ // [tx, ty, flag] corners (track centre between tile tx-1 and tx); flag 'sub' = may run underground
-  [216, 38], [300, 38, 'sub'], [300, 200, 'sub'], [406, 200, 'sub'], [406, 392], [235, 392], [235, 325], [216, 325],
+const RAIL_ROUTE = [ // [tx, ty, flag] corners, clockwise (track centre between tile tx-1 and tx); flag 'sub' = may run underground
+  [10, 10], [197, 10], [197, 38], [300, 38, 'sub'], [300, 200, 'sub'], [406, 200, 'sub'], [406, 392], [235, 392], [235, 325], [197, 325], [197, 384], [10, 384],
 ];
-const RAIL_STATIONS = [ // [name, tx, ty] nearest point on the line becomes the stop
-  ['Northshore', 252, 38], ['Midtown Underground', 300, 120], ['Eastport', 406, 270], ['Refuge Halt', 300, 392], ['Refuge West', 235, 372], ['Southbank', 216, 272], ['Harbor Street', 216, 160],
+const RAIL_STATIONS = [ // [name, tx, ty] nearest point on the line becomes the stop - every island and most districts
+  ['Ironworks', 52, 10], ['Harbor', 158, 10], ['Northshore', 252, 38], ['Midtown Underground', 300, 120], ['Eastport', 406, 270], ['Refuge Halt', 300, 392],
+  ['Refuge West', 235, 372], ['Northgate', 197, 350], ['Sunset Beach', 104, 384], ['Southside', 10, 334], ['Pine Hills', 10, 236], ['The Yards', 10, 118],
 ];
 export const RAIL_MAX_BRIDGE_TILES = 22; // the longest stretch of open water the line may cross (on a bridge)
 function buildRailway(m) {
@@ -1188,7 +1189,7 @@ function buildRailway(m) {
   stations.sort((a, b) => a.s - b.s);
   stations.forEach((st, i) => { m.pois[st.poi].station = i; });
   // the long rural run across Refuge Island (train robbery country): Eastport -> Refuge Halt
-  const east = stations.find((q) => q.name.startsWith('Eastport')), halt = stations.find((q) => q.name.startsWith('Refuge'));
+  const east = stations.find((q) => q.name.startsWith('Eastport')), halt = stations.find((q) => q.name.startsWith('Refuge Halt'));
   const ruralPts = pts.filter((p) => p.s > east.s && p.s < halt.s && m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] === 9);
   m.rail = { pts, len: total, stations, crossings, rural: ruralPts.length ? { s0: ruralPts[0].s + 200, s1: ruralPts[ruralPts.length - 1].s - 100 } : null };
 }

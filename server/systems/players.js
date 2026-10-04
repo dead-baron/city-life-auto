@@ -27,6 +27,8 @@ import * as props from './props.js';
 import * as trains from './trains.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS } from '../../shared/rules.js';
+import * as devmode from '../devmode.js';
+
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
 export function join(world, conn, profile) {
@@ -96,6 +98,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
 
 export function leave(world, p) {
   if (!p) return;
+  if (p.devMode) devmode.exit(world, p, true); // a dev session never reaches the save file
   p.conn = null;
   p.inputQ = [];
   p.lastInput = { seq: p.lastInput.seq, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
@@ -200,6 +203,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       v.input.throttle = di.throttle;
       v.input.steer = di.steer;
       v.input.hb = di.hb;
+      v.input.slide = di.slide;
       if (inp.bits & IN.HORN) v.hornUntil = world.time + 0.2;
       if ((pressed & IN.HORN) && v.def.police) v.sirenOn = !v.sirenOn;
     }
@@ -242,7 +246,7 @@ export function tumbleImpact(world, ped, v0, dt, friction = TUMBLE_FRICTION) {
   // parked / moving cars and solid props stop you too
   if (v1 > 60) {
     for (const e of world.query(ped.x, ped.y, 40, 2)) {
-      if (e.removed || ped.vehId === e.id) continue;
+      if (e.removed || ped.vehId === e.id || (e.id === ped.bailFrom && world.time < (ped.bailFromUntil || 0))) continue;
       if (Math.hypot(e.x - ped.x, e.y - ped.y) > Math.max(e.def.L, e.def.W) / 2 + 6) continue;
       lost = Math.max(lost, v1 - 20);
       const a = Math.atan2(ped.y - e.y, ped.x - e.x);
@@ -252,6 +256,7 @@ export function tumbleImpact(world, ped, v0, dt, friction = TUMBLE_FRICTION) {
     }
   }
   if (lost < 90) return;
+  if (ped.tumbleSoft) { ped.tumbleUntil = 0; ped.airUntil = 0; return; } // a gentle bail: you bump to a stop, no harm done
   world.emit(ped.x, ped.y, { e: 'crash', x: ped.x, y: ped.y, p: Math.min(0.6, lost / 700) });
   world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: Math.atan2(ped.vy, ped.vx), n: 6 });
   ped.tumbleUntil = 0; ped.airUntil = 0;
@@ -459,6 +464,6 @@ export function buildMe(world, p) {
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
     spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, spawnChoice: p.respawnChoice || null,
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
-    dev: p.dev,
+    dev: p.dev, devMode: !!p.devMode,
   };
 }

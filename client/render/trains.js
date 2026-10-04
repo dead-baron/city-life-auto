@@ -136,6 +136,33 @@ export function drawStation(g, st, cx, cy) {
   g.restore();
 }
 
+// The platform clock: an LED board on a post counting down to the next train ("BOARDING" while
+// one is in). secs < 0: no timetable yet.
+export function drawStationClock(g, st, secs, now) {
+  const under = st.under;
+  g.save();
+  if (under) { g.translate(st.platform.x + 40, st.platform.y - 28); g.scale(1.3, 1.3); }
+  else {
+    g.translate(st.x, st.y); g.rotate(st.a);
+    g.translate(98, st.side * 70);
+    if (Math.cos(st.a) < -0.1 || (Math.abs(Math.cos(st.a)) <= 0.1 && Math.sin(st.a) > 0)) g.rotate(Math.PI); // upright text
+    g.scale(1.3, 1.3);
+  }
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(-27, -9, 58, 22);
+  g.fillStyle = '#5a5e66'; g.fillRect(-2, 8, 4, 10);                      // post
+  g.fillStyle = '#16181c'; g.fillRect(-29, -11, 58, 22);                  // housing
+  g.fillStyle = '#050607'; g.fillRect(-27, -9, 54, 18);                   // screen
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  let text, col = '#ffb020';
+  if (secs < 0) text = '--:--';
+  else if (secs === 0) { text = 'BOARDING'; col = Math.floor(now * 2) % 2 ? '#7dff7a' : '#4ad048'; }
+  else { const s = Math.max(0, Math.ceil(secs)); text = s <= 0 ? 'ARRIVING' : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+  g.fillStyle = 'rgba(255,176,32,.12)'; g.fillRect(-27, -9, 54, 18);
+  g.fillStyle = '#8a8f99'; g.font = 'bold 5px sans-serif'; g.fillText('NEXT TRAIN', 0, -5);
+  g.fillStyle = col; g.font = `bold ${text.length > 5 ? 8 : 10}px monospace`; g.fillText(text, 0, 3.5);
+  g.restore();
+}
+
 // ---- rolling stock --------------------------------------------------------------------------------
 const spriteCache = new Map();
 function carCanvas(type, mode) {

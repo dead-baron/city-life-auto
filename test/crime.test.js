@@ -74,6 +74,7 @@ test('silenced pistol: a kill nobody watches goes unreported (a loud one is hear
     for (const v of w.query(p.ped.x, p.ped.y, 300, K.VEH)) w.remove(v);
     p.profile.weapons[weapon] = 99; p.ped.mag[weapon] = 10; p.ped.weapon = weapon;
     const victim = spawnNpc(w, 'casual', p.ped.x + 60, p.ped.y, 'civ');
+    victim.grit = 1; victim.hp = victim.maxHp = 100; // an ordinary person, one shot (a survivor would report you)
     const bystander = spawnNpc(w, 'casual', p.ped.x - 150, p.ped.y, 'civ');
     bystander.a = Math.PI; bystander.npc.state = 'idle'; bystander.npc.until = w.time + 99; // looking the other way
     for (let i = 0; i < 6 && !victim.dead; i++) { p.ped.nextAttack = 0; combat.tryAttack(w, p.ped, 0); }

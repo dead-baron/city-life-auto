@@ -9,6 +9,7 @@ import { vehForwardSpeed } from '../../shared/physics.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { crossingLimit } from './trains.js';
+import { inAnyView } from '../view.js';
 
 const rng = mulberry32(4242);
 
@@ -302,7 +303,7 @@ function manage(world) {
     if (v.owner && !v.wreckAt) continue;
     const isTraffic = v.ai && v.ai.kind === 'traffic';
     const range = isTraffic ? 1700 : 1900;
-    if (!v.despawnable || near(v.x, v.y, range)) continue;
+    if (!v.despawnable || near(v.x, v.y, range) || inAnyView(world, v.x, v.y, 64)) continue;
     if (v.ai && v.ai.kind !== 'traffic') continue; // police/ems manage their own
     removeVehicle(world, v);
   }
@@ -318,7 +319,7 @@ function manage(world) {
       const d2 = (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2;
       if (d2 > 1150 * 1150) continue;
       const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
-      if (d2 < 520 * 520 && !fresh) continue;
+      if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue; // never pops in on someone's screen
       if (world.npcCount + world.trafficCount > world.npcBudget) break;
       const v = world.spawnVehicle(weighted(PARKED_MIX), sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
       world.parked.set(i, v.id);
@@ -327,6 +328,8 @@ function manage(world) {
     world.map.marina.forEach((sp, i) => {
       if (world.marinaParked.has(i) && world.get(world.marinaParked.get(i))) return;
       if ((sp.x - a.x) ** 2 + (sp.y - a.y) ** 2 > 1100 * 1100) return;
+      const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
+      if (!fresh && inAnyView(world, sp.x, sp.y, 80)) return;
       const v = world.spawnVehicle(sp.kind || (i % 3 === 0 ? 'speedboat' : i % 3 === 1 ? 'jetski' : 'dinghy'), sp.x, sp.y, sp.a, { parked: true });
       world.marinaParked.set(i, v.id);
     });
@@ -338,7 +341,7 @@ function manage(world) {
     let count = 0;
     for (const v of world.query(a.x, a.y, 1300, K.VEH)) if (v.ai && v.ai.kind === 'traffic') count++;
     if (count >= target || world.npcCount + world.trafficCount > world.npcBudget) continue;
-    for (let tries = 0; tries < 6; tries++) {
+    for (let tries = 0; tries < 10; tries++) {
       const nodes = world.map.nodes.filter((n) => (n.x - a.x) ** 2 + (n.y - a.y) ** 2 < 1500 * 1500);
       if (!nodes.length) break;
       const n = nodes[Math.floor(rng() * nodes.length)];
@@ -348,7 +351,7 @@ function manage(world) {
       const d = DIRS[dir];
       const along = 40 + rng() * 400;
       const x = e.x + d.dx * along, y = e.y + d.dy * along;
-      if (near(x, y, 700)) continue;
+      if (near(x, y, 300) || inAnyView(world, x, y, 140)) continue; // spawn off every screen and drive in
       if (world.query(x, y, 90, K.VEH).length) continue;
       const model = weighted(TRAFFIC_MIX);
       const v = world.spawnVehicle(model, x, y, Math.atan2(d.dy, d.dx), {});
