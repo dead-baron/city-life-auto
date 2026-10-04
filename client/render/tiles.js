@@ -421,7 +421,7 @@ function drawTile(g, m, tx, ty, x, y) {
   const d = DISTRICTS[m.dist[ty * MAP_W + tx]];
   switch (t) {
     case T.ROAD: {
-      tex(g, d.road, tx, ty, x, y) || (g.fillStyle = '#3a3b40', g.fillRect(x, y, TILE, TILE));
+      tex(g, 'asphalt', tx, ty, x, y) || (g.fillStyle = '#3a3b40', g.fillRect(x, y, TILE, TILE)); // wear is scattered over it (roads.js)
       break;
     }
     case T.BRIDGE: { // open water here: the deck itself is drawn smooth along the road / track (roads.js, trains.js)
@@ -430,7 +430,7 @@ function drawTile(g, m, tx, ty, x, y) {
       break;
     }
     case T.LOT:
-      tex(g, d.road === 'asphalt_worn' ? 'asphalt_worn' : 'asphalt', tx, ty, x, y, 'rgba(70,70,78,.18)') || (g.fillStyle = '#45464b', g.fillRect(x, y, TILE, TILE));
+      tex(g, 'asphalt', tx, ty, x, y, d.road === 'asphalt_worn' ? 'rgba(60,52,44,.16)' : 'rgba(70,70,78,.18)') || (g.fillStyle = '#45464b', g.fillRect(x, y, TILE, TILE));
       break;
     case T.SIDEWALK:
       tex(g, d.walk, tx, ty, x, y) || (g.fillStyle = '#a9a9a4', g.fillRect(x, y, TILE, TILE));

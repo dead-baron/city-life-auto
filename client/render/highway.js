@@ -142,7 +142,7 @@ export class Highway {
       g.lineTo(P[2], P[3] - l1 + d1); g.lineTo(P[0], P[1] - l0 + d0); g.closePath(); g.fill();
     }
     // road surface (the concept's highway asphalt)
-    g.fillStyle = pattern(g, 'deck') || '#45464d';
+    g.fillStyle = pattern(g, 'asphalt') || '#45464d'; // the same asphalt as the streets below, so ramps meet them seamlessly
     g.beginPath();
     g.moveTo(L[0], L[1] - l0); g.lineTo(L[2], L[3] - l1); g.lineTo(R[2], R[3] - l1); g.lineTo(R[0], R[1] - l0); g.closePath();
     g.fill();

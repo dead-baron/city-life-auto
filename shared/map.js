@@ -142,18 +142,18 @@ export const WILD_DISTRICTS = new Set(DISTRICTS.filter((d) => WILD_STYLES.has(d.
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
   houses: { minW: 16, minH: 18, gen: { house1: 3, house2: 3, house3: 3, apt2: 0.6, rest2: 0.3, house4: 2, house5: 2, house7: 2.5, house8: 2.5, house9: 2.5 }, filler: 'park', roof: 0.06, roofKinds: ['tile'] },
-  commercial: { minW: 12, minH: 12, gen: { conv: 2, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.3, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5, diner: 1, latebite: 0.6, arcade: 0.5, tattoo: 0.4, redawning: 0.6, greenbistro: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
-  apartments: { minW: 14, minH: 14, gen: { apt1: 3, apt2: 3, house2: 1, conv: 1, tower2: 1, apt3: 1.5, apt4: 1.5 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
+  commercial: { minW: 12, minH: 12, gen: { conv: 3, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.3, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5, diner: 1, latebite: 0.6, arcade: 0.5, tattoo: 0.4, redawning: 0.6, greenbistro: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
+  apartments: { minW: 14, minH: 14, gen: { apt1: 3, apt2: 3, house2: 1, conv: 1.8, tower2: 1, apt3: 1.5, apt4: 1.5 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
   industrial: { minW: 14, minH: 13, gen: { warehouse: 3, industrial: 2, repair: 1, junkyard: 0.6, site: 0.4 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
   factory: { minW: 14, minH: 13, gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4, junkyard: 0.5, site: 0.5 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
   towers: { minW: 11, minH: 11, gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1, bank2: 0.5, apt3: 0.5, vellori: 0.6, monarch: 0.6, theatre: 0.4, diamond: 0.5 }, filler: 'plaza', roof: 0.78, roofKinds: ['glass', 'gravel', 'tar'] },
   civic: { minW: 14, minH: 14, gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1, church: 0.3, bank2: 0.6, apt4: 0.5, theatre: 0.5, greenbistro: 0.5, house8: 0.6 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
-  southside: { minW: 14, minH: 14, gen: { house1: 1, house3: 1, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5, quickstop: 0.8, junkyard: 0.5, house5: 0.6, liquor: 0.8, shanty2: 0.5, shanty3: 0.5, tattoo: 0.4 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
+  southside: { minW: 14, minH: 14, gen: { house1: 1, house3: 1, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5, quickstop: 1.6, junkyard: 0.5, house5: 0.6, liquor: 0.8, shanty2: 0.5, shanty3: 0.5, tattoo: 0.4 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
   nightlife: { minW: 10, minH: 10, gen: { club: 1, rest1: 1, rest2: 1, hotel: 1, conv: 1, clubnova: 1, clubeclipse: 1, neonclub: 1.4, neontap: 1.2, midnight: 1.2, luna: 1.2, arcade: 0.8, latebite: 0.8, tattoo: 0.6 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
   harbor: { minW: 14, minH: 13, gen: { warehouse: 4, industrial: 1, repair: 1, junkyard: 0.3 }, filler: 'yard', roof: 0.55, roofKinds: ['metal', 'tar'] },
   luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5, house6: 1.5, house4: 1, house5: 1, house9: 1.2, royale: 0.6, bistro: 0.6, crown: 0.5 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
   redlight: { minW: 12, minH: 12, gen: { club: 1, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.4, quickstop: 0.5, liquor: 0.6, neonclub: 1, luna: 1, tattoo: 0.8, shanty1: 0.4 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
-  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 1.5, rest1: 1.5, club: 0.3, repair: 0.6, quickstop: 1, apt3: 0.6, boutique: 0.4, liquor: 0.8, neontap: 0.5, diner: 0.6, greenbistro: 0.5, house7: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 2, rest1: 1.5, club: 0.3, repair: 0.6, quickstop: 1.4, apt3: 0.6, boutique: 0.4, liquor: 0.8, neontap: 0.5, diner: 0.6, greenbistro: 0.5, house7: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
   beach: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, rest2: 1.5, rest1: 1, hotel: 0.6, conv: 0.5, beachbar: 1.2, house5: 0.6, house9: 0.8, diner: 0.6 }, filler: 'plaza', roof: 0.15, roofKinds: ['tile'] },
   park: { minW: 14, minH: 14, gen: { rest2: 1 }, filler: 'park', roof: 0, roofKinds: ['tile'] },
 };
@@ -500,8 +500,8 @@ export function generateCity(seed = 1337) {
       rows.push({ b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: fS ? 'S' : 'N', iv: [[b.x, b.x + b.w]] });
     }
   }
+  claimEstates(m, rows, estateRows, rand); // beach houses first: the beach blocks are few
   placeSpecials(m, rows, rand);
-  claimEstates(m, rows, estateRows, rand);
   for (const row of rows) fillRow(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
   for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)), b.park);
   for (const [type, key, x, y, south] of estateRows) estateHouse(m, rand, type, key, x, y, south);
@@ -1426,18 +1426,22 @@ function seedOf(d) {
 
 // Estates inside the city: beach houses on Sunset Beach's rows (a house plus its garage).
 function claimEstates(m, rows, out, rand) {
-  const want = [['beach', 'house2'], ['beach', 'house1'], ['beach', 'house3']];
+  const want = [['beach', 'house8'], ['beach', 'house3'], ['beach', 'house7']];
   const used = [];
   for (const [type, key] of want) {
     const pf = PREFABS[key];
-    const need = pf.tw + 4;
+    const need = pf.cars ? pf.tw : pf.tw + 4; // a painted house brings its own garage and driveway
     const cands = [];
     for (const row of rows) {
-      if (row.d !== 10 || row.h < pf.th) continue;
+      if (DISTRICTS[row.d].style !== 'beach' || row.h < pf.th || row.face !== 'S') continue;
       for (let k = 0; k < row.iv.length; k++) if (row.iv[k][1] - row.iv[k][0] >= need) cands.push([row, k]);
     }
     const ok = cands.filter(([row]) => used.every((q) => Math.hypot(q.x - row.x, q.y - row.y) > 30));
-    const pick = (ok.length ? ok : cands)[Math.floor(rand() * Math.max(1, (ok.length ? ok : cands).length))];
+    const pool0 = ok.length ? ok : cands;
+    // Sunset Beach gets one, the other beaches the rest (the strip's blocks are few)
+    const sunset = pool0.filter(([row]) => row.d === 10), other = pool0.filter(([row]) => row.d !== 10);
+    const pool = !out.some((e) => e[5] === 10) && sunset.length ? sunset : other.length ? other : pool0;
+    const pick = pool[Math.floor(rand() * Math.max(1, pool.length))];
     if (!pick) continue;
     const [row, k] = pick;
     const iv = row.iv[k];
@@ -1481,7 +1485,7 @@ function fillRow(m, row, rand) {
 
 function placePrefab(m, row, key, x, special, rand) {
   const pf = PREFABS[key];
-  const rot = row.face === 'N' ? 2 : 0;
+  const rot = row.face === 'N' && pf.rot ? 2 : 0; // a painted 3/4 lot is never turned upside-down (out in the country it just faces south)
   const y = row.face === 'S' ? row.y + row.h - pf.th : row.y;
   // dress the leftover strip behind a shorter building (back lots, yards, gardens)
   const left = row.h - pf.th;
@@ -1571,6 +1575,13 @@ function placePrefab(m, row, key, x, special, rand) {
     b.home = id;
   } else if (key !== 'gas' && key !== 'construction') {
     m.pois.push({ id: m.pois.length, kind: 'delivery', label: b.name, x: doors[0].px, y: doors[0].py, r: 40, b: bid });
+  }
+  // the cars painted on the lot were painted out: their spots are parking where a real one may stand
+  if (pf.cars) {
+    const spots = pf.cars.map(([fx, fy, a]) => ({ x: (x + fx * pf.tw) * TILE, y: (y + fy * pf.th) * TILE, a, drive: true }));
+    for (const sp of spots) m.parking.push(sp);
+    const h = b.home !== undefined ? m.homes[b.home] : null;
+    if (h && spots.length) h.garage = { x: spots[0].x, y: spots[0].y, a: spots[0].a }; // your car comes out onto the driveway
   }
   if (key === 'construction') m.dropSites.push({ x: (x + 1.5) * TILE, y: (y + pf.th - 1.5) * TILE, name: 'the construction site' });
   if (key === 'industrial' && row.d === 3 && !m.dropSites.some((s) => s.name === 'the industrial yards')) m.dropSites.push({ x: (x + pf.tw / 2) * TILE, y: (rot === 0 ? y + pf.th - 1 : y + 1) * TILE, name: 'the industrial yards' });
@@ -1770,6 +1781,7 @@ function estateHouse(m, rand, type, key, x, y, south) {
   m.garages ||= [];
   m.mansions ||= [];
   const pf = PREFABS[key];
+  if (!pf.rot) south = true; // painted lots face the camera: they only ever front onto a street to their south
   const d = nearestDist(m, x + 3, y + 7);
   const before = m.homes.length;
   placePrefab(m, { d, y, h: pf.th, face: south ? 'S' : 'N' }, key, x, null, rand);
@@ -1782,7 +1794,7 @@ function estateHouse(m, rand, type, key, x, y, south) {
   if (poi) poi.label = home.name;
   // the house's own walk to its door connects to the road too
   driveway(m, Math.floor(home.x / TILE), 1, Math.floor(home.y / TILE) + (south ? 1 : -1), south ? 1 : -1);
-  addGarage(m, home, x + pf.tw, south ? y + pf.th - 3 : y, south);
+  if (!pf.cars) addGarage(m, home, x + pf.tw, south ? y + pf.th - 3 : y, south); // (a painted house has its own garage and driveway)
   // yard dressing
   const yard = type === 'beach' ? ['palm_a', 'palm_b', 'umbrella_r', 'umbrella_y'] : type === 'farmhouse' ? ['tree_a', 'pallet', 'drum', 'wheelbarrow'] : ['tree_b', 'shrub_a', 'flowers_a', 'bush_c'];
   for (let k = 0; k < 4; k++) {
@@ -1958,6 +1970,16 @@ function carvePoolLot(m, sb) {
     const x0 = side > 0 ? sb.tx + sb.tw + gap : sb.tx - w - gap;
     for (const y0 of [sb.ty + sb.th - h, sb.ty, sb.ty + sb.th - h + 2, sb.ty - 2, sb.ty + sb.th - h - 2]) spots.push([x0, y0, w, h]);
   }
+  // or the yard right behind / in front of the station (a wide, shallow lot)
+  for (const h of [8, 7]) for (const w of [16, 14, 12]) for (const dx of [0, 1, 2]) {
+    spots.push([sb.tx + dx, sb.ty - h, w, h]);
+    spots.push([sb.tx + dx, sb.ty + sb.th, w, h]);
+  }
+  // or across the street, in the next block up or down (a wide, shallow yard)
+  for (const dy of [8, 9, 10, 11, 12, 13, 14]) for (const [w, h] of [[16, 8], [14, 8], [12, 9]]) for (const dx of [0, 2, -2, 4]) {
+    spots.push([sb.tx + dx, sb.ty + sb.th + dy - 4, w, h]);
+    spots.push([sb.tx + dx, sb.ty - dy - h + 4, w, h]);
+  }
   for (const [x0, y0, w, h] of spots) {
     {
       let ok = true;
@@ -1979,14 +2001,14 @@ function carvePoolLot(m, sb) {
 // Corner stores: the convenience-store storefronts become real shops you can walk into (and
 // rob). A few of them, out on the main roads, are Gas 'n Go stations with pumps out front.
 function buildCornerStores(m) {
-  const conv = m.pois.filter((p) => p.kind === 'delivery' && m.buildings[p.b] && (m.buildings[p.b].kind === 'conv' || m.buildings[p.b].kind === 'liquor'));
+  const conv = m.pois.filter((p) => p.kind === 'delivery' && m.buildings[p.b] && (m.buildings[p.b].kind === 'conv' || m.buildings[p.b].kind === 'liquor' || m.buildings[p.b].kind === 'quickstop'));
   const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
   m.pumps = [];
   const gas = [];
   for (const p of [...conv].sort((a, b) => hash2(a.x | 0, a.y | 0, 41) - hash2(b.x | 0, b.y | 0, 41))) {
-    if (m.buildings[p.b].kind === 'liquor' || gas.length >= 11 || gas.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 3500)) continue;
+    if (m.buildings[p.b].kind === 'liquor' || gas.length >= 5 || gas.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 3500)) continue;
     // needs open paving in front for the pumps
-    const ok = [-48, 48].every((dx) => [40, 64].every((dy) => { const t = m.tileAtPx(p.x + dx, p.y + (p.y > m.buildings[p.b].ty * TILE ? dy : -dy)); return t === T.SIDEWALK || t === T.PLAZA || t === T.LOT; }));
+    const ok = [-48, 48].every((dx) => [40, 64].every((dy) => { const t = m.tileAtPx(p.x + dx, p.y + (p.y > m.buildings[p.b].ty * TILE ? dy : -dy)); return t === T.SIDEWALK || t === T.PLAZA || t === T.LOT || t === T.GRASS; }));
     if (ok) gas.push(p);
   }
   for (const p of conv) {
@@ -2987,13 +3009,13 @@ function buildBoatDocks(m) {
   const used = [];
   // --- waterfront homes: a private pier and a covered slip ---------------------------------------
   const cands = m.homes.filter((h) => !h.gone && h.kind !== 'apartment')
-    .map((h) => ({ h, L: findLaunch(m, Math.floor(h.x / TILE), Math.floor(h.y / TILE), 22, 9, used) }))
+    .map((h) => ({ h, L: findLaunch(m, Math.floor(h.x / TILE), Math.floor(h.y / TILE), 28, 9, used) }))
     .filter((c) => c.L)
     .sort((a, b) => Math.hypot(a.L.tx * TILE - a.h.x, a.L.ty * TILE - a.h.y) - Math.hypot(b.L.tx * TILE - b.h.x, b.L.ty * TILE - b.h.y));
   for (const { h } of cands) {
     if (m.homes.filter((q) => q.dock).length >= WATERFRONT_MAX) break;
     // re-check: an earlier pier may have taken this stretch of shore
-    const L = findLaunch(m, Math.floor(h.x / TILE), Math.floor(h.y / TILE), 22, 9, used);
+    const L = findLaunch(m, Math.floor(h.x / TILE), Math.floor(h.y / TILE), 28, 9, used);
     if (!L) continue;
     used.push(L);
     const side = (L.tx + L.ty) % 2 ? 1 : -1;

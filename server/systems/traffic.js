@@ -230,6 +230,8 @@ export function planRoute(world, fromX, fromY, toX, toY) {
 }
 
 // ---- traffic update ----------------------------------------------------------
+const DRIVEWAY_CARS = ['sedan', 'compact', 'pickup', 'sports', 'sedan', 'compact'];
+
 export function update(world, dt) {
   if (world.tick % 15 === 3) manage(world);
   const loopT = world.loopTime;
@@ -392,13 +394,13 @@ function manage(world) {
     for (let i = 0; i < spots.length; i++) {
       const sp = spots[i];
       if (world.parked.has(i)) continue;
-      if (hash2(i, 7, world.map.seed) > (sp.sparse ? 0.3 : 0.7)) continue;
+      if (hash2(i, 7, world.map.seed) > (sp.sparse ? 0.3 : sp.drive ? 0.5 : 0.7)) continue; // a home's driveway: often a car, often not
       const d2 = (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2;
       if (d2 > 1150 * 1150) continue;
       const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
       if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue; // never pops in on someone's screen
       if (world.npcCount + world.trafficCount > world.npcBudget) break;
-      const v = world.spawnVehicle(weighted(PARKED_MIX), sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
+      const v = world.spawnVehicle(sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(PARKED_MIX), sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
       world.parked.set(i, v.id);
     }
     world.marinaParked ??= new Map();

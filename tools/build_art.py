@@ -137,72 +137,115 @@ PREFABS = {
 # door x fractions, ground, rotatable, target width in tiles). The scale per scene follows from
 # the target width; the lot's height from the crop's aspect.
 SCENE_PREFABS = {
-    'fuel':       ('e71fca5d-image.png', (330, 120, 1360, 560), (.60, .05, .98, .85), [.8], 'lot', False, 19),
+    'fuel':       ('e71fca5d-image.png', (330, 120, 1360, 515), (.60, .05, .98, .85), [.8], 'lot', False, 19),
     'clubnova':   ('00ceb559-image.png', (150, 20, 1300, 760), (.03, .0, .97, .62), [.5], 'plaza', False, 18),
     'clubeclipse':('34eae673-image.png', (380, 40, 1300, 640), (.03, .0, .97, .78), [.5], 'plaza', False, 17),
     'police2':    ('6fed2123-image.png', (150, 30, 1000, 700), (.03, .03, .97, .75), [.5], 'plaza', False, 16),
-    'police3':    ('a3d2f043-image.png', (40, 40, 700, 760), (.05, .08, .95, .82), [.6], 'plaza', False, 12),
+    'police3':    ('a3d2f043-image.png', (80, 60, 700, 760), (.05, .08, .95, .82), [.6], 'plaza', False, 14),
     'motors':     ('6d268385-image.png', (380, 40, 1220, 760), (.11, .05, .88, .5), [.5], 'lot', False, 15),
-    'trail':      ('66327ad5-image.png', (380, 40, 1110, 560), (.03, .04, .97, .9), [.5], 'lot', False, 15),
+    'trail':      ('66327ad5-image.png', (380, 40, 1110, 560), (.03, .04, .97, .9), [.5], 'lot', False, 16),
     'boutique':   ('3c723498-image.png', (290, 0, 1210, 600), (.03, .0, .97, .78), [.5], 'plaza', False, 17),
-    'quickstop':  ('f3c20cb7-image.png', (420, 100, 1060, 650), (.05, .05, .95, .86), [.45], 'lot', False, 13),
-    'apt3':       ('d1c9a548-image.png', (180, 0, 1440, 620), (.0, .0, 1.0, .62), [.25], 'plaza', True, 19),
-    'apt4':       ('2ec4379d-image.png', (380, 40, 1420, 760), (.03, .22, .97, .9), [.45], 'grass', True, 18),
-    'house4':     ('1715a193-image.png', (340, 40, 1200, 800), (.03, .22, .97, .67), [.34], 'grass', True, 15),
-    'house5':     ('f98d9a92-image.png', (380, 40, 1420, 800), (.02, .32, .70, .74), [.4], 'grass', True, 14),
-    'house6':     ('9fb6ffb3-image.png', (100, 40, 1380, 820), (.15, .2, .85, .65), [.5], 'grass', True, 19),
+    'quickstop':  ('f3c20cb7-image.png', (420, 100, 1060, 650), (.05, .05, .95, .86), [.45], 'lot', False, 15),
+    'apt3':       ('d1c9a548-image.png', (180, 0, 1440, 620), (.0, .0, 1.0, .62), [.25], 'plaza', False, 19),
+    'apt4':       ('2ec4379d-image.png', (380, 40, 1185, 760), (.03, .22, .97, .9), [.45], 'grass', False, 16),
+    'house4':     ('1715a193-image.png', (340, 40, 1200, 800), (.03, .22, .97, .67), [.34], 'grass', False, 16),
+    'house5':     ('f98d9a92-image.png', (380, 40, 1420, 800), (.02, .32, .70, .74), [.4], 'grass', False, 16),
+    'house6':     ('9fb6ffb3-image.png', (100, 40, 1380, 820), (.15, .2, .85, .65), [.5], 'grass', False, 19),
     'bank2':      ('ae8c09d0-image.png', (540, 0, 1536, 420), (.03, .0, .97, .72), [.45], 'plaza', False, 19),
-    'junkyard':   ('30cb641b-image.png', (0, 0, 1536, 800), (.02, .02, .2, .3), [.25], 'dirt', True, 19),
-    'tackle2':    ('e9e1ec76-image.png', (200, 80, 1300, 640), (.1, .1, .75, .55), [.45], 'dirt', False, 17),
-    'shack':      ('63fc3283-image.png', (480, 260, 1200, 760), (.05, .05, .95, .65), [.5], 'dirt', True, 14),
-    'farmstead':  ('2f8031eb-image.png', (150, 40, 1448, 700), (.58, .1, .85, .45), [.2], 'dirt', True, 19),
-    'site':       ('94484028-image.png', (380, 20, 1400, 760), (.02, .02, .25, .3), [.15], 'dirt', True, 18),
-    'beachbar':   ('5841fda7-image.png', (300, 60, 1460, 720), (.25, .12, .62, .5), [.45], 'sand', True, 18),
-    'pool':       ('d638bb4b-image.png', (240, 60, 1520, 740), (.0, .0, .25, .45), [.12], 'grass', True, 19),
-    'liquor':     ('a8217af8-image.png', (200, 20, 1300, 780), (.04, .02, .92, .84), [.28], 'plaza', False, 14),
+    'junkyard':   ('30cb641b-image.png', (0, 0, 1536, 800), (.02, .02, .2, .3), [.25], 'dirt', False, 19),
+    'tackle2':    ('e9e1ec76-image.png', (200, 80, 1300, 490), (.1, .1, .75, .55), [.45], 'dirt', False, 17),
+    'shack':      ('63fc3283-image.png', (480, 260, 1090, 760), (.05, .05, .95, .65), [.5], 'dirt', False, 13),
+    'farmstead':  ('2f8031eb-image.png', (150, 40, 1448, 700), (.58, .1, .85, .45), [.2], 'dirt', False, 19),
+    'site':       ('94484028-image.png', (380, 20, 1400, 760), (.02, .02, .25, .3), [.15], 'dirt', False, 18),
+    'beachbar':   ('5841fda7-image.png', (300, 60, 1460, 720), (.25, .12, .62, .5), [.45], 'sand', False, 18),
+    'pool':       ('d638bb4b-image.png', (240, 60, 1520, 740), (.0, .0, .25, .45), [.12], 'grass', False, 19),
+    'liquor':     ('a8217af8-image.png', (200, 20, 1300, 780), (.04, .02, .92, .84), [.28], 'plaza', False, 16),
     'shops1':     ('4bb52753-image.png', (0, 0, 1440, 400), (.0, .0, 1.0, .72), [.10, .31, .53, .70, .88], 'plaza', False, 24),
     'shops2':     ('9cec10ef-image.png', (0, 0, 1536, 400), (.0, .0, 1.0, .72), [.10, .31, .57, .74, .91], 'plaza', False, 25),
     # round 7: the building-sheet lots that looked smeared when upscaled, redrawn from the concept scenes
-    'house1'     : ('bfa2eaae-image.png', (149, 61, 600, 395), (0.02, 0.02, 0.8, 0.62), [0.49], 'grass', True, 12),  # suburban house, pool and patio
-    'house2'     : ('bfa2eaae-image.png', (900, 70, 1290, 395), (0.11, 0.02, 0.75, 0.62), [0.6], 'grass', True, 10),  # house with a pickup in the drive
-    'house3'     : ('bfa2eaae-image.png', (1300, 61, 1645, 395), (0.12, 0.18, 0.81, 0.72), [0.49], 'grass', True, 9),  # house with two cars out front
-    'house7'     : ('bfa2eaae-image.png', (0, 520, 420, 924), (0.36, 0.06, 0.86, 0.56), [0.64], 'grass', True, 11),  # house with a fenced side yard
-    'house8'     : ('bfa2eaae-image.png', (430, 520, 800, 924), (0.03, 0.16, 0.73, 0.63), [0.38], 'grass', True, 10),  # house, two cars on the drive
-    'house9'     : ('bfa2eaae-image.png', (961, 559, 1380, 909), (0.25, 0.06, 0.72, 0.67), [0.38], 'grass', True, 11),  # brick-roofed house with a pergola
-    'conv'       : ('c23df171-image.png', (46, 0, 471, 289), (0, 0, 1, 0.62), [0.5], 'plaza', False, 13),  # corner convenience store
-    'rest1'      : ('a7108177-image.png', (1178, 0, 1649, 258), (0, 0, 1, 0.42), [0.45], 'plaza', False, 14),  # awning restaurant with a patio
-    'rest2'      : ('1b15795c-image.png', (0, 0, 391, 335), (0, 0, 1, 0.72), [0.55], 'plaza', False, 12),  # coffee shop
-    'diner'      : ('1b15795c-image.png', (1040, 0, 1375, 279), (0, 0, 1, 0.78), [0.45], 'plaza', False, 10),  # City Diner
-    'hotel'      : ('da2b614f-image.png', (714, 0, 1117, 289), (0, 0, 1, 0.6), [0.5], 'plaza', False, 13),  # Grand Palace hotel
-    'bank'       : ('8e6fd787-image.png', (607, 0, 1075, 461), (0, 0, 1, 0.66), [0.5], 'plaza', False, 13),  # First National Bank
-    'warehouse'  : ('1f061cf5-image.png', (182, 0, 532, 327), (0, 0, 1, 0.8), [0.78], 'lot', False, 10),  # brick warehouse, loading door
-    'tower2'     : ('69353c0e-image.png', (77, 0, 363, 195), (0, 0, 1, 0.8), [0.5], 'plaza', False, 9),  # office block
-    'tower1'     : ('69353c0e-image.png', (915, 0, 1145, 195), (0, 0, 1, 0.8), [0.5], 'plaza', False, 8),  # office block
-    'police'     : ('03063643-image.png', (380, 38, 1140, 456), (0, 0, 1, 0.68), [0.5], 'plaza', False, 13),  # police station front, flags and steps
-    'bistro'     : ('da2b614f-image.png', (410, 0, 646, 289), (0, 0, 1, 0.4), [0.5], 'plaza', False, 7),  # Le Petit Bistro
-    'royale'     : ('da2b614f-image.png', (91, 0, 327, 289), (0, 0, 1, 0.62), [0.5], 'plaza', False, 7),  # Royale fashion
-    'vellori'    : ('8e6fd787-image.png', (328, 0, 607, 461), (0, 0, 1, 0.72), [0.5], 'plaza', False, 9),  # Vellori boutique
-    'monarch'    : ('8e6fd787-image.png', (1082, 0, 1424, 461), (0, 0, 1, 0.72), [0.5], 'plaza', False, 11),  # Monarch boutique
-    'shanty1'    : ('3a84dd63-image.png', (21, 77, 356, 384), (0.05, 0, 0.95, 0.7), [0.45], 'dirt', True, 8),  # shanty, tin roofs
-    'shanty2'    : ('3a84dd63-image.png', (461, 0, 838, 384), (0, 0, 1, 0.8), [0.5], 'dirt', True, 9),  # tarp shacks
-    'shanty3'    : ('3a84dd63-image.png', (838, 0, 1243, 384), (0, 0, 1, 0.75), [0.6], 'dirt', True, 9),  # shanty with a graffiti roof
+    'house1'     : ('bfa2eaae-image.png', (149, 61, 600, 395), (0.02, 0.02, 0.8, 0.62), [0.49], 'grass', False, 16),  # suburban house, pool and patio
+    'house2'     : ('bfa2eaae-image.png', (900, 70, 1290, 395), (0.11, 0.02, 0.75, 0.62), [0.6], 'grass', False, 15),  # house with a pickup in the drive
+    'house3'     : ('bfa2eaae-image.png', (1300, 61, 1645, 395), (0.12, 0.18, 0.81, 0.72), [0.49], 'grass', False, 14),  # house with two cars out front
+    'house7'     : ('bfa2eaae-image.png', (0, 520, 420, 924), (0.36, 0.06, 0.86, 0.56), [0.64], 'grass', False, 15),  # house with a fenced side yard
+    'house8'     : ('bfa2eaae-image.png', (430, 520, 800, 924), (0.03, 0.16, 0.73, 0.63), [0.38], 'grass', False, 13),  # house, two cars on the drive
+    'house9'     : ('bfa2eaae-image.png', (961, 559, 1380, 909), (0.25, 0.06, 0.72, 0.67), [0.38], 'grass', False, 15),  # brick-roofed house with a pergola
+    'conv'       : ('c23df171-image.png', (46, 0, 471, 289), (0, 0, 1, 0.62), [0.5], 'lot', False, 16),  # corner convenience store
+    'rest1'      : ('a7108177-image.png', (1178, 0, 1649, 258), (0, 0, 1, 0.42), [0.45], 'plaza', False, 16),  # awning restaurant with a patio
+    'rest2'      : ('1b15795c-image.png', (0, 0, 391, 335), (0, 0, 1, 0.72), [0.55], 'plaza', False, 14),  # coffee shop
+    'diner'      : ('1b15795c-image.png', (1040, 0, 1375, 279), (0, 0, 1, 0.78), [0.45], 'plaza', False, 13),  # City Diner
+    'hotel'      : ('da2b614f-image.png', (714, 0, 1117, 289), (0, 0, 1, 0.6), [0.5], 'plaza', False, 15),  # Grand Palace hotel
+    'bank'       : ('8e6fd787-image.png', (607, 0, 1075, 461), (0, 0, 1, 0.66), [0.5], 'plaza', False, 15),  # First National Bank
+    'warehouse'  : ('1f061cf5-image.png', (182, 0, 532, 327), (0, 0, 1, 0.8), [0.78], 'lot', False, 14),  # brick warehouse, loading door
+    'tower2'     : ('69353c0e-image.png', (77, 0, 363, 195), (0, 0, 1, 0.8), [0.5], 'plaza', False, 12),  # office block
+    'tower1'     : ('69353c0e-image.png', (915, 0, 1145, 195), (0, 0, 1, 0.8), [0.5], 'plaza', False, 10),  # office block
+    'police'     : ('03063643-image.png', (440, 38, 1080, 445), (0, 0, 1, 0.68), [0.5], 'plaza', False, 16),  # police station front, flags and steps
+    'bistro'     : ('da2b614f-image.png', (410, 0, 646, 289), (0, 0, 1, 0.4), [0.5], 'plaza', False, 10),  # Le Petit Bistro
+    'royale'     : ('da2b614f-image.png', (91, 0, 327, 289), (0, 0, 1, 0.62), [0.5], 'plaza', False, 10),  # Royale fashion
+    'vellori'    : ('8e6fd787-image.png', (328, 0, 607, 461), (0, 0, 1, 0.72), [0.5], 'plaza', False, 10),  # Vellori boutique
+    'monarch'    : ('8e6fd787-image.png', (1082, 0, 1424, 461), (0, 0, 1, 0.72), [0.5], 'plaza', False, 12),  # Monarch boutique
+    'shanty1'    : ('3a84dd63-image.png', (21, 77, 356, 384), (0.05, 0, 0.95, 0.7), [0.45], 'dirt', False, 12),  # shanty, tin roofs
+    'shanty2'    : ('3a84dd63-image.png', (461, 0, 838, 384), (0, 0, 1, 0.8), [0.5], 'dirt', False, 12),  # tarp shacks
+    'shanty3'    : ('3a84dd63-image.png', (838, 0, 1243, 384), (0, 0, 1, 0.75), [0.6], 'dirt', False, 13),  # shanty with a graffiti roof
     # round 7: the neon strip (walk-in clubs after dark) and the boulevard shopfronts
-    'neonclub'   : ('a1c88191-image.png', (49, 0, 405, 349), (0, 0, 1, 0.72), [0.45], 'plaza', False, 10),  # CLUB - dance drink repeat
-    'neontap'    : ('a1c88191-image.png', (482, 0, 824, 349), (0, 0, 1, 0.72), [0.45], 'plaza', False, 10),  # Neon Tap bar
-    'midnight'   : ('a1c88191-image.png', (1040, 0, 1446, 349), (0, 0, 1, 0.72), [0.58], 'plaza', False, 11),  # The Midnight cocktail club
-    'luna'       : ('a1c88191-image.png', (447, 649, 866, 984), (0, 0, 1, 0.62), [0.42], 'plaza', False, 11),  # Luna Lounge
-    'arcade'     : ('a1c88191-image.png', (866, 649, 1117, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 7),  # arcade
-    'latebite'   : ('a1c88191-image.png', (1110, 649, 1382, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 8),  # Late Bite burgers
-    'tattoo'     : ('a1c88191-image.png', (84, 649, 391, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 8),  # tattoo parlour
-    'crown'      : ('59f534a1-image.png', (24, 0, 379, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 8),  # Crown boutique
-    'greenbistro': ('59f534a1-image.png', (387, 0, 685, 323), (0, 0, 1, 0.6), [0.5], 'plaza', False, 7),  # bistro, green awnings
-    'theatre'    : ('59f534a1-image.png', (685, 0, 1113, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 10),  # the arched theatre
-    'diamond'    : ('59f534a1-image.png', (1113, 0, 1443, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 8),  # jeweller
-    'redawning'  : ('59f534a1-image.png', (1443, 0, 1774, 323), (0, 0, 1, 0.62), [0.5], 'plaza', False, 8),  # red-awning cafe
-    'market'     : ('ee728fc6-image.png', (175, 30, 1482, 600), (0.04, 0.04, 0.96, 0.9), [0.5], 'plaza', False, 20),  # FreshMart supermarket front
+    'neonclub'   : ('a1c88191-image.png', (49, 0, 405, 349), (0, 0, 1, 0.72), [0.45], 'plaza', False, 14),  # CLUB - dance drink repeat
+    'neontap'    : ('a1c88191-image.png', (482, 0, 824, 349), (0, 0, 1, 0.72), [0.45], 'plaza', False, 14),  # Neon Tap bar
+    'midnight'   : ('a1c88191-image.png', (1040, 0, 1446, 349), (0, 0, 1, 0.72), [0.58], 'plaza', False, 16),  # The Midnight cocktail club
+    'luna'       : ('a1c88191-image.png', (447, 649, 866, 984), (0, 0, 1, 0.62), [0.42], 'plaza', False, 16),  # Luna Lounge
+    'arcade'     : ('a1c88191-image.png', (866, 649, 1117, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 10),  # arcade
+    'latebite'   : ('a1c88191-image.png', (1110, 649, 1382, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 11),  # Late Bite burgers
+    'tattoo'     : ('a1c88191-image.png', (84, 649, 391, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 12),  # tattoo parlour
+    'crown'      : ('59f534a1-image.png', (24, 0, 379, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 13),  # Crown boutique
+    'greenbistro': ('59f534a1-image.png', (387, 0, 685, 323), (0, 0, 1, 0.6), [0.5], 'plaza', False, 12),  # bistro, green awnings
+    'theatre'    : ('59f534a1-image.png', (685, 0, 1113, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 16),  # the arched theatre
+    'diamond'    : ('59f534a1-image.png', (1113, 0, 1443, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 13),  # jeweller
+    'redawning'  : ('59f534a1-image.png', (1443, 0, 1774, 323), (0, 0, 1, 0.62), [0.5], 'plaza', False, 13),  # red-awning cafe
+    'market'     : ('ee728fc6-image.png', (400, 30, 1300, 600), (0.04, 0.04, 0.96, 0.9), [0.5], 'plaza', False, 17),  # FreshMart supermarket front
 }
 
+MAX_LOT_TH = 16   # a city block is ~16 tiles deep
 NO_GLOW = {'market'}
+
+# Vehicles painted into a lot (a car on a house's driveway, customers at the pumps) are painted
+# out - the hole filled by tiling a patch of the same driveway / forecourt next to it - and become
+# a parking spot instead, where a real, drivable car is sometimes parked.
+# key: [(car box in source px, sample box in source px)], spots: key: [(x, y, heading)] in source px
+SCENE_PATCHES = {
+    'house1': [((200, 244, 292, 350), (200, 351, 292, 366))],
+    'house2': [((960, 248, 1032, 348), (960, 349, 1032, 372))],
+    'house3': [((1478, 288, 1582, 362), (1478, 363, 1582, 372))],
+    'house8': [((486, 766, 600, 872), (486, 873, 600, 896))],
+    'house9': [((962, 686, 1040, 798), (962, 645, 1040, 685))],
+    'house4': [((980, 546, 1090, 745), (980, 746, 1090, 795))],
+    'house5': [((960, 616, 1094, 800), (840, 616, 958, 800))],
+    'house6': [((1112, 505, 1335, 605), (1112, 606, 1335, 625))],
+    'fuel': [((490, 415, 568, 515), (360, 419, 418, 515)), ((670, 415, 751, 515), (360, 419, 418, 515))],
+    'beachbar': [((996, 320, 1096, 490), (1095, 495, 1190, 555))],
+}
+SCENE_CARS = {
+    'house1': [(246, 292, 1.571)], 'house2': [(996, 295, 1.571)], 'house3': [(1508, 325, 1.571), (1552, 325, 1.571)],
+    'house8': [(518, 815, 1.571), (566, 815, 1.571)], 'house9': [(1001, 728, 1.571)], 'house4': [(1035, 640, 1.571)],
+    'house5': [(1028, 710, 1.571)], 'fuel': [(529, 467, 1.571), (710, 467, 1.571)], 'beachbar': [(1046, 405, 1.571)],
+}
+
+
+def paint_out(img, patches):
+    """Fill each car box by tiling its sample patch (mirrored every other time so seams match)."""
+    for (x0, y0, x1, y1), (sx0, sy0, sx1, sy1) in patches:
+        smp = img.crop((sx0, sy0, sx1, sy1))
+        sw, sh = smp.size
+        flips = [smp, smp.transpose(Image.FLIP_TOP_BOTTOM)]
+        k = 0
+        for yy in range(y0, y1, sh):
+            for xx in range(x0, x1, sw):
+                t = flips[k % 2] if sh < sw else (smp if (xx - x0) // sw % 2 == 0 else smp.transpose(Image.FLIP_LEFT_RIGHT))
+                img.paste(t.crop((0, 0, min(sw, x1 - xx), min(sh, y1 - yy))), (xx, yy))
+            k += 1
+        # soften the patch edges a little
+        edge = img.crop((x0 - 3, y0 - 3, x1 + 3, y1 + 3)).filter(ImageFilter.GaussianBlur(1.2))
+        mask = Image.new('L', edge.size, 0)
+        ImageDraw.Draw(mask).rectangle([0, 0, edge.width - 1, edge.height - 1], outline=255, width=5)
+        img.paste(edge, (x0 - 3, y0 - 3), mask)
+    return img
 
 # ----------------------------------------------------------------------------- ground textures
 # name: (sheet, box, extra brightness) -> seamless 128x128 at 1 px per world px
@@ -504,8 +547,11 @@ def build_prefabs():
         glows[key] = emissive(lot, solid, tw, th)
         meta[key] = {'tw': tw, 'th': th, 'solid': so, 'doors': doors, 'ground': ground, 'rot': rot}
     for key, (sheet, box, solid, doors, ground, rot, tw) in SCENE_PREFABS.items():
-        img = Image.open(find_src(sheet)).convert('RGB').crop(box)
-        th = max(1, round(tw * img.height / img.width))
+        full = Image.open(find_src(sheet)).convert('RGB')
+        if key in SCENE_PATCHES:
+            full = paint_out(full, SCENE_PATCHES[key])
+        img = full.crop(box)
+        th = max(1, min(MAX_LOT_TH, round(tw * img.height / img.width)))
         lot = img.resize((tw * TILE, th * TILE), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=0.8, percent=50, threshold=2))
         lot = feather(lot, 5)
         sx0, sy0, sx1, sy1 = solid
@@ -515,6 +561,9 @@ def build_prefabs():
         # a cutaway (the supermarket shows its aisles) has no windows to light: its glow would be noise
         glows[key] = Image.new('RGB', lot.size, (0, 0, 0)) if key in NO_GLOW else emissive(lot, solid, tw, th)
         meta[key] = {'tw': tw, 'th': th, 'solid': so, 'doors': doors, 'ground': ground, 'rot': rot, 'scene': True}
+        if key in SCENE_CARS:
+            bw, bh = box[2] - box[0], box[3] - box[1]
+            meta[key]['cars'] = [[round((x - box[0]) / bw, 3), round((y - box[1]) / bh, 3), a] for x, y, a in SCENE_CARS[key]]
     frames, sheets = shelf_pack(items, width=2048)
     for i, sh in enumerate(sheets):
         sh.save(os.path.join(ASSETS, f'prefabs{i}.webp'), quality=93, method=6)

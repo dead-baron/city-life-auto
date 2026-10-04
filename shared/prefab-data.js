@@ -2,7 +2,7 @@
 // Building prefabs cut from the concept building sheet. Sizes/footprints are in tiles
 // (32 world px); src is [sheet, x, y, w, h] inside assets/prefabs<sheet>.webp, stored at
 // 1 art px per world px (Real-ESRGAN upscaled from the concept sheet).
-export const PREFAB_SHEETS = 4;
+export const PREFAB_SHEETS = 5;
 export const PREFAB_SCALE = 2;
 export const PREFABS = {
  "apt1": {
@@ -21,7 +21,7 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   0,
+   1158,
    0,
    320,
    480
@@ -43,7 +43,7 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   322,
+   1480,
    0,
    320,
    480
@@ -65,8 +65,8 @@ export const PREFABS = {
   "rot": false,
   "src": [
    0,
-   644,
    0,
+   514,
    576,
    480
   ]
@@ -86,9 +86,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   2,
-   902,
+   3,
    0,
+   998,
    384,
    288
   ]
@@ -109,8 +109,8 @@ export const PREFABS = {
   "rot": false,
   "src": [
    0,
-   0,
-   964,
+   932,
+   996,
    416,
    448
   ]
@@ -133,9 +133,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   2,
-   1288,
-   0,
+   3,
+   386,
+   998,
    544,
    288
   ]
@@ -155,9 +155,9 @@ export const PREFABS = {
   "ground": "plaza",
   "rot": false,
   "src": [
+   1,
    0,
-   418,
-   964,
+   450,
    352,
    416
   ]
@@ -177,9 +177,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   2,
-   0,
-   322,
+   3,
+   932,
+   998,
    480,
    288
   ]
@@ -199,9 +199,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   1,
-   676,
-   740,
+   3,
+   0,
+   354,
    416,
    320
   ]
@@ -222,8 +222,8 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   1222,
-   0,
+   578,
+   514,
    608,
    480
   ]
@@ -244,8 +244,8 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   0,
-   482,
+   1188,
+   514,
    480,
    480
   ]
@@ -266,8 +266,8 @@ export const PREFABS = {
   "rot": false,
   "src": [
    0,
-   482,
-   482,
+   1670,
+   514,
    320,
    480
   ]
@@ -287,9 +287,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   2,
-   482,
-   322,
+   3,
+   1414,
+   998,
    448,
    288
   ]
@@ -310,20 +310,20 @@ export const PREFABS = {
   "rot": true,
   "src": [
    0,
-   804,
-   482,
+   0,
+   996,
    448,
    480
   ]
  },
  "fuel": {
   "tw": 19,
-  "th": 8,
+  "th": 7,
   "solid": [
    11,
    0,
    19,
-   7
+   6
   ],
   "doors": [
    0.8
@@ -331,12 +331,24 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.193,
+    0.878,
+    1.571
+   ],
+   [
+    0.369,
+    0.878,
+    1.571
+   ]
+  ],
   "src": [
-   2,
-   0,
-   1482,
+   3,
+   708,
+   1578,
    608,
-   256
+   224
   ]
  },
  "clubnova": {
@@ -355,7 +367,7 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
+   2,
    0,
    0,
    576,
@@ -378,9 +390,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   0,
-   386,
+   2,
+   514,
+   1158,
    544,
    352
   ]
@@ -401,21 +413,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   0,
-   772,
-   964,
+   1,
+   354,
+   450,
    512,
    416
   ]
  },
  "police3": {
-  "tw": 12,
-  "th": 13,
+  "tw": 14,
+  "th": 16,
   "solid": [
    0,
    1,
-   12,
-   11
+   14,
+   14
   ],
   "doors": [
    0.6
@@ -425,10 +437,10 @@ export const PREFABS = {
   "scene": true,
   "src": [
    0,
-   1286,
-   964,
-   384,
-   416
+   0,
+   0,
+   448,
+   512
   ]
  },
  "motors": {
@@ -447,20 +459,20 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   0,
-   0,
-   1414,
+   1,
+   868,
+   450,
    480,
    416
   ]
  },
  "trail": {
-  "tw": 15,
+  "tw": 16,
   "th": 11,
   "solid": [
    0,
    0,
-   15,
+   16,
    10
   ],
   "doors": [
@@ -470,10 +482,10 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   546,
-   386,
-   480,
+   2,
+   1060,
+   1158,
+   512,
    352
   ]
  },
@@ -493,21 +505,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   1028,
-   386,
+   2,
+   0,
+   1544,
    544,
    352
   ]
  },
  "quickstop": {
-  "tw": 13,
-  "th": 11,
+  "tw": 15,
+  "th": 13,
   "solid": [
    0,
    0,
-   13,
-   10
+   15,
+   12
   ],
   "doors": [
    0.45
@@ -517,10 +529,10 @@ export const PREFABS = {
   "scene": true,
   "src": [
    1,
-   1574,
-   386,
-   416,
-   352
+   1350,
+   450,
+   480,
+   416
   ]
  },
  "apt3": {
@@ -536,83 +548,97 @@ export const PREFABS = {
    0.25
   ],
   "ground": "plaza",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
-   2,
-   932,
-   322,
+   3,
+   0,
+   1288,
    608,
    288
   ]
  },
  "apt4": {
-  "tw": 18,
-  "th": 12,
+  "tw": 16,
+  "th": 14,
   "solid": [
    0,
-   2,
-   18,
-   11
+   3,
+   16,
+   13
   ],
   "doors": [
    0.45
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
-   1,
-   578,
    0,
-   576,
-   384
+   1350,
+   996,
+   512,
+   448
   ]
  },
  "house4": {
-  "tw": 15,
-  "th": 13,
+  "tw": 16,
+  "th": 14,
   "solid": [
    0,
-   2,
-   15,
-   9
+   3,
+   16,
+   10
   ],
   "doors": [
    0.34
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.808,
+    0.789,
+    1.571
+   ]
+  ],
   "src": [
    0,
-   482,
-   1414,
-   480,
-   416
+   0,
+   1478,
+   512,
+   448
   ]
  },
  "house5": {
-  "tw": 14,
-  "th": 10,
+  "tw": 16,
+  "th": 12,
   "solid": [
    0,
    3,
-   10,
-   8
+   12,
+   9
   ],
   "doors": [
    0.4
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.623,
+    0.882,
+    1.571
+   ]
+  ],
   "src": [
-   1,
-   1094,
-   740,
-   448,
-   320
+   2,
+   578,
+   0,
+   512,
+   384
   ]
  },
  "house6": {
@@ -628,11 +654,11 @@ export const PREFABS = {
    0.5
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
-   1,
-   1156,
+   2,
+   1092,
    0,
    608,
    384
@@ -654,9 +680,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   610,
-   1482,
+   3,
+   1124,
+   1288,
    608,
    256
   ]
@@ -674,24 +700,24 @@ export const PREFABS = {
    0.25
   ],
   "ground": "dirt",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
-   1,
-   0,
-   1094,
+   3,
+   418,
+   354,
    608,
    320
   ]
  },
  "tackle2": {
   "tw": 17,
-  "th": 9,
+  "th": 6,
   "solid": [
    1,
    0,
    13,
-   5
+   4
   ],
   "doors": [
    0.45
@@ -700,34 +726,34 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
+   4,
    0,
-   612,
+   226,
    544,
-   288
+   192
   ]
  },
  "shack": {
-  "tw": 14,
-  "th": 10,
+  "tw": 13,
+  "th": 11,
   "solid": [
    0,
    0,
-   14,
-   7
+   13,
+   8
   ],
   "doors": [
    0.5
   ],
   "ground": "dirt",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
-   1,
-   610,
-   1094,
-   448,
-   320
+   2,
+   546,
+   1544,
+   416,
+   352
   ]
  },
  "farmstead": {
@@ -743,12 +769,12 @@ export const PREFABS = {
    0.2
   ],
   "ground": "dirt",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
-   1,
-   1060,
-   1094,
+   3,
+   1028,
+   354,
    608,
    320
   ]
@@ -766,12 +792,12 @@ export const PREFABS = {
    0.15
   ],
   "ground": "dirt",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
+   1,
    0,
-   964,
-   1414,
+   868,
    576,
    416
   ]
@@ -789,12 +815,19 @@ export const PREFABS = {
    0.45
   ],
   "ground": "sand",
-  "rot": true,
+  "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.643,
+    0.523,
+    1.571
+   ]
+  ],
   "src": [
-   1,
+   3,
    0,
-   1416,
+   676,
    576,
    320
   ]
@@ -812,24 +845,24 @@ export const PREFABS = {
    0.12
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
-   1,
+   3,
    578,
-   1416,
+   676,
    608,
    320
   ]
  },
  "liquor": {
-  "tw": 14,
-  "th": 10,
+  "tw": 16,
+  "th": 11,
   "solid": [
    0,
    0,
-   13,
-   9
+   15,
+   10
   ],
   "doors": [
    0.28
@@ -838,11 +871,11 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   1188,
-   1416,
-   448,
-   320
+   2,
+   964,
+   1544,
+   512,
+   352
   ]
  },
  "shops1": {
@@ -865,7 +898,7 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
+   4,
    0,
    0,
    768,
@@ -892,7 +925,7 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
+   4,
    770,
    0,
    800,
@@ -900,173 +933,218 @@ export const PREFABS = {
   ]
  },
  "house1": {
-  "tw": 12,
-  "th": 9,
+  "tw": 16,
+  "th": 12,
   "solid": [
    0,
    0,
-   10,
-   6
+   13,
+   8
   ],
   "doors": [
    0.49
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.215,
+    0.692,
+    1.571
+   ]
+  ],
   "src": [
    2,
-   546,
-   612,
-   384,
-   288
+   0,
+   386,
+   512,
+   384
   ]
  },
  "house2": {
-  "tw": 10,
-  "th": 8,
+  "tw": 15,
+  "th": 12,
   "solid": [
    1,
    0,
-   8,
-   5
+   12,
+   8
   ],
   "doors": [
    0.6
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.246,
+    0.692,
+    1.571
+   ]
+  ],
   "src": [
    2,
-   1220,
-   1482,
-   320,
-   256
+   514,
+   386,
+   480,
+   384
   ]
  },
  "house3": {
-  "tw": 9,
-  "th": 9,
+  "tw": 14,
+  "th": 14,
   "solid": [
    1,
-   1,
-   8,
-   7
+   2,
+   12,
+   11
   ],
   "doors": [
    0.49
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.603,
+    0.79,
+    1.571
+   ],
+   [
+    0.73,
+    0.79,
+    1.571
+   ]
+  ],
   "src": [
-   2,
-   932,
-   612,
-   288,
-   288
+   0,
+   514,
+   1478,
+   448,
+   448
   ]
  },
  "house7": {
-  "tw": 11,
-  "th": 11,
+  "tw": 15,
+  "th": 14,
   "solid": [
-   3,
+   5,
    0,
-   10,
-   7
+   13,
+   8
   ],
   "doors": [
    0.64
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
   "src": [
-   1,
    0,
-   740,
-   352,
-   352
+   964,
+   1478,
+   480,
+   448
   ]
  },
  "house8": {
-  "tw": 10,
-  "th": 11,
+  "tw": 13,
+  "th": 14,
   "solid": [
    0,
-   1,
-   8,
-   7
+   2,
+   10,
+   9
   ],
   "doors": [
    0.38
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.238,
+    0.73,
+    1.571
+   ],
+   [
+    0.368,
+    0.73,
+    1.571
+   ]
+  ],
   "src": [
-   1,
-   354,
-   740,
-   320,
-   352
+   0,
+   1446,
+   1478,
+   416,
+   448
   ]
  },
  "house9": {
-  "tw": 11,
-  "th": 9,
+  "tw": 15,
+  "th": 13,
   "solid": [
-   2,
+   3,
    0,
-   8,
-   7
+   11,
+   9
   ],
   "doors": [
    0.38
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "scene": true,
+  "cars": [
+   [
+    0.095,
+    0.483,
+    1.571
+   ]
+  ],
   "src": [
-   2,
-   1222,
-   612,
-   352,
-   288
+   1,
+   578,
+   868,
+   480,
+   416
   ]
  },
  "conv": {
-  "tw": 13,
-  "th": 9,
+  "tw": 16,
+  "th": 11,
   "solid": [
    0,
    0,
-   13,
-   6
+   16,
+   7
   ],
   "doors": [
    0.5
   ],
-  "ground": "plaza",
+  "ground": "lot",
   "rot": false,
   "scene": true,
   "src": [
    2,
-   1576,
-   612,
-   416,
-   288
+   1478,
+   1544,
+   512,
+   352
   ]
  },
  "rest1": {
-  "tw": 14,
-  "th": 8,
+  "tw": 16,
+  "th": 9,
   "solid": [
    0,
    0,
-   14,
+   16,
    4
   ],
   "doors": [
@@ -1076,21 +1154,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   1542,
-   1482,
-   448,
-   256
+   3,
+   610,
+   1288,
+   512,
+   288
   ]
  },
  "rest2": {
-  "tw": 12,
-  "th": 10,
+  "tw": 14,
+  "th": 12,
   "solid": [
    0,
    0,
-   12,
-   8
+   14,
+   9
   ],
   "doors": [
    0.55
@@ -1099,14 +1177,129 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   1638,
-   1416,
-   384,
-   320
+   2,
+   996,
+   386,
+   448,
+   384
   ]
  },
  "diner": {
+  "tw": 13,
+  "th": 11,
+  "solid": [
+   0,
+   0,
+   13,
+   9
+  ],
+  "doors": [
+   0.45
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   3,
+   0,
+   0,
+   416,
+   352
+  ]
+ },
+ "hotel": {
+  "tw": 15,
+  "th": 11,
+  "solid": [
+   0,
+   0,
+   15,
+   7
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   3,
+   418,
+   0,
+   480,
+   352
+  ]
+ },
+ "bank": {
+  "tw": 15,
+  "th": 15,
+  "solid": [
+   0,
+   0,
+   15,
+   10
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   0,
+   450,
+   996,
+   480,
+   480
+  ]
+ },
+ "warehouse": {
+  "tw": 14,
+  "th": 13,
+  "solid": [
+   0,
+   0,
+   14,
+   11
+  ],
+  "doors": [
+   0.78
+  ],
+  "ground": "lot",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   1060,
+   868,
+   448,
+   416
+  ]
+ },
+ "tower2": {
+  "tw": 12,
+  "th": 8,
+  "solid": [
+   0,
+   0,
+   12,
+   7
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   3,
+   0,
+   1578,
+   384,
+   256
+  ]
+ },
+ "tower1": {
   "tw": 10,
   "th": 8,
   "solid": [
@@ -1116,27 +1309,73 @@ export const PREFABS = {
    7
   ],
   "doors": [
-   0.45
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   3,
+   386,
+   1578,
+   320,
+   256
+  ]
+ },
+ "police": {
+  "tw": 16,
+  "th": 10,
+  "solid": [
+   0,
+   0,
+   16,
+   7
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   3,
+   1188,
+   676,
+   512,
+   320
+  ]
+ },
+ "bistro": {
+  "tw": 10,
+  "th": 12,
+  "solid": [
+   0,
+   0,
+   10,
+   5
+  ],
+  "doors": [
+   0.5
   ],
   "ground": "plaza",
   "rot": false,
   "scene": true,
   "src": [
    2,
-   0,
-   1740,
+   1446,
+   386,
    320,
-   256
+   384
   ]
  },
- "hotel": {
-  "tw": 13,
-  "th": 9,
+ "royale": {
+  "tw": 10,
+  "th": 12,
   "solid": [
    0,
    0,
-   13,
-   6
+   10,
+   8
   ],
   "doors": [
    0.5
@@ -1147,12 +1386,380 @@ export const PREFABS = {
   "src": [
    2,
    0,
-   902,
-   416,
-   288
+   772,
+   320,
+   384
   ]
  },
- "bank": {
+ "vellori": {
+  "tw": 10,
+  "th": 16,
+  "solid": [
+   0,
+   0,
+   10,
+   12
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   0,
+   450,
+   0,
+   320,
+   512
+  ]
+ },
+ "monarch": {
+  "tw": 12,
+  "th": 16,
+  "solid": [
+   0,
+   0,
+   12,
+   12
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   0,
+   772,
+   0,
+   384,
+   512
+  ]
+ },
+ "shanty1": {
+  "tw": 12,
+  "th": 11,
+  "solid": [
+   0,
+   0,
+   12,
+   8
+  ],
+  "doors": [
+   0.45
+  ],
+  "ground": "dirt",
+  "rot": false,
+  "scene": true,
+  "src": [
+   3,
+   900,
+   0,
+   384,
+   352
+  ]
+ },
+ "shanty2": {
+  "tw": 12,
+  "th": 12,
+  "solid": [
+   0,
+   0,
+   12,
+   10
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "dirt",
+  "rot": false,
+  "scene": true,
+  "src": [
+   2,
+   322,
+   772,
+   384,
+   384
+  ]
+ },
+ "shanty3": {
+  "tw": 13,
+  "th": 12,
+  "solid": [
+   0,
+   0,
+   13,
+   9
+  ],
+  "doors": [
+   0.6
+  ],
+  "ground": "dirt",
+  "rot": false,
+  "scene": true,
+  "src": [
+   2,
+   708,
+   772,
+   416,
+   384
+  ]
+ },
+ "neonclub": {
+  "tw": 14,
+  "th": 14,
+  "solid": [
+   0,
+   0,
+   14,
+   11
+  ],
+  "doors": [
+   0.45
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   0,
+   0,
+   448,
+   448
+  ]
+ },
+ "neontap": {
+  "tw": 14,
+  "th": 14,
+  "solid": [
+   0,
+   0,
+   14,
+   11
+  ],
+  "doors": [
+   0.45
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   450,
+   0,
+   448,
+   448
+  ]
+ },
+ "midnight": {
+  "tw": 16,
+  "th": 14,
+  "solid": [
+   0,
+   0,
+   16,
+   11
+  ],
+  "doors": [
+   0.58
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   900,
+   0,
+   512,
+   448
+  ]
+ },
+ "luna": {
+  "tw": 16,
+  "th": 13,
+  "solid": [
+   0,
+   0,
+   16,
+   9
+  ],
+  "doors": [
+   0.42
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   1510,
+   868,
+   512,
+   416
+  ]
+ },
+ "arcade": {
+  "tw": 10,
+  "th": 13,
+  "solid": [
+   0,
+   0,
+   10,
+   10
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   0,
+   1286,
+   320,
+   416
+  ]
+ },
+ "latebite": {
+  "tw": 11,
+  "th": 14,
+  "solid": [
+   0,
+   0,
+   11,
+   10
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   1414,
+   0,
+   352,
+   448
+  ]
+ },
+ "tattoo": {
+  "tw": 12,
+  "th": 13,
+  "solid": [
+   0,
+   0,
+   12,
+   10
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   322,
+   1286,
+   384,
+   416
+  ]
+ },
+ "crown": {
+  "tw": 13,
+  "th": 12,
+  "solid": [
+   0,
+   0,
+   13,
+   9
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   2,
+   1126,
+   772,
+   416,
+   384
+  ]
+ },
+ "greenbistro": {
+  "tw": 12,
+  "th": 13,
+  "solid": [
+   0,
+   0,
+   12,
+   8
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   708,
+   1286,
+   384,
+   416
+  ]
+ },
+ "theatre": {
+  "tw": 16,
+  "th": 12,
+  "solid": [
+   0,
+   0,
+   16,
+   9
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   2,
+   0,
+   1158,
+   512,
+   384
+  ]
+ },
+ "diamond": {
+  "tw": 13,
+  "th": 13,
+  "solid": [
+   0,
+   0,
+   13,
+   10
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   1,
+   1094,
+   1286,
+   416,
+   416
+  ]
+ },
+ "redawning": {
   "tw": 13,
   "th": 13,
   "solid": [
@@ -1168,550 +1775,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   0,
-   1542,
-   1414,
+   1,
+   1512,
+   1286,
    416,
    416
   ]
  },
- "warehouse": {
-  "tw": 10,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   10,
-   8
-  ],
-  "doors": [
-   0.78
-  ],
-  "ground": "lot",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   418,
-   902,
-   320,
-   288
-  ]
- },
- "tower2": {
-  "tw": 9,
-  "th": 6,
-  "solid": [
-   0,
-   0,
-   9,
-   5
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   3,
-   934,
-   226,
-   288,
-   192
-  ]
- },
- "tower1": {
-  "tw": 8,
-  "th": 7,
-  "solid": [
-   0,
-   0,
-   8,
-   6
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   3,
-   1572,
-   0,
-   256,
-   224
-  ]
- },
- "police": {
-  "tw": 13,
-  "th": 7,
-  "solid": [
-   0,
-   0,
-   13,
-   5
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   3,
-   0,
-   226,
-   416,
-   224
-  ]
- },
- "bistro": {
-  "tw": 7,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   7,
-   4
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   740,
-   902,
-   224,
-   288
-  ]
- },
- "royale": {
-  "tw": 7,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   7,
-   6
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   966,
-   902,
-   224,
-   288
-  ]
- },
- "vellori": {
-  "tw": 9,
-  "th": 15,
-  "solid": [
-   0,
-   0,
-   9,
-   11
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   0,
-   1254,
-   482,
-   288,
-   480
-  ]
- },
- "monarch": {
-  "tw": 11,
-  "th": 15,
-  "solid": [
-   0,
-   0,
-   11,
-   11
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   0,
-   1544,
-   482,
-   352,
-   480
-  ]
- },
- "shanty1": {
-  "tw": 8,
-  "th": 7,
-  "solid": [
-   0,
-   0,
-   8,
-   5
-  ],
-  "doors": [
-   0.45
-  ],
-  "ground": "dirt",
-  "rot": true,
-  "scene": true,
-  "src": [
-   3,
-   418,
-   226,
-   256,
-   224
-  ]
- },
- "shanty2": {
-  "tw": 9,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   9,
-   8
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "dirt",
-  "rot": true,
-  "scene": true,
-  "src": [
-   2,
-   1192,
-   902,
-   288,
-   288
-  ]
- },
- "shanty3": {
-  "tw": 9,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   9,
-   7
-  ],
-  "doors": [
-   0.6
-  ],
-  "ground": "dirt",
-  "rot": true,
-  "scene": true,
-  "src": [
-   2,
-   1482,
-   902,
-   288,
-   288
-  ]
- },
- "neonclub": {
-  "tw": 10,
-  "th": 10,
-  "solid": [
-   0,
-   0,
-   10,
-   8
-  ],
-  "doors": [
-   0.45
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   0,
-   0,
-   320,
-   320
-  ]
- },
- "neontap": {
-  "tw": 10,
-  "th": 10,
-  "solid": [
-   0,
-   0,
-   10,
-   8
-  ],
-  "doors": [
-   0.45
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   322,
-   0,
-   320,
-   320
-  ]
- },
- "midnight": {
-  "tw": 11,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   11,
-   7
-  ],
-  "doors": [
-   0.58
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   0,
-   1192,
-   352,
-   288
-  ]
- },
- "luna": {
-  "tw": 11,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   11,
-   6
-  ],
-  "doors": [
-   0.42
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   354,
-   1192,
-   352,
-   288
-  ]
- },
- "arcade": {
-  "tw": 7,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   7,
-   7
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   708,
-   1192,
-   224,
-   288
-  ]
- },
- "latebite": {
-  "tw": 8,
-  "th": 10,
-  "solid": [
-   0,
-   0,
-   8,
-   7
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   644,
-   0,
-   256,
-   320
-  ]
- },
- "tattoo": {
-  "tw": 8,
-  "th": 9,
-  "solid": [
-   0,
-   0,
-   8,
-   7
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   934,
-   1192,
-   256,
-   288
-  ]
- },
- "crown": {
-  "tw": 8,
-  "th": 7,
-  "solid": [
-   0,
-   0,
-   8,
-   6
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   3,
-   676,
-   226,
-   256,
-   224
-  ]
- },
- "greenbistro": {
-  "tw": 7,
-  "th": 8,
-  "solid": [
-   0,
-   0,
-   7,
-   5
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   322,
-   1740,
-   224,
-   256
-  ]
- },
- "theatre": {
-  "tw": 10,
-  "th": 8,
-  "solid": [
-   0,
-   0,
-   10,
-   6
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   548,
-   1740,
-   320,
-   256
-  ]
- },
- "diamond": {
-  "tw": 8,
-  "th": 8,
-  "solid": [
-   0,
-   0,
-   8,
-   6
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   870,
-   1740,
-   256,
-   256
-  ]
- },
- "redawning": {
-  "tw": 8,
-  "th": 8,
-  "solid": [
-   0,
-   0,
-   8,
-   5
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   2,
-   1128,
-   1740,
-   256,
-   256
-  ]
- },
  "market": {
-  "tw": 20,
-  "th": 9,
+  "tw": 17,
+  "th": 11,
   "solid": [
    0,
    0,
-   20,
-   9
+   17,
+   10
   ],
   "doors": [
    0.5
@@ -1720,11 +1798,11 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   1192,
-   1192,
-   640,
-   288
+   3,
+   1286,
+   0,
+   544,
+   352
   ]
  }
 };

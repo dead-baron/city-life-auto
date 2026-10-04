@@ -138,12 +138,14 @@ export function drawRoads(g, m, edges, nodes) {
     const G = geo(e);
     const mid = e.pts[Math.floor(e.pts.length / 2)];
     const d = distAt(m, mid.x, mid.y);
-    g.fillStyle = (e.kind === 'dirt' ? pattern(g, 'dirt') : pattern(g, e.kind === 'rural' ? 'asphalt' : e.kind === 'hwy' ? 'deck' : d.road)) || (e.kind === 'dirt' ? '#8a6a44' : '#3a3b40');
+    // one asphalt everywhere at street level (wear is laid over it below, not swapped in)
+    g.fillStyle = (e.kind === 'dirt' ? pattern(g, 'dirt') : pattern(g, 'asphalt')) || (e.kind === 'dirt' ? '#8a6a44' : '#3a3b40');
     poly(g, G.road); g.fill();
+    if (e.kind !== 'dirt') weather(g, e, G, d);
   }
   for (const n of nodes) if (n.culdesac) {
     const d = distAt(m, n.x, n.y);
-    g.fillStyle = pattern(g, d.road) || '#3a3b40';
+    g.fillStyle = pattern(g, 'asphalt') || '#3a3b40';
     g.beginPath(); g.arc(n.x, n.y, n.bulb || 3.6 * TILE, 0, 6.283); g.fill();
     g.strokeStyle = '#cfcdc4'; g.lineWidth = 4; g.stroke();
   }
@@ -154,6 +156,61 @@ export function drawRoads(g, m, edges, nodes) {
       for (const s of [1, -1]) { const q = between(m, e, s * (e.hw - 1)); if (q) { line(g, q); g.stroke(); } }
     }
     markings(g, m, e);
+  }
+  g.restore();
+}
+
+// ---- road wear ---------------------------------------------------------------------------------
+// Instead of tiling one weathered patch (which repeats every few metres), wear is scattered: soft-
+// edged blotches cut from the worn-asphalt art, each turned, scaled and faded differently, laid at
+// hashed spots along the road. Rough districts get a lot of it, smart ones a light scattering
+// (which also breaks up the clean asphalt's own repeat). Deterministic per edge, so chunks meet.
+const WEAR = { asphalt_worn: 0.8, asphalt: 0.2 };
+let blots = null;
+function wearBlots() {
+  if (blots || !atlas.ground || !GROUND_TEX.asphalt_worn) return blots;
+  const [ax, ay] = GROUND_TEX.asphalt_worn;
+  blots = [];
+  for (let k = 0; k < 8; k++) {
+    const S = 64, c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d');
+    g.drawImage(atlas.ground, ax + (k * 37) % 64, ay + (k * 53) % 64, S, S, 0, 0, S, S);
+    // an irregular soft mask: a few overlapping radial blobs
+    g.globalCompositeOperation = 'destination-in';
+    const m = document.createElement('canvas'); m.width = m.height = S;
+    const mg = m.getContext('2d');
+    for (let j = 0; j < 4; j++) {
+      const cx = S / 2 + Math.sin(k * 3.1 + j * 1.7) * 12, cy = S / 2 + Math.cos(k * 2.3 + j * 2.9) * 12, r = 14 + ((k + j * 5) % 7) * 2.5;
+      const gr = mg.createRadialGradient(cx, cy, 0, cx, cy, r);
+      gr.addColorStop(0, 'rgba(0,0,0,.9)'); gr.addColorStop(0.6, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      mg.fillStyle = gr; mg.fillRect(0, 0, S, S);
+    }
+    g.drawImage(m, 0, 0);
+    blots.push(c);
+  }
+  return blots;
+}
+const hsh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+function weather(g, e, G, d) {
+  const bl = wearBlots();
+  if (!bl) return;
+  const dens = WEAR[d.road] ?? 0.22;
+  const pts = e.pts.map((p) => ({ x: p.x, y: p.y }));
+  const L = measure(pts);
+  const n = Math.floor((L * e.w) / (64 * 64) * dens);
+  if (n <= 0) return;
+  g.save();
+  poly(g, G.road); g.clip();
+  for (let k = 0; k < n; k++) {
+    const h1 = hsh(e.id, k * 4 + 1), h2 = hsh(e.id, k * 4 + 2), h3 = hsh(e.id, k * 4 + 3), h4 = hsh(e.id, k * 4 + 4);
+    const p = pointAt(pts, h1 * L);
+    const off = (h2 - 0.5) * (e.w - 16);
+    const x = p.x - p.ty * off, y = p.y + p.tx * off;
+    const sc = 0.6 + h3 * 1.1;
+    g.globalAlpha = (d.road === 'asphalt_worn' ? 0.45 : 0.25) + h4 * 0.3;
+    g.save(); g.translate(x, y); g.rotate(h4 * 6.283); g.scale(sc, sc * (0.7 + h2 * 0.6));
+    g.drawImage(bl[Math.floor(h3 * bl.length) % bl.length], -32, -32);
+    g.restore();
   }
   g.restore();
 }

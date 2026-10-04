@@ -27,7 +27,7 @@ test('estates: farmhouses, cottages, beach houses and a mansion, each with a rea
     }
   }
   assert.ok(w.map.mansions.length >= 1 && w.map.mansions[0].lot.tw >= 20, 'mansion with a big yard');
-  assert.ok(w.map.garages.length >= Object.keys(ESTATE_TYPES).length);
+  assert.ok(w.map.garages.length >= 1, 'built garages (painted houses have their own)');
 });
 
 test('own any number of homes; every car comes out of any home garage (door opens)', () => {

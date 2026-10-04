@@ -1030,3 +1030,23 @@ Playtest:
   - A wanted player turns themself in: busted, fined, contraband taken, and out at the police station.
   - Anyone else collapses and wakes up exactly as after any death.
   - Nothing is gained over playing it out.
+
+## 2026-10-04 · Round 7c: painted lots the right size and the right way up, real cars on driveways, one road surface
+
+- **Scale:** the painted lots were drawn too small. Doors were narrower than a character. The new lots are 25-60% bigger (a house is now 13-16 tiles wide instead of 9-12), so a front door is roughly a character's width.
+  - Lots that would be deeper than a city block are squeezed to fit (`MAX_LOT_TH`).
+  - With bigger houses there are fewer homes: about 110 instead of 265 (that count included the shacks).
+- **Never upside-down:** a painted lot is a 3/4 view with its front at the bottom, so it is never turned round anymore.
+  - City streets only get them on rows that face south.
+  - Out in the country, an estate always faces south.
+  - Beach houses go in before the specials take the few beach blocks.
+  - Corner stores and gas stations count the Quick Stop too.
+- **Cars painted into lots are gone:**
+  - Cars on house driveways (houses 1-5, 8, 9, the mansion), customers at the FuelMax pumps and the pickup at the beach shack are painted out, the hole filled from the driveway or forecourt next to it (`SCENE_PATCHES` in `tools/build_art.py`).
+  - Each becomes a parking spot where a real, drivable car stands about half the time (`SCENE_CARS`).
+  - A house you own brings your car out onto that driveway.
+  - Junkyard wrecks and other set dressing stay painted.
+- **One road surface:**
+  - Every road at street level, the ground highways and the elevated deck now use the same asphalt. Before, the highway's concept asphalt sat next to the district asphalt, and worn districts swapped in a whole different texture.
+  - **Wear** is now scattered: soft-edged blotches cut from the worn-asphalt art, each turned, scaled and faded differently, laid at hashed spots along every road. Rough districts get a lot, smart ones a light scattering, which also breaks up the clean asphalt's own repeat.
+  - Car parks follow the district (a faint warm tint where it's run-down).
