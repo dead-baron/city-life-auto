@@ -10,7 +10,9 @@ concept palette and is a placeholder until real art arrives (see `ART_NEEDS.md`)
 
 | Group | Lots | Source |
 |---|---|---|
-| Building sheet (upscaled) | house1-3, apt1-2, tower1-2, hotel, hospital, police, fire, gas, conv, strip mall, market, rest1-2, club, bank, dealer, repair, warehouse, industrial, construction, church, school, park | building concept sheet |
+| Building sheet (upscaled - still a bit soft) | apt1-2, fire, gas, strip mall, club, dealer, repair, industrial, construction, church, school, park | building concept sheet |
+| Redrawn from the scene paintings (round 7, crisp) | house1-3 + house7-9 (suburb painting), conv + rest1 (intersection paintings), rest2 + diner (railway-crossing street), hotel + bistro + royale (luxury boulevard), bank + vellori + monarch (financial district), warehouse (back-alley warehouses), tower1-2 (overpass blocks), police (police HQ), market (FreshMart), shanty1-3 (the shanty street), neonclub / neontap / midnight / luna / arcade / latebite / tattoo (the neon strip), crown / greenbistro / theatre / diamond / redawning (the boulevard row) | the scene paintings |
+| Hospital | concept roofing tiled over the roof, the rainy-night hospital front, helipad and plant from the roof sheet | composed by `make_hospital()` |
 | Whole scene lots (a building with its own yard, lot, driveway) | fuel (FuelMax), clubnova, clubeclipse, police2, police3, motors (Riverside Motors), trail (Trail & Field), boutique, quickstop, apt3, apt4, house4, house5, house6, bank2, junkyard, tackle2, shack, farmstead, site (construction), beachbar, pool, **liquor** (liquor store with the garage and flats above - a walk-in convenience store with the liquor-store interior) | the scene paintings, one lot each |
 | Storefront rows (one walk-in business behind each door) | **shops1**: Joe's Burgers, Riverside Books, Pixel Tech, Thread & Co., Brew Haven (Westport Center, Northshore); **shops2**: Pizza, 24/7 Mart, Bean There coffee, Urban Wear, Pharmacy (Falls Center, Old Quarter) | the two high-street paintings |
 | Night glow per lot | every lot above | derived from the day art |
@@ -31,15 +33,20 @@ Walk into any of these and the roof lifts off onto the painted interior (mirrore
 | bank, courthouse | the Liberty Bank hall |
 | hospital, pharmacy | the City General lobby |
 | police | the station floor (lockers, interview rooms, cells, briefing) |
+| club | the nightclub (bar, dance floor, VIP booths, cloakroom) |
+| police front desk / armory screens | cut from the station painting |
 | coffee, fishmarket | procedural fit-out (no painting yet) |
 
-The police station lobby / armory screens shown while you use the front desk are still **procedural**.
 
 ## Outdoor scene paintings (`assets/scenes.webp`) - new this round
 
 - **Cedar Hills Golf Club** - the whole golf course painting (clubhouse, carts, fairways, bunkers, ponds, creek) laid over open countryside on Cedar Isle; the clubhouse is solid.
 - **Paradise Cay** - the palm-island painting raised out of the bay between Westport and Metro City: the land, beaches and jetty follow the painting exactly (sampled into a tile mask), the cabin is solid. Boat-only.
 - **Red Rock Canyon** - the desert canyon painting in the Dry Creek desert: the mesas and cliffs are solid where they're painted, plus the homestead and water tower.
+
+## Animals (`assets/animals.png`, `tools/build_animals.py`)
+
+Lost pets: two top-down dogs (golden, black), two spaniels, a retriever and three cats (black, grey, ginger) cut from the character sheets. Birds are still **procedural**.
 
 ## Ground (`assets/ground.png`)
 

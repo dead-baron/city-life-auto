@@ -52,7 +52,8 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 
 - More whole-lot paintings in the current style for each district type (each one: building + its yard/lot, drawn so the front faces the street at the bottom): suburban houses x4, apartment blocks x3, office towers x3, strip mall, mall with car park, motel, diner, fast food, cinema, arcade, car wash, gym, laundromat, church, school, library, fire station, warehouse/industrial x3, farm buildings (barn, silo, farmhouse), desert shacks/ranch, beach houses, lighthouse.
 - Interior paintings for walk-in businesses still on the plain fit-out: coffee shop (now in both storefront rows), fish market, pharmacy (currently reuses the hospital lobby), courthouse (reuses the bank hall), gun shop (reuses the outfitter), hardware store. Same layout as the existing ones: back wall + counter at the top, shop floor in the middle, glass front + door at the bottom.
-- Police station lobby (front desk) and armory full-screen interiors (currently procedural).
+- The remaining building-sheet lots are still upscaled and soft: apartment blocks x2, fire station, gas station, strip mall, dealership, repair shop, factory, building site, church, school, park. Whole-lot paintings of these would replace the last blurry ones.
+- North-facing versions of the scene lots (they're drawn rotated 180° on streets to their north, so the 3/4 view reads upside-down there).
 - Night versions are generated automatically; no need to draw them.
 
 ## 5. Environment
@@ -63,6 +64,7 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 - Boathouse for waterfront homes: a covered boat slip about 64x128 world px, roof view, plus a roof-off version (the roof fades while a boat is inside).
 - Boat-rental kiosk (a small shack with a "Rentals" sign, about 96x64) and hire boats tied along a pier.
 - Smooth bridge decks: straight and curved road / rail bridge spans with railings (drawn by code along the road's curve now).
+- Pets: the same dogs and cats walking (4-frame trot, top-down) and a few more strays.
 - Weather/FX: rain streaks, puddle splash, tyre smoke, skid marks, muzzle flashes, explosions (6-8 frames), fire (loop), blood decals.
 
 ## 6. Street furniture

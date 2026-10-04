@@ -968,3 +968,48 @@ Playtest:
 - The city tour covers all of the above (`TUTORIAL_VERSION` 17).
 
 **Still to do from the audit:** walk-in nightclubs that open at night, the stray-pets event, respray on painted vehicles sometimes looking unchanged, a drawn police front desk/armory, the medic's kneeling pose, blood footprints through splats, and crate slots on the mixer and tanker.
+
+## 2026-10-04 · Round 7: sharper buildings from the concepts, ATMs everywhere, nightclubs, lost pets, a proper subway mouth
+
+- **Blurry buildings replaced.** These lots used to come from the building concept sheet, which had to be upscaled to world size and looked soft. They are now cut from the scene paintings at their own resolution (`tools/build_art.py` SCENE_PREFABS):
+  - the three ordinary houses, plus three new ones from the suburb painting (pool and patio, fenced side yard, pergola)
+  - the corner store, the awning restaurant, the coffee shop, the hotel (Grand Palace) and the bank (First National)
+  - the warehouse, the office blocks and the police station (flags, steps, blue sign)
+  - the supermarket (FreshMart)
+
+  New lots:
+  - City Diner
+  - the Neon Strip's bars and clubs: Club Neon, Neon Tap, The Midnight, Luna Lounge, the arcade, Late Bite, the tattoo parlour
+  - the boulevard shopfronts: Royale, Vellori, Monarch, Crown, Diamond & Co., the Grand Theatre, two bistros, Cafe Rouge
+  - shacks in the rough districts (cheap $6,000 homes with a one-car yard)
+
+  Still from the old sheet: the apartment blocks, fire station, gas station, strip mall, dealership, repair shop, factory, building site, church, school and park.
+- **Hospitals and police:**
+  - The hospital's roof is now the concept painting's own roofing, with a wider lit facade.
+  - The police station exterior is the station painting.
+  - The front-desk and armory screens are now the painted station interior instead of drawn shapes.
+- **Nightclubs** (clubs, Club Nova, Club Eclipse and the neon clubs) are walk-ins. A roller shutter ("OPENS AT DUSK") is down all day and rolls up at dusk.
+  - Inside: the painted club (bar, dance floor, VIP booths), a bartender and people dancing.
+  - The bar sells a Neon Cocktail, which tops your stamina up past full for a minute.
+- **ATMs:**
+  - Every district with streets has cash machines, three to five in the busy ones (117 on the map, up from 44).
+  - Each has a subtle green $ over it, brighter when you're close with cash on you.
+  - Walk up to one (`ATM_DEPOSIT_PX`) and everything you carry is banked automatically.
+  - The phone's **Nearest ATM** button sets a waypoint with a big bouncing $ and a light beam over the machine.
+- **Events:**
+  - Popups, arrows and rumors now only reach players within `EVENT_RANGE` (about 40 m).
+  - The phone's **City feed** lists everything going on anywhere, newest first: snatches, robberies, drops, shootouts, arrests, bounties, manhunts at 3+ stars and returned pets. Tap one for a waypoint.
+- **Lost pets:**
+  - Every few minutes a dog or cat (sprites cut from the character sheets: `tools/build_animals.py`) runs off near a player.
+  - Take its collar and it trots at your heel. A green arrow leads you to the owner.
+  - Hand it back for $150 and 8 Samaritan points. Pets can't be hurt and aren't witnesses.
+- **Subway:**
+  - The tunnel mouth that was hidden under the elevated highway was moved out into the open.
+  - Each subway entrance and exit is a cutting with retaining walls and a railing, a concrete headwall with a green METRO plate and lamps, and the first metres of tunnel lit.
+  - Riding underground, bands of warm light sweep back along the carriage as the train passes each tunnel lamp. They are faster at speed and dimmer at a platform, with a flicker now and then.
+- **From the audit:**
+  - **Resprays** now always change colour. The painted variant changes and the new paint is laid over the bodywork, which also covers models with only one or two painted variants. Owned cars keep their colour in the garage.
+  - Medics kneel beside the person they're reviving.
+  - Walking through a pool of blood or past a body leaves a few bloody footprints that fade as the soles dry.
+  - Lit windows and neon no longer wash over people and cars standing in front of them at night.
+- `TUTORIAL_VERSION` 18: nightlife, lost pets, ATMs, the city feed.
