@@ -24,7 +24,7 @@ import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
-import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers } from './render/trains.js';
+import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
@@ -1412,7 +1412,7 @@ function render(dt) {
     else if (it.slab) S.highway.drawSlab(g, it.slab);
     else if (it.pillar) S.highway.drawPillar(g, it.pillar);
     else if (it.v) drawVehicleEnt(it.v, now, dt);
-    else if (it.p) drawPed(it.p, now);
+    else if (it.p) { if (!drawOnStairs(g, S.map, it.p, () => drawPed(it.p, now))) drawPed(it.p, now); }
     else if (it.c) drawCrateEnt(it.c, now);
     else if (it.o) drawOverheadProp(g, it.o, nightLit);
     if (lift) g.restore();

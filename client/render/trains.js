@@ -1,9 +1,11 @@
 // Railway art: track (ties, rails, the bridge decks and their girders, crossing panels) and the
 // open-air station platforms are baked into the ground chunks; rolling stock (roof view or the
 // lit interior when you're riding), level-crossing gates, the platform clocks and the "train in -
-// board here" glow are drawn live. All procedural canvas drawing - no image assets.
+// board here" glow are drawn live. Procedural canvas drawing, except the subway entrance kiosks
+// (cut from the concept art, in the sprite atlas).
 import { T, TILE, CHUNK_PX, MAP_W } from '../../shared/constants.js';
 import { TRAIN_CARS, COACH_SEATS, MAIL_BOX, CROSSING_ARM, railAt } from '../../shared/map.js';
+import { atlas } from './sprites.js';
 
 const TIE_STEP = 18, RAIL_OFF = 12;
 
@@ -147,6 +149,7 @@ export function drawPortals(g, m, cx, cy) {
 const PLAT_STEP = 16;
 export function drawStation(g, m, st, cx, cy) {
   const L = st.half || 112, sd = st.side, x0 = cx * CHUNK_PX, y0 = cy * CHUNK_PX;
+  if (st.under && st.kiosk) { drawSubwayEntrance(g, st.kiosk, x0, y0); return; }
   if (st.under) { // the subway stairway down from the pavement, with its sign
     const { x, y } = st.platform;
     if (x + 80 < x0 || x - 80 > x0 + CHUNK_PX || y + 80 < y0 || y - 80 > y0 + CHUNK_PX) return;
@@ -207,9 +210,67 @@ export function drawStation(g, m, st, cx, cy) {
   });
 }
 
+// A subway stop's street entrance: a marked queue lane on the plaza (yellow kerb, "WAIT HERE",
+// footprints where people stand, chevrons pointing into the stairs) and the kiosk itself.
+function drawSubwayEntrance(g, k, x0, y0) {
+  const [lx0, ly0, lx1, ly1] = k.lane;
+  if (Math.max(lx1, k.x0 + k.w) + 40 < x0 || Math.min(lx0, k.x0) - 40 > x0 + CHUNK_PX || k.y0 + k.h + 40 < y0 || k.y0 - 60 > y0 + CHUNK_PX) return;
+  g.save();
+  // the lane: a darker pad edged with a yellow line
+  g.fillStyle = 'rgba(30,32,38,.18)'; g.fillRect(lx0, ly0, lx1 - lx0, ly1 - ly0);
+  g.strokeStyle = '#f2c21b'; g.lineWidth = 3; g.setLineDash([10, 6]); g.strokeRect(lx0 + 1.5, ly0 + 1.5, lx1 - lx0 - 3, ly1 - ly0 - 3); g.setLineDash([]);
+  const dir = k.flip ? 1 : -1; // from the mouth out along the lane
+  // chevrons pointing at the mouth
+  g.fillStyle = 'rgba(242,194,27,.85)';
+  for (let i = 0; i < 2; i++) {
+    const cx = k.out.x + dir * (8 + i * 9), cy = k.out.y;
+    g.beginPath(); g.moveTo(cx - dir * 5, cy); g.lineTo(cx + dir * 2, cy - 7); g.lineTo(cx + dir * 5, cy - 7); g.lineTo(cx - dir * 2, cy); g.lineTo(cx + dir * 5, cy + 7); g.lineTo(cx + dir * 2, cy + 7); g.closePath(); g.fill();
+  }
+  // footprints where the queue stands
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  for (const q of k.queue.slice(1)) { if (q.x < lx0 + 6 || q.x > lx1 - 6) continue; g.fillRect(q.x - 4, q.y - 5, 3, 6); g.fillRect(q.x + 1, q.y - 2, 3, 6); }
+  // stencil
+  g.fillStyle = 'rgba(242,194,27,.9)'; g.font = 'bold 7px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('WAIT HERE', (lx0 + lx1) / 2 - dir * 10, ly1 - 7);
+  g.restore();
+  const fr = atlas.ready ? atlas.frames[k.flip ? 'prop_subway_r' : 'prop_subway_l'] : null;
+  if (fr) g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, k.x0, k.y0, k.w, k.h);
+  else { g.fillStyle = '#1f4a3c'; g.fillRect(k.x0, k.y0 + 30, k.w, k.h - 30); g.fillStyle = '#222'; g.fillRect(k.pit[0], k.pit[1], k.pit[2] - k.pit[0], k.pit[3] - k.pit[1]); }
+}
+
+// Someone walking down into (or up out of) a subway kiosk sinks into the stairwell: drawn clipped
+// to it, a little lower and darker the deeper they are. Returns false if p isn't on the stairs.
+export function drawOnStairs(g, map, p, draw) {
+  for (const st of (map.rail && map.rail.stations) || []) {
+    const k = st.kiosk;
+    if (!k) continue;
+    const [x0, y0, x1, y1] = k.pit;
+    if (p.rx < x0 || p.rx > x1 || p.ry < y0 - 6 || p.ry > y1 + 4) continue;
+    const t = Math.max(0, Math.min(1, (p.rx - k.top.x) / (k.deep.x - k.top.x)));
+    g.save();
+    g.beginPath(); g.rect(x0, y0 - 30, x1 - x0, y1 - y0 + 30); g.clip();
+    g.translate(0, t * 18);
+    g.globalAlpha = 1 - 0.8 * t;
+    draw();
+    g.restore();
+    return true;
+  }
+  return false;
+}
+
 // A train standing at the platform: the platform edge glows green and chevrons point at the
 // doors, so it's obvious where to stand and that now is the time to get on.
 export function drawBoardingCue(g, rail, st, now) {
+  if (st.under && st.kiosk) { // the queue lane glows and an arrow bobs at the mouth: go down now
+    const k = st.kiosk, [lx0, ly0, lx1, ly1] = k.lane, dir = k.flip ? 1 : -1;
+    g.save(); g.strokeStyle = `rgba(90,255,120,${0.45 + 0.35 * Math.sin(now * 6)})`; g.lineWidth = 5; g.strokeRect(lx0, ly0, lx1 - lx0, ly1 - ly0);
+    const bob = 4 * Math.sin(now * 6);
+    g.fillStyle = `rgba(120,255,140,${0.6 + 0.3 * Math.sin(now * 6)})`;
+    g.translate(k.out.x + dir * (4 + bob), k.out.y); g.scale(-dir, 1);
+    g.beginPath(); g.moveTo(14, 0); g.lineTo(-7, -12); g.lineTo(-1, 0); g.lineTo(-7, 12); g.closePath(); g.fill();
+    g.restore();
+    return;
+  }
   if (st.under) { // the stairway glows instead
     g.save(); g.strokeStyle = `rgba(90,255,120,${0.45 + 0.35 * Math.sin(now * 6)})`; g.lineWidth = 5; g.strokeRect(st.platform.x - 26, st.platform.y - 20, 52, 40); g.restore();
     return;
@@ -237,7 +298,8 @@ export function drawBoardingCue(g, rail, st, now) {
 // one is in). secs < 0: no timetable yet.
 export function drawStationClock(g, rail, st, secs, now) {
   g.save();
-  if (st.under) { g.translate(st.platform.x + 44, st.platform.y - 26); g.scale(1.2, 1.2); }
+  if (st.under && st.kiosk) { g.translate(st.kiosk.board.x, st.kiosk.board.y); g.scale(1.25, 1.25); }
+  else if (st.under) { g.translate(st.platform.x + 44, st.platform.y - 26); g.scale(1.2, 1.2); }
   else {
     const q = railAt(rail, st.s + (st.clockD || 0));
     g.translate(q.x, q.y); g.rotate(q.a);

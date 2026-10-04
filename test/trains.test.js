@@ -75,7 +75,7 @@ test('the railway: one huge loop through every main island - subway under the co
   // open-air platforms as long as a train, beside the track, that you can stand on
   for (const s of r.stations) {
     assert.ok(w.map.pois[s.poi].kind === 'station');
-    if (s.under) { assert.equal(w.map.tileAtPx(s.platform.x, s.platform.y), T.SIDEWALK, `${s.name}: stairs on the pavement`); continue; }
+    if (s.under) { assert.ok([T.SIDEWALK, T.PLAZA].includes(w.map.tileAtPx(s.platform.x, s.platform.y)), `${s.name}: stairs up on the street`); continue; }
     assert.equal(s.half, PLATFORM_HALF);
     let ok = 0, n = 0;
     for (let d = -PLATFORM_HALF; d <= PLATFORM_HALF; d += 40) {
@@ -274,6 +274,51 @@ test('the subway: riders underground are a level of their own; the stairs bring 
   press(w, p, IN.VEHICLE, 2);
   assert.ok(!p.ped.onTrain && !p.ped.sub, 'up on the street');
   assert.ok(Math.hypot(p.ped.x - st.platform.x, p.ped.y - st.platform.y) < 40, 'at the entrance');
+});
+
+test('subway entrances: a kiosk on a plaza by the street, a queue lane with a countdown; commuters line up, walk down the stairs and ride; arrivals walk up', async () => {
+  const w = makeWorld();
+  const rail = w.map.rail;
+  const under = rail.stations.filter((s) => s.under);
+  assert.ok(under.length >= 3 && under.every((s) => s.kiosk), 'every subway stop has a street entrance');
+  w.npcBudget = 60; // a little room for commuters
+  for (const s of under) {
+    const k = s.kiosk;
+    assert.equal(w.map.tileAtPx(k.out.x, k.out.y), T.PLAZA, `${s.name}: on its plaza`);
+    assert.equal(w.map.tileAtPx(k.out.x, k.y0 + k.h + 40), T.SIDEWALK, `${s.name}: fronting the street`);
+    assert.ok(!w.map.props.some((q) => q.x > k.x0 && q.x < k.x0 + k.w && q.y > k.y0 && q.y < k.y0 + k.h), 'nothing standing in the kiosk');
+  }
+  const si = rail.stations.indexOf(under[0]), st = under[0], k = st.kiosk;
+  const t = w.trains[1];
+  w.trains.forEach((u, n) => { if (u !== t) { u.s = mod(st.s + 9000 + n * 1500, rail.len); u.dwellUntil = w.time + 9999; u.stop = (si + 3) % rail.stations.length; } });
+  t.s = mod(st.s - 6000, rail.len); t.v = 0; t.dwellUntil = w.time + 9999; t.stop = (si + rail.stations.length - 1) % rail.stations.length;
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, k.queue[2].x, k.queue[2].y);
+  w.step();
+  const wait = players.findInteraction(w, p);
+  assert.ok(wait && /next train in \d+:\d\d/.test(wait.label), wait && wait.label);
+  // a commuter in line goes down when the train is in, and rides it
+  const { spawnNpc } = await import('../server/systems/npc.js');
+  const c = spawnNpc(w, 'casual', k.queue[0].x, k.queue[0].y, 'civ');
+  c.npc.waitTrain = si; c.npc.waitX = k.queue[0].x; c.npc.waitY = k.queue[0].y; c.npc.waitGiveUp = w.time + 999; c.npc.keep = true;
+  w.waiting ??= new Map(); w.waiting.set(si, [c.id]);
+  t.s = mod(st.s + t.len / 2, rail.len); t.v = 0; t.stop = si; t.dwellUntil = 0;
+  trains.update(w, 0); // (the arrival is detected on the train's own step)
+  t.dwellUntil = w.time + TRAIN_DWELL_S * 4;
+  for (const id of t.riders) { const r = w.get(id); if (r && r.npc) r.onTrain.dest = si; } // everyone aboard gets off here
+  trains.__test.arrived(w, t);
+  assert.ok(c.npc.stairs, 'the commuter heads for the stairs');
+  const up = [...w.entities.values()].filter((e) => e.npc && e.npc.stairs && !e.npc.stairs.ride);
+  assert.ok(up.length >= 1, 'people off the train come up the stairs');
+  let wasInPit = false;
+  for (let i = 0; i < 200 && !c.onTrain; i++) { w.step(); if (c.x > k.pit[0] && c.x < k.pit[2] && c.y > k.pit[1] && c.y < k.pit[3]) wasInPit = true; }
+  assert.ok(wasInPit, 'walked down through the stairwell');
+  assert.ok(c.onTrain && c.onTrain.t === t.i, 'and got on the train below');
+  for (let i = 0; i < 300 && up.some((e) => e.npc.stairs); i++) w.step();
+  assert.ok(up.every((e) => !e.npc.stairs && (e.removed || !(e.x > k.pit[0] && e.x < k.pit[2] && e.y > k.pit[1] && e.y < k.pit[3]))), 'and walk out onto the street');
+  // players: in the lane, F takes you down
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /Down the stairs/.test(act.label), act && act.label);
 });
 
 test('level crossings: gates come down, traffic waits, a car can smash through the arm', () => {

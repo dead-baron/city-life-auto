@@ -134,6 +134,7 @@ export function update(world, dt) {
     collide(world, t, dt);
     hornForCrossings(world, t);
   }
+  stepStairs(world, dt);
   updateCrossings(world);
   if (world.tick % 4 === 1) keepPedsSafe(world);
   if (world.tick % 20 === 7) for (const t of world.trains) populate(world, t);
@@ -287,7 +288,14 @@ export function onPlatformOf(world, st, x, y) {
 function alightAtStation(world, t, ped) {
   const st = stationAt(world, t);
   if (!st) return false;
-  if (st.under) { const a = rng() * 6.28; alight(world, ped, st.platform.x + Math.cos(a) * 14, st.platform.y + Math.sin(a) * 14); }
+  if (st.under && st.kiosk && ped.npc) { // up the stairs and out onto the street
+    const k = st.kiosk;
+    alight(world, ped, k.deep.x, k.deep.y + (rng() - 0.5) * 10);
+    walkStairs(world, ped, [k.top, k.out, exitPoint(world, k)], null);
+    return true;
+  }
+  if (st.under && st.kiosk) { alight(world, ped, st.kiosk.out.x + (rng() - 0.5) * 10, st.kiosk.out.y + (rng() - 0.5) * 12); }
+  else if (st.under) { const a = rng() * 6.28; alight(world, ped, st.platform.x + Math.cos(a) * 14, st.platform.y + Math.sin(a) * 14); }
   else { const pt = doorPoint(world, t, ped.onTrain.c, doorSide(world, t, ped.onTrain.c, st), 22 + rng() * 12); alight(world, ped, pt.x, pt.y); }
   if (ped.npc) { ped.npc.state = 'wander'; ped.npc.until = 0; ped.npc.wx = ped.x; ped.npc.wy = ped.y; }
   return true;
@@ -384,6 +392,14 @@ function arrived(world, t) {
     const n = q.npc;
     if (n.role === 'civ' && (q.onTrain.dest === t.stop || rng() < 0.15)) alightAtStation(world, t, q);
     else if (n.role === 'cop' && !n.target && rng() < 0.7) { alightAtStation(world, t, q); n.beat = true; }
+  }
+  // up from the platform: a few people off this train climb the stairs and come out on the street
+  if (st.under && st.kiosk && playerNear(world, st.kiosk.out.x, st.kiosk.out.y, POP_NEAR) && world.npcCount + world.trafficCount <= world.npcBudget) {
+    const k = st.kiosk, n = 1 + Math.floor(rng() * 3);
+    for (let i = 0; i < n; i++) {
+      const q = spawnNpc(world, COMMUTERS[Math.floor(rng() * COMMUTERS.length)], k.deep.x, k.deep.y + (rng() - 0.5) * 8, 'civ');
+      walkStairs(world, q, [k.top, k.out, exitPoint(world, k)], null, 0.6 + i * 1.4);
+    }
   }
   // police come aboard for a wanted passenger
   for (const id of t.riders) {
@@ -511,10 +527,10 @@ function gatherCommuters(world) {
     const list = (world.waiting.get(si) || []).filter((id) => { const q = world.get(id); return q && !q.removed && !q.dead && q.npc && q.npc.waitTrain === si; });
     world.waiting.set(si, list);
     const eta = nextTrainIn(world, si);
-    if (eta > WAIT_LEAD_S || list.length >= 4 || world.npcCount + world.trafficCount > world.npcBudget) return;
+    if (eta > WAIT_LEAD_S || list.length >= (st.kiosk ? 5 : 4) || world.npcCount + world.trafficCount > world.npcBudget) return;
     if (rng() > 0.35) return;
     // a spot to wait at, and somewhere out of sight to walk in from
-    const spot = waitSpot(world, st);
+    const spot = waitSpot(world, st, list.length);
     let from = null;
     for (let k = 0; k < 10 && !from; k++) {
       const a = rng() * 6.28, r = 500 + rng() * 300, x = spot.x + Math.cos(a) * r, y = spot.y + Math.sin(a) * r;
@@ -527,7 +543,8 @@ function gatherCommuters(world) {
     list.push(q.id);
   });
 }
-function waitSpot(world, st) {
+function waitSpot(world, st, n = 0) {
+  if (st.under && st.kiosk) { const q = st.kiosk.queue[Math.min(n, st.kiosk.queue.length - 1)]; return { x: q.x, y: q.y + (rng() - 0.5) * 4 }; } // in line in the queue lane
   if (st.under) { const a = rng() * 6.28; return { x: st.platform.x + Math.cos(a) * 26, y: st.platform.y + Math.sin(a) * 26 }; }
   const q = railAt(world.map.rail, st.s + (rng() - 0.5) * st.half * 1.6);
   const off = 62 + rng() * 26;
@@ -542,11 +559,59 @@ function callWaiting(world, t, si) {
     q.npc.waitTrain = undefined; q.npc.keep = false;
     const ci = 1 + Math.floor(rng() * (t.cars.length - 1));
     if (ci === t.mail) continue;
+    if (st.under && st.kiosk) { const k = st.kiosk; walkStairs(world, q, [k.out, k.top, k.deep], { t: t.i, c: ci }); continue; } // in at the mouth and down the steps
     if (st.under) { const spot = freeSpot(world, t, ci, true); if (!spot) continue; board(world, q, t, ci, spot.ox, spot.oy, 0); q.onTrain.seat = spot.seat; q.onTrain.dest = pickDest(world, t); continue; }
     q.npc.boardTrain = { t: t.i, c: ci, side: doorSide(world, t, ci, st) };
     t.boarding.add(q.id);
   }
 }
+
+// ---- subway stairs ----------------------------------------------------------------------------
+// People going down into a subway kiosk or coming up out of it follow a short path (mouth, top
+// step, bottom of the stairs) straight through the railings' opening. Going down, at the bottom
+// they step onto the train if it's still in - else they're gone below to wait for the next one.
+// Coming up, they walk out onto the street and go about their day.
+function walkStairs(world, q, wp, ride, delay = 0) {
+  q.npc.stairs = { wp, k: 0, ride, wait: world.time + delay };
+  q.npc.waitTrain = undefined; q.npc.keep = !!ride;
+  world.stairWalkers ??= new Set();
+  world.stairWalkers.add(q.id);
+}
+function exitPoint(world, k) {
+  const dir = k.flip ? 1 : -1;
+  for (const r of [70, 110, 150]) {
+    const x = k.out.x + dir * r, y = k.out.y + 50 + rng() * 30;
+    if (!PED_BLOCK[world.map.tileAtPx(x, y)]) return { x, y };
+  }
+  return { x: k.out.x + dir * 40, y: k.out.y + 50 };
+}
+function stepStairs(world, dt) {
+  if (!world.stairWalkers || !world.stairWalkers.size) return;
+  for (const id of world.stairWalkers) {
+    const q = world.get(id);
+    const s = q && !q.removed && !q.dead && q.npc && q.npc.stairs;
+    if (!s || q.onTrain || now(world) < (q.downUntil || 0)) { if (!s) world.stairWalkers.delete(id); continue; }
+    if (world.time < s.wait) { q.vx = 0; q.vy = 0; continue; }
+    const p = s.wp[s.k], dx = p.x - q.x, dy = p.y - q.y, d = Math.hypot(dx, dy);
+    if (d < 6) {
+      if (++s.k < s.wp.length) continue;
+      world.stairWalkers.delete(id);
+      q.npc.stairs = null;
+      if (!s.ride) { q.npc.state = 'wander'; q.npc.until = 0; q.npc.wx = q.x; q.npc.wy = q.y; q.npc.keep = false; continue; }
+      const t = world.trains[s.ride.t];
+      const st = t && t.dwellUntil ? world.map.rail.stations[t.stop] : null;
+      const spot = st && st.kiosk ? freeSpot(world, t, s.ride.c, true) : null;
+      if (spot) { board(world, q, t, s.ride.c, spot.ox, spot.oy, 0); q.onTrain.seat = spot.seat; q.onTrain.dest = pickDest(world, t); }
+      else despawnNpc(world, q); // missed it: down on the platform, waiting for the next
+      continue;
+    }
+    const sp = WALK * q.npc.speed * (s.k >= 2 ? 0.75 : 1); // steps slow you a little
+    q.vx = dx / d * sp; q.vy = dy / d * sp; q.a = Math.atan2(dy, dx);
+    q.x += q.vx * dt; q.y += q.vy * dt;
+    world.place(q);
+  }
+}
+const now = (world) => world.time;
 
 // ---- keeping people off the line ---------------------------------------------------------------
 // Tiles within reach of the track map to their nearest track point, so "am I on the rails, and is
@@ -600,7 +665,7 @@ export function keepPedsSafe(world) {
     if (!loco || loco.sub) continue;
     const reach = Math.max(400, t.v * 5) + t.len;
     for (const p of world.query(loco.x, loco.y, reach, K.PED)) {
-      if (!p.npc || p.dead || p.vehId || p.onTrain || p.npc.boardTrain || (p.lz || 0) > 0.3 || p.npc.role === 'cop') continue;
+      if (!p.npc || p.dead || p.vehId || p.onTrain || p.npc.boardTrain || p.npc.stairs || (p.lz || 0) > 0.3 || p.npc.role === 'cop') continue;
       if (now < (p.npc.railBlindUntil || 0) || now < p.downUntil) continue;
       const th = railThreat(world, p.x, p.y);
       if (!th) continue;
@@ -863,7 +928,7 @@ export function interaction(world, p) {
     const st = stationAt(world, t);
     if (!st) continue;
     if (st.under) {
-      if (Math.hypot(ped.x - st.platform.x, ped.y - st.platform.y) < 80) return { label: `Down the stairs - board the train at ${st.name}`, run: () => boardAtStation(world, ped, t, 1 + Math.floor(rng() * (t.cars.length - 1))) };
+      if (atEntrance(st, ped)) return { label: `Down the stairs - board the train at ${st.name}`, run: () => boardAtStation(world, ped, t, 1 + Math.floor(rng() * (t.cars.length - 1))) };
       continue;
     }
     // anywhere on the platform counts: you walk to the nearest open door
@@ -877,8 +942,25 @@ export function interaction(world, p) {
     }
     if (best > 0) return { label: `Board the train - next stop ${world.map.rail.stations[(t.stop + 1) % world.map.rail.stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
   }
+  // at a subway entrance with no train in: the countdown, and where to wait
+  const sts = world.map.rail.stations;
+  for (let si = 0; si < sts.length; si++) {
+    const st = sts[si];
+    if (!st.kiosk || !atEntrance(st, ped)) continue;
+    const eta = Math.max(1, Math.round(nextTrainIn(world, si)));
+    const nxt = sts[(si + 1) % sts.length].name.replace(/ Station$/, '');
+    return { label: `${st.name}: next train in ${Math.floor(eta / 60)}:${String(eta % 60).padStart(2, '0')} - wait in line, F when it's in (to ${nxt})`, run: () => {} };
+  }
   const hit = climbable(world, ped, ped.x, ped.y, 48, ped.vx, ped.vy);
   return hit ? { label: `Hop onto the ${hit.t.cars[hit.ci].def.name.toLowerCase()}`, run: () => climbOn(world, ped, hit) } : null;
+}
+
+// In the queue lane, at the mouth or on the stairs of a subway stop's entrance.
+function atEntrance(st, ped) {
+  const k = st.kiosk;
+  if (!k) return Math.hypot(ped.x - st.platform.x, ped.y - st.platform.y) < 80;
+  const [lx0, ly0, lx1, ly1] = k.lane, [px0, py0, px1, py1] = k.pit;
+  return (ped.x > lx0 - 12 && ped.x < lx1 + 12 && ped.y > ly0 - 16 && ped.y < ly1 + 16) || (ped.x > px0 && ped.x < px1 && ped.y > py0 - 8 && ped.y < py1 + 8);
 }
 
 // A car you could grab onto from here: close alongside and not much faster than you.
@@ -1112,3 +1194,6 @@ export function meInfo(world, p) {
     crack: p.crack ? Math.min(1, (world.time - p.crack.t0) / STRONGBOX_CRACK_S) : null, rural: onRuralRun(world, t),
   };
 }
+
+// test hooks
+export const __test = { arrived };

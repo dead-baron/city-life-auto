@@ -435,6 +435,7 @@ export function generateCity(seed = 1337) {
   const railPts = m.railPts;
   reserveRail(m, railPts);
   buildStationLots(m);
+  reserveSubwayPlazas(m);
   waterfrontStrip(m);
   // Pelican Key's beach end (the bar, the charter dock, the court) stays open; the town is east of it
   {
@@ -958,6 +959,40 @@ function layoutRoads(m, rand) {
 
 // The car parks beside the country stations: asphalt, and a row of spaces down each long side
 // that parked cars turn up in now and then.
+// Subway entrances: before the blocks are cut up, each underground stop claims a small paved
+// plaza on the street nearest its platform - room for the entrance kiosk (stairs down, with its
+// railings, lamps and sign), the countdown board and a marked queue lane beside the mouth. The
+// plaza fronts a street on its south side where it can (the street at the bottom, like the rest
+// of the art), else on its north side.
+export const SUBWAY_PLAZA = { w: 8, h: 4 };
+function reserveSubwayPlazas(m) {
+  m.subwayPlazas = [];
+  const pts = m.railPts, { w: PW, h: PH } = SUBWAY_PLAZA;
+  const free = (i) => m.land[i] && m.tiles[i] === T.GRASS && !m.reserve[i] && !m.deck[i];
+  for (const { name, i } of stationIndex(m, pts)) {
+    const q = pts[i];
+    if (!q.under) continue;
+    const cx = Math.floor(q.x / TILE), cy = Math.floor(q.y / TILE);
+    let best = null;
+    for (let ty = cy - 30; ty <= cy + 30; ty++) for (let tx = cx - 30; tx <= cx + 30; tx++) {
+      let ok = true;
+      for (let y = 0; y < PH && ok; y++) for (let x = 0; x < PW; x++) if (!free((ty + y) * MAP_W + tx + x)) { ok = false; break; }
+      if (!ok) continue;
+      let south = true, north = true;
+      for (let x = 0; x < PW; x++) {
+        if (m.tileAt(tx + x, ty + PH) !== T.SIDEWALK) south = false;
+        if (m.tileAt(tx + x, ty - 1) !== T.SIDEWALK) north = false;
+      }
+      if (!south && !north) continue;
+      const d = Math.hypot((tx + PW / 2) * TILE - q.x, (ty + PH / 2) * TILE - q.y) + (south ? 0 : 160);
+      if (!best || d < best.d) best = { name, x: tx, y: ty, w: PW, h: PH, south, d };
+    }
+    if (!best) continue;
+    for (let y = best.y; y < best.y + PH; y++) for (let x = best.x; x < best.x + PW; x++) { m.tiles[y * MAP_W + x] = T.PLAZA; m.reserve[y * MAP_W + x] |= 16; }
+    m.subwayPlazas.push(best);
+  }
+}
+
 function buildStationLots(m) {
   for (const l of m.stationLots || []) {
     for (let y = l.y; y < l.y + l.h; y++) for (let x = l.x; x < l.x + l.w; x++) {
@@ -1675,6 +1710,7 @@ const FOOT_LOOSE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DIRT, T.GRASS, T.SAND]
 function atmSpot(m, b, x, loose = false) {
   const F = loose ? FOOT_LOOSE : FOOT;
   const wy = (b.ty + b.th) * TILE;
+  if (onSubwayPlaza(m, x, wy + 8)) return false;
   if (x < b.tx * TILE + 22 || x > (b.tx + b.tw) * TILE - 22) return false;
   for (const dx of [-18, 0, 18]) if (m.tileAtPx(x + dx, wy - 6) !== T.BUILDING || !F.has(m.tileAtPx(x + dx, wy + 8))) return false;
   if (!FOOT_LOOSE.has(m.tileAtPx(x, wy + 36))) return false; // room to stand at it
@@ -2434,6 +2470,7 @@ function buildRailway(m, pts) {
     if (!p.deck) for (const [dx, dy] of [[-40, 0], [40, 0], [0, -40], [0, 40]]) { const tx = Math.floor((p.x + dx) / TILE), ty = Math.floor((p.y + dy) / TILE); if (wetT(m.tileAt(tx, ty))) m.set(tx, ty, T.GRASS); }
   }
   clearPropsOnRail(m, pts);
+  clearPropsOnPlazas(m);
   for (const c of crossings) {
     const mid = (c.s0 + c.s1) / 2; const q = railAt({ pts, len: total }, mid); c.s = mid; c.x = q.x; c.y = q.y; c.a = q.a;
     const onRoad = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), t = m.tileAt(tx, ty); return t === T.ROAD || (t === T.BRIDGE && !!m.roadAxis[ty * MAP_W + tx]); };
@@ -2459,6 +2496,8 @@ function buildRailway(m, pts) {
       }
       const st = { name: `${name} Station`, s: best.s, x: q.x, y: q.y, a: q.a, side: 1, half: PLATFORM_HALF, inner: PLATFORM_IN, outer: PLATFORM_OUT, under: true, clockD: 0 };
       st.platform = ent || { x: q.x, y: q.y };
+      const plaza = (m.subwayPlazas || []).find((pl) => pl.name === name);
+      if (plaza) { st.kiosk = subwayKiosk(m, plaza, stations.length); st.platform = st.kiosk.out; }
       st.poi = m.pois.length;
       m.pois.push({ id: m.pois.length, kind: 'station', label: st.name, x: st.platform.x, y: st.platform.y, r: 70, station: stations.length });
       stations.push(st);
@@ -2505,8 +2544,58 @@ function buildRailway(m, pts) {
   m.rail = { pts, len: total, stations, crossings, rural };
 }
 
+// The street entrance of a subway stop on its plaza: the kiosk (stairs down inside its railings)
+// at one end, its mouth facing a marked queue lane at the other, and the countdown board on a
+// post at the back of the lane. Geometry in world px from the kiosk art (SUBWAY_ART: 128 x 95,
+// mouth on the left; the mirrored kiosk, flip, has its mouth on the right). The railings are
+// solid; the stairwell between them is walkable - people walk in at the mouth, down the steps,
+// and are gone below (the client sinks them into the stairwell as they go).
+export const SUBWAY_ART = { w: 128, h: 95, pit: [10, 43, 114, 81], rail: [36, 88], mouthY: 62, top: 16, deep: 96 };
+function subwayKiosk(m, pl, k) {
+  const A = SUBWAY_ART, flip = k % 2 === 1;
+  const px0 = pl.x * TILE, py0 = pl.y * TILE, pw = pl.w * TILE;
+  const x0 = flip ? px0 + 8 : px0 + pw - A.w - 8, y0 = py0 + 8;
+  const lx = (x) => (flip ? x0 + A.w - x : x0 + x); // kiosk-local x -> world (mirrored for flip)
+  const my = y0 + A.mouthY, dir = flip ? 1 : -1;  // dir: from the mouth out into the lane
+  const pit = flip ? [lx(A.pit[2]), y0 + A.pit[1], lx(A.pit[0]), y0 + A.pit[3]] : [lx(A.pit[0]), y0 + A.pit[1], lx(A.pit[2]), y0 + A.pit[3]];
+  const out = { x: lx(0) + dir * 16, y: my };
+  const queue = [];
+  for (let q = 0; q < 5; q++) queue.push({ x: out.x + dir * (14 + q * 20), y: my + (q % 2 ? 3 : -3) });
+  const laneEnd = flip ? px0 + pw - 6 : px0 + 6;
+  const lane = [Math.min(out.x, laneEnd), my - 20, Math.max(out.x, laneEnd), my + 20];
+  // railings: the back (with the sign and lamps above it), the front, and the closed far end
+  for (let x = 4; x <= A.w - 4; x += 10) { m.addSolidProp(lx(x), y0 + A.rail[0], 8); m.addSolidProp(lx(x), y0 + A.rail[1], 8); m.addSolidProp(lx(x), y0 + 16, 10); }
+  for (let y = A.rail[0]; y <= A.rail[1]; y += 10) m.addSolidProp(lx(A.w - 6), y0 + y, 8);
+  const board = { x: (lane[0] + lane[2]) / 2, y: py0 + 22 };
+  m.addSolidProp(board.x, board.y + 10, 5);
+  return { x0, y0, w: A.w, h: A.h, flip, pit, out, top: { x: lx(A.top), y: my }, deep: { x: lx(A.deep), y: my + 4 }, queue, lane, board };
+}
+
 // Clear street furniture standing on the track bed (and re-index what's left: props are
 // referenced by index on the wire, and both ends build the map the same way).
+// Nothing stands on a subway plaza but the entrance (benches, lamps and bins from the street
+// dressing are cleared off it).
+export function onSubwayPlaza(m, x, y) {
+  return (m.subwayPlazas || []).some((pl) => x > pl.x * TILE - 8 && x < (pl.x + pl.w) * TILE + 8 && y > pl.y * TILE - 8 && y < (pl.y + pl.h) * TILE + 4);
+}
+function clearPropsOnPlazas(m) {
+  if ((m.subwayPlazas || []).length) removeProps(m, (x, y) => onSubwayPlaza(m, x, y));
+}
+
+function removeProps(m, near) {
+  const keep = [], remap = new Map(), gone = new Set();
+  m.props.forEach((pr, i) => { if (near(pr.x, pr.y)) { gone.add(pr); return; } remap.set(i, keep.length); keep.push(pr); });
+  if (!gone.size) return;
+  m.props = keep;
+  m.lamps = m.lamps.filter((l) => !gone.has(l));
+  m.propSolid = new Map();
+  for (const [k, arr] of m.solidProps) {
+    const kept = arr.filter((e) => e.pi < 0 ? !near(e.x, e.y) : remap.has(e.pi));
+    for (const e of kept) if (e.pi >= 0) { e.pi = remap.get(e.pi); m.propSolid.set(e.pi, e); }
+    if (kept.length) m.solidProps.set(k, kept); else m.solidProps.delete(k);
+  }
+}
+
 function clearPropsOnRail(m, pts) {
   const grid = new Set();
   for (const p of pts) if (!p.under) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) grid.add((Math.floor(p.y / TILE) + dy) * MAP_W + Math.floor(p.x / TILE) + dx);
@@ -3320,7 +3409,7 @@ export function signalArm(m, n, id) {
   const tip = heads[heads.length - 1];
   for (const extra of [12, 22, 32, 44, 60]) {
     const px = bx + rx * (e.hw + extra), py = by + ry * (e.hw + extra);
-    if (POLE_GROUND.has(m.tileAtPx(px, py))) return { x: px, y: py, hx: tip.x, hy: tip.y, heads, a: Math.atan2(ry, rx), open: true };
+    if (POLE_GROUND.has(m.tileAtPx(px, py)) && !onSubwayPlaza(m, px, py)) return { x: px, y: py, hx: tip.x, hy: tip.y, heads, a: Math.atan2(ry, rx), open: true };
   }
   const px = bx + rx * (e.hw + 10), py = by + ry * (e.hw + 10);
   return { x: px, y: py, hx: tip.x, hy: tip.y, heads, a: Math.atan2(ry, rx), open: false };

@@ -46,6 +46,10 @@ Walk into any of these and the roof lifts off onto the painted interior. Every p
 - **Paradise Cay** - the palm-island painting raised out of the bay between Westport and Metro City: the land, beaches and jetty follow the painting exactly (sampled into a tile mask), the cabin is solid. Boat-only.
 - **Red Rock Canyon** - the desert canyon painting in the Dry Creek desert: the mesas and cliffs are solid where they're painted, plus the homestead and water tower.
 
+## Subway entrances (`prop_subway_l`, `prop_subway_r`)
+
+The two street kiosks from the subway concept (green railings, stairs, SUBWAY sign, globe lamps), cut out of the pavement around them (`SUBWAY_ART` in `tools/build_art.py`), drawn 128 px wide on each underground stop's plaza. The queue lane, countdown board and boarding glow are drawn in code.
+
 ## Cash machines (`assets/atlas*.png`, `prop_atm_*`)
 
 16 ATM units from the ATM concept sheet: blue, red, green, gold, grey, BANK, 24/7, canopy, leaf, neon, hood, recess, CASH, wood, frame, plus the freestanding kiosk. Each is cut tight to its housing (`ATM_ART` in `tools/build_art.py`) so it stands against any building front. The units with real-world branding and the drive-through are not used.

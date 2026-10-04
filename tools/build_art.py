@@ -97,6 +97,13 @@ ATM_ART = {
     'leaf': (1248, 302, 1358, 480), 'neon': (78, 598, 210, 740), 'hood': (372, 560, 484, 740), 'recess': (92, 864, 200, 984),
     'cash': (952, 572, 1078, 740), 'wood': (964, 848, 1076, 1008), 'frame': (1242, 860, 1362, 1004), 'kiosk': (1236, 568, 1368, 736),
 }
+# Subway street entrances from the subway concept: the kiosk with its railings, stairs, sign and
+# two lamps, cut out of the pavement around it (a rectangle for the body, an oval per lamp).
+# name -> (box, lamp centres x in source px). Mouth on the left for 'subway_l', right for 'subway_r'.
+SUBWAY_SHEET = 'e076993c-image.png'
+SUBWAY_ART = {'subway_l': ((188, 234, 670, 590), (213, 644)), 'subway_r': ((866, 234, 1348, 590), (897, 1326))}
+SUBWAY_W = 128  # world px wide (shared/map.js SUBWAY_ART)
+
 ATM_W = 40   # world px wide (a bit wider than a person); height follows the art
 
 PROPS_SHEET = 'ae847b9b-image.png'
@@ -532,6 +539,19 @@ def build_sprites():
         w, h = (size, size / r) if r >= 1 else (size * r, size)
         prop_sizes[name] = [round(w), round(h)]
         sprites.append(('prop_' + name, fit(c, w * SCALE, h * SCALE)))
+    sub_src = Image.open(find_src(SUBWAY_SHEET)).convert('RGB')
+    for name, ((x0, y0, x1, y1), lamps) in SUBWAY_ART.items():
+        c = sub_src.crop((x0, y0, x1, y1)).convert('RGBA')
+        mask = Image.new('L', c.size, 0)
+        d = ImageDraw.Draw(mask)
+        d.rectangle([2, 300 - y0, c.width - 3, c.height - 1], fill=255)
+        for lx in lamps:
+            d.ellipse([lx - x0 - 30, 232 - y0, lx - x0 + 30, 306 - y0], fill=255)
+            d.rectangle([lx - x0 - 16, 290 - y0, lx - x0 + 16, 310 - y0], fill=255)
+        c.putalpha(mask.filter(ImageFilter.GaussianBlur(0.8)))
+        h = SUBWAY_W * c.height / c.width
+        prop_sizes[name] = [SUBWAY_W, round(h)]
+        sprites.append(('prop_' + name, fit(c, SUBWAY_W * SCALE, h * SCALE)))
     atm_src = Image.open(find_src(ATM_SHEET)).convert('RGB')
     for name, box in ATM_ART.items():
         c = atm_src.crop(box)
