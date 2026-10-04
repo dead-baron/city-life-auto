@@ -12,8 +12,8 @@ import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
 import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus } from './input.js';
-import { GroundCache, drawOverheadProp, drawPrefabGlow, debrisColors, lampHead, interiorArt, drawRoofClip, drawShopDoor } from './render/tiles.js';
-import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX } from './render/sprites.js';
+import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
+import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { createPhone } from './phone.js';
@@ -25,6 +25,8 @@ import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev
 import { initAudio, sfx } from './audio.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawTunnel, portalCovers, drawStationClock } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
+import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
+import { BuildingLayer } from './render/buildings.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -423,6 +425,7 @@ function onEvent(ev) {
 function setupWorld(seed) {
   S.map = generateCity(seed);
   S.ground = new GroundCache(S.map);
+  S.buildings = new BuildingLayer(S.map, S.ground);
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
 }
@@ -1213,6 +1216,7 @@ function render(dt) {
   const offX = Math.round(DPR * (W / 2 - S.cam.x * z + shx)), offY = Math.round(DPR * (H / 2 - S.cam.y * z + shy));
   g.setTransform(DPR * z, 0, 0, DPR * z, offX, offY);
   S.worldTf = [DPR * z, 0, 0, DPR * z, offX, offY];
+  S.viewRect = view;
 
   // ground chunks
   const cx0 = Math.floor(view.x0 / CHUNK_PX), cx1 = Math.floor(view.x1 / CHUNK_PX), cy0 = Math.floor(view.y0 / CHUNK_PX), cy1 = Math.floor(view.y1 / CHUNK_PX);
@@ -1260,17 +1264,41 @@ function render(dt) {
   for (const v of boats) drawVehicleEnt(v, now, dt);
   for (const v of boats) if (inWater(v)) coverWithBridge(v.rx, v.ry, 80);
   for (const p of swimmers) coverWithBridge(p.rx, p.ry, 20);
-  // downed / dead peds under vehicles
+  // downed / dead peds lie on the ground under everything that stands
   for (const p of peds) if ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p)) drawPed(p, now);
-  for (const v of vehs) if (!boats.includes(v)) drawVehicleEnt(v, now, dt);
-  for (const c of crates) if ((c.flags & 3) === 2) drawCrateEnt(c, now);
-  for (const p of peds) if (!(p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p)) drawPed(p, now);
+  drawTrains(cars, riders, myTrain, sub, now);
+  for (const b of balls) drawBall(b);
+  // 3/4 view: buildings, vehicles, people, carried crates, trees and lamp posts drawn in order of
+  // where they stand (north first), so whatever is behind a building is hidden by it
+  const items = [];
+  const bl = sub ? [] : S.buildings.inView(view);
+  S.bFade ??= new Map();
+  for (const it of bl) {
+    const inFade = (S.roofFade && S.roofFade[it.b.id]) || 0;
+    const xray = !inFade && S.buildings.hides(it, sp.x, sp.y, 6) ? 1 : 0;
+    const cur = S.bFade.get(it.b.id) || 0;
+    const k = cur + (xray - cur) * (1 - Math.exp(-8 * dt));
+    S.bFade.set(it.b.id, k);
+    items.push({ y: it.y1, b: it, a: Math.max(0.08, 1 - inFade * 0.92 - k * 0.6) });
+  }
+  for (const v of vehs) if (!boats.includes(v)) items.push({ y: v.ry, v });
+  for (const p of peds) if (!(p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p)) items.push({ y: p.ry, p });
+  for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); items.push({ y: (par ? par.ry : c.ry) + 0.5, c }); }
+  for (const c of crates) if ((c.flags & 3) === 1) items.push({ y: c.ry + 1, c });
+  if (!sub) for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
+    for (const p of S.ground.overhead(cx, cy)) if (p.x > view.x0 - 40 && p.x < view.x1 + 40 && p.y > view.y0 - 40 && p.y < view.y1 + 90) items.push({ y: p.y + 8, o: p });
+  items.sort((a, b) => a.y - b.y);
+  const nightLit = clock.dark > 0.3;
+  for (const it of items) {
+    if (it.b) S.buildings.draw(g, it.b, it.a);
+    else if (it.v) drawVehicleEnt(it.v, now, dt);
+    else if (it.p) drawPed(it.p, now);
+    else if (it.c) drawCrateEnt(it.c, now);
+    else if (it.o) drawOverheadProp(g, it.o, nightLit);
+  }
   // your own boat stays readable under a bridge: a faint outline through the deck
   if (S.pred && S.pred.kind === 'veh') { const me = S.ents.get(S.ctrlId); const d = me && me.d ? VEHICLE_BY_INDEX[me.d.m] : null; if (d && d.kind === 'boat' && underBridge(me.rx, me.ry, d.L / 2)) outlineVehicle(me, d); }
   else if (S.pred) { const me = S.ents.get(S.ctrlId); if (me && me.swim && S.map.tileAtPx(me.rx, me.ry) === T.BRIDGE) { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); } }
-  for (const c of crates) if ((c.flags & 3) === 1) drawCrateEnt(c, now);
-  drawTrains(cars, riders, myTrain, sub, now);
-  for (const b of balls) drawBall(b);
   if (!sub) coverWalkIns(view, peds, insideB, dt);
   for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
 
@@ -1290,8 +1318,6 @@ function render(dt) {
   // traffic lights, cameras, overhead canopy (none of it down in the subway)
   if (!sub) {
     drawSignals(view);
-    for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
-      for (const p of S.ground.overhead(cx, cy)) if (p.x > view.x0 - 40 && p.x < view.x1 + 40 && p.y > view.y0 - 40 && p.y < view.y1 + 40) drawOverheadProp(g, p, clock.dark > 0.3);
     updateBirds(dt, view, vehs, peds);
   }
   fx.update(dt);
@@ -1383,12 +1409,13 @@ function drawWaterGlints(view, now) {
 }
 
 function drawCrateEnt(c, now) {
-  const lift = (c.flags & 3) === 0 ? c.hp * 64 : (c.flags & 3) === 1 ? 6 : 0;
+  let lift = (c.flags & 3) === 0 ? c.hp * 64 : (c.flags & 3) === 1 ? 26 : 0;
+  if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = vehLift(pd) / 0.6 + 4; } // on the bed: up with the body
   g.save();
   if (lift > 1) { g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(c.rx + 3, c.ry + 3, 13, 10, 0, 0, 6.28); g.fill(); }
   g.translate(c.rx, c.ry - lift * 0.6);
   g.rotate(c.ra);
-  const sc = 1 + lift / 120;
+  const sc = (c.flags & 3) === 0 ? 1 + lift / 120 : 1;
   g.scale(sc, sc);
   drawCrate(g, c.d.t, c.d.l, now);
   g.restore();
@@ -1485,9 +1512,7 @@ function drawInteriorView(sp) {
     if (!want && cur < 0.01) continue;
     S.roofFade[id] = cur + (want - cur) * 0.15;
     const bb = S.map.buildings[id];
-    const k = S.roofFade[id];
-    g.drawImage(interiorArt(S.map, bb), bb.tx * TILE, bb.ty * TILE);
-    drawRoofClip(g, S.map, bb, 1 - k * 0.88);
+    g.drawImage(interiorArt(S.map, bb), bb.tx * TILE, bb.ty * TILE); // the lifted building above it fades out
   }
   return b;
 }
@@ -1498,7 +1523,7 @@ function coverWalkIns(view, peds, insideB, dt) {
     const x0 = b.tx * TILE, y0 = b.ty * TILE, x1 = x0 + b.tw * TILE, y1 = y0 + b.th * TILE;
     if (x1 < view.x0 || x0 > view.x1 || y1 < view.y0 || y0 > view.y1) continue;
     const fade = (S.roofFade && S.roofFade[id]) || 0;
-    if (!(insideB && insideB.id === id) && fade < 0.05 && peds.some((p) => p.rx > x0 && p.rx < x1 && p.ry > y0 && p.ry < y1)) drawRoofClip(g, S.map, b, 1);
+    void fade;
     for (let i = 0; i < b.walkIn.units.length; i++) {
       const u = b.walkIn.units[i];
       const dx = (u.door.tx + u.door.w / 2) * TILE, dy = (u.door.ty + 0.5) * TILE;
@@ -1681,12 +1706,32 @@ function drawVehicleEnt(v, now, dt) {
   v.sinkT = sinking ? (v.sinkT || 0) + dt : 0;
   const sk = Math.min(1, v.sinkT / 3);
   if (sinking && Math.random() < 0.5) S.fx.splash(v.rx + (Math.random() - 0.5) * def.L * 0.6, v.ry + (Math.random() - 0.5) * def.W * 0.6, 1);
+  // 2.5D lift: side walls (the darkened outline stacked up the screen), the top view raised on
+  // them, leaning out on corners and nosing down under braking
+  const lift = sinking ? 0 : vehLift(def);
+  const prevA = v.leanA ?? v.ra;
+  let dA = v.ra - prevA; while (dA > Math.PI) dA -= Math.PI * 2; while (dA < -Math.PI) dA += Math.PI * 2;
+  v.leanA = v.ra;
+  const spd = v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x - v.buf[v.buf.length - 2].x, v.buf[v.buf.length - 1].y - v.buf[v.buf.length - 2].y) * 20 : 0;
+  const latT = Math.max(-1, Math.min(1, (dA / Math.max(dt, 1e-3)) * spd / 900));
+  v.lean = (v.lean || 0) + (latT - (v.lean || 0)) * (1 - Math.exp(-6 * dt));
+  const leanPx = def.kind === 'boat' ? 0 : -v.lean * (def.kind === 'bike' ? 2.5 : 1.6), dip = (f & VF.BRAKE) && spd > 60 ? 1 : 0;
   g.save();
   g.translate(v.rx, v.ry);
-  g.rotate(v.ra);
   if (sinking) { g.globalAlpha = 1 - 0.75 * sk; g.scale(1 - 0.18 * sk, 1 - 0.18 * sk); }
   if (v.blinkUntil > now || driverBlinks(v)) g.globalAlpha *= Math.floor(now * 10) % 2 ? 0.25 : 1; // pulling out of a garage
-  if (def.kind !== 'boat' && !sinking) drawVehicleShadow(g, v.d, def);
+  if (def.kind !== 'boat' && !sinking) { g.save(); g.rotate(v.ra); drawVehicleShadow(g, v.d, def); g.restore(); }
+  if (lift > 0) {
+    const side = vehicleSide(v.d, def, !!(f & VF.WRECK));
+    const sw = side.width / 2, sh = side.height / 2;
+    for (let k = 0; k < lift; k += 1.5) {
+      g.save(); g.translate(-Math.sin(v.ra) * leanPx * (k / lift), -k); g.rotate(v.ra);
+      g.drawImage(side, -sw / 2, -sh / 2, sw, sh);
+      g.restore();
+    }
+  }
+  g.translate(-Math.sin(v.ra) * leanPx + Math.cos(v.ra) * dip, -lift + Math.sin(v.ra) * dip);
+  g.rotate(v.ra);
   if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }
@@ -1714,7 +1759,8 @@ function drawVehicleEnt(v, now, dt) {
   if (def.kind === 'bike') {
     for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) {
       const seat = SEAT_BIKE[0];
-      const [x, y] = localToWorld(v.rx, v.ry, v.ra, seat[0], seat[1]);
+      const [x, y0] = localToWorld(v.rx, v.ry, v.ra, seat[0], seat[1]);
+      const y = y0 - vehLift(def);
       const spr = pedSprite(p.d.app, 'idle', 0, 0);
       g.save(); g.translate(x, y); g.rotate(v.ra); g.drawImage(spr, -PED_BOX / 2 * 0.9, -PED_BOX / 2 * 0.9, PED_BOX * 0.9, PED_BOX * 0.9); g.restore();
     }
@@ -1738,6 +1784,10 @@ function drawVehicleEnt(v, now, dt) {
   if (f & VF.HORN) sfx('horn', distVol(v.rx, v.ry));
   void dt;
 }
+
+// how high a vehicle's body stands (world px of visible side wall)
+const LIFT = { bus: 12, flatbed: 9, swat: 10, armored: 10, ambulance: 9, van: 9, pickup: 8, sports: 5, bike: 3, policebike: 3 };
+function vehLift(def) { return def.kind === 'boat' ? 3 : LIFT[def.id] ?? 7; }
 
 // rings on the water around a swimmer, plus a little splash while they paddle
 function drawSwimRipples(p, now) {
@@ -1770,12 +1820,14 @@ function drawPed(p, now) {
   let fr = pose === 'move' || pose === 'carry' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   const lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
-  const spr = pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra);
   const hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
   const swimming = !(f & PF.INVEH) && !!p.swim;
   if (swimming) drawSwimRipples(p, now);
   const team = S.pedTeam && S.pedTeam.get(p.id);
   if (team !== undefined) { g.strokeStyle = team === 0 ? '#ff3b3b' : '#3b8bff'; g.lineWidth = 3; g.beginPath(); g.ellipse(p.rx, p.ry + 4, 13, 8, 0, 0, 6.28); g.stroke(); }
+  // standing people: the 3/4-view character, upright on screen, facing one of 8 directions
+  if (UPRIGHT.has(pose) && !flying) { drawUpright(p, pose === 'move' ? 'move' + lvl : pose, fr, hitK, swimming, now); return; }
+  const spr = pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra);
   g.save();
   if (swimming) g.globalAlpha = f & PF.DEAD ? 0.5 : 0.72; // body under the surface, head above
   let lift = 0, spin = 0, grow = 1;
@@ -1807,6 +1859,41 @@ function drawPed(p, now) {
   if (f & PF.UMBRELLA) { const u = umbrellaSprite(p.id % UMBRELLA_COLORS.length); g.drawImage(u, p.rx - 18, p.ry - 20, 35, 35); }
   if ((f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
+}
+
+// Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
+const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'carry', 'fish']);
+const CSCALE = 1.32; // world px per character art px
+function drawUpright(p, pose, fr, hitK, swimming, now) {
+  const f = p.flags;
+  const d8 = dir8(p.ra);
+  const [d, mirror] = baseDir(d8);
+  const spr = charSprite(p.d.app, d, pose, fr, p.extra);
+  const bs = PED_BUILD_SCALE[p.d.app && p.d.app.bd !== undefined ? p.d.app.bd : 1] || 1;
+  const sc = CSCALE * (0.92 + 0.08 * bs) ;
+  const limp = p.d && !p.d.pl && p.hp < NPC_CRITICAL && pose.startsWith('move') && !(f & PF.DEAD) ? Math.sin((p.phase || 0) * Math.PI / 4) : 0;
+  const fx = p.rx + (hitK ? Math.cos(p.hitA) * 4 * hitK : 0), fy = p.ry + 6 + (hitK ? Math.sin(p.hitA) * 3 * hitK : 0);
+  g.save();
+  if (!swimming) { // contact shadow
+    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(fx + 2, fy - 1, 11 * bs, 5, 0, 0, 6.28); g.fill();
+  }
+  if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);
+  if (p.blink) g.globalAlpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
+  g.translate(fx, fy);
+  if (limp) g.rotate(limp * 0.12);
+  g.scale(mirror ? -sc * bs : sc * bs, sc);
+  g.imageSmoothingEnabled = false;
+  if (swimming) { // only head and shoulders above the water
+    g.globalAlpha *= f & PF.DEAD ? 0.5 : 0.9;
+    g.drawImage(spr, 0, 0, CW, 26, -CW / 2, -FOOT_Y + 12, CW, 26);
+  } else g.drawImage(spr, -CW / 2, -FOOT_Y);
+  if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = hitK - 0.4; g.drawImage(spr, -CW / 2, -FOOT_Y); g.globalCompositeOperation = 'source-over'; }
+  g.imageSmoothingEnabled = true;
+  g.restore();
+  if (pose === 'fish') { const a = p.ra; g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(p.rx + Math.cos(a) * 20, p.ry - 14 + Math.sin(a) * 10); g.lineTo(p.rx + Math.cos(a) * 46, p.ry + Math.sin(a) * 30); g.stroke(); }
+  if (f & PF.UMBRELLA) { const u = umbrellaSprite(p.id % UMBRELLA_COLORS.length); g.drawImage(u, p.rx - 20, p.ry - 62, 40, 40); }
+  if ((f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
+  if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - 20 + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
 
 // Traffic signals on mast arms: a pole on the near-right corner of every approach with an arm
@@ -2004,16 +2091,13 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
 
 // ---- night: lit windows, neon and lobby light from the per-lot emissive layer ------------------
 function drawNightGlow(dark) {
-  if (!S.worldTf || !atlas.prefabGlow || !atlas.prefabGlow.length) return;
+  if (!S.worldTf || !S.viewRect) return;
   g.save();
   g.setTransform(...S.worldTf);
   g.globalCompositeOperation = 'lighter';
   g.globalAlpha = Math.min(1, dark * 0.85);
   g.imageSmoothingEnabled = true;
-  const [cx0, cx1, cy0, cy1] = S.chunkView;
-  const seen = new Set();
-  for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
-    for (const p of S.ground.prefabsAt(cx, cy)) { if (seen.has(p)) continue; seen.add(p); drawPrefabGlow(g, p); }
+  for (const it of S.buildings.inView(S.viewRect)) S.buildings.drawGlow(g, it);
   g.restore();
 }
 

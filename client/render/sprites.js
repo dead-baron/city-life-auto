@@ -112,6 +112,34 @@ function procVehicle(def, paint) {
   return cv;
 }
 
+// 2.5D lift: the vehicle's own outline in a darkened shade of its paint, stacked a pixel at a
+// time under the top view, reads as the body's side walls (any angle, no pre-drawn views).
+const sideCache = new Map();
+export function vehicleSide(desc, def, wreck) {
+  const artId = def.art || def.id;
+  const n = atlas.variants[artId] || 0;
+  const key = `${n ? `${artId}_${(desc.vr || 0) % n}` : `${def.id}|${desc.p}`}|${wreck ? 1 : 0}|${atlas.ready ? 1 : 0}`;
+  let cv = sideCache.get(key);
+  if (cv) return cv;
+  const pad = 4;
+  cv = document.createElement('canvas');
+  cv.width = Math.ceil(def.L + pad * 2) * 2; cv.height = Math.ceil(def.W + pad * 2) * 2;
+  const g = cv.getContext('2d');
+  g.scale(2, 2); g.translate(def.L / 2 + pad, def.W / 2 + pad);
+  if (wreck) drawVehicleWreck(g, desc, def); else drawVehicle(g, desc, def, 0);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = 'source-atop';
+  g.fillStyle = wreck ? 'rgba(6,5,4,.7)' : 'rgba(12,14,22,.52)';
+  g.fillRect(0, 0, cv.width, cv.height);
+  // a darker rocker line where the body meets the wheels
+  g.fillStyle = 'rgba(0,0,0,.25)';
+  g.fillRect(0, cv.height * 0.5 - 1, cv.width, 2);
+  if (sideCache.size > 400) sideCache.delete(sideCache.keys().next().value);
+  sideCache.set(key, cv);
+  return cv;
+}
+export const VEH_PAD = 4;
+
 // Soft drop shadow in the exact silhouette of the vehicle art (no rectangles).
 const shadowCache = new Map();
 // Burnt-out wreck: the car's own sprite charred dark (pixels only - no box around it).

@@ -84,7 +84,7 @@ export class GroundCache {
     drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, st, cx, cy);
     for (const s of this.stalls.get(k) || []) drawStall(g, s);
-    for (const r of this.roofs.get(k) || []) drawRoof(g, r);
+    for (const r of this.roofs.get(k) || []) drawBuildingBase(g, r); // the roof itself is lifted onto its walls (render/buildings.js)
     drawPortals(g, m, cx, cy);
     for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
     for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
@@ -93,7 +93,7 @@ export class GroundCache {
     for (const mp of m.motorPools || []) drawMotorPool(g, mp, cx, cy);
     for (const v of m.venues || []) drawVenue(g, v, cx, cy);
     for (const pu of m.pumps || []) drawPump(g, pu, cx, cy);
-    for (const b of this.signs.get(k) || []) for (const s of b.signs) drawSign(g, s);
+    // (shop names are on the lifted facades now: render/buildings.js)
     for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
     for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
     g.restore();
@@ -565,7 +565,17 @@ const ROOF = {
 };
 const METAL_TINTS = ['#5f7469', '#6d6457', '#596a7d', '#7a5545', '#6f7270'];
 
-function drawRoof(g, r) {
+// Under a lifted building: its floor (seen only while its walls fade, e.g. x-ray) and the
+// shadow it throws away from the sun (top-left), a few px wide to the east and south.
+function drawBuildingBase(g, r) {
+  const x = r.tx * TILE, y = r.ty * TILE, w = r.tw * TILE, h = r.th * TILE;
+  g.fillStyle = 'rgba(8,10,16,.34)';
+  g.fillRect(x + w, y - 26, 14, h + 26); g.fillRect(x + 10, y + h, w + 4, 6);
+  g.fillStyle = '#2b2c32'; g.fillRect(x, y, w, h);
+  g.fillStyle = '#34353c'; for (let k = 0; k < w; k += 32) g.fillRect(x + k, y, 1, h);
+}
+
+export function drawRoof(g, r) {
   const x = r.tx * TILE, y = r.ty * TILE, w = r.tw * TILE, h = r.th * TILE;
   const rnd = mulberry32(r.seed);
   const pal = ROOF[r.kind] || ROOF.tar;
@@ -682,13 +692,6 @@ export function drawPrefabGlow(g, p) {
   else g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
-function drawSign(g, s) {
-  g.font = 'bold 12px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  const tw = g.measureText(s.text).width + 12;
-  g.fillStyle = 'rgba(10,12,20,.85)'; g.fillRect(s.x - tw / 2, s.y - 9, tw, 18);
-  g.strokeStyle = '#ffd36b'; g.lineWidth = 1; g.strokeRect(s.x - tw / 2 + 0.5, s.y - 8.5, tw - 1, 17);
-  g.fillStyle = '#fff'; g.fillText(s.text, s.x, s.y + 1);
-}
 
 export function drawProp(g, p) {
   const fr = atlas.ready ? atlas.frames['prop_' + p.t] : null;

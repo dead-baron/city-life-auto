@@ -757,3 +757,24 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
   - Leaving, or disconnecting, restores everything. Granted players get a notice that their progress won't be saved.
 - Tutorial v12. The world map was re-baked.
 - **Tests:** `test/view.test.js` (no in-view spawns, nothing unsent on screen, prefetch ahead) and `test/gameplay.test.js` (bailing, crate capacity, drifting, blood/grit/limp, players list, dev mode save isolation). New train tests cover easing, clocks, headway and speed, guard warnings, and jumping off.
+
+## Art overhaul, phase 1: the 3/4 view (placeholders)
+- **Checkpoint:** the build from before the overhaul is on GitHub as the branch `checkpoint-pre-art-overhaul`.
+- **Characters** (`client/render/chars.js`):
+  - Everyone standing now faces one of 8 directions, upright on screen. You see faces from the front, backs of heads from behind, and profiles from the side.
+  - Five directions are painted procedurally on a 32×44 grid from the existing appearance record; the other three are mirrors.
+  - Parts animate per frame: walk/run strides, arm swing and body bob, punch, melee swing, aiming in the facing direction, carrying, fishing and swimming (head and shoulders only).
+  - Lying, tumbling, flying and bike riders still use the old top-down painter.
+  - This is placeholder art until the drawn rig replaces it.
+- **Buildings** (`client/render/buildings.js`):
+  - Procedural-roof buildings lift their roof by a wall height that depends on style (houses ~34 px up to towers ~84 px). Below it they get a painted south facade by style and district: shopfronts with awnings and the business name on a sign, apartment and office windows, glass curtain walls, corrugated warehouses with roller doors, civic stone with columns, houses with shutters, shacks. Rough districts add graffiti and boarded windows.
+  - Concept-art lots already show their fronts, so they stay as drawn.
+  - All buildings go into a depth-sorted pass with vehicles, people, crates, trees and lamp posts, so anything behind a building is hidden. A building that hides you turns see-through.
+  - Walk-in buildings fade while you're inside.
+  - Night windows, shopfronts and neon glow come from a per-facade light layer.
+  - Shop names moved from baked ground labels onto the facades.
+- **Vehicles:**
+  - **2.5D lift:** the vehicle's outline, darkened, is stacked under the top view as side walls. Height depends on the vehicle (bus 12 px, bikes 3).
+  - Bodies lean out in corners and nose down under hard braking.
+  - Riders and loaded crates rise with the body.
+  - Works at any angle with the existing top-view art.
