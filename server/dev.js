@@ -17,7 +17,7 @@ import * as devmode from './devmode.js';
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train', 'goto', 'bring', 'grant'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant'];
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 
@@ -103,8 +103,24 @@ export function command(world, p, c, msg) {
       world.notify(p, `[dev] Aboard train ${t.i}, car ${ci}.`, 'info');
       break;
     }
+    case 'calltrain': { // bring the next train into the nearest station, doors open
+      if (!ped || ped.dead || !world.trains.length) break;
+      const r = trains.callTrain(world, ped.x, ped.y);
+      if (r) world.notify(p, `[dev] A train is waiting at ${r.st.name}.`, 'info');
+      break;
+    }
     case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
       if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; ped.lz = msg.lz === 1 && surfaceZ(world.map, msg.x, msg.y, 1) !== null ? 1 : 0; p.teleportAt = world.time; } break; // lz: 1 = up on the highway deck
+    case 'god': devmode.setInvincible(world, p, null); break;              // invincible (toggle)
+    case 'godp': devmode.setInvincible(world, p, msg.pid); break;          // make another player invincible (toggle)
+    case 'gunsp': case 'healp': {                                          // give another player weapons / heal them
+      const q = world.players.get(String(msg.pid));
+      if (!q || !q.ped || q.ped.dead) { world.notify(p, '[dev] Can\'t reach that player right now.', 'warn'); break; }
+      if (c === 'healp') { q.ped.hp = q.ped.maxHp; q.ped.bleeding = false; world.notify(q, `${p.name} (dev) healed you.`, 'good'); world.notify(p, `[dev] Healed ${q.name}.`, 'info'); }
+      else { command(world, q, 'guns', {}); world.notify(p, `[dev] Gave ${q.name} weapons.`, 'info'); }
+      q.meDirty = true;
+      break;
+    }
     case 'goto': devmode.goTo(world, p, msg.pid); break;     // teleport to an online player
     case 'bring': devmode.bring(world, p, msg.pid); break;   // fetch an online player to you
     case 'grant': devmode.grant(world, p, msg.pid); break;   // give someone Dev Debug Mode (their progress stops saving too)

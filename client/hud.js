@@ -85,8 +85,8 @@ export class HUD {
     // riding a train: next stop, the tunnel, the strongbox
     const tb = $('trainbar'), tr = me.train;
     if (tr && !me.dead) {
-      tb.classList.remove('hidden'); tb.classList.toggle('sub', !!tr.sub);
-      $('tb-where').textContent = tr.car === 'mail' ? 'MAIL CAR' : tr.sub ? 'SUBWAY' : tr.rural ? 'RURAL RUN' : 'ON THE TRAIN';
+      tb.classList.remove('hidden');
+      $('tb-where').textContent = tr.car === 'mail' ? 'MAIL CAR' : tr.rural ? 'RURAL RUN' : 'ON THE TRAIN';
       $('tb-next').textContent = tr.at ? `At ${tr.next} - F to get off` : `Next: ${tr.next} · ${tr.eta}s`;
       $('tb-crack').classList.toggle('hidden', tr.crack === null);
       if (tr.crack !== null) $('tb-fill').style.width = Math.round(tr.crack * 100) + '%';
@@ -509,21 +509,18 @@ function buildMinimap(map) {
     img.data[i * 4] = c3[0]; img.data[i * 4 + 1] = c3[1]; img.data[i * 4 + 2] = c3[2]; img.data[i * 4 + 3] = 255;
   }
   g.putImageData(img, 0, 0);
-  // the railway: a dark line round the loop, dashed where it runs underground
+  // the railway: a dark line round the loop with cross-ties, a dot at every station
   if (map.rail) {
     const pts = map.rail.pts;
-    g.lineWidth = 1.4; g.strokeStyle = '#2a2420';
-    for (const under of [false, true]) {
-      g.setLineDash(under ? [2, 2] : []);
-      g.beginPath();
-      for (let i = 0; i < pts.length; i++) {
-        const p = pts[i], q = pts[(i + 1) % pts.length];
-        if (!!p.under !== under) continue;
-        g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE);
-      }
-      g.stroke();
-    }
-    g.setLineDash([]);
+    g.lineWidth = 2; g.strokeStyle = '#2a2420';
+    g.beginPath();
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
+    g.stroke();
+    g.strokeStyle = '#c9c2b0'; g.lineWidth = 0.6; g.setLineDash([1, 3]);
+    g.beginPath();
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
+    g.stroke(); g.setLineDash([]);
+    for (const st of map.rail.stations) { g.fillStyle = '#2a2420'; g.beginPath(); g.arc(st.x / TILE, st.y / TILE, 3.2, 0, 6.28); g.fill(); g.fillStyle = '#f4f0e6'; g.beginPath(); g.arc(st.x / TILE, st.y / TILE, 1.8, 0, 6.28); g.fill(); }
   }
   // the elevated ring highway and its ramps, drawn over whatever is beneath them
   g.lineCap = 'round'; g.lineJoin = 'round';

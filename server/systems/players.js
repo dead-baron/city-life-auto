@@ -465,6 +465,6 @@ export function buildMe(world, p) {
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
     spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, spawnChoice: p.respawnChoice || null,
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
-    dev: p.dev, devMode: !!p.devMode,
+    dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
   };
 }

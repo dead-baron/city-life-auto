@@ -24,7 +24,7 @@ import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
-import { drawTrainCar, drawCoupling, drawCrossing, drawTunnel, portalCovers, drawStationClock } from './render/trains.js';
+import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
@@ -144,7 +144,6 @@ function onText(m) {
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
       S.tt = { l: m.tt || [], at: performance.now() / 1000 };
-      S.portals = portalCovers(S.map);
       S.ground.cache.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
       $('play').disabled = false;
@@ -157,7 +156,8 @@ function onText(m) {
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
-      if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); }
+      if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); if (S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('dev'); } }
+      { const g = document.getElementById('dev-god'); if (g) g.classList.toggle('on', !!m.god); }
       break;
     case 'menu': S.hud.openMenu(m); break;
     case 'pong': S.rtt = performance.now() - m.ts; break;
@@ -454,43 +454,66 @@ function startPlaying() {
   if (S.me) S.hud.setMe(S.me);
 }
 
+// The debug menu: commands on the left (give weapons first, leave dev mode last), everyone
+// online on the right with per-player buttons. Every button presses in, clicks, and pops a
+// little note saying what it did.
+const DEV_CMDS = [
+  ['guns', '🔫 Give weapons'], ['god', '🛡 Invincible (toggle)'], ['heal', '❤ Heal'], ['money', '💵 +$25k'],
+  ['car', '🏎 Spawn sports car', { m: 'sports' }], ['car', '🛻 Spawn pickup', { m: 'pickup' }], ['car', '🚤 Spawn speedboat', { m: 'speedboat' }], ['cargo', '📦 Loaded flatbed (cargo test)'],
+  ['calltrain', '🚉 Call a train to this station'], ['train', '🚆 Hop on the nearest train'],
+  ['rain', '🌧 Start rain'], ['clear', '☀ Stop rain'], ['night', '🌙 Jump to night'], ['day', '🌅 Jump to day'],
+  ['wanted', '★★ 2 stars', { n: 2 }], ['wanted', '★★★★ 4 stars', { n: 4 }], ['clean', '🧽 Clear wanted'], ['record', '📜 Wipe criminal record'],
+  ['samaritan', '😇 +50 Samaritan'], ['cop', '👮 Join the police'], ['promote', '⬆ Promote police rank'],
+  ['drop', '🎁 Contraband drop', { n: 4 }], ['snatch', '👜 Snatch-and-grab nearby'], ['shootout', '💥 Gang vs police shootout'], ['die', '☠ Die (respawn test)'],
+];
+function devPress(b, label, run) {
+  b.onclick = () => {
+    b.classList.remove('pressed'); void b.offsetWidth; b.classList.add('pressed');
+    sfx('click', 0.8);
+    S.hud.toast(`🛠 ${label.replace(/^[^A-Za-z+$]+/, '')}`, 'info');
+    run();
+  };
+}
 function setupDev() {
   const box = $('dev');
-  if (!S.dev && !S.devMode) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  box.innerHTML = S.devMode ? '<b>DEV DEBUG MODE (nothing is saved)</b>' : '<b>DEV / PLAYTEST CHEATS</b>';
+  const on = S.dev || S.devMode;
+  $('b-dev').classList.toggle('hidden', !on);
+  if (!on) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
+  box.innerHTML = `<div class="dev-head"><b>${S.devMode ? 'DEV DEBUG MODE · nothing is saved' : 'DEV / PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
+  box.querySelector('.dev-x').onclick = () => closeOverlay('dev');
+  const cmds = box.querySelector('.dev-cmds');
+  for (const [c, label, extra] of DEV_CMDS) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    if (c === 'god') { b.id = 'dev-god'; b.classList.toggle('on', !!(S.me && S.me.god)); }
+    devPress(b, label, () => send({ t: 'dev', c, ...(extra || {}) }));
+    cmds.appendChild(b);
+  }
   if (S.devMode) {
     const leave = document.createElement('button');
     leave.textContent = '⏏ Leave dev mode (restore my progress)'; leave.className = 'dev-leave';
-    leave.onclick = () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); };
-    box.appendChild(leave);
+    devPress(leave, 'Leaving dev mode', () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); });
+    cmds.appendChild(leave);
   }
-  const cmds = [['guns', 'Give weapons'], ['rain', 'Start rain'], ['clear', 'Stop rain'], ['night', 'Jump to night'], ['day', 'Jump to day'], ['money', '+$25k'],
-    ['samaritan', '+50 Samaritan'], ['wanted', '2 stars', { n: 2 }], ['wanted', '4 stars', { n: 4 }], ['clean', 'Clear wanted'], ['record', 'Wipe criminal record (felonies)'], ['cop', 'Join the police (badge + rank)'], ['promote', 'Promote police rank'],
-    ['car', 'Spawn pickup', { m: 'pickup' }], ['cargo', 'Loaded flatbed (cargo test)'], ['car', 'Spawn speedboat', { m: 'speedboat' }], ['car', 'Spawn sports car', { m: 'sports' }], ['drop', 'Contraband drop', { n: 4 }], ['snatch', 'Snatch-and-grab nearby'], ['shootout', 'Gang vs police shootout nearby'], ['train', 'Hop on the nearest train'], ['heal', 'Heal'], ['die', 'Die (respawn test)']];
-  for (const [c, label, extra] of cmds) {
-    const b = document.createElement('button');
-    b.textContent = label;
-    b.onclick = () => send({ t: 'dev', c, ...(extra || {}) });
-    box.appendChild(b);
-  }
-  // everyone online: teleport to them, fetch them, or give them dev mode too
-  const pl = document.createElement('div'); pl.id = 'dev-players'; box.appendChild(pl);
   renderDevPlayers();
   box.classList.add('hidden');
   $('dev-btn').classList.remove('hidden');
-  if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Press ` (or DEV) for the cheats panel.' : 'Dev mode: press ` (backtick) for the playtest panel.', 'info');
+  if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Tap 🛠 (or press `) for the cheats panel.' : 'Dev mode: tap 🛠 or press ` (backtick) for the playtest panel.', 'info');
 }
 function renderDevPlayers() {
   const el = $('dev-players');
   if (!el) return;
-  const ps = ((S.plist && S.plist.l) || []).filter((q) => !q.me);
-  el.innerHTML = `<b>PLAYERS ONLINE (${ps.length + 1})</b>` + (ps.length ? '' : '<p class="dev-none">Just you.</p>');
+  const all = (S.plist && S.plist.l) || [];
+  const ps = all.filter((q) => !q.me);
+  el.innerHTML = `<b>PLAYERS ONLINE (${all.length || 1})</b>` + (ps.length ? '' : '<p class="dev-none">Just you right now.</p>');
   for (const q of ps) {
     const row = document.createElement('div'); row.className = 'dev-pl';
-    row.innerHTML = `<span>${esc(q.n)}${q.dm ? ' [dev]' : ''}<small>${esc(q.d || '')}</small></span>`;
-    for (const [c, label] of [['goto', 'Go to'], ['bring', 'Bring'], ...(q.dm ? [] : [['grant', 'Give dev']])]) {
+    row.innerHTML = `<span>${esc(q.n)}${q.dm ? ' <i>dev</i>' : ''}${q.god ? ' 🛡' : ''}<small>${esc(q.d || '')}${q.dead ? ' · down' : ''}</small></span>`;
+    const acts = [['goto', '📍 Go to'], ['bring', '🧲 Bring'], ['gunsp', '🔫 Weapons'], ['healp', '❤ Heal'], ['godp', q.god ? '🛡 Invincible: ON' : '🛡 Invincible: off'], ...(q.dm ? [] : [['grant', '🛠 Give dev']])];
+    for (const [c, label] of acts) {
       const b = document.createElement('button'); b.textContent = label;
-      b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') closeOverlay('dev'); setTimeout(requestPlayers, 300); };
+      if (c === 'godp' && q.god) b.classList.add('on');
+      devPress(b, `${label} - ${q.n}`, () => { send({ t: 'dev', c, pid: q.id }); if (c === 'goto' || c === 'bring') closeOverlay('dev'); setTimeout(requestPlayers, 300); });
       row.appendChild(b);
     }
     el.appendChild(row);
@@ -671,6 +694,8 @@ function toggleFullscreen(force) {
 for (const id of ['b-fs', 't-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) toggleMap(!S.bigmap); };
 $('b-phone').onclick = () => openPhone();
+$('b-menu').onclick = () => { if (S.playing) { sfx('click', 0.6); if (topOverlay() === 'pause') closeOverlay('pause'); else openOverlay('pause'); } };
+$('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); };
 $('ph-back').onclick = () => phone.back();
 document.addEventListener('fullscreenchange', () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });
 
@@ -914,7 +939,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'fullscreen') toggleFullscreen();
     else if (a === 'dev') openOverlay('dev');
     else if (a === 'players') { closeOverlay('pause'); openOverlay('players'); renderPlayers(); }
-    else if (a === 'devmode') { closeOverlay('pause'); if (S.devMode) send({ t: 'devmode', leave: true }); else { openOverlay('devpw'); setTimeout(() => $('devpw-in').focus(), 50); } }
+    else if (a === 'devmode') { closeOverlay('pause'); sfx('click', 0.8); if (S.devMode) send({ t: 'devmode', leave: true }); else { send({ t: 'devmode', pw: '' }); S.openDevOnEnter = true; } }
     else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }
   };
 }
@@ -1246,18 +1271,16 @@ function render(dt) {
   drawWaterGlints(view, now);
   S.ground.shores.animate(g, view, now);
   if (rain) { g.fillStyle = 'rgba(30,50,80,0.16)'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
-  // the train I'm riding (if any), and whether it's down in the subway right now
+  // the train I'm riding (if any)
   const meEnt = S.ents.get(S.myPedId);
   const myCar = S.ctrlKind === CTRL.RIDER && meEnt && meEnt.parent ? S.ents.get(meEnt.parent) : null;
   const myTrain = myCar && myCar.kind === K.TRAIN && myCar.d ? myCar.d.tr : -1;
-  const sub = !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1));
-  if (sub) drawTunnel(g, S.map, view, now);
-  else fx.drawDecals(g, view, now, rain);
+  fx.drawDecals(g, view, now, rain);
   // the elevated highway: its shadow and the ramps' feet lie on the ground
-  const hv = sub ? { slabs: [], pillars: [] } : S.highway.visible(view);
+  const hv = S.highway.visible(view);
   S.highway.drawShadows(g, hv.slabs, clock.dark);
   S.highway.drawLow(g, hv.slabs);
-  const insideB = sub ? null : drawInteriorView(sp);
+  const insideB = drawInteriorView(sp);
 
   const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
@@ -1288,12 +1311,12 @@ function render(dt) {
   // downed / dead peds lie on the ground under everything that stands
   const up = (e) => (e.rz || 0) > 0.01;
   for (const p of peds) if ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p) && !up(p)) drawPed(p, now);
-  drawTrains(cars, riders, myTrain, sub, now);
+  drawTrains(cars, riders, myTrain, now);
   for (const b of balls) drawBall(b);
   // 3/4 view: buildings, vehicles, people, carried crates, trees and lamp posts drawn in order of
   // where they stand (north first), so whatever is behind a building is hidden by it
   const items = [];
-  const bl = sub ? [] : S.buildings.inView(view);
+  const bl = S.buildings.inView(view);
   S.bFade ??= new Map();
   for (const it of bl) {
     const inFade = (S.roofFade && S.roofFade[it.b.id]) || 0;
@@ -1308,7 +1331,7 @@ function render(dt) {
   for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pz = par ? par.rz || 0 : 0; items.push({ y: levelKey(par ? par.ry : c.ry, pz) + 0.5, c, z: pz }); }
   S.highway.items(hv.slabs, hv.pillars, items);
   for (const c of crates) if ((c.flags & 3) === 1) items.push({ y: c.ry + 1, c });
-  if (!sub) for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
+  for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
     for (const p of S.ground.overhead(cx, cy)) if (p.x > view.x0 - 40 && p.x < view.x1 + 40 && p.y > view.y0 - 40 && p.y < view.y1 + 90) items.push({ y: p.y + 8, o: p });
   items.sort((a, b) => a.y - b.y);
   const nightLit = clock.dark > 0.3;
@@ -1328,7 +1351,7 @@ function render(dt) {
   if (S.pred && S.pred.kind === 'veh') { const me = S.ents.get(S.ctrlId); const d = me && me.d ? VEHICLE_BY_INDEX[me.d.m] : null; if (d && d.kind === 'boat' && underBridge(me.rx, me.ry, d.L / 2)) outlineVehicle(me, d); }
   else if (S.pred) { const me = S.ents.get(S.ctrlId); if (me && me.swim && S.map.tileAtPx(me.rx, me.ry) === T.BRIDGE) { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); } }
   // ...and so do you, walking or driving under the elevated highway
-  if (S.pred && !sub) {
+  if (S.pred) {
     const me = S.ents.get(S.ctrlId);
     if (me && (me.rz || 0) < 0.3 && underDeck(S.map, me.rx, me.ry)) {
       const d = S.pred.kind === 'veh' && me.d ? VEHICLE_BY_INDEX[me.d.m] : null;
@@ -1336,7 +1359,7 @@ function render(dt) {
       else { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); }
     }
   }
-  if (!sub) coverWalkIns(view, peds, insideB, dt);
+  coverWalkIns(view, peds, insideB, dt);
   for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
 
   // geysers
@@ -1344,19 +1367,15 @@ function render(dt) {
   S.geysers = S.geysers.filter((gy) => gy.until > nowMs);
   for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
 
-  if (!sub) {
-    drawBays(view, dt);
-    drawGarageDoors(view, dt);
-    drawGates(view, dt);
-    drawCrossings(view, dt, now);
-    drawStationClocks(view, now);
-    drawBuoys(view, now);
-  }
-  // traffic lights, cameras, overhead canopy (none of it down in the subway)
-  if (!sub) {
-    drawSignals(view);
-    updateBirds(dt, view, vehs, peds);
-  }
+  drawBays(view, dt);
+  drawGarageDoors(view, dt);
+  drawGates(view, dt);
+  drawCrossings(view, dt, now);
+  drawStationClocks(view, now);
+  drawBuoys(view, now);
+  // traffic lights, cameras, birds
+  drawSignals(view);
+  updateBirds(dt, view, vehs, peds);
   fx.update(dt);
   fx.drawParticles(g);
 
@@ -1379,8 +1398,8 @@ function render(dt) {
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   S.trainCars = cars;
-  if (!sub) drawLighting(clock.dark, view, vehs, peds, z, dt);
-  if (rain && !sub) drawRain(dt);
+  drawLighting(clock.dark, view, vehs, peds, z, dt);
+  if (rain) drawRain(dt);
 
   // HUD bits
   const dist = S.map.districtAt(sp.x, sp.y);
@@ -1648,35 +1667,19 @@ function drawGates(view, dt) {
   }
 }
 // Trains: couplings, then the cars (lit interiors for the train you're riding, roofs for the
-// rest), the people aboard yours, and finally the ground drawn back over anything that has
-// already slid into a tunnel mouth.
-function drawTrains(cars, riders, myTrain, sub, now) {
+// rest) and the people aboard yours.
+function drawTrains(cars, riders, myTrain, now) {
   if (!cars.length && !riders.length) return;
   const byId = new Map(cars.map((c) => [c.id, c]));
   for (const c of cars) { const ahead = c.parent ? byId.get(c.parent) : null; if (ahead) drawCoupling(g, ahead, c); }
   for (const c of cars) drawTrainCar(g, c, c.d.tr === myTrain, now);
   for (const p of riders) { g.save(); g.translate(p.rx, p.ry); g.scale(0.8, 0.8); g.translate(-p.rx, -p.ry); drawPed(p, now); g.restore(); } // a touch smaller, so two fit abreast
-  if (!sub) for (const pc of S.portals || []) {
-    if (!cars.some((c) => c.rx > pc.x0 - 120 && c.rx < pc.x1 + 120 && c.ry > pc.y0 - 120 && c.ry < pc.y1 + 120)) continue;
-    coverGround(pc.x0, pc.y0, pc.x1, pc.y1);
-  }
   // the horn and the rumble
   for (const c of cars) {
     if (c.d.c !== 0) continue;
     const moving = c.buf.length > 1 && Math.hypot(c.buf[c.buf.length - 1].x - c.buf[c.buf.length - 2].x, c.buf[c.buf.length - 1].y - c.buf[c.buf.length - 2].y) > 4;
     if (moving) sfx('rumble', distVol(c.rx, c.ry) * 0.6);
   }
-}
-
-// Redraw a rectangle of the baked ground on top of whatever is there.
-function coverGround(x0, y0, x1, y1) {
-  for (let cy = Math.floor(y0 / CHUNK_PX); cy <= Math.floor((y1 - 1) / CHUNK_PX); cy++)
-    for (let cx = Math.floor(x0 / CHUNK_PX); cx <= Math.floor((x1 - 1) / CHUNK_PX); cx++) {
-      const bx = cx * CHUNK_PX, by = cy * CHUNK_PX;
-      const sx = Math.max(x0, bx), sy = Math.max(y0, by), ex = Math.min(x1, bx + CHUNK_PX), ey = Math.min(y1, by + CHUNK_PX);
-      if (ex <= sx || ey <= sy) continue;
-      g.drawImage(S.ground.get(cx, cy), sx - bx, sy - by, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);
-    }
 }
 
 // Level crossings: gate arms swing down when the server says a train is coming; the bell rings.
@@ -1699,10 +1702,11 @@ function drawStationClocks(view, now) {
   const tt = S.tt || { l: [], at: 0 };
   const since = performance.now() / 1000 - tt.at;
   sts.forEach((st, i) => {
-    const x = st.under ? st.platform.x : st.x, y = st.under ? st.platform.y : st.y;
-    if (x < view.x0 - 200 || x > view.x1 + 200 || y < view.y0 - 200 || y > view.y1 + 200) return;
+    if (st.x < view.x0 - 600 || st.x > view.x1 + 600 || st.y < view.y0 - 600 || st.y > view.y1 + 600) return;
     const v = tt.l[i];
-    drawStationClock(g, st, v === undefined ? -1 : v === 0 ? 0 : Math.max(0.01, v - since), now);
+    const secs = v === undefined ? -1 : v === 0 ? 0 : Math.max(0.01, v - since);
+    if (secs === 0 && S.ctrlKind !== CTRL.RIDER) drawBoardingCue(g, S.map.rail, st, now); // a train is in: the platform lights up
+    drawStationClock(g, st, secs, now);
   });
 }
 

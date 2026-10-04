@@ -29,7 +29,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 14;
+export const TUTORIAL_VERSION = 15;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -79,8 +79,8 @@ export const STEPS = [
   { ch: 'city', title: isle('C'), at: { island: 'C' },
     text: `The Syndicate's island fortress, off the far shore of ${isle('F')}. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
-  { ch: 'city', title: 'The metro', at: { pois: 'station' },
-    text: `${TRAINS_ON_LINE} trains run one loop through the middle of the city at up to ${kmh(TRAIN_SPEED)} km/h - in a subway tunnel under Midtown, Downtown and the Civic Center, out past the ring highway across the fields of ${isle('F')}, back at street level through Southside and Pine Hills, over the river and in past The Yards - easing into every {{station}} for ${TRAIN_DWELL_S} seconds. The clock on each platform counts down to the next train. Stand by a door while a train is in and press [[action]] to board; at the subway stations take the stairs down. Inside, the roof comes off so you can see the cars: walk through them while it moves, sit back and watch the city go by. [[vehicle]] gets you off at a station - or leap from the door of a moving train: at a crawl you just roll, at full speed the landing can break bones. In the tunnel the doors stay shut. Running alongside a slow train, or driving level with it, you can hop on too.` },
+  { ch: 'city', title: 'The railway', at: { pois: 'station' },
+    text: `${TRAINS_ON_LINE} trains run one huge loop round the whole map at up to ${kmh(TRAIN_SPEED)} km/h, out in the open the whole way: through the middle of ${isle('W')}, over the long bay bridge to ${isle('N')}, across the channel into Old Town, down through the fields of ${isle('F')}, back through ${isle('R')}, up through the heart of ${isle('D')} under the ring highway, over the river mouth to ${isle('S')} and across the strait home again. They ease into every {{station}} for ${TRAIN_DWELL_S} seconds - a few stops on every island. Each platform has a clock counting down to the next train; when one is in, the platform edge glows green and arrows point at the doors - walk onto the platform and press [[action]] to board. Inside, the roof comes off so you can see the cars: walk through them while it moves, sit back and watch the city go by. [[vehicle]] gets you off at a station - or leap from the door of a moving train: at a crawl you just roll, at full speed the landing can break bones. Running alongside a slow train, or driving level with it, you can hop on too.` },
   { ch: 'city', title: 'Level crossings', at: { crossings: 1 },
     text: `Where the line crosses a road the gates drop when a train is within ${Math.round(CROSSING_WARN_PX / TILE)} m. Most drivers wait; some gamble, and cops on a chase often try to beat the train. You can smash straight through the arms. Nothing stops a train and nothing hurts it: anyone on the tracks gets thrown, and a car caught on the front of the engine is dragged along - steer it off within ${TRAIN_DRAG_EXPLODE_S} seconds or it blows up.` },
   // ---- basics --------------------------------------------------------------------------------

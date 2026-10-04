@@ -1,7 +1,7 @@
-// Trains: the metro. Six trains run one loop through the middle of Metro City - in a subway
-// tunnel under Midtown, Downtown and the Civic Center, out past the ring highway into the
-// fields of Dry Creek, back at street level through Southside and Pine Hills, over the river
-// and in past The Yards - easing in and out of every station. Each platform has a clock
+// Trains: the railway. A fleet of trains runs one huge loop round the whole map - Westport,
+// Granite Peaks, Northshore, Old Town, the fields of Dry Creek, Southside, Pine Hills, the core
+// of Metro City, The Yards and Cedar Isle, over the bridges between the islands - all of it out
+// in the open at grade, easing in and out of every open-air platform. Each platform has a clock
 // counting down to the next train. Nothing stops them and nothing hurts them: a car on the line
 // gets shoved along in front of the engine and blows up if it can't get off; people get thrown.
 // Anyone can ride: players, NPC commuters (seated or standing), and cops who come aboard at the
@@ -15,6 +15,7 @@ import { railAt, TRAIN_CARS, COACH_SEATS, COACH_STAND, MAIL_BOX, MAIL_POSTS, CRO
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
 import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAINS_ON_LINE, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, BAIL_SPEED } from '../../shared/rules.js';
 import { STAR_HEAT } from '../../shared/constants.js';
+import { KB, TOUCH } from '../../shared/controls.js';
 import { mulberry32 } from '../../shared/rng.js';
 import * as vehicles from './vehicles.js';
 import * as combat from './combat.js';
@@ -28,11 +29,12 @@ const JERK = 150;          // how quickly the acceleration itself changes (px/s^
 const HEADWAY_PX = 520;    // never closer than this to the back of the train ahead (block signalling)
 const TIMING_STEP = 64;    // px between samples in the precomputed run-time tables (station clocks)
 // every third train hauls the mail car
-const CONSISTS = Array.from({ length: TRAINS_ON_LINE }, (_, i) => (i % 3 === 0 ? ['loco', 'coach', 'coach', 'mail'] : ['loco', 'coach', 'coach', 'coach']));
+const CONSISTS = Array.from({ length: TRAINS_ON_LINE }, (_, i) => (i % 3 === 0 ? ['loco', 'coach', 'mail'] : ['loco', 'coach', 'coach'])); // short enough to stop between two streets
 const CAR_IDX = { loco: 0, coach: 1, mail: 2 };
 const WALK = 95, RUN = 150;
 const POP_NEAR = 1500, POP_FAR = 2600;
 const BOX_RESET_S = 300;
+const ACTION_HINT = `${KB.action} (${TOUCH.action} on touch)`;
 const COMMUTERS = ['casual', 'casual', 'executive', 'socialite', 'senior', 'athlete', 'construction', 'hustler'];
 
 const mod = (a, n) => ((a % n) + n) % n;
@@ -50,7 +52,7 @@ export function init(world) {
     let off = 0;
     cons.forEach((kind, ci) => {
       const def = TRAIN_CARS[CAR_IDX[kind]];
-      const e = world.add({ id: world.newId(), kind: K.TRAIN, x: 0, y: 0, a: 0, vx: 0, vy: 0, train: ti, car: ci, carType: CAR_IDX[kind], sub: false, cx: -1, cy: -1 });
+      const e = world.add({ id: world.newId(), kind: K.TRAIN, x: 0, y: 0, a: 0, vx: 0, vy: 0, train: ti, car: ci, carType: CAR_IDX[kind], cx: -1, cy: -1 });
       cars.push({ kind, def, off: off + def.L / 2, id: e.id });
       off += def.L + GAP;
     });
@@ -145,8 +147,8 @@ function stepTrain(world, t, dt) {
 
 function carPose(rail, t, c) {
   const sc = t.s - c.off, h = c.def.L * 0.4;
-  const f = railAt(rail, sc + h), b = railAt(rail, sc - h), m = railAt(rail, sc);
-  return { x: (f.x + b.x) / 2, y: (f.y + b.y) / 2, a: Math.atan2(f.y - b.y, f.x - b.x), sub: m.under };
+  const f = railAt(rail, sc + h), b = railAt(rail, sc - h);
+  return { x: (f.x + b.x) / 2, y: (f.y + b.y) / 2, a: Math.atan2(f.y - b.y, f.x - b.x) };
 }
 
 function placeCars(world, t) {
@@ -158,10 +160,9 @@ function placeCars(world, t) {
     const q = carPose(rail, t, c);
     e.x = q.x; e.y = q.y; e.a = q.a;
     e.vx = Math.cos(q.a) * t.v; e.vy = Math.sin(q.a) * t.v;
-    e.sub = q.sub;
     e.doors = !!t.dwellUntil;
     e.horn = now < t.hornUntil;
-    e.lit = lit || q.sub;
+    e.lit = lit;
     e.boxGone = e.carType === 2 && now < t.boxReadyAt;
   }
 }
@@ -196,7 +197,7 @@ function stepRiders(world, t, dt) {
     if (p.npc && !p.dead && now >= p.downUntil && now >= p.stunUntil) npcRide(world, t, p, dt);
     const e = world.get(t.cars[r.c].id);
     const [x, y] = localToWorld(e.x, e.y, e.a, r.ox, r.oy);
-    p.x = x; p.y = y; p.vx = e.vx; p.vy = e.vy; p.sub = e.sub; p.under = false; p.rollT = 0; p.tumbleUntil = 0; p.airUntil = 0;
+    p.x = x; p.y = y; p.vx = e.vx; p.vy = e.vy; p.under = false; p.rollT = 0; p.tumbleUntil = 0; p.airUntil = 0;
     if (p.npc && !p.dead && r.la !== undefined) p.a = e.a + r.la;
     if (p.player) {
       const inMail = r.c === t.mail;
@@ -234,7 +235,7 @@ export function board(world, ped, t, ci, ox, oy, la) {
 export function alight(world, ped, x, y) {
   const t = trainOf(world, ped);
   if (t) t.riders.delete(ped.id);
-  ped.onTrain = null; ped.sub = false;
+  ped.onTrain = null;
   ped.x = x; ped.y = y;
   world.place(ped);
   if (ped.player) { ped.player.meDirty = true; ped.player.crack = null; }
@@ -244,7 +245,7 @@ export function alight(world, ped, x, y) {
 function doorSide(world, t, ci, st) {
   const e = world.get(t.cars[ci].id);
   const nx = -Math.sin(e.a), ny = Math.cos(e.a);
-  if (st && !st.under) return Math.sign((st.platform.x - e.x) * nx + (st.platform.y - e.y) * ny) || 1;
+  if (st) return Math.sign((st.platform.x - e.x) * nx + (st.platform.y - e.y) * ny) || 1;
   for (const sd of [1, -1]) { const x = e.x + nx * sd * 56, y = e.y + ny * sd * 56; if (!PED_BLOCK[world.map.tileAtPx(x, y)]) return sd; }
   return 1;
 }
@@ -254,13 +255,23 @@ function doorPoint(world, t, ci, side, out) {
   return { x, y };
 }
 const stationAt = (world, t) => (t.dwellUntil ? world.map.rail.stations[t.stop] : null);
+// Standing anywhere along station st's platform (it follows the track, as long as a train).
+export function onPlatformOf(world, st, x, y) {
+  if (Math.abs(x - st.x) > st.half + 200 || Math.abs(y - st.y) > st.half + 200) return false;
+  const mid = (st.inner + st.outer) / 2, reach = (st.outer - st.inner) / 2 + 40;
+  for (let d = -st.half; d <= st.half; d += 24) {
+    const q = railAt(world.map.rail, st.s + d);
+    if (Math.hypot(q.x - Math.sin(q.a) * st.side * mid - x, q.y + Math.cos(q.a) * st.side * mid - y) < reach) return true;
+  }
+  return false;
+}
 
-// Step off at a station (onto the platform, or up the stairs to the street for the subway).
+// Step off at a station, onto the platform.
 function alightAtStation(world, t, ped) {
   const st = stationAt(world, t);
   if (!st) return false;
-  if (st.under) { const a = rng() * 6.28; alight(world, ped, st.platform.x + Math.cos(a) * 14, st.platform.y + Math.sin(a) * 14); }
-  else { const pt = doorPoint(world, t, ped.onTrain.c, doorSide(world, t, ped.onTrain.c, st), 22 + rng() * 12); alight(world, ped, pt.x, pt.y); }
+  const pt = doorPoint(world, t, ped.onTrain.c, doorSide(world, t, ped.onTrain.c, st), 22 + rng() * 12);
+  alight(world, ped, pt.x, pt.y);
   if (ped.npc) { ped.npc.state = 'wander'; ped.npc.until = 0; ped.npc.wx = ped.x; ped.npc.wy = ped.y; }
   return true;
 }
@@ -365,7 +376,7 @@ function arrived(world, t) {
     const want = Math.min(4, 1 + q.player.wanted) - cops;
     for (let k = 0; k < want; k++) {
       const ci = 1 + Math.floor(rng() * (t.cars.length - 1));
-      const pt = st.under ? st.platform : doorPoint(world, t, ci, doorSide(world, t, ci, st), 20);
+      const pt = doorPoint(world, t, ci, doorSide(world, t, ci, st), 20);
       const cop = spawnNpc(world, q.player.wanted >= 4 ? 'swat' : 'cop', pt.x, pt.y, 'cop');
       cop.weapon = q.player.wanted >= 4 ? 'pshotgun' : 'pistol';
       cop.npc.target = q.id; cop.npc.trainCop = true;
@@ -375,12 +386,11 @@ function arrived(world, t) {
     break;
   }
   // new commuters walk up to the doors
-  const n = st.under ? 1 + Math.floor(rng() * 3) : Math.floor(rng() * 4);
+  const n = Math.floor(rng() * 4);
   for (let k = 0; k < n; k++) {
     const ci = 1 + Math.floor(rng() * (t.cars.length - 1));
     if (ci === t.mail) continue;
     const arche = COMMUTERS[Math.floor(rng() * COMMUTERS.length)];
-    if (st.under) { const spot = freeSpot(world, t, ci, true); if (!spot) continue; const q = spawnNpc(world, arche, st.platform.x, st.platform.y, 'civ'); board(world, q, t, ci, spot.ox, spot.oy, 0); q.onTrain.seat = spot.seat; q.onTrain.dest = pickDest(world, t); continue; }
     const side = doorSide(world, t, ci, st);
     const pt = doorPoint(world, t, ci, side, 50 + rng() * 50);
     const e = world.get(t.cars[ci].id);
@@ -469,7 +479,7 @@ function collide(world, t, dt) {
   const now = world.time;
   for (let ci = 0; ci < t.cars.length; ci++) {
     const c = t.cars[ci], e = world.get(c.id);
-    if (!e || e.sub) continue;
+    if (!e) continue;
     const hl = c.def.L / 2, hw = c.def.W / 2;
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     for (const v of world.query(e.x, e.y, hl + 80, K.VEH)) {
@@ -556,8 +566,9 @@ function updateCrossings(world) {
       const ahead = mod(c.s - t.s, rail.len), behind = mod(t.s - c.s, rail.len);
       if (behind < t.len + 30) { down = true; eta = 0; continue; }
       if (ahead < CROSSING_WARN_PX) {
-        down = true;
         const wait = t.dwellUntil ? t.dwellUntil - now : 0;
+        if (wait > 3) continue; // standing at the platform: the gates ahead stay up until it's about to leave
+        down = true;
         eta = Math.min(eta, wait + ahead / Math.max(80, t.v || 0));
       }
     }
@@ -643,7 +654,7 @@ export function interaction(world, p) {
     if (p.crack) return { label: `Cracking the strongbox... ${Math.ceil(p.crack.until - now)}s`, run: () => {} };
     if (r.c === t.mail && now >= t.boxReadyAt && Math.hypot(r.ox - MAIL_BOX.ox, r.oy - MAIL_BOX.oy) < 40) return { label: 'Crack the strongbox', run: () => startCrack(world, p, t) };
     const st = stationAt(world, t);
-    if (st) return { label: st.under ? `Get off - up the stairs at ${st.name}` : `Get off at ${st.name}`, key: 'F', run: () => getOff(world, p) };
+    if (st) return { label: `Get off at ${st.name}`, key: 'F', run: () => getOff(world, p) };
     return { label: 'Jump off the train', key: 'F', run: () => getOff(world, p) };
   }
   if (ped.vehId) {
@@ -654,18 +665,16 @@ export function interaction(world, p) {
   for (const t of world.trains) {
     const st = stationAt(world, t);
     if (!st) continue;
-    if (st.under) {
-      if (Math.hypot(ped.x - st.platform.x, ped.y - st.platform.y) < 80) return { label: `Down the stairs - board the train at ${st.name}`, run: () => boardAtStation(world, ped, t, 1) };
-      continue;
-    }
-    let best = -1, bd = 140;
+    // anywhere on the platform counts: you walk to the nearest open door
+    const onPlatform = onPlatformOf(world, st, ped.x, ped.y);
+    let best = -1, bd = onPlatform ? Infinity : 140;
     for (let ci = 1; ci < t.cars.length; ci++) {
       if (ci === t.mail) continue;
       const d = doorPoint(world, t, ci, doorSide(world, t, ci, st), 14);
       const dd = Math.hypot(ped.x - d.x, ped.y - d.y);
       if (dd < bd) { bd = dd; best = ci; }
     }
-    if (best > 0) return { label: `Board the train (next: ${world.map.rail.stations[(t.stop + 1) % world.map.rail.stations.length].name})`, run: () => boardAtStation(world, ped, t, best) };
+    if (best > 0) return { label: `Board the train - next stop ${world.map.rail.stations[(t.stop + 1) % world.map.rail.stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
   }
   const hit = climbable(world, ped, ped.x, ped.y, 48, ped.vx, ped.vy);
   return hit ? { label: `Hop onto the ${hit.t.cars[hit.ci].def.name.toLowerCase()}`, run: () => climbOn(world, ped, hit) } : null;
@@ -676,7 +685,7 @@ function climbable(world, ped, x, y, reach, vx, vy) {
   for (const t of world.trains) {
     for (let ci = 1; ci < t.cars.length; ci++) {
       const e = world.get(t.cars[ci].id);
-      if (!e || e.sub || Math.hypot(e.x - x, e.y - y) > t.cars[ci].def.L / 2 + reach) continue;
+      if (!e || Math.hypot(e.x - x, e.y - y) > t.cars[ci].def.L / 2 + reach) continue;
       const ca = Math.cos(e.a), sa = Math.sin(e.a);
       const lx = (x - e.x) * ca + (y - e.y) * sa, ly = -(x - e.x) * sa + (y - e.y) * ca;
       if (Math.abs(lx) > half(t.cars[ci]) + 8 || Math.abs(ly) > t.cars[ci].def.W / 2 + reach) continue;
@@ -705,7 +714,6 @@ export function getOff(world, p) {
   if (!t) return;
   p.crack = null;
   if (t.dwellUntil) { alightAtStation(world, t, ped); return; }
-  if (world.get(t.cars[ped.onTrain.c].id).sub) { world.notify(p, 'You\'re in the tunnel - the doors stay shut until the next station.', 'warn'); return; }
   jumpOff(world, ped);
 }
 
@@ -732,7 +740,6 @@ export function riderInput(world, p, ped, inp, pressed, dt) {
 
 // ---- the mail-car strongbox --------------------------------------------------------------------
 function startCrack(world, p, t) {
-  if (world.get(t.cars[t.mail].id).sub) { world.notify(p, 'Not in the tunnel - wait till you\'re out in the open.', 'warn'); return; }
   p.crack = { t: t.i, until: world.time + STRONGBOX_CRACK_S, t0: world.time };
   world.notify(p, 'Cracking the strongbox - stay with it!', 'warn');
   p.meDirty = true;
@@ -849,6 +856,28 @@ function etaTo(world, t, si) {
   return eta;
 }
 
+// Debug: the train due next at the station nearest (x, y) is put straight in at its platform.
+export function callTrain(world, x, y) {
+  const rail = world.map.rail, sts = rail.stations;
+  let si = 0, bd = Infinity;
+  sts.forEach((st, i) => { const d = Math.hypot(st.platform.x - x, st.platform.y - y); if (d < bd) { bd = d; si = i; } });
+  const st = sts[si];
+  let t = null, best = Infinity;
+  for (const u of world.trains) { const d = mod(st.s + u.len / 2 - u.s, rail.len); if (d < best) { best = d; t = u; } }
+  if (!t) return null;
+  t.s = mod(st.s + t.len / 2, rail.len); t.v = 0; t.acc = 0; t.braking = false; t.stop = si; t.dwellUntil = world.time + TRAIN_DWELL_S * 3;
+  placeCars(world, t);
+  return { t, st };
+}
+
+// Seconds until the next train at station si (0: one is in now).
+export function nextTrainIn(world, si) {
+  if (!world.trains || !world.trains.length) return Infinity;
+  let best = Infinity;
+  for (const t of world.trains) best = Math.min(best, etaTo(world, t, si));
+  return best;
+}
+
 // Every station's clock: seconds until the next train (0 = one is at the platform now).
 export function timetable(world) {
   if (!world.trains || !world.trains.length) return [];
@@ -865,7 +894,7 @@ export function stationBoard(world, poi) {
     const eta = etaTo(world, t, si);
     return { eta, text: `${t.mail >= 0 ? 'Mail train' : 'Commuter'}: ${eta < 1 ? 'AT THE PLATFORM - board now' : `${Math.round(eta)}s`}` };
   }).sort((a, b) => a.eta - b.eta).slice(0, 3).map((q) => q.text);
-  return { title: sts[si].name, sub: `${sts[si].under ? 'Subway - take the stairs down when a train is in. ' : ''}Trains run the whole loop: ${sts.map((q) => q.name.replace(/ Station$/, '')).join(', ')}. ${lines.join(' · ')}` };
+  return { title: sts[si].name, sub: `Wait on the platform - when a train pulls in, walk up to its doors and press ${ACTION_HINT} to board. ${lines.join(' · ')}` };
 }
 
 export function meInfo(world, p) {
@@ -875,7 +904,7 @@ export function meInfo(world, p) {
   const e = world.get(t.cars[ped.onTrain.c].id);
   const next = t.dwellUntil ? sts[t.stop] : sts[t.stop];
   return {
-    sub: !!e.sub, car: t.cars[ped.onTrain.c].kind, next: next.name, at: !!t.dwellUntil, eta: Math.round(etaTo(world, t, t.stop)),
+    car: t.cars[ped.onTrain.c].kind, next: next.name, at: !!t.dwellUntil, eta: Math.round(etaTo(world, t, t.stop)),
     crack: p.crack ? Math.min(1, (world.time - p.crack.t0) / STRONGBOX_CRACK_S) : null, rural: onRuralRun(world, t),
   };
 }

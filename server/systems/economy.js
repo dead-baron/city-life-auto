@@ -26,7 +26,7 @@ export function poiLabel(world, p, poi) {
     case 'gang': return gang.isMember(p) ? 'Syndicate HQ (members)' : 'Syndicate HQ (join the gang)';
     case 'smuggler': return "Smuggler's Den";
     case 'charter': return 'Charter desk (deep-sea fishing)';
-    case 'station': return `${poi.label} - timetable`;
+    case 'station': { const eta = trains.nextTrainIn(world, poi.station); return eta < 1 ? `${poi.label} - train in! Walk up to the doors` : `${poi.label} - next train ${Math.round(eta)}s (timetable)`; }
     case 'home': {
       const h = world.map.homes[poi.home];
       const owner = world.homeOwner.get(h.id);

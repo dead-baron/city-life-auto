@@ -125,7 +125,7 @@ test('players online: everyone sees names, roles and districts; only devs get po
   void b;
 });
 
-test('Dev Debug Mode: password, nothing saved, leaving restores everything; teleport, bring and grant', () => {
+test('Dev Debug Mode: no password, nothing saved, leaving restores everything; teleport, bring, grant, invincible', () => {
   const w = makeWorld();
   const { p, conn } = joinPlayer(w);
   const { p: other } = joinPlayer(w);
@@ -134,10 +134,17 @@ test('Dev Debug Mode: password, nothing saved, leaving restores everything; tele
   const real = p.profile;
   real.cash = 1234; real.criminalExp = 50;
   const x0 = p.ped.x, y0 = p.ped.y;
-  assert.equal(devmode.tryPassword(w, p, 'nope'), false);
-  assert.ok(!p.devMode);
-  assert.equal(devmode.tryPassword(w, p, 'godmode'), true, 'GODMODE (any case)');
+  assert.equal(devmode.tryPassword(w, p, ''), true, 'no password while testing');
   assert.ok(p.devMode);
+  // invincible: for yourself, and for another player
+  devmode.setInvincible(w, p, null);
+  combat.damage(w, p.ped, 9999, null, 'test');
+  assert.ok(!p.ped.dead && p.ped.hp > 0, 'nothing kills you');
+  devmode.setInvincible(w, p, other.pid);
+  combat.kill(w, other.ped, null, 'test');
+  assert.ok(!other.ped.dead, 'they can\'t be killed either');
+  devmode.setInvincible(w, p, null); devmode.setInvincible(w, p, other.pid);
+  assert.ok(!p.invincible && !other.invincible, 'toggled back off');
   // cheat away
   p.profile.cash += 99999; p.profile.criminalExp = 9999; p.profile.weapons.rocket = 10;
   p.heat = 200; p.wanted = 5;
