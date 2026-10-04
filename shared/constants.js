@@ -31,7 +31,7 @@ export const T = {
 export const WEATHER = { CLEAR: 0, RAIN: 1 };
 
 // Entity kinds (wire values)
-export const K = { PED: 1, VEH: 2, CRATE: 3, BAG: 4, PROJ: 5, PICKUP: 6 };
+export const K = { PED: 1, VEH: 2, CRATE: 3, BAG: 4, PROJ: 5, PICKUP: 6, BALL: 7 };
 
 // Ped flag bits (wire)
 export const PF = {

@@ -86,6 +86,7 @@ export class GroundCache {
     for (const mn of m.mansions || []) drawMansion(g, mn, cx, cy);
     for (const gr of m.garages || []) drawGarage(g, gr, cx, cy);
     for (const mp of m.motorPools || []) drawMotorPool(g, mp, cx, cy);
+    for (const v of m.venues || []) drawVenue(g, v, cx, cy);
     for (const b of this.signs.get(k) || []) for (const s of b.signs) drawSign(g, s);
     for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
     for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
@@ -168,6 +169,40 @@ function drawBayFloor(g, bay, cx, cy) {
   g.fillRect(x - 3, back ? y + h - 3 : y, w + 6, 3);
   // spray nozzles on the walls
   g.fillStyle = '#c8262b'; for (let k = 0; k < 3; k++) { g.fillRect(x - 2, y + 18 + k * 26, 4, 4); g.fillRect(x + w - 2, y + 18 + k * 26, 4, 4); }
+}
+
+// Mini-game venues: a striped, lined soccer pitch with goals; a roped sand court with a net.
+function drawVenue(g, v, cx, cy) {
+  const { x, y, w, h } = v.rect;
+  if (x + w + 80 < cx * CHUNK_PX || x - 80 > (cx + 1) * CHUNK_PX || y + h + 80 < cy * CHUNK_PX || y - 80 > (cy + 1) * CHUNK_PX) return;
+  g.save();
+  if (v.kind === 'soccer') {
+    for (let k = 0; k * 64 < w; k++) { g.fillStyle = k % 2 ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.05)'; g.fillRect(x + k * 64, y, Math.min(64, w - k * 64), h); }
+    g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 3;
+    g.strokeRect(x, y, w, h);
+    g.beginPath(); g.moveTo(x + w / 2, y); g.lineTo(x + w / 2, y + h); g.stroke();
+    g.beginPath(); g.arc(x + w / 2, y + h / 2, 64, 0, 6.28); g.stroke();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(x + w / 2, y + h / 2, 4, 0, 6.28); g.fill();
+    const bw = 130, bh = v.goalW + 120;
+    g.strokeRect(x, y + h / 2 - bh / 2, bw, bh); g.strokeRect(x + w - bw, y + h / 2 - bh / 2, bw, bh);
+    for (const [gx, dir] of [[x, -1], [x + w, 1]]) { // goals with nets
+      g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(dir < 0 ? gx - 28 : gx, y + h / 2 - v.goalW / 2, 28, v.goalW);
+      g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1;
+      for (let k = 4; k < 28; k += 6) { g.beginPath(); g.moveTo(gx + dir * k, y + h / 2 - v.goalW / 2); g.lineTo(gx + dir * k, y + h / 2 + v.goalW / 2); g.stroke(); }
+      for (let k = 0; k <= v.goalW; k += 8) { g.beginPath(); g.moveTo(gx, y + h / 2 - v.goalW / 2 + k); g.lineTo(gx + dir * 28, y + h / 2 - v.goalW / 2 + k); g.stroke(); }
+      g.strokeStyle = '#fff'; g.lineWidth = 4;
+      g.beginPath(); g.moveTo(gx, y + h / 2 - v.goalW / 2); g.lineTo(gx + dir * 28, y + h / 2 - v.goalW / 2); g.lineTo(gx + dir * 28, y + h / 2 + v.goalW / 2); g.lineTo(gx, y + h / 2 + v.goalW / 2); g.stroke();
+    }
+  } else {
+    g.strokeStyle = '#2350c8'; g.lineWidth = 3; g.strokeRect(x, y, w, h);
+    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(v.netX - 2, y - 6, 8, h + 12); // net shadow
+    g.strokeStyle = '#f5f5f5'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(v.netX, y - 6); g.lineTo(v.netX, y + h + 6); g.stroke();
+    g.strokeStyle = 'rgba(30,30,30,.55)'; g.lineWidth = 1;
+    for (let k = 0; k < h + 12; k += 5) { g.beginPath(); g.moveTo(v.netX - 3, y - 6 + k); g.lineTo(v.netX + 3, y - 6 + k); g.stroke(); }
+    g.fillStyle = '#3a3a42'; g.fillRect(v.netX - 4, y - 10, 8, 8); g.fillRect(v.netX - 4, y + h + 2, 8, 8);
+  }
+  g.restore();
 }
 
 // Police motor pool: painted bays on dark asphalt inside a chain-link fence on a concrete curb.

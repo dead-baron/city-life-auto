@@ -21,11 +21,12 @@ import {
   SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
   RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE, JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S,
   NPC_GUN_MULT, VEHICLE_TOUGHNESS, ARMORED_ROCKETS, ARMORED_VEHICLES,
+  MATCH_COUNTDOWN_S, SOCCER_GOALS, SOCCER_MATCH_S, VOLLEY_POINTS, MATCH_PRIZE,
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 7;
+export const TUTORIAL_VERSION = 8;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -91,6 +92,8 @@ export const STEPS = [
     text: `Buy a jet ski, dinghy or speedboat at {{marina}}, or borrow one from a dock. NPC boaters cruise the bay and harbor police patrol it. Book a deep-sea charter at {{charter}}: head far from land, sit still and fish over the side for grouper, swordfish and marlin - land ${DEEPSEA_CATCH} for a $${DEEPSEA_PAY} bonus.` },
   { ch: 'citizen', title: 'Races', at: { island: 'P' },
     text: `Pull up to a start buoy on a jet ski (jet ski sprint) or in a boat (boat classic) to enter. A countdown lets others join, then it's buoy to buoy - the arrow on your radar shows the next one. Prize money goes to the top three; turn up mid-race and you're in the next round. Leave your craft and you forfeit.` },
+  { ch: 'citizen', title: 'Soccer and volleyball', at: { district: 'Greenfield Park' },
+    text: `The ball is always out on the Greenfield Park pitch and the beach volleyball courts (Sunset Beach, Pelican Key) - kick it about any time with [[fire]] next to it. When two or more players are on, a match starts after ${MATCH_COUNTDOWN_S} seconds, sides picked by where you stand: soccer is first to ${SOCCER_GOALS} goals or the lead after ${Math.round(SOCCER_MATCH_S / 60)} minutes, volleyball first to ${VOLLEY_POINTS} points. Winners get $${MATCH_PRIZE}. Walk off and you forfeit; late arrivals play the next round. Weapons still work - if one side is wiped out, the last team standing wins.` },
   { ch: 'citizen', title: 'Shopping', at: { poi: 'coffee' },
     text: `Shops, banks, hospitals, the courthouse and police stations are walk-in: the doors slide open, the roof fades away while you're inside, and you deal with the clerk across the counter (the pawn shop and bank serve you through glass). {{coffee}} boosts your stamina regen, {{hardware}} and {{sports}} sell melee weapons, {{gunshop}} sells legal guns, and {{pawn}} buys and sells second-hand gear.` },
   { ch: 'citizen', title: 'Homes', at: { homes: 'Pine Hills' },

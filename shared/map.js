@@ -96,7 +96,9 @@ const DIST_RECTS = [
 // Syndicate turf (tiles): The Yards and Southside.
 const TURF_RECTS = [[0, 83, 133, 168], [0, 303, 137, 364], [436, 216, 508, 320]];
 // Big park cells (tiles) - left as parks instead of being subdivided.
-const PARK_CELLS = [{ x: 76, y: 18, label: 'Greenfield Park', pond: true }, { x: 276, y: 46, label: 'Central Park', pond: false }];
+const PARK_CELLS = [{ x: 76, y: 18, label: 'Greenfield Park', pond: true, pitch: true }, { x: 276, y: 46, label: 'Central Park', pond: false }];
+// Beach volleyball courts on open sand (tiles: x, y, w, h); waterfront dressing keeps clear of them.
+const VOLLEY_COURTS = [{ name: 'Sunset Beach Volleyball', at: [80, 371, 16, 8] }];
 
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
@@ -171,6 +173,7 @@ export class CityMap {
     this.stalls = [];
     this.marina = [];
     this.gates = []; // sliding gates (police motor pools, the Syndicate compound)
+    this.venues = []; // mini-game venues: soccer pitch, beach volleyball courts
     this.dropSites = [];
     this.cameras = [];
     this.nodes = [];
@@ -442,6 +445,7 @@ export function generateCity(seed = 1337) {
   buildInteriors(m);
   buildDealerLots(m);
   buildOffshore(m, rand);
+  for (const c of VOLLEY_COURTS) volleyCourt(m, c.name, ...c.at);
   aimLamps(m);
   buildLaneGraph(m);
   buildCameras(m, rand);
@@ -996,6 +1000,15 @@ function buildDealerLots(m) {
   }
 }
 
+// A sand volleyball court with a net across the middle (net posts are solid).
+function volleyCourt(m, name, x, y, w, h) {
+  m.fill(x - 1, y - 1, w + 2, h + 2, T.SAND);
+  const rect = { x: x * TILE, y: y * TILE, w: w * TILE, h: h * TILE };
+  const netX = rect.x + rect.w / 2;
+  m.addSolidProp(netX, rect.y - 6, 5); m.addSolidProp(netX, rect.y + rect.h + 6, 5);
+  m.venues.push({ id: m.venues.length, kind: 'volley', name, rect, netX });
+}
+
 // ---- out on the water ------------------------------------------------------------------------
 // Two islands you can only reach by boat (Pelican Key: beach, bar, charter dock; Smuggler's Rock:
 // the Syndicate's walled compound), open-sea waypoints for boats, offshore fishing grounds and
@@ -1041,6 +1054,9 @@ function buildOffshore(m, rand) {
   const [px0, py0, px1, py1] = P.box;
   const pcx = Math.floor((px0 + px1) / 2), pcy = Math.floor((py0 + py1) / 2);
   m.fill(pcx - 8, pcy - 2, 16, 4, T.PLAZA); // boardwalk
+  const court = [px0 + 8, py0 + 9, 16, 8];
+  volleyCourt(m, 'Pelican Key Volleyball', ...court);
+  const onCourt = (tx, ty) => tx >= court[0] - 2 && tx <= court[0] + court[2] + 1 && ty >= court[1] - 2 && ty <= court[1] + court[3] + 1;
   m.fill(pcx - 2, py0 + 6, 4, py1 - py0 - 12, T.PLAZA);
   const bar = simpleBuilding(m, pcx + 3, pcy - 9, 9, 6, 'Pelican Key Beach Bar', 'beachbar', 14, 'tile', { x: (pcx + 7.5) * TILE, y: (pcy - 2.6) * TILE, text: 'Beach Bar' });
   m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Pelican Key Beach Bar', x: (pcx + 7.5) * TILE, y: (pcy - 2.3) * TILE, r: 44, b: bar.id });
@@ -1053,6 +1069,7 @@ function buildOffshore(m, rand) {
   for (let k = 0; k < 40; k++) {
     const tx = px0 + Math.floor(rand() * (px1 - px0)), ty = py0 + Math.floor(rand() * (py1 - py0));
     const t = m.tileAt(tx, ty);
+    if (onCourt(tx, ty)) continue;
     if (t === T.SAND && rand() < 0.5) addProp(m, ['palm_a', 'palm_b', 'palm_c', 'umbrella_r', 'umbrella_y'][Math.floor(rand() * 5)], (tx + 0.5) * TILE, (ty + 0.5) * TILE, 0);
     else if (t === T.GRASS) addProp(m, rand() < 0.7 ? 'palm_d' : 'shrub_a', (tx + 0.5) * TILE, (ty + 0.5) * TILE, 10);
   }
@@ -1226,13 +1243,21 @@ function buildPark(m, b, rand, info) {
       if (k <= 1 && m.tileAt(x, y) === T.GRASS) m.set(x, y, k < 0.45 ? T.DEEP : T.WATER);
     }
   }
+  // a full-size pitch across the park's south half (soccer mini-game)
+  let pitch = null;
+  if (info.pitch) {
+    pitch = { x0: ix + 6, y0: cy + 6, x1: ix + iw - 7, y1: iy + ih - 6 };
+    m.fill(pitch.x0 - 1, pitch.y0 - 1, pitch.x1 - pitch.x0 + 2, pitch.y1 - pitch.y0 + 2, T.GRASS);
+    m.venues.push({ id: m.venues.length, kind: 'soccer', name: `${info.label} Pitch`, rect: { x: pitch.x0 * TILE, y: pitch.y0 * TILE, w: (pitch.x1 - pitch.x0) * TILE, h: (pitch.y1 - pitch.y0) * TILE }, goalW: 5 * TILE });
+  }
+  const onPitch = (tx, ty) => pitch && tx >= pitch.x0 - 2 && tx <= pitch.x1 + 1 && ty >= pitch.y0 - 2 && ty <= pitch.y1 + 1;
   for (let k = 0; k < (iw * ih) / 12; k++) {
     const tx = ix + 1 + Math.floor(rand() * (iw - 2)), ty = iy + 1 + Math.floor(rand() * (ih - 2));
-    if (m.tileAt(tx, ty) !== T.GRASS) continue;
+    if (m.tileAt(tx, ty) !== T.GRASS || onPitch(tx, ty)) continue;
     const t = ['tree_a', 'tree_b', 'tree_a', 'tree_b', 'shrub_a', 'flowers_a', 'flowers_big', 'mosaic'][Math.floor(rand() * 8)];
     addProp(m, t, (tx + 0.5) * TILE, (ty + 0.5) * TILE, t.startsWith('tree') ? 12 : 0);
   }
-  for (let x = ix + 6; x < ix + iw - 6; x += 9) { addProp(m, 'lamp', (x + 0.5) * TILE, (iy + 4.5) * TILE); addProp(m, 'lamp', (x + 0.5) * TILE, (iy + ih - 4.5) * TILE); }
+  for (let x = ix + 6; x < ix + iw - 6; x += 9) { addProp(m, 'lamp', (x + 0.5) * TILE, (iy + 4.5) * TILE); if (!onPitch(x, iy + ih - 5)) addProp(m, 'lamp', (x + 0.5) * TILE, (iy + ih - 4.5) * TILE); }
   m.pois.push({ id: m.pois.length, kind: 'delivery', label: info.label, x: cx * TILE, y: (cy + 4.5) * TILE, r: 48 });
 }
 
@@ -1299,7 +1324,7 @@ function buildWaterfronts(m, rand) {
       if (tx >= x0 && tx < x1 && ty >= y0 && ty < y1) continue;
       let nearRoad = false;
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (isRoad(m.tileAt(tx + dx, ty + dy))) nearRoad = true;
-      if (nearRoad || inEstateLot(tx, ty)) continue;
+      if (nearRoad || inEstateLot(tx, ty) || VOLLEY_COURTS.some(({ at: [x, y, w, h] }) => tx >= x - 2 && tx <= x + w + 1 && ty >= y - 2 && ty <= y + h + 1)) continue;
       const h = hash2(tx, ty, 91);
       const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
       if (key === 'I') { if (h < 0.22) addProp(m, ['pallet', 'drum', 'spool', 'pallet_b', 'dump_b', 'pipes'][Math.floor(h * 27) % 6], x, y, 10); }

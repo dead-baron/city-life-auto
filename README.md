@@ -42,6 +42,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Dive roll / handbrake | Space | A | ROLL |
 | Throw / drop crate | Q | Y | THROW |
 | Reload / horn & siren (siren on: traffic pulls over) | R / H | — / D-pad up | — / HORN |
+| Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
+| Fish over the side (still boat, far out at sea) | E | B | ACT |
 | Police HQ: walk in (front desk → armory → motor pool) | E at the door, E inside for the desk | B / A | ACT, or the ▲ Front desk button |
 | Navigate menus (pause, phone, shops, settings) | W/S or ↑/↓, Enter / Space / E to pick, Esc back | D-pad / stick, A pick, B back | tap |
 | Phone (places, jobs, waypoints) | P | D-pad ← | 📱 |

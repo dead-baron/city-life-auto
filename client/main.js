@@ -367,6 +367,9 @@ function onEvent(ev) {
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
+    case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
+    case 'goal': sfx('cash', 1); S.cam.shake = Math.max(S.cam.shake, 3); break;
+    case 'teams': { S.venueTeams ??= {}; S.venueTeams[ev.v] = ev.t; S.pedTeam = new Map(); for (const t of Object.values(S.venueTeams)) t.forEach((ids, k) => { for (const id of ids) S.pedTeam.set(id, k); }); break; }
     case 'raceGo': S.fx.ring(ev.x, ev.y, 60, 'rgba(255,220,80,'); sfx('cash', 1); break;
     case 'checkpoint': S.fx.ring(ev.x, ev.y, 40, 'rgba(120,255,160,'); sfx('cash', 0.6); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
@@ -1125,7 +1128,7 @@ function render(dt) {
   const insideB = drawInteriorView(sp);
 
   const vis = (e) => e.rx > view.x0 - 100 && e.rx < view.x1 + 100 && e.ry > view.y0 - 100 && e.ry < view.y1 + 100;
-  const peds = [], vehs = [], crates = [], bags = [], projs = [];
+  const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
     if (e.kind === K.PED) peds.push(e);
@@ -1133,6 +1136,7 @@ function render(dt) {
     else if (e.kind === K.CRATE) crates.push(e);
     else if (e.kind === K.BAG) bags.push(e);
     else if (e.kind === K.PROJ) projs.push(e);
+    else if (e.kind === K.BALL) balls.push(e);
   }
   if (rain) drawWetReflections(view, vehs, clock.dark, now, dt);
 
@@ -1156,6 +1160,7 @@ function render(dt) {
   if (S.pred && S.pred.kind === 'veh') { const me = S.ents.get(S.ctrlId); const d = me && me.d ? VEHICLE_BY_INDEX[me.d.m] : null; if (d && d.kind === 'boat' && underBridge(me.rx, me.ry, d.L / 2)) outlineVehicle(me, d); }
   else if (S.pred) { const me = S.ents.get(S.ctrlId); if (me && me.swim && S.map.tileAtPx(me.rx, me.ry) === T.BRIDGE) { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); } }
   for (const c of crates) if ((c.flags & 3) === 1) drawCrateEnt(c, now);
+  for (const b of balls) drawBall(b);
   coverWalkIns(view, peds, insideB, dt);
   for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
 
@@ -1330,6 +1335,20 @@ function drawBays(view, dt) {
     g.fillStyle = '#ffd400'; g.font = 'bold 12px monospace'; g.textAlign = 'center';
     if (k > 0.7) g.fillText('SPRAY & GO', x + w / 2, cy + ch / 2 + 4);
   }
+}
+
+// Soccer ball / volleyball: shadow on the ground, the ball lifted by its height.
+function drawBall(b) {
+  const z = (b.extra || 0) * 2;
+  const volley = b.d.t === 1;
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 4, 7 - Math.min(3, z / 40), 4, 0, 0, 6.28); g.fill();
+  const y = b.ry - z;
+  g.fillStyle = volley ? '#f7e27a' : '#f8f8f8'; g.beginPath(); g.arc(b.rx, y, 7, 0, 6.28); g.fill();
+  g.strokeStyle = '#1b2333'; g.lineWidth = 1.5; g.stroke();
+  g.save(); g.translate(b.rx, y); g.rotate(b.ra || 0);
+  if (volley) { g.strokeStyle = '#2350c8'; g.lineWidth = 1.5; g.beginPath(); g.arc(0, 0, 4, 0.5, 2.6); g.stroke(); g.beginPath(); g.arc(0, 0, 4, 3.6, 5.7); g.stroke(); }
+  else { g.fillStyle = '#1b1d22'; g.beginPath(); for (let k = 0; k < 5; k++) { const a = k * 1.2566; g.lineTo(Math.cos(a) * 2.6, Math.sin(a) * 2.6); } g.fill(); for (let k = 0; k < 5; k++) { const a = k * 1.2566 + 0.63; g.beginPath(); g.arc(Math.cos(a) * 6, Math.sin(a) * 6, 1.6, 0, 6.28); g.fill(); } }
+  g.restore();
 }
 
 // Walk-in buildings. Inside one, its floor plan shows under a faded roof; from outside, the roof
@@ -1580,6 +1599,8 @@ function drawPed(p, now) {
   const hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
   const swimming = !(f & PF.INVEH) && !!p.swim;
   if (swimming) drawSwimRipples(p, now);
+  const team = S.pedTeam && S.pedTeam.get(p.id);
+  if (team !== undefined) { g.strokeStyle = team === 0 ? '#ff3b3b' : '#3b8bff'; g.lineWidth = 3; g.beginPath(); g.ellipse(p.rx, p.ry + 4, 13, 8, 0, 0, 6.28); g.stroke(); }
   g.save();
   if (swimming) g.globalAlpha = f & PF.DEAD ? 0.5 : 0.72; // body under the surface, head above
   let lift = 0, spin = 0, grow = 1;

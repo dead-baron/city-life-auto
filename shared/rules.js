@@ -65,3 +65,10 @@ export const POACH_PAY = { turtle: 900, dolphin: 1300 }; // illegal hauls sold a
 export const NET_TIME_S = 4;                            // hold your boat still over the spot this long to haul the catch in
 export const DEEPSEA_CATCH = 3;                         // offshore fish a deep-sea charter asks for
 export const DEEPSEA_PAY = 500;                         // charter bonus on top of selling the fish
+
+// Mini-games (soccer pitch, beach volleyball)
+export const MATCH_COUNTDOWN_S = 5;   // once two or more players are on the pitch / court
+export const SOCCER_GOALS = 3;        // first to this many goals (or most after SOCCER_MATCH_S)
+export const SOCCER_MATCH_S = 180;
+export const VOLLEY_POINTS = 5;       // first to this many points
+export const MATCH_PRIZE = 100;       // each winner, paid to the bank

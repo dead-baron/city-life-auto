@@ -18,6 +18,7 @@ import * as homes from './homes.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
 import * as races from './races.js';
+import * as minigames from './minigames.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -215,7 +216,8 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   pedStep(ped, inp, dt, world.map, { ...pedMods(world, ped), analog: true });
   if (tumbling) tumbleImpact(world, ped, v0, dt, fr);
   if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
-  if (inp.bits & IN.FIRE) {
+  const kicked = (pressed & IN.FIRE) && !ped.carrying && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
+  if ((inp.bits & IN.FIRE) && !kicked) {
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   }
@@ -435,7 +437,7 @@ export function buildMe(world, p) {
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false,
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, job: races.targetFor(world, p) || phone.jobTarget(world, p),
+    prompt: p.prompt, job: minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
     radar: law.radarFor(world, p), bounty: p.bounty,
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

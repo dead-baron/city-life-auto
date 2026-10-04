@@ -23,6 +23,7 @@ function descriptor(e) {
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: e.cashOnly ? 0 : e.tier, val: e.value };
     case K.PROJ: return { id: e.id, k: K.PROJ, w: WEAPONS[e.weapon]?.i ?? 12 };
+    case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'volley' ? 1 : 0 };
     default: return null;
   }
 }
@@ -36,6 +37,7 @@ function fields(world, e) {
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [0, 1, 0, e.cashOnly ? 0 : e.tier];
     case K.PROJ: return [0, 1, 0, 0];
+    case K.BALL: return [0, 1, 0, Math.max(0, Math.min(255, Math.round(e.z / 2)))]; // extra: height above the ground / 2
     default: return [0, 0, 0, 0];
   }
 }

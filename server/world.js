@@ -26,6 +26,7 @@ import * as gates from './systems/gates.js';
 import * as boats from './systems/boats.js';
 import * as gang from './systems/gang.js';
 import * as races from './systems/races.js';
+import * as minigames from './systems/minigames.js';
 import * as props from './systems/props.js';
 import * as net from './net.js';
 
@@ -46,7 +47,8 @@ const SYSTEMS = [
   ['gang', gang.update],            // Syndicate membership: Smuggler's Rock guards
   ['gangwar', gangwar.update],      // gangs vs police: provocation + shootouts near turf
   ['paint', paint.update],          // Spray & Go paint shop bays
-  ['races', races.update],          // jetski / boat races
+  ['races', races.update],
+  ['minigames', minigames.update],  // soccer pitch, beach volleyball          // jetski / boat races
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop
@@ -89,6 +91,7 @@ export class World {
     gates.init(this);
     station.init(this);
     races.init(this);
+    minigames.init(this);
     dealer.init(this);
     jobs.init(this);
   }
