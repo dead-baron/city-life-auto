@@ -8,10 +8,12 @@ concept palette and is a placeholder until real art arrives (see `ART_NEEDS.md`)
 
 ## Buildings and lots (`assets/prefabs*.webp`, `shared/prefab-data.js`)
 
+Every lot faces south, front at the bottom. Scene lots are cut so the painted door sill sits on the footprint's bottom edge (`SCENE_DOORS`), and painted people are removed (`NPC_PAINT`); check them with `tools/preview_lots.py`.
+
 | Group | Lots | Source |
 |---|---|---|
 | Building sheet (upscaled - still a bit soft) | apt1-2, fire, gas, strip mall, club, dealer, repair, industrial, construction, church, school, park | building concept sheet |
-| Redrawn from the scene paintings (round 7, crisp) | house1-3 + house7-9 (suburb painting), conv + rest1 (intersection paintings), rest2 + diner (railway-crossing street), hotel + bistro + royale (luxury boulevard), bank + vellori + monarch (financial district), warehouse (back-alley warehouses), tower1-2 (overpass blocks), police (police HQ), market (FreshMart), shanty1-3 (the shanty street), neonclub / neontap / midnight / luna / arcade / latebite / tattoo (the neon strip), crown / greenbistro / theatre / diamond / redawning (the boulevard row) | the scene paintings |
+| Redrawn from the scene paintings (round 7, crisp) | house1-3 + house7-9 (suburb painting), conv + rest1 (intersection paintings), rest2 + diner (railway-crossing street), hotel + royale (luxury boulevard), bank + vellori + monarch (financial district), warehouse (back-alley warehouses), tower1-2 (overpass blocks), police (police HQ), market (FreshMart), shanty1-3 (the shanty street), arcade / tattoo (the neon strip; neonclub, neontap, midnight, luna, latebite and bistro were retired in round 8 for their painted crowds), crown / greenbistro / theatre / diamond / redawning (the boulevard row) | the scene paintings |
 | Hospital | concept roofing tiled over the roof, the rainy-night hospital front, helipad and plant from the roof sheet | composed by `make_hospital()` |
 | Whole scene lots (a building with its own yard, lot, driveway) | fuel (FuelMax), clubnova, clubeclipse, police2, police3, motors (Riverside Motors), trail (Trail & Field), boutique, quickstop, apt3, apt4, house4, house5, house6, bank2, junkyard, tackle2, shack, farmstead, site (construction), beachbar, pool, **liquor** (liquor store with the garage and flats above - a walk-in convenience store with the liquor-store interior) | the scene paintings, one lot each |
 | Storefront rows (one walk-in business behind each door) | **shops1**: Joe's Burgers, Riverside Books, Pixel Tech, Thread & Co., Brew Haven (Westport Center, Northshore); **shops2**: Pizza, 24/7 Mart, Bean There coffee, Urban Wear, Pharmacy (Falls Center, Old Quarter) | the two high-street paintings |
@@ -20,7 +22,7 @@ concept palette and is a placeholder until real art arrives (see `ART_NEEDS.md`)
 
 ## Interiors (`assets/interiors.webp`) - new this round
 
-Walk into any of these and the roof lifts off onto the painted interior (mirrored for shops that face north):
+Walk into any of these and the roof lifts off onto the painted interior:
 
 | Business kinds | Painting |
 |---|---|
@@ -46,7 +48,7 @@ Walk into any of these and the roof lifts off onto the painted interior (mirrore
 
 ## Animals (`assets/animals.png`, `tools/build_animals.py`)
 
-Lost pets: two top-down dogs (golden, black), two spaniels, a retriever and three cats (black, grey, ginger) cut from the character sheets. Birds are still **procedural**.
+Lost pets: two top-down dogs (golden, black), two spaniels, a retriever and three cats (black, grey, ginger) cut from the character sheets. Each has idle, walk (4), run (4) and sit frames. These are **placeholders generated from the single concept pose**: paws swing under the top-down dogs, and the sitting 3/4 views stand up and step. Birds are still **procedural**.
 
 ## Ground (`assets/ground.png`)
 

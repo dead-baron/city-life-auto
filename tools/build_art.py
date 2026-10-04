@@ -113,10 +113,11 @@ PROPS = {
 
 # ----------------------------------------------------------------------------- building prefabs
 BUILDINGS = 'a750d4b7-image.png'
-# key: (src box, solid fractions x0,y0,x1,y1, door x fractions, ground, rotatable)
+# key: (src box, solid fractions x0,y0,x1,y1, door x fractions, ground, rotatable). Nothing is rotated any
+# more: every lot is drawn front-at-the-bottom and faces south, like the concept art.
 PREFABS = {
-    'apt1': ((368, 43, 530, 276), (.18, .08, .90, .78), [.5], 'lot', True),
-    'apt2': ((543, 43, 710, 276), (.12, .04, .88, .80), [.5], 'lot', True),
+    'apt1': ((368, 43, 530, 276), (.18, .08, .90, .78), [.5], 'lot', False),
+    'apt2': ((543, 43, 710, 276), (.12, .04, .88, .80), [.5], 'lot', False),
     'hospital': ('REF', (.01, .0, .99, .80), [.5], 'plaza', False),   # composed by make_hospital()
     'fire': ((221, 325, 418, 466), (.16, .05, .95, .97), [.4], 'lot', False),
     'gas': ((433, 325, 638, 546), (.67, .01, .93, .20), [.8], 'lot', False),
@@ -124,11 +125,11 @@ PREFABS = {
     'club': ((338, 588, 520, 793), (.10, .05, .86, .71), [.45], 'plaza', False),
     'dealer': ((765, 588, 998, 733), (.22, .05, .92, .89), [.57], 'lot', False),
     'repair': ((1011, 588, 1226, 743), (.15, .06, .80, .84), [.4], 'lot', False),
-    'industrial': ((11, 835, 316, 1076), (.05, .03, .96, .68), [.5], 'lot', True),
-    'construction': ((558, 835, 793, 1076), (.29, .07, .96, .68), [.15], 'dirt', True),
+    'industrial': ((11, 835, 316, 1076), (.05, .03, .96, .68), [.5], 'lot', False),
+    'construction': ((558, 835, 793, 1076), (.29, .07, .96, .68), [.15], 'dirt', False),
     'church': ((806, 835, 970, 1076), (.13, .03, .90, .68), [.5], 'plaza', False),
     'school': ((985, 835, 1208, 983), (.06, .05, .94, .92), [.5], 'lot', False),
-    'park': ((1221, 835, 1438, 1076), (.30, .11, .66, .46), [.5], 'grass', True),
+    'park': ((1221, 835, 1438, 1076), (.30, .11, .66, .46), [.5], 'grass', False),
 }
 
 # ----------------------------------------------------------------------------- scene lots
@@ -160,8 +161,8 @@ SCENE_PREFABS = {
     'beachbar':   ('5841fda7-image.png', (300, 60, 1460, 720), (.25, .12, .62, .5), [.45], 'sand', False, 18),
     'pool':       ('d638bb4b-image.png', (240, 60, 1520, 740), (.0, .0, .25, .45), [.12], 'grass', False, 19),
     'liquor':     ('a8217af8-image.png', (200, 20, 1300, 780), (.04, .02, .92, .84), [.28], 'plaza', False, 16),
-    'shops1':     ('4bb52753-image.png', (0, 0, 1440, 400), (.0, .0, 1.0, .72), [.10, .31, .53, .70, .88], 'plaza', False, 24),
-    'shops2':     ('9cec10ef-image.png', (0, 0, 1536, 400), (.0, .0, 1.0, .72), [.10, .31, .57, .74, .91], 'plaza', False, 25),
+    'shops1':     ('4bb52753-image.png', (0, 0, 1440, 400), (.0, .0, 1.0, .72), [.10, .31, .53, .70, .88], 'plaza', False, 26),
+    'shops2':     ('9cec10ef-image.png', (0, 0, 1536, 400), (.0, .0, 1.0, .72), [.10, .31, .57, .74, .91], 'plaza', False, 28),
     # round 7: the building-sheet lots that looked smeared when upscaled, redrawn from the concept scenes
     'house1'     : ('bfa2eaae-image.png', (149, 61, 600, 395), (0.02, 0.02, 0.8, 0.62), [0.49], 'grass', False, 16),  # suburban house, pool and patio
     'house2'     : ('bfa2eaae-image.png', (900, 70, 1290, 395), (0.11, 0.02, 0.75, 0.62), [0.6], 'grass', False, 15),  # house with a pickup in the drive
@@ -179,7 +180,6 @@ SCENE_PREFABS = {
     'tower2'     : ('69353c0e-image.png', (77, 0, 363, 195), (0, 0, 1, 0.8), [0.5], 'plaza', False, 12),  # office block
     'tower1'     : ('69353c0e-image.png', (915, 0, 1145, 195), (0, 0, 1, 0.8), [0.5], 'plaza', False, 10),  # office block
     'police'     : ('03063643-image.png', (440, 38, 1080, 445), (0, 0, 1, 0.68), [0.5], 'plaza', False, 16),  # police station front, flags and steps
-    'bistro'     : ('da2b614f-image.png', (410, 0, 646, 289), (0, 0, 1, 0.4), [0.5], 'plaza', False, 10),  # Le Petit Bistro
     'royale'     : ('da2b614f-image.png', (91, 0, 327, 289), (0, 0, 1, 0.62), [0.5], 'plaza', False, 10),  # Royale fashion
     'vellori'    : ('8e6fd787-image.png', (328, 0, 607, 461), (0, 0, 1, 0.72), [0.5], 'plaza', False, 10),  # Vellori boutique
     'monarch'    : ('8e6fd787-image.png', (1082, 0, 1424, 461), (0, 0, 1, 0.72), [0.5], 'plaza', False, 12),  # Monarch boutique
@@ -187,12 +187,7 @@ SCENE_PREFABS = {
     'shanty2'    : ('3a84dd63-image.png', (461, 0, 838, 384), (0, 0, 1, 0.8), [0.5], 'dirt', False, 12),  # tarp shacks
     'shanty3'    : ('3a84dd63-image.png', (838, 0, 1243, 384), (0, 0, 1, 0.75), [0.6], 'dirt', False, 13),  # shanty with a graffiti roof
     # round 7: the neon strip (walk-in clubs after dark) and the boulevard shopfronts
-    'neonclub'   : ('a1c88191-image.png', (49, 0, 405, 349), (0, 0, 1, 0.72), [0.45], 'plaza', False, 14),  # CLUB - dance drink repeat
-    'neontap'    : ('a1c88191-image.png', (482, 0, 824, 349), (0, 0, 1, 0.72), [0.45], 'plaza', False, 14),  # Neon Tap bar
-    'midnight'   : ('a1c88191-image.png', (1040, 0, 1446, 349), (0, 0, 1, 0.72), [0.58], 'plaza', False, 16),  # The Midnight cocktail club
-    'luna'       : ('a1c88191-image.png', (447, 649, 866, 984), (0, 0, 1, 0.62), [0.42], 'plaza', False, 16),  # Luna Lounge
     'arcade'     : ('a1c88191-image.png', (866, 649, 1117, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 10),  # arcade
-    'latebite'   : ('a1c88191-image.png', (1110, 649, 1382, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 11),  # Late Bite burgers
     'tattoo'     : ('a1c88191-image.png', (84, 649, 391, 984), (0, 0, 1, 0.7), [0.5], 'plaza', False, 12),  # tattoo parlour
     'crown'      : ('59f534a1-image.png', (24, 0, 379, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 13),  # Crown boutique
     'greenbistro': ('59f534a1-image.png', (387, 0, 685, 323), (0, 0, 1, 0.6), [0.5], 'plaza', False, 12),  # bistro, green awnings
@@ -226,6 +221,101 @@ SCENE_CARS = {
     'house8': [(518, 815, 1.571), (566, 815, 1.571)], 'house9': [(1001, 728, 1.571)], 'house4': [(1035, 640, 1.571)],
     'house5': [(1028, 710, 1.571)], 'fuel': [(529, 467, 1.571), (710, 467, 1.571)], 'beachbar': [(1046, 405, 1.571)],
 }
+
+
+# Doors line up with the painted doors: (door y, crop bottom) in source px. The lot is cut so the
+# painted door's sill lands exactly on a tile edge, and that edge is the bottom of the solid
+# footprint - where the game puts the walk-in doorway and the door point. A crop bottom (when
+# set) drops the painted sidewalk below the facade with the pedestrians standing on it; the real
+# city sidewalk takes its place.
+SCENE_DOORS = {
+    'police': (326, 400), 'police2': (504, 506), 'police3': (488, 490),
+    'bank': (332, 340), 'vellori': (322, 330), 'monarch': (318, 330),
+    'royale': (198, 204), 'hotel': (196, 204), 
+    'rest1': (182, 203), 'conv': (216, 222), 'shops1': (300, 305), 'shops2': (300, 305),
+    'arcade': (926, 929), 'tattoo': (926, 929), 
+    'crown': (262, 266), 'greenbistro': (242, 246), 'theatre': (252, 256), 'diamond': (252, 256), 'redawning': (242, 246),
+    'clubnova': (532, 540), 'clubeclipse': (512, 516),
+    'quickstop': (575, None), 'liquor': (585, None), 'fuel': (450, None), 'trail': (485, None), 'boutique': (440, 446),
+    'bank2': (300, 306), 'market': (590, None), 'apt3': (450, None), 'apt4': (700, None), 'motors': (390, None),
+    'rest2': (270, 276), 'diner': (230, 236), 'tower1': (180, None), 'tower2': (180, None), 'warehouse': (325, None),
+}
+
+# Painted people come out of the art before it is used: only real NPCs walk the streets. Each
+# entry is a box in source px, either inpainted from its surroundings or - when a clean sample
+# box is given - filled by tiling that sample (for plain paving and steps).
+NPC_PAINT = {
+    '03063643-image.png': [((755, 326, 792, 372), (793, 326, 830, 372)), ((838, 326, 875, 372), (800, 326, 837, 372)),
+                           (1036, 368, 1066, 400), (594, 384, 622, 400)],
+    '6fed2123-image.png': [(565, 494, 603, 512), (637, 494, 677, 512)],
+    'd6e9ec95-image.png': [(836, 148, 888, 180), (296, 158, 348, 180)],
+    '8e6fd787-image.png': [(733, 258, 762, 338), (892, 258, 919, 338)],                       # bank guards and statues
+    'da2b614f-image.png': [(186, 150, 232, 200), (158, 164, 184, 212), (236, 164, 262, 212),  # Royale doorway
+                           (810, 146, 834, 205), (894, 146, 918, 205), (848, 128, 884, 168)], # hotel doormen
+    '4bb52753-image.png': [(50, 225, 80, 265), (95, 240, 125, 285), (150, 245, 190, 292),     # Joe's diners
+                           (1255, 250, 1300, 298), (1320, 245, 1350, 298), (698, 282, 724, 305)],
+    '9cec10ef-image.png': [(808, 236, 836, 282), (926, 236, 952, 282), (1410, 276, 1436, 302)],
+    '00ceb559-image.png': [(592, 495, 614, 540), (696, 495, 718, 540)],                       # Club Nova bouncers
+    '34eae673-image.png': [(386, 370, 410, 412), (708, 486, 734, 512), (826, 486, 852, 512)],
+    'a1c88191-image.png': [(266, 880, 290, 926)],                                             # tattoo doorway
+    '59f534a1-image.png': [(496, 205, 520, 238), (565, 205, 590, 238)],                       # bistro diners
+}
+
+
+PREVIEW = {}  # key -> (painted sheet, crop box, door row, rows): for tools/preview_lots.py
+
+
+def paint_people(img, entries):
+    """Remove painted figures: tile a clean sample over the box, or refill the box column by
+    column, blending from the pixels just above it to those just below it - doors, glass,
+    columns and steps are vertical or horizontal, so their lines carry straight through."""
+    tiled = [e for e in entries if isinstance(e[0], tuple)]
+    if tiled:
+        img = paint_out(img, tiled)
+    boxes = [e for e in entries if not isinstance(e[0], tuple)]
+    if not boxes:
+        return img
+    a = np.asarray(img.convert('RGB'), np.float32).copy()
+    k = 3
+    for x0, y0, x1, y1 in boxes:
+        top = a[max(0, y0 - k):y0, x0:x1].mean(0)
+        bot = a[y1:y1 + k, x0:x1].mean(0)
+        t = np.linspace(0, 1, y1 - y0 + 2)[1:-1][:, None, None]
+        a[y0:y1, x0:x1] = top[None] * (1 - t) + bot[None] * t
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+
+
+def lot_geometry(key, box, solid, tw, img_h):
+    """Crop box (floats) and tile footprint for a scene lot, with the painted door sill on a tile
+    edge at the bottom of the solid footprint."""
+    x0, y0, x1, y1 = box
+    door, cut = SCENE_DOORS.get(key, (None, None))
+    if cut:
+        y1 = cut
+    u = (x1 - x0) / tw  # source px per tile
+    oy = y0 + solid[1] * (box[3] - box[1])  # solid top in source px
+    if door is None:
+        th = max(1, min(MAX_LOT_TH, round((y1 - y0) / u)))
+        y1n = min(img_h, y0 + th * u)
+        th = max(1, int((y1n - y0) / u + 1e-6))
+        sy0 = int(np.floor((oy - y0) / u))
+        sy1 = int(np.ceil((y0 + solid[3] * (box[3] - box[1]) - y0) / u))
+        return (x0, y0, x1, y0 + th * u), th, max(0, sy0), min(th, max(sy0 + 1, sy1))
+    k = max(1, round((door - y0) / u))
+    y0n = door - k * u
+    if y0n < 0:
+        k = int(door // u)
+        y0n = door - k * u
+    th = k + max(0, round((cut - door) / u)) if cut else max(k, round((y1 - y0n) / u))
+    if th > MAX_LOT_TH:
+        th = MAX_LOT_TH
+        if k > th:
+            k = th
+            y0n = door - k * u
+    while y0n + th * u > img_h + 0.5 and th > k:
+        th -= 1
+    sy0 = max(0, int(np.floor((oy - y0n) / u)))
+    return (x0, y0n, x1, y0n + th * u), th, min(sy0, k - 1), k
 
 
 def paint_out(img, patches):
@@ -446,7 +536,7 @@ def sharpen_lot(img, tw, th):
 # Hospital: front facade cut from the rainy-night street reference (lit lobby, red cross, entrance
 # canopy, planter beds) under a procedural parapet roof with a helipad, AC and tanks.
 HOSPITAL_REF = 'd6e9ec95-image.png'         # the rainy-night hospital street scene
-HOSPITAL_FACADE = (213, 0, 1520, 300)        # lit lobby, red cross, canopy, planters and the pavement in front
+HOSPITAL_FACADE = (213, 0, 1520, 176)        # lit lobby, red cross, canopy and planters, cut at the door sill
 HOSPITAL_TILES = (18, 15)
 ROOF_TEX = ('1b15795c-image.png', (100, 20, 330, 120))  # a patch of the concept's tar-and-gravel roof
 
@@ -454,7 +544,7 @@ ROOF_TEX = ('1b15795c-image.png', (100, 20, 330, 120))  # a patch of the concept
 def make_hospital():
     tw, th = HOSPITAL_TILES
     W, H = tw * TILE, th * TILE
-    fac = Image.open(find_src(HOSPITAL_REF)).convert('RGB').crop(HOSPITAL_FACADE)
+    fac = paint_people(Image.open(find_src(HOSPITAL_REF)).convert('RGB'), NPC_PAINT[HOSPITAL_REF]).crop(HOSPITAL_FACADE)
     fh = round(fac.height * W / fac.width)
     fac = fac.resize((W, fh), Image.LANCZOS)
     roof_h = round(H * 0.80) - fh
@@ -550,20 +640,23 @@ def build_prefabs():
         full = Image.open(find_src(sheet)).convert('RGB')
         if key in SCENE_PATCHES:
             full = paint_out(full, SCENE_PATCHES[key])
-        img = full.crop(box)
-        th = max(1, min(MAX_LOT_TH, round(tw * img.height / img.width)))
-        lot = img.resize((tw * TILE, th * TILE), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=0.8, percent=50, threshold=2))
+        if sheet in NPC_PAINT:
+            full = paint_people(full, NPC_PAINT[sheet])
+        cbox, th, sy0, sy1 = lot_geometry(key, box, solid, tw, full.height)
+        lot = full.resize((tw * TILE, th * TILE), Image.LANCZOS, box=cbox).filter(ImageFilter.UnsharpMask(radius=0.8, percent=50, threshold=2))
         lot = feather(lot, 5)
-        sx0, sy0, sx1, sy1 = solid
-        so = [int(np.floor(sx0 * tw)), int(np.floor(sy0 * th)), int(np.ceil(sx1 * tw)), int(np.ceil(sy1 * th))]
-        print('  scene lot', key, tw, th)
+        so = [int(np.floor(solid[0] * tw)), sy0, int(np.ceil(solid[2] * tw)), sy1]
+        fsolid = (solid[0], sy0 / th, solid[2], sy1 / th)
+        print('  scene lot', key, tw, th, 'solid', so)
         items.append((key, lot))
         # a cutaway (the supermarket shows its aisles) has no windows to light: its glow would be noise
-        glows[key] = Image.new('RGB', lot.size, (0, 0, 0)) if key in NO_GLOW else emissive(lot, solid, tw, th)
+        glows[key] = Image.new('RGB', lot.size, (0, 0, 0)) if key in NO_GLOW else emissive(lot, fsolid, tw, th)
         meta[key] = {'tw': tw, 'th': th, 'solid': so, 'doors': doors, 'ground': ground, 'rot': rot, 'scene': True}
+        PREVIEW[key] = (full, cbox, sy1, th)
         if key in SCENE_CARS:
-            bw, bh = box[2] - box[0], box[3] - box[1]
-            meta[key]['cars'] = [[round((x - box[0]) / bw, 3), round((y - box[1]) / bh, 3), a] for x, y, a in SCENE_CARS[key]]
+            bw, bh = cbox[2] - cbox[0], cbox[3] - cbox[1]
+            meta[key]['cars'] = [[round((x - cbox[0]) / bw, 3), round((y - cbox[1]) / bh, 3), a] for x, y, a in SCENE_CARS[key]
+                                 if cbox[1] <= y <= cbox[3]]
     frames, sheets = shelf_pack(items, width=2048)
     for i, sh in enumerate(sheets):
         sh.save(os.path.join(ASSETS, f'prefabs{i}.webp'), quality=93, method=6)

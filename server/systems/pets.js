@@ -161,7 +161,7 @@ export function update(world, dt) {
     } else {
       // sniff about: short trots between pauses, never onto the road
       if (now >= pp.until) {
-        pp.until = now + 1.5 + rng() * 3;
+        pp.until = now + 1.5 + rng() * 3 + (rng() < 0.35 ? 3 + rng() * 4 : 0); // now and then it sits a while
         const a = rng() * 6.28, r = 40 + rng() * 120;
         const tx = pet.x + Math.cos(a) * r, ty = pet.y + Math.sin(a) * r;
         if (walkable(world.map, tx, ty)) { pp.wx = tx; pp.wy = ty; } else { pp.wx = pet.x; pp.wy = pet.y; }

@@ -142,18 +142,18 @@ export const WILD_DISTRICTS = new Set(DISTRICTS.filter((d) => WILD_STYLES.has(d.
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
   houses: { minW: 16, minH: 18, gen: { house1: 3, house2: 3, house3: 3, apt2: 0.6, rest2: 0.3, house4: 2, house5: 2, house7: 2.5, house8: 2.5, house9: 2.5 }, filler: 'park', roof: 0.06, roofKinds: ['tile'] },
-  commercial: { minW: 12, minH: 12, gen: { conv: 3, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.3, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5, diner: 1, latebite: 0.6, arcade: 0.5, tattoo: 0.4, redawning: 0.6, greenbistro: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
+  commercial: { minW: 12, minH: 12, gen: { conv: 3, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.3, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5, diner: 1, arcade: 0.5, tattoo: 0.4, redawning: 0.6, greenbistro: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
   apartments: { minW: 14, minH: 14, gen: { apt1: 3, apt2: 3, house2: 1, conv: 1.8, tower2: 1, apt3: 1.5, apt4: 1.5 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
   industrial: { minW: 14, minH: 13, gen: { warehouse: 3, industrial: 2, repair: 1, junkyard: 0.6, site: 0.4 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
   factory: { minW: 14, minH: 13, gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4, junkyard: 0.5, site: 0.5 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
   towers: { minW: 11, minH: 11, gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1, bank2: 0.5, apt3: 0.5, vellori: 0.6, monarch: 0.6, theatre: 0.4, diamond: 0.5 }, filler: 'plaza', roof: 0.78, roofKinds: ['glass', 'gravel', 'tar'] },
   civic: { minW: 14, minH: 14, gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1, church: 0.3, bank2: 0.6, apt4: 0.5, theatre: 0.5, greenbistro: 0.5, house8: 0.6 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
   southside: { minW: 14, minH: 14, gen: { house1: 1, house3: 1, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5, quickstop: 1.6, junkyard: 0.5, house5: 0.6, liquor: 0.8, shanty2: 0.5, shanty3: 0.5, tattoo: 0.4 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
-  nightlife: { minW: 10, minH: 10, gen: { club: 1, rest1: 1, rest2: 1, hotel: 1, conv: 1, clubnova: 1, clubeclipse: 1, neonclub: 1.4, neontap: 1.2, midnight: 1.2, luna: 1.2, arcade: 0.8, latebite: 0.8, tattoo: 0.6 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  nightlife: { minW: 10, minH: 10, gen: { club: 1, rest1: 1, rest2: 1, hotel: 1, conv: 1, clubnova: 1.4, clubeclipse: 1.4, arcade: 0.8, tattoo: 0.6, theatre: 0.6, diner: 0.6 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
   harbor: { minW: 14, minH: 13, gen: { warehouse: 4, industrial: 1, repair: 1, junkyard: 0.3 }, filler: 'yard', roof: 0.55, roofKinds: ['metal', 'tar'] },
-  luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5, house6: 1.5, house4: 1, house5: 1, house9: 1.2, royale: 0.6, bistro: 0.6, crown: 0.5 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
-  redlight: { minW: 12, minH: 12, gen: { club: 1, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.4, quickstop: 0.5, liquor: 0.6, neonclub: 1, luna: 1, tattoo: 0.8, shanty1: 0.4 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
-  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 2, rest1: 1.5, club: 0.3, repair: 0.6, quickstop: 1.4, apt3: 0.6, boutique: 0.4, liquor: 0.8, neontap: 0.5, diner: 0.6, greenbistro: 0.5, house7: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5, house6: 1.5, house4: 1, house5: 1, house9: 1.2, royale: 0.6, diamond: 0.6, crown: 0.5 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
+  redlight: { minW: 12, minH: 12, gen: { club: 1, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.8, quickstop: 0.5, liquor: 0.6, tattoo: 0.8, shanty1: 0.4 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
+  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 2, rest1: 1.5, club: 0.3, repair: 0.6, quickstop: 1.4, apt3: 0.6, boutique: 0.4, liquor: 0.8, diner: 0.6, greenbistro: 0.5, house7: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
   beach: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, rest2: 1.5, rest1: 1, hotel: 0.6, conv: 0.5, beachbar: 1.2, house5: 0.6, house9: 0.8, diner: 0.6 }, filler: 'plaza', roof: 0.15, roofKinds: ['tile'] },
   park: { minW: 14, minH: 14, gen: { rest2: 1 }, filler: 'park', roof: 0, roofKinds: ['tile'] },
 };
@@ -185,12 +185,11 @@ const SPECIALS = [
   { d: 2, prefab: 'school', biz: ['delivery'], names: ['Northgate High'] },
   { d: 2, prefab: 'fire', biz: ['delivery'], names: ['Fire Station 7'] },
   { d: 5, prefab: 'church', biz: ['delivery'], names: ['St. Pixel Chapel'] },
-  { d: 7, prefab: 'neonclub', biz: ['delivery'], names: ['Club Ultraviolet'] },
-  { d: 7, prefab: 'midnight', biz: ['delivery'], names: ['The Midnight'] },
-  { d: 7, prefab: 'luna', biz: ['delivery'], names: ['Luna Lounge'] },
-  { d: 7, prefab: 'neontap', biz: ['delivery'], names: ['Neon Tap'] },
+  { d: 7, prefab: 'clubnova', biz: ['delivery'], names: ['Club Ultraviolet'] },
+  { d: 7, prefab: 'clubeclipse', biz: ['delivery'], names: ['The Midnight'] },
+  { d: 7, prefab: 'club', biz: ['delivery'], names: ['Luna Lounge'] },
   { d: 7, prefab: 'arcade', biz: ['delivery'], names: ['Pixel Arcade'] },
-  { d: 17, prefab: 'luna', biz: ['delivery'], names: ['Pink Moon Lounge'] },
+  { d: 17, prefab: 'clubeclipse', biz: ['delivery'], names: ['Pink Moon Lounge'] },
   { d: 4, prefab: 'theatre', biz: ['delivery'], names: ['The Grand Theatre'] },
   { d: 4, prefab: 'vellori', biz: ['delivery'], names: ['Vellori'] },
   { d: 16, prefab: 'monarch', biz: ['delivery'], names: ['Monarch'] },
@@ -253,14 +252,13 @@ const GENERIC_NAMES = {
   police2: ['Police Station'], police3: ['Police Station'], liquor: ['Liquor Mart', 'Corner Liquor', 'Spirits & More', 'Beer Wine Spirits'],
   shops1: ['Storefronts'], shops2: ['Storefronts'],
   // round 7 lots
-  house7: ['Residence'], house8: ['Residence'], house9: ['Residence'], diner: ['City Diner', 'Eat Drink Local'], bistro: ['Le Petit Bistro'],
+  house7: ['Residence'], house8: ['Residence'], house9: ['Residence'], diner: ['City Diner', 'Eat Drink Local'],
   royale: ['Royale Fashion'], vellori: ['Vellori'], monarch: ['Monarch'], shanty1: ['Shack'], shanty2: ['Shack'], shanty3: ['Shack'],
-  neonclub: ['Club Neon', 'The Strip Club', 'Dance Drink Repeat'], neontap: ['Neon Tap'], midnight: ['The Midnight'], luna: ['Luna Lounge'],
-  arcade: ['Pixel Arcade', 'Game Zone'], latebite: ['Late Bite'], tattoo: ['Bold Ink Tattoo'], crown: ['Crown Couture'], greenbistro: ['Garden Bistro'],
+  arcade: ['Pixel Arcade', 'Game Zone'], tattoo: ['Bold Ink Tattoo'], crown: ['Crown Couture'], greenbistro: ['Garden Bistro'],
   theatre: ['The Grand Theatre'], diamond: ['Diamond & Co.'], redawning: ['Cafe Rouge'], market: ['FreshMart'],
 };
 // Lots with a nightclub inside: walk in after dark (closed by day)
-export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse', 'neonclub', 'midnight', 'luna']);
+export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse']);
 
 // ---------------------------------------------------------------------------
 export class CityMap {
@@ -487,17 +485,25 @@ export function generateCity(seed = 1337) {
       // too small (or nowhere for a door): one solid building or a pocket park / plaza
       const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' };
       const rr = mulberry32(seed ^ (b.x * 131 + b.y * 7));
-      if (st.roof && b.w >= 4 && b.h >= 4 && rr() < (st.roof >= 0.4 ? 0.85 : st.roof * 2)) roofBuilding(m, row, b.x, b.y, b.w, b.h, st, rr);
+      // with no street along its north side, the shops across that edge may open onto it: keep a
+      // strip of paving there in front of their doors
+      const gap = !fN && b.h >= 6 ? 2 : 0;
+      if (st.roof && b.w >= 4 && b.h - gap >= 4 && rr() < (st.roof >= 0.4 ? 0.85 : st.roof * 2)) roofBuilding(m, row, b.x, b.y + gap, b.w, b.h - gap, st, rr);
       else if (!fS && !fN && b.w >= 12 && b.h >= 12 && (b.w > 30 || b.h > 30)) { const half = { ...b }; splitBlock(m, half, st, rr); }
       else filler(m, row, b.x, b.w, st, rr);
       continue;
     }
-    if (fS && fN && b.h >= minH * 2 + 1) {
-      const hs = Math.ceil(b.h / 2);
-      rows.push({ b, d: b.d, x: b.x, y: b.y + b.h - hs, w: b.w, h: hs, face: 'S', iv: [[b.x, b.x + b.w]] });
-      rows.push({ b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h - hs, face: 'N', iv: [[b.x, b.x + b.w]] });
-    } else {
-      rows.push({ b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: fS ? 'S' : 'N', iv: [[b.x, b.x + b.w]] });
+    // Every building is painted from the same viewpoint, front at the bottom, so every lot faces
+    // south: a block with a street along its south side is one row of fronts as deep as the block
+    // (yards and back lots fill in behind shorter buildings); a block reached only from the north
+    // gets the backs of buildings - roofs, yards and parking - and no doors.
+    if (fS) rows.push({ b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S', iv: [[b.x, b.x + b.w]] });
+    else {
+      // (a strip along the north side stays open: it may be the only way to a door across it)
+      const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'N' };
+      const rr = mulberry32(seed ^ (b.x * 173 + b.y * 11));
+      filler(m, row, b.x, b.w, { ...st, roof: 0 }, rr);
+      if (st.roof && b.w >= 6 && b.h >= 8 && rr() < Math.max(0.5, st.roof)) roofBuilding(m, row, b.x + 1, b.y + 3, b.w - 2, b.h - 4, st, rr);
     }
   }
   claimEstates(m, rows, estateRows, rand); // beach houses first: the beach blocks are few
@@ -505,6 +511,7 @@ export function generateCity(seed = 1337) {
   for (const row of rows) fillRow(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
   for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)), b.park);
   for (const [type, key, x, y, south] of estateRows) estateHouse(m, rand, type, key, x, y, south);
+  clearDoorways(m);
   m.garages ||= []; m.mansions ||= [];
   if (mlot) mansion(m, rand, mlot.x + Math.floor((mlot.w - MANSION_SIZE[0]) / 2), mlot.y);
 
@@ -1368,6 +1375,25 @@ function facesStreet(m, b, face) {
 
 // A big block with no street on its north or south side (between curving roads): a courtyard
 // of greenery or paving with low buildings round it.
+// A door must open onto open ground. Where two blocks meet with no street between them, a plain
+// roofed building across the way can end up right in front of someone's door: it gives up its
+// front rows to paving.
+function clearDoorways(m) {
+  for (const b of m.buildings) {
+    if (b.prefab < 0 || !b.door) continue;
+    const at = m.bld[b.door.ty * MAP_W + b.door.tx];
+    const r = at >= 0 ? m.buildings[at] : null;
+    if (!r || r.kind !== 'roof' || r.gone) continue;
+    const cut = Math.min(r.th, b.door.ty - r.ty + 2);
+    const ground = DISTRICTS[m.dist[r.ty * MAP_W + r.tx]].ground;
+    for (let ty = r.ty; ty < r.ty + cut; ty++) for (let tx = r.tx; tx < r.tx + r.tw; tx++) { m.set(tx, ty, ground === T.WATER ? T.PLAZA : ground); m.bld[ty * MAP_W + tx] = -1; }
+    r.ty += cut; r.th -= cut;
+    const roof = m.roofs[r.roof];
+    roof.ty = r.ty; roof.th = r.th;
+    if (r.th < 2) { r.gone = true; roof.gone = true; for (let ty = r.ty; ty < r.ty + r.th; ty++) for (let tx = r.tx; tx < r.tx + r.tw; tx++) { m.set(tx, ty, ground === T.WATER ? T.PLAZA : ground); m.bld[ty * MAP_W + tx] = -1; } }
+  }
+}
+
 function splitBlock(m, b, st, rand) {
   const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' };
   filler(m, row, b.x, b.w, { ...st, roof: 0 }, rand);
@@ -3198,27 +3224,41 @@ function buildStreetProps(m) {
 }
 
 // ---- traffic signals ---------------------------------------------------------------------------
-// Every signalled ground-level junction gets its lights one of two ways: in the dense districts,
-// heads hang from span wires strung corner to corner (from the buildings, or slim posts); out
-// elsewhere each approach has a mast-arm pole on the kerb, reaching over its lanes - and a pole is
-// street furniture: hit it hard enough and it goes over.
+// Every signalled ground-level junction gets its lights one of two ways. At a small crossing of
+// side streets downtown, where buildings stand right at the corners, heads hang from span wires
+// tied to those walls. Everywhere else - avenues, boulevards, the highway junctions - each approach
+// has a mast-arm pole on its kerb with an arm reaching right across the incoming lanes and a head
+// over every lane, so a wide road is covered end to end. A pole is street furniture: hit it hard
+// enough and it goes over.
 const SPAN_WIRE_STYLES = new Set(['towers', 'commercial', 'nightlife', 'oldtown', 'redlight', 'civic', 'apartments']);
+const SPAN_WIRE_ROADS = new Set(['st', 'minor', 'drive', 'front']);
 const POLE_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.GRASS, T.LOT, T.DIRT, T.SAND]);
 
-// Where the pole for one approach stands, and where its head hangs (the same geometry the
-// renderer uses). Returns null when the kerb spot isn't open ground.
+// Where the pole for one approach stands and where its heads hang - one over the middle of each
+// incoming lane (the same geometry the renderer uses). The pole stands on the first open kerb spot
+// out from the road edge; with none (a wall or water right at the kerb) it stands at the road edge.
 export function signalArm(m, n, id) {
   const e = m.edges[id];
   const oa = n.dirs[id], ox = Math.cos(oa), oy = Math.sin(oa);
   const rx = oy, ry = -ox; // right-hand side for traffic arriving (heading -o)
   const back = (n.trim[id] || n.half || 60) + 14;
   const bx = n.x + ox * back, by = n.y + oy * back;
-  const lanes = e.oneway ? 0 : (e.median / 2 + e.hw) / 2;
-  for (const extra of [12, 22, 32]) {
-    const px = bx + rx * (e.hw + extra), py = by + ry * (e.hw + extra);
-    if (POLE_GROUND.has(m.tileAtPx(px, py))) return { x: px, y: py, hx: bx + rx * lanes, hy: by + ry * lanes, a: Math.atan2(ry, rx) };
+  const inner = e.oneway ? -e.hw : e.median / 2; // incoming lanes run from here out to the kerb
+  const lanes = Math.max(1, e.nl);
+  const lw = (e.hw - inner) / lanes;
+  const heads = [];
+  for (let i = 0; i < Math.min(lanes, 5); i++) {
+    const off = inner + lw * (lanes <= 5 ? i + 0.5 : (i + 0.5) * (lanes / 5));
+    heads.push({ x: bx + rx * off, y: by + ry * off });
   }
-  return null;
+  heads.reverse(); // nearest the pole first
+  const tip = heads[heads.length - 1];
+  for (const extra of [12, 22, 32, 44, 60]) {
+    const px = bx + rx * (e.hw + extra), py = by + ry * (e.hw + extra);
+    if (POLE_GROUND.has(m.tileAtPx(px, py))) return { x: px, y: py, hx: tip.x, hy: tip.y, heads, a: Math.atan2(ry, rx), open: true };
+  }
+  const px = bx + rx * (e.hw + 10), py = by + ry * (e.hw + 10);
+  return { x: px, y: py, hx: tip.x, hy: tip.y, heads, a: Math.atan2(ry, rx), open: false };
 }
 
 function buildSignals(m) {
@@ -3228,37 +3268,37 @@ function buildSignals(m) {
     const ins = n.edges.filter((id) => !(m.edges[id].oneway && m.edges[id].b !== n.id));
     if (!ins.length) continue;
     const st = DISTRICTS[m.districtAt(n.x, n.y).id].style;
-    const arms = ins.map((id) => ({ id, arm: signalArm(m, n, id) }));
-    // span wires downtown, or anywhere a kerb has no room for a pole
-    const wire = SPAN_WIRE_STYLES.has(st) || arms.some((a) => !a.arm);
-    if (!wire) {
-      for (const { id, arm } of arms) {
-        const p = addProp(m, 'sigpole', arm.x, arm.y, 5, { a: arm.a });
-        m.signals.push({ node: n.id, edge: id, x: arm.x, y: arm.y, hx: arm.hx, hy: arm.hy, pi: m.props.indexOf(p) });
+    const small = n.edges.every((id) => SPAN_WIRE_ROADS.has(m.edges[id].kind));
+    let corners = null;
+    if (small && SPAN_WIRE_STYLES.has(st)) {
+      // corners: between each pair of neighbouring streets, out past the junction box
+      const dirs = n.edges.map((id) => n.dirs[id]).sort((a, b) => a - b);
+      const reach = Math.min(160, Math.max(...n.edges.map((id) => n.trim[id] || n.half || 60)) * 1.15 + 34);
+      corners = [];
+      for (let k = 0; k < dirs.length; k++) {
+        const a0 = dirs[k], a1 = dirs[(k + 1) % dirs.length] + (k + 1 === dirs.length ? Math.PI * 2 : 0);
+        const mid = (a0 + a1) / 2;
+        // tie off on a building wall just behind the corner
+        for (let r = 0; r <= 3 * TILE; r += 8) {
+          const qx = n.x + Math.cos(mid) * (reach + r), qy = n.y + Math.sin(mid) * (reach + r);
+          if (m.tileAtPx(qx, qy) === T.BUILDING) { corners.push({ x: qx - Math.cos(mid) * 4, y: qy - Math.sin(mid) * 4, wall: true }); break; }
+        }
       }
+      if (corners.length < 2) corners = null; // nothing to hang wires from: poles instead
+    }
+    if (corners) {
+      const heads = ins.map((id) => {
+        const oa = n.dirs[id];
+        return { edge: id, x: n.x + Math.cos(oa) * 20, y: n.y + Math.sin(oa) * 20, a: oa };
+      });
+      m.signals.push({ node: n.id, wire: true, x: n.x, y: n.y, corners, heads });
       continue;
     }
-    // corners: between each pair of neighbouring streets, out past the junction box
-    const dirs = n.edges.map((id) => n.dirs[id]).sort((a, b) => a - b);
-    const reach = Math.min(240, Math.max(...n.edges.map((id) => n.trim[id] || n.half || 60)) * 1.15 + 34);
-    const corners = [];
-    for (let k = 0; k < dirs.length; k++) {
-      const a0 = dirs[k], a1 = dirs[(k + 1) % dirs.length] + (k + 1 === dirs.length ? Math.PI * 2 : 0);
-      const mid = (a0 + a1) / 2;
-      let cx = n.x + Math.cos(mid) * reach, cy = n.y + Math.sin(mid) * reach;
-      // tie off on a building wall if there's one just behind the corner, else on a slim post
-      let wall = false;
-      for (let r = 0; r <= 3 * TILE && !wall; r += 8) {
-        const qx = cx + Math.cos(mid) * r, qy = cy + Math.sin(mid) * r;
-        if (m.tileAtPx(qx, qy) === T.BUILDING) { cx = qx - Math.cos(mid) * 4; cy = qy - Math.sin(mid) * 4; wall = true; }
-      }
-      corners.push({ x: cx, y: cy, wall });
+    for (const id of ins) {
+      const arm = signalArm(m, n, id);
+      const p = addProp(m, 'sigpole', arm.x, arm.y, arm.open ? 5 : 0, { a: arm.a });
+      m.signals.push({ node: n.id, edge: id, x: arm.x, y: arm.y, hx: arm.hx, hy: arm.hy, hs: arm.heads.map((h) => [Math.round(h.x), Math.round(h.y)]), pi: m.props.indexOf(p) });
     }
-    const heads = ins.map((id) => {
-      const oa = n.dirs[id];
-      return { edge: id, x: n.x + Math.cos(oa) * 20, y: n.y + Math.sin(oa) * 20, a: oa };
-    });
-    m.signals.push({ node: n.id, wire: true, x: n.x, y: n.y, corners, heads });
   }
 }
 

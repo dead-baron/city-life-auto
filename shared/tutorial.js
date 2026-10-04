@@ -30,7 +30,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 18;
+export const TUTORIAL_VERSION = 19;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -76,7 +76,7 @@ export const STEPS = [
   { ch: 'city', title: isle('G'), at: { island: 'G' },
     text: `Two little islands far out in the south - the villages of Gull Harbor and Coral Cay, each round its village green. No bridge reaches them: take a boat. Out in the bay between Westport and Metro City lies Paradise Cay, a palm island with a beach camp, a cabin and a jetty to tie up at.` },
   { ch: 'city', title: 'The roads', at: { city: 1 },
-    text: `Roads join up the way they would in a real city: highways meet major avenues and arterials at signalled junctions, those feed the streets, streets feed the little residential roads and cul-de-sacs, and out in the country the county roads lead off them to dirt tracks into the woods, the hills and the desert. A dirt track is slow going for anything but a pickup or a bike. Downtown the traffic lights hang from wires strung between the buildings; elsewhere they stand on poles at the kerb - and a pole, like a lamp post, goes over if you hit it hard enough.` },
+    text: `Roads join up the way they would in a real city: highways meet major avenues and arterials at signalled junctions, those feed the streets, streets feed the little residential roads and cul-de-sacs, and out in the country the county roads lead off them to dirt tracks into the woods, the hills and the desert. A dirt track is slow going for anything but a pickup or a bike. At a small downtown crossing the traffic lights hang from wires tied to the buildings on its corners; everywhere else - the avenues, the boulevards, the highway junctions - each approach has a pole at the kerb with an arm reaching right across its lanes and a light over every lane. A pole, like a lamp post, goes over if you hit it hard enough.` },
   { ch: 'city', title: isle('C'), at: { island: 'C' },
     text: `The Syndicate's island fortress, off the far shore of ${isle('F')}. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
@@ -126,7 +126,7 @@ export const STEPS = [
   { ch: 'citizen', title: 'Good Samaritan points', at: { poi: 'evidence' },
     text: `Doing good earns Samaritan points: finish deliveries, stop a ${EVENT_KINDS.snatch.label.toLowerCase()} (an orange blip and arrow), then ${EVENT_KINDS.ret.label.toLowerCase()} to its owner (green), or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
   { ch: 'citizen', title: 'Lost pets', at: { poi: 'home' },
-    text: `Every ${Math.round(PET_EVERY_S / 60)} minutes or so a dog or a cat runs off somewhere near someone - a ${EVENT_KINDS.pet.label.toLowerCase()} shows as a light-blue blip and arrow. Find it, take its collar and it trots along at your heel; a green arrow (${EVENT_KINDS.petret.label.toLowerCase()}) leads you to the owner, who's out calling for it. Hand it back for $${PET_REWARD} and ${PET_SAMARITAN} Samaritan points. Get in a car and it slips away again.` },
+    text: `Every ${Math.round(PET_EVERY_S / 60)} minutes or so a dog or a cat runs off somewhere near someone - a ${EVENT_KINDS.pet.label.toLowerCase()} shows as a light-blue blip and arrow. Find it, take its collar and it trots along at your heel; a green arrow (${EVENT_KINDS.petret.label.toLowerCase()}) leads you to the owner, who's out calling for it. Hand it back for $${PET_REWARD} and ${PET_SAMARITAN} Samaritan points. Get in a car and it slips away again. A lost pet trots and sniffs about, bolts when it's in a hurry, and sits down whenever it stops for a while.` },
 
   // ---- criminal ------------------------------------------------------------------------------
   { ch: 'criminal', title: 'Crime needs a witness', at: { cameras: 1 },

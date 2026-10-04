@@ -2,7 +2,7 @@
 // Building prefabs cut from the concept building sheet. Sizes/footprints are in tiles
 // (32 world px); src is [sheet, x, y, w, h] inside assets/prefabs<sheet>.webp, stored at
 // 1 art px per world px (Real-ESRGAN upscaled from the concept sheet).
-export const PREFAB_SHEETS = 5;
+export const PREFAB_SHEETS = 4;
 export const PREFAB_SCALE = 2;
 export const PREFABS = {
  "apt1": {
@@ -18,10 +18,10 @@ export const PREFABS = {
    0.5
   ],
   "ground": "lot",
-  "rot": true,
+  "rot": false,
   "src": [
    0,
-   1158,
+   0,
    0,
    320,
    480
@@ -40,10 +40,10 @@ export const PREFABS = {
    0.5
   ],
   "ground": "lot",
-  "rot": true,
+  "rot": false,
   "src": [
    0,
-   1480,
+   322,
    0,
    320,
    480
@@ -65,8 +65,8 @@ export const PREFABS = {
   "rot": false,
   "src": [
    0,
+   644,
    0,
-   514,
    576,
    480
   ]
@@ -86,9 +86,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   3,
-   0,
-   998,
+   2,
+   1092,
+   322,
    384,
    288
   ]
@@ -109,8 +109,8 @@ export const PREFABS = {
   "rot": false,
   "src": [
    0,
-   932,
-   996,
+   1254,
+   482,
    416,
    448
   ]
@@ -133,9 +133,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   3,
-   386,
-   998,
+   2,
+   1478,
+   322,
    544,
    288
   ]
@@ -155,9 +155,9 @@ export const PREFABS = {
   "ground": "plaza",
   "rot": false,
   "src": [
-   1,
    0,
-   450,
+   418,
+   1414,
    352,
    416
   ]
@@ -177,9 +177,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   3,
-   932,
-   998,
+   2,
+   0,
+   644,
    480,
    288
   ]
@@ -199,9 +199,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   3,
-   0,
-   354,
+   1,
+   932,
+   1544,
    416,
    320
   ]
@@ -219,11 +219,11 @@ export const PREFABS = {
    0.5
   ],
   "ground": "lot",
-  "rot": true,
+  "rot": false,
   "src": [
    0,
-   578,
-   514,
+   1222,
+   0,
    608,
    480
   ]
@@ -241,11 +241,11 @@ export const PREFABS = {
    0.15
   ],
   "ground": "dirt",
-  "rot": true,
+  "rot": false,
   "src": [
    0,
-   1188,
-   514,
+   0,
+   482,
    480,
    480
   ]
@@ -266,8 +266,8 @@ export const PREFABS = {
   "rot": false,
   "src": [
    0,
-   1670,
-   514,
+   482,
+   482,
    320,
    480
   ]
@@ -287,9 +287,9 @@ export const PREFABS = {
   "ground": "lot",
   "rot": false,
   "src": [
-   3,
-   1414,
-   998,
+   2,
+   482,
+   644,
    448,
    288
   ]
@@ -307,11 +307,11 @@ export const PREFABS = {
    0.5
   ],
   "ground": "grass",
-  "rot": true,
+  "rot": false,
   "src": [
    0,
-   0,
-   996,
+   804,
+   482,
    448,
    480
   ]
@@ -334,26 +334,26 @@ export const PREFABS = {
   "cars": [
    [
     0.193,
-    0.878,
+    0.902,
     1.571
    ],
    [
     0.369,
-    0.878,
+    0.902,
     1.571
    ]
   ],
   "src": [
    3,
-   708,
-   1578,
+   0,
+   0,
    608,
    224
   ]
  },
  "clubnova": {
   "tw": 18,
-  "th": 12,
+  "th": 8,
   "solid": [
    0,
    0,
@@ -369,14 +369,14 @@ export const PREFABS = {
   "src": [
    2,
    0,
-   0,
+   1514,
    576,
-   384
+   256
   ]
  },
  "clubeclipse": {
   "tw": 17,
-  "th": 11,
+  "th": 9,
   "solid": [
    0,
    0,
@@ -391,20 +391,20 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   514,
-   1158,
+   932,
+   644,
    544,
-   352
+   288
   ]
  },
  "police2": {
   "tw": 16,
-  "th": 13,
+  "th": 9,
   "solid": [
    0,
    0,
    16,
-   10
+   9
   ],
   "doors": [
    0.5
@@ -413,21 +413,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   354,
-   450,
+   2,
+   1478,
+   644,
    512,
-   416
+   288
   ]
  },
  "police3": {
   "tw": 14,
-  "th": 16,
+  "th": 10,
   "solid": [
    0,
    1,
    14,
-   14
+   10
   ],
   "doors": [
    0.6
@@ -436,11 +436,11 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   0,
-   0,
-   0,
+   1,
+   1350,
+   1544,
    448,
-   512
+   320
   ]
  },
  "motors": {
@@ -450,7 +450,7 @@ export const PREFABS = {
    1,
    0,
    14,
-   7
+   6
   ],
   "doors": [
    0.5
@@ -459,16 +459,16 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   868,
-   450,
+   0,
+   772,
+   1414,
    480,
    416
   ]
  },
  "trail": {
   "tw": 16,
-  "th": 11,
+  "th": 12,
   "solid": [
    0,
    0,
@@ -482,21 +482,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   1060,
-   1158,
+   1,
+   1510,
+   0,
    512,
-   352
+   384
   ]
  },
  "boutique": {
   "tw": 17,
-  "th": 11,
+  "th": 8,
   "solid": [
    0,
    0,
    17,
-   9
+   8
   ],
   "doors": [
    0.5
@@ -506,10 +506,10 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   0,
-   1544,
+   578,
+   1514,
    544,
-   352
+   256
   ]
  },
  "quickstop": {
@@ -519,7 +519,7 @@ export const PREFABS = {
    0,
    0,
    15,
-   12
+   11
   ],
   "doors": [
    0.45
@@ -528,9 +528,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   1350,
-   450,
+   0,
+   1254,
+   1414,
    480,
    416
   ]
@@ -551,9 +551,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
+   2,
    0,
-   1288,
+   934,
    608,
    288
   ]
@@ -575,8 +575,8 @@ export const PREFABS = {
   "scene": true,
   "src": [
    0,
-   1350,
-   996,
+   0,
+   964,
    512,
    448
   ]
@@ -599,14 +599,14 @@ export const PREFABS = {
   "cars": [
    [
     0.808,
-    0.789,
+    0.797,
     1.571
    ]
   ],
   "src": [
    0,
-   0,
-   1478,
+   514,
+   964,
    512,
    448
   ]
@@ -629,14 +629,14 @@ export const PREFABS = {
   "cars": [
    [
     0.623,
-    0.882,
+    0.859,
     1.571
    ]
   ],
   "src": [
-   2,
-   578,
+   1,
    0,
+   418,
    512,
    384
   ]
@@ -657,21 +657,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   1092,
-   0,
+   1,
+   514,
+   418,
    608,
    384
   ]
  },
  "bank2": {
   "tw": 19,
-  "th": 8,
+  "th": 5,
   "solid": [
    0,
    0,
    19,
-   6
+   5
   ],
   "doors": [
    0.45
@@ -681,10 +681,10 @@ export const PREFABS = {
   "scene": true,
   "src": [
    3,
-   1124,
-   1288,
+   546,
+   226,
    608,
-   256
+   160
   ]
  },
  "junkyard": {
@@ -703,9 +703,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
-   418,
-   354,
+   2,
+   0,
+   0,
    608,
    320
   ]
@@ -726,7 +726,7 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   4,
+   3,
    0,
    226,
    544,
@@ -740,7 +740,7 @@ export const PREFABS = {
    0,
    0,
    13,
-   8
+   7
   ],
   "doors": [
    0.5
@@ -749,9 +749,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   546,
-   1544,
+   1,
+   1286,
+   804,
    416,
    352
   ]
@@ -761,7 +761,7 @@ export const PREFABS = {
   "th": 10,
   "solid": [
    11,
-   1,
+   0,
    17,
    5
   ],
@@ -772,9 +772,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
-   1028,
-   354,
+   2,
+   610,
+   0,
    608,
    320
   ]
@@ -797,7 +797,7 @@ export const PREFABS = {
   "src": [
    1,
    0,
-   868,
+   0,
    576,
    416
   ]
@@ -809,7 +809,7 @@ export const PREFABS = {
    4,
    1,
    12,
-   5
+   6
   ],
   "doors": [
    0.45
@@ -820,14 +820,14 @@ export const PREFABS = {
   "cars": [
    [
     0.643,
-    0.523,
+    0.535,
     1.571
    ]
   ],
   "src": [
-   3,
+   2,
+   1220,
    0,
-   676,
    576,
    320
   ]
@@ -848,9 +848,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
-   578,
-   676,
+   2,
+   0,
+   322,
    608,
    320
   ]
@@ -862,7 +862,7 @@ export const PREFABS = {
    0,
    0,
    15,
-   10
+   8
   ],
   "doors": [
    0.28
@@ -871,21 +871,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   964,
-   1544,
+   1,
+   0,
+   1190,
    512,
    352
   ]
  },
  "shops1": {
-  "tw": 24,
-  "th": 7,
+  "tw": 26,
+  "th": 5,
   "solid": [
    0,
    0,
-   24,
-   6
+   26,
+   5
   ],
   "doors": [
    0.1,
@@ -898,21 +898,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   4,
-   0,
-   0,
-   768,
-   224
+   3,
+   1156,
+   226,
+   832,
+   160
   ]
  },
  "shops2": {
-  "tw": 25,
-  "th": 7,
+  "tw": 28,
+  "th": 5,
   "solid": [
    0,
    0,
-   25,
-   6
+   28,
+   5
   ],
   "doors": [
    0.1,
@@ -925,11 +925,11 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   4,
-   770,
+   3,
    0,
-   800,
-   224
+   420,
+   896,
+   160
   ]
  },
  "house1": {
@@ -950,14 +950,14 @@ export const PREFABS = {
   "cars": [
    [
     0.215,
-    0.692,
+    0.683,
     1.571
    ]
   ],
   "src": [
-   2,
-   0,
-   386,
+   1,
+   1124,
+   418,
    512,
    384
   ]
@@ -980,14 +980,14 @@ export const PREFABS = {
   "cars": [
    [
     0.246,
-    0.692,
+    0.721,
     1.571
    ]
   ],
   "src": [
-   2,
-   514,
-   386,
+   1,
+   0,
+   804,
    480,
    384
   ]
@@ -999,7 +999,7 @@ export const PREFABS = {
    1,
    2,
    12,
-   11
+   10
   ],
   "doors": [
    0.49
@@ -1010,19 +1010,19 @@ export const PREFABS = {
   "cars": [
    [
     0.603,
-    0.79,
+    0.765,
     1.571
    ],
    [
     0.73,
-    0.79,
+    0.765,
     1.571
    ]
   ],
   "src": [
    0,
-   514,
-   1478,
+   1028,
+   964,
    448,
    448
   ]
@@ -1034,7 +1034,7 @@ export const PREFABS = {
    5,
    0,
    13,
-   8
+   9
   ],
   "doors": [
    0.64
@@ -1044,8 +1044,8 @@ export const PREFABS = {
   "scene": true,
   "src": [
    0,
-   964,
    1478,
+   964,
    480,
    448
   ]
@@ -1068,19 +1068,19 @@ export const PREFABS = {
   "cars": [
    [
     0.238,
-    0.73,
+    0.74,
     1.571
    ],
    [
     0.368,
-    0.73,
+    0.74,
     1.571
    ]
   ],
   "src": [
    0,
-   1446,
-   1478,
+   0,
+   1414,
    416,
    448
   ]
@@ -1103,26 +1103,26 @@ export const PREFABS = {
   "cars": [
    [
     0.095,
-    0.483,
+    0.465,
     1.571
    ]
   ],
   "src": [
    1,
    578,
-   868,
+   0,
    480,
    416
   ]
  },
  "conv": {
   "tw": 16,
-  "th": 11,
+  "th": 8,
   "solid": [
    0,
    0,
    16,
-   7
+   8
   ],
   "doors": [
    0.5
@@ -1132,20 +1132,20 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   1478,
-   1544,
+   1124,
+   1514,
    512,
-   352
+   256
   ]
  },
  "rest1": {
   "tw": 16,
-  "th": 9,
+  "th": 7,
   "solid": [
    0,
    0,
    16,
-   4
+   6
   ],
   "doors": [
    0.45
@@ -1156,14 +1156,14 @@ export const PREFABS = {
   "src": [
    3,
    610,
-   1288,
+   0,
    512,
-   288
+   224
   ]
  },
  "rest2": {
   "tw": 14,
-  "th": 12,
+  "th": 9,
   "solid": [
    0,
    0,
@@ -1178,20 +1178,20 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   996,
-   386,
+   610,
+   934,
    448,
-   384
+   288
   ]
  },
  "diner": {
   "tw": 13,
-  "th": 11,
+  "th": 8,
   "solid": [
    0,
    0,
    13,
-   9
+   8
   ],
   "doors": [
    0.45
@@ -1200,16 +1200,16 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
+   2,
    0,
-   0,
+   1772,
    416,
-   352
+   256
   ]
  },
  "hotel": {
   "tw": 15,
-  "th": 11,
+  "th": 7,
   "solid": [
    0,
    0,
@@ -1224,15 +1224,15 @@ export const PREFABS = {
   "scene": true,
   "src": [
    3,
-   418,
+   1124,
    0,
    480,
-   352
+   224
   ]
  },
  "bank": {
   "tw": 15,
-  "th": 15,
+  "th": 10,
   "solid": [
    0,
    0,
@@ -1246,11 +1246,11 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   0,
-   450,
-   996,
+   2,
+   610,
+   322,
    480,
-   480
+   320
   ]
  },
  "warehouse": {
@@ -1260,7 +1260,7 @@ export const PREFABS = {
    0,
    0,
    14,
-   11
+   13
   ],
   "doors": [
    0.78
@@ -1271,7 +1271,7 @@ export const PREFABS = {
   "src": [
    1,
    1060,
-   868,
+   0,
    448,
    416
   ]
@@ -1292,9 +1292,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
-   0,
-   1578,
+   2,
+   418,
+   1772,
    384,
    256
   ]
@@ -1315,16 +1315,16 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
-   386,
-   1578,
+   2,
+   804,
+   1772,
    320,
    256
   ]
  },
  "police": {
   "tw": 16,
-  "th": 10,
+  "th": 9,
   "solid": [
    0,
    0,
@@ -1338,39 +1338,16 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
-   1188,
-   676,
-   512,
-   320
-  ]
- },
- "bistro": {
-  "tw": 10,
-  "th": 12,
-  "solid": [
-   0,
-   0,
-   10,
-   5
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
    2,
-   1446,
-   386,
-   320,
-   384
+   1060,
+   934,
+   512,
+   288
   ]
  },
  "royale": {
   "tw": 10,
-  "th": 12,
+  "th": 8,
   "solid": [
    0,
    0,
@@ -1385,20 +1362,20 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   0,
-   772,
+   1126,
+   1772,
    320,
-   384
+   256
   ]
  },
  "vellori": {
   "tw": 10,
-  "th": 16,
+  "th": 11,
   "solid": [
    0,
    0,
    10,
-   12
+   11
   ],
   "doors": [
    0.5
@@ -1407,21 +1384,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   0,
-   450,
-   0,
+   1,
+   514,
+   1190,
    320,
-   512
+   352
   ]
  },
  "monarch": {
   "tw": 12,
-  "th": 16,
+  "th": 11,
   "solid": [
    0,
    0,
    12,
-   12
+   11
   ],
   "doors": [
    0.5
@@ -1430,11 +1407,11 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   0,
-   772,
-   0,
+   1,
+   836,
+   1190,
    384,
-   512
+   352
   ]
  },
  "shanty1": {
@@ -1453,9 +1430,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
-   900,
-   0,
+   1,
+   1222,
+   1190,
    384,
    352
   ]
@@ -1476,9 +1453,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   322,
-   772,
+   1,
+   482,
+   804,
    384,
    384
   ]
@@ -1490,7 +1467,7 @@ export const PREFABS = {
    0,
    0,
    13,
-   9
+   10
   ],
   "doors": [
    0.6
@@ -1499,113 +1476,21 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   2,
-   708,
-   772,
+   1,
+   868,
+   804,
    416,
    384
-  ]
- },
- "neonclub": {
-  "tw": 14,
-  "th": 14,
-  "solid": [
-   0,
-   0,
-   14,
-   11
-  ],
-  "doors": [
-   0.45
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   1,
-   0,
-   0,
-   448,
-   448
-  ]
- },
- "neontap": {
-  "tw": 14,
-  "th": 14,
-  "solid": [
-   0,
-   0,
-   14,
-   11
-  ],
-  "doors": [
-   0.45
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   1,
-   450,
-   0,
-   448,
-   448
-  ]
- },
- "midnight": {
-  "tw": 16,
-  "th": 14,
-  "solid": [
-   0,
-   0,
-   16,
-   11
-  ],
-  "doors": [
-   0.58
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   1,
-   900,
-   0,
-   512,
-   448
-  ]
- },
- "luna": {
-  "tw": 16,
-  "th": 13,
-  "solid": [
-   0,
-   0,
-   16,
-   9
-  ],
-  "doors": [
-   0.42
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   1,
-   1510,
-   868,
-   512,
-   416
   ]
  },
  "arcade": {
   "tw": 10,
-  "th": 13,
+  "th": 11,
   "solid": [
    0,
    0,
    10,
-   10
+   11
   ],
   "doors": [
    0.5
@@ -1615,43 +1500,20 @@ export const PREFABS = {
   "scene": true,
   "src": [
    1,
-   0,
-   1286,
+   1608,
+   1190,
    320,
-   416
-  ]
- },
- "latebite": {
-  "tw": 11,
-  "th": 14,
-  "solid": [
-   0,
-   0,
-   11,
-   10
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   1,
-   1414,
-   0,
-   352,
-   448
+   352
   ]
  },
  "tattoo": {
   "tw": 12,
-  "th": 13,
+  "th": 11,
   "solid": [
    0,
    0,
    12,
-   10
+   11
   ],
   "doors": [
    0.5
@@ -1661,15 +1523,15 @@ export const PREFABS = {
   "scene": true,
   "src": [
    1,
-   322,
-   1286,
+   0,
+   1544,
    384,
-   416
+   352
   ]
  },
  "crown": {
   "tw": 13,
-  "th": 12,
+  "th": 9,
   "solid": [
    0,
    0,
@@ -1684,20 +1546,20 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   1126,
-   772,
+   1574,
+   934,
    416,
-   384
+   288
   ]
  },
  "greenbistro": {
   "tw": 12,
-  "th": 13,
+  "th": 9,
   "solid": [
    0,
    0,
    12,
-   8
+   9
   ],
   "doors": [
    0.5
@@ -1706,16 +1568,16 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   708,
-   1286,
+   2,
+   0,
+   1224,
    384,
-   416
+   288
   ]
  },
  "theatre": {
   "tw": 16,
-  "th": 12,
+  "th": 9,
   "solid": [
    0,
    0,
@@ -1730,38 +1592,15 @@ export const PREFABS = {
   "scene": true,
   "src": [
    2,
-   0,
-   1158,
+   386,
+   1224,
    512,
-   384
+   288
   ]
  },
  "diamond": {
   "tw": 13,
-  "th": 13,
-  "solid": [
-   0,
-   0,
-   13,
-   10
-  ],
-  "doors": [
-   0.5
-  ],
-  "ground": "plaza",
-  "rot": false,
-  "scene": true,
-  "src": [
-   1,
-   1094,
-   1286,
-   416,
-   416
-  ]
- },
- "redawning": {
-  "tw": 13,
-  "th": 13,
+  "th": 9,
   "solid": [
    0,
    0,
@@ -1775,11 +1614,34 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   1,
-   1512,
-   1286,
+   2,
+   900,
+   1224,
    416,
-   416
+   288
+  ]
+ },
+ "redawning": {
+  "tw": 13,
+  "th": 9,
+  "solid": [
+   0,
+   0,
+   13,
+   9
+  ],
+  "doors": [
+   0.5
+  ],
+  "ground": "plaza",
+  "rot": false,
+  "scene": true,
+  "src": [
+   2,
+   1318,
+   1224,
+   416,
+   288
   ]
  },
  "market": {
@@ -1789,7 +1651,7 @@ export const PREFABS = {
    0,
    0,
    17,
-   10
+   11
   ],
   "doors": [
    0.5
@@ -1798,9 +1660,9 @@ export const PREFABS = {
   "rot": false,
   "scene": true,
   "src": [
-   3,
-   1286,
-   0,
+   1,
+   386,
+   1544,
    544,
    352
   ]

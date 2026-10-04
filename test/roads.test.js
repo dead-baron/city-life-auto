@@ -119,7 +119,7 @@ test('roads hang together: no stray dead ends, one-ways never trap you', () => {
   for (const e of m.edges) if (e.kind === 'dirt') for (const id of [e.a, e.b]) for (const o of m.nodes[id].edges) assert.ok(ROAD_RANK[m.edges[o].kind] <= 4, `a dirt track runs straight into a ${m.edges[o].kind}`);
 });
 
-test('intersections: zebra crossings never overlap; lights hang from span wires downtown or stand on knock-down poles', async () => {
+test('intersections: zebra crossings never overlap; span wires only at small walled crossings, mast arms span every lane elsewhere', async () => {
   const { zebraCrossings } = await import('../shared/roads.js');
   const w = makeWorld();
   const m = w.map;
@@ -137,8 +137,15 @@ test('intersections: zebra crossings never overlap; lights hang from span wires 
   const covered = new Set(m.signals.map((s) => s.node));
   assert.ok(lit.every((n) => covered.has(n.id)), 'every signalled junction has lights');
   const wires = m.signals.filter((s) => s.wire), poles = m.signals.filter((s) => !s.wire);
-  assert.ok(wires.length > 50 && poles.length > 100, `span wires ${wires.length}, poles ${poles.length}`);
-  assert.ok(wires.some((s) => s.corners.some((c) => c.wall)), 'some wires are tied to buildings');
+  assert.ok(wires.length > 10 && poles.length > 100, `span wires ${wires.length}, poles ${poles.length}`);
+  const small = new Set(['st', 'minor', 'drive', 'front']);
+  for (const s of wires) {
+    assert.ok(s.corners.length >= 2 && s.corners.every((c) => c.wall), 'span wires are tied to building walls');
+    assert.ok(m.nodes[s.node].edges.every((id) => small.has(m.edges[id].kind)), 'span wires only over side streets');
+  }
+  // on a wide road the arm reaches across every incoming lane, a head over each
+  for (const s of poles) assert.equal(s.hs.length, Math.min(5, Math.max(1, m.edges[s.edge].nl)));
+  assert.ok(poles.some((s) => m.edges[s.edge].kind === 'hwy' && s.hs.length >= 2), 'highway junctions get full-width mast arms');
   // a pole is solid and breakable: ram it and it goes over
   const props = await import('../server/systems/props.js');
   const sg = poles.find((s) => { const e = m.propSolid.get(s.pi); return e && e.brk; });

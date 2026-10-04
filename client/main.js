@@ -492,7 +492,7 @@ const DEV_CMDS = [
   ['calltrain', '🚉 Call a train to this station'], ['train', '🚆 Hop on the nearest train'],
   ['rain', '🌧 Start rain'], ['clear', '☀ Stop rain'], ['night', '🌙 Jump to night'], ['day', '🌅 Jump to day'],
   ['wanted', '★★ 2 stars', { n: 2 }], ['wanted', '★★★★ 4 stars', { n: 4 }], ['clean', '🧽 Clear wanted'], ['record', '📜 Wipe criminal record'],
-  ['samaritan', '😇 +50 Samaritan'], ['cop', '👮 Join the police'], ['promote', '⬆ Promote police rank'],
+  ['samaritan', '😇 +50 Samaritan'], ['pet', '🐶 Lost pet nearby'], ['cop', '👮 Join the police'], ['promote', '⬆ Promote police rank'],
   ['drop', '🎁 Contraband drop', { n: 4 }], ['snatch', '👜 Snatch-and-grab nearby'], ['shootout', '💥 Gang vs police shootout'], ['die', '☠ Die (respawn test)'],
 ];
 function devPress(b, label, run) {
@@ -2011,20 +2011,23 @@ function drawSwimRipples(p, now) {
 // faces the camera and mirrors left / right. A little bob while it trots.
 function drawAnimal(p, now) {
   const key = p.d.ar.slice(4), art = ANIMAL_ART[key];
-  const moving = (p.as || 0) > 12;
+  const sp = p.as || 0;
+  // walking / running frames by speed; a pet that has stood still a moment sits down
+  if (sp > 12 || p.stillSince === undefined) p.stillSince = now;
   g.save();
   g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 4, 13, 6, 0, 0, 6.28); g.fill();
   if (!art || !atlas.animals) { g.fillStyle = '#a0703a'; g.beginPath(); g.ellipse(p.rx, p.ry, 12, 7, p.ra, 0, 6.28); g.fill(); g.restore(); return; }
-  const [sx, sy, sw, sh] = art.r;
-  const bob = moving ? Math.abs(Math.sin(now * 14 + p.id)) * 1.5 : 0;
+  const f = art.f;
+  const r = !f ? art.r : sp > 70 ? f.run[Math.floor(now * 14 + p.id) % 4] : sp > 12 ? f.walk[Math.floor(now * 8 + p.id) % 4] : now - p.stillSince > 1.2 ? f.sit : f.idle;
+  const [sx, sy, sw, sh] = r, pad = art.pad || 0;
   g.imageSmoothingEnabled = false;
   if (art.view === 'top') {
-    g.translate(p.rx, p.ry - bob); g.rotate(p.ra);
+    g.translate(p.rx, p.ry); g.rotate(p.ra);
     const k = 0.9; g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -sh * k / 2, sw * k, sh * k);
   } else {
     const k = 0.75, flip = Math.cos(p.ra) < -0.2;
-    g.translate(p.rx, p.ry + 4 - bob); if (flip) g.scale(-1, 1);
-    g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -sh * k, sw * k, sh * k);
+    g.translate(p.rx, p.ry + 4); if (flip) g.scale(-1, 1);
+    g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -(sh - pad) * k, sw * k, sh * k);
   }
   g.imageSmoothingEnabled = true;
   g.restore();
@@ -2162,7 +2165,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
 }
 
 // Traffic signals on mast arms: a pole on the near-right corner of every approach with an arm
-// reaching over the incoming lanes and a 3-lamp head facing the drivers. Cameras sit on poles.
+// reaching right across the incoming lanes and a 3-lamp head over each lane, facing the drivers. Cameras sit on poles.
 const SIG_COL = { G: '#3ddc84', Y: '#ffc23d', R: '#ff3b3b' };
 function drawSignals(view) {
   S.sigHeads = [];
@@ -2182,18 +2185,21 @@ function drawSignals(view) {
       g.strokeStyle = '#4c5260'; g.lineWidth = 1; g.beginPath(); g.moveTo(px, py - 1); g.lineTo(hx, hy - 1); g.stroke();
       g.fillStyle = '#30343e'; g.beginPath(); g.arc(px, py, 5, 0, 6.28); g.fill();
       g.fillStyle = '#555b68'; g.beginPath(); g.arc(px - 1, py - 1, 2, 0, 6.28); g.fill();
-      // head: three lamps in a row across the arm, lit lamp facing the drivers
-      S.sigHeads.push({ x: hx, y: hy, c: SIG_COL[st] });
-      g.save(); g.translate(hx, hy); g.rotate(Math.atan2(ry, rx));
-      g.fillStyle = '#14161b'; g.fillRect(-14, -5, 28, 10);
-      g.fillStyle = '#e8b923'; g.fillRect(-14, -5, 28, 1.5);
-      ['R', 'Y', 'G'].forEach((c, k) => {
-        const on = st === c;
-        g.fillStyle = on ? SIG_COL[c] : 'rgba(80,80,80,.9)';
-        g.beginPath(); g.arc(-8 + k * 8, 0.5, 3, 0, 6.28); g.fill();
-        if (on) { g.fillStyle = SIG_COL[c] + '55'; g.beginPath(); g.arc(-8 + k * 8, 0.5, 6, 0, 6.28); g.fill(); }
-      });
-      g.restore();
+      // a head over every incoming lane: three lamps in a row across the arm, facing the drivers
+      for (const [x, y] of sg.hs || [[hx, hy]]) {
+        S.sigHeads.push({ x, y, c: SIG_COL[st] });
+        g.save(); g.translate(x, y); g.rotate(Math.atan2(ry, rx));
+        g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-12, -1, 28, 10);
+        g.fillStyle = '#14161b'; g.fillRect(-14, -5, 28, 10);
+        g.fillStyle = '#e8b923'; g.fillRect(-14, -5, 28, 1.5);
+        ['R', 'Y', 'G'].forEach((c, k) => {
+          const on = st === c;
+          g.fillStyle = on ? SIG_COL[c] : 'rgba(80,80,80,.9)';
+          g.beginPath(); g.arc(-8 + k * 8, 0.5, 3, 0, 6.28); g.fill();
+          if (on) { g.fillStyle = SIG_COL[c] + '55'; g.beginPath(); g.arc(-8 + k * 8, 0.5, 6, 0, 6.28); g.fill(); }
+        });
+        g.restore();
+      }
     }
   }
   const nowMs = performance.now();
