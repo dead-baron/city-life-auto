@@ -18,6 +18,7 @@ Outputs
 import json
 import os
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 
 SRC = sys.argv[1] if len(sys.argv) > 1 else '.'
@@ -97,13 +98,51 @@ def tile_mask(name, crop, spec):
     return {'w': w, 'h': h, 'rows': [''.join(r) for r in cls]}
 
 
+# Painted people come out: the game spawns its own clerks, guards and customers. Boxes are in
+# the scaled piece's own px (as packed, at most MAX_W wide); see tools/build_art.py paint_people.
+NPC_PAINT = {
+    'hospital': [(0, 82, 10, 126, 'v'), (484, 82, 504, 128, 'b'), (213, 133, 236, 163, 'h'), (275, 133, 298, 163, 'h'),
+                 (119, 172, 139, 215, 'b'), (243, 188, 265, 233, 'b'), (371, 197, 391, 237, 'b'),
+                 (119, 272, 141, 316, 'h'), (389, 274, 411, 316, 'h'), (391, 348, 415, 392, 'h'), (19, 338, 41, 382, 'b')],
+    'policedesk': [(113, 163, 140, 205, 'b'), (184, 163, 211, 205, 'b'), (110, 224, 137, 283, 'b'), (13, 356, 40, 412, 'b'),
+                   (281, 370, 314, 440, 'b'), (256, 431, 283, 465, 'h'), (27, 626, 58, 691, 'b'), (145, 626, 176, 691, 'b'),
+                   (242, 645, 269, 705, 'b')],
+    'bank': [(39, 45, 55, 65, 'h'), (163, 75, 181, 93, 'h'), (197, 75, 215, 93, 'h'), (237, 75, 255, 93, 'h'),
+             (161, 97, 181, 127, 'b'), (201, 97, 221, 127, 'b'), (241, 97, 261, 127, 'b'), (321, 57, 341, 93, 'b'),
+             (17, 131, 33, 159, 'h'), (427, 125, 443, 147, 'h'), (359, 161, 377, 197, 'b'), (23, 222, 41, 249, 'h')],
+    'corner': [(315, 130, 351, 176, 'h')],
+    'liquor': [(282, 77, 314, 113, 'h')],
+    'fuelmart': [(227, 77, 248, 104, 'h'), (224, 102, 248, 148, 'b')],
+    'pawn': [(245, 70, 273, 101, 'h')],
+    'boutique': [(159, 113, 177, 145, 'b')],
+    'armory': [(113, 127, 146, 193, 'b')],
+    'freshmart': [(162, 47, 178, 77, 'b'), (335, 47, 353, 77, 'b'), (452, 47, 470, 77, 'b'), (52, 100, 68, 128, 'b'),
+                  (105, 105, 125, 147, 'b'), (16, 163, 34, 197, 'b'), (31, 200, 47, 230, 'b'), (131, 170, 151, 208, 'b'),
+                  (155, 207, 175, 247, 'b'), (325, 182, 345, 214, 'b'), (455, 160, 475, 192, 'b'),
+                  (382, 230, 402, 275, 'b'), (330, 252, 348, 275, 'b'), (484, 252, 502, 275, 'b')],
+    'police': [(32, 30, 42, 50, 'b'), (72, 25, 84, 47, 'b'), (75, 43, 86, 58, 'b'), (183, 50, 192, 72, 'b'),
+               (241, 56, 252, 70, 'b'), (240, 77, 251, 98, 'b'), (24, 134, 36, 151, 'b'), (69, 138, 79, 156, 'b'),
+               (112, 140, 124, 162, 'b'), (159, 128, 169, 148, 'b'), (206, 124, 216, 143, 'b'), (177, 149, 189, 170, 'b'),
+               (266, 56, 276, 70, 'b'), (354, 50, 363, 74, 'b'), (455, 29, 466, 41, 'b'), (424, 49, 436, 64, 'b'),
+               (449, 55, 461, 65, 'b'), (475, 49, 486, 64, 'b'), (424, 65, 436, 78, 'b'), (449, 65, 461, 77, 'b'),
+               (475, 65, 486, 78, 'b'), (300, 124, 312, 150, 'b'), (290, 150, 302, 162, 'b'), (370, 132, 382, 146, 'b'),
+               (437, 136, 446, 158, 'b'), (461, 142, 471, 165, 'b')],
+}
+
+
+def piece(key):
+    name, box = CROPS[key]
+    im = Image.open(os.path.join(SRC, name)).convert('RGB').crop(box)
+    if im.width > MAX_W:
+        im = im.resize((MAX_W, round(im.height * MAX_W / im.width)), Image.LANCZOS)
+    if NPC_PAINT.get(key):
+        from build_art import paint_people
+        im = paint_people(im, NPC_PAINT[key])
+    return im
+
+
 def main():
-    pieces = {}
-    for key, (name, box) in CROPS.items():
-        im = Image.open(os.path.join(SRC, name)).convert('RGB').crop(box)
-        if im.width > MAX_W:
-            im = im.resize((MAX_W, round(im.height * MAX_W / im.width)), Image.LANCZOS)
-        pieces[key] = im
+    pieces = {key: piece(key) for key in CROPS}
     # shelf-pack, tallest first
     order = sorted(pieces, key=lambda k: -pieces[k].height)
     W = MAX_W * 2 + 4

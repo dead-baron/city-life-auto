@@ -170,7 +170,6 @@ SCENE_PREFABS = {
     'tackle2':    ('e9e1ec76-image.png', (200, 80, 1300, 490), (.1, .1, .75, .55), [.45], 'dirt', False, 17),
     'shack':      ('63fc3283-image.png', (480, 260, 1090, 760), (.05, .05, .95, .65), [.5], 'dirt', False, 13),
     'farmstead':  ('2f8031eb-image.png', (150, 40, 1448, 700), (.58, .1, .85, .45), [.2], 'dirt', False, 19),
-    'site':       ('94484028-image.png', (380, 20, 1400, 760), (.02, .02, .25, .3), [.15], 'dirt', False, 18),
     'beachbar':   ('5841fda7-image.png', (300, 60, 1460, 720), (.25, .12, .62, .5), [.45], 'sand', False, 18),
     'pool':       ('d638bb4b-image.png', (240, 60, 1520, 740), (.0, .0, .25, .45), [.12], 'grass', False, 19),
     'liquor':     ('a8217af8-image.png', (200, 20, 1300, 780), (.04, .02, .92, .84), [.28], 'plaza', False, 16),
@@ -207,7 +206,6 @@ SCENE_PREFABS = {
     'theatre'    : ('59f534a1-image.png', (685, 0, 1113, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 16),  # the arched theatre
     'diamond'    : ('59f534a1-image.png', (1113, 0, 1443, 323), (0, 0, 1, 0.72), [0.5], 'plaza', False, 13),  # jeweller
     'redawning'  : ('59f534a1-image.png', (1443, 0, 1774, 323), (0, 0, 1, 0.62), [0.5], 'plaza', False, 13),  # red-awning cafe
-    'market'     : ('ee728fc6-image.png', (400, 30, 1300, 600), (0.04, 0.04, 0.96, 0.9), [0.5], 'plaza', False, 17),  # FreshMart supermarket front
 }
 
 MAX_LOT_TH = 16   # a city block is ~16 tiles deep
@@ -250,7 +248,7 @@ SCENE_DOORS = {
     'crown': (262, 266), 'greenbistro': (242, 246), 'theatre': (252, 256), 'diamond': (252, 256), 'redawning': (242, 246),
     'clubnova': (532, 540), 'clubeclipse': (512, 516),
     'quickstop': (575, None), 'liquor': (585, None), 'fuel': (450, None), 'trail': (485, None), 'boutique': (440, 446),
-    'bank2': (300, 306), 'market': (590, None), 'apt3': (450, None), 'apt4': (700, None), 'motors': (390, None),
+    'bank2': (300, 306), 'apt3': (450, None), 'apt4': (700, None), 'motors': (390, None),
     'rest2': (270, 276), 'diner': (230, 236), 'tower1': (180, None), 'tower2': (180, None), 'warehouse': (325, None),
 }
 
@@ -262,16 +260,33 @@ NPC_PAINT = {
                            (1036, 368, 1066, 400), (594, 384, 622, 400)],
     '6fed2123-image.png': [(565, 494, 603, 512), (637, 494, 677, 512)],
     'd6e9ec95-image.png': [(836, 148, 888, 180), (296, 158, 348, 180)],
-    '8e6fd787-image.png': [(733, 258, 762, 338), (892, 258, 919, 338)],                       # bank guards and statues
-    'da2b614f-image.png': [(186, 150, 232, 200), (158, 164, 184, 212), (236, 164, 262, 212),  # Royale doorway
-                           (810, 146, 834, 205), (894, 146, 918, 205), (848, 128, 884, 168)], # hotel doormen
+    'a3d2f043-image.png': [(397, 473, 421, 503), (449, 473, 474, 503)],             # cops either side of the doors
+    '3a84dd63-image.png': [(78, 310, 102, 376, 'b'), (213, 340, 237, 390, 'b'), (430, 290, 455, 333, 'b'),   # the shanty street's
+                           (566, 336, 592, 390, 'b'), (836, 343, 853, 388, 'b'), (1165, 298, 1192, 350, 'b')],  # loiterers
+    'd638bb4b-image.png': [((910, 248, 935, 308), (861, 248, 886, 308)), ((961, 248, 986, 308), (861, 248, 886, 308)),  # sunbathers
+                           ((1252, 622, 1278, 678), (1301, 622, 1327, 678)),
+                           ((810, 410, 862, 442), (720, 410, 772, 442)), ((1036, 485, 1081, 532), (1083, 485, 1128, 532)),  # swimmers
+                           ((868, 528, 924, 552), (760, 528, 816, 552)), ((785, 580, 816, 618), (835, 580, 866, 618)),
+                           ((1275, 511, 1302, 549), (1241, 511, 1268, 549)), ((1330, 541, 1356, 576), (1300, 541, 1326, 576)),
+                           (1204, 316, 1232, 362)],                                                                     # the lifeguard
+    'e9e1ec76-image.png': [(290, 385, 318, 448, 'b'), (477, 406, 502, 464, 'b'), (553, 446, 584, 492, 'b'),  # anglers round
+                           (643, 406, 671, 469, 'b'), (206, 298, 226, 346, 'b'), (198, 454, 215, 492, 'b'),  # Bait & Tackle
+                           (759, 408, 784, 466, 'b'), (1043, 145, 1074, 214, 'b'), (1233, 327, 1261, 387, 'b'), (1285, 103, 1302, 162, 'b')],
+    'e71fca5d-image.png': [(1068, 438, 1094, 492, 'h')],                                         # at the FuelMax door
+    'a7108177-image.png': [(1452, 178, 1470, 206, 'h')],
+    '8e6fd787-image.png': [(733, 258, 762, 338), (892, 258, 919, 338), (760, 266, 774, 314, 'h')],                       # bank guards and statues
+    'da2b614f-image.png': [(186, 150, 232, 200), (143, 126, 163, 166, 'h'), (143, 166, 163, 188), (249, 122, 273, 166, 'h'), (249, 166, 273, 188),  # Royale doorway
+                           (810, 146, 834, 205), (894, 146, 918, 205), (848, 128, 884, 168), (878, 146, 892, 180, 'h')], # hotel doormen
     '4bb52753-image.png': [(50, 225, 80, 265), (95, 240, 125, 285), (150, 245, 190, 292),     # Joe's diners
                            (1255, 250, 1300, 298), (1320, 245, 1350, 298), (698, 282, 724, 305)],
     '9cec10ef-image.png': [(808, 236, 836, 282), (926, 236, 952, 282), (1410, 276, 1436, 302)],
-    '00ceb559-image.png': [(592, 495, 614, 540), (696, 495, 718, 540)],                       # Club Nova bouncers
-    '34eae673-image.png': [(386, 370, 410, 412), (708, 486, 734, 512), (826, 486, 852, 512)],
-    'a1c88191-image.png': [(266, 880, 290, 926)],                                             # tattoo doorway
-    '59f534a1-image.png': [(496, 205, 520, 238), (565, 205, 590, 238)],                       # bistro diners
+    '00ceb559-image.png': [(592, 495, 614, 540), (696, 495, 718, 540), (612, 506, 626, 548, 'h'), (713, 506, 738, 548, 'h')],                       # Club Nova bouncers
+    '34eae673-image.png': [(386, 370, 410, 412), (708, 486, 734, 512), (826, 486, 852, 512),
+                           (514, 462, 588, 506, 'b'), (954, 462, 1030, 506, 'b')],                     # dancers painted in the windows
+    'a1c88191-image.png': [(266, 880, 290, 926), (228, 866, 252, 914, 'h'), (914, 638, 942, 674, 'h'), (1020, 888, 1047, 930, 'h'),  # tattoo / arcade doorways
+                           (966, 824, 992, 852, 'b'), (1046, 824, 1068, 852, 'b')],
+    '59f534a1-image.png': [(496, 205, 520, 238), (565, 205, 590, 238), (458, 212, 486, 238, 'h'), (602, 212, 632, 238, 'h'),  # diners in the
+                           (1492, 210, 1518, 242, 'h'), (1688, 212, 1724, 240, 'h')],                                         # cafe windows
 }
 
 
@@ -279,9 +294,11 @@ PREVIEW = {}  # key -> (painted sheet, crop box, door row, rows): for tools/prev
 
 
 def paint_people(img, entries):
-    """Remove painted figures: tile a clean sample over the box, or refill the box column by
-    column, blending from the pixels just above it to those just below it - doors, glass,
-    columns and steps are vertical or horizontal, so their lines carry straight through."""
+    """Remove painted figures. An entry is (box, sample box): tile a clean sample over the box;
+    or a box (x0, y0, x1, y1[, mode]) refilled from its edges - mode 'v' (default) blends column
+    by column from the pixels just above to those just below, so door frames, glass, columns and
+    steps carry straight through; 'h' blends row by row from left to right (a figure against a
+    wall or a window); 'b' averages the two."""
     tiled = [e for e in entries if isinstance(e[0], tuple)]
     if tiled:
         img = paint_out(img, tiled)
@@ -290,11 +307,20 @@ def paint_people(img, entries):
         return img
     a = np.asarray(img.convert('RGB'), np.float32).copy()
     k = 3
-    for x0, y0, x1, y1 in boxes:
-        top = a[max(0, y0 - k):y0, x0:x1].mean(0)
-        bot = a[y1:y1 + k, x0:x1].mean(0)
+    for e in boxes:
+        x0, y0, x1, y1 = e[:4]
+        mode = e[4] if len(e) > 4 else 'v'
+        A, Bm = a[max(0, y0 - k):y0, x0:x1], a[y1:y1 + k, x0:x1]
+        top = (A if A.shape[0] else Bm).mean(0)
+        bot = (Bm if Bm.shape[0] else A).mean(0)
         t = np.linspace(0, 1, y1 - y0 + 2)[1:-1][:, None, None]
-        a[y0:y1, x0:x1] = top[None] * (1 - t) + bot[None] * t
+        v = top[None] * (1 - t) + bot[None] * t
+        L, R = a[y0:y1, max(0, x0 - k):x0], a[y0:y1, x1:x1 + k]
+        left = (L if L.shape[1] else R).mean(1)
+        right = (R if R.shape[1] else L).mean(1)
+        u = np.linspace(0, 1, x1 - x0 + 2)[1:-1][None, :, None]
+        h = left[:, None] * (1 - u) + right[:, None] * u
+        a[y0:y1, x0:x1] = v if mode == 'v' else h if mode == 'h' else (v + h) / 2
     return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
 
 

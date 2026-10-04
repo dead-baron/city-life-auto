@@ -8,7 +8,7 @@ concept palette and is a placeholder until real art arrives (see `ART_NEEDS.md`)
 
 ## Buildings and lots (`assets/prefabs*.webp`, `shared/prefab-data.js`)
 
-Every lot faces south, front at the bottom. Scene lots are cut so the painted door sill sits on the footprint's bottom edge (`SCENE_DOORS`), and painted people are removed (`NPC_PAINT`); check them with `tools/preview_lots.py`.
+Every lot faces south, front at the bottom. Scene lots are cut so the painted door sill sits on the footprint's bottom edge (`SCENE_DOORS`), and painted people are removed (`NPC_PAINT`); check them with `tools/preview_lots.py`. The FreshMart front (`market`) and the scene construction site (`site`) were retired in round 8c for their painted crowds.
 
 | Group | Lots | Source |
 |---|---|---|
@@ -22,7 +22,7 @@ Every lot faces south, front at the bottom. Scene lots are cut so the painted do
 
 ## Interiors (`assets/interiors.webp`) - new this round
 
-Walk into any of these and the roof lifts off onto the painted interior:
+Walk into any of these and the roof lifts off onto the painted interior. Every painted person has been removed (`NPC_PAINT` in `tools/build_interiors.py`); the game's own clerks stand behind the counters:
 
 | Business kinds | Painting |
 |---|---|

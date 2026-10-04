@@ -1096,3 +1096,24 @@ Playtest:
 - The machines are drawn in the depth-sorted pass, so they stand in front of the facade and you can walk in front of them. They're solid.
 - The green $ marker now floats above the machine instead of covering it.
 - Tutorial text updated (`TUTORIAL_VERSION` 20).
+
+## 2026-10-04 · Round 8c: no painted people anywhere
+
+Went through every painting the game uses: each building lot, the hospital front, every walk-in interior and the three outdoor scene paintings. Any person still painted in was removed. Only real NPCs show now.
+
+- **Building lots** (`NPC_PAINT` in `tools/build_art.py`):
+  - **Doorways:** the person at the FuelMax mart door; the cops beside Police Station 3's doors; the bank guard by the door frame; the Royale shoppers in its window bays; the Grand Palace doorman by the door; the Club Nova bouncers' edges; the Club Eclipse dancers in its windows; the arcade and tattoo-parlour doorways.
+  - **Windows:** diners in the Garden Bistro, Cafe Rouge and the awning restaurant.
+  - **Outdoors:** the six loiterers on the shanty street; the ten anglers around Bait & Tackle; the swimmers, sunbathers and lifeguard at the community pool.
+  - `paint_people` gains a horizontal refill (`'h'`, for a figure standing against a wall or window) and a blended one (`'b'`, for open ground). The vertical refill stays.
+- **Retired lots:** the FreshMart front had shoppers filling its whole cutaway shop floor, and the construction site had workers all over it.
+  - FreshHub Grocery and the Stadium Megastore use the strip-mall front. The Old Quarter Redevelopment and the industrial districts use the building-sheet construction site.
+- **Interiors** (`NPC_PAINT` in `tools/build_interiors.py`, which now cuts every piece through `piece()`):
+  - **Hospital lobby:** receptionists, patients and visitors.
+  - **Police front desk:** the officers, the man at the desk, the records clerk and the cops on the steps.
+  - **Police station floor:** about two dozen officers, the prisoners and the chief.
+  - **Bank hall:** tellers, customers and guards.
+  - **Shops:** the corner, liquor and FuelMart clerks and the customer at the FuelMart counter; the pawnbroker; the boutique shopper; FreshMart's 14 shoppers.
+  - **Armory:** the officer.
+  - The game puts its own clerk behind each counter, so nothing is lost.
+- Already clean: the nightclub, the outfitter, the golf course, the palm cay and the canyon (golf carts and parked cars only). Shop-window mannequins stay.

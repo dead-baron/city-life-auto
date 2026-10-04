@@ -144,8 +144,8 @@ const STYLE = {
   houses: { minW: 16, minH: 18, gen: { house1: 3, house2: 3, house3: 3, apt2: 0.6, rest2: 0.3, house4: 2, house5: 2, house7: 2.5, house8: 2.5, house9: 2.5 }, filler: 'park', roof: 0.06, roofKinds: ['tile'] },
   commercial: { minW: 12, minH: 12, gen: { conv: 3, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.3, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5, diner: 1, arcade: 0.5, tattoo: 0.4, redawning: 0.6, greenbistro: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
   apartments: { minW: 14, minH: 14, gen: { apt1: 3, apt2: 3, house2: 1, conv: 1.8, tower2: 1, apt3: 1.5, apt4: 1.5 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
-  industrial: { minW: 14, minH: 13, gen: { warehouse: 3, industrial: 2, repair: 1, junkyard: 0.6, site: 0.4 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
-  factory: { minW: 14, minH: 13, gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4, junkyard: 0.5, site: 0.5 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
+  industrial: { minW: 14, minH: 13, gen: { warehouse: 3, industrial: 2, repair: 1, junkyard: 0.6, construction: 0.4 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
+  factory: { minW: 14, minH: 13, gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4, junkyard: 0.5, construction: 0.5 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
   towers: { minW: 11, minH: 11, gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1, bank2: 0.5, apt3: 0.5, vellori: 0.6, monarch: 0.6, theatre: 0.4, diamond: 0.5 }, filler: 'plaza', roof: 0.78, roofKinds: ['glass', 'gravel', 'tar'] },
   civic: { minW: 14, minH: 14, gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1, church: 0.3, bank2: 0.6, apt4: 0.5, theatre: 0.5, greenbistro: 0.5, house8: 0.6 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
   southside: { minW: 14, minH: 14, gen: { house1: 1, house3: 1, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5, quickstop: 1.6, junkyard: 0.5, house5: 0.6, liquor: 0.8, shanty2: 0.5, shanty3: 0.5, tattoo: 0.4 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
@@ -171,7 +171,7 @@ const SPECIALS = [
   { d: 5, prefab: 'bank', biz: ['courthouse'], names: ['Hall of Justice'] },
   { d: 4, prefab: 'hotel', biz: ['delivery'], names: ['Grand Neon Hotel'] },
   { d: 1, prefab: 'strip', biz: ['gunshop', 'sports', 'hardware', 'clothing'], names: ['Iron Sights Arms', 'Home Run Sports', 'Nail & Gear Hardware', 'Threads Outfitters'] },
-  { d: 1, prefab: 'market', biz: ['grocery'], names: ['FreshHub Grocery'] },
+  { d: 1, prefab: 'strip', biz: ['grocery'], names: ['FreshHub Grocery'] },
   { d: 1, prefab: 'conv', biz: ['pharmacy'], names: ['MediMart Pharmacy'] },
   { d: 1, prefab: 'rest2', biz: ['coffee'], names: ['Bean Machine Coffee'] },
   { d: 1, prefab: 'dealer', biz: ['dealer'], names: ['Motor Row Dealership'] },
@@ -205,7 +205,7 @@ const SPECIALS = [
   { d: 23, prefab: 'police2', biz: ['police'], names: ['Westport PD'] },
   { d: 23, prefab: 'hotel', biz: ['delivery'], names: ['The Westport Grand'] },
   { d: 23, prefab: 'bank', biz: ['delivery'], names: ['Westport Trade Center'] },
-  { d: 25, prefab: 'market', biz: ['delivery'], names: ['Stadium Megastore'] },
+  { d: 25, prefab: 'strip', biz: ['delivery'], names: ['Stadium Megastore'] },
   { d: 25, prefab: 'club', biz: ['delivery'], names: ['The Turnstile Bar'] },
   { d: 30, prefab: 'strip', biz: ['delivery', 'delivery', 'delivery', 'delivery'], names: ['Old Quarter Books', 'Salt & Pepper Diner', 'Harborview Tattoo', 'Corner Laundry'] },
   { d: 30, prefab: 'church', biz: ['delivery'], names: ['St. Brine Chapel'] },
@@ -231,7 +231,7 @@ const SPECIALS = [
   { d: 31, prefab: 'clubnova', biz: ['delivery'], names: ['Club Nova'] },
   { d: 35, prefab: 'fuel', biz: ['delivery'], names: ['FuelMax Cedar Falls'] },
   { d: 26, prefab: 'junkyard', biz: ['delivery'], names: ['J&R Salvage'] },
-  { d: 30, prefab: 'site', biz: ['delivery'], names: ['Old Quarter Redevelopment'] },
+  { d: 30, prefab: 'construction', biz: ['construction'], names: ['Old Quarter Redevelopment'] },
   // storefront rows cut whole from the street paintings: one business behind each door
   { d: 23, prefab: 'shops1', biz: ['delivery', 'delivery', 'delivery', 'clothing', 'coffee'], names: ["Joe's Burgers", 'Riverside Books', 'Pixel Tech', 'Thread & Co.', 'Brew Haven Coffee'] },
   { d: 31, prefab: 'shops1', biz: ['delivery', 'delivery', 'delivery', 'clothing', 'coffee'], names: ["Joe's Burgers North", 'Northshore Books', 'Pixel Tech Northshore', 'Thread & Co. North', 'Brew Haven North'] },
@@ -247,7 +247,7 @@ const GENERIC_NAMES = {
   // lots cut from the concept scene paintings
   fuel: ['FuelMax'], clubnova: ['Club Nova'], clubeclipse: ['Club Eclipse'], motors: ['Riverside Motors'], trail: ['Trail & Field'],
   boutique: ['Crown Boutique'], quickstop: ['Quick Stop'], apt3: ['Pinecrest Apartments'], apt4: ['Apartments'], house4: ['Residence'],
-  house5: ['Residence'], house6: ['Villa'], bank2: ['First City Bank'], junkyard: ['J&R Salvage'], site: ['Construction Site'],
+  house5: ['Residence'], house6: ['Villa'], bank2: ['First City Bank'], junkyard: ['J&R Salvage'],
   beachbar: ['Beach Shack'], pool: ['Community Pool'], tackle2: ['Bait & Tackle'], shack: ['Homestead'], farmstead: ['Farmstead'],
   police2: ['Police Station'], police3: ['Police Station'], liquor: ['Liquor Mart', 'Corner Liquor', 'Spirits & More', 'Beer Wine Spirits'],
   shops1: ['Storefronts'], shops2: ['Storefronts'],
@@ -255,7 +255,7 @@ const GENERIC_NAMES = {
   house7: ['Residence'], house8: ['Residence'], house9: ['Residence'], diner: ['City Diner', 'Eat Drink Local'],
   royale: ['Royale Fashion'], vellori: ['Vellori'], monarch: ['Monarch'], shanty1: ['Shack'], shanty2: ['Shack'], shanty3: ['Shack'],
   arcade: ['Pixel Arcade', 'Game Zone'], tattoo: ['Bold Ink Tattoo'], crown: ['Crown Couture'], greenbistro: ['Garden Bistro'],
-  theatre: ['The Grand Theatre'], diamond: ['Diamond & Co.'], redawning: ['Cafe Rouge'], market: ['FreshMart'],
+  theatre: ['The Grand Theatre'], diamond: ['Diamond & Co.'], redawning: ['Cafe Rouge'],
 };
 // Lots with a nightclub inside: walk in after dark (closed by day)
 export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse']);
