@@ -17,6 +17,7 @@ import * as jobs from './jobs.js';
 import * as homes from './homes.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
+import * as unstuck from './unstuck.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
 import * as races from './races.js';
@@ -63,6 +64,14 @@ export function join(world, conn, profile) {
   return p;
 }
 
+function standable(world, pos) {
+  const m = world.map;
+  for (const [dx, dy] of [[0, 0], [12, 0], [-12, 0], [0, 12], [0, -12]]) if (PED_BLOCK[m.tileAtPx(pos.x + dx, pos.y + dy)]) return false;
+  const tx = Math.floor(pos.x / TILE), ty = Math.floor(pos.y / TILE);
+  for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) for (const e of m.solidProps.get((ty + oy) * m.w + tx + ox) || []) if (!e.off && Math.hypot(e.x - pos.x, e.y - pos.y) < e.r + 10) return false;
+  return true;
+}
+
 function validSpawn(world, pos) {
   if (!pos || typeof pos.x !== 'number') return false;
   const t = world.map.tileAtPx(pos.x, pos.y);
@@ -72,8 +81,13 @@ function validSpawn(world, pos) {
 export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
   const prof = p.profile;
   let pos;
-  if (useSaved && validSpawn(world, prof.pos)) pos = prof.pos;
-  else {
+  if (useSaved && validSpawn(world, prof.pos)) {
+    // the world may have changed under the spot you logged out on (a new build): step out of
+    // anything that's solid there now
+    if (!standable(world, prof.pos)) { const near = unstuck.openSpot(world.map, prof.pos.x, prof.pos.y); prof.pos = near || null; }
+    pos = prof.pos;
+  }
+  if (!pos) {
     pos = homes.resolveSpawn(world, p, p.respawnChoice, deathPos);
     p.lastSpawnName = pos.name;
     p.respawnChoice = null;

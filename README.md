@@ -49,6 +49,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
 | Fish over the side (still boat, far out at sea) | E | B | ACT |
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
+| Stuck? Get unstuck (stand still 5 s, not wanted, not just after a fight) / Surrender (tap twice: respawn, or turn yourself in when wanted) | Esc → Stuck? / Surrender | Start → Stuck? / Surrender | ☰ → Stuck? / Surrender |
 | Players online (names, roles, districts) | Esc → Players online, or M → Players online | Start → Players online | ☰ → Players online |
 | Dev Debug Mode (online testing, no password; nothing is saved) | Esc → Dev Debug Mode (opens the debug menu; ` or the 🛠 button toggles it) | Start → Dev Debug Mode | ☰ → Dev Debug Mode, then the 🛠 button |
 | Police HQ: walk in (front desk → armory → motor pool) | E at the door, E inside for the desk | B / A | ACT, or the ▲ Front desk button |

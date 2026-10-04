@@ -541,6 +541,7 @@ export function generateCity(seed = 1337) {
   m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 };
   m.spawns.police = { x: pd.x, y: pd.y + 44 };
   m.spawns.default = m.spawns.hospital;
+  mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
   return m;
 }
 
@@ -1390,11 +1391,15 @@ function placeSpecials(m, rows, rand) {
   const order = SPECIALS.map((s, i) => ({ ...s, i })).sort((a, b) => PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);
   for (const sp of order) {
     let cands = [];
-    for (const pass of [0, 1, 2, 3]) {
+    // a building drawn with its front at the bottom (hospitals, stations, shops...) only goes on the
+    // north side of a street, facing south, so it's never upside-down; others may face either way
+    const upright = !PREFABS[sp.prefab].rot;
+    for (const pass of [0, 1, 2, 3, 4]) {
       for (const row of rows) {
-        if (pass <= 1 && row.d !== sp.d) continue;
+        if ((pass <= 1 || pass === 4) && row.d !== sp.d) continue;
         if (pass === 2 && m.zoneAt(row.x * TILE, row.y * TILE) !== m.zoneAt(...seedOf(sp.d))) continue;
-        if (row.face !== 'S' && pass !== 1) continue;
+        if (pass === 1 && upright) continue;
+        if (row.face !== 'S' && pass !== 1 && pass !== 4) continue;
         for (let k = 0; k < row.iv.length; k++) if (rowFits(row, sp.prefab, row.iv[k])) cands.push([row, k]);
       }
       if (cands.length) break;
@@ -1461,7 +1466,7 @@ function fillRow(m, row, rand) {
       const sty = near.length && rand() < 0.3 ? near[Math.floor(rand() * near.length)] : st;
       if (rem >= 6 && rand() < 0.12) { const gw = Math.min(rem, 4 + Math.floor(rand() * 4)); filler(m, row, x, gw, sty, rand); x += gw; continue; }
       const keys = Object.keys(sty.gen);
-      const fits = keys.filter((k) => rowFits(row, k, [x, b]) && !(PREFABS[k].scene && !PREFABS[k].rot && row.face === 'N'));
+      const fits = keys.filter((k) => rowFits(row, k, [x, b]) && !(!PREFABS[k].rot && row.face === 'N')); // fronts drawn at the bottom never face north (upside-down)
       if (!fits.length) { filler(m, row, x, rem, st, rand); break; }
       let tot = 0;
       for (const k of fits) tot += sty.gen[k];
@@ -1881,7 +1886,7 @@ function buildMotorPools(m) {
     const used = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
     let best = null, bd = Infinity;
     for (const b of m.buildings) {
-      if (b.gone || b.prefab !== -1 || b.kind !== 'roof' || used.has(b.id) || b.tw < 8 || b.tw > 14 || b.th < 10) continue;
+      if (b.gone || b.prefab !== -1 || b.kind !== 'roof' || used.has(b.id) || b.tw < 8 || b.tw > 20 || b.th < 7) continue;
       const gapX = Math.max(0, b.tx - (sb.tx + sb.tw), sb.tx - (b.tx + b.tw));
       const gapY = Math.max(0, b.ty - (sb.ty + sb.th), sb.ty - (b.ty + b.th));
       if (gapX > 3 || gapY > 3) continue;
@@ -1928,7 +1933,11 @@ function buildMotorPools(m) {
     const spots = [];
     const colA = (x0 + 1) * TILE + 30, colB = (x0 + 1) * TILE + 30 + 64;
     let ya = (far + 0.5) * TILE + dir * 46, yb = ya;
-    for (const model of POOL_MODELS) {
+    if (h < 11 && w >= 14) {
+      // a wide, shallow lot: everything parked side by side along the far wall, nose to the gate
+      let x = (x0 + 1) * TILE + 30;
+      for (const model of POOL_MODELS) { spots.push({ x, y: (far + 0.5) * TILE + dir * 34, a: heading, model }); x += model === 'police' ? 76 : 56; }
+    } else for (const model of POOL_MODELS) {
       if (model === 'police') { spots.push({ x: colA, y: ya, a: heading, model }); ya += dir * 104; }
       else { spots.push({ x: colB, y: yb, a: heading, model }); yb += dir * 64; }
     }
@@ -1944,10 +1953,10 @@ function carvePoolLot(m, sb) {
   const busy = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
   const keep = (bi) => bi >= 0 && (busy.has(bi) || m.buildings[bi].home !== undefined || bi === sb.id);
   const spots = [];
-  for (const side of [1, -1]) for (const gap of [1, 2, 3, 0]) {
-    const w = 8, h = 12;
+  for (const h of [12, 10]) for (const side of [1, -1]) for (const gap of [1, 2, 3, 0]) {
+    const w = 8;
     const x0 = side > 0 ? sb.tx + sb.tw + gap : sb.tx - w - gap;
-    for (const y0 of [sb.ty + sb.th - h, sb.ty, sb.ty + sb.th - h + 2, sb.ty - 2]) spots.push([x0, y0, w, h]);
+    for (const y0 of [sb.ty + sb.th - h, sb.ty, sb.ty + sb.th - h + 2, sb.ty - 2, sb.ty + sb.th - h - 2]) spots.push([x0, y0, w, h]);
   }
   for (const [x0, y0, w, h] of spots) {
     {
@@ -2078,6 +2087,12 @@ function buildDealerLots(m) {
         if (nb.roof >= 0 && m.roofs[nb.roof]) m.roofs[nb.roof].gone = true;
         if (nb.prefab >= 0 && m.prefabs[nb.prefab]) m.prefabs[nb.prefab] = { ...m.prefabs[nb.prefab], gone: true, tw: 0, th: 0 };
         for (let ty = nb.ty; ty < nb.ty + nb.th; ty++) for (let tx = nb.tx; tx < nb.tx + nb.tw; tx++) { m.bld[ty * MAP_W + tx] = -1; m.set(tx, ty, T.LOT); }
+      } else {
+        // nothing to knock down: the lawns and paving round the showroom are paved over for the lot
+        for (let ty = b.ty - 8; ty < b.ty + b.th + 8; ty++) for (let tx = b.tx - 8; tx < b.tx + b.tw + 8; tx++) {
+          const t = m.tileAt(tx, ty);
+          if ((t === T.GRASS || t === T.PLAZA || t === T.DIRT) && m.bld[ty * MAP_W + tx] < 0) m.set(tx, ty, T.LOT);
+        }
       }
     }
     const slots = [];
@@ -3257,4 +3272,18 @@ function buildCameras(m, rand) {
     }
     close(L);
   }
+}
+
+// A fingerprint of the generated world (tiles, props, solid furniture, gates, homes, the railway).
+// The server sends its own in the welcome; a browser still running the previous build after an
+// update gets a different one and reloads, instead of walking into walls only the server can see.
+export function mapSignature(m) {
+  if (m._sig) return m._sig;
+  let h = 0x811c9dc5;
+  const mix = (v) => { h ^= v & 0xff; h = Math.imul(h, 0x01000193) >>> 0; };
+  for (let i = 0; i < m.tiles.length; i += 3) mix(m.tiles[i]);
+  for (const n of [m.props.length, m.pois.length, m.homes.length, (m.gates || []).length, m.rail ? m.rail.pts.length : 0, m.edges.length]) { mix(n); mix(n >> 8); mix(n >> 16); }
+  for (const [, arr] of m.solidProps) for (const e of arr) { mix(e.x | 0); mix(e.y | 0); mix(e.r | 0); }
+  m._sig = h.toString(36);
+  return m._sig;
 }

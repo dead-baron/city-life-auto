@@ -2,6 +2,8 @@
 // Node WebSocket server and the in-browser offline practice worker.
 import { decodeInput, MSG_INPUT } from '../shared/protocol.js';
 import * as players from './systems/players.js';
+import { mapSignature } from '../shared/map.js';
+import * as unstuck from './systems/unstuck.js';
 import * as combat from './systems/combat.js';
 import * as economy from './systems/economy.js';
 import * as dev from './dev.js';
@@ -41,7 +43,7 @@ export function createSession(world, conn, opts) {
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const { profile, token } = opts.login(msg.token);
-        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world), tt: trains.timetable(world) });
+        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, sig: mapSignature(world.map), tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world), tt: trains.timetable(world) });
         player = players.join(world, conn, profile);
         return;
       }
@@ -53,6 +55,8 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'respawn' && typeof msg.choice === 'string' && msg.choice.length < 20) { player.respawnChoice = msg.choice; player.meDirty = true; return; } // just picks; the normal wake-up timer runs
       if (msg.t === 'phone') { const r = phone.handle(world, player, msg); if (r) conn.sendJSON(r); return; }
       if (msg.t === 'interior' && player.ped && player.ped.interior) { station.openInterior(world, player); return; }
+      if (msg.t === 'unstuck') { unstuck.request(world, player); return; }
+      if (msg.t === 'surrender') { const err = unstuck.surrender(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'plist') { conn.sendJSON(devmode.playerList(world, player)); return; } // who's online (options / map)
       if (msg.t === 'devmode') { if (msg.leave) devmode.exit(world, player); else if (!player.devMode) devmode.tryPassword(world, player, msg.pw); return; }

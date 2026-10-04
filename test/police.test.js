@@ -86,11 +86,12 @@ test('the gate stays shut for civilians; taking a pool car is police-vehicle the
   const { p } = joinPlayer(w);
   const st = hq(w);
   const mp = w.map.motorPools[st.pool];
-  teleport(w, p.ped, mp.gate.x, mp.gate.y + 70);
+  const out = mp.south ? 70 : -70; // the gate faces the street on whichever side the lot has one
+  teleport(w, p.ped, mp.gate.x, mp.gate.y + out);
   run(w, 1);
   assert.ok(!w.gateState[w.map.motorPools[st.pool].gateIdx].open, 'closed to a civilian');
   // someone already inside can leave
-  teleport(w, p.ped, mp.gate.x, mp.gate.y - 70);
+  teleport(w, p.ped, mp.gate.x, mp.gate.y - out);
   run(w, 0.5);
   assert.ok(w.gateState[w.map.motorPools[st.pool].gateIdx].open, 'opens to let people out');
   const car = poolVehicles(w, st.pool).find((v) => v.model === 'police');

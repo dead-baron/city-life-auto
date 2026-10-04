@@ -2,7 +2,7 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
-import { generateCity, WATER_T, TRAIN_CARS } from '../shared/map.js';
+import { generateCity, WATER_T, TRAIN_CARS, mapSignature } from '../shared/map.js';
 import { signalFor } from '../shared/roads.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
@@ -135,6 +135,7 @@ function onText(m) {
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
       document.body.classList.toggle('practice', !!m.practice);
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
+      if (m.sig && m.sig !== mapSignature(S.map)) { outdatedBuild(m.sig); return; } // the server runs a newer world than this page
       S.ents.clear(); S.pred = null; S.pending = [];
       for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
@@ -445,6 +446,24 @@ function onEvent(ev) {
 
 // ---------------------------------------------------------------------------
 // World setup / UI wiring
+// This page is an older build than the server's (it was updated while you played). Reload into the
+// new one. GitHub Pages can lag the game server by a minute or two: if the reload still brings the
+// old build, say so and try again shortly instead of reloading in a loop.
+function outdatedBuild(sig) {
+  let tried = null;
+  try { tried = sessionStorage.getItem('cla.reloadFor'); } catch { tried = null; }
+  try { localStorage.removeItem('cla.build'); } catch { /* storage blocked */ }
+  if (tried !== sig) {
+    try { sessionStorage.setItem('cla.reloadFor', sig); } catch { /* storage blocked */ }
+    if (S.hud) S.hud.toast('The game was just updated - loading the new version...', 'info');
+    setTimeout(() => location.reload(), 600);
+    return;
+  }
+  if (S.hud) S.hud.toast('A new version is still rolling out - retrying in 30 seconds...', 'warn');
+  try { sessionStorage.removeItem('cla.reloadFor'); } catch { /* storage blocked */ }
+  setTimeout(() => { try { sessionStorage.setItem('cla.reloadFor', sig); } catch { /* blocked */ } location.reload(); }, 30000);
+}
+
 function setupWorld(seed) {
   S.map = generateCity(seed);
   S.ground = new GroundCache(S.map);
@@ -979,6 +998,12 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'cruiser') { closeOverlay('pause'); callCruiser(); }
     else if (a === 'settings') openOverlay('settings');
     else if (a === 'controls') openOverlay('controls');
+    else if (a === 'unstuck') { closeOverlay('pause'); send({ t: 'unstuck' }); }
+    else if (a === 'surrender') {
+      // press twice: dying (or, when wanted, turning yourself in) isn't something to do by accident
+      if (b.dataset.armed && performance.now() - Number(b.dataset.armed) < 4000) { delete b.dataset.armed; b.textContent = 'Surrender (respawn)'; closeOverlay('pause'); send({ t: 'surrender' }); }
+      else { b.dataset.armed = String(performance.now()); b.textContent = S.me && S.me.wanted > 0 ? 'Tap again: turn yourself in (fine)' : 'Tap again: give up and respawn'; }
+    }
     else if (a === 'fullscreen') toggleFullscreen();
     else if (a === 'dev') openOverlay('dev');
     else if (a === 'players') { closeOverlay('pause'); openOverlay('players'); renderPlayers(); }

@@ -117,3 +117,7 @@ export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with 
 export const PET_EVERY_S = 150;            // roughly how often a pet goes missing somewhere near a player
 export const PET_REWARD = 150;             // the owner's thank-you (cash) for bringing it home...
 export const PET_SAMARITAN = 8;            // ...and the Samaritan points
+
+// Getting unstuck
+export const UNSTUCK_S = 5;                // stand still this long and you're moved to the nearest open ground
+export const UNSTUCK_CALM_S = 20;          // ...only when you haven't fought, shot or been hurt for this long, and aren't wanted

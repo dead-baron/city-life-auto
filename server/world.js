@@ -32,6 +32,7 @@ import * as trains from './systems/trains.js';
 import * as rentals from './systems/rentals.js';
 import * as spikes from './systems/spikes.js';
 import * as pets from './systems/pets.js';
+import * as unstuck from './systems/unstuck.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
 import * as net from './net.js';
@@ -71,6 +72,7 @@ const SYSTEMS = [
   ['law', law.update],              // heat decay, search circles, bounties
   ['jobs', jobs.update],            // contraband drops, fishing, jobs
   ['economy', economy.update],      // auto-heal at ER reception
+  ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
 ];
 

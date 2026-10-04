@@ -1013,3 +1013,20 @@ Playtest:
   - Walking through a pool of blood or past a body leaves a few bloody footprints that fade as the soles dry.
   - Lit windows and neon no longer wash over people and cars standing in front of them at night.
 - `TUTORIAL_VERSION` 18: nightlife, lost pets, ATMs, the city feed.
+
+## 2026-10-04 · Round 7b: upright hospitals, no more getting stuck after an update
+
+- **Upright buildings:** hospitals, police stations, shops and every other lot drawn with its front at the bottom are only placed on the north side of a street, facing south. You walk in and out at the south entrance, and none are upside-down anymore (0 on the map, down from 8 plus one hospital).
+  - The HQ's motor pool can now use a wide, shallow lot (cars parked side by side).
+  - A showroom with no lot next door paves its lawns over for one.
+- **Stuck after an update - the cause:** a browser still running the previous build kept playing against a server that had already moved to the new map. Walls only the server knew about stopped you dead.
+  - The server now sends a fingerprint of its world (`mapSignature`). A page built for a different world reloads into the new build by itself.
+  - If GitHub Pages hasn't caught up yet, it says so and retries every 30 s.
+- **Logging back in onto a spot that's solid now** (a building or a lamp post moved there in an update): you're stepped out onto the nearest open ground.
+- **Stuck? Get unstuck** (pause menu): stand still for `UNSTUCK_S` (5 s) and you're nudged to the nearest open ground, within about 15 m.
+  - Not while wanted, and not within `UNSTUCK_CALM_S` (20 s) of fighting, shooting or being hurt. It can't be used to dodge a fight or the police.
+  - Moving or getting hit cancels it.
+- **Surrender (respawn)** (pause menu, tap twice):
+  - A wanted player turns themself in: busted, fined, contraband taken, and out at the police station.
+  - Anyone else collapses and wakes up exactly as after any death.
+  - Nothing is gained over playing it out.

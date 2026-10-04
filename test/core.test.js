@@ -941,3 +941,43 @@ test('gangs vs police: left alone unless provoked; speeding cop or cop gunfire s
   run(w, 8);
   assert.ok([...w.entities.values()].some((e) => e.dead && e.npc && (e.npc.role === 'gang' || e.npc.role === 'cop')) || true);
 });
+
+test('unstuck: hold still and you are nudged to open ground; refused while wanted or fighting; surrender', async () => {
+  const unstuck = await import('../server/systems/unstuck.js');
+  const { UNSTUCK_S, UNSTUCK_CALM_S } = await import('../shared/rules.js');
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w, { cash: 300 });
+  // wedged inside a building
+  const b = w.map.buildings.find((q) => !q.gone && q.tw >= 6 && q.th >= 6 && q.kind === 'roof');
+  const x = (b.tx + b.tw / 2) * 32, y = (b.ty + b.th / 2) * 32;
+  p.ped.x = x; p.ped.y = y; w.place(p.ped);
+  p.ped.lastHitAt = w.time - UNSTUCK_CALM_S - 1;
+  p.ped.lastCombatAt = w.time - UNSTUCK_CALM_S - 1;
+  assert.equal(unstuck.request(w, p), null);
+  run(w, UNSTUCK_S + 0.6);
+  assert.ok(Math.hypot(p.ped.x - x, p.ped.y - y) > 20, 'moved out');
+  assert.ok(Math.hypot(p.ped.x - x, p.ped.y - y) < 520, 'but not far');
+  const t = w.map.tileAtPx(p.ped.x, p.ped.y);
+  assert.notEqual(t, 5, 'not inside a building');
+  // no escape hatch in a fight or with the police after you
+  p.ped.lastHitAt = w.time;
+  assert.ok(unstuck.request(w, p), 'refused right after being hit');
+  p.ped.lastHitAt = w.time - UNSTUCK_CALM_S - 1;
+  p.wanted = 2; p.heat = 40;
+  assert.ok(unstuck.request(w, p), 'refused while wanted');
+  // surrender while wanted = turn yourself in (fined, wanted cleared, alive)
+  unstuck.surrender(w, p);
+  assert.equal(p.wanted, 0);
+  assert.ok(!p.ped.dead);
+  assert.ok(prof.cash < 300, 'fined');
+  // surrender otherwise = a death like any other
+  unstuck.surrender(w, p);
+  assert.ok(p.ped.dead);
+});
+
+test('a page built for a different world than the server reloads (map fingerprint)', async () => {
+  const { mapSignature, generateCity } = await import('../shared/map.js');
+  const w = makeWorld();
+  assert.equal(mapSignature(w.map), mapSignature(generateCity(1337)), 'same build, same fingerprint');
+  assert.notEqual(mapSignature(w.map), mapSignature(generateCity(4242)), 'a different world, a different one');
+});
