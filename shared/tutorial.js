@@ -21,11 +21,11 @@ import {
   SERVICE_AMMO, SERVICE_MAG, CALL_COOLDOWN_S, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR,
   RESPAWN_SECONDS, GHOST_SECONDS, HOSPITAL_FEE, JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S,
   NPC_GUN_MULT, VEHICLE_TOUGHNESS, ARMORED_ROCKETS, ARMORED_VEHICLES,
-  FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
+  POLICE_ARMORY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 5;
+export const TUTORIAL_VERSION = 6;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -68,7 +68,7 @@ export const STEPS = [
   { ch: 'basics', title: 'Fighting', at: { spawn: 'default' },
     text: `Aim with [[aim]] and attack with [[fire]]. Land punches in quick succession to floor someone - 3 hits for most people, 4 for tough guys. [[nextw]] switches weapons, [[reload]] reloads, [[throw]] throws what you're carrying. Guns are deadly: a pistol drops most people in ${Math.ceil(70 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))}-${Math.ceil(140 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))} shots and a cop in ${Math.ceil(140 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))}-${Math.ceil(203 / (WEAPONS.pistol.dmg * NPC_GUN_MULT * 0.9))}, SWAT in ${Math.ceil(220 / (WEAPONS.pistol.dmg * NPC_GUN_MULT))} or more. A bazooka rocket wrecks any vehicle in one hit - the ${ARMORED_VEHICLES.map((id) => VEHICLES[id].name).join(' and the ')} take ${ARMORED_ROCKETS}. Cars shrug off ${Math.round((1 - 1 / VEHICLE_TOUGHNESS) * 100)}% of crash and gunfire damage; motorcycles don't, and a hard crash throws you off.` },
   { ch: 'basics', title: 'Your HUD and the map', at: { city: 1 },
-    text: `The HUD shows your weapon, cash on hand, bank balance, wanted stars and the clock, plus the radar in the corner. [[map]] opens the full city map: pick a category - hospitals and police, banks and ATMs, shops, places to sell, garages, jobs, fishing, gang HQs, homes - to number every match on the map, choose one to set a waypoint, or tap anywhere on the map to drop your own. [[pause]] opens the pause menu (settings, controls and this tour). A day lasts ${dayMin} minutes and night ${nightMin} - at night witnesses see less and rain makes the roads slick.` },
+    text: `The HUD shows your weapon, cash on hand, bank balance, wanted stars and the clock, plus the radar in the corner. [[map]] opens the full city map: pick a category - hospitals and police, banks and ATMs, shops, places to sell, garages, jobs, fishing, gang HQs, homes - to number every match on the map, choose one to set a waypoint, or tap anywhere on the map to drop your own. [[pause]] opens the pause menu (settings and controls). A day lasts ${dayMin} minutes and night ${nightMin} - at night witnesses see less and rain makes the roads slick.` },
   { ch: 'basics', title: 'Your phone', at: { city: 1 },
     text: `[[phone]] opens your phone. Places finds the nearest hospital, bank, ATM, shop, place to sell, garage or gang HQ and sets a waypoint - a subtle blip on your radar, or an arrow on its rim when it's far. Jobs lists deliveries priced ${JOB_TIERS.map((t) => t.name).join(' / ')} by distance (about $${Math.round(JOB_TIERS[0].base + JOB_TIERS[0].maxDist * 0.6 * JOB_TIERS[0].perPx)} to $${Math.round(JOB_TIERS[2].base + 9000 * JOB_TIERS[2].perPx)}) and farm harvests. One job at a time - cancel it from the phone and take another.` },
   { ch: 'basics', title: 'Hospitals', at: { pois: 'hospital' },
@@ -78,7 +78,7 @@ export const STEPS = [
 
   // ---- citizen -------------------------------------------------------------------------------
   { ch: 'citizen', title: 'The honest living', at: { poi: 'warehouse' }, route: { from: { poi: 'warehouse' }, to: { poi: 'delivery' }, veh: 'van' },
-    text: `Grab a courier contract at {{warehouse}} in {{warehouse:where}} and haul crates to a {{delivery}} across the city. Cargo rides in the open on pickups and flatbeds - anyone can see it and ambush you, so drive smart.` },
+    text: `Grab a courier contract at {{warehouse}} in {{warehouse:where}} and haul crates to a {{delivery}} across the city. A company flatbed is parked by the pickup for you - taking it isn't stealing. Cargo rides in the open on pickups and flatbeds - anyone can see it and ambush you, so drive smart.` },
   { ch: 'citizen', title: 'Harvest contracts', at: { poi: 'farm' }, route: { from: { poi: 'farm' }, to: { poi: 'grocery' }, veh: 'pickup' },
     text: `Load produce boxes into an open-cargo vehicle at the {{farm}} and deliver them to {{grocery}} in {{grocery:where}}.` },
   { ch: 'citizen', title: 'Fishing', at: { pois: 'tackle' },
@@ -112,9 +112,11 @@ export const STEPS = [
 
   // ---- police --------------------------------------------------------------------------------
   { ch: 'police', title: 'Joining the force', at: { poi: 'police' },
-    text: `Walk into {{police}} in {{police:where}} with ${ENFORCER_MIN_SAMARITAN}+ Samaritan points and zero felonies to pick up a badge. You get a uniform, taser, nightstick and the ${WEAPONS.service.name} (${SERVICE_MAG}-round mag, ${SERVICE_AMMO} rounds) - and you start behind the wheel of your own cruiser. Your own weapons still work.` },
+    text: `Walk in the front door of {{police}} in {{police:where}} and sign up at the front desk (${ENFORCER_MIN_SAMARITAN}+ Samaritan points, zero felonies). You get a uniform, taser, nightstick and the ${WEAPONS.service.name} (${SERVICE_MAG}-round mag, ${SERVICE_AMMO} rounds), then the door locks behind you in the armory: check out one of the ${POLICE_ARMORY.filter((id) => id !== 'service').map((id) => WEAPONS[id].name.replace(/^Police /, '').toLowerCase()).join(', ')}. Your own weapons still work. No ducking inside mid-fight, and not while you're wanted.` },
+  { ch: 'police', title: 'The motor pool', at: { poi: 'police' },
+    text: `Out the armory's back door is the fenced motor pool: cruisers and police motorcycles, free to take - pick whichever you like. The sliding gate opens for officers only. Come back any time and drive in to swap; new recruits always find fresh vehicles waiting. Anyone else who takes one is stealing a police vehicle.` },
   { ch: 'police', title: 'Your cruiser', at: { poi: 'police' }, route: { from: { poi: 'police' }, to: { district: 'Neon Strip' }, veh: 'police', siren: 1 },
-    text: `[[horn]] toggles the siren. Your cruiser is the blue square on your map. Wrecked or stolen? After ${CALL_COOLDOWN_S} seconds press [[cruiser]] and dispatch drives a new one to you, locked just for you. Leave it behind for long and it's towed back to HQ.` },
+    text: `[[horn]] toggles the siren - with it on, traffic ahead slows and eases over to the kerb to let you through (never onto people). Some patrols ride police motorcycles too. Your cruiser is the blue square on your map. Wrecked or stolen? After ${CALL_COOLDOWN_S} seconds press [[cruiser]] and dispatch drives a new one to you, locked just for you. Leave it behind for long and it's towed back to HQ.` },
   { ch: 'police', title: 'Dispatch', at: { district: 'Downtown' },
     text: `On duty, [[map]] becomes the dispatch map: every crime that was witnessed or reported, live suspects you can see, and the search area for ones you can't. Crimes near you pulse red on the radar, and criminals in sight wear a small flashing marker.` },
   { ch: 'police', title: 'Patrol calls', at: { district: 'Neon Strip' },
@@ -130,7 +132,7 @@ export const STEPS = [
 
   // ---- end -----------------------------------------------------------------------------------
   { ch: 'end', title: 'Pick your path', at: { city: 1 },
-    text: `Earn honestly, live outside the law, or keep the streets clean. Watch this tour again any time from the title screen or the pause menu. See you on the streets.` },
+    text: `Earn honestly, live outside the law, or keep the streets clean. Watch this tour again any time from the title screen (not mid-game - no hiding in the tour when trouble finds you). See you on the streets.` },
 ];
 
 // ---- resolvers -----------------------------------------------------------------------------

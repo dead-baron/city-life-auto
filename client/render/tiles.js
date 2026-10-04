@@ -40,7 +40,7 @@ export class GroundCache {
     const propRect = (p) => { const s = PROP_SIZES[p.t] || [40, 40]; return [p.x - s[0] / 2, p.y - s[1] / 2, p.x + s[0] / 2, p.y + s[1] / 2]; };
     this.lowProps = this.byChunk(map.props.filter((p) => !OVERHEAD.has(p.t)), propRect);
     this.highProps = this.byChunk(map.props.filter((p) => OVERHEAD.has(p.t)), propRect);
-    this.roofs = this.byChunk(map.roofs || [], (r) => [r.tx * TILE - 2, r.ty * TILE - 2, (r.tx + r.tw) * TILE + 10, (r.ty + r.th) * TILE + 10]);
+    this.roofs = this.byChunk((map.roofs || []).filter((r) => !r.gone), (r) => [r.tx * TILE - 2, r.ty * TILE - 2, (r.tx + r.tw) * TILE + 10, (r.ty + r.th) * TILE + 10]);
     this.prefabs = this.byChunk(map.prefabs, (p) => [p.tx * TILE, p.ty * TILE, (p.tx + p.tw) * TILE, (p.ty + p.th) * TILE]);
     this.stalls = this.byChunk(map.stalls, (s) => [s.x, s.y, s.x + s.w, s.y + s.h]);
     this.signs = this.byChunk(map.buildings.filter((b) => b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]);
@@ -85,6 +85,7 @@ export class GroundCache {
     for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
     for (const mn of m.mansions || []) drawMansion(g, mn, cx, cy);
     for (const gr of m.garages || []) drawGarage(g, gr, cx, cy);
+    for (const mp of m.motorPools || []) drawMotorPool(g, mp, cx, cy);
     for (const b of this.signs.get(k) || []) for (const s of b.signs) drawSign(g, s);
     for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
     for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
@@ -167,6 +168,41 @@ function drawBayFloor(g, bay, cx, cy) {
   g.fillRect(x - 3, back ? y + h - 3 : y, w + 6, 3);
   // spray nozzles on the walls
   g.fillStyle = '#c8262b'; for (let k = 0; k < 3; k++) { g.fillRect(x - 2, y + 18 + k * 26, 4, 4); g.fillRect(x + w - 2, y + 18 + k * 26, 4, 4); }
+}
+
+// Police motor pool: painted bays on dark asphalt inside a chain-link fence on a concrete curb.
+function drawMotorPool(g, mp, cx, cy) {
+  const x = mp.tx * TILE, y = mp.ty * TILE, w = mp.tw * TILE, h = mp.th * TILE;
+  if (x + w < cx * CHUNK_PX || x > (cx + 1) * CHUNK_PX || y + h + 96 < cy * CHUNK_PX || y - 96 > (cy + 1) * CHUNK_PX) return;
+  g.fillStyle = '#3c3f46'; g.fillRect(x, y, w, h);
+  g.fillStyle = 'rgba(255,255,255,.035)';
+  for (let k = 0; k < 60; k++) { const hx = (k * 7919) % w, hy = (k * 104729) % h; g.fillRect(x + hx, y + hy, 2, 2); }
+  // bays
+  g.strokeStyle = '#e8e8e8'; g.lineWidth = 2;
+  for (const sp of mp.spots) {
+    const bw = sp.model === 'police' ? 58 : 30, bl = sp.model === 'police' ? 100 : 60;
+    g.strokeRect(sp.x - bw / 2, sp.y - bl / 2, bw, bl);
+  }
+  g.fillStyle = 'rgba(42,90,255,.85)'; g.font = 'bold 13px monospace'; g.textAlign = 'center';
+  const ty = mp.south ? y + h - TILE * 1.6 : y + TILE * 1.8;
+  g.fillText('POLICE ONLY', x + w / 2, ty);
+  // fence: concrete curb + chain-link with posts (not across the gate)
+  const fence = (x1, y1, x2, y2) => {
+    g.fillStyle = '#9a9ea6'; g.fillRect(Math.min(x1, x2) - 3, Math.min(y1, y2) - 3, Math.abs(x2 - x1) + 6, Math.abs(y2 - y1) + 6);
+    g.strokeStyle = 'rgba(200,205,215,.85)'; g.lineWidth = 1;
+    const len = Math.hypot(x2 - x1, y2 - y1), nx = (x2 - x1) / len, ny = (y2 - y1) / len;
+    for (let d = 0; d < len; d += 6) { g.beginPath(); g.moveTo(x1 + nx * d - ny * 5, y1 + ny * d + nx * 5); g.lineTo(x1 + nx * (d + 6) + ny * 5, y1 + ny * (d + 6) - nx * 5); g.stroke(); }
+    g.fillStyle = '#2a2c31'; for (let d = 0; d <= len; d += 32) g.fillRect(x1 + nx * d - 3, y1 + ny * d - 3, 6, 6);
+  };
+  const half = TILE / 2;
+  fence(x + half, y + half, x + half, y + h - half);
+  fence(x + w - half, y + half, x + w - half, y + h - half);
+  const back = mp.south ? y + half : y + h - half;
+  fence(x + half, back, x + w - half, back);
+  // gate rail + posts on the street side
+  const gy = mp.gate.y;
+  g.fillStyle = '#2a2c31'; g.fillRect(x + TILE - 6, gy - 7, 8, 14); g.fillRect(x + w - TILE - 2, gy - 7, 8, 14);
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x + TILE, gy - 1, w - 2 * TILE, 2);
 }
 
 // ---- smashed street furniture --------------------------------------------------------------

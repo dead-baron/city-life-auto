@@ -19,6 +19,7 @@ export const VEHICLES = {
   bike:      { i: 12, name: 'Sport Motorcycle', kind: 'bike', L: 48,  W: 20, max: 740, accel: 540, brake: 760, rev: 80,  turn: 3.6, grip: 10,  drift: 3.0, mass: 0.4, hp: 90,  seats: 2, slots: [[-18, 0]], price: 3000 },
   speedboat: { i: 13, name: 'Speedboat',       kind: 'boat', L: 104, W: 48, max: 600, accel: 270, brake: 260, rev: 120, turn: 2.0, grip: 2.4, drift: 1.2, mass: 1.6, hp: 260, seats: 4, slots: [[-24, -10], [-24, 10]], price: 8000 },
   dinghy:    { i: 14, name: 'Dock Motorboat',  kind: 'boat', L: 80,  W: 40, max: 420, accel: 210, brake: 220, rev: 110, turn: 2.2, grip: 2.8, drift: 1.4, mass: 1.0, hp: 160, seats: 2, slots: [[-20, 0]], price: 2500 },
+  policebike: { i: 15, name: 'Police Motorcycle', kind: 'bike', L: 50, W: 20, max: 780, accel: 570, brake: 820, rev: 80, turn: 3.6, grip: 10.5, drift: 3.0, mass: 0.45, hp: 130, seats: 1, slots: [], police: true, art: 'bike' },
 };
 
 export const VEHICLE_BY_INDEX = [];
@@ -26,7 +27,7 @@ for (const [id, v] of Object.entries(VEHICLES)) {
   v.id = id;
   VEHICLE_BY_INDEX[v.i] = v;
   // Models with concept art use the art's own proportions: the collision box IS the sprite.
-  const art = VEHICLE_ART_SIZE[id];
+  const art = VEHICLE_ART_SIZE[v.art || id];
   if (art) {
     const k = art[0] / v.L;
     v.L = art[0]; v.W = art[1];

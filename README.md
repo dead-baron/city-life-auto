@@ -41,10 +41,11 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Sprint | Shift | L3 / LT | RUN (toggle) |
 | Dive roll / handbrake | Space | A | ROLL |
 | Throw / drop crate | Q | Y | THROW |
-| Reload / horn & siren | R / H | — / D-pad up | — / HORN |
+| Reload / horn & siren (siren on: traffic pulls over) | R / H | — / D-pad up | — / HORN |
+| Police HQ: walk in (front desk → armory → motor pool) | E at the door, E inside for the desk | B / A | ACT, or the ▲ Front desk button |
 | Navigate menus (pause, phone, shops, settings) | W/S or ↑/↓, Enter / Space / E to pick, Esc back | D-pad / stick, A pick, B back | tap |
 | Phone (places, jobs, waypoints) | P | D-pad ← | 📱 |
-| City tour / tutorial | Title → 📖 VIEW TUTORIAL, or pause menu → Tutorial | Start → Tutorial | ⚙ / title screen |
+| City tour / tutorial (title screen only, never mid-game) | Title → 📖 VIEW TUTORIAL | Title → VIEW TUTORIAL | title screen |
 | Call police cruiser (on duty) | V | D-pad down | COP CAR (shows when you have no cruiser) |
 | Tackle a suspect (on duty) | Space (dive) into them | A | ROLL |
 | Cuff / book a downed suspect | E | B | ACT |

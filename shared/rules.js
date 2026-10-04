@@ -55,3 +55,6 @@ export const PAINT_TIME_S = 3.5;     // shutter down this long while they spray
 // Homes
 export const HIDE_TIME_S = 2.5;      // standing at your own front door this long gets you inside (move = cancel)
 export const SPAWN_PROTECT_S = 2;    // after spawning or stepping out of a home: you can move, but can't shoot or be hurt
+
+// Police stations
+export const POLICE_ARMORY = ['service', 'prifle', 'psniper', 'passault', 'pshotgun']; // department weapons in the HQ armory

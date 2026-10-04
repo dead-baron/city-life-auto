@@ -429,6 +429,7 @@ export function generateCity(seed = 1337) {
   buildGangHQs(m);
   buildTackleShops(m);
   buildPaintShops(m);
+  buildMotorPools(m);
   aimLamps(m);
   buildLaneGraph(m);
   buildCameras(m, rand);
@@ -835,6 +836,72 @@ function buildPaintShops(m) {
     c.x = (tx0 + 1.5) * TILE; c.y = south ? (ty0 + 3.6) * TILE : (ty0 - 0.6) * TILE;
     if (b) for (const s of b.signs) if (s.text === old) s.text = 'Spray & Go';
     m.bays.push({ poi: c.id, tx: tx0, ty: ty0, tw: 3, th: 3, south });
+  }
+}
+
+// Police motor pools: a fenced lot beside each police station, carved out of a neighbouring
+// plain building. Cruisers and police motorcycles wait inside; the sliding gate on the street
+// side opens only for officers. Officers who sign up walk out of the armory into the lot.
+export const POOL_MODELS = ['police', 'police', 'police', 'policebike', 'policebike'];
+function buildMotorPools(m) {
+  m.motorPools = [];
+  const isRoad = (tx, ty) => { const t = m.tileAt(tx, ty); return t === T.ROAD || t === T.BRIDGE; };
+  for (const st of m.pois.filter((q) => q.kind === 'police')) {
+    const sb = m.buildings[st.b];
+    if (!sb) continue;
+    const used = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
+    let best = null, bd = Infinity;
+    for (const b of m.buildings) {
+      if (b.prefab !== -1 || b.kind !== 'roof' || used.has(b.id) || b.tw < 6 || b.tw > 12 || b.th < 10) continue;
+      const gapX = Math.max(0, b.tx - (sb.tx + sb.tw), sb.tx - (b.tx + b.tw));
+      const gapY = Math.max(0, b.ty - (sb.ty + sb.th), sb.ty - (b.ty + b.th));
+      if (gapX > 2 || gapY > 2) continue;
+      // the gate goes on the short side that faces a road
+      const south = [1, 2, 3].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty + b.th - 1 + k));
+      const north = [1, 2, 3].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty - k));
+      if (!south && !north) continue;
+      const d = Math.hypot(b.tx + b.tw / 2 - (sb.tx + sb.tw / 2), b.ty + b.th / 2 - (sb.ty + sb.th / 2));
+      if (d < bd) { bd = d; best = { b, south }; }
+    }
+    if (!best) continue;
+    const { b, south } = best;
+    if (b.roof >= 0 && m.roofs[b.roof]) m.roofs[b.roof].gone = true;
+    b.kind = 'motorpool'; b.name = 'Motor Pool'; b.roof = -1;
+    const x0 = b.tx, y0 = b.ty, w = b.tw, h = b.th;
+    for (let ty = y0; ty < y0 + h; ty++) for (let tx = x0; tx < x0 + w; tx++) {
+      m.bld[ty * MAP_W + tx] = -1;
+      const edge = tx === x0 || tx === x0 + w - 1 || ty === (south ? y0 : y0 + h - 1);
+      m.set(tx, ty, edge ? T.WALL : T.LOT);
+    }
+    // the gate: the whole street-side end between the corner posts
+    const gy = south ? y0 + h - 1 : y0;
+    for (let tx = x0 + 1; tx < x0 + w - 1; tx++) m.set(tx, gy, T.LOT);
+    // apron out to the road so cars can get in and out
+    for (let k = 1; k <= 3; k++) {
+      const yy = south ? gy + k : gy - k;
+      if (isRoad(x0 + Math.floor(w / 2), yy)) break;
+      for (let tx = x0 + 1; tx < x0 + w - 1; tx++) { const t = m.tileAt(tx, yy); if (t !== T.ROAD && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP) m.set(tx, yy, T.LOT); }
+    }
+    const gate = { x: (x0 + w / 2) * TILE, y: (gy + 0.5) * TILE, w: (w - 2) * TILE, south, props: [] };
+    for (let px = (x0 + 1) * TILE + 8; px <= (x0 + w - 1) * TILE - 8; px += 14) {
+      const e = m.addSolidProp(px, gate.y, 10);
+      e.gate = m.motorPools.length;
+      gate.props.push(e);
+    }
+    // vehicles: cruisers down the far wall, nose to the gate; bikes in the second column
+    const dir = south ? 1 : -1, heading = south ? Math.PI / 2 : -Math.PI / 2;
+    const far = south ? y0 + 1 : y0 + h - 2; // first interior row away from the gate
+    const spots = [];
+    const colA = (x0 + 1) * TILE + 30, colB = (x0 + 1) * TILE + 30 + 64;
+    let ya = (far + 0.5) * TILE + dir * 46, yb = ya;
+    for (const model of POOL_MODELS) {
+      if (model === 'police') { spots.push({ x: colA, y: ya, a: heading, model }); ya += dir * 104; }
+      else { spots.push({ x: colB, y: yb, a: heading, model }); yb += dir * 64; }
+    }
+    // where a new officer walks out of the armory: the station-side corner, away from the cars
+    const exit = { x: (x0 + w - 2) * TILE, y: (far + 0.5) * TILE + dir * 20 };
+    m.motorPools.push({ station: st.id, b: b.id, tx: x0, ty: y0, tw: w, th: h, south, gate, spots, exit });
+    st.pool = m.motorPools.length - 1;
   }
 }
 

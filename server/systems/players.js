@@ -15,6 +15,7 @@ import * as law from './law.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as homes from './homes.js';
+import * as station from './station.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -174,7 +175,7 @@ export function processInputs(world, dt) {
 
 function applyInput(world, p, ped, inp, pressed, dt) {
   if (ped.hidden) { // inside your home: E brings up the home menu (Leave is on it)
-    if (pressed & (IN.ACTION | IN.VEHICLE)) homes.openInside(world, p);
+    if (pressed & (IN.ACTION | IN.VEHICLE)) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
     return;
   }
   ped.aimAngle = inp.aim;
@@ -271,6 +272,7 @@ function tackle(world, ped) {
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return null;
+  if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
   if (ped.vehId) return homes.vehicleInteraction(world, p);
@@ -413,7 +415,7 @@ export function buildMe(world, p) {
   return {
     t: 'me',
     name: p.name, hp: ped ? Math.round(ped.hp) : 0, maxHp: ped ? ped.maxHp : 100,
-    dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
+    pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
     cash: prof.cash, bank: prof.bank, cexp: prof.criminalExp, sam: prof.samaritan,
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),

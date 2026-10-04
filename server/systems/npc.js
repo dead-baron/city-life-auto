@@ -68,7 +68,12 @@ export function update(world, dt) {
   for (const ped of world.entities.values()) {
     if (ped.kind !== K.PED || !ped.npc || ped.dead || ped.vehId) continue;
     const n = ped.npc;
-    if (n.role === 'cop' || n.role === 'medic' || n.role === 'driver') continue; // other systems drive these
+    if (n.role === 'driver') { n.role = 'civ'; n.state = 'wander'; } // a driver left on foot (car gone) walks off
+    if (n.role === 'cop' && !n.war && !n.shootout) {
+      const u = n.unit ? world.get(n.unit) : null;
+      if (!u || u.removed) { n.unit = 0; n.beat = true; } // lost their unit: walk the beat instead of freezing
+    }
+    if ((n.role === 'cop' && !n.beat) || n.role === 'medic') continue; // other systems drive these
     if (now < ped.downUntil || now < ped.stunUntil) continue;
     if (n.state === 'passed') { ped.vx = 0; ped.vy = 0; continue; }
     // ended up in the water (thrown from a car, knocked off a dock): swim for the nearest shore
@@ -80,7 +85,7 @@ export function update(world, dt) {
     let inp = NO_INPUT, factor = 0.55;
     switch (n.state) {
       case 'wander': inp = wander(world, ped, now); factor = rain && !ped.umbrella ? 0.85 : 0.55; break;
-      case 'idle': if (now > n.until) n.state = 'wander'; break;
+      case 'idle': inp = idle(world, ped, now); break;
       case 'flee': {
         const fx = n.fx ?? ped.x, fy = n.fy ?? ped.y;
         const away = Math.atan2(ped.y - fy, ped.x - fx) + (n.fleeBias || 0);
@@ -111,11 +116,31 @@ function wander(world, ped, now) {
   const n = ped.npc;
   const d = Math.hypot(n.wx - ped.x, n.wy - ped.y);
   if (d < 10 || now > n.until) {
-    if (rng() < 0.15) { n.state = 'idle'; n.until = now + 1 + rng() * 3; return NO_INPUT; }
+    if (rng() < 0.2 && !onRoad(world, ped)) { n.state = 'idle'; n.until = now + 2 + rng() * 5; n.lookAt = now; return NO_INPUT; }
     pickWaypoint(world, ped);
     n.until = now + 8;
+    if (Math.hypot(n.wx - ped.x, n.wy - ped.y) < 10) { n.state = 'idle'; n.until = now + 1 + rng() * 2; n.lookAt = now; return NO_INPUT; }
   }
   return seek(ped, n.wx, n.wy, false);
+}
+
+const onRoad = (world, ped) => { const t = world.map.tileAtPx(ped.x, ped.y); return t === T.ROAD || t === T.BRIDGE; };
+
+// Standing around: glance one way, then another, then wander off somewhere new (never just
+// frozen in place, and never loitering in the middle of the road).
+function idle(world, ped, now) {
+  const n = ped.npc;
+  if (onRoad(world, ped)) { n.state = 'wander'; n.until = 0; return NO_INPUT; }
+  if (now >= (n.lookAt || 0)) {
+    ped.a += (rng() < 0.5 ? -1 : 1) * (0.6 + rng() * 1.6);
+    n.lookAt = now + 0.8 + rng() * 1.6;
+  }
+  if (now > n.until) {
+    n.state = 'wander';
+    n.until = 0;
+    n.awayFrom = ped.a + Math.PI; // head off somewhere other than where they were looking last
+  }
+  return NO_INPUT;
 }
 
 function pickWaypoint(world, ped) {
@@ -131,8 +156,17 @@ function pickWaypoint(world, ped) {
     }
     if (bd < 520) towards = null;
   }
-  for (let k = 0; k < 10; k++) {
-    const ang = towards && k < 6 ? Math.atan2(towards.y - ped.y, towards.x - ped.x) + (rng() - 0.5) * 1.6 : rng() * Math.PI * 2;
+  // standing in the street: head for the nearest pavement first
+  if (onRoad(world, ped)) {
+    for (let r = 32; r <= 160; r += 32) for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2, x = ped.x + Math.cos(a) * r, y = ped.y + Math.sin(a) * r;
+      if (WALK_TILES.has(world.map.tileAtPx(x, y))) { n.wx = x; n.wy = y; return; }
+    }
+  }
+  const away = n.awayFrom; n.awayFrom = undefined;
+  for (let k = 0; k < 14; k++) {
+    const ang = towards && k < 6 ? Math.atan2(towards.y - ped.y, towards.x - ped.x) + (rng() - 0.5) * 1.6
+      : away !== undefined && k < 6 ? away + (rng() - 0.5) * 2 : rng() * Math.PI * 2;
     const dist = 64 + rng() * 180;
     const x = ped.x + Math.cos(ang) * dist, y = ped.y + Math.sin(ang) * dist;
     const t = world.map.tileAtPx(x, y);
@@ -297,7 +331,7 @@ function manageDensity(world) {
   // despawn far NPCs
   for (const e of world.entities.values()) {
     if (e.kind !== K.PED || !e.npc || e.vehId) continue;
-    if (e.npc.keep || e.npc.role === 'cop' || e.npc.role === 'medic' || e.npc.role === 'driver') continue;
+    if (e.npc.keep || (e.npc.role === 'cop' && !e.npc.beat) || e.npc.role === 'medic' || e.npc.role === 'driver') continue;
     let near = false;
     for (const a of anchors) if ((a.x - e.x) ** 2 + (a.y - e.y) ** 2 < 1500 * 1500) { near = true; break; }
     if (!near && !(e.dead && world.bodies.has(e))) despawnNpc(world, e);

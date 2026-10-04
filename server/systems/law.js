@@ -4,6 +4,7 @@
 import { K, FACTION, STAR_HEAT, starsForHeat } from '../../shared/constants.js';
 import { angleDiff } from '../../shared/math.js';
 import { isTurf } from '../../shared/map.js';
+import { WEAPONS } from '../../shared/items.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as phone from './phone.js';
@@ -520,9 +521,10 @@ export function goOnDuty(world, p) {
 }
 
 // Department-issued gear: handed out on duty, handed back off duty (or lost on death).
+const DEPT_GEAR = () => ['taser', 'baton', ...Object.keys(WEAPONS).filter((id) => WEAPONS[id].police)];
 export function stripPoliceGear(p) {
-  for (const id of ['taser', 'baton', 'service']) delete p.profile.weapons[id];
-  if (p.ped && ['taser', 'baton', 'service'].includes(p.ped.weapon)) p.ped.weapon = 'fists';
+  for (const id of DEPT_GEAR()) { delete p.profile.weapons[id]; if (p.ped) delete p.ped.mag[id]; }
+  if (p.ped && DEPT_GEAR().includes(p.ped.weapon)) p.ped.weapon = 'fists';
   p.meDirty = true;
 }
 export function restockService(world, p) {

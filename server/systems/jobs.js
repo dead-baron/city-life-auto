@@ -2,7 +2,8 @@
 // contraband drops for the black market / evidence locker, and the deep-sim fishing loop.
 import { K, T } from '../../shared/constants.js';
 import { ITEMS, FISH_TABLE } from '../../shared/items.js';
-import { RIVER_X0, RIVER_X1 } from '../../shared/map.js';
+import { RIVER_X0, RIVER_X1, CAR_SPAWN_BLOCK } from '../../shared/map.js';
+import { VEHICLES } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
@@ -70,7 +71,8 @@ export function startCourier(world, p, poi, opts = {}) {
     pickupText: `Pick up the ${name} at ${poi.label}`,
   };
   c.job.dest = dest.id;
-  world.notify(p, opts.dest ? `Job accepted: pick up the ${name} at ${poi.label} - it's marked on your map.` : 'Contract accepted. Your crate is on the loading pad - grab a vehicle with open cargo slots.', 'good');
+  const truck = workTruck(world, p, pad, 'flatbed');
+  world.notify(p, (opts.dest ? `Job accepted: pick up the ${name} at ${poi.label} - it's marked on your map.` : 'Contract accepted. Your crate is on the loading pad.') + (truck ? ' A company flatbed is parked by the crate - it\'s yours to use.' : ''), 'good');
   return null;
 }
 
@@ -82,11 +84,37 @@ export function startFarm(world, p, poi) {
     const c = world.spawnCrate(1, pad.x + (i % 2) * 34 - 17, pad.y + Math.floor(i / 2) * 34, { owner: p.pid, label: 'Produce Box', value: 140, contraband: false, job: { type: 'farm', pid: p.pid } });
     ids.push(c.id);
   }
-  // a farm pickup waits nearby to help haul
-  const truck = world.spawnVehicle('pickup', pad.x + 110, pad.y, -Math.PI / 2, { npcOwned: false });
-  truck.issuedTo = p.pid; truck.despawnable = true;
+  // a co-op flatbed waits nearby to help haul (taking it isn't theft)
+  workTruck(world, p, pad, 'flatbed', true);
   p.job = { type: 'farm', crates: ids, dest: grocery.id, tx: grocery.x, ty: grocery.y, expires: world.time + 1200, text: `Haul 4 Produce Boxes to ${grocery.label} in the city`, pickupText: `Load the 4 Produce Boxes at ${poi.label}` };
-  world.notify(p, 'Harvest contract! 4 Produce Boxes are in the field by the farm road. A co-op pickup is parked next to them.', 'good');
+  world.notify(p, 'Harvest contract! 4 Produce Boxes are in the field by the farm road. A co-op flatbed is parked next to them - take it, it is not stealing.', 'good');
+  return null;
+}
+
+// A company truck for a cargo job: parked on open ground near the pickup, free to take (not
+// theft), and tidied away like any parked car once nobody is around. Skipped when a free truck
+// with open cargo slots is already waiting there.
+export function workTruck(world, p, pad, model = 'flatbed', always = false) {
+  if (!always) {
+    for (const v of world.query(pad.x, pad.y, 320, K.VEH)) {
+      if (v.wreckAt || v.seats.some((x) => x) || !v.def.slots.length || v.cargo.every((c) => c)) continue;
+      if (!v.npcOwned || v.issuedTo === p.pid) return null; // a free one is already here
+    }
+  }
+  const def = VEHICLES[model];
+  for (let r = 70; r <= 260; r += 30) for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    const x = pad.x + Math.cos(a) * r, y = pad.y + Math.sin(a) * r;
+    const heading = Math.abs(Math.cos(a)) > 0.7 ? Math.PI / 2 : 0;
+    const ok = [-0.5, 0, 0.5].every((f) => [-0.5, 0.5].every((g) => {
+      const px = x + Math.cos(heading) * def.L * f - Math.sin(heading) * def.W * g, py = y + Math.sin(heading) * def.L * f + Math.cos(heading) * def.W * g;
+      return !CAR_SPAWN_BLOCK[world.map.tileAtPx(px, py)];
+    }));
+    if (!ok || world.query(x, y, def.L, K.VEH).length) continue;
+    const v = world.spawnVehicle(model, x, y, heading, { npcOwned: false });
+    v.issuedTo = p.pid; v.despawnable = true; v.workTruck = true;
+    return v;
+  }
   return null;
 }
 

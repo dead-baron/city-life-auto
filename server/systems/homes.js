@@ -194,6 +194,7 @@ function goInside(world, p, h) {
   ped.vx = 0; ped.vy = 0; ped.rollT = 0;
   ped.x = h.x; ped.y = h.y;
   ped.fishing = null;
+  world.place(ped);
   world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
   world.notify(p, `You're inside ${h.name}. Nobody can see or hurt you in here.`, 'good');
   p.meDirty = true;

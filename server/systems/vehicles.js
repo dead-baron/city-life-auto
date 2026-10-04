@@ -9,6 +9,7 @@ import * as combat from './combat.js';
 import * as cargo from './cargo.js';
 import * as law from './law.js';
 import * as npc from './npc.js';
+import * as cruiser from './cruiser.js';
 
 
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
@@ -308,7 +309,7 @@ export function tryEnter(world, ped) {
   }
   if (seat < 0) return false;
   if (seat === 0 && p) {
-    const mine = v.owner === p.pid || v.issuedTo === p.pid;
+    const mine = v.owner === p.pid || v.issuedTo === p.pid || (v.motorPool !== undefined && p.badge);
     const already = v.stolenBy && v.stolenBy.has(p.pid);
     if (!mine && !already && !v.carjacked) {
       if (v.def.police && !p.badge) law.crime(world, ped, 'policeTheft', null, v.x, v.y);
@@ -323,6 +324,7 @@ export function tryEnter(world, ped) {
   ped.vx = 0; ped.vy = 0; ped.rollT = 0;
   v.parked = false;
   if (seat === 0 && p) p.lastVehicle = v.id;
+  if (seat === 0 && p && p.badge && v.def.police && v.cruiserOf !== p.pid && (v.motorPool !== undefined || v.issuedTo === p.pid)) cruiser.adopt(world, p, v);
   if (seat === 0) { v.lastDriver = ped.id; if (v.ai && v.ai.kind === 'traffic') { v.ai = null; v.despawnable = true; } }
   if (p) { p.meDirty = true; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }
   return true;

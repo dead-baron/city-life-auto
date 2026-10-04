@@ -86,6 +86,32 @@ export function issueNow(world, p) {
   return v;
 }
 
+// An officer drove off in a motor-pool cruiser or motorcycle: it becomes their duty vehicle.
+// The one they had before goes back to the pool if it's parked inside the lot, otherwise it's
+// returned to HQ (removed) once nobody is in it.
+export function adopt(world, p, v) {
+  const old = mine(world, p);
+  if (old && old !== v) {
+    const pool = poolIndexAt(world, old.x, old.y);
+    if (pool >= 0 && !old.seats.some((s) => s) && !old.wreckAt) {
+      world.cruisers?.delete(old.id);
+      old.cruiserOf = 0; old.issuedTo = 0; old.lockedTo = 0; old.motorPool = pool; old.npcOwned = true; old.stolenBy = null; old.despawnable = false;
+    } else release(world, old, true);
+  }
+  delete v.motorPool;
+  v.issuedTo = p.pid; v.cruiserOf = p.pid; v.despawnable = false; v.npcOwned = false; v.lockedTo = 0;
+  (v.stolenBy ||= new Set()).add(p.pid);
+  p.dutyVehicle = v.id; p.cruiserFar = 0; p.cruiserLostAt = 0;
+  world.cruisers ??= new Set();
+  world.cruisers.add(v.id);
+  p.meDirty = true;
+}
+function poolIndexAt(world, x, y) {
+  const list = world.map.motorPools || [];
+  for (let i = 0; i < list.length; i++) { const m = list[i]; if (x > m.tx * 32 && x < (m.tx + m.tw) * 32 && y > m.ty * 32 && y < (m.ty + m.th) * 32) return i; }
+  return -1;
+}
+
 // HQ lot requisition (no cooldown, you're standing at the motor pool).
 export function issueAt(world, p, x, y, a) {
   const old = mine(world, p);

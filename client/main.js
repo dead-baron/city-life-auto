@@ -18,6 +18,7 @@ import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { createPhone } from './phone.js';
 import { createMapWaypoints } from './mapwaypoints.js';
+import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
@@ -41,6 +42,7 @@ const S = {
   confirmedBreaks: new Set(), predBreaks: new Map(), // street furniture smashed: server-confirmed / predicted
   bayOpen: {}, bayAnim: {}, // paint-shop shutters
   garageOpen: {}, garageAnim: {}, // home garage doors
+  gateOpen: {}, gateAnim: {}, // police motor pool gates
 };
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 
@@ -126,6 +128,8 @@ function onText(m) {
       for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
+      S.gateOpen = {}; S.gateAnim = {}; for (const mp of S.map.motorPools || []) for (const pr of mp.gate.props) pr.off = false;
+      for (const i of m.gates || []) setGate(i, true);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       S.ground.cache.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
@@ -136,7 +140,7 @@ function onText(m) {
     case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); e.d = d; } break;
     case 'ds': for (const id of m.ids) S.ents.delete(id); break;
     case 'ev': for (const ev of m.l) onEvent(ev); break;
-    case 'me': S.me = m; S.hud && S.hud.setMe(m); break;
+    case 'me': S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m); break;
     case 'menu': S.hud.openMenu(m); break;
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'board': phone.onBoard(m); break;
@@ -169,8 +173,13 @@ function onBinary(buf) {
     e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a });
     if (e.buf.length > 5) e.buf.shift();
     e.flags = it.flags; e.hp = it.hp; e.parent = it.parent;
-    if (it.kind === K.PED) { e.extra = it.extra & 15; e.blink = (it.extra >> 4) & 3; e.swim = (it.extra & 128) !== 0; } // weapon | blink | in water else e.extra = it.extra;
+    if (it.kind === K.PED) { e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; e.swim = (it.extra & 128) !== 0; } // weapon | blink | in water
+    else e.extra = it.extra;
+    e.seen = s.tick;
   }
+  // anything the server stopped mentioning for 4 s is gone (a missed despawn would otherwise
+  // leave a frozen ghost - e.g. a nameplate lying in the street)
+  if (s.tick % 20 === 0) for (const [id, e] of S.ents) if (s.tick - (e.seen ?? s.tick) > 80 && id !== S.ctrlId && id !== S.myPedId) S.ents.delete(id);
   reconcile(s);
 }
 
@@ -357,6 +366,7 @@ function onEvent(ev) {
     case 'foot': fx.decal(2, ev.x, ev.y, ev.a, 1, '#7a0d12', now, 0.8); break;
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
+    case 'gate': setGate(ev.i, ev.open); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
     case 'propfix': {
       const p = S.map.props[ev.i];
@@ -794,7 +804,6 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'cruiser') { closeOverlay('pause'); callCruiser(); }
     else if (a === 'settings') openOverlay('settings');
     else if (a === 'controls') openOverlay('controls');
-    else if (a === 'tutorial') { closeOverlay('pause'); openTutorial(); }
     else if (a === 'fullscreen') toggleFullscreen();
     else if (a === 'dev') openOverlay('dev');
     else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }
@@ -858,8 +867,11 @@ onResize();
 function baseZoom() {
   // GDD §13: fixed 16:9 landscape scaling; portrait keeps the same pixel scale and simply
   // shows a narrow vertical strip instead of zooming in.
+  // Big screens (desktop full screen) show more of the city instead of blowing the characters
+  // up: up to ~30% more world on a 1080p+ monitor, the phone view stays as it was.
   const long = Math.max(W, H);
-  return long / (VIEW_H * 16 / 9);
+  const viewH = VIEW_H * (1 + 0.3 * Math.max(0, Math.min(1, (long - 960) / 960)));
+  return long / (viewH * 16 / 9);
 }
 
 // ---- personal police cruiser: radio dispatch, then an arrow leads you to it ------------------
@@ -1011,6 +1023,7 @@ function frame(nowMs) {
     S.smooth.x *= k; S.smooth.y *= k; S.smooth.a = (S.smooth.a || 0) * k;
     if (nowMs - pingAt > 2000) { pingAt = nowMs; send({ t: 'ping', ts: performance.now() }); }
     if (!tutorialActive()) render(dt);
+    tickInterior();
     checkWaypoint();
     expirePredictedBreaks();
   } else {
@@ -1149,6 +1162,7 @@ function render(dt) {
 
   drawBays(view, dt);
   drawGarageDoors(view, dt);
+  drawGates(view, dt);
   // traffic lights, cameras, overhead canopy
   drawSignals(view);
   for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
@@ -1313,6 +1327,56 @@ function drawBays(view, dt) {
   }
 }
 
+// Inside a police station: the lobby / armory art covers the city view while the menu is used.
+let intShown = null, intDrawnAt = 0;
+function tickInterior() {
+  const kind = S.playing && S.me && !S.me.dead ? S.me.interior : null;
+  const el = $('interior');
+  if (kind !== intShown) {
+    intShown = kind;
+    el.classList.toggle('hidden', !kind);
+    intDrawnAt = 0;
+    if (kind) $('int-open').textContent = kind === 'armory' ? '▲ Armory' : '▲ Front desk';
+  }
+  if (!kind) return;
+  const now = performance.now();
+  if (now - intDrawnAt < 250) return;
+  intDrawnAt = now;
+  const cv = $('int-cv');
+  const w = Math.round(innerWidth), h = Math.round(innerHeight);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const meEnt = S.ents.get(S.myPedId);
+  drawInterior(cv, kind, meEnt && meEnt.d ? meEnt.d.app : {}, now / 1000);
+  $('int-open').classList.toggle('hidden', !!(S.hud && S.hud.menuOpen));
+}
+$('int-open').onclick = () => send({ t: 'interior' });
+
+// Motor pool gates: a sliding steel gate with blue-and-white panels that rolls aside for officers.
+function drawGates(view, dt) {
+  for (let i = 0; i < (S.map.motorPools || []).length; i++) {
+    const gt = S.map.motorPools[i].gate;
+    const x0 = gt.x - gt.w / 2, x1 = gt.x + gt.w / 2;
+    if (x1 < view.x0 - 200 || x0 > view.x1 + 200 || gt.y < view.y0 - 40 || gt.y > view.y1 + 40) continue;
+    const want = S.gateOpen[i] ? 1 : 0;
+    S.gateAnim[i] = (S.gateAnim[i] ?? want) + (want - (S.gateAnim[i] ?? want)) * (1 - Math.exp(-4 * dt));
+    const k = S.gateAnim[i];
+    const gx = x0 + gt.w * k * 0.92; // slides toward the right post
+    const gw = gt.w;
+    g.save();
+    g.beginPath(); g.rect(x0, gt.y - 10, gt.w, 20); g.clip();
+    g.fillStyle = '#d8dce4'; g.fillRect(gx, gt.y - 5, gw, 10);
+    g.fillStyle = '#1d3a8a'; for (let px = gx + 6; px < gx + gw - 4; px += 24) g.fillRect(px, gt.y - 4, 10, 8);
+    g.fillStyle = '#2a2c31'; g.fillRect(gx, gt.y - 6, 4, 12);
+    g.restore();
+    if (k > 0.05 && k < 0.95) { g.fillStyle = Math.floor(S.loopClock * 6) % 2 ? '#ffb000' : '#5a3a00'; g.beginPath(); g.arc(x1 + 6, gt.y - 10, 4, 0, 6.28); g.fill(); }
+  }
+}
+function setGate(i, open) {
+  S.gateOpen[i] = open;
+  const mp = S.map.motorPools && S.map.motorPools[i];
+  if (mp) for (const pr of mp.gate.props) pr.off = !!open;
+}
+
 // Re-draw the baked bridge-deck tiles around a point (over a boat / swimmer beneath them).
 function coverWithBridge(x, y, r) {
   const t0x = Math.floor((x - r) / TILE), t1x = Math.floor((x + r) / TILE), t0y = Math.floor((y - r) / TILE), t1y = Math.floor((y + r) / TILE);
@@ -1355,9 +1419,10 @@ function drawVehicleEnt(v, now, dt) {
   if (f & VF.REVERSE) { g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(-L / 2 - 1, -Wd / 2 + 10, 2, 4); g.fillRect(-L / 2 - 1, Wd / 2 - 14, 2, 4); }
   if (f & VF.SIREN) {
     const ph = Math.floor(now * 6) % 2;
+    const bike = def.kind === 'bike', bx = bike ? -L / 2 + 8 : -2, by = bike ? 4 : 6, br = bike ? 3.5 : 6;
     g.globalAlpha = 0.9;
-    g.fillStyle = ph ? '#ff2a2a' : '#2a6aff'; g.beginPath(); g.arc(-2, -6, 6, 0, 6.28); g.fill();
-    g.fillStyle = ph ? '#2a6aff' : '#ff2a2a'; g.beginPath(); g.arc(-2, 6, 6, 0, 6.28); g.fill();
+    g.fillStyle = ph ? '#ff2a2a' : '#2a6aff'; g.beginPath(); g.arc(bx, -by, br, 0, 6.28); g.fill();
+    g.fillStyle = ph ? '#2a6aff' : '#ff2a2a'; g.beginPath(); g.arc(bx, by, br, 0, 6.28); g.fill();
     g.globalAlpha = 1;
   }
   g.restore();

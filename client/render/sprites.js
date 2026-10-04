@@ -26,10 +26,32 @@ function frame(name) { return atlas.ready ? atlas.frames[name] : null; }
 // ---------------------------------------------------------------------------
 // Vehicles (drawn centered, facing +x, in world units)
 const procCache = new Map();
+const liveryCache = new Map();
+// Police motorcycle: the sport bike's art in black-and-white police livery with a light bar.
+function policeBike(fr, L, W) {
+  const key = `${fr.a}|${fr.x}|${fr.y}`;
+  let cv = liveryCache.get(key);
+  if (cv) return cv;
+  const S = 3;
+  cv = document.createElement('canvas'); cv.width = L * S; cv.height = W * S;
+  const g = cv.getContext('2d');
+  g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, 0, 0, L * S, W * S);
+  g.globalCompositeOperation = 'source-atop';
+  g.fillStyle = 'rgba(236,240,248,0.55)'; g.fillRect(0, 0, L * S, W * S);           // white bodywork
+  g.fillStyle = 'rgba(20,32,80,0.75)'; g.fillRect(L * S * 0.42, 0, L * S * 0.16, W * S); // navy band
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = '#d02020'; g.fillRect(L * S * 0.12, W * S * 0.2, 4 * S, 3 * S);      // rear lights
+  g.fillStyle = '#2050e0'; g.fillRect(L * S * 0.12, W * S * 0.8 - 3 * S, 4 * S, 3 * S);
+  liveryCache.set(key, cv);
+  return cv;
+}
+
 export function drawVehicle(g, desc, def, f) {
-  const n = atlas.variants[def.id] || 0;
-  const fr = n ? frame(`veh_${def.id}_${(desc.vr || 0) % n}`) : null;
+  const artId = def.art || def.id;
+  const n = atlas.variants[artId] || 0;
+  const fr = n ? frame(`veh_${artId}_${(desc.vr || 0) % n}`) : null;
   const L = def.L, W = def.W;
+  if (fr && def.id === 'policebike') { g.drawImage(policeBike(fr, L, W), -L / 2, -W / 2, L, W); return; }
   if (fr) {
     g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, -L / 2, -W / 2, L, W);
   } else {
@@ -87,7 +109,8 @@ const shadowCache = new Map();
 // Burnt-out wreck: the car's own sprite charred dark (pixels only - no box around it).
 const wreckCache = new Map();
 export function drawVehicleWreck(g, desc, def) {
-  const n = atlas.variants[def.id] || 0;
+  const artId = def.art || def.id;
+  const n = atlas.variants[artId] || 0;
   const name = n ? `veh_${def.id}_${(desc.vr || 0) % n}` : `${def.id}|${desc.p}`;
   let wc = wreckCache.get(name);
   if (!wc) {
@@ -109,8 +132,9 @@ export function drawVehicleWreck(g, desc, def) {
   g.drawImage(wc, -wc.width / 2, -wc.height / 2);
 }
 export function drawVehicleShadow(g, desc, def) {
-  const n = atlas.variants[def.id] || 0;
-  const name = n ? `veh_${def.id}_${(desc.vr || 0) % n}` : null;
+  const artId = def.art || def.id;
+  const n = atlas.variants[artId] || 0;
+  const name = n ? `veh_${artId}_${(desc.vr || 0) % n}` : null;
   const fr = name ? frame(name) : null;
   const L = def.L, W = def.W;
   if (!fr) { g.fillStyle = 'rgba(0,0,0,.3)'; rr(g, -L / 2 + 3, -W / 2 + 3, L, W, 8); g.fill(); return; }

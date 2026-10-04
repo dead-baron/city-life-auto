@@ -1,7 +1,7 @@
 // NPC traffic (GDD §10): lane-following drivers on the road graph that obey red/green
 // lights, keep distance, panic when attacked; parked cars and docked boats near players.
 // Also exports the shared driving controller + route planner used by police and EMS.
-import { K } from '../../shared/constants.js';
+import { K, T } from '../../shared/constants.js';
 import { DIRS, lightState } from '../../shared/map.js';
 import { angleDiff, clamp } from '../../shared/math.js';
 import { TRAFFIC_MIX, PARKED_MIX } from '../../shared/vehicles.js';
@@ -194,7 +194,54 @@ function steerTraffic(world, v, t) {
     else if (ai.pts.indexOf(stop) === 0 && ai.turning) desired = Math.min(desired, 150);
   }
   if (ai.pts.length > 1 && ai.pts[0].stop && ai.nextDir !== ai.dir) desired = Math.min(desired, 170);
+  if (!panic && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
+  if (!panic && ai.yieldUntil && now < ai.yieldUntil) {
+    // an emergency vehicle with its siren on is coming: ease over toward the curb and slow
+    // right down. Only ever onto empty road - never up onto the pavement or into people.
+    const c = Math.cos(v.a), sn = Math.sin(v.a);
+    const rx = -sn, ry = c;
+    const solidNear = (x, y) => {
+      const k0x = Math.floor(x / 32), k0y = Math.floor(y / 32);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const arr = world.map.solidProps.get((k0y + dy) * world.map.w + k0x + dx);
+        if (arr) for (const sp of arr) if (!sp.off && Math.hypot(sp.x - x, sp.y - y) < sp.r + 10) return true;
+      }
+      return false;
+    };
+    const curbOk = (x, y) => { const t = world.map.tileAtPx(x, y); return t === T.ROAD || t === T.BRIDGE || t === T.SIDEWALK || t === T.LOT || t === T.PLAZA; };
+    // Slide right until the car's outer edge rides at most ~20 px up onto the kerb - and only
+    // where that strip is clear of people, lamp posts, hydrants and walls.
+    let shift = 0;
+    const strip = (k) => { // the car's outer edge from its tail to 70 px past its nose
+      for (let along = -v.def.L / 2; along <= v.def.L / 2 + 70; along += 14) {
+        const ox = v.x + c * along + rx * (k + v.def.W / 2), oy = v.y + sn * along + ry * (k + v.def.W / 2);
+        if (!curbOk(ox, oy) || solidNear(ox, oy)) return false;
+      }
+      return true;
+    };
+    for (let k = 4; k <= 26; k += 2) { if (!strip(k)) break; shift = k; }
+    const room = shift >= 6;
+    const tx = v.x + c * 50 + rx * shift, ty = v.y + sn * 50 + ry * shift;
+    const busy = room && world.query(v.x + c * 40 + rx * (shift + v.def.W / 2), v.y + sn * 40 + ry * (shift + v.def.W / 2), 70, K.PED).some((e) => !e.dead && !e.vehId);
+    driveToward(world, v, room && !busy ? tx : wp.x, room && !busy ? ty : wp.y, Math.min(desired, 40), {});
+    return;
+  }
   driveToward(world, v, wp.x, wp.y, desired, { ignoreObstacles: panic });
+}
+
+// Is a vehicle running its siren coming up behind us (or straight at us down the same road)?
+function sirenBehind(world, v) {
+  for (const e of world.query(v.x, v.y, 460, K.VEH)) {
+    if (e === v || !e.siren) continue;
+    const sp = Math.hypot(e.vx, e.vy);
+    if (sp < 60) continue;
+    const ux = e.vx / sp, uy = e.vy / sp;
+    const dx = v.x - e.x, dy = v.y - e.y;
+    const ahead = dx * ux + dy * uy;           // how far in front of the emergency vehicle we are
+    const lateral = Math.abs(-dx * uy + dy * ux);
+    if (ahead > 0 && ahead < 380 + sp * 0.4 && lateral < 90) return true;
+  }
+  return false;
 }
 
 // Re-join the road graph at the nearest junction, leaving in the link that best matches the

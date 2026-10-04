@@ -79,6 +79,10 @@ function weapon(P, w, hx, hy, ang) {
     case 12: P.line(hx - Math.cos(ang) * 5, hy - Math.sin(ang) * 5, ang, 14, '#4a5a2a', 2); P.p(hx + Math.cos(ang) * 9, hy + Math.sin(ang) * 9, '#c8262b'); break; // bazooka
     case 13: L(10, '#3a2a1a'); break;                                                          // fishing rod
     case 14: L(5, '#14161c', 2); P.p(hx + Math.cos(ang) * 2, hy + Math.sin(ang) * 2, '#3b6bff'); break; // police service pistol
+    case 15: P.line(hx - Math.cos(ang) * 4, hy - Math.sin(ang) * 4, ang, 4, '#1d2a5a', 2); L(10, '#1c1f26', 2); P.p(hx + Math.cos(ang) * 3, hy + Math.sin(ang) * 3, '#3b6bff'); break; // police patrol rifle
+    case 16: P.line(hx - Math.cos(ang) * 4, hy - Math.sin(ang) * 4, ang, 4, '#3a3f2a', 2); L(13, '#22252c', 2); P.p(hx + Math.cos(ang) * 5 + Math.cos(ang - 1.57), hy + Math.sin(ang) * 5 + Math.sin(ang - 1.57), '#8fd0ff'); break; // marksman rifle (scope glint)
+    case 17: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 3, '#1d2a5a', 2); L(9, '#1a1c22', 2); P.p(hx + Math.cos(ang + 1.57) * 2, hy + Math.sin(ang + 1.57) * 2, '#1a1c22'); break; // assault rifle (magazine)
+    case 18: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 3, '#1d2a5a', 2); L(8, '#2c2f36', 2); P.p(hx + Math.cos(ang) * 8, hy + Math.sin(ang) * 8, '#f2c21b'); break; // police shotgun
     default: break;
   }
 }
@@ -248,7 +252,7 @@ function paint(P, a, pose, fr, w) {
     const r = arm(P, a, 1, 1 - armSw, 0);
     // holstered / held melee weapon hangs from the right hand
     if (w > 0 && w <= 6) weapon(P, w, r.hx - 1, r.hy + 1, 0.5);
-    else if (w >= 7 && w <= 12 && lvl < 3) weapon(P, w, r.hx - 1, r.hy + 1, 0.15);
+    else if (((w >= 7 && w <= 12) || w >= 14) && lvl < 3) weapon(P, w, r.hx - 1, r.hy + 1, 0.15);
     if (a.b === 1) { P.r(r.hx - 3, r.hy + 1.5, 4, 3, '#3a2414'); P.r(r.hx - 2, r.hy + 1.5, 2, 1, '#6b4a2a'); }   // briefcase
   }
   head(P, a);
@@ -296,7 +300,7 @@ export function weaponIcon(wIndex) {
     P.blob(12, 12, 4.5, 3.6, '#e0ac7e');
     for (let k = 0; k < 4; k++) P.r(13 + (k & 1), 9 + k * 1.6, 3, 1, '#a8774c');
     P.r(8, 13, 4, 2, '#c68953');
-  } else weapon(P, wIndex, wIndex >= 9 && wIndex <= 12 ? 5 : 7, 12, 0);
+  } else weapon(P, wIndex, (wIndex >= 9 && wIndex <= 12) || wIndex >= 15 ? 5 : 7, 12, 0);
   const img = g.getImageData(0, 0, G, G), d = img.data;
   const solid = (x, y) => x >= 0 && y >= 0 && x < G && y < G && d[(y * G + x) * 4 + 3] > 40;
   const edge = [];

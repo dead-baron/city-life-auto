@@ -51,11 +51,12 @@ function spawnUnit(world, p) {
   if (!cands.length) return;
   const n = cands[Math.floor(rng() * cands.length)];
   const swat = p.wanted >= 4 && rng() < 0.5;
+  const moto = !swat && p.wanted <= 3 && rng() < 0.3; // motorcycle cops: one rider, fast, fragile
   const a = Math.atan2(ty - n.y, tx - n.x);
-  const v = world.spawnVehicle(swat ? 'swat' : 'police', n.x + 32, n.y + 32, a, {});
+  const v = world.spawnVehicle(swat ? 'swat' : moto ? 'policebike' : 'police', n.x + 32, n.y + 32, a, {});
   v.despawnable = false;
   v.sirenOn = true;
-  const crew = swat ? 3 : 2;
+  const crew = swat ? 3 : moto ? 1 : 2;
   for (let i = 0; i < crew; i++) {
     const cop = spawnNpc(world, swat ? 'swat' : 'cop', v.x, v.y, 'cop');
     cop.npc.unit = v.id;

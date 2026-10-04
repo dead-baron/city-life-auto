@@ -12,9 +12,10 @@ import * as law from './law.js';
 import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
+import * as station from './station.js';
 import * as cruiser from './cruiser.js';
 
-import { HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S } from '../../shared/rules.js';
+import { HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
@@ -29,7 +30,7 @@ export function poiLabel(world, p, poi) {
     }
     case 'atm': return 'Use ATM';
     case 'vending': return 'Buy an Energy Drink';
-    case 'police': return p.badge ? 'Police HQ (duty desk)' : 'Police HQ (apply / badge)';
+    case 'police': return p.badge ? 'Enter Police HQ (desk, armory, motor pool)' : 'Enter Police HQ (front desk)';
     case 'courthouse': return 'Courthouse (bounties)';
     case 'farm': return 'Farm Co-op (harvest contracts)';
     case 'warehouse': return 'Portside Logistics (courier jobs)';
@@ -66,7 +67,7 @@ export function buildMenu(world, p, poi) {
   const ped = () => p.ped;
   const kind = poi.kind;
   const opts = [];
-  let title = poi.label, sub = '';
+  let title = poi.label, sub = '', interior = null;
   const shopKey = kind === 'vending' ? 'vending' : kind;
   const shop = SHOPS[shopKey];
   if (shop && kind !== 'dealer' && kind !== 'marina' && kind !== 'garage' && kind !== 'clothing') {
@@ -103,12 +104,28 @@ export function buildMenu(world, p, poi) {
       sub = 'Step onto the ER reception mat to be healed instantly.';
       opts.push({ id: 'heal', label: 'Full treatment + stop bleeding', price: HOSPITAL_FEE });
       break;
-    case 'police':
-      sub = p.badge ? 'On duty. Arrest wanted suspects, seize contraband, keep it clean.' : `Badge requirements: ${law.ENFORCER_MIN_SAMARITAN} Samaritan points, zero felonies. You: ${prof.samaritan} pts, ${prof.felonies} felonies.`;
-      recordOption(p, opts);
-      if (!p.badge) opts.push({ id: 'duty:on', label: 'Pick up badge, uniform & keys' });
-      else { opts.push({ id: 'armory', label: 'Armory: restock service pistol ammo', note: 'free' }); opts.push({ id: 'cruiser', label: 'Requisition a Police Interceptor' }); opts.push({ id: 'duty:off', label: 'Go off duty' }); }
+    case 'police': {
+      const where = p.ped && p.ped.interior && p.ped.interior.poi === poi.id ? p.ped.interior.kind : null;
+      interior = where;
+      if (where === 'armory') {
+        title = 'HQ Armory';
+        sub = 'The door locks behind you. Check out one long gun (your service pistol always comes along), then head out back to the motor pool and take any cruiser or motorcycle.';
+        for (const id of POLICE_ARMORY) {
+          const has = prof.weapons[id] !== undefined;
+          opts.push({ id: `arm:${id}`, label: `${has ? 'Restock' : 'Take'} ${WEAPONS[id].name}`, note: has ? `carrying ${(prof.weapons[id] || 0) + (p.ped.mag[id] || 0)} rds` : `${WEAPONS[id].mag}-round mag` });
+        }
+        opts.push({ id: 'armexit', label: 'Out the back door to the motor pool ▶' });
+        opts.push({ id: 'armlobby', label: 'Back to the front desk' });
+      } else {
+        title = poi.label + (where ? ' - front desk' : '');
+        sub = p.badge ? 'On duty. Arrest wanted suspects, seize contraband, keep it clean. Your gear and vehicles are through the armory.' : `Sign-up requirements: ${law.ENFORCER_MIN_SAMARITAN} Samaritan points, zero felonies. You: ${prof.samaritan} pts, ${prof.felonies} felonies.`;
+        recordOption(p, opts);
+        if (!p.badge) opts.push({ id: 'duty:on', label: 'Sign up as a police officer' });
+        else { opts.push({ id: 'armgo', label: 'Armory & motor pool (weapons, vehicles)' }); opts.push({ id: 'duty:off', label: 'Go off duty' }); }
+        if (where) opts.push({ id: 'sleave', label: 'Leave the station' });
+      }
       break;
+    }
     case 'courthouse': {
       sub = p.hunter ? 'Licensed Bounty Hunter: targets appear as radar pings.' : `Register as a Bounty Hunter (${law.HUNTER_MIN_SAMARITAN}+ Samaritan, not wanted).`;
       recordOption(p, opts);
@@ -196,7 +213,7 @@ export function buildMenu(world, p, poi) {
     default: break;
   }
   if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
-  return { t: 'menu', poi: poi.id, title, sub, opts, cash: prof.cash, bank: prof.bank };
+  return { t: 'menu', poi: poi.id, title, sub, opts, cash: prof.cash, bank: prof.bank, interior };
 }
 
 const KIND_NAME = { farmhouse: 'farmhouse', cottage: 'coastal cottage', beach: 'beach house', mansion: 'mansion', house: 'house', apartment: 'apartment' };
@@ -225,6 +242,7 @@ function myVehicleNear(world, p, poi) {
 
 export function openMenu(world, p, poi) {
   if (!p.conn) return;
+  if (poi.kind === 'police' && !(p.ped && p.ped.interior)) { const err = station.enter(world, p, poi); if (err) world.notify(p, err, 'warn'); return; }
   p.menu = { poi: poi.id };
   p.conn.sendJSON(buildMenu(world, p, poi));
 }
@@ -237,7 +255,7 @@ export function handleMenu(world, p, poiId, optId) {
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
   p.meDirty = true;
-  if (optId !== 'close' && optId !== 'hhide' && optId !== 'hleave' && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
+  if (!['close', 'hhide', 'hleave', 'armexit', 'sleave'].includes(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
 function execute(world, p, poi, opt) {
@@ -321,14 +339,19 @@ function execute(world, p, poi, opt) {
       if (parts[1] === 'on') {
         const e = law.goOnDuty(world, p);
         if (e) return e;
-        const v = cruiser.issueNow(world, p);
-        world.notify(p, v ? 'Badge on. Taser, baton and sidearm issued - your Interceptor is gassed up and you\'re behind the wheel.' : 'Badge on. You are now an Enforcer. Taser, baton and sidearm issued.', 'good');
+        station.toArmory(world, p);
+        world.notify(p, 'Sworn in! Badge, uniform, taser, nightstick and service pistol issued. You\'re in the armory - pick a weapon, then out back to the motor pool.', 'good');
       } else {
         law.goOffDuty(world, p); // the cruiser system returns the car to the pool
         world.notify(p, 'Off duty.', 'info');
       }
       return null;
     }
+    case 'armgo': return station.toArmory(world, p);
+    case 'armlobby': { if (ped.interior) ped.interior.kind = 'lobby'; return null; }
+    case 'arm': return station.takeWeapon(world, p, parts[1]);
+    case 'armexit': station.toMotorPool(world, p); return null;
+    case 'sleave': station.leave(world, p); return null;
     case 'payrecord': {
       const n = prof.felonies || 0;
       if (n <= 0) return 'Your record is already clean.';
@@ -538,3 +561,4 @@ export function update(world) {
 }
 
 homes.setMenuBuilder(buildMenu);
+station.setMenuBuilder(buildMenu);
