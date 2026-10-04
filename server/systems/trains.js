@@ -1,12 +1,14 @@
-// Trains. Six trains run one big loop around the whole world - along the outer shores of the
-// Industrial and Residential islands and Sunset Beach, over short bridges across the channels,
-// under Downtown in the subway tunnel and across the open fields of Refuge Island - easing in and
-// out of every station. Each platform has a clock counting down to the next train. Nothing stops them and nothing hurts them: a car on
-// the line gets shoved along in front of the engine and blows up if it can't get off; people get
-// thrown. Anyone can ride: players, NPC commuters (seated or standing), and cops who come aboard
-// at the next station for a wanted passenger. Level crossings drop their gates when a train is
-// coming; most drivers wait, a few gamble, and you can smash straight through the arms.
-// The mail train carries a strongbox: the long Refuge Island run is robbery country.
+// Trains: the metro. Six trains run one loop through the middle of Metro City - in a subway
+// tunnel under Midtown, Downtown and the Civic Center, out past the ring highway into the
+// fields of Dry Creek, back at street level through Southside and Pine Hills, over the river
+// and in past The Yards - easing in and out of every station. Each platform has a clock
+// counting down to the next train. Nothing stops them and nothing hurts them: a car on the line
+// gets shoved along in front of the engine and blows up if it can't get off; people get thrown.
+// Anyone can ride: players, NPC commuters (seated or standing), and cops who come aboard at the
+// next station for a wanted passenger. Level crossings drop their gates when a train is coming;
+// most drivers wait, a few gamble, and you can smash straight through the arms.
+// The mail train carries a strongbox: the long run through Dry Creek is robbery country.
+import { inAnyView } from '../view.js';
 import { K } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { railAt, TRAIN_CARS, COACH_SEATS, COACH_STAND, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
@@ -384,7 +386,7 @@ function arrived(world, t) {
     const e = world.get(t.cars[ci].id);
     const along = (rng() - 0.5) * 120;
     const x = pt.x + Math.cos(e.a) * along, y = pt.y + Math.sin(e.a) * along;
-    if (PED_BLOCK[world.map.tileAtPx(x, y)]) continue;
+    if (PED_BLOCK[world.map.tileAtPx(x, y)] || inAnyView(world, x, y)) continue; // nobody pops up in front of a player
     const q = spawnNpc(world, arche, x, y, 'civ');
     q.npc.boardTrain = { t: t.i, c: ci, side };
     t.boarding.add(q.id);
@@ -471,6 +473,7 @@ function collide(world, t, dt) {
     const hl = c.def.L / 2, hw = c.def.W / 2;
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     for (const v of world.query(e.x, e.y, hl + 80, K.VEH)) {
+      if ((v.lz || 0) > 0.3) continue; // up on the highway deck, over the line
       if (v.removed || v.def.kind === 'boat' || v.sinkAt) continue;
       const lx = (v.x - e.x) * ca + (v.y - e.y) * sa, ly = -(v.x - e.x) * sa + (v.y - e.y) * ca;
       const rel = v.a - e.a, ext = Math.abs(Math.cos(rel)) * v.def.L / 2 + Math.abs(Math.sin(rel)) * v.def.W / 2;
@@ -512,6 +515,7 @@ function collide(world, t, dt) {
     }
     if (t.v < 1) continue;
     for (const p of world.query(e.x, e.y, hl + 30, K.PED)) {
+      if ((p.lz || 0) > 0.3) continue;
       if (p.onTrain || p.vehId || p.hidden || isSwimming(world.map, p)) continue;
       const h = circleVsObb(p.x, p.y, p.r, e.x, e.y, e.a, hl, hw);
       if (!h) continue;
@@ -532,6 +536,7 @@ function collide(world, t, dt) {
     const loco = world.get(t.cars[0].id);
     const ca = Math.cos(loco.a), sa = Math.sin(loco.a);
     for (const p of world.query(loco.x + ca * 260, loco.y + sa * 260, 260, K.PED)) {
+      if ((p.lz || 0) > 0.3) continue;
       if (!p.npc || p.dead || p.vehId || p.onTrain || p.npc.role !== 'civ' || p.npc.state === 'flee') continue;
       const dx = p.x - loco.x, dy = p.y - loco.y, ly = -dx * sa + dy * ca;
       if (Math.abs(ly) > 50 || dx * ca + dy * sa < 0) continue;
@@ -562,6 +567,7 @@ function updateCrossings(world) {
     if (down) {
       const rx = -Math.sin(c.a), ry = Math.cos(c.a), tx = Math.cos(c.a), ty = Math.sin(c.a);
       for (const v of world.query(c.x, c.y, c.hw + 140, K.VEH)) {
+        if ((v.lz || 0) > 0.3) continue;
         if (Math.abs(v.vx) + Math.abs(v.vy) < 40 || v.def.kind === 'boat') continue;
         const along = (v.x - c.x) * rx + (v.y - c.y) * ry, across = (v.x - c.x) * tx + (v.y - c.y) * ty;
         if (Math.abs(across) > c.hw + 6) continue;
@@ -786,7 +792,7 @@ export function startTrainJob(world, p) {
   const t = world.trains.find((q) => q.mail >= 0);
   if (!t) return 'No mail train running.';
   p.job = { type: 'trainjob', stage: 'board', train: t.i, tx: 0, ty: 0, text: '', failOnDeath: false };
-  world.notify(p, 'The mail train carries a strongbox. Get aboard (any station, or climb on from a car alongside), work back to the mail car and crack it - best out on the Refuge Island run between Eastport and Refuge Halt, where nobody hears the alarm.', 'info');
+  world.notify(p, 'The mail train carries a strongbox. Get aboard (any station, or climb on from a car alongside), work back to the mail car and crack it - best out on the long run through the fields of Dry Creek, where nobody hears the alarm.', 'info');
   updateJobs(world);
   return null;
 }
@@ -818,7 +824,7 @@ function updateJobs(world) {
     }
     if (ped.onTrain && ped.onTrain.t === t.i) {
       j.stage = 'crack';
-      j.text = world.time < t.boxReadyAt ? 'Someone already cracked this one - the next box is loaded later' : onRuralRun(world, t) ? 'Refuge Island run - crack the strongbox NOW' : 'Work back to the mail car - crack it on the Refuge Island run';
+      j.text = world.time < t.boxReadyAt ? 'Someone already cracked this one - the next box is loaded later' : onRuralRun(world, t) ? 'The Dry Creek run - crack the strongbox NOW' : 'Work back to the mail car - crack it out on the Dry Creek run';
     } else { j.stage = 'board'; j.text = 'Get aboard the mail train'; }
     j.tx = mail.x; j.ty = mail.y;
   }

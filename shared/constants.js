@@ -1,9 +1,9 @@
 // Shared constants used by both the authoritative server and the browser client.
 
 export const TILE = 32;                 // world pixels per tile
-export const MAP_W = 512;               // tiles (open sea east of the city: Pelican Key, Smuggler's Rock)
-export const MAP_H = 416;               // tiles
-export const WORLD_W = MAP_W * TILE;    // 13824 px
+export const MAP_W = 1312;              // tiles: the world map concept, one pixel per tile (1 tile = 1 m)
+export const MAP_H = 1200;              // tiles
+export const WORLD_W = MAP_W * TILE;    // 41984 px
 export const WORLD_H = MAP_H * TILE;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px

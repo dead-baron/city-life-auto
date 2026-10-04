@@ -49,8 +49,10 @@ Binary frames (little-endian):
 | 8 | i8 | move y ×127 |
 | 9 | u16 | aim angle (0..65535 = 0..2π) |
 
-**Snapshot, server → client, 20/s**: header 68 bytes (tick, acked input seq, chrono loop time, weather, control kind + id, own authoritative state for reconciliation, entity count) followed by 23-byte entity records:
-`u32 id, u8 kind, u16 flags, f32 x, f32 y, u16 angle, u8 hp%, u32 parent, u8 extra`.
+**Snapshot, server → client, 20/s**: header 72 bytes (tick, acked input seq, chrono loop time, weather, control kind + id, own authoritative state for reconciliation incl. level height, entity count) followed by 24-byte entity records:
+`u32 id, u8 kind, u16 flags, f32 x, f32 y, u16 angle, u8 hp%, u32 parent, u8 extra, u8 lz` (lz: level height ×255 - 0 on the ground, 255 up on the highway deck).
+
+**Two levels.** Roads are a network of curved edges (`shared/roads.js`); the ring highway and its ramps are edges at level 1 / `ramp`. Every ped, vehicle and projectile carries `lz` (`shared/levels.js`): on the ground the tile map collides as always, up on the deck the deck's corridors and barriers do, and only things at the same level can touch, hit or shoot each other. Server and client prediction run the same `levelStep`.
 `flags` meanings are `PF.*` (peds) and `VF.*` (vehicles) in `shared/constants.js`.
 
 JSON text frames:

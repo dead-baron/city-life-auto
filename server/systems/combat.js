@@ -3,6 +3,7 @@
 import { K, T, WEATHER, PED_RADIUS } from '../../shared/constants.js';
 import { isSwimming, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
+import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS } from '../../shared/items.js';
 import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
@@ -48,7 +49,8 @@ export function tryAttack(world, ped, aim) {
   }
   if (w.type === 'rocket') {
     const sx = ped.x + Math.cos(aim) * 20, sy = ped.y + Math.sin(aim) * 20;
-    world.spawnProjectile(ped.id, sx, sy, aim, 560, w.range, w.id);
+    const proj = world.spawnProjectile(ped.id, sx, sy, aim, 560, w.range, w.id);
+    if (proj) proj.lz = ped.lz || 0;
     world.emit(sx, sy, { e: 'shot', x1: sx, y1: sy, x2: sx, y2: sy, w: w.i });
     law.gunfire(world, ped);
     npc.onGunfire(world, ped.x, ped.y, ped);
@@ -74,7 +76,7 @@ function melee(world, ped, w, aim) {
   ped.swingSide = (ped.swingSide || 0) ^ 1;
   let best = null, bestD = Infinity;
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
-    if (o === ped || o.dead || o.vehId || !!o.sub !== !!ped.sub) continue; // the subway is another level
+    if (o === ped || o.dead || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 4) continue;
@@ -147,7 +149,7 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true) {
   const r = Math.hypot(x2 - x1, y2 - y1) / 2 + 80;
   let best = null, bestT = tWall;
   for (const e of world.query(mx, my, r)) {
-    if (e === shooter || !!e.sub !== sub) continue;
+    if (e === shooter || !!e.sub !== sub || !sameLevel(e.lz, shooter.lz)) continue;
     let t = -1;
     if (e.kind === K.PED) {
       if (e.dead || e.vehId || e.rollT > 0) continue;
@@ -234,9 +236,10 @@ function causeText(cause) {
   return ({ train: 'Hit by a train.', vehicle: 'Flattened by traffic.', crash: 'Wiped out at speed.', explosion: 'Caught in an explosion.', bail: 'Bailed out too fast.' })[cause] || 'You flatlined.';
 }
 
-export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = false) {
-  props.blastBreak(world, x, y, r * 0.8);
+export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = false, z = null) {
+  if (z === null || z < 0.3) props.blastBreak(world, x, y, r * 0.8);
   for (const e of world.query(x, y, r)) {
+    if (z !== null && !sameLevel(e.lz, z)) continue; // up on the deck vs down in the street
     const d = Math.hypot(e.x - x, e.y - y);
     const f = 1 - d / r;
     if (f <= 0) continue;
@@ -331,8 +334,9 @@ export function update(world, dt) {
         const fr = air ? AIR_FRICTION : TUMBLE_FRICTION, v0 = Math.hypot(e.vx, e.vy), k = Math.exp(-fr * dt);
         e.vx *= k; e.vy *= k; e.x += e.vx * dt; e.y += e.vy * dt;
         collideCircle(e, PED_RADIUS, world.map, SWIM_BLOCK);
+        if (world.map.levels) levelStep(world.map, e, PED_RADIUS);
         if (!e.dead) players.tumbleImpact(world, e, v0, dt, fr);
-      } else { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; }
+      } else { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; if (world.map.levels) levelStep(world.map, e, PED_RADIUS); }
     }
   }
 }
@@ -340,14 +344,14 @@ export function update(world, dt) {
 function stepProjectile(world, p, dt) {
   const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
   const owner = world.get(p.owner);
-  const hit = traceTarget(world, owner || { id: -1, vehId: 0 }, p.x, p.y, nx, ny, true);
+  const hit = traceTarget(world, owner ? { ...owner, lz: p.lz || 0, id: owner.id, vehId: owner.vehId, npc: owner.npc, sub: owner.sub } : { id: -1, vehId: 0, lz: p.lz || 0 }, p.x, p.y, nx, ny, true);
   p.dist += Math.hypot(nx - p.x, ny - p.y);
   if ((hit.kind && hit.id !== p.owner) || hit.hitT < 1 || p.dist > p.maxDist) {
     const t = hit.hitT < 1 ? hit.hitT : 1;
     const ex = p.x + (nx - p.x) * t, ey = p.y + (ny - p.y) * t;
     const w = WEAPONS[p.weapon];
     world.emit(ex, ey, { e: 'explode', x: ex, y: ey, r: w.radius });
-    blast(world, ex, ey, w.radius, w.dmg, owner, 0, true);
+    blast(world, ex, ey, w.radius, w.dmg, owner, 0, true, p.lz || 0);
     world.remove(p);
     return;
   }

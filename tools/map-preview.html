@@ -9,6 +9,7 @@ import { generateCity, DISTRICTS, ISLANDS } from '../shared/map.js';
 import { CHUNK_PX, MAP_W, MAP_H, TILE } from '../shared/constants.js';
 import { GroundCache, drawProp, OVERHEAD } from '../client/render/tiles.js';
 import { loadAtlas } from '../client/render/sprites.js';
+import { Highway } from '../client/render/highway.js';
 
 const q = new URLSearchParams(location.search);
 const scale = Number(q.get('scale') || 0.125);
@@ -27,6 +28,10 @@ for (let cy = 0; cy < ny; cy++) for (let cx = 0; cx < nx; cx++) {
 }
 g.save(); g.scale(scale, scale);
 for (const p of map.props) if (OVERHEAD.has(p.t) && p.t !== 'lamp') drawProp(g, p);
+// the elevated highway on top, its slabs in depth order
+const hw = new Highway(map);
+hw.drawShadows(g, hw.slabs, 0);
+for (const sl of hw.slabs.slice().sort((a, b) => a.key - b.key)) hw.drawSlab(g, sl);
 g.restore();
 if (q.get('labels') === '0') { window.done = true; throw new Error('labels off'); }
 // district labels at the centroid of each district's land

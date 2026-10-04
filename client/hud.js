@@ -304,21 +304,24 @@ export class HUD {
     const c = $('bigmap-c');
     const me = this.me;
     const police = !!(me && me.faction === 'enforcer');
-    const WW = MAP_W * TILE, WH = MAP_H * TILE;
+    const [fx0, fy0, fx1, fy1] = MAP_FRAME;
+    const WW = fx1 - fx0, WH = fy1 - fy0;
     const panel = $('bm-panel'), portrait = innerHeight > innerWidth;
     const maxW = (innerWidth - (portrait ? 0 : (panel ? panel.offsetWidth + 24 : 0))) * 0.96, maxH = (innerHeight - (portrait && panel ? panel.offsetHeight + 16 : 0)) * 0.86;
     const sc = Math.min(maxW / WW, maxH / WH);
-    this.bigmapScale = sc;
+    this.bigmapScale = sc; this.bigmapOrigin = [fx0, fy0];
     const w = Math.round(WW * sc), h = Math.round(WH * sc);
     const dpr = Math.min(2, devicePixelRatio || 1);
     if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px'; }
     const g = c.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const img = worldMapImage(this.map);
-    if (img) { g.imageSmoothingEnabled = true; g.drawImage(img, 0, 0, w, h); }
-    else { g.imageSmoothingEnabled = false; g.drawImage(this.mini, 0, 0, w, h); }
+    // the framed part of the world (the outer wild islands lie beyond it)
+    const crop = (im) => { const kx = im.width / (MAP_W * TILE), ky = im.height / (MAP_H * TILE); g.drawImage(im, fx0 * kx, fy0 * ky, WW * kx, WH * ky, 0, 0, w, h); };
+    if (img) { g.imageSmoothingEnabled = true; crop(img); }
+    else { g.imageSmoothingEnabled = false; crop(this.mini); }
     if (police) { g.fillStyle = 'rgba(8,16,40,.35)'; g.fillRect(0, 0, w, h); }
-    const P = (x, y) => [x * sc, y * sc];
+    const P = (x, y) => [(x - fx0) * sc, (y - fy0) * sc];
     const now = performance.now();
     // district names
     g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -328,6 +331,17 @@ export class HUD {
       const [x, y] = P(d.x, d.y);
       g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(d.name.toUpperCase(), x, y);
       g.fillStyle = d.turf ? '#ff8a7a' : '#fff4c8'; g.fillText(d.name.toUpperCase(), x, y);
+    }
+    // the elevated ring highway and its ramps
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const [wd, colr] of [[2.5, 'rgba(0,0,0,.6)'], [0, '#f0c050']]) {
+      for (const e of this.map.edges || []) {
+        if (e.lvl === 0) continue;
+        g.lineWidth = Math.max(1.5, e.w * sc * (e.lvl === 1 ? 0.8 : 0.9)) + wd; g.strokeStyle = colr;
+        g.beginPath();
+        e.pts.forEach((p, i) => { const [x, y] = P(p.x, p.y); if (i) g.lineTo(x, y); else g.moveTo(x, y); });
+        g.stroke();
+      }
     }
     // the railway loop (dashed where it runs underground) - every station is a stop
     if (this.map.rail) {
@@ -445,6 +459,10 @@ function label(g, x, y, text, color) {
   g.fillStyle = color; g.fillText(text, x, y);
 }
 
+// The part of the world the city map shows (px): Metro City, Southbank, Dry Creek and the two
+// small islands off them. The wild islands further out are reached by bridge and come later.
+export const MAP_FRAME = [520 * TILE, 220 * TILE, 1300 * TILE, 1012 * TILE];
+
 // baked city image (only valid for the default seed it was rendered from)
 let wmImg = null, wmState = 0;
 function worldMapImage(map) {
@@ -504,6 +522,18 @@ function buildMinimap(map) {
       g.stroke();
     }
     g.setLineDash([]);
+  }
+  // the elevated ring highway and its ramps, drawn over whatever is beneath them
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const [w, colr] of [[1, '#1c1d22'], [0, '#e8b84a']]) {
+    for (const e of map.edges || []) {
+      if (e.lvl === 0) continue;
+      g.lineWidth = (e.lvl === 1 ? 7 : 3) + w * 2; g.strokeStyle = colr;
+      if (!w && e.lvl !== 1) g.strokeStyle = '#c99a3c';
+      g.beginPath(); g.moveTo(e.pts[0].x / TILE, e.pts[0].y / TILE);
+      for (const p of e.pts) g.lineTo(p.x / TILE, p.y / TILE);
+      g.stroke();
+    }
   }
   return c;
 }

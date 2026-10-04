@@ -2,7 +2,7 @@
 // list and Dev Debug Mode (nothing done in it is saved).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport, store, players, fakeConn } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, store, players, fakeConn, straightRoad } from './helpers.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { vehStep, driveInput } from '../shared/physics.js';
 import { IN } from '../shared/input.js';
@@ -16,8 +16,8 @@ import { createSession } from '../server/session.js';
 
 // a quiet straight bit of road to drive on
 function openRoad(w) {
-  const n = w.map.nodes.find((q) => q.links.E !== undefined && w.map.nodes[q.links.E].x - q.x > 600);
-  return { x: n.x + 120, y: n.y + 22 };
+  const r = straightRoad(w.map, 2400, { kind: 'ave' });
+  return { x: r.x + 400, y: r.y + 41 };
 }
 
 test('bailing out: slow, you roll away unhurt (even off a bike, next to it); fast, it hurts', () => {

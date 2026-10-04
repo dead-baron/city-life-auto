@@ -137,8 +137,8 @@ export function call(world, p) {
   if (cd > 0) return `Dispatch can send a new cruiser in ${Math.ceil(cd)}s.`;
   const m = world.map;
   const farFromEveryone = (n) => { for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - n.x, q.ped.y - n.y) < 600) return false; return true; };
-  let cands = m.nodes.filter((n) => { const d = Math.hypot(n.x - ped.x, n.y - ped.y); return d > 650 && d < 1150 && farFromEveryone(n); });
-  if (!cands.length) cands = m.nodes.filter((n) => { const d = Math.hypot(n.x - ped.x, n.y - ped.y); return d > 400 && d < 1500; });
+  let cands = m.nodes.filter((n) => { const d = Math.hypot(n.x - ped.x, n.y - ped.y); return n.lvl === 0 && d > 650 && d < 1150 && farFromEveryone(n); });
+  if (!cands.length) cands = m.nodes.filter((n) => { const d = Math.hypot(n.x - ped.x, n.y - ped.y); return n.lvl === 0 && d > 400 && d < 1500; });
   if (!cands.length) {
     const sp = clearSpot(world, ped, VEHICLES.police);
     const v = makeCruiser(world, p, sp.x, sp.y, 0);

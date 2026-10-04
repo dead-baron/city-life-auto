@@ -22,10 +22,20 @@ function tierFor(d) {
 }
 
 function districtCentre(map, di) {
+  map._dcentre ??= new Map();
+  if (map._dcentre.has(di)) return map._dcentre.get(di);
+  const c = districtCentre0(map, di);
+  map._dcentre.set(di, c);
+  return c;
+}
+function districtCentre0(map, di) {
   let sx = 0, sy = 0, n = 0;
   for (let ty = 0; ty < map.h; ty += 3) for (let tx = 0; tx < map.w; tx += 3) if (map.dist[ty * map.w + tx] === di && !PED_BLOCK[map.tileAt(tx, ty)]) { sx += tx; sy += ty; n++; }
   return n ? { x: (sx / n + 0.5) * 32, y: (sy / n + 0.5) * 32 } : null;
 }
+
+// Where a delivery's crate waits: the storefront's cargo pad (same spot jobs.startCourier uses).
+const pickupAt = (poi) => poi.cargoPad || { x: poi.x + 18, y: poi.y + 14 };
 
 function newDelivery(world) {
   const shops = world.map.pois.filter((q) => DROP_KINDS.has(q.kind) || q.kind === 'warehouse');
@@ -33,17 +43,18 @@ function newDelivery(world) {
   // aim for an even spread of $, $$ and $$$ jobs
   const want = Math.floor(rng() * JOB_TIERS.length);
   const t = JOB_TIERS[want];
-  const dests = world.map.pois.filter((q) => DROP_KINDS.has(q.kind) && q !== from && (() => { const d = Math.hypot(q.x - from.x, q.y - from.y); return d >= t.minDist && d < t.maxDist; })());
+  const fp = pickupAt(from);
+  const dests = world.map.pois.filter((q) => DROP_KINDS.has(q.kind) && q !== from && (() => { const d = Math.hypot(q.x - fp.x, q.y - fp.y); return d >= t.minDist && d < t.maxDist; })());
   const to = dests.length ? dests[Math.floor(rng() * dests.length)] : null;
   if (!to) return null;
-  const d = Math.hypot(to.x - from.x, to.y - from.y);
+  const d = Math.hypot(to.x - fp.x, to.y - fp.y);
   const tier = tierFor(d);
   const pay = Math.round((JOB_TIERS[tier].base + d * JOB_TIERS[tier].perPx) / 10) * 10;
   return { id: ++world.jobSeq, kind: 'delivery', tier, pay, from: from.id, to: to.id, limit: JOB_TIERS[tier].limit, until: world.time + REFRESH_S * (2 + rng()) };
 }
 
 function newPatrol(world) {
-  const ds = DISTRICTS.map((d, i) => i).filter((i) => DISTRICTS[i].name !== 'Liberty Bay' && !DISTRICTS[i].turf);
+  const ds = DISTRICTS.map((d, i) => i).filter((i) => !['water', 'wild', 'rural', 'rocky'].includes(DISTRICTS[i].style) && !DISTRICTS[i].turf && DISTRICTS[i].isl !== 'Pelican Key' && districtCentre(world.map, i));
   const di = ds[Math.floor(rng() * ds.length)];
   const c = districtCentre(world.map, di);
   if (!c) return null;
@@ -124,7 +135,8 @@ function describe(world, j) {
   const pois = world.map.pois;
   if (j.kind === 'delivery') {
     const a = pois[j.from], b = pois[j.to];
-    return { id: j.id, kind: j.kind, tier: j.tier, pay: j.pay, title: `${a.label} → ${b.label}`, x: a.x, y: a.y, tx: b.x, ty: b.y, limit: j.limit };
+    const pa = pickupAt(a);
+    return { id: j.id, kind: j.kind, tier: j.tier, pay: j.pay, title: `${a.label} → ${b.label}`, x: pa.x, y: pa.y, tx: b.x, ty: b.y, limit: j.limit };
   }
   if (j.kind === 'patrol') return { id: j.id, kind: j.kind, pay: j.pay, title: `Patrol ${DISTRICTS[j.district].name}`, x: j.x, y: j.y };
   return null;

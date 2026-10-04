@@ -1,5 +1,6 @@
 // Playtest/debug commands: accepted when the server runs with CLA_DEV=1 (offline practice), or
 // online from a player in Dev Debug Mode (devmode.js - nothing they do there is saved).
+import { surfaceZ } from '../shared/levels.js';
 import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { WEAPONS } from '../shared/items.js';
@@ -60,9 +61,14 @@ export function command(world, p, c, msg) {
     case 'car': {
       if (!ped) break;
       const model = VEHICLES[msg.m] ? msg.m : 'pickup';
-      const sp = clearSpot(world, ped, VEHICLES[model]);
+      let sp = clearSpot(world, ped, VEHICLES[model]);
+      if ((ped.lz || 0) > 0.5) { // up on the deck: somewhere on the deck beside you
+        sp = { x: ped.x, y: ped.y, a: ped.a };
+        for (let k = 0; k < 16; k++) { const a = (k * Math.PI) / 8, x = ped.x + Math.cos(a) * 110, y = ped.y + Math.sin(a) * 110; if (surfaceZ(world.map, x, y, 1) !== null) { sp = { x, y, a: 0 }; break; } }
+      }
       const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
       v.issuedTo = p.pid;
+      v.lz = ped.lz || 0; // up on the highway with you
       break;
     }
     case 'guns':
@@ -98,7 +104,7 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
-      if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; p.teleportAt = world.time; } break;
+      if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; ped.lz = msg.lz === 1 && surfaceZ(world.map, msg.x, msg.y, 1) !== null ? 1 : 0; p.teleportAt = world.time; } break; // lz: 1 = up on the highway deck
     case 'goto': devmode.goTo(world, p, msg.pid); break;     // teleport to an online player
     case 'bring': devmode.bring(world, p, msg.pid); break;   // fetch an online player to you
     case 'grant': devmode.grant(world, p, msg.pid); break;   // give someone Dev Debug Mode (their progress stops saving too)

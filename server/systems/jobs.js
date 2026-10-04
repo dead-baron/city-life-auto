@@ -1,10 +1,10 @@
-// Professions & extraction loops: courier contracts, Refuge Island harvests (GDD §5),
+// Professions & extraction loops: courier contracts, Dry Creek harvests (GDD §5),
 // contraband drops for the black market / evidence locker, and the deep-sim fishing loop.
 import { K, T } from '../../shared/constants.js';
 import { ITEMS, FISH_TABLE, OFFSHORE_FISH } from '../../shared/items.js';
 import { POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY } from '../../shared/rules.js';
 import * as law from './law.js';
-import { RIVER_X0, RIVER_X1, CAR_SPAWN_BLOCK } from '../../shared/map.js';
+import { waterKind, CAR_SPAWN_BLOCK } from '../../shared/map.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
@@ -227,8 +227,7 @@ export function fishingSpot(world, ped) {
       const x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
       const t = m.tileAtPx(x, y);
       if (t === T.WATER || t === T.DEEP) {
-        const tx = Math.floor(x / 32);
-        const kind = t === T.DEEP && !(tx >= RIVER_X0 && tx <= RIVER_X1) ? 'deep' : (tx >= RIVER_X0 && tx <= RIVER_X1 ? 'river' : 'shore');
+        const kind = waterKind(m, Math.floor(x / 32), Math.floor(y / 32));
         return { x, y, kind, a };
       }
     }

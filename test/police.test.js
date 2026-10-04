@@ -2,7 +2,8 @@
 // flatbeds, police motorcycles and livelier idle pedestrians.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
+import * as traffic from '../server/systems/traffic.js';
 import { K, T } from '../shared/constants.js';
 import { CAR_BLOCK } from '../shared/map.js';
 import * as players from '../server/systems/players.js';
@@ -132,17 +133,18 @@ test('walk-in buildings: doors, floor, counter, a clerk behind it, and the desk 
 test('sirens: traffic ahead slows and eases over; no siren, no yielding', () => {
   const w = makeWorld({ npcBudget: 40 });
   const { p } = joinPlayer(w);
-  const n = w.map.nodes.find((q) => q.links.E !== undefined && Math.abs(w.map.nodes[q.links.E].x - q.x) > 900);
+  const road = straightRoad(w.map, 2600, { kind: 'rural' }); // the long straight county road
+  const n = { x: road.x + 300, y: road.y };
   teleport(w, p.ped, n.x, n.y - 400);
   const mk = (model, x, role) => {
-    const v = w.spawnVehicle(model, x, n.y + n.lane.E, 0, {});
+    const v = w.spawnVehicle(model, x, n.y + 32, 0, {}); // eastbound lane
     const d = spawnNpc(w, role === 'cop' ? 'cop' : 'casual', v.x, v.y, role); d.vehId = v.id; d.seat = 0; v.seats[0] = d.id;
     return v;
   };
-  const car = mk('sedan', n.x + n.half + 260, 'driver');
-  car.ai = { kind: 'traffic', from: n.id, dir: 'E', pts: null }; car.vx = 200;
+  const car = mk('sedan', n.x + 260, 'driver');
+  traffic.joinTraffic(w, car); car.vx = 200;
   const cop = mk('police', car.x - 220, 'cop');
-  const drive = (secs) => { for (let i = 0; i < secs * 20; i++) { cop.vx = car.x - cop.x > 170 ? 260 : Math.max(0, car.vx); cop.vy = 0; cop.input = { throttle: 0, steer: 0, hb: false }; w.step(); } };
+  const drive = (secs) => { for (let i = 0; i < secs * 20; i++) { cop.vx = car.x - cop.x > 170 ? 340 : Math.max(0, car.vx); cop.vy = 0; cop.input = { throttle: 0, steer: 0, hb: false }; w.step(); } };
   drive(1);
   assert.ok(!(car.ai.yieldUntil > w.time), 'siren off: carry on');
   cop.sirenOn = true;

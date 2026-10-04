@@ -5,6 +5,15 @@ import { TILE, PED_RADIUS, T } from './constants.js';
 import { PED_BLOCK, SWIM_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './map.js';
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
+import { levelStep, GROUND_Z } from './levels.js';
+
+// Ground tile under a moving thing - up on the highway deck it's always road.
+const up = (s) => (s.lz || 0) > GROUND_Z;
+const blockedAt = (map, tx, ty, block) => {
+  if (block[map.tileAt(tx, ty)]) return true;
+  const lb = map.lvl0Block;
+  return !!lb && tx >= 0 && ty >= 0 && tx < map.w && ty < map.h && lb[ty * map.w + tx] === 1;
+};
 
 export const PED = {
   walk: 115, sprint: 195, accel: 14, rollSpeed: 300, rollTime: 0.45, rollCost: 30,
@@ -38,7 +47,7 @@ export function pedStep(s, inp, dt, map, mods) {
   // swimming (players, and NPCs who ended up in the water): slow, no sprint, no dive-roll
   // Bridge tiles are two layers: the deck (reached from the road) and the water under it
   // (reached by swimming in). s.under remembers which one this ped is on.
-  const tile = map.tileAtPx(s.x, s.y);
+  const tile = up(s) ? T.ROAD : map.tileAtPx(s.x, s.y);
   if (WATER_T[tile]) s.under = true; else if (tile !== T.BRIDGE) s.under = false;
   const swim = !!mods.canSwim && (WATER_T[tile] === 1 || (tile === T.BRIDGE && !!s.under));
   if (!mods.canMove) {
@@ -98,14 +107,16 @@ export function pedStep(s, inp, dt, map, mods) {
   if (s.stamina > smax) s.stamina = smax;
   s.x += s.vx * dt; s.y += s.vy * dt;
   collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK);
+  if (map.levels) levelStep(map, s, PED_RADIUS);
 }
 
 export function collideCircle(s, r, map, block) {
+  if (up(s)) return; // up on the deck: its barriers hold you (levels.js)
   for (let iter = 0; iter < 2; iter++) {
     const tx0 = Math.floor((s.x - r) / TILE), tx1 = Math.floor((s.x + r) / TILE);
     const ty0 = Math.floor((s.y - r) / TILE), ty1 = Math.floor((s.y + r) / TILE);
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-      if (block[map.tileAt(tx, ty)]) {
+      if (blockedAt(map, tx, ty, block)) {
         const qx = clamp(s.x, tx * TILE, tx * TILE + TILE), qy = clamp(s.y, ty * TILE, ty * TILE + TILE);
         let dx = s.x - qx, dy = s.y - qy;
         const d2 = dx * dx + dy * dy;
@@ -153,7 +164,7 @@ export function newVehState(x, y, a) { return { x, y, a, vx: 0, vy: 0, av: 0 }; 
 // returns impact speed (px/s) of the hardest wall hit this step (0 if none)
 export function vehStep(s, inp, dt, map, def, env) {
   const isBoat = def.kind === 'boat';
-  const tile = map.tileAtPx(s.x, s.y);
+  const tile = up(s) ? T.ROAD : map.tileAtPx(s.x, s.y);
   const surf = isBoat ? [1, 1, 0] : (SURFACE[tile] || SURFACE[1]);
   let gripMul = surf[1], brakeMul = 1;
   if (env.rain) {
@@ -207,7 +218,9 @@ export function vehStep(s, inp, dt, map, def, env) {
   s.vx = c * fwd - sn * lat;
   s.vy = sn * fwd + c * lat;
   s.x += s.vx * dt; s.y += s.vy * dt;
-  return collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);
+  const hit = collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);
+  if (!map.levels || isBoat) return hit;
+  return Math.max(hit, levelStep(map, s, def.W / 2));
 }
 
 // Direction-based driving: the stick points where you want to go. Throttle follows how far it is
@@ -244,13 +257,14 @@ export function driveInput(s, inp) {
 export function collideVehicleTiles(s, def, map, block) {
   const hl = def.L / 2, hw = def.W / 2;
   let impact = 0;
+  if (up(s)) return 0;
   for (let iter = 0; iter < 4; iter++) {
     const bb = obbBounds(s.x, s.y, s.a, hl, hw);
     const tx0 = Math.floor(bb.minX / TILE), tx1 = Math.floor(bb.maxX / TILE);
     const ty0 = Math.floor(bb.minY / TILE), ty1 = Math.floor(bb.maxY / TILE);
     let best = null;
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-      if (block[map.tileAt(tx, ty)]) {
+      if (blockedAt(map, tx, ty, block)) {
         const hit = obbVsAabb(s.x, s.y, s.a, hl, hw, tx * TILE, ty * TILE, TILE, TILE);
         if (hit && (!best || hit.depth > best.depth)) best = hit;
       }

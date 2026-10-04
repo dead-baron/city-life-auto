@@ -3,6 +3,7 @@ import { K, VF, WEATHER } from '../../shared/constants.js';
 import { vehStep, vehLateralSpeed, vehForwardSpeed } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
 import { PED_BLOCK, WATER_T } from '../../shared/map.js';
+import { sameLevel, levelStep } from '../../shared/levels.js';
 
 export const SINK_S = 3.2; // a car that drove into the water sinks, then blows up underwater
 import * as combat from './combat.js';
@@ -57,7 +58,7 @@ export function update(world, dt) {
     if (v.ownStepTick !== world.tick) stepVehicle(world, v, dt, env);
     // land vehicles that end up in the water sink
     if (v.def.kind !== 'boat') {
-      if (!v.sinkAt && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
+      if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
       if (v.sinkAt) {
         v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);
         v.input.throttle = 0;
@@ -77,7 +78,7 @@ export function update(world, dt) {
       damageVehicle(world, v, 4 * dt, v.lastAttacker ? world.get(v.lastAttacker) : null);
     }
     // keep occupants and attached cargo glued to the vehicle
-    for (const sid of v.seats) if (sid) { const p = world.get(sid); if (p) { p.x = v.x; p.y = v.y; p.vx = v.vx; p.vy = v.vy; } }
+    for (const sid of v.seats) if (sid) { const p = world.get(sid); if (p) { p.x = v.x; p.y = v.y; p.vx = v.vx; p.vy = v.vy; p.lz = v.lz || 0; } }
   }
 
   // vehicle vs vehicle
@@ -88,7 +89,7 @@ export function update(world, dt) {
     const near = world.query(a.x, a.y, a.def.L / 2 + 110, K.VEH);
     for (const b of near) {
       if (b === a || b.removed) continue;
-      if ((a.def.kind === 'boat') !== (b.def.kind === 'boat')) continue;
+      if ((a.def.kind === 'boat') !== (b.def.kind === 'boat') || !sameLevel(a.lz, b.lz)) continue;
       const sb = Math.abs(b.vx) + Math.abs(b.vy);
       if (sb >= 2 && b.id < a.id) continue; // pair handled once when both move
       const hit = obbVsObb(a.x, a.y, a.a, a.def.L / 2, a.def.W / 2, b.x, b.y, b.a, b.def.L / 2, b.def.W / 2);
@@ -103,7 +104,7 @@ export function update(world, dt) {
     const spd = speedOf(v);
     const near = world.query(v.x, v.y, v.def.L / 2 + 16, K.PED);
     for (const ped of near) {
-      if (ped.vehId || ped.dead || ped.onTrain) continue;
+      if (ped.vehId || ped.dead || ped.onTrain || !sameLevel(ped.lz, v.lz)) continue;
       const h = circleVsObb(ped.x, ped.y, ped.r, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
       if (!h) continue;
       const vn = (v.vx - ped.vx) * h.nx + (v.vy - ped.vy) * h.ny;
@@ -111,7 +112,8 @@ export function update(world, dt) {
         strikePed(world, v, ped, vn, h);
       } else {
         ped.x += h.nx * h.depth; ped.y += h.ny * h.depth;
-        if (!PED_BLOCK[world.map.tileAtPx(ped.x, ped.y)]) { /* ok */ } else { ped.x -= h.nx * h.depth; ped.y -= h.ny * h.depth; }
+        if ((ped.lz || 0) > 0.3) levelStep(world.map, ped, 11);
+        else if (PED_BLOCK[world.map.tileAtPx(ped.x, ped.y)]) { ped.x -= h.nx * h.depth; ped.y -= h.ny * h.depth; }
       }
     }
   }
@@ -206,7 +208,7 @@ export function explode(world, v, attackerPed) {
     blownOut(world, ped, v, attackerPed);
   }
   cargo.spillCargo(world, v);
-  combat.blast(world, v.x, v.y, v.def.kind === 'bike' ? 60 : 110, 70, attackerPed, v.id);
+  combat.blast(world, v.x, v.y, v.def.kind === 'bike' ? 60 : 110, 70, attackerPed, v.id, false, v.lz || 0);
 }
 
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
@@ -298,6 +300,7 @@ function sinkBoom(world, v) {
 export function nearestVehicle(world, ped, range) {
   let best = null, bestD = Infinity;
   for (const v of world.query(ped.x, ped.y, range + 100, K.VEH)) {
+    if (!sameLevel(v.lz, ped.lz)) continue;
     const h = circleVsObb(ped.x, ped.y, range, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
     if (!h) continue;
     const d = range - h.depth;
@@ -381,6 +384,7 @@ function sideSpot(v, ped) {
 
 function findExitSpot(world, v, ped, maxR) {
   const hw = v.def.W / 2 + 16, hl = v.def.L / 2 + 16;
+  if ((v.lz || 0) > 0.3) return null; // up on the deck: step out beside it (the barriers keep you on)
   const cands = [[0, -hw], [0, hw], [-hl, 0], [hl, 0], [-hl / 2, -hw], [-hl / 2, hw]];
   for (const [lx, ly] of cands) {
     const [x, y] = localToWorld(v.x, v.y, v.a, lx, ly);
@@ -403,7 +407,8 @@ export function ejectPed(world, ped, force) {
     if (i >= 0) v.seats[i] = 0;
     // nowhere dry nearby (out on the water): over the side, into the water beside the vehicle
     const spot = findExitSpot(world, v, ped, v.def.kind === 'boat' ? 150 : force ? 400 : 150) || sideSpot(v, ped);
-    ped.x = spot.x; ped.y = spot.y;
+    ped.x = spot.x; ped.y = spot.y; ped.lz = v.lz || 0;
+    if (ped.lz > 0.3) levelStep(world.map, ped, 11);
     ped.a = v.a;
     if (ped.player) { ped.player.meDirty = true; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }
     if (i === 0) v.input = { throttle: 0, steer: 0, hb: false };

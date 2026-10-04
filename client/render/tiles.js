@@ -8,6 +8,8 @@ import { DISTRICTS } from '../../shared/map.js';
 import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
 import { atlas } from './sprites.js';
 import { railIndex, drawRailChunk, drawPortals, drawStation } from './trains.js';
+import { drawRoads, edgeRect } from './roads.js';
+import { Shores } from './shore.js';
 
 export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp']);
 
@@ -45,9 +47,11 @@ export class GroundCache {
     this.prefabs = this.byChunk(map.prefabs, (p) => [p.tx * TILE, p.ty * TILE, (p.tx + p.tw) * TILE, (p.ty + p.th) * TILE]);
     this.stalls = this.byChunk(map.stalls, (s) => [s.x, s.y, s.x + s.w, s.y + s.h]);
     this.signs = this.byChunk(map.buildings.filter((b) => b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]);
-    this.roads = this.byChunk(map.roads, (r) => [r.x * TILE, r.y * TILE, (r.x + r.w) * TILE, (r.y + r.h) * TILE]);
-    this.nodes = this.byChunk(map.nodes, (n) => [n.x - 200, n.y - 200, n.x + 200, n.y + 200]);
+    // ground-level streets (the deck and ramps are drawn lifted, render/highway.js)
+    this.roads = this.byChunk(map.edges.filter((e) => e.lvl === 0), edgeRect);
+    this.culdesacs = this.byChunk(map.nodes.filter((n) => n.culdesac), (n) => [n.x - 200, n.y - 200, n.x + 200, n.y + 200]);
     this.rail = railIndex(map, (cx, cy) => this.key(cx, cy));
+    this.shores = new Shores(map);
   }
   key(cx, cy) { return cy * 1000 + cx; }
   get(cx, cy) {
@@ -78,9 +82,14 @@ export class GroundCache {
     g.save();
     g.translate(-cx * CHUNK_PX, -cy * CHUNK_PX);
     const k = this.key(cx, cy);
+    // smooth coastlines, then the piers and bridges that stand over them
+    this.shores.bake(g, cx, cy);
+    if (this.shores.grid.has(k)) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const tx = tx0 + i, ty = ty0 + j, t = m.tileAt(tx, ty);
+      if (t === T.DOCK || t === T.BRIDGE) drawTile(g, m, tx, ty, tx * TILE, ty * TILE);
+    }
     drawCurbs(g, m, tx0, ty0, n);
-    for (const r of this.roads.get(k) || []) drawRoadMarkings(g, m, r, cx, cy);
-    for (const nd of this.nodes.get(k) || []) drawCrosswalks(g, m, nd);
+    drawRoads(g, m, this.roads.get(k) || [], this.culdesacs.get(k) || []);
     drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, st, cx, cy);
     for (const s of this.stalls.get(k) || []) drawStall(g, s);
@@ -372,7 +381,6 @@ function drawTile(g, m, tx, ty, x, y) {
       break;
     case T.WATER: case T.DEEP:
       tex(g, t === T.DEEP ? 'deep' : 'water', tx, ty, x, y) || (g.fillStyle = '#1f5aa8', g.fillRect(x, y, TILE, TILE));
-      drawShore(g, m, tx, ty, x, y);
       drawBridgeShadow(g, m, tx, ty, x, y);
       break;
     case T.SAND:
@@ -462,15 +470,6 @@ function drawBridgeShadow(g, m, tx, ty, x, y) {
   }
 }
 
-function drawShore(g, m, tx, ty, x, y) {
-  const land = (a, b) => { const q = m.tileAt(a, b); return q !== T.WATER && q !== T.DEEP && q !== T.BRIDGE && q !== T.DOCK; };
-  g.fillStyle = 'rgba(235,248,255,.6)';
-  if (land(tx, ty - 1)) for (let k = 0; k < 4; k++) g.fillRect(x + k * 8 + (hash2(tx, k, 1) * 4 | 0), y + 1 + (k % 2), 6, 3);
-  if (land(tx - 1, ty)) g.fillRect(x, y, 3, TILE);
-  if (land(tx + 1, ty)) g.fillRect(x + TILE - 3, y, 3, TILE);
-  if (m.tileAt(tx, ty) === T.WATER) { g.fillStyle = 'rgba(120,200,220,.12)'; if (land(tx, ty - 1) || land(tx - 1, ty) || land(tx + 1, ty)) g.fillRect(x, y, TILE, TILE); }
-}
-
 // Concrete curb strip on every sidewalk edge that meets asphalt.
 function drawCurbs(g, m, tx0, ty0, n) {
   const road = (a, b) => { const q = m.tileAt(a, b); return q === T.ROAD || q === T.BRIDGE; };
@@ -484,52 +483,6 @@ function drawCurbs(g, m, tx0, ty0, n) {
     if (road(tx, ty + 1)) { edge(x, y + TILE - 4, TILE, 4); g.fillRect(x, y + TILE - 1, TILE, 1); }
     if (road(tx - 1, ty)) { edge(x, y, 4, TILE); g.fillRect(x, y, 1, TILE); }
     if (road(tx + 1, ty)) { edge(x + TILE - 4, y, 4, TILE); g.fillRect(x + TILE - 1, y, 1, TILE); }
-  }
-}
-
-function drawRoadMarkings(g, m, r, cx, cy) {
-  if (r.width < 3 || r.kind === 'rural') return;
-  const x0 = cx * CHUNK_PX - TILE, x1 = (cx + 1) * CHUNK_PX + TILE, y0 = cy * CHUNK_PX - TILE, y1 = (cy + 1) * CHUNK_PX + TILE;
-  const across = r.axis === 'v' ? r.w : r.h;
-  const start = r.axis === 'v' ? r.y : r.x, end = start + (r.axis === 'v' ? r.h : r.w);
-  const c0 = r.axis === 'v' ? r.x : r.y; // first tile across the road
-  const mid = (c0 + across / 2) * TILE;
-  for (let s = start; s < end; s++) {
-    const tx = r.axis === 'v' ? Math.floor(c0 + across / 2) : s, ty = r.axis === 'v' ? s : Math.floor(c0 + across / 2);
-    if (m.roadAxis[ty * MAP_W + tx] === 3) continue;
-    const t = m.tileAt(tx, ty);
-    if (t !== T.ROAD && t !== T.BRIDGE) continue;
-    const p = s * TILE;
-    if (r.axis === 'v' ? (p < y0 || p > y1 || mid < x0 || mid > x1) : (p < x0 || p > x1 || mid < y0 || mid > y1)) continue;
-    const line = (off, len, wid, col, o2 = 0) => {
-      g.fillStyle = col;
-      if (r.axis === 'v') g.fillRect(mid + off, p + o2, wid, len); else g.fillRect(p + o2, mid + off, len, wid);
-    };
-    if (r.width >= 4) {
-      line(-4, TILE, 3, C.yellow); line(1, TILE, 3, C.yellow);
-      const edgeOff = across * TILE / 2 - 7;
-      line(-edgeOff, TILE, 2, 'rgba(230,228,220,.75)'); line(edgeOff - 2, TILE, 2, 'rgba(230,228,220,.75)');
-      if (r.width >= 6 && s % 2 === 0) { line(-across * TILE / 4 - 1, 20, 3, C.white, 6); line(across * TILE / 4 - 2, 20, 3, C.white, 6); }
-    } else if (s % 2 === 0) line(-1, 18, 3, 'rgba(230,228,220,.85)', 7);
-  }
-}
-
-function drawCrosswalks(g, m, n) {
-  if (n.island) return;
-  g.fillStyle = 'rgba(236,234,226,.9)';
-  for (const dir of Object.keys(n.links)) {
-    const width = n.lane[dir] * 4;
-    if (width < 128) continue;
-    const half = n.half;
-    if (dir === 'N' || dir === 'S') {
-      const sy = dir === 'N' ? -1 : 1;
-      const yy = n.y + sy * (half + 6) - (sy < 0 ? 22 : 0);
-      for (let k = -width / 2 + 8; k < width / 2 - 8; k += 14) g.fillRect(n.x + k, yy, 8, 22);
-    } else {
-      const sx = dir === 'W' ? -1 : 1;
-      const xx = n.x + sx * (half + 6) - (sx < 0 ? 22 : 0);
-      for (let k = -width / 2 + 8; k < width / 2 - 8; k += 14) g.fillRect(xx, n.y + k, 22, 8);
-    }
   }
 }
 

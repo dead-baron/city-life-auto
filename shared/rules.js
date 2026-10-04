@@ -97,4 +97,5 @@ export const CROSSING_WARN_PX = 2600;    // crossing gates come down when a trai
 export const MAIL_WARN_S = 4;            // mail-car guards order you out this long before they open fire
 export const TRAIN_JOB_PAY = 3000;       // the mail-car strongbox, fenced
 export const STRONGBOX_CRACK_S = 5;      // stay on the mail car this long to crack it
-export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Refuge Island run) and the alarm bell puts you here
+export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Dry Creek run) and the alarm bell puts you here
+export const HIGHWAY_SPEED = 560;          // traffic cruising speed up on the ring highway (px/s)

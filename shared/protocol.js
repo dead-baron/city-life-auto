@@ -31,8 +31,9 @@ export function decodeInput(dv) {
 }
 
 // ---- Server -> client snapshot ---------------------------------------------
-export const SNAP_HEADER = 1 + 4 + 4 + 4 + 1 + 1 + 4 + 11 * 4 + 1 + 2 + 2;
-export const SNAP_ENTITY = 4 + 1 + 2 + 4 + 4 + 2 + 1 + 4 + 1;
+export const SNAP_HEADER = 1 + 4 + 4 + 4 + 1 + 1 + 4 + 12 * 4 + 1 + 2 + 2;
+// entity: id, kind, flags, x, y, angle, hp, parent, extra, level height (0 ground .. 255 up on the highway deck)
+export const SNAP_ENTITY = 4 + 1 + 2 + 4 + 4 + 2 + 1 + 4 + 1 + 1;
 
 export class SnapshotWriter {
   constructor(maxEntities = 1500) {
@@ -63,12 +64,13 @@ export class SnapshotWriter {
     dv.setFloat32(o, f.rdx || 0, true); o += 4;
     dv.setFloat32(o, f.rdy || 0, true); o += 4;
     dv.setFloat32(o, f.speedMul || 1, true); o += 4;
+    dv.setFloat32(o, f.lz || 0, true); o += 4;
     dv.setUint8(o, selfFlags); o += 1;
     dv.setUint16(o, prevBits & 0xffff, true); o += 2;
     this.countOffset = o;
     this.count = 0;
   }
-  add(id, kind, flags, x, y, a, hpPct, parent, extra) {
+  add(id, kind, flags, x, y, a, hpPct, parent, extra, lz = 0) {
     if (this.count >= this.max) return;
     const o = SNAP_HEADER + this.count * SNAP_ENTITY;
     const dv = this.dv;
@@ -81,6 +83,7 @@ export class SnapshotWriter {
     dv.setUint8(o + 17, Math.max(0, Math.min(255, Math.round(hpPct * 255))));
     dv.setUint32(o + 18, (parent || 0) >>> 0, true);
     dv.setUint8(o + 22, extra & 0xff);
+    dv.setUint8(o + 23, Math.max(0, Math.min(255, Math.round(lz * 255))));
     this.count++;
   }
   // Copy a pre-encoded SNAP_ENTITY-byte record (see server/net.js encodeAll).
@@ -95,7 +98,7 @@ export class SnapshotWriter {
     return new Uint8Array(this.buf, 0, SNAP_HEADER + this.count * SNAP_ENTITY);
   }
 }
-const ZERO_SELF = { x: 0, y: 0, a: 0, vx: 0, vy: 0, av: 0, stamina: 0, rollT: 0, rdx: 0, rdy: 0, speedMul: 1 };
+const ZERO_SELF = { x: 0, y: 0, a: 0, vx: 0, vy: 0, av: 0, stamina: 0, rollT: 0, rdx: 0, rdy: 0, speedMul: 1, lz: 0 };
 
 export function decodeSnapshot(dv) {
   let o = 19;
@@ -108,7 +111,7 @@ export function decodeSnapshot(dv) {
     ctrlId: dv.getUint32(15, true),
   };
   const self = {};
-  for (const k of ['x', 'y', 'a', 'vx', 'vy', 'av', 'stamina', 'rollT', 'rdx', 'rdy', 'speedMul']) { self[k] = dv.getFloat32(o, true); o += 4; }
+  for (const k of ['x', 'y', 'a', 'vx', 'vy', 'av', 'stamina', 'rollT', 'rdx', 'rdy', 'speedMul', 'lz']) { self[k] = dv.getFloat32(o, true); o += 4; }
   snap.self = self;
   snap.selfFlags = dv.getUint8(o); o += 1;
   snap.prevBits = dv.getUint16(o, true); o += 2;
@@ -126,6 +129,7 @@ export function decodeSnapshot(dv) {
       hp: dv.getUint8(b + 17) / 255,
       parent: dv.getUint32(b + 18, true),
       extra: dv.getUint8(b + 22),
+      lz: dv.getUint8(b + 23) / 255,
     };
   }
   snap.ents = ents;

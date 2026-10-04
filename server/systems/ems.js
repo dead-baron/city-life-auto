@@ -47,6 +47,7 @@ function dispatch(world, now) {
     for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - b.x, p.ped.y - b.y) < 1400) { watched = true; break; }
     if (!watched) continue;
     const cands = world.map.nodes.filter((n) => {
+      if (n.lvl !== 0) return false;
       const d = Math.hypot(n.x - b.x, n.y - b.y);
       if (d < 650 || d > 1300) return false;
       for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - n.x, p.ped.y - n.y) < 620) return false;

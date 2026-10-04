@@ -49,6 +49,7 @@ function spawnUnit(world, p, o = {}) {
   const tx = o.at ? o.at.x : p.seenAt && world.time - p.seenAt < 3 ? p.ped.x : p.lastSeenX;
   const ty = o.at ? o.at.y : p.seenAt && world.time - p.seenAt < 3 ? p.ped.y : p.lastSeenY;
   const cands = m.nodes.filter((n) => {
+    if (n.lvl !== 0) return false;
     const d = Math.hypot(n.x - tx, n.y - ty);
     if (d < (o.minD || 750) || d > (o.maxD || 1400)) return false;
     for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - n.x, q.ped.y - n.y) < (o.clearPx || 650)) return false;

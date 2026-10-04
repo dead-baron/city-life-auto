@@ -778,3 +778,29 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
   - Bodies lean out in corners and nose down under hard braking.
   - Riders and loaded crates rise with the body.
   - Works at any angle with the existing top-view art.
+
+## World rebuild, round 1: Metro City on the new map
+- **New world** (`shared/worldmask.js`, built by `tools/build-worldmask.py` from the world map concept): 1312×1200 tiles, one concept pixel per tile. Metro City sits on the central island, Southbank across the river, Dry Creek's farm country to the east, Pelican Key and Smuggler's Rock offshore. Bridges already reach the wild islands (Westward Isle, Pike Island, Cedar Isle, Gull Isles); they're empty for now.
+- **Roads are a network of curves now** (`shared/roads.js`, layout in `shared/citylayout.js`):
+  - Streets are 50% wider. Avenues have two lanes each way and a median.
+  - **Broadway** cuts diagonally through downtown. Coast and river drives follow the shore, Bayside Heights has crescents round a green, and Southbank has winding streets with cul-de-sacs.
+  - NPC drivers follow lane curves and turn paths through junctions. Signals run per approach (2- or 3-phase).
+- **The ring highway** is elevated on pillars round the downtown core, three lanes each way, with slip ramps to one-way frontage roads either side (inner clockwise, outer anticlockwise).
+  - Everything has a level height (`lz`, `shared/levels.js`). Up on the deck you're held between the barriers. Only things on the same level collide, fight or shoot each other.
+  - On screen the deck is lifted slabs sorted with everything else: cars under it disappear beneath it (your own shows as an outline), cars on it ride on top. The deck has girder faces, parapets, a median barrier and lamps, and casts a shadow.
+  - Traffic cruises at `HIGHWAY_SPEED`.
+- **Wealth tiers blend:** new district styles (luxury Bayside Heights, the Pink Mile, Old Town, beach, park), and each row of houses sometimes takes its neighbour's style, so edges mix.
+- **Shores:** coastlines are traced smooth instead of tile steps. Town shores get a coping-stone seawall over the water, beaches get wet sand and shallows, wild banks get a muddy lip. Surf rolls up the beaches and water laps the seawalls (`client/render/shore.js`).
+- **The metro** runs through the middle of the districts: underground under Midtown, Downtown and Civic Center, then across the river through Southside, Pine Hills, Riverside and The Yards. The one long open run is through the Dry Creek fields (the mail-car job).
+- **No kids anywhere.** Animals stay.
+- **Maps:** the minimap and city map draw the highway. The city map frames the main islands, and the world map image was re-baked with the deck on it.
+- Tutorial v13: city chapter rewritten (Metro City, the ring highway, Southbank, Dry Creek, Pelican Key, Smuggler's Rock, the metro).
+- Dev: `tp` takes `lz: 1` to land on the deck, and `car` spawns beside you up there.
+
+Playtest:
+1. Drive onto a frontage road beside the highway and take an on-ramp. You should climb, merge from the right and cruise with traffic. Take an exit back down.
+2. Drive under the deck: your car shows as a dashed outline until you come out the other side.
+3. Walk up a ramp and try to punch someone on the street below. Nothing connects.
+4. Drive Broadway and the Bayside crescents. AI cars should follow the curves and stop at the lights.
+5. Walk the Sunset Beach shore (surf) and the river promenade (seawall).
+6. Ride the metro the whole way round.

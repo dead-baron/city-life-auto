@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, players, straightRoad } from './helpers.js';
 import { generateCity, PED_BLOCK } from '../shared/map.js';
 import { gameClock, K, T, STAR_HEAT } from '../shared/constants.js';
 import { encodeInput, decodeInput, SnapshotWriter, decodeSnapshot } from '../shared/protocol.js';
@@ -160,9 +160,9 @@ test('open cargo: carry slows by 40%, crates load into visible vehicle slots and
 test('rain: asphalt braking distance roughly doubles', () => {
   const m = generateCity(1337);
   const def = VEHICLES.sedan;
-  const ave = m.roads.find((r) => r.axis === 'h' && r.y === 80); // Bay Bridge avenue, 6 tiles wide
+  const ave = straightRoad(m, 1400, { kind: 'ave' }) || straightRoad(m, 1400); // a long straight avenue
   const brake = (rain) => {
-    const s = newVehState(20 * 32, (ave.y + 4.5) * 32, 0);
+    const s = newVehState(ave.x + 100, ave.y + 40, 0);
     s.vx = 400;
     let d = 0;
     for (let i = 0; i < 400 && Math.hypot(s.vx, s.vy) > 5; i++) { const x0 = s.x; vehStep(s, { throttle: -1, steer: 0, hb: false }, 0.05, m, def, { rain }); d += s.x - x0; }
@@ -375,9 +375,9 @@ test('analog movement: light push walks, full push runs, sprint is faster, relea
 test('direction driving: the car turns toward the stick, light push cruises slower, pulling back reverses', async () => {
   const { driveInput, vehStep, newVehState } = await import('../shared/physics.js');
   const m = generateCity(1337);
-  const ave = m.roads.find((r) => r.axis === 'h' && r.y === 80);
+  const ave = straightRoad(m, 1400, { kind: 'ave' }) || straightRoad(m, 1400);
   const def = VEHICLES.sedan;
-  const drive = (mx, my, secs, s = newVehState((ave.x + 10) * 32, (ave.y + 3) * 32, 0)) => {
+  const drive = (mx, my, secs, s = newVehState(ave.x + 100, ave.y + 40, 0)) => {
     for (let i = 0; i < secs * 20; i++) vehStep(s, driveInput(s, { bits: 0, mx, my, aim: 0 }), 0.05, m, def, { rain: false });
     return s;
   };
@@ -461,8 +461,8 @@ test('NPC loot: cash-only drops are a pile you walk over; not every NPC carries 
 test('stealing a crewed police cruiser: the officers are thrown clear and you can drive off', async () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
-  const ave = w.map.roads.find((r) => r.axis === 'h' && r.y === 80);
-  const v = w.spawnVehicle('police', (ave.x + 40) * 32, (ave.y + 3) * 32, 0, {});
+  const ave = straightRoad(w.map, 1400);
+  const v = w.spawnVehicle('police', ave.x + 200, ave.y + 40, 0, {});
   for (let i = 0; i < 2; i++) { const c = spawnNpc(w, 'cop', v.x, v.y, 'cop'); c.npc.unit = v.id; c.vehId = v.id; c.seat = i; v.seats[i] = c.id; }
   v.ai = { kind: 'police', target: p.pid, mode: 'drive', route: null, routeAt: 0 };
   (w.police ||= new Set()).add(v.id);
@@ -572,8 +572,8 @@ test('bailing out of a fast car: roll and slide, hurts with speed, can kill', ()
   const res = [];
   for (const spd of [100, 300, 700]) {
     const { p } = joinPlayer(w);
-    const n = w.map.nodes[5];
-    teleport(w, p.ped, n.x + 32, n.y + 32);
+    const road = straightRoad(w.map, 2400, { kind: 'ave' });
+    teleport(w, p.ped, road.x + 400, road.y + 41);
     const v = w.spawnVehicle('sedan', p.ped.x, p.ped.y, 0, { npcOwned: false });
     vehicles.tryEnter(w, p.ped);
     v.vx = spd; v.vy = 0;
@@ -592,7 +592,7 @@ test('bailing out of a fast car: roll and slide, hurts with speed, can kill', ()
   ped.tumbleUntil = w.time + 2; ped.downUntil = w.time + 2;
   let wx = 0, wy = 0;
   outer: for (let ty = 2; ty < w.map.h - 2; ty++) for (let tx = 2; tx < w.map.w - 6; tx++) {
-    if (!PED_BLOCK[w.map.tileAt(tx, ty)] && !PED_BLOCK[w.map.tileAt(tx + 1, ty)] && !PED_BLOCK[w.map.tileAt(tx + 2, ty)] && PED_BLOCK[w.map.tileAt(tx + 3, ty)] && ty > 40) { wx = tx * 32 + 16; wy = ty * 32 + 16; break outer; }
+    if (!PED_BLOCK[w.map.tileAt(tx, ty)] && !PED_BLOCK[w.map.tileAt(tx + 1, ty)] && !PED_BLOCK[w.map.tileAt(tx + 2, ty)] && w.map.tileAt(tx + 3, ty) === T.BUILDING && w.map.tileAt(tx + 3, ty + 1) === T.BUILDING && w.map.tileAt(tx + 3, ty - 1) === T.BUILDING && ty > 40) { wx = tx * 32 + 16; wy = ty * 32 + 16; break outer; }
   }
   teleport(w, ped, wx, wy);
   ped.vx = 650; ped.vy = 0;
@@ -659,8 +659,8 @@ test('driving: server steps the car once per received input, matching client pre
   const { DT } = await import('../shared/constants.js');
   const w = makeWorld();
   const { p } = joinPlayer(w);
-  const n = w.map.nodes[20];
-  teleport(w, p.ped, n.x + 40, n.y + 40);
+  const road = straightRoad(w.map, 2400, { kind: 'ave' });
+  teleport(w, p.ped, road.x + 400, road.y - 100); // westbound side, turning gently up the avenue
   const v = w.spawnVehicle('sedan', p.ped.x, p.ped.y, 0, { npcOwned: false });
   vehicles.tryEnter(w, p.ped);
   w.step();
@@ -669,7 +669,7 @@ test('driving: server steps the car once per received input, matching client pre
   let seq = p.ack;
   const pattern = [1, 0, 2, 1, 1, 0, 2, 1, 0, 1, 3, 0, 1];
   for (let k = 0; k < 50; k++) {
-    for (let c = 0; c < pattern[k % pattern.length]; c++) { const inp = { seq: ++seq, bits: IN.TANK, mx: 0.25, my: -1, aim: 0 }; p.inputQ.push(inp); sent.push(inp); }
+    for (let c = 0; c < pattern[k % pattern.length]; c++) { const inp = { seq: ++seq, bits: IN.TANK, mx: 0.06, my: -1, aim: 0 }; p.inputQ.push(inp); sent.push(inp); }
     w.step();
     const s = { ...start };
     for (const inp of sent) if (inp.seq <= p.ack) vehStep(s, driveInput(s, inp), DT, w.map, v.def, { rain: w.weather === 1 });
@@ -715,20 +715,25 @@ test('bridges are two layers: from the road you walk the deck, from the water yo
   const { isSwimming } = await import('../shared/map.js');
   const w = makeWorld(); const m = w.map;
   const { p } = joinPlayer(w);
-  // tile (210, 80) is the north edge of a river bridge; (210, 78) is open water above it (east of the rail trestle)
-  assert.equal(m.tileAt(210, 80), TT.BRIDGE);
-  teleport(w, p.ped, 210 * 32 + 16, 78 * 32);
+  // a road bridge over the river: a column of bridge deck with open water beside it
+  let bx = -1, by = -1;
+  outer: for (let ty = 560; ty < 760; ty++) for (let tx = 760; tx < 1020; tx++) {
+    if (m.tileAt(tx, ty) === TT.BRIDGE && m.river[ty * m.w + tx] && [1, 2, 3, 4, 5, 6, 7].every((k) => m.tileAt(tx - k, ty) === TT.WATER) && [2, 4, 6, 8].every((k) => m.tileAt(tx, ty + k) === TT.BRIDGE) && m.tileAt(tx, ty - 8) === TT.ROAD) { bx = tx; by = ty; break outer; }
+  }
+  assert.ok(bx > 0, 'found a river bridge');
+  // swim in from the open water beside the deck
+  teleport(w, p.ped, (bx - 6) * 32, (by + 0.5) * 32);
   let seq = p.ack;
-  const go = (n, my) => { for (let i = 0; i < n; i++) { p.inputQ.push({ seq: ++seq, bits: 0, mx: 0, my, aim: 0 }); w.step(); } };
+  const go = (n, mx) => { for (let i = 0; i < n; i++) { p.inputQ.push({ seq: ++seq, bits: 0, mx, my: 0, aim: 0 }); w.step(); } };
   go(3, 0);
-  go(30, 1);
+  for (let i = 0; i < 80 && m.tileAtPx(p.ped.x, p.ped.y) !== TT.BRIDGE; i++) go(1, 1);
   assert.equal(m.tileAtPx(p.ped.x, p.ped.y), TT.BRIDGE, 'reached the bridge tiles');
   assert.ok(isSwimming(m, p.ped), 'still swimming - under the deck');
   // a pedestrian arriving along the road is on top
   const q = joinPlayer(w).p;
-  teleport(w, q.ped, 198 * 32, 82 * 32);
+  teleport(w, q.ped, (bx + 0.5) * 32, (by - 9) * 32);
   let s2 = q.ack;
-  for (let i = 0; i < 30; i++) { q.inputQ.push({ seq: ++s2, bits: 0, mx: 1, my: 0, aim: 0 }); w.step(); }
+  for (let i = 0; i < 80 && !(m.tileAtPx(q.ped.x, q.ped.y) === TT.BRIDGE && q.ped.y > (by + 2) * 32); i++) { q.inputQ.push({ seq: ++s2, bits: 0, mx: 0, my: 1, aim: 0 }); w.step(); }
   assert.equal(m.tileAtPx(q.ped.x, q.ped.y), TT.BRIDGE);
   assert.ok(!isSwimming(m, q.ped), 'walking on the deck');
 });
@@ -859,8 +864,8 @@ test('more banks and ATMs around the city; shop sales are paid into the bank', (
 test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-shots cars, armored takes two; cars are tougher, bikes not', async () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
-  const n = w.map.nodes[40];
-  teleport(w, p.ped, n.x + 32, n.y + 32);
+  const road = straightRoad(w.map, 2400, { kind: 'ave' }); // open street: nothing in the line of fire
+  teleport(w, p.ped, road.x + 500, road.y);
   p.profile.weapons.pistol = 999; p.ped.mag.pistol = 999; p.ped.weapon = 'pistol';
   const shotsToDrop = (target) => {
     let shots = 0;
@@ -908,7 +913,11 @@ test('gangs vs police: left alone unless provoked; speeding cop or cop gunfire s
   dev.command(w, cop, 'cop', {});
   const hq = w.map.pois.find((q) => q.kind === 'gang');
   const car = w.get(cop.ped.vehId);
-  car.x = hq.x - 300; car.y = hq.y + 120; w.place(car);
+  // the nearest east-west street to the HQ, a little way back from it
+  const { nearestEdge } = await import('../shared/roads.js');
+  const ne = nearestEdge(w.map.net, hq.x, hq.y, (e) => e.lvl === 0 && e.len > 600 && Math.abs(e.pts[e.pts.length - 1].y - e.pts[0].y) < 8);
+  const ex = Math.min(ne.e.pts[0].x, ne.e.pts[ne.e.pts.length - 1].x);
+  car.x = ex + 40; car.y = ne.e.pts[0].y + 30; w.place(car);
   const g = spawnNpc(w, 'syndicate', car.x + 400, car.y, 'gang');
   run(w, 0.5);
   assert.notEqual(g.npc.state, 'fight', 'a cop just being there is fine');

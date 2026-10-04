@@ -24,12 +24,12 @@ import {
   ROB_WARMUP_S, ROB_TOSS_S, ROB_TAKE, ROB_ALARM_S, ROB_RESPONSE_S, ROB_ALARM_STARS,
   MATCH_COUNTDOWN_S, SOCCER_GOALS, SOCCER_MATCH_S, VOLLEY_POINTS, MATCH_PRIZE,
   TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, TRAINS_ON_LINE, MAIL_WARN_S,
-  BAIL_HURT_SPEED, NPC_GRIT, NPC_CRITICAL,
+  BAIL_HURT_SPEED, NPC_GRIT, NPC_CRITICAL, HIGHWAY_SPEED,
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 12;
+export const TUTORIAL_VERSION = 13;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -50,27 +50,27 @@ export const CHAPTERS = [
 // at: what the camera frames. One of
 //   { city: 1 } | { island: 'D' } | { district: 'Neon Strip' } | { poi: kind } | { pois: kind }
 //   { spawn: 'default' } | { cameras: 1 } | { dropSites: 1 } | { turf: 1 } | { homes: districtName } | { estates: 1 }
-//   { crossings: 1 } (level crossings) | { rural: 1 } (the long rural run of the railway)
+//   { crossings: 1 } (level crossings) | { rural: 1 } (the long rural run of the railway) | { ring: 1 } (the ring highway)
 // route: an animated vehicle driving the road network between two targets (optional chaser).
 export const STEPS = [
   // ---- the city ------------------------------------------------------------------------------
   { ch: 'city', title: 'Welcome to the city', at: { city: 1 },
-    text: `Four islands joined by bridges: ${isle('I')}, ${isle('R')}, ${isle('D')} and the quiet ${isle('F')}. Everyone shares one living city - other players, traffic, cops and crooks. Live as a citizen, a criminal or a police officer, and switch whenever you like.` },
+    text: `${isle('D')} fills the big island in the middle of the bay: towers inside a ring highway, ${isle('R')} across the river, the farms of ${isle('F')} out east, and ${isle('P')} and ${isle('C')} out on the water. Long bridges lead to the wild islands beyond - empty for now, waiting to be built. Everyone shares one living city - other players, traffic, cops and crooks. Live as a citizen, a criminal or a police officer, and switch whenever you like.` },
   { ch: 'city', title: isle('D'), at: { island: 'D' },
-    text: `The heart of the city: offices, shops, government and the bright lights of the Neon Strip.` },
+    text: `The heart of it all. Downtown's towers and the Civic Center inside the ring, Broadway cutting across the grid on the diagonal, the Neon Strip and the Pink Mile toward the river, Bayside Heights' crescents and villas, Old Town's worn brick up north, the docks of the Harbor and the rough Yards in the south-west. The richer the street, the more people carry - and the faster the police turn up.` },
+  { ch: 'city', title: 'The ring highway', at: { ring: 1 },
+    text: `An elevated highway loops around downtown on concrete pillars, three lanes each way. Get on from the one-way frontage roads that run beside it: an on-ramp climbs up and merges from the right, exits peel off to the right and drop back down. Up on the deck there are no lights and no crossings - just traffic doing ${kmh(HIGHWAY_SPEED)} km/h (you can walk up a ramp, but mind the traffic). Down below, the avenues pass underneath it; anything up top is a level of its own, so you can't shoot or hit people on the street below.` },
   { ch: 'city', title: isle('R'), at: { island: 'R' },
-    text: `Houses and apartments you can buy, beaches and quiet streets. A home becomes your respawn point and your garage.` },
-  { ch: 'city', title: isle('I'), at: { island: 'I' },
-    text: `Docks, cranes, warehouses and rail yards - where the city's cargo comes and goes.` },
+    text: `Across the river bridges: the winding streets and cul-de-sacs of Pine Hills, where houses and apartments are for sale, and the gang-run grid of Southside. A home becomes your respawn point and your garage.` },
   { ch: 'city', title: isle('F'), at: { island: 'F' },
-    text: `Farmland across the water from the city. The {{farm}} pays you to haul fresh produce back to town.` },
+    text: `Farm country east of the city: fields, farmhouses and the {{farm}}, which pays you to haul fresh produce back to town. The county road runs out here from the ring road.` },
   { ch: 'city', title: isle('P'), at: { island: 'P' },
     text: `Out in the bay, only by boat: beaches, a beach bar and the {{charter}} dock with jet skis tied up. Jet ski and boat races start from the buoys off its shore.` },
   { ch: 'city', title: isle('C'), at: { island: 'C' },
-    text: `The Syndicate's island fortress. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
+    text: `The Syndicate's island fortress, off the far shore of ${isle('F')}. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
-  { ch: 'city', title: 'The railway', at: { pois: 'station' },
-    text: `${TRAINS_ON_LINE} trains run one big loop around the whole world at up to ${kmh(TRAIN_SPEED)} km/h - along the shores of ${isle('I')} and ${isle('R')}, over short bridges across the channels, under ${isle('D')}'s streets in the subway and across the fields of ${isle('F')} - easing into every {{station}} for ${TRAIN_DWELL_S} seconds. The clock on each platform counts down to the next train. Stand by a door while a train is in and press [[action]] to board; at Midtown Underground take the stairs down. Inside, the roof comes off so you can see the cars: walk through them while it moves, sit back and watch the city go by. [[vehicle]] gets you off at a station - or leap from the door of a moving train: at a crawl you just roll, at full speed the landing can break bones. In the tunnel the doors stay shut. Running alongside a slow train, or driving level with it, you can hop on too.` },
+  { ch: 'city', title: 'The metro', at: { pois: 'station' },
+    text: `${TRAINS_ON_LINE} trains run one loop through the middle of the city at up to ${kmh(TRAIN_SPEED)} km/h - in a subway tunnel under Midtown, Downtown and the Civic Center, out past the ring highway across the fields of ${isle('F')}, back at street level through Southside and Pine Hills, over the river and in past The Yards - easing into every {{station}} for ${TRAIN_DWELL_S} seconds. The clock on each platform counts down to the next train. Stand by a door while a train is in and press [[action]] to board; at the subway stations take the stairs down. Inside, the roof comes off so you can see the cars: walk through them while it moves, sit back and watch the city go by. [[vehicle]] gets you off at a station - or leap from the door of a moving train: at a crawl you just roll, at full speed the landing can break bones. In the tunnel the doors stay shut. Running alongside a slow train, or driving level with it, you can hop on too.` },
   { ch: 'city', title: 'Level crossings', at: { crossings: 1 },
     text: `Where the line crosses a road the gates drop when a train is within ${Math.round(CROSSING_WARN_PX / TILE)} m. Most drivers wait; some gamble, and cops on a chase often try to beat the train. You can smash straight through the arms. Nothing stops a train and nothing hurts it: anyone on the tracks gets thrown, and a car caught on the front of the engine is dragged along - steer it off within ${TRAIN_DRAG_EXPLODE_S} seconds or it blows up.` },
   // ---- basics --------------------------------------------------------------------------------
@@ -107,7 +107,7 @@ export const STEPS = [
   { ch: 'citizen', title: 'Homes', at: { homes: 'Pine Hills' },
     text: `Buy a {{home}} - as many as you like. Each can be your respawn point (you can still pick a hospital when you die), adds garage space, and lets you rest, bank your cash and stash items and guns. Stand at your door and go inside: you blink for ${HIDE_TIME_S} seconds, slowly then fast, and you're hidden - nobody can see or hurt you, and the police lose track of you. Step out and you blink for ${SPAWN_PROTECT_S} seconds of protection. Inside you can change your outfit, check what you're carrying, and pick any car from your garage: say you're ready, the garage door rolls up and you ease out, blinking, before you take the wheel.` },
   { ch: 'citizen', title: 'Estates and garages', at: { estates: 1 },
-    text: `Out past the city: a ${estate('farmhouse')}, the ${estate('cottage')}, a ${estate('beach')} on the sand and the ${estate('mansion')} with its huge yard and pool. Pull up to any of your garages and the door rolls open to take your car; every car you own can be taken out at any home you own. New cars at {{dealer}} - walk its lot and buy whatever's in stock off the price tags, or order from the showroom - boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
+    text: `A ${estate('farmhouse')} or a ${estate('cottage')} out in ${isle('F')}, a ${estate('beach')} on Sunset Beach and the ${estate('mansion')} up in Bayside Heights with its huge walled yard and pool. Pull up to any of your garages and the door rolls open to take your car; every car you own can be taken out at any home you own. New cars at {{dealer}} - walk its lot and buy whatever's in stock off the price tags, or order from the showroom - boats at {{marina}}, and {{garage}} repairs, washes and resprays.` },
   { ch: 'citizen', title: 'Good Samaritan points', at: { poi: 'evidence' },
     text: `Doing good earns Samaritan points: finish deliveries, stop a ${EVENT_KINDS.snatch.label.toLowerCase()} (an orange blip and arrow), then ${EVENT_KINDS.ret.label.toLowerCase()} to its owner (green), or carry contraband to the {{evidence}} for a reward. Points open up the badge (${ENFORCER_MIN_SAMARITAN}) and the bounty hunter license (${HUNTER_MIN_SAMARITAN}).` },
 
@@ -119,7 +119,7 @@ export const STEPS = [
   { ch: 'criminal', title: 'Holding up a store', at: { poi: 'gasstation' },
     text: `Walk into a {{convenience}}, a {{gasstation}}, any shop or a bank and point a gun at the clerk: hands go up, and after ${ROB_WARMUP_S} seconds they start throwing cash at you - a wad every ${ROB_TOSS_S} seconds (about $${ROB_TAKE.convenience}, more each time, ~$${ROB_TAKE.bank} at a bank). Somewhere ${ROB_ALARM_S.join(', ')} seconds in, a silent alarm trips: you jump to ${ROB_ALARM_STARS} stars, a ${EVENT_KINDS.robbery.label.toLowerCase()} shows on every radar, and squad cars pull up ${ROB_RESPONSE_S[0]}-${ROB_RESPONSE_S[1]} seconds later. How long do you dare stay? Anyone else who sees it reports you either way.` },
   { ch: 'criminal', title: 'The mail train', at: { rural: 1 },
-    text: `Every third train hauls a mail car with a strongbox and two armed guards - step inside and they draw on you and give you ${MAIL_WARN_S} seconds to get out before they shoot. Take the job at {{fence}} (or just do it), get aboard - at a station, or climb on from a car driving alongside - work back to the mail car and crack the box: ${STRONGBOX_CRACK_S} seconds next to it and it goes over the side. Jump off, grab it and fence it for $${TRAIN_JOB_PAY}. Do it out here on the long run across ${isle('F')} where nobody hears the alarm; crack it in town and the bell puts you on ${TRAIN_ALARM_STARS} stars. Wanted on a train? Police board at the next station.` },
+    text: `Every third train hauls a mail car with a strongbox and two armed guards - step inside and they draw on you and give you ${MAIL_WARN_S} seconds to get out before they shoot. Take the job at {{fence}} (or just do it), get aboard - at a station, or climb on from a car driving alongside - work back to the mail car and crack the box: ${STRONGBOX_CRACK_S} seconds next to it and it goes over the side. Jump off, grab it and fence it for $${TRAIN_JOB_PAY}. Do it out on the long run through the fields of ${isle('F')} where nobody hears the alarm; crack it in town and the bell puts you on ${TRAIN_ALARM_STARS} stars. Wanted on a train? Police board at the next station.` },
   { ch: 'criminal', title: 'Wanted stars', at: { district: 'Civic Center' }, route: { from: { poi: 'bank' }, to: { district: 'Southside' }, veh: 'sports', chaser: 'police' },
     text: `A reported crime earns wanted stars (★ at ${STAR_HEAT[1]} heat up to ★★★★★ at ${STAR_HEAT[5]}). Police come for you - tasers at low stars, guns from 3, SWAT at 4-5. Break line of sight and they only know a search circle that grows; stay hidden and the heat fades.` },
   { ch: 'criminal', title: 'Lying low', at: { poi: 'clothing' },
@@ -189,6 +189,13 @@ export function resolveTarget(map, at, ref) {
     if (!I) return null;
     const [x0, y0, x1, y1] = I.box;
     return { x: (x0 + x1) / 2 * TILE, y: (y0 + y1) / 2 * TILE, w: (x1 - x0) * TILE, h: (y1 - y0) * TILE, marks: islandMarks(map, at.island), label: I.name };
+  }
+  if (at.ring) {
+    const deck = (map.edges || []).filter((e) => e.lvl === 1);
+    if (!deck.length) return null;
+    const pts = deck.flatMap((e) => e.pts);
+    const ramps = (map.edges || []).filter((e) => e.lvl === 'ramp').map((e) => e.pts[Math.floor(e.pts.length / 2)]);
+    return { ...box(pts, 300), marks: ramps.slice(0, 8).map((p) => ({ x: p.x, y: p.y, label: 'Ramp', kind: 'camera' })), label: 'The ring highway' };
   }
   if (at.district) {
     const d = DISTRICTS.findIndex((q) => q.name === at.district);
@@ -267,17 +274,27 @@ export function resolveRoute(map, route) {
   const to = b.marks[0] || b;
   const s = map.nearestNode(from.x, from.y), g = map.nearestNode(to.x, to.y);
   if (!s || !g) return null;
-  const prev = new Map([[s.id, -1]]);
+  // breadth-first over the ground-level streets (the tour car stays off the highway deck)
+  const prev = new Map([[s.id, null]]);
   const q = [s.id];
-  while (q.length) {
-    const id = q.shift();
+  for (let qi = 0; qi < q.length; qi++) {
+    const id = q[qi];
     if (id === g.id) break;
-    for (const nid of Object.values(map.nodes[id].links)) if (!prev.has(nid)) { prev.set(nid, id); q.push(nid); }
+    for (const [eid, nid] of Object.entries(map.nodes[id].links)) {
+      if (prev.has(nid) || map.nodes[nid].lvl !== 0 || (map.edges[+eid] && map.edges[+eid].lvl !== 0)) continue;
+      prev.set(nid, { id, e: +eid }); q.push(nid);
+    }
   }
-  const chain = [];
-  for (let id = g.id; id !== -1 && id !== undefined; id = prev.get(id)) chain.unshift(map.nodes[id]);
-  if (chain[0] !== s) return null;
-  const pts = [{ x: from.x, y: from.y }, ...chain.map((n) => ({ x: n.x, y: n.y })), { x: to.x, y: to.y }];
+  if (!prev.has(g.id)) return null;
+  const steps = [];
+  for (let id = g.id; id !== s.id;) { const p = prev.get(id); steps.unshift({ from: p.id, e: p.e }); id = p.id; }
+  const pts = [{ x: from.x, y: from.y }, { x: s.x, y: s.y }];
+  for (const st of steps) {
+    const e = map.edges[st.e];
+    const ep = e.a === st.from ? e.pts : e.pts.slice().reverse();
+    for (let k = 1; k < ep.length; k++) pts.push({ x: ep[k].x, y: ep[k].y });
+  }
+  pts.push({ x: to.x, y: to.y });
   let len = 0;
   for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
   return { pts, len, veh: route.veh, chaser: route.chaser || null, siren: !!route.siren, end: to };
@@ -288,10 +305,9 @@ export function districtAt(map, x, y) {
   const d = map.dist[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)];
   return DISTRICTS[d] ? DISTRICTS[d].name : null;
 }
-export function islandAt(x, y) {
-  const tx = x / TILE, ty = y / TILE;
-  for (const I of Object.values(ISLANDS)) { const [x0, y0, x1, y1] = I.box; if (tx >= x0 && tx < x1 && ty >= y0 && ty < y1) return I.name; }
-  return null;
+export function islandAt(map, x, y) {
+  const k = map.islandAt ? map.islandAt(x, y) : null;
+  return k ? ISLANDS[k].name : null;
 }
 const turfNames = () => DISTRICTS.filter((q) => q.turf).map((q) => q.name);
 const andList = (l) => (l.length <= 1 ? l.join('') : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1]);
@@ -302,7 +318,7 @@ export function fillNames(map, text) {
     if (kind === 'turfs') return andList(turfNames());
     const p = map.pois.find((q) => q.kind === kind);
     if (!p) return s;
-    if (mod === 'where') return districtAt(map, p.x, p.y) || islandAt(p.x, p.y) || 'the city';
+    if (mod === 'where') return districtAt(map, p.x, p.y) || islandAt(map, p.x, p.y) || 'the city';
     if (kind === 'home') return 'home';
     if (kind === 'delivery') return 'storefront';
     return p.label;
@@ -315,10 +331,10 @@ export function stepExtra(map, step) {
   if (!step.at || !step.at.island) return '';
   const I = ISLANDS[step.at.island];
   const [x0, y0, x1, y1] = I.box;
-  const inside = (p) => p.x / TILE >= x0 && p.x / TILE < x1 && p.y / TILE >= y0 && p.y / TILE < y1;
+  const inside = (p) => map.zoneAt(p.x, p.y) === I.zone;
   const here = map.pois.filter((p) => !MINOR.has(p.kind) && inside(p)).map((p) => p.label);
   const homes = map.pois.filter((p) => p.kind === 'home' && inside(p)).length;
-  const turf = DISTRICTS.filter((q, i) => q.turf && map.pois.length && (() => { for (let ty = y0; ty < y1; ty += 4) for (let tx = x0; tx < x1; tx += 4) if (map.dist[ty * MAP_W + tx] === i) return true; return false; })()).map((q) => q.name);
+  const turf = DISTRICTS.filter((q, i) => q.turf && map.pois.length && (() => { for (let ty = y0; ty < y1; ty += 4) for (let tx = x0; tx < x1; tx += 4) if (map.dist[ty * MAP_W + tx] === i && map.zone[ty * MAP_W + tx] === I.zone) return true; return false; })()).map((q) => q.name);
   const parts = [];
   if (here.length) parts.push('Here: ' + andList([...new Set(here)]) + '.');
   if (homes) parts.push(`${homes} homes for sale.`);
@@ -329,8 +345,7 @@ export function stepExtra(map, step) {
 // Labels for an island step: every notable place on it.
 export function islandMarks(map, k) {
   const I = ISLANDS[k];
-  const [x0, y0, x1, y1] = I.box;
-  return map.pois.filter((p) => !MINOR.has(p.kind) && p.x / TILE >= x0 && p.x / TILE < x1 && p.y / TILE >= y0 && p.y / TILE < y1).map(poiMark);
+  return map.pois.filter((p) => !MINOR.has(p.kind) && map.zoneAt(p.x, p.y) === I.zone).map(poiMark);
 }
 
 export function actionsIn(text) { return [...text.matchAll(/\[\[(\w+)\]\]/g)].map((m) => m[1]); }

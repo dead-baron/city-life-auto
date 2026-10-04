@@ -43,7 +43,7 @@ export function propRadius(map, i) {
 // One vehicle state s ({x,y,a,vx,vy}) against the props. isBroken(i) / onBreak(i, heavy, speed)
 // are supplied by the caller (server world vs client prediction). Applies the momentum loss.
 export function smashProps(map, s, def, isBroken, onBreak) {
-  if (def.kind === 'boat') return;
+  if (def.kind === 'boat' || (s.lz || 0) > 0.3) return; // up on the highway: the street furniture is below
   const sp = Math.abs(s.vx) + Math.abs(s.vy);
   if (sp < SMASH_MIN_SPEED) return;
   const g = breakGrid(map);

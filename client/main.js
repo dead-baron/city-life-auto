@@ -2,7 +2,8 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
-import { generateCity, lightState, WATER_T, TRAIN_CARS } from '../shared/map.js';
+import { generateCity, WATER_T, TRAIN_CARS } from '../shared/map.js';
+import { signalFor } from '../shared/roads.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
@@ -27,6 +28,8 @@ import { drawTrainCar, drawCoupling, drawCrossing, drawTunnel, portalCovers, dra
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { BuildingLayer } from './render/buildings.js';
+import { Highway, liftOf, levelKey } from './render/highway.js';
+import { underDeck } from '../shared/levels.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -183,8 +186,8 @@ function onBinary(buf) {
     const e = ent(it.id, it.kind);
     const lastS = e.buf[e.buf.length - 1];
     // static entities are only refreshed at 1 Hz: re-anchor so motion resumes smoothly
-    if (lastS && s.tick - lastS.t > 2) e.buf.push({ t: s.tick - 1, x: lastS.x, y: lastS.y, a: lastS.a });
-    e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a });
+    if (lastS && s.tick - lastS.t > 2) e.buf.push({ t: s.tick - 1, x: lastS.x, y: lastS.y, a: lastS.a, z: lastS.z });
+    e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a, z: it.lz });
     if (e.buf.length > 5) e.buf.shift();
     e.flags = it.flags; e.hp = it.hp; e.parent = it.parent;
     if (it.kind === K.PED) { e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; e.swim = (it.extra & 128) !== 0; } // weapon | blink | in water
@@ -217,13 +220,13 @@ function reconcile(s) {
   const old = S.pred && !switched ? drawn(S.pred) : null;
   let st;
   if (kind === 'ped') {
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits, under: !!(S.ents.get(s.ctrlId) || {}).swim };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits, under: !!(S.ents.get(s.ctrlId) || {}).swim, lz: s.self.lz };
     S.pred = { kind, s: st, mods: pedModsFrom(s.selfFlags, s.self.speedMul), prev: null };
   } else {
     const e = S.ents.get(s.ctrlId);
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32) };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz };
     S.pred = { kind, s: st, def, prev: null };
   }
   // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
@@ -425,6 +428,7 @@ function onEvent(ev) {
 function setupWorld(seed) {
   S.map = generateCity(seed);
   S.ground = new GroundCache(S.map);
+  S.highway = new Highway(S.map);
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
@@ -927,7 +931,8 @@ $('bigmap-c').onclick = (e) => {
   const sc = S.hud && S.hud.bigmapScale;
   if (!sc) return;
   const r = $('bigmap-c').getBoundingClientRect();
-  const x = (e.clientX - r.left) / sc, y = (e.clientY - r.top) / sc;
+  const [ox, oy] = S.hud.bigmapOrigin || [0, 0];
+  const x = ox + (e.clientX - r.left) / sc, y = oy + (e.clientY - r.top) / sc;
   // snap to a highlighted place if the click is close to one
   let label = 'Marked spot', bx = x, by = y, bd = 24 / sc;
   for (const p of (S.hud.mapFilter || [])) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; bx = p.x; by = p.y; label = p.label; } }
@@ -1056,11 +1061,11 @@ function selfPos() {
   if (P) {
     const a = Math.min(1, S.acc / DT);
     const pr = P.prev || P.s;
-    return { x: lerp(pr.x, P.s.x, a) + S.smooth.x, y: lerp(pr.y, P.s.y, a) + S.smooth.y, a: lerpAngle(pr.a, P.s.a, a) + (S.smooth.a || 0) };
+    return { x: lerp(pr.x, P.s.x, a) + S.smooth.x, y: lerp(pr.y, P.s.y, a) + S.smooth.y, a: lerpAngle(pr.a, P.s.a, a) + (S.smooth.a || 0), z: lerp(pr.lz || 0, P.s.lz || 0, a) };
   }
   const e = S.ents.get(S.ctrlId);
-  if (e) return { x: e.rx, y: e.ry, a: e.ra };
-  return { x: S.cam.x, y: S.cam.y, a: 0 };
+  if (e) return { x: e.rx, y: e.ry, a: e.ra, z: e.rz || 0 };
+  return { x: S.cam.x, y: S.cam.y, a: 0, z: 0 };
 }
 
 function worldToScreen(p) {
@@ -1074,12 +1079,13 @@ function interp(e, rt) {
   let i = b.length - 1;
   while (i > 0 && b[i - 1].t > rt) i--;
   const s1 = b[i], s0 = i > 0 ? b[i - 1] : s1;
-  let x, y, a;
-  if (s0 === s1 || s1.t === s0.t) { x = s1.x; y = s1.y; a = s1.a; }
+  let x, y, a, z;
+  if (s0 === s1 || s1.t === s0.t) { x = s1.x; y = s1.y; a = s1.a; z = s1.z || 0; }
   else {
     const k = Math.max(0, Math.min(1, (rt - s0.t) / (s1.t - s0.t)));
-    x = lerp(s0.x, s1.x, k); y = lerp(s0.y, s1.y, k); a = lerpAngle(s0.a, s1.a, k);
+    x = lerp(s0.x, s1.x, k); y = lerp(s0.y, s1.y, k); a = lerpAngle(s0.a, s1.a, k); z = lerp(s0.z || 0, s1.z || 0, k);
   }
+  e.rz = z;
   if (e.lx !== null) e.walk += Math.hypot(x - e.lx, y - e.ly);
   e.lx = x; e.ly = y;
   e.rx = x; e.ry = y; e.ra = a;
@@ -1143,13 +1149,13 @@ function render(dt) {
   for (const e of S.ents.values()) interp(e, S.renderTick);
   // own entity follows prediction
   const sp = selfPos();
-  if (S.pred) { const e = S.ents.get(S.ctrlId); if (e) { if (e.lx !== null) e.walk += Math.hypot(sp.x - e.rx, sp.y - e.ry) * 0; e.rx = sp.x; e.ry = sp.y; e.ra = sp.a; } }
+  if (S.pred) { const e = S.ents.get(S.ctrlId); if (e) { e.rx = sp.x; e.ry = sp.y; e.ra = sp.a; e.rz = sp.z; } }
   // things riding on my driven vehicle (passengers, loaded crates) follow the prediction too
   if (S.pred && S.pred.kind === 'veh') {
     for (const e of S.ents.values()) {
       if (e.kind === K.CRATE && e.parent === S.ctrlId && (e.flags & 3) === 2) {
         const sl = S.pred.def.slots[e.extra];
-        if (sl) { const [x, y] = localToWorld(sp.x, sp.y, sp.a, sl[0], sl[1]); e.rx = x; e.ry = y; e.ra = sp.a; }
+        if (sl) { const [x, y] = localToWorld(sp.x, sp.y, sp.a, sl[0], sl[1]); e.rx = x; e.ry = y; e.ra = sp.a; e.rz = sp.z; }
       }
     }
   }
@@ -1228,6 +1234,7 @@ function render(dt) {
 
   // animated water glints
   drawWaterGlints(view, now);
+  S.ground.shores.animate(g, view, now);
   if (rain) { g.fillStyle = 'rgba(30,50,80,0.16)'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
   // the train I'm riding (if any), and whether it's down in the subway right now
   const meEnt = S.ents.get(S.myPedId);
@@ -1236,6 +1243,10 @@ function render(dt) {
   const sub = !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1));
   if (sub) drawTunnel(g, S.map, view, now);
   else fx.drawDecals(g, view, now, rain);
+  // the elevated highway: its shadow and the ramps' feet lie on the ground
+  const hv = sub ? { slabs: [], pillars: [] } : S.highway.visible(view);
+  S.highway.drawShadows(g, hv.slabs, clock.dark);
+  S.highway.drawLow(g, hv.slabs);
   const insideB = sub ? null : drawInteriorView(sp);
 
   const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
@@ -1265,7 +1276,8 @@ function render(dt) {
   for (const v of boats) if (inWater(v)) coverWithBridge(v.rx, v.ry, 80);
   for (const p of swimmers) coverWithBridge(p.rx, p.ry, 20);
   // downed / dead peds lie on the ground under everything that stands
-  for (const p of peds) if ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p)) drawPed(p, now);
+  const up = (e) => (e.rz || 0) > 0.01;
+  for (const p of peds) if ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p) && !up(p)) drawPed(p, now);
   drawTrains(cars, riders, myTrain, sub, now);
   for (const b of balls) drawBall(b);
   // 3/4 view: buildings, vehicles, people, carried crates, trees and lamp posts drawn in order of
@@ -1281,24 +1293,39 @@ function render(dt) {
     S.bFade.set(it.b.id, k);
     items.push({ y: it.y1, b: it, a: Math.max(0.08, 1 - inFade * 0.92 - k * 0.6) });
   }
-  for (const v of vehs) if (!boats.includes(v)) items.push({ y: v.ry, v });
-  for (const p of peds) if (!(p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) && !swimmers.includes(p)) items.push({ y: p.ry, p });
-  for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); items.push({ y: (par ? par.ry : c.ry) + 0.5, c }); }
+  for (const v of vehs) if (!boats.includes(v)) items.push({ y: levelKey(v.ry, v.rz || 0), v, z: v.rz || 0 });
+  for (const p of peds) if (!swimmers.includes(p) && (up(p) || !(p.flags & (PF.DEAD | PF.DOWN | PF.STUN)))) items.push({ y: levelKey(p.ry, p.rz || 0) - ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) ? 0.4 : 0), p, z: p.rz || 0 });
+  for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pz = par ? par.rz || 0 : 0; items.push({ y: levelKey(par ? par.ry : c.ry, pz) + 0.5, c, z: pz }); }
+  S.highway.items(hv.slabs, hv.pillars, items);
   for (const c of crates) if ((c.flags & 3) === 1) items.push({ y: c.ry + 1, c });
   if (!sub) for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
     for (const p of S.ground.overhead(cx, cy)) if (p.x > view.x0 - 40 && p.x < view.x1 + 40 && p.y > view.y0 - 40 && p.y < view.y1 + 90) items.push({ y: p.y + 8, o: p });
   items.sort((a, b) => a.y - b.y);
   const nightLit = clock.dark > 0.3;
   for (const it of items) {
+    const lift = it.z ? liftOf(it.z) : 0;
+    if (lift) { g.save(); g.translate(0, -lift); }
     if (it.b) S.buildings.draw(g, it.b, it.a);
+    else if (it.slab) S.highway.drawSlab(g, it.slab);
+    else if (it.pillar) S.highway.drawPillar(g, it.pillar);
     else if (it.v) drawVehicleEnt(it.v, now, dt);
     else if (it.p) drawPed(it.p, now);
     else if (it.c) drawCrateEnt(it.c, now);
     else if (it.o) drawOverheadProp(g, it.o, nightLit);
+    if (lift) g.restore();
   }
   // your own boat stays readable under a bridge: a faint outline through the deck
   if (S.pred && S.pred.kind === 'veh') { const me = S.ents.get(S.ctrlId); const d = me && me.d ? VEHICLE_BY_INDEX[me.d.m] : null; if (d && d.kind === 'boat' && underBridge(me.rx, me.ry, d.L / 2)) outlineVehicle(me, d); }
   else if (S.pred) { const me = S.ents.get(S.ctrlId); if (me && me.swim && S.map.tileAtPx(me.rx, me.ry) === T.BRIDGE) { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); } }
+  // ...and so do you, walking or driving under the elevated highway
+  if (S.pred && !sub) {
+    const me = S.ents.get(S.ctrlId);
+    if (me && (me.rz || 0) < 0.3 && underDeck(S.map, me.rx, me.ry)) {
+      const d = S.pred.kind === 'veh' && me.d ? VEHICLE_BY_INDEX[me.d.m] : null;
+      if (d) outlineVehicle(me, d);
+      else { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); }
+    }
+  }
   if (!sub) coverWalkIns(view, peds, insideB, dt);
   for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
 
@@ -1900,21 +1927,22 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
 // reaching over the incoming lanes and a 3-lamp head facing the drivers. Cameras sit on poles.
 const SIG_COL = { G: '#3ddc84', Y: '#ffc23d', R: '#ff3b3b' };
 function drawSignals(view) {
-  const dirs = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
   S.sigHeads = [];
+  const edges = S.map.edges;
   for (const n of S.map.nodes) {
-    if (!n.light || n.x < view.x0 - 160 || n.x > view.x1 + 160 || n.y < view.y0 - 160 || n.y > view.y1 + 160) continue;
-    const ls = lightState(n, S.loopTime);
-    for (const [dir, [dx, dy]] of Object.entries(dirs)) {
-      // traffic travelling `dir` arrives from the opposite link
-      const from = { N: 'S', S: 'N', E: 'W', W: 'E' }[dir];
-      if (n.links[from] === undefined) continue;
-      const st = dir === 'N' || dir === 'S' ? ls.ns : ls.ew;
-      const rx = -dy, ry = dx; // right-hand side of travel
-      const lane = n.lane[dir] ?? n.lane[from] ?? 32;
-      const px = n.x - dx * (n.half + 14) + rx * (n.half + 12), py = n.y - dy * (n.half + 14) + ry * (n.half + 12);
-      const hx = n.x - dx * (n.half + 14) + rx * lane * 0.55, hy = n.y - dy * (n.half + 14) + ry * lane * 0.55;
-      // arm + shadow
+    if (!n.light || n.lvl !== 0 || n.x < view.x0 - 200 || n.x > view.x1 + 200 || n.y < view.y0 - 200 || n.y > view.y1 + 200) continue;
+    for (const id of n.edges) {
+      const e = edges[id];
+      if (e.oneway && e.b !== n.id) continue; // nobody arrives along a one-way leaving here
+      // drivers arrive heading opposite to the edge's outgoing direction at this node
+      const oa = n.dirs[id], ox = Math.cos(oa), oy = Math.sin(oa);
+      const dx = -ox, dy = -oy, rx = -dy, ry = dx; // travel direction and its right-hand side
+      const back = (n.trim[id] || n.half || 60) + 14;
+      const bx = n.x + ox * back, by = n.y + oy * back; // stop line centre (on the road's centre line)
+      const st = signalFor(n, id, S.loopTime);
+      const lanes = e.oneway ? 0 : (e.median / 2 + e.hw) / 2;
+      const px = bx + rx * (e.hw + 12), py = by + ry * (e.hw + 12);
+      const hx = bx + rx * lanes, hy = by + ry * lanes;
       g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 4; g.beginPath(); g.moveTo(px + 4, py + 4); g.lineTo(hx + 4, hy + 4); g.stroke();
       g.strokeStyle = '#2a2d35'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(px, py); g.lineTo(hx, hy); g.stroke();
       g.strokeStyle = '#4c5260'; g.lineWidth = 1; g.beginPath(); g.moveTo(px, py - 1); g.lineTo(hx, hy - 1); g.stroke();
