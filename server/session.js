@@ -33,6 +33,8 @@ export function createSession(world, conn, opts) {
       if (!msg || typeof msg !== 'object') return;
       if (msg.t === 'hello') {
         if (player) return;
+        const closed = opts.closedReason && opts.closedReason();
+        if (closed) { conn.sendJSON({ t: 'kicked', reason: closed }); conn.close(4003, 'quota'); return; }
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const { profile, token } = opts.login(msg.token);

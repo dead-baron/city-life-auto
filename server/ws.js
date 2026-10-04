@@ -6,6 +6,8 @@ import { EventEmitter } from 'node:events';
 
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const MAX_PAYLOAD = 64 * 1024;
+// Every byte written to any WebSocket (frames included) - the server meters this for its data cap.
+export const wsStats = { bytesOut: 0 };
 
 export class WSConnection extends EventEmitter {
   constructor(socket, req) {
@@ -92,6 +94,7 @@ export class WSConnection extends EventEmitter {
       this.socket.write(data);
       this.socket.uncork();
     } catch { this._closed(); return false; }
+    wsStats.bytesOut += header.length + len;
     return true;
   }
 
@@ -122,7 +125,8 @@ export class WSConnection extends EventEmitter {
   }
 }
 
-export function attachWebSocketServer(httpServer, { path = '/ws', onConnection, allowOrigin = () => true }) {
+// allowUpgrade(req) -> null to accept, or [status, text] to refuse before the handshake (cheap).
+export function attachWebSocketServer(httpServer, { path = '/ws', onConnection, allowOrigin = () => true, allowUpgrade = () => null }) {
   const clients = new Set();
   httpServer.on('upgrade', (req, socket) => {
     const url = new URL(req.url, 'http://x');
@@ -135,6 +139,8 @@ export function attachWebSocketServer(httpServer, { path = '/ws', onConnection, 
       socket.end('HTTP/1.1 403 Forbidden\r\n\r\n');
       return;
     }
+    const refuse = allowUpgrade(req);
+    if (refuse) { socket.end(`HTTP/1.1 ${refuse[0]} ${refuse[1]}\r\n\r\n`); return; }
     const key = req.headers['sec-websocket-key'];
     if (!key) { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); return; }
     const accept = createHash('sha1').update(key + GUID).digest('base64');

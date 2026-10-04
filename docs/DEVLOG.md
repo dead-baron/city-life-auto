@@ -681,3 +681,19 @@ Measured with 4x CPU throttling (phone-like frame times). Before: driving speed 
   - Each platform picks the side with room, so on a waterfront it can be a pier.
   - The timetable lists the stations from the map.
 - Tutorial v11 (railway text). The railway test now checks that no track is laid in water, the longest bridge, and the bridge share of the line. The drag test moved to the rural straight. World map rebuilt.
+
+## Server cost and abuse guards
+- **Monthly outbound-data cap** (`server/limits.js`, `CLA_MONTHLY_GB`, default 9,000 GB, just under Oracle's 10 TB free allowance):
+  - Everything the server sends (WebSocket frames, metered in `ws.js`, plus HTTP files) is counted per calendar month (UTC), with 12% added for TCP/TLS overhead.
+  - The count is saved to `traffic.json` in the data dir, so restarts don't reset it.
+  - At 95% of the cap new players are turned away. At 100% everyone is disconnected with a message and connections are refused (503) until the 1st.
+  - Progress shows under `traffic` in `/stats`. The result is a hard stop on data charges, which Oracle budgets (alerts only) can't give.
+- **Per-IP limits** (`CLA_MAX_PER_IP` 6 simultaneous, `CLA_CONN_PER_MIN` 20 new connections a minute, `CLA_HTTP_PER_MIN` 300 HTTP requests a minute):
+  - Refused before the WebSocket handshake (429), so one script can't fill the city or pull files on repeat.
+  - `X-Forwarded-For` is only trusted when the server listens on localhost behind Caddy.
+- **Deploy script fixes:**
+  - The 80/443 firewall rule now goes above the Ubuntu-on-Oracle catch-all REJECT; before, it was added after it and never matched.
+  - The backup cron step no longer stops the script on a fresh server with no crontab.
+  - The service file sets the new limits.
+- New `test/limits.test.js` (4 tests).
+

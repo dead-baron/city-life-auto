@@ -5,7 +5,8 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname } from 'node:path';
 import { config } from './config.js';
-import { attachWebSocketServer } from './ws.js';
+import { attachWebSocketServer, wsStats } from './ws.js';
+import { createLimits, clientIp } from './limits.js';
 import { issueToken, verifyToken, newPlayerId } from './auth.js';
 import { store, useStore } from './store.js';
 import { FileStore } from './file-store.js';
@@ -26,10 +27,16 @@ useStore(new FileStore());
 const map = generateCity(config.seed);
 const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget });
 const startedAt = Date.now();
+const limits = config.monthlyGB > 0 || config.maxPerIp > 0 ? createLimits({ dataDir: config.dataDir, monthlyGB: config.monthlyGB > 0 ? config.monthlyGB : Infinity, maxPerIp: config.maxPerIp, connPerMinute: config.connPerMinute, httpPerMinute: config.httpPerMinute }) : null;
+const QUOTA_MSG = 'The city is closed for the rest of the month (monthly data limit reached). It reopens on the 1st!';
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
+  if (limits && path !== '/health') {
+    const why = limits.checkHttp(clientIp(req, config.trustProxy));
+    if (why) { res.writeHead(why === 'quota' ? 503 : 429, { 'content-type': 'text/plain', 'retry-after': '60' }); res.end(why === 'quota' ? QUOTA_MSG : 'Too many requests'); return; }
+  }
   if (path === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok'); return; }
   if (path === '/stats') {
     res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
@@ -46,6 +53,7 @@ const server = createServer(async (req, res) => {
     const st = await stat(file);
     if (!st.isFile()) throw new Error('not file');
     const body = await readFile(file);
+    if (limits) limits.addBytes(body.length + 300); // + headers
     res.writeHead(200, { 'content-type': MIME[extname(file)] || 'application/octet-stream', 'cache-control': config.dev ? 'no-cache' : 'public, max-age=300' });
     res.end(body);
   } catch {
@@ -61,9 +69,17 @@ function originAllowed(origin) {
 attachWebSocketServer(server, {
   path: '/ws',
   allowOrigin: originAllowed,
-  onConnection(conn) {
+  allowUpgrade(req) {
+    if (!limits) return null;
+    const why = limits.checkUpgrade(clientIp(req, config.trustProxy));
+    return why === 'quota' ? [503, 'Monthly Data Limit Reached'] : why ? [429, 'Too Many Connections'] : null;
+  },
+  onConnection(conn, req) {
+    const ip = clientIp(req, config.trustProxy);
+    if (limits) { limits.track(ip); conn.on('close', () => limits.untrack(ip)); }
     const session = createSession(world, conn, {
       seed: config.seed, dev: config.dev, maxPlayers: config.maxPlayers, label: 'City Life Auto 0.8',
+      closedReason: () => (limits && limits.state() !== 'ok' ? QUOTA_MSG : null),
       login(token) {
         const v = verifyToken(token);
         let profile = v ? store.get(v.pid) : null;
@@ -91,6 +107,7 @@ function statsSnapshot() {
     kbOutPerSec: +((world.stats.bytesOut / Math.max(1, (Date.now() - startedAt) / 1000)) / 1024).toFixed(1),
     weather: world.weather, clock: Math.round(world.clock.minutes), droppedSnapshots: world.stats.dropped || 0,
     systemMs: world.profile(),
+    traffic: limits ? limits.summary() : null,
   };
 }
 
@@ -109,6 +126,17 @@ function loop() {
 }
 
 setInterval(() => store.flush(), config.saveIntervalMs).unref();
+// data meter: fold in what the WebSockets sent; at the monthly cap, close the city
+let lastWs = 0;
+if (limits) {
+  setInterval(() => {
+    limits.addBytes(wsStats.bytesOut - lastWs); lastWs = wsStats.bytesOut;
+    if (limits.state() === 'over') {
+      for (const p of world.players.values()) if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: QUOTA_MSG }); p.conn.close(4003, 'quota'); } catch { /* gone */ } }
+    }
+  }, 1000).unref();
+  setInterval(() => { limits.save(); limits.sweep(); }, 30000).unref();
+}
 setInterval(() => {
   const s = statsSnapshot();
   console.log(`[stats] online=${s.online} ghosts=${s.ghosts} ents=${s.entities} npc=${s.npcPeds} veh=${s.vehicles} tick=${s.tickMsAvg}ms (max ${s.tickMsMax}) out=${s.kbOutPerSec}KB/s`);
@@ -122,6 +150,7 @@ function shutdown(sig) {
     if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server restarting - your progress is saved. Reconnecting...' }); } catch { /* closed */ } }
   }
   try { store.flushSync(); } catch (e) { console.error('[server] final save failed', e); }
+  if (limits) { limits.addBytes(wsStats.bytesOut - lastWs); limits.save(); }
   process.exit(0);
 }
 process.on('SIGINT', () => shutdown('SIGINT'));
