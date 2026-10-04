@@ -74,6 +74,17 @@ function procVehicle(def, paint) {
   g.fillStyle = '#111'; rr(g, 0, 0, L, W, 6); g.fill();
   if (def.id === 'bus') paint = '#f2c21b';
   if (def.id === 'armored') paint = '#d8dbe0';
+  if (def.id === 'bicycle') { // two thin wheels, the frame between, handlebars across the front
+    g.clearRect(-2, -2, L + 4, W + 4);
+    const cy = W / 2;
+    g.fillStyle = '#16171b'; rr(g, 0, cy - 2, 12, 4, 2); g.fill(); rr(g, L - 12, cy - 2, 12, 4, 2); g.fill(); // tyres
+    g.fillStyle = '#8a8f99'; g.fillRect(2, cy - 0.5, 8, 1); g.fillRect(L - 10, cy - 0.5, 8, 1);             // rims
+    g.fillStyle = paint; g.fillRect(8, cy - 1.5, L - 18, 3);                                                  // frame
+    g.fillStyle = '#1b1d22'; rr(g, 11, cy - 2.5, 7, 5, 2); g.fill();                                          // saddle
+    g.fillStyle = '#2a2d35'; g.fillRect(L - 11, 1, 2, W - 2);                                                 // bars
+    g.fillStyle = '#c9c5bb'; g.fillRect(L - 11, 0, 2, 2); g.fillRect(L - 11, W - 2, 2, 2);                    // grips
+    return cv;
+  }
   if (def.id === 'jetski') { // stubby hull, seat, handlebars
     g.clearRect(-2, -2, L + 4, W + 4);
     g.fillStyle = paint; g.beginPath(); g.moveTo(0, 3); g.lineTo(L - 12, 1); g.quadraticCurveTo(L, W / 2, L - 12, W - 1); g.lineTo(0, W - 3); g.closePath(); g.fill();

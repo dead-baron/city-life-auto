@@ -58,6 +58,9 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Call police cruiser (on duty) | V | D-pad down | COP CAR (shows when you have no cruiser) |
 | Tackle a suspect (on duty) | Space (dive) into them | A | ROLL |
 | Cuff / book a downed suspect | E | B | ACT |
+| Lay a spike strip (on duty: select it with the weapon key, then fire toward the road ahead) | Tab, then click | RB, then RT | WPN, then FIRE |
+| Hire a boat / hand it back (at a rental dock) | E at the kiosk · E in the boat by the pier | B | ACT |
+| Moor a boat in your boathouse (waterfront homes) / take one out | E in the boat by your slip · E at your door → Take out | B | ACT |
 | Heal (bandage / medkit) | X | Back | HEAL |
 | Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN |
 | City map + waypoints (pick a category / place, or click the map) | M | Pause → Map (D-pad / stick, A pick, B back) | tap the radar or ▦, then tap |

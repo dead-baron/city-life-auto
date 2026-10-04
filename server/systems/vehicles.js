@@ -206,6 +206,13 @@ export function explode(world, v, attackerPed) {
   v.hp = 0;
   v.wreckAt = world.time;
   v.sirenOn = false;
+  if (v.def.pedal) {
+    // a bicycle has nothing to blow up: it buckles and the rider comes off
+    for (const sid of [...v.seats]) { const ped = sid && world.get(sid); if (ped) ejectPed(world, ped, true); }
+    cargo.spillCargo(world, v);
+    world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: 0.4 });
+    return;
+  }
   world.emit(v.x, v.y, { e: 'explode', x: v.x, y: v.y, r: v.def.kind === 'bike' ? 60 : 110 });
   for (const sid of [...v.seats]) {
     if (!sid) continue;
@@ -430,8 +437,8 @@ export function vehFlags(world, v) {
   if (v.brake) f |= VF.BRAKE;
   if (v.reverse) f |= VF.REVERSE;
   if (v.wreckAt) f |= VF.WRECK;
-  if (v.burnUntil > world.time || (v.wreckAt && world.time - v.wreckAt < 20)) f |= VF.BURN;
-  if (v.hp < v.def.hp * 0.35) f |= VF.SMOKE;
+  if (v.burnUntil > world.time || (v.wreckAt && !v.def.pedal && world.time - v.wreckAt < 20)) f |= VF.BURN;
+  if (v.hp < v.def.hp * 0.35 && !v.def.pedal) f |= VF.SMOKE;
   if (v.drift) f |= VF.DRIFT;
   if (v.hornUntil > world.time) f |= VF.HORN;
   if (v.bloody) f |= VF.BLOODY;

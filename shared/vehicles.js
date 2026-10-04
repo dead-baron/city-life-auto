@@ -32,6 +32,8 @@ export const VEHICLES = {
   garbage:   { i: 22, name: 'Garbage Truck',    kind: 'car',  L: 140, W: 60, max: 380, accel: 170, brake: 500, rev: 120, turn: 1.8, grip: 7.2, drift: 2.4, mass: 3.4, hp: 520, seats: 2, slots: [[-50, 0]] },
   firetruck: { i: 23, name: 'Fire Engine',      kind: 'car',  L: 176, W: 64, max: 470, accel: 200, brake: 520, rev: 120, turn: 1.7, grip: 7.2, drift: 2.4, mass: 4.0, hp: 700, seats: 4, slots: [[-30, -15], [-30, 15], [-60, -15], [-60, 15]] },
   towtruck:  { i: 24, name: 'Tow Truck',        kind: 'car',  L: 134, W: 58, max: 480, accel: 220, brake: 560, rev: 140, turn: 2.0, grip: 7.6, drift: 2.4, mass: 2.6, hp: 400, seats: 2, slots: [[-34, -13], [-34, 13]], price: 9500 },
+  // pedal power: quiet, slow, nimble; it buckles instead of blowing up
+  bicycle:   { i: 25, name: 'City Bicycle',     kind: 'bike', L: 40,  W: 14, max: 330, accel: 260, brake: 620, rev: 50,  turn: 3.9, grip: 10,  drift: 3.0, mass: 0.25, hp: 50, seats: 1, slots: [[-14, 0]], price: 250, pedal: true },
 };
 
 export const VEHICLE_BY_INDEX = [];

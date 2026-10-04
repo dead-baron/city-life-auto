@@ -929,3 +929,42 @@ Playtest:
   - The passenger-coach painting is now the riding view inside every coach.
   - Landmarks are labelled on the world map, and the world map was re-baked.
 - `tools/build_interiors.py` now also samples paintings into tile masks (water / sand / grass / jetty / solid), so a whole scene can reshape the ground under it.
+
+## 2026-10-04 · Round 6: a subway again, smarter crowds round the trains, boats for hire, cleaner intersections
+
+- **Railway:**
+  - Back to three-car trains (locomotive and two coaches; every third train swaps a coach for the mail car), so a train fits its platform again. The coach interior is the drawn one again, not the concept painting with painted passengers.
+  - **Subway:** the line dives underground through the city core between Civic Center and The Yards. Its three stations (Civic Center, Downtown, Midtown) are stairways on the sidewalk, with a tunnel view once you're down there.
+  - The line goes **under** the ground-level highways where it can: cuttings with retaining walls lead into short tunnels.
+  - **Fewer stops:** 12 stations instead of one in every district.
+  - **Country stations** get a road connecting them to the network and a small car park. Sometimes a car is left there, so getting off out in the sticks doesn't always mean walking.
+- **People and trains:**
+  - Pedestrians step back from the track when a train is coming. Drivers look along their whole route for crossings and wait for the gates.
+  - Now and then somebody misjudges it (about one in sixteen), so accidents still happen. They are rare.
+  - **Commuters:** people gather on the platform ahead of a train, board when it pulls in, and get off at later stops. A near-empty train fills up a bit when you board it.
+- **Smooth bridges:** road and rail bridges are drawn as smooth decks following the road's curve over the water, instead of tile squares.
+- **Boat hire:**
+  - Rental docks at Sunset Beach, the Harbor, Pelican Key, Lakeview Lake and Cedar Lake. Each has a kiosk, a pier and boats tied up.
+  - Hire a jet ski, dock motorboat or speedboat (lakes: no speedboats) for 5 minutes (`BOAT_RENTAL_S`). It waits at the end of the pier.
+  - Hand it back at any rental dock. Leave it lying about and it's towed home. Stay out 45 s past your time and the company reports it stolen.
+- **Waterfront homes:**
+  - 14 homes near the water now have a private pier and a boathouse (a covered slip, with a roof that turns see-through while a boat is inside). They cost 30% more and hold one more vehicle.
+  - Pull a boat you own into the slip to moor it. From the house, "Take out your ..." puts you at the helm in the slip.
+  - Fix: parking a vehicle you already own no longer adds a second copy to your garage list.
+- **Intersections:**
+  - Zebra crossings are now chosen once per map, busiest junctions first. A crossing that would overlap another one, or lie across another street's asphalt, is dropped. No more stacked stripes at tight junction pairs and skewed corners.
+  - Downtown, nightlife, old town, civic and apartment districts get **span-wire signals**: cables from building walls (or slim posts) meet over the middle of the junction, with a head hanging off the hub for each approach.
+  - Everywhere else each approach has a **mast-arm pole** on the kerb. Poles are street furniture: hit one hard enough and it goes over and lies in the road until the crew puts it back.
+  - **Bridge toll cameras:** a gantry at each end of every long road bridge. Cross with a wanted level and it pings the police.
+- **Things from earlier rounds brought back or finished:**
+  - Bike and jet-ski riders are drawn with the new character art, sitting on the saddle facing the way they ride. The passenger now sits behind the driver (the in-vehicle sprint bit marks the passenger seat). Jet-ski riders were invisible before.
+  - Dive rolls, tumbles and being flung from a car use the drawn body (curled up for a roll) instead of the old small sprite.
+  - Executives carry their briefcase again. Women's caps, bandanas, sunglasses and purse straps show again.
+  - Up on the elevated highway, headlights, name tags and health bars follow the car or person up onto the deck.
+  - **Account transfer code** (Settings): copy it on one device and paste it on another to play the same character. The character it replaces is remembered, so a wrong paste can be undone.
+  - **Pepper spray** (sports and gun shops): a short cone that blinds anyone in front of you for 3 seconds. Non-lethal and legal.
+  - **Spike strips** (issued to on-duty police): thrown across the road ahead. Anything driven over it gets shredded tyres, about half speed with slithery grip, until a garage repair fits new ones. A strip lasts `SPIKE_STRIP_S` = 45 s, one per officer.
+  - **City bicycle** at the dealership: slow, nimble, quiet. It buckles instead of exploding.
+- The city tour covers all of the above (`TUTORIAL_VERSION` 17).
+
+**Still to do from the audit:** walk-in nightclubs that open at night, the stray-pets event, respray on painted vehicles sometimes looking unchanged, a drawn police front desk/armory, the medic's kneeling pose, blood footprints through splats, and crate slots on the mixer and tanker.

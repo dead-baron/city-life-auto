@@ -59,3 +59,22 @@ test('home: change outfit inside, pick a car, the garage opens and you ease out 
   assert.ok(Math.hypot(v.x - h.garage.x, v.y - h.garage.y) < 30, 'parked on the driveway');
   assert.ok(!homes.isProtected(w, p.ped));
 });
+
+test('bicycles: sold at the dealership, slower than a motorcycle, and they buckle instead of blowing up', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w, { bank: 5000 });
+  const dealer = w.map.pois.find((q) => q.kind === 'dealer');
+  assert.ok(economy.buildMenu(w, p, dealer).opts.some((o) => o.id === 'vb:bicycle'), 'on sale');
+  const bike = w.spawnVehicle('bicycle', dealer.x, dealer.y + 200, 0, { npcOwned: false });
+  assert.ok(bike.def.max < w.spawnVehicle('bike', dealer.x + 200, dealer.y + 200, 0, {}).def.max * 0.6);
+  teleport(w, p.ped, bike.x + 12, bike.y + 12);
+  bike.seats[0] = p.ped.id; p.ped.vehId = bike.id; p.ped.seat = 0;
+  const events = [];
+  const emit = w.emit.bind(w);
+  w.emit = (x, y, ev) => { events.push(ev.e); emit(x, y, ev); };
+  vehicles.damageVehicle(w, bike, 999, null, true);
+  assert.ok(bike.wreckAt, 'wrecked');
+  assert.ok(!events.includes('explode'), 'no explosion');
+  assert.equal(p.ped.vehId, 0, 'rider thrown off');
+  assert.ok(!p.ped.dead);
+});

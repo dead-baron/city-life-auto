@@ -40,7 +40,6 @@ The police station lobby / armory screens shown while you use the front desk are
 - **Cedar Hills Golf Club** - the whole golf course painting (clubhouse, carts, fairways, bunkers, ponds, creek) laid over open countryside on Cedar Isle; the clubhouse is solid.
 - **Paradise Cay** - the palm-island painting raised out of the bay between Westport and Metro City: the land, beaches and jetty follow the painting exactly (sampled into a tile mask), the cabin is solid. Boat-only.
 - **Red Rock Canyon** - the desert canyon painting in the Dry Creek desert: the mesas and cliffs are solid where they're painted, plus the homestead and water tower.
-- **Train coach interior** - the coach painting is the inside view of every passenger coach while you ride.
 
 ## Ground (`assets/ground.png`)
 
@@ -48,13 +47,13 @@ asphalt, worn asphalt, concrete sidewalk, red brick, slate plaza, water, deep wa
 
 ## Vehicles (`assets/atlas0.png`)
 
-compact, sedan, taxi, sports, pickup, van, police, swat, ambulance, bike, speedboat, dinghy, bus, armored, flatbed, box truck, dump truck, mixer, tanker, garbage truck, fire truck, tow truck - several painted variants each, from the vehicle sheets. **Procedural:** police motorcycle livery, police boat livery, jetski, trains (locomotive, coaches, mail car).
+compact, sedan, taxi, sports, pickup, van, police, swat, ambulance, bike, speedboat, dinghy, bus, armored, flatbed, box truck, dump truck, mixer, tanker, garbage truck, fire truck, tow truck - several painted variants each, from the vehicle sheets. **Procedural:** police motorcycle livery, police boat livery, jetski, city bicycle, trains (locomotive, coaches, mail car).
 
 ## Characters (`assets/chars/`)
 
 - Body sheet: male and female idle + female walk frames from the character sheets; the male walk is composed at runtime from the female walk legs. Clothing, hair and skin are recoloured layers (outline / skin / shirt / pants / shoes / hair).
 - Lying poses (knocked down, passed out) from the "lying down" sheet.
-- **Procedural:** running, punching, throwing, aiming, diving, swimming, animals.
+- **Procedural:** running, punching, throwing, aiming, swimming, animals. Dive rolls, tumbles and flings reuse the drawn lying-down body (curled up for a roll). Bike and jet-ski riders are the drawn upper body on the saddle.
 
 ## Street props (`assets/atlas0.png`)
 
@@ -62,7 +61,11 @@ compact, sedan, taxi, sports, pickup, van, police, swat, ambulance, bike, speedb
 
 ## Railway (all procedural, in the concept palette)
 
-Track, ties, bridge decks and girders, level crossings (gates, lights, crossbucks), open-air platforms (deck, coping, safety line, shelters, benches, lamps, name boards, stairs), platform clocks, the boarding glow, the trains.
+Track, ties, bridge decks and girders, level crossings (gates, lights, crossbucks), open-air platforms (deck, coping, safety line, shelters, benches, lamps, name boards, stairs), platform clocks, the boarding glow, the trains, the coach interior, subway stairways, tunnel portals and cuttings, the underground tunnel view.
+
+## Streets and water (all procedural)
+
+Smooth road and rail bridge decks along the road's curve; zebra crossings; mast-arm signal poles (and knocked-over poles); span-wire signals; bridge toll gantries; spike strips; waterfront boathouses (catwalks, pilings, tin roof); rental-dock kiosks and piers; country-station car parks.
 
 ## Concepts not used yet (candidates for later rounds)
 

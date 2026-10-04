@@ -35,7 +35,9 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 - Light overlays: headlights, brake lights, reverse lights, police/ambulance/fire light bars (2 frames each).
 - Doors-open frames (left/right) for the enter/exit animation.
 - Police motorcycle, police boat, jetski, a proper dinghy with outboard - currently recoloured or procedural.
-- Trains: locomotive, passenger coach, mail car - roof views at 196x70 / 212x76 / 188x76 world px, plus a mail-car interior. (The coach interior now uses your coach painting; a version without painted passengers would let the real riders stand out.)
+- City bicycle (40x14 world px, facing right; a few frame colours) - procedural now.
+- Flat-tyre look (shredded tyres after a spike strip) - optional overlay.
+- Trains: locomotive, passenger coach, mail car - roof views at 196x70 / 212x76 / 188x76 world px, plus coach and mail-car interiors with no painted people (the coach interior is drawn by code again).
 - Optional: a light aircraft and an airliner for the airports (static props now).
 
 ## 3. Railway
@@ -43,6 +45,8 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 - Track tiles: straight, curves (gentle), on ballast and on a bridge deck; a steel truss bridge span.
 - Level crossing kit: gate arm (up/down), post with crossbuck and lights (lit/unlit), road panel.
 - Station platform kit: platform edge with safety line, shelter, bench, lamp, name board, stairs/ramp, ticket machine; a station building (small town + big city versions).
+- Subway: a sidewalk stairway entrance with its sign (top-down), a tunnel portal / cutting with retaining walls, and a tunnel interior strip for the underground view.
+- Small country-station car park (a few bays, a shelter) - procedural now.
 
 ## 4. Buildings
 
@@ -56,9 +60,18 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 - Clean versions (no painted people) of: soccer pitch / stadium, beach volleyball court, park playground - painted people can't move, so the live ones are drawn on top.
 - Airport kit: terminal building, jet bridge, hangar, apron markings, runway ends.
 - Water kit: shoreline edges and corners (sand, rock, concrete quay), piers, buoys, boat wake.
+- Boathouse for waterfront homes: a covered boat slip about 64x128 world px, roof view, plus a roof-off version (the roof fades while a boat is inside).
+- Boat-rental kiosk (a small shack with a "Rentals" sign, about 96x64) and hire boats tied along a pier.
+- Smooth bridge decks: straight and curved road / rail bridge spans with railings (drawn by code along the road's curve now).
 - Weather/FX: rain streaks, puddle splash, tyre smoke, skid marks, muzzle flashes, explosions (6-8 frames), fire (loop), blood decals.
 
-## 6. UI
+## 6. Street furniture
 
-- Weapon icons (64x32 side view) for every weapon tier; item icons (bandage, med kit, armour, fishing rod, fish types).
+- Traffic signals: a mast-arm pole with its 3-lamp head (top-down, lit and unlit), its knocked-over state, and a span-wire head hanging from cables (for downtown).
+- Bridge toll gantry spanning a road, with cameras.
+- Police spike strip lying across a road.
+
+## 7. UI
+
+- Weapon icons (64x32 side view) for every weapon tier, including pepper spray and the spike strip; item icons (bandage, med kit, armour, fishing rod, fish types).
 - HUD frame pieces (minimap ring, wanted stars, money font) if you want them hand-drawn.

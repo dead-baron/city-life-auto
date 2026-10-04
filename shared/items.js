@@ -117,7 +117,7 @@ export const SHOPS = {
   ], sells: ['purse', 'bonds', 'jewelry'] },
   clothing: { title: 'Threads Outfitters', buy: [{ kind: 'service', id: 'outfit', price: 120 }] },
   garage: { title: 'Fresh Coat Garage', buy: [{ kind: 'service', id: 'respray', price: 250 }, { kind: 'service', id: 'wash', price: 20 }, { kind: 'service', id: 'repair', price: 300 }, { kind: 'service', id: 'garage', price: 0 }] },
-  dealer: { title: 'Motor Row Dealership', buy: ['compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports'].map((id) => ({ kind: 'vehicle', id })) },
+  dealer: { title: 'Motor Row Dealership', buy: ['bicycle', 'compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports'].map((id) => ({ kind: 'vehicle', id })) },
   marina: { title: 'Harbor Marina', buy: ['jetski', 'dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },
 };
 
