@@ -102,6 +102,9 @@ ATM_ART = {
 # name -> (box, lamp centres x in source px). Mouth on the left for 'subway_l', right for 'subway_r'.
 SUBWAY_SHEET = 'e076993c-image.png'
 SUBWAY_ART = {'subway_l': ((188, 234, 670, 590), (213, 644)), 'subway_r': ((866, 234, 1348, 590), (897, 1326))}
+# the route bullets painted on each sign (real-world subway lines) are blanked to the sign's black;
+# the game draws its own line, the City Loop, in that panel (client/render/trains.js SIGN_PANEL)
+SUBWAY_BULLETS = [(466, 335, 605, 368), (932, 335, 1037, 368)]
 SUBWAY_W = 128  # world px wide (shared/map.js SUBWAY_ART)
 
 ATM_W = 40   # world px wide (a bit wider than a person); height follows the art
@@ -540,6 +543,8 @@ def build_sprites():
         prop_sizes[name] = [round(w), round(h)]
         sprites.append(('prop_' + name, fit(c, w * SCALE, h * SCALE)))
     sub_src = Image.open(find_src(SUBWAY_SHEET)).convert('RGB')
+    for box in SUBWAY_BULLETS:
+        ImageDraw.Draw(sub_src).rectangle([box[0], box[1], box[2] - 1, box[3] - 1], fill=(22, 23, 28))
     for name, ((x0, y0, x1, y1), lamps) in SUBWAY_ART.items():
         c = sub_src.crop((x0, y0, x1, y1)).convert('RGBA')
         mask = Image.new('L', c.size, 0)

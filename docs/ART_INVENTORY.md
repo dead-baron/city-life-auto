@@ -48,7 +48,7 @@ Walk into any of these and the roof lifts off onto the painted interior. Every p
 
 ## Subway entrances (`prop_subway_l`, `prop_subway_r`)
 
-The two street kiosks from the subway concept (green railings, stairs, SUBWAY sign, globe lamps), cut out of the pavement around them (`SUBWAY_ART` in `tools/build_art.py`), drawn 128 px wide on each underground stop's plaza. The queue lane, countdown board and boarding glow are drawn in code.
+The two street kiosks from the subway concept (green railings, stairs, SUBWAY sign, globe lamps), cut out of the pavement around them (`SUBWAY_ART` in `tools/build_art.py`), drawn 128 px wide on each underground stop's plaza. The real-world route bullets on the signs are blanked; the game draws its own City Loop badge (orange L) there. The queue lane, countdown board and boarding glow are drawn in code.
 
 ## Cash machines (`assets/atlas*.png`, `prop_atm_*`)
 

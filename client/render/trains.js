@@ -234,8 +234,22 @@ function drawSubwayEntrance(g, k, x0, y0) {
   g.fillText('WAIT HERE', (lx0 + lx1) / 2 - dir * 10, ly1 - 7);
   g.restore();
   const fr = atlas.ready ? atlas.frames[k.flip ? 'prop_subway_r' : 'prop_subway_l'] : null;
-  if (fr) g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, k.x0, k.y0, k.w, k.h);
+  if (fr) { g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, k.x0, k.y0, k.w, k.h); drawLineBadge(g, k.x0 + SIGN_PANEL[k.flip ? 1 : 0][0], k.y0 + SIGN_PANEL[0][1]); }
   else { g.fillStyle = '#1f4a3c'; g.fillRect(k.x0, k.y0 + 30, k.w, k.h - 30); g.fillStyle = '#222'; g.fillRect(k.pit[0], k.pit[1], k.pit[2] - k.pit[0], k.pit[3] - k.pit[1]); }
+}
+
+// The sign panel (kiosk px, left and mirrored kiosk) where the concept had real-world route
+// bullets; it carries the game's own line instead: the orange L of the City Loop.
+export const SUBWAY_LINE = { name: 'City Loop', letter: 'L', color: '#f28c28' };
+const SIGN_PANEL = [[74.5, 27, 36.5, 8], [18, 27, 27, 8]];
+function drawLineBadge(g, x, y) {
+  g.save();
+  g.fillStyle = SUBWAY_LINE.color; g.beginPath(); g.arc(x + 4.2, y + 4, 3.9, 0, 6.283); g.fill();
+  g.fillStyle = '#fff'; g.font = 'bold 6px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(SUBWAY_LINE.letter, x + 4.2, y + 4.4);
+  g.fillStyle = '#f2efe6'; g.font = 'bold 5px sans-serif'; g.textAlign = 'left';
+  g.fillText('LOOP', x + 9.5, y + 4.4);
+  g.restore();
 }
 
 // Someone walking down into (or up out of) a subway kiosk sinks into the stairwell: drawn clipped
