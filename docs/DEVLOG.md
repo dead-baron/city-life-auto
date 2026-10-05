@@ -1372,3 +1372,16 @@ Went through every painting the game uses: each building lot, the hospital front
   
   It's made to be read off a screenshot from a TV.
 - Tested in headless Chromium emulating Xbox Edge: Xbox user agent, 1920x1080 at pixel ratio 2, a controller with emulated cursor movement, and a forced `contextlost`.
+
+## 2026-10-05 · Xbox: graphics memory, part 2 (low-memory mode)
+
+- **The cause:** Edge on Xbox Series X still ran out of graphics memory after a while, even at 1x resolution. Measuring a city tour in an emulated Xbox session showed two things.
+  - **Canvas memory kept climbing** (79 → 110 MB in a minute, more over time). Character sprites are cached per outfit, direction, pose and frame, up to 5,000 + 4,000 + 3,000 small canvases. Building roofs and facades were cached up to 60 + 160. Evicted canvases only gave their pixels back whenever the garbage collector got round to it.
+  - **Images held about 270 MB once decoded,** about 100 MB of it the night-glow sheets.
+- **Low-memory mode** (`client/platform.js`, on for consoles, or `?lowmem` anywhere):
+  - Character sprite caches are capped at 1,200 / 1,200 / 200.
+  - Roofs are capped at 24, facades at 60, the ground chunk cache at 12, the tour's chunk cache at 14 and shop interiors at 4.
+  - The night-glow sheets aren't loaded below High graphics.
+- **Everywhere:** evicted canvases are emptied straight away (`freeCanvas`), so their pixels go back at once. This covers ground chunks, roofs, facades, interiors, sprite and tint caches.
+- **Result** in the same emulated tour: canvas memory levels off around 80–90 MB instead of climbing, and about 100 MB less image memory on a console.
+- **Diagnostics:** the overlay now also shows live canvases and their memory, and whether low-memory mode is on.

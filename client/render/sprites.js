@@ -6,11 +6,12 @@ import { shade } from './tiles.js';
 import { paintCharacter, CHAR_GRID } from './peds.js';
 import { PREFAB_SHEETS } from '../../shared/prefab-data.js';
 import { BLOCK_SHEETS } from '../../shared/block-data.js';
+import { LOW_MEM, capSet } from '../platform.js';
 
 const SKINS = ['#f1c9a5', '#e0ac7e', '#c68953', '#a86b3c', '#7d4a26', '#4f2f1a'];
 export const atlas = { ready: false, imgs: [], frames: {}, variants: {}, scale: 2, ground: null, prefabs: null, prefabGlow: null, blocks: null, blockGlow: null, interiors: null, scenes: null, animals: null };
 
-export async function loadAtlas(base = 'assets/') {
+export async function loadAtlas(base = 'assets/', glowSheets = true) {
   try {
     const meta = await (await fetch(base + 'sprites.json')).json();
     atlas.frames = meta.frames; atlas.variants = meta.variants; atlas.scale = meta.scale;
@@ -18,9 +19,13 @@ export async function loadAtlas(base = 'assets/') {
     [atlas.imgs, atlas.ground, atlas.prefabs, atlas.scenes, atlas.blocks] = await Promise.all([Promise.all(meta.atlases.map(load)), load('ground.png'), Promise.all(Array.from({ length: PREFAB_SHEETS }, (_, i) => load(`prefabs${i}.webp`))), load('scenes.webp').catch(() => null),
       Promise.all(Array.from({ length: BLOCK_SHEETS }, (_, i) => load(`blocks${i}.webp`))).catch(() => null)]); // hand-designed blocks
     atlas.ready = true;
-    // night emissive sheets load after the day art (not needed for the first frame)
-    Promise.all(Array.from({ length: PREFAB_SHEETS }, (_, i) => load(`prefabs${i}_glow.webp`))).then((a) => { atlas.prefabGlow = a; }).catch(() => {});
-    Promise.all(Array.from({ length: BLOCK_SHEETS }, (_, i) => load(`blocks${i}_glow.webp`))).then((a) => { atlas.blockGlow = a; }).catch(() => {});
+    // night emissive sheets load after the day art (not needed for the first frame). They're as
+    // big again as the day art once decoded (~100 MB), so a console on less than High does without
+    // them: the lighting pass still lights the windows.
+    if (!LOW_MEM || glowSheets) {
+      Promise.all(Array.from({ length: PREFAB_SHEETS }, (_, i) => load(`prefabs${i}_glow.webp`))).then((a) => { atlas.prefabGlow = a; }).catch(() => {});
+      Promise.all(Array.from({ length: BLOCK_SHEETS }, (_, i) => load(`blocks${i}_glow.webp`))).then((a) => { atlas.blockGlow = a; }).catch(() => {});
+    }
     load('interiors.webp').then((im) => { atlas.interiors = im; }).catch(() => {}); // shop interiors (only needed once you walk in)
     load('animals.png').then((im) => { atlas.animals = im; }).catch(() => {}); // lost pets
   } catch (e) { console.warn('atlas unavailable, using procedural sprites', e); }
@@ -293,8 +298,7 @@ export function pedSprite(app, pose, frameN, weapon) {
   cv = document.createElement('canvas');
   cv.width = cv.height = CHAR_GRID * PS;
   paintCharacter(cv, PS, app, pose, frameN, weapon);
-  if (pedCache.size > 3000) pedCache.delete(pedCache.keys().next().value);
-  pedCache.set(key, cv);
+  capSet(pedCache, key, cv, LOW_MEM ? 200 : 3000);
   return cv;
 }
 export const PED_BOX = PSIZE;

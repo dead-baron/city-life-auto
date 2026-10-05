@@ -7,6 +7,7 @@
 // punching, swinging and carrying. All eight directions are drawn (no mirroring).
 // Falls back to the procedural painter (chars.js) until the template has loaded.
 import { CW, CH, SKINS, OUTLINE, hex, hi, lo, P, weapon } from './chars.js';
+import { LOW_MEM, capSet } from '../platform.js';
 
 const PART = { NONE: 0, LINE: 1, SKIN: 2, SHIRT: 3, PANTS: 4, SHOES: 5, HAIR: 6 };
 // rows of assets/chars/body.png: male idle, female idle, female walk frames 1-4
@@ -173,8 +174,7 @@ export function bodySprite(app, d8, pose, fr, w) {
   for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++)
     if (!solid(x, y) && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))) o.fillRect(x, y, 1, 1);
   o.drawImage(art, 0, 0);
-  if (cache.size > 5000) cache.delete(cache.keys().next().value);
-  cache.set(key, cv);
+  capSet(cache, key, cv, LOW_MEM ? 1200 : 5000);
   return cv;
 }
 

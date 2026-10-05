@@ -7,6 +7,7 @@
 // sites, fog banks), pooled where it moves.
 import { T, TILE, MAP_W, MAP_H, CHUNK_PX } from '../../shared/constants.js';
 import { hash } from './atmos.js';
+import { freeCanvas } from '../platform.js';
 
 const N = CHUNK_PX / TILE;
 const SHAPES = 8;
@@ -42,7 +43,7 @@ function tinted(k, rgb) {
   const key = k + ':' + rgb.join(',');
   let c = tintCache.get(key);
   if (c) return c;
-  if (tintCache.size > 400) tintCache.clear();
+  if (tintCache.size > 400) { for (const c of tintCache.values()) freeCanvas(c); tintCache.clear(); }
   const s = puddleShapes()[k];
   c = document.createElement('canvas'); c.width = s.width; c.height = s.height;
   const g = c.getContext('2d');

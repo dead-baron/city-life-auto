@@ -35,7 +35,8 @@ export function saveSettings() { try { localStorage.setItem('cla.settings', JSON
 // both at once made the game flip between pad and mouse every frame (the top buttons blinked
 // and the HUD kept re-laying itself out). Ask for the raw pad, and while the pad is in use, ignore
 // mouse events for picking the device.
-export const IS_CONSOLE = typeof navigator !== 'undefined' && /Xbox|PlayStation|Nintendo/i.test(navigator.userAgent || '');
+import { IS_CONSOLE } from './platform.js';
+export { IS_CONSOLE };
 try { if (typeof navigator !== 'undefined' && 'gamepadInputEmulation' in navigator) navigator.gamepadInputEmulation = 'gamepad'; } catch { /* read-only */ }
 let padUsedAt = -1e9;
 const padRecent = () => performance.now() - padUsedAt < (IS_CONSOLE ? 4000 : 1500);

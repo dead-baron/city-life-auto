@@ -7,6 +7,7 @@
 // outfit gets idle, walk, run, punch, melee swing, aim, carry and fishing in all directions.
 // Placeholder art until the drawn rig (docs: Art Overhaul Plan) replaces it; cached per
 // appearance + direction + pose + frame.
+import { LOW_MEM, capSet } from '../platform.js';
 
 export const CW = 32, CH = 44;          // art grid
 export const FOOT_Y = 42;               // the feet's ground line in art px
@@ -300,8 +301,7 @@ export function charSprite(app, d, pose, fr, weapon) {
   for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++)
     if (!solid(x, y) && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))) o.fillRect(x, y, 1, 1);
   o.drawImage(art, 0, 0);
-  if (cache.size > 4000) cache.delete(cache.keys().next().value);
-  cache.set(key, cv);
+  capSet(cache, key, cv, LOW_MEM ? 1200 : 4000);
   return cv;
 }
 void dk;

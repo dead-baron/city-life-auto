@@ -9,6 +9,7 @@ import { CHAPTERS, STEPS, TUTORIAL_VERSION, resolveTarget, resolveRoute, fillNam
 import { GroundCache, drawOverheadProp } from './render/tiles.js';
 import { atlas, drawVehicle, drawVehicleShadow } from './render/sprites.js';
 import { glyph } from './glyphs.js';
+import { LOW_MEM } from './platform.js';
 
 const SEEN_KEY = 'cla.tutorial';
 const $ = (id) => document.getElementById(id);
@@ -34,7 +35,7 @@ export function startTutorial(opts) {
   const cv = $('tut-cv');
   T = {
     map, cv, g: cv.getContext('2d'), onClose: opts.onClose,
-    gc: new GroundCache(map, 40),
+    gc: new GroundCache(map, LOW_MEM ? 14 : 40),
     fallback: opts.fallback || null, wm: null,
     i: 0, t: 0, paused: false, dur: 8,
     cam: { x: WW / 2, y: WH / 2, z: 0.05 }, fly: null,
@@ -55,7 +56,7 @@ export function stopTutorial() {
   if (!T) return;
   cancelAnimationFrame(T.raf);
   removeEventListener('resize', resize);
-  T.gc.cache.clear();
+  T.gc.clear();
   const cb = T.onClose;
   T = null;
   markTutorialSeen();

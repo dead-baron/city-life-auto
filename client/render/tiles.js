@@ -13,6 +13,7 @@ import { railIndex, drawRailChunk, drawStation, drawPortals } from './trains.js'
 import { drawRoads, edgeRect, drawGores } from './roads.js';
 import { Shores } from './shore.js';
 import { drawCountryProp, drawQuarry, drawRaceway } from './country.js';
+import { LOW_MEM, freeCanvas, capSet } from '../platform.js';
 
 export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw', 'busstop', 'phonebox', 'billboard',
   'campfire', 'upole', 'radiotower', 'turbine', 'pumpjack', 'flare', 'dscreen', 'dome', 'marquee', 'otank']);
@@ -69,9 +70,11 @@ export class GroundCache {
     if (c) { this.cache.delete(k); this.cache.set(k, c); return c; }
     c = this.bake(cx, cy);
     this.cache.set(k, c);
-    if (this.cache.size > this.max) this.cache.delete(this.cache.keys().next().value);
+    if (this.cache.size > this.max) { const k0 = this.cache.keys().next().value; freeCanvas(this.cache.get(k0)); this.cache.delete(k0); }
     return c;
   }
+  // forget every baked chunk, freeing their pixels
+  clear() { for (const c of this.cache.values()) freeCanvas(c); this.cache.clear(); }
   overhead(cx, cy) { return this.highProps.get(this.key(cx, cy)) || []; }
   prefabsAt(cx, cy) { return this.prefabs.get(this.key(cx, cy)) || []; }
 
@@ -135,7 +138,7 @@ export class GroundCache {
   // a smashed / restored prop changes the baked ground: drop the cached chunks it touches
   invalidateAt(x, y, r = 90) {
     for (let cy = Math.floor((y - r) / CHUNK_PX); cy <= Math.floor((y + r) / CHUNK_PX); cy++)
-      for (let cx = Math.floor((x - r) / CHUNK_PX); cx <= Math.floor((x + r) / CHUNK_PX); cx++) this.cache.delete(this.key(cx, cy));
+      for (let cx = Math.floor((x - r) / CHUNK_PX); cx <= Math.floor((x + r) / CHUNK_PX); cx++) { const k = this.key(cx, cy); freeCanvas(this.cache.get(k)); this.cache.delete(k); }
   }
 }
 
@@ -911,7 +914,8 @@ export function interiorArt(m, b) {
     }
   }
   cv.ver = ver;
-  artCache.set(b.id, cv);
+  if (artCache.has(b.id)) { freeCanvas(artCache.get(b.id)); artCache.delete(b.id); }
+  capSet(artCache, b.id, cv, LOW_MEM ? 4 : 16);
   return cv;
 }
 

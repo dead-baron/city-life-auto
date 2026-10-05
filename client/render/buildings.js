@@ -13,6 +13,7 @@ import { hash2, mulberry32 } from '../../shared/rng.js';
 import { atlas } from './sprites.js';
 import { drawRoof, drawHandGlow } from './tiles.js';
 import { PREFABS } from '../../shared/prefab-data.js';
+import { LOW_MEM, freeCanvas } from '../platform.js';
 
 // facade style per building kind; H = visible wall height in world px (foreshortened)
 const KIND_STYLE = {
@@ -178,7 +179,7 @@ export class BuildingLayer {
     drawRoof(g, r);
     g.restore();
     this.roofCv.set(it.b.id, cv);
-    if (this.roofCv.size > 60) this.roofCv.delete(this.roofCv.keys().next().value);
+    while (this.roofCv.size > (LOW_MEM ? 24 : 60)) { const k = this.roofCv.keys().next().value; freeCanvas(this.roofCv.get(k)); this.roofCv.delete(k); }
     return cv;
   }
 
@@ -187,7 +188,7 @@ export class BuildingLayer {
     if (f) { this.facades.delete(it.b.id); this.facades.set(it.b.id, f); return f; }
     f = paintFacade(this.map, it);
     this.facades.set(it.b.id, f);
-    if (this.facades.size > 160) this.facades.delete(this.facades.keys().next().value);
+    while (this.facades.size > (LOW_MEM ? 60 : 160)) { const k = this.facades.keys().next().value; const o = this.facades.get(k); freeCanvas(o.cv); freeCanvas(o.glow); this.facades.delete(k); }
     return f;
   }
 }

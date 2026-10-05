@@ -41,6 +41,7 @@ import { Lighting, LIGHT } from './render/lighting.js';
 import { Weather } from './render/weather.js';
 import { drawBuildingShadows, drawPropShadows } from './render/shadows.js';
 import { registerNewProps } from './render/newprops.js';
+import { LOW_MEM, canvasStats } from './platform.js';
 import { registerCountryProps, COUNTRY_TALL, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 
 const $ = (id) => document.getElementById(id);
@@ -158,7 +159,7 @@ function onText(m) {
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
       S.tt = { l: m.tt || [], at: performance.now() / 1000 };
       S.portals = portalCovers(S.map);
-      S.ground.cache.clear();
+      S.ground.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
       $('play').disabled = false;
       if (S.playing) startPlaying();
@@ -623,7 +624,7 @@ function outdatedBuild(sig) {
 
 function setupWorld(seed) {
   S.map = generateCity(seed);
-  S.ground = new GroundCache(S.map, IS_CONSOLE ? 16 : 24); // (consoles give the browser little graphics memory)
+  S.ground = new GroundCache(S.map, LOW_MEM ? 12 : 24); // (consoles give the browser little graphics memory)
   S.wx = new Weather(S.map);
   S.poleAt = null;
   S.wx.onThunder = () => sfx('thunder', 1);
@@ -1575,11 +1576,12 @@ function diagFrame(dtMs) {
   const swRate = (deviceStats.switches - diag.sw0) / Math.max(1, (now - diag.swAt) / 60000);
   if (now - diag.swAt > 60000) { diag.sw0 = deviceStats.switches; diag.swAt = now; }
   const cacheMB = (S.ground ? S.ground.cache.size : 0) * CHUNK_PX * CHUNK_PX * 4 / 1e6;
+  const cs = canvasStats();
   diag.el.textContent = [
     `fps ${S.fps}  frame avg ${avg.toFixed(1)} ms  worst ${(f[f.length - 1] || 0).toFixed(0)} ms  >50ms: ${diag.long}`,
     `parts ${Object.entries(p).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`,
     `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${['low', 'med', 'high'][gfxQuality()]}`,
-    `ground cache ${S.ground ? S.ground.cache.size : 0}/${S.ground ? S.ground.max : 0} chunks (${cacheMB.toFixed(0)} MB)  js heap ${mem}  gfx lost ${diag.lost}`,
+    `ground cache ${S.ground ? S.ground.cache.size : 0}/${S.ground ? S.ground.max : 0} chunks (${cacheMB.toFixed(0)} MB)  canvases ${cs.n} (${cs.mb.toFixed(0)} MB)  js heap ${mem}  gfx lost ${diag.lost}${LOW_MEM ? '  low-memory mode' : ''}`,
     `input ${input.device}  flips/min ${swRate.toFixed(0)}  pad ${pads.length ? `${pads[0].id.slice(0, 40)} [${pads[0].mapping || 'no mapping'}]` : 'none'}  emulation ${navigator.gamepadInputEmulation ?? 'n/a'}`,
     `${IS_CONSOLE ? 'console · ' : ''}${navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110)}`,
   ].join('\n');
@@ -3331,7 +3333,7 @@ function drawRain(dt, sky) {
 
 // ---------------------------------------------------------------------------
 loadBodies('assets/');
-loadAtlas('assets/').finally(() => { registerNewProps(); registerCountryProps(); connect(); requestAnimationFrame(frame); });
+loadAtlas('assets/', gfxQuality() >= 2).finally(() => { registerNewProps(); registerCountryProps(); connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
 window.CLA = { S, send, WEAPONS, smash: (i, a = 0) => setPropBroken(i, a, true) };
