@@ -45,6 +45,7 @@ export function join(world, conn, profile) {
     p.known = new Map();
     p.inputQ = [];
     p.meDirty = true;
+    if (p.spectating) { p.spectating = false; p.invincible = p.specWasGod; } // a new page starts out of the free camera
     world.notify(p, 'Reconnected - you made it back before your ghost timer ran out.', 'good');
     return p;
   }

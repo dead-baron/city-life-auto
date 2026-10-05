@@ -24,9 +24,11 @@ const C = {
 };
 
 export class GroundCache {
-  constructor(map, maxChunks = 24) {
+  // layers (spectator mode): { lots: painted lots and yards, props: street furniture and trees }
+  constructor(map, maxChunks = 24, layers = null) {
     this.map = map;
     this.max = maxChunks;
+    this.layers = { lots: true, props: true, ...(layers || {}) };
     this.cache = new Map();
     this.byChunk = (list, getRect) => {
       const out = new Map();
@@ -95,20 +97,25 @@ export class GroundCache {
     for (const pt of m.paintings || []) drawPainting(g, pt, cx, cy);
     drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, m, st, cx, cy);
-    for (const s of this.stalls.get(k) || []) drawStall(g, s);
+    const L = this.layers;
+    if (L.props) for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawBuildingBase(g, r); // the roof itself is lifted onto its walls (render/buildings.js)
     drawPortals(g, m, cx, cy);
-    for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
-    for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
-    for (const mn of m.mansions || []) drawMansion(g, mn, cx, cy);
-    for (const gr of m.garages || []) drawGarage(g, gr, cx, cy);
-    for (const bh of m.boathouses || []) drawBoathouseBase(g, bh, cx, cy);
-    for (const mp of m.motorPools || []) drawMotorPool(g, mp, cx, cy);
-    for (const v of m.venues || []) drawVenue(g, v, cx, cy);
-    for (const pu of m.pumps || []) drawPump(g, pu, cx, cy);
+    if (L.lots) {
+      for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
+      for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
+      for (const mn of m.mansions || []) drawMansion(g, mn, cx, cy);
+      for (const gr of m.garages || []) drawGarage(g, gr, cx, cy);
+      for (const bh of m.boathouses || []) drawBoathouseBase(g, bh, cx, cy);
+      for (const mp of m.motorPools || []) drawMotorPool(g, mp, cx, cy);
+      for (const v of m.venues || []) drawVenue(g, v, cx, cy);
+      for (const pu of m.pumps || []) drawPump(g, pu, cx, cy);
+    }
     // (shop names are on the lifted facades now: render/buildings.js)
-    for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
-    for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
+    if (L.props) {
+      for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
+      for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
+    }
     g.restore();
     return cv;
   }

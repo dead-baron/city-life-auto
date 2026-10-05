@@ -14,6 +14,7 @@ import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { buildTeleport } from './devtp.js';
 import { createInventory, createWheel } from './inventory.js';
+import { createSpectator, SPEC_LAYERS, SCHEMATIC_KEY } from './spectator.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus, mouseScreen } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -136,6 +137,7 @@ function onText(m) {
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
       document.body.classList.toggle('practice', !!m.practice);
+      if (S.spec && S.spec.on) { if (S.map.seed !== (m.seed >>> 0)) exitSpectate(); else send({ t: 'dev', c: 'spectate', on: true }); } // back in after a reconnect
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
       if (m.sig && m.sig !== mapSignature(S.map)) { outdatedBuild(m.sig); return; } // the server runs a newer world than this page
       S.ents.clear(); S.pred = null; S.pending = [];
@@ -285,17 +287,19 @@ function fixedStep() {
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
   let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed });
   const inOverlay = overlayPad();
-  if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
+  const spec = !!(S.spec && S.spec.on);
+  if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
+  if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
-  if (!inOverlay && input.padCall && S.playing && !S.hud.menuOpen && !S.bigmap) callCruiser();
-  if (!inOverlay && input.padPhone && S.playing && !S.hud.menuOpen && !S.bigmap) openPhone();
+  if (!spec && !inOverlay && input.padCall && S.playing && !S.hud.menuOpen && !S.bigmap) callCruiser();
+  if (!spec && !inOverlay && input.padPhone && S.playing && !S.hud.menuOpen && !S.bigmap) openPhone();
   // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
-  if (!inOverlay && input.padRight && S.playing && !S.hud.menuOpen && !S.bigmap) toggleBag();
-  if (input.padView && !S.padViewHeld && canWheel() && !wheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
+  if (!spec && !inOverlay && input.padRight && S.playing && !S.hud.menuOpen && !S.bigmap) toggleBag();
+  if (!spec && input.padView && !S.padViewHeld && canWheel() && !wheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
   if (wheel.open && S.padWheel && input.padAxes) wheel.point(input.padAxes.rx * 100, input.padAxes.ry * 100);
   if (!input.padView && S.padViewHeld && wheel.open && S.padWheel) { S.padWheel = false; wheel.release(performance.now() - (S.wheelAt || 0) < 250); }
   S.padViewHeld = input.padView;
-  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open;
+  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || spec;
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
   if (S.menuWasUp && !menuUp) S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
@@ -325,9 +329,9 @@ function fixedStep() {
     if (input.menuNav) S.hud.navMenu(input.menuNav);
     if (input.menuSelect) S.hud.choose(S.hud.menuFocus);
     if (input.menuBack) S.hud.closeMenu();
-  } else if (S.me && S.me.dead) deathPad();
+  } else if (S.me && S.me.dead && !spec) deathPad();
   const n = takeNumberPick();
-  if (n !== null) {
+  if (n !== null && !spec) {
     if (S.hud.menuOpen) S.hud.choose(n);
     else if (S.me && S.me.weapons[n]) send({ t: 'weapon', id: S.me.weapons[n].id });
   }
@@ -479,6 +483,10 @@ function setupWorld(seed) {
   S.ground = new GroundCache(S.map);
   S.highway = new Highway(S.map);
   S.buildings = new BuildingLayer(S.map, S.ground);
+  S.spec = createSpectator({
+    map: S.map, buildings: S.buildings, highway: S.highway, drawEntities: specEntities,
+    players: () => (S.plist && S.plist.l) || [], mobile: input.device === 'touch',
+  });
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.hud.onDown = (a) => downAct(a);
@@ -534,6 +542,10 @@ function setupDev() {
     });
   };
   const cmds = box.querySelector('.dev-cmds');
+  const specB = document.createElement('button');
+  specB.textContent = '🎥 Spectator (free camera)'; specB.className = 'dev-spec';
+  devPress(specB, 'Spectator: fly round the city', () => enterSpectate());
+  cmds.appendChild(specB);
   for (const [c, label, extra] of DEV_CMDS) {
     const b = document.createElement('button');
     b.textContent = label;
@@ -610,6 +622,7 @@ $('play').onclick = firstPlay(playGo);
 
 initInput(canvas, {
   onKey(k) {
+    if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (S.playing && S.me && S.me.dead && !topOverlay() && S.me.down && !S.me.down.finished) {
       if (k === 'KeyH') { downAct('help'); return; }
@@ -646,8 +659,8 @@ initInput(canvas, {
     if (k === 'Backquote' && (S.dev || S.devMode)) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
-  onKeyUp(k) { if (k === 'KeyX' && wheel.open) wheel.release(performance.now() - (S.wheelAt || 0) < 250); },
-  onItems() { if (canWheel()) { if (wheel.open) wheel.close(); else wheel.show(true); } },
+  onKeyUp(k) { if (S.spec) S.spec.key(k, false); if (k === 'KeyX' && wheel.open) wheel.release(performance.now() - (S.wheelAt || 0) < 250); },
+  onItems() { if (S.spec && S.spec.on) return; if (canWheel()) { if (wheel.open) wheel.close(); else wheel.show(true); } },
   onDev() { if (S.dev || S.devMode) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); } },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
@@ -692,7 +705,7 @@ function deathPad() {
 // ---- the bag + quick wheel ----------------------------------------------------------------------
 const bag = createInventory({ el: $('inv'), send: (o) => send(o), me: () => S.me });
 const wheel = createWheel({ el: $('wheel'), send: (o) => send(o), me: () => S.me });
-function canWheel() { return S.playing && S.me && !S.me.dead && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
+function canWheel() { return S.playing && S.me && !S.me.dead && !(S.spec && S.spec.on) && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
 function toggleBag() {
   if (topOverlay() === 'inv') { closeOverlay('inv'); return; }
   if (!S.playing || !S.me || S.me.dead || topOverlay() || (S.hud && S.hud.menuOpen)) return;
@@ -709,6 +722,172 @@ for (const ov of document.querySelectorAll('.overlay')) {
   if (ov.id === 'tutorial') continue;
   ov.addEventListener('pointerdown', (e) => { if (e.target === ov && topOverlay() === ov.id) closeOverlay(ov.id); });
 }
+
+// ---- spectator (debug menu): a free camera over the whole city ----------------------------------
+// Your character stays where it is (made invincible on the server); the camera flies anywhere. The
+// city's art is drawn from what this browser already generates, so it never asks the server for
+// more - people and vehicles show only where the server is already sending them (round you).
+function specEntities(view, now) {
+  const list = [];
+  for (const e of S.ents.values()) {
+    if (!e.d || e.rx === undefined || e.rx < view.x0 - 120 || e.rx > view.x1 + 120 || e.ry < view.y0 - 120 || e.ry > view.y1 + 120) continue;
+    if (e.kind === K.VEH || (e.kind === K.PED && !(e.flags & PF.INVEH))) list.push(e);
+  }
+  list.sort((a, b) => a.ry - b.ry);
+  for (const e of list) { if (e.kind === K.VEH) drawVehicleEnt(e, now, 0); else drawPed(e, now); }
+}
+function enterSpectate() {
+  if (!S.spec || !S.playing) return;
+  if (topOverlay()) closeOverlay(topOverlay());
+  if (S.bigmap) toggleMap(false);
+  if (S.hud && S.hud.menuOpen) S.hud.closeMenu();
+  wheel.close();
+  const me = selfPos();
+  S.spec.enter(me.x, me.y);
+  send({ t: 'dev', c: 'spectate', on: true });
+  document.body.classList.add('spectating');
+  $('spec-pad').classList.remove('hidden');
+  buildSpecPanel();
+  $('spec').classList.remove('hidden', 'min');
+  S.specPlistAt = 0;
+}
+function exitSpectate() {
+  if (!S.spec || !S.spec.on) return;
+  S.spec.exit();
+  send({ t: 'dev', c: 'spectate', on: false });
+  document.body.classList.remove('spectating');
+  $('spec-pad').classList.add('hidden');
+  $('spec').classList.add('hidden');
+  specPointers.clear();
+  S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
+}
+// keys while spectating: movement / zoom go to the camera; Esc leaves, H hides the panel,
+// C finds you, P saves a screenshot. Returns true when the key was used.
+function specKey(k) {
+  if (k === 'Escape') { exitSpectate(); return true; }
+  if (k === 'KeyH') { specPanel(); return true; }
+  if (k === 'KeyC') { const me = selfPos(); S.spec.center(me.x, me.y); return true; }
+  if (k === 'KeyP') { specSave(); return true; }
+  if (k === 'Backquote') return false; // the debug menu still opens over it
+  S.spec.key(k, true);
+  return true;
+}
+function specPanel() {
+  const el = $('spec');
+  if (!el.classList.contains('hidden') && !el.classList.contains('min')) el.classList.add(input.device === 'touch' ? 'min' : 'hidden');
+  else el.classList.remove('hidden', 'min');
+}
+function specName(ext, scale = 1) {
+  const t = S.spec.viewTiles(W, H);
+  const d = S.map.districtAt(S.spec.state.x, S.spec.state.y);
+  const mode = S.spec.state.layers.schematic ? 'schematic' : 'art';
+  const slug = (d && d.name ? d.name : 'city').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `cla_${slug}_${mode}_tiles-x${t.x0}-${t.x1}_y${t.y0}-${t.y1}${scale > 1 ? `_${scale}x` : ''}.${ext}`;
+}
+function downloadCanvas(cv, name) {
+  cv.toBlob((blob) => {
+    if (!blob) { S.hud.toast('Could not make the image (too big for this browser).', 'warn'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    S.hud.toast(`Saved ${name}`, 'good');
+  }, 'image/png');
+}
+// the screen as it is (what you see, at screen resolution)
+function specSave() {
+  if (!S.spec || !S.spec.on) return;
+  S.spec.render(g, W, H, DPR, 0, S.loopClock);
+  sfx('click', 0.8);
+  downloadCanvas(canvas, specName('png'));
+}
+// the same view again with up to 4x the detail (tiles baked finer, over a few frames)
+async function specHiRes(btn) {
+  if (!S.spec || !S.spec.on || S.specBusy) return;
+  const k = S.spec.snapshotScale(W, H);
+  if (k <= 1) { S.hud.toast('This close in the screen already shows full detail - saving it as it is.', 'info'); specSave(); return; }
+  S.specBusy = true;
+  const was = btn.textContent;
+  btn.textContent = `Rendering ${k}x…`;
+  try {
+    const cv = await S.spec.snapshot(W, H, k, (f) => { btn.textContent = `Rendering ${Math.round(f * 100)}%`; });
+    if (cv) downloadCanvas(cv, specName('png', k));
+  } finally { S.specBusy = false; btn.textContent = was; }
+}
+function buildSpecPanel() {
+  const el = $('spec');
+  if (el.dataset.built) { syncSpecPanel(); return; }
+  el.dataset.built = '1';
+  const touch = input.device === 'touch', pad = input.device === 'gamepad';
+  el.innerHTML = `<button class="sp-mini">🎥 Spectator ▾</button><h2>🎥 SPECTATOR</h2><div class="sp-read"></div>
+    <div class="sp-layers"></div>
+    <div class="sp-btns"><button class="sp-me">⌖ Find me</button><button class="sp-png">📸 Save PNG</button><button class="sp-hi">🖼 Hi-res PNG</button><button class="sp-hide">▴ Hide panel</button><button class="sp-exit" style="grid-column: span 2">✕ Exit spectator</button></div>
+    <div class="sp-legend hidden"><b>Schematic key</b><div class="sp-key">${SCHEMATIC_KEY.map(([c, n]) => `<span><i style="background:${c}"></i>${n}</span>`).join('')}</div><p class="sp-hint">Black outlines: buildings. White dashes: painted lots (one concept image each).</p></div>
+    <p class="sp-hint">${touch ? 'Drag to fly, pinch to zoom.' : pad ? 'Left stick flies, RT / LT zoom, X saves a PNG, Y hides this panel, B exits.' : 'WASD / arrows fly (Shift faster), E / Q or wheel zoom, drag to pan. C finds you, P saves a PNG, H hides this panel, Esc exits.'} The file name carries the tile coordinates on screen, so a drawing over it can be matched back to the map.</p>`;
+  const lay = el.querySelector('.sp-layers');
+  for (const [id, label] of SPEC_LAYERS) {
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" data-l="${id}"> ${label}`;
+    l.querySelector('input').onchange = (e) => { S.spec.setLayer(id, e.target.checked); syncSpecPanel(); };
+    lay.appendChild(l);
+  }
+  el.querySelector('.sp-mini').onclick = () => el.classList.remove('min');
+  el.querySelector('.sp-me').onclick = () => { const me = selfPos(); S.spec.center(me.x, me.y); };
+  el.querySelector('.sp-png').onclick = () => specSave();
+  el.querySelector('.sp-hi').onclick = (e) => specHiRes(e.currentTarget);
+  el.querySelector('.sp-hide').onclick = () => el.classList.add('min');
+  el.querySelector('.sp-exit').onclick = () => exitSpectate();
+  syncSpecPanel();
+}
+function syncSpecPanel() {
+  const el = $('spec'), L = S.spec.state.layers;
+  for (const i of el.querySelectorAll('.sp-layers input')) i.checked = !!L[i.dataset.l];
+  el.querySelector('.sp-legend').classList.toggle('hidden', !L.schematic);
+}
+// once a frame while spectating: the readout, and who's where (every few seconds)
+function specTick() {
+  const now = performance.now();
+  if (now - (S.specPlistAt || 0) > 3000) { S.specPlistAt = now; requestPlayers(); }
+  if (now - (S.specReadAt || 0) < 250) return;
+  S.specReadAt = now;
+  const st = S.spec.state, t = S.spec.viewTiles(W, H);
+  const d = S.map.districtAt(st.x, st.y);
+  const n = S.spec.loading();
+  const r = $('spec').querySelector('.sp-read');
+  if (r) r.innerHTML = `${d ? d.name : ''} · zoom ${(st.z * 100).toFixed(st.z < 0.1 ? 1 : 0)}% · ${st.layers.schematic ? 'schematic' : `detail ${S.spec.levelName()}`}${n ? ` · loading ${n}` : ''}<small>tiles x ${t.x0}-${t.x1}, y ${t.y0}-${t.y1}</small>`;
+}
+// mouse wheel, drag, and two-finger pinch on the spectator layer
+const specPointers = new Map();
+let specPinch = null;
+$('spec-pad').addEventListener('wheel', (e) => { e.preventDefault(); if (S.spec && S.spec.on) S.spec.zoomBy(Math.pow(1.0015, -e.deltaY), e.clientX, e.clientY, W, H); }, { passive: false });
+$('spec-pad').addEventListener('pointerdown', (e) => {
+  if (!S.spec || !S.spec.on) return;
+  try { $('spec-pad').setPointerCapture(e.pointerId); } catch { /* the pointer is already gone */ }
+  specPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  $('spec-pad').classList.add('drag');
+  specPinch = null;
+});
+$('spec-pad').addEventListener('pointermove', (e) => {
+  const p = specPointers.get(e.pointerId);
+  if (!p || !S.spec || !S.spec.on) return;
+  if (specPointers.size === 1) { S.spec.pan(e.clientX - p.x, e.clientY - p.y); p.x = e.clientX; p.y = e.clientY; return; }
+  p.x = e.clientX; p.y = e.clientY;
+  const [a, b] = [...specPointers.values()];
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, d = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+  if (specPinch) {
+    S.spec.pan(mx - specPinch.mx, my - specPinch.my);
+    S.spec.zoomBy(d / specPinch.d, mx, my, W, H);
+  }
+  specPinch = { mx, my, d };
+});
+const specUp = (e) => {
+  specPointers.delete(e.pointerId);
+  specPinch = null;
+  if (!specPointers.size) $('spec-pad').classList.remove('drag');
+};
+$('spec-pad').addEventListener('pointerup', specUp);
+$('spec-pad').addEventListener('pointercancel', specUp);
+addEventListener('blur', () => { if (S.spec) S.spec.clearKeys(); });
 
 // ---- phone + waypoints ---------------------------------------------------------------------------
 const phone = createPhone({
@@ -1405,6 +1584,7 @@ function render(dt) {
     const blend = Math.max(0, Math.min(1, (e.as - 70) / 110));
     e.phase = (e.phase + d / (4.6 + blend * 2.4)) % 8;
   }
+  if (S.spec && S.spec.on) { S.spec.render(g, W, H, DPR, dt, now); specTick(); return; }
   // camera
   let speed = 0;
   if (S.pred && S.pred.kind === 'veh') speed = Math.hypot(S.pred.s.vx, S.pred.s.vy);

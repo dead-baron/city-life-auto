@@ -18,7 +18,7 @@ import * as pets from './systems/pets.js';
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate'];
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 
@@ -114,6 +114,11 @@ export function command(world, p, c, msg) {
     case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y); if (ped) ped.sub = false;
       if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; ped.lz = msg.lz === 1 && surfaceZ(world.map, msg.x, msg.y, 1) !== null ? 1 : 0; p.teleportAt = world.time; } break; // lz: 1 = up on the highway deck
     case 'god': devmode.setInvincible(world, p, null); break;              // invincible (toggle)
+    case 'spectate':                                                        // free camera: your character stays put, safe
+      if (msg.on && !p.spectating) { p.spectating = true; p.specWasGod = !!p.invincible; p.invincible = true; if (ped) { ped.hp = ped.maxHp; ped.bleeding = false; } }
+      else if (!msg.on && p.spectating) { p.spectating = false; p.invincible = p.specWasGod; }
+      p.meDirty = true;
+      break;
     case 'godp': devmode.setInvincible(world, p, msg.pid); break;          // make another player invincible (toggle)
     case 'gunsp': case 'healp': {                                          // give another player weapons / heal them
       const q = world.players.get(String(msg.pid));

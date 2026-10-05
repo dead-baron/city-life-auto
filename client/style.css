@@ -477,3 +477,39 @@ body.portrait #bm-panel { width: calc(100vw - 24px); max-height: 34vh; }
   #wheel .s0 { transform: translate(0, -82px); } #wheel .s1 { transform: translate(114px, 0); } #wheel .s2 { transform: translate(0, 82px); } #wheel .s3 { transform: translate(-114px, 0); }
   #wheel .s0.on { transform: translate(0, -86px) scale(1.06); } #wheel .s1.on { transform: translate(118px, 0) scale(1.06); } #wheel .s2.on { transform: translate(0, 86px) scale(1.06); } #wheel .s3.on { transform: translate(-118px, 0) scale(1.06); }
 }
+
+/* ---- spectator (debug menu): a free camera over the whole world ---- */
+body.spectating #hud > :not(#toasts), body.spectating #touch, body.spectating #interior, body.spectating #wheel, body.spectating #death, body.spectating #menu { display: none !important; }
+body.spectating #toasts { left: auto !important; right: 12px; top: auto !important; bottom: 12px; margin: 0 !important; width: min(360px, 60vw) !important; z-index: 16; }
+body.spectating #view { filter: none !important; cursor: grab; }
+#spec-pad { position: absolute; inset: 0; z-index: 10; touch-action: none; cursor: grab; }
+#spec-pad.drag { cursor: grabbing; }
+#spec { position: absolute; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); z-index: 11; width: 250px; max-height: calc(100vh - 20px); overflow-y: auto;
+  background: rgba(0,0,0,.82); border-top: 4px solid var(--accent); padding: 8px 10px; font-size: 15px; line-height: 1.25; }
+#spec h2 { font-family: var(--display); font-weight: 400; font-size: 20px; letter-spacing: .5px; margin: 0 0 4px; }
+#spec .sp-read { color: var(--warn); font-weight: 700; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+#spec .sp-read small { color: var(--dim); font-weight: 400; display: block; }
+#spec label { display: flex; align-items: center; gap: 7px; padding: 2px 0; cursor: pointer; }
+#spec label input { width: 17px; height: 17px; accent-color: var(--accent); margin: 0; }
+#spec .sp-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 8px 0 6px; }
+#spec .sp-btns button { font: 700 14px var(--ui); background: #222839; color: var(--text); border: 0; border-bottom: 3px solid #000; padding: 7px 4px; cursor: pointer; }
+#spec .sp-btns button:hover, #spec .sp-btns button.pfocus { background: #343c56; }
+#spec .sp-btns .sp-exit { background: #5a1c2c; }
+#spec .sp-key { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; margin: 4px 0; font-size: 13px; }
+#spec .sp-key span { display: flex; align-items: center; gap: 5px; }
+#spec .sp-key i { width: 12px; height: 12px; border: 1px solid #000; flex: none; }
+#spec .sp-hint { color: var(--dim); font-size: 13px; margin: 6px 0 0; }
+#spec.min { width: auto; padding: 6px 8px; }
+#spec.min > :not(.sp-mini) { display: none; }
+#spec .sp-mini { display: none; }
+#spec.min .sp-mini { display: block; font: 700 14px var(--ui); background: none; color: var(--text); border: 0; cursor: pointer; }
+body.portrait #spec { width: 210px; font-size: 14px; }
+@media (max-height: 500px) {
+  #spec { width: 215px; font-size: 13px; padding: 6px 8px; }
+  #spec h2 { font-size: 16px; }
+  #spec label { padding: 0; }
+  #spec label input { width: 14px; height: 14px; }
+  #spec .sp-btns { margin: 5px 0 4px; gap: 4px; }
+  #spec .sp-btns button { padding: 4px; font-size: 13px; }
+  #spec .sp-hint { font-size: 12px; }
+}

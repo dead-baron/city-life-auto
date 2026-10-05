@@ -1186,3 +1186,29 @@ Went through every painting the game uses: each building lot, the hospital front
   - **Going down is no escape:** a wanted player who's revived is wanted again.
   - The paramedic crew now treats from where they are if a prop blocks the last few steps to the patient.
 - New test file `test/revive.test.js`. `RESPAWN_SECONDS` 7 → 15. README controls, tutorial ("Your bag", "Down, not out"; `TUTORIAL_VERSION` 23).
+
+## 2026-10-04 · Round 11: spectator free camera (debug menu)
+
+- **🎥 Spectator (free camera)** is at the top of the debug menu's commands (`client/spectator.js`).
+  - Your character stays where it is. The server makes it invincible while you're away and restores your old setting when you come back (`dev` command `spectate`). A reconnect always starts out of the free camera.
+  - The camera flies anywhere, from 2× in to the whole world on screen.
+  - The world is drawn only from what the browser already generates from the seed, so the server never sends, loads or spawns anything extra. People and vehicles appear only where the server is already sending them (round your character).
+- **Levels of detail:** close in, the art is drawn from composite chunk tiles (ground, lots, rooftops, highway deck, trees) baked at full size, 1/3, 1/8 or 1/16.
+  - Each level has its own capped cache (40 / 220 / 1300 / 2900 tiles, the two finer ones halved on phones), so memory stays bounded however far you fly. The test run peaked at about 90 MB of JS heap.
+  - Missing tiles bake about 10 ms per frame, nearest the middle of the screen first, with the baked world map underneath until they arrive. All-sea chunks are skipped.
+  - Far out, where the world-map image is already as sharp as the screen, it's drawn on its own.
+  - Leaving spectator frees every cache.
+- **Layers:**
+  - Art layers: lots & painted buildings, rooftops, the elevated highway, props & trees. Switch off lots, roofs and props to see just the streets and the plots.
+  - Overlays: people & vehicles, names (districts, stations, landmarks, streets, and businesses when close), a tile grid with tile numbers along the edges.
+  - **Schematic:** flat colour-coded shapes, one cell per tile. Buildings are coloured by use (homes, shops & food, nightlife, civic, industrial). Buildings are outlined in black and painted lots dashed in white. A key is shown in the panel.
+- **Screenshots:**
+  - **📸 Save PNG** (P / X) saves the screen as it is.
+  - **🖼 Hi-res PNG** renders the same view again at up to 4× the detail, painting each chunk straight into the picture so memory doesn't grow. It's capped at 8192 px (4096 px on phones) and full detail.
+  - File names carry the district, the mode and the tile rectangle on screen, e.g. `cla_downtown_schematic_tiles-x756-832_y497-533.png`, so a drawing over it can be matched back to the map.
+- **Controls:**
+  - Keyboard: WASD / arrows fly (Shift faster), E / Q, + / - or the wheel zoom (about the pointer), drag to pan. C finds you, P saves a PNG, H hides the panel, Esc exits.
+  - Gamepad: left stick flies, RT / LT zoom, X saves a PNG, Y hides the panel, B exits.
+  - Touch: drag, pinch.
+  - The HUD and touch controls hide while spectating; toasts move to the bottom right.
+- Dev-only, so there's no tutorial stop. README controls updated.

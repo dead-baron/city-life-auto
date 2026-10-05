@@ -982,3 +982,22 @@ test('a page built for a different world than the server reloads (map fingerprin
   assert.equal(mapSignature(w.map), mapSignature(generateCity(1337)), 'same build, same fingerprint');
   assert.notEqual(mapSignature(w.map), mapSignature(generateCity(4242)), 'a different world, a different one');
 });
+
+test('dev spectator: your character is kept safe while you look round, and set back as it was after', async () => {
+  const dev = await import('../server/dev.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  p.ped.protectUntil = 0;
+  assert.ok(!p.invincible);
+  dev.command(w, p, 'spectate', { on: true });
+  assert.ok(p.spectating && p.invincible, 'safe while spectating');
+  combat.damage(w, p.ped, 500, null, 'melee', 0);
+  assert.ok(!p.ped.dead, 'nothing hurts the body left behind');
+  dev.command(w, p, 'spectate', { on: false });
+  assert.ok(!p.spectating && !p.invincible, 'back as it was');
+  // already invincible before: stays so
+  p.invincible = true;
+  dev.command(w, p, 'spectate', { on: true });
+  dev.command(w, p, 'spectate', { on: false });
+  assert.ok(p.invincible);
+});

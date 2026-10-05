@@ -75,6 +75,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | City map + waypoints (pick a category / place, or click the map) | M | Pause → Map (D-pad / stick, A pick, B back) | tap the radar or ▦, then tap |
 | Zoom the city map / look around / find yourself | mouse wheel or + / − · drag · C (or the + − ⌖ buttons) | RT / LT · right stick | pinch · drag · + − ⌖ buttons |
 | Dev teleport to any district, station or landmark | ` → 📍 Teleport (map or list) | Start → Dev Debug Mode → 📍 Teleport | 🛠 → 📍 Teleport |
+| Dev spectator: free camera over the whole world, art layers, schematic view, PNG / hi-res PNG screenshots | ` → 🎥 Spectator; WASD / arrows fly (Shift faster), E / Q or wheel zoom, drag pans, C find me, P save PNG, H hide panel, Esc exit | Start → Dev Debug Mode → 🎥 Spectator; left stick flies, RT / LT zoom, X save PNG, Y hide panel, B exit | 🛠 → 🎥 Spectator; drag to fly, pinch to zoom |
 
 ## Project layout
 
