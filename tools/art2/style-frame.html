@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Art v2 style frame</title>
 <style>body{margin:0;background:#18181c;color:#ccc;font:13px monospace}canvas,img{image-rendering:pixelated;display:block}
 .wrap{position:relative;width:1536px;height:1024px}.wrap canvas{position:absolute;left:0;top:0}h3{margin:8px}</style></head><body>
-<!-- The phase 1 style frame: the hero corner rebuilt from the v2 generators, lit for ?p=golden|noon|night,
+<!-- The phase 1 style frame: the hero corner rebuilt from the v2 generators, lit for ?p=golden|noon|night|rain,
      with the matching Round 1 target underneath (?target=0 to hide it). Serve the repo root. -->
 <h3 id="t"></h3>
 <div class="wrap"><canvas id="c" width="1536" height="1024"></canvas><canvas id="rain" width="1536" height="1024"></canvas></div>
@@ -23,7 +23,7 @@ if (PRESETS[preset].rain) {
   for (let i = 0; i < 520; i++) { const x = r() * 1536, y = r() * 1024, l = 10 + r() * 14; g.strokeStyle = `rgba(190,205,255,${0.18 + r() * 0.22})`; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - l * 0.25, y + l); g.stroke(); }
   for (let i = 0; i < 140; i++) { const x = r() * 1536, y = r() * 1024; g.fillStyle = 'rgba(200,215,255,0.35)'; g.fillRect(x, y, 4, 2); g.fillRect(x - 2, y - 2, 2, 2); g.fillRect(x + 4, y - 2, 2, 2); }
 }
-const tg = { golden: 'R1-A_hero-golden.png', noon: 'R1-B_hero-noon.png', night: 'R1-C_hero-rain-night.png' }[preset];
+const tg = { golden: 'R1-A_hero-golden.png', noon: 'R1-B_hero-noon.png', night: 'R1-E_hero-night-dry.png', rain: 'R1-C_hero-rain-night.png' }[preset];
 if (q.get('target') !== '0') document.getElementById('tg').src = '../../docs/art-v2/targets/' + tg;
 document.getElementById('tg').onload = () => { window.done = true; };
 if (q.get('target') === '0') window.done = true;

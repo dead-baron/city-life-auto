@@ -201,9 +201,14 @@ export const PRESETS = {
     bloomK: 0.3, haze: 0.02, hazeCol: [0.8, 0.88, 1.0], vign: 0.25, sat: 1.22, contrast: 1.1, lift: [0, 0, 0.0], gain: [1.04, 1.03, 1.0], reflK: 0, lampsOn: 0,
   },
   night: {
-    sunDir: [-0.5, -0.3, 0.8], sunCol: [0.04, 0.05, 0.1], ambSky: [0.08, 0.1, 0.22], ambGround: [0.06, 0.06, 0.13],
+    sunDir: [-0.5, -0.3, 0.8], sunCol: [0.04, 0.05, 0.1], ambSky: [0.06, 0.08, 0.17], ambGround: [0.05, 0.05, 0.1],
+    shadowTint: [1, 1, 1], shadowLen: 0, bands: 0, bandMix: 0, wet: 0, emiK: 1.05, bloomThr: 0.55, leafGlow: 0,
+    bloomK: 1.1, haze: 0.06, hazeCol: [0.08, 0.1, 0.22], vign: 0.7, sat: 1.15, contrast: 1.08, lift: [0.0, 0.0, 0.03], gain: [1.04, 0.98, 1.02], reflK: 0, lampsOn: 1,
+  },
+  rain: {
+    sunDir: [-0.5, -0.3, 0.8], sunCol: [0.04, 0.05, 0.1], ambSky: [0.06, 0.08, 0.18], ambGround: [0.05, 0.05, 0.11],
     shadowTint: [1, 1, 1], shadowLen: 0, bands: 0, bandMix: 0, wet: 0.9, emiK: 1.05, bloomThr: 0.55, leafGlow: 0,
-    bloomK: 1.1, haze: 0.06, hazeCol: [0.14, 0.14, 0.3], vign: 0.65, sat: 1.25, contrast: 1.08, lift: [0.0, 0.0, 0.03], gain: [1.04, 0.98, 1.02], reflK: 1.1, lampsOn: 1, rain: 1,
+    bloomK: 1.1, haze: 0.06, hazeCol: [0.08, 0.1, 0.22], vign: 0.7, sat: 1.15, contrast: 1.08, lift: [0.0, 0.0, 0.03], gain: [1.04, 0.98, 1.02], reflK: 1.1, lampsOn: 1, rain: 1,
   },
 };
 

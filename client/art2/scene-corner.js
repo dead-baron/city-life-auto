@@ -10,6 +10,7 @@ import { GBuf, hash } from './gbuf.js';
 import { paintGround, laneLine, zebra, kerbs, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, skid } from './ground.js';
 import { makeBuilding } from './buildings.js';
 import * as P from './props.js';
+import { vehicleModel } from './vehicles.js';
 import { person, randomPerson } from './people.js';
 import { palm, leafyTree, bush } from './trees.js';
 import { MAT, LIGHT } from './palette.js';
@@ -38,7 +39,8 @@ function isWalk(x, y) {
 }
 
 export function buildCorner(preset = 'golden') {
-  const night = preset === 'night' ? 1 : preset === 'golden' ? 0.4 : 0;
+  const isNight = preset === 'night' || preset === 'rain';
+  const night = isNight ? 1 : preset === 'golden' ? 0.4 : 0;
   const lampsOn = preset === 'noon' ? 0 : 1;
   const G = new GBuf(CW, CH);
   // ---- ground
@@ -109,11 +111,11 @@ export function buildCorner(preset = 'golden') {
   vox(P.hedge(150, 12), 690, 272);
   vox(P.crate(1), 600, 206); vox(P.bin(false), 586, 208);
   // vehicles
-  const lt = preset === 'night' ? 1 : preset === 'golden' ? 1 : 0;
-  vox(P.car('taxi', MAT.paintYellowCar, { lights: lt }), 262, 96, Math.PI / 2);
-  vox(P.car('sedan', MAT.paintTeal, { lights: lt }), 226, 300, -Math.PI / 4);
-  vox(P.car('sedan', MAT.paintBlack, { lights: lt }), 276, 466, -Math.PI / 2);
-  vox(P.car('pickup', MAT.paintRed, { crate: true, lights: 0 }), 612, 306, Math.PI);
+  const lt = isNight ? 1 : preset === 'golden' ? 1 : 0;
+  vox(vehicleModel('taxi', { lights: lt }), 262, 96, Math.PI / 2);
+  vox(vehicleModel('sedan', { paint: '#3a7a84', lights: lt }), 226, 300, -Math.PI / 4);
+  vox(vehicleModel('sedan', { paint: '#2c3448', lights: lt }), 276, 466, -Math.PI / 2);
+  vox(vehicleModel('pickup', { cargo: [1], lights: 0 }), 612, 306, Math.PI);
   vox(P.scooter('#d8d0c0'), 724, 318);
   vox(P.dog(), 548, 238, 0);
   // people
@@ -136,16 +138,16 @@ export function buildCorner(preset = 'golden') {
 
   // ---- lights
   const lights = [];
-  if (lampsOn) for (const [x, y] of [[138, 160], [322, 178], [368, 430], [322, 470]]) lights.push({ x, y: y + 2, z: 84, r: preset === 'night' ? 200 : 110, col: LIGHT.sodium, k: preset === 'night' ? 3.4 : 0.8 });
-  const win = preset === 'night' ? 1.2 : preset === 'golden' ? 0.6 : 0.12;
+  if (lampsOn) for (const [x, y] of [[138, 160], [322, 178], [368, 430], [322, 470]]) lights.push({ x, y: y + 2, z: 84, r: isNight ? 200 : 110, col: LIGHT.sodium, k: isNight ? 3.4 : 0.8 });
+  const win = isNight ? 1.2 : preset === 'golden' ? 0.6 : 0.12;
   for (const x of [380, 430, 480]) lights.push({ x, y: 210, z: 26, r: 76, col: LIGHT.warmWindow, k: win });
   for (const x of [20, 60, 100]) lights.push({ x, y: 182, z: 24, r: 70, col: LIGHT.warmWindow, k: win * 0.9 });
   if (preset !== 'noon') { lights.push({ x: 70, y: 180, z: 60, r: 120, col: LIGHT.neonMagenta, k: night * 1.4 + 0.2 }); lights.push({ x: 100, y: 120, z: 74, r: 90, col: LIGHT.neonCyan, k: night * 1.2 + 0.2 }); }
   if (lampsOn) { lights.push({ x: 150, y: 214, z: 60, r: 50, col: [1, 0.2, 0.15], k: 0.8 }); lights.push({ x: 150, y: 334, z: 64, r: 50, col: [1, 0.2, 0.15], k: 0.8 }); }
   if (lt) {
     for (const [x, y, a] of [[262, 96, Math.PI / 2], [226, 300, -Math.PI / 4], [276, 466, -Math.PI / 2]]) {
-      for (const dd of [60, 100]) lights.push({ x: x + Math.cos(a) * dd, y: y + Math.sin(a) * dd, z: 10, r: 56 + dd * 0.3, col: LIGHT.headlight, k: (preset === 'night' ? 1.6 : 0.7) - dd * 0.005 });
-      lights.push({ x: x - Math.cos(a) * 56, y: y - Math.sin(a) * 56, z: 12, r: 40, col: LIGHT.tail, k: preset === 'night' ? 1.3 : 0.5 });
+      for (const dd of [60, 100]) lights.push({ x: x + Math.cos(a) * dd, y: y + Math.sin(a) * dd, z: 10, r: 56 + dd * 0.3, col: LIGHT.headlight, k: (isNight ? 1.6 : 0.7) - dd * 0.005 });
+      lights.push({ x: x - Math.cos(a) * 56, y: y - Math.sin(a) * 56, z: 12, r: 40, col: LIGHT.tail, k: isNight ? 1.3 : 0.5 });
     }
   }
   return { G, lights };
