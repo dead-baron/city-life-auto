@@ -57,6 +57,9 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 - Every lot faces south (front at the bottom), so north-facing versions are no longer needed. A painted door's sill should sit right at the bottom of the facade: the game puts its doorway there.
 - Night versions are generated automatically; no need to draw them.
 
+- **More hand-designed neighbourhoods** (the round 11 workflow): spectator mode → screenshot + schematic of an area → paint over it → send it back. Paint one block per image at least ~1000 px square for the sharpest result (the downtown close-ups were ~550-650 px a block, a little soft once fitted). Keep each block's curb and corners, the same building positions as the schematic, and nobody painted on the pavement. Leave the subway entrance and traffic signals out (the game draws its own working ones).
+- **A street-furniture sheet** in the downtown painting's style, each object alone on a transparent or flat background, about 150-250 px per object: the black double-globe street lamp, three or four street trees (round, cherry blossom, conifer, palm), blue bus shelter, bench, trash can, planter box, bollard, newspaper box, mailbox, hydrant, chalkboard sign, café table with umbrella, the green "Downtown →" sign, a stretch of black iron fence and its gate, the red-and-white barrier arm. The game could then place them anywhere in the city as real objects (solid, knocked over by cars, lit at night) instead of only inside the painted blocks.
+
 ## 5. Environment
 
 - Clean versions (no painted people) of: soccer pitch / stadium, beach volleyball court, park playground - painted people can't move, so the live ones are drawn on top.

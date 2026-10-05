@@ -46,6 +46,16 @@ Walk into any of these and the roof lifts off onto the painted interior. Every p
 - **Paradise Cay** - the palm-island painting raised out of the bay between Westport and Metro City: the land, beaches and jetty follow the painting exactly (sampled into a tile mask), the cabin is solid. Boat-only.
 - **Red Rock Canyon** - the desert canyon painting in the Dry Creek desert: the mesas and cliffs are solid where they're painted, plus the homestead and water tower.
 
+## Hand-designed blocks (`assets/blocks*.webp`, `shared/block-data.js`, `shared/handblocks.js`) - new this round
+
+The neighbourhood around Broadway where Midtown, Northgate and Downtown meet (tiles x 693-863, y 477-551), repainted by you over a spectator screenshot and rebuilt from the paintings by `tools/build_blocks.py`. There are 18 blocks: Fresh Coat Garage, Bean Machine Coffee, South Port Cannery, Vellori + Downtown Station, The Daily Fork (replacing J&R Salvage), FreshHub Grocery, MediMart Pharmacy, Falls Hardware, City General, Cedar Falls Clinic, Fitness + Midtown Station, Books, Electronics, Metro City PD - HQ with its gated motor pool, City Hall, and the three Broadway corner gardens.
+- Each block is cropped at its painted curb and fitted to the game's block curb to curb. It's scaled evenly, and seam carving takes up the remaining difference so signs and lamps keep their shape. The Broadway gardens are two triangles, each warped onto the game's triangle.
+- Road tiles are cut out of the art, so the game's own streets, crosswalks and traffic signals show.
+- The painted subway entrances are painted out; the game's working kiosk stands there instead.
+- Signs say the game's names: FRESHHUB GROCERY, MEDIMART PHARMACY, FALLS HARDWARE.
+- Night: the painting's own lit windows, signs and lamp heads glow, and every painted lamp found in the art is a real light that throws a pool of light and is solid. Other painted furniture (trees, benches, bins, planters) is flat art you can walk over.
+- Sources: `6798e892`, `390d1fba`, `cb2ec2d4`, `c98ce2f5`, `ecf8162e` (the `Westpoint General` hospital painting was not used: City General was picked).
+
 ## Subway entrances (`prop_subway_l`, `prop_subway_r`)
 
 The two street kiosks from the subway concept (green railings, stairs, SUBWAY sign, globe lamps), cut out of the pavement around them (`SUBWAY_ART` in `tools/build_art.py`), drawn 128 px wide on each underground stop's plaza. The real-world route bullets on the signs are blanked; the game draws its own City Loop badge (orange L) there. The queue lane, countdown board and boarding glow are drawn in code.

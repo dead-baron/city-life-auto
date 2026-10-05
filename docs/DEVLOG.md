@@ -1212,3 +1212,35 @@ Went through every painting the game uses: each building lot, the hospital front
   - Touch: drag, pinch.
   - The HUD and touch controls hide while spectating; toasts move to the bottom right.
 - Dev-only, so there's no tutorial stop. README controls updated.
+
+## 2026-10-04 · Round 12: hand-designed downtown (painted blocks)
+
+- **The workflow:** spectator screenshot + schematic → the designer paints over them → the paintings rebuild the area.
+  - `shared/handblocks.js` lists each hand-designed block's area (curb to curb), the buildings in it with their doors and businesses, and the generator shops it hosts (`claims`).
+  - `tools/build_blocks.py` cuts every block out of the paintings and fits it to its block:
+    - Uniform scale plus seam carving (rows and columns of plain paving or roof are added or removed, so nothing is squashed).
+    - The Broadway corner gardens: two warped triangles each.
+    - Road tiles cut out.
+    - Paint-outs where the game draws something itself.
+    - Signs repainted to the game's names.
+    - A night layer, and the painted lamp posts found for real lights.
+  - Output: `assets/blocks*.webp` + `shared/block-data.js`.
+  - `tools/hand-mask.mjs` gives it the block areas and road tiles.
+- **The map** (`shared/map.js`):
+  - A block inside a hand area gets no generated rows, lots, roofs or furniture.
+  - `buildHandBlocks` lays the buildings, doors and POIs. Painted shops are walk-in like the lot-built ones; the hospitals, police HQ, grocery, pharmacy and coffee shop have their counters.
+  - `finishHandBlocks` clears generated props off the painted blocks (traffic signals stay) and adds the painted lamps as solid, lit posts (`plamp`).
+  - A block's subway plaza can move (`subway`: Midtown Station's entrance is now in front of Fitness).
+  - The police HQ's motor pool is the painted gated lot out front (`pool`; drawn by the painting, cars side by side, bikes one behind the other).
+  - Generator specials a hand block hosts are skipped with the same random draws, so the rest of the city doesn't reshuffle.
+- **The neighbourhood:** 18 blocks around Broadway between Midtown, Northgate and Downtown.
+  - The junkyard is now **The Daily Fork** (patio restaurant).
+  - The hospital is **City General**.
+  - The bottom row is **Fitness**, **Books**, **Electronics** and **City Hall**.
+  - The gun shop and dealership moved to the next Midtown row south. The boat shop (Harbor Marina) prefers a south-facing city lot by the sea now, so it's on The Yards waterfront, with its rental dock nearby.
+- **Client:**
+  - Painted blocks are drawn in the ground chunks after the streets (their road tiles are transparent), and the buildings in them hide whoever walks behind them like the other painted lots.
+  - Their night glow is drawn per building, and painted lamps throw light.
+  - Painted motor pools aren't drawn over.
+  - Motor-pool lots no longer get redrawn over the cruisers parked in them.
+- World map rebaked. New test file `test/handblocks.test.js`. Tutorial: the Metro City island stop mentions the redrawn Broadway blocks, and the motor pool stop no longer says "out the back" (`TUTORIAL_VERSION` 24).

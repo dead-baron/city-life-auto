@@ -11,7 +11,7 @@ import { TILE, CHUNK_PX } from '../../shared/constants.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { hash2, mulberry32 } from '../../shared/rng.js';
 import { atlas } from './sprites.js';
-import { drawRoof } from './tiles.js';
+import { drawRoof, drawHandGlow } from './tiles.js';
 import { PREFABS } from '../../shared/prefab-data.js';
 
 // facade style per building kind; H = visible wall height in world px (foreshortened)
@@ -67,6 +67,7 @@ export class BuildingLayer {
     this.facades = new Map(); // id -> { cv, glow }
     this.roofCv = new Map();  // id -> the roof art (procedural, 1 px per world px)
     for (const b of map.buildings) {
+      if (b.gone || b.kind === 'motorpool') continue; // an open lot: nothing stands up off the ground
       const flat = !(b.roof >= 0 && map.roofs[b.roof]); // concept-art lots (fronts already in the art), the mansion
       const st = flat ? 'lot' : styleOf(map, b);
       if (!st) continue;
@@ -137,6 +138,13 @@ export class BuildingLayer {
   // night: lit windows / shopfronts / neon (drawn additively by the lighting pass)
   drawGlow(g, it) {
     if (!it.flat) { const f = this.facade(it); if (f.glow) g.drawImage(f.glow, it.x0, it.y1 - it.H); }
+    // a hand-designed block: its painting's lit windows and signs on this building and the
+    // pavement just in front of it
+    if (it.b.hand) {
+      const ha = (this.map.handArt || []).find((a) => a.key === it.b.hand);
+      if (ha) drawHandGlow(g, ha, [it.x0, it.y0, it.x1, it.y1 + 2 * TILE]);
+      return;
+    }
     // the lot's own emissive art (rooftop signs, lobby light), lifted with the roof
     const p = it.b.prefab >= 0 ? this.map.prefabs[it.b.prefab] : null;
     if (p && atlas.prefabGlow) {

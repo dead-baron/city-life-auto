@@ -28,6 +28,8 @@ import { buildLevels } from './levels.js';
 import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS, SCENE_SPOTS, SCENE_ISLANDS } from './islands.js';
 import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
+import { HAND_BLOCKS } from './handblocks.js';
+import { BLOCK_ART } from './block-data.js';
 
 export { Z };
 
@@ -294,6 +296,8 @@ export class CityMap {
     this.nodes = [];
     this.edges = [];
     this.lamps = [];
+    this.handMask = new Uint8Array(MAP_W * MAP_H); // 1 + index of the hand-designed block a tile is in
+    this.handArt = [];                               // the painted blocks laid on the ground (client/render/tiles.js)
     this.fields = [];
     this.roofs = [];
     this.hospitals = [];
@@ -436,6 +440,7 @@ export function generateCity(seed = 1337) {
   reserveRail(m, railPts);
   buildStationLots(m);
   reserveSubwayPlazas(m);
+  handPrepare(m);
   waterfrontStrip(m);
   // Pelican Key's beach end (the bar, the charter dock, the court) stays open; the town is east of it
   {
@@ -457,6 +462,7 @@ export function generateCity(seed = 1337) {
   for (const b of m.blocks) {
     const st = STYLE[DISTRICTS[b.d].style];
     b.ix = b.x; b.iy = b.y; b.iw = b.w; b.ih = b.h;
+    if (handBlockOf(b)) { b.hand = true; continue; } // rebuilt from a painting (buildHandBlocks)
     if (b.court) {
       m.fill(b.x, b.y, b.w, b.h, T.SAND);
       volleyCourt(m, 'Sunset Beach Volleyball', b.x + ((b.w - 16) >> 1), b.y + ((b.h - 8) >> 1), 16, 8);
@@ -511,6 +517,7 @@ export function generateCity(seed = 1337) {
   placeSpecials(m, rows, rand);
   for (const row of rows) fillRow(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
   for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)), b.park);
+  buildHandBlocks(m);
   for (const [type, key, x, y, south] of estateRows) estateHouse(m, rand, type, key, x, y, south);
   clearDoorways(m);
   m.garages ||= []; m.mansions ||= [];
@@ -538,6 +545,7 @@ export function generateCity(seed = 1337) {
   buildBoatDocks(m);
   buildSignals(m);
   buildStreetAtms(m);
+  finishHandBlocks(m);
   m.atms = m.pois.filter((p) => p.kind === 'atm');
   aimLamps(m);
   m.levels = buildLevels(m);
@@ -1450,12 +1458,22 @@ function rowFits(row, pf, iv) {
 
 function placeSpecials(m, rows, rand) {
   const order = SPECIALS.map((s, i) => ({ ...s, i })).sort((a, b) => PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);
+  const claimed = new Set(HAND_BLOCKS.flatMap((h) => h.claims || []));
   for (const sp of order) {
+    if (sp.names.some((n) => claimed.has(n))) { rand(); rand(); continue; } // a hand-designed block hosts it (same draws, so the rest of the city stays put)
+    // the boat shop wants the water: any south-facing row in the city near the sea
+    const seaSide = sp.biz.includes('marina');
+    const nearSea = (row) => m.distSea[Math.min(MAP_H - 1, row.y + row.h) * MAP_W + row.x + (row.w >> 1)] < 24 * 4;
     let cands = [];
+    if (seaSide) for (const row of rows) {
+      if (row.face !== 'S' || !nearSea(row) || m.zoneAt(row.x * TILE, row.y * TILE) !== Z.CITY) continue;
+      for (let k = 0; k < row.iv.length; k++) if (rowFits(row, sp.prefab, row.iv[k])) cands.push([row, k]);
+    }
     // a building drawn with its front at the bottom (hospitals, stations, shops...) only goes on the
     // north side of a street, facing south, so it's never upside-down; others may face either way
     const upright = !PREFABS[sp.prefab].rot;
     for (const pass of [0, 1, 2, 3, 4]) {
+      if (cands.length) break;
       for (const row of rows) {
         if ((pass <= 1 || pass === 4) && row.d !== sp.d) continue;
         if (pass === 2 && m.zoneAt(row.x * TILE, row.y * TILE) !== m.zoneAt(...seedOf(sp.d))) continue;
@@ -1466,6 +1484,7 @@ function placeSpecials(m, rows, rand) {
       if (cands.length) break;
     }
     if (!cands.length) throw new Error(`city generator: no room for ${sp.prefab} (${sp.names[0]})`);
+    if (seaSide) { const near = cands.filter(([row]) => nearSea(row)); if (near.length) cands = near; const home = cands.filter(([row]) => row.d === sp.d); if (home.length) cands = home; }
     // prefer lots near the heart of the district
     const [sx, sy] = seedOf(sp.d);
     cands.sort((a, b) => Math.hypot(a[0].x * TILE - sx, a[0].y * TILE - sy) - Math.hypot(b[0].x * TILE - sx, b[0].y * TILE - sy));
@@ -1708,6 +1727,7 @@ const FOOT = new Set([T.SIDEWALK, T.PLAZA, T.LOT]);
 // right below the wall, clear of doors, other machines and street furniture.
 const FOOT_LOOSE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DIRT, T.GRASS, T.SAND]);
 function atmSpot(m, b, x, loose = false) {
+  if (b.hand) return false; // a painted block keeps to its painting
   const F = loose ? FOOT_LOOSE : FOOT;
   const wy = (b.ty + b.th) * TILE;
   if (onSubwayPlaza(m, x, wy + 8)) return false;
@@ -1792,7 +1812,7 @@ function kioskAtm(m, di, atms, loose) {
   const F = loose ? FOOT_LOOSE : FOOT;
   for (let ty = 2; ty < MAP_H - 2; ty++) for (let tx = 2; tx < MAP_W - 2; tx++) {
     const i = ty * MAP_W + tx;
-    if (m.dist[i] !== di || !F.has(m.tiles[i]) || m.reserve[i] & 3 || m.deck[i] || hash2(tx, ty, 41) > 0.3) continue;
+    if (m.dist[i] !== di || !F.has(m.tiles[i]) || m.reserve[i] & 3 || m.deck[i] || m.handMask[i] || hash2(tx, ty, 41) > 0.3) continue;
     // pavement with the road in front (south) and no pavement behind it: the back edge
     if (m.tileAt(tx, ty + 2) !== T.ROAD && m.tileAt(tx, ty + 1) !== T.ROAD) continue;
     const back = m.tileAt(tx, ty - 1);
@@ -1843,6 +1863,89 @@ function buildEstates(m, rand) {
   if (!m.mansions.length) {
     m.fill(1196, 480, MANSION_SIZE[0], MANSION_SIZE[1], T.GRASS);
     mansion(m, rand, 1196, 480);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hand-designed blocks (shared/handblocks.js): a designer's painting of a block, laid on the
+// ground curb to curb, with the buildings, doors and businesses it shows.
+function handPrepare(m) {
+  HAND_BLOCKS.forEach((h, hi) => {
+    const [ax, ay, aw, ah] = h.area;
+    for (let y = ay; y < ay + ah; y++) for (let x = ax; x < ax + aw; x++) m.handMask[y * MAP_W + x] = hi + 1;
+    // a subway entrance the painting puts somewhere else in the block moves there
+    if (!h.subway) return;
+    const pl = (m.subwayPlazas || []).find((q) => q.x < ax + aw && q.x + q.w > ax && q.y < ay + ah && q.y + q.h > ay);
+    if (!pl) return;
+    for (let y = pl.y; y < pl.y + pl.h; y++) for (let x = pl.x; x < pl.x + pl.w; x++) { const i = y * MAP_W + x; m.tiles[i] = T.GRASS; m.reserve[i] &= ~16; }
+    pl.x = ax + h.subway[0]; pl.y = ay + h.subway[1];
+    for (let y = pl.y; y < pl.y + pl.h; y++) for (let x = pl.x; x < pl.x + pl.w; x++) { const i = y * MAP_W + x; m.tiles[i] = T.PLAZA; m.reserve[i] |= 16; }
+  });
+}
+function handBlockOf(b) {
+  return HAND_BLOCKS.find((h) => b.x >= h.area[0] && b.y >= h.area[1] && b.x + b.w <= h.area[0] + h.area[2] && b.y + b.h <= h.area[1] + h.area[3]) || null;
+}
+function buildHandBlocks(m) {
+  for (const h of HAND_BLOCKS) {
+    const [ax, ay, aw, ah] = h.area;
+    m.handArt.push({ key: h.key, x: ax * TILE, y: ay * TILE, w: aw * TILE, h: ah * TILE });
+    // everything inside the curb is paving (the painting shows what's on it); streets, the
+    // sidewalk ring and a subway entrance's plaza stay as they are
+    for (let y = ay; y < ay + ah; y++) for (let x = ax; x < ax + aw; x++) {
+      const i = y * MAP_W + x, t = m.tiles[i];
+      if (t === T.ROAD || t === T.BRIDGE || t === T.SIDEWALK || m.reserve[i] & 16) continue;
+      if (m.bld[i] >= 0) continue;
+      m.tiles[i] = T.PLAZA;
+    }
+    for (const spec of h.buildings || []) {
+      const [rx, ry, rw, rh] = spec.r;
+      const b = { id: m.buildings.length, prefab: -1, tx: ax + rx, ty: ay + ry, tw: rw, th: rh, kind: spec.kind || 'shop', name: spec.name || 'Building', business: spec.biz && spec.biz !== 'delivery' ? spec.biz : null, signs: [], hand: h.key };
+      m.buildings.push(b);
+      for (let ty = b.ty; ty < b.ty + b.th; ty++) for (let tx = b.tx; tx < b.tx + b.tw; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * MAP_W + tx] = b.id; }
+      const dtx = ax + (spec.door ?? rx + (rw >> 1));
+      b.door = { tx: dtx, ty: b.ty + b.th };
+      if (!spec.biz) continue;
+      const px = (dtx + 0.5) * TILE, py = (b.ty + b.th + 0.7) * TILE;
+      const poi = { id: m.pois.length, kind: spec.biz, label: b.name, x: px, y: py, r: spec.biz === 'delivery' ? 40 : 48, b: b.id, fixed: true };
+      m.pois.push(poi);
+      if (spec.biz === 'garage' || spec.biz === 'dealer') poi.spawnLot = { x: px, y: (b.ty + b.th + 1.6) * TILE, a: Math.PI / 2 };
+      if (spec.biz === 'warehouse') poi.cargoPad = { x: px, y: (b.ty + b.th + 1.2) * TILE };
+      if (spec.biz === 'police') { poi.spawnLot = spec.spawn ? { x: (ax + spec.spawn[0]) * TILE, y: (ay + spec.spawn[1]) * TILE, a: Math.PI / 2 } : { x: px, y: (b.ty + b.th + 2) * TILE, a: Math.PI / 2 }; m.pois.push({ id: m.pois.length, kind: 'evidence', label: 'Evidence Locker', x: (b.tx + b.tw - 1) * TILE, y: py, r: 56, b: b.id }); }
+      if (spec.biz === 'hospital') m.pois.push({ id: m.pois.length, kind: 'reception', label: 'ER Reception', x: px, y: py, r: 36, b: b.id });
+      if (h.pool && spec.biz === 'police') {
+        // the painted, fenced lot beside the station becomes its motor pool (buildMotorPools)
+        const [qx, qy, qw, qh] = h.pool;
+        const lot = { id: m.buildings.length, prefab: -1, tx: ax + qx, ty: ay + qy, tw: qw, th: qh, kind: 'roof', name: 'Motor Pool', business: null, signs: [], hand: h.key, handPool: poi.id, roof: -1 };
+        m.buildings.push(lot);
+        for (let ty = lot.ty; ty < lot.ty + lot.th; ty++) for (let tx = lot.tx; tx < lot.tx + lot.tw; tx++) m.bld[ty * MAP_W + tx] = lot.id;
+      }
+    }
+  }
+}
+// After the street furniture: nothing the generator put down stands on a painted block (the
+// painting has its own lamps, benches and trees), apart from the traffic signals. The painted
+// things you'd bump into become solid, and the painted lamps light up after dark.
+function finishHandBlocks(m) {
+  const inHand = (x, y) => m.handMask[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)] > 0;
+  const keepT = new Set(['sigpole']);
+  const keep = [], remap = new Map(), gone = new Set();
+  m.props.forEach((pr, i) => { if (inHand(pr.x, pr.y) && !keepT.has(pr.t)) { gone.add(pr); return; } remap.set(i, keep.length); keep.push(pr); });
+  if (gone.size) {
+    m.props = keep;
+    m.lamps = m.lamps.filter((l) => !gone.has(l));
+    m.propSolid = new Map();
+    for (const [k, arr] of m.solidProps) {
+      const kept = arr.filter((e) => e.pi < 0 || remap.has(e.pi));
+      for (const e of kept) if (e.pi >= 0) { e.pi = remap.get(e.pi); m.propSolid.set(e.pi, e); }
+      if (kept.length) m.solidProps.set(k, kept); else m.solidProps.delete(k);
+    }
+  }
+  for (const h of HAND_BLOCKS) {
+    const ox = h.area[0] * TILE, oy = h.area[1] * TILE;
+    for (const [x, y, r] of h.solids || []) addProp(m, 'painted', ox + x, oy + y, r);
+    // the lamp posts found in the painting (tools/build_blocks.py), plus any listed by hand
+    const lamps = [...((BLOCK_ART[h.key] && BLOCK_ART[h.key].lamps) || []), ...(h.lamps || [])];
+    for (const [x, y, hx, hy] of lamps) m.lamps.push(addProp(m, 'plamp', ox + x, oy + y, 5, { hx: ox + hx, hy: oy + hy }));
   }
 }
 
@@ -2024,8 +2127,10 @@ function buildMotorPools(m) {
     if (!sb) continue;
     const used = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
     let best = null, bd = Infinity;
-    for (const b of m.buildings) {
-      if (b.gone || b.prefab !== -1 || b.kind !== 'roof' || used.has(b.id) || b.tw < 8 || b.tw > 20 || b.th < 7) continue;
+    const painted = m.buildings.find((b) => b.handPool === st.id);
+    if (painted) best = { b: painted, south: true };
+    if (!best) for (const b of m.buildings) {
+      if (b.gone || b.prefab !== -1 || b.kind !== 'roof' || b.hand || used.has(b.id) || b.tw < 8 || b.tw > 20 || b.th < 7) continue;
       const gapX = Math.max(0, b.tx - (sb.tx + sb.tw), sb.tx - (b.tx + b.tw));
       const gapY = Math.max(0, b.ty - (sb.ty + sb.th), sb.ty - (b.ty + b.th));
       if (gapX > 3 || gapY > 3) continue;
@@ -2081,8 +2186,17 @@ function buildMotorPools(m) {
       else { spots.push({ x: colB, y: yb, a: heading, model }); yb += dir * 64; }
     }
     // where a new officer walks out of the armory: the station-side corner, away from the cars
+    if (b.handPool !== undefined) {
+      // a painted lot: everything side by side under the far fence, nose to the gate
+      spots.length = 0;
+      let x = (x0 + 1) * TILE + 30, bikes = 0;
+      for (const model of POOL_MODELS) {
+        if (model === 'police') { spots.push({ x, y: (far + 0.5) * TILE + dir * 36, a: heading, model }); x += 72; }
+        else spots.push({ x: x + 10, y: (far + 0.5) * TILE + dir * (14 + 62 * bikes++), a: heading, model }); // the bikes one behind the other
+      }
+    }
     const exit = { x: (x0 + w - 2) * TILE, y: (far + 0.5) * TILE + dir * 20 };
-    m.motorPools.push({ station: st.id, b: b.id, tx: x0, ty: y0, tw: w, th: h, south, gate, gateIdx: m.gates.length - 1, spots, exit });
+    m.motorPools.push({ station: st.id, b: b.id, tx: x0, ty: y0, tw: w, th: h, south, gate, gateIdx: m.gates.length - 1, spots, exit, painted: b.handPool !== undefined });
     st.pool = m.motorPools.length - 1;
   }
 }
@@ -2171,10 +2285,10 @@ function buildInteriors(m) {
   const bays = new Set((m.bays || []).map((bay) => m.bld[bay.ty * MAP_W + bay.tx]));
   for (const [bid, list] of byB) {
     const b = m.buildings[bid];
-    if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
+    if (!b || b.gone || (b.prefab < 0 && !b.hand) || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
     const main = list.filter((p) => WALK_IN.has(p.kind) || p.kind === 'delivery');
     if (!main.some((p) => WALK_IN.has(p.kind)) || list.some((p) => !WALK_IN.has(p.kind) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery')) continue;
-    const south = m.prefabs[b.prefab].rot === 0;
+    const south = b.hand ? true : m.prefabs[b.prefab].rot === 0;
     const x0 = b.tx + 1, x1 = b.tx + b.tw - 2, y0 = b.ty + 1, y1 = b.ty + b.th - 2; // interior (inclusive)
     main.sort((a, c) => a.x - c.x);
     const depth = y1 - y0 + 1;

@@ -6,6 +6,7 @@ import { T, TILE, CHUNK_PX, MAP_W, MAP_H } from '../../shared/constants.js';
 import { hash2, mulberry32 } from '../../shared/rng.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
+import { BLOCK_ART } from '../../shared/block-data.js';
 import { INTERIOR_RECTS, INTERIOR_KINDS, SCENE_RECTS } from '../../shared/interior-art.js';
 import { atlas } from './sprites.js';
 import { railIndex, drawRailChunk, drawStation, drawPortals } from './trains.js';
@@ -48,6 +49,7 @@ export class GroundCache {
     this.highProps = this.byChunk(map.props.filter((p) => OVERHEAD.has(p.t)), propRect);
     this.roofs = this.byChunk((map.roofs || []).filter((r) => !r.gone), (r) => [r.tx * TILE - 2, r.ty * TILE - 2, (r.tx + r.tw) * TILE + 10, (r.ty + r.th) * TILE + 10]);
     this.prefabs = this.byChunk(map.prefabs, (p) => [p.tx * TILE, p.ty * TILE, (p.tx + p.tw) * TILE, (p.ty + p.th) * TILE]);
+    this.handArt = this.byChunk(map.handArt || [], (a) => [a.x, a.y, a.x + a.w - 1, a.y + a.h - 1]);
     this.stalls = this.byChunk(map.stalls, (s) => [s.x, s.y, s.x + s.w, s.y + s.h]);
     this.signs = this.byChunk(map.buildings.filter((b) => b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]);
     // ground-level streets (the deck and ramps are drawn lifted, render/highway.js)
@@ -85,6 +87,7 @@ export class GroundCache {
     g.save();
     g.translate(-cx * CHUNK_PX, -cy * CHUNK_PX);
     const k = this.key(cx, cy);
+    const L = this.layers;
     // smooth coastlines, then the piers and bridges that stand over them
     this.shores.bake(g, cx, cy);
     if (this.shores.grid.has(k)) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
@@ -93,11 +96,13 @@ export class GroundCache {
     }
     drawCurbs(g, m, tx0, ty0, n);
     drawRoads(g, m, this.roads.get(k) || [], this.culdesacs.get(k) || []);
+    // hand-designed blocks: the painting, curb to curb (its road tiles are cut out, so the
+    // game's own streets and crosswalks show through)
+    if (L.lots) for (const a of this.handArt.get(k) || []) drawHandArt(g, a);
     for (const ap of m.airports || []) drawAirport(g, ap, cx, cy);
     for (const pt of m.paintings || []) drawPainting(g, pt, cx, cy);
     drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, m, st, cx, cy);
-    const L = this.layers;
     if (L.props) for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawBuildingBase(g, r); // the roof itself is lifted onto its walls (render/buildings.js)
     drawPortals(g, m, cx, cy);
@@ -291,6 +296,7 @@ function drawVenue(g, v, cx, cy) {
 
 // Police motor pool: painted bays on dark asphalt inside a chain-link fence on a concrete curb.
 function drawMotorPool(g, mp, cx, cy) {
+  if (mp.painted) return; // a hand-designed block's own painted lot, fences and all
   const x = mp.tx * TILE, y = mp.ty * TILE, w = mp.tw * TILE, h = mp.th * TILE;
   if (x + w < cx * CHUNK_PX || x > (cx + 1) * CHUNK_PX || y + h + 96 < cy * CHUNK_PX || y - 96 > (cy + 1) * CHUNK_PX) return;
   g.fillStyle = '#3c3f46'; g.fillRect(x, y, w, h);
@@ -399,7 +405,7 @@ function drawLamp(g, p) {
   g.restore();
   void c; void s;
 }
-export function lampHead(p) { const a = p.a ?? -Math.PI / 2; return { x: p.x + Math.cos(a) * 30, y: p.y + Math.sin(a) * 30 }; }
+export function lampHead(p) { if (p.hx !== undefined) return { x: p.hx, y: p.hy }; const a = p.a ?? -Math.PI / 2; return { x: p.x + Math.cos(a) * 30, y: p.y + Math.sin(a) * 30 }; }
 
 // ---------------------------------------------------------------------------
 function tex(g, name, tx, ty, x, y, tint = null) {
@@ -511,6 +517,25 @@ function drawStall(g, s) {
   g.moveTo(s.x + 1, s.y + 4); g.lineTo(s.x + 1, s.y + s.h - 4);
   g.moveTo(s.x + s.w - 1, s.y + 4); g.lineTo(s.x + s.w - 1, s.y + s.h - 4);
   g.stroke();
+}
+
+// A hand-designed block's painting (tools/build_blocks.py), laid on its block curb to curb.
+function drawHandArt(g, a) {
+  const art = BLOCK_ART[a.key];
+  if (!art || !atlas.blocks) { g.fillStyle = 'rgba(138,130,120,.35)'; g.fillRect(a.x, a.y, a.w, a.h); return; }
+  const [si, sx, sy, sw, sh] = art.src;
+  g.drawImage(atlas.blocks[si], sx, sy, sw, sh, a.x, a.y, a.w, a.h);
+}
+export function drawHandGlow(g, a, clip) {
+  const art = BLOCK_ART[a.key];
+  const img = art && atlas.blockGlow && atlas.blockGlow[art.src[0]];
+  if (!img) return;
+  const [, sx, sy, sw, sh] = art.src;
+  const kx = sw / a.w, ky = sh / a.h;
+  const [x0, y0, x1, y1] = clip;
+  const cx0 = Math.max(a.x, x0), cy0 = Math.max(a.y, y0), cx1 = Math.min(a.x + a.w, x1), cy1 = Math.min(a.y + a.h, y1);
+  if (cx1 <= cx0 || cy1 <= cy0) return;
+  g.drawImage(img, sx + (cx0 - a.x) * kx, sy + (cy0 - a.y) * ky, (cx1 - cx0) * kx, (cy1 - cy0) * ky, cx0, cy0, cx1 - cx0, cy1 - cy0);
 }
 
 function drawPrefab(g, p) {
@@ -666,6 +691,7 @@ export function drawPrefabGlow(g, p) {
 
 
 export function drawProp(g, p) {
+  if (p.t === 'painted' || p.t === 'plamp') return; // part of a painted block: the art already shows it
   const fr = atlas.ready ? atlas.frames['prop_' + p.t] : null;
   if (fr) {
     const s = PROP_SIZES[p.t];

@@ -31,7 +31,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 23;
+export const TUTORIAL_VERSION = 24;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -59,7 +59,7 @@ export const STEPS = [
   { ch: 'city', title: 'Welcome to the city', at: { city: 1 },
     text: `${isle('D')} fills the big island in the middle of the bay: towers inside a ring highway, ${isle('R')} across the river, the farms and desert of ${isle('F')} out east. Highways run out over long bridges to ${isle('W')} in the west, ${isle('N')} in the north and ${isle('S')} in the south, and one more bridge to the little town on ${isle('P')}; ${isle('G')} and ${isle('C')} you reach by boat. Everyone shares one living world - other players, traffic, cops and crooks. Live as a citizen, a criminal or a police officer, and switch whenever you like.` },
   { ch: 'city', title: isle('D'), at: { island: 'D' },
-    text: `The heart of it all. Downtown's towers and the Civic Center inside the ring, Broadway cutting across the grid on the diagonal, the Neon Strip and the Pink Mile toward the river, Bayside Heights' crescents and villas, Old Town's worn brick up north, the docks of the Harbor and the rough Yards in the south-west. The richer the street, the more people carry - and the faster the police turn up.` },
+    text: `The heart of it all. Downtown's towers and the Civic Center inside the ring, Broadway cutting across the grid on the diagonal, the Neon Strip and the Pink Mile toward the river, Bayside Heights' crescents and villas, Old Town's worn brick up north, the docks of the Harbor and the rough Yards in the south-west. Where Broadway crosses from Midtown into Downtown, every block has been redrawn by hand: City General and Cedar Falls Clinic, the police HQ and City Hall, The Daily Fork's patio, Fitness, Books and Electronics, little gardens on the Broadway corners. The richer the street, the more people carry - and the faster the police turn up.` },
   { ch: 'city', title: 'The ring highway', at: { ring: 1 },
     text: `An elevated highway loops around downtown on concrete pillars, three lanes each way. Get on from the one-way frontage roads that run beside it: an on-ramp climbs up and merges from the right, exits peel off to the right and drop back down. Up on the deck there are no lights and no crossings - just traffic doing ${kmh(HIGHWAY_SPEED)} km/h (you can walk up a ramp, but mind the traffic). Down below, the avenues pass underneath it; anything up top is a level of its own, so you can't shoot or hit people on the street below. The concrete barriers hold at normal speeds, but ram one head-on faster than about ${kmh(BARRIER_BREAK_SPEED)} km/h and it gives way - over the edge you go, a hard drop onto the street below. The road crew puts a smashed barrier back after ${Math.round(BARRIER_REPAIR_S / 60)} minutes.` },
   { ch: 'city', title: isle('R'), at: { island: 'R' },
@@ -163,7 +163,7 @@ export const STEPS = [
   { ch: 'police', title: 'Joining the force', at: { poi: 'police' },
     text: `Walk in the front door of {{police}} in {{police:where}} and sign up at the front desk (${ENFORCER_MIN_SAMARITAN}+ Samaritan points, zero felonies). You get a uniform, taser, nightstick, a ${WEAPONS.spikes.name.toLowerCase()} (throw it across the road ahead of a fleeing car: anything driven over it has its tyres shredded, and it stays ${SPIKE_STRIP_S} seconds) and the ${WEAPONS.service.name} (${SERVICE_MAG}-round mag, ${SERVICE_AMMO} rounds), then the door locks behind you in the armory: check out one of the ${POLICE_ARMORY.filter((id) => id !== 'service').map((id) => WEAPONS[id].name.replace(/^Police /, '').toLowerCase()).join(', ')}. Your own weapons still work. No ducking inside mid-fight, and not while you're wanted.` },
   { ch: 'police', title: 'The motor pool', at: { poi: 'police' },
-    text: `Out the armory's back door is the fenced motor pool: cruisers and police motorcycles, free to take - pick whichever you like. The sliding gate opens for officers only. Come back any time and drive in to swap; new recruits always find fresh vehicles waiting. Anyone else who takes one is stealing a police vehicle.` },
+    text: `Beside every station is its fenced motor pool (at Metro City PD - HQ it's the gated lot out front): cruisers and police motorcycles, free to take - pick whichever you like. The sliding gate opens for officers only. Come back any time and drive in to swap; new recruits always find fresh vehicles waiting. Anyone else who takes one is stealing a police vehicle.` },
   { ch: 'police', title: 'Your cruiser', at: { poi: 'police' }, route: { from: { poi: 'police' }, to: { district: 'Neon Strip' }, veh: 'police', siren: 1 },
     text: `[[horn]] toggles the siren - with it on, traffic ahead slows and eases over to the kerb to let you through (never onto people). Some patrols ride police motorcycles too. Your cruiser is the blue square on your map. Wrecked or stolen? After ${CALL_COOLDOWN_S} seconds press [[cruiser]] and dispatch drives a new one to you, locked just for you. Leave it behind for long and it's towed back to HQ.` },
   { ch: 'police', title: 'Dispatch', at: { district: 'Downtown' },
