@@ -604,6 +604,9 @@ function onEvent(ev) {
 // new one. GitHub Pages can lag the game server by a minute or two: if the reload still brings the
 // old build, say so and try again shortly instead of reloading in a loop.
 function outdatedBuild(sig) {
+  // say so on the title screen too (it used to sit on "Connecting..." while the versions differed)
+  $('t-status').textContent = 'The server and this page are on different versions (an update is rolling out) - retrying shortly...';
+  $('play').disabled = true;
   let tried = null;
   try { tried = sessionStorage.getItem('cla.reloadFor'); } catch { tried = null; }
   try { localStorage.removeItem('cla.build'); } catch { /* storage blocked */ }

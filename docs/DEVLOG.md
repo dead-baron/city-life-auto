@@ -1345,3 +1345,10 @@ Went through every painting the game uses: each building lot, the hospital front
   - Stop lines need a proper approach and never go on alleys, lanes or dirt.
   - The asphalt grime decals are lighter and fewer.
 - New test `test/country.test.js`. Tutorial: new "Out in the country" stop framing all the landmarks (`TUTORIAL_VERSION` 27), and `test/tutorial.test.js` checks that it exists.
+
+## 2026-10-05 · Fix: the live server didn't come back after round 14
+
+- **The cause:** the bigger world made the server take longer to start. It missed the deploy's 15-second health check, so the update rolled the server back to the old version. GitHub Pages was already serving the new page, so the page and the server built different cities. The page kept reloading every 30 seconds and showed only "Connecting to play.deadbaron.com...".
+- **Deploy:** `deploy/auto-update.sh` now gives a restarted server up to 90 seconds to answer `/health` before rolling back.
+- **Startup:** the country site search (`shared/countryside.js`) finds the nearest road through a bucketed lookup and tracks claimed ground in a list instead of rebuilding its table after every site. It went from about 0.9 s to 0.17 s, and every site lands in the same place as before.
+- **Client:** when the page and the server are on different versions, the title screen now says so instead of sitting on "Connecting...".

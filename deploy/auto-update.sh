@@ -26,7 +26,7 @@ if ! echo "$CHANGED" | grep -qE '^(server/|shared/|package\.json)'; then
 fi
 
 healthy() {
-  for _ in $(seq 1 15); do
+  for _ in $(seq 1 90); do
     sleep 1
     curl -sf -m 2 http://127.0.0.1:8080/health >/dev/null && return 0
   done

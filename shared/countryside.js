@@ -91,7 +91,14 @@ export function countrysideRoads(ctx) {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) sat[(y + 1) * (W + 1) + x + 1] = bad[y * W + x] + sat[y * (W + 1) + x + 1] + sat[(y + 1) * (W + 1) + x] - sat[y * (W + 1) + x];
   };
   build();
-  const badIn = (x, y, w, h) => (x < 0 || y < 0 || x + w > W || y + h > H ? 1 : sat[(y + h) * (W + 1) + x + w] - sat[y * (W + 1) + x + w] - sat[(y + h) * (W + 1) + x] + sat[y * (W + 1) + x]);
+  const satIn = (x, y, w, h) => (x < 0 || y < 0 || x + w > W || y + h > H ? 1 : sat[(y + h) * (W + 1) + x + w] - sat[y * (W + 1) + x + w] - sat[(y + h) * (W + 1) + x] + sat[y * (W + 1) + x]);
+  // what's been claimed since the table was built (the lots placed so far and their roads in)
+  const claimed = []; // tile rects [x0, y0, x1, y1), inclusive-exclusive
+  const badIn = (x, y, w, h) => {
+    if (satIn(x, y, w, h)) return 1;
+    for (const [a, b, c, d] of claimed) if (a < x + w && c > x && b < y + h && d > y) return 1;
+    return 0;
+  };
 
   const hwys = lines.filter((l) => l.kind === 'hwy' && l.lvl === 0);
   const crossesHwy = (pts) => {
@@ -118,14 +125,29 @@ export function countrysideRoads(ctx) {
     const comp = m.compLab ? m.compLab[S.near[1] * W + S.near[0]] : -1;
     const sameLand = (q) => !m.compLab || comp < 0 || m.compLab[Math.floor(q.y / TILE) * W + Math.floor(q.x / TILE)] === comp;
     const near = samples.filter((q) => ok.has(q.kind) && Math.abs(q.x / TILE - S.near[0]) < 160 && Math.abs(q.y / TILE - S.near[1]) < 160 && sameLand(q));
+    // bucketed, so finding the nearest one is a look round a few cells, not a scan of them all
+    const CELL = 16 * TILE, buckets = new Map();
+    near.forEach((q, i) => { const k = Math.floor(q.x / CELL) * 4096 + Math.floor(q.y / CELL); let b = buckets.get(k); if (!b) buckets.set(k, (b = [])); b.push(i); });
+    const nearest = (ex, ey) => {
+      const cx = Math.floor(ex / CELL), cy = Math.floor(ey / CELL);
+      let bi = -1, bd = Infinity;
+      for (let r = 0; r < 14; r++) {
+        if (bi >= 0 && (r - 1) * CELL > bd) break;
+        for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const b = buckets.get((cx + dx) * 4096 + cy + dy);
+          if (b) for (const i of b) { const q = near[i], d = Math.hypot(q.x - ex, q.y - ey); if (d < bd || (d === bd && i < bi)) { bd = d; bi = i; } }
+        }
+      }
+      return bi < 0 ? [null, Infinity] : [near[bi], bd];
+    };
     const cands = [];
     for (let dy = -60; dy <= 60; dy += 2) for (let dx = -60; dx <= 60; dx += 2) {
       const x = S.near[0] + dx - (S.w >> 1), y = S.near[1] + dy - (S.h >> 1);
       if (badIn(x - M, y - M, S.w + 2 * M, S.h + 2 * M)) continue;
       // the nearest road below or beside the entrance (the middle of the bottom edge)
       const ex = (x + S.w / 2) * TILE, ey = (y + S.h) * TILE;
-      let q = null, qd = Infinity;
-      for (const s of near) { const d = Math.hypot(s.x - ex, s.y - ey); if (d < qd) { qd = d; q = s; } }
+      const [q, qd] = nearest(ex, ey);
       if (!q || qd > 90 * TILE) continue;
       const above = q.y < (y + S.h * 0.5) * TILE ? 30 : 0; // a road behind the lot means a long way round
       cands.push({ x, y, q, score: Math.hypot(dx, dy) + qd / TILE * 0.6 + above });
@@ -145,16 +167,16 @@ export function countrysideRoads(ctx) {
     const { x, y, q } = best;
     const site = { ...S, x, y, d: m.dist[(y + (S.h >> 1)) * W + x + (S.w >> 1)] };
     m.countrySites.push(site);
-    for (let ty = y - 1; ty < y + S.h + 1; ty++) for (let tx = x - 1; tx < x + S.w + 1; tx++) { bad[ty * W + tx] = 1; m.reserve[ty * W + tx] |= 32; }
+    for (let ty = y - 1; ty < y + S.h + 1; ty++) for (let tx = x - 1; tx < x + S.w + 1; tx++) m.reserve[ty * W + tx] |= 32;
+    claimed.push([x - 1, y - 1, x + S.w + 1, y + S.h + 1]);
     const pts = rounded(route(S, x, y, q), 4 * TILE, false, 8);
     measure(pts);
     lines.push({ pts, kind: S.road, lvl: 0, name: `${S.name} Road`.replace(' Road Road', ' Road'), culdesac: true });
     // the access road is now a road too (later lots keep off it)
     for (let k = 0; k + 1 < pts.length; k++) {
       const a = pts[k], b = pts[k + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 16));
-      for (let j = 0; j <= n; j++) stamp(a.x + (b.x - a.x) * (j / n), a.y + (b.y - a.y) * (j / n), 3);
+      for (let j = 0; j <= n; j++) { const tx = Math.floor((a.x + (b.x - a.x) * (j / n)) / TILE), ty = Math.floor((a.y + (b.y - a.y) * (j / n)) / TILE); claimed.push([tx - 3, ty - 3, tx + 4, ty + 4]); }
     }
-    build();
   }
 }
 
