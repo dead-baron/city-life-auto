@@ -25,6 +25,8 @@ export class HUD {
     this.mini = buildMinimap(map);
     this.toastEls = [];
     $('m-close').onclick = () => this.closeMenu();
+    // tapping (or clicking) anywhere off the menu panel backs out of it too - no hunting for the ✕
+    $('menu').addEventListener('pointerdown', (e) => { if (this.menuOpen && !e.target.closest('.panel')) { e.preventDefault(); this.closeMenu(); } });
     this.lastStars = 0;
   }
 
@@ -122,7 +124,33 @@ export class HUD {
       $('d-cause').textContent = me.deathCause || '';
       const opts = me.spawnOpts || [];
       const chosen = opts.find((o) => o.id === me.spawnChoice);
-      $('d-timer').textContent = me.respawnIn > 0 ? `Waking up${chosen ? ' at ' + chosen.label : ''} in ${Math.ceil(me.respawnIn)}...` : '';
+      const dn = me.down;
+      $('d-title').textContent = dn && !dn.finished ? 'DOWN' : 'WASTED';
+      const left = Math.ceil(me.respawnIn);
+      $('d-timer').textContent = me.respawnIn > 0 ? (dn && !dn.finished
+        ? `${dn.help ? 'Waiting for help' : 'You can still be revived'} · waking up${chosen ? ' at ' + chosen.label : ''} in ${left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : left + 's'}`
+        : `Waking up${chosen ? ' at ' + chosen.label : ''} in ${left}...`) : '';
+      // downed: call for help (again: re-alert), the ambulance, give up and wake up now
+      const hb = $('d-help');
+      const pad = input.device === 'gamepad', kb = input.device === 'keyboard';
+      const k = (key, padBtn) => (kb ? ` <i>${key}</i>` : pad ? ` <i>${padBtn}</i>` : '');
+      const btns = !dn || dn.finished ? [] : !dn.help
+        ? [['help', `<b class="medic">✚</b> Call for Help${k('H', 'X')}`, 'help']]
+        : [['help', `<b class="medic">✚</b> Call again${k('H', 'X')}`, 'help'],
+          dn.amb ? ['ambx', `🚑 Cancel ambulance${k('J', 'Y')}`, 'amb on'] : ['amb', `🚑 Ambulance $${dn.fee}${dn.ambUsed ? ' (used)' : ''}${k('J', 'Y')}`, dn.canAmb ? 'amb' : 'amb off'],
+          ['cancel', `✕ Cancel request & wake up${k('C', 'B')}`, 'cancel']];
+      const hsig = btns.map((b) => b[1] + b[2]).join('|');
+      if (hb.dataset.sig !== hsig) {
+        hb.dataset.sig = hsig; hb.innerHTML = '';
+        for (const [a, html, cls] of btns) {
+          const b = document.createElement('button');
+          b.className = 'help-btn ' + cls; b.innerHTML = html; b.dataset.a = a;
+          b.disabled = cls.endsWith('off');
+          b.onclick = () => this.onDown?.(a);
+          hb.appendChild(b);
+        }
+        if (dn && dn.help && !dn.canAmb && !dn.amb && !dn.ambUsed) { const n = document.createElement('small'); n.textContent = `(ambulance needs $${dn.fee} in the bank)`; hb.appendChild(n); }
+      }
       const box = $('d-spawn');
       const sig = opts.map((o) => o.id).join() + '|' + me.spawnChoice + '|' + input.device;
       if (box.dataset.sig !== sig) {

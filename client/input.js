@@ -63,7 +63,7 @@ export function initInput(canvas, hooks) {
     hooks.onKey?.(k);
     setDevice('keyboard');
   });
-  addEventListener('keyup', (e) => keys.delete(e.code));
+  addEventListener('keyup', (e) => { keys.delete(e.code); hooks.onKeyUp?.(e.code); });
   addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.rdown = false; });
   canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.movedAt = performance.now(); if (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents) setDevice('keyboard'); });
   canvas.addEventListener('mousedown', (e) => {
@@ -104,6 +104,7 @@ function initTouch(hooks) {
       if (name === 'map') { hooks.onMap?.(); return; }
       if (name === 'cruiser') { hooks.onCruiser?.(); return; }
       if (name === 'phone') { hooks.onPhone?.(); return; }
+      if (name === 'use') { hooks.onItems?.(); return; } // the quick wheel (stays open until you tap a slot)
       if (name === 'settings') { hooks.onSettings?.(); return; }
       if (name === 'fullscreen') { hooks.onFullscreen?.(); return; }
       touch.btn.add(name); touch.tapped.add(name); b.classList.add('on');
@@ -221,7 +222,7 @@ function readPad() {
   const out = {
     lx, ly, rx, ry,
     a: b(0), bb: b(1), x: b(2), y: b(3), lb: edge(4), rb: edge(5), lt: lt > 0.06 ? lt : 0, rt: rt > 0.06 ? rt : 0, back: b(8), start: edge(9), l3: b(10), r3: edge(11),
-    up: b(12), dUpEdge: edge(12), dDownEdge: edge(13), dLeftEdge: edge(14), dRightEdge: edge(15), aEdge: edge(0), bEdge: edge(1),
+    up: b(12), dUpEdge: edge(12), dDownEdge: edge(13), dLeftEdge: edge(14), dRightEdge: edge(15), aEdge: edge(0), bEdge: edge(1), xEdge: edge(2), yEdge: edge(3), viewEdge: edge(8),
   };
   // left stick also navigates menus (edge-triggered when it crosses 0.6)
   const sy = ly > 0.6 ? 1 : ly < -0.6 ? -1 : 0, sx = lx > 0.6 ? 1 : lx < -0.6 ? -1 : 0;
@@ -254,7 +255,6 @@ export function sample(view) {
   if (k('KeyQ')) bits |= IN.THROW;
   if (k('KeyR')) bits |= IN.RELOAD;
   if (k('KeyH')) bits |= IN.HORN;
-  if (k('KeyX')) bits |= IN.USE;
   if (pressedOnce.has('Tab')) bits |= IN.NEXTW;
   if (mouse.wheel > 0) bits |= IN.NEXTW;
   if (mouse.wheel < 0) bits |= IN.PREVW;
@@ -276,6 +276,7 @@ export function sample(view) {
   const p = readPad();
   input.menuNav = 0; input.menuLR = 0; input.menuSelect = false; input.menuBack = false; input.padStart = false; input.padCall = false; input.padPhone = false;
   input.padAxes = p ? { rx: p.rx, ry: p.ry, lt: p.lt, rt: p.rt } : null; // the raw sticks and triggers (the city map zooms and pans with them)
+  input.padX = !!(p && p.xEdge); input.padY = !!(p && p.yEdge); input.padRight = !!(p && p.dRightEdge); input.padView = !!(p && p.back); input.padViewEdge = !!(p && p.viewEdge);
   if (p) {
     if (p.dUpEdge) input.menuNav = -1;
     if (p.dDownEdge) input.menuNav = 1;
@@ -302,7 +303,6 @@ export function sample(view) {
     if (p.lb) bits |= IN.PREVW;
     if (p.rb) bits |= IN.NEXTW;
     if (p.r3) bits |= IN.RELOAD;
-    if (p.back) bits |= IN.USE;
     if (p.up) bits |= IN.HORN;
     if (view.inVehicle) { if (!driving && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
     else if (p.l3 || p.lt > 0.4) bits |= IN.SPRINT;
@@ -325,7 +325,6 @@ export function sample(view) {
     if (tb.has('action') || tt.has('action')) bits |= IN.ACTION;
     if (tb.has('vehicle') || tt.has('vehicle')) bits |= IN.VEHICLE;
     if (tb.has('throw') || tt.has('throw')) bits |= IN.THROW;
-    if (tb.has('use') || tt.has('use')) bits |= IN.USE;
     if (tt.has('nextw')) bits |= IN.NEXTW;
     if (tt.has('reload')) bits |= IN.RELOAD;
     if (tb.has('horn') || tt.has('horn')) bits |= IN.HORN;

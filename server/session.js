@@ -1,3 +1,4 @@
+import * as revive from './systems/revive.js';
 // One connected client: handshake, input decoding and message routing. Shared by the
 // Node WebSocket server and the in-browser offline practice worker.
 import { decodeInput, MSG_INPUT } from '../shared/protocol.js';
@@ -52,6 +53,17 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
       if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
       if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
+      // the bag: use an item, or put one in a quick-wheel slot (null clears it)
+      if (msg.t === 'inv' && msg.a === 'use' && typeof msg.id === 'string') { economy.useItem(world, player, msg.id); return; }
+      if (msg.t === 'inv' && msg.a === 'slot' && Number.isInteger(msg.i)) { economy.setQuick(player, msg.i, typeof msg.id === 'string' ? msg.id : null); return; }
+      // downed: call for help (again: re-alert), give up waiting, the paid ambulance
+      if (msg.t === 'down') {
+        if (msg.a === 'help') revive.callHelp(world, player);
+        else if (msg.a === 'cancel') revive.cancelHelp(world, player);
+        else if (msg.a === 'amb') revive.callAmbulance(world, player);
+        else if (msg.a === 'ambx') revive.cancelAmbulance(world, player);
+        return;
+      }
       if (msg.t === 'respawn' && typeof msg.choice === 'string' && msg.choice.length < 20) { player.respawnChoice = msg.choice; player.meDirty = true; return; } // just picks; the normal wake-up timer runs
       if (msg.t === 'phone') { const r = phone.handle(world, player, msg); if (r) conn.sendJSON(r); return; }
       if (msg.t === 'interior' && player.ped && player.ped.interior) { station.openInterior(world, player); return; }

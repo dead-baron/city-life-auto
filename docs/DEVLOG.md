@@ -1152,3 +1152,37 @@ Went through every painting the game uses: each building lot, the hospital front
   - Tap a dot or a name to teleport there and close the panel.
   - Each place lands on standable ground: the pavement or plaza nearest the middle of the district (open ground where it has no streets), the street in front of a subway kiosk, or the edge of a landmark.
 - README controls table and the tutorial's map stop updated (`TUTORIAL_VERSION` 22).
+
+## 2026-10-04 · Round 10: the bag, the quick wheel, going down and getting revived
+
+- **The bag** (`client/inventory.js`): I / D-pad → / 🎒 opens it and the same button closes it, as does a tap off the panel. The city doesn't pause.
+  - Weapons: tap to equip.
+  - Items: use now, or pin to one of four quick-wheel slots with the 1-4 buttons. Pinning an item that's already in another slot swaps the two.
+  - Loot, fish and bait are listed with what they sell for.
+  - Cash and bank are shown at the top.
+  - Coffee, energy drinks and cocktails now go into the bag instead of being drunk at the counter. A usable item you buy fills the first free slot by itself (`economy.useItem` / `setQuick` / `quickSlots`; `profile.quick`).
+- **The quick wheel:** hold X / View and the four slots fan out round you. Point with the mouse or right stick and let go to use one. A quick tap uses the slot you used last. On touch, ITEMS (was HEAL) opens it, a tap on a slot uses it, and a tap elsewhere puts it away.
+- **Menus close with a tap off them:** shop counters, hospital and police front desks and every other NPC menu, plus all pop-up panels (bag, players, settings...).
+- **Going down instead of dying straight away** (`server/systems/revive.js`). Your cash, items and weapons drop in a bag beside you, and anyone can grab it.
+  - **The death screen** now says DOWN. You have `RESPAWN_SECONDS` (15 s) to pick a spawn, and the camera slowly pulls back from your body (the server sends the wider view, `DOWN_ZOOM_OUT`).
+  - **Call for Help** (red medic cross; H / X):
+    - You stay down for `HELP_S` (2 minutes).
+    - Every player within `HELP_PING_PX` gets an alert and a red "Player down" blip on their map.
+    - Pressing it again re-alerts them at most every `HELP_PING_S` seconds.
+    - Cancel request & wake up (C / B) gives up and wakes you at your chosen spawn now.
+  - **The paid ambulance** (J / Y), once help is called, if you have `AMBULANCE_FEE` ($200) banked:
+    - It starts out of everyone's sight on your island and drives over, shown on your map, and the clock restarts.
+    - The paramedics revive you on half health, and only then is the fee taken from the bank.
+    - It can be cancelled at no charge. One per time you go down, unless it's wrecked or hijacked on the way.
+  - **Reviving someone:** hold the action button over them (E / B / ACT).
+    - Bare-handed it takes `REVIVE_HAND_S` (6 s). They come round on 15% health, limping at 55% speed and leaving a blood trail for `REVIVE_LIMP_S` (10 s) while they heal to half.
+    - With a **Revive Kit** it takes `REVIVE_KIT_S` (3 s) and gives full health. The kit costs `REVIVE_KIT_PRICE` ($50) at hospitals and pharmacies, is never used up, and doesn't work on yourself.
+    - Letting go, walking off or getting hit stops it. The reviver gets +5 Samaritan.
+    - For `GIVE_AFTER_REVIVE_S` the reviver can hand over a med kit (full) or bandage (to half). It's used on the revived player at once, not put in their bag.
+  - **Finishing a downed player:**
+    - Hold the vehicle button over them for `FINISH_S` (F / X / CAR), or hit or shoot them (melee and gunfire now reach a downed player).
+    - A cop booking a downed wanted player is a bust.
+    - Either way there's no revive.
+  - **Going down is no escape:** a wanted player who's revived is wanted again.
+  - The paramedic crew now treats from where they are if a prop blocks the last few steps to the patient.
+- New test file `test/revive.test.js`. `RESPAWN_SECONDS` 7 → 15. README controls, tutorial ("Your bag", "Down, not out"; `TUTORIAL_VERSION` 23).

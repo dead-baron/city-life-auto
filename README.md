@@ -65,7 +65,12 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | City feed (what's happening anywhere) | P → City feed | D-pad ← → City feed | 📱 → City feed |
 | Hire a boat / hand it back (at a rental dock) | E at the kiosk · E in the boat by the pier | B | ACT |
 | Moor a boat in your boathouse (waterfront homes) / take one out | E in the boat by your slip · E at your door → Take out | B | ACT |
-| Heal (bandage / medkit) | X | Back | HEAL |
+| Bag (inventory: equip weapons, use items, pin them to the quick wheel) | I | D-pad → | 🎒 |
+| Quick wheel (med kits, bandages, drinks) | hold X, point, let go (tap: last used) | hold View, right stick, let go | ITEMS, then tap a slot |
+| Revive a downed player (kit: full health, bare-handed: low) / hand them a bandage or med kit after | hold E | hold B | hold ACT |
+| Finish off a downed player | hold F (or just hit them) | hold X | hold CAR |
+| Downed: Call for Help · ambulance ($200 from the bank) · cancel and wake up | H · J · C (or the buttons) | X · Y · B | the buttons |
+| Close a shop / desk / NPC menu or any panel | Esc, or click off it | B | tap anywhere off it |
 | Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN |
 | City map + waypoints (pick a category / place, or click the map) | M | Pause → Map (D-pad / stick, A pick, B back) | tap the radar or ▦, then tap |
 | Zoom the city map / look around / find yourself | mouse wheel or + / − · drag · C (or the + − ⌖ buttons) | RT / LT · right stick | pinch · drag · + − ⌖ buttons |
@@ -104,7 +109,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Sprint | Shift | LT / L3 | SPRINT |
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
-| Weapons · reload · heal | Tab, wheel, 1-9 · R · X | LB/RB · R3 · View | tap the weapon box · RELOAD · HEAL |
+| Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | tap the weapon box · RELOAD · ITEMS · 🎒 |
 | World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
 | Pause menu (map, players online, settings, controls, Dev Debug Mode) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
 

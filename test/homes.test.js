@@ -1,3 +1,4 @@
+import { RESPAWN_SECONDS } from '../shared/rules.js';
 // Homes & estates, hiding indoors, spawn protection / spread, paint shops, felony payoff, bait.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -124,7 +125,7 @@ test('every spawn: a few spots around the place, and a couple of seconds of prot
   for (let i = 0; i < 8; i++) {
     combat.kill(w, p.ped, null, 'melee', 0);
     p.respawnChoice = 'h:0';
-    run(w, 8);
+    run(w, RESPAWN_SECONDS + 1);
     assert.ok(!p.ped.dead);
     const d = Math.hypot(p.ped.x - hosp.x, p.ped.y - hosp.y);
     assert.ok(d < 200, `near the hospital (${d})`);
@@ -133,7 +134,7 @@ test('every spawn: a few spots around the place, and a couple of seconds of prot
   }
   assert.ok(spots.size >= 3, `spawns spread out (${spots.size} spots)`);
   combat.kill(w, p.ped, null, 'melee', 0);
-  run(w, 8);
+  run(w, RESPAWN_SECONDS + 1);
   assert.ok(homes.isProtected(w, p.ped), 'fresh spawn is protected');
   combat.damage(w, p.ped, 30, null, 'melee');
   assert.equal(p.ped.hp, 100);

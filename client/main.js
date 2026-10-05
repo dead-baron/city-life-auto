@@ -13,7 +13,8 @@ import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
 import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { buildTeleport } from './devtp.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus } from './input.js';
+import { createInventory, createWheel } from './inventory.js';
+import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus, mouseScreen } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
 import { FX } from './render/fx.js';
@@ -160,6 +161,8 @@ function onText(m) {
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
+      bag.refresh(); wheel.refresh();
+      if (m.dead) { wheel.close(); if (topOverlay() === 'inv') closeOverlay('inv'); }
       if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); if (S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('dev'); } }
       { const g = document.getElementById('dev-god'); if (g) g.classList.toggle('on', !!m.god); }
       break;
@@ -286,7 +289,13 @@ function fixedStep() {
   if (!inOverlay && !S.playing) titlePad();
   if (!inOverlay && input.padCall && S.playing && !S.hud.menuOpen && !S.bigmap) callCruiser();
   if (!inOverlay && input.padPhone && S.playing && !S.hud.menuOpen && !S.bigmap) openPhone();
-  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay;
+  // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
+  if (!inOverlay && input.padRight && S.playing && !S.hud.menuOpen && !S.bigmap) toggleBag();
+  if (input.padView && !S.padViewHeld && canWheel() && !wheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
+  if (wheel.open && S.padWheel && input.padAxes) wheel.point(input.padAxes.rx * 100, input.padAxes.ry * 100);
+  if (!input.padView && S.padViewHeld && wheel.open && S.padWheel) { S.padWheel = false; wheel.release(performance.now() - (S.wheelAt || 0) < 250); }
+  S.padViewHeld = input.padView;
+  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open;
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
   if (S.menuWasUp && !menuUp) S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
@@ -472,6 +481,7 @@ function setupWorld(seed) {
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
+  S.hud.onDown = (a) => downAct(a);
 }
 
 function startPlaying() {
@@ -601,6 +611,11 @@ $('play').onclick = firstPlay(playGo);
 initInput(canvas, {
   onKey(k) {
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
+    if (S.playing && S.me && S.me.dead && !topOverlay() && S.me.down && !S.me.down.finished) {
+      if (k === 'KeyH') { downAct('help'); return; }
+      if (k === 'KeyJ' && S.me.down.help) { downAct(S.me.down.amb ? 'ambx' : 'amb'); return; }
+      if (k === 'KeyC' && S.me.down.help) { downAct('cancel'); return; }
+    }
     if (S.playing && S.me && S.me.dead && !topOverlay() && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { cycleDeathChoice(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
     if (k === 'Escape' && topOverlay() === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
@@ -616,6 +631,14 @@ initInput(canvas, {
       if (k === 'ArrowDown' || k === 'KeyS') { S.hud.navMenu(1); return; }
       if (k === 'Enter' || k === 'Space') { S.hud.choose(S.hud.menuFocus); return; }
     }
+    if (k === 'KeyI' && S.playing) { toggleBag(); return; }
+    if (k === 'KeyX' && canWheel() && !wheel.open) {
+      wheel.show(); S.wheelAt = performance.now();
+      // start from where the mouse already is (after that the wheel itself tracks the pointer)
+      const ms = mouseScreen(); if (performance.now() - (ms.movedAt || 0) < 4000) wheel.point(ms.x - innerWidth / 2, ms.y - innerHeight / 2);
+      return;
+    }
+    if (k === 'Escape' && wheel.open) { wheel.close(); return; }
     if (k === 'KeyP' && S.playing && !topOverlay()) { openPhone(); return; }
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
@@ -623,6 +646,8 @@ initInput(canvas, {
     if (k === 'Backquote' && (S.dev || S.devMode)) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
+  onKeyUp(k) { if (k === 'KeyX' && wheel.open) wheel.release(performance.now() - (S.wheelAt || 0) < 250); },
+  onItems() { if (canWheel()) { if (wheel.open) wheel.close(); else wheel.show(true); } },
   onDev() { if (S.dev || S.devMode) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); } },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
@@ -633,6 +658,15 @@ initInput(canvas, {
 input.onDevice = () => setTimeout(() => { onResize(); if (S.hud && S.me) { $('helpbox').dataset.sig = ''; S.hud.setMe(S.me); } }, 0);
 detectDevice();
 
+// Downed: call for help, the ambulance, give up waiting.
+function downAct(a) {
+  const dn = S.me && S.me.down;
+  if (!dn || dn.finished) return;
+  if (a === 'amb' && !dn.canAmb) { S.hud.toast(dn.ambUsed ? 'One ambulance per time you go down.' : `An ambulance needs $${dn.fee} in your bank.`, 'warn'); return; }
+  sfx('click', 0.8);
+  send({ t: 'down', a });
+}
+
 function cycleDeathChoice(step) {
   const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];
   if (!btns.length) return;
@@ -642,10 +676,38 @@ function cycleDeathChoice(step) {
 }
 // Death screen with a controller: D-pad / stick picks where to wake up, A confirms.
 function deathPad() {
+  // downed: X calls for help (again), Y the ambulance (or cancels it), B gives up and wakes up now
+  const dn = S.me && S.me.down;
+  if (dn && !dn.finished) {
+    if (input.padX) downAct('help');
+    if (input.padY && dn.help) downAct(dn.amb ? 'ambx' : 'amb');
+    if (input.menuBack && dn.help) downAct('cancel');
+  }
   const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];
   if (!btns.length) return;
   const step = input.menuNav || input.menuLR;
   if (step) cycleDeathChoice(step); // moving the highlight picks it
+}
+
+// ---- the bag + quick wheel ----------------------------------------------------------------------
+const bag = createInventory({ el: $('inv'), send: (o) => send(o), me: () => S.me });
+const wheel = createWheel({ el: $('wheel'), send: (o) => send(o), me: () => S.me });
+function canWheel() { return S.playing && S.me && !S.me.dead && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
+function toggleBag() {
+  if (topOverlay() === 'inv') { closeOverlay('inv'); return; }
+  if (!S.playing || !S.me || S.me.dead || topOverlay() || (S.hud && S.hud.menuOpen)) return;
+  if (S.bigmap) toggleMap(false);
+  wheel.close();
+  openOverlay('inv');
+}
+$('b-bag').onclick = () => toggleBag();
+// a sticky (touch) wheel: tap off the slots to put it away; with the mouse it follows the pointer
+$('wheel').addEventListener('pointerdown', (e) => { if (e.target === $('wheel')) wheel.close(); });
+$('wheel').addEventListener('pointermove', (e) => { if (wheel.open && e.pointerType === 'mouse') wheel.point(e.clientX - innerWidth / 2, e.clientY - innerHeight / 2); });
+// every pop-up panel (bag, players, settings...) closes when you tap the dark space around it
+for (const ov of document.querySelectorAll('.overlay')) {
+  if (ov.id === 'tutorial') continue;
+  ov.addEventListener('pointerdown', (e) => { if (e.target === ov && topOverlay() === ov.id) closeOverlay(ov.id); });
 }
 
 // ---- phone + waypoints ---------------------------------------------------------------------------
@@ -875,6 +937,7 @@ function openOverlay(id) {
   if (id === 'pause') { document.querySelectorAll('#pause .cop-only').forEach((b) => b.classList.toggle('hidden', !(S.me && S.me.cruiser))); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
   overlays.push(id);
   $(id).classList.remove('hidden');
+  if (id === 'inv') bag.show();
   if (id === 'dev') $('dev').classList.add('as-overlay');
   if (id === 'bigmap') S.bigmap = true;
   ovFocus = 0; focusOverlay();
@@ -884,6 +947,7 @@ function closeOverlay(id = topOverlay()) {
   const i = overlays.lastIndexOf(id);
   if (i >= 0) overlays.splice(i, 1);
   $(id).classList.add('hidden');
+  if (id === 'inv') bag.hide();
   if (id === 'dev') $('dev').classList.remove('as-overlay');
   if (id === 'tutorial') stopTutorial();
   if (id === 'bigmap') { S.bigmap = false; if (S.hud) S.hud.mapFilter = null; }
@@ -1345,8 +1409,11 @@ function render(dt) {
   let speed = 0;
   if (S.pred && S.pred.kind === 'veh') speed = Math.hypot(S.pred.s.vx, S.pred.s.vy);
   else if (S.ctrlKind === CTRL.PASSENGER || S.ctrlKind === CTRL.RIDER) { const e = S.ents.get(S.ctrlId); if (e && e.buf.length > 1) { const b = e.buf; speed = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20; } }
-  const targetZoom = baseZoom() / (1 + Math.min(0.5, speed / 1300));
-  S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-2.5 * dt));
+  // down: like a movie camera, it slowly pulls back from your body (never wider than the server sends)
+  const downFor = S.me && S.me.dead ? (S.downFor = (S.downFor || 0) + dt) : (S.downFor = 0);
+  const pull = downFor ? 1 + (DOWN_PULL - 1) * Math.min(1, downFor / 9) * (0.5 - 0.5 * Math.cos(Math.min(1, downFor / 9) * Math.PI)) : 1;
+  const targetZoom = baseZoom() / Math.max(pull, 1 + Math.min(0.5, speed / 1300));
+  S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
   // and server corrections don't shake the camera
   let lvx = 0, lvy = 0;
@@ -1787,6 +1854,7 @@ function coverWalkIns(view, peds, insideB, dt) {
 
 // Inside a police station: the lobby / armory art covers the city view while the menu is used.
 let intShown = null, intDrawnAt = 0;
+const DOWN_PULL = 1.42; // (server/view.js DOWN_ZOOM_OUT keeps a little more in view than this)
 function tickInterior() {
   const kind = S.playing && S.me && !S.me.dead ? S.me.interior : null;
   const el = $('interior');

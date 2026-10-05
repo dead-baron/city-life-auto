@@ -18,7 +18,7 @@ import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
 
-import { ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY } from '../../shared/rules.js';
+import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
@@ -127,6 +127,7 @@ export function buildMenu(world, p, poi) {
     case 'hospital':
       sub = 'Step onto the ER reception mat to be healed instantly.';
       opts.push({ id: 'heal', label: 'Full treatment + stop bleeding', price: HOSPITAL_FEE });
+      opts.push({ id: `i:revivekit:${REVIVE_KIT_PRICE}:1`, label: 'Revive Kit (revive downed players, reusable)', price: REVIVE_KIT_PRICE, dis: (prof.inventory.revivekit || 0) > 0, note: prof.inventory.revivekit ? 'have one' : '' });
       break;
     case 'police': {
       const where = p.ped && p.ped.interior && p.ped.interior.poi === poi.id ? p.ped.interior.kind : null;
@@ -353,8 +354,10 @@ function execute(world, p, poi, opt) {
       const id = parts[1], price = Number(parts[2]), qty = Number(parts[3]);
       if (!pay(p, price)) return 'Not enough money.';
       const it = ITEMS[id];
-      if (it.buff) { applyBuff(world, ped, it.buff); world.notify(p, `${it.name}: ${it.buff === 'coffee' ? 'stamina refilled, faster recovery' : 'more stamina + speed boost'} for 60s.`, 'good'); }
-      else prof.inventory[id] = (prof.inventory[id] || 0) + qty;
+      if (it.tool && prof.inventory[id] > 0) return `You already have a ${it.name}.`; // tools are never used up: one is enough
+      prof.inventory[id] = (prof.inventory[id] || 0) + qty;
+      autoSlot(p, id);
+      if (it.buff) world.notify(p, `${it.name} in your bag - drink it from the quick wheel (${'X / View / ITEMS'}).`, 'good');
       store.touch();
       return null;
     }
@@ -631,6 +634,53 @@ function quickDeposits(world) {
     world.emit(at.x, at.y, { e: 'deposit', x: at.x, y: at.y, n: amt });
     world.notify(p, `ATM: deposited $${amt.toLocaleString()} - bank $${p.profile.bank.toLocaleString()}.`, 'good');
   }
+}
+
+// The quick bar: four slots of usable items. A newly bought usable item fills the first empty slot.
+export const QUICK_SLOTS = 4;
+export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff)); };
+export function quickSlots(p) {
+  const prof = p.profile;
+  if (!Array.isArray(prof.quick)) prof.quick = ['medkit', 'bandage', 'energy', 'coffee'];
+  while (prof.quick.length < QUICK_SLOTS) prof.quick.push(null);
+  return prof.quick;
+}
+function autoSlot(p, id) {
+  if (!USABLE(id)) return;
+  const q = quickSlots(p);
+  if (q.includes(id)) return;
+  const i = q.indexOf(null);
+  if (i >= 0) q[i] = id;
+}
+export function setQuick(p, i, id) {
+  const q = quickSlots(p);
+  if (!(i >= 0 && i < QUICK_SLOTS)) return;
+  if (id !== null && !USABLE(id)) return;
+  if (id !== null) { const j = q.indexOf(id); if (j >= 0) q[j] = q[i]; } // assigning an item that's in another slot swaps them
+  q[i] = id;
+  p.meDirty = true;
+  store.touch();
+}
+
+// Use one of an item from the bag: med kits and bandages heal, drinks give their boost.
+export function useItem(world, p, id) {
+  const ped = p.ped, inv = p.profile.inventory, it = ITEMS[id];
+  if (!ped || ped.dead || !it) return;
+  if ((inv[id] || 0) <= 0) { world.notify(p, `No ${it.name} left.`, 'warn'); return; }
+  if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
+  if (it.heal) {
+    if (ped.hp >= ped.maxHp && !ped.bleeding) { world.notify(p, 'You are already healthy.', 'info'); return; }
+    inv[id]--;
+    ped.hp = Math.min(ped.maxHp, ped.hp + it.heal); ped.bleeding = false;
+    world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
+    world.notify(p, `Used ${it.name}.`, 'good');
+  } else if (it.buff) {
+    inv[id]--;
+    applyBuff(world, ped, it.buff);
+    world.notify(p, `${it.name}: ${it.buff === 'coffee' ? 'stamina refilled, faster recovery' : 'more stamina + speed boost'} for 60s.`, 'good');
+  } else { world.notify(p, `You can't use ${it.name}.`, 'info'); return; }
+  p.meDirty = true;
+  store.touch();
 }
 
 export function useHealItem(world, p) {

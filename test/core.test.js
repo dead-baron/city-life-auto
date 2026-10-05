@@ -1,3 +1,4 @@
+import { RESPAWN_SECONDS } from '../shared/rules.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players, straightRoad } from './helpers.js';
@@ -320,7 +321,7 @@ test('homes: buy a house, respawn there, park a car in its garage and take it ba
   assert.equal(w.homeOwner.get(home.id), prof.pid);
   // die -> wake up at home
   combat.kill(w, p.ped, null, 'melee', 0);
-  run(w, 8);
+  run(w, RESPAWN_SECONDS + 1);
   assert.ok(Math.hypot(p.ped.x - home.x, p.ped.y - home.y) < 200, 'respawned at home');
   // drive a stolen car up to the garage and park it
   const v = w.spawnVehicle('sedan', home.garage.x, home.garage.y, 0, { npcOwned: false });
@@ -343,7 +344,7 @@ test('respawn picker: players can choose any hospital', () => {
   combat.kill(w, p.ped, null, 'melee', 0);
   const target = w.map.hospitals[2];
   p.respawnChoice = 'h:2';
-  run(w, 8);
+  run(w, RESPAWN_SECONDS + 1);
   assert.ok(Math.hypot(p.ped.x - target.x, p.ped.y - target.y) < 200);
 });
 

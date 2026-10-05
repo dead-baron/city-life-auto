@@ -15,6 +15,7 @@ import * as gangwar from './systems/gangwar.js';
 import * as paint from './systems/paint.js';
 import * as phone from './systems/phone.js';
 import * as ems from './systems/ems.js';
+import * as revive from './systems/revive.js';
 import * as economy from './systems/economy.js';
 import * as jobs from './systems/jobs.js';
 import * as env from './systems/environment.js';
@@ -62,6 +63,7 @@ const SYSTEMS = [
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop
+  ['revive', revive.update],        // holding to revive / finish a downed player, the limp afterwards
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
   ['spikes', spikes.update],        // police spike strips: shredded tyres
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up

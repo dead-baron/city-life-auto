@@ -2,6 +2,7 @@
 // return a recovered purse). Clients get a small list in their `me` payload and draw blips +
 // a fading arrow (client/hud.js, client/main.js).
 import { K } from '../../shared/constants.js';
+import { HELP_PING_PX } from '../../shared/rules.js';
 import { EVENT_RANGE, EVENT_KINDS, FEED_MAX, FEED_KEEP_S } from '../../shared/worldevents.js';
 
 let petTarget = () => null; // set by pets.js (it imports this module)
@@ -62,9 +63,13 @@ export function forPlayer(world, p) {
   if (!ped) return null;
   const out = [];
   for (const e of world.happenings || []) {
-    if (Math.hypot(e.x - ped.x, e.y - ped.y) > EVENT_RANGE) continue;
+    if (e.kind === 'revive' && e.pid === p.pid) continue; // your own call for help
+    if (Math.hypot(e.x - ped.x, e.y - ped.y) > (e.kind === 'revive' ? HELP_PING_PX : EVENT_RANGE)) continue;
     out.push({ id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y) });
   }
+  // down and waiting: the ambulance you called, wherever it is
+  const amb = p.amb && world.get(p.amb.vehId);
+  if (amb) out.push({ id: 'amb', k: 'amb', x: Math.round(amb.x), y: Math.round(amb.y) });
   const home = petTarget(world, p);
   if (home) out.push(home);
   if ((p.profile.inventory.purse || 0) > 0) {

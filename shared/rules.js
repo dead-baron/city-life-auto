@@ -20,7 +20,20 @@ export const POLICE_RANKS = [
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;
 export const ARREST_REWARD_PER_STAR = 150;
-export const RESPAWN_SECONDS = 7;
+export const RESPAWN_SECONDS = 15;           // down: this long to pick where to wake up (unless you call for help)
+// Downed, revives and the paid ambulance
+export const HELP_S = 120;                    // Call for Help: you stay down (revivable) this long instead
+export const HELP_PING_S = 10;                // pressing it again re-alerts nearby players at most this often
+export const HELP_PING_PX = 2400;             // ...everyone within this range hears it
+export const REVIVE_KIT_S = 3;                // hold this long over a downed player with a Revive Kit (full health)
+export const REVIVE_HAND_S = 6;               // ...or bare-handed (they come round on low health)
+export const REVIVE_LOW_HP = 0.15;            // bare-handed revive: back on this share of health...
+export const REVIVE_LIMP_S = 10;              // ...limping and bleeding, healing to half over this long
+export const REVIVE_LIMP_SPEED = 0.55;        // move speed while limping
+export const FINISH_S = 2;                    // hold interact over a downed player this long to finish them
+export const GIVE_AFTER_REVIVE_S = 15;        // after a revive you may hand them a bandage (to half) or med kit (full)
+export const REVIVE_KIT_PRICE = 50;           // hospitals and pharmacies; never used up, only works on someone else
+export const AMBULANCE_FEE = 200;             // paid from the bank, and only if the paramedics actually revive you
 export const GHOST_SECONDS = 30;              // a disconnected player's body lingers this long
 export const HOSPITAL_FEE = 150;
 export const BAIL_SPEED = 140;                // bailing out faster than this means a tumble (slower: you just step out)

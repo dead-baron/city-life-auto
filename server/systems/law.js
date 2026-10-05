@@ -2,6 +2,7 @@
 // heat/wanted stars with the 3-second flare and expanding search circle, peak-wanted
 // disguise memory (§4B), enforcer badge + demotion (§4C), bounties and arrests.
 import { K, FACTION, STAR_HEAT, starsForHeat } from '../../shared/constants.js';
+import * as revive from './revive.js';
 import { angleDiff } from '../../shared/math.js';
 import { isTurf } from '../../shared/map.js';
 import { WEAPONS } from '../../shared/items.js';
@@ -409,6 +410,7 @@ export function suspectsFor(world, p) {
 function bookBody(world, cop, body) {
   const now = world.time;
   const b = body.bookable;
+  if (body.player && revive.isDowned(body)) { revive.finish(world, body, cop, 'bust'); body.player.downWanted = null; } // booked while down: a bust, no revive
   world.emit(body.x, body.y, { e: 'poof', x: body.x, y: body.y });
   if (b) {
     const t = world.players.get(b.pid);

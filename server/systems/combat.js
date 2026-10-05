@@ -1,6 +1,7 @@
 // Combat: melee arcs, hitscan ballistics, tasers, rockets, damage, death, bleeding,
 // regeneration and blood-trail footprints (GDD §14C combat feedback).
 import { K, T, WEATHER, PED_RADIUS } from '../../shared/constants.js';
+import * as revive from './revive.js';
 import { isSwimming, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
@@ -80,7 +81,7 @@ function melee(world, ped, w, aim) {
   ped.swingSide = (ped.swingSide || 0) ^ 1;
   let best = null, bestD = Infinity;
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
-    if (o === ped || o.dead || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level
+    if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 4) continue;
@@ -151,7 +152,7 @@ function spray(world, ped, w, aim) {
   const now = world.time;
   world.emit(ped.x, ped.y, { e: 'spray', x: ped.x + Math.cos(aim) * 12, y: ped.y + Math.sin(aim) * 12, a: aim });
   for (const o of world.query(ped.x, ped.y, w.range + 20, K.PED)) {
-    if (o === ped || o.dead || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue;
+    if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue;
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 6) continue;
@@ -218,6 +219,7 @@ function hitscan(world, ped, w, a) {
 }
 
 export function damage(world, ped, amount, attacker, cause, dir = 0) {
+  if (ped && ped.dead && amount > 0 && attacker && cause !== 'fall' && revive.isDowned(ped)) return revive.finish(world, ped, attacker); // hitting a downed player finishes them
   if (!ped || ped.dead || amount <= 0) return false;
   const now = world.time;
   if (ped.hidden || ped.pet || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet

@@ -8,6 +8,7 @@ import { inAnyView } from '../view.js';
 import { driveToward, planRoute } from './traffic.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
+import * as revive from './revive.js';
 
 const HARD_DESPAWN = 45;
 const REVIVE_TIME = 3;
@@ -55,17 +56,49 @@ function dispatch(world, now) {
     });
     if (!cands.length) continue;
     const n = cands[Math.floor(rng() * cands.length)];
-    const v = world.spawnVehicle('ambulance', n.x + 32, n.y + 32, Math.atan2(b.y - n.y, b.x - n.x), {});
-    v.despawnable = false; v.sirenOn = false; v.npcOwned = true;
-    const driver = spawnNpc(world, 'medic', v.x, v.y, 'medic');
-    driver.vehId = v.id; driver.seat = 0; v.seats[0] = driver.id;
-    const medic2 = spawnNpc(world, 'medic', v.x, v.y, 'medic');
-    medic2.vehId = v.id; medic2.seat = 1; v.seats[1] = medic2.id;
-    v.ai = { kind: 'ems', body: b.id, mode: 'drive', route: planRoute(world, v.x, v.y, b.x, b.y), crew: [driver.id, medic2.id], since: now };
-    b.emsAssigned = v.id;
-    world.ambulances.add(v.id);
+    launch(world, b, n, now);
     return;
   }
+}
+
+function launch(world, b, n, now, paid = null) {
+  const v = world.spawnVehicle('ambulance', n.x + 32, n.y + 32, Math.atan2(b.y - n.y, b.x - n.x), {});
+  v.despawnable = false; v.sirenOn = false; v.npcOwned = true;
+  const driver = spawnNpc(world, 'medic', v.x, v.y, 'medic');
+  driver.vehId = v.id; driver.seat = 0; v.seats[0] = driver.id;
+  const medic2 = spawnNpc(world, 'medic', v.x, v.y, 'medic');
+  medic2.vehId = v.id; medic2.seat = 1; v.seats[1] = medic2.id;
+  v.ai = { kind: 'ems', body: b.id, mode: 'drive', route: planRoute(world, v.x, v.y, b.x, b.y), crew: [driver.id, medic2.id], since: now, paid };
+  b.emsAssigned = v.id;
+  world.ambulances.add(v.id);
+  return v;
+}
+
+// A downed player paid for an ambulance: it starts out of everyone's sight (as far off as it
+// must) and drives to them; the paramedics revive them on half health (revive.js charges the fee).
+export function dispatchPaid(world, ped, pid) {
+  world.ambulances ??= new Set();
+  const now = world.time;
+  for (const [lo, hi] of [[650, 1400], [500, 2200], [400, 3200]]) {
+    const cands = world.map.nodes.filter((n) => {
+      if (n.lvl !== 0) return false;
+      const d = Math.hypot(n.x - ped.x, n.y - ped.y);
+      if (d < lo || d > hi) return false;
+      if (world.map.zoneAt(n.x, n.y) !== world.map.zoneAt(ped.x, ped.y)) return false; // the same island: it has to drive there
+      return !inAnyView(world, n.x + 32, n.y + 32, 100);
+    });
+    if (cands.length) { cands.sort((a, b) => Math.hypot(a.x - ped.x, a.y - ped.y) - Math.hypot(b.x - ped.x, b.y - ped.y)); return launch(world, ped, cands[Math.floor(rng() * Math.min(4, cands.length))], now, pid); }
+  }
+  return null;
+}
+
+// The downed player cancelled: the crew turns round (no charge).
+export function recall(world, vehId) {
+  const v = world.get(vehId);
+  if (!v || !v.ai) return;
+  v.ai.paid = null;
+  for (const c of v.ai.crew.map((id) => world.get(id)).filter((c) => c && !c.vehId)) { const seat = v.seats.findIndex((x) => !x); if (seat >= 0) { v.seats[seat] = c.id; c.vehId = v.id; c.seat = seat; } else despawnNpc(world, c); }
+  v.ai.mode = 'leave';
 }
 
 function runAmbulance(world, v, dt, now) {
@@ -85,7 +118,7 @@ function runAmbulance(world, v, dt, now) {
   if (!crew.length) { cleanup(world, v); return; }
   if (ai.mode === 'drive') {
     v.sirenOn = true;
-    if (!body || !body.dead) { ai.mode = 'leave'; return; }
+    if (!body || !body.dead || (ai.paid && !revive.isDowned(body))) { ai.mode = 'leave'; return; } // revived / finished / woke up elsewhere
     const d = Math.hypot(body.x - v.x, body.y - v.y);
     if (d < 150) {
       ai.mode = 'treat';
@@ -96,25 +129,30 @@ function runAmbulance(world, v, dt, now) {
     while (ai.route.length > 1 && Math.hypot(ai.route[0].x - v.x, ai.route[0].y - v.y) < 60) ai.route.shift();
     const wp = ai.route.length > 1 ? ai.route[0] : { x: body.x, y: body.y };
     driveToward(world, v, wp.x, wp.y, d < 400 ? 220 : 480, {});
-    if (now - ai.since > 40) ai.mode = 'leave';
+    if (now - ai.since > (ai.paid ? 150 : 40)) ai.mode = 'leave';
     return;
   }
   if (ai.mode === 'treat') {
     v.input = { throttle: 0, steer: 0, hb: true };
-    if (!body || !body.dead || body.removed) { ai.mode = 'board'; return; }
+    if (!body || !body.dead || body.removed || (ai.paid && !revive.isDowned(body))) { ai.mode = 'board'; return; }
     let atBody = 0;
     for (const c of crew) {
       if (c.vehId) continue;
       const d = Math.hypot(body.x - c.x, body.y - c.y);
       const inp = d > 20 ? seek(c, body.x + (c === crew[0] ? -14 : 14), body.y, true) : { bits: 0, mx: 0, my: 0, aim: Math.atan2(body.y - c.y, body.x - c.x) };
+      const bx = c.x, by = c.y;
       pedStep(c, inp, dt, world.map, players.pedMods(world, c));
-      if (d < 26) { atBody++; c.kneelUntil = now + 0.5; c.a = Math.atan2(body.y - c.y, body.x - c.x); } // down on one knee beside them
+      // close but blocked (a vending machine, a bollard in the way): close enough to work from there
+      c.emsStuck = d < 90 && Math.hypot(c.x - bx, c.y - by) < 20 * dt ? (c.emsStuck || 0) + dt : 0;
+      if (d < 26 || c.emsStuck > 1.5) { atBody++; c.kneelUntil = now + 0.5; c.a = Math.atan2(body.y - c.y, body.x - c.x); } // down on one knee beside them
     }
     if (atBody > 0) {
       if (!body.reviving) { body.reviving = now; world.emit(body.x, body.y, { e: 'revive', x: body.x, y: body.y, id: body.id }); }
       if (now - body.reviving >= REVIVE_TIME) {
         world.bodies.delete(body);
-        if (body.npc) {
+        body.reviving = 0;
+        if (body.player && revive.isDowned(body)) { revive.revive(world, body, { ambulance: true }); body.emsAssigned = 0; } // the patient who called them
+        else if (body.npc) {
           // GDD: the target is revived, stands up and walks away
           body.dead = false; body.hp = body.maxHp * 0.6; body.reviving = 0; body.bleeding = false;
           body.npc.state = 'wander'; body.npc.role = body.npc.role === 'driver' ? 'civ' : body.npc.role;

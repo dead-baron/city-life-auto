@@ -43,7 +43,7 @@
     <div id="w-carry"></div>
     <div id="fishbar" class="hidden"></div>
     <div id="net"></div>
-    <div id="hud-btns"><button id="b-menu" title="Menu (players online, debug, settings)">☰</button><button id="b-phone" title="Phone">📱</button><button id="b-map" title="World map">▦</button><button id="b-settings" title="Settings">⚙</button><button id="b-fs" title="Fullscreen">⛶</button><button id="b-dev" class="hidden" title="Debug menu">🛠</button></div>
+    <div id="hud-btns"><button id="b-menu" title="Menu (players online, debug, settings)">☰</button><button id="b-phone" title="Phone">📱</button><button id="b-bag" title="Bag (inventory)">🎒</button><button id="b-map" title="World map">▦</button><button id="b-settings" title="Settings">⚙</button><button id="b-fs" title="Fullscreen">⛶</button><button id="b-dev" class="hidden" title="Debug menu">🛠</button></div>
   </div>
   <span id="hp-text" class="hidden"></span>
 
@@ -60,7 +60,7 @@
       <button data-b="throw" class="throw">THROW</button>
       <button data-b="nextw" class="wpn">WPN</button>
       <button data-b="reload" class="reload">RELOAD</button>
-      <button data-b="use" class="heal">HEAL</button>
+      <button data-b="use" class="heal">ITEMS</button>
       <button data-b="horn" class="horn">HORN</button>
       <button data-b="map" class="map">MAP</button>
       <button data-b="cruiser" class="cruiser" id="b-cruiser">COP CAR</button>
@@ -69,9 +69,11 @@
   </div>
 
   <div id="interior" class="hidden"><canvas id="int-cv"></canvas><button id="int-open">▲ Front desk</button></div>
+  <div id="inv" class="hidden overlay"><div class="panel"><div class="mhead"><h2>BAG</h2><button class="x" data-close>✕</button></div><p class="msub inv-cash"></p><div class="inv-body"></div></div></div>
+  <div id="wheel" class="hidden"></div>
   <div id="menu" class="hidden"><div class="panel"><div class="mhead"><h2 id="m-title"></h2><button id="m-close">✕</button></div><p id="m-sub"></p><div id="m-money"></div><div id="m-opts"></div></div></div>
 
-  <div id="death" class="hidden"><div><h1>WASTED</h1><p id="d-cause"></p><p id="d-timer"></p><div id="d-spawn"></div></div></div>
+  <div id="death" class="hidden"><div><h1 id="d-title">WASTED</h1><p id="d-cause"></p><p id="d-timer"></p><div id="d-help"></div><div id="d-spawn"></div></div></div>
   <div id="district"></div>
 
   <div id="bigmap" class="hidden"><div id="bm-panel"><div id="bm-list"></div></div><div id="bm-mapwrap"><div id="bm-zoom"><button id="bm-zin" title="Zoom in">+</button><button id="bm-zout" title="Zoom out">−</button><button id="bm-me" title="Find me">⌖</button></div><canvas id="bigmap-c"></canvas><p id="bigmap-hint">M / ESC to close</p></div></div>

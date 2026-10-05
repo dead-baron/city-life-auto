@@ -1,3 +1,4 @@
+import { REVIVE_KIT_PRICE } from './rules.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
 export const WEAPONS = {
@@ -29,6 +30,7 @@ for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i]
 
 export const ITEMS = {
   medkit:  { name: 'Medical Kit',   heal: 60, stopBleed: true, sell: 30 },
+  revivekit: { name: 'Revive Kit', tool: true, sell: 20 },   // defib paddles: revive a downed player to full health (never used up; not on yourself)
   bandage: { name: 'Field Bandage', heal: 15, stopBleed: true, sell: 8 },
   coffee:  { name: 'Hot Coffee',    stamina: true, buff: 'coffee', sell: 0 },
   energy:  { name: 'Energy Drink',  stamina: true, buff: 'energy', sell: 0 },
@@ -90,7 +92,7 @@ export const SHOPS = {
     { kind: 'weapon', id: 'sledge', price: 260 },
   ] },
   pharmacy: { title: 'MediMart Pharmacy', buy: [
-    { kind: 'item', id: 'medkit', price: 80, qty: 1 }, { kind: 'item', id: 'bandage', price: 25, qty: 1 },
+    { kind: 'item', id: 'medkit', price: 80, qty: 1 }, { kind: 'item', id: 'bandage', price: 25, qty: 1 }, { kind: 'item', id: 'revivekit', price: REVIVE_KIT_PRICE, qty: 1 },
   ] },
   coffee: { title: 'Bean Machine Coffee', buy: [{ kind: 'item', id: 'coffee', price: 6, qty: 1 }] },
   convenience: { title: 'Corner Store', buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }] },

@@ -29,7 +29,8 @@ import * as phone from './phone.js';
 import * as props from './props.js';
 import * as trains from './trains.js';
 
-import { GHOST_SECONDS, RESPAWN_SECONDS } from '../../shared/rules.js';
+import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED } from '../../shared/rules.js';
+import * as revive from './revive.js';
 import * as devmode from '../devmode.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
@@ -163,6 +164,7 @@ export function pedMods(world, ped) {
   if (ped.carrying) speedMul *= 0.6; // GDD: carrying scales walking speed down by 40%
   if (ped.buffs.energy > now) speedMul *= 1.15;
   if (ped.fishing) speedMul *= 0;
+  if (ped.limpUntil > now) speedMul *= REVIVE_LIMP_SPEED; // just revived bare-handed: limping
   return {
     canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),
     canSwim: !!ped.player || isSwimming(world.map, ped), // players swim anywhere; NPCs only get out of water
@@ -249,7 +251,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   }
   if (pressed & IN.THROW) { if (ped.carrying) cargo.throwCrate(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a); }
-  if (pressed & IN.VEHICLE) vehicles.tryEnter(world, ped);
+  if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) vehicles.tryEnter(world, ped);
   if (pressed & IN.ACTION) {
     const act = findInteraction(world, p);
     if (act) act.run();
@@ -308,6 +310,7 @@ export function findInteraction(world, p) {
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
   if (ped.onTrain) return trains.interaction(world, p);
+  if (!ped.vehId) { const rv = revive.interaction(world, p); if (rv) return rv; }
   if (ped.vehId) {
     const hop = trains.interaction(world, p);
     if (hop) return hop;
@@ -384,6 +387,9 @@ export function crateName(c) {
 export function onPedDeath(world, ped, killer, cause) {
   const p = ped.player;
   if (!p) return;
+  revive.clearDown(world, p);
+  p.channel = null; p.giveTo = null;
+  p.downWanted = p.wanted > 0 ? { wanted: p.wanted, heat: p.heat } : null; // restored if someone revives you
   p.respawnAt = world.time + RESPAWN_SECONDS;
   p.respawnChoice = homes.defaultChoice(world, p, { x: ped.x, y: ped.y }); // pre-selected; change it on the death screen
   p.deathCause = cause || 'You flatlined.';
@@ -412,6 +418,7 @@ export function update(world, dt) {
     if (ped && ped.dead && p.respawnAt && now >= p.respawnAt) {
       if (!p.conn) { finalizeLogout(world, p, false); continue; }
       // leave a body for EMS, respawn clean at hospital
+      revive.clearDown(world, p); p.downWanted = null;
       const body = world.spawnPed(ped.x, ped.y, { hp: 100, app: ped.app, archetype: 'casual', name: '' });
       body.dead = true; body.deadAt = now; body.a = ped.a; body.corpseOf = p.pid; body.bookable = ped.bookable || null;
       world.bodies.add(body);
@@ -446,7 +453,7 @@ export function pedFlags(world, ped) {
   if (ped.rollT > 0) f |= PF.ROLL;
   if (ped.carrying || ped.handsUp) f |= PF.CARRY; // carry pose doubles as hands-up for a held-up clerk
   if (ped.vehId) f |= PF.INVEH;
-  if (ped.bleeding) f |= PF.BLEED;
+  if (ped.bleeding || ped.limpUntil > now) f |= PF.BLEED; // (a limp leaves the same trail of blood)
   if (ped.player && ped.player.ghostUntil) f |= PF.GHOST;
   if (now < ped.flareUntil) f |= PF.FLARE;
   if (ped.player && ped.player.badge) f |= PF.BADGE;
@@ -487,5 +494,6 @@ export function buildMe(world, p) {
     spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, spawnChoice: p.respawnChoice || null,
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
+    quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
   };
 }
