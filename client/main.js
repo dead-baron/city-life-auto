@@ -15,7 +15,7 @@ import { serverUrl, TOKEN_KEY } from './config.js';
 import { buildTeleport } from './devtp.js';
 import { createInventory, createWheel } from './inventory.js';
 import { createSpectator, SPEC_LAYERS, SCHEMATIC_KEY } from './spectator.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus, mouseScreen } from './input.js';
+import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -623,7 +623,7 @@ function outdatedBuild(sig) {
 
 function setupWorld(seed) {
   S.map = generateCity(seed);
-  S.ground = new GroundCache(S.map);
+  S.ground = new GroundCache(S.map, IS_CONSOLE ? 16 : 24); // (consoles give the browser little graphics memory)
   S.wx = new Weather(S.map);
   S.poleAt = null;
   S.wx.onThunder = () => sfx('thunder', 1);
@@ -1364,6 +1364,7 @@ function syncSettings() {
   $('s-autofs').checked = settings.autoFullscreen !== false;
   $('s-gfx').value = String(gfxQuality());
   $('s-tilt').checked = settings.tiltShift !== false;
+  $('s-diag').checked = diag.on;
 }
 // Account transfer: the login token is the account. Copy it here, paste it on another device;
 // the one it replaces is kept so a wrong paste can be undone.
@@ -1429,10 +1430,11 @@ $('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; s
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
-$('s-gfx').onchange = (e) => { settings.gfx = Number(e.target.value); saveSettings(); };
+$('s-gfx').onchange = (e) => { settings.gfx = Number(e.target.value); saveSettings(); onResize(); };
 $('s-tilt').onchange = (e) => { settings.tiltShift = e.target.checked; saveSettings(); };
+$('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.target.checked; saveSettings(); if (!diag.on && diag.el) { diag.el.remove(); diag.el = null; } };
 // graphics: high on desktops, medium on phones and tablets unless chosen
-function gfxQuality() { return settings.gfx ?? (input.device === 'touch' ? 1 : 2); }
+function gfxQuality() { return settings.gfx ?? (input.device === 'touch' || IS_CONSOLE ? 1 : 2); }
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
 
 function toggleMap(on) {
@@ -1507,7 +1509,12 @@ $('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.pla
 // Rendering
 let W = 0, H = 0, DPR = 1;
 function onResize() {
-  DPR = Math.min(2, window.devicePixelRatio || 1);
+  // A 4K TV reports a pixel ratio of 2, which made a console draw every pass at 3840x2160 until
+  // its graphics memory ran out. Lower settings and consoles draw at fewer pixels (the art is
+  // pixel art: it barely shows), and nothing ever renders more than ~2.5 megapixels.
+  const q = gfxQuality();
+  const cap = IS_CONSOLE ? 1 : q >= 2 ? 2 : q === 1 ? 1.5 : 1;
+  DPR = Math.max(0.5, Math.min(cap, window.devicePixelRatio || 1, Math.sqrt(2.5e6 / Math.max(1, innerWidth * innerHeight))));
   const nw = innerWidth, nh = innerHeight;
   if (nw === W && nh === H && canvas.width === Math.round(W * DPR)) return;
   W = nw; H = nh;
@@ -1525,6 +1532,58 @@ function sendView() {
   send({ t: 'view', hw: Math.round(W / 2 / z), hh: Math.round(H / 2 / z) });
 }
 addEventListener('resize', onResize);
+
+// ---- graphics memory lost ------------------------------------------------------------------------
+// When the browser runs out of graphics memory (consoles and old phones mostly) it throws away the
+// canvases: everything we drew and cached goes blank. Rather than limp on with a blank or
+// half-drawn screen, step the graphics setting down one notch and reload (the server keeps your
+// place; you're straight back in).
+function graphicsLost(why) {
+  if (S.gfxLost) return;
+  S.gfxLost = true;
+  diag.lost++;
+  const q = gfxQuality();
+  if (q > 0) { settings.gfx = q - 1; settings.tiltShift = false; saveSettings(); }
+  try { sessionStorage.setItem('cla.gfxLost', JSON.stringify({ why, q, at: Date.now() })); } catch { /* blocked */ }
+  if (S.hud) S.hud.toast('Graphics memory ran out - reloading with lighter graphics...', 'warn');
+  setTimeout(() => location.reload(), 1200);
+}
+canvas.addEventListener('contextlost', (e) => { e.preventDefault(); graphicsLost('contextlost'); });
+setInterval(() => { if (typeof g.isContextLost === 'function' && g.isContextLost()) graphicsLost('watchdog'); }, 2000);
+try {
+  const was = JSON.parse(sessionStorage.getItem('cla.gfxLost') || 'null');
+  if (was && Date.now() - was.at < 60000) { sessionStorage.removeItem('cla.gfxLost'); setTimeout(() => S.hud && S.hud.toast(`Graphics were lowered to ${['Low', 'Medium', 'High'][gfxQuality()]} after the screen lost its graphics memory (Settings to change).`, 'info'), 4000); }
+} catch { /* blocked */ }
+
+// ---- diagnostics overlay (?diag, or Settings) -----------------------------------------------------
+// Everything worth knowing when it runs badly on some device: frame rate and where the frame
+// goes, the render size, memory, the controller, how often the input device flips. Made for
+// reading off a TV or a phone screenshot.
+const diag = { on: /[?&]diag\b/.test(location.search) || settings.diag === true, lost: 0, el: null, last: 0, frames: [], long: 0, sw0: 0, swAt: performance.now() };
+function diagFrame(dtMs) {
+  if (!diag.on) return;
+  diag.frames.push(dtMs); if (diag.frames.length > 120) diag.frames.shift();
+  if (dtMs > 50) diag.long++;
+  const now = performance.now();
+  if (now - diag.last < 500) return;
+  diag.last = now;
+  if (!diag.el) { diag.el = document.createElement('pre'); diag.el.id = 'diag'; document.body.appendChild(diag.el); }
+  const f = diag.frames.slice().sort((a, b) => a - b), avg = f.reduce((a, b) => a + b, 0) / (f.length || 1);
+  const p = S.perf || {};
+  const mem = performance.memory ? `${Math.round(performance.memory.usedJSHeapSize / 1e6)}/${Math.round(performance.memory.jsHeapSizeLimit / 1e6)} MB` : 'n/a';
+  const pads = (navigator.getGamepads ? [...navigator.getGamepads()] : []).filter(Boolean);
+  const swRate = (deviceStats.switches - diag.sw0) / Math.max(1, (now - diag.swAt) / 60000);
+  if (now - diag.swAt > 60000) { diag.sw0 = deviceStats.switches; diag.swAt = now; }
+  const cacheMB = (S.ground ? S.ground.cache.size : 0) * CHUNK_PX * CHUNK_PX * 4 / 1e6;
+  diag.el.textContent = [
+    `fps ${S.fps}  frame avg ${avg.toFixed(1)} ms  worst ${(f[f.length - 1] || 0).toFixed(0)} ms  >50ms: ${diag.long}`,
+    `parts ${Object.entries(p).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`,
+    `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${['low', 'med', 'high'][gfxQuality()]}`,
+    `ground cache ${S.ground ? S.ground.cache.size : 0}/${S.ground ? S.ground.max : 0} chunks (${cacheMB.toFixed(0)} MB)  js heap ${mem}  gfx lost ${diag.lost}`,
+    `input ${input.device}  flips/min ${swRate.toFixed(0)}  pad ${pads.length ? `${pads[0].id.slice(0, 40)} [${pads[0].mapping || 'no mapping'}]` : 'none'}  emulation ${navigator.gamepadInputEmulation ?? 'n/a'}`,
+    `${IS_CONSOLE ? 'console · ' : ''}${navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110)}`,
+  ].join('\n');
+}
 // rotating a phone in fullscreen doesn't always fire 'resize' right away: catch every signal
 addEventListener('orientationchange', () => { onResize(); setTimeout(onResize, 120); setTimeout(onResize, 400); });
 screen.orientation?.addEventListener?.('change', () => { onResize(); setTimeout(onResize, 120); });
@@ -1671,6 +1730,7 @@ function pedPose(e) {
 
 let last = performance.now(), fpsAcc = 0, fpsN = 0, pingAt = 0;
 function frame(nowMs) {
+  diagFrame(nowMs - last);
   const dt = Math.min(0.1, (nowMs - last) / 1000);
   last = nowMs;
   fpsAcc += dt; fpsN++;

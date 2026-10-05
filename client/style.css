@@ -513,3 +513,6 @@ body.portrait #spec { width: 210px; font-size: 14px; }
   #spec .sp-btns button { padding: 4px; font-size: 13px; }
   #spec .sp-hint { font-size: 12px; }
 }
+
+/* diagnostics overlay (?diag or Settings) */
+#diag { position: fixed; left: 8px; top: 64px; z-index: 50; margin: 0; padding: 6px 8px; max-width: calc(100vw - 16px); background: rgba(0,0,0,.72); color: #9fffb0; font: 12px/1.35 monospace; white-space: pre-wrap; pointer-events: none; border-radius: 4px; }

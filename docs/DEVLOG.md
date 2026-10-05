@@ -1352,3 +1352,23 @@ Went through every painting the game uses: each building lot, the hospital front
 - **Deploy:** `deploy/auto-update.sh` now gives a restarted server up to 90 seconds to answer `/health` before rolling back.
 - **Startup:** the country site search (`shared/countryside.js`) finds the nearest road through a bucketed lookup and tracks claimed ground in a list instead of rebuilding its table after every site. It went from about 0.9 s to 0.17 s, and every site lands in the same place as before.
 - **Client:** when the page and the server are on different versions, the title screen now says so instead of sitting on "Connecting...".
+
+## 2026-10-05 · Xbox / Edge: blinking menu buttons, blank screen, choppiness
+
+- **Blinking top buttons:** Edge on Xbox moves a mouse cursor with the controller (and repeats the pad as `Gamepad*` key presses) at the same time the page reads the pad. The game flipped between "gamepad" and "mouse" every frame. The fullscreen button is hidden in mouse mode, so it blinked, and every flip re-laid out the HUD.
+  - The page now asks Edge for the raw pad (`navigator.gamepadInputEmulation = 'gamepad'`).
+  - `Gamepad*` key events are ignored.
+  - Mouse events no longer switch away from the pad while it's in use (1.5 s, 4 s on a console).
+- **Graphics vanishing, then choppy:** a 4K TV reports a pixel ratio of 2, so the game drew every pass (scene, light map, bloom) at 3840x2160 until the console's graphics memory ran out and the browser dropped the canvases.
+  - The render resolution is now capped: 1x on consoles, 1.5x on Medium, 1x on Low, and never more than about 2.5 megapixels.
+  - Consoles default to Medium graphics and a smaller ground cache (16 chunks).
+  - If graphics memory is lost anyway (`contextlost`, or a 2-second watchdog), the game steps Graphics down one notch, turns tilt-shift off and reloads. The server keeps your place, and a toast says what changed.
+- **Diagnostics overlay:** add `?diag` to the address (or Settings → Performance overlay). It shows:
+  - fps and frame times, and where the frame goes
+  - render size and pixel ratio
+  - ground cache size, JS heap, and how many times graphics were lost
+  - the input device and how often it flips, the controller's id and mapping
+  - the user agent
+  
+  It's made to be read off a screenshot from a TV.
+- Tested in headless Chromium emulating Xbox Edge: Xbox user agent, 1920x1080 at pixel ratio 2, a controller with emulated cursor movement, and a forced `contextlost`.

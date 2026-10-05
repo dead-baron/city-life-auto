@@ -31,8 +31,20 @@ export const settings = { kbDrive: 'direction', padDrive: 'triggers', touchEdgeF
 try { Object.assign(settings, JSON.parse(localStorage.getItem('cla.settings') || '{}')); } catch { /* private mode */ }
 export function saveSettings() { try { localStorage.setItem('cla.settings', JSON.stringify(settings)); } catch { /* ignore */ } }
 
+// Edge on Xbox drives a mouse cursor with the controller unless the page asks for the raw pad:
+// both at once made the game flip between pad and mouse every frame (the top buttons blinked
+// and the HUD kept re-laying itself out). Ask for the raw pad, and while the pad is in use, ignore
+// mouse events for picking the device.
+export const IS_CONSOLE = typeof navigator !== 'undefined' && /Xbox|PlayStation|Nintendo/i.test(navigator.userAgent || '');
+try { if (typeof navigator !== 'undefined' && 'gamepadInputEmulation' in navigator) navigator.gamepadInputEmulation = 'gamepad'; } catch { /* read-only */ }
+let padUsedAt = -1e9;
+const padRecent = () => performance.now() - padUsedAt < (IS_CONSOLE ? 4000 : 1500);
+export const deviceStats = { switches: 0 }; // for the diagnostics overlay
+
 function setDevice(d) {
   if (input.device === d) return;
+  if (d !== 'gamepad' && input.device === 'gamepad' && padRecent()) return; // emulated mouse / keys from the pad
+  deviceStats.switches++;
   input.device = d;
   input.usingTouch = d === 'touch';
   input.usingPad = d === 'gamepad';
@@ -54,6 +66,7 @@ export function detectDevice() {
 export function initInput(canvas, hooks) {
   addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (typeof e.key === 'string' && e.key.startsWith('Gamepad')) { e.preventDefault(); return; } // Xbox Edge mirrors the pad as keys
     const k = e.code;
     if (!keys.has(k)) { pressedOnce.add(k); tappedKeys.add(k); }
     keys.add(k);
@@ -228,7 +241,7 @@ function readPad() {
   const sy = ly > 0.6 ? 1 : ly < -0.6 ? -1 : 0, sx = lx > 0.6 ? 1 : lx < -0.6 ? -1 : 0;
   out.stickNav = sy !== stickNavY ? sy : 0; out.stickLR = sx !== stickNavX ? sx : 0;
   stickNavY = sy; stickNavX = sx;
-  if (now.some((x) => x) || Math.abs(lx) + Math.abs(ly) + Math.abs(rx) + Math.abs(ry) > 0) setDevice('gamepad');
+  if (now.some((x) => x) || Math.abs(lx) + Math.abs(ly) + Math.abs(rx) + Math.abs(ry) > 0) { padUsedAt = performance.now(); setDevice('gamepad'); }
   padPrev = now;
   return out;
 }
