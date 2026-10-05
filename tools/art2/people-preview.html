@@ -1,17 +1,26 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Art v2 people</title>
 <style>body{margin:0;background:#6b6f78;color:#eee;font:12px monospace}canvas{image-rendering:pixelated;display:block}</style></head><body>
+<!-- ?view=turn (C1: four bodies, 5 facings), ?view=line (C2/C3: every archetype), ?view=walk -->
 <canvas id="c"></canvas>
 <script type="module">
-import { person, randomPerson } from '../../client/art2/people.js';
-const kinds = [null, null, 'business', 'cop', 'beach', 'thug', 'clerk', null, null, null, null, null];
-const Z = Number(new URLSearchParams(location.search).get('z') || 4);
-const cols = 8 + 4, rows = kinds.length;
-const cv = document.getElementById('c'); cv.width = cols * 32 * Z; cv.height = rows * 54 * Z;
-const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
-kinds.forEach((k, r) => {
-  const app = randomPerson(100 + r * 7, k);
-  for (let d = 0; d < 8; d++) g.drawImage(person(app, d, 'idle', 0).toCanvas('col'), 0, 0, 30, 52, d * 32 * Z, r * 54 * Z, 30 * Z, 52 * Z);
-  for (let f = 0; f < 4; f++) g.drawImage(person(app, 2, 'walk', f).toCanvas('col'), 0, 0, 30, 52, (8 + f) * 32 * Z, r * 54 * Z, 30 * Z, 52 * Z);
-});
+import { person, randomPerson, ARCHETYPES } from '../../client/art2/people.js';
+const q = new URLSearchParams(location.search), Z = Number(q.get('z') || 4), view = q.get('view') || 'turn';
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const put = (G, col, row, cw, ch) => g.drawImage(G.toCanvas('col'), col * cw * Z, row * ch * Z, G.w * Z, G.h * Z);
+if (view === 'turn') {
+  const bodies = [{ top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'spiky', color: 1 }, skin: 1 },
+    { fem: true, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'pony', color: 1 }, skin: 1 },
+    { build: 2, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'spiky', color: 1 }, skin: 1 },
+    { build: 3, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'curly', color: 0 }, skin: 3 }];
+  cv.width = 5 * 40 * Z; cv.height = bodies.length * 52 * Z; g.imageSmoothingEnabled = false;
+  bodies.forEach((b, r) => [0, 1, 2, 3, 4].forEach((d, c) => put(person(b, d), c, r, 40, 52)));
+} else if (view === 'line') {
+  const ks = Object.keys(ARCHETYPES), cols = 9;
+  cv.width = cols * 40 * Z; cv.height = Math.ceil(ks.length / cols) * 52 * Z; g.imageSmoothingEnabled = false;
+  ks.forEach((k, i) => put(person(randomPerson(i * 31 + 7, k), 1), i % cols, Math.floor(i / cols), 40, 52));
+} else {
+  cv.width = 8 * 40 * Z; cv.height = 4 * 52 * Z; g.imageSmoothingEnabled = false;
+  for (let r = 0; r < 4; r++) { const a = randomPerson(300 + r * 13); for (let f = 0; f < 4; f++) { put(person(a, 2, 'walk', f), f, r, 40, 52); put(person(a, 0, 'walk', f), 4 + f, r, 40, 52); } }
+}
 window.done = true;
 </script></body></html>

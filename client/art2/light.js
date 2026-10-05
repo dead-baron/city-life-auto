@@ -98,6 +98,24 @@ void main(){
     float w = max(dot(n, v / max(d, 0.001)), 0.0) * 0.8 + 0.2;
     light += lCol[i].rgb * lCol[i].a * a * w;
   }
+  // wet ground mirrors each light as a long wobbling streak running down the screen from its base
+  vec3 refl = vec3(0.0);
+  if (ground && wet > 0.0) {
+    for (int i = 0; i < ${MAXL}; i++) {
+      if (i >= nL) break;
+      float dx = P.x - lPos[i].x, dy = P.y - lPos[i].y;
+      float len = 30.0 + lPos[i].z * 1.4;
+      if (dy < -4.0 || dy > len) continue;
+      float wob = sin(P.y * 0.55 + lPos[i].x) * 1.2 + sin(P.y * 1.7) * 0.6;
+      float wdt = 2.0 + max(dy, 0.0) * 0.05 + lPos[i].w * 0.012;
+      float across = exp(-pow((dx - wob) / wdt, 2.0));
+      if (across < 0.02) continue;
+      float along = (1.0 - clamp(dy / len, 0.0, 1.0)); along *= along;
+      float dash = 0.55 + 0.45 * step(0.35, fract(P.y * 0.23 + lPos[i].x * 0.13));
+      refl += lCol[i].rgb * lCol[i].a * across * along * dash * 0.22;
+    }
+    refl *= wet;
+  }
   vec3 col = alb;
   if (ground && wet > 0.0 && (fl & ${F_WATER}) == 0) col *= mix(1.0, 0.7, wet);
   vec3 lit = col * light;
@@ -105,7 +123,7 @@ void main(){
   vec3 glow = pow(e.rgb, vec3(2.2)) * e.a * emiK;
   // glass reflects a little sky
   if ((fl & ${F_GLASS}) != 0) lit += ambSky * 0.12;
-  lit += glow;
+  lit += glow + refl;
   // filmic-ish curve back to display
   vec3 m = lit / (1.0 + lit * 0.18);
   o0 = vec4(pow(m, vec3(1.0 / 2.2)), 1.0);
@@ -183,9 +201,9 @@ export const PRESETS = {
     bloomK: 0.3, haze: 0.02, hazeCol: [0.8, 0.88, 1.0], vign: 0.25, sat: 1.22, contrast: 1.1, lift: [0, 0, 0.0], gain: [1.04, 1.03, 1.0], reflK: 0, lampsOn: 0,
   },
   night: {
-    sunDir: [-0.5, -0.3, 0.8], sunCol: [0.04, 0.05, 0.1], ambSky: [0.12, 0.14, 0.3], ambGround: [0.08, 0.08, 0.16],
+    sunDir: [-0.5, -0.3, 0.8], sunCol: [0.04, 0.05, 0.1], ambSky: [0.08, 0.1, 0.22], ambGround: [0.06, 0.06, 0.13],
     shadowTint: [1, 1, 1], shadowLen: 0, bands: 0, bandMix: 0, wet: 0.9, emiK: 1.05, bloomThr: 0.55, leafGlow: 0,
-    bloomK: 1.1, haze: 0.06, hazeCol: [0.14, 0.14, 0.3], vign: 0.65, sat: 1.25, contrast: 1.08, lift: [0.0, 0.0, 0.03], gain: [1.04, 0.98, 1.02], reflK: 2.6, lampsOn: 1, rain: 1,
+    bloomK: 1.1, haze: 0.06, hazeCol: [0.14, 0.14, 0.3], vign: 0.65, sat: 1.25, contrast: 1.08, lift: [0.0, 0.0, 0.03], gain: [1.04, 0.98, 1.02], reflK: 1.1, lampsOn: 1, rain: 1,
   },
 };
 

@@ -104,8 +104,8 @@ export const MAT = {
   tyre: ramp('#2a2a30', 5, 2),
   chrome: ramp('#b8c0c8', 5, 2, { light: 0.8 }),
   // people
-  skin: [ramp('#f1c9a5', 5, 2), ramp('#d9a27a', 5, 2), ramp('#b77a52', 5, 2), ramp('#8d5536', 5, 2), ramp('#5e3826', 5, 2)],
-  hair: [ramp('#2a2220', 5, 2), ramp('#5a3a24', 5, 2), ramp('#a8743a', 5, 2), ramp('#d9b25e', 5, 2), ramp('#8a8a8e', 5, 2), ramp('#b8432e', 5, 2)],
+  skin: [ramp('#f4c8a0', 5, 2, { light: 0.32, dark: 0.45, shift: 0.04 }), ramp('#e4a474', 5, 2, { light: 0.32, dark: 0.48, shift: 0.04 }), ramp('#c07c4c', 5, 2, { light: 0.32, dark: 0.5, shift: 0.04 }), ramp('#8e5634', 5, 2, { light: 0.32, dark: 0.52, shift: 0.04 }), ramp('#5e3826', 5, 2, { light: 0.32, dark: 0.5, shift: 0.04 })],
+  hair: [ramp('#2e2422', 5, 2, { light: 0.35 }), ramp('#8a4a26', 5, 2, { dark: 0.6, light: 0.55, shift: 0.15 }), ramp('#b06a30', 5, 2, { dark: 0.6, light: 0.55, shift: 0.15 }), ramp('#d8aa5c', 5, 2, { dark: 0.55, light: 0.5 }), ramp('#a8a8ac', 5, 2), ramp('#b8432e', 5, 2)],
   cloth: {
     white: ramp('#e8e4dc', 5, 2), black: ramp('#2c2c34', 5, 2), denim: ramp('#3e5f8f', 5, 2), navy: ramp('#2c3a66', 5, 2),
     red: ramp('#b8343a', 5, 2), orange: ramp('#d8722e', 5, 2), yellow: ramp('#e0b83a', 5, 2), green: ramp('#3f7a46', 5, 2),

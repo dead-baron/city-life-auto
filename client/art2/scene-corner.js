@@ -118,12 +118,14 @@ export function buildCorner(preset = 'golden') {
   vox(P.dog(), 548, 238, 0);
   // people
   const ppl = [
-    [randomPerson(42, 'cop'), 348, 224, 0, 'idle'], [Object.assign(randomPerson(44), { carry: 'board', hat: { kind: 'cap', color: 'red' } }), 386, 242, 7, 'walk'],
+    [randomPerson(42, 'cop'), 348, 224, 0, 'idle'], [randomPerson(44, 'student'), 386, 242, 7, 'walk'],
     [randomPerson(45), 424, 206, 3, 'idle'], [randomPerson(46), 466, 236, 0, 'walk'], [randomPerson(47), 532, 236, 2, 'walk'],
-    [randomPerson(31, 'thug'), 576, 192, 0, 'idle'], [Object.assign(randomPerson(48), { top: { kind: 'tank', color: 'pink' }, bottom: { kind: 'shorts', color: 'navy' }, fem: true, hair: { style: 'pony', color: 1 } }), 652, 236, 2, 'walk'],
-    [randomPerson(49), 522, 290, 6, 'idle'], [randomPerson(50), 458, 312, 2, 'idle'],
-    [randomPerson(51), 60, 250, 2, 'walk'], [randomPerson(52, 'business'), 130, 296, 0, 'walk'],
+    [randomPerson(31, 'enforcer'), 576, 192, 0, 'idle'], [randomPerson(48, 'athleisure'), 652, 236, 2, 'walk'],
+    [randomPerson(49, 'clerk'), 522, 290, 6, 'idle'], [randomPerson(50), 458, 312, 2, 'idle'],
+    [randomPerson(51), 60, 250, 2, 'walk'], [randomPerson(52, 'banker'), 130, 296, 0, 'walk'], [randomPerson(53, 'dad'), 470, 222, 2, 'walk'],
   ];
+  // more of the street life from the targets
+  ppl.push([randomPerson(61, 'courier'), 300, 210, 0, 'walk'], [randomPerson(62, 'nurse'), 600, 244, 6, 'walk'], [randomPerson(63, 'tourist'), 90, 228, 1, 'idle'], [randomPerson(64, 'granny'), 140, 240, 2, 'walk']);
   for (const [app, x, y, dir, pose] of ppl) add(person(app, dir, pose, (x + y) & 3), x, y);
   // trees
   add(leafyTree(31, 132, 50), 180, 62); add(leafyTree(32, 130, 50), 730, 228); add(leafyTree(33, 120, 44), 16, 332); add(leafyTree(34, 116, 46), 120, 442);
@@ -135,7 +137,7 @@ export function buildCorner(preset = 'golden') {
   // ---- lights
   const lights = [];
   if (lampsOn) for (const [x, y] of [[138, 160], [322, 178], [368, 430], [322, 470]]) lights.push({ x, y: y + 2, z: 84, r: preset === 'night' ? 200 : 110, col: LIGHT.sodium, k: preset === 'night' ? 3.4 : 0.8 });
-  const win = preset === 'night' ? 1.8 : preset === 'golden' ? 0.6 : 0.12;
+  const win = preset === 'night' ? 1.2 : preset === 'golden' ? 0.6 : 0.12;
   for (const x of [380, 430, 480]) lights.push({ x, y: 210, z: 26, r: 76, col: LIGHT.warmWindow, k: win });
   for (const x of [20, 60, 100]) lights.push({ x, y: 182, z: 24, r: 70, col: LIGHT.warmWindow, k: win * 0.9 });
   if (preset !== 'noon') { lights.push({ x: 70, y: 180, z: 60, r: 120, col: LIGHT.neonMagenta, k: night * 1.4 + 0.2 }); lights.push({ x: 100, y: 120, z: 74, r: 90, col: LIGHT.neonCyan, k: night * 1.2 + 0.2 }); }
