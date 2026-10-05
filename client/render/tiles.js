@@ -50,6 +50,7 @@ export class GroundCache {
     this.roofs = this.byChunk((map.roofs || []).filter((r) => !r.gone), (r) => [r.tx * TILE - 2, r.ty * TILE - 2, (r.tx + r.tw) * TILE + 10, (r.ty + r.th) * TILE + 10]);
     this.prefabs = this.byChunk(map.prefabs, (p) => [p.tx * TILE, p.ty * TILE, (p.tx + p.tw) * TILE, (p.ty + p.th) * TILE]);
     this.handArt = this.byChunk(map.handArt || [], (a) => [a.x, a.y, a.x + a.w - 1, a.y + a.h - 1]);
+    this.brick = this.byChunk(map.brickWalls || [], (w) => [w.tx * TILE, w.ty * TILE - 20, (w.tx + w.tw) * TILE, (w.ty + 1) * TILE + 6]);
     this.stalls = this.byChunk(map.stalls, (s) => [s.x, s.y, s.x + s.w, s.y + s.h]);
     this.signs = this.byChunk(map.buildings.filter((b) => b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]);
     // ground-level streets (the deck and ramps are drawn lifted, render/highway.js)
@@ -106,6 +107,7 @@ export class GroundCache {
     if (L.props) for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawBuildingBase(g, r); // the roof itself is lifted onto its walls (render/buildings.js)
     drawPortals(g, m, cx, cy);
+    for (const w of this.brick.get(k) || []) drawBrickWall(g, w);
     if (L.lots) {
       for (const p of this.prefabs.get(k) || []) drawPrefab(g, p);
       for (const bay of m.bays || []) drawBayFloor(g, bay, cx, cy);
@@ -517,6 +519,26 @@ function drawStall(g, s) {
   g.moveTo(s.x + 1, s.y + 4); g.lineTo(s.x + 1, s.y + s.h - 4);
   g.moveTo(s.x + s.w - 1, s.y + 4); g.lineTo(s.x + s.w - 1, s.y + s.h - 4);
   g.stroke();
+}
+
+// A brick wall along the street (between buildings, round the yards behind them): a capped
+// red-brick wall in the same 3/4 view as the buildings - its face toward the street below, its
+// coping on top - one tile deep.
+function drawBrickWall(g, w) {
+  const x = w.tx * TILE, y = w.ty * TILE, W = w.tw * TILE;
+  const top = y - 14, face = TILE + 14 - 6; // lifted a little: it stands up off the ground
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x + 4, y + TILE - 2, W, 6);               // shadow at its foot
+  g.fillStyle = '#7d3a28'; g.fillRect(x, top + 6, W, face);                            // brick face
+  for (let r = 0; r * 6 < face; r++) {                                                // courses + mortar
+    const yy = top + 6 + r * 6;
+    g.fillStyle = 'rgba(214,190,160,.35)'; g.fillRect(x, yy, W, 1);
+    for (let bx = x + ((r % 2) ? 6 : 0) + hash2(w.tx, r, 3) * 2; bx < x + W; bx += 12) g.fillRect(bx, yy, 1, 6);
+    for (let bx = x + ((r % 2) ? 0 : 6); bx < x + W; bx += 12) { const h = hash2(bx | 0, yy | 0, 9); if (h < 0.3) { g.fillStyle = h < 0.15 ? 'rgba(0,0,0,.12)' : 'rgba(255,200,170,.08)'; g.fillRect(bx + 1, yy + 1, 10, 5); g.fillStyle = 'rgba(214,190,160,.35)'; } }
+  }
+  g.fillStyle = '#b9ad9c'; g.fillRect(x - 1, top, W + 2, 6);                           // coping stones
+  g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x - 1, top, W + 2, 1);
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x - 1, top + 5, W + 2, 1);
+  for (let px = x + 30; px < x + W - 8; px += 64) { g.fillStyle = '#6e3222'; g.fillRect(px, top + 6, 6, face); g.fillStyle = '#b9ad9c'; g.fillRect(px - 1, top - 2, 8, 4); } // piers
 }
 
 // A hand-designed block's painting (tools/build_blocks.py), laid on its block curb to curb.

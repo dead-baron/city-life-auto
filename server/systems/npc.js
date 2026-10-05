@@ -103,7 +103,13 @@ export function update(world, dt) {
     if (n.state !== 'limp' && n.role !== 'cop' && ped.hp < ped.maxHp * NPC_CRITICAL) startLimp(world, ped, n.fx ?? ped.x + 1, n.fy ?? ped.y);
     // ended up in the water (thrown from a car, knocked off a dock): swim for the nearest shore
     if (isSwimming(world.map, ped)) {
-      if (!n.shore || now > (n.shoreAt || 0)) { n.shore = nearestLand(world.map, ped.x, ped.y); n.shoreAt = now + 2; }
+      if (!n.shore || now > (n.shoreAt || 0)) {
+        // no headway in the last couple of seconds (a sea wall, a moored boat): try another bit of shore
+        if (n.shore && n.swimFrom && Math.hypot(ped.x - n.swimFrom.x, ped.y - n.swimFrom.y) < 12) (n.badShore ||= new Set()).add(Math.floor(n.shore.y / 32) * world.map.w + Math.floor(n.shore.x / 32));
+        n.swimFrom = { x: ped.x, y: ped.y };
+        n.shore = nearestLand(world.map, ped.x, ped.y, 24, n.badShore);
+        n.shoreAt = now + 2;
+      }
       if (n.shore) { pedStep(ped, seek(ped, n.shore.x, n.shore.y, true), dt, world.map, walkMods(world, ped, 1)); continue; }
     }
     if (n.role === 'civ' || n.role === 'mugger') checkDive(world, ped, now);

@@ -196,3 +196,90 @@ export function acrossWater(isLand, x, y, dx, dy, maxLen = 260) {
 }
 
 export { dirOf };
+
+// --------------------------------------------------------------------------------------------
+// Breaking up a street grid so it reads like a real city instead of graph paper.
+//
+// A grid line runs the length of the city, crossing every street of the other direction. Each
+// stretch of a plain street between two crossings is looked at on its own (a hash of where it is,
+// so the same city comes out every time):
+//  * north-south stretches are sometimes left out, so the blocks either side join into one long
+//    block - room for a long run of storefronts along the avenue in front of it (never two side
+//    by side, so blocks don't grow into giant squares);
+//  * some stretches (either way) are narrowed to a back alley instead of a street;
+//  * a long block usually gets an alley of its own: a dead-end service alley in from the street
+//    behind the buildings, or a narrow lane right through between two groups of buildings.
+// Avenues are never touched, nor anywhere protect(xTile, yTile) says to leave alone.
+export const ALLEY = { drop: 0.62, alleyV: 0.2, alleyH: 0.24, serviceIn: 0.5, through: 0.38 };
+export function breakGrid(lines, xs, ys, protect, salt = 0) {
+  const T = (v) => v * TILE;
+  const out = [];
+  const isSt = (l) => l.kind === 'st';
+  const verticalOf = (l) => Math.abs(l.pts[0].x - l.pts[l.pts.length - 1].x) < 1;
+  const xsS = [...xs].sort((a, b) => a - b), ysS = [...ys].sort((a, b) => a - b);
+  const h = (a, b, k) => hashXY(a, b, salt * 31 + k);
+  // a north-south stretch at grid column ix, between grid rows iy and iy+1
+  const dropV = (ix, iy, x, ya) => (ix + iy) % 2 === 0 && h(x, ya, 1) < ALLEY.drop;
+  const alleyV = (x, ya) => h(x, ya, 1) >= ALLEY.drop && h(x, ya, 1) < ALLEY.drop + ALLEY.alleyV;
+  // is there a street of the other direction crossing (c, s)? (a stretch is only reshaped between
+  // two real crossings, so nothing is left hanging in mid-air)
+  const spans = lines.filter((l) => l.pts.length >= 2).map((l) => {
+    const xa = Math.min(...l.pts.map((p) => p.x)) / TILE, xb = Math.max(...l.pts.map((p) => p.x)) / TILE;
+    const ya = Math.min(...l.pts.map((p) => p.y)) / TILE, yb = Math.max(...l.pts.map((p) => p.y)) / TILE;
+    return { v: xb - xa < 0.05, xa, xb, ya, yb };
+  });
+  const crossedAt = (vert, c, s) => spans.some((q) => (vert ? !q.v && Math.abs(q.ya - s) < 0.05 && q.xa <= c + 0.5 && q.xb >= c - 0.5
+    : q.v && Math.abs(q.xa - s) < 0.05 && q.ya <= c + 0.5 && q.yb >= c - 0.5));
+  for (const l of lines) {
+    if (!isSt(l) || l.pts.length < 2) { out.push(l); continue; }
+    const vert = verticalOf(l);
+    const horiz = !vert && Math.abs(l.pts[0].y - l.pts[l.pts.length - 1].y) < 1;
+    if (!vert && !horiz) { out.push(l); continue; }
+    const c = vert ? l.pts[0].x / TILE : l.pts[0].y / TILE;
+    const a0 = Math.min(...l.pts.map((p) => (vert ? p.y : p.x))) / TILE, a1 = Math.max(...l.pts.map((p) => (vert ? p.y : p.x))) / TILE;
+    const cross = (vert ? ysS : xsS).filter((v) => v > a0 + 1 && v < a1 - 1);
+    const ix = (vert ? xsS : ysS).indexOf(c);
+    const cuts = [a0, ...cross, a1];
+    const pt = (v) => (vert ? { x: T(c), y: T(v) } : { x: T(v), y: T(c) });
+    let run = null;
+    const flush = () => { if (run) { out.push({ ...l, pts: [pt(run[0]), pt(run[1])] }); run = null; } };
+    for (let k = 0; k + 1 < cuts.length; k++) {
+      const s0 = cuts[k], s1 = cuts[k + 1];
+      // reshaped only between two crossings, or the end stretch out to wherever the street stops
+      // (dropping that leaves no stub; the street just ends at its last crossing)
+      const endOk = (v, other) => crossedAt(vert, c, v) || ((v === a0 || v === a1) && crossedAt(vert, c, other));
+      const inner = cuts.length > 2 && endOk(s0, s1) && endOk(s1, s0) && s1 - s0 >= 8;
+      const mid = (s0 + s1) / 2;
+      const safe = !protect(vert ? c : mid, vert ? mid : c);
+      let what = 'st';
+      if (inner && safe && ix >= 0) {
+        const grid = vert ? ysS : xsS;
+        const iy = grid.indexOf(s0) >= 0 ? grid.indexOf(s0) : grid.indexOf(s1) - 1;
+        const both = crossedAt(vert, c, s0) && crossedAt(vert, c, s1); // an alley must join streets at both ends
+        if (vert) what = dropV(ix, iy, c, s0) ? 'drop' : both && alleyV(c, s0) ? 'alley' : 'st';
+        else what = both && h(s0, c, 2) < ALLEY.alleyH ? 'alley' : 'st';
+      }
+      if (what === 'st') { if (run) run[1] = s1; else run = [s0, s1]; continue; }
+      flush();
+      if (what === 'alley') { out.push({ pts: [pt(s0), pt(s1)], kind: 'alley', lvl: 0, name: 'Back Alley' }); continue; }
+      // dropped: the long block gets an alley of its own, off-centre so the blocks stay unequal
+      const r = h(c, s0, 3), side = h(c, s0, 4) < 0.5 ? -1 : 1, off = side * (9 + Math.floor(h(c, s0, 5) * 4));
+      const ax = c + off;
+      if (protect(ax, mid)) continue;
+      if (r < ALLEY.serviceIn && crossedAt(true, ax, s0)) {
+        const depth = (s1 - s0) * (0.5 + h(c, s0, 6) * 0.15);
+        out.push({ pts: [{ x: T(ax), y: T(s0) }, { x: T(ax), y: T(s0 + depth) }], kind: 'alley', lvl: 0, name: 'Service Alley', culdesac: true }); // a dead end on purpose
+      } else if (r < ALLEY.serviceIn + ALLEY.through && crossedAt(true, ax, s0) && crossedAt(true, ax, s1)) {
+        out.push({ pts: [{ x: T(ax), y: T(s0) }, { x: T(ax), y: T(s1) }], kind: 'alley', lvl: 0, name: 'Back Alley' });
+      }
+    }
+    flush();
+  }
+  return out;
+}
+function hashXY(x, y, seed) {
+  let h = (Math.imul(Math.round(x * 4) | 0, 374761393) + Math.imul(Math.round(y * 4) | 0, 668265263) + Math.imul(seed | 0, 2147483647)) | 0;
+  // full avalanche (murmur3 finaliser): neighbouring grid crossings get unrelated values
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}

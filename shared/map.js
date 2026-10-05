@@ -22,7 +22,7 @@ import { buildNetwork, stampEdge, stampLine, edgeZ } from './roads.js';
 import { measure, pointAt, rounded, project, cubic, quad, segX } from './geom.js';
 import {
   Z, BAND, GRID_X, GRID_Y, AVE_X, AVE_Y, RIVER_BRIDGES, PARK, CRESCENT, BROADWAY, SEEDS,
-  clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, slipRamp, acrossWater,
+  clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, slipRamp, acrossWater, breakGrid,
 } from './citylayout.js';
 import { buildLevels } from './levels.js';
 import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS, SCENE_SPOTS, SCENE_ISLANDS } from './islands.js';
@@ -144,18 +144,18 @@ export const WILD_DISTRICTS = new Set(DISTRICTS.filter((d) => WILD_STYLES.has(d.
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
   houses: { minW: 16, minH: 18, gen: { house1: 3, house2: 3, house3: 3, apt2: 0.6, rest2: 0.3, house4: 2, house5: 2, house7: 2.5, house8: 2.5, house9: 2.5 }, filler: 'park', roof: 0.06, roofKinds: ['tile'] },
-  commercial: { minW: 12, minH: 12, gen: { conv: 3, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.3, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5, diner: 1, arcade: 0.5, tattoo: 0.4, redawning: 0.6, greenbistro: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
+  commercial: { minW: 12, minH: 12, gen: { shops1: 0.6, shops2: 0.6, conv: 3, rest1: 2, rest2: 2, gas: 1, apt1: 1, club: 0.3, tower2: 1, trail: 0.6, boutique: 0.6, quickstop: 0.6, fuel: 0.3, motors: 0.3, bank2: 0.3, liquor: 0.5, diner: 1, arcade: 0.5, tattoo: 0.4, redawning: 0.6, greenbistro: 0.5 }, filler: 'parking', roof: 0.5, roofKinds: ['tar', 'gravel'] },
   apartments: { minW: 14, minH: 14, gen: { apt1: 3, apt2: 3, house2: 1, conv: 1.8, tower2: 1, apt3: 1.5, apt4: 1.5 }, filler: 'park', roof: 0.4, roofKinds: ['tar', 'gravel'] },
   industrial: { minW: 14, minH: 13, gen: { warehouse: 3, industrial: 2, repair: 1, junkyard: 0.6, construction: 0.4 }, filler: 'yard', roof: 0.45, roofKinds: ['metal', 'tar'] },
   factory: { minW: 14, minH: 13, gen: { industrial: 3, warehouse: 2, repair: 1, gas: 0.4, junkyard: 0.5, construction: 0.5 }, filler: 'yard', roof: 0.6, roofKinds: ['metal', 'metal', 'tar'] },
   towers: { minW: 11, minH: 11, gen: { tower1: 3, tower2: 3, apt1: 1, hotel: 1, bank2: 0.5, apt3: 0.5, vellori: 0.6, monarch: 0.6, theatre: 0.4, diamond: 0.5 }, filler: 'plaza', roof: 0.78, roofKinds: ['glass', 'gravel', 'tar'] },
   civic: { minW: 14, minH: 14, gen: { apt1: 1, tower2: 1, house1: 1, conv: 1, rest1: 1, church: 0.3, bank2: 0.6, apt4: 0.5, theatre: 0.5, greenbistro: 0.5, house8: 0.6 }, filler: 'park', roof: 0.35, roofKinds: ['gravel', 'tile'] },
   southside: { minW: 14, minH: 14, gen: { house1: 1, house3: 1, warehouse: 1, industrial: 1, apt2: 1, conv: 0.5, quickstop: 1.6, junkyard: 0.5, house5: 0.6, liquor: 0.8, shanty2: 0.5, shanty3: 0.5, tattoo: 0.4 }, filler: 'yard', roof: 0.3, roofKinds: ['tar', 'metal'] },
-  nightlife: { minW: 10, minH: 10, gen: { club: 1, rest1: 1, rest2: 1, hotel: 1, conv: 1, clubnova: 1.4, clubeclipse: 1.4, arcade: 0.8, tattoo: 0.6, theatre: 0.6, diner: 0.6 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  nightlife: { minW: 10, minH: 10, gen: { shops1: 0.6, shops2: 0.6, club: 1, rest1: 1, rest2: 1, hotel: 1, conv: 1, clubnova: 1.4, clubeclipse: 1.4, arcade: 0.8, tattoo: 0.6, theatre: 0.6, diner: 0.6 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
   harbor: { minW: 14, minH: 13, gen: { warehouse: 4, industrial: 1, repair: 1, junkyard: 0.3 }, filler: 'yard', roof: 0.55, roofKinds: ['metal', 'tar'] },
   luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5, house6: 1.5, house4: 1, house5: 1, house9: 1.2, royale: 0.6, diamond: 0.6, crown: 0.5 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
-  redlight: { minW: 12, minH: 12, gen: { club: 1, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.8, quickstop: 0.5, liquor: 0.6, tattoo: 0.8, shanty1: 0.4 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
-  oldtown: { minW: 12, minH: 12, gen: { apt2: 2, house1: 1, house3: 1, conv: 2, rest1: 1.5, club: 0.3, repair: 0.6, quickstop: 1.4, apt3: 0.6, boutique: 0.4, liquor: 0.8, diner: 0.6, greenbistro: 0.5, house7: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
+  redlight: { minW: 12, minH: 12, gen: { shops1: 0.6, shops2: 0.6, club: 1, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.8, quickstop: 0.5, liquor: 0.6, tattoo: 0.8, shanty1: 0.4 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
+  oldtown: { minW: 12, minH: 12, gen: { shops1: 0.6, shops2: 0.6, apt2: 2, house1: 1, house3: 1, conv: 2, rest1: 1.5, club: 0.3, repair: 0.6, quickstop: 1.4, apt3: 0.6, boutique: 0.4, liquor: 0.8, diner: 0.6, greenbistro: 0.5, house7: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
   beach: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, rest2: 1.5, rest1: 1, hotel: 0.6, conv: 0.5, beachbar: 1.2, house5: 0.6, house9: 0.8, diner: 0.6 }, filler: 'plaza', roof: 0.15, roofKinds: ['tile'] },
   park: { minW: 14, minH: 14, gen: { rest2: 1 }, filler: 'park', roof: 0, roofKinds: ['tile'] },
 };
@@ -297,7 +297,8 @@ export class CityMap {
     this.edges = [];
     this.lamps = [];
     this.handMask = new Uint8Array(MAP_W * MAP_H); // 1 + index of the hand-designed block a tile is in
-    this.handArt = [];                               // the painted blocks laid on the ground (client/render/tiles.js)
+    this.handArt = [];
+    this.brickWalls = [];                            // brick walls along the street between buildings: { tx, ty, tw }                               // the painted blocks laid on the ground (client/render/tiles.js)
     this.fields = [];
     this.roofs = [];
     this.hospitals = [];
@@ -393,14 +394,15 @@ export function isSwimming(map, ped) {
 }
 
 // Nearest walkable land to a point (for swimmers heading ashore), ring search in tiles.
-export function nearestLand(map, x, y, maxTiles = 24) {
+export function nearestLand(map, x, y, maxTiles = 24, skip = null) {
   const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
   for (let r = 0; r <= maxTiles; r++) {
     let best = null, bd = Infinity;
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
       const t = map.tileAt(cx + dx, cy + dy);
-      if (PED_BLOCK[t] || t === T.BRIDGE) continue;
+      if (PED_BLOCK[t] || t === T.BRIDGE || t === T.DOCK) continue; // a pier stands up out of the water: swim for real shore
+      if (skip && skip.has((cy + dy) * MAP_W + cx + dx)) continue; // tried that bit of shore: couldn't get up there
       const px = (cx + dx + 0.5) * TILE, py = (cy + dy + 0.5) * TILE, d = (px - x) ** 2 + (py - y) ** 2;
       if (d < bd) { bd = d; best = { x: px, y: py }; }
     }
@@ -851,7 +853,10 @@ function layoutRoads(m, rand) {
       gridLines.push({ pts, kind: ave ? 'ave' : 'st', lvl: 0, name: `${ave ? 'Avenue' : 'Street'} ${y}`, hy: y });
     }
   }
-  lines.push(...gridLines);
+  // ...broken up so it isn't graph paper: long blocks, back alleys, service alleys (citylayout.js).
+  // Downtown, Northgate and the hand-painted blocks around Broadway keep their grid.
+  const keepGrid = (x, y) => { const d = distOf(x, y); return d === 2 || d === 4 || (x > 684 && x < 872 && y > 464 && y < 560); };
+  lines.push(...breakGrid(gridLines, GRID_X, GRID_Y, keepGrid, 1));
   // Broadway: the diagonal through the core, between the inner frontage at both ends
   const bw = clipLine(BROADWAY.map(([x, y]) => ({ x: x * TILE, y: y * TILE })), (x, y) => isLand(x, y) && rD(x, y) >= BAND - 1 && zoneOf(x, y) === Z.CITY && !inPark(x, y), 8 * TILE, 8);
   for (const p of bw) lines.push({ pts: p, kind: 'blvd', lvl: 0, name: 'Broadway' });
@@ -1110,7 +1115,7 @@ function repairRoads(m, lines, seed) {
   const W = MAP_W;
   clipAtHighways(lines);
   const wetAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= W || ty >= MAP_H || !m.land[ty * W + tx] || !!m.lake[ty * W + tx]; };
-  const lower = (a, b) => { let k = (ROAD_RANK[a] ?? 3) <= (ROAD_RANK[b] ?? 3) ? a : b; if (k === 'hwy' || k === 'ramp') k = k === a ? b : a; if (k === 'hwy' || k === 'ramp') k = 'art'; return k === 'front' ? 'art' : k; };
+  const lower = (a, b) => { let k = (ROAD_RANK[a] ?? 3) <= (ROAD_RANK[b] ?? 3) ? a : b; if (k === 'hwy' || k === 'ramp') k = k === a ? b : a; if (k === 'hwy' || k === 'ramp') k = 'art'; if (k === 'alley') k = k === a ? b : a; if (k === 'alley') k = 'st'; return k === 'front' ? 'art' : k; };
   let net = null;
   const hwys = lines.filter((l) => l.kind === 'hwy' && l.lvl === 0);
   const crossesHwy = (a, b) => hwys.some((h) => { for (let j = 0; j + 1 < h.pts.length; j++) if (segX(a, b, h.pts[j], h.pts[j + 1])) return true; return false; });
@@ -1227,7 +1232,7 @@ function rasterRoads(m) {
     }
     // roads with no pavement beside them only take the tiles well inside their edge, so the
     // smooth road drawn over them covers every asphalt tile (no staircase showing at the side)
-    const hwT = CITY_KINDS.has(e.kind) ? e.hw : e.hw - 14;
+    const hwT = CITY_KINDS.has(e.kind) || e.kind === 'alley' ? e.hw : e.hw - 14; // (an alley has walls, not kerbs, but its asphalt is all road)
     stampEdge(e, e.hw, (tx, ty, d, horiz) => {
       const i = at(tx, ty);
       if (i < 0) return;
@@ -1548,10 +1553,13 @@ function fillRow(m, row, rand) {
     while (x < b) {
       const rem = b - x;
       const sty = near.length && rand() < 0.3 ? near[Math.floor(rand() * near.length)] : st;
-      if (rem >= 6 && rand() < 0.12) { const gw = Math.min(rem, 4 + Math.floor(rand() * 4)); filler(m, row, x, gw, sty, rand); x += gw; continue; }
+      // a long town block is a continuous frontage: few gaps, and a gap is a brick-walled yard or a
+      // narrow passage, not an open lot
+      const walled = URBAN.has(DISTRICTS[row.d].style) && row.w >= 30;
+      if (rem >= 6 && rand() < (walled ? 0.06 : 0.12)) { const gw = Math.min(rem, 4 + Math.floor(rand() * 4)); if (walled) walledGap(m, row, x, gw, rand); else filler(m, row, x, gw, sty, rand); x += gw; continue; }
       const keys = Object.keys(sty.gen);
       const fits = keys.filter((k) => rowFits(row, k, [x, b]) && !(!PREFABS[k].rot && row.face === 'N')); // fronts drawn at the bottom never face north (upside-down)
-      if (!fits.length) { filler(m, row, x, rem, st, rand); break; }
+      if (!fits.length) { if (walled && rem <= 12) walledGap(m, row, x, rem, rand); else filler(m, row, x, rem, st, rand); break; }
       let tot = 0;
       for (const k of fits) tot += sty.gen[k];
       let r = rand() * tot, pick = fits[0];
@@ -2929,6 +2937,43 @@ function hqInPlainBuilding(m, di, cx, cy) {
 
 function filler(m, row, x, w, st, rand, backLot = false) {
   if (w <= 0) return;
+  // in town the yards and car parks behind the buildings are walled off from the back street
+  if (backLot && URBAN.has(DISTRICTS[row.d].style) && row.h >= 3) {
+    const before = m.brickWalls.length;
+    fillerInner(m, row, x, w, st, rand, backLot);
+    if (m.brickWalls.length === before && !(m.tileAt(x, row.y) === T.BUILDING)) streetWall(m, x, row.face === 'S' ? row.y + row.h - 1 : row.y, w, rand, w >= 6);
+    return;
+  }
+  fillerInner(m, row, x, w, st, rand, backLot);
+}
+// Town styles where the street frontage runs on in brick between the buildings.
+const URBAN = new Set(['commercial', 'oldtown', 'nightlife', 'redlight', 'southside', 'industrial', 'factory', 'harbor', 'towers', 'apartments']);
+// A brick wall along a row of tiles (1 tile deep) - with a gateway somewhere along it when asked.
+function streetWall(m, x, y, w, rand, gate) {
+  if (w < 2) return;
+  const gx = gate ? x + 1 + Math.floor(rand() * Math.max(1, w - 3)) : -99; // a 2-tile gateway
+  let run = null;
+  for (let tx = x; tx <= x + w; tx++) {
+    const i = y * MAP_W + tx;
+    const ok = tx < x + w && (tx < gx || tx > gx + 1) && m.bld[i] < 0 && !(m.reserve[i] & 16) && m.tiles[i] !== T.ROAD && m.tiles[i] !== T.BUILDING;
+    if (ok) { m.tiles[i] = T.WALL; if (run) run.tw++; else run = { tx, ty: y, tw: 1 }; continue; }
+    if (run) { m.brickWalls.push(run); run = null; }
+  }
+}
+// A gap in a long frontage: a narrow paved passage between the buildings, or a yard behind a
+// brick wall (with a gateway) - so the street side stays a continuous run of brick and storefronts.
+function walledGap(m, row, x, w, rand) {
+  const y0 = row.y, h = row.h;
+  if (w <= 3) { m.fill(x, y0, w, h, T.PLAZA); addProp(m, rand() < 0.5 ? 'dump_g' : 'dump_b', (x + w / 2) * TILE, (y0 + 2) * TILE, 16); return; }
+  m.fill(x, y0, w, h, T.LOT);
+  const pool = ['pallet', 'pallet_b', 'drum', 'dump_g', 'dump_b', 'tires', 'planks'];
+  for (let k = 0; k < Math.max(1, (w * h) / 40); k++) {
+    const t = pool[Math.floor(rand() * pool.length)];
+    addProp(m, t, (x + 1 + rand() * (w - 2)) * TILE, (y0 + 1 + rand() * Math.max(1, h - 4)) * TILE, t.startsWith('dump') ? 16 : 10);
+  }
+  streetWall(m, x, row.face === 'S' ? y0 + h - 1 : y0, w, rand, w >= 5);
+}
+function fillerInner(m, row, x, w, st, rand, backLot = false) {
   const x0 = x, y0 = row.y, h = row.h;
   if (st.roof && w >= 4 && h >= 4 && rand() < (backLot ? Math.max(st.roof, 0.7) : st.roof)) { roofBuilding(m, row, x0, y0, w, h, st, rand); return; }
   let kind = w >= 5 && (st.filler === 'parking' || st.filler === 'yard' || (st.filler === 'plaza' && rand() < 0.4)) ? 'parking' : st.filler;

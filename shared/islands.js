@@ -9,7 +9,7 @@
 // the network builder, roads.js) and set pieces; map.js paints, builds and fills them.
 import { TILE } from './constants.js';
 import { rounded, measure, pointAt, cubic, quad, inPoly } from './geom.js';
-import { clipLine, offsetLoop } from './citylayout.js';
+import { clipLine, offsetLoop, breakGrid } from './citylayout.js';
 
 export const P = (x, y) => ({ x: x * TILE, y: y * TILE });
 const pts = (list) => list.map(([x, y]) => P(x, y));
@@ -92,8 +92,11 @@ export function islandRoads(ctx) {
     // avenues carry on out through the ring road to a junction on the highway
     const okAve = (x, y) => (ok(x, y) || (land(x, y) && seaD(x, y) >= 3 && !inCore(R)(x, y) && inPoly(R.outer, x * TILE, y * TILE) && !inPark(x, y)));
     const ys0 = Math.min(...ys) - 40, ys1 = Math.max(...ys) + 40, xs0 = Math.min(...xs) - 40, xs1 = Math.max(...xs) + 40;
-    for (const x of xs) for (const p of clipLine([P(x, ys0), P(x, ys1)], kinds.x(x) === 'ave' ? okAve : ok, 8 * TILE)) lines.push({ pts: p, kind: kinds.x(x), lvl: 0, name: `${name} ${kindName(kinds.x(x))} ${x}` });
-    for (const y of ys) for (const p of clipLine([P(xs0, y), P(xs1, y)], kinds.y(y) === 'ave' ? okAve : ok, 8 * TILE)) lines.push({ pts: p, kind: kinds.y(y), lvl: 0, name: `${name} ${kindName(kinds.y(y))} ${y}` });
+    const gl = [];
+    for (const x of xs) for (const p of clipLine([P(x, ys0), P(x, ys1)], kinds.x(x) === 'ave' ? okAve : ok, 8 * TILE)) gl.push({ pts: p, kind: kinds.x(x), lvl: 0, name: `${name} ${kindName(kinds.x(x))} ${x}` });
+    for (const y of ys) for (const p of clipLine([P(xs0, y), P(xs1, y)], kinds.y(y) === 'ave' ? okAve : ok, 8 * TILE)) gl.push({ pts: p, kind: kinds.y(y), lvl: 0, name: `${name} ${kindName(kinds.y(y))} ${y}` });
+    // long blocks and back alleys, like Metro City's (citylayout.js breakGrid)
+    lines.push(...breakGrid(gl, xs, ys, () => false, z + 7));
   };
   const pick = (ave, art) => (v) => (ave.includes(v) ? 'ave' : art.includes(v) ? 'art' : 'st');
 

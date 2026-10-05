@@ -1253,3 +1253,27 @@ Went through every painting the game uses: each building lot, the hospital front
 - **Unstuck:** if the nearest open ground is itself closed in, it takes you out to the nearest street.
 - **Surrender** (not wanted): no more lying downed waiting for help; you wake at your spawn about 3 seconds later.
 - Test in `test/core.test.js`: motor pool, walled-in pocket, Unstuck out of a pocket, surrender wake-up, deck. Tutorial line on Stuck?/Surrender updated.
+
+## 2026-10-04 · Round 13: breaking up the street grid
+
+- **`breakGrid`** (`shared/citylayout.js`) reshapes the plain-street grid of Metro City and the Westport, Northshore and Cedar Falls grids. Downtown, Northgate and the hand-painted Broadway blocks are left alone (`keepGrid` in `map.js`).
+  - Each stretch of a plain street between two crossings is decided on its own, by a hash of where it is, so the city is the same every time.
+  - North-south stretches are often left out, so the blocks either side join into one long block for a run of storefronts along the avenue. This is done checkerboard-wise, so long blocks never sit side by side and grow into giant squares.
+  - Some stretches become **back alleys**. The long blocks usually get one of their own: a dead-end **service alley** in behind the buildings, or a narrow lane right through between two groups.
+  - The end stretch out to wherever a street stops can also go, which leaves no stub.
+  - Avenues are never touched, and an alley always joins streets at both ends (service alleys at one, on purpose).
+- **The `alley` road kind** (`shared/roads.js`):
+  - 3 tiles wide, no sidewalk, rank 1.
+  - Drawn with a dark gutter and grime along the walls, no lane lines.
+  - Never gets traffic lights or zebra crossings.
+  - Traffic mostly keeps to the streets: an alley is taken 8% of the time, at a 120 px/s crawl, and traffic never spawns in one.
+  - Road repair never turns a connector into an alley.
+- **Brick frontage** in town styles (commercial, old town, nightlife, red-light, Southside, industrial, harbor, towers, apartments):
+  - On a long block (30+ tiles) the gaps between buildings are fewer, and a gap is a narrow passage with a dumpster or a yard behind a **brick wall** with a gateway, never an open lot.
+  - Yards and car parks behind the buildings are walled off from the back street.
+  - Walls are `T.WALL` tiles (solid) listed in `m.brickWalls`, and drawn as capped red-brick walls with piers in the 3/4 view (`drawBrickWall`).
+  - The multi-storefront rows (`shops1`, `shops2`) can now appear in commercial, old town, nightlife and red-light blocks.
+- **Fixes found on the way:**
+  - A swimming NPC no longer heads for a pier it can't climb, and if it makes no headway it tries another bit of shore.
+  - The soccer test re-indexes the ball after moving it.
+- World map rebaked. Tutorial: the Metro City island stop mentions the long blocks and alleys (`TUTORIAL_VERSION` 25).

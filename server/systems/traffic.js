@@ -27,7 +27,7 @@ function weighted(mix) {
 }
 
 // cruising speed by road class (px/s)
-const CRUISE = { hwy: HIGHWAY_SPEED, ramp: 330, ave: 290, blvd: 290, front: 290, st: 245, drive: 255, minor: 170, rural: 330, art: 275, dirt: 150 };
+const CRUISE = { hwy: HIGHWAY_SPEED, ramp: 330, ave: 290, blvd: 290, front: 290, st: 245, drive: 255, minor: 170, rural: 330, art: 275, dirt: 150, alley: 120 };
 
 function nearestAnchor(world, x, y) {
   let best = null, bd = Infinity;
@@ -43,8 +43,11 @@ function nearestAnchor(world, x, y) {
 // wandered far from every player drift back toward the action.
 function chooseExit(world, n, inEdge) {
   const net = world.map.net;
-  const opts = exitsFrom(net, n, inEdge);
+  let opts = exitsFrom(net, n, inEdge);
   if (!opts.length) return null;
+  // through traffic keeps to the streets: an alley only now and then (or when it's the only way on)
+  const streets = opts.filter((o) => net.edges[o.edge].kind !== 'alley');
+  if (streets.length && rng() < 0.92) opts = streets;
   const near = nearestAnchor(world, n.x, n.y);
   if (near && near.d > 900 && rng() < 0.7) {
     let best = null, bd = Infinity;
@@ -424,7 +427,7 @@ function manage(world) {
     if (count >= target || world.npcCount + world.trafficCount > world.npcBudget) continue;
     const cands = net.edges.filter((e) => {
       const bb = e.bb || (e.bb = bboxOf(e.pts));
-      return bb.x1 > a.x - 1600 && bb.x0 < a.x + 1600 && bb.y1 > a.y - 1600 && bb.y0 < a.y + 1600 && e.len > 200;
+      return e.kind !== 'alley' && bb.x1 > a.x - 1600 && bb.x0 < a.x + 1600 && bb.y1 > a.y - 1600 && bb.y0 < a.y + 1600 && e.len > 200;
     });
     if (!cands.length) continue;
     for (let tries = 0; tries < 10; tries++) {

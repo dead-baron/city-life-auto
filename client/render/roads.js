@@ -251,6 +251,10 @@ function markings(g, m, e) {
     for (const s of [1, -1]) solid(between(m, e, s * (e.hw - 8)), 'rgba(232,230,222,.55)', 2);
   } else if (e.kind === 'minor') {
     dashed(between(m, e, 0), 'rgba(232,230,222,.8)', 2, 14, 20);
+  } else if (e.kind === 'alley') {
+    // a back alley: no lines, just the gutter down the middle and grime along the walls
+    solid(between(m, e, 0), 'rgba(20,20,24,.45)', 3);
+    for (const sd of [1, -1]) solid(between(m, e, sd * (e.hw - 3)), 'rgba(0,0,0,.28)', 6);
   } else if (e.kind === 'rural') {
     dashed(between(m, e, 0), 'rgba(232,185,35,.75)', 2, 24, 30);
   } else if (e.kind === 'art') {

@@ -32,11 +32,12 @@ export const ROAD_KINDS = {
   front: { w: 6, nl: 2, median: 0, light: true, oneway: true }, // frontage roads beside the ring, one-way
   art: { w: 7, nl: 1, median: 0, light: true },    // minor arterial: ring roads, harbor and airport roads, bridges to small towns
   dirt: { w: 4, nl: 1, median: 0, light: false },  // unpaved tracks in the woods, the hills and the desert
+  alley: { w: 3, nl: 1, median: 0, light: false }, // back alleys between the buildings: one car wide each way, no pavement
 };
 
 // The road hierarchy, highest first: highway, major arterial, minor arterial / collector, street,
 // county road, local road, dirt track. Roads join roads near their own rank (see map.js repair).
-export const ROAD_RANK = { hwy: 6, ramp: 6, ave: 5, blvd: 5, front: 4, art: 4, drive: 4, st: 3, rural: 3, minor: 2, dirt: 1 };
+export const ROAD_RANK = { hwy: 6, ramp: 6, ave: 5, blvd: 5, front: 4, art: 4, drive: 4, st: 3, rural: 3, minor: 2, dirt: 1, alley: 1 };
 
 export const LIGHT_CYCLE = 24; // divides the 1200 s chrono loop evenly
 
@@ -279,8 +280,8 @@ function finishNetwork(nodes0, edges0, seed) {
     }
     n.half = Math.max(0, ...Object.values(n.trim));
     // signals
-    const roads = ids.map((id) => edges[id]);
-    const lit = n.lvl === 0 && ids.length >= 3 && roads.some((e) => (ROAD_KINDS[e.kind] || {}).light) && !roads.every((e) => e.kind === 'minor' || e.kind === 'rural');
+    const roads = ids.map((id) => edges[id]).filter((e) => e.kind !== 'alley'); // an alley mouth never gets lights
+    const lit = n.lvl === 0 && roads.length >= 3 && roads.some((e) => (ROAD_KINDS[e.kind] || {}).light) && !roads.every((e) => e.kind === 'minor' || e.kind === 'rural');
     n.light = lit || (n.lvl === 1 && !n.merge && ids.length >= 3);
     n.island = roads.every((e) => e.kind === 'rural');
     n.phase = Math.floor(hash2(Math.round(n.x), Math.round(n.y), seed) * LIGHT_CYCLE);

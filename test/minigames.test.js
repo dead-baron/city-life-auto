@@ -38,7 +38,7 @@ test('soccer: anyone can kick the ball; two players start a match; goals count; 
   const ball = ballFor(w, v);
   assert.ok(ball && ball.kind === K.BALL, 'ball on the pitch');
   // kick-about with no match on
-  ball.x = a.p.ped.x + 20; ball.y = a.p.ped.y; ball.vx = 0; ball.vy = 0;
+  ball.x = a.p.ped.x + 20; ball.y = a.p.ped.y; ball.vx = 0; ball.vy = 0; w.place(ball);
   assert.ok(minigames.tryKick(w, a.p.ped, 0));
   run(w, 0.2);
   assert.ok(ball.x > a.p.ped.x + 60, 'kicked away');
