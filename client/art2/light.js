@@ -99,7 +99,7 @@ void main(){
     light += lCol[i].rgb * lCol[i].a * a * w;
   }
   vec3 col = alb;
-  if (ground && wet > 0.0 && (fl & ${F_WATER}) == 0) col *= mix(1.0, 0.55, wet);
+  if (ground && wet > 0.0 && (fl & ${F_WATER}) == 0) col *= mix(1.0, 0.7, wet);
   vec3 lit = col * light;
   vec4 e = texelFetch(tEmi, q, 0);
   vec3 glow = pow(e.rgb, vec3(2.2)) * e.a * emiK;
@@ -175,17 +175,17 @@ export const PRESETS = {
   golden: {
     sunDir: [-0.72, -0.24, 0.46], sunCol: [1.72, 1.3, 0.62], ambSky: [0.24, 0.34, 0.5], ambGround: [0.3, 0.26, 0.2],
     shadowTint: [0.74, 0.96, 1.12], shadowLen: 300, bands: 5, bandMix: 0.85, wet: 0, emiK: 1.0, bloomThr: 0.78, leafGlow: 0.55,
-    bloomK: 0.9, haze: 0.07, hazeCol: [1.0, 0.72, 0.4], vign: 0.6, sat: 1.14, contrast: 1.08, lift: [0.015, 0.0, 0.03], gain: [1.03, 0.98, 0.93], reflK: 0.0, lampsOn: 0.6,
+    bloomK: 0.9, haze: 0.07, hazeCol: [1.0, 0.66, 0.34], vign: 0.6, sat: 1.22, contrast: 1.1, lift: [0.015, 0.0, 0.025], gain: [1.08, 0.97, 0.86], reflK: 0.0, lampsOn: 0.6,
   },
   noon: {
-    sunDir: [-0.42, -0.3, 0.86], sunCol: [1.3, 1.24, 1.12], ambSky: [0.44, 0.52, 0.7], ambGround: [0.4, 0.38, 0.36],
+    sunDir: [-0.42, -0.3, 0.86], sunCol: [1.4, 1.34, 1.2], ambSky: [0.48, 0.56, 0.74], ambGround: [0.44, 0.42, 0.38],
     shadowTint: [0.85, 0.9, 1.15], shadowLen: 120, bands: 5, bandMix: 0.85, wet: 0, emiK: 0.25, bloomThr: 0.9, leafGlow: 0.1,
-    bloomK: 0.35, haze: 0.04, hazeCol: [0.8, 0.88, 1.0], vign: 0.3, sat: 1.08, contrast: 1.02, lift: [0, 0, 0.01], gain: [1, 1, 1], reflK: 0, lampsOn: 0,
+    bloomK: 0.3, haze: 0.02, hazeCol: [0.8, 0.88, 1.0], vign: 0.25, sat: 1.22, contrast: 1.1, lift: [0, 0, 0.0], gain: [1.04, 1.03, 1.0], reflK: 0, lampsOn: 0,
   },
   night: {
-    sunDir: [-0.5, -0.3, 0.8], sunCol: [0.04, 0.05, 0.1], ambSky: [0.1, 0.11, 0.25], ambGround: [0.06, 0.06, 0.13],
+    sunDir: [-0.5, -0.3, 0.8], sunCol: [0.04, 0.05, 0.1], ambSky: [0.12, 0.14, 0.3], ambGround: [0.08, 0.08, 0.16],
     shadowTint: [1, 1, 1], shadowLen: 0, bands: 0, bandMix: 0, wet: 0.9, emiK: 1.05, bloomThr: 0.55, leafGlow: 0,
-    bloomK: 1.0, haze: 0.08, hazeCol: [0.16, 0.14, 0.32], vign: 0.7, sat: 1.12, contrast: 1.06, lift: [0.01, 0.0, 0.035], gain: [0.98, 0.96, 1.08], reflK: 1.6, lampsOn: 1, rain: 1,
+    bloomK: 1.1, haze: 0.06, hazeCol: [0.14, 0.14, 0.3], vign: 0.65, sat: 1.25, contrast: 1.08, lift: [0.0, 0.0, 0.03], gain: [1.04, 0.98, 1.02], reflK: 2.6, lampsOn: 1, rain: 1,
   },
 };
 

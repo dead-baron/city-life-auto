@@ -114,81 +114,156 @@ export function crate(tier = 1) {
 // ---- vehicles -------------------------------------------------------------------------------------
 // type: sedan | taxi | pickup | convertible ; paint ramp ; lights 0..1 (headlights glow)
 export function car(type = 'sedan', paint = MAT.paintBlue, opt = {}) {
-  const L = type === 'pickup' ? 110 : 100, W = type === 'pickup' ? 50 : 46, Hh = type === 'pickup' ? 36 : 32;
+  // type: sedan | taxi | pickup | convertible
+  const pickup = type === 'pickup';
+  const L = pickup ? 112 : 100, W = pickup ? 50 : 46, Hh = pickup ? 38 : 34;
   const m = new Vox(L, W, Hh);
-  const body = m.mat({ ramp: paint, k: 3, gloss: 1 });
-  const dark = m.mat({ ramp: ramp(paint[1], 5, 2), k: 2 });
-  const glass = m.mat({ ramp: MAT.glassDark, k: 3, flag: F_GLASS, shade: (x, y, z) => ((Math.round(x + z) % 11) < 2 ? 1.2 : 0) });
-  const tyre = m.mat({ ramp: MAT.tyre, k: 2 }), hub = m.mat({ ramp: MAT.chrome, k: 2 });
-  const chrome = m.mat({ ramp: MAT.chrome, k: 3 });
+  const body = m.mat({ ramp: paint, k: 3 });
+  const lower = m.mat({ ramp: ramp(paint[2], 5, 2), k: 2 });
+  const glass = m.mat({ ramp: MAT.glassDark, k: 2, flag: F_GLASS, shade: (x, y, z) => ((Math.round(x * 0.7 + z) % 13) < 2 ? 2 : 0) });
+  const tyre = m.mat({ ramp: MAT.tyre, k: 1 }), hub = m.mat({ ramp: MAT.chrome, k: 2 }), arch = m.mat({ ramp: MAT.tyre, k: 0 });
+  const chrome = m.mat({ ramp: MAT.chrome, k: 3 }), trim = m.mat({ ramp: MAT.metalDark, k: 1 });
   const lit = opt.lights || 0;
-  const head = m.mat({ ramp: R('#f4ecd0', 5, 3), k: 3, emi: lit ? [255, 240, 200, 255] : null });
-  const tail = m.mat({ ramp: R('#d8302a', 5, 3), k: 3, emi: lit ? [255, 60, 40, 220] : [255, 40, 30, 40] });
-  const interior = m.mat({ ramp: R('#3a3030'), k: 2 });
-  const rr = 7; // corner rounding in plan
-  const inPlan = (x, y, x0, x1, y0, y1, r) => { const cx = Math.max(x0 + r, Math.min(x1 - r, x)), cy = Math.max(y0 + r, Math.min(y1 - r, y)); return (x - cx) ** 2 + (y - cy) ** 2 <= r * r; };
-  // wheels
-  for (const wx of [L * 0.2, L * 0.79]) for (const [y0, y1] of [[3, 9], [W - 9, W - 3]]) m.cyl('y', wx, 0, 8, 8, y0, y1, tyre, 4, hub);
-  // lower body
-  const bodyTop = type === 'pickup' ? 20 : 18;
+  const head = m.mat({ ramp: R('#f6f0d8', 5, 3), k: 3, emi: lit ? [255, 244, 210, 255] : null });
+  const tail = m.mat({ ramp: R('#d8302a', 5, 3), k: 3, emi: lit ? [255, 50, 36, 230] : [255, 40, 30, 50] });
+  const interior = m.mat({ ramp: R('#3c3232'), k: 2 });
+  const wheelX = [L * 0.2, L * 0.8], wr = 8.5;
+  // plan shape: a rounded rectangle with softer, rounder ends
+  const plan = (x, y, inset) => {
+    const hx = L / 2 - 1 - inset, hy = W / 2 - 1 - inset, ux = x - L / 2, uy = y - W / 2;
+    const ex = Math.abs(ux) / hx, ey = Math.abs(uy) / hy;
+    return ex ** 6 + ey ** 4 <= 1;
+  };
+  // lower body: sills, doors, bumpers; a slight tumblehome toward the top
+  const beltZ = pickup ? 21 : 19;
   m.fill((x, y, z) => {
-    if (!inPlan(x, y, 2, L - 2, 2, W - 2, rr)) return -1;
-    // wheel arches
-    for (const wx of [L * 0.2, L * 0.79]) if ((x - wx) ** 2 + (z - 8) ** 2 < 100 && (y < 9 || y > W - 9)) return -1;
-    // rounded top edge
-    const ex = Math.min(x - 2, L - 2 - x), ey = Math.min(y - 2, W - 2 - y);
-    if (z > bodyTop - 2 && (ex < 2 || ey < 2)) return -1;
-    return z < 9 && (y < 4 || y > W - 4) ? dark : body;
-  }, 0, 0, 5, L, W, bodyTop);
-  // bumpers and lights
-  m.box(0, 4, 7, 3, W - 4, 11, chrome); m.box(L - 3, 4, 7, L, W - 4, 11, chrome);
-  m.box(L - 3, 5, 12, L - 1, 12, 16, head); m.box(L - 3, W - 12, 12, L - 1, W - 5, 16, head);
-  m.box(1, 5, 12, 3, 11, 16, tail); m.box(1, W - 11, 12, 3, W - 5, 16, tail);
-  if (type === 'pickup') {
-    // cab and an open bed
+    if (z < 4) return -1;
+    const inset = z > beltZ - 3 ? (z - (beltZ - 3)) * 0.7 : z < 7 ? (7 - z) * 0.8 : 0;
+    if (!plan(x, y, inset)) return -1;
+    for (const wx of wheelX) if ((x - wx) ** 2 + (z - 8) ** 2 < (wr + 1.5) ** 2 && (y < 11 || y > W - 11)) return -1;
+    return z < 8 ? lower : body;
+  }, 0, 0, 4, L, W, beltZ);
+  // wheels in their arches
+  for (const wx of wheelX) for (const [y0, y1] of [[3, 10], [W - 10, W - 3]]) { m.cyl('y', wx, 0, 8.5, wr, y0, y1, tyre, 4.5, hub); }
+  for (const wx of wheelX) for (const yy of [10, W - 11]) m.fill((x, y, z) => ((x - wx) ** 2 + (z - 8) ** 2 < (wr + 1.4) ** 2 && (x - wx) ** 2 + (z - 8) ** 2 > (wr) ** 2 ? arch : -1), Math.floor(wx - 11), yy, 0, Math.ceil(wx + 11), yy + 1, 20);
+  // lights, bumpers, grille
+  m.fill((x, y, z) => (z >= 11 && z < 15 && (y < 13 || y > W - 13) && plan(x, y, 0) && !plan(x - 2, y, 0) ? head : -1), L - 6, 0, 10, L, W, 16);
+  m.fill((x, y, z) => (z >= 12 && z < 16 && (y < 15 || y > W - 15) && plan(x, y, 0) && !plan(x + 2, y, 0) ? tail : -1), 0, 0, 11, 6, W, 17);
+  m.fill((x, y, z) => (z >= 6 && z < 9 && plan(x, y, 0) && (!plan(x - 2, y, 0) || !plan(x + 2, y, 0)) ? chrome : -1), 0, 0, 6, L, W, 9);
+  m.fill((x, y, z) => (z >= 9 && z < 12 && y > 14 && y < W - 14 && plan(x, y, 0) && !plan(x - 2, y, 0) ? trim : -1), L - 6, 0, 9, L, W, 12);
+  if (pickup) {
+    // cab
     m.fill((x, y, z) => {
-      if (x < 52 || x > 84 || y < 6 || y > W - 6) return -1;
-      const front = 84 - (z - bodyTop) * 0.7, back = 52 + (z - bodyTop) * 0.15;
-      if (x > front || x < back) return -1;
-      const side = y < 8 || y > W - 8, pillar = x < back + 3 || x > front - 3;
-      return z > bodyTop + 2 && !(pillar && !side) && (side ? !pillar : true) ? glass : body;
-    }, 0, 0, bodyTop, L, W, Hh);
-    // hollow the bed (keep the walls)
-    m.fill((x, y) => (x > 6 && x < 48 && y > 5 && y < W - 5 ? 0 : -1), 0, 0, 11, L, W, bodyTop);
-    const bedFloor = m.mat({ ramp: MAT.metalDark, k: 3 });
-    m.box(7, 6, 10, 48, W - 6, 11, bedFloor);
-    if (opt.crate) { const c = m.mat({ ramp: R('#a0703c'), k: 3, shade: (x, y, z) => ((Math.round(z) % 4 === 0 || Math.round(x) % 7 === 0) ? -0.5 : 0) }); m.box(16, 14, 11, 32, 30, 24, c); m.box(34, 18, 11, 44, 30, 20, c); }
-  } else if (type === 'convertible') {
-    m.fill((x, y) => (x > 26 && x < 72 && y > 6 && y < W - 6 ? 0 : -1), 0, 0, 12, L, W, bodyTop);
-    m.box(26, 6, 10, 72, W - 6, 12, interior);
-    for (const sx of [34, 54]) { m.box(sx, 8, 12, sx + 7, W / 2 - 2, 20, interior); m.box(sx, W / 2 + 2, 12, sx + 7, W - 8, 20, interior); }
-    // windscreen frame
-    m.fill((x, y, z) => (x > 70 - (z - bodyTop) * 0.8 && x < 73 - (z - bodyTop) * 0.8 && y > 6 && y < W - 6 ? glass : -1), 60, 0, bodyTop, 76, W, bodyTop + 8);
-  } else {
-    // cabin with a sloped windscreen and back window
-    m.fill((x, y, z) => {
-      const t = z - bodyTop;
-      const front = 76 - t * 1.25, back = 26 + t * 0.9;
-      const inset = 5 + t * 0.45;
+      const t = z - beltZ, front = 84 - t * 1.1, back = 55 + t * 0.15, inset = 5 + t * 0.3;
       if (x > front || x < back || y < inset || y > W - inset) return -1;
-      if (z >= Hh - 1) return body;                                   // roof
-      const pillar = (x > front - 3) || (x < back + 3) || Math.abs(x - 50) < 1.5;
-      const sideZone = y < inset + 2 || y > W - inset - 2;
-      if (t > 1 && !(pillar && sideZone)) return glass;
+      if (z >= Hh - 2) return body;
+      const side = y < inset + 1.5 || y > W - inset - 1.5;
+      const pillar = (x < back + 3 || x > front - 2.5) && side;
+      return t > 2 && !pillar ? glass : body;
+    }, 0, 0, beltZ, L, W, Hh);
+    // open bed: hollow, floor, walls
+    m.fill((x, y) => (x > 6 && x < 52 && y > 5 && y < W - 5 ? 0 : -1), 0, 0, 11, L, W, beltZ);
+    const bed = m.mat({ ramp: MAT.metalDark, k: 2 });
+    m.box(7, 6, 10, 52, W - 6, 11, bed);
+    if (opt.crate) {
+      const c = m.mat({ ramp: R('#b08048'), k: 3, shade: (x, y, z) => { const lx = x - 18, lz = z - 11; return (Math.round(z) % 5 === 0 || Math.round(x) % 7 === 0) ? -0.6 : Math.abs(lx * 0.75 - lz) < 1.2 || Math.abs(lx * 0.75 - (14 - lz)) < 1.2 ? -0.9 : 0; } });
+      m.box(16, 12, 11, 40, 38, 29, c);
+    }
+  } else if (type === 'convertible') {
+    m.fill((x, y) => (x > 28 && x < 72 && y > 6 && y < W - 6 ? 0 : -1), 0, 0, 12, L, W, beltZ);
+    m.box(28, 6, 10, 72, W - 6, 12, interior);
+    for (const sx of [36, 56]) { m.box(sx, 8, 12, sx + 8, W / 2 - 2, 22, interior); m.box(sx, W / 2 + 2, 12, sx + 8, W - 8, 22, interior); }
+    m.fill((x, y, z) => (x > 72 - (z - beltZ) * 0.8 && x < 75 - (z - beltZ) * 0.8 && y > 6 && y < W - 6 ? glass : -1), 60, 0, beltZ, 80, W, beltZ + 8);
+  } else {
+    // greenhouse: one sweep from windscreen to back window, a rounded roof
+    m.fill((x, y, z) => {
+      const t = (z - beltZ) / (Hh - beltZ);                    // 0 at the belt, 1 at the roof
+      const front = 74 - t * 15 - t * t * 4, back = 25 + t * 12 + t * t * 2;
+      const inset = 4 + t * 6 + t * t * 3;
+      if (x > front || x < back || y < inset || y > W - inset) return -1;
+      if (z >= Hh - 2) return body;                            // roof skin
+      const pillarA = x > front - 3, pillarC = x < back + 4, pillarB = Math.abs(x - 52) < 1.5;
+      const side = y < inset + 1.5 || y > W - inset - 1.5;
+      if (t > 0.12 && !((pillarA || pillarC || pillarB) && side)) return glass;
       return body;
-    }, 0, 0, bodyTop, L, W, Hh);
-    // flat roof cap
-    m.fill((x, y, z) => { const t = z - bodyTop, front = 76 - t * 1.25, back = 26 + t * 0.9, inset = 5 + t * 0.45; return x <= front && x >= back && y >= inset && y <= W - inset ? body : -1; }, 0, 0, Hh - 1, L, W, Hh);
+    }, 0, 0, beltZ, L, W, Hh);
+    m.fill((x, y, z) => { const t = (z - beltZ) / (Hh - beltZ), front = 74 - t * 15 - t * t * 4, back = 25 + t * 12 + t * t * 2, inset = 4 + t * 6 + t * t * 3; return x <= front - 1 && x >= back + 1 && y >= inset + 1 && y <= W - inset - 1 ? body : -1; }, 0, 0, Hh - 2, L, W, Hh);
+    // mirrors
+    m.box(68, 1, beltZ, 71, 4, beltZ + 3, body); m.box(68, W - 4, beltZ, 71, W - 1, beltZ + 3, body);
     if (type === 'taxi') {
       const sign = m.mat({ ramp: R('#f4f0d8'), k: 3, emi: lit ? [255, 240, 180, 200] : null });
-      m.box(44, W / 2 - 6, Hh - 1, 56, W / 2 + 6, Hh, sign);
+      m.box(44, W / 2 - 6, Hh, 56, W / 2 + 6, Hh, sign); m.box(45, W / 2 - 5, Hh - 1, 55, W / 2 + 5, Hh, sign);
       const chk = m.mat({ ramp: R('#2a2a2e'), k: 2 }), wht = m.mat({ ramp: MAT.paintWhiteCar, k: 3 });
-      m.fill((x, y, z) => ((y < 3 || y > W - 3) && z >= 11 && z < 14 && x > 26 && x < 76 ? (((Math.floor(x / 3) + Math.floor(z / 1.5)) % 2) ? chk : wht) : -1), 0, 0, 10, L, W, 15);
+      m.fill((x, y, z) => ((y < 4 || y > W - 4) && z >= 13 && z < 16 && x > 22 && x < 80 && plan(x, y, 0) && !plan(x, y, 2) ? (((Math.floor(x / 3) + Math.floor(z / 1.5)) % 2) ? chk : wht) : -1), 0, 0, 12, L, W, 17);
     }
   }
+  m.smooth = 2;
   return m;
 }
 
+// ---- the corner's street kit ---------------------------------------------------------------------
+// traffic signal on a mast arm reaching over the road; arm points toward +x in the model (turn it)
+export function trafficSignal(arm = 70, state = 'red', on = 1) {
+  const m = new Vox(arm + 10, 14, 92);
+  const pole = m.mat({ ramp: MAT.metalDark, k: 2 }), yel = m.mat({ ramp: R('#2c2c30'), k: 2 });
+  const lamp = (c, active) => m.mat({ ramp: R(c, 5, 2), k: active ? 4 : 1, emi: active ? [...hex(c), 255 * on] : null, flag: F_NOCAST });
+  m.cyl('z', 6, 7, 0, 3, 0, 4, pole); m.cyl('z', 6, 7, 0, 2, 4, 86, pole);
+  m.box(6, 6, 82, arm + 6, 8, 85, pole);
+  // a signal head on the pole (facing the viewer) and one hanging from the arm
+  for (const hx of [10, arm - 2]) {
+    const z0 = hx === 10 ? 44 : 60;
+    m.box(hx, 4, z0, hx + 7, 11, z0 + 22, yel);
+    const L = [['#e8382e', state === 'red'], ['#f0b030', state === 'amber'], ['#3ad070', state === 'green']];
+    L.forEach(([c, act], i) => m.box(hx + 2, 10, z0 + 16 - i * 7, hx + 5, 12, z0 + 20 - i * 7, lamp(c, act)));
+  }
+  return m;
+}
+// a black cast-iron street lamp with a glowing lantern
+export function streetLamp(on = 0) {
+  const m = new Vox(14, 14, 94);
+  const iron = m.mat({ ramp: R('#2a2c34'), k: 3 });
+  const glass = m.mat({ ramp: R('#f6dca0', 5, 3), k: on ? 4 : 2, emi: on ? [255, 206, 130, 255] : null, flag: F_NOCAST });
+  m.cyl('z', 7, 7, 0, 4, 0, 4, iron); m.cyl('z', 7, 7, 0, 3, 4, 10, iron); m.cyl('z', 7, 7, 0, 1.6, 10, 78, iron);
+  m.cyl('z', 7, 7, 0, 3.5, 78, 80, iron);
+  m.fill((x, y, z) => (Math.hypot(x - 7, y - 7) < 3.6 + (z - 80) * 0.25 ? glass : -1), 0, 0, 80, 14, 14, 89);
+  m.fill((x, y, z) => (Math.hypot(x - 7, y - 7) < 6 - (z - 89) * 1.2 ? iron : -1), 0, 0, 89, 14, 14, 94);
+  return m;
+}
+export function hotdogCart(on = 0) {
+  const m = new Vox(40, 24, 56);
+  const steel = m.mat({ ramp: MAT.chrome, k: 3 }), red = m.mat({ ramp: R('#c83a30'), k: 3 }), yel = m.mat({ ramp: R('#e8b830'), k: 3 }), tyre = m.mat({ ramp: MAT.tyre, k: 1 });
+  const goods = [R('#c8443a'), R('#e8c040'), R('#5a9a40'), R('#e8e0d0')].map((r) => m.mat({ ramp: r, k: 3 }));
+  m.box(2, 4, 8, 34, 20, 24, steel); m.box(2, 4, 16, 34, 20, 18, red);
+  for (let i = 0; i < 6; i++) m.box(6 + i * 4, 6, 24, 8 + i * 4, 9, 28 + (i % 2) * 2, goods[i % 4]);
+  m.cyl('y', 8, 0, 6, 5, 3, 21, tyre); m.box(34, 10, 18, 40, 14, 20, steel);
+  m.cyl('z', 18, 12, 0, 0.8, 24, 50, steel);
+  m.fill((x, y, z) => { const d = Math.hypot(x - 18, y - 12); return d < 20 && z <= 54 - d * 0.42 && z > 51 - d * 0.42 ? (Math.floor((Math.atan2(y - 12, x - 18) + 3.15) / 0.785) % 2 ? red : yel) : -1; }, 0, 0, 40, 40, 24, 56);
+  return m;
+}
+export function wireBin() {
+  const m = new Vox(12, 12, 20);
+  const mesh = m.mat({ ramp: R('#4a4e58'), k: 3, shade: (x, y, z) => ((Math.round(z) % 3 === 0) ? -0.8 : 0) });
+  const junk = [R('#e0d6c0'), R('#c8443a'), R('#4a76b0'), R('#2c2c30'), R('#d8b040')].map((r) => m.mat({ ramp: r, k: 3 }));
+  m.cyl('z', 6, 6, 0, 5.5, 0, 17, mesh, 4.5, 0);
+  m.fill((x, y, z) => { const d = Math.hypot(x - 6, y - 6); return d < 5.5 && z < 17 + 3.5 - d * 0.6 ? junk[Math.floor(hash(x | 0, y | 0, z | 0) * 5)] : -1; }, 0, 0, 10, 12, 12, 20);
+  return m;
+}
+export function signPost(color = '#e8e4dc') { const m = new Vox(10, 4, 48); const p = m.mat({ ramp: MAT.metal, k: 2 }), s = m.mat({ ramp: R(color), k: 3 }), r = m.mat({ ramp: R('#c8343a'), k: 3 }); m.box(4, 1, 0, 6, 3, 44, p); m.box(1, 0, 32, 9, 2, 46, s); m.box(3, 0, 40, 7, 1, 44, r); return m; }
+export function pedSignal(on = 1) { const m = new Vox(10, 10, 60); const p = m.mat({ ramp: MAT.metalDark, k: 2 }), h = m.mat({ ramp: R('#2c2c30'), k: 2 }), l = m.mat({ ramp: R('#f08030', 5, 3), k: 3, emi: [255, 140, 60, 220 * on], flag: F_NOCAST }); m.cyl('z', 5, 5, 0, 1.6, 0, 56, p); m.box(1, 2, 40, 9, 9, 52, h); m.box(3, 8, 43, 7, 10, 49, l); return m; }
+// rooftop kit
+export function roofAC(big = true) {
+  const w = big ? 30 : 18, d = big ? 22 : 14, h = big ? 16 : 11;
+  const m = new Vox(w, d, h);
+  const b = m.mat({ ramp: R('#c4c6c8'), k: 3 }), f = m.mat({ ramp: MAT.metalDark, k: 1 }), g = m.mat({ ramp: MAT.metal, k: 2 });
+  m.box(0, 0, 0, w, d, h - 1, b);
+  m.fill((x, y, z) => (Math.hypot(x - w * 0.32, y - d / 2) < d * 0.32 && ((Math.round(x) + Math.round(y)) % 2 === 0) ? f : -1), 0, 0, h - 2, w, d, h);
+  m.fill((x, y, z) => ((Math.round(z) % 2 === 0) && x > w * 0.6 ? g : -1), Math.floor(w * 0.6), d - 1, 2, w - 1, d, h - 3);
+  return m;
+}
+export function roofVent() { const m = new Vox(10, 10, 12); const b = m.mat({ ramp: MAT.metal, k: 3 }); m.cyl('z', 5, 5, 0, 3, 0, 8, b); m.fill((x, y, z) => (Math.hypot(x - 5, y - 5) < 5 - (z - 8) * 1.1 ? b : -1), 0, 0, 8, 10, 10, 12); return m; }
+export function skylight() { const m = new Vox(24, 18, 7); const f = m.mat({ ramp: MAT.metal, k: 2 }), g = m.mat({ ramp: MAT.glass, k: 3, flag: F_GLASS }); m.box(0, 0, 0, 24, 18, 4, f); m.fill((x, y, z) => (z < 4 + (9 - Math.abs(y - 9)) * 0.35 && x > 1 && x < 23 && y > 1 && y < 17 ? g : -1), 0, 0, 3, 24, 18, 7); return m; }
+export function dish() { const m = new Vox(18, 14, 18); const b = m.mat({ ramp: R('#d8d8d4'), k: 3 }), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(8, 6, 0, 10, 8, 8, p); m.fill((x, y, z) => { const d = Math.hypot(x - 9, z - 11); return d < 7 && Math.abs(y - 7 - d * 0.3 + 2) < 1.2 ? b : -1; }); return m; }
+export function roofPlanter(len = 26) { return flowerBed(len); }
 // ---- beach, marina and back-yard kit ---------------------------------------------------------------
 export function lifeguardTower() {
   const m = new Vox(34, 30, 46);
@@ -277,5 +352,18 @@ export function flowerBed(len = 30) {
   const fls = ['#d84a78', '#e8c040', '#f0ece8', '#9a6ad8', '#f08a3a'].map((h) => m.mat({ ramp: R(h), k: 3, flag: F_LEAF }));
   m.box(0, 0, 0, len, 12, 4, c); m.box(1, 1, 3, len - 1, 11, 4, soil);
   m.fill((x, y, z) => { const hh = hash(x | 0, y | 0, 77); const top = 4 + 3 + hh * 3; if (x < 1.5 || x > len - 1.5 || y < 1.5 || y > 10.5 || z >= top) return -1; return z > top - 1.2 && hh > 0.55 ? fls[Math.floor(hh * 50) % 5] : lf; }, 0, 0, 4, len, 12, 10);
+  return m;
+}
+// a dog (golden by default) as a little voxel model, facing +x
+export function dog(coat = '#d8a050') {
+  const m = new Vox(30, 12, 22);
+  const f = m.mat({ ramp: R(coat), k: 3 }), dark = m.mat({ ramp: R('#3a2a22'), k: 2 });
+  m.ell(14, 6, 11, 9, 4, 4.5, f);                              // body
+  for (const [x, y] of [[8, 3], [8, 9], [20, 3], [20, 9]]) m.box(x - 1, y - 1, 0, x + 1, y + 1, 9, f);
+  m.ell(24, 6, 15, 4, 3.5, 3.5, f); m.ell(28, 6, 14, 2.5, 2, 2, f);   // head and muzzle
+  m.box(29, 5, 14, 31, 7, 16, dark);                           // nose
+  m.box(22, 2, 15, 24, 4, 19, f); m.box(22, 8, 15, 24, 10, 19, f);   // ears
+  for (let k = 0; k < 8; k++) m.box(4 - k * 0.5, 5, 12 + k * 0.8, 6 - k * 0.5, 7, 13.5 + k * 0.8, f);   // tail
+  m.smooth = 1;
   return m;
 }

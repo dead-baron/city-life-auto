@@ -17,6 +17,7 @@ function groundPixel(kind, x, y, seed) {
       const R = kind === 'asphalt' ? MAT.asphalt : MAT.asphaltWorn;
       let t = 0.5 + (big - 0.5) * 0.35 + (mid - 0.5) * 0.25;
       if (h > 0.94) t += 0.28; else if (h < 0.05) t -= 0.25;      // aggregate speckle
+      if (h > 0.985) return { c: step(MAT.pebble, 0.4 + hash(x, y, seed + 1) * 0.6, x, y, 0) };   // warm pebbles
       return { c: step(R, t, x, y, 0.8) };
     }
     case 'sidewalk': case 'paver': {
@@ -144,7 +145,7 @@ export function wear(G, x0, y0, w, h, amount = 1, seed = 11) {
     const pw = 20 + rng(p) * 40, ph = 12 + rng(p + 9) * 26, px = x0 + rng(p + 3) * (w - pw), py = y0 + rng(p + 5) * (h - ph);
     for (let y = py; y < py + ph; y++) for (let x = px; x < px + pw; x++) {
       const edge = x - px < 1 || y - py < 1 || px + pw - x < 1 || py + ph - y < 1;
-      paint(G, x | 0, y | 0, edge ? R[1] : step(R, 0.38 + (hash(x | 0, y | 0, seed) > 0.9 ? 0.2 : 0), x | 0, y | 0, 0.6));
+      paint(G, x | 0, y | 0, edge ? R[2] : step(R, 0.45 + (hash(x | 0, y | 0, seed) > 0.9 ? 0.2 : 0), x | 0, y | 0, 0.7));
     }
   }
   for (let c = 0; c < Math.round(7 * amount); c++) {            // cracks
@@ -178,4 +179,73 @@ export function surf(G, edgeX, y0, y1, seed = 21) {
       if (on) paint(G, x, y, step(MAT.foam, 0.8 - k * 0.06, x, y, 0.5));
     }
   }
+}
+
+// ---- kerbs from a sidewalk mask (any shape, rounded corners included) ---------------------------
+// isWalk(x, y): raised pavement. Pavement pixels within 3 px of the road become the kerb stone (lit
+// on top); road pixels just below a pavement edge show the kerb's 3 px face (it faces the viewer).
+// red(x, y): where the kerb is painted red.
+export function kerbs(G, isWalk, red = () => false) {
+  const R = MAT.curb, RR = MAT.kerbRed;
+  for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
+    const w = isWalk(x, y);
+    if (w) {
+      let edge = 99;
+      for (let k = 1; k <= 3 && edge === 99; k++) for (const [dx, dy] of [[0, k], [0, -k], [k, 0], [-k, 0]]) if (!isWalk(x + dx, y + dy) && G.inside(x + dx, y + dy)) { edge = k; break; }
+      if (edge <= 3) {
+        const RC = red(x, y) ? RR : R;
+        const t = edge === 1 ? 0.45 : edge === 2 ? 0.85 : 0.7;
+        paint(G, x, y, step(RC, t + (hash(x >> 3, y >> 3, 5) - 0.5) * 0.1, x, y, 0.3));
+      }
+    } else {
+      // kerb face below a pavement edge
+      for (let k = 1; k <= 3; k++) if (isWalk(x, y - k)) {
+        const RC = red(x, y - k) ? RR : R;
+        if (G.inside(x, y)) G.put(x, y, step(RC, 0.22 - (k - 1) * 0.06, x, y, 0.3), [0, 1, 0], 4 - k, null, F_GROUND | F_WET);
+        break;
+      }
+    }
+  }
+}
+// weeds and grass tufts sprouting along an edge test: edgeAt(x, y) true where cracks meet pavement
+export function weeds(G, edgeAt, density = 0.05, seed = 41) {
+  for (let y = 2; y < G.h - 2; y++) for (let x = 2; x < G.w - 2; x++) {
+    if (!edgeAt(x, y) || hash(x, y, seed) > density) continue;
+    const n = 2 + Math.floor(hash(x, y, seed + 1) * 4);
+    for (let b = 0; b < n; b++) {
+      const bx = x + Math.round((hash(x, b, seed + 2) - 0.5) * 4), h = 2 + Math.floor(hash(b, y, seed + 3) * 3);
+      for (let k = 0; k < h; k++) paint(G, bx + (k > 1 ? Math.sign(bx - x) : 0), y - k, MAT.leaf[Math.min(6, 2 + k + (b & 1))]);
+    }
+  }
+}
+// fallen leaves scattered on pavement (warm yellow and brown) around tree positions
+export function leafLitter(G, trees, radius = 60, seed = 51) {
+  const cols = [[214, 168, 52], [190, 120, 40], [150, 160, 50], [226, 196, 90]];
+  for (const [tx, ty] of trees) for (let i = 0; i < 70; i++) {
+    const a = hash(i, tx, seed) * 6.28, r = Math.sqrt(hash(i, ty, seed + 1)) * radius;
+    const x = Math.round(tx + Math.cos(a) * r * 1.2), y = Math.round(ty + Math.sin(a) * r * 0.8);
+    const c = cols[Math.floor(hash(i, i, seed + 2) * 4)];
+    paint(G, x, y, c); if (hash(i, 3, seed) > 0.5) paint(G, x + 1, y, c.map((v) => v * 0.8));
+  }
+}
+// square iron tree grate
+export function treeGrate(G, cx, cy, s = 14) {
+  for (let y = -s; y <= s; y++) for (let x = -s; x <= s; x++) {
+    const edge = Math.abs(x) === s || Math.abs(y) === s, ring = Math.max(Math.abs(x), Math.abs(y)) % 3 === 0;
+    paint(G, cx + x, cy + y, edge ? MAT.metalDark[3] : ring ? MAT.metalDark[1] : MAT.soil[1]);
+  }
+}
+// a dark puddle (it mirrors the sky and lights when wet; flagged as water)
+export function puddle(G, cx, cy, rx, ry, seed = 61) {
+  for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+    const d = (x / rx) ** 2 + (y / ry) ** 2 + (vnoise(cx + x, cy + y, 5, seed) - 0.5) * 0.6;
+    if (d > 1) continue;
+    const X = cx + x, Y = cy + y;
+    if (!G.inside(X, Y)) continue;
+    G.put(X, Y, step(MAT.water, d > 0.7 ? 0.15 : 0.32 + (y < 0 ? 0.15 : 0), X, Y, 0.4), [0, 0, 1], 0, null, F_GROUND | F_WATER | F_WET);
+  }
+}
+// tyre skid arcs
+export function skid(G, cx, cy, r, a0, a1) {
+  for (let a = a0; a < a1; a += 0.01) for (const off of [-7, 7]) { const x = Math.round(cx + Math.cos(a) * (r + off)), y = Math.round(cy + Math.sin(a) * (r + off) * 0.8); if (hash(x, y, 3) > 0.3) paint(G, x, y, MAT.asphalt[1]); }
 }

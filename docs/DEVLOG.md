@@ -1461,7 +1461,7 @@ All the grass, crops, trees, palms, bushes and flower beds are now drawn by code
 
 The full art overhaul (see the art v2 plan) has started. The live game is unchanged; everything new lives in `client/art2/` and on the test pages in `tools/art2/`.
 
-- **Targets:** the four approved Round 1 images are in `docs/art-v2/targets`: the hero corner at golden hour, noon and rainy night, plus the palette and materials sheet.
+- **Targets:** the four approved Round 1 images are in `docs/art-v2/targets`: the hero corner (a four-way crossing with a diner, a corner mart and a brick walk-up) at golden hour, noon and rainy night, plus the palette and materials sheet. They were regenerated at a higher ChatGPT thinking setting and replace a first set, which is kept in `targets/v1`.
   - `tools/art2/extract_palette.py` measures a first master palette from them (`docs/art-v2/palette-v0.*`).
 - **Art rules (`docs/art-v2/SPEC.md`):**
   - The projection is A Link to the Past style: screen x = X, screen y = Y − Z, with the ground at 1:1, walls at full height, and only south faces and roofs visible.
@@ -1495,6 +1495,6 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
     - Vehicles: a sedan, taxi, pickup (with crates in the bed) and convertible, with working head and tail lights.
   - **People (`people.js`):** characters built from parts (skin, hair styles, tops, bottoms, shoes, hats, glasses, carried items, build and height), with 8 facings and a 4-frame walk. Archetypes include business, cop, beach, clerk and thug. Preview: `tools/art2/people-preview.html`.
   - **Trees (`trees.js`):** palms with layered fronds, broadleaf street trees and bushes, with normals from frond direction or leaf-clump spheres.
-- **Style frame (`tools/art2/style-frame.html?p=golden|noon|night`):** the hero corner rebuilt entirely from the generators, shown above its target. It builds in about 0.7 s in software rendering. Comparison sheet: `docs/art-v2/style-frame-v1.png`.
+- **Style frame (`tools/art2/style-frame.html?p=golden|noon|night`):** the hero corner rebuilt entirely from the generators, with rounded kerbs, traffic signals on mast arms, cast-iron lamps, a hot-dog cart, rooftop kit and greenery, shown above its target. It builds in about 1 s in software rendering. Vehicles at 8 headings: `tools/art2/vehicle-preview.html`. Comparison sheet: `docs/art-v2/style-frame-v1.png`.
 - **Gaps against the targets:** they are denser and more finely detailed.
-  - The next passes add more detail per character, richer facades and rooftops, bushier palms and more foliage, and more props per metre.
+  - The next passes add more detail per character and vehicle, richer facades, lusher trees, and stronger wet-street reflections at night.

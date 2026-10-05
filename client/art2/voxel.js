@@ -68,7 +68,7 @@ export class Vox {
 
   // Draw the model at a heading (radians; 0 = model x pointing east, positive turns toward south).
   render(heading = 0, opt = {}) {
-    this.prepare(opt.smooth ?? 1);
+    this.prepare(opt.smooth ?? this.smooth ?? 1);
     const { w, d, h } = this;
     const R = Math.ceil(Math.hypot(w, d) / 2) + 2;
     const G = new GBuf(2 * R, 2 * R + h + 2);

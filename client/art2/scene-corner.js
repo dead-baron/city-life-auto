@@ -1,12 +1,13 @@
-// The phase 1 style frame: a slice of the Round 1 hero corner (docs/art-v2/targets/R1-A..C) built
-// entirely from the v2 generators - beach and surf, a promenade, a stucco cafe with an open
-// shopfront, a brick walk-up with a fire escape and water tank, a purple corner shop with a neon
-// palm and a mural, the crossing, a marina, a terracotta house, palms and street trees, cars, people
-// and street furniture - so it can be compared side by side with the targets.
+// The phase 1 style frame: the Round 1 hero corner (docs/art-v2/targets/R1-A..C) rebuilt entirely from
+// the v2 generators - a four-way crossing with rounded kerbs and zebra crossings, a diner with a red
+// neon band and coffee-cup sign, a corner mart with a striped awning and its clerk at the till, a brick
+// walk-up with fire escapes, flat rooftops with their kit, street trees in grates, traffic signals on
+// mast arms, cast-iron lamps, a hot-dog cart, the taxi, the turning sedan and the pickup with a crate,
+// people and a dog - so it can be compared side by side with the targets.
 //
-// buildCorner(presetName) -> { G, lights } (768 x 512 world px)
+// buildCorner(presetName) -> { G, lights } (768 x 512 world px: the targets at half scale)
 import { GBuf, hash } from './gbuf.js';
-import { paintGround, laneLine, zebra, kerb, manhole, drain, wear, surf } from './ground.js';
+import { paintGround, laneLine, zebra, kerbs, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, skid } from './ground.js';
 import { makeBuilding } from './buildings.js';
 import * as P from './props.js';
 import { person, randomPerson } from './people.js';
@@ -14,143 +15,136 @@ import { palm, leafyTree, bush } from './trees.js';
 import { MAT, LIGHT } from './palette.js';
 
 export const CW = 768, CH = 512;
-const ROAD_NS = [364, 470], ROAD_EW = [322, 428];
+// roads: the north arm, the east-west road, the (wider) south arm
+const N_ARM = [184, 306], EW = [272, 384], S_ARM = [170, 326];
+const R_CORNER = 18;
+
+function isRoad(x, y) {
+  if (y >= EW[0] && y < EW[1]) return true;
+  if (y < EW[0] && x >= N_ARM[0] && x < N_ARM[1]) return true;
+  if (y >= EW[1] && x >= S_ARM[0] && x < S_ARM[1]) return true;
+  return false;
+}
+// pavement = not road, with the block corners rounded off
+function isWalk(x, y) {
+  if (x < 0 || y < 0 || x >= CW || y >= CH) return true;
+  if (isRoad(x, y)) return false;
+  for (const [cx, cy, sx, sy] of [[N_ARM[0], EW[0], -1, -1], [N_ARM[1], EW[0], 1, -1], [S_ARM[0], EW[1], -1, 1], [S_ARM[1], EW[1], 1, 1]]) {
+    const ox = cx + sx * R_CORNER, oy = cy + sy * R_CORNER;           // the corner's circle centre
+    const inX = sx < 0 ? x > ox && x <= cx : x < ox && x >= cx, inY = sy < 0 ? y > oy && y <= cy : y < oy && y >= cy;
+    if (inX && inY && Math.hypot(x - ox, y - oy) > R_CORNER) return false;
+  }
+  return true;
+}
 
 export function buildCorner(preset = 'golden') {
-  const night = preset === 'night' ? 1 : preset === 'golden' ? 0.35 : 0;
-  const lampsOn = preset === 'night' ? 1 : preset === 'golden' ? 1 : 0;
+  const night = preset === 'night' ? 1 : preset === 'golden' ? 0.4 : 0;
+  const lampsOn = preset === 'noon' ? 0 : 1;
   const G = new GBuf(CW, CH);
-  const seaEdge = (y) => 92 - y * 0.32 + Math.sin(y * 0.05) * 6;
   // ---- ground
-  paintGround(G, (x, y) => {
-    if (y < 300 && x < seaEdge(y) - 8) return x < seaEdge(y) - 40 ? 'waterDeep' : 'water';
-    if (y < 300 && x < seaEdge(y) + 6) return 'sandWet';
-    if (x < 150 && y < 300) return 'sand';
-    if (y >= 474 && x >= 96 && x < 150) return 'dock';
-    if (y >= 470 && x < 300) return 'waterDeep';
-    if (x >= ROAD_NS[0] && x < ROAD_NS[1]) return 'asphalt';
-    if (y >= ROAD_EW[0] && y < ROAD_EW[1]) return 'asphalt';
-    if (x >= 476 && y < 316 && x > 690 && y < 160) return 'asphaltWorn';     // the rough back yard
-    if (x >= 640 && y >= 470) return 'grass';
-    return x < 364 ? 'paver' : 'sidewalk';
-  }, 4);
-  surf(G, (y) => seaEdge(y) - 6, 0, 300);
-  wear(G, ROAD_NS[0], 0, ROAD_NS[1] - ROAD_NS[0], ROAD_EW[0], 0.8, 7);
-  wear(G, ROAD_NS[1], ROAD_EW[0], CW - ROAD_NS[1], ROAD_EW[1] - ROAD_EW[0], 0.9, 9);
-  wear(G, 150, ROAD_EW[0], ROAD_NS[0] - 150, ROAD_EW[1] - ROAD_EW[0], 0.6, 13);
-  // lane markings
-  const cxNS = (ROAD_NS[0] + ROAD_NS[1]) / 2, cyEW = (ROAD_EW[0] + ROAD_EW[1]) / 2;
-  laneLine(G, cxNS - 1, 0, ROAD_EW[0] - 34, false, { yellow: true, dash: 14, gap: 10 });
-  laneLine(G, cxNS - 1, ROAD_EW[1] + 34, CH - ROAD_EW[1] - 34, false, { yellow: true, dash: 14, gap: 10 });
-  laneLine(G, 150, cyEW - 1, ROAD_NS[0] - 150 - 34, true, { yellow: true, dash: 14, gap: 10 });
-  laneLine(G, ROAD_NS[1] + 34, cyEW - 1, CW - ROAD_NS[1] - 34, true, { yellow: true, dash: 14, gap: 10 });
-  for (const x of [ROAD_NS[0] + 4, ROAD_NS[1] - 6]) { laneLine(G, x, 0, ROAD_EW[0] - 30, false, { wear: 0.25 }); laneLine(G, x, ROAD_EW[1] + 30, CH, false, { wear: 0.25 }); }
-  // crossings on all four arms
-  zebra(G, ROAD_NS[0] + 4, ROAD_EW[0] - 30, ROAD_NS[1] - ROAD_NS[0] - 8, 24, true);
-  zebra(G, ROAD_NS[0] + 4, ROAD_EW[1] + 6, ROAD_NS[1] - ROAD_NS[0] - 8, 24, true);
-  zebra(G, ROAD_NS[0] - 30, ROAD_EW[0] + 4, 24, ROAD_EW[1] - ROAD_EW[0] - 8, false);
-  zebra(G, ROAD_NS[1] + 6, ROAD_EW[0] + 4, 24, ROAD_EW[1] - ROAD_EW[0] - 8, false);
-  manhole(G, cxNS + 14, 150); manhole(G, 560, cyEW + 10);
-  // kerbs (red near the corners)
-  kerb(G, 150, ROAD_EW[0], ROAD_NS[0] - 150, 's', {}); kerb(G, ROAD_NS[1], ROAD_EW[0], CW - ROAD_NS[1], 's', {});
-  kerb(G, 300, ROAD_EW[1], ROAD_NS[0] - 300, 'n', {}); kerb(G, ROAD_NS[1], ROAD_EW[1], CW - ROAD_NS[1], 'n', {});
-  kerb(G, ROAD_NS[0], 0, ROAD_EW[0], 'e', {}); kerb(G, ROAD_NS[1], 0, ROAD_EW[0], 'w', {});
-  kerb(G, ROAD_NS[0], ROAD_EW[1], CH - ROAD_EW[1], 'e', {}); kerb(G, ROAD_NS[1], ROAD_EW[1], CH - ROAD_EW[1], 'w', {});
-  kerb(G, ROAD_NS[0] - 34, ROAD_EW[0], 34, 's', { red: true }); kerb(G, ROAD_NS[1], ROAD_EW[0], 34, 's', { red: true });
-  drain(G, ROAD_NS[0] - 60, ROAD_EW[0] + 4); drain(G, ROAD_NS[1] + 60, ROAD_EW[0] + 4); drain(G, ROAD_NS[1] + 120, ROAD_EW[1] - 9);
-  // marina edge: a stone quay along the water
-  for (let x = 0; x < 300; x++) for (let k = 0; k < 4; k++) G.put(x, 470 + k, MAT.concrete[k === 0 ? 5 : 2 - Math.min(2, k)], [0, k ? 1 : 0, k ? 0 : 1], 4 - k, null, 1);
+  paintGround(G, (x, y) => (isWalk(x, y) ? (x > 612 && y > 252 && y < 276 ? 'grass' : 'sidewalk') : 'asphalt'), 4);
+  wear(G, N_ARM[0], 0, N_ARM[1] - N_ARM[0], EW[0], 0.7, 7);
+  wear(G, 0, EW[0], CW, EW[1] - EW[0], 1.1, 9);
+  wear(G, S_ARM[0], EW[1], S_ARM[1] - S_ARM[0], CH - EW[1], 0.7, 13);
+  // markings
+  laneLine(G, 226, 0, EW[0] - 40, false, { yellow: true }); laneLine(G, 231, 0, EW[0] - 40, false, { yellow: true });
+  laneLine(G, 246, EW[1] + 44, CH, false, { yellow: true, dash: 16, gap: 12 });
+  laneLine(G, 412, 332, CW - 412, true, { yellow: true, dash: 18, gap: 12 });
+  laneLine(G, 0, 330, 104, true, { yellow: true, dash: 18, gap: 12 });
+  laneLine(G, N_ARM[0] + 3, 0, EW[0] - 40, false, { wear: 0.2 }); laneLine(G, 170, EW[1] + 40, CH, false, { wear: 0.2 });
+  laneLine(G, N_ARM[0], EW[0] - 38, N_ARM[1] - N_ARM[0] - 60, true, { width: 3 });   // stop line
+  laneLine(G, 405, EW[0] + 6, 70, true, { wear: 0.25 }); laneLine(G, 440, EW[1] - 8, 160, true, { wear: 0.25 });
+  zebra(G, N_ARM[0] + 6, EW[0] - 30, N_ARM[1] - N_ARM[0] - 12, 24, true);
+  zebra(G, S_ARM[0] + 6, EW[1] + 8, S_ARM[1] - S_ARM[0] - 12, 26, true);
+  zebra(G, 110, EW[0] + 6, 26, EW[1] - EW[0] - 12, false);
+  zebra(G, 368, EW[0] + 6, 26, EW[1] - EW[0] - 12, false);
+  manhole(G, 270, 26); manhole(G, 268, 330); manhole(G, 252, 470, 6);
+  for (const [x, y] of [[70, EW[0] - 6], [150, EW[0] - 6], [450, EW[1] + 2], [640, EW[0] - 6], [212, EW[1] + 4], [340, 170]]) drain(G, x, y, 14, 5);
+  puddle(G, 150, 392, 12, 5); puddle(G, 178, 398, 7, 4); puddle(G, 300, 360, 9, 4);
+  skid(G, 240, 312, 34, 1.9, 3.4);
+  kerbs(G, isWalk, (x, y) => (Math.abs(x - N_ARM[0]) < 40 && Math.abs(y - EW[0]) < 40) || (Math.abs(x - S_ARM[0]) < 30 && Math.abs(y - EW[1]) < 30) || (Math.abs(x - S_ARM[1]) < 30 && Math.abs(y - EW[1]) < 30));
+  // grass strip with a low railing (east side)
+  for (const [x, y] of [[180, 60], [730, 226], [16, 330], [120, 440]]) treeGrate(G, x, y + 4, 11);
+  weeds(G, (x, y) => isWalk(x, y) !== isWalk(x, y + 4) || isWalk(x, y) !== isWalk(x + 4, y) || (isWalk(x, y) && (x % 22 === 0 || y % 22 === 0)), 0.035);
+  leafLitter(G, [[180, 64], [730, 230], [16, 334], [120, 444]], 70);
 
-  // beach towels painted on the sand
-  for (const [x0, y0, c1, c2] of [[44, 96, [214, 80, 100], [240, 220, 200]], [96, 252, [60, 120, 190], [240, 200, 80]]]) for (let y = 0; y < 14; y++) for (let x = 0; x < 26; x++) { const j = ((y0 + y) * CW + x0 + x) * 4; const c = (Math.floor(x / 4) % 2 ? c1 : c2); G.col[j] = c[0]; G.col[j + 1] = c[1]; G.col[j + 2] = c[2]; }
   // ---- everything that stands up, back to front
   const items = [];
   const add = (spr, x, y, dz = 0, base = y) => items.push({ spr, x, y, dz, base });
   const vox = (m, x, y, hd = 0, dz = 0, base = y) => add(m.render(hd), x, y, dz, base);
-
-  // buildings (x, y = south-west corner of the footprint on the ground)
-  const cafe = makeBuilding({ w: 150, d: 92, floors: 2, style: 'stucco', seed: 3, night, roof: 'terrace', balcony: true, shop: { kind: 'cafe', awning: 'green', door: 'right', open: true }, mural: { x: 100, y: 84, w: 40, h: 46, kind: 'sunset' } });
-  add(cafe, 196, 172);
-  const brick = makeBuilding({ w: 150, d: 80, floors: 3, style: 'brick', seed: 8, night, roof: 'tar', fireEscape: [94, 44] });
-  add(brick, 520, 108);
-  const shop = makeBuilding({ w: 110, d: 60, floors: 1, style: 'purple', seed: 12, night, roof: 'gravel', shop: { kind: 'mart', awning: null, door: 'left', open: true, clerkShirt: [70, 60, 120] }, sign: { neon: [255, 70, 220], icon: 'palm' } });
-  add(shop, 520, 278);
-  const wall = makeBuilding({ w: 90, d: 50, floors: 1, style: 'teal', seed: 14, night, roof: 'tar', mural: { x: 8, y: 6, w: 74, h: 54, kind: 'bird' } });
-  add(wall, 632, 268);
-  const house = makeBuilding({ w: 128, d: 54, floors: 1, style: 'peach', seed: 21, night, roof: 'tile' });
-  add(house, 650, 536);
-  // rooftop kit
-  vox(P.waterTank(), 640, 60, 0, 204, 108.5); vox(P.acUnit(), 560, 78, 0, 204, 108.5); vox(P.acUnit(), 590, 50, 0, 204, 108.5);
-  vox(P.acUnit(), 548, 250, 0, 82, 278.5); vox(P.acUnit(), 600, 240, 0, 82, 278.5);
-  vox(P.umbrella('#e8dcc0', '#2f7a5c'), 230, 118, 0, 148, 172.5); vox(P.umbrella('#e8dcc0', '#b8443e'), 290, 132, 0, 148, 172.5);
-  vox(P.planter(), 216, 160, 0, 148, 172.5); vox(P.planter(), 300, 160, 0, 148, 172.5);
-
+  // buildings
+  const diner = makeBuilding({ w: 138, d: 100, floors: 1, style: 'diner', seed: 3, night, roof: 'flat', shop: { kind: 'diner', awning: null, door: 'right', open: true, people: 4 }, trim: [255, 70, 90], neon: { icon: 'cup', col: [70, 210, 255], x: 74, y: -4 } });
+  add(diner, 0, 178);
+  const mart = makeBuilding({ w: 170, d: 96, floors: 1, style: 'concrete', seed: 8, night, roof: 'flat', parapet: 26, shop: { kind: 'mart', awning: ['#2f8a72', '#f0ece4'], band: ['#d24a4a', '#f0ece4'], door: 'left', open: true, clerkShirt: [44, 140, 120] } });
+  add(mart, 342, 207);
+  const walkup = makeBuilding({ w: 196, d: 52, floors: 3, style: 'brick', seed: 12, night, roof: 'flat', fireEscape: [92, 66] });
+  add(walkup, 520, 207);
+  const walkup2 = makeBuilding({ w: 70, d: 52, floors: 3, style: 'brick', seed: 19, night, roof: 'flat' });
+  add(walkup2, 716, 207);
+  const se1 = makeBuilding({ w: 156, d: 150, floors: 1, style: 'concrete', seed: 21, night, roof: 'flat' }); add(se1, 400, 600);
+  const se2 = makeBuilding({ w: 110, d: 110, floors: 1, style: 'stucco', seed: 22, night, roof: 'flat' }); add(se2, 566, 580);
+  const sw1 = makeBuilding({ w: 74, d: 110, floors: 1, style: 'concrete', seed: 23, night, roof: 'flat' }); add(sw1, 0, 600);
+  // rooftop kit (sorted with the building they stand on)
+  const roof = (m, x, sy, b, H) => vox(m, x, sy + H, 0, H, b.base + 0.5);   // sy: where it stands on the roof, on screen
+  const dB = { base: 178 }, mB = { base: 207 }, wB = { base: 207 }, s1 = { base: 600 }, s2 = { base: 580 }, w1 = { base: 600 };
+  roof(P.roofAC(), 30, 40, dB, 70); roof(P.roofAC(), 74, 62, dB, 70); roof(P.roofAC(false), 110, 36, dB, 70); roof(P.roofVent(), 20, 70, dB, 70); roof(P.roofVent(), 120, 70, dB, 70);
+  roof(P.roofPlanter(30), 380, 52, mB, 96); roof(P.roofPlanter(26), 450, 40, mB, 96); roof(P.roofAC(), 470, 78, mB, 96); roof(P.roofVent(), 400, 90, mB, 96);
+  roof(P.waterTank(), 680, 14, wB, 184); roof(P.roofAC(), 590, 8, wB, 184); roof(P.roofVent(), 556, 16, wB, 184); roof(P.roofPlanter(24), 630, 18, wB, 184);
+  roof(P.roofAC(), 440, 440, s1, 70); roof(P.roofAC(false), 500, 410, s1, 70); roof(P.dish(), 520, 470, s1, 70); roof(P.skylight(), 430, 490, s1, 70); roof(P.roofVent(), 535, 430, s1, 70); roof(P.roofPlanter(30), 420, 404, s1, 70);
+  roof(P.roofAC(), 600, 440, s2, 70); roof(P.dish(), 650, 470, s2, 70); roof(P.roofVent(), 590, 490, s2, 70);
+  roof(P.roofAC(false), 20, 450, w1, 70); roof(P.roofVent(), 50, 490, w1, 70);
+  // greenery on the roofs and ivy, the way the targets have it
+  for (const [x, sy, b, H, l] of [[20, 20, dB, 70, 22], [400, 20, mB, 96, 30], [460, 82, mB, 96, 26], [710, 10, wB, 184, 26], [610, 392, s2, 70, 30], [455, 470, s1, 70, 26], [12, 430, w1, 70, 22], [690, 520, s2, 70, 26]]) roof(P.roofPlanter(l), x, sy, b, H);
+  for (const [x, sy, b, H] of [[150, 30, dB, 70], [500, 30, mB, 96], [660, 420, s2, 70], [410, 520, s1, 70]]) roof(P.pottedPalm(), x, sy, b, H);
   // street furniture
-  for (const [x, y] of [[188, 60], [188, 230], [356, 110], [356, 300], [480, 300], [480, 120], [356, 450], [480, 450], [170, 450]]) vox(P.lampPost('cast', lampsOn), x, y);
-  vox(P.hydrant(), 346, 312); vox(P.hydrant(), 492, 440);
-  vox(P.bin(), 200, 300); vox(P.bin(), 650, 312); vox(P.newsBox(), 486, 312); vox(P.newsBox('#c23a30'), 220, 450);
-  vox(P.bench(), 160, 150, Math.PI / 2); vox(P.bench(), 270, 452);
-  vox(P.dumpster(), 700, 312); vox(P.dumpster(), 730, 150);
-  for (const x of [200, 214, 228]) vox(P.bollard(), x, 318);
-  vox(P.planter(), 160, 200, Math.PI / 2); vox(P.planter(), 160, 90, Math.PI / 2);
-  vox(P.pottedPalm(), 344, 186);
-  // cafe terrace: umbrellas and tables in front of the shop
-  vox(P.umbrella('#f0ece0', '#2f7a5c'), 236, 212); vox(P.umbrella('#f0ece0', '#2f7a5c'), 290, 214);
-  // dressing: greenery, cafe terrace, signs, a scooter
-  for (let x = 196; x < 346; x += 34) vox(P.flowerBed(30), x + 15, 186);
-  for (const [x, y, l] of [[540, 128, 44], [600, 128, 50], [700, 290, 40]]) vox(P.hedge(l, 11), x, y);
-  for (const [x, y] of [[214, 240], [250, 236], [306, 238], [340, 236]]) vox(P.cafeTable(), x, y);
-  vox(P.chalkboard(), 330, 192); vox(P.chalkboard(), 512, 284);
-  vox(P.scooter('#3a6ab0'), 500, 70, Math.PI / 2); vox(P.scooter('#c23a30'), 690, 316);
-  for (const [x, y] of [[512, 210], [512, 30], [350, 40], [350, 268], [670, 290], [200, 456], [320, 456]]) vox(P.planter(), x, y, Math.PI / 2);
-  for (const [x, y] of [[200, 250], [246, 252], [300, 250], [330, 254]]) add(person(randomPerson(x * 7 + y), (x >> 3) % 8, 'idle', 0), x, y);
-  for (const [x, y, k] of [[430, 300, null], [560, 140, null], [610, 150, 'business'], [700, 240, 'thug'], [720, 250, null], [400, 470, null], [520, 500, null], [160, 380, null], [280, 470, 'business']]) add(person(randomPerson(x * 13 + y, k), (x + y) % 8, 'walk', (x >> 2) & 3), x, y);
-  // beach and marina kit
-  vox(P.lifeguardTower(), 70, 160); vox(P.surfboard('#e8a040'), 96, 168); vox(P.surfboard('#d8504a'), 104, 170); vox(P.volleyNet(64), 70, 236);
-  vox(P.umbrella('#f0ece0', '#c23a30'), 40, 290); vox(P.yacht(), 214, 526, 0, 0, 526);
-  for (const [x, y] of [[96, 478], [148, 478], [96, 508], [148, 508]]) vox(P.piling(18), x, y);
-  // the rough back yard
-  vox(P.couch(), 720, 200, Math.PI); vox(P.burnBarrel(lampsOn ? 1 : 0.4), 756, 214); vox(P.laundryLine(66), 690, 128);
+  vox(P.trafficSignal(60, 'red', lampsOn), 150, 212, 0); vox(P.trafficSignal(52, 'red', lampsOn), 100, 330, 0);
+  vox(P.pedSignal(lampsOn), 330, 262); vox(P.pedSignal(lampsOn), 160, 396);
+  for (const [x, y] of [[138, 160], [322, 178], [368, 430], [322, 470]]) vox(P.streetLamp(lampsOn), x, y);
+  vox(P.wireBin(), 120, 240); vox(P.wireBin(), 356, 252); vox(P.wireBin(), 640, 202);
+  vox(P.hydrant(), 166, 170); vox(P.hydrant(), 332, 248); vox(P.hydrant(), 422, 262);
+  vox(P.newsBox('#2f5aa8'), 436, 206); vox(P.newsBox('#2f5aa8'), 22, 206);
+  vox(P.bench(), 470, 206); vox(P.signPost(), 618, 236); vox(P.bollard(), 108, 256); vox(P.bollard(), 122, 256);
+  vox(P.pottedPalm(), 348, 172); vox(P.planter(), 34, 204); vox(P.planter(), 96, 204); vox(P.chalkboard(), 66, 206);
+  vox(P.hotdogCart(lampsOn), 490, 296, Math.PI);
+  vox(P.hedge(150, 12), 690, 272);
+  vox(P.crate(1), 600, 206); vox(P.bin(false), 586, 208);
   // vehicles
-  const lt = night ? 1 : 0;
-  vox(P.car('sedan', MAT.paintBlue, { lights: lt }), 250, 350, 0);
-  vox(P.car('pickup', MAT.paintGreen, { crate: true, lights: lt }), 600, 404, Math.PI);
-  vox(P.car('convertible', MAT.paintRed, { lights: lt }), 444, 230, Math.PI / 2);
-  vox(P.car('taxi', MAT.paintYellowCar, { lights: lt }), 444, 40, Math.PI / 2);
-  vox(P.car('sedan', MAT.paintBlack, { lights: 0 }), 742, 230, -Math.PI / 2);
+  const lt = preset === 'night' ? 1 : preset === 'golden' ? 1 : 0;
+  vox(P.car('taxi', MAT.paintYellowCar, { lights: lt }), 262, 96, Math.PI / 2);
+  vox(P.car('sedan', MAT.paintTeal, { lights: lt }), 226, 300, -Math.PI / 4);
+  vox(P.car('sedan', MAT.paintBlack, { lights: lt }), 276, 466, -Math.PI / 2);
+  vox(P.car('pickup', MAT.paintRed, { crate: true, lights: 0 }), 612, 306, Math.PI);
+  vox(P.scooter('#d8d0c0'), 724, 318);
+  vox(P.dog(), 548, 238, 0);
   // people
   const ppl = [
-    [randomPerson(11, 'beach'), 60, 210, 1, 'idle'], [randomPerson(12, 'beach'), 110, 120, 0, 'walk'], [randomPerson(13, 'beach'), 92, 260, 6, 'idle'],
-    [randomPerson(21), 166, 120, 0, 'walk'], [randomPerson(22), 176, 280, 4, 'walk'], [randomPerson(23, 'business'), 330, 250, 2, 'walk'],
-    [randomPerson(31, 'thug'), 560, 312, 0, 'idle'], [randomPerson(32), 590, 316, 7, 'idle'], [randomPerson(33), 616, 314, 0, 'idle'], [randomPerson(34), 646, 318, 1, 'idle'],
-    [randomPerson(35), 492, 330, 0, 'idle'], [randomPerson(41), 440, 410, 2, 'walk'], [randomPerson(42, 'cop'), 520, 450, 0, 'idle'],
-    [randomPerson(51), 120, 486, 0, 'idle'], [randomPerson(52), 300, 300, 2, 'walk'],
+    [randomPerson(42, 'cop'), 348, 224, 0, 'idle'], [Object.assign(randomPerson(44), { carry: 'board', hat: { kind: 'cap', color: 'red' } }), 386, 242, 7, 'walk'],
+    [randomPerson(45), 424, 206, 3, 'idle'], [randomPerson(46), 466, 236, 0, 'walk'], [randomPerson(47), 532, 236, 2, 'walk'],
+    [randomPerson(31, 'thug'), 576, 192, 0, 'idle'], [Object.assign(randomPerson(48), { top: { kind: 'tank', color: 'pink' }, bottom: { kind: 'shorts', color: 'navy' }, fem: true, hair: { style: 'pony', color: 1 } }), 652, 236, 2, 'walk'],
+    [randomPerson(49), 522, 290, 6, 'idle'], [randomPerson(50), 458, 312, 2, 'idle'],
+    [randomPerson(51), 60, 250, 2, 'walk'], [randomPerson(52, 'business'), 130, 296, 0, 'walk'],
   ];
   for (const [app, x, y, dir, pose] of ppl) add(person(app, dir, pose, (x + y) & 3), x, y);
-  // trees and palms
-  for (const [x, y, s, h] of [[150, 40, 1, 104], [150, 300, 2, 120], [356, 200, 3, 96], [486, 200, 4, 116], [486, 40, 5, 108], [350, 500, 6, 112], [500, 500, 7, 100], [40, 330, 8, 90]]) add(palm(s, h), x, y);
-  add(leafyTree(31, 96, 30), 720, 470); add(leafyTree(32, 84, 26, { flowers: '#e888b0' }), 600, 500);
-  for (const [x, y, s] of [[176, 172, 1], [190, 330, 2], [300, 318, 3], [500, 268, 4], [740, 330, 5], [620, 470, 6], [16, 500, 7]]) add(bush(40 + s, 12 + (s % 3) * 3), x, y);
-  // sort back to front by base, then draw
+  // trees
+  add(leafyTree(31, 132, 50), 180, 62); add(leafyTree(32, 130, 50), 730, 228); add(leafyTree(33, 120, 44), 16, 332); add(leafyTree(34, 116, 46), 120, 442);
+  add(palm(5, 104), 724, 440);
+  for (const [x, y, s] of [[340, 214, 1], [650, 262, 2], [760, 262, 3], [338, 494, 4], [700, 500, 5], [6, 470, 6]]) add(bush(60 + s, 12 + (s % 3) * 3), x, y);
   items.sort((a, b) => a.base - b.base);
   for (const it of items) G.blit(it.spr, it.x - it.spr.ax, it.y - it.spr.ay - it.dz, it.dz);
 
   // ---- lights
   const lights = [];
-  if (lampsOn) for (const [x, y] of [[188, 60], [188, 230], [356, 110], [356, 300], [480, 300], [480, 120], [356, 450], [480, 450], [170, 450]]) lights.push({ x, y: y + 2, z: 66, r: preset === 'night' ? 135 : 110, col: LIGHT.sodium, k: preset === 'night' ? 2.4 : 0.7 });
-  const win = preset === 'night' ? 1.3 : preset === 'golden' ? 0.6 : 0.15;
-  // shopfront light spilling onto the pavement
-  for (const x of [220, 270, 320]) lights.push({ x, y: 176, z: 24, r: 70, col: LIGHT.warmWindow, k: win });
-  lights.push({ x: 545, y: 282, z: 20, r: 80, col: LIGHT.neonMagenta, k: win * 1.2 });
-  lights.push({ x: 600, y: 282, z: 24, r: 60, col: LIGHT.warmWindow, k: win });
-  if (preset === 'night') {
-    // headlights: a short fan of lights ahead of each moving car, tail lights behind
-    const heads = [[250, 350, 0], [600, 404, Math.PI], [444, 230, Math.PI / 2], [444, 40, Math.PI / 2]];
-    for (const [x, y, a] of heads) {
-      for (const d of [60, 100]) lights.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: 10, r: 60 + d * 0.3, col: LIGHT.headlight, k: 1.6 - d * 0.006 });
-      lights.push({ x: x - Math.cos(a) * 56, y: y - Math.sin(a) * 56, z: 10, r: 40, col: LIGHT.tail, k: 1.2 });
+  if (lampsOn) for (const [x, y] of [[138, 160], [322, 178], [368, 430], [322, 470]]) lights.push({ x, y: y + 2, z: 84, r: preset === 'night' ? 200 : 110, col: LIGHT.sodium, k: preset === 'night' ? 3.4 : 0.8 });
+  const win = preset === 'night' ? 1.8 : preset === 'golden' ? 0.6 : 0.12;
+  for (const x of [380, 430, 480]) lights.push({ x, y: 210, z: 26, r: 76, col: LIGHT.warmWindow, k: win });
+  for (const x of [20, 60, 100]) lights.push({ x, y: 182, z: 24, r: 70, col: LIGHT.warmWindow, k: win * 0.9 });
+  if (preset !== 'noon') { lights.push({ x: 70, y: 180, z: 60, r: 120, col: LIGHT.neonMagenta, k: night * 1.4 + 0.2 }); lights.push({ x: 100, y: 120, z: 74, r: 90, col: LIGHT.neonCyan, k: night * 1.2 + 0.2 }); }
+  if (lampsOn) { lights.push({ x: 150, y: 214, z: 60, r: 50, col: [1, 0.2, 0.15], k: 0.8 }); lights.push({ x: 150, y: 334, z: 64, r: 50, col: [1, 0.2, 0.15], k: 0.8 }); }
+  if (lt) {
+    for (const [x, y, a] of [[262, 96, Math.PI / 2], [226, 300, -Math.PI / 4], [276, 466, -Math.PI / 2]]) {
+      for (const dd of [60, 100]) lights.push({ x: x + Math.cos(a) * dd, y: y + Math.sin(a) * dd, z: 10, r: 56 + dd * 0.3, col: LIGHT.headlight, k: (preset === 'night' ? 1.6 : 0.7) - dd * 0.005 });
+      lights.push({ x: x - Math.cos(a) * 56, y: y - Math.sin(a) * 56, z: 12, r: 40, col: LIGHT.tail, k: preset === 'night' ? 1.3 : 0.5 });
     }
   }
-  if (lampsOn) lights.push({ x: 756, y: 214, z: 18, r: 90, col: LIGHT.fire, k: preset === 'night' ? 2.2 : 0.8 });
   return { G, lights };
 }

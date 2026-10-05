@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 vehicles</title>
+<style>body{margin:0;background:#5a5e68}canvas{image-rendering:pixelated;display:block}</style></head><body><canvas id="c"></canvas>
+<script type="module">
+import { car } from '../../client/art2/props.js';
+import { MAT } from '../../client/art2/palette.js';
+const Z = 3, types = [['sedan', MAT.paintTeal], ['taxi', MAT.paintYellowCar], ['pickup', MAT.paintRed], ['convertible', MAT.paintBlue]];
+const cv = document.getElementById('c'); cv.width = 8 * 130 * Z; cv.height = types.length * 130 * Z;
+const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+types.forEach(([t, p], r) => { const m = car(t, p, { crate: true }); for (let i = 0; i < 8; i++) { const s = m.render(i / 8 * Math.PI * 2); g.drawImage(s.toCanvas('col'), i * 130 * Z + (65 - s.ax) * Z, r * 130 * Z + (95 - s.ay) * Z, s.w * Z, s.h * Z); } });
+window.done = true;
+</script></body></html>

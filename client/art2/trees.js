@@ -92,10 +92,10 @@ export function leafyTree(seed = 1, height = 120, crown = 34, opt = {}) {
   }
   // clumps
   const blobs = [];
-  const nb = 9 + Math.floor(rnd() * 5);
+  const nb = 16 + Math.floor(rnd() * 6);
   for (let i = 0; i < nb; i++) {
     const a = rnd() * 6.283, r = Math.sqrt(rnd()) * crown * 0.62;
-    blobs.push({ x: cx + Math.cos(a) * r * 1.05, y: crownCy + Math.sin(a) * r * 0.78 - crown * 0.08, r: crown * (0.34 + rnd() * 0.18) });
+    blobs.push({ x: cx + Math.cos(a) * r * 1.1, y: crownCy + Math.sin(a) * r * 0.8 - crown * 0.08, r: crown * (0.26 + rnd() * 0.16) });
   }
   blobs.push({ x: cx, y: crownCy - crown * 0.15, r: crown * 0.55 });
   // for each pixel: the front-most clump surface (largest projected depth)
@@ -115,7 +115,7 @@ export function leafyTree(seed = 1, height = 120, crown = 34, opt = {}) {
     const [u, v, w] = best;
     // leaf texture: little clusters lit on their upper-left
     const cl = hash(x >> 1, y >> 1, seed + 5), cl2 = hash((x + 1) >> 1, (y + 1) >> 1, seed + 6);
-    let t = 0.5 - u * 0.28 - v * 0.32 + (w - 0.5) * 0.2 + (cl > 0.72 ? 0.22 : cl < 0.2 ? -0.22 : 0) + (cl2 > 0.9 ? 0.15 : 0);
+    let t = 0.5 - u * 0.3 - v * 0.34 + (w - 0.45) * 0.55 + (cl > 0.72 ? 0.2 : cl < 0.2 ? -0.22 : 0) + (cl2 > 0.9 ? 0.15 : 0);
     if (opt.flowers && hash(x, y, seed + 9) > 0.93) { G.put(x, y, step(ramp(opt.flowers, 5, 2), 0.7, x, y, 0), null, 0, null, F_LEAF); nrm(G, x, y, [u, 0.4 + w * 0.3, -v + 0.3]); continue; }
     G.put(x, y, step(R, t, x, y, 0.8), null, 0, null, F_LEAF);
     nrm(G, x, y, [u * 0.9, 0.35 + w * 0.4, -v * 0.9 + 0.25]);
