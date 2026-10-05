@@ -1385,3 +1385,7 @@ Went through every painting the game uses: each building lot, the hospital front
 - **Everywhere:** evicted canvases are emptied straight away (`freeCanvas`), so their pixels go back at once. This covers ground chunks, roofs, facades, interiors, sprite and tint caches.
 - **Result** in the same emulated tour: canvas memory levels off around 80–90 MB instead of climbing, and about 100 MB less image memory on a console.
 - **Diagnostics:** the overlay now also shows live canvases and their memory, and whether low-memory mode is on.
+
+## 2026-10-05 · Tilt-shift off by default
+
+- The tilt-shift blur doesn't suit this near-overhead camera: the top and bottom of the screen just look out of focus. It's now off unless you turn it on (Settings → Tilt-shift blur, High graphics only). Players who never touched the switch get it off; anyone who turned it on keeps it.

@@ -1364,7 +1364,7 @@ function syncSettings() {
   $('s-vibrate').checked = settings.vibrate;
   $('s-autofs').checked = settings.autoFullscreen !== false;
   $('s-gfx').value = String(gfxQuality());
-  $('s-tilt').checked = settings.tiltShift !== false;
+  $('s-tilt').checked = settings.tiltShift === true;
   $('s-diag').checked = diag.on;
 }
 // Account transfer: the login token is the account. Copy it here, paste it on another device;
@@ -2044,7 +2044,7 @@ function render(dt) {
   }
   if (rain && !sub) drawRain(dt, sky);
   mark('rain');
-  if (!sub) S.light.post(g, DPR, now, settings.tiltShift !== false);
+  if (!sub) S.light.post(g, DPR, now, settings.tiltShift === true);
   mark('post');
   // things that stay sharp and unlit over all of it: the aim line, name tags and markers
   g.setTransform(...S.worldTf);
