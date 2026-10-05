@@ -18,7 +18,7 @@ import * as pets from './systems/pets.js';
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time'];
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 
@@ -30,6 +30,12 @@ export function command(world, p, c, msg) {
     case 'clear': env.stopRain(world); break;
     case 'night': world.loopTime = DAY_PART_S + 5; break;
     case 'day': world.loopTime = 90; break;
+    case 'time': { // jump the clock to a time of day: msg.m minutes after midnight
+      const mins = ((Number(msg.m) % 1440) + 1440) % 1440;
+      // 06:00-20:00 is the day part (DAY_PART_S), 20:00-06:00 the rest of the loop
+      world.loopTime = mins >= 360 && mins < 1200 ? (mins - 360) / 840 * DAY_PART_S : DAY_PART_S + (((mins - 1200 + 1440) % 1440) / 600) * (DAY_LOOP_S - DAY_PART_S);
+      break;
+    }
     case 'money': prof.cash += 5000; prof.bank += 20000; world.notify(p, '[dev] +$5,000 cash, +$20,000 bank', 'info'); break;
     case 'wanted': {
       if (!ped) break;

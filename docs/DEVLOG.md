@@ -1277,3 +1277,41 @@ Went through every painting the game uses: each building lot, the hospital front
   - A swimming NPC no longer heads for a pier it can't climb, and if it makes no headway it tries another bit of shore.
   - The soccer test re-indexes the ball after moving it.
 - World map rebaked. Tutorial: the Metro City island stop mentions the long blocks and alleys (`TUTORIAL_VERSION` 25).
+
+## 2026-10-04 · Round 14 (part 1): light, weather and things that smash
+
+- **Time of day** (`client/render/atmos.js`): the sky is a set of keyframes over the clock, giving blue hour, sunrise, golden hour, noon, sunset and night. Each keyframe sets an ambient level and a colour grade.
+  - The sun has a direction, so buildings, highway decks and props cast **shadows** that swing and stretch through the day (`client/render/shadows.js`).
+  - In golden hour a warm wash and soft god rays come in from the sun's side.
+- **Lighting** (`client/render/lighting.js`): a half-resolution light map multiplies over the scene, with the vignette and grade folded into the same pass.
+  - Light sources: streetlights and wall lamps, traffic lights, headlight cones, tail and brake lights, siren bars, the player's flashlight, lit windows, neon, billboards and bus shelters, muzzle flashes and explosions.
+  - An additive glow pass and a cheap down-scaled bloom put halos on the bright bits. Lit signs keep their colours at night.
+- **Lamps with character:**
+  - At dusk the streetlights come on staggered: most just switch on, some warm up slowly, a few flicker into life.
+  - A rare lamp flickers all night, or is dead.
+  - Neon buzzes and flickers now and then, more often in the rough districts.
+- **Rain** looks different by day and by night.
+  - Streaks catch the light near lamps, and the ground darkens and turns glossy.
+  - Lightning flashes are followed by thunder.
+  - **Puddles** fill over about two minutes of rain and dry over five. They hold the sky's colour, take a streak of reflection from every light near them at night, ripple as rain lands, and splash when people or cars go through them.
+  - Rain rings the sea and rivers too.
+- **Fog:** some mornings fog rolls in off the water and sometimes reaches the waterfront streets. Some nights have a thin haze. It's the same morning for everyone (hashed by the day). Steam drifts out of a few manholes, only some of the time.
+- **Tilt-shift:** a subtle blur on the top and bottom of the screen (Settings, on by default).
+- **Graphics setting** (High / Medium / Low): light-map resolution, bloom, puddle reflections and rain density. Phones default to Medium.
+- **Things that smash** (pooled particles, plus pieces of the prop's own sprite thrown in an arc):
+  - Hydrants pop off and gush. Most leave a big pool that ripples and reflects.
+  - Mailboxes burst into fluttering letters.
+  - Bins and dumpsters spray rubbish that settles as litter.
+  - Benches splinter, bus shelters and phone boxes shatter into glass, news boxes spill papers, and billboards come apart.
+- **New street furniture** (drawn in code in the concept art's 3/4 style, `client/render/newprops.js`, sizes in `shared/props2.js`):
+  - Bus shelters along the avenues, phone boxes, bollards.
+  - Crates, AC units and bin bags dressing the back alleys (all smashable).
+  - Billboards with six made-up adverts on the grass strips of the ring highway, which are now planted like an interchange.
+- **Highways read as raised:**
+  - A soft shade on the ground under the deck, plus a sun shadow.
+  - The girder edge has a lit lip and a dark underside.
+  - Pillars are new.
+  - Where a slip ramp runs beside its frontage road, the strip between them is a painted gore instead of a sliver of pavement.
+- **Long blocks:** long building footprints are split into several buildings of different widths and heights, so no block is one long box.
+- Dev: the `time` dev command jumps the clock to `m` minutes after midnight.
+- Tutorial: the HUD stop covers dawn and dusk, puddles, fog and the Graphics setting. The driving stop covers smashing street furniture (`TUTORIAL_VERSION` 26).

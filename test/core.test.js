@@ -1009,6 +1009,7 @@ test('coming back after an update: never boxed in - out of a closed-in pocket or
   const m = w.map;
   // 1. the police motor pool, gate shut (you logged out in it as an officer, you're back as a citizen)
   const mp = m.motorPools[0];
+  for (const e of mp.gate.props) e.off = false; // (an earlier test in this file may have left it open)
   const inPool = { x: (mp.tx + mp.tw / 2) * 32, y: (mp.ty + mp.th / 2) * 32 };
   assert.ok(!unstuck.canWalkOut(m, inPool.x, inPool.y), 'a shut motor pool is a closed pocket');
   const a = joinPlayer(w, { pos: { ...inPool } });

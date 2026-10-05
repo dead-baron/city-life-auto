@@ -30,6 +30,7 @@ import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
 import { HAND_BLOCKS } from './handblocks.js';
 import { BLOCK_ART } from './block-data.js';
+import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 
 export { Z };
 
@@ -438,6 +439,7 @@ export function generateCity(seed = 1337) {
   const net = repairRoads(m, lines, seed);
   m.net = net; m.nodes = net.nodes; m.edges = net.edges; m.roads = net.edges;
   rasterRoads(m);
+  rampGores(m);
   const railPts = m.railPts;
   reserveRail(m, railPts);
   buildStationLots(m);
@@ -1311,6 +1313,43 @@ function rasterRoads(m) {
   }
 }
 
+// Where a slip ramp comes down beside the frontage road (or leaves it), the two run side by side for a
+// stretch: the strip between them is paved road (a painted gore with chevrons, client/render/roads.js),
+// not a sliver of pavement, so the ramp joins the street the way a real one does.
+function rampGores(m) {
+  m.gores = [];
+  for (const e of m.edges) {
+    if (e.lvl !== 'ramp') continue;
+    const groundA = e.za < 0.5, gnode = m.nodes[groundA ? e.a : e.b];
+    const road = gnode.edges.map((id) => m.edges[id]).find((o) => o.lvl === 0 && o !== e);
+    if (!road) continue;
+    const pts = [];
+    for (let s = 0; s < e.len; s += 12) {
+      const sr = groundA ? s : e.len - s;
+      const z = edgeZ(e, e.a, sr);
+      if (z > 0.55) break;
+      const p = pointAt(e.pts, sr);
+      const q = project(road.pts, p);
+      if (!q) break;
+      if (q.d > road.hw + e.hw + 4 * TILE) break;
+      pts.push({ x: p.x, y: p.y, qx: q.x, qy: q.y, d: q.d, z });
+    }
+    if (pts.length < 3) continue;
+    // the gore is road: no pavement, kerb or street furniture in it
+    for (const g of pts) {
+      const n = Math.ceil(g.d / 12);
+      for (let k = 0; k <= n; k++) {
+        const x = g.qx + (g.x - g.qx) * (k / n), y = g.qy + (g.y - g.qy) * (k / n);
+        const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), i = ty * MAP_W + tx;
+        if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) continue;
+        const t = m.tiles[i];
+        if ((t === T.SIDEWALK || t === T.GRASS || t === T.PLAZA || t === T.DIRT) && m.land[i]) { m.tiles[i] = T.ROAD; m.reserve[i] &= ~1; }
+      }
+    }
+    m.gores.push({ ramp: e.id, road: road.id, pts, hw: e.hw, rhw: road.hw });
+  }
+}
+
 // Keep the land along every shore free for promenades, beaches and quays.
 const BUILT_ZONES = new Set([Z.CITY, Z.SOUTH, Z.WEST, Z.NORTH, Z.ISLE, Z.KEY, Z.GULL]);
 const builtAt = (m, i) => BUILT_ZONES.has(m.zone[i]) && !!STYLE[DISTRICTS[m.dist[i]].style];
@@ -1637,7 +1676,7 @@ function placePrefab(m, row, key, x, special, rand) {
       }
       if (kind === 'bank') {
         // the branch's cash machine: the one painted beside its door, or one set into the wall
-        if (PAINTED_ATM[key] !== undefined) m.pois.push({ id: m.pois.length, kind: 'atm', label: 'ATM', x: (x + PAINTED_ATM[key] * pf.tw) * TILE, y: (b.ty + b.th) * TILE + 26, r: 36 });
+        if (PAINTED_ATM[key] !== undefined && !onSubwayPlaza(m, (x + PAINTED_ATM[key] * pf.tw) * TILE, (b.ty + b.th) * TILE + 26)) m.pois.push({ id: m.pois.length, kind: 'atm', label: 'ATM', x: (x + PAINTED_ATM[key] * pf.tw) * TILE, y: (b.ty + b.th) * TILE + 26, r: 36 });
         else if (![-64, 64, -100, 100].some((dx) => wallAtm(m, b, dd.px + dx, 'bank'))) wallAtm(m, b, dd.px + (dd.px - 64 > b.tx * TILE + 20 ? -64 : 64), 'bank', true);
       }
       if (kind === 'coffee' || kind === 'sports' || kind === 'pharmacy') {
@@ -1679,10 +1718,30 @@ function placePrefab(m, row, key, x, special, rand) {
 // Procedural flat-roof building filling a leftover lot (GTA-style dense blocks). The renderer
 // draws the roof (parapet, texture, AC units, vents, skylights, helipads) from r.kind + r.seed.
 function roofBuilding(m, row, x, y, w, h, st, rand) {
+  // a long run is never one long building: it's a row of separate buildings of different widths,
+  // roofs and heights standing shoulder to shoulder (the widths come from where they stand, so the
+  // rest of the city's random draws don't move)
+  if (w > 13 && h >= 4) {
+    let x0 = x;
+    const kinds = st.roofKinds || ['tar'];
+    while (x0 < x + w) {
+      const left = x + w - x0;
+      let bw = left <= 13 ? left : 5 + Math.floor(hash2(x0, y, 301) * 8);
+      if (left - bw < 4) bw = left;
+      const kind = kinds[Math.floor(hash2(x0, y, 302) * kinds.length)];
+      roofOne(m, row, x0, y, bw, h, kind, Math.floor(hash2(x0, y, 303) * 1e9));
+      x0 += bw;
+    }
+    rand(); rand(); // the same draws as one building, so nothing else in the city moves
+    return;
+  }
   const kinds = st.roofKinds || ['tar'];
   const kind = kinds[Math.floor(rand() * kinds.length)];
+  roofOne(m, row, x, y, w, h, kind, Math.floor(rand() * 1e9));
+}
+function roofOne(m, row, x, y, w, h, kind, seed) {
   const bid = m.buildings.length;
-  const r = { tx: x, ty: y, tw: w, th: h, kind, seed: Math.floor(rand() * 1e9), d: row.d, b: bid };
+  const r = { tx: x, ty: y, tw: w, th: h, kind, seed, d: row.d, b: bid };
   m.roofs.push(r);
   m.buildings.push({ id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind: 'roof', name: 'Building', business: null, signs: [] });
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * MAP_W + tx] = bid; }
@@ -3077,12 +3136,14 @@ export const BREAKABLE = new Set([
   'news_a', 'news_b', 'news_c', 'mailbox', 'vend_a', 'vend_cola', 'vend_c', 'bikerack', 'cone', 'barrier', 'drum', 'pallet', 'pallet_b',
   'pallet_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'foodcart', 'foodcart_b', 'tires', 'bags', 'spool',
   'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b', 'cactus', 'sigpole',
+  'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'bollard', 'crates', 'acunit', 'trashpile', 'atm', 'billboard',
 ]);
-export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole']);
+export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole', 'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'acunit', 'billboard']);
 
 // Point every lamp's arm at the nearest road so the head hangs over the street.
 function aimLamps(m) {
   for (const l of m.lamps) {
+    if (l.wall || l.hx !== undefined) continue; // aimed already (alley wall lamps, painted lamps)
     const tx = Math.floor(l.x / TILE), ty = Math.floor(l.y / TILE);
     let best = null, bd = 1e9;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
@@ -3524,14 +3585,89 @@ function buildStreetProps(m) {
     if (h < (d.tier === 'rough' || d.tier === 'low' ? 0.08 : 0.05)) {
       const pool = {
         houses: ['tree_a', 'shrub_a', 'mailbox', 'bush_a'], apartments: ['tree_b', 'bench_a', 'bush_b', 'trashcan'], civic: ['tree_a', 'bench_b', 'planter_sq'],
-        towers: ['planter_sq', 'bench_m', 'news_a', 'news_b', 'trashcan', 'palm_s'], commercial: ['news_c', 'trashcan', 'bench_a', 'planter_g', 'bikerack'],
-        nightlife: ['palm_s', 'palm_d', 'trashcan', 'news_b', 'foodcart'], industrial: ['dump_g', 'drum', 'pallet_s', 'cone', 'bags'],
-        southside: ['bags', 'dump_o', 'tires', 'shrub_b', 'rubble'], harbor: ['drum', 'pallet', 'spool', 'dump_b'], factory: ['dump_g', 'drum', 'pallet_s', 'cone', 'tires'], park: ['tree_a', 'bench_a', 'shrub_a'],
-        luxury: ['palm_s', 'planter_sq', 'flowers_a', 'tree_a', 'bench_m'], redlight: ['trashcan', 'bags', 'news_b', 'dump_o', 'palm_s'], oldtown: ['trashcan', 'bags', 'mailbox', 'dump_g', 'news_c', 'tires'],
+        towers: ['planter_sq', 'bench_m', 'news_a', 'news_b', 'trashcan', 'palm_s', 'bollard', 'tree_b'], commercial: ['news_c', 'trashcan', 'bench_a', 'planter_g', 'bikerack', 'phonebox', 'tree_a', 'mailbox'],
+        nightlife: ['palm_s', 'palm_d', 'trashcan', 'news_b', 'foodcart', 'phonebox', 'bollard'], industrial: ['dump_g', 'drum', 'pallet_s', 'cone', 'bags', 'crates', 'trashpile'],
+        southside: ['bags', 'dump_o', 'tires', 'shrub_b', 'rubble', 'trashpile', 'phonebox'], harbor: ['drum', 'pallet', 'spool', 'dump_b', 'crates'], factory: ['dump_g', 'drum', 'pallet_s', 'cone', 'tires', 'crates'], park: ['tree_a', 'bench_a', 'shrub_a'],
+        luxury: ['palm_s', 'planter_sq', 'flowers_a', 'tree_a', 'bench_m', 'bollard'], redlight: ['trashcan', 'bags', 'news_b', 'dump_o', 'palm_s', 'trashpile', 'phonebox'], oldtown: ['trashcan', 'bags', 'mailbox', 'dump_g', 'news_c', 'tires', 'phonebox', 'tree_b'],
         beach: ['palm_a', 'palm_d', 'bench_m', 'umbrella_y', 'trashcan'],
       }[d.style] || ['trashcan'];
       const t = pool[Math.floor(hash2(tx, ty, 5) * pool.length)];
-      addProp(m, t, x, y, t.startsWith('tree') || t.startsWith('dump') ? 10 : 0);
+      addProp(m, t, x, y, t.startsWith('tree') || t.startsWith('dump') || t === 'crates' || t === 'phonebox' ? 10 : t === 'bollard' ? 5 : 0);
+    }
+  }
+  buildBusStops(m, doorsNear);
+  dressAlleys(m);
+  landscapeHighway(m);
+}
+
+// The grass strips between the ring highway and its frontage roads: planted like a real
+// interchange - rows of trees, clumps of shrubs and flowers - and a billboard now and then facing
+// the traffic below.
+function landscapeHighway(m) {
+  if (!m.ringD) return;
+  const W = MAP_W;
+  let lastBoard = [];
+  for (let ty = 2; ty < MAP_H - 2; ty++) for (let tx = 2; tx < W - 2; tx++) {
+    const i = ty * W + tx;
+    if (m.tiles[i] !== T.GRASS || m.deck[i] || m.reserve[i] & 24 || m.lvl0Block[i]) continue;
+    const rd = m.ringD[i];
+    if (rd < 9 || rd > BAND - 3) continue;
+    let clear = true;
+    for (let dy = -1; dy <= 1 && clear; dy++) for (let dx = -1; dx <= 1; dx++) { const t = m.tiles[i + dy * W + dx]; if (t !== T.GRASS || m.deck[i + dy * W + dx]) { clear = false; break; } }
+    if (!clear) continue;
+    const h = hash2(tx, ty, 707);
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
+    if (rd >= 12 && rd <= 15 && h < 0.012 && lastBoard.every((b) => Math.hypot(b[0] - tx, b[1] - ty) > 30)) {
+      let room = true;
+      for (let dx = -3; dx <= 3 && room; dx++) for (let dy = -1; dy <= 1; dy++) { const j = i + dy * W + dx; if (m.tiles[j] !== T.GRASS || m.deck[j]) { room = false; break; } }
+      if (room) { addProp(m, 'billboard', x, y, 10, { ad: Math.floor(hash2(tx, ty, 708) * 6) }); lastBoard.push([tx, ty]); continue; }
+    }
+    if (h < 0.05 && (tx + ty) % 3 === 0) addProp(m, hash2(tx, ty, 709) < 0.7 ? 'tree_a' : 'tree_b', x, y, 12);
+    else if (h < 0.075) addProp(m, ['shrub_a', 'shrub_b', 'bush_a', 'bush_c', 'flowers_a'][Math.floor(hash2(tx, ty, 710) * 5)], x, y, 0);
+  }
+}
+
+// Bus shelters along the avenues and arterials in town, on the pavement beside east-west stretches
+// (the shelter's open front faces the road below it).
+function buildBusStops(m, doorsNear) {
+  const near = (x, y, r) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let dy = -2; dy <= 2; dy++) for (let dx = -3; dx <= 3; dx++) for (const e of m.solidProps.get((ty + dy) * MAP_W + tx + dx) || []) if (Math.hypot(e.x - x, e.y - y) < r) return true; return false; };
+  for (const e of m.edges) {
+    if (e.lvl !== 0 || !['ave', 'art', 'blvd'].includes(e.kind) || e.len < 18 * TILE) continue;
+    const a = e.pts[0], b = e.pts[e.pts.length - 1];
+    if (Math.abs(a.y - b.y) > 4) continue; // east-west only
+    const z = m.zoneAt(a.x, a.y);
+    if (z !== Z.CITY && z !== Z.SOUTH && z !== Z.WEST && z !== Z.NORTH && z !== Z.ISLE) continue;
+    for (let s = 8 * TILE; s < e.len - 8 * TILE; s += 26 * TILE) {
+      const q = pointAt(e.pts, s);
+      if (hash2(Math.round(q.x / TILE), Math.round(q.y / TILE), 404) < 0.35) continue;
+      const side = hash2(Math.round(q.x / TILE), 7, 405) < 0.5 ? -1 : 1; // either side of the road
+      const y = side < 0 ? q.y - e.hw - TILE * 1.25 : q.y + e.hw + TILE * 1.6;
+      const tx = Math.floor(q.x / TILE), ty = Math.floor(y / TILE);
+      let ok = true;
+      for (let dx = -2; dx <= 2 && ok; dx++) { const t = m.tileAt(tx + dx, ty); if (t !== T.SIDEWALK || m.deck[ty * MAP_W + tx + dx] || m.handMask[ty * MAP_W + tx + dx]) ok = false; }
+      for (let dx = -3; dx <= 3 && ok; dx++) for (let dy = -1; dy <= 1; dy++) if (doorsNear.has(`${tx + dx},${ty + dy}`)) ok = false;
+      if (!ok || near(q.x, y, 70) || onSubwayPlaza(m, q.x, y)) continue;
+      addProp(m, 'busstop', (tx + 0.5) * TILE, y, 14, { face: side < 0 ? 'S' : 'N' });
+    }
+  }
+}
+
+// Back alleys: dumpsters, bin bags, crates, AC units and rubbish against the walls, the odd wall
+// lamp - all of it smashable by anything driving through.
+function dressAlleys(m) {
+  const pool = ['dump_g', 'dump_b', 'bags', 'trashpile', 'crates', 'acunit', 'drum', 'tires', 'pallet', 'dump_g', 'trashpile', 'bags'];
+  for (const e of m.edges) {
+    if (e.kind !== 'alley' || e.lvl !== 0) continue;
+    let k = 0;
+    for (let s = 2.5 * TILE; s < e.len - 2.5 * TILE; s += 2.6 * TILE, k++) {
+      const q = pointAt(e.pts, s);
+      const h = hash2(Math.round(q.x), Math.round(q.y), 611);
+      if (h > 0.55) continue;
+      const side = hash2(Math.round(q.x), Math.round(q.y), 612) < 0.5 ? -1 : 1;
+      const x = q.x - q.ty * side * (e.hw - 12), y = q.y + q.tx * side * (e.hw - 12);
+      const t = pool[Math.floor(hash2(Math.round(q.x), Math.round(q.y), 613) * pool.length)];
+      addProp(m, t, x, y, t.startsWith('dump') ? 14 : t === 'crates' || t === 'acunit' ? 12 : t === 'drum' || t === 'tires' ? 9 : 0);
+      if (k % 5 === 2) { const l = addProp(m, 'lamp', q.x + q.ty * side * (e.hw - 4), q.y - q.tx * side * (e.hw - 4)); l.a = Math.atan2(q.tx * side, -q.ty * side); l.wall = true; }
     }
   }
 }

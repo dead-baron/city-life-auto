@@ -74,7 +74,9 @@ export class BuildingLayer {
       const S = STYLE[st];
       const x0 = b.tx * TILE, y0 = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE;
       // big footprints read as taller; a shallow lot can't carry a huge facade
-      const H = flat ? 0 : Math.round(Math.min(S.H * (st === 'tower' || st === 'office' || st === 'apt' ? 0.85 + Math.min(0.35, b.tw * b.th / 900) : 1), h * 1.1));
+      // neighbours in a row aren't all the same height
+      const vary = 0.82 + 0.4 * (((b.tx * 7919 + b.ty * 104729) >>> 0) % 1000) / 1000;
+      const H = flat ? 0 : Math.round(Math.min(S.H * vary * (st === 'tower' || st === 'office' || st === 'apt' ? 0.85 + Math.min(0.35, b.tw * b.th / 900) : 1), h * 1.1));
       const d = map.districtAt(x0 + w / 2, y0 + h / 2);
       const item = { b, st, H, flat, x0, y0, x1: x0 + w, y1: y0 + h, w, h, d, seed: (b.tx * 7919 + b.ty * 104729) >>> 0 };
       this.list.push(item);

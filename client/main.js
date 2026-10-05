@@ -2,7 +2,7 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
-import { generateCity, WATER_T, TRAIN_CARS, mapSignature } from '../shared/map.js';
+import { generateCity, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
 import { signalFor } from '../shared/roads.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
@@ -17,6 +17,7 @@ import { createInventory, createWheel } from './inventory.js';
 import { createSpectator, SPEC_LAYERS, SCHEMATIC_KEY } from './spectator.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus, mouseScreen } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
+import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
@@ -35,6 +36,11 @@ import { ANIMAL_ART } from '../shared/animal-art.js';
 import { BuildingLayer } from './render/buildings.js';
 import { Highway, liftOf, levelKey } from './render/highway.js';
 import { underDeck } from '../shared/levels.js';
+import { skyAt, lampLevel, neonLevel, hash as hashAt } from './render/atmos.js';
+import { Lighting, LIGHT } from './render/lighting.js';
+import { Weather } from './render/weather.js';
+import { drawBuildingShadows, drawPropShadows } from './render/shadows.js';
+import { registerNewProps } from './render/newprops.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -347,13 +353,134 @@ function setPropBroken(i, a, withFx) {
   if (se) se.off = true;
   S.ground.invalidateAt(p.x, p.y);
   if (!withFx) return;
-  const c = debrisColors(p.t);
-  for (let k = 0; k < 14; k++) {
-    const aa = a + (Math.random() - 0.5) * 1.8, sp = 60 + Math.random() * 180;
-    S.fx.spawn(4, p.x, p.y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.5 + Math.random() * 0.4, 2 + Math.random() * 2.5, c[k % 3], 0, 60 + Math.random() * 90);
+  smashFx(p, i, a);
+}
+
+// What a smashed thing does: the object itself goes flying (a piece of its own sprite, spinning),
+// and what it's made of / holds spills out - water from a hydrant, mail from a mailbox, rubbish
+// from a bin, planks from a bench, glass from a bus shelter, papers from a news box.
+const BOARD = ['#e8e8e8', '#c8262b', '#2f5fc8', '#e8b923'];
+const PAPER = ['#f2f0e6', '#e8e4d4', '#ffffff', '#d8dce8'];
+const MAIL = ['#f4f1e4', '#e6dcc0', '#ffffff', '#c8d8f0', '#f0d0b0'];
+const TRASH = ['#5a4a32', '#7a6a4a', '#3f5a2e', '#c8c2b4', '#8a2a24', '#2f3a5a', '#e8d070', '#9a9a9a'];
+const GLASS = ['#d8ecff', '#b8d8f0', '#ffffff', '#9ec4e0'];
+const WOODC = ['#7a5230', '#a87444', '#5a3a1e', '#8a6038'];
+function smashFx(p, i, a) {
+  const fx = S.fx, now = S.loopClock, t = p.t;
+  const vol = distVol(p.x, p.y);
+  const fr = atlas.ready ? atlas.frames['prop_' + t] : null;
+  const sz = PROP_SIZES[t] || [24, 24];
+  const throwIt = (scale = 1, spin = 9, up = 220) => {
+    if (!fr) return;
+    const sp = 140 + Math.random() * 120;
+    const aa = a + (Math.random() - 0.5) * 0.7;
+    fx.chunk(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, sz[0] * scale, sz[1] * scale, p.x, p.y, Math.cos(aa) * sp, Math.sin(aa) * sp, up, (Math.random() < 0.5 ? -1 : 1) * spin, 7);
+  };
+  // pieces: the sprite cut into quarters, scattered
+  const shatter = (n = 4, speed = 160) => {
+    if (!fr) return;
+    for (let k = 0; k < n; k++) {
+      const qx = k % 2, qy = (k >> 1) % 2;
+      const aa = a + (Math.random() - 0.5) * 2.2, sp = speed * (0.5 + Math.random());
+      fx.chunk(atlas.imgs[fr.a], fr.x + qx * fr.w / 2, fr.y + qy * fr.h / 2, fr.w / 2, fr.h / 2, sz[0] / 2, sz[1] / 2, p.x + (qx - 0.5) * sz[0] / 2, p.y + (qy - 0.5) * sz[1] / 2, Math.cos(aa) * sp, Math.sin(aa) * sp, 120 + Math.random() * 160, (Math.random() - 0.5) * 18, 5 + Math.random() * 3);
+    }
+  };
+  const bits = (n, colors, speed = 180, up = 90, size = 2.5) => {
+    for (let k = 0; k < n; k++) {
+      const aa = a + (Math.random() - 0.5) * 2.4, sp = speed * (0.3 + Math.random());
+      fx.spawn(4, p.x, p.y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.6 + Math.random() * 0.6, size * (0.6 + Math.random() * 0.8), colors[k % colors.length], 0, up * (0.5 + Math.random()));
+    }
+  };
+  if (isHydrant(t)) {
+    throwIt(1, 14, 320); // the hydrant pops off its stand and tumbles away
+    fx.splash(p.x, p.y, 30);
+    for (let k = 0; k < 24; k++) { const aa = Math.random() * 6.283, sp = 60 + Math.random() * 200; fx.spawn(6, p.x, p.y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.8 + Math.random() * 0.6, 3 + Math.random() * 3, Math.random() < 0.5 ? '#ffffff' : '#9fd4ff', 4, 220 + Math.random() * 160); }
+    // most of the time the gushing water pools across the street (the same for everyone)
+    if (hashAt(i, 77) < 0.7) S.wx.addPool(p.x + Math.cos(a) * 30, p.y + Math.sin(a) * 18, 70 + hashAt(i, 78) * 60, now);
+    sfx('clang', vol); sfx('gush', vol);
+  } else if (t === 'mailbox') {
+    throwIt(1, 10, 260);
+    fx.flutter(p.x, p.y, 30, MAIL, Math.random, 200, 200);
+    bits(6, ['#2350c8', '#1b3a8a', '#c8262b'], 160);
+    sfx('clang', vol); sfx('paper', vol);
+  } else if (t.startsWith('news')) {
+    throwIt(1, 8, 200);
+    fx.flutter(p.x, p.y, 24, PAPER, Math.random, 180, 170);
+    sfx('paper', vol); sfx('hit', vol);
+  } else if (t === 'trashcan' || t === 'bags' || t.startsWith('dump')) {
+    const big = t.startsWith('dump');
+    if (big) shatter(4, 120); else throwIt(1, 10, 220);
+    fx.flutter(p.x, p.y, big ? 18 : 10, PAPER.concat(['#c8c2b4']), Math.random, 150, 140);
+    bits(big ? 34 : 18, TRASH, big ? 220 : 170, 110, 3);
+    fx.litter(p.x + Math.cos(a) * 20, p.y + Math.sin(a) * 14, big ? 40 : 20, TRASH, big ? 70 : 42, now);
+    for (let k = 0; k < (big ? 4 : 2); k++) fx.smoke(p.x, p.y, false); // a puff of dust and stink
+    sfx(big ? 'clang' : 'hit', vol); sfx('paper', vol * 0.6);
+  } else if (t === 'billboard') {
+    const bf = atlas.frames['prop_billboard' + (p.ad || 0)];
+    if (bf) for (let k = 0; k < 6; k++) { const qx = k % 3, qy = (k / 3) | 0, aa = a + (Math.random() - 0.5) * 2; fx.chunk(atlas.imgs[bf.a], bf.x + qx * bf.w / 3, bf.y + qy * bf.h / 2, bf.w / 3, bf.h / 2, 44, 42, p.x + (qx - 1) * 44, p.y - 30 + qy * 30, Math.cos(aa) * 120, Math.sin(aa) * 120, 200, (Math.random() - 0.5) * 10, 7); }
+    fx.flutter(p.x, p.y - 30, 20, BOARD, Math.random, 180, 240);
+    fx.sparks(p.x, p.y - 30, 12);
+    sfx('crash', vol); sfx('clang', vol);
+  } else if (t === 'phonebox') {
+    throwIt(1, 8, 200);
+    bits(26, GLASS, 200, 120, 2);
+    bits(8, ['#c8262b', '#a01c20'], 180, 110, 3);
+    fx.litter(p.x, p.y + 4, 18, GLASS, 30, now);
+    sfx('glass', vol); sfx('clang', vol * 0.6);
+  } else if (t === 'crates') {
+    shatter(4, 170);
+    bits(22, WOODC, 220, 130, 3.4);
+    fx.litter(p.x, p.y, 12, WOODC, 34, now);
+    sfx('crash', vol * 0.7);
+  } else if (t === 'acunit') {
+    throwIt(1, 10, 200);
+    bits(10, ['#a6a9ae', '#7a7e86', '#2a2c33'], 180, 100, 2.5);
+    fx.sparks(p.x, p.y, 8);
+    sfx('clang', vol);
+  } else if (t === 'trashpile') {
+    fx.flutter(p.x, p.y, 12, PAPER.concat(['#c8c2b4']), Math.random, 150, 140);
+    bits(30, TRASH, 200, 110, 3);
+    fx.litter(p.x, p.y, 34, TRASH, 56, now);
+    sfx('hit', vol); sfx('paper', vol * 0.6);
+  } else if (t === 'busstop') {
+    shatter(4, 170);
+    bits(40, GLASS, 240, 140, 2.2);
+    fx.litter(p.x, p.y + 6, 36, GLASS, 46, now);
+    fx.flutter(p.x, p.y, 6, ['#f2c21b', '#ffffff', '#2f5fc8'], Math.random, 120, 140); // the timetable and the poster
+    sfx('glass', vol * 1.2); sfx('crash', vol * 0.6);
+  } else if (t.startsWith('bench') || t === 'pbench' || t.startsWith('pallet') || t === 'lumber' || t === 'planks' || t === 'cart' || t.startsWith('foodcart')) {
+    shatter(4, 180);
+    bits(20, WOODC, 220, 120, 3.4);
+    fx.litter(p.x, p.y, 10, WOODC, 36, now);
+    sfx('crash', vol * 0.7);
+  } else if (t.startsWith('vend') || t === 'atm') {
+    shatter(4, 120);
+    bits(24, GLASS, 200, 110, 2);
+    bits(14, ['#c8262b', '#2f9a5a', '#e8d070', '#2350c8'], 200, 120, 3); // cans and snacks
+    fx.sparks(p.x, p.y, 10);
+    sfx('glass', vol); sfx('clang', vol);
+  } else if (t === 'drum') {
+    throwIt(1, 16, 260);
+    fx.decal(5, p.x + Math.cos(a) * 18, p.y + Math.sin(a) * 12, a, 18, '#1a1a1e', now, 0.7); // an oil slick
+    sfx('clang', vol);
+  } else if (t === 'cone' || t === 'barrier' || t === 'tires' || t === 'spool') {
+    throwIt(1, 12, 240);
+    sfx('thud', vol);
+  } else if (t.startsWith('umbrella')) {
+    throwIt(1, 6, 300);
+    sfx('hit', vol);
+  } else {
+    const c = debrisColors(t);
+    for (let k = 0; k < 14; k++) {
+      const aa = a + (Math.random() - 0.5) * 1.8, sp = 60 + Math.random() * 180;
+      fx.spawn(4, p.x, p.y, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.5 + Math.random() * 0.4, 2 + Math.random() * 2.5, c[k % 3], 0, 60 + Math.random() * 90);
+    }
+    if (t.startsWith('tree') || t.startsWith('palm') || t.startsWith('shrub') || t.startsWith('bush') || t.startsWith('flower') || t.startsWith('planter') || t === 'potted') {
+      fx.flutter(p.x, p.y, 18, ['#3f7f2c', '#5fa03a', '#2f6a24', '#7aa848'], Math.random, 120, 120);
+    }
+    if (t.startsWith('planter') || t === 'potted') fx.litter(p.x, p.y, 14, ['#5a3a1e', '#6a4a2a', '#3f7f2c'], 26, now); // soil
+    sfx('hit', vol * 1.3);
   }
-  if (p.t.startsWith('tree') || p.t.startsWith('palm') || p.t.startsWith('shrub') || p.t.startsWith('bush')) for (let k = 0; k < 10; k++) S.fx.spawn(4, p.x + (Math.random() - 0.5) * 30, p.y + (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60, 1 + Math.random(), 3, Math.random() < 0.5 ? '#3f7f2c' : '#5fa03a', 0, 20);
-  sfx('hit', distVol(p.x, p.y) * 1.3);
 }
 
 function distVol(x, y) { const d = Math.hypot(x - S.cam.x, y - S.cam.y); return Math.max(0, 1 - d / 1100); }
@@ -367,7 +494,7 @@ function onEvent(ev) {
       const w = WEAPON_BY_INDEX[ev.w];
       fx.tracer(ev.x1, ev.y1, ev.x2, ev.y2);
       if (w && w.silenced) { sfx('swing', distVol(ev.x1, ev.y1) * 0.5); break; } // a suppressed cough, no muzzle flash
-      S.flashes.push({ x: ev.x1, y: ev.y1, t: 0.06 });
+      S.flashes.push({ x: ev.x1, y: ev.y1, t: 0.065, a: Math.atan2(ev.y2 - ev.y1, ev.x2 - ev.x1), r: 170 });
       fx.spawn(4, ev.x1, ev.y1, 0, 0, 0.05, 6, '#fff3b0');
       sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
@@ -376,7 +503,7 @@ function onEvent(ev) {
     case 'drip': fx.drip(ev.x, ev.y, now); break; // a bleeding person's trail
     case 'death': fx.decal(5, ev.x - Math.cos(ev.a) * 4, ev.y - Math.sin(ev.a) * 4, ev.a, 14, '#6a0a10', now, 0.9); break;
     case 'crash': fx.sparks(ev.x, ev.y, 4 + Math.round(ev.p * 8)); sfx('crash', distVol(ev.x, ev.y) * (0.4 + ev.p)); if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, ev.p * 6); break;
-    case 'explode': fx.explosion(ev.x, ev.y, ev.r, now); sfx('explode', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 14 * distVol(ev.x, ev.y)); S.flashes.push({ x: ev.x, y: ev.y, t: 0.5, r: ev.r * 3 }); break;
+    case 'explode': fx.explosion(ev.x, ev.y, ev.r, now); sfx('explode', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 14 * distVol(ev.x, ev.y)); S.flashes.push({ x: ev.x, y: ev.y, t: 0.55, r: ev.r * 4, kind: 'boom' }); break;
     case 'spark': fx.sparks(ev.x, ev.y, 3); break;
     case 'taser': fx.tracer(ev.x1, ev.y1, ev.x2, ev.y2, 'rgba(120,200,255,'); fx.sparks(ev.x2, ev.y2, 4); sfx('taser', distVol(ev.x1, ev.y1)); break;
     case 'spray': // pepper spray: an orange mist cone
@@ -481,6 +608,9 @@ function outdatedBuild(sig) {
 function setupWorld(seed) {
   S.map = generateCity(seed);
   S.ground = new GroundCache(S.map);
+  S.wx = new Weather(S.map);
+  S.wx.onThunder = () => sfx('thunder', 1);
+  S.light ||= new Lighting();
   S.highway = new Highway(S.map);
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.spec = createSpectator({
@@ -1215,6 +1345,8 @@ function syncSettings() {
   $('s-padfire').checked = settings.padStickFire;
   $('s-vibrate').checked = settings.vibrate;
   $('s-autofs').checked = settings.autoFullscreen !== false;
+  $('s-gfx').value = String(gfxQuality());
+  $('s-tilt').checked = settings.tiltShift !== false;
 }
 // Account transfer: the login token is the account. Copy it here, paste it on another device;
 // the one it replaces is kept so a wrong paste can be undone.
@@ -1280,6 +1412,10 @@ $('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; s
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
+$('s-gfx').onchange = (e) => { settings.gfx = Number(e.target.value); saveSettings(); };
+$('s-tilt').onchange = (e) => { settings.tiltShift = e.target.checked; saveSettings(); };
+// graphics: high on desktops, medium on phones and tablets unless chosen
+function gfxQuality() { return settings.gfx ?? (input.device === 'touch' ? 1 : 2); }
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
 
 function toggleMap(on) {
@@ -1621,6 +1757,18 @@ function render(dt) {
   const view = { x0: S.cam.x - halfW - 64, x1: S.cam.x + halfW + 64, y0: S.cam.y - halfH - 64, y1: S.cam.y + halfH + 64 };
   const clock = gameClock(S.loopTime);
   const rain = S.weather === WEATHER.RAIN;
+  // the sky: time of day, how long it's been raining, fog, lightning (render/atmos.js)
+  S.rainK = (S.rainK || 0) + ((rain ? 1 : 0) - (S.rainK || 0)) * (1 - Math.exp(-dt / 8));
+  S.wx.update(dt, rain, now);
+  const sky = skyAt(S.loopTime, clock.minutes, S.rainK);
+  if (S.wx.flash > 0) { const f = S.wx.flash * (0.5 + 0.4 * sky.night); sky.amb = sky.amb.map((v) => v + (1 - v) * f); }
+  const quality = gfxQuality();
+  const pf = S.perf ??= {}; let pt = performance.now();
+  const mark = (k) => { const n = performance.now(); pf[k] = (pf[k] || 0) * 0.9 + (n - pt) * 0.1; pt = n; };
+  S.light.resize(W, H);
+  S.light.begin(sky, S.cam, z, quality);
+  if (S.fogForce) sky.fog = S.fogForce;
+  S.sky = sky;
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.fillStyle = '#10141c'; g.fillRect(0, 0, W, H);
@@ -1645,7 +1793,10 @@ function render(dt) {
   // animated water glints
   drawWaterGlints(view, now);
   S.ground.shores.animate(g, view, now);
-  if (rain) { g.fillStyle = 'rgba(30,50,80,0.16)'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
+  const wetK = Math.max(S.rainK, S.wx.wet * 0.8);
+  if (wetK > 0.01) { g.fillStyle = `rgba(30,50,80,${(0.17 * wetK).toFixed(3)})`; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
+  mark('ground');
+  S.wx.drawWaterSheen(g, view, sky, now);
   // the train I'm riding (if any)
   const meEnt = S.ents.get(S.myPedId);
   const myCar = S.ctrlKind === CTRL.RIDER && meEnt && meEnt.parent ? S.ents.get(meEnt.parent) : null;
@@ -1655,8 +1806,16 @@ function render(dt) {
   else fx.drawDecals(g, view, now, rain);
   // the elevated highway: its shadow and the ramps' feet lie on the ground
   const hv = sub ? { slabs: [], pillars: [] } : S.highway.visible(view);
-  S.highway.drawShadows(g, hv.slabs, clock.dark);
+  S.highway.drawShadows(g, hv.slabs, sky);
   S.highway.drawLow(g, hv.slabs);
+  // the sun's shadows: buildings (from just off screen too), trees and palms
+  if (!sub && sky.sun > 0.05) {
+    const reach = 90 * Math.min(3.2, sky.shadowLen);
+    drawBuildingShadows(g, S.buildings.inView({ x0: view.x0 - reach, y0: view.y0 - reach, x1: view.x1 + reach, y1: view.y1 + reach }), sky);
+    const tp = [];
+    for (let cy = Math.max(0, cy0 - 1); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) for (const p of S.ground.overhead(cx, cy)) if (!p.broken && (p.t.startsWith('tree') || p.t.startsWith('palm'))) tp.push(p);
+    drawPropShadows(g, tp, sky, (p) => (p.t.startsWith('palm') ? { h: 52, r: 10 } : { h: 40, r: 15 }));
+  }
   const insideB = sub ? null : drawInteriorView(sp);
 
   const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
@@ -1672,7 +1831,18 @@ function render(dt) {
     else if (e.kind === K.PROJ) projs.push(e);
     else if (e.kind === K.BALL) balls.push(e);
   }
-  if (rain) drawWetReflections(view, vehs, clock.dark, now, dt);
+  mark('shadows');
+  // lights of the frame (for the light map, the puddles and the rain), then the puddles
+  const refl = sub ? [] : collectLights(sky, view, vehs, peds, dt);
+  if (!sub) {
+    S.wx.drawPuddles(g, view, sky, refl, rain, now, dt, quality);
+    if (rain) S.wx.rainOnWater(view, dt);
+    S.wx.drawRipples(g);
+    S.wx.splashes(peds.concat(vehs), S.fx, (v) => sfx('splash', v * 0.4), now);
+    S.wx.steam(view, S.fx, dt, now, sky);
+  }
+  mark('lights+puddles');
+  if (rain || S.wx.wet > 0.2) drawWetReflections(view, vehs, sky.night, now, dt);
 
   for (const b of bags) { g.save(); g.translate(b.rx, b.ry); g.rotate(b.ra); drawBag(g, b.d.t, now); g.restore(); }
   for (const c of crates) if ((c.flags & 3) === 0) drawCrateEnt(c, now);
@@ -1721,7 +1891,7 @@ function render(dt) {
     else if (it.v) drawVehicleEnt(it.v, now, dt);
     else if (it.p) { if (!drawOnStairs(g, S.map, it.p, () => drawPed(it.p, now))) drawPed(it.p, now); }
     else if (it.c) drawCrateEnt(it.c, now);
-    else if (it.o) drawOverheadProp(g, it.o, nightLit);
+    else if (it.o) drawOverheadProp(g, it.o, it.o.t === 'lamp' ? (it.o._lv || 0) > 0.5 : nightLit);
     if (lift) g.restore();
   }
   // your own boat stays readable under a bridge: a faint outline through the deck
@@ -1760,6 +1930,32 @@ function render(dt) {
   fx.update(dt);
   fx.drawParticles(g);
 
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  S.trainCars = cars;
+  if (sub) drawSubwayLights(myCar, z, dt);
+  mark('world');
+  if (!sub) {
+    S.wx.drawFog(g, sky, S.cam, z, W, H, DPR, now);
+    mark('fog');
+    S.light.applyLightMap(g, DPR);
+    mark('lightmap');
+    if (sky.night > 0.05) drawNightGlow(sky.night, peds, vehs);
+    g.setTransform(...S.worldTf);
+    S.fx.drawEmissive(g);
+    S.wx.drawGlints(g, reflSrc, gfxQuality(), sky.night);
+    // lit signs keep their colours at night: drawn again over the darkened scene
+    if (selfLit.length) { g.globalAlpha = Math.min(0.85, sky.night); for (const p of selfLit) drawOverheadProp(g, p, true); g.globalAlpha = 1; }
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    mark('neon');
+    S.light.applyGlows(g, DPR);
+    mark('glows');
+  }
+  if (rain && !sub) drawRain(dt, sky);
+  mark('rain');
+  if (!sub) S.light.post(g, DPR, now, settings.tiltShift !== false);
+  mark('post');
+  // things that stay sharp and unlit over all of it: the aim line, name tags and markers
+  g.setTransform(...S.worldTf);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
     const ta = touchAimState();
@@ -1778,10 +1974,6 @@ function render(dt) {
   drawWorldLabels(peds, vehs, now, z);
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  S.trainCars = cars;
-  if (sub) drawSubwayLights(myCar, z, dt);
-  if (!sub) drawLighting(clock.dark, view, vehs, peds, z, dt);
-  if (rain && !sub) drawRain(dt);
 
   // HUD bits
   const dist = S.map.districtAt(sp.x, sp.y);
@@ -2720,92 +2912,162 @@ function drawWorldLabels(peds, vehs, now, z) {
   void vehs;
 }
 
-function drawLighting(dark, view, vehs, peds, z, dt) {
+// ---- lighting: every light source of the frame into the light map and the bloom pass -----------
+// (render/lighting.js does the compositing). Also returns the light sources the puddles and the rain
+// pick up, in world px.
+const reflSrc = [], selfLit = [];
+function collectLights(sky, view, vehs, peds, dt) {
+  selfLit.length = 0;
+  const L = S.light;
+  const night = sky.night, t = S.loopTime;
+  const haze = 1 + sky.fog.k * 1.4 + S.rainK * 0.7;
+  reflSrc.length = 0;
   S.flashes = S.flashes.filter((f) => (f.t -= dt) > 0);
-  if (dark < 0.02 && !S.flashes.length) return;
-  const lw = lightCv.width, lh = lightCv.height;
-  const toL = (x, y) => [((x - S.cam.x) * z + W / 2) / 2, ((y - S.cam.y) * z + H / 2) / 2];
-  const zz = z / 2;
-  lg.globalCompositeOperation = 'source-over';
-  lg.clearRect(0, 0, lw, lh);
-  lg.fillStyle = `rgba(14,16,52,${(0.74 * dark).toFixed(3)})`;
-  lg.fillRect(0, 0, lw, lh);
-  lg.globalCompositeOperation = 'destination-out';
-  const hole = (x, y, r, a = 1) => {
-    const [lx, ly] = toL(x, y);
-    const rr = r * zz;
-    if (lx < -rr || ly < -rr || lx > lw + rr || ly > lh + rr) return;
-    const gr = lg.createRadialGradient(lx, ly, 0, lx, ly, rr);
-    gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
-    lg.fillStyle = gr; lg.fillRect(lx - rr, ly - rr, rr * 2, rr * 2);
-  };
-  if (dark > 0.02) {
-    for (const l of S.map.lamps) if (!l.broken && l.x > view.x0 - 120 && l.x < view.x1 + 120 && l.y > view.y0 - 120 && l.y < view.y1 + 120) { const h = lampHead(l); hole(h.x, h.y, 120, 0.85); }
-    for (const p of S.map.pois) if (p.x > view.x0 - 100 && p.x < view.x1 + 100 && p.y > view.y0 - 100 && p.y < view.y1 + 100) hole(p.x, p.y - 20, 95, 0.75);
-    for (const v of vehs) {
-      if (!(v.flags & VF.LIGHTS)) continue;
-      const def = VEHICLE_BY_INDEX[v.d.m];
-      const vy = v.ry - (v.rz ? liftOf(v.rz) : 0); // up on the highway deck: lit where it's drawn
-      const [lx, ly] = toL(v.rx, vy);
-      lg.save(); lg.translate(lx, ly); lg.rotate(v.ra);
-      const len = 260 * zz, w0 = def.W * 0.4 * zz, w1 = 120 * zz;
-      const gr = lg.createLinearGradient(def.L / 2 * zz, 0, def.L / 2 * zz + len, 0);
-      gr.addColorStop(0, 'rgba(0,0,0,.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      lg.fillStyle = gr; lg.beginPath();
-      lg.moveTo(def.L / 2 * zz, -w0); lg.lineTo(def.L / 2 * zz + len, -w1); lg.lineTo(def.L / 2 * zz + len, w1); lg.lineTo(def.L / 2 * zz, w0); lg.closePath(); lg.fill();
-      lg.restore();
-      hole(v.rx, vy, def.L * 0.7, 0.5);
-    }
-    for (const c of S.trainCars || []) {
-      if (!(c.flags & 8)) continue;
-      const def = TRAIN_CARS[c.d.c];
-      hole(c.rx, c.ry, def.L * 0.6, 0.55);
-      if (c.d.c === 0) { // the locomotive's headlight throws a long beam down the line
-        const [lx, ly] = toL(c.rx, c.ry);
-        lg.save(); lg.translate(lx, ly); lg.rotate(c.ra);
-        const len = 420 * zz, x0 = def.L / 2 * zz;
-        const gr = lg.createLinearGradient(x0, 0, x0 + len, 0);
-        gr.addColorStop(0, 'rgba(0,0,0,.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-        lg.fillStyle = gr; lg.beginPath(); lg.moveTo(x0, -10 * zz); lg.lineTo(x0 + len, -90 * zz); lg.lineTo(x0 + len, 90 * zz); lg.lineTo(x0, 10 * zz); lg.closePath(); lg.fill();
-        lg.restore();
+  const inV = (x, y, m) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
+  // street lamps: they come on one by one at dusk, a few flicker or are out (render/atmos.js)
+  const lamps = S.map.lamps;
+  for (let i = 0; i < lamps.length; i++) {
+    const l = lamps[i];
+    if (l.broken || night <= 0.05) { l._lv = 0; continue; }
+    if (!inV(l.x, l.y, 220)) continue;
+    const lv = lampLevel(i, t, night);
+    l._lv = lv;
+    if (lv <= 0) continue;
+    const h = lampHead(l);
+    L.add(h.x, h.y, 190, LIGHT.sodium, 1.05 * lv);
+    L.glow(h.x, h.y, 22, LIGHT.warm, 0.6 * lv);                 // the bulb
+    L.glow(h.x, h.y, 130, LIGHT.sodium, 0.1 * lv * haze);       // light hanging in the air round it
+    reflSrc.push({ x: h.x, y: h.y, c: LIGHT.sodium, a: 0.9 * lv });
+  }
+  if (night > 0.05) {
+    // lit windows and shop fronts throw light out onto the pavement
+    for (const it of S.buildings.inView(view)) {
+      const b = it.b;
+      if (b.kind === 'motorpool' || (S.roofFade && (S.roofFade[b.id] || 0) > 0.3)) continue;
+      if (hashA(b.id, 5) > (it.flat ? 0.9 : 0.72)) continue; // some are dark
+      const k = night * (0.35 + 0.35 * hashA(b.id, 6));
+      for (let x = it.x0 + 48; x < it.x1 - 16; x += 110) {
+        L.add(x, it.y1 + 18, 85, LIGHT.window, k);
+        L.glow(x, it.y1 + 6, 42, LIGHT.window, 0.05 * k * haze);
       }
     }
+    // shop doors, ATMs and screens
+    for (const p of S.map.pois) {
+      if (!inV(p.x, p.y, 120)) continue;
+      if (p.kind === 'atm') { L.add(p.x, p.y - 24, 60, LIGHT.cyan, 0.6 * night); L.glow(p.x, p.y - 26, 10, LIGHT.cyan, 0.55 * night); continue; }
+      if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception') continue;
+      L.add(p.x, p.y - 8, 120, LIGHT.warm, 0.55 * night);
+      reflSrc.push({ x: p.x, y: p.y, c: LIGHT.warm, a: 0.4 * night });
+    }
+    const [cx0, cx1, cy0, cy1] = S.chunkView;
+    for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++) {
+      for (const p of S.ground.lowProps.get(cy * 1000 + cx) || []) {
+        if (p.broken) continue;
+        if (p.t === 'busstop') { L.add(p.x + 28, p.y, 70, LIGHT.white, 0.5 * night); L.glow(p.x + 28, p.y - 6, 18, LIGHT.warm, 0.25 * night); continue; }
+        if (!p.t.startsWith('vend')) continue;
+        const c = p.t === 'vend_cola' ? LIGHT.red : LIGHT.white;
+        L.add(p.x, p.y, 55, c, 0.55 * night); L.glow(p.x, p.y - 6, 14, c, 0.4 * night);
+      }
+    }
+  }
+  // billboards (lit from above) and bus shelters are tall props: they live in the overhead lists
+  if (night > 0.05) {
+    const [cx0, cx1, cy0, cy1] = S.chunkView;
+    for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++) for (const p of S.ground.overhead(cx, cy)) {
+      if (p.broken) continue;
+      if (p.t === 'billboard' || p.t === 'busstop') selfLit.push(p);
+      if (p.t === 'billboard') { const y = p.y - 26; L.add(p.x, y, 110, LIGHT.white, 0.8 * night); L.glow(p.x, y - 6, 60, LIGHT.white, 0.08 * night * haze); reflSrc.push({ x: p.x, y, c: LIGHT.white, a: 0.6 * night }); }
+      else if (p.t === 'busstop') { L.add(p.x + 26, p.y - 4, 75, LIGHT.white, 0.6 * night); L.glow(p.x + 26, p.y - 10, 16, LIGHT.warm, 0.3 * night); }
+      else if (p.t === 'phonebox') { L.add(p.x, p.y, 45, LIGHT.warm, 0.5 * night); }
+    }
+  }
+  // traffic signals (last frame's heads: drawSignals runs later in the frame)
+  for (const h of S.sigHeads || []) {
+    const c = h.rgb || (h.rgb = hexRgb(h.c));
+    if (night > 0.05) { L.add(h.x, h.y, 56, c, 0.75 * night); reflSrc.push({ x: h.x, y: h.y, c, a: 0.8 * night }); }
+    L.glow(h.x, h.y, 9, c, 0.25 + 0.6 * night);
+    L.glow(h.x, h.y, 34, c, (0.04 + 0.1 * night) * haze);
+  }
+  // vehicles: headlight beams, tail lights, sirens, fires
+  for (const v of vehs) {
+    const def = VEHICLE_BY_INDEX[v.d.m];
+    if (!def) continue;
+    const lift = v.rz ? liftOf(v.rz) : 0, vy = v.ry - lift;
+    const c = Math.cos(v.ra), sn = Math.sin(v.ra), hl = def.L / 2, hw = def.W / 2;
+    if (v.flags & VF.LIGHTS) {
+      const fx = v.rx + c * hl, fy = vy + sn * hl;
+      L.cone(fx, fy, v.ra, 340, 100, LIGHT.head, 1);
+      L.add(v.rx, vy, def.L * 0.9, LIGHT.head, 0.22);
+      L.beam(fx, fy, v.ra, 260, 64, LIGHT.head, 0.07 * haze);
+      for (const sd of [-1, 1]) {
+        const px = fx - sn * hw * 0.62 * sd, py = fy + c * hw * 0.62 * sd;
+        L.glow(px, py, 9, LIGHT.white, 0.85);
+        const tx = v.rx - c * hl - sn * hw * 0.62 * sd, ty = vy - sn * hl + c * hw * 0.62 * sd;
+        const br = v.flags & VF.BRAKE;
+        L.add(tx, ty, br ? 60 : 36, LIGHT.red, br ? 0.85 : 0.45);
+        L.glow(tx, ty, br ? 12 : 7, LIGHT.red, br ? 0.9 : 0.55);
+      }
+      reflSrc.push({ x: fx, y: fy, c: LIGHT.head, a: 0.9 });
+    } else if (v.flags & VF.BRAKE) {
+      for (const sd of [-1, 1]) { const tx = v.rx - c * hl - sn * hw * 0.62 * sd, ty = vy - sn * hl + c * hw * 0.62 * sd; L.glow(tx, ty, 8, LIGHT.red, 0.5); }
+    }
+    if (v.flags & VF.SIREN) {
+      const ph = Math.floor(S.loopClock * 6) % 2, col = ph ? LIGHT.red : LIGHT.blue;
+      L.add(v.rx, vy, 260, col, 0.9);
+      L.glow(v.rx, vy, 70, col, 0.35 + 0.15 * night);
+      reflSrc.push({ x: v.rx, y: vy, c: col, a: 0.9 });
+    }
+    if (v.flags & VF.BURN) {
+      const f = 0.75 + 0.25 * Math.sin(S.loopClock * 23 + v.id);
+      L.add(v.rx, vy, 200, LIGHT.fire, 1.1 * f);
+      L.glow(v.rx, vy, 70, LIGHT.fire, 0.3 * f);
+    }
+  }
+  // trains: lit carriages, the locomotive's headlight down the line
+  for (const c of S.trainCars || []) {
+    if (!(c.flags & 8)) continue;
+    const def = TRAIN_CARS[c.d.c];
+    L.add(c.rx, c.ry, def.L * 0.75, LIGHT.window, 0.6);
+    if (c.d.c === 0) { const x = c.rx + Math.cos(c.ra) * def.L / 2, y = c.ry + Math.sin(c.ra) * def.L / 2; L.cone(x, y, c.ra, 460, 100, LIGHT.head, 1); L.beam(x, y, c.ra, 380, 70, LIGHT.head, 0.08 * haze); }
+  }
+  // flashlights: police on foot at night, and you
+  if (night > 0.35) {
+    for (const p of peds) {
+      const mine = p.id === S.myPedId;
+      if ((!mine && !(p.flags & PF.BADGE)) || (p.flags & (PF.INVEH | PF.DEAD | PF.DOWN))) continue;
+      const a = p.ra, x = p.rx + Math.cos(a) * 8, y = p.ry - 10 + Math.sin(a) * 8;
+      L.cone(x, y, a, mine ? 230 : 200, 62, LIGHT.white, 0.85 * night);
+      L.beam(x, y, a, 170, 40, LIGHT.white, 0.045 * haze * night);
+    }
     const sp = selfPos();
-    hole(sp.x, sp.y - (sp.z ? liftOf(sp.z) : 0), 70, 0.35);
+    L.add(sp.x, sp.y - (sp.z ? liftOf(sp.z) : 0), 100, LIGHT.moon, 0.22 * night); // enough to see yourself by
   }
-  for (const f of S.flashes) hole(f.x, f.y, f.r || 90, Math.min(1, f.t * 10));
-  lg.globalCompositeOperation = 'source-over';
-  g.imageSmoothingEnabled = true;
-  g.drawImage(lightCv, 0, 0, W, H);
-  if (dark > 0.05) drawNightGlow(dark, peds, vehs);
-  // additive colour: lamp glow, sirens, neon
-  if (dark > 0.02) {
-    g.globalCompositeOperation = 'lighter';
-    for (const l of S.map.lamps) {
-      if (l.broken || l.x < view.x0 || l.x > view.x1 || l.y < view.y0 || l.y > view.y1) continue;
-      const s = worldToScreen(lampHead(l));
-      const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, 95 * z);
-      gr.addColorStop(0, `rgba(255,196,96,${0.3 * dark})`); gr.addColorStop(0.5, `rgba(255,170,70,${0.1 * dark})`); gr.addColorStop(1, 'rgba(255,170,70,0)');
-      g.fillStyle = gr; g.fillRect(s.x - 95 * z, s.y - 95 * z, 190 * z, 190 * z);
+  // gunfire and explosions light everything round them
+  for (const f of S.flashes) {
+    if (f.kind === 'boom') {
+      const e = Math.min(1.6, f.t * 3.2) * (0.8 + 0.2 * Math.sin(S.loopClock * 40));
+      L.add(f.x, f.y, f.r * 1.3, LIGHT.fire, e);
+      L.glow(f.x, f.y, f.r * 0.55, LIGHT.fire, 0.45 * Math.min(1, e));
+      L.glow(f.x, f.y, f.r * 0.22, LIGHT.flash, 0.7 * Math.min(1, e));
+    } else {
+      const e = Math.min(1.4, f.t * 22);
+      L.add(f.x, f.y, f.r || 150, LIGHT.flash, e);
+      if (f.a !== undefined) L.beam(f.x, f.y, f.a, 64, 20, LIGHT.flash, 0.9 * Math.min(1, e));
+      L.glow(f.x, f.y, 26, LIGHT.flash, 0.8 * Math.min(1, e));
     }
-    for (const h of S.sigHeads || []) { // signal lamps glow after dark
-      const s = worldToScreen(h);
-      const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, 22 * z);
-      gr.addColorStop(0, h.c + 'cc'); gr.addColorStop(1, h.c + '00');
-      g.globalAlpha = dark; g.fillStyle = gr; g.fillRect(s.x - 22 * z, s.y - 22 * z, 44 * z, 44 * z); g.globalAlpha = 1;
-    }
-    for (const v of vehs) {
-      if (!(v.flags & VF.SIREN)) continue;
-      const s = worldToScreen({ x: v.rx, y: v.ry });
-      const ph = Math.floor(S.loopClock * 6) % 2;
-      const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, 110 * z);
-      gr.addColorStop(0, ph ? 'rgba(255,40,40,.35)' : 'rgba(40,90,255,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = gr; g.fillRect(s.x - 110 * z, s.y - 110 * z, 220 * z, 220 * z);
-    }
-    g.globalCompositeOperation = 'source-over';
   }
-  void peds;
+  // anything burning lights its surroundings
+  let fires = 0;
+  for (const o of S.fx.p) {
+    if (!o.on || o.type !== 3 || fires > 26) continue;
+    if (!inV(o.x, o.y, 60)) continue;
+    fires++;
+    L.add(o.x, o.y, 70, LIGHT.fire, 0.35);
+  }
+  return reflSrc;
 }
+const hexRgb = (h) => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const hashA = (a, b) => hashAt(a, b);
 
 // ---- night: lit windows, neon and lobby light from the per-lot emissive layer ------------------
 // The lit windows / neon of every lot after dark. Drawn into its own layer first, with the people
@@ -2814,15 +3076,25 @@ function drawLighting(dark, view, vehs, peds, z, dt) {
 let glowCv = null, gg2 = null;
 function drawNightGlow(dark, peds, vehs) {
   if (!S.worldTf || !S.viewRect) return;
-  const cw = g.canvas.width, ch = g.canvas.height;
+  // (at half resolution: it's light, not detail, and it's bloomed anyway)
+  const cw = Math.ceil(g.canvas.width / 2), ch = Math.ceil(g.canvas.height / 2);
   if (!glowCv || glowCv.width !== cw || glowCv.height !== ch) { glowCv = document.createElement('canvas'); glowCv.width = cw; glowCv.height = ch; gg2 = glowCv.getContext('2d'); }
   gg2.setTransform(1, 0, 0, 1, 0, 0);
   gg2.clearRect(0, 0, cw, ch);
-  gg2.setTransform(...S.worldTf);
+  const wt = S.worldTf;
+  gg2.setTransform(wt[0] / 2, 0, 0, wt[3] / 2, wt[4] / 2, wt[5] / 2);
   gg2.globalCompositeOperation = 'source-over';
   gg2.imageSmoothingEnabled = true;
   let any = false;
-  for (const it of S.buildings.inView(S.viewRect)) { if (S.roofFade && (S.roofFade[it.b.id] || 0) > 0.3) continue; S.buildings.drawGlow(gg2, it); any = true; } // (not over a building you're inside)
+  const t = S.loopTime;
+  for (const it of S.buildings.inView(S.viewRect)) {
+    if (S.roofFade && (S.roofFade[it.b.id] || 0) > 0.3) continue; // (not over a building you're inside)
+    // neon in the rough parts of town misbehaves now and then (render/atmos.js)
+    const tier = it.d && it.d.tier;
+    gg2.globalAlpha = neonLevel(it.b.id, t, tier === 'low' || tier === 'rough');
+    S.buildings.drawGlow(gg2, it); any = true;
+  }
+  gg2.globalAlpha = 1;
   if (!any) return;
   gg2.globalCompositeOperation = 'destination-out';
   gg2.fillStyle = '#000';
@@ -2838,9 +3110,12 @@ function drawNightGlow(dark, peds, vehs) {
   g.save();
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = 'lighter';
-  g.globalAlpha = Math.min(1, dark * 0.85);
-  g.drawImage(glowCv, 0, 0);
+  g.globalAlpha = Math.min(1, dark * 0.8);
+  g.imageSmoothingEnabled = true;
+  g.drawImage(glowCv, 0, 0, g.canvas.width, g.canvas.height);
   g.restore();
+  // ...and the neon blooms into the air round it
+  S.light.bloom(g, glowCv, Math.min(1, dark));
 }
 
 // ---- rain: broken light streaks reflected in wet asphalt (head/tail lights, lamps, shopfronts) ------
@@ -2878,7 +3153,8 @@ function drawWetReflections(view, vehs, dark, now, dt) {
     }
   }
   if (dark > 0.05) {
-    for (const l of S.map.lamps) if (!l.broken && l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) { const h = lampHead(l); reflect(h.x, h.y + 10, 55, 10, '255,200,110', 0.35 * dark); }
+    for (const l of S.map.lamps) if (!l.broken && (l._lv || 0) > 0.05 && l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) { const h = lampHead(l); reflect(h.x, h.y + 10, 60, 11, '255,200,110', 0.4 * dark * l._lv); }
+    for (const h of S.sigHeads || []) if (h.rgb) reflect(h.x, h.y + 8, 46, 7, h.rgb.join(','), 0.45 * dark);
     for (const p of S.map.pois) if (p.x > view.x0 && p.x < view.x1 && p.y > view.y0 - 40 && p.y < view.y1) reflect(p.x, p.y + 6, 50, 26, '255,190,100', 0.22 * dark);
   }
   g.restore();
@@ -2917,24 +3193,21 @@ function umbrellaSprite(i) {
   return cv;
 }
 
-function drawRain(dt) {
-  if (S.rain.length < 220) for (let i = S.rain.length; i < 220; i++) S.rain.push({ x: Math.random() * W, y: Math.random() * H, s: 600 + Math.random() * 400 });
-  g.strokeStyle = 'rgba(180,200,255,.35)'; g.lineWidth = 1;
-  g.beginPath();
-  for (const r of S.rain) {
-    r.y += r.s * dt; r.x -= r.s * 0.15 * dt;
-    if (r.y > H) { r.y = -10; r.x = Math.random() * (W + 60); }
-    g.moveTo(r.x, r.y); g.lineTo(r.x + 3, r.y - 14);
+function drawRain(dt, sky) {
+  // the lights the streaks catch, in screen px
+  const ls = [];
+  for (const r of reflSrc) {
+    if (ls.length >= 28) break;
+    const s2 = worldToScreen(r);
+    if (s2.x < -150 || s2.y < -150 || s2.x > W + 150 || s2.y > H + 150) continue;
+    ls.push({ x: s2.x, y: s2.y, r: 150 * S.cam.zoom, c: r.c, a: r.a });
   }
-  g.stroke();
-  // drops hitting the ground
-  g.fillStyle = 'rgba(210,225,255,.38)';
-  for (let i = 0; i < 26; i++) { const x = Math.random() * W, y = Math.random() * H; g.fillRect(x - 2, y, 4, 1); g.fillRect(x, y - 1, 1, 1); }
+  S.wx.drawRain(g, W, H, dt, ls, sky, gfxQuality());
 }
 
 // ---------------------------------------------------------------------------
 loadBodies('assets/');
-loadAtlas('assets/').finally(() => { connect(); requestAnimationFrame(frame); });
+loadAtlas('assets/').finally(() => { registerNewProps(); connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
-window.CLA = { S, send, WEAPONS };
+window.CLA = { S, send, WEAPONS, smash: (i, a = 0) => setPropBroken(i, a, true) };

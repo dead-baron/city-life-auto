@@ -70,6 +70,11 @@ export function sfx(name, vol = 1) {
     case 'bad': if (throttle('bad', 300)) tone(180, 0.25, 0.15 * vol, 'sawtooth', -60); break;
     case 'camera': if (throttle('camera', 400)) { tone(1500, 0.06, 0.08 * vol); setTimeout(() => tone(1500, 0.06, 0.08 * vol), 120); } break;
     case 'click': if (throttle('click', 40)) { tone(1050, 0.035, 0.14 * vol, 'square'); setTimeout(() => tone(1400, 0.03, 0.08 * vol, 'square'), 30); } break;
+    case 'thunder': if (throttle('thunder', 3000)) { noise(2.6, 140, 0.6, 0.9 * vol); setTimeout(() => noise(1.8, 90, 0.8, 0.7 * vol), 260); tone(42, 1.6, 0.35 * vol, 'sine', -12); } break;
+    case 'glass': if (throttle('glass', 90)) { noise(0.25, 4200, 0.6, 0.45 * vol, 'highpass'); tone(2600, 0.12, 0.06 * vol, 'triangle', 900); setTimeout(() => tone(3400, 0.1, 0.04 * vol, 'triangle'), 50); } break;
+    case 'paper': if (throttle('paper', 120)) noise(0.3, 2600, 0.5, 0.3 * vol, 'highpass'); break;
+    case 'gush': if (throttle('gush', 400)) noise(1.4, 1100, 0.4, 0.4 * vol, 'bandpass'); break;
+    case 'clang': if (throttle('clang', 90)) { tone(520, 0.3, 0.12 * vol, 'triangle', -120); tone(780, 0.22, 0.06 * vol, 'square', -200); noise(0.12, 900, 1, 0.3 * vol); } break;
     case 'thud': if (throttle('thud', 80)) tone(110, 0.12, 0.25 * vol, 'sine', -50); break;
     // diesel air horn: a low two-note chord, long or short
     case 'trainhorn': case 'trainhornshort': if (throttle('trainhorn', 700)) { const d = name === 'trainhorn' ? 1.1 : 0.5; tone(277, d, 0.11 * vol, 'sawtooth'); tone(349, d, 0.09 * vol, 'sawtooth'); tone(415, d, 0.06 * vol, 'square'); } break;

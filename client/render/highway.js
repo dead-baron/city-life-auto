@@ -10,7 +10,7 @@ import { pattern } from './roads.js';
 
 const PIECE = 48;        // slab length (px along the road)
 const CELL = 512;        // view culling grid
-const GIRDER = 13;       // visible thickness of the deck's edge beam
+const GIRDER = 18;       // visible thickness of the deck's edge beam
 
 export class Highway {
   constructor(map) {
@@ -87,19 +87,47 @@ export class Highway {
     return { slabs: [...out], pillars: pil };
   }
 
-  // The deck's shadow on the ground (drawn with the ground, before anything stands on it).
-  drawShadows(g, slabs, dark) {
+  // Under and beside the deck (drawn with the ground, before anything stands on it): the ground
+  // right under it is always in deep shade (it's covered), and the sun throws its shadow off to
+  // the side - long in the morning and evening, tucked underneath at noon.
+  drawShadows(g, slabs, sky) {
+    const sun = sky ? sky.sun : 1, L = sky ? sky.shadowLen : 0.7;
+    const dx = sky ? sky.sunDir.x : 0.6, dy = sky ? sky.sunDir.y : 0.4;
+    const night = sky ? sky.night : 0;
     g.save();
-    g.fillStyle = `rgba(0,6,18,${(0.3 - dark * 0.15).toFixed(3)})`;
+    const quad = (P, Q, ox, oy) => { g.moveTo(P[0] + ox, P[1] + oy); g.lineTo(P[2] + ox, P[3] + oy); g.lineTo(Q[2] + ox, Q[3] + oy); g.lineTo(Q[0] + ox, Q[1] + oy); g.closePath(); };
+    // the footprint: under the deck (the deck is drawn DECK_LIFT px up the screen, so this is the
+    // ground you see between the pillars)
+    g.fillStyle = `rgba(4,8,22,${(0.42 - night * 0.18).toFixed(3)})`;
     g.beginPath();
     for (const sl of slabs) {
       const z = (sl.z0 + sl.z1) / 2;
-      if (z < 0.2 || sl.e.lvl === 'ramp' && z < 0.5) continue;
-      const ox = 26 * z, oy = 16 * z; // light from the north-west
-      g.moveTo(sl.L[0] + ox, sl.L[1] + oy); g.lineTo(sl.L[2] + ox, sl.L[3] + oy);
-      g.lineTo(sl.R[2] + ox, sl.R[3] + oy); g.lineTo(sl.R[0] + ox, sl.R[1] + oy); g.closePath();
+      if (z < 0.25) continue;
+      // keep the winding the same whichever way the road runs, so overlaps merge instead of cancelling
+      const cw = (sl.R[0] - sl.L[0]) * (sl.L[3] - sl.L[1]) - (sl.R[1] - sl.L[1]) * (sl.L[2] - sl.L[0]) > 0;
+      if (cw) quad(sl.L, sl.R, 0, 0); else quad(sl.R, sl.L, 0, 0);
     }
     g.fill();
+    // a soft edge of shade spilling out on both sides (light can't get in under there)
+    g.strokeStyle = `rgba(4,8,22,${(0.16 - night * 0.08).toFixed(3)})`; g.lineWidth = 26;
+    g.beginPath();
+    for (const sl of slabs) { if ((sl.z0 + sl.z1) / 2 < 0.4) continue; g.moveTo(sl.L[0], sl.L[1]); g.lineTo(sl.L[2], sl.L[3]); g.moveTo(sl.R[0], sl.R[1]); g.lineTo(sl.R[2], sl.R[3]); }
+    g.stroke();
+    // the sun's shadow
+    const a = 0.3 * sun;
+    if (a > 0.02) {
+      g.fillStyle = `rgba(10,14,40,${a.toFixed(3)})`;
+      g.beginPath();
+      for (const sl of slabs) {
+        const z = (sl.z0 + sl.z1) / 2;
+        if (z < 0.2 || sl.e.lvl === 'ramp' && z < 0.5) continue;
+        const h = DECK_LIFT * z * L * 1.4;
+        const ox = dx * h, oy = dy * h + DECK_LIFT * z * 0.15;
+        const cw = (sl.R[0] - sl.L[0]) * (sl.L[3] - sl.L[1]) - (sl.R[1] - sl.L[1]) * (sl.L[2] - sl.L[0]) > 0;
+        if (cw) quad(sl.L, sl.R, ox, oy); else quad(sl.R, sl.L, ox, oy);
+      }
+      g.fill();
+    }
     g.restore();
   }
 
@@ -114,11 +142,15 @@ export class Highway {
 
   drawPillar(g, p) {
     const top = p.y - DECK_LIFT;
-    g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.x + 5, p.y + 3, 12, 6, 0, 0, 6.283); g.fill();
-    g.fillStyle = '#8d8f95'; g.fillRect(p.x - 9, top, 18, DECK_LIFT);
-    g.fillStyle = '#a9abb1'; g.fillRect(p.x - 9, top, 5, DECK_LIFT);
-    g.fillStyle = '#6c6e74'; g.fillRect(p.x + 5, top, 4, DECK_LIFT);
-    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(p.x - 9, p.y - 5, 18, 5);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(p.x + 3, p.y + 2, 13, 6, 0, 0, 6.283); g.fill();
+    // a square column: lit face, shaded face, a cap where it meets the deck and stains at its foot
+    g.fillStyle = '#8a8c92'; g.fillRect(p.x - 10, top, 20, DECK_LIFT);
+    g.fillStyle = '#b0b2b7'; g.fillRect(p.x - 10, top, 6, DECK_LIFT);
+    g.fillStyle = '#62646a'; g.fillRect(p.x + 5, top, 5, DECK_LIFT);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(p.x - 12, top, 24, 5);           // the deck's underside shading the top
+    g.fillStyle = '#9c9ea3'; g.fillRect(p.x - 12, top + 5, 24, 2);
+    g.fillStyle = 'rgba(40,36,30,.35)'; g.fillRect(p.x - 10, p.y - 9, 20, 9);     // grime at the foot
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(p.x - 10, p.y - 3, 20, 3);
   }
 
   drawSlab(g, sl) {
@@ -132,14 +164,19 @@ export class Highway {
       if (N[1] <= 0.05) continue;
       const d0 = ramp ? l0 : Math.min(l0, GIRDER), d1 = ramp ? l1 : Math.min(l1, GIRDER);
       if (d0 + d1 < 0.5) continue;
-      g.fillStyle = ramp ? '#7d7f86' : '#8a8c93';
+      g.fillStyle = ramp ? '#7d7f86' : '#8f9197';
       g.beginPath();
       g.moveTo(P[0], P[1] - l0); g.lineTo(P[2], P[3] - l1);
       g.lineTo(P[2], P[3] - l1 + d1); g.lineTo(P[0], P[1] - l0 + d0); g.closePath(); g.fill();
-      g.fillStyle = 'rgba(0,0,0,.22)';
+      // a lit lip along the top, the girder's shadowed lower half, and a dark line where it ends
+      g.fillStyle = 'rgba(255,255,255,.18)';
+      g.beginPath(); g.moveTo(P[0], P[1] - l0); g.lineTo(P[2], P[3] - l1); g.lineTo(P[2], P[3] - l1 + 2); g.lineTo(P[0], P[1] - l0 + 2); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(0,0,0,.3)';
       g.beginPath();
-      g.moveTo(P[0], P[1] - l0 + d0 * 0.6); g.lineTo(P[2], P[3] - l1 + d1 * 0.6);
+      g.moveTo(P[0], P[1] - l0 + d0 * 0.55); g.lineTo(P[2], P[3] - l1 + d1 * 0.55);
       g.lineTo(P[2], P[3] - l1 + d1); g.lineTo(P[0], P[1] - l0 + d0); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(0,0,0,.45)';
+      g.beginPath(); g.moveTo(P[0], P[1] - l0 + d0 - 1.5); g.lineTo(P[2], P[3] - l1 + d1 - 1.5); g.lineTo(P[2], P[3] - l1 + d1); g.lineTo(P[0], P[1] - l0 + d0); g.closePath(); g.fill();
     }
     // road surface (the concept's highway asphalt)
     g.fillStyle = pattern(g, 'asphalt') || '#45464d'; // the same asphalt as the streets below, so ramps meet them seamlessly
@@ -161,6 +198,7 @@ export class Highway {
       g.stroke();
     };
     const white = 'rgba(232,230,222,.8)';
+    if (ramp && Math.max(sl.z0, sl.z1) < 0.18) return; // at street level the ramp is just road: no edge lines over the street it joins
     if (e.kind === 'hwy') {
       // median barrier, edge lines, lane dividers on both carriageways
       for (const s of [1, -1]) {

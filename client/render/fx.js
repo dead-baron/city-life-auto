@@ -28,6 +28,20 @@ function scorchTexture() {
 }
 const MAX_D = 700;
 
+// soft round puffs for smoke and steam (one sprite per colour)
+const puffs = new Map();
+function puff(col) {
+  let c = puffs.get(col);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = 48;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(24, 24, 0, 24, 24, 24);
+  gr.addColorStop(0, col + '1)'); gr.addColorStop(0.45, col + '.6)'); gr.addColorStop(1, col + '0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 48, 48);
+  puffs.set(col, c);
+  return c;
+}
+
 export class FX {
   constructor() {
     this.p = new Array(MAX_P);
@@ -37,6 +51,10 @@ export class FX {
     for (let i = 0; i < MAX_D; i++) this.d[i] = { on: false, x: 0, y: 0, a: 0, type: 0, size: 1, alpha: 1, born: 0, color: '' };
     this.di = 0;
     this.tracers = [];
+    // flying chunks of smashed street furniture: a piece of the object's own sprite, spinning
+    this.chunks = [];
+    for (let i = 0; i < 40; i++) this.chunks.push({ on: false, img: null, sx: 0, sy: 0, sw: 0, sh: 0, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, a: 0, va: 0, w: 0, h: 0, life: 0, rest: 0 });
+    this.ci = 0;
     this.rings = [];
     this.texts = [];
   }
@@ -107,6 +125,24 @@ export class FX {
     this.rings.push({ x, y, t: 0, max: 0.22, r: 16, color: 'rgba(255,250,210,' });
   }
   tracer(x1, y1, x2, y2, color = 'rgba(255,240,170,') { this.tracers.push({ x1, y1, x2, y2, t: 0, color }); }
+  // a piece of a sprite (img rect sx,sy,sw,sh drawn w x h world px) thrown from (x, y)
+  chunk(img, sx, sy, sw, sh, w, h, x, y, vx, vy, vz, va, rest = 6) {
+    const o = this.chunks[this.ci]; this.ci = (this.ci + 1) % this.chunks.length;
+    o.on = true; o.img = img; o.sx = sx; o.sy = sy; o.sw = sw; o.sh = sh; o.w = w; o.h = h;
+    o.x = x; o.y = y; o.z = 2; o.vx = vx; o.vy = vy; o.vz = vz; o.a = 0; o.va = va; o.life = 0; o.rest = rest;
+  }
+  // bits that flutter down (paper, leaves, mail) and then lie where they land as litter
+  flutter(x, y, n, colors, rand = Math.random, spread = 160, lift = 160) {
+    for (let i = 0; i < n; i++) {
+      const a = rand() * 6.283, sp = 20 + rand() * spread;
+      const o = this.spawn(8, x, y, Math.cos(a) * sp, Math.sin(a) * sp, 2.2 + rand() * 1.8, 2 + rand() * 2.5, colors[i % colors.length], 0, lift * (0.5 + rand()));
+      o.ph = rand() * 6.283;
+    }
+  }
+  // litter left on the ground: small rotated scraps
+  litter(x, y, n, colors, r, now, rand = Math.random) {
+    for (let i = 0; i < n; i++) { const a = rand() * 6.283, d = Math.sqrt(rand()) * r; this.decal(6, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.7, rand() * 6.283, 1.5 + rand() * 2.5, colors[i % colors.length], now, 0.95); }
+  }
   ring(x, y, r, color, max = 0.6) { this.rings.push({ x, y, t: 0, max, r, color }); }
   floatText(x, y, text, color) { this.texts.push({ x, y, text, color, t: 0 }); }
 
@@ -116,6 +152,13 @@ export class FX {
       if (!o.on) continue;
       o.life -= dt;
       if (o.life <= 0) { o.on = false; continue; }
+      if (o.type === 8) { // paper: drag, a slow sway, a gentle fall
+        o.ph += dt * 5; o.vx = o.vx * 0.94 + Math.cos(o.ph) * 9; o.vy *= 0.94;
+        o.x += o.vx * dt; o.y += o.vy * dt;
+        o.vz = Math.max(-38, o.vz - 160 * dt); o.z += o.vz * dt;
+        if (o.z <= 0) { o.on = false; this.decal(6, o.x, o.y, o.ph, o.size * 0.9, o.color, this.now || 0, 0.95); }
+        continue;
+      }
       o.x += o.vx * dt; o.y += o.vy * dt;
       const f = o.type === 2 ? 0.98 : 0.92;
       o.vx *= f; o.vy *= f;
@@ -127,6 +170,16 @@ export class FX {
           if (o.type === 1) { o.on = false; if (Math.random() < 0.3) this.decal(1, o.x, o.y, Math.random() * 6.28, 1.2 + o.size * 0.5, '#7a0d12', this.now || 0, 0.8); } // a droplet lands
         }
       }
+    }
+    for (const c of this.chunks) {
+      if (!c.on) continue;
+      c.life += dt;
+      if (c.z > 0 || c.vz > 0) {
+        c.x += c.vx * dt; c.y += c.vy * dt; c.a += c.va * dt;
+        c.vz -= 520 * dt; c.z += c.vz * dt;
+        if (c.z <= 0) { c.z = 0; if (Math.abs(c.vz) > 90) { c.vz = -c.vz * 0.35; c.vx *= 0.5; c.vy *= 0.5; c.va *= 0.5; } else { c.vz = 0; c.vx = 0; c.vy = 0; c.va = 0; } }
+      }
+      if (c.life > c.rest + 1.5) c.on = false;
     }
     for (const arr of [this.tracers, this.rings, this.texts]) {
       for (let i = arr.length - 1; i >= 0; i--) { arr[i].t += dt; if (arr[i].t > (arr[i].max || (arr === this.tracers ? 0.08 : 1.4))) arr.splice(i, 1); }
@@ -157,6 +210,8 @@ export class FX {
         g.restore();
       } else if (d.type === 4) { // skid
         g.save(); g.translate(d.x, d.y); g.rotate(d.a); g.fillRect(-4, -1.5, 8, 3); g.restore();
+      } else if (d.type === 6) { // litter: a scrap of paper, a wrapper, a can
+        g.save(); g.translate(d.x, d.y); g.rotate(d.a); g.fillRect(-d.size, -d.size * 0.6, d.size * 2, d.size * 1.2); g.restore();
       } else if (d.type === 5) { // body blood pool
         g.beginPath(); g.ellipse(d.x, d.y, d.size, d.size * 0.8, d.a, 0, 6.28); g.fill();
       }
@@ -164,16 +219,57 @@ export class FX {
     g.globalAlpha = 1;
   }
 
+  // The things that give off their own light, drawn again additively after the light map has
+  // darkened the scene: flames, sparks, tracers (world transform).
+  drawEmissive(g) {
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < MAX_P; i++) {
+      const o = this.p[i];
+      if (!o.on || (o.type !== 3 && o.type !== 4)) continue;
+      const k = o.life / o.max;
+      g.globalAlpha = Math.min(1, k * 1.5) * (o.type === 3 ? 0.7 : 0.8);
+      g.fillStyle = o.color;
+      const s = o.size;
+      g.fillRect(o.x - s / 2, o.y - s / 2 - o.z * 0.3, s, s);
+    }
+    g.globalAlpha = 1;
+    g.lineWidth = 2;
+    for (const t of this.tracers) {
+      g.strokeStyle = t.color + (0.9 * (1 - t.t / 0.08)).toFixed(2) + ')';
+      g.beginPath(); g.moveTo(t.x1, t.y1); g.lineTo(t.x2, t.y2); g.stroke();
+    }
+    g.restore();
+  }
+
   drawParticles(g) {
     for (let i = 0; i < MAX_P; i++) {
       const o = this.p[i];
       if (!o.on) continue;
       const k = o.life / o.max;
-      if (o.type === 2) { g.fillStyle = o.color + (0.45 * k).toFixed(3) + ')'; g.beginPath(); g.arc(o.x, o.y, o.size, 0, 6.28); g.fill(); continue; }
+      if (o.type === 2) { // a soft puff that fades in, then thins out as it spreads
+        g.globalAlpha = Math.min(1, (1 - k) * 6) * k * (o.color.charCodeAt(5) === 50 ? 0.22 : 0.55); // steam (rgba(2..) is thinner than smoke
+        const r = o.size * 1.6;
+        g.drawImage(puff(o.color), o.x - r, o.y - r - o.z * 0.3, r * 2, r * 2);
+        g.globalAlpha = 1;
+        continue;
+      }
+      if (o.type === 8) { g.globalAlpha = 1; g.fillStyle = o.color; const w = o.size * (0.6 + 0.4 * Math.abs(Math.cos(o.ph))); g.fillRect(o.x - w / 2, o.y - o.size * 0.35 - o.z * 0.5, w, o.size * 0.7); continue; }
       g.globalAlpha = o.type === 3 ? Math.min(1, k * 1.5) : Math.min(1, k * 2);
       g.fillStyle = o.color;
       const s = o.size;
       g.fillRect(o.x - s / 2, o.y - s / 2 - o.z * 0.3, s, s);
+    }
+    g.globalAlpha = 1;
+    for (const c of this.chunks) {
+      if (!c.on || !c.img) continue;
+      const fade = c.life > c.rest ? Math.max(0, 1 - (c.life - c.rest) / 1.5) : 1;
+      g.globalAlpha = 0.35 * fade; g.fillStyle = '#000';
+      g.beginPath(); g.ellipse(c.x + 2, c.y + 2, c.w * 0.4, c.h * 0.22, 0, 0, 6.283); g.fill();
+      g.globalAlpha = fade;
+      g.save(); g.translate(c.x, c.y - c.z * 0.6); g.rotate(c.a);
+      g.drawImage(c.img, c.sx, c.sy, c.sw, c.sh, -c.w / 2, -c.h / 2, c.w, c.h);
+      g.restore();
     }
     g.globalAlpha = 1;
     g.lineWidth = 2;

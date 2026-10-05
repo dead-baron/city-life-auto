@@ -10,10 +10,10 @@ import { BLOCK_ART } from '../../shared/block-data.js';
 import { INTERIOR_RECTS, INTERIOR_KINDS, SCENE_RECTS } from '../../shared/interior-art.js';
 import { atlas } from './sprites.js';
 import { railIndex, drawRailChunk, drawStation, drawPortals } from './trains.js';
-import { drawRoads, edgeRect } from './roads.js';
+import { drawRoads, edgeRect, drawGores } from './roads.js';
 import { Shores } from './shore.js';
 
-export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw']);
+export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw', 'busstop', 'phonebox', 'billboard']);
 
 const C = {
   grass: ['#4f8f3c', '#4a8838', '#559643', '#45812f'],
@@ -55,6 +55,7 @@ export class GroundCache {
     this.signs = this.byChunk(map.buildings.filter((b) => b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]);
     // ground-level streets (the deck and ramps are drawn lifted, render/highway.js)
     this.roads = this.byChunk(map.edges.filter((e) => e.lvl === 0), edgeRect);
+    this.gores = this.byChunk(map.gores || [], (gr) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of gr.pts) { x0 = Math.min(x0, p.x, p.qx); y0 = Math.min(y0, p.y, p.qy); x1 = Math.max(x1, p.x, p.qx); y1 = Math.max(y1, p.y, p.qy); } const pad = gr.hw + gr.rhw + 8; return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; });
     this.culdesacs = this.byChunk(map.nodes.filter((n) => n.culdesac), (n) => [n.x - 200, n.y - 200, n.x + 200, n.y + 200]);
     this.rail = railIndex(map, (cx, cy) => this.key(cx, cy));
     this.shores = new Shores(map);
@@ -97,6 +98,7 @@ export class GroundCache {
     }
     drawCurbs(g, m, tx0, ty0, n);
     drawRoads(g, m, this.roads.get(k) || [], this.culdesacs.get(k) || []);
+    drawGores(g, m, this.gores.get(k) || []);
     // hand-designed blocks: the painting, curb to curb (its road tiles are cut out, so the
     // game's own streets and crosswalks show through)
     if (L.lots) for (const a of this.handArt.get(k) || []) drawHandArt(g, a);
@@ -356,6 +358,7 @@ function drawDebris(g, p) {
   if (p.t.startsWith('hydrant')) { g.fillStyle = '#5a1418'; g.fillRect(p.x - 4, p.y - 4, 8, 8); g.fillStyle = '#222'; g.fillRect(p.x - 2, p.y - 2, 4, 4); }
 }
 function drawFallen(g, p) {
+  if (p.t === 'busstop' || p.t === 'phonebox' || p.t === 'billboard') { drawDebris(g, p); return; } // nothing left standing: glass and twisted frame
   const a = p.broken && p.broken.a !== undefined ? p.broken.a : 0;
   if (p.t === 'lamp') {
     // the post lies along the impact direction, head smashed at the far end
@@ -588,8 +591,9 @@ const METAL_TINTS = ['#5f7469', '#6d6457', '#596a7d', '#7a5545', '#6f7270'];
 // shadow it throws away from the sun (top-left), a few px wide to the east and south.
 function drawBuildingBase(g, r) {
   const x = r.tx * TILE, y = r.ty * TILE, w = r.tw * TILE, h = r.th * TILE;
-  g.fillStyle = 'rgba(8,10,16,.34)';
-  g.fillRect(x + w, y - 26, 14, h + 26); g.fillRect(x + 10, y + h, w + 4, 6);
+  // (its shadow is cast live, from the sun's position: render/shadows.js) - just contact shade at the foot
+  g.fillStyle = 'rgba(8,10,16,.28)';
+  g.fillRect(x - 2, y + h, w + 4, 3);
   g.fillStyle = '#2b2c32'; g.fillRect(x, y, w, h);
   g.fillStyle = '#34353c'; for (let k = 0; k < w; k += 32) g.fillRect(x + k, y, 1, h);
 }
@@ -714,7 +718,7 @@ export function drawPrefabGlow(g, p) {
 
 export function drawProp(g, p) {
   if (p.t === 'painted' || p.t === 'plamp') return; // part of a painted block: the art already shows it
-  const fr = atlas.ready ? atlas.frames['prop_' + p.t] : null;
+  const fr = atlas.ready ? atlas.frames['prop_' + (p.t === 'billboard' ? 'billboard' + (p.ad || 0) : p.t)] : null;
   if (fr) {
     const s = PROP_SIZES[p.t];
     g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, p.x - s[0] / 2, p.y - s[1] / 2, s[0], s[1]);

@@ -160,6 +160,64 @@ export function drawRoads(g, m, edges, nodes) {
   g.restore();
 }
 
+// Gores: where a ramp runs beside the frontage road, the strip between them is asphalt with a white
+// chevron hatch, bounded by solid white lines, and a kerb runs along the ramp's outer edge until it
+// lifts off onto its embankment.
+export function drawGores(g, m, gores) {
+  if (!gores.length) return;
+  g.save();
+  for (const gr of gores) {
+    const P = gr.pts, n = P.length;
+    // which way from the road the ramp lies, at each sample
+    const side = P.map((p) => { const dx = p.x - p.qx, dy = p.y - p.qy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; });
+    const roadEdge = P.map((p, i) => ({ x: p.qx + side[i][0] * (gr.rhw - 2), y: p.qy + side[i][1] * (gr.rhw - 2) }));
+    const rampNear = P.map((p, i) => ({ x: p.x - side[i][0] * gr.hw, y: p.y - side[i][1] * gr.hw }));
+    const rampFar = P.map((p, i) => ({ x: p.x + side[i][0] * (gr.hw + 1), y: p.y + side[i][1] * (gr.hw + 1) }));
+    // asphalt across the whole strip
+    g.fillStyle = pattern(g, 'asphalt') || '#3a3b40';
+    g.beginPath();
+    g.moveTo(roadEdge[0].x, roadEdge[0].y);
+    for (let i = 1; i < n; i++) g.lineTo(roadEdge[i].x, roadEdge[i].y);
+    for (let i = n - 1; i >= 0; i--) g.lineTo(rampFar[i].x, rampFar[i].y);
+    g.closePath(); g.fill();
+    // the painted gore between the lanes: chevrons pointing the way traffic flows
+    const gap = P.map((p, i) => Math.hypot(rampNear[i].x - roadEdge[i].x, rampNear[i].y - roadEdge[i].y));
+    g.save();
+    g.beginPath();
+    g.moveTo(roadEdge[0].x, roadEdge[0].y);
+    for (let i = 1; i < n; i++) g.lineTo(roadEdge[i].x, roadEdge[i].y);
+    for (let i = n - 1; i >= 0; i--) g.lineTo(rampNear[i].x, rampNear[i].y);
+    g.closePath(); g.clip();
+    g.strokeStyle = 'rgba(236,234,226,.8)'; g.lineWidth = 3;
+    for (let i = 2; i < n - 1; i += 3) {
+      if (gap[i] < 10) continue;
+      const a = roadEdge[i], b = rampNear[Math.max(0, i - 2)];
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+    }
+    g.restore();
+    g.strokeStyle = 'rgba(236,234,226,.85)'; g.lineWidth = 2.5;
+    for (const L of [roadEdge, rampNear]) { g.beginPath(); g.moveTo(L[0].x, L[0].y); for (let i = 1; i < n; i++) g.lineTo(L[i].x, L[i].y); g.stroke(); }
+    // a zebra crossing where the pavement crosses the ramp's mouth
+    for (let i = 1; i < n; i++) {
+      if (P[i].d < gr.rhw + 1.3 * TILE) continue;
+      const dx = P[i].x - P[i - 1].x, dy = P[i].y - P[i - 1].y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+      g.fillStyle = 'rgba(236,234,226,.85)';
+      for (let k = -gr.hw + 5; k < gr.hw - 4; k += 9) {
+        const cx = P[i].x - uy * k, cy = P[i].y + ux * k;
+        g.save(); g.translate(cx, cy); g.rotate(Math.atan2(uy, ux)); g.fillRect(-12, -2.5, 24, 5); g.restore();
+      }
+      break;
+    }
+    // kerb on the ramp's outer edge (while it's still down on the ground)
+    g.strokeStyle = '#cfcdc4'; g.lineWidth = 4;
+    g.beginPath();
+    let on = false;
+    for (let i = 0; i < n; i++) { if (P[i].z > 0.3) break; if (!on) { g.moveTo(rampFar[i].x, rampFar[i].y); on = true; } else g.lineTo(rampFar[i].x, rampFar[i].y); }
+    g.stroke();
+  }
+  g.restore();
+}
+
 // ---- road wear ---------------------------------------------------------------------------------
 // Instead of tiling one weathered patch (which repeats every few metres), wear is scattered: soft-
 // edged blotches cut from the worn-asphalt art, each turned, scaled and faded differently, laid at
