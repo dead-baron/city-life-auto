@@ -16,13 +16,18 @@ function rectShadow(g, x0, y0, x1, y1, vx, vy) {
   for (let i = 1; i < h.length; i++) g.lineTo(h[i][0], h[i][1]);
   g.closePath();
 }
+// shadows go cooler and bluer as the sun gets low and warm (golden hour, sunrise)
+export function shadeCol(sky, a) {
+  const w = Math.max(0, Math.min(1, (sky.shadowLen - 1) / 1.5));
+  return `rgba(${Math.round(16 - 6 * w)},${Math.round(20 - 2 * w)},${Math.round(48 + 30 * w)},${a.toFixed(3)})`;
+}
 // buildings: BuildingLayer items (lifted ones have H; painted lots are given a nominal height)
 export function drawBuildingShadows(g, items, sky) {
-  const a = 0.46 * sky.sun;
+  const a = 0.46 * sky.sun * (1 + 0.2 * Math.max(0, Math.min(1, sky.shadowLen - 1))); // deeper in a low sun
   if (a < 0.02) return;
   const L = sky.shadowLen, dx = sky.sunDir.x, dy = sky.sunDir.y;
   g.save();
-  g.fillStyle = `rgba(16,20,48,${a.toFixed(3)})`;
+  g.fillStyle = shadeCol(sky, a);
   g.beginPath();
   for (const it of items) {
     if (it.flat) continue;
@@ -76,6 +81,49 @@ export function drawContactShade(g, items, sky) {
       g.rect(it.x0 - pad, it.y0 - pad * 0.5, it.x1 - it.x0 + pad * 2, it.y1 - it.y0 + pad * 1.6);
     }
     g.fill();
+  }
+  g.restore();
+}
+
+// ---- cast shadows from the sprites themselves ---------------------------------------------------
+// Every prop (trees, benches, bins, bus shelters, masts...) throws its own silhouette along the
+// ground away from the sun: the sprite, filled dark, sheared so its top lies out along the sun's
+// direction from its base. Long and thin early and late, short at noon, gone at night. The
+// sprites' painted shadows were cut out (tools/deshadow.py), so this is the only one.
+const sil = new Map();
+function silhouette(img, fr) {
+  const k = fr.a + ':' + fr.x + ':' + fr.y;
+  let c = sil.get(k);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(fr.w / 2)); c.height = Math.max(1, Math.ceil(fr.h / 2)); // half res: it's a soft dark shape
+  const g = c.getContext('2d');
+  g.drawImage(img, fr.x, fr.y, fr.w, fr.h, 0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = '#0c1026';
+  g.fillRect(0, 0, c.width, c.height);
+  if (sil.size > 400) { const k0 = sil.keys().next().value; const o = sil.get(k0); o.width = 0; o.height = 0; sil.delete(k0); }
+  sil.set(k, c);
+  return c;
+}
+// list: [{ img, fr, x (centre), base (y of the foot), w, h (drawn size, world px) }]
+export function drawSpriteShadows(g, list, sky) {
+  const a = 0.42 * sky.sun * (1 + 0.25 * Math.max(0, Math.min(1, sky.shadowLen - 1)));
+  if (a < 0.02 || !list.length) return;
+  const Ls = Math.max(0.35, Math.min(1.3, sky.shadowLen * 0.6));
+  // the sprite's "up" lies along the sun's direction, its "across" stays across it (full width)
+  const n = Math.hypot(sky.sunDir.x, sky.sunDir.y) || 1, ux = sky.sunDir.x / n, uy = sky.sunDir.y / n;
+  const px = -uy, py = ux;
+  g.save();
+  g.globalAlpha = Math.min(0.6, a);
+  for (const s of list) {
+    const c = silhouette(s.img, s.fr);
+    // sprite space: u across (centred), v from -h (top) to 0 (the foot); the top lands Ls*h out
+    // along the sun's direction from the foot
+    g.save();
+    g.transform(px, py, -ux * Ls, -uy * Ls, s.x, s.base);
+    g.drawImage(c, -s.w / 2, -s.h, s.w, s.h);
+    g.restore();
   }
   g.restore();
 }

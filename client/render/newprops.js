@@ -14,7 +14,6 @@ const box = (g, c, x, y, w, h, line = '#14161c') => { px(g, line, x - 0.5, y - 0
 function busstop() {
   const [c, g] = canvas(96, 54);
   // shadow
-  px(g, 'rgba(0,0,0,.28)', 6, 40, 88, 10);
   // back glass panel (the wall at the back of the shelter, seen face-on below the roof)
   box(g, '#9ec4d8', 6, 14, 84, 26);
   for (let x = 8; x < 88; x += 3) px(g, 'rgba(255,255,255,.18)', x, 15, 1, 24);
@@ -40,7 +39,6 @@ function busstop() {
 }
 function phonebox() {
   const [c, g] = canvas(26, 40);
-  px(g, 'rgba(0,0,0,.28)', 3, 32, 22, 7);
   box(g, '#c8262b', 3, 4, 20, 32);
   px(g, '#e04a40', 3, 4, 20, 2);
   box(g, '#9ec4d8', 6, 10, 14, 20);
@@ -51,7 +49,6 @@ function phonebox() {
 }
 function bollard() {
   const [c, g] = canvas(10, 16);
-  px(g, 'rgba(0,0,0,.3)', 2, 12, 8, 4);
   box(g, '#3a3d44', 2, 3, 6, 11); px(g, '#5a5e68', 2, 3, 2, 11);
   px(g, '#e8b923', 2, 6, 6, 2);
   box(g, '#4a4e58', 1.5, 1, 7, 3);
@@ -59,7 +56,6 @@ function bollard() {
 }
 function crates() {
   const [c, g] = canvas(40, 40);
-  px(g, 'rgba(0,0,0,.28)', 4, 30, 34, 8);
   const crate = (x, y, w, h) => {
     box(g, '#8a6038', x, y, w, h);
     px(g, '#a87444', x, y, w, 2);
@@ -72,7 +68,6 @@ function crates() {
 }
 function acunit() {
   const [c, g] = canvas(34, 30);
-  px(g, 'rgba(0,0,0,.28)', 3, 22, 30, 7);
   box(g, '#a6a9ae', 3, 4, 28, 20);
   px(g, '#c4c7cc', 3, 4, 28, 3);
   px(g, '#7a7e86', 3, 21, 28, 3);
@@ -84,7 +79,6 @@ function acunit() {
 }
 function trashpile() {
   const [c, g] = canvas(38, 26);
-  px(g, 'rgba(0,0,0,.25)', 3, 17, 34, 8);
   const bag = (x, y, r, col) => { g.fillStyle = '#14161c'; g.beginPath(); g.ellipse(x, y, r + 0.7, r * 0.8 + 0.7, 0, 0, 6.283); g.fill(); g.fillStyle = col; g.beginPath(); g.ellipse(x, y, r, r * 0.8, 0, 0, 6.283); g.fill(); g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.3, r * 0.35, r * 0.2, 0, 0, 6.283); g.fill(); };
   bag(11, 15, 8, '#2a2c33'); bag(24, 16, 7, '#3a5a2e'); bag(18, 9, 6, '#2a2c33');
   px(g, '#c8c2b4', 30, 19, 4, 3); px(g, '#8a2a24', 4, 20, 3, 2); px(g, '#e8d070', 26, 21, 3, 2); px(g, '#f2f0e6', 15, 21, 5, 2);
@@ -103,7 +97,6 @@ function billboard(ad) {
   return () => {
     const A = ADS[ad];
     const [c, g] = canvas(132, 84);
-    px(g, 'rgba(0,0,0,.28)', 30, 74, 76, 8);
     for (const x of [40, 90]) { px(g, '#14161c', x - 1, 44, 6, 36); px(g, '#5a5e68', x, 44, 4, 35); px(g, '#7a7e88', x, 44, 1, 35); }
     px(g, '#14161c', 4, 47, 124, 4); px(g, '#4a4e58', 5, 48, 122, 2); // catwalk
     for (let x = 8; x < 126; x += 6) px(g, '#3a3d44', x, 50, 1, 3);

@@ -1406,3 +1406,18 @@ Went through every painting the game uses: each building lot, the hospital front
   - Faulty lamps get a 1–2 s burst every half minute or so, then they're back on or dark until the next spell.
   - Rough-district neon does the same on a 25 s cycle.
   - A lamp first seen well after dusk (a street you drive into) is simply on; it doesn't put on its striking show.
+
+## 2026-10-05 · Full world lighting: painted shadows out, live shadows everywhere
+
+- **`tools/deshadow.py`:** cuts the painted ground shadow out of the street-prop sprites (trees, palms, shrubs, benches, bins, umbrellas, food carts, planters...).
+  - In each sprite cell, the object is everything that isn't a cool, dark shadow colour. Its silhouette is closed, its holes are filled, and it keeps a few px for the outline ring. Any cool-dark pixel outside it becomes transparent, through the palette's transparent index, so colours are untouched.
+  - Dark objects that would be eaten by this are left alone: bin bags, tyres, carts, grey dumpsters, trash cans, news boxes, cable spools.
+  - `--review out.png` writes a before/after sheet. It ran on 45 props.
+  - Run it after `tools/build_art.py`; running it twice is harmless.
+- The code-drawn props (bus shelters, phone boxes, country props) lost their painted shadow blobs too.
+- **Live cast shadows for every prop** (`drawSpriteShadows`): each prop's own sprite, filled dark at half resolution (cached), is laid along the ground away from the sun. Its "up" runs along the sun's direction and its width stays across it, so a tree's crown throws a round shadow, not a streak.
+  - Long early and late, short at noon, gone at night.
+  - About 100–200 small draws a frame.
+- **People** throw a shadow away from the sun, plus a smaller contact blob.
+- **Pushed further:** shadows get deeper (+20–25%) and cooler, shifting toward blue, as the sun gets low (sunrise, golden hour).
+- **Still painted:** the building lots, the hand-designed downtown blocks and the scene paintings keep their painted shadows. They're blended into the ground texture and a script can't lift them out cleanly. ART_NEEDS asks for shadowless re-renders of those sheets.

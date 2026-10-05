@@ -84,6 +84,8 @@ compact, sedan, taxi, sports, pickup, van, police, swat, ambulance, bike, speedb
 
 ## Street props (`assets/atlas0.png`)
 
+Painted ground shadows were cut out of 45 props by `tools/deshadow.py` (run it after `tools/build_art.py`); the game casts their shadows from the live sun instead.
+
 ~70 props from the street-props sheet: trees, palms, shrubs, benches, hydrants, dumpsters, planters, fountain, umbrellas, vending machines, pallets, drums, tyres, cones, news boxes, mailboxes, lamps, crates (4 tiers), loot bags (4 kinds), produce.
 
 ## Code-drawn street furniture and country props (`client/render/newprops.js`, `client/render/country.js`)

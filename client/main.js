@@ -39,10 +39,10 @@ import { underDeck } from '../shared/levels.js';
 import { skyAt, lampLevel, neonLevel, hash as hashAt } from './render/atmos.js';
 import { Lighting, LIGHT } from './render/lighting.js';
 import { Weather } from './render/weather.js';
-import { drawBuildingShadows, drawPropShadows, drawContactShade } from './render/shadows.js';
+import { drawBuildingShadows, drawPropShadows, drawContactShade, drawSpriteShadows } from './render/shadows.js';
 import { registerNewProps } from './render/newprops.js';
 import { LOW_MEM, canvasStats } from './platform.js';
-import { registerCountryProps, COUNTRY_TALL, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
+import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -1893,9 +1893,29 @@ function render(dt) {
     const near = S.buildings.inView({ x0: view.x0 - reach, y0: view.y0 - reach, x1: view.x1 + reach, y1: view.y1 + reach });
     drawContactShade(g, near, sky);
     drawBuildingShadows(g, near, sky);
-    const tp = [];
-    for (let cy = Math.max(0, cy0 - 1); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) for (const p of S.ground.overhead(cx, cy)) if (!p.broken && (p.t.startsWith('tree') || p.t.startsWith('palm') || TALL_SHADOW[p.t])) tp.push(p);
-    drawPropShadows(g, tp, sky, (p) => TALL_SHADOW[p.t] || (p.t.startsWith('palm') ? { h: 52, r: 10 } : { h: 40, r: 15 }));
+    // every prop throws its own silhouette (render/shadows.js); the few drawn in code without a
+    // sprite (lamp posts, poles) keep the soft blot
+    castList.length = 0;
+    const blots = [];
+    const seen = new Set();
+    const addCast = (p) => {
+      if (p.broken || seen.has(p)) return;
+      seen.add(p);
+      const t = p.t;
+      if (NO_CAST.has(t)) return;
+      const fr = atlas.ready ? atlas.frames['prop_' + (t === 'billboard' ? 'billboard' + (p.ad || 0) : t === 'tent' ? 'tent' + (p.v || 0) : t)] : null;
+      if (!fr) { if (TALL_SHADOW[t]) blots.push(p); return; }
+      const grow = COUNTRY_GROW[t];
+      if (COUNTRY_TALL[t]) { const s0 = PROP_SIZES[t], k = t === 'pumpjack' || t === 'otank' ? 1 : grow || 1, w = s0[0] * k, h = s0[1] * k; castList.push({ img: atlas.imgs[fr.a], fr, x: p.x, base: p.y + 4, w, h }); return; }
+      const s = PROP_SIZES[t] || [24, 24];
+      castList.push({ img: atlas.imgs[fr.a], fr, x: p.x, base: p.y + s[1] / 2 - 2, w: s[0], h: s[1] });
+    };
+    for (let cy = Math.max(0, cy0 - 1); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) {
+      for (const p of S.ground.overhead(cx, cy)) addCast(p);
+      for (const p of S.ground.lowProps.get(cy * 1000 + cx) || []) addCast(p);
+    }
+    drawSpriteShadows(g, castList, sky);
+    drawPropShadows(g, blots, sky, (p) => TALL_SHADOW[p.t]);
   }
   const insideB = sub ? null : drawInteriorView(sp);
 
@@ -2740,8 +2760,15 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   const limp = p.d && !p.d.pl && p.hp < NPC_CRITICAL && pose.startsWith('move') && !(f & PF.DEAD) ? Math.sin((p.phase || 0) * Math.PI / 4) : 0;
   const fx = p.rx + (hitK ? Math.cos(p.hitA) * 4 * hitK : 0), fy = p.ry + 6 + (hitK ? Math.sin(p.hitA) * 3 * hitK : 0);
   g.save();
-  if (!swimming) { // contact shadow
-    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(fx + 2, fy - 1, 11 * bs, 5, 0, 0, 6.28); g.fill();
+  if (!swimming) { // contact shadow, and the body's shadow thrown away from the sun
+    const sk = S.sky;
+    if (sk && sk.sun > 0.05) {
+      const L = Math.max(0.35, Math.min(1.7, sk.shadowLen * 0.75)) * 30 * bs, dx = sk.sunDir.x, dy = Math.max(0.28, sk.sunDir.y);
+      const n = Math.hypot(dx, dy);
+      g.fillStyle = `rgba(12,15,34,${(0.36 * sk.sun).toFixed(3)})`;
+      g.beginPath(); g.ellipse(fx + dx / n * L * 0.5, fy - 1 + dy / n * L * 0.5, L * 0.55, 5 * bs, Math.atan2(dy, dx), 0, 6.28); g.fill();
+    }
+    g.fillStyle = 'rgba(0,0,0,.24)'; g.beginPath(); g.ellipse(fx + 1, fy - 1, 9 * bs, 4, 0, 0, 6.28); g.fill();
   }
   if (f & PF.GHOST) g.globalAlpha = 0.45 + 0.2 * Math.sin(now * 8);
   if (p.blink) g.globalAlpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
@@ -3017,8 +3044,11 @@ function drawWorldLabels(peds, vehs, now, z) {
 // pick up, in world px.
 const reflSrc = [], selfLit = [], countryLit = [];
 // shadow sizes (height, footprint) of the tall country props
+// props that lie flat (or draw their own) and cast nothing
+const NO_CAST = new Set(['gravel', 'rubble', 'flowerbed', 'mosaic', 'rwlight', 'painted', 'plamp', 'sigpole', 'atmw', 'plane', 'solar', 'subway_l', 'subway_r', 'roof_ac', 'roof_heli', 'roof_tanks', 'roof_sky', 'roof_access']);
+const castList = [];
 const RW_COL = { w: LIGHT.head, g: LIGHT.green, r: LIGHT.red, b: LIGHT.blue };
-const TALL_SHADOW = { turbine: { h: 120, r: 7 }, radiotower: { h: 110, r: 9 }, upole: { h: 36, r: 3 }, flare: { h: 50, r: 4 }, dome: { h: 60, r: 60 }, dscreen: { h: 50, r: 70 }, marquee: { h: 30, r: 26 }, pumpjack: { h: 30, r: 40 }, otank: { h: 60, r: 46 } };
+const TALL_SHADOW = { lamp: { h: 34, r: 3 }, turbine: { h: 120, r: 7 }, radiotower: { h: 110, r: 9 }, upole: { h: 36, r: 3 }, flare: { h: 50, r: 4 }, dome: { h: 60, r: 60 }, dscreen: { h: 50, r: 70 }, marquee: { h: 30, r: 26 }, pumpjack: { h: 30, r: 40 }, otank: { h: 60, r: 46 } };
 function collectLights(sky, view, vehs, peds, dt) {
   selfLit.length = 0; countryLit.length = 0;
   const L = S.light;

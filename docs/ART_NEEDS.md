@@ -71,6 +71,10 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 - Pets: the same dogs and cats walking, running and sitting (4-frame trot, 4-frame run, a sit; top-down or side-on). The current frames are placeholders generated from the single concept pose of each. A few more strays too.
 - Weather/FX: rain streaks, puddle splash, tyre smoke, skid marks, muzzle flashes, explosions (6-8 frames), fire (loop), blood decals.
 
+## 5b. Shadowless versions (for the live sun)
+
+The game now casts every shadow live from the moving sun. Street props had their painted ground shadows cut out automatically (`tools/deshadow.py`). The building lots, the hand-designed downtown blocks and the scene paintings still have shadows painted in, and they can't be cut out cleanly by a script, because the shadows are blended into the ground texture. For full world lighting, re-render those sheets **with no cast shadows on the ground** (keep the shading on the buildings themselves): `prefabs*`, `blocks*`, `scenes`. Same framing and size as now, so they drop straight in.
+
 ## 6. Street furniture
 
 - Traffic signals: a mast-arm pole with its 3-lamp head (top-down, lit and unlit), its knocked-over state, and a span-wire head hanging from cables (for downtown).

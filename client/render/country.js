@@ -20,7 +20,6 @@ function tent(v) {
   return () => {
     const [c, g] = canvas(44, 34);
     const [base, lite, dark] = TENT[v];
-    ell(g, 'rgba(0,0,0,.28)', 23, 28, 20, 5);
     // a dome tent: the fly over two crossed poles, a darker door panel at the front
     g.fillStyle = '#14161c'; g.beginPath(); g.ellipse(22, 22, 19.5, 17, 0, Math.PI, 0); g.lineTo(41.5, 29); g.lineTo(2.5, 29); g.closePath(); g.fill();
     g.fillStyle = base; g.beginPath(); g.ellipse(22, 22, 18.5, 16, 0, Math.PI, 0); g.lineTo(40.5, 28); g.lineTo(3.5, 28); g.closePath(); g.fill();
@@ -38,7 +37,6 @@ function tent(v) {
 }
 function campfire() {
   const [c, g] = canvas(24, 20);
-  ell(g, 'rgba(0,0,0,.25)', 12, 13, 11, 5);
   ell(g, '#2a2420', 12, 11, 8, 5);
   for (let k = 0; k < 9; k++) { const a = (k / 9) * 6.283; const x = 12 + Math.cos(a) * 9, y = 11 + Math.sin(a) * 5.6; ell(g, '#14161c', x, y, 2.6, 2.1); ell(g, k % 2 ? '#8a8578' : '#a39d90', x - 0.3, y - 0.3, 2, 1.6); }
   // logs crossed in the middle
@@ -48,7 +46,6 @@ function campfire() {
 }
 function picnic() {
   const [c, g] = canvas(38, 30);
-  px(g, 'rgba(0,0,0,.25)', 4, 22, 32, 6);
   // benches either side, the table between
   box(g, '#7a5230', 4, 4, 30, 4); px(g, '#9a6a3e', 4, 4, 30, 1);
   box(g, '#8a6038', 3, 10, 32, 9); for (let y = 12; y < 19; y += 2.4) px(g, '#6a4628', 3, y, 32, 0.6); px(g, '#a87444', 3, 10, 32, 1.2);
@@ -58,7 +55,6 @@ function picnic() {
 }
 function upole() {
   const [c, g] = canvas(18, 58);
-  ell(g, 'rgba(0,0,0,.28)', 9, 55, 5, 2);
   box(g, '#6a4a2e', 7.5, 4, 3, 51); px(g, '#8a6440', 7.5, 4, 1, 51);
   box(g, '#5a3e26', 1, 7, 16, 2.2); // the cross-arm
   for (const x of [2, 9, 15.5]) { box(g, '#d8dce4', x - 0.8, 4.4, 1.8, 2.6, '#3a3d44'); }
@@ -68,7 +64,6 @@ function upole() {
 }
 function radiotower() {
   const [c, g] = canvas(50, 172);
-  ell(g, 'rgba(0,0,0,.3)', 25, 167, 18, 4);
   box(g, '#9a9ea6', 10, 162, 30, 6); // concrete footing
   const bot = 165, top = 8, wB = 13, wT = 2.5;
   const at = (y) => wT + (wB - wT) * ((y - top) / (bot - top));
@@ -96,7 +91,6 @@ function radiotower() {
 function turbine() {
   // the tower and the nacelle; the blades turn live
   const [c, g] = canvas(30, 186);
-  ell(g, 'rgba(0,0,0,.28)', 15, 182, 12, 3.5);
   box(g, '#a6a9ae', 6, 176, 18, 8); px(g, '#c4c7cc', 6, 176, 18, 2);
   g.fillStyle = '#14161c'; g.beginPath(); g.moveTo(9.5, 178); g.lineTo(12, 22); g.lineTo(18, 22); g.lineTo(20.5, 178); g.fill();
   g.fillStyle = '#eef0f2'; g.beginPath(); g.moveTo(10.5, 177); g.lineTo(12.8, 22); g.lineTo(17.2, 22); g.lineTo(19.5, 177); g.fill();
@@ -110,7 +104,6 @@ function turbine() {
 function pumpjack() {
   // the skid, the motor and the samson post; the beam, horse head and cranks move live
   const [c, g] = canvas(72, 50);
-  px(g, 'rgba(0,0,0,.28)', 4, 42, 66, 7);
   box(g, '#4a4e58', 3, 38, 66, 6); px(g, '#6a6e78', 3, 38, 66, 1.5);
   box(g, '#2a2c33', 10, 40, 6, 5); // the wellhead
   px(g, '#8a8e96', 11.5, 34, 3, 6);
@@ -123,7 +116,6 @@ function pumpjack() {
 }
 function otank() {
   const [c, g] = canvas(56, 60);
-  ell(g, 'rgba(0,0,0,.3)', 30, 54, 25, 6);
   // the body
   box(g, '#d8d6d0', 4, 14, 48, 38);
   px(g, '#efede8', 4, 14, 14, 38); px(g, '#b8b6b0', 40, 14, 12, 38);
@@ -139,7 +131,6 @@ function otank() {
 }
 function flare() {
   const [c, g] = canvas(20, 82);
-  ell(g, 'rgba(0,0,0,.3)', 10, 79, 7, 2.5);
   box(g, '#8a8e96', 5, 74, 10, 6);
   box(g, '#5a5e68', 8.5, 8, 3, 68); px(g, '#7a7e88', 8.5, 8, 1, 68);
   line(g, '#4a4e58', 0.8, [[10, 30], [2, 76]]); line(g, '#4a4e58', 0.8, [[10, 30], [18, 76]]); // guy wires
@@ -148,7 +139,6 @@ function flare() {
 }
 function solar() {
   const [c, g] = canvas(64, 30);
-  px(g, 'rgba(0,0,0,.25)', 4, 22, 58, 6);
   for (const x of [8, 32, 54]) { px(g, '#3a3d44', x, 18, 2, 8); }
   // the panel, tilted up to the sun: a slanted frame, blue cells
   g.fillStyle = '#14161c'; g.beginPath(); g.moveTo(3, 21.5); g.lineTo(7, 2.5); g.lineTo(61, 2.5); g.lineTo(63, 21.5); g.fill();
@@ -161,7 +151,6 @@ function solar() {
 }
 function dscreen() {
   const [c, g] = canvas(210, 132);
-  px(g, 'rgba(0,0,0,.28)', 14, 124, 186, 7);
   // the scaffold behind and under the screen
   for (const x of [22, 60, 104, 148, 186]) { box(g, '#4a4e58', x, 70, 4, 58); px(g, '#6a6e78', x, 70, 1, 58); }
   for (const x of [22, 60, 104, 148]) { line(g, '#3a3d44', 1.2, [[x + 2, 76], [x + 40, 122]]); line(g, '#3a3d44', 1.2, [[x + 40, 76], [x + 2, 122]]); }
@@ -174,14 +163,12 @@ function dscreen() {
 }
 function dspeaker() {
   const [c, g] = canvas(10, 18);
-  ell(g, 'rgba(0,0,0,.28)', 5, 16, 4, 1.6);
   box(g, '#5a5e68', 4, 6, 2, 10);
   box(g, '#7a7e86', 1, 1, 8, 6); px(g, '#2a2c33', 2, 2.5, 6, 3); for (let x = 2.5; x < 8; x += 1.5) px(g, '#5a5e68', x, 2.5, 0.6, 3);
   return c;
 }
 function dome() {
   const [c, g] = canvas(200, 172);
-  ell(g, 'rgba(0,0,0,.3)', 104, 162, 92, 10);
   // the drum the dome sits on: cream walls, a door, windows, steps
   box(g, '#e8e2d0', 22, 92, 156, 70);
   px(g, '#f6f0e0', 22, 92, 156, 4); px(g, '#c8c0aa', 22, 150, 156, 12);
@@ -201,7 +188,6 @@ function dome() {
 }
 function scope() {
   const [c, g] = canvas(16, 26);
-  ell(g, 'rgba(0,0,0,.28)', 8, 24, 5, 2);
   box(g, '#5a5e68', 7, 10, 2, 14);
   box(g, '#2f9a8a', 2, 3, 12, 8); px(g, '#4fbaa8', 2, 3, 12, 2);
   ell(g, '#14161c', 5, 10, 2.2, 1.6); ell(g, '#14161c', 11, 10, 2.2, 1.6); ell(g, '#7ac8ff', 5, 9.6, 1.2, 0.8); ell(g, '#7ac8ff', 11, 9.6, 1.2, 0.8);
@@ -209,7 +195,6 @@ function scope() {
 }
 function marquee() {
   const [c, g] = canvas(84, 76);
-  px(g, 'rgba(0,0,0,.28)', 14, 70, 60, 5);
   for (const x of [20, 62]) { box(g, '#4a4e58', x, 34, 4, 38); px(g, '#6a6e78', x, 34, 1, 38); }
   box(g, '#1f2a5a', 4, 4, 76, 34);
   px(g, '#2f3f7a', 4, 4, 76, 3);
