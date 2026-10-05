@@ -23,6 +23,7 @@ const setC = (G, x, y, c) => { if (!G.inside(x, y)) return; const j = (y * G.w +
 const setN = (G, x, y, n) => { if (!G.inside(x, y)) return; const j = (y * G.w + x) * 4; G.nrm[j] = (n[0] * 0.5 + 0.5) * 255; G.nrm[j + 1] = (n[1] * 0.5 + 0.5) * 255; G.nrm[j + 2] = (n[2] * 0.5 + 0.5) * 255; G.nrm[j + 3] = 255; };
 const glow = (G, x, y, e) => G.glow(x, y, e);
 
+let WALLC = null;   // a custom wall ramp for the building being made (spec.wallColor)
 function wallColor(style, u, v, seed, x, y) {
   const big = vnoise(u, v, 30, seed), mid = vnoise(u, v, 8, seed + 1), h = hash(u, v, seed);
   if (style === 'brick' || style === 'brickDark') {
@@ -33,7 +34,25 @@ function wallColor(style, u, v, seed, x, y) {
     const b = hash(col, row, seed + 7);
     return step(R, 0.48 + (b - 0.5) * 0.4 + (big - 0.5) * 0.22 + (h > 0.93 ? 0.15 : 0) - (v < 8 ? 0.12 : 0), x, y, 0.5);
   }
-  const R = style === 'diner' ? MAT.diner : style === 'purple' ? MAT.stuccoPurple : style === 'peach' ? MAT.stuccoPeach : style === 'teal' ? MAT.stuccoTeal : style === 'concrete' ? MAT.concrete : MAT.stucco;
+  if (style === 'siding') {                                                   // painted wood siding, lit board edges
+    const R = WALLC || MAT.stucco, b = v % 5;
+    return step(R, 0.55 + (b === 4 ? 0.22 : b === 0 ? -0.3 : 0) + (big - 0.5) * 0.15 + (h > 0.97 ? -0.15 : 0), x, y, 0.4);
+  }
+  if (style === 'corrugated') {
+    const R = WALLC || MAT.metal, r = u % 4;
+    return step(R, 0.5 + (r === 0 ? 0.25 : r === 2 ? -0.22 : 0) + (big - 0.5) * 0.2 - (vnoise(u, v, 14, seed + 3) > 0.75 ? 0.2 : 0), x, y, 0.3);
+  }
+  if (style === 'stone') {
+    const row = Math.floor(v / 7), off = (row & 1) * 9, col = Math.floor((u + off) / 18);
+    if (v % 7 === 0 || (u + off) % 18 === 0) return step(MAT.stone, 0.22, x, y, 0.3);
+    return step(WALLC || MAT.stone, 0.5 + (hash(col, row, seed) - 0.5) * 0.3 + (big - 0.5) * 0.15, x, y, 0.5);
+  }
+  if (style === 'glass') {
+    const mull = u % 16 === 0 || v % 22 === 0;
+    if (mull) return step(MAT.metalDark, 0.45, x, y, 0);
+    return step(MAT.glass, 0.35 + ((u + (40 - v % 40)) % 40 < 8 ? 0.35 : 0) + (big - 0.5) * 0.2, x, y, 0.4);
+  }
+  const R = WALLC ? WALLC : style === 'diner' ? MAT.diner : style === 'purple' ? MAT.stuccoPurple : style === 'peach' ? MAT.stuccoPeach : style === 'teal' ? MAT.stuccoTeal : style === 'concrete' ? MAT.concrete : MAT.stucco;
   let t = 0.55 + (big - 0.5) * 0.22 + (mid - 0.5) * 0.12 + (h > 0.95 ? 0.1 : 0) - (h < 0.03 ? 0.12 : 0);
   if (v < 6) t -= 0.12 * (1 - v / 6);
   return step(R, t, x, y, 0.7);
@@ -74,10 +93,19 @@ function windowBox(G, x0, y0, w, seed) {
     else setC(G, X, Y, step(MAT.woodDark, 0.55 - (k - 3) * 0.12, X, Y, 0.3));
   }
 }
+function balconyRail(G, x0, yb, len, seed) {
+  for (let x = 0; x < len; x++) {
+    for (let k = 0; k < 3; k++) setC(G, x0 + x, yb - k, k === 0 ? MAT.stone[1] : MAT.stone[k === 1 ? 3 : 4]);   // slab edge
+    setC(G, x0 + x, yb - 12, MAT.metalDark[3]); setC(G, x0 + x, yb - 11, MAT.metalDark[1]);
+    if (x % 3 === 0) for (let k = 3; k < 11; k++) setC(G, x0 + x, yb - k, MAT.metalDark[1]);
+  }
+  if (hash(x0, yb, seed) > 0.4) for (let k = 0; k < 18; k++) { const lx = x0 + 3 + Math.floor(hash(k, 1, seed) * (len - 6)), ly = yb - 4 - Math.floor(hash(k, 2, seed) * 9); setC(G, lx, ly, MAT.leaf[2 + (k % 4)]); }
+}
 function acBox(G, x0, y0) { for (let y = 0; y < 9; y++) for (let x = 0; x < 13; x++) setC(G, x0 + x, y0 + y, y === 0 ? MAT.metal[5] : x === 12 || y === 8 ? MAT.metal[1] : (y > 2 && x > 1 && x < 11 && y % 2 === 0) ? MAT.metal[2] : MAT.metal[3]); }
 
 export function makeBuilding(spec) {
   const { w, d } = spec, seed = spec.seed || 1, style = spec.style || 'stucco';
+  WALLC = spec.wallColor ? ramp(spec.wallColor, 6, 3) : null;
   const floors = spec.floors || 1, gH = spec.shop ? SHOP_FLOOR : FLOOR, cornice = style === 'brick' ? 10 : 6;
   const H = gH + (floors - 1) * FLOOR + cornice + (spec.parapet || 0);
   const G = new GBuf(w, d + H);
@@ -132,7 +160,7 @@ export function makeBuilding(spec) {
   // diner neon band along the top of the facade
   if (spec.trim) for (let x = 1; x < w - 1; x++) for (const k of [cornice + 2, cornice + 4]) { const Y = fy(H - k); setC(G, x, Y, spec.trim.map((c) => Math.min(255, c * 0.7 + 80))); glow(G, x, Y, [...spec.trim, 120 + night * 135]); }
   // ---- upper floors
-  for (let f = 1; f < floors; f++) {
+  for (let f = 1; f < floors && style !== 'glass'; f++) {
     const base = gH + (f - 1) * FLOOR;
     const ww = style === 'brick' ? 18 : 16, wh = style === 'brick' ? 30 : 26, gap = style === 'brick' ? 20 : 22;
     const n = Math.max(1, Math.floor((w - 16) / (ww + gap)));
@@ -141,7 +169,8 @@ export function makeBuilding(spec) {
       const px = x0 + i * (ww + gap), py = fy(base + 12 + wh);
       const lit = hash(i, f, seed + 13) < night * 0.75 + (night > 0 ? 0.08 : 0);
       sash(G, px, py, ww, wh, lit, seed + f * 7 + i);
-      if (hash(i, f, seed + 21) > 0.62) windowBox(G, px, py + wh + 2, ww, seed + i);
+      if (spec.balconies) balconyRail(G, px - 6, py + wh + 3, ww + 12, seed + i * 3 + f);
+      else if (hash(i, f, seed + 21) > 0.62) windowBox(G, px, py + wh + 2, ww, seed + i);
       else if (hash(i, f, seed + 23) > 0.82) acBox(G, px + 1, py + wh - 8);
     }
   }
@@ -149,7 +178,14 @@ export function makeBuilding(spec) {
   if (style === 'brick' && floors > 1) for (let k = 0; k < 4; k++) for (let x = 0; x < w; x++) setC(G, x, fy(gH + 2 - k), step(MAT.stone, 0.8 - k * 0.15, x, k, 0.3));
   // ---- ground floor
   if (spec.shop) storefront(G, w, d, H, gH, spec, seed, night, fy);
-  else {
+  else if (spec.doors) {
+    for (const dd of spec.doors) {
+      const dh = dd.h || (dd.kind === 'garage' || dd.kind === 'roller' ? 48 : 46);
+      if (dd.kind === 'garage' || dd.kind === 'roller') bigDoor(G, dd.x, fy(dh), dd.w, dh, dd.kind, dd.open, night);
+      else door(G, dd.x, fy(dh), dd.w || 18, dh, !!dd.open, night, seed);
+    }
+    for (const wx of spec.windows || []) sash(G, wx, fy(42), 16, 24, hash(wx, 0, seed) < night * 0.6, seed + wx);
+  } else {
     const dx = Math.floor(w * 0.22);
     door(G, dx, fy(46), 18, 46, false, night, seed, true);
     for (let k = 0; k < 3; k++) for (let x = -3; x < 21; x++) setC(G, dx + x, fy(3 - k), step(MAT.stone, 0.7 - k * 0.15, x, k, 0.3));   // stoop
@@ -158,7 +194,64 @@ export function makeBuilding(spec) {
   }
   if (spec.fireEscape) fireEscape(G, spec.fireEscape, d + H, gH, floors, seed);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
+  return spec.pitch ? pitched(G, spec, w, d, H, seed) : G;
+}
+
+// A hip or gable roof over the walls. Each roof pixel stands q * k above the eaves (q = its distance
+// in from the nearest eave), drawn north to south so nearer slopes cover farther ones; each face is
+// shaded by which way it slopes, with shingle courses or barrel tiles running along it.
+function pitched(G0, spec, w, d, H, seed) {
+  const k = spec.slope ?? 0.75, gable = spec.pitch === 'gable', ns = gable && spec.ridge === 'ns';
+  const E = Math.ceil((ns ? w / 2 : gable ? d / 2 : Math.min(w, d) / 2) * k) + 2;
+  const G = new GBuf(w, G0.h + E);
+  G.ax = 0; G.ay = G0.ay + E;
+  G.blit(G0, 0, E);
+  const R = spec.roofColor ? ramp(spec.roofColor, 6, 3) : spec.roof === 'tile' ? MAT.terracotta : MAT.roofShingle || ramp('#5a5c66', 6, 3);
+  const tile = spec.roof === 'tile';
+  const FACE = { w: [-0.7, 0, 0.7], e: [0.7, 0, 0.7], n: [0, -0.7, 0.7], s: [0, 0.7, 0.7] };
+  const LIT = { w: 0.68, n: 0.58, s: 0.5, e: 0.32 };
+  for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) {
+    const dW = x, dE = w - 1 - x, dN = y, dS = d - 1 - y;
+    let q, f;
+    if (ns) { q = Math.min(dW, dE); f = dW < dE ? 'w' : 'e'; }
+    else if (gable) { q = Math.min(dN, dS); f = dN < dS ? 'n' : 's'; }
+    else { q = Math.min(dW, dE, dN, dS); f = q === dS ? 's' : q === dN ? 'n' : q === dW ? 'w' : 'e'; }
+    const z = q * k, row = Math.round(E + y - z);
+    // courses run parallel to the eave: shingles every 4, tiles as barrels across
+    const along = f === 'n' || f === 's' ? x : y, course = Math.floor(q / (tile ? 4 : 3));
+    let t = LIT[f] + (q % (tile ? 4 : 3) === 0 ? -0.2 : 0) + (vnoise(x, y, 13, seed) - 0.5) * 0.14;
+    if (tile) t += ((along + (course & 1) * 3) % 6 < 2 ? -0.16 : (along % 6 === 3 ? 0.12 : 0));
+    else t += hash(Math.floor((along + (course & 1) * 2) / 4), course, seed) * 0.12 - 0.06;
+    const ridge = ns ? Math.abs(dW - dE) <= 1 : gable ? Math.abs(dN - dS) <= 1 : (Math.abs(dN - dS) <= 1 && q === Math.min(dN, dS)) || (q > 2 && Math.abs(Math.min(dW, dE) - Math.min(dN, dS)) < 0.6);
+    if (ridge) t += 0.18;
+    if (q < 2) t -= 0.12;                                                               // eave shadow line
+    const c = step(R, t, x, row, 0.45);
+    for (let r = row; r <= row + (f === 's' ? 1 : 0); r++) G.put(x, r, c, FACE[f], H + z, null, 0);
+  }
+  // the gable end over the front wall (ridge running north-south): a triangle of wall with a round vent
+  if (ns) for (let x = 0; x < w; x++) {
+    const top = Math.round(E + d - 1 - Math.min(x, w - 1 - x) * k);
+    for (let r = top + 1; r < E + d; r++) {
+      const v = H + (E + d - r);
+      let c = wallColor(spec.style || 'stucco', x, v, seed, x, r);
+      if (Math.hypot(x - w / 2, r - (E + d - (w / 2) * k * 0.45)) < 4) c = Math.hypot(x - w / 2, r - (E + d - (w / 2) * k * 0.45)) < 3 ? MAT.glassDark[2] : MAT.stone[4];
+      G.put(x, r, c, [0, 1, 0], v, null, 0);
+    }
+  }
+  // a chimney on some houses
+  if (spec.chimney) { const cx = Math.floor(w * 0.7), cy = Math.floor(d * 0.35), q = Math.min(cx, w - cx, cy, d - cy) * k; for (let yy = 0; yy < 14; yy++) for (let xx = 0; xx < 8; xx++) G.put(cx + xx, Math.round(E + cy - q - 10 + yy), step(MAT.brick, xx < 2 ? 0.7 : 0.45, xx, yy, 0.3), [0, 1, 0], H + q + 10, null, 0); }
   return G;
+}
+
+// garage door (panels) or roller shutter (slats); open shows the lit garage inside
+function bigDoor(G, x0, y0, w, h, kind, open, night) {
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const X = x0 + x, Y = y0 + y;
+    if (x < 2 || x >= w - 2 || y < 2) { setC(G, X, Y, step(MAT.stone, x < 2 || y < 2 ? 0.7 : 0.45, X, Y, 0)); continue; }
+    if (open && y > h * 0.25) { setC(G, X, Y, step(ramp('#9a7a5a', 5, 2), 0.3 + (y / h) * 0.4, X, Y, 0.7)); G.glow(X, Y, [255, 196, 120, 20 + night * 80]); continue; }
+    const c = kind === 'roller' ? step(MAT.metal, y % 3 === 0 ? 0.25 : 0.55, X, Y, 0.3) : step(ramp('#e2e0d8', 6, 3), (y % 10 === 0 || (x - 2) % Math.max(8, Math.floor(w / 4)) === 0) ? 0.3 : 0.6, X, Y, 0.3);
+    setC(G, X, Y, c);
+  }
 }
 
 function door(G, x0, y0, w, h, open, night, seed, gated = false) {

@@ -67,6 +67,7 @@ export const MAT = {
   stuccoPurple: ramp('#6c4a86', 6, 3),
   stuccoTeal: ramp('#5f9a96', 6, 3),
   terracotta: ramp('#b5553c', 6, 3),
+  roofShingle: ramp('#5c606c', 6, 3, { shift: 0.15 }),
   roofTar: ramp('#a6a8ae', 6, 3, { dark: 0.5, shift: 0.15 }),
   roofGravel: ramp('#9c9a96', 6, 3, { dark: 0.5, shift: 0.15 }),
   woodDock: ramp('#8a6440', 6, 3),

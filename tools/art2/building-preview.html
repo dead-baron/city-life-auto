@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 buildings</title>
+<style>body{margin:0;background:#4a4e58}canvas{image-rendering:pixelated;display:block}</style></head><body><canvas id="c"></canvas>
+<!-- the B5 lineup rebuilt from the building generator, lit at golden hour (?p=noon|night) -->
+<script type="module">
+import { makeBuilding } from '../../client/art2/buildings.js';
+import { GBuf } from '../../client/art2/gbuf.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+const q = new URLSearchParams(location.search), preset = q.get('p') || 'golden', Z = Number(q.get('z') || 1), night = preset === 'night' ? 1 : 0.3;
+const B = [
+  { w: 120, d: 70, floors: 1, style: 'siding', wallColor: '#b8c0c4', pitch: 'hip', roof: 'shingle', chimney: true, doors: [{ x: 52, w: 18 }], windows: [16, 86] },
+  { w: 130, d: 76, floors: 2, style: 'siding', wallColor: '#d8ccb0', pitch: 'hip', roof: 'tile', doors: [{ x: 8, w: 56, kind: 'garage' }, { x: 84, w: 18 }], windows: [106] },
+  { w: 150, d: 90, floors: 2, style: 'stucco', roof: 'terrace', doors: [{ x: 60, w: 30, kind: 'door', open: true }], windows: [16, 110] },
+  { w: 120, d: 50, floors: 1, style: 'corrugated', wallColor: '#c8ccd0', pitch: 'gable', roof: 'shingle', roofColor: '#9aa0a8', slope: 0.35, doors: [{ x: 50, w: 18 }], windows: [14, 86] },
+  { w: 110, d: 60, floors: 4, style: 'brick', roof: 'flat', fireEscape: [64, 40] },
+  { w: 160, d: 80, floors: 5, style: 'concrete', roof: 'flat', balconies: true, doors: [{ x: 66, w: 28, kind: 'door' }], windows: [16, 128] },
+  { w: 130, d: 90, floors: 8, style: 'glass', roof: 'flat', doors: [{ x: 50, w: 30, kind: 'door', open: true }] },
+  { w: 120, d: 80, floors: 2, style: 'siding', wallColor: '#b03a30', pitch: 'gable', ridge: 'ns', roof: 'shingle', roofColor: '#6a6c74', slope: 0.8, doors: [{ x: 40, w: 40, kind: 'garage', open: true }] },
+  { w: 160, d: 90, floors: 1, style: 'corrugated', wallColor: '#4e6a8a', roof: 'flat', parapet: 14, doors: [{ x: 14, w: 40, kind: 'roller' }, { x: 64, w: 40, kind: 'roller', open: true }, { x: 114, w: 40, kind: 'roller' }] },
+  { w: 100, d: 90, floors: 2, style: 'stucco', wallColor: '#ece4d4', pitch: 'gable', ridge: 'ns', roof: 'tile', slope: 0.8, doors: [{ x: 38, w: 24 }], windows: [12, 72] },
+];
+const sprites = B.map((b, i) => makeBuilding({ seed: i * 7 + 3, night, ...b }));
+const W = sprites.reduce((a, s) => a + s.w + 24, 24), H = Math.max(...sprites.map((s) => s.h)) + 60;
+const G = new GBuf(W, H);
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = 112 + ((x * 7 + y * 13) % 5) * 2; G.put(x, y, [v, v, v + 6], [0, 0, 1], 0, null, 1); }
+let x = 24;
+for (const s of sprites) { G.blit(s, x, H - 30 - s.ay); x += s.w + 24; }
+const cv = document.getElementById('c'); cv.width = W * Z; cv.height = H * Z;
+const L = new Lighter(cv); L.setScene(G); L.render(PRESETS[preset], [], 0);
+window.done = true;
+</script></body></html>

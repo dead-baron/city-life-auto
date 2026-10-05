@@ -1522,3 +1522,13 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
 - **States:** clean, dented (scuffs, cracked glass), wrecked (crumpled front) and burnt out. Head and tail lights and sirens glow.
   - Preview: `tools/art2/vehicle-preview.html?view=line|rot|state`.
 - **Lighting presets:** night is now dry (matching R1-E), and the rainy night is its own `rain` preset. The style frame takes `?p=golden|noon|night|rain`, and both nights are darker.
+
+### Art v2: building targets and a first building-kit pass
+- **Targets:** B1 to B6 (shopfronts and doors, business and life interiors, the facade kit, and two building-type lineups) are saved in `docs/art-v2/targets`.
+- **`client/art2/buildings.js`:**
+  - New wall styles: painted wood siding, corrugated metal, stone block and glass curtain wall, with any wall colour.
+  - Hip and gable roofs in shingle or terracotta. Each roof face is shaded by the way it slopes, with courses, ridges and eave shadows. Gables can face the street with a gable-end wall and vent, and chimneys are supported.
+  - Garage doors and roller shutters, open (lit inside) or shut.
+  - Balconies with railings and plants, and custom door and window layouts.
+  - Glass towers.
+- **Preview:** `tools/art2/building-preview.html` (the B5 lineup rebuilt). Comparison: `docs/art-v2/buildings-v1.png`.
