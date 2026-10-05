@@ -86,7 +86,19 @@ compact, sedan, taxi, sports, pickup, van, police, swat, ambulance, bike, speedb
 
 Painted ground shadows were cut out of 45 props by `tools/deshadow.py` (run it after `tools/build_art.py`); the game casts their shadows from the live sun instead.
 
-~70 props from the street-props sheet: trees, palms, shrubs, benches, hydrants, dumpsters, planters, fountain, umbrellas, vending machines, pallets, drums, tyres, cones, news boxes, mailboxes, lamps, crates (4 tiers), loot bags (4 kinds), produce.
+~70 props from the street-props sheet: benches, hydrants, dumpsters, planters, fountain, umbrellas, vending machines, pallets, drums, tyres, cones, news boxes, mailboxes, lamps, crates (4 tiers), loot bags (4 kinds), produce.
+
+The sheet's trees, palms, shrubs, bushes and flower beds are no longer drawn: the procedural vegetation below replaces them (the same props, the same places, the same collisions).
+
+## Procedural vegetation (`client/render/flora/`, all generated in the browser)
+
+16-bit pixel art drawn by code (6-step ramps, Bayer dither, top-left light, outlines, 2 canvas px per world px); see `tools/flora-preview.html`.
+- Ground: seamless textures for lawn (mowing stripes), lush grass, park, meadow, forest floor, dry grass, dunes, bare earth with pebbles and tilled field soil, blended along noisy edges.
+- Grass tufts for each kind, with wildflowers in meadows and parks; 11 lean frames x standing / trodden / flattened, each with a golden-hour glow twin.
+- Crops: wheat (ripe and green-gold), barley, corn, cabbage, sunflowers.
+- Undergrowth: ferns, wildflower drifts (daisies, poppies, lupins, buttercups), leafy shrubs (some with berries), dry scrub, reeds with cattails.
+- Trees (oak, maple, pine, birch, blossom; olive-toned in dry country), palms (four tall, one small), bushes (round, dark, flowering, yellow, olive), flower beds; crowns sway separately from trunks, with rim-glow masks for low sun.
+- Animated live by the universal wind, parted by people and flattened by vehicles.
 
 ## Code-drawn street furniture and country props (`client/render/newprops.js`, `client/render/country.js`)
 

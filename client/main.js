@@ -18,7 +18,7 @@ import { createSpectator, SPEC_LAYERS, SCHEMATIC_KEY } from './spectator.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
-import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
+import { atlas, loadAtlas, loadGlowSheets, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { createPhone } from './phone.js';
@@ -42,6 +42,9 @@ import { Weather } from './render/weather.js';
 import { drawBuildingShadows, drawPropShadows, drawContactShade, drawSpriteShadows } from './render/shadows.js';
 import { registerNewProps } from './render/newprops.js';
 import { LOW_MEM, canvasStats } from './platform.js';
+import { Flora, FLORA_PROPS, wind } from './render/flora/index.js';
+import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS } from './gfx.js';
+initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 
 const $ = (id) => document.getElementById(id);
@@ -624,6 +627,7 @@ function outdatedBuild(sig) {
 
 function setupWorld(seed) {
   S.map = generateCity(seed);
+  S.flora = new Flora(S.map); S.flora.configure(gfx); if (atlas.ready) S.flora.registerAtlas(atlas); // procedural vegetation (render/flora): before the ground is baked
   S.ground = new GroundCache(S.map, LOW_MEM ? 12 : 24); // (consoles give the browser little graphics memory)
   S.wx = new Weather(S.map);
   S.poleAt = null;
@@ -1084,8 +1088,11 @@ function openTutorial(chapter, then) {
   startTutorial({ map, fallback: S.hud ? S.hud.mini : null, chapter, onClose: () => { if (overlays.includes('tutorial')) closeOverlay('tutorial'); if (then) setTimeout(then, 0); } });
 }
 // first-time players see the tour before their first game (SKIP is always there)
-function firstPlay(go) {
+function firstPlay(go0) {
   return () => {
+    // a new player picks graphics first (the recommended preset for this device is highlighted)
+    const go = () => (gfxChosen() ? go0() : askGfx(go0));
+    if (!gfxChosen() && tutorialSeen()) { askGfx(go0); return; }
     if (tutorialSeen()) { go(); return; }
     if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); // needs this tap's user gesture
     // ask in a popup (nothing on the title screen moves around)
@@ -1095,6 +1102,69 @@ function firstPlay(go) {
   };
 }
 let tutAskGo = null;
+
+// ---- graphics: the first-run choice and the settings section ------------------------------------
+let gfxAskGo = null;
+function askGfx(go) {
+  const d = getDevice(), rec = d.recommended;
+  gfxAskGo = go;
+  $('gfx-ask-p').innerHTML = `We detected <b>${d.label}</b>${d.why.length > 1 ? ` (${d.why.slice(1).join(' · ')})` : ''} and picked <b>${PRESET_NAMES[rec]}</b> graphics as the best fit. Play with that, or choose another setting now.`;
+  const box = $('gfx-ask-opts');
+  box.innerHTML = '';
+  const DESC = { low: 'flat ground art, basic lighting - smoothest on older devices', medium: 'lighting, bloom and detailed still vegetation', high: 'living vegetation that sways and flattens, golden-hour glow, every shadow', ultra: 'high, with lusher vegetation and native sharpness - fast desktops' };
+  const order = [rec, ...['low', 'medium', 'high', 'ultra'].filter((k) => k !== rec)];
+  for (const k of order) {
+    const b = document.createElement('button');
+    b.className = 'opt' + (k === rec ? ' rec' : '');
+    b.innerHTML = k === rec ? `▶ ${PRESET_NAMES[k]} (recommended)<br><small>${DESC[k]}</small>` : `${PRESET_NAMES[k]}<br><small>${DESC[k]}</small>`;
+    b.onclick = () => { applyPreset(k); onGfxChange(); const g2 = gfxAskGo; gfxAskGo = null; closeOverlay('gfx-ask'); if (g2) g2(); };
+    box.appendChild(b);
+  }
+  const c = document.createElement('button');
+  c.className = 'opt'; c.textContent = '⚙ Customize each effect…';
+  c.onclick = () => { applyPreset(rec); onGfxChange(); const g2 = gfxAskGo; gfxAskGo = null; closeOverlay('gfx-ask'); openOverlay('settings'); S.afterSettings = g2; };
+  box.appendChild(c);
+  openOverlay('gfx-ask');
+}
+// rebuild what depends on the graphics settings
+function onGfxChange() {
+  onResize();
+  if (S.ground) S.ground.clear();         // baked ground art changes with the vegetation setting
+  if (S.flora) S.flora.configure(gfx);
+  if (gfx.lighting >= 2) loadGlowSheets();
+  syncGfxPanel();
+}
+function buildGfxPanel() {
+  const box = $('s-gfxbox');
+  if (box.dataset.built) return;
+  box.dataset.built = '1';
+  const d = getDevice();
+  box.innerHTML = `<h3>GRAPHICS</h3><p class="gfx-dev">Detected ${d.label}${d.gpu ? ' · ' + d.why.slice(1, 2).join('') : ''} - recommended: ${PRESET_NAMES[d.recommended]}</p>`;
+  const row = (label, el, sub) => { const l = document.createElement('label'); l.className = 'srow' + (sub ? ' sub' : ''); const sp = document.createElement('span'); sp.textContent = label; l.append(sp, el); box.appendChild(l); };
+  const ps = document.createElement('select'); ps.id = 's-preset';
+  for (const k of ['low', 'medium', 'high', 'ultra', 'custom']) { const o = document.createElement('option'); o.value = k; o.textContent = PRESET_NAMES[k] + (k === d.recommended ? ' (recommended)' : ''); ps.appendChild(o); }
+  ps.onchange = () => { if (ps.value !== 'custom') { applyPreset(ps.value); onGfxChange(); } };
+  row('Preset', ps);
+  for (const [key, label, choices] of OPTIONS) {
+    let el;
+    if (choices === 'bool') { el = document.createElement('input'); el.type = 'checkbox'; el.onchange = () => { setOption(key, el.checked); onGfxChange(); }; }
+    else {
+      el = document.createElement('select');
+      for (const [v, t] of choices) { const o = document.createElement('option'); o.value = String(v); o.textContent = t; el.appendChild(o); }
+      el.onchange = () => { const v = choices.find(([x]) => String(x) === el.value)[0]; setOption(key, v); onGfxChange(); };
+    }
+    el.dataset.g = key;
+    row(label, el, true);
+  }
+}
+function syncGfxPanel() {
+  buildGfxPanel();
+  $('s-preset').value = gfx.preset;
+  for (const el of $('s-gfxbox').querySelectorAll('[data-g]')) {
+    const v = gfx[el.dataset.g];
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v);
+  }
+}
 $('tut-ask-watch').onclick = () => { const go = tutAskGo; tutAskGo = null; closeOverlay('tut-ask'); openTutorial(null, go); };
 $('tut-ask-skip').onclick = () => { const go = tutAskGo; tutAskGo = null; markTutorialSeen(); closeOverlay('tut-ask'); if (go) go(); };
 $('t-tutorial').onclick = () => openTutorial();
@@ -1277,6 +1347,7 @@ function closeOverlay(id = topOverlay()) {
   if (id === 'inv') bag.hide();
   if (id === 'dev') $('dev').classList.remove('as-overlay');
   if (id === 'tutorial') stopTutorial();
+  if (id === 'settings' && S.afterSettings) { const g2 = S.afterSettings; S.afterSettings = null; settings.gfxPreset ||= gfx.preset; setTimeout(g2, 0); }
   if (id === 'bigmap') { S.bigmap = false; if (S.hud) S.hud.mapFilter = null; }
   S.inputMuteUntil = performance.now() + 300; // the A press that closed the menu shouldn't roll you
   ovFocus = 0; focusOverlay();
@@ -1363,8 +1434,7 @@ function syncSettings() {
   $('s-padfire').checked = settings.padStickFire;
   $('s-vibrate').checked = settings.vibrate;
   $('s-autofs').checked = settings.autoFullscreen !== false;
-  $('s-gfx').value = String(gfxQuality());
-  $('s-tilt').checked = settings.tiltShift === true;
+  syncGfxPanel();
   $('s-diag').checked = diag.on;
 }
 // Account transfer: the login token is the account. Copy it here, paste it on another device;
@@ -1431,11 +1501,9 @@ $('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; s
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
-$('s-gfx').onchange = (e) => { settings.gfx = Number(e.target.value); saveSettings(); onResize(); };
-$('s-tilt').onchange = (e) => { settings.tiltShift = e.target.checked; saveSettings(); };
 $('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.target.checked; saveSettings(); if (!diag.on && diag.el) { diag.el.remove(); diag.el = null; } };
 // graphics: high on desktops, medium on phones and tablets unless chosen
-function gfxQuality() { return settings.gfx ?? (input.device === 'touch' || IS_CONSOLE ? 1 : 2); }
+function gfxQuality() { return gfx.lighting; }
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
 
 function toggleMap(on) {
@@ -1513,8 +1581,7 @@ function onResize() {
   // A 4K TV reports a pixel ratio of 2, which made a console draw every pass at 3840x2160 until
   // its graphics memory ran out. Lower settings and consoles draw at fewer pixels (the art is
   // pixel art: it barely shows), and nothing ever renders more than ~2.5 megapixels.
-  const q = gfxQuality();
-  const cap = IS_CONSOLE ? 1 : q >= 2 ? 2 : q === 1 ? 1.5 : 1;
+  const cap = IS_CONSOLE ? Math.min(1, gfx.resolution) : gfx.resolution;
   DPR = Math.max(0.5, Math.min(cap, window.devicePixelRatio || 1, Math.sqrt(2.5e6 / Math.max(1, innerWidth * innerHeight))));
   const nw = innerWidth, nh = innerHeight;
   if (nw === W && nh === H && canvas.width === Math.round(W * DPR)) return;
@@ -1543,8 +1610,8 @@ function graphicsLost(why) {
   if (S.gfxLost) return;
   S.gfxLost = true;
   diag.lost++;
-  const q = gfxQuality();
-  if (q > 0) { settings.gfx = q - 1; settings.tiltShift = false; saveSettings(); }
+  const q = gfx.preset;
+  stepDown();
   try { sessionStorage.setItem('cla.gfxLost', JSON.stringify({ why, q, at: Date.now() })); } catch { /* blocked */ }
   if (S.hud) S.hud.toast('Graphics memory ran out - reloading with lighter graphics...', 'warn');
   setTimeout(() => location.reload(), 1200);
@@ -1553,7 +1620,7 @@ canvas.addEventListener('contextlost', (e) => { e.preventDefault(); graphicsLost
 setInterval(() => { if (typeof g.isContextLost === 'function' && g.isContextLost()) graphicsLost('watchdog'); }, 2000);
 try {
   const was = JSON.parse(sessionStorage.getItem('cla.gfxLost') || 'null');
-  if (was && Date.now() - was.at < 60000) { sessionStorage.removeItem('cla.gfxLost'); setTimeout(() => S.hud && S.hud.toast(`Graphics were lowered to ${['Low', 'Medium', 'High'][gfxQuality()]} after the screen lost its graphics memory (Settings to change).`, 'info'), 4000); }
+  if (was && Date.now() - was.at < 60000) { sessionStorage.removeItem('cla.gfxLost'); setTimeout(() => S.hud && S.hud.toast(`Graphics were lowered to ${PRESET_NAMES[gfx.preset]} after the screen lost its graphics memory (Settings to change).`, 'info'), 4000); }
 } catch { /* blocked */ }
 
 // ---- diagnostics overlay (?diag, or Settings) -----------------------------------------------------
@@ -1580,7 +1647,7 @@ function diagFrame(dtMs) {
   diag.el.textContent = [
     `fps ${S.fps}  frame avg ${avg.toFixed(1)} ms  worst ${(f[f.length - 1] || 0).toFixed(0)} ms  >50ms: ${diag.long}`,
     `parts ${Object.entries(p).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`,
-    `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${['low', 'med', 'high'][gfxQuality()]}`,
+    `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${gfx.preset} (light ${gfx.lighting}, flora ${gfx.flora})`,
     `ground cache ${S.ground ? S.ground.cache.size : 0}/${S.ground ? S.ground.max : 0} chunks (${cacheMB.toFixed(0)} MB)  canvases ${cs.n} (${cs.mb.toFixed(0)} MB)  js heap ${mem}  gfx lost ${diag.lost}${LOW_MEM ? '  low-memory mode' : ''}`,
     `input ${input.device}  flips/min ${swRate.toFixed(0)}  pad ${pads.length ? `${pads[0].id.slice(0, 40)} [${pads[0].mapping || 'no mapping'}]` : 'none'}  emulation ${navigator.gamepadInputEmulation ?? 'n/a'}`,
     `${IS_CONSOLE ? 'console · ' : ''}${navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110)}`,
@@ -1839,9 +1906,11 @@ function render(dt) {
   // the sky: time of day, how long it's been raining, fog, lightning (render/atmos.js)
   S.rainK = (S.rainK || 0) + ((rain ? 1 : 0) - (S.rainK || 0)) * (1 - Math.exp(-dt / 8));
   S.wx.update(dt, rain, now);
+  wind.update(S.loopTime, S.rainK || 0);
   const sky = skyAt(S.loopTime, clock.minutes, S.rainK);
   if (S.wx.flash > 0) { const f = S.wx.flash * (0.5 + 0.4 * sky.night); sky.amb = sky.amb.map((v) => v + (1 - v) * f); }
   const quality = gfxQuality();
+  S.fx.thin = !gfx.particles;
   const pf = S.perf ??= {}; let pt = performance.now();
   const mark = (k) => { const n = performance.now(); pf[k] = (pf[k] || 0) * 0.9 + (n - pt) * 0.1; pt = n; };
   S.light.resize(W, H);
@@ -1883,12 +1952,20 @@ function render(dt) {
   const sub = !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
   if (sub) drawTunnel(g, S.map, view, now);
   else fx.drawDecals(g, view, now, rain);
+  // grass, crops, bushes and flower beds: sway, part round people, lie flat where cars went (render/flora)
+  if (!sub && S.flora) {
+    S.flora.sky = sky;
+    const lp = S.lastPeds || [], lv = S.lastVehs || [];
+    S.flora.update(dt, now, lp, lv, fx, sky);
+    S.flora.drawLive(g, view, S.ground, sky);
+    mark('flora');
+  }
   // the elevated highway: its shadow and the ramps' feet lie on the ground
   const hv = sub ? { slabs: [], pillars: [] } : S.highway.visible(view);
   S.highway.drawShadows(g, hv.slabs, sky);
   S.highway.drawLow(g, hv.slabs);
   // the sun's shadows: buildings (from just off screen too), trees and palms
-  if (!sub && sky.sun > 0.05) {
+  if (!sub && sky.sun > 0.05 && gfx.shadows > 0) {
     const reach = 90 * Math.min(3.2, sky.shadowLen);
     const near = S.buildings.inView({ x0: view.x0 - reach, y0: view.y0 - reach, x1: view.x1 + reach, y1: view.y1 + reach });
     drawContactShade(g, near, sky);
@@ -1896,6 +1973,7 @@ function render(dt) {
     // every prop throws its own silhouette (render/shadows.js); the few drawn in code without a
     // sprite (lamp posts, poles) keep the soft blot
     castList.length = 0;
+    if (gfx.shadows >= 2) {
     const blots = [];
     const seen = new Set();
     const addCast = (p) => {
@@ -1903,6 +1981,7 @@ function render(dt) {
       seen.add(p);
       const t = p.t;
       if (NO_CAST.has(t)) return;
+      if (S.flora && FLORA_PROPS.has(t)) { castList.push(S.flora.castFor(p)); return; }
       const fr = atlas.ready ? atlas.frames['prop_' + (t === 'billboard' ? 'billboard' + (p.ad || 0) : t === 'tent' ? 'tent' + (p.v || 0) : t)] : null;
       if (!fr) { if (TALL_SHADOW[t]) blots.push(p); return; }
       const grow = COUNTRY_GROW[t];
@@ -1916,6 +1995,7 @@ function render(dt) {
     }
     drawSpriteShadows(g, castList, sky);
     drawPropShadows(g, blots, sky, (p) => TALL_SHADOW[p.t]);
+    }
   }
   const insideB = sub ? null : drawInteriorView(sp);
 
@@ -1936,7 +2016,7 @@ function render(dt) {
   // lights of the frame (for the light map, the puddles and the rain), then the puddles
   const refl = sub ? [] : collectLights(sky, view, vehs, peds, dt);
   if (!sub) {
-    S.wx.drawPuddles(g, view, sky, refl, rain, now, dt, quality);
+    S.wx.drawPuddles(g, view, sky, gfx.reflections ? refl : [], rain, now, dt, quality);
     if (rain) S.wx.rainOnWater(view, dt);
     S.wx.drawRipples(g);
     S.wx.splashes(peds.concat(vehs), S.fx, (v) => sfx('splash', v * 0.4), now);
@@ -1991,6 +2071,7 @@ function render(dt) {
     }
   items.sort((a, b) => a.y - b.y);
   const nightLit = clock.dark > 0.3;
+  if (S.flora) S.flora.beginFrame();
   for (const it of items) {
     const lift = it.z ? liftOf(it.z) : 0;
     if (lift) { g.save(); g.translate(0, -lift); }
@@ -2003,6 +2084,10 @@ function render(dt) {
     else if (it.o) drawOverheadProp(g, it.o, it.o.t === 'lamp' ? (it.o._lv || 0) > 0.5 : nightLit);
     if (lift) g.restore();
   }
+  // wading through tall grass and crops: the stalks in front of your legs drawn over them
+  if (S.flora && !sub) S.flora.drawFront(g, peds.filter((p) => !(p.flags & (PF.INVEH | PF.DEAD | PF.DOWN))));
+  S.lastPeds = peds; S.lastVehs = vehs;
+  for (const v of vehs) { const d = VEHICLE_BY_INDEX[v.d.m]; if (d) { v._L = d.L; v._W = d.W; } }
   // the wires strung between the utility poles, over everything at ground level
   if (poles.length) {
     if (!S.poleAt) { S.poleAt = new Map(); for (const p of S.map.props) if (p.t === 'upole') S.poleAt.set(`${Math.round(p.x)},${Math.round(p.y)}`, p); }
@@ -2042,6 +2127,7 @@ function render(dt) {
     updateBirds(dt, view, vehs, peds);
   }
   fx.update(dt);
+  if (S.flora && !sub) S.flora.leavesFrame(g, view, dt, false);
   fx.drawParticles(g);
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -2056,7 +2142,7 @@ function render(dt) {
     if (sky.night > 0.05) drawNightGlow(sky.night, peds, vehs);
     g.setTransform(...S.worldTf);
     S.fx.drawEmissive(g);
-    S.wx.drawGlints(g, reflSrc, gfxQuality(), sky.night);
+    if (gfx.reflections) S.wx.drawGlints(g, reflSrc, gfxQuality(), sky.night);
     // lit signs keep their colours at night: drawn again over the darkened scene
     if (selfLit.length) { g.globalAlpha = Math.min(0.85, sky.night); for (const p of selfLit) drawOverheadProp(g, p, true); g.globalAlpha = 1; }
     if (countryLit.length) { g.globalAlpha = Math.min(1, sky.night * 1.3); for (const p of countryLit) drawCountryEmissive(g, p, sky.night); g.globalAlpha = 1; }
@@ -2067,7 +2153,7 @@ function render(dt) {
   }
   if (rain && !sub) drawRain(dt, sky);
   mark('rain');
-  if (!sub) S.light.post(g, DPR, now, settings.tiltShift === true);
+  if (!sub) S.light.post(g, DPR, now, gfx.tiltShift === true);
   mark('post');
   // things that stay sharp and unlit over all of it: the aim line, name tags and markers
   g.setTransform(...S.worldTf);
@@ -2545,7 +2631,7 @@ function drawVehicleEnt(v, now, dt) {
   if (v.blinkUntil > now || driverBlinks(v)) g.globalAlpha *= Math.floor(now * 10) % 2 ? 0.25 : 1; // pulling out of a garage
   if (def.kind !== 'boat' && !sinking) {
     // the shadow falls away from the sun (in the world, not turning with the car), longer when it's low
-    const sk = S.sky, sl = sk ? 3 + 7 * Math.min(1.6, sk.shadowLen) * sk.sun : 4;
+    const sk = gfx.shadows >= 2 ? S.sky : null, sl = sk ? 3 + 7 * Math.min(1.6, sk.shadowLen) * sk.sun : 4;
     const ox = sk ? sk.sunDir.x * sl : 3, oy = sk ? sk.sunDir.y * sl : 4;
     g.save(); g.translate(ox, oy); g.rotate(v.ra); drawVehicleShadow(g, v.d, def, true); g.restore();
   }
@@ -2762,7 +2848,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   g.save();
   if (!swimming) { // contact shadow, and the body's shadow thrown away from the sun
     const sk = S.sky;
-    if (sk && sk.sun > 0.05) {
+    if (sk && sk.sun > 0.05 && gfx.shadows >= 2) {
       const L = Math.max(0.35, Math.min(1.7, sk.shadowLen * 0.75)) * 30 * bs, dx = sk.sunDir.x, dy = Math.max(0.28, sk.sunDir.y);
       const n = Math.hypot(dx, dy);
       g.fillStyle = `rgba(12,15,34,${(0.36 * sk.sun).toFixed(3)})`;
@@ -3366,12 +3452,12 @@ function drawRain(dt, sky) {
     if (s2.x < -150 || s2.y < -150 || s2.x > W + 150 || s2.y > H + 150) continue;
     ls.push({ x: s2.x, y: s2.y, r: 150 * S.cam.zoom, c: r.c, a: r.a });
   }
-  S.wx.drawRain(g, W, H, dt, ls, sky, gfxQuality());
+  S.wx.drawRain(g, W, H, dt, ls, sky, gfx.weather ? gfxQuality() : 0, 0.1 + 0.5 * wind.strength * -wind.dx);
 }
 
 // ---------------------------------------------------------------------------
 loadBodies('assets/');
-loadAtlas('assets/', gfxQuality() >= 2).finally(() => { registerNewProps(); registerCountryProps(); connect(); requestAnimationFrame(frame); });
+loadAtlas('assets/', gfx.lighting >= 2).finally(() => { registerNewProps(); registerCountryProps(); connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
-window.CLA = { S, send, WEAPONS, smash: (i, a = 0) => setPropBroken(i, a, true) };
+window.CLA = { S, send, WEAPONS, smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };

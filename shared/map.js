@@ -595,7 +595,7 @@ function decodeTerrain() {
 // The wild terrain class at a tile: the 4x4-tile cells of the map concept, sampled through a
 // wobble of smooth and fine noise so the patches of desert, rock and forest get ragged, natural
 // edges instead of square blocks.
-function terrainAt(cls, cw, x, y) {
+export function terrainAt(cls, cw, x, y) {
   const n1 = Math.sin(x * 0.11 + Math.sin(y * 0.07) * 2) + Math.sin(y * 0.13 + Math.sin(x * 0.05) * 2);
   const n2 = Math.sin(x * 0.09 - y * 0.05 + 1.7) + Math.cos(y * 0.1 + x * 0.04);
   const jx = x + n1 * 3.2 + (hash2(x, y, 11) - 0.5) * 3, jy = y + n2 * 3.2 + (hash2(x, y, 13) - 0.5) * 3;

@@ -398,6 +398,7 @@ export class Weather {
         r.y += r.s * dt; r.x -= r.s * wind * dt;
         if (r.y > H + 20) { r.y = -20; r.x = Math.random() * (W + 120); }
         if (r.x < -20) r.x += W + 40;
+        else if (r.x > W + 20) r.x -= W + 40;
         const len = 8 + r.z * 16;
         g.moveTo(r.x, r.y); g.lineTo(r.x + len * wind, r.y - len);
       }

@@ -1,0 +1,76 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Flora preview</title>
+<style>body{margin:0;background:#222;color:#ddd;font:12px monospace}canvas{image-rendering:pixelated;display:block}</style></head>
+<body>
+<!-- Every procedural vegetation sprite on one sheet (serve the repo root, open this page):
+     grass kinds (upright, a lean, trodden, flattened), crops, bushes, flowers, trees, palms, the ground. -->
+<canvas id="c"></canvas>
+<script type="module">
+import { grassSheet, cropSheet, plantSheet, PLANTS, treeSprite, palmSprite, bushSprite, flowerSprite, paintGroundTile, GRASS, CROPS } from '../client/render/flora/art.js';
+const cv = document.getElementById('c');
+const W = 1800, H = 1700, Z = 2;
+cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+g.imageSmoothingEnabled = false;
+const glow = new URLSearchParams(location.search).has('glow');
+// ground strip
+const kinds = ['lawn', 'lush', 'park', 'meadow', 'forest', 'dry', 'dune', 'field'];
+const gd = new ImageData(32 * 6, 32 * 2 * kinds.length);
+kinds.forEach((k, r) => { for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 6; tx++) paintGroundTile(gd.data, gd.width, tx * 32, (r * 2 + ty) * 32, 4000 + tx * 32, 7000 + ty * 32, k); });
+const gc = document.createElement('canvas'); gc.width = gd.width; gc.height = gd.height; gc.getContext('2d').putImageData(gd, 0, 0);
+g.drawImage(gc, 0, 0, gd.width * 2, gd.height * 2);
+// grass over each ground
+let y = 0;
+for (const k of kinds) {
+  const sh = k === 'field' ? cropSheet('wheat', 1) : grassSheet(k, 2);
+  for (let i = 0; i < 6; i++) {
+    const col = [5, 5, 8, 2, 5, 10][i], row = [0, 1, 0, 0, 1, 2][i];
+    const sx = col * sh.cw, sy = Math.min(row, 2) * sh.ch;
+    g.drawImage(sh.cv, sx, sy, sh.cw, sh.ch, i * 64 + 4, y + 64 - sh.ch + 6, sh.cw, sh.ch);
+    if (glow && sh.glow) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.7; g.drawImage(sh.glow, sx, sy, sh.cw, sh.ch, i * 64 + 4, y + 64 - sh.ch + 6, sh.cw, sh.ch); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  }
+  y += 128;
+}
+// crops
+let x = 420;
+for (const k of Object.keys(CROPS)) {
+  const sh = cropSheet(k, 1);
+  for (let r = 0; r < 3; r++) {
+    g.drawImage(sh.cv, 5 * sh.cw, r * sh.ch, sh.cw, sh.ch, x, 10 + r * (sh.ch + 6), sh.cw, sh.ch);
+    if (glow && sh.glow) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.7; g.drawImage(sh.glow, 5 * sh.cw, r * sh.ch, sh.cw, sh.ch, x, 10 + r * (sh.ch + 6), sh.cw, sh.ch); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  }
+  x += sh.cw + 8;
+}
+// trees, palms, bushes, flowers
+const put = (s, px, py) => {
+  g.fillStyle = '#4c7a36'; g.fillRect(px, py, s.full.width, s.full.height);
+  g.drawImage(s.full, px, py);
+  if (glow) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.8; g.drawImage(s.glowL, px, py); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  return s.full.width + 8;
+};
+x = 420; let yy = 300;
+for (const k of ['oak', 'maple', 'pine', 'birch', 'blossom']) for (let v = 0; v < 2; v++) { x += put(treeSprite(k, v, 63, 78), x, yy); if (x > W - 140) { x = 420; yy += 170; } }
+x = 420; yy += 170;
+for (let v = 0; v < 4; v++) x += put(palmSprite(v, 59, 62), x, yy);
+x += put(palmSprite(0, 38, 44, true), x, yy);
+x = 420; yy += 140;
+for (const k of ['round', 'dark', 'flowering', 'yellow', 'olive']) for (let v = 0; v < 2; v++) x += put(bushSprite(k, v, 40, 39), x, yy);
+x = 420; yy += 90;
+for (let v = 0; v < 4; v++) x += put(flowerSprite(v, 48, 33), x, yy);
+for (let v = 0; v < 2; v++) x += put(flowerSprite(v, 43, 52, true), x, yy);
+// undergrowth: each kind's variants, upright / leaning / trodden / flattened
+x = 420; yy += 80;
+for (const k of Object.keys(PLANTS)) {
+  const sh = plantSheet(k, 4);
+  for (let v = 0; v < sh.variants; v++) for (const [col, row] of [[5, 0], [9, 0], [5, 1], [5, 2]]) {
+    const sx = col * sh.cw, sy = (v * 3 + row) * sh.ch;
+    g.fillStyle = '#3e6a2e'; g.fillRect(x, yy, sh.cw, sh.ch);
+    g.drawImage(sh.cv, sx, sy, sh.cw, sh.ch, x, yy, sh.cw, sh.ch);
+    if (glow && sh.glow) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.7; g.drawImage(sh.glow, sx, sy, sh.cw, sh.ch, x, yy, sh.cw, sh.ch); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+    x += sh.cw + 2;
+    if (x > W - 70) { x = 420; yy += sh.ch + 4; }
+  }
+  x += 10;
+}
+window.done = true;
+</script></body></html>

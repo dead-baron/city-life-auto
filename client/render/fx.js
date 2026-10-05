@@ -59,6 +59,8 @@ export class FX {
     this.texts = [];
   }
   spawn(type, x, y, vx, vy, life, size, color, grow = 0, vz = 0) {
+    // "fewer particles": every other burst particle is skipped (the scratch object soaks up callers' edits)
+    if (this.thin && type !== 6 && (this.skip = !this.skip)) return this.scratch || (this.scratch = {});
     const o = this.p[this.pi];
     this.pi = (this.pi + 1) % MAX_P;
     o.on = true; o.type = type; o.x = x; o.y = y; o.vx = vx; o.vy = vy; o.life = life; o.max = life; o.size = size; o.color = color; o.grow = grow; o.z = 0; o.vz = vz;

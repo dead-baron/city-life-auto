@@ -14,6 +14,7 @@ import { drawRoads, edgeRect, drawGores } from './roads.js';
 import { Shores } from './shore.js';
 import { drawCountryProp, drawQuarry, drawRaceway } from './country.js';
 import { LOW_MEM, freeCanvas, capSet } from '../platform.js';
+import { flora, FLORA_PROPS } from './flora/index.js';
 
 export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw', 'busstop', 'phonebox', 'billboard',
   'campfire', 'upole', 'radiotower', 'turbine', 'pumpjack', 'flare', 'dscreen', 'dome', 'marquee', 'otank']);
@@ -86,11 +87,13 @@ export class GroundCache {
     const m = this.map;
     const n = CHUNK_PX / TILE;
     const tx0 = cx * n, ty0 = cy * n;
+    const F = flora() && flora().m === m ? flora() : null;
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
       const tx = tx0 + i, ty = ty0 + j;
       if (tx >= MAP_W || ty >= MAP_H) { g.fillStyle = '#0b0d14'; g.fillRect(i * TILE, j * TILE, TILE, TILE); continue; }
       drawTile(g, m, tx, ty, i * TILE, j * TILE);
     }
+    if (F) F.paintGround(g, cx, cy); // procedural grass and tilled fields (render/flora)
     g.save();
     g.translate(-cx * CHUNK_PX, -cy * CHUNK_PX);
     const k = this.key(cx, cy);
@@ -104,6 +107,7 @@ export class GroundCache {
     drawCurbs(g, m, tx0, ty0, n);
     drawRoads(g, m, this.roads.get(k) || [], this.culdesacs.get(k) || []);
     drawGores(g, m, this.gores.get(k) || []);
+    if (F && L.props) F.bakeChunk(g, cx, cy); // still tufts and crops (static vegetation mode)
     // hand-designed blocks: the painting, curb to curb (its road tiles are cut out, so the
     // game's own streets and crosswalks show through)
     if (L.lots) for (const a of this.handArt.get(k) || []) drawHandArt(g, a);
@@ -129,7 +133,11 @@ export class GroundCache {
     }
     // (shop names are on the lifted facades now: render/buildings.js)
     if (L.props) {
-      for (const p of this.lowProps.get(k) || []) { if (p.broken) drawDebris(g, p); else drawProp(g, p); }
+      for (const p of this.lowProps.get(k) || []) {
+        if (p.broken) drawDebris(g, p);
+        else if (F && FLORA_PROPS.has(p.t)) { if (F.mode !== 'live') F.drawStatic(g, p); } // live ones sway, drawn each frame
+        else drawProp(g, p);
+      }
       for (const p of this.highProps.get(k) || []) if (p.broken) drawFallen(g, p); // knocked-over trees / lamp posts lie on the ground
     }
     g.restore();
@@ -814,6 +822,7 @@ export function drawOverheadProp(g, p, night) {
   if (p.broken || p.t === 'sigpole') return; // signal poles are drawn live with their lights (client/main.js)
   if (p.t === 'atmw') { drawAtm(g, p, night); return; }
   if (p.t === 'lamp') { p.night = night; drawProp(g, p); return; }
+  if (FLORA_PROPS.has(p.t) && flora()) { flora().drawTree(g, p); return; }
   if (drawCountryProp(g, p, night)) return;
   drawProp(g, p);
 }

@@ -107,8 +107,7 @@
     <label class="srow"><span>Touch: aim stick outer ring fires</span><input type="checkbox" id="s-edgefire"></label>
     <label class="srow"><span>Gamepad: right stick full push fires</span><input type="checkbox" id="s-padfire"></label>
     <label class="srow"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>
-    <label class="srow"><span>Graphics</span><select id="s-gfx"><option value="2">High: full lighting, bloom, god rays</option><option value="1">Medium: lighting and bloom</option><option value="0">Low: basic lighting (fastest)</option></select></label>
-    <label class="srow"><span>Tilt-shift blur (optional, High only)</span><input type="checkbox" id="s-tilt"></label>
+    <div id="s-gfxbox" class="gfxbox"></div>
     <label class="srow"><span>Performance overlay (for bug reports)</span><input type="checkbox" id="s-diag"></label>
     <label class="srow"><span>Fullscreen when playing on mobile</span><input type="checkbox" id="s-autofs"></label>
     <button id="s-fs" class="sbtn">⛶ Toggle fullscreen</button>
@@ -128,6 +127,12 @@
     <div class="ibody" id="i-body"></div>
     <button id="i-go" class="sbtn hidden">⬇ Install now</button>
     <button id="i-repair" class="sbtn">↻ Repair install and reload</button>
+  </div></div>
+  <div id="gfx-ask" class="hidden overlay"><div class="panel">
+    <div class="mhead"><h2>GRAPHICS</h2></div>
+    <p class="msub" id="gfx-ask-p"></p>
+    <div class="m-opts" id="gfx-ask-opts"></div>
+    <p class="msub gfx-ask-note">You can change this, or switch individual effects on and off, any time in Settings.</p>
   </div></div>
   <div id="tut-ask" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2 id="tut-ask-h">FIRST TIME IN THE CITY?</h2><button class="x" data-close>✕</button></div>

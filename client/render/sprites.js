@@ -22,13 +22,20 @@ export async function loadAtlas(base = 'assets/', glowSheets = true) {
     // night emissive sheets load after the day art (not needed for the first frame). They're as
     // big again as the day art once decoded (~100 MB), so a console on less than High does without
     // them: the lighting pass still lights the windows.
-    if (!LOW_MEM || glowSheets) {
-      Promise.all(Array.from({ length: PREFAB_SHEETS }, (_, i) => load(`prefabs${i}_glow.webp`))).then((a) => { atlas.prefabGlow = a; }).catch(() => {});
-      Promise.all(Array.from({ length: BLOCK_SHEETS }, (_, i) => load(`blocks${i}_glow.webp`))).then((a) => { atlas.blockGlow = a; }).catch(() => {});
-    }
+    if (!LOW_MEM || glowSheets) loadGlowSheets(base);
     load('interiors.webp').then((im) => { atlas.interiors = im; }).catch(() => {}); // shop interiors (only needed once you walk in)
     load('animals.png').then((im) => { atlas.animals = im; }).catch(() => {}); // lost pets
   } catch (e) { console.warn('atlas unavailable, using procedural sprites', e); }
+}
+
+// the night emissive sheets (lit windows and signs), loaded once
+let glowLoading = false;
+export function loadGlowSheets(base = 'assets/') {
+  if (glowLoading) return;
+  glowLoading = true;
+  const load = (f) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = base + f; });
+  Promise.all(Array.from({ length: PREFAB_SHEETS }, (_, i) => load(`prefabs${i}_glow.webp`))).then((a) => { atlas.prefabGlow = a; }).catch(() => {});
+  Promise.all(Array.from({ length: BLOCK_SHEETS }, (_, i) => load(`blocks${i}_glow.webp`))).then((a) => { atlas.blockGlow = a; }).catch(() => {});
 }
 
 function frame(name) { return atlas.ready ? atlas.frames[name] : null; }

@@ -341,8 +341,10 @@ body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
 .ph-hint, .ph-empty { color: #8a90a2; font-size: 12.5px; margin: 6px 2px; }
 body.portrait #phone { justify-content: center; padding: 0; }
 
-#tut-ask { position: absolute; inset: 0; z-index: 44; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
+#tut-ask, #gfx-ask { position: absolute; inset: 0; z-index: 44; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
 #tut-ask .panel { width: min(460px, 92vw); }
+#gfx-ask .panel { width: min(560px, 94vw); max-height: 92vh; overflow-y: auto; }
+#gfx-ask .opt small { display: block; font-size: 12px; opacity: .78; font-weight: 400; margin-top: 2px; }
 
 /* world-map waypoint panel */
 #bm-panel { width: 230px; max-height: 86vh; overflow-y: auto; background: rgba(10,13,22,.92); border: 1px solid #2c3142; border-radius: 12px; padding: 8px; flex: 0 0 auto; }
@@ -516,3 +518,11 @@ body.portrait #spec { width: 210px; font-size: 14px; }
 
 /* diagnostics overlay (?diag or Settings) */
 #diag { position: fixed; left: 8px; top: 64px; z-index: 50; margin: 0; padding: 6px 8px; max-width: calc(100vw - 16px); background: rgba(0,0,0,.72); color: #9fffb0; font: 12px/1.35 monospace; white-space: pre-wrap; pointer-events: none; border-radius: 4px; }
+
+/* graphics section of the settings menu */
+.gfxbox { margin: 6px 0 4px; padding: 6px 0 2px; border-top: 1px solid rgba(255,255,255,.12); border-bottom: 1px solid rgba(255,255,255,.12); }
+.gfxbox h3 { margin: 4px 16px 2px; font: 15px Anton, Impact, sans-serif; letter-spacing: .06em; color: #ffd23e; }
+.gfxbox .gfx-dev { margin: 0 16px 6px; font-size: 12px; color: var(--dim); }
+.gfxbox .srow.sub span { padding-left: 12px; opacity: .9; }
+.gfx-ask-note { font-size: 12px; opacity: .8; }
+#gfx-ask .opt.rec { border-color: #ffd23e; }
