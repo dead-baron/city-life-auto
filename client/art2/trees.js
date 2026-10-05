@@ -1,0 +1,128 @@
+// Art v2 trees and plants, drawn as upright sprites (heights per pixel = how far above the foot it
+// stands, so they throw proper shadows) with normals worked out from their shapes: palm crowns from
+// each frond's direction, broadleaf crowns from clumps of leafy spheres. Leaves are flagged so low
+// sun glows through their edges.
+import { GBuf, F_LEAF, hash, mulberry32, step, bayer } from './gbuf.js';
+import { MAT, ramp } from './palette.js';
+
+const nrm = (G, x, y, n) => { x |= 0; y |= 0; if (!G.inside(x, y)) return; const j = (y * G.w + x) * 4; const l = Math.hypot(n[0], n[1], n[2]) || 1; G.nrm[j] = (n[0] / l * 0.5 + 0.5) * 255; G.nrm[j + 1] = (n[1] / l * 0.5 + 0.5) * 255; G.nrm[j + 2] = (n[2] / l * 0.5 + 0.5) * 255; G.nrm[j + 3] = 255; };
+
+function finishUpright(G, foot) {
+  for (let i = 0; i < G.z.length; i++) if (G.col[i * 4 + 3]) G.z[i] = Math.max(1, foot - Math.floor(i / G.w));
+}
+
+// ---- palm -------------------------------------------------------------------------------------------
+export function palm(seed = 1, height = 110) {
+  const rnd = mulberry32(seed * 7919 + 11);
+  const crownR = 30;
+  const W = crownR * 2 + 24, H = height + crownR + 10, foot = H - 3;
+  const G = new GBuf(W, H);
+  G.ax = W / 2; G.ay = foot;
+  const lean = (rnd() - 0.5) * 18, bend = (rnd() - 0.3) * 10;
+  const trunkX = (t) => W / 2 + lean * t + bend * Math.sin(t * Math.PI);    // t: 0 foot .. 1 top
+  const topY = foot - height;
+  // trunk
+  for (let y = topY; y <= foot; y++) {
+    const t = (foot - y) / height, cx = trunkX(t), w = 3.2 - t * 1.2;
+    for (let x = Math.floor(cx - w); x <= Math.ceil(cx + w); x++) {
+      const u = (x + 0.5 - cx) / w;
+      if (Math.abs(u) > 1) continue;
+      const ring = (foot - y) % 5 === 0 || (foot - y) % 5 === 1 && u > 0;
+      const c = step(MAT.palmTrunk, 0.62 - u * 0.35 - (ring ? 0.3 : 0), x, y, 0.4);
+      G.put(x, y, c, null, 0);
+      nrm(G, x, y, [u * 0.9, 0.45, 0.2]);
+    }
+  }
+  // coconuts / dead frond skirt under the crown
+  const cxTop = trunkX(1);
+  for (let k = 0; k < 5; k++) { const a = rnd() * 6.28, r = 2 + rnd() * 3, x = cxTop + Math.cos(a) * r, y = topY + 3 + Math.abs(Math.sin(a)) * 3; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx * dx + dy * dy < 2) { G.put(x + dx, y + dy, step(ramp('#7a5a28', 5, 2), 0.6 - dx * 0.15 - dy * 0.1, x, y, 0)); nrm(G, x + dx, y + dy, [dx, 0.5, -dy]); } }
+  // fronds: back ones first (pointing up/away), front ones last
+  const n = 17 + Math.floor(rnd() * 5);
+  const fronds = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * 6.283 + rnd() * 0.4;
+    fronds.push({ a, len: crownR * (0.62 + rnd() * 0.4), droop: 0.5 + rnd() * 0.6, lift: Math.sin(a) });
+  }
+  fronds.sort((p, q) => p.lift - q.lift);
+  for (const f of fronds) {
+    const dx = Math.cos(f.a), dyw = Math.sin(f.a);                // direction on the ground plane
+    const steps = Math.round(f.len * 1.4);
+    let px = cxTop, py = topY;
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      // the frond arcs up a little then droops; seen in this projection its ground y and its height
+      // both move it on screen
+      const along = f.len * t;
+      const hgt = 6 * Math.sin(t * Math.PI * 0.6) - f.droop * along * t * 0.9;
+      const X = cxTop + dx * along, Y = topY + dyw * along * 0.75 - hgt;
+      // leaflets on both sides, longest mid-frond, angled toward the tip and down
+      const ll = Math.round(Math.sin(Math.min(1, t * 1.15) * Math.PI) * 7.5 + 1.5);
+      const px2 = -dyw, py2 = dx * 0.75;                            // perpendicular on screen
+      for (const sgn of [-1, 1]) for (let k = 1; k <= ll; k++) {
+        const qx = X + px2 * k * sgn + dx * k * 0.35, qy = Y + py2 * k * sgn + k * 0.45 + dyw * k * 0.2;
+        const top = sgn * (px2 + py2) < 0;                          // upper-left side catches light
+        const c = step(MAT.palmLeaf, 0.5 + (top ? 0.25 : -0.15) - k / ll * 0.2 + (t < 0.15 ? -0.2 : 0), qx | 0, qy | 0, 0.6);
+        G.put(qx, qy, c, null, 0, null, F_LEAF);
+        nrm(G, qx, qy, [px2 * sgn * 0.6, 0.35, 0.75]);
+      }
+      G.put(X, Y, step(MAT.palmLeaf, 0.3, X | 0, Y | 0, 0), null, 0, null, F_LEAF);
+      nrm(G, X, Y, [dx * 0.3, 0.4, 0.85]);
+      px = X; py = Y;
+    }
+  }
+  G.outline(0.42, true);
+  finishUpright(G, foot);
+  return G;
+}
+
+// ---- broadleaf street tree (and bushes) -----------------------------------------------------------
+export function leafyTree(seed = 1, height = 120, crown = 34, opt = {}) {
+  const rnd = mulberry32(seed * 104729 + 3);
+  const W = crown * 2 + 12, H = height + 8, foot = H - 3;
+  const G = new GBuf(W, H);
+  G.ax = W / 2; G.ay = foot;
+  const R = opt.ramp || MAT.leaf, cx = W / 2;
+  const crownCy = foot - height + crown * 0.95;
+  const trunkTop = crownCy + crown * 0.3;
+  // trunk with a fork
+  if (!opt.bush) for (let y = Math.floor(trunkTop - 10); y <= foot; y++) {
+    const t = (foot - y) / (foot - trunkTop), w = 2.6 - t * 0.6 + (y > foot - 3 ? 1 : 0);
+    const cxx = cx + Math.sin(t * 2.2 + seed) * 1.5;
+    for (let x = Math.floor(cxx - w); x <= Math.ceil(cxx + w); x++) { const u = (x + 0.5 - cxx) / w; if (Math.abs(u) > 1) continue; G.put(x, y, step(MAT.bark, 0.6 - u * 0.35 + (hash(x, y, seed) > 0.85 ? -0.2 : 0), x, y, 0.4)); nrm(G, x, y, [u, 0.5, 0.1]); }
+  }
+  // clumps
+  const blobs = [];
+  const nb = 9 + Math.floor(rnd() * 5);
+  for (let i = 0; i < nb; i++) {
+    const a = rnd() * 6.283, r = Math.sqrt(rnd()) * crown * 0.62;
+    blobs.push({ x: cx + Math.cos(a) * r * 1.05, y: crownCy + Math.sin(a) * r * 0.78 - crown * 0.08, r: crown * (0.34 + rnd() * 0.18) });
+  }
+  blobs.push({ x: cx, y: crownCy - crown * 0.15, r: crown * 0.55 });
+  // for each pixel: the front-most clump surface (largest projected depth)
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let best = null, bz = -1e9;
+    for (const b of blobs) {
+      const u = (x + 0.5 - b.x) / b.r, v = (y + 0.5 - b.y) / b.r, q = u * u + v * v;
+      if (q > 1) continue;
+      // leafy, ragged edge
+      const edge = 1 - q;
+      if (edge < 0.18 && hash(x >> 1, y >> 1, seed) > edge * 5) continue;
+      const w = Math.sqrt(1 - q);
+      const depth = b.y + w * b.r * 0.6;
+      if (depth > bz) { bz = depth; best = [u, v, w]; }
+    }
+    if (!best) continue;
+    const [u, v, w] = best;
+    // leaf texture: little clusters lit on their upper-left
+    const cl = hash(x >> 1, y >> 1, seed + 5), cl2 = hash((x + 1) >> 1, (y + 1) >> 1, seed + 6);
+    let t = 0.5 - u * 0.28 - v * 0.32 + (w - 0.5) * 0.2 + (cl > 0.72 ? 0.22 : cl < 0.2 ? -0.22 : 0) + (cl2 > 0.9 ? 0.15 : 0);
+    if (opt.flowers && hash(x, y, seed + 9) > 0.93) { G.put(x, y, step(ramp(opt.flowers, 5, 2), 0.7, x, y, 0), null, 0, null, F_LEAF); nrm(G, x, y, [u, 0.4 + w * 0.3, -v + 0.3]); continue; }
+    G.put(x, y, step(R, t, x, y, 0.8), null, 0, null, F_LEAF);
+    nrm(G, x, y, [u * 0.9, 0.35 + w * 0.4, -v * 0.9 + 0.25]);
+  }
+  G.outline(0.4, true);
+  finishUpright(G, foot);
+  return G;
+}
+
+export const bush = (seed, size = 18, opt = {}) => leafyTree(seed, size * 1.4, size, { ...opt, bush: true });

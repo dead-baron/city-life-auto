@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 people</title>
+<style>body{margin:0;background:#6b6f78;color:#eee;font:12px monospace}canvas{image-rendering:pixelated;display:block}</style></head><body>
+<canvas id="c"></canvas>
+<script type="module">
+import { person, randomPerson } from '../../client/art2/people.js';
+const kinds = [null, null, 'business', 'cop', 'beach', 'thug', 'clerk', null, null, null, null, null];
+const Z = Number(new URLSearchParams(location.search).get('z') || 4);
+const cols = 8 + 4, rows = kinds.length;
+const cv = document.getElementById('c'); cv.width = cols * 32 * Z; cv.height = rows * 54 * Z;
+const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+kinds.forEach((k, r) => {
+  const app = randomPerson(100 + r * 7, k);
+  for (let d = 0; d < 8; d++) g.drawImage(person(app, d, 'idle', 0).toCanvas('col'), 0, 0, 30, 52, d * 32 * Z, r * 54 * Z, 30 * Z, 52 * Z);
+  for (let f = 0; f < 4; f++) g.drawImage(person(app, 2, 'walk', f).toCanvas('col'), 0, 0, 30, 52, (8 + f) * 32 * Z, r * 54 * Z, 30 * Z, 52 * Z);
+});
+window.done = true;
+</script></body></html>

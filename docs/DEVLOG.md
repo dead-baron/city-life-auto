@@ -1456,3 +1456,45 @@ All the grass, crops, trees, palms, bushes and flower beds are now drawn by code
   - Older saved settings carry over.
 - **Cost:** live vegetation has a budget of 4200 tufts a frame (7000 on Ultra). In software rendering, a full screen of forest or meadow costs about 6–9 ms. Medium costs nothing per frame after a chunk is baked.
 - `tools/flora-preview.html` shows every generator on one sheet; add `?glow` to see the golden-hour light. `shared/map.js` now exports `terrainAt`.
+
+## 2026-10-05 · Art v2, phase 1: art rules and the first style frame
+
+The full art overhaul (see the art v2 plan) has started. The live game is unchanged; everything new lives in `client/art2/` and on the test pages in `tools/art2/`.
+
+- **Targets:** the four approved Round 1 images are in `docs/art-v2/targets`: the hero corner at golden hour, noon and rainy night, plus the palette and materials sheet.
+  - `tools/art2/extract_palette.py` measures a first master palette from them (`docs/art-v2/palette-v0.*`).
+- **Art rules (`docs/art-v2/SPEC.md`):**
+  - The projection is A Link to the Past style: screen x = X, screen y = Y − Z, with the ground at 1:1, walls at full height, and only south faces and roofs visible.
+  - 1 art pixel = 1 world pixel (4.5 cm). People are about 42 px tall, a storey 66 px, a sedan 100 px.
+  - Light comes from the upper left.
+  - Ramps are hue-shifted and outlines are dark, tinted, never black.
+  - Variants come from seeds.
+- **Core:**
+  - **`gbuf.js`:** every sprite is four maps: colour, normal, height and glow.
+    - Includes a selective outline pass and normals generated from a 2D silhouette.
+  - **`voxel.js`:** vehicles and props are small voxel models, ray-marched into sprites at any heading. Surface normals and ambient occlusion are baked in, with outlines along depth breaks.
+  - **`light.js`:** a WebGL2 renderer.
+    - Ambient from sky and ground, plus the sun with cast shadows marched through the height map (three soft rays).
+    - Direct light is quantised into bands with an ordered dither, so lighting looks hand-shaded.
+    - Leaves glow when the sun is low, and up to 64 point lights are supported.
+    - Bloom, streaky wet-ground reflections in the rain, haze, grading and a vignette.
+    - Three presets: golden, noon and night with rain.
+- **Generators:**
+  - **Ground (`ground.js`):**
+    - Asphalt with cracks, patches and potholes; paving slabs; kerbs with a visible face.
+    - Zebra crossings, lane lines, manholes and drains.
+    - Sand, surf, water, dock planks and grass.
+  - **Buildings (`buildings.js`):**
+    - Stucco, brick, painted block and tiled-roof houses.
+    - Windows that light at night, storefronts with awnings, interiors, an open door and a clerk behind the counter.
+    - Balconies, fire escapes, murals and neon icons.
+  - **Props (`props.js`):**
+    - Street furniture: lamps, hydrants, bins, news boxes, benches, bollards, planters, flower beds, hedges, umbrellas, cafe tables, chalkboards and dumpsters.
+    - Roof kit: AC units and a water tank.
+    - Beach and yard kit: a lifeguard tower, surfboards, a volleyball net, a yacht, pilings, a couch, a burn barrel and a laundry line.
+    - Vehicles: a sedan, taxi, pickup (with crates in the bed) and convertible, with working head and tail lights.
+  - **People (`people.js`):** characters built from parts (skin, hair styles, tops, bottoms, shoes, hats, glasses, carried items, build and height), with 8 facings and a 4-frame walk. Archetypes include business, cop, beach, clerk and thug. Preview: `tools/art2/people-preview.html`.
+  - **Trees (`trees.js`):** palms with layered fronds, broadleaf street trees and bushes, with normals from frond direction or leaf-clump spheres.
+- **Style frame (`tools/art2/style-frame.html?p=golden|noon|night`):** the hero corner rebuilt entirely from the generators, shown above its target. It builds in about 0.7 s in software rendering. Comparison sheet: `docs/art-v2/style-frame-v1.png`.
+- **Gaps against the targets:** they are denser and more finely detailed.
+  - The next passes add more detail per character, richer facades and rooftops, bushier palms and more foliage, and more props per metre.

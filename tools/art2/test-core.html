@@ -1,0 +1,34 @@
+<!doctype html><html><head><meta charset="utf-8"><title>art2 core test</title>
+<style>body{margin:0;background:#222;color:#ccc;font:12px monospace}canvas{image-rendering:pixelated;display:block;margin:6px}</style></head><body>
+<canvas id="c"></canvas><div id="raw"></div>
+<script type="module">
+import { GBuf } from '../../client/art2/gbuf.js';
+import { paintGround, laneLine, zebra, wear, manhole } from '../../client/art2/ground.js';
+import { car, lampPost, hydrant, bin, newsBox, bench, waterTank, planter, umbrella, dumpster } from '../../client/art2/props.js';
+import { MAT } from '../../client/art2/palette.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+const preset = new URLSearchParams(location.search).get('p') || 'golden';
+const G = new GBuf(480, 300);
+paintGround(G, (x, y) => (y > 90 && y < 230 ? 'asphalt' : 'sidewalk'), 3);
+wear(G, 0, 92, 480, 136, 1, 4);
+laneLine(G, 0, 159, 480, true, { yellow: true, dash: 16, gap: 10 });
+manhole(G, 300, 120);
+const T = performance.now();
+const place = (m, x, y, hd = 0) => { const s = m.render(hd); G.blit(s, x - s.ax, y - s.ay); return s; };
+const night = preset === 'night' ? 1 : 0;
+const cars = [car('sedan', MAT.paintBlue, { lights: night }), car('taxi', MAT.paintYellowCar, { lights: night }), car('pickup', MAT.paintGreen, { crate: true, lights: night }), car('convertible', MAT.paintRed, { lights: night })];
+place(lampPost('cast', night), 40, 80);
+place(hydrant(), 80, 70); place(bin(), 110, 72); place(newsBox(), 140, 70); place(bench(), 190, 70); place(planter(), 240, 72);
+place(umbrella(), 300, 70); place(dumpster(), 360, 72); place(waterTank(), 440, 60);
+place(cars[0], 90, 140, 0); place(cars[1], 230, 140, Math.PI); place(cars[2], 380, 200, 0.4); place(cars[3], 120, 210, -0.6);
+place(lampPost('modern', night), 20, 290); place(cars[0], 300, 270, Math.PI / 2 - 0.3);
+const ms = performance.now() - T;
+const cv = document.getElementById('c'); cv.width = G.w * 2; cv.height = G.h * 2;
+const L = new Lighter(cv); L.setScene(G);
+const lights = night ? [{ x: 44, y: 80, z: 70, r: 120, col: [1, 0.72, 0.38], k: 1.6 }, { x: 26, y: 290, z: 90, r: 140, col: [1, 0.8, 0.5], k: 1.4 }] : [];
+L.render(PRESETS[preset], lights, 0);
+const raw = document.getElementById('raw');
+for (const k of ['col', 'nrm', 'z']) raw.appendChild(G.toCanvas(k, 1));
+window.info = 'build ms ' + ms.toFixed(0);
+window.done = true;
+</script></body></html>
