@@ -275,6 +275,7 @@ export function sample(view) {
 
   const p = readPad();
   input.menuNav = 0; input.menuLR = 0; input.menuSelect = false; input.menuBack = false; input.padStart = false; input.padCall = false; input.padPhone = false;
+  input.padAxes = p ? { rx: p.rx, ry: p.ry, lt: p.lt, rt: p.rt } : null; // the raw sticks and triggers (the city map zooms and pans with them)
   if (p) {
     if (p.dUpEdge) input.menuNav = -1;
     if (p.dDownEdge) input.menuNav = 1;

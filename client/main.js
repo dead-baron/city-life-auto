@@ -12,6 +12,7 @@ import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
 import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
+import { buildTeleport } from './devtp.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { atlas, loadAtlas, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -508,8 +509,20 @@ function setupDev() {
   const on = S.dev || S.devMode;
   $('b-dev').classList.toggle('hidden', !on);
   if (!on) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  box.innerHTML = `<div class="dev-head"><b>${S.devMode ? 'DEV DEBUG MODE · nothing is saved' : 'DEV / PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
+  box.innerHTML = `<div class="dev-head"><b>${S.devMode ? 'DEV DEBUG MODE · nothing is saved' : 'DEV / PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><button class="dev-tp-toggle">📍 Teleport to a district or landmark…</button><div id="dev-tp" class="hidden"></div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
   box.querySelector('.dev-x').onclick = () => closeOverlay('dev');
+  // teleport: a map of every district, station and landmark (built the first time it's opened)
+  const tpBox = box.querySelector('#dev-tp'), tpBtn = box.querySelector('.dev-tp-toggle');
+  tpBtn.onclick = () => {
+    const open = tpBox.classList.toggle('hidden') === false;
+    tpBtn.textContent = open ? '📍 Teleport ▲ (hide)' : '📍 Teleport to a district or landmark…';
+    if (open && !tpBox.childElementCount && S.map) buildTeleport(tpBox, S.map, (pl) => {
+      sfx('click', 0.8);
+      send({ t: 'dev', c: 'tp', x: Math.round(pl.x), y: Math.round(pl.y) });
+      S.hud.toast(`🛠 Teleported to ${pl.name}`, 'info');
+      closeOverlay('dev');
+    });
+  };
   const cmds = box.querySelector('.dev-cmds');
   for (const [c, label, extra] of DEV_CMDS) {
     const b = document.createElement('button');
@@ -591,6 +604,11 @@ initInput(canvas, {
     if (S.playing && S.me && S.me.dead && !topOverlay() && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { cycleDeathChoice(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
     if (k === 'Escape' && topOverlay() === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
+    if (topOverlay() === 'bigmap' && S.hud) { // zoom the city map: + / - (and C to find yourself)
+      if (k === 'Equal' || k === 'NumpadAdd') { S.hud.zoomMap(1.5); return; }
+      if (k === 'Minus' || k === 'NumpadSubtract') { S.hud.zoomMap(1 / 1.5); return; }
+      if (k === 'KeyC') { const me = selfPos(); S.hud.centerMap(me.x, me.y); return; }
+    }
     // menus with the keyboard: W/S or arrows move, Enter / Space / E selects, A/D or arrows change a setting
     if (topOverlay() && topOverlay() !== 'tutorial' && menuKey(k)) return;
     if (!topOverlay() && S.hud && S.hud.menuOpen) {
@@ -1024,13 +1042,55 @@ for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSetting
 function toggleMap(on) {
   if (on) {
     if (topOverlay() !== 'bigmap') openOverlay('bigmap');
-    $('bigmap-hint').textContent = input.device === 'touch' ? 'Tap the map to drop a marker · tap outside to close' : input.device === 'gamepad' ? 'Pick a place on the left · B to close' : 'Click the map to drop a marker · M / Esc to close';
+    $('bigmap-hint').textContent = input.device === 'touch' ? 'Pinch to zoom, drag to look around · tap to drop a marker · tap outside to close' : input.device === 'gamepad' ? 'RT / LT zoom · right stick looks around · pick a place on the left · B to close' : 'Wheel or + / - to zoom, drag to look around, C finds you · click to drop a marker · M / Esc to close';
+    if (S.hud && S.hud.mapView) { S.hud.resetMap(); const me = selfPos(); S.hud.centerMap(me.x, me.y); }
     mapwp.open();
   } else if (overlays.includes('bigmap')) closeOverlay('bigmap');
 }
 // clicking the dark backdrop closes; clicking the map itself drops a waypoint there
 $('bigmap').onclick = (e) => { if (e.target === $('bigmap')) toggleMap(false); };
+// Zoom and look around the map: mouse wheel / pinch zooms about the pointer, dragging pans, the
+// + / - / ⌖ buttons (and + - C keys, LT / RT and the right stick on a pad) do the same.
+const mapPtrs = new Map();
+let mapDrag = null, mapDragged = false;
+const mapPos = (e) => { const r = $('bigmap-c').getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+$('bigmap-c').addEventListener('wheel', (e) => { e.preventDefault(); const [x, y] = mapPos(e); S.hud && S.hud.zoomMap(Math.pow(1.0015, -e.deltaY), x, y); }, { passive: false });
+$('bigmap-c').addEventListener('pointerdown', (e) => {
+  try { $('bigmap-c').setPointerCapture(e.pointerId); } catch { /* a pointer the browser no longer tracks */ }
+  mapPtrs.set(e.pointerId, mapPos(e));
+  if (mapPtrs.size === 1) { mapDrag = mapPos(e); mapDragged = false; }
+});
+$('bigmap-c').addEventListener('pointermove', (e) => {
+  if (!mapPtrs.has(e.pointerId) || !S.hud) return;
+  const prev = mapPtrs.get(e.pointerId), cur = mapPos(e);
+  if (mapPtrs.size >= 2) { // pinch: zoom about the middle of the two fingers, and pan with it
+    const [a, b] = [...mapPtrs.entries()].map(([id, p]) => (id === e.pointerId ? cur : p));
+    const [o] = [...mapPtrs.entries()].filter(([id]) => id !== e.pointerId).map(([, p]) => p);
+    const d0 = Math.hypot(prev[0] - o[0], prev[1] - o[1]), d1 = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    if (d0 > 10) S.hud.zoomMap(d1 / d0, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    S.hud.panMap((cur[0] - prev[0]) / 2, (cur[1] - prev[1]) / 2);
+    mapDragged = true;
+  } else if (mapDrag) {
+    if (Math.hypot(cur[0] - mapDrag[0], cur[1] - mapDrag[1]) > 6) mapDragged = true;
+    if (mapDragged) S.hud.panMap(cur[0] - prev[0], cur[1] - prev[1]);
+  }
+  mapPtrs.set(e.pointerId, cur);
+});
+const mapUp = (e) => { mapPtrs.delete(e.pointerId); if (!mapPtrs.size) mapDrag = null; };
+$('bigmap-c').addEventListener('pointerup', mapUp);
+$('bigmap-c').addEventListener('pointercancel', mapUp);
+$('bm-zin').onclick = () => S.hud && S.hud.zoomMap(1.6);
+$('bm-zout').onclick = () => S.hud && S.hud.zoomMap(1 / 1.6);
+$('bm-me').onclick = () => { if (!S.hud) return; const me = selfPos(); if (S.hud.mapView.z < 2.5) S.hud.zoomMap(3 / S.hud.mapView.z); S.hud.centerMap(me.x, me.y); };
+// on a pad: RT zooms in, LT out, the right stick looks around
+function padMapLook(dt) {
+  const a = input.padAxes;
+  if (!a || !S.hud || !S.hud.mapView) return;
+  if (a.rt || a.lt) S.hud.zoomMap(Math.pow(2.2, (a.rt - a.lt) * dt));
+  if (a.rx || a.ry) S.hud.panMap(-a.rx * 700 * dt, -a.ry * 700 * dt);
+}
 $('bigmap-c').onclick = (e) => {
+  if (mapDragged) { mapDragged = false; return; } // that was a drag or a pinch, not a tap
   const sc = S.hud && S.hud.bigmapScale;
   if (!sc) return;
   const r = $('bigmap-c').getBoundingClientRect();
@@ -1493,7 +1553,7 @@ function render(dt) {
     if (dead !== S.uiDead) { S.uiDead = dead; document.body.classList.toggle('dead', dead); }
     if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
   }
-  if (S.bigmap) S.hud.drawBigMap(sp.x, sp.y, sp.a);
+  if (S.bigmap) { padMapLook(Math.min(0.05, dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a); }
   if ((nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
 }
 

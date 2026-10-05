@@ -300,6 +300,22 @@ export class HUD {
   // The baked city image (assets/worldmap.webp, rendered by the game's own chunk baker) with
   // district names, places, your homes and job on top. On duty, it becomes the police dispatch
   // map: reported crimes, live suspects you can currently see, and last-known search areas.
+  // Map zoom: factor k about a point on the canvas (CSS px; default its middle), clamped 1x-8x.
+  zoomMap(k, sx, sy) {
+    const V = this.mapView, sc = this.bigmapScale;
+    if (!V || !sc) return;
+    const c = $('bigmap-c'), cw = c.clientWidth, ch = c.clientHeight;
+    if (sx === undefined) { sx = cw / 2; sy = ch / 2; }
+    const [ox, oy] = this.bigmapOrigin;
+    const wx = ox + sx / sc, wy = oy + sy / sc; // the world point under the finger stays put
+    const z = Math.max(1, Math.min(8, V.z * k));
+    const ns = this.bigmapFit * z;
+    V.z = z; V.cx = wx - sx / ns + cw / ns / 2; V.cy = wy - sy / ns + ch / ns / 2;
+  }
+  panMap(dx, dy) { const V = this.mapView, sc = this.bigmapScale; if (!V || !sc) return; V.cx -= dx / sc; V.cy -= dy / sc; }
+  centerMap(x, y) { if (this.mapView) { this.mapView.cx = x; this.mapView.cy = y; } }
+  resetMap() { if (this.mapView) this.mapView.z = 1; }
+
   drawBigMap(cx, cy, heading) {
     const c = $('bigmap-c');
     const me = this.me;
@@ -308,20 +324,27 @@ export class HUD {
     const WW = fx1 - fx0, WH = fy1 - fy0;
     const panel = $('bm-panel'), portrait = innerHeight > innerWidth;
     const maxW = (innerWidth - (portrait ? 0 : (panel ? panel.offsetWidth + 24 : 0))) * 0.96, maxH = (innerHeight - (portrait && panel ? panel.offsetHeight + 16 : 0)) * 0.86;
-    const sc = Math.min(maxW / WW, maxH / WH);
-    this.bigmapScale = sc; this.bigmapOrigin = [fx0, fy0];
-    const w = Math.round(WW * sc), h = Math.round(WH * sc);
+    const fit = Math.min(maxW / WW, maxH / WH);
+    const w = Math.round(WW * fit), h = Math.round(WH * fit);
+    // zoomed in, the canvas shows a window of the frame round the view centre (clamped to it)
+    const V = this.mapView || (this.mapView = { z: 1, cx: (fx0 + fx1) / 2, cy: (fy0 + fy1) / 2 });
+    const vw = WW / V.z, vh = WH / V.z;
+    V.cx = Math.max(fx0 + vw / 2, Math.min(fx1 - vw / 2, V.cx)); V.cy = Math.max(fy0 + vh / 2, Math.min(fy1 - vh / 2, V.cy));
+    const ox = V.cx - vw / 2, oy = V.cy - vh / 2;
+    const sc = fit * V.z;
+    this.bigmapScale = sc; this.bigmapOrigin = [ox, oy]; this.bigmapFit = fit;
     const dpr = Math.min(2, devicePixelRatio || 1);
     if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px'; }
     const g = c.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const img = worldMapImage(this.map);
     // the framed part of the world (the outer wild islands lie beyond it)
-    const crop = (im) => { const kx = im.width / (MAP_W * TILE), ky = im.height / (MAP_H * TILE); g.drawImage(im, fx0 * kx, fy0 * ky, WW * kx, WH * ky, 0, 0, w, h); };
+    g.clearRect(0, 0, w, h);
+    const crop = (im) => { const kx = im.width / (MAP_W * TILE), ky = im.height / (MAP_H * TILE); g.drawImage(im, ox * kx, oy * ky, vw * kx, vh * ky, 0, 0, w, h); };
     if (img) { g.imageSmoothingEnabled = true; crop(img); }
     else { g.imageSmoothingEnabled = false; crop(this.mini); }
     if (police) { g.fillStyle = 'rgba(8,16,40,.35)'; g.fillRect(0, 0, w, h); }
-    const P = (x, y) => [(x - fx0) * sc, (y - fy0) * sc];
+    const P = (x, y) => [(x - ox) * sc, (y - oy) * sc];
     const now = performance.now();
     // district names
     g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -357,7 +380,7 @@ export class HUD {
     for (const [wd, colr] of [[2.5, 'rgba(0,0,0,.6)'], [0, '#f0c050']]) {
       for (const e of this.map.edges || []) {
         if (e.lvl === 0) continue;
-        g.lineWidth = Math.max(1.5, e.w * sc * (e.lvl === 1 ? 0.8 : 0.9)) + wd; g.strokeStyle = colr;
+        g.lineWidth = Math.min(7, Math.max(1.5, e.w * sc * (e.lvl === 1 ? 0.8 : 0.9))) + wd; // thin when zoomed in: the baked map shows the deck itself g.strokeStyle = colr;
         g.beginPath();
         e.pts.forEach((p, i) => { const [x, y] = P(p.x, p.y); if (i) g.lineTo(x, y); else g.moveTo(x, y); });
         g.stroke();
@@ -449,7 +472,7 @@ export class HUD {
     g.beginPath(); g.moveTo(11, 0); g.lineTo(-7, -7); g.lineTo(-3, 0); g.lineTo(-7, 7); g.closePath(); g.fill(); g.stroke();
     g.restore();
     // header
-    const title = police ? `POLICE DISPATCH · ${(me.rank || 'Officer').toUpperCase()}` : 'CITY MAP';
+    const title = (police ? `POLICE DISPATCH · ${(me.rank || 'Officer').toUpperCase()}` : 'CITY MAP') + (V.z > 1.01 ? `  ·  ${V.z.toFixed(1)}x` : '');
     g.font = `${Math.max(14, w / 38)}px Anton, Impact, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'top';
     g.lineWidth = 4; g.strokeStyle = '#000'; g.strokeText(title, 10, 8);
     g.fillStyle = police ? '#7ab0ff' : '#ffffff'; g.fillText(title, 10, 8);
