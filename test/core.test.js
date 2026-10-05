@@ -1001,3 +1001,49 @@ test('dev spectator: your character is kept safe while you look round, and set b
   dev.command(w, p, 'spectate', { on: false });
   assert.ok(p.invincible);
 });
+
+test('coming back after an update: never boxed in - out of a closed-in pocket or a locked motor pool, back up on the deck', async () => {
+  const unstuck = await import('../server/systems/unstuck.js');
+  const { T } = await import('../shared/constants.js');
+  const w = makeWorld();
+  const m = w.map;
+  // 1. the police motor pool, gate shut (you logged out in it as an officer, you're back as a citizen)
+  const mp = m.motorPools[0];
+  const inPool = { x: (mp.tx + mp.tw / 2) * 32, y: (mp.ty + mp.th / 2) * 32 };
+  assert.ok(!unstuck.canWalkOut(m, inPool.x, inPool.y), 'a shut motor pool is a closed pocket');
+  const a = joinPlayer(w, { pos: { ...inPool } });
+  assert.ok(unstuck.canWalkOut(m, a.p.ped.x, a.p.ped.y), 'came back somewhere you can walk away from');
+  assert.ok(Math.hypot(a.p.ped.x - inPool.x, a.p.ped.y - inPool.y) < 40 * 32, 'close to where you left');
+  // 2. a patch of pavement walled in on every side by a new build
+  const road = m.pois.find((q) => q.kind === 'coffee');
+  const cx = Math.floor(road.x / 32), cy = Math.floor(road.y / 32) + 1;
+  const saved = [];
+  for (let y = cy - 3; y <= cy + 3; y++) for (let x = cx - 3; x <= cx + 3; x++) {
+    const ring = Math.max(Math.abs(x - cx), Math.abs(y - cy));
+    saved.push([y * m.w + x, m.tiles[y * m.w + x]]);
+    m.tiles[y * m.w + x] = ring === 3 ? T.WALL : T.PLAZA;
+  }
+  try {
+    const at = { x: (cx + 0.5) * 32, y: (cy + 0.5) * 32 };
+    assert.ok(!unstuck.canWalkOut(m, at.x, at.y));
+    const b = joinPlayer(w, { pos: { ...at } });
+    assert.ok(unstuck.canWalkOut(m, b.p.ped.x, b.p.ped.y), 'out of the pocket on login');
+    // and Unstuck gets you out too, if you end up in one
+    b.p.ped.x = at.x; b.p.ped.y = at.y; w.place(b.p.ped);
+    b.p.ped.lastHitAt = b.p.ped.lastCombatAt = -999;
+    assert.equal(unstuck.request(w, b.p), null);
+    run(w, 6);
+    assert.ok(unstuck.canWalkOut(m, b.p.ped.x, b.p.ped.y), 'Unstuck: out of the pocket');
+  } finally { for (const [i, t] of saved) m.tiles[i] = t; }
+  // 3. surrender: no lying there waiting for help - you wake up at your spawn
+  const c = joinPlayer(w, {});
+  unstuck.surrender(w, c.p);
+  assert.ok(c.p.ped.dead);
+  run(w, 5);
+  assert.ok(!c.p.ped.dead, 'woke up within seconds');
+  // 4. up on the highway deck: back on the deck
+  const seg = m.levels.segs.find((sg) => sg.za >= 0.99 && sg.zb >= 0.99 && sg.len > 200);
+  const dx = seg.ax + (seg.bx - seg.ax) * 0.5, dy = seg.ay + (seg.by - seg.ay) * 0.5;
+  const d = joinPlayer(w, { pos: { x: dx, y: dy, lz: 1 } });
+  assert.ok(d.p.ped.lz > 0.9, 'still up on the deck');
+});

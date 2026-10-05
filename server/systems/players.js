@@ -5,6 +5,7 @@ import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
 import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
 import { PED_BLOCK, isSwimming } from '../../shared/map.js';
+import { surfaceZ } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
 import { store } from '../store.js';
@@ -74,6 +75,14 @@ function standable(world, pos) {
   return true;
 }
 
+// Where you'll come back to next time: your feet, and whether you're up on the highway deck.
+// Not while riding a train (you'd come back in a tunnel or over the tracks): the last spot on
+// foot stands.
+export function savePos(p, ped) {
+  if (!ped || ped.onTrain || ped.sub) return;
+  p.profile.pos = { x: Math.round(ped.x), y: Math.round(ped.y), lz: (ped.lz || 0) > 0.5 ? 1 : 0 };
+}
+
 function validSpawn(world, pos) {
   if (!pos || typeof pos.x !== 'number') return false;
   const t = world.map.tileAtPx(pos.x, pos.y);
@@ -83,11 +92,21 @@ function validSpawn(world, pos) {
 export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
   const prof = p.profile;
   let pos;
-  if (useSaved && validSpawn(world, prof.pos)) {
-    // the world may have changed under the spot you logged out on (a new build): step out of
-    // anything that's solid there now
-    if (!standable(world, prof.pos)) { const near = unstuck.openSpot(world.map, prof.pos.x, prof.pos.y); prof.pos = near || null; }
-    pos = prof.pos;
+  let lz = 0;
+  if (useSaved && prof.pos && typeof prof.pos.x === 'number') {
+    // the world may have changed under the spot you logged out on (a new build): a building,
+    // fence or gate may stand there now, or close round it. Up on the highway deck you stay up
+    // there if the deck still is; anywhere else you're put on the nearest ground you can actually
+    // walk away from (out of any closed-in pocket, to the street).
+    const sp = prof.pos;
+    const deckZ = sp.lz === 1 ? surfaceZ(world.map, sp.x, sp.y, 1) : null;
+    if (deckZ !== null) { pos = sp; lz = deckZ; }
+    else {
+      const ok = validSpawn(world, sp) && standable(world, sp) && unstuck.canWalkOut(world.map, sp.x, sp.y);
+      const to = ok ? sp : unstuck.safeSpot(world.map, sp.x, sp.y);
+      prof.pos = to ? { x: to.x, y: to.y } : null;
+      pos = prof.pos;
+    }
   }
   if (!pos) {
     pos = homes.resolveSpawn(world, p, p.respawnChoice, deathPos);
@@ -98,6 +117,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
   const ped = world.spawnPed(at.x, at.y, {
     hp: 100, app: { ...prof.outfit }, archetype: 'player', name: p.name,
   });
+  if (lz && pos === prof.pos) ped.lz = lz;
   ped.player = p;
   ped.weapon = 'fists';
   for (const id of Object.keys(prof.weapons)) {
@@ -136,7 +156,7 @@ function finalizeLogout(world, p, dropLoot) {
       world.emit(ped.x, ped.y, { e: 'poof', x: ped.x, y: ped.y });
     }
     if (ped.vehId) vehicles.ejectPed(world, ped, true);
-    p.profile.pos = { x: ped.x, y: ped.y };
+    savePos(p, ped);
     world.remove(ped);
   }
   p.profile.lastSeen = Date.now();
@@ -432,7 +452,7 @@ export function update(world, dt) {
     // flags
     ped.ghost = !!p.ghostUntil;
     // periodic persistence of position
-    if (now - p.lastPosSave > 5) { p.lastPosSave = now; p.profile.pos = { x: ped.x, y: ped.y }; store.touch(); }
+    if (now - p.lastPosSave > 5) { p.lastPosSave = now; savePos(p, ped); store.touch(); }
     // prompt every 4 ticks
     if ((world.tick + (ped.id & 3)) % 4 === 0 && p.conn) {
       const act = findInteraction(world, p);

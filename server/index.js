@@ -13,6 +13,7 @@ import { store, useStore } from './store.js';
 import { FileStore } from './file-store.js';
 import { createSession } from './session.js';
 import { World } from './world.js';
+import * as players from './systems/players.js';
 import { generateCity } from '../shared/map.js';
 import { TICK_MS } from '../shared/constants.js';
 
@@ -168,7 +169,7 @@ setInterval(() => {
 function shutdown(sig) {
   console.log(`[server] ${sig} received - saving and shutting down`);
   for (const p of world.players.values()) {
-    if (p.ped && !p.ped.dead) p.profile.pos = { x: p.ped.x, y: p.ped.y };
+    if (p.ped && !p.ped.dead) players.savePos(p, p.ped);
     if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server restarting - your progress is saved. Reconnecting...' }); } catch { /* closed */ } }
   }
   try { store.flushSync(); } catch (e) { console.error('[server] final save failed', e); }

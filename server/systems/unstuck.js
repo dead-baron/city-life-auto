@@ -4,12 +4,13 @@
 //  * Surrender: give up on the spot. A wanted player turns themself in (busted: fined, contraband
 //    taken, back out at the police station); anyone else collapses and wakes up like any death.
 // Either way nothing is gained over playing it out.
-import { K, T } from '../../shared/constants.js';
+import { K, T, MAP_W, MAP_H } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { UNSTUCK_S, UNSTUCK_CALM_S } from '../../shared/rules.js';
 import * as law from './law.js';
 import * as combat from './combat.js';
 import * as vehicles from './vehicles.js';
+import * as revive from './revive.js';
 
 const STILL_PX = 24;
 const SEARCH_PX = 480;
@@ -38,7 +39,7 @@ export function request(world, p) {
 }
 
 // Somewhere a person can stand and walk away from: open ground all round, no solid furniture.
-export function openSpot(map, x, y) {
+export function openSpot(map, x, y, maxR = SEARCH_PX, here = false) {
   const free = (px, py) => !PED_BLOCK[map.tileAtPx(px, py)] && map.tileAtPx(px, py) !== T.WATER && map.tileAtPx(px, py) !== T.DEEP;
   const clear = (px, py) => {
     for (const [dx, dy] of [[0, 0], [16, 0], [-16, 0], [0, 16], [0, -16], [24, 24], [-24, 24], [24, -24], [-24, -24]]) if (!free(px + dx, py + dy)) return false;
@@ -48,7 +49,8 @@ export function openSpot(map, x, y) {
     }
     return true;
   };
-  for (let r = 0; r <= SEARCH_PX; r += 16) {
+  if (here && clear(x, y)) return { x, y };
+  for (let r = 0; r <= maxR; r += 16) {
     const n = Math.max(1, Math.round((2 * Math.PI * r) / 16));
     for (let k = 0; k < n; k++) {
       const a = (k / n) * Math.PI * 2;
@@ -57,6 +59,72 @@ export function openSpot(map, x, y) {
     }
   }
   return null;
+}
+
+// ---- pockets ---------------------------------------------------------------------------------------
+// After an update the city can change under the spot a character was saved on: a new building,
+// fence or gate can close round it so there's open ground right there but no way out. Walk the
+// open tiles from (x, y): reaching a street (road or sidewalk), or so much ground that it can't be
+// a closed pocket, means you can get away. Closed gates (the police motor pool, club shutters)
+// count as walls - they don't open for everyone.
+const STREET = new Set([T.ROAD, T.SIDEWALK, T.BRIDGE]);
+const POCKET_LIMIT = 2500; // tiles: more open ground than this is never a trap
+function gateTiles(map) {
+  const out = new Set();
+  for (const gt of map.gates || []) for (const e of gt.props) if (!e.off) out.add(Math.floor(e.y / 32) * MAP_W + Math.floor(e.x / 32));
+  return out;
+}
+export function canWalkOut(map, x, y) {
+  const tx0 = Math.floor(x / 32), ty0 = Math.floor(y / 32);
+  if (tx0 < 0 || ty0 < 0 || tx0 >= MAP_W || ty0 >= MAP_H) return false;
+  const gates = gateTiles(map);
+  const seen = new Set([ty0 * MAP_W + tx0]);
+  const q = [ty0 * MAP_W + tx0];
+  for (let h = 0; h < q.length; h++) {
+    const i = q[h], t = map.tiles[i];
+    if (STREET.has(t) || t === T.WATER || t === T.DEEP || seen.size > POCKET_LIMIT) return true;
+    const tx = i % MAP_W, ty = (i - tx) / MAP_W;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = tx + dx, ny = ty + dy;
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
+      const j = ny * MAP_W + nx;
+      if (seen.has(j) || PED_BLOCK[map.tiles[j]] || gates.has(j)) continue;
+      seen.add(j);
+      q.push(j);
+    }
+  }
+  return false; // a closed pocket
+}
+// The nearest open ground you can walk away from: the closest street-connected tile (searching
+// outward through walls), then a clear spot on it.
+export function escapeSpot(map, x, y) {
+  const tx0 = Math.max(0, Math.min(MAP_W - 1, Math.floor(x / 32))), ty0 = Math.max(0, Math.min(MAP_H - 1, Math.floor(y / 32)));
+  for (let r = 1; r < 80; r++) {
+    const ring = [];
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      const tx = tx0 + dx, ty = ty0 + dy;
+      if (tx < 1 || ty < 1 || tx >= MAP_W - 1 || ty >= MAP_H - 1) continue;
+      const t = map.tiles[ty * MAP_W + tx];
+      if (t === T.SIDEWALK || t === T.PLAZA) ring.push([tx, ty, dx * dx + dy * dy]);
+    }
+    ring.sort((a, b) => a[2] - b[2]);
+    for (const [tx, ty] of ring) {
+      const px = (tx + 0.5) * 32, py = (ty + 0.5) * 32;
+      if (!canWalkOut(map, px, py)) continue;
+      const spot = openSpot(map, px, py, 96);
+      if (spot && canWalkOut(map, spot.x, spot.y)) return spot;
+    }
+  }
+  return null;
+}
+// Where to put someone who should be at (x, y): there if it's fine, else the nearest good spot.
+export function safeSpot(map, x, y) {
+  if (canWalkOut(map, x, y)) {
+    const near = openSpot(map, x, y, SEARCH_PX, true);
+    if (near && canWalkOut(map, near.x, near.y)) return near;
+  }
+  return escapeSpot(map, x, y);
 }
 
 export function surrender(world, p) {
@@ -73,6 +141,9 @@ export function surrender(world, p) {
     return null;
   }
   combat.damage(world, ped, 99999, null, 'surrender', 0);
+  // no lying there waiting for help: you wake up at your spawn in a couple of seconds
+  if (ped.dead && revive.isDowned(ped)) revive.finish(world, ped, null, 'surrender');
+  world.notify(p, 'You gave up. Waking up somewhere safe...', 'info');
   return null;
 }
 
@@ -90,7 +161,8 @@ export function update(world) {
     }
     if (world.time - u.at < UNSTUCK_S) continue;
     p.unstuck = null;
-    const to = openSpot(world.map, ped.x, ped.y);
+    let to = openSpot(world.map, ped.x, ped.y);
+    if (!to || !canWalkOut(world.map, to.x, to.y)) to = escapeSpot(world.map, ped.x, ped.y); // closed in: out to the nearest street
     if (!to) { world.notify(p, 'No open ground nearby - use Surrender to start over.', 'warn'); continue; }
     ped.x = to.x; ped.y = to.y; ped.vx = 0; ped.vy = 0; ped.lz = 0; ped.rollT = 0;
     world.place(ped);

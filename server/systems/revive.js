@@ -116,6 +116,7 @@ export function finish(world, ped, by, how = 'finished') {
   cancelAmbulance(world, p, true);
   endRequest(world, p);
   p.respawnAt = Math.min(p.respawnAt, world.time + 3);
+  if (how === 'surrender') { p.meDirty = true; return true; } // gave up: straight to the wake-up, no one to blame
   world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: 0, n: 8 });
   const who = by && by.player ? by.player.name : by ? (by.name || 'someone') : 'someone';
   world.notify(p, how === 'bust' ? `Booked by ${who} while you were down - no revive.` : `${who} finished you off.`, 'bad');
