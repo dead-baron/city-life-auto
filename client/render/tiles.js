@@ -12,8 +12,10 @@ import { atlas } from './sprites.js';
 import { railIndex, drawRailChunk, drawStation, drawPortals } from './trains.js';
 import { drawRoads, edgeRect, drawGores } from './roads.js';
 import { Shores } from './shore.js';
+import { drawCountryProp, drawQuarry, drawRaceway } from './country.js';
 
-export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw', 'busstop', 'phonebox', 'billboard']);
+export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw', 'busstop', 'phonebox', 'billboard',
+  'campfire', 'upole', 'radiotower', 'turbine', 'pumpjack', 'flare', 'dscreen', 'dome', 'marquee', 'otank']);
 
 const C = {
   grass: ['#4f8f3c', '#4a8838', '#559643', '#45812f'],
@@ -103,6 +105,8 @@ export class GroundCache {
     // game's own streets and crosswalks show through)
     if (L.lots) for (const a of this.handArt.get(k) || []) drawHandArt(g, a);
     for (const ap of m.airports || []) drawAirport(g, ap, cx, cy);
+    for (const q of m.quarries || []) drawQuarry(g, q, cx, cy, CHUNK_PX);
+    for (const r of m.raceways || []) drawRaceway(g, r, cx, cy, CHUNK_PX);
     for (const pt of m.paintings || []) drawPainting(g, pt, cx, cy);
     drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, m, st, cx, cy);
@@ -718,7 +722,7 @@ export function drawPrefabGlow(g, p) {
 
 export function drawProp(g, p) {
   if (p.t === 'painted' || p.t === 'plamp') return; // part of a painted block: the art already shows it
-  const fr = atlas.ready ? atlas.frames['prop_' + (p.t === 'billboard' ? 'billboard' + (p.ad || 0) : p.t)] : null;
+  const fr = atlas.ready ? atlas.frames['prop_' + (p.t === 'billboard' ? 'billboard' + (p.ad || 0) : p.t === 'tent' ? 'tent' + (p.v || 0) : p.t)] : null;
   if (fr) {
     const s = PROP_SIZES[p.t];
     g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, p.x - s[0] / 2, p.y - s[1] / 2, s[0], s[1]);
@@ -807,6 +811,7 @@ export function drawOverheadProp(g, p, night) {
   if (p.broken || p.t === 'sigpole') return; // signal poles are drawn live with their lights (client/main.js)
   if (p.t === 'atmw') { drawAtm(g, p, night); return; }
   if (p.t === 'lamp') { p.night = night; drawProp(g, p); return; }
+  if (drawCountryProp(g, p, night)) return;
   drawProp(g, p);
 }
 

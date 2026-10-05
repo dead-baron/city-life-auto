@@ -76,6 +76,8 @@ Overlay layers needed for each frame: hair (several styles), headwear (cap, bean
 - Traffic signals: a mast-arm pole with its 3-lamp head (top-down, lit and unlit), its knocked-over state, and a span-wire head hanging from cables (for downtown).
 - Bridge toll gantry spanning a road, with cameras.
 - Police spike strip lying across a road.
+- Hand-painted versions of the code-drawn props, if you want them to match the concept sheets more closely: bus shelter, phone box, billboard frame, utility pole, radio mast, wind turbine (tower + separate blade sprite so it can spin), pump jack (base + beam + horse head + crank as separate pieces for the animation), oil tank, solar panel row, tent, fire pit, picnic table, drive-in screen and marquee, observatory, coin binoculars.
+- Country lots as concept-style paintings (like the gas station lots): a campground, a roadside motel, a quarry office, a raceway grandstand and pit garages, a ranger station.
 
 ## 7. UI
 

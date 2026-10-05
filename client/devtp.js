@@ -57,7 +57,7 @@ export function teleportPlaces(map) {
     const p = st.kiosk ? { x: st.kiosk.out.x, y: st.kiosk.out.y + 40 } : spotNear(map, st.platform.x, st.platform.y, () => true);
     if (p) list.push({ name: st.name, group: 'Stations', x: p.x, y: p.y, kind: 'station' });
   }
-  for (const pt of map.paintings || []) {
+  for (const pt of (map.paintings || []).concat(map.landmarks || [])) {
     if (!pt.name) continue;
     const p = spotNear(map, pt.x + pt.w / 2, pt.y + pt.h / 2, () => true);
     if (p) list.push({ name: pt.name, group: 'Landmarks', x: p.x, y: p.y, kind: 'landmark' });

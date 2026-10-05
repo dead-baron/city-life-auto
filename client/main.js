@@ -41,6 +41,7 @@ import { Lighting, LIGHT } from './render/lighting.js';
 import { Weather } from './render/weather.js';
 import { drawBuildingShadows, drawPropShadows } from './render/shadows.js';
 import { registerNewProps } from './render/newprops.js';
+import { registerCountryProps, COUNTRY_TALL, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -421,6 +422,18 @@ function smashFx(p, i, a) {
     fx.flutter(p.x, p.y - 30, 20, BOARD, Math.random, 180, 240);
     fx.sparks(p.x, p.y - 30, 12);
     sfx('crash', vol); sfx('clang', vol);
+  } else if (t === 'tent') {
+    throwIt(1, 6, 160);
+    fx.flutter(p.x, p.y, 10, [['#e07b20', '#f29a3e'], ['#3f8a3a', '#5fae52'], ['#2f6fc8', '#4f8fe8']][p.v || 0].concat(['#e8e4d4']), Math.random, 120, 120);
+    sfx('hit', vol);
+  } else if (t === 'upole') {
+    fx.sparks(p.x, p.y - 46, 22);
+    bits(8, ['#6a4a2e', '#8a6440', '#d8dce4'], 160, 140, 3);
+    sfx('crash', vol * 0.8); sfx('clang', vol);
+  } else if (t === 'dspeaker' || t === 'scope') {
+    throwIt(1, 10, 220);
+    bits(6, ['#7a7e86', '#2a2c33', '#2f9a8a'], 150, 100, 2);
+    sfx('clang', vol * 0.8);
   } else if (t === 'phonebox') {
     throwIt(1, 8, 200);
     bits(26, GLASS, 200, 120, 2);
@@ -448,7 +461,7 @@ function smashFx(p, i, a) {
     fx.litter(p.x, p.y + 6, 36, GLASS, 46, now);
     fx.flutter(p.x, p.y, 6, ['#f2c21b', '#ffffff', '#2f5fc8'], Math.random, 120, 140); // the timetable and the poster
     sfx('glass', vol * 1.2); sfx('crash', vol * 0.6);
-  } else if (t.startsWith('bench') || t === 'pbench' || t.startsWith('pallet') || t === 'lumber' || t === 'planks' || t === 'cart' || t.startsWith('foodcart')) {
+  } else if (t.startsWith('bench') || t === 'pbench' || t === 'picnic' || t.startsWith('pallet') || t === 'lumber' || t === 'planks' || t === 'cart' || t.startsWith('foodcart')) {
     shatter(4, 180);
     bits(20, WOODC, 220, 120, 3.4);
     fx.litter(p.x, p.y, 10, WOODC, 36, now);
@@ -609,6 +622,7 @@ function setupWorld(seed) {
   S.map = generateCity(seed);
   S.ground = new GroundCache(S.map);
   S.wx = new Weather(S.map);
+  S.poleAt = null;
   S.wx.onThunder = () => sfx('thunder', 1);
   S.light ||= new Lighting();
   S.highway = new Highway(S.map);
@@ -1813,8 +1827,8 @@ function render(dt) {
     const reach = 90 * Math.min(3.2, sky.shadowLen);
     drawBuildingShadows(g, S.buildings.inView({ x0: view.x0 - reach, y0: view.y0 - reach, x1: view.x1 + reach, y1: view.y1 + reach }), sky);
     const tp = [];
-    for (let cy = Math.max(0, cy0 - 1); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) for (const p of S.ground.overhead(cx, cy)) if (!p.broken && (p.t.startsWith('tree') || p.t.startsWith('palm'))) tp.push(p);
-    drawPropShadows(g, tp, sky, (p) => (p.t.startsWith('palm') ? { h: 52, r: 10 } : { h: 40, r: 15 }));
+    for (let cy = Math.max(0, cy0 - 1); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) for (const p of S.ground.overhead(cx, cy)) if (!p.broken && (p.t.startsWith('tree') || p.t.startsWith('palm') || TALL_SHADOW[p.t])) tp.push(p);
+    drawPropShadows(g, tp, sky, (p) => TALL_SHADOW[p.t] || (p.t.startsWith('palm') ? { h: 52, r: 10 } : { h: 40, r: 15 }));
   }
   const insideB = sub ? null : drawInteriorView(sp);
 
@@ -1878,8 +1892,15 @@ function render(dt) {
   for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pz = par ? par.rz || 0 : 0; items.push({ y: levelKey(par ? par.ry : c.ry, pz) + 0.5, c, z: pz }); }
   S.highway.items(hv.slabs, hv.pillars, items);
   for (const c of crates) if ((c.flags & 3) === 1) items.push({ y: c.ry + 1, c });
+  const poles = [];
   if (!sub) for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
-    for (const p of S.ground.overhead(cx, cy)) if (p.x > view.x0 - 40 && p.x < view.x1 + 40 && p.y > view.y0 - 40 && p.y < view.y1 + 90) items.push({ y: p.y + 8, o: p });
+    for (const p of S.ground.overhead(cx, cy)) {
+      const tall = COUNTRY_TALL[p.t] || 0; // masts, turbines... stand up from their base: keep them while any of them shows
+      if (p.x > view.x0 - 40 - tall * 0.5 && p.x < view.x1 + 40 + tall * 0.5 && p.y > view.y0 - 40 && p.y < view.y1 + 90 + tall) {
+        items.push({ y: p.y + 8, o: p });
+        if (p.t === 'upole') poles.push(p);
+      }
+    }
   items.sort((a, b) => a.y - b.y);
   const nightLit = clock.dark > 0.3;
   for (const it of items) {
@@ -1893,6 +1914,11 @@ function render(dt) {
     else if (it.c) drawCrateEnt(it.c, now);
     else if (it.o) drawOverheadProp(g, it.o, it.o.t === 'lamp' ? (it.o._lv || 0) > 0.5 : nightLit);
     if (lift) g.restore();
+  }
+  // the wires strung between the utility poles, over everything at ground level
+  if (poles.length) {
+    if (!S.poleAt) { S.poleAt = new Map(); for (const p of S.map.props) if (p.t === 'upole') S.poleAt.set(`${Math.round(p.x)},${Math.round(p.y)}`, p); }
+    drawWires(g, poles, (x, y) => S.poleAt.get(`${Math.round(x)},${Math.round(y)}`));
   }
   // your own boat stays readable under a bridge: a faint outline through the deck
   if (S.pred && S.pred.kind === 'veh') { const me = S.ents.get(S.ctrlId); const d = me && me.d ? VEHICLE_BY_INDEX[me.d.m] : null; if (d && d.kind === 'boat' && underBridge(me.rx, me.ry, d.L / 2)) outlineVehicle(me, d); }
@@ -1945,6 +1971,7 @@ function render(dt) {
     S.wx.drawGlints(g, reflSrc, gfxQuality(), sky.night);
     // lit signs keep their colours at night: drawn again over the darkened scene
     if (selfLit.length) { g.globalAlpha = Math.min(0.85, sky.night); for (const p of selfLit) drawOverheadProp(g, p, true); g.globalAlpha = 1; }
+    if (countryLit.length) { g.globalAlpha = Math.min(1, sky.night * 1.3); for (const p of countryLit) drawCountryEmissive(g, p, sky.night); g.globalAlpha = 1; }
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
     mark('neon');
     S.light.applyGlows(g, DPR);
@@ -2915,9 +2942,12 @@ function drawWorldLabels(peds, vehs, now, z) {
 // ---- lighting: every light source of the frame into the light map and the bloom pass -----------
 // (render/lighting.js does the compositing). Also returns the light sources the puddles and the rain
 // pick up, in world px.
-const reflSrc = [], selfLit = [];
+const reflSrc = [], selfLit = [], countryLit = [];
+// shadow sizes (height, footprint) of the tall country props
+const RW_COL = { w: LIGHT.head, g: LIGHT.green, r: LIGHT.red, b: LIGHT.blue };
+const TALL_SHADOW = { turbine: { h: 120, r: 7 }, radiotower: { h: 110, r: 9 }, upole: { h: 36, r: 3 }, flare: { h: 50, r: 4 }, dome: { h: 60, r: 60 }, dscreen: { h: 50, r: 70 }, marquee: { h: 30, r: 26 }, pumpjack: { h: 30, r: 40 }, otank: { h: 60, r: 46 } };
 function collectLights(sky, view, vehs, peds, dt) {
-  selfLit.length = 0;
+  selfLit.length = 0; countryLit.length = 0;
   const L = S.light;
   const night = sky.night, t = S.loopTime;
   const haze = 1 + sky.fog.k * 1.4 + S.rainK * 0.7;
@@ -2964,9 +2994,40 @@ function collectLights(sky, view, vehs, peds, dt) {
       for (const p of S.ground.lowProps.get(cy * 1000 + cx) || []) {
         if (p.broken) continue;
         if (p.t === 'busstop') { L.add(p.x + 28, p.y, 70, LIGHT.white, 0.5 * night); L.glow(p.x + 28, p.y - 6, 18, LIGHT.warm, 0.25 * night); continue; }
+        if (p.t === 'rwlight') { const c = RW_COL[p.c] || LIGHT.white; L.add(p.x, p.y, 34, c, 0.7 * night); L.glow(p.x, p.y, 7, c, 0.9 * night); L.glow(p.x, p.y, 20, c, 0.12 * night * haze); continue; }
         if (!p.t.startsWith('vend')) continue;
         const c = p.t === 'vend_cola' ? LIGHT.red : LIGHT.white;
         L.add(p.x, p.y, 55, c, 0.55 * night); L.glow(p.x, p.y - 6, 14, c, 0.4 * night);
+      }
+    }
+  }
+  // out in the country: camp fires and the flare stack burn day and night; beacons, the drive-in's
+  // screen and marquee and the observatory light up after dark
+  {
+    const [cx0, cx1, cy0, cy1] = S.chunkView;
+    for (let cy = Math.max(0, cy0); cy <= cy1 + 2; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) for (const p of S.ground.overhead(cx, cy)) {
+      if (p.broken || !COUNTRY_TALL[p.t] || p.t === 'upole' || p.t === 'pumpjack' || p.t === 'otank') continue;
+      if (!inV(p.x, p.y, 260)) continue;
+      const fl = 0.8 + 0.2 * Math.sin(S.loopClock * 17 + p.x) * Math.sin(S.loopClock * 7.3 + p.y);
+      if (p.t === 'campfire') {
+        if (!p.lit) continue;
+        L.add(p.x, p.y - 8, 170, LIGHT.fire, (0.35 + 0.8 * night) * fl);
+        L.glow(p.x, p.y - 10, 26, LIGHT.fire, (0.15 + 0.4 * night) * fl);
+        reflSrc.push({ x: p.x, y: p.y - 8, c: LIGHT.fire, a: 0.7 * night });
+        if (Math.random() < dt * 1.6) S.fx.smoke(p.x + (Math.random() - 0.5) * 4, p.y - 16, false);
+        if (night > 0.05) countryLit.push(p);
+      } else if (p.t === 'flare') {
+        const fy = countryLightY(p, 0.96);
+        L.add(p.x, fy + 10, 280, LIGHT.fire, (0.4 + 0.9 * night) * fl);
+        L.glow(p.x, fy, 46, LIGHT.fire, (0.2 + 0.4 * night) * fl);
+        if (Math.random() < dt * 2) S.fx.smoke(p.x, fy - 14, true);
+        if (night > 0.05) countryLit.push(p);
+      } else if (night > 0.05) {
+        countryLit.push(p);
+        if (p.t === 'dscreen') { const sy = countryLightY(p, 0.65); L.add(p.x, sy + 120, 340, LIGHT.white, 0.75 * night); L.glow(p.x, sy, 160, LIGHT.white, 0.06 * night * haze); reflSrc.push({ x: p.x, y: sy + 120, c: LIGHT.white, a: 0.6 * night }); }
+        else if (p.t === 'marquee') { L.add(p.x, p.y - 50, 110, LIGHT.warm, 0.8 * night); L.glow(p.x, p.y - 56, 40, LIGHT.amber, 0.12 * night * haze); }
+        else if (p.t === 'dome') { L.add(p.x, p.y - 30, 160, LIGHT.window, 0.5 * night); }
+        else if (p.t === 'radiotower' || p.t === 'turbine') L.glow(p.x, countryLightY(p, 0.95), 30, LIGHT.red, 0.12 * night * haze);
       }
     }
   }
@@ -3207,7 +3268,7 @@ function drawRain(dt, sky) {
 
 // ---------------------------------------------------------------------------
 loadBodies('assets/');
-loadAtlas('assets/').finally(() => { registerNewProps(); connect(); requestAnimationFrame(frame); });
+loadAtlas('assets/').finally(() => { registerNewProps(); registerCountryProps(); connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
 window.CLA = { S, send, WEAPONS, smash: (i, a = 0) => setPropBroken(i, a, true) };

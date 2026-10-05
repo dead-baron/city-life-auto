@@ -56,6 +56,7 @@ test('every island and gang turf is shown', () => {
   assert.ok(DISTRICTS.some((d) => d.turf) ? STEPS.some((s) => s.at && s.at.turf) : true, 'gang turf has no tutorial stop');
   assert.ok(map.cameras.length && STEPS.some((s) => s.at && s.at.cameras), 'traffic cameras have no tutorial stop');
   assert.ok(map.dropSites.length && STEPS.some((s) => s.at && s.at.dropSites), 'contraband drop sites have no tutorial stop');
+  assert.ok(map.landmarks.length && STEPS.some((s) => s.at && s.at.landmarks), 'the places out in the country have no tutorial stop');
 });
 
 test('every gameplay rule is explained (numbers come from shared/rules.js)', () => {

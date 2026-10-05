@@ -86,6 +86,14 @@ compact, sedan, taxi, sports, pickup, van, police, swat, ambulance, bike, speedb
 
 ~70 props from the street-props sheet: trees, palms, shrubs, benches, hydrants, dumpsters, planters, fountain, umbrellas, vending machines, pallets, drums, tyres, cones, news boxes, mailboxes, lamps, crates (4 tiers), loot bags (4 kinds), produce.
 
+## Code-drawn street furniture and country props (`client/render/newprops.js`, `client/render/country.js`)
+
+Pixel art drawn in code in the concept art's 3/4 style (top-left light, dark outlines) and registered in the sprite atlas, so smashing (pieces of the sprite fly off) and the spectator view treat them like concept-sheet props:
+- Town: bus shelters, phone boxes, bollards, alley crates, ground AC units, bin-bag piles, billboards with six made-up adverts.
+- Country: dome tents (3 colours), fire pits, picnic tables, wooden utility poles (wires drawn live between them), lattice radio masts, wind turbines, pump jacks, oil tanks, a flare stack, solar panels, the drive-in screen, speaker posts and marquee, the observatory, coin binoculars, runway lights.
+- Animated live: turbine blades, pump-jack beams and cranks, flames, red aircraft beacons, the film on the drive-in screen, the marquee's chaser bulbs.
+- Painted into the ground: the quarry's terraced pit and the raceway oval (kerbs, start line).
+
 ## Railway (all procedural, in the concept palette)
 
 Track, ties, bridge decks and girders, level crossings (gates, lights, crossbucks), open-air platforms (deck, coping, safety line, shelters, benches, lamps, name boards, stairs), platform clocks, the boarding glow, the trains, the coach interior, subway stairways, tunnel portals and cuttings, the underground tunnel view.

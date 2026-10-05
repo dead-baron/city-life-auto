@@ -43,6 +43,25 @@ function poly(g, pts) {
   for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
   g.closePath();
 }
+// Clip to everywhere except the carriageways of the other ground-level roads at this edge's ends.
+function clipOutNeighbours(g, m, e) {
+  for (const end of [e.a, e.b]) {
+    const n = m.nodes[end];
+    if (!n || n.lvl !== 0) continue;
+    for (const id of n.edges) {
+      if (id === e.id) continue;
+      const o = m.edges[id];
+      if (!o || o.lvl !== 0) continue;
+      const R = geo(o).road;
+      g.beginPath();
+      g.rect(-1e6, -1e6, 2e6, 2e6);
+      g.moveTo(R[0].x, R[0].y);
+      for (let i = 1; i < R.length; i++) g.lineTo(R[i].x, R[i].y);
+      g.closePath();
+      g.clip('evenodd');
+    }
+  }
+}
 function line(g, pts) {
   g.beginPath();
   g.moveTo(pts[0].x, pts[0].y);
@@ -150,12 +169,18 @@ export function drawRoads(g, m, edges, nodes) {
     g.strokeStyle = '#cfcdc4'; g.lineWidth = 4; g.stroke();
   }
   // 4. kerb shadow, lane markings, stop lines and crossings
+  // (each road's paint stays off the asphalt of the roads it meets: no edge line, centre line or
+  // stop line runs on into a junction across the other street)
   for (const e of edges) {
+    if (e.lvl !== 0) continue;
+    g.save();
+    clipOutNeighbours(g, m, e);
     if (CITY.has(e.kind) && !e.bridge) {
       g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1;
       for (const s of [1, -1]) { const q = between(m, e, s * (e.hw - 1)); if (q) { line(g, q); g.stroke(); } }
     }
     markings(g, m, e);
+    g.restore();
   }
   g.restore();
 }
@@ -223,7 +248,7 @@ export function drawGores(g, m, gores) {
 // edged blotches cut from the worn-asphalt art, each turned, scaled and faded differently, laid at
 // hashed spots along the road. Rough districts get a lot of it, smart ones a light scattering
 // (which also breaks up the clean asphalt's own repeat). Deterministic per edge, so chunks meet.
-const WEAR = { asphalt_worn: 0.8, asphalt: 0.2 };
+const WEAR = { asphalt_worn: 0.45, asphalt: 0.1 };
 let blots = null;
 function wearBlots() {
   if (blots || !atlas.ground || !GROUND_TEX.asphalt_worn) return blots;
@@ -252,7 +277,7 @@ const hsh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = Math.im
 function weather(g, e, G, d) {
   const bl = wearBlots();
   if (!bl) return;
-  const dens = WEAR[d.road] ?? 0.22;
+  const dens = WEAR[d.road] ?? 0.12;
   const pts = e.pts.map((p) => ({ x: p.x, y: p.y }));
   const L = measure(pts);
   const n = Math.floor((L * e.w) / (64 * 64) * dens);
@@ -265,7 +290,7 @@ function weather(g, e, G, d) {
     const off = (h2 - 0.5) * (e.w - 16);
     const x = p.x - p.ty * off, y = p.y + p.tx * off;
     const sc = 0.6 + h3 * 1.1;
-    g.globalAlpha = (d.road === 'asphalt_worn' ? 0.45 : 0.25) + h4 * 0.3;
+    g.globalAlpha = (d.road === 'asphalt_worn' ? 0.32 : 0.18) + h4 * 0.22;
     g.save(); g.translate(x, y); g.rotate(h4 * 6.283); g.scale(sc, sc * (0.7 + h2 * 0.6));
     g.drawImage(bl[Math.floor(h3 * bl.length) % bl.length], -32, -32);
     g.restore();
@@ -290,6 +315,15 @@ function between(m, e, o) {
 
 function markings(g, m, e) {
   if (e.lvl !== 0) return;
+  // a short link between two junctions close together is junction, not street: no lines on it
+  const na = m.nodes[e.a], nb = m.nodes[e.b];
+  const avail = e.len - ((na && na.trim[e.id]) || 0) - ((nb && nb.trim[e.id]) || 0);
+  const linked = (na && na.edges.length >= 3) && (nb && nb.edges.length >= 3);
+  if (linked && avail < 150 && e.kind !== 'hwy') { crossings(g, m, e, false); return; }
+  laneLines(g, m, e);
+  crossings(g, m, e, avail > 200);
+}
+function laneLines(g, m, e) {
   const dashed = (pts, col, w, on = 18, off = 18) => { if (!pts) return; g.strokeStyle = col; g.lineWidth = w; g.setLineDash([on, off]); line(g, pts); g.stroke(); g.setLineDash([]); };
   const solid = (pts, col, w) => { if (!pts) return; g.strokeStyle = col; g.lineWidth = w; line(g, pts); g.stroke(); };
   if (e.kind === 'ave' || e.kind === 'blvd') {
@@ -331,7 +365,9 @@ function markings(g, m, e) {
     // wheel ruts
     for (const s of [1, -1]) { const q = between(m, e, s * 22); if (q) { g.strokeStyle = 'rgba(70,50,28,.35)'; g.lineWidth = 6; line(g, q); g.stroke(); } }
   }
-  // stop lines and zebra crossings where the edge meets a signalled / busy junction
+}
+// stop lines and zebra crossings where the edge meets a signalled / busy junction
+function crossings(g, m, e, stops) {
   for (const end of [e.a, e.b]) {
     const n = m.nodes[end];
     if (n.lvl !== 0 || n.edges.length < 3 || n.island) continue;
@@ -353,7 +389,7 @@ function markings(g, m, e) {
       g.restore();
     }
     // stop line on the approach (the right-hand side for traffic arriving at this node)
-    if (n.light && (!e.oneway || !fwd)) {
+    if (stops && n.light && (!e.oneway || !fwd) && e.kind !== 'alley' && e.kind !== 'minor' && e.kind !== 'dirt') {
       const s = pointAt(pp, t + 34);
       g.strokeStyle = 'rgba(236,234,226,.92)'; g.lineWidth = 5;
       const w0 = e.oneway ? -e.hw + 6 : 2, w1 = e.hw - 6;

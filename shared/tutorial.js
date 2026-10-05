@@ -31,7 +31,7 @@ import {
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 26;
+export const TUTORIAL_VERSION = 27;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -53,6 +53,7 @@ export const CHAPTERS = [
 //   { city: 1 } | { island: 'D' } | { district: 'Neon Strip' } | { poi: kind } | { pois: kind }
 //   { spawn: 'default' } | { cameras: 1 } | { dropSites: 1 } | { turf: 1 } | { homes: districtName } | { estates: 1 }
 //   { crossings: 1 } (level crossings) | { rural: 1 } (the long rural run of the railway) | { ring: 1 } (the ring highway)
+//   { landmarks: 1 } (the places out in the country: campgrounds, roadside stops, wind farms...)
 // route: an animated vehicle driving the road network between two targets (optional chaser).
 export const STEPS = [
   // ---- the city ------------------------------------------------------------------------------
@@ -78,6 +79,8 @@ export const STEPS = [
     text: `Two little islands far out in the south - the villages of Gull Harbor and Coral Cay, each round its village green. No bridge reaches them: take a boat. Out in the bay between Westport and Metro City lies Paradise Cay, a palm island with a beach camp, a cabin and a jetty to tie up at.` },
   { ch: 'city', title: 'The roads', at: { city: 1 },
     text: `Roads join up the way they would in a real city: highways meet major avenues and arterials at signalled junctions, those feed the streets, streets feed the little residential roads and cul-de-sacs, and out in the country the county roads lead off them to dirt tracks into the woods, the hills and the desert. A dirt track is slow going for anything but a pickup or a bike. At a small downtown crossing the traffic lights hang from wires tied to the buildings on its corners; everywhere else - the avenues, the boulevards, the highway junctions - each approach has a pole at the kerb with an arm reaching right across its lanes and a light over every lane. A pole, like a lamp post, goes over if you hit it hard enough.` },
+  { ch: 'city', title: 'Out in the country', at: { landmarks: 1 },
+    text: `The wild ground between the towns has places to go now, each down its own road: campgrounds with tents and fire pits in the woods and hills, roadside stops on the country highways (a quick stop, a diner and a filling station on one forecourt), wind farms on the ridges, a quarry and a domed observatory up in the Granite Peaks, the nodding pump jacks and flare stack of the Dry Creek oil field, a solar farm, the Starlite Drive-In (the film starts after dark) and the Westport Raceway oval past the airport. Utility poles carry the power lines along the county roads, radio masts and turbines blink red on the skyline at night, and the runways light up at dusk. Every one of them is on the map.` },
   { ch: 'city', title: isle('C'), at: { island: 'C' },
     text: `The Syndicate's island fortress, off the far shore of ${isle('F')}. Guards shoot outsiders on sight, and the compound gate only opens for gang members - home of the {{smuggler}}.` },
 
@@ -271,6 +274,11 @@ export function resolveTarget(map, at, ref) {
     if (!parts.length) return null;
     const names = DISTRICTS.filter((q) => q.turf).map((q) => q.name);
     return { ...box(parts.flatMap((r) => [{ x: r.x - r.w / 2, y: r.y - r.h / 2 }, { x: r.x + r.w / 2, y: r.y + r.h / 2 }])), marks: parts.map((r, i) => ({ x: r.x, y: r.y, label: names[i], kind: 'turf' })) };
+  }
+  if (at.landmarks) {
+    const list = (map.landmarks || []).map((l) => ({ x: l.x + l.w / 2, y: l.y + l.h / 2, label: l.name }));
+    if (!list.length) return null;
+    return { ...box(list, 600), marks: list.map((l) => ({ ...l, kind: 'landmark' })) };
   }
   if (at.estates) {
     const list = map.homes.filter((h) => ESTATE_TYPES[h.kind]);

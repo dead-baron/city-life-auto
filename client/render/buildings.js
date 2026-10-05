@@ -21,6 +21,9 @@ const KIND_STYLE = {
   conv: 'shop', strip: 'shop', market: 'shop', rest1: 'shop', rest2: 'shop', club: 'club', dealer: 'shop', gas: 'shop',
   repair: 'garage', warehouse: 'warehouse', industrial: 'warehouse', construction: 'warehouse',
   mansion: 'mansion', beachbar: 'shack', charter: 'shack', den: 'shack',
+  // out in the country (shared/countryside.js) and the airfields
+  ranger: 'shack', restrooms: 'garage', hut: 'garage', office: 'garage', snackbar: 'shop', grandstand: 'warehouse', pits: 'garage',
+  terminal: 'civic', hangar: 'warehouse', lighthouse: 'civic',
 };
 const STYLE = {
   house: { H: 34, floors: 1, walls: ['#e6d9bf', '#d8c6a2', '#c8d4da', '#e8e1d2', '#d6b598', '#bfcfb4'] },

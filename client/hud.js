@@ -385,7 +385,7 @@ export class HUD {
     }
     // landmarks painted whole from the concepts (the golf club, the canyon, the island)
     g.font = `${Math.max(8, fs - 3)}px Anton, Impact, sans-serif`;
-    for (const pt of this.map.paintings || []) {
+    for (const pt of (this.map.paintings || []).concat(this.map.landmarks || [])) {
       if (!pt.name) continue;
       const [x, y] = P(pt.x + pt.w / 2, pt.y + pt.h + 40);
       g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(pt.name.toUpperCase(), x, y);

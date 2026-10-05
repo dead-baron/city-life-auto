@@ -1315,3 +1315,33 @@ Went through every painting the game uses: each building lot, the hospital front
 - **Long blocks:** long building footprints are split into several buildings of different widths and heights, so no block is one long box.
 - Dev: the `time` dev command jumps the clock to `m` minutes after midnight.
 - Tutorial: the HUD stop covers dawn and dusk, puddles, fog and the Graphics setting. The driving stop covers smashing street furniture (`TUTORIAL_VERSION` 26).
+
+## 2026-10-04 · Round 14 (part 2): filling out the country, cleaner street paint
+
+- **Country set pieces** (`shared/countryside.js`): 17 places in the wild ground that used to be empty. Each one finds open ground near its spot while the roads are laid out, clear of every road, the railway, the airfields, farm fields and the shore, and gets its own access road from the nearest road it may join.
+  - Dirt tracks never meet a highway, and a track that would have to cross one isn't used.
+  - The site is reserved (`reserve` bit 32), so scene paintings, cabins and woods keep off it.
+  - It's built later by `buildCountryside`.
+  - Everything is hashed, so the rest of the city doesn't move.
+  - The places:
+    - Campgrounds: Pine Ridge, Granite Cove and Cedar Hills. Tents round a dirt loop, fire pits that burn and smoke and light the night, picnic tables, a ranger station (courier stop) and restrooms.
+    - Roadside stops: Highland and Route 9. A Quick Stop (a real shop), a diner and a filling station on one forecourt, with parking, lamps and a billboard.
+    - Radio masts: Highland, North Ridge and Mesa. Red-and-white lattice masts with blinking aircraft beacons.
+    - Wind farms: Windy Point, Dry Creek and Cedar Point. Turbines with turning blades and red night beacons, on pads along service tracks.
+    - Granite Quarry: a terraced pit with a haul road and standing water, spoil heaps and the site office.
+    - Granite Peak Observatory: a domed observatory on the summit, its slit glowing at night, with coin binoculars, benches and a car park.
+    - Dry Creek Oil Field: nodding pump jacks, a tank farm, a flare stack that burns day and night, and the oil company office.
+    - Sunfield Solar Farm: rows of panels and inverters.
+    - Starlite Drive-In: a big screen that shows a film after dark, curved rows of speaker posts with cars parked at them, a snack bar and a chaser-bulb marquee.
+    - Westport Raceway: an asphalt oval (drivable) with kerbs and a chequered start line, plus a grandstand and pit garages.
+  - Every place is labelled on the full map and listed in the dev teleport (`m.landmarks`).
+- **Power lines:** wooden utility poles along the county roads and country highways, each wired to the one before (the wires sag between the cross-arms and drop when a pole is knocked down).
+- **Runway lights** at both airfields: white edges, green and red ends, blue taxiway. They come on at dusk.
+- **Art** (`client/render/country.js`): all of it is code-drawn pixel art registered in the atlas. Tall props stand on their base and stay drawn while any part is on screen. They cast sun shadows. Their emissive parts are redrawn over the night light map.
+- Buildings made with `simpleBuilding` (ranger stations, offices, snack bar, grandstand, the airport terminal and hangars, the lighthouse) now get proper walls and facades instead of a flat dark slab.
+- **Street paint:**
+  - A road's markings no longer run on over the asphalt of the roads it meets.
+  - Very short links between two close junctions get no lane lines and no stop lines.
+  - Stop lines need a proper approach and never go on alleys, lanes or dirt.
+  - The asphalt grime decals are lighter and fewer.
+- New test `test/country.test.js`. Tutorial: new "Out in the country" stop framing all the landmarks (`TUTORIAL_VERSION` 27), and `test/tutorial.test.js` checks that it exists.

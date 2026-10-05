@@ -30,6 +30,7 @@ import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
 import { HAND_BLOCKS } from './handblocks.js';
 import { BLOCK_ART } from './block-data.js';
+import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 
 export { Z };
@@ -531,11 +532,14 @@ export function generateCity(seed = 1337) {
   buildWaterfronts(m, rand);
   buildFarm(m, rand);
   buildAirports(m);
+  runwayLights(m, { addProp });
+  buildCountryside(m, { simpleBuilding, placePrefab, addProp, clearArea });
   buildEstates(m, rand);
   buildOutposts(m, rand);
   buildScenePaintings(m);
   buildWilds(m, rand);
   buildStreetProps(m);
+  buildPowerLines(m, { addProp }, (tx, ty) => wildAt(m, tx, ty));
   buildBanking(m);
   buildGangHQs(m);
   buildTackleShops(m);
@@ -969,6 +973,9 @@ function layoutRoads(m, rand) {
   };
   m.islandRings = islandRoads(ctx);
   stationAccess(m, lines, isLand, seaD);
+  // campgrounds, roadside stops, masts, wind farms... out in the wild, each with its own road in
+  const avoid = AIRPORTS.flatMap((A) => [A.runway, A.apron, A.taxi, A.terminal, ...A.hangars].map(([x, y, w, h]) => [x - 5, y - 5, w + 10, h + 10])).concat(FIELDS.map(([x, y, w, h]) => [x - 2, y - 2, w + 4, h + 4]), FARM_FIELDS.map(([x, y, w, h]) => [x - 2, y - 2, w + 4, h + 4]));
+  countrysideRoads({ m, lines, isLand, seaD, lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }, wildAt: (tx, ty) => wildAt(m, tx, ty), avoid });
   return lines;
 }
 
@@ -3137,8 +3144,9 @@ export const BREAKABLE = new Set([
   'pallet_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'foodcart', 'foodcart_b', 'tires', 'bags', 'spool',
   'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b', 'cactus', 'sigpole',
   'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'bollard', 'crates', 'acunit', 'trashpile', 'atm', 'billboard',
+  'tent', 'picnic', 'upole', 'dspeaker', 'scope',
 ]);
-export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole', 'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'acunit', 'billboard']);
+export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole', 'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'acunit', 'billboard', 'upole']);
 
 // Point every lamp's arm at the nearest road so the head hangs over the street.
 function aimLamps(m) {
@@ -3226,9 +3234,15 @@ function buildWaterfronts(m, rand) {
 }
 
 // Dry Creek: crop fields either side of the railway, the farm co-op on the farm road, woods.
+const FARM_FIELDS = [[1056, 548, 30, 40], [1100, 548, 34, 40], [1056, 594, 32, 40], [1100, 594, 34, 46], [1160, 560, 40, 30], [1146, 600, 50, 34], [1060, 640, 26, 36]];
+// open country (the woods, hills, desert, farmland and the airfields), not town
+function wildAt(m, tx, ty) {
+  const d = DISTRICTS[m.dist[ty * MAP_W + tx]];
+  return !!d && WILD_STYLES.has(d.style) && d.style !== 'water';
+}
 function buildFarm(m, rand) {
   const W = MAP_W;
-  const fields = [[1056, 548, 30, 40], [1100, 548, 34, 40], [1056, 594, 32, 40], [1100, 594, 34, 46], [1160, 560, 40, 30], [1146, 600, 50, 34], [1060, 640, 26, 36]];
+  const fields = FARM_FIELDS;
   for (const [fx, fy, fw, fh] of fields) {
     let n = 0;
     for (let y = fy; y < fy + fh; y++) for (let x = fx; x < fx + fw; x++) {
@@ -3283,8 +3297,9 @@ function buildOutposts(m, rand) {
   for (const n of m.nodes) {
     if (n.lvl !== 0 || n.edges.length !== 1) continue;
     const e = m.edges[n.edges[0]];
-    if (e.kind !== 'dirt') continue;
+    if (e.kind !== 'dirt' || e.culdesac) continue;
     const tx = Math.floor(n.x / TILE), ty = Math.floor(n.y / TILE);
+    if ((m.countrySites || []).some((s) => tx > s.x - 8 && tx < s.x + s.w + 8 && ty > s.y - 8 && ty < s.y + s.h + 8)) continue;
     const st = DISTRICTS[m.dist[ty * W + tx]].style;
     const desert = st === 'desert' || (m.terrainCls && terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty) === 3);
     const key = desert ? 'shack' : cabins % 2 ? 'house3' : 'house1';
