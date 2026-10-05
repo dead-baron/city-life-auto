@@ -39,7 +39,7 @@ import { underDeck } from '../shared/levels.js';
 import { skyAt, lampLevel, neonLevel, hash as hashAt } from './render/atmos.js';
 import { Lighting, LIGHT } from './render/lighting.js';
 import { Weather } from './render/weather.js';
-import { drawBuildingShadows, drawPropShadows } from './render/shadows.js';
+import { drawBuildingShadows, drawPropShadows, drawContactShade } from './render/shadows.js';
 import { registerNewProps } from './render/newprops.js';
 import { LOW_MEM, canvasStats } from './platform.js';
 import { registerCountryProps, COUNTRY_TALL, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
@@ -1890,7 +1890,9 @@ function render(dt) {
   // the sun's shadows: buildings (from just off screen too), trees and palms
   if (!sub && sky.sun > 0.05) {
     const reach = 90 * Math.min(3.2, sky.shadowLen);
-    drawBuildingShadows(g, S.buildings.inView({ x0: view.x0 - reach, y0: view.y0 - reach, x1: view.x1 + reach, y1: view.y1 + reach }), sky);
+    const near = S.buildings.inView({ x0: view.x0 - reach, y0: view.y0 - reach, x1: view.x1 + reach, y1: view.y1 + reach });
+    drawContactShade(g, near, sky);
+    drawBuildingShadows(g, near, sky);
     const tp = [];
     for (let cy = Math.max(0, cy0 - 1); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0 - 1); cx <= cx1 + 1; cx++) for (const p of S.ground.overhead(cx, cy)) if (!p.broken && (p.t.startsWith('tree') || p.t.startsWith('palm') || TALL_SHADOW[p.t])) tp.push(p);
     drawPropShadows(g, tp, sky, (p) => TALL_SHADOW[p.t] || (p.t.startsWith('palm') ? { h: 52, r: 10 } : { h: 40, r: 15 }));
@@ -1943,6 +1945,7 @@ function render(dt) {
   // where they stand (north first), so whatever is behind a building is hidden by it
   const items = [];
   const bl = sub ? [] : S.buildings.inView(view);
+  S.light.setRoofs(bl);
   S.bFade ??= new Map();
   for (const it of bl) {
     const inFade = (S.roofFade && S.roofFade[it.b.id]) || 0;
@@ -2520,7 +2523,12 @@ function drawVehicleEnt(v, now, dt) {
   g.translate(v.rx, v.ry);
   if (sinking) { g.globalAlpha = 1 - 0.75 * sk; g.scale(1 - 0.18 * sk, 1 - 0.18 * sk); }
   if (v.blinkUntil > now || driverBlinks(v)) g.globalAlpha *= Math.floor(now * 10) % 2 ? 0.25 : 1; // pulling out of a garage
-  if (def.kind !== 'boat' && !sinking) { g.save(); g.rotate(v.ra); drawVehicleShadow(g, v.d, def); g.restore(); }
+  if (def.kind !== 'boat' && !sinking) {
+    // the shadow falls away from the sun (in the world, not turning with the car), longer when it's low
+    const sk = S.sky, sl = sk ? 3 + 7 * Math.min(1.6, sk.shadowLen) * sk.sun : 4;
+    const ox = sk ? sk.sunDir.x * sl : 3, oy = sk ? sk.sunDir.y * sl : 4;
+    g.save(); g.translate(ox, oy); g.rotate(v.ra); drawVehicleShadow(g, v.d, def, true); g.restore();
+  }
   if (lift > 0) {
     const side = vehicleSide(v.d, def, !!(f & VF.WRECK));
     const sw = side.width / 2, sh = side.height / 2;
@@ -3025,7 +3033,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     const l = lamps[i];
     if (l.broken || night <= 0.05) { l._lv = 0; continue; }
     if (!inV(l.x, l.y, 220)) continue;
-    const lv = lampLevel(i, t, night);
+    const lv = lampLevel(i, t, night, l);
     l._lv = lv;
     if (lv <= 0) continue;
     const h = lampHead(l);

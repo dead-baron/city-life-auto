@@ -219,7 +219,7 @@ export function drawVehicleWreck(g, desc, def) {
   }
   g.drawImage(wc, -wc.width / 2, -wc.height / 2);
 }
-export function drawVehicleShadow(g, desc, def) {
+export function drawVehicleShadow(g, desc, def, placed = false) {
   const artId = def.art || def.id;
   const n = atlas.variants[artId] || 0;
   const name = n ? `veh_${artId}_${(desc.vr || 0) % n}` : null;
@@ -233,11 +233,12 @@ export function drawVehicleShadow(g, desc, def) {
     const sg = sc.getContext('2d');
     sg.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, 0, 0, fr.w, fr.h);
     sg.globalCompositeOperation = 'source-in';
-    sg.fillStyle = 'rgba(0,0,0,0.38)';
+    sg.fillStyle = 'rgba(8,10,24,0.45)';
     sg.fillRect(0, 0, fr.w, fr.h);
     shadowCache.set(name, sc);
   }
-  g.drawImage(sc, -L / 2 + 4, -W / 2 + 5, L, W);
+  if (placed) g.drawImage(sc, -L / 2 - 1, -W / 2 - 1, L + 2, W + 2); // (the caller has offset it from the car)
+  else g.drawImage(sc, -L / 2 + 4, -W / 2 + 5, L, W);
 }
 
 // ---------------------------------------------------------------------------

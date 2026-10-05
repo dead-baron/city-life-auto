@@ -18,7 +18,7 @@ function rectShadow(g, x0, y0, x1, y1, vx, vy) {
 }
 // buildings: BuildingLayer items (lifted ones have H; painted lots are given a nominal height)
 export function drawBuildingShadows(g, items, sky) {
-  const a = 0.34 * sky.sun;
+  const a = 0.46 * sky.sun;
   if (a < 0.02) return;
   const L = sky.shadowLen, dx = sky.sunDir.x, dy = sky.sunDir.y;
   g.save();
@@ -43,7 +43,7 @@ export function drawBuildingShadows(g, items, sky) {
 }
 // trees, palms, lamp posts: a soft blot thrown along the ground
 export function drawPropShadows(g, props, sky, size) {
-  const a = 0.26 * sky.sun;
+  const a = 0.34 * sky.sun;
   if (a < 0.02 || !props.length) return;
   const L = Math.min(2.2, sky.shadowLen), dx = sky.sunDir.x, dy = sky.sunDir.y;
   g.save();
@@ -59,5 +59,23 @@ export function drawPropShadows(g, props, sky, size) {
     g.ellipse(cx, cy, r + h * 0.4, r * 0.7, ang, 0, 6.283);
   }
   g.fill();
+  g.restore();
+}
+
+// Contact shade: the ground darkens close round every building's foot, whatever the time of day
+// (ambient occlusion) - a few soft rings, so walls look like they stand on the ground instead of
+// floating over it. Strongest under the front wall, where the street meets it.
+export function drawContactShade(g, items, sky) {
+  const k = 0.55 + 0.45 * Math.max(sky.sun, 1 - sky.night);
+  g.save();
+  for (const [pad, a] of [[3, 0.16], [8, 0.09], [15, 0.045]]) {
+    g.fillStyle = `rgba(10,12,26,${(a * k).toFixed(3)})`;
+    g.beginPath();
+    for (const it of items) {
+      if (it.flat || it.b.kind === 'motorpool') continue;
+      g.rect(it.x0 - pad, it.y0 - pad * 0.5, it.x1 - it.x0 + pad * 2, it.y1 - it.y0 + pad * 1.6);
+    }
+    g.fill();
+  }
   g.restore();
 }

@@ -1389,3 +1389,20 @@ Went through every painting the game uses: each building lot, the hospital front
 ## 2026-10-05 · Tilt-shift off by default
 
 - The tilt-shift blur doesn't suit this near-overhead camera: the top and bottom of the screen just look out of focus. It's now off unless you turn it on (Settings → Tilt-shift blur, High graphics only). Players who never touched the switch get it off; anyone who turned it on keeps it.
+
+## 2026-10-05 · More depth: light, shadows, steadier lamps
+
+- **Depth through light** (replaces the tilt-shift blur), on Medium and High:
+  - The light map leaves the street level about 10% in shade and gives the roofs of standing buildings their light back. Blocks read as standing up off the ground, and their walls sit a touch darker than their roofs.
+  - A soft oval falloff toward the screen edges and corners keeps the eye in the middle.
+- **Stronger shadows:**
+  - The sun now swings through the top of the sky, so through the day shadows fall down and to the right, the same way as the shading painted into the art.
+  - It never stands straight overhead, so even at noon everything throws a short shadow.
+  - Building shadows are darker (0.34 → 0.46), and so are tree, lamp and prop shadows (0.26 → 0.34).
+  - Vehicles cast their shadow away from the sun in world space (it used to turn with the car), longer when the sun is low.
+  - New contact shading: the ground darkens in soft rings round the foot of every standing building, day and night (`drawContactShade`).
+- **Flicker that settles** (`client/render/atmos.js`): flicker is always a short burst now. Nothing flickers on and on.
+  - A lamp that strikes with a flicker settles after 0.6–2 s. Now and then it doesn't catch and stays dark for 12–40 s before it comes on.
+  - Faulty lamps get a 1–2 s burst every half minute or so, then they're back on or dark until the next spell.
+  - Rough-district neon does the same on a 25 s cycle.
+  - A lamp first seen well after dusk (a street you drive into) is simply on; it doesn't put on its striking show.

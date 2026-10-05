@@ -95,7 +95,7 @@ export class Lighting {
     this.vig = null;
   }
   begin(sky, cam, z, quality) {
-    this.nL = 0; this.nG = 0;
+    this.nL = 0; this.nG = 0; this.roofs = null;
     this.sky = sky; this.cam = cam; this.z = z; this.quality = quality;
   }
   _push(arr, n, x, y, r, c, a, kind, ang, len, w) {
@@ -130,21 +130,39 @@ export class Lighting {
 
   // Multiply the light map over the scene (g in device px with an identity transform). The sky's
   // colour grade and the vignette are folded into it, so the whole thing is one full-screen pass.
+  // Depth by height: the roofs (raised high, catching the open sky) stay at full light while the
+  // streets between them sit a little in their shade - so the city reads as blocks standing up off
+  // the ground, not a flat map. items: BuildingLayer items in view ({x0, y0, w, h, H, flat}).
+  setRoofs(items) { this.roofs = items; }
+
   applyLightMap(g, DPR) {
     const sky = this.sky;
     const amb = sky.amb, gr = sky.grade;
     const dayish = amb[0] > 0.985 && amb[1] > 0.985 && amb[2] > 0.985;
-    const vignette = this.quality >= 2 || !dayish;
-    if (dayish && gr[3] < 0.01 && !vignette) return;
+    const vignette = this.quality >= 1 || !dayish;
+    const depth = this.quality >= 1 && this.roofs && this.roofs.length ? 0.1 * (0.4 + 0.6 * sky.sun) : 0;
+    if (dayish && gr[3] < 0.01 && !vignette && !depth) return;
     const lg = this.lg, lw = this.lightCv.width, lh = this.lightCv.height;
     lg.globalCompositeOperation = 'source-over';
     lg.globalAlpha = 1;
     // ambient, tinted by the sky's grade (golden hour warms, blue hour cools)
     const ga = Math.min(0.6, gr[3] * 2.2);
     const tint = (k) => amb[k] * (1 - ga + ga * (gr[k] / 255) * 1.12);
-    lg.fillStyle = `rgb(${Math.min(255, Math.round(tint(0) * 255))},${Math.min(255, Math.round(tint(1) * 255))},${Math.min(255, Math.round(tint(2) * 255))})`;
+    const lit = (k) => Math.min(255, Math.round(tint(k) * 255));
+    lg.fillStyle = `rgb(${Math.round(lit(0) * (1 - depth))},${Math.round(lit(1) * (1 - depth))},${Math.round(lit(2) * (1 - depth))})`;
     lg.fillRect(0, 0, lw, lh);
     lg.globalCompositeOperation = 'lighter';
+    if (depth) {
+      // the roofs get back the light the street lost
+      lg.fillStyle = `rgb(${Math.round(lit(0) * depth)},${Math.round(lit(1) * depth)},${Math.round(lit(2) * depth)})`;
+      const zz = this.z / 2, cx = this.cam.x, cy = this.cam.y, hw = this.W / 4, hh = this.H / 4;
+      lg.beginPath();
+      for (const it of this.roofs) {
+        if (it.flat) continue;
+        lg.rect((it.x0 - cx) * zz + hw, (it.y0 - it.H - cy) * zz + hh, it.w * zz, it.h * zz);
+      }
+      lg.fill();
+    }
     if (!dayish) {
       const k = this.z / 2, cx = this.cam.x, cy = this.cam.y, W = this.W, H = this.H;
       for (let i = 0; i < this.nL; i++) {
@@ -158,7 +176,9 @@ export class Lighting {
         const v = document.createElement('canvas'); v.width = 256; v.height = 144;
         const vg = v.getContext('2d');
         const rg = vg.createRadialGradient(128, 72, 40, 128, 72, 150);
-        rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(0.6, 'rgba(240,240,244,1)'); rg.addColorStop(1, 'rgba(170,170,185,1)');
+        // an oval falloff: the middle of the screen at full light, the edges and corners sinking
+        // away into shade - the eye reads the middle as nearer (this replaces the tilt-shift blur)
+        rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(0.45, 'rgba(250,250,252,1)'); rg.addColorStop(0.75, 'rgba(222,222,232,1)'); rg.addColorStop(1, 'rgba(150,150,168,1)');
         vg.fillStyle = rg; vg.fillRect(0, 0, 256, 144);
         this.vig = v;
       }

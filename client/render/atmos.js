@@ -70,8 +70,11 @@ export function skyAt(loopTime, minutes, rain = 0) {
   const dayT = Math.max(0, Math.min(1, (minutes - 380) / (1180 - 380)));
   const az = Math.PI * dayT;                       // 0 = east, pi/2 = south, pi = west
   const elev = Math.max(0.12, Math.sin(Math.PI * dayT)) * 1.05; // radians-ish: low at the ends
-  const sunDir = { x: -Math.cos(az), y: -Math.sin(az) * 0.8 };  // shadows point away from the sun
-  const shadowLen = Math.min(3.2, 0.55 / Math.tan(Math.min(1.25, elev)));
+  // The sun swings through the top of the sky, so through the middle of the day shadows fall down
+  // and to the right - the same way as the shading painted into the art (light from the top left).
+  // It never stands straight overhead: even at noon everything throws a short shadow.
+  const sunDir = { x: -Math.cos(az) + 0.3, y: Math.sin(az) * 0.62 + 0.12 };
+  const shadowLen = Math.min(3.2, 0.62 / Math.tan(Math.min(0.95, elev)));
   // rain: overcast - a flat grey-blue light, faint diffuse shadows, the street lights come on early
   if (rain > 0) {
     const r = rain;
@@ -88,45 +91,60 @@ export function skyAt(loopTime, minutes, rain = 0) {
   return { amb, grade, sky, sun, night, sunDir, shadowLen, az, fog, warm, rain, minutes };
 }
 
-// Lamp behaviour: lamps come on one by one through dusk (most just come on, some flicker on, some
-// warm up slowly), a few are faulty and flicker now and then, and every night a rare one is out.
-// Returns brightness 0..1 for a lamp with id `i` at loopTime t with darkness `night`.
-export function lampLevel(i, t, night) {
-  if (night <= 0.05) return 0;
+// Lamp behaviour: lamps come on one by one through dusk. Most just come on, some warm up slowly,
+// and some flicker a few times as they strike - then they settle, on, or (now and then) dark for a
+// while before they try again. A few are faulty: every so often a short burst of flicker, after
+// which they're either back on or out for a while. Every night a rare one is out altogether.
+// Flicker is always a short burst: nothing stays flickering. st (the lamp itself) remembers when
+// it came on this evening.
+const FLICK = (i, t) => (hash(i, Math.floor(t * 15), 3) < 0.5 ? 0.12 : 1);
+export function lampLevel(i, t, night, st) {
+  if (night <= 0.05) { if (st) st._onAt = undefined; return 0; }
   const h = hash(i, 11);
   const on = 0.12 + h * 0.45;                       // how dark it has to get before this one comes on
-  if (night < on) return 0;
-  const since = (night - on) / 0.08;                 // 0..1 over the moment it comes on
+  if (night < on) { if (st) st._onAt = undefined; return 0; }
   const day = Math.floor(t / DAY_LOOP_S);
   if (hash(i, day, 17) < 0.015) return 0;            // burnt out tonight
+  if (st && (st._onAt === undefined || st._onDay !== day || st._onAt > t)) {
+    // first time we look at it tonight: if it only just got dark enough it's coming on now,
+    // otherwise it's been on a while (a street you drive into isn't all striking at once)
+    st._onAt = night - on < 0.06 ? t : t - 999; st._onDay = day;
+  }
+  const since = st ? t - st._onAt : 999;             // seconds since it came on tonight
   const kind = hash(i, 13);
   let b = 1;
-  if (kind < 0.1) {                                  // flickers on
-    if (since < 1) b = hash(i, Math.floor(t * 14), 3) < 0.55 ? 0.15 : 1;
-  } else if (kind < 0.25) {                          // warms up slowly (sodium lamp)
-    b = Math.min(1, 0.15 + since * 0.4);
-  } else if (since < 1) b = Math.min(1, since * 3);
-  // faulty: now and then a burst of flickering
-  if (hash(i, 19) < 0.035) {
-    const w = Math.floor(t / 9);
-    if (hash(i, w, 23) < 0.35) {
-      const ph = t - w * 9;
-      if (ph < 1.6) b *= hash(i, Math.floor(t * 18), 29) < 0.5 ? 0.1 : 1;
+  if (kind < 0.12) {                                 // strikes with a few flickers
+    const burst = 0.6 + hash(i, 5) * 1.4;
+    if (since < burst) b = FLICK(i, t);
+    else if (hash(i, day, 7) < 0.3 && since < burst + 12 + hash(i, day, 8) * 30) b = 0.04; // didn't catch: dark a while, then on
+  } else if (kind < 0.27) b = Math.min(1, 0.15 + since * 0.12); // warms up slowly (sodium lamp, ~7 s)
+  else b = Math.min(1, 0.2 + since * 2.5);
+  // faulty: every 30 s or so, maybe a 1-2 s burst - then back on, or out for the rest of the spell
+  if (hash(i, 19) < 0.04) {
+    const W = 30, w = Math.floor(t / W), ph = t - w * W;
+    const ev = hash(i, w, 23);
+    if (ev < 0.35) {
+      const burst = 0.8 + hash(i, w, 24) * 1.2;
+      if (ph < burst) b *= FLICK(i, t);
+      else if (ev < 0.12) b *= 0.04;                 // gave up: dark until the next spell
     }
   }
   return b;
 }
 
-// Neon signs in rough areas misbehave now and then: a burst of flicker, or out for the night.
+// Neon signs in rough areas misbehave now and then: a short burst of flicker, then back on or
+// dark for a while - or out for the whole night.
 export function neonLevel(id, t, rough) {
   if (!rough) return 1;
   if (hash(id, 41) > 0.3) return 1;
   const day = Math.floor(t / DAY_LOOP_S);
   if (hash(id, day, 43) < 0.06) return 0.12;        // dead tonight
-  const w = Math.floor(t / 7);
-  if (hash(id, w, 47) < 0.18) {
-    const ph = t - w * 7;
-    if (ph < 1.3) return hash(id, Math.floor(t * 16), 53) < 0.45 ? 0.15 : 1;
+  const W = 25, w = Math.floor(t / W), ph = t - w * W;
+  const ev = hash(id, w, 47);
+  if (ev < 0.22) {
+    const burst = 0.7 + hash(id, w, 48) * 1.1;
+    if (ph < burst) return hash(id, Math.floor(t * 16), 53) < 0.45 ? 0.15 : 1;
+    if (ev < 0.08) return 0.12;                       // stays dark until the next spell
   }
   return 1;
 }
