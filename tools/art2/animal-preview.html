@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 animals</title>
+<style>body{margin:0;background:#4a4e58}canvas{image-rendering:pixelated;display:block}</style></head><body><canvas id="c"></canvas>
+<!-- ?view=line (every animal, 3/4 and side), ?view=walk (golden + ginger cat walk and run cycles) -->
+<script type="module">
+import { animalModel, ANIMALS } from '../../client/art2/animals.js';
+import { GBuf } from '../../client/art2/gbuf.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+const q = new URLSearchParams(location.search), view = q.get('view') || 'line', Z = Number(q.get('z') || 3);
+const items = []; let W, H;
+if (view === 'line') {
+  const ks = Object.keys(ANIMALS), cols = 6, cw = 110, ch = 80; W = cols * cw; H = Math.ceil(ks.length / cols) * ch + 10;
+  ks.forEach((k, i) => { const m = animalModel(k); const x = (i % cols) * cw, y = Math.floor(i / cols) * ch + ch - 8; items.push([m, -0.5, x + 30, y]); items.push([m, 0, x + 78, y]); });
+} else {
+  W = 8 * 60; H = 4 * 60;
+  ['golden', 'catGinger'].forEach((k, r) => { for (let f = 0; f < 8; f++) { items.push([animalModel(k, { phase: f / 8 }), 0, 30 + f * 60, 50 + r * 120]); items.push([animalModel(k, { phase: f / 8, gait: 'run' }), 0, 30 + f * 60, 110 + r * 120]); } });
+}
+const G = new GBuf(W, H);
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = 108 + ((x * 7 + y * 13) % 5) * 2; G.put(x, y, [v, v + 2, v + 6], [0, 0, 1], 0, null, 1); }
+items.sort((a, b) => a[3] - b[3]);
+for (const [m, hd, x, y] of items) { const s = m.render(hd); G.blit(s, x - s.ax, y - s.ay); }
+const cv = document.getElementById('c'); cv.width = W * Z; cv.height = H * Z;
+const L = new Lighter(cv); L.setScene(G); L.render(PRESETS.noon, [], 0);
+window.done = true;
+</script></body></html>

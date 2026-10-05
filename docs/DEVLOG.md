@@ -1532,3 +1532,16 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - Balconies with railings and plants, and custom door and window layouts.
   - Glass towers.
 - **Preview:** `tools/art2/building-preview.html` (the B5 lineup rebuilt). Comparison: `docs/art-v2/buildings-v1.png`.
+
+### Art v2: animals
+- **Targets:** A1 to A3 (dogs and cats, pet animation, city, farm and wild animals) are saved in `docs/art-v2/targets`.
+- **`client/art2/animals.js`:** one adjustable four-legged voxel rig makes 24 animals.
+  - Dogs (10 breeds): golden, lab, spaniel, shepherd, husky, pit bull, bulldog, chihuahua, terrier, dalmatian.
+  - Cats (5 coats): black, tabby, ginger, calico, white long-hair.
+  - Farm animals: cow, horse, sheep, pig, goat.
+  - Wild animals: deer, rabbit, raccoon, coyote.
+- **Rig settings:** size, legs, snout, ears, tail style, coat pattern (spots, saddle, tabby, calico), collars, horns, antlers, mane, udder and beard.
+- **Animation:** walk and run cycles through `phase`, plus sit and graze poses.
+- **Preview:** `tools/art2/animal-preview.html?view=line|walk`.
+- **Still missing:** birds (pigeons, gulls, crows, pelican), rats, squirrels, ducks and fish.
+- **Prompt pack:** gained an Extras section (E1 terrain by biome, E2 rocks and water edges, E3 plants by biome, I6 streets by wealth, I7 highways, ramps and parking, P5 more street furniture).
