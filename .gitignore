@@ -6,3 +6,4 @@ logs/
 __pycache__/
 tools/weights/
 
+.playtest-data/
