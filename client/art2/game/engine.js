@@ -340,6 +340,11 @@ export class Art2Engine {
     return this.scr;
   }
   _pack(g) { const s = this._scratch(g.w * g.h * 4); return packGBuf(g, s[0], s[1], s[2]); }
+  // scratch for cropped sprite uploads (separate from _scratch: the planes being cropped may live there)
+  _cropScratch(n) {
+    if (!this.cropScr || this.cropScr[0].length < n) { const m = Math.max(n, 1 << 18); this.cropScr = [new Uint8Array(m), new Uint8Array(m), new Uint8Array(m)]; }
+    return this.cropScr;
+  }
 
   // ---- quality, size, lifecycle -----------------------------------------------------------------------------
   setQuality(q) {
@@ -521,10 +526,16 @@ export class Art2Engine {
     const r = this._rec(key, w, h);
     if (!r) return false;
     r.ax = (g.ax ?? 0) - x0; r.ay = (g.ay ?? 0) - y0;
-    const gl = this.gl, crop = w !== W0 || h !== H0;
-    if (crop) { gl.pixelStorei(gl.UNPACK_ROW_LENGTH, W0); gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, x0); gl.pixelStorei(gl.UNPACK_SKIP_ROWS, y0); }
-    this._subImage(r, 0, pk.p0); this._subImage(r, 1, pk.p1); this._subImage(r, 2, pk.p2);
-    if (crop) { gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0); gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0); gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0); }
+    if (w === W0 && h === H0) { this._subImage(r, 0, pk.p0); this._subImage(r, 1, pk.p1); this._subImage(r, 2, pk.p2); return true; }
+    // the cropped rectangle copied out on the CPU: a 3D upload with UNPACK_SKIP_ROWS is refused by browsers
+    // (INVALID_OPERATION unless UNPACK_IMAGE_HEIGHT is set too), which left every sprite with empty top rows
+    // (vehicles, animals, crates, trains, effects) resident but blank
+    const n = w * h * 4, C = this._cropScratch(n);
+    for (let i = 0; i < 3; i++) {
+      const src = i === 0 ? pk.p0 : i === 1 ? pk.p1 : pk.p2, dst = C[i];
+      for (let y = 0; y < h; y++) { const a = ((y0 + y) * W0 + x0) * 4; dst.set(src.subarray(a, a + w * 4), y * w * 4); }
+      this._subImage(r, i, dst.subarray(0, n));
+    }
     return true;
   }
   // v1 art as a sprite: albedo from the canvas, a normal facing the camera, z rising 1 px per row from the
