@@ -10,14 +10,15 @@
 // The client only asks; the server checks you have the item and applies it.
 import { WEAPONS, ITEMS } from '../shared/items.js';
 import { weaponIcon } from './render/peds.js';
+import { keyName } from './glyphs.js';
 
 export const ITEM_ICON = {
-  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕',
+  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦',
   lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
   purse: '👜', bonds: '📜', jewelry: '💎', scrap: '⚙', wallet: '👛',
 };
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff));
+const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
 const SLOTS = 4;
 
 export function createInventory({ el, send, me, onClose }) {
@@ -73,6 +74,7 @@ export function createInventory({ el, send, me, onClose }) {
       r.innerHTML = `<span class="ic">${ITEM_ICON[id] || '•'}</span><span class="nm">${it.name} <small>x${n}</small><em>${describe(id)}</em></span>`;
       if (usable(id)) {
         const u = document.createElement('button'); u.className = 'inv-use'; u.textContent = 'Use';
+        if (it.light) { u.textContent = m.light ? 'Turn off' : 'Turn on'; u.classList.toggle('lit', !!m.light); }
         u.onclick = () => send({ t: 'inv', a: 'use', id });
         r.appendChild(u);
         for (let i = 0; i < SLOTS; i++) {
@@ -113,6 +115,7 @@ function section(body, title) {
 function describe(id) {
   const it = ITEMS[id];
   if (id === 'revivekit') return 'revive a downed player to full health - never used up';
+  if (id === 'flashlight') return `${keyName('light')} switches it on and off - no hand slot (you keep your weapon); everyone sees the beam`;
   if (id === 'medkit') return `+${it.heal} health, stops bleeding`;
   if (id === 'bandage') return `+${it.heal} health, stops bleeding`;
   if (it.buff === 'coffee') return 'refills stamina, faster recovery for 60s';
@@ -141,7 +144,7 @@ export function createWheel({ el, send, me }) {
       const id = quick[i], n = id ? (m.inv[id] || 0) : 0;
       const b = document.createElement('button');
       b.className = `wheel-slot s${i}` + (i === sel ? ' on' : '') + (!id || !n ? ' empty' : '');
-      b.innerHTML = id ? `<span class="ic">${ITEM_ICON[id] || '•'}</span><span>${ITEMS[id].name}</span><small>${n ? 'x' + n : 'none'}</small>` : '<span class="ic">·</span><span>empty</span><small>pin one in the bag</small>';
+      b.innerHTML = id ? `<span class="ic">${ITEM_ICON[id] || '•'}</span><span>${ITEMS[id].name}</span><small>${!n ? 'none' : ITEMS[id].light ? (m.light ? 'on' : 'off') : 'x' + n}</small>` : '<span class="ic">·</span><span>empty</span><small>pin one in the bag</small>';
       b.onpointerup = (e) => { e.stopPropagation(); sel = i; use(); };
       el.appendChild(b);
     }

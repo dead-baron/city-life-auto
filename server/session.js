@@ -44,8 +44,9 @@ export function createSession(world, conn, opts) {
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const { profile, token } = opts.login(msg.token);
-        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, sig: mapSignature(world.map), tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world), tt: trains.timetable(world) });
-        player = players.join(world, conn, profile);
+        // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
+        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, sig: mapSignature(world.map), tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world), tt: trains.timetable(world) });
+        player = players.join(world, conn, profile, { clientBuild: typeof msg.cb === 'string' ? msg.cb.slice(0, 40) : null, clientBuiltAt: Number(msg.cbt) || 0 });
         return;
       }
       if (!player) return;

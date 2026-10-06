@@ -14,6 +14,7 @@ import { FileStore } from './file-store.js';
 import { createSession } from './session.js';
 import { World } from './world.js';
 import * as players from './systems/players.js';
+import { readBuild, watchBuild } from './build.js';
 import { generateCity } from '../shared/map.js';
 import { TICK_MS } from '../shared/constants.js';
 
@@ -27,7 +28,17 @@ const STATIC_ROOTS = ['client/', 'shared/', 'assets/', 'server/'];
 
 useStore(new FileStore());
 const map = generateCity(config.seed);
-const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget });
+// the build we run (version.json): players coming back from an older one start fresh (CLA_FRESH_ON_UPDATE)
+const BUILD_FILE = join(config.root, 'version.json');
+const bootBuild = readBuild(BUILD_FILE);
+const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget, build: bootBuild && bootBuild.v, buildAt: bootBuild && bootBuild.at, freshOnUpdate: config.freshOnUpdate });
+console.log(`[server] build ${bootBuild ? bootBuild.v : '(no version.json)'} · fresh start on update: ${config.freshOnUpdate}`);
+// Client-only updates arrive without a restart (deploy/auto-update.sh pulls them): look at version.json
+// every 20 s and tell every page about a new build, so they reload into it (client/update.js).
+watchBuild(BUILD_FILE, 20000, (b) => {
+  console.log(`[server] new build on disk: ${b.v} (was ${world.build || 'none'}) - telling players to update`);
+  players.announceBuild(world, b);
+}, bootBuild && bootBuild.v);
 const startedAt = Date.now();
 // always on for metering; each limit only acts when configured (see config.js)
 const limits = createLimits({ dataDir: config.dataDir, monthlyGB: config.monthlyGB, maxPerIp: config.maxPerIp, connPerMinute: config.connPerMinute, httpPerMinute: config.httpPerMinute });
@@ -48,7 +59,8 @@ const server = createServer(async (req, res) => {
   }
   if (path === '/' || path === '') path = '/index.html';
   const rel = normalize(path).replace(/^([/\\])+/, '');
-  if (rel.includes('..') || rel.startsWith('server/config') || rel.startsWith('server/auth') || !(rel === 'index.html' || STATIC_ROOTS.some((r) => rel.startsWith(r)))) {
+  // (version.json too: a page played straight off this server checks it for updates - client/boot.js, update.js)
+  if (rel.includes('..') || rel.startsWith('server/config') || rel.startsWith('server/auth') || !(rel === 'index.html' || rel === 'version.json' || STATIC_ROOTS.some((r) => rel.startsWith(r)))) {
     res.writeHead(404); res.end('not found'); return;
   }
   const file = join(config.root, rel);
@@ -57,7 +69,7 @@ const server = createServer(async (req, res) => {
     if (!st.isFile()) throw new Error('not file');
     const body = await readFile(file);
     if (limits) limits.addBytes(body.length + 300); // + headers
-    res.writeHead(200, { 'content-type': MIME[extname(file)] || 'application/octet-stream', 'cache-control': config.dev ? 'no-cache' : 'public, max-age=300' });
+    res.writeHead(200, { 'content-type': MIME[extname(file)] || 'application/octet-stream', 'cache-control': config.dev || rel === 'version.json' ? 'no-cache' : 'public, max-age=300' });
     res.end(body);
   } catch {
     res.writeHead(404); res.end('not found');
@@ -101,6 +113,7 @@ function statsSnapshot() {
   let npc = 0, veh = 0;
   for (const e of world.entities.values()) { if (e.npc) npc++; if (e.def) veh++; }
   return {
+    build: world.build,
     uptimeS: Math.round((Date.now() - startedAt) / 1000),
     online: [...world.players.values()].filter((p) => p.conn).length,
     ghosts: [...world.players.values()].filter((p) => !p.conn).length,

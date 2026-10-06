@@ -35,6 +35,6 @@ export function formatPrompt(p) {
 // rewrite "press E" / "(E)" style hints inside server notifications for the current device
 export function localizeText(t) {
   return String(t)
-    .replace(/\bpress(ing)? ([EFQRXHM])\b/gi, (s, ing, k) => `${s.slice(0, ing ? 8 : 5)} ${keyName(actionOfKey(k))}`)
+    .replace(/\bpress(ing)? ([EFQRXHML])\b/gi, (s, ing, k) => `${s.slice(0, ing ? 8 : 5)} ${keyName(actionOfKey(k))}`)
     .replace(/\bPress ` \(or DEV\)/g, input.device === 'keyboard' ? 'Press ` (or DEV)' : 'Tap DEV');
 }

@@ -13,7 +13,8 @@
 //   pool.has(key), pool.idle, pool.stats(), pool.dispose()
 //
 // At most two jobs run on a worker at a time (the second waits in its message queue, so a worker never
-// sits idle between jobs). A worker that dies fails its jobs (done gets the error); one stuck on a job
+// sits idle between jobs), and at most one of them is a chunk bake: a bake takes a few hundred ms, a sprite a
+// few, so the other slot is always there for the sprites things on screen are waiting for. A worker that dies fails its jobs (done gets the error); one stuck on a job
 // for over a minute is replaced. If none are left, pool.dead is set and every new request fails at once
 // (the host keeps its fallbacks).
 const PER_WORKER = 2, STUCK_MS = 60000;
@@ -39,7 +40,7 @@ export class WorkerPool {
     this.watch = setInterval(() => this._watchdog(), 5000);
   }
   _spawn(i) {
-    const w = { i, wk: null, busy: 0, alive: true, running: new Set() };
+    const w = { i, wk: null, busy: 0, baking: 0, alive: true, running: new Set() };
     try { w.wk = new Worker(this.url, { type: 'module', name: `art2-bake-${i}` }); } catch (e) { w.alive = false; w.err = String(e); return w; }
     w.wk.onmessage = (e) => this._onMessage(w, e.data);
     w.wk.onerror = (e) => { e.preventDefault && e.preventDefault(); this._kill(w, `worker error: ${e.message || e}`); };
@@ -94,10 +95,12 @@ export class WorkerPool {
   // Fairness between classes of job (the key's first letter: c chunk bakes, s sprites): after STREAK[cls]
   // jobs of one class in a row, a waiting job of another class goes next, so a steady stream of cheap
   // high-priority sprites can't starve the bakes (or the other way round).
-  _next() {
-    const q = this.queue, s = this.streak;
-    let i = 0;
-    if (s.n >= (STREAK[s.cls] || 8)) { const j = q.findIndex((x) => x.key[0] !== s.cls); if (j >= 0) i = j; }
+  // bakeOk: a free slot can take a chunk bake (null when nothing waiting may go now)
+  _next(bakeOk = true) {
+    const q = this.queue, s = this.streak, ok = (x) => bakeOk || x.key[0] !== 'c';
+    let i = q.findIndex(ok);
+    if (i < 0) return null;
+    if (s.n >= (STREAK[s.cls] || 8)) { const j = q.findIndex((x) => x.key[0] !== s.cls && ok(x)); if (j >= 0) i = j; }
     const job = q.splice(i, 1)[0], c = job.key[0];
     if (c === s.cls) s.n++; else { s.cls = c; s.n = 1; }
     return job;
@@ -107,11 +110,15 @@ export class WorkerPool {
     this.queue.sort((a, b) => a.prio - b.prio || a.seq - b.seq);
     for (;;) {
       if (!this.queue.length) return;
-      let best = null;
-      for (const w of this.workers) if (w.alive && w.busy < PER_WORKER && (!best || w.busy < best.busy)) best = w;
+      let best = null, bakeOk = false;
+      for (const w of this.workers) if (w.alive && w.busy < PER_WORKER) { if (!w.baking) bakeOk = true; if (!best || w.busy < best.busy) best = w; }
       if (!best) return;
-      const job = this._next();
+      const job = this._next(bakeOk);
+      if (!job) return;
+      const bake = job.key[0] === 'c';
+      if (bake && best.baking) { best = null; for (const w of this.workers) if (w.alive && w.busy < PER_WORKER && !w.baking && (!best || w.busy < best.busy)) best = w; }
       job.id = this.nextId++; job.w = best; job.t0 = performance.now();
+      if (bake) best.baking++;
       this.byId.set(job.id, job); best.busy++; best.running.add(job);
       try { best.wk.postMessage({ id: job.id, op: job.op, args: job.args }); } catch (e) { this._finish(job, null, `could not send: ${e.message || e}`); }
     }
@@ -124,7 +131,7 @@ export class WorkerPool {
   }
   _finish(job, result, err, ms) {
     this.byId.delete(job.id);
-    if (job.w) { job.w.busy = Math.max(0, job.w.busy - 1); job.w.running.delete(job); }
+    if (job.w) { job.w.busy = Math.max(0, job.w.busy - 1); job.w.running.delete(job); if (job.key && job.key[0] === 'c' && job.w.baking) job.w.baking--; }
     if (!job.init && this.jobs.get(job.key) === job) this.jobs.delete(job.key);
     if (err) this.counts.failed++; else this.counts.done++;
     if (result && ms !== undefined) result.workerMs = ms;

@@ -1,16 +1,19 @@
 // Gameplay feel: bailing out, crate capacity, drifting, blood + hurt NPCs, the online player
-// list and Dev Debug Mode (nothing done in it is saved).
+// list, Dev Debug Mode (progress made in it is kept) and its give menu, the flashlight.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, store, players, fakeConn, straightRoad } from './helpers.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { vehStep, driveInput } from '../shared/physics.js';
 import { IN } from '../shared/input.js';
-import { BAIL_HURT_SPEED, NPC_CRITICAL, NPC_GRIT } from '../shared/rules.js';
+import { BAIL_HURT_SPEED, NPC_CRITICAL, NPC_GRIT, FLASHLIGHT_PRICE } from '../shared/rules.js';
 import { K } from '../shared/constants.js';
+import { SHOPS, ITEMS, WEAPONS, itemCat } from '../shared/items.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as combat from '../server/systems/combat.js';
+import * as economy from '../server/systems/economy.js';
 import * as devmode from '../server/devmode.js';
+import * as dev from '../server/dev.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import { createSession } from '../server/session.js';
 
@@ -155,7 +158,7 @@ test('players online: everyone sees names, roles and districts; only devs get po
   void b;
 });
 
-test('Dev Debug Mode: no password, nothing saved, leaving restores everything; teleport, bring, grant, invincible', () => {
+test('Dev Debug Mode: no password; progress made in it is kept when you leave (or quit); teleport, bring, grant, invincible', () => {
   const w = makeWorld();
   const { p, conn } = joinPlayer(w);
   const { p: other } = joinPlayer(w);
@@ -166,6 +169,7 @@ test('Dev Debug Mode: no password, nothing saved, leaving restores everything; t
   const x0 = p.ped.x, y0 = p.ped.y;
   assert.equal(devmode.tryPassword(w, p, ''), true, 'no password while testing');
   assert.ok(p.devMode);
+  assert.equal(p.profile, real, 'dev mode works on your real profile');
   // invincible: for yourself, and for another player
   devmode.setInvincible(w, p, null);
   combat.damage(w, p.ped, 9999, null, 'test');
@@ -179,7 +183,7 @@ test('Dev Debug Mode: no password, nothing saved, leaving restores everything; t
   p.profile.cash += 99999; p.profile.criminalExp = 9999; p.profile.weapons.rocket = 10;
   p.heat = 200; p.wanted = 5;
   teleport(w, p.ped, x0 + 3000, y0);
-  assert.equal(store.get(p.pid).cash, 1234, 'the saved profile never sees it');
+  assert.equal(store.get(p.pid).cash, 1234 + 99999, 'saved like anything else');
   // teleport to another player, and fetch them
   devmode.goTo(w, p, other.pid);
   assert.ok(Math.hypot(p.ped.x - other.ped.x, p.ped.y - other.ped.y) < 80, 'went to them');
@@ -188,20 +192,136 @@ test('Dev Debug Mode: no password, nothing saved, leaving restores everything; t
   assert.ok(Math.hypot(p.ped.x - other.ped.x, p.ped.y - other.ped.y) < 80, 'brought them');
   devmode.grant(w, p, other.pid);
   assert.ok(other.devMode, 'granted');
-  // leave: all back
+  // leave: everything stays as it is now - only the dev powers end
+  devmode.setInvincible(w, p, null);
+  assert.ok(p.invincible);
+  const x1 = p.ped.x, y1 = p.ped.y;
   devmode.exit(w, p);
   assert.ok(!p.devMode);
-  assert.equal(p.profile, real, 'the real profile is back');
-  assert.equal(p.profile.cash, 1234);
-  assert.equal(p.profile.criminalExp, 50);
-  assert.equal(p.profile.weapons.rocket, undefined);
-  assert.equal(p.wanted, 0);
-  assert.ok(Math.hypot(p.ped.x - x0, p.ped.y - y0) < 1, 'back where they were');
-  // disconnecting in dev mode restores too
-  const oc = other.profile;
+  assert.ok(!p.invincible, 'invincibility ends with dev mode');
+  assert.equal(p.profile, real, 'still the one real profile');
+  assert.equal(p.profile.cash, 1234 + 99999, 'money kept');
+  assert.equal(p.profile.criminalExp, 9999, 'EXP kept');
+  assert.equal(p.profile.weapons.rocket, 10, 'weapons kept');
+  assert.equal(p.wanted, 5, 'nothing is rolled back - wanted level included');
+  assert.ok(Math.hypot(p.ped.x - x1, p.ped.y - y1) < 1, 'stays where they are');
+  // quitting in dev mode keeps it too
   other.profile.cash += 5000;
-  const realOther = store.get(other.pid);
+  const cash = other.profile.cash;
   w.players.get(other.pid).conn = fakeConn();
   players.leave(w, other);
-  assert.ok(!other.devMode && other.profile === realOther && other.profile !== oc, 'quit: restored');
+  assert.ok(!other.devMode, 'dev mode ends with the session');
+  assert.equal(other.profile, store.get(other.pid));
+  assert.equal(store.get(other.pid).cash, cash, 'quit: kept');
+});
+
+// what a fake connection was sent (JSON text frames parsed)
+const sentTo = (conn) => conn.sent.map((m) => (typeof m === 'string' ? JSON.parse(m) : m));
+// one input from the player (a fresh sequence number each time)
+function press(w, p, bits) {
+  players.queueInput(p, { seq: p.ack + 1, bits, mx: 0, my: 0, aim: 0 });
+  w.step();
+}
+
+test('flashlight: off unless you own one; bought at hardware / corner stores / gas stations (one is enough); L / D-pad up / 🔦 switches it; no hand slot; others see it', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w, { cash: 500, quick: [null, null, null, null] });
+  const ped = p.ped;
+  assert.ok(!ped.flashOn, 'players have no light of their own');
+  press(w, p, IN.LIGHT); press(w, p, 0);
+  assert.ok(!ped.flashOn && !prof.light, 'nothing to switch on without one');
+  for (const k of ['hardware', 'convenience', 'gasstation']) assert.ok(SHOPS[k].buy.some((o) => o.id === 'flashlight' && o.price === FLASHLIGHT_PRICE), `${k} sells it`);
+  assert.equal(itemCat('flashlight'), 'tools');
+  const shop = w.map.pois.find((q) => q.kind === 'hardware');
+  teleport(w, ped, shop.x, shop.y);
+  economy.handleMenu(w, p, shop.id, `i:flashlight:${FLASHLIGHT_PRICE}:1`);
+  assert.equal(prof.inventory.flashlight, 1, 'in the bag');
+  assert.equal(prof.cash, 500 - FLASHLIGHT_PRICE);
+  assert.ok(economy.buildMenu(w, p, shop).opts.find((o) => o.id.startsWith('i:flashlight')).dis, 'shown as owned');
+  economy.handleMenu(w, p, shop.id, `i:flashlight:${FLASHLIGHT_PRICE}:1`);
+  assert.equal(prof.inventory.flashlight, 1, 'one is enough');
+  assert.equal(prof.cash, 500 - FLASHLIGHT_PRICE, 'and nobody pays for a second');
+  assert.equal(prof.quick[0], 'flashlight', 'on the quick wheel by itself');
+  run(w, 0.2);
+  assert.ok(!ped.flashOn, 'it starts off');
+  // the button switches it on and off; a gun stays in hand (no hand slot)
+  prof.weapons.pistol = 24; combat.selectWeapon(w, ped, 'pistol');
+  press(w, p, IN.LIGHT);
+  assert.ok(ped.flashOn && prof.light, 'on');
+  assert.equal(ped.weapon, 'pistol', 'still holding the pistol');
+  press(w, p, IN.LIGHT);
+  assert.ok(ped.flashOn, 'held down: no flicker');
+  press(w, p, 0); press(w, p, IN.LIGHT);
+  assert.ok(!ped.flashOn && !prof.light, 'off again');
+  // from the bag / the quick wheel
+  economy.useItem(w, p, 'flashlight');
+  assert.ok(ped.flashOn, 'used from the bag: on');
+  assert.equal(prof.inventory.flashlight, 1, 'never used up');
+  assert.ok(players.buildMe(w, p).light, 'the HUD knows');
+  // everyone sees it: the spawn descriptor carries fl, sent again when it changes
+  const o = joinPlayer(w);
+  teleport(w, o.p.ped, ped.x + 80, ped.y);
+  run(w, 0.3);
+  const lastDesc = () => { let d = null; for (const m of sentTo(o.conn)) if (m && m.t === 'sp') for (const e of m.e) if (e.id === ped.id) d = e; return d; };
+  assert.equal(lastDesc().fl, 1, 'others get the light');
+  economy.toggleLight(w, p);
+  run(w, 0.2);
+  assert.ok(!lastDesc().fl, 'and see it go off');
+  economy.toggleLight(w, p);
+  // going down drops it with everything else: the light goes out, and a new one starts off
+  combat.kill(w, ped, null, 'melee', 0);
+  run(w, 0.1);
+  assert.ok(!ped.flashOn, 'out');
+  assert.ok(!prof.light && !prof.inventory.flashlight, 'gone with your things');
+  // the art: a held flashlight (unarmed) - and police officers keep theirs at night (client side)
+  assert.ok(ITEMS.flashlight.tool && ITEMS.flashlight.light);
+});
+
+test('dev give: anything to yourself or another online player, any quantity, or everything at once; give weapons now includes the tools', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  const { p: q, prof: qprof, conn: qconn } = joinPlayer(w);
+  prof.inventory = {}; qprof.inventory = {};
+  devmode.enter(w, p, null);
+  // the old button: weapons with ammo, med kits, and every tool (the flashlight among them)
+  dev.command(w, p, 'guns', {});
+  assert.ok(prof.weapons.pistol > 0 && prof.inventory.medkit >= 3);
+  for (const id of Object.keys(ITEMS)) if (ITEMS[id].tool) assert.equal(prof.inventory[id], 1, `guns gives the ${id}`);
+  // one thing to yourself
+  dev.command(w, p, 'give', { kind: 'item', id: 'bandage', n: 5 });
+  assert.equal(prof.inventory.bandage, 5);
+  dev.command(w, p, 'give', { kind: 'item', id: 'flashlight', n: 9 });
+  assert.equal(prof.inventory.flashlight, 1, 'a tool: one');
+  // a weapon with magazines, to someone else - they're told
+  dev.command(w, p, 'give', { pid: q.pid, kind: 'weapon', id: 'shotgun', n: 3 });
+  assert.equal(qprof.weapons.shotgun, WEAPONS.shotgun.mag * 3);
+  assert.equal(q.ped.mag.shotgun, WEAPONS.shotgun.mag, 'one magazine loaded');
+  run(w, 0.1);
+  assert.ok(sentTo(qconn).some((m) => m && m.t === 'ev' && m.l.some((e) => e.e === 'toast' && /gave you: Pump Shotgun \+ 3 mags/.test(e.text))), 'they are told');
+  dev.command(w, p, 'give', { pid: q.pid, kind: 'weapon', id: 'knife', n: 2 });
+  assert.equal(qprof.weapons.knife, 0, 'melee: just the weapon');
+  // everything at once
+  dev.command(w, p, 'give', { pid: q.pid, kind: 'all', n: 2 });
+  for (const id of Object.keys(WEAPONS)) if (id !== 'fists') assert.ok(qprof.weapons[id] !== undefined, `all: ${id}`);
+  for (const id of Object.keys(ITEMS)) assert.ok(qprof.inventory[id] >= 1, `all: ${id}`);
+  assert.equal(qprof.inventory.flashlight, 1);
+  assert.equal(qprof.inventory.bass, 2);
+  // validated
+  assert.match(dev.give(w, p, { kind: 'weapon', id: 'raygun' }), /No weapon/);
+  assert.match(dev.give(w, p, { kind: 'weapon', id: 'fists' }), /No weapon/);
+  assert.match(dev.give(w, p, { kind: 'item', id: '__proto__' }), /No item/);
+  assert.match(dev.give(w, p, { kind: 'item', id: 'toString' }), /No item/);
+  assert.match(dev.give(w, p, { kind: 'cash', id: 'x' }), /Give what/);
+  assert.match(dev.give(w, p, { pid: 'nobody', kind: 'item', id: 'medkit' }), /isn't online/);
+  dev.command(w, p, 'give', { kind: 'item', id: 'medkit', n: 1e9 });
+  assert.equal(prof.inventory.medkit, 3 + dev.GIVE_MAX, 'quantity capped');
+  dev.command(w, p, 'give', { kind: 'item', id: 'coffee', n: -4 });
+  assert.equal(prof.inventory.coffee, 1, 'at least one');
+  // only in dev mode (or on a dev server)
+  const conn = fakeConn();
+  const r = joinPlayer(w);
+  const s = createSession(w, conn, { dev: false, maxPlayers: 10, login: () => ({ profile: r.prof, token: 't' }) });
+  s.onMessage(JSON.stringify({ t: 'hello', token: null }), false);
+  s.onMessage(JSON.stringify({ t: 'dev', c: 'give', kind: 'item', id: 'medkit', n: 50 }), false);
+  assert.ok(!(r.prof.inventory.medkit > 1), 'not without dev mode');
 });

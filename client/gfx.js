@@ -9,7 +9,7 @@
 //   ultra   - high, denser vegetation and sharper rendering (fast desktops)
 // Changing any single option makes the preset "custom".
 import { settings, saveSettings } from './input.js';
-import { IS_CONSOLE } from './platform.js';
+import { IS_CONSOLE, IS_XBOX, DEVICE_FORCED, CONSOLE_WHY } from './platform.js';
 
 export const PRESETS = {
   low: { lighting: 0, flora: 'static', floraDensity: 0.5, wind: false, trample: false, sss: false, shadows: 1, reflections: false, weather: 0, particles: 0, resolution: 1, tiltShift: false },
@@ -60,9 +60,10 @@ export function detectDevice() {
   const gpu = gpuName();
   const g = gpu.toLowerCase();
   let kind;
+  const pc = DEVICE_FORCED === 'pc', mobile = DEVICE_FORCED === 'mobile';
   if (IS_CONSOLE) kind = 'console';
-  else if (/iPhone|Android.+Mobile|Mobile Safari/i.test(ua) || (coarse && small < 520)) kind = 'phone';
-  else if (/iPad|Android|Tablet/i.test(ua) || (touch && coarse)) kind = 'tablet';
+  else if (!pc && (/iPhone|Android.+Mobile|Mobile Safari/i.test(ua) || (coarse && small < 520) || (mobile && small < 520))) kind = 'phone';
+  else if (!pc && (/iPad|Android|Tablet/i.test(ua) || (touch && coarse) || mobile)) kind = 'tablet';
   else if (/intel|iris|uhd|hd graphics|mali|adreno|powervr|apple m1|apple gpu/i.test(g) || (cores && cores <= 4)) kind = 'laptop';
   else kind = 'desktop';
   const software = /swiftshader|llvmpipe|software|basic render/i.test(g);
@@ -74,9 +75,9 @@ export function detectDevice() {
   else if (kind === 'tablet') rec = mem && mem <= 3 ? 'low' : 'medium';
   else if (kind === 'laptop') rec = bigGpu ? 'high' : mem && mem <= 4 ? 'medium' : 'high';
   else rec = bigGpu && (!mem || mem >= 8) && cores >= 8 ? 'ultra' : 'high';
-  const label = { console: IS_CONSOLE && /Xbox/i.test(ua) ? 'an Xbox' : 'a games console', phone: 'a phone', tablet: 'a tablet', laptop: 'a laptop / integrated graphics', desktop: 'a desktop computer' }[kind];
+  const label = { console: IS_XBOX ? 'an Xbox' : 'a games console', phone: 'a phone', tablet: 'a tablet', laptop: 'a laptop / integrated graphics', desktop: 'a desktop computer' }[kind];
   const why = [label, gpu && !software ? gpu.replace(/ANGLE \(|\)$|Direct3D11 vs_5_0 ps_5_0, D3D11|, OpenGL.*$/g, '').trim() : software ? 'no graphics acceleration' : '', mem ? `${mem} GB memory` : '', cores ? `${cores} cores` : ''].filter(Boolean);
-  return { kind, label, gpu, recommended: rec, why };
+  return { kind, label, gpu, recommended: rec, why, consoleWhy: CONSOLE_WHY, forced: DEVICE_FORCED };
 }
 
 // ---- the live settings -----------------------------------------------------------------------------

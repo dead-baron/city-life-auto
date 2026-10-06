@@ -18,7 +18,7 @@ import { createSpectator, SPEC_LAYERS, SCHEMATIC_KEY } from './spectator.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
-import { atlas, loadAtlas, loadGlowSheets, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
+import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
 import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { createPhone } from './phone.js';
@@ -28,6 +28,8 @@ import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
+import { noteServerBuild, myBuild } from './update.js';
+import { buildGive } from './devgive.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
@@ -41,7 +43,7 @@ import { Lighting, LIGHT } from './render/lighting.js';
 import { Weather } from './render/weather.js';
 import { drawBuildingShadows, drawPropShadows, drawContactShade, drawSpriteShadows } from './render/shadows.js';
 import { registerNewProps } from './render/newprops.js';
-import { LOW_MEM, canvasStats } from './platform.js';
+import { LOW_MEM, canvasStats, setDeviceKind } from './platform.js';
 import { Flora, FLORA_PROPS, wind } from './render/flora/index.js';
 import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS, worldArtWanted } from './gfx.js';
 initGfx();
@@ -53,6 +55,7 @@ const canvas = $('view');
 // under this canvas, which then carries only the overlays - so it needs an alpha channel, and that is
 // fixed when the context is made: the choice applies per page load.
 const ART2_WANTED = worldArtWanted();
+let v1ArtP = null; // the classic art, once something asked for it (ensureV1Art)
 const g = canvas.getContext('2d', { alpha: ART2_WANTED });
 
 const VIEW_H = 660;           // world px visible vertically in 16:9 landscape
@@ -115,7 +118,7 @@ function connect() {
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
   S.ws = ws;
-  ws.onopen = () => { S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token })); };
+  ws.onopen = () => { S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
     if (typeof ev.data !== 'string') { onBinary(ev.data); return; }
     let m; try { m = JSON.parse(ev.data); } catch { return; }
@@ -152,7 +155,8 @@ function onText(m) {
       document.body.classList.toggle('practice', !!m.practice);
       if (S.spec && S.spec.on) { if (S.map.seed !== (m.seed >>> 0)) exitSpectate(); else send({ t: 'dev', c: 'spectate', on: true }); } // back in after a reconnect
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
-      if (m.sig && m.sig !== mapSignature(S.map)) { outdatedBuild(m.sig); return; } // the server runs a newer world than this page
+      S.updating = noteServerBuild(m.build, m.built); // the server runs a newer build: this page reloads into it (client/update.js)
+      if (m.sig && m.sig !== mapSignature(S.map)) { if (S.updating) $('play').disabled = true; else outdatedBuild(m.sig); return; } // the server runs a newer world than this page
       S.ents.clear(); S.pred = null; S.pending = [];
       for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
@@ -166,7 +170,7 @@ function onText(m) {
       S.tt = { l: m.tt || [], at: performance.now() / 1000 };
       S.portals = portalCovers(S.map);
       S.ground.clear();
-      $('t-status').textContent = m.practice ? 'Offline practice city ready' : `Signed in as ${m.name}`;
+      $('t-status').textContent = m.practice ? 'Offline practice city ready' : S.updating ? 'Updating to the latest version...' : `Signed in as ${m.name}`;
       $('play').disabled = false;
       if (S.playing) startPlaying();
       setupDev();
@@ -189,6 +193,7 @@ function onText(m) {
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
+    case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     default: break;
   }
 }
@@ -377,7 +382,8 @@ const WOODC = ['#7a5230', '#a87444', '#5a3a1e', '#8a6038'];
 function smashFx(p, i, a) {
   const fx = S.fx, now = S.loopClock, t = p.t;
   const vol = distVol(p.x, p.y);
-  const fr = atlas.ready ? atlas.frames['prop_' + t] : null;
+  const v1 = atlas.ready && !!atlas.frames && !S.art2; // (pieces of the classic sprites fly only in the classic view)
+  const fr = v1 ? atlas.frames['prop_' + t] : null;
   const sz = PROP_SIZES[t] || [24, 24];
   const throwIt = (scale = 1, spin = 9, up = 220) => {
     if (!fr) return;
@@ -425,7 +431,7 @@ function smashFx(p, i, a) {
     for (let k = 0; k < (big ? 4 : 2); k++) fx.smoke(p.x, p.y, false); // a puff of dust and stink
     sfx(big ? 'clang' : 'hit', vol); sfx('paper', vol * 0.6);
   } else if (t === 'billboard') {
-    const bf = atlas.frames['prop_billboard' + (p.ad || 0)];
+    const bf = v1 ? atlas.frames['prop_billboard' + (p.ad || 0)] : null;
     if (bf) for (let k = 0; k < 6; k++) { const qx = k % 3, qy = (k / 3) | 0, aa = a + (Math.random() - 0.5) * 2; fx.chunk(atlas.imgs[bf.a], bf.x + qx * bf.w / 3, bf.y + qy * bf.h / 2, bf.w / 3, bf.h / 2, 44, 42, p.x + (qx - 1) * 44, p.y - 30 + qy * 30, Math.cos(aa) * 120, Math.sin(aa) * 120, 200, (Math.random() - 0.5) * 10, 7); }
     fx.flutter(p.x, p.y - 30, 20, BOARD, Math.random, 180, 240);
     fx.sparks(p.x, p.y - 30, 12);
@@ -649,6 +655,29 @@ function setupWorld(seed) {
   startArt2(S.map);
 }
 
+// ---- the classic (v1) art ------------------------------------------------------------------------------
+// The sprite atlas, the hand-drawn prop sheets and the body sheets: ~250 MB of pictures once decoded. The
+// new renderer draws none of it, so it loads only when something still needs it - the classic renderer
+// (no WebGL2, ?art=1, or the graphics lost for good), the subway tunnel, the city tour, the spectator map.
+function ensureV1Art() {
+  if (v1ArtP) return v1ArtP;
+  loadBodies('assets/');
+  v1ArtP = loadAtlas('assets/', gfx.lighting >= 2).then(() => {
+    if (!atlas.ready || !atlas.frames) return;
+    registerNewProps(); registerCountryProps();
+    if (S.flora) S.flora.registerAtlas(atlas);
+    if (S.ground) S.ground.clear(); // (chunks drawn before the art arrived are drawn again with it)
+  }).catch((e) => console.warn('[v1 art]', e));
+  return v1ArtP;
+}
+// The classic renderer draws the frame: the new one is off (or failed), or you ride the subway (the
+// tunnel view is classic art). While the new renderer is still starting the world stays dark instead.
+function v1Draws(F) {
+  const on = !ART2_WANTED || !!S.art2Off || !!F.sub;
+  if (on) ensureV1Art();
+  return on;
+}
+
 // ---- the art v2 world renderer (client/art2/game/host.js) --------------------------------------------
 // Loaded only when wanted and built per city. Until it is ready, while riding the subway (the tunnel
 // view) and for good if it fails, the v1 renderer draws the frame (the overlay canvas takes a whole v1
@@ -728,7 +757,7 @@ function startPlaying() {
 // online on the right with per-player buttons. Every button presses in, clicks, and pops a
 // little note saying what it did.
 const DEV_CMDS = [
-  ['guns', '🔫 Give weapons'], ['god', '🛡 Invincible (toggle)'], ['heal', '❤ Heal'], ['money', '💵 +$25k'],
+  ['guns', '🔫 Give weapons + tools'], ['god', '🛡 Invincible (toggle)'], ['heal', '❤ Heal'], ['money', '💵 +$25k'],
   ['car', '🏎 Spawn sports car', { m: 'sports' }], ['car', '🛻 Spawn pickup', { m: 'pickup' }], ['car', '🚤 Spawn speedboat', { m: 'speedboat' }], ['cargo', '📦 Loaded flatbed (cargo test)'],
   ['calltrain', '🚉 Call a train to this station'], ['train', '🚆 Hop on the nearest train'],
   ['rain', '🌧 Start rain'], ['clear', '☀ Stop rain'], ['night', '🌙 Jump to night'], ['day', '🌅 Jump to day'],
@@ -749,8 +778,16 @@ function setupDev() {
   const on = S.dev || S.devMode;
   $('b-dev').classList.toggle('hidden', !on);
   if (!on) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  box.innerHTML = `<div class="dev-head"><b>${S.devMode ? 'DEV DEBUG MODE · nothing is saved' : 'DEV / PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><button class="dev-tp-toggle">📍 Teleport to a district or landmark…</button><div id="dev-tp" class="hidden"></div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
+  box.innerHTML = `<div class="dev-head"><b>${S.devMode ? 'DEV DEBUG MODE · your progress is kept' : 'DEV / PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><button class="dev-tp-toggle">📍 Teleport to a district or landmark…</button><div id="dev-tp" class="hidden"></div><button class="dev-give-toggle">🎁 Give items to me or a player…</button><div id="dev-give" class="hidden"></div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
   box.querySelector('.dev-x').onclick = () => closeOverlay('dev');
+  // give: anything in the game (weapons, tools, items) to yourself or anyone online (client/devgive.js)
+  const giveBox = box.querySelector('#dev-give'), giveBtn = box.querySelector('.dev-give-toggle');
+  S.devGive = buildGive(giveBox, { send, press: devPress, players: () => (S.plist && S.plist.l) || [] });
+  giveBtn.onclick = () => {
+    const open = giveBox.classList.toggle('hidden') === false;
+    giveBtn.textContent = open ? '🎁 Give ▲ (hide)' : '🎁 Give items to me or a player…';
+    if (open) { requestPlayers(); S.devGive.refreshTargets(); }
+  };
   // teleport: a map of every district, station and landmark (built the first time it's opened)
   const tpBox = box.querySelector('#dev-tp'), tpBtn = box.querySelector('.dev-tp-toggle');
   tpBtn.onclick = () => {
@@ -777,7 +814,7 @@ function setupDev() {
   }
   if (S.devMode) {
     const leave = document.createElement('button');
-    leave.textContent = '⏏ Leave dev mode (restore my progress)'; leave.className = 'dev-leave';
+    leave.textContent = '⏏ Leave dev mode (keep my progress)'; leave.className = 'dev-leave';
     devPress(leave, 'Leaving dev mode', () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); });
     cmds.appendChild(leave);
   }
@@ -787,6 +824,7 @@ function setupDev() {
   if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Tap 🛠 (or press `) for the cheats panel.' : 'Dev mode: tap 🛠 or press ` (backtick) for the playtest panel.', 'info');
 }
 function renderDevPlayers() {
+  if (S.devGive) S.devGive.refreshTargets(); // the give menu's "give to" list
   const el = $('dev-players');
   if (!el) return;
   const all = (S.plist && S.plist.l) || [];
@@ -795,7 +833,7 @@ function renderDevPlayers() {
   for (const q of ps) {
     const row = document.createElement('div'); row.className = 'dev-pl';
     row.innerHTML = `<span>${esc(q.n)}${q.dm ? ' <i>dev</i>' : ''}${q.god ? ' 🛡' : ''}<small>${esc(q.d || '')}${q.dead ? ' · down' : ''}</small></span>`;
-    const acts = [['goto', '📍 Go to'], ['bring', '🧲 Bring'], ['gunsp', '🔫 Weapons'], ['healp', '❤ Heal'], ['godp', q.god ? '🛡 Invincible: ON' : '🛡 Invincible: off'], ...(q.dm ? [] : [['grant', '🛠 Give dev']])];
+    const acts = [['goto', '📍 Go to'], ['bring', '🧲 Bring'], ['gunsp', '🔫 Weapons + tools'], ['healp', '❤ Heal'], ['godp', q.god ? '🛡 Invincible: ON' : '🛡 Invincible: off'], ...(q.dm ? [] : [['grant', '🛠 Give dev']])];
     for (const [c, label] of acts) {
       const b = document.createElement('button'); b.textContent = label;
       if (c === 'godp' && q.god) b.classList.add('on');
@@ -959,6 +997,7 @@ function specEntities(view, now) {
   for (const e of list) { if (e.kind === K.VEH) { vehVisual(e, now, 0); drawVehicleEnt(e, now, 0); } else { pedVisual(e, now); drawPed(e, now); } }
 }
 function enterSpectate() {
+  ensureV1Art(); // (the spectator map draws with the classic art)
   if (!S.spec || !S.playing) return;
   if (topOverlay()) closeOverlay(topOverlay());
   if (S.bigmap) toggleMap(false);
@@ -1153,6 +1192,7 @@ function checkWaypoint() {
 let tutMap = null;
 // `then` runs once the tour is finished or skipped (first play: tour first, then into the city)
 function openTutorial(chapter, then) {
+  ensureV1Art(); // (the tour draws the map with the classic art)
   const map = S.map || (tutMap ||= generateCity(1337));
   openOverlay('tutorial');
   startTutorial({ map, fallback: S.hud ? S.hud.mini : null, chapter, onClose: () => { if (overlays.includes('tutorial')) closeOverlay('tutorial'); if (then) setTimeout(then, 0); } });
@@ -1201,7 +1241,7 @@ function onGfxChange() {
   onResize();
   if (S.ground) S.ground.clear();         // baked ground art changes with the vegetation setting
   if (S.flora) S.flora.configure(gfx);
-  if (gfx.lighting >= 2) loadGlowSheets();
+  if (gfx.lighting >= 2 && v1ArtP) loadGlowSheets();
   syncGfxPanel();
 }
 function buildGfxPanel() {
@@ -1209,8 +1249,14 @@ function buildGfxPanel() {
   if (box.dataset.built) return;
   box.dataset.built = '1';
   const d = getDevice();
-  box.innerHTML = `<h3>GRAPHICS</h3><p class="gfx-dev">Detected ${d.label}${d.gpu ? ' · ' + d.why.slice(1, 2).join('') : ''} - recommended: ${PRESET_NAMES[d.recommended]}</p>`;
+  box.innerHTML = `<h3>GRAPHICS</h3><p class="gfx-dev">${d.forced ? 'Set to' : 'Detected'} ${d.label}${d.consoleWhy && !d.forced ? ` (${d.consoleWhy})` : ''}${d.gpu ? ' · ' + d.why.slice(1, 2).join('') : ''} - recommended: ${PRESET_NAMES[d.recommended]}</p><p class="gfx-dev" id="s-renderer"></p>`;
   const row = (label, el, sub) => { const l = document.createElement('label'); l.className = 'srow' + (sub ? ' sub' : ''); const sp = document.createElement('span'); sp.textContent = label; l.append(sp, el); box.appendChild(l); };
+  // what this device is, if the guess was wrong (consoles get the pad controls and the memory-light caches)
+  const dv = document.createElement('select'); dv.id = 's-device';
+  for (const [v, t] of [['', 'Detect automatically'], ['console', 'Xbox / games console'], ['pc', 'Computer'], ['mobile', 'Phone or tablet']]) { const o = document.createElement('option'); o.value = v; o.textContent = t; dv.appendChild(o); }
+  dv.value = d.forced || '';
+  dv.onchange = () => { setDeviceKind(dv.value || null); S.hud?.toast('Restarting to apply the device setting...', 'info'); setTimeout(() => location.reload(), 600); };
+  row('This device', dv);
   const ps = document.createElement('select'); ps.id = 's-preset';
   for (const k of ['low', 'medium', 'high', 'ultra', 'custom']) { const o = document.createElement('option'); o.value = k; o.textContent = PRESET_NAMES[k] + (k === d.recommended ? ' (recommended)' : ''); ps.appendChild(o); }
   ps.onchange = () => { if (ps.value !== 'custom') { applyPreset(ps.value); onGfxChange(); } };
@@ -1230,6 +1276,8 @@ function buildGfxPanel() {
 function syncGfxPanel() {
   buildGfxPanel();
   $('s-preset').value = gfx.preset;
+  const rr = $('s-renderer');
+  if (rr) rr.textContent = S.art2 ? `World graphics: new renderer, ${['Low', 'Medium', 'High', 'Ultra'][S.art2.q] || ''} detail${LOW_MEM ? ', low-memory mode' : ''}` : ART2_WANTED ? (S.art2Off ? `World graphics: basic (${S.art2Off})` : 'World graphics: new renderer starting...') : 'World graphics: basic (?art=1 in the address)';
   for (const el of $('s-gfxbox').querySelectorAll('[data-g]')) {
     const v = gfx[el.dataset.g];
     if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v);
@@ -1396,7 +1444,7 @@ function openOverlay(id) {
   if (id === 'pause') {
     requestPlayers();
     document.querySelectorAll('#pause .online-only').forEach((b) => b.classList.toggle('hidden', !!S.practice));
-    $('p-devmode').textContent = S.devMode ? '⏏ Leave Dev Debug Mode (restore my progress)' : 'Dev Debug Mode';
+    $('p-devmode').textContent = S.devMode ? '⏏ Leave Dev Debug Mode (keep my progress)' : 'Dev Debug Mode';
     // the debug menu goes to the top of the options while you're in dev mode
     const dbg = document.querySelector('#pause [data-p="dev"]'); dbg.parentNode.insertBefore(dbg, dbg.parentNode.firstChild);
     document.querySelectorAll('#pause .dev-only').forEach((b) => b.classList.toggle('hidden', !S.dev && !S.devMode));
@@ -1917,7 +1965,9 @@ function render(dt) {
   tickVisuals(F);
   F.mark('visuals');
   const v2 = art2Draws(F);
-  if (v2) S.art2.frame(F); else drawWorldV1(F);
+  if (v2) S.art2.frame(F);
+  else if (v1Draws(F)) drawWorldV1(F);
+  else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }
   drawOverlays(F, v2);
 }
 
@@ -2628,7 +2678,7 @@ function tickInterior() {
     intShown = kind;
     el.classList.toggle('hidden', !kind);
     intDrawnAt = 0;
-    if (kind) $('int-open').textContent = kind === 'armory' ? '▲ Armory' : '▲ Front desk';
+    if (kind) { $('int-open').textContent = kind === 'armory' ? '▲ Armory' : '▲ Front desk'; loadInteriorArt('assets/'); }
   }
   if (!kind) return;
   const now = performance.now();
@@ -2998,7 +3048,7 @@ function pedVisual(p, now) {
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
   if (L.swimming && (p.as || 0) > 30 && Math.random() < 0.12 && S.map.tileAtPx(p.rx, p.ry) !== T.BRIDGE) S.fx.splash(p.rx, p.ry, 2);
   // lying still (the drawn body on the ground) doesn't drip; standing, the sparks fly round the head
-  const lying = !L.upright && (L.pose === 'down' || L.pose === 'dead') && !L.flying && !L.swimming && !!lyingSprite(p.d.app, L.pose === 'dead' ? 1 : 0);
+  const lying = !L.upright && (L.pose === 'down' || L.pose === 'dead') && !L.flying && !L.swimming && (!!S.art2 || !!lyingSprite(p.d.app, L.pose === 'dead' ? 1 : 0));
   if (!lying && (f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - (L.upright ? 20 : 0) + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
@@ -3536,15 +3586,17 @@ function collectLights(sky, view, vehs, peds, dt) {
     L.add(c.rx, c.ry, def.L * 0.75, LIGHT.window, 0.6);
     if (c.d.c === 0) { const x = c.rx + Math.cos(c.ra) * def.L / 2, y = c.ry + Math.sin(c.ra) * def.L / 2; L.cone(x, y, c.ra, 460, 100, LIGHT.head, 1); L.beam(x, y, c.ra, 380, 70, LIGHT.head, 0.08 * haze); }
   }
-  // flashlights: police on foot at night, and you
+  // flashlights: police on foot carry theirs after dark; a player's shines whenever it's switched on (d.fl in
+  // the spawn descriptor - they buy one and switch it on): a soft beam by day, the full cone at night
+  for (const p of peds) {
+    if ((p.flags & (PF.INVEH | PF.DEAD | PF.DOWN)) || p.swim || p.blink === 3) continue;
+    const torch = !!(p.d && p.d.fl), cop = night > 0.35 && !!(p.flags & PF.BADGE);
+    if (!torch && !cop) continue;
+    const a = p.ra, x = p.rx + Math.cos(a) * 8, y = p.ry - 10 + Math.sin(a) * 8;
+    if (night > 0.05) L.cone(x, y, a, torch ? 240 : 200, 62, LIGHT.white, 0.85 * night);
+    L.beam(x, y, a, 170, 40, LIGHT.white, torch ? 0.16 * (1 - night) + 0.06 * haze * night : 0.045 * haze * night);
+  }
   if (night > 0.35) {
-    for (const p of peds) {
-      const mine = p.id === S.myPedId;
-      if ((!mine && !(p.flags & PF.BADGE)) || (p.flags & (PF.INVEH | PF.DEAD | PF.DOWN))) continue;
-      const a = p.ra, x = p.rx + Math.cos(a) * 8, y = p.ry - 10 + Math.sin(a) * 8;
-      L.cone(x, y, a, mine ? 230 : 200, 62, LIGHT.white, 0.85 * night);
-      L.beam(x, y, a, 170, 40, LIGHT.white, 0.045 * haze * night);
-    }
     const sp = selfPos();
     L.add(sp.x, sp.y - (sp.z ? liftOf(sp.z) : 0), 100, LIGHT.moon, 0.22 * night); // enough to see yourself by
   }
@@ -3719,8 +3771,10 @@ function drawRain(dt, sky) {
 }
 
 // ---------------------------------------------------------------------------
-loadBodies('assets/');
-loadAtlas('assets/', gfx.lighting >= 2).finally(() => { registerNewProps(); registerCountryProps(); connect(); requestAnimationFrame(frame); });
+// The new renderer needs none of the classic art, so the game starts straight away; the classic
+// renderer waits for its art first.
+if (ART2_WANTED) { connect(); requestAnimationFrame(frame); }
+else ensureV1Art().finally(() => { connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
 window.CLA = { S, send, WEAPONS, smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };

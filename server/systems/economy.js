@@ -18,7 +18,7 @@ import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
 
-import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY } from '../../shared/rules.js';
+import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
@@ -95,7 +95,10 @@ export function buildMenu(world, p, poi) {
     for (const o of shop.buy) {
       if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));
       else if (o.kind === 'ammo') opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? 'need weapon' : `have ${prof.weapons[o.id]}` });
-      else if (o.kind === 'item') opts.push({ id: `i:${o.id}:${o.price}:${o.qty}`, label: `${ITEMS[o.id].name}${o.qty > 1 ? ' x' + o.qty : ''}`, price: o.price, note: prof.inventory[o.id] ? `have ${prof.inventory[o.id]}` : '' });
+      else if (o.kind === 'item') {
+        const have = prof.inventory[o.id] || 0, tool = !!ITEMS[o.id].tool; // a tool is never used up: one is enough
+        opts.push({ id: `i:${o.id}:${o.price}:${o.qty}`, label: `${ITEMS[o.id].name}${o.qty > 1 ? ' x' + o.qty : ''}`, price: o.price, dis: tool && have > 0, note: tool && have > 0 ? 'have one' : have ? `have ${have}` : '' });
+      }
     }
     if (kind === 'club') {
       title = poi.label;
@@ -352,12 +355,13 @@ function execute(world, p, poi, opt) {
     }
     case 'i': {
       const id = parts[1], price = Number(parts[2]), qty = Number(parts[3]);
-      if (!pay(p, price)) return 'Not enough money.';
       const it = ITEMS[id];
-      if (it.tool && prof.inventory[id] > 0) return `You already have a ${it.name}.`; // tools are never used up: one is enough
+      if (it.tool && prof.inventory[id] > 0) return `You already have a ${it.name}.`; // tools are never used up: one is enough (checked before paying)
+      if (!pay(p, price)) return 'Not enough money.';
       prof.inventory[id] = (prof.inventory[id] || 0) + qty;
       autoSlot(p, id);
       if (it.buff) world.notify(p, `${it.name} in your bag - drink it from the quick wheel (${'X / View / ITEMS'}).`, 'good');
+      if (it.light) world.notify(p, `${it.name} in your bag - press L to switch it on and off (or use it from the bag). It doesn't take a hand: you keep your weapon.`, 'good');
       store.touch();
       return null;
     }
@@ -636,9 +640,10 @@ function quickDeposits(world) {
   }
 }
 
-// The quick bar: four slots of usable items. A newly bought usable item fills the first empty slot.
+// The quick bar: four slots of usable items (a flashlight there switches it on and off). A newly bought
+// usable item fills the first empty slot.
 export const QUICK_SLOTS = 4;
-export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff)); };
+export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light)); };
 export function quickSlots(p) {
   const prof = p.profile;
   if (!Array.isArray(prof.quick)) prof.quick = ['medkit', 'bandage', 'energy', 'coffee'];
@@ -662,11 +667,37 @@ export function setQuick(p, i, id) {
   store.touch();
 }
 
-// Use one of an item from the bag: med kits and bandages heal, drinks give their boost.
+// The flashlight: in the bag (never used up, no hand slot - you keep your weapon), switched on and off with
+// L / D-pad up / 🔦, from the bag or the quick wheel. profile.light is the switch; the light shines while it's
+// on and you still have one (syncLight). Other players see it through the spawn descriptor (net.js: fl).
+export function toggleLight(world, p, on) {
+  const prof = p.profile;
+  if ((prof.inventory.flashlight || 0) <= 0) {
+    if (world.time - (p.noLightAt ?? -99) > 6) { p.noLightAt = world.time; world.notify(p, `You don't have a flashlight - hardware stores, corner stores and gas stations sell them ($${FLASHLIGHT_PRICE}).`, 'warn'); }
+    return false;
+  }
+  prof.light = on === undefined ? !prof.light : !!on;
+  syncLight(world, p);
+  p.meDirty = true;
+  store.touch();
+  return true;
+}
+// Keeps the ped's light in step with the switch (every tick, players.update): off when you go down or lose the
+// flashlight (dropped when you went down, sold, stashed) - and a new one starts off.
+export function syncLight(world, p) {
+  const prof = p.profile, ped = p.ped;
+  if (prof.light && !((prof.inventory.flashlight || 0) > 0)) { prof.light = false; p.meDirty = true; }
+  const on = !!(prof.light && ped && !ped.dead);
+  if (ped && !!ped.flashOn !== on) { ped.flashOn = on; ped.appVer = (ped.appVer || 0) + 1; p.meDirty = true; }
+}
+
+// Use one of an item from the bag: med kits and bandages heal, drinks give their boost; the flashlight
+// switches on or off.
 export function useItem(world, p, id) {
   const ped = p.ped, inv = p.profile.inventory, it = ITEMS[id];
   if (!ped || ped.dead || !it) return;
   if ((inv[id] || 0) <= 0) { world.notify(p, `No ${it.name} left.`, 'warn'); return; }
+  if (it.light) { toggleLight(world, p); return; }
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {
     if (ped.hp >= ped.maxHp && !ped.bleeding) { world.notify(p, 'You are already healthy.', 'info'); return; }

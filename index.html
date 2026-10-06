@@ -65,6 +65,7 @@
       <button data-b="horn" class="horn">HORN</button>
       <button data-b="map" class="map">MAP</button>
       <button data-b="cruiser" class="cruiser" id="b-cruiser">COP CAR</button>
+      <button data-b="light" class="light" id="b-light" title="Flashlight on / off">🔦</button>
       <button data-b="dev" id="dev-btn" class="hidden">DEV</button>
     </div>
   </div>
@@ -93,9 +94,9 @@
     </div>
     <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="pad-only">Start → Debug / cheats</span><span class="touch-only">the DEV button</span>.</div>
     <div id="t-help">
-      <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move &amp; drive (point where you want to go) · Mouse aim · Click shoot / punch · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · H horn / siren · V call cruiser (police) · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
-      <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster) · right stick aim · RT fire · LT sprint · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, push it all the way to fire drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
-      <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire · ACT interact · CAR get in/out</div>
+      <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move &amp; drive (point where you want to go) · Mouse aim · Click shoot / punch · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · L flashlight (once you have one) · H horn / siren · V call cruiser (police) · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
+      <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster) · right stick aim · RT fire · LT sprint · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal · D-pad up flashlight<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, push it all the way to fire drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
+      <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire · ACT interact · CAR get in/out · 🔦 flashlight (once you have one)</div>
     </div>
     <div id="t-tools"><button id="t-tutorial">📖 VIEW TUTORIAL</button><button id="t-install" class="hidden">⬇ INSTALL APP</button><button id="t-settings">⚙ SETTINGS</button><button id="t-fs">⛶ FULLSCREEN</button></div>
     <div id="t-ver"></div>
@@ -190,7 +191,7 @@
   </div></div>
   <div id="devpw" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>DEV DEBUG MODE</h2><button class="x" data-close>✕</button></div>
-    <p class="msub">For testing on the live server. Nothing you do in dev mode is saved: leaving it - or quitting - puts your character back exactly as it was when you went in.</p>
+    <p class="msub">For testing on the live server. Your progress carries on as normal: whatever you do or get in dev mode stays when you leave it (or quit) - only the debug powers go.</p>
     <div class="m-opts devpw-row"><input id="devpw-in" type="password" placeholder="Password" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="opt" id="devpw-go">Unlock</button></div>
   </div></div>
   <div id="controls" class="hidden overlay"><div class="panel">

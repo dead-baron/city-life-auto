@@ -9,12 +9,14 @@
 //   setQuality(q)  resize(cssW, cssH, dpr)  onContextLost(cb)  stats()  dispose()
 //   hasChunk(cx, cy) (true only for baked chunks)  uploadChunk(cx, cy, g)  setChunkFallback(cx, cy, src)
 //   dropChunk(cx, cy)  chunkKeys() ('cx,cy' of every resident chunk, baked or fallback)
-//   +hasFallback(cx, cy)
+//   +hasFallback(cx, cy)  +reserveChunks(n) (at least n slots: the cap grows to fit the view, up to 32)
+//   +chunkCap() (the slots it will keep now)
 //   hasSprite(key)  uploadSprite(key, g) -> bool  uploadSpriteFromCanvas(key, canvas, ax, ay, opts) -> bool
 //   +dropSprite(key)  +spriteInfo(key) -> {w, h, ax, ay} (read only)
-//   - uploadChunk g.under (optional RGBA8, 768^2): the chunk's statics without buildings; beginFrame f.cut
-//     {x, y, z0, r, lift} opens a soft hole round the player through tall statics standing south of them
-//     and shows the under layer there (the street behind a building stays readable).
+//   - uploadChunk g.under (optional RGBA8, 768^2): the chunk before its buildings (rgb) + the local number of
+//     the building on top (alpha), g.blds [[building index, ...]] per local number; beginFrame f.fades: a Map
+//     building index -> 0..1 fades those whole buildings (smoothly; past half way they stop hiding what is
+//     behind them).
 //   beginFrame(f) -> bool  drawSprite(key, x, y, z0, o) -> bool  drawDecal(key, x, y, angle, alpha, +z0)
 //   addLight(L)  endFrame()
 //   - uploadChunk / uploadSprite also take pre-packed planes {w, h, ax, ay, p0, p1, p2} (gbuf.js packGBuf,
@@ -41,9 +43,12 @@
 //   re-allocated); atlas page 1024^2 x 12 B = 12 MiB (three TEXTURE_2D_ARRAYs allocated per tier);
 //   frame ~21 B per scene texel (scene 12 + depth 2 + lit 4 + half/quarter bloom, shafts, light tiles ~3),
 //   allocated on the first frame and grown in 128 px steps only when the view needs more.
-//   Caches at the cap: Low 9 chunks + 3 pages = 61 + 36 MiB; Medium 12 + 4 = 81 + 48; High 16 + 6 = 108 +
-//   72; Ultra 24 + 8 = 162 + 96. Frame: ~27 MiB for 1280x720 or a phone (1.1-1.3 M texels), ~52 MiB at
-//   1080p, ~94 MiB at 1440p zoomed out to 1.5x. lowMem caps the caches at the Low sizes.
+//   A baked chunk also keeps its "under" layer (the chunk before its buildings, RGBA8 2.25 MiB) for the
+//   building fades: 9 MiB a slot. Caches at the cap: Low 12 chunks + 4 pages = 108 + 48 MiB; Medium 14 + 6 =
+//   126 + 72; High 18 + 8 = 162 + 96; Ultra 26 + 10 = 234 + 120. lowMem: 10 chunks + 4 pages = 90 + 48.
+//   The host reserves as many slots as the view needs (zoomed out driving on a 1080p screen: up to 15), so
+//   the cap only grows past these when the view itself is bigger. Frame: ~27 MiB for 1280x720 or a phone
+//   (1.1-1.3 M texels), ~52 MiB at 1080p, ~94 MiB at 1440p zoomed out to 1.5x.
 // Sprite atlas: shelf packing (heights rounded to 4 px) on 1024 px pages; when full it evicts the least
 //   recently drawn shelf that fits (then the least recently drawn page), never one drawn this frame;
 //   evicted keys report hasSprite() false. Sprites larger than 1024 px are refused.
@@ -75,10 +80,10 @@ export const CHUNK_PX = 768;
 export const ATLAS_PX = 1024;
 // cache budgets per quality (GAME-RENDERER.md "Quality tiers"); lighting settings live in LIGHT_TIERS
 export const QUALITY = [
-  { name: 'Low', chunks: 9, pages: 3 },
-  { name: 'Medium', chunks: 12, pages: 4 },
-  { name: 'High', chunks: 16, pages: 6 },
-  { name: 'Ultra', chunks: 24, pages: 8 },
+  { name: 'Low', chunks: 12, pages: 4 },
+  { name: 'Medium', chunks: 14, pages: 6 },
+  { name: 'High', chunks: 18, pages: 8 },
+  { name: 'Ultra', chunks: 26, pages: 10 },
 ];
 const HMAX = 4096, GSINK = 4, DECAL_H = 3.5, FL = 16;
 const EMPTY = Object.freeze({});
@@ -98,12 +103,12 @@ in vec2 c;
 uniform vec4 uRect; uniform vec2 uScene;
 void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2.0 - 1.0, 0.0, 1.0); }`;
 // a chunk texel copied into the scene, depth from its height
-// The cut-away: a soft-edged hole round the player through tall statics that stand in front of (south of)
-// them, showing the chunk's "under" layer (the static world without its buildings) there instead, so the
-// street behind a building stays readable. uCut: player body centre in scene texels (x, y), the player's
-// ground Y in scene texels (z), radius (w); uCutOn 0/1; uUnder 0/1 (the chunk has an under layer).
+// Fading whole buildings: a chunk's under layer holds the chunk before its buildings (rgb) and, in alpha, the
+// local number of the building on top at each texel. uFade[k] (0..1) fades building k toward the under layer:
+// the colour blends smoothly; past half way the texel also takes the ground's height and normal, so people
+// and cars behind it draw over it (the host eases each building in and out round the player).
 const STATIC_FS = HDR + `
-uniform sampler2D t0, t1, t2, t3; uniform vec2 uOff; uniform vec4 uCut; uniform float uCutOn, uUnder;
+uniform sampler2D t0, t1, t2, t3; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64];
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
 void main(){
@@ -113,21 +118,20 @@ void main(){
   vec4 b = texelFetch(t1, q, 0), c = texelFetch(t2, q, 0);
   float h = zOf(b);
   bool ground = (flOf(b) & ${F_GROUND}) != 0;
-  if (uCutOn > 0.5 && uUnder > 0.5 && !ground && h > 8.0) {
-    vec2 sp = gl_FragCoord.xy;
-    // the surface's own ground line (screen row + height) lies south of the player: it stands in front
-    if (sp.y + h > uCut.z + 6.0) {
-      vec2 d = (sp - uCut.xy) / vec2(uCut.w, uCut.w * 1.2);
-      float r = length(d);
-      float edge = r + bayer4(ivec2(sp)) * 0.12;
-      if (edge < 0.94) {
-        vec4 u = texelFetch(t3, q, 0);
-        if (u.a > 0.5) {
+  if (uFadeOn > 0.5) {
+    vec4 u = texelFetch(t3, q, 0);
+    int k = int(u.a * 255.0 + 0.5);
+    if (k > 0 && k < 64) {
+      float f = uFade[k];
+      if (f > 0.002) {
+        a.rgb = mix(a.rgb, u.rgb, f);
+        c.rgb *= 1.0 - f;
+        if (f > 0.55 + bayer4(ivec2(gl_FragCoord.xy)) * 0.2) {
           gl_FragDepth = 1.0;
-          o0 = vec4(u.rgb, 1.0); o1 = vec4(0.0, 0.0, ${(F_GROUND | 8) / 255}, ${OCT_MID / 255}); o2 = vec4(0.0, 0.0, 0.0, ${OCT_MID / 255});
+          o0 = vec4(a.rgb, 1.0); o1 = vec4(0.0, 0.0, ${(F_GROUND | 8) / 255}, ${OCT_MID / 255}); o2 = vec4(c.rgb, ${OCT_MID / 255});
           return;
         }
-      } else if (edge < 1.0) a.rgb *= 0.55;   // a dark rim where the cut goes through
+      }
     }
   }
   if (ground) h = max(h - ${GSINK.toFixed(1)}, 0.0);
@@ -313,8 +317,10 @@ export class Art2Engine {
     gl.bindVertexArray(null);
     return v;
   }
-  _chunksCap() { return this.lowMem ? Math.min(9, QUALITY[this.q].chunks) : QUALITY[this.q].chunks; }
-  _pagesCap() { return this.lowMem ? Math.min(3, QUALITY[this.q].pages) : QUALITY[this.q].pages; }
+  _chunksCap() { const c = this.lowMem ? Math.min(10, QUALITY[this.q].chunks) : QUALITY[this.q].chunks; return Math.max(c, this.chunkMin || 0); }
+  reserveChunks(n) { this.chunkMin = Math.max(0, Math.min(32, n | 0)); }
+  chunkCap() { return this._chunksCap(); }
+  _pagesCap() { return this.lowMem ? Math.min(4, QUALITY[this.q].pages) : QUALITY[this.q].pages; }
   _allocAtlas() {
     const gl = this.gl, n = this._pagesCap();
     if (this.atlas) for (const t of this.atlas) gl.deleteTexture(t);
@@ -416,6 +422,7 @@ export class Art2Engine {
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, g.w);
     for (let i = 0; i < 3; i++) { gl.bindTexture(gl.TEXTURE_2D, s.t[i]); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, i === 0 ? pk.p0 : i === 1 ? pk.p1 : pk.p2); }
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+    s.bids = g.blds && g.blds.length ? g.blds.map((r) => r[0]) : null;
     if (g.under && g.under.length >= CHUNK_PX * CHUNK_PX * 4) {
       if (!s.t[3]) s.t[3] = glTex(gl, CHUNK_PX, CHUNK_PX);
       gl.pixelStorei(gl.UNPACK_ROW_LENGTH, g.w);
@@ -443,7 +450,7 @@ export class Art2Engine {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, src);
     // flat ground: z 0, F_GROUND, the up normal, no glow
     this._clearTex(s.t[1], 0, 0, F_GROUND / 255, OCT_MID / 255); this._clearTex(s.t[2], 0, 0, 0, OCT_MID / 255);
-    s.real = false; s.src = source; s.under = false;
+    s.real = false; s.src = source; s.under = false; s.bids = null;
     return true;
   }
   dropChunk(cx, cy) {
@@ -485,6 +492,9 @@ export class Art2Engine {
     if (!pl) return null;
     r = { key, layer: pl.s.page.i, x: pl.x, y: pl.s.y, w, h, ax: 0, ay: 0, shelf: pl.s, used: 0 };
     pl.s.list.push(r); this.sprites.set(key, r);
+    // (a fresh upload counts as a use: what was just asked for ahead isn't the first thing pushed out)
+    if (pl.s.used < this.frameNo) pl.s.used = this.frameNo;
+    if (pl.s.page.used < this.frameNo) pl.s.page.used = this.frameNo;
     return r;
   }
   _subImage(r, plane, data) {
@@ -494,13 +504,27 @@ export class Art2Engine {
   }
   uploadSprite(key, g) {
     if (this.lost || !g) return false;
-    const w = g.w | 0, h = g.h | 0;
-    if (w <= 0 || h <= 0 || w > ATLAS_PX || h > ATLAS_PX) return false;
+    const W0 = g.w | 0, H0 = g.h | 0;
+    if (W0 <= 0 || H0 <= 0) return false;
+    const pk = g.p0 ? g : this._pack(g);
+    // crop to what is drawn (a voxel render is a square round its model): the atlas holds twice as much
+    const A = pk.p0;
+    let x0 = W0, y0 = H0, x1 = -1, y1 = -1;
+    for (let y = 0, j = 3; y < H0; y++) {
+      let rowAny = false;
+      for (let x = 0; x < W0; x++, j += 4) if (A[j] > 127) { rowAny = true; if (x < x0) x0 = x; if (x > x1) x1 = x; }
+      if (rowAny) { if (y < y0) y0 = y; y1 = y; }
+    }
+    if (x1 < 0) { x0 = 0; y0 = 0; x1 = 0; y1 = 0; }
+    const w = x1 - x0 + 1, h = y1 - y0 + 1;
+    if (w > ATLAS_PX || h > ATLAS_PX) return false;
     const r = this._rec(key, w, h);
     if (!r) return false;
-    r.ax = g.ax ?? 0; r.ay = g.ay ?? 0;
-    const pk = g.p0 ? g : this._pack(g);
+    r.ax = (g.ax ?? 0) - x0; r.ay = (g.ay ?? 0) - y0;
+    const gl = this.gl, crop = w !== W0 || h !== H0;
+    if (crop) { gl.pixelStorei(gl.UNPACK_ROW_LENGTH, W0); gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, x0); gl.pixelStorei(gl.UNPACK_SKIP_ROWS, y0); }
     this._subImage(r, 0, pk.p0); this._subImage(r, 1, pk.p1); this._subImage(r, 2, pk.p2);
+    if (crop) { gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0); gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0); gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0); }
     return true;
   }
   // v1 art as a sprite: albedo from the canvas, a normal facing the camera, z rising 1 px per row from the
@@ -541,10 +565,7 @@ export class Art2Engine {
     this.nInst = 0; this.nDec = 0; this.nXr = 0; this.nLights = 0;
     const P = f.preset || PRESETS_GAME.noon, T = LIGHT_TIERS[this.q];
     this.P = P; this.time = f.time || 0; this.wet = f.wet || 0; this.flash = f.flash || 0; this.fog = f.fog || 0;
-    // the cut-away round the player: f.cut = {x, y (ground point, world px), z0, r (radius px), lift (body centre height)}
-    const fc = f.cut;
-    this.cut = fc && fc.r > 0 ? (this._cut || (this._cut = { x: 0, y: 0, r: 0, lift: 0 })) : null;
-    if (this.cut) { this.cut.x = Math.round(fc.x); this.cut.y = Math.round(fc.y - (fc.z0 || 0)); this.cut.r = fc.r; this.cut.lift = fc.lift ?? 22; }
+    if (f.fades !== undefined) this.fades = f.fades;
     this.zoom = f.zoom > 0 ? f.zoom : 1; this.camX = +f.camX || 0; this.camY = +f.camY || 0;
     // margins: the shadow reach on the side the sun is, room above for wet reflections, a little slack
     const sd = P.sunDir || PRESET_DEFAULTS.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]) || 1, sz = sd[2] / sl;
@@ -702,9 +723,7 @@ export class Art2Engine {
     gl.clearBufferfv(gl.COLOR, 0, Z4); gl.clearBufferfv(gl.COLOR, 1, Z4); gl.clearBufferfv(gl.COLOR, 2, Z4); gl.clearBufferfv(gl.DEPTH, 0, ONE);
     gl.useProgram(p.p); gl.bindVertexArray(this.vaoQuad);
     gl.uniform2f(u.uScene, this.SW, this.SH);
-    const C = this.cut;
-    if (C && C.r > 0) { gl.uniform1f(u.uCutOn, 1); gl.uniform4f(u.uCut, C.x - this.ox, C.y - C.lift - this.oy, C.y - this.oy, C.r); }
-    else gl.uniform1f(u.uCutOn, 0);
+    const fades = this.fades && this.fades.size ? this.fades : null, FA = this._fadeArr || (this._fadeArr = new Float32Array(64));
     const c0 = Math.floor(this.ox / CHUNK_PX), c1 = Math.floor((this.ox + this.SW - 1) / CHUNK_PX), r0 = Math.floor(this.oy / CHUNK_PX), r1 = Math.floor((this.oy + this.SH - 1) / CHUNK_PX);
     let n = 0;
     for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
@@ -713,7 +732,13 @@ export class Art2Engine {
       s.used = this.frameNo;
       for (let i = 0; i < 3; i++) { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, s.t[i]); }
       gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, s.under && s.t[3] ? s.t[3] : s.t[0]);
-      gl.uniform1f(u.uUnder, s.under && s.t[3] ? 1 : 0);
+      let on = 0;
+      if (fades && s.under && s.t[3] && s.bids) {
+        FA.fill(0);
+        for (let i = 0; i < s.bids.length && i < 63; i++) { const f = fades.get(s.bids[i]); if (f) { FA[i + 1] = f; on = 1; } }
+        if (on) gl.uniform1fv(u.uFade, FA);
+      }
+      gl.uniform1f(u.uFadeOn, on);
       const x = cx * CHUNK_PX - this.ox, y = cy * CHUNK_PX - this.oy;
       gl.uniform4f(u.uRect, x, y, CHUNK_PX, CHUNK_PX); gl.uniform2f(u.uOff, x, y);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

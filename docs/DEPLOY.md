@@ -47,7 +47,14 @@ Your main site repo `dead-baron.github.io` already serves `deadbaron.com` (it ha
 | Restart (players see "Server restarting", progress saved) | `sudo systemctl restart city-life-auto` |
 | Backups | `~/cla-backups/profiles-YYYY-MM-DD.json` (14 days) |
 
-Environment variables (in `deploy/city-life-auto.service`): `PORT`, `HOST`, `CLA_DATA_DIR`, `CLA_ORIGINS` (allowed page origins for WebSockets), `CLA_MAX_PLAYERS`, `CLA_NPC_BUDGET`, `CLA_SECRET`, `CLA_SEED`, `CLA_DEV` (never `1` in production).
+Environment variables (in `deploy/city-life-auto.service`): `PORT`, `HOST`, `CLA_DATA_DIR`, `CLA_ORIGINS` (allowed page origins for WebSockets), `CLA_MAX_PLAYERS`, `CLA_NPC_BUDGET`, `CLA_SECRET`, `CLA_SEED`, `CLA_DEV` (never `1` in production), `CLA_FRESH_ON_UPDATE` (below).
+
+`CLA_FRESH_ON_UPDATE` - what happens to a player the first time they come back after an update (a new build):
+- `spawn` (default): a fresh start at a spawn point (their home if they picked one, else a hospital), on foot, not wanted, carrying nothing, full health. Money, items, weapons, homes and cars are kept.
+- `all`: the same, and their progress is wiped too (money, bank, items, weapons, EXP, record, cars, homes; name and look are kept). Use it for updates that need everyone to start over.
+- `off`: players carry on where they left off.
+
+To change it, uncomment the `#Environment=CLA_FRESH_ON_UPDATE=all` line (or set `off`) in the service file (`/etc/systemd/system/city-life-auto.service`, or `deploy/city-life-auto.service` and re-run `bash deploy/setup-oracle.sh`), then `sudo systemctl daemon-reload && sudo systemctl restart city-life-auto`. The server logs the mode it runs with at startup.
 
 **Why not PM2 cluster mode:** the city is one stateful process. Cluster mode would split players into separate worlds. systemd (or PM2 in *fork* mode) is correct.
 
@@ -61,3 +68,8 @@ Environment variables (in `deploy/city-life-auto.service`): `PORT`, `HOST`, `CLA
 ## Releasing a client update
 
 Run `node tools/stamp-version.mjs` before committing. It hashes every file the browser loads into `version.json`; `client/boot.js` sees the new hash and refreshes the browser's cached copies, so players get the update immediately instead of after GitHub Pages' 10-minute cache.
+
+How an update reaches people who are playing:
+1. The game server finds the new `version.json`: at boot after a server update, or within 20 s of `auto-update.sh` pulling a client-only change (no restart). It logs `new build on disk` and tells every page (`{t: 'build'}`). `curl -s http://127.0.0.1:8080/stats` shows the build it runs.
+2. Pages on an older build show "Updating to the latest version...", wait until GitHub Pages serves the new build (up to 3 minutes), then clear this game's caches and reload (`client/update.js`). A device that can't get the new build retries at most every 30 s.
+3. Players come back on the new build fresh at a spawn point (`CLA_FRESH_ON_UPDATE`). Leaving to reload never drops their things.

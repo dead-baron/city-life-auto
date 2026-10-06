@@ -23,9 +23,20 @@ export async function loadAtlas(base = 'assets/', glowSheets = true) {
     // big again as the day art once decoded (~100 MB), so a console on less than High does without
     // them: the lighting pass still lights the windows.
     if (!LOW_MEM || glowSheets) loadGlowSheets(base);
-    load('interiors.webp').then((im) => { atlas.interiors = im; }).catch(() => {}); // shop interiors (only needed once you walk in)
+    loadInteriorArt(base); // shop interiors (only needed once you walk in)
     load('animals.png').then((im) => { atlas.animals = im; }).catch(() => {}); // lost pets
   } catch (e) { console.warn('atlas unavailable, using procedural sprites', e); }
+}
+
+// the police station paintings (front desk, armory cage) on their own: the interior view needs only these
+let interiorLoading = false;
+export function loadInteriorArt(base = 'assets/') {
+  if (atlas.interiors || interiorLoading) return;
+  interiorLoading = true;
+  const im = new Image();
+  im.onload = () => { atlas.interiors = im; };
+  im.onerror = () => { interiorLoading = false; };
+  im.src = base + 'interiors.webp';
 }
 
 // the night emissive sheets (lit windows and signs), loaded once

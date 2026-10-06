@@ -102,6 +102,11 @@ export class World {
     this.rand = opts.rand || Math.random;
     this.dev = !!opts.dev;
     this.npcBudget = opts.npcBudget ?? 700;
+    // the build this server runs (version.json; server/build.js) and when it was stamped - null when not
+    // tracked (offline practice); players coming back from an older build start fresh (players.join)
+    this.build = opts.build || null;
+    this.buildAt = opts.buildAt || 0;
+    this.freshOnUpdate = opts.freshOnUpdate || 'spawn'; // 'spawn' | 'all' | 'off' (server/config.js)
     env.init(this);
     homes.init(this);
     gates.init(this);

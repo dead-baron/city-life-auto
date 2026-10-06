@@ -38,6 +38,12 @@ export const config = {
   allowedOrigins: (process.env.CLA_ORIGINS || '*').split(',').map((s) => s.trim()).filter(Boolean),
   saveIntervalMs: 5000,
   npcBudget: Number(process.env.CLA_NPC_BUDGET || 700),
+  // What happens to a player the first time they come back after an update (a new build: version.json,
+  // stamped on every commit): 'spawn' (default) - a fresh start at a spawn point (their home if they
+  // picked one, else a hospital): on foot, not wanted, nothing carried, full health, progress kept;
+  // 'all' - the same, and their progress is wiped too (money, bank, items, weapons, EXP, homes, cars...);
+  // 'off' - they carry on where they left off.
+  freshOnUpdate: ['off', 'spawn', 'all'].includes(process.env.CLA_FRESH_ON_UPDATE) ? process.env.CLA_FRESH_ON_UPDATE : 'spawn',
 };
 // Only trust X-Forwarded-For when a local proxy (Caddy) is the only thing that can reach us.
 config.trustProxy = process.env.CLA_TRUST_PROXY ? process.env.CLA_TRUST_PROXY === '1' : (config.host === '127.0.0.1' || config.host === 'localhost');

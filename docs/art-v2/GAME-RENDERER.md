@@ -30,8 +30,12 @@ client (frame loop in `client/main.js`, `render()` at about lines 1834-2198) and
   - lights come from the static chunks (lamps, windows, neon) plus moving things (headlights, sirens, fire,
     muzzle flashes);
   - the sky (`skyAt` in `client/render/atmos.js`) drives the presets.
-- **Fallback.** No WebGL2, a lost context twice, or the user picking "Classic" in Settings brings back the
-  v1 renderer unchanged.
+- **Only the new art.** Nothing in the world is ever drawn with v1 art while this renderer runs. A chunk
+  not baked yet shows a placeholder (each tile in its ground colour); a moving thing whose new sprite isn't
+  made yet keeps its last sprite (see "Host scheduling"). The classic art (~250 MB of sheets once decoded)
+  isn't even loaded unless something still needs it.
+- **Fallback.** No WebGL2, the graphics memory lost three times within three minutes while the page is on
+  screen, or `?art=1` brings back the v1 renderer unchanged (and loads its art then).
 
 ## Shared formats
 
@@ -166,21 +170,44 @@ positive angles turning toward south, the same as `e.ra`.
 5. **X-ray:** the controlled player gets a silhouette pass where it is hidden (depth test fails), drawn
    unlit on top. Walk-in interiors are re-baked in cutaway mode when the player is inside (`opt.cutaway =
    buildingIndex`).
+   **Building fades:** a baked chunk also carries its "under" layer (the chunk before its buildings) with
+   the local number of the building on top in alpha, and `blds` (each building's screen rectangle). The
+   host eases whole buildings standing in front of the player (base south of them, picture covering the
+   space round them: ±100 px across and 128 up on foot, ±150 and 160 driving) to 0.88 and back (rate 5/s);
+   the static pass mixes their texels toward the under layer, and past about half way (dithered) they turn
+   into ground, so they stop hiding sprites and stop casting shadows.
 6. **Lighter:** lit pass (sun, shadow march, point and cone lights, wet streaks), bloom, final (haze, grade,
    vignette). Present to `#world` at `zoom * DPR` with sharp sampling.
 7. **Overlays** (aim line, labels, markers, rain streaks) stay on the transparent `#view` canvas above.
 
 ## Quality tiers (graphics presets)
 
-| Preset | Lighting resolution | Shadow march | Lights | Bloom | Chunk cache | Atlas pages |
-|---|---|---|---|---|---|---|
-| Ultra | full | 3 rays, 110 steps | 96 | full | 24 | 8 |
-| High | full | 1 ray, 64 steps | 64 | full | 16 | 6 |
-| Medium | full | 1 ray, 32 steps, no bands | 32 | half | 12 | 4 |
-| Low / Xbox | half | none (soft contact shade only) | 16 | off | 9 | 3 |
+| Preset | Lighting resolution | Shadow march | Lights | Bloom | Chunk cache | Atlas pages | People made at once a frame |
+|---|---|---|---|---|---|---|---|
+| Ultra | full | 3 rays, 110 steps | 96 | full | 26 | 10 | 6 ms |
+| High | full | 1 ray, 64 steps | 64 | full | 18 | 8 | 4.5 ms |
+| Medium | full | 1 ray, 32 steps, no bands | 32 | half | 14 | 6 | 3.5 ms |
+| Low / Xbox | half | none (soft contact shade only) | 16 | off | 12 (Xbox 10) | 4 | 2.5 ms |
+
+The chunk cache always grows to fit what the view needs (the host reserves it each frame, up to 32 slots), so
+a big screen zoomed out while driving never makes the chunks on screen push each other out.
+
+## Host scheduling (`host.js`)
+- **Chunks:** what is on screen (plus the tier's shadow reach) gets a placeholder at once and its bake first;
+  then a ring of 420 px round the view and the road 1.6 s ahead when driving. A few uploads a frame.
+- **Sprites:** a sprite is resident, or (people only, ~2 ms each) made on the main thread at once within the
+  tier's budget a frame (the player's own figure always), or asked of the workers. Until it lands the thing
+  keeps its last sprite (`_v2k`); a vehicle or train seen for the first time takes the nearest resident
+  heading within an eighth of a turn. Nothing falls back to other art.
+- **Asking ahead:** everything the server sent within ~520 px of the view has its current sprite asked for
+  before it comes on screen; a person who starts walking or turns gets the whole stride; a vehicle that turns
+  gets the headings either side; when the workers start, the little sprites everyone sees (particles,
+  decals, muzzle flashes, birds, balls) are asked for a few a frame. Fresh uploads count as used, so the atlas
+  doesn't push them out before they are drawn.
+- **Context loss:** losses while the page is hidden (or within 3 s of coming back) aren't counted; three
+  within three minutes give up for the session.
 
 ## Rollout
-1. `?art=2` opts in; `?art=1` forces v1.
-2. Default on once it runs cleanly on desktop, phone landscape and portrait, and Low.
-3. A Settings toggle "World art: New / Classic".
-4. Server, shared and network are untouched throughout.
+1. Done: the new renderer is the default everywhere; `?art=1` forces v1 (troubleshooting only).
+2. The Settings toggle "World art: New / Classic" is gone; Settings shows which renderer runs and why.
+3. Server, shared and network are untouched throughout.

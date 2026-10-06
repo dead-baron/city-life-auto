@@ -51,7 +51,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
 | Stuck? Get unstuck (stand still 5 s, not wanted, not just after a fight) / Surrender (tap twice: respawn, or turn yourself in when wanted) | Esc → Stuck? / Surrender | Start → Stuck? / Surrender | ☰ → Stuck? / Surrender |
 | Players online (names, roles, districts) | Esc → Players online, or M → Players online | Start → Players online | ☰ → Players online |
-| Dev Debug Mode (online testing, no password; nothing is saved) | Esc → Dev Debug Mode (opens the debug menu; ` or the 🛠 button toggles it) | Start → Dev Debug Mode | ☰ → Dev Debug Mode, then the 🛠 button |
+| Dev Debug Mode (online testing, no password; your progress carries on - whatever you get in it stays when you leave) | Esc → Dev Debug Mode (opens the debug menu; ` or the 🛠 button toggles it) | Start → Dev Debug Mode | ☰ → Dev Debug Mode, then the 🛠 button |
+| Dev give: any weapon (with magazines), tool, item, drink, bait, fish or loot - or everything - to yourself or any player online | ` → 🎁 Give (category, thing, how many, who) | Start → Dev Debug Mode → 🎁 Give (D-pad / stick, ← → to choose) | 🛠 → 🎁 Give |
 | Police HQ: walk in (front desk → armory → motor pool) | E at the door, E inside for the desk | B / A | ACT, or the ▲ Front desk button |
 | Navigate menus (pause, phone, shops, settings) | W/S or ↑/↓, Enter / Space / E to pick, Esc back | D-pad / stick, A pick, B back | tap |
 | Phone (places, jobs, waypoints) | P | D-pad ← | 📱 |
@@ -66,6 +67,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Hire a boat / hand it back (at a rental dock) | E at the kiosk · E in the boat by the pier | B | ACT |
 | Moor a boat in your boathouse (waterfront homes) / take one out | E in the boat by your slip · E at your door → Take out | B | ACT |
 | Bag (inventory: equip weapons, use items, pin them to the quick wheel) | I | D-pad → | 🎒 |
+| Flashlight on / off (buy one at a hardware store, corner store or gas station; it takes no hand - you keep your weapon) | L, or the bag / quick wheel | D-pad ↑ on foot | 🔦 (shows once you have one), or the bag |
 | Quick wheel (med kits, bandages, drinks) | hold X, point, let go (tap: last used) | hold View, right stick, let go | ITEMS, then tap a slot |
 | Revive a downed player (kit: full health, bare-handed: low) / hand them a bandage or med kit after | hold E | hold B | hold ACT |
 | Finish off a downed player | hold F (or just hit them) | hold X | hold CAR |
@@ -111,6 +113,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
 | Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | tap the weapon box · RELOAD · ITEMS · 🎒 |
+| Flashlight on / off (once you have one) | L | D-pad ↑ (on foot) | 🔦 |
 | World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
 | Pause menu (map, players online, settings, controls, Dev Debug Mode) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
 

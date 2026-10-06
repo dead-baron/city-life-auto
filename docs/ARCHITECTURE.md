@@ -58,8 +58,9 @@ Binary frames (little-endian):
 JSON text frames:
 | `t` | direction | purpose |
 |---|---|---|
-| `hello` / `welcome` | c→s / s→c | guest token handshake (`{token}` → `{token,pid,name,seed,dev}`) |
-| `sp` / `ds` | s→c | spawn descriptors (appearance, model, paint, tier) / despawns for culling |
+| `hello` / `welcome` | c→s / s→c | guest token handshake (`{token, cb, cbt}` → `{token,pid,name,seed,dev,build,built,...}`; `cb`/`cbt` the page's build, `build`/`built` the server's) |
+| `build` | s→c | a new build went live (`{v, at}`): pages on an older one reload into it (`client/update.js`) |
+| `sp` / `ds` | s→c | spawn descriptors (appearance, model, paint, tier; `fl: 1` on a player whose flashlight is on) / despawns for culling |
 | `ev` | s→c | positional events (shots, blood, crashes, explosions, cameras, toasts) |
 | `me` | s→c | personal HUD state (money, stars, weapons, inventory, prompt, radar, job) |
 | `menu` | both | storefront menu payload / option chosen |
@@ -75,7 +76,8 @@ JSON text frames:
 
 | Topic | Decision |
 |---|---|
-| Disconnect | 30 s ghost body (GDD §9). Reconnecting inside the window resumes it; otherwise everything carried drops in a value-tiered bag. Bank money is always safe. |
+| Disconnect | 30 s ghost body (GDD §9). Reconnecting inside the window resumes it; otherwise everything carried drops in a value-tiered bag. Bank money is always safe. Not when the page is reloading for an update: no ghost, nothing dropped. |
+| Updates | A player coming back to a newer build than the one their character was last played on starts fresh at a spawn point (`CLA_FRESH_ON_UPDATE`: `spawn` keeps progress, `all` wipes it, `off`). |
 | Death | Pick where to wake up on the WASTED screen: any of the 3 hospitals or an owned home (default: your home, else a hospital away from where you died). Badge and hunter license stripped; peak wanted memory reset. |
 | Self-defense | Whoever is struck first may retaliate for 60 s without a report. Attacking flagged outlaws/bounty targets and gang members in turf is immune. Turf attacks alert the gang. |
 | Heat | Stars at 10/30/60/100/160 heat. Out of sight 3 s → search circle grows; heat decays, faster after 20 s unseen. |

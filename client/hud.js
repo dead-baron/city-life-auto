@@ -33,6 +33,10 @@ export class HUD {
   setMe(me) {
     const prev = this.me;
     this.me = me;
+    if (this.held && this.held.length && !$('hud').classList.contains('hidden')) { // notes that came in on the title screen
+      const held = this.held; this.held = [];
+      for (const t of held) if (performance.now() - t.at < 60000) this.toast(t.text, t.tone);
+    }
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
     $('hp-fill').classList.toggle('low', hpPct < 30);
@@ -44,6 +48,7 @@ export class HUD {
     if (me.bounty > 0) st.push(`<span class="bad">BOUNTY $${me.bounty}</span>`);
     if (me.buffs?.coffee > 0) st.push(`COFFEE ${Math.ceil(me.buffs.coffee)}s`);
     if (me.buffs?.energy > 0) st.push(`ENERGY ${Math.ceil(me.buffs.energy)}s`);
+    if (me.light) st.push('🔦 ON');
     if (me.ghost) st.push('GHOST');
     st.push(`<span class="dim">EXP ${me.cexp} · SAM ${me.sam}</span>`);
     $('status').innerHTML = st.join(' · ');
@@ -104,6 +109,9 @@ export class HUD {
     } else ch.classList.add('hidden');
     cb.textContent = cr && cr.cd > 0 ? `COP CAR ${cr.cd}` : 'COP CAR';
     cb.classList.toggle('cooling', !!(cr && cr.cd > 0));
+    // the flashlight's touch button: there while you own one, lit while it's on
+    document.body.classList.toggle('has-light', !!(me.inv && me.inv.flashlight > 0 && !me.dead));
+    $('b-light')?.classList.toggle('lit', !!me.light);
     // weapon
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;
     $('w-name').textContent = w.name;
@@ -175,6 +183,13 @@ export class HUD {
   }
 
   toast(text, tone = 'info') {
+    // still on the title screen (you sign in there, before PLAY): held back and shown once you're in, if
+    // it's still fresh - so the welcome (or "fresh start after an update") isn't missed
+    if ($('hud').classList.contains('hidden')) {
+      (this.held ||= []).push({ text, tone, at: performance.now() });
+      if (this.held.length > 4) this.held.shift();
+      return;
+    }
     const el = document.createElement('div');
     el.className = 'toast ' + tone;
     el.textContent = localizeText(text);

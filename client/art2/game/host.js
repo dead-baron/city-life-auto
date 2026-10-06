@@ -2,13 +2,16 @@
 // the WebGL2 engine (engine.js). World2 owns the engine and the bake worker pool and turns main.js's
 // frame packet F (camera, sky, who is on screen, the fx pools; see main.js prepFrame) into engine calls:
 //   chunks   the static world baked per 768 px chunk in the workers (chunkbake.js): what is in view
-//            first, then ahead of the camera; a budget of uploads a frame; the v1 ground chunk shown until
-//            a bake lands; the cache kept to the quality tier; the chunks of a walk-in shop you stand in
-//            rebaked in cutaway (opt.cutaway = building index)
+//            first, then a wide ring round it and the road ahead; a budget of uploads a frame; a quick
+//            placeholder (the ground's colours by tile) until a bake lands; the cache kept to the quality
+//            tier; the chunks of a walk-in shop you stand in rebaked in cutaway (opt.cutaway = building)
 //   sprites  moving things get their sprite keys from the providers (actors.js, peds.js) and the
-//            sprites from the workers; until one arrives (or with no provider) the v1 art is converted
-//            (bodies, lying bodies, cars with their side walls, trains, crates, bags, pets) or a small
-//            one generated (particles, decals, birds, balls, rockets), so everything always shows
+//            sprites from the workers, asked for as soon as a thing is near (before it is on screen);
+//            people and small things are made on this thread at once within a small budget a frame (your
+//            own figure always). Only the new art is drawn: while a new frame or heading is being made a
+//            thing keeps showing the last sprite it had
+//   fades    whole buildings round the player ease to transparent (the engine shows the street under
+//            them), so nothing standing in front of you hides you or what is near you
 //   live     what moves on the static world: the lit lens of every signal head (the chunk bakes bring the
 //            heads, chunkbake.signalLenses), level crossing barrier arms and flashers, sliding gates,
 //            spike strips (as decals)
@@ -24,34 +27,39 @@
 //
 //   const w = await World2.create({ S, map, canvas, gfx, lowMem, api, onFail })   null: no WebGL2
 //   w.ready, w.resize(W, H, dpr), w.frame(F), w.propChanged(i), w.resync(), w.diag(), w.stats(), w.dispose()
-// api: helpers lent by main.js (pedLook, vehLift, birds, umbrellaSprite, seats, scales).
+// api: helpers lent by main.js (pedLook, vehLift, birds, umbrella colours, seats, scales).
 import { CHUNK, DECK_Z, groundZ } from './chunkbake.js';
 import { WorkerPool } from './pool.js';
 import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM } from '../../../shared/map.js';
+import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/roads.js';
 import { VEHICLE_BY_INDEX } from '../../../shared/vehicles.js';
-import { ANIMAL_ART } from '../../../shared/animal-art.js';
-import { atlas, drawVehicle, drawVehicleWreck, vehicleSide, drawCrate, drawBag } from '../../render/sprites.js';
-import { bodySprite, lyingSprite, LW, LH } from '../../render/body.js';
-import { charSprite, dir8, baseDir, CW, CH, FOOT_Y } from '../../render/chars.js';
-import { drawTrainCar } from '../../render/trains.js';
+import { dir8 } from '../../render/chars.js';
 import { lampHead } from '../../render/tiles.js';
 import { countryLightY } from '../../render/country.js';
-import { F_GROUND, F_CHAR, F_NOCAST } from '../gbuf.js';
+import { F_GROUND, F_NOCAST } from '../gbuf.js';
 
 export { DECK_Z };
 const TAU = Math.PI * 2;
 const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK);
 // per quality tier (Low/Xbox, Medium, High, Ultra): chunk cache, lights, vehicle headings, uploads a frame
+// syncMs: how long a frame may spend making sprites on this thread (people and small things)
 const TIERS = [
-  { chunks: 9, lights: 16, N: 16, chunkUp: 1, sprUp: 6, convert: 3, sprJobs: 8 },
-  { chunks: 12, lights: 32, N: 32, chunkUp: 1, sprUp: 8, convert: 4, sprJobs: 12 },
-  { chunks: 16, lights: 64, N: 32, chunkUp: 2, sprUp: 10, convert: 5, sprJobs: 16 },
-  { chunks: 24, lights: 96, N: 64, chunkUp: 2, sprUp: 12, convert: 6, sprJobs: 24 },
+  { chunks: 12, lights: 16, N: 16, chunkUp: 1, sprUp: 8, convert: 3, sprJobs: 12, syncMs: 2.5 },
+  { chunks: 14, lights: 32, N: 32, chunkUp: 1, sprUp: 10, convert: 4, sprJobs: 16, syncMs: 3.5 },
+  { chunks: 18, lights: 64, N: 32, chunkUp: 2, sprUp: 12, convert: 5, sprJobs: 24, syncMs: 4.5 },
+  { chunks: 26, lights: 96, N: 64, chunkUp: 2, sprUp: 14, convert: 6, sprJobs: 32, syncMs: 6 },
 ];
-const MARGIN = 300;        // world px baked round the view (shadows fall in from beyond its edge)
-const AHEAD_S = 1.2;       // prefetch where the camera will be this many seconds ahead
+const LOWMEM_CHUNKS = 10;
+// the placeholder ground (before a chunk's bake lands): each tile type in the new ground's colours
+const PH_COL = {
+  [TT.WALL]: [70, 66, 72], [TT.GRASS]: [84, 118, 56], [TT.SIDEWALK]: [170, 164, 152], [TT.ROAD]: [66, 68, 76], [TT.PLAZA]: [178, 160, 138],
+  [TT.BUILDING]: [96, 90, 90], [TT.WATER]: [52, 112, 132], [TT.DEEP]: [36, 82, 112], [TT.SAND]: [216, 196, 146], [TT.DOCK]: [128, 96, 66],
+  [TT.DIRT]: [140, 108, 74], [TT.FIELD]: [152, 140, 70], [TT.BRIDGE]: [112, 110, 106], [TT.LOT]: [92, 92, 98], [TT.FLOOR]: [186, 174, 152], [TT.COUNTER]: [136, 100, 70],
+};
+const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
+const AHEAD_S = 1.6;       // prefetch where the camera will be this many seconds ahead
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
@@ -69,7 +77,7 @@ export function worldData(map) {
   return o;
 }
 
-// ---- small raster helpers (fallback sprites) -------------------------------------------------------------
+// ---- small raster helpers (the generated sprites: signal lenses, barrier arms, gates, umbrellas...) ----------
 function gbuf(w, h, ax, ay) {
   const n = w * h;
   return { w, h, ax, ay, col: new Uint8ClampedArray(n * 4), nrm: new Uint8ClampedArray(n * 4), z: new Uint16Array(n), emi: new Uint8ClampedArray(n * 4), flag: new Uint8Array(n) };
@@ -108,9 +116,6 @@ function rgbOf(c) {
   rgbCache.set(c, v);
   return v;
 }
-const appKeyOf = (a) => (a ? `${a.s}.${a.h}.${a.hc}.${a.t}.${a.tc}.${a.tc2}.${a.l}.${a.sh}.${a.ht}.${a.htc}.${a.b}.${a.bd}.${a.bandana ? 1 : 0}` : 'x');
-const appKeys = new WeakMap();
-const akey = (a) => { if (!a) return 'x'; let k = appKeys.get(a); if (!k) { k = appKeyOf(a); appKeys.set(a, k); } return k; };
 const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
 
 // the time-of-day keys of the presets (minutes after midnight), blended in between
@@ -186,14 +191,20 @@ export class World2 {
     this.prov = { ground: false, statics: false, actors: false, peds: false };
     this.A = null; this.Pd = null;                 // provider modules on this thread (sprite keys)
     this.pool = null; this.failed = false; this.lost = 0;
-    this.chunkState = new Map();                   // cy*1000+cx -> { mode, gh, lights } of an uploaded bake
-    this.fallbacks = new Set();                    // chunks showing the v1 ground
+    this.chunkState = new Map();                   // cy*1000+cx -> { mode, gh, lights, live, blds } of an uploaded bake
+    this.fallbacks = new Set();                    // chunks showing a placeholder (the tiles' colours)
     this.results = new Map();                      // job key -> { key, cx, cy, mode, r, prio } waiting for upload
     this.wantJobs = new Set(); this.wantChunks = new Map();
     this.chunkFails = new Map();
-    this.upQ = []; this.upKeys = new Set();        // sprites back from the workers, waiting for upload
-    this.badKeys = new Set();                      // sprite keys a provider failed on (fallback from then on)
-    this.convBudget = 0; this.genBudget = 0; this.sprOut = 0; this.sprPrio = -1;
+    this.upQ = new Map();                          // sprites back from the workers, waiting for upload (key -> planes)
+    this.badKeys = new Set(); this.badAt = 0;      // sprite keys a provider failed on (tried again now and then)
+    this.warmQ = []; this.warmed = false;          // sprites asked for ahead of need (the little things everyone sees)
+    this.critInfo = {}; this.fxInf = {}; this.projWarm = new Set();
+    this.losses = [];                              // when the graphics memory was lost (visible page only)
+    this.convBudget = 0; this.genBudget = 0; this.sprOut = 0; this.sprPrio = -1; this.syncLeft = 0;
+    this.fades = new Map();                        // building index -> 0..1 (eased round the player)
+    this.phs = new Map();                          // placeholder canvases (chunk key -> canvas)
+    this.cycles = new Map();                       // walk cycles asked for lately (key -> time)
     this.cvs = [];                                 // scratch canvases
     this.lights = []; this.lightPool = [];
     this.liveHeads = [];                           // signal heads lit this frame: head, lens index, ...
@@ -202,13 +213,13 @@ export class World2 {
     this.lampGrid = null;
     this.ver = new Map();                          // chunk -> bake version (raised when the world changes there)
     this.adapted = new WeakMap();
-    this.t = { clonePrep: 0, post: 0, workerInit: 0, bakeN: 0, bakeSum: 0, bakeMax: 0, upChunkMs: 0, frameMs: 0, convMs: 0 };
-    this.n = { chunkUp: 0, fbSet: 0, sprReq: 0, sprUp: 0, conv: 0, gen: 0, lights: 0, drawn: 0, bakeErr: 0, sprErr: 0 };
+    this.t = { clonePrep: 0, post: 0, workerInit: 0, bakeN: 0, bakeSum: 0, bakeMax: 0, upChunkMs: 0, frameMs: 0, convMs: 0, syncMs: 0 };
+    this.n = { chunkUp: 0, fbSet: 0, sprReq: 0, sprUp: 0, conv: 0, gen: 0, sync: 0, pre: 0, lights: 0, drawn: 0, bakeErr: 0, sprErr: 0 };
     this.ghOf = (cx, cy) => { const s = this.chunkState.get(cy * 1000 + cx); return s ? s.gh : null; };
     this.lastErr = '';
     this.part = {}; this.pt = 0;
     this.noBake = /[?&]art2nobake\b/.test(typeof location !== 'undefined' ? location.search : '');
-    this.ready = true; // drawable at once: the v1 ground stands in until bakes land
+    this.ready = true; // drawable at once: placeholders stand in until bakes land
     if (engine.onContextLost) engine.onContextLost((what) => this._contextLost(what));
   }
 
@@ -229,30 +240,41 @@ export class World2 {
       this.prov = { ground: !!p.ground, statics: !!p.statics, actors: !!p.actors && !!this.A, peds: !!p.peds && !!this.Pd };
       this.provErrors = p.errors || {};
       console.info(`[art2] ${r.workers} bake worker(s) ready: send ${this.t.post.toFixed(0)} ms, init ${this.t.workerInit.toFixed(0)} ms; providers ${JSON.stringify(this.prov)}`);
-      if (this.pool.dead) console.warn('[art2] no bake workers: the v1 ground and sprites stand in');
     } catch (e) { console.error('[art2] worker pool', e); this.pool = null; }
+    // without its workers nothing but people could be drawn: the classic renderer takes over
+    if (!this.failed && (!this.pool || this.pool.dead)) this._noWorkers();
   }
+  _noWorkers() { this.failed = true; this.ready = false; this.onFail('its background workers could not run here', true); }
 
   resize(W, H, dpr) { this.W = W; this.H = H; this.dpr = dpr; if (this.E.resize) this.E.resize(W, H, dpr); }
 
-  // engine.onContextLost: 'lost' (count it: twice and we fall back), 'restored' (everything must be uploaded
-  // again: has* answer false, and what was waiting is dropped), 'failed' (the rebuild failed)
+  // engine.onContextLost: 'lost', 'restored' (everything must be uploaded again: has* answer false, and what
+  // was waiting is dropped), 'failed' (the rebuild failed). Phones drop the graphics of a page in the
+  // background (and sometimes when it comes back): that is not counted. Only losses while it is on screen,
+  // three within three minutes, give up on the new renderer for the session.
   _contextLost(what = 'lost') {
-    if (what === 'lost') this.lost++;
-    this.chunkState.clear(); this.fallbacks.clear(); this.results.clear(); this.upQ.length = 0; this.upKeys.clear();
-    if (this.lost >= 2 || what === 'failed') { this.failed = true; this.ready = false; this.onFail(what === 'failed' ? 'the graphics could not be rebuilt' : 'the graphics memory was lost twice', true); }
+    const now = performance.now();
+    if (what === 'lost') {
+      const seen = typeof document === 'undefined' || (!document.hidden && now - (World2.shownAt || 0) > 3000);
+      if (seen) this.losses.push(now);
+      this.lost++;
+    }
+    this.chunkState.clear(); this.fallbacks.clear(); this.results.clear(); this.upQ.clear();
+    this.losses = this.losses.filter((t) => now - t < 180000);
+    if (this.losses.length >= 3 || what === 'failed') { this.failed = true; this.ready = false; this.onFail(what === 'failed' ? 'the graphics could not be rebuilt' : 'the graphics memory kept running out', true); }
   }
 
   dispose() {
     this.ready = false; this.failed = true;
     if (this.pool) this.pool.dispose();
     try { this.E.dispose(); } catch { /* gone */ }
-    this.chunkState.clear(); this.results.clear(); this.upQ.length = 0;
+    this.chunkState.clear(); this.results.clear(); this.upQ.clear(); this.phs.clear(); this.fades.clear();
   }
 
   // ---- the frame ---------------------------------------------------------------------------------------------
   frame(F) {
     if (this.failed) return;
+    if (this.pool && this.pool.dead) { this._noWorkers(); return; }
     const t0 = performance.now();
     const E = this.E, S = this.S, z = F.z;
     this.F = F;
@@ -265,6 +287,9 @@ export class World2 {
     this.vx0 = camX - hw; this.vx1 = camX + hw; this.vy0 = camY - hh; this.vy1 = camY + hh;
     this.camX = camX; this.camY = camY;
     this.convBudget = this.tier.convert; this.genBudget = 48;
+    // people made on this thread this frame: more while the workers are still starting
+    this.syncLeft = this.prov.peds ? this.tier.syncMs : Math.max(8, this.tier.syncMs * 2);
+    if (F.now - this.badAt > 20) { this.badKeys.clear(); this.badAt = F.now; } // (a failure may have been passing)
     const T = this.part, mk = (k) => { const n = performance.now(); T[k] = (T[k] || 0) * 0.9 + (n - this.pt) * 0.1; this.pt = n; };
     this.pt = t0;
     this._chunks(F); mk('chunks');
@@ -272,18 +297,14 @@ export class World2 {
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
-    // the cut-away round the player (engine.js f.cut): on foot a hole about a body and a half wide, bigger in
-    // a vehicle; it only opens through tall statics standing south of the player
-    const me = S.ents && S.ents.get ? S.ents.get(S.ctrlId) : null, inVeh = S.ctrlKind >= 2;
-    const cz0 = me ? this._z0(me, false) : (sp.z ? DECK_Z * sp.z : 0);
-    const cut = this._cutO || (this._cutO = { x: 0, y: 0, z0: 0, r: 0, lift: 0 });
-    cut.x = sp.x; cut.y = sp.y; cut.z0 = cz0; cut.r = this.cutOff ? 0 : inVeh ? 150 : 104; cut.lift = inVeh ? 12 : 22;
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, cut }) === false) return;
+    this._fades(F, sp);
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
     this._decals(F); mk('decals');
     this._entities(F); mk('entities');
+    this._prefetch(F); mk('prefetch');
     this._furniture(F); mk('furniture');
     this._particles(F); mk('particles');
     this._lights(F); mk('lights');
@@ -293,9 +314,10 @@ export class World2 {
   }
 
   // ---- chunks ---------------------------------------------------------------------------------------------
-  // need: what the engine draws this frame (the view plus the tier's shadow reach) - resident now, the v1
-  // ground standing in until its bake lands; bake: that, plus a wider ring and the road ahead when
-  // driving - baked in the background, uploaded while the engine has free slots.
+  // need: what the engine draws this frame (the view plus the tier's shadow reach) - resident now, a
+  // placeholder (the tiles' colours) standing in until its bake lands; the engine keeps at least that many
+  // chunk slots, so what is on screen never pushes itself out. bake: that, plus a wider ring and the road
+  // ahead when driving - baked in the background, uploaded while the engine has free slots.
   _chunks(F) {
     const E = this.E, S = this.S, tier = this.tier;
     const need = this.needChunks || (this.needChunks = new Map()), bake = this.wantChunks;
@@ -322,20 +344,20 @@ export class World2 {
     let cutBox = null;
     if (cut >= 0) { const b = F.insideB; cutBox = [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
     const modeOf = (cx, cy) => (cutBox && (cx + 1) * CHUNK > cutBox[0] && cx * CHUNK < cutBox[2] && (cy + 1) * CHUNK > cutBox[1] && cy * CHUNK < cutBox[3] ? cut : -1);
-    // the v1 ground where nothing baked is resident: at once for what is on screen (as v1 itself does),
-    // one a frame for the margins
+    if (E.reserveChunks) E.reserveChunks(need.size + 1);
+    // the placeholder where nothing baked is resident: at once for what is on screen, one a frame for the
+    // margins
     let fbBudget = 1;
     for (const k of need.keys()) {
       const cx = k % 1000, cy = Math.floor(k / 1000);
-      if (E.hasChunk(cx, cy) || this._fallback(cx, cy) || !S.ground) continue;
+      if (E.hasChunk(cx, cy) || this._fallback(cx, cy)) continue;
       const onScreen = (cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1;
       if (!onScreen && fbBudget-- <= 0) continue;
-      E.setChunkFallback(cx, cy, S.ground.get(cx, cy)); this.fallbacks.add(k); this.n.fbSet++;
+      E.setChunkFallback(cx, cy, this._placeholder(cx, cy)); this.fallbacks.add(k); this.n.fbSet++;
     }
     const jobs = this.wantJobs; jobs.clear();
     const baking = !this.noBake && this.pool && !this.pool.dead && this.pool.ready && (this.prov.ground || this.prov.statics);
     if (baking) {
-      let colBudget = 1;
       for (const [k, prio] of bake) {
         const cx = k % 1000, cy = Math.floor(k / 1000), mode = modeOf(cx, cy);
         const st = this.chunkState.get(k), ver = this.ver.get(k) || 0;
@@ -346,11 +368,6 @@ export class World2 {
         if (this.results.has(jk) || this.pool.has(jk) || this.results.size > 5) continue;
         const opt = { quality: this.q, seed: this.map.seed, lowMem: this.lowMem };
         if (mode >= 0) opt.cutaway = mode;
-        if (!this.prov.ground) { // no ground provider: the statics go over the v1 ground's pixels
-          const cv = S.ground && colBudget-- > 0 ? S.ground.get(cx, cy) : null;
-          if (!cv) continue;
-          opt.groundCol = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, CHUNK, CHUNK).data;
-        }
         this.pool.request(jk, 'bakeChunk', { cx, cy, opt }, prio, (r, err) => this._baked(jk, k, cx, cy, mode, prio, r, err, ver));
       }
     }
@@ -359,18 +376,19 @@ export class World2 {
     // uploads, nearest first: what is needed now; the rest only into free slots
     if (this.results.size) {
       const ready = [...this.results.values()].sort((a, b) => a.prio - b.prio);
-      let n = tier.chunkUp, free = Math.max(0, tier.chunks - (E.chunkKeys ? E.chunkKeys().length : 0));
+      const cap = E.chunkCap ? E.chunkCap() : this.lowMem ? Math.min(LOWMEM_CHUNKS, tier.chunks) : tier.chunks;
+      let n = tier.chunkUp, free = Math.max(0, cap - (E.chunkKeys ? E.chunkKeys().length : 0));
       for (const res of ready) {
         if (n <= 0) break;
         if (!need.has(res.key)) { if (free <= 0) continue; free--; }
         n--;
         const t = performance.now();
         let ok = false;
-        try { const g = res.r.g; if (res.r.under) g.under = res.r.under; ok = E.uploadChunk(res.cx, res.cy, g) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
+        try { const g = res.r.g; if (res.r.under) g.under = res.r.under; g.blds = res.r.blds || null; ok = E.uploadChunk(res.cx, res.cy, g) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
         this.results.delete(res.jk);
         if (!ok) continue;
         this.t.upChunkMs = performance.now() - t;
-        this.chunkState.set(res.key, { mode: res.mode, ver: res.ver, gh: res.r.gh, lights: this._prepLights(res.r.lights || []), live: res.r.live || null });
+        this.chunkState.set(res.key, { mode: res.mode, ver: res.ver, gh: res.r.gh, lights: this._prepLights(res.r.lights || []), live: res.r.live || null, blds: res.r.blds && res.r.blds.length ? res.r.blds : null });
         this.fallbacks.delete(res.key);
         this.n.chunkUp++;
       }
@@ -382,6 +400,53 @@ export class World2 {
     }
   }
   _fallback(cx, cy) { return this.E.hasFallback ? this.E.hasFallback(cx, cy) : this.fallbacks.has(cy * 1000 + cx); }
+  // A chunk's stand-in until its bake lands: every tile in its ground colour (one pixel per 8 world px, with
+  // a little grain). Never the old art.
+  _placeholder(cx, cy) {
+    const k = cy * 1000 + cx;
+    let cv = this.phs.get(k);
+    if (cv) return cv;
+    const n = CHUNK >> 3, M = this.map;
+    cv = document.createElement('canvas'); cv.width = n; cv.height = n;
+    const g = cv.getContext('2d'), id = g.createImageData(n, n), d = id.data;
+    for (let y = 0, j = 0; y < n; y++) for (let x = 0; x < n; x++, j += 4) {
+      const wx = cx * CHUNK + x * 8 + 4, wy = cy * CHUNK + y * 8 + 4;
+      const c = PH_COL[M.tileAtPx(wx, wy)] || PH_COL[TT.GRASS];
+      const nz = ((((wx * 73856093) ^ (wy * 19349663)) >>> 8) & 7) - 3;
+      d[j] = c[0] + nz; d[j + 1] = c[1] + nz; d[j + 2] = c[2] + nz; d[j + 3] = 255;
+    }
+    g.putImageData(id, 0, 0);
+    if (this.phs.size >= 48) this.phs.delete(this.phs.keys().next().value);
+    this.phs.set(k, cv);
+    return cv;
+  }
+
+  // ---- see-through buildings --------------------------------------------------------------------------------
+  // Whole buildings standing in front of you (their base south of you) whose picture covers the space round
+  // you ease to transparent and back (the engine shows the street under them; past half way they stop hiding
+  // what is behind them). Driving clears a wider space. A building already fading keeps a slightly bigger box,
+  // so walking along its edge doesn't make it flicker.
+  _fades(F, sp) {
+    const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false;
+    const z0 = (sp.z || 0) > 0.01 ? DECK_Z * sp.z : this._gz(sp.x, sp.y), px = sp.x, py = sp.y, sy = py - z0;
+    const rx = inVeh ? 150 : 100, up = inVeh ? 160 : 128, down = 44;
+    const want = this._fadeWant || (this._fadeWant = new Set());
+    want.clear();
+    if (!F.sub) for (const st of this.chunkState.values()) {
+      if (!st.blds) continue;
+      for (const r of st.blds) {
+        const b = r[0], m = (this.fades.get(b) || 0) > 0.05 ? 24 : 0;
+        if (r[5] <= py + 2 || r[3] < px - rx - m || r[1] > px + rx + m || r[4] < sy - up - m || r[2] > sy + down + m) continue;
+        want.add(b);
+      }
+    }
+    const k = 1 - Math.exp(-5 * Math.min(0.1, F.dt || 0.016));
+    for (const b of want) if (!this.fades.has(b)) this.fades.set(b, 0);
+    for (const [b, f] of this.fades) {
+      const on = want.has(b), nf = f + ((on ? 0.88 : 0) - f) * k; // (a faint ghost of it stays: you still see its shape)
+      if (!on && nf < 0.01) this.fades.delete(b); else this.fades.set(b, nf);
+    }
+  }
   _baked(jk, key, cx, cy, mode, prio, r, err, ver = 0) {
     if (err || !r) {
       this.n.bakeErr++; this.lastErr = String(err).slice(0, 300);
@@ -445,33 +510,63 @@ export class World2 {
   }
 
   // ---- sprites --------------------------------------------------------------------------------------------
-  // The provider's sprite (asking the workers for it), or the fallback key fb() gives meanwhile.
-  _spr(prov, kind, key, args, fb) {
-    if (key && this.prov[prov]) {
-      if (this.E.hasSprite(key)) return key;
-      // at most a tier's worth of sprite jobs out at a time (they go ahead of chunk bakes); yours first
-      if (!this.badKeys.has(key) && !this.upKeys.has(key) && this.pool && !this.pool.dead && this.sprOut < this.tier.sprJobs) {
-        const jk = 's' + key;
-        if (!this.pool.has(jk)) {
-          this.n.sprReq++; this.sprOut++;
-          this.pool.request(jk, 'sprite', { kind, key, a: args }, this.sprPrio, (r, err) => {
-            this.sprOut--;
-            if (err || !r || !r.g) { this.n.sprErr++; this.badKeys.add(key); if (this.n.sprErr <= 3) console.warn('[art2] sprite failed', key, String(err).slice(0, 300)); return; }
-            this.upQ.push(key, r.g); this.upKeys.add(key);
-          });
-        }
-      }
-    }
-    return fb ? fb() : null;
+  // Only the new art is drawn. A sprite comes from the providers (actors.js, peds.js): resident already, made
+  // on this thread at once (people, ~2 ms each, while the frame's budget lasts - your own figure always), or
+  // asked of the workers and drawn once it lands. Meanwhile a thing keeps showing the last sprite it had
+  // (thing._v2k); a vehicle or train seen for the first time takes the nearest heading already made.
+  _spr(prov, kind, key, args) {
+    if (!key) return null;
+    if (this.E.hasSprite(key)) return key;
+    const g = this.upQ.get(key);                   // back from a worker, not uploaded yet: now
+    if (g) { this.upQ.delete(key); if (this._upload(key, g)) return key; }
+    if (this.badKeys.has(key)) return null;
+    if (kind === 'ped' && this._now(key, args)) return key;
+    this._ask(prov, kind, key, args, this.sprPrio);
+    return null;
+  }
+  // a person made on this thread, now: yours always, others while the frame's budget lasts
+  _now(key, args) {
+    const fn = this.Pd && this.Pd.pedSprite;
+    if (!fn || (this.sprPrio !== -3 && this.syncLeft <= 0)) return false;
+    const t = performance.now();
+    let G = null;
+    try { G = fn(...args); } catch (e) { this.badKeys.add(key); this.n.sprErr++; if (this.n.sprErr <= 3) console.warn('[art2] sprite failed', key, e); return false; }
+    const ok = !!(G && G.w) && this._upload(key, G);
+    const ms = performance.now() - t;
+    this.syncLeft -= ms; this.t.syncMs += ms; this.n.sync++;
+    if (ok && this.pool) { const jk = 's' + key; if (this.pool.has(jk)) { this.pool.cancel(jk); this.sprOut = Math.max(0, this.sprOut - 1); } }
+    return ok;
+  }
+  // Ask the workers for a sprite. prio: lower runs sooner (-3 yours, -1 on screen, 0 and up ahead of need).
+  // At most a tier's worth of jobs are out at once (asking ahead: half of that). An ask already queued only
+  // has its priority raised. true when a job went out.
+  _ask(prov, kind, key, args, prio = -1) {
+    const pool = this.pool;
+    if (!key || !pool || pool.dead || !pool.ready || !this.prov[prov]) return false;
+    if (this.E.hasSprite(key) || this.upQ.has(key) || this.badKeys.has(key)) return false;
+    const jk = 's' + key;
+    if (pool.has(jk)) { pool.request(jk, 'sprite', null, prio, null); return false; }
+    if (this.sprOut >= (prio >= 0 ? this.tier.sprJobs >> 1 : this.tier.sprJobs)) return false;
+    this.n.sprReq++; this.sprOut++;
+    pool.request(jk, 'sprite', { kind, key, a: args }, prio, (r, err) => {
+      this.sprOut = Math.max(0, this.sprOut - 1);
+      if (err || !r || !r.g) { this.n.sprErr++; this.badKeys.add(key); if (this.n.sprErr <= 3) console.warn('[art2] sprite failed', key, String(err).slice(0, 300)); return; }
+      if (!this.failed && !this.E.hasSprite(key)) this.upQ.set(key, r.g);
+    });
+    return true;
+  }
+  _upload(key, g) {
+    let ok = false;
+    try { ok = this.E.uploadSprite(key, g) !== false; } catch (e) { console.warn('[art2] uploadSprite', key, e); }
+    if (ok) this.n.sprUp++;
+    return ok; // (a full atlas refuses for now: the sprite is asked for again when it is next needed)
   }
   _uploadSprites() {
     let n = this.tier.sprUp;
-    while (this.upQ.length && n-- > 0) {
-      const key = this.upQ.shift(), g = this.upQ.shift();
-      this.upKeys.delete(key);
-      let ok = false;
-      try { ok = this.E.uploadSprite(key, g) !== false; } catch (e) { console.warn('[art2] uploadSprite', key, e); }
-      if (ok) this.n.sprUp++; else this.badKeys.add(key);
+    for (const [key, g] of this.upQ) {
+      if (n-- <= 0) break;
+      this.upQ.delete(key);
+      if (!this.E.hasSprite(key)) this._upload(key, g);
     }
   }
   _canvas(i, w, h) {
@@ -484,13 +579,13 @@ export class World2 {
   }
   // exact-size scratch: getImageData reads the whole canvas
   _sized(i, w, h) { const [c, g] = this._canvas(i, 1, 1); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } g.imageSmoothingEnabled = false; g.clearRect(0, 0, w, h); return [c, g]; }
-  _have(key) { return this.E.hasSprite(key); }
+  // a generated sprite (gen: from the frame's generous budget), made once and kept
   _conv(key, make, gen = false) {
     if (this.E.hasSprite(key)) return key;
     if (gen ? this.genBudget-- <= 0 : this.convBudget-- <= 0) return null;
     const t = performance.now();
     let G = null;
-    try { G = make(); } catch (e) { console.warn('[art2] fallback sprite', key, e); G = null; }
+    try { G = make(); } catch (e) { console.warn('[art2] generated sprite', key, e); G = null; }
     if (!G) return null;
     let ok = false;
     try { ok = this.E.uploadSprite(key, G) !== false; } catch (e) { console.warn('[art2] uploadSprite', key, e); }
@@ -498,199 +593,10 @@ export class World2 {
     this.t.convMs += performance.now() - t; gen ? this.n.gen++ : this.n.conv++;
     return key;
   }
-
-  // a person: the provider's figure, or the v1 body converted (upright 8 directions, lying, swimming)
-  _ped(p, now, me, F, scale = 1, extraZ = 0) {
-    const api = this.api, E = this.E;
-    if (p.flags & PF.INVEH) return;
-    if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { this._pet(p, now, F); return; }
-    if (p.blink === 3) return;
-    const L = api.pedLook(p, now), f = p.flags, app = p.d.app || {};
-    const d8 = dir8(p.ra);
-    let pose = L.pose, fr = L.fr;
-    const lying = !L.upright && (pose === 'down' || pose === 'dead') && !L.flying && !L.swimming;
-    let ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
-    let lift = 0;
-    if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
-    const A2 = this.prov.peds ? this._app(app, p.d.ar) : null, pf = this.prov.peds && this.Pd.pedFrame ? this.Pd.pedFrame(ppose, fr) : fr;
-    const key = this.prov.peds ? this.Pd.pedKey(A2, ppose, d8, pf, p.extra | 0) : null;
-    const sk = this._spr('peds', 'ped', key, [A2, ppose, d8, pf, p.extra | 0], () => (L.upright || L.swimming ? this._fbUpright(app, d8, pose === 'move' ? 'move' + L.lvl : pose, fr, p.extra | 0, L.swimming) : this._fbLying(app, pose === 'dead' ? 1 : 0, p.ra + (L.flying || pose === 'roll' ? (now * 15 + p.id) % TAU : 0))));
-    const key2 = sk || (p._v2k && this.E.hasSprite(p._v2k) ? p._v2k : null); // (the last one while a new one is made)
-    if (!key2) return;
-    p._v2k = key2;
-    const o = this.opts;
-    o.alpha = 1; o.flash = L.hitK > 0.4 ? L.hitK - 0.4 : 0; o.xray = !!me; o.flipX = false; o.shadow = true; o.tint = null;
-    if (f & PF.GHOST) o.alpha = 0.45 + 0.2 * Math.sin(now * 8);
-    if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
-    const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
-    const z0 = this._z0(p, L.swimming) + lift + extraZ;
-    E.drawSprite(key2, p.rx + hx, p.ry + hy, z0, o);
-    this.n.drawn++;
-    if (f & PF.UMBRELLA) {
-      const i = p.id % api.UMBRELLA_COLORS.length, uk = this._conv(`v1um|${i}`, () => { const cv = api.umbrellaSprite(i); return fromCanvas(cv, cv.width / 2, cv.height / 2, () => 2); });
-      if (uk) { o.flash = 0; E.drawSprite(uk, p.rx, p.ry, z0 + 46, o); }
-    }
-    void scale;
-  }
-  _fbUpright(app, d8, pose, fr, w, swim) {
-    const kneel = pose === 'kneel';
-    if (kneel) { pose = 'carry'; fr = 0; }
-    const body = bodySprite(app, d8, pose, fr, w);
-    const key = `v1u|${akey(app)}|${d8}|${pose}|${fr}|${w}|${swim ? 1 : 0}|${kneel ? 1 : 0}|${body ? 'b' : 'c'}`;
-    return this._conv(key, () => {
-      const api = this.api, [d, mirror0] = baseDir(d8);
-      const spr = body || charSprite(app, d, pose, fr, w), mirror = body ? false : mirror0;
-      const bs = api.PED_BUILD_SCALE[app.bd !== undefined ? app.bd : 1] || 1, sc = api.CSCALE * (0.92 + 0.08 * bs);
-      const rows = swim ? 26 : kneel ? 34 : CH;
-      const w2 = Math.ceil(CW * sc * bs), h2 = Math.ceil(rows * sc);
-      const [cv, g] = this._sized(0, w2, h2);
-      g.save(); if (mirror) { g.translate(w2, 0); g.scale(-1, 1); }
-      g.drawImage(spr, 0, 0, CW, rows, 0, 0, w2, h2); g.restore();
-      // feet on the ground point; kneeling sinks the body; swimming shows head and shoulders at the surface
-      const ay = swim ? h2 + 2 : kneel ? Math.round((FOOT_Y - 8) * sc) : Math.round(FOOT_Y * sc);
-      return fromCanvas(cv, w2 >> 1, ay, (x, y) => Math.max(0, ay - y), FACE_N, F_CHAR);
-    });
-  }
-  _fbLying(app, kind, ang) {
-    const ly = lyingSprite(app, kind);
-    if (!ly) return null;
-    const ai = quant(ang + Math.PI, 16);
-    return this._conv(`v1l|${akey(app)}|${kind}|${ai}`, () => {
-      const sc = 1.25, R = Math.ceil(Math.hypot(LW, LH) * sc / 2) + 2;
-      const [cv, g] = this._sized(0, R * 2, R * 2);
-      g.translate(R, R); g.rotate(ai * TAU / 16); g.drawImage(ly, -LW * sc / 2, -LH * sc / 2, LW * sc, LH * sc);
-      return fromCanvas(cv, R, R, () => 2, UP_N, F_CHAR);
-    });
-  }
-  _pet(p, now, F) {
-    const kind = p.d.ar.slice(4), sp = p.as || 0, E = this.E;
-    const A = this.prov.actors && this.A.animalKey ? this.A : null;
-    const pose = sp > 70 ? 'run' : sp > 12 ? 'walk' : now - (p.stillSince ?? now) > 1.2 ? 'sit' : 'idle';
-    const fr = pose === 'run' ? Math.floor(now * 14 + p.id) % 4 : pose === 'walk' ? Math.floor(now * 8 + p.id) % 4 : 0, d8 = dir8(p.ra);
-    const n = A && A.ANIMAL_FRAMES ? A.ANIMAL_FRAMES[pose] || 1 : 4, key = A ? A.animalKey(kind, pose, d8, fr % n) : null;
-    const sk = this._spr('actors', 'animal', key, [kind, pose, d8, fr % n], () => this._fbPet(kind, pose, fr, p.ra));
-    if (sk) { this.opts.alpha = 1; this.opts.flash = 0; this.opts.xray = false; E.drawSprite(sk, p.rx, p.ry, this._z0(p, false), this.opts); this.n.drawn++; }
-    void F;
-  }
-  _fbPet(kind, pose, fr, ra) {
-    const art = ANIMAL_ART[kind];
-    if (!art || !atlas.animals) return null;
-    const f = art.f, r = !f ? art.r : pose === 'run' ? f.run[fr] : pose === 'walk' ? f.walk[fr] : pose === 'sit' ? f.sit : f.idle;
-    const top = art.view === 'top', ai = top ? quant(ra, 16) : Math.cos(ra) < -0.2 ? 1 : 0;
-    return this._conv(`v1a|${kind}|${r.join(',')}|${ai}`, () => {
-      const [sx, sy, sw, sh] = r, pad = art.pad || 0;
-      if (top) {
-        const k = 0.9, R = Math.ceil(Math.hypot(sw, sh) * k / 2) + 2;
-        const [cv, g] = this._sized(0, R * 2, R * 2);
-        g.translate(R, R); g.rotate(ai * TAU / 16); g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -sh * k / 2, sw * k, sh * k);
-        return fromCanvas(cv, R, R, () => 6, UP_N, F_CHAR);
-      }
-      const k = 0.75, w = Math.ceil(sw * k), h = Math.ceil(sh * k);
-      const [cv, g] = this._sized(0, w, h);
-      if (ai) { g.translate(w, 0); g.scale(-1, 1); }
-      g.drawImage(atlas.animals, sx, sy, sw, sh, 0, 0, w, h);
-      const ay = Math.round((sh - pad) * k);
-      return fromCanvas(cv, w >> 1, ay, (x, y) => Math.max(0, ay - y), FACE_N, F_CHAR);
-    });
-  }
-
-  // a vehicle: the provider's model at heading hi of N, or the v1 car (top view raised on its side walls)
-  _veh(v, now, me) {
-    const def = VEHICLE_BY_INDEX[v.d.m];
-    if (!def) return;
-    const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
-    const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
-    let key = null, st = null, hi = 0;
-    if (this.prov.actors && this.A.vehicleKey) {
-      hi = quant(v.ra, N);
-      st = this.A.vehState ? this.A.vehState(f, Math.floor(now * 6) % 2 ? 1 : 2) : { lights: !!(f & VF.LIGHTS), siren: f & VF.SIREN ? 1 : 0, brake: !!(f & VF.BRAKE), wreck: !!(f & VF.WRECK), burn: !!(f & VF.BURN) };
-      key = this.A.vehicleKey(v.d, st, hi, N);
-    }
-    const sk1 = this._spr('actors', 'vehicle', key, [v.d, st, hi, N], () => this._fbVeh(v, def, quant(v.ra, 32)));
-    const sk2 = sk1 || (v._v2k && this.E.hasSprite(v._v2k) ? v._v2k : null);
-    if (!sk2) return;
-    v._v2k = sk2;
-    const o = this.opts;
-    o.alpha = sinking ? 1 - 0.75 * sk : 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = !sinking; o.tint = null;
-    if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
-    const lean = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.kind === 'bike' ? 2.5 : 1.6);
-    const z0 = this._z0(v, def.kind === 'boat') - (sinking ? sk * 8 : 0);
-    E.drawSprite(sk2, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
-    this.n.drawn++;
-    // riders on bikes and jet skis sit in the open
-    if (def.kind === 'bike' || def.id === 'jetski') {
-      const seats = def.kind === 'bike' ? api.SEAT_BIKE : api.SEAT_JETSKI, lift = api.vehLift(def) + 2;
-      for (const p of this.S.ents.values()) {
-        if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
-        const seat = seats[(p.flags & PF.PASSENGER) ? 1 : 0];
-        const c = Math.cos(v.ra), s = Math.sin(v.ra), x = v.rx + c * seat[0] - s * seat[1], y = v.ry + s * seat[0] + c * seat[1];
-        const d8 = dir8(v.ra), app = p.d.app || {}, pose = def.id === 'bicycle' ? 'pedal' : 'ride', A2 = this.prov.peds ? this._app(app, p.d.ar) : null;
-        const pk = this.prov.peds ? this.Pd.pedKey(A2, pose, d8, 0, p.extra | 0) : null;
-        const rk = this._spr('peds', 'ped', pk, [A2, pose, d8, 0, p.extra | 0], () => this._fbRider(app, d8));
-        if (rk) { o.xray = p.id === this.S.myPedId; o.alpha = 1; E.drawSprite(rk, x, y, z0 + (pk && this.E.hasSprite(pk) ? 0 : lift), o); }
-      }
-    }
-  }
-  _fbVeh(v, def, hi) {
-    const wreck = !!(v.flags & VF.WRECK), d = v.d;
-    return this._conv(`v1v|${d.m}|${d.p}|${d.vr}|${d.tn}|${wreck ? 1 : 0}|${hi}|${atlas.ready ? 1 : 0}`, () => {
-      const lift = Math.max(1, Math.round(this.api.vehLift(def))), a = hi * TAU / 32;
-      const R = Math.ceil(Math.hypot(def.L, def.W) / 2) + 6, w = R * 2;
-      const [top, tg] = this._sized(0, w, w);
-      tg.translate(R, R); tg.rotate(a); if (wreck) drawVehicleWreck(tg, d, def); else drawVehicle(tg, d, def, 0);
-      const side = vehicleSide(d, def, wreck), sw = side.width / 2, sh = side.height / 2;
-      const [sc, sg] = this._sized(1, w, w);
-      sg.translate(R, R); sg.rotate(a); sg.drawImage(side, -sw / 2, -sh / 2, sw, sh);
-      const G = gbuf(w, w + lift, R, R + lift);
-      // the side walls stacked up the screen (height k), then the top view on them
-      const sd = sc.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, w).data;
-      for (let k = 0; k < lift; k++) for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) {
-        const s = (y * w + x) * 4;
-        if (sd[s + 3] < 128) continue;
-        put(G, x, y + lift - k, [sd[s], sd[s + 1], sd[s + 2]], k, FACE_N);
-      }
-      return fromCanvas(top, R, R + lift, () => lift + 1, UP_N, 0, G, 0);
-    });
-  }
-  _fbRider(app, d8) {
-    const body = bodySprite(app, d8, 'idle', 0, 0);
-    if (!body) return null;
-    return this._conv(`v1r|${akey(app)}|${d8}`, () => {
-      const sc = this.api.CSCALE * 0.92, rows = this.api.RIDER_H, w = Math.ceil(CW * sc), h = Math.ceil(rows * sc);
-      const [cv, g] = this._sized(0, w, h);
-      g.drawImage(body, 0, 0, CW, rows, 0, 0, w, h);
-      const ay = h - Math.round(4 * sc);
-      return fromCanvas(cv, w >> 1, ay, (x, y) => Math.max(0, ay - y), FACE_N, F_CHAR);
-    });
-  }
-
-  _train(c, now, myTrain) {
-    const def = TRAIN_CARS[c.d.c];
-    if (!def) return;
-    const inside = c.d.tr === myTrain, N = this.tier.N;
-    const mode = `${inside && c.d.c !== 0 ? 'in' : 'roof'}${c.flags & 8 ? '-lit' : ''}${c.flags & 16 ? '-empty' : ''}`;
-    let key = null, hi = quant(c.ra, N);
-    if (this.prov.actors && this.A.trainKey) key = this.A.trainKey(c.d.c, mode, hi, N);
-    const sk = this._spr('actors', 'train', key, [c.d.c, mode, hi, N], () => this._fbTrain(c, inside, quant(c.ra, 32)));
-    if (!sk) return;
-    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true;
-    this.E.drawSprite(sk, c.rx, c.ry, 0, o); this.n.drawn++;
-  }
-  _fbTrain(c, inside, hi) {
-    const def = TRAIN_CARS[c.d.c];
-    return this._conv(`v1t|${c.d.c}|${inside ? 1 : 0}|${c.flags & 26}|${hi}`, () => {
-      const R = Math.ceil(Math.hypot(def.L, def.W) / 2) + 8, H = 14, w = R * 2;
-      const [cv, g] = this._sized(0, w, w);
-      drawTrainCar(g, { rx: R, ry: R, ra: hi * TAU / 32, d: c.d, flags: c.flags & ~4 }, inside, 0);
-      // the car's own outline, darkened, stacked up as its sides; the roof (or the lit inside) on top
-      const G = gbuf(w, w + H, R, R + H), d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, w).data;
-      for (let k = 0; k < H; k++) for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) {
-        const s = (y * w + x) * 4;
-        if (d[s + 3] < 200) continue;
-        put(G, x, y + H - k, [d[s] * 0.45, d[s + 1] * 0.45, d[s + 2] * 0.5], k, FACE_N);
-      }
-      return fromCanvas(cv, R, R + H, () => H, UP_N, 0, G, 0);
-    });
+  // the nearest heading already made (within an eighth of a turn either way), for a thing seen the first time
+  _near(keyOf, hi, N) {
+    for (let d = 1; d <= N >> 3; d++) for (let s = -1; s <= 1; s += 2) { const k = keyOf((hi + s * d + N) % N); if (this.E.hasSprite(k)) return k; }
+    return null;
   }
   // the server appearance as the peds provider wants it (adapted once per descriptor, with its archetype)
   _app(a, ar) {
@@ -700,71 +606,285 @@ export class World2 {
     return v;
   }
 
-  _small(kind, key, args, fb, x, y, z0) {
-    const sk = this._spr('actors', kind, key, args, fb);
+  // ---- people ---------------------------------------------------------------------------------------------
+  // A person: the peds provider's figure (people.js) for their pose, heading and stride, the weapon in hand -
+  // or the flashlight when they carry nothing and have it switched on. The rest of a stride is asked for as
+  // soon as a walk starts (or turns), so the next frames are there in time.
+  _ped(p, now, me, F, extraZ = 0) {
+    const E = this.E, Pd = this.Pd;
+    if (p.flags & PF.INVEH) return;
+    if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { this._pet(p, now); return; }
+    if (p.blink === 3 || !Pd || !Pd.pedKey) return;
+    const api = this.api, L = api.pedLook(p, now), f = p.flags, pose = L.pose;
+    const d8 = dir8(p.ra);
+    const lying = !L.upright && (pose === 'down' || pose === 'dead') && !L.flying && !L.swimming;
+    const ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
+    let lift = 0;
+    if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
+    const A2 = this._app(p.d.app || {}, p.d.ar), pf = Pd.pedFrame(ppose, L.fr);
+    const wpn = (p.extra | 0) || (p.d.fl ? 'flashlight' : 0); // unarmed with the flashlight on: it's in your hand
+    let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn]);
+    if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
+    if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
+      p._cp = ppose; p._cd = d8; p._cw = wpn; p._ca = A2;
+      this._cycle(A2, ppose, d8, wpn, me ? -2 : 0);
+    }
     if (!sk) return;
-    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true;
-    this.E.drawSprite(sk, x, y, z0, o); this.n.drawn++;
+    p._v2k = sk;
+    const o = this.opts;
+    o.alpha = 1; o.flash = L.hitK > 0.4 ? L.hitK - 0.4 : 0; o.xray = !!me; o.flipX = false; o.shadow = true; o.tint = null;
+    if (f & PF.GHOST) o.alpha = 0.45 + 0.2 * Math.sin(now * 8);
+    if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
+    const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
+    const z0 = this._z0(p, L.swimming) + lift + extraZ;
+    E.drawSprite(sk, p.rx + hx, p.ry + hy, z0, o);
+    this.n.drawn++;
+    if (f & PF.UMBRELLA) {
+      const uk = this._genUmbrella(p.id % Math.max(1, (api.UMBRELLA_COLORS || []).length));
+      if (uk) { o.flash = 0; o.xray = false; E.drawSprite(uk, p.rx, p.ry, z0 + 44, o); }
+    }
   }
-  _fbCanvasThing(key, draw, size, z) {
-    return this._conv(key, () => { const [cv, g] = this._sized(0, size, size); g.translate(size / 2, size / 2); draw(g); return fromCanvas(cv, size / 2, size / 2 + z, () => z, UP_N, 0, gbuf(size, size + z, size / 2, size / 2 + z), 0); });
+  // every frame of a looping pose (stride, idle, carry...) at this heading, asked for ahead
+  _cycle(A2, ppose, d8, wpn, prio) {
+    const Pd = this.Pd, n = (Pd.PED_POSES && Pd.PED_POSES[ppose]) || 1;
+    if (n < 2 || n > 8) return;
+    for (let i = 0; i < n; i++) this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, i, wpn), [A2, ppose, d8, i, wpn], prio);
+  }
+  // an open umbrella over a head: a shallow dome of 8 panels in its colour, a darker rim, the tip on top
+  _genUmbrella(i) {
+    return this._conv(`gumb|${i}`, () => {
+      const cols = this.api.UMBRELLA_COLORS || ['#c8262b'], base = rgbOf(cols[i] || cols[0]);
+      const R = 13, H = 6, w = R * 2 + 1, h = R * 2 + H + 3, ax = R, ay = R + H + 1;
+      const G = gbuf(w, h, ax, ay);
+      for (let Y = -R; Y <= R; Y++) for (let X = -R; X <= R; X++) {
+        const r2 = (X * X + Y * Y) / (R * R);
+        if (r2 > 1) continue;
+        const Z = Math.round(H * (1 - r2)), sx = X + ax, sy = Y - Z + ay, zz = Z + 1;
+        if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+        const ii = sy * w + sx;
+        if (G.col[ii * 4 + 3] && G.z[ii] >= zz) continue;
+        const rim = r2 > 0.82, panel = Math.floor((Math.atan2(Y, X) + Math.PI) / (Math.PI / 4)) & 1;
+        const k = rim ? 0.62 : panel ? 0.84 : 1;
+        const nx = 2 * H * X / (R * R), ny = 2 * H * Y / (R * R), nl = Math.hypot(nx, ny, 1);
+        put(G, sx, sy, [base[0] * k, base[1] * k, base[2] * k], zz, [128 + nx / nl * 127, 128 + ny / nl * 127, 128 + 127 / nl, 255]);
+      }
+      put(G, ax, ay - H - 2, [40, 40, 44], H + 3); put(G, ax, ay - H - 1, [40, 40, 44], H + 2); // the tip
+      return G;
+    }, true);
+  }
+
+  // ---- animals, vehicles, trains, small things ------------------------------------------------------------------
+  _pet(p, now) {
+    const A = this.A, E = this.E;
+    if (!A || !A.animalKey) return;
+    const kind = p.d.ar.slice(4), sp = p.as || 0;
+    const pose = sp > 70 ? 'run' : sp > 12 ? 'walk' : now - (p.stillSince ?? now) > 1.2 ? 'sit' : 'idle';
+    const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
+    const fr = Math.floor(pose === 'run' ? now * 14 + p.id : pose === 'walk' ? now * 8 + p.id : pose === 'idle' ? now * 3 + p.id : now * 1.5 + p.id) % n;
+    let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
+    if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null;
+    if (pose !== p._cp || d8 !== p._cd) { p._cp = pose; p._cd = d8; for (let i = 0; i < n; i++) this._ask('actors', 'animal', A.animalKey(kind, pose, d8, i), [kind, pose, d8, i], 0); }
+    if (!sk) return;
+    p._v2k = sk;
+    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
+    E.drawSprite(sk, p.rx, p.ry, this._z0(p, false), o); this.n.drawn++;
+  }
+
+  // a vehicle: the actors provider's model at heading hi of N (by tier), its lights, brakes, siren, wreck;
+  // the headings either side are asked for whenever it turns (yours sooner), and the siren's other flash
+  _veh(v, now, me) {
+    const def = VEHICLE_BY_INDEX[v.d.m], A = this.A;
+    if (!def || !A || !A.vehicleKey || !A.vehState) return;
+    const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
+    const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
+    const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase);
+    let use = this._spr('actors', 'vehicle', A.vehicleKey(v.d, st, hi, N), [v.d, st, hi, N]);
+    if (!use && v._v2k && E.hasSprite(v._v2k)) use = v._v2k;
+    if (!use) use = this._near((h) => A.vehicleKey(v.d, st, h, N), hi, N);
+    if (v._hi !== hi || v._hn !== N || v._hf !== f) {
+      v._hi = hi; v._hn = N; v._hf = f;
+      for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; this._ask('actors', 'vehicle', A.vehicleKey(v.d, st, h, N), [v.d, st, h, N], me ? -2 : 1); }
+      if (f & VF.SIREN) { const s2 = A.vehState(f, 3 - phase); this._ask('actors', 'vehicle', A.vehicleKey(v.d, s2, hi, N), [v.d, s2, hi, N], me ? -2 : 0); }
+    }
+    if (!use) return;
+    v._v2k = use;
+    const o = this.opts;
+    o.alpha = sinking ? 1 - 0.75 * sk : 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = !sinking; o.tint = null;
+    if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
+    const lean = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.kind === 'bike' ? 2.5 : 1.6);
+    const z0 = this._z0(v, def.kind === 'boat') - (sinking ? sk * 8 : 0);
+    E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
+    this.n.drawn++;
+    // riders on bikes and jet skis sit in the open
+    const Pd = this.Pd;
+    if ((def.kind === 'bike' || def.id === 'jetski') && Pd && Pd.pedKey) {
+      const seats = def.kind === 'bike' ? api.SEAT_BIKE : api.SEAT_JETSKI, myPed = this.S.myPedId;
+      for (const p of this.S.ents.values()) {
+        if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
+        const seat = seats[(p.flags & PF.PASSENGER) ? 1 : 0];
+        const c = Math.cos(v.ra), s = Math.sin(v.ra), x = v.rx + c * seat[0] - s * seat[1], y = v.ry + s * seat[0] + c * seat[1];
+        const d8 = dir8(v.ra), pose = def.id === 'bicycle' ? 'pedal' : 'ride', A2 = this._app(p.d.app || {}, p.d.ar);
+        const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : 0, wpn = p.extra | 0;
+        const was = this.sprPrio;
+        if (p.id === myPed) this.sprPrio = -3;
+        let rk = this._spr('peds', 'ped', Pd.pedKey(A2, pose, d8, fr, wpn), [A2, pose, d8, fr, wpn]);
+        this.sprPrio = was;
+        if (!rk) rk = p._v2r && E.hasSprite(p._v2r) ? p._v2r : null;
+        if (!rk) continue;
+        p._v2r = rk;
+        o.xray = p.id === myPed; o.alpha = 1;
+        E.drawSprite(rk, x, y, Math.max(0, z0), o);
+      }
+    }
+  }
+
+  _train(c, now, myTrain) {
+    const def = TRAIN_CARS[c.d.c], A = this.A;
+    if (!def || !A || !A.trainKey) return;
+    const inside = c.d.tr === myTrain, N = this.tier.N;
+    const mode = `${inside && c.d.c !== 0 ? 'in' : 'roof'}${c.flags & 8 ? '-lit' : ''}${c.flags & 16 ? '-empty' : ''}`;
+    const hi = quant(c.ra, N);
+    let sk = this._spr('actors', 'train', A.trainKey(c.d.c, mode, hi, N), [c.d.c, mode, hi, N]);
+    if (!sk && c._v2k && this.E.hasSprite(c._v2k)) sk = c._v2k;
+    if (!sk) sk = this._near((h) => A.trainKey(c.d.c, mode, h, N), hi, N);
+    if (c._hi !== hi || c._hm !== mode) {
+      c._hi = hi; c._hm = mode;
+      for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; this._ask('actors', 'train', A.trainKey(c.d.c, mode, h, N), [c.d.c, mode, h, N], 1); }
+    }
+    if (!sk) return;
+    c._v2k = sk;
+    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
+    this.E.drawSprite(sk, c.rx, c.ry, 0, o); this.n.drawn++;
+  }
+
+  _small(kind, key, args, e, x, y, z0) {
+    let sk = this._spr('actors', kind, key, args);
+    if (!sk) sk = e._v2k && this.E.hasSprite(e._v2k) ? e._v2k : null;
+    if (!sk) return;
+    e._v2k = sk;
+    const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
+    this.E.drawSprite(sk, x, y, z0, o); this.n.drawn++;
   }
 
   // ---- the moving things on screen -------------------------------------------------------------------------
   _entities(F) {
-    const S = this.S, now = F.now, A = this.prov.actors ? this.A : null;
+    const S = this.S, now = F.now, A = this.A && this.A.crateKey ? this.A : null;
     this.opts = this.opts || { alpha: 1, flipX: false, flash: 0, xray: false, shadow: true, tint: null };
     const meVeh = S.pred && S.pred.kind === 'veh' ? S.ctrlId : -1;
     for (const v of F.vehs) { this.sprPrio = v.id === meVeh ? -3 : -1; this._veh(v, now, v.id === meVeh); }
     for (const p of F.peds) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F); }
+    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F, 8); }
     this.sprPrio = -1;
-    for (const p of F.riders) this._ped(p, now, p.id === S.myPedId, F, 0.8, 8);
     for (const c of F.cars) this._train(c, now, F.myTrain);
-    for (const c of F.crates) {
-      const st = c.flags & 3;
-      let lift = st === 0 ? c.hp * 64 : st === 1 ? 26 : 0;
-      if (st === 2) { const par = S.ents.get(c.parent), pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = this.api.vehLift(pd) / 0.6 + 4; }
-      const tier = c.d.t, label = c.d.l || '';
-      const hi = quant(c.ra || 0, 16), key = A && A.crateKey ? A.crateKey(tier, label, hi, 16) : null;
-      const par = st === 2 ? S.ents.get(c.parent) : null;
-      this._small('crate', key, [tier, label, hi, 16], () => this._fbCanvasThing(`v1c|${tier}|${label}`, (g) => drawCrate(g, tier, label, 0), 36, 10), c.rx, c.ry, this._z0(par || c, false) + lift * 0.6);
-    }
-    for (const b of F.bags) {
-      const hi = quant(b.ra || 0, 16), key = A && A.bagKey ? A.bagKey(b.d.t, hi, 16) : null;
-      this._small('bag', key, [b.d.t, hi, 16], () => this._fbCanvasThing(`v1b|${b.d.t}`, (g) => drawBag(g, b.d.t, 0), 34, 3), b.rx, b.ry, this._z0(b, false));
-    }
-    for (const b of F.balls) {
-      const t = b.d.t | 0, spin = quant(b.ra || 0, 4), key = A && A.ballKey ? A.ballKey(t, spin) : null;
-      this._small('ball', key, [t, spin], () => this._genBall(t), b.rx, b.ry, (b.extra || 0) * 2 + this._z0(b, false));
-    }
-    for (const pr of F.projs) {
-      const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0, key = A && A.projKey ? A.projKey(w, hi, N) : null;
-      this._small('proj', key, [w, hi, N], () => this._genRocket(quant(pr.ra, 16)), pr.rx, pr.ry, 14 + ((pr.rz || 0) > 0.01 ? DECK_Z * pr.rz : 0));
+    if (A) {
+      for (const c of F.crates) {
+        const st = c.flags & 3;
+        let lift = st === 0 ? c.hp * 64 : st === 1 ? 26 : 0;
+        if (st === 2) { const par = S.ents.get(c.parent), pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = this.api.vehLift(pd) / 0.6 + 4; }
+        const tier = c.d.t, label = c.d.l || '', hi = quant(c.ra || 0, 16);
+        const par = st === 2 ? S.ents.get(c.parent) : null;
+        this._small('crate', A.crateKey(tier, label, hi, 16), [tier, label, hi, 16], c, c.rx, c.ry, this._z0(par || c, false) + lift * 0.6);
+      }
+      for (const b of F.bags) { const hi = quant(b.ra || 0, 16); this._small('bag', A.bagKey(b.d.t, hi, 16), [b.d.t, hi, 16], b, b.rx, b.ry, this._z0(b, false)); }
+      for (const b of F.balls) { const t = b.d.t | 0, spin = quant(b.ra || 0, 4); this._small('ball', A.ballKey(t, spin), [t, spin], b, b.rx, b.ry, (b.extra || 0) * 2 + this._z0(b, false)); }
+      for (const pr of F.projs) {
+        const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0;
+        if (!this.projWarm.has(w)) { this.projWarm.add(w); for (let h = 0; h < N; h++) this.warmQ.unshift(['actors', 'proj', A.projKey(w, h, N), [w, h, N], -1]); }
+        this._small('proj', A.projKey(w, hi, N), [w, hi, N], pr, pr.rx, pr.ry, 14 + ((pr.rz || 0) > 0.01 ? DECK_Z * pr.rz : 0));
+      }
     }
     // the birds (simulated in main.js): the providers' pigeons and gulls, flapping when they fly
-    const ck = A && A.critterKey && A.critterInfo;
-    for (const b of this.api.birds) {
-      let k = null;
-      if (ck) { // (frames: the critter's ground pose, its take-off frame, then its flight cycle)
-        const kind = b.gull ? 'seagull' : 'pigeon', info = A.critterInfo(kind), nf = info ? info.frames : 1, fps = (info && info.fps) || 10;
-        const air = info && info.air ? info.air : [0, nf - 1], ground = info && info.ground ? info.ground[0] : 0;
-        const fr = !b.fly ? ground : b.fly < 0.12 && info && info.takeoff !== undefined ? info.takeoff : air[0] + Math.floor(b.fly * fps) % (air[1] - air[0] + 1);
-        const left = Math.cos(b.a) < 0;
-        k = this._spr('actors', 'critter', A.critterKey(kind, fr, left), [kind, fr, left], null);
-      }
-      k = k || this._genBird(!!b.gull, b.fly ? 1 : 0);
+    if (A && A.critterKey && A.critterInfo) for (const b of this.api.birds) {
+      const kind = b.gull ? 'seagull' : 'pigeon', info = this.critInfo[kind] || (this.critInfo[kind] = A.critterInfo(kind) || { frames: 1, fps: 10 });
+      const nf = info.frames || 1, fps = info.fps || 10, air = info.air || [0, nf - 1], ground = info.ground ? info.ground[0] : 0;
+      // (frames: the ground pose, the take-off frame, then the flight cycle)
+      const fr = !b.fly ? ground : b.fly < 0.12 && info.takeoff !== undefined ? info.takeoff : air[0] + Math.floor(b.fly * fps) % (air[1] - air[0] + 1);
+      const left = Math.cos(b.a) < 0;
+      let k = this._spr('actors', 'critter', A.critterKey(kind, fr, left), [kind, fr, left]);
+      if (!k) k = b._v2k && this.E.hasSprite(b._v2k) ? b._v2k : null;
       if (!k) continue;
-      const o = this.opts; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = true;
+      b._v2k = k;
+      const o = this.opts; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = true; o.tint = null; o.flipX = false;
       this.E.drawSprite(k, b.x, b.y, b.fly ? Math.min(70, 8 + b.fly * 30) : 0, o);
     }
     // muzzle flashes (S.flashes, lit in _lights): the providers' flash sprite along the shot
     if (A && A.muzzleKey) for (const f of S.flashes) {
       if (f.kind === 'boom' || f.a === undefined) continue;
       const hi = quant(f.a, 16), frm = f.t > 0.045 ? 0 : f.t > 0.02 ? 1 : 2;
-      const k = this._spr('actors', 'muzzle', A.muzzleKey(1, hi, 16, frm), [1, hi, 16, frm], null);
-      if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; this.E.drawSprite(k, f.x, f.y, 18, o); }
+      const k = this._spr('actors', 'muzzle', A.muzzleKey(1, hi, 16, frm), [1, hi, 16, frm]);
+      if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, 18, o); }
     }
   }
+
+  // ---- getting sprites ready before they are needed ---------------------------------------------------------------
+  // Everything the server has sent that isn't on screen yet (within a ring round the view) has its sprite
+  // asked for now - every few frames each, a few asks a frame - so it is there when it comes into view. The
+  // queue of things asked for ahead (warmQ: the little sprites everyone sees, rockets once one is fired) goes
+  // out while there is room.
+  _prefetch(F) {
+    const pool = this.pool;
+    if (!pool || pool.dead || !pool.ready) return;
+    if (!this.warmed && this.prov.actors && this.A) this._warm();
+    const q = this.warmQ;
+    for (let n = 4; q.length && n > 0;) {
+      const it = q[0], key = it[2];
+      if (this.E.hasSprite(key) || this.upQ.has(key) || this.badKeys.has(key) || pool.has('s' + key)) { q.shift(); continue; }
+      if (!this._ask(it[0], it[1], key, it[3], it[4])) break; // (no room for more jobs yet)
+      q.shift(); n--;
+    }
+    const S = this.S, now = F.now, A = this.A, Pd = this.Pd, fn = this.frameNo || 0;
+    const x0 = this.vx0 - 520, x1 = this.vx1 + 520, y0 = this.vy0 - 520, y1 = this.vy1 + 520;
+    const ox0 = this.vx0 - 60, ox1 = this.vx1 + 60, oy0 = this.vy0 - 100, oy1 = this.vy1 + 100;
+    let budget = 8;
+    for (const e of S.ents.values()) {
+      if (budget <= 0) break;
+      if (!e.d || (e.id + fn) % 6 || e.rx === undefined || e.rx < x0 || e.rx > x1 || e.ry < y0 || e.ry > y1) continue;
+      if (e.rx > ox0 && e.rx < ox1 && e.ry > oy0 && e.ry < oy1) continue; // (on screen: drawn, so already asked)
+      const prio = 2 + Math.hypot(e.rx - this.camX, e.ry - this.camY) / 1000;
+      if (e.kind === K.PED && Pd && Pd.pedKey) {
+        if ((e.flags & PF.INVEH) || e.blink === 3) continue;
+        if (e.d.ar && e.d.ar.startsWith('pet:')) {
+          if (!A || !A.animalKey) continue;
+          const kind = e.d.ar.slice(4), d8 = dir8(e.ra), pose = (e.as || 0) > 12 ? 'walk' : 'idle';
+          if (this._ask('actors', 'animal', A.animalKey(kind, pose, d8, 0), [kind, pose, d8, 0], prio)) budget--;
+          continue;
+        }
+        const L = this.api.pedLook(e, now), pose = L.pose;
+        if (!L.upright && !L.swimming) continue;
+        const ppose = L.swimming ? 'swim' : pose === 'move' ? 'walk' + L.lvl : pose, d8 = dir8(e.ra), A2 = this._app(e.d.app || {}, e.d.ar);
+        const wpn = (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = Pd.pedFrame(ppose, L.fr);
+        if (this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn], prio)) budget--;
+      } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState) {
+        const N = this.tier.N, hi = quant(e.ra || 0, N), st = A.vehState(e.flags, 1);
+        if (this._ask('actors', 'vehicle', A.vehicleKey(e.d, st, hi, N), [e.d, st, hi, N], prio)) budget--;
+      } else if (e.kind === K.TRAIN && A && A.trainKey && TRAIN_CARS[e.d.c]) {
+        const N = this.tier.N, hi = quant(e.ra || 0, N), mode = `roof${e.flags & 8 ? '-lit' : ''}${e.flags & 16 ? '-empty' : ''}`;
+        if (this._ask('actors', 'train', A.trainKey(e.d.c, mode, hi, N), [e.d.c, mode, hi, N], prio)) budget--;
+      } else if (e.kind === K.CRATE && A && A.crateKey) {
+        const hi = quant(e.ra || 0, 16), label = e.d.l || '';
+        if (this._ask('actors', 'crate', A.crateKey(e.d.t, label, hi, 16), [e.d.t, label, hi, 16], prio)) budget--;
+      } else if (e.kind === K.BAG && A && A.bagKey) {
+        const hi = quant(e.ra || 0, 16);
+        if (this._ask('actors', 'bag', A.bagKey(e.d.t, hi, 16), [e.d.t, hi, 16], prio)) budget--;
+      }
+    }
+  }
+  // once the workers are up: the sprites of the little things everyone sees, asked for a few a frame - the
+  // pooled particles and decals (their art2 sets), muzzle flashes, pigeons and gulls, balls
+  _warm() {
+    this.warmed = true;
+    const A = this.A, q = this.warmQ, P = 6;
+    if (A.fxKey && A.fxInfo && A.FX_FOR_V1) {
+      const names = new Set(['pSmokeDark', 'pSteam', 'pLeaf', 'pLeafAutumn', 'pPaper', 'dOil']);
+      for (const t of Object.values(A.FX_FOR_V1.particle || {})) names.add(t.name);
+      for (const t of Object.values(A.FX_FOR_V1.decal || {})) names.add(t.name);
+      for (const n of names) { const inf = A.fxInfo(n); if (inf) for (let f = 0; f < inf.frames; f++) q.push(['actors', 'fx', A.fxKey(n, f), [n, f], P]); }
+    }
+    if (A.muzzleKey) for (let f = 0; f < 3; f++) for (let hi = 0; hi < 16; hi++) q.push(['actors', 'muzzle', A.muzzleKey(1, hi, 16, f), [1, hi, 16, f], P + 1]);
+    if (A.critterKey && A.critterInfo) for (const kind of ['pigeon', 'seagull']) { const inf = A.critterInfo(kind); if (inf) for (let f = 0; f < inf.frames; f++) for (const l of [false, true]) q.push(['actors', 'critter', A.critterKey(kind, f, l), [kind, f, l], P]); }
+    if (A.ballKey) for (const t of [0, 1]) for (let s = 0; s < 4; s++) q.push(['actors', 'ball', A.ballKey(t, s), [t, s], P + 1]);
+  }
+  _fx(name) { let i = this.fxInf[name]; if (i === undefined) i = this.fxInf[name] = (this.A && this.A.fxInfo ? this.A.fxInfo(name) : null) || null; return i; }
   _z0(e, water) {
     if ((e.rz || 0) > 0.01) return DECK_Z * e.rz;
     if (water) return 0;
@@ -912,82 +1032,41 @@ export class World2 {
     }, true);
   }
 
-  // ---- generated little sprites (particles, decals, birds, balls, rockets) -----------------------------------
-  _genBall(t) {
-    return this._conv(`gball|${t}`, () => {
-      const G = gbuf(17, 17, 8, 15), c = t === 1 ? [247, 226, 122] : [246, 246, 246];
-      for (let y = 0; y < 15; y++) for (let x = 0; x < 15; x++) {
-        const dx = x - 7, dy = y - 7, d = Math.hypot(dx, dy);
-        if (d > 7.2) continue;
-        const edge = d > 6.2, n = [128 + dx * 16, 128 + dy * 16, 220, 255];
-        put(G, x + 1, y, edge ? [27, 35, 51] : (t !== 1 && (dx * dx + dy * dy < 7 || (x + y) % 7 === 0)) ? [30, 30, 34] : c, Math.round(7 + Math.sqrt(Math.max(0, 49 - d * d))), n);
-      }
-      return G;
-    }, true);
-  }
-  _genRocket(hi) {
-    return this._conv(`grock|${hi}`, () => {
-      const [cv, g] = this._sized(0, 24, 24);
-      g.translate(12, 12); g.rotate(hi * TAU / 16);
-      g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6);
-      return fromCanvas(cv, 12, 12, () => 3);
-    }, true);
-  }
-  _genBird(gull, fly) {
-    return this._conv(`gbird|${gull ? 1 : 0}|${fly}`, () => {
-      const G = gbuf(fly ? 11 : 7, 5, fly ? 5 : 3, 4), c = gull ? [242, 242, 242] : [138, 143, 154], h = gull ? [255, 194, 61] : [58, 63, 74];
-      if (fly) { for (let x = 0; x < 11; x++) put(G, x, x === 5 ? 1 : 2, c, 4); put(G, 5, 1, h, 5); }
-      else { for (let y = 1; y < 4; y++) for (let x = 0; x < 5; x++) put(G, x, y, c, 4 - y); put(G, 5, 1, h, 4); }
-      return G;
-    }, true);
-  }
-  // particle types (render/fx.js): 1 blood, 2 smoke/steam, 3 fire, 4 sparks, 5 water, 6 geyser, 8 paper
-  _genParticle(type, size, rgb) {
-    return this._conv(`gfx|${type}|${size}|${rgb[0]},${rgb[1]},${rgb[2]}`, () => {
-      if (type === 2) { // a soft puff: a dithered disc (the engine keeps texels whole)
-        const r = size, G = gbuf(r * 2 + 1, r * 2 + 1, r, r * 2);
-        for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
-          const d = Math.hypot(x, y) / r;
-          if (d > 1 || ((x + y) & 1 && d > 0.55) || ((x & 1) && (y & 1) && d > 0.8)) continue;
-          put(G, x + r, y + r, rgb.map((v) => Math.min(255, v + (1 - d) * 18)), r - y, [128 + x * 6, 128 + y * 6, 230, 255], F_NOCAST);
-        }
-        return G;
-      }
-      const s = Math.max(1, size), G = gbuf(s, s, s >> 1, s - 1), emi = type === 3 || type === 4 ? 220 : 0;
-      for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) put(G, x, y, rgb, s - 1 - y, UP_N, F_NOCAST, emi);
-      return G;
-    }, true);
-  }
+  // ---- particles and decals ------------------------------------------------------------------------------------
+  // The pooled particles (render/fx.js) drawn as the art2 effect frames (actors.js FX_FOR_V1 maps each
+  // particle onto its set, the frame by its age). A frame not made yet is skipped (they are asked for as soon
+  // as the workers start, so that is the first second at most).
   _particles(F) {
-    const fx = F.fx, E = this.E, o = this.opts, A = this.prov.actors && this.A.fxKey && this.A.v1ParticleFx ? this.A : null;
+    const fx = F.fx, E = this.E, o = this.opts, A = this.A && this.A.fxKey && this.A.v1ParticleFx ? this.A : null;
+    if (!A) return;
     const x0 = this.vx0 - 40, x1 = this.vx1 + 40, y0 = this.vy0 - 40, y1 = this.vy1 + 120;
-    o.flash = 0; o.xray = false; o.shadow = false;
+    o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false;
     for (let i = 0; i < fx.p.length; i++) {
       const p = fx.p[i];
       if (!p.on || p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
-      const k = p.life / p.max;
-      let key = null;
-      if (A && A.v1ParticleFx) { const name = A.v1ParticleFx(p), frm = A.v1ParticleFrame(p); key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm], null); }
-      if (!key) {
-        const size = p.type === 2 ? Math.max(3, Math.min(20, Math.round(p.size * 1.3))) : Math.max(1, Math.min(14, Math.round(p.size)));
-        key = this._genParticle(p.type, size, rgbOf(p.color));
-      }
+      const k = p.life / p.max, name = A.v1ParticleFx(p), frm = A.v1ParticleFrame(p);
+      const key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]);
       if (!key) continue;
       o.alpha = p.type === 2 ? Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1 : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2);
       E.drawSprite(key, p.x, p.y, Math.max(0, p.z * (p.type === 8 ? 0.5 : 0.3)), o); // (v1's heights)
     }
-    // wind-blown leaves (render/flora): their simulation runs without drawing
+    // wind-blown leaves (render/flora): their simulation runs without drawing; the art2 leaf frames tumble
     const fl = this.S.flora;
     if (fl && fl.leaves && fl.leavesFrame) {
       fl.leavesFrame(NULL_CTX, F.view, F.dt, false);
-      const COLS = [[63, 122, 52], [142, 188, 84], [200, 160, 56], [232, 138, 168]];
       o.alpha = 1;
-      for (const l of fl.leaves) { if (!l.on) continue; const k2 = this._genParticle(8, 2, COLS[l.c] || COLS[0]); if (k2) E.drawSprite(k2, l.x, l.y, l.z * 0.3, o); }
+      for (const l of fl.leaves) {
+        if (!l.on) continue;
+        const name = l.c >= 2 ? 'pLeafAutumn' : 'pLeaf', inf = this._fx(name), n = inf ? inf.frames : 1, frm = Math.floor(Math.abs(l.a || 0) * 2) % n;
+        const k2 = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]);
+        if (k2) E.drawSprite(k2, l.x, l.y, l.z * 0.3, o);
+      }
     }
   }
-  // decals (render/fx.js ring): the same fading and rain-washing as v1's drawDecals
+  // decals (render/fx.js ring): the same fading and rain-washing as v1's drawDecals; the art2 decal sets
+  // (blood, footprints, scorch, skids, pools, oil, litter), tiny droplet spots as a few pixels of their colour
   _decals(F) {
-    const fx = F.fx, E = this.E, now = F.now, wet = F.rain, A = this.prov.actors && this.A.v1DecalFx && this.A.fxKey ? this.A : null;
+    const fx = F.fx, E = this.E, now = F.now, wet = F.rain, A = this.A && this.A.v1DecalFx && this.A.fxKey ? this.A : null;
     fx.now = now;
     const x0 = this.vx0 - 40, x1 = this.vx1 + 40, y0 = this.vy0 - 40, y1 = this.vy1 + 40;
     for (let i = 0; i < fx.d.length; i++) {
@@ -998,8 +1077,8 @@ export class World2 {
       if (wet && d.type !== 3) { a *= 0.995; d.alpha *= 0.9995; }
       if (a <= 0.02) { d.on = false; continue; }
       let key = null;
-      if (A && !(d.type === 1 && d.size < 4)) { const name = A.v1DecalFx(d), frm = A.v1DecalFrame(d); key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm], null); } // (droplet spots stay v1-sized)
-      key = key || this._genDecal(d);
+      if (d.type === 1 && d.size < 4) key = this._genDecal(d);
+      else if (A) { const name = A.v1DecalFx(d), frm = A.v1DecalFrame(d); key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]); }
       if (key) E.drawDecal(key, d.x, d.y, d.a, a, 0);
     }
   }
@@ -1090,15 +1169,15 @@ export class World2 {
     for (let j = 0; j < hs.length; j += 2) { const h = hs[j], i = hs[j + 1], c = h.L[i]; this._light(c[0] + h.nx * 8, c[1] + h.ny * 8, c[2], 56, SIG_RGB01[i], sigK); }
     for (const h of S.sigHeads || []) if (!this._liveAt(h.x, h.y)) this._light(h.x, h.y, 44, 56, h.rgb01 || (h.rgb01 = rgbOf(h.c).map((v) => v / 255)), sigK);
     for (let j = 0; j < this.nfL; j++) { const L = this.fLights[j]; this._light(L.x, L.y, L.z, L.r, L.col, L.k); }
-    if (night > 0.35) {
-      for (const p of F.peds) {
-        const mine = p.id === S.myPedId;
-        if ((!mine && !(p.flags & PF.BADGE)) || (p.flags & (PF.INVEH | PF.DEAD | PF.DOWN))) continue;
-        this._light(p.rx + Math.cos(p.ra) * 8, p.ry + Math.sin(p.ra) * 8, 30 + this._z0(p, false), mine ? 230 : 200, C.white, 1.6 * night, [p.ra, 0.32, mine ? 230 : 200]);
-      }
-      const sp = F.sp;
-      this._light(sp.x, sp.y, 40 + (sp.z ? DECK_Z * sp.z : 0), 100, C.moon, 0.5 * night);
+    // flashlights: police on foot after dark; a player's whenever it's switched on (d.fl), brightest at night
+    for (const p of F.peds) {
+      if ((p.flags & (PF.INVEH | PF.DEAD | PF.DOWN)) || p.swim || p.blink === 3) continue;
+      const torch = !!(p.d && p.d.fl), cop = night > 0.35 && !!(p.flags & PF.BADGE);
+      if (!torch && !cop) continue;
+      const len = torch ? 240 : 200;
+      this._light(p.rx + Math.cos(p.ra) * 8, p.ry + Math.sin(p.ra) * 8, 30 + this._z0(p, false), len, C.white, 1.6 * (torch ? Math.max(night, 0.3) : night), [p.ra, 0.32, len]);
     }
+    if (night > 0.35) { const sp = F.sp; this._light(sp.x, sp.y, 40 + (sp.z ? DECK_Z * sp.z : 0), 100, C.moon, 0.5 * night); }
     for (const f of S.flashes) {
       if (f.kind === 'boom') { const e = Math.min(1.6, f.t * 3.2); this._light(f.x, f.y, 30, f.r * 1.3, C.fire, 2.4 * e); }
       else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
@@ -1181,16 +1260,21 @@ export class World2 {
   stats() {
     const es = this.E.stats ? this.E.stats() : {};
     return {
-      q: this.q, providers: this.prov, chunks: this.chunkState.size, fallbacks: this.fallbacks.size, results: this.results.size,
+      q: this.q, providers: this.prov, chunks: this.chunkState.size, placeholders: this.fallbacks.size, results: this.results.size,
       pool: this.pool ? this.pool.stats() : null, t: { ...this.t, bakeAvg: this.t.bakeN ? this.t.bakeSum / this.t.bakeN : 0 }, n: { ...this.n },
-      upQ: this.upQ.length / 2, badKeys: this.badKeys.size, lastErr: this.lastErr, engine: es, part: this.part,
+      upQ: this.upQ.size, sprOut: this.sprOut, warmQ: this.warmQ.length, fades: this.fades.size, badKeys: this.badKeys.size, lastErr: this.lastErr, engine: es, part: this.part,
     };
   }
   diag() {
     const p = this.pool ? this.pool.stats() : null, t = this.t;
-    return `q${this.q} chunks ${this.chunkState.size}+${this.fallbacks.size}v1 (queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms  sprites req ${this.n.sprReq} up ${this.n.sprUp} v1 ${this.n.conv} gen ${this.n.gen}  lights ${this.n.lights}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
+    return `q${this.q}${this.lowMem ? ' lowmem' : ''} chunks ${this.chunkState.size}+${this.fallbacks.size} placeholder (queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms  sprites req ${this.n.sprReq} up ${this.n.sprUp} now ${this.n.sync} gen ${this.n.gen} out ${this.sprOut}  fades ${this.fades.size}  lights ${this.n.lights}  lost ${this.lost}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
   }
 }
+
+// when the page last came back on screen (a phone drops the graphics of a page in the background: losses
+// just after coming back are not held against the renderer)
+World2.shownAt = 0;
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) World2.shownAt = performance.now(); });
 
 // a 2D context that draws nothing (to run v1's simulate-and-draw helpers for their simulation alone)
 const NULL_CTX = new Proxy({}, { get: (t, k) => (k in t ? t[k] : () => {}), set: (t, k, v) => { t[k] = v; return true; } });

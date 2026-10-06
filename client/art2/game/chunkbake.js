@@ -1,6 +1,9 @@
 // Art v2 live renderer: one baked chunk of the static world (docs/art-v2/GAME-RENDERER.md).
 //
-//   bakeChunk(M, cx, cy, opt) -> { g, lights, gh, live, ms, n }
+//   bakeChunk(M, cx, cy, opt) -> { g, under, blds, lights, gh, live, ms, n }
+//     under   RGBA8: the chunk before its buildings (rgb) and, in alpha, the local number (1..63) of the building
+//             whose surface is on top at that pixel (0: none); blds: [building index, x0, y0, x1, y1, base y]
+//             per local number (its screen rectangle in world px), for fading whole buildings
 //     g       the chunk G-buffer, CHUNK x CHUNK, ax = ay = 0: world X [cx*768, cx*768+768) and screen
 //             Y (= world Y - Z) [cy*768, cy*768+768)
 //     lights  the static light sources anchored in the chunk (statics.staticLights)
@@ -99,7 +102,7 @@ export function flatGround(M, cx, cy, opt = {}) {
 
 // ---- compositing ---------------------------------------------------------------------------------------------
 // Sprite s with its top-left at chunk pixel (sx, sy), heights raised by z0, depth-tested into G.
-export function compositeDepth(G, s, sx, sy, z0 = 0) {
+export function compositeDepth(G, s, sx, sy, z0 = 0, bid = null, k = 0) {
   const x0 = Math.max(0, -sx), y0 = Math.max(0, -sy), x1 = Math.min(s.w, G.w - sx), y1 = Math.min(s.h, G.h - sy);
   if (x1 <= x0 || y1 <= y0) return 0;
   const sc = s.col, sn = s.nrm, se = s.emi, sz = s.z, sf = s.flag, dc = G.col, dn = G.nrm, de = G.emi, dz = G.z, df = G.flag;
@@ -122,6 +125,7 @@ export function compositeDepth(G, s, sx, sy, z0 = 0) {
       dn[dj] = sn[sj]; dn[dj + 1] = sn[sj + 1]; dn[dj + 2] = sn[sj + 2]; dn[dj + 3] = sn[sj + 3];
       de[dj] = se[sj]; de[dj + 1] = se[sj + 1]; de[dj + 2] = se[sj + 2]; de[dj + 3] = se[sj + 3];
       dz[di] = Math.min(65535, Math.max(hz, 0)); df[di] = sf[si];
+      if (bid) bid[di] = k;
       n++;
     }
   }
@@ -161,7 +165,8 @@ export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
   G.ax = 0; G.ay = 0;
   const gh = groundHeights(G, ox, oy);
   const t1 = now();
-  let items = [], lights = [], n = 0, made = 0, staticErr = null, under = null;
+  let items = [], lights = [], n = 0, made = 0, staticErr = null, under = null, bid = null;
+  const local = new Map(), blds = [];      // building index -> local number; [b, x0, y0, x1, y1, base] per number
   const live = { heads: [], xing: [] };
   if (P.statics) {
     try { items = P.statics.staticItems(M, cx, cy, opt) || []; } catch (e) { staticErr = String((e && e.stack) || e); items = []; }
@@ -171,7 +176,17 @@ export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
     items.sort((a, b) => (isBuilding(a) - isBuilding(b)) || a.y - b.y || a.x - b.x);
     let snap = opt.under !== false;
     for (const it of items) {
-      if (snap && isBuilding(it)) { under = G.col.slice(); snap = false; }
+      if (snap && isBuilding(it)) { under = G.col.slice(); snap = false; bid = new Uint8Array(CHUNK * CHUNK); }
+      // each building gets a local number (1..63) in this chunk: the engine fades a whole building by it
+      let k = 0;
+      if (bid && isBuilding(it) && it.b !== undefined) {
+        k = local.get(it.b) || 0;
+        if (!k && blds.length < 63) { k = blds.length + 1; local.set(it.b, k); blds.push([it.b, Infinity, Infinity, -Infinity, -Infinity, -Infinity]); }
+        if (k) {
+          const r = blds[k - 1], e = it.ext || [0, 0, 0, 0];
+          r[1] = Math.min(r[1], it.x - e[0]); r[2] = Math.min(r[2], it.y - (it.z0 || 0) - e[1]); r[3] = Math.max(r[3], it.x + e[2]); r[4] = Math.max(r[4], it.y + e[3]); r[5] = Math.max(r[5], it.y);
+        }
+      }
       let s;
       try {
         s = cache ? cache.get(it.key, () => { made++; return P.statics.makeStatic(it.recipe); }) : (made++, P.statics.makeStatic(it.recipe));
@@ -179,7 +194,7 @@ export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
       if (!s || !s.w) continue;
       const z0 = it.z0 || 0;
       const sx = Math.round(it.x - (s.ax || 0)) - ox, sy = Math.round(it.y - z0 - (s.ay || 0)) - oy;
-      n += compositeDepth(G, s, sx, sy, z0) ? 1 : 0;
+      n += compositeDepth(G, s, sx, sy, z0, k ? bid : null, k) ? 1 : 0;
     }
     for (const it of items) { // (once per item: the chunk its anchor is in)
       if (it.x < ox || it.x >= ox + CHUNK || it.y < oy || it.y >= oy + CHUNK) continue;
@@ -192,7 +207,9 @@ export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
   }
   const t2 = now();
   if (!under && opt.under !== false) under = G.col.slice();   // no buildings here: the whole chunk is "under"
-  return { g: G, under, lights, gh, live, n, items: items.length, made, ms: { ground: t1 - t0, statics: t2 - t1 }, errors: groundErr || staticErr ? { ground: groundErr, statics: staticErr } : null };
+  // the under layer's alpha carries the local building number of the surface on top (0: no building)
+  if (under) for (let i = 0, j = 3; i < CHUNK * CHUNK; i++, j += 4) under[j] = bid ? bid[i] : 0;
+  return { g: G, under, blds, lights, gh, live, n, items: items.length, made, ms: { ground: t1 - t0, statics: t2 - t1 }, errors: groundErr || staticErr ? { ground: groundErr, statics: staticErr } : null };
 }
 
 // A signal head of a statics item as the host lights it: { x, y, z, node, edge, pi (the signal's prop, -1

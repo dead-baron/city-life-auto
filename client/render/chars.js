@@ -83,6 +83,7 @@ export function weapon(Pp, w, hx, hy, ang) {
     case 13: L(14, '#3a2a1a'); break;                                                             // rod
     case 20: L(4, '#c8262b', 2); Pp.p(hx + Math.cos(ang) * 4, hy + Math.sin(ang) * 4, '#f0f0ec'); break; // pepper spray canister
     case 21: back(4, '#2a2a30', 3); L(6, '#c9c5bb', 3); break;                                    // spike strip (folded)
+    case 'flashlight': L(5, '#24242a', 2); Pp.p(hx + Math.cos(ang) * 5, hy + Math.sin(ang) * 5, '#fff2c0'); break; // a switched-on flashlight (held when unarmed)
     default: break;
   }
 }
@@ -254,7 +255,7 @@ function paint(Pp, a, d, pose, fr, w) {
     // arms hang and swing with the stride
     if (side) { lh = { dx: Math.round(-swing), dy: 8 }; rh = { dx: Math.round(swing), dy: 8 }; }
     else { lh = { dx: -1, dy: 8 - Math.round(Math.max(0, swing)) }; rh = { dx: 1, dy: 8 - Math.round(Math.max(0, -swing)) }; }
-    if (w > 0 && w !== 13) held = { w, ang: w <= 6 ? Math.PI / 2 + (side ? -0.4 * Math.sign(fv[0]) : 0.3) : aimAng + (side ? 0 : 0.6) }; // carried low
+    if ((w > 0 && w !== 13) || w === 'flashlight') held = { w, ang: w <= 6 ? Math.PI / 2 + (side ? -0.4 * Math.sign(fv[0]) : 0.3) : aimAng + (side ? 0 : 0.6) }; // carried low
   }
   const drawArm = (which) => {
     const s = which === 'l' ? sL : sR, h = which === 'l' ? lh : rh;
@@ -292,7 +293,7 @@ export function charSprite(app, d, pose, fr, weapon) {
   if (cv) return cv;
   const g = art.getContext('2d', { willReadFrequently: true });
   g.clearRect(0, 0, CW, CH);
-  paint(new P(g), app || {}, d, pose, fr | 0, weapon | 0);
+  paint(new P(g), app || {}, d, pose, fr | 0, weapon === 'flashlight' ? weapon : weapon | 0);
   const img = g.getImageData(0, 0, CW, CH), px = img.data;
   const solid = (x, y) => x >= 0 && y >= 0 && x < CW && y < CH && px[(y * CW + x) * 4 + 3] > 40;
   cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;

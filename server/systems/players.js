@@ -8,7 +8,7 @@ import { PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { surfaceZ } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
-import { store } from '../store.js';
+import { store, defaultProfile } from '../store.js';
 import * as vehicles from './vehicles.js';
 import * as combat from './combat.js';
 import * as cargo from './cargo.js';
@@ -36,8 +36,19 @@ import * as devmode from '../devmode.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
-export function join(world, conn, profile) {
+// opts.clientBuild / opts.clientBuiltAt: the build the player's page runs (sent in hello; see client/update.js).
+export function join(world, conn, profile, opts = {}) {
   let p = world.players.get(profile.pid);
+  if (p && world.build && p.build !== world.build) {
+    // a session left over from before an update (a ghost, or another tab still on the old page): close it
+    // out without the drop rule - this login starts fresh on the new build (below)
+    if (p.conn && p.conn !== conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Signed in from another tab' }); p.conn.close(4000, 'replaced'); } catch { /* gone */ } }
+    if (p.devMode) devmode.exit(world, p, true);
+    p.conn = null;
+    revive.clearDown(world, p);
+    finalizeLogout(world, p, false);
+    p = null;
+  }
   if (p) {
     // reconnect: within the ghost window (or replacing another tab)
     if (p.conn && p.conn !== conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Signed in from another tab' }); p.conn.close(4000, 'replaced'); } catch { /* gone */ } }
@@ -46,10 +57,14 @@ export function join(world, conn, profile) {
     p.known = new Map();
     p.inputQ = [];
     p.meDirty = true;
+    noteClientBuild(world, p, opts);
     if (p.spectating) { p.spectating = false; p.invincible = p.specWasGod; } // a new page starts out of the free camera
     world.notify(p, 'Reconnected - you made it back before your ghost timer ran out.', 'good');
     return p;
   }
+  const fresh = freshStart(world, profile);
+  if (fresh === 'all') wipeProgress(world, profile);
+  if (world.build) profile.build = world.build; // the build this character's state now belongs to (saved with the profile)
   if (!profile.outfit) profile.outfit = playerOutfit(mulberry32(parseInt(profile.pid.slice(0, 8), 16)));
   p = {
     pid: profile.pid, profile, conn, name: profile.name,
@@ -59,13 +74,67 @@ export function join(world, conn, profile) {
     heat: 0, wanted: 0, flareUntil: 0, lastSeenX: 0, lastSeenY: 0, seenAt: 0, searchR: 0, disguised: false,
     victims: new Map(), robbedBy: new Map(), bounty: 0,
     menu: null, job: null, prompt: '', promptKey: '', lastHealAt: 0, deathCause: '',
-    joinedAt: world.time, lastPosSave: 0, dev: world.dev,
+    joinedAt: world.time, lastPosSave: 0, dev: world.dev, build: world.build,
   };
+  noteClientBuild(world, p, opts);
   world.players.set(p.pid, p);
-  spawnPlayerPed(world, p, true);
-  world.notify(p, `Welcome to City Life Auto, ${p.name}. You are a clean Citizen.`, 'info');
+  if (fresh) {
+    // a fresh start: at a spawn point (your home if you picked one, else a hospital), on foot, not wanted
+    // (and no peak-wanted memory), nothing carried, full health, no police gear left over from a shift
+    profile.pos = null; profile.peakWanted = 0; profile.peakWantedAt = 0;
+    law.stripPoliceGear(p);
+    store.touch();
+  }
+  spawnPlayerPed(world, p, !fresh);
+  if (fresh) world.notify(p, fresh === 'all'
+    ? `The game was updated: everyone starts over for this one - a brand-new start at ${p.lastSpawnName || 'the hospital'}.`
+    : `The game was updated: fresh start at ${p.lastSpawnName || 'the hospital'}. Your money, things and homes are all still yours.`, 'warn');
+  else world.notify(p, `Welcome to City Life Auto, ${p.name}. You are a clean Citizen.`, 'info');
   return p;
 }
+
+// Coming back to a server running a newer build than the one your character was last on: start fresh
+// ('spawn', or 'all' to wipe progress too - CLA_FRESH_ON_UPDATE, server/config.js). A brand-new character
+// (never saved anywhere) has nothing to start over.
+export function freshStart(world, prof) {
+  if (!world.build || world.freshOnUpdate === 'off' || prof.build === world.build) return null;
+  if (!prof.build && !prof.pos) return null;
+  return world.freshOnUpdate === 'all' ? 'all' : 'spawn';
+}
+
+// CLA_FRESH_ON_UPDATE=all: back to a brand-new character (name, look and account kept). Homes go back on
+// the market.
+function wipeProgress(world, prof) {
+  for (const [id, pid] of [...world.homeOwner]) if (pid === prof.pid) world.homeOwner.delete(id);
+  const keep = { pid: prof.pid, name: prof.name, created: prof.created, outfit: prof.outfit };
+  for (const k of Object.keys(prof)) delete prof[k];
+  Object.assign(prof, defaultProfile(keep.pid), keep);
+  store.touch();
+}
+
+// The page's build (hello): when the server runs a newer one, this page is about to reload to update (see
+// leave: no ghost body for that).
+function noteClientBuild(world, p, opts) {
+  p.clientBuild = typeof opts.clientBuild === 'string' ? opts.clientBuild : null;
+  const at = Number(opts.clientBuiltAt) || 0;
+  p.updateDue = !!(world.build && p.clientBuild && p.clientBuild !== world.build && (!at || !world.buildAt || at < world.buildAt));
+}
+
+// The server found a new build on disk (server/index.js: deploy/auto-update.sh pulled one): tell every page.
+// Pages on an older build reload into it (client/update.js) and come back fresh; a page that already runs it
+// (it loaded the new files before the server noticed) just carries on.
+export function announceBuild(world, b) {
+  world.build = b.v; world.buildAt = b.at || 0;
+  for (const p of world.players.values()) {
+    if (!p.conn) continue;
+    if (p.clientBuild === b.v) { p.build = b.v; p.profile.build = b.v; p.updateDue = false; }
+    else p.updateDue = true;
+    try { p.conn.sendJSON({ t: 'build', v: b.v, at: b.at || 0 }); } catch { /* closed */ }
+  }
+}
+
+// Is this player's session from before the build the server runs now (or is their page reloading for it)?
+const updating = (world, p) => !!(world.build && (p.build !== world.build || p.updateDue));
 
 function standable(world, pos) {
   const m = world.map;
@@ -125,6 +194,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
     if (w && w.mag) ped.mag[id] = Math.min(w.mag, prof.weapons[id] || 0);
   }
   p.ped = ped;
+  economy.syncLight(world, p); // a flashlight left switched on is still on
   homes.protect(world, ped); // ~2 s of blinking: move freely, can't shoot or be hurt
   p.faction = FACTION.CITIZEN; p.badge = false; p.hunter = false;
   p.heat = 0; p.wanted = 0; p.flareUntil = 0; p.disguised = false;
@@ -136,11 +206,13 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
 
 export function leave(world, p) {
   if (!p) return;
-  if (p.devMode) devmode.exit(world, p, true); // a dev session never reaches the save file
+  if (p.devMode) devmode.exit(world, p, true); // dev mode ends with the session (progress made in it is kept)
   p.conn = null;
   p.inputQ = [];
   p.lastInput = { seq: p.lastInput.seq, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
-  if (p.ped && !p.ped.dead) {
+  // reloading to update (the server runs a newer build than this session or page): no ghost body and no
+  // drop rule - they're straight back on the new build
+  if (p.ped && !p.ped.dead && !updating(world, p)) {
     p.ghostUntil = world.time + GHOST_SECONDS;
   } else {
     finalizeLogout(world, p, false);
@@ -222,6 +294,7 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
+  if (pressed & IN.LIGHT) economy.toggleLight(world, p); // the flashlight (in the bag, no hand slot)
   if (ped.hidden) { // inside your home: E brings up the home menu (Leave is on it)
     if (pressed & (IN.ACTION | IN.VEHICLE)) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
     return;
@@ -431,9 +504,11 @@ export function update(world, dt) {
   const now = world.time;
   for (const p of [...world.players.values()]) {
     const ped = p.ped;
+    if (ped) economy.syncLight(world, p); // the flashlight goes out when you go down or lose it
     if (p.ghostUntil && now >= p.ghostUntil) {
-      // GDD §9 drop rule: timer expired -> body despawns, everything on them jettisoned
-      finalizeLogout(world, p, true);
+      // GDD §9 drop rule: timer expired -> body despawns, everything on them jettisoned (not when an
+      // update came out meanwhile: they come back fresh on it instead)
+      finalizeLogout(world, p, !updating(world, p));
       continue;
     }
     if (ped && ped.dead && p.respawnAt && now >= p.respawnAt) {
@@ -500,7 +575,7 @@ export function buildMe(world, p) {
     cash: prof.cash, bank: prof.bank, cexp: prof.criminalExp, sam: prof.samaritan,
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
-    weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false,
+    weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, job: minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
     radar: law.radarFor(world, p), bounty: p.bounty,

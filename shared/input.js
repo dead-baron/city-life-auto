@@ -14,6 +14,7 @@ export const IN = {
   NEXTW: 1024,   // next weapon
   PREVW: 2048,   // previous weapon
   TANK: 4096,    // classic tank-style driving (optional keyboard setting)
+  LIGHT: 8192,   // L / D-pad up on foot / 🔦 - flashlight on / off (if you have one)
 };
 
 export function quantizeAngle(a) {

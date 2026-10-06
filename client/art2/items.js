@@ -25,6 +25,7 @@ const M = {
   yellow: R5('#e2b222', { light: 0.5 }), blade: R5('#3c86ff', { light: 0.7 }), core: R5('#d8ecff', { dark: 0.2, light: 0.8 }), cream: R5('#e4dac2', { dark: 0.38 }),
   paper: R5('#b88a58', { dark: 0.5, light: 0.4 }), bottle: R5('#3e6a32', { light: 0.6 }), card: R5('#9a6a40'), cup: R5('#f0ece4', { dark: 0.32 }),
   money: R5('#5e8c4a', { light: 0.5 }), medRed: R5('#c8362e', { light: 0.45 }), gauze: R5('#e2d8be', { dark: 0.6, light: 0.55 }), white: R5('#eeece6', { dark: 0.3 }), screen: R5('#3a78d8', { light: 0.7 }),
+  lens: R5('#fff3c4', { dark: 0.25, light: 0.85 }),
 };
 const box = (u0, v0, u1, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
 const rbox = (u0, v0, u1, v1, c = 1) => [[u0 + c, v0], [u1 - c, v0], [u1, v0 + c], [u1, v1 - c], [u1 - c, v1], [u0 + c, v1], [u0, v1 - c], [u0, v0 + c]];
@@ -245,16 +246,27 @@ export const ITEMS = {
     ...[-5.5, -2.8, 0, 2.8, 5.5].map((u) => poly([[u - 0.9, -1.8], [u + 0.9, -1.8], [u, -3.6]], M.steel)),
     poly(box(-7.4, -0.3, 7.4, 0.5), M.yellow, { k: -0.1 }),
   ] },
+  // a plain hand torch: ribbed rubber grip, a red thumb switch, a flared head and a lit lens (it's only ever
+  // drawn in a hand while it's switched on)
+  flashlight: { ia: -28, hs: 0.8, is: 1.3, parts: [
+    ell([-6.4, 0], 0.75, 1.35, M.black),
+    cap([-6.2, 0], [5.4, 0], 1.4, M.black, { flat: true, pat: (u, v) => (u < 0.6 && Math.round(u * 1.4) % 2 === 0 && Math.abs(v) < 1.25 ? -0.22 : v < -0.7 ? 0.12 : 0) }),
+    ell([2.6, -1.4], 0.85, 0.5, M.medRed, { k: 0.1 }),
+    cap([5.4, 0], [9.4, 0], 1.45, M.dark, { r1: 2.5, flat: true }),
+    poly(box(9.4, -2.7, 10.1, 2.7), M.silver, { k: 0.1 }),
+    ell([10.25, 0], 0.5, 2.3, M.lens, { e: [255, 244, 205, 240], k: 0.3 }),
+  ] },
 };
 ITEMS.silencedPistol.parts = [...ITEMS.pistol.parts, cap([11.6, -4.6], [20, -4.6], 1.4, M.dark, { flat: true, k: 0.05 }), ell([20, -4.6], 0.45, 1.35, M.black, { k: -0.3 })];
 function grain(u, v) { return hash(Math.round(u * 0.6), Math.round(v * 1.6), 5) > 0.82 ? -0.14 : 0; }
 
-export const ITEM_KINDS = ['bat', 'knife', 'crowbar', 'sledgehammer', 'chainsaw', 'sword', 'katana', 'energyBlade', 'nightstick', 'taser', 'pistol', 'revolver', 'shotgun', 'rifle', 'smg', 'rocketLauncher', 'fishingRod', 'medkit', 'bandage', 'phone', 'cash', 'keys', 'silencedPistol', 'sniper', 'pepperSpray', 'bottle', 'coffee', 'spikeStrip'];
+export const ITEM_KINDS = ['bat', 'knife', 'crowbar', 'sledgehammer', 'chainsaw', 'sword', 'katana', 'energyBlade', 'nightstick', 'taser', 'pistol', 'revolver', 'shotgun', 'rifle', 'smg', 'rocketLauncher', 'fishingRod', 'medkit', 'bandage', 'phone', 'cash', 'keys', 'silencedPistol', 'sniper', 'pepperSpray', 'bottle', 'coffee', 'spikeStrip', 'flashlight'];
 export const ITEM_NAMES = {
   bat: 'Baseball bat', knife: 'Knife', crowbar: 'Crowbar', sledgehammer: 'Sledgehammer', chainsaw: 'Chainsaw', sword: 'Sword', katana: 'Katana',
   energyBlade: 'Energy blade', nightstick: 'Nightstick', taser: 'Taser', pistol: 'Pistol', revolver: 'Revolver', shotgun: 'Pump shotgun', rifle: 'Rifle',
   smg: 'SMG', rocketLauncher: 'Rocket launcher', fishingRod: 'Fishing rod', medkit: 'Medical kit', bandage: 'Bandage', phone: 'Phone', cash: 'Cash', keys: 'Keys',
   silencedPistol: 'Silenced pistol', sniper: 'Marksman rifle', pepperSpray: 'Pepper spray', bottle: 'Bottle in a bag', coffee: 'Coffee', spikeStrip: 'Spike strip',
+  flashlight: 'Flashlight',
 };
 
 // ---- rasterising ----------------------------------------------------------------------------------

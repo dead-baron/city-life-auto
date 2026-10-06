@@ -164,7 +164,7 @@ export function bodySprite(app, d8, pose, fr, w) {
   if (cv) return cv;
   const g = art.getContext('2d', { willReadFrequently: true });
   g.clearRect(0, 0, CW, CH);
-  paintBody(g, app || {}, d8, pose, fr | 0, w | 0);
+  paintBody(g, app || {}, d8, pose, fr | 0, w === 'flashlight' ? w : w | 0); // (w: a weapon index, or 'flashlight')
   // outline round anything that was added without one (hair, hats, reaching arms, held items)
   const img = g.getImageData(0, 0, CW, CH), px = img.data;
   const solid = (x, y) => x >= 0 && y >= 0 && x < CW && y < CH && px[(y * CW + x) * 4 + 3] > 40;
@@ -404,7 +404,7 @@ function holds(Pp, a, d, I, pal, bob, pose, fr, w, actArm) {
     const lx = l ? Math.round(l.cx) : sx - 2, rx = r ? Math.round(r.cx) : sx + 2;
     drawArm(lx, sy, dx + (SIDE(d) ? 0 : 2), dy - 3);
     drawArm(rx, sy, dx - (SIDE(d) ? 0 : 2), dy - 3);
-  } else if (w > 0 && w !== 13) {
+  } else if ((w > 0 && w !== 13) || w === 'flashlight') {
     // walking with it: in the hand of the hanging arm on the near side
     const b = I.armBox[actArm >= 0 ? actArm : 1] || I.armBox[0];
     const hx = b ? Math.round(b.cx) : Math.round(I.hcx), hy = b ? b.y1 + bob : I.waist + bob;

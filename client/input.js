@@ -35,16 +35,19 @@ export function saveSettings() { try { localStorage.setItem('cla.settings', JSON
 // both at once made the game flip between pad and mouse every frame (the top buttons blinked
 // and the HUD kept re-laying itself out). Ask for the raw pad, and while the pad is in use, ignore
 // mouse events for picking the device.
-import { IS_CONSOLE } from './platform.js';
+import { IS_CONSOLE, DEVICE_FORCED } from './platform.js';
 export { IS_CONSOLE };
 try { if (typeof navigator !== 'undefined' && 'gamepadInputEmulation' in navigator) navigator.gamepadInputEmulation = 'gamepad'; } catch { /* read-only */ }
 let padUsedAt = -1e9;
 const padRecent = () => performance.now() - padUsedAt < (IS_CONSOLE ? 4000 : 1500);
 export const deviceStats = { switches: 0 }; // for the diagnostics overlay
 
-function setDevice(d) {
+// src 'mouse': picked by a mouse move (on a console that is the pad-driven cursor, not a mouse)
+function setDevice(d, src = '') {
   if (input.device === d) return;
   if (d !== 'gamepad' && input.device === 'gamepad' && padRecent()) return; // emulated mouse / keys from the pad
+  // a console plays with the pad: never the touch controls, and its cursor doesn't make it a mouse
+  if (IS_CONSOLE && input.device && (d === 'touch' || (d === 'keyboard' && src === 'mouse'))) return;
   deviceStats.switches++;
   input.device = d;
   input.usingTouch = d === 'touch';
@@ -57,10 +60,14 @@ function setDevice(d) {
 
 // Touch-first devices start in touch mode before the first tap, so the title screen already
 // shows the on-screen controls instead of keyboard shortcuts.
+// Consoles start (and stay) in pad mode; a device set by hand in Settings starts as that.
 export function detectDevice() {
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const fine = typeof matchMedia === 'function' && matchMedia('(any-pointer: fine)').matches;
-  if (coarse && !fine) setDevice('touch'); else { input.device = ''; setDevice('keyboard'); }
+  input.device = '';
+  if (IS_CONSOLE) setDevice('gamepad');
+  else if (DEVICE_FORCED === 'mobile' || (DEVICE_FORCED !== 'pc' && coarse && !fine)) setDevice('touch');
+  else setDevice('keyboard');
   return input.device;
 }
 
@@ -79,7 +86,7 @@ export function initInput(canvas, hooks) {
   });
   addEventListener('keyup', (e) => { keys.delete(e.code); hooks.onKeyUp?.(e.code); });
   addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.rdown = false; });
-  canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.movedAt = performance.now(); if (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents) setDevice('keyboard'); });
+  canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.movedAt = performance.now(); if (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents) setDevice('keyboard', 'mouse'); });
   canvas.addEventListener('mousedown', (e) => {
     if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
     if (e.button === 0) { mouse.down = true; mouse.clicked = true; }
@@ -269,6 +276,7 @@ export function sample(view) {
   if (k('KeyQ')) bits |= IN.THROW;
   if (k('KeyR')) bits |= IN.RELOAD;
   if (k('KeyH')) bits |= IN.HORN;
+  if (k('KeyL')) bits |= IN.LIGHT; // flashlight on / off
   if (pressedOnce.has('Tab')) bits |= IN.NEXTW;
   if (mouse.wheel > 0) bits |= IN.NEXTW;
   if (mouse.wheel < 0) bits |= IN.PREVW;
@@ -317,7 +325,7 @@ export function sample(view) {
     if (p.lb) bits |= IN.PREVW;
     if (p.rb) bits |= IN.NEXTW;
     if (p.r3) bits |= IN.RELOAD;
-    if (p.up) bits |= IN.HORN;
+    if (p.up) bits |= view.inVehicle ? IN.HORN : IN.LIGHT; // D-pad up: horn / siren in a vehicle, the flashlight on foot
     if (view.inVehicle) { if (!driving && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
     else if (p.l3 || p.lt > 0.4) bits |= IN.SPRINT;
     const rmag = Math.hypot(p.rx, p.ry);
@@ -342,6 +350,7 @@ export function sample(view) {
     if (tt.has('nextw')) bits |= IN.NEXTW;
     if (tt.has('reload')) bits |= IN.RELOAD;
     if (tb.has('horn') || tt.has('horn')) bits |= IN.HORN;
+    if (tb.has('light') || tt.has('light')) bits |= IN.LIGHT;
     tt.clear();
   }
   const ml = Math.hypot(mx, my);

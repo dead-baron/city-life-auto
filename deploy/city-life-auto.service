@@ -22,6 +22,9 @@ Environment=HOST=127.0.0.1
 Environment=CLA_DATA_DIR=/home/ubuntu/cla-data
 Environment=CLA_ORIGINS=https://deadbaron.com,https://www.deadbaron.com,https://play.deadbaron.com
 Environment=CLA_MAX_PLAYERS=120
+# After an update (a new build) players come back fresh at a spawn point with their progress (spawn, the
+# default); all = everyone also starts over with a brand-new character; off = they carry on where they were.
+#Environment=CLA_FRESH_ON_UPDATE=all
 # Cost / abuse guards - OFF for now. Monthly data use is always shown in /stats ("traffic").
 # To switch on, remove the # in front of these lines, then: sudo systemctl daemon-reload &&
 # sudo systemctl restart city-life-auto  (or re-run deploy/setup-oracle.sh)

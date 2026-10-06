@@ -1,21 +1,15 @@
 // Dev Debug Mode for online testing. Anyone can switch it on (Options -> Dev Debug Mode - no
-// password while it's just the team and friends testing) and gets the debug menu on the live server - but nothing they do in it is kept: entering it
-// snapshots the player (profile, rank, wanted level, health, ammo, where they stand) and from
-// then on the game works on a throwaway copy of the profile, so the save file never sees it.
-// Leaving dev mode - or disconnecting - puts everything back exactly as it was. A dev can grant
-// the mode to other online players (same deal for them) and teleport to / fetch any player.
-import { store } from './store.js';
+// password while it's just the team and friends testing) and gets the debug menu on the live server.
+// Progress carries on as normal: whatever a player gets or does in dev mode (money, items, rank, where
+// they are) is saved like anything else and stays when they leave it - leaving only ends the dev powers
+// (the debug menu, invincibility, the free camera). A dev can grant the mode to other online players
+// and teleport to / fetch any player.
 import * as vehicles from './systems/vehicles.js';
 import * as trains from './systems/trains.js';
-import * as law from './systems/law.js';
 
 const envPw = typeof process !== 'undefined' && process.env ? process.env.CLA_DEV_PASSWORD : '';
 export const DEV_PASSWORD = envPw || 'GODMODE';
 const MAX_TRIES_PER_MIN = 5;
-
-const clone = (o) => JSON.parse(JSON.stringify(o));
-// player fields that rank / wanted / role live in (outside the profile)
-const P_KEYS = ['heat', 'wanted', 'disguised', 'badge', 'hunter', 'faction', 'bounty', 'flareUntil', 'searchR'];
 
 // No password for now (just the team and friends testing): asking is enough. Flip this to
 // false to bring the password back (DEV_PASSWORD, or CLA_DEV_PASSWORD on the server).
@@ -33,49 +27,22 @@ export function tryPassword(world, p, pw) {
 
 export function enter(world, p, grantedBy) {
   if (p.devMode) return;
-  const ped = p.ped;
-  p.devSnap = {
-    profile: p.profile,                                   // the real one, untouched from here on
-    player: Object.fromEntries(P_KEYS.map((k) => [k, clone(p[k] ?? null)])),
-    ped: ped && !ped.dead ? { x: ped.x, y: ped.y, hp: ped.hp, weapon: ped.weapon, mag: clone(ped.mag || {}), bleeding: !!ped.bleeding, app: clone(ped.app) } : null,
-    civvies: p.civvies ? clone(p.civvies) : null,
-    job: p.job ? clone(p.job) : null,
-  };
-  p.profile = clone(p.profile); // everything from now on happens to a throwaway copy
   p.devMode = true;
   p.meDirty = true;
-  store.touch();
   world.notify(p, grantedBy
-    ? `${grantedBy.name} gave you Dev Debug Mode: tap 🛠 at the top of the screen for the debug menu. None of your progress is saved from now on, until you leave dev mode or rejoin.`
-    : 'Dev Debug Mode ON - tap 🛠 at the top of the screen (or Options) for the debug menu. Nothing you do now is saved; leaving dev mode puts you back exactly as you were.', 'warn');
+    ? `${grantedBy.name} gave you Dev Debug Mode: tap 🛠 at the top of the screen for the debug menu. Your progress carries on as normal - whatever you get in dev mode is yours to keep.`
+    : 'Dev Debug Mode ON - tap 🛠 at the top of the screen (or Options) for the debug menu. Your progress carries on as normal: whatever you do in dev mode stays when you leave it.', 'warn');
 }
 
-// Put the player back exactly as they were when they entered dev mode.
+// Leave dev mode: the progress made in it is kept (it was saved all along); only the dev powers end -
+// invincibility and the free camera go with the debug menu.
 export function exit(world, p, quiet = false) {
   if (!p.devMode) return;
-  const snap = p.devSnap;
-  p.devMode = false; p.devSnap = null;
-  if (p.badge && !snap.player.badge) law.goOffDuty(world, p); // joined the force in dev mode: hand the badge back
-  p.profile = snap.profile;
-  for (const k of P_KEYS) p[k] = snap.player[k];
-  p.civvies = snap.civvies;
-  p.job = snap.job; p.crack = null;
-  const ped = p.ped;
-  if (ped && snap.ped) {
-    if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
-    if (ped.vehId) vehicles.ejectPed(world, ped, true);
-    if (ped.dead) { ped.dead = false; world.bodies.delete(ped); p.respawnAt = 0; }
-    ped.x = snap.ped.x; ped.y = snap.ped.y; ped.vx = 0; ped.vy = 0; ped.sub = false; ped.hidden = false; ped.interior = null;
-    ped.hp = snap.ped.hp; ped.weapon = snap.ped.weapon; ped.mag = snap.ped.mag; ped.bleeding = snap.ped.bleeding;
-    ped.app = snap.ped.app; ped.appVer = (ped.appVer || 0) + 1;
-    ped.downUntil = 0; ped.stunUntil = 0; ped.tumbleUntil = 0; ped.airUntil = 0;
-    if (ped.carrying) { const c = world.get(ped.carrying); if (c) { c.state = 'ground'; c.parent = 0; } ped.carrying = 0; }
-    world.place(ped);
-    p.teleportAt = world.time;
-  }
+  p.devMode = false;
+  if (p.spectating) p.spectating = false;
+  p.invincible = false;
   p.meDirty = true;
-  store.touch();
-  if (!quiet) world.notify(p, 'Dev Debug Mode OFF - you\'re back where you were, with your real progress.', 'good');
+  if (!quiet) world.notify(p, 'Dev Debug Mode OFF - you keep everything you have now.', 'good');
 }
 
 export function grant(world, p, pid) {

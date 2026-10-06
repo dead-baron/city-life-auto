@@ -126,6 +126,9 @@ export const SPIKE_STRIP_S = 45;           // a deployed spike strip stays acros
 // Money
 export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with cash on you and it's banked automatically
 
+// Gear
+export const FLASHLIGHT_PRICE = 35;        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
+
 // Lost pets
 export const PET_EVERY_S = 150;            // roughly how often a pet goes missing somewhere near a player
 export const PET_REWARD = 150;             // the owner's thank-you (cash) for bringing it home...

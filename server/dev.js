@@ -3,7 +3,7 @@
 import { surfaceZ } from '../shared/levels.js';
 import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
-import { WEAPONS } from '../shared/items.js';
+import { WEAPONS, ITEMS } from '../shared/items.js';
 import { store } from './store.js';
 import * as env from './systems/environment.js';
 import * as jobs from './systems/jobs.js';
@@ -18,7 +18,53 @@ import * as pets from './systems/pets.js';
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'car', 'guns', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time'];
+
+export const GIVE_MAX = 999;
+const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const TOOL_ITEMS = () => Object.keys(ITEMS).filter((id) => ITEMS[id].tool);
+
+// Put something in a player's bag. Weapons come with n magazines of ammo (one loaded; melee weapons and
+// tools: just the weapon), items n of them (a tool - flashlight, revive kit - just one: it never wears out).
+function addThing(q, kind, id, n) {
+  const prof = q.profile, ped = q.ped;
+  if (kind === 'weapon') {
+    const w = WEAPONS[id];
+    prof.weapons[id] = (prof.weapons[id] || 0) + (w.mag ? w.mag * n : 0);
+    if (w.mag && ped) ped.mag[id] = Math.max(ped.mag[id] || 0, Math.min(w.mag, prof.weapons[id]));
+  } else {
+    prof.inventory[id] = ITEMS[id].tool ? Math.max(1, prof.inventory[id] || 0) : (prof.inventory[id] || 0) + n;
+  }
+}
+
+// Dev give: anything from the catalogs to yourself or any online player.
+//   msg: { pid (absent: yourself), kind: 'weapon' | 'item' | 'all', id (weapon or item id), n (1..GIVE_MAX) }
+// 'all' gives every weapon (n magazines each) and every item (n each, tools one). Returns an error or null.
+export function give(world, p, msg) {
+  const q = msg.pid ? world.players.get(String(msg.pid)) : p;
+  if (!q || !q.conn) return '[dev] That player isn\'t online.';
+  const n = Math.max(1, Math.min(GIVE_MAX, Math.floor(Number(msg.n)) || 1));
+  const kind = String(msg.kind || ''), id = String(msg.id || '').slice(0, 30);
+  let what;
+  if (kind === 'all') {
+    for (const wid of Object.keys(WEAPONS)) if (wid !== 'fists') addThing(q, 'weapon', wid, n);
+    for (const iid of Object.keys(ITEMS)) addThing(q, 'item', iid, n);
+    what = 'every weapon and item in the game';
+  } else if (kind === 'weapon') {
+    if (!own(WEAPONS, id) || id === 'fists') return `[dev] No weapon "${id}".`;
+    addThing(q, 'weapon', id, n);
+    what = WEAPONS[id].mag ? `${WEAPONS[id].name} + ${n} mag${n > 1 ? 's' : ''}` : WEAPONS[id].name;
+  } else if (kind === 'item') {
+    if (!own(ITEMS, id)) return `[dev] No item "${id}".`;
+    addThing(q, 'item', id, n);
+    what = ITEMS[id].tool ? ITEMS[id].name : `${n}x ${ITEMS[id].name}`;
+  } else return '[dev] Give what? (kind: weapon, item or all)';
+  q.meDirty = true;
+  store.touch();
+  if (q !== p) world.notify(q, `${p.name} (dev) gave you: ${what}.`, 'good');
+  world.notify(p, q === p ? `[dev] Given to you: ${what}.` : `[dev] Gave ${q.name}: ${what}.`, 'info');
+  return null;
+}
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 
@@ -79,14 +125,16 @@ export function command(world, p, c, msg) {
       v.lz = ped.lz || 0; // up on the highway with you
       break;
     }
-    case 'guns':
+    case 'guns': // weapons with ammo, med kits, and every tool / bit of equipment (flashlight, revive kit)
       for (const id of ['bat', 'pistol', 'shotgun', 'rifle', 'smg', 'rocket', 'rod']) {
         const w = WEAPONS[id];
         prof.weapons[id] = (prof.weapons[id] || 0) + (w.mag ? w.mag * 5 : 0);
         if (w.mag && ped) ped.mag[id] = w.mag;
       }
       prof.inventory.medkit = (prof.inventory.medkit || 0) + 3;
+      for (const id of TOOL_ITEMS()) prof.inventory[id] = Math.max(1, prof.inventory[id] || 0);
       break;
+    case 'give': { const err = give(world, p, msg); if (err) world.notify(p, err, 'warn'); break; }
     case 'cargo': {
       // a flatbed pre-loaded with one crate of every tier, for open-cargo playtests
       if (!ped) break;

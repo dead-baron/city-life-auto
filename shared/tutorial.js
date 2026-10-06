@@ -28,10 +28,11 @@ import {
   POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, FELONY_FINE, GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S, PAINT_PRICE, PAINT_TIME_S, HIDE_TIME_S, SPAWN_PROTECT_S,
   BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE, SPIKE_STRIP_S, ATM_DEPOSIT_PX, PET_EVERY_S, PET_REWARD, PET_SAMARITAN, UNSTUCK_S, UNSTUCK_CALM_S,
   HELP_S, HELP_PING_S, HELP_PING_PX, REVIVE_KIT_S, REVIVE_HAND_S, REVIVE_LOW_HP, REVIVE_LIMP_S, REVIVE_LIMP_SPEED, FINISH_S, GIVE_AFTER_REVIVE_S, REVIVE_KIT_PRICE, AMBULANCE_FEE,
+  FLASHLIGHT_PRICE,
 } from './rules.js';
 
 // Bump when the tour changes enough that returning players should be offered it again.
-export const TUTORIAL_VERSION = 28;
+export const TUTORIAL_VERSION = 29;
 
 const price = (shop, id) => (SHOPS[shop].buy.find((o) => o.id === id) || {}).price;
 const min = (ms) => Math.round(ms / 60000);
@@ -103,6 +104,8 @@ export const STEPS = [
     text: `Hurt? Step onto the {{reception}} mat at any hospital for full treatment ($${HOSPITAL_FEE}). Below 30% health you bleed - hold [[use]] for your quick wheel and let go on a med kit or bandage from the {{pharmacy}} (a quick tap uses the last one again). {{vending}}s, coffee shops and corner stores sell drinks for stamina. When you wake up you appear at one of several spots around the building, blinking for ${SPAWN_PROTECT_S} seconds: you can move, but you can't shoot or be hurt.` },
   { ch: 'basics', title: 'Your bag', at: { poi: 'pharmacy' },
     text: `[[bag]] opens your bag - it doesn't pause the city, and the same button (or a tap off the panel) closes it. Tap a weapon to equip it; use a med kit, bandage, coffee or energy drink straight from the list, or pin it to one of the four quick-wheel slots with its 1-4 buttons. Anything you buy that you can use goes in the first free slot by itself. Loot, fish and bait show here too. Shop, hospital and police desk menus close with a tap anywhere off the menu.` },
+  { ch: 'basics', title: 'A flashlight for the dark', at: { poi: 'hardware' },
+    text: `Away from the streetlights the nights get properly dark. A flashlight ($${FLASHLIGHT_PRICE} at {{hardware}}, corner stores and gas stations) goes in your bag and never wears out. [[light]] switches it on and off - or switch it from the bag, or pin it to the quick wheel. It doesn't take a hand from your weapon: armed, you keep your gun or bat in hand; unarmed, you hold the flashlight up in front of you. Everyone sees its beam, by day or night (brightest after dark). Police on foot carry their own after dark.` },
   { ch: 'basics', title: 'Down, not out', at: { poi: 'hospital' },
     text: `Take too much damage and you go down instead of straight to the respawn screen: your cash, items and weapons drop in a bag beside you, where anyone can take them. You have ${RESPAWN_SECONDS} seconds to pick where to wake up - any hospital, or a home you own - or press Call for Help (the red medic cross): you stay down for ${Math.round(HELP_S / 60)} minutes and every player within ${Math.round(HELP_PING_PX / TILE / 10) * 10} m gets an alert and a 'player down' blip; press it again every ${HELP_PING_S} seconds to re-alert them. While you wait you can call an ambulance for $${AMBULANCE_FEE} from your bank - it drives over from out of sight (you'll see it coming on your map), the clock starts again, and you're only charged if the paramedics revive you; you can cancel it, and one per time you go down. Cancel request wakes you at your chosen spawn. To revive someone, hold [[action]] over them: ${REVIVE_HAND_S} seconds bare-handed brings them round on ${Math.round(REVIVE_LOW_HP * 100)}% health, limping at ${Math.round(REVIVE_LIMP_SPEED * 100)}% speed and bleeding for ${REVIVE_LIMP_S} seconds while they heal to half; a Revive Kit ($${REVIVE_KIT_PRICE} at hospitals and pharmacies, never used up, only on someone else) takes ${REVIVE_KIT_S} seconds and brings them back at full health. For ${GIVE_AFTER_REVIVE_S} seconds after a revive you can hand them a bandage (to half) or a med kit (full) - used on them at once. Getting hit stops a revive. A downed player can be finished off: hold [[vehicle]] over them for ${FINISH_S} seconds, or just hit them - and police can book a downed wanted player as a bust. Revived, you're still wanted.` },
   { ch: 'basics', title: 'Cash vs. bank', at: { poi: 'bank' },
