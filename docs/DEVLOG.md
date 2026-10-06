@@ -1811,6 +1811,6 @@ Everything here is client-side. Server, shared code and the network are unchange
 - **Test pages:** `tools/art2/engine-test.html`, `ground-chunk.html`, `statics-chunk.html`, `actors-preview.html`, and new views in `people-preview.html`.
 - **Comparisons:** `docs/art-v2/engine-v1.png`, `ground-chunks-v1.png`, `statics-chunks-v1.png`, `actors-v1.png` and `characters-v2.png`.
 - **Known gaps before it can be the default:**
-  - Buildings stand at art v2 height (about 60 px a storey), so dense blocks read as mostly rooftops and hide the street north of them. They need a fade or cut-away near the player and a scale and variety pass.
+  - Buildings stand at art v2 height (about 60 px a storey), so dense blocks read as mostly rooftops. **Done:** a soft cut-away hole round the player through any building in front of them, showing the street underneath (chunks keep an "under" layer without buildings). Still to do: a scale decision (the concept art is framed about twice as close as the game camera) and a street density pass.
   - Performance is untested on real phones and consoles; all measurements so far are on a software GPU.
   - Not drawn yet: paint-shop and garage doors, boathouse roof fade and club shutters.
