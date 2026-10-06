@@ -1,0 +1,78 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 effects</title>
+<style>body{margin:0;background:#18181c;color:#ccc;font:13px monospace}canvas{image-rendering:pixelated;display:block}
+.wrap{position:relative}.wrap canvas{position:absolute;left:0;top:0}.lab{position:absolute;color:#b8bcc8;font:11px monospace;white-space:nowrap;text-shadow:0 1px 0 #000}
+h3{margin:8px}a{color:#9cf;margin-right:10px}</style></head><body>
+<!-- Every effect in client/art2/fx.js, frame by frame in rows (compare docs/art-v2/targets/FX1-A / FX1-B),
+     composed onto dark asphalt and lit with ?p=night (default, so the glows read) | golden | noon | rain | indoor.
+     Frames that carry a .light hint light the ground like they would in game; ?fill=0 drops the soft fill
+     lamps that keep the non-glowing effects (smoke, dust, glass, blood) readable at night. Serve the repo root. -->
+<h3 id="t"></h3>
+<div class="wrap"><canvas id="c"></canvas></div>
+<div id="nav"></div>
+<script type="module">
+import { GBuf, F_GROUND, hash } from '../../client/art2/gbuf.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+import { FX, fxFrames } from '../../client/art2/fx.js';
+const q = new URLSearchParams(location.search), preset = q.get('p') || 'night', fill = q.get('fill') !== '0';
+document.getElementById('nav').innerHTML = ['night', 'golden', 'noon', 'rain', 'indoor'].map((p) => `<a href="?p=${p}">${p}</a>`).join('');
+const T0 = performance.now();
+// groups in sheet order; gun: draw a pistol behind the first muzzle frame
+const order = [
+  ['muzzleSmall', 0], ['muzzleMedium', 1], ['muzzleLarge', 2], ['tracerOrange'], ['tracerWhite'],
+  ['impactSpark'], ['impactGlass'], ['impactDirt'], ['dustPuff'],
+  ['explosion'],
+  ['fire'], ['fireSmall'], ['fireLarge'], ['smokeLight'], ['smokeHeavy'],
+  ['exhaust'], ['dustTrail'], ['skidMarks'],
+  ['waterSplash'], ['rainRipple'], ['glassShatter'],
+  ['leaves'], ['petals'], ['sparkle'], ['sparkleBlue'],
+  ['bloodSplat'], ['bloodSpray'], ['footprints'],
+];
+const W = 1200, GAP = 26, LAB = 14, PAD = 12;
+const groups = order.map(([name, gun]) => {
+  const fr = fxFrames(name);
+  if (fr.length !== FX[name].frames) throw new Error(`${name}: ${fr.length} frames, FX says ${FX[name].frames}`);
+  const cw = Math.max(...fr.map((g) => g.w)) + 2, ch = Math.max(...fr.map((g) => g.h));
+  const lead = gun === undefined ? 0 : [12, 15, 19][gun];
+  return { name, fr, cw, ch, gun, lead, width: lead + cw * fr.length };
+});
+// flow the groups into rows
+const rows = []; let row = null, x = PAD;
+for (const g of groups) {
+  if (!row || x + g.width > W - PAD || g.name === 'explosion' || g.name === 'fire' || g.name === 'impactSpark' || g.name === 'exhaust' || g.name === 'waterSplash' || g.name === 'leaves' || g.name === 'bloodSplat') { row = { items: [], h: 0 }; rows.push(row); x = PAD; }
+  g.x = x; x += g.width + GAP; row.items.push(g); row.h = Math.max(row.h, g.ch);
+}
+let H = PAD; for (const r of rows) { r.y = H + LAB; H = r.y + r.h + 10; }
+H += PAD;
+// dark asphalt ground
+const G = new GBuf(W, H);
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  const n = hash(x >> 1, y >> 1, 3) * 6 + hash(x, y, 9) * 4, v = 54 + n;
+  G.put(x, y, [v, v + 2, v + 8], [0, 0, 1], 0, null, F_GROUND);
+}
+const wrap = document.querySelector('.wrap'), lights = [], labels = [];
+const gunAt = (g, ax, ay, size) => {      // a dark pistol / shotgun silhouette whose muzzle is at (ax, ay)
+  const len = [9, 12, 16][size], th = [3, 4, 5][size], z = 16, M = [[34, 34, 42], [50, 50, 60], [70, 72, 84], [96, 98, 110]], WD = [[70, 44, 30], [100, 64, 40]];
+  for (let x = ax - len; x < ax; x++) for (let y = ay - (th >> 1); y < ay - (th >> 1) + th; y++) g.put(x, y, M[y === ay - (th >> 1) ? 3 : y === ay - (th >> 1) + th - 1 ? 0 : 2], [0, -0.3, 0.95], z, null, 4);
+  for (let y = ay + th - 1; y < ay + th + 3 + size; y++) for (let x = ax - len; x < ax - len + 3 + size; x++) g.put(x - (y - ay) * 0.3, y, size === 0 ? WD[x === ax - len ? 0 : 1] : M[1], [0, 0.4, 0.9], z, null, 4);
+};
+for (const r of rows) for (const g of r.items) {
+  labels.push([g.x, r.y - LAB + 1, `${g.name} (${g.fr.length})`]);
+  g.fr.forEach((s, i) => {
+    const cx = g.x + g.lead + i * g.cw + ((g.cw - s.w) >> 1), cy = r.y + r.h - g.ch + (g.ch - s.h);
+    if (g.gun !== undefined && i === 0) gunAt(G, cx + s.ax, cy + s.ay, g.gun);
+    G.blit(s, cx, cy);
+    if (s.light) lights.push({ x: cx + s.ax + s.light.x, y: cy + s.ay + (s.light.y || 0), z: s.light.z, r: s.light.r, col: s.light.col, k: s.light.k });
+  });
+}
+lights.sort((a, b) => b.k * b.r - a.k * a.r);
+lights.length = Math.min(lights.length, fill ? 48 : 64);
+if (fill && (preset === 'night' || preset === 'rain' || preset === 'indoor')) for (let y = 0; y < H; y += 190) for (let x = 100; x < W; x += 250) lights.push({ x, y: y + 120, z: 160, r: 330, col: [0.75, 0.82, 1.0], k: 0.55 });
+const T1 = performance.now();
+const cv = document.getElementById('c');
+cv.width = W * 2; cv.height = H * 2; wrap.style.width = W * 2 + 'px'; wrap.style.height = H * 2 + 'px';
+const L = new Lighter(cv); L.setScene(G); L.render(PRESETS[preset], lights, 1.0);
+for (const [x, y, t] of labels) { const d = document.createElement('div'); d.className = 'lab'; d.style.left = x * 2 + 'px'; d.style.top = y * 2 - 4 + 'px'; d.textContent = t; wrap.appendChild(d); }
+document.getElementById('t').textContent = `effects - ${preset} - ${Object.keys(FX).length} effects - built in ${(T1 - T0).toFixed(0)} ms - ${lights.length} lights`;
+window.info = `${W}x${H} built ${(T1 - T0).toFixed(0)} ms, ${lights.length} lights`;
+window.done = true;
+</script></body></html>

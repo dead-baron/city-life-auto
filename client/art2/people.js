@@ -6,17 +6,24 @@
 // volume as the targets; a dark hue-tinted outline goes round the result.
 //
 // person(app, dir, pose, frame) -> GBuf (anchor .ax/.ay at the feet)
-//   dir 0 S, 1 SE, 2 E, 3 NE, 4 N, 5 NW, 6 W, 7 SW (5-7 mirrored)     pose 'idle' | 'walk'
+//   dir 0 S, 1 SE, 2 E, 3 NE, 4 N, 5 NW, 6 W, 7 SW (5-7 mirrored)     pose 'idle' | 'walk' | 'held' (= idle)
 //   app: { skin 0-4, build 0 slim | 1 average | 2 heavy | 3 tall, fem,
 //          hair: { style, color }, beard, top: { kind, color, color2, pattern }, bottom: { kind, color },
-//          shoes, hat: { kind, color }, glasses: 'sun'|'round'|null, chain, carry, back }
+//          shoes, hat: { kind, color }, glasses: 'sun'|'round'|null, chain, carry, held, back }
 //   hair styles: spiky short buzz bald afro long wavy pony bun braids dreads mohawk slick curly
 //   tops: tee tank polo shirt hoodie jacket suit leather puffer flannel hawaiian vest hivis uniform
 //         tactical scrubs apron overalls tracksuit jersey coat
 //   bottoms: jeans pants cargo shorts skirt track     hats: cap beanie bucket cowboy hard police
 //         helmet bandana fedora      carry: briefcase bag shopping coffee phone cane board
+//   held (or carry, for any kind but the carry ones above): an items.js kind, drawn at the right hand
+//         with the arms posed for it - bat (over the shoulder), knife (low), crowbar (at the side),
+//         sledgehammer chainsaw (two hands), sword katana energyBlade (raised), nightstick, taser pistol
+//         revolver (aimed, arms out), shotgun rifle smg (across the body), rocketLauncher (shoulder),
+//         fishingRod (up, line and float), medkit bandage phone cash keys (held in front). Items held
+//         forward go behind the body when facing away (dirs 3-5).
 import { GBuf, F_CHAR, hash, bayer } from './gbuf.js';
 import { MAT, ramp } from './palette.js';
+import { ITEMS, drawItem } from './items.js';
 
 const W = 36, H = 50, FOOT = 47;
 const C = (c) => (Array.isArray(c) ? c : MAT.cloth[c] || (typeof c === 'string' && c[0] === '#' ? ramp(c, 5, 2) : MAT.cloth.grey));
@@ -25,31 +32,45 @@ const OUT = [38, 24, 34];
 export function person(app, dir = 0, pose = 'idle', frame = 0) {
   const mirror = dir >= 5;
   const d = mirror ? 8 - dir : dir;
-  const G = new GBuf(W, H);
-  G.ax = W / 2; G.ay = FOOT;
-  const L = new Lay();
+  // a held item can reach well past the 36 x 50 figure box (rod, launcher): give it a margin
+  const px = heldKind(app) ? 16 : 0, pt = px ? 20 : 0, w = W + px * 2, h = H + pt;
+  const G = new GBuf(w, h);
+  G.ax = W / 2 + px; G.ay = FOOT + pt;
+  const L = new Lay(px, pt, w, h), no = new Uint8Array(w * h);
+  L.under = new Lay(px, pt, w, h);                                 // things behind the whole body
   draw(L, app, d, pose, frame);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = L.c[y * W + x]; if (c) G.put(mirror ? W - 1 - x : x, y, c, null, 0, null, 0); }
-  outline(G);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x, K = L.c[i] ? L : L.under, c = K.c[i], X = mirror ? w - 1 - x : x;
+    if (c) { G.put(X, y, c, null, 0, K.e[i], 0); no[y * w + X] = K.no[i]; }
+  }
+  outline(G, no);
   G.autoNormals([0, 0.4, 0.92], 4);
-  for (let i = 0; i < G.flag.length; i++) if (G.col[i * 4 + 3]) { G.flag[i] |= F_CHAR; G.z[i] = Math.max(1, FOOT - Math.floor(i / W)); }
+  for (let i = 0; i < G.flag.length; i++) if (G.col[i * 4 + 3]) { G.flag[i] |= F_CHAR; G.z[i] = Math.max(1, FOOT + pt - Math.floor(i / w)); }
   return G;
 }
 
-// dark, warm-tinted outline (the targets use deep brown-purple, never black)
-function outline(G) {
+// dark, warm-tinted outline (the targets use deep brown-purple, never black); a blue glow edge beside
+// emissive pixels (energy blade), none along 1 px lines (fishing line, flagged in `no`)
+function outline(G, no) {
   const add = [];
   for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
     if (G.alpha(x, y)) continue;
-    if (G.alpha(x + 1, y) || G.alpha(x - 1, y) || G.alpha(x, y + 1) || G.alpha(x, y - 1)) add.push(x, y);
+    let solid = false, glow = null;
+    for (const [X, Y] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+      if (!G.alpha(X, Y) || no[Y * G.w + X]) continue;
+      const j = (Y * G.w + X) * 4;
+      if (G.emi[j + 3] > 180) glow = [G.emi[j], G.emi[j + 1], G.emi[j + 2]]; else solid = true;
+    }
+    if (glow || solid) add.push(x, y, glow);
   }
-  for (let i = 0; i < add.length; i += 2) G.put(add[i], add[i + 1], OUT, null, 0, null, 0);
+  for (let i = 0; i < add.length; i += 3) { const g = add[i + 2]; G.put(add[i], add[i + 1], g ? [g[0] * 0.45, g[1] * 0.55, g[2] * 0.85].map(Math.round) : OUT, null, 0, g ? [g[0], g[1], g[2], 140] : null, 0); }
 }
 
+// the paint layer, in figure coordinates (36 x 50 box) offset by (ox, oy) into a w x h raster
 class Lay {
-  constructor() { this.c = new Array(W * H).fill(null); }
-  set(x, y, col) { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < W && y < H && col) this.c[y * W + x] = col; }
-  get(x, y) { x = Math.round(x); y = Math.round(y); return x >= 0 && y >= 0 && x < W && y < H ? this.c[y * W + x] : null; }
+  constructor(ox = 0, oy = 0, w = W, h = H) { this.ox = ox; this.oy = oy; this.w = w; this.h = h; this.c = new Array(w * h).fill(null); this.e = new Array(w * h).fill(null); this.no = new Uint8Array(w * h); }
+  set(x, y, col, e = null, no = false) { x = Math.round(x) + this.ox; y = Math.round(y) + this.oy; if (x >= 0 && y >= 0 && x < this.w && y < this.h && col) { const i = y * this.w + x; this.c[i] = col; this.e[i] = e; this.no[i] = no ? 1 : 0; } }
+  get(x, y) { x = Math.round(x) + this.ox; y = Math.round(y) + this.oy; return x >= 0 && y >= 0 && x < this.w && y < this.h ? this.c[y * this.w + x] : null; }
 }
 // pick a ramp step for a lit value (0 dark .. 1 light), dithering between steps
 const shade = (R, v, x, y) => { const t = Math.max(0, Math.min(0.999, v)) * (R.length - 1) + bayer(x, y) * 0.55; return R[Math.max(0, Math.min(R.length - 1, Math.round(t)))]; };
@@ -142,7 +163,14 @@ function draw(L, A, d, pose, frame) {
     ? [[cx - 1, shY + 2.5, cx - 1 - swing, shY + armDrop + 1, true], [cx + 0.5, shY + 2.5, cx + 1.5 + swing, shY + armDrop + 1, false]]
     : [[cx - shW - 0.2, shY + 2.5, cx - shW - 2 - (heavy ? 1 : 0), shY + armDrop + swing * 0.3, d === 3], [cx + shW + 0.2, shY + 2.5, cx + shW + 2 + (heavy ? 1 : 0), shY + armDrop - swing * 0.3, d === 1]];
   const farArms = arms.filter((a) => a[4]), nearArms = arms.filter((a) => !a[4]);
-  for (const a of farArms) drawArm(...a);
+  // a held item poses the arms: the right hand on the grip, the left on a second grip for two-handed items
+  const held = heldKind(A), HP = held ? holdPose(held, d, cx, shY, arms) : null;
+  const armBack = arms.map((a) => a[4]);
+  if (HP) for (const i of HP.posed) { armBack[i] = HP.back; }
+  const drawItemNow = (K = L) => drawItem((x, y, c, e, n) => K.set(x, y, c, e, n), held, HP.ox, HP.oy, HP.U, HP.V);
+  const fists = () => { for (const i of HP.fists) blob(L, skin, arms[i][2], arms[i][3], armR + 0.6, armR + 0.4, { k: arms[i][4] ? -0.2 : 0.05 }); };
+  if (HP && HP.lay === 'b') drawItemNow(L.under);
+  for (let i = 0; i < arms.length; i++) if (HP ? armBack[i] : arms[i][4]) drawArm(...arms[i]);
   // ---------------- torso
   const pat = A.top?.pattern === 'check' ? (x, y) => ((Math.floor(x / 2) + Math.floor(y / 2)) % 2 ? -0.18 : 0.05)
     : A.top?.pattern === 'floral' ? (x, y) => (hash(x >> 1, y >> 1, 7) > 0.8 ? 0.45 : 0)
@@ -188,10 +216,11 @@ function draw(L, A, d, pose, frame) {
     else column(L, C(A.backColor || 'navy'), cx - 4, shY + 3, cx - 4, hipY - 1, 2.6, 2.4);
   }
   // near arms over the torso
-  for (const a of nearArms) drawArm(...a);
+  for (let i = 0; i < arms.length; i++) if (HP ? !armBack[i] : !arms[i][4]) drawArm(...arms[i]);
+  if (HP && HP.lay === 'f') { drawItemNow(); fists(); }
   // held things
   const nearHand = nearArms[nearArms.length - 1] || arms[0];
-  const [hx, hy] = [nearHand[2], nearHand[3]];
+  const [hx, hy] = HP ? [-99, -99] : [nearHand[2], nearHand[3]];
   if (A.carry === 'briefcase' && !back) for (let y = 0; y < 6; y++) for (let x = 0; x < 8; x++) L.set(hx - 3 + x, hy + 2 + y, y === 0 ? MAT.woodDark[4] : x === 7 || y === 5 ? MAT.woodDark[0] : MAT.woodDark[2]);
   if (A.carry === 'shopping') for (const [ox, c] of [[-3, '#d84a6a'], [2, '#e8dcc8']]) for (let y = 0; y < 7; y++) for (let x = 0; x < 5; x++) L.set(hx + ox + x - 2, hy + 1 + y, ramp(c, 5, 2)[x === 4 ? 1 : y === 0 ? 4 : 2]);
   if (A.carry === 'coffee' && !back) for (let y = 0; y < 4; y++) for (let x = 0; x < 3; x++) L.set(hx - 1 + x, hy - 3 + y, y === 0 ? [240, 236, 228] : [196, 150, 100]);
@@ -232,6 +261,60 @@ function draw(L, A, d, pose, frame) {
   if (!A.mask) hair(L, A, d, hcx, hcy, R, hairR, skin);
   // hat
   if (A.hat && !A.mask) hat(L, A.hat, d, hcx, hcy, R);
+  if (HP && HP.lay === 't') { drawItemNow(); fists(); }
+}
+
+// ---- held items -------------------------------------------------------------------------------------
+const CARRY = ['briefcase', 'bag', 'shopping', 'coffee', 'phone', 'cane', 'board'];
+const heldKind = (A) => (A.held && ITEMS[A.held] ? A.held : A.carry && !CARRY.includes(A.carry) && ITEMS[A.carry] ? A.carry : null);
+// Poses in the body's own frame: h = the right hand [forward, right, up] from the chest centre (px); d =
+// the item's long axis [forward, right, up]; up = the way the item's underside faces (default down);
+// two = the left hand takes the item's second grip; left = hold it in the left hand (h mirrored); over = the item covers the hand (small things shown
+// off); lay = per facing 0-4: 'f' in front of the body, 'b' behind it, 't' over the head too; at = per
+// facing overrides of h / d (a blade raised beside the head from the front leans forward from the side).
+const HOLD = {
+  bat: { h: [3, 7, -5], d: [-0.3, 0.3, 1], two: 1, lay: 'ttfff' },
+  knife: { h: [4, 3, -8], d: [1, -0.25, 0.55], at: { 0: { d: [0.6, 0.6, -0.2] } } },
+  crowbar: { h: [4, -2, -4], d: [0.2, 1, -0.75], two: 1 },
+  sledgehammer: { h: [3, 7, -6], d: [-0.2, 0.3, 1], two: 1, lay: 'ttfff' },
+  chainsaw: { h: [3, 3, -7], d: [1, -0.25, -0.2], two: 1, at: { 0: { d: [0.8, -0.8, -0.3] } } },
+  sword: { h: [3, 9, -3], d: [0, 0.3, 1], two: 1, up: [1, 0, 0], lay: 'tttbb', at: { 2: { h: [4, 1, -4], d: [0.9, 0, 1] } } },
+  katana: { h: [3, 9, -3], d: [0, 0.3, 1], two: 1, up: [1, 0, 0], lay: 'tttbb', at: { 2: { h: [4, 1, -4], d: [0.9, 0, 1] } } },
+  energyBlade: { h: [3, 9, -3], d: [0, 0.3, 1], two: 1, up: [1, 0, 0], lay: 'tttbb', at: { 2: { h: [4, 1, -4], d: [0.9, 0, 1] } } },
+  nightstick: { h: [2, 7, -4], d: [-0.2, 0.4, 1], up: [1, 0, 0], lay: 'ttfff' },
+  taser: { h: [10, -1, -1], d: [1, 0, 0.04], two: 1, at: { 0: { h: [7, 4, 0], d: [0.8, 0.8, 0.05] } } },
+  pistol: { h: [10, -1, -1], d: [1, 0, 0.04], two: 1, at: { 0: { h: [7, 4, 0], d: [0.8, 0.8, 0.05] } } },
+  revolver: { h: [10, -1, -1], d: [1, 0, 0.04], two: 1, at: { 0: { h: [7, 4, 0], d: [0.8, 0.8, 0.05] } } },
+  shotgun: { h: [3, 2, -6], d: [1, -0.35, 0.12], two: 1, at: { 0: { d: [0.8, -0.9, 0.1] } } },
+  rifle: { h: [3, 2, -5], d: [1, -0.35, 0.12], two: 1, at: { 0: { d: [0.8, -0.9, 0.1] } } },
+  smg: { h: [5, 1, -4], d: [1, -0.3, 0.08], two: 1, at: { 0: { d: [0.8, -0.8, 0.1] } } },
+  rocketLauncher: { h: [3, 6, -1], d: [1, 0, 0.06], two: 1, lay: 'tffff' },
+  fishingRod: { h: [4, 3, -7], d: [1, -0.2, 1.1], two: 1, up: [0, 0, 1], lay: 'tffbb', at: { 0: { d: [1, 0.8, 1.1] } } },
+  medkit: { h: [4, 0, -9] },
+  bandage: { h: [4, -1, -6], two: 1, over: 1 },
+  phone: { h: [4, -1, -5], over: 1 },
+  cash: { h: [4, -1, -7], two: 1, over: 1 },
+  keys: { h: [3, -11, 4], left: 1, at: { 2: { h: [9, -2, -3] } } },
+};
+const FACE = [[0, 1], [0.707, 0.707], [1, 0], [0.707, -0.707], [0, -1]], KY = 0.45;   // KY: depth squash
+function holdPose(kind, d, cx, shY, arms) {
+  const P = { ...HOLD[kind], ...(HOLD[kind].at?.[d] || {}) }, D = ITEMS[kind], [Fx, Fy] = FACE[d], Rx = -Fy, Ry = Fx;
+  const proj = ([f, s, z]) => [f * Fx + s * Rx, (f * Fy + s * Ry) * KY - z];
+  const mi = (d <= 1) !== !!P.left ? 0 : 1, oi = 1 - mi;          // the right hand is screen-left for S / SE
+  const [hx, hy] = proj(P.h), ox = cx + (d === 2 ? -0.5 : 0) + hx, oy = shY + 3 + hy;
+  let U, V;
+  if (D.bill) { U = [D.hs, 0]; V = [0, D.hs]; }
+  else {
+    const ds = proj(P.d), ls = Math.hypot(ds[0], ds[1]) || 1, f = Math.max(0.45, Math.min(1, ls / Math.hypot(...P.d))), u = [ds[0] / ls, ds[1] / ls];
+    const up = proj(P.up || [0, 0, -1]); let p = [-u[1], u[0]];
+    if (p[0] * up[0] + p[1] * up[1] < 0) p = [-p[0], -p[1]];
+    U = [u[0] * D.hs * f, u[1] * D.hs * f]; V = [p[0] * D.hs, p[1] * D.hs];
+  }
+  arms[mi][2] = ox; arms[mi][3] = oy;
+  const posed = [mi], fists = P.over ? [] : [mi];
+  if (P.two && D.off) { arms[oi][2] = ox + D.off[0] * U[0] + D.off[1] * V[0]; arms[oi][3] = oy + D.off[0] * U[1] + D.off[1] * V[1]; posed.push(oi); if (!P.over) fists.push(oi); }
+  const lay = (P.lay || 'fffbb')[d];
+  return { ox, oy, U, V, posed, fists: lay === 'b' ? [] : fists, back: d >= 3, lay };
 }
 
 function hair(L, A, d, hcx, hcy, R, H, skin) {

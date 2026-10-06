@@ -1686,3 +1686,28 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - East–west alleys show the north side's back walls full on (doors, pipes, window boxes, roller doors), with the south side kept low (sheds, hedges, fences) so it doesn't cover the lane.
 - **Metro and train cars:** darker, ribbed roofs with air-conditioning pods, so they don't read as flat slabs from above.
 - **Comparison:** `docs/art-v2/roads-v1.png`.
+
+### Props, weapons and effects (P1–P4, FX1)
+- **`client/art2/props-kit.js`:** the props the districts didn't have yet.
+  - Town (P1): a vending machine, a phone booth, jersey barriers (striped or bare), a sawhorse barricade with amber lamps, a cable reel, an ATM in a brick wall, a parking meter, a twin-arm lamp, three bollard styles, a drum on its side and a knocked-over cone.
+  - Country and leisure (P2): dome tents, a cell tower, a pole with a transformer, an outdoor movie screen, a rural mailbox, split-rail and barbed-wire fences, a log pile and a mossy fallen log, a lifeguard chair, a rowboat, and a tackle box with a rod.
+  - Planting (P3): meadow grass with wildflowers, a wheat patch, cabbage rows and a prickly pear.
+- **New trees (`trees.js`):** autumn maple, birch (white bark with black marks), olive (gnarled trunk, silvery crown), fan palm and fern.
+- **Weapons and items (`client/art2/items.js`, P4):**
+  - Inventory icons for 22 items: bat, knife, crowbar, sledgehammer, chainsaw, sword, katana, energy blade, nightstick, taser, pistol, revolver, shotgun, rifle, SMG, rocket launcher, fishing rod, first-aid kit, bandage, phone, cash and keys.
+  - The energy blade is a generic glowing sci-fi blade, named "Energy blade" in game.
+  - People can now hold any of them (`app.held` in `people.js`), posed per item and per facing: bat on the shoulder, guns aimed, chainsaw held in front with both hands, launcher on the shoulder.
+  - Preview: `tools/art2/people-preview.html?view=items`.
+- **Effects (`client/art2/fx.js`, FX1):** 28 animated effects:
+  - muzzle flashes in three sizes, and tracers
+  - metal, glass and dirt impacts
+  - the explosion, whose smoke rises off the ground as in FX1-B
+  - fire in three sizes, light and heavy smoke, exhaust and dust trails
+  - skid marks, water splashes, rain ripples, dust puffs and breaking glass
+  - falling leaves and petals, gold and blue sparkles
+  - blood decals and spray, and bloody footprints
+
+  Flashes, fire, sparks and glints glow under the lighting, and no effect casts a shadow. Effects that light their surroundings carry a light hint for the game.
+- **Effect pool:** each effect's frames are built once and cached. `FxPool` pre-allocates its slots and reuses the oldest when full, so playing effects allocates nothing per frame.
+- **Previews:** the prop sheets are in the district preview (`?d=propsTown|propsCountry|propsNature`), and the effects in `tools/art2/fx-preview.html`.
+- **Comparisons:** `docs/art-v2/props-v1.png`, `items-v1.png` and `fx-v1.png`.

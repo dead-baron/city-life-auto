@@ -86,9 +86,16 @@ export function leafyTree(seed = 1, height = 120, crown = 34, opt = {}) {
   const trunkTop = crownCy + crown * 0.3;
   // trunk with a fork
   if (!opt.bush) for (let y = Math.floor(trunkTop - 10); y <= foot; y++) {
-    const t = (foot - y) / (foot - trunkTop), w = 2.6 - t * 0.6 + (y > foot - 3 ? 1 : 0);
-    const cxx = cx + Math.sin(t * 2.2 + seed) * 1.5;
-    for (let x = Math.floor(cxx - w); x <= Math.ceil(cxx + w); x++) { const u = (x + 0.5 - cxx) / w; if (Math.abs(u) > 1) continue; G.put(x, y, step(MAT.bark, 0.6 - u * 0.35 + (hash(x, y, seed) > 0.85 ? -0.2 : 0), x, y, 0.4)); nrm(G, x, y, [u, 0.5, 0.1]); }
+    const t = (foot - y) / (foot - trunkTop), tw = opt.trunkW || 2.6, w = tw - t * 0.6 * (tw / 2.6) + (y > foot - 3 ? 1 + (opt.gnarl ? 2 : 0) : 0);
+    const cxx = cx + Math.sin(t * 2.2 + seed) * 1.5 + (opt.gnarl ? Math.sin(t * 7 + seed) * 2 : 0);
+    const BK = opt.bark || MAT.bark;
+    for (let x = Math.floor(cxx - w); x <= Math.ceil(cxx + w); x++) {
+      const u = (x + 0.5 - cxx) / w; if (Math.abs(u) > 1) continue;
+      let k = 0.6 - u * 0.35 + (hash(x, y, seed) > 0.85 ? -0.2 : 0);
+      if (opt.birch && hash(x >> 1, y >> 1, seed + 2) > 0.8 && Math.abs(u) < 0.9) k = 0.02;              // birch: black marks on white bark
+      if (opt.gnarl && hash(x, y >> 2, seed + 3) > 0.7) k -= 0.25;                                         // olive: deep furrows
+      G.put(x, y, step(BK, k, x, y, 0.4)); nrm(G, x, y, [u, 0.5, 0.1]);
+    }
   }
   // clumps
   const blobs = [];
@@ -213,3 +220,75 @@ export function willow(seed = 1, height = 130, crown = 52) {
 }
 // a flowering tree (cherry blossom): the broadleaf generator in pink
 export const blossom = (seed = 1, height = 120, crown = 46) => leafyTree(seed, height, crown, { ramp: ramp('#e48aac', 7, 3, { dark: 0.55, light: 0.55, shift: 0.15 }), flowers: '#fff0f4' });
+
+// ---- more broadleaves from the P3 nature sheet --------------------------------------------------------
+// an autumn maple (red-orange crown), a birch (white bark, light yellow-green crown, narrower), an olive
+// (silvery grey-green crown on a thick gnarled trunk)
+export const maple = (seed = 1, height = 120, crown = 44) => leafyTree(seed, height, crown, { ramp: ramp('#d0582a', 7, 3, { dark: 0.62, light: 0.6, shift: 0.22 }), flowers: '#f0b040' });
+export const birch = (seed = 1, height = 124, crown = 30) => leafyTree(seed, height, crown, { ramp: ramp('#a8b83a', 7, 3, { dark: 0.62, light: 0.55, shift: 0.3 }), bark: ramp('#e4e2da', 6, 3, { dark: 0.45, light: 0.25 }), birch: true, trunkW: 2.2 });
+export const olive = (seed = 1, height = 84, crown = 40) => leafyTree(seed, height, crown, { ramp: ramp('#6e8250', 7, 3, { dark: 0.62, light: 0.45, shift: 0.15 }), flowers: '#b8c4a0', trunkW: 4.2, gnarl: true });
+
+// ---- fan palm: a short trunk with a criss-cross of old leaf bases and a round crown of stiff fans --------
+export function fanPalm(seed = 1, height = 60) {
+  const rnd = mulberry32(seed * 6007 + 5);
+  const crownR = 26, W = crownR * 2 + 14, H = height + crownR + 8, foot = H - 3, cx = W / 2, topY = foot - height;
+  const G = new GBuf(W, H);
+  G.ax = W / 2; G.ay = foot;
+  const TR = ramp('#7a5a34', 6, 3, { dark: 0.6, light: 0.4 });
+  for (let y = topY; y <= foot; y++) {
+    const t = (foot - y) / height, w = 6.5 - t * 1.5;
+    for (let x = Math.floor(cx - w); x <= Math.ceil(cx + w); x++) {
+      const u = (x + 0.5 - cx) / w; if (Math.abs(u) > 1) continue;
+      const dia = ((x + y) % 6 < 2) || ((x - y + 600) % 6 < 2);                                               // the criss-cross of leaf bases
+      G.put(x, y, step(TR, 0.62 - u * 0.35 - (dia ? 0.3 : 0), x, y, 0.4)); nrm(G, x, y, [u * 0.9, 0.45, 0.2]);
+    }
+  }
+  const PL = ramp('#4a8a3a', 7, 3, { dark: 0.68, light: 0.55, shift: 0.35 });
+  const fans = [];
+  for (let i = 0; i < 14; i++) { const a = (i / 14) * 6.283 + rnd() * 0.3; fans.push({ a, r: crownR * (0.75 + rnd() * 0.3), lift: Math.sin(a) }); }
+  fans.sort((p, q) => p.lift - q.lift);
+  for (const f of fans) {
+    const dx = Math.cos(f.a), dy = Math.sin(f.a) * 0.7;
+    const bx = cx + dx * f.r * 0.45, by = topY - 4 + dy * f.r * 0.45 - (1 - Math.abs(dy)) * 4;
+    for (let k = 0; k < f.r * 0.45; k++) G.put(cx + dx * k, topY - 2 + dy * k, step(PL, 0.25, cx | 0, k, 0), null, 0, null, F_LEAF);
+    for (let s = -7; s <= 7; s++) {                                                                       // the fan: stiff blades spread round its tip
+      const ang = f.a + s * 0.11, len = f.r * 0.55 * (1 - Math.abs(s) / 12);
+      for (let k = 0; k < len; k++) {
+        const X = bx + Math.cos(ang) * k, Y = by + Math.sin(ang) * k * 0.7 + (k / len) ** 2 * 3;
+        const c = step(PL, 0.55 + (s < 0 ? 0.15 : -0.1) - k / len * 0.15 + (s % 2 ? -0.12 : 0) - (f.lift < -0.3 ? 0.15 : 0), X | 0, Y | 0, 0.5);
+        G.put(X, Y, c, null, 0, null, F_LEAF); nrm(G, X, Y, [Math.cos(ang) * 0.4, 0.35, 0.85]);
+      }
+    }
+  }
+  G.outline(0.42, true);
+  finishUpright(G, foot);
+  return G;
+}
+// ---- fern: arching fronds from a central crown, each a midrib with paired leaflets -----------------------
+export function fern(seed = 1, size = 26) {
+  const rnd = mulberry32(seed * 811 + 7);
+  const W = size * 2 + 8, H = size * 1.4 + 10 | 0, foot = H - 3, cx = W / 2;
+  const G = new GBuf(W, H);
+  G.ax = W / 2; G.ay = foot;
+  const FR = ramp('#4a8a34', 7, 3, { dark: 0.7, light: 0.55, shift: 0.32 });
+  const fr = [];
+  for (let i = 0; i < 15; i++) { const a = Math.PI + (i / 14) * Math.PI + (rnd() - 0.5) * 0.25; fr.push({ a, len: size * (0.7 + rnd() * 0.35) }); }
+  fr.push({ a: 0.5, len: size * 0.6 }, { a: Math.PI - 0.5, len: size * 0.6 });
+  fr.sort((p, q) => Math.sin(p.a) - Math.sin(q.a));
+  for (const f of fr) {
+    const dx = Math.cos(f.a), up = -Math.sin(f.a);
+    for (let s = 0; s < f.len; s++) {
+      const t = s / f.len, X = cx + dx * s * 0.9, Y = foot - 3 - up * s * 1.15 + t * t * f.len * 0.5;
+      G.put(X, Y, step(FR, 0.3, X | 0, Y | 0, 0), null, 0, null, F_LEAF);
+      const ll = Math.round(Math.sin(Math.min(1, t * 1.2) * Math.PI) * 5 + 1);
+      for (const sg of [-1, 1]) for (let k = 1; k <= ll; k++) {
+        const qx = X + (-up * 0.7) * k * sg * 0.8 + dx * k * 0.4, qy = Y + dx * k * sg * 0.6 + k * 0.5;
+        G.put(qx, qy, step(FR, 0.55 + (sg < 0 ? 0.18 : -0.12) - k / ll * 0.2 + (hash(s, k, seed) > 0.85 ? 0.2 : 0), qx | 0, qy | 0, 0.6), null, 0, null, F_LEAF);
+        nrm(G, qx, qy, [dx * 0.5, 0.35, 0.8]);
+      }
+    }
+  }
+  G.outline(0.42, true);
+  finishUpright(G, foot);
+  return G;
+}

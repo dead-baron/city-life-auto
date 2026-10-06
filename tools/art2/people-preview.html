@@ -1,12 +1,15 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Art v2 people</title>
-<style>body{margin:0;background:#6b6f78;color:#eee;font:12px monospace}canvas{image-rendering:pixelated;display:block}</style></head><body>
-<!-- ?view=turn (C1: four bodies, 5 facings), ?view=line (C2/C3: every archetype), ?view=walk -->
-<canvas id="c"></canvas>
+<style>body{margin:0;background:#6b6f78;color:#eee;font:12px monospace}canvas{image-rendering:pixelated;display:block}.wrap{display:inline-block;background:#6b6f78}</style></head><body>
+<!-- ?view=turn (C1: four bodies, 5 facings), ?view=line (C2/C3: every archetype), ?view=walk,
+     ?view=items (P4: inventory icons, then one character holding each item facing SE, E and N;
+     &dirs=0,3,6 picks other facings, &pose=walk) -->
+<div class="wrap"><canvas id="c"></canvas></div>
 <script type="module">
 import { person, randomPerson, ARCHETYPES } from '../../client/art2/people.js';
+import { icon, ITEM_KINDS } from '../../client/art2/items.js';
 const q = new URLSearchParams(location.search), Z = Number(q.get('z') || 4), view = q.get('view') || 'turn';
 const cv = document.getElementById('c'), g = cv.getContext('2d');
-const put = (G, col, row, cw, ch) => g.drawImage(G.toCanvas('col'), col * cw * Z, row * ch * Z, G.w * Z, G.h * Z);
+const put = (G, col, row, cw, ch, dx = 0, dy = 0) => g.drawImage(G.toCanvas('col'), (col * cw + dx) * Z, (row * ch + dy) * Z, G.w * Z, G.h * Z);
 if (view === 'turn') {
   const bodies = [{ top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'spiky', color: 1 }, skin: 1 },
     { fem: true, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'pony', color: 1 }, skin: 1 },
@@ -18,6 +21,17 @@ if (view === 'turn') {
   const ks = Object.keys(ARCHETYPES), cols = 9;
   cv.width = cols * 40 * Z; cv.height = Math.ceil(ks.length / cols) * 52 * Z; g.imageSmoothingEnabled = false;
   ks.forEach((k, i) => put(person(randomPerson(i * 31 + 7, k), 1), i % cols, Math.floor(i / cols), 40, 52));
+} else if (view === 'items') {
+  // the P4 targets' model: red cap, olive jacket over a white tee, jeans, white trainers
+  const guy = { skin: 1, hair: { style: 'short', color: 0 }, beard: 'short', glasses: 'sun', top: { kind: 'jacket', color: '#5c6236', color2: 'white' },
+    bottom: { kind: 'jeans', color: 'denim' }, shoes: 'white', hat: { kind: 'cap', color: 'red' } };
+  const CW = 44, IH = 40, PH = 64, n = ITEM_KINDS.length, dirs = (q.get('dirs') || '1,2,4').split(',').map(Number), pose = q.get('pose') || 'idle';
+  cv.width = n * CW * Z; cv.height = (IH + dirs.length * PH) * Z; g.imageSmoothingEnabled = false;
+  ITEM_KINDS.forEach((k, i) => {
+    put(icon(k, 32), i, 0, CW, IH, 6, 4);
+    // place each figure by its feet anchor (held items widen the sprite)
+    dirs.forEach((d, r) => { const G = person({ ...guy, held: k }, d, pose, 1); put(G, i, 0, CW, 1, CW / 2 - G.ax, IH + r * PH + PH - 6 - G.ay); });
+  });
 } else {
   cv.width = 8 * 40 * Z; cv.height = 4 * 52 * Z; g.imageSmoothingEnabled = false;
   for (let r = 0; r < 4; r++) { const a = randomPerson(300 + r * 13); for (let f = 0; f < 4; f++) { put(person(a, 2, 'walk', f), f, r, 40, 52); put(person(a, 0, 'walk', f), 4 + f, r, 40, 52); } }
