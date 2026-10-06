@@ -1814,3 +1814,9 @@ Everything here is client-side. Server, shared code and the network are unchange
   - Buildings stand at art v2 height (about 60 px a storey), so dense blocks read as mostly rooftops. **Done:** a soft cut-away hole round the player through any building in front of them, showing the street underneath (chunks keep an "under" layer without buildings). Still to do: a scale decision (the concept art is framed about twice as close as the game camera) and a street density pass.
   - Performance is untested on real phones and consoles; all measurements so far are on a software GPU.
   - Not drawn yet: paint-shop and garage doors, boathouse roof fade and club shutters.
+
+## 2026-10-06 · Art v2 is the live default
+- **Every player now gets the art v2 world renderer.** The "World art" option is gone from Settings.
+- **Classic is only a safety net:** it is used without WebGL2, after the graphics context is lost twice (for the rest of the session), or with `?art=1` in the address for troubleshooting.
+- **Roll back** by pushing branch `checkpoint-live-before-art-v2` (the live game before the art v2 work) to `main`.
+- **Still classic:** the city tour, spectator mode, the radar and the big map image. The subway ride keeps the classic tunnel view.

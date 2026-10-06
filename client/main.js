@@ -43,7 +43,7 @@ import { drawBuildingShadows, drawPropShadows, drawContactShade, drawSpriteShado
 import { registerNewProps } from './render/newprops.js';
 import { LOW_MEM, canvasStats } from './platform.js';
 import { Flora, FLORA_PROPS, wind } from './render/flora/index.js';
-import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS, WORLD_ART_CHOICES, setWorldArt, worldArtWanted } from './gfx.js';
+import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS, worldArtWanted } from './gfx.js';
 initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 
@@ -711,7 +711,7 @@ function art2Failed(why, lostTwice) {
   S.art2Off = why;
   showWorld2(false);
   if (lostTwice) { try { sessionStorage.setItem('cla.art2off', '1'); } catch { /* storage blocked */ } }
-  if (S.hud) S.hud.toast('The new world art can\'t run here - using the classic graphics.', 'warn');
+  if (S.hud) S.hud.toast('This browser can\'t run the full graphics - using basic graphics instead.', 'warn');
 }
 
 function startPlaying() {
@@ -1215,17 +1215,6 @@ function buildGfxPanel() {
   for (const k of ['low', 'medium', 'high', 'ultra', 'custom']) { const o = document.createElement('option'); o.value = k; o.textContent = PRESET_NAMES[k] + (k === d.recommended ? ' (recommended)' : ''); ps.appendChild(o); }
   ps.onchange = () => { if (ps.value !== 'custom') { applyPreset(ps.value); onGfxChange(); } };
   row('Preset', ps);
-  // the world renderer: switching reloads the page (the server keeps your place)
-  const wa = document.createElement('select'); wa.id = 's-worldart';
-  for (const [v, t] of WORLD_ART_CHOICES) { const o = document.createElement('option'); o.value = v; o.textContent = t; wa.appendChild(o); }
-  wa.onchange = () => {
-    setWorldArt(wa.value);
-    try { sessionStorage.removeItem('cla.art2off'); } catch { /* storage blocked */ }
-    if (S.hud) S.hud.toast('Switching the world art - reloading...', 'info');
-    const u = new URL(location.href); u.searchParams.delete('art');
-    setTimeout(() => location.replace(u.href), 700);
-  };
-  row('World art', wa);
   for (const [key, label, choices] of OPTIONS) {
     let el;
     if (choices === 'bool') { el = document.createElement('input'); el.type = 'checkbox'; el.onchange = () => { setOption(key, el.checked); onGfxChange(); }; }
@@ -1241,7 +1230,6 @@ function buildGfxPanel() {
 function syncGfxPanel() {
   buildGfxPanel();
   $('s-preset').value = gfx.preset;
-  $('s-worldart').value = ART2_WANTED ? 'new' : 'classic';
   for (const el of $('s-gfxbox').querySelectorAll('[data-g]')) {
     const v = gfx[el.dataset.g];
     if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v);
