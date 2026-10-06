@@ -1,0 +1,118 @@
+# World v2: the world rebuilt
+
+The world is rebuilt from scratch with the new art and a new layout logic. The user's original world map
+concept (the land mask, coastlines, islands and district placement the current generator reads) is the rough
+reference, not a template: roads, blocks, lots, buildings, water, transit and special places are all laid out
+again. The old world is archived as the branch `checkpoint-world-v1`.
+
+**Shipping:** World v2 goes live as it is built, district by district. There is no switching between old and
+new: each stage replaces part of the world on `main` and stays. Every push keeps the game playable and
+`npm test` green.
+
+## Decisions so far (user, 2026-10-05 / 06)
+- **No perfect grids.** Streets vary: long blocks, short blocks, offsets, T-junctions, the occasional
+  diagonal or curving boulevard, alleys behind long rows of buildings. Every district type has its own
+  pattern (below).
+- **Realistic layout:** a believable city that blends dense downtown, commercial strips, old town,
+  apartments, rough districts, nightlife, industry and the port, suburbs at every income level, and then the
+  country, farms, forests, desert, mountains, beaches and islands ("all the way out to the boonies").
+- **Realistic sizes:** houses 10-15 m wide on real lots, shopfronts 6-12 m, downtown towers 20-40 m wide.
+  (Scale: a person is 42 px, about 1.75 m, so 1 m is about 24 px; a lane is 80 px.)
+- **Sidewalks:** 112 px downtown, 96 px commercial, 64 px residential, none (a shoulder) in the country.
+- **Highways:** two lanes each way by default, especially in dense urban areas; three where on- and off-ramps
+  merge or over longer stretches, then back to two. On- and off-ramps follow the real-road rules (below).
+- **No old art anywhere,** not even as a fallback. The hand-painted downtown blocks and every painted lot are
+  replaced by the art v2 generators.
+- **Prison island** out in the open sea, far enough that a breakout means a long swim. Sharks are rare
+  everywhere, likeliest round the prison, with fins seen now and then; bleeding in the water draws them.
+
+## The camera constraint every layout must respect
+The game is drawn in a 3/4 oblique view (screen y = Y - Z). A building shows its south face and its roof; its
+north, east and west faces cannot be seen. So:
+- On an east-west street, the north side shows shopfronts and doors; the south side shows the backs and roofs
+  of buildings whose fronts face north. Those north-facing fronts get roof signs and pavement markers at their
+  doors (as art v2 already does).
+- Buildings are axis-aligned boxes. Along a diagonal or curving street they step along the curve.
+- Plan districts so the important frontages (main streets, plazas, shops) face south where possible.
+
+## Road hierarchy and cross-sections (`shared/roads.js` ROAD_KINDS, widths in px)
+| Class | Lanes each way | Median | Sidewalk | Where |
+|---|---|---|---|---|
+| Highway | 2 (3 at merges / long runs) | Barrier or grass | none (shoulders) | Ring, cross-island, coast and country highways |
+| Ramp | 1 (2 where it meets the street) | - | none | Interchanges |
+| Major arterial / boulevard | 2 | 14+ (planted on boulevards) | by district | Between districts, bridges |
+| Minor arterial / collector | 1 + turn lane or parking | - | by district | Through districts |
+| Street | 1 | - | by district | Inside districts |
+| Residential local | 1 | - | 64 | Suburbs, cul-de-sacs, loops |
+| Alley | 1 shared, no sidewalk | - | - | Behind building rows downtown, old town, commercial |
+| County road | 1 | - | shoulder | Country |
+| Dirt track | 1 | - | - | Forest, farm, desert, beach access |
+Plus parking lots, driveways, docks, and beach and park paths.
+
+**Highway ramps and junctions** (user, 2026-10-05; previews `interchange` and `highwayFlat` in
+`tools/art2/district-preview.html`):
+- **Off-ramps:** a deceleration lane peels off the outer lane along a long taper, bends away in a gentle curve
+  while it eases down the embankment, levels out, and only then meets the street, square-on at a signal or
+  stop line well clear of the bridge. It never ends in the middle of a street.
+- **On-ramps:** the mirror image: a level start, an eased climb through a smooth curve, then an acceleration
+  lane that tapers into the outer lane.
+- At-grade highways (country, desert) use the same tapers and curves on flat ground.
+- Interchanges: diamond by default; partial cloverleaf or cloverleaf for big junctions; trumpet where a highway
+  ends. Ramps are at least one full lane plus shoulders.
+
+## District patterns
+- **Downtown:** an irregular grid. Block lengths vary (about 120 to 260 m), a few streets jog or end in T's,
+  one or two diagonal or curving boulevards, plazas, towers, long building rows with service alleys behind.
+  112 px sidewalks. Subway entrances on the plazas.
+- **Midtown / commercial:** main streets lined with continuous shopfronts (long rows, varied widths and
+  heights), side streets, alleys behind. 96 px sidewalks. Strip malls with parking out on the edges.
+- **Old town:** organic, narrow, irregular streets, small squares, cobbles, narrow lots.
+- **Apartments / rough districts (low income):** dense walk-ups and row housing, small lots, alleys, corner
+  stores, chain-link, vacant lots, the shanty edges.
+- **Nightlife / red light:** a strip with neon frontages, clubs, bars, back alleys.
+- **Suburbs (middle income):** curvilinear streets, loops and lollipop cul-de-sacs, houses on real lots with
+  driveways, garages and yards, a commercial strip on the arterial.
+- **Luxury (high income):** large lots on winding roads, hillside and waterfront estates, gated communities
+  (open gates), private docks.
+- **Industrial / port:** big parcels on a coarse grid, warehouses, yards, rail spurs, docks, cranes.
+- **Country:** county roads following the terrain, farms with field patterns, small towns at crossroads,
+  forest and mountain roads, desert highways, beach access tracks.
+
+## Water (procedural; `client/art2/rivergen.js` has the art-side generator)
+Rivers traced downhill over the height map by flow accumulation, widening as they collect water, meandering in
+flat country, with creeks, lakes, rapids where the slope steepens and waterfalls at cliffs. Bridges where roads
+cross rivers, culverts and small bridges for creeks, fords on dirt roads. Deterministic in shared code so the
+server (swimming, boats, current) and every client agree.
+
+## Transit
+- **Rail:** surface lines with stations that development clusters round.
+- **Subway:** lines under the dense districts, walkable stations reached by stairs from plazas and sidewalks.
+- **Ferries:** terminals linking the main island to the other islands.
+- **Buses:** routes along arterials with stops; NPC riders; players can ride, drive or steal the bus.
+- **Taxis and the rideshare app** (see `docs/DESIGN-NOTES.md`).
+- **Live transit map:** routes and the vehicles on them shown on the big map.
+
+## Special places to keep or add
+Hospitals and clinics spread evenly (respawn points), police stations, the airport, quarry, raceway, marina,
+docks, beaches and tidepools, campsites and campfires, parks and gardens, pools and bathhouses, gyms, farms,
+the prison island, gang hideouts, and every player property type in `docs/DESIGN-NOTES.md` (all tiers, each
+with vehicle access, a bed and a place to cook; waterfront ones with a dock and boat storage).
+
+## Stages (each one goes live)
+0. **Groundwork:** a world version in shared code. Profiles store it, and on a change homes and garages from the
+   old world are released, so no one ends up owning the wrong house. The road spec gets its new
+   cross-sections (sidewalk classes, lane counts).
+1. **Metro City core:** downtown, midtown and old town re-laid (non-grid, alleys, real lot sizes); the
+   hand-painted blocks go; highway through the core with real ramps.
+2. **Residential belts:** apartments, rough districts, suburbs, luxury hills, Southbank.
+3. **Industry, port, harbor, airport.**
+4. **Country:** farms, forest, desert, mountains, small towns, rivers, creeks and waterfalls.
+5. **Islands:** the other islands, ferries, the prison island and sharks.
+6. **Transit:** subway lines and stations, buses, the live transit map.
+7. **Properties:** every home and business tier placed across the world.
+
+## Testing a stage
+- `npm test` (the tour test checks that every place type still exists and every tour stop resolves).
+- Top-down previews of the whole map and of each changed district (before / after) from a node script, so the
+  layout can be judged without the browser.
+- Headless playtests with `tools/playtest.py` (drive the new streets and ramps; walk the sidewalks).
