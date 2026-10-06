@@ -26,15 +26,20 @@ const lerp = (a, b, t) => a + (b - a) * t;
 
 // The avenues (two lanes each way, a median): north-south ones cross the whole island and carry on over
 // the bridges (868 and 958 south over the river, 958 north to Northshore, 688 south to Cedar Isle),
-// east-west ones run from coast to coast (556 is the Bay Bridge's way into town).
+// east-west ones run from coast to coast (556 is the Bay Bridge's way into town). bow: a gentle curve,
+// amp tiles at its middle, between x0 and x1 (North Boulevard sweeps south through the core, High
+// Street follows the Old Town shore).
 export const AVES_X = [
   { x: 598.5, name: 'Shore Avenue' }, { x: 688.5, name: 'Cedar Avenue' }, { x: 774.5, name: 'Central Avenue' },
   { x: 868.5, name: 'Bridge Avenue', bridge: true }, { x: 958.5, name: 'Northbridge Avenue', bridge: true },
 ];
 export const AVES_Y = [
-  { y: 380.5, name: 'High Street', from: 770 }, { y: 476.5, name: 'North Avenue' }, { y: 556.5, name: 'Bay Avenue' },
+  { y: 380.5, name: 'High Street', from: 770, bow: { amp: -4, x0: 770, x1: 1047 } }, { y: 476.5, name: 'North Boulevard', kind: 'blvd', bow: { amp: 7, x0: 660, x1: 1010 } },
+  { y: 556.5, name: 'Bay Avenue' },
   { y: 724.5, name: 'Southside Avenue' }, { y: 808.5, name: 'Dock Avenue' },
 ];
+export const aveY = (a, x) => (a.bow && x > a.bow.x0 && x < a.bow.x1 ? a.y + a.bow.amp * Math.sin(Math.PI * (x - a.bow.x0) / (a.bow.x1 - a.bow.x0)) : a.y);
+const CURVED = new Map(AVES_Y.filter((a) => a.bow).map((a) => [a.y, (x) => aveY(a, x)]));
 // Through streets that aren't avenues: Harbor Street (Old Town's way to the Harbor Bridge north, and on
 // south through Southside) and the two streets round Greenfield Park.
 const THROUGH = [
@@ -131,8 +136,10 @@ export function metroRoads(ctx) {
   }
   let westEnd = null;
   for (const a of AVES_Y) {
-    for (const pts of clipLine([{ x: T(a.from || 520), y: T(a.y) }, { x: T(1060), y: T(a.y) }], okAve(false, false), 8 * TILE)) {
-      const l = { pts, kind: 'ave', lvl: 0, name: a.name, hy: a.y };
+    const line = [];
+    for (let x = a.from || 520; x <= 1060; x += 4) line.push({ x: T(x), y: T(aveY(a, x)) });
+    for (const pts of clipLine(line, okAve(false, false), 8 * TILE)) {
+      const l = { pts, kind: a.kind || 'ave', lvl: 0, name: a.name, hy: a.y };
       lines.push(l); aves.push(l);
       if (a.y === 556.5 && (!westEnd || pts[0].x < westEnd.x)) westEnd = pts[0];
     }
@@ -177,8 +184,9 @@ export function metroRoads(ctx) {
     }
     ys.push(cell.y1);
     const wob = (seed, v, amp, lam) => (amp ? amp * (0.62 * Math.sin(v / lam * Math.PI * 2 + hash(seed, 1, 5) * 6.28) + 0.38 * Math.sin(v / (lam * 0.47) * Math.PI * 2 + hash(seed, 2, 5) * 6.28)) : 0);
-    // the east-west street k at x (Old Town's lanes wander)
-    const ewY = (k, x) => (k === 0 || k === ys.length - 1 ? ys[k] : ys[k] + wob(ys[k] * 13 + cell.seed, x, (P(x, ys[k]) || P0).wobble || 0, 38));
+    // the east-west street k at x (Old Town's lanes wander; a curving avenue along the cell's edge curves)
+    const edgeY = (k, x) => { const f = CURVED.get(ys[k]); return f ? f(x) : ys[k]; };
+    const ewY = (k, x) => (k === 0 || k === ys.length - 1 ? edgeY(k, x) : ys[k] + wob(ys[k] * 13 + cell.seed, x, (P(x, ys[k]) || P0).wobble || 0, 38));
     const ewKind = (k) => ((P(midX, ys[k]) || P0).lane || 'st');
     for (let k = 1; k + 1 < ys.length; k++) {
       const pts = [];
@@ -224,8 +232,12 @@ export function metroRoads(ctx) {
         const h = hash(cx, ym, cell.seed + 53);
         if (hash(cx, ym, cell.seed + 59) < p.plaza && x1 - x0 < 80 && yb - ya < 70) { plazas.push({ x0, y0: ya, x1, y1: yb }); continue; }
         if (yb - ya >= p.alleyMin && h < p.alley) {
-          const ay = Math.floor(ya + (yb - ya) * (0.48 + (hash(cx, ym, cell.seed + 61) - 0.5) * 0.12)) + 0.5;
-          const pts = [{ x: T(x0), y: T(ay) }, { x: T(x1), y: T(ay) }];
+          // along the middle of the block (a straight alley on tile centres; parallel to a curving street)
+          const f = 0.48 + (hash(cx, ym, cell.seed + 61) - 0.5) * 0.12;
+          const curved = CURVED.has(ya) || CURVED.has(yb) || (P(cx, ya) || P0).wobble;
+          const pts = [];
+          if (!curved) { const ay = Math.floor(ya + (yb - ya) * f) + 0.5; pts.push({ x: T(x0), y: T(ay) }, { x: T(x1), y: T(ay) }); }
+          else for (let x = x0; x <= x1 + 0.01; x += 2) { const xx = Math.min(x, x1); pts.push({ x: T(xx), y: T(lerp(ewY(k, xx), ewY(k + 1, xx), f)) }); }
           for (const piece of clipLine(pts, okLocal(false), 6 * TILE, 12)) lines.push({ pts: piece, kind: 'alley', lvl: 0, name: 'Service Alley' });
         }
         if (x1 - x0 >= p.passMin && hash(cx, ym, cell.seed + 67) < p.passage) {

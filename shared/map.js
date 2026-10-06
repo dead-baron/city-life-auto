@@ -879,7 +879,7 @@ function layoutRoads(m, rand) {
 
   // highway slip ramps: diamond-free "Texas" style onto the one-way frontage roads
   const crossS = [];
-  for (const g of metro.aves.filter((q) => q.kind === 'ave')) {
+  for (const g of metro.aves.filter((q) => q.kind === 'ave' || q.kind === 'blvd')) {
     for (let k = 0; k + 1 < g.pts.length; k++) {
       for (let j = 0; j + 1 < ring.length; j++) {
         const a = g.pts[k], b = g.pts[k + 1], c = ring[j], d = ring[j + 1];
