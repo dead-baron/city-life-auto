@@ -5,7 +5,7 @@
 //
 // CITY_DISTRICTS[name](preset) -> { G, lights }; CITY_TARGETS[name] -> the target image file
 import { Scene, Streets } from './scene.js';
-import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, litter, stain, lawnEdge, shoreFoam, parkingLines, pavementCracks, courtLines, poolWall, roadText } from './ground-warped.js';
+import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, litter, stain, lawnEdge, shoreFoam, parkingLines, pavementCracks, courtLines, poolWall, roadText, towel } from './ground-warped.js';
 import { W } from './warp.js';
 import * as P from './props.js';
 import * as D from './props-district.js';
@@ -225,50 +225,61 @@ export function buildCommercial(preset = 'golden') {
   return sc.finish();
 }
 
-// ---- D16 islands: a gang compound on a rock island with a guard tower and boats; a beach cabin ---------
-export function buildIslands(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 16, {walk: 1}), G = sc.G;
-  const S = new Streets(DW, DH, { lotKind: 'waterDeep' });
-  S.zone('rock', { blob: { cx: 150, cy: 230, rx: 290, ry: 280, seed: 3, wob: 0.12 } });
-  S.zone('yard', { poly: [[0, 80], [330, 70], [350, 330], [300, 400], [0, 420]] });
-  S.zone('dock', { x: 180, y: 400, w: 40, h: 90 }); S.zone('dock', { x: 120, y: 420, w: 180, h: 24 });
-  S.zone('shallow', { blob: { cx: 640, cy: 330, rx: 210, ry: 190, seed: 7, wob: 0.15 } });
-  S.zone('sand', { blob: { cx: 660, cy: 330, rx: 160, ry: 140, seed: 7, wob: 0.15 } });
-  S.zone('grass', { blob: { cx: 690, cy: 260, rx: 120, ry: 100, seed: 8, wob: 0.2 } });
-  S.zone('dock', { path: [[560, 410], [470, 470]], width: 22 });
-  for (const [cx, cy, r, s] of [[470, 120, 30, 1], [740, 60, 50, 2], [430, 320, 24, 3], [520, 500, 30, 4], [330, 480, 18, 5]]) S.zone('rock', { blob: { cx, cy, rx: r, ry: r * 0.8, seed: s, wob: 0.3 } });
-  S.build(); S.paint(G, 16);
+// ---- D16, two separate islands in different parts of the sea (World v2 places them apart) --------------
+function seaBase(sc, S, seed) {
+  const G = sc.G;
+  S.build(); S.paint(G, seed);
   for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) if (S.kind(x, y) === 'waterDeep') G.put(x, y, ...seaPixel(x, y));
-  shoreFoam(G, (x, y) => { const k = S.kind(x, y); return k === 'waterDeep' || k === 'shallow'; }, 161);
-  // the compound: walls with wire, a gate, the guard tower, a flag, crates, a container, a pickup, guards
-  fenceRun(sc, 'chain', 0, 420, 120, 420, { barbed: true });
-  for (let x = 0; x < 320; x += 80) sc.vox(T.compoundWall(80, 40, true), x + 40, 90, 0, 0, 90, 'cwall');
-  sc.vox(T.compoundWall(80, 40, true), 330, 160, PI / 2); sc.vox(T.compoundWall(80, 40, true), 336, 260, PI / 2);
-  sc.vox(T.guardTower(70, sc.lampsOn), 110, 130); sc.person(110, 120, 'swat', 0, 'idle', 1601);
-  sc.vox(U.flagpole(120, '#2a2228'), 30, 110);
-  sc.building({ w: 120, d: 70, style: 'concrete', seed: 161, roof: 'flat', grime: 0.7, graffiti: 1, tagText: 'KEEP OUT', doors: [{ x: 20, w: 20, kind: 'door' }], windows: [80] }, 190, 160);
-  car(sc, 'pickup', 260, 230, PI + 0.3, { paint: '#2a2c30', cargo: [3, 3], parked: true }); car(sc, 'bike', 160, 230, 0.5, { paint: '#1e2026', parked: true });
-  sc.vox(X.container('#a8402e', 130), 90, 340, PI / 2);
-  for (const [x, y, t] of [[180, 330, 2], [200, 344, 3], [220, 330, 1], [250, 360, 4], [40, 230, 2], [60, 240, 3], [280, 330, 1]]) sc.vox(P.crate(t), x, y);
-  for (const [x, y] of [[150, 300], [166, 306], [300, 200]]) sc.vox(D.oilDrum('#3a6a3a'), x, y);
-  for (const [x, y, d, k] of [[80, 270, 2, 'enforcer'], [230, 290, 0, 'swat'], [300, 300, 6, 'syndicate'], [200, 420, 4, 'thug']]) sc.person(x, y, k, d, 'idle', x * 17 + y);
-  for (const [x, y] of [[20, 190], [310, 120]]) lamp(sc, x, y, 'street');
-  // the dock: boats tied up, a hoist
-  car(sc, 'speedboat', 150, 480, -PI / 2, { paint: '#c8342e', cargo: [3], parked: true }); car(sc, 'speedboat', 260, 480, -PI / 2, { paint: '#f0eee8', parked: true });
-  for (const [x, y] of [[180, 494], [220, 494], [120, 446], [300, 446]]) sc.vox(P.piling(30), x, y, 0, 0, y, 'pile30');
-  // the cove: the cabin with a solar panel, palms, the campfire, a dog, a rowboat at a little dock
-  const cab = sc.building({ w: 120, d: 80, style: 'siding', wallColor: '#7a5a3a', pitch: 'hip', roof: 'shingle', roofColor: '#6a6e78', slope: 0.45, seed: 162, doors: [{ x: 40, w: 18, kind: 'door', open: true }], windows: [10, 90], porchLight: true }, 640, 330);
-  sc.vox(T.solarPanel(30, 20), 720, 270, 0, 40, 330.5);
-  sc.vox(T.hammock(44), 610, 350); sc.vox(P.surfboard('#e8a040'), 772 - 12, 330, PI / 2);
-  sc.vox(U.campfire(1), 690, 400); sc.light(690, 398, 18, 110, LIGHT.fire, sc.isNight ? 3 : 1.2);
-  sc.vox(U.campChair('#2e7a7a'), 670, 392); sc.vox(U.campChair('#2e7a7a'), 716, 396, PI); sc.person(716, 398, 'surfer', 6, 'idle', 1621); pet(sc, 'golden', 660, 420, 0.3, { pose: 'sit' });
-  sc.person(600, 400, 'lifeguard', 4, 'walk', 1622);
-  car(sc, 'dinghy', 450, 478, 0.6, { parked: true });
-  for (const [x, y, s] of [[600, 230, 1], [660, 200, 2], [740, 210, 3], [580, 300, 4], [760, 300, 5], [700, 160, 6]]) sc.add(palm(1630 + s, 110 + s * 6), x, y);
-  for (const [x, y, s] of [[40, 90, 1], [330, 60, 2], [10, 380, 3]]) sc.add(palm(1640 + s, 100), x, y);
-  // rocks in the water, a speedboat running
-  for (const [x, y, s, z] of [[470, 130, 1, 30], [740, 70, 2, 40], [430, 330, 3, 24], [520, 506, 4, 28], [330, 486, 5, 20], [370, 200, 6, 26]]) sc.vox(D.boulder(s + 160, z, '#6e6860'), x, y);
-  car(sc, 'speedboat', 520, 60, -0.2, { paint: '#2a2c38' });
+  shoreFoam(G, (x, y) => { const k = S.kind(x, y); return k === 'waterDeep' || k === 'shallow'; }, seed);
+}
+// the gang compound: a rocky island ringed by water, walls, a guard tower, crates, boats at its dock
+export function buildCompoundIsland(preset = 'golden') {
+  const sc = new Scene(DW, DH, preset, 16, { walk: 1 }), G = sc.G;
+  const S = new Streets(DW, DH, { lotKind: 'waterDeep' });
+  S.zone('rock', { blob: { cx: 384, cy: 236, rx: 300, ry: 200, seed: 3, wob: 0.12 } });
+  S.zone('yard', { poly: [[150, 110], [610, 100], [630, 330], [560, 380], [170, 380]] });
+  S.zone('dock', { x: 340, y: 380, w: 44, h: 110 }); S.zone('dock', { x: 260, y: 420, w: 220, h: 24 });
+  for (const [cx, cy, r, s] of [[60, 60, 30, 1], [720, 470, 40, 2], [700, 60, 24, 3], [90, 460, 26, 4]]) S.zone('rock', { blob: { cx, cy, rx: r, ry: r * 0.8, seed: s, wob: 0.3 } });
+  seaBase(sc, S, 161);
+  for (let x = 160; x < 620; x += 80) sc.vox(T.compoundWall(80, 40, true), x + 40, 116, 0, 0, 116, 'cwall');
+  sc.vox(T.compoundWall(80, 40, true), 620, 190, PI / 2); sc.vox(T.compoundWall(80, 40, true), 620, 280, PI / 2);
+  sc.vox(T.compoundWall(80, 40, true), 160, 190, PI / 2); sc.vox(T.compoundWall(80, 40, true), 160, 280, PI / 2);
+  sc.vox(T.guardTower(70, sc.lampsOn), 230, 160); sc.person(230, 150, 'swat', 0, 'idle', 1601);
+  sc.vox(U.flagpole(120, '#2a2228'), 190, 140);
+  sc.building({ w: 140, d: 80, style: 'concrete', seed: 161, roof: 'flat', grime: 0.7, graffiti: 1, tagText: 'KEEP OUT', doors: [{ x: 20, w: 20, kind: 'door' }], windows: [100] }, 360, 200);
+  car(sc, 'pickup', 480, 270, PI + 0.3, { paint: '#2a2c30', cargo: [3, 3], parked: true }); car(sc, 'bike', 300, 270, 0.5, { paint: '#1e2026', parked: true });
+  sc.vox(X.container('#a8402e', 130), 560, 300, PI / 2);
+  for (const [x, y, t] of [[260, 330, 2], [280, 344, 3], [300, 330, 1], [440, 350, 4], [220, 250, 2], [240, 262, 3], [500, 340, 1]]) sc.vox(P.crate(t), x, y);
+  for (const [x, y] of [[200, 330], [214, 336], [520, 220]]) sc.vox(D.oilDrum('#3a6a3a'), x, y);
+  for (const [x, y, d, k] of [[260, 290, 2, 'enforcer'], [420, 300, 0, 'swat'], [520, 380, 6, 'syndicate'], [362, 410, 4, 'thug']]) sc.person(x, y, k, d, 'idle', x * 17 + y);
+  for (const [x, y] of [[180, 220], [600, 150]]) lamp(sc, x, y, 'street');
+  car(sc, 'speedboat', 300, 486, -PI / 2, { paint: '#c8342e', cargo: [3], parked: true }); car(sc, 'speedboat', 430, 486, -PI / 2, { paint: '#f0eee8', parked: true });
+  for (const [x, y] of [[340, 494], [384, 494], [260, 446], [480, 446]]) sc.vox(P.piling(30), x, y, 0, 0, y, 'pile30');
+  for (const [x, y, s] of [[110, 200, 1], [650, 360, 2], [120, 340, 3], [660, 140, 4]]) sc.add(palm(1640 + s, 100), x, y);
+  for (const [x, y, s, z] of [[60, 60, 1, 30], [720, 470, 2, 40], [700, 60, 3, 24], [90, 460, 4, 28]]) sc.vox(D.boulder(s + 160, z, '#6e6860'), x, y);
+  car(sc, 'speedboat', 640, 480, -0.4, { paint: '#2a2c38' });
+  return sc.finish();
+}
+// the cove: a small palm island with a beach cabin, a campfire and a little dock, nobody else around
+export function buildCoveIsland(preset = 'golden') {
+  const sc = new Scene(DW, DH, preset, 26, { walk: 1 }), G = sc.G;
+  const S = new Streets(DW, DH, { lotKind: 'waterDeep' });
+  S.zone('shallow', { blob: { cx: 384, cy: 260, rx: 300, ry: 220, seed: 7, wob: 0.15 } });
+  S.zone('sand', { blob: { cx: 384, cy: 250, rx: 240, ry: 170, seed: 7, wob: 0.15 } });
+  S.zone('grass', { blob: { cx: 400, cy: 190, rx: 170, ry: 110, seed: 8, wob: 0.2 } });
+  S.zone('dock', { path: [[300, 380], [220, 470]], width: 22 });
+  for (const [cx, cy, r, s] of [[90, 120, 30, 1], [690, 90, 40, 2], [660, 440, 26, 3], [110, 440, 22, 4]]) S.zone('rock', { blob: { cx, cy, rx: r, ry: r * 0.8, seed: s, wob: 0.3 } });
+  seaBase(sc, S, 162);
+  sc.building({ w: 130, d: 84, style: 'siding', wallColor: '#7a5a3a', pitch: 'hip', roof: 'shingle', roofColor: '#6a6e78', slope: 0.45, seed: 162, doors: [{ x: 46, w: 18, kind: 'door', open: true }], windows: [12, 96], porchLight: true }, 360, 270);
+  sc.vox(T.solarPanel(30, 20), 450, 206, 0, 40, 270.5);
+  sc.vox(T.hammock(44), 320, 296); sc.vox(P.surfboard('#e8a040'), 506, 270, PI / 2);
+  sc.vox(U.campfire(1), 440, 340); sc.light(440, 338, 18, 110, LIGHT.fire, sc.isNight ? 3 : 1.2);
+  sc.vox(U.campChair('#2e7a7a'), 420, 332); sc.vox(U.campChair('#2e7a7a'), 466, 336, PI); sc.person(466, 338, 'surfer', 6, 'idle', 1621); pet(sc, 'golden', 410, 360, 0.3, { pose: 'sit' });
+  sc.person(330, 350, 'lifeguard', 4, 'walk', 1622); towel(G, 540, 330, 20, 40, [[230, 120, 170], [240, 236, 228]]);
+  car(sc, 'dinghy', 200, 480, 0.6, { parked: true });
+  for (const [x, y, s] of [[280, 160, 1], [340, 120, 2], [460, 110, 3], [520, 170, 4], [560, 250, 5], [250, 240, 6]]) sc.add(palm(1630 + s, 110 + s * 6), x, y);
+  for (const [x, y, s] of [[300, 220, 1], [500, 220, 2], [580, 300, 3]]) sc.add(bush(1650 + s, 14, { flowers: '#e8507a' }), x, y);
+  for (const [x, y, s, z] of [[90, 120, 1, 30], [690, 90, 2, 40], [660, 440, 3, 24], [110, 440, 4, 22]]) sc.vox(D.boulder(s + 170, z, '#6e6860'), x, y);
   return sc.finish();
 }
 
@@ -326,5 +337,5 @@ export function buildBlend(preset = 'golden') {
   return sc.finish();
 }
 
-export const CITY_DISTRICTS = { ...EVERY_DISTRICT, oldtown: buildOldTown, apartments: buildApartments, nightlife: buildNightlife, commercial: buildCommercial, islands: buildIslands, blend: buildBlend };
-export const CITY_TARGETS = { ...EVERY_TARGET, oldtown: 'D5_old-town.png', apartments: 'D4_apartments.png', nightlife: 'D8_nightlife.png', commercial: 'D3_commercial.png', islands: 'D16_islands.png', blend: 'D17_blend.png' };
+export const CITY_DISTRICTS = { ...EVERY_DISTRICT, oldtown: buildOldTown, apartments: buildApartments, nightlife: buildNightlife, commercial: buildCommercial, compound: buildCompoundIsland, cove: buildCoveIsland, blend: buildBlend };
+export const CITY_TARGETS = { ...EVERY_TARGET, oldtown: 'D5_old-town.png', apartments: 'D4_apartments.png', nightlife: 'D8_nightlife.png', commercial: 'D3_commercial.png', compound: 'D16_islands.png', cove: 'D16_islands.png', blend: 'D17_blend.png' };

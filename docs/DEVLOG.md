@@ -1635,3 +1635,4 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
 - **Preview:** all 19 blocks are re-laid at the new widths. The preview page now sizes itself to each block.
 - **Live game:** unchanged; its streets are already 192 px. Its avenues (288 px) get widened in the world rebuild.
 - **Comparison:** `docs/art-v2/districts-wide.png`.
+- **Islands split:** the D16 block is now two separate island scenes, the gang compound (`?d=compound`) and the palm cove with the beach cabin (`?d=cove`). Each is ringed by open water, because in World v2 they sit in different parts of the sea.
