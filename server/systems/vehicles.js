@@ -1,6 +1,6 @@
 // Vehicle physics, seats (multi-passenger binding), collisions, ped strikes, wrecks.
 import { K, VF, WEATHER } from '../../shared/constants.js';
-import { vehStep, vehLateralSpeed, vehForwardSpeed } from '../../shared/physics.js';
+import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
 import { PED_BLOCK, WATER_T } from '../../shared/map.js';
 import { sameLevel, levelStep } from '../../shared/levels.js';
@@ -29,10 +29,11 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
     v.x += v.vx * dt; v.y += v.vy * dt; v.a += (v.av || 0) * dt;
     return;
   }
+  if (v.dead) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead: it rolls to a stop)
   const impact = vehStep(v, v.input, dt, world.map, v.def, env);
   if (impact > 160) {
     const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);
-    damageVehicle(world, v, dmg, null);
+    crashDamage(world, v, dmg, null, impact);
     world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: Math.min(1, impact / 500) });
     if (v.def.kind === 'bike' && impact > 280) bikeCrash(world, v, impact);
     if (impact > 330) cargo.knockOff(world, v, impact);
@@ -78,10 +79,10 @@ export function update(world, dt) {
     v.drift = Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player);
     v.lights = (night && !!driver) || (v.def.police && v.sirenOn);
     v.siren = !!(v.def.police && v.sirenOn && driver);
-    // burning / smoke
-    if (!v.wreckAt && v.hp < v.def.hp * 0.15) {
-      v.burnUntil = now + 1;
-      damageVehicle(world, v, 4 * dt, v.lastAttacker ? world.get(v.lastAttacker) : null);
+    // out of health: rolling to a stop, smoking, then on fire, then up it goes (killEngine)
+    if (v.dead && !v.wreckAt) {
+      if (now >= v.deadFireAt) v.burnUntil = now + 1;
+      if (now >= v.deadBoomAt) explode(world, v, v.lastAttacker ? world.get(v.lastAttacker) : null);
     }
     // keep occupants and attached cargo glued to the vehicle
     for (const sid of v.seats) if (sid) { const p = world.get(sid); if (p) { p.x = v.x; p.y = v.y; p.vx = v.vx; p.vy = v.vy; p.lz = v.lz || 0; } }
@@ -150,8 +151,8 @@ function resolveVehicleHit(world, a, b, hit) {
     const dmg = (impact - 90) * 0.18;
     const da = driverOf(world, a), db = driverOf(world, b);
     const aFaster = speedOf(a) >= speedOf(b);
-    damageVehicle(world, a, dmg / Math.sqrt(ma), db);
-    damageVehicle(world, b, dmg / Math.sqrt(mb), da);
+    crashDamage(world, a, dmg / Math.sqrt(ma), db, impact);
+    crashDamage(world, b, dmg / Math.sqrt(mb), da, impact);
     world.emit((a.x + b.x) / 2, (a.y + b.y) / 2, { e: 'crash', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, p: Math.min(1, impact / 500) });
     const attacker = aFaster ? da : db, victimV = aFaster ? b : a;
     if (attacker && impact > 180) law.vehicleRam(world, attacker, victimV, impact);
@@ -194,12 +195,49 @@ function bikeCrash(world, v, impact) {
 }
 
 
-export function damageVehicle(world, v, amount, attackerPed, raw = false) {
+// How much a vehicle shrugs off (damage is divided by this): by kind, heavy trucks and buses the most.
+export function toughOf(def) { return def.kind === 'bike' ? VEHICLE_TOUGH.bike : def.kind === 'boat' ? VEHICLE_TOUGH.boat : def.mass >= 2.4 ? VEHICLE_TOUGH.heavy : VEHICLE_TOUGH.car; }
+
+// Damage. raw: already scaled (trains, rockets). boom: if this takes the last of its health it explodes on the
+// spot (a rocket, a blast, a crash hard enough); otherwise running out of health kills the engine (killEngine).
+// A vehicle already dying: a blast or a rocket sets it off at once, gunfire brings the end sooner.
+export function damageVehicle(world, v, amount, attackerPed, raw = false, boom = false) {
   if (v.wreckAt || amount <= 0) return;
-  // cars and boats are built a little tougher; motorcycles stay fragile
-  v.hp -= raw || v.def.kind === 'bike' ? amount : amount / VEHICLE_TOUGHNESS;
+  const dmg = raw ? amount : amount / toughOf(v.def);
   if (attackerPed) v.lastAttacker = attackerPed.id;
-  if (v.hp <= 0) explode(world, v, attackerPed);
+  if (v.dead) {
+    if (boom) explode(world, v, attackerPed);
+    else v.deadBoomAt = Math.max(world.time + 0.5, v.deadBoomAt - dmg / 25);
+    return;
+  }
+  v.hp -= dmg;
+  if (v.hp > 0) return;
+  v.hp = 0;
+  if (boom || v.def.pedal) explode(world, v, attackerPed); // (a bicycle just buckles)
+  else killEngine(world, v, attackerPed);
+}
+// A crash: a hard one (closing speed over CRASH_BOOM_IMPACT) blows a motorcycle up on the spot, and anything else
+// that was already badly damaged (or that it finishes off); the rest is ordinary damage.
+function crashDamage(world, v, dmg, attackerPed, impact) {
+  if (v.wreckAt) return;
+  const hard = impact > CRASH_BOOM_IMPACT && !v.def.pedal && v.def.kind !== 'boat';
+  if (hard && (v.def.kind === 'bike' || v.dead || v.hp < v.def.hp * CRASH_BOOM_HP)) { explode(world, v, attackerPed); return; }
+  damageVehicle(world, v, dmg, attackerPed, false, hard);
+}
+// Out of health: the engine dies and it rolls to a stop, smoking; it catches fire after DEAD_FIRE_S and blows up
+// after DEAD_BOOM_S. Whoever's inside is told to get out; NPCs at the wheel bail and run.
+export function killEngine(world, v, attackerPed) {
+  if (v.dead || v.wreckAt) return;
+  v.dead = true; v.hp = 0; v.sirenOn = false;
+  v.deadAt = world.time; v.deadFireAt = world.time + DEAD_FIRE_S; v.deadBoomAt = world.time + DEAD_BOOM_S;
+  if (attackerPed) v.lastAttacker = attackerPed.id;
+  world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: 0.3 });
+  for (const sid of [...v.seats]) {
+    const ped = sid && world.get(sid);
+    if (!ped) continue;
+    if (ped.player) world.notify(ped.player, "The engine's dead and it's smoking - get out before it goes up!", 'bad');
+    else if (ped.npc && !v.scripted) exitVehicle(world, ped);
+  }
 }
 
 export function explode(world, v, attackerPed) {
@@ -227,7 +265,7 @@ export function explode(world, v, attackerPed) {
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
-import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGHNESS } from '../../shared/rules.js';
+import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S } from '../../shared/rules.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
@@ -438,7 +476,8 @@ export function vehFlags(world, v) {
   if (v.reverse) f |= VF.REVERSE;
   if (v.wreckAt) f |= VF.WRECK;
   if (v.burnUntil > world.time || (v.wreckAt && !v.def.pedal && world.time - v.wreckAt < 20)) f |= VF.BURN;
-  if (v.hp < v.def.hp * 0.35 && !v.def.pedal) f |= VF.SMOKE;
+  if ((v.hp < v.def.hp * 0.35 || v.dead) && !v.def.pedal) f |= VF.SMOKE;
+  if (v.dead && !v.wreckAt) f |= VF.DEAD;
   if (v.drift) f |= VF.DRIFT;
   if (v.hornUntil > world.time) f |= VF.HORN;
   if (v.bloody) f |= VF.BLOODY;

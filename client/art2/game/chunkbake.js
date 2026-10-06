@@ -4,8 +4,9 @@
 //   bakeSteps(M, cx, cy, opt) -> the same bake as a generator that yields every few ms (worker.js pauses at
 //                                each yield, so other jobs get answered in between)
 //     under   RGBA8: the chunk before its buildings (rgb) and, in alpha, the local number (1..63) of the building
-//             whose surface is on top at that pixel (0: none); blds: [building index, x0, y0, x1, y1, base y]
-//             per local number (its screen rectangle in world px), for fading whole buildings
+//             whose surface is on top at that pixel (0: none); blds: [building index, x0, y0, x1, y1, base y,
+//             fx0, fy0, fx1, fy1] per local number (its screen rectangle in world px, then its footprint), for
+//             fading whole buildings (only where they cover ground outside their footprint)
 //     g       the chunk G-buffer, CHUNK x CHUNK, ax = ay = 0: world X [cx*768, cx*768+768) and screen
 //             Y (= world Y - Z) [cy*768, cy*768+768)
 //     lights  the static light sources anchored in the chunk (statics.staticLights)
@@ -202,10 +203,11 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
       let k = 0;
       if (bid && isBuilding(it) && it.b !== undefined) {
         k = local.get(it.b) || 0;
-        if (!k && blds.length < 63) { k = blds.length + 1; local.set(it.b, k); blds.push([it.b, Infinity, Infinity, -Infinity, -Infinity, -Infinity]); }
+        if (!k && blds.length < 63) { k = blds.length + 1; local.set(it.b, k); blds.push([it.b, Infinity, Infinity, -Infinity, -Infinity, -Infinity, Infinity, Infinity, -Infinity, -Infinity]); }
         if (k) {
           const r = blds[k - 1], e = it.ext || [0, 0, 0, 0];
           r[1] = Math.min(r[1], it.x - e[0]); r[2] = Math.min(r[2], it.y - (it.z0 || 0) - e[1]); r[3] = Math.max(r[3], it.x + e[2]); r[4] = Math.max(r[4], it.y + e[3]); r[5] = Math.max(r[5], it.y);
+          if (it.fp) { r[6] = Math.min(r[6], it.fp[0]); r[7] = Math.min(r[7], it.fp[1]); r[8] = Math.max(r[8], it.fp[2]); r[9] = Math.max(r[9], it.fp[3]); }
         }
       }
       let s;

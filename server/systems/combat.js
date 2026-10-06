@@ -282,8 +282,8 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
       // a rocket landing on / next to a vehicle destroys it outright (armored ones take two)
       if (rocket && f > 0.25) {
         const armored = ARMORED_VEHICLES.includes(e.def.id);
-        vehicles.damageVehicle(world, e, armored ? e.def.hp / ARMORED_ROCKETS + 1 : e.hp + 1, attacker, true);
-      } else vehicles.damageVehicle(world, e, dmg * 1.6 * f, attacker);
+        vehicles.damageVehicle(world, e, armored ? e.def.hp / ARMORED_ROCKETS + 1 : e.hp + 1, attacker, true, true);
+      } else vehicles.damageVehicle(world, e, dmg * 1.6 * f, attacker, false, f > 0.5); // (a blast close by finishes it off on the spot)
     } else if (e.kind === K.CRATE && e.state === 'ground') {
       const a = Math.atan2(e.y - y, e.x - x);
       e.vx += Math.cos(a) * 200 * f; e.vy += Math.sin(a) * 200 * f; e.vz = 160 * f;

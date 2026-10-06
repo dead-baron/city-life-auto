@@ -106,10 +106,12 @@ in vec2 c;
 uniform vec4 uRect; uniform vec2 uScene;
 void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2.0 - 1.0, 0.0, 1.0); }`;
 // a chunk texel copied into the scene, depth from its height
-// Fading whole buildings: a chunk's under layer holds the chunk before its buildings (rgb) and, in alpha, the
-// local number of the building on top at each texel. uFade[k] (0..1) fades building k toward the under layer:
-// the colour blends smoothly; past half way the texel also takes the ground's height and normal, so people
-// and cars behind it draw over it (the host eases each building in and out round the player).
+// Fading buildings: a chunk's under layer holds the chunk before its buildings (rgb) and, in alpha, the local
+// number of the building on top at each texel. uFade[k] (0..1) fades building k toward the under layer where its
+// picture covers ground outside its own footprint (uFoot[k], chunk texels) - the street and pavement behind it -
+// while over its footprint it stays, so the inside isn't shown until you walk in: the colour blends smoothly;
+// past half way the texel also takes the ground's height and normal, so people and cars behind it draw over it
+// (the host eases each building in and out round the player).
 // Swaying vegetation: leaf texels (F_LEAF: foliage, grass tufts, crops) lean with the wind (uWind: strength,
 // gustiness, direction; uWindT the shared wind clock) by whole texels, more the higher they stand above their
 // ground - so a tree's crown sways over its trunk and grass tips nod - plus a slow idle sway even in calm air.
@@ -118,7 +120,7 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // shows through. Gusts also brighten the leaves they bend (bands of wind sweeping over a wheat field).
 // uSway: 0 off, 1 gust shading only (Low), 2-4 leaning up to 1-3 texels.
 const STATIC_FS = HDR + `
-uniform sampler2D t0, t1, t2, t3; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64];
+uniform sampler2D t0, t1, t2, t3; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64]; uniform vec4 uFoot[64];
 uniform vec4 uWind; uniform float uWindT; uniform int uSway; uniform vec2 uChunk;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
@@ -182,6 +184,9 @@ void main(){
     int k = int(u.a * 255.0 + 0.5);
     if (k > 0 && k < 64) {
       float f = uFade[k];
+      vec4 fp = uFoot[k];
+      vec2 sp = vec2(src);
+      if (sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w) f = 0.0;   // over its own footprint: stays
       if (f > 0.002) {
         a.rgb = mix(a.rgb, u.rgb, f);
         c.rgb *= 1.0 - f;
@@ -490,6 +495,13 @@ export class Art2Engine {
     for (let i = 0; i < 3; i++) { gl.bindTexture(gl.TEXTURE_2D, s.t[i]); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, i === 0 ? pk.p0 : i === 1 ? pk.p1 : pk.p2); }
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
     s.bids = g.blds && g.blds.length ? g.blds.map((r) => r[0]) : null;
+    // each building's footprint in the chunk's texels (a fading building keeps its own footprint covered, so the
+    // inside stays hidden until you walk in; only what it hides of the street round it shows)
+    if (s.bids) {
+      const F4 = s.foot || (s.foot = new Float32Array(64 * 4)), ox = cx * CHUNK_PX, oy = cy * CHUNK_PX;
+      F4.fill(0);
+      g.blds.forEach((r, i) => { if (i < 63 && r.length >= 10 && isFinite(r[6])) { const j = (i + 1) * 4; F4[j] = r[6] - ox; F4[j + 1] = r[7] - oy; F4[j + 2] = r[8] - ox; F4[j + 3] = r[9] - oy; } });
+    }
     if (g.under && g.under.length >= CHUNK_PX * CHUNK_PX * 4) {
       if (!s.t[3]) s.t[3] = glTex(gl, CHUNK_PX, CHUNK_PX);
       gl.pixelStorei(gl.UNPACK_ROW_LENGTH, g.w);
@@ -815,7 +827,7 @@ export class Art2Engine {
       if (fades && s.under && s.t[3] && s.bids) {
         FA.fill(0);
         for (let i = 0; i < s.bids.length && i < 63; i++) { const f = fades.get(s.bids[i]); if (f) { FA[i + 1] = f; on = 1; } }
-        if (on) gl.uniform1fv(u.uFade, FA);
+        if (on) { gl.uniform1fv(u.uFade, FA); gl.uniform4fv(u.uFoot, s.foot); }
       }
       gl.uniform1f(u.uFadeOn, on);
       const x = cx * CHUNK_PX - this.ox, y = cy * CHUNK_PX - this.oy;

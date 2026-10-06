@@ -53,7 +53,7 @@ PF.KNEEL = PF.FISHING;    // on a medic: kneeling beside someone
 // Vehicle flag bits (wire)
 export const VF = {
   LIGHTS: 1, SIREN: 2, BRAKE: 4, REVERSE: 8, WRECK: 16, BURN: 32, SMOKE: 64, DRIFT: 128,
-  HORN: 256, BLOODY: 512, DRIVER: 1024, OWNED: 2048, FLAT: 4096,
+  HORN: 256, BLOODY: 512, DRIVER: 1024, OWNED: 2048, FLAT: 4096, DEAD: 8192, // DEAD: out of health, the engine cut out (it rolls to a stop, burns, explodes)
 };
 
 // Factions

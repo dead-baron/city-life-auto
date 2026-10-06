@@ -29,7 +29,7 @@ Status tags: **[W2]** built as part of World v2; **[next]** right after the art 
   - **Cost:** cheap enough for low-end devices.
 
 **Bugs [next]:**
-- **Vehicles are too fragile.** Make them tougher, tiered by type; motorcycles get a bit tougher too.
+- **Vehicles are too fragile.** **[done 2026-10-06]** Make them tougher, tiered by type; motorcycles get a bit tougher too.
   - **Explosions on impact:** only in a serious head-on collision at high speed (a car must already be badly
     damaged), or when hit by something going very fast.
   - **At 0 health otherwise:** the vehicle slows to a stop, smokes, catches fire, then explodes. That gives you
@@ -40,7 +40,7 @@ Status tags: **[W2]** built as part of World v2; **[next]** right after the art 
   - **Mostly** you see plants sway.
   - **Ambient effects:** butterflies and dust motes don't play in a strong wind. Every ambient effect has the
     right conditions and places.
-- **Building fades:** only the part that blocks the street and the walkable space goes see-through. The interior
+- **Building fades:** **[done 2026-10-06]** only the part that blocks the street and the walkable space goes see-through. The interior
   stays hidden until you walk in through the door.
 - **Birds in rain:** no reflection. **[done 2026-10-06]** A faint shadow far below them on the ground is fine, so they read as high up.
 - **Rain ripples:** fixed in the world, on the ground, puddles and car roofs. **[done 2026-10-06]** Today they ride on the rain overlay

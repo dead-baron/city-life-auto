@@ -9,6 +9,7 @@
        &t=seconds    the clock (waves, surf, rain)          &wind=strength,dirx,diry,gust  (default 0.1,1,0,0.3)
        &windt=s      the wind clock (default t)             &rain=0..1   &wet=0..1   &q=0..3 quality  &z=zoom
        &r=1          chunks baked round the camera's chunk (r=1: 3 x 3)
+       &fade=0.88    fades every building in view that far (the see-through you get walking behind one)
      window.render(t, windT) draws another frame at that clock (returns when done); window.ready once baked. -->
 <canvas id="cv"></canvas><div id="hud"></div>
 <script type="module">
@@ -32,15 +33,17 @@ await loadProviders();
 const M = generateCity(1337);
 const cache = new SpriteCache(200e6);
 const ccx = Math.floor(camX / CHUNK), ccy = Math.floor(camY / CHUNK);
+const fades = new Map(), fadeK = +(q.get('fade') || 0);
 for (let cy = ccy - R; cy <= ccy + R; cy++) for (let cx = ccx - R; cx <= ccx + R; cx++) {
   const r = bakeChunk(M, cx, cy, { quality: Q, seed: 1337 }, cache);
   const g = r.g; g.under = r.under; g.blds = r.blds;
   eng.uploadChunk(cx, cy, g);
+  if (fadeK) for (const b of r.blds || []) fades.set(b[0], fadeK);
 }
 const P = { ...(PRESETS_GAME[PN] || PRESETS_GAME.noon) };
 const wind = [ws, wg, wdx, wdy];
 window.render = (t, windT = t) => {
-  eng.beginFrame({ camX, camY, zoom, viewW: W / zoom, viewH: H / zoom, time: t, preset: P, wet, quality: Q, wind, windT });
+  eng.beginFrame({ camX, camY, zoom, viewW: W / zoom, viewH: H / zoom, time: t, preset: P, wet, quality: Q, wind, windT, fades });
   eng.endFrame();
   eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, new Uint8Array(4));
   hud.textContent = `cam ${camX},${camY} t ${t.toFixed(2)} wind ${ws} rain ${rain} q${Q} ${PN}  baked in ${((performance.now() - t0) / 1000).toFixed(1)} s`;

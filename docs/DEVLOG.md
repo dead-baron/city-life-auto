@@ -2005,3 +2005,25 @@ Everything here is client-side. Server, shared code and the network are unchange
 - **Phone stand-ins:** water now matches the baked sea's colour.
 - **Tour:** the countryside stop describes the swaying plants, the waves, the surf and the wakes, and no longer promises trampled grass, which the new renderer doesn't do yet.
 - **Tool:** `tools/art2/live-test.html` renders the real map through the engine at a fixed camera with a controlled clock, wind and rain, for checking moving things frame by frame.
+
+## 2026-10-06 · Tougher vehicles that die slowly; building fades keep interiors hidden
+
+- **Vehicles are tougher, tiered by type** (user: cars exploded far too easily). Damage from crashes, gunfire and blasts is divided by `VEHICLE_TOUGH` (`shared/rules.js`):
+  - cars 1.8 (was 1.35);
+  - heavy trucks, vans and buses (mass 2.4 and up) 2.1;
+  - boats 1.6;
+  - motorcycles 1.25 (they took it all before).
+  
+  Each model's own health still tiers them further (a bus 600, the armored van 850, a hatchback 180).
+- **Running out of health no longer means an instant explosion.**
+  - **Sequence:** the engine dies and the vehicle rolls to a stop pouring black smoke (it still steers). It catches fire after 3 s (`DEAD_FIRE_S`) and explodes after 9 s (`DEAD_BOOM_S`): time to get out and run.
+  - **Who gets out:** you're told to; NPC drivers bail.
+  - **What speeds it up:** gunfire brings the end sooner; a blast close by or a rocket sets it off at once.
+  - **The old rule is gone:** cars below 15 % used to start burning and blow up by themselves.
+- **Explosions on impact are for really hard crashes only:** a closing speed over 600 px/s (67 km/h on the tour's scale, close to a car's top speed; `CRASH_BOOM_IMPACT`).
+  - **Motorcycles:** blow up every time.
+  - **Cars, trucks and boats:** only if they were already below 35 % health (`CRASH_BOOM_HP`) or the crash takes the last of it.
+- **Client:** a dying vehicle is flagged (`VF.DEAD`), so the driver's predicted car stops answering the gas the same moment the server's does.
+- **Building fades keep the inside hidden** (user: walking behind a building showed its whole interior). A fading building now only goes see-through where its picture covers ground outside its own footprint: the street and pavement behind it. Over its footprint it stays, so the interior isn't shown until you walk in through the door. (`chunkbake` adds each building's footprint to `blds`; the engine passes it to the fade.)
+- **Tour:** the combat stop explains the toughness tiers, the dying engine and what blows a vehicle up on the spot. `TUTORIAL_VERSION` 31.
+- **Tests:** toughness by type; a car out of health smokes, burns after 3 s and explodes after 9 s; a blast sets a dying car off.

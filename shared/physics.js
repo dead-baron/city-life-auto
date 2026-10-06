@@ -291,12 +291,22 @@ export function vehStep(s, inp, dt, map, def, env) {
   return Math.max(hit, levelStep(map, s, def.W / 2, true));
 }
 
+// A vehicle whose engine has died (out of health): no power, the brakes dragging it to a stop, the wheel still turns.
+export function deadInput(s, steer = 0, hb = false) {
+  const fwd = s.vx * Math.cos(s.a) + s.vy * Math.sin(s.a);
+  return { throttle: fwd > 20 ? -0.3 : 0, steer: Math.max(-1, Math.min(1, steer)), hb, slide: false, drv: true };
+}
+
 // Direction-based driving: the stick points where you want to go. Throttle follows how far it is
 // pushed; steering turns the car toward the stick. Point well behind the car to brake, then reverse
 // (the rear swings toward the stick). Tank mode (IN.TANK, optional for keyboards): up/down = gas /
 // brake, left/right = steer, like the classic games.
 export function driveInput(s, inp) {
   const hb = !!(inp.bits & IN.DIVE);
+  if (s.dead) { // the engine has cut out: it only rolls to a stop (the wheel still turns)
+    const m = Math.hypot(inp.mx, inp.my);
+    return deadInput(s, inp.bits & IN.TANK ? inp.mx : m < 0.08 ? 0 : wrapAngle(Math.atan2(inp.my, inp.mx) - s.a) * 2.4, hb);
+  }
   if (inp.bits & IN.TANK) return { throttle: -inp.my, steer: inp.mx, hb, slide: -inp.my < -0.3 && Math.abs(inp.mx) > 0.2, drv: true }; // brake + steer = skid turn
   const m = Math.min(1, Math.hypot(inp.mx, inp.my));
   if (m < 0.08) { s.rev = false; return { throttle: 0, steer: 0, hb, slide: false, drv: true }; }

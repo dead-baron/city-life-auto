@@ -257,7 +257,7 @@ function reconcile(s) {
     const e = S.ents.get(s.ctrlId);
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT) };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD) };
     S.pred = { kind, s: st, def, prev: null };
   }
   // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
@@ -2923,7 +2923,7 @@ function vehVisual(v, now, dt) {
   v.lean = (v.lean || 0) + (latT - (v.lean || 0)) * (1 - Math.exp(-6 * dt));
   // particles: smoke, fire, drift, boat wake, siren audio
   const fwdX = Math.cos(v.ra), fwdY = Math.sin(v.ra);
-  if ((f & VF.SMOKE) && Math.random() < 0.3) S.fx.smoke(v.rx + fwdX * def.L * 0.35, v.ry + fwdY * def.L * 0.35, !!(f & VF.WRECK));
+  if ((f & VF.SMOKE) && Math.random() < ((f & VF.DEAD) ? 0.75 : 0.3)) S.fx.smoke(v.rx + fwdX * def.L * 0.35, v.ry + fwdY * def.L * 0.35, !!(f & (VF.WRECK | VF.DEAD))); // (a dying engine pours black smoke)
   if ((f & VF.BURN) && Math.random() < 0.7) S.fx.fire(v.rx + fwdX * def.L * 0.2, v.ry + fwdY * def.L * 0.2);
   if (f & VF.DRIFT && def.kind !== 'boat') {
     for (const sgn of [-1, 1]) {

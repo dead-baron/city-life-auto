@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players, straightRoad } from './helpers.js';
 import { generateCity, PED_BLOCK } from '../shared/map.js';
-import { gameClock, K, T, STAR_HEAT } from '../shared/constants.js';
+import { gameClock, K, T, STAR_HEAT, VF } from '../shared/constants.js';
 import { encodeInput, decodeInput, SnapshotWriter, decodeSnapshot } from '../shared/protocol.js';
 import { vehStep, newVehState } from '../shared/physics.js';
 import { VEHICLES } from '../shared/vehicles.js';
@@ -862,7 +862,7 @@ test('more banks and ATMs around the city; shop sales are paid into the bank', (
   assert.ok(p.profile.bank > bank, 'paid into the bank');
 });
 
-test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-shots cars, armored takes two; cars are tougher, bikes not', async () => {
+test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-shots cars, armored takes two; cars tough, trucks tougher, bikes least', async () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
   const road = straightRoad(w.map, 2400, { kind: 'ave' }); // open street: nothing in the line of fire
@@ -898,12 +898,38 @@ test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-
   assert.ok(!van.wreckAt, 'armored van survives the first rocket');
   rocketAt(van);
   assert.ok(van.wreckAt, 'and not the second');
-  // sturdier cars, fragile bikes
+  // sturdy cars, sturdier trucks, bikes the most fragile
   const sedan = w.spawnVehicle('sedan', p.ped.x, p.ped.y + 600, 0, {});
   const bike = w.spawnVehicle('bike', p.ped.x + 200, p.ped.y + 600, 0, {});
-  vehicles.damageVehicle(w, sedan, 50, null); vehicles.damageVehicle(w, bike, 50, null);
-  assert.ok(sedan.def.hp - sedan.hp < 40, 'cars soak up some of the damage');
-  assert.equal(bike.def.hp - bike.hp, 50, 'bikes take it all');
+  const truck = w.spawnVehicle('boxtruck', p.ped.x + 400, p.ped.y + 600, 0, {});
+  vehicles.damageVehicle(w, sedan, 50, null); vehicles.damageVehicle(w, bike, 50, null); vehicles.damageVehicle(w, truck, 50, null);
+  assert.ok(sedan.def.hp - sedan.hp < 30, 'cars soak up much of the damage');
+  assert.ok(truck.def.hp - truck.hp < sedan.def.hp - sedan.hp, 'trucks more');
+  assert.ok(bike.def.hp - bike.hp > sedan.def.hp - sedan.hp && bike.def.hp - bike.hp < 50, 'bikes less, but a little');
+});
+
+test('a vehicle out of health rolls to a stop, smokes, burns, then explodes - a blast or a rocket at once', async () => {
+  const { DEAD_FIRE_S, DEAD_BOOM_S } = await import('../shared/rules.js');
+  const w = makeWorld();
+  const p = joinPlayer(w).p;
+  const car = w.spawnVehicle('sedan', p.ped.x + 300, p.ped.y, 0, { npcOwned: false });
+  car.vx = 400;
+  vehicles.damageVehicle(w, car, 9999, p.ped);
+  assert.ok(car.dead && !car.wreckAt, 'the engine is dead, the car still whole');
+  let f = vehicles.vehFlags(w, car);
+  assert.ok(f & VF.DEAD && f & VF.SMOKE && !(f & VF.BURN), 'smoking, not yet burning');
+  for (let i = 0; i < 20 * (DEAD_FIRE_S + 0.2); i++) w.step();
+  f = vehicles.vehFlags(w, car);
+  assert.ok(f & VF.BURN && !car.wreckAt, `on fire after ${DEAD_FIRE_S} s`);
+  assert.ok(Math.hypot(car.vx, car.vy) < 60, 'and rolled (nearly) to a stop');
+  for (let i = 0; i < 20 * (DEAD_BOOM_S - DEAD_FIRE_S + 0.3); i++) w.step();
+  assert.ok(car.wreckAt, `exploded after ${DEAD_BOOM_S} s`);
+  // a dying car set off by a blast next to it
+  const car2 = w.spawnVehicle('sedan', p.ped.x + 900, p.ped.y, 0, { npcOwned: false });
+  vehicles.damageVehicle(w, car2, 9999, null);
+  assert.ok(car2.dead && !car2.wreckAt);
+  vehicles.damageVehicle(w, car2, 10, null, false, true);
+  assert.ok(car2.wreckAt, 'a blast sets it off');
 });
 
 test('gangs vs police: left alone unless provoked; speeding cop or cop gunfire sets them off; shootouts near turf', async () => {

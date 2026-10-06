@@ -960,7 +960,7 @@ function addBuildings(c, I) {
           it.cut = () => base._cut || (base._cut = { ...base, key: 'cut:' + base.key, recipe: cutRecipe(c, bld, sec, spec), ext: [2, d + Math.min(buildingH(spec), 120) + 12, w + 2, 4] });
         }
       }
-      it.b = bi;
+      it.b = bi; it.fp = [x0, y1 - d, x0 + w, y1];   // (fp: the section's footprint; a fading building keeps it covered)
       put(I, it);
       for (const [dx, dy, z, r, col, k, kind] of lights) lightAt(I, x0 + dx, y1 + dy, z, r, col, k, kind, 1);
       // garage doors (the yard keeps their driveways clear), shopfronts (dressed later)

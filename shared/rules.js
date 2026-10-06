@@ -55,7 +55,18 @@ export const NPC_GUN_MULT = 6;          // gun damage vs NPCs and police (1-2 sh
 export const NPC_GRIT = [[0.75, 30], [1, 45], [1.6, 17], [2.5, 8]]; // [how much more a bullet takes to drop them, % of people]: some go down at the first shot, a few take three or four
 export const NPC_CRITICAL = 0.3;        // below this share of health people bleed; NPCs stop fighting and limp off
 export const LIMP_SPEED = 0.35;         // a critically hurt NPC limps along at this fraction of walking pace
-export const VEHICLE_TOUGHNESS = 1.35;  // cars and boats take this much less damage (motorcycles stay fragile)
+// Vehicle toughness: crash, gunfire and blast damage is divided by this, by kind (heavy: trucks, vans, buses -
+// anything with mass 2.4 and up). Motorcycles are the most fragile but no longer take it all.
+export const VEHICLE_TOUGH = { car: 1.8, heavy: 2.1, boat: 1.6, bike: 1.25 };
+// A crash with a closing speed over CRASH_BOOM_IMPACT (px/s, a serious head-on or something very fast hitting you)
+// blows a motorcycle up on the spot, and a car, truck or boat when it was already below CRASH_BOOM_HP of its
+// health (or the crash takes the last of it). Anything else that runs out of health dies slowly: the engine cuts
+// out and it rolls to a stop, smoking; it catches fire after DEAD_FIRE_S and explodes after DEAD_BOOM_S - time
+// to get out and run (gunfire brings the end sooner, a blast or a rocket ends it at once).
+export const CRASH_BOOM_IMPACT = 600;
+export const CRASH_BOOM_HP = 0.35;
+export const DEAD_FIRE_S = 3;
+export const DEAD_BOOM_S = 9;
 export const ARMORED_ROCKETS = 2;       // rockets to destroy an armored van / SWAT truck (everything else: one)
 export const ARMORED_VEHICLES = ['armored', 'swat'];
 
