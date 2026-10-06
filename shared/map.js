@@ -520,6 +520,7 @@ export function generateCity(seed = 1337) {
   for (const row of rows) (row.v2 ? fillRowV2 : fillRow)(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
   for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)), b.park);
   for (const [type, key, x, y, south, , dims] of estateRows) estateHouse(m, rand, type, key, x, y, south, dims);
+  fillScraps(m, mulberry32(seed ^ 0x5c4a)); // the stepped edges along Broadway and the curving streets
   clearDoorways(m);
   m.garages ||= []; m.mansions ||= [];
   if (mlot) mansion(m, rand, mlot.x + Math.floor((mlot.w - MANSION_SIZE[0]) / 2), mlot.y);
@@ -1886,6 +1887,33 @@ function backLots(m, row, st, rand) {
   }
   if (w >= 6 && h >= 6 && rand() < (BUILT_UP.has(st) ? 0.7 : 0.4)) { roofRowV2(m, row, x, y, w, h, st, rand, true); return; }
   filler(m, { ...row, face: 'S' }, x, w, { ...S, roof: 0, filler: st === 'towers' || st === 'civic' ? 'plaza' : S.filler === 'park' ? 'park' : 'parking' }, rand, false);
+}
+
+// The scraps of land the blocks leave along a diagonal or curving street (too small or too ragged for a
+// row of lots): in the dense districts of the v2 city, small buildings step along the street's edge the
+// way axis-aligned boxes have to (docs/WORLD-V2.md), instead of a sawtooth of empty paving.
+function fillScraps(m, rand) {
+  const W = MAP_W;
+  const free = new Uint8Array(W * MAP_H);
+  for (const i of m.leftover) {
+    const t = m.tiles[i], st = DISTRICTS[m.dist[i]].style;
+    if (m.bld[i] < 0 && !m.reserve[i] && BUILT_UP.has(st) && (t === T.PLAZA || t === T.LOT || t === T.GRASS) && v2At(m, { x: i % W, y: (i / W) | 0, w: 1, h: 1 })) free[i] = 1;
+  }
+  const order = m.leftover.slice().sort((a, b) => a - b);
+  for (const i0 of order) {
+    if (!free[i0]) continue;
+    const x0 = i0 % W, y0 = (i0 / W) | 0, st = DISTRICTS[m.dist[i0]].style;
+    const Wm = (V2W[st] || [8, 14])[1];
+    let w = 0;
+    while (w < Wm && free[y0 * W + x0 + w]) w++;
+    if (w < 4) continue;
+    let h = 0;
+    while (h < 20) { let ok = true; for (let x = x0; x < x0 + w; x++) if (!free[(y0 + h) * W + x]) { ok = false; break; } if (!ok) break; h++; }
+    if (h < 4) continue;
+    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) free[y * W + x] = 0;
+    const kinds = (STYLE[st] && STYLE[st].roofKinds) || ['tar'];
+    roofOne(m, { d: m.dist[i0] }, x0, y0, w, h, kinds[Math.floor(rand() * kinds.length)], Math.floor(rand() * 1e9));
+  }
 }
 
 // An open square: paving, a fountain in the middle, trees and benches round it, lamps at the corners.
