@@ -125,7 +125,17 @@ export function grill() {
   m.ell(8, 6, 15, 7, 5, 5, b); m.box(1, 1, 0, 2, 2, 12, leg); m.box(14, 1, 0, 15, 2, 12, leg); m.box(1, 10, 0, 2, 11, 12, leg); m.box(14, 10, 0, 15, 11, 12, leg);
   return m;
 }
-export function wadingPool() { const m = new Vox(30, 30, 6); const p = m.mat({ ramp: R('#4a9ae0'), k: 3 }), w = m.mat({ ramp: R('#5ad0e0'), k: 3, flag: F_WATER }); m.fill((x, y, z) => { const d = Math.hypot(x - 15, y - 15); return d < 14 ? (d > 12 ? p : z < 3 ? w : -1) : -1; }); return m; }
+// a round hot tub: a tiled rim, a step, bubbling turquoise water with a little steam
+export function hotTub(r = 22) {
+  const D = r * 2 + 2, c = r + 1, m = new Vox(D, D, 14);
+  const rim = m.mat({ ramp: R('#cfc6b4'), k: 4 }), wall = m.mat({ ramp: R('#b8b0a0'), k: 3 }), st = m.mat({ ramp: R('#a8a090'), k: 3 });
+  const w = m.mat({ ramp: R('#4ac8d8'), k: 3, flag: F_WATER, shade: (x, y) => (hash(Math.round(x / 2), Math.round(y / 2), 9) > 0.8 ? 1.6 : 0) });
+  const steam = m.mat({ ramp: R('#eef6f6'), k: 4, emi: [230, 250, 250, 30], flag: F_NOCAST });
+  m.fill((x, y, z) => { const d = Math.hypot(x - c, y - c); if (d > r) return -1; if (d > r - 3) return z < 10 ? (z >= 8 ? rim : wall) : -1; return z < 7 ? w : -1; }, 0, 0, 0, D, D, 10);
+  m.box(c - 6, D - 4, 0, c + 6, D, 5, st);
+  m.fill((x, y, z) => (Math.hypot(x - c, y - c) < r - 5 && hash(Math.round(x), Math.round(y), Math.round(z)) > 0.97 ? steam : -1), 0, 0, 9, D, D, 14);
+  return m;
+}
 
 // ---- utilities over the street ------------------------------------------------------------------------
 // a wooden power pole with a crossarm (across x), insulators and a transformer can. Wires attach at
