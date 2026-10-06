@@ -245,15 +245,17 @@ void main(){
 
 // ---- the engine ---------------------------------------------------------------------------------------
 export class Art2Engine {
+  // null when it can't run here; Art2Engine.lastWhy then says why (shown to the player)
   static create(canvas, opts = {}) {
     let gl = null;
-    try { gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: 'high-performance', depth: false, stencil: false }); } catch (e) { gl = null; }
-    if (!gl) return null;
+    Art2Engine.lastWhy = '';
+    try { gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: 'high-performance', depth: false, stencil: false }); } catch (e) { gl = null; Art2Engine.lastWhy = String((e && e.message) || e); }
+    if (!gl) { Art2Engine.lastWhy ||= 'this browser has no WebGL2'; return null; }
     try {
-      if (gl.getParameter(gl.MAX_DRAW_BUFFERS) < 3 || gl.getParameter(gl.MAX_COLOR_ATTACHMENTS) < 3 || gl.getParameter(gl.MAX_TEXTURE_SIZE) < 2048 ||
-        gl.getParameter(gl.MAX_ARRAY_TEXTURE_LAYERS) < 8 || gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) < 8 || gl.getParameter(gl.MAX_UNIFORM_BLOCK_SIZE) < MAX_LIGHTS * LIGHT_FLOATS * 4) return null;
+      const need = [['MAX_DRAW_BUFFERS', 3], ['MAX_COLOR_ATTACHMENTS', 3], ['MAX_TEXTURE_SIZE', 2048], ['MAX_ARRAY_TEXTURE_LAYERS', 8], ['MAX_TEXTURE_IMAGE_UNITS', 8], ['MAX_UNIFORM_BLOCK_SIZE', MAX_LIGHTS * LIGHT_FLOATS * 4]];
+      for (const [k, v] of need) { const have = gl.getParameter(gl[k]); if (have < v) { Art2Engine.lastWhy = `the graphics card reports ${k} ${have} (needs ${v})`; return null; } }
       return new Art2Engine(canvas, gl, opts);
-    } catch (e) { console.warn('Art2Engine: ' + (e && e.message)); return null; }
+    } catch (e) { Art2Engine.lastWhy = 'the graphics could not be set up: ' + String((e && e.message) || e).slice(0, 200); console.warn('Art2Engine: ' + (e && e.message)); return null; }
   }
   constructor(canvas, gl, opts) {
     this.cv = canvas; this.gl = gl;

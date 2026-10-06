@@ -553,3 +553,10 @@ body.portrait.touch #tbtns .light { left: max(10px, env(safe-area-inset-left)); 
 #dev #dev-give .dev-give-go { background: #1f5f3a; border-color: #3ddc84; }
 #dev #dev-give .dev-give-all { background: #5a3a12; border-color: #f2c21b; }
 #dev #dev-give .dev-give-note { margin: 4px 0 0; color: #999; font-size: 11px; }
+
+/* the new renderer couldn't start (there is no other renderer): why, and a way to try again */
+.art2-err { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; max-width: min(90vw, 460px); padding: 18px 22px; background: rgba(12, 18, 34, 0.94); border: 2px solid #c8a24a; border-radius: 10px; color: #f2ead8; font: 600 16px/1.35 'Barlow Condensed', sans-serif; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+.art2-err b { display: block; font-size: 20px; letter-spacing: .04em; margin-bottom: 6px; color: #ffd36b; }
+.art2-err p { margin: 0 0 12px; color: #c9c3b4; font-weight: 500; }
+.art2-err button { font: inherit; padding: 8px 18px; border-radius: 8px; border: 2px solid #c8a24a; background: #1d2742; color: #ffd36b; cursor: pointer; min-height: 44px; }
+.art2-err.hidden { display: none; }

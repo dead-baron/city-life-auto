@@ -42,7 +42,7 @@ export function startTutorial(opts) {
     route: null, routeT: 0, target: null,
     last: performance.now(), raf: 0, dpr: Math.min(2, devicePixelRatio || 1),
   };
-  if (map.seed === 1337) { const im = new Image(); im.onload = () => { if (T) T.wm = im; }; im.src = 'assets/worldmap.webp'; }
+  // (assets/worldmap.webp is the old world: not used since World v2)
   buildChapters();
   const first = opts.chapter ? Math.max(0, STEPS.findIndex((s) => s.ch === opts.chapter)) : 0;
   resize();

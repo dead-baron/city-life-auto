@@ -115,15 +115,13 @@ export function initGfx() {
   return gfx;
 }
 // ---- world renderer --------------------------------------------------------------------------------
-// The world is drawn by the art v2 renderer (WebGL2, client/art2/game). The classic Canvas2D renderer is
-// only a safety net: browsers without WebGL2, a session that lost the GPU twice (until the tab is closed),
-// or ?art=1 in the address (troubleshooting).
+// The world is drawn by the art v2 renderer (WebGL2, client/art2/game). Nothing falls back to the classic
+// renderer any more (the user's call: no old art anywhere); only ?art=1 in the address still asks for it, for
+// troubleshooting. (The old per-tab "fall back" flag is cleared: tabs that set it this morning stay new.)
 export function worldArtWanted() {
+  try { sessionStorage.removeItem('cla.art2off'); } catch { /* storage blocked */ }
   const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('art') : null;
-  if (q === '1') return false;
-  if (q === '2') return true;
-  try { if (sessionStorage.getItem('cla.art2off')) return false; } catch { /* storage blocked */ }
-  return true;
+  return q !== '1';
 }
 
 // One notch down (after the browser ran out of graphics memory).

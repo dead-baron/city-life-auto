@@ -169,16 +169,18 @@ class StubEngine {
 
 // ---- the host -----------------------------------------------------------------------------------------------
 export class World2 {
+  // null when it can't run here; World2.lastWhy then says why
   static async create(o) {
     let E = null, L = null, why = '';
-    try { E = await import('./engine.js'); } catch (e) { why = String((e && e.message) || e); }
+    World2.lastWhy = '';
+    try { E = await import('./engine.js'); } catch (e) { why = 'the renderer could not load: ' + String((e && e.message) || e); }
     try { L = await import('./lightgame.js'); } catch { L = null; }
     const q = qualityOf(o.gfx, o.lowMem);
     let engine = null;
-    if (/[?&]art2nogl\b/.test(location.search)) return null; // (testing the fallback: as if there were no WebGL2)
-    if (E && E.Art2Engine) { try { engine = E.Art2Engine.create(o.canvas, { quality: q, lowMem: !!o.lowMem }); } catch (e) { console.error('[art2] engine', e); engine = null; } }
+    if (/[?&]art2nogl\b/.test(location.search)) { World2.lastWhy = 'no WebGL2 (?art2nogl)'; return null; } // (testing: as if there were no WebGL2)
+    if (E && E.Art2Engine) { try { engine = E.Art2Engine.create(o.canvas, { quality: q, lowMem: !!o.lowMem }); } catch (e) { console.error('[art2] engine', e); engine = null; why = String((e && e.message) || e); } if (!engine) why = why || E.Art2Engine.lastWhy || ''; }
     if (!engine && /[?&]art2stub\b/.test(location.search)) engine = new StubEngine(o.canvas);
-    if (!engine) { if (why) console.warn('[art2] no engine:', why); return null; }
+    if (!engine) { World2.lastWhy = why || 'WebGL2 is not available'; console.warn('[art2] no engine:', World2.lastWhy); return null; }
     const w = new World2(o, engine, L, q);
     w.init();
     return w;
@@ -244,7 +246,7 @@ export class World2 {
     // without its workers nothing but people could be drawn: the classic renderer takes over
     if (!this.failed && (!this.pool || this.pool.dead)) this._noWorkers();
   }
-  _noWorkers() { this.failed = true; this.ready = false; this.onFail('its background workers could not run here', true); }
+  _noWorkers() { this.failed = true; this.ready = false; this.onFail('its background workers could not start'); }
 
   resize(W, H, dpr) { this.W = W; this.H = H; this.dpr = dpr; if (this.E.resize) this.E.resize(W, H, dpr); }
 
@@ -261,7 +263,7 @@ export class World2 {
     }
     this.chunkState.clear(); this.fallbacks.clear(); this.results.clear(); this.upQ.clear();
     this.losses = this.losses.filter((t) => now - t < 180000);
-    if (this.losses.length >= 3 || what === 'failed') { this.failed = true; this.ready = false; this.onFail(what === 'failed' ? 'the graphics could not be rebuilt' : 'the graphics memory kept running out', true); }
+    if (this.losses.length >= 3 || what === 'failed') { this.failed = true; this.ready = false; this.onFail(what === 'failed' ? 'the graphics could not be rebuilt' : 'the graphics memory kept running out'); }
   }
 
   dispose() {
@@ -432,7 +434,7 @@ export class World2 {
     const rx = inVeh ? 150 : 100, up = inVeh ? 160 : 128, down = 44;
     const want = this._fadeWant || (this._fadeWant = new Set());
     want.clear();
-    if (!F.sub) for (const st of this.chunkState.values()) {
+    if (!F.sub && !F.spec) for (const st of this.chunkState.values()) { // (none while spectating)
       if (!st.blds) continue;
       for (const r of st.blds) {
         const b = r[0], m = (this.fades.get(b) || 0) > 0.05 ? 24 : 0;

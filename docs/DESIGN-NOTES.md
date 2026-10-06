@@ -97,6 +97,11 @@ combine well: interiors are private, yards are shared.
    away, your state rests in your profile, not in the world.
 - Why not fully private yards: the user wants the outside to stay risky and social. Why not one owner per
   property: a public server with thousands of players would run out of houses.
+- **Approved by the user (2026-10-06),** with three additions:
+  - **Plenty of properties,** so few players share one. Neighbours are fine: a whole row of houses on a
+    street can all be for sale.
+  - **Selling:** a player can sell a property (back to the market, for most of what they paid) and buy
+    another, for when the one they bought is hard to claim.
 
 ## Garages and vehicles [next]
 - All your garages, boat garages and parking spots share one collection. Pull any owned vehicle from any of them.

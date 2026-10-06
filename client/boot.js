@@ -39,8 +39,7 @@ async function freshen() {
   }
   // (the classic renderer's picture sheets are skipped: the world is drawn by the new renderer, which makes its
   // own art, so they are only fetched if something asks for them - ?art=1 or a browser that can't run it)
-  let classic = /[?&]art=1\b/.test(location.search);
-  try { classic ||= !!sessionStorage.getItem('cla.art2off'); } catch { /* storage blocked */ }
+  const classic = /[?&]art=1\b/.test(location.search);
   const v1Sheet = (f) => /^assets\/(atlas\d|prefabs\d|blocks\d|scenes|ground|animals|interiors|chars\/)/.test(f);
   const list = (meta.files || []).filter((f) => classic || !v1Sheet(f)).sort((a, b) => isArt(a) - isArt(b));
   let i = 0, done = 0, failed = 0;

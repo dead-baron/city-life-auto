@@ -646,7 +646,7 @@ function setupWorld(seed) {
   S.highway = new Highway(S.map);
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.spec = createSpectator({
-    map: S.map, buildings: S.buildings, highway: S.highway, drawEntities: specEntities,
+    map: S.map,
     players: () => (S.plist && S.plist.l) || [], mobile: input.device === 'touch',
   });
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
@@ -670,10 +670,10 @@ function ensureV1Art() {
   }).catch((e) => console.warn('[v1 art]', e));
   return v1ArtP;
 }
-// The classic renderer draws the frame: the new one is off (or failed), or you ride the subway (the
-// tunnel view is classic art). While the new renderer is still starting the world stays dark instead.
+// The classic renderer draws the frame only with ?art=1, or while you ride the subway (the tunnel view
+// is still classic art). While the new renderer starts (or restarts) the world stays dark instead.
 function v1Draws(F) {
-  const on = !ART2_WANTED || !!S.art2Off || !!F.sub;
+  const on = !ART2_WANTED || !!F.sub;
   if (on) ensureV1Art();
   return on;
 }
@@ -687,19 +687,21 @@ let world2Shown = false;
 function showWorld2(on) { if (on === world2Shown || !worldCv) return; world2Shown = on; worldCv.classList.toggle('hidden', !on); }
 function art2Draws(F) { const on = !!(S.art2 && S.art2.ready && !F.sub); showWorld2(on); return on; }
 async function startArt2(map) {
-  if (!ART2_WANTED || S.art2Off || !worldCv) return;
+  if (!ART2_WANTED || !worldCv) return;
   if (S.art2) { S.art2.dispose(); S.art2 = null; showWorld2(false); }
   const token = (S.art2Token = (S.art2Token || 0) + 1);
   let mod;
   try { mod = await import('./art2/game/host.js'); } catch (e) { art2Failed('the renderer could not load: ' + ((e && e.message) || e)); return; }
+  S.art2Off = null;
   if (token !== S.art2Token || S.map !== map) return; // a newer city arrived meanwhile
   // what the renderer borrows from here: how people look and pose, body heights, seats, the birds
   const api = { pedLook, pedPose, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, SEAT_JETSKI, RIDER_H, UMBRELLA_COLORS };
   let w = null;
   try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed }); } catch (e) { console.error('[art2]', e); w = null; }
   if (token !== S.art2Token || S.map !== map) { if (w) w.dispose(); return; }
-  if (!w) { art2Failed('WebGL2 is not available'); return; }
-  S.art2 = w;
+  if (!w) { art2Failed(mod.World2.lastWhy || 'WebGL2 is not available'); return; }
+  S.art2 = w; S.art2At = performance.now();
+  const el = $('art2-err'); if (el) el.classList.add('hidden');
   w.resize(W, H, DPR);
 }
 // With the art v2 world the overlay canvas also carries what v1 draws as marks inside its world pass:
@@ -732,15 +734,28 @@ function drawArt2Marks(F) {
   for (const c of F.crates) if (c.d.t >= 3 && (c.flags & 3) === 0) { g.globalAlpha = 0.5 + 0.3 * Math.sin(now * 4); g.strokeStyle = c.d.t === 4 ? '#ffd36b' : '#c07aff'; g.lineWidth = 2; g.beginPath(); g.arc(c.rx, c.ry, 18, 0, 6.28); g.stroke(); }
   g.restore();
 }
-// No WebGL2, the renderer failing, or the GPU lost twice: back to the classic renderer (for the rest of
-// the session when the GPU was lost).
-function art2Failed(why, lostTwice) {
-  console.warn('[art2] using the classic renderer:', why);
+// The new renderer couldn't start or stopped (no WebGL2, the graphics memory lost again and again, its
+// workers failing). There is no classic renderer to fall back to any more: say why, and start it again (a
+// few times, then a panel with the reason and a Try again button).
+let art2Retries = 0;
+function art2Failed(why) {
+  console.warn('[art2] stopped:', why);
   if (S.art2) { try { S.art2.dispose(); } catch { /* already gone */ } S.art2 = null; }
   S.art2Off = why;
   showWorld2(false);
-  if (lostTwice) { try { sessionStorage.setItem('cla.art2off', '1'); } catch { /* storage blocked */ } }
-  if (S.hud) S.hud.toast('This browser can\'t run the full graphics - using basic graphics instead.', 'warn');
+  if (S.art2At && performance.now() - S.art2At > 120000) art2Retries = 0; // (it had been running fine)
+  if (art2Retries < 3) {
+    art2Retries++;
+    if (S.hud) S.hud.toast(`The graphics stopped (${why}) - restarting them...`, 'warn');
+    setTimeout(() => { if (S.map && !S.art2) startArt2(S.map); }, 1500 * art2Retries);
+    return;
+  }
+  let el = $('art2-err');
+  if (!el) { el = document.createElement('div'); el.id = 'art2-err'; el.className = 'art2-err'; document.body.appendChild(el); }
+  el.innerHTML = '<b>The graphics can\'t run here</b><p></p><button type="button">Try again</button>';
+  el.querySelector('p').textContent = why;
+  el.querySelector('button').onclick = () => { el.classList.add('hidden'); art2Retries = 0; if (S.map && !S.art2) startArt2(S.map); };
+  el.classList.remove('hidden');
 }
 
 function startPlaying() {
@@ -987,17 +1002,13 @@ for (const ov of document.querySelectorAll('.overlay')) {
 // Your character stays where it is (made invincible on the server); the camera flies anywhere. The
 // city's art is drawn from what this browser already generates, so it never asks the server for
 // more - people and vehicles show only where the server is already sending them (round you).
-function specEntities(view, now) {
-  const list = [];
-  for (const e of S.ents.values()) {
-    if (!e.d || e.rx === undefined || e.rx < view.x0 - 120 || e.rx > view.x1 + 120 || e.ry < view.y0 - 120 || e.ry > view.y1 + 120) continue;
-    if (e.kind === K.VEH || (e.kind === K.PED && !(e.flags & PF.INVEH))) list.push(e);
-  }
-  list.sort((a, b) => a.ry - b.ry);
-  for (const e of list) { if (e.kind === K.VEH) { vehVisual(e, now, 0); drawVehicleEnt(e, now, 0); } else { pedVisual(e, now); drawPed(e, now); } }
+// the furthest out the spectator shows the new renderer's art: the chunks a view that size needs must fit its
+// memory (about 28 of 768 px, 16 on a console); further out it shows the flat map
+function specArtMinZoom() {
+  for (const z of [0.4, 0.5, 0.6, 0.75, 0.9, 1.1]) if ((W / z / 768 + 2) * (H / z / 768 + 2) <= (LOW_MEM ? 16 : 28)) return z;
+  return 1.3;
 }
 function enterSpectate() {
-  ensureV1Art(); // (the spectator map draws with the classic art)
   if (!S.spec || !S.playing) return;
   if (topOverlay()) closeOverlay(topOverlay());
   if (S.bigmap) toggleMap(false);
@@ -1055,16 +1066,19 @@ function downloadCanvas(cv, name) {
     S.hud.toast(`Saved ${name}`, 'good');
   }, 'image/png');
 }
-// the screen as it is (what you see, at screen resolution)
+// the screen as it is (what you see, at screen resolution): the new renderer's picture is taken right after
+// the next frame draws it (render: S.specGrab), the flat view straight away
 function specSave() {
   if (!S.spec || !S.spec.on) return;
-  S.spec.render(g, W, H, DPR, 0, S.loopClock);
   sfx('click', 0.8);
+  if (S.specArt) { S.specGrab = (cv) => downloadCanvas(cv, specName('png')); return; }
+  S.spec.render(g, W, H, DPR, 0, S.loopClock);
   downloadCanvas(canvas, specName('png'));
 }
 // the same view again with up to 4x the detail (tiles baked finer, over a few frames)
 async function specHiRes(btn) {
   if (!S.spec || !S.spec.on || S.specBusy) return;
+  if (S.specArt) { S.hud.toast('Hi-res pictures come from the schematic view - saving the art view as you see it.', 'info'); specSave(); return; }
   const k = S.spec.snapshotScale(W, H);
   if (k <= 1) { S.hud.toast('This close in the screen already shows full detail - saving it as it is.', 'info'); specSave(); return; }
   S.specBusy = true;
@@ -1115,7 +1129,7 @@ function specTick() {
   const d = S.map.districtAt(st.x, st.y);
   const n = S.spec.loading();
   const r = $('spec').querySelector('.sp-read');
-  if (r) r.innerHTML = `${d ? d.name : ''} · zoom ${(st.z * 100).toFixed(st.z < 0.1 ? 1 : 0)}% · ${st.layers.schematic ? 'schematic' : `detail ${S.spec.levelName()}`}${n ? ` · loading ${n}` : ''}<small>tiles x ${t.x0}-${t.x1}, y ${t.y0}-${t.y1}</small>`;
+  if (r) r.innerHTML = `${d ? d.name : ''} · zoom ${(st.z * 100).toFixed(st.z < 0.1 ? 1 : 0)}% · ${S.specArt ? 'art' : st.layers.schematic ? 'schematic' : 'flat map (zoom in for the art)'}${n ? ` · loading ${n}` : ''}<small>tiles x ${t.x0}-${t.x1}, y ${t.y0}-${t.y1}</small>`;
 }
 // mouse wheel, drag, and two-finger pinch on the spectator layer
 const specPointers = new Map();
@@ -1968,6 +1982,17 @@ function render(dt) {
   if (v2) S.art2.frame(F);
   else if (v1Draws(F)) drawWorldV1(F);
   else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }
+  if (F.spec) { // spectating close in: the new renderer's picture, the spectator's names / grid / players on top
+    S.spec.overlay(g, W, H, DPR);
+    specTick();
+    if (S.specGrab && v2) {
+      const done = S.specGrab; S.specGrab = null;
+      const cv = document.createElement('canvas'); cv.width = canvas.width; cv.height = canvas.height;
+      const c2 = cv.getContext('2d'); c2.drawImage(worldCv, 0, 0, cv.width, cv.height); c2.drawImage(canvas, 0, 0);
+      done(cv);
+    }
+    return;
+  }
   drawOverlays(F, v2);
 }
 
@@ -2006,7 +2031,15 @@ function prepFrame(dt) {
     const blend = Math.max(0, Math.min(1, (e.as - 70) / 110));
     e.phase = (e.phase + d / (4.6 + blend * 2.4)) % 8;
   }
-  if (S.spec && S.spec.on) { showWorld2(false); S.spec.render(g, W, H, DPR, dt, now); specTick(); return null; }
+  // spectating: close in, the new renderer draws the spectator's camera (below); further out than it can hold
+  // in memory (or in the schematic view), the spectator's flat map
+  S.specArt = false;
+  if (S.spec && S.spec.on) {
+    const st = S.spec.state;
+    if (!S.art2 || st.layers.schematic || st.z < specArtMinZoom()) { showWorld2(false); S.spec.render(g, W, H, DPR, dt, now); specTick(); return null; }
+    S.specArt = true;
+    S.spec.move(dt, W, H);
+  }
   // camera
   let speed = 0;
   if (S.pred && S.pred.kind === 'veh') speed = Math.hypot(S.pred.s.vx, S.pred.s.vy);
@@ -2035,6 +2068,7 @@ function prepFrame(dt) {
     S.cam.x = hw * 2 >= WW ? WW / 2 : Math.max(hw, Math.min(WW - hw, S.cam.x));
     S.cam.y = hh * 2 >= WH ? WH / 2 : Math.max(hh, Math.min(WH - hh, S.cam.y));
   }
+  if (S.specArt) { const st = S.spec.state; S.cam.x = st.x; S.cam.y = st.y; S.cam.zoom = st.z; S.cam.shake = 0; } // (the spectator's camera)
   S.cam.shake *= Math.exp(-6 * dt);
   const shx = (Math.random() - 0.5) * S.cam.shake, shy = (Math.random() - 0.5) * S.cam.shake;
 
@@ -2086,7 +2120,7 @@ function prepFrame(dt) {
   const swimmers = peds.filter((p) => !(p.flags & PF.INVEH) && p.swim);
   const boats = vehs.filter((v) => VEHICLE_BY_INDEX[v.d.m] && VEHICLE_BY_INDEX[v.d.m].kind === 'boat');
   return {
-    dt, now, nowMs: performance.now(), fx, sp, z, shx, shy, view, clock, rain, sky, quality, mark,
+    dt, now, nowMs: performance.now(), fx, sp: S.specArt ? { x: S.cam.x, y: S.cam.y, a: 0, z: 0 } : sp, z, shx, shy, view, clock, rain, sky, quality, mark, spec: S.specArt,
     chunkView: S.chunkView, meEnt, myCar, myTrain, sub,
     peds, vehs, crates, bags, projs, balls, cars, riders, swimmers, boats,
     insideB: null, roofArt: [], bl: [], bA: [], refl: [],
@@ -2097,7 +2131,7 @@ function prepFrame(dt) {
 function tickVisuals(F) {
   const { dt, now, view, sky, sub, fx } = F;
   // walk-in shops: inside one, its roof fades away and the floor plan shows
-  if (!sub) F.insideB = interiorTick(F.sp, F.roofArt);
+  if (!sub && !F.spec) F.insideB = interiorTick(F.sp, F.roofArt);
   // grass, crops and bushes: trampled underfoot and flattened by wheels; trees shaken by cars (render/flora)
   if (!sub && S.flora) { S.flora.sky = sky; S.flora.update(dt, now, S.lastPeds || [], S.lastVehs || [], fx, sky); }
   // vehicles lean and sink, smoke, burn, skid, leave wakes, sound sirens; people bleed, spark, splash, land
@@ -3777,4 +3811,4 @@ if (ART2_WANTED) { connect(); requestAnimationFrame(frame); }
 else ensureV1Art().finally(() => { connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
-window.CLA = { S, send, WEAPONS, smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };
+window.CLA = { S, send, WEAPONS, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };

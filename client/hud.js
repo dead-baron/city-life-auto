@@ -1,7 +1,7 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, fishing cue, shop menus, death screen, radar + big map.
 import { WEAPONS, ITEMS } from '../shared/items.js';
-import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER } from '../shared/constants.js';
+import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER, WORLD_VERSION } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
 import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
@@ -548,10 +548,12 @@ function label(g, x, y, text, color) {
 // The part of the world the city map shows (px): every island, trimmed of open sea at the edges.
 export const MAP_FRAME = [24 * TILE, 10 * TILE, 1304 * TILE, 1170 * TILE];
 
-// baked city image (only valid for the default seed it was rendered from)
+// baked city image (only valid for the world it was rendered from: assets/worldmap.webp is the old world,
+// so World v2 draws the map from its data until a new image is baked)
 let wmImg = null, wmState = 0;
+const WORLDMAP_FOR = 1; // the world version assets/worldmap.webp shows
 function worldMapImage(map) {
-  if (map.seed !== 1337) return null;
+  if (map.seed !== 1337 || WORLD_VERSION !== WORLDMAP_FOR) return null;
   if (wmState === 0) { wmState = 1; wmImg = new Image(); wmImg.onload = () => { wmState = 2; }; wmImg.onerror = () => { wmState = 3; }; wmImg.src = 'assets/worldmap.webp'; }
   return wmState === 2 && Math.abs(wmImg.width / wmImg.height - MAP_W / MAP_H) < 0.02 ? wmImg : null; // a stale bake (old map size) falls back to the minimap
 }

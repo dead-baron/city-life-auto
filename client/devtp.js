@@ -97,7 +97,7 @@ export function buildTeleport(box, map, go) {
   };
   const img = new Image();
   img.onload = () => draw(img);
-  if (map.seed === 1337) img.src = 'assets/worldmap.webp';
+  // (assets/worldmap.webp is the old world: the teleport map is drawn from the map data until World v2 has its own image)
   requestAnimationFrame(() => draw(img.complete && img.naturalWidth ? img : null));
   const pick = (e) => {
     const r = cv.getBoundingClientRect(), sc = r.width / (fx1 - fx0);

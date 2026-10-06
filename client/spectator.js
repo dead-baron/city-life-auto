@@ -2,34 +2,21 @@
 // taking screenshots of whole neighbourhoods to design over.
 //
 // It only draws what this browser already has: the city is generated client-side from the seed,
-// so every street, lot, roof and prop can be drawn anywhere without asking the server for
-// anything. Live people and vehicles are whatever the server is already sending (around where you
-// left your character) - spectating never makes the server load or spawn anything new.
+// so every street, lot and roof can be drawn anywhere without asking the server for anything. Live
+// people and vehicles are whatever the server is already sending (around where you left your
+// character) - spectating never makes the server load or spawn anything new.
 //
-// Zoomed out, the world is drawn from tiles baked at four levels of detail (full size, 1/3, 1/8,
-// 1/16 of a 768 px ground chunk), each kept in its own capped LRU so memory stays bounded however
-// far you fly. Missing tiles are baked a few per frame, nearest the middle of the screen first,
-// with the baked world-map image underneath until they arrive. Layers (lots, rooftops, the
-// highway deck, props, people, names, a grid) can be switched off, and the schematic view swaps
-// the art for flat colour-coded shapes (one cell per tile) to draw over.
-import { T, TILE, MAP_W, MAP_H, CHUNK_PX } from '../shared/constants.js';
-import { GroundCache, drawOverheadProp } from './render/tiles.js';
+// Close in, the world is the new renderer's (main.js hands it this camera: move() steps it, overlay()
+// draws the names, grid and players over it). Further out than the new renderer can hold in memory, and
+// in the schematic view, the world is drawn here as flat colour-coded shapes, one cell per tile. No old
+// art anywhere.
+import { T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
 import { teleportPlaces } from './devtp.js';
 
 const WORLD_W = MAP_W * TILE, WORLD_H = MAP_H * TILE;
-const CW = Math.ceil(WORLD_W / CHUNK_PX), CH = Math.ceil(WORLD_H / CHUNK_PX);
-// level of detail: tile scale, the zoom it's used from, and how many tiles are kept
-const LEVELS = [
-  { s: 1, minZ: 0.5, cap: 40, name: 'full' },
-  { s: 1 / 3, minZ: 0.17, cap: 220, name: '1/3' },
-  { s: 1 / 8, minZ: 0.06, cap: 1300, name: '1/8' },
-  { s: 1 / 16, minZ: 0, cap: 2900, name: '1/16' },
-];
 export const SPEC_LAYERS = [
-  ['lots', 'Lots & painted buildings'], ['roofs', 'Rooftops'], ['deck', 'Elevated highway'], ['props', 'Props & trees'],
-  ['ents', 'People & vehicles'], ['labels', 'Names (districts, streets, places)'], ['grid', 'Tile grid'], ['schematic', 'Schematic: flat shapes'],
+  ['labels', 'Names (districts, streets, places)'], ['grid', 'Tile grid'], ['schematic', 'Schematic: flat shapes'],
 ];
-const BAKE_MS = 10; // per frame
 
 // schematic colours: tiles, then buildings by what they are
 const TILE_COL = {
@@ -52,76 +39,13 @@ function buildingCol(b) {
   return '#a8a29a';
 }
 
-export function createSpectator({ map, buildings, highway, drawEntities, players, mobile }) {
+export function createSpectator({ map, players, mobile }) {
   const S = {
     on: false, x: 0, y: 0, z: 0.25,
-    layers: { lots: true, roofs: true, deck: true, props: true, ents: true, labels: true, grid: false, schematic: false },
+    layers: { labels: true, grid: false, schematic: false },
     keys: new Set(), panelHidden: false,
   };
-  const caps = LEVELS.map((l, i) => Math.round(l.cap * (mobile && i < 2 ? 0.5 : 1)));
-  let caches = LEVELS.map(() => new Map());
-  let ground = null, scratch = null, sg = null, schematic = null, worldImg = null, wmReady = false;
-  let pending = new Map(); // key -> level wanted
-  let baked = 0;
-  const sea = new Int8Array(CW * CH).fill(-1);
-
-  function resetArt() { caches = LEVELS.map(() => new Map()); ground = null; pending = new Map(); baked = 0; }
-  function seaChunk(cx, cy) {
-    const i = cy * CW + cx;
-    if (sea[i] >= 0) return sea[i] === 1;
-    const n = CHUNK_PX / TILE;
-    let all = true;
-    for (let ty = cy * n; ty < (cy + 1) * n && all; ty++) for (let tx = cx * n; tx < (cx + 1) * n; tx++) {
-      if (tx >= MAP_W || ty >= MAP_H) continue;
-      const t = map.tiles[ty * MAP_W + tx];
-      if (t !== T.WATER && t !== T.DEEP) { all = false; break; }
-    }
-    sea[i] = all ? 1 : 0;
-    return all;
-  }
-
-  // ---- baking one composite chunk (ground + rooftops + deck + trees), stored at every level --------
-  function bake(cx, cy, fromLevel) {
-    paint(cx, cy);
-    const k = cy * CW + cx;
-    for (let li = fromLevel; li < LEVELS.length; li++) {
-      const size = Math.max(8, Math.round(CHUNK_PX * LEVELS[li].s));
-      const c = caches[li];
-      if (c.has(k)) continue;
-      const cv = document.createElement('canvas');
-      cv.width = cv.height = size;
-      const cg = cv.getContext('2d');
-      cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
-      cg.drawImage(scratch, 0, 0, CHUNK_PX, CHUNK_PX, 0, 0, size, size);
-      c.set(k, cv);
-      if (c.size > caps[li]) c.delete(c.keys().next().value);
-    }
-    baked++;
-  }
-  // one chunk at full size into the scratch canvas
-  function paint(cx, cy) {
-    if (!ground) ground = new GroundCache(map, 2, { lots: S.layers.lots, props: S.layers.props });
-    if (!scratch) { scratch = document.createElement('canvas'); scratch.width = scratch.height = CHUNK_PX; sg = scratch.getContext('2d'); }
-    sg.setTransform(1, 0, 0, 1, 0, 0);
-    sg.clearRect(0, 0, CHUNK_PX, CHUNK_PX);
-    sg.drawImage(ground.bake(cx, cy), 0, 0);
-    sg.save();
-    sg.translate(-cx * CHUNK_PX, -cy * CHUNK_PX);
-    const view = { x0: cx * CHUNK_PX, y0: cy * CHUNK_PX, x1: (cx + 1) * CHUNK_PX, y1: (cy + 1) * CHUNK_PX };
-    const items = [];
-    let hv = null;
-    if (S.layers.deck && highway) { hv = highway.visible(view); highway.drawShadows(sg, hv.slabs, 0); highway.drawLow(sg, hv.slabs); highway.items(hv.slabs, hv.pillars, items); }
-    if (S.layers.roofs && buildings) for (const it of buildings.inView(view)) if (!it.flat) items.push({ y: it.y1, b: it });
-    if (S.layers.props) for (const p of ground.overhead(cx, cy)) if (!p.broken && p.t !== 'sigpole') items.push({ y: p.y + 8, o: p });
-    items.sort((a, b) => a.y - b.y);
-    for (const it of items) {
-      if (it.b) buildings.draw(sg, it.b, 1);
-      else if (it.slab) highway.drawSlab(sg, it.slab);
-      else if (it.pillar) highway.drawPillar(sg, it.pillar);
-      else if (it.o) drawOverheadProp(sg, it.o, false);
-    }
-    sg.restore();
-  }
+  let schematic = null;
 
   // the schematic: one pixel per tile, buildings coloured by what they are (built once)
   function buildSchematic() {
@@ -144,102 +68,47 @@ export function createSpectator({ map, buildings, highway, drawEntities, players
   }
 
   // ---- drawing --------------------------------------------------------------------------------------
-  function levelAt(z) { return LEVELS.findIndex((l) => z >= l.minZ); }
-  function level() { return levelAt(S.z); }
   function minZoom(W, H) { return Math.min(W / WORLD_W, H / WORLD_H) * 0.95; }
 
-  // cam: { x, y, z } (the live camera, or a scaled copy for a hi-res snapshot); live: also move the
-  // camera and draw the people / vehicles the server is sending (only onto the screen canvas)
-  function render(g, W, H, DPR, dt, now, cam = null, budget = BAKE_MS) {
+  // the flat view: cam { x, y, z } (the live camera, or a scaled copy for a hi-res snapshot); live: also
+  // move the camera and draw the players
+  function render(g, W, H, DPR, dt, now, cam = null) {
     const live = !cam;
-    if (!worldImg && map.seed === 1337) { worldImg = new Image(); worldImg.onload = () => { wmReady = true; }; worldImg.src = 'assets/worldmap.webp'; }
     if (live) { step(dt, W, H); cam = S; }
     const z = cam.z, ox = W / 2 - cam.x * z, oy = H / 2 - cam.y * z;
     const view = { x0: cam.x - W / 2 / z, y0: cam.y - H / 2 / z, x1: cam.x + W / 2 / z, y1: cam.y + H / 2 / z };
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
     g.fillStyle = '#0b1830'; g.fillRect(0, 0, W, H);
-    let loading = 0;
-    if (S.layers.schematic) {
-      schematic ||= buildSchematic();
-      g.imageSmoothingEnabled = false;
-      g.drawImage(schematic, ox, oy, WORLD_W * z, WORLD_H * z);
-      if (z * TILE >= 3) outlineBuildings(g, view, z, ox, oy);
-    } else {
-      g.imageSmoothingEnabled = true;
-      if (wmReady) g.drawImage(worldImg, ox, oy, WORLD_W * z, WORLD_H * z);
-      const li = levelAt(z);
-      // far out, the baked world map is already as sharp as the screen: no need to bake tiles (as
-      // long as every art layer is on - the map image has them all)
-      const L = S.layers, mapEnough = wmReady && L.lots && L.roofs && L.deck && L.props && z * DPR <= worldImg.naturalWidth / WORLD_W * 1.15;
-      const cx0 = Math.max(0, Math.floor(view.x0 / CHUNK_PX)), cx1 = Math.min(CW - 1, Math.floor(view.x1 / CHUNK_PX));
-      const cy0 = Math.max(0, Math.floor(view.y0 / CHUNK_PX)), cy1 = Math.min(CH - 1, Math.floor(view.y1 / CHUNK_PX));
-      const want = [];
-      const sz = CHUNK_PX * z;
-      g.imageSmoothingEnabled = li > 0;
-      if (!mapEnough) for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
-        if (seaChunk(cx, cy)) continue;
-        const k = cy * CW + cx;
-        let tile = caches[li].get(k);
-        if (tile) { caches[li].delete(k); caches[li].set(k, tile); }
-        else {
-          want.push([cx, cy, Math.hypot((cx + 0.5) * CHUNK_PX - cam.x, (cy + 0.5) * CHUNK_PX - cam.y)]);
-          for (let lj = li + 1; lj < LEVELS.length && !tile; lj++) tile = caches[lj].get(k); // a coarser one meanwhile
-        }
-        if (tile) g.drawImage(tile, Math.floor(ox + cx * sz), Math.floor(oy + cy * sz), Math.ceil(sz) + 1, Math.ceil(sz) + 1);
-      }
-      // bake the missing tiles, nearest the middle first, a few milliseconds a frame
-      want.sort((a, b) => a[2] - b[2]);
-      const t0 = performance.now();
-      for (const [cx, cy] of want) { if (performance.now() - t0 > budget) break; bake(cx, cy, li); }
-      loading = want.length;
-      // people and vehicles the server is already sending
-      if (live && S.layers.ents && z >= 0.06 && drawEntities) {
-        g.setTransform(DPR * z, 0, 0, DPR * z, DPR * ox, DPR * oy);
-        drawEntities(view, now);
-        g.setTransform(DPR, 0, 0, DPR, 0, 0);
-      }
-    }
+    schematic ||= buildSchematic();
+    g.imageSmoothingEnabled = false;
+    g.drawImage(schematic, ox, oy, WORLD_W * z, WORLD_H * z);
+    if (z * TILE >= 3) outlineBuildings(g, view, z, ox, oy);
     if (S.layers.grid) drawGrid(g, view, z, ox, oy);
     if (S.layers.labels) drawLabels(g, view, z, ox, oy);
-    if (live) { drawPlayers(g, z, ox, oy); S.loading = loading; }
-    return loading;
+    if (live) { drawPlayers(g, z, ox, oy); S.loading = 0; }
+    return 0;
+  }
+  // over the new renderer's picture: the names, the grid and the players (the canvas cleared to see-through)
+  function overlay(g, W, H, DPR) {
+    const z = S.z, ox = W / 2 - S.x * z, oy = H / 2 - S.y * z;
+    const view = { x0: S.x - W / 2 / z, y0: S.y - H / 2 / z, x1: S.x + W / 2 / z, y1: S.y + H / 2 / z };
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, g.canvas.width, g.canvas.height);
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (S.layers.grid) drawGrid(g, view, z, ox, oy);
+    if (S.layers.labels) drawLabels(g, view, z, ox, oy);
+    drawPlayers(g, z, ox, oy);
+    S.loading = 0;
   }
 
-  // The current view drawn again `scale` times bigger, into a new canvas. Each chunk is painted at
-  // full size and drawn straight into the picture (not kept), so however much of the world is in
-  // view, memory stays at one picture plus one chunk. Yields to the browser between chunks.
+  // The current flat view drawn again `scale` times bigger, into a new canvas (the art view is saved as
+  // the screen shows it: main.js).
   async function snapshot(W, H, scale, onProgress) {
     const z = S.z * scale, OW = Math.round(W * scale), OH = Math.round(H * scale);
     const cam = { x: S.x, y: S.y, z };
     const cv = document.createElement('canvas');
     cv.width = OW; cv.height = OH;
     const g = cv.getContext('2d', { alpha: false });
-    const ox = OW / 2 - cam.x * z, oy = OH / 2 - cam.y * z;
-    const view = { x0: cam.x - OW / 2 / z, y0: cam.y - OH / 2 / z, x1: cam.x + OW / 2 / z, y1: cam.y + OH / 2 / z };
-    g.fillStyle = '#0b1830'; g.fillRect(0, 0, OW, OH);
-    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    if (S.layers.schematic) {
-      schematic ||= buildSchematic();
-      g.imageSmoothingEnabled = false;
-      g.drawImage(schematic, ox, oy, WORLD_W * z, WORLD_H * z);
-      if (z * TILE >= 3) outlineBuildings(g, view, z, ox, oy);
-    } else {
-      if (wmReady) g.drawImage(worldImg, ox, oy, WORLD_W * z, WORLD_H * z);
-      const cx0 = Math.max(0, Math.floor(view.x0 / CHUNK_PX)), cx1 = Math.min(CW - 1, Math.floor(view.x1 / CHUNK_PX));
-      const cy0 = Math.max(0, Math.floor(view.y0 / CHUNK_PX)), cy1 = Math.min(CH - 1, Math.floor(view.y1 / CHUNK_PX));
-      const list = [];
-      for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) if (!seaChunk(cx, cy)) list.push([cx, cy]);
-      const sz = CHUNK_PX * z;
-      let t0 = performance.now();
-      for (let i = 0; i < list.length; i++) {
-        const [cx, cy] = list[i];
-        paint(cx, cy);
-        g.drawImage(scratch, Math.floor(ox + cx * sz), Math.floor(oy + cy * sz), Math.ceil(sz) + 1, Math.ceil(sz) + 1);
-        if (performance.now() - t0 > 30) { onProgress?.(i / list.length); await new Promise((r) => setTimeout(r, 0)); t0 = performance.now(); if (!S.on) return null; }
-      }
-    }
-    if (S.layers.grid) drawGrid(g, view, z, ox, oy);
-    if (S.layers.labels) drawLabels(g, view, z, ox, oy);
+    render(g, OW, OH, 1, 0, 0, cam);
     onProgress?.(1);
     return cv;
   }
@@ -263,15 +132,6 @@ export function createSpectator({ map, buildings, highway, drawEntities, players
     for (const b of map.buildings) {
       if (b.gone) continue;
       const x = b.tx * TILE, y = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE;
-      if (x > view.x1 || x + w < view.x0 || y > view.y1 || y + h < view.y0) continue;
-      g.rect(Math.round(ox + x * z) + 0.5, Math.round(oy + y * z) + 0.5, Math.round(w * z), Math.round(h * z));
-    }
-    g.stroke();
-    // painted lots (each a whole concept-art plot): dashed
-    g.setLineDash([4, 3]); g.strokeStyle = 'rgba(255,255,255,.7)';
-    g.beginPath();
-    for (const p of map.prefabs) {
-      const x = p.tx * TILE, y = p.ty * TILE, w = p.tw * TILE, h = p.th * TILE;
       if (x > view.x1 || x + w < view.x0 || y > view.y1 || y + h < view.y0) continue;
       g.rect(Math.round(ox + x * z) + 0.5, Math.round(oy + y * z) + 0.5, Math.round(w * z), Math.round(h * z));
     }
@@ -401,15 +261,13 @@ export function createSpectator({ map, buildings, highway, drawEntities, players
   return {
     get on() { return S.on; },
     state: S,
-    levelName() { return LEVELS[Math.max(0, level())].name; },
+    levelName() { return 'flat'; },
     loading() { return S.loading || 0; },
-    enter(x, y) { S.on = true; S.x = x; S.y = y; S.z = 0.35; S.keys.clear(); },
-    exit() { S.on = false; S.keys.clear(); resetArt(); schematic = null; scratch = null; sg = null; }, // free the art caches
-    setLayer(name, on) {
-      S.layers[name] = on;
-      if (name === 'lots' || name === 'props' || name === 'roofs' || name === 'deck') resetArt();
-    },
-    render,
+    enter(x, y) { S.on = true; S.x = x; S.y = y; S.z = 0.7; S.keys.clear(); },
+    exit() { S.on = false; S.keys.clear(); schematic = null; },
+    setLayer(name, on) { S.layers[name] = on; },
+    render, overlay,
+    move(dt, W, H) { step(dt, W, H); },
     snapshot, snapshotScale, viewTiles,
     key(code, down) { if (down) S.keys.add(code); else S.keys.delete(code); },
     pad(p) { pad = p; },
