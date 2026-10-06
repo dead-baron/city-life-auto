@@ -15,6 +15,30 @@ Every v2 asset follows these rules. The numbers were measured from the approved 
 - **Trees:** street trees are 6–12 m (130–260 px) and palms 10–20 m (220–440 px). The targets show palms of 100–130 px; tall ones get the see-through cutaway when they cover the player.
 - **Kerbs** are 3 px high, sidewalk slabs about 22 px, a lane 3.5 m (77 px).
 
+## Roads and pavements
+Widths are in world px (a sedan is 100 x 48) and live in `client/art2/road-spec.js`. That table moves to `shared/` when the world is rebuilt, so the road network and the art read the same numbers.
+
+| Road | Width | Notes |
+|---|---|---|
+| Lane | 80 | about 1.7 car widths, close to a real 3.6 m lane, so cars can weave and pass |
+| Alley or one-lane road | 96 | two cars wide, so you can still squeeze past |
+| Two-lane street | 192 | 280 with parking on both sides |
+| One-way street | 160 | two lanes |
+| Avenue | 344 | four lanes and a 24 px median |
+| Boulevard | 384 | four lanes round a planted median |
+| Highway lane | 88 | |
+| County road | 160 | |
+| Dirt track | 120 | |
+
+| Sidewalk | Width |
+|---|---|
+| Residential | 64 |
+| Commercial | 96 |
+| Downtown | 112 |
+| Plaza edge | 128 or more |
+
+Kerb returns at corners have a radius of about 22. The district kits are laid out in compact design coordinates and widened along their roads by a layout warp (`client/art2/warp.js`). Objects keep their size; only their positions move.
+
 ## Light
 - **Sun direction:** the sun is from the upper left of the screen, in world terms from the west-north-west and a little toward the viewer. Shadows fall right and slightly down. South faces get some sun, with the most light on roofs and west faces.
 - **Golden hour:** warm key light (#ffb46a range) and long shadows tinted blue-violet (#3a3a6e range).

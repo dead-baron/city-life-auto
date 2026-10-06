@@ -14,6 +14,7 @@ import { paintGround, kerbs } from './ground.js';
 import { makeBuilding, buildingH } from './buildings.js';
 import { person, randomPerson } from './people.js';
 import { LIGHT } from './palette.js';
+import { W, setWarp } from './warp.js';
 
 // ---- exact Euclidean distance transform (Felzenszwalb & Huttenlocher) -----------------------------
 // mask[i] = 1 marks the features; returns the squared distance from every pixel to the nearest one.
@@ -43,23 +44,31 @@ function segDist2(px, py, a, b) {
 }
 // ---- the street plan -------------------------------------------------------------------------------
 export class Streets {
+  // w, h and every shape below are in design coordinates; they are placed through the layout warp
+  // (warp.js), so the plan comes out at world size. isWalk / kind / kindAt take world coordinates.
   constructor(w, h, opt = {}) {
-    this.w = w; this.h = h;
-    this.corner = opt.corner ?? 16;        // kerb return radius at block corners
-    this.sidewalk = opt.sidewalk ?? 26;    // default sidewalk width from the kerb
+    this.w = Math.round(W.x(w)); this.h = Math.round(W.y(h));
+    this.corner = (opt.corner ?? 16) * W.grow;        // kerb return radius at block corners
+    this.sidewalk = (opt.sidewalk ?? 26) * W.walk;    // default sidewalk width from the kerb
     this.roads = []; this.bulbs = []; this.islands = []; this.zones = [];
     this.roadKind = opt.roadKind || 'asphalt';
     this.lotKind = opt.lotKind || 'sidewalk';
   }
-  road(x, y, w, h, opt = {}) { this.roads.push({ x, y, w, h, ...opt }); return this; }
-  bulb(cx, cy, r) { this.bulbs.push({ cx, cy, r }); return this; }
+  road(x, y, w, h, opt = {}) { const [X, Y, WW, HH] = W.rect(x, y, w, h); this.roads.push({ ...opt, x: X, y: Y, w: WW, h: HH }); return this; }
+  bulb(cx, cy, r) { this.bulbs.push({ cx: W.x(cx), cy: W.y(cy), r: r * W.grow * 1.4 }); return this; }
   // a raised island inside the carriageway (median, traffic island): a rounded rectangle of pavement
-  island(x, y, w, h, r = 8, kind = 'sidewalk') { this.islands.push({ x, y, w, h, r, kind }); return this; }
+  island(x, y, w, h, r = 8, kind = 'sidewalk') { const [X, Y, WW, HH] = W.rect(x, y, w, h); this.islands.push({ x: Math.round(X), y: Math.round(Y), w: Math.round(WW), h: Math.round(HH), r, kind }); return this; }
   // lot ground. shape: rect {x,y,w,h,r?}, circle {cx,cy,r}, path {path: [[x,y]...], width} (a winding
   // walk), blob {blob: {cx,cy,rx,ry,seed,wob}} (a pond, a flower bed) or poly {poly: [[x,y]...]}.
   // over: also covers the sidewalk band (driveways, plazas); road: may be painted on the carriageway.
   zone(kind, shape, opt = {}) {
     const z = { kind, ...shape, ...opt };
+    if (z.sidewalk !== undefined) z.sidewalk *= W.walk;
+    if (z.path) { z.path = z.path.map(([x, y]) => [W.x(x), W.y(y)]); z.width *= W.grow; }
+    else if (z.blob) z.blob = { ...z.blob, cx: W.x(z.blob.cx), cy: W.y(z.blob.cy), rx: z.blob.rx * W.kx(z.blob.cx), ry: z.blob.ry * W.ky(z.blob.cy) };
+    else if (z.poly) z.poly = z.poly.map(([x, y]) => [W.x(x), W.y(y)]);
+    else if (z.cx !== undefined) { const k = Math.min(W.grow, Math.max(W.kx(z.cx), W.ky(z.cy))); z.cx = W.x(z.cx); z.cy = W.y(z.cy); z.r *= k; }
+    else if (z.x !== undefined) { const [X, Y, WW, HH] = W.rect(z.x, z.y, z.w, z.h); z.x = X; z.y = Y; z.w = WW; z.h = HH; }
     if (z.path) { const hw = z.width / 2 + 1; z.bb = [Math.min(...z.path.map((p) => p[0])) - hw, Math.min(...z.path.map((p) => p[1])) - hw, Math.max(...z.path.map((p) => p[0])) + hw, Math.max(...z.path.map((p) => p[1])) + hw]; }
     else if (z.blob) { const b = z.blob, k = 1 + (b.wob ?? 0.25); z.bb = [b.cx - b.rx * k, b.cy - b.ry * k, b.cx + b.rx * k, b.cy + b.ry * k]; }
     else if (z.poly) z.bb = [Math.min(...z.poly.map((p) => p[0])), Math.min(...z.poly.map((p) => p[1])), Math.max(...z.poly.map((p) => p[0])), Math.max(...z.poly.map((p) => p[1]))];
@@ -122,6 +131,8 @@ export class Streets {
     if (wk === 2) { for (const s of this.islands) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) return s.kind; }
     return this.kerbDist[i] <= this.sidewalk ? 'sidewalk' : this.lotKind;
   }
+  // the ground kind at a design position (for placing things in the kits)
+  kindD(x, y) { return this.kind(W.x(x), W.y(y)); }
   kind(x, y) { x |= 0; y |= 0; return x < 0 || y < 0 || x >= this.w || y >= this.h ? null : this.kinds[y * this.w + x]; }
   paint(G, seed = 1, kerbRed = () => false) {
     this.kinds = new Array(this.w * this.h);
@@ -133,7 +144,12 @@ export class Streets {
 
 // ---- the scene -------------------------------------------------------------------------------------
 export class Scene {
-  constructor(w, h, preset = 'golden', seed = 1) {
+  // w, h in design coordinates; warp: the layout stretch for this block (see warp.js), set before
+  // anything is placed. Positions passed to the methods below are design coordinates.
+  constructor(w, h, preset = 'golden', seed = 1, warp = null) {
+    setWarp(warp || {});
+    this.dw = w; this.dh = h;
+    w = Math.round(W.x(w)); h = Math.round(W.y(h));
     this.w = w; this.h = h; this.preset = preset; this.seed = seed;
     this.isNight = preset === 'night' || preset === 'rain';
     this.night = this.isNight ? 1 : preset === 'golden' ? 0.4 : 0;     // lit windows, neon
@@ -145,7 +161,8 @@ export class Scene {
     this.sprites = new Map();
   }
   rnd(i, k = 0) { return hash(i, k, this.seed * 131 + 7); }
-  add(spr, x, y, dz = 0, base = y) { this.items.push({ spr, x, y, dz, base }); return spr; }
+  add(spr, x, y, dz = 0, base = y) { this.items.push({ spr, x: W.x(x), y: W.y(y), dz, base: W.y(base) }); return spr; }
+  addWorld(spr, x, y, dz = 0, base = y) { this.items.push({ spr, x, y, dz, base }); return spr; }
   // a voxel model, rendered once per (model, heading) when a key is given
   vox(m, x, y, hd = 0, dz = 0, base = y, key = null) {
     let spr;
@@ -156,13 +173,19 @@ export class Scene {
   // a building whose footprint's south-west corner sits at (x, y); returns its placement for roof kit
   building(spec, x, y) {
     const s = { night: this.night, ...spec };
-    const spr = makeBuilding(s);
-    this.add(spr, x, y);
-    return { x, y, w: spec.w, d: spec.d, H: buildingH(s), base: y, spr };
+    const spr = makeBuilding(s), X = W.x(x), Y = W.y(y);
+    this.addWorld(spr, X, Y);
+    return { x: X, y: Y, w: spec.w, d: spec.d, H: buildingH(s), base: Y, spr };
   }
-  // rooftop kit: (rx, ry) measured from the footprint's north-west corner
-  onRoof(b, m, rx, ry, hd = 0, key = null) { return this.vox(m, b.x + rx, b.y - b.d + ry, hd, b.H, b.base + 0.5, key); }
-  sprOnRoof(b, spr, rx, ry) { return this.add(spr, b.x + rx, b.y - b.d + ry, b.H, b.base + 0.5); }
+  // rooftop kit: (rx, ry) measured from the footprint's north-west corner (world offsets)
+  onRoof(b, m, rx, ry, hd = 0, key = null) { return this.addWorld(this.render(m, hd, key), b.x + rx, b.y - b.d + ry, b.H, b.base + 0.5); }
+  sprOnRoof(b, spr, rx, ry) { return this.addWorld(spr, b.x + rx, b.y - b.d + ry, b.H, b.base + 0.5); }
+  render(m, hd = 0, key = null) {
+    if (!key) return m.render(hd);
+    const k = key + '@' + hd.toFixed(3); let spr = this.sprites.get(k);
+    if (!spr) { spr = m.render(hd); this.sprites.set(k, spr); }
+    return spr;
+  }
   person(x, y, kind = null, dir = 2, pose = 'idle', seed = null) {
     const s = seed ?? Math.floor(x * 7 + y * 13);
     const app = typeof kind === 'object' && kind ? kind : randomPerson(s, kind);
@@ -183,7 +206,7 @@ export class Scene {
     for (let a = 0; a < 6.28; a += 0.12) { const rx = Math.round(g.ax + Math.cos(a) * 11), ry = Math.round(cut - 1 + Math.sin(a) * 3); if (hash(rx, ry, s) > 0.3) g.put(rx, ry, [224, 244, 244], [0, 0, 1], 0, null, 2); }
     return this.add(g, x, y);
   }
-  light(x, y, z, r, col, k) { this.lights.push({ x, y, z, r, col, k }); }
+  light(x, y, z, r, col, k) { this.lights.push({ x: W.x(x), y: W.y(y), z, r: r * W.grow, col, k }); }
   // a street lamp's pool of light (the lamp model itself is placed by the caller)
   lampLight(x, y, z = 80, warm = LIGHT.sodium, s = 1) { if (this.lampsOn) this.light(x, y + 2, z, (this.isNight ? 190 : 100) * (0.6 + 0.4 * s), warm, (this.isNight ? 3.2 : 0.75) * s); }
   // headlights and tail lights for a vehicle at (x, y) facing heading a, of length L
@@ -194,7 +217,7 @@ export class Scene {
   }
   windowGlow(x, y, z, r = 70, col = LIGHT.warmWindow, k = 1) { this.light(x, y, z, r, col, this.win * k); }
   // an overhead wire between two points (world X, Y, Z), sagging in the middle
-  wire(x0, y0, z0, x1, y1, z1, sag = 10, col = [30, 30, 36]) { this.wires.push({ x0, y0, z0, x1, y1, z1, sag, col }); }
+  wire(x0, y0, z0, x1, y1, z1, sag = 10, col = [30, 30, 36]) { this.wires.push({ x0: W.x(x0), y0: W.y(y0), z0, x1: W.x(x1), y1: W.y(y1), z1, sag, col }); }
 
   finish() {
     const G = this.G;

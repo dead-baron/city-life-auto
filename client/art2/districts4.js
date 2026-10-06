@@ -5,7 +5,8 @@
 //
 // CITY_DISTRICTS[name](preset) -> { G, lights }; CITY_TARGETS[name] -> the target image file
 import { Scene, Streets } from './scene.js';
-import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, litter, stain, lawnEdge, shoreFoam, parkingLines, pavementCracks, courtLines, poolWall, roadText } from './ground.js';
+import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, litter, stain, lawnEdge, shoreFoam, parkingLines, pavementCracks, courtLines, poolWall, roadText } from './ground-warped.js';
+import { W } from './warp.js';
 import * as P from './props.js';
 import * as D from './props-district.js';
 import * as X from './props-transit.js';
@@ -38,7 +39,7 @@ function neon(sc, x, y, text, col, opt = {}) {
 
 // ---- D5 Old Town: the market square, the church, a café terrace, cobbled lanes, terracotta roofs ------
 export function buildOldTown(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 5), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 5, {x: [[190, 246, 120]], y: [[392, 454, 176]], walk: 1, grow: 1.3}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 18, sidewalk: 0, roadKind: 'asphaltWorn', lotKind: 'cobble' });
   S.road(0, 392, DW, 62).road(190, 0, 56, 392);
   S.zone('paver', { x: 270, y: 236, w: 498, h: 156 });
@@ -88,7 +89,7 @@ export function buildOldTown(preset = 'golden') {
 
 // ---- D4 apartments: walk-ups round a courtyard with a basketball court, the corner mart, parked cars ----
 export function buildApartments(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 4), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 4, {x: [[0, 100, 280], [100, 130, 64]], y: [[380, 410, 64], [410, 476, 280], [476, 506, 64]], walk: 2.1333333333333333, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 20, sidewalk: 30, lotKind: 'paver' });
   S.road(0, 0, 100, DH).road(100, 410, DW - 100, 66);
   S.zone('asphalt', { x: 380, y: 200, w: 150, h: 130 });
@@ -133,7 +134,7 @@ export function buildApartments(preset = 'golden') {
 
 // ---- D8 neon strip: clubs, a cocktail bar and an arcade under neon, a crossroads slick with rain ------
 export function buildNightlife(preset = 'rain') {
-  const sc = new Scene(DW, DH, preset, 8), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 8, {x: [[260, 300, 96], [300, 420, 192], [420, 460, 96]], y: [[290, 330, 96], [330, 410, 192], [410, 450, 96]], walk: 2.4, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 20, sidewalk: 40, lotKind: 'sidewalk' });
   S.road(300, 0, 120, DH).road(0, 330, DW, 80);
   S.zone('asphalt', { x: 0, y: 430, w: 250, h: 82 });
@@ -179,7 +180,7 @@ export function buildNightlife(preset = 'rain') {
 
 // ---- D3 commercial strip: shopfronts under a billboard, the mall entrance, the stadium, deliveries -----
 export function buildCommercial(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 3), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 3, {x: [[360, 400, 96], [400, 472, 192], [472, 512, 96]], y: [[210, 250, 96], [250, 340, 344], [340, 380, 96]], walk: 2.4, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 20, sidewalk: 40, lotKind: 'paver' });
   S.road(0, 250, DW, 90).road(400, 340, 72, DH - 340);
   S.island(0, 290, 380, 10, 4, 'mulch');
@@ -226,7 +227,7 @@ export function buildCommercial(preset = 'golden') {
 
 // ---- D16 islands: a gang compound on a rock island with a guard tower and boats; a beach cabin ---------
 export function buildIslands(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 16), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 16, {walk: 1}), G = sc.G;
   const S = new Streets(DW, DH, { lotKind: 'waterDeep' });
   S.zone('rock', { blob: { cx: 150, cy: 230, rx: 290, ry: 280, seed: 3, wob: 0.12 } });
   S.zone('yard', { poly: [[0, 80], [330, 70], [350, 330], [300, 400], [0, 420]] });
@@ -237,7 +238,7 @@ export function buildIslands(preset = 'golden') {
   S.zone('dock', { path: [[560, 410], [470, 470]], width: 22 });
   for (const [cx, cy, r, s] of [[470, 120, 30, 1], [740, 60, 50, 2], [430, 320, 24, 3], [520, 500, 30, 4], [330, 480, 18, 5]]) S.zone('rock', { blob: { cx, cy, rx: r, ry: r * 0.8, seed: s, wob: 0.3 } });
   S.build(); S.paint(G, 16);
-  for (let y = 0; y < DH; y++) for (let x = 0; x < DW; x++) if (S.kind(x, y) === 'waterDeep') G.put(x, y, ...seaPixel(x, y));
+  for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) if (S.kind(x, y) === 'waterDeep') G.put(x, y, ...seaPixel(x, y));
   shoreFoam(G, (x, y) => { const k = S.kind(x, y); return k === 'waterDeep' || k === 'shallow'; }, 161);
   // the compound: walls with wire, a gate, the guard tower, a flag, crates, a container, a pickup, guards
   fenceRun(sc, 'chain', 0, 420, 120, 420, { barbed: true });
@@ -273,7 +274,7 @@ export function buildIslands(preset = 'golden') {
 
 // ---- D17 blend: villas and a marina, a mid-income shop street, a rough lot - meeting at a crossroads ---
 export function buildBlend(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 17), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 17, {x: [[250, 280, 72], [280, 360, 192], [360, 390, 72]], y: [[270, 300, 72], [300, 370, 192], [370, 400, 72]], walk: 2.4, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 18, sidewalk: 30, lotKind: 'paver' });
   S.road(280, 0, 80, DH).road(0, 300, DW, 70);
   S.zone('lawn', { x: 0, y: 0, w: 250, h: 270 }); S.zone('stoneTile', { x: 0, y: 150, w: 220, h: 110 }); S.zone('pool', { x: 20, y: 170, w: 120, h: 60 });
@@ -287,8 +288,8 @@ export function buildBlend(preset = 'golden') {
   laneLine(G, 318, 0, 260, false, { yellow: true }); laneLine(G, 323, 0, 260, false, { yellow: true }); laneLine(G, 318, 410, 102, false, { yellow: true }); laneLine(G, 323, 410, 102, false, { yellow: true });
   laneLine(G, 0, 333, 250, true, { yellow: true, dash: 18, gap: 12 }); laneLine(G, 390, 333, 170, true, { yellow: true, dash: 18, gap: 12 }); laneLine(G, 560, 333, 208, true, { yellow: true, dash: 18, gap: 12, wear: 0.5 });
   zebra(G, 284, 272, 72, 24, true, 175); zebra(G, 284, 374, 72, 24, true, 177); zebra(G, 250, 304, 24, 62, false, 179);
-  pavementCracks(G, (x, y) => S.isWalk(x, y) && x > 560, 60, 181); litter(G, (x, y) => S.isWalk(x, y) && x > 560, 0.006, 183);
-  weeds(G, (x, y) => x > 560 && (S.isWalk(x, y) !== S.isWalk(x, y + 3) || S.kind(x, y) === 'dirt'), 0.06, 185);
+  pavementCracks(G, (x, y) => S.isWalk(x, y) && W.ix(x) > 560, 60, 181); litter(G, (x, y) => S.isWalk(x, y) && W.ix(x) > 560, 0.006, 183);
+  weeds(G, (x, y) => W.ix(x) > 560 && (S.isWalk(x, y) !== S.isWalk(x, y + 3) || S.kind(x, y) === 'dirt'), 0.06, 185);
   // luxury: the villa, the pool deck, the gate; the marina with a yacht
   sc.building({ w: 200, d: 120, floors: 2, style: 'stucco', wallColor: '#ecdcc4', pitch: 'hip', roof: 'tile', seed: 171, doors: [{ x: 90, w: 24, kind: 'door' }], windows: [30, 150], shutters: '#3a5a6a', porchLight: true }, 10, 130);
   for (const [x, y] of [[160, 190], [160, 214]]) sc.vox(D.lounger(), x, y, PI / 2, 0, y, 'loung'); sc.vox(P.umbrella('#f0ece4', '#f0ece4'), 190, 236);

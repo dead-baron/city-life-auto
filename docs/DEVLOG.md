@@ -1623,3 +1623,15 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - a block where luxury, mid-income and rough streets meet (D17)
 - **Signs:** neon words, billboards and painted walls are thin sign sprites that can stand on roofs or poles.
 - **Status:** all 17 district concepts now have a block in the preview (19 blocks with T3 and T4). Comparison: `docs/art-v2/districts-v4.png`.
+
+### Art v2: wider roads and sidewalks
+- **Why:** in the first district previews some streets were barely one car wide, which would make them hard to drive.
+- **New standard:**
+  - Lanes are 80 px (1.7 car widths), so cars can weave and pass.
+  - Alleys and one-lane roads are 96 px, two-lane streets 192 px (280 px with parking) and avenues 344 px.
+  - Sidewalks are 64 px in residential areas, 96 px for shops and 112 px downtown.
+  - The table is in `client/art2/road-spec.js` and `docs/art-v2/SPEC.md`. It moves to `shared/` with the world rebuild, so driving and art use the same numbers.
+- **`client/art2/warp.js`:** a layout warp widens each district along its roads and sidewalks without resizing buildings, cars or people. `scene.js` and `ground-warped.js` route every placement and ground mark through it.
+- **Preview:** all 19 blocks are re-laid at the new widths. The preview page now sizes itself to each block.
+- **Live game:** unchanged; its streets are already 192 px. Its avenues (288 px) get widened in the world rebuild.
+- **Comparison:** `docs/art-v2/districts-wide.png`.

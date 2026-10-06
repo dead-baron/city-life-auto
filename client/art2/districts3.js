@@ -4,7 +4,7 @@
 //
 // EVERY_DISTRICT[name](preset) -> { G, lights }; EVERY_TARGET[name] -> the target image file
 import { Scene, Streets } from './scene.js';
-import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, litter, stain, lawnEdge, shoreFoam, parkingLines, ruts, pavementCracks } from './ground.js';
+import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, litter, stain, lawnEdge, shoreFoam, parkingLines, ruts, pavementCracks } from './ground-warped.js';
 import * as P from './props.js';
 import * as D from './props-district.js';
 import * as X from './props-transit.js';
@@ -28,7 +28,7 @@ function poles(sc, pts, h = 120) {
 
 // ---- D13 farm: wheat and a combine, a pasture with cows, corn, the farmhouse, the barn and silo --------
 export function buildFarm(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 13), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 13, {x: [[338, 410, 140]], y: [[195, 255, 100]], walk: 1, grow: 1.3}), G = sc.G;
   const S = new Streets(DW, DH, { lotKind: 'grass' });
   const road = [[384, 0], [372, 200], [364, 512]], lane = [[370, 214], [560, 222], [768, 232]];
   S.zone('wheat', { x: 0, y: 0, w: 306, h: 190 });
@@ -76,7 +76,7 @@ export function buildFarm(preset = 'golden') {
 
 // ---- D14 desert: a diner and fuel stop at the crossroads, pump jacks, an airstrip, mesas and cacti ------
 export function buildDesert(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 14), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 14, {x: [[168, 242, 192]], y: [[270, 340, 192]], walk: 1}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 10, sidewalk: 0, roadKind: 'asphaltWorn', lotKind: 'desert' });
   S.road(168, 0, 74, DH).road(0, 270, DW, 70);
   S.zone('driveway', { x: 270, y: 130, w: 440, h: 132 });
@@ -115,7 +115,7 @@ export function buildDesert(preset = 'golden') {
   car(sc, 'pickup', 60, 236, 0.2, { paint: '#a87a4a', parked: true });
   for (const [x, y, s, h] of [[100, 190, 1, 52], [120, 400, 2, 60], [30, 470, 3, 48], [690, 380, 4, 56], [740, 30, 5, 50], [300, 470, 6, 44], [470, 470, 7, 58], [20, 30, 8, 46]]) sc.vox(U.saguaro(s, h), x, y);
   for (const [x, y] of [[260, 420], [380, 470], [560, 380], [120, 230], [720, 390]]) sc.vox(U.barrelCactus(), x, y, 0, 0, y, 'barrel');
-  for (let i = 0; i < 30; i++) { const x = hash(i, 1, 141) * DW, y = hash(i, 2, 141) * DH, k = S.kind(x | 0, y | 0); if (k === 'desert') sc.add(bush(900 + i, 7 + (i % 4) * 2, { ramp: MAT.leafDark }), x, y); }
+  for (let i = 0; i < 30; i++) { const x = hash(i, 1, 141) * DW, y = hash(i, 2, 141) * DH, k = S.kindD(x | 0, y | 0); if (k === 'desert') sc.add(bush(900 + i, 7 + (i % 4) * 2, { ramp: MAT.leafDark }), x, y); }
   poles(sc, [[150, 0], [150, 250], [150, 500]], 118); poles(sc, [[260, 360], [520, 356], [768, 352]], 118);
   // traffic
   car(sc, 'sedan', 200, 304, 0, { paint: '#3a5a8a' }); car(sc, 'suv', 640, 306, PI, { paint: '#a83030' }); car(sc, 'suv', 222, 90, -PI / 2, { paint: '#c8c8c4' });
@@ -124,7 +124,7 @@ export function buildDesert(preset = 'golden') {
 
 // ---- D15 forest: a lake with a dock and boathouse, a campsite, the lookout, a river bridge, the quarry ---
 export function buildForest(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 15), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 15, {walk: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { lotKind: 'grass' });
   const trail = [[280, 240], [420, 300], [520, 300], [600, 380], [640, 512]], road = [[440, 196], [600, 176], [768, 150]];
   const river = [[600, 0], [640, 110], [680, 200], [740, 280], [790, 320]];
@@ -167,17 +167,17 @@ export function buildForest(preset = 'golden') {
   for (let i = 0; i < 400 && n < 46; i++) {
     const x = hash(i, 1, 155) * DW, y = hash(i, 2, 155) * DH;
     let ok = !(x > 40 && x < 380 && y > 50 && y < 300) && !(x > 390 && x < 560 && y > 220 && y < 310) && !(x > 520 && y < 120 && Math.abs(x - 560) < 30);
-    for (const [dx, dy] of [[0, 0], [26, 0], [-26, 0], [0, 18], [0, -14], [18, 14], [-18, 14]]) if (S.kind((x + dx) | 0, (y + dy) | 0) !== 'grass') ok = false;
+    for (const [dx, dy] of [[0, 0], [26, 0], [-26, 0], [0, 18], [0, -14], [18, 14], [-18, 14]]) if (S.kindD((x + dx) | 0, (y + dy) | 0) !== 'grass') ok = false;
     if (!ok) continue;
     n++; sc.add(pine(160 + i, 110 + hash(i, 3, 155) * 70, 24 + hash(i, 4, 155) * 10), x, y);
   }
-  for (let i = 0; i < 40; i++) { const x = hash(i, 5, 155) * DW, y = hash(i, 6, 155) * DH; if (S.kind(x | 0, y | 0) === 'grass') sc.add(bush(990 + i, 8 + (i % 3) * 3, { flowers: i % 4 === 0 ? '#c85ad8' : null }), x, y); }
+  for (let i = 0; i < 40; i++) { const x = hash(i, 5, 155) * DW, y = hash(i, 6, 155) * DH; if (S.kindD(x | 0, y | 0) === 'grass') sc.add(bush(990 + i, 8 + (i % 3) * 3, { flowers: i % 4 === 0 ? '#c85ad8' : null }), x, y); }
   return sc.finish();
 }
 
 // ---- D12 civic centre: hospital, courthouse and city hall, the statue plaza, the police station --------
 export function buildCivic(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 12), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 12, {x: [[296, 330, 96], [330, 402, 192], [402, 436, 96]], y: [[266, 300, 96], [300, 372, 280], [372, 406, 96]], walk: 2.823529411764706, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 20, sidewalk: 34, lotKind: 'stoneTile' });
   S.road(0, 300, DW, 72).road(330, 372, 72, DH - 372);
   S.zone('plaza', { x: 0, y: 406, w: 330, h: 106 });

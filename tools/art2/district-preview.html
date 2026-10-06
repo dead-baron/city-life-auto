@@ -15,14 +15,17 @@ document.getElementById('nav').innerHTML = Object.keys(DISTRICTS).map((k) => ['g
 const T0 = performance.now();
 const { G, lights } = DISTRICTS[d](preset);
 const T1 = performance.now();
-const L = new Lighter(document.getElementById('c'));
+const cv = document.getElementById('c'), rc = document.getElementById('rain'), wrap = document.querySelector('.wrap');
+for (const c of [cv, rc]) { c.width = G.w * 2; c.height = G.h * 2; }
+wrap.style.width = G.w * 2 + 'px'; wrap.style.height = G.h * 2 + 'px';
+const L = new Lighter(cv);
 L.setScene(G);
 L.render(PRESETS[preset], lights, 1.0);
-document.getElementById('t').textContent = `${d} - ${preset} - built in ${(T1 - T0).toFixed(0)} ms, ${lights.length} lights`;
+document.getElementById('t').textContent = `${d} - ${preset} - ${G.w} x ${G.h} world px - built in ${(T1 - T0).toFixed(0)} ms, ${lights.length} lights`;
 if (PRESETS[preset].rain) {
   const g = document.getElementById('rain').getContext('2d');
   let s = 7; const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  for (let i = 0; i < 520; i++) { const x = r() * 1536, y = r() * 1024, l = 10 + r() * 14; g.strokeStyle = `rgba(190,205,255,${0.18 + r() * 0.22})`; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - l * 0.25, y + l); g.stroke(); }
+  for (let i = 0; i < 520 * (G.w * G.h) / (768 * 512); i++) { const x = r() * G.w * 2, y = r() * G.h * 2, l = 10 + r() * 14; g.strokeStyle = `rgba(190,205,255,${0.18 + r() * 0.22})`; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - l * 0.25, y + l); g.stroke(); }
 }
 const tg = document.getElementById('tg');
 if (q.get('target') !== '0') { tg.onload = () => { window.done = true; }; tg.src = '../../docs/art-v2/targets/' + DISTRICT_TARGETS[d]; tg.style.width = '1536px'; }

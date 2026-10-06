@@ -4,7 +4,9 @@
 //
 // ALL_DISTRICTS[name](preset) -> { G, lights }; ALL_TARGETS[name] -> the target image file
 import { Scene, Streets } from './scene.js';
-import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, litter, stain, roadText, lawnEdge, shoreFoam, railTrack, quayEdge, pitchLines, parkingLines, busSymbol, lilyPads, towel, pavementCracks } from './ground.js';
+import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, litter, stain, roadText, lawnEdge, shoreFoam, railTrack, quayEdge, pitchLines, parkingLines, busSymbol, lilyPads, towel, pavementCracks } from './ground-warped.js';
+import { putAt } from './ground-warped.js';
+import { W } from './warp.js';
 import * as P from './props.js';
 import * as D from './props-district.js';
 import * as X from './props-transit.js';
@@ -20,7 +22,7 @@ const pet = (sc, kind, x, y, hd = 0, o = {}) => sc.vox(animalModel(kind, o), x, 
 
 // ---- T4 transit avenue: a tram on embedded rails under catenary, a red bus lane, a taxi rank --------
 export function buildTransit(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 4), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 4, {x: [[136, 170, 96], [170, 426, 360], [426, 460, 96]], y: [[322, 356, 96], [356, 430, 192], [430, 464, 96]], walk: 2.823529411764706, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 20, sidewalk: 34, lotKind: 'sidewalk' });
   S.road(170, 0, 256, DH).road(0, 356, 170, 74).road(426, 356, DW - 426, 74).road(520, 196, 190, 160);
   S.zone('asphaltRed', { x: 364, y: 0, w: 62, h: 356 }, { road: true }); S.zone('asphaltRed', { x: 364, y: 430, w: 62, h: 82 }, { road: true });
@@ -73,7 +75,7 @@ export function buildTransit(preset = 'golden') {
 
 // ---- T3 ferry terminal: the terminal hall, the marshalling lot, a gangway and the docked ferry ------
 export function buildFerry(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 3), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 3, {y: [[284, 304, 110]], walk: 1}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 16, sidewalk: 20, lotKind: 'stoneTile' });
   S.zone('waterDeep', { poly: [[420, 0], [DW, 0], [DW, DH], [0, DH], [0, 440], [420, 440]] });
   S.zone('asphalt', { x: 30, y: 200, w: 390, h: 200 });
@@ -81,7 +83,7 @@ export function buildFerry(preset = 'golden') {
   S.zone('dock', { x: 420, y: 160, w: 60, h: 90 });
   S.build(); S.paint(G, 3);
   shoreFoam(G, (x, y) => S.kind(x, y) === 'waterDeep', 27);
-  quayEdge(G, 0, 440, 420, 18); for (let y = 0; y < 440; y++) for (let k = 0; k < 4; k++) G.put(420 + k, y, k < 2 ? [228, 186, 52] : [40, 38, 44], [0, 0, 1], 0, null, 1);
+  quayEdge(G, 0, 440, 420, 18); for (let y = 0; y < W.y(440); y++) for (let k = 0; k < 4; k++) G.put(Math.round(W.x(420)) + k, y, k < 2 ? [228, 186, 52] : [40, 38, 44], [0, 0, 1], 0, null, 1);
   parkingLines(G, 60, 214, 6, 56, 70); parkingLines(G, 60, 304, 6, 56, 70);
   for (let i = 0; i < 6; i++) { laneLine(G, 380, 220 + i * 6, 30, true, { yellow: true, width: 2 }); }
   stain(G, 120, 260, 10, 5); stain(G, 250, 340, 12, 6); puddle(G, 330, 380, 10, 4);
@@ -122,7 +124,7 @@ export function buildFerry(preset = 'golden') {
 
 // ---- D7 industrial docks: a warehouse, the container yard and crane, freight wagons, tanks, the quay --
 export function buildIndustrial(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 7), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 7, {x: [[270, 286, 40], [286, 370, 192], [370, 386, 40]], y: [[254, 270, 40], [270, 340, 192], [340, 356, 40]], walk: 2.5, grow: 1.4}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 12, sidewalk: 16, roadKind: 'asphaltWorn', lotKind: 'yard' });
   S.road(286, 0, 84, 440).road(0, 270, DW, 70);
   S.zone('ballast', { x: 380, y: 186, w: 388, h: 54 });
@@ -178,7 +180,7 @@ const hash2 = (x, y) => ((x * 7 + y * 13) % 17) === 0;
 
 // ---- D10 beach: the boardwalk shops, dunes, sand, surf, a lifeguard tower and the pier -----------------
 export function buildBeach(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 10), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 10, {y: [[0, 40, 140]], walk: 1}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 16, sidewalk: 24, lotKind: 'sand' });
   S.road(0, 0, DW, 40);
   const shore = (x) => 392 + Math.sin(x / 95) * 20 + Math.sin(x / 37 + 1) * 6;
@@ -190,8 +192,8 @@ export function buildBeach(preset = 'golden') {
   S.zone('dock', { x: 656, y: 248, w: 70, h: 264 });
   S.build(); S.paint(G, 10);
   shoreFoam(G, (x, y) => (S.kind(x, y) === 'shallow' || S.kind(x, y) === 'water'), 31);
-  for (let x = 0; x < DW; x++) for (let k = 0; k < 6; k++) { const y = Math.round(shore(x)) + 18 + k + Math.round(Math.sin(x / 13) * 3); if (S.kind(x, y) === 'shallow' && ((x + k * 3) % 5)) G.put(x, y, [234, 248, 246], [0, 0, 1], 0, null, 2); }
-  weeds(G, (x, y) => y > 250 && y < 290 && S.kind(x, y) === 'sand', 0.12, 81);
+  for (let x = 0; x < DW; x++) for (let k = 0; k < 6; k++) { const y = Math.round(shore(x)) + 18 + k + Math.round(Math.sin(x / 13) * 3); if (S.kindD(x, y) === 'shallow' && ((x + k * 3) % 5)) putAt(G, x, y, [234, 248, 246], [0, 0, 1], 0, null, 2); }
+  weeds(G, (x, y) => W.iy(y) > 250 && W.iy(y) < 290 && S.kind(x, y) === 'sand', 0.12, 81);
   // the boardwalk front: beach bar, surf shop, snack bar, motel
   const bar = sc.building({ w: 200, d: 90, style: 'siding', wallColor: '#8a6a4a', seed: 61, pitch: 'hip', roof: 'shingle', roofColor: '#6a5040', slope: 0.5, shop: { kind: 'diner', door: 'right', open: true, people: 5, sign: { text: 'SANDYS', bg: '#2a5a7a', fg: [250, 220, 120], lit: true } } }, 40, 176);
   sc.building({ w: 110, d: 100, style: 'stucco', wallColor: '#d8c8a8', seed: 62, roof: 'flat', parapet: 6, shop: { kind: 'mart', door: 'left', open: true, sign: { text: 'SURF', bg: '#2a3a6a', fg: [240, 236, 220] } } }, 380, 176);
@@ -206,8 +208,8 @@ export function buildBeach(preset = 'golden') {
   towel(G, 56, 322, 20, 40, [[220, 70, 80], [240, 236, 228], [60, 120, 190]]); towel(G, 126, 340, 20, 40, [[240, 200, 70], [240, 236, 228]]); towel(G, 84, 372, 20, 40, [[60, 160, 140], [240, 236, 228]]); towel(G, 190, 330, 20, 40, [[230, 120, 170], [240, 236, 228]]);
   sc.vox(P.umbrella('#e84a5a', '#f0ece4'), 90, 324); sc.vox(P.umbrella('#3a6ab0', '#f0ece4'), 150, 346); sc.vox(P.umbrella('#f0b040', '#f0ece4'), 60, 380);
   sc.vox(K.beachChair('#e8504a'), 120, 330); sc.vox(K.cooler(), 104, 360); sc.vox(K.cooler('#e8504a'), 176, 370);
-  for (let x = 240; x <= 380; x++) for (const y of [310, 382]) if (x % 3) G.put(x, y, [236, 232, 216], [0, 0, 1], 0, null, 1);
-  for (let y = 310; y <= 382; y++) for (const x of [240, 380]) if (y % 3) G.put(x, y, [236, 232, 216], [0, 0, 1], 0, null, 1);
+  for (let x = 240; x <= 380; x++) for (const y of [310, 382]) if (x % 3) putAt(G, x, y, [236, 232, 216], [0, 0, 1], 0, null, 1);
+  for (let y = 310; y <= 382; y++) for (const x of [240, 380]) if (y % 3) putAt(G, x, y, [236, 232, 216], [0, 0, 1], 0, null, 1);
   sc.vox(P.volleyNet(90), 310, 346, 0);
   for (const [x, y, d] of [[280, 326, 0], [334, 330, 0], [290, 372, 4], [346, 368, 4]]) sc.person(x, y, 'surfer', d, 'idle', x * 5);
   sc.vox(P.lifeguardTower(), 480, 340); sc.person(470, 346, 'lifeguard', 0, 'idle', 991);
@@ -237,7 +239,7 @@ const range = (a, b, s) => { const r = []; for (let x = a; x <= b; x += s) r.pus
 
 // ---- D11 park: winding paths, a pond with a footbridge, a gazebo, a football pitch, a statue garden ----
 export function buildPark(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 11), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 11, {walk: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { lotKind: 'grass' });
   const paths = [
     [[0, 330], [120, 300], [260, 250], [420, 236], [520, 290], [560, 330], [700, 330], [768, 310]],

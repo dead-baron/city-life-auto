@@ -5,7 +5,8 @@
 //
 // DISTRICTS[name](preset) -> { G, lights }
 import { Scene, Streets } from './scene.js';
-import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, skid, courtLines, poolWall, litter, pavementCracks, stain, roadText, lawnEdge, shoreFoam } from './ground.js';
+import { laneLine, zebra, manhole, drain, wear, weeds, leafLitter, treeGrate, puddle, skid, courtLines, poolWall, litter, pavementCracks, stain, roadText, lawnEdge, shoreFoam } from './ground-warped.js';
+import { W } from './warp.js';
 import * as P from './props.js';
 import * as D from './props-district.js';
 import { vehicleModel } from './vehicles.js';
@@ -43,7 +44,7 @@ export function hedgeRun(sc, x0, y0, len, ns = false, h = 12) {
 
 // ---- D9 suburbs: a wide residential junction, ranch houses and two-storeys, lawns and driveways -------
 export function buildSuburbs(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 9), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 9, {x: [[362, 380, 56], [380, 434, 176], [434, 452, 56]], y: [[282, 300, 56], [300, 352, 176], [352, 370, 56]], walk: 3.111111111111111, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 20, sidewalk: 18, lotKind: 'lawn' });
   S.road(0, 300, DW, 52).road(380, 352, 54, DH - 352).bulb(407, 314, 58);
   // driveways (over the sidewalk), front paths, patios, beds
@@ -111,7 +112,7 @@ export function buildSuburbs(preset = 'golden') {
 
 // ---- D6 Southside: a rough crossroads - pawn and liquor stores, a vacant lot, chain-link and graffiti -
 export function buildSouthside(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 6), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 6, {x: [[266, 298, 64], [298, 404, 192], [404, 436, 64]], y: [[268, 300, 64], [300, 396, 192], [396, 428, 64]], walk: 2}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 14, sidewalk: 32, roadKind: 'asphaltWorn' });
   S.road(298, 0, 106, DH).road(0, 300, DW, 96);
   S.zone('rubble', { x: 0, y: 118, w: 262, h: 148 });
@@ -188,7 +189,7 @@ export function buildSouthside(preset = 'golden') {
 
 // ---- D2 luxury: a palm boulevard, villas with pools, a gated estate, tennis, the cliff lookout -------
 export function buildLuxury(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 2), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 2, {x: [[120, 150, 96], [150, 326, 384], [326, 356, 96]], y: [[306, 336, 96], [336, 396, 192], [396, 426, 96]], walk: 3.2, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 18, sidewalk: 30, lotKind: 'lawn' });
   S.road(150, 0, 176, DH).road(326, 336, DW - 326, 60);
   S.island(226, -10, 28, 326, 12, 'mulch'); S.island(226, 412, 28, 120, 12, 'mulch');
@@ -207,8 +208,9 @@ export function buildLuxury(preset = 'golden') {
   const sea = (x, y) => y > 500 - (x - 470) * 0.45 && x > 470;
   S.zone('rock', { x: 326, y: 466, w: 442, h: 46 }, { over: true });
   S.build(); S.paint(G, 2);
-  for (let y = 0; y < DH; y++) for (let x = 0; x < DW; x++) if (sea(x, y) && y > 452) G.put(x, y, ...seaPixel(x, y));
-  shoreFoam(G, (x, y) => sea(x, y) && y > 452, 25);
+  const seaW = (X, Y) => { const x = W.ix(X), y = W.iy(Y); return sea(x, y) && y > 452; };
+  for (let Y = 0; Y < G.h; Y++) for (let X = 0; X < G.w; X++) if (seaW(X, Y)) G.put(X, Y, ...seaPixel(X, Y));
+  shoreFoam(G, seaW, 25);
   poolWall(G, 16, 88, 78, 6); poolWall(G, 10, 360, 66, 6);
   courtLines(G, 684, 56, 84, 168, true);
   lawnEdge(G, (x, y) => S.kind(x, y) === 'lawn' || S.kind(x, y) === 'mulch');
@@ -270,7 +272,7 @@ export function seaPixel(x, y) {
 
 // ---- D1 downtown: a hotel plaza, a bus-only lane, food trucks, banner lamps -----------------------------
 export function buildDowntown(preset = 'golden') {
-  const sc = new Scene(DW, DH, preset, 1), G = sc.G;
+  const sc = new Scene(DW, DH, preset, 1, {x: [[60, 100, 112], [100, 218, 256], [218, 258, 112]], y: [[312, 352, 112], [352, 426, 192], [426, 466, 112]], walk: 2.8, grow: 1.5}), G = sc.G;
   const S = new Streets(DW, DH, { corner: 22, sidewalk: 40, lotKind: 'plaza' });
   S.road(100, 0, 118, DH).road(0, 352, DW, 74);
   S.zone('asphaltRed', { x: 100, y: 0, w: 46, h: 352 }, { road: true });
