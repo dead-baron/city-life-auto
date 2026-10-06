@@ -1608,3 +1608,18 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - the forest lake, campsite, lookout, bridge and quarry, combining D15-A and D15-B
   - the civic centre (D12)
 - **Preview:** all thirteen blocks are in the district preview. Comparison: `docs/art-v2/districts-v3.png`.
+
+### Art v2: the rest of the districts
+- **Buildings:**
+  - Arched doors and stained-glass lancet windows, and a rose window.
+  - New shop interiors: an arcade (glowing cabinets) and a bar (pool table and bottles).
+- **`client/art2/props-town.js`:** market stalls with produce, a glass barrel-vault entrance, a guard tower, compound walls with wire, a billboard frame, velvet-rope queue lines, chained bollards, a solar panel, a hammock, pigeons and a canvas tent.
+- **`client/art2/districts4.js`:** six more blocks:
+  - the Old Town market square and church (D5)
+  - the apartment courtyard with the corner mart (D4)
+  - the neon strip, shown in the rain by default (D8)
+  - the commercial strip, mall and stadium (D3)
+  - the gang compound and beach-cabin islands (D16)
+  - a block where luxury, mid-income and rough streets meet (D17)
+- **Signs:** neon words, billboards and painted walls are thin sign sprites that can stand on roofs or poles.
+- **Status:** all 17 district concepts now have a block in the preview (19 blocks with T3 and T4). Comparison: `docs/art-v2/districts-v4.png`.

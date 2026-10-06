@@ -215,6 +215,8 @@ export function makeBuilding(spec) {
   if (spec.ivy) ivy(G, w, d, H, spec.ivy, seed);
   if (spec.mural) mural(G, spec.mural, d + H, seed);
   if (spec.portico) portico(G, spec.portico, d, H, cornice);
+  for (const a of spec.arches || []) arch(G, a, d + H, night, seed);
+  if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
   for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
   if (spec.cross) redCross(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
@@ -312,7 +314,16 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     if (mull) { setC(G, x, y, step(MAT.metalDark, y === winTop ? 0.25 : 0.55, x, y, 0)); continue; }
     const iy = y - winTop, H2 = winBot - winTop;
     let c;
-    if (shop.kind === 'lobby') {                                                                    // hotel lobby: marble, gold light
+    if (shop.kind === 'arcade') {                                                                   // arcade cabinets with glowing screens
+      c = step(ramp('#3a2a5a', 5, 2), 0.3 + (iy / H2) * 0.3, x, y, 0.8);
+      const cab = Math.floor((x - 4) / 16), lx = (x - 4) % 16;
+      if (lx > 2 && lx < 13 && iy > H2 * 0.2) { const hue = [[255, 80, 200], [80, 220, 255], [255, 220, 80], [120, 255, 140]][cab % 4]; c = iy < H2 * 0.55 && lx > 4 && lx < 11 ? hue : [40, 30, 60]; if (iy < H2 * 0.55 && lx > 4 && lx < 11) glow(G, x, y, [...hue, 100 + night * 120]); }
+    } else if (shop.kind === 'bar') {                                                               // a dim bar: a pool table, bottles, warm lamps
+      c = step(ramp('#6a4228', 5, 2), 0.3 + (iy / H2) * 0.3, x, y, 0.8);
+      if (iy < 4 && (x % 30) < 8) c = [255, 210, 130];
+      if (iy > H2 * 0.55 && iy < H2 * 0.8 && Math.abs(((x - 4) % 60) - 30) < 16) c = (Math.abs(((x - 4) % 60) - 30) > 13 || iy < H2 * 0.58 || iy > H2 * 0.77) ? [90, 56, 30] : [40, 120, 70];
+      if (iy > H2 * 0.15 && iy < H2 * 0.4 && x % 3 === 0 && (x % 60) > 40) c = [[60, 130, 70], [150, 90, 40], [200, 200, 210]][x % 9 / 3 | 0];
+    } else if (shop.kind === 'lobby') {                                                                    // hotel lobby: marble, gold light
       c = step(ramp('#d8b07a', 5, 2), 0.5 + (iy / H2) * 0.3 + ((x >> 3) % 3 === 0 ? -0.1 : 0), x, y, 0.8);
       if (iy < 3) c = step(ramp('#f4e2b0', 5, 2), 0.8, x, y, 0);
       if (iy > 3 && iy < 9 && Math.abs(((x - 4) % 60) - 30) < 6 - (iy - 3)) c = [255, 236, 170];   // chandeliers
@@ -574,5 +585,34 @@ function redCross(G, x0, y0, s, night) {
     const c = s / 2, arm = s * 0.18, inX = Math.abs(x - c + 0.5) < arm, inY = Math.abs(y - c + 0.5) < arm, inner = x > 2 && y > 2 && x < s - 3 && y < s - 3;
     const col = (inX || inY) && inner && Math.abs(x - c) < s * 0.38 && Math.abs(y - c) < s * 0.38 ? [212, 40, 44] : [244, 242, 236];
     setC(G, x0 + x, y0 + y, col); G.glow(x0 + x, y0 + y, [...col, 30 + night * 120]);
+  }
+}
+
+// an arched opening on the facade: a door (wood double leaves), a lancet window (stained glass) or a
+// plain round-headed window. a: { x, w, h, v (sill height), kind: 'door'|'lancet'|'window' }
+function arch(G, a, yG, night, seed) {
+  const r = a.w / 2, v0 = a.v || 0;
+  for (let v = v0; v < v0 + a.h; v++) for (let x = 0; x < a.w; x++) {
+    const top = v0 + a.h - r, dx = x + 0.5 - r, inside = v < top || Math.hypot(dx, (v - top) * (a.kind === 'lancet' ? 0.75 : 1)) < r - (a.kind === 'lancet' ? Math.abs(dx) * 0.2 : 0);
+    if (!inside) continue;
+    const X = a.x + x, Y = yG - v, edge = Math.abs(dx) > r - 2 || (v >= top && Math.hypot(dx, v - top) > r - 2.2);
+    let c;
+    if (edge) c = step(MAT.stone, 0.75 - (dx > 0 ? 0.25 : 0), X, Y, 0.3);
+    else if (a.kind === 'door') { c = step(MAT.woodDark, 0.5 + (Math.abs(dx) < 1 ? -0.35 : 0) + ((v - v0) % 12 === 0 ? -0.2 : 0), X, Y, 0.4); if (Math.abs(dx) < 4 && Math.abs(v - v0 - a.h * 0.45) < 1) c = [200, 160, 70]; }
+    else if (a.kind === 'lancet') { const cell = hash(Math.floor(x / 3), Math.floor((v - v0) / 4), seed); c = (x % 3 === 0 || (v - v0) % 4 === 0) ? [40, 34, 44] : cell > 0.7 ? [200, 60, 60] : cell > 0.45 ? [60, 100, 190] : cell > 0.25 ? [230, 190, 70] : [80, 150, 90]; G.glow(X, Y, [...c, 30 + night * 140]); }
+    else { c = step(MAT.glassDark, 0.35 + ((x + v) % 7 < 2 ? 0.3 : 0), X, Y, 0.4); if (hash(a.x, v0, seed) < night * 0.7) { c = [236, 190, 120]; G.glow(X, Y, [255, 200, 130, 120]); } }
+    setC(G, X, Y, c);
+  }
+}
+// a rose window: concentric tracery round a hub, stained glass between
+function rose(G, cx, cy, r, night) {
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    const d = Math.hypot(x, y); if (d > r) continue;
+    const a = Math.atan2(y, x), petal = Math.round(a / (Math.PI / 6)), dp = Math.abs(a - petal * Math.PI / 6) * d;
+    let c;
+    if (d > r - 2.2) c = step(MAT.stone, 0.75 - (x > 0 ? 0.2 : 0), x, y, 0.3);
+    else if (d < 3 || dp < 0.9 || Math.abs(d - r * 0.55) < 0.8) c = [52, 44, 54];
+    else { c = (petal & 1) ? (d > r * 0.55 ? [70, 110, 200] : [220, 70, 70]) : (d > r * 0.55 ? [230, 190, 80] : [90, 160, 110]); G.glow(cx + x, cy + y, [...c, 40 + night * 150]); }
+    setC(G, cx + x, cy + y, c);
   }
 }
