@@ -1255,7 +1255,7 @@ const SPECIES = {
   mapleAutumn: [FL.mapleAutumn, 48, 104], oak: [FL.bigOak, 66, 124], birch: [FL.birchClump, 48, 110], aspen: [FL.aspenGrove, 48, 112], willow: [FL.weepingWillow, 44, 106],
   apple: [FL.appleTree, 40, 92], orange: [FL.orangeTree, 40, 90], olive: [(s) => TR.olive(s, 92, 42), 48, 94], cypress: [(s) => TR.cypress(s, 112, 13), 18, 108],
   fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => FL.redwood(s, 230), 50, 250],
-  mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 50, 114], larch: [FL.goldenLarch, 38, 154], snowSpruce: [FL.snowySpruce, 32, 110],
+  mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 50, 114], larch: [FL.goldenLarch, 38, 154],
   mesquite: [FL.mesquite, 48, 116], paloVerde: [FL.paloVerde, 54, 115], joshua: [FL.joshuaTree, 52, 101], deadSnag: [FL.deadSnag, 38, 77],
   coconut: [FL.coconutPalm, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
   smallPalm: [(s) => TR.fanPalm(s, 46), 36, 76], coastCypress: [FL.coastalCypress, 80, 98], banana: [FL.banana, 60, 99],
@@ -1269,7 +1269,7 @@ const SPECIES = {
   hibiscus: [FL.hibiscus, 41, 58], bougain: [FL.bougainvillea, 41, 74], monstera: [FL.monstera, 35, 58], elephant: [FL.elephantEar, 33, 51], bird: [FL.birdOfParadise, 45, 83],
   duneGrass: [FL.duneGrass, 48, 61], beachGrass: [FL.beachGrass, 43, 45], icePlant: [FL.icePlant, 56, 33], flHedge: [FL.floweringHedge, 62, 55], poppies: [FL.poppies, 33, 45], lupines: [FL.lupines, 27, 64],
   daisies: [FL.daisies, 35, 37], tallGrass: [FL.tallGrass, 51, 57], cattails: [FL.cattails, 27, 69], reeds: [FL.reeds, 26, 70], juniper: [FL.juniperMat, 63, 53], twisted: [FL.twistedShrub, 46, 73],
-  berryShrub: [FL.berryShrub, 40, 56], aLupine: [FL.alpineLupine, 27, 60], paintbrush: [FL.paintbrush, 27, 51], heather: [FL.heather, 31, 36], aDaisies: [FL.alpineDaisies, 31, 33], snowShrub: [FL.snowyShrub, 35, 51],
+  berryShrub: [FL.berryShrub, 40, 56], aLupine: [FL.alpineLupine, 27, 60], paintbrush: [FL.paintbrush, 27, 51], heather: [FL.heather, 31, 36], aDaisies: [FL.alpineDaisies, 31, 33],
   sunflowers: [FL.sunflowers, 35, 69], wildflowers: [(s) => FL.wildflowerLawn(s), 68, 47],
 };
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
@@ -1299,7 +1299,7 @@ function plantFor(c, p) {
   const paved = tile === T.SIDEWALK || tile === T.PLAZA;
   if (t === 'tree_a' || t === 'tree_b') {
     if (desert) return [pick(['mesquite', 'paloVerde', 'joshua', 'joshua', 'deadSnag', 'mesquite'], u), 1.15];
-    if (mountain) return [pick(u2 < 0.2 && p.y < 3000 ? ['snowSpruce'] : ['mtnPine', 'mtnFir', 'whitePine', 'mtnFir', 'mtnPine', 'larch', 'mtnFir', 'mtnPine', 'whitePine', 'mtnPine'], u), 1.4];
+    if (mountain) return [pick(['mtnPine', 'mtnFir', 'whitePine', 'mtnFir', 'mtnPine', 'larch', 'mtnFir', 'mtnPine', 'whitePine', 'mtnPine'], u), 1.4]; // (no snowy species: no snow biome for now)
     if (di === 29 && wild) return [pick(['redwood', 'redwood', 'cedar', 'fir', 'redwood'], u), u < 0.5 ? 1.1 : 1.45];
     if (wild && forest) return [pick(['fir', 'cedar', 'pondPine', 'fir', 'oak', 'birch', 'aspen', 'spruce'], u), 1.45 + u2 * 0.3];
     if (sand || (coastal && wild)) return [pick(['coconut', 'leaning', 'coastCypress'], u), 1.25];
@@ -1324,7 +1324,7 @@ function plantFor(c, p) {
   if (t === 'shrub_a' || t === 'shrub_b' || t === 'bush_a' || t === 'bush_b' || t === 'bush_c') {
     const a = t === 'shrub_a' || t === 'bush_a';
     if (desert) return [pick(a ? ['creosote', 'sage', 'brittle', 'agave', 'yucca'] : ['bursage', 'dryGrass', 'tumble', 'sage', 'pear'], u), 1];
-    if (mountain) return [pick(a ? ['juniper', 'twisted', 'heather', 'berryShrub'] : ['snowShrub', 'juniper', 'heather', 'twisted'], u), 1];
+    if (mountain) return [pick(a ? ['juniper', 'twisted', 'heather', 'berryShrub'] : ['berryShrub', 'juniper', 'heather', 'twisted'], u), 1];
     if (wild && forest) return [pick(a ? ['salal', 'huckle', 'fern', 'berry', 'fern'] : ['fern', 'bracken', 'salal', 'foxglove', 'berry'], u), 1.1];
     if (sand || st === 'beach' || coastal) return [pick(a ? ['hibiscus', 'bougain', 'duneGrass', 'monstera'] : ['beachGrass', 'icePlant', 'duneGrass', 'elephant'], u), 1];
     if (wild) return [pick(a ? ['berryShrub', 'tallGrass', 'salal', 'berry'] : ['tallGrass', 'pampas', 'berry', 'fern'], u), 1.1];
@@ -1447,7 +1447,7 @@ function propItems(c, p, pi, I) {
     case 'solar': V('sol', 'solar', [56, 26]); return;
     case 'rwlight': { const col = { w: '#f0eee0', g: '#3ae070', r: '#e83a30', b: '#3a6ae8' }[p.c] || '#f0eee0'; V(`rw:${p.c}`, 'runwayLight', [col]); lightAt(I, x, y, 6, 50, L01(col), 1.1, 'lamp', 1); return; }
     case 'boulder': {
-      const bio = c.biome(x, y), st = c.dist(x, y).style, size = [20, 26, 34][Math.floor(hh(x, y, 17) * 3)];
+      const bio = c.biome(x, y), st = c.dist(x, y).style, size = p.s || [20, 26, 34][Math.floor(hh(x, y, 17) * 3)]; // (p.s: an outcrop)
       if (!WILDS.has(st)) { V(`bld:${size}:${seed % 3}`, 'boulder', [seed % 3 + 1, size - 4, pick(['#8a8478', '#7a7068', '#9a9488'], seed / 6)]); return; }
       const style = bio === 3 || st === 'desert' ? 'sandstone' : bio === 5 ? 'basalt' : 'granite';
       put(I, { key: `rk:${style}:${size}:${seed % 2}:${bio === 2 ? 1 : 0}`, recipe: { t: 'rock', style, size, s: seed % 2, moss: bio === 2 ? 0.5 : 0 }, x, y, ext: [size * 1.4 + 16, size * 1.8 + 24, size * 1.4 + 16, size + 14], pi });
@@ -2077,7 +2077,7 @@ function addGreenery(c, I) {
       if (h < 0.15 && clear(tx, ty, 3, true)) { const pr = plantFor(c, { t: h < 0.07 ? 'tree_a' : 'tree_b', x, y }); if (pr) flora1(I, pr[0], Math.round(pr[1] * 5) / 5, x, y); }
       else if (h < 0.36) flora1(I, pick(['fern', 'fern', 'salal', 'huckle', 'bracken', 'berry', 'foxglove', 'fern', 'salal'], h2), 1, x, y);
     } else if (bio === 3 || st === 'desert') { if (h < 0.12) flora1(I, pick(['creosote', 'sage', 'bursage', 'dryGrass', 'brittle', 'tumble', 'barrel', 'agave', 'cholla', 'saguaroSmall', 'pear', 'creosote'], h2), 1, x, y); }
-    else if (bio === 4) { if (h < 0.14) flora1(I, pick(['heather', 'juniper', 'aDaisies', 'heather', 'aLupine', 'paintbrush', 'snowShrub', 'twisted', 'juniper', 'aDaisies'], h2), 1, x, y); }
+    else if (bio === 4) { if (h < 0.14) flora1(I, pick(['heather', 'juniper', 'aDaisies', 'heather', 'aLupine', 'paintbrush', 'berryShrub', 'twisted', 'juniper', 'aDaisies'], h2), 1, x, y); }
     else if (h < 0.06) flora1(I, pick(['tallGrass', 'wildflowers', 'poppies', 'daisies', 'berryShrub', 'lupines', 'tallGrass'], h2), 1, x, y);
   }
 }

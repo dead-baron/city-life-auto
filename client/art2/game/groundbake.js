@@ -1,7 +1,8 @@
 // Art v2 in the game: the ground of one world chunk (docs/art-v2/GAME-RENDERER.md, "Ground: groundbake.js").
 //
 //   bakeGround(M, cx, cy, opt) -> GBuf 768 x 768, ax = ay = 0, covering world X [cx*768, +768) and screen Y
-//   (= world Y at z 0) [cy*768, +768). M is the CityMap from shared/map.js generateCity() or its structured
+//   (= world Y at z 0) [cy*768, +768); groundSteps(...) is the same as a generator that yields between its
+//   phases (a worker answers other jobs in between). M is the CityMap from shared/map.js generateCity() or its structured
 //   clone (fields are read directly, no methods). opt: { quality 0..3, seed (default M.seed), deckZ (bridge
 //   deck height, default 6) }. Pure, deterministic (no Math.random), worker safe; the scratch buffers are
 //   allocated once per worker (about 22 MB) and reused, the result's typed arrays are fresh (transferable).
@@ -118,6 +119,15 @@ const A_FILLET = 1, A_BULB = 2, A_GORE = 4, A_CHEV = 8, A_RAIL = 16, A_UNDER = 3
 
 // ---- the baker -------------------------------------------------------------------------------------------------
 export function bakeGround(M, cx, cy, opt = {}) {
+  const it = groundSteps(M, cx, cy, opt);
+  let r = it.next();
+  while (!r.done) r = it.next();
+  return r.value;
+}
+// The same bake one phase at a time: a generator that yields between phases and returns the GBuf, so a worker
+// can answer other jobs (sprites for things on screen) in between (worker.js). Only one bake at a time per
+// worker: the phases share the worker's scratch buffers.
+export function* groundSteps(M, cx, cy, opt = {}) {
   const b = scratch();
   const q = opt.quality ?? 2, seed = ((opt.seed ?? M.seed ?? 1337) | 0) & 0xffff;
   const X0 = cx * CHUNK, Y0 = cy * CHUNK, WX0 = X0 - PAD, WY0 = Y0 - PAD;
@@ -130,6 +140,7 @@ export function bakeGround(M, cx, cy, opt = {}) {
     const t0 = prof ? performance.now() : 0;
     f(C, G);
     if (prof) prof[name] = Math.round(performance.now() - t0);
+    yield name;
   }
   if (prof) G.prof = prof;
   if (opt.debug) G.debug = { mat: b.mat.slice(), rE: b.rE.slice(), rD: b.rD.slice(), aux: b.aux.slice(), names: Object.keys(M_), E: C.E.map((e) => e.id), PAD, WN };

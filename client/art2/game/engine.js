@@ -590,6 +590,7 @@ export class Art2Engine {
     const hw = Math.ceil((f.viewW > 0 ? f.viewW : this.cv.width / (this.zoom * this.dpr)) / 2) + 2;
     const hh = Math.ceil((f.viewH > 0 ? f.viewH : this.cv.height / (this.zoom * this.dpr)) / 2) + 2;
     this.SW = Math.min(this.maxTex, 2 * hw + mL + mR); this.SH = Math.min(this.maxTex, 2 * hh + mT + mB);
+    this.margins = [mL, mT, mR, mB]; // (+ the scene's margins round the view: the host bakes what they cover)
     this.ox = Math.floor(this.camX) - hw - mL; this.oy = Math.floor(this.camY) - hh - mT;
     this.view[0] = mL; this.view[1] = mT; this.view[2] = 2 * hw; this.view[3] = 2 * hh;
     this.org[0] = ((this.ox % 8192) + 8192) % 8192; this.org[1] = ((this.oy % 8192) + 8192) % 8192;

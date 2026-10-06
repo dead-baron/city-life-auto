@@ -1554,7 +1554,7 @@ export function cypressKnees(seed = 1) {
 }
 
 // ---- mountain (E3f) ----------------------------------------------------------------------------------------
-export const mountainFir = (seed = 1) => conifer(seed, { h: 148, r: 33, form: 'narrow', R: FOL('#2e5a32'), tw: 3.4, sp: 5.6, sw: 5, bare: 0.06, droop: 0.4, snow: 0.22, k: 4, base: (G, cx, foot) => pebbles(G, cx, foot, 6, 28, 41) });
+export const mountainFir = (seed = 1) => conifer(seed, { h: 148, r: 33, form: 'narrow', R: FOL('#2e5a32'), tw: 3.4, sp: 5.6, sw: 5, bare: 0.06, droop: 0.4, k: 4, base: (G, cx, foot) => pebbles(G, cx, foot, 6, 28, 41) }); // (no snow dusting: no snow biome for now)
 export const mountainPine = (seed = 1) => conifer(seed, { h: 140, r: 30, form: 'narrow', R: FOL('#3e6a2a', { warm: 58 }), tw: 3, sp: 5.4, sw: 4.6, bare: 0.06, droop: 0.3, g: 0.36, k: 5, base: (G, cx, foot) => pebbles(G, cx, foot, 5, 24, 42) });
 export const whitebarkPine = (seed = 1) => pineTufts(seed, { h: 98, cw: 44, B: BARK_PALE, tex: 'bark', tw: 4.4, twist: 14, lean: -10, n: 9, low: 0.3, tuft: 7.5, flat: 0.55, rise: 0.05, flatTop: true, leaf: 'round', cs: 3, R: FOL('#3e6e2c', { warm: 60 }), rocks: 6, grass: 5, k: 1 });
 export const goldenLarch = (seed = 1) => conifer(seed, { h: 144, r: 36, form: 'narrow', R: FOL('#eaa020', { cool: 15, shiftD: 0.45, dark: 0.62 }), B: RR('#5a4030', 7, 3), tw: 2.8, sp: 5.4, sw: 4.6, sparse: 0.22, droop: 0.25, g: 0.4, k: 6, base: (G, cx, foot) => pebbles(G, cx, foot, 6, 26, 43) });

@@ -2,7 +2,7 @@
 // (worker.js) take jobs from one queue, by priority (lower runs sooner) with fairness between kinds of
 // job (see _next):
 //
-//   const pool = new WorkerPool({ lowMem });          size clamp(hardwareConcurrency - 1, 1, 3), 1 on LOW_MEM
+//   const pool = new WorkerPool({ lowMem });          size: poolSize (below)
 //   pool.init(worldData) -> Promise<{ providers, ms: { post, init } }>   every worker gets its own copy
 //   pool.request(key, op, args, prio, done)  queue a job (done(result, error) once, unless it is cancelled);
 //                                            a key already queued or running is not queued twice (its
@@ -12,17 +12,20 @@
 //   pool.broadcast(op, args)  a message to every worker (world patches), in order with later jobs
 //   pool.has(key), pool.idle, pool.stats(), pool.dispose()
 //
-// At most two jobs run on a worker at a time (the second waits in its message queue, so a worker never
-// sits idle between jobs), and at most one of them is a chunk bake: a bake takes a few hundred ms, a sprite a
-// few, so the other slot is always there for the sprites things on screen are waiting for. A worker that dies fails its jobs (done gets the error); one stuck on a job
-// for over a minute is replaced. If none are left, pool.dead is set and every new request fails at once
-// (the host keeps its fallbacks).
-const PER_WORKER = 2, STUCK_MS = 60000;
+// At most four jobs are out on a worker at a time (the rest wait in its message queue, so a worker never
+// sits idle between jobs), and at most one of them is a chunk bake: a bake takes a few hundred ms (a second or
+// more on a phone) and pauses every few ms (worker.js), a sprite takes a few ms, so the sprites things on
+// screen are waiting for are made between the bake's steps. A worker that dies fails its jobs (done gets the
+// error); one stuck on a job for over a minute is replaced. If none are left, pool.dead is set and every new
+// request fails at once (the host keeps its fallbacks).
+// Size: up to three workers, four on an 8-core device (phones are 8-core: the bakes are what keeps up with a
+// fast car), one on a low-memory device.
+const PER_WORKER = 4, STUCK_MS = 60000;
 const STREAK = { s: 8, c: 1 }; // jobs of a class in a row before another waiting class gets a turn
 
 export function poolSize(lowMem) {
   const hc = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2;
-  return lowMem ? 1 : Math.max(1, Math.min(3, hc - 1));
+  return lowMem ? 1 : hc >= 8 ? 4 : Math.max(1, Math.min(3, hc - 1));
 }
 
 export class WorkerPool {
@@ -52,7 +55,7 @@ export class WorkerPool {
 
   // Send the world to every worker. Resolves once all have answered (or failed).
   init(M) {
-    this.initArgs = { M, lowMem: this.lowMem };
+    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length };
     let post = 0;
     const answers = this.workers.filter((w) => w.alive).map((w) => new Promise((res) => {
       const id = this.nextId++;

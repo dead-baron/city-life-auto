@@ -3675,28 +3675,53 @@ function buildAirports(m) {
   }
 }
 
-// Wild ground everywhere that isn't built: woods on green land, scrub and rocks in the desert,
-// palms on beaches. Kept sparse so the prop list stays light.
+// Wild ground everywhere that isn't built: woods on green land, scrub in the desert, palms on beaches, and a
+// few big rock outcrops. Kept sparse so the prop list stays light.
+const WILD_CLEAR = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.FIELD, T.LOT, T.WALL]);
 function buildWilds(m, rand) {
   const W = MAP_W;
   const { cls, cw } = m.terrainCls;
+  const wild = (i) => m.land[i] && WILD_STYLES.has(DISTRICTS[m.dist[i]].style) && DISTRICTS[m.dist[i]].style !== 'airport' && !m.reserve[i];
+  const inField = (tx, ty, pad) => m.fields.some((f) => tx * TILE >= f.x - pad && tx * TILE < f.x + f.w + pad && ty * TILE >= f.y - pad && ty * TILE < f.y + f.h + pad);
+  const clear = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (WILD_CLEAR.has(m.tileAt(tx + dx, ty + dy))) return false; return true; };
   for (let ty = 2; ty < MAP_H - 2; ty += 3) for (let tx = 2; tx < W - 2; tx += 3) {
     const i = ty * W + tx;
-    if (!m.land[i] || !WILD_STYLES.has(DISTRICTS[m.dist[i]].style) || DISTRICTS[m.dist[i]].style === 'airport') continue;
-    if (m.reserve[i] || m.fields.some((f) => tx * TILE >= f.x - 32 && tx * TILE < f.x + f.w + 32 && ty * TILE >= f.y - 32 && ty * TILE < f.y + f.h + 32)) continue;
+    if (!wild(i) || inField(tx, ty, 32)) continue;
     const t = m.tiles[i];
     if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
-    let nearRoad = false;
-    for (let dy = -2; dy <= 2 && !nearRoad; dy++) for (let dx = -2; dx <= 2; dx++) { const q = m.tileAt(tx + dx, ty + dy); if (q === T.ROAD || q === T.BRIDGE || q === T.BUILDING || q === T.FIELD || q === T.LOT) { nearRoad = true; break; } }
-    if (nearRoad) continue;
+    if (!clear(tx, ty, 2)) continue;
     const c = terrainAt(cls, cw, tx, ty);
     const h = hash2(tx, ty, 61);
     const x = (tx + 0.5 + (hash2(tx, ty, 3) - 0.5)) * TILE, y = (ty + 0.5 + (hash2(tx, ty, 4) - 0.5)) * TILE;
     if (t === T.SAND) { if (h < 0.025) addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(h * 120) % 3], x, y, 10); continue; }
     if (c === 2) { if (h < 0.22) addProp(m, h < 0.16 ? (h < 0.08 ? 'tree_a' : 'tree_b') : 'shrub_b', x, y, h < 0.16 ? 12 : 0); }
     else if (c === 1) { if (h < 0.035) addProp(m, h < 0.02 ? 'tree_b' : 'bush_c', x, y, h < 0.02 ? 12 : 0); }
-    else if (c === 3) { if (h < 0.06) addProp(m, h < 0.025 ? 'cactus' : h < 0.04 ? 'bush_a' : 'boulder', x, y, h < 0.025 ? 8 : h < 0.04 ? 0 : 14); }
-    else if (c === 4) { if (h < 0.09) addProp(m, h < 0.05 ? 'boulder' : 'gravel', x, y, h < 0.05 ? 14 : 0); }
+    // desert scrub and mountain scree: plants and pebbles you drive through (no small rocks to crash into)
+    else if (c === 3) { if (h < 0.04) addProp(m, h < 0.025 ? 'cactus' : 'bush_a', x, y, 0); }
+    else if (c === 4) { if (h < 0.04) addProp(m, 'gravel', x, y, 0); }
+  }
+  // Rock outcrops: at most one per 12-tile cell (jittered), likeliest in the mountains and the desert - a big
+  // rock (52-82 px, car-sized and up: tall, easy to see and to steer round) with plants round its foot and
+  // sometimes a pine beside it, well clear of roads, tracks, fields and buildings. (World v2's country stage lays
+  // nature out properly: docs/WORLD-V2.md "Nature is designed, not scattered".)
+  const CELL = 12;
+  for (let gy = 0; gy < MAP_H; gy += CELL) for (let gx = 0; gx < W; gx += CELL) {
+    const tx = gx + 2 + Math.floor(hash2(gx, gy, 91) * (CELL - 4)), ty = gy + 2 + Math.floor(hash2(gx, gy, 92) * (CELL - 4));
+    if (tx < 4 || ty < 4 || tx >= W - 4 || ty >= MAP_H - 4) continue;
+    const i = ty * W + tx;
+    if (!wild(i) || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT)) continue;
+    const c = terrainAt(cls, cw, tx, ty);
+    if (hash2(gx, gy, 93) >= (c === 4 ? 0.4 : c === 3 ? 0.25 : c === 2 ? 0.1 : 0.06)) continue;
+    if (inField(tx, ty, 96) || !clear(tx, ty, 4)) continue;
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, s = 52 + Math.floor(hash2(gx, gy, 94) * 4) * 10;
+    addProp(m, 'boulder', x, y, Math.round(s * 0.5), { s });
+    const n = 2 + Math.floor(hash2(gx, gy, 95) * 3);
+    for (let k = 0; k < n; k++) {
+      const a = hash2(gx + k, gy, 96) * Math.PI * 2, r = s * 0.85 + hash2(gx, gy + k, 97) * 28;
+      const kind = c === 3 ? (k % 2 ? 'bush_a' : 'cactus') : c === 4 ? (k % 2 ? 'shrub_b' : 'flowers_a') : k % 2 ? 'shrub_a' : 'flowers_a';
+      addProp(m, kind, x + Math.cos(a) * r, y + Math.sin(a) * r * 0.7 + 8, 0);
+    }
+    if (c !== 3 && hash2(gx, gy, 98) < 0.35) addProp(m, 'tree_b', x - s * 0.95, y - 18, 12);
   }
   void rand;
 }

@@ -280,7 +280,7 @@ const BUILD = {
       const x = pit.x + pit.w / 2 + Math.cos(a) * (pit.w / 2 + 40), y = pit.y + pit.h / 2 + Math.sin(a) * (pit.h / 2 + 30);
       if (y > (s.y + s.h - 7) * TILE || x < (s.x + 1) * TILE || x > (s.x + s.w - 1) * TILE || y < (s.y + 0.5) * TILE) continue;
       const h = hs(s, k, 31);
-      H.addProp(m, h < 0.45 ? 'gravel' : 'boulder', x, y, h < 0.45 ? 0 : 14);
+      if (h < 0.45) H.addProp(m, 'gravel', x, y, 0); else H.addProp(m, 'boulder', x, y, 22, { s: 44 }); // (big enough to see)
     }
     for (const [fx, t] of [[0.62, 'cone'], [0.66, 'cone'], [0.7, 'cone'], [0.4, 'drum'], [0.43, 'tires']]) H.addProp(m, t, (s.x + s.w * fx) * TILE, (s.y + s.h - 6.5) * TILE, t === 'cone' ? 0 : 9);
     H.addProp(m, 'lamp', (s.x + 10) * TILE, (s.y + s.h - 1) * TILE);

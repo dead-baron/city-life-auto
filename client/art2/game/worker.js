@@ -6,7 +6,8 @@
 //   init       { M, lowMem }       WorldData (a structured clone of the client's CityMap); answers with
 //                                  which providers loaded
 //   bakeChunk  { cx, cy, opt }     -> { cx, cy, g, lights, gh, ms, ... }  (g: the engine's packed planes
-//                                  {w,h,ax,ay,p0,p1,p2}, or {w,h,ax,ay,col,nrm,z,emi,flag})
+//                                  {w,h,ax,ay,p0,p1,p2}, or {w,h,ax,ay,col,nrm,z,emi,flag}); it pauses every
+//                                  few ms (chunkbake.bakeSteps), so sprite jobs sent meanwhile run in between
 //   sprite     { kind, key, a }    kind: ped (peds.pedSprite) or any actors.SPRITES kind (vehicle, animal, crate,
 //                                  bag, ball, proj, train, fx, muzzle, tracer, critter); a: its arguments
 //                                  -> { g } (the provider's G-buffer)
@@ -14,8 +15,15 @@
 //   patch      { props, reset }    world changes, no answer: props [[index, broken {a} | null]] (reset: none broken first)
 // Every result's typed arrays are transferred. A provider that throws answers with an error (the host
 // falls back); the worker carries on.
-import { bakeChunk, loadProviders, SpriteCache, providers as chunkProviders } from './chunkbake.js';
+import { bakeSteps, loadProviders, SpriteCache, providers as chunkProviders } from './chunkbake.js';
 import * as GB from '../gbuf.js';
+
+// A pause that lets the messages already waiting for this worker run first (a message to ourselves goes to the
+// back of the queue): a bake pauses at each of its yields, so the sprite a thing on screen is waiting for is made
+// within a few ms instead of after the whole bake (a second or more on a phone).
+const chan = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null, waiting = [];
+if (chan) chan.port1.onmessage = () => { const f = waiting.shift(); if (f) f(); };
+const pause = () => new Promise((res) => { if (chan) { waiting.push(res); chan.port2.postMessage(0); } else setTimeout(res, 0); });
 
 let M = null, statCache = null, sprCache = null;
 const P = { actors: null, peds: null, errors: {} };
@@ -53,7 +61,7 @@ async function init(args) {
   M = args.M;
   try { const { CityMap } = await import('../../../shared/map.js'); Object.setPrototypeOf(M, CityMap.prototype); } catch (e) { P.errors.map = String((e && e.message) || e); }
   const lowMem = !!args.lowMem;
-  statCache = new SpriteCache((lowMem ? 40 : 120) * 1e6);
+  statCache = new SpriteCache((lowMem ? 40 : (args.workers || 3) >= 4 ? 90 : 120) * 1e6); // (four workers: a little less each)
   sprCache = new SpriteCache((lowMem ? 8 : 32) * 1e6);
   const [pc] = await Promise.all([loadProviders(), loadActors()]);
   return { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors } };
@@ -77,7 +85,10 @@ async function handle(msg) {
   if (!M && op !== 'stats') throw new Error('worker not initialised');
   if (op === 'bakeChunk') {
     const { cx, cy, opt } = args;
-    const r = bakeChunk(M, cx, cy, opt || {}, statCache, chunkProviders);
+    const it = bakeSteps(M, cx, cy, opt || {}, statCache, chunkProviders);
+    let step = it.next();
+    while (!step.done) { await pause(); step = it.next(); }
+    const r = step.value;
     const transfer = [];
     const g = pack(r.g, false, transfer);
     transfer.push(r.gh.buffer);

@@ -31,7 +31,7 @@ client (frame loop in `client/main.js`, `render()` at about lines 1834-2198) and
     muzzle flashes);
   - the sky (`skyAt` in `client/render/atmos.js`) drives the presets.
 - **Only the new art.** Nothing in the world is ever drawn with v1 art while this renderer runs. A chunk
-  not baked yet shows a placeholder (each tile in its ground colour); a moving thing whose new sprite isn't
+  not baked yet shows a stand-in (the map drawn simply: roads, blocks, trees); a moving thing whose new sprite isn't
   made yet keeps its last sprite (see "Host scheduling"). The classic art (~250 MB of sheets once decoded)
   isn't even loaded unless something still needs it.
 - **Fallback.** No WebGL2, the graphics memory lost three times within three minutes while the page is on
@@ -67,6 +67,7 @@ and anything in `client/art2/`. They may not touch the DOM or WebGL.
 | `lightgame.js` (or changes to `light.js`) | GPU | Lighter game mode: allocate once, attach external textures, camera offset, cone lights, more lights, tiered shadow march. |
 | `host.js` | Integration | The bridge from `main.js`: frame packet, worker pool, chunk scheduling and prefetch, `WorldData` clone, light and sky adapters, fallback switch. |
 | `worker.js`, `pool.js` | Integration | Module workers that run recipes: `bakeChunk`, `sprite(kind, args)`. Caches by key inside the worker. |
+| `standin.js` | Integration | A chunk's stand-in while its bake is on the way: the map drawn simply on a small canvas. |
 | `chunkbake.js` | Integration | `bakeChunk(M, cx, cy, opt)`: ground (from `groundbake.js`) plus static items (from `statics.js`) composited with the depth rule, plus the chunk's static light list. |
 | `groundbake.js` | Ground | `bakeGround(M, cx, cy, opt) -> GBuf` (see below). |
 | `statics.js` | Statics | `staticItems(M, cx, cy, opt) -> [item]`, `makeStatic(recipe) -> GBuf`, `staticLights(M, cx, cy) -> [light]`. |
@@ -193,8 +194,25 @@ The chunk cache always grows to fit what the view needs (the host reserves it ea
 a big screen zoomed out while driving never makes the chunks on screen push each other out.
 
 ## Host scheduling (`host.js`)
-- **Chunks:** what is on screen (plus the tier's shadow reach) gets a placeholder at once and its bake first;
-  then a ring of 420 px round the view and the road 1.6 s ahead when driving. A few uploads a frame.
+- **Chunks** (`planBake`, tested in `test/art2.test.js`):
+  1. **The view first.** What is on screen, plus the scene's margins (the shadow reach on the sun's side), bakes
+     first.
+  2. **Then the road ahead.** When moving, the next chunks are every chunk the view will sweep over in the
+     next 1-3.5 s (1 s plus 1 s per 320 px/s), ordered by when each comes into view. The camera's velocity is
+     the driven vehicle's, or the camera's own smoothed motion on a train, bus or taxi. The view counts at the
+     wider zoom it is easing out to.
+  3. **Then a ring of 420 px round the view,** never behind you when moving and not at all above 450 px/s.
+  - **Results:** in a simulation of a 790 px/s car with phone-like 1.4 s bakes, the old order (ring before
+    the road ahead) left unbaked chunks on screen in 80 % of frames, and this order in none.
+  - **Uploads:** a few a frame.
+- **Stand-ins** (`standin.js`): until its bake lands, a chunk shows the map drawn simply at a quarter
+  resolution in about a millisecond: roads with pavements and centre lines, building blocks (the roof raised by
+  the height, the south wall with a band per floor), tree canopies, bushes and boulders. Chunks coming into
+  view within 1.5 s get theirs drawn ahead, one a frame. (`?art2nobake` shows only stand-ins;
+  `tools/art2/standin-preview.html` draws them on their own.)
+- **Workers:** four on 8-core devices (phones), up to three elsewhere, one on low memory. A bake yields every
+  ~10 ms (`chunkbake.bakeSteps`) and the worker pauses there, so a sprite sent to a worker in the middle of a
+  bake is made between its steps instead of after it (a second or more on a phone).
 - **Sprites:** a sprite is resident, or (people only, ~2 ms each) made on the main thread at once within the
   tier's budget a frame (the player's own figure always), or asked of the workers. Until it lands the thing
   keeps its last sprite (`_v2k`); a vehicle or train seen for the first time takes the nearest resident

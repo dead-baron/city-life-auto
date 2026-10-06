@@ -30,9 +30,9 @@
 // api: helpers lent by main.js (pedLook, vehLift, birds, umbrella colours, seats, scales).
 import { CHUNK, DECK_Z, groundZ } from './chunkbake.js';
 import { WorkerPool } from './pool.js';
+import { drawStandIn, STANDIN_PX } from './standin.js';
 import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM } from '../../../shared/map.js';
-import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/roads.js';
 import { VEHICLE_BY_INDEX } from '../../../shared/vehicles.js';
 import { dir8 } from '../../render/chars.js';
@@ -52,16 +52,70 @@ const TIERS = [
   { chunks: 26, lights: 96, N: 64, chunkUp: 2, sprUp: 14, convert: 6, sprJobs: 32, syncMs: 6 },
 ];
 const LOWMEM_CHUNKS = 10;
-// the placeholder ground (before a chunk's bake lands): each tile type in the new ground's colours
-const PH_COL = {
-  [TT.WALL]: [70, 66, 72], [TT.GRASS]: [84, 118, 56], [TT.SIDEWALK]: [170, 164, 152], [TT.ROAD]: [66, 68, 76], [TT.PLAZA]: [178, 160, 138],
-  [TT.BUILDING]: [96, 90, 90], [TT.WATER]: [52, 112, 132], [TT.DEEP]: [36, 82, 112], [TT.SAND]: [216, 196, 146], [TT.DOCK]: [128, 96, 66],
-  [TT.DIRT]: [140, 108, 74], [TT.FIELD]: [152, 140, 70], [TT.BRIDGE]: [112, 110, 106], [TT.LOT]: [92, 92, 98], [TT.FLOOR]: [186, 174, 152], [TT.COUNTER]: [136, 100, 70],
-};
 const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
-const AHEAD_S = 1.6;       // prefetch where the camera will be this many seconds ahead
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+
+// Which chunks to bake, and in what order (lower runs sooner).
+//   need  the view (x0..y1, world px) plus the scene's margins (the shadow reach on the sun's side, room for
+//         reflections on top): drawn this frame; priority = distance from the camera (0..~2000)
+//   bake  need; then the sweep ahead when moving at (vx, vy) px/s: every chunk the view (grown by gx, gy: the
+//         zoom-out to come) passes over in the next T s (1 s plus 1 s per 320 px/s, at most 3.5 s), priority
+//         2000 + the ms until it comes into view; then a ring of MARGIN round the view (6000 + distance) - not
+//         behind you when moving, not at all at speed (the view itself is wider then)
+// Returns the chunks coming into view within 1.5 s that aren't on screen yet, soonest first (their placeholders
+// are drawn ahead).
+const SWEEP_MAX = 3.5, SOON_S = 1.5;
+export function planBake(need, bake, view, vx, vy, reach, out = []) {
+  out.length = 0;
+  const camX = view.cx, camY = view.cy, gx = view.gx || 0, gy = view.gy || 0;
+  const span = (a0, a1, b0, b1, v) => (v > 1e-3 ? [(a0 - b1) / v, (a1 - b0) / v] : v < -1e-3 ? [(a1 - b0) / v, (a0 - b1) / v] : a1 > b0 && a0 < b1 ? [-Infinity, Infinity] : null);
+  // reach: the scene's margins round the view [left, top, right, bottom] (the shadow reach is on the sun's side
+  // only), or one number for all sides (+64 on top)
+  const m = Array.isArray(reach) ? reach : [reach, reach + 64, reach, reach];
+  const R0 = view.x0 - m[0], R1 = view.y0 - m[1], R2 = view.x1 + m[2], R3 = view.y1 + m[3];
+  const range = (a, b, n) => [Math.max(0, Math.floor(a / CHUNK)), Math.min(n - 1, Math.floor(b / CHUNK))];
+  let [cx0, cx1] = range(R0, R2, CX), [cy0, cy1] = range(R1, R3, CY);
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+    const k = cy * 1000 + cx, d = Math.hypot((cx + 0.5) * CHUNK - camX, (cy + 0.5) * CHUNK - camY);
+    need.set(k, d); bake.set(k, d);
+  }
+  const speed = Math.hypot(vx, vy);
+  if (speed > 60) {
+    const T = Math.min(SWEEP_MAX, 1 + speed / 320), S0 = R0 - gx, S1 = R1 - gy, S2 = R2 + gx, S3 = R3 + gy;
+    [cx0, cx1] = range(Math.min(S0, S0 + vx * T), Math.max(S2, S2 + vx * T), CX);
+    [cy0, cy1] = range(Math.min(S1, S1 + vy * T), Math.max(S3, S3 + vy * T), CY);
+    const soon = [];
+    for (let cy = cy0; cy <= cy1; cy++) {
+      const sy = span(cy * CHUNK, (cy + 1) * CHUNK, S1, S3, vy);
+      if (!sy) continue;
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const sx = span(cx * CHUNK, (cx + 1) * CHUNK, S0, S2, vx);
+        if (!sx) continue;
+        const lo = Math.max(0, sx[0], sy[0]), hi = Math.min(T, sx[1], sy[1]);
+        if (lo > hi) continue;
+        const k = cy * 1000 + cx, p = 2000 + lo * 1000, cur = bake.get(k);
+        if (cur === undefined || p < cur) bake.set(k, p);
+        if (!need.has(k) && lo < SOON_S) soon.push([lo, k]);
+      }
+    }
+    soon.sort((a, b) => a[0] - b[0]);
+    for (const s of soon) out.push(s[1]);
+  }
+  if (speed < 450) {
+    const ux = speed > 1 ? vx / speed : 0, uy = speed > 1 ? vy / speed : 0;
+    [cx0, cx1] = range(view.x0 - MARGIN, view.x1 + MARGIN, CX);
+    [cy0, cy1] = range(view.y0 - MARGIN, view.y1 + MARGIN, CY);
+    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+      const k = cy * 1000 + cx;
+      if (bake.has(k)) continue;
+      const dx = (cx + 0.5) * CHUNK - camX, dy = (cy + 0.5) * CHUNK - camY;
+      if (speed > 150 && dx * ux + dy * uy < -CHUNK * 0.5) continue; // behind you
+      bake.set(k, 6000 + Math.hypot(dx, dy));
+    }
+  }
+  return out;
+}
 
 export function qualityOf(gfx, lowMem) {
   if (lowMem) return 0;
@@ -317,30 +371,27 @@ export class World2 {
 
   // ---- chunks ---------------------------------------------------------------------------------------------
   // need: what the engine draws this frame (the view plus the tier's shadow reach) - resident now, a
-  // placeholder (the tiles' colours) standing in until its bake lands; the engine keeps at least that many
-  // chunk slots, so what is on screen never pushes itself out. bake: that, plus a wider ring and the road
-  // ahead when driving - baked in the background, uploaded while the engine has free slots.
+  // placeholder (roads, blocks and trees drawn simply) standing in until its bake lands; the engine keeps at
+  // least that many chunk slots, so what is on screen never pushes itself out. bake, in this order: that; the
+  // road ahead when moving (every chunk the view will sweep over in the next few seconds, by when it comes into
+  // view); then a ring round the view, not behind you when moving and not at all at speed. A fast car on a
+  // phone outruns a bake queue that spends its time on the ring (planBake, exported for the tests).
   _chunks(F) {
     const E = this.E, S = this.S, tier = this.tier;
     const need = this.needChunks || (this.needChunks = new Map()), bake = this.wantChunks;
     need.clear(); bake.clear();
-    const add = (m, x0, y0, x1, y1, base) => {
-      const cx0 = Math.max(0, Math.floor(x0 / CHUNK)), cx1 = Math.min(CX - 1, Math.floor(x1 / CHUNK));
-      const cy0 = Math.max(0, Math.floor(y0 / CHUNK)), cy1 = Math.min(CY - 1, Math.floor(y1 / CHUNK));
-      for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
-        const k = cy * 1000 + cx, d = Math.hypot((cx + 0.5) * CHUNK - this.camX, (cy + 0.5) * CHUNK - this.camY) + base;
-        const cur = m.get(k);
-        if (cur === undefined || d < cur) m.set(k, d);
-      }
-    };
-    const reach = [36, 200, 300, 300][this.q];
-    add(need, this.vx0 - reach, this.vy0 - reach - 64, this.vx1 + reach, this.vy1 + reach, 0);
-    for (const [k, d] of need) bake.set(k, d);
-    add(bake, this.vx0 - MARGIN, this.vy0 - MARGIN, this.vx1 + MARGIN, this.vy1 + MARGIN, 2000);
-    // ahead of the camera: where it will be in a moment (driving)
-    let vx = 0, vy = 0;
-    if (S.pred && S.pred.kind === 'veh') { vx = S.pred.s.vx; vy = S.pred.s.vy; }
-    if (vx * vx + vy * vy > 2500) add(bake, this.vx0 + vx * AHEAD_S, this.vy0 + vy * AHEAD_S, this.vx1 + vx * AHEAD_S, this.vy1 + vy * AHEAD_S, 4000);
+    const v = this._camVel(F);
+    // the view the camera is easing toward (it zooms out with speed): the sweep uses the larger of the two
+    const zt = Math.min(F.z, (S.cam && S.cam.tz) || F.z), grow = Math.max(0, (this.W / 2 / zt) - (this.W / 2 / F.z)), growY = Math.max(0, (this.H / 2 / zt) - (this.H / 2 / F.z));
+    const soon = planBake(need, bake, { x0: this.vx0, y0: this.vy0, x1: this.vx1, y1: this.vy1, cx: this.camX, cy: this.camY, gx: grow, gy: growY }, v.x, v.y, E.margins || [36, 200, 300, 300][this.q], this.soonKeys || (this.soonKeys = []));
+    // the chunks coming into view within 1.5 s get their placeholder drawn ahead (one a frame), so a bake that is
+    // late shows the simple version at once
+    for (const k of soon) {
+      const cx = k % 1000, cy = Math.floor(k / 1000);
+      if (this.phs.has(k) || E.hasChunk(cx, cy)) continue;
+      this._placeholder(cx, cy);
+      break;
+    }
     // standing in a walk-in shop: its chunks are baked cut away
     const cut = F.insideB ? F.insideB.id : -1;
     let cutBox = null;
@@ -401,23 +452,28 @@ export class World2 {
       for (const k of this.fallbacks) if (!this._fallback(k % 1000, Math.floor(k / 1000))) this.fallbacks.delete(k);
     }
   }
+  // Where the camera is heading (world px/s): the driven vehicle's own velocity (no lag), else the camera's
+  // smoothed motion (riding a train, a bus or a taxi, spectating); a jump (teleport, respawn) resets it.
+  _camVel(F) {
+    const S = this.S, v = this.camV || (this.camV = { x: 0, y: 0, px: this.camX, py: this.camY, out: { x: 0, y: 0 } });
+    const dt = Math.min(0.1, Math.max(0.001, F.dt || 0.016)), dx = this.camX - v.px, dy = this.camY - v.py;
+    v.px = this.camX; v.py = this.camY;
+    if (Math.abs(dx) + Math.abs(dy) > 900) { v.x = 0; v.y = 0; } else { const k = 1 - Math.exp(-5 * dt); v.x += (dx / dt - v.x) * k; v.y += (dy / dt - v.y) * k; }
+    const o = v.out, p = S.pred && S.pred.kind === 'veh' && S.pred.s;
+    o.x = p ? p.vx : v.x; o.y = p ? p.vy : v.y;
+    return o;
+  }
   _fallback(cx, cy) { return this.E.hasFallback ? this.E.hasFallback(cx, cy) : this.fallbacks.has(cy * 1000 + cx); }
-  // A chunk's stand-in until its bake lands: every tile in its ground colour (one pixel per 8 world px, with
-  // a little grain). Never the old art.
+  // A chunk's stand-in until its bake lands: the map drawn simply in the new ground's colours - roads with
+  // their lines, building blocks, trees (standin.js, a millisecond or two). Never the old art.
   _placeholder(cx, cy) {
     const k = cy * 1000 + cx;
     let cv = this.phs.get(k);
     if (cv) return cv;
-    const n = CHUNK >> 3, M = this.map;
-    cv = document.createElement('canvas'); cv.width = n; cv.height = n;
-    const g = cv.getContext('2d'), id = g.createImageData(n, n), d = id.data;
-    for (let y = 0, j = 0; y < n; y++) for (let x = 0; x < n; x++, j += 4) {
-      const wx = cx * CHUNK + x * 8 + 4, wy = cy * CHUNK + y * 8 + 4;
-      const c = PH_COL[M.tileAtPx(wx, wy)] || PH_COL[TT.GRASS];
-      const nz = ((((wx * 73856093) ^ (wy * 19349663)) >>> 8) & 7) - 3;
-      d[j] = c[0] + nz; d[j + 1] = c[1] + nz; d[j + 2] = c[2] + nz; d[j + 3] = 255;
-    }
-    g.putImageData(id, 0, 0);
+    cv = document.createElement('canvas'); cv.width = cv.height = STANDIN_PX;
+    const t = performance.now();
+    try { drawStandIn(cv.getContext('2d'), this.map, cx, cy); } catch (e) { if (!this.loggedStandIn) { this.loggedStandIn = true; console.warn('[art2] stand-in', e); } }
+    this.t.standIn = (this.t.standIn || 0) * 0.8 + (performance.now() - t) * 0.2;
     if (this.phs.size >= 48) this.phs.delete(this.phs.keys().next().value);
     this.phs.set(k, cv);
     return cv;

@@ -1,6 +1,8 @@
 // Art v2 live renderer: one baked chunk of the static world (docs/art-v2/GAME-RENDERER.md).
 //
 //   bakeChunk(M, cx, cy, opt) -> { g, under, blds, lights, gh, live, ms, n }
+//   bakeSteps(M, cx, cy, opt) -> the same bake as a generator that yields every few ms (worker.js pauses at
+//                                each yield, so other jobs get answered in between)
 //     under   RGBA8: the chunk before its buildings (rgb) and, in alpha, the local number (1..63) of the building
 //             whose surface is on top at that pixel (0: none); blds: [building index, x0, y0, x1, y1, base y]
 //             per local number (its screen rectangle in world px), for fading whole buildings
@@ -154,11 +156,28 @@ export function groundHeights(G, ox, oy) {
 // cache: SpriteCache for makeStatic results (one per worker); P: providers (default: the loaded ones)
 const isBuilding = (it) => (it.recipe && it.recipe.t === 'b' && !it.recipe.frame ? 1 : 0);
 export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
+  const it = bakeSteps(M, cx, cy, opt, cache, P);
+  let r = it.next();
+  while (!r.done) r = it.next();
+  return r.value;
+}
+// The bake as a generator: it yields between the ground's phases and every ~10 ms while placing the statics,
+// and returns what bakeChunk returns. A worker steps through it with a pause at each yield, so the sprites
+// that things on screen are waiting for don't queue behind a whole bake (worker.js).
+const SLICE_MS = 10;
+export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
   const t0 = now();
   const ox = cx * CHUNK, oy = cy * CHUNK;
   let G = null, groundErr = null;
   if (P.ground && !opt.groundCol) {
-    try { G = P.ground.bakeGround(M, cx, cy, opt); } catch (e) { groundErr = String((e && e.stack) || e); G = null; }
+    try {
+      if (P.ground.groundSteps) {
+        const it = P.ground.groundSteps(M, cx, cy, opt);
+        let r = it.next();
+        while (!r.done) { yield 'ground'; r = it.next(); }
+        G = r.value;
+      } else G = P.ground.bakeGround(M, cx, cy, opt);
+    } catch (e) { groundErr = String((e && e.stack) || e); G = null; }
     if (G && (G.w !== CHUNK || G.h !== CHUNK)) { groundErr = `bakeGround gave ${G.w}x${G.h}`; G = null; }
   }
   if (!G) G = flatGround(M, cx, cy, opt);
@@ -174,8 +193,10 @@ export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
     // Buildings go last: the albedo just before them is the chunk's "under" layer, which the engine shows
     // through the cut-away hole round the player (the street behind a building).
     items.sort((a, b) => (isBuilding(a) - isBuilding(b)) || a.y - b.y || a.x - b.x);
-    let snap = opt.under !== false;
+    let snap = opt.under !== false, ts = now();
+    yield 'items';
     for (const it of items) {
+      if (now() - ts > SLICE_MS) { yield 'statics'; ts = now(); }
       if (snap && isBuilding(it)) { under = G.col.slice(); snap = false; bid = new Uint8Array(CHUNK * CHUNK); }
       // each building gets a local number (1..63) in this chunk: the engine fades a whole building by it
       let k = 0;

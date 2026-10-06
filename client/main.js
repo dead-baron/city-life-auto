@@ -2049,6 +2049,7 @@ function prepFrame(dt) {
   const pull = downFor ? 1 + (DOWN_PULL - 1) * Math.min(1, downFor / 9) * (0.5 - 0.5 * Math.cos(Math.min(1, downFor / 9) * Math.PI)) : 1;
   const targetZoom = baseZoom() / Math.max(pull, 1 + Math.min(0.5, speed / 1300));
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
+  S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
   // and server corrections don't shake the camera
   let lvx = 0, lvy = 0;

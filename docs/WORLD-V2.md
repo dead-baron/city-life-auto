@@ -78,6 +78,29 @@ Plus parking lots, driveways, docks, and beach and park paths.
 - **Country:** county roads following the terrain, farms with field patterns, small towns at crossroads,
   forest and mountain roads, desert highways, beach access tracks.
 
+## Nature is designed, not scattered (user, 2026-10-06)
+Today's wild areas are open ground with small rocks scattered at random: hard to see, easy to crash into, and
+big stretches with nothing in them. The country stage lays nature out like the city:
+1. **Skeleton first.** County roads follow the terrain; dirt tracks and hiking trails branch off them. All of
+   them are kept clear of anything solid.
+2. **Destinations along them,** so there is always something ahead: trailheads with car parks and map boards,
+   campsites with fire pits, lookouts, lakes and creeks with footbridges, cabins, ranches, ruins, waterfalls and
+   fire towers.
+3. **Set pieces,** not single props. Each is a small composed scene authored once as a recipe and placed many
+   times with variation by biome (species, rock type, mirroring, seed): a big rock outcrop with a pine and
+   wildflowers round it, a fallen log in ferns, a creek crossing with stepping stones, a grove, a desert wash with
+   boulders and palo verde, a cliff edge with a view.
+4. **Ground cover between them:** living grass, wheat and flowers (they sway in the wind and bend as you drive
+   through), plus big landmarks you can see from a distance. Open land stays open only on purpose (fields,
+   prairie), and even then it has fences, hay bales, a windmill or a lone tree.
+5. **Rules:**
+   - Anything solid is big and easy to read: car-sized and up, tall, casting a clear shadow.
+   - Small stones are ground detail you drive over.
+   - Nothing solid stands near a road, track or trail.
+   - No stretch of a route goes much more than about 100 m without a feature.
+6. **Concepts:** the user's nature concepts (N1-N10, E2, E3a-f, the biome scenes) and the new prompts in the
+   prompt pack ("Nature areas": NA1 layouts, NS1 set pieces, NR1 big rocks, NT1 trails), area by area.
+
 ## Water (procedural; `client/art2/rivergen.js` has the art-side generator)
 Rivers traced downhill over the height map by flow accumulation, widening as they collect water, meandering in
 flat country, with creeks, lakes, rapids where the slope steepens and waterfalls at cliffs. Bridges where roads

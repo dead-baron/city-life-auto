@@ -16,6 +16,59 @@ Status tags: **[W2]** built as part of World v2; **[next]** right after the art 
   built; the old world is archived (`checkpoint-world-v1`).
 - Prison island: out in the open sea. **[W2 stage 5]**
 
+## From play-testing (2026-10-06 afternoon)
+**Priority, now:**
+- **Phones fall behind at speed** (Pixel 7 Pro, Medium, installed app): drive fast and you reach places before
+  their streets, buildings and cars are drawn. Load the road ahead first and further ahead the faster you go, put
+  a quick first pass down before the full detail, and make vehicles before they come on screen.
+- **Living vegetation, water and wind.** Grass, wheat and crops that sway; trees whose leaves move with the wind;
+  animated water with waves, beach surf that rolls in and out, and wakes behind boats.
+  - **The wind:** one controller that everything reads. It is mostly calm, with a subtle idle sway on all
+    vegetation; windy spells are rarer events, and gales rarer still.
+  - **Cost:** cheap enough for low-end devices.
+
+**Bugs [next]:**
+- **Vehicles are too fragile.** Make them tougher, tiered by type; motorcycles get a bit tougher too.
+  - **Explosions on impact:** only in a serious head-on collision at high speed (a car must already be badly
+    damaged), or when hit by something going very fast.
+  - **At 0 health otherwise:** the vehicle slows to a stop, smokes, catches fire, then explodes. That gives you
+    time to get out and run.
+- **Wind effects suit the place and follow the wind controller.**
+  - **City:** the occasional sheet of paper or plastic bag, subtle.
+  - **Forest:** leaves.
+  - **Mostly** you see plants sway.
+  - **Ambient effects:** butterflies and dust motes don't play in a strong wind. Every ambient effect has the
+    right conditions and places.
+- **Building fades:** only the part that blocks the street and the walkable space goes see-through. The interior
+  stays hidden until you walk in through the door.
+- **Birds in rain:** no reflection. A faint shadow far below them on the ground is fine, so they read as high up.
+- **Rain ripples:** fixed in the world, on the ground, puddles and car roofs. Today they ride on the rain overlay
+  and travel with you in a car or on a train.
+
+**Nature (15:40):** rocks in the wilderness are small, hard to see and easy to crash into, and big open areas
+have nothing in them. Make fewer, bigger rocks with grass, plants and trees around them, and design nature with
+roads, trails and thoughtfully placed set pieces. The quick fix replaces the scattered rocks now. The full design
+is World v2 stage 4: see "Nature is designed, not scattered" in `docs/WORLD-V2.md`. The user will send nature
+concepts per area.
+
+**World and NPCs:**
+- **Hit reactions [next]:** a varied set of reactions, animations and physics for people and players.
+  - **Bullets:** knocked back and sliding; or a trip, a roll and back up running; a limp once hit; crawling away
+    on the stomach.
+  - **Shotgun at close range:** knocks people far back and almost always kills.
+  - **Explosions:** throw people far.
+  - **Bats:** knock people back. Some fall backwards and get up to run or fight. Hit while running, they fall
+    forward, roll or faceplant and slide.
+  - **Deaths:** a death while running slides or rolls to a stop face up, face down or on the side.
+  - **Non-lethal hits:** an attacker who isn't killed may stagger and keep coming, or fall and scramble up.
+  - **Hits to kill vary.**
+- **Wilderness population [W2 stage 4]:** mostly animals, and only a few people who belong there: campers, hikers,
+  nomads, farmers, off-roaders. Few vehicles.
+- **Subway stations [W2 stage 6]:** entrances you can see on the street. The station below tells you where you
+  are, with stairs up to the surface. No more blind cuts to an underground view.
+- **Train front car [next]:** seats for passengers and players, instead of the whole car given to the engine.
+- **Security train [next]:** the guards warn you as you walk in and wait a second before they attack.
+
 ## Sharks [W2 stage 5]
 - Extremely rare anywhere in the sea; likeliest round the prison island (still rare).
 - Fins are seen now and then: sharks hunting near the surface.
