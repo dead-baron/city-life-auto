@@ -1727,3 +1727,34 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - `mark` paints stop lines.
 - **New `highwayFlat` scene:** the same tapers and curves on flat ground. A divided rural highway with one-way frontage roads, exits and entrances with deceleration and acceleration lanes, and a farm road meeting the frontage road at a stop line.
 - **World v2 plan:** now has the road rules for ramps and junctions. It also has a procedural water system: rivers traced downhill with flow accumulation, creeks, lakes, rapids and waterfalls, bridges and culverts planned with the road generator, and river current and boating gameplay. The concept prompts W1 (river country) and W2 (water kit) are added to the pack.
+
+### Nature, water and biomes (E3a–f, W1/W2, N1–N10)
+- **Plants (`client/art2/flora.js`, E3a–E3f):**
+  - 142 seeded plants across city, forest, desert, tropical coast, farm and wetland, and mountain.
+  - A new crown painter builds foliage from lit leaf clumps with deep shaded pockets, replacing the old soft blobs. Conifers are drooping needle fans on whorled branches, with optional snow.
+  - Crops come in three growth stages each.
+  - Six plant sheets: `plantsheets.js`.
+- **Procedural water (`client/art2/rivergen.js`, `water.js`, W1/W2):**
+  - `generateRivers(seed, w, h)` is pure data and dependency-free, ready to move to `shared/`. Over a seeded height map it fills depressions, works out flow directions and flow accumulation, then extracts rivers and creeks with width and depth from flow.
+  - Rivers meander on flat stretches, with gravel bars on the inside of bends. Lakes form in basins.
+  - It detects rapids, waterfalls, river mouths and where tributaries join, and finds road crossings, classed as bridge, culvert or ford.
+  - The water painters draw depth-tinted water with clear shallows, banks (grass, mud, gravel, rock, sand, cut) and current lines that loop for animation.
+  - Sprites: ledge, two-tier and cliff waterfalls with mist, a weir, culvert, stone arch bridge, road bridge, footbridge, stepping stones and a canoe.
+  - Scenes (`waterscenes.js`): `riverCountry`, `waterKit`, and `riverMap`, a whole generated map.
+- **Terrain (`client/art2/terrain.js`):**
+  - A height-field renderer for this camera: raised tops with south-facing cliff faces.
+  - Rock styles: sandstone strata, jointed granite, basalt columns, and cave walls with stalactite fringes. Plus snowfields, scree, a natural arch, sea stacks, boulders, outcrops, stalagmites and glowing crystals.
+  - Plants grow on ledges and hang down faces.
+  - New props for these scenes are in `props-wild.js`.
+  - Scenes (`rockscenes.js`): `cave`, `canyon`, `mountains` and `tidepools` (N3, N4, N5, N8).
+- **Biomes (`biomescenes.js`):**
+  - `redwood`, `rainforest`, `gardens` and `wetlands` (N1, N2, N6, N7), with faked god rays, dust motes and fog.
+  - New garden and wetland props are in `props-garden.js`: greenhouse, beehives, stone lanterns, a red arched bridge, koi, a raked-gravel painter, a fishing pier, a boardwalk, a beaver dam and lodge, and a swan.
+- **Wildlife (`client/art2/critters.js`, N10):**
+  - 19 animated kinds: butterflies, dragonflies, bees, fireflies, sparrow flocks, pigeons, gulls, herons, falling leaves and petals, motes, ripples, fish, frogs, squirrels and rabbits.
+  - `CritterPool` runs them with no per-frame allocation. Flocks burst out of trees and pigeons and herons take off when `startle()` is called near them.
+- **Forage (`client/art2/forage.js`, N9):**
+  - 22 fictional finds, each with an inventory icon and an in-world ground sprite.
+  - The only black-market finds are two fictional glowing caps.
+- **Preview:** `district-preview.html?m=<module>&d=<scene>` loads any scene module. A module can also set its own default lighting (`PRESET`).
+- **Comparisons:** `docs/art-v2/plants-v1.png`, `water-v1.png`, `rock-v1.png`, `biomes-v1.png` and `nature-v1.png`.
