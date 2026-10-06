@@ -161,12 +161,13 @@ const STYLE = {
   park: { minW: 14, minH: 14, gen: { rest2: 1 }, filler: 'park', roof: 0, roofKinds: ['tile'] },
 };
 
-// Every business the game systems rely on, placed in a specific district.
+// Every business the game systems rely on, placed in a specific district (alt: where it goes when its
+// own district has no lot big enough - Sunset Beach's strip and the harbor's quays are narrow).
 // strip prefabs host one business per storefront door.
 const SPECIALS = [
   { d: 5, prefab: 'hospital', biz: ['hospital'], names: ['St. Neon General'] },
   { d: 0, prefab: 'hospital', biz: ['hospital'], names: ['Southbank Medical'] },
-  { d: 10, prefab: 'hospital', biz: ['hospital'], names: ['Westside Clinic'] },
+  { d: 10, alt: [1], prefab: 'hospital', biz: ['hospital'], names: ['Westside Clinic'] },
   { d: 18, prefab: 'hospital', biz: ['hospital'], names: ['Old Town Infirmary'] },
   { d: 4, prefab: 'police', biz: ['police'], names: ['Metro City PD - HQ'] },
   { d: 0, prefab: 'police', biz: ['police'], names: ['Southbank Precinct'] },
@@ -182,7 +183,7 @@ const SPECIALS = [
   { d: 6, prefab: 'strip', biz: ['pawn', 'delivery', 'delivery', 'delivery'], names: ['Second Chance Pawn', 'Lucky Laundromat', 'Cut & Fade', 'Quick Mart 24/7'] },
   { d: 3, prefab: 'club', biz: ['fence'], names: ['Back-Alley Exchange'] },
   { d: 3, prefab: 'construction', biz: ['construction'], names: ['Construction Site'] },
-  { d: 8, prefab: 'warehouse', biz: ['warehouse'], names: ['Portside Logistics'] },
+  { d: 8, alt: [3, 6], prefab: 'warehouse', biz: ['warehouse'], names: ['Portside Logistics'] },
   { d: 8, prefab: 'rest1', biz: ['fishmarket'], names: ['Dockside Fish Market'] },
   { d: 8, prefab: 'conv', biz: ['marina'], names: ['Harbor Marina (boats)'] },
   { d: 2, prefab: 'school', biz: ['delivery'], names: ['Northgate High'] },
@@ -1498,13 +1499,14 @@ function rowFits(row, pf, iv) {
 function placeSpecials(m, rows, rand) {
   const order = SPECIALS.map((s, i) => ({ ...s, i })).sort((a, b) => PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);
   // Two rounds: first every business looks for a lot in its own district (so a big one from elsewhere
-  // can't take the only lot a district has for its own); then the rest look elsewhere on the same part
-  // of the world, then for a smaller lot there, and only then anywhere at all (a World v2 row hosts a
-  // special on a real-sized lot: lotDims).
+  // can't take the only lot a district has for its own); then the rest look in the districts named as
+  // their second home (alt), elsewhere on the same part of the world, then for a smaller lot there, and
+  // only then anywhere at all (a World v2 row hosts a special on a real-sized lot: lotDims).
   const later = [];
   for (const sp of order) if (!placeSpecial(m, rows, rand, sp, [0, 1])) later.push(sp);
   for (const sp of later) {
-    if (placeSpecial(m, rows, rand, sp, [2]) || placeSpecial(m, rows, rand, sp, [0, 2], 0.75) || placeSpecial(m, rows, rand, sp, [3, 4]) || placeSpecial(m, rows, rand, sp, [0, 1, 2, 3, 4], 0.6)) continue;
+    if (placeSpecial(m, rows, rand, sp, [5]) || placeSpecial(m, rows, rand, sp, [5], 0.75) || placeSpecial(m, rows, rand, sp, [2]) || placeSpecial(m, rows, rand, sp, [0, 2], 0.75)
+      || placeSpecial(m, rows, rand, sp, [3, 4]) || placeSpecial(m, rows, rand, sp, [0, 1, 2, 3, 4], 0.6)) continue;
     throw new Error(`city generator: no room for ${sp.prefab} (${sp.names[0]})`);
   }
 }
@@ -1525,6 +1527,7 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
     if (cands.length) break;
     for (const row of rows) {
       if ((pass <= 1 || pass === 4) && row.d !== sp.d) continue;
+      if (pass === 5 && !(sp.alt || []).includes(row.d)) continue;
       if (pass === 2 && m.zoneAt(row.x * TILE, row.y * TILE) !== m.zoneAt(...seedOf(sp.d))) continue;
       if (pass === 1 && upright) continue;
       if (row.face !== 'S' && pass !== 1 && pass !== 4) continue;
