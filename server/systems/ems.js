@@ -140,10 +140,12 @@ function runAmbulance(world, v, dt, now) {
       if (c.vehId) continue;
       const d = Math.hypot(body.x - c.x, body.y - c.y);
       const inp = d > 20 ? seek(c, body.x + (c === crew[0] ? -14 : 14), body.y, true) : { bits: 0, mx: 0, my: 0, aim: Math.atan2(body.y - c.y, body.x - c.x) };
-      const bx = c.x, by = c.y;
       pedStep(c, inp, dt, world.map, players.pedMods(world, c));
-      // close but blocked (a vending machine, a bollard in the way): close enough to work from there
-      c.emsStuck = d < 90 && Math.hypot(c.x - bx, c.y - by) < 20 * dt ? (c.emsStuck || 0) + dt : 0;
+      // close but blocked (a vending machine, a bollard, the wall beside a doorway in the way - sliding
+      // along it gets no nearer): close enough to work from there
+      const nearer = c.emsD === undefined || d < c.emsD - 8 * dt;
+      c.emsD = d;
+      c.emsStuck = d < 90 && !nearer ? (c.emsStuck || 0) + dt : 0;
       if (d < 26 || c.emsStuck > 1.5) { atBody++; c.kneelUntil = now + 0.5; c.a = Math.atan2(body.y - c.y, body.x - c.x); } // down on one knee beside them
     }
     if (atBody > 0) {

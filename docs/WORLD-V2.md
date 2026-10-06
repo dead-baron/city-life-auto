@@ -134,5 +134,11 @@ with vehicle access, a bed and a place to cook; waterfront ones with a dock and 
   district class are on everywhere; the hand-painted blocks are gone; `WORLD_VERSION` 2. Block sizes are the low
   end of the spec (50-130 m): the island is ~650 m across, at 120-260 m Downtown would be two or three blocks.
   Fronts face south; the north half of a block backs onto its alley (plain `back` buildings, no doors shown).
+  Junctions along a street are one crossroads or at least 14 tiles apart (`MINSEP` in `metroRoads`), Broadway
+  goes through the avenue crossings it meets (three big squares), and of two signalled junctions closer than a
+  car length the smaller gives way (`SIGNAL_GAP` in `shared/roads.js`): traffic flows downtown again.
   Still to do in the core: the highway through the core with real ramps (the ring keeps its slip ramps, 3 lanes
   each way), roof signs / door markers for north-facing fronts (renderer), more homes in Metro City (stage 7).
+  Rule for every later stage: lay new streets so that junctions keep the same spacing (the ring's frontage
+  roads and the crescents in Bayside Heights still meet some streets a few metres apart; their lights are
+  merged by `SIGNAL_GAP` but the geometry wants redoing with the highway stage).

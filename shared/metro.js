@@ -4,8 +4,10 @@
 // uniform grid between the avenues is gone. Each district lays its own streets between them:
 //  * the blocks are real-sized and every one is different: the east-west streets (and so the block
 //    depths) are spaced by the district's pattern, and every row of blocks picks its own north-south
-//    streets - some carry straight on, some jog a few metres, most stop at a T - so block lengths vary
-//    and long rows of buildings run between the side streets;
+//    streets - some carry straight on, some jog, most stop at a T - so block lengths vary and long rows
+//    of buildings run between the side streets. Junctions along a street are either one crossroads or
+//    at least MINSEP apart (a jog of a few metres is two sets of lights whose queues lock each other):
+//    streets across an avenue line up with the ones on the other side or keep clear of them;
 //  * deep blocks get a service alley along the middle, behind the two rows of buildings (the south row
 //    fronts the street below it, facing the camera; the north row backs onto the alley), long ones now
 //    and then a passage through; downtown and the civic quarter leave the odd block open as a plaza;
@@ -28,13 +30,17 @@ const lerp = (a, b, t) => a + (b - a) * t;
 // the bridges (868 and 958 south over the river, 958 north to Northshore, 688 south to Cedar Isle),
 // east-west ones run from coast to coast (556 is the Bay Bridge's way into town). bow: a gentle curve,
 // amp tiles at its middle, between x0 and x1 (North Boulevard sweeps south through the core, High
-// Street follows the Old Town shore).
+// Street follows the Old Town shore); from: where one starts - at a junction already there, not a few
+// metres off it (Central Avenue at the frontage road north of the ring rather than on at Coast Drive;
+// North Boulevard where Cedar Avenue meets the inner frontage road, beside: though the highway's
+// corner is right there).
 export const AVES_X = [
-  { x: 598.5, name: 'Shore Avenue' }, { x: 688.5, name: 'Cedar Avenue' }, { x: 774.5, name: 'Central Avenue' },
+  { x: 598.5, name: 'Shore Avenue' }, { x: 688.5, name: 'Cedar Avenue' }, { x: 774.5, name: 'Central Avenue', from: 410 },
   { x: 868.5, name: 'Bridge Avenue', bridge: true }, { x: 958.5, name: 'Northbridge Avenue', bridge: true },
 ];
 export const AVES_Y = [
-  { y: 380.5, name: 'High Street', from: 770, bow: { amp: -4, x0: 770, x1: 1047 } }, { y: 476.5, name: 'North Boulevard', kind: 'blvd', bow: { amp: 7, x0: 660, x1: 1010 } },
+  { y: 380.5, name: 'High Street', from: 770, bow: { amp: -4, x0: 770, x1: 1047 } },
+  { y: 476.5, name: 'North Boulevard', kind: 'blvd', from: 688.5, beside: true, bow: { amp: 7, x0: 688.5, x1: 1010 } },
   { y: 556.5, name: 'Bay Avenue' },
   { y: 724.5, name: 'Southside Avenue' }, { y: 808.5, name: 'Dock Avenue' },
 ];
@@ -47,13 +53,17 @@ const THROUGH = [
   { pts: [[748, 556.5], [748, 650]], name: 'Park Lane' },
   { pts: [[688.5, 580], [774.5, 580]], name: 'Park Street' },
 ];
-// Broadway: the diagonal boulevard through the core, from the park corner up to the Civic Center.
-export const BROADWAY = [[748, 584], [778, 556], [808, 528], [838, 500], [868, 472], [898, 444], [914, 429]];
+// Broadway: the diagonal boulevard through the core, from the park corner up to the Civic Center. It
+// bends at the avenue crossings it meets and goes straight through them (a big square where three
+// roads cross) - a diagonal that missed them by a few metres would leave three sets of lights round a
+// tiny triangle, and their queues would lock each other solid.
+const NORTH_BLVD = AVES_Y.find((a) => a.name === 'North Boulevard');
+export const BROADWAY = [[748, 580], [774.5, 556.5], [868.5, aveY(NORTH_BLVD, 868.5)], [914, 429]];
 
 // District street patterns. depth: spacing of the east-west streets (centre to centre), len: of the
 // north-south ones; through: chance a north-south street carries straight on across the next street
-// (else a new one starts somewhere else: a T-junction), jog: chance one that carries on is offset a few
-// metres; alley: chance of a service alley along a block at least alleyMin deep; passage: chance of a
+// (else a new one starts somewhere else: a T-junction), jog: chance one that carries on is offset (by
+// 14-20 tiles); alley: chance of a service alley along a block at least alleyMin deep; passage: chance of a
 // north-south alley through a block at least passMin long; plaza: chance a block is left open; wobble:
 // how far (tiles) the lanes wander; lane: the street kind ('minor' = a narrow lane).
 export const PATTERNS = {
@@ -96,7 +106,7 @@ export function metroRoads(ctx) {
   const { m, Z, BAND, at, inPark, lines } = ctx;
   const styleAt = (x, y) => { const i = at(x, y); return i < 0 ? null : ctx.styleOf(m.dist[i]); };
   // avenues: across the island, under the highway, over the river bridges
-  const okAve = (vertical, bridge) => (x, y) => {
+  const okAve = (vertical, bridge, beside) => (x, y) => {
     const i = at(x, y);
     if (i < 0) return false;
     if (!m.land[i]) return vertical && bridge && !!m.river[i];
@@ -105,7 +115,7 @@ export function metroRoads(ctx) {
     if (m.distSea[i] < 8 * 4) return false;
     if (m.distRiver[i] < 6 * 4 && !(vertical && bridge)) return false;
     if (inPark(x, y)) return false;
-    if (m.ringD[i] < BAND + 13 && ctx.ringH[i] === (vertical ? 2 : 1)) return false; // never alongside the highway
+    if (!beside && m.ringD[i] < BAND + 13 && ctx.ringH[i] === (vertical ? 2 : 1)) return false; // never alongside the highway
     if (z === Z.SOUTH) return vertical && bridge ? true : m.dist[i] === 6;
     return true;
   };
@@ -127,7 +137,7 @@ export function metroRoads(ctx) {
   const aves = [];
   const vEnds = new Map();
   for (const a of AVES_X) {
-    for (const pts of clipLine([{ x: T(a.x), y: T(200) }, { x: T(a.x), y: T(930) }], okAve(true, !!a.bridge), 8 * TILE)) {
+    for (const pts of clipLine([{ x: T(a.x), y: T(a.from || 200) }, { x: T(a.x), y: T(930) }], okAve(true, !!a.bridge), 8 * TILE)) {
       const l = { pts, kind: 'ave', lvl: 0, name: a.name, vx: a.x };
       lines.push(l); aves.push(l);
       if (!vEnds.has(a.x)) vEnds.set(a.x, []);
@@ -138,7 +148,7 @@ export function metroRoads(ctx) {
   for (const a of AVES_Y) {
     const line = [];
     for (let x = a.from || 520; x <= 1060; x += 4) line.push({ x: T(x), y: T(aveY(a, x)) });
-    for (const pts of clipLine(line, okAve(false, false), 8 * TILE)) {
+    for (const pts of clipLine(line, okAve(false, false, !!a.beside), 8 * TILE)) {
       const l = { pts, kind: a.kind || 'ave', lvl: 0, name: a.name, hy: a.y };
       lines.push(l); aves.push(l);
       if (a.y === 556.5 && (!westEnd || pts[0].x < westEnd.x)) westEnd = pts[0];
@@ -157,8 +167,24 @@ export function metroRoads(ctx) {
     const l = { pts: p, kind: 'blvd', lvl: 0, name: 'Broadway' };
     lines.push(l); aves.push(l);
   }
-  const bwX = (y) => { for (let k = 0; k + 1 < BROADWAY.length; k++) { const [x0, y0] = BROADWAY[k], [x1, y1] = BROADWAY[k + 1]; if (y <= y0 && y >= y1) return lerp(x0, x1, (y - y0) / (y1 - y0)); } return null; };
   const bwY = (x) => { for (let k = 0; k + 1 < BROADWAY.length; k++) { const [x0, y0] = BROADWAY[k], [x1, y1] = BROADWAY[k + 1]; if (x >= x0 && x <= x1) return lerp(y0, y1, (x - x0) / (x1 - x0)); } return null; };
+
+  // Junctions already laid along each street line - 'x<x>': the ys where streets meet the north-south
+  // line x, 'y<y>': the xs where streets meet the east-west line y (an avenue's are shared by the cells
+  // either side of it). A new street meets a line either right at a junction already there (a
+  // crossroads) or well clear of it: two sets of lights a few metres apart lock each other's queues.
+  const MINSEP = 14, BWSEP = 20; // tiles between junctions along a street; clear of Broadway's wide diagonal crossings
+  const ends = new Map();
+  const endsOn = (key) => { let l = ends.get(key); if (!l) ends.set(key, (l = [])); return l; };
+  const clearOf = (keys, v) => keys.every((key) => endsOn(key).every((e) => Math.abs(e.v - v) < 0.5 || Math.abs(e.v - v) >= MINSEP));
+  // where a street wants to be if that fits, else the nearest that does of: lined up with a junction
+  // near there, pushed clear of it, pushed clear of Broadway
+  const settle = (want, keys, bw, fits) => {
+    const near = keys.flatMap((key) => endsOn(key)).filter((e) => Math.abs(e.v - want) < MINSEP);
+    const tries = [want, ...near.flatMap((e) => [e.v, e.v - MINSEP, e.v + MINSEP]), ...bw.flatMap((b) => [b - BWSEP, b + BWSEP])];
+    return tries.sort((a, b) => Math.abs(a - want) - Math.abs(b - want)).find(fits) ?? null;
+  };
+  const named = (list, v) => { const e = list.find((q) => Math.abs(q.v - v) < 0.5 && q.name); return e ? e.name : null; };
 
   const plazas = [];
   let nEW = 0, nNS = 0;
@@ -170,49 +196,79 @@ export function metroRoads(ctx) {
     if (!P0) continue;
     // the park keeps its square: no streets in the cell it fills
     if (inPark(midX, (cell.y0 + cell.y1) / 2) && inPark(cell.x0 + 10, (cell.y0 + cell.y1) / 2)) continue;
+    const sides = ['x' + cell.x0, 'x' + cell.x1];
+    const curveY = (y, x) => { const f = CURVED.get(y); return f ? f(x) : y; };
+    // the cell's corners are junctions on its sides too (an avenue crossing, a through street's end)
+    for (const x of [cell.x0, cell.x1]) for (const y of [cell.y0, cell.y1]) { endsOn('x' + x).push({ v: curveY(y, x) }); endsOn('y' + y).push({ v: x }); }
     // 1. east-west streets: block depths by the district's pattern; the last block takes what's left
-    const ys = [cell.y0];
+    const bwSide = [cell.x0, cell.x1].map(bwY).filter((v) => v !== null);
+    const ys = [cell.y0], ewNames = [null];
     for (let y = cell.y0, k = 0; k < 12; k++) {
       const p = P(midX, y + 16) || P0;
-      const d = Math.round(lerp(p.depth[0], p.depth[1], hash(midX, y, cell.seed + 11)));
-      if (cell.y1 - (y + d) < p.depth[0] * 0.72) break;
-      let ny = y + d;
-      // not right where Broadway crosses the cell's sides (no slivers of junction)
-      for (const x of [cell.x0, cell.x1]) { const by = bwY(x); if (by !== null && Math.abs(by - ny) < 9) ny = by + (ny < by ? -9 : 9); }
-      if (ny - y < p.depth[0] * 0.72 || cell.y1 - ny < p.depth[0] * 0.72) break;
+      const lo = p.depth[0] * 0.72;
+      const want = y + Math.round(lerp(p.depth[0], p.depth[1], hash(midX, y, cell.seed + 11)));
+      if (cell.y1 - want < lo) break;
+      const ny = settle(want, sides, bwSide, (v) => v - y >= lo && cell.y1 - v >= lo && bwSide.every((b) => Math.abs(b - v) >= BWSEP) && clearOf(sides, v));
+      if (ny === null) break;
+      // across an avenue from a street already there: the same street carries on
+      ewNames.push(named(endsOn(sides[0]), ny) || named(endsOn(sides[1]), ny) || `${EW_NAMES[(nEW++ + Math.floor(ny)) % EW_NAMES.length]} Street`);
       ys.push(ny); y = ny;
     }
     ys.push(cell.y1);
+    for (let k = 1; k + 1 < ys.length; k++) for (const s of sides) endsOn(s).push({ v: ys[k], name: ewNames[k] });
     const wob = (seed, v, amp, lam) => (amp ? amp * (0.62 * Math.sin(v / lam * Math.PI * 2 + hash(seed, 1, 5) * 6.28) + 0.38 * Math.sin(v / (lam * 0.47) * Math.PI * 2 + hash(seed, 2, 5) * 6.28)) : 0);
-    // the east-west street k at x (Old Town's lanes wander; a curving avenue along the cell's edge curves)
-    const edgeY = (k, x) => { const f = CURVED.get(ys[k]); return f ? f(x) : ys[k]; };
-    const ewY = (k, x) => (k === 0 || k === ys.length - 1 ? edgeY(k, x) : ys[k] + wob(ys[k] * 13 + cell.seed, x, (P(x, ys[k]) || P0).wobble || 0, 38));
+    // the east-west street k at x (Old Town's lanes wander - though they meet the avenues square, where
+    // the streets across line up with them; a curving avenue along the cell's edge curves)
+    const edgeY = (k, x) => curveY(ys[k], x);
+    const settleIn = (x) => Math.max(0, Math.min(1, (x - cell.x0) / 8, (cell.x1 - x) / 8));
+    const ewY = (k, x) => (k === 0 || k === ys.length - 1 ? edgeY(k, x) : ys[k] + wob(ys[k] * 13 + cell.seed, x, (P(x, ys[k]) || P0).wobble || 0, 38) * settleIn(x));
     const ewKind = (k) => ((P(midX, ys[k]) || P0).lane || 'st');
     for (let k = 1; k + 1 < ys.length; k++) {
       const pts = [];
       for (let x = cell.x0; x <= cell.x1 + 0.01; x += 2) pts.push({ x: T(Math.min(x, cell.x1)), y: T(ewY(k, Math.min(x, cell.x1))) });
       if (pts[pts.length - 1].x < T(cell.x1)) pts.push({ x: T(cell.x1), y: T(ewY(k, cell.x1)) });
-      const name = `${EW_NAMES[(nEW++ + Math.floor(ys[k])) % EW_NAMES.length]} Street`;
-      for (const piece of clipLine(pts, okLocal(false), 6 * TILE, 12)) lines.push({ pts: piece, kind: ewKind(k), lvl: 0, name });
+      for (const piece of clipLine(pts, okLocal(false), 6 * TILE, 12)) lines.push({ pts: piece, kind: ewKind(k), lvl: 0, name: ewNames[k] });
     }
+    // where Broadway crosses east-west street k (null: it doesn't, in this cell)
+    const bwCross = (k) => {
+      let px = null, pd = null;
+      for (let x = cell.x0; x <= cell.x1 + 0.01; x += 1) {
+        const by = bwY(x);
+        const d = by === null ? null : by - ewY(k, x);
+        if (d !== null && pd !== null && (d === 0 || (d < 0) !== (pd < 0))) return lerp(px, x, pd / (pd - d));
+        px = x; pd = d;
+      }
+      return null;
+    };
     // 2. each row of blocks picks its own north-south streets
-    let prev = [];
     for (let k = 0; k + 1 < ys.length; k++) {
       const ya = ys[k], yb = ys[k + 1], ym = (ya + yb) / 2;
+      const lns = ['y' + ya, 'y' + yb];
+      const bwRow = [bwCross(k), bwCross(k + 1)].filter((v) => v !== null);
+      // the streets that reach the row's north side from above (the row above, or across the avenue)
+      const prev = endsOn(lns[0]).filter((e) => e.v > cell.x0 + 0.5 && e.v < cell.x1 - 0.5);
       const xsRow = [];
       for (let x = cell.x0, n = 0; n < 12; n++) {
         const p = P(x + 24, ym) || P0;
-        let nx = x + Math.round(lerp(p.len[0], p.len[1], hash(x, ya, cell.seed + 23)));
-        // carry a street from the row above straight on (or with a jog) when one is about here
-        const cont = prev.find((q) => q.x > x + p.len[0] * 0.6 && Math.abs(q.x - nx) < p.len[0] * 0.45);
-        if (cont && hash(cont.x, ya, cell.seed + 29) < p.through) {
-          nx = cont.x;
-          if (hash(cont.x, ya, cell.seed + 31) < p.jog) nx += (hash(cont.x, ya, cell.seed + 37) < 0.5 ? -1 : 1) * (6 + Math.floor(hash(cont.x, ya, cell.seed + 41) * 5));
+        const lo = p.len[0] * 0.6, hi = p.len[0] * 0.65;
+        const want = x + Math.round(lerp(p.len[0], p.len[1], hash(x, ya, cell.seed + 23)));
+        const fits = (v) => v - x >= lo && cell.x1 - v >= hi && bwRow.every((b) => Math.abs(b - v) >= BWSEP) && clearOf(lns, v);
+        let nx = null;
+        // carry a street from above straight on (now and then with a real jog) when one is about here
+        const cont = prev.find((q) => q.v > x + lo && Math.abs(q.v - want) < p.len[0] * 0.45);
+        if (cont && hash(cont.v, ya, cell.seed + 29) < p.through) {
+          const tries = [cont.v];
+          if (hash(cont.v, ya, cell.seed + 31) < p.jog) {
+            const s = hash(cont.v, ya, cell.seed + 37) < 0.5 ? -1 : 1, j = MINSEP + Math.floor(hash(cont.v, ya, cell.seed + 41) * 7);
+            tries.unshift(cont.v + s * j, cont.v - s * j);
+          }
+          nx = tries.find(fits) ?? null;
         }
-        // clear of Broadway where it crosses this row's streets
-        for (const yy of [ya, yb]) { const bx = bwX(yy); if (bx !== null && Math.abs(bx - nx) < 10) nx = bx + (nx < bx ? -10 : 10); }
-        if (cell.x1 - nx < p.len[0] * 0.65 || nx - x < p.len[0] * 0.6) break;
-        xsRow.push({ x: nx, name: cont && Math.abs(cont.x - nx) < 0.5 ? cont.name : `${NS_NAMES[(nNS++ + Math.floor(nx)) % NS_NAMES.length]} Street` });
+        if (nx === null) nx = settle(want, lns, bwRow, fits);
+        if (nx === null) break;
+        const name = named(prev, nx) || `${NS_NAMES[(nNS++ + Math.floor(nx)) % NS_NAMES.length]} Street`;
+        xsRow.push({ x: nx, name });
+        for (const key of lns) endsOn(key).push({ v: nx, name });
         x = nx;
       }
       for (const s of xsRow) {
@@ -240,13 +296,16 @@ export function metroRoads(ctx) {
           else for (let x = x0; x <= x1 + 0.01; x += 2) { const xx = Math.min(x, x1); pts.push({ x: T(xx), y: T(lerp(ewY(k, xx), ewY(k + 1, xx), f)) }); }
           for (const piece of clipLine(pts, okLocal(false), 6 * TILE, 12)) lines.push({ pts: piece, kind: 'alley', lvl: 0, name: 'Service Alley' });
         }
-        if (x1 - x0 >= p.passMin && hash(cx, ym, cell.seed + 67) < p.passage) {
-          const ax = Math.floor(x0 + (x1 - x0) * (0.42 + hash(cx, ym, cell.seed + 71) * 0.16)) + 0.5;
+        const ax = Math.floor(x0 + (x1 - x0) * (0.42 + hash(cx, ym, cell.seed + 71) * 0.16)) + 0.5;
+        // a passage through: never out right at a junction, nor across Broadway
+        const by = bwY(ax);
+        const passClear = lns.every((key) => endsOn(key).every((e) => Math.abs(e.v - ax) >= 6)) && bwRow.every((b) => Math.abs(b - ax) >= BWSEP)
+          && (by === null || by < Math.min(ewY(k, ax), ewY(k + 1, ax)) - 8 || by > Math.max(ewY(k, ax), ewY(k + 1, ax)) + 8);
+        if (x1 - x0 >= p.passMin && passClear && hash(cx, ym, cell.seed + 67) < p.passage) {
           const pts = [{ x: T(ax), y: T(ewY(k, ax)) }, { x: T(ax), y: T(ewY(k + 1, ax)) }];
           for (const piece of clipLine(pts, okLocal(true), 6 * TILE, 12)) lines.push({ pts: piece, kind: 'alley', lvl: 0, name: 'Back Alley' });
         }
       }
-      prev = xsRow;
     }
   }
   const end = (list, pick) => { if (!list || !list.length) return null; return pick(list); };

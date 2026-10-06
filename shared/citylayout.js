@@ -1,9 +1,9 @@
 // Layout of the built-up world, after the world map concept (one concept pixel = one tile):
-// Metro City on the central island - a street grid with a diagonal boulevard through the
-// downtown core, an elevated ring highway with slip ramps to one-way frontage roads either side,
-// curving coast and river drives, Bayside Heights' crescents - and across the river Southbank's
-// winding suburban streets with cul-de-sacs. East of the city the farm country of Dry Creek.
-// Bridges lead out to the wild islands that come later.
+// Metro City on the central island - its streets (avenues, Broadway on the diagonal, each
+// district's own blocks) are laid in metro.js; here are the elevated ring highway with slip ramps
+// to one-way frontage roads either side, curving coast and river drives, Bayside Heights'
+// crescents - and across the river Southbank's winding suburban streets with cul-de-sacs. East of
+// the city the farm country of Dry Creek. Bridges lead out to the wild islands that come later.
 //
 // Everything here is in tiles unless a name says px. The generator (map.js) turns the road
 // lines into the network (roads.js) and the tiles.
@@ -17,20 +17,10 @@ export const Z = { SEA: 0, CITY: 1, SOUTH: 2, EAST: 3, WILD: 4, KEY: 5, ROCK: 6,
 export const RING = [[648, 650], [648, 482], [716, 430], [1022, 430], [1022, 520], [990, 548], [955, 578], [932, 612], [900, 634], [850, 644], [760, 652]];
 export const RING_R = 20;      // corner radius
 export const BAND = 20;        // ring centre line -> frontage road centre line
-// Street grid (centre lines). Avenues (wider, two lanes each way) pass under the highway;
-// plain streets stop at the frontage roads.
-export const GRID_X = [538, 568, 598, 628, 658, 688, 718, 748, 778, 808, 838, 868, 898, 928, 958, 988, 1018];
-export const GRID_Y = [220, 248, 276, 304, 332, 360, 388, 416, 444, 472, 500, 528, 556, 584, 612, 640, 668, 696, 724, 752, 780, 808, 836, 864, 892];
-export const AVE_X = new Set([598, 688, 778, 868, 958]);
-export const AVE_Y = new Set([388, 472, 556, 724, 808]);
-// Avenues that cross the river into Southbank on bridges.
-export const RIVER_BRIDGES = new Set([868, 958]);
 // Greenfield Park: a whole superblock with no streets through it.
 export const PARK = { x0: 688, y0: 584, x1: 748, y1: 642, label: 'Greenfield Park' };
 // Bayside Heights: crescents around a round green instead of a grid.
 export const CRESCENT = { x: 958, y: 520, r: [12, 26] };
-// Broadway: the diagonal boulevard through the downtown core (through grid crossings).
-export const BROADWAY = [[748, 584], [778, 556], [808, 528], [838, 500], [868, 472], [898, 444], [914, 429]];
 
 // District seeds per zone: [district id, x, y]. Tiles take the nearest seed in their zone
 // (with a little noise so borders wander), then a few hard overrides (the park).

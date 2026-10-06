@@ -2,8 +2,8 @@
 // and get byte-identical maps, so the map is never sent over the wire.
 //
 // The world follows the world map concept (tools/data/worldmap-concept.webp, one pixel = one
-// tile). On the central island stands Metro City (see citylayout.js for the plan): a street grid
-// with a diagonal boulevard, an elevated ring highway with slip ramps, curving coast and river
+// tile). On the central island stands Metro City (citylayout.js and metro.js for the plan): avenues,
+// each district's own real-sized blocks, Broadway on the diagonal, an elevated ring highway with slip ramps, curving coast and river
 // drives, wealth tiers that blend into each other from the downtown towers and Bayside Heights'
 // crescents to the rough Yards and Southside; across the river the winding streets of Southbank,
 // east of town the farms and desert of Dry Creek. Around it (islands.js): Westport with its port
@@ -2528,6 +2528,12 @@ function buildDealerLots(m) {
   for (const d of m.pois.filter((q) => q.kind === 'dealer')) {
     const b = m.buildings[d.b];
     if (!b) continue;
+    // the showroom's own forecourt is the display lot
+    const own = m.prefabs[b.prefab];
+    if (own) for (let ty = own.ty; ty < own.ty + own.th; ty++) for (let tx = own.tx; tx < own.tx + own.tw; tx++) {
+      const t = m.tileAt(tx, ty);
+      if ((t === T.GRASS || t === T.PLAZA || t === T.DIRT) && m.bld[ty * MAP_W + tx] < 0) m.set(tx, ty, T.LOT);
+    }
     // no open lot round the showroom: the plain building next door is knocked down for one
     let lot = 0;
     for (let ty = b.ty - 8; ty < b.ty + b.th + 8; ty++) for (let tx = b.tx - 8; tx < b.tx + b.tw + 8; tx++) if (m.tileAt(tx, ty) === T.LOT) lot++;

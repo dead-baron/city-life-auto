@@ -302,19 +302,32 @@ function finishNetwork(nodes0, edges0, seed) {
     if (n.light) {
       const main = roads.slice().sort((a, b) => b.w - a.w)[0];
       const ax = n.dirs[main.id];
-      let three = false;
+      let three = false, across = false;
       for (const id of ids) {
         let d = Math.abs(wrap(n.dirs[id] - ax)) % Math.PI;
         if (d > Math.PI / 2) d = Math.PI - d;
         n.group[id] = d < 0.45 ? 0 : d > Math.PI / 2 - 0.45 ? 1 : 2;
+        if (edges[id].kind === 'alley') continue; // (an alley mouth takes its turn, but never needs lights of its own)
         if (n.group[id] === 2) three = true;
+        if (n.group[id] === 1) across = true;
       }
       n.phases = three ? 3 : 2;
-      if (!Object.values(n.group).includes(1) && !three) n.light = false; // everything on one axis: no signal needed
+      if (!across && !three) n.light = false; // everything on one axis (a slip road peeling off): no signal needed
     }
+  }
+  // Two signalled junctions so close that a car waiting at one stands in the other would lock each
+  // other's queues solid: the smaller of the pair (narrower roads, fewer of them) gives way instead.
+  for (const e of edges) {
+    if (e.lvl !== 0) continue;
+    const a = nodes[e.a], b = nodes[e.b];
+    if (!a.light || !b.light || a.lvl !== 0 || b.lvl !== 0) continue;
+    if (e.len - (a.trim[e.id] || 0) - (b.trim[e.id] || 0) >= SIGNAL_GAP) continue;
+    const size = (n) => n.edges.reduce((s, id) => s + edges[id].w, 0);
+    (size(a) >= size(b) ? b : a).light = false;
   }
   return { nodes, edges };
 }
+const SIGNAL_GAP = 3.5 * TILE; // px of road between the stop lines of two signalled junctions, at least (a car waiting at one clear of the other)
 
 const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 
