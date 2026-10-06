@@ -42,7 +42,7 @@ export function tunnelPortal(h = 90, w = 70, sig = 'red') {
 // a metro car (boxy stainless steel, blue stripe, doors that can stand open, lit windows with riders)
 export function metroCar(len = 260, open = true, on = 1) {
   const W = 56, m = new Vox(len, W, 62);
-  const body = m.mat({ ramp: R('#a8acb4'), k: 3, shade: (x, y, z) => (Math.round(z) % 9 === 0 ? -0.4 : 0) }), stripe = m.mat({ ramp: R('#2a5aa8'), k: 3 }), roof = m.mat({ ramp: R('#8a8e96'), k: 3, shade: (x, y) => (Math.round(y) % 6 === 0 ? -0.6 : 0) });
+  const body = m.mat({ ramp: R('#a8acb4'), k: 3, shade: (x, y, z) => (Math.round(z) % 9 === 0 ? -0.4 : 0) }), stripe = m.mat({ ramp: R('#2a5aa8'), k: 3 }), roof = m.mat({ ramp: R('#6e737c'), k: 3, shade: (x, y) => (Math.round(x) % 32 === 0 ? -1.2 : 0) + (Math.abs(y - W / 2) > W / 2 - 7 ? -0.7 : 0) + (Math.abs(y - W / 2) < 2 ? 0.5 : 0) });
   const glass = m.mat({ ramp: R('#c8a070', 5, 2), k: 2, emi: [255, 214, 150, 14 + on * 36], flag: F_GLASS, shade: (x, y, z) => (Math.hypot((x % 20) - 10, z - 34) < 4 && hash(Math.floor(x / 20), 0, 7) > 0.35 ? -2.5 : 0) });
   const inside = m.mat({ ramp: R('#d8b880', 5, 2), k: 3, emi: [255, 220, 160, 8 + on * 20] }), vent = m.mat({ ramp: MAT.metalDark, k: 2 });
   const doors = []; for (let x = 30; x < len - 30; x += 70) doors.push(x);
@@ -57,7 +57,7 @@ export function metroCar(len = 260, open = true, on = 1) {
     if (z > 18 && z < 23) return stripe;
     return body;
   });
-  for (let x = 20; x < len - 20; x += 60) m.box(x, W / 2 - 10, 56, x + 18, W / 2 + 10, 60, vent);
+  for (let x = 20; x < len - 20; x += 60) { m.box(x, W / 2 - 12, 57, x + 24, W / 2 + 12, 62, vent); m.box(x + 4, W / 2 - 8, 61, x + 20, W / 2 + 8, 62, body); }
   if (open) for (const dx of doors) m.box(dx, 2, 6, dx + 22, W - 2, 7, inside);
   return m;
 }

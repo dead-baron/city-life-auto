@@ -1660,3 +1660,29 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - the prison island (J1)
 - **Entrances on hidden fronts:** a building whose front faces north, away from the camera, hides its door and the strip of pavement in front of it. `sc.building({ northDoors: [...] })` now marks those entrances with a lit sign on the roof edge, and an A-board (shops) or mailbox (homes) out on the pavement with light spilling onto it. The doorstep and mat are painted at the face for when the roof is cut away near the player.
 - **Comparison:** `docs/art-v2/cutaways-v1.png`.
+
+### Road kit: highways, overpasses, crossings, a toll bridge, the airport and alleys (I1–I5, H1/H2, S1, AL1)
+- **`client/art2/deck.js`:** raised roads.
+  - A deck follows a path with a width and a height profile: flat, a smooth climb from one height to another, or any function along its length.
+  - The top is road with lane lines, edge lines, a centre line or a concrete median, and parapets at each edge.
+  - The south sides drop to the ground as a concrete wall, a grass embankment, or just the edge girder over a road or water, so you can see underneath.
+  - Cars, lamps and signs can stand on a deck at its height.
+- **`client/art2/props-road.js`:**
+  - Roads and rail: sign gantries, deck pillars, crossing signals with barriers, platform canopies, a station clock, a metro entrance, toll gantries and booths, and sound walls.
+  - Harbour: sailboats and a kayak rack.
+  - Airport: an airliner, a jet bridge, baggage carts, a belt loader, a tug, the control tower, and runway and approach lights.
+  - Alleys: paper lanterns, hanging blade signs, a steaming wall vent, a hand truck, a shopping trolley, yellow guard posts, a produce stand and wall lamps.
+- **`client/art2/roadscenes.js`:** eight scenes in the preview (`?d=roadkit|interchange|overpass|crossing|tollbridge|airport|alleysNS|alleysEW`):
+  - **roadkit:** the street kit at the new road widths (I1/S1).
+  - **interchange:** the highway on embankments over an avenue, with ramps to signal-controlled ends (H1/H2).
+  - **overpass:** an elevated deck on pillars over a street, with a ramp up to it (I2).
+  - **crossing:** a level crossing and station platform (I3).
+  - **tollbridge:** the toll bridge over the marina (I4).
+  - **airport:** the terminal, gate and runway end (I5).
+  - **alleysNS:** three north–south alleys: service, night market and rough (AL1).
+  - **alleysEW:** three east–west alleys: Old Town, industrial and residential back lane (AL1).
+- **Alley layout:** both alley sheets are laid out as strips like their concepts.
+  - North–south alleys show the building tops either side, with life along the walls.
+  - East–west alleys show the north side's back walls full on (doors, pipes, window boxes, roller doors), with the south side kept low (sheds, hedges, fences) so it doesn't cover the lane.
+- **Metro and train cars:** darker, ribbed roofs with air-conditioning pods, so they don't read as flat slabs from above.
+- **Comparison:** `docs/art-v2/roads-v1.png`.

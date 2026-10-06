@@ -11,7 +11,7 @@ const UP = [0, 0, 1];
 const pick = (R, i) => R[Math.max(0, Math.min(R.length - 1, i))];
 
 // per-pixel ground colour by kind
-function groundPixel(kind, x, y, seed) {
+export function groundPixel(kind, x, y, seed) {
   const h = hash(x, y, seed), big = vnoise(x, y, 46, seed + 3), mid = vnoise(x, y, 11, seed + 5);
   switch (kind) {
     case 'asphalt': case 'asphaltWorn': {
@@ -599,5 +599,36 @@ export function paintRect(G, x0, y0, w, h, kind, seed = 1) {
   for (let y = Math.max(0, y0 | 0); y < Math.min(G.h, (y0 + h) | 0); y++) for (let x = Math.max(0, x0 | 0); x < Math.min(G.w, (x0 + w) | 0); x++) {
     const p = groundPixel(kind, x, y, seed);
     if (p) G.put(x, y, p.c, p.n || UP, 0, p.e || null, F_GROUND | (p.water ? F_WATER : F_WET));
+  }
+}
+
+// ---- road markings ----------------------------------------------------------------------------------
+// a painted arrow (dir: 'up'|'down'|'left'|'right' = the way traffic goes; turn: 'straight'|'left'|'right'|
+// 'straightLeft'|'straightRight'), about 16 x 44 px, centred on (cx, cy)
+export function arrowMark(G, cx, cy, dir = 'up', turn = 'straight', opt = {}) {
+  const R = opt.yellow ? MAT.paintYellow : MAT.paintWhite, pts = [];
+  const shaft = (x0, y0, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0 - 1; x <= x0 + 1; x++) pts.push([x, y]); };
+  const head = (x0, y0, d) => { for (let k = 0; k < 9; k++) for (let x = -k; x <= k; x++) pts.push([x0 + x, y0 + d * k]); };
+  if (turn === 'straight' || turn.startsWith('straight')) { shaft(0, -12, 20); head(0, -20, 1); }
+  for (const side of ['left', 'right']) {
+    if (turn !== side && turn !== 'straight' + side[0].toUpperCase() + side.slice(1)) continue;
+    const s = side === 'left' ? -1 : 1;
+    shaft(turn === side ? 0 : 0, -2, 20);
+    for (let k = 0; k < 12; k++) for (let w = -1; w <= 1; w++) pts.push([s * k, -2 + w]);
+    for (let k = 0; k < 7; k++) for (let w = -k; w <= k; w++) pts.push([s * (12 + 7 - k), -2 + w]);
+  }
+  const rot = { up: (x, y) => [x, y], down: (x, y) => [-x, -y], left: (x, y) => [y, -x], right: (x, y) => [-y, x] }[dir];
+  for (const [x, y] of pts) { const [rx, ry] = rot(x, y); const X = Math.round(cx + rx), Y = Math.round(cy + ry); if (hash(X, Y, 9) > 0.08) paint(G, X, Y, step(R, 0.6, X, Y, 0.3)); }
+}
+// diagonal hatching inside a polygon (gore areas, no-stopping boxes), with a solid border
+export function hatchPoly(G, poly, opt = {}) {
+  const R = opt.yellow ? MAT.paintYellow : MAT.paintWhite, sp = opt.spacing || 14, wd = opt.width || 4;
+  const xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]);
+  const inside = (x, y) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  for (let y = Math.floor(Math.min(...ys)); y <= Math.max(...ys); y++) for (let x = Math.floor(Math.min(...xs)); x <= Math.max(...xs); x++) {
+    if (!inside(x + 0.5, y + 0.5)) continue;
+    const edge = !inside(x - 2.5, y + 0.5) || !inside(x + 3.5, y + 0.5) || !inside(x + 0.5, y - 2.5) || !inside(x + 0.5, y + 3.5);
+    const d = opt.chevron ? Math.abs(((x - opt.chevron[0]) * 0.7 + Math.abs(y - opt.chevron[1])) % sp) : ((x + (opt.dir || 1) * y) % sp + sp) % sp;
+    if ((edge || d < wd) && hash(x, y, 3) > 0.08) paint(G, x, y, step(R, 0.6, x, y, 0.3));
   }
 }
