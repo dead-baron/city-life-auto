@@ -21,15 +21,14 @@ import { LAND, TERRAIN, TERRAIN_CELL } from './worldmask.js';
 import { buildNetwork, stampEdge, stampLine, edgeZ, ROAD_KINDS, sidewalkPx } from './roads.js';
 import { measure, pointAt, rounded, project, cubic, quad, segX } from './geom.js';
 import {
-  Z, BAND, GRID_X, GRID_Y, AVE_X, AVE_Y, RIVER_BRIDGES, PARK, CRESCENT, BROADWAY, SEEDS,
-  clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, slipRamp, acrossWater, breakGrid,
+  Z, BAND, PARK, CRESCENT, SEEDS,
+  clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, slipRamp, acrossWater,
 } from './citylayout.js';
+import { metroRoads } from './metro.js';
 import { buildLevels } from './levels.js';
 import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS, SCENE_SPOTS, SCENE_ISLANDS } from './islands.js';
 import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
-import { HAND_BLOCKS } from './handblocks.js';
-import { BLOCK_ART } from './block-data.js';
 import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 
@@ -278,6 +277,7 @@ export class CityMap {
     this.deck = new Uint8Array(N);        // 1 = under the elevated highway
     this.lvl0Block = new Uint8Array(N);   // 1 = solid at ground level (a ramp's embankment)
     this.roadAxis = new Uint8Array(N);    // bit1 vertical-ish road, bit2 horizontal-ish, 3 = junction box
+    this.roadRank = new Uint8Array(N);    // 1 = an alley's asphalt, 2 = any other road's (a street wins where they meet)
     this.bld = new Int16Array(N).fill(-1);
     this.buildings = [];
     this.prefabs = [];
@@ -298,9 +298,7 @@ export class CityMap {
     this.nodes = [];
     this.edges = [];
     this.lamps = [];
-    this.handMask = new Uint8Array(MAP_W * MAP_H); // 1 + index of the hand-designed block a tile is in
-    this.handArt = [];
-    this.brickWalls = [];                            // brick walls along the street between buildings: { tx, ty, tw }                               // the painted blocks laid on the ground (client/render/tiles.js)
+    this.brickWalls = [];                            // brick walls along the street between buildings: { tx, ty, tw }
     this.fields = [];
     this.roofs = [];
     this.hospitals = [];
@@ -445,7 +443,6 @@ export function generateCity(seed = 1337) {
   reserveRail(m, railPts);
   buildStationLots(m);
   reserveSubwayPlazas(m);
-  handPrepare(m);
   waterfrontStrip(m);
   // Pelican Key's beach end (the bar, the charter dock, the court) stays open; the town is east of it
   {
@@ -462,15 +459,14 @@ export function generateCity(seed = 1337) {
   const mlot = m.blocks.filter((b) => b.d === 16 && b.w >= MANSION_SIZE[0] + 1 && b.h >= MANSION_SIZE[1] + 1 && facesStreet(m, { x: b.x + Math.floor((b.w - MANSION_SIZE[0]) / 2), y: b.y, w: MANSION_SIZE[0], h: 1 }, 'N')).sort((a, b) => b.w * b.h - a.w * a.h)[0];
   if (mlot) mlot.mansion = true;
   // Sunset Beach's volleyball court takes a whole block by the sea
-  const clot = m.blocks.filter((b) => b.d === 10 && !b.mansion && b.w >= 18 && b.h >= 10).sort((a, b) => m.distSea[(a.y + (a.h >> 1)) * MAP_W + a.x] - m.distSea[(b.y + (b.h >> 1)) * MAP_W + b.x])[0];
+  const clot = m.blocks.filter((b) => b.d === 10 && !b.mansion && b.w >= 16 && b.h >= 10).sort((a, b) => m.distSea[(a.y + (a.h >> 1)) * MAP_W + a.x] - m.distSea[(b.y + (b.h >> 1)) * MAP_W + b.x])[0];
   if (clot) clot.court = true;
   for (const b of m.blocks) {
     const st = STYLE[DISTRICTS[b.d].style];
     b.ix = b.x; b.iy = b.y; b.iw = b.w; b.ih = b.h;
-    if (handBlockOf(b)) { b.hand = true; continue; } // rebuilt from a painting (buildHandBlocks)
     if (b.court) {
       m.fill(b.x, b.y, b.w, b.h, T.SAND);
-      volleyCourt(m, 'Sunset Beach Volleyball', b.x + ((b.w - 16) >> 1), b.y + ((b.h - 8) >> 1), 16, 8);
+      volleyCourt(m, 'Sunset Beach Volleyball', b.x + ((b.w - 16) >> 1), b.y + ((b.h - 8) >> 1), 16, 8, b.w >= 18 ? 1 : 0);
       continue;
     }
     if (b.mansion) {
@@ -484,6 +480,7 @@ export function generateCity(seed = 1337) {
     m.fill(b.x, b.y, b.w, b.h, DISTRICTS[b.d].ground);
     if (b.park) continue;
     if (b.green) { filler(m, { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, b.x, b.w, STYLE.park, mulberry32(seed ^ (b.x * 17 + b.y))); continue; }
+    if (v2At(m, b)) { b.v2 = true; v2Block(m, b, rows, mulberry32(seed ^ (b.x * 97 + b.y * 13))); continue; } // World v2: real-sized lots
     const minH = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].th));
     const minW = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].tw));
     const fS = facesStreet(m, b, 'S'), fN = facesStreet(m, b, 'N');
@@ -520,10 +517,9 @@ export function generateCity(seed = 1337) {
   }
   claimEstates(m, rows, estateRows, rand); // beach houses first: the beach blocks are few
   placeSpecials(m, rows, rand);
-  for (const row of rows) fillRow(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
+  for (const row of rows) (row.v2 ? fillRowV2 : fillRow)(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
   for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)), b.park);
-  buildHandBlocks(m);
-  for (const [type, key, x, y, south] of estateRows) estateHouse(m, rand, type, key, x, y, south);
+  for (const [type, key, x, y, south, , dims] of estateRows) estateHouse(m, rand, type, key, x, y, south, dims);
   clearDoorways(m);
   m.garages ||= []; m.mansions ||= [];
   if (mlot) mansion(m, rand, mlot.x + Math.floor((mlot.w - MANSION_SIZE[0]) / 2), mlot.y);
@@ -553,7 +549,6 @@ export function generateCity(seed = 1337) {
   buildBoatDocks(m);
   buildSignals(m);
   buildStreetAtms(m);
-  finishHandBlocks(m);
   m.atms = m.pois.filter((p) => p.kind === 'atm');
   aimLamps(m);
   m.levels = buildLevels(m);
@@ -786,6 +781,9 @@ function paintDistricts(m) {
 
 // ---------------------------------------------------------------------------
 // Road lines (px) for the network builder.
+// Districts with a street plan of their own (no blocks from metro.js): Pine Hills' winding drives and
+// courts, Greenfield Park, Bayside Heights' crescents.
+const OWN_PLAN = new Set([0, 12, 16]);
 function layoutRoads(m, rand) {
   const W = MAP_W;
   const lines = [];
@@ -824,48 +822,10 @@ function layoutRoads(m, rand) {
   for (const p of innerPieces) lines.push({ pts: p, kind: 'front', lvl: 0, name: 'Ring Road (inner)' });
   for (const p of outerPieces) lines.push({ pts: p, kind: 'front', lvl: 0, name: 'Ring Road (outer)' });
 
-  // street grid
-  const gridLines = [];
-  const okGrid = (vertical, c, ave) => (x, y) => {
-    const i = at(x, y);
-    if (i < 0) return false;
-    if (!m.land[i]) return vertical && RIVER_BRIDGES.has(c) && !!m.river[i];
-    const z = m.zone[i];
-    if (z !== Z.CITY && z !== Z.SOUTH) return false;
-    if (m.distSea[i] < 8 * 4) return false;
-    if (m.distRiver[i] < 6 * 4 && !(vertical && RIVER_BRIDGES.has(c))) return false;
-    if (inPark(x, y)) return false;
-    const rd = ringD[i];
-    if (rd < BAND - 1 && !ave) return false;
-    // never run alongside the highway close to it (the frontage road already does)
-    if (rd < BAND + 13 && ringH[i] === (vertical ? 2 : 1)) return false;
-    const d = m.dist[i];
-    if (z === Z.SOUTH) {
-      if (vertical && RIVER_BRIDGES.has(c)) return true;
-      return d === 6; // Southside keeps a grid; Pine Hills winds
-    }
-    if (!ave && d === 16) return false; // Bayside Heights: crescents instead
-    return true;
-  };
-  for (const x of GRID_X) {
-    const ave = AVE_X.has(x);
-    for (const pts of clipLine([{ x: x * TILE, y: 200 * TILE }, { x: x * TILE, y: 900 * TILE }], okGrid(true, x, ave), 8 * TILE)) {
-      gridLines.push({ pts, kind: ave ? 'ave' : 'st', lvl: 0, name: `${ave ? 'Avenue' : 'Street'} ${x}` , vx: x });
-    }
-  }
-  for (const y of GRID_Y) {
-    const ave = AVE_Y.has(y);
-    for (const pts of clipLine([{ x: 520 * TILE, y: y * TILE }, { x: 1060 * TILE, y: y * TILE }], okGrid(false, y, ave), 8 * TILE)) {
-      gridLines.push({ pts, kind: ave ? 'ave' : 'st', lvl: 0, name: `${ave ? 'Avenue' : 'Street'} ${y}`, hy: y });
-    }
-  }
-  // ...broken up so it isn't graph paper: long blocks, back alleys, service alleys (citylayout.js).
-  // Downtown, Northgate and the hand-painted blocks around Broadway keep their grid.
-  const keepGrid = (x, y) => { const d = distOf(x, y); return d === 2 || d === 4 || (x > 684 && x < 872 && y > 464 && y < 560); };
-  lines.push(...breakGrid(gridLines, GRID_X, GRID_Y, keepGrid, 1));
-  // Broadway: the diagonal through the core, between the inner frontage at both ends
-  const bw = clipLine(BROADWAY.map(([x, y]) => ({ x: x * TILE, y: y * TILE })), (x, y) => isLand(x, y) && rD(x, y) >= BAND - 1 && zoneOf(x, y) === Z.CITY && !inPark(x, y), 8 * TILE, 8);
-  for (const p of bw) lines.push({ pts: p, kind: 'blvd', lvl: 0, name: 'Broadway' });
+  // the streets of Metro City (metro.js): the avenues across the island, Broadway, and each district's own
+  // irregular blocks, service alleys and plazas between them
+  const metro = metroRoads({ m, Z, BAND, at, inPark, lines, ringH, styleOf: (d) => DISTRICTS[d].style, gridded: (d) => !OWN_PLAN.has(d) });
+  m.plazas = metro.plazas;
   // Bayside Heights: two crescents round a green, spokes out to the avenues
   for (const r of CRESCENT.r) {
     const circ = [];
@@ -918,7 +878,7 @@ function layoutRoads(m, rand) {
 
   // highway slip ramps: diamond-free "Texas" style onto the one-way frontage roads
   const crossS = [];
-  for (const g of gridLines.filter((q) => q.kind === 'ave')) {
+  for (const g of metro.aves.filter((q) => q.kind === 'ave')) {
     for (let k = 0; k + 1 < g.pts.length; k++) {
       for (let j = 0; j + 1 < ring.length; j++) {
         const a = g.pts[k], b = g.pts[k + 1], c = ring[j], d = ring[j + 1];
@@ -963,13 +923,10 @@ function layoutRoads(m, rand) {
   for (const p of clipLine([{ x: 1047 * TILE, y: 296 * TILE }, { x: 1047 * TILE, y: 910 * TILE }], (x, y) => isLand(x, y) && seaD(x, y) >= 4 && !m.river[at(x, y)], 10 * TILE)) lines.push({ pts: p, kind: 'art', lvl: 0, name: 'Eastern Parkway' });
 
   // the other islands, the highways and bridges between them (islands.js)
-  const vEnds = (x) => gridLines.filter((q) => q.vx === x);
   const ctx = {
     m, lines, rand, Z, isLand, zoneOf, seaD,
     lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; },
-    metroWestEnd: (() => { const g = gridLines.filter((q) => q.hy === 556).sort((p, q) => p.pts[0].x - q.pts[0].x)[0]; return g && g.pts[0]; })(),
-    metroNorthEnd: (x) => { const g = vEnds(x).sort((p, q) => p.pts[0].y - q.pts[0].y)[0]; return g && g.pts[0]; },
-    metroSouthEnd: (x) => { const g = vEnds(x).sort((p, q) => q.pts[q.pts.length - 1].y - p.pts[p.pts.length - 1].y)[0]; return g && g.pts[g.pts.length - 1]; },
+    metroWestEnd: metro.westEnd, metroNorthEnd: metro.northEnd, metroSouthEnd: metro.southEnd,
   };
   m.islandRings = islandRoads(ctx);
   stationAccess(m, lines, isLand, seaD);
@@ -1006,7 +963,7 @@ function reserveSubwayPlazas(m) {
         if (m.tileAt(tx + x, ty - 1) !== T.SIDEWALK) north = false;
       }
       if (!south && !north) continue;
-      const d = Math.hypot((tx + PW / 2) * TILE - q.x, (ty + PH / 2) * TILE - q.y) + (south ? 0 : 160);
+      const d = Math.hypot((tx + PW / 2) * TILE - q.x, (ty + PH / 2) * TILE - q.y) + (south ? 0 : 2000); // the street below it whenever possible
       if (!best || d < best.d) best = { name, x: tx, y: ty, w: PW, h: PH, south, d };
     }
     if (!best) continue;
@@ -1220,12 +1177,9 @@ function nearLine(lines, x, y, r, except) {
 const CITY_KINDS = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 // The pavement beside a road (px, roads.js sidewalkPx): by the class of the districts it runs through -
 // the commonest one along both sides of it - so a block face keeps one width from corner to corner.
-// (Off until the World v2 core lands: every city road keeps the original 64 px pavement.)
-const PAVEMENT_CLASSES = false;
 function edgeWalk(m, e) {
   const K = ROAD_KINDS[e.kind] || ROAD_KINDS.st;
   if (K.walk !== 'district') return K.walk || 0;
-  if (!PAVEMENT_CLASSES) return 64;
   const votes = new Map();
   for (let s = 0; s <= e.len; s += 3 * TILE) {
     const q = pointAt(e.pts, Math.min(s, e.len));
@@ -1273,6 +1227,7 @@ function rasterRoads(m) {
       if (d > hwT && !isWet(t) && t !== T.BRIDGE) return;
       if (isWet(t) || t === T.BRIDGE) { m.tiles[i] = T.BRIDGE; e.bridge = true; } else m.tiles[i] = T.ROAD;
       m.roadAxis[i] |= horiz ? 2 : 1;
+      m.roadRank[i] = Math.max(m.roadRank[i], e.kind === 'alley' ? 1 : 2);
       m.reserve[i] &= ~1;
     });
     if (e.kind === 'rural') stampEdge(e, e.hw + 20, (tx, ty, d) => { const i = at(tx, ty); if (i >= 0 && d > e.hw && m.tiles[i] === T.GRASS) m.tiles[i] = T.DIRT; });
@@ -1526,52 +1481,71 @@ function splitBlock(m, b, st, rand) {
 
 // ---------------------------------------------------------------------------
 // Back rows face north (prefab rotated 180) so every door opens onto a street.
+// A lot of this kind in this row: the painted lot's own size, or (World v2 rows) a real-sized lot -
+// at least the kind's narrowest, at most its widest or what's left, as deep as the row allows.
+function lotDims(row, key, avail) {
+  if (!row.v2) return { tw: PREFABS[key].tw, th: PREFABS[key].th };
+  const L = LOT[key] || [PREFABS[key].tw, PREFABS[key].tw, PREFABS[key].th];
+  return { tw: Math.min(L[1], Math.max(L[0], avail)), th: Math.min(row.h, L[2]) };
+}
 function rowFits(row, pf, iv) {
+  if (row.v2) { const L = LOT[pf]; return !!L && iv[1] - iv[0] >= L[0] && row.h >= Math.ceil(L[2] * 0.62); }
   if (PREFABS[pf].th > row.h) return false;
   return iv[1] - iv[0] >= PREFABS[pf].tw;
 }
 
 function placeSpecials(m, rows, rand) {
   const order = SPECIALS.map((s, i) => ({ ...s, i })).sort((a, b) => PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);
-  const claimed = new Set(HAND_BLOCKS.flatMap((h) => h.claims || []));
-  for (const sp of order) {
-    if (sp.names.some((n) => claimed.has(n))) { rand(); rand(); continue; } // a hand-designed block hosts it (same draws, so the rest of the city stays put)
-    // the boat shop wants the water: any south-facing row in the city near the sea
-    const seaSide = sp.biz.includes('marina');
-    const nearSea = (row) => m.distSea[Math.min(MAP_H - 1, row.y + row.h) * MAP_W + row.x + (row.w >> 1)] < 24 * 4;
-    let cands = [];
-    if (seaSide) for (const row of rows) {
-      if (row.face !== 'S' || !nearSea(row) || m.zoneAt(row.x * TILE, row.y * TILE) !== Z.CITY) continue;
-      for (let k = 0; k < row.iv.length; k++) if (rowFits(row, sp.prefab, row.iv[k])) cands.push([row, k]);
-    }
-    // a building drawn with its front at the bottom (hospitals, stations, shops...) only goes on the
-    // north side of a street, facing south, so it's never upside-down; others may face either way
-    const upright = !PREFABS[sp.prefab].rot;
-    for (const pass of [0, 1, 2, 3, 4]) {
-      if (cands.length) break;
-      for (const row of rows) {
-        if ((pass <= 1 || pass === 4) && row.d !== sp.d) continue;
-        if (pass === 2 && m.zoneAt(row.x * TILE, row.y * TILE) !== m.zoneAt(...seedOf(sp.d))) continue;
-        if (pass === 1 && upright) continue;
-        if (row.face !== 'S' && pass !== 1 && pass !== 4) continue;
-        for (let k = 0; k < row.iv.length; k++) if (rowFits(row, sp.prefab, row.iv[k])) cands.push([row, k]);
-      }
-      if (cands.length) break;
-    }
-    if (!cands.length) throw new Error(`city generator: no room for ${sp.prefab} (${sp.names[0]})`);
-    if (seaSide) { const near = cands.filter(([row]) => nearSea(row)); if (near.length) cands = near; const home = cands.filter(([row]) => row.d === sp.d); if (home.length) cands = home; }
-    // prefer lots near the heart of the district
-    const [sx, sy] = seedOf(sp.d);
-    cands.sort((a, b) => Math.hypot(a[0].x * TILE - sx, a[0].y * TILE - sy) - Math.hypot(b[0].x * TILE - sx, b[0].y * TILE - sy));
-    const [row, k] = cands[Math.floor(rand() * Math.min(cands.length, 4))];
-    const iv = row.iv[k];
-    const pf = PREFABS[sp.prefab];
-    const slack = iv[1] - iv[0] - pf.tw;
-    const x = iv[0] + (rand() < 0.5 ? 0 : slack);
-    placePrefab(m, row, sp.prefab, x, sp, rand);
-    row.iv.splice(k, 1, [iv[0], x], [x + pf.tw, iv[1]]);
-    row.iv = row.iv.filter((v) => v[1] - v[0] > 0);
+  // Two rounds: first every business looks for a lot in its own district (so a big one from elsewhere
+  // can't take the only lot a district has for its own); then the rest look elsewhere on the same part
+  // of the world, then for a smaller lot there, and only then anywhere at all (a World v2 row hosts a
+  // special on a real-sized lot: lotDims).
+  const later = [];
+  for (const sp of order) if (!placeSpecial(m, rows, rand, sp, [0, 1])) later.push(sp);
+  for (const sp of later) {
+    if (placeSpecial(m, rows, rand, sp, [2]) || placeSpecial(m, rows, rand, sp, [0, 2], 0.75) || placeSpecial(m, rows, rand, sp, [3, 4]) || placeSpecial(m, rows, rand, sp, [0, 1, 2, 3, 4], 0.6)) continue;
+    throw new Error(`city generator: no room for ${sp.prefab} (${sp.names[0]})`);
   }
+}
+function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
+  const fits = (row, iv) => (shrink < 1 && row.v2 ? !!LOT[sp.prefab] && iv[1] - iv[0] >= Math.ceil(LOT[sp.prefab][0] * shrink) && row.h >= Math.ceil(LOT[sp.prefab][2] * 0.62 * shrink) : rowFits(row, sp.prefab, iv));
+  // the boat shop wants the water: any south-facing row in the city near the sea
+  const seaSide = sp.biz.includes('marina');
+  const nearSea = (row) => m.distSea[Math.min(MAP_H - 1, row.y + row.h) * MAP_W + row.x + (row.w >> 1)] < 24 * 4;
+  let cands = [];
+  if (seaSide) for (const row of rows) {
+    if (row.face !== 'S' || !nearSea(row) || m.zoneAt(row.x * TILE, row.y * TILE) !== Z.CITY) continue;
+    for (let k = 0; k < row.iv.length; k++) if (fits(row, row.iv[k])) cands.push([row, k]);
+  }
+  // a building drawn with its front at the bottom (hospitals, stations, shops...) only goes on the
+  // north side of a street, facing south, so it's never upside-down; others may face either way
+  const upright = !PREFABS[sp.prefab].rot;
+  for (const pass of passes) {
+    if (cands.length) break;
+    for (const row of rows) {
+      if ((pass <= 1 || pass === 4) && row.d !== sp.d) continue;
+      if (pass === 2 && m.zoneAt(row.x * TILE, row.y * TILE) !== m.zoneAt(...seedOf(sp.d))) continue;
+      if (pass === 1 && upright) continue;
+      if (row.face !== 'S' && pass !== 1 && pass !== 4) continue;
+      for (let k = 0; k < row.iv.length; k++) if (fits(row, row.iv[k])) cands.push([row, k]);
+    }
+    if (cands.length) break;
+  }
+  if (!cands.length) return false;
+  if (seaSide) { const near = cands.filter(([row]) => nearSea(row)); if (near.length) cands = near; const home = cands.filter(([row]) => row.d === sp.d); if (home.length) cands = home; }
+  // prefer lots near the heart of the district
+  const [sx, sy] = seedOf(sp.d);
+  cands.sort((a, b) => Math.hypot(a[0].x * TILE - sx, a[0].y * TILE - sy) - Math.hypot(b[0].x * TILE - sx, b[0].y * TILE - sy));
+  const [row, k] = cands[Math.floor(rand() * Math.min(cands.length, 4))];
+  const iv = row.iv[k];
+  const pf = lotDims(row, sp.prefab, iv[1] - iv[0]);
+  if (row.v2) { pf.tw = Math.min(pf.tw, iv[1] - iv[0]); pf.th = Math.min(pf.th, row.h); }
+  const slack = iv[1] - iv[0] - pf.tw;
+  const x = iv[0] + (rand() < 0.5 ? 0 : slack);
+  placePrefab(m, row, sp.prefab, x, sp, rand, row.v2 ? pf : null);
+  row.iv.splice(k, 1, [iv[0], x], [x + pf.tw, iv[1]]);
+  row.iv = row.iv.filter((v) => v[1] - v[0] > 0);
+  return true;
 }
 function seedOf(d) {
   const s = SEEDS.filter((q) => q[0] === d);
@@ -1584,11 +1558,12 @@ function claimEstates(m, rows, out, rand) {
   const want = [['beach', 'house8'], ['beach', 'house3'], ['beach', 'house7']];
   const used = [];
   for (const [type, key] of want) {
-    const pf = PREFABS[key];
-    const need = pf.cars ? pf.tw : pf.tw + 4; // a painted house brings its own garage and driveway
+    const pf0 = PREFABS[key];
     const cands = [];
     for (const row of rows) {
-      if (DISTRICTS[row.d].style !== 'beach' || row.h < pf.th || row.face !== 'S') continue;
+      const pf = lotDims(row, key, 0);
+      const need = pf0.cars ? pf.tw : pf.tw + 4; // a painted house brings its own garage and driveway
+      if (DISTRICTS[row.d].style !== 'beach' || row.h < (row.v2 ? Math.ceil(LOT[key][2] * 0.62) : pf.th) || row.face !== 'S') continue;
       for (let k = 0; k < row.iv.length; k++) if (row.iv[k][1] - row.iv[k][0] >= need) cands.push([row, k]);
     }
     const ok = cands.filter(([row]) => used.every((q) => Math.hypot(q.x - row.x, q.y - row.y) > 30));
@@ -1601,8 +1576,10 @@ function claimEstates(m, rows, out, rand) {
     const [row, k] = pick;
     const iv = row.iv[k];
     const x = iv[0];
+    const pf = lotDims(row, key, 0);
+    const need = pf0.cars ? pf.tw : pf.tw + 4;
     const y = row.face === 'S' ? row.y + row.h - pf.th : row.y;
-    out.push([type, key, x, y, row.face === 'S', row.d]);
+    out.push([type, key, x, y, row.face === 'S', row.d, row.v2 ? pf : null]);
     used.push({ x: row.x, y: row.y });
     row.iv.splice(k, 1, [x + need, iv[1]]);
     row.iv = row.iv.filter((v) => v[1] - v[0] > 0);
@@ -1641,8 +1618,9 @@ function fillRow(m, row, rand) {
   void st;
 }
 
-function placePrefab(m, row, key, x, special, rand) {
-  const pf = PREFABS[key];
+// dims (World v2): the lot's real size, the building scaled into it the way the prefab sits in its own lot.
+function placePrefab(m, row, key, x, special, rand, dims = null) {
+  const pf = dims ? scaledPrefab(PREFABS[key], dims.tw, dims.th, key) : PREFABS[key];
   const rot = row.face === 'N' && pf.rot ? 2 : 0; // a painted 3/4 lot is never turned upside-down (out in the country it just faces south)
   const y = row.face === 'S' ? row.y + row.h - pf.th : row.y;
   // dress the leftover strip behind a shorter building (back lots, yards, gardens)
@@ -1658,7 +1636,7 @@ function placePrefab(m, row, key, x, special, rand) {
   let [sx0, sy0, sx1, sy1] = pf.solid;
   if (rot === 2) [sx0, sy0, sx1, sy1] = [pf.tw - sx1, pf.th - sy1, pf.tw - sx0, pf.th - sy0];
   const pi = m.prefabs.length;
-  m.prefabs.push({ key, tx: x, ty: y, tw: pf.tw, th: pf.th, rot, d: row.d });
+  m.prefabs.push({ key, tx: x, ty: y, tw: pf.tw, th: pf.th, rot, d: row.d, ...(dims ? { solid: pf.solid } : {}) });
   const names = special ? special.names : (GENERIC_NAMES[key] || ['Building']);
   const bid = m.buildings.length;
   const b = {
@@ -1734,6 +1712,14 @@ function placePrefab(m, row, key, x, special, rand) {
   } else if (key !== 'gas' && key !== 'construction') {
     m.pois.push({ id: m.pois.length, kind: 'delivery', label: b.name, x: doors[0].px, y: doors[0].py, r: 40, b: bid });
   }
+  // a v2 strip mall: its car park in front, bays nose-in toward the shops
+  if (dims && key === 'strip' && pf.th - sy1 >= 5) {
+    const yy = y + sy1 + 2;
+    for (let sx = x + 1; sx + 2 <= x + pf.tw - 1; sx += 2) {
+      m.parking.push({ x: (sx + 1) * TILE, y: yy * TILE, a: -Math.PI / 2 });
+      m.stalls.push({ x: sx * TILE, y: (yy - 2) * TILE, w: 2 * TILE, h: 4 * TILE });
+    }
+  }
   // the cars painted on the lot were painted out: their spots are parking where a real one may stand
   if (pf.cars) {
     const spots = pf.cars.map(([fx, fy, a]) => ({ x: (x + fx * pf.tw) * TILE, y: (y + fy * pf.th) * TILE, a, drive: true }));
@@ -1776,6 +1762,182 @@ function roofOne(m, row, x, y, w, h, kind, seed) {
   m.roofs.push(r);
   m.buildings.push({ id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind: 'roof', name: 'Building', business: null, signs: [] });
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * MAP_W + tx] = bid; }
+}
+
+// ---------------------------------------------------------------------------
+// World v2 lots (docs/WORLD-V2.md): Metro City's blocks are filled with real-sized buildings. A person is
+// 42 px (1.75 m), so a metre is 24 px, three quarters of a tile: shopfronts 6-12 m (5-9 tiles), houses
+// 10-15 m on their lots, downtown towers 20-40 m (16-30 tiles). LOT: [narrowest, widest, depth] in tiles
+// for each kind of building (the prefab's own layout - where the building stands in its lot, the doors,
+// the parking - is scaled into the lot).
+const LOT = {
+  tower1: [16, 24, 22], tower2: [18, 28, 26], hotel: [16, 22, 20], bank: [16, 20, 16], bank2: [14, 18, 14], theatre: [14, 18, 18],
+  vellori: [9, 12, 14], monarch: [9, 12, 14], royale: [8, 10, 12], diamond: [8, 11, 12], crown: [8, 11, 12], boutique: [9, 12, 12],
+  conv: [7, 10, 12], quickstop: [8, 11, 13], liquor: [7, 10, 12], rest1: [6, 9, 12], rest2: [6, 9, 12], diner: [7, 10, 12],
+  redawning: [6, 9, 12], greenbistro: [6, 9, 12], arcade: [7, 9, 13], tattoo: [5, 7, 12], club: [10, 13, 14], clubnova: [12, 16, 14],
+  clubeclipse: [12, 16, 14], shops1: [30, 36, 12], shops2: [30, 36, 12], strip: [24, 30, 22], trail: [12, 16, 14], motors: [18, 22, 18],
+  dealer: [20, 26, 18], fuel: [16, 20, 12], gas: [14, 18, 14], repair: [12, 15, 14], beachbar: [12, 16, 12],
+  apt1: [10, 14, 16], apt2: [10, 14, 16], apt3: [16, 22, 14], apt4: [14, 18, 16],
+  house1: [11, 14, 18], house2: [11, 14, 18], house3: [11, 14, 18], house4: [12, 15, 18], house5: [12, 15, 18], house6: [14, 18, 20],
+  house7: [11, 14, 18], house8: [11, 14, 18], house9: [11, 14, 18], shanty1: [8, 11, 12], shanty2: [8, 11, 12], shanty3: [8, 11, 12],
+  hospital: [26, 32, 22], police: [28, 34, 18], police2: [20, 26, 18], police3: [18, 24, 16], fire: [14, 18, 14], school: [22, 28, 20],
+  church: [12, 16, 18], warehouse: [20, 28, 24], industrial: [26, 34, 24], construction: [16, 22, 18], junkyard: [20, 26, 18], pool: [18, 22, 16],
+  park: [14, 18, 14], tackle2: [12, 16, 10], shack: [10, 13, 12], farmstead: [18, 22, 14],
+};
+// How deep a row of fronts is, by district (tiles); and how wide the plain buildings are (the backs
+// along a street to the north, the infill).
+const V2DEPTH = { towers: [20, 28], civic: [16, 26], commercial: [12, 18], nightlife: [12, 16], redlight: [11, 15], oldtown: [8, 12], apartments: [13, 18],
+  southside: [10, 15], industrial: [18, 28], factory: [18, 28], harbor: [18, 28], beach: [12, 18], luxury: [14, 22], houses: [14, 20], park: [10, 14] };
+const V2W = { towers: [16, 26], civic: [16, 26], commercial: [6, 12], nightlife: [6, 12], redlight: [6, 10], oldtown: [4, 8], apartments: [10, 16],
+  southside: [7, 12], industrial: [18, 32], factory: [18, 32], harbor: [18, 32], beach: [8, 14], luxury: [12, 20], houses: [10, 14], park: [8, 12] };
+// Metro City is World v2 (the whole central island north of the river, and Southside south of it).
+const v2At = (m, b) => { const i = (b.y + (b.h >> 1)) * MAP_W + b.x + (b.w >> 1); return m.zone[i] === Z.CITY || m.dist[i] === 6; };
+
+// Where the building stands in a v2 lot that needs open ground (fractions of the lot): the police station's
+// yard for its motor pool, the car dealer's display lot, the strip mall's car park, the school yard, the
+// warehouse's loading yard.
+const V2_SOLID = { police: [0, 0, 0.62, 0.78], dealer: [0, 0, 0.6, 0.5], motors: [0, 0, 0.7, 0.55], strip: [0, 0, 1, 0.56], school: [0, 0, 1, 0.66], warehouse: [0, 0, 1, 0.7] };
+// A prefab's layout in a lot of another size: the building and its yards scaled with the lot.
+function scaledPrefab(pf, tw, th, key = null) {
+  const sx = tw / pf.tw, sy = th / pf.th;
+  const f = key && V2_SOLID[key];
+  const [a, b, c, d] = f ? [f[0] * pf.tw, f[1] * pf.th, f[2] * pf.tw, f[3] * pf.th] : pf.solid;
+  const x0 = Math.round(a * sx), y0 = Math.round(b * sy);
+  const x1 = Math.max(x0 + 2, Math.round(c * sx)), y1 = Math.max(y0 + 2, Math.round(d * sy));
+  return { ...pf, tw, th, solid: [x0, y0, Math.min(tw, x1), Math.min(th, y1)] };
+}
+
+// What lies just outside one side of a block: 'street' (pavement, a street's asphalt, a plaza), 'alley'
+// (an alley's asphalt) or null (more land, water...).
+function frontage(m, b, face) {
+  let street = 0, alley = 0, n = 0;
+  const look = (tx, ty) => {
+    n++;
+    const t = m.tileAt(tx, ty);
+    if (t === T.SIDEWALK || t === T.PLAZA) street++;
+    else if (t === T.ROAD || t === T.BRIDGE) { if (m.roadRank[ty * MAP_W + tx] === 1) alley++; else street++; }
+  };
+  if (face === 'S' || face === 'N') { const y = face === 'S' ? b.y + b.h : b.y - 1; for (let x = b.x; x < b.x + b.w; x++) look(x, y); }
+  else { const x = face === 'E' ? b.x + b.w : b.x - 1; for (let y = b.y; y < b.y + b.h; y++) look(x, y); }
+  return street >= n * 0.3 ? 'street' : alley >= n * 0.45 ? 'alley' : null;
+}
+// Districts built wall to wall: what's left inside a block is built over rather than left open.
+const BUILT_UP = new Set(['towers', 'civic', 'commercial', 'nightlife', 'redlight', 'oldtown', 'apartments', 'southside', 'industrial', 'factory', 'harbor']);
+
+// One block of the v2 city. The side on a street to the south is the front: a row of lots facing the
+// camera, as deep as the district builds (businesses and homes go there, filled later by placeSpecials
+// and fillRowV2). Behind it, or in a block that only reaches a street on its north side, a row of plain
+// buildings backs onto that street (their fronts face away from the camera: the backs and roofs of the
+// south side of a street). Whatever is left inside is back lots: yards, parking, the odd building.
+function v2Block(m, b, rows, rand) {
+  const st = DISTRICTS[b.d].style;
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  if ((m.plazas || []).some((p) => cx > p.x0 && cx < p.x1 && cy > p.y0 && cy < p.y1)) { plazaFill(m, b, rand); return; }
+  const D = V2DEPTH[st] || [12, 18];
+  const fS = frontage(m, b, 'S'), fN = frontage(m, b, 'N');
+  let y1 = b.y + b.h;
+  if (fS === 'street' && b.h >= 6 && b.w >= 5) {
+    let depth = Math.min(b.h, D[0] + Math.floor(rand() * (D[1] - D[0] + 1)));
+    if (fN === 'street' && b.h >= 2 * D[0] + 2) depth = Math.min(depth, Math.floor(b.h / 2)); // two rows back to back
+    if (b.h - depth < 5) depth = b.h;                                                         // no thin strip behind
+    rows.push({ b, d: b.d, x: b.x, y: y1 - depth, w: b.w, h: depth, face: 'S', iv: [[b.x, b.x + b.w]], v2: true });
+    y1 -= depth;
+  }
+  const h = y1 - b.y;
+  if (h < 3) return;
+  const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h, face: 'N' };
+  if (fN === 'street' || (fN === 'alley' && fS !== 'street')) {
+    // the backs along the street to the north (plain buildings, fronts facing away)
+    const depth = Math.min(h, D[1] + 2);
+    roofRowV2(m, row, b.x, b.y, b.w, h - depth < 4 ? h : depth, st, rand, true);
+    if (h - depth >= 4) backLots(m, { ...row, y: b.y + depth, h: h - depth }, st, rand);
+  } else if (fS !== 'street' && ((frontage(m, b, 'E') || frontage(m, b, 'W')) && b.w <= 40 || (BUILT_UP.has(st) && b.w >= 4 && h >= 4))) {
+    roofRowV2(m, row, b.x, b.y, b.w, h, st, rand, true); // a sliver between side streets, the odd corner of a dense block: built over
+  } else backLots(m, row, st, rand);
+}
+
+// A run of plain buildings, shoulder to shoulder, each its own width by the district (a long run is never
+// one long building). back: their fronts face away from the camera (the renderer shows a plain back wall).
+function roofRowV2(m, row, x, y, w, h, st, rand, back = false) {
+  const W = V2W[st] || [8, 14];
+  const kinds = (STYLE[st] && STYLE[st].roofKinds) || ['tar'];
+  let x0 = x;
+  while (x0 < x + w) {
+    const left = x + w - x0;
+    let bw = left <= W[1] ? left : W[0] + Math.floor(rand() * (W[1] - W[0] + 1));
+    if (left - bw < W[0]) bw = left;
+    if (bw < 3) break;
+    roofOne(m, row, x0, y, bw, h, kinds[Math.floor(rand() * kinds.length)], Math.floor(rand() * 1e9));
+    if (back) m.buildings[m.buildings.length - 1].back = true;
+    x0 += bw;
+  }
+}
+
+// Back lots: the inside of a block behind its buildings - car parks, yards, now and then another building.
+function backLots(m, row, st, rand) {
+  const S = STYLE[st] || STYLE.commercial;
+  const { x, y, w, h } = row;
+  // the yards and works of the industrial blocks: sheds and warehouses with their yards between
+  if ((st === 'industrial' || st === 'factory' || st === 'harbor') && w >= 10 && h >= 10) {
+    const bh = Math.min(h, 14 + Math.floor(rand() * 10));
+    roofRowV2(m, row, x, y, w, bh, st, rand, true);
+    if (h - bh >= 4) filler(m, { ...row, y: y + bh, h: h - bh, face: 'S' }, x, w, { ...S, roof: 0, filler: 'yard' }, rand, false);
+    return;
+  }
+  if (w >= 6 && h >= 6 && rand() < (BUILT_UP.has(st) ? 0.7 : 0.4)) { roofRowV2(m, row, x, y, w, h, st, rand, true); return; }
+  filler(m, { ...row, face: 'S' }, x, w, { ...S, roof: 0, filler: st === 'towers' || st === 'civic' ? 'plaza' : S.filler === 'park' ? 'park' : 'parking' }, rand, false);
+}
+
+// An open square: paving, a fountain in the middle, trees and benches round it, lamps at the corners.
+function plazaFill(m, b, rand) {
+  m.fill(b.x, b.y, b.w, b.h, T.PLAZA);
+  const cx = (b.x + b.w / 2) * TILE, cy = (b.y + b.h / 2) * TILE;
+  if (b.w >= 8 && b.h >= 8) addProp(m, 'fountain', cx, cy, 36);
+  for (let k = 0; k < Math.min(10, Math.floor((b.w * b.h) / 60)); k++) {
+    const a = (k / 10) * Math.PI * 2 + rand(), r = 0.35 + rand() * 0.1;
+    const x = cx + Math.cos(a) * b.w * TILE * r, y = cy + Math.sin(a) * b.h * TILE * r;
+    addProp(m, k % 3 === 0 ? 'tree_b' : k % 3 === 1 ? 'bench_m' : 'planter_sq', x, y, k % 3 === 0 ? 12 : 0);
+  }
+  for (const [fx, fy] of [[0.12, 0.12], [0.88, 0.12], [0.12, 0.88], [0.88, 0.88]]) if (b.w >= 10 && b.h >= 10) addProp(m, 'lamp', (b.x + b.w * fx) * TILE, (b.y + b.h * fy) * TILE);
+  m.squares ||= [];
+  m.squares.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+}
+
+// A row of fronts in the v2 city: real-sized lots of the district's kinds side by side, the gaps between
+// them walled yards or narrow passages; the neighbouring district's style creeps in near a border.
+function fillRowV2(m, row, rand) {
+  const style = DISTRICTS[row.d].style;
+  const st = STYLE[style];
+  const near = [];
+  for (const [dx, dy] of [[-14, 0], [14 + row.w, 0], [row.w / 2, -12], [row.w / 2, row.h + 12]]) {
+    const d = m.dist[Math.max(0, Math.min(MAP_H - 1, Math.floor(row.y + dy))) * MAP_W + Math.max(0, Math.min(MAP_W - 1, Math.floor(row.x + dx)))];
+    if (d !== row.d && STYLE[DISTRICTS[d].style] && DISTRICTS[d].style !== 'park') near.push(STYLE[DISTRICTS[d].style]);
+  }
+  const minW = Math.min(...Object.keys(st.gen).filter((k) => LOT[k]).map((k) => LOT[k][0]));
+  for (const [a, b] of row.iv) {
+    let x = a;
+    while (x < b) {
+      const rem = b - x;
+      const sty = near.length && rand() < 0.25 ? near[Math.floor(rand() * near.length)] : st;
+      const walled = URBAN.has(style);
+      if (rem >= minW + 4 && rand() < (walled ? 0.05 : 0.1)) { const gw = Math.min(rem, 3 + Math.floor(rand() * 3)); if (walled) walledGap(m, row, x, gw, rand); else filler(m, row, x, gw, sty, rand); x += gw; continue; }
+      const fits = Object.keys(sty.gen).filter((k) => rowFits(row, k, [x, b]));
+      if (!fits.length) {
+        if (rem >= 3) roofRowV2(m, row, x, row.y, rem, row.h, style, rand);
+        break;
+      }
+      let tot = 0;
+      for (const k of fits) tot += sty.gen[k];
+      let r = rand() * tot, pick = fits[0];
+      for (const k of fits) { r -= sty.gen[k]; if (r <= 0) { pick = k; break; } }
+      const L = LOT[pick];
+      let tw = Math.min(rem, L[0] + Math.floor(rand() * (L[1] - L[0] + 1)));
+      if (rem - tw < minW) tw = rem - tw < 3 && rem <= L[1] + 4 ? rem : tw; // no sliver left over at the end
+      const th = Math.min(row.h, L[2] + Math.floor(rand() * 3));
+      placePrefab(m, row, pick, x, null, rand, { tw, th });
+      x += tw;
+    }
+  }
 }
 
 // Bank branches (one per part of the world that lacks one) and street ATMs (up to two per
@@ -1825,7 +1987,6 @@ const FOOT = new Set([T.SIDEWALK, T.PLAZA, T.LOT]);
 // right below the wall, clear of doors, other machines and street furniture.
 const FOOT_LOOSE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DIRT, T.GRASS, T.SAND]);
 function atmSpot(m, b, x, loose = false) {
-  if (b.hand) return false; // a painted block keeps to its painting
   const F = loose ? FOOT_LOOSE : FOOT;
   const wy = (b.ty + b.th) * TILE;
   if (onSubwayPlaza(m, x, wy + 8)) return false;
@@ -1910,7 +2071,7 @@ function kioskAtm(m, di, atms, loose) {
   const F = loose ? FOOT_LOOSE : FOOT;
   for (let ty = 2; ty < MAP_H - 2; ty++) for (let tx = 2; tx < MAP_W - 2; tx++) {
     const i = ty * MAP_W + tx;
-    if (m.dist[i] !== di || !F.has(m.tiles[i]) || m.reserve[i] & 3 || m.deck[i] || m.handMask[i] || hash2(tx, ty, 41) > 0.3) continue;
+    if (m.dist[i] !== di || !F.has(m.tiles[i]) || m.reserve[i] & 3 || m.deck[i] || hash2(tx, ty, 41) > 0.3) continue;
     // pavement with the road in front (south) and no pavement behind it: the back edge
     if (m.tileAt(tx, ty + 2) !== T.ROAD && m.tileAt(tx, ty + 1) !== T.ROAD) continue;
     const back = m.tileAt(tx, ty - 1);
@@ -1961,89 +2122,6 @@ function buildEstates(m, rand) {
   if (!m.mansions.length) {
     m.fill(1196, 480, MANSION_SIZE[0], MANSION_SIZE[1], T.GRASS);
     mansion(m, rand, 1196, 480);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Hand-designed blocks (shared/handblocks.js): a designer's painting of a block, laid on the
-// ground curb to curb, with the buildings, doors and businesses it shows.
-function handPrepare(m) {
-  HAND_BLOCKS.forEach((h, hi) => {
-    const [ax, ay, aw, ah] = h.area;
-    for (let y = ay; y < ay + ah; y++) for (let x = ax; x < ax + aw; x++) m.handMask[y * MAP_W + x] = hi + 1;
-    // a subway entrance the painting puts somewhere else in the block moves there
-    if (!h.subway) return;
-    const pl = (m.subwayPlazas || []).find((q) => q.x < ax + aw && q.x + q.w > ax && q.y < ay + ah && q.y + q.h > ay);
-    if (!pl) return;
-    for (let y = pl.y; y < pl.y + pl.h; y++) for (let x = pl.x; x < pl.x + pl.w; x++) { const i = y * MAP_W + x; m.tiles[i] = T.GRASS; m.reserve[i] &= ~16; }
-    pl.x = ax + h.subway[0]; pl.y = ay + h.subway[1];
-    for (let y = pl.y; y < pl.y + pl.h; y++) for (let x = pl.x; x < pl.x + pl.w; x++) { const i = y * MAP_W + x; m.tiles[i] = T.PLAZA; m.reserve[i] |= 16; }
-  });
-}
-function handBlockOf(b) {
-  return HAND_BLOCKS.find((h) => b.x >= h.area[0] && b.y >= h.area[1] && b.x + b.w <= h.area[0] + h.area[2] && b.y + b.h <= h.area[1] + h.area[3]) || null;
-}
-function buildHandBlocks(m) {
-  for (const h of HAND_BLOCKS) {
-    const [ax, ay, aw, ah] = h.area;
-    m.handArt.push({ key: h.key, x: ax * TILE, y: ay * TILE, w: aw * TILE, h: ah * TILE });
-    // everything inside the curb is paving (the painting shows what's on it); streets, the
-    // sidewalk ring and a subway entrance's plaza stay as they are
-    for (let y = ay; y < ay + ah; y++) for (let x = ax; x < ax + aw; x++) {
-      const i = y * MAP_W + x, t = m.tiles[i];
-      if (t === T.ROAD || t === T.BRIDGE || t === T.SIDEWALK || m.reserve[i] & 16) continue;
-      if (m.bld[i] >= 0) continue;
-      m.tiles[i] = T.PLAZA;
-    }
-    for (const spec of h.buildings || []) {
-      const [rx, ry, rw, rh] = spec.r;
-      const b = { id: m.buildings.length, prefab: -1, tx: ax + rx, ty: ay + ry, tw: rw, th: rh, kind: spec.kind || 'shop', name: spec.name || 'Building', business: spec.biz && spec.biz !== 'delivery' ? spec.biz : null, signs: [], hand: h.key };
-      m.buildings.push(b);
-      for (let ty = b.ty; ty < b.ty + b.th; ty++) for (let tx = b.tx; tx < b.tx + b.tw; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * MAP_W + tx] = b.id; }
-      const dtx = ax + (spec.door ?? rx + (rw >> 1));
-      b.door = { tx: dtx, ty: b.ty + b.th };
-      if (!spec.biz) continue;
-      const px = (dtx + 0.5) * TILE, py = (b.ty + b.th + 0.7) * TILE;
-      const poi = { id: m.pois.length, kind: spec.biz, label: b.name, x: px, y: py, r: spec.biz === 'delivery' ? 40 : 48, b: b.id, fixed: true };
-      m.pois.push(poi);
-      if (spec.biz === 'garage' || spec.biz === 'dealer') poi.spawnLot = { x: px, y: (b.ty + b.th + 1.6) * TILE, a: Math.PI / 2 };
-      if (spec.biz === 'warehouse') poi.cargoPad = { x: px, y: (b.ty + b.th + 1.2) * TILE };
-      if (spec.biz === 'police') { poi.spawnLot = spec.spawn ? { x: (ax + spec.spawn[0]) * TILE, y: (ay + spec.spawn[1]) * TILE, a: Math.PI / 2 } : { x: px, y: (b.ty + b.th + 2) * TILE, a: Math.PI / 2 }; m.pois.push({ id: m.pois.length, kind: 'evidence', label: 'Evidence Locker', x: (b.tx + b.tw - 1) * TILE, y: py, r: 56, b: b.id }); }
-      if (spec.biz === 'hospital') m.pois.push({ id: m.pois.length, kind: 'reception', label: 'ER Reception', x: px, y: py, r: 36, b: b.id });
-      if (h.pool && spec.biz === 'police') {
-        // the painted, fenced lot beside the station becomes its motor pool (buildMotorPools)
-        const [qx, qy, qw, qh] = h.pool;
-        const lot = { id: m.buildings.length, prefab: -1, tx: ax + qx, ty: ay + qy, tw: qw, th: qh, kind: 'roof', name: 'Motor Pool', business: null, signs: [], hand: h.key, handPool: poi.id, roof: -1 };
-        m.buildings.push(lot);
-        for (let ty = lot.ty; ty < lot.ty + lot.th; ty++) for (let tx = lot.tx; tx < lot.tx + lot.tw; tx++) m.bld[ty * MAP_W + tx] = lot.id;
-      }
-    }
-  }
-}
-// After the street furniture: nothing the generator put down stands on a painted block (the
-// painting has its own lamps, benches and trees), apart from the traffic signals. The painted
-// things you'd bump into become solid, and the painted lamps light up after dark.
-function finishHandBlocks(m) {
-  const inHand = (x, y) => m.handMask[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)] > 0;
-  const keepT = new Set(['sigpole']);
-  const keep = [], remap = new Map(), gone = new Set();
-  m.props.forEach((pr, i) => { if (inHand(pr.x, pr.y) && !keepT.has(pr.t)) { gone.add(pr); return; } remap.set(i, keep.length); keep.push(pr); });
-  if (gone.size) {
-    m.props = keep;
-    m.lamps = m.lamps.filter((l) => !gone.has(l));
-    m.propSolid = new Map();
-    for (const [k, arr] of m.solidProps) {
-      const kept = arr.filter((e) => e.pi < 0 || remap.has(e.pi));
-      for (const e of kept) if (e.pi >= 0) { e.pi = remap.get(e.pi); m.propSolid.set(e.pi, e); }
-      if (kept.length) m.solidProps.set(k, kept); else m.solidProps.delete(k);
-    }
-  }
-  for (const h of HAND_BLOCKS) {
-    const ox = h.area[0] * TILE, oy = h.area[1] * TILE;
-    for (const [x, y, r] of h.solids || []) addProp(m, 'painted', ox + x, oy + y, r);
-    // the lamp posts found in the painting (tools/build_blocks.py), plus any listed by hand
-    const lamps = [...((BLOCK_ART[h.key] && BLOCK_ART[h.key].lamps) || []), ...(h.lamps || [])];
-    for (const [x, y, hx, hy] of lamps) m.lamps.push(addProp(m, 'plamp', ox + x, oy + y, 5, { hx: ox + hx, hy: oy + hy }));
   }
 }
 
@@ -2105,14 +2183,14 @@ function addGarage(m, home, tx, ty, south, w = 3) {
   driveway(m, tx, w, south ? ty + 3 : ty - 1, south ? 1 : -1);
 }
 
-function estateHouse(m, rand, type, key, x, y, south) {
+function estateHouse(m, rand, type, key, x, y, south, dims = null) {
   m.garages ||= [];
   m.mansions ||= [];
-  const pf = PREFABS[key];
+  const pf = dims ? scaledPrefab(PREFABS[key], dims.tw, dims.th, key) : PREFABS[key];
   if (!pf.rot) south = true; // painted lots face the camera: they only ever front onto a street to their south
   const d = nearestDist(m, x + 3, y + 7);
   const before = m.homes.length;
-  placePrefab(m, { d, y, h: pf.th, face: south ? 'S' : 'N' }, key, x, null, rand);
+  placePrefab(m, { d, y, h: pf.th, face: south ? 'S' : 'N' }, key, x, null, rand, dims);
   const home = m.homes[before];
   if (!home) return;
   const T_ = ESTATE_TYPES[type];
@@ -2225,16 +2303,14 @@ function buildMotorPools(m) {
     if (!sb) continue;
     const used = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
     let best = null, bd = Infinity;
-    const painted = m.buildings.find((b) => b.handPool === st.id);
-    if (painted) best = { b: painted, south: true };
-    if (!best) for (const b of m.buildings) {
-      if (b.gone || b.prefab !== -1 || b.kind !== 'roof' || b.hand || used.has(b.id) || b.tw < 8 || b.tw > 20 || b.th < 7) continue;
+    for (const b of m.buildings) {
+      if (b.gone || b.prefab !== -1 || b.kind !== 'roof' || used.has(b.id) || b.tw < 8 || b.tw > 20 || b.th < 7 || (b.th < 12 && b.tw < 14)) continue; // (room for the cars)
       const gapX = Math.max(0, b.tx - (sb.tx + sb.tw), sb.tx - (b.tx + b.tw));
       const gapY = Math.max(0, b.ty - (sb.ty + sb.th), sb.ty - (b.ty + b.th));
       if (gapX > 3 || gapY > 3) continue;
       // the gate goes on the short side that faces a road
-      const south = [1, 2, 3, 4].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty + b.th - 1 + k));
-      const north = [1, 2, 3, 4].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty - k));
+      const south = [1, 2, 3, 4, 5, 6].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty + b.th - 1 + k)); // (across a wide pavement)
+      const north = [1, 2, 3, 4, 5, 6].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty - k));
       if (!south && !north) continue;
       const d = Math.hypot(b.tx + b.tw / 2 - (sb.tx + sb.tw / 2), b.ty + b.th / 2 - (sb.ty + sb.th / 2));
       if (d < bd) { bd = d; best = { b, south }; }
@@ -2257,7 +2333,7 @@ function buildMotorPools(m) {
     const gy = south ? y0 + h - 1 : y0;
     for (let tx = x0 + 1; tx < x0 + w - 1; tx++) m.set(tx, gy, T.LOT);
     // apron out to the road so cars can get in and out
-    for (let k = 1; k <= 4; k++) {
+    for (let k = 1; k <= 9; k++) {
       const yy = south ? gy + k : gy - k;
       if (isRoad(x0 + Math.floor(w / 2), yy)) break;
       for (let tx = x0 + 1; tx < x0 + w - 1; tx++) { const t = m.tileAt(tx, yy); if (t !== T.ROAD && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP) m.set(tx, yy, T.LOT); }
@@ -2284,17 +2360,8 @@ function buildMotorPools(m) {
       else { spots.push({ x: colB, y: yb, a: heading, model }); yb += dir * 64; }
     }
     // where a new officer walks out of the armory: the station-side corner, away from the cars
-    if (b.handPool !== undefined) {
-      // a painted lot: everything side by side under the far fence, nose to the gate
-      spots.length = 0;
-      let x = (x0 + 1) * TILE + 30, bikes = 0;
-      for (const model of POOL_MODELS) {
-        if (model === 'police') { spots.push({ x, y: (far + 0.5) * TILE + dir * 36, a: heading, model }); x += 72; }
-        else spots.push({ x: x + 10, y: (far + 0.5) * TILE + dir * (14 + 62 * bikes++), a: heading, model }); // the bikes one behind the other
-      }
-    }
     const exit = { x: (x0 + w - 2) * TILE, y: (far + 0.5) * TILE + dir * 20 };
-    m.motorPools.push({ station: st.id, b: b.id, tx: x0, ty: y0, tw: w, th: h, south, gate, gateIdx: m.gates.length - 1, spots, exit, painted: b.handPool !== undefined });
+    m.motorPools.push({ station: st.id, b: b.id, tx: x0, ty: y0, tw: w, th: h, south, gate, gateIdx: m.gates.length - 1, spots, exit });
     st.pool = m.motorPools.length - 1;
   }
 }
@@ -2304,18 +2371,15 @@ function carvePoolLot(m, sb) {
   const busy = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
   const keep = (bi) => bi >= 0 && (busy.has(bi) || m.buildings[bi].home !== undefined || bi === sb.id);
   const spots = [];
-  for (const h of [12, 10]) for (const side of [1, -1]) for (const gap of [1, 2, 3, 0]) {
-    const w = 8;
+  // (deep enough for the cruisers parked nose to tail, or wide enough to park them side by side)
+  for (const [w, h] of [[14, 12], [12, 12], [8, 12], [16, 10], [14, 10]]) for (const side of [1, -1]) for (const gap of [1, 2, 3, 0]) {
     const x0 = side > 0 ? sb.tx + sb.tw + gap : sb.tx - w - gap;
     for (const y0 of [sb.ty + sb.th - h, sb.ty, sb.ty + sb.th - h + 2, sb.ty - 2, sb.ty + sb.th - h - 2]) spots.push([x0, y0, w, h]);
   }
-  // or the yard right behind / in front of the station (a wide, shallow lot)
-  for (const h of [8, 7]) for (const w of [16, 14, 12]) for (const dx of [0, 1, 2]) {
-    spots.push([sb.tx + dx, sb.ty - h, w, h]);
-    spots.push([sb.tx + dx, sb.ty + sb.th, w, h]);
-  }
+  // or the yard right behind the station (a wide, shallow lot; never in front of its doors)
+  for (const h of [8, 7]) for (const w of [16, 14]) for (const dx of [0, 1, 2]) spots.push([sb.tx + dx, sb.ty - h, w, h]);
   // or across the street, in the next block up or down (a wide, shallow yard)
-  for (const dy of [8, 9, 10, 11, 12, 13, 14]) for (const [w, h] of [[16, 8], [14, 8], [12, 9]]) for (const dx of [0, 2, -2, 4]) {
+  for (const dy of [8, 9, 10, 11, 12, 13, 14]) for (const [w, h] of [[16, 8], [14, 8]]) for (const dx of [0, 2, -2, 4]) {
     spots.push([sb.tx + dx, sb.ty + sb.th + dy - 4, w, h]);
     spots.push([sb.tx + dx, sb.ty - dy - h + 4, w, h]);
   }
@@ -2324,8 +2388,8 @@ function carvePoolLot(m, sb) {
       let ok = true;
       for (let ty = y0; ty < y0 + h && ok; ty++) for (let tx = x0; tx < x0 + w; tx++) { const t = m.tileAt(tx, ty); if (t === T.ROAD || t === T.BRIDGE || t === T.WATER || t === T.DEEP || keep(m.bld[ty * MAP_W + tx])) ok = false; }
       if (!ok) continue;
-      const south = [1, 2, 3, 4].some((k) => { const t = m.tileAt(x0 + 4, y0 + h - 1 + k); return t === T.ROAD; });
-      const north = [1, 2, 3, 4].some((k) => { const t = m.tileAt(x0 + 4, y0 - k); return t === T.ROAD; });
+      const south = [1, 2, 3, 4, 5, 6, 7, 8, 9].some((k) => { const t = m.tileAt(x0 + 4, y0 + h - 1 + k); return t === T.ROAD; }); // (across a forecourt and a wide pavement)
+      const north = [1, 2, 3, 4, 5, 6, 7, 8, 9].some((k) => { const t = m.tileAt(x0 + 4, y0 - k); return t === T.ROAD; });
       if (!south && !north) continue;
       clearArea(m, x0, y0, w, h);
       const bid = m.buildings.length;
@@ -2383,10 +2447,10 @@ function buildInteriors(m) {
   const bays = new Set((m.bays || []).map((bay) => m.bld[bay.ty * MAP_W + bay.tx]));
   for (const [bid, list] of byB) {
     const b = m.buildings[bid];
-    if (!b || b.gone || (b.prefab < 0 && !b.hand) || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
+    if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
     const main = list.filter((p) => WALK_IN.has(p.kind) || p.kind === 'delivery');
     if (!main.some((p) => WALK_IN.has(p.kind)) || list.some((p) => !WALK_IN.has(p.kind) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery')) continue;
-    const south = b.hand ? true : m.prefabs[b.prefab].rot === 0;
+    const south = m.prefabs[b.prefab].rot === 0;
     const x0 = b.tx + 1, x1 = b.tx + b.tw - 2, y0 = b.ty + 1, y1 = b.ty + b.th - 2; // interior (inclusive)
     main.sort((a, c) => a.x - c.x);
     const depth = y1 - y0 + 1;
@@ -2476,8 +2540,8 @@ function buildDealerLots(m) {
 }
 
 // A sand volleyball court with a net across the middle (net posts are solid).
-function volleyCourt(m, name, x, y, w, h) {
-  m.fill(x - 1, y - 1, w + 2, h + 2, T.SAND);
+function volleyCourt(m, name, x, y, w, h, margin = 1) {
+  m.fill(x - margin, y - 1, w + 2 * margin, h + 2, T.SAND);
   const rect = { x: x * TILE, y: y * TILE, w: w * TILE, h: h * TILE };
   const netX = rect.x + rect.w / 2;
   m.addSolidProp(netX, rect.y - 6, 5); m.addSolidProp(netX, rect.y + rect.h + 6, 5);
@@ -3683,7 +3747,7 @@ function buildBusStops(m, doorsNear) {
       const y = side < 0 ? q.y - e.hw - TILE * 1.25 : q.y + e.hw + TILE * 1.6;
       const tx = Math.floor(q.x / TILE), ty = Math.floor(y / TILE);
       let ok = true;
-      for (let dx = -2; dx <= 2 && ok; dx++) { const t = m.tileAt(tx + dx, ty); if (t !== T.SIDEWALK || m.deck[ty * MAP_W + tx + dx] || m.handMask[ty * MAP_W + tx + dx]) ok = false; }
+      for (let dx = -2; dx <= 2 && ok; dx++) { const t = m.tileAt(tx + dx, ty); if (t !== T.SIDEWALK || m.deck[ty * MAP_W + tx + dx]) ok = false; }
       for (let dx = -3; dx <= 3 && ok; dx++) for (let dy = -1; dy <= 1; dy++) if (doorsNear.has(`${tx + dx},${ty + dy}`)) ok = false;
       if (!ok || near(q.x, y, 70) || onSubwayPlaza(m, q.x, y)) continue;
       addProp(m, 'busstop', (tx + 0.5) * TILE, y, 14, { face: side < 0 ? 'S' : 'N' });
@@ -3759,15 +3823,17 @@ function buildSignals(m) {
     const small = n.edges.every((id) => SPAN_WIRE_ROADS.has(m.edges[id].kind));
     let corners = null;
     if (small && SPAN_WIRE_STYLES.has(st)) {
-      // corners: between each pair of neighbouring streets, out past the junction box
+      // corners: between each pair of neighbouring streets, out past the junction box (and across the
+      // pavement: a wide one puts the walls further back)
       const dirs = n.edges.map((id) => n.dirs[id]).sort((a, b) => a - b);
       const reach = Math.min(160, Math.max(...n.edges.map((id) => n.trim[id] || n.half || 60)) * 1.15 + 34);
+      const far = 3 * TILE + Math.max(0, ...n.edges.map((id) => (m.edges[id].walk || 64) - 64)) * 1.5 + (st === 'towers' || st === 'civic' ? 3 * TILE : 0); // (past a tower's forecourt)
       corners = [];
       for (let k = 0; k < dirs.length; k++) {
         const a0 = dirs[k], a1 = dirs[(k + 1) % dirs.length] + (k + 1 === dirs.length ? Math.PI * 2 : 0);
         const mid = (a0 + a1) / 2;
         // tie off on a building wall just behind the corner
-        for (let r = 0; r <= 3 * TILE; r += 8) {
+        for (let r = 0; r <= far; r += 8) {
           const qx = n.x + Math.cos(mid) * (reach + r), qy = n.y + Math.sin(mid) * (reach + r);
           if (m.tileAtPx(qx, qy) === T.BUILDING) { corners.push({ x: qx - Math.cos(mid) * 4, y: qy - Math.sin(mid) * 4, wall: true }); break; }
         }

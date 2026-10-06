@@ -137,7 +137,8 @@ test('intersections: zebra crossings never overlap; span wires only at small wal
   const covered = new Set(m.signals.map((s) => s.node));
   assert.ok(lit.every((n) => covered.has(n.id)), 'every signalled junction has lights');
   const wires = m.signals.filter((s) => s.wire), poles = m.signals.filter((s) => !s.wire);
-  assert.ok(wires.length > 10 && poles.length > 100, `span wires ${wires.length}, poles ${poles.length}`);
+  // (World v2's Metro City has real-sized blocks: few side streets meet each other, most meet an avenue)
+  assert.ok(wires.length >= 6 && poles.length > 100, `span wires ${wires.length}, poles ${poles.length}`);
   const small = new Set(['st', 'minor', 'drive', 'front']);
   for (const s of wires) {
     assert.ok(s.corners.length >= 2 && s.corners.every((c) => c.wall), 'span wires are tied to building walls');

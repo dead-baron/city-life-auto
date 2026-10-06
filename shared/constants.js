@@ -11,7 +11,8 @@ export const WORLD_H = MAP_H * TILE;
 // bought back, you wake at a hospital (server/systems/homes.js checkWorld). Bump it whenever a change
 // moves homes or the streets under people's feet.
 //   1  the original world (until 2026-10)
-export const WORLD_VERSION = 1;
+//   2  World v2 stage 1: Metro City's core re-laid (real-sized blocks, pavements by district class)
+export const WORLD_VERSION = 2;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);

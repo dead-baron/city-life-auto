@@ -127,3 +127,12 @@ with vehicle access, a bed and a place to cook; waterfront ones with a dock and 
   switch on with stage 1, `PAVEMENT_CLASSES` in `shared/map.js`; stage 0 leaves the world unchanged). Highway lane
   counts are unchanged so far (3 each way on the ring): the deck art and levels depend on them, they change with
   the highway stage. Previews: `tools/world2/preview.mjs` -> `docs/world-v2/`.
+- **Stage 1 (first pass, 2026-10-06):** Metro City's streets come from `shared/metro.js` (avenues + Broadway kept as
+  the skeleton, `PATTERNS` per district between them: varied block depths and lengths, staggered side streets with
+  jogs and T-junctions, service alleys behind the rows, plazas, Old Town's wandering lanes); the central island and
+  Southside are filled with real-sized lots (`LOT`, `v2Block`, `fillRowV2` in `shared/map.js`); pavements by
+  district class are on everywhere; the hand-painted blocks are gone; `WORLD_VERSION` 2. Block sizes are the low
+  end of the spec (50-130 m): the island is ~650 m across, at 120-260 m Downtown would be two or three blocks.
+  Fronts face south; the north half of a block backs onto its alley (plain `back` buildings, no doors shown).
+  Still to do in the core: the highway through the core with real ramps (the ring keeps its slip ramps, 3 lanes
+  each way), roof signs / door markers for north-facing fronts (renderer), more homes in Metro City (stage 7).

@@ -597,7 +597,12 @@ function stepStairs(world, dt) {
       if (++s.k < s.wp.length) continue;
       world.stairWalkers.delete(id);
       q.npc.stairs = null;
-      if (!s.ride) { q.npc.state = 'wander'; q.npc.until = 0; q.npc.wx = q.x; q.npc.wy = q.y; q.npc.keep = false; continue; }
+      if (!s.ride) {
+        // out on the street: walk on away from the entrance (not straight back down into the stairwell)
+        const a = s.wp[s.wp.length - 2] || s.wp[0], b = s.wp[s.wp.length - 1];
+        q.npc.state = 'wander'; q.npc.until = 0; q.npc.wx = q.x; q.npc.wy = q.y; q.npc.keep = false; q.npc.awayFrom = Math.atan2(b.y - a.y, b.x - a.x);
+        continue;
+      }
       const t = world.trains[s.ride.t];
       const st = t && t.dwellUntil ? world.map.rail.stations[t.stop] : null;
       const spot = st && st.kiosk ? freeSpot(world, t, s.ride.c, true) : null;
@@ -607,7 +612,8 @@ function stepStairs(world, dt) {
     }
     const sp = WALK * q.npc.speed * (s.k >= 2 ? 0.75 : 1); // steps slow you a little
     q.vx = dx / d * sp; q.vy = dy / d * sp; q.a = Math.atan2(dy, dx);
-    q.x += q.vx * dt; q.y += q.vy * dt;
+    const step = Math.min(sp * dt, d) / d; // (never past the waypoint: a quick walker would step back and forth over it)
+    q.x += dx * step; q.y += dy * step;
     world.place(q);
   }
 }

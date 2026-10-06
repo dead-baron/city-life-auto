@@ -431,7 +431,8 @@ function sectionsOf(c, b, A) {
     if (sec.south) {
       // what's in front of it: a street front gets doors and shops; a wall behind another building stays plain
       let open = 0; for (let x = tx; x < tx + tw; x++) { const t = c.tile(x, ty + th); if (t !== T.BUILDING && t !== T.WALL && t !== T.WATER && t !== T.DEEP) open++; }
-      sec.front = open >= tw * 0.5 || b.prefab >= 0 || !!b.hand || !!b.walkIn;
+      // (b.back: a World v2 building whose front faces north, away from the camera: its south wall is a plain back)
+      sec.front = !b.back && (open >= tw * 0.5 || b.prefab >= 0 || !!b.hand || !!b.walkIn);
       if (units) { const u = units.find((q) => q.door && q.door.tx >= tx && q.door.tx < tx + tw); if (u) { sec.walk = u; sec.doorX = (u.door.tx - tx) * TILE + 4; sec.doorW = (u.door.w || 2) * TILE - 8; } }
       if (sec.doorX === undefined && b.door && b.door.tx >= tx && b.door.tx < tx + tw) sec.doorX = (b.door.tx - tx) * TILE + 7;
       if (b.signs && b.signs.length) { const s = b.signs.find((q) => q.x >= tx * TILE && q.x < (tx + tw) * TILE) || (xs.length === 1 ? b.signs[0] : null); if (s) sec.sign = clean(s.text, 26); }
@@ -1914,7 +1915,7 @@ function addLots(c, I) {
   M.prefabs.forEach((p, pi) => {
     const pf = PREFABS[p.key];
     if (!pf) return;
-    const x0 = p.tx * TILE, y0 = p.ty * TILE, w = p.tw * TILE, h = p.th * TILE, [sx0, sy0, sx1, sy1] = pf.solid, bx0 = x0 + sx0 * TILE, bx1 = x0 + sx1 * TILE, by1 = y0 + sy1 * TILE;
+    const x0 = p.tx * TILE, y0 = p.ty * TILE, w = p.tw * TILE, h = p.th * TILE, [sx0, sy0, sx1, sy1] = p.solid || pf.solid, bx0 = x0 + sx0 * TILE, bx1 = x0 + sx1 * TILE, by1 = y0 + sy1 * TILE;   // (a World v2 lot carries its own solid)
     const D = c.dist(x0 + w / 2, y0 + h / 2), rnd = rndOf(pi, 333), front = y0 + h - by1;   // px of lot in front (south) of the building
     const tree = (x, y) => { const pr = plantFor(c, { t: 'tree_a', x, y }); if (pr) flora1(I, pr[0], Math.round(pr[1] * 5) / 5, Math.round(x), Math.round(y)); };
     const key = p.key;
