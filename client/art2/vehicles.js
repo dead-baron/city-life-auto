@@ -25,13 +25,15 @@ export const VEHICLE_DIMS = {
   suv: [104, 50], limo: [150, 50], foodtruck: [124, 58],
   // transit and harbour scenery (World v2): a two-section tram, a harbour tug, a car and passenger ferry
   tram: [300, 56], tugboat: [150, 64], ferry: [470, 150],
+  // country and works scenery
+  tractor: [84, 54], combine: [150, 120], plane: [104, 130], excavator: [130, 60],
 };
 const DEFAULT_PAINT = {
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', firetruck: '#c0302a', towtruck: '#e6e2d8',
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
-  jetski: '#c8302c', policeboat: '#f0eee8', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6',
+  jetski: '#c8302c', policeboat: '#f0eee8', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
 };
 
 const R = (h, n = 6, k) => ramp(h, n, k);
@@ -144,7 +146,7 @@ function truckCab(m, M, x1, H, o = {}) {
 // ---- the models ---------------------------------------------------------------------------------
 export function vehicleModel(type, o = {}) {
   const [L, W] = VEHICLE_DIMS[type] || VEHICLE_DIMS.sedan;
-  const tall = { tram: 66, tugboat: 70, ferry: 112, suv: 44, foodtruck: 60, van: 48, ambulance: 54, armored: 52, swat: 56, bus: 64, flatbed: 50, boxtruck: 64, dumptruck: 56, mixer: 62, tanker: 56, garbage: 62, firetruck: 64, towtruck: 58, pickup: 38 }[type] || 36;
+  const tall = { tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, suv: 44, foodtruck: 60, van: 48, ambulance: 54, armored: 52, swat: 56, bus: 64, flatbed: 50, boxtruck: 64, dumptruck: 56, mixer: 62, tanker: 56, garbage: 62, firetruck: 64, towtruck: 58, pickup: 38 }[type] || 36;
   const m = new Vox(L, W, tall + 14);
   const M = mats(m, o.paint || DEFAULT_PAINT[type] || '#808080', o);
   const lit = o.lights || 0;
@@ -204,6 +206,48 @@ export function vehicleModel(type, o = {}) {
       wheels(m, [L * 0.2, L * 0.78], 8, M, { inset: 3 });
       m.fill((x, y, z) => (y > y1 && z < 20 ? 0 : -1), 0, 0, 0, L, W, 20);
       lamps(m, M, { zh: 14, h: 5, inset: 4, wd: 8, tailUp: 6 });
+      break;
+    }
+    case 'tractor': {
+      shell(m, { x0: 30, x1: L - 2, y0: 14, y1: W - 14, z0: 12, z1: 30, r: 4, rz: 3, mat: (x, y, z) => (Math.round(x) % 6 === 0 && z > 16 && z < 26 ? M.lower : M.body) });   // hood with louvres
+      shell(m, { x0: 6, x1: 36, y0: 8, y1: W - 8, z0: 14, z1: 50, r: 2, rz: 2, mat: glassy(M.body, M.glass, { band: [26, 46], pillars: [21] }) });                  // cab
+      m.box(6, 6, 48, 38, W - 6, 52, M.white);
+      m.cyl('z', L - 14, W / 2, 0, 1.6, 30, 46, M.trim);                                                                                                    // exhaust
+      for (const y of [0, W - 12]) m.cyl('y', 18, 0, 15, 15, y, y + 12, M.tyre, 8, M.hub);
+      for (const y of [4, W - 12]) m.cyl('y', L - 14, 0, 9, 9, y, y + 8, M.tyre, 5, M.hub);
+      lamps(m, M, { zh: 22, h: 4, inset: 16, wd: 6, bumpers: false });
+      break;
+    }
+    case 'combine': {
+      const hx = L - 26;
+      shell(m, { x0: 4, x1: hx, y0: 26, y1: W - 26, z0: 16, z1: 56, r: 4, rz: 4, mat: M.body });                                                          // body and grain tank
+      m.box(10, 30, 56, 60, W - 30, 62, M.body);
+      shell(m, { x0: hx - 28, x1: hx, y0: 40, y1: W - 40, z0: 44, z1: 70, r: 2, rz: 2, mat: glassy(M.body, M.glass, { band: [48, 66], pillars: [], sideGlass: true }) });
+      m.box(hx - 6, 4, 6, L, W - 4, 22, M.body); m.box(hx - 4, 4, 22, L - 2, W - 4, 24, M.trim);                                                          // header
+      m.cyl('y', L - 10, 0, 22, 9, 4, W - 4, M.trim, 6, 0);
+      for (let y = 6; y < W - 6; y += 6) m.box(L - 2, y, 4, L, y + 2, 8, M.steel);
+      for (let k = 0; k < 50; k++) m.box(30 + k * 0.4, 20 - k * 0.3, 58 + k * 0.1, 33 + k * 0.4, 24 - k * 0.3, 61 + k * 0.1, M.body);                  // unloading auger
+      for (const y of [20, W - 34]) m.cyl('y', hx - 20, 0, 16, 16, y, y + 14, M.tyre, 9, M.hub);
+      for (const y of [28, W - 38]) m.cyl('y', 20, 0, 10, 10, y, y + 10, M.tyre, 6, M.hub);
+      break;
+    }
+    case 'plane': {
+      const cy = W / 2;
+      m.fill((x, y, z) => { const t = x / L, r = t < 0.15 ? 7 * (t / 0.15) + 2 : t > 0.75 ? 9 - (t - 0.75) * 24 : 9; return Math.hypot(y - cy, (z - 18) * 1.1) < r ? (z > 22 && t > 0.55 && t < 0.72 ? M.glass : Math.abs(z - 16) < 1 ? M.stripeRed : M.body) : -1; }, 0, 0, 6, L, W, 32);
+      m.box(L * 0.45, 2, 22, L * 0.62, W - 2, 25, M.body); m.box(L * 0.45, 2, 22, L * 0.5, 10, 25, M.stripeRed); m.box(L * 0.45, W - 10, 22, L * 0.5, W - 2, 25, M.stripeRed);
+      m.box(2, cy - 22, 18, 14, cy + 22, 20, M.body); m.box(2, cy - 1, 18, 14, cy + 1, 36, M.body); m.box(2, cy - 1, 30, 10, cy + 1, 36, M.stripeRed);
+      m.box(L - 2, cy - 12, 12, L, cy + 12, 24, M.trim);
+      for (const [x, y] of [[L * 0.62, cy - 14], [L * 0.62, cy + 12], [L * 0.86, cy - 1]]) { m.box(x, y, 3, x + 2, y + 2, 10, M.trim); m.cyl('y', x + 1, 0, 3, 3, y - 1, y + 3, M.tyre); }
+      break;
+    }
+    case 'excavator': {
+      const tw = 14;
+      for (const y of [2, W - 2 - tw]) m.fill((x, yy, z) => (z < 14 - Math.max(0, Math.abs(x - L * 0.32) - 26) * 0.5 && x > 4 && x < L * 0.64 ? (Math.round(x) % 4 === 0 ? M.dark : M.tyre) : -1), 0, y, 0, L, y + tw, 14);
+      m.box(L * 0.12, 8, 14, L * 0.56, W - 8, 34, M.body); m.box(L * 0.06, 10, 14, L * 0.16, W - 10, 34, M.dark);
+      shell(m, { x0: L * 0.4, x1: L * 0.56, y0: 8, y1: 28, z0: 34, z1: 58, r: 2, mat: glassy(M.body, M.glass, { band: [38, 54], pillars: [] }) });
+      for (let k = 0; k < 40; k++) { const x = L * 0.5 + k * 0.9, z = 32 + k * 0.9; m.box(x, W / 2 - 3, z, x + 3, W / 2 + 3, z + 4, M.body); }
+      for (let k = 0; k < 40; k++) { const x = L * 0.5 + 36 + k * 0.5, z = 68 - k * 1.3; m.box(x, W / 2 - 2.5, z, x + 3, W / 2 + 2.5, z + 3, M.body); }
+      m.fill((x, y, z) => (Math.hypot(x - (L - 8), z - 12) < 9 && x < L - 3 + (z - 12) * 0.3 && Math.abs(y - W / 2) < 7 ? M.dark : -1), L - 18, 0, 0, L, W, 24);
       break;
     }
     case 'tram': {

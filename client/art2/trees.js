@@ -156,13 +156,27 @@ export function pine(seed = 1, height = 150, radius = 30) {
   const G = new GBuf(W, H);
   G.ax = W / 2; G.ay = foot;
   for (let y = foot - height + 6; y <= foot; y++) { const w = 3 - (foot - y) / height * 2; for (let x = Math.floor(cx - w); x <= cx + w; x++) { G.put(x, y, step(MAT.bark, 0.55 - (x - cx) / w * 0.3, x, y, 0.4)); nrm(G, x, y, [(x - cx) / w, 0.5, 0.1]); } }
-  const blobs = [];
-  const tiers = 6 + Math.floor(rnd() * 3);
+  // tiers of drooping boughs: each a fan that widens downward with a ragged, needled edge, drawn from
+  // the bottom tier up so the upper ones overlap the lower; lit on the upper left, dark underneath
+  const R = ramp('#3a6a3e', 7, 3, { dark: 0.72, light: 0.5, shift: 0.3 });
+  const tiers = 6 + Math.floor(rnd() * 3), top = foot - height, bottom = foot - height * 0.18;
   for (let i = 0; i < tiers; i++) {
-    const t = i / (tiers - 1), y = foot - height * 0.22 - t * height * 0.72, r = radius * (1 - t * 0.78);
-    for (let k = 0; k < 5; k++) blobs.push({ x: cx + (k - 2) * r * 0.42 + (rnd() - 0.5) * 4, y: y + Math.abs(k - 2) * r * 0.18, r: r * (0.42 + rnd() * 0.12) });
+    const t = i / (tiers - 1), yb = bottom - t * (bottom - top - 10), th = (bottom - top) / tiers * 1.7, r = radius * (1 - t * 0.8) + 3, lean = (rnd() - 0.5) * 3;
+    for (let y = Math.floor(yb - th); y <= yb; y++) {
+      const v = (y - (yb - th)) / th;                                      // 0 at the tier's tip, 1 at its hem
+      const half = r * Math.pow(v, 0.85);
+      for (let x = Math.floor(cx - half - 3); x <= cx + half + 3; x++) {
+        const u = (x + 0.5 - cx - lean * v) / Math.max(1, half);
+        const rag = hash(x, y >> 1, seed) * 0.35 + (Math.abs(u) > 0.7 ? hash(x >> 1, y, seed + 1) * 0.3 : 0);
+        if (Math.abs(u) > 1 + 0.15 - rag * 0.6) continue;
+        if (v > 0.82 && hash(x, 0, seed + i) > 0.55 + (1 - v) * 2) continue;   // a jagged, drooping hem
+        let k = 0.55 - u * 0.32 - v * 0.28 + (hash(x >> 1, y >> 1, seed + 3) > 0.75 ? 0.18 : 0) + (v < 0.3 ? 0.12 : 0);
+        if (Math.abs(u) < 0.12 && v > 0.2) k -= 0.12;                        // the shaded line down the middle
+        G.put(x, y, step(R, k, x, y, 0.7), null, 0, null, F_LEAF);
+        nrm(G, x, y, [u * 0.75, 0.35 + v * 0.3, 0.7 - v * 0.4]);
+      }
+    }
   }
-  paintBlobs(G, blobs, MAT.leafDark, seed);
   G.outline(0.4, true);
   finishUpright(G, foot);
   return G;

@@ -1591,3 +1591,20 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - the beach boardwalk (D10)
   - the park (D11)
 - The preview covers all nine blocks. Comparison: `docs/art-v2/districts-v2.png`.
+
+### Art v2: country and civic districts
+- **New ground:** dirt roads with tyre ruts, ripe wheat, ploughed furrows and desert sand.
+- **New vehicles:** a tractor, a combine harvester, a light plane and an excavator.
+- **`client/art2/props-rural.js`:**
+  - Farm: corn rows, hay bales, a trough, a wheelbarrow, a scarecrow, a windmill, a ranch gate arch, a porch, sunflowers, a woodpile and a plough.
+  - Desert: saguaro and barrel cactus, banded mesas, pump jacks, fuel pumps under a lit canopy, a wooden water tower, a windsock, road signs, a propane tank and a flare stack.
+  - Forest: tents, a campfire, camp chairs, a picnic table, a trail map board, a finger post, quarry terraces and wind turbines.
+  - Civic: lion statues, flagpoles, a barrier arm and a helipad.
+- **Buildings:** classical porticos (columns, an inscribed entablature, a pediment), lettered plaques and panels, a lit red cross and a badge sign icon.
+- **Pines:** rebuilt as tiers of drooping, needled boughs.
+- **`client/art2/districts3.js`:** four more blocks:
+  - the farm (D13)
+  - the desert crossroads (D14)
+  - the forest lake, campsite, lookout, bridge and quarry, combining D15-A and D15-B
+  - the civic centre (D12)
+- **Preview:** all thirteen blocks are in the district preview. Comparison: `docs/art-v2/districts-v3.png`.

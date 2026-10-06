@@ -214,6 +214,9 @@ export function makeBuilding(spec) {
   if (spec.graffiti) for (let i = 0; i < spec.graffiti; i++) tag(G, Math.floor(hash(i, 1, seed + 61) * Math.max(1, w - 60)) + 4, d + H - 10 - Math.floor(hash(i, 2, seed + 61) * 18), seed + i * 17, spec.tagText && i === 0 ? spec.tagText : null);
   if (spec.ivy) ivy(G, w, d, H, spec.ivy, seed);
   if (spec.mural) mural(G, spec.mural, d + H, seed);
+  if (spec.portico) portico(G, spec.portico, d, H, cornice);
+  for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
+  if (spec.cross) redCross(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   return spec.pitch ? pitched(G, spec, w, d, H, seed) : G;
 }
@@ -532,5 +535,44 @@ function signBoard(G, sign, x0, y0, w, h, night) {
   const tw = textWidth(text, { sx, gap: 1 });
   const tx = x0 + Math.floor((w - tw) / 2), ty = y0 + Math.floor((h - 5 * sy) / 2);
   drawText((px, py, k) => { setC(G, px, py, k ? [20, 16, 24] : fg); if (!k && (sign.lit || sign.neon)) glow(G, px, py, [...fg, (sign.neon ? 150 : 60) + night * 100]); }, text, tx, ty, { sx, sy, gap: 1, shadow: true });
+  if (sign.icon === 'badge') { const cx = x0 + 10, cy = y0 + h / 2; for (let y = -8; y <= 8; y++) for (let x = -8; x <= 8; x++) { const a = Math.atan2(y, x), r = Math.hypot(x, y), star = 4 + 4 * Math.max(0, Math.cos(5 * (a + Math.PI / 2))) ** 2; if (r < star) { setC(G, cx + x, cy + y, r < 3 ? [180, 140, 50] : [236, 200, 90]); glow(G, cx + x, cy + y, [255, 210, 110, 40 + night * 100]); } } }
   if (sign.icon === 'crown') { const cx = x0 + w - 16, cy = y0 + 5; for (let y = 0; y < 10; y++) for (let x = 0; x < 13; x++) { const on = y > 6 || ((x === 0 || x === 6 || x === 12) && y > 0) || (y > 3 && (x < 3 || (x > 4 && x < 8) || x > 9)); if (on) { setC(G, cx + x, cy + y, [236, 196, 80]); glow(G, cx + x, cy + y, [255, 200, 80, 40 + night * 120]); } } }
+}
+
+// a classical portico on the facade: columns standing proud of a shaded recess, an entablature with an
+// inscription and a pediment above (p: { x, w, cols, text })
+function portico(G, p, d, H, cornice) {
+  const yG = d + H, top = H - cornice, entH = 16, pedH = Math.min(30, Math.floor(p.w * 0.16)), ent0 = top - pedH - entH;
+  const S = ramp('#d8cfbc', 6, 3);
+  // recess behind the columns
+  for (let v = 4; v < ent0; v++) for (let x = p.x + 4; x < p.x + p.w - 4; x++) { const Y = yG - v, j = (Y * G.w + x) * 4; if (G.inside(x, Y)) { G.col[j] *= 0.62; G.col[j + 1] *= 0.6; G.col[j + 2] *= 0.66; } }
+  const n = p.cols || 4, cw = 12, gap = (p.w - 8 - n * cw) / Math.max(1, n - 1);
+  for (let i = 0; i < n; i++) {
+    const cx = p.x + 4 + i * (cw + gap);
+    for (let v = 0; v < ent0; v++) for (let x = 0; x < cw; x++) {
+      const u = (x + 0.5) / cw * 2 - 1, cap = v > ent0 - 6, base = v < 6, fl = (x % 3 === 1) && !cap && !base;
+      const w = cap || base ? 1 : 0.86;
+      if (Math.abs(u) > w + (cap || base ? 0.2 : 0)) continue;
+      setC(G, cx + x, yG - v, step(S, 0.66 - u * 0.36 + (cap ? 0.15 : 0) - (fl ? 0.12 : 0), cx + x, v, 0.4));
+      setN(G, cx + x, yG - v, [u * 0.8, 0.6, 0]);
+    }
+  }
+  // entablature with lettering
+  for (let v = ent0; v < ent0 + entH; v++) for (let x = p.x; x < p.x + p.w; x++) setC(G, x, yG - v, step(S, v === ent0 || v === ent0 + entH - 1 ? 0.35 : 0.62, x, v, 0.3));
+  if (p.text) { const sx = 2, tw = textWidth(p.text, { sx, gap: 1 }); drawText((px, py) => setC(G, px, py, S[1]), p.text, p.x + Math.floor((p.w - tw) / 2), yG - ent0 - entH + 3, { sx, sy: 2, gap: 1 }); }
+  // pediment
+  for (let v = ent0 + entH; v < top; v++) { const t = (v - ent0 - entH) / pedH, half = (p.w / 2) * (1 - t); for (let x = Math.round(p.x + p.w / 2 - half); x < p.x + p.w / 2 + half; x++) { const edge = x < p.x + p.w / 2 - half + 3 || x > p.x + p.w / 2 + half - 3 || v === ent0 + entH; setC(G, x, yG - v, step(S, edge ? 0.75 : 0.45, x, v, 0.3)); } }
+}
+// a plaque or lettered panel on the wall (p: { text, x, v height above the pavement, sx, bg, fg, lit })
+function plaque(G, p, yG, night) {
+  const sx = p.sx || 2, sy = p.sy || sx, tw = textWidth(p.text, { sx, gap: 1 }), w = p.w || tw + 10, h = 5 * sy + 8, x0 = p.x, y0 = yG - p.v - h;
+  if (p.bg) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { setC(G, x0 + x, y0 + y, (x === 0 || y === 0 || x === w - 1 || y === h - 1) ? MAT.metalDark[2] : ramp(p.bg, 5, 2)[2]); if (p.lit) G.glow(x0 + x, y0 + y, [...ramp(p.bg, 5, 2)[3], 30 + night * 60]); }
+  drawText((px, py) => { setC(G, px, py, p.fg || [60, 54, 48]); if (p.lit) G.glow(px, py, [...(p.fg || [255, 255, 255]), 80 + night * 120]); }, p.text, x0 + Math.floor((w - tw) / 2), y0 + 4, { sx, sy, gap: 1 });
+}
+function redCross(G, x0, y0, s, night) {
+  for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) {
+    const c = s / 2, arm = s * 0.18, inX = Math.abs(x - c + 0.5) < arm, inY = Math.abs(y - c + 0.5) < arm, inner = x > 2 && y > 2 && x < s - 3 && y < s - 3;
+    const col = (inX || inY) && inner && Math.abs(x - c) < s * 0.38 && Math.abs(y - c) < s * 0.38 ? [212, 40, 44] : [244, 242, 236];
+    setC(G, x0 + x, y0 + y, col); G.glow(x0 + x, y0 + y, [...col, 30 + night * 120]);
+  }
 }

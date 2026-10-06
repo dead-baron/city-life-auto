@@ -80,6 +80,27 @@ function groundPixel(kind, x, y, seed) {
       if (vnoise(x, y, 14, seed + 33) > 0.74) t -= 0.14;
       return { c: step(YARD, t, x, y, 0.7) };
     }
+    case 'dirtRoad': {                                           // packed dirt and gravel, darker where wheels run
+      let t = 0.55 + (big - 0.5) * 0.3 + (mid - 0.5) * 0.25 + (h > 0.9 ? 0.2 : h < 0.08 ? -0.22 : 0);
+      if (hash(x >> 1, y >> 1, seed + 3) > 0.94) t += 0.25;
+      return { c: step(DIRTROAD, t, x, y, 0.9) };
+    }
+    case 'wheat': {                                              // a ripe field: rows, wind sheen, bright ears
+      const row = y % 7, sheen = vnoise(x * 0.5, y, 30, seed + 13);
+      let t = 0.5 + (row < 2 ? -0.25 : row === 3 ? 0.15 : 0) + (sheen - 0.5) * 0.4 + (h > 0.86 ? 0.2 : 0);
+      return { c: step(WHEAT, t, x, y, 0.8) };
+    }
+    case 'plowed': {                                             // furrows of dark turned earth
+      const f = x % 8;
+      let t = 0.45 + (f < 2 ? -0.25 : f < 4 ? 0.15 : 0) + (mid - 0.5) * 0.25 + (h > 0.9 ? 0.15 : 0);
+      return { c: step(MAT.soil, t, x, y, 0.7) };
+    }
+    case 'desert': {                                             // orange desert sand, pebbles, faint cracks
+      let t = 0.55 + (big - 0.5) * 0.3 + (mid - 0.5) * 0.25 + (h > 0.93 ? 0.2 : h < 0.05 ? -0.2 : 0);
+      if (hash(x >> 1, y >> 1, seed + 5) > 0.96) return { c: step(ROCKRED, 0.4 + h * 0.3, x, y, 0.3) };
+      if (vnoise(x, y, 5, seed + 9) > 0.86 && vnoise(x + 1, y, 5, seed + 9) < 0.86) t -= 0.25;
+      return { c: step(DESERT, t, x, y, 0.9) };
+    }
     case 'asphaltRed': {                                         // a painted bus lane
       let t = 0.5 + (big - 0.5) * 0.3 + (mid - 0.5) * 0.2 + (h > 0.94 ? 0.2 : h < 0.05 ? -0.2 : 0);
       return { c: step(BUSLANE, t, x, y, 0.8) };
@@ -164,6 +185,10 @@ function groundPixel(kind, x, y, seed) {
 const SHALLOW = ramp('#3cc0c4', 6, 3, { dark: 0.45, light: 0.6, shift: 0.1 });
 const BALLAST = ramp('#6a6660', 6, 3, { dark: 0.55, light: 0.4, shift: 0.15 });
 const YARD = ramp('#9a9890', 6, 3, { dark: 0.55, light: 0.42, shift: 0.15 });
+const DIRTROAD = ramp('#b08a5e', 6, 3, { dark: 0.5, light: 0.4 });
+const WHEAT = ramp('#d8a840', 7, 3, { dark: 0.55, light: 0.55, shift: 0.2 });
+const DESERT = ramp('#d09a62', 6, 3, { dark: 0.5, light: 0.45, shift: 0.2 });
+const ROCKRED = ramp('#a8543a', 6, 3, { dark: 0.55, light: 0.45 });
 const BUSLANE = ramp('#7a4a48', 6, 3, { dark: 0.55, light: 0.35, shift: 0.14 });
 const COBBLE = ramp('#a8a094', 6, 3, { dark: 0.55, light: 0.45, shift: 0.18 });
 const PAVEBRICK = ramp('#a86a52', 6, 3, { dark: 0.5, light: 0.4 });
@@ -513,5 +538,18 @@ export function towel(G, x0, y0, w, h, cols, check = false) {
     const i = check ? ((Math.floor(x / 4) + Math.floor(y / 4)) & 1) : Math.floor(y / Math.max(2, Math.floor(h / (cols.length * 2)))) % cols.length;
     const c = check ? (i ? cols[0] : cols[1] || [240, 236, 228]) : cols[i];
     paint(G, x0 + x, y0 + y, (y === h - 1 || x === w - 1) ? c.map((v) => v * 0.7) : c);
+  }
+}
+
+// tyre ruts along a dirt track: two darker, compacted lines either side of a path's centre
+export function ruts(G, path, gap = 22, seed = 111) {
+  for (let i = 1; i < path.length; i++) {
+    const [ax, ay] = path[i - 1], [bx, by] = path[i], L = Math.hypot(bx - ax, by - ay), nx = -(by - ay) / L, ny = (bx - ax) / L;
+    for (let s = 0; s < L; s++) for (const side of [-1, 1]) for (let w = -3; w <= 3; w++) {
+      const x = Math.round(ax + (bx - ax) * s / L + nx * (side * gap / 2 + w)), y = Math.round(ay + (by - ay) * s / L + ny * (side * gap / 2 + w));
+      if (!G.inside(x, y) || hash(x, y, seed) < 0.2) continue;
+      const j = (y * G.w + x) * 4, k = Math.abs(w) < 2 ? 0.8 : 0.9;
+      G.col[j] *= k; G.col[j + 1] *= k; G.col[j + 2] *= k;
+    }
   }
 }
