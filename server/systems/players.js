@@ -62,6 +62,7 @@ export function join(world, conn, profile, opts = {}) {
     world.notify(p, 'Reconnected - you made it back before your ghost timer ran out.', 'good');
     return p;
   }
+  homes.checkWorld(world, profile); // saved in an older world: homes bought back, wake at a hospital
   const fresh = freshStart(world, profile);
   if (fresh === 'all') wipeProgress(world, profile);
   if (world.build) profile.build = world.build; // the build this character's state now belongs to (saved with the profile)
@@ -86,7 +87,12 @@ export function join(world, conn, profile, opts = {}) {
     store.touch();
   }
   spawnPlayerPed(world, p, !fresh);
-  if (fresh) world.notify(p, fresh === 'all'
+  if (profile.worldNote) {
+    // the world was rebuilt since they last played (homes.checkWorld): say what happened to their homes, once
+    world.notify(p, homes.worldNoteText(profile.worldNote), 'warn');
+    delete profile.worldNote;
+    store.touch();
+  } else if (fresh) world.notify(p, fresh === 'all'
     ? `The game was updated: everyone starts over for this one - a brand-new start at ${p.lastSpawnName || 'the hospital'}.`
     : `The game was updated: fresh start at ${p.lastSpawnName || 'the hospital'}. Your money, things and homes are all still yours.`, 'warn');
   else world.notify(p, `Welcome to City Life Auto, ${p.name}. You are a clean Citizen.`, 'info');

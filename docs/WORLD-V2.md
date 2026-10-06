@@ -116,3 +116,14 @@ with vehicle access, a bed and a place to cook; waterfront ones with a dock and 
 - Top-down previews of the whole map and of each changed district (before / after) from a node script, so the
   layout can be judged without the browser.
 - Headless playtests with `tools/playtest.py` (drive the new streets and ramps; walk the sidewalks).
+
+## Progress
+- **Stage 0 (done, 2026-10-06):** `WORLD_VERSION` in `shared/constants.js` (1 until something moves), stored on profiles as `wv`; a
+  profile from an older world has its homes bought back (deeds from now on, `server/systems/legacy-homes.js`
+  for the original world), its respawn home and saved spot cleared, cars and stash kept
+  (`server/systems/homes.js` `checkWorld`). `ROAD_KINDS[...].walk` + `SIDEWALK` / `sidewalkPx` in
+  `shared/roads.js`: pavements 112 / 96 / 64 px by district class, none on alleys, highways, ramps, county roads
+  and tracks; every ground edge carries its `walk` (map) and the art v2 ground bake draws it (the district classes
+  switch on with stage 1, `PAVEMENT_CLASSES` in `shared/map.js`; stage 0 leaves the world unchanged). Highway lane
+  counts are unchanged so far (3 each way on the ring): the deck art and levels depend on them, they change with
+  the highway stage. Previews: `tools/world2/preview.mjs` -> `docs/world-v2/`.

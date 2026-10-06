@@ -5,6 +5,13 @@ export const MAP_W = 1312;              // tiles: the world map concept, one pix
 export const MAP_H = 1200;              // tiles
 export const WORLD_W = MAP_W * TILE;    // 41984 px
 export const WORLD_H = MAP_H * TILE;
+// The world's layout version (docs/WORLD-V2.md). Profiles remember the version they were saved in;
+// homes and anything else a profile refers to by its place in the map (home indices, the spot you
+// logged out on) only make sense in that world, so when this changes they are released - homes
+// bought back, you wake at a hospital (server/systems/homes.js checkWorld). Bump it whenever a change
+// moves homes or the streets under people's feet.
+//   1  the original world (until 2026-10)
+export const WORLD_VERSION = 1;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);

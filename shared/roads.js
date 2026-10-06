@@ -19,21 +19,34 @@ import { hash2 } from './rng.js';
 const TILE = 32;
 
 // Road classes. w: total width (tiles); nl: lanes per direction; median (px) between the two
-// directions; light: may get traffic lights.
+// directions; light: may get traffic lights; walk: the pavement either side - 'district' (the class
+// of the district the road runs through, SIDEWALK below), px, or 0 for none.
 export const ROAD_KINDS = {
-  hwy: { w: 14, nl: 3, median: 28, light: false, deck: true },
-  ave: { w: 9, nl: 2, median: 14, light: true },
-  blvd: { w: 9, nl: 2, median: 14, light: true },  // a curving boulevard (same section as an avenue)
-  st: { w: 6, nl: 1, median: 0, light: true },
-  minor: { w: 4, nl: 1, median: 0, light: false },
-  drive: { w: 5, nl: 1, median: 0, light: true },  // coast / river drives
-  rural: { w: 4, nl: 1, median: 0, light: false },
-  ramp: { w: 4, nl: 1, median: 0, light: false, oneway: true },
-  front: { w: 6, nl: 2, median: 0, light: true, oneway: true }, // frontage roads beside the ring, one-way
-  art: { w: 7, nl: 1, median: 0, light: true },    // minor arterial: ring roads, harbor and airport roads, bridges to small towns
-  dirt: { w: 4, nl: 1, median: 0, light: false },  // unpaved tracks in the woods, the hills and the desert
-  alley: { w: 3, nl: 1, median: 0, light: false }, // back alleys between the buildings: one car wide each way, no pavement
+  hwy: { w: 14, nl: 3, median: 28, light: false, deck: true, walk: 0 },
+  ave: { w: 9, nl: 2, median: 14, light: true, walk: 'district' },
+  blvd: { w: 9, nl: 2, median: 14, light: true, walk: 'district' },  // a curving boulevard (same section as an avenue)
+  st: { w: 6, nl: 1, median: 0, light: true, walk: 'district' },
+  minor: { w: 4, nl: 1, median: 0, light: false, walk: 64 },        // residential local: courts, loops
+  drive: { w: 5, nl: 1, median: 0, light: true, walk: 'district' },  // coast / river drives
+  rural: { w: 4, nl: 1, median: 0, light: false, walk: 0 },          // county road: a gravel shoulder, no pavement
+  ramp: { w: 4, nl: 1, median: 0, light: false, oneway: true, walk: 0 },
+  front: { w: 6, nl: 2, median: 0, light: true, oneway: true, walk: 'district' }, // frontage roads beside the ring, one-way
+  art: { w: 7, nl: 1, median: 0, light: true, walk: 'district' },    // minor arterial: ring roads, harbor and airport roads, bridges to small towns
+  dirt: { w: 4, nl: 1, median: 0, light: false, walk: 0 },           // unpaved tracks in the woods, the hills and the desert
+  alley: { w: 3, nl: 1, median: 0, light: false, walk: 0 },          // back alleys between the buildings: one car wide each way, no pavement
 };
+
+// Pavement widths (World v2 cross-sections, docs/WORLD-V2.md): 112 px downtown, 96 px in commercial
+// districts (shopping streets, nightlife, the civic quarter, the beachfront), 64 px everywhere else
+// people live or work (homes, apartments, old town's narrow streets, industry, the port, parks).
+export const SIDEWALK = { downtown: 112, commercial: 96, residential: 64 };
+const SIDEWALK_CLASS = { towers: 'downtown', commercial: 'commercial', civic: 'commercial', nightlife: 'commercial', redlight: 'commercial', beach: 'commercial' };
+// The pavement (px) beside a road of this kind running through a district of this style.
+export function sidewalkPx(kind, style) {
+  const w = (ROAD_KINDS[kind] || ROAD_KINDS.st).walk;
+  if (w !== 'district') return w || 0;
+  return SIDEWALK[SIDEWALK_CLASS[style] || 'residential'];
+}
 
 // The road hierarchy, highest first: highway, major arterial, minor arterial / collector, street,
 // county road, local road, dirt track. Roads join roads near their own rank (see map.js repair).

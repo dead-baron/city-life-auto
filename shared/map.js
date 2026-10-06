@@ -18,7 +18,7 @@ import { T, TILE, MAP_W, MAP_H } from './constants.js';
 import { mulberry32, hash2 } from './rng.js';
 import { PREFABS } from './prefab-data.js';
 import { LAND, TERRAIN, TERRAIN_CELL } from './worldmask.js';
-import { buildNetwork, stampEdge, stampLine, edgeZ } from './roads.js';
+import { buildNetwork, stampEdge, stampLine, edgeZ, ROAD_KINDS, sidewalkPx } from './roads.js';
 import { measure, pointAt, rounded, project, cubic, quad, segX } from './geom.js';
 import {
   Z, BAND, GRID_X, GRID_Y, AVE_X, AVE_Y, RIVER_BRIDGES, PARK, CRESCENT, BROADWAY, SEEDS,
@@ -1218,15 +1218,39 @@ function nearLine(lines, x, y, r, except) {
 // Tiles from the road network: asphalt (bridge decks over water), sidewalks along city roads,
 // the strip under and beside the elevated highway, ramp embankments, pillars.
 const CITY_KINDS = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
+// The pavement beside a road (px, roads.js sidewalkPx): by the class of the districts it runs through -
+// the commonest one along both sides of it - so a block face keeps one width from corner to corner.
+// (Off until the World v2 core lands: every city road keeps the original 64 px pavement.)
+const PAVEMENT_CLASSES = false;
+function edgeWalk(m, e) {
+  const K = ROAD_KINDS[e.kind] || ROAD_KINDS.st;
+  if (K.walk !== 'district') return K.walk || 0;
+  if (!PAVEMENT_CLASSES) return 64;
+  const votes = new Map();
+  for (let s = 0; s <= e.len; s += 3 * TILE) {
+    const q = pointAt(e.pts, Math.min(s, e.len));
+    for (const side of [-1, 1]) {
+      const r = e.hw + 2 * TILE;
+      const tx = Math.floor((q.x - q.ty * side * r) / TILE), ty = Math.floor((q.y + q.tx * side * r) / TILE);
+      if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H || !m.land[ty * MAP_W + tx]) continue;
+      const w = sidewalkPx(e.kind, DISTRICTS[m.dist[ty * MAP_W + tx]].style);
+      votes.set(w, (votes.get(w) || 0) + 1);
+    }
+  }
+  let best = sidewalkPx(e.kind, 'houses'), bn = 0;
+  for (const [w, n] of votes) if (n > bn || (n === bn && w > best)) { best = w; bn = n; }
+  return best;
+}
 function rasterRoads(m) {
   const W = MAP_W;
   const at = (tx, ty) => (tx < 0 || ty < 0 || tx >= W || ty >= MAP_H ? -1 : ty * W + tx);
   const isWet = (t) => t === T.WATER || t === T.DEEP;
   const ground = m.edges.filter((e) => e.lvl === 0);
+  for (const e of m.edges) e.walk = e.lvl === 0 ? edgeWalk(m, e) : 0;
   // sidewalks first (roads win where they overlap)
   for (const e of ground) {
-    if (!CITY_KINDS.has(e.kind)) continue;
-    stampEdge(e, e.hw + 2 * TILE + 4, (tx, ty, d) => {
+    if (!CITY_KINDS.has(e.kind) || !e.walk) continue;
+    stampEdge(e, e.hw + e.walk + 4, (tx, ty, d) => {
       const i = at(tx, ty);
       if (i < 0 || d <= e.hw) return;
       const t = m.tiles[i];

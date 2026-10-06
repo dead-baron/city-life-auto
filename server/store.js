@@ -1,9 +1,11 @@
 // Environment-neutral profile store facade. The Node server plugs in the persistent
 // FileStore (server/file-store.js); offline practice and tests use this in-memory store.
+import { WORLD_VERSION } from '../shared/constants.js';
 
 export function defaultProfile(pid) {
   return {
     pid,
+    wv: WORLD_VERSION, // the world layout this profile's homes and position belong to (homes.checkWorld)
     name: 'Guest' + String(Math.floor(1000 + Math.random() * 9000)),
     created: Date.now(),
     lastSeen: Date.now(),
@@ -20,6 +22,7 @@ export function defaultProfile(pid) {
     outfit: null,
     vehicles: [],
     homes: [],
+    deeds: {},       // home id -> what was paid for it (bought back at that when the world changes)
     spawnHome: null,
     pos: null,
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },

@@ -1,20 +1,63 @@
 // Player homes: buyable houses/apartments that act as respawn points and garages.
 // Ownership is persisted on profiles (profile.homes) and indexed in world.homeOwner.
-import { K } from '../../shared/constants.js';
+import { K, WORLD_VERSION } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { HIDE_TIME_S, SPAWN_PROTECT_S } from '../../shared/rules.js';
 import { store } from '../store.js';
+import { LEGACY_HOMES } from './legacy-homes.js';
 
 const BASE_GARAGE = 2;
+const FALLBACK_PRICE = 25000; // a home of an old world with no deed and no record: bought back at a house's price
 
 export function init(world) {
   world.homeOwner = new Map();
   for (const prof of store.all()) {
+    if (checkWorld(world, prof)) continue; // homes from an older world: released, nothing to register
     for (const id of prof.homes || []) {
       if (world.map.homes[id] && !world.homeOwner.has(id)) world.homeOwner.set(id, prof.pid);
     }
   }
+}
+
+// A profile saved in an older world (shared/constants.js WORLD_VERSION): its homes are indices into a
+// map that no longer exists, and its saved spot may now be inside a building across town. Everything
+// world-bound is released - each home bought back at what was paid for it (its deed, or the old
+// world's price list for homes bought before deeds were kept), paid into the bank - and the player
+// wakes at a hospital. Cars, the stash, money and everything else are kept (a new home opens the
+// garage and the stash again). Returns the note shown when they next play (also kept on the profile
+// as worldNote until then), or null when the profile is already in this world.
+export function checkWorld(world, prof) {
+  const wv = prof.wv ?? 1; // profiles from before versions were kept belong to world v1
+  if (wv === WORLD_VERSION) return null;
+  const old = LEGACY_HOMES[wv] || [];
+  let refund = 0;
+  const names = [];
+  for (const id of prof.homes || []) {
+    const paid = prof.deeds && prof.deeds[id] !== undefined ? prof.deeds[id] : old[id] ? old[id][0] : FALLBACK_PRICE;
+    refund += Math.max(0, Math.round(paid) || 0);
+    if (old[id]) names.push(old[id][1]);
+  }
+  const n = (prof.homes || []).length;
+  for (const [id, pid] of [...(world.homeOwner || [])]) if (pid === prof.pid) world.homeOwner.delete(id);
+  prof.bank = (prof.bank || 0) + refund;
+  prof.homes = [];
+  prof.deeds = {};
+  prof.spawnHome = null;
+  prof.pos = null; // the streets moved: wake up at a hospital, not inside whatever stands there now
+  prof.wv = WORLD_VERSION;
+  const note = { from: wv, homes: n, refund, names: names.slice(0, 4) };
+  prof.worldNote = note;
+  store.touch();
+  return note;
+}
+
+// The toast for a profile whose world changed (players.join shows it once, then forgets it).
+export function worldNoteText(note) {
+  const base = 'The city has been rebuilt since you were last here - new streets, new buildings.';
+  if (!note || !note.homes) return `${base} You're starting out from a hospital.`;
+  const what = note.homes === 1 ? `Your home${note.names[0] ? ` (${note.names[0]})` : ''} went` : `Your ${note.homes} homes went`;
+  return `${base} ${what} with the old streets: bought back for $${note.refund.toLocaleString()}, paid into your bank. Your cars and your stash are kept - buy a new place to get at them.`;
 }
 
 export function ownedHomes(world, prof) {
@@ -32,6 +75,7 @@ export function buy(world, p, home, pay) {
   if (world.homeOwner.has(home.id)) return 'Someone already owns this place.';
   if (!pay(p, home.price)) return `You need $${home.price.toLocaleString()} (cash + bank).`;
   (prof.homes ||= []).push(home.id);
+  (prof.deeds ||= {})[home.id] = home.price; // what it cost: bought back at that if the world is ever rebuilt under it
   world.homeOwner.set(home.id, prof.pid);
   if (prof.spawnHome == null) prof.spawnHome = home.id;
   store.touch();
@@ -44,6 +88,7 @@ export function sell(world, p, home) {
   if (world.homeOwner.get(home.id) !== prof.pid) return 'You do not own this place.';
   world.homeOwner.delete(home.id);
   prof.homes = prof.homes.filter((id) => id !== home.id);
+  if (prof.deeds) delete prof.deeds[home.id];
   if (prof.spawnHome === home.id) prof.spawnHome = prof.homes.length ? prof.homes[0] : null;
   const back = Math.round(home.price * 0.6);
   prof.bank += back;

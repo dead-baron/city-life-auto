@@ -322,7 +322,9 @@ function edgeInfo(M, e) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const p of P) { if (p.x < x0) x0 = p.x; if (p.y < y0) y0 = p.y; if (p.x > x1) x1 = p.x; if (p.y > y1) y1 = p.y; }
   const aligned = P.every((p, i) => i === 0 || Math.abs(p.x - P[i - 1].x) < 1 || Math.abs(p.y - P[i - 1].y) < 1);
-  const city = CITY.has(e.kind), walk = city ? (aligned ? 2 : 2.6) * TILE : e.kind === 'rural' ? 18 : 0;
+  // the pavement: the width the map gave this road (shared/map.js edgeWalk: 112 / 96 / 64 px by district class),
+  // a little wider on curves where the tile raster steps out past the smooth kerb line
+  const city = CITY.has(e.kind), walk = city ? (e.walk ?? 2 * TILE) + (aligned ? 0 : 0.6 * TILE) : e.kind === 'rural' ? 18 : 0;
   const L = P[P.length - 1].s, na = M.nodes[e.a], nb = M.nodes[e.b];
   const t0 = ((na && na.trim[e.id]) || 0) + 6, t1 = L - ((nb && nb.trim[e.id]) || 0) - 6;
   const linked = na && nb && na.edges.length >= 3 && nb.edges.length >= 3 && t1 - t0 < 138 && e.kind !== 'hwy';
@@ -338,7 +340,7 @@ function edgeInfo(M, e) {
       if (!w && s0 >= 0) { wet.push([Math.max(0, s0 - 26), Math.min(L, s + 18)]); s0 = -1; }
     }
   }
-  e._gb = { bb: [x0, y0, x1, y1], aligned, city, walk, R: e.hw + walk + 4, L, t0, t1, linked, wet, sp: simplify(P, 0.3) };
+  e._gb = { bb: [x0, y0, x1, y1], aligned, city, walk, R: e.hw + walk + (city ? 20 : 4), L, t0, t1, linked, wet, sp: simplify(P, 0.3) };
   return e._gb;
 }
 // Douglas-Peucker: the polyline with points dropped while it stays within tol px of the original (the distance
@@ -649,7 +651,7 @@ function classify(C) {
           else if (wetSpan && !(a & A_FILLET)) { m = DISTRICTS[b.td[ti]].road === 'asphalt_worn' ? M_.DECK : M_.DECKF; z = deckRamp(C, I.wet, s); }
           else m = DISTRICTS[b.td[ti]].road === 'asphalt_worn' ? M_.ROADOLD : M_.ROAD;
           if (e.kind === 'dirt' && (a & A_FILLET)) m = M_.DIRTROAD;
-        } else if (I.city && val < I.walk) {
+        } else if (I.city && (val < I.walk || (t === T.SIDEWALK && val < I.walk + 18))) {   // (a 112 px pavement fills its 4th tile row)
           if (wetSpan) { if (Math.abs(b.rV[i]) < e.hw + 14) { m = M_.DECKWALK; z = deckRamp(C, I.wet, s) + 3; } }
           else if (t !== T.BUILDING && t !== T.WALL && t !== T.FLOOR && t !== T.COUNTER && t !== T.DOCK && !isWater(m)) {
             m = walkOf(DISTRICTS[b.td[ti]]);

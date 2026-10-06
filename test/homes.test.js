@@ -2,7 +2,7 @@ import { RESPAWN_SECONDS } from '../shared/rules.js';
 // Homes & estates, hiding indoors, spawn protection / spread, paint shops, felony payoff, bait.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, players, fakeConn } from './helpers.js';
 import { ESTATE_TYPES, PED_BLOCK, CAR_SPAWN_BLOCK } from '../shared/map.js';
 import { K } from '../shared/constants.js';
 import { HIDE_TIME_S, SPAWN_PROTECT_S, PAINT_PRICE, PAINT_TIME_S, FELONY_FINE } from '../shared/rules.js';
@@ -45,6 +45,54 @@ test('own any number of homes; every car comes out of any home garage (door open
   const car = [...w.entities.values()].find((e) => e.kind === K.VEH && e.owner === prof.pid);
   assert.ok(car && Math.hypot(car.x - far.garage.x, car.y - far.garage.y) < 5, 'car at this home\'s garage');
   assert.ok(w.events.some((e) => e.ev.e === 'garagedoor' && e.ev.home === far.id), 'garage door opens');
+});
+
+test('a rebuilt world: homes from the old one are bought back (deed or old price list), you wake at a hospital, cars and stash kept', async () => {
+  const { WORLD_VERSION } = await import('../shared/constants.js');
+  const { LEGACY_HOMES } = await import('../server/systems/legacy-homes.js');
+  const { store } = await import('./helpers.js');
+  const w0 = makeWorld();
+  const at = w0.map.spawns.police;
+  const [h1, h2] = w0.map.homes.filter((h) => !w0.homeOwner.has(h.id)).slice(0, 2);
+  // saved in an older world, before deeds were kept for one of its homes
+  const stale = store.create('0ldw0r1d' + Date.now().toString(16).padStart(16, '0'));
+  Object.assign(stale, { wv: WORLD_VERSION - 1, homes: [h1.id, h2.id], spawnHome: h1.id, deeds: { [h1.id]: 41000 }, bank: 1000, pos: { x: at.x, y: at.y },
+    vehicles: [{ model: 'sports', paint: 1, variant: 0 }], stash: { items: { medkit: 2 }, weapons: {} } });
+  // a server starting up with it in the store: nothing of the old world gets registered as theirs
+  const w = makeWorld();
+  assert.ok(!w.homeOwner.has(h1.id) && !w.homeOwner.has(h2.id), 'their old homes are on the market');
+  const oldPrice = (LEGACY_HOMES[WORLD_VERSION - 1] || [])[h2.id];
+  const refund = 41000 + (oldPrice ? oldPrice[0] : 25000);
+  assert.deepEqual(stale.homes, []);
+  assert.equal(stale.spawnHome, null);
+  assert.deepEqual(stale.deeds, {});
+  assert.equal(stale.bank, 1000 + refund, 'bought back: the deed, else the old price list');
+  assert.equal(stale.wv, WORLD_VERSION);
+  assert.equal(stale.pos, null, 'the saved spot belongs to the old streets');
+  assert.ok(stale.worldNote && stale.worldNote.homes === 2 && stale.worldNote.refund === refund);
+  // coming back: told once, at a hospital, cars and stash still theirs
+  const p = players.join(w, fakeConn(), stale);
+  assert.ok(w.map.hospitals.some((q) => Math.hypot(q.x - p.ped.x, q.y - p.ped.y) < 260), 'wakes at a hospital');
+  assert.ok(p.toasts.some((t) => /rebuilt/.test(t.text) && t.text.includes(refund.toLocaleString())), 'told what happened to their homes');
+  assert.equal(stale.worldNote, undefined, 'only once');
+  assert.equal(stale.vehicles.length, 1, 'cars kept');
+  assert.equal(stale.stash.items.medkit, 2, 'stash kept');
+  assert.equal(homes.ownedHomes(w, stale).length, 0);
+  // a profile from a world with no price list: what the deed says, else a house's price
+  const older = store.create('0ldw0r2d' + Date.now().toString(16).padStart(16, '0'));
+  Object.assign(older, { wv: -7, homes: [h1.id], deeds: {}, bank: 0 });
+  const note = homes.checkWorld(w, older);
+  assert.equal(note.refund, 25000);
+  assert.equal(homes.checkWorld(w, older), null, 'nothing more to do once it is in this world');
+  // this world's profiles keep their homes; buying records the deed, selling clears it
+  const { p: q, prof } = joinPlayer(w, { bank: 1e6 });
+  teleport(w, q.ped, h1.x, h1.y);
+  economy.handleMenu(w, q, poiOf(w, h1).id, 'hbuy');
+  assert.equal(prof.deeds[h1.id], h1.price, 'the deed remembers the price');
+  assert.equal(homes.checkWorld(w, prof), null);
+  assert.equal(w.homeOwner.get(h1.id), prof.pid);
+  homes.sell(w, q, h1);
+  assert.equal(prof.deeds[h1.id], undefined);
 });
 
 test('going inside: blink in over a few seconds, hidden and untouchable, stash things, step out protected', () => {
