@@ -36,6 +36,11 @@ export function distSq(mask, w, h) {
   return out;
 }
 
+function segDist2(px, py, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
+  let t = l ? ((px - a[0]) * dx + (py - a[1]) * dy) / l : 0; t = Math.max(0, Math.min(1, t));
+  return (px - a[0] - t * dx) ** 2 + (py - a[1] - t * dy) ** 2;
+}
 // ---- the street plan -------------------------------------------------------------------------------
 export class Streets {
   constructor(w, h, opt = {}) {
@@ -50,9 +55,16 @@ export class Streets {
   bulb(cx, cy, r) { this.bulbs.push({ cx, cy, r }); return this; }
   // a raised island inside the carriageway (median, traffic island): a rounded rectangle of pavement
   island(x, y, w, h, r = 8, kind = 'sidewalk') { this.islands.push({ x, y, w, h, r, kind }); return this; }
-  // lot ground. shape: rect {x,y,w,h,r?} or circle {cx,cy,r}. over: also covers the sidewalk band
-  // (driveways, plazas); road: may be painted on the carriageway (bus lane, parking bays).
-  zone(kind, shape, opt = {}) { this.zones.push({ kind, ...shape, ...opt }); return this; }
+  // lot ground. shape: rect {x,y,w,h,r?}, circle {cx,cy,r}, path {path: [[x,y]...], width} (a winding
+  // walk), blob {blob: {cx,cy,rx,ry,seed,wob}} (a pond, a flower bed) or poly {poly: [[x,y]...]}.
+  // over: also covers the sidewalk band (driveways, plazas); road: may be painted on the carriageway.
+  zone(kind, shape, opt = {}) {
+    const z = { kind, ...shape, ...opt };
+    if (z.path) { const hw = z.width / 2 + 1; z.bb = [Math.min(...z.path.map((p) => p[0])) - hw, Math.min(...z.path.map((p) => p[1])) - hw, Math.max(...z.path.map((p) => p[0])) + hw, Math.max(...z.path.map((p) => p[1])) + hw]; }
+    else if (z.blob) { const b = z.blob, k = 1 + (b.wob ?? 0.25); z.bb = [b.cx - b.rx * k, b.cy - b.ry * k, b.cx + b.rx * k, b.cy + b.ry * k]; }
+    else if (z.poly) z.bb = [Math.min(...z.poly.map((p) => p[0])), Math.min(...z.poly.map((p) => p[1])), Math.max(...z.poly.map((p) => p[0])), Math.max(...z.poly.map((p) => p[1]))];
+    this.zones.push(z); return this;
+  }
 
   build() {
     const { w, h } = this, n = w * h;
@@ -87,6 +99,10 @@ export class Streets {
   isWalk(x, y) { x |= 0; y |= 0; if (x < 0 || y < 0 || x >= this.w || y >= this.h) return this.isWalk(Math.max(0, Math.min(this.w - 1, x)), Math.max(0, Math.min(this.h - 1, y))); return this.walk[y * this.w + x] > 0; }
   isRoad(x, y) { return !this.isWalk(x, y); }
   inZone(z, x, y) {
+    if (z.bb && (x < z.bb[0] || y < z.bb[1] || x > z.bb[2] || y > z.bb[3])) return false;
+    if (z.path) { const r2 = (z.width / 2) ** 2; for (let i = 1; i < z.path.length; i++) if (segDist2(x + 0.5, y + 0.5, z.path[i - 1], z.path[i]) <= r2) return true; return false; }
+    if (z.blob) { const b = z.blob, a = Math.atan2(y - b.cy, x - b.cx), w = 1 + (b.wob ?? 0.25) * (Math.sin(a * 3 + (b.seed || 0)) * 0.6 + Math.sin(a * 5 + (b.seed || 0) * 2.3) * 0.4); return ((x + 0.5 - b.cx) / b.rx) ** 2 + ((y + 0.5 - b.cy) / b.ry) ** 2 < w * w; }
+    if (z.poly) { let inside = false; const P = z.poly; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inside = !inside; } return inside; }
     if (z.cx !== undefined) return (x + 0.5 - z.cx) ** 2 + (y + 0.5 - z.cy) ** 2 < z.r * z.r;
     if (x < z.x || y < z.y || x >= z.x + z.w || y >= z.y + z.h) return false;
     if (!z.r) return true;
@@ -152,9 +168,24 @@ export class Scene {
     const app = typeof kind === 'object' && kind ? kind : randomPerson(s, kind);
     return this.add(person(app, dir, pose, (x + y) & 3), x, y);
   }
+  // someone standing on something raised (a ship's deck, a stage) dz px above the ground
+  personUp(x, y, dz, kind = null, dir = 0, pose = 'idle', seed = null) {
+    const s = seed ?? Math.floor(x * 7 + y * 13);
+    return this.add(person(typeof kind === 'object' && kind ? kind : randomPerson(s, kind), dir, pose, (x + y) & 3), x, y, dz, y + 0.6);
+  }
+  // someone in the water: head and shoulders above the surface, a ring of ripples round them
+  swimmer(x, y, kind = null, dir = 0, seed = null) {
+    const s = seed ?? Math.floor(x * 7 + y * 13);
+    const full = person(typeof kind === 'object' && kind ? kind : randomPerson(s, kind), dir, 'idle', 0);
+    const cut = 24, g = new GBuf(full.w, cut + 4); g.ax = full.ax; g.ay = cut;
+    g.blit(full, 0, 0);
+    for (let yy = cut - 2; yy < g.h; yy++) for (let xx = 0; xx < g.w; xx++) { const j = (yy * g.w + xx) * 4; g.col[j + 3] = 0; }
+    for (let a = 0; a < 6.28; a += 0.12) { const rx = Math.round(g.ax + Math.cos(a) * 11), ry = Math.round(cut - 1 + Math.sin(a) * 3); if (hash(rx, ry, s) > 0.3) g.put(rx, ry, [224, 244, 244], [0, 0, 1], 0, null, 2); }
+    return this.add(g, x, y);
+  }
   light(x, y, z, r, col, k) { this.lights.push({ x, y, z, r, col, k }); }
   // a street lamp's pool of light (the lamp model itself is placed by the caller)
-  lampLight(x, y, z = 80, warm = LIGHT.sodium) { if (this.lampsOn) this.light(x, y + 2, z, this.isNight ? 190 : 100, warm, this.isNight ? 3.2 : 0.75); }
+  lampLight(x, y, z = 80, warm = LIGHT.sodium, s = 1) { if (this.lampsOn) this.light(x, y + 2, z, (this.isNight ? 190 : 100) * (0.6 + 0.4 * s), warm, (this.isNight ? 3.2 : 0.75) * s); }
   // headlights and tail lights for a vehicle at (x, y) facing heading a, of length L
   carLight(x, y, a, L = 100) {
     if (!this.carLights) return;

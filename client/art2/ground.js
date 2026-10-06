@@ -63,6 +63,23 @@ function groundPixel(kind, x, y, seed) {
       if (hash(x >> 1, y >> 1, seed + 3) > 0.985) t = 0.1;      // nail heads
       return { c: step(MAT.woodDock, t, x, y, 0.6) };
     }
+    case 'shallow': {                                            // bright turquoise shallows over sand
+      const sw = Math.sin(y * 0.22 + vnoise(x, y, 19, seed + 9) * 5 + x * 0.04), net = Math.sin(x * 0.4 + Math.sin(y * 0.3) * 2) + Math.sin(y * 0.36 + Math.sin(x * 0.2) * 2.2);
+      let t = 0.55 + (big - 0.5) * 0.25 + sw * 0.08 + (net > 1.3 ? 0.25 : 0);
+      return { c: step(SHALLOW, t, x, y, 0.6), water: true, e: net > 1.6 && h > 0.6 ? [230, 255, 250, 70] : null, n: norm([sw * 0.06, Math.cos(y * 0.22) * 0.12, 1]) };
+    }
+    case 'ballast': {                                            // railway ballast: dark angular stone, rust
+      let t = 0.45 + (h - 0.5) * 0.5 + (hash(x >> 1, y >> 1, seed + 2) > 0.8 ? 0.2 : 0) + (mid - 0.5) * 0.2;
+      if (hash(x, y, seed + 4) > 0.97) return { c: step(DIRT, 0.5, x, y, 0) };
+      return { c: step(BALLAST, t, x, y, 0.7) };
+    }
+    case 'yard': {                                               // industrial concrete apron: big worn slabs, stains
+      const S = 56, lx = x % S, ly = y % S;
+      let t = 0.45 + (hash(Math.floor(x / S), Math.floor(y / S), seed + 7) - 0.5) * 0.16 + (big - 0.5) * 0.2 + (mid - 0.5) * 0.12 + (h > 0.95 ? 0.1 : h < 0.05 ? -0.12 : 0);
+      if (lx === 0 || ly === 0) t -= 0.25;
+      if (vnoise(x, y, 14, seed + 33) > 0.74) t -= 0.14;
+      return { c: step(YARD, t, x, y, 0.7) };
+    }
     case 'asphaltRed': {                                         // a painted bus lane
       let t = 0.5 + (big - 0.5) * 0.3 + (mid - 0.5) * 0.2 + (h > 0.94 ? 0.2 : h < 0.05 ? -0.2 : 0);
       return { c: step(BUSLANE, t, x, y, 0.8) };
@@ -144,6 +161,9 @@ function groundPixel(kind, x, y, seed) {
     default: return null;
   }
 }
+const SHALLOW = ramp('#3cc0c4', 6, 3, { dark: 0.45, light: 0.6, shift: 0.1 });
+const BALLAST = ramp('#6a6660', 6, 3, { dark: 0.55, light: 0.4, shift: 0.15 });
+const YARD = ramp('#9a9890', 6, 3, { dark: 0.55, light: 0.42, shift: 0.15 });
 const BUSLANE = ramp('#7a4a48', 6, 3, { dark: 0.55, light: 0.35, shift: 0.14 });
 const COBBLE = ramp('#a8a094', 6, 3, { dark: 0.55, light: 0.45, shift: 0.18 });
 const PAVEBRICK = ramp('#a86a52', 6, 3, { dark: 0.5, light: 0.4 });
@@ -413,9 +433,85 @@ export function shoreFoam(G, isWater, seed = 23) {
   for (let y = 1; y < G.h - 1; y++) for (let x = 1; x < G.w - 1; x++) {
     if (!isWater(x, y)) continue;
     let d = 99;
-    for (let k = 1; k <= 6 && d === 99; k++) for (const [dx, dy] of [[0, k], [0, -k], [k, 0], [-k, 0]]) if (!isWater(x + dx, y + dy)) { d = k; break; }
+    for (let k = 1; k <= 6 && d === 99; k++) for (const [dx, dy] of [[0, k], [0, -k], [k, 0], [-k, 0]]) if (G.inside(x + dx, y + dy) && !isWater(x + dx, y + dy)) { d = k; break; }
     if (d > 6) continue;
     const on = d < 2 ? hash(x, y, seed) > 0.2 : hash(x, y, seed) > 0.45 + d * 0.08 || vnoise(x, y, 4, seed) > 0.8 - d * 0.04;
     if (on) paint(G, x, y, step(MAT.foam, 0.85 - d * 0.08, x, y, 0.5));
+  }
+}
+
+// ---- rails, quays, pitches, parking -----------------------------------------------------------------
+// a railway or tram track. horizontal: rails run along x from (x0, y0); the track is gauge + 14 wide.
+// embedded: tram rails set into the road (no sleepers, a dark groove beside each rail).
+export function railTrack(G, x0, y0, len, horizontal = true, opt = {}) {
+  const gauge = opt.gauge || 30, wood = MAT.woodDark;
+  const P = (a, b) => (horizontal ? [x0 + a, y0 + b] : [x0 + b, y0 + a]);
+  if (!opt.embedded) for (let a = 0; a < len; a++) {
+    if (a % 10 > 4) continue;                                  // sleepers
+    for (let b = -4; b < gauge + 10; b++) { const [x, y] = P(a, b); paint(G, x, y, step(wood, 0.45 + (a % 10 === 0 ? 0.2 : 0) - (b > gauge + 6 ? 0.15 : 0) + (hash(Math.floor(a / 10), b >> 3, 3) - 0.5) * 0.2, x, y, 0.4)); }
+  }
+  for (const r of [3, gauge + 3]) for (let a = 0; a < len; a++) {
+    if (opt.embedded) { const [gx, gy] = P(a, r + 3); paint(G, gx, gy, MAT.asphalt[0]); const [hx, hy] = P(a, r - 1); paint(G, hx, hy, MAT.asphalt[1]); }
+    for (let k = 0; k < 3; k++) { const [x, y] = P(a, r + k); if (G.inside(x, y)) G.put(x, y, k === 0 ? MAT.chrome[4] : k === 1 ? MAT.metal[3] : MAT.metalDark[1], [0, horizontal ? 0.4 : 0, 0.92], opt.embedded ? 0 : 2, null, 1 | 8); }
+  }
+}
+// a quay edge: the hazard-striped coping and, below it, the quay wall's face (it faces the viewer)
+// down to the water, with tyre fenders. The quay runs along x at y (the edge), wall h px tall.
+export function quayEdge(G, x0, y, len, h = 20, seed = 5) {
+  for (let x = x0; x < x0 + len; x++) {
+    for (let k = 0; k < 5; k++) paint(G, x, y - 5 + k, k < 1 ? MAT.concrete[4] : (Math.floor((x + k) / 8) & 1) ? [228, 186, 52] : [40, 38, 44]);
+    for (let k = 0; k < h; k++) {
+      const Y = y + k; if (!G.inside(x, Y)) continue;
+      let c = step(MAT.concrete, 0.32 - k / h * 0.18 + (vnoise(x, Y, 6, seed) - 0.5) * 0.15 + (x % 40 === 0 ? -0.1 : 0), x, Y, 0.5);
+      if (k > h - 5) c = step(MAT.leafDark, 0.25 + hash(x, k, seed) * 0.2, x, Y, 0.3);        // weed and slime line
+      G.put(x, Y, c, [0, 1, 0], h - k, null, 1 | 8);
+    }
+    const fx = (x - x0) % 48;                                   // tyre fenders
+    if (fx > 18 && fx < 30) for (let k = 3; k < 15; k++) { const d = Math.hypot(fx - 24, k - 9); if (d < 6 && d > 2.5) paint(G, x, y + k, d > 5 ? [20, 20, 24] : [44, 44, 50]); }
+  }
+}
+// football pitch markings in a rectangle (touchlines, halfway line, centre circle, boxes)
+export function pitchLines(G, x0, y0, w, h) {
+  const W = MAT.paintWhite, p = (x, y) => paint(G, Math.round(x), Math.round(y), step(W, 0.7, x | 0, y | 0, 0.3));
+  for (let x = x0; x <= x0 + w; x++) { p(x, y0); p(x, y0 + 1); p(x, y0 + h); p(x, y0 + h - 1); }
+  for (let y = y0; y <= y0 + h; y++) { p(x0, y); p(x0 + 1, y); p(x0 + w, y); p(x0 + w - 1, y); p(x0 + w / 2, y); }
+  for (let a = 0; a < 6.28; a += 0.02) p(x0 + w / 2 + Math.cos(a) * h * 0.16, y0 + h / 2 + Math.sin(a) * h * 0.16);
+  const bw = w * 0.14, bh = h * 0.5;
+  for (const side of [0, 1]) { const bx = side ? x0 + w - bw : x0; for (let y = y0 + (h - bh) / 2; y <= y0 + (h + bh) / 2; y++) p(side ? bx : bx + bw, y); for (let x = bx; x <= bx + bw; x++) { p(x, y0 + (h - bh) / 2); p(x, y0 + (h + bh) / 2); } }
+}
+// parking bay lines: n bays from (x0, y0), each `bay` wide and `len` deep (vertical: bays side by side
+// along x, lines running down y)
+export function parkingLines(G, x0, y0, n, bay = 56, len = 110, opt = {}) {
+  const R = opt.yellow ? MAT.paintYellow : MAT.paintWhite;
+  for (let i = 0; i <= n; i++) for (let k = 0; k < len; k++) for (let t = 0; t < 2; t++) { const x = x0 + i * bay + t, y = y0 + k; if (hash(x, y, 5) > 0.12) paint(G, x, y, step(R, 0.6, x, y, 0.3)); }
+}
+// a painted bus pictogram on a bus lane
+export function busSymbol(G, cx, y0, s = 2) {
+  const W = MAT.paintWhite, plot = (x, y) => { for (let a = 0; a < s; a++) for (let b = 0; b < s; b++) paint(G, cx + x * s + a, y0 + y * s + b, step(W, 0.65, x, y, 0.2)); };
+  for (let y = 0; y < 16; y++) for (let x = -9; x <= 9; x++) {
+    const edge = Math.abs(x) === 9 || y === 0 || y === 12, win = y === 4 && Math.abs(x) < 8, wheel = y > 12 && (Math.abs(x + 5) < 2 || Math.abs(x - 5) < 2);
+    if (edge || win || wheel || (y === 9 && Math.abs(x) > 5 && Math.abs(x) < 8)) plot(x, y);
+  }
+}
+// lily pads on a pond where test(x, y) allows
+export function lilyPads(G, test, count = 30, seed = 101) {
+  for (let i = 0; i < count; i++) {
+    const cx = Math.floor(hash(i, 1, seed) * G.w), cy = Math.floor(hash(i, 2, seed) * G.h);
+    if (!test(cx, cy)) continue;
+    const r = 3 + hash(i, 3, seed) * 3, notch = hash(i, 4, seed) * 6.28;
+    for (let y = -r; y <= r; y++) for (let x = -r * 1.3; x <= r * 1.3; x++) {
+      const d = (x / 1.3) ** 2 + y * y, a = Math.atan2(y, x);
+      if (d > r * r || Math.abs(((a - notch + 9.42) % 6.28) - 3.14) < 0.3 || !test(cx + x | 0, cy + y | 0)) continue;
+      paint(G, (cx + x) | 0, (cy + y) | 0, step(MAT.leaf, 0.35 + (y < 0 ? 0.25 : 0) + (d > r * r * 0.7 ? -0.15 : 0), x | 0, y | 0, 0.4));
+    }
+    if (hash(i, 5, seed) > 0.7) { paint(G, cx, cy - 1, [244, 200, 220]); paint(G, cx + 1, cy - 1, [250, 236, 240]); }
+  }
+}
+// a beach towel or picnic blanket (stripes or a check) lying on the ground
+export function towel(G, x0, y0, w, h, cols, check = false) {
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = check ? ((Math.floor(x / 4) + Math.floor(y / 4)) & 1) : Math.floor(y / Math.max(2, Math.floor(h / (cols.length * 2)))) % cols.length;
+    const c = check ? (i ? cols[0] : cols[1] || [240, 236, 228]) : cols[i];
+    paint(G, x0 + x, y0 + y, (y === h - 1 || x === w - 1) ? c.map((v) => v * 0.7) : c);
   }
 }

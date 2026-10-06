@@ -16,19 +16,19 @@ export const DW = 768, DH = 512;
 const PI = Math.PI;
 
 // shared bits ---------------------------------------------------------------------------------------
-function car(sc, type, x, y, hd, o = {}) {
+export function car(sc, type, x, y, hd, o = {}) {
   const m = vehicleModel(type, { lights: o.lights ?? (o.parked ? 0 : sc.carLights), ...o });
   sc.vox(m, x, y, hd);
   if (!o.parked) sc.carLight(x, y, hd, m.w);
 }
-function lamp(sc, x, y, kind = 'street') {
+export function lamp(sc, x, y, kind = 'street') {
   if (kind === 'street') { sc.vox(P.streetLamp(sc.lampsOn), x, y, 0, 0, y, 'slamp' + sc.lampsOn); sc.lampLight(x, y, 84); }
-  else if (kind === 'cast') { sc.vox(P.lampPost('cast', sc.lampsOn), x, y, 0, 0, y, 'clamp' + sc.lampsOn); sc.lampLight(x, y, 74, [1, 0.8, 0.5]); }
+  else if (kind === 'cast') { sc.vox(P.lampPost('cast', sc.lampsOn), x, y, 0, 0, y, 'clamp' + sc.lampsOn); sc.lampLight(x, y, 74, [1, 0.8, 0.5], 0.55); }
   else { sc.vox(D.bannerLamp(sc.lampsOn, kind), x, y, 0, 0, y, 'blamp' + kind + sc.lampsOn); sc.lampLight(x, y, 84, [1, 0.82, 0.55]); }
 }
-const tree = (sc, x, y, seed, h = 140, crown = 50, opt) => sc.add(leafyTree(seed, h, crown, opt), x, y);
+export const tree = (sc, x, y, seed, h = 140, crown = 50, opt) => sc.add(leafyTree(seed, h, crown, opt), x, y);
 // a run of fence from (x0, y0) to (x1, y1) along one axis, in chunks
-function fenceRun(sc, kind, x0, y0, x1, y1, opt = {}) {
+export function fenceRun(sc, kind, x0, y0, x1, y1, opt = {}) {
   const ns = x0 === x1, len = Math.abs(ns ? y1 - y0 : x1 - x0);
   for (let s = 0; s < len; s += 80) {
     const l = Math.min(80, len - s);
@@ -37,7 +37,7 @@ function fenceRun(sc, kind, x0, y0, x1, y1, opt = {}) {
     else sc.vox(m, Math.min(x0, x1) + s + l / 2, y0, 0, 0, y0, kind + l + 'ew' + (opt.barbed ? 'b' : ''));
   }
 }
-function hedgeRun(sc, x0, y0, len, ns = false, h = 12) {
+export function hedgeRun(sc, x0, y0, len, ns = false, h = 12) {
   for (let s = 0; s < len; s += 60) { const l = Math.min(60, len - s); sc.vox(P.hedge(l, h), ns ? x0 : x0 + s + l / 2, ns ? y0 + s + l / 2 : y0, ns ? PI / 2 : 0); }
 }
 
@@ -262,7 +262,7 @@ export function buildLuxury(preset = 'golden') {
   sc.windowGlow(502, 60, 30, 90, LIGHT.warmWindow, 1.4);
   return sc.finish();
 }
-function seaPixel(x, y) {
+export function seaPixel(x, y) {
   const sw = Math.sin(y * 0.2 + Math.sin(x * 0.05) * 3), t = 0.4 + sw * 0.12 + ((x * 7 + y * 3) % 11 === 0 ? 0.15 : 0);
   const c = t > 0.5 ? [48, 128, 160] : t > 0.38 ? [30, 104, 140] : [22, 80, 116];
   return [c, [0, Math.cos(y * 0.2) * 0.15, 1], 0, null, 1 | 2];

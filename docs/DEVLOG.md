@@ -1573,3 +1573,21 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - luxury boulevard and estate (D2)
   - downtown hotel plaza (D1)
 - **Preview:** `tools/art2/district-preview.html?d=suburbs|southside|luxury|downtown&p=golden|noon|night|rain`. Comparison: `docs/art-v2/districts-v1.png`.
+
+### Art v2: transit and waterfront districts
+- **Targets:** T1 to T4 (metro station, tunnel, ferry terminal, buses, taxis and trams) are saved in `docs/art-v2/targets`.
+- **Scene composer:** zones can now be winding paths, ponds (wobbly blobs) or polygons. People can stand on raised decks, and swimmers show head and shoulders in a ring of ripples.
+- **New ground:** turquoise shallows, rail ballast and a concrete industrial yard.
+  - Ground decorators: rail and tram tracks (embedded in the road or on sleepers), quay edges (hazard stripes, the wall face and tyre fenders), football pitch markings, parking bays, a painted bus symbol, lily pads, towels and picnic blankets.
+  - Shore foam no longer runs round the edge of the frame.
+- **New vehicles:** a two-section tram with a pantograph, a harbour tug with tyre fenders, and a car and passenger ferry (car deck, two-storey cabin, top deck, twin funnels).
+- **`client/art2/props-transit.js`:** catenary masts, 20 ft and 40 ft containers, a boxcar, a tank car, a gantry crane, forklifts, cones, mooring bollards, gangways, pipe runs, storage tanks, floodlight masts, stop poles, bike racks, ticket machines and lifebuoys.
+- **`client/art2/props-park.js`:** a gazebo, an arched footbridge, a statue on a plinth, football goals, ducks, reeds, a cooler, a sandcastle, a rubber ring, a beach chair, boardwalk and rope rails, steps, park signs and string lights.
+- **New trees:** weeping willow and cherry blossom.
+- **`client/art2/districts2.js`:** five more blocks:
+  - the transit avenue (T4)
+  - the ferry terminal (T3)
+  - the industrial docks (D7)
+  - the beach boardwalk (D10)
+  - the park (D11)
+- The preview covers all nine blocks. Comparison: `docs/art-v2/districts-v2.png`.

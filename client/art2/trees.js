@@ -169,3 +169,33 @@ export function pine(seed = 1, height = 150, radius = 30) {
 }
 
 export const bush = (seed, size = 18, opt = {}) => leafyTree(seed, size * 1.4, size, { ...opt, bush: true });
+
+// ---- weeping willow: a rounded crown with long curtains of hanging leaves ------------------------------
+export function willow(seed = 1, height = 130, crown = 52) {
+  const rnd = mulberry32(seed * 5113 + 1);
+  const W = crown * 2 + 20, H = height + 8, foot = H - 3, cx = W / 2;
+  const G = new GBuf(W, H);
+  G.ax = W / 2; G.ay = foot;
+  const top = foot - height, crownCy = top + crown * 0.7;
+  for (let y = Math.floor(crownCy); y <= foot; y++) { const t = (foot - y) / (foot - crownCy), w = 4 - t * 1.5, x0 = cx + Math.sin(t * 2 + seed) * 3; for (let x = Math.floor(x0 - w); x <= x0 + w; x++) { G.put(x, y, step(MAT.bark, 0.55 - (x - x0) / w * 0.3 + (hash(x, y, seed) > 0.85 ? -0.2 : 0), x, y, 0.4)); nrm(G, x, y, [(x - x0) / w, 0.5, 0.1]); } }
+  const blobs = [];
+  for (let i = 0; i < 14; i++) { const a = rnd() * 6.28, r = Math.sqrt(rnd()) * crown * 0.6; blobs.push({ x: cx + Math.cos(a) * r * 1.1, y: crownCy + Math.sin(a) * r * 0.55 - crown * 0.1, r: crown * (0.3 + rnd() * 0.15) }); }
+  const R = ramp('#86a83a', 7, 3, { dark: 0.7, light: 0.5, shift: 0.38 });
+  paintBlobs(G, blobs, R, seed);
+  // curtains: strands from the crown's underside down toward the ground, swaying a little
+  for (let i = 0; i < crown * 3.2; i++) {
+    const u = (rnd() * 2 - 1), sx = cx + u * crown * 1.05, y0 = crownCy - crown * 0.2 + Math.abs(u) * crown * 0.35 + rnd() * 8;
+    const len = (foot - y0) * (0.55 + rnd() * 0.4) * (1 - Math.abs(u) * 0.3), sway = (rnd() - 0.5) * 4;
+    for (let k = 0; k < len; k++) {
+      const x = sx + sway * (k / len) ** 2 + u * k * 0.06, y = y0 + k;
+      if (hash(Math.round(x), Math.round(y), seed) < 0.18) continue;
+      G.put(x, y, step(R, 0.5 + (u < 0 ? 0.15 : -0.1) - k / len * 0.25 + (hash(i, k >> 2, seed) > 0.7 ? 0.2 : 0), Math.round(x), Math.round(y), 0.6), null, 0, null, F_LEAF);
+      nrm(G, x, y, [u * 0.6, 0.6, 0.5]);
+    }
+  }
+  G.outline(0.4, true);
+  finishUpright(G, foot);
+  return G;
+}
+// a flowering tree (cherry blossom): the broadleaf generator in pink
+export const blossom = (seed = 1, height = 120, crown = 46) => leafyTree(seed, height, crown, { ramp: ramp('#e48aac', 7, 3, { dark: 0.55, light: 0.55, shift: 0.15 }), flowers: '#fff0f4' });
