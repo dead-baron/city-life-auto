@@ -125,7 +125,7 @@ export function grill() {
   m.ell(8, 6, 15, 7, 5, 5, b); m.box(1, 1, 0, 2, 2, 12, leg); m.box(14, 1, 0, 15, 2, 12, leg); m.box(1, 10, 0, 2, 11, 12, leg); m.box(14, 10, 0, 15, 11, 12, leg);
   return m;
 }
-export function kiddiePool() { const m = new Vox(30, 30, 6); const p = m.mat({ ramp: R('#4a9ae0'), k: 3 }), w = m.mat({ ramp: R('#5ad0e0'), k: 3, flag: F_WATER }); m.fill((x, y, z) => { const d = Math.hypot(x - 15, y - 15); return d < 14 ? (d > 12 ? p : z < 3 ? w : -1) : -1; }); return m; }
+export function wadingPool() { const m = new Vox(30, 30, 6); const p = m.mat({ ramp: R('#4a9ae0'), k: 3 }), w = m.mat({ ramp: R('#5ad0e0'), k: 3, flag: F_WATER }); m.fill((x, y, z) => { const d = Math.hypot(x - 15, y - 15); return d < 14 ? (d > 12 ? p : z < 3 ? w : -1) : -1; }); return m; }
 
 // ---- utilities over the street ------------------------------------------------------------------------
 // a wooden power pole with a crossarm (across x), insulators and a transformer can. Wires attach at
