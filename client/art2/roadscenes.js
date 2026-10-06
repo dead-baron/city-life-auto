@@ -20,7 +20,7 @@ import { vehicleModel } from './vehicles.js';
 import { animalModel } from './animals.js';
 import { makeBuilding } from './buildings.js';
 import { palm, leafyTree, bush, cypress } from './trees.js';
-import { LIGHT } from './palette.js';
+import { LIGHT, MAT } from './palette.js';
 import { hash } from './gbuf.js';
 import { seaPixel } from './districts.js';
 
@@ -89,54 +89,146 @@ export function buildRoadKit(preset = 'golden') {
   return sc.finish();
 }
 
-// ---- H1 diamond interchange: the highway on an embankment, a bridge over the avenue, four ramps ----------
+// a smooth path through control points (Catmull-Rom), sampled every `step` px, so ramps bend in curves
+function smooth(pts, step = 10) {
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let k = 0; k < n; k++) {
+      const t = k / n, t2 = t * t, t3 = t2 * t, f = (a, b, c, d) => 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (3 * b - a - 3 * c + d) * t3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+// a ramp's height along its length (t 0..1): level at z0, an eased climb or descent between t = a and b, level at z1
+const profile = (z0, z1, a, b) => (t) => { const u = Math.max(0, Math.min(1, (t - a) / (b - a))); return z0 + (z1 - z0) * u * u * (3 - 2 * u); };
+// a point and heading a fraction t along a sampled path
+function along(path, t) {
+  let L = 0; const seg = []; for (let i = 1; i < path.length; i++) { const l = Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]); seg.push(l); L += l; }
+  let d = t * L, i = 0; while (i < seg.length - 1 && d > seg[i]) { d -= seg[i]; i++; }
+  const [ax, ay] = path[i], [bx, by] = path[i + 1], k = d / (seg[i] || 1);
+  return [ax + (bx - ax) * k, ay + (by - ay) * k, Math.atan2(by - ay, bx - ax)];
+}
+// a ramp's taper as a deck clip: within TL px of where it leaves (fromStart) or joins the highway, only the
+// part within a widening wedge off the highway's edge (edgeY) is kept, so the lane peels away from a sliver
+const pathLen = (path) => path.reduce((a, p, k) => (k ? a + Math.hypot(p[0] - path[k - 1][0], p[1] - path[k - 1][1]) : 0), 0);
+const taperClip = (edgeY, north, fromStart, total, width, TL) => (X, Y, s) => {
+  const k = fromStart ? s : total - s; if (k >= TL) return 1e3;
+  const d = north ? edgeY - Y : Y - edgeY; return d < -2 ? 1e3 : width * (k / TL) ** 0.8 - d;
+};
+// a stop line across a ramp's lane, just before its end (deck mark callback)
+const stopLine = (o = 10) => (X, Y, u, s, total) => (s > total - o - 5 && s < total - o && Math.abs(u) < 40 ? MAT.paintWhite : null);
+
+// ---- H1/H2 diamond interchange: the highway on an embankment bridges the avenue; each ramp leaves the
+// highway along a long taper (a deceleration lane beside the outer lane), bends away in a smooth curve while
+// it eases down the embankment, levels out on flat ground and meets the avenue square-on at a signal well
+// away from the bridge. The on-ramps mirror that: a level start at the avenue, an eased climb through a
+// smooth curve, then an acceleration lane alongside the highway before it merges.
 export function buildInterchange(preset = 'golden') {
-  const W = 1400, H = 1200, sc = new Scene(W, H, preset, 72), G = sc.G;
-  const S = new Streets(W, H, { corner: 24, sidewalk: 64, lotKind: 'grass' });
-  S.road(528, 0, 344, H);
-  S.road(872, 204, 70, 92).road(458, 204, 70, 92).road(458, 904, 70, 92).road(872, 904, 70, 92);   // ramp terminals
-  S.island(690, 0, 20, 180, 8, 'mulch'); S.island(690, 1020, 20, 180, 8, 'mulch');
-  for (const [x, y] of [[0, 0], [1060, 0], [0, 1040], [1060, 1040]]) S.zone('sidewalk', { x, y, w: 340, h: 160 });
+  const W = 2400, H = 1400, sc = new Scene(W, H, preset, 72), G = sc.G;
+  const AX = 1028, AW = 344, AE = AX + AW, SWK = 64, HY = 700, HW = 404, hz = 44, RW = 140;
+  const S = new Streets(W, H, { corner: 30, sidewalk: SWK, lotKind: 'grass' });
+  S.road(AX, 0, AW, H);
+  for (const [x, y] of [[AE, 180], [AX - SWK, 180], [AX - SWK, 1080], [AE, 1080]]) S.road(x, y, SWK, RW);     // the ramp ends through the sidewalk
+  S.island(1190, 0, 20, 150, 8, 'mulch'); S.island(1190, 1250, 20, 150, 8, 'mulch');
+  for (const [x, y, w] of [[0, 0, 900], [1500, 0, 900], [0, 1260, 900], [1500, 1260, 900]]) S.zone('sidewalk', { x, y, w, h: 140 });
   S.build(); S.paint(G, 72);
   lawnEdge(G, (x, y) => S.kind(x, y) === 'grass');
-  for (const [y0, y1] of [[0, 200], [300, 400], [800, 900], [1000, 1200]]) { laneLine(G, 610, y0, y1 - y0, false, { dash: 18, gap: 14 }); laneLine(G, 790, y0, y1 - y0, false, { dash: 18, gap: 14 }); }
-  for (const [x, y, d, t] of [[570, 360, 'down', 'straightLeft'], [650, 360, 'down', 'straight'], [750, 840, 'up', 'straight'], [830, 840, 'up', 'straightRight']]) arrowMark(G, x, y, d, t);
-  zebra(G, 534, 150, 150, 36, true); zebra(G, 716, 150, 150, 36, true); zebra(G, 534, 1010, 150, 36, true); zebra(G, 716, 1010, 150, 36, true);
-  laneLine(G, 534, 196, 156, true, { width: 3 }); laneLine(G, 710, 1000, 156, true, { width: 3 });
-  // the highway (4 lanes, median, on an embankment; a bridge where it crosses the avenue)
-  const hz = 44, hwy = deck({ path: [[-60, 600], [W + 60, 600]], width: 404, z: hz, lanes: 4, median: 24, shoulder: 24, face: (x) => (x > 520 && x < 880 ? 'girder' : 'grass'), seed: 72 });
-  // ramps: off before the bridge, on after it; each ends at a signal on the avenue
-  const ramps = [
-    { path: [[W + 60, 376], [1180, 376], [1010, 300], [900, 250]], z: [hz, 0] },   // NE off (westbound)
-    { path: [[500, 250], [390, 300], [220, 376], [-60, 376]], z: [0, hz] },        // NW on (westbound)
-    { path: [[-60, 824], [220, 824], [390, 900], [500, 950]], z: [hz, 0] },        // SW off (eastbound)
-    { path: [[900, 950], [1010, 900], [1180, 824], [W + 60, 824]], z: [0, hz] },   // SE on (eastbound)
-  ].map((r, i) => deck({ path: r.path, width: 96, z: r.z, lanes: 1, face: 'grass', seed: 80 + i }));
-  // the embankment islands between ramps and highway: trees and shrubs (drawn before the decks)
-  for (const [x, y, s] of [[260, 300, 1], [140, 250, 2], [1140, 300, 3], [1260, 250, 4], [260, 900, 5], [140, 950, 6], [1140, 900, 7], [1260, 950, 8]]) tree(sc, x, y, 7200 + s, 110, 36);
-  for (const [x, y, s] of [[420, 360, 1], [980, 360, 2], [420, 850, 3], [980, 850, 4], [330, 420, 5], [1070, 430, 6]]) sc.add(bush(7300 + s, 16), x, y);
-  for (const r of ramps) sc.addWorld(r.spr, r.bx, r.by, 0, r.by + 96);
+  for (const [y0, y1] of [[0, 170], [330, 498], [902, 1070], [1230, 1400]]) { laneLine(G, AX + 86, y0, y1 - y0, false, { dash: 18, gap: 14 }); laneLine(G, AE - 86, y0, y1 - y0, false, { dash: 18, gap: 14 }); }
+  zebra(G, AX + 6, 130, 150, 36, true); zebra(G, 1216, 130, 150, 36, true); zebra(G, AX + 6, 1236, 150, 36, true); zebra(G, 1216, 1236, 150, 36, true);
+  for (const [x, y, d, t] of [[1070, 420, 'down', 'straightLeft'], [1150, 420, 'down', 'straight'], [1250, 980, 'up', 'straight'], [1330, 980, 'up', 'straightRight']]) arrowMark(G, x, y, d, t);
+  // the highway: 4 lanes and a median barrier on an embankment, a bridge girder over the avenue; its outer
+  // parapet opens where a ramp runs alongside (the taper)
+  const tapers = (X) => X < 380 || X > W - 380;   // where the ramps run alongside
+  const hwy = deck({ path: [[-60, HY], [W + 60, HY]], width: HW, z: hz, lanes: 4, median: 24, shoulder: 24, face: (x) => (x > AX - SWK && x < AE + SWK ? 'girder' : 'grass'), open: (X) => tapers(X), openLine: 'none', seed: 72 });
+  // the ramps (travel order): off-ramps descend after their taper, on-ramps climb before theirs
+  const mir = (pts) => pts.map(([x, y]) => [W - x, y]), flip = (pts) => pts.map(([x, y]) => [x, 2 * HY - y]).reverse();
+  const NE = [[W - 40, HY - HW / 2 - RW / 2], [W - 340, 428], [W - 560, 418], [W - 720, 370], [W - 840, 296], [W - 920, 258], [AE + SWK - 14, 250]];
+  const NW = mir(NE).reverse().map(([x, y], i, a) => (i === 0 ? [AX - SWK + 14, 250] : [x, y]));
+  const defs = [
+    { path: NE, z: profile(hz, 0, 0.34, 0.8), off: true },
+    { path: NW, z: profile(0, hz, 0.2, 0.66), off: false },
+    { path: flip(NW), z: profile(hz, 0, 0.34, 0.8), off: true },
+    { path: flip(NE), z: profile(0, hz, 0.2, 0.66), off: false },
+  ];
+  // the taper: where a ramp leaves (or joins) the highway it starts as a sliver at the highway's edge and
+  // widens to full width over TL px, so the lane peels away rather than starting square
+  const taper = (north, off, total) => taperClip(north ? HY - HW / 2 : HY + HW / 2, north, off, total, RW, 260);
+  const ramps = defs.map((r, i) => { const path = smooth(r.path, 10), total = pathLen(path); return { ...deck({ path, width: RW, z: r.z, lanes: 1, shoulder: 22, face: 'grass', clip: taper(i < 2, r.off, total), open: (X, Y, u, s, z) => z < 5 || (Y > HY - HW / 2 - 8 && Y < HY + HW / 2 + 8), mark: r.off ? stopLine(12) : null, seed: 80 + i }), path, north: i < 2, off: r.off }; });
+  // the embankment islands between the ramps and the highway, and the verges: trees and shrubs
+  for (const [x, y, s] of [[1560, 452, 1], [1660, 470, 2], [840, 452, 3], [740, 470, 4]]) tree(sc, x, y, 7200 + s, 104, 34);
+  for (const [x, y, s] of [[1480, 380, 1], [920, 380, 2], [1760, 484, 3], [640, 484, 4]]) sc.add(bush(7300 + s, 15), x, y);
+  for (const r of ramps) sc.addWorld(r.spr, r.bx, r.by, 0, r.north ? r.by + 60 : r.base);
   place(sc, hwy);
-  for (const x of [560, 840]) sc.vox(Q.pillar(hz, 26, 360), x, 600, PI / 2, 0, 600);
-  for (const [x, y] of [[90, 340], [1310, 340], [90, 1080], [1310, 1080]]) sc.vox(Q.soundWall(160, 36), x, y, 0, 0, y, 'swall');
-  sc.vox(Q.signGantry(200, 60, 2), 1300, 500, 0, hz, hwy.base + 2, 'gantryN'); sc.vox(Q.signGantry(200, 60, 2), 100, 700, 0, hz, hwy.base + 2, 'gantryS');
-  // traffic: highway both ways, on the ramps, through the junctions
+  sc.vox(Q.pillar(hz, 26, 360), 1200, HY, PI / 2, 0, HY);
+  for (const [x, y, s] of [[1560, 960, 5], [1700, 940, 6], [840, 960, 7], [700, 940, 8], [2200, 1140, 9], [200, 1140, 10], [2200, 300, 11], [200, 300, 12]]) tree(sc, x, y, 7200 + s, 112, 36);
+  // traffic: the highway both ways, cars on every ramp, the avenue through the junctions
   const onDeck = hwy.base + 3;
-  for (const [x, y, t, c] of [[200, 460, 'sedan', '#3a5a8a'], [520, 530, 'boxtruck', '#e6e2d8'], [980, 460, 'suv', '#2f5a4a'], [1260, 530, 'sedan', '#a83030']]) car(sc, t, x, y, PI, { paint: c, dz: hz, base: onDeck });
-  for (const [x, y, t, c] of [[120, 680, 'mixer', '#e6e2d8'], [420, 740, 'sedan', '#2f4a3a'], [820, 680, 'taxi', null], [1180, 740, 'van', '#ecebe4']]) car(sc, t, x, y, 0, { paint: c || undefined, dz: hz, base: onDeck });
-  car(sc, 'sedan', 1090, 335, PI - 0.38, { paint: '#c8c8c4', dz: 22, base: 470 }); car(sc, 'sports', 320, 335, PI + 0.38, { paint: '#e8b830', dz: 24, base: 470 });
-  car(sc, 'sedan', 320, 865, 0.38, { paint: '#2c3a5e', dz: 24, base: 960 }); car(sc, 'pickup', 1090, 865, -0.38, { paint: '#a8342e', dz: 22, base: 960 });
-  for (const [x, y, hd, c] of [[570, 60, PI / 2, '#a83030'], [650, 250, PI / 2, '#3a5a8a'], [750, 960, -PI / 2, '#2f4a3a'], [830, 1140, -PI / 2, '#e8e0cc'], [570, 1100, PI / 2, '#5a5e66'], [830, 100, -PI / 2, '#2f5a5a']]) car(sc, 'sedan', x, y, hd, { paint: c });
-  car(sc, 'taxi', 830, 300, -PI / 2);
-  // signals at the ramp terminals, lamps, corner buildings
-  for (const [x, y, hd] of [[512, 190, 0], [888, 310, PI], [512, 890, 0], [888, 1010, PI]]) sc.vox(P.trafficSignal(60, 'green', sc.lampsOn), x, y, hd);
-  for (const [x, y] of [[512, 120], [888, 120], [512, 1090], [888, 1090]]) lamp(sc, x, y, 'street');
-  const b1 = sc.building({ w: 300, d: 120, floors: 2, style: 'brick', seed: 721, roof: 'flat', doors: [{ x: 90, w: 20, kind: 'door' }], windows: [30, 150, 220] }, 20, 120);
-  const b2 = sc.building({ w: 300, d: 120, style: 'stucco', wallColor: '#d8c8a8', seed: 722, roof: 'flat', shop: { kind: 'mart', door: 'right', open: true, awning: ['#c8343a', '#f0ece4'] } }, 1080, 120);
-  const b3 = sc.building({ w: 300, d: 150, style: 'concrete', seed: 723, roof: 'flat', blank: true, northDoors: [{ x: 80, kind: 'service' }] }, 20, 1300);
-  const b4 = sc.building({ w: 300, d: 150, style: 'brick', seed: 724, roof: 'flat', blank: true, northDoors: [{ x: 60, w: 30, col: '#2e6a4e' }] }, 1080, 1300);
-  for (const b of [b1, b2, b3, b4]) roofKit(sc, b, [['ac', 40, 30], ['acs', 160, 50]]);
-  for (const [x, y, k, d] of [[500, 130, 'student', 2], [900, 1080, null, 6], [340, 140, 'office', 2]]) sc.person(x, y, k, d, 'walk', x * 3 + y);
+  for (const [x, y, t, c] of [[300, 560, 'sedan', '#3a5a8a'], [760, 640, 'boxtruck', '#e6e2d8'], [1500, 560, 'suv', '#2f5a4a'], [2000, 640, 'sedan', '#a83030']]) car(sc, t, x, y, PI, { paint: c, dz: hz, base: onDeck });
+  for (const [x, y, t, c] of [[200, 840, 'mixer', '#e6e2d8'], [700, 760, 'sedan', '#2f4a3a'], [1450, 840, 'taxi', null], [2100, 760, 'van', '#ecebe4']]) car(sc, t, x, y, 0, { paint: c || undefined, dz: hz, base: onDeck });
+  ramps.forEach((r, i) => {
+    for (const [t, type, c] of [[0.3, 'sedan', '#c8c8c4'], [0.78, ['sports', 'pickup', 'sedan', 'suv'][i], ['#e8b830', '#a8342e', '#2c3a5e', '#3a6a4a'][i]]]) {
+      const [x, y, hd] = along(r.path, i % 2 ? 1 - t : t), dz = r.zAt(x, y);
+      car(sc, type, x, y, hd + (i % 2 ? 0 : 0), { paint: c, dz, base: (r.north ? r.by + 61 : r.base + 1) });
+    }
+  });
+  for (const [x, y, hd, c] of [[1080, 60, PI / 2, '#a83030'], [1150, 320, PI / 2, '#3a5a8a'], [1250, 1040, -PI / 2, '#2f4a3a'], [1320, 1330, -PI / 2, '#e8e0cc'], [1080, 1300, PI / 2, '#5a5e66'], [1320, 90, -PI / 2, '#2f5a5a']]) car(sc, 'sedan', x, y, hd, { paint: c });
+  car(sc, 'taxi', 1320, 380, -PI / 2);
+  // signals where the ramps meet the avenue, lamps, buildings along the frontage
+  for (const [x, y, hd] of [[AE + SWK + 6, 326, PI], [AX - SWK - 6, 174, 0], [AX - SWK - 6, 1226, 0], [AE + SWK + 6, 1074, PI]]) sc.vox(P.trafficSignal(70, 'green', sc.lampsOn), x, y, hd);
+  for (const [x, y] of [[AX - 30, 60], [AE + 30, 60], [AX - 30, 1360], [AE + 30, 1360], [AX - 30, 440], [AE + 30, 440]]) lamp(sc, x, y, 'street');
+  const bs = [
+    sc.building({ w: 280, d: 120, floors: 2, style: 'brick', seed: 721, roof: 'flat', doors: [{ x: 90, w: 20, kind: 'door' }], windows: [30, 150, 220] }, 560, 140),
+    sc.building({ w: 300, d: 120, style: 'stucco', wallColor: '#d8c8a8', seed: 722, roof: 'flat', shop: { kind: 'mart', door: 'right', open: true, awning: ['#c8343a', '#f0ece4'] } }, 1540, 140),
+    sc.building({ w: 260, d: 120, style: 'siding', wallColor: '#c8b8a0', seed: 725, roof: 'flat', doors: [{ x: 40, w: 22, kind: 'door' }], windows: [100, 180] }, 1900, 140),
+    sc.building({ w: 300, d: 150, style: 'concrete', seed: 723, roof: 'flat', blank: true, northDoors: [{ x: 80, kind: 'service' }] }, 560, 1460),
+    sc.building({ w: 300, d: 150, style: 'brick', seed: 724, roof: 'flat', blank: true, northDoors: [{ x: 60, w: 30, col: '#2e6a4e' }] }, 1540, 1460),
+  ];
+  for (const b of bs) roofKit(sc, b, [['ac', 40, 30], ['acs', 160, 50]]);
+  for (const [x, y, k, d] of [[1000, 120, 'student', 2], [1400, 1300, null, 6], [800, 150, 'office', 2]]) sc.person(x, y, k, d, 'walk', x * 3 + y);
+  return sc.finish();
+}
+
+// ---- H2 at-grade highway exits and entrances: the same smooth geometry on flat ground. A divided rural
+// highway with a one-way frontage road each side; the exit leaves the outer lane along a taper and a gentle
+// curve into the frontage road, and the entrance leaves the frontage road and runs alongside the highway as
+// an acceleration lane before it merges. A farm road meets the south frontage road at a stop line.
+export function buildHighwayFlat(preset = 'golden') {
+  const W = 2200, H = 1100, sc = new Scene(W, H, preset, 79), G = sc.G;
+  const HY = 520, HW = 404, FW = 180, FS = 930, FN = 110, RW = 96;
+  const S = new Streets(W, H, { corner: 24, sidewalk: 0, lotKind: 'grassDry' });
+  S.zone('grass', { x: 0, y: HY - HW / 2 - 60, w: W, h: HW + 120 });
+  S.zone('dirtRoad', { x: 1060, y: FS + FW / 2 - 4, w: 88, h: H });
+  S.zone('wheat', { x: 0, y: FS + FW / 2 + 10, w: 1040, h: 200 }); S.zone('plowed', { x: 1170, y: FS + FW / 2 + 10, w: 1100, h: 200 });
+  S.build(); S.paint(G, 79);
+  const flatDeck = (o, base) => { const d = deck({ parapet: 0, z: 0, face: 'grass', ...o }); sc.addWorld(d.spr, d.bx, d.by, 0, base); return d; };
+  const nearHwy = (Y) => Y > HY - HW / 2 - 6 && Y < HY + HW / 2 + 6, nearFr = (Y) => Math.abs(Y - FS) < FW / 2 + 6 || Math.abs(Y - FN) < FW / 2 + 6;
+  flatDeck({ path: [[-60, HY], [W + 60, HY]], width: HW, lanes: 4, median: 24, shoulder: 24, open: (X, Y) => (Y > HY ? X < 560 || X > 1600 : X > 1640 || X < 560), openLine: 'none', seed: 79 }, -10);
+  flatDeck({ path: [[-60, FS], [W + 60, FS]], width: FW, lanes: 2, shoulder: 10, open: (X) => (X > 760 && X < 1060) || (X > 1150 && X < 1460), openLine: 'none', mark: (X, Y) => (X > 1062 && X < 1146 && Y > FS + FW / 2 - 14 && Y < FS + FW / 2 - 9 ? MAT.paintWhite : null), seed: 791 }, -9);
+  flatDeck({ path: [[W + 60, FN], [-60, FN]], width: FW, lanes: 2, shoulder: 10, open: (X) => (X > 1140 && X < 1440) || (X > 760 && X < 1060), openLine: 'none', seed: 792 }, -9);
+  const ramp = (pts, seed, north, off) => { const path = smooth(pts, 10); return { path, ...flatDeck({ path, width: RW, lanes: 1, shoulder: 8, open: (X, Y) => nearHwy(Y) || nearFr(Y), clip: taperClip(north ? HY - HW / 2 : HY + HW / 2, north, off, pathLen(path), RW, 240), seed }, -8) }; };
+  const eo = HY + HW / 2 + RW / 2, wo = HY - HW / 2 - RW / 2, fs = FS - FW / 4, fn = FN + FW / 4;
+  const rs = [
+    ramp([[140, eo], [560, eo], [720, eo + 24], [880, fs - 60], [1000, fs - 4], [1060, fs]], 793, false, true),     // eastbound exit
+    ramp([[1150, fs], [1210, fs - 4], [1330, fs - 60], [1490, eo + 24], [1650, eo], [W - 40, eo]], 794, false, false),   // eastbound entrance
+    ramp([[2060, wo], [1640, wo], [1480, wo - 24], [1320, fn + 60], [1200, fn + 4], [1140, fn]], 795, true, true),   // westbound exit
+    ramp([[1060, fn], [1000, fn + 4], [880, fn + 60], [720, wo - 24], [560, wo], [40, wo]], 796, true, false),       // westbound entrance
+  ];
+  // traffic: through traffic, a car taking each ramp, frontage road traffic, a tractor on the farm road
+  for (const [x, y, t, c] of [[300, 440, 'sedan', '#3a5a8a'], [900, 360, 'tanker', '#e6e2d8'], [1700, 440, 'suv', '#2f5a4a']]) car(sc, t, x, y, PI, { paint: c });
+  for (const [x, y, t, c] of [[400, 600, 'pickup', '#a8342e'], [1000, 680, 'van', '#ecebe4'], [1900, 600, 'sedan', '#c8c8c4']]) car(sc, t, x, y, 0, { paint: c });
+  rs.forEach((r, i) => { const [x, y, hd] = along(r.path, 0.55); car(sc, ['sedan', 'taxi', 'sports', 'sedan'][i], x, y, hd, { paint: ['#2c3a5e', undefined, '#e8b830', '#5a5e66'][i] }); });
+  car(sc, 'sedan', 1500, FS + 40, 0, { paint: '#3a6a4a' }); car(sc, 'pickup', 700, FN - 40, PI, { paint: '#8a5a3a' }); car(sc, 'tractor', 1104, 1060, -PI / 2);
+  sc.vox(P.signPost('#c8343a'), 1040, FS + FW / 2 + 16);
+  // a diner and fuel stop on the frontage road, fences and utility poles along the fields
+  const din = sc.building({ w: 220, d: 90, style: 'diner', seed: 797, roof: 'flat', shop: { kind: 'diner', awning: null, door: 'right', open: true, people: 3 } }, 1600, 1100);
+  roofKit(sc, din, [['ac', 40, 20], ['vent', 160, 40]]);
+  for (let x = 20; x < 1040; x += 60) sc.vox(D.fence('wood', 60), x + 30, FS + FW / 2 + 12, 0, 0, FS + FW / 2 + 12, 'fw60');
+  for (const x of [200, 600, 1400, 1800]) sc.vox(D.powerPole(110, 16), x, FN - FW / 2 - 6);
+  for (const [x, y, s] of [[300, 260, 1], [800, 300, 2], [1900, 780, 3], [1300, 760, 4], [100, 780, 5]]) sc.add(bush(7900 + s, 14), x, y);
   return sc.finish();
 }
 
@@ -466,5 +558,5 @@ export function buildAlleysEW(preset = 'golden') {
   return sc.finish();
 }
 
-export const ROAD_SCENES = { roadkit: buildRoadKit, interchange: buildInterchange, overpass: buildOverpass, crossing: buildCrossing, tollbridge: buildTollBridge, airport: buildAirport, alleysNS: buildAlleysNS, alleysEW: buildAlleysEW };
-export const ROAD_TARGETS = { roadkit: 'I1-A_road-kit.png', interchange: 'H1-A_interchange.png', overpass: 'I2-A_overpass.png', crossing: 'I3-A_level-crossing.png', tollbridge: 'I4-A_toll-bridge-marina.png', airport: 'I5-A_airport.png', alleysNS: 'AL1-H_alleys-ns-4.png', alleysEW: 'AL1-E_alleys-ew-3.png' };
+export const ROAD_SCENES = { roadkit: buildRoadKit, interchange: buildInterchange, highwayFlat: buildHighwayFlat, overpass: buildOverpass, crossing: buildCrossing, tollbridge: buildTollBridge, airport: buildAirport, alleysNS: buildAlleysNS, alleysEW: buildAlleysEW };
+export const ROAD_TARGETS = { roadkit: 'I1-A_road-kit.png', interchange: 'H1-A_interchange.png', highwayFlat: 'H2-A_highway-kit.png', overpass: 'I2-A_overpass.png', crossing: 'I3-A_level-crossing.png', tollbridge: 'I4-A_toll-bridge-marina.png', airport: 'I5-A_airport.png', alleysNS: 'AL1-H_alleys-ns-4.png', alleysEW: 'AL1-E_alleys-ew-3.png' };

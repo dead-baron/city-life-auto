@@ -43,6 +43,7 @@ export function deck(o) {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const n = nearest(path, cum, bx + x + 0.5, by + y + 0.5);
     if (n.end || Math.abs(n.u) > hw) continue;
+    if (o.clip && o.clip(bx + x + 0.5, by + y + 0.5, n.s, n.s / total) < 0) continue;
     const i = y * w + x; Z[i] = zOf(Math.max(0, Math.min(1, n.s / total))); U[i] = n.u; S[i] = n.s;
   }
   const G = new GBuf(w, h + zmax); G.ax = 0; G.ay = zmax;
@@ -71,19 +72,22 @@ export function deck(o) {
     if (z < 0) continue;
     const u = U[i], s = S[i], au = Math.abs(u) , X = bx + x, Y = by + y;
     let c, zz = z, n = UP, flag = F_GROUND | F_WET;
-    if (au > hw - par) { zz = z + parH; c = step(CONC, au > hw - 1.5 ? 0.35 : 0.68 + (u < 0 ? 0.1 : -0.05), X, Y, 0.3); n = [0, 0, 1]; flag = 0; }
+    const open = o.open && o.open(X, Y, u, s, z);
+    if (!open && au > hw - par) { zz = z + parH; c = step(CONC, au > hw - 1.5 ? 0.35 : 0.68 + (u < 0 ? 0.1 : -0.05), X, Y, 0.3); n = [0, 0, 1]; flag = 0; }
     else if (med && au < med / 2) { zz = z + parH + 2; c = step(CONC, au > med / 2 - 1.5 ? 0.4 : 0.72, X, Y, 0.3); flag = 0; }
     else {
       const p = groundPixel(surf, X, Y, seed); c = p.c;
       const inner = hw - par, sh = o.shoulder ?? 6, edge = inner - au;
       const paint = (R) => { c = step(R, 0.62, X, Y, 0.2); };
       const dash = s % 48 < 26;
-      if (o.edgeLines !== false && Math.abs(edge - sh) < 1.6) paint(med && au < hw / 2 ? MAT.paintYellow : MAT.paintWhite);
+      if (o.edgeLines !== false && Math.abs(edge - sh) < 1.6 && (!open || (o.openLine !== 'none' && dash))) paint(med && au < hw / 2 ? MAT.paintYellow : MAT.paintWhite);
       else if (med && Math.abs(au - med / 2 - 5) < 1.4) paint(MAT.paintYellow);
       else if (!med && o.centre === 'yellow' && (Math.abs(u - 3) < 1.2 || Math.abs(u + 3) < 1.2)) paint(MAT.paintYellow);
       else if (!med && o.centre === 'dash' && au < 1.4 && dash) paint(MAT.paintWhite);
       else if (med) { const per = lanes / 2, lw = (inner - med / 2 - 5 - sh) / per, a = au - med / 2 - 5; for (let k = 1; k < per; k++) if (Math.abs(a - k * lw) < 1.3 && dash) paint(MAT.paintWhite); }
       else if (!o.centre) { const lw = (2 * inner - 2 * sh) / lanes, a = u + inner - sh; for (let k = 1; k < lanes; k++) if (Math.abs(a - k * lw) < 1.3 && dash) paint(MAT.paintWhite); }
+      if (o.clip) { const cd = o.clip(X + 0.5, Y + 0.5, s, s / total); if (cd < 1.8 && hw - au > par + 2) paint(MAT.paintWhite); }   // the line along a taper's edge
+      if (o.mark) { const R2 = o.mark(X, Y, u, s, total); if (R2) paint(R2); }                       // stop lines, arrows, gore chevrons
       if (hash(X >> 3, Y >> 3, seed + 7) > 0.97) c = c.map((v) => v * 0.85);
     }
     const r = y + zmax - Math.round(zz);

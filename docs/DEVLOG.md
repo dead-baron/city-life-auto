@@ -1711,3 +1711,19 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
 - **Effect pool:** each effect's frames are built once and cached. `FxPool` pre-allocates its slots and reuses the oldest when full, so playing effects allocates nothing per frame.
 - **Previews:** the prop sheets are in the district preview (`?d=propsTown|propsCountry|propsNature`), and the effects in `tools/art2/fx-preview.html`.
 - **Comparisons:** `docs/art-v2/props-v1.png`, `items-v1.png` and `fx-v1.png`.
+
+### Smooth highway ramps (H1/H2 rework)
+- **The problem:** the first interchange had ramps that were too narrow, bent at sharp angles and ended in the middle of the avenue.
+- **The rework:** ramps now follow real road design.
+  - **Off-ramps:** leave the outer lane along a long taper. The lane starts as a sliver at the highway's edge and widens to full width.
+  - **The descent:** the ramp bends away in a smooth curve while it eases down the embankment, levels out on flat ground, and meets the avenue square-on at a signal and stop line, well clear of the bridge.
+  - **On-ramps:** the mirror image, ending in an acceleration lane alongside the highway.
+  - **Width:** ramps are a full 80 px lane plus shoulders (140 px).
+- **`deck.js` additions:**
+  - Paths are smoothed through control points (Catmull-Rom).
+  - Height profiles are eased.
+  - `open` leaves the parapet out where a ramp runs alongside the highway or is at grade.
+  - `clip` cuts the taper wedge and paints its edge line.
+  - `mark` paints stop lines.
+- **New `highwayFlat` scene:** the same tapers and curves on flat ground. A divided rural highway with one-way frontage roads, exits and entrances with deceleration and acceleration lanes, and a farm road meeting the frontage road at a stop line.
+- **World v2 plan:** now has the road rules for ramps and junctions. It also has a procedural water system: rivers traced downhill with flow accumulation, creeks, lakes, rapids and waterfalls, bridges and culverts planned with the road generator, and river current and boating gameplay. The concept prompts W1 (river country) and W2 (water kit) are added to the pack.
