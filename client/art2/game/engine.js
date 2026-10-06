@@ -12,6 +12,9 @@
 //   +hasFallback(cx, cy)
 //   hasSprite(key)  uploadSprite(key, g) -> bool  uploadSpriteFromCanvas(key, canvas, ax, ay, opts) -> bool
 //   +dropSprite(key)  +spriteInfo(key) -> {w, h, ax, ay} (read only)
+//   - uploadChunk g.under (optional RGBA8, 768^2): the chunk's statics without buildings; beginFrame f.cut
+//     {x, y, z0, r, lift} opens a soft hole round the player through tall statics standing south of them
+//     and shows the under layer there (the street behind a building stays readable).
 //   beginFrame(f) -> bool  drawSprite(key, x, y, z0, o) -> bool  drawDecal(key, x, y, angle, alpha, +z0)
 //   addLight(L)  endFrame()
 //   - uploadChunk / uploadSprite also take pre-packed planes {w, h, ax, ay, p0, p1, p2} (gbuf.js packGBuf,
@@ -95,8 +98,12 @@ in vec2 c;
 uniform vec4 uRect; uniform vec2 uScene;
 void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2.0 - 1.0, 0.0, 1.0); }`;
 // a chunk texel copied into the scene, depth from its height
+// The cut-away: a soft-edged hole round the player through tall statics that stand in front of (south of)
+// them, showing the chunk's "under" layer (the static world without its buildings) there instead, so the
+// street behind a building stays readable. uCut: player body centre in scene texels (x, y), the player's
+// ground Y in scene texels (z), radius (w); uCutOn 0/1; uUnder 0/1 (the chunk has an under layer).
 const STATIC_FS = HDR + `
-uniform sampler2D t0, t1, t2; uniform vec2 uOff;
+uniform sampler2D t0, t1, t2, t3; uniform vec2 uOff; uniform vec4 uCut; uniform float uCutOn, uUnder;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
 void main(){
@@ -105,7 +112,25 @@ void main(){
   if (a.a < 0.5) discard;
   vec4 b = texelFetch(t1, q, 0), c = texelFetch(t2, q, 0);
   float h = zOf(b);
-  if ((flOf(b) & ${F_GROUND}) != 0) h = max(h - ${GSINK.toFixed(1)}, 0.0);
+  bool ground = (flOf(b) & ${F_GROUND}) != 0;
+  if (uCutOn > 0.5 && uUnder > 0.5 && !ground && h > 8.0) {
+    vec2 sp = gl_FragCoord.xy;
+    // the surface's own ground line (screen row + height) lies south of the player: it stands in front
+    if (sp.y + h > uCut.z + 6.0) {
+      vec2 d = (sp - uCut.xy) / vec2(uCut.w, uCut.w * 1.2);
+      float r = length(d);
+      float edge = r + bayer4(ivec2(sp)) * 0.12;
+      if (edge < 0.94) {
+        vec4 u = texelFetch(t3, q, 0);
+        if (u.a > 0.5) {
+          gl_FragDepth = 1.0;
+          o0 = vec4(u.rgb, 1.0); o1 = vec4(0.0, 0.0, ${(F_GROUND | 8) / 255}, ${OCT_MID / 255}); o2 = vec4(0.0, 0.0, 0.0, ${OCT_MID / 255});
+          return;
+        }
+      } else if (edge < 1.0) a.rgb *= 0.55;   // a dark rim where the cut goes through
+    }
+  }
+  if (ground) h = max(h - ${GSINK.toFixed(1)}, 0.0);
   gl_FragDepth = 1.0 - h * ${(1 / HMAX).toFixed(8)};
   o0 = vec4(a.rgb, 1.0); o1 = b; o2 = c;
 }`;
@@ -267,7 +292,7 @@ export class Art2Engine {
     this.vaoSpr = this._instVao(this.ibSpr); this.vaoDec = this._instVao(this.ibDec); this.vaoXr = this._instVao(this.ibXr);
     this.uboBuf = gl.createBuffer(); gl.bindBuffer(gl.UNIFORM_BUFFER, this.uboBuf); gl.bufferData(gl.UNIFORM_BUFFER, this.ubo.byteLength, gl.DYNAMIC_DRAW); gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     const IA = ['c', 'iDst', 'iSrc', 'iPar', 'iTint'];
-    this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS, ['c'], { t0: 0, t1: 1, t2: 2 });
+    this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS, ['c'], { t0: 0, t1: 1, t2: 2, t3: 7 });
     this.pSprite = glProgram(gl, SPRITE_VS, SPRITE_FS, IA, { tA: 3, tB: 4, tC: 5 });
     this.pDecal = glProgram(gl, DECAL_VS, DECAL_FS, ['c', 'iA', 'iSrc', 'iSz', 'iPar'], { tA: 3 });
     this.pPresent = glProgram(gl, TRI_VS, PRESENT_FS, ['p'], { tF: 0 });
@@ -391,6 +416,13 @@ export class Art2Engine {
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, g.w);
     for (let i = 0; i < 3; i++) { gl.bindTexture(gl.TEXTURE_2D, s.t[i]); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, i === 0 ? pk.p0 : i === 1 ? pk.p1 : pk.p2); }
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+    if (g.under && g.under.length >= CHUNK_PX * CHUNK_PX * 4) {
+      if (!s.t[3]) s.t[3] = glTex(gl, CHUNK_PX, CHUNK_PX);
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, g.w);
+      gl.bindTexture(gl.TEXTURE_2D, s.t[3]); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, g.under);
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+      s.under = true;
+    } else s.under = false;
     s.real = true; s.src = null;
     return true;
   }
@@ -411,7 +443,7 @@ export class Art2Engine {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, src);
     // flat ground: z 0, F_GROUND, the up normal, no glow
     this._clearTex(s.t[1], 0, 0, F_GROUND / 255, OCT_MID / 255); this._clearTex(s.t[2], 0, 0, 0, OCT_MID / 255);
-    s.real = false; s.src = source;
+    s.real = false; s.src = source; s.under = false;
     return true;
   }
   dropChunk(cx, cy) {
@@ -509,6 +541,10 @@ export class Art2Engine {
     this.nInst = 0; this.nDec = 0; this.nXr = 0; this.nLights = 0;
     const P = f.preset || PRESETS_GAME.noon, T = LIGHT_TIERS[this.q];
     this.P = P; this.time = f.time || 0; this.wet = f.wet || 0; this.flash = f.flash || 0; this.fog = f.fog || 0;
+    // the cut-away round the player: f.cut = {x, y (ground point, world px), z0, r (radius px), lift (body centre height)}
+    const fc = f.cut;
+    this.cut = fc && fc.r > 0 ? (this._cut || (this._cut = { x: 0, y: 0, r: 0, lift: 0 })) : null;
+    if (this.cut) { this.cut.x = Math.round(fc.x); this.cut.y = Math.round(fc.y - (fc.z0 || 0)); this.cut.r = fc.r; this.cut.lift = fc.lift ?? 22; }
     this.zoom = f.zoom > 0 ? f.zoom : 1; this.camX = +f.camX || 0; this.camY = +f.camY || 0;
     // margins: the shadow reach on the side the sun is, room above for wet reflections, a little slack
     const sd = P.sunDir || PRESET_DEFAULTS.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]) || 1, sz = sd[2] / sl;
@@ -666,6 +702,9 @@ export class Art2Engine {
     gl.clearBufferfv(gl.COLOR, 0, Z4); gl.clearBufferfv(gl.COLOR, 1, Z4); gl.clearBufferfv(gl.COLOR, 2, Z4); gl.clearBufferfv(gl.DEPTH, 0, ONE);
     gl.useProgram(p.p); gl.bindVertexArray(this.vaoQuad);
     gl.uniform2f(u.uScene, this.SW, this.SH);
+    const C = this.cut;
+    if (C && C.r > 0) { gl.uniform1f(u.uCutOn, 1); gl.uniform4f(u.uCut, C.x - this.ox, C.y - C.lift - this.oy, C.y - this.oy, C.r); }
+    else gl.uniform1f(u.uCutOn, 0);
     const c0 = Math.floor(this.ox / CHUNK_PX), c1 = Math.floor((this.ox + this.SW - 1) / CHUNK_PX), r0 = Math.floor(this.oy / CHUNK_PX), r1 = Math.floor((this.oy + this.SH - 1) / CHUNK_PX);
     let n = 0;
     for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
@@ -673,6 +712,8 @@ export class Art2Engine {
       if (!s) continue;
       s.used = this.frameNo;
       for (let i = 0; i < 3; i++) { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, s.t[i]); }
+      gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, s.under && s.t[3] ? s.t[3] : s.t[0]);
+      gl.uniform1f(u.uUnder, s.under && s.t[3] ? 1 : 0);
       const x = cx * CHUNK_PX - this.ox, y = cy * CHUNK_PX - this.oy;
       gl.uniform4f(u.uRect, x, y, CHUNK_PX, CHUNK_PX); gl.uniform2f(u.uOff, x, y);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -761,7 +802,7 @@ export class Art2Engine {
     let baked = 0, shelves = 0;
     for (const s of this.chunks.values()) if (s.real) baked++;
     for (const pg of this.pages) shelves += pg.shelves.length;
-    const bytes = this.slots.length * CHUNK_PX * CHUNK_PX * 12 + this.pages.length * ATLAS_PX * ATLAS_PX * 12 + this.cw * this.ch * 14 + (this.light ? this.light.bytes() : 0);
+    const bytes = this.slots.length * CHUNK_PX * CHUNK_PX * 12 + this.slots.filter((x) => x.t[3]).length * CHUNK_PX * CHUNK_PX * 4 + this.pages.length * ATLAS_PX * ATLAS_PX * 12 + this.cw * this.ch * 14 + (this.light ? this.light.bytes() : 0);
     return {
       chunks: this.chunks.size, baked, slots: this.slots.length, sprites: this.sprites.size, pages: this.pages.length, shelves,
       gpuMB: Math.round(bytes / 1048576 * 10) / 10, msGpuApprox: Math.round(this.msGpu * 100) / 100, lights: this.lightsUsed,

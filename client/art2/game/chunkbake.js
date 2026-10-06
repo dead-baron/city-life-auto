@@ -148,6 +148,7 @@ export function groundHeights(G, ox, oy) {
 // ---- the bake ---------------------------------------------------------------------------------------------
 // opt: { quality 0..3, seed, cutaway (building index), lowMem, groundCol (v1 ground pixels, RGBA) }
 // cache: SpriteCache for makeStatic results (one per worker); P: providers (default: the loaded ones)
+const isBuilding = (it) => (it.recipe && it.recipe.t === 'b' && !it.recipe.frame ? 1 : 0);
 export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
   const t0 = now();
   const ox = cx * CHUNK, oy = cy * CHUNK;
@@ -160,13 +161,17 @@ export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
   G.ax = 0; G.ay = 0;
   const gh = groundHeights(G, ox, oy);
   const t1 = now();
-  let items = [], lights = [], n = 0, made = 0, staticErr = null;
+  let items = [], lights = [], n = 0, made = 0, staticErr = null, under = null;
   const live = { heads: [], xing: [] };
   if (P.statics) {
     try { items = P.statics.staticItems(M, cx, cy, opt) || []; } catch (e) { staticErr = String((e && e.stack) || e); items = []; }
-    // painter's order under the depth test: north to south, then west to east (ties go to the later one)
-    items.sort((a, b) => a.y - b.y || a.x - b.x);
+    // painter's order under the depth test: north to south, then west to east (ties go to the later one).
+    // Buildings go last: the albedo just before them is the chunk's "under" layer, which the engine shows
+    // through the cut-away hole round the player (the street behind a building).
+    items.sort((a, b) => (isBuilding(a) - isBuilding(b)) || a.y - b.y || a.x - b.x);
+    let snap = opt.under !== false;
     for (const it of items) {
+      if (snap && isBuilding(it)) { under = G.col.slice(); snap = false; }
       let s;
       try {
         s = cache ? cache.get(it.key, () => { made++; return P.statics.makeStatic(it.recipe); }) : (made++, P.statics.makeStatic(it.recipe));
@@ -186,7 +191,8 @@ export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
     }
   }
   const t2 = now();
-  return { g: G, lights, gh, live, n, items: items.length, made, ms: { ground: t1 - t0, statics: t2 - t1 }, errors: groundErr || staticErr ? { ground: groundErr, statics: staticErr } : null };
+  if (!under && opt.under !== false) under = G.col.slice();   // no buildings here: the whole chunk is "under"
+  return { g: G, under, lights, gh, live, n, items: items.length, made, ms: { ground: t1 - t0, statics: t2 - t1 }, errors: groundErr || staticErr ? { ground: groundErr, statics: staticErr } : null };
 }
 
 // A signal head of a statics item as the host lights it: { x, y, z, node, edge, pi (the signal's prop, -1

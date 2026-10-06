@@ -272,7 +272,13 @@ export class World2 {
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog }) === false) return;
+    // the cut-away round the player (engine.js f.cut): on foot a hole about a body and a half wide, bigger in
+    // a vehicle; it only opens through tall statics standing south of the player
+    const me = S.ents && S.ents.get ? S.ents.get(S.ctrlId) : null, inVeh = S.ctrlKind >= 2;
+    const cz0 = me ? this._z0(me, false) : (sp.z ? DECK_Z * sp.z : 0);
+    const cut = this._cutO || (this._cutO = { x: 0, y: 0, z0: 0, r: 0, lift: 0 });
+    cut.x = sp.x; cut.y = sp.y; cut.z0 = cz0; cut.r = this.cutOff ? 0 : inVeh ? 150 : 104; cut.lift = inVeh ? 12 : 22;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, cut }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
@@ -360,7 +366,7 @@ export class World2 {
         n--;
         const t = performance.now();
         let ok = false;
-        try { ok = E.uploadChunk(res.cx, res.cy, res.r.g) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
+        try { const g = res.r.g; if (res.r.under) g.under = res.r.under; ok = E.uploadChunk(res.cx, res.cy, g) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
         this.results.delete(res.jk);
         if (!ok) continue;
         this.t.upChunkMs = performance.now() - t;

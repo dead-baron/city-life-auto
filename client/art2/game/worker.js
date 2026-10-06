@@ -81,8 +81,9 @@ async function handle(msg) {
     const transfer = [];
     const g = pack(r.g, false, transfer);
     transfer.push(r.gh.buffer);
+    if (r.under) transfer.push(r.under.buffer);
     stats.chunks++; stats.chunkMs += performance.now() - t0;
-    self.postMessage({ id, ok: true, result: { cx, cy, g, lights: r.lights, gh: r.gh, live: r.live, n: r.n, items: r.items, made: r.made, bake: r.ms, errors: r.errors }, ms: performance.now() - t0 }, transfer);
+    self.postMessage({ id, ok: true, result: { cx, cy, g, under: r.under || null, lights: r.lights, gh: r.gh, live: r.live, n: r.n, items: r.items, made: r.made, bake: r.ms, errors: r.errors }, ms: performance.now() - t0 }, transfer);
     return;
   }
   if (op === 'sprite') {
