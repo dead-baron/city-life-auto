@@ -21,13 +21,15 @@ export const VEHICLE_DIMS = {
   bike: [48, 20], policebike: [50, 20], bicycle: [40, 14], speedboat: [104, 48], dinghy: [80, 40], jetski: [46, 22],
   policeboat: [104, 48], boxtruck: [150, 58], dumptruck: [140, 60], mixer: [146, 60], tanker: [160, 58],
   garbage: [140, 60], firetruck: [176, 64], towtruck: [134, 58],
+  // scenery-only variants (parked and NPC traffic; they share the sedan / van footprints in play)
+  suv: [104, 50], limo: [150, 50], foodtruck: [124, 58],
 };
 const DEFAULT_PAINT = {
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', firetruck: '#c0302a', towtruck: '#e6e2d8',
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
-  jetski: '#c8302c', policeboat: '#f0eee8',
+  jetski: '#c8302c', policeboat: '#f0eee8', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0',
 };
 
 const R = (h, n = 6, k) => ramp(h, n, k);
@@ -117,6 +119,8 @@ function mats(m, paint, o) {
     stripeRed: m.mat({ ramp: R('#c8302c'), k: 3 }), stripeTeal: m.mat({ ramp: R('#2f8a86'), k: 3 }),
     wood: m.mat({ ramp: MAT.woodDock, k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -0.8 : 0) }),
     steel: m.mat({ ramp: MAT.metal, k: 3 }),
+    hatch: m.mat({ ramp: R('#e8b870', 5, 2), k: 3, emi: [255, 210, 140, 40 + lit * 160], shade: (x, y, z) => (Math.round(z) % 7 === 0 ? -1.5 : 0) + (Math.round(x) % 9 === 0 ? -0.8 : 0) }),
+    awn: m.mat({ ramp: R('#ecebe4'), k: 3, shade: (x) => (Math.floor(x / 5) % 2 ? -2 : 0) }), awn2: m.mat({ ramp: R('#c8343a'), k: 3 }),
     crate: [R('#b08048'), R('#8a949c'), R('#5e6e3e'), R('#2c2c34')].map((r, i) => m.mat({ ramp: r, k: 3, emi: i === 3 ? [255, 200, 90, 40] : null, shade: (x, y, z) => ((Math.round(z) % 4 === 0 || Math.round(x) % 6 === 0) ? -0.6 : 0) })),
   };
   return M;
@@ -137,7 +141,7 @@ function truckCab(m, M, x1, H, o = {}) {
 // ---- the models ---------------------------------------------------------------------------------
 export function vehicleModel(type, o = {}) {
   const [L, W] = VEHICLE_DIMS[type] || VEHICLE_DIMS.sedan;
-  const tall = { van: 48, ambulance: 54, armored: 52, swat: 56, bus: 64, flatbed: 50, boxtruck: 64, dumptruck: 56, mixer: 62, tanker: 56, garbage: 62, firetruck: 64, towtruck: 58, pickup: 38 }[type] || 36;
+  const tall = { suv: 44, foodtruck: 60, van: 48, ambulance: 54, armored: 52, swat: 56, bus: 64, flatbed: 50, boxtruck: 64, dumptruck: 56, mixer: 62, tanker: 56, garbage: 62, firetruck: 64, towtruck: 58, pickup: 38 }[type] || 36;
   const m = new Vox(L, W, tall + 14);
   const M = mats(m, o.paint || DEFAULT_PAINT[type] || '#808080', o);
   const lit = o.lights || 0;
@@ -167,6 +171,36 @@ export function vehicleModel(type, o = {}) {
       }
       if (type === 'police') lightbar(m, M, L / 2 - 6, L / 2 + 6, roof);
       if (sp) { m.box(2, 4, belt, 6, W - 4, belt + 5, M.trim); m.box(1, 3, belt + 5, 8, W - 3, belt + 6, M.body); }   // rear wing
+      break;
+    }
+    case 'suv': case 'limo': {
+      const suv = type === 'suv', belt = suv ? 22 : 18, roof = suv ? 42 : 32;
+      shell(m, { x0: 1, x1: L - 1, z0: 4, z1: belt, r: 7, rz: 3, mat: (x, y, z, s) => (z < 7 ? M.lower : s.side < 1.5 && Math.abs(z - (belt - 2)) < 0.6 ? M.chrome : M.body) });
+      const c0 = suv ? L * 0.08 : L * 0.2, c1 = suv ? L * 0.74 : L * 0.78;
+      const pil = suv ? [L * 0.36, L * 0.56] : [L * 0.4, L * 0.55, L * 0.68];
+      shell(m, { x0: c0, x1: c1, z0: belt, z1: roof, fr: suv ? 12 : 14, br: suv ? 2 : 10, tuck: 4, r: 4, rz: 2, mat: glassy(M.body, M.glass, { band: [belt + 1, roof - 2], pillars: pil }) });
+      if (suv) { for (const y of [6, W - 8]) m.box(c0 + 4, y, roof, c1 - 8, y + 2, roof + 2, M.trim); }
+      wheels(m, [L * 0.19, L * 0.8], suv ? 8.5 : 7, M);
+      lamps(m, M, { zh: belt - 7, h: 4, inset: 4, wd: 9 });
+      for (const y of [1, W - 3]) m.box(c1 - 6, y, belt, c1 - 3, y + 2, belt + 3, M.body);
+      break;
+    }
+    case 'foodtruck': {
+      const y0 = 2, y1 = W - 8;                                        // it serves from the right-hand side (high y)
+      shell(m, { x0: 1, x1: L - 1, y0, y1, z0: 5, z1: 58, r: 4, rz: 3, mat: (x, y, z, s) => {
+        if (z < 9) return M.lower;
+        if (x > L - 26 && z > 26 && z < 44 && (s.side < 1.6 || s.front < 2.2)) return M.glass;
+        if (y > y1 - 1.6 && x > L * 0.22 && x < L * 0.66 && z > 24 && z < 42) return M.hatch;
+        if (z > 46 && z < 50) return M.white;
+        return M.body;
+      } });
+      m.fill((x, y, z) => (x > L - 12 && z > 30 + (x - (L - 12)) * 1.8 ? 0 : -1), L - 12, 0, 30, L, W, 59);
+      m.box(L * 0.22, y1, 42, L * 0.66, W, 44, M.awn); m.box(L * 0.22, W - 1, 39, L * 0.66, W, 42, M.awn2);
+      m.box(L * 0.22, y1, 23, L * 0.66, y1 + 4, 25, M.steel);           // serving counter
+      m.box(L * 0.4, W / 2 - 6, 58, L * 0.55, W / 2 + 6, 63, M.steel);  // roof vent
+      wheels(m, [L * 0.2, L * 0.78], 8, M, { inset: 3 });
+      m.fill((x, y, z) => (y > y1 && z < 20 ? 0 : -1), 0, 0, 0, L, W, 20);
+      lamps(m, M, { zh: 14, h: 5, inset: 4, wd: 8, tailUp: 6 });
       break;
     }
     case 'pickup': {
@@ -333,7 +367,8 @@ export function vehicleModel(type, o = {}) {
 function applyState(m, state, type) {
   const n = m.mats.length;
   const remap = new Array(n).fill(0).map((_, i) => i);
-  const charred = m.mat({ ramp: R('#3a2e2a'), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 2 });
+  const charred = m.mat({ ramp: R('#34333a', 6, 2), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.6 + (z > 14 ? 0.6 : 0) });
+  const rust = m.mat({ ramp: R('#8a4e2c'), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.4 });
   const scuff = new Map();
   for (let i = 1; i < n; i++) {
     const M = m.mats[i];
@@ -345,7 +380,7 @@ function applyState(m, state, type) {
   for (let z = 0; z < m.h; z++) for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) {
     const i = m.idx(x, y, z), v = m.v[i];
     if (!v) continue;
-    if (state === 'burnt') { if (m.mats[v].flag & F_GLASS && z > 6) m.v[i] = 0; else m.v[i] = remap[v] || 0; continue; }
+    if (state === 'burnt') { if (m.mats[v].flag & F_GLASS && z > 6) m.v[i] = 0; else m.v[i] = remap[v] ? (vnoiseLite(x, y, z) > 0.74 ? rust : remap[v]) : 0; continue; }
     const h = hash(x, y * 7 + z, 17);
     const front = x / L;
     if (state === 'wrecked' && front > 0.82 && hash(x >> 2, y >> 2, 3) > 0.35 + (1 - front) * 2) { m.v[i] = 0; continue; }
@@ -354,3 +389,6 @@ function applyState(m, state, type) {
   }
   m.prepared = false;
 }
+
+// cheap 3D value noise for rust patches
+function vnoiseLite(x, y, z) { const s = 6, ix = Math.floor(x / s), iy = Math.floor(y / s), iz = Math.floor(z / s); return (hash(ix, iy * 31 + iz, 41) * 0.6 + hash(Math.floor(x / 3), Math.floor((y + z) / 3), 43) * 0.4); }

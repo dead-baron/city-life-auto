@@ -14,10 +14,17 @@
 //                   door: 'left'|'right'|x, clerk, clerkShirt, people }, fireEscape: [x, w],
 //           neon: { icon: 'cup'|'palm', col: [r,g,b], x, y }, trim: [r,g,b] (diner neon band) }
 import { MAT, ramp } from './palette.js';
-import { GBuf, hash, vnoise, bayer, step, F_GLASS } from './gbuf.js';
+import { GBuf, hash, vnoise, bayer, step, F_GLASS, F_LEAF } from './gbuf.js';
+import { drawText, textWidth } from './font.js';
 
 const S_N = [0, 1, 0], UP = [0, 0, 1];
 export const FLOOR = 56, SHOP_FLOOR = 64;
+// the height of a building's walls (its flat roof level), as makeBuilding lays it out
+export function buildingH(spec) {
+  if (spec.height) return spec.height;
+  const floors = spec.floors || 1, gH = spec.shop ? SHOP_FLOOR : FLOOR, cornice = (spec.style || 'stucco') === 'brick' ? 10 : 6;
+  return gH + (floors - 1) * FLOOR + cornice + (spec.parapet || 0);
+}
 
 const setC = (G, x, y, c) => { if (!G.inside(x, y)) return; const j = (y * G.w + x) * 4; G.col[j] = c[0]; G.col[j + 1] = c[1]; G.col[j + 2] = c[2]; G.col[j + 3] = 255; };
 const setN = (G, x, y, n) => { if (!G.inside(x, y)) return; const j = (y * G.w + x) * 4; G.nrm[j] = (n[0] * 0.5 + 0.5) * 255; G.nrm[j + 1] = (n[1] * 0.5 + 0.5) * 255; G.nrm[j + 2] = (n[2] * 0.5 + 0.5) * 255; G.nrm[j + 3] = 255; };
@@ -107,7 +114,7 @@ export function makeBuilding(spec) {
   const { w, d } = spec, seed = spec.seed || 1, style = spec.style || 'stucco';
   WALLC = spec.wallColor ? ramp(spec.wallColor, 6, 3) : null;
   const floors = spec.floors || 1, gH = spec.shop ? SHOP_FLOOR : FLOOR, cornice = style === 'brick' ? 10 : 6;
-  const H = gH + (floors - 1) * FLOOR + cornice + (spec.parapet || 0);
+  const H = buildingH(spec);
   const G = new GBuf(w, d + H);
   G.ax = 0; G.ay = d + H;
   const night = spec.night || 0;
@@ -145,6 +152,8 @@ export function makeBuilding(spec) {
   for (let r = 0; r < H; r++) for (let x = 0; x < w; x++) {
     const y = d + r, v = H - r;
     G.put(x, y, wallColor(style, x, v, seed, x, y), S_N, v, null, 0);
+    // office towers: some panes lit after dark
+    if (style === 'glass' && night > 0 && v > gH && x % 16 && v % 22 && hash(x >> 4, Math.floor(v / 22), seed + 5) < night * night * 0.45) { const j = (y * G.w + x) * 4; G.col[j] = 236; G.col[j + 1] = 206; G.col[j + 2] = 140; G.glow(x, y, [255, 214, 150, 70 + night * 60]); }
   }
   const fy = (v) => d + H - v;                                      // facade height -> sprite row
   // cornice: a projecting band at the top (dentils on brick)
@@ -168,7 +177,9 @@ export function makeBuilding(spec) {
     for (let i = 0; i < n; i++) {
       const px = x0 + i * (ww + gap), py = fy(base + 12 + wh);
       const lit = hash(i, f, seed + 13) < night * 0.75 + (night > 0 ? 0.08 : 0);
+      if (spec.boarded && hash(i, f, seed + 41) < spec.boarded) { boards(G, px, py, ww, wh, seed + i * 5 + f); continue; }
       sash(G, px, py, ww, wh, lit, seed + f * 7 + i);
+      if (spec.shutters) shutters(G, px, py, ww, wh, spec.shutters);
       if (spec.balconies) balconyRail(G, px - 6, py + wh + 3, ww + 12, seed + i * 3 + f);
       else if (hash(i, f, seed + 21) > 0.62) windowBox(G, px, py + wh + 2, ww, seed + i);
       else if (hash(i, f, seed + 23) > 0.82) acBox(G, px + 1, py + wh - 8);
@@ -177,14 +188,20 @@ export function makeBuilding(spec) {
   // stone band over the ground floor
   if (style === 'brick' && floors > 1) for (let k = 0; k < 4; k++) for (let x = 0; x < w; x++) setC(G, x, fy(gH + 2 - k), step(MAT.stone, 0.8 - k * 0.15, x, k, 0.3));
   // ---- ground floor
-  if (spec.shop) storefront(G, w, d, H, gH, spec, seed, night, fy);
+  if (spec.blank) { /* a plain wall: no doors or windows */ }
+  else if (spec.shop) storefront(G, w, d, H, gH, spec, seed, night, fy);
   else if (spec.doors) {
     for (const dd of spec.doors) {
       const dh = dd.h || (dd.kind === 'garage' || dd.kind === 'roller' ? 48 : 46);
       if (dd.kind === 'garage' || dd.kind === 'roller') bigDoor(G, dd.x, fy(dh), dd.w, dh, dd.kind, dd.open, night);
       else door(G, dd.x, fy(dh), dd.w || 18, dh, !!dd.open, night, seed);
     }
-    for (const wx of spec.windows || []) sash(G, wx, fy(42), 16, 24, hash(wx, 0, seed) < night * 0.6, seed + wx);
+    for (const wx of spec.windows || []) {
+      if (spec.boarded && hash(wx, 7, seed) < spec.boarded) { boards(G, wx, fy(42), 16, 24, seed + wx); continue; }
+      sash(G, wx, fy(42), 16, 24, hash(wx, 0, seed) < night * 0.6, seed + wx);
+      if (spec.shutters) shutters(G, wx, fy(42), 16, 24, spec.shutters);
+    }
+    if (spec.porchLight) for (const dd of spec.doors) if (dd.kind !== 'garage' && dd.kind !== 'roller') { const lx = dd.x + (dd.w || 18) + 3, ly = fy(36); for (let k = 0; k < 4; k++) for (let q = 0; q < 3; q++) { setC(G, lx + q, ly + k, k === 0 ? MAT.metalDark[1] : [250, 226, 160]); if (k) glow(G, lx + q, ly + k, [255, 210, 140, 120 + night * 135]); } }
   } else {
     const dx = Math.floor(w * 0.22);
     door(G, dx, fy(46), 18, 46, false, night, seed, true);
@@ -192,7 +209,11 @@ export function makeBuilding(spec) {
     sash(G, w - 34, fy(40), 16, 22, hash(0, 0, seed) < night * 0.6, seed + 3);
     sash(G, Math.floor(w * 0.52), fy(40), 16, 22, hash(1, 0, seed) < night * 0.6, seed + 4);
   }
+  if (spec.grime) grime(G, w, d, H, spec.grime, seed);
   if (spec.fireEscape) fireEscape(G, spec.fireEscape, d + H, gH, floors, seed);
+  if (spec.graffiti) for (let i = 0; i < spec.graffiti; i++) tag(G, Math.floor(hash(i, 1, seed + 61) * Math.max(1, w - 60)) + 4, d + H - 10 - Math.floor(hash(i, 2, seed + 61) * 18), seed + i * 17, spec.tagText && i === 0 ? spec.tagText : null);
+  if (spec.ivy) ivy(G, w, d, H, spec.ivy, seed);
+  if (spec.mural) mural(G, spec.mural, d + H, seed);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   return spec.pitch ? pitched(G, spec, w, d, H, seed) : G;
 }
@@ -248,7 +269,13 @@ function bigDoor(G, x0, y0, w, h, kind, open, night) {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const X = x0 + x, Y = y0 + y;
     if (x < 2 || x >= w - 2 || y < 2) { setC(G, X, Y, step(MAT.stone, x < 2 || y < 2 ? 0.7 : 0.45, X, Y, 0)); continue; }
-    if (open && y > h * 0.25) { setC(G, X, Y, step(ramp('#9a7a5a', 5, 2), 0.3 + (y / h) * 0.4, X, Y, 0.7)); G.glow(X, Y, [255, 196, 120, 20 + night * 80]); continue; }
+    if (open && y > h * 0.25) {
+      // a dim garage: shelves at the back, the rear of a parked car
+      let c = step(ramp('#7a6a58', 5, 2), 0.2 + (y / h) * 0.35 + ((y - Math.round(h * 0.25)) % 7 === 0 && y < h * 0.6 ? 0.2 : 0), X, Y, 0.7);
+      const cx = x - w / 2, cy = y - h * 0.62;
+      if (Math.abs(cx) < w * 0.36 && cy > -h * 0.2 && cy < h * 0.32) { c = step(ramp('#6a6e78', 5, 2), 0.45 - cy / h, X, Y, 0.4); if (Math.abs(Math.abs(cx) - w * 0.28) < 3 && Math.abs(cy) < 2) c = [200, 40, 36]; if (cy < -h * 0.08) c = step(MAT.glassDark, 0.4, X, Y, 0.3); }
+      setC(G, X, Y, c); G.glow(X, Y, [255, 196, 120, 6 + night * 40]); continue;
+    }
     const c = kind === 'roller' ? step(MAT.metal, y % 3 === 0 ? 0.25 : 0.55, X, Y, 0.3) : step(ramp('#e2e0d8', 6, 3), (y % 10 === 0 || (x - 2) % Math.max(8, Math.floor(w / 4)) === 0) ? 0.3 : 0.6, X, Y, 0.3);
     setC(G, X, Y, c);
   }
@@ -282,7 +309,24 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     if (mull) { setC(G, x, y, step(MAT.metalDark, y === winTop ? 0.25 : 0.55, x, y, 0)); continue; }
     const iy = y - winTop, H2 = winBot - winTop;
     let c;
-    if (shop.kind === 'diner' || shop.kind === 'cafe') {
+    if (shop.kind === 'lobby') {                                                                    // hotel lobby: marble, gold light
+      c = step(ramp('#d8b07a', 5, 2), 0.5 + (iy / H2) * 0.3 + ((x >> 3) % 3 === 0 ? -0.1 : 0), x, y, 0.8);
+      if (iy < 3) c = step(ramp('#f4e2b0', 5, 2), 0.8, x, y, 0);
+      if (iy > 3 && iy < 9 && Math.abs(((x - 4) % 60) - 30) < 6 - (iy - 3)) c = [255, 236, 170];   // chandeliers
+      if (iy > H2 * 0.7) c = step(ramp('#7a5236', 5, 2), 0.5, x, y, 0.4);                           // desk / floor
+    } else if (shop.kind === 'liquor') {                                                            // rows of bottles
+      c = step(ramp('#6a5a4a', 5, 2), 0.35 + (iy / H2) * 0.3, x, y, 0.8);
+      const shelf = iy % 11;
+      if (shelf === 0) c = MAT.metal[3];
+      else if (shelf > 2 && (x % 3) < 2) { const g = hash(x >> 1, (iy / 11) | 0, seed + 3); const B = g > 0.75 ? [60, 130, 70] : g > 0.5 ? [150, 90, 40] : g > 0.3 ? [210, 160, 60] : g > 0.15 ? [200, 210, 214] : [120, 40, 50]; c = shelf === 6 ? [230, 226, 210] : shelf < 4 ? B.map((v) => v * 0.7) : B; }
+    } else if (shop.kind === 'pawn') {                                                              // guitars, TVs, gold
+      c = step(ramp('#7a6a58', 5, 2), 0.35 + (iy / H2) * 0.3, x, y, 0.8);
+      const cell = Math.floor((x - 4) / 14), row = Math.floor(iy / 14), g = hash(cell, row, seed + 5), lx = (x - 4) % 14, ly = iy % 14;
+      if (ly === 0) c = MAT.metalDark[3];
+      else if (g > 0.66 && lx > 2 && lx < 12 && ly > 2 && ly < 11) { c = (lx === 3 || ly === 3 || lx === 11 || ly === 10) ? [40, 40, 46] : [70, 120, 170]; if (c[2] === 170) glow(G, x, y, [120, 180, 255, 60 + night * 80]); }
+      else if (g > 0.4 && Math.abs(lx - 7) < (ly > 7 ? 4 : 2) && ly > 1) c = ly < 7 ? [96, 60, 36] : [176, 100, 44];
+      else if (g < 0.15 && ly > 8 && (x + iy) % 3 === 0) c = [240, 206, 90];
+    } else if (shop.kind === 'diner' || shop.kind === 'cafe') {
       c = step(ramp('#c08a50', 5, 2), 0.4 + (iy / H2) * 0.35, x, y, 0.8);
       if (iy > H2 * 0.62) c = step(MAT.dinerRed, 0.4 + (x % 16 < 2 ? -0.2 : 0), x, y, 0.4);            // booth seats
       if (iy > H2 * 0.55 && iy < H2 * 0.62) c = MAT.chrome[3];                                          // table tops
@@ -298,6 +342,16 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     glow(G, x, y, [255, 200, 132, 8 + night * 60]);
     G.flag[y * G.w + x] |= F_GLASS;
   }
+  // security grille over the glass (bars), and a neon OPEN sign in the window
+  if (shop.grille) for (let y = winTop; y < winBot; y++) for (let x = 4; x < w - 4; x++) {
+    if (x >= doorX - 2 && x < doorX + doorW + 2) continue;
+    if ((x - 4) % 5 === 0 || (y - winTop) % 15 === 0) setC(G, x, y, step(MAT.metalDark, (x - 4) % 5 === 0 ? 0.55 : 0.75, x, y, 0));
+  }
+  if (shop.openSign) {
+    const ox = shop.openSign.x ?? (shop.door === 'right' ? doorX - 30 : doorX + doorW + 8), oy = winTop + 6, col = shop.openSign.col || [255, 60, 70];
+    for (let y = -2; y < 9; y++) for (let x = -2; x < 18; x++) if (y === -2 || y === 8 || x === -2 || x === 17) { setC(G, ox + x, oy + y, [70, 140, 255]); glow(G, ox + x, oy + y, [70, 140, 255, 140 + night * 115]); }
+    drawText((px, py) => { setC(G, px, py, col.map((v) => Math.min(255, v * 0.6 + 110))); glow(G, px, py, [...col, 170 + night * 85]); }, 'OPEN', ox, oy, { sx: 1, gap: 1 });
+  }
   // people inside the windows (busts), and the clerk at the counter
   const people = shop.people ?? (shop.kind === 'diner' ? 4 : 0);
   for (let i = 0; i < people; i++) { const px = 16 + ((i * 37 + seed * 11) % Math.max(20, w - 40)); if (px > doorX - 12 && px < doorX + doorW + 12) continue; bust(G, px, winTop + 10, [ [180, 60, 60], [60, 110, 180], [230, 200, 80], [90, 150, 90] ][i % 4], seed + i * 3, 0.8); }
@@ -305,8 +359,9 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   // stall riser under the windows
   for (let y = winBot; y < y0; y++) for (let x = 2; x < w - 2; x++) if (!(x >= doorX && x < doorX + doorW)) setC(G, x, y, step(shop.kind === 'diner' ? MAT.dinerRed : MAT.stone, 0.4 + (y === winBot ? 0.35 : 0), x, y, 0.4));
   door(G, doorX, y0 - 50, doorW, 50, shop.open !== false, night, seed);
+  if (shop.sign) signBoard(G, shop.sign, shop.sign.x ?? 4, winTop - 24, shop.sign.w ?? w - 8, 22, night);
   // striped fascia band above the windows
-  if (shop.band) for (let y = winTop - 22; y < winTop - 2; y++) for (let x = 2; x < w - 2; x++) { const k = y - (winTop - 22); setC(G, x, y, k < 3 || k > 17 ? MAT.paintWhiteCar[k < 3 ? 4 : 2] : step(ramp(shop.band[Math.floor((k - 3) / 5) & 1], 5, 2), 0.6 - ((k - 3) % 5 === 4 ? 0.2 : 0), x, y, 0)); }
+  else if (shop.band) for (let y = winTop - 22; y < winTop - 2; y++) for (let x = 2; x < w - 2; x++) { const k = y - (winTop - 22); setC(G, x, y, k < 3 || k > 17 ? MAT.paintWhiteCar[k < 3 ? 4 : 2] : step(ramp(shop.band[Math.floor((k - 3) / 5) & 1], 5, 2), 0.6 - ((k - 3) % 5 === 4 ? 0.2 : 0), x, y, 0)); }
   // awning: sloped canvas strip, scalloped, in stripes
   if (shop.awning) {
     const [ca, cb] = shop.awning.map((h) => ramp(h, 6, 3));
@@ -374,4 +429,108 @@ function bust(G, cx, cy, shirt, seed, scale = 1) {
     if (y >= 11 && Math.abs(x) <= 8 - Math.max(0, 13 - y)) c = step(sh, 0.62 - x * 0.04, X, Y, 0.4);
     if (c) setC(G, X, Y, c);
   }
+}
+
+// ---- weathering, graffiti and signs -----------------------------------------------------------------
+// plywood boards nailed over a window
+function boards(G, x0, y0, w, h, seed) {
+  for (let y = -1; y < h + 1; y++) for (let x = -1; x < w + 1; x++) {
+    const X = x0 + x, Y = y0 + y, plank = Math.floor((y + 1) / 6), ly = (y + 1) % 6;
+    let t = 0.55 + (hash(plank, 0, seed) - 0.5) * 0.3 + (vnoise(X, Y, 5, seed) - 0.5) * 0.15;
+    if (ly === 0) t -= 0.3; if (ly === 1) t += 0.1;
+    if ((x === 1 || x === w - 2) && ly === 3) t = 0.05;                    // nail heads
+    setC(G, X, Y, step(ramp('#a8865a', 6, 3), t, X, Y, 0.4));
+  }
+}
+function shutters(G, x0, y0, w, h, color) {
+  const R = ramp(color, 5, 2);
+  for (const sx of [x0 - 7, x0 + w + 1]) for (let y = 0; y < h; y++) for (let x = 0; x < 6; x++) {
+    const edge = x === 0 || x === 5 || y === 0 || y === h - 1;
+    setC(G, sx + x, y0 + y, step(R, edge ? 0.25 : y % 3 === 0 ? 0.35 : 0.65, sx + x, y, 0));
+  }
+}
+// streaks of dirt washing down from the roof and sills, and a grimy base
+function grime(G, w, d, H, k, seed) {
+  for (let x = 0; x < w; x++) {
+    const streak = vnoise(x, 0, 3, seed + 71) > 1 - k * 0.45 ? vnoise(x, 1, 7, seed + 72) * H * 0.7 : 0;
+    for (let r = 0; r < H; r++) {
+      const Y = d + r, j = (Y * G.w + x) * 4;
+      if (!G.col[j + 3] || (G.flag[Y * G.w + x] & F_GLASS)) continue;
+      let m = 1;
+      if (r < streak) m -= (1 - r / streak) * 0.22 * k;
+      if (r > H - 12) m -= ((r - (H - 12)) / 12) * 0.25 * k;
+      if (vnoise(x, r, 6, seed + 73) > 0.8) m -= 0.1 * k;
+      G.col[j] *= m; G.col[j + 1] *= m; G.col[j + 2] *= m * 1.02;
+    }
+  }
+}
+const SPRAY = [[156, 92, 210], [70, 180, 200], [226, 80, 84], [244, 236, 224], [244, 206, 70], [96, 206, 120], [240, 120, 180]];
+// a graffiti piece: bubble letters (text) or a scribbled tag, with outline, highlight and drips
+function tag(G, x0, yb, seed, text) {
+  const W = 96, Hh = 34, M = new Uint8Array(W * Hh);
+  const disc = (cx, cy, r) => { for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (x >= 0 && y >= 0 && x < W && y < Hh && (x - cx) ** 2 + (y - cy) ** 2 <= r * r) M[y * W + x] = 1; };
+  if (text) {
+    const sx = Math.min(5, Math.floor((W - 8) / Math.max(1, text.length * 4)));
+    drawText((px, py) => disc(px + 0.5, py + 0.5 + Math.sin(px * 0.3 + seed) * 1.5, sx * 0.62), text, 4, 4, { sx, sy: 5, gap: 1 });
+  } else {
+    let x = 6, y = 18;
+    const n = 30 + Math.floor(hash(seed, 1, 3) * 30);
+    for (let i = 0; i < n; i++) { const a = Math.sin(i * 0.7 + seed) * 1.9 + (hash(i, seed, 5) - 0.5) * 1.5; x += 2.2; y += Math.sin(a) * 3.2; y = Math.max(6, Math.min(Hh - 8, y)); disc(x, y, 2 + (i % 9 === 0 ? 1.5 : 0)); if (x > W - 10) break; }
+  }
+  const fill = SPRAY[Math.floor(hash(seed, 2, 7) * SPRAY.length)], line = [28, 22, 38], hi = fill.map((v) => Math.min(255, v + 70));
+  const at = (x, y) => x >= 0 && y >= 0 && x < W && y < Hh && M[y * W + x];
+  for (let y = -1; y < Hh + 6; y++) for (let x = -1; x <= W; x++) {
+    const X = x0 + x, Y = yb - Hh + y;
+    if (!G.inside(X, Y) || !G.col[(Y * G.w + X) * 4 + 3] || (G.flag[Y * G.w + X] & F_GLASS)) continue;
+    let c = null;
+    if (at(x, y)) c = !at(x - 1, y - 1) ? hi : step(ramp(fill, 5, 2), 0.7 - y / Hh * 0.35, X, Y, 0.5);
+    else if (at(x - 1, y) || at(x + 1, y) || at(x, y - 1) || at(x, y + 1)) c = line;
+    else if (y >= Hh - 6 && hash(x, 0, seed) > 0.86 && at(x, Hh - 8) && y < Hh - 6 + hash(x, 1, seed) * 10) c = fill;   // drips
+    if (c) setC(G, X, Y, c);
+  }
+}
+// ivy climbing from the pavement and trailing from the roofline
+function ivy(G, w, d, H, k, seed) {
+  const leaf = (X, Y) => { if (!G.inside(X, Y) || !G.col[(Y * G.w + X) * 4 + 3]) return; setC(G, X, Y, MAT.leaf[Math.min(6, 1 + Math.floor(hash(X, Y, seed) * 4))]); setN(G, X, Y, [0, 0.75, 0.66]); G.flag[Y * G.w + X] |= F_LEAF; };
+  const n = Math.round(w / 60 * k * 3) + 1;
+  for (let v = 0; v < n; v++) {
+    let x = hash(v, 1, seed + 81) * w, y = d + H - 1;
+    const up = H * (0.35 + hash(v, 2, seed + 81) * 0.6);
+    for (let s = 0; s < up; s++) {
+      x += (hash(s, v, seed + 82) - 0.5) * 1.6; y -= 1;
+      for (let q = 0; q < 3; q++) if (hash(s, q, seed + v) > 0.45) leaf(Math.round(x + (hash(q, s, v) - 0.5) * 7), Math.round(y + (hash(s, q, 9) - 0.5) * 3));
+    }
+  }
+  for (let x = 0; x < w; x++) if (vnoise(x, 0, 9, seed + 83) > 1 - k * 0.6) { const len = vnoise(x, 2, 4, seed + 84) * 26 * k; for (let r = 0; r < len; r++) if (hash(x, r, seed) > 0.25) leaf(x, d + 8 + r); }
+}
+// a painted mural: a sunset with palms (x, w on the facade, h tall, standing on the pavement)
+function mural(G, m, yGround, seed) {
+  const { x: x0, w, h } = m;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const X = x0 + x, Y = yGround - h + y, t = y / h;
+    let c = t < 0.6 ? [255 - t * 120, 120 + t * 80, 140 - t * 60] : [70, 50 + t * 40, 110];
+    const sun = Math.hypot(x - w * 0.6, y - h * 0.58);
+    if (sun < h * 0.22 && t < 0.62) c = [255, 210 - sun, 90];
+    if (t > 0.6 && t < 0.63) c = [255, 170, 90];
+    for (const px of [w * 0.2, w * 0.82]) { if (Math.abs(x - px - (h - y) * 0.08) < 1.5 && t > 0.3) c = [30, 24, 40]; if (Math.abs(y - h * 0.3) < 4 - Math.abs(x - px) * 0.25 && Math.abs(x - px) < 14) c = [30, 24, 40]; }
+    if (m.text && t > 0.72) c = [44, 30, 70];
+    setC(G, X, Y, c.map((v) => Math.max(0, Math.min(255, v | 0))));
+  }
+  if (m.text) drawText((px, py) => setC(G, px, py, [250, 236, 210]), m.text, x0 + 6, yGround - Math.round(h * 0.24), { sx: 2, sy: 2, gap: 1 });
+}
+// a shop sign board with lettering (lit from inside at night when sign.lit)
+function signBoard(G, sign, x0, y0, w, h, night) {
+  const bg = ramp(sign.bg || '#2c2c34', 5, 2), fg = sign.fg || [240, 220, 150];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const edge = x < 2 || y < 2 || x >= w - 2 || y >= h - 2;
+    setC(G, x0 + x, y0 + y, edge ? (y < 2 || x < 2 ? MAT.metal[4] : MAT.metalDark[1]) : step(bg, 0.5 + (y < h / 2 ? 0.08 : -0.05), x0 + x, y0 + y, 0.4));
+    if (sign.lit && !edge) glow(G, x0 + x, y0 + y, [...bg[3], 30 + night * 40]);
+  }
+  const text = sign.text || '';
+  let sx = Math.max(1, Math.min(3, Math.floor((w - 10) / Math.max(1, text.length * 4))));
+  const sy = Math.max(1, Math.min(3, Math.floor((h - 6) / 5)));
+  const tw = textWidth(text, { sx, gap: 1 });
+  const tx = x0 + Math.floor((w - tw) / 2), ty = y0 + Math.floor((h - 5 * sy) / 2);
+  drawText((px, py, k) => { setC(G, px, py, k ? [20, 16, 24] : fg); if (!k && (sign.lit || sign.neon)) glow(G, px, py, [...fg, (sign.neon ? 150 : 60) + night * 100]); }, text, tx, ty, { sx, sy, gap: 1, shadow: true });
+  if (sign.icon === 'crown') { const cx = x0 + w - 16, cy = y0 + 5; for (let y = 0; y < 10; y++) for (let x = 0; x < 13; x++) { const on = y > 6 || ((x === 0 || x === 6 || x === 12) && y > 0) || (y > 3 && (x < 3 || (x > 4 && x < 8) || x > 9)); if (on) { setC(G, cx + x, cy + y, [236, 196, 80]); glow(G, cx + x, cy + y, [255, 200, 80, 40 + night * 120]); } } }
 }

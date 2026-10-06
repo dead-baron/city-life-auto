@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 districts</title>
+<style>body{margin:0;background:#18181c;color:#ccc;font:13px monospace}canvas,img{image-rendering:pixelated;display:block}
+.wrap{position:relative;width:1536px;height:1024px}.wrap canvas{position:absolute;left:0;top:0}h3{margin:8px}a{color:#9cf;margin-right:10px}</style></head><body>
+<!-- One district block built by client/art2/districts.js, lit for ?p=golden|noon|night|rain, with its D target
+     underneath (?target=0 to hide it). ?d=suburbs|southside|luxury|downtown. Serve the repo root. -->
+<h3 id="t"></h3><div id="nav"></div>
+<div class="wrap"><canvas id="c" width="1536" height="1024"></canvas><canvas id="rain" width="1536" height="1024"></canvas></div>
+<img id="tg">
+<script type="module">
+import { DISTRICTS, DISTRICT_TARGETS } from '../../client/art2/districts.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+const q = new URLSearchParams(location.search), d = q.get('d') || 'suburbs', preset = q.get('p') || 'golden';
+document.getElementById('nav').innerHTML = Object.keys(DISTRICTS).map((k) => ['golden', 'noon', 'night', 'rain'].map((p) => `<a href="?d=${k}&p=${p}">${k} ${p}</a>`).join('')).join('<br>');
+const T0 = performance.now();
+const { G, lights } = DISTRICTS[d](preset);
+const T1 = performance.now();
+const L = new Lighter(document.getElementById('c'));
+L.setScene(G);
+L.render(PRESETS[preset], lights, 1.0);
+document.getElementById('t').textContent = `${d} - ${preset} - built in ${(T1 - T0).toFixed(0)} ms, ${lights.length} lights`;
+if (PRESETS[preset].rain) {
+  const g = document.getElementById('rain').getContext('2d');
+  let s = 7; const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 520; i++) { const x = r() * 1536, y = r() * 1024, l = 10 + r() * 14; g.strokeStyle = `rgba(190,205,255,${0.18 + r() * 0.22})`; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - l * 0.25, y + l); g.stroke(); }
+}
+const tg = document.getElementById('tg');
+if (q.get('target') !== '0') { tg.onload = () => { window.done = true; }; tg.src = '../../docs/art-v2/targets/' + DISTRICT_TARGETS[d]; tg.style.width = '1536px'; }
+else window.done = true;
+window.info = (T1 - T0).toFixed(0) + ' ms';
+</script></body></html>

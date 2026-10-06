@@ -98,7 +98,14 @@ export function leafyTree(seed = 1, height = 120, crown = 34, opt = {}) {
     blobs.push({ x: cx + Math.cos(a) * r * 1.1, y: crownCy + Math.sin(a) * r * 0.8 - crown * 0.08, r: crown * (0.26 + rnd() * 0.16) });
   }
   blobs.push({ x: cx, y: crownCy - crown * 0.15, r: crown * 0.55 });
-  // for each pixel: the front-most clump surface (largest projected depth)
+  paintBlobs(G, blobs, R, seed, opt);
+  G.outline(0.4, true);
+  finishUpright(G, foot);
+  return G;
+}
+// the leafy crown: for each pixel, the front-most clump surface (largest projected depth)
+function paintBlobs(G, blobs, R, seed, opt = {}) {
+  const W = G.w, H = G.h;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     let best = null, bz = -1e9;
     for (const b of blobs) {
@@ -120,6 +127,42 @@ export function leafyTree(seed = 1, height = 120, crown = 34, opt = {}) {
     G.put(x, y, step(R, t, x, y, 0.8), null, 0, null, F_LEAF);
     nrm(G, x, y, [u * 0.9, 0.35 + w * 0.4, -v * 0.9 + 0.25]);
   }
+}
+
+// ---- Italian cypress / columnar conifer: a tall, narrow flame of dark foliage -----------------------
+export function cypress(seed = 1, height = 96, radius = 11, opt = {}) {
+  const rnd = mulberry32(seed * 7717 + 5);
+  const W = radius * 2 + 10, H = height + 8, foot = H - 3, cx = W / 2;
+  const G = new GBuf(W, H);
+  G.ax = W / 2; G.ay = foot;
+  for (let y = foot - 8; y <= foot; y++) for (let x = Math.floor(cx - 2); x <= cx + 2; x++) { G.put(x, y, step(MAT.bark, 0.55 - (x - cx) * 0.12, x, y, 0.4)); nrm(G, x, y, [(x - cx) / 2, 0.5, 0.1]); }
+  const blobs = [];
+  const n = Math.round(height / 6);
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1), y = foot - 6 - t * (height - 10);
+    const r = radius * (t < 0.15 ? 0.75 + t * 1.6 : 1 - Math.pow((t - 0.15) / 0.85, 1.6) * 0.82);
+    blobs.push({ x: cx + (rnd() - 0.5) * radius * 0.5, y, r: Math.max(2.5, r * (0.85 + rnd() * 0.3)) });
+  }
+  paintBlobs(G, blobs, opt.ramp || MAT.leafDark, seed, opt);
+  G.outline(0.4, true);
+  finishUpright(G, foot);
+  return G;
+}
+
+// ---- pine: tiers of drooping dark boughs on a straight trunk -----------------------------------------
+export function pine(seed = 1, height = 150, radius = 30) {
+  const rnd = mulberry32(seed * 3301 + 9);
+  const W = radius * 2 + 12, H = height + 8, foot = H - 3, cx = W / 2;
+  const G = new GBuf(W, H);
+  G.ax = W / 2; G.ay = foot;
+  for (let y = foot - height + 6; y <= foot; y++) { const w = 3 - (foot - y) / height * 2; for (let x = Math.floor(cx - w); x <= cx + w; x++) { G.put(x, y, step(MAT.bark, 0.55 - (x - cx) / w * 0.3, x, y, 0.4)); nrm(G, x, y, [(x - cx) / w, 0.5, 0.1]); } }
+  const blobs = [];
+  const tiers = 6 + Math.floor(rnd() * 3);
+  for (let i = 0; i < tiers; i++) {
+    const t = i / (tiers - 1), y = foot - height * 0.22 - t * height * 0.72, r = radius * (1 - t * 0.78);
+    for (let k = 0; k < 5; k++) blobs.push({ x: cx + (k - 2) * r * 0.42 + (rnd() - 0.5) * 4, y: y + Math.abs(k - 2) * r * 0.18, r: r * (0.42 + rnd() * 0.12) });
+  }
+  paintBlobs(G, blobs, MAT.leafDark, seed);
   G.outline(0.4, true);
   finishUpright(G, foot);
   return G;

@@ -1545,3 +1545,31 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
 - **Preview:** `tools/art2/animal-preview.html?view=line|walk`.
 - **Still missing:** birds (pigeons, gulls, crows, pelican), rats, squirrels, ducks and fish.
 - **Prompt pack:** gained an Extras section (E1 terrain by biome, E2 rocks and water edges, E3 plants by biome, I6 streets by wealth, I7 highways, ramps and parking, P5 more street furniture).
+
+### Art v2: district targets and the first district kits
+- **Targets:** D1 to D17 (with two D15 forest versions) are saved in `docs/art-v2/targets`.
+- **`client/art2/scene.js`, the scene composer:**
+  - `Streets` lays out roads, cul-de-sac bulbs and raised medians. Every block corner gets a rounded kerb (a morphological opening of the pavement), and lot ground (lawns, driveways, plazas, pools, courts) is laid on top as zones.
+  - `Scene` sorts buildings, props, cars, people and trees back to front, places rooftop kit, strings overhead wires and collects the point lights (the strongest 64 are kept).
+- **New ground:** bus lane, driveway, cobbles, herringbone brick, gravel, dirt, rubble, mulch, mown lawn, dry grass, tennis courts, pools (with caustics and the near pool wall), limestone tile, plaza paving and coastal rock.
+  - Ground decorators: court lines, litter, pavement cracks, oil stains, painted road words (BUS ONLY), lawn edges and shore foam.
+- **Buildings:**
+  - Graffiti (bubble letters or scribbled tags, with drips), boarded windows, ivy, grime streaks, shutters and porch lights.
+  - Plain walls of any height, and a dim open garage with a car parked inside.
+  - Sign boards with lettering (a small 3x5 font in `client/art2/font.js`, used only for generic words), security grilles, a neon OPEN sign, and pawn, liquor and hotel-lobby shop interiors.
+  - Office-tower windows light up at night.
+- **`client/art2/props-district.js`:**
+  - Fences: picket, wood, chain-link with barbed wire, wrought iron and low stone walls. Gate pillars with lanterns and an iron gate.
+  - Yards: mailboxes, wheelie bins, a mower, a trampoline, a basketball hoop, loungers, patio chairs and a grill.
+  - Street: power poles with wires, bus shelters, banner lamps, advert kiosks and a hotel canopy.
+  - Round and plaza fountains, pallets, boxes, bin bags, tyres, a mattress, oil drums, boulders, topiary, planter boxes, a tennis net, a coin viewer and railings.
+- **Trees and vehicles:**
+  - New trees: cypress and pine.
+  - New scenery vehicles: SUV, limo and food truck (it serves from the kerb side).
+  - Burnt-out cars are now sooty black with rust instead of brown.
+- **`client/art2/districts.js`:** four district blocks built to their targets:
+  - suburbs (D9)
+  - Southside (D6)
+  - luxury boulevard and estate (D2)
+  - downtown hotel plaza (D1)
+- **Preview:** `tools/art2/district-preview.html?d=suburbs|southside|luxury|downtown&p=golden|noon|night|rain`. Comparison: `docs/art-v2/districts-v1.png`.
