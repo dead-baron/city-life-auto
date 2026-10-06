@@ -154,8 +154,8 @@ export function buildSouthside(preset = 'golden') {
   sc.vox(P.bin(true), 520, 290); sc.vox(P.bin(true), 456, 292); sc.vox(P.hydrant(), 440, 290);
   sc.vox(D.cardboard(), 586, 276); sc.vox(D.trashBag(), 602, 280); sc.vox(D.cardboard(), 470, 274, 0.4);
   // ---- SW and SE: flat roofs seen from above, a second vacant lot
-  const sw = sc.building({ w: 250, d: 150, style: 'brick', seed: 66, roof: 'flat', parapet: 6, doors: [], windows: [], ivy: 0.4 }, 0, 650);
-  const se = sc.building({ w: 214, d: 150, style: 'brick', seed: 67, roof: 'flat', parapet: 6, doors: [], windows: [], ivy: 0.5, grime: 0.6 }, 432, 650);
+  const sw = sc.building({ w: 250, d: 150, style: 'brick', seed: 66, roof: 'flat', parapet: 6, doors: [], windows: [], ivy: 0.4, northDoors: [{ x: 60, w: 30, col: '#c8a030' }, { x: 180, kind: 'home' }] }, 0, 650);
+  const se = sc.building({ w: 214, d: 150, style: 'brick', seed: 67, roof: 'flat', parapet: 6, doors: [], windows: [], ivy: 0.5, grime: 0.6, northDoors: [{ x: 40, w: 30, col: '#2a8a5a' }] }, 432, 650);
   for (const [b, list] of [[sw, [[40, 20, 'ac'], [120, 14, 'acs'], [190, 40, 'vent'], [70, 60, 'dish'], [160, 70, 'ac']]], [se, [[40, 20, 'tank'], [120, 24, 'ac'], [170, 60, 'acs'], [80, 70, 'vent']]]])
     for (const [x, y, k] of list) sc.onRoof(b, k === 'ac' ? P.roofAC() : k === 'acs' ? P.roofAC(false) : k === 'vent' ? P.roofVent() : k === 'dish' ? P.dish() : P.waterTank(), x, y);
   fenceRun(sc, 'chain', 652, 430, 768, 430, { barbed: true }); fenceRun(sc, 'chain', 652, 430, 652, 512);

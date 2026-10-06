@@ -2,16 +2,18 @@
 <style>body{margin:0;background:#18181c;color:#ccc;font:13px monospace}canvas,img{image-rendering:pixelated;display:block}
 .wrap{position:relative;width:1536px;height:1024px}.wrap canvas{position:absolute;left:0;top:0}h3{margin:8px}a{color:#9cf;margin-right:10px}</style></head><body>
 <!-- One district block built by client/art2/districts.js, lit for ?p=golden|noon|night|rain, with its D target
-     underneath (?target=0 to hide it). ?d=suburbs|southside|luxury|downtown|transit|ferry|industrial|beach|park|farm|desert|forest|civic|oldtown|apartments|nightlife|commercial|compound|cove|blend. Serve the repo root. -->
+     underneath (?target=0 to hide it). ?d=suburbs|southside|luxury|downtown|transit|ferry|industrial|beach|park|farm|desert|forest|civic|oldtown|apartments|nightlife|commercial|compound|cove|blend, and the cut-aways metro|tunnel|gym|prison|prisonisland (p=indoor for underground). Serve the repo root. -->
 <h3 id="t"></h3>
 <div class="wrap"><canvas id="c" width="1536" height="1024"></canvas><canvas id="rain" width="1536" height="1024"></canvas></div>
 <div id="nav"></div>
 <img id="tg">
 <script type="module">
-import { CITY_DISTRICTS as DISTRICTS, CITY_TARGETS as DISTRICT_TARGETS } from '../../client/art2/districts4.js';
+import { CITY_DISTRICTS, CITY_TARGETS } from '../../client/art2/districts4.js';
+import { CUTAWAYS, CUTAWAY_TARGETS, CUTAWAY_PRESET } from '../../client/art2/cutaways.js';
+const DISTRICTS = { ...CITY_DISTRICTS, ...CUTAWAYS }, DISTRICT_TARGETS = { ...CITY_TARGETS, ...CUTAWAY_TARGETS };
 import { Lighter, PRESETS } from '../../client/art2/light.js';
-const q = new URLSearchParams(location.search), d = q.get('d') || 'suburbs', preset = q.get('p') || 'golden';
-document.getElementById('nav').innerHTML = Object.keys(DISTRICTS).map((k) => ['golden', 'noon', 'night', 'rain'].map((p) => `<a href="?d=${k}&p=${p}">${k} ${p}</a>`).join('')).join('<br>');
+const q = new URLSearchParams(location.search), d = q.get('d') || 'suburbs', preset = q.get('p') || CUTAWAY_PRESET[d] || 'golden';
+document.getElementById('nav').innerHTML = Object.keys(DISTRICTS).map((k) => ['golden', 'noon', 'night', 'rain', 'indoor'].map((p) => `<a href="?d=${k}&p=${p}">${k} ${p}</a>`).join('')).join('<br>');
 const T0 = performance.now();
 const { G, lights } = DISTRICTS[d](preset);
 const T1 = performance.now();

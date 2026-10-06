@@ -1636,3 +1636,27 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
 - **Live game:** unchanged; its streets are already 192 px. Its avenues (288 px) get widened in the world rebuild.
 - **Comparison:** `docs/art-v2/districts-wide.png`.
 - **Islands split:** the D16 block is now two separate island scenes, the gang compound (`?d=compound`) and the palm cove with the beach cabin (`?d=cove`). Each is ringed by open water, because in World v2 they sit in different parts of the sea.
+
+### Art v2: cut-away interiors, the metro, gym and prison
+- **Targets:** J1 (the prison island), J2 and J3 (prison interiors) and G1 (the gym) are saved in `docs/art-v2/targets`.
+- **`client/art2/interior.js`, the cut-away room:**
+  - The back wall stands full height and carries the room's look: tile, brick, cinder block or concrete, with a colour band.
+  - Wall decorations: posters, a line map, a monitor wall, lit signs, windows, notice boards, fans, a clock, wall lamps, pipes, mirrors and athlete posters.
+  - Doors in the back wall can be shut, open, steel, glass, barred, or open onto lit stairs, with exit signs.
+  - Side and front walls are cut down low so the room and the people in it stay in view. The front wall is sorted with the people, so it covers anyone standing behind it.
+  - Inner rooms can have cut-down back walls.
+- **New floors:** white and green tile, station platform, checkerboard, gym rubber, wood planks, and dark bedrock round underground rooms.
+- **`indoor` lighting preset:** no sun, a warm fill light, and the room's own lamps.
+- **`client/art2/props-interior.js`:**
+  - Metro: turnstiles, tiled pillars with lights, a busker's amp and guitar case, tunnel mouths with signals, and a stainless metro car with open doors.
+  - Gym: a dumbbell rack, benches, squat racks, punching bags, a boxing ring, treadmills, kettlebells, lockers, a reception desk, a drinks fridge and medicine balls.
+  - Prison: cells with bunks and toilets, canteen tables, a serving counter, a control desk with screens, filing cabinets, a gun locker, an office chair and desk, and watchtowers.
+- **New people:** inmate, warden, cook, janitor, lifter, boxer, yoga, busker and commuter.
+- **`client/art2/cutaways.js`:** five scenes in the preview (`?d=metro|tunnel|gym|prison|prisonisland`):
+  - the metro station (T1)
+  - the tunnel with service rooms and the line rising to the surface (T2)
+  - the gym (G1)
+  - the four prison interiors, including the breakout at the gate (J2/J3)
+  - the prison island (J1)
+- **Entrances on hidden fronts:** a building whose front faces north, away from the camera, hides its door and the strip of pavement in front of it. `sc.building({ northDoors: [...] })` now marks those entrances with a lit sign on the roof edge, and an A-board (shops) or mailbox (homes) out on the pavement with light spilling onto it. The doorstep and mat are painted at the face for when the roof is cut away near the player.
+- **Comparison:** `docs/art-v2/cutaways-v1.png`.

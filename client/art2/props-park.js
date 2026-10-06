@@ -86,7 +86,7 @@ export function woodRail(len = 80, rope = false) {
 // steps down from a raised boardwalk (descending toward +y)
 export function steps(w = 40, n = 6, rise = 4, run = 6, color = '#8a6440') {
   const m = new Vox(w, n * run, n * rise);
-  const s = m.mat({ ramp: R(color), k: 3, shade: (x, y) => (Math.round(y) % run === 0 ? 1 : 0) });
+  const s = m.mat({ ramp: R(color), k: 3, shade: (x, y) => (Math.round(y) % run === 0 ? 1.2 : Math.round(y) % run === run - 1 ? -1.4 : 0) });
   m.fill((x, y, z) => (z < (n - Math.floor(y / run)) * rise ? s : -1));
   return m;
 }

@@ -15,6 +15,8 @@ import { makeBuilding, buildingH } from './buildings.js';
 import { person, randomPerson } from './people.js';
 import { LIGHT } from './palette.js';
 import { W, setWarp } from './warp.js';
+import { chalkboard } from './props.js';
+import { mailbox } from './props-district.js';
 
 // ---- exact Euclidean distance transform (Felzenszwalb & Huttenlocher) -----------------------------
 // mask[i] = 1 marks the features; returns the squared distance from every pixel to the nearest one.
@@ -142,6 +144,20 @@ export class Streets {
   }
 }
 
+// a lit sign panel standing on a roof edge on two legs, its face to the camera (the shop's colour,
+// light stripes for lettering)
+function roofSign(col, night) {
+  const c = typeof col === 'string' ? [parseInt(col.slice(1, 3), 16), parseInt(col.slice(3, 5), 16), parseInt(col.slice(5, 7), 16)] : col;
+  const G = new GBuf(34, 26); G.ax = 17; G.ay = 24;
+  for (const lx of [6, 27]) for (let v = 0; v < 8; v++) G.put(lx, 24 - v, [44, 44, 50], [0, 1, 0], v, null, 0);
+  for (let v = 8; v < 24; v++) for (let x = 1; x < 33; x++) {
+    const edge = v === 8 || v === 23 || x === 1 || x === 32, text = !edge && v > 11 && v < 20 && x > 4 && x < 29 && (x % 4 !== 0) && ((x * 7 + v * 3) % 5 !== 0);
+    const cc = edge ? [36, 34, 40] : text ? [250, 244, 228] : c;
+    G.put(x, 24 - v, cc, [0, 1, 0], v, edge ? null : [...cc, (text ? 140 : 50) + night * 110], 0);
+  }
+  return G;
+}
+const P_CHALK = () => chalkboard(), P_MAIL = () => mailbox('#2c3a66');
 // ---- the scene -------------------------------------------------------------------------------------
 export class Scene {
   // w, h in design coordinates; warp: the layout stretch for this block (see warp.js), set before
@@ -151,7 +167,7 @@ export class Scene {
     this.dw = w; this.dh = h;
     w = Math.round(W.x(w)); h = Math.round(W.y(h));
     this.w = w; this.h = h; this.preset = preset; this.seed = seed;
-    this.isNight = preset === 'night' || preset === 'rain';
+    this.isNight = preset === 'night' || preset === 'rain' || preset === 'indoor';
     this.night = this.isNight ? 1 : preset === 'golden' ? 0.4 : 0;     // lit windows, neon
     this.lampsOn = preset === 'noon' ? 0 : 1;
     this.carLights = preset === 'noon' ? 0 : 1;
@@ -175,7 +191,30 @@ export class Scene {
     const s = { night: this.night, ...spec };
     const spr = makeBuilding(s), X = W.x(x), Y = W.y(y);
     this.addWorld(spr, X, Y);
-    return { x: X, y: Y, w: spec.w, d: spec.d, H: buildingH(s), base: Y, spr };
+    const b = { x: X, y: Y, w: spec.w, d: spec.d, H: buildingH(s), base: Y, spr };
+    for (const e of spec.northDoors || []) this.entrance(b, e);
+    return b;
+  }
+  // An entrance on a building's north face. With this camera that face is hidden, and so is the strip of
+  // ground in front of it (the roof covers it on screen for as far as the building is tall). So the way
+  // in is marked where it can be seen: a lit sign standing on the roof's north edge, and out on the
+  // pavement beyond the roof's shadow an A-board (shops) or a mailbox (homes), with light spilling onto
+  // it. The doorstep and mat are painted at the face too, for when the roof is cut away near the player.
+  // e: { x (from the building's west edge), w, kind: 'shop'|'home'|'service', col, glow }
+  entrance(b, e) {
+    const G = this.G, x0 = Math.round(b.x + e.x), y0 = Math.round(b.y - b.d), w = e.w || 22, shop = e.kind !== 'home' && e.kind !== 'service';
+    for (let k = 1; k <= 10; k++) for (let x = x0 - 3; x < x0 + w + 3; x++) {
+      if (!G.inside(x, y0 - k)) continue;
+      const st = k <= 4, mat = k > 4 && k <= 9 && x >= x0 + 2 && x < x0 + w - 2;
+      const c = st ? [180 - k * 8, 176 - k * 8, 166 - k * 7] : mat ? (e.kind === 'service' ? [90, 92, 96] : [70, 54, 44]) : null;
+      if (c) G.put(x, y0 - k, c, [0, 0, 1], st ? 5 - k : 0, null, 1 | 8);
+    }
+    const col = e.col || (shop ? '#c8343a' : '#2a4a6a'), out = y0 - b.H - 16;
+    if (shop) {
+      this.addWorld(roofSign(col, this.night), x0 + w / 2, y0 + 8, b.H, b.base + 0.5);
+      this.addWorld(this.render(P_CHALK(), 0, 'chalk'), x0 + w / 2, out, 0, out);
+    } else this.addWorld(this.render(P_MAIL(), 0, 'mail'), x0 + w / 2, out, 0, out);
+    this.light(W.ix(x0 + w / 2), W.iy(out + 6), 30, shop ? 90 : 50, e.glow || [1, 0.82, 0.55], this.isNight ? 1.5 : this.preset === 'golden' ? 0.5 : 0.15);
   }
   // rooftop kit: (rx, ry) measured from the footprint's north-west corner (world offsets)
   onRoof(b, m, rx, ry, hd = 0, key = null) { return this.addWorld(this.render(m, hd, key), b.x + rx, b.y - b.d + ry, b.H, b.base + 0.5); }

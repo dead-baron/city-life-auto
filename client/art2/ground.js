@@ -101,6 +101,40 @@ function groundPixel(kind, x, y, seed) {
       if (vnoise(x, y, 5, seed + 9) > 0.86 && vnoise(x + 1, y, 5, seed + 9) < 0.86) t -= 0.25;
       return { c: step(DESERT, t, x, y, 0.9) };
     }
+    case 'tileWhite': case 'tileGreen': {                        // glazed wall-style floor tile, small, bright grout
+      const S = 12, lx = x % S, ly = y % S, R = kind === 'tileWhite' ? TILEW : TILEG;
+      let t = 0.6 + (hash(Math.floor(x / S), Math.floor(y / S), seed + 3) - 0.5) * 0.12 + (mid - 0.5) * 0.08;
+      if (lx === 0 || ly === 0) t -= 0.28; else if (lx === 1 || ly === 1) t += 0.08;
+      if (vnoise(x, y, 9, seed + 41) > 0.82) t -= 0.12;
+      return { c: step(R, t, x, y, 0.4) };
+    }
+    case 'platform': {                                           // big grey station tiles, scuffed and shiny
+      const S = 28, lx = x % S, ly = y % S;
+      let t = 0.5 + (hash(Math.floor(x / S), Math.floor(y / S), seed + 5) - 0.5) * 0.16 + (big - 0.5) * 0.15 + (h > 0.96 ? 0.12 : 0);
+      if (lx === 0 || ly === 0) t -= 0.22;
+      return { c: step(PLATF, t, x, y, 0.5) };
+    }
+    case 'checker': {                                            // canteen / diner floor
+      const on = (Math.floor(x / 16) + Math.floor(y / 16)) & 1;
+      return { c: step(on ? CHECKA : CHECKB, 0.55 + (mid - 0.5) * 0.12 + (h > 0.95 ? 0.08 : 0), x, y, 0.4) };
+    }
+    case 'rubber': {                                             // gym rubber flooring in big tiles
+      const S = 40, lx = x % S, ly = y % S;
+      let t = 0.45 + (h > 0.9 ? 0.15 : h < 0.1 ? -0.1 : 0) + (mid - 0.5) * 0.12;
+      if (lx === 0 || ly === 0) t -= 0.2;
+      return { c: step(RUBBER, t, x, y, 0.6) };
+    }
+    case 'woodFloor': {                                          // planks along x
+      const row = Math.floor(y / 6), off = (row * 37) % 60, lx = (x + off) % 60;
+      let t = 0.55 + (hash(Math.floor((x + off) / 60), row, seed + 9) - 0.5) * 0.25 + (mid - 0.5) * 0.1;
+      if (y % 6 === 0 || lx === 0) t -= 0.25;
+      return { c: step(MAT.woodDock, t, x, y, 0.4) };
+    }
+    case 'bedrock': {                                            // the dark ground round an underground cut-away
+      let t = 0.35 + (big - 0.5) * 0.3 + (mid - 0.5) * 0.2 + (h > 0.95 ? 0.12 : 0);
+      if (((x >> 4) + (y >> 4)) % 7 === 0 && (x % 16 === 0 || y % 16 === 0)) t -= 0.12;
+      return { c: step(BEDROCK, t, x, y, 0.6) };
+    }
     case 'asphaltRed': {                                         // a painted bus lane
       let t = 0.5 + (big - 0.5) * 0.3 + (mid - 0.5) * 0.2 + (h > 0.94 ? 0.2 : h < 0.05 ? -0.2 : 0);
       return { c: step(BUSLANE, t, x, y, 0.8) };
@@ -189,6 +223,12 @@ const DIRTROAD = ramp('#b08a5e', 6, 3, { dark: 0.5, light: 0.4 });
 const WHEAT = ramp('#d8a840', 7, 3, { dark: 0.55, light: 0.55, shift: 0.2 });
 const DESERT = ramp('#d09a62', 6, 3, { dark: 0.5, light: 0.45, shift: 0.2 });
 const ROCKRED = ramp('#a8543a', 6, 3, { dark: 0.55, light: 0.45 });
+const TILEW = ramp('#d8d6cc', 6, 3, { dark: 0.45, light: 0.4, shift: 0.15 });
+const TILEG = ramp('#5e8a7a', 6, 3, { dark: 0.5, light: 0.4 });
+const PLATF = ramp('#8a8a88', 6, 3, { dark: 0.5, light: 0.45, shift: 0.15 });
+const CHECKA = ramp('#c8c4b8', 5, 2, { dark: 0.4 }), CHECKB = ramp('#5a6a6a', 5, 2);
+const RUBBER = ramp('#3a3a40', 6, 3, { dark: 0.5, light: 0.35 });
+const BEDROCK = ramp('#3a3638', 6, 3, { dark: 0.5, light: 0.35, shift: 0.15 });
 const BUSLANE = ramp('#7a4a48', 6, 3, { dark: 0.55, light: 0.35, shift: 0.14 });
 const COBBLE = ramp('#a8a094', 6, 3, { dark: 0.55, light: 0.45, shift: 0.18 });
 const PAVEBRICK = ramp('#a86a52', 6, 3, { dark: 0.5, light: 0.4 });
@@ -551,5 +591,13 @@ export function ruts(G, path, gap = 22, seed = 111) {
       const j = (y * G.w + x) * 4, k = Math.abs(w) < 2 ? 0.8 : 0.9;
       G.col[j] *= k; G.col[j + 1] *= k; G.col[j + 2] *= k;
     }
+  }
+}
+
+// paint one ground kind over a rectangle (interiors: floors laid room by room)
+export function paintRect(G, x0, y0, w, h, kind, seed = 1) {
+  for (let y = Math.max(0, y0 | 0); y < Math.min(G.h, (y0 + h) | 0); y++) for (let x = Math.max(0, x0 | 0); x < Math.min(G.w, (x0 + w) | 0); x++) {
+    const p = groundPixel(kind, x, y, seed);
+    if (p) G.put(x, y, p.c, p.n || UP, 0, p.e || null, F_GROUND | (p.water ? F_WATER : F_WET));
   }
 }

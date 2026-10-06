@@ -205,6 +205,12 @@ export const PRESETS = {
     shadowTint: [1, 1, 1], shadowLen: 0, bands: 0, bandMix: 0, wet: 0, emiK: 1.05, bloomThr: 0.55, leafGlow: 0,
     bloomK: 1.1, haze: 0.06, hazeCol: [0.08, 0.1, 0.22], vign: 0.7, sat: 1.15, contrast: 1.08, lift: [0.0, 0.0, 0.03], gain: [1.04, 0.98, 1.02], reflK: 0, lampsOn: 1,
   },
+  // indoors and underground: no sun, a warm ambient fill, the room's own lamps do the rest
+  indoor: {
+    sunDir: [-0.4, -0.3, 0.86], sunCol: [0.0, 0.0, 0.0], ambSky: [0.3, 0.28, 0.27], ambGround: [0.22, 0.2, 0.2],
+    shadowTint: [1, 1, 1], shadowLen: 0, bands: 0, bandMix: 0, wet: 0, emiK: 1.0, bloomThr: 0.62, leafGlow: 0,
+    bloomK: 0.9, haze: 0.03, hazeCol: [0.3, 0.24, 0.18], vign: 0.55, sat: 1.15, contrast: 1.1, lift: [0.01, 0.0, 0.02], gain: [1.06, 1.0, 0.94], reflK: 0, lampsOn: 1,
+  },
   rain: {
     sunDir: [-0.5, -0.3, 0.8], sunCol: [0.04, 0.05, 0.1], ambSky: [0.06, 0.08, 0.18], ambGround: [0.05, 0.05, 0.11],
     shadowTint: [1, 1, 1], shadowLen: 0, bands: 0, bandMix: 0, wet: 0.9, emiK: 1.05, bloomThr: 0.55, leafGlow: 0,

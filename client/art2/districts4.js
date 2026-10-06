@@ -72,10 +72,10 @@ export function buildOldTown(preset = 'golden') {
   sc.vox(P.scooter('#c8342e'), 150, 372); sc.vox(P.laundryLine(60), 90, 300);
   sc.building({ w: 180, d: 150, floors: 3, style: 'brick', seed: 54, roof: 'flat', doors: [{ x: 30, w: 20, kind: 'door' }], windows: [80, 120, 150], porchLight: true }, 270, 220);
   // south of the street: rooftops, tile and flat, a roof terrace
-  const s1 = sc.building({ w: 200, d: 150, style: 'stucco', wallColor: '#d8c8a8', pitch: 'hip', roof: 'tile', seed: 55, blank: true }, 0, 660);
-  const s2 = sc.building({ w: 180, d: 150, style: 'stucco', wallColor: '#c8b898', seed: 56, roof: 'flat', parapet: 6, blank: true }, 260, 660);
-  const s3 = sc.building({ w: 160, d: 150, style: 'brick', seed: 57, roof: 'terrace', blank: true }, 470, 660);
-  sc.building({ w: 130, d: 150, style: 'stucco', wallColor: '#d8b48a', pitch: 'hip', roof: 'tile', seed: 58, blank: true }, 640, 660);
+  const s1 = sc.building({ w: 200, d: 150, style: 'stucco', wallColor: '#d8c8a8', pitch: 'hip', roof: 'tile', seed: 55, blank: true, northDoors: [{ x: 80, kind: 'home' }] }, 0, 660);
+  const s2 = sc.building({ w: 180, d: 150, style: 'stucco', wallColor: '#c8b898', seed: 56, roof: 'flat', parapet: 6, blank: true, northDoors: [{ x: 40, w: 30, col: '#2e6a4e' }, { x: 120, kind: 'home' }] }, 260, 660);
+  const s3 = sc.building({ w: 160, d: 150, style: 'brick', seed: 57, roof: 'terrace', blank: true, northDoors: [{ x: 60, w: 30, col: '#a8343a' }] }, 470, 660);
+  sc.building({ w: 130, d: 150, style: 'stucco', wallColor: '#d8b48a', pitch: 'hip', roof: 'tile', seed: 58, blank: true, northDoors: [{ x: 50, kind: 'home' }] }, 640, 660);
   roofKit(sc, s2, [['ac', 30, 20], ['ac', 90, 30], ['tank', 140, 20]]); roofKit(sc, s3, [['plant', 20, 20], ['palm', 100, 30], ['plant', 60, 60]]);
   // lanes: lamps, bollards with chain round the square, trees, people, cars
   for (const x of [290, 400, 640]) sc.vox(T.chainBollards(60), x, 388, 0, 0, 388, 'chain');
@@ -126,8 +126,8 @@ export function buildApartments(preset = 'golden') {
   sc.person(660, 396, null, 2, 'walk', 4120); pet(sc, 'terrier', 684, 400, 0, { phase: 0.4 });
   lamp(sc, 104, 300, 'cast'); lamp(sc, 360, 404, 'cast'); lamp(sc, 104, 120, 'cast');
   // south rooftops
-  const r1 = sc.building({ w: 260, d: 150, style: 'brick', seed: 46, roof: 'flat', parapet: 6, blank: true }, 120, 730);
-  const r2 = sc.building({ w: 300, d: 150, style: 'brick', seed: 47, roof: 'flat', parapet: 6, blank: true }, 420, 730);
+  const r1 = sc.building({ w: 260, d: 150, style: 'brick', seed: 46, roof: 'flat', parapet: 6, blank: true, northDoors: [{ x: 40, kind: 'home' }, { x: 160, w: 30, col: '#2f6a8a' }] }, 120, 730);
+  const r2 = sc.building({ w: 300, d: 150, style: 'brick', seed: 47, roof: 'flat', parapet: 6, blank: true, northDoors: [{ x: 60, w: 30, col: '#c8a030' }, { x: 220, kind: 'home' }] }, 420, 730);
   roofKit(sc, r1, [['ac', 40, 20], ['ac', 100, 30], ['plant', 180, 20]]); roofKit(sc, r2, [['dish', 60, 30], ['ac', 160, 20], ['tank', 240, 30]]);
   return sc.finish();
 }
@@ -172,7 +172,7 @@ export function buildNightlife(preset = 'rain') {
   sc.vox(D.busShelter(60, sc.lampsOn), 470, 450, PI); sc.vox(D.adKiosk(sc.lampsOn, '#d84a7a'), 540, 452);
   for (const [x, y, k, d] of [[330, 314, null, 2], [380, 316, 'punk', 2], [520, 420, null, 6], [270, 200, 'socialite', 4], [460, 150, null, 0], [600, 440, 'tracksuit', 2]]) sc.person(x, y, k, d, 'walk', x * 3 + y);
   // south: rooftops with AC
-  const r1 = sc.building({ w: 300, d: 150, style: 'concrete', seed: 84, roof: 'flat', parapet: 6, blank: true }, 460, 670);
+  const r1 = sc.building({ w: 300, d: 150, style: 'concrete', seed: 84, roof: 'flat', parapet: 6, blank: true, northDoors: [{ x: 60, w: 30, col: '#d84a9a', glow: [1, 0.4, 0.8] }, { x: 200, w: 30, col: '#3ab0d8', glow: [0.4, 0.8, 1] }] }, 460, 670);
   roofKit(sc, r1, [['ac', 30, 20], ['ac', 80, 20], ['acs', 140, 30], ['vent', 200, 20], ['dish', 260, 40]]);
   if (sc.preset !== 'noon') { sc.light(560, 240, 40, 140, LIGHT.neonMagenta, sc.isNight ? 1.8 : 0.5); sc.light(140, 240, 40, 140, LIGHT.neonMagenta, sc.isNight ? 1.8 : 0.5); sc.light(700, 250, 40, 110, LIGHT.neonCyan, sc.isNight ? 1.8 : 0.5); }
   return sc.finish();
@@ -219,7 +219,7 @@ export function buildCommercial(preset = 'golden') {
   for (const [x, y, k, d] of [[420, 270, null, 0], [440, 300, 'student', 0], [430, 330, 'dad', 4], [520, 236, 'socialite', 2], [600, 238, null, 0], [660, 240, 'banker', 6], [300, 232, 'tourist', 2]]) sc.person(x, y, k, d, 'walk', x * 9 + y);
   pet(sc, 'golden', 540, 244, 0, { phase: 0.4 });
   // the south-west rooftops with a painted wall
-  const r1 = sc.building({ w: 360, d: 150, style: 'concrete', seed: 36, roof: 'flat', parapet: 6, blank: true }, 0, 670);
+  const r1 = sc.building({ w: 360, d: 150, style: 'concrete', seed: 36, roof: 'flat', parapet: 6, blank: true, northDoors: [{ x: 60, w: 30, col: '#2e6a4e' }, { x: 260, w: 30, col: '#a8343a' }] }, 0, 670);
   roofKit(sc, r1, [['ac', 30, 20], ['ac', 80, 30], ['solar', 140, 20], ['solar', 180, 20], ['vent', 260, 30], ['plant', 300, 60]]);
   signFace(sc, 180, 520, 160, 70, [{ text: 'GOOD PEOPLE', x: 8, v: 40, sx: 2, fg: [40, 60, 90] }, { text: 'BETTER DAYS', x: 8, v: 20, sx: 2, fg: [40, 60, 90] }], { color: '#e8e0cc', base: 520 });
   return sc.finish();
