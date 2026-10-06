@@ -5,3 +5,6 @@ logs/
 .DS_Store
 __pycache__/
 tools/weights/
+
+# bathhouse/shower concept targets: kept out of the public repo
+docs/art-v2/targets-private/
