@@ -98,7 +98,8 @@ export function twinLamp(on = 0) {
   const pole = m.mat({ ramp: R('#3a3e44'), k: 2 }), glass = glowMat(m, '#f4d9a0', on ? [255, 205, 130, 255] : null, 3);
   m.cyl('z', 23, 6, 0, 4, 0, 8, pole); m.cyl('z', 23, 6, 0, 2, 8, 88, pole);
   m.box(4, 5, 86, 42, 7, 89, pole);
-  for (const x of [2, 34]) { m.box(x, 3, 82, x + 10, 9, 86, pole); m.box(x + 1, 4, 81, x + 9, 8, 82, glass); }
+  // the heads: a housing over a glass bowl that shows a lit rim all round from above (the lamp reads as lit)
+  for (const x of [2, 34]) { m.box(x - 1, 2, 79, x + 11, 10, 83, glass); m.box(x, 3, 82, x + 10, 9, 86, pole); }
   return m;
 }
 // bollards: 'concrete' (pale post with a domed top), 'banded' (black with yellow bands), 'cast' (old iron)

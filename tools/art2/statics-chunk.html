@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 statics chunks</title>
+<style>body{margin:0;background:#18181c;color:#ccc;font:13px monospace}canvas{image-rendering:pixelated;display:block}
+.wrap{position:relative;display:flex;flex-direction:column;gap:6px;width:max-content}h3{margin:8px}</style></head><body>
+<!-- The live world's statics (client/art2/game/statics.js) for one chunk or a block of them, composed over the
+     ground (client/art2/game/groundbake.js when present, else plain tile colours) with the depth rule and lit by
+     the Lighter at 2x - golden hour on top, night below. The city is generated in the page (seed 1337).
+     ?cx=&cy= the first chunk  &grid=W or WxH chunks  &p=both|golden|noon|night|rain  &cut=<building index>
+     &ground=0 plain ground  &q=0..3 ground quality  &list=cx,cy;cx,cy... several chunks, one after another
+     &dbg=1 adds a strong test light at the chunk centre. Serve the repo root. -->
+<h3 id="t">generating the city...</h3>
+<div class="wrap" id="wrap"></div>
+<script type="module" src="./statics-chunk.js"></script>
+</body></html>

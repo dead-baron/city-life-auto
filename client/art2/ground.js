@@ -3,9 +3,13 @@
 //
 // paintGround(G, kindAt, seed): kindAt(x, y) -> a ground kind name for every pixel; then the
 // decorators below add markings, kerbs, drains and wear on top.
-import { MAT, ramp } from './palette.js';
+//
+// World materials (the live game's chunk baker, client/art2/game/groundbake.js): GSHADE[name](x, y, seed)
+// shades one pixel of an E1-sheet material in world coordinates, without allocating (see the section at
+// the end); coverSprite(kind, variant) makes the tiny upright plants, stones and shells strewn on top.
+import { MAT, ramp, hex } from './palette.js';
 import { drawText } from './font.js';
-import { F_GROUND, F_WATER, F_WET, hash, vnoise, bayer, step, norm } from './gbuf.js';
+import { GBuf, F_GROUND, F_WATER, F_WET, F_LEAF, F_NOCAST, hash, vnoise, bayer, step, norm } from './gbuf.js';
 
 const UP = [0, 0, 1];
 const pick = (R, i) => R[Math.max(0, Math.min(R.length - 1, i))];
@@ -213,7 +217,13 @@ export function groundPixel(kind, x, y, seed) {
       if (vnoise(x + 1, y + 1, 9, seed + 61) < cr - 0.04) t += 0.2;    // lit facets
       return { c: step(ROCK, t, x, y, 0.6) };
     }
-    default: return null;
+    default: {                                                   // the world materials (GSHADE, below)
+      const f = GSHADE[kind];
+      if (!f) return null;
+      gsReset();
+      const c = f(x, y, seed);
+      return { c, n: GS.nx || GS.ny ? norm([GS.nx, GS.ny, 1]) : null, water: GS.water };
+    }
   }
 }
 const SHALLOW = ramp('#3cc0c4', 6, 3, { dark: 0.45, light: 0.6, shift: 0.1 });
@@ -631,4 +641,683 @@ export function hatchPoly(G, poly, opt = {}) {
     const d = opt.chevron ? Math.abs(((x - opt.chevron[0]) * 0.7 + Math.abs(y - opt.chevron[1])) % sp) : ((x + (opt.dir || 1) * y) % sp + sp) % sp;
     if ((edge || d < wd) && hash(x, y, 3) > 0.08) paint(G, x, y, step(R, 0.6, x, y, 0.3));
   }
+}
+
+// ==== World materials ================================================================================
+// One shader per material of the E1 ground sheet, plus the district and biome variants the live map needs,
+// all in world coordinates so neighbouring chunks meet without a seam. GSHADE[name](x, y, seed) returns a
+// ramp colour (a shared array: copy it, never write to it) and leaves its extras in GS: nx, ny (a tilt of
+// the normal: relief the low sun picks out), h (px above the surface: grain stalks, crop leaves) and water
+// (1: a puddle, flag it F_WATER). Call gsReset() before each pixel. groundPixel(name, ...) serves them too.
+export const GS = { nx: 0, ny: 0, h: 0, water: 0 };
+export function gsReset() { GS.nx = 0; GS.ny = 0; GS.h = 0; GS.water = 0; }
+// world ramps: hex steps dark -> light, with extra contrast laid on (E1's materials have far brighter sunlit
+// highlights than a plain ramp: the upper steps lift and warm, the lowest dips a little)
+const RP = (s) => { const R = s.split(' ').map(hex), n = R.length; return R.map((c, k) => { const u = n > 1 ? k / (n - 1) : 0, f = 0.94 + 0.5 * u * u; return [Math.min(255, Math.round(c[0] * f * (1 + 0.06 * u))), Math.min(255, Math.round(c[1] * f)), Math.min(255, Math.round(c[2] * f * (1 - 0.06 * u)))]; }); };
+// a fast integer hash -> 0..1 (integer arguments; the world shaders' own, cheaper than gbuf's hash())
+export const hh = (x, y, s) => { let h = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(y | 0, 0x165667b1) ^ Math.imul(s | 0, 0x9e3779b9); h = Math.imul(h ^ (h >>> 15), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const BAY = new Float32Array([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.5 + 1 / 32));
+const at = (R, k) => R[k <= 0 ? 0 : k >= R.length - 1 ? R.length - 1 : k | 0];
+// a 0..1 shade to a ramp step through the ordered dither (step() inlined for the hot loops)
+const sd = (R, t, x, y, d = 0.6) => { const v = t * (R.length - 1) + BAY[(y & 3) * 4 + (x & 3)] * d; return R[v <= 0 ? 0 : v >= R.length - 1 ? R.length - 1 : Math.round(v)]; };
+export { sd as shadeStep };
+
+// Worley cells: distance to the nearest and second-nearest jittered cell centre, that cell's hash and the
+// offset from its centre (allocation free: the result lives in WC until the next call)
+export const WC = { d1: 0, d2: 0, h: 0, dx: 0, dy: 0, gx: 0, gy: 0 };
+// The jittered centres of the 3 x 3 cells around the last cell looked up are kept per (size, seed, jitter)
+// slot, so a row of pixels re-hashes only when it crosses into the next cell (same results as without).
+const WK = new Float64Array(32 * 32);
+export function worley(x, y, sz, seed, jit = 0.8) {
+  const cx = Math.floor(x / sz), cy = Math.floor(y / sz), o = ((seed * 5 + sz * 3 + jit * 40) & 31) * 32;
+  if (WK[o] !== sz || WK[o + 1] !== seed || WK[o + 2] !== cx || WK[o + 3] !== cy || WK[o + 4] !== jit) {
+    WK[o] = sz; WK[o + 1] = seed; WK[o + 2] = cx; WK[o + 3] = cy; WK[o + 4] = jit;
+    for (let j = -1, q = o + 5; j <= 1; j++) for (let i = -1; i <= 1; i++, q += 3) {
+      const gx = cx + i, gy = cy + j, h = hh(gx, gy, seed);
+      WK[q] = (gx + 0.5 + (h - 0.5) * jit) * sz; WK[q + 1] = (gy + 0.5 + (hh(gy, gx, seed + 1) - 0.5) * jit) * sz; WK[q + 2] = h;
+    }
+  }
+  let b = 1e18, b2 = 1e18, bk = 0;
+  for (let k = 0, q = o + 5; k < 9; k++, q += 3) {
+    const dx = x - WK[q], dy = y - WK[q + 1], d = dx * dx + dy * dy;
+    if (d < b) { b2 = b; b = d; bk = k; } else if (d < b2) b2 = d;
+  }
+  const q = o + 5 + bk * 3;
+  WC.h = WK[q + 2]; WC.dx = x - WK[q]; WC.dy = y - WK[q + 1]; WC.gx = cx + (bk % 3) - 1; WC.gy = cy + ((bk / 3) | 0) - 1;
+  WC.d1 = Math.sqrt(b); WC.d2 = Math.sqrt(b2);
+  return WC;
+}
+// value noise (identical to vnoise) that keeps the corner hashes of the last cell per (scale, seed) slot
+const VK = new Float64Array(64 * 8);
+export function vnc(x, y, sc, seed = 0) {
+  const fx = x / sc, fy = y / sc, ix = Math.floor(fx), iy = Math.floor(fy), o = ((seed * 7 + sc * 13) & 63) * 8;
+  if (VK[o] !== sc || VK[o + 1] !== seed || VK[o + 2] !== ix || VK[o + 3] !== iy) {
+    VK[o] = sc; VK[o + 1] = seed; VK[o + 2] = ix; VK[o + 3] = iy;
+    VK[o + 4] = hh(ix, iy, seed); VK[o + 5] = hh(ix + 1, iy, seed); VK[o + 6] = hh(ix, iy + 1, seed); VK[o + 7] = hh(ix + 1, iy + 1, seed);
+  }
+  const a = VK[o + 4], b = VK[o + 5], c = VK[o + 6], d = VK[o + 7];
+  let tx = fx - ix, ty = fy - iy; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+  return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+}
+// one stone of a pebble field: its shade 0..1 (lit on the upper left, a dark rim) or -1 between stones
+function stone(x, y, sz, seed, fill, jit = 0.8) {
+  const w = worley(x + 0.5, y + 0.5, sz, seed, jit), r = sz * fill * (0.6 + 0.8 * w.h);
+  if (w.d1 > r) return -1;
+  const u = w.dx / r, v = w.dy / r;
+  GS.nx = u * 0.55; GS.ny = v * 0.55;
+  return 0.56 + (w.h - 0.5) * 0.3 - (u + v) * 0.26 - (w.d1 > r - 1.1 ? 0.22 : 0);
+}
+// grass blades: short slanted strokes (one column of strokes per blade lean, phased by hash), bright at the
+// tip, dark in the gaps between - returns the row within the stroke (0 = tip, >= 3 or so = gap)
+function bladeRow(x, y, s, per) {
+  const lean = ((vnc(x, y, 41, s + 71) * 3) | 0) - 1;
+  const c = x + (y >> 1) * lean, hb = hh(c, (y + ((c * 7) & 15)) >> 4, s);
+  GS.nx = lean * 0.16;
+  return (y + ((hb * 1013) | 0)) % (per + ((hb * 3) | 0));
+}
+function grass(R, x, y, s, per, stripes = 0) {
+  const t = bladeRow(x, y, s, per);
+  let k = t === 0 ? 6 : t === 1 ? 5 : t === 2 ? 4 : t === 3 && per > 4 ? 3 : 1;
+  const big = vnc(x, y, 52, s + 3), cl = vnc(x, y, 8, s + 5);
+  k += (big > 0.62 ? 1 : big < 0.36 ? -1 : 0) + (cl > 0.7 ? 1 : cl < 0.28 ? -1 : 0);
+  if (stripes && ((((x + ((vnc(x, y, 90, s) * 14) | 0)) / 34) | 0) & 1)) k -= 1;
+  if (hh(x, y, s + 9) < 0.05) k -= 2;
+  if (t > 2) GS.nx = 0;
+  return at(R, k);
+}
+// a clover patch: small three-lobed leaves lit on the upper left, with a white flower head now and then
+function clover(x, y, s, dens) {
+  if (vnc(x, y, 23, s + 31) < 1 - dens) return null;
+  const w = worley(x + 0.5, y + 0.5, 5, s + 33, 0.9);
+  if (w.d1 > 2.7) return null;
+  if (w.h > 0.84 && w.d1 < 1.6) return at(FLWR, w.dy < 0 ? 1 : 0);
+  GS.nx = w.dx * 0.15; GS.ny = w.dy * 0.15;
+  return at(CLOV, 3 - Math.round((w.dx + w.dy) * 0.6) + (w.h > 0.5 ? 1 : 0));
+}
+const DIRS = Array.from({ length: 16 }, (_, i) => [Math.cos(i * Math.PI / 16), Math.sin(i * Math.PI / 16)]);
+// pine needles: a few straight strokes in each 4 px cell, at random angles (the 3 x 3 block of needles
+// around the last cell is kept, as for worley())
+const NK = new Float64Array(3 + 9 * 5);
+function needle(x, y, s) {
+  const cx = x >> 2, cy = y >> 2;
+  if (NK[0] !== cx || NK[1] !== cy || NK[2] !== s) {
+    NK[0] = cx; NK[1] = cy; NK[2] = s;
+    for (let j = -1, q = 3; j <= 1; j++) for (let i = -1; i <= 1; i++, q += 5) {
+      const gx = cx + i, gy = cy + j, h = hh(gx, gy, s), dr = DIRS[(h * 20) & 15];
+      NK[q] = h; NK[q + 1] = dr[0]; NK[q + 2] = dr[1]; NK[q + 3] = gx * 4 + 2 + (hh(gy, gx, s) - 0.5) * 3; NK[q + 4] = gy * 4 + 2 + (hh(gx + 7, gy, s) - 0.5) * 3;
+    }
+  }
+  for (let q = 3; q < 48; q += 5) {
+    const h = NK[q];
+    if (h > 0.8) continue;
+    const px = x - NK[q + 3], py = y - NK[q + 4], al = px * NK[q + 1] + py * NK[q + 2], ac = py * NK[q + 1] - px * NK[q + 2], L = 3 + h * 4;
+    if (h < 0.62 && ac > -0.6 && ac < 0.6 && al > -L && al < L) return h;
+  }
+  return -1;
+}
+// a herringbone of bricks at 45 degrees (2 x 1 dominoes, half of them turned): mortar, brick id, row
+function herring(x, y, w) {
+  const P = (x + y) * 0.7071 / w + 4096, Q = (y - x) * 0.7071 / w + 4096, i = Math.floor(P), j = Math.floor(Q), fp = P - i, fq = Q - j, d = (i + j) & 3, m = 0.75 / w;
+  let mort, id;
+  if (d < 2) { mort = fq < m || (d === 0 && fp < m); id = (i - d) * 7919 + j; HB.u = (d + fp) / 2; HB.v = fq; }
+  else { mort = fp < m || (d === 2 && fq < m); id = i * 7919 + j - (d - 2); HB.u = fp; HB.v = (d - 2 + fq) / 2; }
+  HB.id = id; return mort;
+}
+const HB = { id: 0, u: 0, v: 0 };
+// a crack across a slab: from one edge to another, with a jitter; true on the crack line
+function slabCrack(lx, ly, S, sh, x, y) {
+  const a0 = sh * 4 | 0, a = (a0 + 1 + (sh * 13 | 0) % 3) & 3, p0 = (sh * 97 % 1) * S, p1 = (sh * 31 % 1) * S;
+  const ax = a0 === 0 ? p0 : a0 === 1 ? S : a0 === 2 ? p0 : 0, ay = a0 === 0 ? 0 : a0 === 1 ? p0 : a0 === 2 ? S : p0;
+  const bx = a === 0 ? p1 : a === 1 ? S : a === 2 ? p1 : 0, by = a === 0 ? 0 : a === 1 ? p1 : a === 2 ? S : p1;
+  const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, d = ((lx - ax) * dy - (ly - ay) * dx) / L;
+  if (d > 2.2 || d < -2.2) return false;
+  return Math.abs(d + (vnc(x, y, 5, 77) - 0.5) * 3) < 0.6;
+}
+
+const G_LAWN = RP('#122a20 #183825 #20482b #2b592f #396932 #4b7a34 #618a39 #809d41');
+const G_PARK = RP('#122d22 #193c27 #234c2d #2e5d31 #3d6c33 #507c36 #698e3c #87a246');
+const G_MEAD = RP('#0f201b #142d1e #1c3b22 #284b25 #385827 #4c662c #677633 #888a42');
+const G_DRY = RP('#2a3426 #3a442c #4c5432 #5e6438 #727240 #86824a #9c9458 #b4aa6c');
+const G_ALP = RP('#1e2e2c #283c32 #344a38 #42583c #546640 #687448 #808452 #9a9862');
+const CLOV = RP('#143327 #1b432c #255432 #336638 #46783e #5e8b47');
+const FLWR = RP('#d8d2c0 #f2eedf'), FLWY = RP('#c8902a #ecc848');
+const SOIL_F = RP('#121012 #1d181a #292121 #362c2c #453937 #574945 #685b57');
+const NEEDLE = RP('#2c2420 #40352a #564837 #6c5a44 #806d55 #928167');
+const MOSS = RP('#1e3a2a #284c30 #345e36 #42703c');
+const MUD = RP('#231d20 #312829 #403432 #50423c #625248 #766456 #8a7866');
+const PUD = RP('#1e3450 #2c4a6e #46689a #6a8ec0 #9cbce6');
+const GRV_C = RP('#1a232a #2f3840 #404953 #4d5762 #636c73 #727c80 #7c8687');
+const GRV_W = RP('#3a3432 #4e4642 #645a54 #7a6e66 #908478 #a69a8c');
+const DIRT2 = RP('#3c3028 #524236 #685444 #7c6652 #8e7660 #a0886e #b29a80');
+const PLOW = RP('#211b1e #2e2526 #3c302e #4c3c38 #5c4a42 #6e5a4e #82705e');
+const SPROUT = RP('#2e5a32 #4a7e3a #6aa044');
+const DUNE = RP('#896d52 #9a7c5a #a98963 #b5956d #bd9f75 #c5a97f #cbb289');
+const DESR = RP('#5a4a3c #6e5a48 #826c54 #947c62 #a48c70 #b49c80 #c2ac90');
+const REDS = RP('#382325 #4d2d2d #623835 #72433d #835046 #905d53 #9c6c60');
+const REDST = RP('#3f2527 #563131 #6c3c39 #7e4741 #90544a #9f6357 #ad7466');
+const CRACK = RP('#4a3a32 #62503e #78644e #8a745c #9a846a #aa947a #b8a48a');
+const BEACH = RP('#7e7a6e #989383 #aea997 #beb8a4 #cac4af #d3ceba #dad6c5');
+const WETS = RP('#4e4c48 #605c54 #726c62 #847c70 #948a7c #a49884');
+const PEBG = RP('#2c2e34 #44464c #5c5e64 #76787c #929494');
+const SETT = RP('#1c2327 #383f46 #515963 #646d79 #737b84 #7c8489 #818a8c');
+const SETTW = RP('#3a3230 #4c4240 #605450 #746660 #887870 #9a8a80');
+const BRK = RP('#2d202d #472d37 #5e3840 #6f4046 #744b49 #75524b #73564b');
+const MORT = RP('#28262e #3c3a42 #58565a');
+const HBR = RP('#24262f #423b43 #5b4e55 #6f5c63 #726363 #726660 #6f675d');
+const SLAB = RP('#4f5561 #5c6370 #6a717e #757d8b #808895 #8a929f #919aa7 #98a1ae');
+const STONE2 = RP('#585c5f #676c71 #787d81 #848a8f #90969c #99a0a7 #a2a9b1');
+const PAVE2 = RP('#6a6258 #7e766a #92887a #a49a8a #b4aa98 #c2b8a6 #cec4b2');
+const ASPF = RP('#19232e #242e3a #2c3744 #333d4b #3f4855 #46505c #4b5560');
+const ASPO = RP('#222a33 #2c353f #353e49 #3b4450 #48505b #505962 #555d66');
+const AGG = RP('#7e8084 #939292 #aaa6a1');
+const YARDC = RP('#3a3d44 #4b4f56 #5d626b #6f747e #80858f #9096a0 #a0a6b0');
+const WOOD = RP('#2e2420 #40322a #544234 #68523e #7a624a #8c7256 #9e8466');
+const WOODG = RP('#3a3836 #4e4a46 #625c56 #766e66 #8a8076 #9c9286 #aea496');
+const SCREE = RP('#2a2c32 #3a3c42 #4c4e52 #5e6064 #727476 #868886 #9a9a98');
+const QUAR = RP('#575a5c #6b6e6f #7f8181 #939494 #a5a6a5 #b4b6b3 #c4c4c2');
+const GRAIN = RP('#5a4c2a #746236 #8e7842 #a68c4e #b89e5c #c8b06c #d6c080');
+const CORN = RP('#183026 #20402c #2a5232 #386438 #4a763e #608846 #789a50');
+const VEGL = RP('#1e3c38 #284e44 #34644e #447a58 #589062 #6ea66e');
+const HAY = RP('#40462c #565c34 #6e723e #848648 #9a9a54 #aeac62 #c0bc74');
+const FOUND = RP('#2b2c2f #333437 #3b3c3f #444548 #4d4e50');
+const PATHG = RP('#555454 #6a6867 #7e7d7b #90908d #a1a19e #b1b1af #bdbebd');
+const BALL = RP('#2c2c30 #3c3a3c #4c4a4a #5e5a58 #706a66 #847c76');
+const RUST = RP('#4a2e22 #6a3e2a #8a5234');
+
+export const GSHADE = {
+  // --- grass --------------------------------------------------------------------------------------------
+  grassLawn: (x, y, s) => grass(G_LAWN, x, y, s, 4, 1),                         // mown, in broad stripes
+
+  grassPark(x, y, s) { const c = clover(x, y, s, 0.14); return c || (hh(x, y, s + 21) > 0.9994 ? at(FLWR, 1) : grass(G_PARK, x, y, s, 4)); },
+  grassClover(x, y, s) { return clover(x, y, s, 0.62) || grass(G_PARK, x, y, s, 4); },
+  grassMeadow(x, y, s) { const h = hh(x, y, s + 23); if (h > 0.994) return at(FLWY, h > 0.997 ? 1 : 0); return grass(G_MEAD, x, y, s, 5); },
+  grassDry(x, y, s) {
+    const p = vnc(x, y, 17, s + 51);
+    if (p < 0.3) return GSHADE.dirtPebbly(x, y, s);
+    if (p < 0.36 && hh(x, y, s) > 0.5) return at(DIRT2, 3);
+    return grass(G_DRY, x, y, s, 4);
+  },
+  grassAlpine(x, y, s) { const p = stone(x, y, 11, s + 61, 0.32); if (p >= 0) return sd(SCREE, p, x, y, 0.4); GS.nx = GS.ny = 0; return grass(G_ALP, x, y, s, 4); },
+  grassGolf(x, y, s) { const k = (((x + y * 0.2) / 44) | 0) & 1; const c = grass(G_PARK, x, y, s, 3); return k ? c : at(G_PARK, G_PARK.indexOf(c) - 1); },
+  pasture(x, y, s) { const c = clover(x, y, s, 0.18); return c || grass(G_MEAD, x, y, s, 4); },
+  // --- earth --------------------------------------------------------------------------------------------
+  forestFloor(x, y, s) {
+    const m = vnc(x, y, 14, s + 7);
+    if (m > 0.74) return at(MOSS, 1 + ((hh(x, y, s) * 3) | 0) + (m > 0.8 ? 0 : -1));
+    const n = needle(x, y, s + 11);
+    if (n >= 0) return at(NEEDLE, n < 0.35 ? 1 : n < 0.6 ? 3 : 4 + (n > 0.72 ? 1 : 0));
+    const big = vnc(x, y, 33, s + 3), h = hh(x, y, s + 5);
+    return sd(SOIL_F, 0.42 + (big - 0.5) * 0.4 + (h > 0.9 ? 0.15 : h < 0.1 ? -0.15 : 0), x, y, 0.8);
+  },
+  forestDirt(x, y, s) {
+    const n = needle(x, y, s + 11);
+    if (n >= 0 && n < 0.45) return at(NEEDLE, n < 0.2 ? 2 : 3);
+    const p = stone(x, y, 10, s + 15, 0.18); if (p >= 0) return sd(SCREE, p, x, y, 0.4);
+    GS.nx = GS.ny = 0;
+    const big = vnc(x, y, 33, s + 3), h = hh(x, y, s + 5);
+    return sd(SOIL_F, 0.5 + (big - 0.5) * 0.4 + (vnc(x, y, 5, s) - 0.5) * 0.25 + (h > 0.9 ? 0.12 : h < 0.1 ? -0.14 : 0), x, y, 0.8);
+  },
+  mudRuts(x, y, s) {
+    const big = vnc(x, y, 29, s + 3), fine = vnc(x, y, 5, s + 5), h = hh(x, y, s);
+    if (big > 0.72 && fine > 0.36) { GS.water = 1; return sd(PUD, fine < 0.4 ? 0.62 : 0.12 + (fine - 0.4) * 0.8 + (h > 0.95 ? 0.35 : 0), x, y, 0.4); }
+    const p = stone(x, y, 9, s + 13, 0.18); if (p >= 0) return sd(PEBG, p, x, y, 0.4);
+    GS.nx = GS.ny = 0;
+    let t = 0.42 + (big - 0.5) * 0.35 + (fine - 0.5) * 0.3 + (h > 0.92 ? 0.2 : h < 0.06 ? -0.2 : 0);
+    if (fine > 0.66 && big > 0.5) t += 0.18;
+    return sd(MUD, t, x, y, 0.8);
+  },
+  gravelGrey(x, y, s) {                                       // fine gravel (a few px per stone at game scale)
+    const p = stone(x, y, 4, s + 17, 0.6, 0.9);
+    if (p < 0) { GS.nx = GS.ny = 0; return sd(GRV_C, 0.12 + hh(x, y, s) * 0.16, x, y, 0.3); }
+    return sd(WC.h > 0.84 ? GRV_W : GRV_C, p, x, y, 0.35);
+  },
+  dirtPebbly(x, y, s) {
+    const p = stone(x, y, 9, s + 19, 0.2);
+    if (p >= 0) return sd(WC.h > 0.6 ? PEBG : DIRT2, p * 0.9 + 0.05, x, y, 0.4);
+    GS.nx = GS.ny = 0;
+    const big = vnc(x, y, 38, s + 3), fine = vnc(x, y, 4, s + 5), h = hh(x, y, s);
+    return sd(DIRT2, 0.52 + (big - 0.5) * 0.3 + (fine - 0.5) * 0.28 + (h > 0.9 ? 0.14 : h < 0.08 ? -0.16 : 0), x, y, 0.7);
+  },
+  soilPlowed: (x, y, s) => plow(y, x, x, y, s, 0),      // furrows running along x
+  soilPlowedV: (x, y, s) => plow(x, y, x, y, s, 1),     // furrows running along y
+  sandDune(x, y, s) {
+    const wob = vnc(x, y, 31, s + 3) * 14 + vnc(x, y, 9, s + 4) * 3, r = (x * 0.55 + y * 0.83 + wob) / 9, f = r - Math.floor(r);
+    if (hh(x, y, s) > 0.994) return at(PEBG, 2);
+    GS.nx = f < 0.25 ? -0.22 : f > 0.75 ? 0.18 : 0; GS.ny = GS.nx * 1.4;
+    return sd(DUNE, 0.5 + (f < 0.16 ? 0.28 : f < 0.3 ? 0.12 : f > 0.8 ? -0.2 : 0) + (vnc(x, y, 60, s) - 0.5) * 0.3, x, y, 0.6);
+  },
+  desertGround(x, y, s) {
+    let p = stone(x, y, 13, s + 27, 0.15);
+    if (p >= 0 && WC.h < 0.55) return sd(WC.h > 0.3 ? REDST : PEBG, p * 0.8 + 0.1, x, y, 0.4);
+    GS.nx = GS.ny = 0;
+    const big = vnc(x, y, 40, s + 3), f = vnc(x, y, 5, s + 2), h = hh(x, y, s + 3);
+    let t = 0.55 + (big - 0.5) * 0.3 + (f - 0.5) * 0.25 + (h > 0.92 ? 0.14 : h < 0.06 ? -0.18 : 0);
+    // baked hardpan in patches: thin polygonal cracks, each plate curling up a little at its edges
+    const pan = vnc(x, y, 83, s + 29);
+    if (pan > 0.56) {
+      const w = worley(x + 0.5, y + 0.5, 17, s + 25, 0.8), e = w.d2 - w.d1;
+      if (e < 0.75 + (pan - 0.56) * 1.2) return sd(DESR, t - 0.32, x, y, 0.4);
+      if (e < 2) t += 0.08;
+      GS.nx = w.dx / 40; GS.ny = w.dy / 40;
+    }
+    return sd(DESR, t, x, y, 0.8);
+  },
+  redRock(x, y, s) {
+    let p = stone(x, y, 19, s + 21, 0.28);
+    if (p >= 0 && WC.h < 0.35) { GS.nx *= 0.5; GS.ny *= 0.5; return sd(REDST, p * 0.8 + 0.12, x, y, 0.35); }
+    p = stone(x, y, 8, s + 23, 0.2);
+    if (p >= 0 && WC.h < 0.5) { GS.nx *= 0.5; GS.ny *= 0.5; return sd(REDST, p * 0.7 + 0.1, x, y, 0.4); }
+    GS.nx = GS.ny = 0;
+    const big = vnc(x, y, 33, s), f = vnc(x, y, 5, s + 2), h = hh(x, y, s + 3);
+    return sd(REDS, 0.5 + (big - 0.5) * 0.35 + (f - 0.5) * 0.25 + (h > 0.92 ? 0.15 : h < 0.07 ? -0.18 : 0), x, y, 0.7);
+  },
+  earthCracked(x, y, s) {
+    const w = worley(x + 0.5, y + 0.5, 19, s + 25, 0.75), e = w.d2 - w.d1;
+    if (e < 1.3) return at(CRACK, e < 0.7 ? 0 : 1);
+    GS.nx = w.dx / 34; GS.ny = w.dy / 34;
+    if (hh(x, y, s + 5) > 0.996) return at(PEBG, 2);
+    return sd(CRACK, 0.62 + (w.h - 0.5) * 0.2 - (w.dx + w.dy) / 70 + (e < 1.8 ? -0.1 : 0) + (vnc(x, y, 4, s) - 0.5) * 0.18, x, y, 0.5);
+  },
+  scree(x, y, s) {                                           // mountain ground: grey soil, stones of all sizes, lichen
+    let p = stone(x, y, 17, s + 29, 0.3);
+    if (p >= 0 && WC.h < 0.5) return sd(SCREE, p * 0.9 + 0.12, x, y, 0.35);
+    p = stone(x, y, 7, s + 31, 0.3);
+    if (p >= 0 && WC.h < 0.6) return sd(SCREE, p * 0.8 + 0.02, x, y, 0.4);
+    GS.nx = GS.ny = 0;
+    if (vnc(x, y, 11, s + 33) > 0.72) return at(G_ALP, 2 + (hh(x, y, s) > 0.5 ? 1 : 0));
+    return sd(DIRT2, 0.28 + vnc(x, y, 9, s) * 0.22 + (hh(x, y, s) - 0.5) * 0.14, x, y, 0.6);
+  },
+  quarryRock(x, y, s) {
+    const bench = ((y + ((vnc(x, y, 40, s) * 10) | 0)) % 56);
+    if (bench < 2) return at(QUAR, bench === 0 ? 0 : 1);
+    if (bench < 5) return at(QUAR, 5);
+    const p = stone(x, y, 5, s + 33, 0.45);
+    if (p >= 0) return sd(QUAR, p, x, y, 0.4);
+    GS.nx = GS.ny = 0;
+    return sd(QUAR, 0.42 + (hh(x, y, s) - 0.5) * 0.2 + (vnc(x, y, 23, s + 1) - 0.5) * 0.25, x, y, 0.6);
+  },
+  rockShore(x, y, s) {                                       // a rocky shore: big rounded boulders, wet dark gaps, weed
+    let p = stone(x, y, 15, s + 41, 0.44, 0.9);
+    if (p >= 0) return sd(WC.h > 0.75 ? GRV_W : SCREE, p * 0.9 + 0.08, x, y, 0.35);
+    p = stone(x, y, 6, s + 43, 0.4);
+    if (p >= 0) return sd(PEBG, p * 0.8, x, y, 0.4);
+    GS.nx = GS.ny = 0;
+    return vnc(x, y, 9, s + 45) > 0.68 ? at(MOSS, 1 + (hh(x, y, s) > 0.5 ? 1 : 0)) : at(SCREE, hh(x, y, s) > 0.6 ? 1 : 0);
+  },
+  pebbleBeach(x, y, s) {                                     // shingle: sand between packed pebbles
+    const p = stone(x, y, 6, s + 47, 0.46, 0.9);
+    if (p >= 0) return sd(WC.h > 0.6 ? GRV_W : PEBG, p * 0.85 + 0.1, x, y, 0.35);
+    GS.nx = GS.ny = 0;
+    return GSHADE.sandBeach(x, y, s);
+  },
+  // --- sand ---------------------------------------------------------------------------------------------
+  sandBeach(x, y, s) {
+    const big = vnc(x, y, 44, s + 3), f = vnc(x, y, 3, s + 5), h = hh(x, y, s);
+    if (h > 0.9965) return at(PEBG, 1 + ((hh(x, y, s + 1) * 3) | 0));
+    return sd(BEACH, 0.6 + (big - 0.5) * 0.22 + (f - 0.5) * 0.3 + (h > 0.85 ? 0.1 : h < 0.12 ? -0.12 : 0), x, y, 0.9);
+  },
+  sandWet(x, y, s) { const h = hh(x, y, s); if (h > 0.995) return at(PEBG, 2); return sd(WETS, 0.5 + (vnc(x, y, 7, s + 5) - 0.5) * 0.4 + (h > 0.88 ? 0.15 : 0), x, y, 0.8); },
+  // --- paving -------------------------------------------------------------------------------------------
+  cobbleSett(x, y, s) {
+    const H = 13, Wd = 14, row = Math.floor(y / H), ox = (row & 1) * 7 + ((hh(row, 0, s) * 3) | 0);
+    const col = Math.floor((x + ox) / Wd), lx = x + ox - col * Wd, ly = y - row * H, sh = hh(col, row, s + 13);
+    const ix = lx < 3 ? 3 - lx : lx > Wd - 4 ? lx - (Wd - 4) : 0, iy = ly < 3 ? 3 - ly : ly > H - 4 ? ly - (H - 4) : 0, d = Math.sqrt(ix * ix + iy * iy);
+    if (d > 2.7 || lx === 0 || ly === 0) {
+      if (hh(x, y, s + 3) > 0.86 && vnc(x, y, 13, s + 41) > 0.55) return at(G_MEAD, 3 + ((hh(x, y, s + 4) * 3) | 0));
+      return at(SETT, 0);
+    }
+    const u = (lx - Wd / 2) / (Wd / 2), v = (ly - H / 2) / (H / 2);
+    GS.nx = u * 0.3; GS.ny = v * 0.3;
+    return sd(sh > 0.82 ? SETTW : SETT, 0.54 + (sh - 0.5) * 0.36 - (u + v) * 0.15 - d * 0.12 + (hh(x, y, s + 7) - 0.5) * 0.14, x, y, 0.4);
+  },
+  brickRun(x, y, s) {
+    const H = 7, Wd = 16, row = Math.floor(y / H), ox = (row & 1) * 8, col = Math.floor((x + ox) / Wd), lx = x + ox - col * Wd, ly = y - row * H, bh = hh(col, row, s + 17);
+    if (ly === 0 || lx === 0) return at(MORT, hh(x, y, s) > 0.85 ? 1 : 0);
+    let t = 0.55 + (bh - 0.5) * 0.4 + (ly === 1 ? 0.12 : ly === H - 1 ? -0.12 : 0) + (lx === 1 ? 0.06 : lx === Wd - 1 ? -0.08 : 0) + (hh(x, y, s + 5) - 0.5) * 0.2;
+    if (bh > 0.93) t -= 0.25;
+    return sd(BRK, t, x, y, 0.4);
+  },
+  brickHerring(x, y, s) {
+    if (herring(x, y, 5.5)) return at(MORT, hh(x, y, s) > 0.88 ? 1 : 0);
+    const bh = hh(HB.id, 3, s + 19);
+    return sd(HBR, 0.55 + (bh - 0.5) * 0.42 + (HB.u < 0.12 || HB.v < 0.14 ? 0.12 : HB.u > 0.9 || HB.v > 0.86 ? -0.1 : 0) + (hh(x, y, s + 5) - 0.5) * 0.18, x, y, 0.4);
+  },
+  slabConcrete: (x, y, s) => slab(SLAB, x, y, s, 34, 0, 0),
+  slabDrive(x, y, s) {                                         // a driveway: poured concrete, big slabs, tyre grime
+    const S = 40, lx = x % S, ly = y % S;
+    if (lx === 0 || ly === 0) return at(SLAB, 1);
+    let t = 0.62 + (vnc(x, y, 9, s + 5) - 0.5) * 0.12 + (vnc(x, y, 31, s + 7) - 0.5) * 0.12 + (hh(x, y, s) > 0.95 ? 0.06 : 0);
+    if (vnc(x, y, 7, s + 31) > 0.78) t -= 0.14;
+    return sd(SLAB, t, x, y, 0.5);
+  },
+  slabCracked: (x, y, s) => slab(SLAB, x, y, s, 34, 1, 0),
+  slabStone(x, y, s) {                                         // pale limestone, long slabs in running bond
+    const H = 28, Wd = 44, row = Math.floor(y / H), ox = (row & 1) * 22, col = Math.floor((x + ox) / Wd), lx = x + ox - col * Wd, ly = y - row * H, sh = hh(col, row, s + 23);
+    if (lx === 0 || ly === 0) return at(STONE2, 1);
+    let t = 0.62 + (sh - 0.5) * 0.16 + (vnc(x, y, 13, s + 5) - 0.5) * 0.1 + (lx === 1 || ly === 1 ? 0.06 : 0) + (hh(x, y, s) > 0.96 ? 0.06 : 0);
+    if (vnc(x, y, 7, s + 43) > 0.86 && sh > 0.4) t -= 0.12;
+    return sd(STONE2, t, x, y, 0.4);
+  },
+  slabPlaza(x, y, s) {                                         // plaza pavers, an accent band every few
+    const S = 22, sx = Math.floor(x / S), sy = Math.floor(y / S), lx = x - sx * S, ly = y - sy * S, sh = hh(sx, sy, s + 9);
+    const R = SLAB;
+    if (lx === 0 || ly === 0) return at(R, 1);
+    return sd(R, 0.62 + (sh - 0.5) * 0.16 + (vnc(x, y, 11, s + 5) - 0.5) * 0.1 + (lx === 1 || ly === 1 ? 0.06 : 0) + (hh(x, y, s) > 0.95 ? 0.07 : 0), x, y, 0.45);
+  },
+  asphaltFresh(x, y, s) {
+    const h = hh(x, y, s), big = vnc(x, y, 61, s + 3), m = vnc(x, y, 13, s + 5);
+    if (hh(x >> 1, y >> 1, s + 7) > 0.993) return at(AGG, ((x & 1) === 0 && (y & 1) === 0) ? 1 : 0);
+    if (h > 0.985) return at(AGG, (hh(x, y, s + 1) * 2) | 0);
+    return sd(ASPF, 0.5 + (big - 0.5) * 0.22 + (m - 0.5) * 0.18 + (h < 0.08 ? -0.2 : h > 0.86 ? 0.12 : 0), x, y, 0.7);
+  },
+  asphaltOld(x, y, s) {
+    const h = hh(x, y, s), big = vnc(x, y, 47, s + 3), m = vnc(x, y, 11, s + 5);
+    if (h > 0.985) return at(AGG, (hh(x, y, s + 1) * 2) | 0);
+    return sd(ASPO, 0.5 + (big - 0.5) * 0.3 + (m - 0.5) * 0.24 + (h < 0.07 ? -0.22 : h > 0.88 ? 0.14 : 0), x, y, 0.8);
+  },
+  lotAsphalt(x, y, s) {
+    const h = hh(x, y, s), big = vnc(x, y, 37, s + 3), m = vnc(x, y, 9, s + 5);
+    if (h > 0.98) return at(AGG, (hh(x, y, s + 1) * 3) | 0);
+    let t = 0.52 + (big - 0.5) * 0.34 + (m - 0.5) * 0.24 + (h < 0.07 ? -0.2 : h > 0.88 ? 0.12 : 0);
+    if (vnc(x, y, 19, s + 47) > 0.78) t -= 0.18;              // oil and tyre grime
+    return sd(ASPO, t, x, y, 0.8);
+  },
+  yardSlab(x, y, s) {
+    const S = 64, lx = x % S, ly = y % S, sh = hh(Math.floor(x / S), Math.floor(y / S), s + 7);
+    if (lx === 0 || ly === 0) return at(YARDC, 0);
+    let t = 0.5 + (sh - 0.5) * 0.18 + (vnc(x, y, 40, s) - 0.5) * 0.2 + (vnc(x, y, 7, s + 1) - 0.5) * 0.14 + (hh(x, y, s) > 0.95 ? 0.08 : 0) + (lx === 1 || ly === 1 ? 0.05 : 0);
+    if (vnc(x, y, 9, s + 33) > 0.8) t -= 0.13;
+    return sd(YARDC, t, x, y, 0.7);
+  },
+  apron(x, y, s) {
+    const lx = x % 96, ly = y % 48, sh = hh(Math.floor(x / 96), Math.floor(y / 48), s + 7);
+    if (lx === 0 || ly === 0) return at(YARDC, 2);
+    return sd(YARDC, 0.66 + (sh - 0.5) * 0.12 + (vnc(x, y, 30, s) - 0.5) * 0.14 + (hh(x, y, s) > 0.96 ? 0.06 : 0) - (vnc(x, y, 14, s + 33) > 0.8 ? 0.14 : 0), x, y, 0.5);
+  },
+  pathGravel(x, y, s) {                                     // a park path: fine compacted gravel, a few larger stones
+    const p = stone(x, y, 6, s + 39, 0.22);
+    if (p >= 0 && WC.h < 0.4) return sd(PATHG, p * 0.7 + 0.2, x, y, 0.4);
+    GS.nx = GS.ny = 0;
+    const h = hh(x, y, s);
+    return sd(PATHG, 0.58 + (vnc(x, y, 21, s + 3) - 0.5) * 0.18 + (vnc(x, y, 4, s + 5) - 0.5) * 0.18 + (h > 0.9 ? 0.12 : h < 0.1 ? -0.14 : 0), x, y, 0.7);
+  },
+  planks: (x, y, s) => plank(x, y, s, WOOD, 7, 52),            // boards running along y (laid across an E-W pier)
+  planksX: (x, y, s) => plank(y, x, s, WOOD, 7, 52),           // boards running along x
+  boardwalk: (x, y, s) => plank(y, x, s, WOODG, 8, 70),
+  boardwalkV: (x, y, s) => plank(x, y, s, WOODG, 8, 70),
+  ballastStone(x, y, s) {
+    const p = stone(x, y, 4, s + 37, 0.6, 0.9);
+    if (p < 0) { GS.nx = GS.ny = 0; return at(BALL, 0); }
+    if (WC.h > 0.9) return sd(RUST, p, x, y, 0.4);
+    return sd(BALL, p, x, y, 0.4);
+  },
+  // --- crops --------------------------------------------------------------------------------------------
+  cropWheat(x, y, s) {                                       // rows of ripe ears, bright on top, dark between the rows
+    const wy = y + ((vnc(x, y, 47, s + 1) * 5) | 0), P = 6, row = Math.floor(wy / P), ly = wy - row * P;
+    const col = (x + row * 3) >> 1, ch = hh(col, row, s + 3), sheen = vnc(x * 0.7, y, 41, s + 13);
+    let k;
+    if (ch < 0.78 && ly <= 3 - (ch > 0.6 ? 1 : 0)) { k = ly === 0 ? 6 : ly === 1 ? 5 : 4; if ((x + row) & 1) k -= 1; GS.h = 5 - ly; }
+    else { k = ly >= 4 ? 1 : 2; GS.h = 2; }
+    k += sheen > 0.64 ? 1 : sheen < 0.34 ? -1 : 0;
+    return at(GRAIN, k);
+  },
+  cropCorn: (x, y, s) => corn(x, y, s, 0),
+  cropCornV: (x, y, s) => corn(y, x, s, 1),
+  cropVeg(x, y, s) {
+    const P = 13, row = Math.floor(y / P), ly = y - row * P, pi = Math.floor((x + (row & 1) * 6) / 12), lx = x + (row & 1) * 6 - pi * 12;
+    const dx = lx - 6, dy = ly - 6.5, r2 = dx * dx + dy * dy, ph = hh(pi, row, s + 5);
+    if (r2 < 20 + ph * 6) { GS.nx = dx * 0.08; GS.ny = dy * 0.08; GS.h = 3; return sd(VEGL, 0.62 - (dx + dy) * 0.06 + (ph - 0.5) * 0.3 - (r2 > 16 ? 0.15 : 0) + ((dx * dy > 0) !== (Math.abs(dx) > Math.abs(dy)) ? 0.08 : -0.04), x, y, 0.4); }
+    return plow(y, x, x, y, s, 0);
+  },
+  cropHay(x, y, s) {
+    const w = (y + ((vnc(x, y, 60, s) * 8) | 0)) % 26;
+    if (w < 5) { GS.h = w < 3 ? 2 : 1; return sd(HAY, 0.75 + (hh(x >> 1, y, s) - 0.5) * 0.4 - (w === 4 ? 0.3 : 0), x, y, 0.6); }
+    return grass(G_DRY, x, y, s, 3);
+  },
+  // --- built ground -------------------------------------------------------------------------------------
+  foundation(x, y, s) { const lx = x & 31, ly = y & 31; return (lx === 0 || ly === 0) ? at(FOUND, 0) : sd(FOUND, 0.55 + (hh(x, y, s) - 0.5) * 0.3 + (vnc(x, y, 23, s) - 0.5) * 0.3, x, y, 0.5); },
+  underDeck(x, y, s) { const v = vnc(x, y, 21, s + 9); if (v > 0.6) return GSHADE.gravelGrey(x, y, s); const c = GSHADE.dirtPebbly(x, y, s); return v < 0.3 && hh(x, y, s) > 0.4 ? at(MUD, 2) : c; },
+  counterTop(x, y, s) { return sd(WOOD, 0.35 + (y % 6 === 0 ? -0.25 : 0) + (hh(x >> 3, y, s) - 0.5) * 0.2, x, y, 0.4); },
+};
+function slab(R, x, y, s, S, cracked) {
+  const sx = Math.floor(x / S), sy = Math.floor(y / S), lx = x - sx * S, ly = y - sy * S, sh = hh(sx, sy, s + 9);
+  if (lx === 0 || ly === 0) return at(R, 1);
+  let t = 0.6 + (sh - 0.5) * 0.14 + (vnc(x, y, 11, s + 5) - 0.5) * 0.12 + (lx === 1 || ly === 1 ? 0.07 : lx === S - 1 || ly === S - 1 ? -0.05 : 0);
+  const h = hh(x, y, s); t += h > 0.95 ? 0.08 : h < 0.04 ? -0.1 : 0;
+  if (vnc(x, y, 6, s + 41) > 0.84 && sh > 0.35) t -= 0.16;                    // stains
+  if (cracked && sh > 0.35 && slabCrack(lx, ly, S, sh, x, y)) return at(R, 0);
+  if (cracked && sh < 0.12 && lx + ly < 9) t -= 0.18;                            // a broken corner
+  return sd(R, t, x, y, 0.5);
+}
+function plow(u, w, x, y, s, vert) {
+  const P = 16, f = ((u % P) + P) % P;
+  if (f >= 4 && f <= 5 && ((w % 9) + 9) % 9 < 2 && hh(Math.floor(w / 9), Math.floor(u / P), s + 3) > 0.42) { GS.h = 1; return at(SPROUT, f === 4 ? 2 : 1); }
+  let t = f < 2 ? 0.3 : f < 3 ? 0.5 : f < 8 ? 0.66 + (f === 4 ? 0.08 : 0) : f < 12 ? 0.42 : 0.12;
+  t += (hh(Math.floor(w / 3), Math.floor(u / 2), s) - 0.5) * 0.26 + (vnc(x, y, 23, s) - 0.5) * 0.2;
+  const tilt = f < 5 ? -0.3 : f > 9 ? 0.3 : 0;
+  if (vert) GS.nx = tilt; else GS.ny = tilt;
+  return sd(PLOW, t, x, y, 0.5);
+}
+function plank(u, w, s, R, P, L) {
+  const pl = Math.floor(u / P), lu = u - pl * P, off = (hh(pl, 1, s) * L) | 0, seg = Math.floor((w + off) / L), lw = w + off - seg * L, ph = hh(pl, seg, s + 3);
+  if (lu === 0) return at(R, 0);
+  if (lw === 0) return at(R, 1);
+  if ((lw === 3 || lw === L - 3) && (lu === 2 || lu === P - 2)) return at(R, 1);    // nail heads
+  return sd(R, 0.55 + (ph - 0.5) * 0.36 + (lu === 1 ? 0.14 : lu === P - 1 ? -0.1 : 0) + (vnc(u, w * 0.3, 9, s + 7) - 0.5) * 0.2 + (hh(u, w, s) > 0.93 ? -0.12 : 0), u, w, 0.4);
+}
+function corn(x, y, s, vert) {
+  const P = 16, row = Math.floor(y / P), ly = y - row * P, pi = Math.floor(x / 11), lx = x - pi * 11, ph = hh(pi, row, s + 9);
+  const dx = lx - 5.5 + (ph - 0.5) * 2, dy = ly - 8, ad = Math.abs(dx), ady = Math.abs(dy), r = Math.max(ad, ady);
+  const leaf = r < 7.5 && (Math.abs(ad - ady * (0.7 + ph * 0.6)) < 1.3 || ad < 1.1 || (ady < 1.2 && ad < 5));
+  if (leaf) {
+    GS.h = Math.max(1, 9 - Math.round(r));
+    if (vert) { GS.nx = dy * 0.06; GS.ny = dx * 0.06; } else { GS.nx = dx * 0.06; GS.ny = dy * 0.06; }
+    return sd(CORN, 0.68 - r * 0.05 - (dx + dy) * 0.03 + (ph - 0.5) * 0.2 + (r < 2 ? 0.15 : 0), x, y, 0.4);
+  }
+  if (ady > 6) return at(PLOW, 1 + ((hh(x, y, s) * 2) | 0));
+  return sd(CORN, 0.12 + hh(x, y, s + 1) * 0.15, x, y, 0.4);
+}
+
+// ---- ground cover sprites ------------------------------------------------------------------------------
+// coverSprite(kind, variant): a tiny upright thing strewn over the ground by the chunk baker - a tuft of
+// grass, a flower, a fern, a reed, a pebble, a pine cone, a shell. Anchored at its root (ax, ay); z is the
+// height above the ground it stands on; plants are flagged F_LEAF. Cached: identical calls share a sprite.
+const COVERS = new Map();
+export function coverSprite(kind, v = 0) {
+  const key = kind + ':' + v;
+  let g = COVERS.get(key);
+  if (!g) { g = makeCover(kind, v); COVERS.set(key, g); }
+  return g;
+}
+export const COVER_KINDS = ['turf', 'tuft', 'tuftTall', 'tuftDry', 'tuftAlp', 'seed', 'flower', 'fern', 'reed', 'duneGrass', 'weed', 'pebble', 'rock', 'redStone', 'cone', 'twig', 'shell', 'starfish', 'leaf', 'seaweed', 'mushroom', 'scrub', 'lily', 'clod'];
+// turf palettes: lawn, park, meadow, dry, alpine, tall meadow - the last two steps are the sunlit blade tips
+const TURF = [
+  RP('#132a1a #1a3c21 #234c27 #2e5c2b #3d6d30 #4e7e35 #819d41 #b0b851'),
+  RP('#132d21 #1b3f27 #25502d #306333 #3d7338 #4c833d #87a446 #b8bf5c'),
+  RP('#0e2019 #152e1e #1d3c24 #294b29 #37592c #486531 #838642 #ada55b'),
+  RP('#2a3426 #3a442c #4c5432 #5e6438 #727240 #86824a #aaa262 #c6be7e'),
+  RP('#1e2e2c #283c32 #344a38 #42583c #546640 #687448 #98965c #bcb478'),
+  RP('#0c1b15 #12271a #193621 #244426 #335228 #435e2d #7e8341 #aba459'),
+];
+const BLOOMS = ['#ecebe2', '#f0c83a', '#e8823a', '#a868c8', '#d8384a', '#f0a0c0', '#6a8ce8'].map((h) => ramp(h, 4, 2, { dark: 0.45, light: 0.6 }));
+function makeCover(kind, v) {
+  const S = new GBuf(24, 24); S.ax = 12; S.ay = 20;
+  let n = (Math.imul(v + 1, 2654435761) ^ (kind.length * 977 + kind.charCodeAt(0) * 31)) >>> 0;
+  const r = () => { n = (n + 0x6D2B79F5) | 0; let t = Math.imul(n ^ (n >>> 15), 1 | n); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const put = (x, y, c, nx, ny, z, f) => { x = Math.round(x); y = Math.round(y); if (!S.inside(x, y)) return; S.put(x, y, c, norm([nx, ny, 1]), Math.max(0, z), null, f); };
+  // a blade from the root: lean (px per px of height), height, ramp, base shade
+  const blade = (x0, lean, h, R, curve = 0, f = F_LEAF, t0 = 0.15) => {
+    for (let k = 0; k < h; k++) {
+      const x = S.ax + x0 + lean * k + curve * k * k, t = t0 + (k / Math.max(1, h - 1)) * (0.92 - t0);
+      put(x, S.ay - k, R[Math.max(0, Math.min(R.length - 1, Math.round(t * (R.length - 1))))], lean * 0.5, 0.45, k, f);
+    }
+  };
+  const rock = (w, h, R, f = 0) => {                       // a small domed stone, outlined at the bottom
+    for (let y = -h; y <= 1; y++) for (let x = -w; x <= w; x++) {
+      const q = (x / (w + 0.5)) ** 2 + ((y + h / 2) / (h / 2 + 1)) ** 2;
+      if (q > 1) continue;
+      const rim = q > 0.7 && y > -h / 2;
+      const t = rim ? 0.08 : 0.62 - (x / w) * 0.25 - ((y + h / 2) / h) * 0.3 + (r() - 0.5) * 0.15;
+      put(S.ax + x, S.ay + y, R[Math.max(0, Math.min(R.length - 1, Math.round(t * (R.length - 1))))], x / w * 0.5, (y + h / 2) / h * 0.6, Math.round(-y + (h + 1) / 2 - Math.abs(x) * 0.3), f);
+    }
+  };
+  switch (kind) {
+    case 'tuft': case 'tuftTall': case 'tuftDry': case 'tuftAlp': {
+      const R = kind === 'tuftDry' ? G_DRY : kind === 'tuftAlp' ? G_ALP : kind === 'tuftTall' ? G_MEAD : G_LAWN;
+      const nb = kind === 'tuftTall' ? 6 + (r() * 4 | 0) : 4 + (r() * 3 | 0), H = kind === 'tuftTall' ? 6 : kind === 'tuftAlp' ? 3 : 4;
+      for (let b = 0; b < nb; b++) { const sp = (b / (nb - 1) - 0.5) * 2; blade(Math.round(sp * 2), sp * (kind === 'tuftDry' ? 0.7 : 0.4) + (r() - 0.5) * 0.3, H + (r() * 3 | 0) - (Math.abs(sp) > 0.6 ? 1 : 0), R, (r() - 0.5) * 0.04); }
+      break;
+    }
+    case 'seed': {
+      blade(0, (r() - 0.5) * 0.3, 3, G_MEAD); blade(1, 0.2, 2, G_MEAD);
+      const h = 7 + (r() * 4 | 0), lean = (r() - 0.5) * 0.25;
+      for (let k = 0; k < h; k++) put(S.ax + lean * k, S.ay - k, k > h - 4 ? GRAIN[5 + (k & 1)] : G_DRY[3 + (k > h / 2 ? 1 : 0)], lean, 0.4, k, F_LEAF);
+      put(S.ax + lean * h + 1, S.ay - h + 2, GRAIN[4], 0.3, 0.4, h - 2, F_LEAF);
+      break;
+    }
+    case 'flower': {
+      const B = BLOOMS[v % BLOOMS.length], h = 3 + (r() * 3 | 0);
+      blade(-1, -0.3, 3, G_PARK); blade(1, 0.3, 3, G_PARK); blade(0, 0, h, G_PARK);
+      const big = r() > 0.5;
+      for (let y = -1; y <= (big ? 1 : 0); y++) for (let x = -1; x <= (big ? 1 : 0); x++) if (!(big && Math.abs(x) === 1 && Math.abs(y) === 1)) put(S.ax + x, S.ay - h - y, B[y < 0 || x < 0 ? 3 : 1], x * 0.3, -0.2, h + 1, F_LEAF);
+      put(S.ax, S.ay - h, B[2], 0, 0, h + 1, F_LEAF);
+      break;
+    }
+    case 'fern': {
+      const R = RP('#14301c #1e4424 #2c5a2a #3e702e #568634 #74a03e'), nf = 5 + (r() * 3 | 0);
+      for (let f = 0; f < nf; f++) {
+        const a = -Math.PI / 2 + (f / (nf - 1) - 0.5) * 2.6 + (r() - 0.5) * 0.3, L = 6 + r() * 3;
+        for (let k = 0; k <= L; k++) {
+          const droop = (k / L) ** 2 * 3, x = S.ax + Math.cos(a) * k, y = S.ay + Math.sin(a) * k * 0.6 + droop, z = Math.max(0, Math.round(-Math.sin(a) * k * 0.8 - droop * 0.7));
+          const t = 0.3 + k / L * 0.6;
+          put(x, y, R[Math.round(t * 5)], Math.cos(a) * 0.4, 0.3, z, F_LEAF);
+          if (k > 1 && k < L - 1 && (k & 1)) { put(x - Math.sin(a), y + Math.cos(a) * 0.6, R[Math.round(t * 4)], 0, 0.3, z, F_LEAF); put(x + Math.sin(a), y - Math.cos(a) * 0.6, R[Math.round(t * 5)], 0, 0.3, z, F_LEAF); }
+        }
+      }
+      break;
+    }
+    case 'reed': {
+      const R = RP('#1e3a22 #2c5028 #42682e #5e8034 #7e9840'), nr = 3 + (r() * 3 | 0);
+      for (let b = 0; b < nr; b++) blade(Math.round((b - nr / 2) * 1.2), (b - nr / 2) * 0.08 + (r() - 0.5) * 0.12, 8 + (r() * 6 | 0), R, (r() - 0.5) * 0.02);
+      if (r() > 0.35) { const h = 10 + (r() * 3 | 0); for (let k = h - 3; k <= h; k++) put(S.ax + 1, S.ay - k, k === h ? RP('#6a4426')[0] : RP('#4a2c1a #5e3820')[k & 1], 0, 0.4, k, F_LEAF); }
+      break;
+    }
+    case 'duneGrass': {
+      const R = RP('#2e4a3a #3e5e44 #54744e #6e8a5a #8ea06c'), nb = 5 + (r() * 4 | 0);
+      for (let b = 0; b < nb; b++) { const sp = (b / (nb - 1) - 0.5) * 2; blade(Math.round(sp * 2), sp * 0.6, 5 + (r() * 4 | 0), R, sp * 0.03); }
+      break;
+    }
+    case 'weed': {
+      const R = RP('#1e3c20 #2e5426 #44702c #62903a');
+      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + r(); put(S.ax + Math.round(Math.cos(a) * 2), S.ay + Math.round(Math.sin(a) * 1.2), R[1 + (k & 1)], Math.cos(a) * 0.4, Math.sin(a) * 0.4, 0, F_LEAF); }
+      blade(0, (r() - 0.5) * 0.5, 2 + (r() * 3 | 0), R); if (r() > 0.5) blade(1, 0.5, 2, R);
+      break;
+    }
+    case 'pebble': rock(1 + (r() * 1.6 | 0), 1 + (r() * 2 | 0), [PEBG, GRV_W, DIRT2][v % 3]); break;
+    case 'rock': rock(3 + (r() * 3 | 0), 2 + (r() * 3 | 0), [SCREE, PEBG, GRV_C][v % 3]); break;
+    case 'redStone': rock(2 + (r() * 4 | 0), 2 + (r() * 3 | 0), REDST); break;
+    case 'cone': {
+      const R = RP('#2a1810 #4a2c18 #6a4224 #8a5a30'), a = r() > 0.5;
+      for (let y = 0; y < 4; y++) for (let x = 0; x < 3; x++) { const X = a ? y - 1 : x - 1, Y = a ? x - 1 : y - 2; put(S.ax + X, S.ay + Y, R[((x + y) & 1) ? 1 : 2 + (y === 0 ? 1 : 0)], 0, 0.3, a ? 1 : 3 - y, 0); }
+      break;
+    }
+    case 'twig': {
+      const R = RP('#3a2418 #5a3a24 #7a5434'), a = r() * Math.PI, L = 4 + (r() * 5 | 0);
+      for (let k = -L / 2; k <= L / 2; k++) put(S.ax + Math.cos(a) * k, S.ay + Math.sin(a) * k * 0.7, R[k > 0 ? 2 : 1], 0, 0, 0, 0);
+      if (r() > 0.5) put(S.ax + Math.cos(a + 0.8) * 2, S.ay + Math.sin(a + 0.8) * 1.4, R[1], 0, 0, 0, 0);
+      break;
+    }
+    case 'shell': {                                         // a scallop: a fan of ridges, pale and lit on its upper side
+      const R = v & 1 ? RP('#a07868 #d0a898 #f0d4c4') : RP('#9a8c7c #ccc0b0 #f2ece0');
+      for (let y = -2; y <= 1; y++) for (let x = -3; x <= 3; x++) {
+        if ((x * x) / 9 + ((y + 0.5) * (y + 0.5)) / 3.4 > 1.05) continue;
+        const ridge = (x + 9) % 2 === 0;
+        put(S.ax + x, S.ay + y, y === 1 ? R[0] : ridge ? R[y < 0 ? 2 : 1] : R[y < 0 ? 1 : 0], x * 0.2, -0.2, y < 0 ? 1 : 0, 0);
+      }
+      put(S.ax, S.ay + 2, R[0], 0, 0, 0, 0);
+      break;
+    }
+    case 'starfish': {
+      const R = RP('#9a3a1a #d0602a #f08a40');
+      put(S.ax, S.ay, R[1], 0, 0, 1, 0);
+      for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2 - Math.PI / 2; for (let d = 1; d <= 2; d++) put(S.ax + Math.cos(a) * d, S.ay + Math.sin(a) * d * 0.8, R[d === 1 ? 2 : 1], 0, 0, 0, 0); }
+      break;
+    }
+    case 'leaf': {
+      const C = [[196, 120, 40], [214, 168, 52], [168, 70, 36], [150, 160, 50], [226, 196, 90]][v % 5];
+      put(S.ax, S.ay, C, 0, 0, 0, 0); put(S.ax + 1, S.ay, C.map((q) => q * 0.82), 0, 0, 0, 0); if (r() > 0.4) put(S.ax, S.ay - 1, C.map((q) => Math.min(255, q * 1.1)), 0, 0, 0, 0);
+      break;
+    }
+    case 'seaweed': {
+      const R = RP('#1e2a1c #2e3c22 #46502a'), L = 5 + (r() * 5 | 0); let x = 0;
+      for (let k = 0; k < L; k++) { x += (r() - 0.5) * 1.6; put(S.ax + x, S.ay - k * 0.5, R[(k & 1) + (k > L / 2 ? 1 : 0)], 0, 0, 0, 0); }
+      break;
+    }
+    case 'mushroom': {
+      const R = v & 1 ? RP('#7a1e1a #b83a2a #e86a4a') : RP('#5a3a24 #8a6040 #b88c5c');
+      put(S.ax, S.ay, [220, 210, 190], 0, 0.4, 1, 0); put(S.ax, S.ay - 1, [200, 190, 170], 0, 0.4, 2, 0);
+      for (let x = -1; x <= 1; x++) put(S.ax + x, S.ay - 2, R[x < 0 ? 2 : 1], x * 0.4, -0.3, 3, 0);
+      put(S.ax, S.ay - 3, R[2], 0, -0.4, 3, 0);
+      break;
+    }
+    case 'scrub': {                                         // a low dusty desert bush: a mound of tiny leaves
+      const R = RP('#2a3022 #3a4428 #4e5a30 #66703a #828848 #9ea05a');
+      for (let y = -5; y <= 0; y++) for (let x = -5; x <= 5; x++) {
+        const q = (x / 5.5) ** 2 + ((y + 2.5) / 3.2) ** 2;
+        if (q > 1 || hh(x, y, v) > 0.8) continue;
+        put(S.ax + x, S.ay + y, R[Math.max(0, Math.min(5, Math.round(3.4 - x * 0.25 - (y + 2.5) * 0.4 + (r() - 0.5) * 1.6 - q * 1.2)))], x * 0.1, (y + 2.5) * 0.1, Math.round(-y * 0.8 + 1), F_LEAF);
+      }
+      break;
+    }
+    case 'lily': {                                          // a lily pad on the water (flat), now and then a flower
+      const R = CLOV, rr = 2.5 + r() * 1.5, notch = r() * 6.28;
+      for (let y = -3; y <= 3; y++) for (let x = -4; x <= 4; x++) {
+        const d = (x / 1.3) ** 2 + y * y, a = Math.atan2(y, x);
+        if (d > rr * rr || Math.abs(((a - notch + 9.42) % 6.28) - 3.14) < 0.35) continue;
+        put(S.ax + x, S.ay + y, R[Math.max(0, Math.min(5, Math.round(3 - (x + y) * 0.3 - (d > rr * rr * 0.6 ? 1 : 0))))], 0, 0, 0, F_LEAF);
+      }
+      if (v % 3 === 0) { put(S.ax, S.ay - 1, [244, 200, 220], 0, 0, 1, F_LEAF); put(S.ax + 1, S.ay - 1, [252, 236, 240], 0, 0, 1, F_LEAF); }
+      break;
+    }
+    case 'clod': rock(2 + (r() * 2 | 0), 1 + (r() * 2 | 0), PLOW); break;
+    case 'turf': {                                          // v = (palette * 3 + shade) * 16 + variant: dense lawn / meadow tufts
+      const pal = (v >> 4) / 3 | 0, shade = ((v >> 4) % 3) - 1, R = TURF[pal] || TURF[0], tall = pal === 2 || pal === 5 ? 2 : 0;
+      const nb = 3 + (r() * 3 | 0), q = (k) => R[Math.max(0, Math.min(7, k + shade))];
+      for (let b = 0; b < nb; b++) {
+        const sp = nb > 1 ? b / (nb - 1) - 0.5 : 0, h = 4 + tall + (r() * 3 | 0) - (Math.abs(sp) > 0.3 ? 1 : 0), lean = sp * (1 + r() * 0.5), curve = sp * 0.07;
+        const lit = r() < 0.18 ? 7 : r() < 0.6 ? 6 : 5, body = 4 + ((b + (r() * 2 | 0)) & 1);
+        for (let k = 0; k < h; k++) {
+          const x = S.ax + Math.round(sp * 2.2 + lean * k + curve * k * k), y = S.ay - k, tip = h - 1 - k;
+          const c = tip === 0 ? (shade < 0 && lit === 7 ? q(6) : R[lit]) : tip === 1 && lit === 7 ? R[5] : k === 0 ? q(2) : k === 1 ? q(3) : q(body);
+          put(x, y, c, lean * 0.35, 0.12, k, pal < 2 ? F_LEAF | F_NOCAST : F_LEAF);   // (mown turf: self-shaded, casts no shadow)
+        }
+      }
+      break;
+    }
+  }
+  // crop to the drawn pixels, keeping the anchor
+  let x0 = S.w, y0 = S.h, x1 = -1, y1 = -1;
+  for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) if (S.col[(y * S.w + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return S;
+  const O = new GBuf(x1 - x0 + 1, y1 - y0 + 1);
+  for (let y = 0; y < O.h; y++) for (let x = 0; x < O.w; x++) {
+    const si = (y + y0) * S.w + x + x0, di = y * O.w + x;
+    for (let c = 0; c < 4; c++) { O.col[di * 4 + c] = S.col[si * 4 + c]; O.nrm[di * 4 + c] = S.nrm[si * 4 + c]; }
+    O.z[di] = S.z[si]; O.flag[di] = S.flag[si];
+  }
+  O.ax = S.ax - x0; O.ay = S.ay - y0;
+  return O;
+}
+// the ground between dense turf tufts (what shows in the gaps): dark, mottled, a clover patch now and then
+// (pal: the turf palette, as for coverSprite('turf', pal * 16 + v); clover: patch density 0..1)
+export function turfGround(pal, x, y, s, clov = 0) {
+  if (clov) { const c = clover(x, y, s, clov); if (c) return c; }
+  const R = TURF[pal] || TURF[0], big = vnc(x, y, 37, s + 3), h = hh(x, y, s);
+  return R[2 + (big > 0.55 ? 1 : 0) + (h > 0.6 ? 1 : 0) - (h < 0.12 ? 1 : 0) + (h > 0.96 ? 2 : 0)];
+}
+export const cloverAt = (x, y, s, dens) => vnc(x, y, 23, s + 31) >= 1 - dens;
+// grass for the lowest quality (no tufts on top): the turf palette's mid greens mottled, sparse sunlit tips
+export function turfFlat(pal, x, y, s) {
+  const R = TURF[pal] || TURF[0], big = vnc(x, y, 37, s + 3), h = hh(x, y, s);
+  return R[3 + (big > 0.55 ? 1 : 0) + (h > 0.55 ? 1 : 0) - (h < 0.15 ? 2 : 0) + (h > 0.94 ? 2 : 0)];
 }

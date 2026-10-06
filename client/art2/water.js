@@ -11,6 +11,10 @@
 //   paintPond(G, inside, opts)   a pool or lake from a mask, deepening away from the shore
 //   paintSea(G, isSea, opts)     open sea: depth bands, a lattice of swell lines, surf foam along the shore
 //   foamPatch / foamRing / ripples   whitewater in a plunge pool, round a rock in a current, rings
+// World water for the live game's chunk baker (client/art2/game/groundbake.js), per pixel in world
+// coordinates and allocation free: seaPx (open sea: turquoise shelf to blue, a scalloped lattice of crests,
+// foam at the waterline, sand showing through clear shallows), stillPx (lakes, ponds and the river inlet:
+// deep teal, a faint ripple lattice, current streaks on the river, pebbles in the shallows). Result in WP.
 // Painted water keeps a per-buffer depth map, so a tributary meets its parent without a seam and banks
 // never overwrite water that is already there.
 //
@@ -27,6 +31,7 @@ import { Vox } from './voxel.js';
 import { person } from './people.js';
 import { distSq } from './scene.js';
 import { prepPoints, detectFeatures } from './rivergen.js';
+import { worley, vnc, hh, shadeStep as sd } from './ground.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -741,3 +746,68 @@ export function dressRiver(sc, info, o = {}) {
   return placed;
 }
 export { detectFeatures };
+
+// ---- world water (the live game's chunk baker) --------------------------------------------------------------
+// One pixel of water in world coordinates; the result lands in WP (c: a colour - shared, copy it; nx, ny: the
+// normal's tilt; e: a glint 0..255 for the emissive map). d: px from the waterline (0 at the edge; pass 99
+// when far), dd: depth 0 (shallow) .. 1 (deep), shore: 1 a sandy beach nearby, 2 a quay or seawall, 0 other.
+export const WP = { c: null, nx: 0, ny: 0, e: 0 };
+const WMIX = [0, 0, 0];
+const mixInto = (a, b, k) => { WMIX[0] = a[0] + (b[0] - a[0]) * k; WMIX[1] = a[1] + (b[1] - a[1]) * k; WMIX[2] = a[2] + (b[2] - a[2]) * k; return WMIX; };
+// the world sea's own ramps: calibrated so the golden-hour light lands on the targets' teal and blue
+const SEABED = R('#b8b4a0', 6, 3, { dark: 0.4, light: 0.45, shift: 0.15 }), WSH = R('#2a9cc0', 7, 3, { dark: 0.5, light: 0.55, shift: 0.1 });
+const WSEA = R('#1a72aa', 7, 3, { dark: 0.55, light: 0.5, shift: 0.08 }), NAVY = R('#155a90', 6, 3, { dark: 0.6, light: 0.45, shift: 0.08 });
+// lakes and the river: deep blue-teal in the channel, green-teal over the shallows
+const RDEEP = R('#134f78', 7, 3, { dark: 0.6, light: 0.45, shift: 0.08 }), RMID = R('#1a6a88', 7, 3, { dark: 0.55, light: 0.5, shift: 0.08 }), RSHAL = R('#2e8a8e', 7, 3, { dark: 0.5, light: 0.5, shift: 0.1 });
+// ordered dither between two depth palettes across a band (the 16-bit way: no hard edge where the depth changes)
+const BAYW = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.5);
+const dpal = (dd, X, Y, a, A, B, band = 0.14) => (dd + BAYW[(Y & 3) * 4 + (X & 3)] * band > a ? A : B);
+export function seaPx(X, Y, d, dd, shore = 0, seed = 13) {
+  WP.e = 0;
+  const big = vnc(X, Y, 41, seed), fine = vnc(X, Y, 6, seed + 2), swell = vnc(X, Y, 97, seed + 4);
+  // the lattice of crests: the edges of stretched Worley cells, scalloped like fish scales; finer and brighter in
+  // the shallows, wider apart and fainter out in the blue, and broken up by long swells
+  const sz = dd < 0.35 ? 11 : 15, w = worley(X * 0.8 + fine * 3, Y + big * 7, sz, seed + 7, 0.85), edge = w.d2 - w.d1;
+  const near = d < 40, sw = near ? Math.sin(d * 0.21 + big * 5 + X * 0.02) : (big - 0.5) * 1.6;
+  const pal = dpal(dd, X, Y, 0.8, NAVY, null) || dpal(dd, X, Y, 0.3, WSEA, WSH);
+  const t = (dd < 0.3 ? 0.68 - dd * 0.8 : dd < 0.8 ? 0.6 - (dd - 0.3) * 0.4 : 0.58) + (big - 0.5) * 0.16 + (swell - 0.5) * 0.14 + sw * 0.05 + (w.d1 < 2.5 ? 0.05 : 0);
+  let c = sd(pal, t, X, Y, 0.7);
+  const net = edge < (dd < 0.35 ? 1.05 : 0.75 * (0.4 + swell));
+  if (net) {
+    c = d < 30 ? sd(WATER.foam, 0.28 + (1 - edge) * 0.35 + (d < 14 ? 0.15 : 0), X, Y, 0.4) : sd(pal, Math.min(1, t + (dd < 0.35 ? 0.32 : 0.2)), X, Y, 0.5);
+    if (hh(X, Y, seed) > 0.975) WP.e = 120;
+  } else if (shore === 1 && d < 16) c = mixInto(c, sd(SEABED, 0.55 + fine * 0.3, X, Y, 0.6), (1 - d / 16) * 0.55);     // clear water over sand
+  if (shore === 2) { if (d < 1.6) c = sd(WATER.foam, 0.45, X, Y, 0.4); else if (d < 6 && !net) c = sd(pal, t - 0.18, X, Y, 0.6); }   // calm at a quay wall
+  else if (d < 18) {                                  // the wash: foam at the waterline, a broken scalloped band beyond
+    const wash = 2.5 + 2 * Math.sin(X * 0.07 + Y * 0.05) + fine * 2.5;
+    if (d < wash) c = sd(WATER.foam, 0.85 - d / wash * 0.35, X, Y, 0.4);
+    else if (Math.abs(d - (10 + 3.5 * Math.sin(X * 0.05 + Y * 0.031))) < 1.1 + fine * 1.4 && hh(X >> 1, Y >> 1, seed) > 0.3) c = sd(WATER.foam, 0.62, X, Y, 0.4);
+  }
+  WP.c = c; WP.nx = sw * 0.06; WP.ny = near ? Math.cos(d * 0.21) * 0.1 : (fine - 0.5) * 0.12;
+  return WP;
+}
+// kind: 0 a lake or pond, 1 the river (its current runs along x). bottom: 1 pebbles (rocky banks), 0 mud
+export function stillPx(X, Y, d, dd, kind = 0, bottom = 0, seed = 17) {
+  WP.e = 0;
+  const big = vnc(X, Y, 37, seed + 3), fine = vnc(X, Y, 7, seed + 5);
+  const pal = dpal(dd, X, Y, 0.5, RDEEP, null, 0.2) || dpal(dd, X, Y, 0.18, RMID, RSHAL, 0.12);
+  let t = 0.62 - dd * 0.36 + (big - 0.5) * 0.16 + (fine - 0.5) * 0.06;
+  // the ripple lattice: bright in the shallows, in drifting patches out on open water
+  const w = worley(X * (kind ? 0.55 : 0.9), Y + big * 5, 12, seed + 9, 0.85), edge = w.d2 - w.d1, patch = vnc(X, Y, 71, seed + 11);
+  const lat = edge < (dd < 0.3 ? 0.85 : patch > 0.55 ? 0.7 : 0.3);
+  if (lat) t += dd < 0.3 ? 0.24 : 0.14;
+  if (kind) {                                        // current lines: long thin streaks along the flow
+    const lane = Math.floor((Y + 2.6 * Math.sin(X * 0.037 + seed)) / 4.2), lh = hh(lane, 7, seed), env = vnc(X * 0.5 + lh * 400, lane * 13, 14, seed + 9);
+    if (env > 0.66 && ((Y + 2.6 * Math.sin(X * 0.037 + seed)) / 4.2 - lane) < 0.3 && Math.sin(X / (44 + lh * 30) * 6.283 + lh * 40) > -0.1) t += 0.2;
+  }
+  let c = sd(pal, t, X, Y, 0.7);
+  if (d < 12 && !lat) {                               // the bed shows through the shallows
+    const ww = worley(X + 0.5, Y + 0.5, bottom ? 6 : 8, seed + 31), rr = (bottom ? 6 : 8) * (bottom ? 0.45 : 0.25) * (0.7 + 0.6 * ww.h);
+    const bed = ww.d1 < rr ? sd(ww.h > 0.8 ? PEBW : bottom ? ROCKG : PEB, 0.5 + (ww.h - 0.5) * 0.4 - (ww.dx + ww.dy) / rr * 0.22 - (ww.d1 > rr - 1 ? 0.25 : 0), X, Y, 0.4) : sd(bottom ? BAR : MUD, 0.35 + fine * 0.3, X, Y, 0.6);
+    c = mixInto(bed, c, Math.min(1, 0.35 + d / 12 * 0.65));
+  }
+  if (d < 1.4) c = mixInto(c, [200, 226, 220], 0.35);
+  if (lat && hh(X, Y, seed) > 0.985) WP.e = 90;
+  WP.c = c; WP.nx = (fine - 0.5) * 0.08; WP.ny = (big - 0.5) * 0.1;
+  return WP;
+}

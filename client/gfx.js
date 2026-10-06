@@ -113,6 +113,23 @@ export function initGfx() {
   } else applyPreset(d.recommended, false);
   return gfx;
 }
+// ---- world art: the classic renderer or the art v2 one ---------------------------------------------
+// The art v2 world renderer (WebGL2, client/art2/game) or the classic Canvas2D one. It is not a quality
+// step, so it isn't part of the presets. It applies from the next page load (the main canvas is made
+// once); ?art=2 / ?art=1 in the address override it, and a session that lost the GPU twice under the new
+// renderer stays classic until the tab is closed.
+export const WORLD_ART_DEFAULT = 'classic';
+export const WORLD_ART_CHOICES = [['new', 'New (art v2, beta)'], ['classic', 'Classic']];
+export function worldArt() { return settings.worldArt === 'new' || settings.worldArt === 'classic' ? settings.worldArt : WORLD_ART_DEFAULT; }
+export function setWorldArt(v) { settings.worldArt = v === 'new' ? 'new' : 'classic'; saveSettings(); }
+export function worldArtWanted() {
+  const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('art') : null;
+  if (q === '2') return true;
+  if (q === '1') return false;
+  try { if (sessionStorage.getItem('cla.art2off')) return false; } catch { /* storage blocked */ }
+  return worldArt() === 'new';
+}
+
 // One notch down (after the browser ran out of graphics memory).
 export function stepDown() {
   const order = ['ultra', 'high', 'medium', 'low'];

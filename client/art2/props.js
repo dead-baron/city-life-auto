@@ -254,14 +254,15 @@ export function pedSignal(on = 1) { const m = new Vox(10, 10, 60); const p = m.m
 export function roofAC(big = true) {
   const w = big ? 30 : 18, d = big ? 22 : 14, h = big ? 16 : 11;
   const m = new Vox(w, d, h);
-  const b = m.mat({ ramp: R('#c4c6c8'), k: 3 }), f = m.mat({ ramp: MAT.metalDark, k: 1 }), g = m.mat({ ramp: MAT.metal, k: 2 });
+  const b = m.mat({ ramp: R('#a6acb0'), k: 3 }), f = m.mat({ ramp: MAT.metalDark, k: 1 }), g = m.mat({ ramp: MAT.metal, k: 2 }), hub = m.mat({ ramp: MAT.metalDark, k: 3 });
   m.box(0, 0, 0, w, d, h - 1, b);
-  m.fill((x, y, z) => (Math.hypot(x - w * 0.32, y - d / 2) < d * 0.32 && ((Math.round(x) + Math.round(y)) % 2 === 0) ? f : -1), 0, 0, h - 2, w, d, h);
+  // the fan guard: dark rings with the blades' hub in the middle
+  m.fill((x, y) => { const r = Math.hypot(x - w * 0.32, y - d / 2); return r < d * 0.34 ? (r < 1.6 ? hub : Math.floor(r * 0.9) % 2 ? f : g) : -1; }, 0, 0, h - 2, w, d, h);
   m.fill((x, y, z) => ((Math.round(z) % 2 === 0) && x > w * 0.6 ? g : -1), Math.floor(w * 0.6), d - 1, 2, w - 1, d, h - 3);
   return m;
 }
 export function roofVent() { const m = new Vox(10, 10, 12); const b = m.mat({ ramp: MAT.metal, k: 3 }); m.cyl('z', 5, 5, 0, 3, 0, 8, b); m.fill((x, y, z) => (Math.hypot(x - 5, y - 5) < 5 - (z - 8) * 1.1 ? b : -1), 0, 0, 8, 10, 10, 12); return m; }
-export function skylight() { const m = new Vox(24, 18, 7); const f = m.mat({ ramp: MAT.metal, k: 2 }), g = m.mat({ ramp: MAT.glass, k: 3, flag: F_GLASS }); m.box(0, 0, 0, 24, 18, 4, f); m.fill((x, y, z) => (z < 4 + (9 - Math.abs(y - 9)) * 0.35 && x > 1 && x < 23 && y > 1 && y < 17 ? g : -1), 0, 0, 3, 24, 18, 7); return m; }
+export function skylight(lit = 0) { const m = new Vox(24, 18, 7); const f = m.mat({ ramp: MAT.metal, k: 2 }), g = m.mat({ ramp: lit ? R('#6a6450') : MAT.glass, k: 3, flag: F_GLASS, emi: lit ? [255, 214, 150, 70 * lit] : null }); m.box(0, 0, 0, 24, 18, 4, f); m.fill((x, y, z) => (z < 4 + (9 - Math.abs(y - 9)) * 0.35 && x > 1 && x < 23 && y > 1 && y < 17 ? g : -1), 0, 0, 3, 24, 18, 7); return m; }
 export function dish() { const m = new Vox(18, 14, 18); const b = m.mat({ ramp: R('#d8d8d4'), k: 3 }), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(8, 6, 0, 10, 8, 8, p); m.fill((x, y, z) => { const d = Math.hypot(x - 9, z - 11); return d < 7 && Math.abs(y - 7 - d * 0.3 + 2) < 1.2 ? b : -1; }); return m; }
 export function roofPlanter(len = 26) { return flowerBed(len); }
 // ---- beach, marina and back-yard kit ---------------------------------------------------------------
@@ -365,5 +366,113 @@ export function dog(coat = '#d8a050') {
   m.box(22, 2, 15, 24, 4, 19, f); m.box(22, 8, 15, 24, 10, 19, f);   // ears
   for (let k = 0; k < 8; k++) m.box(4 - k * 0.5, 5, 12 + k * 0.8, 6 - k * 0.5, 7, 13.5 + k * 0.8, f);   // tail
   m.smooth = 1;
+  return m;
+}
+
+// ---- for the live world (game/statics.js) ------------------------------------------------------------
+// a street light on a curved mast arm over the road: pole at model (3.5, 5), arm along +x to the head at
+// x = 3 + arm (render at the arm's heading; the head's glass glows when on). style: 'cobra' (grey steel,
+// flat head) | 'green' (painted mast, round head) | 'sodium' (galvanised, old box head)
+export function armLamp(arm = 30, on = 1, style = 'cobra') {
+  const H = 96, m = new Vox(arm + 12, 10, H + 6);
+  const pole = m.mat({ ramp: style === 'green' ? R('#2f5a4a') : style === 'sodium' ? R('#8a8e94') : R('#6a707a'), k: 3 });
+  const head = m.mat({ ramp: style === 'green' ? R('#264a3e') : R('#4a4e58'), k: 3 });
+  const glass = m.mat({ ramp: R(style === 'sodium' ? '#f6c070' : '#f4ead0', 5, 3), k: on ? 4 : 2, emi: on ? (style === 'sodium' ? [255, 176, 96, 255] : [255, 236, 200, 255]) : null, flag: F_NOCAST });
+  m.cyl('z', 3.5, 5, 0, 3, 0, 3, pole); m.cyl('z', 3.5, 5, 0, 1.8, 3, H - 6, pole);
+  for (let x = 2; x <= arm + 2; x++) { const t = (x - 2) / arm, z = H - 6 + Math.sin(Math.min(1, t * 2.2) * Math.PI / 2) * 5 - t * 1.2; m.box(x, 4, z, x + 1, 6, z + 2, pole); }
+  const hx = arm - 2;
+  // the glass is wider than the housing above it, so a lit rim shows from above at every heading
+  if (style === 'green') { m.box(hx - 1, 1, H - 8, hx + 10, 9, H - 5, glass); m.ell(hx + 4, 5, H - 4, 5, 3.5, 2.6, head); }
+  else { m.box(hx - 1, 1, H - 7, hx + 12, 9, H - 4, glass); m.box(hx, 2, H - 5, hx + 11, 8, H - 2, head); }
+  return m;
+}
+// a rooftop stair / lift housing: a small block with a steel door facing south and a vent on top
+export function roofHut(w = 34, d = 26, h = 30, color = '#a8a49a') {
+  const m = new Vox(w, d, h + 6);
+  const c = m.mat({ ramp: R(color), k: 3, shade: (x, y, z) => (Math.round(z) % 12 === 0 ? -0.4 : 0) }), rim = m.mat({ ramp: R('#c8c4ba'), k: 4 });
+  const door = m.mat({ ramp: R('#4a5662'), k: 2 }), vent = m.mat({ ramp: MAT.metal, k: 3 });
+  m.box(0, 0, 0, w, d, h, c); m.box(0, 0, h - 2, w, d, h, rim);
+  m.box(Math.floor(w / 2) - 6, d - 1, 0, Math.floor(w / 2) + 6, d, 24, door);
+  m.box(4, 4, h, 12, 12, h + 5, vent);
+  return m;
+}
+// a thin radio / TV antenna mast with cross bars and a red beacon
+export function antennaMast(h = 60) {
+  const m = new Vox(14, 14, h + 3);
+  const s = m.mat({ ramp: MAT.metal, k: 3 }), red = m.mat({ ramp: R('#e83a30', 5, 3), k: 4, emi: [255, 50, 40, 255], flag: F_NOCAST });
+  m.box(6, 6, 0, 8, 8, h, s); m.box(2, 2, 0, 12, 12, 2, s);
+  for (let z = 14; z < h - 6; z += 12) m.box(2, 6, z, 12, 8, z + 1, s);
+  m.box(6, 6, h, 8, 8, h + 3, red);
+  return m;
+}
+// a factory smoke stack: a tapering brick (or concrete) column with bands and a sooty lip
+export function smokeStack(h = 70, r = 7, brick = true) {
+  const m = new Vox(r * 2 + 4, r * 2 + 4, h + 2);
+  const c = m.mat({ ramp: brick ? MAT.brick : R('#a8a49a'), k: 3, shade: (x, y, z) => (Math.round(z) % 14 === 0 ? -0.6 : 0) + (z > h - 8 ? -1.6 : 0) });
+  const band = m.mat({ ramp: R('#d8d4cc'), k: 3 });
+  for (let z = 0; z < h; z++) { const rr = r - z / h * r * 0.25; m.cyl('z', r + 2, r + 2, 0, rr, z, z + 1, Math.abs(z - h * 0.7) < 2 || Math.abs(z - h * 0.35) < 1.5 ? band : c, z > h - 3 ? rr - 2 : 0, 0); }
+  return m;
+}
+// a packaged rooftop air handler: a long louvred cabinet on a steel curb with two fans in its lid
+export function hvacUnit(w = 44, d = 30, h = 22) {
+  const m = new Vox(w, d, h);
+  const b = m.mat({ ramp: R('#aeb4b8'), k: 3, shade: (x, y, z) => (y > d - 2 && Math.round(z) % 3 === 0 && z > 4 && z < h - 3 ? -1.1 : 0) });
+  const lid = m.mat({ ramp: R('#a4aaae'), k: 3 }), fan = m.mat({ ramp: MAT.metalDark, k: 1 }), hub = m.mat({ ramp: MAT.metal, k: 3 }), curb = m.mat({ ramp: MAT.metalDark, k: 2 });
+  m.box(1, 1, 0, w - 1, d - 1, 3, curb); m.box(1, 1, 3, w - 1, d - 1, h - 1, b); m.box(0, 0, h - 2, w, d, h, lid);
+  for (const fx of [w * 0.28, w * 0.72]) m.fill((x, y) => { const r = Math.hypot(x - fx, y - d / 2); return r < d * 0.32 ? (r < 2.2 ? hub : (Math.floor(Math.atan2(y - d / 2, x - fx) * 2.6) & 1) ? fan : hub) : -1; }, 0, 0, h - 1, w, d, h);
+  return m;
+}
+// a roof hatch: a concrete curb with a steel lid
+export function roofHatch() {
+  const m = new Vox(16, 16, 9), c = m.mat({ ramp: R('#a8a49a'), k: 3 }), l = m.mat({ ramp: R('#5e6874'), k: 3 });
+  m.box(0, 0, 0, 16, 16, 6, c); m.box(1, 1, 6, 15, 15, 9, l);
+  return m;
+}
+// a brick chimney stack with a stone cap and two clay pots
+export function chimney(h = 34) {
+  const m = new Vox(12, 12, h + 5);
+  const b = m.mat({ ramp: MAT.brick, k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -0.5 : 0) + (z > h - 9 ? -0.6 : 0) }), cap = m.mat({ ramp: R('#b8b2a6'), k: 3 }), pot = m.mat({ ramp: MAT.terracotta, k: 3 }), soot = m.mat({ ramp: R('#2a2626', 4, 1), k: 0 });
+  m.box(1, 1, 0, 11, 11, h - 2, b); m.box(0, 0, h - 2, 12, 12, h, cap);
+  for (const px of [3.5, 8.5]) m.cyl('z', px, 6, 0, 2, h, h + 5, pot, 1, soot);
+  return m;
+}
+// a plumbing vent stack with a rain cap
+export function ventStack(h = 22) {
+  const m = new Vox(8, 8, h), p = m.mat({ ramp: MAT.metal, k: 3 }), c = m.mat({ ramp: MAT.metalDark, k: 2 });
+  m.cyl('z', 4, 4, 0, 1.8, 0, h - 4, p); m.cyl('z', 4, 4, 0, 3.5, h - 4, h - 2, c); m.cyl('z', 4, 4, 0, 2, h - 2, h, c);
+  return m;
+}
+// a rooftop cooling tower: a louvred box with a fan shroud on top
+export function coolingTower(s = 36, h = 30) {
+  const m = new Vox(s, s, h + 6);
+  const b = m.mat({ ramp: R('#98a2aa'), k: 3, shade: (x, y, z) => (Math.round(z) % 3 === 0 && z > 4 && z < h - 5 ? -0.9 : 0) }), top = m.mat({ ramp: R('#b4bcc2'), k: 3 }), fan = m.mat({ ramp: MAT.metalDark, k: 1 });
+  m.box(0, 0, 0, s, s, h, b); m.box(0, 0, h - 2, s, s, h, top);
+  m.cyl('z', s / 2, s / 2, 0, s * 0.4, h, h + 6, top, s * 0.33, fan);
+  m.fill((x, y) => (Math.hypot(x - s / 2, y - s / 2) < s * 0.33 ? fan : -1), 0, 0, h - 1, s, s, h);
+  return m;
+}
+// a sheet-metal duct run along x on little stands
+export function duct(len = 64) {
+  const m = new Vox(len, 10, 11), d = m.mat({ ramp: R('#a8aeb2'), k: 3, shade: (x) => (Math.round(x) % 16 === 0 ? -0.8 : 0) }), s = m.mat({ ramp: MAT.metalDark, k: 2 });
+  for (let x = 4; x < len - 2; x += 20) m.box(x, 3, 0, x + 2, 7, 3, s);
+  m.box(0, 1, 3, len, 9, 11, d);
+  return m;
+}
+// festoon lights over a roof terrace: two poles and a sagging line of warm bulbs (they glow; no shadow)
+export function stringLights(len = 60, on = 1) {
+  const m = new Vox(len, 4, 30), p = m.mat({ ramp: MAT.metalDark, k: 2 }), w = m.mat({ ramp: R('#2a2a30'), k: 1, flag: F_NOCAST });
+  const b = m.mat({ ramp: R('#ffd890', 5, 3), k: 4, emi: on ? [255, 196, 110, 255] : null, flag: F_NOCAST });
+  m.box(0, 1, 0, 2, 3, 30, p); m.box(len - 2, 1, 0, len, 3, 30, p);
+  for (let x = 2; x < len - 2; x++) { const t = (x - 2) / (len - 5), z = 28 - Math.sin(t * Math.PI) * 7; m.box(x, 2, z, x + 1, 3, z + 1, w); if ((x - 2) % 6 === 3) m.box(x, 1.5, z - 2, x + 1, 3.5, z, b); }
+  return m;
+}
+// a CCTV camera on a pole: the pole at model (3, 4), an arm along +x, the camera under its end looking +x
+// with a red tally light (render at the heading it watches)
+export function cctvPole(h = 64) {
+  const m = new Vox(22, 8, h + 2), p = m.mat({ ramp: MAT.metalDark, k: 2 }), b = m.mat({ ramp: R('#d6d6d0'), k: 3 }), lens = m.mat({ ramp: R('#20242c'), k: 1 });
+  const led = m.mat({ ramp: R('#ff3a30', 5, 3), k: 4, emi: [255, 50, 40, 200], flag: F_NOCAST });
+  m.cyl('z', 3, 4, 0, 2.2, 0, 3, p); m.cyl('z', 3, 4, 0, 1.4, 3, h, p);
+  m.box(3, 3, h - 3, 13, 5, h - 1, p);
+  m.box(10, 1, h - 10, 21, 7, h - 4, b); m.box(20, 2, h - 9, 22, 6, h - 5, lens); m.box(11, 3, h - 4, 13, 5, h - 2, led);
   return m;
 }

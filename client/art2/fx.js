@@ -14,6 +14,9 @@
 //   fxFrames(name)   memoised frames of a named effect from FX (built once, then shared)
 //   memo(fn, ...a)   memoised frames of any maker + arguments
 //   new FxPool(n)    fixed pool of n effect slots: spawn(name, x, y, variant) / update(dt) / forEach(fn)
+// The p* entries are single pooled particles (smoke, steam, flame, spark, drops, paper, leaves; each set
+// ordered by age) and the d* entries ground decals for the live game (scorch, blood pool, oil, litter, skid
+// dabs); wakeBoat / wakeSmall are looping boat wakes (wakeFrames(L, W, heading) for any hull).
 import { GBuf, F_GROUND, F_NOCAST, F_WATER, mulberry32, hash, bayer, step, vnoise, norm } from './gbuf.js';
 
 // ---- ramps (dark -> light) ---------------------------------------------------------------------------
@@ -883,6 +886,173 @@ export function footprints() {
   return out;
 }
 
+// ---- single particles (the live game's pooled particles) ---------------------------------------------
+// One sprite per particle, so a pool of hundreds of them stays cheap. Every set is ordered by age (frame 0
+// young .. last old), so a particle's frame is just floor(age / life * frames). Anchors are the particle's
+// ground point; z is the height above it, so the renderer lifts them by their flight height.
+const SMOKE_M = [[58, 56, 68], [82, 80, 92], [108, 106, 118], [136, 134, 146], [166, 164, 174]];
+// smoke / steam puffs over a life: 8 frames growing (r 3 -> 10) and breaking up. kind 'dark' (a burning
+// car), 'light' (steam, tyre smoke) or 'mid' (when the source isn't known)
+export function puffFrames(kind = 'mid') {
+  const R = kind === 'dark' || kind === true ? SMOKE_D : kind === 'light' ? SMOKE_L : SMOKE_M, out = [];
+  const RS = [3, 4, 5, 6, 7, 8, 9, 10], DIS = [0, 0, 0.08, 0.18, 0.32, 0.46, 0.6, 0.74];
+  RS.forEach((r, f) => {
+    const S = Math.ceil(r * 2 + 6), G = frame(S, S, S >> 1, S - 2), k = DIS[f];
+    puff(G, G.ax, G.ay - r - 1, r, (x, y, lit, u, v, w) => (k && gone(x, y, k * (1.25 - w * 0.5), r) ? null : [step(R, cl(0.42 + lit * 0.55 + (kind === 'light' ? 0.06 : 0) - k * 0.15), x, y, 0.6)]), k < 0.3 ? 1 : 0, 0.18, r);
+    out.push(finish(G));
+  });
+  return out;
+}
+// a flame over its life: 8 frames, a full flickering tongue (~15 px) that shrinks and gutters out
+export function flameFrames() {
+  const out = [], SC = [1.2, 1.2, 1.05, 0.9, 0.8, 0.65, 0.5, 0.4];
+  SC.forEach((sc, fi) => {
+    const H = 12 * sc, W2 = 4.2 * sc, w = Math.ceil(W2 * 2 + 6), h = Math.ceil(H * 1.3 + 5), ax = w >> 1, ay = h - 2, ph = fi / 4 * TAU;
+    const G = frame(w, h, ax, ay);
+    for (let y = 0; y <= ay; y++) for (let x = 0; x < w; x++) {
+      const yy = (ay - y) / H; if (yy > 1.3) continue;
+      const hw = W2 * Math.pow(Math.max(0, 1 - yy * 0.85), 0.6) * Math.min(1, 0.6 + yy * 2.5), sway = Math.sin(yy * 3 - ph) * 1.1 * sc * yy;
+      const I = 1 - Math.abs(x + 0.5 - ax - sway) / Math.max(0.5, hw) + (vnoise(x, y + fi * 5, 2.4, 7) - 0.5) * 0.6 - yy * 0.25 - fi * 0.03;
+      if (I <= 0.12) continue;
+      const t = cl(I * 0.75 + (1 - yy) * 0.35 - 0.05 - fi * 0.04, 0.15);
+      dot(G, x, y, step(FIRE, t, x, y, 0.7), 90 + t * t * 165, 1);
+    }
+    G.light = { x: 0, y: 0, z: H * 0.5, r: 30 * sc + 10, k: 0.9 * (1 - fi * 0.08), col: [1, 0.58, 0.24] };
+    out.push(finish(G));
+  });
+  return out;
+}
+// sparks: a hot 3 px streak, a 2 px one, a dying dot
+export function sparkFrames() {
+  return [3, 2, 1].map((n, i) => {
+    const G = frame(7, 5, 3, 2, 0, false);
+    for (let k = 0; k < n; k++) dot(G, 3 - k, 2, SPARK[Math.max(0, 4 - i - k)], 255 - i * 60 - k * 30, 0);
+    return finish(G);
+  });
+}
+// droplets over a flight: blood (dark red, a glossy fleck) or water (blue-white, a glint), thinning 2.3 -> 1 px
+export function dropFrames(blood = false) {
+  const R = blood ? BLOOD : WATER;
+  return [2.3, 1.6, 1].map((r) => {
+    const S = Math.ceil(r * 2 + 4), G = frame(S, S, S >> 1, S - 1);
+    puff(G, G.ax, G.ay - r - 0.5, r, (x, y, lit) => [step(R, cl((blood ? 0.35 : 0.55) + lit * 0.45), x, y, 0.4), blood ? 0 : lit > 0.5 ? 60 : 0], 1);
+    return finish(G);
+  });
+}
+// paper scraps and leaves fluttering: 4 frames turning edge-on and back (paper white, leaf green, leaf orange)
+export function flutterFrames(kind = 'paper') {
+  const R = kind === 'paper' ? [[150, 146, 140], [196, 192, 184], [226, 222, 212], [246, 244, 236]] : kind === 'leaf' ? LEAF_G : LEAF_O, out = [];
+  for (let f = 0; f < 4; f++) {
+    const G = frame(10, 9, 5, 7), k = [1, 0.55, 0.15, 0.6][f], a = f * 0.7;
+    for (let y = 0; y < 9; y++) for (let x = 0; x < 10; x++) {
+      const dx = x + 0.5 - 5, dy = y + 0.5 - 4, lx = dx * Math.cos(a) + dy * Math.sin(a), ly = -dx * Math.sin(a) + dy * Math.cos(a);
+      const inside = kind === 'paper' ? Math.abs(lx) < 3.2 && Math.abs(ly) < 2.2 * k + 0.4 : (lx / 3.6) ** 2 + (ly / (1.8 * k + 0.45)) ** 2 < 1;
+      if (inside) dot(G, x, y, step(R, cl(0.6 - ly * 0.08 + (f === 2 ? -0.2 : 0)), x, y, 0.5), 0, 1);
+    }
+    out.push(finish(G));
+  }
+  return out;
+}
+
+// ---- boat wake ------------------------------------------------------------------------------------------
+// Foam for a boat L x W heading along ang (0 = +x): spray curling off the bow along both sides of the hull,
+// a churned patch at the stern and a widening V trail behind, broken up by dither. 4 frames that loop.
+// Anchor = the boat's centre; it lies on the water (F_GROUND | F_WATER) under the hull sprite.
+export function wakeFrames(L = 104, W = 48, ang = 0) {
+  const tail = Math.round(L * 0.7 + 30), R = Math.ceil(Math.hypot(L / 2 + tail, W / 2 + 22)) + 2, out = [];
+  const FOAM = [[150, 196, 220], [196, 226, 240], [232, 246, 252], [252, 255, 255]];
+  const ca = Math.cos(ang), sa = Math.sin(ang);
+  for (let f = 0; f < 4; f++) {
+    const G = frame(R * 2, R * 2, R, R, 0, false);
+    for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
+      const gx = x + 0.5 - R, gy = y + 0.5 - R, u = gx * ca + gy * sa, v = -gx * sa + gy * ca, av = Math.abs(v);
+      let k = 0;
+      // bow spray hugging the hull: a white collar that widens toward the stern
+      if (u < L / 2 + 3 && u > -L / 2 - 2) {
+        const hw = (W / 2) * Math.min(1, (L / 2 + 3 - u) / (L * 0.3)), d = av - hw, wdt = 2.5 + (L / 2 - u) * 0.07;
+        if (d > -1.5 && d < wdt) k = Math.max(k, 1 - Math.max(0, d) / (wdt + 1));
+      }
+      // the churned stern patch and the V trail spreading behind
+      if (u < -L / 2 + 4) {
+        const b = -L / 2 + 4 - u, arm = W * 0.38 + b * 0.45, edge = Math.abs(av - arm), fade = 1 - b / tail;
+        if (b < tail) {
+          if (edge < 3 + b * 0.05) k = Math.max(k, (1 - edge / (3.5 + b * 0.05)) * fade);
+          const core = W * 0.42 * (1 - b / (tail * 0.75));
+          if (av < core) k = Math.max(k, (1 - av / core * 0.5) * fade * 1.05);
+        }
+      }
+      if (k <= 0.05) continue;
+      const n = vnoise(u - f * 6, v * 1.3, 2.6, 41) * 0.65 + hash(x, y, f + 5) * 0.35;
+      if (n * 0.75 > k * 1.15 || dith(x, y, 0.85 - k)) continue;
+      dot(G, x, y, FOAM[Math.max(0, Math.min(3, Math.floor(k * 3.4 + n * 0.6 - 0.3)))], 0, 0, F_GROUND | F_WATER, NUP, 240);
+    }
+    out.push(finish(G));
+  }
+  return out;
+}
+
+// ---- ground decals for the live game ---------------------------------------------------------------------
+// scorch: a sooty blotch with ragged spatter (3 sizes, r 10, 20, 34)
+export function scorchFrames() {
+  return [10, 20, 34].map((r, vi) => {
+    const S = Math.ceil(r * 2.6), Hh = Math.ceil(S * 0.8), G = frame(S, Hh, S >> 1, Hh >> 1, 0, false), rnd = mulberry32(vi * 977 + 3);
+    groundEllipse(G, G.ax, G.ay, r * 1.15, r * 0.82, (d, x, y) => {
+      const nz = vnoise(x, y, 3 + vi, 5 + vi) * 0.45;
+      if (d + nz * 0.6 > 1 || (d > 0.55 && dith(x, y, (d - 0.55) * 2 + nz * 0.5))) return null;
+      return [step(SCORCH, cl(d * 0.8 + nz - 0.15), x, y), 0, 235];
+    });
+    for (let i = 0; i < 8 + vi * 6; i++) { const a = rnd() * TAU, dd = r * (1.05 + rnd() * 0.5); groundEllipse(G, G.ax + Math.cos(a) * dd, G.ay + Math.sin(a) * dd * 0.72, 0.8 + rnd() * 1.4, 0.6 + rnd(), () => [SCORCH[1], 0, 220]); }
+    return finish(G);
+  });
+}
+// a glossy pool: blood (dark red) or oil (near black with a faint sheen); 3 sizes
+export function poolFrames(oil = false) {
+  const R = oil ? [[14, 12, 18], [22, 20, 28], [32, 30, 40], [58, 56, 76], [96, 92, 120]] : BLOOD;
+  return [5, 9, 14].map((r, vi) => {
+    const S = Math.ceil(r * 2.6 + 4), Hh = Math.ceil(S * 0.8), G = frame(S, Hh, S >> 1, Hh >> 1, 0, false), ph = vi * 1.7 + (oil ? 3 : 0);
+    for (let y = 0; y < Hh; y++) for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - G.ax, dy = (y + 0.5 - G.ay) / 0.72, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+      const rr = r * (0.84 + 0.3 * vnoise(Math.cos(a) * 2.5 + ph, Math.sin(a) * 2.5 + ph, 1.1, 31));
+      if (d > rr) continue;
+      const hl = (dx / rr) * LX + (dy / rr) * LY;
+      const v = cl(0.3 - (d / rr) * 0.15 + (d < rr * 0.6 && hl > 0.35 ? 0.4 : 0) + (oil && Math.abs(Math.sin(d * 0.9 + a)) < 0.12 ? 0.35 : 0));
+      dot(G, x, y, step(R, v, x, y, 0.4), 0, 0, F_GROUND, NUP, 240);
+    }
+    return finish(G);
+  });
+}
+// litter: a paper scrap, a crushed can, a cup, a wrapper, a folded newspaper, a bottle cap (6 variants)
+export function litterFrames() {
+  const PAPER = [[150, 146, 140], [200, 196, 186], [232, 228, 218]], CAN = [[120, 30, 32], [176, 50, 46], [214, 96, 86]], CUP = [[200, 196, 186], [236, 232, 224], [176, 60, 50]];
+  const WRAP = [[46, 92, 150], [76, 132, 196], [214, 180, 60]], NEWS = [[120, 118, 112], [170, 168, 160], [210, 208, 200]], CAP = [[150, 140, 120], [196, 186, 160], [230, 220, 196]];
+  const shapes = [[PAPER, 5, 3.5, 0.4], [CAN, 4, 2, 0.9], [CUP, 3, 2.5, -0.3], [WRAP, 4, 2, 0.2], [NEWS, 6, 4, -0.5], [CAP, 1.6, 1.4, 0]];
+  return shapes.map(([R, rx, ry, a], vi) => {
+    const G = frame(16, 12, 8, 6, 0, false), ca = Math.cos(a), sa = Math.sin(a);
+    for (let y = 0; y < 12; y++) for (let x = 0; x < 16; x++) {
+      const dx = x + 0.5 - 8, dy = y + 0.5 - 6, lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
+      if (Math.abs(lx) > rx || Math.abs(ly) > ry) continue;
+      const band = vi === 1 ? (Math.abs(lx) > rx - 1 ? 2 : 1) : vi === 3 ? (Math.abs(lx) < 1 ? 2 : 1) : vi === 4 ? ((Math.round(ly) & 1) ? 0 : 1) : vi === 2 ? (Math.abs(ly) < 0.8 ? 2 : 1) : (hash(x, y, vi) > 0.8 ? 0 : 1);
+      dot(G, x, y, R[Math.min(R.length - 1, band + (lx < 0 && vi !== 4 ? 0 : 0))], 0, 0, F_GROUND, NUP, 250);
+    }
+    return finish(G);
+  });
+}
+// a short skid dab (one tyre, ~12 x 4 px) at 8 angles, for marks laid along a wheel's path
+export function skidDabFrames() {
+  const out = [];
+  for (let k = 0; k < 8; k++) {
+    const a = k / 8 * Math.PI, ca = Math.cos(a), sa = Math.sin(a), G = frame(16, 16, 8, 8, 0, false);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const dx = x + 0.5 - 8, dy = y + 0.5 - 8, lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
+      if (Math.abs(lx) > 6 || Math.abs(ly) > 2) continue;
+      if (dith(x, y, Math.abs(lx) > 4.5 ? 0.5 : 0.1)) continue;
+      dot(G, x, y, RUBBER[(Math.round(ly + 2) % 3 === 0) ? 0 : 1], 0, 0, F_GROUND, NUP, 215);
+    }
+    out.push(finish(G));
+  }
+  return out;
+}
+
 // ---- registry, memo and pool -------------------------------------------------------------------------
 const CACHE = new Map();
 // memoised frames of any maker + arguments (frames are built once and shared; never mutate them)
@@ -923,8 +1093,26 @@ export const FX = {
   bloodSplat: { make: M(bloodSplat), frames: 3, decal: true, hold: 40 },
   bloodSpray: { make: M(bloodSpray), frames: 4, fps: 20 },
   footprints: { make: M(footprints), frames: 6, decal: true, hold: 20 },
+  // single pooled particles and live-game decals (frame layouts in each maker's comment)
+  pSmoke: { make: M(puffFrames, 'mid'), frames: 8, particle: true },
+  pSmokeDark: { make: M(puffFrames, 'dark'), frames: 8, particle: true },
+  pSteam: { make: M(puffFrames, 'light'), frames: 8, particle: true },
+  pFlame: { make: M(flameFrames), frames: 8, particle: true },
+  pSpark: { make: M(sparkFrames), frames: 3, particle: true },
+  pBlood: { make: M(dropFrames, true), frames: 3, particle: true },
+  pWater: { make: M(dropFrames, false), frames: 3, particle: true },
+  pPaper: { make: M(flutterFrames, 'paper'), frames: 4, particle: true },
+  pLeaf: { make: M(flutterFrames, 'leaf'), frames: 4, particle: true },
+  pLeafAutumn: { make: M(flutterFrames, 'autumn'), frames: 4, particle: true },
+  dScorch: { make: M(scorchFrames), frames: 3, decal: true, hold: 240 },
+  dBloodPool: { make: M(poolFrames, false), frames: 3, decal: true, hold: 240 },
+  dOil: { make: M(poolFrames, true), frames: 3, decal: true, hold: 240 },
+  dLitter: { make: M(litterFrames), frames: 6, decal: true, hold: 240 },
+  dSkid: { make: M(skidDabFrames), frames: 8, decal: true, hold: 240 },
+  wakeBoat: { make: M(wakeFrames, 104, 48, 0), frames: 4, fps: 10, loop: true },
+  wakeSmall: { make: M(wakeFrames, 46, 22, 0), frames: 4, fps: 12, loop: true },
 };
-for (const [k, fn] of Object.entries({ muzzleFlash, tracer, impactSpark, impactGlass, impactDirt, explosion, fire, smokeLight, smokeHeavy, exhaust, skidMarks, waterSplash, rainRipple, dustPuff, glassShatter, leaves, petals, sparkle, sparkleBlue, bloodSplat, bloodSpray, footprints })) fn.fxName = k;
+for (const [k, fn] of Object.entries({ muzzleFlash, tracer, impactSpark, impactGlass, impactDirt, explosion, fire, smokeLight, smokeHeavy, exhaust, skidMarks, waterSplash, rainRipple, dustPuff, glassShatter, leaves, petals, sparkle, sparkleBlue, bloodSplat, bloodSpray, footprints, puffFrames, flameFrames, sparkFrames, dropFrames, flutterFrames, scorchFrames, poolFrames, litterFrames, skidDabFrames, wakeFrames })) fn.fxName = k;
 export const fxFrames = (name) => FX[name].make();
 
 // A fixed set of effect slots, allocated once: spawning reuses a free slot (or the oldest one when

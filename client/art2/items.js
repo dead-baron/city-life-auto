@@ -5,8 +5,11 @@
 // draws as an inventory icon and, small, in a character's hand (people.js). Generic designs: no logos,
 // no text, no maker marks.
 //   icon(kind, size = 32) -> GBuf: transparent background, dark warm outline, soft drop shadow
-//   drawItem(set, kind, ox, oy, U, V) draws into any pixel sink, set(x, y, col, emi, noOutline):
-//     (ox, oy) is the grip (item origin) on screen, U / V the screen vectors of one item unit along u / v
+//   drawItem(set, kind, ox, oy, U, V, opt) draws into any pixel sink, set(x, y, col, emi, noOutline):
+//     (ox, oy) is the grip (item origin) on screen, U / V the screen vectors of one item unit along u / v;
+//     opt.line overrides the length (px) of a hanging line (fishing rod; 0 = none); opt.org [x, y] anchors the
+//     dither pattern (a sprite's own anchor, so it holds still from frame to frame)
+//   itemSpan(kind) -> [u min, u max, largest |v|]: the model's extent in item units
 //   ITEMS[kind]: { parts, ia icon angle (deg, - tilts the tip up), is icon scale, hs held scale, vk thickening,
 //     off [u,v] second-hand grip, bill (always drawn upright), tip [u,v] + line (hanging line length) }
 //   ITEM_KINDS (inventory order), ITEM_NAMES (player-facing)
@@ -20,6 +23,7 @@ const M = {
   gun: R5('#40444e', { light: 0.42, shift: 0.12 }), gunLight: R5('#5a5f6a', { light: 0.45, shift: 0.12 }), red: R5('#b23a30'), rodRed: R5('#8e2a2c'),
   gold: R5('#c8962e', { light: 0.6 }), orange: R5('#d8582c', { light: 0.5 }), olive: R5('#666c30'), oliveLight: R5('#84863e'), rust: R5('#8a3c2a'),
   yellow: R5('#e2b222', { light: 0.5 }), blade: R5('#3c86ff', { light: 0.7 }), core: R5('#d8ecff', { dark: 0.2, light: 0.8 }), cream: R5('#e4dac2', { dark: 0.38 }),
+  paper: R5('#b88a58', { dark: 0.5, light: 0.4 }), bottle: R5('#3e6a32', { light: 0.6 }), card: R5('#9a6a40'), cup: R5('#f0ece4', { dark: 0.32 }),
   money: R5('#5e8c4a', { light: 0.5 }), medRed: R5('#c8362e', { light: 0.45 }), gauze: R5('#e2d8be', { dark: 0.6, light: 0.55 }), white: R5('#eeece6', { dark: 0.3 }), screen: R5('#3a78d8', { light: 0.7 }),
 };
 const box = (u0, v0, u1, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
@@ -208,14 +212,49 @@ export const ITEMS = {
     poly(rbox(1, 4.6, 5.4, 12.4, 1.3), M.black, { k: 0.12 }),
     ell([3.2, 7.4], 1, 1, M.medRed, { k: 0.15 }), ell([3.2, 10.2], 0.7, 0.7, M.dark, { k: 0.2 }),
   ] },
+  // the rest of the game's arsenal and street props
+  silencedPistol: { ia: -10, hs: 0.72, is: 1.15, off: [-0.6, 1.6], parts: null },
+  sniper: { ia: -26, hs: 0.47, vk: 1.4, off: [14, -2.4], parts: [
+    poly([[-3, -5.4], [-16, -4.8], [-16.4, 1.8], [-13.4, 2], [-6.6, -1.4], [-2.6, -1.6]], M.gunLight, { k: -0.05 }),
+    poly([[1.5, -0.8], [4.6, -0.8], [5.8, 4.8], [2.8, 5.4]], M.gun, { k: -0.08 }),
+    poly(box(-3.4, -5.6, 12, -1.2), M.gun, { pat: (u, v) => (v < -5 && (Math.round(u) & 1) ? -0.25 : 0) }),
+    poly(box(12, -4.8, 21, -2.2), M.gun),
+    cap([20, -3.6], [37, -3.6], 0.6, M.gun, { flat: true }),
+    cap([36, -3.6], [38.6, -3.6], 0.95, M.gun, { flat: true, k: -0.1 }),
+    poly(box(2.6, -7.2, 3.6, -5.6), M.black), poly(box(8.4, -7.2, 9.4, -5.6), M.black),
+    cap([0.4, -8.4], [12, -8.4], 1.25, M.black, { flat: true, k: 0.1 }),
+    ell([12.2, -8.4], 0.5, 1.5, M.black), ell([12.3, -8.4], 0.3, 0.9, M.blade, { k: 0.2 }),
+    ...path([[1.5, -1.2], [1.8, 0.4], [3.8, 0.4], [4.2, -1.2]], 0.4, M.gun),
+  ] },
+  pepperSpray: { ia: -18, hs: 0.95, is: 1.7, parts: [
+    cap([-2.8, 0], [4.2, 0], 1.9, M.black, { flat: true }),
+    poly(box(-1.6, -2, 2.4, 2), M.orange, { k: -0.05 }),
+    poly(box(4.2, -1.4, 5.8, 1.4), M.red), poly(box(5.8, -0.5, 6.7, 0.5), M.dark),
+  ] },
+  bottle: { ia: 0, hs: 0.62, is: 1.6, bill: true, parts: [
+    cap([0, -8], [0, -2.2], 0.85, M.bottle, { r1: 1.2 }),
+    poly([[-2.6, -2.6], [2.6, -2.6], [3.2, 7.2], [-3.2, 7.2]], M.paper, { pat: (u, v) => (hash(Math.round(u * 1.2), Math.round(v * 0.8), 9) > 0.78 ? -0.22 : v < -1.6 ? 0.18 : 0) }),
+  ] },
+  coffee: { ia: 0, hs: 0.6, is: 1.6, bill: true, parts: [
+    poly([[-2.3, -3.4], [2.3, -3.4], [1.8, 4], [-1.8, 4]], M.cup),
+    poly(box(-2.7, -4.6, 2.7, -3.3), M.cup, { k: 0.12 }),
+    poly([[-2.15, -1.2], [2.15, -1.2], [2, 1.8], [-2, 1.8]], M.card),
+  ] },
+  spikeStrip: { ia: 0, hs: 0.62, is: 1.4, bill: true, parts: [
+    poly(rbox(-7.4, -1.8, 7.4, 1.8, 0.7), M.black, { k: 0.1 }),
+    ...[-5.5, -2.8, 0, 2.8, 5.5].map((u) => poly([[u - 0.9, -1.8], [u + 0.9, -1.8], [u, -3.6]], M.steel)),
+    poly(box(-7.4, -0.3, 7.4, 0.5), M.yellow, { k: -0.1 }),
+  ] },
 };
+ITEMS.silencedPistol.parts = [...ITEMS.pistol.parts, cap([11.6, -4.6], [20, -4.6], 1.4, M.dark, { flat: true, k: 0.05 }), ell([20, -4.6], 0.45, 1.35, M.black, { k: -0.3 })];
 function grain(u, v) { return hash(Math.round(u * 0.6), Math.round(v * 1.6), 5) > 0.82 ? -0.14 : 0; }
 
-export const ITEM_KINDS = ['bat', 'knife', 'crowbar', 'sledgehammer', 'chainsaw', 'sword', 'katana', 'energyBlade', 'nightstick', 'taser', 'pistol', 'revolver', 'shotgun', 'rifle', 'smg', 'rocketLauncher', 'fishingRod', 'medkit', 'bandage', 'phone', 'cash', 'keys'];
+export const ITEM_KINDS = ['bat', 'knife', 'crowbar', 'sledgehammer', 'chainsaw', 'sword', 'katana', 'energyBlade', 'nightstick', 'taser', 'pistol', 'revolver', 'shotgun', 'rifle', 'smg', 'rocketLauncher', 'fishingRod', 'medkit', 'bandage', 'phone', 'cash', 'keys', 'silencedPistol', 'sniper', 'pepperSpray', 'bottle', 'coffee', 'spikeStrip'];
 export const ITEM_NAMES = {
   bat: 'Baseball bat', knife: 'Knife', crowbar: 'Crowbar', sledgehammer: 'Sledgehammer', chainsaw: 'Chainsaw', sword: 'Sword', katana: 'Katana',
   energyBlade: 'Energy blade', nightstick: 'Nightstick', taser: 'Taser', pistol: 'Pistol', revolver: 'Revolver', shotgun: 'Pump shotgun', rifle: 'Rifle',
   smg: 'SMG', rocketLauncher: 'Rocket launcher', fishingRod: 'Fishing rod', medkit: 'Medical kit', bandage: 'Bandage', phone: 'Phone', cash: 'Cash', keys: 'Keys',
+  silencedPistol: 'Silenced pistol', sniper: 'Marksman rifle', pepperSpray: 'Pepper spray', bottle: 'Bottle in a bag', coffee: 'Coffee', spikeStrip: 'Spike strip',
 };
 
 // ---- rasterising ----------------------------------------------------------------------------------
@@ -248,13 +287,26 @@ function hit(p, u, v) {
 function segDist(px, py, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2)); return Math.hypot(px - ax - dx * t, py - ay - dy * t); }
 
 // draw one item: grip at (ox, oy), U / V the screen vectors of one item unit along u / v
-export function drawItem(set, kind, ox, oy, U, V) {
+// an item's extent in its own units, [u min, u max, largest |v|] (callers bound a drawn item with it)
+const SPAN = new Map();
+export function itemSpan(kind) {
+  let s = SPAN.get(kind);
+  if (s) return s;
+  const D = ITEMS[kind];
+  if (!D) return [0, 0, 0];
+  let u0 = 1e9, u1 = -1e9, va = 0;
+  for (const p of D.parts) for (const [u, v, r] of extent(p)) { u0 = Math.min(u0, u - r); u1 = Math.max(u1, u + r); va = Math.max(va, Math.abs(v) + r); }
+  s = [u0, u1, va];
+  SPAN.set(kind, s);
+  return s;
+}
+export function drawItem(set, kind, ox, oy, U, V, opt = {}) {
   const D = ITEMS[kind]; if (!D) return;
   if (D.vk) V = [V[0] * D.vk, V[1] * D.vk];
   const det = U[0] * V[1] - U[1] * V[0]; if (Math.abs(det) < 1e-6) return;
   const toItem = (x, y) => { const dx = x - ox, dy = y - oy; return [(dx * V[1] - dy * V[0]) / det, (U[0] * dy - U[1] * dx) / det]; };
   const toScr = (u, v) => [ox + u * U[0] + v * V[0], oy + u * U[1] + v * V[1]];
-  const su = Math.hypot(U[0], U[1]), sv = Math.hypot(V[0], V[1]), Uh = [U[0] / su, U[1] / su], Vh = [V[0] / sv, V[1] / sv];
+  const su = Math.hypot(U[0], U[1]), sv = Math.hypot(V[0], V[1]), Uh = [U[0] / su, U[1] / su], Vh = [V[0] / sv, V[1] / sv], org = opt.org || [0, 0];
   for (const p of D.parts) {
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (const [u, v, r] of extent(p)) { const [x, y] = toScr(u, v), rr = r * Math.max(su, sv) + 1; x0 = Math.min(x0, x - rr); y0 = Math.min(y0, y - rr); x1 = Math.max(x1, x + rr); y1 = Math.max(y1, y + rr); }
@@ -291,12 +343,13 @@ export function drawItem(set, kind, ox, oy, U, V) {
       v += p.k ?? 0;
       let col = null;
       if (p.pat) { const [u, vv] = toItem(X + 0.5, Y + 0.5), r = p.pat(u, vv); if (Array.isArray(r)) col = r; else v += r; }
-      set(X, Y, col || shade(p.m, v, X, Y), p.e || null, false);
+      set(X, Y, col || shade(p.m, v, X - org[0], Y - org[1]), p.e || null, false);
     }
   }
   // a hanging line from the tip, with a red-and-white float
-  if (D.tip && D.line) {
-    const [tx, ty] = toScr(...D.tip), len = Math.max(4, Math.round(D.line * sv)), X = Math.round(tx), Y0 = Math.round(ty) + 1;
+  const ln = opt.line;
+  if (D.tip && (ln === undefined ? D.line : ln > 0)) {
+    const [tx, ty] = toScr(...D.tip), len = ln === undefined ? Math.max(4, Math.round(D.line * sv)) : Math.max(3, Math.round(ln)), X = Math.round(tx), Y0 = Math.round(ty) + 1;
     for (let k = 0; k < len; k++) set(X, Y0 + k, [214, 212, 204], null, true);
     const b = sv > 0.8 ? 1 : 0, yb = Y0 + len;
     for (let y = 0; y <= 2 + b; y++) for (let x = -b; x <= b; x++) set(X + x, yb + y, y <= (b ? 1 : 0) ? (x < 0 ? [236, 92, 80] : [198, 48, 44]) : x < 0 ? [244, 242, 236] : [206, 204, 198], null, false);

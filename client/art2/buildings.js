@@ -7,32 +7,54 @@
 //   shop      big lit windows with goods and a clerk at the counter, an open glass door, a striped
 //             awning and a striped fascia band
 // Roofs are flat membranes with a parapet (the rooftop kit is placed separately), or terracotta tile.
+// With spec.roofMat a flat roof is a deck sunk below its parapet (the north parapet's inner face shows, the
+// coping matches the walls): 'tar' | 'gravel' | 'membrane' | 'metal' (standing seams) | 'paver' | 'deck'
+// (planks) | 'green' (sedum) | 'rubber', with seams, patches, drains and ponding stains.
 //
 // makeBuilding(spec) -> GBuf, with .ax/.ay = the footprint's south-west corner on the ground.
 //   spec: { w, d, floors, style, seed, night 0..1, roof: 'flat'|'tile'|'terrace',
 //           shop: { kind: 'mart'|'cafe'|'diner', awning: [colA, colB] | null, band: [colA, colB],
-//                   door: 'left'|'right'|x, clerk, clerkShirt, people }, fireEscape: [x, w],
-//           neon: { icon: 'cup'|'palm', col: [r,g,b], x, y }, trim: [r,g,b] (diner neon band) }
-import { MAT, ramp } from './palette.js';
+//                   door: 'left'|'right'|x, doorW, clerk, clerkShirt, people }, fireEscape: [x, w],
+//           neon: { icon: 'cup'|'palm', col: [r,g,b], x, y }, trim: [r,g,b] (diner neon band),
+//           blades: [{ text, x, v, col }] (vertical neon signs), plaques: [{ text, x, v, sx, bg, fg, lit }],
+//           roofMat, lip (parapet height above the deck, px), rimW (parapet thickness), pads: [[x, y, w, h]]
+//           (walkway pads on the deck), groundH (ground floor height; 0 = every floor is an upper floor,
+//           for a volume standing on another's roof), glowOnly (lit windows keep their glass albedo and
+//           carry their light in the emissive only, for bakes lit at every time of day) }
+//   roofDeckZ(spec): the height of a flat roof's deck (where rooftop kit stands)
+import { MAT, ramp as ramp0 } from './palette.js';
 import { GBuf, hash, vnoise, bayer, step, F_GLASS, F_LEAF } from './gbuf.js';
 import { drawText, textWidth } from './font.js';
 
 const S_N = [0, 1, 0], UP = [0, 0, 1];
+// ramp() is pure but not free, and the painters below call it per pixel: memoise the plain calls
+const RAMPS = new Map();
+function ramp(base, n = 6, k = Math.floor((n - 1) / 2), opt) {
+  if (opt) return ramp0(base, n, k, opt);
+  const key = (typeof base === 'string' ? base : base.join(',')) + ':' + n + ':' + k;
+  let r = RAMPS.get(key);
+  if (!r) { r = ramp0(base, n, k); if (RAMPS.size > 4000) RAMPS.clear(); RAMPS.set(key, r); }
+  return r;
+}
 export const FLOOR = 56, SHOP_FLOOR = 64;
 // the height of a building's walls (its flat roof level), as makeBuilding lays it out
 export function buildingH(spec) {
   if (spec.height) return spec.height;
-  const floors = spec.floors || 1, gH = spec.shop ? SHOP_FLOOR : FLOOR, cornice = (spec.style || 'stucco') === 'brick' ? 10 : 6;
+  const floors = spec.floors || 1, gH = spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR), cornice = (spec.style || 'stucco') === 'brick' ? 10 : 6;
   return gH + (floors - 1) * FLOOR + cornice + (spec.parapet || 0);
 }
+export const roofDeckZ = (spec) => buildingH(spec) - (spec.roofMat && spec.roof !== 'tile' && !spec.pitch ? spec.lip ?? 6 : 0);
 
 const setC = (G, x, y, c) => { if (!G.inside(x, y)) return; const j = (y * G.w + x) * 4; G.col[j] = c[0]; G.col[j + 1] = c[1]; G.col[j + 2] = c[2]; G.col[j + 3] = 255; };
 const setN = (G, x, y, n) => { if (!G.inside(x, y)) return; const j = (y * G.w + x) * 4; G.nrm[j] = (n[0] * 0.5 + 0.5) * 255; G.nrm[j + 1] = (n[1] * 0.5 + 0.5) * 255; G.nrm[j + 2] = (n[2] * 0.5 + 0.5) * 255; G.nrm[j + 3] = 255; };
 const glow = (G, x, y, e) => G.glow(x, y, e);
 
 let WALLC = null;   // a custom wall ramp for the building being made (spec.wallColor)
-function wallColor(style, u, v, seed, x, y) {
-  const big = vnoise(u, v, 30, seed), mid = vnoise(u, v, 8, seed + 1), h = hash(u, v, seed);
+let GLOW_ONLY = false; // spec.glowOnly: lit windows keep their glass albedo and carry the light in the emissive
+                       // map only (the game bakes a chunk once for every time of day; the Lighter scales emi)
+// (big and mid: vnoise(u, v, 30, seed) and vnoise(u, v, 8, seed + 1) when the caller has them precomputed)
+function wallColor(style, u, v, seed, x, y, big = vnoise(u, v, 30, seed), mid = vnoise(u, v, 8, seed + 1)) {
+  const h = hash(u, v, seed);
   if (style === 'brick' || style === 'brickDark') {
     const R = style === 'brick' ? MAT.brick : MAT.brickDark;
     const row = Math.floor(v / 4), off = (row & 1) * 4, col = Math.floor((u + off) / 8);
@@ -65,6 +87,7 @@ function wallColor(style, u, v, seed, x, y) {
   return step(R, t, x, y, 0.7);
 }
 
+const GLASS_WARM = ramp('#4a4038', 6, 3);     // glass with a warm room behind it (glowOnly mode)
 // a sash window: frame, two panes with a reflection streak (or warm light when lit), a curtain
 function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
   const fr = opt.frame || MAT.metalDark, warm = hash(x0, y0, seed) > 0.22;
@@ -76,7 +99,11 @@ function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
     if (edge || mid) { setC(G, X, Y, step(fr, (x === 0 || y === 0) ? 0.2 : 0.55, X, Y, 0)); continue; }
     const streak = ((x + (h - y)) % 9) < 2;
     let c;
-    if (lit) {
+    if (lit && GLOW_ONLY) {
+      c = step(warm ? GLASS_WARM : MAT.glassDark, 0.34 + (streak ? 0.38 : 0) + (y < 3 ? 0.14 : 0), X, Y, 0.4);
+      const e = warm ? [255, 196, 118] : [176, 212, 244];
+      glow(G, X, Y, [e[0], e[1], e[2], 114 + (y / h) * 66]);
+    } else if (lit) {
       c = step(warm ? ramp('#d8964e', 5, 2) : ramp('#5a8ec0', 5, 2), 0.45 + (y / h) * 0.35 + (streak ? 0.15 : 0), X, Y, 0.6);
       const e = warm ? [255, 200, 120] : [150, 210, 255];
       glow(G, X, Y, [e[0], e[1], e[2], 90 + (y / h) * 60]);
@@ -113,13 +140,15 @@ function acBox(G, x0, y0) { for (let y = 0; y < 9; y++) for (let x = 0; x < 13; 
 export function makeBuilding(spec) {
   const { w, d } = spec, seed = spec.seed || 1, style = spec.style || 'stucco';
   WALLC = spec.wallColor ? ramp(spec.wallColor, 6, 3) : null;
-  const floors = spec.floors || 1, gH = spec.shop ? SHOP_FLOOR : FLOOR, cornice = style === 'brick' ? 10 : 6;
+  GLOW_ONLY = !!spec.glowOnly;
+  const floors = spec.floors || 1, gH = spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR), cornice = style === 'brick' ? 10 : 6;
   const H = buildingH(spec);
   const G = new GBuf(w, d + H);
   G.ax = 0; G.ay = d + H;
   const night = spec.night || 0;
   // ---- roof
-  if (spec.roof === 'tile') {
+  if (spec.roofMat && spec.roof !== 'tile' && !spec.pitch) roofDeck(G, spec, w, d, H, seed, style);
+  else if (spec.roof === 'tile') {
     for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) {
       const row = Math.floor(y / 5), cx = (x + (row & 1) * 3) % 7;
       G.put(x, y, step(MAT.terracotta, 0.62 - (y % 5) * 0.08 + (cx === 0 ? -0.25 : cx === 1 ? 0.1 : 0) + (vnoise(x, y, 9, seed) - 0.5) * 0.15, x, y, 0.4), [0, 0.35, 0.94], H, null, 0);
@@ -149,11 +178,18 @@ export function makeBuilding(spec) {
     }
   }
   // ---- south face
+  const NB = noiseField(w, H + 1, 30, 30, seed), NM = noiseField(w, H + 1, 8, 8, seed + 1);
   for (let r = 0; r < H; r++) for (let x = 0; x < w; x++) {
     const y = d + r, v = H - r;
-    G.put(x, y, wallColor(style, x, v, seed, x, y), S_N, v, null, 0);
-    // office towers: some panes lit after dark
-    if (style === 'glass' && night > 0 && v > gH && x % 16 && v % 22 && hash(x >> 4, Math.floor(v / 22), seed + 5) < night * night * 0.45) { const j = (y * G.w + x) * 4; G.col[j] = 236; G.col[j + 1] = 206; G.col[j + 2] = 140; G.glow(x, y, [255, 214, 150, 70 + night * 60]); }
+    G.put(x, y, wallColor(style, x, v, seed, x, y, NB[v * w + x], NM[v * w + x]), S_N, v, null, 0);
+    // office towers: some panes lit after dark (glowOnly: whole office floors lit, a few late panes elsewhere)
+    if (style === 'glass' && night > 0 && v > gH && x % 16 && v % 22) {
+      const fl = Math.floor(v / 22), pane = x >> 4, j = (y * G.w + x) * 4;
+      if (GLOW_ONLY) {
+        const on = hash(fl, 3, seed + 5) < night * 0.22 ? hash(pane, fl, seed + 6) < 0.7 : hash(pane, fl, seed + 7) < night * 0.07;
+        if (on) { const k = v % 22 < 4 ? 0.8 : 1; G.col[j] = G.col[j] * 0.66 + 32 * k; G.col[j + 1] = G.col[j + 1] * 0.66 + 25 * k; G.col[j + 2] = G.col[j + 2] * 0.62 + 12 * k; G.glow(x, y, [255, 210, 148, 54 + night * 30]); }
+      } else if (hash(pane, fl, seed + 5) < night * night * 0.45) { G.col[j] = 236; G.col[j + 1] = 206; G.col[j + 2] = 140; G.glow(x, y, [255, 214, 150, 70 + night * 60]); }
+    }
   }
   const fy = (v) => d + H - v;                                      // facade height -> sprite row
   // cornice: a projecting band at the top (dentils on brick)
@@ -186,7 +222,7 @@ export function makeBuilding(spec) {
     }
   }
   // stone band over the ground floor
-  if (style === 'brick' && floors > 1) for (let k = 0; k < 4; k++) for (let x = 0; x < w; x++) setC(G, x, fy(gH + 2 - k), step(MAT.stone, 0.8 - k * 0.15, x, k, 0.3));
+  if (style === 'brick' && floors > 1 && gH > 0) for (let k = 0; k < 4; k++) for (let x = 0; x < w; x++) setC(G, x, fy(gH + 2 - k), step(MAT.stone, 0.8 - k * 0.15, x, k, 0.3));
   // ---- ground floor
   if (spec.blank) { /* a plain wall: no doors or windows */ }
   else if (spec.shop) storefront(G, w, d, H, gH, spec, seed, night, fy);
@@ -218,9 +254,105 @@ export function makeBuilding(spec) {
   for (const a of spec.arches || []) arch(G, a, d + H, night, seed);
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
   for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
+  for (const bl of spec.blades || []) blade(G, bl, d + H, night);
   if (spec.cross) redCross(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   return spec.pitch ? pitched(G, spec, w, d, H, seed) : G;
+}
+
+// ---- flat roof decks (spec.roofMat) ------------------------------------------------------------------
+const DECK = { tar: ramp('#615c5c', 6, 3), gravel: ramp('#7c756c', 6, 3), membrane: ramp('#a29f99', 6, 3), metal: ramp('#7a838c', 6, 3),
+  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#5a7a3c', 6, 3), rubber: ramp('#4c494c', 6, 3) };
+const RUST = ramp('#8a5a3a', 6, 3), PAD = ramp('#b6b0a4', 6, 3);
+const SEDUM = [ramp('#6e8e3a', 6, 3), ramp('#8e6c3a', 6, 3), ramp('#4a6e3c', 6, 3), ramp('#9a5c4c', 6, 3)];
+// the parapet's coping: stone on brick and stone, metal on glass and sheds, the wall's own colour on render
+function coping(style) {
+  if (style === 'glass' || style === 'corrugated') return MAT.metal;
+  if (style === 'concrete') return MAT.concrete;
+  if (style === 'brick' || style === 'brickDark' || style === 'stone') return MAT.stone;
+  return WALLC || MAT.stucco;
+}
+// The deck sits `lip` px below the parapet's top: rows y + lip of the sprite. Painter's order: the deck, then the
+// north parapet's inner face (it faces the camera), then the coping all round (it covers the strip of deck
+// hidden behind the south parapet); the south face drawn after covers the rest.
+// vnoise (gbuf.js) over a whole w x h grid at once (x scale sx, y scale sy): the cell corners are hashed once
+export function noiseField(w, h, sx, sy, seed) {
+  const F = new Float32Array(w * h), cw = Math.floor((w - 1) / sx) + 2, chh = Math.floor((h - 1) / sy) + 2, C = new Float32Array(cw * chh);
+  for (let j = 0; j < chh; j++) for (let i = 0; i < cw; i++) C[j * cw + i] = hash(i, j, seed);
+  for (let y = 0; y < h; y++) {
+    const fy = y / sy, iy = Math.floor(fy); let ty = fy - iy; ty = ty * ty * (3 - 2 * ty);
+    const r0 = iy * cw, r1 = r0 + cw;
+    for (let x = 0; x < w; x++) {
+      const fx = x / sx, ix = Math.floor(fx); let tx = fx - ix; tx = tx * tx * (3 - 2 * tx);
+      const a = C[r0 + ix], b = C[r0 + ix + 1], c = C[r1 + ix], d = C[r1 + ix + 1];
+      F[y * w + x] = a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+    }
+  }
+  return F;
+}
+function roofDeck(G, spec, w, d, H, seed, style) {
+  const mat = spec.roofMat, L = Math.max(0, spec.lip ?? 6), rw = Math.max(2, spec.rimW ?? 4), zD = H - L, C = coping(style);
+  const rn = (i, k) => hash(i, k, seed + 313), iw = w - 2 * rw, id = d - 2 * rw;
+  if (iw > 0 && id > 0) {
+    // per deck pixel: a shade (T) and which ramp (RI: 0 the material, 1 rust, 2 walkway pads, 3 gravel, 4-7 sedum)
+    const RS = [DECK[mat] || DECK.tar, RUST, PAD, DECK.gravel, SEDUM[0], SEDUM[1], SEDUM[2], SEDUM[3]], DI = [mat === 'gravel' || mat === 'paver' ? 0.3 : 0.5, 0.5, 0.5, 0.3, 0.6, 0.6, 0.6, 0.6];
+    const T = new Float32Array(iw * id), RI = new Uint8Array(iw * id), F = (sx, sy, s) => noiseField(w, d, sx, sy, s);
+    const each = (fn) => { for (let v = 0, i = 0; v < id; v++) for (let u = 0; u < iw; u++, i++) fn(u, v, i, u + rw, v + rw); };
+    switch (mat) {
+      case 'gravel': { const A = F(4, 4, seed + 5), B = F(40, 40, seed); each((u, v, i, x, y) => { const j = y * w + x, h1 = hash(x, y, seed + 2); T[i] = 0.46 + (A[j] - 0.5) * 0.3 + (h1 > 0.82 ? 0.22 : h1 < 0.14 ? -0.22 : 0) + (B[j] - 0.5) * 0.12; }); break; }
+      case 'membrane': { const A = F(30, 30, seed + 4); each((u, v, i, x, y) => { const h1 = hash(x, y, seed + 2), s = u % 46; T[i] = 0.56 + (A[y * w + x] - 0.5) * 0.12 + (h1 > 0.97 ? 0.08 : 0) + (s === 0 ? 0.12 : s === 1 ? -0.08 : 0); }); break; }
+      case 'metal': {
+        const A = F(26, 26, seed), B = F(10, 42, seed + 9);
+        each((u, v, i, x, y) => { const r = u % 9, j = y * w + x; T[i] = 0.5 + (r === 0 ? 0.3 : r === 1 ? 0.14 : r === 8 ? -0.2 : 0) + (A[j] - 0.5) * 0.14 + (v % 120 === 0 ? -0.15 : 0); if (r > 1 && r < 8 && B[j] > 0.9 && hash(x, y, seed + 2) > 0.45) { RI[i] = 1; T[i] -= 0.12; } });
+        break;
+      }
+      case 'paver': each((u, v, i) => { const px = u % 20, py = v % 20; T[i] = px === 0 || py === 0 ? 0.24 : 0.5 + (hash(Math.floor(u / 20), Math.floor(v / 20), seed) - 0.5) * 0.24 + (px === 1 || py === 1 ? 0.06 : 0); }); break;
+      case 'deck': each((u, v, i) => { const pl = v % 6; T[i] = 0.55 + (hash(Math.floor(u / 48 + (Math.floor(v / 6) & 1) * 0.5), Math.floor(v / 6), seed) - 0.5) * 0.25 + (pl === 0 ? -0.3 : pl === 1 ? 0.08 : 0); }); break;
+      case 'green': {                                                          // a sedum mat, a gravel margin and one service path
+        const A = F(9, 9, seed + 8), B = F(4, 4, seed + 7);
+        each((u, v, i, x, y) => {
+          const h1 = hash(x, y, seed + 2);
+          if (Math.min(u, v, iw - 1 - u, id - 1 - v) < 7 || Math.abs(u - (iw >> 1)) < 4) { RI[i] = 3; T[i] = 0.5 + (h1 > 0.8 ? 0.2 : h1 < 0.15 ? -0.2 : 0); return; }
+          const j = y * w + x, pv = A[j], tuft = hash(x >> 1, y >> 1, seed + 6);
+          RI[i] = h1 > 0.985 ? 7 : pv > 0.72 ? 6 : pv < 0.2 && tuft > 0.5 ? 5 : 4; T[i] = h1 > 0.985 ? 0.75 : 0.42 + (tuft - 0.5) * 0.3 + (B[j] - 0.5) * 0.2;
+        });
+        break;
+      }
+      default: {                                                               // tar, rubber: lapped sheets, stains
+        const A = F(22, 22, seed + 4), B = F(12, 12, seed + 9);
+        each((u, v, i, x, y) => { const j = y * w + x, h1 = hash(x, y, seed + 2), s = v % 32; T[i] = 0.5 + (A[j] - 0.5) * 0.18 + (h1 > 0.96 ? 0.1 : h1 < 0.03 ? -0.1 : 0) + (s === 0 ? 0.13 : s === 1 ? -0.09 : 0) - (B[j] > 0.8 ? 0.08 : 0); });
+      }
+    }
+    // patches of newer membrane, drains with ponding stains round them, walkway pads
+    const np = mat === 'tar' || mat === 'rubber' || mat === 'membrane' ? Math.round(w * d / 15000) : 0;
+    for (let k = 0; k < np; k++) {
+      const pw = 16 + rn(k, 1) * 40 | 0, ph = 12 + rn(k, 2) * 30 | 0; if (iw - 12 - pw <= 0 || id - 12 - ph <= 0) continue;
+      const pu = 6 + rn(k, 3) * (iw - 12 - pw) | 0, pv = 6 + rn(k, 4) * (id - 12 - ph) | 0;
+      for (let v = pv; v < pv + ph; v++) for (let u = pu; u < pu + pw; u++) T[v * iw + u] += u === pu || v === pv ? 0.14 : -0.06;
+    }
+    const nd = mat === 'green' || mat === 'deck' || iw < 40 || id < 40 ? 0 : 1 + Math.round(w * d / 40000);
+    for (let k = 0; k < nd; k++) {
+      const du = 12 + rn(k, 5) * (iw - 24) | 0, dv = 12 + rn(k, 6) * (id - 24) | 0;
+      for (let v = Math.max(0, dv - 13); v <= Math.min(id - 1, dv + 13); v++) for (let u = Math.max(0, du - 13); u <= Math.min(iw - 1, du + 13); u++) { const dd = Math.sqrt((u - du) * (u - du) + (v - dv) * (v - dv)); if (dd < 14) T[v * iw + u] -= dd < 2.5 ? 0.45 : (1 - dd / 14) * 0.14; }
+    }
+    for (const [px, py, pw, ph] of spec.pads || []) for (let y = Math.max(rw, py); y < Math.min(d - rw, py + ph); y++) for (let x = Math.max(rw, px); x < Math.min(w - rw, px + pw); x++) {
+      const i = (y - rw) * iw + x - rw, a = (x - px) % 14, b = (y - py) % 14; RI[i] = 2; T[i] = a > 11 || b > 11 ? 0.2 : 0.55 + (a === 0 || b === 0 ? 0.12 : 0);
+    }
+    for (let v = 0, i = 0; v < id; v++) for (let u = 0; u < iw; u++, i++) {
+      const x = u + rw, y = v + rw, e = Math.min(v, u, iw - 1 - u), ri = RI[i];             // the parapets' inner shadow
+      G.put(x, y + L, step(RS[ri], T[i] - (e < 6 && L > 0 ? (6 - e) * 0.03 : 0), x, y, DI[ri]), UP, zD, null, 0);
+    }
+  }
+  for (let k = 0; k < L; k++) for (let x = rw; x < w - rw; x++) {
+    let c = wallColor(style === 'glass' ? 'concrete' : style, x, L - k + 3, seed, x, rw + k);
+    if (k === L - 1) c = c.map((q) => q * 0.72);
+    G.put(x, rw + k, c, S_N, H - k, null, 0);
+  }
+  for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) {
+    if (x >= rw && y >= rw && x < w - rw && y < d - rw) continue;
+    const outer = x === 0 || y === 0 || x === w - 1 || y === d - 1, inner = x === rw - 1 || y === rw - 1 || x === w - rw || y === d - rw;
+    G.put(x, y, step(C, outer ? 0.86 : inner ? 0.42 : 0.66 + (hash(x >> 3, y >> 3, seed) - 0.5) * 0.1, x, y, 0.3), UP, H, null, 0);
+  }
 }
 
 // A hip or gable roof over the walls. Each roof pixel stands q * k above the eaves (q = its distance
@@ -243,16 +375,31 @@ function pitched(G0, spec, w, d, H, seed) {
     else if (gable) { q = Math.min(dN, dS); f = dN < dS ? 'n' : 's'; }
     else { q = Math.min(dW, dE, dN, dS); f = q === dS ? 's' : q === dN ? 'n' : q === dW ? 'w' : 'e'; }
     const z = q * k, row = Math.round(E + y - z);
-    // courses run parallel to the eave: shingles every 4, tiles as barrels across
-    const along = f === 'n' || f === 's' ? x : y, course = Math.floor(q / (tile ? 4 : 3));
-    let t = LIT[f] + (q % (tile ? 4 : 3) === 0 ? -0.2 : 0) + (vnoise(x, y, 13, seed) - 0.5) * 0.14;
-    if (tile) t += ((along + (course & 1) * 3) % 6 < 2 ? -0.16 : (along % 6 === 3 ? 0.12 : 0));
-    else t += hash(Math.floor((along + (course & 1) * 2) / 4), course, seed) * 0.12 - 0.06;
+    // courses run parallel to the eave: shingle tabs in staggered courses of 4, tiles as barrels across
+    const along = f === 'n' || f === 's' ? x : y, course = Math.floor(q / 4);
+    let t = LIT[f] + (vnoise(x, y, 13, seed) - 0.5) * 0.14;
+    if (tile) {                                                                         // barrel tiles: courses, gaps, odd tiles, weathering
+      const th = hash(Math.floor((along + (course & 1) * 3) / 6), course, seed + 5);
+      t += (q % 4 === 0 ? -0.24 : q % 4 === 1 ? 0.06 : 0) + ((along + (course & 1) * 3) % 6 < 2 ? -0.18 : (along % 6 === 3 ? 0.1 : 0)) + (th - 0.5) * 0.14 + (th > 0.96 ? -0.22 : 0) - (vnoise(x, y, 7, seed + 11) > 0.72 ? 0.1 : 0);
+    }
+    else {
+      const qc = q % 4, tab = Math.floor((along + (course & 1) * 4) / 8), th = hash(tab, course, seed);
+      t += (qc === 0 ? -0.3 : qc === 1 ? 0.07 : 0) + ((along + (course & 1) * 4) % 8 === 0 && qc ? -0.16 : 0) + th * 0.16 - 0.08 + (th > 0.95 ? 0.14 : th < 0.04 ? -0.16 : 0);
+    }
     const ridge = ns ? Math.abs(dW - dE) <= 1 : gable ? Math.abs(dN - dS) <= 1 : (Math.abs(dN - dS) <= 1 && q === Math.min(dN, dS)) || (q > 2 && Math.abs(Math.min(dW, dE) - Math.min(dN, dS)) < 0.6);
-    if (ridge) t += 0.18;
-    if (q < 2) t -= 0.12;                                                               // eave shadow line
-    const c = step(R, t, x, row, 0.45);
-    for (let r = row; r <= row + (f === 's' ? 1 : 0); r++) G.put(x, r, c, FACE[f], H + z, null, 0);
+    if (ridge) t += 0.2;
+    if (q < 2) t -= 0.14;                                                               // eave shadow line
+    let c = step(R, t, x, row, 0.45), fl = 0;
+    // solar panels on the sunny slope, a skylight on another (spec.solar, spec.skylight)
+    if (spec.solar && f === (ns ? 'w' : 's')) {
+      const span = ns ? d : w, a0 = Math.round(span * 0.16), a1 = Math.round(span * 0.56), q0 = 4, q1 = Math.min(Math.round(E / k) - 6, 40);
+      if (along >= a0 && along < a1 && q >= q0 && q < q1) { const fr = along === a0 || along === a1 - 1 || q === q0 || q === q1 - 1; c = fr ? MAT.metal[4] : (along - a0) % 7 === 0 || (q - q0) % 9 === 0 ? [74, 88, 112] : ((along + q) % 11 < 2 ? [70, 92, 136] : [38, 52, 86]); fl = F_GLASS; }
+    }
+    if (spec.skylight && f === (ns ? 'e' : 'n')) {
+      const span = ns ? d : w, a0 = Math.round(span * 0.62), q0 = 6;
+      if (along >= a0 && along < a0 + 14 && q >= q0 && q < q0 + 11) { const fr = along === a0 || along === a0 + 13 || q === q0 || q === q0 + 10; c = fr ? MAT.metalDark[3] : step(MAT.glass, 0.35 + ((along + q) % 6 < 2 ? 0.3 : 0), x, row, 0); fl = F_GLASS; }
+    }
+    for (let r = row; r <= row + (f === 's' ? 1 : 0); r++) G.put(x, r, c, FACE[f], H + z, null, fl);
   }
   // the gable end over the front wall (ridge running north-south): a triangle of wall with a round vent
   if (ns) for (let x = 0; x < w; x++) {
@@ -306,7 +453,7 @@ function door(G, x0, y0, w, h, open, night, seed, gated = false) {
 function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   const shop = spec.shop, y0 = d + H;
   const winTop = fy(gH - 18), winBot = y0 - 7;
-  const doorW = 22, doorX = shop.door === 'right' ? w - doorW - 10 : shop.door === 'left' ? 10 : (shop.door | 0);
+  const doorW = shop.doorW || 22, doorX = shop.door === 'right' ? w - doorW - 10 : shop.door === 'left' ? 10 : (shop.door | 0);
   // windows with the interior
   for (let y = winTop; y < winBot; y++) for (let x = 4; x < w - 4; x++) {
     if (x >= doorX - 2 && x < doorX + doorW + 2) continue;
@@ -379,12 +526,14 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   // awning: sloped canvas strip, scalloped, in stripes
   if (shop.awning) {
     const [ca, cb] = shop.awning.map((h) => ramp(h, 6, 3));
-    const top = winTop - 2, depth = 13;
+    // its true height: it leaves the wall just above the windows and slopes down as it reaches out over
+    // the pavement (so people under it are covered and it casts its shadow from the right height)
+    const top = winTop - 2, depth = 13, vTop = y0 - top + 2;
     for (let y = 0; y < depth; y++) for (let x = 0; x < w; x++) {
       const Y = top + y, stripe = Math.floor(x / 6) % 2 === 1;
-      G.put(x, Y, step(stripe ? cb : ca, 0.8 - y / depth * 0.4, x, Y, 0.5), [0, 0.6, 0.8], H - (y0 - Y) + 6, null, 0);
+      G.put(x, Y, step(stripe ? cb : ca, 0.8 - y / depth * 0.4, x, Y, 0.5), [0, 0.6, 0.8], vTop - y * 0.3, null, 0);
     }
-    for (let x = 0; x < w; x++) { const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], y0 - Y, null, 0); } }
+    for (let x = 0; x < w; x++) { const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
   }
 }
 
@@ -579,6 +728,19 @@ function plaque(G, p, yG, night) {
   const sx = p.sx || 2, sy = p.sy || sx, tw = textWidth(p.text, { sx, gap: 1 }), w = p.w || tw + 10, h = 5 * sy + 8, x0 = p.x, y0 = yG - p.v - h;
   if (p.bg) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { setC(G, x0 + x, y0 + y, (x === 0 || y === 0 || x === w - 1 || y === h - 1) ? MAT.metalDark[2] : ramp(p.bg, 5, 2)[2]); if (p.lit) G.glow(x0 + x, y0 + y, [...ramp(p.bg, 5, 2)[3], 30 + night * 60]); }
   drawText((px, py) => { setC(G, px, py, p.fg || [60, 54, 48]); if (p.lit) G.glow(px, py, [...(p.fg || [255, 255, 255]), 80 + night * 120]); }, p.text, x0 + Math.floor((w - tw) / 2), y0 + 4, { sx, sy, gap: 1 });
+}
+// a vertical neon blade sign: letters stacked top to bottom in a dark frame with a lit border, on two brackets
+// (b: { text, x, v (bottom height above the pavement), col: [r,g,b] })
+function blade(G, b, yG, night) {
+  const t = String(b.text || '').slice(0, 8), sx = 2, w = 5 * sx + 10, h = t.length * (5 * sx + 4) + 10, x0 = b.x, y0 = yG - b.v - h, col = b.col || [255, 80, 200];
+  for (let k = 0; k < 2; k++) for (let x = -3; x < 2; x++) setC(G, x0 + x, y0 + 8 + k * (h - 18), MAT.metalDark[1]);      // brackets
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const e = x === 0 || y === 0 || x === w - 1 || y === h - 1, e2 = x === 2 || y === 2 || x === w - 3 || y === h - 3;
+    if (e) setC(G, x0 + x, y0 + y, MAT.metalDark[2]);
+    else if (e2) { setC(G, x0 + x, y0 + y, col.map((v) => Math.min(255, v * 0.5 + 120))); glow(G, x0 + x, y0 + y, [...col, 150 + night * 100]); }
+    else setC(G, x0 + x, y0 + y, [24, 20, 32]);
+  }
+  for (let i = 0; i < t.length; i++) drawText((px, py) => { setC(G, px, py, col.map((v) => Math.min(255, v * 0.55 + 115))); glow(G, px, py, [...col, 170 + night * 85]); }, t[i], x0 + 5, y0 + 6 + i * (5 * sx + 4), { sx, sy: sx, gap: 1 });
 }
 function redCross(G, x0, y0, s, night) {
   for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) {

@@ -1,26 +1,35 @@
 // Art v2 vehicles: every vehicle in the game (shared/vehicles.js) as a voxel model, built to the V1-V6
 // targets (docs/art-v2/targets). Models are rendered at any heading by voxel.js, so cars turn smoothly
 // and are lit, shaded and shadowed like everything else. 1 voxel = 1 world px; the model's x axis runs
-// from the rear (0) to the front (L), y across (0 = left side), z up. Footprints match the server's.
+// from the rear (0) to the front (L), y across (0 = the left side, L = the right side, which faces south
+// at heading 0), z up.
 //
-//   vehicleModel(type, { paint, lights, siren, state, cargo })  -> Vox
+//   vehicleModel(type, o) -> Vox (with .anchors, see below)
 //     type     any id from shared/vehicles.js (compact sedan taxi sports pickup flatbed van bus police swat
 //              ambulance armored bike policebike bicycle speedboat dinghy jetski policeboat boxtruck
-//              dumptruck mixer tanker garbage firetruck towtruck)
-//     paint    a hex colour for civilian bodies (each model has a default)
-//     lights   0..1 headlights / tail lights on       siren   light bar flashing (true) or off
-//     state    'clean' | 'dented' | 'wrecked' | 'burnt'
-//     cargo    crate tiers to strap onto a bed or deck, e.g. [1, 3]
+//              dumptruck mixer tanker garbage firetruck towtruck) or a scenery model (suv limo foodtruck
+//              tram tugboat ferry tractor combine plane excavator)
+//     o.paint  hex body colour (civilian bodies; on liveried models a respray); o.cab truck cab colour
+//     o.lights 0..1 headlights and tail lights      o.brake / o.reverse  brake and reversing lamps lit
+//     o.siren  false | true (all lamps lit) | 1 | 2 (the two flash phases: red side or blue side lit)
+//     o.state  'clean' | 'dented' | 'wrecked' | 'burning' | 'burnt' | 'smoulder' (burnt, embers glowing)
+//     o.variant integer: roof racks, rust, two-tone roofs, sunroofs, stickers, hubcaps, dirt (per model)
+//     o.bloody blood on the front      o.cargo crate tiers to strap onto a bed or deck (scenery only;
+//              the game places crates as their own sprites)      o.dry skip the normals (anchors only)
+//   vehicleAnchors(type) -> the lamp, siren, seat, exhaust and fire points of a model (model coordinates,
+//              x from the rear, y from the left side, z up), measured once per type.
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
 import { F_GLASS, F_NOCAST, hash } from './gbuf.js';
 
+// footprints [length, width] in world px. The game's physics footprint (VEHICLE_ART_SIZE in
+// shared/prefab-data.js) differs by up to ~20% for a few models; actors.js reports the table.
 export const VEHICLE_DIMS = {
-  compact: [84, 44], sedan: [100, 48], taxi: [100, 48], sports: [96, 48], pickup: [110, 50], flatbed: [150, 56],
-  van: [112, 54], bus: [190, 60], police: [100, 48], swat: [120, 58], ambulance: [116, 54], armored: [118, 56],
+  compact: [80, 48], sedan: [94, 52], taxi: [100, 48], sports: [96, 48], pickup: [110, 50], flatbed: [150, 56],
+  van: [112, 54], bus: [186, 62], police: [100, 48], swat: [120, 58], ambulance: [112, 56], armored: [122, 54],
   bike: [48, 20], policebike: [50, 20], bicycle: [40, 14], speedboat: [104, 48], dinghy: [80, 40], jetski: [46, 22],
   policeboat: [104, 48], boxtruck: [150, 58], dumptruck: [140, 60], mixer: [146, 60], tanker: [160, 58],
-  garbage: [140, 60], firetruck: [176, 64], towtruck: [134, 58],
+  garbage: [140, 60], firetruck: [172, 66], towtruck: [134, 58],
   // scenery-only variants (parked and NPC traffic; they share the sedan / van footprints in play)
   suv: [104, 50], limo: [150, 50], foodtruck: [124, 58],
   // transit and harbour scenery (World v2): a two-section tram, a harbour tug, a car and passenger ferry
@@ -28,17 +37,137 @@ export const VEHICLE_DIMS = {
   // country and works scenery
   tractor: [84, 54], combine: [150, 120], plane: [104, 130], excavator: [130, 60],
 };
+// height of the body (roof) in world px
+export const VEHICLE_TALL = {
+  compact: 31, sedan: 33, taxi: 33, police: 33, sports: 27, pickup: 36, van: 46, suv: 42, limo: 32, ambulance: 54, armored: 50,
+  swat: 52, bus: 62, flatbed: 46, boxtruck: 62, dumptruck: 46, mixer: 62, tanker: 54, garbage: 60, firetruck: 56, towtruck: 50,
+  bike: 24, policebike: 26, bicycle: 20, speedboat: 22, dinghy: 14, jetski: 16, policeboat: 34,
+  tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, foodtruck: 60,
+};
 const DEFAULT_PAINT = {
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
-  dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', firetruck: '#c0302a', towtruck: '#e6e2d8',
+  dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
-  jetski: '#c8302c', policeboat: '#f0eee8', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
+  jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
 };
+const DEFAULT_CAB = { flatbed: '#e6e2d8', boxtruck: '#e6e2d8', dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', towtruck: '#e6e2d8' };
 
 const R = (h, n = 6, k) => ramp(h, n, k);
+const sm = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
-// ---- building blocks ------------------------------------------------------------------------------
+// ---- materials ---------------------------------------------------------------------------------------
+// Glossy paint. The shader works out the ramp step voxel.js would pick (its own occlusion and up-facing
+// terms) and returns the offset that lands on a whole step, so big panels are clean flat tones with a
+// narrow dithered seam between bands instead of an ordered-dither mesh. The bands: the sides darken
+// toward the sill, the shoulder crease catches the light, horizontal paint is lighter toward the world's
+// north-west (a sky sheen that follows the heading, m.view), a few chips. (f is kept for tuning.)
+function paintShader(m, k = 3) {
+  // the heading-free part (side bands, the shoulder crease, chips): game/actors.js bakes it per voxel
+  const base = (x, y, z, vi) => {
+    const nz = m.nz[vi], ny = m.ny[vi], L = m.look || {};
+    let t = 0;
+    if (nz < 0.5 && Math.abs(ny) > 0.45) {
+      const top = L.belt || 18, z0 = L.z0 || 3, u = (z - z0) / Math.max(1, top - z0);
+      t += u > 1.05 ? 0.8 : u > 0.62 ? 0.75 : u > 0.22 ? 0.3 : -0.3;
+      if (u <= 1.05 && Math.abs(z - (top - 2.5)) < 0.8) t += 1.1;
+    }
+    const h = hash(x | 0, (y | 0) * 3 + (z | 0), L.seed || 1);
+    if (h > 0.992) t -= 1.1; else if (h < 0.0015) t += 1.2;
+    return t;
+  };
+  const shade = (x, y, z, vi) => {
+    const nz = m.nz[vi], L = m.look || {};
+    let t = base(x, y, z, vi);
+    if (nz >= 0.5 && m.view) t += paintSheen(m, x, y, m.view.c, m.view.s, L.sheen ?? 1);
+    // horizontal paint ignores the occlusion term (a stepped hood would band), sides keep half of it
+    const tv = k + (nz >= 0.5 ? 0.55 : (m.ao[vi] - 0.75) * 1.1) + (nz > 0.7 ? 0.5 : 0) + t;
+    return Math.round(tv) - (k + (m.ao[vi] - 0.75) * 2.2 + (nz > 0.7 ? 0.5 : 0));
+  };
+  shade.base = base;
+  return shade;
+}
+// the sky sheen on horizontal paint at heading (c, s) = (cos, sin): lighter toward the world's north-west
+export function paintSheen(m, x, y, c, s, k = 1) {
+  const dx = x - m.w / 2, dy = y - m.d / 2;
+  return Math.max(-0.5, Math.min(0.6, -((c * dx - s * dy) + (s * dx + c * dy)) / (m.w * 0.5))) * k;
+}
+// a body paint: the panels, the darker sill and the panel-seam shade
+function paintSet(m, paint) {
+  const P = ramp(paint, 7, 3, { dark: 0.64, light: 0.62, shift: 0.24 });
+  return { body: m.mat({ ramp: P, k: 3, shade: paintShader(m, 3) }), lower: m.mat({ ramp: ramp(P[2], 5, 2), k: 2 }), seam: m.mat({ ramp: ramp(P[1], 5, 2), k: 1.6 }) };
+}
+// Lamps glow only when lit; the siren lamps by phase (1 = the red side, 2 = the blue side, true = both).
+function mats(m, paint, o) {
+  const lit = o.lights ? 1 : 0, sir = o.siren, redOn = sir === true || sir === 1 || sir === 3, blueOn = sir === true || sir === 2 || sir === 3;
+  const look = () => m.look || {}, paintShade = paintShader(m, 3);
+  const PS = paintSet(m, paint);
+  const M = {
+    body: PS.body, lower: PS.lower, seam: PS.seam,
+    arch: m.mat({ ramp: R('#1e1c24'), k: 1 }),
+    glass: m.mat({ ramp: ramp('#22324a', 6, 2, { light: 0.5, shift: 0.4 }), k: 1.0, flag: F_GLASS, shade: (x, y, z) => {
+      const L = look(), roof = L.roof || 33;
+      return ((x * 0.9 + z * 1.6 + y * 0.35) % 17 < 2.2 ? 1.6 : 0) + (z > roof - 3.5 ? 0.8 : 0) - (z < (L.belt || 18) + 2.5 ? 0.4 : 0);
+    } }),
+    tyre: m.mat({ ramp: R('#2a2a30', 5, 2), k: 1.2, shade: (x, y, z) => (((x + z) | 0) % 3 === 0 ? -0.6 : 0) }),
+    rim: m.mat({ ramp: R('#b8bec8', 6, 3, { light: 0.75 }), k: 3, shade: (x, y, z) => {
+      const L = look(), ws = L.wheels || [], r = L.wr || 7;
+      let best = 1e9, bx = 0;
+      for (const w of ws) { const d = Math.abs(x - w); if (d < best) { best = d; bx = w; } }
+      const dx = x - bx, dz = z - r, d = Math.hypot(dx, dz);
+      if (d < r * 0.2) return -1.6;
+      const a = (Math.atan2(dz, dx) / (Math.PI * 2)) * 5 + 10;
+      return a % 1 < 0.38 ? 0.7 : d > r * 0.48 ? -0.3 : -1.1;
+    } }),
+    trim: m.mat({ ramp: MAT.metalDark, k: 1.6 }), chrome: m.mat({ ramp: MAT.chrome, k: 2.6 }),
+    grille: m.mat({ ramp: R('#2a2c34', 5, 2), k: 1.4, shade: (x, y, z) => ((z | 0) % 2 ? -0.8 : 0.4) }),
+    head: m.mat({ ramp: R('#f6f0d8', 5, 3), k: 3, emi: lit ? [255, 244, 210, 255] : null }),
+    tail: m.mat({ ramp: R('#d8302a', 5, 3), k: 2.6, emi: o.brake ? [255, 46, 30, 255] : lit ? [255, 40, 28, 190] : [255, 40, 30, 46] }),
+    brakeL: m.mat({ ramp: R('#c8302a', 5, 2), k: 2, emi: o.brake ? [255, 40, 28, 255] : null }),
+    rev: m.mat({ ramp: R('#ecebe6', 5, 3), k: 3, emi: o.reverse ? [255, 250, 240, 230] : null }),
+    ind: m.mat({ ramp: R('#e89a2a', 5, 2), k: 2.4 }),
+    plate: m.mat({ ramp: R('#e6e2d0', 5, 3), k: 3, shade: (x, y, z) => (((y | 0) + (z | 0)) % 3 === 0 ? -1.4 : 0) }),
+    dark: m.mat({ ramp: R('#2c2e36'), k: 2 }), interior: m.mat({ ramp: R('#3a3034'), k: 1.6 }), seat: m.mat({ ramp: R('#4a3a36'), k: 2 }),
+    white: m.mat({ ramp: ramp('#ecebe6', 6, 3, { dark: 0.45, light: 0.6 }), k: 3, shade: paintShade }),
+    black: m.mat({ ramp: ramp('#26282e', 6, 3, { light: 0.55 }), k: 3, shade: paintShade }),
+    bar: m.mat({ ramp: MAT.metalDark, k: 2 }),
+    red: m.mat({ ramp: R('#e83a30', 5, 3), k: redOn ? 4 : 2, emi: redOn ? [255, 50, 40, 255] : null, flag: F_NOCAST }),
+    blue: m.mat({ ramp: R('#3a6ae8', 5, 3), k: blueOn ? 4 : 2, emi: blueOn ? [60, 110, 255, 255] : null, flag: F_NOCAST }),
+    amber: m.mat({ ramp: R('#f0a030', 5, 3), k: sir ? 4 : 2.4, emi: sir ? [255, 170, 50, 255] : null, flag: F_NOCAST }),
+    stripeRed: m.mat({ ramp: R('#c8302c'), k: 3, shade: paintShade }), stripeTeal: m.mat({ ramp: R('#2f8a86'), k: 3, shade: paintShade }),
+    stripeBlue: m.mat({ ramp: R('#2f56b0'), k: 3, shade: paintShade }), stripeYellow: m.mat({ ramp: R('#e8b830'), k: 3, shade: paintShade }),
+    gold: m.mat({ ramp: R('#e0b040', 5, 2), k: 3 }),
+    wood: m.mat({ ramp: MAT.woodDock, k: 3, shade: (x) => ((Math.round(x) % 6 === 0) ? -0.8 : 0) }),
+    steel: m.mat({ ramp: MAT.metal, k: 3 }),
+    liner: m.mat({ ramp: R('#34343c'), k: 2, shade: (x, y) => ((y | 0) % 3 === 0 ? -0.7 : 0) }),
+    paintLine: m.mat({ ramp: R('#e8c860'), k: 3 }),
+    hatch: m.mat({ ramp: R('#e8b870', 5, 2), k: 3, emi: [255, 210, 140, 40 + lit * 160], shade: (x, y, z) => (Math.round(z) % 7 === 0 ? -1.5 : 0) + (Math.round(x) % 9 === 0 ? -0.8 : 0) }),
+    awn: m.mat({ ramp: R('#ecebe4'), k: 3, shade: (x) => (Math.floor(x / 5) % 2 ? -2 : 0) }), awn2: m.mat({ ramp: R('#c8343a'), k: 3 }),
+    rust: m.mat({ ramp: R('#8a4e2c'), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.6 }),
+    dirt: m.mat({ ramp: R('#6a5a48'), k: 2.4, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.4 }),
+    blood: m.mat({ ramp: R('#7a1a1e', 5, 2), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) > 0.7 ? 1 : 0) }),
+    crate: [R('#b08048'), R('#8a949c'), R('#5e6e3e'), R('#2c2c34')].map((r, i) => m.mat({ ramp: r, k: 3, emi: i === 3 ? [255, 200, 90, 40] : null, shade: (x, y, z) => ((Math.round(z) % 4 === 0 || Math.round(x) % 6 === 0) ? -0.6 : 0) })),
+  };
+  M.paint = M.body; M.hub = M.rim; M.cab = M.body;
+  return M;
+}
+
+// ---- building blocks ----------------------------------------------------------------------------------
+const open6 = (m, x, y, z) => !m.get(x + 1, y, z) || !m.get(x - 1, y, z) || !m.get(x, y + 1, z) || !m.get(x, y - 1, z) || !m.get(x, y, z + 1) || !m.get(x, y, z - 1);
+// Repaint the surface voxels inside a box. test(x, y, z, v, side) - side: 'x' (front/back face), 'y'
+// (a side), 'z' (top) - picks which; mat is a material or fn(x, y, z, v) -> material.
+function deco(m, mat, x0, y0, z0, x1, y1, z1, test = null) {
+  for (let z = Math.max(0, Math.floor(z0)); z < Math.min(m.h, Math.ceil(z1)); z++) for (let y = Math.max(0, Math.floor(y0)); y < Math.min(m.d, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(m.w, Math.ceil(x1)); x++) {
+    const i = m.idx(x, y, z), v = m.v[i];
+    if (!v || !open6(m, x, y, z)) continue;
+    // a side wins over a top on a sloped wall (its surface is a staircase of both)
+    const side = (!m.get(x, y + 1, z) || !m.get(x, y - 1, z)) ? 'y' : (!m.get(x + 1, y, z) || !m.get(x - 1, y, z)) ? 'x' : 'z';
+    if (test && !test(x + 0.5, y + 0.5, z + 0.5, v, side)) continue;
+    const nm = typeof mat === 'function' ? mat(x + 0.5, y + 0.5, z + 0.5, v) : mat;
+    if (nm >= 0) m.v[i] = nm;
+  }
+  m.prepared = false;
+}
 // A body block from x0 (rear) to x1 (front), y0..y1 across, z0..z1 up. fr / br: how far the top of the
 // front / rear face leans in (windscreens, hatchbacks); tuck: how far the sides lean in at the top;
 // r: plan corner radius. mat: a material, or fn(x, y, z, s) with s = { t, side, front, back, top }.
@@ -49,7 +178,6 @@ function shell(m, o) {
     const t = (z - z0) / Math.max(1, z1 - z0);
     const xf = x1 - fr * t, xb = x0 + br * t, ya = y0 + tuck * t, yb = y1 - tuck * t;
     if (x > xf || x < xb || y < ya || y > yb) return -1;
-    // rounded plan corners, and a rounded top edge (rz)
     const rr = r + (rz && z1 - z < rz ? rz - (z1 - z) : 0);
     const cx = Math.max(xb + rr, Math.min(xf - rr, x)), cy = Math.max(ya + rr, Math.min(yb - rr, y));
     if (rr > 0 && (x - cx) ** 2 + (y - cy) ** 2 > rr * rr) return -1;
@@ -71,13 +199,23 @@ function glassy(body, glass, o = {}) {
     return glass;
   };
 }
-function wheels(m, xs, r, mats, o = {}) {
-  const inset = o.inset ?? 3, wd = o.width ?? 7, W = m.d;
-  // arches first (cut out of the body), then the tyres and hubs
-  for (const x of xs) m.fill((px, py, pz) => (((px - x) ** 2 + (pz - r) ** 2 < (r + 1.2) ** 2 && (py < inset + wd || py > W - inset - wd)) ? (mats.arch && (px - x) ** 2 + (pz - r) ** 2 > (r + 0.2) ** 2 ? mats.arch : 0) : -1), Math.floor(x - r - 3), 0, 0, Math.ceil(x + r + 3), W, Math.ceil(2 * r + 3));
-  for (const x of xs) for (const [a, b] of [[inset, inset + wd], [W - inset - wd, W - inset]]) m.cyl('y', x, 0, r, r, a, b, mats.tyre, r * 0.55, mats.hub);
+// a wheel set into an arch on both sides: the arch is cut out of the body down to the tyre's inner face
+// (its inside painted dark), the tyre a ring, the rim recessed one voxel with spokes and a hub
+function wheel(m, M, wx, r, o = {}) {
+  const W = m.d, ww = o.width ?? 7, wi = o.inset ?? 2, ra = r + (o.arch ?? 1.6), zc = r;
+  for (const side of [0, 1]) {
+    const yin = side ? W - wi - ww - 1.5 : wi + ww + 1.5;
+    if (o.arch !== 0) {
+      m.fill((x, y, z) => (Math.hypot(x - wx, z - zc) < ra && (side ? y > yin : y < yin) && (!o.top || z < o.top(x)) ? 0 : -1), Math.floor(wx - ra - 1), 0, 0, Math.ceil(wx + ra + 1), W, Math.ceil(zc + ra + 1));
+      deco(m, M.arch, wx - ra - 2, side ? yin - 4 : 0, 0, wx + ra + 2, side ? W : yin + 4, zc + ra + 2, (x, y, z, vv, sd) => sd !== 'z' && z < Math.min(zc + ra - 0.3, o.top ? o.top(x) - 0.5 : 99) && Math.hypot(x - wx, z - zc) < ra + 1.3);
+    }
+    const ya = side ? W - wi - ww : wi, yb = ya + ww;
+    m.cyl('y', wx, 0, zc, r, ya, yb, M.tyre, r * 0.64, 0);
+    m.cyl('y', wx, 0, zc, r * 0.66, side ? ya : ya + 1, side ? yb - 1 : yb, M.rim);
+  }
 }
-// head and tail lights, a bumper at each end
+function wheels(m, xs, r, mats, o = {}) { for (const x of xs) wheel(m, mats, x, r, o); }
+// head and tail lights, a bumper at each end (scenery models)
 function lamps(m, M, o) {
   const W = m.d, L = m.w, zh = o.zh ?? 12, h = o.h ?? 4, inset = o.inset ?? 4, wd = o.wd ?? 7;
   for (const [a, b] of [[inset, inset + wd], [W - inset - wd, W - inset]]) {
@@ -90,11 +228,15 @@ function lamps(m, M, o) {
     m.fill((x, y, z) => (m.get(Math.floor(x) + 2, Math.floor(y), Math.floor(z)) && !m.get(Math.floor(x) - 1, Math.floor(y), Math.floor(z)) ? M.trim : -1), 0, 3, bz, 4, W - 3, bz + 3);
   }
 }
+// a roof light bar: red on the left half, blue on the right (amber for works vehicles)
 function lightbar(m, M, x0, x1, z, o = {}) {
-  const W = m.d, y0 = Math.round(W * 0.28), y1 = Math.round(W * 0.72), ym = Math.round(W / 2);
-  m.box(x0, y0, z, x1, y1, z + 3, M.bar);
-  m.box(x0, y0, z, x1, ym, z + 3, o.amber ? M.amber : M.red);
-  m.box(x0, ym, z, x1, y1, z + 3, o.amber ? M.amber : M.blue);
+  const W = m.d, y0 = Math.round(W * (o.wide ? 0.18 : 0.28)), y1 = Math.round(W * (o.wide ? 0.82 : 0.72)), ym = Math.round(W / 2);
+  m.box(x0, y0, z, x1, y1, z + 1, M.bar);
+  m.box(x0, y0, z + 1, x1, ym - 1, z + 3, o.amber ? M.amber : M.red);
+  m.box(x0, ym - 1, z + 1, x1, ym + 1, z + 3, M.bar);
+  m.box(x0, ym + 1, z + 1, x1, y1, z + 3, o.amber ? M.amber : M.blue);
+  const A = m.anchors;
+  if (A) { const zz = z + 2, xm = (x0 + x1) / 2; A.siren.push([xm, (y0 + ym) / 2, zz, o.amber ? 2 : 0], [xm, (ym + y1) / 2, zz, o.amber ? 2 : 1]); }
 }
 function crateOn(m, x, y, z, tier, M) {
   const s = 12;
@@ -102,96 +244,556 @@ function crateOn(m, x, y, z, tier, M) {
   m.box(x, y, z, x + s, y + s, z + s - 1, mat);
 }
 
-function mats(m, paint, o) {
-  const lit = o.lights || 0;
-  const P = R(paint);
-  const M = {
-    body: m.mat({ ramp: P, k: 1.4, shade: (x, y, z) => ((Math.round(x + z * 2) % 17) < 1 ? 1.2 : 0) }),
-    arch: m.mat({ ramp: R('#1e1e24'), k: 1 }),
-    lower: m.mat({ ramp: ramp(P[2], 5, 2), k: 2 }),
-    glass: m.mat({ ramp: MAT.glassDark, k: 2, flag: F_GLASS, shade: (x, y, z) => ((Math.round(x * 0.7 + z) % 13) < 2 ? 2 : 0) }),
-    tyre: m.mat({ ramp: MAT.tyre, k: 1 }), hub: m.mat({ ramp: MAT.chrome, k: 2 }),
-    trim: m.mat({ ramp: MAT.metalDark, k: 2 }), chrome: m.mat({ ramp: MAT.chrome, k: 3 }),
-    head: m.mat({ ramp: R('#f6f0d8', 5, 3), k: 3, emi: lit ? [255, 244, 210, 255] : null }),
-    tail: m.mat({ ramp: R('#d8302a', 5, 3), k: 3, emi: lit ? [255, 50, 36, 230] : [255, 40, 30, 50] }),
-    dark: m.mat({ ramp: R('#2c2e36'), k: 2 }), interior: m.mat({ ramp: R('#3c3232'), k: 2 }),
-    white: m.mat({ ramp: MAT.paintWhiteCar, k: 3 }), black: m.mat({ ramp: MAT.paintBlack, k: 3 }),
-    bar: m.mat({ ramp: MAT.metalDark, k: 2 }),
-    red: m.mat({ ramp: R('#e83a30', 5, 3), k: 3, emi: o.siren ? [255, 50, 40, 255] : null, flag: F_NOCAST }),
-    blue: m.mat({ ramp: R('#3a6ae8', 5, 3), k: 3, emi: o.siren ? [60, 110, 255, 255] : null, flag: F_NOCAST }),
-    amber: m.mat({ ramp: R('#f0a030', 5, 3), k: 3, emi: o.siren ? [255, 170, 50, 255] : null, flag: F_NOCAST }),
-    stripeRed: m.mat({ ramp: R('#c8302c'), k: 3 }), stripeTeal: m.mat({ ramp: R('#2f8a86'), k: 3 }),
-    wood: m.mat({ ramp: MAT.woodDock, k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -0.8 : 0) }),
-    steel: m.mat({ ramp: MAT.metal, k: 3 }),
-    paintLine: m.mat({ ramp: R('#e8c860'), k: 3 }),
-    hatch: m.mat({ ramp: R('#e8b870', 5, 2), k: 3, emi: [255, 210, 140, 40 + lit * 160], shade: (x, y, z) => (Math.round(z) % 7 === 0 ? -1.5 : 0) + (Math.round(x) % 9 === 0 ? -0.8 : 0) }),
-    awn: m.mat({ ramp: R('#ecebe4'), k: 3, shade: (x) => (Math.floor(x / 5) % 2 ? -2 : 0) }), awn2: m.mat({ ramp: R('#c8343a'), k: 3 }),
-    crate: [R('#b08048'), R('#8a949c'), R('#5e6e3e'), R('#2c2c34')].map((r, i) => m.mat({ ramp: r, k: 3, emi: i === 3 ? [255, 200, 90, 40] : null, shade: (x, y, z) => ((Math.round(z) % 4 === 0 || Math.round(x) % 6 === 0) ? -0.6 : 0) })),
+// ---- the car body -------------------------------------------------------------------------------------
+// A lower tub (hood, doors, boot) with a rounded plan, a tumblehome shoulder and a rounded nose and tail;
+// a glass cabin on top (windscreen and rear window leaning in, pillars, a rounded roof); wheels in
+// arches; lamps, bumpers, grille, plates, mirrors, door seams and handles. Every x in the spec is a
+// fraction of the length.
+function carBody(m, M, s) {
+  const L = m.w, W = m.d, cy = W / 2, z0 = s.z0 ?? 3, belt = s.belt;
+  const nose = s.nose ?? belt - 5, tail = s.tail ?? belt - 2, hood = (s.hood ?? 0.7) * L, boot = (s.boot ?? 0.22) * L;
+  const topAt = (x) => (x > hood ? belt + (nose - belt) * Math.pow(sm((x - hood) / (L - hood)), 0.85) : x < boot ? tail + (belt - tail) * sm(x / Math.max(1, boot)) : belt);
+  const hw0 = cy - 1.2, rf = s.rf ?? 9, rr = s.rr ?? 7, wr = s.wr ?? 7.5;
+  const wx = s.wheels.map((f) => f * L);
+  m.look = { ...(m.look || {}), belt, z0, roof: s.roof, wheels: wx, wr };
+  const body = M.body;
+  const tub = (x, y, z) => {
+    const top = topAt(x);
+    if (z > top + 0.5) return false;
+    const ends = Math.max(0, z - (top - 3)) * 0.85 + Math.max(0, z0 + 2.5 - z) * 0.9;
+    const xa = 0.5 + ends * (s.rearRound ?? 1), xb = L - 0.5 - ends * (s.frontRound ?? 1);
+    if (x < xa || x > xb) return false;
+    const tuck = Math.max(0, z - (top - 4)) * (s.shoulder ?? 0.5) + Math.max(0, z0 + 2.5 - z) * 0.8;
+    const hw = hw0 - tuck, dy = Math.abs(y - cy);
+    if (dy > hw) return false;
+    const front = x > L / 2, r = front ? rf : rr, kx = front ? xb - r : xa + r, ky = hw - r;
+    if ((front ? x > kx : x < kx) && dy > ky && (x - kx) ** 2 + (dy - ky) ** 2 > r * r) return false;
+    return true;
   };
-  return M;
+  m.fill((x, y, z) => (tub(x, y, z) ? body : -1), 0, 0, Math.max(0, z0 - 1), L, W, Math.ceil(Math.max(belt, nose, tail) + 1));
+  // cabin
+  if (s.cab) {
+    const c0 = s.cab[0] * L, c1 = s.cab[1] * L, rz = s.roof, fr = s.fr ?? 13, br = s.br ?? 10, ci0 = s.ci0 ?? 3, ci1 = s.ci1 ?? 6.5;
+    const pil = (s.pillars || []).map((f) => f * L), roofMat = s.roofMat ?? body, win = s.win;
+    m.fill((x, y, z) => {
+      const t = (z - belt) / (rz - belt), xf = c1 - fr * t, xr = c0 + br * t, hw = hw0 - (ci0 + (ci1 - ci0) * t), dy = Math.abs(y - cy);
+      if (x > xf || x < xr || dy > hw) return -1;
+      const cr = s.cr ?? 3, kx = Math.max(xr + cr, Math.min(xf - cr, x)), ky = hw - cr;
+      if (dy > ky && (x - kx) ** 2 + (dy - ky) ** 2 > cr * cr) return -1;
+      const side = hw - dy, front = xf - x, back = x - xr, top = rz - z;
+      if (top < 2.2 && (Math.max(0, 2.2 - side) ** 2 + Math.max(0, 2.2 - top) ** 2 > 4.8 || Math.max(0, 2.2 - front) ** 2 + Math.max(0, 2.2 - top) ** 2 > 4.8 || Math.max(0, 2.2 - back) ** 2 + Math.max(0, 2.2 - top) ** 2 > 4.8)) return -1;
+      if (top < 1.7) return roofMat;
+      const skin = side < 1.5 || front < 1.9 || back < 1.9;
+      if (!skin) return M.interior;
+      if (z < belt + 1.2) return body;
+      const face = side < 1.5 ? (front < 2.8 || back < 2.8 ? 'corner' : 'side') : front < 1.9 ? 'front' : 'back';
+      if (face === 'corner' || (face === 'side' && pil.some((p) => Math.abs(x - p) < 1.3))) return s.pillarMat ?? body;
+      if (win && !win(x, y, z, face)) return body;
+      return M.glass;
+    }, 0, 0, Math.floor(belt), L, W, Math.ceil(rz + 1));
+  }
+  // wheels
+  for (const x of wx) wheel(m, M, x, wr, { width: s.ww ?? 7, inset: s.wi ?? 2.5, top: (xx) => topAt(xx) - 2 });
+  // lamps: head at the front corners, tail clusters at the rear corners (wrapping round onto the sides so a
+  // side-on car shows them), a reversing lamp in each cluster, indicators, a third brake lamp
+  const lz = s.lampZ ?? belt - 6, lh = s.lampH ?? 4, lw = s.lampW ?? 9;
+  const headT = (x, y, z) => Math.abs(y - cy) > hw0 - lw - 0.5;
+  deco(m, M.head, L - 5, 0, lz, L, W, lz + lh, headT);
+  deco(m, M.ind, L - 3.5, 0, lz - 2, L, W, lz, headT);
+  deco(m, (x, y) => (Math.abs(y - cy) < hw0 - lw + 2.5 ? M.rev : M.tail), 0, 0, lz + (s.tailUp ?? 0), 4.5, W, lz + lh + (s.tailUp ?? 0), (x, y) => Math.abs(y - cy) > hw0 - lw - 0.5);
+  // grille between the headlamps, bumpers and number plates
+  deco(m, M.grille, L - 3, 0, lz - 1, L, W, lz + lh - 0.5, (x, y, z, v, side) => side === 'x' && Math.abs(y - cy) < hw0 - lw - 1);
+  const bumper = s.bumper ?? M.trim;
+  deco(m, bumper, L - 3.2, 0, z0, L, W, z0 + 3.4, (x, y, z, v, side) => side !== 'z' || x > L - 2);
+  deco(m, bumper, 0, 0, z0, 3.2, W, z0 + 3.4, (x, y, z, v, side) => side !== 'z' || x < 2);
+  deco(m, M.plate, 0, cy - 5, z0 + 3.5, 2.5, cy + 5, z0 + 6.5, (x, y, z, v, side) => side === 'x');
+  deco(m, M.plate, L - 2.5, cy - 4, z0 + 1, L, cy + 4, z0 + 3.5, (x, y, z, v, side) => side === 'x');
+  // door seams and handles
+  for (const f of s.seams || []) {
+    const sx = f * L;
+    deco(m, M.seam, sx - 0.5, 0, z0 + 3, sx + 0.5, W, belt + 0.2, (x, y, z, v, side) => side === 'y');
+    deco(m, M.chrome, sx + 2.5, 0, belt - 4.5, sx + 5.5, W, belt - 3.5, (x, y, z, v, side) => side === 'y');
+  }
+  // mirrors on the A pillars
+  if (s.cab && s.mirrors !== false) { const mx = s.cab[1] * L - (s.fr ?? 13) * 0.25 - 4; for (const y of [0, W - 2]) { m.box(mx, y, belt, mx + 3, y + 2, belt + 3, body); m.box(mx + 2, y, belt - 1, mx + 3, y + 2, belt, M.trim); } }
+  // smooth normals for the stepped surfaces (voxel stairs would band in the light): the hood and boot
+  // follow their profile, the roof is flat, the windscreen, rear window and side glass lean as built
+  m.fixNormals = () => {
+    const cab = s.cab, c0 = cab ? cab[0] * L : 0, c1 = cab ? cab[1] * L : 0, rz = s.roof || belt, fr = s.fr ?? 13, br = s.br ?? 10, ci0 = s.ci0 ?? 3, ci1 = s.ci1 ?? 6.5, Hc = Math.max(1, rz - belt);
+    const set = (i, a, b, c) => { const l = Math.hypot(a, b, c) || 1; m.nx[i] = a / l; m.ny[i] = b / l; m.nz[i] = c / l; };
+    for (let z = Math.max(0, Math.floor(z0)); z < Math.min(m.h, Math.ceil(rz + 1)); z++) for (let y = 0; y < W; y++) for (let x = 0; x < L; x++) {
+      const i = m.idx(x, y, z);
+      if (!m.v[i] || (!m.nx[i] && !m.ny[i] && !m.nz[i])) continue;
+      const X = x + 0.5, Y = y + 0.5, Zc = z + 0.5, dy = Math.abs(Y - cy), sgn = Y < cy ? -1 : 1;
+      const top = topAt(X);
+      if (Zc > top - 1.6 && Zc <= top + 0.6 && dy < hw0 - 3.2 && X > 1.5 && X < L - 2.5) { set(i, -(topAt(X + 1) - topAt(X - 1)) / 2, 0, 1); continue; }
+      if (!cab || Zc < belt + 0.8) continue;
+      const t = (Zc - belt) / Hc, xf = c1 - fr * t, xr = c0 + br * t, hw = hw0 - (ci0 + (ci1 - ci0) * t);
+      if (Zc > rz - 1.7 && X < xf - 2.5 && X > xr + 2.5 && dy < hw - 2.5) set(i, 0, 0, 1);
+      else if (X > xf - 1.9 && dy < hw - 2.5 && Zc < rz - 1.5) set(i, Hc, 0, fr);
+      else if (X < xr + 1.9 && dy < hw - 2.5 && Zc < rz - 1.5) set(i, -Hc, 0, Math.max(br, 0.5));
+      else if (dy > hw - 1.5 && X < xf - 2.6 && X > xr + 2.6 && Zc < rz - 1.7) set(i, 0, sgn * Hc, ci1 - ci0);
+    }
+  };
+  const A = m.anchors;
+  if (A) {
+    A.head.push([L - 1, cy - hw0 + lw / 2, lz + lh / 2], [L - 1, cy + hw0 - lw / 2, lz + lh / 2]);
+    A.tail.push([1, cy - hw0 + lw / 2, lz + lh / 2 + (s.tailUp ?? 0)], [1, cy + hw0 - lw / 2, lz + lh / 2 + (s.tailUp ?? 0)]);
+    A.rev.push([1, cy - hw0 + lw - 1.5, lz + lh / 2], [1, cy + hw0 - lw + 1.5, lz + lh / 2]);
+    A.exhaust = [0, cy + hw0 * 0.55, z0 + 1];
+    A.fire.push([L * 0.86, cy, belt], [L * 0.5, cy, (s.roof || belt + 12) - 4]);
+    A.seat = [L * ((s.cab ? (s.cab[0] + s.cab[1]) / 2 : 0.5)), cy - W * 0.18, belt + 2];
+  }
+  return { L, W, cy, hw0, belt, z0, lz, lh, topAt, tub, wx, wr };
+}
+// a third brake lamp at the top of the rear window
+function thirdBrake(m, M, b, c0, roof) {
+  deco(m, M.brakeL, c0 * b.L - 1, b.cy - 4, roof - 4, c0 * b.L + 10, b.cy + 4, roof - 1.2, (x, y, z, v) => v === M.glass || v === M.body);
+}
+// an open bed behind the cab (pickups): floor at bz, walls 2 px thick, a ribbed liner
+function cutBed(m, M, b, x0, x1, bz) {
+  m.fill((x, y, z) => (x > x0 + 2 && x < x1 - 1 && Math.abs(y - b.cy) < b.hw0 - 2.5 ? 0 : -1), 0, 0, bz, m.w, m.d, m.h);
+  // wheel wells: humps over the rear wheels inside the bed
+  for (const wx of b.wx) if (wx > x0 && wx < x1) m.fill((x, y, z) => ((x - wx) ** 2 + (z - b.wr) ** 2 < (b.wr + 2.2) ** 2 && Math.abs(y - b.cy) > b.hw0 - 11 && Math.abs(y - b.cy) < b.hw0 - 2 ? M.liner : -1), Math.floor(wx - b.wr - 3), 0, bz - 1, Math.ceil(wx + b.wr + 3), m.d, Math.ceil(b.wr * 2 + 3));
+  deco(m, M.liner, x0 + 1, 0, bz - 1, x1, m.d, m.h, (x, y, z, v, side) => Math.abs(y - b.cy) < b.hw0 - 2 && x > x0 + 1.5 && x < x1 - 0.5);
+  deco(m, M.trim, x0, 0, b.belt - 0.5, x1, m.d, b.belt + 1);
 }
 
-// a truck cab at the front: short hood, upright cab, big windscreen; returns the cab's rear x
+// ---- trucks -------------------------------------------------------------------------------------------
+// A conventional cab at the front: a short hood with a grille, an upright cab with a big windscreen and a
+// door window, mirror arms, roof marker lamps and an exhaust stack. Returns the cab's rear x.
 function truckCab(m, M, x1, H, o = {}) {
-  const W = m.d, cabL = o.cabL ?? 30, hood = o.hood ?? 12;
-  const x0 = x1 - cabL - hood;
-  shell(m, { x0, x1, z0: 6, z1: 28, r: 3, rz: 2, mat: M.cab ?? M.body });                                      // hood and grille block
-  shell(m, { x0, x1: x1 - hood + 4, z0: 6, z1: H, fr: 6, r: 3, rz: 3, mat: glassy(M.cab ?? M.body, M.glass, { band: [H * 0.55, H - 3], pillars: [x0 + cabL * 0.45], sideGlass: true }) });
-  m.box(x1 - 2, 6, 10, x1, W - 6, 22, M.trim);                                                               // grille
-  for (const y of [3, W - 6]) m.box(x0 + cabL - 6, y, H - 14, x0 + cabL - 3, y + 3, H - 8, M.trim);           // mirrors
-  m.box(x0 + 2, W / 2 - 1, H, x0 + 4, W / 2 + 1, H + 10, M.trim);                                             // exhaust stack
+  const W = m.d, cabL = o.cabL ?? 30, hood = o.hood ?? 14, cy = W / 2, cab = o.mat ?? M.cab ?? M.body;
+  const x0 = x1 - cabL - hood, hz = o.hoodZ ?? 26;
+  shell(m, { x0: x1 - hood - 2, x1, y0: 3, y1: W - 3, z0: 7, z1: hz, fr: 3, r: 4, rz: 3, mat: cab });          // hood
+  shell(m, { x0, x1: x1 - hood + 2, y0: 2, y1: W - 2, z0: 7, z1: H, fr: 4, r: 3, rz: 3, mat: (x, y, z, s) => {
+    if (s.top < 1.8) return cab;
+    const skin = s.side < 1.6 || s.front < 2.3;
+    if (!skin || z < H * 0.56 || z > H - 3) return z < 12 ? M.lower : cab;
+    if (s.front < 2.3) return s.side < 2.5 ? cab : M.glass;                                                   // windscreen
+    if (x > x0 + cabL * 0.42 && x < x1 - hood - 2.5) return M.glass;                                          // door window
+    return cab;
+  } });
+  deco(m, M.seam, x0 + cabL * 0.36, 0, 10, x0 + cabL * 0.36 + 1, W, H - 2, (x, y, z, v, side) => side === 'y');
+  deco(m, M.chrome, x0 + cabL * 0.42, 0, H * 0.48, x0 + cabL * 0.42 + 3, W, H * 0.48 + 1, (x, y, z, v, side) => side === 'y');
+  deco(m, M.grille, x1 - 3, 6, 9, x1, W - 6, hz - 3, (x, y, z, v, side) => side === 'x');
+  deco(m, M.chrome, x1 - 3, 0, 7, x1, W, 10, (x, y, z, v, side) => side !== 'z');                              // bumper
+  deco(m, M.head, x1 - 3, 0, 13, x1, W, 18, (x, y, z, v, side) => Math.abs(y - cy) > cy - 9);
+  deco(m, M.ind, x1 - 3, 0, 18, x1, W, 20, (x, y, z, v, side) => Math.abs(y - cy) > cy - 7);
+  for (const y of [0, W - 2]) { m.box(x1 - hood - 1, y, H - 20, x1 - hood + 1, y + 2, H - 8, M.trim); m.box(x1 - hood - 3, y, H - 21, x1 - hood + 1, y + 2, H - 20, M.chrome); }   // mirrors on arms
+  for (const y of [cy - 12, cy - 4, cy + 4, cy + 12]) m.box(x1 - hood - 6, y - 1, H, x1 - hood - 3, y + 1, H + 1, M.ind); // roof marker lamps
+  if (o.stack !== false) { m.cyl('z', x0 + 2.5, 4, 0, 1.6, 12, H + 10, M.chrome); m.box(x0 + 1, 3, H + 8, x0 + 4, 5, H + 10, M.trim); }
+  const A = m.anchors;
+  if (A) {
+    A.head.push([x1 - 1, 5.5, 15.5], [x1 - 1, W - 5.5, 15.5]);
+    A.exhaust = [x0 + 2.5, 4, H + 10];
+    A.fire.push([x1 - hood / 2, cy, hz], [x0 + cabL / 2, cy, H - 4]);
+    A.seat = [x0 + cabL * 0.6, cy - W * 0.2, 24];
+  }
   return x0;
 }
+// chassis rails, a fuel tank and steps, dual wheels
+function chassis(m, M, x0, x1, o = {}) {
+  const W = m.d;
+  m.box(2, 9, 6, x1, W - 9, 11, M.trim);
+  m.cyl('x', 0, 4.5, 9.5, 4, x0 - 20, x0 - 3, M.chrome);
+  m.cyl('x', 0, W - 4.5, 9.5, 4, x0 - 20, x0 - 3, M.steel);
+  for (const y of [0, W - 3]) m.box(x0 + 1, y, 7, x0 + 7, y + 3, 9, M.trim);                                 // cab steps
+}
+// tail lamps and a bumper on a truck body's rear face
+function truckRear(m, M, zt = 12, o = {}) {
+  const W = m.d, cy = W / 2;
+  deco(m, M.tail, 0, 0, zt, 3, W, zt + 4, (x, y, z, v, side) => Math.abs(y - cy) > cy - 8);
+  deco(m, M.rev, 0, 0, zt, 3, W, zt + 4, (x, y, z, v, side) => Math.abs(y - cy) > cy - 10 && Math.abs(y - cy) <= cy - 8);
+  m.box(0, 4, 5, 3, W - 4, 8, M.trim);
+  const A = m.anchors;
+  if (A) { A.tail.push([1, 5, zt + 2], [1, W - 5, zt + 2]); A.rev.push([1, 9, zt + 2], [1, W - 9, zt + 2]); }
+}
+// a body box behind the cab (box trucks, the ambulance and armored boxes): rounded edges, panel seams
+function boxBody(m, x0, x1, z0, z1, mat, o = {}) {
+  shell(m, { x0, x1, y0: o.y0 ?? 1.5, y1: o.y1 ?? m.d - 1.5, z0, z1, r: o.r ?? 2, rz: o.rz ?? 2, mat });
+}
 
-// ---- the models ---------------------------------------------------------------------------------
+// detail for a big flat roof whose top is at height z: panel seams across it, a few vents or hatches
+function roofKit(m, M, x0, x1, z, o = {}) {
+  const W = m.d, st = o.step ?? 16;
+  deco(m, M.seam, x0, 0, z - 2, x1, W, z + 1, (x, y, zz, v, side) => side === 'z' && (x - x0) % st < 1 && x > x0 + 4 && x < x1 - 4);
+  for (const [vx, vy, vw = 7, vd = 7] of o.vents || []) {
+    m.box(vx, vy, z, vx + vw, vy + vd, z + 2, M.steel);
+    deco(m, M.dark, vx, vy, z, vx + vw, vy + vd, z + 3, (x, y, zz, v, side) => side === 'z' && (y | 0) % 2 === 0 && x > vx + 0.9 && x < vx + vw - 0.9 && y > vy + 0.9 && y < vy + vd - 0.9);
+  }
+}
+
+// ---- the models ---------------------------------------------------------------------------------------
+const CAR = {
+  compact: { belt: 17, nose: 12, tail: 15.5, hood: 0.74, boot: 0.05, cab: [0.05, 0.73], roof: 31, fr: 11, br: 3.5, ci0: 3, ci1: 6, wheels: [0.17, 0.81], wr: 7, rf: 9, rr: 6, lampW: 8, seams: [0.5], pillars: [0.48], tailUp: 3 },
+  sedan: { belt: 18, nose: 13, tail: 16.5, hood: 0.72, boot: 0.23, cab: [0.25, 0.75], roof: 33, fr: 13, br: 10, wheels: [0.19, 0.8], wr: 7.5, seams: [0.33, 0.55], pillars: [0.5] },
+  taxi: { belt: 18, nose: 13, tail: 16.5, hood: 0.72, boot: 0.23, cab: [0.25, 0.75], roof: 33, fr: 13, br: 10, wheels: [0.19, 0.8], wr: 7.5, seams: [0.33, 0.55], pillars: [0.5] },
+  police: { belt: 18, nose: 13, tail: 16.5, hood: 0.72, boot: 0.23, cab: [0.26, 0.74], roof: 33, fr: 13, br: 10, wheels: [0.19, 0.8], wr: 7.5, seams: [0.33, 0.55], pillars: [0.5] },
+  sports: { belt: 16.5, nose: 11, tail: 15, hood: 0.66, boot: 0.2, cab: [0.28, 0.7], roof: 28, fr: 16, br: 13, ci0: 4, ci1: 8, wheels: [0.19, 0.8], wr: 7, rf: 11, rr: 8, lampW: 10, lampH: 3, seams: [0.56], pillars: [], shoulder: 0.45, ww: 8, wi: 2 },
+  suv: { belt: 22, nose: 18, tail: 21, hood: 0.8, boot: 0.04, cab: [0.05, 0.79], roof: 42, fr: 12, br: 2.5, ci0: 2.5, ci1: 5, wheels: [0.19, 0.8], wr: 8.5, seams: [0.37, 0.6], pillars: [0.37, 0.6], z0: 5, tailUp: 6 },
+  limo: { belt: 18, nose: 13, tail: 16, hood: 0.8, boot: 0.15, cab: [0.17, 0.82], roof: 32, fr: 14, br: 10, wheels: [0.13, 0.86], wr: 7.5, seams: [0.38, 0.55, 0.7], pillars: [0.4, 0.55, 0.68] },
+};
+// soften the game's paint list for car bodies: saturated but not neon, no paper white
+export function carPaint(hex) {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(...c), mn = Math.min(...c), l = (mx + mn) / 2, dl = mx - mn;
+  if (dl < 0.02) { const g = Math.round((l > 0.8 ? 0.84 : Math.max(0.16, l * 0.9)) * 255).toString(16).padStart(2, '0'); return '#' + g + g + g; }
+  const s = dl / (1 - Math.abs(2 * l - 1));
+  let h = mx === c[0] ? (c[1] - c[2]) / dl + (c[1] < c[2] ? 6 : 0) : mx === c[1] ? (c[2] - c[0]) / dl + 2 : (c[0] - c[1]) / dl + 4;
+  h *= 60;
+  // warm paints (reds, oranges, yellows) stay rich; cool ones (greens, blues, purples) are toned down
+  const warm = h < 70 || h > 330, sat = Math.min(s, warm ? 0.72 : 0.42), lt = l > 0.8 ? 0.84 : Math.max(0.16, l * (warm ? 0.95 : 0.88));
+  const q = lt < 0.5 ? lt * (1 + sat) : lt + sat - lt * sat, pp = 2 * lt - q;
+  const f = (t) => { t = (t + 1) % 1; return t < 1 / 6 ? pp + (q - pp) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? pp + (q - pp) * (2 / 3 - t) * 6 : pp; };
+  return '#' + [f(h / 360 + 1 / 3), f(h / 360), f(h / 360 - 1 / 3)].map((v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0')).join('');
+}
+
 export function vehicleModel(type, o = {}) {
   const [L, W] = VEHICLE_DIMS[type] || VEHICLE_DIMS.sedan;
-  const tall = { tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, suv: 44, foodtruck: 60, van: 48, ambulance: 54, armored: 52, swat: 56, bus: 64, flatbed: 50, boxtruck: 64, dumptruck: 56, mixer: 62, tanker: 56, garbage: 62, firetruck: 64, towtruck: 58, pickup: 38 }[type] || 36;
-  const m = new Vox(L, W, tall + 14);
+  if (!VEHICLE_DIMS[type]) return vehicleModel('sedan', o);
+  const tall = VEHICLE_TALL[type] || 36;
+  const m = new Vox(L, W, tall + (type === 'policeboat' ? 16 : 11));
+  m.anchors = { head: [], tail: [], rev: [], brake: [], siren: [], fire: [], seat: null, exhaust: null, wake: null, bed: null };
+  // variant bits: rack (roof rails / ladder rack / basket), box (roof box on a rack), rusty, twoTone, sunroof
+  const v = (o.variant | 0) & 7, V = { rack: !!(v & 1), box: (v & 3) === 3, rusty: v >= 6, twoTone: v === 4 || v === 5, sunroof: v === 2 };
+  // how strongly horizontal paint picks up the sky sheen: full on cars, faint on big flat roofs
+  const sheen = { van: 0.45, ambulance: 0.4, armored: 0.4, swat: 0.4, bus: 0.3, firetruck: 0.3, foodtruck: 0.3, tram: 0.3, ferry: 0.2, tugboat: 0.4 }[type] ?? (VEHICLE_TALL[type] > 44 ? 0.35 : 1);
+  m.look = { seed: 1 + v * 7 + (type.length * 13), sheen };
   const M = mats(m, o.paint || DEFAULT_PAINT[type] || '#808080', o);
+  if (o.cab || DEFAULT_CAB[type]) { const C = paintSet(m, o.cab || DEFAULT_CAB[type]); M.cab = C.body; M.cabLower = C.lower; }
   const lit = o.lights || 0;
+  const A = m.anchors;
   switch (type) {
-    case 'compact': case 'sedan': case 'taxi': case 'police': case 'sports': {
-      const sp = type === 'sports', cmp = type === 'compact';
-      const belt = sp ? 16 : 19, roof = sp ? 28 : cmp ? 32 : 33;
-      const lowerMat = type === 'police' ? (x, y, z, s) => (s.side < 2 && x > L * 0.3 && x < L * 0.72 && z > 8 ? M.white : M.body) : M.body;
-      const seams = cmp ? [L * 0.5] : sp ? [L * 0.55] : [L * 0.5, L * 0.28, L * 0.72];
-      shell(m, { x0: 1, x1: L - 1, z0: 3, z1: belt, r: sp ? 9 : 7, rz: 3, tuck: 0, mat: (x, y, z, s) => {
-        if (z < 6) return M.lower;
-        if (s.side < 1.5 && seams.some((sx) => Math.abs(x - sx) < 0.6) && z > 6) return M.lower;
-        if (s.side < 1.5 && Math.abs(z - (belt - 2)) < 0.6) return M.chrome;
-        if (s.side < 1.5 && seams.slice(0, 2).some((sx) => Math.abs(x - (sx + 5)) < 1) && Math.abs(z - (belt - 4)) < 0.6) return M.chrome;   // door handles
-        return typeof lowerMat === 'function' ? lowerMat(x, y, z, s) : lowerMat;
-      } });
-      const c0 = cmp ? L * 0.14 : sp ? L * 0.3 : L * 0.25, c1 = cmp ? L * 0.76 : sp ? L * 0.72 : L * 0.75;
-      shell(m, { x0: c0, x1: c1, z0: belt, z1: roof, fr: sp ? 14 : cmp ? 10 : 14, br: cmp ? 3 : sp ? 12 : 10, tuck: 5, r: 4, rz: 2,
-        mat: glassy(type === 'police' ? M.white : M.body, M.glass, { band: [belt + 1, roof - 2], pillars: [(c0 + c1) / 2 + (cmp ? 4 : 2)] }) });
-      wheels(m, [L * (cmp ? 0.2 : 0.2), L * (cmp ? 0.8 : 0.79)], 7, M);
-      lamps(m, M, { zh: belt - 6, h: 4, inset: 4, wd: 9 });
-      for (const y of [1, W - 3]) m.box(c1 - 6, y, belt, c1 - 3, y + 2, belt + 3, M.body);                         // mirrors
-      if (type === 'taxi') {
-        const sign = m.mat({ ramp: R('#f4f0d8'), k: 3, emi: lit ? [255, 240, 180, 200] : null });
-        m.box(L / 2 - 6, W / 2 - 5, roof, L / 2 + 6, W / 2 + 5, roof + 4, sign);
-        m.fill((x, y, z) => ((y < 3 || y > W - 4) && z >= 12 && z < 15 && x > L * 0.25 && x < L * 0.75 ? (((Math.floor(x / 3) + Math.floor(z / 1.5)) % 2) ? M.black : M.white) : -1), 0, 0, 11, L, W, 16);
+    case 'compact': case 'sedan': case 'taxi': case 'police': case 'sports': case 'suv': case 'limo': {
+      const s = { ...CAR[type] };
+      if (type === 'police') { s.roofMat = M.white; s.bumper = M.trim; }
+      if (type === 'compact' && V.twoTone) s.roofMat = M.white;                     // two-tone roof
+      if (type === 'sedan' && V.twoTone) s.roofMat = M.black;                       // vinyl top
+      const b = carBody(m, M, s);
+      thirdBrake(m, M, b, s.cab[0] + 0.02, s.roof);
+      if (type === 'police') {
+        // black-and-white: white doors from the front wheel to the rear wheel, a gold star on the doors,
+        // the light bar, a push bar on some
+        deco(m, M.white, b.wx[0] + b.wr + 2, 0, b.z0 + 2.5, b.wx[1] - b.wr - 2, W, b.belt + 1.2, (x, y, z, vv, side) => side === 'y' && vv === M.body);
+        deco(m, M.gold, L * 0.44 - 2.5, 0, b.belt - 9, L * 0.44 + 2.5, W, b.belt - 4, (x, y, z, vv, side) => side === 'y' && (Math.abs(x - L * 0.44) + Math.abs(z - (b.belt - 6.5))) < 3);
+        lightbar(m, M, L * 0.5 - 4, L * 0.5 + 2, s.roof, { wide: true });
+        if (V.rack) { m.box(L - 2, 8, 5, L, W - 8, 16, M.trim); for (const y of [12, W - 14]) m.box(L - 3, y, 5, L, y + 2, 17, M.trim); }
       }
-      if (type === 'police') lightbar(m, M, L / 2 - 6, L / 2 + 6, roof);
-      if (sp) { m.box(2, 4, belt, 6, W - 4, belt + 5, M.trim); m.box(1, 3, belt + 5, 8, W - 3, belt + 6, M.body); }   // rear wing
+      if (type === 'taxi') {
+        // checker band along the sides, the roof sign, a door roundel
+        deco(m, (x, y, z) => (((Math.floor(x / 2.5) + Math.floor(z / 1.6)) % 2) ? M.black : M.white), b.wx[0] + b.wr + 1, 0, b.belt - 7.5, b.wx[1] - b.wr - 1, W, b.belt - 4.2, (x, y, z, vv, side) => side === 'y');
+        const sign = m.mat({ ramp: R('#f4f0d8', 6, 3), k: 3, emi: lit ? [255, 236, 170, 230] : null, shade: (x, y, z) => ((z | 0) % 4 === 0 ? -1.2 : 0) });
+        const sx = L * 0.47;
+        m.box(sx - 4, b.cy - 6, s.roof, sx + 4, b.cy + 6, s.roof + 1, M.trim);
+        shell(m, { x0: sx - 3.5, x1: sx + 3.5, y0: b.cy - 5.5, y1: b.cy + 5.5, z0: s.roof + 1, z1: s.roof + 5, r: 1, rz: 1.5, mat: sign });
+        if (v & 2) deco(m, M.stripeRed, sx - 4, 0, s.roof + 2, sx + 4, W, s.roof + 4, (x, y, z, vv, side) => side !== 'z');   // an advert band
+      }
+      if (type === 'sports') {
+        if (!V.rack) { m.box(1, 6, s.tail, 5, W - 6, s.tail + 5, M.trim); m.box(0, 4, s.tail + 5, 7, W - 4, s.tail + 7, M.body); }   // rear wing
+        if (v & 2) deco(m, M.white, 0, b.cy - 4, 0, L, b.cy + 4, m.h, (x, y, z, vv, side) => side === 'z' && vv === M.body);       // racing stripes
+        deco(m, M.seam, L * 0.8, 0, b.belt - 4, L * 0.86, W, b.belt + 1, (x, y, z, vv, side) => side === 'z' && Math.abs(Math.abs(y - b.cy) - 6) < 0.6); // hood vents
+      }
+      if ((type === 'compact' || type === 'sedan' || type === 'suv') && V.rack) {                                          // roof rails
+        for (const y of [b.cy - b.hw0 + 6, b.cy + b.hw0 - 7]) m.box(L * s.cab[0] + 8, y, s.roof, L * s.cab[1] - 12, y + 1, s.roof + 2, M.trim);
+        if (type !== 'suv' && V.box) shell(m, { x0: L * 0.38, x1: L * 0.62, y0: b.cy - 8, y1: b.cy + 8, z0: s.roof + 2, z1: s.roof + 6, r: 3, rz: 2, mat: M.dark });   // roof box
+      }
+      if (type === 'sedan' && V.sunroof) deco(m, M.glass, L * 0.42, b.cy - 6, s.roof - 1, L * 0.56, b.cy + 6, s.roof + 1, (x, y, z, vv, side) => side === 'z');   // sunroof
+      if (type === 'limo') { deco(m, M.chrome, 0, 0, b.belt - 1, L, W, b.belt + 0.5, (x, y, z, vv, side) => side === 'y'); }
+      if (type === 'police' || type === 'taxi') A.seat = [L * 0.56, b.cy - W * 0.18, b.belt + 2];
       break;
     }
-    case 'suv': case 'limo': {
-      const suv = type === 'suv', belt = suv ? 22 : 18, roof = suv ? 42 : 32;
-      shell(m, { x0: 1, x1: L - 1, z0: 4, z1: belt, r: 7, rz: 3, mat: (x, y, z, s) => (z < 7 ? M.lower : s.side < 1.5 && Math.abs(z - (belt - 2)) < 0.6 ? M.chrome : M.body) });
-      const c0 = suv ? L * 0.08 : L * 0.2, c1 = suv ? L * 0.74 : L * 0.78;
-      const pil = suv ? [L * 0.36, L * 0.56] : [L * 0.4, L * 0.55, L * 0.68];
-      shell(m, { x0: c0, x1: c1, z0: belt, z1: roof, fr: suv ? 12 : 14, br: suv ? 2 : 10, tuck: 4, r: 4, rz: 2, mat: glassy(M.body, M.glass, { band: [belt + 1, roof - 2], pillars: pil }) });
-      if (suv) { for (const y of [6, W - 8]) m.box(c0 + 4, y, roof, c1 - 8, y + 2, roof + 2, M.trim); }
-      wheels(m, [L * 0.19, L * 0.8], suv ? 8.5 : 7, M);
-      lamps(m, M, { zh: belt - 7, h: 4, inset: 4, wd: 9 });
-      for (const y of [1, W - 3]) m.box(c1 - 6, y, belt, c1 - 3, y + 2, belt + 3, M.body);
+    case 'pickup': {
+      const s = { belt: 21, nose: 16, tail: 20.5, hood: 0.79, boot: 0.02, cab: [0.45, 0.77], roof: 36, fr: 10, br: 1.5, ci0: 2.5, ci1: 5, wheels: [0.19, 0.81], wr: 8, z0: 4, seams: [0.62], pillars: [], lampW: 7, tailUp: 3, rr: 4 };
+      const b = carBody(m, M, s);
+      cutBed(m, M, b, 0, L * 0.44, 10);
+      A.bed = 10;
+      deco(m, M.seam, 1.5, 0, b.z0 + 4, 2.5, W, b.belt, (x, y, z, vv, side) => side === 'x' && Math.abs(y - b.cy) < b.hw0 - 3);       // tailgate seam
+      thirdBrake(m, M, b, s.cab[0] + 0.005, s.roof);
+      if (V.rack) { m.box(L * 0.42, 3, b.belt, L * 0.44, W - 3, b.belt + 9, M.trim); for (const y of [3, W - 5]) m.box(L * 0.42 - 3, y, b.belt, L * 0.42, y + 2, b.belt + 9, M.trim); }   // headache rack
+      (o.cargo || []).forEach((t, i) => crateOn(m, 8 + (i % 3) * 13, 8 + Math.floor(i / 3) * 16, 11, t, M));
       break;
     }
+    case 'van': {
+      // a one-box delivery van: short nose, steep windscreen, glass only in the cab doors and the back doors
+      const s = { belt: 25, nose: 21, tail: 24.5, hood: 0.84, boot: 0.0, cab: [0.0, 0.88], roof: 46, fr: 9, br: 0, ci0: 0.5, ci1: 2.5, wheels: [0.17, 0.81], wr: 8, z0: 5, seams: [0.7, 0.48], pillars: [], lampW: 8, lampZ: 17, tailUp: 4, rr: 4, rf: 8,
+        win: (x, y, z, face) => face === 'front' || (face === 'side' && x > L * 0.68 && x < L * 0.82 && z > 31) || (face === 'back' && z > 30 && z < 41 && Math.abs(y - W / 2) > 2) };
+      const b = carBody(m, M, s);
+      deco(m, M.seam, 0, 0, 8, L * 0.66, W, 44, (x, y, z, vv, side) => side === 'y' && (Math.abs(x - L * 0.4) < 0.5 || (Math.abs(z - 41) < 0.5 && x > L * 0.38)));   // sliding door
+      deco(m, M.seam, 0, b.cy - 0.5, 8, 2, b.cy + 0.5, 44, (x, y, z, vv, side) => side === 'x');                                        // back doors
+      roofKit(m, M, 4, L * 0.8, s.roof - 1, { step: 18, vents: V.rack ? [] : [[L * 0.5, W / 2 - 4, 8, 8]] });
+      if (V.rack) for (let x = L * 0.12; x < L * 0.7; x += 14) m.box(x, 6, s.roof, x + 2, W - 6, s.roof + 2, M.trim);              // ladder rack
+      if (v & 2) deco(m, M.stripeBlue, 0, 0, 22, L * 0.66, W, 26, (x, y, z, vv, side) => side === 'y' && vv === M.body);             // fleet stripe
+      if (v & 4) deco(m, M.stripeRed, 0, 0, 26, L * 0.66, W, 28, (x, y, z, vv, side) => side === 'y' && vv === M.body);
+      A.seat = [L * 0.76, b.cy - W * 0.2, 28];
+      break;
+    }
+    case 'ambulance': case 'armored': case 'swat': {
+      const amb = type === 'ambulance', boxH = amb ? 54 : type === 'swat' ? 52 : 50, cabH = amb ? 44 : 42;
+      // the cab: a van nose; the box behind it is taller and squarer
+      const s = { belt: amb ? 24 : 23, nose: amb ? 20 : 19, tail: 22, hood: 0.84, boot: 0.0, cab: [0.66, 0.89], roof: cabH, fr: 8, br: 0, ci0: 1.5, ci1: 3, wheels: [0.18, 0.8], wr: 8.5, z0: 5, seams: [0.76], pillars: [], lampW: 8, lampZ: 16, rr: 3, rf: 7, mirrors: true,
+        win: (x, y, z, face) => face === 'front' || (face === 'side' && x > L * 0.74 && z > cabH - 13) };
+      const b = carBody(m, M, s);
+      const bx1 = L * 0.7, boxMat = (x, y, z, sh) => {
+        if (amb && z > 18 && z < 24) return M.stripeRed;
+        if (!amb && sh.side < 1.6 && (Math.round(x) % 14 === 0 || Math.round(z) % 13 === 0)) return M.seam;
+        return M.body;
+      };
+      boxBody(m, 1, bx1, 8, boxH, boxMat, { r: amb ? 3 : 2, rz: amb ? 3 : 1.5 });
+      roofKit(m, M, 2, bx1, boxH - 1, { step: amb ? 20 : 14, vents: amb ? [[L * 0.3, W / 2 - 5, 10, 10]] : type === 'armored' ? [[L * 0.2, W / 2 - 4, 8, 8], [L * 0.45, W / 2 - 4, 8, 8]] : [] });
+      wheel(m, M, b.wx[0], b.wr, { width: 8, inset: 2 });
+      // rear doors, tail lamps high on the box corners
+      deco(m, M.seam, 0, b.cy - 0.5, 9, 2, b.cy + 0.5, boxH - 2, (x, y, z, vv, side) => side === 'x');
+      deco(m, M.tail, 0, 0, boxH - 10, 3, W, boxH - 4, (x, y, z, vv, side) => Math.abs(y - b.cy) > b.cy - 4);
+      deco(m, M.tail, 0, 0, 12, 3, W, 18, (x, y, z, vv, side) => Math.abs(y - b.cy) > b.cy - 6);
+      A.tail.push([1, 4, boxH - 7], [1, W - 4, boxH - 7]);
+      if (amb) {
+        // the box: a red band, a blue star emblem, red corner beacons, a light bar on the cab
+        const em = L * 0.36, ez = 36;
+        deco(m, M.stripeBlue, em - 6, 0, ez - 6, em + 6, W, ez + 6, (x, y, z, vv, side) => side === 'y' && (Math.abs(x - em) < 1.4 || Math.abs(z - ez) < 1.4 || Math.abs((x - em) - (z - ez)) < 1.2 || Math.abs((x - em) + (z - ez)) < 1.2) && Math.hypot(x - em, z - ez) < 5.8);
+        deco(m, M.glass, L * 0.08, 0, 30, L * 0.16, W, 42, (x, y, z, vv, side) => side === 'y');                                       // box side window
+        for (const x of [2, bx1 - 6]) for (const y of [1, W - 4]) m.box(x, y, boxH - 6, x + 4, y + 3, boxH - 1, M.red);
+        for (const y of [1, W - 4]) A.siren.push([bx1 - 4, y + 1.5, boxH - 3, 0]);
+        lightbar(m, M, L * 0.74, L * 0.79, cabH, { wide: true });
+        deco(m, M.stripeRed, L * 0.7, 0, 18, L, W, 24, (x, y, z, vv, side) => side === 'y' && vv === M.body);
+      } else {
+        // armored and SWAT: small barred windows, riveted plates, an emblem; beacons and roof rails
+        for (const wx0 of [L * 0.12, L * 0.3, L * 0.48]) deco(m, M.glass, wx0, 0, 32, wx0 + 7, W, 38, (x, y, z, vv, side) => side === 'y');
+        const em = L * 0.36, ez = 22;
+        deco(m, type === 'swat' ? M.gold : M.white, em - 5, 0, ez - 5, em + 5, W, ez + 5, (x, y, z, vv, side) => side === 'y' && Math.abs(x - em) + Math.max(0, z - ez) * 0.6 + Math.max(0, ez - z) * 1.2 < 5);
+        deco(m, M.chrome, 0, 0, 0, bx1, W, boxH, (x, y, z, vv, side) => side === 'y' && (Math.round(x) % 14 === 7 && Math.round(z) % 8 === 4));    // rivets
+        if (type === 'armored') { for (const y of [2, W - 5]) { m.box(bx1 - 6, y, boxH, bx1 - 2, y + 3, boxH + 3, M.amber); A.siren.push([bx1 - 4, y + 1.5, boxH + 2, 2]); } }
+        else {
+          lightbar(m, M, L * 0.75, L * 0.8, cabH, { wide: true });
+          for (const y of [3, W - 4]) m.box(4, y, boxH, bx1 - 4, y + 1, boxH + 3, M.trim);                                               // roof rails
+          for (let x = 8; x < bx1 - 4; x += 16) m.box(x, 3, boxH + 2, x + 1, W - 3, boxH + 3, M.trim);
+          m.box(L - 2, 6, 6, L, W - 6, 20, M.trim);                                                                                       // push bar
+        }
+      }
+      A.fire.push([L * 0.35, b.cy, boxH - 6]);
+      break;
+    }
+    case 'bus': {
+      // a city bus: cream body, teal band, a deep window band with mullions, doors front and middle,
+      // roof units, a lit destination sign
+      const cy = W / 2;
+      shell(m, { x0: 1, x1: L - 1, y0: 1.5, y1: W - 1.5, z0: 7, z1: 62, r: 5, rz: 4, fr: 3, mat: (x, y, z, s) => {
+        if (z < 11) return M.lower;
+        if (z > 16 && z < 22 && s.side < 1.6) return M.stripeTeal;
+        const win = z > 29 && z < 50;
+        if (win && s.front < 2.4 && s.side > 2) return M.glass;
+        if (win && s.side < 1.6 && Math.round(x) % 21 > 1 && x > 8 && x < L - 8) return M.glass;
+        if (s.back < 2.2 && z > 34 && z < 48 && s.side > 4) return M.glass;
+        return M.body;
+      } });
+      m.look = { ...m.look, belt: 29, z0: 7, roof: 62, wheels: [L * 0.18, L * 0.8], wr: 9.5 };
+      for (const x of [L - 20, L * 0.52]) deco(m, (xx) => (Math.abs(xx - (x + 7)) < 0.8 ? M.trim : M.glass), x, 0, 12, x + 14, W, 50, (xx, y, z, vv, side) => side === 'y');   // doors
+      roofKit(m, M, 4, L - 4, 61, { step: 22 });
+      m.box(L * 0.4, cy - 9, 62, L * 0.58, cy + 9, 66, M.steel); m.box(L * 0.18, cy - 7, 62, L * 0.26, cy + 7, 65, M.steel);             // roof units
+      deco(m, M.dark, L * 0.41, cy - 8, 65, L * 0.57, cy + 8, 67, (x, y, z) => (x | 0) % 3 === 0);
+      const dest = m.mat({ ramp: R('#2a2a2e'), k: 2, emi: [255, 170, 60, 110 + lit * 140] });
+      deco(m, dest, L - 4, cy - 10, 52, L, cy + 10, 57, (x, y, z, vv, side) => side === 'x');
+      wheels(m, [L * 0.18, L * 0.8], 9.5, M, { width: 8, inset: 2 });
+      deco(m, M.head, L - 3, 0, 13, L, W, 18, (x, y, z, vv, side) => Math.abs(y - cy) > cy - 8);
+      truckRear(m, M, 14);
+      A.head.push([L - 1, 5, 15.5], [L - 1, W - 5, 15.5]);
+      A.exhaust = [0, W - 8, 8]; A.fire.push([L * 0.15, cy, 40], [L * 0.6, cy, 40]); A.seat = [L - 14, 12, 28];
+      break;
+    }
+    case 'flatbed': case 'boxtruck': case 'dumptruck': case 'mixer': case 'tanker': case 'garbage': case 'towtruck': {
+      const cabH = 46, cx0 = truckCab(m, M, L - 1, cabH, { cabL: 30, hood: 14 });
+      chassis(m, M, cx0, cx0 + 4);
+      const back0 = 2, back1 = cx0 - 2, cy = W / 2;
+      m.look = { ...m.look, belt: 30, z0: 7, roof: cabH, wheels: [L * 0.13, L * 0.27, L * 0.84], wr: 9.5 };
+      if (type === 'flatbed') {
+        // the deck rides above the dual wheels: a steel frame with a plank floor, low stake sides
+        m.box(back0, 2, 17, back1, W - 2, 20, M.trim);
+        m.box(back0, 3, 20, back1, W - 3, 22, M.wood);
+        for (const [a, bb] of [[2, 4], [W - 4, W - 2]]) { for (let x = back0; x < back1; x += 12) m.box(x, a, 22, x + 2, bb, 28, M.trim); m.box(back0, a, 25, back1, bb, 27, M.wood); }   // stakes and rails
+        m.box(back1 - 3, 2, 22, back1, W - 2, 44, M.trim);                                                                                   // headboard
+        deco(m, M.steel, back1 - 3, 2, 22, back1, W - 2, 44, (x, y, z) => (z | 0) % 4 === 0);
+        A.bed = 22;
+        (o.cargo || []).forEach((t, i) => crateOn(m, back0 + 4 + (i % 3) * 26, 8 + Math.floor(i / 3) * 22, 22, t, M));
+      } else if (type === 'boxtruck' || type === 'garbage') {
+        const gar = type === 'garbage', boxM = gar ? M.body : M.white;
+        boxBody(m, back0, back1, 11, gar ? 56 : 62, (x, y, z, s) => {
+          if (gar && s.side < 1.6 && Math.round(x) % 16 === 0) return M.seam;
+          if (!gar && s.side < 1.6 && Math.round(x) % 22 === 0) return M.seam;
+          return boxM;
+        }, { r: 1.5, rz: 1.5 });
+        roofKit(m, M, back0, back1, gar ? 55 : 61, { step: gar ? 16 : 22 });
+        if (gar) {
+          // compactor at the back (hopper), the recycling arrows
+          shell(m, { x0: 0, x1: 18, y0: 3, y1: W - 3, z0: 9, z1: 58, br: -6, r: 2, rz: 2, mat: M.lower });
+          deco(m, M.trim, 0, 0, 9, 19, W, 58, (x, y, z, vv, side) => side === 'y' && ((x | 0) % 6 === 0 || (z | 0) % 9 === 0));
+          const ex = back1 * 0.55, ez = 34;
+          deco(m, M.white, ex - 7, 0, ez - 7, ex + 7, W, ez + 7, (x, y, z, vv, side) => side === 'y' && Math.abs(Math.hypot(x - ex, z - ez) - 5) < 1.2 && Math.atan2(z - ez, x - ex) % 2.1 > 0.5);
+        } else {
+          // a generic courier logo: a pink pig in a hurry
+          const ex = back1 * 0.62, ez = 36, pink = m.mat({ ramp: R('#d86a90'), k: 3 });
+          deco(m, pink, ex - 12, 0, ez - 8, ex + 9, W, ez + 8, (x, y, z, vv, side) => side === 'y' && (((x - ex) / 7) ** 2 + ((z - ez) / 5.5) ** 2 < 1 || ((x > ex - 12 && x < ex - 6) && Math.abs(((z - ez) | 0) % 3) === 0 && Math.abs(z - ez) < 5)));
+          deco(m, M.white, ex - 1, 0, ez, ex + 1, W, ez + 2, (x, y, z, vv, side) => side === 'y');
+          deco(m, M.seam, 0, cy - 0.5, 12, 2, cy + 0.5, 61, (x, y, z, vv, side) => side === 'x');
+        }
+      } else if (type === 'dumptruck') {
+        shell(m, { x0: back0, x1: back1, y0: 2, y1: W - 2, z0: 11, z1: 40, br: -4, r: 2, mat: (x, y, z, s) => (s.side < 1.6 && Math.round(x) % 10 === 0 ? M.seam : M.body) });
+        const gravel = m.mat({ ramp: R('#6e6258'), k: 3, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.8 });
+        m.fill((x, y, z) => (x > back0 + 3 && x < back1 - 3 && y > 4 && y < W - 4 ? (z < 34 + Math.sin(x * 0.2) * 2 + Math.cos(y * 0.3) * 2 ? gravel : 0) : -1), 0, 0, 16, L, W, 41);
+        m.box(back1 - 2, 4, 40, back1 + 6, W - 4, 42, M.body);                                                                               // cab guard
+        A.bed = 30;
+      } else if (type === 'mixer') {
+        const drum = m.mat({ ramp: MAT.paintWhiteCar, k: 3 }), band = m.mat({ ramp: R('#c8302c'), k: 3 });
+        m.fill((x, y, z) => { const t = (x - back0) / (back1 - back0); const rr = 20 * Math.sin(Math.min(1, t * 1.15) * Math.PI * 0.95 + 0.2); const cz = 32 + t * 6; return (y - cy) ** 2 + (z - cz) ** 2 < rr * rr ? (Math.floor(t * 7 + (y - cy) * 0.04) % 2 ? band : drum) : -1; }, back0 + 4, 0, 10, back1, W, 62);
+        m.box(back0, cy - 3, 18, back0 + 8, cy + 3, 30, M.trim);                                                                             // chute
+        for (let z = 14; z < 50; z += 4) m.box(back1 - 3, W - 4, z, back1 - 1, W - 2, z + 1, M.steel);                                       // ladder
+        m.box(back1 - 3, W - 4, 12, back1 - 2, W - 3, 52, M.steel);
+      } else if (type === 'tanker') {
+        const tank = m.mat({ ramp: MAT.chrome, k: 2.6, shade: (x, y, z) => (z > 44 ? 0.8 : z < 26 ? -0.6 : 0) });
+        m.cyl('x', 0, cy, 34, cy - 3, back0, back1, tank);
+        for (const [a, bb] of [[back0, back0 + 3], [back1 - 3, back1]]) m.cyl('x', 0, cy, 34, cy - 2, a, bb, M.steel);
+        deco(m, M.stripeRed, back0, 0, 29, back1, W, 33, (x, y, z, vv, side) => side === 'y');
+        const ex = back1 * 0.8, ez = 38;
+        deco(m, M.stripeRed, ex - 4, 0, ez - 4, ex + 4, W, ez + 4, (x, y, z, vv, side) => side === 'y' && Math.abs(x - ex) + Math.abs(z - ez) < 3.6);
+        for (let x = back0 + 14; x < back1 - 10; x += 28) { m.cyl('z', x, cy, 0, 4, 52, 55, M.steel); m.cyl('z', x, cy, 0, 2, 55, 56, M.trim); }
+        m.box(back0 + 6, cy - 1, 52, back1 - 6, cy + 1, 54, M.steel);                                                                       // catwalk
+      } else {                                                                                                                              // tow truck
+        const boom = m.mat({ ramp: R('#2f4a8a'), k: 3 });
+        m.box(back0, 4, 11, back1, W - 4, 22, boom);
+        deco(m, M.stripeYellow, back0, 0, 15, back1, W, 18, (x, y, z, vv, side) => side === 'y' && (((x | 0) >> 2) % 2 === 0));
+        for (let s = 0; s < 46; s++) m.box(back1 - 16 - s * 0.9, cy - 3, 22 + s * 0.55, back1 - 10 - s * 0.9, cy + 3, 26 + s * 0.55, boom);
+        m.box(2, cy - 1, 30, 4, cy + 1, 47, M.trim);                                                                                         // cable
+        m.box(1, cy - 2, 26, 5, cy + 2, 30, M.chrome);                                                                                       // hook
+        m.box(0, 5, 6, 8, W - 5, 9, M.trim);                                                                                                 // wheel lift
+        lightbar(m, M, cx0 + 5, cx0 + 11, cabH, { amber: true, wide: true });
+      }
+      wheels(m, [L * 0.13, L * 0.27, L * 0.84], 9.5, M, { width: 8, inset: 2 });
+      truckRear(m, M, 12);
+      if (type !== 'tanker' && type !== 'mixer') A.fire.push([L * 0.35, cy, 30]);
+      break;
+    }
+    case 'firetruck': {
+      // cab-forward fire engine: red body, white band, chrome pump panel, roller doors, a ladder on top
+      const cy = W / 2, cabX = L - 34;
+      shell(m, { x0: 1, x1: L - 1, y0: 1.5, y1: W - 1.5, z0: 7, z1: 50, r: 3, rz: 3, mat: (x, y, z, s) => {
+        if (z > 25 && z < 28 && s.side < 1.6) return M.white;
+        if (x > cabX && z > 32 && z < 47 && (s.side < 1.6 || s.front < 2.2) && !(s.side < 1.6 && Math.abs(x - (cabX + 14)) < 1.2)) return M.glass;
+        if (z < 11) return M.lower;
+        return M.body;
+      } });
+      m.box(cabX + 2, 4, 50, L - 3, W - 4, 54, M.white);                                                                                    // cab roof
+      m.look = { ...m.look, belt: 28, z0: 7, roof: 54, wheels: [L * 0.14, L * 0.26, L * 0.82], wr: 9.5 };
+      deco(m, M.seam, 4, 0, 10, cabX - 4, W, 46, (x, y, z, vv, side) => side === 'y' && (Math.abs(((x - 4) % 20) - 19.5) < 0.6 || Math.abs(z - 46) < 0.6));   // roller doors
+      deco(m, M.chrome, cabX - 22, 0, 12, cabX - 4, W, 44, (x, y, z, vv, side) => side === 'y');                                            // pump panel
+      deco(m, M.dark, cabX - 20, 0, 18, cabX - 6, W, 40, (x, y, z, vv, side) => side === 'y' && (Math.hypot(((x - cabX + 20) % 6) - 3, ((z - 18) % 6) - 3) < 1.8));
+      const lad = m.mat({ ramp: MAT.chrome, k: 3 });
+      for (const y of [7, W - 9]) m.box(8, y, 52, L - 40, y + 2, 55, lad);
+      for (let x = 10; x < L - 40; x += 5) m.box(x, 7, 52, x + 1, W - 7, 54, lad);
+      for (const x of [8, L - 44]) m.box(x, 6, 50, x + 4, W - 6, 52, M.trim);
+      m.cyl('y', 16, 0, 46, 5, 10, W - 10, M.trim);                                                                                          // hose reel
+      lightbar(m, M, L - 29, L - 23, 54, { wide: true });
+      wheels(m, [L * 0.14, L * 0.26, L * 0.82], 9.5, M, { width: 8, inset: 2 });
+      deco(m, M.head, L - 3, 0, 13, L, W, 18, (x, y, z, vv, side) => Math.abs(y - cy) > cy - 9);
+      deco(m, M.chrome, L - 3, 0, 7, L, W, 11, (x, y, z, vv, side) => side !== 'z');
+      truckRear(m, M, 13);
+      A.head.push([L - 1, 6, 15.5], [L - 1, W - 6, 15.5]); A.exhaust = [0, W - 8, 8]; A.fire.push([L * 0.5, cy, 40], [L - 20, cy, 40]); A.seat = [L - 18, 14, 30];
+      break;
+    }
+    case 'bike': case 'policebike': {
+      // a sport bike: two spoked wheels, a fairing and tank, the seat and tail, forks, bars, a chrome pipe
+      const cy = W / 2, pol = type === 'policebike', bodyM = pol ? M.white : M.body;
+      for (const x of [8, L - 8]) { m.cyl('y', x, 0, 7, 7, cy - 2, cy + 2, M.tyre, 4.6, 0); m.cyl('y', x, 0, 7, 4.8, cy - 1, cy + 1, M.rim); }
+      m.look = { ...m.look, belt: 18, z0: 8, roof: 24, wheels: [8, L - 8], wr: 7 };
+      m.box(14, cy - 3, 6, 30, cy + 3, 13, M.dark);                                                                                          // engine
+      deco(m, M.chrome, 14, 0, 6, 30, W, 13, (x, y, z) => (z | 0) % 3 === 0);
+      shell(m, { x0: 14, x1: L - 11, y0: cy - 4.5, y1: cy + 4.5, z0: 11, z1: 21, fr: 5, r: 2.5, rz: 2.5, mat: bodyM });                     // tank and fairing
+      shell(m, { x0: L - 17, x1: L - 9, y0: cy - 4, y1: cy + 4, z0: 13, z1: 24, fr: 6, br: -2, r: 2, mat: (x, y, z, s) => (z > 20 ? M.glass : bodyM) });   // nose and screen
+      m.box(8, cy - 3, 18, 26, cy + 3, 21, M.seat);                                                                                          // seat
+      shell(m, { x0: 3, x1: 14, y0: cy - 3, y1: cy + 3, z0: 15, z1: 22, br: 3, r: 1.5, mat: bodyM });                                       // tail
+      for (let k = 0; k < 9; k++) m.box(L - 9 - k * 0.5, cy - 3, 7 + k, L - 8 - k * 0.5, cy - 2, 8 + k, M.chrome);                          // forks
+      for (let k = 0; k < 9; k++) m.box(L - 9 - k * 0.5, cy + 2, 7 + k, L - 8 - k * 0.5, cy + 3, 8 + k, M.chrome);
+      m.box(L - 16, 1, 21, L - 14, W - 1, 23, M.trim);                                                                                      // bars
+      m.box(L - 10, cy - 2, 15, L - 8, cy + 2, 18, M.head);
+      m.box(3, cy - 2, 17, 5, cy + 2, 19, M.tail);
+      for (let k = 0; k < 14; k++) m.box(6 + k, W - 3, 7 + k * 0.35, 8 + k, W - 1, 9 + k * 0.35, M.chrome);                                 // exhaust
+      if (pol) {
+        for (const y of [0, W - 5]) shell(m, { x0: 2, x1: 13, y0: y, y1: y + 5, z0: 8, z1: 19, r: 1.5, rz: 1.5, mat: M.white });             // panniers
+        deco(m, M.stripeBlue, 2, 0, 12, 13, W, 14, (x, y, z, vv, side) => side === 'y');
+        deco(m, M.stripeBlue, 14, 0, 14, L - 11, W, 16, (x, y, z, vv, side) => side === 'y');
+        m.box(4, cy - 0.5, 22, 5, cy + 0.5, 30, M.trim); m.box(3, cy - 1, 30, 6, cy + 1, 33, M.blue); m.box(L - 11, cy - 4, 18, L - 10, cy - 2, 20, M.red); m.box(L - 11, cy + 2, 18, L - 10, cy + 4, 20, M.blue);
+        A.siren.push([4.5, cy, 31.5, 1], [L - 10.5, cy - 3, 19, 0], [L - 10.5, cy + 3, 19, 1]);
+      }
+      A.head.push([L - 9, cy, 16.5]); A.tail.push([4, cy, 18]); A.rev.push([4, cy, 18]); A.seat = [17, cy, 21]; A.exhaust = [6, W - 2, 8]; A.fire.push([22, cy, 14]);
+      break;
+    }
+    case 'bicycle': {
+      const cy = W / 2;
+      for (const x of [7, L - 7]) { m.cyl('y', x, 0, 7, 7, cy - 0.5, cy + 0.5, M.tyre, 6, 0); m.fill((xx, y, z) => ((Math.abs(xx - x) < 0.6 || Math.abs(z - 7) < 0.6 || Math.abs((xx - x) - (z - 7)) < 0.6) && Math.hypot(xx - x, z - 7) < 6 ? M.rim : -1), x - 6, cy - 0.5, 1, x + 6, cy + 0.5, 13); }
+      m.look = { ...m.look, belt: 14, z0: 7, roof: 20, wheels: [7, L - 7], wr: 7 };
+      for (let s = 0; s <= 24; s++) { const t = s / 24; m.box(7 + t * 13, cy - 0.5, 7 + t * 10, 9 + t * 13, cy + 0.5, 9 + t * 10, M.body); m.box(20 + t * 12, cy - 0.5, 17 - t * 0.5, 22 + t * 12, cy + 0.5, 18.5 - t * 0.5, M.body); m.box(20 - t * 1.5, cy - 0.5, 7 + t * 10, 22 - t * 1.5, cy + 0.5, 9 + t * 10, M.body); m.box(20 + t * 13, cy - 0.5, 7 + t * 0, 21 + t * 13, cy + 0.5, 8, M.body); }
+      for (let k = 0; k < 11; k++) m.box(L - 8 + k * 0.1, cy - 0.5, 7 + k, L - 7 + k * 0.1, cy + 0.5, 8 + k, M.chrome);                       // fork
+      m.box(15, cy - 1.5, 18, 21, cy + 1.5, 20, M.seat);                                                                                    // saddle
+      m.box(L - 9, cy - 4, 19, L - 7, cy + 4, 20, M.trim);                                                                                  // bars
+      if (V.rack) { m.box(L - 7, cy - 3, 13, L - 1, cy + 3, 18, M.wood); m.fill(() => 0, L - 6, cy - 2, 15, L - 2, cy + 2, 18); }            // basket
+      A.head.push([L - 3, cy, 15]); A.tail.push([3, cy, 14]); A.rev.push([3, cy, 14]); A.seat = [18, cy, 19];
+      break;
+    }
+    case 'speedboat': case 'policeboat': case 'dinghy': case 'jetski': {
+      const pol = type === 'policeboat', jet = type === 'jetski', din = type === 'dinghy';
+      const hz = jet ? 8 : din ? 9 : 12, cy = W / 2;
+      // speedboats keep a white hull and wear the paint as their stripe; the police boat is navy and white
+      const navy = m.mat({ ramp: R('#22305a'), k: 3 }), sb = type === 'speedboat', accent = sb ? M.body : M.stripeBlue;
+      const hullTop = pol ? navy : sb ? M.white : M.body, hullLow = pol ? navy : din ? M.lower : sb ? M.white : M.body;
+      const deck = din ? M.lower : jet ? M.dark : m.mat({ ramp: R(pol ? '#8a8e96' : '#e4d8bc'), k: 3, shade: (x, y) => ((y | 0) % 4 === 0 ? -0.5 : 0) });
+      const teak = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x, y) => ((y | 0) % 3 === 0 ? -0.9 : 0) });
+      m.fill((x, y, z) => {
+        const t = x / L, bow = t > 0.66 ? (t - 0.66) / 0.34 : 0;
+        const half = (W / 2 - 1) * (1 - bow * bow * 0.95) * (0.66 + 0.34 * (z / hz)) * (t < 0.02 ? 0.92 : 1);
+        if (Math.abs(y - cy) > half) return -1;
+        if (z > hz - 2) return Math.abs(y - cy) > half - 2.5 ? hullTop : (!din && !jet && !pol && t > 0.74) ? teak : deck;
+        if (z > hz * 0.42 && z < hz * 0.62) return pol ? M.stripeYellow : din ? hullLow : jet ? M.white : accent;
+        return z < hz * 0.42 ? hullLow : hullTop;
+      }, 0, 0, 0, L, W, hz);
+      if (din) {
+        m.fill((x, y) => (Math.abs(y - cy) < W / 2 - 4 && x > 5 && x < L - 14 ? 0 : -1), 0, 0, 3, L, W, hz);                                // open hull
+        deco(m, M.wood, 4, 0, 2, L - 13, W, 4, (x, y, z, vv, side) => side === 'z');
+        for (const x of [L * 0.45, L * 0.2]) m.box(x, 4, 3, x + 6, W - 4, 7, M.wood);                                                        // benches
+        m.box(0, cy - 4, 4, 6, cy + 4, 19, M.dark); m.box(-1, cy - 2, 0, 2, cy + 2, 5, M.trim); m.box(1, cy - 3, 16, 7, cy + 3, 19, M.trim);  // outboard
+        if (v & 1) { m.box(L * 0.3, 6, 3, L * 0.3 + 8, 12, 9, M.white); m.box(L * 0.3, 6, 9, L * 0.3 + 8, 12, 10, M.stripeBlue); }         // cooler
+        if (v & 2) for (const y of [5, W - 6]) for (let k = 0; k < 12; k++) m.box(L * 0.55 + k * 0.6, y, 6 + k * 1.4, L * 0.55 + k * 0.6 + 1, y + 1, 7 + k * 1.4, M.trim);   // rods
+        A.seat = [10, cy, 7];
+      }
+      if (type === 'speedboat') {
+        m.fill((x, y, z) => (x > L * 0.5 && x < L * 0.58 && Math.abs(y - cy) < W / 2 - 6 && z < hz + 8 - (x - L * 0.5) * 0.6 ? M.glass : -1), 0, 0, hz, L, W, hz + 9);
+        deco(m, M.chrome, L * 0.5, 0, hz + 6, L * 0.58, W, hz + 9, (x, y, z, vv, side) => side === 'z');
+        m.box(L * 0.3, 4, hz, L * 0.48, W - 4, hz + 1, M.seat);                                                                              // cockpit floor
+        for (const y of [5, cy + 2]) m.box(L * 0.36, y, hz + 1, L * 0.44, y + 9, hz + 5, deck);                                              // seats
+        m.box(L * 0.06, 4, hz, L * 0.26, W - 4, hz + 4, deck);                                                                              // rear bench
+        for (const y of [cy - 9, cy + 2]) { m.box(-2, y, 3, 4, y + 7, hz + 8, M.dark); m.box(-2, y, hz + 6, 5, y + 7, hz + 9, M.trim); }    // twin outboards
+        A.seat = [L * 0.4, cy - 5, hz + 4];
+      }
+      if (pol) {
+        shell(m, { x0: L * 0.36, x1: L * 0.72, y0: 7, y1: W - 7, z0: hz, z1: hz + 18, fr: 6, r: 2, rz: 2, mat: glassy(M.white, M.glass, { band: [hz + 7, hz + 15], pillars: [L * 0.54] }) });
+        lightbar(m, M, L * 0.48, L * 0.54, hz + 18, { wide: false });
+        m.box(L * 0.42, cy - 0.5, hz + 18, L * 0.42 + 1, cy + 0.5, hz + 30, M.trim);                                                       // antenna
+        for (const y of [3, W - 4]) { m.box(L * 0.1, y, hz, L * 0.9, y + 1, hz + 1, M.chrome); for (let x = L * 0.1; x < L * 0.9; x += 8) m.box(x, y, hz, x + 1, y + 1, hz + 6, M.chrome); m.box(L * 0.1, y, hz + 5, L * 0.36, y + 1, hz + 6, M.chrome); m.box(L * 0.72, y, hz + 5, L * 0.9, y + 1, hz + 6, M.chrome); }
+        const ring = m.mat({ ramp: R('#e86a2a'), k: 3 });
+        for (const y of [6, W - 7]) m.cyl('y', L * 0.6, 0, hz + 9, 3.5, y, y + 1, ring, 2, 0);
+        m.box(-2, cy - 5, 3, 4, cy + 5, hz + 8, M.dark);
+        A.seat = [L * 0.5, cy - 5, hz + 2];
+      }
+      if (jet) {
+        m.box(L * 0.32, cy - 3, hz, L * 0.66, cy + 3, hz + 4, M.seat);
+        shell(m, { x0: L * 0.6, x1: L * 0.86, y0: cy - 5, y1: cy + 5, z0: hz - 1, z1: hz + 5, fr: 4, r: 2, rz: 2, mat: M.body });
+        m.box(L * 0.64, 1, hz + 5, L * 0.68, W - 1, hz + 7, M.trim);
+        deco(m, M.white, 0, 0, hz - 3, L, W, hz, (x, y, z, vv, side) => side === 'y' && x > L * 0.2 && x < L * 0.6);
+        A.seat = [L * 0.48, cy, hz + 4];
+      }
+      A.head.push([L - 2, cy, hz + 1]); A.tail.push([1, cy - 4, hz], [1, cy + 4, hz]); A.wake = [0, cy]; A.fire.push([L * 0.3, cy, hz + 4]);
+      if (!A.seat) A.seat = [L * 0.4, cy, hz];
+      break;
+    }
+    // ---- scenery models (not driven in the game) ----
     case 'foodtruck': {
-      const y0 = 2, y1 = W - 8;                                        // it serves from the right-hand side (high y)
+      const y0 = 2, y1 = W - 8;
       shell(m, { x0: 1, x1: L - 1, y0, y1, z0: 5, z1: 58, r: 4, rz: 3, mat: (x, y, z, s) => {
         if (z < 9) return M.lower;
         if (x > L - 26 && z > 26 && z < 44 && (s.side < 1.6 || s.front < 2.2)) return M.glass;
@@ -201,34 +803,34 @@ export function vehicleModel(type, o = {}) {
       } });
       m.fill((x, y, z) => (x > L - 12 && z > 30 + (x - (L - 12)) * 1.8 ? 0 : -1), L - 12, 0, 30, L, W, 59);
       m.box(L * 0.22, y1, 42, L * 0.66, W, 44, M.awn); m.box(L * 0.22, W - 1, 39, L * 0.66, W, 42, M.awn2);
-      m.box(L * 0.22, y1, 23, L * 0.66, y1 + 4, 25, M.steel);           // serving counter
-      m.box(L * 0.4, W / 2 - 6, 58, L * 0.55, W / 2 + 6, 63, M.steel);  // roof vent
-      wheels(m, [L * 0.2, L * 0.78], 8, M, { inset: 3 });
+      m.box(L * 0.22, y1, 23, L * 0.66, y1 + 4, 25, M.steel);
+      m.box(L * 0.4, W / 2 - 6, 58, L * 0.55, W / 2 + 6, 63, M.steel);
+      wheels(m, [L * 0.2, L * 0.78], 8, M, { inset: 3, arch: 0 });
       m.fill((x, y, z) => (y > y1 && z < 20 ? 0 : -1), 0, 0, 0, L, W, 20);
       lamps(m, M, { zh: 14, h: 5, inset: 4, wd: 8, tailUp: 6 });
       break;
     }
     case 'tractor': {
-      shell(m, { x0: 30, x1: L - 2, y0: 14, y1: W - 14, z0: 12, z1: 30, r: 4, rz: 3, mat: (x, y, z) => (Math.round(x) % 6 === 0 && z > 16 && z < 26 ? M.lower : M.body) });   // hood with louvres
-      shell(m, { x0: 6, x1: 36, y0: 8, y1: W - 8, z0: 14, z1: 50, r: 2, rz: 2, mat: glassy(M.body, M.glass, { band: [26, 46], pillars: [21] }) });                  // cab
+      shell(m, { x0: 30, x1: L - 2, y0: 14, y1: W - 14, z0: 12, z1: 30, r: 4, rz: 3, mat: (x, y, z) => (Math.round(x) % 6 === 0 && z > 16 && z < 26 ? M.lower : M.body) });
+      shell(m, { x0: 6, x1: 36, y0: 8, y1: W - 8, z0: 14, z1: 50, r: 2, rz: 2, mat: glassy(M.body, M.glass, { band: [26, 46], pillars: [21] }) });
       m.box(6, 6, 48, 38, W - 6, 52, M.white);
-      m.cyl('z', L - 14, W / 2, 0, 1.6, 30, 46, M.trim);                                                                                                    // exhaust
-      for (const y of [0, W - 12]) m.cyl('y', 18, 0, 15, 15, y, y + 12, M.tyre, 8, M.hub);
-      for (const y of [4, W - 12]) m.cyl('y', L - 14, 0, 9, 9, y, y + 8, M.tyre, 5, M.hub);
+      m.cyl('z', L - 14, W / 2, 0, 1.6, 30, 46, M.trim);
+      for (const y of [0, W - 12]) m.cyl('y', 18, 0, 15, 15, y, y + 12, M.tyre, 8, M.rim);
+      for (const y of [4, W - 12]) m.cyl('y', L - 14, 0, 9, 9, y, y + 8, M.tyre, 5, M.rim);
       lamps(m, M, { zh: 22, h: 4, inset: 16, wd: 6, bumpers: false });
       break;
     }
     case 'combine': {
       const hx = L - 26;
-      shell(m, { x0: 4, x1: hx, y0: 26, y1: W - 26, z0: 16, z1: 56, r: 4, rz: 4, mat: M.body });                                                          // body and grain tank
+      shell(m, { x0: 4, x1: hx, y0: 26, y1: W - 26, z0: 16, z1: 56, r: 4, rz: 4, mat: M.body });
       m.box(10, 30, 56, 60, W - 30, 62, M.body);
       shell(m, { x0: hx - 28, x1: hx, y0: 40, y1: W - 40, z0: 44, z1: 70, r: 2, rz: 2, mat: glassy(M.body, M.glass, { band: [48, 66], pillars: [], sideGlass: true }) });
-      m.box(hx - 6, 4, 6, L, W - 4, 22, M.body); m.box(hx - 4, 4, 22, L - 2, W - 4, 24, M.trim);                                                          // header
+      m.box(hx - 6, 4, 6, L, W - 4, 22, M.body); m.box(hx - 4, 4, 22, L - 2, W - 4, 24, M.trim);
       m.cyl('y', L - 10, 0, 22, 9, 4, W - 4, M.trim, 6, 0);
       for (let y = 6; y < W - 6; y += 6) m.box(L - 2, y, 4, L, y + 2, 8, M.steel);
-      for (let k = 0; k < 50; k++) m.box(30 + k * 0.4, 20 - k * 0.3, 58 + k * 0.1, 33 + k * 0.4, 24 - k * 0.3, 61 + k * 0.1, M.body);                  // unloading auger
-      for (const y of [20, W - 34]) m.cyl('y', hx - 20, 0, 16, 16, y, y + 14, M.tyre, 9, M.hub);
-      for (const y of [28, W - 38]) m.cyl('y', 20, 0, 10, 10, y, y + 10, M.tyre, 6, M.hub);
+      for (let k = 0; k < 50; k++) m.box(30 + k * 0.4, 20 - k * 0.3, 58 + k * 0.1, 33 + k * 0.4, 24 - k * 0.3, 61 + k * 0.1, M.body);
+      for (const y of [20, W - 34]) m.cyl('y', hx - 20, 0, 16, 16, y, y + 14, M.tyre, 9, M.rim);
+      for (const y of [28, W - 38]) m.cyl('y', 20, 0, 10, 10, y, y + 10, M.tyre, 6, M.rim);
       break;
     }
     case 'plane': {
@@ -262,11 +864,11 @@ export function vehicleModel(type, o = {}) {
           return M.body;
         } });
       }
-      m.box(half, 6, 10, half + 6, W - 6, 54, M.dark);                                                           // articulation bellows
-      for (const [a, b] of [[30, 70], [half + 40, half + 80], [half - 60, half - 30]]) m.box(a, W / 2 - 12, 58, b, W / 2 + 12, 63, M.steel);   // roof units
+      m.box(half, 6, 10, half + 6, W - 6, 54, M.dark);
+      for (const [a, b] of [[30, 70], [half + 40, half + 80], [half - 60, half - 30]]) m.box(a, W / 2 - 12, 58, b, W / 2 + 12, 63, M.steel);
       for (let k = 0; k < 12; k++) { m.box(L * 0.62 + k * 1.5, W / 2 - 1, 63 + k, L * 0.62 + k * 1.5 + 2, W / 2 + 1, 64 + k, M.trim); m.box(L * 0.62 + 34 - k * 1.5, W / 2 - 1, 63 + k, L * 0.62 + 36 - k * 1.5, W / 2 + 1, 64 + k, M.trim); }
-      m.box(L * 0.62 + 10, W / 2 - 12, 75, L * 0.62 + 26, W / 2 + 12, 77, M.trim);                                // pantograph
-      for (const x of [30, half - 30, half + 36, L - 30]) m.cyl('y', x, 0, 5, 5, 4, W - 4, M.tyre, 3, M.hub);
+      m.box(L * 0.62 + 10, W / 2 - 12, 75, L * 0.62 + 26, W / 2 + 12, 77, M.trim);
+      for (const x of [30, half - 30, half + 36, L - 30]) m.cyl('y', x, 0, 5, 5, 4, W - 4, M.tyre, 3, M.rim);
       lamps(m, M, { zh: 14, h: 5, inset: 6, wd: 8 });
       const dest = m.mat({ ramp: R('#2a2a2e'), k: 2, emi: [255, 180, 60, 120 + lit * 120] });
       m.box(L - 6, W / 2 - 10, 50, L - 2, W / 2 + 10, 54, dest);
@@ -278,7 +880,6 @@ export function vehicleModel(type, o = {}) {
       const carDeck = m.mat({ ramp: R('#5a5e66'), k: 3, shade: (x, y) => (Math.abs((y % 46) - 23) < 0.8 ? 2.5 : hash(Math.round(x / 3), Math.round(y / 3), 2) > 0.9 ? -0.6 : 0) });
       const deckM = ferry ? carDeck : topDeck;
       const hullBody = ferry ? M.white : M.body;
-      // hull: blunt stern, pointed bow, flared sides
       m.fill((x, y, z) => {
         const t = x / L, bow = t > (ferry ? 0.8 : 0.66) ? (t - (ferry ? 0.8 : 0.66)) / (ferry ? 0.2 : 0.34) : 0;
         const halfW = (W / 2 - 2) * (1 - bow * bow * 0.9) * (0.8 + 0.2 * (z / hz)), stern = t < 0.03 ? t / 0.03 : 1;
@@ -290,14 +891,13 @@ export function vehicleModel(type, o = {}) {
         return hullBody;
       }, 0, 0, 0, L, W, hz);
       if (!ferry) {
-        for (let x = 6; x < L - 20; x += 13) for (const y of [1, W - 6]) m.cyl('y', x, 0, hz - 6, 4.5, y, y + 5, M.tyre, 2.2, 0);   // fender tyres
+        for (let x = 6; x < L - 20; x += 13) for (const y of [1, W - 6]) m.cyl('y', x, 0, hz - 6, 4.5, y, y + 5, M.tyre, 2.2, 0);
         shell(m, { x0: L * 0.42, x1: L * 0.72, y0: cy - 18, y1: cy + 18, z0: hz, z1: hz + 26, r: 3, rz: 2, mat: glassy(M.white, M.glass, { band: [hz + 12, hz + 22], pillars: [L * 0.52, L * 0.62] }) });
         shell(m, { x0: L * 0.5, x1: L * 0.66, y0: cy - 12, y1: cy + 12, z0: hz + 26, z1: hz + 38, r: 2, mat: glassy(M.white, M.glass, { band: [hz + 28, hz + 36], pillars: [] }) });
-        m.cyl('z', L * 0.36, cy, 0, 5, hz, hz + 34, M.dark); m.box(L * 0.36 - 5, cy - 5, hz + 30, L * 0.36 + 5, cy + 5, hz + 34, red);   // funnel
-        m.box(L * 0.6, cy - 1, hz + 38, L * 0.6 + 2, cy + 1, hz + 46, M.trim);                                  // mast
-        m.box(L * 0.1, cy - 8, hz, L * 0.2, cy + 8, hz + 6, M.trim);                                            // towing bitt
+        m.cyl('z', L * 0.36, cy, 0, 5, hz, hz + 34, M.dark); m.box(L * 0.36 - 5, cy - 5, hz + 30, L * 0.36 + 5, cy + 5, hz + 34, red);
+        m.box(L * 0.6, cy - 1, hz + 38, L * 0.6 + 2, cy + 1, hz + 46, M.trim);
+        m.box(L * 0.1, cy - 8, hz, L * 0.2, cy + 8, hz + 6, M.trim);
       } else {
-        // car deck at the stern (open), a two-storey passenger block forward, an open top deck, funnels
         const c0 = L * 0.42, c1 = L * 0.86;
         shell(m, { x0: c0, x1: c1, y0: 6, y1: W - 6, z0: hz, z1: hz + 50, fr: 8, r: 4, rz: 2, mat: (x, y, z, s) => {
           const win = (z > hz + 10 && z < hz + 20) || (z > hz + 32 && z < hz + 42);
@@ -308,200 +908,129 @@ export function vehicleModel(type, o = {}) {
         m.box(c0 + 4, 10, hz + 50, c1 - 12, W - 10, hz + 51, topDeck);
         for (let x = c0 + 10; x < c1 - 20; x += 18) m.box(x, cy - 30, hz + 51, x + 10, cy - 26, hz + 54, M.wood);
         for (let x = c0 + 10; x < c1 - 20; x += 18) m.box(x, cy + 26, hz + 51, x + 10, cy + 30, hz + 54, M.wood);
-        for (const y of [8, W - 9]) m.box(c0 + 2, y, hz + 51, c1 - 10, y + 1, hz + 58, M.chrome);                // top-deck rails
+        for (const y of [8, W - 9]) m.box(c0 + 2, y, hz + 51, c1 - 10, y + 1, hz + 58, M.chrome);
         for (const fy of [cy - 22, cy + 22]) { m.cyl('z', c0 + 40, fy, 0, 9, hz + 51, hz + 78, M.white); m.box(c0 + 31, fy - 9, hz + 66, c0 + 49, fy + 9, hz + 70, red); m.box(c0 + 31, fy - 9, hz + 70, c0 + 49, fy + 9, hz + 73, navy); m.cyl('z', c0 + 40, fy, 0, 6, hz + 78, hz + 81, M.dark); }
-        m.box(c1 - 30, cy - 2, hz + 51, c1 - 26, cy + 2, hz + 92, M.white);                                     // mast
-        for (const y of [6, W - 7]) m.box(4, y, hz, c0, y + 1, hz + 8, M.chrome);                               // car-deck rails
+        m.box(c1 - 30, cy - 2, hz + 51, c1 - 26, cy + 2, hz + 92, M.white);
+        for (const y of [6, W - 7]) m.box(4, y, hz, c0, y + 1, hz + 8, M.chrome);
         for (let k = 0; k < 8; k++) m.box(L * 0.18 + k * 4, 14, hz, L * 0.18 + k * 4 + 2, W - 14, hz + 1, M.paintLine);
       }
       break;
     }
-    case 'pickup': {
-      shell(m, { x0: 1, x1: L - 1, z0: 4, z1: 21, r: 6, rz: 2, mat: (x, y, z) => (z < 7 ? M.lower : M.body) });
-      shell(m, { x0: 50, x1: 84, z0: 21, z1: 37, fr: 9, br: 1, tuck: 3, r: 3, rz: 2, mat: glassy(M.body, M.glass, { band: [22, 34], pillars: [68] }) });
-      m.fill((x, y) => (x > 4 && x < 49 && y > 4 && y < W - 5 ? 0 : -1), 0, 0, 11, L, W, 22);
-      m.box(5, 5, 10, 49, W - 5, 11, M.trim);
-      wheels(m, [L * 0.2, L * 0.8], 7.5, M);
-      lamps(m, M, { zh: 14, h: 4, inset: 4, wd: 8 });
-      (o.cargo || []).forEach((t, i) => crateOn(m, 8 + (i % 3) * 13, 8 + Math.floor(i / 3) * 16, 11, t, M));
-      break;
-    }
-    case 'van': {
-      shell(m, { x0: 1, x1: L - 1, z0: 4, z1: 46, fr: 0, r: 5, rz: 3, mat: (x, y, z, s) => {
-        if (z < 8) return M.lower;
-        if (x > L - 30 && z > 24 && z < 42 && (s.side < 1.6 || s.front < 2.2) && !(s.side < 1.6 && Math.abs(x - (L - 22)) < 1.5)) return M.glass;
-        return M.body;
-      } });
-      m.fill((x, y, z) => (x > L - 14 && z > 24 + (x - (L - 14)) * 1.6 ? 0 : -1), L - 14, 0, 24, L, W, 47);               // sloped windscreen
-      m.fill((x, y, z) => (x > L - 15 && z > 23 + (x - (L - 15)) * 1.6 && z < 25 + (x - (L - 15)) * 1.6 && y > 3 && y < W - 3 ? M.glass : -1), L - 15, 0, 23, L, W, 47);
-      for (let x = 20; x < L - 34; x += 30) m.box(x, 0, 10, x + 1, 2, 40, M.trim);                                     // panel seams
-      wheels(m, [L * 0.18, L * 0.8], 8, M);
-      lamps(m, M, { zh: 14, h: 5, inset: 4, wd: 9, tailUp: 6 });
-      break;
-    }
-    case 'ambulance': case 'armored': case 'swat': {
-      M.cab = M.body;
-      const boxH = type === 'ambulance' ? 54 : type === 'swat' ? 52 : 50;
-      const cx0 = truckCab(m, M, L - 1, 42, { cabL: 24, hood: 14 });
-      shell(m, { x0: 1, x1: cx0 + 2, z0: 7, z1: boxH, r: 3, rz: 3, mat: (x, y, z, s) => {
-        if (type === 'ambulance' && z > 18 && z < 23) return M.stripeRed;
-        if (type !== 'ambulance' && s.side < 1.6 && z > 30 && z < 36 && (Math.floor(x / 14) % 3 === 1)) return M.glass;   // gun-port windows
-        if (type === 'armored' && (Math.round(x) % 12 === 0 || Math.round(z) % 12 === 0) && s.side < 1.6) return M.lower;   // riveted plates
-        return M.body;
-      } });
-      wheels(m, [L * 0.18, L * 0.8], 8.5, M);
-      lamps(m, M, { zh: 14, h: 5, inset: 4, wd: 8, tailUp: 10 });
-      if (type === 'ambulance') { lightbar(m, M, cx0 - 2, cx0 + 4, boxH); for (const x of [4, cx0 - 8]) m.box(x, 2, boxH - 6, x + 4, 5, boxH - 2, M.red); }
-      if (type === 'swat') { lightbar(m, M, cx0 + 4, cx0 + 12, 42); m.box(6, 4, boxH, cx0 - 4, 6, boxH + 3, M.trim); m.box(6, W - 6, boxH, cx0 - 4, W - 4, boxH + 3, M.trim); }
-      if (type === 'armored') for (const x of [6, cx0 - 10]) m.box(x, 2, boxH - 4, x + 4, 5, boxH - 1, M.amber);
-      break;
-    }
-    case 'bus': {
-      shell(m, { x0: 1, x1: L - 1, z0: 7, z1: 62, r: 4, rz: 4, mat: (x, y, z, s) => {
-        if (z < 12) return M.lower;
-        if (z > 18 && z < 24) return M.stripeTeal;
-        const win = z > 30 && z < 50;
-        if (win && (s.side < 1.6 || s.front < 2.2) && !(s.side < 1.6 && Math.round(x) % 22 < 2)) return M.glass;
-        return M.body;
-      } });
-      m.box(L / 2 - 20, W / 2 - 8, 62, L / 2, W / 2 + 8, 66, M.steel);                                               // roof units
-      m.box(30, W / 2 - 6, 62, 44, W / 2 + 6, 65, M.steel);
-      for (const x of [L - 30, L / 2 + 6]) m.box(x, 0, 12, x + 14, 2, 50, M.glass);                                   // doors
-      wheels(m, [L * 0.18, L * 0.82], 9, M);
-      lamps(m, M, { zh: 14, h: 5, inset: 4, wd: 8 });
-      break;
-    }
-    case 'flatbed': case 'boxtruck': case 'dumptruck': case 'mixer': case 'tanker': case 'garbage': case 'towtruck': {
-      M.cab = type === 'tanker' || type === 'dumptruck' ? M.body : M.white;
-      const cx0 = truckCab(m, M, L - 1, 46, { cabL: 30, hood: 14 });
-      // chassis rail and fuel tank
-      m.box(4, 10, 6, cx0, W - 10, 11, M.trim);
-      m.cyl('x', 0, 5, 9, 4, cx0 - 22, cx0 - 4, M.steel);
-      const back0 = 2, back1 = cx0 - 2;
-      if (type === 'flatbed') {
-        m.box(back0, 3, 11, back1, W - 3, 15, M.wood);
-        for (const [a, b] of [[3, 5], [W - 5, W - 3]]) m.box(back0, a, 15, back1, b, 20, M.wood);
-        m.box(back1 - 3, 3, 15, back1, W - 3, 42, M.trim);                                                               // headboard
-        (o.cargo || []).forEach((t, i) => crateOn(m, back0 + 4 + (i % 3) * 26, 8 + Math.floor(i / 3) * 22, 15, t, M));
-      } else if (type === 'boxtruck' || type === 'garbage') {
-        const col = type === 'garbage' ? m.mat({ ramp: R('#3f7a3a'), k: 3 }) : M.white;
-        shell(m, { x0: back0, x1: back1, z0: 11, z1: 62, r: 2, rz: 2, mat: (x, y, z, s) => {
-          if (type === 'boxtruck' && s.side < 1.6 && z > 30 && z < 44 && x > back1 * 0.35 && x < back1 * 0.6) return m.mats.length > 0 ? M.pink ?? (M.pink = m.mat({ ramp: R('#d86a90'), k: 3 })) : col;
-          if ((Math.round(x) % 18 === 0) && s.side < 1.6) return type === 'garbage' ? M.lower : M.trim;
-          return col;
-        } });
-      } else if (type === 'dumptruck') {
-        shell(m, { x0: back0, x1: back1, z0: 11, z1: 40, br: -4, r: 2, mat: (x, y, z, s) => (s.side < 1.6 && Math.round(x) % 10 === 0 ? M.lower : M.body) });
-        const gravel = m.mat({ ramp: R('#6e6258'), k: 3, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.6 });
-        m.fill((x, y, z) => (x > back0 + 3 && x < back1 - 3 && y > 3 && y < W - 3 ? (z < 34 + Math.sin(x * 0.2) * 2 + Math.cos(y * 0.3) * 2 ? gravel : 0) : -1), 0, 0, 16, L, W, 41);
-      } else if (type === 'mixer') {
-        const drum = m.mat({ ramp: MAT.paintWhiteCar, k: 3 }), band = m.mat({ ramp: R('#c8302c'), k: 3 });
-        m.fill((x, y, z) => { const t = (x - back0) / (back1 - back0); const rr = 20 * Math.sin(Math.min(1, t * 1.15) * Math.PI * 0.95 + 0.2); const cz = 32 + t * 6; return (y - W / 2) ** 2 + (z - cz) ** 2 < rr * rr ? (Math.floor(t * 6) % 2 ? band : drum) : -1; }, back0, 0, 10, back1, W, 62);
-      } else if (type === 'tanker') {
-        const tank = m.mat({ ramp: MAT.chrome, k: 3 });
-        m.cyl('x', 0, W / 2, 33, W / 2 - 3, back0, back1, tank);
-        m.fill((x, y, z) => (Math.abs(z - 33) < 2.5 && (y < 5 || y > W - 5) ? M.stripeRed : -1), back0 + 4, 0, 30, back1 - 4, W, 36);
-        for (let x = back0 + 14; x < back1 - 10; x += 30) m.cyl('z', x, W / 2, 0, 4, 52, 55, M.steel);
-      } else {                                                                                                         // tow truck
-        m.box(back0, 4, 11, back1, W - 4, 22, M.body);
-        const boom = m.mat({ ramp: R('#2f4a8a'), k: 3 });
-        for (let s = 0; s < 46; s++) m.box(back1 - 16 - s * 0.9, W / 2 - 3, 22 + s * 0.55, back1 - 10 - s * 0.9, W / 2 + 3, 26 + s * 0.55, boom);
-        m.box(2, W / 2 - 1, 30, 4, W / 2 + 1, 46, M.trim);
-        lightbar(m, M, cx0 + 6, cx0 + 14, 46, { amber: true });
-      }
-      wheels(m, [L * 0.14, L * 0.28, L * 0.84], 9.5, M);
-      lamps(m, M, { zh: 14, h: 5, inset: 3, wd: 8 });
-      break;
-    }
-    case 'firetruck': {
-      shell(m, { x0: 1, x1: L - 1, z0: 7, z1: 54, r: 3, rz: 3, mat: (x, y, z, s) => {
-        if (z > 26 && z < 29) return M.white;
-        if (x > L - 34 && z > 34 && z < 50 && (s.side < 1.6 || s.front < 2.2)) return M.glass;
-        if (s.side < 1.6 && x > 30 && x < L - 40 && Math.round(x) % 22 === 0) return M.lower;                      // compartment doors
-        return M.body;
-      } });
-      const lad = m.mat({ ramp: MAT.chrome, k: 3 });
-      for (const y of [8, W - 10]) m.box(10, y, 56, L - 30, y + 2, 59, lad);
-      for (let x = 12; x < L - 30; x += 6) m.box(x, 8, 56, x + 1, W - 8, 58, lad);
-      for (const x of [10, L - 34]) m.box(x, 8, 54, x + 4, W - 8, 56, M.trim);
-      lightbar(m, M, L - 30, L - 22, 54);
-      wheels(m, [L * 0.14, L * 0.26, L * 0.82], 9.5, M);
-      lamps(m, M, { zh: 14, h: 5, inset: 3, wd: 8 });
-      break;
-    }
-    case 'bike': case 'policebike': {
-      const cy = W / 2;
-      for (const x of [7, L - 8]) m.cyl('y', x, 0, 7, 7, cy - 2, cy + 2, M.tyre, 3.5, M.hub);
-      shell(m, { x0: 10, x1: L - 12, y0: cy - 4, y1: cy + 4, z0: 8, z1: 20, fr: -4, r: 2, rz: 2, mat: M.body });          // fairing / tank
-      m.box(10, cy - 3, 19, 26, cy + 3, 22, M.dark);                                                                     // seat
-      m.box(L - 14, cy - 6, 22, L - 12, cy + 6, 24, M.trim);                                                             // bars
-      m.box(L - 12, cy - 2, 15, L - 10, cy + 2, 19, M.head);
-      m.box(4, cy - 3, 11, 12, cy - 1, 13, M.chrome);                                                                    // exhaust
-      m.box(6, cy - 2, 16, 8, cy + 2, 18, M.tail);
-      if (type === 'policebike') { for (const y of [cy - 6, cy + 3]) m.box(4, y, 9, 14, y + 3, 19, M.white); m.box(12, cy - 1, 24, 14, cy + 1, 30, M.trim); m.box(12, cy - 1, 30, 14, cy + 1, 32, M.blue); }
-      (o.cargo || []).slice(0, 1).forEach((t) => crateOn(m, 1, cy - 6, 20, t, M));
-      break;
-    }
-    case 'bicycle': {
-      const cy = W / 2;
-      for (const x of [7, L - 7]) m.cyl('y', x, 0, 7, 7, cy - 1, cy + 1, M.tyre, 5.5, 0);
-      for (let s = 0; s <= 20; s++) { const t = s / 20; m.box(7 + t * 13, cy - 1, 7 + t * 9, 9 + t * 13, cy + 1, 9 + t * 9, M.body); m.box(20 + t * 13, cy - 1, 16 - t * 9, 22 + t * 13, cy + 1, 18 - t * 9, M.body); }
-      m.box(9, cy - 2, 17, 15, cy + 2, 19, M.dark); m.box(L - 10, cy - 5, 18, L - 8, cy + 5, 20, M.trim);
-      m.box(L - 8, cy - 3, 13, L - 2, cy + 3, 17, M.trim);                                                               // basket
-      break;
-    }
-    case 'speedboat': case 'policeboat': case 'dinghy': case 'jetski': {
-      const hz = type === 'jetski' ? 8 : type === 'dinghy' ? 9 : 12, cy = W / 2;
-      const deck = type === 'dinghy' ? M.lower : m.mat({ ramp: MAT.woodDock, k: 3 });
-      m.fill((x, y, z) => {
-        const t = x / L, bow = t > 0.68 ? (t - 0.68) / 0.32 : 0;
-        const half = (W / 2 - 1) * (1 - bow * bow * 0.95) * (0.62 + 0.38 * (z / hz));
-        if (Math.abs(y - cy) > half) return -1;
-        if (z > hz - 2) return Math.abs(y - cy) > half - 2.5 ? M.body : type === 'jetski' ? M.dark : deck;
-        if (type !== 'dinghy' && z > hz * 0.45 && z < hz * 0.62) return type === 'policeboat' ? M.blue : M.stripeTeal;
-        return z < 3 ? M.lower : M.body;
-      }, 0, 0, 0, L, W, hz);
-      if (type === 'dinghy') { m.fill((x, y) => (Math.abs(y - cy) < W / 2 - 4 && x > 6 && x < L - 16 ? 0 : -1), 0, 0, 3, L, W, hz); m.box(0, cy - 4, 4, 6, cy + 4, 18, M.dark); m.box(30, 4, 3, 36, W - 4, 7, deck); }
-      if (type === 'speedboat') { m.fill((x, y, z) => (x > L * 0.52 && x < L * 0.6 && Math.abs(y - cy) < W / 2 - 6 ? M.glass : -1), 0, 0, hz, L, W, hz + 8); m.box(L * 0.3, cy - 8, hz, L * 0.5, cy + 8, hz + 4, M.interior); m.box(0, cy - 5, hz - 4, 3, cy + 5, hz + 6, M.dark); }
-      if (type === 'policeboat') { shell(m, { x0: L * 0.35, x1: L * 0.7, y0: 8, y1: W - 8, z0: hz, z1: hz + 18, fr: 6, r: 2, rz: 2, mat: glassy(M.white, M.glass, { band: [hz + 7, hz + 15], pillars: [L * 0.52] }) }); lightbar(m, M, L * 0.45, L * 0.55, hz + 18); for (const y of [3, W - 4]) m.box(L * 0.15, y, hz, L * 0.85, y + 1, hz + 6, M.chrome); }
-      if (type === 'jetski') { m.box(L * 0.35, cy - 3, hz, L * 0.62, cy + 3, hz + 4, M.dark); m.box(L * 0.62, cy - 6, hz + 2, L * 0.66, cy + 6, hz + 6, M.trim); }
-      (o.cargo || []).forEach((t, i) => crateOn(m, 4 + i * 14, cy - 6, hz, t, M));
-      break;
-    }
     default: return vehicleModel('sedan', o);
   }
+  // variant wear: rust and dirt (civilian models), blood on the front
+  const civ = type === 'compact' || type === 'sedan' || type === 'pickup' || type === 'van' || type === 'suv' || type === 'dinghy';
+  if (civ && V.rusty) {
+    deco(m, M.rust, 0, 0, 0, L, W, 14, (x, y, z, vv, side) => vv === M.body && side !== 'z' && vnoiseLite(x, y, z) > 0.78);
+  }
+  if (o.bloody) deco(m, M.blood, L * 0.8, 0, 0, L, W, m.h, (x, y, z, vv) => vv !== M.glass && vv !== M.tyre && vnoiseLite(x * 1.6, y * 1.6, z * 1.6) > 0.55);
+  if (o.state && o.state !== 'clean') applyState(m, M, o.state, type);
   m.smooth = 2;
-  if (o.state && o.state !== 'clean') applyState(m, o.state, type);
+  if (o.dry) return m;                                   // anchors only: no normals
+  m.prepare(2);
+  if (m.fixNormals) m.fixNormals();
+  patchHidden(m);
   return m;
 }
 
-// damage: dents and scratches darken the paint, glass cracks, a wreck loses its front, a burnt-out shell
-// turns black and loses its glass
-function applyState(m, state, type) {
-  const n = m.mats.length;
-  const remap = new Array(n).fill(0).map((_, i) => i);
-  const charred = m.mat({ ramp: R('#34333a', 6, 2), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.6 + (z > 14 ? 0.6 : 0) });
-  const rust = m.mat({ ramp: R('#8a4e2c'), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.4 });
-  const scuff = new Map();
-  for (let i = 1; i < n; i++) {
-    const M = m.mats[i];
-    if (state === 'burnt') remap[i] = M.flag & F_GLASS ? 0 : charred;
-    else if (M.flag & F_GLASS) scuff.set(i, m.mat({ ...M, shade: (x, y, z) => ((Math.round(x * 1.3 + z * 2) % 7) < 1 ? 3 : 0) }));
-    else scuff.set(i, m.mat({ ...M, k: Math.max(0, M.k - 1) }));
-  }
-  const L = m.w;
-  for (let z = 0; z < m.h; z++) for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) {
+// ---- damage and fire ------------------------------------------------------------------------------------
+// dented: scuffed paint and a cracked windscreen; wrecked: the front crushed in, glass broken out, a flat;
+// burning: paint scorching from the engine back, fire behind the glass; burnt: a charred shell, no glass,
+// no tyres; smoulder: burnt with glowing embers.
+function applyState(m, M, state, type) {
+  const L = m.w, W = m.d, cy = W / 2, burntish = state === 'burnt' || state === 'smoulder';
+  const charred = m.mat({ ramp: ramp('#2a282c', 6, 2, { light: 0.35 }), k: 1.4, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.6 + (z > 14 ? 0.4 : 0) });
+  const ash = m.mat({ ramp: R('#5a5450', 5, 2), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 2 });
+  const ember = m.mat({ ramp: R('#e86a2a', 5, 3), k: 3, emi: [255, 120, 40, 230] });
+  // fire behind the glass: a dim orange glow broken by soot, brightest low in the cabin
+  const fireGlass = m.mat({ ramp: R('#d86a28', 6, 3), k: 2.2, emi: [255, 120, 40, 150], flag: F_NOCAST, shade: (x, y, z) => (hash(x >> 1, z >> 1, 5) - 0.5) * 2.4 - (z - 20) * 0.08 });
+  const soot = m.mat({ ramp: R('#2a2626', 5, 2), k: 1.5, flag: F_GLASS });
+  const primer = m.mat({ ramp: R('#8a8a86', 5, 2), k: 2.2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) });
+  const scorch = m.mat({ ramp: R('#3a3438', 5, 2), k: 1.5, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.4 });
+  const crack = m.mat({ ramp: R('#c8d8e4', 5, 3), k: 3, flag: F_GLASS });
+  const scuffs = new Map();
+  const scuffOf = (v) => { if (!scuffs.has(v)) { const Mv = m.mats[v]; scuffs.set(v, m.mat({ ...Mv, k: Math.max(0, Mv.k - 1.2), shade: null, emi: null })); } return scuffs.get(v); };
+  const small = type === 'bicycle' || type === 'bike' || type === 'policebike' || type === 'jetski';
+  const crushD = state === 'wrecked' ? (small ? 4 : 9) : burntish ? (small ? 2 : 5) : state === 'dented' ? 3 : 0;
+  const isLamp = (v) => v === M.head || v === M.tail || v === M.rev || v === M.brakeL || v === M.red || v === M.blue || v === M.amber;
+  for (let z = 0; z < m.h; z++) for (let y = 0; y < W; y++) for (let x = 0; x < L; x++) {
     const i = m.idx(x, y, z), v = m.v[i];
     if (!v) continue;
-    if (state === 'burnt') { if (m.mats[v].flag & F_GLASS && z > 6) m.v[i] = 0; else m.v[i] = remap[v] ? (vnoiseLite(x, y, z) > 0.74 ? rust : remap[v]) : 0; continue; }
+    const Mv = m.mats[v], glass = (Mv.flag & F_GLASS) !== 0, front = x / L;
+    // the crushed front: an irregular bite out of the nose (deeper toward one corner)
+    if (crushD) {
+      const bite = crushD * (0.55 + 0.45 * (y / W)) * (0.7 + 0.6 * hash(y >> 2, z >> 2, 9));
+      if (x > L - 1 - bite && z > 2) { m.v[i] = 0; continue; }
+    }
+    if (burntish) {
+      if (glass && z > 4) { m.v[i] = 0; continue; }
+      if (v === M.tyre) { m.v[i] = z < 2 ? ash : 0; continue; }
+      if (v === M.interior || v === M.seat) { m.v[i] = ash; continue; }
+      m.v[i] = v === M.rim || v === M.chrome ? scuffOf(v) : (state === 'smoulder' && hash(x >> 1, (y >> 1) * 7 + (z >> 1), 13) > 0.93) ? ember : vnoiseLite(x, y, z) > 0.9 ? M.rust : charred;
+      continue;
+    }
+    if (state === 'burning') {
+      if (glass) { m.v[i] = hash(x >> 1, (y >> 1) + (z >> 1) * 3, 21) > 0.55 ? fireGlass : soot; continue; }
+      const sc = (front - 0.45) * 2.4 + (vnoiseLite(x, y, z) - 0.5) * 1.2 + (z > 20 ? 0.25 : 0);
+      if (!isLamp(v) && v !== M.tyre && sc > 0.35) m.v[i] = sc > 0.85 ? charred : scorch;
+      continue;
+    }
+    // dented / wrecked
+    if (glass) {
+      if (state === 'wrecked' && front < 0.62 && hash(x >> 1, (y >> 1) + z * 5, 4) > 0.35 && z > 4) { m.v[i] = 0; continue; }
+      // a crack web round an impact point on the windscreen
+      if (front > 0.55) { const dy = y - W * 0.62, dz = z - (m.look && m.look.belt ? m.look.belt + 6 : 24), a = Math.atan2(dz, dy), r = Math.hypot(dy, dz); if (r < 2 || Math.abs((a * 7 / Math.PI) % 1) < 0.16 || Math.abs(r - 5) < 0.5 || Math.abs(r - 9) < 0.5 || hash(x, y * 3 + z, 6) > (state === 'wrecked' ? 0.8 : 0.94)) m.v[i] = crack; }
+      continue;
+    }
+    if (isLamp(v)) { if (front > 0.7 && state === 'wrecked') m.v[i] = M.dark; continue; }
     const h = hash(x, y * 7 + z, 17);
-    const front = x / L;
-    if (state === 'wrecked' && front > 0.82 && hash(x >> 2, y >> 2, 3) > 0.35 + (1 - front) * 2) { m.v[i] = 0; continue; }
-    if (h < (state === 'wrecked' ? 0.28 : 0.12) * (0.4 + front)) m.v[i] = scuff.get(v) ?? v;
-    if ((m.mats[v].flag & F_GLASS) && front > 0.6) m.v[i] = scuff.get(v) ?? v;
+    if (front > 0.72 && v !== M.tyre && v !== M.rim && vnoiseLite(x * 1.5, y * 1.5, z * 1.5) > (state === 'wrecked' ? 0.62 : 0.78)) { m.v[i] = primer; continue; }
+    if (h < (state === 'wrecked' ? 0.3 : 0.14) * (0.5 + front)) m.v[i] = scuffOf(v);
+  }
+  if (state === 'wrecked') {
+    // a flat front tyre: the bottom rows of one front wheel squashed out
+    for (let z = 0; z < 3; z++) for (let y = 0; y < W; y++) for (let x = Math.floor(L * 0.74); x < L; x++) { const i = m.idx(x, y, z); if (m.v[i] === M.tyre && y > cy) m.v[i] = 0; }
   }
   m.prepared = false;
 }
 
-// cheap 3D value noise for rust patches
+// Vox.render marches each pixel's ray one height step at a time, so on a sloped or stepped surface it
+// often lands on the voxel just under the surface, which prepare() leaves as interior (no normal, no
+// occlusion): those pixels come out a step darker and dither into stripes. Give every near-surface
+// interior voxel the average normal and occlusion of its surface neighbours. Call after prepare().
+const N6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+export function patchHidden(m) {
+  if (!m.prepared) m.prepare(m.smooth ?? 1);
+  const { w, d, h, v } = m, n = w * d * h, wd = w * d;
+  // near the surface = within one voxel (26-neighbourhood) of an empty cell: dilate the empty mask on x, y, z
+  const a = new Uint8Array(n), b = new Uint8Array(n);
+  for (let i = 0; i < n; i++) a[i] = v[i] ? 0 : 1;
+  for (let i = 0; i < n; i++) { const x = i % w; b[i] = a[i] | (x > 0 ? a[i - 1] : 1) | (x < w - 1 ? a[i + 1] : 1); }
+  for (let i = 0; i < n; i++) { const y = ((i / w) | 0) % d; a[i] = b[i] | (y > 0 ? b[i - w] : 1) | (y < d - 1 ? b[i + w] : 1); }
+  for (let i = 0; i < n; i++) { const z = (i / wd) | 0; b[i] = a[i] | (z > 0 ? a[i - wd] : 1) | (z < h - 1 ? a[i + wd] : 1); }
+  for (let i = 0; i < n; i++) {
+    if (!v[i] || !b[i] || m.nx[i] || m.ny[i] || m.nz[i]) continue;
+    const x = i % w, y = ((i / w) | 0) % d, z = (i / wd) | 0;
+    let ax = 0, ay = 0, az = 0, ao = 0, c = 0;
+    for (const [dx, dy, dz] of N6) {
+      const xx = x + dx, yy = y + dy, zz = z + dz;
+      if (xx < 0 || yy < 0 || zz < 0 || xx >= w || yy >= d || zz >= h) continue;
+      const j = i + dx + dy * w + dz * wd;
+      if (!v[j] || (!m.nx[j] && !m.ny[j] && !m.nz[j])) continue;
+      ax += m.nx[j]; ay += m.ny[j]; az += m.nz[j]; ao += m.ao[j]; c++;
+    }
+    if (c) { const l = Math.hypot(ax, ay, az) || 1; m.nx[i] = ax / l; m.ny[i] = ay / l; m.nz[i] = az / l; m.ao[i] = ao / c; }
+    else { m.nz[i] = 1; m.ao[i] = 0.8; }
+  }
+}
+
+// cheap 3D value noise for rust patches and scorch
 function vnoiseLite(x, y, z) { const s = 6, ix = Math.floor(x / s), iy = Math.floor(y / s), iz = Math.floor(z / s); return (hash(ix, iy * 31 + iz, 41) * 0.6 + hash(Math.floor(x / 3), Math.floor((y + z) / 3), 43) * 0.4); }
+
+// lamp / siren / seat / exhaust / fire points of a model (model coordinates), measured once per type
+const ANCHORS = new Map();
+export function vehicleAnchors(type) {
+  let a = ANCHORS.get(type);
+  if (!a) { const m = vehicleModel(type, { dry: true }); a = { ...m.anchors, L: m.w, W: m.d, H: VEHICLE_TALL[type] || 36 }; ANCHORS.set(type, a); }
+  return a;
+}

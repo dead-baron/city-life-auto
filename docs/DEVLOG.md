@@ -1758,3 +1758,59 @@ The full art overhaul (see the art v2 plan) has started. The live game is unchan
   - The only black-market finds are two fictional glowing caps.
 - **Preview:** `district-preview.html?m=<module>&d=<scene>` loads any scene module. A module can also set its own default lighting (`PRESET`).
 - **Comparisons:** `docs/art-v2/plants-v1.png`, `water-v1.png`, `rock-v1.png`, `biomes-v1.png` and `nature-v1.png`.
+
+## 2026-10-06 · Art v2 in the live game (opt-in): the v2 world renderer
+Turn it on with **Settings → World art: New**, or add `?art=2` to the URL. `?art=1` forces the classic renderer.
+
+Everything here is client-side. Server, shared code and the network are unchanged, so players who don't opt in see the same game as before.
+
+- **Frame split:** `render()` in `client/main.js` is now four steps:
+  - `prepFrame`: camera, interpolation, sky and entity buckets.
+  - `tickVisuals`: every side effect that used to hide inside draw functions (particles, decals, sounds, door and gate easing, signal heads, birds).
+  - `drawWorldV1` (the classic renderer, unchanged) or the new `World2.frame`.
+  - `drawOverlays`: aim line, labels, markers and rain.
+
+  The classic renderer was checked against before-and-after screenshots on desktop, phone landscape and portrait, day and night.
+- **New WebGL2 world under the HUD** (`client/art2/game/`). Spec: `docs/art-v2/GAME-RENDERER.md`.
+  - **`engine.js` and `lightgame.js`:**
+    - Static chunks and moving sprites are composited with a per-pixel depth test on height, so people behind buildings and cars under the highway are hidden correctly. The local player shows as an x-ray outline.
+    - Game-mode lighting:
+      - sun shadows ray-marched through the height map;
+      - point and cone lights (headlights, flashlights) and sirens;
+      - wet reflections, bloom, fog, lightning and light shafts;
+      - day-part presets blended from the time of day.
+    - Quality tiers set the shadow cost, the light count and the cache sizes.
+  - **`host.js`, `pool.js`, `worker.js`, `chunkbake.js`:**
+    - Web Workers bake 768 px chunks, prefetching ahead of the camera. The classic ground shows until each chunk is ready.
+    - Walk-in shops are rebaked as cut-aways when you're inside, and broken props are rebaked.
+    - Every moving thing is drawn, with converted classic art standing in until its new sprite is generated.
+    - The renderer falls back to classic without WebGL2, or after the graphics context is lost twice.
+  - **`groundbake.js`:** ground from the live map:
+    - about 50 materials by tile, district, wealth and biome;
+    - roads from the road graph, with lane markings, zebras, stop lines, medians, kerbs, wear by wealth, driveways and rail track;
+    - water with depth tint, shallows, foam and quays;
+    - procedural ground cover by biome.
+
+    It takes about 230 ms of CPU per chunk.
+  - **`statics.js`:** every building (741), prefab and prop kind (84) on the map drawn in art v2. Also:
+    - plants by biome, district and coast;
+    - highway decks and ramps, rail stations and set pieces;
+    - lights for lamps, windows, neon, signs and fires.
+  - **`actors.js`:**
+    - all 26 vehicle models, with damage, wreck and burn states, lights and sirens;
+    - 30 animal kinds;
+    - crates, bags, balls and rockets;
+    - train cars;
+    - 45 effects mapped from the classic particles and decals;
+    - ambient critters.
+  - **`peds.js`** with a rewritten `people.js`:
+    - server appearances adapted to art v2 people;
+    - every game pose in 8 directions: idle; walk, jog, run and sprint; punch, swing, aim, carry, hands up; fish, kneel, roll, down, dead; swim, ride, pedal, sit, drive;
+    - held weapons;
+    - swimwear, towels and a small censor mosaic for the leisure areas.
+- **Test pages:** `tools/art2/engine-test.html`, `ground-chunk.html`, `statics-chunk.html`, `actors-preview.html`, and new views in `people-preview.html`.
+- **Comparisons:** `docs/art-v2/engine-v1.png`, `ground-chunks-v1.png`, `statics-chunks-v1.png`, `actors-v1.png` and `characters-v2.png`.
+- **Known gaps before it can be the default:**
+  - Buildings stand at art v2 height (about 60 px a storey), so dense blocks read as mostly rooftops and hide the street north of them. They need a fade or cut-away near the player and a scale and variety pass.
+  - Performance is untested on real phones and consoles; all measurements so far are on a software GPU.
+  - Not drawn yet: paint-shop and garage doors, boathouse roof fade and club shutters.

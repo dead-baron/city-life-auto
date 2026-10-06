@@ -43,15 +43,17 @@ import { drawBuildingShadows, drawPropShadows, drawContactShade, drawSpriteShado
 import { registerNewProps } from './render/newprops.js';
 import { LOW_MEM, canvasStats } from './platform.js';
 import { Flora, FLORA_PROPS, wind } from './render/flora/index.js';
-import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS } from './gfx.js';
+import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS, WORLD_ART_CHOICES, setWorldArt, worldArtWanted } from './gfx.js';
 initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
-const g = canvas.getContext('2d', { alpha: false });
-const lightCv = document.createElement('canvas');
-const lg = lightCv.getContext('2d');
+// World art (Settings, or ?art=2 / ?art=1): the art v2 renderer draws the world on #world (WebGL2)
+// under this canvas, which then carries only the overlays - so it needs an alpha channel, and that is
+// fixed when the context is made: the choice applies per page load.
+const ART2_WANTED = worldArtWanted();
+const g = canvas.getContext('2d', { alpha: ART2_WANTED });
 
 const VIEW_H = 660;           // world px visible vertically in 16:9 landscape
 const INTERP_TICKS = 2.2;     // render others ~110 ms in the past
@@ -158,6 +160,7 @@ function onText(m) {
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
+      if (S.art2) S.art2.resync(); // (back in after a reconnect: the art v2 bakes follow the server's broken props)
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
       S.tt = { l: m.tt || [], at: performance.now() / 1000 };
@@ -357,6 +360,7 @@ function setPropBroken(i, a, withFx) {
   const se = S.map.propSolid.get(i);
   if (se) se.off = true;
   S.ground.invalidateAt(p.x, p.y);
+  if (S.art2) S.art2.propChanged(i);
   if (!withFx) return;
   smashFx(p, i, a);
 }
@@ -578,7 +582,7 @@ function onEvent(ev) {
     case 'propfix': {
       const p = S.map.props[ev.i];
       S.confirmedBreaks.delete(ev.i); S.predBreaks.delete(ev.i);
-      if (p) { delete p.broken; const se = S.map.propSolid.get(ev.i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); }
+      if (p) { delete p.broken; const se = S.map.propSolid.get(ev.i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); if (S.art2) S.art2.propChanged(ev.i); }
       break;
     }
     case 'geyser': { const g = S.geysers.find((q) => Math.hypot(q.x - ev.x, q.y - ev.y) < 4); if (g) delete g.seq; else S.geysers.push({ x: ev.x, y: ev.y, until: performance.now() + ev.d * 1000 }); fx.splash(ev.x, ev.y, 14); break; }
@@ -642,6 +646,72 @@ function setupWorld(seed) {
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.hud.onDown = (a) => downAct(a);
+  startArt2(S.map);
+}
+
+// ---- the art v2 world renderer (client/art2/game/host.js) --------------------------------------------
+// Loaded only when wanted and built per city. Until it is ready, while riding the subway (the tunnel
+// view) and for good if it fails, the v1 renderer draws the frame (the overlay canvas takes a whole v1
+// frame just as well).
+const worldCv = $('world');
+let world2Shown = false;
+function showWorld2(on) { if (on === world2Shown || !worldCv) return; world2Shown = on; worldCv.classList.toggle('hidden', !on); }
+function art2Draws(F) { const on = !!(S.art2 && S.art2.ready && !F.sub); showWorld2(on); return on; }
+async function startArt2(map) {
+  if (!ART2_WANTED || S.art2Off || !worldCv) return;
+  if (S.art2) { S.art2.dispose(); S.art2 = null; showWorld2(false); }
+  const token = (S.art2Token = (S.art2Token || 0) + 1);
+  let mod;
+  try { mod = await import('./art2/game/host.js'); } catch (e) { art2Failed('the renderer could not load: ' + ((e && e.message) || e)); return; }
+  if (token !== S.art2Token || S.map !== map) return; // a newer city arrived meanwhile
+  // what the renderer borrows from here: how people look and pose, body heights, seats, the birds
+  const api = { pedLook, pedPose, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, SEAT_JETSKI, RIDER_H, UMBRELLA_COLORS };
+  let w = null;
+  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed }); } catch (e) { console.error('[art2]', e); w = null; }
+  if (token !== S.art2Token || S.map !== map) { if (w) w.dispose(); return; }
+  if (!w) { art2Failed('WebGL2 is not available'); return; }
+  S.art2 = w;
+  w.resize(W, H, DPR);
+}
+// With the art v2 world the overlay canvas also carries what v1 draws as marks inside its world pass:
+// tracers, rings and floating text, flying debris, price tags, team rings, the glow round valuable
+// crates (world transform set).
+function drawArt2Marks(F) {
+  const fx = S.fx, now = F.now;
+  g.save();
+  g.lineWidth = 2;
+  for (const t of fx.tracers) { g.strokeStyle = t.color + (1 - t.t / 0.08).toFixed(2) + ')'; g.beginPath(); g.moveTo(t.x1, t.y1); g.lineTo(t.x2, t.y2); g.stroke(); }
+  for (const r of fx.rings) { const k = r.t / r.max; g.strokeStyle = r.color + (1 - k).toFixed(2) + ')'; g.lineWidth = 3; g.beginPath(); g.arc(r.x, r.y, r.r * (0.3 + k), 0, 6.28); g.stroke(); }
+  for (const c of fx.chunks) {
+    if (!c.on || !c.img) continue;
+    const fade = c.life > c.rest ? Math.max(0, 1 - (c.life - c.rest) / 1.5) : 1;
+    g.globalAlpha = fade; g.save(); g.translate(c.x, c.y - c.z * 0.6); g.rotate(c.a); g.drawImage(c.img, c.sx, c.sy, c.sw, c.sh, -c.w / 2, -c.h / 2, c.w, c.h); g.restore();
+  }
+  g.globalAlpha = 1;
+  g.font = 'bold 13px monospace'; g.textAlign = 'center';
+  for (const t of fx.texts) { g.globalAlpha = Math.max(0, 1 - t.t / 1.4); g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y - t.t * 30 + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y - t.t * 30); }
+  g.globalAlpha = 1;
+  for (const v of F.vehs) if (v.d.fs) {
+    const txt = `$${v.d.fs.toLocaleString()}`;
+    g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    const w = g.measureText(txt).width + 10;
+    g.fillStyle = '#fff8d0'; g.fillRect(v.rx - w / 2, v.ry - 9, w, 18);
+    g.strokeStyle = '#c8262b'; g.lineWidth = 2; g.strokeRect(v.rx - w / 2, v.ry - 9, w, 18);
+    g.fillStyle = '#c8262b'; g.fillText(txt, v.rx, v.ry + 4);
+  }
+  if (S.pedTeam) for (const p of F.peds) { const team = S.pedTeam.get(p.id); if (team === undefined) continue; g.strokeStyle = team === 0 ? '#ff3b3b' : '#3b8bff'; g.lineWidth = 3; g.beginPath(); g.ellipse(p.rx, p.ry + 4, 13, 8, 0, 0, 6.28); g.stroke(); }
+  for (const c of F.crates) if (c.d.t >= 3 && (c.flags & 3) === 0) { g.globalAlpha = 0.5 + 0.3 * Math.sin(now * 4); g.strokeStyle = c.d.t === 4 ? '#ffd36b' : '#c07aff'; g.lineWidth = 2; g.beginPath(); g.arc(c.rx, c.ry, 18, 0, 6.28); g.stroke(); }
+  g.restore();
+}
+// No WebGL2, the renderer failing, or the GPU lost twice: back to the classic renderer (for the rest of
+// the session when the GPU was lost).
+function art2Failed(why, lostTwice) {
+  console.warn('[art2] using the classic renderer:', why);
+  if (S.art2) { try { S.art2.dispose(); } catch { /* already gone */ } S.art2 = null; }
+  S.art2Off = why;
+  showWorld2(false);
+  if (lostTwice) { try { sessionStorage.setItem('cla.art2off', '1'); } catch { /* storage blocked */ } }
+  if (S.hud) S.hud.toast('The new world art can\'t run here - using the classic graphics.', 'warn');
 }
 
 function startPlaying() {
@@ -886,7 +956,7 @@ function specEntities(view, now) {
     if (e.kind === K.VEH || (e.kind === K.PED && !(e.flags & PF.INVEH))) list.push(e);
   }
   list.sort((a, b) => a.ry - b.ry);
-  for (const e of list) { if (e.kind === K.VEH) drawVehicleEnt(e, now, 0); else drawPed(e, now); }
+  for (const e of list) { if (e.kind === K.VEH) { vehVisual(e, now, 0); drawVehicleEnt(e, now, 0); } else { pedVisual(e, now); drawPed(e, now); } }
 }
 function enterSpectate() {
   if (!S.spec || !S.playing) return;
@@ -1070,7 +1140,7 @@ function expirePredictedBreaks() {
     S.predBreaks.delete(i);
     if (S.confirmedBreaks.has(i)) continue;
     const p = S.map.props[i];
-    if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); }
+    if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(i); if (se) se.off = false; S.ground.invalidateAt(p.x, p.y); if (S.art2) S.art2.propChanged(i); }
   }
 }
 function checkWaypoint() {
@@ -1145,6 +1215,17 @@ function buildGfxPanel() {
   for (const k of ['low', 'medium', 'high', 'ultra', 'custom']) { const o = document.createElement('option'); o.value = k; o.textContent = PRESET_NAMES[k] + (k === d.recommended ? ' (recommended)' : ''); ps.appendChild(o); }
   ps.onchange = () => { if (ps.value !== 'custom') { applyPreset(ps.value); onGfxChange(); } };
   row('Preset', ps);
+  // the world renderer: switching reloads the page (the server keeps your place)
+  const wa = document.createElement('select'); wa.id = 's-worldart';
+  for (const [v, t] of WORLD_ART_CHOICES) { const o = document.createElement('option'); o.value = v; o.textContent = t; wa.appendChild(o); }
+  wa.onchange = () => {
+    setWorldArt(wa.value);
+    try { sessionStorage.removeItem('cla.art2off'); } catch { /* storage blocked */ }
+    if (S.hud) S.hud.toast('Switching the world art - reloading...', 'info');
+    const u = new URL(location.href); u.searchParams.delete('art');
+    setTimeout(() => location.replace(u.href), 700);
+  };
+  row('World art', wa);
   for (const [key, label, choices] of OPTIONS) {
     let el;
     if (choices === 'bool') { el = document.createElement('input'); el.type = 'checkbox'; el.onchange = () => { setOption(key, el.checked); onGfxChange(); }; }
@@ -1160,6 +1241,7 @@ function buildGfxPanel() {
 function syncGfxPanel() {
   buildGfxPanel();
   $('s-preset').value = gfx.preset;
+  $('s-worldart').value = ART2_WANTED ? 'new' : 'classic';
   for (const el of $('s-gfxbox').querySelectorAll('[data-g]')) {
     const v = gfx[el.dataset.g];
     if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v);
@@ -1587,7 +1669,7 @@ function onResize() {
   if (nw === W && nh === H && canvas.width === Math.round(W * DPR)) return;
   W = nw; H = nh;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-  lightCv.width = Math.ceil(W / 2); lightCv.height = Math.ceil(H / 2);
+  if (S.art2) S.art2.resize(W, H, DPR);
   document.body.classList.toggle('portrait', H > W);
   if (S.playing) maybeLandscapeTip();
   sendView();
@@ -1649,6 +1731,7 @@ function diagFrame(dtMs) {
     `parts ${Object.entries(p).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`,
     `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${gfx.preset} (light ${gfx.lighting}, flora ${gfx.flora})`,
     `ground cache ${S.ground ? S.ground.cache.size : 0}/${S.ground ? S.ground.max : 0} chunks (${cacheMB.toFixed(0)} MB)  canvases ${cs.n} (${cs.mb.toFixed(0)} MB)  js heap ${mem}  gfx lost ${diag.lost}${LOW_MEM ? '  low-memory mode' : ''}`,
+    ...(ART2_WANTED ? [S.art2 ? `art2 ${S.art2.diag()}` : `art2 off: ${S.art2Off || 'starting'}`] : []),
     `input ${input.device}  flips/min ${swRate.toFixed(0)}  pad ${pads.length ? `${pads[0].id.slice(0, 40)} [${pads[0].mapping || 'no mapping'}]` : 'none'}  emulation ${navigator.gamepadInputEmulation ?? 'n/a'}`,
     `${IS_CONSOLE ? 'console · ' : ''}${navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110)}`,
   ].join('\n');
@@ -1831,7 +1914,26 @@ function frame(nowMs) {
   requestAnimationFrame(frame);
 }
 
+// ---- the frame ------------------------------------------------------------------------------------------
+// A frame is four steps:
+//   prepFrame(dt)     interpolation and prediction, the camera, the sky, who is on screen: the frame packet F
+//                     every later step reads (null while the spectator camera draws its own frame)
+//   tickVisuals(F)    the visual simulation - particles and decals, sounds, cars leaning and sinking, doors,
+//                     gates, shutters and crossing arms easing, signal heads, birds, trampled grass, building
+//                     fades, the frame's light sources - the same whichever renderer draws the world
+//   the world         drawWorldV1(F) (Canvas2D) or the art v2 renderer (S.art2: client/art2/game/host.js)
+//   drawOverlays(F)   what stays sharp and unlit on top: aim line, name tags, markers, and the HUD bits
 function render(dt) {
+  const F = prepFrame(dt);
+  if (!F) return;
+  tickVisuals(F);
+  F.mark('visuals');
+  const v2 = art2Draws(F);
+  if (v2) S.art2.frame(F); else drawWorldV1(F);
+  drawOverlays(F, v2);
+}
+
+function prepFrame(dt) {
   const fx = S.fx;
   const now = S.loopClock;
   for (const e of S.ents.values()) interp(e, S.renderTick);
@@ -1866,7 +1968,7 @@ function render(dt) {
     const blend = Math.max(0, Math.min(1, (e.as - 70) / 110));
     e.phase = (e.phase + d / (4.6 + blend * 2.4)) % 8;
   }
-  if (S.spec && S.spec.on) { S.spec.render(g, W, H, DPR, dt, now); specTick(); return; }
+  if (S.spec && S.spec.on) { showWorld2(false); S.spec.render(g, W, H, DPR, dt, now); specTick(); return null; }
   // camera
   let speed = 0;
   if (S.pred && S.pred.kind === 'veh') speed = Math.hypot(S.pred.s.vx, S.pred.s.vy);
@@ -1913,26 +2015,120 @@ function render(dt) {
   S.fx.thin = !gfx.particles;
   const pf = S.perf ??= {}; let pt = performance.now();
   const mark = (k) => { const n = performance.now(); pf[k] = (pf[k] || 0) * 0.9 + (n - pt) * 0.1; pt = n; };
-  S.light.resize(W, H);
-  S.light.begin(sky, S.cam, z, quality);
+  S.light.begin(sky, S.cam, z, quality); // (the light records: collectLights fills them for either renderer)
   if (S.fogForce) sky.fog = S.fogForce;
   S.sky = sky;
+  // snap the world offset to whole device pixels: pixel-art ground and sprites then round the
+  // same way every frame instead of shimmering by a pixel against each other
+  const offX = Math.round(DPR * (W / 2 - S.cam.x * z + shx)), offY = Math.round(DPR * (H / 2 - S.cam.y * z + shy));
+  S.worldTf = [DPR * z, 0, 0, DPR * z, offX, offY];
+  S.viewRect = view;
+  const cx0 = Math.floor(view.x0 / CHUNK_PX), cx1 = Math.floor(view.x1 / CHUNK_PX), cy0 = Math.floor(view.y0 / CHUNK_PX), cy1 = Math.floor(view.y1 / CHUNK_PX);
+  S.chunkView = [cx0, cx1, cy0, cy1];
+  // the train I'm riding (if any)
+  const meEnt = S.ents.get(S.myPedId);
+  const myCar = S.ctrlKind === CTRL.RIDER && meEnt && meEnt.parent ? S.ents.get(meEnt.parent) : null;
+  const myTrain = myCar && myCar.kind === K.TRAIN && myCar.d ? myCar.d.tr : -1;
+  const sub = !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
+  // who is on screen, by kind
+  const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
+  const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
+  for (const e of S.ents.values()) {
+    if (!vis(e) || !e.d) continue;
+    if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
+    if (e.kind === K.TRAIN) cars.push(e);
+    else if (e.kind === K.PED) peds.push(e);
+    else if (e.kind === K.VEH) vehs.push(e);
+    else if (e.kind === K.CRATE) crates.push(e);
+    else if (e.kind === K.BAG) bags.push(e);
+    else if (e.kind === K.PROJ) projs.push(e);
+    else if (e.kind === K.BALL) balls.push(e);
+  }
+  // at the water's level: swimmers and boats (drawn under bridge decks)
+  const swimmers = peds.filter((p) => !(p.flags & PF.INVEH) && p.swim);
+  const boats = vehs.filter((v) => VEHICLE_BY_INDEX[v.d.m] && VEHICLE_BY_INDEX[v.d.m].kind === 'boat');
+  return {
+    dt, now, nowMs: performance.now(), fx, sp, z, shx, shy, view, clock, rain, sky, quality, mark,
+    chunkView: S.chunkView, meEnt, myCar, myTrain, sub,
+    peds, vehs, crates, bags, projs, balls, cars, riders, swimmers, boats,
+    insideB: null, roofArt: [], bl: [], bA: [], refl: [],
+  };
+}
 
+// The visual simulation of the frame (see render): everything here runs whichever renderer draws.
+function tickVisuals(F) {
+  const { dt, now, view, sky, sub, fx } = F;
+  // walk-in shops: inside one, its roof fades away and the floor plan shows
+  if (!sub) F.insideB = interiorTick(F.sp, F.roofArt);
+  // grass, crops and bushes: trampled underfoot and flattened by wheels; trees shaken by cars (render/flora)
+  if (!sub && S.flora) { S.flora.sky = sky; S.flora.update(dt, now, S.lastPeds || [], S.lastVehs || [], fx, sky); }
+  // vehicles lean and sink, smoke, burn, skid, leave wakes, sound sirens; people bleed, spark, splash, land
+  for (const v of F.vehs) vehVisual(v, now, dt);
+  for (const p of F.peds) pedVisual(p, now);
+  for (const p of F.riders) pedVisual(p, now);
+  trainsTick(F.cars, F.riders);
+  // buildings in view: see-through while they hide you, faded while you're inside
+  if (!sub) buildingFades(F);
+  // lights of the frame (for the light map, the puddles and the rain; lamps warm up, flashes die away)
+  F.refl = sub ? [] : collectLights(sky, view, F.vehs, F.peds, dt);
+  // the wet street: rain rings on open water, splashes through puddles, manhole steam, tyre spray
+  if (!sub) {
+    if (F.rain) S.wx.rainOnWater(view, dt);
+    S.wx.splashes(F.peds.concat(F.vehs), fx, (v) => sfx('splash', v * 0.4), now);
+    S.wx.steam(view, fx, dt, now, sky);
+  }
+  if (F.rain || S.wx.wet > 0.2) tyreSpray(F.vehs, dt);
+  // rockets trail fire and smoke; smashed hydrants gush
+  for (const pr of F.projs) { fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
+  S.geysers = S.geysers.filter((gy) => gy.until > F.nowMs);
+  for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
+  // street furniture that moves (none of it down in the subway)
+  if (!sub) {
+    doorsTick(view, F.peds, dt);
+    baysTick(view, dt);
+    garagesTick(view, dt);
+    boathousesTick(view, dt, F.vehs);
+    spikesTick(F.nowMs);
+    gatesTick(view, dt);
+    crossingsTick(view, dt);
+    signalsTick(view);
+    birdsTick(dt, view, F.vehs, F.peds);
+  }
+  S.lastPeds = F.peds; S.lastVehs = F.vehs;
+  for (const v of F.vehs) { const d = VEHICLE_BY_INDEX[v.d.m]; if (d) { v._L = d.L; v._W = d.W; } }
+  S.trainCars = F.cars;
+  fx.update(dt);
+}
+
+// The buildings in view this frame, with how see-through each is drawn: x-rayed while it hides you,
+// faded while you're inside it.
+function buildingFades(F) {
+  const bl = S.buildings.inView(F.view), bA = [];
+  S.bFade ??= new Map();
+  for (const it of bl) {
+    const inFade = (S.roofFade && S.roofFade[it.b.id]) || 0;
+    const xray = !inFade && S.buildings.hides(it, F.sp.x, F.sp.y, 6) ? 1 : 0;
+    const cur = S.bFade.get(it.b.id) || 0;
+    const k = cur + (xray - cur) * (1 - Math.exp(-8 * F.dt));
+    S.bFade.set(it.b.id, k);
+    bA.push(Math.max(0.08, 1 - inFade * 0.92 - k * 0.6));
+  }
+  F.bl = bl; F.bA = bA;
+}
+
+// The v1 world: Canvas2D, painter's order, its own light map and post passes.
+function drawWorldV1(F) {
+  const { fx, now, dt, z, view, sky, sub, rain, quality, mark, sp, peds, vehs, crates, bags, projs, balls, cars, riders, swimmers, boats, myTrain, refl } = F;
+  const [cx0, cx1, cy0, cy1] = F.chunkView;
+  S.light.resize(W, H);
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.fillStyle = '#10141c'; g.fillRect(0, 0, W, H);
   // crisp nearest-neighbour pixels at gameplay zoom; filtered only when zoomed out (fast driving)
   // so minified art doesn't shimmer
   g.imageSmoothingEnabled = z < 0.92;
-  // snap the world offset to whole device pixels: pixel-art ground and sprites then round the
-  // same way every frame instead of shimmering by a pixel against each other
-  const offX = Math.round(DPR * (W / 2 - S.cam.x * z + shx)), offY = Math.round(DPR * (H / 2 - S.cam.y * z + shy));
-  g.setTransform(DPR * z, 0, 0, DPR * z, offX, offY);
-  S.worldTf = [DPR * z, 0, 0, DPR * z, offX, offY];
-  S.viewRect = view;
+  g.setTransform(...S.worldTf);
 
   // ground chunks
-  const cx0 = Math.floor(view.x0 / CHUNK_PX), cx1 = Math.floor(view.x1 / CHUNK_PX), cy0 = Math.floor(view.y0 / CHUNK_PX), cy1 = Math.floor(view.y1 / CHUNK_PX);
-  S.chunkView = [cx0, cx1, cy0, cy1];
   for (let cy = Math.max(0, cy0); cy <= Math.min(Math.ceil(MAP_H * TILE / CHUNK_PX) - 1, cy1); cy++)
     for (let cx = Math.max(0, cx0); cx <= Math.min(Math.ceil(MAP_W * TILE / CHUNK_PX) - 1, cx1); cx++)
       g.drawImage(S.ground.get(cx, cy), cx * CHUNK_PX, cy * CHUNK_PX, CHUNK_PX + 0.5, CHUNK_PX + 0.5);
@@ -1945,18 +2141,10 @@ function render(dt) {
   if (wetK > 0.01) { g.fillStyle = `rgba(30,50,80,${(0.17 * wetK).toFixed(3)})`; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
   mark('ground');
   S.wx.drawWaterSheen(g, view, sky, now);
-  // the train I'm riding (if any)
-  const meEnt = S.ents.get(S.myPedId);
-  const myCar = S.ctrlKind === CTRL.RIDER && meEnt && meEnt.parent ? S.ents.get(meEnt.parent) : null;
-  const myTrain = myCar && myCar.kind === K.TRAIN && myCar.d ? myCar.d.tr : -1;
-  const sub = !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
   if (sub) drawTunnel(g, S.map, view, now);
   else fx.drawDecals(g, view, now, rain);
   // grass, crops, bushes and flower beds: sway, part round people, lie flat where cars went (render/flora)
   if (!sub && S.flora) {
-    S.flora.sky = sky;
-    const lp = S.lastPeds || [], lv = S.lastVehs || [];
-    S.flora.update(dt, now, lp, lv, fx, sky);
     S.flora.drawLive(g, view, S.ground, sky);
     mark('flora');
   }
@@ -1997,30 +2185,13 @@ function render(dt) {
     drawPropShadows(g, blots, sky, (p) => TALL_SHADOW[p.t]);
     }
   }
-  const insideB = sub ? null : drawInteriorView(sp);
-
-  const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
-  const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
-  for (const e of S.ents.values()) {
-    if (!vis(e) || !e.d) continue;
-    if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
-    if (e.kind === K.TRAIN) cars.push(e);
-    else if (e.kind === K.PED) peds.push(e);
-    else if (e.kind === K.VEH) vehs.push(e);
-    else if (e.kind === K.CRATE) crates.push(e);
-    else if (e.kind === K.BAG) bags.push(e);
-    else if (e.kind === K.PROJ) projs.push(e);
-    else if (e.kind === K.BALL) balls.push(e);
-  }
+  // inside a walk-in shop: its floor plan, under the fading roof
+  for (const id of F.roofArt) { const bb = S.map.buildings[id]; g.drawImage(interiorArt(S.map, bb), bb.tx * TILE, bb.ty * TILE); }
   mark('shadows');
-  // lights of the frame (for the light map, the puddles and the rain), then the puddles
-  const refl = sub ? [] : collectLights(sky, view, vehs, peds, dt);
+  // the puddles (they catch the frame's lights) and the ripples on them
   if (!sub) {
     S.wx.drawPuddles(g, view, sky, gfx.reflections ? refl : [], rain, now, dt, quality);
-    if (rain) S.wx.rainOnWater(view, dt);
     S.wx.drawRipples(g);
-    S.wx.splashes(peds.concat(vehs), S.fx, (v) => sfx('splash', v * 0.4), now);
-    S.wx.steam(view, S.fx, dt, now, sky);
   }
   mark('lights+puddles');
   if (rain || S.wx.wet > 0.2) drawWetReflections(view, vehs, sky.night, now, dt);
@@ -2030,8 +2201,6 @@ function render(dt) {
   // water level first: swimmers, then boats - and the bridge decks drawn back over them, so
   // anything passing under a bridge really is under it
   const inWater = (e) => WATER_T[S.map.tileAtPx(e.rx, e.ry)] === 1 || S.map.tileAtPx(e.rx, e.ry) === T.BRIDGE;
-  const swimmers = peds.filter((p) => !(p.flags & PF.INVEH) && p.swim);
-  const boats = vehs.filter((v) => VEHICLE_BY_INDEX[v.d.m] && VEHICLE_BY_INDEX[v.d.m].kind === 'boat');
   for (const p of swimmers) drawPed(p, now);
   for (const v of boats) drawVehicleEnt(v, now, dt);
   for (const v of boats) if (inWater(v)) coverWithBridge(v.rx, v.ry, 80);
@@ -2044,17 +2213,8 @@ function render(dt) {
   // 3/4 view: buildings, vehicles, people, carried crates, trees and lamp posts drawn in order of
   // where they stand (north first), so whatever is behind a building is hidden by it
   const items = [];
-  const bl = sub ? [] : S.buildings.inView(view);
-  S.light.setRoofs(bl);
-  S.bFade ??= new Map();
-  for (const it of bl) {
-    const inFade = (S.roofFade && S.roofFade[it.b.id]) || 0;
-    const xray = !inFade && S.buildings.hides(it, sp.x, sp.y, 6) ? 1 : 0;
-    const cur = S.bFade.get(it.b.id) || 0;
-    const k = cur + (xray - cur) * (1 - Math.exp(-8 * dt));
-    S.bFade.set(it.b.id, k);
-    items.push({ y: it.y1, b: it, a: Math.max(0.08, 1 - inFade * 0.92 - k * 0.6) });
-  }
+  S.light.setRoofs(F.bl);
+  for (let i = 0; i < F.bl.length; i++) items.push({ y: F.bl[i].y1, b: F.bl[i], a: F.bA[i] });
   for (const v of vehs) if (!boats.includes(v)) items.push({ y: levelKey(v.ry, v.rz || 0), v, z: v.rz || 0 });
   for (const p of peds) if (!swimmers.includes(p) && (up(p) || !(p.flags & (PF.DEAD | PF.DOWN | PF.STUN)))) items.push({ y: levelKey(p.ry, p.rz || 0) - ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) ? 0.4 : 0), p, z: p.rz || 0 });
   for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pz = par ? par.rz || 0 : 0; items.push({ y: levelKey(par ? par.ry : c.ry, pz) + 0.5, c, z: pz }); }
@@ -2070,7 +2230,7 @@ function render(dt) {
       }
     }
   items.sort((a, b) => a.y - b.y);
-  const nightLit = clock.dark > 0.3;
+  const nightLit = F.clock.dark > 0.3;
   if (S.flora) S.flora.beginFrame();
   for (const it of items) {
     const lift = it.z ? liftOf(it.z) : 0;
@@ -2086,8 +2246,6 @@ function render(dt) {
   }
   // wading through tall grass and crops: the stalks in front of your legs drawn over them
   if (S.flora && !sub) S.flora.drawFront(g, peds.filter((p) => !(p.flags & (PF.INVEH | PF.DEAD | PF.DOWN))));
-  S.lastPeds = peds; S.lastVehs = vehs;
-  for (const v of vehs) { const d = VEHICLE_BY_INDEX[v.d.m]; if (d) { v._L = d.L; v._W = d.W; } }
   // the wires strung between the utility poles, over everything at ground level
   if (poles.length) {
     if (!S.poleAt) { S.poleAt = new Map(); for (const p of S.map.props) if (p.t === 'upole') S.poleAt.set(`${Math.round(p.x)},${Math.round(p.y)}`, p); }
@@ -2105,34 +2263,27 @@ function render(dt) {
       else { g.save(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.arc(me.rx, me.ry, 13, 0, 6.28); g.stroke(); g.restore(); }
     }
   }
-  if (!sub) coverWalkIns(view, peds, insideB, dt);
-  for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
-
-  // geysers
-  const nowMs = performance.now();
-  S.geysers = S.geysers.filter((gy) => gy.until > nowMs);
-  for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
+  if (!sub) coverWalkIns(view);
+  for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); }
 
   if (!sub) { // (none of it down in the subway)
-    drawBays(view, dt);
-    drawGarageDoors(view, dt);
-    drawBoathouseRoofs(view, dt, vehs);
+    drawBays(view);
+    drawGarageDoors(view);
+    drawBoathouseRoofs(view);
     drawSpikes(view);
     drawAtmMarks(view, now);
-    drawGates(view, dt);
-    drawCrossings(view, dt, now);
+    drawGates(view);
+    drawCrossings(view, now);
     drawStationClocks(view, now);
     drawBuoys(view, now);
     drawSignals(view);
-    updateBirds(dt, view, vehs, peds);
+    drawBirds();
   }
-  fx.update(dt);
   if (S.flora && !sub) S.flora.leavesFrame(g, view, dt, false);
   fx.drawParticles(g);
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  S.trainCars = cars;
-  if (sub) drawSubwayLights(myCar, z, dt);
+  if (sub) drawSubwayLights(F.myCar, z, dt);
   mark('world');
   if (!sub) {
     S.wx.drawFog(g, sky, S.cam, z, W, H, DPR, now);
@@ -2155,7 +2306,25 @@ function render(dt) {
   mark('rain');
   if (!sub) S.light.post(g, DPR, now, gfx.tiltShift === true);
   mark('post');
-  // things that stay sharp and unlit over all of it: the aim line, name tags and markers
+  void sp;
+}
+
+// What stays sharp and unlit over the world: the aim line, name tags and markers; then the HUD bits.
+// With the art v2 world (v2) this canvas is a transparent layer over it: cleared, then the rain
+// streaks and the markers v1 draws inside its world pass go on it here.
+function drawOverlays(F, v2) {
+  const { sp, now, z } = F;
+  if (v2) {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (F.rain) drawRain(F.dt, F.sky);
+    g.setTransform(...S.worldTf);
+    drawAtmMarks(F.view, now);
+    drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
+    drawBuoys(F.view, now);
+    drawArt2Marks(F);
+  }
   g.setTransform(...S.worldTf);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
@@ -2172,7 +2341,7 @@ function render(dt) {
   }
 
   // name tags + public flares + rumor marker
-  drawWorldLabels(peds, vehs, now, z);
+  drawWorldLabels(F.peds, F.vehs, now, z);
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
 
@@ -2193,13 +2362,13 @@ function render(dt) {
     if (dead !== S.uiDead) { S.uiDead = dead; document.body.classList.toggle('dead', dead); }
     if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
   }
-  if (S.bigmap) { padMapLook(Math.min(0.05, dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a); }
-  if ((nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
+  if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a); }
+  if ((F.nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
 }
 
 // Urban wildlife (GDD §10): client-side pigeons/gulls that scatter from cars and runners.
 const birds = [];
-function updateBirds(dt, view, vehs, peds) {
+function birdsTick(dt, view, vehs, peds) {
   const m = S.map;
   if (birds.length < 14 && Math.random() < 0.15) {
     const x = view.x0 + Math.random() * (view.x1 - view.x0), y = view.y0 + Math.random() * (view.y1 - view.y0);
@@ -2216,6 +2385,11 @@ function updateBirds(dt, view, vehs, peds) {
       if (!b.fly) for (const p of peds) if ((p.flags & PF.MOVING) && Math.hypot(p.rx - b.x, p.ry - b.y) < 45) { b.fly = 1; break; }
       if (b.fly) { const a = Math.random() * 6.28; b.vx = Math.cos(a) * 230; b.vy = Math.sin(a) * 230; b.a = a; }
     } else { b.x += b.vx * dt; b.y += b.vy * dt; b.fly += dt; if (b.fly > 4) { birds.splice(i, 1); continue; } }
+  }
+}
+function drawBirds() {
+  for (let i = birds.length - 1; i >= 0; i--) {
+    const b = birds[i];
     g.save(); g.translate(b.x, b.y); g.rotate(b.a);
     const s = b.fly ? 1.4 : 1;
     g.fillStyle = 'rgba(0,0,0,.25)'; if (b.fly) g.fillRect(-3 + b.fly * 6, 4 + b.fly * 6, 6, 3);
@@ -2283,7 +2457,7 @@ const PED_SCALE = 1.18; // characters a touch smaller than before (was 1.35) - p
 const PED_BUILD_SCALE = [0.92, 1, 1.07, 1.16]; // frail, average, tough, brute
 // Home garage doors: roll up when your car pulls up to a garage you own (or when the server says
 // a car was just parked / taken out).
-function drawGarageDoors(view, dt) {
+function garagesTick(view, dt) {
   const mine = new Set(((S.me && S.me.homes) || []).map((h) => h.id));
   const myCar = S.pred && S.pred.kind === 'veh' ? S.pred.s : null;
   for (const gr of S.map.garages || []) {
@@ -2294,7 +2468,15 @@ function drawGarageDoors(view, dt) {
     const near = myCar && mine.has(gr.home) && Math.hypot(myCar.x - h.garage.x, myCar.y - h.garage.y) < 170;
     const want = near || (S.garageOpen[gr.home] || 0) > performance.now() ? 1 : 0;
     S.garageAnim[gr.home] = (S.garageAnim[gr.home] || 0) + (want - (S.garageAnim[gr.home] || 0)) * (1 - Math.exp(-4 * dt));
-    const k = S.garageAnim[gr.home];
+  }
+}
+function drawGarageDoors(view) {
+  for (const gr of S.map.garages || []) {
+    const h = S.map.homes[gr.home];
+    if (!h || !h.garageDoor) continue;
+    const d = h.garageDoor;
+    if (d.x < view.x0 - 100 || d.x > view.x1 + 100 || d.y < view.y0 - 100 || d.y > view.y1 + 100) continue;
+    const k = S.garageAnim[gr.home] || 0;
     const x = d.x - d.w / 2 + 3, w = d.w - 6, depth = 22;
     const y0 = gr.south ? d.y - depth : d.y;
     // dark interior shows as the door lifts
@@ -2310,7 +2492,7 @@ function drawGarageDoors(view, dt) {
 
 // Boathouse roofs over the waterfront homes' slips: a gabled tin roof that turns see-through
 // while a boat (or anybody) is underneath, so you can see what's moored there.
-function drawBoathouseRoofs(view, dt, vehs) {
+function boathousesTick(view, dt, vehs) {
   S.bhFade ??= [];
   const list = S.map.boathouses || [];
   for (let i = 0; i < list.length; i++) {
@@ -2322,8 +2504,17 @@ function drawBoathouseRoofs(view, dt, vehs) {
     const me = S.ents.get(S.ctrlId);
     if (me && me.rx > x - 30 && me.rx < x + w + 30 && me.ry > y - 30 && me.ry < y + h + 30) under = true;
     const cur = S.bhFade[i] || 0;
-    const k = cur + ((under ? 1 : 0) - cur) * (1 - Math.exp(-6 * dt));
-    S.bhFade[i] = k;
+    S.bhFade[i] = cur + ((under ? 1 : 0) - cur) * (1 - Math.exp(-6 * dt));
+  }
+}
+function drawBoathouseRoofs(view) {
+  S.bhFade ??= [];
+  const list = S.map.boathouses || [];
+  for (let i = 0; i < list.length; i++) {
+    const bh = list[i];
+    const x = bh.tx * TILE - 6, y = bh.ty * TILE - 6, w = bh.tw * TILE + 12, h = bh.th * TILE + 12;
+    if (x > view.x1 || x + w < view.x0 || y > view.y1 || y + h < view.y0) continue;
+    const k = S.bhFade[i] || 0;
     g.save();
     g.globalAlpha = 1 - k * 0.72;
     const along = bh.dx !== 0;
@@ -2347,14 +2538,21 @@ function drawBoathouseRoofs(view, dt, vehs) {
 }
 
 // Paint-shop shutters: roll down over the bay (and the car in it) while it's being sprayed.
-function drawBays(view, dt) {
+function baysTick(view, dt) {
   for (let i = 0; i < (S.map.bays || []).length; i++) {
     const b = S.map.bays[i];
     const x = b.tx * TILE, y = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE;
     if (x > view.x1 || x + w < view.x0 || y > view.y1 || y + h < view.y0) continue;
     const want = S.bayOpen[i] === false ? 1 : 0;
     S.bayAnim[i] = (S.bayAnim[i] || 0) + (want - (S.bayAnim[i] || 0)) * (1 - Math.exp(-5 * dt));
-    const k = S.bayAnim[i];
+  }
+}
+function drawBays(view) {
+  for (let i = 0; i < (S.map.bays || []).length; i++) {
+    const b = S.map.bays[i];
+    const x = b.tx * TILE, y = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE;
+    if (x > view.x1 || x + w < view.x0 || y > view.y1 || y + h < view.y0) continue;
+    const k = S.bayAnim[i] || 0;
     // shutter rolled up at the entrance
     const fy = b.south ? y + h : y;
     g.fillStyle = '#6b6f78'; g.fillRect(x - 2, b.south ? fy - 5 : fy, w + 4, 5);
@@ -2393,35 +2591,42 @@ function walkInAt(x, y) {
   const b = S.map.buildings[S.map.bld[ty * S.map.w + tx]];
   return b && b.walkIn ? b : null;
 }
-function drawInteriorView(sp) {
-  const b = S.playing && S.ctrlKind !== CTRL.RIDER ? walkInAt(sp.x, sp.y) : null; // riding the subway under a shop doesn't open it
+// The walk-in you're standing in (riding the subway under a shop doesn't open it), easing every
+// walk-in's roof fade; `art` gets the ones whose floor plan shows this frame.
+function interiorTick(sp, art) {
+  const b = S.playing && S.ctrlKind !== CTRL.RIDER ? walkInAt(sp.x, sp.y) : null;
   S.roofFade ??= {};
   for (const id of S.map.walkIns || []) {
     const want = b && b.id === id ? 1 : 0;
     const cur = S.roofFade[id] || 0;
     if (!want && cur < 0.01) continue;
     S.roofFade[id] = cur + (want - cur) * 0.15;
-    const bb = S.map.buildings[id];
-    g.drawImage(interiorArt(S.map, bb), bb.tx * TILE, bb.ty * TILE); // the lifted building above it fades out
+    art.push(id); // its floor plan is drawn: the lifted building above it fades out
   }
   return b;
 }
-function coverWalkIns(view, peds, insideB, dt) {
+// shop sliding doors open as people come and go
+function doorsTick(view, peds, dt) {
   S.doorAnim ??= {};
   for (const id of S.map.walkIns || []) {
     const b = S.map.buildings[id];
     const x0 = b.tx * TILE, y0 = b.ty * TILE, x1 = x0 + b.tw * TILE, y1 = y0 + b.th * TILE;
     if (x1 < view.x0 || x0 > view.x1 || y1 < view.y0 || y0 > view.y1) continue;
-    const fade = (S.roofFade && S.roofFade[id]) || 0;
-    void fade;
     for (let i = 0; i < b.walkIn.units.length; i++) {
       const u = b.walkIn.units[i];
       const dx = (u.door.tx + u.door.w / 2) * TILE, dy = (u.door.ty + 0.5) * TILE;
       const near = peds.some((p) => !(p.flags & PF.INVEH) && Math.hypot(p.rx - dx, p.ry - dy) < 56);
       const key = id * 16 + i;
       S.doorAnim[key] = (S.doorAnim[key] || 0) + ((near ? 1 : 0) - (S.doorAnim[key] || 0)) * (1 - Math.exp(-9 * dt));
-      drawShopDoor(g, u, b.walkIn.south, S.doorAnim[key]);
     }
+  }
+}
+function coverWalkIns(view) {
+  for (const id of S.map.walkIns || []) {
+    const b = S.map.buildings[id];
+    const x0 = b.tx * TILE, y0 = b.ty * TILE, x1 = x0 + b.tw * TILE, y1 = y0 + b.th * TILE;
+    if (x1 < view.x0 || x0 > view.x1 || y1 < view.y0 || y0 > view.y1) continue;
+    for (let i = 0; i < b.walkIn.units.length; i++) drawShopDoor(g, b.walkIn.units[i], b.walkIn.south, S.doorAnim[id * 16 + i] || 0);
   }
 }
 
@@ -2476,14 +2681,21 @@ function drawBuoys(view, now) {
 }
 
 // Sliding gates (motor pools, the Syndicate compound): steel panels that roll aside.
-function drawGates(view, dt) {
+function gatesTick(view, dt) {
   const list = S.map.gates || [];
   for (let i = 0; i < list.length; i++) {
     const gt = list[i];
     if (Math.abs(gt.x - (view.x0 + view.x1) / 2) > (view.x1 - view.x0) / 2 + 250 || Math.abs(gt.y - (view.y0 + view.y1) / 2) > (view.y1 - view.y0) / 2 + 250) continue;
     const want = S.gateOpen[i] ? 1 : 0;
     S.gateAnim[i] = (S.gateAnim[i] ?? want) + (want - (S.gateAnim[i] ?? want)) * (1 - Math.exp(-4 * dt));
-    const k = S.gateAnim[i];
+  }
+}
+function drawGates(view) {
+  const list = S.map.gates || [];
+  for (let i = 0; i < list.length; i++) {
+    const gt = list[i];
+    if (Math.abs(gt.x - (view.x0 + view.x1) / 2) > (view.x1 - view.x0) / 2 + 250 || Math.abs(gt.y - (view.y0 + view.y1) / 2) > (view.y1 - view.y0) / 2 + 250) continue;
+    const k = S.gateAnim[i] ?? (S.gateOpen[i] ? 1 : 0);
     if (gt.club) { drawClubShutter(gt, k); continue; }
     g.save();
     g.translate(gt.x, gt.y);
@@ -2530,7 +2742,10 @@ function drawTrains(cars, riders, myTrain, sub, now) {
     if (!cars.some((c) => c.rx > pc.x0 - 120 && c.rx < pc.x1 + 120 && c.ry > pc.y0 - 120 && c.ry < pc.y1 + 120)) continue;
     coverGround(pc.x0, pc.y0, pc.x1, pc.y1);
   }
-  // the horn and the rumble
+}
+// the rumble of a moving train
+function trainsTick(cars, riders) {
+  if (!cars.length && !riders.length) return;
   for (const c of cars) {
     if (c.d.c !== 0) continue;
     const moving = c.buf.length > 1 && Math.hypot(c.buf[c.buf.length - 1].x - c.buf[c.buf.length - 2].x, c.buf[c.buf.length - 1].y - c.buf[c.buf.length - 2].y) > 4;
@@ -2550,15 +2765,22 @@ function coverGround(x0, y0, x1, y1) {
 }
 
 // Level crossings: gate arms swing down when the server says a train is coming; the bell rings.
-function drawCrossings(view, dt, now) {
+function crossingsTick(view, dt) {
   const xs = (S.map.rail && S.map.rail.crossings) || [];
   xs.forEach((c, i) => {
     const st = S.xing[i] || { d: 0, b: [0, 0] };
     const a = S.xingAnim[i] ?? 0;
     S.xingAnim[i] = a + ((st.d ? 1 : 0) - a) * (1 - Math.exp(-3.5 * dt));
     if (c.x < view.x0 - 260 || c.x > view.x1 + 260 || c.y < view.y0 - 260 || c.y > view.y1 + 260) return;
-    drawCrossing(g, c, S.xingAnim[i], st.b || [0, 0], !!st.d, now);
     if (st.d) sfx('bell', distVol(c.x, c.y) * 0.7);
+  });
+}
+function drawCrossings(view, now) {
+  const xs = (S.map.rail && S.map.rail.crossings) || [];
+  xs.forEach((c, i) => {
+    const st = S.xing[i] || { d: 0, b: [0, 0] };
+    if (c.x < view.x0 - 260 || c.x > view.x1 + 260 || c.y < view.y0 - 260 || c.y > view.y1 + 260) return;
+    drawCrossing(g, c, S.xingAnim[i] ?? 0, st.b || [0, 0], !!st.d, now);
   });
 }
 
@@ -2606,25 +2828,57 @@ function outlineVehicle(v, def) {
 }
 
 function driverBlinks(v) { for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.blink) return true; return false; }
-function drawVehicleEnt(v, now, dt) {
+// A vehicle's visual state for the frame and what it throws off (once a frame, whichever renderer
+// draws it): sinking in the water, leaning on corners, smoke, fire, skid marks, a boat's wake, the
+// siren and the horn.
+const vehSpeed = (v) => (v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x - v.buf[v.buf.length - 2].x, v.buf[v.buf.length - 1].y - v.buf[v.buf.length - 2].y) * 20 : 0);
+const vehSinking = (v, def) => def.kind !== 'boat' && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+function vehVisual(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
   const f = v.flags;
   // a land vehicle in the water is sinking: it settles, darkens and fades, bubbling
-  const sinking = def.kind !== 'boat' && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+  const sinking = vehSinking(v, def);
   v.sinkT = sinking ? (v.sinkT || 0) + dt : 0;
-  const sk = Math.min(1, v.sinkT / 3);
   if (sinking && Math.random() < 0.5) S.fx.splash(v.rx + (Math.random() - 0.5) * def.L * 0.6, v.ry + (Math.random() - 0.5) * def.W * 0.6, 1);
-  // 2.5D lift: side walls (the darkened outline stacked up the screen), the top view raised on
-  // them, leaning out on corners and nosing down under braking
-  const lift = sinking ? 0 : vehLift(def);
+  // leaning out on corners (from how fast it turns at speed)
   const prevA = v.leanA ?? v.ra;
   let dA = v.ra - prevA; while (dA > Math.PI) dA -= Math.PI * 2; while (dA < -Math.PI) dA += Math.PI * 2;
   v.leanA = v.ra;
-  const spd = v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x - v.buf[v.buf.length - 2].x, v.buf[v.buf.length - 1].y - v.buf[v.buf.length - 2].y) * 20 : 0;
+  const spd = vehSpeed(v);
   const latT = Math.max(-1, Math.min(1, (dA / Math.max(dt, 1e-3)) * spd / 900));
   v.lean = (v.lean || 0) + (latT - (v.lean || 0)) * (1 - Math.exp(-6 * dt));
-  const leanPx = def.kind === 'boat' ? 0 : -v.lean * (def.kind === 'bike' ? 2.5 : 1.6), dip = (f & VF.BRAKE) && spd > 60 ? 1 : 0;
+  // particles: smoke, fire, drift, boat wake, siren audio
+  const fwdX = Math.cos(v.ra), fwdY = Math.sin(v.ra);
+  if ((f & VF.SMOKE) && Math.random() < 0.3) S.fx.smoke(v.rx + fwdX * def.L * 0.35, v.ry + fwdY * def.L * 0.35, !!(f & VF.WRECK));
+  if ((f & VF.BURN) && Math.random() < 0.7) S.fx.fire(v.rx + fwdX * def.L * 0.2, v.ry + fwdY * def.L * 0.2);
+  if (f & VF.DRIFT && def.kind !== 'boat') {
+    for (const sgn of [-1, 1]) {
+      const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.35, sgn * def.W * 0.38);
+      S.fx.decal(4, x, y, v.ra, 1, '#111', S.loopClock, 0.5);
+    }
+    if (Math.random() < 0.4) S.fx.smoke(v.rx - fwdX * def.L * 0.4, v.ry - fwdY * def.L * 0.4, false);
+  }
+  if (def.kind === 'boat' && v.buf.length > 1) {
+    const b = v.buf; const sp = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y);
+    if (sp > 2 && Math.random() < 0.8) S.fx.spawn(5, v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, 0.7, 3, '#e8f6ff');
+  }
+  if (f & VF.SIREN) sfx('siren', distVol(v.rx, v.ry) * 0.7);
+  if (f & VF.HORN) sfx('horn', distVol(v.rx, v.ry));
+  void now;
+}
+function drawVehicleEnt(v, now, dt) {
+  const def = VEHICLE_BY_INDEX[v.d.m];
+  if (!def) return;
+  const f = v.flags;
+  // a land vehicle in the water is sinking: it settles, darkens and fades, bubbling (vehVisual)
+  const sinking = vehSinking(v, def);
+  const sk = Math.min(1, (v.sinkT || 0) / 3);
+  // 2.5D lift: side walls (the darkened outline stacked up the screen), the top view raised on
+  // them, leaning out on corners and nosing down under braking
+  const lift = sinking ? 0 : vehLift(def);
+  const spd = vehSpeed(v);
+  const leanPx = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.kind === 'bike' ? 2.5 : 1.6), dip = (f & VF.BRAKE) && spd > 60 ? 1 : 0;
   g.save();
   g.translate(v.rx, v.ry);
   if (sinking) { g.globalAlpha = 1 - 0.75 * sk; g.scale(1 - 0.18 * sk, 1 - 0.18 * sk); }
@@ -2674,23 +2928,6 @@ function drawVehicleEnt(v, now, dt) {
     const seats = def.kind === 'bike' ? SEAT_BIKE : SEAT_JETSKI;
     for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) drawRider(p, v, def, seats[(p.flags & PF.PASSENGER) ? 1 : 0]);
   }
-  // particles: smoke, fire, drift, boat wake, siren audio
-  const fwdX = Math.cos(v.ra), fwdY = Math.sin(v.ra);
-  if ((f & VF.SMOKE) && Math.random() < 0.3) S.fx.smoke(v.rx + fwdX * def.L * 0.35, v.ry + fwdY * def.L * 0.35, !!(f & VF.WRECK));
-  if ((f & VF.BURN) && Math.random() < 0.7) S.fx.fire(v.rx + fwdX * def.L * 0.2, v.ry + fwdY * def.L * 0.2);
-  if (f & VF.DRIFT && def.kind !== 'boat') {
-    for (const sgn of [-1, 1]) {
-      const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.35, sgn * def.W * 0.38);
-      S.fx.decal(4, x, y, v.ra, 1, '#111', S.loopClock, 0.5);
-    }
-    if (Math.random() < 0.4) S.fx.smoke(v.rx - fwdX * def.L * 0.4, v.ry - fwdY * def.L * 0.4, false);
-  }
-  if (def.kind === 'boat' && v.buf.length > 1) {
-    const b = v.buf; const sp = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y);
-    if (sp > 2 && Math.random() < 0.8) S.fx.spawn(5, v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, 0.7, 3, '#e8f6ff');
-  }
-  if (f & VF.SIREN) sfx('siren', distVol(v.rx, v.ry) * 0.7);
-  if (f & VF.HORN) sfx('horn', distVol(v.rx, v.ry));
   void dt;
 }
 
@@ -2710,7 +2947,6 @@ function drawSwimRipples(p, now) {
   g.globalAlpha = 0.35; g.fillStyle = '#0c3a66';
   g.beginPath(); g.ellipse(p.rx, p.ry + 2, 13, 10, 0, 0, 6.28); g.fill();
   g.restore();
-  if ((p.as || 0) > 30 && Math.random() < 0.12 && S.map.tileAtPx(p.rx, p.ry) !== T.BRIDGE) S.fx.splash(p.rx, p.ry, 2);
 }
 
 // A lost pet: the drawn dog or cat. Top-down art turns to face where it's going; the 3/4 art
@@ -2718,8 +2954,8 @@ function drawSwimRipples(p, now) {
 function drawAnimal(p, now) {
   const key = p.d.ar.slice(4), art = ANIMAL_ART[key];
   const sp = p.as || 0;
-  // walking / running frames by speed; a pet that has stood still a moment sits down
-  if (sp > 12 || p.stillSince === undefined) p.stillSince = now;
+  // walking / running frames by speed; a pet that has stood still a moment sits down (p.stillSince: pedVisual)
+  if (p.stillSince === undefined) p.stillSince = now;
   g.save();
   g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 4, 13, 6, 0, 0, 6.28); g.fill();
   if (!art || !atlas.animals) { g.fillStyle = '#a0703a'; g.beginPath(); g.ellipse(p.rx, p.ry, 12, 7, p.ra, 0, 6.28); g.fill(); g.restore(); return; }
@@ -2739,25 +2975,51 @@ function drawAnimal(p, now) {
   g.restore();
 }
 
-function drawPed(p, now) {
+// How a person looks this frame (pure; kept on the entity, no allocation): the pose (pedPose, plus
+// being thrown from a vehicle and tumbling along), its animation frame, the move speed level, the hit
+// flash, swimming. pedVisual, drawPed and the art v2 renderer all read it.
+function pedLook(p, now) {
   const f = p.flags;
-  if (f & PF.INVEH) return;
-  if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { drawAnimal(p, now); return; }
-  if (p.blink === 3) return; // inside a home
   let pose = pedPose(p);
   // thrown from a vehicle: airborne arc, then a roll / faceplant / slide on the back
   const flT = p.flingAt !== undefined ? now - p.flingAt : 99;
   const flying = flT < (p.flingDur || 0);
   const flK = p.flingK;
   const flRecent = flT < (p.flingDur || 0) + 3;
-  if (!flying && flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
   if (flying) pose = flK === 'roll' ? 'roll' : 'down';
   else if (pose === 'down' && !(f & PF.DEAD) && (p.as || 0) > 70 && !(flRecent && flK !== 'roll')) pose = 'roll'; // tumbling along
   let fr = pose === 'move' || pose === 'carry' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
-  const lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
-  const hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
-  const swimming = !(f & PF.INVEH) && !!p.swim;
+  const L = p._look || (p._look = {});
+  L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent;
+  L.lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
+  L.hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
+  L.swimming = !(f & PF.INVEH) && !!p.swim;
+  L.upright = UPRIGHT.has(pose) && !flying;
+  return L;
+}
+// What a person throws off this frame (once a frame, whichever renderer draws them): the thud and dust
+// of landing after being thrown, splashes while swimming, blood drips while bleeding, stun sparks; a
+// pet that has stood still a moment sits down.
+function pedVisual(p, now) {
+  const f = p.flags;
+  if (f & PF.INVEH) return;
+  if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { if ((p.as || 0) > 12 || p.stillSince === undefined) p.stillSince = now; return; }
+  if (p.blink === 3) return; // inside a home
+  const L = pedLook(p, now);
+  if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
+  if (L.swimming && (p.as || 0) > 30 && Math.random() < 0.12 && S.map.tileAtPx(p.rx, p.ry) !== T.BRIDGE) S.fx.splash(p.rx, p.ry, 2);
+  // lying still (the drawn body on the ground) doesn't drip; standing, the sparks fly round the head
+  const lying = !L.upright && (L.pose === 'down' || L.pose === 'dead') && !L.flying && !L.swimming && !!lyingSprite(p.d.app, L.pose === 'dead' ? 1 : 0);
+  if (!lying && (f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
+  if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - (L.upright ? 20 : 0) + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
+}
+function drawPed(p, now) {
+  const f = p.flags;
+  if (f & PF.INVEH) return;
+  if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { drawAnimal(p, now); return; }
+  if (p.blink === 3) return; // inside a home
+  const { pose, fr, lvl, hitK, flT, flying, flK, flRecent, swimming } = pedLook(p, now);
   if (swimming) drawSwimRipples(p, now);
   const team = S.pedTeam && S.pedTeam.get(p.id);
   if (team !== undefined) { g.strokeStyle = team === 0 ? '#ff3b3b' : '#3b8bff'; g.lineWidth = 3; g.beginPath(); g.ellipse(p.rx, p.ry + 4, 13, 8, 0, 0, 6.28); g.stroke(); }
@@ -2778,7 +3040,6 @@ function drawPed(p, now) {
       if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = hitK - 0.4; g.drawImage(ly, -LW * sc / 2, -LH * sc / 2, LW * sc, LH * sc); g.globalCompositeOperation = 'source-over'; }
       g.imageSmoothingEnabled = true;
       g.restore();
-      if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
       return;
     }
   }
@@ -2824,8 +3085,6 @@ function drawPed(p, now) {
   if (pose === 'fish') { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(24, -6); g.lineTo(44, 0); g.stroke(); }
   g.restore();
   if (f & PF.UMBRELLA) { const u = umbrellaSprite(p.id % UMBRELLA_COLORS.length); g.drawImage(u, p.rx - 18, p.ry - 20, 35, 35); }
-  if ((f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
-  if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
@@ -2873,15 +3132,25 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   g.restore();
   if (pose === 'fish') { const a = p.ra; g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(p.rx + Math.cos(a) * 20, p.ry - 14 + Math.sin(a) * 10); g.lineTo(p.rx + Math.cos(a) * 46, p.ry + Math.sin(a) * 30); g.stroke(); }
   if (f & PF.UMBRELLA) { const u = umbrellaSprite(p.id % UMBRELLA_COLORS.length); g.drawImage(u, p.rx - 20, p.ry - 62, 40, 40); }
-  if ((f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
-  if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - 20 + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
 
 // Traffic signals on mast arms: a pole on the near-right corner of every approach with an arm
 // reaching right across the incoming lanes and a 3-lamp head over each lane, facing the drivers. Cameras sit on poles.
 const SIG_COL = { G: '#3ddc84', Y: '#ffc23d', R: '#ff3b3b' };
-function drawSignals(view) {
+// Every signal head in view and the colour it shows (next frame's light sources: collectLights runs first).
+function signalsTick(view) {
   S.sigHeads = [];
+  for (const sg of S.map.signals || []) {
+    if (sg.x < view.x0 - 260 || sg.x > view.x1 + 260 || sg.y < view.y0 - 260 || sg.y > view.y1 + 260) continue;
+    const n = S.map.nodes[sg.node];
+    if (sg.wire) { for (const h of sg.heads) S.sigHeads.push({ x: h.x, y: h.y, c: SIG_COL[signalFor(n, h.edge, S.loopTime)] }); continue; }
+    const pr = S.map.props[sg.pi];
+    if (pr && pr.broken) continue; // knocked over
+    const st = signalFor(n, sg.edge, S.loopTime);
+    for (const [x, y] of sg.hs || [[sg.hx, sg.hy]]) S.sigHeads.push({ x, y, c: SIG_COL[st] });
+  }
+}
+function drawSignals(view) {
   for (const sg of S.map.signals || []) {
     if (sg.x < view.x0 - 260 || sg.x > view.x1 + 260 || sg.y < view.y0 - 260 || sg.y > view.y1 + 260) continue;
     const n = S.map.nodes[sg.node];
@@ -2900,7 +3169,6 @@ function drawSignals(view) {
       g.fillStyle = '#555b68'; g.beginPath(); g.arc(px - 1, py - 1, 2, 0, 6.28); g.fill();
       // a head over every incoming lane: three lamps in a row across the arm, facing the drivers
       for (const [x, y] of sg.hs || [[hx, hy]]) {
-        S.sigHeads.push({ x, y, c: SIG_COL[st] });
         g.save(); g.translate(x, y); g.rotate(Math.atan2(ry, rx));
         g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-12, -1, 28, 10);
         g.fillStyle = '#14161b'; g.fillRect(-14, -5, 28, 10);
@@ -3006,10 +3274,11 @@ function drawAtmMarks(view, now) {
 }
 
 // Spike strips lying across the road: a black band of steel teeth, yellow tips at the ends.
+function spikesTick(nowMs) { for (const [id, s] of S.spikes) if (nowMs > s.until) S.spikes.delete(id); }
 function drawSpikes(view) {
   const nowMs = performance.now();
-  for (const [id, s] of S.spikes) {
-    if (nowMs > s.until) { S.spikes.delete(id); continue; }
+  for (const s of S.spikes.values()) {
+    if (nowMs > s.until) continue;
     if (s.x < view.x0 - 100 || s.x > view.x1 + 100 || s.y < view.y0 - 100 || s.y > view.y1 + 100) continue;
     g.save(); g.translate(s.x, s.y); g.rotate(s.a);
     g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-s.half + 2, -3, s.half * 2, 9);
@@ -3058,7 +3327,6 @@ function drawSpanWire(sg, n) {
   g.fillStyle = '#22252b'; g.beginPath(); g.arc(hub.x, hub.y, 4, 0, 6.28); g.fill();
   for (const h of sg.heads) {
     const st = signalFor(n, h.edge, S.loopTime);
-    S.sigHeads.push({ x: h.x, y: h.y, c: SIG_COL[st] });
     g.strokeStyle = '#1b1d22'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(hub.x, hub.y); g.lineTo(h.x, h.y); g.stroke();
     // a vertical-ish box hanging off the hub, its lit lamp facing the drivers coming in
     g.save(); g.translate(h.x, h.y); g.rotate(h.a + Math.PI / 2);
@@ -3231,7 +3499,7 @@ function collectLights(sky, view, vehs, peds, dt) {
       else if (p.t === 'phonebox') { L.add(p.x, p.y, 45, LIGHT.warm, 0.5 * night); }
     }
   }
-  // traffic signals (last frame's heads: drawSignals runs later in the frame)
+  // traffic signals (last frame's heads: signalsTick runs later in the frame)
   for (const h of S.sigHeads || []) {
     const c = h.rgb || (h.rgb = hexRgb(h.c));
     if (night > 0.05) { L.add(h.x, h.y, 56, c, 0.75 * night); reflSrc.push({ x: h.x, y: h.y, c, a: 0.8 * night }); }
@@ -3393,7 +3661,21 @@ function drawWetReflections(view, vehs, dark, now, dt) {
       reflect(tx, ty + 4, brake ? 60 : 38, 7, '255,40,40', (brake ? 0.55 : 0.3) * k);
     }
     if (v.flags & VF.SIREN) reflect(v.rx, v.ry + 8, 60, 14, Math.floor(S.loopClock * 6) % 2 ? '255,40,40' : '60,110,255', 0.45 * k);
-    // tyre spray when moving
+  }
+  if (dark > 0.05) {
+    for (const l of S.map.lamps) if (!l.broken && (l._lv || 0) > 0.05 && l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) { const h = lampHead(l); reflect(h.x, h.y + 10, 60, 11, '255,200,110', 0.4 * dark * l._lv); }
+    for (const h of S.sigHeads || []) if (h.rgb) reflect(h.x, h.y + 8, 46, 7, h.rgb.join(','), 0.45 * dark);
+    for (const p of S.map.pois) if (p.x > view.x0 && p.x < view.x1 && p.y > view.y0 - 40 && p.y < view.y1) reflect(p.x, p.y + 6, 50, 26, '255,190,100', 0.22 * dark);
+  }
+  g.restore();
+  void now; void dt;
+}
+// wet roads: moving cars throw spray off their back wheels
+function tyreSpray(vehs, dt) {
+  for (const v of vehs) {
+    const def = VEHICLE_BY_INDEX[v.d.m];
+    if (!def || def.kind === 'boat') continue;
+    const c = Math.cos(v.ra), sn = Math.sin(v.ra), L = def.L / 2 - 3, Wd = def.W / 2 - 6;
     const sp = v._lx !== undefined ? Math.hypot(v.rx - v._lx, v.ry - v._ly) / Math.max(dt, 1e-3) : 0;
     v._lx = v.rx; v._ly = v.ry;
     if (sp > 140 && Math.random() < 0.7) {
@@ -3402,13 +3684,6 @@ function drawWetReflections(view, vehs, dark, now, dt) {
       S.fx.spawn(5, tx, ty, -c * sp * 0.25 + (Math.random() - 0.5) * 40, -sn * sp * 0.25 + (Math.random() - 0.5) * 40, 0.35, 2, '#cfe6ff', 0, 30);
     }
   }
-  if (dark > 0.05) {
-    for (const l of S.map.lamps) if (!l.broken && (l._lv || 0) > 0.05 && l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) { const h = lampHead(l); reflect(h.x, h.y + 10, 60, 11, '255,200,110', 0.4 * dark * l._lv); }
-    for (const h of S.sigHeads || []) if (h.rgb) reflect(h.x, h.y + 8, 46, 7, h.rgb.join(','), 0.45 * dark);
-    for (const p of S.map.pois) if (p.x > view.x0 && p.x < view.x1 && p.y > view.y0 - 40 && p.y < view.y1) reflect(p.x, p.y + 6, 50, 26, '255,190,100', 0.22 * dark);
-  }
-  g.restore();
-  void now;
 }
 
 // ---- umbrellas (pixel-art canopy, cached per colour) -------------------------------------------

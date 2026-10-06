@@ -1,40 +1,136 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Art v2 people</title>
-<style>body{margin:0;background:#6b6f78;color:#eee;font:12px monospace}canvas{image-rendering:pixelated;display:block}.wrap{display:inline-block;background:#6b6f78}</style></head><body>
-<!-- ?view=turn (C1: four bodies, 5 facings), ?view=line (C2/C3: every archetype), ?view=walk,
-     ?view=items (P4: inventory icons, then one character holding each item facing SE, E and N;
-     &dirs=0,3,6 picks other facings, &pose=walk) -->
-<div class="wrap"><canvas id="c"></canvas></div>
+<style>body{margin:0;background:#6b6f78;color:#eee;font:12px monospace}canvas{image-rendering:pixelated;display:block}.wrap{display:inline-block;position:relative;background:#6b6f78}.wrap canvas{position:absolute;left:0;top:0}.wrap canvas#c{position:relative}</style></head><body>
+<!-- ?view=turn (C1: four bodies, 8 facings), ?view=line (C2/C3: every art2 archetype facing SE), ?view=walk,
+     ?view=items (P4: inventory icons, then one character holding each item facing SE, E and N; &dirs=0,3,6 picks other
+     facings, &pose=walk), ?view=poses (one character, every pose x 8 facings x frames; &pose=walk2 for one pose, &dirs=...),
+     ?view=crowd (40 server-like appearances through peds.js adaptApp, walking), ?view=weapons (every game weapon: rest,
+     aim / swing frames), ?view=lineup (every server archetype x 6 seeds, adapted, facing SE), ?view=leisure (swimwear,
+     towels, undressed + censored). &lit=golden|noon|night lights the sheet with the Lighter on paving; &z= zoom. -->
+<div class="wrap"><canvas id="c"></canvas><canvas id="lab"></canvas></div>
 <script type="module">
-import { person, randomPerson, ARCHETYPES } from '../../client/art2/people.js';
+import { person, randomPerson, ARCHETYPES, POSES } from '../../client/art2/people.js';
 import { icon, ITEM_KINDS } from '../../client/art2/items.js';
-const q = new URLSearchParams(location.search), Z = Number(q.get('z') || 4), view = q.get('view') || 'turn';
-const cv = document.getElementById('c'), g = cv.getContext('2d');
-const put = (G, col, row, cw, ch, dx = 0, dy = 0) => g.drawImage(G.toCanvas('col'), (col * cw + dx) * Z, (row * ch + dy) * Z, G.w * Z, G.h * Z);
+import { adaptApp, pedSprite } from '../../client/art2/game/peds.js';
+import { GBuf, F_GROUND, F_WET } from '../../client/art2/gbuf.js';
+import { groundPixel } from '../../client/art2/ground.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+const q = new URLSearchParams(location.search), view = q.get('view') || 'turn', lit = q.get('lit'), Z = Number(q.get('z') || (lit ? 3 : 4));
+const cv = document.getElementById('c'), lab = document.getElementById('lab');
+const cells = [], labels = [];
+let SW = 0, SH = 0;
+// a cell: sprite G with its anchor at (x, y) in sheet px
+const add = (G, x, y) => { cells.push({ G, x, y }); SW = Math.max(SW, x - G.ax + G.w + 2); SH = Math.max(SH, y - G.ay + G.h + 2); };
+const label = (t, x, y) => labels.push({ t, x, y });
+const guy = { skin: 1, hair: { style: 'spiky', color: 1 }, top: { kind: 'hoodie', color: 'red', color2: 'white' }, bottom: { kind: 'jeans', color: 'denim' }, shoes: 'white' };
+const SERVER = {   // appearances as the server makes them (server/entities.js ARCHETYPES look() and playerOutfit())
+  executive: (r) => ({ t: 1, tc: pk(r, ['#1d2a4a', '#2a2a2e', '#4a4a52']), tc2: '#c8262b', l: '#1d2030', sh: '#111', ht: 0, b: 1 }),
+  socialite: (r) => ({ t: 5, tc: pk(r, ['#c8262b', '#7a3ac8', '#e04a9a', '#f2c21b']), tc2: '#ffd36b', l: '#000', sh: '#c8262b', ht: 0, b: 2 }),
+  construction: (r) => ({ t: 3, tc: pk(r, ['#ef7a1a', '#b8e02a']), tc2: '#e8e8e8', l: '#2a4a8a', sh: '#6b4a2a', ht: 2, htc: pk(r, ['#f2c21b', '#f4f4f4']), b: 3 }),
+  sweeper: () => ({ t: 6, tc: '#ef7a1a', tc2: '#1d2a5a', l: '#1d2a5a', sh: '#222', ht: 1, htc: '#1d2a5a', b: 0 }),
+  casual: (r) => ({ t: pk(r, [0, 2, 4]), tc: pk(r, ['#c8262b', '#2350c8', '#e8e8e8', '#2f9a3a', '#7a3ac8', '#25b8c0', '#555']), tc2: '#ddd', l: pk(r, ['#2a4a8a', '#222', '#6b5a3a']), sh: pk(r, ['#eee', '#222', '#c8262b']), ht: r() < 0.35 ? 1 : 0, htc: pk(r, ['#c8262b', '#222', '#2350c8']), b: 0 }),
+  athlete: (r) => ({ t: 0, tc: pk(r, ['#e8e8e8', '#c8262b', '#2350c8']), tc2: '#fff', l: '#111', sh: '#eee', ht: 0, b: 0 }),
+  senior: (r) => ({ t: 4, tc: pk(r, ['#8a6a3a', '#5a6a5a', '#6a5a7a']), tc2: '#ccc', l: '#555', sh: '#3a2a1a', ht: r() < 0.5 ? 3 : 0, htc: '#6b4a2a', b: 0, hc: '#cfcfcf' }),
+  hustler: (r) => ({ t: 7, tc: pk(r, ['#e8dcc0', '#7a3ac8']), tc2: '#f2c21b', l: '#222', sh: '#eee', ht: r() < 0.5 ? 1 : 0, htc: '#7a3ac8', b: 0 }),
+  drunk: (r) => ({ t: 4, tc: pk(r, ['#4a5a3a', '#7a1d24', '#6b5a3a']), tc2: '#aaa', l: '#2a4a8a', sh: '#3a2a1a', ht: r() < 0.5 ? 4 : 0, htc: '#3a5a2a', b: 0 }),
+  syndicate: (r) => ({ t: 3, tc: '#1a1a1e', tc2: '#c8262b', l: '#1a1a1e', sh: '#eee', ht: 1, htc: pk(r, ['#c8262b', '#111']), b: 0, bandana: true }),
+  mugger: () => ({ t: 2, tc: '#2a2a2e', tc2: '#555', l: '#222', sh: '#eee', ht: 1, htc: '#111', b: 0 }),
+  cop: () => ({ t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', sh: '#111', ht: 1, htc: '#1d2a5a', b: 0 }),
+  swat: () => ({ t: 3, tc: '#151517', tc2: '#333', l: '#151517', sh: '#111', ht: 5, htc: '#151517', b: 0 }),
+  medic: () => ({ t: 6, tc: '#e8e8e8', tc2: '#2350c8', l: '#1d2a5a', sh: '#111', ht: 1, htc: '#2350c8', b: 0 }),
+  player: (r) => ({ t: pk(r, [0, 2, 4, 7, 3]), tc: pk(r, ['#c8262b', '#2350c8', '#2f9a3a', '#f2c21b', '#7a3ac8', '#e8e8e8', '#25b8c0', '#ef7a1a', '#2a2a2e']), tc2: pk(r, ['#fff', '#111', '#f2c21b']), l: pk(r, ['#2a4a8a', '#222', '#6b5a3a', '#4a4a52']), sh: pk(r, ['#eee', '#222', '#c8262b']), ht: r() < 0.4 ? 1 : 0, htc: pk(r, ['#c8262b', '#111', '#2350c8', '#f2c21b']), b: 0 }),
+};
+const HAIRC = ['#1a1410', '#3b2414', '#6b3e1e', '#b5862f', '#d9c27a', '#8a8a8a', '#e8e8e8', '#7a1d1d'];
+function pk(r, a) { return a[Math.floor(r() * a.length) % a.length]; }
+function rng(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function serverApp(ar, seed) {
+  const r = rng(seed * 7919 + 13); r(); r();
+  const look = SERVER[ar](r);
+  const base = { s: Math.floor(r() * 6), h: Math.floor(r() * 6), hc: pk(r, HAIRC) };
+  const w = { senior: [8, 2, 0, 0], drunk: [5, 4, 1, 0], socialite: [5, 4, 1, 0], executive: [4, 5, 1, 0], athlete: [0, 4, 5, 1], construction: [0, 3, 5, 2], hustler: [1, 4, 4, 1], mugger: [1, 5, 3, 1], syndicate: [0, 3, 5, 3], cop: [0, 4, 5, 1], swat: [0, 2, 5, 3], medic: [1, 6, 2, 0] }[ar] || [2, 6, 2, 0.5];
+  let t = w.reduce((a, b) => a + b, 0) * r(), bd = 1; for (let i = 0; i < 4; i++) { t -= w[i]; if (t <= 0) { bd = i; break; } }
+  const o = { ...base, ...look, bd };
+  if (look.hc) o.hc = look.hc;
+  return o;
+}
+const SV = Object.keys(SERVER);
 if (view === 'turn') {
-  const bodies = [{ top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'spiky', color: 1 }, skin: 1 },
-    { fem: true, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'pony', color: 1 }, skin: 1 },
-    { build: 2, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'spiky', color: 1 }, skin: 1 },
-    { build: 3, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'curly', color: 0 }, skin: 3 }];
-  cv.width = 5 * 40 * Z; cv.height = bodies.length * 52 * Z; g.imageSmoothingEnabled = false;
-  bodies.forEach((b, r) => [0, 1, 2, 3, 4].forEach((d, c) => put(person(b, d), c, r, 40, 52)));
+  const bodies = [{ ...guy, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' } },
+    { fem: true, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'pony', color: 1 }, skin: 1, shoes: 'white' },
+    { build: 2, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'spiky', color: 1 }, skin: 1, shoes: 'white' },
+    { build: 3, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'curly', color: 0 }, skin: 4, shoes: 'white' }];
+  bodies.forEach((b, r) => [0, 1, 2, 3, 4, 5, 6, 7].forEach((d, c) => add(person(b, d), 22 + c * 40, 50 + r * 54)));
 } else if (view === 'line') {
   const ks = Object.keys(ARCHETYPES), cols = 9;
-  cv.width = cols * 40 * Z; cv.height = Math.ceil(ks.length / cols) * 52 * Z; g.imageSmoothingEnabled = false;
-  ks.forEach((k, i) => put(person(randomPerson(i * 31 + 7, k), 1), i % cols, Math.floor(i / cols), 40, 52));
+  ks.forEach((k, i) => add(person(randomPerson(i * 31 + 7, k), 1), 22 + (i % cols) * 40, 50 + Math.floor(i / cols) * 56));
 } else if (view === 'items') {
-  // the P4 targets' model: red cap, olive jacket over a white tee, jeans, white trainers
-  const guy = { skin: 1, hair: { style: 'short', color: 0 }, beard: 'short', glasses: 'sun', top: { kind: 'jacket', color: '#5c6236', color2: 'white' },
-    bottom: { kind: 'jeans', color: 'denim' }, shoes: 'white', hat: { kind: 'cap', color: 'red' } };
-  const CW = 44, IH = 40, PH = 64, n = ITEM_KINDS.length, dirs = (q.get('dirs') || '1,2,4').split(',').map(Number), pose = q.get('pose') || 'idle';
-  cv.width = n * CW * Z; cv.height = (IH + dirs.length * PH) * Z; g.imageSmoothingEnabled = false;
-  ITEM_KINDS.forEach((k, i) => {
-    put(icon(k, 32), i, 0, CW, IH, 6, 4);
-    // place each figure by its feet anchor (held items widen the sprite)
-    dirs.forEach((d, r) => { const G = person({ ...guy, held: k }, d, pose, 1); put(G, i, 0, CW, 1, CW / 2 - G.ax, IH + r * PH + PH - 6 - G.ay); });
+  const g2 = { skin: 1, hair: { style: 'short', color: 0 }, beard: 'short', glasses: 'sun', top: { kind: 'jacket', color: '#5c6236', color2: 'white' }, bottom: { kind: 'jeans', color: 'denim' }, shoes: 'white', hat: { kind: 'cap', color: 'red' } };
+  const CW = 44, dirs = (q.get('dirs') || '1,2,4').split(',').map(Number), pose = q.get('pose') || 'idle';
+  // icons carry no anchor: hang each one by its bottom centre
+  ITEM_KINDS.forEach((k, i) => { add(Object.assign(icon(k, 32), { ax: 16, ay: 32 }), 22 + i * CW, 38); dirs.forEach((d, r) => add(person(g2, d, pose, 1, { held: k }), 22 + i * CW, 110 + r * 66)); });
+} else if (view === 'poses') {
+  const only = q.get('pose'), dirs = (q.get('dirs') || '0,1,2,3,4,5,6,7').split(',').map(Number), held = { aim: 'pistol', swing: 'bat' };
+  const poses = only ? only.split(',') : Object.keys(POSES).filter((p) => p !== 'walk' && p !== 'held');
+  const CW = 46, RH = 62, blockW = (n) => n * CW + 14;
+  let bx = 0, by = 0, rowH = 0;
+  const maxW = Number(q.get('w') || 1500);
+  for (const p of poses) {
+    const nf = POSES[p], w = blockW(nf), h = dirs.length * RH + 16;
+    if (bx + w > maxW && bx > 0) { bx = 0; by += rowH; rowH = 0; }
+    label(p, bx + 2, by + 10);
+    dirs.forEach((d, r) => { for (let f = 0; f < nf; f++) add(person(guy, d, p, f, { held: held[p] }), bx + 24 + f * CW, by + 16 + r * RH + 50); });
+    bx += w; rowH = Math.max(rowH, h);
+  }
+} else if (view === 'crowd') {
+  const n = 40, cols = 10;
+  for (let i = 0; i < n; i++) {
+    const ar = SV[i % SV.length], A = adaptApp(serverApp(ar, i + 1), ar), d = (i * 3) % 8, lvl = i % 7 === 0 ? 2 : i % 5 === 0 ? 1 : 0;
+    add(pedSprite(A, i % 9 === 4 ? 'idle' : 'move' + lvl, d, i % 6, ar === 'cop' ? 14 : ar === 'swat' ? 15 : null), 26 + (i % cols) * 44 + (Math.floor(i / cols) & 1) * 20, 54 + Math.floor(i / cols) * 58);
+  }
+} else if (view === 'lineup') {
+  const seeds = Number(q.get('n') || 6);
+  SV.forEach((ar, r) => { label(ar, 2, 12 + r * 56); for (let s = 0; s < seeds; s++) add(pedSprite(adaptApp(serverApp(ar, s + 1), ar), 'idle', 7, 0, null), 110 + s * 40, 50 + r * 56); });
+} else if (view === 'weapons') {
+  const W = [[1, 'bat'], [2, 'knife'], [3, 'crowbar'], [4, 'sledge'], [5, 'baton'], [6, 'taser'], [7, 'pistol'], [8, 'revolver'], [9, 'shotgun'], [10, 'rifle'], [11, 'smg'], [12, 'rocket'], [13, 'rod'], [16, 'sniper'], [19, 'silenced'], [20, 'pepper'], [21, 'spikes']];
+  const dirs = (q.get('dirs') || '7,6,0').split(',').map(Number), A = adaptApp({ s: 1, h: 0, hc: '#3b2414', t: 0, tc: '#c8262b', tc2: '#fff', l: '#2a4a8a', sh: '#eee', ht: 1, htc: '#2a2a2e', b: 0, bd: 1 }, 'player');
+  W.forEach(([w, name], r) => {
+    label(name, 2, 14 + r * 60);
+    const gun = w >= 6 && w !== 13 && w !== 21, frames = [['idle', 0], ['move0', 1], ...(gun ? [['aim', 0], ['aim', 1]] : [['swing', 0], ['swing', 1], ['swing', 2]])];
+    let c = 0;
+    for (const d of dirs) for (const [p, f] of frames) add(pedSprite(A, p, d, f, w), 96 + (c++) * 46 + Math.floor((c - 1) / frames.length) * 16, 52 + r * 60);
   });
+} else if (view === 'leisure') {
+  const L = [
+    { fem: true, skin: 1, hair: { style: 'pony', color: 3 }, top: { kind: 'bikini', color: 'coral' }, bottom: { kind: 'bikini', color: 'coral' }, shoeKind: 'barefoot' },
+    { fem: true, skin: 3, hair: { style: 'long', color: 0 }, top: { kind: 'swimsuit', color: 'navy' }, bottom: { kind: 'bikini', color: 'navy' }, shoeKind: 'sandal', shoes: 'brown' },
+    { skin: 2, hair: { style: 'short', color: 0 }, top: { kind: 'none' }, bottom: { kind: 'trunks', color: 'red' }, shoeKind: 'barefoot' },
+    { skin: 0, build: 2, hair: { style: 'bald' }, beard: 'full', top: { kind: 'none' }, bottom: { kind: 'towel', color: 'white' }, shoeKind: 'sandal', shoes: 'brown' },
+    { fem: true, skin: 4, hair: { style: 'bun', color: 0 }, top: { kind: 'towel', color: 'cream' }, bottom: { kind: 'towel', color: 'cream' }, shoeKind: 'sandal', shoes: 'brown' },
+    { skin: 1, hair: { style: 'curly', color: 1 }, top: { kind: 'none' }, bottom: { kind: 'none' }, shoeKind: 'barefoot' },
+    { fem: true, skin: 2, hair: { style: 'wavy', color: 2 }, top: { kind: 'none' }, bottom: { kind: 'none' }, shoeKind: 'barefoot' },
+  ];
+  [false, true].forEach((cen, r) => L.forEach((a, i) => [0, 1, 4].forEach((d, j) => add(person({ ...a, censored: cen }, d), 22 + (i * 3 + j) * 38 + i * 10, 50 + r * 56))));
+  label('uncensored (pixel blocks)', 2, 10); label('censored setting: swimwear', 2, 66);
 } else {
-  cv.width = 8 * 40 * Z; cv.height = 4 * 52 * Z; g.imageSmoothingEnabled = false;
-  for (let r = 0; r < 4; r++) { const a = randomPerson(300 + r * 13); for (let f = 0; f < 4; f++) { put(person(a, 2, 'walk', f), f, r, 40, 52); put(person(a, 0, 'walk', f), 4 + f, r, 40, 52); } }
+  for (let r = 0; r < 4; r++) { const a = randomPerson(300 + r * 13); for (let f = 0; f < 6; f++) { add(person(a, 2, 'walk0', f), 22 + f * 40, 50 + r * 54); add(person(a, 0, 'walk0', f), 262 + f * 40, 50 + r * 54); } }
 }
+SW = Math.ceil(SW); SH = Math.ceil(SH);
+if (!lit) {
+  cv.width = SW * Z; cv.height = SH * Z;
+  const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.fillStyle = '#6b6f78'; g.fillRect(0, 0, cv.width, cv.height);
+  for (const c of cells) g.drawImage(c.G.toCanvas('col'), Math.round(c.x - c.G.ax) * Z, Math.round(c.y - c.G.ay) * Z, c.G.w * Z, c.G.h * Z);
+} else {
+  const G = new GBuf(SW, SH);
+  for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) G.put(x, y, groundPixel('paver', x, y, 3).c, [0, 0, 1], 0, null, F_GROUND | F_WET);
+  for (const c of [...cells].sort((a, b) => a.y - b.y)) G.blit(c.G, Math.round(c.x - c.G.ax), Math.round(c.y - c.G.ay));
+  cv.width = SW * Z; cv.height = SH * Z;
+  const L = new Lighter(cv); L.setScene(G);
+  const lights = lit === 'night' ? [{ x: SW * 0.3, y: SH * 0.4, z: 70, r: 260, col: [1, 0.72, 0.38], k: 2.6 }, { x: SW * 0.75, y: SH * 0.6, z: 70, r: 240, col: [0.55, 0.85, 1], k: 2.2 }] : [];
+  L.render(PRESETS[lit] || PRESETS.golden, lights, 1);
+}
+lab.width = cv.width; lab.height = cv.height;
+const lg = lab.getContext('2d'); lg.font = `${Math.max(10, Z * 3)}px monospace`; lg.fillStyle = '#fff'; lg.strokeStyle = '#000'; lg.lineWidth = 3;
+for (const l of labels) { lg.strokeText(l.t, l.x * Z, l.y * Z); lg.fillText(l.t, l.x * Z, l.y * Z); }
+document.querySelector('.wrap').style.width = cv.width + 'px';
+window.info = `${cells.length} sprites`;
 window.done = true;
 </script></body></html>

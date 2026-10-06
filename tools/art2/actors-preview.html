@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 actors</title>
+<style>body{margin:0;background:#18181c;color:#ccc;font:12px monospace}canvas{image-rendering:pixelated;display:block}
+.wrap{position:relative}.wrap canvas{position:absolute;left:0;top:0}#t{margin:6px 8px}a{color:#9cf;margin-right:10px}</style></head><body>
+<!-- The live renderer's actor sprites (client/art2/game/actors.js), composited with the engine's depth rule (larger
+     height wins) and lit by the Lighter. ?view=line (all 26 models side-on) | grid (8 headings; &set=cars|trucks|small)
+     | rot (sedan, 16 headings) | states (damage, fire, night lights, siren) | cargo (crates, bags, loaded beds) | animals
+     | objects | trains | fx (every effect frame) | lighttest; &p=golden|noon|night|rain, &z=pixel zoom (default 2),
+     &labels=0 hides the names, &panel=i shows one panel. Riders come from client/art2/game/peds.js when it is there.
+     Serve the repo root; window.info has the per-sprite timings, window.table the model / footprint table. -->
+<div id="t"></div>
+<div class="wrap"><canvas id="c"></canvas><canvas id="lab"></canvas></div>
+<div id="nav"></div>
+<script type="module" src="./actors-preview.js"></script>
+</body></html>

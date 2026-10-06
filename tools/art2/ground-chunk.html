@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 ground chunks</title>
+<style>body{margin:0;background:#18181c;color:#ccc;font:13px monospace}canvas{image-rendering:pixelated;display:block}
+.wrap{position:relative}.wrap canvas{position:absolute;left:0;top:0}h3{margin:8px;font-weight:normal}</style></head><body>
+<!-- The live game's ground chunks (client/art2/game/groundbake.js) baked from the real map (generateCity(1337)
+     in this page) and lit by the art2 Lighter at 2x. ?cx=&cy= chunk (768 px), ?grid=1..3 bakes a grid x grid
+     block from there, ?q=0..3 quality, ?p=golden|noon|night|rain, ?albedo=1 shows the unlit colours, ?seed=
+     map seed. Serve the repo root; window.done is set when drawn, window.info holds the timings. -->
+<h3 id="t">baking...</h3>
+<div class="wrap"><canvas id="c"></canvas></div>
+<script type="module" src="./ground-chunk.js"></script>
+</body></html>

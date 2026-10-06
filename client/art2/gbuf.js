@@ -139,3 +139,46 @@ export function vnoise(x, y, sc, seed = 0) {
 }
 export const N_UP = [0, 0, 1], N_SOUTH = [0, 1, 0], N_WEST = [-1, 0, 0], N_EAST = [1, 0, 0];
 export const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+
+// ---- GPU packing for the game renderer (client/art2/game/engine.js). Worker-safe. ----------------
+// A G-buffer texel becomes three RGBA8 texels (12 bytes instead of 15):
+//   P0 [albedo r, g, b, coverage]
+//   P1 [z low byte, z high byte, flags, octahedral normal x]      <- height + flags in one fetch
+//   P2 [emissive r, g, b premultiplied by (strength/255)^(1/2.2), octahedral normal y]
+// Octahedral normals are stored as 0..254 so the up normal (0, 0, 1) is exactly (127, 127); a texel
+// whose normal was never set (nrm alpha 0) gets the up normal, as the Lighter assumes.
+export const OCT_MID = 127;
+const EMI_PRE = new Float32Array(256);
+for (let a = 0; a < 256; a++) EMI_PRE[a] = Math.pow(a / 255, 1 / 2.2);
+// unit normal -> [x, y] in 0..254 (written to out[o], out[o + 1])
+export function octEncode(nx, ny, nz, out = [0, 0], o = 0) {
+  const s = Math.abs(nx) + Math.abs(ny) + Math.abs(nz);
+  if (s < 1e-6) { out[o] = OCT_MID; out[o + 1] = OCT_MID; return out; }
+  let x = nx / s, y = ny / s;
+  if (nz < 0) { const fx = (1 - Math.abs(y)) * (x >= 0 ? 1 : -1); y = (1 - Math.abs(x)) * (y >= 0 ? 1 : -1); x = fx; }
+  out[o] = Math.round((x + 1) * 127); out[o + 1] = Math.round((y + 1) * 127);
+  return out;
+}
+// g: a GBuf or any {w, h, col, nrm, z, emi, flag}. The planes may be passed in (each at least w*h*4
+// bytes, e.g. reused scratch buffers) and are returned as { w, h, ax, ay, p0, p1, p2 }.
+export function packGBuf(g, p0 = null, p1 = null, p2 = null) {
+  const n = g.w * g.h, n4 = n * 4;
+  p0 = p0 ? p0.subarray(0, n4) : new Uint8Array(n4); p1 = p1 ? p1.subarray(0, n4) : new Uint8Array(n4); p2 = p2 ? p2.subarray(0, n4) : new Uint8Array(n4);
+  const { col, nrm, z, emi, flag } = g, oe = [OCT_MID, OCT_MID];
+  p0.set(col.length === n4 ? col : col.subarray(0, n4));
+  let lr = -1, lg = -1, lb = -1;
+  for (let i = 0, j = 0; i < n; i++, j += 4) {
+    const zz = z[i];
+    p1[j] = zz & 255; p1[j + 1] = zz >> 8; p1[j + 2] = flag[i];
+    if (nrm[j + 3] < 128) { p1[j + 3] = OCT_MID; p2[j + 3] = OCT_MID; }
+    else {
+      const r = nrm[j], gg = nrm[j + 1], b = nrm[j + 2];
+      if (r !== lr || gg !== lg || b !== lb) { lr = r; lg = gg; lb = b; octEncode(r / 127.5 - 1, gg / 127.5 - 1, b / 127.5 - 1, oe); }
+      p1[j + 3] = oe[0]; p2[j + 3] = oe[1];
+    }
+    const ea = emi[j + 3];
+    if (ea) { const k = EMI_PRE[ea]; p2[j] = emi[j] * k + 0.5; p2[j + 1] = emi[j + 1] * k + 0.5; p2[j + 2] = emi[j + 2] * k + 0.5; }
+    else { p2[j] = 0; p2[j + 1] = 0; p2[j + 2] = 0; }
+  }
+  return { w: g.w, h: g.h, ax: g.ax ?? 0, ay: g.ay ?? 0, p0, p1, p2 };
+}

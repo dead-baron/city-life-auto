@@ -1,0 +1,166 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 engine test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}.wrap{position:fixed;inset:0}#cv{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+#hud{position:absolute;left:6px;bottom:4px;font:11px/1.35 monospace;color:#e4f0ea;text-shadow:0 1px 2px #000,0 0 3px #000;white-space:pre;pointer-events:none}</style></head><body>
+<!-- The art v2 GPU engine (client/art2/game/engine.js) without the game: existing art2 scenes cut into
+     768 px chunks (tools/art2/engine-world.js) plus v1 canvas fallbacks, cars on and under the elevated
+     deck, people behind a building (x-ray), under the deck and on it, a siren, a fire, decals.
+     ?q=0..3 quality  &p=golden|night|fog|storm|dusk|rain|dawn|morning|noon|afternoon|indoor  &t=seconds
+     &cam=x,y (world px of the view centre; 645,460 the overpass, 1779,420 downtown)  &z=zoom  &dpr=n
+     &n=frames to run  &prof=1 per-pass GPU timing (a 1-px readPixels sync after each pass)
+     &bench=1 times every quality x golden/night/storm/fog (6 frames each) into window.info  &flash=0..1 lightning
+     &bench=2 only exposes window.benchRun(q, preset, frames) for an outside driver  &pm=0|1|2 forces the present
+     filter (nearest / sharp bilinear / area)
+     &scene=module:name renders an art2 scene module (e.g. biomescenes:redwood) as the world, without the cast
+     &lose=1 loses the WebGL context after the frame, restores it, uploads again and redraws
+     &hud=0 hides the label  &set=key=v;key=r,g,b overrides preset values
+     &vars=set|set|... renders up to 4 variants of the preset as centre crops in a 2 x 2 grid (@name: a whole preset). Serve the repo root. -->
+<div class="wrap"><canvas id="cv"></canvas><div id="hud"></div></div>
+<script type="module">
+import { Art2Engine, PRESETS_GAME } from '../../client/art2/game/engine.js';
+import { buildWorld, buildSceneWorld, makeSprites, cast } from './engine-world.js';
+const q = new URLSearchParams(location.search);
+const Q = +(q.get('q') ?? 2), PN = q.get('p') || 'golden', T = +(q.get('t') ?? 0), N = Math.max(1, +(q.get('n') ?? 1));
+const P = { ...(PRESETS_GAME[PN] || PRESETS_GAME.golden) };
+if (q.get('flash')) P.flash = +q.get('flash');
+// &set=key=v;key=r,g,b overrides preset values (for tuning)
+function setPreset(Pv, str) { for (const kv of str.split(';').filter(Boolean)) { const [k, v] = kv.split('='); const a = v.split(',').map(Number); Pv[k] = a.length > 1 ? a : a[0]; } }
+setPreset(P, q.get('set') || '');
+const night = !['golden', 'noon', 'morning', 'afternoon', 'dawn'].includes(PN);
+const scenePreset = ['noon', 'morning', 'afternoon'].includes(PN) ? 'noon' : night ? 'night' : 'golden';
+const cv = document.getElementById('cv'), hud = document.getElementById('hud');
+if (q.get('hud') === '0') hud.style.display = 'none';
+const dpr = +(q.get('dpr') || devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+const eng = Art2Engine.create(cv, { quality: Q, profile: q.get('prof') === '1' });
+if (!eng) { hud.textContent = 'WebGL2 is not available'; window.done = true; }
+else {
+  window.eng = eng;
+  if (q.get('pm')) eng.presentMode = +q.get('pm');
+  const ctxEvents = [];
+  let onRestored = null;
+  eng.onContextLost((k) => { ctxEvents.push(k); hud.textContent = 'context ' + k; if (k === 'restored' && onRestored) onRestored(); });
+  eng.resize(W, H, dpr);
+  // the game's baseZoom(): the long side always spans viewH * 16/9 world px
+  const long = Math.max(W, H), vh = 660 * (1 + 0.3 * Math.min(1, Math.max(0, (long - 960) / 960)));
+  const zoom = +(q.get('z') || long / (vh * 16 / 9));
+  const t0 = performance.now();
+  // &scene=module:name renders that art2 scene module as the world (no cast)
+  const sc = q.get('scene') ? q.get('scene').split(':') : null;
+  const world = sc ? await buildSceneWorld(sc[0], sc[1], scenePreset) : buildWorld(scenePreset);
+  const [camX, camY] = (q.get('cam') || (sc ? `${world.w / 2},${world.h / 2}` : '645,460')).split(',').map(Number);
+  const t1 = performance.now();
+  for (const c of world.chunks) eng.uploadChunk(c.cx, c.cy, c.g);
+  for (const f of world.fallbacks) eng.setChunkFallback(f.cx, f.cy, f.canvas);
+  eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, new Uint8Array(4));
+  const t2 = performance.now();
+  const S = makeSprites(night);
+  for (const [k, g] of S) if (g.canvas) eng.uploadSpriteFromCanvas(k, g.canvas, g.ax, g.ay, g.opts); else eng.uploadSprite(k, g);
+  eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, new Uint8Array(4));
+  const t3 = performance.now();
+  let frameMs = 0, missing = 0;
+  const px1 = new Uint8Array(4);
+  const frame = (Pv, t) => {
+    eng.beginFrame({ camX, camY, zoom, viewW: cv.width / (zoom * dpr), viewH: cv.height / (zoom * dpr), time: t, preset: Pv, wet: Pv.wet, quality: Q });
+    for (const L of world.lights) eng.addLight(L);
+    for (const d of sc ? [] : cast(t, night, S)) {
+      if (d.op === 'sprite') { if (!eng.drawSprite(d.key, d.x, d.y, d.z0, d.o)) missing++; }
+      else if (d.op === 'decal') eng.drawDecal(d.key, d.x, d.y, d.a, d.alpha);
+      else eng.addLight(d.L);
+    }
+    eng.endFrame();
+  };
+  // &vars=set|set|...: one frame per variant of the preset, centre crops at 1:1 in a grid
+  const vars = (q.get('vars') || '').split('|').filter(Boolean);
+  if (vars.length) {
+    const grid = document.createElement('canvas'), g2 = grid.getContext('2d'), cols = vars.length > 1 ? 2 : 1, rows = Math.ceil(vars.length / cols);
+    grid.width = cv.width; grid.height = cv.height; grid.style.cssText = cv.style.cssText + ';position:absolute;left:0;top:0;width:100%;height:100%';
+    const tw = Math.floor(cv.width / cols), th = Math.floor(cv.height / rows);
+    g2.font = '12px monospace'; g2.fillStyle = '#fff';
+    vars.forEach((v, i) => {
+      const Pv = v[0] === '@' ? { ...PRESETS_GAME[v.slice(1)] } : { ...P };   // @name: that whole preset
+      if (v[0] !== '@') setPreset(Pv, v);
+      frame(Pv, T);
+      g2.drawImage(cv, (cv.width - tw) >> 1, (cv.height - th) >> 1, tw, th, (i % cols) * tw, Math.floor(i / cols) * th, tw, th);
+      g2.fillText(String.fromCharCode(65 + i), (i % cols) * tw + 6, Math.floor(i / cols) * th + 16);
+    });
+    cv.style.display = 'none'; document.querySelector('.wrap').appendChild(grid);
+  }
+  // bench driver hook: one tier x preset, `frames` frames; pass times are minima over the frames
+  window.benchRun = (qq, pn, frames = 4) => {
+    eng.profile = true; eng.setQuality(qq);
+    const Pv = PRESETS_GAME[pn], pass = {};
+    let tot = 1e9;
+    for (let i = 0; i < frames; i++) {
+      const a = performance.now();
+      eng.beginFrame({ camX, camY, zoom, viewW: cv.width / (zoom * dpr), viewH: cv.height / (zoom * dpr), time: T + i / 30, preset: Pv, wet: Pv.wet, quality: qq });
+      for (const L of world.lights) eng.addLight(L);
+      for (const d of cast(T + i / 30, night, S)) {
+        if (d.op === 'sprite') eng.drawSprite(d.key, d.x, d.y, d.z0, d.o); else if (d.op === 'decal') eng.drawDecal(d.key, d.x, d.y, d.a, d.alpha); else eng.addLight(d.L);
+      }
+      eng.endFrame();
+      eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, px1);
+      tot = Math.min(tot, performance.now() - a);
+      for (const k in eng.timesLast) if (eng.timesLast[k] > 0) pass[k] = Math.min(pass[k] ?? 1e9, Math.round(eng.timesLast[k] * 10) / 10);
+    }
+    return { frame: Math.round(tot), lights: eng.lightsUsed, scene: [eng.SW, eng.SH], pass };
+  };
+  if (q.get('bench') === '2') {}
+  else if (q.get('bench') === '1') {
+    // every tier x preset: average pass times over 5 frames after a warm-up frame
+    const res = {};
+    eng.profile = true;
+    for (const qq of [0, 1, 2, 3]) for (const pn of ['golden', 'night', 'storm', 'fog']) {
+      eng.setQuality(qq);
+      const Pv = PRESETS_GAME[pn];
+      let tot = 1e9;
+      const pass = {};
+      for (let i = 0; i < 6; i++) {
+        const a = performance.now();
+        eng.beginFrame({ camX, camY, zoom, viewW: cv.width / (zoom * dpr), viewH: cv.height / (zoom * dpr), time: T + i / 30, preset: Pv, wet: Pv.wet, quality: qq });
+        for (const L of world.lights) eng.addLight(L);
+        for (const d of cast(T + i / 30, night, S)) {
+          if (d.op === 'sprite') eng.drawSprite(d.key, d.x, d.y, d.z0, d.o); else if (d.op === 'decal') eng.drawDecal(d.key, d.x, d.y, d.a, d.alpha); else eng.addLight(d.L);
+        }
+        eng.endFrame();
+        eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, px1);
+        if (!i) continue;
+        tot = Math.min(tot, performance.now() - a);
+        for (const k in eng.timesLast) pass[k] = Math.min(pass[k] ?? 1e9, Math.round(eng.timesLast[k] * 10) / 10);
+      }
+      tot = Math.round(tot);
+      res[qq + ':' + pn] = { frame: tot, lights: eng.lightsUsed, pass };
+    }
+    window.bench = res;
+  }
+  else for (let i = 0; i < N; i++) {
+    const t = T + i / 30, a = performance.now();
+    frame(P, t);
+    eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, px1);
+    if (i || N === 1) frameMs += performance.now() - a;
+    if (i < N - 1) await new Promise((r) => requestAnimationFrame(r));
+  }
+  // &lose=1: lose the context after the frame, restore it, upload everything again and draw again
+  if (q.get('lose') === '1') {
+    const ext = eng.gl.getExtension('WEBGL_lose_context');
+    const upload = () => {
+      for (const c of world.chunks) eng.uploadChunk(c.cx, c.cy, c.g);
+      for (const f of world.fallbacks) eng.setChunkFallback(f.cx, f.cy, f.canvas);
+      for (const [k, g] of S) if (g.canvas) eng.uploadSpriteFromCanvas(k, g.canvas, g.ax, g.ay, g.opts); else eng.uploadSprite(k, g);
+    };
+    await new Promise((res) => {
+      onRestored = () => { ctxEvents.push('chunks after restore: ' + eng.stats().chunks); upload(); frame(P, T); res(); };
+      ext.loseContext();
+      setTimeout(() => { ctxEvents.push('drawing while lost: ' + (eng.beginFrame({ camX, camY, zoom, viewW: 100, viewH: 100, time: 0, preset: P }) === false ? 'refused' : 'accepted')); ext.restoreContext(); }, 300);
+    });
+  }
+  frameMs /= Math.max(1, N - 1);
+  const st = eng.stats();
+  const dbg = eng.gl.getExtension('WEBGL_debug_renderer_info');
+  const info = { gpu: dbg ? eng.gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '?', q: Q, p: PN, zoom: +zoom.toFixed(3), canvas: [cv.width, cv.height], build: Math.round(t1 - t0), scenes: Math.round(world.ms.scenes), upload: Math.round(t2 - t1), sprites: Math.round(t3 - t2), frame: Math.round(frameMs), missing, ...st };
+  if (window.bench) info.bench = window.bench;
+  if (ctxEvents.length) info.context = ctxEvents;
+  window.info = JSON.stringify(info);
+  hud.textContent = `${['Low', 'Medium', 'High', 'Ultra'][Q]} ${PN}  zoom ${zoom.toFixed(2)} x dpr ${dpr}  scene ${st.scene.join('x')}\nchunks ${st.chunks} (${st.baked} baked)  sprites ${st.sprites} on ${st.pages} pages  lights ${st.lights}/${st.lightsIn}  GPU ~${st.gpuMB} MB  frame ${Math.round(frameMs)} ms (swiftshader)`;
+  window.done = true;
+}
+</script></body></html>
