@@ -1785,7 +1785,7 @@ function baseZoom() {
   // up: up to ~30% more world on a 1080p+ monitor, the phone view stays as it was.
   const long = Math.max(W, H);
   const viewH = VIEW_H * (1 + 0.3 * Math.max(0, Math.min(1, (long - 960) / 960)));
-  return long / (viewH * 16 / 9);
+  return long / (viewH * 16 / 9) * (S.camScale || 1); // (S.camScale: a closer camera, for trying framings)
 }
 
 // ---- personal police cruiser: radio dispatch, then an arrow leads you to it ------------------
