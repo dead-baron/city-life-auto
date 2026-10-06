@@ -25,7 +25,8 @@
 //     (call it every frame until the bake lands; dropChunk first to force a refresh of a redrawn canvas).
 //   - drawSprite returns false when the sprite is not resident (upload it, draw next frame) and snaps the
 //     sprite to whole world px. o.alpha < 1 is an ordered-dither fade (a G-buffer cannot blend).
-//   - o.shadow === false stops the sprite casting a shadow; o.flash whitens it and adds glow.
+//   - o.shadow === false stops the sprite casting a shadow; o.flash whitens it and adds glow; o.air marks it as
+//     up in the air (birds: no mirror image in wet ground or water).
 //   - f.wet / f.flash / f.fog (optional) raise the preset's wet, lightning flash and fog.
 //   - onContextLost(cb): cb('lost') on loss, cb('restored') once rebuilt (every chunk and sprite must be
 //     uploaded again: has* return false), cb('failed') if the rebuild fails.
@@ -72,18 +73,20 @@
 // Integration notes: sprites snap to whole world px while the camera scrolls with sub-texel precision, so
 //   pass camX/camY as the player's rounded position (+ the smooth look-ahead) to keep the player steady.
 //   Decals on decks need z0. Lights are world px; static lights from chunks must be added each frame.
-import { F_GROUND, packGBuf, octEncode, OCT_MID } from '../gbuf.js';
+import { F_GROUND, F_LEAF, packGBuf, octEncode, OCT_MID } from '../gbuf.js';
 import { LightGame, LIGHT_TIERS, MAX_LIGHTS, LIGHT_FLOATS, PRESETS_GAME, PRESET_DEFAULTS, blendPresets, glProgram, glTex, glFbo, TRI_VS, GLSL_COMMON } from './lightgame.js';
 export { PRESETS_GAME, PRESET_DEFAULTS, blendPresets, LIGHT_TIERS };
 
 export const CHUNK_PX = 768;
 export const ATLAS_PX = 1024;
 // cache budgets per quality (GAME-RENDERER.md "Quality tiers"); lighting settings live in LIGHT_TIERS
+// sway: how the vegetation moves with the wind (STATIC_FS uSway: 1 gust shading only, 3 leaning up to 2 texels,
+// 4 up to 3)
 export const QUALITY = [
-  { name: 'Low', chunks: 12, pages: 4 },
-  { name: 'Medium', chunks: 14, pages: 6 },
-  { name: 'High', chunks: 18, pages: 8 },
-  { name: 'Ultra', chunks: 26, pages: 10 },
+  { name: 'Low', chunks: 12, pages: 4, sway: 1 },
+  { name: 'Medium', chunks: 14, pages: 6, sway: 3 },
+  { name: 'High', chunks: 18, pages: 8, sway: 4 },
+  { name: 'Ultra', chunks: 26, pages: 10, sway: 4 },
 ];
 const HMAX = 4096, GSINK = 4, DECAL_H = 3.5, FL = 16;
 const EMPTY = Object.freeze({});
@@ -107,19 +110,75 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // local number of the building on top at each texel. uFade[k] (0..1) fades building k toward the under layer:
 // the colour blends smoothly; past half way the texel also takes the ground's height and normal, so people
 // and cars behind it draw over it (the host eases each building in and out round the player).
+// Swaying vegetation: leaf texels (F_LEAF: foliage, grass tufts, crops) lean with the wind (uWind: strength,
+// gustiness, direction; uWindT the shared wind clock) by whole texels, more the higher they stand above their
+// ground - so a tree's crown sways over its trunk and grass tips nod - plus a slow idle sway even in calm air.
+// A texel looks for the leaf that leans onto it among its neighbours (up to uSway - 1 texels either side; the
+// tallest wins, as in the depth rule); where a leaf leans away and nothing takes its place, the texel beside it
+// shows through. Gusts also brighten the leaves they bend (bands of wind sweeping over a wheat field).
+// uSway: 0 off, 1 gust shading only (Low), 2-4 leaning up to 1-3 texels.
 const STATIC_FS = HDR + `
 uniform sampler2D t0, t1, t2, t3; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64];
+uniform vec4 uWind; uniform float uWindT; uniform int uSway; uniform vec2 uChunk;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
+float gustAt(vec2 w){
+  float s = uWind.x, t = uWindT, along = dot(w, uWind.zw);
+  float w1 = sin(along * 0.006 - t * (1.1 + s * 1.6));
+  float w2 = sin(along * 0.009 + (w.x * uWind.w - w.y * uWind.z) * 0.003 - t * (2.3 + s * 2.0) + 1.3);
+  return 0.5 + 0.5 * (0.65 * w1 + 0.35 * w2);
+}
+// how far a leaf texel at height h leans for a push of 1 (texels): grass and crops at their tips, foliage
+// more the higher it stands
+float ampOf(float h, int f){ return (f & ${F_GROUND}) != 0 ? clamp(h / 7.0, 0.0, 1.0) * 1.6 : clamp((h - 10.0) / 70.0, 0.0, 1.4) * 2.2; }
+int leanOf(float pw, float pi, float h, int f, int R){
+  float k = (f & ${F_GROUND}) != 0 ? 0.4 : 1.0;
+  return clamp(int(round((pw + pi * k) * ampOf(h, f))), -R, R);
+}
 void main(){
-  ivec2 q = ivec2(gl_FragCoord.xy - uOff);
-  vec4 a = texelFetch(t0, q, 0);
+  ivec2 q = ivec2(gl_FragCoord.xy - uOff), src = q;
+  vec4 b = texelFetch(t1, q, 0);
+  float gb = 0.0;
+  if (uSway > 0) {
+    vec2 w = uChunk + vec2(q);
+    float g = gustAt(w), s = uWind.x;
+    gb = s * (0.35 + 0.65 * g) * smoothstep(0.15, 0.5, s);
+    if (uSway > 1) {
+      int R = uSway - 1;
+      float pw = s * ((1.0 - uWind.y) * 0.6 + uWind.y * g * 1.3) * uWind.z;
+      // (the fields change slowly across the ground, so a whole plant leans as one)
+      float pi = sin(uWindT * 1.25 + w.x * 0.0045 + w.y * 0.006) * 0.3 + sin(uWindT * 0.7 + w.x * 0.0021 - w.y * 0.003) * 0.15;
+      int fl0 = flOf(b);
+      float h0 = zOf(b);
+      int own = (fl0 & ${F_LEAF}) != 0 ? leanOf(pw, pi, h0, fl0, R) : 0;
+      float bestH = own == 0 ? h0 : -1.0;
+      int bestK = own == 0 ? 0 : 99;
+      for (int k = -3; k <= 3; k++) {
+        if (k == 0 || abs(k) > R) continue;
+        int sx = q.x - k;
+        if (sx < 0 || sx > ${CHUNK_PX - 1}) continue;
+        vec4 sb = texelFetch(t1, ivec2(sx, q.y), 0);
+        int sf = flOf(sb);
+        if ((sf & ${F_LEAF}) == 0) continue;
+        float sh = zOf(sb);
+        if (sh > bestH && leanOf(pw, pi, sh, sf, R) == k) { bestH = sh; bestK = k; }
+      }
+      if (bestK == 99) {
+        ivec2 s2 = ivec2(clamp(q.x - own, 0, ${CHUNK_PX - 1}), q.y);
+        vec4 b2 = texelFetch(t1, s2, 0);
+        if ((flOf(b2) & ${F_LEAF}) == 0) { src = s2; b = b2; }
+      } else if (bestK != 0) { src = ivec2(q.x - bestK, q.y); b = texelFetch(t1, src, 0); }
+    }
+  }
+  vec4 a = texelFetch(t0, src, 0);
   if (a.a < 0.5) discard;
-  vec4 b = texelFetch(t1, q, 0), c = texelFetch(t2, q, 0);
+  vec4 c = texelFetch(t2, src, 0);
   float h = zOf(b);
-  bool ground = (flOf(b) & ${F_GROUND}) != 0;
+  int fl = flOf(b);
+  bool ground = (fl & ${F_GROUND}) != 0;
+  if (gb > 0.0 && (fl & ${F_LEAF}) != 0) a.rgb *= 1.0 + gb * (ground ? 0.2 : 0.08);
   if (uFadeOn > 0.5) {
-    vec4 u = texelFetch(t3, q, 0);
+    vec4 u = texelFetch(t3, src, 0);
     int k = int(u.a * 255.0 + 0.5);
     if (k > 0 && k < 64) {
       float f = uFade[k];
@@ -136,7 +195,7 @@ void main(){
   }
   if (ground) h = max(h - ${GSINK.toFixed(1)}, 0.0);
   gl_FragDepth = 1.0 - h * ${(1 / HMAX).toFixed(8)};
-  o0 = vec4(a.rgb, 1.0); o1 = b; o2 = c;
+  o0 = vec4(a.rgb, a.a); o1 = b; o2 = c;
 }`;
 // instanced sprite quads: iDst (x, y, w, h in scene texels), iSrc (atlas x, y, layer, bits 1 flipX 2 no
 // shadow), iPar (z0, alpha, flash, 0), iTint (r, g, b, 0)
@@ -166,6 +225,7 @@ void main(){
   float h = zOf(b) + vPar.x;
   int fl = flOf(b);
   if ((bits & 2) != 0) fl |= 4;
+  if ((bits & 4) != 0) fl |= 128;   // up in the air (F_AIR): the wet-ground mirror skips it
   float hd = (fl & ${F_GROUND}) != 0 ? max(h - ${GSINK.toFixed(1)}, 0.0) : h;
   gl_FragDepth = clamp(1.0 - hd * ${(1 / HMAX).toFixed(8)}, 0.0, 1.0);
   float H = clamp(floor(h + 0.5), 0.0, 65535.0), hi = floor(H / 256.0);
@@ -579,6 +639,7 @@ export class Art2Engine {
     const P = f.preset || PRESETS_GAME.noon, T = LIGHT_TIERS[this.q];
     this.P = P; this.time = f.time || 0; this.wet = f.wet || 0; this.flash = f.flash || 0; this.fog = f.fog || 0;
     if (f.fades !== undefined) this.fades = f.fades;
+    this.wind = f.wind || null; this.windT = f.windT ?? this.time; // [strength, gustiness, dir x, dir y], the wind clock (s)
     this.zoom = f.zoom > 0 ? f.zoom : 1; this.camX = +f.camX || 0; this.camY = +f.camY || 0;
     // margins: the shadow reach on the side the sun is, room above for wet reflections, a little slack
     const sd = P.sunDir || PRESET_DEFAULTS.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]) || 1, sz = sd[2] / sl;
@@ -610,7 +671,7 @@ export class Art2Engine {
     if (this.nInst * FL >= this.inst.length) this.inst = this._grow(this.inst, this.ibSpr);
     const A = this.inst, b = this.nInst++ * FL, t = o.tint;
     A[b] = dx; A[b + 1] = dy; A[b + 2] = r.w; A[b + 3] = r.h;
-    A[b + 4] = r.x; A[b + 5] = r.y; A[b + 6] = r.layer; A[b + 7] = (o.flipX ? 1 : 0) | (o.shadow === false ? 2 : 0);
+    A[b + 4] = r.x; A[b + 5] = r.y; A[b + 6] = r.layer; A[b + 7] = (o.flipX ? 1 : 0) | (o.shadow === false ? 2 : 0) | (o.air ? 4 : 0);
     A[b + 8] = z0; A[b + 9] = alpha; A[b + 10] = o.flash || 0; A[b + 11] = 0;
     A[b + 12] = t ? t[0] : 1; A[b + 13] = t ? t[1] : 1; A[b + 14] = t ? t[2] : 1; A[b + 15] = 0;
     if (o.xray) {
@@ -667,6 +728,7 @@ export class Art2Engine {
     const LS = this.LS;
     LS.A = this.tA; LS.B = this.tB; LS.C = this.tC; LS.w = this.SW; LS.h = this.SH; LS.preset = this.P;
     LS.wet = this.wet; LS.time = this.time; LS.flash = this.flash; LS.fog = this.fog;
+    const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind;
     LS.nL = this._packLights(); LS.ubo = this.uboBuf; LS.out = this.fbOut; LS.mark = this.profile ? this._mark : null;
     this.light.bin(this.ubo, LS.nL, this.SW, this.SH, Math.max(this.P.wet ?? 0, this.wet) > 0);
     this.light.render(LS);
@@ -737,6 +799,9 @@ export class Art2Engine {
     gl.clearBufferfv(gl.COLOR, 0, Z4); gl.clearBufferfv(gl.COLOR, 1, Z4); gl.clearBufferfv(gl.COLOR, 2, Z4); gl.clearBufferfv(gl.DEPTH, 0, ONE);
     gl.useProgram(p.p); gl.bindVertexArray(this.vaoQuad);
     gl.uniform2f(u.uScene, this.SW, this.SH);
+    const W = this.wind, sway = W && this.swayOn !== false ? QUALITY[this.q].sway : 0; // (swayOn: Settings' "Wind sway")
+    gl.uniform1i(u.uSway, sway);
+    if (sway) { gl.uniform4f(u.uWind, W[0], W[1], W[2], W[3]); gl.uniform1f(u.uWindT, this.windT % 4096); }
     const fades = this.fades && this.fades.size ? this.fades : null, FA = this._fadeArr || (this._fadeArr = new Float32Array(64));
     const c0 = Math.floor(this.ox / CHUNK_PX), c1 = Math.floor((this.ox + this.SW - 1) / CHUNK_PX), r0 = Math.floor(this.oy / CHUNK_PX), r1 = Math.floor((this.oy + this.SH - 1) / CHUNK_PX);
     let n = 0;
@@ -754,7 +819,7 @@ export class Art2Engine {
       }
       gl.uniform1f(u.uFadeOn, on);
       const x = cx * CHUNK_PX - this.ox, y = cy * CHUNK_PX - this.oy;
-      gl.uniform4f(u.uRect, x, y, CHUNK_PX, CHUNK_PX); gl.uniform2f(u.uOff, x, y);
+      gl.uniform4f(u.uRect, x, y, CHUNK_PX, CHUNK_PX); gl.uniform2f(u.uOff, x, y); gl.uniform2f(u.uChunk, cx * CHUNK_PX, cy * CHUNK_PX);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       n++;
     }

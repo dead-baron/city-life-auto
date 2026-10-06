@@ -23,7 +23,7 @@
 // uniform objects; light.js PRESETS entries work too (missing keys take PRESET_DEFAULTS).
 // blendPresets(a, b, t, out) mixes two presets (numbers and colours) into out (start it as {}: its arrays
 // are created once and reused, so blending every frame allocates nothing; out may be a or b).
-import { F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS } from '../gbuf.js';
+import { F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_AIR } from '../gbuf.js';
 
 // ---- quality tiers (lighting side; the engine adds cache sizes) -----------------------------------------
 // stepC/stepG: the march step grows as t += stepC + t * stepG, so `steps` steps reach `reach` px.
@@ -189,9 +189,78 @@ uniform vec3 sunDir, sunCol, ambSky, ambGround, shadowTint, flashCol;
 uniform float shadowLen, bands, bandMix, wet, emiK, leafGlow, time, flash, rain, skyRefl;
 uniform int nL;
 uniform highp usampler2D tTiles;   // per ${TILE} px tile: count, then up to ${TILE_K - 1} light indices
+uniform vec2 worg;                 // the world px of scene texel (0, 0): water and rain are anchored to the world
+uniform vec4 wind4;                // the wind: strength, gustiness, direction x, y (render/flora/wind.js)
 struct Light { vec4 pos; vec4 col; vec4 cone; };
 layout(std140) uniform Lights { Light L[MAXL]; };
 ${GLSL_COMMON}
+float wnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  ivec2 c = ivec2(i);
+  return mix(mix(hash2(c), hash2(c + ivec2(1, 0)), f.x), mix(hash2(c + ivec2(0, 1)), hash2(c + ivec2(1, 1)), f.x), f.y);
+}
+// Water. Open water rolls with little waves along the wind (the normal tilts with them; the sun glints off the
+// crests in crisp pixels). Near a shore - code: the shore distance the ground bake keeps in the albedo's alpha
+// (groundbake surf: 191 + px out into the water, 191 - px up a beach) - a wave runs in every few seconds (each
+// stretch of shore in its own time), breaks into foam, and its swash runs up the sand and back, leaving it wet.
+// Anchored to the world (w: world px): nothing travels with the camera. alb is linear; returns the glint.
+float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 wq){
+  float glint = 0.0, t = time;
+  if ((fl & ${F_WATER}) != 0 && (fl & ${F_WET}) == 0) {
+    // two wave trains along the wind and a fine chop: the water brightens a little on the crests, and where a
+    // crest faces the sun just so, it glints (the baked ripples keep shading the surface)
+    vec2 d1 = normalize(wind4.zw + vec2(1e-3, 0.0)), d2 = normalize(vec2(-d1.y, d1.x) * 0.7 + d1);
+    float A = 0.16 + wind4.x * 0.5;
+    float p1 = dot(w, d1) * 0.13 - t * 1.7, p2 = dot(w, d2) * 0.21 - t * 2.3 + 1.7, p3 = dot(w, vec2(0.37, -0.29)) - t * 3.1;
+    float hgt = sin(p1) + sin(p2) * 0.6 + sin(p3) * 0.25;
+    alb *= 1.0 + hgt * (0.025 + wind4.x * 0.03);
+    vec2 g = d1 * cos(p1) + d2 * (cos(p2) * 0.6) + vec2(0.37, -0.29) * (cos(p3) * 0.25);
+    vec3 nw = normalize(vec3(n.xy + g * A, n.z)), H = normalize(sunDir + vec3(0.0, 0.5, 0.866));
+    glint = step(0.72 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), 160.0)) * 0.5;
+  }
+  int ci = int(code + 0.5);
+  if (ci >= 143 && ci <= 238) {
+    float sd = float(ci - 191);                                    // + out into the water, - up the beach
+    float al = wnoise(w * vec2(0.012, 0.009));                      // along the shore: waves arrive at different times
+    float c = fract(t / 7.0 + al * 0.6);                            // this stretch of shore's place in its wave cycle
+    float reach = 10.0 + al * 10.0;
+    float run = reach * pow(sin(3.14159 * clamp((c - 0.3) / 0.7, 0.0, 1.0)), 0.6); // the swash up the sand
+    float front = 47.0 * (1.0 - c / 0.32);                          // the wave coming in, until it breaks
+    float foam = 0.0;
+    if (sd >= 0.0) {
+      float df = sd - front;
+      if (c < 0.32 && df > -1.5 && df < 12.0) foam = (df < 2.5 ? 1.0 : (1.0 - (df - 2.5) / 9.5) * 0.85) * smoothstep(0.0, 0.08, c); // (it builds as it comes in)
+      if (sd < 2.0 + sin(t * 1.9 + al * 9.0)) foam = max(foam, 0.7);   // lapping at the water's edge
+    } else {
+      float ds = -sd;
+      if (ds < run - 1.6) { alb = mix(alb, vec3(0.2, 0.5, 0.56), 0.45); n = vec3(0.0, 0.0, 1.0); }   // a thin sheet of clear water
+      else if (ds < run + 0.8) foam = 1.0;
+      else if (ds < reach) alb *= 0.88;                            // still wet from the last wave
+    }
+    if (foam > bayer4(wq) + 0.5) alb = mix(alb, vec3(0.86, 0.9, 0.93), 0.85);
+  }
+  return glint;
+}
+// Rain on the world (not on the screen): rings spreading on water and puddles, small splashes on wet ground and
+// on anything facing up (car roofs too). up: the normal's z. Returns light to add (display units).
+float rainMarks(vec2 w, bool water, float up){
+  if (rain <= 0.0 || up < 0.75) return 0.0;
+  float cs = water ? 20.0 : 12.0, life = water ? 1.1 : 0.35, add = 0.0;
+  vec2 cell = floor(w / cs), f = fract(w / cs), sgn = vec2(f.x < 0.5 ? -1.0 : 1.0, f.y < 0.5 ? -1.0 : 1.0);
+  for (int k = 0; k < 4; k++) {
+    vec2 c = cell + vec2(float(k & 1), float(k >> 1)) * sgn;
+    ivec2 ic = ivec2(c);
+    float u = time / life + hash2(ic + ivec2(911, 37)), slot = floor(u), age = u - slot;
+    int si = int(slot);
+    if (hash2(ic + ivec2(si * 13, si * 7)) > rain * (water ? 0.35 : 0.1)) continue;   // no drop here this time
+    vec2 dv = w - (c + vec2(hash2(ic + ivec2(si, 3)), hash2(ic + ivec2(5, si)))) * cs;
+    dv.y *= 1.8;                                                    // seen at an angle: rings are flattened
+    float d = length(dv);
+    if (water) add += step(abs(d - 1.0 - age * 7.0), 0.6) * (1.0 - age) * 0.35;
+    else if (age < 0.5) add += step(d, 1.0) * 0.22 + step(abs(d - 2.0 - age * 3.0), 0.5) * (0.5 - age) * 0.3;
+  }
+  return add * rain;
+}
 // how much sun reaches P (1 .. 0): a march toward the sun through the height map, or (Low) a few taps
 float sunVis(vec3 P, ivec2 wq){
   float sh = 1.0;
@@ -294,7 +363,7 @@ vec4 shade(vec3 alb, vec3 n, int fl, float sh, vec3 plight, vec3 refl, vec3 emi,
   if ((fl & ${F_GLASS}) != 0) lit += ambSky * 0.12;
   if (wet > 0.0 && (fl & ${F_WET | F_GROUND}) != 0) {
     lit += ambSky * (skyRefl * wet * (0.25 + 0.75 * max(n.z, 0.0)) * 0.5);
-    if (rain > 0.0 && hash2(wq + ivec2(0, int(time * 12.0) * 7919)) > 1.0 - 0.006 * rain) lit += vec3(0.55, 0.6, 0.75) * rain;
+    if (rain > 0.0 && hash2(wq + ivec2(0, int(time * 12.0) * 7919)) > 1.0 - 0.0015 * rain) lit += vec3(0.55, 0.6, 0.75) * rain;
   }
   lit += pow(emi, vec3(2.2)) * emiK + refl * wet;
   vec3 m = lit / (1.0 + lit * 0.18);
@@ -319,7 +388,12 @@ void main(){
   float sh = dot(n, sunDir) > 0.0 && sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, wq) : 1.0;
   vec3 plight = vec3(0.0), refl = vec3(0.0);
   pointLights(P, n, q, (fl & ${F_GROUND}) != 0 && wet > 0.0, plight, refl);
-  o0 = shade(pow(A.rgb, vec3(2.2)), n, fl, sh, plight, refl, C.rgb, wq);
+  vec3 alb = pow(A.rgb, vec3(2.2));
+  vec2 w = worg + vec2(q) + 0.5;
+  float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, wq) : 0.0;
+  o0 = shade(alb, n, fl, sh, plight, refl, C.rgb, wq);
+  float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * sh + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
+  if (add > 0.0) o0.rgb = min(o0.rgb + vec3(add), vec3(1.0));
 }`;
 
 // Low: the lights at half resolution. lighth lights the top-left texel of each 2 x 2 block: rgb = point
@@ -368,7 +442,12 @@ void main(){
     if (d3 < best) { best = d3; pick = c3; R = R3; }
   }
   vec4 LH = texelFetch(tLH, pick, 0);
-  o0 = shade(pow(A.rgb, vec3(2.2)), n, fl, LH.a, LH.rgb * LH.rgb * 8.0, R.rgb * R.rgb * 4.0, C.rgb, q + org);
+  vec3 alb = pow(A.rgb, vec3(2.2));
+  vec2 w = worg + vec2(q) + 0.5;
+  float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, q + org) : 0.0;
+  o0 = shade(alb, n, fl, LH.a, LH.rgb * LH.rgb * 8.0, R.rgb * R.rgb * 4.0, C.rgb, q + org);
+  float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * LH.a + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
+  if (add > 0.0) o0.rgb = min(o0.rgb + vec3(add), vec3(1.0));
 }`;
 
 // bloom source at half size: glow + whatever is brighter than the threshold
@@ -448,7 +527,7 @@ void main(){
       ivec2 sq = ivec2(int(float(q.x) + wob * t * 0.06), q.y - int(2.0 * t));
       if (sq.y < 0) break;
       vec4 sb = texelFetch(tB, sq, 0);
-      if (zOf(sb) + 0.5 < t + Z || (flOf(sb) & ${F_GROUND}) != 0) continue;
+      if (zOf(sb) + 0.5 < t + Z || (flOf(sb) & ${F_GROUND | F_AIR}) != 0) continue;   // (birds in the air leave no image)
       vec2 hu = (vec2(sq) + 0.5) * 0.5 / halfTex;
       vec3 bb = texelFetch(tLit, sq, 0).rgb * 0.42 + (useBH > 0.5 ? texture(tBH, min(hu, maxUVh)).rgb : texture(tBQ, min(hu * halfTex / (2.0 * quarterTex), maxUVq)).rgb) * 1.1;
       c += bb * ((1.0 - t / (float(REFL) * REFLSTEP + 8.0)) * rk);
@@ -576,6 +655,8 @@ export class LightGame {
     gl.uniform1f(u.wet, wet); gl.uniform1f(u.emiK, pv(P, 'emiK')); gl.uniform1f(u.leafGlow, pv(P, 'leafGlow')); gl.uniform1f(u.time, S.time % 4096);
     gl.uniform1f(u.flash, flash); gl.uniform1f(u.rain, pv(P, 'rain') * Math.min(1, wet * 1.5)); gl.uniform1f(u.skyRefl, pv(P, 'skyRefl'));
     gl.uniform1i(u.nL, S.nL);
+    if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
+    if (u.wind4) { const W = S.wind; gl.uniform4f(u.wind4, W ? W[0] : 0.1, W ? W[1] : 0.3, W ? W[2] : 1, W ? W[3] : 0); }
   }
   // S: { A, B, C: scene textures; w, h: used size; preset; wet; time; flash; nL; ubo; org: [x, y] (origin
   //      mod 8192); view: [x, y, w, h] (the visible rectangle in scene texels); out: framebuffer for the

@@ -19,7 +19,7 @@ const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK)
 // the ground by tile type, in the new ground's colours
 export const GROUND_RGB = {
   [T.WALL]: [70, 66, 72], [T.GRASS]: [84, 118, 56], [T.SIDEWALK]: [170, 164, 152], [T.ROAD]: [66, 68, 76], [T.PLAZA]: [178, 160, 138],
-  [T.BUILDING]: [96, 90, 90], [T.WATER]: [52, 112, 132], [T.DEEP]: [36, 82, 112], [T.SAND]: [216, 196, 146], [T.DOCK]: [128, 96, 66],
+  [T.BUILDING]: [96, 90, 90], [T.WATER]: [34, 122, 168], [T.DEEP]: [22, 104, 156], [T.SAND]: [216, 196, 146], [T.DOCK]: [128, 96, 66],
   [T.DIRT]: [140, 108, 74], [T.FIELD]: [152, 140, 70], [T.BRIDGE]: [112, 110, 106], [T.LOT]: [92, 92, 98], [T.FLOOR]: [186, 174, 152], [T.COUNTER]: [136, 100, 70],
 };
 const ASPHALT = '#42444c', DIRT = '#8c6c4a', WALK = '#aaa498', DECK = '#706e6a', DECK_SIDE = '#4e4c4a', LINE_W = 'rgba(232,230,220,0.85)', LINE_Y = 'rgba(214,194,78,0.9)';

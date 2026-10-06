@@ -3802,7 +3802,9 @@ function drawRain(dt, sky) {
     if (s2.x < -150 || s2.y < -150 || s2.x > W + 150 || s2.y > H + 150) continue;
     ls.push({ x: s2.x, y: s2.y, r: 150 * S.cam.zoom, c: r.c, a: r.a });
   }
-  S.wx.drawRain(g, W, H, dt, ls, sky, gfx.weather ? gfxQuality() : 0, 0.1 + 0.5 * wind.strength * -wind.dx);
+  // (the new renderer splashes the drops on the world itself - rings on water, splashes on the ground and on car
+  // roofs - so the screen-space bursts, which travelled with the camera, are only drawn for the classic renderer)
+  S.wx.drawRain(g, W, H, dt, ls, sky, gfx.weather ? gfxQuality() : 0, 0.1 + 0.5 * wind.strength * -wind.dx, !(S.art2 && S.art2.ready));
 }
 
 // ---------------------------------------------------------------------------

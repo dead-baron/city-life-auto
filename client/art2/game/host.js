@@ -32,12 +32,14 @@ import { CHUNK, DECK_Z, groundZ } from './chunkbake.js';
 import { WorkerPool } from './pool.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
-import { WATER_T, TRAIN_CARS, CROSSING_ARM } from '../../../shared/map.js';
+import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/map.js';
+import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/roads.js';
 import { VEHICLE_BY_INDEX } from '../../../shared/vehicles.js';
 import { dir8 } from '../../render/chars.js';
 import { lampHead } from '../../render/tiles.js';
 import { countryLightY } from '../../render/country.js';
+import { wind } from '../../render/flora/wind.js';
 import { F_GROUND, F_NOCAST } from '../gbuf.js';
 
 export { DECK_Z };
@@ -53,6 +55,8 @@ const TIERS = [
 ];
 const LOWMEM_CHUNKS = 10;
 const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
+const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown']);
+const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
@@ -354,11 +358,16 @@ export class World2 {
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
     this._fades(F, sp);
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades }) === false) return;
+    // the wind the vegetation sways in (render/flora/wind.js, from the shared world clock); Settings' "Wind sway"
+    // switch turns the swaying off
+    E.swayOn = this.gfx.wind !== false;
+    const Wd = this.windArr || (this.windArr = [0, 0, 1, 0]);
+    Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, windT: S.loopTime || F.now }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
-    this._decals(F); mk('decals');
+    this._decals(F); this._wakeTrail(F); mk('decals');
     this._entities(F); mk('entities');
     this._prefetch(F); mk('prefetch');
     this._furniture(F); mk('furniture');
@@ -771,6 +780,16 @@ export class World2 {
     if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
     const lean = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.kind === 'bike' ? 2.5 : 1.6);
     const z0 = this._z0(v, def.kind === 'boat') - (sinking ? sk * 8 : 0);
+    // a moving boat: its foam under the hull (bow collar, churned stern, the V close behind) and wake points
+    // dropped for the trail that spreads and fades behind it (_wakeTrail)
+    if (def.kind === 'boat' && A.wakeKey && !sinking) {
+      const b = v.buf, sp = b && b.length > 1 ? Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20 : 0;
+      if (sp > 40) {
+        const fr = Math.floor(now * 8) & 3, wk = this._spr('actors', 'wake', A.wakeKey(v.d, hi, N, fr), [v.d, hi, N, fr]);
+        if (wk) { const wo = this.wakeO || (this.wakeO = {}); wo.alpha = Math.min(1, sp / 220); wo.shadow = false; wo.flash = 0; wo.xray = false; wo.flipX = false; wo.tint = null; E.drawSprite(wk, v.rx, v.ry, 0, wo); }
+        if (now - (v._wkT || 0) > 0.09) { v._wkT = now; this._wakeDrop(v.rx - Math.cos(v.ra) * def.L * 0.45, v.ry - Math.sin(v.ra) * def.L * 0.45, v.ra, now, def.W * 0.5, sp); }
+      }
+    }
     E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
     this.n.drawn++;
     // riders on bikes and jet skis sit in the open
@@ -862,9 +881,12 @@ export class World2 {
       if (!k) k = b._v2k && this.E.hasSprite(b._v2k) ? b._v2k : null;
       if (!k) continue;
       b._v2k = k;
-      const o = this.opts; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = true; o.tint = null; o.flipX = false;
-      this.E.drawSprite(k, b.x, b.y, b.fly ? Math.min(70, 8 + b.fly * 30) : 0, o);
+      // flying: well up in the air (its shadow, when the sun reaches that far, falls well away from it) and no
+      // mirror image in wet streets or water
+      const o = this.opts; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = true; o.tint = null; o.flipX = false; o.air = !!b.fly;
+      this.E.drawSprite(k, b.x, b.y, b.fly ? Math.min(140, 10 + b.fly * 55) : 0, o);
     }
+    this.opts.air = false;
     // muzzle flashes (S.flashes, lit in _lights): the providers' flash sprite along the shot
     if (A && A.muzzleKey) for (const f of S.flashes) {
       if (f.kind === 'boom' || f.a === undefined) continue;
@@ -1108,18 +1130,94 @@ export class World2 {
       o.alpha = p.type === 2 ? Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1 : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2);
       E.drawSprite(key, p.x, p.y, Math.max(0, p.z * (p.type === 8 ? 0.5 : 0.3)), o); // (v1's heights)
     }
-    // wind-blown leaves (render/flora): their simulation runs without drawing; the art2 leaf frames tumble
-    const fl = this.S.flora;
-    if (fl && fl.leaves && fl.leavesFrame) {
-      fl.leavesFrame(NULL_CTX, F.view, F.dt, false);
-      o.alpha = 1;
-      for (const l of fl.leaves) {
-        if (!l.on) continue;
-        const name = l.c >= 2 ? 'pLeafAutumn' : 'pLeaf', inf = this._fx(name), n = inf ? inf.frames : 1, frm = Math.floor(Math.abs(l.a || 0) * 2) % n;
-        const k2 = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]);
-        if (k2) E.drawSprite(k2, l.x, l.y, l.z * 0.3, o);
+    this._blown(F, o);
+  }
+  // What the wind carries, only in windy spells and gales (render/flora/wind.js: rare) - otherwise you see the
+  // wind in the plants: leaves where trees grow (woods, parks, gardens, the country), now and then a sheet of
+  // paper or a plastic bag in town, nothing over water, sand or desert. They blow in from the upwind side of
+  // the view and tumble across it (a pool of 36).
+  _blown(F, o) {
+    const A = this.A, E = this.E, s = wind.strength, dt = Math.min(0.1, F.dt || 0.016);
+    const B = this.blownPool || (this.blownPool = Array.from({ length: 36 }, () => ({ on: false, k: 0, x: 0, y: 0, z: 0, vx: 0, vy: 0, a: 0, life: 0 })));
+    if (s > 0.45 && !F.sub && !F.spec) {
+      this.blownAcc = (this.blownAcc || 0) + dt * (s - 0.45) * 12;
+      for (; this.blownAcc >= 1; this.blownAcc -= 1) {
+        const fromLeft = wind.dx >= 0, x = fromLeft ? this.vx0 - 20 : this.vx1 + 20, y = this.vy0 + Math.random() * (this.vy1 - this.vy0);
+        const k = this._blownKind(x + (fromLeft ? 160 : -160), y);
+        if (k < 0) continue;
+        const b = B.find((q) => !q.on);
+        if (!b) break;
+        const sp = (k >= 2 ? 110 : 150) + s * 220;
+        b.on = true; b.k = k; b.x = x; b.y = y; b.z = 8 + Math.random() * 30; b.life = 5 + Math.random() * 3; b.a = Math.random() * 6.28;
+        b.vx = wind.dx * sp * (0.7 + Math.random() * 0.6); b.vy = wind.dy * sp * 0.4 + (Math.random() - 0.5) * 40;
       }
     }
+    o.alpha = 1;
+    for (const b of B) {
+      if (!b.on) continue;
+      b.life -= dt;
+      if (b.life <= 0 || b.x < this.vx0 - 80 || b.x > this.vx1 + 80) { b.on = false; continue; }
+      b.x += b.vx * dt; b.y += b.vy * dt + Math.sin(F.now * 3 + b.a) * 20 * dt; b.a += dt * (b.k === 3 ? 2.5 : 6);
+      b.z = Math.max(2, b.z + Math.sin(F.now * 2 + b.a) * 10 * dt);
+      const name = b.k === 0 ? 'pLeaf' : b.k === 1 ? 'pLeafAutumn' : 'pPaper', inf = this._fx(name), n = inf ? inf.frames : 1, frm = Math.floor(Math.abs(b.a) * 2) % n;
+      const key = A && this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]);
+      o.tint = b.k === 3 ? BAG_TINT : null;
+      if (key) E.drawSprite(key, b.x, b.y, b.z * 0.3, o);
+    }
+    o.tint = null;
+  }
+  // 0 green leaves, 1 autumn leaves (where things grow), 2 a sheet of paper, 3 a plastic bag (in town, and only
+  // a third as often), -1 nothing (water, sand, desert, bare ground)
+  _blownKind(x, y) {
+    const M = this.map, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return -1;
+    const i = ty * MAP_W + tx, t = M.tiles[i], st = (DISTRICTS[M.dist[i]] || {}).style;
+    if (t === TT.WATER || t === TT.DEEP || t === TT.SAND || st === 'desert' || st === 'beach') return -1;
+    if (TOWN.has(st)) return Math.random() < 0.33 ? (Math.random() < 0.3 ? 3 : 2) : -1;
+    return t === TT.GRASS ? (Math.random() < 0.25 ? 1 : 0) : -1;
+  }
+  // ---- boat wakes ------------------------------------------------------------------------------------------
+  // Each moving boat drops a wake point every ~0.1 s at its stern (a pooled ring of 320). A point draws two foam
+  // streaks that spread outward from its track and fade over 3.6 s - the V a boat leaves behind it - and, for its
+  // first second, the churned water of the stern. Flat foam decals on the water (the waves and glints stay).
+  _wakeDrop(x, y, a, now, hw, sp) {
+    const W = this.wakePts || (this.wakePts = { i: 0, n: 0, d: new Float32Array(320 * 6) });
+    const j = W.i * 6;
+    W.d[j] = x; W.d[j + 1] = y; W.d[j + 2] = a; W.d[j + 3] = now; W.d[j + 4] = hw; W.d[j + 5] = sp;
+    W.i = (W.i + 1) % 320; W.n = Math.min(320, W.n + 1);
+  }
+  _wakeTrail(F) {
+    const W = this.wakePts;
+    if (!W || !W.n) return;
+    const E = this.E, now = F.now, LIFE = 3.6, x0 = this.vx0 - 60, x1 = this.vx1 + 60, y0 = this.vy0 - 60, y1 = this.vy1 + 60;
+    const streak = [this._genFoam(0), this._genFoam(1), this._genFoam(2)], churn = this._genFoam(3);
+    for (let k = 0; k < W.n; k++) {
+      const j = k * 6, age = now - W.d[j + 3];
+      if (age < 0 || age > LIFE) continue;
+      const x = W.d[j], y = W.d[j + 1];
+      if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+      const a = W.d[j + 2], hw = W.d[j + 4], sp = W.d[j + 5], f = 1 - age / LIFE, alpha = Math.pow(f, 1.3) * Math.min(1, sp / 300) * 0.9;
+      const spread = hw * 0.8 + age * (10 + sp * 0.035), nx = -Math.sin(a), ny = Math.cos(a);
+      for (let s = -1; s <= 1; s += 2) {
+        const key = streak[(k + (s > 0 ? 1 : 0)) % 3];
+        if (key) E.drawDecal(key, x + nx * spread * s, y + ny * spread * s, a + s * 0.35, alpha, 0);
+      }
+      if (age < 1 && churn) E.drawDecal(churn, x, y, a, (1 - age) * alpha, 0);
+    }
+  }
+  // foam: k 0-2 a streak along x (16 x 5), 3 the churned stern patch (24 x 14), white with blue-grey shading
+  _genFoam(k) {
+    return this._conv(`gfoam|${k}`, () => {
+      const w = k < 3 ? 16 : 24, h = k < 3 ? 5 : 14, G = gbuf(w, h, w >> 1, h >> 1), rx = w / 2, ry = h / 2;
+      const C1 = [236, 247, 252], C2 = [196, 224, 238];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const dx = (x + 0.5 - rx) / rx, dy = (y + 0.5 - ry) / ry, d = dx * dx + dy * dy;
+        const n = ((((x + k * 7) * 73856093) ^ ((y + k * 3) * 19349663)) >>> 8 & 15) / 15;
+        if (d > 1 || n < d * 0.9 - 0.05) continue;
+        put(G, x, y, n > 0.55 ? C1 : C2, 0, UP_N, F_GROUND);
+      }
+      return G;
+    }, true);
   }
   // decals (render/fx.js ring): the same fading and rain-washing as v1's drawDecals; the art2 decal sets
   // (blood, footprints, scorch, skids, pools, oil, litter), tiny droplet spots as a few pixels of their colour
@@ -1334,5 +1432,3 @@ export class World2 {
 World2.shownAt = 0;
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) World2.shownAt = performance.now(); });
 
-// a 2D context that draws nothing (to run v1's simulate-and-draw helpers for their simulation alone)
-const NULL_CTX = new Proxy({}, { get: (t, k) => (k in t ? t[k] : () => {}), set: (t, k, v) => { t[k] = v; return true; } });

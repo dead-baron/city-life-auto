@@ -136,7 +136,7 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   const G = new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
   const prof = opt.profile ? {} : null;
   C.prof = prof;
-  for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['decor', decor]]) {
+  for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['decor', decor], ['surf', surf]]) {
     const t0 = prof ? performance.now() : 0;
     f(C, G);
     if (prof) prof[name] = Math.round(performance.now() - t0);
@@ -747,6 +747,28 @@ function shoreDistance(C) {
   }
 }
 
+// ---- 4b. surf: how far each texel is from the shoreline, kept in the albedo's alpha for the engine's lighting
+// (it draws the waves breaking toward the shore and the swash running up the beach and back from it):
+// 191 + px out into the sea or a lake (to 47), 191 - px up a beach (to 30), 255 elsewhere. The alpha is still
+// coverage (above a half: drawn), so nothing else changes. Runs last, over the decorations too.
+const SURF_LAND = new Uint8Array(NM);
+for (const k of ['BEACH', 'WETSAND', 'SHINGLE', 'DUNE', 'ROCKSHORE']) SURF_LAND[M_[k]] = 1;
+function surf(C, G) {
+  const { b } = C, col = G.col, fl = G.flag;
+  for (let y = 0; y < CHUNK; y++) {
+    const r = (y + PAD) * WN + PAD;
+    for (let x = 0; x < CHUNK; x++) {
+      const dd = b.dist[r + x];
+      if (dd >= 470) continue;
+      const m = b.mat[r + x], gi = y * CHUNK + x;
+      if (!(fl[gi] & F_GROUND)) continue;
+      const d = Math.round(dd / 10);
+      if (m === M_.SEA || m === M_.LAKE) { if (fl[gi] & F_WATER) col[gi * 4 + 3] = 191 + d; }
+      else if (SURF_LAND[m] && d <= 30) col[gi * 4 + 3] = 191 - d;
+    }
+  }
+}
+
 // ---- 5. paint --------------------------------------------------------------------------------------------------
 const NUP = 255, NMID = 128;
 function putN(G, gi, nx, ny) { const j = gi * 4, l = 1 / Math.sqrt(nx * nx + ny * ny + 1); G.nrm[j] = (nx * l * 0.5 + 0.5) * 255; G.nrm[j + 1] = (ny * l * 0.5 + 0.5) * 255; G.nrm[j + 2] = (l * 0.5 + 0.5) * 255; G.nrm[j + 3] = 255; }
@@ -1262,6 +1284,7 @@ function decor(C, G) {
     }
   }
   turf(C, G, 1);                                              // (the grass itself: full density from q1 up)
+  crops(C, G, dens);
   // cover on soft ground and loose decals: one candidate per CELL x CELL world cell
   const c0x = Math.floor((C.X0 - 16) / CELL), c1x = Math.ceil((C.X0 + CHUNK + 16) / CELL), c0y = Math.floor((C.Y0 - 4) / CELL), c1y = Math.ceil((C.Y0 + CHUNK + 20) / CELL);
   for (let cy = c0y; cy < c1y; cy++) for (let cx = c0x; cx < c1x; cx++) {
@@ -1312,6 +1335,26 @@ function turf(C, G, dens) {
       const tall = m === M_.MEADOW && vnc(X, Y, 31, seed + 115) > 0.45 ? 5 : pal, pv = vnc(X, Y, 53, seed + 119) + (h0 - 0.5) * 0.3;
       const shade = pv < 0.38 ? 0 : pv > 0.64 ? 2 : 1;
       stamp(C, G, coverSprite('turf', (tall * 3 + shade) * 16 + ((hh(c, r, seed + 117) * 12) | 0)), X, Y, b.zb[py * WN + px]);
+    }
+  }
+}
+// standing wheat: rows of clumps 3 px apart, rows 5 px apart, stamped north to south so nearer stalks cover
+// farther ones (corn is drawn by its ground shader, plants seen from above). The ears are F_LEAF: they sway in
+// the wind (engine STATIC_FS) and gusts roll across the field as bands of brighter ears.
+function crops(C, G, dens) {
+  const { b, seed } = C;
+  for (const [mats, kind, RY, RX, nv] of [[[M_.WHEAT], 'wheat', 5, 3, 8]]) {
+    const r0 = Math.floor((C.Y0 - 2) / RY), r1 = Math.ceil((C.Y0 + CHUNK + 16) / RY);
+    for (let r = r0; r < r1; r++) {
+      const ox = (r & 1) * (RX >> 1);
+      for (let c = Math.floor((C.X0 - 8 - ox) / RX); c <= Math.ceil((C.X0 + CHUNK + 8) / RX); c++) {
+        const h0 = hh(c, r, seed + 131);
+        if (h0 > 0.55 + dens * 0.4) continue;                   // (a few gaps; fewer on the lower tiers)
+        const X = c * RX + ox + (hh(r, c, seed + 133) - 0.5) * 1.5, Y = r * RY + (h0 - 0.5);
+        const px = Math.floor(X - C.WX0), py = Math.floor(Y - C.WY0);
+        if (px < 0 || py < 0 || px >= WN || py >= WN || !mats.includes(b.mat[py * WN + px])) continue;
+        stamp(C, G, coverSprite(kind, (hh(c, r, seed + 137) * nv) | 0), X, Y, b.zb[py * WN + px]);
+      }
     }
   }
 }

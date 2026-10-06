@@ -18,11 +18,12 @@ Status tags: **[W2]** built as part of World v2; **[next]** right after the art 
 
 ## From play-testing (2026-10-06 afternoon)
 **Priority, now:**
-- **Phones fall behind at speed** (Pixel 7 Pro, Medium, installed app): drive fast and you reach places before
+- **Phones fall behind at speed** (Pixel 7 Pro, Medium, installed app): **[done 2026-10-06, to be re-tested on the phone]** drive fast and you reach places before
   their streets, buildings and cars are drawn. Load the road ahead first and further ahead the faster you go, put
   a quick first pass down before the full detail, and make vehicles before they come on screen.
-- **Living vegetation, water and wind.** Grass, wheat and crops that sway; trees whose leaves move with the wind;
-  animated water with waves, beach surf that rolls in and out, and wakes behind boats.
+- **Living vegetation, water and wind.** **[done 2026-10-06]** Grass, wheat and crops that sway; trees whose leaves
+  move with the wind; animated water with waves, beach surf that rolls in and out, and wakes behind boats.
+  Still to do: grass and crops parting round people and flattened by tyres (the old renderer's trampling).
   - **The wind:** one controller that everything reads. It is mostly calm, with a subtle idle sway on all
     vegetation; windy spells are rarer events, and gales rarer still.
   - **Cost:** cheap enough for low-end devices.
@@ -33,7 +34,7 @@ Status tags: **[W2]** built as part of World v2; **[next]** right after the art 
     damaged), or when hit by something going very fast.
   - **At 0 health otherwise:** the vehicle slows to a stop, smokes, catches fire, then explodes. That gives you
     time to get out and run.
-- **Wind effects suit the place and follow the wind controller.**
+- **Wind effects suit the place and follow the wind controller.** **[done 2026-10-06]**
   - **City:** the occasional sheet of paper or plastic bag, subtle.
   - **Forest:** leaves.
   - **Mostly** you see plants sway.
@@ -41,8 +42,8 @@ Status tags: **[W2]** built as part of World v2; **[next]** right after the art 
     right conditions and places.
 - **Building fades:** only the part that blocks the street and the walkable space goes see-through. The interior
   stays hidden until you walk in through the door.
-- **Birds in rain:** no reflection. A faint shadow far below them on the ground is fine, so they read as high up.
-- **Rain ripples:** fixed in the world, on the ground, puddles and car roofs. Today they ride on the rain overlay
+- **Birds in rain:** no reflection. **[done 2026-10-06]** A faint shadow far below them on the ground is fine, so they read as high up.
+- **Rain ripples:** fixed in the world, on the ground, puddles and car roofs. **[done 2026-10-06]** Today they ride on the rain overlay
   and travel with you in a car or on a train.
 
 **Nature (15:40):** rocks in the wilderness are small, hard to see and easy to crash into, and big open areas

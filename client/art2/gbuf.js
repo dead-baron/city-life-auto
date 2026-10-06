@@ -7,7 +7,7 @@
 //   flag bits: 1 ground, 2 water, 4 casts no shadow, 8 wet-able, 16 character, 32 foliage
 // Projection (docs/art-v2/SPEC.md): screen x = X, screen y = Y - Z.
 
-export const F_GROUND = 1, F_WATER = 2, F_NOCAST = 4, F_WET = 8, F_CHAR = 16, F_LEAF = 32, F_GLASS = 64;
+export const F_GROUND = 1, F_WATER = 2, F_NOCAST = 4, F_WET = 8, F_CHAR = 16, F_LEAF = 32, F_GLASS = 64, F_AIR = 128; // F_AIR: up in the air (birds): no mirror image in wet ground or water
 
 export class GBuf {
   constructor(w, h) {

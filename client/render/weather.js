@@ -5,6 +5,7 @@
 // drops bursting on the ground, lightning in a night storm).
 // All of it is client-side decoration: deterministic where it's tied to the map (puddle and vent
 // sites, fog banks), pooled where it moves.
+import { wind } from './flora/wind.js';
 import { T, TILE, MAP_W, MAP_H, CHUNK_PX } from '../../shared/constants.js';
 import { hash } from './atmos.js';
 import { freeCanvas } from '../platform.js';
@@ -294,7 +295,9 @@ export class Weather {
       if (v.x < view.x0 - 40 || v.x > view.x1 + 40 || v.y < view.y0 - 60 || v.y > view.y1 + 40) return;
       if (hash(v.id, Math.floor(t / 45), 61) > 0.32 * boost) return;
       if (Math.random() > dt * 6) return;
-      fx.spawn(2, v.x + (Math.random() - 0.5) * 12, v.y + (Math.random() - 0.5) * 6, 8 + (Math.random() - 0.5) * 14, -16 - Math.random() * 12, 2.6 + Math.random() * 1.6, 3 + Math.random() * 3, 'rgba(232,236,242,', 7);
+      // (the wind bends the plume over and tears it away sooner)
+      const wx = wind.dx * wind.strength * 90, life = (2.6 + Math.random() * 1.6) * (1 - 0.4 * wind.strength);
+      fx.spawn(2, v.x + (Math.random() - 0.5) * 12, v.y + (Math.random() - 0.5) * 6, 8 + wx + (Math.random() - 0.5) * 14, -16 - Math.random() * 12 + wind.dy * wind.strength * 30, life, 3 + Math.random() * 3, 'rgba(232,236,242,', 7);
     }, true);
   }
   // the vent itself (a manhole cover) drawn by the ground; this marks which ones are live
@@ -380,7 +383,8 @@ export class Weather {
 
   // ---- the rain itself (screen px) ---------------------------------------------------------------
   // lights: screen-space light sources [{x, y, r, c}] - streaks near them catch the light.
-  drawRain(g, W, H, dt, lights, sky, quality, wind = 0.18) {
+  // bursts: draw drops bursting on the ground in screen space (off when the world draws its own splashes)
+  drawRain(g, W, H, dt, lights, sky, quality, wind = 0.18, bursts = true) {
     const want = quality >= 2 ? 300 : quality >= 1 ? 200 : 120;
     while (this.drops.length < want) { const z = Math.random(); this.drops.push({ x: Math.random() * W, y: Math.random() * H, z, s: 520 + z * 620 }); }
     this.drops.length = want;
@@ -424,12 +428,12 @@ export class Weather {
       g.globalCompositeOperation = 'source-over';
     }
     // drops bursting on the ground
-    for (let k = 0; k < dt * (quality >= 1 ? 90 : 40); k++) { const b = this.burst[this.bi]; this.bi = (this.bi + 1) % this.burst.length; b.on = true; b.x = Math.random() * W; b.y = Math.random() * H; b.t = 0; }
+    for (let k = 0; bursts && k < dt * (quality >= 1 ? 90 : 40); k++) { const b = this.burst[this.bi]; this.bi = (this.bi + 1) % this.burst.length; b.on = true; b.x = Math.random() * W; b.y = Math.random() * H; b.t = 0; }
     g.strokeStyle = `rgba(215,228,255,${(0.32 + 0.1 * (1 - night)).toFixed(3)})`;
     g.lineWidth = 1;
     g.beginPath();
     for (const b of this.burst) {
-      if (!b.on) continue;
+      if (!b.on || !bursts) continue;
       const k = b.t / 0.22, r = 1.5 + k * 5;
       g.moveTo(b.x + r, b.y); g.ellipse(b.x, b.y, r, r * 0.45, 0, 0, 6.283);
     }

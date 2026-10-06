@@ -1129,7 +1129,7 @@ export function coverSprite(kind, v = 0) {
   if (!g) { g = makeCover(kind, v); COVERS.set(key, g); }
   return g;
 }
-export const COVER_KINDS = ['turf', 'tuft', 'tuftTall', 'tuftDry', 'tuftAlp', 'seed', 'flower', 'fern', 'reed', 'duneGrass', 'weed', 'pebble', 'rock', 'redStone', 'cone', 'twig', 'shell', 'starfish', 'leaf', 'seaweed', 'mushroom', 'scrub', 'lily', 'clod'];
+export const COVER_KINDS = ['turf', 'tuft', 'tuftTall', 'tuftDry', 'tuftAlp', 'seed', 'wheat', 'corn', 'flower', 'fern', 'reed', 'duneGrass', 'weed', 'pebble', 'rock', 'redStone', 'cone', 'twig', 'shell', 'starfish', 'leaf', 'seaweed', 'mushroom', 'scrub', 'lily', 'clod'];
 // turf palettes: lawn, park, meadow, dry, alpine, tall meadow - the last two steps are the sunlit blade tips
 const TURF = [
   RP('#132a1a #1a3c21 #234c27 #2e5c2b #3d6d30 #4e7e35 #819d41 #b0b851'),
@@ -1173,6 +1173,28 @@ function makeCover(kind, v) {
       const h = 7 + (r() * 4 | 0), lean = (r() - 0.5) * 0.25;
       for (let k = 0; k < h; k++) put(S.ax + lean * k, S.ay - k, k > h - 4 ? GRAIN[5 + (k & 1)] : G_DRY[3 + (k > h / 2 ? 1 : 0)], lean, 0.4, k, F_LEAF);
       put(S.ax + lean * h + 1, S.ay - h + 2, GRAIN[4], 0.3, 0.4, h - 2, F_LEAF);
+      break;
+    }
+    case 'wheat': {                                        // a clump of ripe wheat: 3-4 straw stalks, a golden ear on each
+      const ns = 3 + (r() * 2 | 0);
+      for (let b = 0; b < ns; b++) {
+        const x0 = Math.round((b - (ns - 1) / 2) * 1.4), lean = (b - (ns - 1) / 2) * 0.06 + (r() - 0.5) * 0.12, h = 8 + (r() * 4 | 0);
+        for (let k = 0; k < h; k++) {
+          const ear = k >= h - 3, c = ear ? GRAIN[(k === h - 1 ? 6 : 5 - ((k + b) & 1))] : G_DRY[3 + Math.min(4, k >> 2)];
+          put(S.ax + x0 + lean * k, S.ay - k, c, lean * 0.6, 0.4, k, F_LEAF);
+          if (ear && k === h - 2 && (b & 1)) put(S.ax + x0 + lean * k + 1, S.ay - k, GRAIN[3], lean, 0.4, k, F_LEAF); // (an awn)
+        }
+      }
+      break;
+    }
+    case 'corn': {                                         // a corn plant: a tall stalk, broad leaves arching out, a tassel
+      const R = RP('#1e3a1c #2c5426 #3e6e30 #568a3a #74a448 #96bc5c'), h = 13 + (r() * 4 | 0), lean = (r() - 0.5) * 0.08;
+      for (let k = 0; k < h; k++) put(S.ax + lean * k, S.ay - k, R[1 + Math.min(3, k >> 2)], lean, 0.45, k, F_LEAF);
+      for (let l = 0; l < 4; l++) {
+        const k0 = 3 + l * 3, side = l & 1 ? 1 : -1, L = 5 + (r() * 3 | 0);
+        for (let j = 1; j <= L; j++) { const droop = (j / L) ** 2 * 3; put(S.ax + lean * k0 + side * j, S.ay - k0 + droop - 1, R[Math.min(5, 2 + (j > L / 2 ? 2 : 1) + (l > 1 ? 1 : 0))], side * 0.5, 0.35, Math.max(1, k0 - droop), F_LEAF); }
+      }
+      for (let k = 0; k < 3; k++) put(S.ax + lean * h, S.ay - h - k, GRAIN[5 - k], 0, 0.4, h + k, F_LEAF);
       break;
     }
     case 'flower': {

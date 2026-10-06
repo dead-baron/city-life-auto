@@ -225,6 +225,36 @@ a big screen zoomed out while driving never makes the chunks on screen push each
 - **Context loss:** losses while the page is hidden (or within 3 s of coming back) aren't counted; three
   within three minutes give up for the session.
 
+## The living world: wind, plants, water, rain
+- **Wind** (`client/render/flora/wind.js`, from the shared world clock, so every player sees the same):
+  - 90 s spells: calm 80 %, breezy 13 %, windy 5.5 %, gale 1.5 %; rain brings wind with it.
+  - The host passes it to the engine every frame.
+- **Plants sway** (engine `STATIC_FS`, per texel of the baked chunks):
+  - Leaf texels (`F_LEAF`: foliage, grass tufts, crops) lean with the wind by whole texels, more the higher they
+    stand above their ground, so a crown sways over its trunk and grass tips nod. A slow idle sway runs even in
+    calm air.
+  - A texel looks for the leaf that leans onto it among its neighbours; the tallest wins, as in the depth rule.
+  - Gusts are travelling waves that also brighten the leaves they bend: bands of wind roll over a wheat field.
+  - Tiers: Low gust shading only (no leaning), Medium leaning up to 2 texels, High and Ultra up to 3. Settings'
+    "Wind sway" switch turns it off.
+- **Standing wheat** (`groundbake.crops`): rows of straw stalks with golden ears, so fields sway.
+- **Water** (lighting, `waterSurf` in `lightgame.js`):
+  - Open water brightens a little on two wave trains along the wind, and the sun glints off the crests in
+    crisp pixels.
+  - The ground bake keeps each texel's distance from the shoreline in the albedo's alpha (`groundbake.surf`:
+    191 + px out into the sea or a lake, 191 - px up a beach). From it, a wave runs in every ~7 s (each
+    stretch of shore in its own time), breaks into foam, and its swash runs up the sand and back, leaving it wet.
+- **Boat wakes:** a moving boat draws its foam under the hull (`actors.wakeSprite`) and drops wake points. Each
+  point draws two foam streaks that spread out and fade over 3.6 s (the V behind it), and the churned stern.
+- **Rain on the world:** rings spreading on water and puddles, small splashes on wet ground and on anything
+  facing up (car roofs), all anchored to the world (`rainMarks`). The old screen-space bursts, which travelled
+  with the camera, are only drawn by the classic renderer.
+- **Birds in the air** (`o.air`, flag `F_AIR`) fly higher and leave no mirror image in wet ground or water.
+- **Wind-blown things,** only in windy spells and gales: leaves where things grow, the odd sheet of paper or
+  plastic bag in town, nothing over water, sand or desert. Manhole steam bends over with the wind.
+- **Checking it:** `tools/art2/live-test.html` renders the real map at a fixed camera and a controlled clock,
+  wind and rain, frame by frame.
+
 ## Rollout
 1. Done: the new renderer is the default everywhere; `?art=1` forces v1 (troubleshooting only).
 2. The Settings toggle "World art: New / Classic" is gone; Settings shows which renderer runs and why.

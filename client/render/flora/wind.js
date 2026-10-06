@@ -2,19 +2,20 @@
 // sway with it, rain slants with it, leaves and petals blow in it, smoke drifts on it.
 //
 // It's worked out from the shared world clock (loopTime), so every player sees the same weather:
-// the loop is split into 75 s spells, each hashed to a mood - mostly calm (the faint idle sway),
-// sometimes a breeze, now and then a windy spell, rarely a gale - and rain stirs it up. Spells blend
-// into each other over a quarter of a minute. Over the base strength, gusts roll across the ground
-// as travelling waves, so a wheat field shows bands of wind sweeping over it.
+// the loop is split into 90 s spells, each hashed to a mood - mostly calm (only the faint idle sway),
+// now and then a breeze, a windy spell as a rarer event, a gale rarest of all - and rain stirs it up.
+// Spells blend into each other over the last fifth. Over the base strength, gusts roll across the
+// ground as travelling waves, so a wheat field shows bands of wind sweeping over it. (User, 2026-10-06:
+// wind should be a rarer event, with a subtle idle sway on the vegetation the rest of the time.)
 import { hash } from '../atmos.js';
 
-const SPELL_S = 75;
+const SPELL_S = 90;
 const MOODS = [
   // [chance, strength, gustiness, name]
-  [0.66, 0.12, 0.35, 'calm'],
-  [0.2, 0.32, 0.5, 'breezy'],
-  [0.11, 0.6, 0.65, 'windy'],
-  [0.03, 0.92, 0.8, 'gale'],
+  [0.8, 0.1, 0.3, 'calm'],
+  [0.13, 0.3, 0.5, 'breezy'],
+  [0.055, 0.58, 0.65, 'windy'],
+  [0.015, 0.88, 0.8, 'gale'],
 ];
 function mood(spell) {
   const h = hash(spell, 0, 811);

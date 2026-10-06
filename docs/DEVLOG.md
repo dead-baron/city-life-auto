@@ -1979,3 +1979,29 @@ Everything here is client-side. Server, shared code and the network are unchange
   - `docs/DESIGN-NOTES.md` has the afternoon's play-test feedback: vehicle toughness, wind effects by biome, building fades without interiors, birds in rain, ripples on the ground, hit reactions, wilderness NPCs, subway stations, train seats, the security train's warning.
   - The prompt pack has fill-in templates for screenshot concepts (SC1-SC4) and a "Nature areas" section (NA1 layouts, NS1 set pieces, NR1 big rocks, NT1 trails).
 - **Tests:** `test/art2.test.js` covers the bake order and the stepped bake (same result as the one-shot bake).
+
+## 2026-10-06 · The living world: swaying plants, rarer wind, waves and surf, boat wakes, rain on the world
+
+- **Wind is rarer** (user: wind as an occasional event, with a subtle idle sway the rest of the time).
+  - Spells last 90 s: calm 80 %, breezy 13 %, windy 5.5 %, gale 1.5 % (was 66 / 20 / 11 / 3 % over 75 s spells).
+  - Rain still brings wind with it.
+- **Plants move in the new renderer.** It had no moving vegetation: the old renderer's live grass layer was never drawn by it.
+  - **How:** every leaf texel of the baked world (tree crowns, bushes, grass tufts, crops) leans with the wind by whole pixels, more the higher it stands above its ground, so crowns sway over their trunks and grass tips nod. Gusts roll across as travelling waves and brighten the leaves they bend.
+  - **Calm air:** a slow idle sway on the trees.
+  - **Tiers:** Low gets the gust shading only, Medium leans up to 2 px, High and Ultra up to 3 px. Settings' "Wind sway" switch turns it off.
+  - **Cost:** done per pixel on the graphics chip while the chunks are copied in, a handful of extra texture reads per pixel.
+- **Standing wheat:** wheat fields are rows of straw stalks with golden ears that sway and ripple in gusts.
+- **Water:**
+  - **Open sea and lakes:** gently brighten on two wave trains along the wind, and the sun glints off the crests in crisp pixels.
+  - **Beaches:** a wave runs in every ~7 seconds, each stretch of shore in its own time, and breaks into a line of foam. Its swash runs up the sand as a thin sheet of clear water with a foam edge, slides back and leaves the sand wet.
+  - **How:** the ground bake stores each texel's distance from the shoreline in the albedo's alpha channel (`groundbake.surf`), so it costs no extra memory.
+- **Boat wakes:**
+  - **Under the hull:** foam (a bow collar, the churned stern, the V right behind).
+  - **Behind it:** a trail of foam streaks that spreads out and fades over 3.6 s.
+- **Rain marks the world, not the screen.** Rings spread on water and puddles; small splashes land on wet ground and on car roofs. The screen-space bursts that travelled with you in a car or on a train are gone from the new renderer, and the random rain speckles are thinner.
+- **Birds** fly higher and leave no mirror image in wet streets or water (`F_AIR`).
+- **Wind-blown things suit the place** and come only in windy spells and gales: leaves where things grow, the odd sheet of paper or plastic bag in town, nothing over water, sand or desert. Before, leaves blew in any breeze, city included. Manhole steam bends with the wind.
+- **No snow on plants** (no snow biome for now; earlier today).
+- **Phone stand-ins:** water now matches the baked sea's colour.
+- **Tour:** the countryside stop describes the swaying plants, the waves, the surf and the wakes, and no longer promises trampled grass, which the new renderer doesn't do yet.
+- **Tool:** `tools/art2/live-test.html` renders the real map through the engine at a fixed camera with a controlled clock, wind and rain, for checking moving things frame by frame.
