@@ -124,10 +124,10 @@ with vehicle access, a bed and a place to cook; waterfront ones with a dock and 
   (`server/systems/homes.js` `checkWorld`). `ROAD_KINDS[...].walk` + `SIDEWALK` / `sidewalkPx` in
   `shared/roads.js`: pavements 112 / 96 / 64 px by district class, none on alleys, highways, ramps, county roads
   and tracks; every ground edge carries its `walk` (map) and the art v2 ground bake draws it (the district classes
-  switch on with stage 1, `PAVEMENT_CLASSES` in `shared/map.js`; stage 0 leaves the world unchanged). Highway lane
+  switched on with stage 1; stage 0 left the world unchanged). Highway lane
   counts are unchanged so far (3 each way on the ring): the deck art and levels depend on them, they change with
   the highway stage. Previews: `tools/world2/preview.mjs` -> `docs/world-v2/`.
-- **Stage 1 (first pass, 2026-10-06):** Metro City's streets come from `shared/metro.js` (avenues + Broadway kept as
+- **Stage 1 (done but for the highway, 2026-10-06):** Metro City's streets come from `shared/metro.js` (avenues + Broadway kept as
   the skeleton, `PATTERNS` per district between them: varied block depths and lengths, staggered side streets with
   jogs and T-junctions, service alleys behind the rows, plazas, Old Town's wandering lanes); the central island and
   Southside are filled with real-sized lots (`LOT`, `v2Block`, `fillRowV2` in `shared/map.js`); pavements by
@@ -142,3 +142,7 @@ with vehicle access, a bed and a place to cook; waterfront ones with a dock and 
   Rule for every later stage: lay new streets so that junctions keep the same spacing (the ring's frontage
   roads and the crescents in Bayside Heights still meet some streets a few metres apart; their lights are
   merged by `SIGNAL_GAP` but the geometry wants redoing with the highway stage).
+  Big businesses whose district is too narrow name a second home (`alt` in `SPECIALS`): the Westside Clinic
+  sits in Midtown, Portside Logistics in The Yards or Southside. Known gaps for stage 2: Pine Hills keeps its
+  old plan and has no home for sale (one in the original world); Metro City has few homes (Southside 13, a
+  handful elsewhere; 116 world-wide against 125 in the original world).
