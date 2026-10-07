@@ -425,19 +425,50 @@ export function buildPowerLines(m, H, wildAt) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const q = m.tiles[i + dy * W + dx]; if (q === T.BUILDING || q === T.WALL || q === T.WATER || q === T.DEEP) return false; }
     return true;
   };
+  // Along the country roads and highways: a pole every 9 tiles beside the road, wired to the one before. Every
+  // few poles the line swings across to the other side - a span over the road.
   for (const e of m.edges) {
     if (e.lvl !== 0 || !(e.kind === 'rural' || (e.kind === 'hwy' && !e.bridge))) continue;
     if (e.len < 30 * TILE) continue;
-    const side = hash2(e.id, 3, 801) < 0.5 ? -1 : 1;
+    let side = hash2(e.id, 3, 801) < 0.5 ? -1 : 1, run = 0, cross = 4 + Math.floor(hash2(e.id, 4, 8021) * 4);
     const off = e.hw + 1.3 * TILE;
     let prev = null;
     for (let s = 3 * TILE; s < e.len - 3 * TILE; s += 9 * TILE) {
+      if (prev && ++run >= cross && e.kind === 'rural') { side = -side; run = 0; cross = 5 + Math.floor(hash2(e.id, Math.round(s), 8031) * 5); }
       const pt = pointAt(e.pts, s);
       const x = pt.x - pt.ty * off * side, y = pt.y + pt.tx * off * side;
       const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
       if (!okGround(tx, ty)) { prev = null; continue; }
       const p = H.addProp(m, 'upole', x, y, 5);
-      if (prev && Math.hypot(prev.x - x, prev.y - y) < 11 * TILE) { p.wx = prev.x; p.wy = prev.y; }
+      if (prev && Math.hypot(prev.x - x, prev.y - y) < 14 * TILE) { p.wx = prev.x; p.wy = prev.y; }
+      prev = p;
+    }
+  }
+  // In the older streets of town (the houses, Southside, the docks and the industrial blocks): wooden poles on the
+  // pavement by the kerb, wired along the street, the line crossing over it now and then (and at its far end).
+  const TOWN = new Set(['houses', 'southside', 'industrial', 'harbor', 'factory']);
+  const styleAt = (x, y) => { const d = m.dist[Math.floor(y / TILE) * W + Math.floor(x / TILE)]; return H.distStyle ? H.distStyle[d] : ''; };
+  const okWalk = (x, y) => {
+    const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+    if (tx < 2 || ty < 2 || tx >= W - 2 || ty >= MAP_H - 2) return false;
+    const i = ty * W + tx;
+    if (m.tiles[i] !== T.SIDEWALK || m.reserve[i] || m.deck[i]) return false;
+    for (const L of m.lamps) if (Math.abs(L.x - x) < 40 && Math.abs(L.y - y) < 40) return false;   // (clear of the street lamps)
+    return true;
+  };
+  for (const e of m.edges) {
+    if (e.lvl !== 0 || e.bridge || !(e.kind === 'st' || e.kind === 'minor' || e.kind === 'ave') || e.len < 14 * TILE) continue;
+    const mid = pointAt(e.pts, e.len / 2);
+    if (!TOWN.has(styleAt(mid.x, mid.y)) || hash2(e.id, 5, 8041) > 0.55) continue;
+    let side = hash2(e.id, 6, 8051) < 0.5 ? -1 : 1, run = 0, prev = null;
+    for (let s = 2.5 * TILE; s < e.len - 2.5 * TILE; s += 7 * TILE) {
+      if (prev && ++run >= 3 && hash2(e.id, Math.round(s), 8061) < 0.45) { side = -side; run = 0; }
+      const pt = pointAt(e.pts, s);
+      let x = 0, y = 0, ok = false;
+      for (const off of [e.hw - 14, e.hw - 30, e.hw + 2]) { x = pt.x - pt.ty * off * side; y = pt.y + pt.tx * off * side; if (okWalk(x, y)) { ok = true; break; } }
+      if (!ok) { prev = null; continue; }
+      const p = H.addProp(m, 'upole', Math.round(x), Math.round(y), 5);
+      if (prev && Math.hypot(prev.x - x, prev.y - y) < 12 * TILE) { p.wx = prev.x; p.wy = prev.y; }
       prev = p;
     }
   }

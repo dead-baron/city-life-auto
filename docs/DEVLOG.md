@@ -3155,3 +3155,12 @@ On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesi
   - The unit gives up and drives off if the mugger gets clean away (out of the crew's sight for 25 s) or after two minutes.
   - A player officer's patrol call stays theirs: no squad car is sent after that mugger.
 - **Tests:** `test/police.test.js`: a mugger called in, the squad car sent, custody, the purse dropped.
+
+## 2026-10-07 · Power lines over the street
+
+- **Across the road** (backlog: "power lines can go across the street"). Every few poles, the country lines along the rural roads swing across to the other side, so a span crosses over the road (`shared/countryside.js` `buildPowerLines`).
+- **In the older streets of town** (the houses, Southside, the docks, the industrial blocks), about half the streets now have wooden poles on the pavement by the kerb.
+  - Each pole is wired to the one before.
+  - The line crosses over the street now and then.
+  - They stay clear of the street lamps. Downtown has none.
+- **Tests:** `test/country.test.js` covers no pole on a road or a building, poles in the older streets only, and spans over the road.

@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld } from './helpers.js';
+import { DISTRICTS } from '../shared/map.js';
 import { SITES } from '../shared/countryside.js';
 import { T, TILE, MAP_W } from '../shared/constants.js';
 
@@ -43,10 +44,16 @@ test('country set pieces: all placed on open ground, each reachable by road, and
   assert.equal(count('dscreen'), 1); assert.equal(count('dome'), 1); assert.equal(m.raceways.length, 1); assert.equal(m.quarries.length, 1);
   assert.ok(count('radiotower') >= 3, 'radio masts');
   for (const name of ['Highland Quick Stop', 'Route 9 Quick Stop']) assert.ok(m.pois.some((p) => p.label === name && p.kind === 'convenience'), `${name} sells things`);
-  // utility poles along the country roads, most of them wired to the one before, none in town
+  // utility poles along the country roads, most of them wired to the one before; in the older streets of town on
+  // the pavement (never downtown); now and then the line crosses over the road
   const poles = m.props.filter((p) => p.t === 'upole');
   assert.ok(poles.length > 150 && poles.filter((p) => p.wx !== undefined).length > poles.length * 0.6, `poles ${poles.length}`);
-  for (const p of poles) { const t = m.tiles[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)]; assert.ok(t !== T.ROAD && t !== T.SIDEWALK && t !== T.BUILDING, `a pole stands on ${t} at ${Math.round(p.x / TILE)},${Math.round(p.y / TILE)}`); }
+  const tileOf = (x, y) => m.tiles[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)];
+  for (const p of poles) { const t = tileOf(p.x, p.y); assert.ok(t !== T.ROAD && t !== T.BUILDING, `a pole stands on ${t} at ${Math.round(p.x / TILE)},${Math.round(p.y / TILE)}`); }
+  const town = poles.filter((p) => tileOf(p.x, p.y) === T.SIDEWALK);
+  assert.ok(town.length >= 40, `poles in the older streets (${town.length})`);
+  for (const p of town) assert.ok(['houses', 'southside', 'industrial', 'harbor', 'factory'].includes(DISTRICTS[m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)]].style), 'not downtown');
+  assert.ok(poles.filter((p) => p.wx !== undefined && tileOf((p.x + p.wx) / 2, (p.y + p.wy) / 2) === T.ROAD).length >= 10, 'spans over the road');
   // runway lights at both airfields, off the runway's tarmac edges
   assert.ok(count('rwlight') > 100, 'runway lights');
 });

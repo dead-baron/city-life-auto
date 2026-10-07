@@ -561,7 +561,7 @@ function buildCity(seed) {
   buildWilds(m, rand);
   buildTownGreen(m);
   buildStreetProps(m);
-  buildPowerLines(m, { addProp }, (tx, ty) => wildAt(m, tx, ty));
+  buildPowerLines(m, { addProp, distStyle: DISTRICTS.map((d) => (d ? d.style : '')) }, (tx, ty) => wildAt(m, tx, ty));
   buildHeroCorner(m);
   buildBanking(m);
   buildGangHQs(m);
