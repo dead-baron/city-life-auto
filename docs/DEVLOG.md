@@ -2789,3 +2789,14 @@ The roofless ruin of an old adobe mission church now stands on the open desert b
 - **Getting in:** the walls are solid. You get in through the doorway or a breach in the west wall.
 - **Round it:** what's left of the cloister's arcade along the east side, with two of its arches down, rubble inside and out, saguaros, prickly pear, sage and boulders.
 - On the map, and in the debug menu (⛪ Old Mission Ruins). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Fern Gorge (Highland Woods, off the Ridge Track; concepts NK1-B, NK1-N, NK1-A)
+
+A trailhead and a little gorge in the woods east of the Ridge Track (`shared/naturesites.js` `fernGorge`):
+- **The trailhead:** a gravel pull-off beside the track with a timber rail, the trail map board, a finger post, a bench and a bin.
+- **The trail** runs east through the ferns to the pools, with a bench by the falls.
+- **The gorge:**
+  - a spring pool spills over a mossy granite ledge in a falls facing you, with mist, into a lower pool of lily pads;
+  - the outlet creek runs on over stepping stones (you can cross dry-footed) to a reedy pond with cattails and more lilies;
+  - mossy boulders, a fallen log, firs, maples and one red maple round it, and ferns thick on the banks.
+- On the map as Fern Gorge, and in the debug menu (🌿 Fern Gorge). Homes, POIs and buildings unchanged.

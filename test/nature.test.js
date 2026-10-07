@@ -595,3 +595,15 @@ test('Old Mission Ruins: a ruined adobe mission east of the vineyard, its walls 
   assert.ok(!solid(s.breach.x, s.breach.y), 'the breach is open');
   assert.ok(m.landmarks.some((l) => l.name === 'Old Mission Ruins'));
 });
+
+test('Fern Gorge: a trailhead on the Ridge Track, a trail to a spring pool spilling over a ledge into a lily pool, stepping stones to a reedy pond', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'gorge');
+  assert.ok(s, 'the gorge is there');
+  assert.equal(tileAt(s.trailhead.x, s.trailhead.y), T.LOT, 'the pull-off');
+  assert.ok(m.props.some((q) => q && q.t === 'mapboard' && Math.hypot(q.x - s.trailhead.x, q.y - s.trailhead.y) < 6 * TILE), 'the trail map');
+  assert.ok(m.isWater(s.x, s.y), 'the lily pool');
+  assert.ok(m.isWater(s.pond.x, s.pond.y), 'the pond');
+  assert.ok(m.props.some((q) => q && q.t === 'fallsmall' && Math.hypot(q.x - s.falls.x, q.y - s.falls.y) < 2 * TILE), 'the falls over the ledge');
+  assert.ok(m.props.filter((q) => q && q.t === 'lily' && Math.hypot(q.x - s.x, q.y - s.y) < 16 * TILE).length >= 5, 'lily pads');
+  assert.ok(m.landmarks.some((l) => l.name === 'Fern Gorge'));
+});

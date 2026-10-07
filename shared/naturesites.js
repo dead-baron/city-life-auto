@@ -116,6 +116,7 @@ export function buildNatureSites(m, H) {
   hilltopTrack(m, H);
   balloonField(m, H);
   missionRuins(m, H);
+  fernGorge(m, H);
   golfClub(m, H);
   driveTracks(m, H);
   roadside(m, H);
@@ -254,6 +255,69 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- Fern Gorge (Highland Woods, off the Ridge Track; concepts NK1-B, NK1-N, NK1-A) ------------------------------
+// A trailhead on the Ridge Track: a gravel pull-off with a rail fence, the trail map board, a finger post, a bench
+// and a bin. The trail runs east through the ferns to a little gorge where a spring pool spills over a mossy granite
+// ledge in a falls (facing you, south) into a lower pool of lily pads; the outlet creek runs on over stepping
+// stones to a reedy pond. Mossy boulders, a fallen log, firs and maples round the pools, a bench at the falls.
+function fernGorge(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const track = (m.edges || []).find((e) => e.name === 'Ridge Track' && e.lvl === 0);
+  if (!track) return;
+  const UP = [309, 171.6], LOW = [308.5, 180], POND = [300.5, 193], LEDGE = 174.4;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === 29;
+  for (let ty = 164; ty <= 200; ty++) for (let tx = 296; tx <= 318; tx++) if (!open(at(tx, ty))) return;
+  // the trailhead: the point on the track nearest the gorge's west side
+  let th = null, bd = 1e9;
+  for (let k = 1; k < track.pts.length; k++) {
+    const a = track.pts[k - 1], b = track.pts[k], dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1, X = 298 * TILE, Y = 175 * TILE;
+    const t = Math.max(0, Math.min(1, ((X - a.x) * dx + (Y - a.y) * dy) / l2)), q = { x: a.x + dx * t, y: a.y + dy * t }, d = Math.hypot(q.x - X, q.y - Y) / TILE;
+    if (d < bd) { bd = d; th = q; }
+  }
+  if (!th || bd > 24) return;
+  { let ok = true; for (let ty = Math.floor(th.y / TILE) + 1; ty <= th.y / TILE + 4; ty++) for (let tx = Math.floor(th.x / TILE) - 3; tx <= th.x / TILE + 5; tx++) { const t = m.tiles[at(tx, ty)]; if (t !== T.GRASS && t !== T.DIRT) ok = false; } if (!ok) return; }   // (open ground for the pull-off)
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= 294 * TILE && q.x < 320 * TILE && q.y >= 162 * TILE && q.y < 202 * TILE) dropProp(m, i); });
+  for (let ty = 162; ty <= 201; ty++) for (let tx = 294; tx <= 319; tx++) { const i = at(tx, ty); if (open(i)) m.reserve[i] |= RES; }
+  // the water: the spring pool above the ledge, the lily pool below, the outlet creek, the reedy pond
+  const wet = new Set();
+  const blob = (cx, cy, rx, ry, deep) => { for (let ty = Math.floor(cy - ry - 1); ty <= cy + ry + 1; ty++) for (let tx = Math.floor(cx - rx - 1); tx <= cx + rx + 1; tx++) { const dx = (tx + 0.5 - cx) / rx, dy = (ty + 0.5 - cy) / ry, a = Math.atan2(dy, dx), q = Math.hypot(dx, dy) / (1 + 0.1 * Math.sin(a * 3 + cx)); if (q > 1) continue; const i = at(tx, ty); m.tiles[i] = q < deep ? T.DEEP : T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; wet.add(i); } };
+  blob(UP[0], UP[1], 3.2, 2.2, 0.4); blob(LOW[0], LOW[1], 4.4, 3.0, 0.45); blob(POND[0], POND[1], 4.6, 3.2, 0.5);
+  const creek = spline([[LOW[0] - 1.5, LOW[1] + 2.4], [306, 185.5], [303.5, 188.5], [POND[0] + 1.6, POND[1] - 2.4]].map(([x, y]) => [x * TILE, y * TILE]), 10);
+  for (const [x, y] of creek) for (let ty = Math.floor(y / TILE - 1); ty <= y / TILE + 1; ty++) for (let tx = Math.floor(x / TILE - 1); tx <= x / TILE + 1; tx++) { if (Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y) > 22) continue; const i = at(tx, ty); if (!wet.has(i)) { m.tiles[i] = T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; wet.add(i); } }
+  if (m.distRiver) for (const i of wet) { m.distRiver[i] = 0; const tx = i % MAP_W, ty = Math.floor(i / MAP_W); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const j = (ty + dy) * MAP_W + tx + dx; if (wet.has(j)) continue; const d = Math.round(Math.hypot(dx, dy) * 4); if (!m.distRiver[j] || m.distRiver[j] > d) m.distRiver[j] = d; } }
+  // the ledge between the pools: a mossy granite band (solid), the falls over it, mist
+  for (let tx = UP[0] - 5; tx <= UP[0] + 5; tx++) { const i = at(tx, LEDGE); if (!wet.has(i)) { m.tiles[i] = T.WALL; m.reserve[i] |= RES; } }
+  add('outcrop', UP[0], LEDGE + 0.4, 0, { w: 11 * TILE, d: 1.6 * TILE, h: 34, style: 'granite', s: 5 });
+  add('fallsmall', UP[0] + 0.2, LEDGE + 1, 0, { w: 46, h: 34 });
+  add('steam', LOW[0], LOW[1] - 1.2, 0, { w: 70, h: 34, s: 2 });
+  for (let tx = UP[0] - 4.5; tx <= UP[0] + 4.5; tx += 1.5) if (Math.abs(tx - UP[0]) > 1) m.addSolidProp(Math.round(tx * TILE), Math.round(LEDGE * TILE), 14);
+  // lily pads in the lower pool, reeds round the pond, stepping stones across the creek, mossy boulders, a log
+  for (let j = 0; j < 4; j++) add('lily', LOW[0] - 2.4 + j * 1.6, LOW[1] + 0.6 + (j % 2) * 0.8, 0, { v: j });
+  for (let j = 0; j < 3; j++) add('lily', POND[0] - 2 + j * 1.8, POND[1] + 0.8, 0, { v: (j + 2) % 4 });
+  const sm = creek[Math.floor(creek.length * 0.55)], sn = creek[Math.floor(creek.length * 0.55) + 1], ca = Math.atan2(sn[1] - sm[1], sn[0] - sm[0]), bx = -Math.sin(ca), by = Math.cos(ca);
+  for (const k of [-1, 0, 1]) { const x = sm[0] + bx * k * 18, y = sm[1] + by * k * 18, i = at(x / TILE, y / TILE); m.tiles[i] = T.SAND; m.reserve[i] |= RES; wet.delete(i); H.addProp(m, 'boulder', Math.round(x), Math.round(y), 0, { s: 14, moss: 1 }); }
+  for (const [dx, dy, r] of [[-4.6, -1.2, 22], [5, -1, 20], [-5.4, 2.4, 18], [5.6, 3.2, 24], [-3.6, 4.2, 14]]) add('boulder', LOW[0] + dx, LOW[1] + dy, r, { s: r * 2, moss: 1 });
+  add('log', LOW[0] + 3.4, LOW[1] + 5.2, 10, { a: 0.4, len: 110, moss: 1 });
+  for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2, x = POND[0] + Math.cos(a) * 5.4, y = POND[1] + Math.sin(a) * 3.8; if (!wet.has(at(x, y))) add('shrub_a', x, y, 0, { sp: k % 3 ? 'reeds' : 'cattails', k: 1 }); }
+  // the trailhead: a gravel pull-off beside the track, a rail fence, the board, a finger post, a bench and a bin
+  const tx0 = th.x / TILE, ty0 = th.y / TILE + 2.6;
+  for (let ty = Math.floor(ty0 - 1); ty <= ty0 + 1; ty++) for (let tx = Math.floor(tx0 - 2); tx <= tx0 + 2; tx++) { const i = at(tx, ty); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) { m.tiles[i] = T.LOT; m.reserve[i] |= RES | 1; } }
+  m.parking.push({ x: Math.round(tx0 * TILE), y: Math.round(ty0 * TILE), a: 0, drive: true });
+  add('mapboard', tx0 + 3.2, ty0 - 0.6, 10); add('fingerpost', tx0 + 3.6, ty0 + 1.4, 4);
+  add('pbench', tx0 - 1.2, ty0 + 2, 8, { a: Math.PI / 2 }); add('trashcan', tx0 + 1.6, ty0 + 2, 6);
+  add('creekrail', tx0, ty0 + 1.9, 0, { len: 150, a: 0 });
+  // the trail: from the pull-off east through the ferns to the lily pool's west side, round to the falls
+  const tr = trail(m, [[(tx0 + 3) * TILE, (ty0 + 1) * TILE], [299 * TILE, 172 * TILE], [302.5 * TILE, 177.5 * TILE], [303.6 * TILE, 182.5 * TILE]]);
+  for (const [x, y] of tr) m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < 30) dropProp(m, i); });
+  add('pbench', 303.2, 177.2, 8, { a: 0 });
+  // firs and maples round the gorge, ferns thick on the banks
+  for (const [dx, dy, sp] of [[-7, -5, 'mtnFir'], [7.5, -6, 'mapleAutumn'], [9, 2, 'mtnFir'], [-8, 6, 'maple'], [8, 9, 'mtnFir'], [-3, 13, 'maple'], [10, 14, 'mtnFir'], [-9, -12, 'mtnFir']]) { const x = LOW[0] + dx, y = LOW[1] + dy; if (!wet.has(at(x, y)) && m.tiles[at(x, y)] === T.GRASS) add('tree_a', x, y, 12, { sp, k: 1.35 }); }
+  for (let j = 0; j < 26; j++) { const x = LOW[0] - 8 + hash2(j, 1, 3801) * 16, y = UP[1] - 3 + hash2(j, 2, 3801) * 26, i = at(x, y); if (!wet.has(i) && m.tiles[i] === T.GRASS && !tr.some(([px, py]) => Math.hypot(px - x * TILE, py - y * TILE) < 40)) add('shrub_a', x, y, 0, { sp: j % 4 ? 'fern' : 'salal', k: 1 }); }
+  (m.landmarks ||= []).push({ name: 'Fern Gorge', type: 'gorge', x: 296 * TILE, y: 164 * TILE, w: 22 * TILE, h: 34 * TILE });
+  m.natureSites.push({ kind: 'gorge', name: 'Fern Gorge', x: Math.round(LOW[0] * TILE), y: Math.round(LOW[1] * TILE), trailhead: { x: Math.round(tx0 * TILE), y: Math.round(ty0 * TILE) }, falls: { x: Math.round(UP[0] * TILE), y: Math.round(LEDGE * TILE) }, pond: { x: Math.round(POND[0] * TILE), y: Math.round(POND[1] * TILE) } });
 }
 
 // ---- The old mission (Dry Creek Desert, east of the vineyard; original) --------------------------------------------
