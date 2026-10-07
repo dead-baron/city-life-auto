@@ -3711,6 +3711,9 @@ function buildAirports(m) {
 // Wild ground everywhere that isn't built: woods on green land, scrub in the desert, palms on beaches, and a
 // few big rock outcrops. Kept sparse so the prop list stays light.
 const WILD_CLEAR = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.FIELD, T.LOT, T.WALL]);
+// the little sea islands (Lighthouse Rock, the Islets) are never desert: grassland where the terrain says dry
+export const SEA_ISLES = new Set([19, 20]);
+const seaIsle = (d, c) => (c === 3 && SEA_ISLES.has(d) ? 1 : c);
 // value noise over tiles (s: feature size in tiles), 0..1
 function vnoise2(x, y, s, seed) {
   const fx = x / s, fy = y / s, ix = Math.floor(fx), iy = Math.floor(fy);
@@ -3741,7 +3744,7 @@ function buildWilds(m, rand) {
     if (tx < 4 || ty < 4 || tx >= W - 4 || ty >= MAP_H - 4) continue;
     const i = ty * W + tx;
     if (!wild(i) || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT)) continue;
-    const c = terrainAt(cls, cw, tx, ty);
+    const c = seaIsle(m.dist[i], terrainAt(cls, cw, tx, ty));
     if (hash2(gx, gy, 93) >= (c === 4 ? 0.4 : c === 3 ? 0.25 : c === 2 ? 0.1 : 0.06)) continue;
     if (inField(tx, ty, 96) || !clear(tx, ty, 4)) continue;
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, s = 52 + Math.floor(hash2(gx, gy, 94) * 4) * 10;
@@ -3762,7 +3765,7 @@ function buildWilds(m, rand) {
     if (!wild(i)) continue;
     const t = m.tiles[i];
     if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
-    const c = terrainAt(cls, cw, tx, ty), h = hash2(gx, gy, 61);
+    const c = seaIsle(m.dist[i], terrainAt(cls, cw, tx, ty)), h = hash2(gx, gy, 61);
     const g = 0.65 * vnoise2(gx, gy, 16, 71) + 0.35 * vnoise2(gx, gy, 6, 72); // where the groves are
     const x = Math.round(fx * TILE), y = Math.round(fy * TILE);
     let p = 0;

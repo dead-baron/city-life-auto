@@ -2268,3 +2268,16 @@ nothing else in the world moves).
   - sandstone boulders sit round it;
   - on the map as "Canyon Oasis".
 - **Tests:** the pool, the solid cliff behind the spring, the palms, the solid mesas, the landmark (`test/nature.test.js`).
+
+## 2026-10-06 · Lighthouse Rock: the keeper's cottage and the tidepools (concepts N8, N8-B, N8-C)
+
+- **The lighthouse** now stands on grass, with a stone apron round the tower instead of a paved square. A dirt path runs down to the jetty, and the keeper's cottage (whitewashed, red roof, lit windows, solid) stands beside it with a bench.
+- **The tidepool shelf** (`shared/naturesites.js` `lighthouseTidepools`) is the island's east shore, its beach widened two tiles into the grass behind:
+  - shallow pools among barnacled basalt rocks with kelp down their sides (solid);
+  - starfish, urchins and anemones in the pools, crabs beside them, driftwood up the beach;
+  - pool water is still water on land (the pond look), not the sea.
+- **Offshore:**
+  - three basalt sea stacks with kelp and grass tufts (solid);
+  - a low seal rock with grey seals hauled out on it and a gull.
+- **Sea islands are never desert:** Lighthouse Rock and the Islets grow grassland and coastal plants where the terrain map said dry (no cactus on a sea rock), and their rocks are basalt (`SEA_ISLES`).
+- On the map as "Lighthouse Tidepools". Tests in `test/nature.test.js`.

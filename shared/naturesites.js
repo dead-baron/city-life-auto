@@ -83,6 +83,99 @@ export function buildNatureSites(m, H) {
   m.natureSites = [];
   redwoodCreek(m, H);
   canyonOasis(m, H);
+  lighthouseTidepools(m, H);
+}
+
+// ---- Lighthouse Rock: the keeper's cottage and the tidepools (concepts N8, N8-B, N8-C) -------------------------
+// The lighthouse stands on grass now (its paved square goes), a path runs down to the jetty, the keeper's
+// cottage stands beside it. The island's east shore is a tidepool shelf: shallow pools among barnacled basalt
+// rocks with starfish, urchins, anemones and crabs; sea stacks and a seal rock offshore, gulls on the rocks.
+function lighthouseTidepools(m, H) {
+  const lh = m.buildings.find((b) => b && b.kind === 'lighthouse');
+  if (!lh) return;
+  const cx = lh.tx + 2, cy = lh.ty + 2, comp = m.compLab ? m.compLab[cy * MAP_W + cx] : -1;
+  const onIsland = (tx, ty) => m.compLab ? m.compLab[ty * MAP_W + tx] === comp : true;
+  // the paved square: grass, a stone apron one tile round the tower, a dirt path south to the jetty
+  for (let ty = cy - 6; ty < cy + 6; ty++) for (let tx = cx - 6; tx < cx + 6; tx++) {
+    const i = ty * MAP_W + tx;
+    if (m.tiles[i] !== T.PLAZA) continue;
+    const ring = tx >= lh.tx - 1 && tx <= lh.tx + lh.tw && ty >= lh.ty - 1 && ty <= lh.ty + lh.th;
+    m.tiles[i] = ring ? T.PLAZA : Math.abs(tx - cx) <= 1 && ty > cy ? T.DIRT : T.GRASS;
+    m.reserve[i] |= RES;
+  }
+  for (let ty = cy + 6; ty < cy + 22; ty++) for (let tx = cx - 1; tx <= cx + 1; tx++) { const i = ty * MAP_W + tx; if (m.tiles[i] === T.GRASS || m.tiles[i] === T.SAND) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; } }
+  // the keeper's cottage, east of the tower: solid over its footprint
+  const kx = (cx + 8) * TILE, ky = (cy + 2) * TILE;
+  for (let dy = -22; dy <= 22; dy += 14) for (let dx = -40; dx <= 40; dx += 14) m.addSolidProp(kx + dx, ky + dy - 4, 10);
+  H.addProp(m, 'cottage', kx, ky + 26, 0, { w: 84, d: 54 });
+  for (let ty = cy - 1; ty <= cy + 5; ty++) for (let tx = cx + 5; tx <= cx + 11; tx++) m.reserve[ty * MAP_W + tx] |= RES;
+  H.addProp(m, 'pbench', kx - 70, ky + 50, 0);
+  // the tidepool shelf: the island's sand east of the tower, widened two tiles into the grass behind it
+  const widen = [];
+  for (let ty = cy - 30; ty <= cy + 30; ty++) for (let tx = cx + 14; tx <= cx + 46; tx++) {
+    if (!onIsland(tx, ty) || m.tiles[ty * MAP_W + tx] !== T.GRASS || (m.reserve[ty * MAP_W + tx] & RES)) continue;
+    let sand = false;
+    for (let dy = -2; dy <= 2 && !sand; dy++) for (let dx = -2; dx <= 2; dx++) if (m.tiles[(ty + dy) * MAP_W + tx + dx] === T.SAND) { sand = true; break; }
+    if (sand) widen.push(ty * MAP_W + tx);
+  }
+  for (const i of widen) m.tiles[i] = T.SAND;
+  const shelf = [];
+  for (let ty = cy - 30; ty <= cy + 30; ty++) for (let tx = cx + 16; tx <= cx + 46; tx++) if (onIsland(tx, ty) && m.tiles[ty * MAP_W + tx] === T.SAND) shelf.push([tx, ty]);
+  if (!shelf.length) return;
+  const isSand = (tx, ty) => m.tiles[ty * MAP_W + tx] === T.SAND && onIsland(tx, ty);
+  const pools = [];
+  for (let gy = cy - 30; gy <= cy + 30; gy += 3) for (let gx = cx + 14; gx <= cx + 46; gx += 3) {
+    const px = gx + Math.floor(hash2(gx, gy, 801) * 3), py = gy + Math.floor(hash2(gx, gy, 802) * 3);
+    if (!isSand(px, py) || [isSand(px + 1, py), isSand(px, py + 1), isSand(px - 1, py), isSand(px, py - 1)].filter(Boolean).length < 3) continue;
+    if (hash2(gx, gy, 803) < 0.1) continue;
+    const rx = 1.1 + hash2(gx, gy, 804) * 0.9, ry = 0.8 + hash2(gx, gy, 805) * 0.6, X = (px + 0.5) * TILE, Y = (py + 0.5) * TILE;
+    for (let ty = py - 2; ty <= py + 2; ty++) for (let tx = px - 2; tx <= px + 2; tx++) {
+      if (((tx - px) / rx) ** 2 + ((ty - py) / ry) ** 2 > 1 || !isSand(tx, ty)) continue;
+      const i = ty * MAP_W + tx; m.tiles[i] = T.WATER; m.reserve[i] |= RES;   // (land stays: a shallow pool, not the sea)
+    }
+    pools.push([X, Y, rx * TILE, ry * TILE, gx, gy]);
+  }
+  // round each pool: barnacled basalt rocks (solid), life in and round it
+  const life = ['starfish', 'starfish', 'urchin', 'anemone', 'urchin', 'anemone'];
+  for (const [X, Y, RX, RY, gx, gy] of pools) {
+    const n = 2 + Math.floor(hash2(gx, gy, 806) * 3);
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + hash2(gx, gy, 807 + k) * 1.2, r = 14 + Math.floor(hash2(gx + k, gy, 808) * 3) * 4;
+      const x = X + Math.cos(a) * (RX + r * 0.6), y = Y + Math.sin(a) * (RY + r * 0.5);
+      if (m.tiles[at(x, y)] !== T.SAND) continue;
+      H.addProp(m, 'boulder', Math.round(x), Math.round(y), Math.round(r * 0.75), { s: r * 2 + 4, style: 'basalt', barn: 1 });
+    }
+    for (let k = 0; k < 4; k++) {
+      const x = X + (hash2(gx, gy + k, 809) - 0.5) * RX * 1.2, y = Y + (hash2(gx + k, gy, 810) - 0.5) * RY * 1.1;
+      if (m.tiles[at(x, y)] !== T.WATER) continue;
+      H.addProp(m, life[Math.floor(hash2(gx, gy, 811 + k) * life.length)], Math.round(x), Math.round(y), 0, { v: Math.floor(hash2(gx, gy, 812 + k) * 4) });
+    }
+    if (hash2(gx, gy, 813) < 0.4) H.addProp(m, 'crab', Math.round(X + RX + 10), Math.round(Y + 4), 0, { a: Math.round(hash2(gx, gy, 814) * 628) / 100 });
+  }
+  // driftwood up the beach
+  for (let k = 0; k < 4; k++) { const [tx, ty] = shelf[Math.floor(hash2(k, 3, 815) * shelf.length)]; if (m.tiles[ty * MAP_W + tx] === T.SAND) H.addProp(m, 'driftwood', (tx + 0.5) * TILE, (ty + 0.5) * TILE, 0, { a: Math.round(hash2(k, 4, 815) * 314) / 100, len: 40 + Math.floor(hash2(k, 5, 815) * 3) * 10 }); }
+  // offshore: sea stacks and the seal rock, in the water east of the shelf (solid: boats steer round them)
+  const water = (tx, ty) => m.tiles[ty * MAP_W + tx] === T.WATER || m.tiles[ty * MAP_W + tx] === T.DEEP;
+  const spots = [];
+  for (let ty = cy - 30; ty <= cy + 28; ty += 2) for (let tx = cx + 30; tx <= cx + 60; tx += 2) {
+    if (!water(tx, ty)) continue;
+    let near = 99; for (let r = 1; r < 10 && near === 99; r++) for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r]]) if (!water(tx + dx, ty + dy)) { near = r; break; }
+    if (near >= 3 && near <= 8) spots.push([tx, ty, near]);
+  }
+  const used = [];
+  const take = (minGap) => { for (const sp of spots) if (used.every((u) => Math.hypot(u[0] - sp[0], u[1] - sp[1]) >= minGap)) { used.push(sp); return sp; } return null; };
+  spots.sort((a, b) => hash2(a[0], a[1], 816) - hash2(b[0], b[1], 816));
+  for (let k = 0; k < 3; k++) { const sp = take(7); if (!sp) break; const r = 24 + k * 6, h = 130 + k * 40; H.addProp(m, 'seastack', (sp[0] + 0.5) * TILE, (sp[1] + 0.5) * TILE, r, { r, h, s: k + 1 }); }
+  const sr = take(6);
+  if (sr) {
+    const X = (sr[0] + 0.5) * TILE, Y = (sr[1] + 0.5) * TILE;
+    H.addProp(m, 'sealrock', X, Y, 40, { w: 120, d: 70 });
+    for (const [dx, dy, p, a] of [[-24, -6, 0, 0.3], [18, 4, 1, 2.8], [-6, 16, 0, 1.2]]) H.addProp(m, 'seal', X + dx, Y + dy, 0, { pose: p, a, z: 32 });
+    H.addProp(m, 'gull', X + 40, Y - 10, 0, { a: 0.4, z: 32 });
+  }
+  for (const [X, Y] of pools.slice(0, 3)) H.addProp(m, 'gull', X - 30, Y - 22, 0, { a: 2.4, z: 0 });
+  (m.landmarks ||= []).push({ name: 'Lighthouse Tidepools', type: 'tidepools', x: (cx + 18) * TILE, y: (cy - 16) * TILE, w: 26 * TILE, h: 30 * TILE });
+  m.natureSites.push({ kind: 'tidepools', name: 'Lighthouse Tidepools', x: (cx + 30) * TILE, y: cy * TILE, pools: pools.length, cottage: { x: kx, y: ky } });
 }
 
 // ---- the oasis in Red Rock Canyon (concepts N4-B, N4-C) ------------------------------------------------------

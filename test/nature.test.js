@@ -73,3 +73,18 @@ test('Red Rock Canyon: the oasis pool under the north mesa, the spring, palms; t
   assert.ok(wall > 400, `the mesas are solid (${wall} tiles)`);
   assert.ok(m.landmarks.some((l) => l.name === 'Canyon Oasis'));
 });
+
+test('Lighthouse Rock: tidepools among barnacled rocks, life in them, sea stacks and seals offshore, the keeper\'s cottage', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'tidepools');
+  assert.ok(s && s.pools >= 8, `tidepools (${s && s.pools})`);
+  const near = (t, r = 1400) => m.props.filter((q) => q && q.t === t && Math.hypot(q.x - s.x, q.y - s.y) < r);
+  assert.ok(near('starfish').length + near('urchin').length + near('anemone').length >= 12, 'life in the pools');
+  assert.ok(near('boulder').filter((q) => q.barn).length >= 12, 'barnacled rocks round them');
+  assert.ok(near('seastack', 2200).length >= 2 && near('sealrock', 2200).length === 1 && near('seal', 2200).length >= 2, 'stacks, the seal rock and its seals');
+  for (const q of near('seastack', 2200)) assert.ok([T.WATER, T.DEEP].includes(tileAt(q.x, q.y)) && solidNear(q.x, q.y, 4), 'a stack stands in the water and is solid');
+  assert.ok(solidNear(s.cottage.x, s.cottage.y, 20), 'the cottage is solid');
+  // no desert plants on a sea island
+  const isle = m.props.filter((q) => q && m.dist[Math.floor(q.y / TILE) * m.w + Math.floor(q.x / TILE)] === 19);
+  assert.equal(isle.filter((q) => q.t === 'cactus').length, 0, 'no cactus on Lighthouse Rock');
+  assert.ok(m.landmarks.some((l) => l.name === 'Lighthouse Tidepools'));
+});
