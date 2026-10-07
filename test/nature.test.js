@@ -143,3 +143,12 @@ test('Northshore Botanical Gardens: the random park dressing gives way to the ga
   for (const [i, p] of m.props.entries()) if (p && p.t === 'painted' && Math.hypot(p.x - s.x, p.y - s.y) < 900) assert.ok(!m.propSolid.has(i), 'no solid left for a cleared prop');
   assert.ok(m.landmarks.some((l) => l.name === 'Northshore Botanical Gardens'));
 });
+
+test('the Old Granite Mine: a solid cliff with its adit, rails and a cart out of it, a track to the road', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'mine');
+  assert.ok(s, 'the mine is built');
+  assert.equal(tileAt(s.x, s.y - 40), T.WALL, 'the cliff is solid');
+  assert.equal(tileAt(s.x, s.y + 60), T.DIRT, 'dirt in front of the mouth');
+  assert.ok(m.props.some((p) => p && p.t === 'minecart' && Math.hypot(p.x - s.x, p.y - s.y) < 200), 'the ore cart');
+  assert.ok(m.landmarks.some((l) => l.name === 'Old Granite Mine'));
+});

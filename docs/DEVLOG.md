@@ -2338,3 +2338,13 @@ Northshore Commons is laid out as the gardens (`shared/naturesites.js` `northsho
 - **South-east:** lavender in rows and five beehives.
 - On the map as "Northshore Botanical Gardens".
 - **Test fixes:** the dying-car test rolls its car down a long straight road with the player beside it. From a random spot it could roll into water, or be too far from anyone to be simulated.
+
+## 2026-10-06 · The Old Granite Mine (Granite Peaks; concept N3, the mine's mouth)
+
+Beside the road below the quarry (`shared/naturesites.js` `oldMine`), a granite cliff band stands up out of the hillside: ragged ledges, moss down its face, solid.
+- **The adit:** a timbered portal in its south face (dark inside), with lanterns on posts either side.
+- **By the mouth:** rails run out of the mouth to an ore cart, with crates, barrels, a chest, a pickaxe and lumber about the place.
+- **Around it:** blue crystals glow at the foot of the rock, tailings heaps lie nearby, and outcrops stand at each end.
+- **Access:** a dirt track runs down to the road.
+- **Art:** the cliff is a terrain-kit plateau with a superellipse outline, its face kept straight round the adit (`statics.js` recipe `cliff`); the rails are a flat sprite.
+- On the map as "Old Granite Mine". The cave interior (N3's lake and walkway) waits for an interiors pass.

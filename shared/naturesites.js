@@ -92,6 +92,46 @@ export function buildNatureSites(m, H) {
   summitTarn(m, H);
   heronMarsh(m, H);
   northshoreGardens(m, H);
+  oldMine(m, H);
+}
+
+// ---- the Old Granite Mine (Granite Peaks; concept N3, the mine's mouth) -----------------------------------------
+// A granite cliff band with a timbered adit in its south face; rails run out of it past an ore cart, lanterns on
+// posts either side, crates, barrels and tools by the mouth, glowing crystals in the rock, tailings heaps; a dirt
+// track down to the nearest road.
+function oldMine(m, H) {
+  const ok = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !m.reserve[i] && m.dist[i] === 33;
+  let best = null;
+  for (let ty = 30; ty < 200; ty += 2) for (let tx = 470; tx < 720; tx += 2) {
+    let good = true;
+    for (let dy = -6; dy <= 8 && good; dy++) for (let dx = -9; dx <= 9; dx++) if (!ok((ty + dy) * MAP_W + tx + dx)) { good = false; break; }
+    if (!good) continue;
+    let road = 0;
+    for (let k = 9; k <= 20 && !road; k++) for (let dx = -4; dx <= 4; dx++) { const t = m.tiles[(ty + k) * MAP_W + tx + dx]; if (t === T.ROAD) { road = k; break; } }
+    if (!road) continue;
+    const d = Math.hypot(tx * TILE - 17200, ty * TILE - 3400) + road * 20;
+    if (!best || d < best.d) best = { tx, ty, road, d };
+  }
+  if (!best) return;
+  const { tx, ty, road } = best;
+  // the cliff band: solid rock over its footprint
+  for (let y = ty - 5; y <= ty; y++) for (let x = tx - 7; x <= tx + 7; x++) { const i = y * MAP_W + x; m.tiles[i] = T.WALL; m.reserve[i] |= RES; }
+  for (let y = ty - 7; y <= ty + 8; y++) for (let x = tx - 10; x <= tx + 10; x++) m.reserve[y * MAP_W + x] |= RES;
+  const X = (tx + 0.5) * TILE, face = (ty + 1) * TILE;
+  H.addProp(m, 'cliff', X, face, 0, { w: 15 * TILE, d: 6 * TILE, h: 120, s: 33 });
+  H.addProp(m, 'mineportal', X, face + 10, 0);
+  // the rails out of the mouth, the cart on them, dirt under it all and down to the road
+  for (let y = ty + 1; y <= ty + road; y++) for (let x = tx - 1; x <= tx + 1; x++) { const i = y * MAP_W + x; if (m.tiles[i] === T.GRASS) m.tiles[i] = T.DIRT; }
+  for (let y = ty + 1; y <= ty + 6; y++) for (let x = tx - 5; x <= tx + 5; x++) { const i = y * MAP_W + x; if (m.tiles[i] === T.GRASS) m.tiles[i] = T.DIRT; }
+  H.addProp(m, 'rails', X, face + 4 * TILE, 0, { len: 7 * TILE });
+  H.addProp(m, 'minecart', X, face + 3.2 * TILE, 12);
+  for (const sx of [-1, 1]) { H.addProp(m, 'lantern', X + sx * 58, face + 22, 4); }
+  for (const [dx, dy, t, r] of [[-110, 40, 'crates', 12], [-88, 76, 'barrel', 8], [-128, 84, 'barrel', 8], [104, 50, 'chest', 10], [124, 90, 'pickaxe', 0], [86, 96, 'lumber', 10]]) H.addProp(m, t, X + dx, face + dy, r);
+  for (const [dx, dy, size] of [[-150, 14, 30], [150, 18, 26], [-74, 12, 18]]) H.addProp(m, 'crystal', X + dx, face + dy, 0, { size });
+  for (const [dx, dy, r] of [[-250, -40, 30], [256, -30, 26]]) H.addProp(m, 'outcrop', X + dx, face + dy, r, { w: 100, d: 64, h: 70, s: dx > 0 ? 5 : 6, style: 'granite' });
+  for (const [dx, dy] of [[-200, 150], [180, 140]]) H.addProp(m, 'gravel', X + dx, face + dy, 0);
+  (m.landmarks ||= []).push({ name: 'Old Granite Mine', type: 'mine', x: Math.round(X - 260), y: Math.round(face - 220), w: 520, h: 420 });
+  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face) });
 }
 
 // clear a map prop away (its picture and its solid footprint): for a designed place that replaces random dressing

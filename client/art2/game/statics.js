@@ -49,7 +49,7 @@ import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
 import * as TR from '../trees.js';
-import { boulder as rockLump, outcrop, rockSprite, seaStack } from '../terrain.js';
+import { boulder as rockLump, outcrop, rockSprite, seaStack, crystals } from '../terrain.js';
 import { distSq } from '../scene.js';
 import { SCENE_MASKS } from '../../../shared/interior-art.js';
 import { groundPixel } from '../ground.js';
@@ -318,6 +318,33 @@ export function makeStatic(r) {
     case 'festoon': return makeFestoon(r);
     case 'koi': { const G = new GBuf(24, 24); G.ax = 12; G.ay = 12; GD.koi(G, 12, 12, r.a || 0, r.v || 0, 9); return G; }
     case 'zen': return makeZen();
+    case 'cliff': { // a granite cliff band, its south face toward the camera, stepped back in ledges (anchor: the face's foot, centre)
+      // the outline: a squashed superellipse, ragged, its south side flattened where the adit is (the face)
+      const W = r.w, D = r.d, pad = 30, poly = [];
+      for (let k = 0; k < 48; k++) {
+        const a = k / 48 * TAU, c = Math.cos(a), sn = Math.sin(a), e = 0.55;
+        let x = Math.sign(c) * Math.abs(c) ** e * W / 2, y = Math.sign(sn) * Math.abs(sn) ** e * D / 2;
+        const j = 1 + (hash(k, 3, r.s || 1) - 0.5) * 0.18 + Math.sin(a * 5 + (r.s || 1)) * 0.05;
+        x *= j; y *= j;
+        if (sn > 0 && Math.abs(x) < W * 0.22) y = D / 2;   // (the face round the adit stays straight)
+        poly.push([x + W / 2 + pad, y + D / 2 + 6]);
+      }
+      return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: 'granite', tiers: [[0, r.h * 0.6], [D * 0.22, r.h * 0.84], [D * 0.42, r.h]], veg: { kind: 'grass', density: 0.1, band: 2 }, hang: { kind: 'moss', amount: 0.35 }, moss: 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
+    }
+    case 'crystal': { // (the cave kit's crystals glow full; out in the open half that, so they read as crystal, not lamps)
+      const G = crystals(r.s || 1, r.size || 20, '#5ac8ff');
+      for (let i = 3; i < G.emi.length; i += 4) G.emi[i] = G.emi[i] * 0.45;
+      return G;
+    }
+    case 'rails': { // a straight north-south track: sleepers and two rails, flat on the ground
+      const L = r.len || 200, G = new GBuf(28, L); G.ax = 14; G.ay = L / 2;
+      const S = ramp('#5a3e2a', 6, 3), Rl = MAT.metal;
+      for (let y = 0; y < L; y++) {
+        if (y % 8 < 3) for (let x = 2; x < 26; x++) G.put(x, y, S[2 + (hash(x >> 2, y, 3) > 0.6 ? 1 : 0)], [0, 0, 1], 1, null, F_GROUND);
+        for (const x of [6, 7, 20, 21]) G.put(x, y, Rl[x % 2 ? 4 : 2], [0, 0, 1], 2, null, F_GROUND);
+      }
+      return G;
+    }
     case 'critter': { const fr = critterFrames(r.k); return (fr && fr[r.f || 0]) || EMPTY; }
     case 'lily': { const G = FL.lilyPads(r.s || 1, 7, 2); return G && G.render ? G.render(0) : G; }
     case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });
@@ -1131,6 +1158,8 @@ function voxModel(m, a) {
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
     case 'creekRail': return creekRail(a[0] || 200);
+    case 'minePortal': return WL.minePortal(80, 70); case 'mineCart': return WL.mineCart(true); case 'mBarrel': return WL.barrel('#8a5a34');
+    case 'chest': return WL.chest(); case 'pickaxe': return WL.pickaxe();
     case 'greenhouse': return GD.greenhouse(150, 80, 40, 30, 0.6, 1); case 'gStatue': return GD.gardenStatue(); case 'stoneLantern': return GD.stoneLantern(a[0] ?? 0.6);
     case 'redBridge': return GD.redBridge(a[0] || 110, 26, 16); case 'beehive': return GD.beehive(['#e0b850', '#d8a848', '#e8c060'][a[0] || 0], (a[0] || 0) + 3);
     case 'raisedBed': return GD.raisedBed(60, 26, 9, (a[0] || 0) + 1); case 'gShed': return GD.gardenShed(52, 38, 32, '#3a6a8a'); case 'ladder': return GD.orchardLadder(46);
@@ -1180,6 +1209,7 @@ function vdim(m, a) {
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
     case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
+    case 'minePortal': return [80, 22, 78]; case 'mineCart': return [32, 22, 26]; case 'mBarrel': return [14, 14, 18]; case 'chest': return [26, 16, 18]; case 'pickaxe': return [10, 6, 34];
     case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
     case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, 30, 54];
@@ -1580,6 +1610,14 @@ function propItems(c, p, pi, I) {
       return;
     }
     case 'mapboard': V('mapb', 'mapBoard', []); return;
+    case 'cliff': put(I, { key: `cliff:${p.w}:${p.d}:${p.h}:${p.s || 1}`, recipe: { t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1 }, x, y, ext: [p.w / 2 + 20, p.d + p.h + 30, p.w / 2 + 20, 20], pi }); return;
+    case 'mineportal': V('mport', 'minePortal', []); lightAt(I, x, y + 6, 30, 90, [1, 0.75, 0.4], 0.8, 'lamp'); return;
+    case 'minecart': V('mcart', 'mineCart', [], PI / 2); return;
+    case 'barrel': V('mbarrel', 'mBarrel', []); return;
+    case 'chest': V('mchest', 'chest', [], 0.3); return;
+    case 'pickaxe': V('mpick', 'pickaxe', [], 0.6); return;
+    case 'crystal': put(I, { key: `crys:${p.size || 20}`, recipe: { t: 'crystal', size: p.size || 20, s: Math.round(x) % 5 }, x, y, ext: [40, 50, 40, 12], pi }); lightAt(I, x, y, 14, 70, [0.4, 0.8, 1], 0.6, 'neon'); return;
+    case 'rails': put(I, { key: `rails:${p.len || 200}`, recipe: { t: 'rails', len: p.len || 200 }, x, y, ext: [20, (p.len || 200) / 2 + 10, 20, (p.len || 200) / 2 + 10], pi }); return;
     case 'greenhouse': V('ghouse', 'greenhouse', []); lightAt(I, x, y, 30, 160, [1, 0.88, 0.62], 1.2, 'window'); return;
     case 'statue': V('gstat', 'gStatue', []); return;
     case 'stonelantern': V('slant', 'stoneLantern', [0.7]); lightAt(I, x, y + 2, 24, 80, [1, 0.8, 0.5], 1.1, 'lamp'); return;
