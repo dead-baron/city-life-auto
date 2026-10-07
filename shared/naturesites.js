@@ -115,6 +115,7 @@ export function buildNatureSites(m, H) {
   orchard(m, H);
   hilltopTrack(m, H);
   balloonField(m, H);
+  missionRuins(m, H);
   golfClub(m, H);
   driveTracks(m, H);
   roadside(m, H);
@@ -253,6 +254,35 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- The old mission (Dry Creek Desert, east of the vineyard; original) --------------------------------------------
+// The roofless ruin of an old adobe mission church stands on the open desert beside the vineyard (whose first vines,
+// the story goes, came from its garden): crumbling plaster walls, the great arched doorway under the bell gable with
+// two bells still hanging, the front's west corner fallen, a breach in the west wall you can climb through, the
+// cloister's arcade with two arches down, rubble everywhere; saguaros, prickly pear and boulders round it.
+function missionRuins(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const CX = 1190, CY = 405;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);
+  for (let ty = CY - 6; ty <= CY + 7; ty++) for (let tx = CX - 6; tx <= CX + 6; tx++) if (!open(at(tx, ty))) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.abs(q.x / TILE - CX) < 7 && Math.abs(q.y / TILE - CY) < 7.5) dropProp(m, i); });
+  for (let ty = CY - 6; ty <= CY + 7; ty++) for (let tx = CX - 6; tx <= CX + 6; tx++) m.reserve[at(tx, ty)] |= RES;
+  const X = CX * TILE, Y = CY * TILE, x0 = X - 118, y0 = Y - 98;
+  add('mission', CX, CY, 0);
+  // the walls are solid (model coordinates: the nave x 24..124, y 40..186; the doorway at x 58..90; the breach y 96..122)
+  const solid = (x, y) => m.addSolidProp(Math.round(x0 + x), Math.round(y0 + y), 7);
+  for (let y = 44; y <= 182; y += 12) { if (y < 94 || y > 124) solid(29, y); solid(119, y); }
+  for (let x = 28; x <= 120; x += 12) { solid(x, 45); if (Math.abs(x - 74) > 18) solid(x, 181); }
+  for (let k = 0; k < 5; k++) solid(164, 56 + k * 26);
+  for (let x = 128; x <= 164; x += 12) solid(x, 52);
+  // round it: saguaros, prickly pear and sage, boulders
+  for (const [dx, dy, sp] of [[-7.5, -4, 'saguaroBig'], [7.8, -5.5, 'saguaroMid'], [6.2, 5.6, 'saguaroBig'], [-8, 4.4, 'saguaroMid']]) add('tree_a', CX + dx, CY + dy, 8, { sp, k: 1.1 });
+  for (const [dx, dy, sp] of [[-5.5, 5.8, 'pear'], [4, 6.4, 'pear'], [-6.6, -1, 'sage'], [7, 1.5, 'agave'], [2.5, -6.2, 'ocotillo'], [-3, -6.4, 'barrel']]) add('shrub_a', CX + dx, CY + dy, 0, { sp, k: 1 });
+  for (const [dx, dy, sz] of [[5.4, -2.8, 30], [-7.2, 1.6, 24], [3.2, 7, 20]]) add('boulder', CX + dx, CY + dy, Math.round(sz * 0.5), { s: sz });
+  (m.landmarks ||= []).push({ name: 'Old Mission Ruins', type: 'mission', x: (CX - 4) * TILE, y: (CY - 3) * TILE, w: 8 * TILE, h: 6 * TILE });
+  m.natureSites.push({ kind: 'mission', name: 'Old Mission Ruins', x: X, y: Y, door: { x: Math.round(x0 + 74), y: Math.round(y0 + 192) }, breach: { x: Math.round(x0 + 29), y: Math.round(y0 + 109) } });
 }
 
 // ---- The balloon field (Dry Creek, east of the Farm Road; original) ---------------------------------------------

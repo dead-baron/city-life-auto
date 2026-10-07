@@ -584,3 +584,14 @@ test('Dry Creek Balloon Field: hot-air balloons on a launch field east of the Fa
   assert.equal(tileAt(s.x, s.y), T.GRASS, 'a grass field');
   assert.ok(m.landmarks.some((l) => l.name === 'Dry Creek Balloon Field'));
 });
+
+test('Old Mission Ruins: a ruined adobe mission east of the vineyard, its walls solid, in through the doorway or the breach', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'mission');
+  assert.ok(s, 'the ruins are there');
+  assert.ok(m.props.some((q) => q && q.t === 'mission'), 'the ruin');
+  const solid = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r + 3) return true; return false; };
+  assert.ok(!solid(s.door.x, s.door.y - 12), 'the doorway is open');
+  assert.ok(solid(s.door.x - 40, s.door.y - 11), 'the front wall beside it is solid');
+  assert.ok(!solid(s.breach.x, s.breach.y), 'the breach is open');
+  assert.ok(m.landmarks.some((l) => l.name === 'Old Mission Ruins'));
+});

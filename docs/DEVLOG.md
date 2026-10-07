@@ -2780,3 +2780,12 @@ A launch field of dry grass on the flat ground east of the Farm Road, below the 
 - **Round the field:** a windsock and a "BALLOON RIDES" sign by the track.
 
 At golden hour the balloons throw long shadows across the field. On the map, and in the debug menu (🎈 Dry Creek Balloon Field). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · The Old Mission Ruins (Dry Creek Desert, east of the vineyard; original)
+
+The roofless ruin of an old adobe mission church now stands on the open desert beside Willow River Vineyard (`shared/naturesites.js` `missionRuins`; `props-rural.js` `missionRuins`).
+- **The walls:** sun-faded plaster over adobe, fallen away in patches to show brick, crumbled to broken tops that run lower toward the back.
+- **The front:** the great arched doorway, and the bell gable rising over it with three arched openings and two bells still hanging. The front's west corner has fallen.
+- **Getting in:** the walls are solid. You get in through the doorway or a breach in the west wall.
+- **Round it:** what's left of the cloister's arcade along the east side, with two of its arches down, rubble inside and out, saguaros, prickly pear, sage and boulders.
+- On the map, and in the debug menu (⛪ Old Mission Ruins). Homes, POIs and buildings unchanged.

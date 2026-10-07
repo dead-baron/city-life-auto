@@ -398,3 +398,58 @@ export function inflationFan() {
   m.cyl('z', 25, 6, 0, 4, 0, 18, tank);
   return m;
 }
+
+// ---- the old mission ruins ----------------------------------------------------------------------------------
+// The roofless shell of an old adobe mission church (the nave along y, the front facing +y): thick walls of
+// sun-faded plaster over adobe and stone, crumbled to broken tops and fallen away in places to show the brick,
+// the front with its great arched doorway and the bell gable rising over it (three arched openings, two bells
+// still hanging), rubble on the floor inside; along the east side what's left of the cloister's arcade, arches on
+// square piers, two of them fallen. (The wall heights are noise, so no two stretches crumble alike.)
+export function missionRuins() {
+  const W = 236, D = 196, m = new Vox(W, D, 132);
+  const adobe = m.mat({ ramp: R('#c8a07a'), k: 3, shade: (x, y, z) => (hash(Math.round(x / 4), Math.round(z / 3) + Math.round(y / 4), 91) - 0.5) * 0.7 + (z < 5 ? -0.5 : 0) });
+  const plaster = m.mat({ ramp: R('#e6d8bc'), k: 3, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z / 3) + Math.round(y / 3), 92) - 0.5) * 0.5 });
+  const brick = m.mat({ ramp: R('#a8603e'), k: 3, shade: (x, y, z) => (Math.round(z) % 3 === 0 || Math.round(x + y + (Math.floor(z / 3) % 2) * 3) % 6 === 0 ? -1 : 0) });
+  const rub = m.mat({ ramp: R('#b8926a'), k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), 93) - 0.5) * 1.2 }), dark = m.mat({ ramp: R('#3a2a22'), k: 1 });
+  const bell = m.mat({ ramp: R('#8a7a3a'), k: 4 }), beam = m.mat({ ramp: R('#5a4232'), k: 3 });
+  // a wall material by where on the wall: plaster mostly, adobe where it has fallen away, brick at the breaks
+  const wallMat = (x, y, z, top) => (top - z < 3 && hash(Math.round(x / 2), Math.round(y / 2), 94) > 0.4 ? brick : hash(Math.round(x / 9), Math.round(z / 7) + Math.round(y / 9), 95) > 0.62 ? adobe : plaster);
+  const crumble = (u, base, amp, seed) => base - amp * Math.abs(Math.sin(u * 0.045 + seed)) * (0.6 + 0.4 * hash(Math.floor(u / 10), 1, seed)) - (hash(Math.floor(u / 6), 2, seed) > 0.8 ? 6 : 0);
+  // the nave: x 24..124, y 40..186 (front at y 186); walls 10 thick
+  const nx0 = 24, nx1 = 124, ny0 = 40, ny1 = 186, T = 10;
+  m.fill((x, y, z) => {
+    const inWestWall = x >= nx0 && x < nx0 + T, inEastWall = x >= nx1 - T && x < nx1, inBack = y >= ny0 && y < ny0 + T, inFront = y >= ny1 - T && y < ny1;
+    if (y < ny0 || y >= ny1 || x < nx0 || x >= nx1) return -1;
+    if (!(inWestWall || inEastWall || inBack || inFront)) return z < 2 ? rub : -1;
+    let top;
+    if (inFront) {
+      const cx = (nx0 + nx1) / 2, dx = Math.abs(x - cx);
+      top = x < cx - 32 ? crumble(x, 40, 16, 11) : 76 - (dx > 40 ? (dx - 40) * 0.6 : 0);               // (the west corner has fallen)
+      if (dx < 16 && (z < 46 || Math.hypot(dx, z - 46) < 16)) return z < 1 ? rub : -1;                    // the great doorway
+    } else if (inBack) top = crumble(x, 36, 20, 3);
+    else top = Math.max(8, crumble(y + (inWestWall ? 0 : 400), 44, inWestWall ? 30 : 20, inWestWall ? 5 : 7) + (y - ny0) * 0.12);   // (lower toward the back: the front stands tallest)
+    if (inWestWall && y > 96 && y < 122) top = Math.min(top, 14 + (y - 96) * 0.3);                        // (a breach in the west wall)
+    if (!inFront && !inBack && Math.abs(((y - ny0) % 36) - 22) < 5 && z > 24 && z < 40 && top > 44) return dark;   // window slots
+    return z < top ? wallMat(x, y, z, top) : -1;
+  }, 0, 0, 0, W, D, 80);
+  // the bell gable over the front: a stepped, curved top with three arched openings, two bells hanging
+  const gx = (nx0 + nx1) / 2;
+  m.fill((x, y, z) => {
+    const dx = Math.abs(x - gx), top = 126 - Math.pow(dx / 32, 2) * 30;
+    if (dx > 32 || z < 76 || z >= top) return -1;
+    for (const [ox, oz, r] of [[-15, 92, 6], [15, 92, 6], [0, 108, 7]]) { const ddx = x - (gx + ox); if (Math.abs(ddx) < r && z > oz - 11 && (z < oz || Math.hypot(ddx, z - oz) < r)) return -1; }
+    return z > top - 3 ? brick : plaster;
+  }, nx0, ny1 - T + 2, 76, nx1, ny1 - 2, 126);
+  for (const [ox, oz] of [[15, 85], [0, 101]]) { m.box(gx + ox - 6, ny1 - 7, oz + 6, gx + ox + 6, ny1 - 5, oz + 7, beam); m.fill((x, y, z) => (Math.hypot(x - (gx + ox), y - (ny1 - 6)) < 2 + (oz + 6 - z) * 0.45 && z >= oz - 2 && z < oz + 6 ? bell : -1), gx + ox - 6, ny1 - 10, oz - 2, gx + ox + 6, ny1 - 2, oz + 6); }
+  // the cloister arcade on the east side: square piers and round arches, two fallen
+  const ax = nx1 + 40;
+  for (let k = 0; k < 5; k++) {
+    const y0 = 56 + k * 26, fallen = k === 1 || k === 3;
+    m.box(ax - 4, y0 - 4, 0, ax + 4, y0 + 4, fallen ? 10 : 34, k % 2 ? adobe : plaster);
+    if (!fallen && k < 4) m.fill((x, y, z) => { const t = (y - y0) / 26, top = 34 + Math.sin(t * Math.PI) * 10; return z >= top - 2 && z < top + 6 ? plaster : -1; }, ax - 4, y0, 30, ax + 4, y0 + 26, 52);
+  }
+  m.box(nx1, 50, 0, ax + 4, 54, 22, plaster);   // (the cloister's north wall, low)
+  // rubble: heaps inside, below the breach, under the fallen arches
+  for (const [cx, cy, r] of [[70, 110, 14], [44, 104, 10], [ax + 6, 86, 9], [ax - 6, 140, 10], [100, 70, 8], [nx0 - 6, 112, 9]]) m.ell(cx, cy, 2, r, r * 0.7, 4 + r * 0.25, rub);
+  return m;
+}
