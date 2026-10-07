@@ -255,6 +255,24 @@ float canopyVis(vec3 P){
 // Anchored to the world (w: world px): nothing travels with the camera. alb is linear; returns the glint.
 float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 wq){
   float glint = 0.0, t = time;
+  int cf = int(code + 0.5);
+  if (cf >= 239 && cf <= 254 && (fl & ${F_WATER}) != 0) {
+    // a river or a creek running downstream (the ground bake's code: which way, sixteenths of a turn): ripples
+    // whose crests cross the current and travel with it, a fine chop, the light sliding over them, and flecks of
+    // foam riding the current
+    float fa = float(cf - 239) * 0.3927;
+    vec2 fd = vec2(cos(fa), sin(fa)), fn = vec2(-fd.y, fd.x);
+    float al = dot(w, fd), ac = dot(w, fn);
+    float p1 = al * 0.15 - t * 3.6 + sin(ac * 0.06) * 1.6, p2 = al * 0.33 - t * 5.4 + ac * 0.09 + 1.3;
+    float hgt = sin(p1) * 0.65 + sin(p2) * 0.35;
+    alb *= 1.0 + hgt * 0.06;
+    vec3 nw = normalize(vec3(n.xy + fd * (cos(p1) * 0.22 + cos(p2) * 0.1), n.z)), H = normalize(sunDir + vec3(0.0, 0.5, 0.866));
+    n = nw;
+    glint = step(0.7 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), 120.0)) * 0.5;
+    float fo = wnoise(vec2(al * 0.03 - t * 1.4, ac * 0.22)) * 0.7 + wnoise(vec2(al * 0.08 - t * 2.6, ac * 0.4 + 7.0)) * 0.3;
+    if (fo > 0.79 + bayer4(wq) * 0.08) alb = mix(alb, vec3(0.74, 0.84, 0.86), 0.28 + (fo - 0.79) * 1.6);
+    return glint;
+  }
   if ((fl & ${F_WATER}) != 0 && (fl & ${F_WET}) == 0) {
     // two wave trains along the wind and a fine chop: the water brightens a little on the crests, and where a
     // crest faces the sun just so, it glints (the baked ripples keep shading the surface)
@@ -289,6 +307,13 @@ float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 
     if (foam > bayer4(wq) + 0.5) alb = mix(alb, vec3(0.86, 0.9, 0.93), 0.85);
   }
   return glint;
+}
+// Falling water (a waterfall's sheets: water that isn't ground): streaks running down it, brighter and darker,
+// and white water breaking through them - on the screen's own rows, so it pours down the face.
+void fallingWater(inout vec3 alb, vec2 w){
+  float st = wnoise(vec2(w.x * 0.42, w.y * 0.055 - time * 3.4)) * 0.62 + wnoise(vec2(w.x * 0.95 + 3.0, w.y * 0.11 - time * 5.2)) * 0.38;
+  alb *= 0.8 + st * 0.45;
+  if (st > 0.7) alb = mix(alb, vec3(0.86, 0.93, 0.96), clamp((st - 0.7) * 2.4, 0.0, 0.8));
 }
 // Rain on the world (not on the screen): rings spreading on water and puddles, small splashes on wet ground and
 // on anything facing up (car roofs too). up: the normal's z. Returns light to add (display units).
@@ -442,6 +467,7 @@ void main(){
   vec3 alb = pow(A.rgb, vec3(2.2));
   vec2 w = (floor((worg + vec2(q)) / float(AP)) + 0.5) * float(AP);   // (its centre, world px)
   float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, wq) : 0.0;
+  if ((fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0) fallingWater(alb, w);
   o0 = shade(alb, n, fl, sh, plight, refl, C.rgb, wq);
   float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * sh + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
   if (add > 0.0) o0.rgb = min(o0.rgb + vec3(add), vec3(1.0));
@@ -497,6 +523,7 @@ void main(){
   vec2 w = (floor((worg + vec2(q)) / float(AP)) + 0.5) * float(AP);
   ivec2 wq = (q + org) / AP;
   float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, wq) : 0.0;
+  if ((fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0) fallingWater(alb, w);
   o0 = shade(alb, n, fl, LH.a, LH.rgb * LH.rgb * 8.0, R.rgb * R.rgb * 4.0, C.rgb, wq);
   float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * LH.a + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
   if (add > 0.0) o0.rgb = min(o0.rgb + vec3(add), vec3(1.0));

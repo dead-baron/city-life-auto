@@ -31,7 +31,7 @@ import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTAT
 import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
 import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
-import { buildNatureSites, REDWOOD_TRUNK } from './naturesites.js';
+import { buildNatureSites, REDWOOD_TRUNK, setFlow } from './naturesites.js';
 import { mushroomAtFoot } from './foraging.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 
@@ -707,6 +707,11 @@ function terrain(m) {
     prev = best.mid;
     riverMid.set(x, best.mid);
     for (let y = best.y0; y <= best.y1; y++) m.river[y * W + x] = 1;
+  }
+  // it runs west, out to the sea (m.flow: naturesites.js setFlow)
+  for (const [x, mid] of riverMid) {
+    const a = riverMid.get(x + 2) ?? mid, b = riverMid.get(x - 2) ?? mid;
+    for (let y = 560; y < 760; y++) if (m.river[y * W + x]) setFlow(m, y * W + x, -4, b - a);
   }
   const yRiver = (x) => {
     if (x < 772) return Infinity;

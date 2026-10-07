@@ -781,14 +781,19 @@ function shoreDistance(C) {
 // coverage (above a half: drawn), so nothing else changes. Runs last, over the decorations too.
 const SURF_LAND = new Uint8Array(NM);
 for (const k of ['BEACH', 'WETSAND', 'SHINGLE', 'DUNE', 'ROCKSHORE']) SURF_LAND[M_[k]] = 1;
+// A river's water (M.flow: which way it runs, sixteenths of a turn) takes 239 + that instead: the lighting runs its
+// ripples and foam downstream.
 function surf(C, G) {
-  const { b } = C, col = G.col, fl = G.flag;
+  const { b } = C, col = G.col, fl = G.flag, flow = C.M.flow;
   for (let y = 0; y < CHUNK; y++) {
     const r = (y + PAD) * WN + PAD;
     for (let x = 0; x < CHUNK; x++) {
-      const dd = b.dist[r + x];
+      const dd = b.dist[r + x], m = b.mat[r + x], gi = y * CHUNK + x;
+      if (m === M_.RIVER && flow && (fl[gi] & F_WATER) && (fl[gi] & F_GROUND)) {
+        const f = flow.get(Math.floor((C.Y0 + y) / TILE) * MAP_W + Math.floor((C.X0 + x) / TILE));
+        if (f !== undefined) { col[gi * 4 + 3] = 239 + f; continue; }
+      }
       if (dd >= 470) continue;
-      const m = b.mat[r + x], gi = y * CHUNK + x;
       if (!(fl[gi] & F_GROUND)) continue;
       const d = Math.round(dd / 10);
       if (m === M_.SEA || m === M_.LAKE) { if (fl[gi] & F_WATER) col[gi * 4 + 3] = 191 + d; }

@@ -24,16 +24,16 @@ const RES = 32;
 const at = (x, y) => Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE);
 // distance from (x, y) to a polyline, and the parameter (0..1 along it) of the nearest point
 function nearest(pts, x, y) {
-  let best = 1e18, bs = 0, acc = 0, tot = 0;
+  let best = 1e18, bs = 0, acc = 0, tot = 0, bk = 1;
   for (let i = 1; i < pts.length; i++) tot += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
   for (let i = 1; i < pts.length; i++) {
     const [ax, ay] = pts[i - 1], [bx, by] = pts[i], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, L = Math.sqrt(l2);
     let t = l2 ? ((x - ax) * dx + (y - ay) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t));
     const d = (x - ax - t * dx) ** 2 + (y - ay - t * dy) ** 2;
-    if (d < best) { best = d; bs = (acc + t * L) / tot; }
+    if (d < best) { best = d; bs = (acc + t * L) / tot; bk = i; }
     acc += L;
   }
-  return [Math.sqrt(best), bs];
+  return [Math.sqrt(best), bs, bk];   // (bk: the nearest segment, pts[bk - 1] to pts[bk])
 }
 // a smooth path through control points (Catmull-Rom, step px)
 function spline(cp, step = 24) {
@@ -51,6 +51,10 @@ function spline(cp, step = 24) {
   return out;
 }
 const KEEP = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.WALL, T.SIDEWALK, T.PLAZA, T.LOT, T.FIELD, T.DOCK]);
+// which way the water runs in a river tile (m.flow: tile -> 0..15, sixteenths of a turn from east, clockwise as the
+// screen goes): the renderer draws the ripples and the foam running downstream (lightgame.js waterSurf). A creek's
+// path runs downstream, from its source to where it ends.
+export function setFlow(m, i, dx, dy) { (m.flow ||= new Map()).set(i, Math.round(Math.atan2(dy, dx) / (Math.PI / 8)) & 15); }
 // water along a path, its half-width hw(s) (s 0..1 along it); never over a road or anything built
 function carveWater(m, pts, hw) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
@@ -58,9 +62,10 @@ function carveWater(m, pts, hw) {
   const pad = 140, out = [];
   for (let ty = Math.floor((y0 - pad) / TILE); ty <= Math.floor((y1 + pad) / TILE); ty++) for (let tx = Math.floor((x0 - pad) / TILE); tx <= Math.floor((x1 + pad) / TILE); tx++) {
     if (tx < 1 || ty < 1 || tx >= MAP_W - 1 || ty >= MAP_H - 1) continue;
-    const i = ty * MAP_W + tx, [d, s] = nearest(pts, (tx + 0.5) * TILE, (ty + 0.5) * TILE);
+    const i = ty * MAP_W + tx, [d, s, k] = nearest(pts, (tx + 0.5) * TILE, (ty + 0.5) * TILE);
     if (d > hw(s) || KEEP.has(m.tiles[i])) continue;
     m.tiles[i] = T.WATER; m.land[i] = 0; m.river[i] = 1; m.reserve[i] |= RES;
+    setFlow(m, i, pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
     out.push(i);
   }
   return out;
@@ -2484,12 +2489,18 @@ function redwoodCreek(m, H) {
     if (dx * dx + dy * dy > 1 || KEEP.has(m.tiles[i])) continue;
     m.tiles[i] = T.WATER; m.land[i] = 0; m.river[i] = 1; m.reserve[i] |= RES; poolTiles.push(i);
   }
+  if (m.flow) for (const i of poolTiles) m.flow.delete(i);   // (the pool lies still: carved round its rim, it would swirl)
   // the bridge: the parapets along both edges of the road where the creek runs under it (solid)
   const span = 120;   // half the length of the bridge along the road
   for (const side of [-1, 1]) for (let s = -span; s <= span; s += 20) { const [x, y] = P(s, side * (RW + 6)); m.addSolidProp(x, y, 8); }
   // the falls (the renderer's basalt ledge, ~170 px across): solid along the ledge, a mossy boulder past each end
   for (let dx = -86; dx <= 86; dx += 16) m.addSolidProp(F[0] + dx, F[1] - 8, 10);
   for (const [dx, r] of [[-116, 24], [118, 21]]) H.addProp(m, 'boulder', F[0] + dx, F[1] - 4, r, { s: r * 2 + 6, moss: 1 });
+  // the gorge the creek has cut: columnar basalt walls either side of the falls (mossy on top, ferns at their feet;
+  // solid along their faces - the renderer's statics.js addNature, cliffWall), mossy boulders tumbled below them
+  const gorge = [[-250, -6, 150, 64, 31], [250, -2, 150, 70, 32], [-330, 60, 96, 40, 33], [334, 66, 96, 44, 34]].map(([dx, dy, len, h, sd]) => ({ x: Math.round(F[0] + dx), y: Math.round(F[1] + dy), len, h, seed: sd }));
+  for (const g of gorge) for (let k = -g.len / 2 + 10; k <= g.len / 2 - 10; k += 18) m.addSolidProp(g.x + k, g.y - 10, 12);
+  for (const [dx, dy, r] of [[-190, 52, 16], [198, 58, 14], [-150, 96, 11], [160, 104, 12], [-262, 104, 13], [270, 112, 12]]) H.addProp(m, 'boulder', Math.round(F[0] + dx), Math.round(F[1] + dy), r, { s: r * 2 + 6, moss: 1 });
   // boulders in the creek and on its banks: big mossy ones you steer round
   const rocks = [[0.18, -8, 15], [0.3, 30, 13], [0.45, -30, 17], [0.62, 26, 12], [0.78, -18, 15], [0.9, 30, 13]];
   for (const [s, off, r] of rocks) {
@@ -2550,7 +2561,7 @@ function redwoodCreek(m, H) {
   m.natureSites.push({
     kind: 'creek', name: 'Redwood Creek', x: Math.round(C.x), y: Math.round(C.y),
     bridge: { x: C.x, y: C.y, a: C.a, half: span, roadHw: RW },
-    falls: { x: F[0], y: F[1], w: 100, drop: 34 }, pool: { x: pool[0], y: pool[1] },
+    falls: { x: F[0], y: F[1], w: 100, drop: 34 }, gorge, pool: { x: pool[0], y: pool[1] },
     footbridge: { x: fb[0], y: fb[1], a: Math.atan2(by, bx), len: 176 },
     camp: { x: camp[0], y: camp[1] }, pulloff: { x: qx, y: qy }, trails: [tr.length, tr2.length],
   });

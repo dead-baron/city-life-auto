@@ -2427,6 +2427,8 @@ function addNature(c, I) {
     // the bridge: a rail along each edge of the road where the creek runs under it
     const b = s.bridge, nx = -Math.sin(b.a), ny = Math.cos(b.a), hd = qa(b.a, 64), len = Math.round(b.half * 2);
     for (const side of [-1, 1]) put(I, vitem(`crail:${len}:${hd.toFixed(3)}`, 'creekRail', [len], Math.round(b.x + nx * side * (b.roadHw + 7)), Math.round(b.y + ny * side * (b.roadHw + 7)), hd));
+    // the gorge's basalt walls either side of the falls
+    for (const cw of s.gorge || []) put(I, vitem(`cliffw:${cw.len}:${cw.h}:${cw.seed}`, 'cliffWall', [cw.len, cw.h, 60, cw.seed], cw.x, cw.y, 0));
     // the falls: water over a mossy basalt ledge, facing south, its foot on the pool's north shore
     const f = s.falls;
     put(I, { key: `fall:${f.w}:${f.drop}`, recipe: { t: 'fall', w: f.w, drop: f.drop, seed: 5, mist: 0.35 }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + 60, f.drop + 90, f.w / 2 + 60, 40] });

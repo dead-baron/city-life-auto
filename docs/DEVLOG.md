@@ -3164,3 +3164,17 @@ On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesi
   - The line crosses over the street now and then.
   - They stay clear of the street lamps. Downtown has none.
 - **Tests:** `test/country.test.js` covers no pole on a road or a building, poles in the older streets only, and spans over the road.
+
+## 2026-10-07 · Water that runs downstream; a basalt gorge round Redwood Creek Falls
+
+- **Rivers and creeks flow** (backlog: "water in rivers and waterfalls should run downstream").
+  - Every river tile now knows which way its water runs (`m.flow`, in sixteenths of a turn: `naturesites.js` `setFlow`).
+    - A creek carved along a path takes the path's direction.
+    - The city river runs west to the sea.
+    - A falls' plunge pool lies still.
+  - The ground bake writes that direction into the river water (`groundbake.js` `surf`, as the shore code 239-254).
+  - The light pass (`lightgame.js` `waterSurf`) draws it moving: ripples whose crests cross the current and travel down it, a fine chop, glints sliding over them, and flecks of foam riding the current.
+- **Waterfalls pour.** Water standing upright (a falls' sheets) gets streaks and white water running down its face (`fallingWater`), on every quality tier.
+- **The gorge at Redwood Creek Falls** (concept N1-E):
+  - Columnar basalt walls stand either side of the falls, mossy on top and solid along their faces.
+  - Mossy boulders lie tumbled below them.
