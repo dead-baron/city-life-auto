@@ -2,11 +2,11 @@
 // regeneration and blood-trail footprints (GDD §14C combat feedback).
 import { K, T, WEATHER, PED_RADIUS } from '../../shared/constants.js';
 import * as revive from './revive.js';
-import { isSwimming, SWIM_BLOCK } from '../../shared/map.js';
+import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT } from '../../shared/rules.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -373,6 +373,18 @@ export function update(world, dt) {
         if (dryWeather && DRY_CONCRETE.has(world.map.tileAtPx(e.x, e.y))) world.emit(e.x, e.y, { e: 'foot', x: e.x, y: e.y, a: Math.atan2(e.vy, e.vx), f: +(e.bloodyFeet / 12).toFixed(2) });
       }
     }
+    // a soak in a hot spring: the hot water stops the bleeding and brings health back quickly, even when badly hurt
+    if (inHotSpring(world.map, e)) {
+      e.bleeding = false;
+      if (e.hp < e.maxHp && now - (e.lastHitAt || 0) > SOAK_AFTER_HIT_S) {
+        e.hp = Math.min(e.maxHp, e.hp + SOAK_HEAL * dt);
+        if (e.player && world.tick % 20 === 0) e.player.meDirty = true;
+      }
+      if (e.player && !e.soaking) {
+        e.soaking = true;
+        if (now - (e.soakNoteAt || -99) > 30) { e.soakNoteAt = now; world.notify(e.player, e.hp < e.maxHp ? 'The hot water eases your aches.' : 'You sink into the hot water.', 'good'); }
+      }
+    } else if (e.soaking) e.soaking = false;
     // bleeding drain, a trail of drips wherever they go + bloody footprints on dry concrete
     if (e.bleeding) {
       if (e.hp > 8) e.hp -= 0.5 * dt;

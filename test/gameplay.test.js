@@ -6,7 +6,7 @@ import { makeWorld, joinPlayer, run, teleport, store, players, fakeConn, straigh
 import { VEHICLES } from '../shared/vehicles.js';
 import { vehStep, driveInput } from '../shared/physics.js';
 import { IN } from '../shared/input.js';
-import { BAIL_HURT_SPEED, NPC_CRITICAL, NPC_GRIT, FLASHLIGHT_PRICE } from '../shared/rules.js';
+import { BAIL_HURT_SPEED, NPC_CRITICAL, NPC_GRIT, FLASHLIGHT_PRICE, SOAK_HEAL } from '../shared/rules.js';
 import { K } from '../shared/constants.js';
 import { SHOPS, ITEMS, WEAPONS, itemCat } from '../shared/items.js';
 import * as vehicles from '../server/systems/vehicles.js';
@@ -375,4 +375,25 @@ test('debug menu: hold the weather, freeze the clock, rain for as long as asked'
   devCmds.command(w, p, 'clockhold', {});
   for (let i = 0; i < 20; i++) w.step();
   assert.ok(w.loopTime > t0, 'and runs again');
+});
+
+test('hot springs: a soak stops bleeding and brings health back quickly, even when badly hurt', () => {
+  const w = makeWorld();
+  const { p, conn } = joinPlayer(w);
+  const s = w.map.springs && w.map.springs[1];
+  assert.ok(s, 'the hot springs are on the map');
+  // badly hurt and bleeding on dry land: no healing (below the critical line), the bleeding goes on
+  p.ped.hp = 20; p.ped.bleeding = true; p.ped.lastHitAt = w.time - 20;
+  run(w, 2);
+  assert.ok(p.ped.bleeding && p.ped.hp <= 20, 'still bleeding out of the water');
+  // into the big pool: the bleeding stops and health comes back fast
+  teleport(w, p.ped, s.x, s.y);
+  assert.ok(w.map.isWater(p.ped.x, p.ped.y), 'in the water');
+  const hp0 = p.ped.hp;
+  run(w, 4);
+  assert.ok(!p.ped.bleeding, 'the bleeding stopped');
+  assert.ok(p.ped.hp - hp0 >= SOAK_HEAL * 3, `health back quickly (${hp0.toFixed(1)} -> ${p.ped.hp.toFixed(1)})`);
+  assert.ok(conn.sent.some((o) => JSON.stringify(o).includes('hot water')), 'a note says so');
+  run(w, 30);
+  assert.equal(p.ped.hp, p.ped.maxHp, 'all the way to full');
 });

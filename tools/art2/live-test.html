@@ -11,6 +11,7 @@
        &r=1          chunks baked round the camera's chunk (r=1: 3 x 3)
        &fade=0.88    fades every building in view that far (the see-through you get walking behind one)
        &artpx=1      the art at full resolution (default 2: 1 art pixel = 2 world px, as in the game)
+       &lights=1     the baked static lights (lamps, windows, signs) added at that strength, as the game does at night
      window.render(t, windT) draws another frame at that clock (returns when done); window.ready once baked. -->
 <canvas id="cv"></canvas><div id="hud"></div>
 <script type="module">
@@ -35,9 +36,11 @@ const M = generateCity(1337);
 const cache = new SpriteCache(200e6);
 const ccx = Math.floor(camX / CHUNK), ccy = Math.floor(camY / CHUNK);
 const fades = new Map(), fadeK = +(q.get('fade') || 0);
+const lightK = +(q.get('lights') || 0), lights = [];   // &lights=1: the chunks' static lights at night strength (the game's host adds them every frame)
 for (let cy = ccy - R; cy <= ccy + R; cy++) for (let cx = ccx - R; cx <= ccx + R; cx++) {
   const r = bakeChunk(M, cx, cy, { quality: Q, seed: 1337, artPx: eng.ap }, cache);
   const g = r.g; g.under = r.under; g.blds = r.blds;
+  if (lightK) for (const L of r.lights || []) if (L.kind !== 'fire') lights.push(L);
   eng.uploadChunk(cx, cy, g);
   if (fadeK) for (const b of r.blds || []) fades.set(b[0], fadeK);
 }
@@ -45,6 +48,7 @@ const P = { ...(PRESETS_GAME[PN] || PRESETS_GAME.noon) };
 const wind = [ws, wg, wdx, wdy];
 window.render = (t, windT = t) => {
   eng.beginFrame({ camX, camY, zoom, viewW: W / zoom, viewH: H / zoom, time: t, preset: P, wet, quality: Q, wind, windT, fades });
+  for (const L of lights) eng.addLight({ x: L.x, y: L.y, z: L.z || 0, r: L.r, col: L.col, k: L.k * lightK });
   eng.endFrame();
   eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, new Uint8Array(4));
   hud.textContent = `cam ${camX},${camY} t ${t.toFixed(2)} wind ${ws} rain ${rain} q${Q} ${PN}  baked in ${((performance.now() - t0) / 1000).toFixed(1)} s`;

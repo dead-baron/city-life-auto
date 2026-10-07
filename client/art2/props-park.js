@@ -290,3 +290,95 @@ export function boombox() {
   m.box(7, 5, 5, 9, 6, 6, led); m.box(2, 2, 8, 3, 4, 11, h); m.box(13, 2, 8, 14, 4, 11, h); m.box(2, 2, 10, 14, 4, 11, h);
   return m;
 }
+// a fishing pier's rail (len along x): square timber posts with caps every 24 px, a worn top rail and a mid
+// rail, the timber weathered silver-brown and a little different post to post
+export function pierRail(len = 192) {
+  const m = new Vox(len, 6, 26);
+  const post = m.mat({ ramp: R('#6e5a48'), k: 3, shade: (x, y, z) => (hash(Math.floor(x / 24), 1, 41) - 0.5) * 0.9 + (z < 3 ? -0.7 : 0) });
+  const cap = m.mat({ ramp: R('#8a7a68'), k: 3 }), top = m.mat({ ramp: R('#a08c74'), k: 3, shade: (x) => (hash(Math.round(x / 3), 2, 41) > 0.85 ? -0.8 : 0) + (Math.round(x) % 48 === 0 ? -1 : 0) });
+  const mid = m.mat({ ramp: R('#7a6654'), k: 3 });
+  for (let x = 1; x < len - 2; x += 24) { m.box(x, 1, 0, x + 4, 5, 24, post); m.box(x - 0.5, 0.5, 24, x + 4.5, 5.5, 26, cap); }
+  m.box(0, 1.5, 20, len, 4.5, 23, top);
+  m.box(0, 2, 11, len, 4, 13, mid);
+  return m;
+}
+// a bait and tackle shack on a pier: sun-bleached blue board walls with white trim, a tin gable roof (the ridge
+// along x), a serving hatch in the south (front) wall with its flap propped up as an awning and the counter
+// out under it (lit at night), buoys and a net hung on the west end, a life ring on the east end, crab pots
+// stacked by the door and a bucket
+export function baitShack(on = 0.5) {
+  const w = 100, d = 54, H = 40, m = new Vox(w + 20, d + 22, H + 26);
+  const board = m.mat({ ramp: R('#7f9caa'), k: 3, shade: (x, y, z) => (Math.round(x + y) % 5 === 0 ? -1.1 : 0) + (hash(Math.floor((x + y) / 5), 3, 43) - 0.5) * 0.7 + (z < 4 ? -0.6 : 0) + (hash(Math.round(x), Math.round(z), 44) > 0.96 ? 0.9 : 0) });
+  const trim = m.mat({ ramp: R('#ece8dc'), k: 3 }), dark = m.mat({ ramp: R('#2a2622'), k: 1 }), counter = m.mat({ ramp: R('#b08a5e'), k: 3 });
+  const tin = m.mat({ ramp: R('#8a8a84'), k: 3, shade: (x, y) => (Math.round(y) % 5 < 2 ? -0.7 : 0.25) + (hash(Math.round(x / 10), Math.round(y / 7), 45) > 0.82 ? -0.7 : 0) });
+  const rust = m.mat({ ramp: R('#94582e'), k: 3 }), flap = m.mat({ ramp: R('#6f8c9a'), k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -1 : 0) });
+  const lit = m.mat({ ramp: R('#f4d48a', 5, 3), k: 4, emi: [255, 200, 120, Math.round(200 * on)], flag: F_NOCAST });
+  const buoyO = m.mat({ ramp: R('#e8642a'), k: 3 }), buoyW = m.mat({ ramp: R('#f0ece4'), k: 3 }), ring = m.mat({ ramp: R('#e8442e'), k: 3 }), net = m.mat({ ramp: R('#5a6a5a'), k: 2, flag: F_NOCAST });
+  const wire = m.mat({ ramp: R('#9aa2a6'), k: 3, flag: F_NOCAST }), rope = m.mat({ ramp: R('#c8a870'), k: 3 }), pail = m.mat({ ramp: R('#d8d4cc'), k: 3 });
+  const x0 = 10, y0 = 4, x1 = x0 + w, y1 = y0 + d, cy = (y0 + y1) / 2;
+  m.box(x0, y0, 0, x1, y1, 1, dark);
+  m.box(x0, y0, 0, x1, y0 + 3, H, board); m.box(x0, y0, 0, x0 + 3, y1, H, board); m.box(x1 - 3, y0, 0, x1, y1, H, board);
+  // the front: wall below the counter and above the hatch, the door at the east end (dark, ajar)
+  m.box(x0, y1 - 3, 0, x1, y1, 14, board); m.box(x0, y1 - 3, 30, x1, y1, H, board);
+  m.box(x0, y1 - 3, 14, x0 + 8, y1, 30, board); m.box(x0 + 60, y1 - 3, 14, x1, y1, 30, board);
+  m.box(x0 + 8, y1 - 4, 14, x0 + 60, y1 - 3, 30, lit);                                     // the lit inside through the hatch
+  for (let x = x0 + 12; x < x0 + 58; x += 7) m.box(x, y1 - 5, 22, x + 4, y1 - 4, 28, x % 2 ? buoyO : trim);   // (lures and tackle hung inside)
+  m.box(x0 + 72, y1 - 3, 0, x0 + 86, y1 + 0.5, 30, dark);                                    // the door
+  for (const [a, b] of [[x0 + 70, x0 + 72], [x0 + 86, x0 + 88]]) m.box(a, y1 - 3.5, 0, b, y1 + 0.5, 31, trim);
+  m.box(x0 + 70, y1 - 3.5, 30, x0 + 88, y1 + 0.5, 32, trim);
+  m.box(x0 + 6, y1 - 2, 13, x0 + 62, y1 + 6, 15, counter);                                   // the counter board
+  // the hatch flap propped up as an awning on two sticks
+  m.fill((x, y, z) => { const top = 31 + (y - y1) * 0.55; return z >= top && z < top + 1.6 ? flap : -1; }, x0 + 6, y1, 30, x0 + 62, y1 + 14, 40);
+  for (const x of [x0 + 8, x0 + 59]) m.box(x, y1 + 12, 15, x + 1, y1 + 13, 38, trim);
+  // white corner trim
+  for (const [a, b] of [[x0, y0], [x1 - 3, y0], [x0, y1 - 3], [x1 - 3, y1 - 3]]) m.box(a, b, 0, a + 3, b + 3, H, trim);
+  // the tin gable roof: the ridge along x, overhanging all round, a rusty ridge cap
+  m.fill((x, y, z) => { const top = H + 18 - Math.abs(y - cy) * 0.75; return z >= top - 2 && z < top ? (Math.abs(y - cy) < 2 ? rust : tin) : -1; }, x0 - 4, y0 - 4, H, x1 + 4, y1 + 4, H + 20);
+  m.fill((x, y, z) => (Math.abs(y - cy) * 0.75 + (z - H) < 18 && z >= H ? board : -1), x0, y0 + 3, H, x0 + 3, y1 - 3, H + 18);   // the gable ends
+  m.fill((x, y, z) => (Math.abs(y - cy) * 0.75 + (z - H) < 18 && z >= H ? board : -1), x1 - 3, y0 + 3, H, x1, y1 - 3, H + 18);
+  // the west end: two buoys on a rope and a hanging net; the east end: a life ring
+  m.box(x0 - 2, y0 + 6, 30, x0 - 1, y1 - 6, 31, rope);
+  for (const [y, c] of [[y0 + 14, buoyO], [y0 + 28, buoyW]]) m.ell(x0 - 4, y, 22, 2.6, 3, 5, c);
+  m.fill((x, y, z) => ((Math.round(y + z) % 3 === 0 || Math.round(y - z) % 3 === 0) && z > 8 + Math.abs(y - (y0 + 21)) * 0.4 ? net : -1), x0 - 1.5, y0 + 18, 8, x0 - 0.5, y0 + 26, 29);
+  m.fill((x, y, z) => { const r = Math.hypot(y - cy, z - 22); return r >= 4.5 && r < 7.5 ? (Math.floor(Math.atan2(z - 22, y - cy) / (Math.PI / 4) + 8) % 2 ? ring : buoyW) : -1; }, x1, cy - 8, 14, x1 + 2, cy + 8, 30);
+  // crab pots stacked by the door (wire cages, an orange float on each) and a bucket
+  for (const [px, py, pz] of [[x1 + 2, y1 + 2, 0], [x1 + 2, y1 + 10, 0], [x1 + 3, y1 + 6, 10]]) {
+    m.fill((x, y, z) => { const ex = x === px || x === px + 13 || y === py || y === py + 7 || z === pz || z === pz + 9; return ex && (Math.round(x + y + z) % 2 === 0 || z === pz || z === pz + 9) ? wire : -1; }, px, py, pz, px + 14, py + 8, pz + 10);
+    m.ell(px + 7, py + 4, pz + 11, 1.6, 1.6, 1.2, buoyO);
+  }
+  m.box(x0 + 40, y1 + 8, 0, x0 + 46, y1 + 14, 7, pail);
+  return m;
+}
+// a life ring on a short post (piers and docks): orange and white, the rope coiled under it
+export function lifeRingPost() {
+  const m = new Vox(14, 8, 34), p = m.mat({ ramp: R('#6e5a48'), k: 3 }), o = m.mat({ ramp: R('#e8642a'), k: 3 }), w = m.mat({ ramp: R('#f2eee6'), k: 3 }), r = m.mat({ ramp: R('#c8a870'), k: 3 });
+  m.box(5, 2, 0, 9, 6, 32, p); m.box(4, 1, 32, 10, 7, 34, p);
+  m.fill((x, y, z) => { const q = Math.hypot(x - 7, z - 22); return q >= 3.6 && q < 6.4 ? (Math.floor(Math.atan2(z - 22, x - 7) / (Math.PI / 4) + 8) % 2 ? o : w) : -1; }, 0, 6, 14, 14, 8, 30);
+  m.fill((x, y, z) => (Math.abs(Math.hypot(x - 7, y - 4) - 3.4) < 0.8 ? r : -1), 2, 0, 8, 12, 8, 10);
+  return m;
+}
+// a fish-cleaning table: a timber bench top with a steel sink and a tap, a hose coiled below, a bucket
+export function fishTable() {
+  const m = new Vox(34, 16, 26), wd = m.mat({ ramp: R('#8a7258'), k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -0.8 : 0) }), leg = m.mat({ ramp: R('#5e4a3a'), k: 3 });
+  const st = m.mat({ ramp: R('#b8c0c4'), k: 4 }), tap = m.mat({ ramp: R('#8a9096'), k: 3, flag: F_NOCAST }), hose = m.mat({ ramp: R('#2f7a4a'), k: 3 }), pail = m.mat({ ramp: R('#d8d4cc'), k: 3 });
+  for (const [x, y] of [[2, 2], [29, 2], [2, 11], [29, 11]]) m.box(x, y, 0, x + 3, y + 3, 15, leg);
+  m.box(0, 0, 15, 34, 16, 17, wd); m.box(20, 3, 13, 31, 13, 17.5, st);
+  m.box(30, 2, 17, 31.5, 3.5, 25, tap); m.box(26, 2, 23.5, 31.5, 3.5, 25, tap);
+  m.fill((x, y, z) => (Math.abs(Math.hypot(x - 12, y - 8) - 4) < 0.9 ? hose : -1), 6, 2, 1, 18, 14, 3);
+  m.box(4, 4, 0, 9, 9, 6, pail);
+  return m;
+}
+// a rod holder clamped to a pier rail post: two rods standing in tubes, leaning out over the water (-y), their
+// lines down to the sea, a tackle box and a bucket at the foot
+export function rodHolder() {
+  const m = new Vox(22, 30, 48), tube = m.mat({ ramp: R('#d8d8d0'), k: 3 }), rod = m.mat({ ramp: R('#2a2a2e'), k: 2, flag: F_NOCAST }), reel = m.mat({ ramp: R('#9aa2aa'), k: 4 });
+  const line = m.mat({ ramp: R('#e8e8e0'), k: 4, flag: F_NOCAST }), box = m.mat({ ramp: R('#2f6a4a'), k: 3 }), pail = m.mat({ ramp: R('#e86a2a'), k: 3 });
+  for (const [x, lean] of [[6, 0.55], [15, 0.7]]) {
+    m.box(x - 1, 22, 10, x + 1, 24, 20, tube);
+    for (let k = 0; k < 30; k++) m.box(x - 0.5, 23 - k * lean, 18 + k * 0.9, x + 0.5, 24 - k * lean, 19 + k * 0.9, rod);
+    m.box(x - 1.5, 20, 21, x + 1.5, 22, 24, reel);
+    for (let k = 0; k < 12; k++) m.box(x - 0.25, 23 - 30 * lean - k * 0.1, 44 - k * 3.6, x + 0.25, 23.4 - 30 * lean - k * 0.1, 45 - k * 3.6, line);
+  }
+  m.box(2, 24, 0, 12, 29, 5, box); m.box(14, 25, 0, 19, 30, 6, pail);
+  return m;
+}

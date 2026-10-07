@@ -396,6 +396,17 @@ export function isSwimming(map, ped) {
   return WATER_T[t] === 1 || (t === T.BRIDGE && !!ped.under);
 }
 
+// Soaking: swimming in one of the hot springs' pools (map.springs ellipses, Granite Hot Springs).
+export function inHotSpring(map, ped) {
+  const sp = map.springs;
+  if (!sp || ped.vehId) return false;
+  for (const s of sp) {
+    const dx = (ped.x - s.x) / s.rx, dy = (ped.y - s.y) / s.ry;
+    if (dx * dx + dy * dy <= 1) return isSwimming(map, ped);
+  }
+  return false;
+}
+
 // Nearest walkable land to a point (for swimmers heading ashore), ring search in tiles.
 export function nearestLand(map, x, y, maxTiles = 24, skip = null) {
   const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);

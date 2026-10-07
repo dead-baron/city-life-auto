@@ -110,8 +110,110 @@ export function buildNatureSites(m, H) {
   splashBay(m, H);
   driftwoodPoint(m, H);
   northPointCourts(m, H);
+  westportPier(m, H);
   roadside(m, H);
   coralRainforest(m, H);
+}
+
+// ---- Westport Pier (the Westport coast below the airport; original, with the NK1-C dock kit) -------------------
+// The side road that runs west from the coast road to the sea goes on as a long timber fishing pier out over the
+// bay, with a T-head at the end: rails along both sides, black iron lamps in pairs, benches facing the water, life
+// rings, a bait and tackle shack, a fish-cleaning table, a cooler, a coin telescope looking out to sea, gulls on the
+// rail posts, a float off the head's south side with two little boats tied up and a gap in the rail to reach it.
+// Ashore: sand either side of the pier (a lifeguard tower, umbrellas, towels and a surfboard), a lawn behind with
+// fan palms, picnic tables and benches facing the sunset, a snack cart by the pier, and the pier's lit sign.
+// The pier faces west: the sun sets over its end.
+function westportPier(m, H) {
+  const D = 27, RY = 750;   // Westport International's coast strip; the side road's centre line (tile rows 749|750)
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const wet = (i) => m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP;
+  let sx = 150;
+  while (sx > 100 && m.tiles[at(sx - 1, RY)] === T.ROAD) sx--;
+  if (m.tiles[at(sx, RY)] !== T.ROAD || m.dist[at(sx, RY)] !== D || !wet(at(sx - 3, RY))) return;
+  // the shaft: L tiles out from the road's end, rows RY-2..RY+1; the head: 8 x 12 tiles at its end; the float
+  const L = 26, HX0 = sx - L - 7, HX1 = sx - L, HY0 = RY - 6, HY1 = RY + 5, FX0 = HX0 + 2, FX1 = HX0 + 5;
+  const deck = [];
+  for (let tx = HX1 + 1; tx < sx; tx++) for (let ty = RY - 2; ty <= RY + 1; ty++) deck.push([tx, ty]);
+  for (let tx = HX0; tx <= HX1; tx++) for (let ty = HY0; ty <= HY1; ty++) deck.push([tx, ty]);
+  for (let tx = FX0; tx <= FX1; tx++) for (let ty = HY1 + 1; ty <= HY1 + 2; ty++) deck.push([tx, ty]);
+  for (const [tx, ty] of deck) { const i = at(tx, ty); if (tx < sx - 4 && !wet(i)) return; if (m.reserve[i] & RES) return; }
+  for (let ty = HY0 - 3; ty <= HY1 + 6; ty++) for (let tx = HX0 - 3; tx <= HX1 + 2; tx++) if (!wet(at(tx, ty))) return;   // (open water round the head)
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  const solidLine = (x0, y0, x1, y1, r = 6) => { const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / 16)); for (let k = 0; k <= n; k++) m.addSolidProp(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n, r); };
+  for (const [tx, ty] of deck) { const i = at(tx, ty); m.tiles[i] = T.DOCK; m.land[i] = 0; m.reserve[i] |= RES | 16; }
+  // the rails (pieces of up to 6 tiles; solid: the only ways off are the shore and the float's gap)
+  const rail = (x0, y0, x1, y1) => {
+    const len = Math.hypot(x1 - x0, y1 - y0), a = Math.atan2(y1 - y0, x1 - x0), n = Math.max(1, Math.ceil(len / 192)), seg = len / n;
+    for (let k = 0; k < n; k++) { const cx = x0 + Math.cos(a) * seg * (k + 0.5), cy = y0 + Math.sin(a) * seg * (k + 0.5); H.addProp(m, 'pierrail', Math.round(cx), Math.round(cy), 0, { len: Math.round(seg), a }); }
+    solidLine(x0, y0, x1, y1);
+  };
+  const T0 = TILE, yN = (RY - 2) * T0 + 3, yS = (RY + 2) * T0 - 3, xE = sx * T0, xH = (HX1 + 1) * T0 - 3;
+  rail(xH, yN, xE, yN); rail(xH, yS, xE, yS);                                                    // along the shaft
+  rail(HX0 * T0 + 3, HY0 * T0 + 3, xH + 3, HY0 * T0 + 3);                                         // the head: north side
+  rail(HX0 * T0 + 3, HY0 * T0 + 3, HX0 * T0 + 3, (HY1 + 1) * T0 - 3);                             // west side
+  rail(HX0 * T0 + 3, (HY1 + 1) * T0 - 3, FX0 * T0, (HY1 + 1) * T0 - 3);                           // south side, west of the gap
+  rail((FX1 + 1) * T0, (HY1 + 1) * T0 - 3, xH + 3, (HY1 + 1) * T0 - 3);                           // ...east of it
+  rail(xH, HY0 * T0 + 3, xH, yN); rail(xH, yS, xH, (HY1 + 1) * T0 - 3);                            // the head's east side, either side of the shaft
+  // lamps in pairs along the shaft and at the head's corners; benches between them facing out; life rings
+  for (let k = 0; k < 4; k++) {
+    const lx = sx - 2.5 - k * 6.5;
+    add('lamp', lx, RY - 1.55, 5, { style: 'iron', lift: 4 }); add('lamp', lx, RY + 1.55, 5, { style: 'iron', lift: 4 });
+    const bx = lx - 3.2;
+    if (bx > HX1 + 2) { add('pbench', bx, RY - 1.45, 8, { a: -Math.PI / 2, lift: 4 }); add('pbench', bx, RY + 1.5, 8, { a: Math.PI / 2, lift: 4 }); }
+  }
+  for (const [tx, ty] of [[HX0 + 0.7, HY0 + 0.7], [HX1 + 0.3, HY0 + 0.7], [HX0 + 0.7, HY1 + 0.3], [HX1 + 0.3, HY1 + 0.3]]) add('lamp', tx, ty, 5, { style: 'iron', lift: 4 });
+  for (const [tx, ty] of [[sx - 9.5, RY - 1.62], [sx - 16, RY + 1.62], [HX0 + 0.62, RY - 3.5], [HX0 + 0.62, RY + 3.5]]) add('lifering', tx, ty, 0);
+  // rods in holders on the rails, out over the water (left by whoever's fishing there)
+  for (const [tx, ty, a] of [[sx - 7.2, RY - 1.75, 0], [sx - 13.8, RY - 1.75, 0], [sx - 20.3, RY + 1.78, Math.PI], [HX0 + 3.2, HY1 + 0.75, Math.PI], [HX1 - 1.4, HY1 + 0.75, Math.PI]]) add('rods', tx, ty, 0, { a });
+  // the head: the bait shack along the north rail, its sign, the cleaning table, a cooler and crates, benches facing
+  // west along the end rail, the telescope at the very end, gulls on the rail posts
+  const shx = HX0 + 4.1, shy = HY0 + 2.2;
+  add('baitshack', shx, shy, 0);
+  for (const dx of [-48, -24, 0, 24, 48]) m.addSolidProp(Math.round(shx * TILE + dx), Math.round(shy * TILE - 6), 20);
+  add('textsign', HX0 + 1.5, HY0 + 5.2, 0, { text: 'BAIT & TACKLE', z: 24, sx: 1, bg: '#24506e', fg: [250, 240, 210] });
+  add('fishtable', HX1 - 1.0, HY0 + 5.4, 8, { a: 0 });
+  add('cooler', HX1 - 0.3, HY0 + 6.3, 0, { v: 1, lift: 4 }); add('crates', HX0 + 7.4, HY0 + 1.4, 10, { lift: 4 });
+  add('pbench', HX0 + 1.0, RY - 1.6, 8, { a: Math.PI, lift: 4 }); add('pbench', HX0 + 1.0, RY + 1.8, 8, { a: Math.PI, lift: 4 });
+  add('pbench', HX0 + 5.8, HY1 + 0.5, 8, { a: Math.PI / 2, lift: 4 });
+  add('scope', HX0 + 0.8, RY + 0.1, 6, { lift: 4 });
+  for (const [tx, ty, a] of [[HX0 + 0.1, RY - 5.2, 2.4], [sx - 12.1, RY - 1.95, -0.6], [HX1 + 0.92, HY1 + 0.8, 0.9]]) add('gull', tx, ty, 0, { a, z: 30 });
+  // the float: two little boats tied up, cleats at its corners
+  add('canoe', FX0 + 1.6, HY1 + 3.35, 0, { a: 0, c: 0 }); add('canoe', FX1 + 1.5, HY1 + 2.0, 0, { a: Math.PI / 2, c: 2 });
+  for (const [tx, ty] of [[FX0 + 0.3, HY1 + 2.7], [FX1 + 0.7, HY1 + 2.7]]) add('mooring', tx, ty, 0, { lift: 4 });
+  m.marina.push({ x: Math.round((FX0 + 2) * TILE), y: Math.round((HY1 + 4.6) * TILE), a: Math.PI });
+  // ashore: a beach either side of the pier, the lawn behind it (to the coast road's sidewalk)
+  let roadX = sx; while (roadX < sx + 30 && !(m.tiles[at(roadX, RY - 14)] === T.SIDEWALK || m.tiles[at(roadX, RY - 14)] === T.ROAD)) roadX++;
+  const north = [RY - 44, RY - 5], south = [RY + 6, RY + 44], shore = (ty) => { let tx = sx - 6; while (tx < sx + 6 && wet(at(tx, ty))) tx++; return tx; };
+  const land = (i) => m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND;
+  for (const [y0, y1] of [north, south]) for (let ty = y0; ty <= y1; ty++) {
+    const x0 = shore(ty);
+    for (let tx = x0; tx < roadX; tx++) {
+      const i = at(tx, ty);
+      if (!land(i) || m.dist[i] !== D) continue;
+      m.props.forEach((q, j) => { if (q && q.t !== 'painted' && Math.floor(q.x / TILE) === tx && Math.floor(q.y / TILE) === ty) dropProp(m, j); });
+      if (tx < x0 + 6) { m.tiles[i] = T.SAND; m.reserve[i] |= RES | 4; } else { m.tiles[i] = T.GRASS; m.reserve[i] |= RES; }
+    }
+  }
+  // the beach: a lifeguard tower on the south beach, umbrellas, towels, a surfboard; the north beach quieter
+  const sxS = shore(RY + 22);
+  add('lifeguard', sxS + 2.6, RY + 22, 16);
+  for (const [dy, u, tw] of [[9, 'umbrella_r', 0], [14, 'umbrella_y', 1], [30, 'umbrella_b', 2], [37, 'umbrella_r', 0]]) { const bx = shore(RY + dy) + 3.2; add(u, bx, RY + dy, 4); add('towel', bx - 1.1, RY + dy + 0.9, 0, { v: tw }); }
+  add('surfboard', sxS + 4.6, RY + 20.6, 0, { v: 2 });
+  for (const [dy, u] of [[-14, 'umbrella_g'], [-30, 'umbrella_y']]) { const bx = shore(RY + dy) + 3.2; add(u, bx, RY + dy, 4); add('towel', bx + 0.9, RY + dy + 1, 0, { v: 1 }); }
+  // the lawn: fan palms in loose rows, picnic tables and benches facing the sea, the snack cart by the pier
+  const lx0 = shore(RY - 20) + 7;
+  for (const [y0, y1] of [north, south]) for (let ty = y0 + 2, k = 0; ty <= y1 - 2; ty += 4.5, k++) {
+    const tx = lx0 + 1 + (k % 2) * 4.5 + hash2(k, y0, 3101) * 1.2;
+    if (tx < roadX - 2) add('palm_a', tx, ty, 10, { sp: k % 3 === 1 ? 'royal' : 'fanSkirt', k: 1.35 + hash2(k, y0, 3102) * 0.3 });
+  }
+  for (const [y0, y1] of [north, south]) for (let ty = y0 + 4, k = 0; ty <= y1 - 4; ty += 9, k++) {
+    add('picnic', lx0 + 3, ty + 2.2, 8);
+    add('pbench', lx0 - 0.4, ty - 0.6, 8, { a: Math.PI });
+  }
+  add('foodcart', sx + 2.2, RY - 3.9, 10); add('umbrella_r', sx + 3.8, RY - 3.4, 4); add('cafetable', sx + 0.6, RY - 3.2, 6);
+  add('textsign', sx + 1.6, RY + 3.75, 0, { text: 'WESTPORT PIER', z: 50, bg: '#1d3f6e', fg: [255, 226, 120] });
+  (m.landmarks ||= []).push({ name: 'Westport Pier', type: 'pier', x: HX0 * TILE, y: HY0 * TILE, w: (sx - HX0) * TILE, h: (HY1 - HY0 + 3) * TILE });
+  m.natureSites.push({ kind: 'pier', name: 'Westport Pier', x: Math.round((sx - 2) * TILE), y: RY * TILE, head: { x: Math.round((HX0 + HX1 + 1) / 2 * TILE), y: RY * TILE }, len: L, root: { x: sx * TILE, y: RY * TILE } });
 }
 
 // ---- Route 9 (Dry Creek Desert; concept D14) ---------------------------------------------------------------------

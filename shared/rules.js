@@ -74,6 +74,11 @@ export const DEAD_BOOM_S = 9;
 export const ARMORED_ROCKETS = 2;       // rockets to destroy an armored van / SWAT truck (everything else: one)
 export const ARMORED_VEHICLES = ['armored', 'swat'];
 
+// Hot springs (Granite Hot Springs): a soak in the hot water stops bleeding and brings health back quickly, even
+// when badly hurt (out of the water, health only creeps back above the critical line).
+export const SOAK_HEAL = 5;             // health per second while soaking
+export const SOAK_AFTER_HIT_S = 3;      // ...once you've been out of the fight this long
+
 // Clearing your record: pay the fines at the courthouse or Police HQ (not while wanted)
 export const FELONY_FINE = 750;
 

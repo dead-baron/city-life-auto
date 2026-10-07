@@ -456,3 +456,29 @@ test('North Point Courts: two fenced half courts with hoops and bleachers on the
   assert.ok(solid(s.gate.x - 4 * TILE, s.gate.y - 16), 'the fence is solid');
   assert.ok(m.landmarks.some((l) => l.name === 'North Point Courts'));
 });
+
+test('Westport Pier: a timber fishing pier out to sea from the end of a Westport road; rails, lamps, a bait shack on the head; sand either side ashore', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'pier');
+  assert.ok(s, 'the pier is built');
+  assert.equal(tileAt(s.root.x + 16, s.y), T.ROAD, 'it starts at the road\'s end');
+  for (let x = s.root.x - 16; x > s.head.x; x -= TILE) assert.equal(tileAt(x, s.y), T.DOCK, `planks all the way out (${x})`);
+  // clear down the middle; the rails along both sides are solid; open water beyond them (somewhere to cast)
+  const solid = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r + 4) return true; return false; };
+  for (let x = s.root.x - 40; x > s.head.x; x -= 24) assert.ok(!solid(x, s.y), `clear down the middle (${x})`);
+  for (const side of [-1, 1]) {
+    assert.ok(solid(s.x - 300, s.y + side * (2 * TILE - 3)), `a solid rail on the ${side < 0 ? 'north' : 'south'} side`);
+    assert.ok(m.isWater(s.x - 300, s.y + side * 3.5 * TILE), 'water beyond it');
+  }
+  // the head: the bait shack, lamps along the whole pier, benches
+  const onPier = (q) => q && q.x < s.root.x && q.x > s.head.x - 6 * TILE && Math.abs(q.y - s.y) < 8 * TILE;
+  assert.equal(m.props.filter((q) => onPier(q) && q.t === 'baitshack').length, 1, 'the bait shack');
+  assert.ok(m.props.filter((q) => onPier(q) && q.t === 'lamp').length >= 10, 'lamps all the way out');
+  assert.ok(m.props.filter((q) => onPier(q) && q.t === 'pbench').length >= 8, 'benches');
+  // ashore: sand either side of the pier's root
+  for (const side of [-1, 1]) {
+    let sand = 0;
+    for (let dy = 6; dy < 30; dy += 4) for (let dx = -4; dx <= 6; dx++) if (tileAt(s.root.x + dx * TILE, s.y + side * dy * TILE) === T.SAND) sand++;
+    assert.ok(sand > 20, `a beach on the ${side < 0 ? 'north' : 'south'} side (${sand})`);
+  }
+  assert.ok(m.landmarks.some((l) => l.name === 'Westport Pier'));
+});
