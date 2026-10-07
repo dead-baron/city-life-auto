@@ -2899,3 +2899,7 @@ The telescope at the end of Westport Pier works now (`server/systems/places.js` 
 - The README's controls table mentions the telescope under Interact.
 
 **Test fix:** the weapons test sometimes failed when the SWAT officer rolled the rare toughest grit (five shots against the four it allows). It now shoots a typical SWAT officer; the grit spread is still tested on civilians.
+
+## 2026-10-07 · A tidier big map
+
+There are many more named places on the big map now, so a place's name is only drawn where it doesn't cover a district name or another place's name (`client/hud.js`). Zoom in and the crowded ones appear as there's room. Names off the edge of the view aren't drawn at all.

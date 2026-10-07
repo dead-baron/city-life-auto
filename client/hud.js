@@ -397,20 +397,25 @@ export class HUD {
     g.textAlign = 'center'; g.textBaseline = 'middle';
     const fs = Math.max(9, Math.min(15, w / 70));
     g.font = `${fs}px Anton, Impact, sans-serif`;
+    const taken = [];   // the labels drawn so far (screen boxes): a place's name only goes where it doesn't cover another
+    const free = (x, y, tw, th) => { const b = [x - tw / 2 - 2, y - th / 2 - 1, x + tw / 2 + 2, y + th / 2 + 1]; if (taken.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1])) return false; taken.push(b); return true; };
     for (const d of districtCentroids(this.map)) {
       const [x, y] = P(d.x, d.y);
+      taken.push([x - g.measureText(d.name.toUpperCase()).width / 2 - 2, y - fs / 2 - 1, x + g.measureText(d.name.toUpperCase()).width / 2 + 2, y + fs / 2 + 1]);
       g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(d.name.toUpperCase(), x, y);
       g.fillStyle = d.turf ? '#ff8a7a' : '#fff4c8'; g.fillText(d.name.toUpperCase(), x, y);
     }
-    // landmarks painted whole from the concepts (the golf club, the canyon, the island)
-    g.font = `${Math.max(8, fs - 3)}px Anton, Impact, sans-serif`;
+    // the places (landmarks, and the painted ones): zoom in and the crowded ones show too
+    const lfs = Math.max(8, fs - 3);
+    g.font = `${lfs}px Anton, Impact, sans-serif`;
     const named = new Set();
     for (const pt of (this.map.paintings || []).concat(this.map.landmarks || [])) {
       if (!pt.name || named.has(pt.name)) continue;   // (a painted place laid out again as a designed one: its name once)
+      const [x, y] = P(pt.x + pt.w / 2, pt.y + pt.h + 40), label = pt.name.toUpperCase();
+      if (x < -200 || y < -50 || x > w + 200 || y > h + 50 || !free(x, y, g.measureText(label).width, lfs)) continue;
       named.add(pt.name);
-      const [x, y] = P(pt.x + pt.w / 2, pt.y + pt.h + 40);
-      g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(pt.name.toUpperCase(), x, y);
-      g.fillStyle = '#bfe9ff'; g.fillText(pt.name.toUpperCase(), x, y);
+      g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(label, x, y);
+      g.fillStyle = '#bfe9ff'; g.fillText(label, x, y);
     }
     // the railway: a dark line with white ties, round the whole loop (drawn under the district names' level of detail)
     if (this.map.rail) {
