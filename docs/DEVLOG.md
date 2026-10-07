@@ -2190,3 +2190,21 @@ The ring highway now runs **two lanes each way**, and you get on and off it at *
   - no see-through outline on a motorcycle rider;
   - checkpoint branch `checkpoint-art-16bit`.
 - **`WORLD_VERSION` 4:** homes from before are bought back.
+
+## 2026-10-06 · Phones: the art keeps arriving after a long trip round the world
+
+On a phone (Pixel 7 Pro, Medium) the art stopped arriving after a lot of travel. Measured in node:
+- A bake worker settles at about 230 MB: its own copy of the world (~65 MB), 90 MB of static sprites, 32 MB of moving-thing sprites, up to 48 MB of vehicle models, and scratch.
+- With four workers that is close to a gigabyte, more than a phone tab holds.
+- Once memory ran short, bakes failed. A chunk that failed three times was never tried again, and a worker that died was never replaced.
+
+**Fixes:**
+- **Smaller caches on phones** (`pool.js` `cacheBudget`). Phones and devices with 4 GB or less now keep 40 MB of static sprites, 10 MB of sprites and 20 MB of vehicle models per worker (was 90/32/48). Devices with 2 GB or less, and `?lowmem`, keep 24/6/12. Desktops are unchanged. The smaller cache costs a bake about 15% more time.
+- **Running out of memory** in a worker (an allocation that fails) empties all its caches and tries the job once more.
+- **Workers are replaced.** A worker that dies or hangs is replaced after 1 s, then 2, 4 and 8 s. The new worker gets the world plus every prop broken so far (kept compacted in the pool). Jobs wait in the queue meanwhile.
+  - The pool gives up only after 8 failed replacements in two minutes. The renderer then starts a fresh pool, up to three times in five minutes, before restarting itself.
+- **Failed chunks are tried again** after 1 s, 2, 4 ... up to every 30 s, never given up on. A bake that hung its worker waits 2 minutes before the next try.
+- **Also:**
+  - the clothing-colour cache is bounded;
+  - `?diag` shows workers alive, restarts, new pools and failing chunks.
+- **Tests:** `test/pool.test.js` uses a fake Worker to check that a dead worker is replaced and gets the world and the broken props, that jobs wait for a replacement, that a hung worker is replaced, that the pool gives up after too many failures, and the phone and desktop budgets.

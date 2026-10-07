@@ -13,10 +13,12 @@
 //   sprite     { kind, key, a }    kind: ped (peds.pedSprite) or any actors.SPRITES kind (vehicle, animal, crate,
 //                                  bag, ball, proj, train, fx, muzzle, tracer, critter); a: its arguments
 //                                  -> { g } (the provider's G-buffer as art-resolution planes)
-//   stats      {}                  cache sizes and timings
+//   init       + cacheMB, sprMB, modelMB: what the caches may hold (pool.js cacheBudget: far less on a phone)
+//   stats      {}                  cache sizes, hit rates and timings
 //   patch      { props, reset }    world changes, no answer: props [[index, broken {a} | null]] (reset: none broken first)
 // Every result's typed arrays are transferred. A provider that throws answers with an error (the host
-// falls back); the worker carries on.
+// falls back); the worker carries on. Running out of memory (an allocation that fails: a RangeError) empties
+// every cache and tries the job once more before answering with the error (oom: true).
 import { bakeSteps, loadProviders, SpriteCache, providers as chunkProviders } from './chunkbake.js';
 import * as GB from '../gbuf.js';
 
@@ -29,7 +31,7 @@ const pause = () => new Promise((res) => { if (chan) { waiting.push(res); chan.p
 
 let M = null, statCache = null, sprCache = null, ART = 2;
 const P = { actors: null, peds: null, errors: {} };
-const stats = { chunks: 0, chunkMs: 0, sprites: 0, spriteMs: 0, errors: 0 };
+const stats = { chunks: 0, chunkMs: 0, sprites: 0, spriteMs: 0, errors: 0, shed: 0 };
 
 async function loadActors() {
   const load = async (name, file) => {
@@ -65,10 +67,12 @@ async function init(args) {
   M = args.M; ART = args.artPx === 1 ? 1 : 2;
   try { const { CityMap } = await import('../../../shared/map.js'); Object.setPrototypeOf(M, CityMap.prototype); } catch (e) { P.errors.map = String((e && e.message) || e); }
   const lowMem = !!args.lowMem;
-  statCache = new SpriteCache((lowMem ? 40 : (args.workers || 3) >= 4 ? 90 : 120) * 1e6); // (four workers: a little less each)
-  sprCache = new SpriteCache((lowMem ? 8 : 32) * 1e6);
+  // (the pool says how much; without that: four workers a little less each)
+  statCache = new SpriteCache((args.cacheMB || (lowMem ? 40 : (args.workers || 3) >= 4 ? 90 : 120)) * 1e6);
+  sprCache = new SpriteCache((args.sprMB || (lowMem ? 8 : 32)) * 1e6);
   const [pc] = await Promise.all([loadProviders(), loadActors()]);
   if (P.actors && P.actors.setArtPx) P.actors.setArtPx(ART);   // (voxel things render straight at the art pixel)
+  if (P.actors && P.actors.setActorBudget) P.actors.setActorBudget(args.modelMB ? { modelMB: args.modelMB } : { lowMem });
   return { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors } };
 }
 
@@ -115,16 +119,31 @@ async function handle(msg) {
     return;
   }
   if (op === 'stats') {
-    self.postMessage({ id, ok: true, result: { ...stats, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0 }, ms: 0 });
+    const c = (k) => (k ? { bytes: k.bytes, n: k.m.size, max: k.max, hits: k.hits, misses: k.misses } : null);
+    self.postMessage({ id, ok: true, result: { ...stats, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
     return;
   }
   throw new Error(`unknown op ${op}`);
 }
 
+// out of memory: an allocation that failed (typed arrays are where a phone runs out), or a stack blown by it
+const isOOM = (e) => e instanceof RangeError || /allocation failed|out of memory/i.test(String((e && e.message) || e));
+// empty every cache to get memory back (they fill again as things are drawn)
+function shed() {
+  if (statCache) statCache.clear();
+  if (sprCache) sprCache.clear();
+  try { if (P.actors && P.actors.clearActorCaches) P.actors.clearActorCaches(); } catch { /* best effort */ }
+  stats.shed++;
+}
+
 self.onmessage = (e) => {
   const msg = e.data;
   handle(msg).catch((err) => {
+    if (!isOOM(err) || !msg || (msg.op !== 'bakeChunk' && msg.op !== 'sprite')) throw err;
+    shed();
+    return handle(msg); // once more, with the memory the caches held
+  }).catch((err) => {
     stats.errors++;
-    self.postMessage({ id: msg && msg.id, ok: false, error: String((err && err.stack) || err) });
+    self.postMessage({ id: msg && msg.id, ok: false, error: String((err && err.stack) || err), oom: isOOM(err) });
   });
 };

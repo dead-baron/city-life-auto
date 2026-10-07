@@ -15,32 +15,64 @@
 // At most four jobs are out on a worker at a time (the rest wait in its message queue, so a worker never
 // sits idle between jobs), and at most one of them is a chunk bake: a bake takes a few hundred ms (a second or
 // more on a phone) and pauses every few ms (worker.js), a sprite takes a few ms, so the sprites things on
-// screen are waiting for are made between the bake's steps. A worker that dies fails its jobs (done gets the
-// error); one stuck on a job for over a minute is replaced. If none are left, pool.dead is set and every new
-// request fails at once (the host keeps its fallbacks).
+// screen are waiting for are made between the bake's steps.
+//
+// Workers die (a phone short of memory, a crash) or get stuck (a job running over a minute): either way its
+// jobs fail (done gets the error) and a new worker takes its place after a short wait (1 s, then longer), given
+// the world again and the world's changes so far (the broken props, kept compacted here). Jobs wait in the queue
+// meanwhile. Only when replacements keep failing (more than RESPAWN_MAX in two minutes) does a slot stay empty;
+// when every slot is empty pool.dead is set and every new request fails at once (the host starts a new pool).
+//
 // Size: up to three workers, four on an 8-core device (phones are 8-core: the bakes are what keeps up with a
-// fast car), one on a low-memory device.
-const PER_WORKER = 4, STUCK_MS = 60000;
+// fast car), one on a low-memory device. Memory: each worker holds its own copy of the world (~65 MB) and its
+// caches; phones get much smaller caches (cacheBudget) - four workers with desktop caches took a phone past
+// what it could hold after a long drive round the world, and the art stopped arriving.
+const PER_WORKER = 4, STUCK_MS = 60000, INIT_STUCK_MS = 90000;
 const STREAK = { s: 8, c: 1 }; // jobs of a class in a row before another waiting class gets a turn
+const RESPAWN_MS = [1000, 2000, 4000, 8000]; // wait before replacing a worker, by how many were replaced lately
+const RESPAWN_WINDOW = 120000, RESPAWN_MAX = 8;
 
 export function poolSize(lowMem) {
   const hc = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2;
   return lowMem ? 1 : hc >= 8 ? 4 : Math.max(1, Math.min(3, hc - 1));
 }
 
+// What each worker may keep cached, in MB: stat (the static sprites the chunk bakes reuse: buildings, trees,
+// props), spr (the sprites of moving things) and model (actors.js: the vehicle models those are drawn from). A
+// phone or a small-memory device keeps far less (a smaller cache costs a bake ~15% more time; running out of
+// memory costs the art).
+export function isPhone(nav = typeof navigator !== 'undefined' ? navigator : null) {
+  const ua = (nav && nav.userAgent) || '';
+  return /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(ua) || (/Macintosh/.test(ua) && !!nav && nav.maxTouchPoints > 1);
+}
+export function cacheBudget(lowMem, workers, nav = typeof navigator !== 'undefined' ? navigator : null) {
+  const dm = (nav && nav.deviceMemory) || 0; // GB, rounded (Chrome tells at most 8; Safari and Firefox don't tell)
+  if (lowMem || (dm && dm <= 2)) return { stat: 24, spr: 6, model: 12 };
+  if (isPhone(nav) || (dm && dm <= 4)) return { stat: 40, spr: 10, model: 20 };
+  return { stat: workers >= 4 ? 90 : 120, spr: 32, model: 48 };
+}
+
 export class WorkerPool {
-  constructor({ lowMem = false, artPx = 2, size = poolSize(lowMem), url = new URL('./worker.js', import.meta.url) } = {}) {
+  // (timing: the waits, for the tests - { respawn: [ms...], stuck, initStuck, watch })
+  constructor({ lowMem = false, artPx = 2, size = poolSize(lowMem), url = new URL('./worker.js', import.meta.url), budget = null, timing = null } = {}) {
     this.url = url; this.lowMem = lowMem; this.artPx = artPx;
+    this.T = { respawn: RESPAWN_MS, stuck: STUCK_MS, initStuck: INIT_STUCK_MS, watch: 5000, ...(timing || {}) };
+    this.budget = budget || cacheBudget(lowMem, size);
     this.workers = [];
     this.queue = [];               // { key, op, args, prio, done, seq } (sorted when dispatching)
     this.jobs = new Map();         // key -> job (queued or running)
     this.byId = new Map();         // message id -> job
     this.nextId = 1; this.seq = 0;
-    this.dead = false; this.ready = false; this.initArgs = null;
+    this.dead = false; this.ready = false; this.initArgs = null; this.disposed = false;
     this.streak = { cls: '', n: 0 };
     this.counts = { done: 0, failed: 0, cancelled: 0, restarted: 0 };
+    this.respawns = [];            // when workers were replaced lately (performance.now)
+    this.pending = new Set();      // slots waiting for their replacement
+    this.timers = new Set();
+    this.props = new Map();        // the world's changes so far: prop index -> its broken state (replayed to a new worker)
+    this.lastWhy = '';
     for (let i = 0; i < size; i++) this.workers.push(this._spawn(i));
-    this.watch = setInterval(() => this._watchdog(), 5000);
+    this.watch = setInterval(() => this._watchdog(), this.T.watch);
   }
   _spawn(i) {
     const w = { i, wk: null, busy: 0, baking: 0, alive: true, running: new Set() };
@@ -55,24 +87,34 @@ export class WorkerPool {
 
   // Send the world to every worker. Resolves once all have answered (or failed).
   init(M) {
-    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx };
+    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model };
     let post = 0;
     const answers = this.workers.filter((w) => w.alive).map((w) => new Promise((res) => {
-      const id = this.nextId++;
-      const job = { key: `init:${w.i}`, op: 'init', id, w, t0: performance.now(), done: (r, err) => res(err ? null : r), init: true };
-      this.byId.set(id, job); w.busy++; w.running.add(job);
       const t = performance.now();
-      try { w.wk.postMessage({ id, op: 'init', args: this.initArgs }); } catch (e) { this.byId.delete(id); w.busy--; w.running.delete(job); this._kill(w, `could not send the world: ${e.message || e}`); res(null); }
+      this._postInit(w, (r, err) => res(err ? null : r));
       post += performance.now() - t;
     }));
     const t0 = performance.now();
     return Promise.all(answers).then((rs) => {
       this.ready = true;
       const ok = rs.filter(Boolean);
-      if (!ok.length) this.dead = true;
+      if (!ok.length) this._giveUp(this.lastWhy || 'no worker started');
       this._pump();
       return { providers: ok[0] || null, workers: ok.length, ms: { post, init: performance.now() - t0 } };
     });
+  }
+  // the world to one worker (an init job: it counts against the worker's slots until it answers)
+  _postInit(w, done) {
+    const id = this.nextId++;
+    const job = { key: `init:${w.i}:${id}`, op: 'init', id, w, t0: performance.now(), init: true, done };
+    this.byId.set(id, job); w.busy++; w.running.add(job);
+    try { w.wk.postMessage({ id, op: 'init', args: this.initArgs }); } catch (e) {
+      this.byId.delete(id); w.busy--; w.running.delete(job);
+      this._kill(w, `could not send the world: ${e.message || e}`);
+      done(null, 'could not send the world');
+      return false;
+    }
+    return true;
   }
 
   request(key, op, args, prio, done) {
@@ -85,8 +127,16 @@ export class WorkerPool {
     return true;
   }
   has(key) { return this.jobs.has(key); }
-  // a message every worker gets, in order with the jobs sent to it after (no answer expected)
-  broadcast(op, args) { for (const w of this.workers) if (w.alive) { try { w.wk.postMessage({ id: 0, op, args }); } catch { /* it will be replaced */ } } }
+  // a message every worker gets, in order with the jobs sent to it after (no answer expected). World patches
+  // ('patch': props [[index, broken | null]], reset: that list is everything broken) are also kept, compacted, for
+  // a worker that starts later.
+  broadcast(op, args) {
+    if (op === 'patch' && args) {
+      if (args.reset) this.props.clear();
+      for (const [i, br] of args.props || []) { if (br) this.props.set(i, br); else this.props.delete(i); }
+    }
+    for (const w of this.workers) if (w.alive) { try { w.wk.postMessage({ id: 0, op, args }); } catch { /* it will be replaced */ } }
+  }
   cancel(key) {
     const j = this.jobs.get(key);
     if (!j) return;
@@ -141,41 +191,67 @@ export class WorkerPool {
     if (!job.cancelled && job.done) { try { job.done(result, err); } catch (e) { console.error('[art2 pool] job callback', e); } }
     this._pump();
   }
+  // a worker gone (an error, out of memory, stuck): its jobs fail, and a new one is on its way
   _kill(w, why) {
     if (!w.alive) return;
-    w.alive = false; w.err = why;
+    w.alive = false; w.err = why; this.lastWhy = why;
     try { w.wk && w.wk.terminate(); } catch { /* gone */ }
     for (const job of [...w.running]) this._finish(job, null, why);
-    if (!this.workers.some((x) => x.alive)) {
-      this.dead = true;
-      for (const job of this.queue.splice(0)) { this.jobs.delete(job.key); if (job.done) job.done(null, 'no workers'); }
-    }
+    if (!this.disposed && !this.dead && this.initArgs) this._scheduleRespawn(w.i);
+    this._checkDead();
   }
-  // a job running far too long (a provider stuck in a loop): replace the worker, fail the job
+  _checkDead() {
+    if (this.dead || this.workers.some((x) => x.alive) || this.pending.size) return;
+    this._giveUp(this.lastWhy || 'no workers left');
+  }
+  _giveUp(why) {
+    this.dead = true; this.lastWhy = why;
+    for (const t of this.timers) clearTimeout(t);
+    this.timers.clear(); this.pending.clear();
+    for (const job of this.queue.splice(0)) { this.jobs.delete(job.key); if (job.done) job.done(null, 'no workers'); }
+  }
+  _scheduleRespawn(i) {
+    if (this.pending.has(i)) return;
+    const now = performance.now();
+    this.respawns = this.respawns.filter((t) => now - t < RESPAWN_WINDOW);
+    if (this.respawns.length >= RESPAWN_MAX) return; // replaced too often lately: this slot stays empty
+    const R = this.T.respawn, wait = R[Math.min(this.respawns.length, R.length - 1)];
+    this.respawns.push(now);
+    this.pending.add(i);
+    const t = setTimeout(() => { this.timers.delete(t); this.pending.delete(i); this._respawn(i); }, wait);
+    this.timers.add(t);
+  }
+  _respawn(i) {
+    if (this.disposed || this.dead || !this.initArgs) return;
+    const nw = this._spawn(i);
+    this.workers[i] = nw; this.counts.restarted++;
+    if (!nw.alive) { this.lastWhy = nw.err || 'the worker could not start'; this._scheduleRespawn(i); this._checkDead(); return; }
+    // the world, then what has changed in it (applied once the world is in: the worker answers in order)
+    if (!this._postInit(nw, () => {})) return;
+    if (this.props.size) { try { nw.wk.postMessage({ id: 0, op: 'patch', args: { props: [...this.props], reset: true } }); } catch { /* replaced again */ } }
+    this._pump();
+  }
+  // a job running far too long (a provider stuck in a loop), or a worker that never finished taking the world:
+  // replace the worker, fail its jobs
   _watchdog() {
     const now = performance.now();
-    for (let i = 0; i < this.workers.length; i++) {
-      const w = this.workers[i];
-      if (!w.alive || ![...w.running].some((j) => !j.init && now - j.t0 > STUCK_MS)) continue;
-      this._kill(w, 'a job took too long');
-      if (this.initArgs) {
-        const nw = this._spawn(i);
-        this.workers[i] = nw; this.counts.restarted++;
-        if (nw.alive) {
-          this.dead = false;
-          const id = this.nextId++;
-          const job = { key: `init:${i}:${id}`, op: 'init', id, w: nw, t0: now, init: true, done: () => {} };
-          this.byId.set(id, job); nw.busy++; nw.running.add(job);
-          nw.wk.postMessage({ id, op: 'init', args: this.initArgs });
-        }
-      }
+    for (const w of this.workers) {
+      if (!w.alive) continue;
+      for (const j of w.running) if (now - j.t0 > (j.init ? this.T.initStuck : this.T.stuck)) { this._kill(w, j.init ? 'the worker never got going' : 'a job took too long'); break; }
     }
   }
   stats() {
-    return { workers: this.size, queued: this.queue.length, running: this.workers.reduce((a, w) => a + w.busy, 0), ...this.counts };
+    return {
+      workers: this.size, slots: this.workers.length, pending: this.pending.size, queued: this.queue.length,
+      running: this.workers.reduce((a, w) => a + (w.alive ? w.busy : 0), 0), ...this.counts,
+      cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model, broken: this.props.size, dead: this.dead, lastWhy: this.lastWhy,
+    };
   }
   dispose() {
+    this.disposed = true;
     clearInterval(this.watch);
+    for (const t of this.timers) clearTimeout(t);
+    this.timers.clear(); this.pending.clear();
     for (const w of this.workers) { try { w.wk && w.wk.terminate(); } catch { /* gone */ } w.alive = false; }
     this.queue.length = 0; this.jobs.clear(); this.byId.clear();
     this.dead = true; this.initArgs = null;

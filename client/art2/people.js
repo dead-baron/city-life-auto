@@ -92,6 +92,7 @@ export function cloth(c) {
   if (R) return R;
   const rgb = Array.isArray(c) ? c : hexRgb(NAMED[key] || (key[0] === '#' ? key : NAMED.grey)), l = rgbHsl(rgb[0], rgb[1], rgb[2])[2];
   R = l < 0.17 ? hramp(rgb, 5, 2, 0.45, 0.26, 0.2, 0.04) : l > 0.8 ? hramp(rgb, 5, 4, 0.48, 0, 0.3) : hramp(rgb, 5, 3, 0.62, 0.28, 0.32, 0.1);
+  if (RC.size > 4000) RC.clear(); // (custom colours are endless: a long session doesn't keep them all)
   RC.set(key, R);
   return R;
 }

@@ -89,8 +89,10 @@ Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
   rider.
 
 **Next, after the highway stage:**
-- **Graphics stop loading on mobile** (Pixel 7 Pro, Medium) after a lot of travel round the world. They load
-  sooner when frontloaded; a bigger download up front is fine if it helps.
+- **Graphics stop loading on mobile** (Pixel 7 Pro, Medium) after a lot of travel round the world. **Done
+  (2026-10-06 night):** much smaller worker caches on phones, workers replaced when they die, failed chunks
+  retried (DEVLOG "Phones: the art keeps arriving"). Nothing is downloaded (the art is made on the device), so a
+  bigger download wouldn't help; a later option is baking the area round your spawn during the loading screen.
 - **Lamp-post shadows:** a street light casts a big triangle from the top of the post down to its foot. It should
   cast the post's own shape out from its base (the shadow of a thin upright thing in 3D).
 - **Running without a button:** only the keyboard keeps a run key (Shift). On a gamepad or touch, a full stick

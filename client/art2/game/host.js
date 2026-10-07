@@ -260,7 +260,7 @@ export class World2 {
     this.fallbacks = new Set();                    // chunks showing a placeholder (the tiles' colours)
     this.results = new Map();                      // job key -> { key, cx, cy, mode, r, prio } waiting for upload
     this.wantJobs = new Set(); this.wantChunks = new Map();
-    this.chunkFails = new Map();
+    this.chunkFails = new Map();                   // chunk -> { n, t }: bakes that failed, tried again from t (backing off)
     this.upQ = new Map();                          // sprites back from the workers, waiting for upload (key -> planes)
     this.badKeys = new Set(); this.badAt = 0;      // sprite keys a provider failed on (tried again now and then)
     this.warmQ = []; this.warmed = false;          // sprites asked for ahead of need (the little things everyone sees)
@@ -301,15 +301,44 @@ export class World2 {
       this.pool = new WorkerPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 });
       const r = await this.pool.init(M);
       this.t.post = r.ms.post; this.t.workerInit = r.ms.init;
-      const p = r.providers || {};
-      this.prov = { ground: !!p.ground, statics: !!p.statics, actors: !!p.actors && !!this.A, peds: !!p.peds && !!this.Pd };
-      this.provErrors = p.errors || {};
-      console.info(`[art2] ${r.workers} bake worker(s) ready: send ${this.t.post.toFixed(0)} ms, init ${this.t.workerInit.toFixed(0)} ms; providers ${JSON.stringify(this.prov)}`);
+      this._providers(r.providers);
+      console.info(`[art2] ${r.workers} bake worker(s) ready: send ${this.t.post.toFixed(0)} ms, init ${this.t.workerInit.toFixed(0)} ms; providers ${JSON.stringify(this.prov)}; caches ${JSON.stringify(this.pool.budget)} MB`);
     } catch (e) { console.error('[art2] worker pool', e); this.pool = null; }
-    // without its workers nothing but people could be drawn: the classic renderer takes over
+    // without its workers nothing but people could be drawn: main.js starts the renderer again
     if (!this.failed && (!this.pool || this.pool.dead)) this._noWorkers();
   }
+  _providers(p) {
+    p = p || {};
+    this.prov = { ground: !!p.ground, statics: !!p.statics, actors: !!p.actors && !!this.A, peds: !!p.peds && !!this.Pd };
+    this.provErrors = p.errors || {};
+  }
   _noWorkers() { this.failed = true; this.ready = false; this.onFail('its background workers could not start'); }
+  // Every worker gone and the pool given up on replacing them (pool.js): a new pool, with the world and what is
+  // broken in it - the stand-ins show meanwhile. At most three times in five minutes; after that (false) the
+  // renderer stops and main.js starts it again from scratch.
+  _revivePool() {
+    if (this.reviving) return true;
+    const now = performance.now();
+    this.revives = (this.revives || []).filter((t) => now - t < 300000);
+    if (this.revives.length >= 3) return false;
+    this.revives.push(now); this.reviving = true; this.n.revived = (this.n.revived || 0) + 1;
+    const old = this.pool;
+    this.pool = null;
+    try { if (old) old.dispose(); } catch { /* gone */ }
+    this.sprOut = 0; this.results.clear(); this.upQ.clear(); this.chunkFails.clear(); this.badKeys.clear();
+    console.warn('[art2] the bake workers were lost - starting new ones', old ? old.lastWhy : '');
+    let p = null;
+    try { p = new WorkerPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 }); } catch (e) { console.error('[art2] worker pool', e); this.reviving = false; return false; }
+    p.init(worldData(this.map)).then((r) => {
+      this.reviving = false;
+      if (this.failed) { p.dispose(); return; }
+      if (p.dead) { this.pool = p; return; } // (the next frame tries again, or gives up)
+      this.pool = p;
+      this._providers(r.providers);
+      this.resync();
+    }, () => { this.reviving = false; p.dispose(); this.pool = null; this._noWorkers(); });
+    return true;
+  }
 
   resize(W, H, dpr) { this.W = W; this.H = H; this.dpr = dpr; if (this.E.resize) this.E.resize(W, H, dpr); }
 
@@ -339,7 +368,7 @@ export class World2 {
   // ---- the frame ---------------------------------------------------------------------------------------------
   frame(F) {
     if (this.failed) return;
-    if (this.pool && this.pool.dead) { this._noWorkers(); return; }
+    if (this.pool && this.pool.dead && !this._revivePool()) { this._noWorkers(); return; }
     const t0 = performance.now();
     const E = this.E, S = this.S, z = F.z;
     this.F = F;
@@ -429,7 +458,8 @@ export class World2 {
         const cx = k % 1000, cy = Math.floor(k / 1000), mode = modeOf(cx, cy);
         const st = this.chunkState.get(k), ver = this.ver.get(k) || 0;
         if (st && st.mode === mode && st.ver === ver && E.hasChunk(cx, cy)) continue;
-        if ((this.chunkFails.get(k) || 0) > 2) continue;
+        const fail = this.chunkFails.get(k);
+        if (fail && performance.now() < fail.t) continue;
         const jk = `c${cx},${cy},${mode},${ver}`;
         jobs.add(jk);
         if (this.results.has(jk) || this.pool.has(jk) || this.results.size > 5) continue;
@@ -522,10 +552,17 @@ export class World2 {
   _baked(jk, key, cx, cy, mode, prio, r, err, ver = 0) {
     if (err || !r) {
       this.n.bakeErr++; this.lastErr = String(err).slice(0, 300);
-      this.chunkFails.set(key, (this.chunkFails.get(key) || 0) + 1);
       if (this.n.bakeErr <= 3) console.warn('[art2] chunk bake failed', cx, cy, this.lastErr);
+      if (err === 'no workers') return; // (the pool is being replaced: asked again once it is back)
+      // tried again later, never given up on (a phone short of memory fails bakes for a while, then has room
+      // again): 1 s, 2, 4 ... up to 30 s between tries - 2 minutes after a bake that hung its worker
+      const f = this.chunkFails.get(key) || { n: 0, t: 0 }, now = performance.now();
+      f.n++;
+      f.t = now + (/too long/.test(this.lastErr) ? 120000 : Math.min(30000, 1000 * 2 ** Math.min(5, f.n - 1)));
+      this.chunkFails.set(key, f);
       return;
     }
+    this.chunkFails.delete(key);
     if (r.errors && !this.loggedBakeErr) { this.loggedBakeErr = true; console.warn('[art2] chunk bake reported provider errors (fallbacks used)', JSON.stringify(r.errors).slice(0, 600)); }
     const ms = r.workerMs || 0;
     this.t.bakeN++; this.t.bakeSum += ms; this.t.bakeMax = Math.max(this.t.bakeMax, ms);
@@ -1432,7 +1469,7 @@ export class World2 {
   }
   diag() {
     const p = this.pool ? this.pool.stats() : null, t = this.t;
-    return `q${this.q}${this.lowMem ? ' lowmem' : ''} chunks ${this.chunkState.size}+${this.fallbacks.size} placeholder (queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms  sprites req ${this.n.sprReq} up ${this.n.sprUp} now ${this.n.sync} gen ${this.n.gen} out ${this.sprOut}  fades ${this.fades.size}  lights ${this.n.lights}  lost ${this.lost}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
+    return `q${this.q}${this.lowMem ? ' lowmem' : ''} chunks ${this.chunkState.size}+${this.fallbacks.size} placeholder (workers ${p ? p.workers + '/' + p.slots + (p.restarted ? ' restarted ' + p.restarted : '') : '-'}${this.n.revived ? ' new pool ' + this.n.revived : ''}, queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}, failing ${this.chunkFails.size}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms  sprites req ${this.n.sprReq} up ${this.n.sprUp} now ${this.n.sync} gen ${this.n.gen} out ${this.sprOut}  fades ${this.fades.size}  lights ${this.n.lights}  lost ${this.lost}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
   }
 }
 
