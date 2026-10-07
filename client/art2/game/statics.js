@@ -54,7 +54,7 @@ import { SCENE_MASKS } from '../../../shared/interior-art.js';
 import { groundPixel } from '../ground.js';
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
-import { DISTRICTS, terrainAt, railAt, SEA_ISLES } from '../../../shared/map.js';
+import { DISTRICTS, terrainAt, railAt, SEA_ISLES, wildBiome } from '../../../shared/map.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
 import { DECK_LIFT } from '../../../shared/levels.js';
 
@@ -208,7 +208,7 @@ function ctxOf(M) {
   const di = (x, y) => { const tx = clamp(Math.floor(x / TILE), 0, W - 1), ty = clamp(Math.floor(y / TILE), 0, H - 1); return M.dist[ty * W + tx]; };
   const dist = (x, y) => DISTRICTS[di(x, y)] || DISTRICTS[13];
   const zone = (x, y) => { const tx = clamp(Math.floor(x / TILE), 0, W - 1), ty = clamp(Math.floor(y / TILE), 0, H - 1); return M.zone[ty * W + tx]; };
-  const biome = (x, y) => (M.terrainCls ? terrainAt(M.terrainCls.cls, M.terrainCls.cw, Math.floor(x / TILE), Math.floor(y / TILE)) : 1);
+  const biome = (x, y) => (M.terrainCls ? wildBiome(di(x, y), terrainAt(M.terrainCls.cls, M.terrainCls.cw, Math.floor(x / TILE), Math.floor(y / TILE))) : 1);
   const deckAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < W && ty < H && M.deck && M.deck[ty * W + tx]; };
   // direction (radians) from (x, y) to the nearest road tile within r tiles along the axes, or null
   const roadDir = (x, y, r = 3) => {
@@ -315,6 +315,7 @@ export function makeStatic(r) {
     case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist });
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);
+    case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });
     case 'towel': return makeTowel(r);
     case 'stack': return seaStack(r.s || 1, r.r || 26, r.h || 150, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 2 } });
     case 'sealrock': return outcrop(r.s || 3, r.w || 120, r.d || 70, r.h || 26, 'basalt', { barnacles: 0.8, wet: 12, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, (r.h || 26) * 0.7], [8, r.h || 26]] });
@@ -1125,6 +1126,7 @@ function voxModel(m, a) {
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
     case 'creekRail': return creekRail(a[0] || 200);
+    case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
     case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46);
     case 'cottage': return WL.cottage(a[0] || 84, a[1] || 54, a[2] ?? 0.5); case 'seal': return WL.seal(a[0] || 0, ['#8a8a92', '#6e6e78', '#9a9088'][a[1] || 0]); case 'gull': return WL.gull(false);
@@ -1166,6 +1168,7 @@ function vdim(m, a) {
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
     case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
+    case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
     case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'driftwood': return [a[0] || 50, 16, 10];
     case 'mapBoard': return [40, 12, 50]; case 'lantern': return [12, 12, 40];
@@ -1553,6 +1556,10 @@ function propItems(c, p, pi, I) {
       return;
     }
     case 'mapboard': V('mapb', 'mapBoard', []); return;
+    case 'logcabin': V('lcab', 'logCabin', [96, 60, 0.6]); lightAt(I, x, y + 8, 22, 120, [1, 0.78, 0.46], 1.4, 'window'); return;
+    case 'lookout': V('lkout', 'lookout', [110, 0.6]); lightAt(I, x, y, 130, 140, [1, 0.82, 0.5], 1.2, 'window'); return;
+    case 'outcrop': put(I, { key: `oc:${p.style || 'granite'}:${p.w || 80}:${p.d || 50}:${p.h || 46}:${(p.s || 1) % 4}`, recipe: { t: 'outcrop', style: p.style || 'granite', w: p.w || 80, d: p.d || 50, h: p.h || 46, s: (p.s || 1) % 4 }, x, y, ext: [(p.w || 80) / 2 + 16, (p.h || 46) + (p.d || 50) / 2 + 20, (p.w || 80) / 2 + 16, (p.d || 50) / 2 + 16], pi }); return;
+    case 'rail': fenceLine(I, 'rail', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;
     case 'chair': V(`chr:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, 'chair', [p.v || 0], qa(p.a || 0, 8)); return;
     case 'cooler': V(`col:${p.v || 0}`, 'cooler', [p.v || 0], qa(u * TAU, 4)); return;
     case 'woodpile': V('wpile', 'woodpile', [], qa(u * PI, 2)); return;
@@ -2138,6 +2145,11 @@ function addNature(c, I) {
       lightAt(I, f.x, f.y + 10, 8, 90, [0.8, 0.95, 1], 0.4, 'sign', 0);
       continue;
     }
+    if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge
+      const f = s.falls;
+      put(I, { key: `fall:t:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 9, mist: 0.4 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
+      continue;
+    }
     if (s.kind !== 'creek') continue;
     // the bridge: a rail along each edge of the road where the creek runs under it
     const b = s.bridge, nx = -Math.sin(b.a), ny = Math.cos(b.a), hd = qa(b.a, 64), len = Math.round(b.half * 2);
@@ -2342,7 +2354,7 @@ const NAT_SP = {
   desert: [['creosote', 4], ['bursage', 3], ['brittle', 2], ['dryGrass', 3], ['sage', 2], ['tumble', 1]],
   desertBloom: [['dFlowers', 2], ['dPoppies', 2], ['brittle', 1]],
   desertCacti: [['barrel', 2], ['pear', 2], ['agave', 2], ['cholla', 1], ['saguaroSmall', 1], ['yucca', 1]],
-  alpine: [['heather', 4], ['juniper', 3], ['aDaisies', 2], ['aLupine', 1], ['paintbrush', 1], ['twisted', 1]],
+  alpine: [['heather', 4], ['juniper', 1], ['aDaisies', 3], ['aLupine', 2], ['paintbrush', 1], ['twisted', 1]],
   dune: [['duneGrass', 4], ['beachGrass', 3], ['icePlant', 1]],
   shore: [['reeds', 3], ['cattails', 3], ['tallGrass', 1]],
 };
@@ -2372,7 +2384,7 @@ function coverAt(c, tx, ty, x, y) {
     if (pb > 0.7 && h < 0.08) return [pickW(NAT_SP.desertCacti, h2), 1];
     return h < 0.1 + pb * 0.08 ? [pickW(NAT_SP.desert, h2), 1] : null;
   }
-  if (bio === 4) return pb > 0.35 && h < 0.3 ? [pickW(NAT_SP.alpine, h2), 1] : h < 0.04 ? [pickW(NAT_SP.alpine, h2), 1] : null;
+  if (bio === 4) return pb > 0.5 && h < 0.2 ? [pickW(NAT_SP.alpine, h2), 1] : h < 0.03 ? [pickW(NAT_SP.alpine, h2), 1] : null;
   // meadows: a drift of one flower, tall grass between, plain grass most of the way
   if (pa > 0.62 && h < 0.32) return [pickW([NAT_SP.meadowA, NAT_SP.meadowB, NAT_SP.meadowC, NAT_SP.meadowD][Math.floor(vnoise(x, y, 400, 7111) * 4) % 4], h2), 1];
   if (pb > 0.66 && h < 0.22) return [pickW(NAT_SP.meadowGrass, h2), 1];

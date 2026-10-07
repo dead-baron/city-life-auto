@@ -46,7 +46,7 @@ import { MAT, ramp } from '../palette.js';
 import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, vnc, worley, shadeStep as sd } from '../ground.js';
 import { seaPx, stillPx, WP, WATER } from '../water.js';
 import { T, TILE, MAP_W, MAP_H } from '../../../shared/constants.js';
-import { DISTRICTS, WILD_STYLES, terrainAt, railAt } from '../../../shared/map.js';
+import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/map.js';
 import { Z } from '../../../shared/citylayout.js';
 import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roads.js';
 
@@ -196,7 +196,7 @@ function tileFacts(C) {
     if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
     const g = ty * MAP_W + tx, t = M.tiles[g];
     b.tt[k] = t; b.td[k] = M.dist[g]; b.tz[k] = M.zone[g]; b.tdeck[k] = M.deck[g]; b.tres[k] = M.reserve[g]; b.tbld[k] = M.bld[g];
-    b.tb[k] = M.land[g] ? terrainAt(cls, cw, tx, ty) : 0;
+    b.tb[k] = M.land[g] ? wildBiome(M.dist[g], terrainAt(cls, cw, tx, ty)) : 0;
     b.tw[k] = t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK ? 1 : 0;
     // water kind / land material
     const X = tx * TILE + 16, Y = ty * TILE + 16, D = DISTRICTS[b.td[k]] || DISTRICTS[13], st = D.style, wild = WSTYLE.has(st), bio = b.tb[k];

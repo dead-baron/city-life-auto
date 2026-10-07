@@ -665,12 +665,17 @@ test('driving: server steps the car once per received input, matching client pre
   const v = w.spawnVehicle('sedan', p.ped.x, p.ped.y, 0, { npcOwned: false });
   vehicles.tryEnter(w, p.ped);
   w.step();
+  // (the prediction knows the map, not other cars: nothing else on the road, so a parked or passing car can't
+  // bump this one and make the test flaky)
+  const clearRoad = () => { for (const e of [...w.entities.values()]) if (e.kind === K.VEH && e !== v) w.remove(e); };
+  clearRoad();
   const start = { x: v.x, y: v.y, a: v.a, vx: v.vx, vy: v.vy, av: v.av || 0 };
   const sent = [];
   let seq = p.ack;
   const pattern = [1, 0, 2, 1, 1, 0, 2, 1, 0, 1, 3, 0, 1];
   for (let k = 0; k < 50; k++) {
     for (let c = 0; c < pattern[k % pattern.length]; c++) { const inp = { seq: ++seq, bits: IN.TANK, mx: 0.06, my: -1, aim: 0 }; p.inputQ.push(inp); sent.push(inp); }
+    clearRoad();
     w.step();
     const s = { ...start };
     for (const inp of sent) if (inp.seq <= p.ack) vehStep(s, driveInput(s, inp), DT, w.map, v.def, { rain: w.weather === 1 });

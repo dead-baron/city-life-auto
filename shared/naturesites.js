@@ -89,6 +89,76 @@ export function buildNatureSites(m, H) {
   campDressing(m, H);
   beachBonfire(m, H);
   desertCamp(m, H);
+  summitTarn(m, H);
+}
+
+// ---- Granite Peaks: Summit Tarn and the fire lookout (concept N5) -----------------------------------------------
+// The tarn spills over a granite ledge on its south shore into a creek; granite outcrops round the water; a log
+// cabin in a fenced meadow of lupines on its east side; up the Ridge Trail, a fire lookout on its granite knob.
+function summitTarn(m, H) {
+  // the tarn's tiles (Summit Tarn: islands.js LAKES)
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
+  for (let ty = 60; ty < 110; ty++) for (let tx = 545; tx < 610; tx++) if (m.lake[ty * MAP_W + tx]) { n++; x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
+  if (n < 40) return;
+  const cxT = (x0 + x1 + 1) / 2 * TILE;
+  // the outlet: the southernmost lake tile near the middle; the ledge stands just below it, facing south
+  let ox = 0, oy = 0;
+  for (let tx = Math.floor(cxT / TILE) - 6; tx <= Math.floor(cxT / TILE) + 6; tx++) for (let ty = y1; ty >= y0; ty--) if (m.lake[ty * MAP_W + tx]) { if (ty > oy || (ty === oy && Math.abs(tx * TILE - cxT) < Math.abs(ox - cxT))) { oy = ty; ox = tx * TILE + 16; } break; }
+  const F = [ox, (oy + 1) * TILE + 6];
+  for (let dx = -70; dx <= 70; dx += 14) m.addSolidProp(F[0] + dx, F[1] - 6, 10);
+  for (let ty = oy + 1; ty <= oy + 2; ty++) for (let tx = Math.floor(ox / TILE) - 3; tx <= Math.floor(ox / TILE) + 3; tx++) m.reserve[ty * MAP_W + tx] |= RES;
+  // the creek from the foot of the ledge, south and a little west, into the woods
+  const creek = spline([[F[0], F[1] + 30], [F[0] - 30, F[1] + 220], [F[0] + 20, F[1] + 420], [F[0] - 40, F[1] + 640]]);
+  carveWater(m, creek, (t) => 28 + t * 10);
+  for (const p of creek) reserveRound(m, p[0], p[1], 56);
+  for (const [t, off, r] of [[0.2, 22, 13], [0.45, -24, 15], [0.7, 20, 12], [0.9, -18, 14]]) { const p = creek[Math.floor(t * (creek.length - 1))]; H.addProp(m, 'boulder', Math.round(p[0] + off), Math.round(p[1]), r, { s: r * 2 + 6, style: 'granite', moss: 1 }); }
+  // granite outcrops round the shore (solid), not on the outlet or the cabin's side
+  const ring = [];
+  for (let k = 0; k < 9; k++) {
+    const a = Math.PI * (0.95 + k * 0.17), rx = (x1 - x0 + 1) * TILE / 2 + 70, ry = (y1 - y0 + 1) * TILE / 2 + 60;
+    const x = cxT + Math.cos(a) * rx, y = (y0 + y1 + 1) / 2 * TILE + Math.sin(a) * ry, i = at(x, y);
+    if (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT) continue;
+    const big = hash2(k, 5, 931) < 0.4, r = big ? 34 : 24;
+    H.addProp(m, 'outcrop', Math.round(x), Math.round(y), r, { w: big ? 110 : 76, d: big ? 70 : 50, h: big ? 70 : 46, s: k + 3, style: 'granite' });
+    reserveRound(m, x, y, 90); ring.push([x, y]);
+  }
+  // the cabin meadow east of the tarn: lupines and grass, a rail fence, the cabin, its woodpile
+  const cab = [(x1 + 6) * TILE, (y0 + y1) / 2 * TILE + 40];
+  const meadow = [];
+  for (let ty = Math.floor((cab[1] - 200) / TILE); ty <= Math.floor((cab[1] + 160) / TILE); ty++) for (let tx = Math.floor((cab[0] - 160) / TILE); tx <= Math.floor((cab[0] + 220) / TILE); tx++) {
+    const i = ty * MAP_W + tx;
+    if (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT) continue;
+    m.reserve[i] |= RES; meadow.push(i);
+  }
+  for (let dy = -26; dy <= 26; dy += 13) for (let dx = -46; dx <= 46; dx += 13) m.addSolidProp(cab[0] + dx, cab[1] + dy - 6, 10);
+  H.addProp(m, 'logcabin', cab[0], cab[1] + 30, 0);
+  H.addProp(m, 'woodpile', cab[0] + 70, cab[1] + 20, 8);
+  H.addProp(m, 'chair', cab[0] - 30, cab[1] + 50, 0, { a: -1.6, v: 1 });
+  m.parking.push({ x: cab[0] - 110, y: cab[1] + 40, a: -Math.PI / 2, drive: true });
+  for (const [ax, ay, bx, by] of [[-150, 110, 210, 110], [210, -170, 210, 110], [-150, -170, 210, -170]]) H.addProp(m, 'rail', cab[0] + ax, cab[1] + ay, 0, { tx: bx - ax, ty: by - ay });
+  for (let k = 0; k < 26; k++) {
+    const x = cab[0] - 130 + hash2(k, 1, 932) * 330, y = cab[1] - 150 + hash2(k, 2, 932) * 250;
+    if (Math.abs(x - cab[0]) < 80 && Math.abs(y - cab[1]) < 60) continue;
+    H.addProp(m, 'flowers_a', Math.round(x), Math.round(y), 0, { sp: hash2(k, 3, 932) < 0.7 ? 'aLupine' : 'paintbrush', k: 1 });
+  }
+  // the fire lookout up the Ridge Trail: on the trail's highest stretch, a granite knob beside it
+  const trail = (m.roads || []).find((r) => r.name === 'Ridge Trail' && r.pts.length > 4);
+  if (trail) {
+    const p = trail.pts[Math.floor(trail.pts.length * 0.62)], q = trail.pts[Math.floor(trail.pts.length * 0.62) + 1];
+    const ux = q.x - p.x, uy = q.y - p.y, ul = Math.hypot(ux, uy) || 1, nx = -uy / ul, ny = ux / ul;
+    const L = [p.x + nx * 170, p.y + ny * 170];
+    if (m.tiles[at(L[0], L[1])] !== T.GRASS && m.tiles[at(L[0], L[1])] !== T.DIRT) { L[0] = p.x - nx * 170; L[1] = p.y - ny * 170; }
+    reserveRound(m, L[0], L[1], 130);
+    for (let dy = -30; dy <= 30; dy += 15) for (let dx = -30; dx <= 30; dx += 15) m.addSolidProp(L[0] + dx, L[1] + dy - 10, 10);
+    H.addProp(m, 'lookout', Math.round(L[0]), Math.round(L[1] + 20), 0);
+    H.addProp(m, 'solar', Math.round(L[0] + 70), Math.round(L[1] + 30), 0);
+    H.addProp(m, 'outcrop', Math.round(L[0] - 90), Math.round(L[1] + 60), 30, { w: 96, d: 60, h: 54, s: 21, style: 'granite' });
+    // a footpath from the trail to its stairs
+    for (let k = 0; k <= 170; k += 14) { const i = at(p.x + nx * k * Math.sign((L[0] - p.x) * nx + (L[1] - p.y) * ny), p.y + ny * k * Math.sign((L[0] - p.x) * nx + (L[1] - p.y) * ny)); if (m.tiles[i] === T.GRASS) m.tiles[i] = T.DIRT; }
+    (m.landmarks ||= []).push({ name: 'Ridge Fire Lookout', type: 'lookout', x: Math.round(L[0] - 150), y: Math.round(L[1] - 150), w: 300, h: 260 });
+  }
+  (m.landmarks ||= []).push({ name: 'Summit Tarn Falls', type: 'falls', x: Math.round(F[0] - 300), y: Math.round(y0 * TILE - 40), w: 600, h: Math.round((y1 - y0) * TILE + 240) });
+  m.natureSites.push({ kind: 'tarn', name: 'Summit Tarn', x: Math.round(cxT), y: Math.round((y0 + y1) / 2 * TILE), falls: { x: Math.round(F[0]), y: Math.round(F[1]), w: 70, drop: 40 }, cabin: { x: Math.round(cab[0]), y: Math.round(cab[1]) }, outcrops: ring.length });
 }
 
 // ---- the campgrounds, lived in (concept N11, the forest camps) -------------------------------------------------

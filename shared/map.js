@@ -3711,9 +3711,11 @@ function buildAirports(m) {
 // Wild ground everywhere that isn't built: woods on green land, scrub in the desert, palms on beaches, and a
 // few big rock outcrops. Kept sparse so the prop list stays light.
 const WILD_CLEAR = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.FIELD, T.LOT, T.WALL]);
-// the little sea islands (Lighthouse Rock, the Islets) are never desert: grassland where the terrain says dry
+// The terrain class a wild district really grows: the little sea islands (Lighthouse Rock, the Islets) are never
+// desert (grassland where the terrain says dry), and Granite Peaks is mountain where it says dry.
 export const SEA_ISLES = new Set([19, 20]);
-const seaIsle = (d, c) => (c === 3 && SEA_ISLES.has(d) ? 1 : c);
+export const wildBiome = (d, c) => (c === 3 ? (SEA_ISLES.has(d) ? 1 : d === 33 ? 4 : c) : c);
+const seaIsle = wildBiome;
 // value noise over tiles (s: feature size in tiles), 0..1
 function vnoise2(x, y, s, seed) {
   const fx = x / s, fy = y / s, ix = Math.floor(fx), iy = Math.floor(fy);

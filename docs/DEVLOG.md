@@ -2297,3 +2297,18 @@ nothing else in the world moves).
   - coolers, surfboards, towels, tiki torches and timber posts;
   - festoon lights: a sagging wire with warm bulbs that glow and light the ground.
 - Tests in `test/nature.test.js`.
+
+## 2026-10-06 · Granite Peaks: Summit Tarn, the cabin meadow, the fire lookout (concept N5)
+
+- **Summit Tarn** (`shared/naturesites.js` `summitTarn`):
+  - the tarn spills over a two-tier granite ledge on its south shore (solid) into a creek that runs down into the woods, with mossy boulders in it;
+  - granite outcrops ring the shore (solid);
+  - on the map as "Summit Tarn Falls".
+- **The cabin meadow** east of the water:
+  - a log cabin with a green roof and lit windows (solid);
+  - a woodpile and a chair on the porch, a parking spot for a jeep;
+  - a rail fence round a meadow of alpine lupines and paintbrush.
+- **The Ridge Fire Lookout** stands up the Ridge Trail on its own granite knob, with a solar panel and a footpath from the trail. Its cab glows at night. On the map.
+- **Granite Peaks is mountain everywhere:** where the terrain map said dry, it now grows pines, heather and alpine flowers with granite rocks, instead of cactus and red sandstone (`wildBiome` in `shared/map.js`, shared with the ground and the art).
+- **The alpine ground cover is lighter:** fewer juniper mats, more daisies and lupines.
+- **Test fix:** the driving-prediction test clears other cars off its road; a parked or passing car could bump the test car and make it flaky.

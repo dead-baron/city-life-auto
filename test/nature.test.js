@@ -104,3 +104,15 @@ test('camps: campground fires get seats and kit; a bonfire on the beach; a deser
   assert.ok(d, 'the desert camp is built');
   for (const p of m.props.filter((q) => q && Math.hypot(q.x - d.x, q.y - d.y) < 240 && ['campfire', 'chair', 'windmill', 'post', 'cooler'].includes(q.t))) assert.notEqual(tileAt(p.x, p.y), T.WATER, `${p.t} on dry ground`);
 });
+
+test('Granite Peaks: Summit Tarn spills over a solid ledge into a creek; the cabin meadow; the fire lookout; no desert plants', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'tarn');
+  assert.ok(s, 'the tarn is built');
+  assert.ok(solidNear(s.falls.x, s.falls.y - 6, 12), 'the ledge is solid');
+  assert.equal(tileAt(s.falls.x, s.falls.y + 120), T.WATER, 'the creek below the falls');
+  assert.ok(solidNear(s.cabin.x, s.cabin.y, 16), 'the cabin is solid');
+  assert.ok(m.props.some((p) => p && p.t === 'lookout'), 'the fire lookout');
+  assert.ok(s.outcrops >= 5, 'granite outcrops round the shore');
+  const peaks = m.props.filter((q) => q && m.dist[Math.floor(q.y / TILE) * m.w + Math.floor(q.x / TILE)] === 33);
+  assert.equal(peaks.filter((q) => q.t === 'cactus').length, 0, 'no cactus in Granite Peaks');
+});
