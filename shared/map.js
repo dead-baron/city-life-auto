@@ -3709,35 +3709,33 @@ function buildAirports(m) {
 // Wild ground everywhere that isn't built: woods on green land, scrub in the desert, palms on beaches, and a
 // few big rock outcrops. Kept sparse so the prop list stays light.
 const WILD_CLEAR = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.FIELD, T.LOT, T.WALL]);
+// value noise over tiles (s: feature size in tiles), 0..1
+function vnoise2(x, y, s, seed) {
+  const fx = x / s, fy = y / s, ix = Math.floor(fx), iy = Math.floor(fy);
+  let tx = fx - ix, ty = fy - iy; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+  const a = hash2(ix, iy, seed), b = hash2(ix + 1, iy, seed), c = hash2(ix, iy + 1, seed), d = hash2(ix + 1, iy + 1, seed);
+  return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+}
+const smooth01 = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+// The wild's trees, laid out like woods rather than scattered: groves with sunlit clearings in the forests (a
+// stand of one kind of tree - conifers, mixed, broadleaf, birch and aspen - by a slower noise: g on the prop),
+// copses and lone trees in the meadows, stands of pine on the mountains, joshua trees and mesquite in the desert,
+// palms behind the beaches; fallen logs at the edges of the groves. Trees keep two tiles clear of every road,
+// track, field and building. What carpets the ground between them (ferns, flowers, scrub) is the renderer's
+// (statics.js coverItems): decoration, made per chunk. (docs/WORLD-V2.md "Nature is designed, not scattered")
 function buildWilds(m, rand) {
   const W = MAP_W;
   const { cls, cw } = m.terrainCls;
   const wild = (i) => m.land[i] && WILD_STYLES.has(DISTRICTS[m.dist[i]].style) && DISTRICTS[m.dist[i]].style !== 'airport' && !m.reserve[i];
   const inField = (tx, ty, pad) => m.fields.some((f) => tx * TILE >= f.x - pad && tx * TILE < f.x + f.w + pad && ty * TILE >= f.y - pad && ty * TILE < f.y + f.h + pad);
   const clear = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (WILD_CLEAR.has(m.tileAt(tx + dx, ty + dy))) return false; return true; };
-  for (let ty = 2; ty < MAP_H - 2; ty += 3) for (let tx = 2; tx < W - 2; tx += 3) {
-    const i = ty * W + tx;
-    if (!wild(i) || inField(tx, ty, 32)) continue;
-    const t = m.tiles[i];
-    if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
-    if (!clear(tx, ty, 2)) continue;
-    const c = terrainAt(cls, cw, tx, ty);
-    const h = hash2(tx, ty, 61);
-    const x = (tx + 0.5 + (hash2(tx, ty, 3) - 0.5)) * TILE, y = (ty + 0.5 + (hash2(tx, ty, 4) - 0.5)) * TILE;
-    if (t === T.SAND) { if (h < 0.025) addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(h * 120) % 3], x, y, 10); continue; }
-    if (c === 2) { if (h < 0.22) addProp(m, h < 0.16 ? (h < 0.08 ? 'tree_a' : 'tree_b') : 'shrub_b', x, y, h < 0.16 ? 12 : 0); }
-    else if (c === 1) { if (h < 0.035) addProp(m, h < 0.02 ? 'tree_b' : 'bush_c', x, y, h < 0.02 ? 12 : 0); }
-    // desert scrub and mountain scree: plants and pebbles you drive through (no small rocks to crash into)
-    else if (c === 3) { if (h < 0.04) addProp(m, h < 0.025 ? 'cactus' : 'bush_a', x, y, 0); }
-    else if (c === 4) { if (h < 0.04) addProp(m, 'gravel', x, y, 0); }
-  }
   // Rock outcrops: at most one per 12-tile cell (jittered), likeliest in the mountains and the desert - a big
   // rock (52-82 px, car-sized and up: tall, easy to see and to steer round) with plants round its foot and
   // sometimes a pine beside it, well clear of roads, tracks, fields and buildings. (World v2's country stage lays
   // nature out properly: docs/WORLD-V2.md "Nature is designed, not scattered".)
-  const CELL = 12;
-  for (let gy = 0; gy < MAP_H; gy += CELL) for (let gx = 0; gx < W; gx += CELL) {
-    const tx = gx + 2 + Math.floor(hash2(gx, gy, 91) * (CELL - 4)), ty = gy + 2 + Math.floor(hash2(gx, gy, 92) * (CELL - 4));
+  const RCELL = 12, rocky = new Uint8Array(W * MAP_H); // (the trees keep off the outcrops)
+  for (let gy = 0; gy < MAP_H; gy += RCELL) for (let gx = 0; gx < W; gx += RCELL) {
+    const tx = gx + 2 + Math.floor(hash2(gx, gy, 91) * (RCELL - 4)), ty = gy + 2 + Math.floor(hash2(gx, gy, 92) * (RCELL - 4));
     if (tx < 4 || ty < 4 || tx >= W - 4 || ty >= MAP_H - 4) continue;
     const i = ty * W + tx;
     if (!wild(i) || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT)) continue;
@@ -3746,6 +3744,7 @@ function buildWilds(m, rand) {
     if (inField(tx, ty, 96) || !clear(tx, ty, 4)) continue;
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, s = 52 + Math.floor(hash2(gx, gy, 94) * 4) * 10;
     addProp(m, 'boulder', x, y, Math.round(s * 0.5), { s });
+    for (let dy = -4; dy <= 3; dy++) for (let dx = -4; dx <= 4; dx++) { const j = (ty + dy) * W + tx + dx; if (j >= 0 && j < rocky.length) rocky[j] = 1; }
     const n = 2 + Math.floor(hash2(gx, gy, 95) * 3);
     for (let k = 0; k < n; k++) {
       const a = hash2(gx + k, gy, 96) * Math.PI * 2, r = s * 0.85 + hash2(gx, gy + k, 97) * 28;
@@ -3753,6 +3752,37 @@ function buildWilds(m, rand) {
       addProp(m, kind, x + Math.cos(a) * r, y + Math.sin(a) * r * 0.7 + 8, 0);
     }
     if (c !== 3 && hash2(gx, gy, 98) < 0.35) addProp(m, 'tree_b', x - s * 0.95, y - 18, 12);
+  }
+  const CELL = 2; // a tree at most every 2 x 2 tiles (64 px: crowns overlap, trunks leave room to walk and steer)
+  for (let gy = 2; gy < MAP_H - 3; gy += CELL) for (let gx = 2; gx < W - 3; gx += CELL) {
+    const fx = gx + hash2(gx, gy, 3) * CELL, fy = gy + hash2(gx, gy, 4) * CELL, tx = Math.floor(fx), ty = Math.floor(fy);
+    const i = ty * W + tx;
+    if (!wild(i)) continue;
+    const t = m.tiles[i];
+    if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
+    const c = terrainAt(cls, cw, tx, ty), h = hash2(gx, gy, 61);
+    const g = 0.65 * vnoise2(gx, gy, 16, 71) + 0.35 * vnoise2(gx, gy, 6, 72); // where the groves are
+    const x = Math.round(fx * TILE), y = Math.round(fy * TILE);
+    let p = 0;
+    if (t === T.SAND) p = 0.012;
+    else if (c === 2) p = smooth01(0.3, 0.55, g) * (m.dist[i] === 29 ? 0.45 : 0.9) + 0.03;   // (the redwoods stand wider apart)
+    else if (c === 1) p = smooth01(0.7, 0.86, g) * 0.55 + 0.005;
+    else if (c === 4) p = smooth01(0.5, 0.74, g) * 0.42 + 0.008;
+    else if (c === 3) p = smooth01(0.76, 0.92, g) * 0.08 + 0.005;
+    if (h >= p) {
+      // the edge of a forest grove: now and then a fallen log (solid along its length, not smashable)
+      if (c === 2 && t !== T.SAND && !rocky[i] && g > 0.3 && g < 0.42 && hash2(gx, gy, 66) < 0.035 && !inField(tx, ty, 64) && clear(tx, ty, 3)) {
+        const a = hash2(gx, gy, 67) * Math.PI, len = 90 + Math.floor(hash2(gx, gy, 68) * 4) * 20;
+        addProp(m, 'log', x, y, 0, { a: Math.round(a * 100) / 100, len });
+        for (const k of [-0.36, 0, 0.36]) m.addSolidProp(x + Math.cos(a) * len * k, y + Math.sin(a) * len * k * 0.7, 11);
+      }
+      continue;
+    }
+    if (rocky[i] || inField(tx, ty, 32) || !clear(tx, ty, 2)) continue;
+    if (t === T.SAND) { addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(h * 997) % 3], x, y, 10); continue; }
+    // the stand: one kind of tree over a wide area (conifers 0, mixed 1, broadleaf 2, birch and aspen 3)
+    const sv = vnoise2(gx, gy, 40, 73), stand = sv < 0.38 ? 0 : sv < 0.55 ? 1 : sv < 0.78 ? 2 : 3;
+    addProp(m, hash2(gx, gy, 62) < 0.5 ? 'tree_a' : 'tree_b', x, y, 12, { g: stand });
   }
   void rand;
 }

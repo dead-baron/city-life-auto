@@ -2208,3 +2208,31 @@ On a phone (Pixel 7 Pro, Medium) the art stopped arriving after a lot of travel.
   - the clothing-colour cache is bounded;
   - `?diag` shows workers alive, restarts, new pools and failing chunks.
 - **Tests:** `test/pool.test.js` uses a fake Worker to check that a dead worker is replaced and gets the world and the broken props, that jobs wait for a replacement, that a hung worker is replaced, that the pool gives up after too many failures, and the phone and desktop budgets.
+
+## 2026-10-06 · The wilds blocked in: groves, stands, fern beds and flower drifts
+
+The first pass of the environment work (`docs/WORLD-V2.md` "Nature is designed, not scattered").
+- **Trees grow in groves** (`shared/map.js` `buildWilds`):
+  - forests are groves with sunlit clearings between them, a tree at most every 64 px in the thick of a grove;
+  - meadows get copses and the odd lone tree;
+  - mountains get stands of pine;
+  - the desert gets joshua trees and mesquite;
+  - palms grow behind the beaches.
+- **Each grove is one kind of tree** (`p.g`): conifers, mixed woods, broadleaf (oak and maple), or birch and aspen. Highland Woods is redwood country, with maples and birches between. Willows stand near the rivers. The art picks the species (`statics.js` `plantFor`).
+- **Layout rules:**
+  - fallen logs lie at the edges of the groves, solid along their length;
+  - trees keep two tiles clear of every road, track, field and building, and stay off the rock outcrops.
+  - Trees went from 3.2k to 10.6k; homes are unchanged.
+- **Ground cover** (`statics.js` `coverItems`), made for each chunk when it is baked and never kept:
+  - fern and salal beds under the woods;
+  - drifts of one flower at a time (lupines, poppies) with tall grass in the meadows;
+  - scrub, dry grass, cactus clumps and the odd desert bloom;
+  - heather, juniper and alpine flowers on the mountains;
+  - dune grass behind the beaches;
+  - reeds and cattails along lakes and rivers.
+  - It is walk-through decoration placed anywhere in its tile, in clumps of one plant, so it never forms rows.
+- **The forest floor is mossier** (greener under the trees).
+- **Lighter on memory:**
+  - the static index keeps only which props show in each chunk and makes their items when the chunk is baked (index 19.8 MB down to 10.3 MB per worker);
+  - the old undergrowth pass that indexed every wild plant is gone.
+- **Cost:** a wild chunk bakes in about 274 ms instead of 218 ms (node, warm cache).

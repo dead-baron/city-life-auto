@@ -843,7 +843,7 @@ export const GSHADE = {
   // --- earth --------------------------------------------------------------------------------------------
   forestFloor(x, y, s) {
     const m = vnc(x, y, 14, s + 7);
-    if (m > 0.74) return at(MOSS, 1 + ((hh(x, y, s) * 3) | 0) + (m > 0.8 ? 0 : -1));
+    if (m > 0.56) return at(MOSS, 1 + ((hh(x, y, s) * 3) | 0) + (m > 0.66 ? 0 : -1));   // (a mossy floor: green under the trees)
     const n = needle(x, y, s + 11);
     if (n >= 0) return at(NEEDLE, n < 0.35 ? 1 : n < 0.6 ? 3 : 4 + (n > 0.72 ? 1 : 0));
     const big = vnc(x, y, 33, s + 3), h = hh(x, y, s + 5);
