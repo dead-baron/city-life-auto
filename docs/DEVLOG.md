@@ -2650,3 +2650,21 @@ Three hot pools stepping down a hillside in the Granite Peaks, north of the coas
 - **The garden:** a bamboo fence runs round the baths (`bambooFence`; solid). A flagstone path comes up from the road through the gate, with paper lanterns on posts either side.
 - `fallsmall` (a small cascade) now takes a width and height.
 - On the map as Granite Hot Springs, and in the debug menu (♨ Granite Hot Springs). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Splash Bay Water Park (Gull Harbor; concept L3)
+
+The open lawn behind Bonfire Beach is now a water park inside a chain-link fence (`shared/naturesites.js` `splashBay`).
+- **The lazy river:** a ring channel round a palm island, with a rock waterfall, hibiscus, bird of paradise and monstera, and rubber rings floating on it.
+  - Pools can now be rings as well as rects (`m.pools` entries with `ring: {cx, cy, rx, ry, hw}`). The river draws as clear pool water over a tiled channel.
+- **The slides:** a slide tower with a striped canopy, three landings with rails and a stair up its side (`props-park.js` `slideTower`). It is solid.
+  - Three slides swing down from it in S-curves into their own deep splash pools: a blue enclosed tube, and red and yellow open flumes with water running down them (`waterSlide`).
+  - Each landing pool has a lifeguard chair.
+- **The deck:**
+  - the changing block along the north side;
+  - a snack cart with café tables;
+  - loungers and striped umbrellas along the east side and the south fence;
+  - royal palms and potted palms.
+- **The way in:** the gate is in the west side, with a path from the sidewalk and the park's lit sign (SPLASH BAY) beside it. A bike rack and a bin stand outside.
+  - New prop: `textsign`, any short text on a lit board on posts.
+- You can swim anywhere in it. There's no fishing in the river or the pools (`jobs.js`).
+- On the map as Splash Bay Water Park, and in the debug menu (🌊 Splash Bay Water Park). Homes, POIs and buildings unchanged.

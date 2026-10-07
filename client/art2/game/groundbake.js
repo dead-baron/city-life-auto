@@ -207,7 +207,7 @@ function tileFacts(C) {
     // water kind / land material
     const X = tx * TILE + 16, Y = ty * TILE + 16, D = DISTRICTS[b.td[k]] || DISTRICTS[13], st = D.style, wild = WSTYLE.has(st), bio = b.tb[k];
     let m;
-    if ((t === T.WATER || t === T.DEEP) && pools.length && inRects(pools, X, Y)) m = M_.POOL;
+    if ((t === T.WATER || t === T.DEEP) && pools.length && inPools(pools, X, Y)) m = M_.POOL;
     else if ((t === T.WATER || t === T.DEEP) && springs.length && springs.some((e) => ((X - e.x) / e.rx) ** 2 + ((Y - e.y) / e.ry) ** 2 < 1.6)) m = M_.SPRING;
     else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE) m = M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
     else if (t === T.DOCK) m = runAxis(M, tx, ty, T.DOCK) ? M_.DOCK : M_.DOCKX;
@@ -247,7 +247,7 @@ function tileFacts(C) {
       m = fk === 'CORN' ? (long ? M_.CORN : M_.CORNV) : fk === 'PLOW' ? (long ? M_.PLOW : M_.PLOWV) : M_[fk];
     } else if (t === T.SIDEWALK) m = walkOf(D);
     else if (t === T.PLAZA) {
-      if (pools.length && pools.some((r) => inRect(r.deck, X, Y))) m = M_.PLAZAC;
+      if (pools.length && pools.some((r) => r.deck && inRect(r.deck, X, Y))) m = M_.PLAZAC;
       else if ((b.tres[k] & 4) && (st === 'beach' || st === 'park')) m = runAxis(M, tx, ty, T.PLAZA) ? M_.BOARDV : M_.BOARD;
       else if (inRects(parks, X, Y) && !parks.some((r) => inRect(r.plaza, X, Y))) m = M_.PATH;
       else if (st === 'oldtown') m = M_.PLAZAO;
@@ -827,9 +827,22 @@ function paint(C, G) {
 // the edge, lane lines with T-ends on the floor along the pool (pool.lanes lanes along its long side), the deep end
 // (pool.deep) darker; a fine bright ripple lattice over it all
 const POOLW = ramp('#62c8dc', 6, 3), POOLD = ramp('#2a88b8', 6, 3), POOLL = ramp('#1e3e8a', 4, 2), POOLE = ramp('#1e5a96', 4, 2), PWP = { c: null, nx: 0, ny: 0, e: 0 };
+// a pool is a rect ({x, y, w, h}) or a ring (a lazy river: {ring: {cx, cy, rx, ry, hw}}, round an ellipse)
+const inRing = (g, X, Y, pad = 0) => Math.abs(Math.hypot((X - g.cx) / g.rx, (Y - g.cy) / g.ry) - 1) * Math.min(g.rx, g.ry) < g.hw + pad;
+const inPool = (r, X, Y) => (r.ring ? inRing(r.ring, X, Y, 16) : inRect(r, X, Y));
+const inPools = (list, X, Y) => list.some((r) => inPool(r, X, Y));
 function poolPx(pools, X, Y, d, seed) {
   PWP.e = 0;
-  const p = pools.find((r) => inRect(r, X, Y)) || pools[0], deep = p.deep && inRect(p.deep, X, Y);
+  const p = pools.find((r) => inPool(r, X, Y)) || pools[0], deep = p.deep && inRect(p.deep, X, Y);
+  if (p.ring) {   // the lazy river: clear water over a tiled channel, no lanes
+    const big = vnc(X, Y, 23, seed + 3), fine = vnc(X, Y, 5, seed + 5), w = worley(X * 1.1, Y + big * 4, 9, seed + 9, 0.85), lat = w.d2 - w.d1 < 0.55;
+    let t = 0.55 + (big - 0.5) * 0.12 + (lat ? 0.2 : 0);
+    if (((X % 8) === 0 || (Y % 8) === 0) && !lat) t -= 0.12;
+    PWP.c = d < 2.2 ? sd(POOLE, 0.5 + (fine - 0.5) * 0.3, X, Y, 0.6) : sd(POOLW, t, X, Y, 0.6);
+    if (lat && hh(X, Y, seed) > 0.97) PWP.e = 110;
+    PWP.nx = (fine - 0.5) * 0.06; PWP.ny = (big - 0.5) * 0.08;
+    return PWP;
+  }
   const along = p.w >= p.h, u = along ? X - p.x : Y - p.y, v = along ? Y - p.y : X - p.x, L = along ? p.w : p.h, Wd = along ? p.h : p.w;
   const big = vnc(X, Y, 23, seed + 3), fine = vnc(X, Y, 5, seed + 5);
   let t = (deep ? 0.42 : 0.6) + (big - 0.5) * 0.12 + (fine - 0.5) * 0.06;

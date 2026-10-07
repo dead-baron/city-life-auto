@@ -404,3 +404,22 @@ test('Granite Hot Springs: three hot pools in the Granite Peaks you can get into
   assert.equal(tileAt(s.gate.x, s.gate.y), T.PLAZA, 'a flagstone path through the gate');
   assert.ok(m.landmarks.some((l) => l.name === 'Granite Hot Springs'));
 });
+
+test('Splash Bay Water Park: a fenced water park at Gull Harbor - a lazy river round an island, three slides into splash pools, no fishing', async () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'waterpark');
+  assert.ok(s, 'the water park is built');
+  const river = (m.pools || []).find((p) => p.ring);
+  assert.ok(river, 'the lazy river');
+  const g = river.ring;
+  assert.ok(m.isWater(g.cx + g.rx, g.cy) && m.isWater(g.cx - g.rx, g.cy) && m.isWater(g.cx, g.cy + g.ry), 'water all round the ring');
+  assert.ok(!m.isWater(g.cx, g.cy), 'the island in the middle is dry');
+  const splash = (m.pools || []).filter((p) => !p.ring && Math.abs(p.x - s.tower.x) < 600 && p.w === 4 * TILE);
+  assert.equal(splash.length, 3, 'three splash pools');
+  for (const p of splash) assert.equal(tileAt(p.x + p.w / 2, p.y + p.h / 2 - 8), T.DEEP, 'deep enough to land in');
+  assert.equal(m.props.filter((q) => q && q.t === 'wslide').length, 3, 'three slides');
+  assert.equal(tileAt(s.tower.x, s.tower.y - TILE), T.WALL, 'the tower is solid');
+  assert.equal(tileAt(s.gate.x + TILE, s.gate.y), T.PLAZA, 'in through the gate');
+  const { fishingSpot } = await import('../server/systems/jobs.js');
+  assert.equal(fishingSpot({ map: m }, { x: g.cx + g.rx + g.hw + 30, y: g.cy, a: Math.PI }), null, 'no fish in the lazy river');
+  assert.ok(m.landmarks.some((l) => l.name === 'Splash Bay Water Park'));
+});

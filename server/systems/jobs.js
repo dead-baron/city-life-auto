@@ -227,7 +227,7 @@ export function fishingSpot(world, ped) {
       const x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
       const t = m.tileAtPx(x, y);
       if (t === T.WATER || t === T.DEEP) {
-        if ((m.pools || []).some((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h)) continue;   // (no fish in a swimming pool)
+        if ((m.pools || []).some((r) => (r.ring ? Math.abs(Math.hypot((x - r.ring.cx) / r.ring.rx, (y - r.ring.cy) / r.ring.ry) - 1) * Math.min(r.ring.rx, r.ring.ry) < r.ring.hw + 16 : x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h))) continue;   // (no fish in a swimming pool or the water park)
         const kind = waterKind(m, Math.floor(x / 32), Math.floor(y / 32));
         return { x, y, kind, a };
       }

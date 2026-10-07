@@ -107,6 +107,7 @@ export function buildNatureSites(m, H) {
   wreckIsland(m, H);
   bluffsMaze(m, H);
   hotSprings(m, H);
+  splashBay(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -572,6 +573,72 @@ function hotSprings(m, H) {
   for (let j = 0; j < 22; j++) { const tx = CX - 14 + hash2(j, 1, 2502) * 28, ty = CY - 12 + hash2(j, 2, 2502) * 20; const i = at(tx, ty); if ((m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !wetSet.has(i)) add('shrub_a', tx, ty, 0, { sp: ['fern', 'salal', 'fern', 'heather'][j % 4], k: 1 }); }
   (m.landmarks ||= []).push({ name: 'Granite Hot Springs', type: 'springs', x: (CX - 15) * TILE, y: (CY - 13) * TILE, w: 28 * TILE, h: 22 * TILE });
   m.natureSites.push({ kind: 'springs', name: 'Granite Hot Springs', x: Math.round((CX + 1) * TILE), y: Math.round((CY - 2) * TILE), gate: { x: CX * TILE + 16, y: (CY + 9) * TILE + 16 }, pools: POOLS.length });
+}
+
+// ---- Splash Bay Water Park (Gull Harbor; concept L3) -----------------------------------------------------------
+// The open lawn behind Bonfire Beach becomes a water park inside a fence: a lazy river looping round a palm island
+// with a rock waterfall; a slide tower with three slides (a blue tube, red and yellow open flumes) swinging down into
+// their splash pools, a lifeguard chair at each; the changing block along the north side, a snack cart, loungers
+// and striped umbrellas on the pale deck, palms; the gate on the road side under the park's sign. All the water is
+// pool water (m.pools: a ring for the river, rects for the splash pools) - swim, no fishing.
+function splashBay(m, H) {
+  const X0 = 118, Y0 = 963, X1 = 161, Y1 = 984, D = 43;
+  const at = (tx, ty) => ty * MAP_W + tx;
+  for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) { const i = at(tx, ty); if ((m.tiles[i] !== T.GRASS && m.tiles[i] !== T.SAND) || m.reserve[i] || m.dist[i] !== D) return; }
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= (X0 - 1) * TILE && q.x < (X1 + 2) * TILE && q.y >= (Y0 - 1) * TILE && q.y < (Y1 + 2) * TILE) dropProp(m, i); });
+  // the deck: everything inside the fence paved (pale slabs), reserved
+  for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) { const i = at(tx, ty); m.reserve[i] |= RES | 16; m.tiles[i] = tx > X0 && tx < X1 && ty > Y0 && ty < Y1 ? T.PLAZA : T.GRASS; }
+  const deck = { x: (X0 + 1) * TILE, y: (Y0 + 1) * TILE, w: (X1 - X0 - 1) * TILE, h: (Y1 - Y0 - 1) * TILE };
+  // the lazy river: a ring channel round an island (grass, palms, a rock waterfall)
+  const ring = { cx: 130 * TILE, cy: 975.4 * TILE, rx: 8.2 * TILE, ry: 5.1 * TILE, hw: 1.25 * TILE };
+  for (let ty = Y0 + 1; ty < Y1; ty++) for (let tx = X0 + 1; tx < 142; tx++) {
+    const X = (tx + 0.5) * TILE, Y = (ty + 0.5) * TILE, q = Math.hypot((X - ring.cx) / ring.rx, (Y - ring.cy) / ring.ry), dd = (q - 1) * Math.min(ring.rx, ring.ry);
+    if (Math.abs(dd) < ring.hw) m.tiles[at(tx, ty)] = T.WATER;
+    else if (q < 1) m.tiles[at(tx, ty)] = T.GRASS;   // (the island)
+  }
+  (m.pools ||= []).push({ ring, x: ring.cx - ring.rx - ring.hw, y: ring.cy - ring.ry - ring.hw, w: (ring.rx + ring.hw) * 2, h: (ring.ry + ring.hw) * 2, lanes: 0, deck });
+  for (const [tx, ty, sp] of [[127.5, 974.6, 'coconut'], [132.5, 976, 'royal'], [130, 973.9, 'coconut']]) add('tree_a', tx, ty, 10, { sp, k: 1.3 });
+  add('outcrop', 130.5, 977.2, 0, { w: 90, d: 40, h: 34, style: 'granite', s: 2 }); add('fallsmall', 130.5, 977.6, 0, { w: 14, h: 20 });
+  for (const [tx, ty, sp] of [[126.8, 976.6, 'hibiscus'], [133.8, 974.8, 'bird'], [128.6, 972.9, 'monstera']]) add('shrub_a', tx, ty, 0, { sp, k: 1 });
+  for (const [tx, ty, v] of [[122.4, 974.6, 0], [137.7, 976.8, 2], [131, 970.3, 1], [125.6, 980.4, 3]]) add('ringfloat', tx, ty, 0, { v });
+  // the slide tower (solid) at the north of the east half; three slides down to three splash pools
+  const TX = 151, TY = 966;   // the tower's south face, tiles
+  for (let ty = TY - 2; ty < TY; ty++) for (let tx = TX - 2; tx < TX + 2; tx++) m.tiles[at(tx, ty)] = T.WALL;
+  add('stower', TX, TY - 0.9, 0);
+  const SP = [[144, 'tube', '#2a6ab8'], [150, 'flume', '#d8342e'], [156, 'flume', '#e8b830']];
+  SP.forEach(([px, kind, c], k) => {
+    const pw = 4, ph = 4, py = 977, x = px - pw / 2;
+    for (let ty = py; ty < py + ph; ty++) for (let tx = x; tx < x + pw; tx++) m.tiles[at(tx, ty)] = ty === py + ph - 1 || tx === x || tx === x + pw - 1 ? T.WATER : T.DEEP;
+    (m.pools ||= []).push({ x: x * TILE, y: py * TILE, w: pw * TILE, h: ph * TILE, lanes: 0, deck });
+    const sx = (TX - 1 + k) * TILE + 16, sy = TY * TILE + 2;
+    add('wslide', sx / TILE, sy / TILE, 0, { dx: px * TILE - sx, len: (py - TY) * TILE + 30, z: 84, kind, c });
+    add('lguard', px + 2.6, py + 1.2, 12, { a: Math.PI });
+  });
+  // the changing block along the north side (solid), facing the deck; the snack cart by it, the gate on the west
+  const bx0 = 120, bw = 9;
+  for (let ty = Y0 + 1; ty <= Y0 + 2; ty++) for (let tx = bx0; tx < bx0 + bw; tx++) m.tiles[at(tx, ty)] = T.WALL;
+  add('poolhouse', bx0 + bw / 2, Y0 + 2.75, 0, { w: bw * TILE, d: 2 * TILE - 4 });
+  add('foodcart', 141, 967.4, 10); add('umbrella_r', 142.4, 967.8, 4); add('cafetable', 139.6, 968.6, 6); add('cafetable', 143.8, 969.2, 6);
+  // loungers and umbrellas: along the east side, between the river and the slides, along the south fence
+  let k = 0;
+  for (let ty = 968; ty < 983; ty += 1.6, k++) { if (k % 3 === 1) add(k % 2 ? 'umbrella_b' : 'umbrella_y', 159.4, ty, 4); else add('lounger', 159.6, ty, 6, { a: Math.PI, v: k % 4 }); }
+  k = 0;
+  for (let tx = 121; tx < 140; tx += 1.7, k++) { if (k % 3 === 2) add(k % 2 ? 'umbrella_r' : 'umbrella_g', tx, 983.3, 4); else add('lounger', tx, 983.1, 6, { a: -Math.PI / 2, v: (k + 1) % 4 }); }
+  for (const [tx, ty] of [[X0 + 1.2, Y0 + 1.2], [X1 - 0.8, Y0 + 1.2], [X1 - 0.8, Y1 - 0.8], [140.5, 983.4], [146.6, 982.6], [152.6, 982.6]]) add('tree_a', tx, ty, 8, { sp: 'royal', k: 1.15 });
+  for (const [tx, ty] of [[X0 + 1.3, Y1 - 1.3], [139.6, 970.6], [139.6, 980.2]]) add('potted', tx, ty, 6);
+  // the fence: chain-link all round on the tile lines (solid), the gate in the west side by the road
+  const gy = 974;
+  for (const [ax, ay, bx, by] of [[X0, Y0, X1 + 1, Y0], [X1 + 1, Y0, X1 + 1, Y1 + 1], [X0, Y1 + 1, X1 + 1, Y1 + 1], [X0, Y0, X0, gy - 1], [X0, gy + 2, X0, Y1 + 1]]) {
+    add('chainfence', ax, ay, 0, { tx: (bx - ax) * TILE, ty: (by - ay) * TILE });
+    const L = Math.hypot(bx - ax, by - ay) * TILE;
+    for (let d = 0; d <= L; d += 16) m.addSolidProp((ax + (bx - ax) * d / L) * TILE, (ay + (by - ay) * d / L) * TILE, 7);
+  }
+  for (let tx = X0 - 4; tx <= X0; tx++) for (let ty = gy - 1; ty <= gy + 1; ty++) if (m.tiles[at(tx, ty)] === T.GRASS) { m.tiles[at(tx, ty)] = T.PLAZA; m.reserve[at(tx, ty)] |= RES; }   // (a path from the sidewalk to the gate)
+  add('textsign', X0 - 2, gy - 1.3, 0, { text: 'SPLASH BAY', z: 46, bg: '#1a5a9a', fg: [255, 226, 90] });
+  add('bikerack', X0 - 2.4, gy + 2.6, 6); add('trashcan', X0 - 1.2, gy + 2.4, 5);
+  (m.landmarks ||= []).push({ name: 'Splash Bay Water Park', type: 'waterpark', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
+  m.natureSites.push({ kind: 'waterpark', name: 'Splash Bay Water Park', x: Math.round(ring.cx), y: Math.round(ring.cy + ring.ry), gate: { x: X0 * TILE + 16, y: gy * TILE + 16 }, tower: { x: TX * TILE, y: TY * TILE } });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------
