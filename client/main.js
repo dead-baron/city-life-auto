@@ -189,6 +189,7 @@ function onText(m) {
       { const g = document.getElementById('dev-god'); if (g) g.classList.toggle('on', !!m.god); }
       break;
     case 'menu': S.hud.openMenu(m); break;
+    case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'board': phone.onBoard(m); break;
     case 'feed': phone.onFeed(m); break;
@@ -2114,6 +2115,12 @@ function prepFrame(dt) {
   // chasing camera with a frame-time-dependent lag made the car slide around on screen when
   // frame times vary (phones). Teleports / respawns still snap.
   S.cam.x = tx; S.cam.y = ty;
+  if (S.look) {   // looking through a telescope: ease out to the view and back; walking off ends it
+    const L = S.look, t = performance.now() - L.t0;
+    if (L.px === null) { L.px = sp.x; L.py = sp.y; }
+    if (t > L.dur || Math.hypot(sp.x - L.px, sp.y - L.py) > 24) S.look = null;
+    else { const e = Math.min(1, t / 900, (L.dur - t) / 900), k = e * e * (3 - 2 * e); S.cam.x = tx + (L.x - tx) * k; S.cam.y = ty + (L.y - ty) * k; }
+  }
   {
     // keep the camera inside the world (no black void past the map edge)
     const hw = W / 2 / S.cam.zoom, hh = H / 2 / S.cam.zoom, WW = MAP_W * TILE, WH = MAP_H * TILE;

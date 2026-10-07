@@ -2889,3 +2889,13 @@ Stand at the Old Mission Ruins' great doorway and press the action button to hau
 - **The sound:** three slow strikes ring out over the desert for everyone nearby. It is a new deep bell with its hum and overtones (`client/audio.js` `churchbell`), and it carries about twice as far as other sounds.
 - **While they ring:** you can't ring them again until they stop.
 - The README's controls table mentions the bells under Interact.
+
+## 2026-10-07 · The coin telescope on Westport Pier
+
+The telescope at the end of Westport Pier works now (`server/systems/places.js` `lookOut`).
+- **Using it:** it costs a dollar. Your view swings out over the bay to the seals on the Seal Islets for seven seconds, then eases back.
+- **What moves:** only the camera. You stay where you are, and walking off cuts the view short.
+- The server sends a `look` message, and the client's camera eases out to it and back (`client/main.js`).
+- The README's controls table mentions the telescope under Interact.
+
+**Test fix:** the weapons test sometimes failed when the SWAT officer rolled the rare toughest grit (five shots against the four it allows). It now shoots a typical SWAT officer; the grit spread is still tested on civilians.

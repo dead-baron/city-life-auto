@@ -886,7 +886,8 @@ test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-
   const civ = [], cops = [];
   for (let i = 0; i < 12; i++) civ.push(shotsToDrop(spawnNpc(w, 'casual', p.ped.x + 60, p.ped.y, 'civ')));
   for (let i = 0; i < 8; i++) cops.push(shotsToDrop(spawnNpc(w, 'cop', p.ped.x + 60, p.ped.y, 'cop')));
-  const swat = shotsToDrop(spawnNpc(w, 'swat', p.ped.x + 60, p.ped.y, 'cop'));
+  const sw = spawnNpc(w, 'swat', p.ped.x + 60, p.ped.y, 'cop'); sw.grit = 1;   // (a typical SWAT officer: a rare tough grit roll made this flaky)
+  const swat = shotsToDrop(sw);
   // most people drop in one or two shots; a few (grit) take more
   assert.ok(Math.max(...civ) <= 6 && civ.filter((s) => s <= 2).length >= 8, `civilians: ${civ}`);
   assert.ok(Math.max(...cops) <= 3, `cops: ${cops}`);

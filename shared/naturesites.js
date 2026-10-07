@@ -799,7 +799,8 @@ function westportPier(m, H) {
   // (the seals' islets get a name on the map when there are seals on them)
   if (ns >= 4) (m.landmarks ||= []).push({ name: 'Seal Islets', type: 'seals', x: (HX0 - 34) * TILE, y: (HY0 - 40) * TILE, w: 26 * TILE, h: 44 * TILE });
   (m.landmarks ||= []).push({ name: 'Westport Pier', type: 'pier', x: HX0 * TILE, y: HY0 * TILE, w: (sx - HX0) * TILE, h: (HY1 - HY0 + 3) * TILE });
-  m.natureSites.push({ kind: 'pier', name: 'Westport Pier', x: Math.round((sx - 2) * TILE), y: RY * TILE, head: { x: Math.round((HX0 + HX1 + 1) / 2 * TILE), y: RY * TILE }, len: L, root: { x: sx * TILE, y: RY * TILE } });
+  m.natureSites.push({ kind: 'pier', name: 'Westport Pier', x: Math.round((sx - 2) * TILE), y: RY * TILE, head: { x: Math.round((HX0 + HX1 + 1) / 2 * TILE), y: RY * TILE }, len: L, root: { x: sx * TILE, y: RY * TILE },
+    scope: { x: Math.round((HX0 + 0.8) * TILE), y: Math.round((RY + 0.1) * TILE), look: { x: Math.round((HX0 - 16) * TILE), y: Math.round((RY - 18) * TILE) } } });   // (the coin telescope looks out at the Seal Islets)
 }
 
 // ---- Route 9 (Dry Creek Desert; concept D14) ---------------------------------------------------------------------

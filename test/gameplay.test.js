@@ -7,7 +7,7 @@ import { VEHICLES } from '../shared/vehicles.js';
 import { vehStep, driveInput } from '../shared/physics.js';
 import { IN } from '../shared/input.js';
 import { BAIL_HURT_SPEED, NPC_CRITICAL, NPC_GRIT, FLASHLIGHT_PRICE, SOAK_HEAL, PICK_MAX, PICK_REGROW_S } from '../shared/rules.js';
-import { K } from '../shared/constants.js';
+import { K, TILE } from '../shared/constants.js';
 import { SHOPS, ITEMS, WEAPONS, itemCat } from '../shared/items.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as combat from '../server/systems/combat.js';
@@ -457,4 +457,24 @@ test('the old mission\'s bells: ring them from the doorway; three strikes everyo
   players.findInteraction(w, p).run();
   assert.equal(evs.length, 2, 'again once they stop');
   w.emit = emit0;
+});
+
+test('the pier telescope: a dollar, and the view swings out to the Seal Islets for a few seconds', () => {
+  const w = makeWorld();
+  const { p, conn } = joinPlayer(w);
+  const pr = w.map.natureSites.find((q) => q.kind === 'pier');
+  assert.ok(pr && pr.scope, 'the telescope is on the pier');
+  teleport(w, p.ped, pr.scope.x + 20, pr.scope.y);
+  p.profile.cash = 5;
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /telescope/.test(act.label), `the prompt (${act && act.label})`);
+  act.run();
+  const look = conn.sent.find((o) => o && o.t === 'look');
+  assert.ok(look && look.s > 0, 'the view swings out');
+  assert.ok(w.map.props.some((q) => q && q.t === 'seal' && Math.hypot(q.x - look.x, q.y - look.y) < 24 * TILE), 'to the seals');
+  assert.equal(p.profile.cash, 4, 'it took a dollar');
+  p.profile.cash = 0; p.profile.bank = 0;
+  const n = conn.sent.length;
+  players.findInteraction(w, p).run();
+  assert.ok(!conn.sent.slice(n).some((o) => o && o.t === 'look'), 'no dollar, no view');
 });
