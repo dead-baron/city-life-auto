@@ -378,3 +378,16 @@ test('Bluffs Maze Garden: a hedge maze you can walk from every gate to the gazeb
   assert.ok(m.props.some((q) => q && q.t === 'gazebo' && Math.hypot(q.x - s.x, q.y - s.y) < 60), 'the gazebo at its heart');
   assert.ok(m.landmarks.some((l) => l.name === 'Bluffs Maze Garden'));
 });
+
+test('Red Rock Wash: a dry wash of gravel from the oasis to the beach, and a dirt track in from the desert road', () => {
+  const lm = m.landmarks.find((l) => l.name === 'Red Rock Wash');
+  assert.ok(lm, 'the wash is on the map');
+  const pt = m.paintings.find((p) => p.key === 'canyon');
+  let sand = 0; for (let ty = pt.y / TILE; ty < (pt.y + pt.h) / TILE; ty++) for (let tx = pt.x / TILE; tx < (pt.x + pt.w) / TILE; tx++) if (m.tiles[ty * m.w + tx] === T.SAND) sand++;
+  assert.ok(sand > 40, `gravel in the canyon (${sand})`);
+  assert.ok((m.tracks || []).length >= 1 && m.tracks[0].pts.length > 10, 'the track');
+  // the track starts by a road and ends by the oasis; nothing tall stands on it
+  const t = m.tracks[0].pts, o = m.natureSites.find((q) => q.kind === 'oasis');
+  assert.ok(Math.hypot(t[t.length - 1][0] - o.x, t[t.length - 1][1] - o.y) < 400, 'it ends by the oasis');
+  for (const q of m.props) if (q && q.t === 'tree_a') for (const [x, y] of t) assert.ok(Math.hypot(q.x - x, q.y - y) > 20, 'a tree on the track');
+});

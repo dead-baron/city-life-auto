@@ -194,6 +194,8 @@ function tileFacts(C) {
   const parks = M.parkGrounds || [];        // designed town parks (Lakeview Park): lawn and gravel paths whatever the district, the plaza paved
   const pools = M.pools || [];              // swimming pools (the Stadium Lido): tiled pool water, a pale concrete deck
   const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
+  const tracks = (M.tracks || []).filter((r) => r.bb[2] >= TX0 * TILE - 64 && r.bb[0] <= (TX0 + TN) * TILE + 64 && r.bb[3] >= TY0 * TILE - 64 && r.bb[1] <= (TY0 + TN) * TILE + 64);   // dirt tracks off-road (Red Rock Canyon)
+  const onTrack = (X, Y) => tracks.some((r) => { if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, ty = TY0 + j, k = j * TN + i;
     if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
@@ -218,6 +220,7 @@ function tileFacts(C) {
       else m = bio === 2 ? M_.FOREST : bio === 4 ? (b.tz[k] === Z.EAST ? M_.DRYGRASS : M_.ALPINE) : bio === 3 ? M_.DRYGRASS : bio === 5 ? M_.MEADOW : M_.MEADOW;
     } else if (t === T.DIRT) {
       if (mazes.length && inRects(mazes, X, Y)) m = M_.PATH;   // (a maze's paths: gravel)
+      else if (tracks.length && onTrack(X, Y)) m = M_.DIRT;     // (a dirt track across the desert or the canyon)
       else if (inRects(quarries, X, Y)) m = M_.QUARRY;
       else if (inRects(paint, X, Y, 'canyon')) m = M_.REDROCK;
       else if (b.tdeck[k]) m = M_.UNDERDECK;
@@ -231,6 +234,7 @@ function tileFacts(C) {
       // wild coasts by their land: rock shores below mountains, shingle under the forests, sand elsewhere
       if (b.tres[k] & 128) m = M_.SHINGLE;                      // (a river's gravel bars)
       else if ((b.tres[k] & 36) === 36) m = M_.BEACH;            // (a designed beach - the cove's sand - whatever the coast round it)
+      else if (inRects(paint, X, Y, 'canyon')) m = M_.SHINGLE;    // (a dry wash's gravel and cobbles)
       else if ((bio === 4 || (bio === 2 && wild)) && WSTYLE.has(st) && st !== 'beach') m = bio === 4 ? (vnc(X, Y, 211, seed + 3) > 0.35 ? M_.ROCKSHORE : M_.SHINGLE) : (vnc(X, Y, 173, seed + 5) > 0.5 ? M_.SHINGLE : M_.BEACH);
       else m = (bio === 3 || st === 'desert') && M.distSea[g] > 24 ? M_.DUNE : M_.BEACH;
     }

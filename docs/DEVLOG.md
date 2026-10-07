@@ -2620,3 +2620,14 @@ The open lawn in the middle of The Bluffs held a random scatter of trees and flo
   - rose, lavender and hydrangea parterres with topiary balls in the four corners;
   - big oaks and red maples out on the lawns.
 - On the map as the Bluffs Maze Garden, and in the debug menu (🌿 Bluffs Maze Garden). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Red Rock Canyon: the wash and the track (concepts N4-B, N4-C)
+
+The flat red floor of Red Rock Canyon now has the concepts' dry wash and dirt road (`shared/naturesites.js` `canyonWash`).
+- **The wash:** a dry wash of pale gravel and cobbles winds from the oasis pool south-east across the canyon floor and out to the beach.
+  - It is sand tiles, which the ground bake draws as river gravel inside the canyon.
+  - Mesquite and palo verde follow it (they find the water under the sand), with red sandstone boulders in its bends, cobbles in the bed and brittlebush on the banks.
+- **The track:** a dirt track comes in from the desert road on the west, between the mesas, to a turnaround by the oasis.
+  - It has a parking spot, a map board at the end and a road sign where it leaves the road.
+  - Tracks are a new map list, `m.tracks` (polylines with a half-width), drawn as dirt over the desert or the canyon's red rock (`groundbake.js`).
+- On the map as Red Rock Wash. Homes, POIs and buildings unchanged.

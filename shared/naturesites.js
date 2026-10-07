@@ -87,6 +87,7 @@ export function buildNatureSites(m, H) {
   if (H.terrainAt && m.terrainCls && !m.terrainCls.at) Object.defineProperty(m.terrainCls, 'at', { value: (tx, ty) => H.terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty), enumerable: false });
   redwoodCreek(m, H);
   canyonOasis(m, H);
+  canyonWash(m, H);
   lighthouseTidepools(m, H);
   campDressing(m, H);
   beachBonfire(m, H);
@@ -1219,6 +1220,54 @@ function canyonOasis(m, H) {
   for (const [dx, dy, r] of [[-190, 4, 16], [186, 16, 14], [10, 74, 12], [-150, 92, 12]]) H.addProp(m, 'boulder', Math.round(cx + dx), Math.round(cy + dy), r, { s: r * 2 + 6 });
   (m.landmarks ||= []).push({ name: 'Canyon Oasis', type: 'oasis', x: Math.round(cx - 220), y: Math.round(cy - 160), w: 440, h: 300 });
   m.natureSites.push({ kind: 'oasis', name: 'Canyon Oasis', x: Math.round(cx), y: Math.round(cy), spring: { x: Math.round(fx), y: Math.round(fy), w: 18, h: 104 } });
+}
+
+// ---- the wash and the track in Red Rock Canyon (concepts N4-B, N4-C) ---------------------------------------------
+// A dry wash of pale gravel and cobbles winds from the oasis pool south-east across the canyon floor and out to the
+// beach, mesquite and palo verde along it (they follow the water under the sand), boulders in its bends; a dirt
+// track comes in from the desert road on the west, between the mesas, to a turnaround by the oasis. The wash is
+// sand tiles (drawn as river gravel inside the canyon), the track a polyline the ground bake draws as dirt (m.tracks).
+function canyonWash(m, H) {
+  const pt = (m.paintings || []).find((p) => p.key === 'canyon'), o = (m.natureSites || []).find((q) => q.kind === 'oasis');
+  if (!pt || !o) return;
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const T0 = (tx, ty) => [pt.x + tx * TILE, pt.y + ty * TILE];
+  const add = (t, x, y, r = 0, extra = null) => H.addProp(m, t, Math.round(x), Math.round(y), r, extra);
+  const clearR = (x, y, r) => m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < r) dropProp(m, i); });
+  // the wash: from the pool's south side out across the floor, east to the sea
+  const wash = spline([[o.x + 10, o.y + 60], T0(29, 14), T0(35, 18), T0(40, 23), T0(45, 27), T0(51, 31), T0(56, 35), T0(61, 38.5)], 14);
+  for (const [x, y] of wash) {
+    clearR(x, y, 40);
+    const k = Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE);
+    paint(m, x, y, 26 + 10 * hash2(Math.floor(x / 64), Math.floor(y / 64), 2401), T.SAND, (t) => t === T.DIRT || t === T.GRASS);
+    void k;
+  }
+  // its banks: mesquite and palo verde, boulders in the bends, brittlebush and dry grass
+  for (let k = 6; k < wash.length - 4; k += 7) {
+    const [x0, y0] = wash[k - 1], [x1, y1] = wash[k], l = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / l, ny = (x1 - x0) / l, sd = k % 2 ? 1 : -1;
+    const tx = x1 + nx * sd * 62, ty = y1 + ny * sd * 62, i = at(tx / TILE, ty / TILE);
+    if (m.tiles[i] !== T.DIRT && m.tiles[i] !== T.GRASS) continue;
+    const h = hash2(k, 3, 2402);
+    if (h < 0.5) add('tree_a', tx, ty, 10, { sp: h < 0.25 ? 'mesquite' : 'paloVerde', k: 1.2 });
+    else if (h < 0.8) add('boulder', x1 - nx * sd * 30, y1 - ny * sd * 30, 14, { s: 22 + Math.round(h * 20) });
+    else add('shrub_a', tx, ty, 0, { sp: 'brittle', k: 1 });
+  }
+  for (let k = 3; k < wash.length; k += 5) { const [x, y] = wash[k]; add('boulder', x + (hash2(k, 1, 2403) - 0.5) * 30, y + (hash2(k, 2, 2403) - 0.5) * 20, 0, { s: 9 + Math.round(hash2(k, 4, 2403) * 8) }); }   // (cobbles in the bed)
+  // the track: from the desert road west of the canyon, between the mesas, to a turnaround by the oasis
+  const road = (m.roads || []).filter((r) => r.lvl === 0).map((r) => r.pts).flat().reduce((b, q) => { const d = Math.hypot(q.x - (pt.x - 6 * TILE), q.y - (pt.y + 16 * TILE)); return !b || d < b.d ? { x: q.x, y: q.y, d } : b; }, null);
+  if (road && road.d < 20 * TILE) {
+    const tp = spline([[road.x + 60, road.y], T0(-4, 15.6), T0(4, 15.2), T0(12, 14.6), T0(19, 13.2), [o.x - 150, o.y + 120]], 12);
+    for (const [x, y] of tp) clearR(x, y, 34);
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of tp) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    (m.tracks ||= []).push({ pts: tp, hw: 26, bb: [x0 - 40, y0 - 40, x1 + 40, y1 + 40] });
+    for (const [x, y] of tp) reserveRound(m, x, y, 30);
+    const [ex, ey] = tp[tp.length - 1];
+    (m.tracks).push({ pts: [[ex - 40, ey], [ex + 40, ey]], hw: 52, bb: [ex - 100, ey - 60, ex + 100, ey + 60] });   // (the turnaround)
+    m.parking.push({ x: Math.round(ex), y: Math.round(ey), a: 0.2, drive: true });
+    add('roadsign', road.x + 90, road.y - 44, 0, { k: 'arrow', a: 0 });
+    add('mapboard', ex + 70, ey - 36, 10);
+  }
+  (m.landmarks ||= []).push({ name: 'Red Rock Wash', type: 'wash', x: Math.round(wash[0][0]), y: Math.round(wash[0][1]), w: Math.round(wash[wash.length - 1][0] - wash[0][0]), h: Math.round(wash[wash.length - 1][1] - wash[0][1]) });
 }
 
 // ---- Redwood Creek ------------------------------------------------------------------------------------------
