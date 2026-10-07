@@ -348,3 +348,14 @@ test('Cedar Creek: a creek joins the Lake District ponds over a little falls, un
   assert.ok(solid(s.bridge.x, s.bridge.y - s.bridge.roadHw - 6) && solid(s.bridge.x, s.bridge.y + s.bridge.roadHw + 6), 'the parapets');
   assert.ok(m.landmarks.some((l) => l.name === 'Cedar Creek Falls'));
 });
+
+test('Wreck Island: an old ship aground on the biggest islet, solid, with its cargo spilled up the beach', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'wreck');
+  assert.ok(s, 'the wreck is there');
+  assert.ok(m.props.some((q) => q && q.t === 'wreck' && Math.hypot(q.x - s.x, q.y - s.y) < 8), 'the ship');
+  assert.ok([T.SAND, T.GRASS].includes(tileAt(s.beach.x, s.beach.y)), 'on the beach');
+  const solid = (x, y) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r) return true; return false; };
+  assert.ok(solid(s.x, s.y), 'you can\'t walk through the hull');
+  for (const k of ['barrel', 'crates', 'driftwood']) assert.ok(m.props.some((q) => q && q.t === k && Math.hypot(q.x - s.x, q.y - s.y) < 420), k);
+  assert.ok(m.landmarks.some((l) => l.name === 'Wreck Island'));
+});

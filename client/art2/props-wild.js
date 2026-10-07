@@ -485,3 +485,35 @@ export function cliffStairs(len = 120, h = 80, w = 28) {
   for (const x of [1.5, w + 3.5]) for (let y = 4; y < len - 1; y++) { const k = ((y - 4) % 22) / 22, sag = Math.sin(k * Math.PI) * 3; m.box(x, y, zAt(y) + 17 - sag, x + 1, y + 1, zAt(y) + 18.4 - sag, rope); }
   return m;
 }
+// an old wooden wreck run aground (the Islets): a clinker hull heeled over to port, its bow up the beach (+x), the
+// starboard side stove in amidships to show the ribs, the mast snapped off at a stump, weed and barnacles along the
+// waterline, the deck's planks sprung. Built along +x; the hull's foot sits at z 0.
+export function shipwreck(L = 220, W = 64, Hh = 40, heel = 0.38) {
+  const m = new Vox(L + 8, W + 30, Hh + 40), cy = (W + 30) / 2 + 6, c = Math.cos(heel), sn = Math.sin(heel);
+  const plank = m.mat({ ramp: R('#6a4a32'), k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -1 : 0) + (hash(Math.floor(x / 18), Math.round(z / 4), 61) - 0.5) * 0.8 + (hash(Math.round(x), Math.round(z), 62) > 0.93 ? -0.7 : 0) });
+  const rib = m.mat({ ramp: R('#4a3424'), k: 3 }), deck = m.mat({ ramp: R('#8a7458'), k: 3, shade: (x, y) => (Math.round(y) % 5 === 0 ? -1 : 0) + (hash(Math.floor(x / 22), Math.round(y / 5), 63) - 0.5) * 0.9 });
+  const weed = m.mat({ ramp: R('#3a5a2a'), k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
+  const barn = m.mat({ ramp: R('#c8c0b0'), k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.2 });
+  const dark = m.mat({ ramp: R('#20180f'), k: 1 }), iron = m.mat({ ramp: R('#6a4a3a'), k: 3 });
+  // the hull in its own frame (u along, v across, w up) turned by the heel about the keel: a sharp bow, a fuller
+  // stern, a sheer that rises to the bow
+  const half = (u) => { const t = u / L; return W / 2 * Math.pow(Math.max(0, Math.sin(Math.PI * Math.min(1, t * 0.92 + 0.04))), t > 0.6 ? 0.9 : 0.45); };
+  const sheer = (u) => Hh * (0.9 + 0.25 * Math.pow(u / L, 3));
+  m.fill((x, y, z) => {
+    const u = x - 4; if (u < 0 || u > L) return -1;
+    const dy = y - cy, v = dy * c + (z + 2) * sn, w = -dy * sn + (z + 2) * c;   // (into the hull's frame)
+    const hw = half(u); if (hw < 1) return -1;
+    const bottom = Hh * 0.08 + Math.pow(Math.abs(v) / hw, 2) * Hh * 0.55, top = sheer(u);
+    if (w < bottom || w > top || Math.abs(v) > hw) return -1;
+    const shell = Math.abs(v) > hw - 2.2 || w < bottom + 2.2;
+    const stove = v > 0 && u > L * 0.42 && u < L * 0.7 && w > bottom + 4 && w < top - 3 && hash(Math.floor(u / 7), Math.floor(w / 5), 64) > 0.25;   // the hole in the starboard side
+    if (shell) { if (stove) return Math.round(u) % 7 < 2 ? rib : -1; if (w < bottom + 2.5) { const h = hash(Math.round(u), Math.round(w), 65); return h > 0.8 ? barn : h > 0.35 ? weed : plank; } return plank; }
+    if (w > top - 2) return hash(Math.floor(u / 22), Math.round(v / 5), 66) > 0.18 ? deck : -1;   // the deck, sprung in places
+    return stove ? dark : -1;
+  }, 0, 0, 0, L + 8, W + 30, Hh + 40);
+  // the mast's stump, raked over with the heel; a rusty windlass at the bow
+  const mx = 4 + L * 0.42;
+  for (let k = 0; k < 22; k++) { const zz = Hh * 0.9 + k, yy = cy - (zz) * sn * 0.9; m.box(mx - 2.5, yy - 2.5, zz * c, mx + 2.5, yy + 2.5, zz * c + 1.5, rib); }
+  m.box(4 + L * 0.84, cy - 6 - Hh * sn * 0.9, sheer(L * 0.84) * c, 4 + L * 0.84 + 6, cy + 6 - Hh * sn * 0.9, sheer(L * 0.84) * c + 5, iron);
+  return m;
+}

@@ -2590,3 +2590,17 @@ The two ponds east of Cedar Falls are now joined by a creek (`shared/naturesites
   - Below the road, an arched footbridge crosses to the west lawn.
   - Benches face the water, with lamps and park signs.
 - On the map as Cedar Creek Falls, and in the debug menu (🏞 Cedar Creek). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Wreck Island (the Islets)
+
+The biggest of the Islets, west of the city, has an old wooden ship run aground on its west beach (`shared/naturesites.js` `wreckIsland`).
+- **The wreck:** a new voxel model, solid along its length (`props-wild.js` `shipwreck`).
+  - A clinker-built hull heeled over, its bow up the sand and its stern in the shallows.
+  - The starboard side is stove in amidships to show the ribs, the deck's planks are sprung, and the mast is snapped off at a stump.
+  - Weed and barnacles grow along the waterline, and a rusty windlass sits at the bow.
+- **The beach:**
+  - the mast and a spar washed up along the tide line;
+  - barrels and crates spilled up the beach;
+  - a castaway's tent by a dead campfire;
+  - gulls and crabs.
+- On the map as Wreck Island, and in the debug menu (⚓ Wreck Island). Reach it by boat.

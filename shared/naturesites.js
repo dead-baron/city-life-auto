@@ -103,6 +103,7 @@ export function buildNatureSites(m, H) {
   route9(m, H);
   pineLake(m, H);
   cedarCreek(m, H);
+  wreckIsland(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -374,6 +375,35 @@ function cedarCreek(m, H) {
   add('parksign', AX - 7.6, cy - 3.6, 0); add('parksign', AX + 7.2, cy + 4.4, 0);
   (m.landmarks ||= []).push({ name: 'Cedar Creek Falls', type: 'falls', x: Math.round(F[0] - 160), y: Math.round(F[1] - 120), w: 320, h: 240 });
   m.natureSites.push({ kind: 'towncreek', name: 'Cedar Creek', x: Math.round(F[0]), y: Math.round(F[1] + 120), falls: { x: Math.round(F[0]), y: Math.round(F[1]), w: 64, drop: 22 }, bridge: { x: Math.round(C.x), y: Math.round(C.y), a: C.a, half: 70, roadHw: RW }, footbridge: fb && { x: Math.round(fb.x), y: Math.round(fb.y) }, arch: { x: Math.round(ab.x), y: Math.round(ab.y) } });
+}
+
+// ---- Wreck Island (the Islets) ------------------------------------------------------------------------------------
+// The biggest of the Islets, west of the city: an old wooden ship run aground on its west beach, heeled over, its
+// side stove in, the bow up the sand; its snapped mast and spars washed up along the tide line, barrels and crates
+// spilled from the hold, a tattered tarp lean-to and a dead campfire where someone camped by it; gulls and crabs.
+function wreckIsland(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  // the island: Islets land round (540, 636)
+  if (!m.land[at(540, 636)] || m.dist[at(540, 636)] !== 20) return;
+  // the west beach: from the island's middle row, west to the last sand before the sea
+  const row = 636;
+  let sx = 540; while (m.land[at(sx - 1, row)] && sx > 500) sx--;
+  if (m.tiles[at(sx, row)] !== T.SAND) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.abs(q.x / TILE - (sx + 4)) < 9 && Math.abs(q.y / TILE - row) < 7) dropProp(m, i); });
+  // the wreck: its stern in the shallows, the bow up the beach to the north-east (solid along its length)
+  const a = -0.45, L = 220, X = (sx + 2.5) * TILE, Y = (row + 0.5) * TILE;
+  add('wreck', X / TILE, Y / TILE, 0, { a });
+  for (let u = -L / 2 + 20; u <= L / 2 - 16; u += 22) m.addSolidProp(X + Math.cos(a) * u, Y + Math.sin(a) * u, 22);
+  for (let ty = row - 5; ty <= row + 4; ty++) for (let tx = sx - 3; tx <= sx + 8; tx++) m.reserve[at(tx, ty)] |= RES;
+  // the mast and spars along the tide line, barrels and crates spilled up the beach, the castaway's camp
+  add('driftwood', sx + 2.2, row + 4.4, 0, { len: 110, a: 0.55 }); add('driftwood', sx + 3.4, row - 4.4, 0, { len: 90, a: 0.3 });   // (the mast and a spar)
+  for (const [dx, dy] of [[5.2, 1.6], [5.9, 2.3], [6.8, -1.2], [4.2, 3.6]]) add('barrel', sx + dx, row + dy, 8);
+  for (const [dx, dy] of [[7.4, 0.6], [3.4, -3.4]]) add('crates', sx + dx, row + dy, 12);
+  add('campfire', sx + 8.6, row + 3.2, 0, { lit: false }); add('tent', sx + 9.8, row + 1.6, 12, { v: 0 });
+  add('gull', sx + 3.6, row - 1.2, 0, { a: 0.6, z: 30 }); add('gull', sx + 6.2, row + 4.8, 0, { a: 2.2 }); add('crab', sx + 1.6, row + 2.8, 0, { a: 1.2 }); add('crab', sx + 2.8, row - 3.2, 0, { a: 4.1 });
+  (m.landmarks ||= []).push({ name: 'Wreck Island', type: 'wreck', x: (sx - 4) * TILE, y: (row - 8) * TILE, w: 40 * TILE, h: 16 * TILE });
+  m.natureSites.push({ kind: 'wreck', name: 'Wreck Island', x: Math.round(X), y: Math.round(Y), beach: { x: (sx + 6) * TILE, y: (row + 1) * TILE } });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------

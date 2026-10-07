@@ -1175,7 +1175,7 @@ function voxModel(m, a) {
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
     case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46);
     case 'cottage': return WL.cottage(a[0] || 84, a[1] || 54, a[2] ?? 0.5); case 'seal': return WL.seal(a[0] || 0, ['#8a8a92', '#6e6e78', '#9a9088'][a[1] || 0]); case 'gull': return WL.gull(false);
-    case 'crab': return WL.crab(); case 'driftwood': return WL.driftwood(a[0] || 50, a[1] || 1);
+    case 'crab': return WL.crab(); case 'driftwood': return WL.driftwood(a[0] || 50, a[1] || 1); case 'shipwreck': return WL.shipwreck(a[0] || 220, a[1] || 64, a[2] || 40);
     case 'footbridge': return WT.footbridge(a[0] || 140, a[1] || 26, a[2] || 8);
     case 'mapBoard': return U.mapBoard();
     case 'lantern': return WL.lantern(a[0] || 'post', a[1] ?? 1);
@@ -1222,7 +1222,7 @@ function vdim(m, a) {
     case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
-    case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'driftwood': return [a[0] || 50, 16, 10];
+    case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'shipwreck': return [(a[0] || 220) + 8, (a[1] || 64) + 30, (a[2] || 40) + 40]; case 'driftwood': return [a[0] || 50, 16, 10];
     case 'mapBoard': return [40, 12, 50]; case 'lantern': return [12, 12, 40];
     case 'lumber': return [60, 24, 18]; case 'crates': return [32, 28, 30]; case 'cctv': return [22, 8, (a[0] || 64) + 2]; case 'signal': return [(a[0] || 70) + 10, 14, 92]; case 'bbframe': return [a[0] || 132, 10, (a[1] || 54) + (a[2] || 36) + 6]; case 'cabbages': return [(a[0] || 3) * 18, (a[1] || 3) * 18, 14]; case 'cornRow': return [120, 60, 36]; case 'wheatRow': return [120, 50, 22]; case 'ropeLine': return [a[0] || 60, 6, 20]; case 'silo': return [44, 44, (a[0] || 90) + 22]; case 'craneTower': return [(a[1] || 120) + 40, 30, (a[0] || 200) + 16];
     default: return [24, 24, 24];
@@ -1729,6 +1729,7 @@ function propItems(c, p, pi, I) {
     case 'seal': { const coat = Math.floor(hh(x, y, 21) * 3); V(`seal:${p.pose || 0}:${coat}:${qa(p.a || 0, 8).toFixed(2)}`, 'seal', [p.pose || 0, coat], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return; }
     case 'gull': V(`gull:${qa(p.a || 0, 8).toFixed(2)}`, 'gull', [], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return;
     case 'crab': V(`crab:${qa(p.a || 0, 8).toFixed(2)}`, 'crab', [], qa(p.a || 0, 8)); return;
+    case 'wreck': { const hd = qa(p.a || 0, 16); V(`wreck:${hd.toFixed(2)}`, 'shipwreck', [220, 64, 40], hd); return; }
     case 'driftwood': V(`dw:${p.len || 50}:${qa(p.a || 0, 8).toFixed(2)}`, 'driftwood', [p.len || 50, 1], qa(p.a || 0, 8)); return;
     case 'starfish': case 'urchin': case 'anemone': {
       const v = p.v || 0, col = t === 'starfish' ? ['#d8583a', '#e8a040', '#c84a8a', '#d8583a'][v] : t === 'urchin' ? ['#3a2448', '#5a2a5a', '#3a2448', '#2a3a5a'][v] : null;
