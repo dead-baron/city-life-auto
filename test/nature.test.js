@@ -482,3 +482,26 @@ test('Westport Pier: a timber fishing pier out to sea from the end of a Westport
   }
   assert.ok(m.landmarks.some((l) => l.name === 'Westport Pier'));
 });
+
+test('Willow River Vineyard: rows of vines either side of a track east of the river, the winery by the road with its courtyard and terrace, a drive in under the gate', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'vineyard');
+  assert.ok(s, 'the vineyard is built');
+  assert.equal(s.rows, 32, 'sixteen rows in each block');
+  const vines = m.props.filter((q) => q && q.t === 'vinerow');
+  assert.ok(vines.length >= 150, `vines (${vines.length})`);
+  assert.ok(vines.some((q) => q.kind === 0) && vines.some((q) => q.kind === 1), 'reds and whites');
+  // the vines are solid; the alleys between them are clear, and so is the track down the middle
+  const solid = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r + 4) return true; return false; };
+  const v = vines[40];
+  assert.ok(solid(v.x, v.y), 'a vine row is solid');
+  assert.ok(!solid(v.x, v.y + 1.5 * TILE), 'the alley beside it is clear');
+  for (let y = vines[0].y; y < vines[0].y + 40 * TILE; y += TILE) assert.ok(!solid((s.track + 1) * TILE, y), `the track is clear (${y})`);
+  // the winery: solid, on the road side, its courtyard in front and the drive out to the road through the gate
+  assert.ok(m.props.some((q) => q && q.t === 'winery'), 'the winery');
+  assert.ok(solid(s.winery.x, s.winery.y), 'the winery is solid');
+  assert.equal(tileAt(s.x - 2 * TILE, s.y), T.PLAZA, 'the courtyard');
+  let y = s.gate.y; while (tileAt(s.gate.x, y - TILE) !== T.ROAD && y > s.gate.y - 6 * TILE) y -= TILE;
+  assert.equal(tileAt(s.gate.x, y - TILE), T.ROAD, 'the drive reaches the road');
+  assert.ok(m.props.filter((q) => q && q.t === 'festoon' && Math.hypot(q.x - s.x, q.y - s.y) < 16 * TILE).length >= 4, 'string lights over the terrace');
+  assert.ok(m.landmarks.some((l) => l.name === 'Willow River Vineyard'));
+});

@@ -111,8 +111,75 @@ export function buildNatureSites(m, H) {
   driftwoodPoint(m, H);
   northPointCourts(m, H);
   westportPier(m, H);
+  vineyard(m, H);
   roadside(m, H);
   coralRainforest(m, H);
+}
+
+// ---- Willow River Vineyard (Dry Creek Desert, east of the river; original) --------------------------------------------
+// Rows of grapevines on trellises across the open ground south of the oil field road: two blocks either side of a
+// gravel track, reds on the west, whites on the east, green grass alleys between the rows. The winery stands at the
+// top by the road: a honey-stone hall with a terracotta roof and a bell tower, its front on a gravel courtyard with
+// an old olive tree, barrels by the door, a tasting terrace with tables, umbrellas and string lights; Italian
+// cypresses line the drive in from the road under a ranch gate and the vineyard's sign; olives and lavender round
+// the edges. (Vines are solid: you walk the alleys.)
+function vineyard(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const X0 = 1105, X1 = 1166, Y0 = 384, NR = 16, Y1 = Y0 + NR * 3, TX = 1135, WX = 1121, WY = 369;   // vines; the track; the winery
+  let ry = WY; while (ry > WY - 12 && m.tiles[at(WX, ry)] !== T.ROAD) ry--;
+  if (m.tiles[at(WX, ry)] !== T.ROAD) return;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);   // (Dry Creek, the desert's edge)
+  for (let ty = ry + 2; ty <= Y1 + 2; ty++) for (let tx = X0 - 3; tx <= X1 + 3; tx++) if (!open(at(tx, ty))) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= (X0 - 3) * TILE && q.x < (X1 + 4) * TILE && q.y >= (ry + 1) * TILE && q.y < (Y1 + 3) * TILE) dropProp(m, i); });
+  for (let ty = ry + 1; ty <= Y1 + 2; ty++) for (let tx = X0 - 3; tx <= X1 + 3; tx++) { const i = at(tx, ty); if (open(i)) m.reserve[i] |= RES; }
+  // the vines: a dirt strip under each row, grass alleys between (lush: watered), the gravel track down the middle
+  for (let ty = Y0 - 1; ty < Y1; ty++) for (let tx = X0; tx <= X1; tx++) {
+    const i = at(tx, ty);
+    if (tx === TX || tx === TX + 1) { m.tiles[i] = T.PLAZA; continue; }
+    if ((ty - Y0) % 3 === 0) m.tiles[i] = T.DIRT; else { m.tiles[i] = T.GRASS; m.reserve[i] |= 128; }
+  }
+  for (let r = 0; r < NR; r++) {
+    const y = (Y0 + r * 3 + 0.5) * TILE;
+    for (const [a, b, kind] of [[X0, TX, 0], [TX + 2, X1 + 1, 1]]) {
+      for (let x = a; x < b; x += 5) {
+        const len = Math.min(5, b - x) * TILE;
+        H.addProp(m, 'vinerow', Math.round(x * TILE + len / 2), Math.round(y), 0, { len, v: (r * 7 + x) % 4, kind });
+        for (let d = 8; d < len; d += 24) m.addSolidProp(Math.round(x * TILE + d), Math.round(y), 6);
+      }
+    }
+  }
+  // the winery at the top, its courtyard (gravel) in front, the drive in from the road on the west side
+  const DX = WX - 11;
+  for (let ty = ry + 1; ty <= WY + 9; ty++) for (const tx of [DX, DX + 1]) m.tiles[at(tx, ty)] = T.PLAZA;
+  for (let ty = WY + 2; ty <= WY + 9; ty++) for (let tx = DX; tx <= WX + 12; tx++) m.tiles[at(tx, ty)] = T.PLAZA;
+  // (the drive, the courtyard and the track draw as pale gravel: park grounds with no paved plaza)
+  const none = { x: 0, y: 0, w: 0, h: 0 };
+  (m.parkGrounds ||= []).push({ x: DX * TILE, y: (ry + 1) * TILE, w: 2 * TILE, h: (WY + 9 - ry) * TILE, plaza: none }, { x: DX * TILE, y: (WY + 2) * TILE, w: (WX + 13 - DX) * TILE, h: 8 * TILE, plaza: none }, { x: TX * TILE, y: (Y0 - 1) * TILE, w: 2 * TILE, h: (Y1 - Y0 + 1) * TILE, plaza: none });
+  add('winery', WX, WY, 0);
+  for (let dx = -126; dx <= 126; dx += 24) for (const dy of [-46, -12, 22]) m.addSolidProp(Math.round(WX * TILE + dx), Math.round(WY * TILE + dy), 18);
+  for (const dx of [-5.6, 5.6]) add('barrels', WX + dx, WY + 2.5, 12, { a: 0 });
+  add('barrels', WX + 12.2, WY + 3.9, 12, { a: Math.PI / 2 });
+  add('fountain', WX - 6.6, WY + 6.2, 26);
+  add('tree_a', WX, WY + 6.4, 12, { sp: 'olive', k: 1.5 });
+  for (const [dx, dy] of [[-1.6, 1.6], [1.6, 1.6], [-1.6, -1.2], [1.6, -1.2]]) add('shrub_a', WX + dx, WY + 6.4 + dy, 0, { sp: 'lavender', k: 1 });
+  // the tasting terrace on the courtyard's east side: tables under umbrellas, string lights on posts over them
+  for (const [dx, dy, u] of [[6.5, 4.6, 'umbrella_g'], [9.6, 4.6, 'umbrella_y'], [6.5, 7.8, 'umbrella_y'], [9.6, 7.8, 'umbrella_g']]) { add('cafetable', WX + dx, WY + dy, 6); add(u, WX + dx + 0.9, WY + dy + 0.4, 4); }
+  const posts = [[WX + 5, WY + 3.4], [WX + 11.4, WY + 3.4], [WX + 11.4, WY + 9.2], [WX + 5, WY + 9.2]];
+  for (const [tx, ty] of posts) add('post', tx, ty, 5, { h: 46 });
+  for (let k = 0; k < 4; k++) { const [ax, ay] = posts[k], [bx, by] = posts[(k + 1) % 4]; add('festoon', ax, ay, 0, { tx: Math.round((bx - ax) * TILE), ty: Math.round((by - ay) * TILE), h: 44 }); }
+  add('festoon', posts[0][0], posts[0][1], 0, { tx: Math.round((posts[2][0] - posts[0][0]) * TILE), ty: Math.round((posts[2][1] - posts[0][1]) * TILE), h: 44 });
+  // the drive: cypresses either side, the ranch gate and the sign at the road
+  for (let ty = ry + 3.5; ty <= WY + 2; ty += 2.6) for (const dx of [-1.2, 3.2]) add('tree_a', DX + dx, ty, 10, { sp: 'cypress', k: 1.3 });
+  add('gatearch', DX + 1, ry + 1.9, 0, { w: 92 });
+  add('textsign', DX - 3.8, ry + 2.6, 0, { text: 'WILLOW RIVER VINEYARD', z: 30, sx: 1, bg: '#5a2a34', fg: [240, 220, 170] });
+  // round the edges: olive trees down the west side, lavender along the courtyard, cypresses at the corners
+  for (let ty = Y0; ty < Y1; ty += 5) add('tree_a', X0 - 1.8, ty + 1.3, 12, { sp: 'olive', k: 1.3 + hash2(ty, 1, 3201) * 0.2 });
+  for (let tx = DX + 3; tx < WX - 5; tx += 1.4) add('shrub_a', tx, WY + 9.7, 0, { sp: 'lavender', k: 0.9 });
+  for (const [tx, ty] of [[X1 + 1.6, Y0 - 1.5], [X1 + 1.6, Y1 + 0.5], [X0 - 1.6, Y1 + 0.8]]) add('tree_a', tx, ty, 10, { sp: 'cypress', k: 1.4 });
+  m.parking.push({ x: Math.round((DX + 3) * TILE), y: Math.round((WY + 6) * TILE), a: 0, drive: true });
+  (m.landmarks ||= []).push({ name: 'Willow River Vineyard', type: 'vineyard', x: X0 * TILE, y: (ry + 1) * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - ry) * TILE });
+  m.natureSites.push({ kind: 'vineyard', name: 'Willow River Vineyard', x: Math.round(WX * TILE), y: Math.round((WY + 6) * TILE), winery: { x: WX * TILE, y: WY * TILE }, rows: NR * 2, gate: { x: Math.round((DX + 1) * TILE), y: Math.round((ry + 2) * TILE) }, track: TX });
 }
 
 // ---- Westport Pier (the Westport coast below the airport; original, with the NK1-C dock kit) -------------------

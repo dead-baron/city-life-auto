@@ -265,3 +265,83 @@ export function helipad(r = 40) {
   m.fill((x, yy, z) => { const d = Math.hypot(x - c, yy - c); if (d > r) return -1; if (Math.abs(d - (r - 4)) < 1.5) return y; const hx = x - c, hy = yy - c; if ((Math.abs(Math.abs(hx) - 9) < 2.5 && Math.abs(hy) < 14) || (Math.abs(hy) < 2 && Math.abs(hx) < 9)) return w; return base; });
   return m;
 }
+
+// ---- vineyard ---------------------------------------------------------------------------------------
+// a row of grapevines on a trellis (len along x): weathered posts every 40 px with two wires, gnarled trunks every
+// 16 px, the leafy canopy trained along the wires (lumpy, swaying in the wind) and bunches of grapes hanging
+// under it on both sides - dark purple, or pale green for white wine (kind 1); autumn turns the leaves (k 1)
+export function vineRow(len = 160, seed = 1, kind = 0, autumn = 0) {
+  const m = new Vox(len, 20, 34);
+  const post = m.mat({ ramp: R('#6a5644'), k: 3, flag: F_THIN }), wire = m.mat({ ramp: R('#a8acae'), k: 3, flag: F_NOCAST | F_THIN }), trunk = m.mat({ ramp: R('#5a4232'), k: 3 });
+  const lv = autumn ? [R('#b8862e'), R('#9a5a2a'), R('#c8a040')] : [R('#5f7f2c'), R('#4f7028'), R('#7a9234')];
+  const leaves = lv.map((rp, i) => m.mat({ ramp: rp, k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2) + i * 31, seed + 5) - 0.5) * 1.3 + (z > 22 ? 0.5 : 0) }));
+  const grape = m.mat({ ramp: kind ? R('#a8b450') : R('#4a2a58'), k: 3, shade: (x, y, z) => (Math.round(x + z) % 2 ? -0.5 : 0.3) });
+  for (let x = 1; x < len - 1; x += 40) m.box(x, 9, 0, x + (x === 1 ? 3 : 2), 11, 31, post);
+  m.box(len - 3, 9, 0, len, 11, 31, post);
+  for (const z of [16, 26]) m.box(0, 9.5, z, len, 10.5, z + 0.6, wire);
+  for (let x = 6; x < len - 4; x += 16) { const j = (hash(x, 1, seed) - 0.5) * 3; for (let z = 0; z < 15; z++) m.box(x + Math.sin(z * 0.6 + x) * 0.8 + j * (z / 15), 9, z, x + 2 + Math.sin(z * 0.6 + x) * 0.8 + j * (z / 15), 11, z + 1, trunk); }
+  // the canopy: a lumpy hedge along the wires
+  m.fill((x, y, z) => {
+    const n = hash(Math.round(x / 3), Math.round(z / 3), seed) + hash(Math.round(x / 7), 9, seed + 1) * 0.6, half = 5.2 + n * 1.8 - Math.max(0, z - 28) * 0.8, top = 30 + n * 2.4, bot = 13 - n * 1.8;
+    if (Math.abs(y - 10) > half || z < bot || z > top || x < 2 || x > len - 2) return -1;
+    if (Math.abs(y - 10) > half - 1 && hash(Math.round(x), Math.round(z), seed + 2) > 0.7) return -1;   // (ragged edges)
+    return leaves[Math.floor(hash(Math.round(x / 5), Math.round(z / 4), seed + 3) * 3)];
+  }, 0, 0, 9, len, 20, 34);
+  // the bunches, under the canopy's edge on both sides
+  for (let x = 5; x < len - 5; x += 6 + Math.floor(hash(x, 2, seed) * 5)) for (const y of [3.4, 16.6]) if (hash(x, y, seed + 4) > 0.2) {
+    const h = 3.5 + hash(x, y, seed + 6) * 3;
+    m.fill((X, Y, Z) => { const t = (15 - Z) / h; return t >= 0 && t <= 1 && Math.hypot(X - x, (Y - y) * 1.2) < 2.1 * (1 - t * 0.6) ? grape : -1; }, x - 3, Math.floor(y - 3), 9, x + 3, Math.ceil(y + 3), 16);
+  }
+  return m;
+}
+// a stone winery (the ridge along x, the front facing +y): honey-coloured limestone walls laid in courses with
+// paler quoins, a terracotta tile roof, a big arched oak door in the middle of the front, arched windows either
+// side (lit at night) and small shuttered windows above, a bell tower at the east end with an open arch and a
+// tiled pyramid roof, a vine climbing the front, barrels by the door
+export function winery(on = 0.6) {
+  const w = 264, d = 112, H = 64, tw = 40, TH = 118, m = new Vox(w + 12, d + 20, TH + 28);
+  const stone = m.mat({ ramp: R('#c8a878'), k: 3, shade: (x, y, z) => { const row = Math.floor(z / 5), off = row % 2 ? 4 : 0, cell = Math.floor((x + y + off) / 9); return (Math.round(z) % 5 === 0 || Math.round(x + y + off) % 9 === 0 ? -1.1 : 0) + (hash(cell, row, 71) - 0.5) * 0.8 + (z < 4 ? -0.4 : 0); } });
+  const quoin = m.mat({ ramp: R('#e2cfa6'), k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.9 : 0) });
+  const tile = m.mat({ ramp: R('#b45a3a'), k: 3, shade: (x, y, z) => (Math.round(z * 1.4) % 3 === 0 ? -0.9 : 0.2) + (Math.round(x) % 6 === 0 ? -0.35 : 0) + (hash(Math.round(x / 6), Math.round(z), 72) - 0.5) * 0.5 });
+  const oak = m.mat({ ramp: R('#6a4228'), k: 3, shade: (x) => (Math.round(x) % 4 === 0 ? -0.9 : 0) }), iron = m.mat({ ramp: R('#2a2a2c'), k: 2 });
+  const glass = m.mat({ ramp: R('#f0c878', 5, 3), k: 4, emi: [255, 196, 120, Math.round(220 * on)], flag: F_NOCAST }), dark = m.mat({ ramp: R('#2a2420'), k: 1 });
+  const shut = m.mat({ ramp: R('#5a7a5a'), k: 3, shade: (x, y, z) => (Math.round(z) % 2 ? -0.6 : 0) }), vine = m.mat({ ramp: R('#5a7a2e'), k: 3, flag: F_LEAF }), sill = m.mat({ ramp: R('#e8dcc0'), k: 3 });
+  const x0 = 6, y0 = 6, x1 = x0 + w, y1 = y0 + d, cy = (y0 + y1) / 2;
+  m.box(x0, y0, 0, x1, y1, H, stone);
+  for (const [a, b] of [[x0, y1 - 4], [x1 - 4, y1 - 4], [x0, y0], [x1 - 4, y0]]) m.box(a, b, 0, a + 4, b + 4, H, quoin);
+  // the roof: a gable along x, overhanging, tiles in courses; the ridge capped
+  m.fill((x, y, z) => { const top = H + 30 - Math.abs(y - cy) * 0.62; return z >= top - 3 && z < top ? tile : -1; }, x0 - 4, y0 - 5, H - 2, x1 + 4, y1 + 5, H + 32);
+  m.fill((x, y, z) => (Math.abs(y - cy) * 0.62 + (z - H) < 30 && z >= H ? stone : -1), x0, y0 + 1, H, x0 + 4, y1 - 1, H + 30);
+  m.fill((x, y, z) => (Math.abs(y - cy) * 0.62 + (z - H) < 30 && z >= H ? stone : -1), x1 - 4, y0 + 1, H, x1, y1 - 1, H + 30);
+  // the front: the arched door in the middle, arched windows either side, small shuttered windows above
+  const arch = (cx, hw, top, z0 = 0) => (x, z) => z >= z0 && (z < top - hw ? Math.abs(x - cx) < hw : Math.hypot(x - cx, z - (top - hw)) < hw);
+  const door = arch(x0 + w / 2, 15, 44);
+  m.fill((x, y, z) => (door(x, z) ? (Math.hypot(x - (x0 + w / 2), z - 29) > 13.5 && z > 29 ? quoin : (Math.round(x) % 6 === 0 && z % 9 < 1 ? iron : oak)) : -1), x0 + w / 2 - 16, y1 - 1, 0, x0 + w / 2 + 16, y1 + 1, 46);
+  for (const cx of [x0 + 32, x0 + 70, x0 + 108, x1 - 108, x1 - 70, x1 - 32]) {
+    const win = arch(cx, 8, 36, 12);
+    m.fill((x, y, z) => (win(x, z) ? (Math.round(x - cx) === 0 || Math.round(z) === 24 ? dark : glass) : -1), cx - 8, y1 - 1, 12, cx + 8, y1 + 0.5, 37);
+    m.box(cx - 9, y1 - 1, 11, cx + 9, y1 + 2, 12.5, sill);
+    m.box(cx - 5, y1 - 1, 44, cx + 5, y1 + 0.5, 53, glass); m.box(cx - 10, y1 - 1, 44, cx - 5, y1 + 1, 53, shut); m.box(cx + 5, y1 - 1, 44, cx + 10, y1 + 1, 53, shut);
+  }
+  // a vine climbing the front by the door, along under the eaves
+  m.fill((x, y, z) => { const n = hash(Math.round(x / 2), Math.round(z / 2), 73); return (Math.abs(x - (x0 + w / 2 - 22)) < 2.5 + n * 2 && z < 50) || (z > 50 && z < 55 + n * 3 && x > x0 + 50 && x < x1 - 50 && n > 0.25) ? vine : -1; }, x0 + 40, y1, 0, x1 - 40, y1 + 3, 58);
+  // the bell tower at the east end, rising from the ridge: an open arch with the bell, a tiled pyramid roof
+  const tx0 = x1 - tw - 8, ty0 = cy - tw / 2;
+  m.box(tx0, ty0, 0, tx0 + tw, ty0 + tw, TH, stone);
+  for (const [a, b] of [[tx0, ty0], [tx0 + tw - 4, ty0], [tx0, ty0 + tw - 4], [tx0 + tw - 4, ty0 + tw - 4]]) m.box(a, b, H, a + 4, b + 4, TH, quoin);
+  const belfry = arch(tx0 + tw / 2, 8, TH - 6, TH - 30);
+  m.fill((x, y, z) => (belfry(x, z) ? dark : -1), tx0 + 4, ty0 - 1, TH - 30, tx0 + tw - 4, ty0 + tw + 1, TH - 5);
+  m.fill((x, y, z) => (belfry(y + tx0 - ty0, z) ? dark : -1), tx0 - 1, ty0 + 4, TH - 30, tx0 + tw + 1, ty0 + tw - 4, TH - 5);
+  m.ell(tx0 + tw / 2, ty0 + tw / 2, TH - 18, 5, 5, 6, m.mat({ ramp: R('#b08a3a'), k: 4 }));
+  m.fill((x, y, z) => { const t = (z - TH) / 22, r = (tw / 2 + 3) * (1 - t); return t >= 0 && Math.abs(x - (tx0 + tw / 2)) < r && Math.abs(y - (ty0 + tw / 2)) < r ? tile : -1; }, tx0 - 4, ty0 - 4, TH, tx0 + tw + 4, ty0 + tw + 4, TH + 24);
+  return m;
+}
+// oak wine barrels on a cradle: two below, one on top, lying along x, iron hoops
+export function wineBarrels() {
+  const m = new Vox(22, 30, 26), oak = m.mat({ ramp: R('#8a5a34'), k: 3, shade: (x, y, z) => (Math.round(Math.atan2(z - 8, y - 8) * 6) % 2 ? -0.5 : 0.2) }), hoop = m.mat({ ramp: R('#3a3a3c'), k: 2 }), cr = m.mat({ ramp: R('#5a4232'), k: 3 }), end = m.mat({ ramp: R('#a8784a'), k: 3 });
+  m.box(1, 2, 0, 21, 28, 3, cr);
+  for (const [cy, cz] of [[8, 9], [22, 9], [15, 20]]) {
+    m.fill((x, y, z) => { const r = 6.4 - Math.abs(x - 11) * 0.06 + (1 - Math.abs(x - 11) / 11) * 0.6; return Math.hypot(y - cy, z - cz) < r ? (x < 2.5 || x > 19.5 ? end : (Math.abs(x - 4) < 0.8 || Math.abs(x - 18) < 0.8 || Math.abs(x - 8) < 0.5 || Math.abs(x - 14) < 0.5 ? hoop : oak)) : -1; }, 1, cy - 8, cz - 8, 21, cy + 8, cz + 8);
+  }
+  return m;
+}
