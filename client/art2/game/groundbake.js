@@ -65,7 +65,7 @@ function mat(name, shader, kind) { M_[name] = MATS.length; MATS.push([shader, ki
 mat('NONE', 'foundation', 1);
 mat('LAWN', 'grassLawn', 0); mat('PARK', 'grassPark', 0); mat('MEADOW', 'grassMeadow', 0); mat('DRYGRASS', 'grassDry', 0);
 mat('ALPINE', 'grassAlpine', 0); mat('FOREST', 'forestFloor', 0); mat('FORESTDIRT', 'forestDirt', 0); mat('PASTURE', 'pasture', 0);
-mat('GOLF', 'grassGolf', 0); mat('CLOVER', 'grassClover', 0); mat('DIRT', 'dirtPebbly', 0); mat('DESERT', 'desertGround', 0);
+mat('GOLF', 'grassGolf', 0); mat('GREEN', 'grassGreen', 0); mat('CLOVER', 'grassClover', 0); mat('DIRT', 'dirtPebbly', 0); mat('DESERT', 'desertGround', 0);
 mat('CRACKED', 'earthCracked', 0); mat('REDROCK', 'redRock', 0); mat('SCREE', 'scree', 0); mat('GRAVEL', 'gravelGrey', 0);
 mat('MUD', 'mudRuts', 0); mat('BEACH', 'sandBeach', 0); mat('DUNE', 'sandDune', 0); mat('QUARRY', 'quarryRock', 0);
 mat('UNDERDECK', 'underDeck', 0); mat('WETSAND', 'sandWet', 0); mat('ROCKSHORE', 'rockShore', 0); mat('SHINGLE', 'pebbleBeach', 0);
@@ -191,6 +191,14 @@ function tileFacts(C) {
   const { M, b, TX0, TY0, seed } = C;
   const { cls, cw } = M.terrainCls;
   const fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
+  // a golf course laid out by the map (M.golf): greens and tees, the striped fairways, the rough round them
+  const golf = M.golf || null, golfAt = (X, Y) => {
+    if (!golf) return M_.GOLF;
+    for (const g of golf.greens) if (Math.hypot(X - g.x, Y - g.y) < g.r) return M_.GREEN;
+    for (const t of golf.tees) if (inRect(t, X, Y)) return M_.GREEN;
+    for (const f of golf.fairways) for (let k = 1; k < f.pts.length; k++) { const [ax, ay] = f.pts[k - 1], [bx, by] = f.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < f.hw) return M_.GOLF; }
+    return M_.PASTURE;
+  };
   const parks = M.parkGrounds || [];        // designed town parks (Lakeview Park): lawn and gravel paths whatever the district, the plaza paved
   const pools = M.pools || [];              // swimming pools (the Stadium Lido): tiled pool water, a pale concrete deck
   const springs = M.springs || [];          // hot spring pools: milky blue-green mineral water (ellipses)
@@ -214,7 +222,7 @@ function tileFacts(C) {
     else if (t === T.GRASS) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (b.tres[k] & 128) m = M_.PASTURE;                 // (a river's lush banks, even in dry country: Willow River)
-      else if (inRects(paint, X, Y, 'golf')) m = M_.GOLF;
+      else if (inRects(paint, X, Y, 'golf')) m = golfAt(X, Y);
       else if (inRects(parks, X, Y)) m = hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK;
       else if (!wild) m = (b.tres[k] & 64) ? M_.FOREST : (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn)
       else if (st === 'rural' || st === 'airport') m = bio === 2 ? M_.FOREST : bio === 3 ? M_.DRYGRASS : st === 'airport' ? M_.LAWN : M_.PASTURE;

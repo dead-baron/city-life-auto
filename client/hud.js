@@ -404,8 +404,10 @@ export class HUD {
     }
     // landmarks painted whole from the concepts (the golf club, the canyon, the island)
     g.font = `${Math.max(8, fs - 3)}px Anton, Impact, sans-serif`;
+    const named = new Set();
     for (const pt of (this.map.paintings || []).concat(this.map.landmarks || [])) {
-      if (!pt.name) continue;
+      if (!pt.name || named.has(pt.name)) continue;   // (a painted place laid out again as a designed one: its name once)
+      named.add(pt.name);
       const [x, y] = P(pt.x + pt.w / 2, pt.y + pt.h + 40);
       g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(pt.name.toUpperCase(), x, y);
       g.fillStyle = '#bfe9ff'; g.fillText(pt.name.toUpperCase(), x, y);

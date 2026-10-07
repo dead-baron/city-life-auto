@@ -382,3 +382,50 @@ export function rodHolder() {
   m.box(2, 24, 0, 12, 29, 5, box); m.box(14, 25, 0, 19, 30, 6, pail);
   return m;
 }
+// a golf clubhouse (front facing +y): white boarded walls on a stone base, a dark green hip roof with dormers,
+// tall windows lit at night, a covered veranda across the front on white columns with a rail and steps, a lantern
+// either side of the door
+export function clubhouse(on = 0.6) {
+  const w = 236, d = 104, H = 48, m = new Vox(w + 16, d + 40, H + 52);
+  const wall = m.mat({ ramp: R('#ece8de'), k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -0.7 : 0) + (z < 9 ? -0.2 : 0) });
+  const base = m.mat({ ramp: R('#8a8070'), k: 3, shade: (x, y, z) => (Math.round(x + y) % 8 === 0 || Math.round(z) % 4 === 0 ? -0.9 : 0) + (hash(Math.round((x + y) / 8), Math.round(z / 4), 81) - 0.5) * 0.6 });
+  const roof = m.mat({ ramp: R('#2e5442'), k: 3, shade: (x, y, z) => (Math.round(z) % 3 === 0 ? -0.8 : 0.1) + (hash(Math.round(x / 5), Math.round(z), 82) - 0.5) * 0.4 });
+  const trim = m.mat({ ramp: R('#f6f4ee'), k: 3 }), glass = m.mat({ ramp: R('#f2cc84', 5, 3), k: 4, emi: [255, 200, 130, Math.round(210 * on)], flag: F_NOCAST }), dark = m.mat({ ramp: R('#2a2a2c'), k: 1 });
+  const deck = m.mat({ ramp: R('#9a7a5a'), k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -0.8 : 0) }), lamp = m.mat({ ramp: R('#ffe0a0', 5, 3), k: 4, emi: [255, 220, 150, Math.round(255 * on)], flag: F_NOCAST });
+  const x0 = 8, y0 = 6, x1 = x0 + w, y1 = y0 + d, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  m.box(x0, y0, 0, x1, y1, 9, base); m.box(x0, y0, 9, x1, y1, H, wall);
+  for (const xx of [x0, x1 - 4]) for (const yy of [y0, y1 - 4]) m.box(xx, yy, 9, xx + 4, yy + 4, H, trim);
+  // the hip roof, overhanging, with two dormers on the front slope
+  m.fill((x, y, z) => { const dx = Math.max(0, Math.abs(x - cx) - (w / 2 - d / 2)), dy = Math.abs(y - cy), top = H + 40 - Math.max(dx, dy) * 0.8; return z >= top - 3 && z < top ? roof : -1; }, x0 - 6, y0 - 6, H - 2, x1 + 6, y1 + 6, H + 42);
+  for (const dx of [-60, 60]) { const dxx = cx + dx; m.box(dxx - 10, y1 - 22, H + 8, dxx + 10, y1 - 14, H + 24, wall); m.box(dxx - 6, y1 - 14.5, H + 11, dxx + 6, y1 - 13.5, H + 21, glass); m.fill((x, y, z) => (z >= H + 24 && z < H + 24 + (10 - Math.abs(x - dxx)) * 0.8 ? roof : -1), dxx - 12, y1 - 24, H + 24, dxx + 12, y1 - 12, H + 34); }
+  // tall windows along the front, the double door in the middle
+  for (let x = x0 + 16; x < x1 - 16; x += 24) { if (Math.abs(x + 6 - cx) < 16) continue; m.box(x, y1 - 1, 14, x + 12, y1 + 0.5, 38, glass); m.box(x + 5.5, y1 - 0.5, 14, x + 6.5, y1 + 1, 38, trim); m.box(x - 1, y1 - 1, 13, x + 13, y1 + 1, 14, trim); m.box(x - 1, y1 - 1, 38, x + 13, y1 + 1, 40, trim); }
+  m.box(cx - 10, y1 - 1, 9, cx + 10, y1 + 0.5, 40, dark); m.box(cx - 9, y1 - 0.5, 10, cx - 1, y1 + 1, 38, glass); m.box(cx + 1, y1 - 0.5, 10, cx + 9, y1 + 1, 38, glass);
+  for (const sd of [-1, 1]) m.box(cx + sd * 15 - 2, y1, 24, cx + sd * 15 + 2, y1 + 3, 30, lamp);
+  // the veranda: a plank deck across the front, white columns, a rail, a shallow roof, steps down in the middle
+  m.box(x0 + 6, y1, 0, x1 - 6, y1 + 22, 8, base); m.box(x0 + 6, y1, 8, x1 - 6, y1 + 22, 10, deck);
+  for (let x = x0 + 8; x < x1 - 8; x += 28) m.box(x, y1 + 18, 10, x + 3, y1 + 21, H - 4, trim);
+  m.box(x1 - 9, y1 + 18, 10, x1 - 6, y1 + 21, H - 4, trim);
+  m.fill((x, y, z) => (Math.abs(x - cx) > 16 && ((z >= 22 && z < 24) || (Math.round(x) % 5 === 0 && z < 22)) ? trim : -1), x0 + 6, y1 + 20, 10, x1 - 6, y1 + 21, 24);
+  m.fill((x, y, z) => { const top = H - 2 - (y - y1) * 0.25; return z >= top - 2 && z < top ? roof : -1; }, x0 + 4, y1, H - 10, x1 - 4, y1 + 24, H);
+  for (let k = 0; k < 3; k++) m.box(cx - 16, y1 + 22 + k * 4, 0, cx + 16, y1 + 26 + k * 4, 8 - k * 3, base);
+  return m;
+}
+// a golf cart: a white body with a canopy roof on four posts, a bench seat, a bag of clubs at the back
+export function golfCart(col = '#f0eee8') {
+  const m = new Vox(34, 20, 26), body = m.mat({ ramp: R(col), k: 3 }), roof = m.mat({ ramp: R('#2e5a3e'), k: 3 }), seat = m.mat({ ramp: R('#3a3a3c'), k: 2 }), tyre = m.mat({ ramp: R('#1e1e20'), k: 1 }), bag = m.mat({ ramp: R('#b8342e'), k: 3 }), club = m.mat({ ramp: R('#c8ccd0'), k: 4, flag: F_NOCAST }), post = m.mat({ ramp: R('#d8d8d4'), k: 3, flag: F_NOCAST });
+  for (const x of [6, 27]) for (const y of [2, 16]) m.cyl('y', x, 0, 4, 3.6, y, y + 2.5, tyre);
+  m.box(2, 3, 3, 32, 17, 9, body); m.box(24, 3, 9, 32, 17, 12, body);
+  m.box(8, 4, 9, 20, 16, 12, seat); m.box(8, 4, 12, 11, 16, 18, seat);
+  for (const x of [4, 24]) for (const y of [3.5, 15]) m.box(x, y, 9, x + 1.5, y + 1.5, 23, post);
+  m.box(2, 2, 23, 28, 18, 25, roof);
+  m.box(1, 6, 9, 6, 13, 20, bag); for (let k = 0; k < 3; k++) m.box(2 + k * 1.5, 7 + k * 2, 20, 3 + k * 1.5, 8 + k * 2, 24, club);
+  return m;
+}
+// a golf pin: a thin white pole in the cup with a small red flag
+export function golfPin() {
+  const m = new Vox(14, 4, 36), p = m.mat({ ramp: R('#f2f0ea'), k: 3, flag: F_NOCAST }), f = m.mat({ ramp: R('#d8342e'), k: 3, flag: F_NOCAST }), cup = m.mat({ ramp: R('#1a1a1a'), k: 1 });
+  m.box(1, 1, 0, 3, 3, 0.6, cup); m.box(1.5, 1.5, 0, 2.5, 2.5, 34, p);
+  m.fill((x, y, z) => { const fx = x - 2.5, fz = 33 - z + Math.sin(fx * 0.5) * 0.6; return fx >= 0 && fx < 10 && fz >= 0 && fz < 7 - fx * 0.25 ? f : -1; }, 2, 1, 24, 14, 3, 34);
+  return m;
+}

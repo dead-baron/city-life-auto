@@ -113,8 +113,75 @@ export function buildNatureSites(m, H) {
   westportPier(m, H);
   vineyard(m, H);
   hilltopTrack(m, H);
+  golfClub(m, H);
   roadside(m, H);
   coralRainforest(m, H);
+}
+
+// ---- Cedar Hills Golf Club (Cedar Hills, on the south island's west shore; original) ---------------------------
+// The golf club's ground was a bare green with a blank block where the old painting's clubhouse stood. Now it is a
+// three-hole course: striped fairways through longer rough, bright putting greens mown in a checker with a flag on
+// each, sand bunkers round the greens, a pond beside the second fairway, tees with a bench, a
+// concrete cart path between the holes and carts on it; the white clubhouse with a green roof and a veranda at the
+// north-east corner by the road, its car park, a practice green and tables on the lawn; oaks, pines and cypresses
+// between the holes. (m.golf: the ground bake draws the greens, tees and fairways.)
+function golfClub(m, H) {
+  const pt = (m.paintings || []).find((q) => q.key === 'golf');
+  if (!pt) return;
+  const PX = Math.round(pt.x / TILE), PY = Math.round(pt.y / TILE), PW = Math.round(pt.w / TILE), PH = Math.round(pt.h / TILE);
+  if (PW < 50 || PH < 34) return;
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx), P = (dx, dy) => [(PX + dx) * TILE, (PY + dy) * TILE];
+  const add = (t, dx, dy, r = 0, extra = null) => H.addProp(m, t, Math.round((PX + dx) * TILE), Math.round((PY + dy) * TILE), r, extra);
+  // the old painting's solid block goes back to grass
+  for (let ty = PY; ty < PY + PH; ty++) for (let tx = PX; tx < PX + PW; tx++) { const i = at(tx, ty); if (m.tiles[i] === T.WALL) m.tiles[i] = T.GRASS; }
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= pt.x && q.x < pt.x + pt.w && q.y >= pt.y && q.y < pt.y + pt.h) dropProp(m, i); });
+  // the holes: [tee, fairway control points, green]
+  const holes = [
+    { tee: [38, 8.5], way: [[35, 8.6], [28, 9.4], [20, 9.8], [14, 9.6]], green: [10.5, 9.5] },
+    { tee: [7.5, 16.5], way: [[10, 17.8], [16, 20.5], [22, 25.5], [27, 28.2]], green: [30.5, 29] },
+    { tee: [37, 31.5], way: [[39, 29], [42, 25], [45, 21], [46.5, 19.5]], green: [47, 16] },
+  ];
+  const golf = { greens: [], tees: [], fairways: [] };
+  holes.forEach((h, k) => {
+    golf.greens.push({ x: P(...h.green)[0], y: P(...h.green)[1], r: 2.7 * TILE });
+    golf.tees.push({ x: (PX + h.tee[0] - 1.2) * TILE, y: (PY + h.tee[1] - 0.8) * TILE, w: 2.4 * TILE, h: 1.6 * TILE });
+    golf.fairways.push({ pts: spline(h.way.map((q) => P(...q)), 24), hw: 2.6 * TILE });
+    add('golfflag', h.green[0] + 0.4, h.green[1] - 0.3, 3);
+    add('pbench', h.tee[0], h.tee[1] + 1.6, 8, { a: Math.PI / 2 });
+    void k;
+  });
+  // the practice green by the clubhouse, three flags on it
+  golf.greens.push({ x: P(40, 15)[0], y: P(40, 15)[1], r: 2.2 * TILE });
+  for (const [dx, dy] of [[-1, -0.6], [0.9, 0.2], [-0.2, 1.1]]) add('golfflag', 40 + dx, 15 + dy, 0);
+  m.golf = golf;
+  // the bunkers (sand) round the greens, the pond beside the second fairway
+  const blob = (cx, cy, rx, ry, fn) => { for (let ty = Math.floor(cy - ry - 1); ty <= cy + ry + 1; ty++) for (let tx = Math.floor(cx - rx - 1); tx <= cx + rx + 1; tx++) { const dx = (tx + 0.5 - cx) / rx, dy = (ty + 0.5 - cy) / ry, a = Math.atan2(dy, dx), q = Math.hypot(dx, dy) / (1 + 0.12 * Math.sin(a * 3 + cx)); if (q <= 1) fn(at(tx, ty), q); } };
+  for (const [dx, dy, rx, ry] of [[PX + 13.6, PY + 12.4, 1.8, 1.1], [PX + 7.6, PY + 6.8, 1.5, 1.0], [PX + 33.6, PY + 31.6, 2.0, 1.1], [PX + 27.4, PY + 26.2, 1.4, 1.0], [PX + 49.8, PY + 18.6, 1.6, 1.2], [PX + 44, PY + 13.2, 1.7, 1.0], [PX + 30, PY + 9.4, 1.6, 1.1]]) blob(dx, dy, rx, ry, (i) => { if (m.tiles[i] === T.GRASS) { m.tiles[i] = T.SAND; m.reserve[i] |= RES | 4; } });
+  const POND = [PX + 21.5, PY + 18.5, 4.2, 2.4];
+  blob(...POND, (i, q) => { m.tiles[i] = q < 0.5 ? T.DEEP : T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; });
+  // the cart path: a concrete ribbon from the clubhouse round the holes (pale concrete: plaza tiles)
+  const cart = spline([P(43, 9.5), P(38, 11), P(26, 12.4), P(14, 13.2), P(9, 14.5), P(10, 21), P(18, 24.5), P(26, 31.5), P(33, 33.6), P(40, 33.2), P(44, 28), P(50, 23), P(51.5, 16), P(48.5, 11)], 12);
+  for (const [x, y] of cart) { const i = at(x / TILE, y / TILE); if (m.tiles[i] === T.GRASS) m.tiles[i] = T.PLAZA; }
+  for (const [k, a, v] of [[6, Math.PI, 0], [60, 1.2, 1], [118, -0.4, 2]]) if (cart[k]) { const [x, y] = cart[k]; H.addProp(m, 'golfcart', Math.round(x), Math.round(y - 4), 12, { a, v }); }
+  // the clubhouse at the north-east corner, the veranda on its south side; its car park out to the road
+  add('clubhouse', 44.5, 4.2, 0);
+  for (let dx = -116; dx <= 116; dx += 24) for (const dy of [-50, -18, 14]) m.addSolidProp(Math.round((PX + 44.5) * TILE + dx), Math.round((PY + 4.2) * TILE + dy), 18);
+  for (const [dx, dy, u] of [[39.5, 8.4, 'umbrella_g'], [42.5, 8.6, 'umbrella_r'], [46.5, 8.6, 'umbrella_g'], [49.5, 8.4, 'umbrella_r']]) { add('cafetable', dx, dy, 6); add(u, dx + 0.9, dy + 0.4, 4); }
+  for (let ty = PY - 5; ty <= PY + 7; ty++) for (let tx = PX + PW - 3; tx <= PX + PW + 4; tx++) { const i = at(tx, ty); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) { m.tiles[i] = T.LOT; m.reserve[i] |= RES | 1; } }
+  for (let k = 0; k < 3; k++) m.parking.push({ x: Math.round((PX + PW + 1.5) * TILE), y: Math.round((PY - 2 + k * 3) * TILE), a: Math.PI, drive: true });
+  add('textsign', PW - 6.5, 9.6, 0, { text: 'CEDAR HILLS GOLF CLUB', z: 34, sx: 1, bg: '#1e4a32', fg: [240, 230, 190] });
+  // the trees between the holes (never on a fairway, green, tee, bunker, the pond or the path)
+  const clear = (x, y, r) => { for (const g of golf.greens) if (Math.hypot(x - g.x, y - g.y) < g.r + r) return false; for (const f of golf.fairways) if (nearest(f.pts, x, y)[0] < f.hw + r) return false; for (const t of golf.tees) if (x > t.x - r && x < t.x + t.w + r && y > t.y - r && y < t.y + t.h + r) return false; if (nearest(cart, x, y)[0] < r + 20) return false; if (Math.hypot((x / TILE - POND[0]) / (POND[2] + 2), (y / TILE - POND[1]) / (POND[3] + 2)) < 1) return false; const i = at(x / TILE, y / TILE); return m.tiles[i] === T.GRASS; };
+  let n = 0;
+  for (let ty = 1.5; ty < PH - 1; ty += 2.6) for (let tx = 1.5; tx < PW - 1; tx += 2.6) {
+    const jx = tx + (hash2(Math.round(tx * 3), Math.round(ty * 3), 3301) - 0.5) * 1.6, jy = ty + (hash2(Math.round(tx * 3), Math.round(ty * 3), 3302) - 0.5) * 1.6, [x, y] = P(jx, jy);
+    if (jx > PW - 16 && jy < 12) continue;   // (the clubhouse's corner stays open)
+    if (hash2(Math.round(tx), Math.round(ty), 3303) > 0.55 || !clear(x, y, 52)) continue;
+    const h = hash2(Math.round(tx), Math.round(ty), 3304), sp = h < 0.45 ? 'oak' : h < 0.7 ? 'pine' : h < 0.85 ? 'cypress' : 'maple';
+    H.addProp(m, 'tree_a', Math.round(x), Math.round(y), 12, { sp, k: 1.3 + hash2(Math.round(tx), Math.round(ty), 3305) * 0.3 }); n++;
+  }
+  (m.landmarks ||= []).push({ name: 'Cedar Hills Golf Club', type: 'golf', x: pt.x, y: pt.y, w: pt.w, h: pt.h });
+  m.natureSites.push({ kind: 'golf', name: 'Cedar Hills Golf Club', x: Math.round((PX + 44.5) * TILE), y: Math.round((PY + 9) * TILE), greens: golf.greens.length, pond: { x: POND[0] * TILE, y: POND[1] * TILE }, trees: n });
 }
 
 // ---- The Hilltop Mansion's track (Dry Creek Desert) ------------------------------------------------------------

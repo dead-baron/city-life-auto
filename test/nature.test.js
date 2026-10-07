@@ -517,3 +517,22 @@ test('the Hilltop Mansion\'s drive is joined to the end of the Farm Road by a di
   assert.ok(road, 'it starts at the road');
   assert.equal(tileAt(x1, y1 + TILE), T.LOT, 'and ends on the drive');
 });
+
+test('Cedar Hills Golf Club: three holes with greens, flags, bunkers, a pond and a cart path, the clubhouse and its car park; the old painting\'s blank block is gone', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'golf');
+  assert.ok(s, 'the course is laid out');
+  const pt = m.paintings.find((q) => q.key === 'golf');
+  let walls = 0, sand = 0, path = 0;
+  for (let ty = pt.y / TILE; ty < (pt.y + pt.h) / TILE; ty++) for (let tx = pt.x / TILE; tx < (pt.x + pt.w) / TILE; tx++) { const t = m.tiles[ty * m.w + tx]; if (t === T.WALL) walls++; if (t === T.SAND) sand++; if (t === T.PLAZA) path++; }
+  assert.equal(walls, 0, 'no blank walls left from the painting');
+  assert.ok(sand > 20, `bunkers (${sand})`);
+  assert.ok(path > 60, `a cart path (${path})`);
+  assert.ok(m.golf && m.golf.greens.length === 4 && m.golf.fairways.length === 3, 'three holes and a practice green');
+  for (const g of m.golf.greens) assert.ok(m.props.some((q) => q && q.t === 'golfflag' && Math.hypot(q.x - g.x, q.y - g.y) < g.r), 'a flag on every green');
+  assert.ok(m.isWater(s.pond.x, s.pond.y), 'the pond');
+  assert.ok(m.props.some((q) => q && q.t === 'clubhouse'), 'the clubhouse');
+  assert.ok(m.props.filter((q) => q && q.t === 'golfcart').length >= 3, 'carts');
+  // no tree on a green or a fairway
+  for (const q of m.props) if (q && q.t === 'tree_a' && q.x >= pt.x && q.x < pt.x + pt.w && q.y >= pt.y && q.y < pt.y + pt.h) for (const g of m.golf.greens) assert.ok(Math.hypot(q.x - g.x, q.y - g.y) > g.r, 'trees off the greens');
+  assert.ok(m.landmarks.some((l) => l.name === 'Cedar Hills Golf Club'));
+});

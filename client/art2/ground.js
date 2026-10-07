@@ -776,6 +776,7 @@ function slabCrack(lx, ly, S, sh, x, y) {
 
 const G_LAWN = RP('#122a20 #183825 #20482b #2b592f #396932 #4b7a34 #618a39 #809d41');
 const G_PARK = RP('#122d22 #193c27 #234c2d #2e5d31 #3d6c33 #507c36 #698e3c #87a246');
+const G_GREEN = RP('#1a4424 #24562a #2f6a30 #3c7c36 #4c8e3c #5ea044 #74b24e #8ec45c');   // a putting green: short, even, bright
 const G_MEAD = RP('#0f201b #142d1e #1c3b22 #284b25 #385827 #4c662c #677633 #888a42');
 const G_DRY = RP('#2a3426 #3a442c #4c5432 #5e6438 #727240 #86824a #9c9458 #b4aa6c');
 const G_ALP = RP('#1e2e2c #283c32 #344a38 #42583c #546640 #687448 #808452 #9a9862');
@@ -838,6 +839,7 @@ export const GSHADE = {
     return grass(G_DRY, x, y, s, 4);
   },
   grassAlpine(x, y, s) { const p = stone(x, y, 11, s + 61, 0.32); if (p >= 0) return sd(SCREE, p, x, y, 0.4); GS.nx = GS.ny = 0; return grass(G_ALP, x, y, s, 4); },
+  grassGreen(x, y, s) { const ck = (((x / 14) | 0) + ((y / 14) | 0)) & 1, n = hh(x, y, s + 3), b = vnc(x, y, 40, s + 7); return at(G_GREEN, 5 - ck + (n > 0.94 ? 1 : n < 0.04 ? -1 : 0) + (b > 0.7 ? 1 : 0)); },   // (mown in a checker)
   grassGolf(x, y, s) { const k = (((x + y * 0.2) / 44) | 0) & 1; const c = grass(G_PARK, x, y, s, 3); return k ? c : at(G_PARK, G_PARK.indexOf(c) - 1); },
   pasture(x, y, s) { const c = clover(x, y, s, 0.18); return c || grass(G_MEAD, x, y, s, 4); },
   // --- earth --------------------------------------------------------------------------------------------
