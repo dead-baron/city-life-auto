@@ -93,6 +93,45 @@ export function buildNatureSites(m, H) {
   heronMarsh(m, H);
   northshoreGardens(m, H);
   oldMine(m, H);
+  farmDressing(m, H);
+}
+
+// ---- the farms (concept D13): a fenced pasture with a windmill and trough beside each farmstead, sunflowers
+// along the farm's fences, a mailbox at the road (the livestock graze round the farms: wildlife.js) ---------------
+function farmDressing(m, H) {
+  const ok = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !m.reserve[i];
+  for (const poi of m.pois.filter((p) => p.kind === 'farm')) {
+    const ftx = Math.floor(poi.x / TILE), fty = Math.floor(poi.y / TILE);
+    // the pasture: the nearest clear 12 x 9 tiles within 30 tiles of the farm
+    let best = null;
+    for (let ty = fty - 30; ty <= fty + 30; ty += 2) for (let tx = ftx - 34; tx <= ftx + 30; tx += 2) {
+      let good = true;
+      for (let y = ty - 1; y <= ty + 10 && good; y++) for (let x = tx - 1; x <= tx + 13; x++) if (!ok(y * MAP_W + x)) { good = false; break; }
+      if (!good) continue;
+      const d = Math.hypot(tx + 6 - ftx, ty + 4.5 - fty);
+      if (!best || d < best.d) best = { tx, ty, d };
+    }
+    if (!best) continue;
+    const x0 = best.tx * TILE, y0 = best.ty * TILE, w = 12 * TILE, h = 9 * TILE;
+    for (let y = best.ty; y < best.ty + 9; y++) for (let x = best.tx; x < best.tx + 12; x++) { const i = y * MAP_W + x; m.reserve[i] |= RES; m.tiles[i] = T.GRASS; }   // (grazed grass)
+    // anything already standing in it goes (the pasture is open grass)
+    // (and a band south of it: a tree there would stand up over the pasture in this view)
+    m.props.forEach((p, i) => { if (p && p.x > x0 - 8 && p.x < x0 + w + 8 && p.y > y0 - 8 && p.y < y0 + h + 120 && p.t !== 'painted') dropProp(m, i); });
+    for (let y = best.ty + 9; y < best.ty + 13; y++) for (let x = best.tx; x < best.tx + 12; x++) m.reserve[y * MAP_W + x] |= RES;
+    // the fence: four sides (a gap in the south side for the gate), solid along its length
+    const runs = [[x0, y0, x0 + w, y0], [x0, y0, x0, y0 + h], [x0 + w, y0, x0 + w, y0 + h], [x0, y0 + h, x0 + w * 0.42, y0 + h], [x0 + w * 0.58, y0 + h, x0 + w, y0 + h]];
+    for (const [ax, ay, bx, by] of runs) {
+      H.addProp(m, 'rail', ax, ay, 0, { tx: bx - ax, ty: by - ay });
+      const L = Math.hypot(bx - ax, by - ay);
+      for (let k = 0; k <= L; k += 16) m.addSolidProp(ax + (bx - ax) * k / L, ay + (by - ay) * k / L, 7);
+    }
+    H.addProp(m, 'windmill', x0 + w - 40, y0 + 46, 18);
+    H.addProp(m, 'trough', x0 + w - 90, y0 + 60, 10);
+    for (let k = 0; k < 3; k++) H.addProp(m, 'hayBale', x0 + 40 + k * 30, y0 + 40, 10);
+    // sunflowers along the outside of the pasture's south fence
+    for (let x = x0 + 16; x < x0 + w - 8; x += 26) if (Math.abs(x - (x0 + w / 2)) > w * 0.1) H.addProp(m, 'flowers_a', x, y0 + h + 22, 0, { sp: 'sunflowers', k: 1 });
+    m.natureSites.push({ kind: 'pasture', name: `${poi.label} Pasture`, x: Math.round(x0 + w / 2), y: Math.round(y0 + h / 2) });
+  }
 }
 
 // ---- the Old Granite Mine (Granite Peaks; concept N3, the mine's mouth) -----------------------------------------

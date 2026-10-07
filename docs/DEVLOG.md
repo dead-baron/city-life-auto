@@ -2348,3 +2348,12 @@ Beside the road below the quarry (`shared/naturesites.js` `oldMine`), a granite 
 - **Access:** a dirt track runs down to the road.
 - **Art:** the cliff is a terrain-kit plateau with a superellipse outline, its face kept straight round the adit (`statics.js` recipe `cliff`); the rails are a flat sprite.
 - On the map as "Old Granite Mine". The cave interior (N3's lake and walkway) waits for an interiors pass.
+
+## 2026-10-06 · Farms: the crops are the ground's; a pasture by every farm (concept D13)
+
+- **No more crop grid:** the farm fields were covered in a grid of identical crop sprites laid over whatever the ground had drawn. The ground's own crops show now (`groundbake.js`): golden wheat that sways in the wind, corn, ploughed furrows, vegetable rows and hay, one per field. The fields keep their rail fences, scarecrow and hay bales.
+- **A pasture by each farm** (Cedar Farms Market, the Dry Creek co-op) (`shared/naturesites.js` `farmDressing`):
+  - a fenced paddock of grazed grass, the fence solid with a gap for the gate;
+  - a windmill, a water trough and hay bales;
+  - sunflowers along the fence.
+  - The farm animals already graze round the farms (`wildlife.js`), so they have somewhere that looks like theirs.

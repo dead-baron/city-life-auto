@@ -152,3 +152,13 @@ test('the Old Granite Mine: a solid cliff with its adit, rails and a cart out of
   assert.ok(m.props.some((p) => p && p.t === 'minecart' && Math.hypot(p.x - s.x, p.y - s.y) < 200), 'the ore cart');
   assert.ok(m.landmarks.some((l) => l.name === 'Old Granite Mine'));
 });
+
+test('farms: a fenced pasture (solid fence) by every farm, open grass inside', () => {
+  const pastures = m.natureSites.filter((q) => q.kind === 'pasture');
+  assert.equal(pastures.length, m.pois.filter((p) => p.kind === 'farm').length, 'one per farm');
+  for (const s of pastures) {
+    assert.equal(tileAt(s.x, s.y), T.GRASS, 'grass inside');
+    assert.ok(m.props.some((p) => p && p.t === 'windmill' && Math.hypot(p.x - s.x, p.y - s.y) < 300), 'a windmill');
+    assert.ok(!m.props.some((p) => p && (p.t === 'tree_a' || p.t === 'tree_b') && Math.abs(p.x - s.x) < 170 && Math.abs(p.y - s.y) < 130), 'no tree in the pasture');
+  }
+});

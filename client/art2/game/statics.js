@@ -1653,6 +1653,7 @@ function propItems(c, p, pi, I) {
     case 'post': V(`post:${p.h || 46}`, 'post', [p.h || 46]); return;
     case 'windmill': V('wmill', 'windmill', [120]); return;
     case 'trough': V('trough', 'trough', []); return;
+    case 'hayBale': V('hay:1', 'hayBale', [true], qa(u * PI, 2)); return;
     case 'festoon': {
       const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40;
       put(I, { key: `fest:${tx}:${ty}:${h}`, recipe: { t: 'festoon', tx, ty, h }, x, y, ext: [Math.max(0, -tx) + 16, h + Math.max(0, -ty) + 16, Math.max(0, tx) + 16, Math.max(0, ty) + 16], pi });
@@ -2152,14 +2153,9 @@ function addSetPieces(c, I) {
     const spec = { w, d: 12, seed: 500 + (bw.tx % 7), glowOnly: true, night: NIGHT, style: D.style === 'oldtown' ? 'stone' : 'brick', height: 38, blank: true, graffiti: rough && w >= 96 ? 1 : 0, grime: rough ? 0.6 : 0.2, roof: 'flat' };
     put(I, { key: `bw:${w}:${bw.tx % 7}:${rough ? 1 : 0}`, recipe: { t: 'b', spec, kit: [] }, x: bw.tx * TILE, y: (bw.ty + 1) * TILE - 8, ext: [2, 60, w + 2, 4] });
   }
-  // farm fields: rows of crops (corn, wheat or cabbages by field), rail fences round them
-  (M.fields || []).forEach((f, fi) => {
-    const crop = ['corn', 'wheat', 'corn', 'cab'][fi % 4];
-    for (let y = f.y + 40; y < f.y + f.h - 20; y += crop === 'corn' ? 70 : 54) for (let x = f.x + 40; x < f.x + f.w - 40; x += 120) {
-      const k = Math.floor(hh(x, y, 5) * 3), tt = c.at(x, y); if (tt !== T.FIELD) continue;
-      if (crop === 'cab') put(I, vitem(`cab:${k}`, 'cabbages', [5, 2], x, y));
-      else put(I, vitem(`crop:${crop}:${k}`, crop === 'corn' ? 'cornRow' : 'wheatRow', [k], x, y));
-    }
+  // farm fields: the crops are the ground's (groundbake.js: wheat that sways, corn, furrows, vegetable rows, hay
+  // by field); rail fences round them, a scarecrow, hay bales by the gate
+  (M.fields || []).forEach((f) => {
     fenceLine(I, 'rail', f.x - 10, f.y - 10, f.x + f.w + 10, f.y - 10);
     put(I, vitem('scare', 'scarecrow', [], f.x + f.w * 0.5, f.y + f.h * 0.4));
     for (let k = 0; k < 3; k++) put(I, vitem('hay:1', 'hayBale', [true], f.x + 30 + k * 34, f.y + f.h + 26));
