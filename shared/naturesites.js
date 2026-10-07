@@ -114,6 +114,7 @@ export function buildNatureSites(m, H) {
   vineyard(m, H);
   orchard(m, H);
   hilltopTrack(m, H);
+  balloonField(m, H);
   golfClub(m, H);
   driveTracks(m, H);
   roadside(m, H);
@@ -252,6 +253,29 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- The balloon field (Dry Creek, east of the Farm Road; original) ---------------------------------------------
+// A mown launch field out on the flat ground below the Hilltop Mansion's track: two hot-air balloons standing on
+// their baskets with their burners lit, a third already aloft over the field, one laid out on the grass in front of
+// its inflation fan, a windsock, and a sign for the rides at the track.
+function balloonField(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const X0 = 1150, X1 = 1178, Y0 = 463, Y1 = 486;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);
+  for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) if (!open(at(tx, ty))) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
+  for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) { const d = Math.hypot((tx - (X0 + X1) / 2) / ((X1 - X0) / 2), (ty - (Y0 + Y1) / 2) / ((Y1 - Y0) / 2)); const i = at(tx, ty); m.reserve[i] |= RES; if (d < 1 - hash2(tx, ty, 3701) * 0.12) m.tiles[i] = T.GRASS; }
+  add('balloon', X0 + 7, Y0 + 10, 26, { v: 0 });
+  add('balloon', X0 + 19, Y0 + 14, 26, { v: 1 });
+  add('balloon', X0 + 14, Y0 + 2, 0, { v: 2, up: 230 });
+  add('balloonlaid', X0 + 11, Y0 + 20, 0, { v: 3, a: 0 });
+  add('fan', X0 + 6.3, Y0 + 20, 8, { a: 0 });
+  add('windsock', X1 - 2, Y0 + 2, 4);
+  add('textsign', X0 + 2.5, Y0 - 0.2, 0, { text: 'BALLOON RIDES', z: 28, sx: 1, bg: '#2a4a8a', fg: [250, 230, 140] });
+  (m.landmarks ||= []).push({ name: 'Dry Creek Balloon Field', type: 'balloons', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
+  m.natureSites.push({ kind: 'balloons', name: 'Dry Creek Balloon Field', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), balloons: 3 });
 }
 
 // ---- Willow River Orchard (Dry Creek, below the vineyard; original) ------------------------------------------------

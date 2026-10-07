@@ -345,3 +345,56 @@ export function wineBarrels() {
   }
   return m;
 }
+
+// ---- hot-air balloons -------------------------------------------------------------------------------------
+const BALLOON_PALS = [['#d8342e', '#f08a2a', '#f0c830', '#4aa84a', '#2f7ac8', '#7a4ab8'], ['#d8342e', '#f2f0ea'], ['#2f5ab8', '#f0c830'], ['#1e8a7a', '#f2ece0', '#e86a2a']];
+// a hot-air balloon standing on its basket (or aloft, raised by the caller): the envelope a teardrop of coloured
+// gores with a band round its widest part, the dark skirt at the throat, ropes down to a wicker basket, the
+// burner frame over it (its flame lit when burn > 0)
+export function hotAirBalloon(pal = 0, burn = 1) {
+  const S = 1.75, W = Math.round(88 * S), m = new Vox(W, W, Math.round(152 * S)), cx = W / 2, cy = W / 2, P = BALLOON_PALS[pal % BALLOON_PALS.length];
+  const gores = P.map((c) => m.mat({ ramp: R(c), k: 3, shade: (x, y, z) => (Math.round(z) % 9 === 0 ? -0.35 : 0) }));
+  const band = m.mat({ ramp: R(P.length > 2 ? '#f2f0ea' : P[1] === '#f2f0ea' ? '#2a3a7a' : '#f2f0ea'), k: 3 });
+  const skirt = m.mat({ ramp: R('#3a3438'), k: 2 }), rope = m.mat({ ramp: R('#5a4a3a'), k: 2, flag: F_NOCAST | F_THIN }), wick = m.mat({ ramp: R('#a8804a'), k: 3, shade: (x, y, z) => ((Math.round(x + z) % 3 === 0) ? -0.8 : 0.2) });
+  const rim = m.mat({ ramp: R('#5a3a24'), k: 3 }), steel = m.mat({ ramp: R('#9aa0a6'), k: 3 }), flame = m.mat({ ramp: R('#ffd070', 5, 3), k: 4, emi: [255, 190, 90, Math.round(255 * burn)], flag: F_NOCAST });
+  const ZC = 104 * S, RC = 40 * S, ZT = 50 * S, RT = 9 * S, BK = 8 * 1.2, BH = 13 * 1.2;
+  const rad = (z) => z >= ZC ? Math.sqrt(Math.max(0, RC * RC - (z - ZC) * (z - ZC))) : RT + (RC - RT) * Math.pow(Math.max(0, (z - ZT) / (ZC - ZT)), 0.7);
+  m.fill((x, y, z) => {
+    if (z < ZT) return -1;
+    const r = rad(z), d = Math.hypot(x - cx, y - cy);
+    if (d > r || d < r - 3) return -1;   // (a shell)
+    if (Math.abs(z - (ZC - 10)) < 3.5) return band;
+    const a = Math.atan2(y - cy, x - cx), k = Math.floor((a + Math.PI) / (Math.PI * 2) * 14);
+    return gores[k % gores.length];
+  }, 0, 0, Math.floor(ZT), W, W, Math.ceil(ZC + RC + 1));
+  m.fill((x, y, z) => (Math.hypot(x - cx, y - cy) < rad(z) - 0.5 && z > ZC + RC - 8 ? gores[0] : -1), cx - 26, cy - 26, Math.floor(ZC + RC - 10), cx + 26, cy + 26, Math.ceil(ZC + RC + 1));   // (the crown cap)
+  m.fill((x, y, z) => { const d = Math.hypot(x - cx, y - cy); return z >= ZT - 9 && z < ZT + 2 && d < RT + 1.5 && d > RT - 2.5 ? skirt : -1; }, cx - 20, cy - 20, Math.floor(ZT - 9), cx + 20, cy + 20, Math.ceil(ZT + 2));
+  // the basket and its burner
+  m.box(cx - BK, cy - BK, 0, cx + BK, cy + BK, BH, wick); m.box(cx - BK - 0.5, cy - BK - 0.5, BH - 1, cx + BK + 0.5, cy + BK + 0.5, BH + 1, rim);
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const ax = cx + sx * (BK - 1), ay = cy + sy * (BK - 1), bx = cx + sx * RT * 0.8, by = cy + sy * RT * 0.8;
+    for (let k = 0; k <= 60; k++) { const t = k / 60, x = ax + (bx - ax) * t, y = ay + (by - ay) * t, z = BH + 1 + t * (ZT - 10 - BH); m.box(x - 0.4, y - 0.4, z, x + 0.4, y + 0.4, z + 1, rope); }
+  }
+  const BZ = BH + 12;
+  m.box(cx - 7, cy - 7, BZ, cx + 7, cy + 7, BZ + 2, steel); m.box(cx - 3.5, cy - 3.5, BZ + 2, cx + 3.5, cy + 3.5, BZ + 7, steel);
+  if (burn > 0) m.fill((x, y, z) => (Math.hypot(x - cx, y - cy) < 3.8 - (z - BZ - 7) * 0.17 ? flame : -1), cx - 5, cy - 5, BZ + 7, cx + 5, cy + 5, BZ + 26);
+  m.smooth = 1;
+  return m;
+}
+// a balloon laid out on the grass before inflation (along x, the throat at x 0), its gores in stripes
+export function balloonLaid(pal = 1) {
+  const m = new Vox(130, 46, 8), P = BALLOON_PALS[pal % BALLOON_PALS.length];
+  const gores = P.map((c) => m.mat({ ramp: R(c), k: 3 }));
+  m.fill((x, y, z) => { const t = x / 130, hw = 6 + Math.sin(Math.min(1, t * 1.25) * Math.PI * 0.5) * 16 - Math.max(0, t - 0.85) * 60, h = 2 + Math.sin(t * Math.PI) * 4 + Math.sin(x * 0.3 + y * 0.2) * 0.6; return Math.abs(y - 23) < hw && z < h ? gores[Math.floor((y - 23 + hw) / (hw * 2) * 6) % gores.length] : -1; });
+  return m;
+}
+// an inflation fan on its frame (the cage facing +x) and a fuel tank
+export function inflationFan() {
+  const m = new Vox(30, 26, 26), fr = m.mat({ ramp: R('#3a3a3c'), k: 2 }), cage = m.mat({ ramp: R('#9aa0a6'), k: 3, flag: F_NOCAST }), blade = m.mat({ ramp: R('#e8642a'), k: 3 }), tank = m.mat({ ramp: R('#d8d4cc'), k: 3 });
+  m.box(2, 6, 0, 20, 20, 4, fr);
+  m.fill((x, y, z) => { const d = Math.hypot(y - 13, z - 14); return x >= 14 && x < 17 && d < 10 && (d > 9 || Math.round(Math.atan2(z - 14, y - 13) * 4) % 3 === 0) ? cage : -1; });
+  m.fill((x, y, z) => { const d = Math.hypot(y - 13, z - 14), a = Math.atan2(z - 14, y - 13); return x >= 12 && x < 14 && d < 8 && Math.abs(Math.sin(a * 2)) > 0.6 ? blade : -1; });
+  m.box(4, 10, 4, 12, 16, 12, fr);
+  m.cyl('z', 25, 6, 0, 4, 0, 18, tank);
+  return m;
+}

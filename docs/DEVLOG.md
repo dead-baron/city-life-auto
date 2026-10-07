@@ -2770,3 +2770,13 @@ Four more homes out in the wilds had drives that ran off into the trees and stop
 On the map, and in the debug menu (🍎 Willow River Orchard).
 
 **Seal Islets.** The two little islets in the bay west of Westport Pier are where the seals haul out now. There are a dozen on the sand along their shores, facing the water, and two more with a gull on a barnacled rock between the islets. The coin telescope at the end of the pier looks straight at them. On the map, and in the debug menu (🦭 Seal Islets). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Dry Creek Balloon Field (original)
+
+A launch field of dry grass on the flat ground east of the Farm Road, below the Hilltop Mansion's track (`shared/naturesites.js` `balloonField`):
+- **Two hot-air balloons** stand on their wicker baskets with their burners lit. The models are new (`props-rural.js` `hotAirBalloon`; prop `balloon`): a teardrop envelope of coloured gores with a band round its widest part, the dark skirt at the throat, ropes down to the basket, and the burner frame with its flame.
+- **A third balloon** is already aloft over the field (`up`: drawn raised).
+- **A fourth** is laid out on the grass in front of its inflation fan (`balloonLaid`, `inflationFan`).
+- **Round the field:** a windsock and a "BALLOON RIDES" sign by the track.
+
+At golden hour the balloons throw long shadows across the field. On the map, and in the debug menu (🎈 Dry Creek Balloon Field). Homes, POIs and buildings unchanged.

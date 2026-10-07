@@ -573,3 +573,14 @@ test('Seal Islets: seals hauled out on the islets off Westport Pier, and on a ro
   for (const q of seals) if (!q.z) assert.ok(!m.isWater(q.x, q.y), 'hauled out on land');
   assert.ok(m.landmarks.some((l) => l.name === 'Seal Islets'));
 });
+
+test('Dry Creek Balloon Field: hot-air balloons on a launch field east of the Farm Road, one aloft, one laid out by its fan', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'balloons');
+  assert.ok(s, 'the field is laid out');
+  const bs = m.props.filter((q) => q && q.t === 'balloon' && Math.hypot(q.x - s.x, q.y - s.y) < 20 * TILE);
+  assert.equal(bs.length, 3, 'three balloons');
+  assert.equal(bs.filter((q) => q.up).length, 1, 'one of them aloft');
+  assert.ok(m.props.some((q) => q && q.t === 'balloonlaid') && m.props.some((q) => q && q.t === 'fan'), 'one laid out by its fan');
+  assert.equal(tileAt(s.x, s.y), T.GRASS, 'a grass field');
+  assert.ok(m.landmarks.some((l) => l.name === 'Dry Creek Balloon Field'));
+});
