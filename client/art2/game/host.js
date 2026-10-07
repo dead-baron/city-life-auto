@@ -734,7 +734,9 @@ export class World2 {
     let lift = 0;
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
     const A2 = this._app(p.d.app || {}, p.d.ar), pf = Pd.pedFrame(ppose, L.fr);
-    const wpn = (p.extra | 0) || (p.d.fl ? 'flashlight' : 0); // unarmed with the flashlight on: it's in your hand
+    // unarmed with the flashlight on: it's in your hand; under an open umbrella (standing or walking): its shaft is
+    const umb = !!(f & PF.UMBRELLA) && !(p.extra | 0) && !p.d.fl && (ppose === 'idle' || ppose.startsWith('walk')) && !!Pd.umbrellaTop;
+    const wpn = (p.extra | 0) || (p.d.fl ? 'flashlight' : umb ? 'umbrella' : 0);
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
@@ -753,7 +755,11 @@ export class World2 {
     this.n.drawn++;
     if (f & PF.UMBRELLA) {
       const uk = this._genUmbrella(p.id % Math.max(1, (api.UMBRELLA_COLORS || []).length));
-      if (uk) { o.flash = 0; o.xray = false; E.drawSprite(uk, p.rx, p.ry, z0 + 44, o); }
+      if (uk) {
+        o.flash = 0; o.xray = false;
+        if (umb) { const t = Pd.umbrellaTop(d8, this._umbT || (this._umbT = [0, 0, 0])); E.drawSprite(uk, p.rx + hx + t[0], p.ry + hy + t[1], z0 + t[2], o); }  // on the shaft in the hand
+        else E.drawSprite(uk, p.rx, p.ry, z0 + 44, o);
+      }
     }
   }
   // every frame of a looping pose (stride, idle, carry...) at this heading, asked for ahead
@@ -762,21 +768,23 @@ export class World2 {
     if (n < 2 || n > 8) return;
     for (let i = 0; i < n; i++) this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, i, wpn), [A2, ppose, d8, i, wpn], prio);
   }
-  // an open umbrella over a head: a shallow dome of 8 panels in its colour, a darker rim, the tip on top
+  // an open umbrella: a shallow dome of 8 panels in its colour, scalloped between the rib tips, darker ribs and rim, the
+  // tip on top (sampled at quarter pixels, keeping the highest point per pixel, so the near slope has no gaps)
   _genUmbrella(i) {
     return this._conv(`gumb|${i}`, () => {
       const cols = this.api.UMBRELLA_COLORS || ['#c8262b'], base = rgbOf(cols[i] || cols[0]);
-      const R = 13, H = 6, w = R * 2 + 1, h = R * 2 + H + 3, ax = R, ay = R + H + 1;
+      const R = 13, H = 6, w = R * 2 + 1, h = R * 2 + H + 3, ax = R, ay = R + H + 1, PAN = Math.PI / 4;
       const G = gbuf(w, h, ax, ay);
-      for (let Y = -R; Y <= R; Y++) for (let X = -R; X <= R; X++) {
-        const r2 = (X * X + Y * Y) / (R * R);
-        if (r2 > 1) continue;
-        const Z = Math.round(H * (1 - r2)), sx = X + ax, sy = Y - Z + ay, zz = Z + 1;
+      for (let Y = -R; Y <= R; Y += 0.25) for (let X = -R; X <= R; X += 0.25) {
+        const a = Math.atan2(Y, X) + Math.PI, f = (a / PAN) % 1, edge = R * (0.93 + 0.07 * Math.abs(Math.cos(f * Math.PI)));   // scallops: the rim dips between rib tips
+        const r = Math.hypot(X, Y);
+        if (r > edge) continue;
+        const r2 = (r * r) / (R * R), Z = H * (1 - r2), sx = Math.floor(X + ax + 0.5), sy = Math.floor(Y - Z + ay + 0.5), zz = Math.round(Z) + 1;
         if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
         const ii = sy * w + sx;
         if (G.col[ii * 4 + 3] && G.z[ii] >= zz) continue;
-        const rim = r2 > 0.82, panel = Math.floor((Math.atan2(Y, X) + Math.PI) / (Math.PI / 4)) & 1;
-        const k = rim ? 0.62 : panel ? 0.84 : 1;
+        const rib = Math.min(f, 1 - f) * r < 0.45 && r > 2, rim = r > edge - 1.3, panel = Math.floor(a / PAN) & 1;
+        const k = rib ? 0.62 : rim ? 0.66 : panel ? 0.86 : 1;
         const nx = 2 * H * X / (R * R), ny = 2 * H * Y / (R * R), nl = Math.hypot(nx, ny, 1);
         put(G, sx, sy, [base[0] * k, base[1] * k, base[2] * k], zz, [128 + nx / nl * 127, 128 + ny / nl * 127, 128 + 127 / nl, 255]);
       }

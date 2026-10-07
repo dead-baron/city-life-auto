@@ -246,6 +246,13 @@ export const ITEMS = {
     ...[-5.5, -2.8, 0, 2.8, 5.5].map((u) => poly([[u - 0.9, -1.8], [u + 0.9, -1.8], [u, -3.6]], M.steel)),
     poly(box(-7.4, -0.3, 7.4, 0.5), M.yellow, { k: -0.1 }),
   ] },
+  // an open umbrella's shaft and crook handle, held upright in one hand (the canopy is drawn over the shaft's top
+  // by the renderer: game/host.js, at people.js UMBRELLA_TOP)
+  umbrella: { ia: -90, hs: 1, is: 1.1, parts: [
+    cap([-2.6, 0], [29, 0], 0.5, M.dark, { flat: true }),
+    ...path([[-2.6, 0], [-4.4, 0.9], [-4.6, 2.4], [-3.6, 3.2]], 0.75, M.woodDark),
+    cap([-2.8, 0], [0.8, 0], 0.85, M.woodDark, { flat: true }),
+  ] },
   // a plain hand torch: ribbed rubber grip, a red thumb switch, a flared head and a lit lens (it's only ever
   // drawn in a hand while it's switched on)
   flashlight: { ia: -28, hs: 0.8, is: 1.3, parts: [

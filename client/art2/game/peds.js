@@ -19,7 +19,7 @@
 //     frame: 0 .. PED_POSES[pose] - 1 (wraps); pedFrame(pose, v1Frame) converts the v1 frame counters
 //     weapon: WEAPON_BY_INDEX index (drawn held: rest, aimed or swung per pose), or an items.js kind ('phone', 'medkit')
 //   weaponItem(w) -> items.js kind or null;  PED_POSES: frames per pose;  SEATS: seat heights of the seated poses
-import { person, POSES, SEATS } from '../people.js';
+import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN } from '../people.js';
 import { ITEMS } from '../items.js';
 import { hash } from '../gbuf.js';
 import { WEAPON_BY_INDEX } from '../../../shared/items.js';
@@ -215,6 +215,16 @@ const normPose = (p) => (p && p.startsWith('move') ? 'walk' + (p[4] || '0') : p 
 export function pedKey(app, pose, dir8, frame, weapon, opt = {}) {
   const pn = normPose(pose), n = PED_POSES[pn] || 1;
   return `${appKey(app, opt)}|${pn}|${((dir8 | 0) % 8 + 8) % 8}|${(((frame | 0) % n) + n) % n}|${weaponItem(weapon) || ''}`;
+}
+// Where the canopy goes over someone holding an open umbrella (people.js 'umbrella': the right hand in front of the
+// shoulder, the shaft straight up) at sprite heading dir8: out = [dx, dy, z], world px from the feet - draw the canopy
+// at (x + dx, y + dy) and height z so it lands on the shaft's top in the figure's own (35 degree) projection.
+const UMB_CA = Math.cos(35 * Math.PI / 180), UMB_SA = Math.sin(35 * Math.PI / 180);
+export function umbrellaTop(dir8, out = [0, 0, 0]) {
+  const th = Math.PI / 2 + (dir8 | 0) * Math.PI / 4, s = Math.sin(th), c = Math.cos(th), [hx, hy] = UMBRELLA_HAND;
+  const X = -s * hx + c * hy, Y = c * hx + s * hy, top = (UMBRELLA_HAND[2] + UMBRELLA_LEN) * UMB_CA;
+  out[0] = X; out[1] = Y * UMB_SA - 2; out[2] = top - 2;
+  return out;
 }
 export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
   const A = isServer(app) ? adaptApp(app, opt.ar || app.ar, opt) : app || {};

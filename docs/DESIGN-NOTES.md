@@ -93,7 +93,7 @@ Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
   (2026-10-06 night):** much smaller worker caches on phones, workers replaced when they die, failed chunks
   retried (DEVLOG "Phones: the art keeps arriving"). Nothing is downloaded (the art is made on the device), so a
   bigger download wouldn't help; a later option is baking the area round your spawn during the loading screen.
-- **Lamp-post shadows:** a street light casts a big triangle from the top of the post down to its foot. It should
+- **Lamp-post shadows [done 2026-10-07]:** a street light casts a big triangle from the top of the post down to its foot. It should
   cast the post's own shape out from its base (the shadow of a thin upright thing in 3D).
 - **Running without a button [done 2026-10-07]:** only the keyboard keeps a run key (Shift). On a gamepad or touch, a full stick
   is full speed.
@@ -113,7 +113,7 @@ Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
   - **Weather controls.**
 - **Police in the wilderness [done 2026-10-07]:** cops shouldn't spawn right on you while you flee. Fleeing into the wilderness makes
   you harder to find.
-- **Umbrellas:** NPCs hold the umbrella in one hand.
+- **Umbrellas [done 2026-10-07]:** NPCs hold the umbrella in one hand.
 
 **Then, through the night: the environment pass.**
 - Make the procedural nature and the points of interest as close to the concepts as possible (N1-N10, D9-D17,

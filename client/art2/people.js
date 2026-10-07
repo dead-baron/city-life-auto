@@ -226,7 +226,12 @@ const ICLS = {
   rocketLauncher: 'rocket', bat: 'big', sledgehammer: 'big', crowbar: 'one', nightstick: 'one', knife: 'knife', sword: 'blade', katana: 'blade', energyBlade: 'blade',
   chainsaw: 'saw', fishingRod: 'rod', medkit: 'bill', bandage: 'bill', cash: 'bill', keys: 'bill', phone: 'phone', bottle: 'bill', coffee: 'bill', spikeStrip: 'bill',
   flashlight: 'gun1', // held out like a pistol: low in front at rest, up and pointed when aiming
+  umbrella: 'umb',     // held up in the right hand, the shaft straight up (the other arm swings free)
 };
+// The umbrella's hold, in body space (x right, y forward, z up): the right hand in front of the right shoulder at a
+// set height whatever the build, the shaft UMBRELLA_LEN long straight up, so its top - where the renderer puts the
+// canopy (game/peds.js umbrellaTop) - is the same for everyone.
+export const UMBRELLA_HAND = [9.0, 3.4, 25], UMBRELLA_LEN = 29;
 function setItem(P, kind, axis, down, two = false) {
   axis = vnorm(axis);
   let v = vsub(down, vmul(axis, vdot(down, axis)));
@@ -245,6 +250,7 @@ function restHold(D, P, S, kind) {
   else if (c === 'rod') { P.hR = vadd(sR, [1.4, 4.2, -r * 0.74]); setItem(P, kind, [0.15, 0.42, 0.9], [0, 1, 0]); P.line = 8; }
   else if (c === 'blade') { P.hR = vadd(S.pel, mv(S.PF, [1.4, 5.6, 4.2])); setItem(P, kind, [0.05, 0.45, 0.89], [0, 1, 0], true); P.elR = [1, -0.3, -0.5]; P.elL = [-1, -0.3, -0.5]; }
   else if (c === 'saw') { P.hR = vadd(S.pel, mv(S.PF, [3, 5.5, 3.4])); setItem(P, kind, [-0.1, 0.9, -0.3], [0, 0, -1], true); }
+  else if (c === 'umb') { P.hR = [...UMBRELLA_HAND]; setItem(P, kind, [0, 0, 1], [0, 1, 0]); P.elR = [0.8, -0.3, -1]; }
   else if (c === 'phone') { P.hR = vadd(S.chest, mv(S.SP, [1.4, 6.6, -2.4])); P.hL = vadd(S.chest, mv(S.SP, [-0.6, 6.4, -3])); setItem(P, kind, [0, 1, 0], [0, 0, -1]); P.elR = [1, -0.5, -0.6]; P.elL = [-1, -0.5, -0.6]; }
   else { P.hR = vadd(sR, [1.6, 2.4, -r * 0.92]); setItem(P, kind, [0, 1, 0], [0, 0, -1]); }
 }
@@ -1143,7 +1149,7 @@ function crop(G) {
 }
 // a held item: items.js draws it flat along the item's axis; its plane is turned toward the camera when it would be
 // seen edge-on, and every pixel is depth-tested against the body (fists close round the grip, things held behind are hidden)
-const ITEM_SCALE = { gun1: 1.08, gun2: 1.18, rocket: 1.06, bill: 1, phone: 1 };
+const ITEM_SCALE = { gun1: 1.08, gun2: 1.18, rocket: 1.06, bill: 1, phone: 1, umb: 1 };
 function heldItem(IT, P, w, h, AX, AY, opt) {
   const ID = IT.ID, cls = ICLS[IT.kind], hs = ID.hs * (ITEM_SCALE[cls] || 1.04), A3 = IT.axis, Cv = [0, CA, SA];
   let V3 = IT.vdir;
