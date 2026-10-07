@@ -33,7 +33,7 @@ import { buildGive } from './devgive.js';
 import { DEV_SECTIONS } from './devcats.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
-import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt } from '../shared/rides.js';
+import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
 import { swingMeter, carry as golfCarry } from '../shared/golf.js';
 import { courtHoops, idealPower, shotWindow } from '../shared/hoops.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
@@ -2118,7 +2118,7 @@ function prepFrame(dt) {
   // down: like a movie camera, it slowly pulls back from your body (never wider than the server sends)
   const downFor = S.me && S.me.dead ? (S.downFor = (S.downFor || 0) + dt) : (S.downFor = 0);
   const pull = downFor ? 1 + (DOWN_PULL - 1) * Math.min(1, downFor / 9) * (0.5 - 0.5 * Math.cos(Math.min(1, downFor / 9) * Math.PI)) : 1;
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? RIDE_PULL : 1, 1 + Math.min(0.5, speed / 1300));
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, 1 + Math.min(0.5, speed / 1300));
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -3031,26 +3031,33 @@ function drawGolf(g, z, now) {
 }
 
 // ---- rides (shared/rides.js; the server: server/systems/rides.js) -------------------------------------------------
-// What's under way, by id: the kind, the cab or the route and the balloon's colours, and when it started on this
-// page's clock (the server says how far in it is). The renderer draws them (art2 host.js _rides); a rider's camera
-// opens out and follows the cab round or the balloon across the country (rideCam).
+// What's under way, by id: the kind, the cab, the route and the balloon's colours or the slide and the slider's looks,
+// and when it started on this page's clock (the server says how far in it is). The renderer draws them (art2 host.js
+// _rides); a rider's camera opens out and follows the cab round, the balloon across the country or you up the slide
+// tower and down (rideCam).
 function rideOn(r) {
   if (!S.rides) S.rides = new Map();
-  S.rides.set(r.id, { id: r.id, ped: r.ped, k: r.k, d: r.d, cab: r.cab, r: r.r, pal: r.pal, at: performance.now() / 1000 - (r.el || 0) });
+  S.rides.set(r.id, { id: r.id, ped: r.ped, k: r.k, d: r.d, cab: r.cab, r: r.r, pal: r.pal, sl: r.sl, app: r.app, ar: r.ar, at: performance.now() / 1000 - (r.el || 0) });
 }
-const RIDE_PULL = 1.42;   // how far a rider's camera pulls back (server/view.js RIDE_ZOOM_OUT keeps a little more in view)
+// how far a rider's camera pulls back (server/view.js RIDE_ZOOM_OUT keeps a little more in view); a slide is short
+const RIDE_PULL = 1.42, SLIDE_PULL = 1.12;
 const rideTmp = {};
 // where the camera looks on my ride, eased in from where I stood and back at the end ([x, y, k] or null)
 function rideCam(tx, ty) {
   const mine = S.me && S.me.ride, R = mine && S.rides ? S.rides.get(mine.id) : null;
   if (!R) return null;
-  const t = performance.now() / 1000 - R.at, e = Math.max(0, Math.min(1, t / 1.4, (R.d - t) / 1.4)), k = e * e * (3 - 2 * e);
+  const t = performance.now() / 1000 - R.at, ease = R.k === 'slide' ? 0.6 : 1.4, e = Math.max(0, Math.min(1, t / ease, (R.d - t) / ease)), k = e * e * (3 - 2 * e);
   let x, y;
   if (R.k === 'ferris') {
     const w = ferrisSite(S.map);
     if (!w) return null;
     const c = ferrisCab(w, R.cab, S.loopTime || 0, rideTmp);
     x = w.x + (c.x - w.x) * 0.5; y = w.y - c.z * 0.75 - 20;   // (up with the cab: at the top the view is out over the bay)
+  } else if (R.k === 'slide') {
+    const site = slideSite(S.map);
+    if (!site) return null;
+    slideRider(site, R.sl, Math.max(0, Math.min(t, R.d)), rideTmp);
+    x = rideTmp.x; y = rideTmp.y - rideTmp.z * 0.8;           // (on you, up the stair and down the slide)
   } else {
     const route = balloonRoutes(S.map)[R.r];
     if (!route) return null;
@@ -3721,7 +3728,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     for (const p of S.map.pois) {
       if (!inV(p.x, p.y, 120)) continue;
       if (p.kind === 'atm') { L.add(p.x, p.y - 24, 60, LIGHT.cyan, 0.6 * night); L.glow(p.x, p.y - 26, 10, LIGHT.cyan, 0.55 * night); continue; }
-      if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception') continue;
+      if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception' || p.kind === 'race') continue;   // (a race's start: out on the track or the water)
       L.add(p.x, p.y - 8, 120, LIGHT.warm, 0.55 * night);
       reflSrc.push({ x: p.x, y: p.y, c: LIGHT.warm, a: 0.4 * night });
     }

@@ -30,7 +30,7 @@ test('Pelican Key (a bridge from Westport, a charter dock) and Smuggler\'s Rock 
   }
   assert.ok(poiOf(w, 'charter') && poiOf(w, 'smuggler'));
   assert.ok(w.map.offshore.length > 50, 'offshore fishing grounds');
-  for (const r of w.map.races) for (const c of [r.start, ...r.cps]) assert.ok([T.WATER, T.DEEP].includes(w.map.tileAtPx(c.x, c.y)), `${r.name} buoy on water`);
+  for (const r of w.map.races) if (r.kind !== 'wheels') for (const c of [r.start, ...r.cps]) assert.ok([T.WATER, T.DEEP].includes(w.map.tileAtPx(c.x, c.y)), `${r.name} buoy on water`);
   assert.ok(w.map.marina.some((m) => m.kind === 'jetski'), 'jet skis at the Pelican Key jetty');
 });
 
@@ -141,6 +141,29 @@ test('jet ski race: enter at the start buoy, checkpoint to checkpoint, prize at 
   for (const cp of race.cps) { ski.x = cp.x; ski.y = cp.y; ski.vx = 0; ski.vy = 0; w.place(ski); run(w, 0.4); }
   assert.ok(prof.bank > 0, 'prize paid');
   assert.equal(w.raceState[race.id].racers.get(p.pid).place, 1);
+});
+
+test('the Westport Raceway: three laps of the oval for anything with wheels, from the grid behind the chequered line', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w, { bank: 0 });
+  const race = w.map.races.find((r) => r.kind === 'wheels');
+  assert.ok(race && race.laps === 3 && race.cps.length === race.laps * race.lapLen, 'three laps');
+  for (const c of [race.start, ...race.cps]) assert.equal(w.map.tileAtPx(c.x, c.y), T.LOT, 'on the track');
+  const rw = w.map.raceways[0];
+  assert.ok(race.start.x > rw.start.x && Math.abs(race.cps[race.lapLen - 1].x - (rw.start.x + rw.start.w / 2)) < 2, 'the grid behind the line; each lap ends on it');
+  // a boat doesn't qualify; a car does
+  const car = w.spawnVehicle('sports', race.start.x, race.start.y, Math.PI, { npcOwned: false });
+  board(w, p, car);
+  run(w, 0.5);
+  assert.equal(w.raceState[race.id].phase, 'countdown');
+  assert.ok(/stay at the start line/.test(players.buildMe(w, p).job.text), 'the HUD');
+  run(w, COUNTDOWN_S + 0.5);
+  assert.equal(w.raceState[race.id].phase, 'running');
+  for (const cp of race.cps.slice(0, race.lapLen)) { car.x = cp.x; car.y = cp.y; car.vx = 0; car.vy = 0; w.place(car); run(w, 0.4); }
+  assert.ok(/lap 2\/3/.test(players.buildMe(w, p).job.text), `lap two (${players.buildMe(w, p).job.text})`);
+  for (const cp of race.cps.slice(race.lapLen)) { car.x = cp.x; car.y = cp.y; car.vx = 0; car.vy = 0; w.place(car); run(w, 0.4); }
+  assert.equal(w.raceState[race.id].racers.get(p.pid).place, 1, 'first');
+  assert.ok(prof.bank > 0, 'prize paid');
 });
 
 test('boat hire: rent at a rental dock, it waits at the pier, hand it back; overdue = reported stolen', async () => {

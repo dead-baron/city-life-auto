@@ -41,7 +41,7 @@ import { lampHead } from '../../render/tiles.js';
 import { countryLightY } from '../../render/country.js';
 import { wind } from '../../render/flora/wind.js';
 import { F_GROUND, F_NOCAST } from '../gbuf.js';
-import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt } from '../../../shared/rides.js';
+import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 
 export { DECK_Z };
 const TAU = Math.PI * 2;
@@ -896,7 +896,8 @@ export class World2 {
   // The Ferris wheel's sixteen gondolas going round on the world's loop clock (the wheel is baked without them; your
   // own cab glows a little while you ride it), and every balloon flight under way, from its route and how long it
   // has been up (main.js keeps S.rides from the server's broadcasts): it fades in as it fills on the field and out
-  // as it empties after touch-down. The burners light up the night (_lights).
+  // as it empties after touch-down. The burners light up the night (_lights). And the sliders at Splash Bay: up the
+  // tower's stair, then down their slide on their backs, feet first (_slider).
   _rides(F, now) {
     const A = this.A, S = this.S, E = this.E, lit = this.balLit || (this.balLit = []);
     lit.length = 0;
@@ -917,6 +918,7 @@ export class World2 {
     if (S.rides && S.rides.size) {
       const routes = balloonRoutes(this.map), at = this._bal || (this._bal = {}), clock = performance.now() / 1000;
       for (const R of S.rides.values()) {
+        if (R.k === 'slide') { this._slider(R, clock - R.at, now); continue; }
         const route = R.k === 'balloon' ? routes[R.r] : null;
         if (!route) continue;
         const t = clock - R.at;
@@ -932,6 +934,28 @@ export class World2 {
       }
     }
     o.alpha = 1; o.flash = 0; o.air = false;
+  }
+  // Someone on a water slide t seconds after boarding (their entity is hidden while they ride: they're drawn from
+  // the ride, in the looks it brought): walking up the tower's stair and along its top deck, then lying back in
+  // the flume, feet first, on the way down - out of sight inside the tube (you see yourself through it).
+  _slider(R, t, now) {
+    const site = slideSite(this.map), Pd = this.Pd, S = this.S;
+    if (!site || !Pd || !Pd.pedKey || t < 0 || t >= R.d) return;
+    const at = slideRider(site, R.sl, t, this._sld || (this._sld = {})), mine = R.ped === S.myPedId;
+    if (at.x < this.vx0 - 80 || at.x > this.vx1 + 80 || at.y - at.z < this.vy0 - 80 || at.y - at.z > this.vy1 + 80) return;
+    const sl = site.slides[R.sl], tube = at.phase === 1 && sl.kind === 'tube' && at.at > 0.01 && at.at < 0.99;
+    if (tube && !mine) return;
+    const A2 = this._app(R.app || {}, R.ar), d8 = dir8(at.a), climbing = at.phase === 0;
+    const ppose = climbing ? 'walk0' : 'downB', pf = climbing ? Pd.pedFrame('walk0', Math.floor(at.dist / 4.6)) : 0;
+    this.sprPrio = mine ? -3 : -1;
+    const sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, 0), [A2, ppose, d8, pf, 0]);
+    if (climbing && (R._cd !== d8 || R._ca !== A2)) { R._cd = d8; R._ca = A2; this._cycle(A2, ppose, d8, 0, mine ? -2 : 0); }
+    this.sprPrio = -1;
+    if (!sk) return;
+    const o = this.opts;
+    o.alpha = 1; o.flash = 0; o.xray = mine; o.flipX = false; o.shadow = true; o.tint = null; o.air = false;
+    this.E.drawSprite(sk, at.x, at.y, at.z + (climbing ? 1 : tube ? 3 : 2), o); this.n.drawn++;
+    o.xray = false;
   }
 
   _small(kind, key, args, e, x, y, z0) {
@@ -1492,7 +1516,7 @@ export class World2 {
       for (let x = it.x0 + 48; x < it.x1 - 16; x += 110) if (inV(x, it.y1)) this._light(x, it.y1 + 10, 18, 90, C.window, k);
     }
     this._eachIn(this.poiG, 512, (p) => {
-      if (!inV(p.x, p.y) || p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception') return;
+      if (!inV(p.x, p.y) || p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception' || p.kind === 'race') return;
       this._light(p.x, p.y, 16, p.kind === 'atm' ? 60 : 120, p.kind === 'atm' ? C.cyan : C.warm, 1.2 * nightK);
     });
   }

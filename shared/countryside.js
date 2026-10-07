@@ -387,6 +387,7 @@ const BUILD = {
     fill(m, s.x, s.y, s.w, s.h, T.GRASS);
     const ox = s.x + 2, oy = s.y + 6, ow = s.w - 4, oh = s.h - 10;
     const track = { x: ox * TILE, y: oy * TILE, w: ow * TILE, h: oh * TILE, band: 5 * TILE };
+    track.start = { x: Math.round(track.x + track.w / 2 + 40), y: track.y + track.h - track.band, w: 24, h: track.band };   // (the chequered line across the bottom straight: the races start and finish there - shared/map.js m.races)
     m.raceways.push(track);
     // the band between the outer and inner stadium shapes is drivable asphalt
     const inStadium = (tx, ty, x, y, w, h) => {

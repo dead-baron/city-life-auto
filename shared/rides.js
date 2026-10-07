@@ -1,13 +1,15 @@
-// Rides: the Ferris wheel on Westport Pier and hot-air balloon flights from the Dry Creek Balloon Field.
-// server/systems/rides.js sells the tickets and carries the riders; the client draws the wheel's cabs going round
-// and the balloons in the air (client/art2/game/host.js) and points the rider's camera (client/main.js).
-// Everything here is a pure function of the map and the clock, so the server, the rider's camera and everyone
-// watching agree on where a cab or a balloon is.
+// Rides: the Ferris wheel on Westport Pier, hot-air balloon flights from the Dry Creek Balloon Field and the water
+// slides at Splash Bay. server/systems/rides.js sells the tickets and carries the riders; the client draws the
+// wheel's cabs going round, the balloons in the air and the sliders (client/art2/game/host.js) and points the
+// rider's camera (client/main.js). Everything here is a pure function of the map and the clock, so the server, the
+// rider's camera and everyone watching agree on where a cab, a balloon or a slider is.
 //   - The wheel turns all the time, once round every FERRIS_S on the world's loop clock. You step into the cab at
 //     the bottom (ferrisBoardCab) and ride it once round.
 //   - A flight fills and lifts off at the field's launch spot, drifts out over the country on one of the routes
 //     (balloonRoutes: the orchard, the vineyard and the old mission; the market, Willow Lake and the falls; the
 //     pastures and the wind farm) and comes down where it took off. balloonAt says where it is t seconds in.
+//   - A slide: up the tower's stair, along its top deck to the slide's bay, and down it into the splash pool
+//     (slideRider says where you are t seconds after boarding; slideDur how long it all takes).
 import { FERRIS_S } from './rules.js';
 
 const TAU = Math.PI * 2;
@@ -130,5 +132,76 @@ export function balloonAt(route, t, dur, out = {}) {
   const up = Math.min(smoothstep(t / 18), smoothstep((dur - t) / 20));
   out.z = BALLOON_ALT * up + Math.sin(t * 0.7) * 5 * up;
   out.down = t <= 0 || t >= dur;
+  return out;
+}
+
+// ---- the Splash Bay water slides ----------------------------------------------------------------------------------
+// The slides as the art builds them (client/art2/props-park.js waterSlide: from the tower's top deck at (x, y), z up,
+// a channel swinging out in an S and down to (x + dx, y + len) in its splash pool), and the stair up the tower's east
+// side (slideTower: three flights, the first from the north end, turning at each landing). Down an open flume you
+// lie on your back, feet first; in the tube you're out of sight.
+export const SLIDE = { wig: 34, ride: 4.2, walk: 72 };   // the S's swing (px), the time down (s), the climb's pace (px/s)
+const STAIR_X = 48, TOP_Z = 84;                           // the stair's middle, east of the tower's; the top deck
+
+// The water park { tower, board, slides: [{ x, y, dx, len, z, kind, name }] } (shared/naturesites.js), or null.
+export function slideSite(map) {
+  if (map._slideSite === undefined) {
+    const s = (map.natureSites || []).find((q) => q.kind === 'waterpark' && q.slides && q.board);
+    Object.defineProperty(map, '_slideSite', { value: s || null, enumerable: false, configurable: true });
+  }
+  return map._slideSite;
+}
+
+// Where on slide sl at t (0 its top, 1 the splash pool): the ground point (x, y), the height of its floor (z), and
+// the way down (a: the heading of the path there).
+export function slideAt(sl, t, out = {}) {
+  t = clamp01(t);
+  const w = SLIDE.wig, s = t * t * (3 - 2 * t), sn = Math.sin(t * TAU), k = 1 - t * 0.3;
+  out.x = sl.x + sl.dx * s + w * sn * k;
+  out.y = sl.y + t * sl.len;
+  out.z = t > 0.9 ? 3 : 3 + (sl.z - 3) * (1 - t / 0.9);
+  out.a = Math.atan2(sl.len, sl.dx * 6 * t * (1 - t) + w * (TAU * Math.cos(t * TAU) * k - 0.3 * sn));
+  return out;
+}
+
+// The walk up to slide k: [x, y, z] corners from the boarding point round to the foot of the stair, up its three
+// flights, along the top deck's front to the slide's bay, and the distance walked at each (made once per slide).
+const climbs = new WeakMap();
+function climb(site, k) {
+  let c = climbs.get(site);
+  if (!c) climbs.set(site, (c = []));
+  if (c[k]) return c[k];
+  const T = site.tower, b = site.board, sl = site.slides[k], X = T.x + STAIR_X, yN = T.y - 54, yS = T.y - 9;
+  const pts = [[b.x, b.y, 0], [T.x + 70, yN - 2, 0], [X, yN - 2, 0], [X, yS, 28], [X, yN + 2, 56], [X, yS, TOP_Z], [sl.x, T.y - 4, TOP_Z], [sl.x, sl.y, TOP_Z]];
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) { const [x0, y0, z0] = pts[i - 1], [x1, y1, z1] = pts[i]; cum.push(cum[i - 1] + Math.hypot(x1 - x0, y1 - y0, z1 - z0)); }
+  return (c[k] = { pts, cum, len: cum[cum.length - 1] });
+}
+// How long the climb to slide k takes, and the whole ride (boarding to the splash).
+export const slideClimbS = (site, k) => climb(site, k).len / SLIDE.walk;
+export const slideDur = (site, k) => slideClimbS(site, k) + SLIDE.ride;
+// how far down (0..1) tau seconds after pushing off: slow away from the top, quicker all the way to the pool
+const downAt = (tau) => Math.pow(clamp01(tau / SLIDE.ride), 1.3);
+
+// Where a rider on slide k is t seconds after boarding: the ground point (x, y), the height they're at (z: the step
+// or the deck under their feet, the floor of the slide), the heading they're drawn at (a: where they're walking; on
+// the slide, head back up it - feet first), and climbing (phase 0; dist: how far walked, for the stride) or sliding
+// (phase 1; at: how far down, 0..1).
+export function slideRider(site, k, t, out = {}) {
+  const c = climb(site, k), up = c.len / SLIDE.walk;
+  if (t < up) {
+    const d = Math.max(0, t) * SLIDE.walk, cum = c.cum;
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < d) i++;
+    const a = c.pts[i - 1], b = c.pts[i], f = clamp01((d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1));
+    out.x = a[0] + (b[0] - a[0]) * f; out.y = a[1] + (b[1] - a[1]) * f; out.z = a[2] + (b[2] - a[2]) * f;
+    out.a = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    out.phase = 0; out.dist = d; out.at = 0;
+    return out;
+  }
+  const u = downAt(t - up);
+  slideAt(site.slides[k], u, out);
+  out.a += Math.PI;
+  out.phase = 1; out.dist = 0; out.at = u;
   return out;
 }

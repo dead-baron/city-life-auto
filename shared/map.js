@@ -3128,6 +3128,21 @@ function buildOffshore(m, rand) {
     { id: 0, name: 'Pelican Key Jetski Sprint', kind: 'jetski', start: jetCourse[0], cps: jetCourse.slice(1).concat([jetCourse[0]]), prize: 400 },
     { id: 1, name: 'Bay Boat Classic', kind: 'boat', start: boatCourse[0], cps: boatCourse.slice(1).concat([boatCourse[0]]), prize: 700 },
   ];
+  // the Westport Raceway oval: three laps for anything with wheels, from the grid behind the chequered line on the
+  // bottom straight, west down the straight and round (eight checkpoints a lap on the middle of the band)
+  const rw = (m.raceways || []).find((r) => r.start);
+  if (rw) {
+    const b = rw.band, X = rw.x + b / 2, Y = rw.y + b / 2, W = rw.w - b, Hh = rw.h - b, R = Hh / 2, cx0 = X + R, cx1 = X + W - R, cy = Y + R, yb = Y + Hh;
+    const line = rw.start.x + rw.start.w / 2, LAPS = 3;
+    const arc = (cx, a) => ({ x: Math.round(cx + Math.cos(a) * R), y: Math.round(cy + Math.sin(a) * R) });
+    const lap = [{ x: Math.round((line + cx0) / 2), y: Math.round(yb) }, arc(cx0, Math.PI * 0.75), arc(cx0, Math.PI * 1.25), { x: Math.round(cx0 + (cx1 - cx0) * 0.33), y: Math.round(Y) },
+      { x: Math.round(cx0 + (cx1 - cx0) * 0.67), y: Math.round(Y) }, arc(cx1, -Math.PI * 0.25), arc(cx1, Math.PI * 0.25), { x: Math.round(line), y: Math.round(yb) }];
+    const cps = [];
+    for (let k = 0; k < LAPS; k++) cps.push(...lap.map((q) => ({ ...q })));
+    m.races.push({ id: m.races.length, name: 'Westport Raceway', kind: 'wheels', start: { x: Math.round(line + 130), y: Math.round(yb) }, cps, prize: 300, laps: LAPS, lapLen: lap.length, where: 'the start line' });
+  }
+  // (each race's start is a place on the phone and the maps; the race itself starts when you pull up there)
+  for (const r of m.races) m.pois.push({ id: m.pois.length, kind: 'race', label: r.name, x: Math.round(r.start.x), y: Math.round(r.start.y), r: 60 });
 }
 
 // Bait & tackle shops: storefronts close to the water, in different districts, spread apart.

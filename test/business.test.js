@@ -1,15 +1,15 @@
 // The new places as businesses and days out: the counters at the countryside places (the winery's tasting room,
 // the orchard's fruit stand, the market's stalls, the snack carts, the golf club's bar, the lavender farm stand,
 // the boneyard's salvage office, the pier's bait shop), and the rides (the Ferris wheel on Westport Pier, balloon
-// flights from the Dry Creek Balloon Field).
+// flights from the Dry Creek Balloon Field, the water slides at Splash Bay).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
 import { SHOPS, ITEMS } from '../shared/items.js';
-import { TILE } from '../shared/constants.js';
-import { PED_BLOCK } from '../shared/map.js';
+import { TILE, T } from '../shared/constants.js';
+import { PED_BLOCK, isSwimming } from '../shared/map.js';
 import { FERRIS_PRICE, FERRIS_S, BALLOON_PRICE, BALLOON_S, BALLOONS_UP, WINE_S, SALVAGE_S, SALVAGE_REGROW_S, MAZE_PRIZE, PROSPECT_S, WRECK_S, LAP_PRIZE } from '../shared/rules.js';
-import { FERRIS, ferrisSite, balloonSite, balloonRoutes, balloonAt, ferrisCab, ferrisBoardCab, BALLOON_ALT } from '../shared/rides.js';
+import { FERRIS, ferrisSite, balloonSite, balloonRoutes, balloonAt, ferrisCab, ferrisBoardCab, BALLOON_ALT, SLIDE, slideSite, slideAt, slideRider, slideDur, slideClimbS } from '../shared/rides.js';
 import * as economy from '../server/systems/economy.js';
 import * as combat from '../server/systems/combat.js';
 import * as rides from '../server/systems/rides.js';
@@ -44,7 +44,7 @@ test('every countryside place with a business has a counter: its own prompt, and
   // the market has a counter in front of each row of stalls, but the phone and the maps list it once
   assert.ok(w.map.pois.filter((q) => q.counter && q.kind === 'market').length >= 2, 'a counter at each row');
   // the rides' boarding points are places too (the phone lists them), with no menu of their own
-  for (const label of ['Westport Pier Ferris Wheel', 'Dry Creek Balloon Flights']) {
+  for (const label of ['Westport Pier Ferris Wheel', 'Dry Creek Balloon Flights', 'Splash Bay Water Slides']) {
     const poi = w.map.pois.find((q) => q.kind === 'ride' && q.label === label);
     assert.ok(poi, label);
     assert.equal(economy.poiLabel(w, p, poi), null, `${label}: the ride itself answers the action button`);
@@ -181,6 +181,67 @@ test('balloon flights: $40, the balloon drifts out over the country on its route
   assert.equal(flyers.filter((q) => q.ped.ride).length, BALLOONS_UP, `${BALLOONS_UP} up at once`);
   assert.equal(flyers[3].profile.cash, 100, 'the last one is not charged');
   assert.notEqual(flyers[0].ped.ride.r, flyers[1].ped.ride.r, 'flights take turns at the routes');
+});
+
+test('the water slides at Splash Bay: free - up the tower stair, down the next slide in turn, and out with a splash in its pool', () => {
+  const w = makeWorld();
+  const site = slideSite(w.map);
+  assert.ok(site && site.slides.length === 3, 'three slides');
+  for (const [k, sl] of site.slides.entries()) {
+    // each from the tower's top deck down into its splash pool; the ride: from the boarding point up the stair to it
+    const top = slideAt(sl, 0), end = slideAt(sl, 1);
+    assert.ok(top.z === sl.z && end.z < 6 && end.y - top.y > 8 * TILE, `${sl.name}: from the top down to the pool`);
+    for (let t = 0.05; t <= 1; t += 0.05) assert.ok(slideAt(sl, t).z <= slideAt(sl, t - 0.05).z, `${sl.name}: always down (t ${t.toFixed(2)})`);
+    const up = slideClimbS(site, k), a = slideRider(site, k, 0), b = slideRider(site, k, up - 0.01), c = slideRider(site, k, up + 0.01), d = slideRider(site, k, slideDur(site, k));
+    assert.ok(Math.hypot(a.x - site.board.x, a.y - site.board.y) < 1 && a.z === 0 && a.phase === 0, `${sl.name}: the climb starts where you board`);
+    assert.ok(b.z > sl.z - 1 && Math.hypot(b.x - sl.x, b.y - sl.y) < 4 && c.phase === 1, `${sl.name}: at the top, into the slide`);
+    assert.ok(Math.hypot(d.x - end.x, d.y - end.y) < 1, `${sl.name}: all the way down`);
+    assert.ok(up > 2 && up < 6 && slideDur(site, k) < 12, `${sl.name}: a short ride (${slideDur(site, k).toFixed(1)} s)`);
+  }
+  const { p, conn } = joinPlayer(w, { cash: 0, bank: 0 });
+  const evs = watchRides(w), splashes = [], e0 = w.emit.bind(w);
+  w.emit = (x, y, ev) => { if (ev.e === 'splash') splashes.push(ev); e0(x, y, ev); };
+  teleport(w, p.ped, site.board.x - 10, site.board.y + 8);
+  assert.equal(economy.poiLabel(w, p, w.map.pois.find((q) => q.label === 'Splash Bay Water Slides')), null, 'the ride answers the button');
+  let act = players.findInteraction(w, p);
+  assert.ok(act && /Climb the tower and ride the blue tube/.test(act.label), `the prompt (${act && act.label})`);
+  act.run();
+  assert.ok(p.ped.hidden && p.ped.ride && p.ped.ride.k === 'slide' && p.ped.ride.sl === 0, 'up the stair - no ticket needed');
+  const ev = evs.find((e) => e.e === 'ride');
+  assert.ok(ev && ev.k === 'slide' && ev.sl === 0 && ev.app && ev.ped === p.ped.id, 'everyone is told (the slide, who, how they look)');
+  assert.equal(players.buildMe(w, p).ride.sl, 0, 'and the rider\'s HUD');
+  act = players.findInteraction(w, p);
+  assert.ok(act.passive && /Up the stair to the blue tube/.test(act.label), `climbing (${act.label})`);
+  run(w, slideClimbS(site, 0) + SLIDE.ride / 2);
+  act = players.findInteraction(w, p);
+  assert.ok(act.passive && /Down the blue tube/.test(act.label), `sliding (${act.label})`);
+  assert.ok(p.ped.y > site.slides[0].y + 2 * TILE, 'the rider goes along (what they\'re sent follows them)');
+  assert.equal(combat.damage(w, p.ped, 50, null, 'gun'), false, 'nobody can hurt you on the slide');
+  run(w, SLIDE.ride / 2 + 0.3);
+  assert.ok(!p.ped.ride && !p.ped.hidden, 'off the end');
+  assert.ok(isSwimming(w.map, p.ped), 'in the splash pool');
+  const sl = site.slides[0];
+  assert.ok(Math.hypot(p.ped.x - (sl.x + sl.dx), p.ped.y - (sl.y + sl.len)) < 40, 'at the bottom of the slide');
+  assert.ok(splashes.length === 1 && evs.some((e) => e.e === 'rideend' && e.id === ev.id), 'a splash, and everyone is told it\'s over');
+  // back round to the tower: the red flume next, then the yellow one, then the tube again
+  for (const name of ['red flume', 'yellow flume', 'blue tube']) {
+    teleport(w, p.ped, site.board.x, site.board.y);
+    act = players.findInteraction(w, p);
+    assert.ok(act && act.label.includes(`ride the ${name}`), `next: the ${name} (${act && act.label})`);
+    act.run();
+    run(w, p.ped.ride.dur + 0.3);
+    assert.ok(!p.ped.ride && isSwimming(w.map, p.ped), `down the ${name}`);
+  }
+  // not while wanted; logging off on the slide brings you back in the pool
+  teleport(w, p.ped, site.board.x, site.board.y);
+  p.wanted = 2;
+  assert.ok(rides.start(w, p, 'slide'), 'not with the police after you');
+  p.wanted = 0;
+  rides.start(w, p, 'slide');
+  players.savePos(p, p.ped);
+  assert.equal(w.map.tileAtPx(p.profile.pos.x, p.profile.pos.y), T.DEEP, 'saved in the splash pool');
+  assert.equal(p.profile.cash, 0, 'never a charge');
+  assert.ok(conn.sent.some((o) => JSON.stringify(o).includes('Up the tower stair to the blue tube')), 'a note on the way up');
 });
 
 test('a ride ends cleanly if something else takes you off it (a dev teleport), and the cab you board is always the bottom one', () => {

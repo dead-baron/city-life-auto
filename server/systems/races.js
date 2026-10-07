@@ -1,13 +1,16 @@
-// Water races around Pelican Key: a jetski sprint and a boat classic. Pull up to the start buoy
-// (on a jetski / in a boat) and you're entered; a countdown gives others time to join, then it's
-// checkpoint to checkpoint. Anyone who turns up mid-race joins the next round. Leave your craft,
-// die, or wander off and you forfeit - the race carries on for everyone else.
+// Races: on the water round Pelican Key (a jetski sprint and a boat classic) and three laps of the Westport Raceway
+// oval for anything with wheels. Pull up to the start (the buoy; the grid behind the chequered line) in the right
+// kind of vehicle and you're entered; a countdown gives others time to join, then it's checkpoint to checkpoint.
+// Anyone who turns up mid-race joins the next round. Leave your vehicle, die, or wander off and you forfeit - the
+// race carries on for everyone else.
 import { store } from '../store.js';
 
 export const COUNTDOWN_S = 15;
 const RESULTS_S = 8, MAX_S = 330, CP_R = 130, START_R = 190, LOST_PX = 3200;
 
-const qualifies = (race, v) => !!v && !v.wreckAt && (race.kind === 'jetski' ? v.model === 'jetski' : v.def.kind === 'boat' && v.model !== 'jetski');
+const qualifies = (race, v) => !!v && !v.wreckAt && (race.kind === 'jetski' ? v.model === 'jetski' : race.kind === 'wheels' ? v.def.kind !== 'boat' : v.def.kind === 'boat' && v.model !== 'jetski');
+const where = (race) => race.where || 'the start buoy';
+const progress = (race, r) => (race.laps ? `lap ${Math.min(race.laps, Math.floor(r.cp / race.lapLen) + 1)}/${race.laps}` : `checkpoint ${r.cp + 1}/${race.cps.length}`);
 
 export function init(world) {
   world.raceState = (world.map.races || []).map(() => ({ phase: 'idle', racers: new Map(), t: 0, finished: 0, results: [] }));
@@ -36,7 +39,7 @@ export function update(world) {
       if (atStart.length) {
         st.phase = 'countdown'; st.t = now + COUNTDOWN_S; st.racers = new Map(); st.finished = 0; st.results = [];
         for (const p of atStart) st.racers.set(p.pid, { cp: 0, done: false });
-        for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - race.start.x, q.ped.y - race.start.y) < 1800) world.notify(q, `${race.name}: starting in ${COUNTDOWN_S}s - pull up to the start buoy to join!`, 'info');
+        for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - race.start.x, q.ped.y - race.start.y) < 1800) world.notify(q, `${race.name}: starting in ${COUNTDOWN_S}s - pull up to ${where(race)} to join!`, 'info');
       }
     } else if (st.phase === 'countdown') {
       for (const p of atStart) if (!st.racers.has(p.pid)) { st.racers.set(p.pid, { cp: 0, done: false }); world.notify(p, `You're in: ${race.name}.`, 'good'); }
@@ -48,7 +51,7 @@ export function update(world) {
       if (!st.racers.size) { st.phase = 'idle'; return; }
       if (now >= st.t) {
         st.phase = 'running'; st.t = now;
-        tell(world, race, st, `GO! ${race.name} - ${race.cps.length} checkpoints.`, 'good');
+        tell(world, race, st, `GO! ${race.name} - ${race.laps ? `${race.laps} laps` : `${race.cps.length} checkpoints`}.`, 'good');
         world.emit(race.start.x, race.start.y, { e: 'raceGo', x: race.start.x, y: race.start.y });
       }
     } else if (st.phase === 'running') {
@@ -62,6 +65,7 @@ export function update(world) {
         if (Math.hypot(v.x - cp.x, v.y - cp.y) < CP_R) {
           r.cp++; p.meDirty = true;
           world.emit(cp.x, cp.y, { e: 'checkpoint', x: cp.x, y: cp.y });
+          if (race.laps && r.cp % race.lapLen === 0 && r.cp < race.cps.length) world.notify(p, `Lap ${r.cp / race.lapLen} done in ${(now - st.t).toFixed(1)}s - ${race.laps - r.cp / race.lapLen} to go.`, 'info');
           if (r.cp >= race.cps.length) {
             r.done = true; r.place = ++st.finished; r.time = now - st.t;
             st.results.push({ pid, name: p.name, place: r.place, time: r.time });
@@ -96,8 +100,8 @@ export function targetFor(world, p) {
     const st = world.raceState[i], r = st.racers.get(p.pid);
     if (!r) continue;
     const race = world.map.races[i];
-    if (st.phase === 'countdown') return { text: `${race.name}: starts in ${Math.max(0, Math.ceil(st.t - world.time))}s - stay at the start buoy`, x: Math.round(race.start.x), y: Math.round(race.start.y), stage: 'race' };
-    if (st.phase === 'running' && !r.done) { const cp = race.cps[r.cp]; return { text: `${race.name}: checkpoint ${r.cp + 1}/${race.cps.length}`, x: Math.round(cp.x), y: Math.round(cp.y), stage: 'race' }; }
+    if (st.phase === 'countdown') return { text: `${race.name}: starts in ${Math.max(0, Math.ceil(st.t - world.time))}s - stay at ${where(race)}`, x: Math.round(race.start.x), y: Math.round(race.start.y), stage: 'race' };
+    if (st.phase === 'running' && !r.done) { const cp = race.cps[r.cp]; return { text: `${race.name}: ${progress(race, r)}`, x: Math.round(cp.x), y: Math.round(cp.y), stage: 'race' }; }
   }
   return null;
 }

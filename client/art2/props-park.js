@@ -230,9 +230,10 @@ export function waterSlide(dx = 0, len = 240, z0 = 84, kind = 'flume', color = '
   return m;
 }
 // the slide tower: a timber frame of four corner posts with three landings and rails, a zig-zag stair up its east
-// side, the slides' start bays at the top, under a striped canopy. Built along +x, the south face toward +y.
+// side, the slides' start bays at the top, under a striped canopy (high enough over the top deck that the people
+// climbing up to the slides stand under it). Built along +x, the south face toward +y.
 export function slideTower(w = 96, d = 56, h = 84) {
-  const m = new Vox(w + 30, d + 8, h + 36), x0 = 4, y0 = 4, x1 = x0 + w, y1 = y0 + d;
+  const CZ = 32, m = new Vox(w + 30, d + 8, h + CZ + 14), x0 = 4, y0 = 4, x1 = x0 + w, y1 = y0 + d;
   const wood = m.mat({ ramp: R('#8a6440', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 12 === 0 ? -0.8 : 0) }), deck = m.mat({ ramp: R('#a8845a', 6, 3), k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -0.9 : 0) });
   const rail = m.mat({ ramp: R('#e8e4dc', 6, 3), k: 3 }), red = m.mat({ ramp: R('#d8342e'), k: 3 }), white = m.mat({ ramp: R('#f2eee6'), k: 3 }), blue = m.mat({ ramp: R('#2a6ab8'), k: 3 });
   for (const [x, y] of [[x0, y0], [x1 - 6, y0], [x0, y1 - 6], [x1 - 6, y1 - 6], [(x0 + x1) / 2 - 3, y0], [(x0 + x1) / 2 - 3, y1 - 6]]) m.box(x, y, 0, x + 6, y + 6, h + 4, wood);
@@ -246,8 +247,8 @@ export function slideTower(w = 96, d = 56, h = 84) {
   // the stair up the east side: three flights, landing to landing
   for (let f = 0; f < 3; f++) { const zb = f * h / 3, back = f % 2; for (let s = 0; s < 14; s++) { const yy = back ? y1 - 6 - s * (d - 10) / 14 : y0 + 4 + s * (d - 10) / 14, zz = zb + s * (h / 3) / 14; m.box(x1, yy, zz, x1 + 22, yy + (d - 10) / 14 + 1, zz + 2, deck); } m.box(x1 + 20, y0, zb, x1 + 22, y1, zb + h / 3 + 10, rail); }
   // the canopy: a striped pyramid over the top deck
-  m.fill((x, y, z) => { const dx2 = Math.abs(x - (x0 + x1) / 2) / ((x1 - x0) / 2 + 8), dy2 = Math.abs(y - (y0 + y1) / 2) / ((y1 - y0) / 2 + 8), t = (z - h - 22) / 14, e = Math.max(dx2, dy2); return t >= 0 && e <= 1 - t && e > 1 - t - 0.12 ? (Math.floor(Math.atan2(y - (y0 + y1) / 2, x - (x0 + x1) / 2) / (Math.PI / 8) + 16) % 2 ? red : white) : -1; }, x0 - 10, y0 - 10, h + 22, x1 + 10, y1 + 10, h + 36);
-  for (const [x, y] of [[x0 + 2, y0 + 2], [x1 - 4, y0 + 2], [x0 + 2, y1 - 4], [x1 - 4, y1 - 4]]) m.box(x, y, h, x + 2, y + 2, h + 24, blue);
+  m.fill((x, y, z) => { const dx2 = Math.abs(x - (x0 + x1) / 2) / ((x1 - x0) / 2 + 8), dy2 = Math.abs(y - (y0 + y1) / 2) / ((y1 - y0) / 2 + 8), t = (z - h - CZ) / 14, e = Math.max(dx2, dy2); return t >= 0 && e <= 1 - t && e > 1 - t - 0.12 ? (Math.floor(Math.atan2(y - (y0 + y1) / 2, x - (x0 + x1) / 2) / (Math.PI / 8) + 16) % 2 ? red : white) : -1; }, x0 - 10, y0 - 10, h + CZ, x1 + 10, y1 + 10, h + CZ + 14);
+  for (const [x, y] of [[x0 + 2, y0 + 2], [x1 - 4, y0 + 2], [x0 + 2, y1 - 4], [x1 - 4, y1 - 4]]) m.box(x, y, h, x + 2, y + 2, h + CZ + 2, blue);
   return m;
 }
 
