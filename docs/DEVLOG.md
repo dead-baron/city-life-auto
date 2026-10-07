@@ -2819,3 +2819,12 @@ A ring of standing stones on the grassy headland over the north sea (`shared/nat
 - **Round it:** heather and paintbrush, and a worn path up from the observatory road.
 - **Off the point:** a sea arch stands in the surf (`props-wild.js` `seaArch`; prop `seaarch`). It has rough legs of dark layered rock, barnacles and wet rock at the waterline, and a cap of grass and thrift with a gull on top. Only its legs are solid, so you can take a boat through it.
 - On the map, and in the debug menu (🗿 The Sentinel Stones). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Old Town Market (Old Town's cobbled square; original)
+
+The big empty cobbled square in Old Town is now a market (`shared/naturesites.js` `marketSquare`):
+- **The stalls:** two rows of them across the square, facing south, with the fountain between the rows. Each has a striped canvas awning on four poles, a counter heaped with fruit, greens, flowers or bread, a chalk price board and crates in front (`props-park.js` `marketStall`; prop `mstall`).
+- **String lights** hang over each row on posts at the square's edges.
+- **Round the fountain:** cafe tables under umbrellas at the south end, and benches.
+- **Kept as it was:** the square's paving, lamps, fountain and trees. The loose benches and bins make way where a stall stands, and no stall stands within two tiles of anything you use.
+- On the map, and in the debug menu (🧺 Old Town Market). Homes, POIs and buildings unchanged.

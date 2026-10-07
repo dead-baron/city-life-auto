@@ -465,3 +465,18 @@ export function ferrisWheel(on = 0.6) {
   }
   return m;
 }
+// a market stall (the counter along x, facing +y): a trestle counter of crates heaped with goods (fruit, greens,
+// flowers or bread by kind), a striped canvas awning on four poles, a chalk price board, a crate or two in front
+export function marketStall(kind = 0, col = '#c8343a') {
+  const m = new Vox(60, 34, 46), wood = m.mat({ ramp: R('#8a6646'), k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -0.8 : 0) }), pole = m.mat({ ramp: R('#5a4232'), k: 3, flag: F_NOCAST });
+  const can1 = m.mat({ ramp: R(col), k: 3 }), can2 = m.mat({ ramp: R('#f2eee4'), k: 3 }), board = m.mat({ ramp: R('#2a302c'), k: 2 }), chalk = m.mat({ ramp: R('#e8e4d8'), k: 3 });
+  const GOODS = [['#d8342e', '#f08a2a', '#f0c830', '#9acb3a'], ['#4a8a3a', '#6aa84a', '#2f6a2e', '#a8c84a'], ['#e86a9a', '#b85ad8', '#f2f0ea', '#f0c830'], ['#c8925a', '#a8703e', '#e0b878', '#8a5a34']][kind % 4].map((c) => m.mat({ ramp: R(c), k: 3 }));
+  m.box(4, 12, 0, 56, 26, 14, wood);                                   // the counter
+  m.fill((x, y, z) => { if (x < 5 || x > 55 || y < 13 || y > 25 || z < 14 || z > 14 + 4 * (1 - Math.abs(y - 19) / 7)) return -1; return GOODS[Math.floor(hash(Math.round(x / 2), Math.round(y / 2) + Math.round(z), kind + 61) * 4)]; });
+  for (const x of [4, 55]) for (const y of [8, 28]) m.box(x, y, 0, x + 1.5, y + 1.5, 38, pole);
+  m.fill((x, y, z) => { const top = 42 - Math.abs(y - 18) * 0.35; return z >= top - 1.5 && z < top ? (Math.floor(x / 6) % 2 ? can1 : can2) : -1; }, 1, 4, 34, 59, 32, 44);
+  for (let x = 1; x < 59; x += 6) m.ell(x + 3, 32, 35.4, 3, 1.2, 1.8, Math.floor(x / 6) % 2 ? can1 : can2);   // (the scalloped front edge)
+  m.box(48, 28, 0, 49, 29, 18, pole); m.box(44, 28.5, 8, 54, 29.5, 18, board); for (let z = 10; z < 17; z += 2) m.box(46, 29.4, z, 46 + 3 + hash(z, 2, kind) * 4, 29.8, z + 1, chalk);
+  m.box(10, 27, 0, 22, 33, 8, wood); m.fill((x, y, z) => (x >= 11 && x < 21 && y >= 28 && y < 32 && z >= 8 && z < 10 ? GOODS[(Math.round(x) + Math.round(y)) % 4] : -1));
+  return m;
+}

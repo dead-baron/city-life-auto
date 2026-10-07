@@ -118,6 +118,7 @@ export function buildNatureSites(m, H) {
   missionRuins(m, H);
   fernGorge(m, H);
   sentinelStones(m, H);
+  marketSquare(m, H);
   golfClub(m, H);
   driveTracks(m, H);
   roadside(m, H);
@@ -256,6 +257,46 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- The Old Town market (Old Town's big cobbled square; original) -----------------------------------------------
+// The empty cobbled square round the fountain becomes a market: two rows of stalls under striped awnings facing
+// each other across the square (fruit, greens, flowers, bread), crates of produce, string lights zig-zagging
+// over the aisle between the rows on posts, cafe tables under umbrellas at the south end, benches by the fountain.
+// (Props only: the square, its lamps, its fountain and its trees stay as they are.)
+function marketSquare(m, H) {
+  const at = (tx, ty) => ty * MAP_W + tx;
+  // the square: the biggest run of plaza in Old Town round (1033, 397)
+  let x0 = 1033, x1 = 1033, y0 = 397, y1 = 397;
+  const pl = (tx, ty) => m.tiles[at(tx, ty)] === T.PLAZA && m.dist[at(tx, ty)] === 18;
+  if (!pl(1033, 397)) return;
+  while (pl(x0 - 1, 397)) x0--; while (pl(x1 + 1, 397)) x1++; while (pl(1033, y0 - 1)) y0--; while (pl(1033, y1 + 1)) y1++;
+  if (x1 - x0 < 14 || y1 - y0 < 16) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  const busy = (tx, ty, r) => m.props.some((q) => q && q.t !== 'painted' && Math.hypot(q.x / TILE - tx, q.y / TILE - ty) < r);
+  const cxF = (x0 + x1 + 1) / 2, rows = [y0 + 3.4, y1 - 5.4];
+  let n = 0, k = 0;
+  // two rows of stalls across the square, facing south (the fountain between the rows), crates in front
+  const MOVABLE = new Set(['bench_a', 'bench_b', 'bench_m', 'trashcan', 'planter_g', 'planter_sq', 'planter_fl', 'potted', 'news_a', 'news_b', 'news_c', 'bags', 'mosaic']);
+  for (const ry of rows) for (const dx of [-5.9, -1.95, 1.95, 5.9]) {
+    const tx = cxF + dx;
+    m.props.forEach((q, i) => { if (q && MOVABLE.has(q.t) && Math.abs(q.x / TILE - tx) < 1.3 && Math.abs(q.y / TILE - ry) < 1.2) dropProp(m, i); });   // (the square's loose benches and bins make way)
+    if (busy(tx, ry, 1.15) || (m.pois || []).some((p) => Math.hypot(p.x / TILE - tx, p.y / TILE - ry) < 2.5)) continue;   // (round the square's trees and lamps, clear of anything you use)
+    add('mstall', tx, ry, 14, { v: k, c: k + (ry > rows[0] ? 1 : 0), a: 0 }); n++; k++;
+    if (k % 2) add('fruitcrate', tx + 1.2, ry + 1.4, 0);
+  }
+  // the string lights over each row, on posts at the square's edges
+  for (const ry of rows) {
+    const ya = ry - 1.2;
+    add('post', x0 + 0.8, ya, 5, { h: 52 }); add('post', x1 + 0.2, ya, 5, { h: 52 });
+    add('festoon', x0 + 0.8, ya, 0, { tx: Math.round((x1 - x0 - 0.6) / 2 * TILE), ty: 0, h: 50 });
+    add('festoon', (x0 + x1 + 1) / 2, ya, 0, { tx: Math.round((x1 - x0 - 0.6) / 2 * TILE), ty: 0, h: 50 });
+  }
+  // cafe tables at the south end, benches round the fountain
+  for (const dx of [-4.5, -1.5, 1.5, 4.5]) { const tx = cxF + dx, ty = y1 - 1.6; if (!busy(tx, ty, 1)) { add('cafetable', tx, ty, 6); add(dx < 0 ? 'umbrella_r' : 'umbrella_g', tx + 0.6, ty + 0.3, 4); } }
+  for (const [dx, dy, a] of [[-2.6, 0, 0], [2.6, 0, Math.PI]]) { const tx = cxF + dx, ty = (y0 + y1) / 2 + dy; if (!busy(tx, ty, 1.2)) add('pbench', tx, ty, 8, { a }); }
+  (m.landmarks ||= []).push({ name: 'Old Town Market', type: 'market', x: x0 * TILE, y: y0 * TILE, w: (x1 - x0 + 1) * TILE, h: (y1 - y0 + 1) * TILE });
+  m.natureSites.push({ kind: 'market', name: 'Old Town Market', x: Math.round(cxF * TILE), y: Math.round((y0 + y1) / 2 * TILE), stalls: n, rect: { x0, y0, x1, y1 } });
 }
 
 // ---- The Sentinel Stones (Granite Peaks, the headland north of the observatory; original) ------------------------

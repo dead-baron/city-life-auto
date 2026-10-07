@@ -621,3 +621,16 @@ test('The Sentinel Stones: a ring of standing stones round an altar on the headl
   assert.ok(m.isWater(arch.x, arch.y) && !solid(arch.x, arch.y), 'a boat can go through it');
   assert.ok(m.landmarks.some((l) => l.name === 'The Sentinel Stones'));
 });
+
+test('Old Town Market: rows of market stalls and string lights on Old Town\'s cobbled square, its fountain and trees kept', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'market');
+  assert.ok(s, 'the market is set up');
+  assert.ok(s.stalls >= 6, `stalls (${s.stalls})`);
+  const r = s.rect, inSq = (q) => q.x / TILE >= r.x0 && q.x / TILE <= r.x1 + 1 && q.y / TILE >= r.y0 && q.y / TILE <= r.y1 + 1;
+  assert.ok(m.props.filter((q) => q && q.t === 'festoon' && inSq(q)).length >= 4, 'string lights');
+  assert.ok(m.props.some((q) => q && q.t === 'fountain' && inSq(q)), 'the fountain is still there');
+  for (let ty = r.y0; ty <= r.y1; ty++) for (let tx = r.x0; tx <= r.x1; tx++) assert.equal(m.tiles[ty * m.w + tx], T.PLAZA, 'the square is still paved');
+  // nothing you use (an ATM, a stop, a door) has a stall in front of it
+  for (const p of m.pois) for (const q of m.props) if (q && q.t === 'mstall') assert.ok(Math.hypot(p.x - q.x, p.y - q.y) > 2 * TILE, `${p.label} is clear`);
+  assert.ok(m.landmarks.some((l) => l.name === 'Old Town Market'));
+});
