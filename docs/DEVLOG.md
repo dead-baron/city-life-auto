@@ -2376,3 +2376,14 @@ The island's open middle, which was plain grass, is now tropical rainforest (`sh
 - **Trees:** groves of coconut, royal, fan and leaning palms and banana plants, with clearings, two tiles clear of every road and building and four clear of the beach.
 - **The jungle floor** (reserve bit 64): dark forest-floor ground under dense ferns, monstera, elephant ears, birds of paradise and hibiscus (`statics.js` jungle cover).
 - **Coral Cay Falls** sits in the middle: water drops off a mossy basalt ledge into a pool, with mossy boulders round it and a mossy log by the pool. A dirt trail leads in from the nearest road. On the map.
+
+## 2026-10-06 · Town greenery: the open grass in the suburbs, the hills and the beach towns
+
+The biggest bare areas left were the town districts' open grass: West Hills, the Lake District, Cedar Falls, The Bluffs, Gull Harbor, Pine Hills, Lakeview, North Point, the Old Quarter and Pelican Key (up to 16,000 open tiles each).
+- **Groves of mature trees with lawns between** (`shared/map.js` `buildTownGreen`): on a 3-tile jittered grid by grove noise, three tiles clear of every road, building, pavement and lot.
+  - The species come from the district's own planting (`plantFor`): oaks, maples and blossom in the suburbs; royal palms, cypress, olives and magnolias in the luxury hills; palms in the beach towns.
+- **Light drifts under them** (`statics.js` `TOWN_COVER`):
+  - wildflowers, daisies and tall grass in the suburbs;
+  - lavender, hydrangea and roses in the luxury hills;
+  - beach grass, ice plant, hibiscus and bougainvillea in the beach towns.
+- Homes and businesses are unchanged. World v2 stage 2 (the residential belts) will lay real lots over much of this later.

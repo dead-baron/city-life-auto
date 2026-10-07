@@ -2449,6 +2449,13 @@ const NAT_SP = {
   shore: [['reeds', 3], ['cattails', 3], ['tallGrass', 1]],
   jungle: [['fern', 5], ['monstera', 4], ['elephant', 3], ['bird', 2], ['hibiscus', 1], ['fern', 3], ['salal', 1]],
 };
+const TOWN_COVER = {
+  houses: [['wildflowers', 2], ['daisies', 2], ['tallGrass', 2], ['lupines', 1], ['berryShrub', 1]],
+  luxury: [['lavender', 2], ['hydrangea', 2], ['rose', 1], ['daisies', 2], ['pampas', 1]],
+  beach: [['beachGrass', 3], ['duneGrass', 2], ['icePlant', 2], ['hibiscus', 1], ['bougain', 1]],
+  apartments: [['tallGrass', 3], ['daisies', 2], ['dryGrass', 1]],
+  oldtown: [['lavender', 2], ['poppies', 2], ['daisies', 2]],
+};
 const pickW = (list, u) => { let t = 0; for (const e of list) t += e[1]; let a = u * t; for (const e of list) { a -= e[1]; if (a < 0) return e[0]; } return list[list.length - 1][0]; };
 // what a wild tile grows, or null: [species, scale]
 function coverAt(c, tx, ty, x, y) {
@@ -2459,6 +2466,10 @@ function coverAt(c, tx, ty, x, y) {
     return h < 0.8 ? [pickW(NAT_SP.jungle, vnoise(x, y, 50, 7123) * 0.7 + hash(tx, ty, 7125) * 0.3), 1 + (h < 0.2 ? 0.2 : 0)] : null;
   }
   const st = (DISTRICTS[M.dist[i]] || {}).style;
+  if (TOWN_COVER[st] && t === T.GRASS) {   // the open grass in town: light drifts of what grows there
+    const pa = vnoise(x, y, 150, 7131), h = hash(tx, ty, 7133);
+    return pa > 0.62 && h < 0.3 ? [pickW(TOWN_COVER[st], vnoise(x, y, 60, 7135) * 0.7 + hash(tx, ty, 7137) * 0.3), 1] : null;
+  }
   if (!WILDS.has(st) || st === 'airport') return null;
   const bio = c.biome(x, y), h = hash(tx, ty, 7101), h2 = vnoise(x, y, 70, 7103) * 0.75 + hash(tx, ty, 7103) * 0.25; // (h2: clumps of one plant)
   const pa = vnoise(x, y, 170, 7105), pb = vnoise(x, y, 90, 7107);   // patches: big drifts, smaller clumps

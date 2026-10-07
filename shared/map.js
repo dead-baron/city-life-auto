@@ -539,6 +539,7 @@ export function generateCity(seed = 1337) {
   buildScenePaintings(m);
   buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * MAP_W + tx], terrainAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')) });
   buildWilds(m, rand);
+  buildTownGreen(m);
   buildStreetProps(m);
   buildPowerLines(m, { addProp }, (tx, ty) => wildAt(m, tx, ty));
   buildHeroCorner(m);
@@ -3717,6 +3718,27 @@ const WILD_CLEAR = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.FIELD, T.LOT, T.WALL
 export const SEA_ISLES = new Set([19, 20]);
 export const wildBiome = (d, c) => (c === 3 ? (SEA_ISLES.has(d) ? 1 : d === 33 ? 4 : c) : c);
 const seaIsle = wildBiome;
+// The open grass in town (the suburbs, the luxury hills, the beach towns, old town): groves of mature trees with
+// lawns between, three tiles clear of every road, building, pavement and lot; the species by district (statics.js
+// plantFor). The plants under them are the renderer's (coverAt, light drifts).
+const TOWN_GREEN = { houses: 0.5, luxury: 0.55, beach: 0.35, apartments: 0.3, oldtown: 0.3 };
+function buildTownGreen(m) {
+  const W = MAP_W, CELL = 3;
+  for (let gy = 3; gy < MAP_H - 4; gy += CELL) for (let gx = 3; gx < W - 4; gx += CELL) {
+    const tx = gx + Math.floor(hash2(gx, gy, 151) * CELL), ty = gy + Math.floor(hash2(gx, gy, 152) * CELL), i = ty * W + tx;
+    if (m.tiles[i] !== T.GRASS || m.reserve[i] || m.lake[i]) continue;
+    const D = DISTRICTS[m.dist[i]], dens = D && TOWN_GREEN[D.style];
+    if (!dens) continue;
+    let open = true;
+    for (let dy = -3; dy <= 3 && open; dy++) for (let dx = -3; dx <= 3; dx++) { const j = (ty + dy) * W + tx + dx; if (m.tiles[j] !== T.GRASS || (m.reserve[j] & ~32)) { open = false; break; } }
+    if (!open) continue;
+    const g = 0.6 * vnoise2(gx, gy, 14, 153) + 0.4 * vnoise2(gx, gy, 5, 154);
+    if (hash2(gx, gy, 155) >= smooth01(0.5, 0.75, g) * dens) continue;
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
+    if (D.style === 'beach') addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(hash2(gx, gy, 156) * 3)], x, y, 10);
+    else addProp(m, hash2(gx, gy, 157) < 0.5 ? 'tree_a' : 'tree_b', x, y, 12);
+  }
+}
 // value noise over tiles (s: feature size in tiles), 0..1
 function vnoise2(x, y, s, seed) {
   const fx = x / s, fy = y / s, ix = Math.floor(fx), iy = Math.floor(fy);
