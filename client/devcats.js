@@ -58,6 +58,6 @@ export const DEV_SECTIONS = [
     ['⛏ Old mine', 'near', { k: 'mine' }], ['🔭 Observatory', 'near', { k: 'observatory' }], ['🪨 Quarry', 'near', { k: 'quarry' }],
     ['🌬 Wind farm', 'near', { k: 'wind' }], ['🛢 Oil field', 'near', { k: 'oil' }], ['☀ Solar farm', 'near', { k: 'solar' }],
     ['⛽ Roadside stop', 'near', { k: 'stop' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }], ['🌳 Lakeview Park', 'near', { k: 'park' }],
-    ['🛶 Pine Lake camp', 'near', { k: 'lakecamp' }], ['🏊 Stadium Lido (pool)', 'near', { k: 'pool' }], ['🏞 Cedar Creek', 'near', { k: 'towncreek' }], ['⚓ Wreck Island', 'near', { k: 'wreck' }], ['🌿 Bluffs Maze Garden', 'near', { k: 'maze' }], ['♨ Granite Hot Springs', 'near', { k: 'springs' }], ['🌊 Splash Bay Water Park', 'near', { k: 'waterpark' }],
+    ['🛶 Pine Lake camp', 'near', { k: 'lakecamp' }], ['🏊 Stadium Lido (pool)', 'near', { k: 'pool' }], ['🏞 Cedar Creek', 'near', { k: 'towncreek' }], ['⚓ Wreck Island', 'near', { k: 'wreck' }], ['🌿 Bluffs Maze Garden', 'near', { k: 'maze' }], ['♨ Granite Hot Springs', 'near', { k: 'springs' }], ['🌊 Splash Bay Water Park', 'near', { k: 'waterpark' }], ['🪵 Driftwood Point', 'near', { k: 'coastfalls' }],
   ] },
 ];

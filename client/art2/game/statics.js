@@ -1681,6 +1681,8 @@ function propItems(c, p, pi, I) {
     case 'scarecrow': V('scare', 'scarecrow', []); return;
     case 'fallsmall': { const w = p.w || 16, h = p.h || 30; put(I, { key: `curt:${w}:${h}`, recipe: { t: 'curtain', w, h, seed: 7 }, x, y, ext: [w + 24, h + 30, w + 24, 30], pi }); return; }
     case 'steam': { const w = p.w || 80, h = p.h || 50, s = p.s || 1; put(I, { key: `steam:${w}:${h}:${s}`, recipe: { t: 'steam', w, h, s }, x, y, ext: [w / 2 + 14, h + 20, w / 2 + 14, 8], pi }); return; }
+    case 'cliffwall': { const len = Math.round((p.len || 160) / 8) * 8, h = p.h || 70, dp = p.d || 60, sd = p.s || 1; put(I, vitem(`cliffw:${len}:${h}:${sd}:${dp}`, 'cliffWall', [len, h, dp, sd], x, y, 0, null, { pi })); return; }
+    case 'coastfall': { const w = p.w || 28, drop = p.drop || 66, sd = p.s || 11; put(I, { key: `fall:c:${w}:${drop}:${sd}`, recipe: { t: 'fall', kind: p.kind || 'cliff', w, drop, seed: sd, mist: p.mist ?? 0.7 }, x, y, ext: [w / 2 + 80, drop + 130, w / 2 + 80, 50], pi }); lightAt(I, x, y + 10, 12, 130, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
     case 'wslide': {   // a water slide from its tower (x, y: the start, at the tower's south face) down to its pool
       const dx = Math.round(p.dx || 0), len = Math.round(p.len || 240), z0 = p.z || 84, kind = p.kind || 'flume', col = p.c || '#d8342e', wig = 34;
       const x0 = 22 + (dx < 0 ? Math.abs(dx) : 0) + wig;
@@ -1698,7 +1700,7 @@ function propItems(c, p, pi, I) {
     case 'lodge': V('lodge', 'lodge', []); return;
     case 'boardwalk': V(`bwalk:${p.len || 160}`, 'boardwalk', [p.len || 160], PI / 2); return;
     case 'pier': { const len = p.len || 120, w = p.w || 30, hd = qa(p.a || 0, 4); V(`pier:${len}:${w}:${hd.toFixed(2)}`, 'pier', [len, w], hd); lightAt(I, x + Math.cos(hd) * (len / 2 - 10), y + Math.sin(hd) * (len / 2 - 10), 40, 110, [1, 0.8, 0.5], 1.4, 'lamp'); return; }
-    case 'creekrail': { const len = Math.max(40, Math.round((p.len || 120) / 8) * 8), hd = qa(p.a || 0, 32); V(`crail:${len}:${hd.toFixed(3)}`, 'creekRail', [len], hd); return; }
+    case 'creekrail': { const len = Math.max(40, Math.round((p.len || 120) / 8) * 8), hd = qa(p.a || 0, 32); V(`crail:${len}:${hd.toFixed(3)}`, 'creekRail', [len], hd, null, p.z ? { z0: p.z } : null); return; }
     case 'poolhouse': { const w = p.w || 288, d = p.d || 60; V(`phs:${w}:${d}`, 'poolHouse', [w, d]); lightAt(I, x - w * 0.18 + 11, y + d / 2 + 14, 30, 120, [1, 0.86, 0.62], 1.4, 'window'); lightAt(I, x + w * 0.1, y + d / 2 + 14, 30, 110, [1, 0.86, 0.62], 1.1, 'window'); return; }
     case 'hottub': V(`htub:${p.r || 30}`, 'hotTub', [p.r || 30]); lightAt(I, x, y, 4, 70, [0.55, 0.9, 1], 0.9, 'sign', 0); return;
     case 'diveboard': { const len = p.len || 56, hd = qa(p.a || 0, 4); V(`dvb:${len}:${hd.toFixed(2)}`, 'divingBoard', [len], hd); return; }

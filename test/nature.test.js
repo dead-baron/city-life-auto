@@ -423,3 +423,22 @@ test('Splash Bay Water Park: a fenced water park at Gull Harbor - a lazy river r
   assert.equal(fishingSpot({ map: m }, { x: g.cx + g.rx + g.hw + 30, y: g.cy, a: Math.PI }), null, 'no fish in the lazy river');
   assert.ok(m.landmarks.some((l) => l.name === 'Splash Bay Water Park'));
 });
+
+test('Driftwood Point: basalt cliffs under the Cedar Point road, a creek falling to the beach, steps down, tidepools and sea stacks', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'coastfalls');
+  assert.ok(s, 'Driftwood Point is built');
+  assert.ok(s.stacks >= 2, 'sea stacks');
+  // the falls land on the beach and the creek runs on to the sea
+  let water = 0; for (let dx = -3; dx <= 3; dx++) if (tileAt(s.x + dx * TILE, s.y + 2 * TILE) === T.WATER) water++;
+  assert.ok(water >= 1, 'the creek below the falls');
+  assert.ok(m.props.some((q) => q && q.t === 'coastfall' && Math.hypot(q.x - s.x, q.y - s.y) < 16), 'the waterfall');
+  // a band of solid rock with a gap where the steps go down
+  assert.notEqual(tileAt(s.steps.x, s.steps.y), T.WALL, 'the steps go down through a gap');
+  assert.equal(tileAt(s.steps.x - 3 * TILE, s.steps.y), T.WALL, 'the cliff is solid');
+  assert.ok(m.props.some((q) => q && q.t === 'stairs' && Math.abs(q.x - s.steps.x) < 40), 'the steps');
+  for (const k of ['cliffwall', 'creekrail', 'driftwood', 'starfish']) assert.ok(m.props.some((q) => q && q.t === k && Math.abs(q.x - s.x) < 900 && Math.abs(q.y - s.y) < 500), k);
+  // the creek comes round the wind farm, never through it
+  const farm = m.countrySites.find((q) => q.name === 'Cedar Point Wind Farm');
+  for (let ty = farm.y; ty < farm.y + farm.h; ty++) for (let tx = farm.x; tx < farm.x + farm.w; tx++) assert.ok(!m.river[ty * m.w + tx], 'no creek through the wind farm');
+  assert.ok(m.landmarks.some((l) => l.name === 'Driftwood Point'));
+});

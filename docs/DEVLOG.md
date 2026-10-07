@@ -2668,3 +2668,20 @@ The open lawn behind Bonfire Beach is now a water park inside a chain-link fence
   - New prop: `textsign`, any short text on a lit board on posts.
 - You can swim anywhere in it. There's no fishing in the river or the pools (`jobs.js`).
 - On the map as Splash Bay Water Park, and in the debug menu (🌊 Splash Bay Water Park). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Driftwood Point (Cedar Hills; concept N8-D)
+
+The beach below the Cedar Point Wind Farm road, dressed like the coast-road tidepools concept (`shared/naturesites.js` `driftwoodPoint`).
+- **The cliffs:** a band of columnar basalt with mossy tops under the road. It is solid, and from the beach it reads as the road running along the cliff top.
+  - A timber guard rail runs along the cliff top. Props can now be raised (`creekrail` takes a height `z`).
+  - Wooden steps go down to the sand through a gap in the rock.
+- **The falls:** a creek from the hills east of the wind farm runs round the road's end (never through the farm), drops over the cliff in a tall fall with mist, and crosses the beach to the sea, with mossy boulders at its foot.
+  - New props: `coastfall` (a cliff waterfall anywhere) and `cliffwall` (a length of basalt cliff anywhere).
+- **The beach:**
+  - sand from the cliff's foot to the waterline (a designed beach);
+  - driftwood logs, beach grass and ice plant;
+  - tidepools among barnacled basalt rocks, with starfish, urchins, anemones and crabs;
+  - more barnacled rocks half in the shallows all along the waterline;
+  - four sea stacks out in the surf, with a gull on one.
+- **The cliff top:** firs and pines, and a pull-off with a bench and a trail map board looking over the falls.
+- On the map as Driftwood Point, and in the debug menu (🪵 Driftwood Point). Homes, POIs and buildings unchanged.

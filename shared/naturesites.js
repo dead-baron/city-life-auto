@@ -108,6 +108,7 @@ export function buildNatureSites(m, H) {
   bluffsMaze(m, H);
   hotSprings(m, H);
   splashBay(m, H);
+  driftwoodPoint(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -639,6 +640,110 @@ function splashBay(m, H) {
   add('bikerack', X0 - 2.4, gy + 2.6, 6); add('trashcan', X0 - 1.2, gy + 2.4, 5);
   (m.landmarks ||= []).push({ name: 'Splash Bay Water Park', type: 'waterpark', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
   m.natureSites.push({ kind: 'waterpark', name: 'Splash Bay Water Park', x: Math.round(ring.cx), y: Math.round(ring.cy + ring.ry), gate: { x: X0 * TILE + 16, y: gy * TILE + 16 }, tower: { x: TX * TILE, y: TY * TILE } });
+}
+
+// ---- Driftwood Point (Cedar Hills; concept N8-D) ---------------------------------------------------------------
+// The beach below the Cedar Point Wind Farm road: a band of columnar basalt cliffs under the road (a timber guard
+// rail along its edge), a creek from the hills to the east that falls over the cliff to the sand, wooden steps down
+// through a gap in the rock; on the beach driftwood logs, tidepools among barnacled rocks with starfish, urchins,
+// anemones and crabs at the waterline, sea stacks in the surf; pines and beach grass on the cliff top.
+function driftwoodPoint(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const road = (m.roads || []).find((r) => r.name === 'Cedar Point Wind Farm Road');
+  if (!road) return;
+  // the road's east-west stretch along the top of the beach
+  let y0 = null, xa = 1e9, xb = -1e9;
+  for (let k = 1; k < road.pts.length; k++) { const a = road.pts[k - 1], b = road.pts[k]; if (Math.abs(a.y - b.y) < 4 && Math.abs(a.x - b.x) > 200) { y0 = a.y; xa = Math.min(a.x, b.x); xb = Math.max(a.x, b.x); } }
+  if (y0 === null) return;
+  const RY = Math.floor((y0 + (road.hw || 64)) / TILE) + 1;   // (the first row south of the road)
+  const X0 = Math.floor(xa / TILE) + 1, X1 = Math.floor(xb / TILE) - 1;
+  const sandOr = (tx, ty) => { const t = m.tiles[at(tx, ty)]; return t === T.SAND || t === T.DIRT || t === T.GRASS; };
+  for (let tx = X0; tx <= X1 + 4; tx++) for (let ty = RY; ty < RY + 3; ty++) if (!sandOr(tx, ty) || m.reserve[at(tx, ty)]) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= (X0 - 4) * TILE && q.x < (X1 + 14) * TILE && q.y >= (RY - 1) * TILE && q.y < (RY + 22) * TILE) dropProp(m, i); });
+  // the cliff band: three rows of solid rock under the road, a gap for the steps
+  const GX = X0 + 4;
+  for (let tx = X0 - 2; tx <= X1 + 3; tx++) for (let ty = RY; ty < RY + 2; ty++) {
+    const i = at(tx, ty);
+    if (!sandOr(tx, ty)) continue;
+    m.reserve[i] |= RES;
+    if (tx === GX || tx === GX + 1) { m.tiles[i] = T.DIRT; continue; }   // (the steps' gap)
+    m.tiles[i] = T.WALL;
+  }
+  // the cliff faces (columnar basalt, mossy tops), their feet on the row below the band
+  const footY = (RY + 2) * TILE, D = 56;
+  for (const [a, b, sd] of [[X0 - 2, GX, 1], [GX + 2, X1 + 4, 2]]) {
+    for (let x = a; x < b; x += 6) { const l = Math.min(6, b - x); if (l < 2) continue; add('cliffwall', x + l / 2, footY / TILE - D / 2 / TILE, 0, { len: l * TILE, h: 70 + ((x * 7) % 3) * 6, d: D, s: sd + x }); }
+  }
+  // the wooden steps down through the gap, their foot on the sand
+  add('stairs', GX + 1, RY + 2.6, 0, { len: 2 * TILE + 16, h: 70, w: 30 });
+  // the guard rail along the road's south edge (timber posts and rails on a stone kerb), a gap at the steps
+  for (const [a, b] of [[X0 - 1, GX - 0.2], [GX + 2.2, X1 + 1]]) { const len = (b - a) * TILE; if (len > 40) add('creekrail', (a + b) / 2, RY + 0.35, 0, { len, a: 0, z: 68 }); }   // (up on the cliff top)
+  // the creek: from the hills to the east, round the road's end, over the cliff to the beach, across it to the sea
+  const FX = X1 + 2.5;
+  // (from the open hills east of the wind farm, south of its fence, never through it)
+  const farm = (m.countrySites || []).find((q) => q.type === 'wind' && Math.abs(q.x + q.w / 2 - FX) < 40 && Math.abs(q.y + q.h - RY) < 12);
+  const fy = farm ? farm.y + farm.h + 1.5 : RY - 6, fx = farm ? farm.x + farm.w + 4 : FX + 12;
+  const up = spline([[fx + 10, fy - 8], [fx + 4, fy - 2], [fx - 2, Math.max(fy, RY - 2.5)], [FX + 6, RY - 1.2], [FX, RY - 0.5]].map(([x, y]) => [x * TILE, y * TILE]), 12);
+  const wet = carveWater(m, up, (s) => 13 + s * 5);
+  let sy = RY + 2; while (sy < RY + 30 && !(m.tiles[at(FX - 3, sy)] === T.WATER && !m.land[at(FX - 3, sy)])) sy++;
+  const down = spline([[FX, RY + 2.5], [FX - 1.2, RY + 4.5], [FX - 2.5, (RY + sy) / 2 + 1.5], [FX - 3.5, sy + 1]].map(([x, y]) => [x * TILE, y * TILE]), 12);
+  wet.push(...carveWater(m, down, (s) => 22 + s * 14));
+  for (const i of wet) { m.reserve[i] |= RES; }
+  if (m.distRiver) for (const i of wet) { m.distRiver[i] = 0; const tx = i % MAP_W, ty = Math.floor(i / MAP_W); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const j = (ty + dy) * MAP_W + tx + dx; const d = Math.round(Math.hypot(dx, dy) * 4); if (m.distRiver[j] > d || !m.distRiver[j]) m.distRiver[j] = d; } }
+  add('coastfall', FX, RY + 2.2, 0, { w: 26, drop: 66, s: 13 });
+  for (const [dx, dy, r] of [[-1.6, 2.8, 12], [1.7, 3.2, 10], [-2.4, 5.4, 9]]) add('boulder', FX + dx, RY + dy, r, { s: r * 2 + 4, style: 'basalt', moss: 1 });
+  // the beach: sand from the cliff's foot down to the water (a designed beach: drawn as sand, no ground cover)
+  for (let tx = X0 - 6; tx <= Math.floor(FX) + 3; tx++) for (let ty = RY + 2; ty < RY + 14; ty++) {
+    const i = at(tx, ty), t = m.tiles[i];
+    if ((t === T.WATER || t === T.DEEP) && !m.river[i]) break;   // (the sea: the beach ends; the creek: carry on past it)
+    if (t === T.DIRT || t === T.GRASS || t === T.SAND) { m.tiles[i] = T.SAND; m.reserve[i] |= RES | 4; }
+  }
+  // the beach: driftwood logs at the top of the sand
+  for (const [dx, dy, len, a] of [[3, 3.4, 110, 0.15], [9, 4.2, 90, -0.3], [14, 3.4, 130, 0.4], [-1, 3.2, 80, -0.1]]) { const tx = X0 + dx, ty = RY + dy; if (m.tiles[at(tx, ty)] === T.SAND) add('driftwood', tx, ty, 0, { len, a }); }
+  // tidepools: shallow pools in the sand near the waterline, barnacled basalt round them, life in them
+  const LIFE = ['starfish', 'urchin', 'anemone', 'starfish', 'urchin'];
+  const pools = [];
+  for (let tx = X0 - 4; tx <= X1 + 2; tx += 2) {
+    let ty = RY + 4; while (ty < RY + 26 && m.tiles[at(tx, ty)] === T.SAND) ty++;
+    if (m.tiles[at(tx, ty)] !== T.WATER && m.tiles[at(tx, ty)] !== T.DEEP) continue;
+    const py = ty - 1.5 - hash2(tx, 3, 2601) * 1.5, px = tx + hash2(tx, 4, 2601);
+    if (py < RY + 3.2 || m.tiles[at(px, py)] !== T.SAND || hash2(tx, 5, 2601) < 0.15 || pools.some(([qx, qy]) => Math.hypot(qx - px, qy - py) < 3)) continue;
+    const rx = 1 + hash2(tx, 6, 2601) * 0.8, ry = 0.7 + hash2(tx, 7, 2601) * 0.5;
+    for (let y = Math.floor(py - 2); y <= py + 2; y++) for (let x = Math.floor(px - 2); x <= px + 2; x++) if (((x + 0.5 - px) / rx) ** 2 + ((y + 0.5 - py) / ry) ** 2 <= 1 && m.tiles[at(x, y)] === T.SAND) { m.tiles[at(x, y)] = T.WATER; m.reserve[at(x, y)] |= RES; }
+    pools.push([px, py, rx, ry]);
+  }
+  pools.forEach(([px, py, rx, ry], k) => {
+    for (let j = 0; j < 3; j++) { const a = j / 3 * Math.PI * 2 + hash2(k, j, 2602), x = px + Math.cos(a) * (rx + 0.7), y = py + Math.sin(a) * (ry + 0.5); if (m.tiles[at(x, y)] === T.SAND) add('boulder', x, y, 12, { s: 16 + Math.round(hash2(k, j, 2603) * 10), style: 'basalt', barn: 1 }); }
+    for (let j = 0; j < 3; j++) { const x = px + (hash2(k, j, 2604) - 0.5) * rx, y = py + (hash2(j, k, 2604) - 0.5) * ry; if (m.tiles[at(x, y)] === T.WATER) add(LIFE[(k + j) % LIFE.length], x, y, 0, { v: (k + j) % 4 }); }
+    if (k % 2 === 0) add('crab', px + rx + 0.6, py + 0.2, 0, { a: hash2(k, 9, 2605) * 6.28 });
+  });
+  // the rocks at the waterline: barnacled basalt half in the shallows, starfish, urchins and anemones round them
+  for (let tx = X0 - 6; tx <= X1 + 1; tx++) {
+    if (hash2(tx, 11, 2607) < 0.45) continue;
+    let ty = RY + 2; while (ty < RY + 26 && m.tiles[at(tx, ty)] === T.SAND) ty++;
+    const i = at(tx, ty);
+    if (m.tiles[i] !== T.WATER || m.land[i]) continue;
+    const h = hash2(tx, 12, 2607), x = tx + 0.3 + h * 0.4, y = ty + 0.1 + hash2(tx, 13, 2607) * 0.6;
+    add('boulder', x, y, 0, { s: 16 + Math.round(h * 16), style: 'basalt', barn: 1 });
+    if (h > 0.4) add(LIFE[Math.floor(h * 10) % LIFE.length], x + 0.6, y + 0.5, 0, { v: tx % 4 });
+  }
+  // sea stacks out in the surf, kelp-hung, a gull on one
+  const stacks = [];
+  for (const [dx, dy, r, h] of [[2, 3, 24, 130], [7, 2, 18, 96], [12, 4, 30, 150], [-3, 5, 16, 80]]) {
+    const tx = X0 + dx; let ty = RY + 6; while (ty < RY + 40 && m.tiles[at(tx, ty)] !== T.DEEP) ty++;
+    ty += dy;
+    if (m.tiles[at(tx, ty)] !== T.DEEP) continue;
+    add('seastack', tx, ty, r, { s: (tx + ty) % 4 + 1, r, h }); stacks.push([tx, ty]);
+  }
+  if (stacks.length) add('gull', stacks[0][0] + 0.2, stacks[0][1] - 0.4, 0, { a: 0.5, z: 120 });
+  // the cliff top east of the road: pines, beach grass, ice plant; a pull-off by the falls with a bench
+  for (const [dx, dy, sp] of [[4, -6, 'fir'], [7, -3, 'pondPine'], [10, -7, 'fir'], [6, -10, 'mtnPine']]) { const tx = FX + dx, ty = RY + dy; if (sandOr(Math.floor(tx), Math.floor(ty)) && !wet.includes(at(tx, ty))) add('tree_a', tx, ty, 12, { sp, k: 1.35 }); }
+  for (let k = 0; k < 14; k++) { const tx = X0 - 3 + hash2(k, 1, 2606) * (X1 - X0 + 12), ty = RY + 2.5 + hash2(k, 2, 2606) * 1.2; if (m.tiles[at(tx, ty)] === T.SAND) add('shrub_a', tx, ty, 0, { sp: k % 3 ? 'beachGrass' : 'icePlant', k: 1 }); }
+  add('pbench', FX + 7, RY - 3.4, 0, { a: Math.PI });
+  add('mapboard', FX + 4.6, RY - 3.2, 10);
+  (m.landmarks ||= []).push({ name: 'Driftwood Point', type: 'falls', x: (X0 - 4) * TILE, y: RY * TILE, w: (X1 - X0 + 12) * TILE, h: 16 * TILE });
+  m.natureSites.push({ kind: 'coastfalls', name: 'Driftwood Point', x: Math.round(FX * TILE), y: Math.round((RY + 2.2) * TILE), steps: { x: (GX + 1) * TILE, y: (RY + 1) * TILE }, pools: pools.length, stacks: stacks.length });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------
