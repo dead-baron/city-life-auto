@@ -2702,3 +2702,7 @@ The beach below the Cedar Point Wind Farm road, dressed like the coast-road tide
 - On the map as North Point Courts, and in the debug menu (🏀 North Point Courts).
 
 **Glowing stars.** One starfish in five in the tidepools (Lighthouse Tidepools, Driftwood Point) is now a glowing star. It is golden, lit from within, and casts a soft pool of light at dusk and at night. Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Fix: elevated highways on the big map
+
+The big map drew the raised highway decks and ramps in whatever colour was last used, not in their gold, because the colour line had slipped into a comment (`client/hud.js`). They are gold again, with their dark outline.

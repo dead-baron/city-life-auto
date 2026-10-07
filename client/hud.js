@@ -427,7 +427,8 @@ export class HUD {
     for (const [wd, colr] of [[2.5, 'rgba(0,0,0,.6)'], [0, '#f0c050']]) {
       for (const e of this.map.edges || []) {
         if (e.lvl === 0) continue;
-        g.lineWidth = Math.min(7, Math.max(1.5, e.w * sc * (e.lvl === 1 ? 0.8 : 0.9))) + wd; // thin when zoomed in: the baked map shows the deck itself g.strokeStyle = colr;
+        g.lineWidth = Math.min(7, Math.max(1.5, e.w * sc * (e.lvl === 1 ? 0.8 : 0.9))) + wd; // thin when zoomed in: the baked map shows the deck itself
+        g.strokeStyle = colr;
         g.beginPath();
         e.pts.forEach((p, i) => { const [x, y] = P(p.x, p.y); if (i) g.lineTo(x, y); else g.moveTo(x, y); });
         g.stroke();
