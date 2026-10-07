@@ -2828,3 +2828,23 @@ The big empty cobbled square in Old Town is now a market (`shared/naturesites.js
 - **Round the fountain:** cafe tables under umbrellas at the south end, and benches.
 - **Kept as it was:** the square's paving, lamps, fountain and trees. The loose benches and bins make way where a stall stands, and no stall stands within two tiles of anything you use.
 - On the map, and in the debug menu (🧺 Old Town Market). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Picking fruit at the orchard and the vineyard
+
+Fruit can now be picked, eaten and sold (`server/systems/picking.js`; the map's `m.pickables`, laid out by the orchard and the vineyard).
+- **Picking:** stand by an apple or orange tree in Willow River Orchard, or by a vine in the vineyard, and press the action button (E, B, ACT) to pick 1-3 apples, oranges or bunches of grapes (`PICK_MAX`).
+  - The tree or vine is then picked clean for 4 minutes (`PICK_REGROW_S`). The prompt says so and points you to another.
+- **New items** (a new Food section in the bag and the dev Give menu):
+
+  | Item | Health | Sells for |
+  |---|---|---|
+  | Crisp Apple | +6 | $3 |
+  | Sweet Orange | +6 | $4 |
+  | Bunch of Grapes | +8 | $6 |
+
+  - Eating fruit doesn't stop bleeding, unlike med kits and bandages.
+  - Fruit can go on the quick wheel.
+- **Selling:** corner stores and gas stations buy fruit, paid into your bank like other sales.
+- The README's controls table mentions picking under Interact.
+
+**Test fix:** the gunshot test sometimes failed because a bullet from its first shots was still in the air and hit the victim again, dropping them below the crawl line. It now clears bullets in flight first. It also accepts a crawl, which is still the badly hurt getting away, in case something passing hurts them more.

@@ -54,17 +54,21 @@ export const ITEMS = {
   jewelry: { name: 'Diamond Earrings',  loot: true, sell: 220 },
   scrap:   { name: 'Component Scrap',   loot: true, sell: 30 },
   wallet:  { name: 'Lost Wallet',       loot: true, sell: 60 },
+  // fruit picked at the orchard and the vineyard: eat it for a little health (it doesn't stop bleeding), or sell it
+  apple:   { name: 'Crisp Apple',       food: true, heal: 6, sell: 3 },
+  orange:  { name: 'Sweet Orange',      food: true, heal: 6, sell: 4 },
+  grapes:  { name: 'Bunch of Grapes',   food: true, heal: 8, sell: 6 },
 };
 
 // What kind of thing an item is (the bag's sections and the dev give menu).
 export const ITEM_CATS = [
   { id: 'tools', name: 'Tools & equipment' }, { id: 'medical', name: 'Medical' }, { id: 'drinks', name: 'Drinks' },
-  { id: 'bait', name: 'Fishing bait' }, { id: 'fish', name: 'Fish' }, { id: 'loot', name: 'Loot & valuables' },
+  { id: 'bait', name: 'Fishing bait' }, { id: 'fish', name: 'Fish' }, { id: 'food', name: 'Food' }, { id: 'loot', name: 'Loot & valuables' },
 ];
 export function itemCat(id) {
   const it = ITEMS[id];
   if (!it) return null;
-  return it.tool ? 'tools' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : 'loot';
+  return it.tool ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : 'loot';
 }
 
 // GDD §8 crate rarity tiers
@@ -107,8 +111,8 @@ export const SHOPS = {
     { kind: 'item', id: 'medkit', price: 80, qty: 1 }, { kind: 'item', id: 'bandage', price: 25, qty: 1 }, { kind: 'item', id: 'revivekit', price: REVIVE_KIT_PRICE, qty: 1 },
   ] },
   coffee: { title: 'Bean Machine Coffee', buy: [{ kind: 'item', id: 'coffee', price: 6, qty: 1 }] },
-  convenience: { title: 'Corner Store', buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }] },
-  gasstation: { title: "Gas 'n Go", buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }] },
+  convenience: { title: 'Corner Store', buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }], sells: ['apple', 'orange', 'grapes'] },
+  gasstation: { title: "Gas 'n Go", buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }], sells: ['apple', 'orange', 'grapes'] },
   club: { title: 'The Club', buy: [{ kind: 'item', id: 'cocktail', price: 18, qty: 1 }, { kind: 'item', id: 'energy', price: 12, qty: 1 }] },
   vending: { title: 'Vending Machine', buy: [{ kind: 'item', id: 'energy', price: 8, qty: 1 }] },
   pawn: { title: 'Second Chance Pawn', buy: [

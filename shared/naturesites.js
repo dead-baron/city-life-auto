@@ -470,6 +470,7 @@ function orchard(m, H) {
   let n = 0;
   for (let ty = Y0 + 1.5, r = 0; ty <= Y1 - 1; ty += 3.2, r++) for (let tx = X0 + 1.5, c = 0; tx <= X1 - 1; tx += 3.2, c++) {
     add('tree_a', tx + (r % 2) * 0.3, ty, 10, { sp: r === 7 ? 'orange' : 'apple', k: 1.15 + hash2(c, r, 3601) * 0.2 }); n++;
+    (m.pickables ||= []).push({ x: Math.round((tx + (r % 2) * 0.3) * TILE), y: Math.round(ty * TILE), item: r === 7 ? 'orange' : 'apple' });
   }
   // the work in the alleys: ladders against trees, crates of picked fruit, a wheelbarrow
   for (const [tx, ty] of [[X0 + 4.2, Y0 + 2.6], [X0 + 13.8, Y0 + 9], [X0 + 23.4, Y0 + 15.4], [X0 + 8.8, Y0 + 18.6]]) { add('ladder', tx, ty, 0); add('fruitcrate', tx + 1.2, ty + 1.1, 0); add('fruitcrate', tx + 1.7, ty + 1.3, 0); }
@@ -518,6 +519,7 @@ function vineyard(m, H) {
         const len = Math.min(5, b - x) * TILE;
         H.addProp(m, 'vinerow', Math.round(x * TILE + len / 2), Math.round(y), 0, { len, v: (r * 7 + x) % 4, kind });
         for (let d = 8; d < len; d += 24) m.addSolidProp(Math.round(x * TILE + d), Math.round(y), 6);
+        for (let d = 24; d < len; d += 48) (m.pickables ||= []).push({ x: Math.round(x * TILE + d), y: Math.round(y), item: 'grapes', vine: 1 });
       }
     }
   }

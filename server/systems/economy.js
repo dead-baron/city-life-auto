@@ -700,11 +700,11 @@ export function useItem(world, p, id) {
   if (it.light) { toggleLight(world, p); return; }
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {
-    if (ped.hp >= ped.maxHp && !ped.bleeding) { world.notify(p, 'You are already healthy.', 'info'); return; }
+    if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding)) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }
     inv[id]--;
-    ped.hp = Math.min(ped.maxHp, ped.hp + it.heal); ped.bleeding = false;
+    ped.hp = Math.min(ped.maxHp, ped.hp + it.heal); if (it.stopBleed) ped.bleeding = false;   // (food doesn't stop bleeding)
     world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
-    world.notify(p, `Used ${it.name}.`, 'good');
+    world.notify(p, it.food ? `Ate a ${it.name.replace(/^Bunch of /, 'bunch of ')}.` : `Used ${it.name}.`, 'good');
   } else if (it.buff) {
     inv[id]--;
     applyBuff(world, ped, it.buff);

@@ -15,6 +15,7 @@ import * as cargo from './cargo.js';
 import * as law from './law.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
+import * as picking from './picking.js';
 import * as homes from './homes.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
@@ -466,6 +467,9 @@ export function findInteraction(world, p) {
     const label = economy.poiLabel(world, p, poi);
     if (label) return { label, run: () => economy.openMenu(world, p, poi) };
   }
+
+  const fruit = picking.interaction(world, p);
+  if (fruit) return fruit;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);

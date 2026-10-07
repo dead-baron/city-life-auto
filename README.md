@@ -36,7 +36,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 |---|---|---|---|
 | Move / steer | WASD | Left stick (RT gas, LT brake in cars) | Left stick |
 | Aim / attack | Mouse / left click | Right stick (full deflection auto-fires) / RT | Right stick (push far to fire) |
-| Interact (shops, crates, loot, arrest, fishing) | E | B | E |
+| Interact (shops, crates, loot, arrest, fishing, picking fruit at the orchard and the vineyard) | E | B | E |
 | Enter / exit vehicle | F | X | CAR |
 | Sprint | Shift | Push the left stick all the way | Push the left thumb all the way |
 | Dive roll / handbrake (in a car: e-brake skid turn / drift; held with gas = burnout, + steer = donuts) | Space | A | ROLL / BRAKE |

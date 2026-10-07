@@ -79,6 +79,11 @@ export const ARMORED_VEHICLES = ['armored', 'swat'];
 export const SOAK_HEAL = 5;             // health per second while soaking
 export const SOAK_AFTER_HIT_S = 3;      // ...once you've been out of the fight this long
 
+// Picking fruit (Willow River Orchard, the vineyard's vines): a tree or a vine gives a few, then it's bare a while
+export const PICK_MAX = 3;              // up to this many from one tree or vine...
+export const PICK_REGROW_S = 240;       // ...then nothing more on it for this long
+export const PICK_REACH = 40;           // stand this close to the trunk / the row
+
 // Clearing your record: pay the fines at the courthouse or Police HQ (not while wanted)
 export const FELONY_FINE = 750;
 
