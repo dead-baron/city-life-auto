@@ -2903,3 +2903,40 @@ The telescope at the end of Westport Pier works now (`server/systems/places.js` 
 ## 2026-10-07 · A tidier big map
 
 There are many more named places on the big map now, so a place's name is only drawn where it doesn't cover a district name or another place's name (`client/hud.js`). Zoom in and the crowded ones appear as there's room. Names off the edge of the view aren't drawn at all.
+
+## 2026-10-07 · The new places open for business
+
+The countryside places now have counters you can buy from and sell to. Walk up and press the action button; each counter has its own prompt, menu title and a line about the place (`shared/naturesites.js` `addCounter`, `server/systems/economy.js` `COUNTER`, the shops in `shared/items.js`).
+
+| Counter | Where | Sells | Buys |
+|---|---|---|---|
+| Tasting room | Willow River Winery | a red and a white ($30 each), fresh bread | grapes at $10 (town pays $6) |
+| Orchard stand | Willow River Orchard, at the road | apple cider, bags of apples and oranges | apples and oranges, a little over town |
+| The stalls | Old Town Market (in front of each row) | bread, fruit, grapes, lavender honey | fruit and honey |
+| Snack carts | Lakeview Park, Splash Bay, Westport Pier | hot dogs, lemonade, energy drinks | |
+| The Nineteenth (bar) | Cedar Hills Golf Club | cocktails, coffee, a fine red, hot dogs | |
+| Farm stand | Cedar Point Lavender | lavender honey, lemonade | honey |
+| Yard office | Dry Creek Boneyard | | component scrap at $45 (the pawn shop pays $30) |
+| Bait & tackle | Westport Pier | rods and bait | your catch |
+
+- **New items:** hot dog, fresh bread and lavender honey heal a little, like fruit (they don't stop bleeding). Lemonade and apple cider refill stamina like coffee. A bottle of wine makes health come back 2.5 times faster for two minutes (`WINE_S`, `WINE_REGEN` in `shared/rules.js`).
+- **Selling:** a counter can pay its own price for an item (`sellPrice` on the shop). Sales go straight into the bank, as in town.
+- **Finding them:** the phone's Places app has a new group, *Food, drink & days out*, and the Sell group lists the places that buy. The minimap and the big map show an icon for each kind. A place with more than one counter (the market) is listed and drawn once.
+- **Map changes for the counters:** the Lakeview Park snack cart got a paved pad so its counter stands on the path. The market's counters are placed after its stalls, so no stall is skipped for them.
+
+**Test fix:** the weapons test was still flaky. A target that dive-rolls dodges a bullet, so the test now resets the roll before each shot.
+
+## 2026-10-07 · Rides: the Ferris wheel and balloon flights
+
+Two rides at the new places (`shared/rides.js` has the wheel and the routes, `server/systems/rides.js` runs them).
+
+- **The Ferris wheel (Westport Pier, $5):** the wheel turns all the time now, once every 40 seconds. Its sixteen gondolas are drawn going round (`client/art2/props-park.js` `ferrisCab`, `client/art2/game/host.js` `_rides`); the baked wheel no longer includes them. Stand on the boarding deck in front of it and press the action button: you step into the cab at the bottom and ride once round. Your camera pulls back and rises with your cab, out over the bay, and your cab glows a little.
+- **Balloon flights (Dry Creek Balloon Field, $40):** book at the table under the umbrella. A balloon fills and lifts off from the spot beside it, drifts for 100 seconds over one of three routes, and lands where it took off:
+  - the orchard, the vineyard and the old mission;
+  - the old town market, Willow Lake and the falls;
+  - the pastures and the wind farm.
+  Your camera follows the balloon across the country, and the burner roars now and then. Up to three flights can be in the air at once (the field has three balloons); the fourth flyer is told when the next one is down.
+- **Everyone sees the balloons.** A flight is broadcast when it starts and ends, and a player who joins mid-flight gets the flights already up. Each client draws the balloon from the shared route and clock, with its burner lighting up the night.
+- **While you ride:** you're out of the street like someone indoors. Nobody can see or hurt you, you can't act, and the prompt shows the seconds left. You can't board while wanted, carrying a crate or driving. If you log off mid-ride you come back at the boarding point. The server sends you a wider area while you ride, to match the wider camera.
+- **Smaller changes:** the field's standing red balloon moved south-east so it doesn't stand in front of the booking table. Both rides' boarding points are places on the phone and the maps.
+- **Tests:** `test/business.test.js` covers the counters' prompts and menus, the better prices at the winery and the salvage yard, wine's faster healing, a hot dog, both rides from boarding to stepping off, the three-balloon limit, the routes, and a ride ending cleanly when something else takes you off it.

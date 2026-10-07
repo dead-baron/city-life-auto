@@ -37,6 +37,7 @@ import * as wildlife from './systems/wildlife.js';
 import * as unstuck from './systems/unstuck.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
+import * as rides from './systems/rides.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -44,6 +45,7 @@ const SYSTEMS = [
   ['environment', env.update],      // chrono loop + rain
   ['inputs', players.processInputs],// player-controlled peds + vehicle inputs
   ['homes', homes.update],          // going inside your home (hide), step-out protection
+  ['rides', rides.update],          // the Ferris wheel, balloon flights: carrying the riders, setting them down
   ['gates', gates.update],          // sliding gates (motor pools, Syndicate compound)
   ['station', station.update],
   ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking

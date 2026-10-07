@@ -80,6 +80,14 @@ function trail(m, cp) {
   return pts;
 }
 
+// A business counter at a designed place: a point of interest the player walks up to (server/systems/economy.js opens
+// its menu: SHOPS[kind] in shared/items.js). x, y: where you stand to be served.
+function addCounter(m, kind, label, x, y, r = 44) {
+  const p = { id: m.pois.length, kind, label, x: Math.round(x), y: Math.round(y), r, counter: true };
+  m.pois.push(p);
+  return p;
+}
+
 // H: { addProp(m, t, x, y, solidR, extra) }
 export function buildNatureSites(m, H) {
   m.natureSites = [];
@@ -175,6 +183,7 @@ function golfClub(m, H) {
   for (const [k, a, v] of [[6, Math.PI, 0], [60, 1.2, 1], [118, -0.4, 2]]) if (cart[k]) { const [x, y] = cart[k]; H.addProp(m, 'golfcart', Math.round(x), Math.round(y - 4), 12, { a, v }); }
   // the clubhouse at the north-east corner, the veranda on its south side; its car park out to the road
   add('clubhouse', 44.5, 4.2, 0);
+  addCounter(m, 'clubhouse', 'Cedar Hills Golf Club', (PX + 44.5) * TILE, (PY + 6.8) * TILE, 44);   // (at the veranda steps: the bar)
   for (let dx = -116; dx <= 116; dx += 24) for (const dy of [-50, -18, 14]) m.addSolidProp(Math.round((PX + 44.5) * TILE + dx), Math.round((PY + 4.2) * TILE + dy), 18);
   for (const [dx, dy, u] of [[39.5, 8.4, 'umbrella_g'], [42.5, 8.6, 'umbrella_r'], [46.5, 8.6, 'umbrella_g'], [49.5, 8.4, 'umbrella_r']]) { add('cafetable', dx, dy, 6); add(u, dx + 0.9, dy + 0.4, 4); }
   for (let ty = PY - 5; ty <= PY + 7; ty++) for (let tx = PX + PW - 3; tx <= PX + PW + 4; tx++) { const i = at(tx, ty); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) { m.tiles[i] = T.LOT; m.reserve[i] |= RES | 1; } }
@@ -341,6 +350,8 @@ function lavenderFields(m, H) {
   for (let j = 0; j < 4; j++) add('beehive', X1 + 1.6, Y0 + 4 + j * 2.6, 6, { v: j % 3 });
   add('fruitcrate', X0 + 3.4, Y1 + 0.9, 0); add('fruitcrate', X0 + 4.1, Y1 + 1.1, 0); add('wheelbarrow', X0 + 6, Y1 + 1, 0);
   add('textsign', X0 + 1, Y1 + 1.6, 0, { text: 'CEDAR POINT LAVENDER', z: 26, sx: 1, bg: '#5a3a8a', fg: [250, 240, 210] });
+  add('stand', X0 + 9.5, Y1 + 1.4, 12); add('beehive', X0 + 11.4, Y1 + 1.2, 6, { v: 1 });
+  addCounter(m, 'farmstand', 'Cedar Point Lavender', (X0 + 9.5) * TILE, (Y1 + 2.4) * TILE, 40);
   (m.landmarks ||= []).push({ name: 'Cedar Point Lavender', type: 'lavender', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
   m.natureSites.push({ kind: 'lavender', name: 'Cedar Point Lavender', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), plants: n });
 }
@@ -373,6 +384,9 @@ function boneyard(m, H) {
     const L = Math.hypot(bx - ax, by - ay) * TILE; for (let d = 0; d <= L; d += 16) m.addSolidProp(Math.round(ax * TILE + (bx - ax) / Math.hypot(bx - ax, by - ay) * d), Math.round(ay * TILE + (by - ay) / Math.hypot(bx - ax, by - ay) * d), 6);
   }
   add('textsign', X0 - 1.6, Y0 + 39.6, 0, { text: 'AIRCRAFT STORAGE', z: 30, sx: 1, bg: '#3a3e44', fg: [240, 230, 200] });
+  add('boxoffice', X0 + 3.4, Y0 + 30.2, 0);
+  for (const dx of [-48, -16, 16, 48]) m.addSolidProp(Math.round((X0 + 3.4) * TILE + dx), Math.round((Y0 + 30.2) * TILE - 8), 18);
+  addCounter(m, 'salvage', 'Dry Creek Aircraft Salvage', (X0 + 3.4) * TILE, (Y0 + 31.6) * TILE, 40);   // (the yard office, a container by the gate: they buy scrap)
   for (const [dx, dy] of [[3, 3], [28, 70], [14, 40]]) add('drum', X0 + dx, Y0 + dy, 9);
   (m.landmarks ||= []).push({ name: 'Dry Creek Boneyard', type: 'boneyard', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
   m.natureSites.push({ kind: 'boneyard', name: 'Dry Creek Boneyard', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), planes: n, gate: { x: X0 * TILE, y: (Y0 + 35) * TILE } });
@@ -404,6 +418,7 @@ function marketSquare(m, H) {
     add('mstall', tx, ry, 14, { v: k, c: k + (ry > rows[0] ? 1 : 0), a: 0 }); n++; k++;
     if (k % 2) add('fruitcrate', tx + 1.2, ry + 1.4, 0);
   }
+  for (const ry of rows) addCounter(m, 'market', 'Old Town Market', cxF * TILE, (ry + 1.4) * TILE, 48);   // (in front of the middle stalls of each row)
   // the string lights over each row, on posts at the square's edges
   for (const ry of rows) {
     const ya = ry - 1.2;
@@ -562,14 +577,19 @@ function balloonField(m, H) {
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
   for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) { const d = Math.hypot((tx - (X0 + X1) / 2) / ((X1 - X0) / 2), (ty - (Y0 + Y1) / 2) / ((Y1 - Y0) / 2)); const i = at(tx, ty); m.reserve[i] |= RES; if (d < 1 - hash2(tx, ty, 3701) * 0.12) m.tiles[i] = T.GRASS; }
   add('balloon', X0 + 7, Y0 + 10, 26, { v: 0 });
-  add('balloon', X0 + 19, Y0 + 14, 26, { v: 1 });
+  add('balloon', X0 + 23, Y0 + 16, 26, { v: 1 });   // (south-east of the booking table, so it doesn't stand in front of it)
   add('balloon', X0 + 14, Y0 + 2, 0, { v: 2, up: 230 });
   add('balloonlaid', X0 + 11, Y0 + 20, 0, { v: 3, a: 0 });
   add('fan', X0 + 6.3, Y0 + 20, 8, { a: 0 });
   add('windsock', X1 - 2, Y0 + 2, 4);
   add('textsign', X0 + 2.5, Y0 - 0.2, 0, { text: 'BALLOON RIDES', z: 28, sx: 1, bg: '#2a4a8a', fg: [250, 230, 140] });
+  // the flights: the booking table under an umbrella with the price board, the launch spot just north of it
+  // (a flight's balloon fills and lifts off there, and comes down there again)
+  add('umbrella_b', X0 + 21.4, Y0 + 7.6, 4); add('cafetable', X0 + 21.4, Y0 + 7.7, 6); add('chalkboard', X0 + 18.5, Y0 + 7.5, 0);
+  const launch = { x: Math.round((X0 + 20) * TILE), y: Math.round((Y0 + 5.2) * TILE) }, board = { x: Math.round((X0 + 20) * TILE), y: Math.round((Y0 + 7.6) * TILE) };
+  addCounter(m, 'ride', 'Dry Creek Balloon Flights', board.x, board.y, 44);
   (m.landmarks ||= []).push({ name: 'Dry Creek Balloon Field', type: 'balloons', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
-  m.natureSites.push({ kind: 'balloons', name: 'Dry Creek Balloon Field', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), balloons: 3 });
+  m.natureSites.push({ kind: 'balloons', name: 'Dry Creek Balloon Field', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), balloons: 3, launch, board });
 }
 
 // ---- Willow River Orchard (Dry Creek, below the vineyard; original) ------------------------------------------------
@@ -600,6 +620,7 @@ function orchard(m, H) {
   const sx = end.x / TILE - 3.2, sy = end.y / TILE + 3;
   if (open(at(sx, sy)) || (m.reserve[at(sx, sy)] & RES) === 0) {
     add('stand', sx, sy, 12);
+    addCounter(m, 'fruitstand', 'Willow River Orchard Stand', sx * TILE, (sy + 1) * TILE, 40);
     for (const dx of [-1.4, 1.4]) add('fruitcrate', sx + dx, sy + 0.9, 0);
     add('textsign', sx, sy - 1.6, 0, { text: 'FRESH APPLES', z: 26, sx: 1, bg: '#8a2a24', fg: [250, 236, 200] });
     m.parking.push({ x: Math.round((sx + 0.4) * TILE), y: Math.round((sy + 2.4) * TILE), a: Math.PI / 2, drive: true });
@@ -650,6 +671,7 @@ function vineyard(m, H) {
   const none = { x: 0, y: 0, w: 0, h: 0 };
   (m.parkGrounds ||= []).push({ x: DX * TILE, y: (ry + 1) * TILE, w: 2 * TILE, h: (WY + 9 - ry) * TILE, plaza: none }, { x: DX * TILE, y: (WY + 2) * TILE, w: (WX + 13 - DX) * TILE, h: 8 * TILE, plaza: none }, { x: TX * TILE, y: (Y0 - 1) * TILE, w: 2 * TILE, h: (Y1 - Y0 + 1) * TILE, plaza: none });
   add('winery', WX, WY, 0);
+  addCounter(m, 'winery', 'Willow River Winery', WX * TILE, (WY + 2.4) * TILE, 44);   // (at the great door: the tasting room)
   for (let dx = -126; dx <= 126; dx += 24) for (const dy of [-46, -12, 22]) m.addSolidProp(Math.round(WX * TILE + dx), Math.round(WY * TILE + dy), 18);
   for (const dx of [-5.6, 5.6]) add('barrels', WX + dx, WY + 2.5, 12, { a: 0 });
   add('barrels', WX + 12.2, WY + 3.9, 12, { a: Math.PI / 2 });
@@ -732,6 +754,7 @@ function westportPier(m, H) {
   add('baitshack', shx, shy, 0);
   for (const dx of [-48, -24, 0, 24, 48]) m.addSolidProp(Math.round(shx * TILE + dx), Math.round(shy * TILE - 6), 20);
   add('textsign', HX0 + 1.5, HY0 + 5.2, 0, { text: 'BAIT & TACKLE', z: 24, sx: 1, bg: '#24506e', fg: [250, 240, 210] });
+  addCounter(m, 'tackle', 'Pier Bait & Tackle', shx * TILE - 16, shy * TILE + 58, 40);   // (at the hatch: rods and bait, they buy your catch)
   add('fishtable', HX1 - 1.0, HY0 + 5.4, 8, { a: 0 });
   add('cooler', HX1 - 0.3, HY0 + 6.3, 0, { v: 1, lift: 4 }); add('crates', HX0 + 7.4, HY0 + 1.4, 10, { lift: 4 });
   add('pbench', HX0 + 1.0, RY - 1.6, 8, { a: Math.PI, lift: 4 }); add('pbench', HX0 + 1.0, RY + 1.8, 8, { a: Math.PI, lift: 4 });
@@ -740,6 +763,9 @@ function westportPier(m, H) {
   // the Ferris wheel on the head's south side, lit at night (its legs solid; you walk under the wheel to the deck)
   add('ferris', HX0 + 4, HY1 - 1.3, 0);
   for (const sd of [-1, 1]) for (const dy of [-12, 12]) m.addSolidProp(Math.round((HX0 + 4) * TILE + sd * 60), Math.round((HY1 - 1.3) * TILE + dy), 6);
+  const wheel = { x: Math.round((HX0 + 4) * TILE), y: Math.round((HY1 - 1.3) * TILE) };
+  wheel.board = { x: wheel.x, y: wheel.y + 30 };   // (on the boarding deck in front of the wheel: the cab at the bottom)
+  addCounter(m, 'ride', 'Westport Pier Ferris Wheel', wheel.board.x, wheel.board.y, 40);
   for (const [tx, ty, a] of [[HX0 + 0.1, RY - 5.2, 2.4], [sx - 12.1, RY - 1.95, -0.6], [HX1 + 0.92, HY1 + 0.8, 0.9]]) add('gull', tx, ty, 0, { a, z: 30 });
   // the float: two little boats tied up, cleats at its corners
   add('canoe', FX0 + 1.6, HY1 + 3.35, 0, { a: 0, c: 0 }); add('canoe', FX1 + 1.5, HY1 + 2.0, 0, { a: Math.PI / 2, c: 2 });
@@ -775,6 +801,7 @@ function westportPier(m, H) {
     add('pbench', lx0 - 0.4, ty - 0.6, 8, { a: Math.PI });
   }
   add('foodcart', sx + 2.2, RY - 3.9, 10); add('umbrella_r', sx + 3.8, RY - 3.4, 4); add('cafetable', sx + 0.6, RY - 3.2, 6);
+  addCounter(m, 'snack', 'Pier Snack Cart', (sx + 2.2) * TILE, (RY - 2.9) * TILE, 36);
   add('textsign', sx + 1.6, RY + 3.75, 0, { text: 'WESTPORT PIER', z: 50, bg: '#1d3f6e', fg: [255, 226, 120] });
   // the seal islets out in the bay to the west (the telescope looks at them): seals hauled out on the sand along
   // their shores, more on a barnacled rock between them, gulls, driftwood
@@ -801,7 +828,7 @@ function westportPier(m, H) {
   if (ns >= 4) (m.landmarks ||= []).push({ name: 'Seal Islets', type: 'seals', x: (HX0 - 34) * TILE, y: (HY0 - 40) * TILE, w: 26 * TILE, h: 44 * TILE });
   (m.landmarks ||= []).push({ name: 'Westport Pier', type: 'pier', x: HX0 * TILE, y: HY0 * TILE, w: (sx - HX0) * TILE, h: (HY1 - HY0 + 3) * TILE });
   m.natureSites.push({ kind: 'pier', name: 'Westport Pier', x: Math.round((sx - 2) * TILE), y: RY * TILE, head: { x: Math.round((HX0 + HX1 + 1) / 2 * TILE), y: RY * TILE }, len: L, root: { x: sx * TILE, y: RY * TILE },
-    scope: { x: Math.round((HX0 + 0.8) * TILE), y: Math.round((RY + 0.1) * TILE), look: { x: Math.round((HX0 - 16) * TILE), y: Math.round((RY - 18) * TILE) } } });   // (the coin telescope looks out at the Seal Islets)
+    scope: { x: Math.round((HX0 + 0.8) * TILE), y: Math.round((RY + 0.1) * TILE), look: { x: Math.round((HX0 - 16) * TILE), y: Math.round((RY - 18) * TILE) } }, ferris: wheel });   // (the coin telescope looks out at the Seal Islets)
 }
 
 // ---- Route 9 (Dry Creek Desert; concept D14) ---------------------------------------------------------------------
@@ -1312,6 +1339,7 @@ function splashBay(m, H) {
   for (let ty = Y0 + 1; ty <= Y0 + 2; ty++) for (let tx = bx0; tx < bx0 + bw; tx++) m.tiles[at(tx, ty)] = T.WALL;
   add('poolhouse', bx0 + bw / 2, Y0 + 2.75, 0, { w: bw * TILE, d: 2 * TILE - 4 });
   add('foodcart', 141, 967.4, 10); add('umbrella_r', 142.4, 967.8, 4); add('cafetable', 139.6, 968.6, 6); add('cafetable', 143.8, 969.2, 6);
+  addCounter(m, 'snack', 'Splash Bay Snack Cart', 141 * TILE, 968.4 * TILE, 36);
   // loungers and umbrellas: along the east side, between the river and the slides, along the south fence
   let k = 0;
   for (let ty = 968; ty < 983; ty += 1.6, k++) { if (k % 3 === 1) add(k % 2 ? 'umbrella_b' : 'umbrella_y', 159.4, ty, 4); else add('lounger', 159.6, ty, 6, { a: Math.PI, v: k % 4 }); }
@@ -2646,7 +2674,9 @@ function lakeviewPark(m, H) {
   add('statue', ST[0], ST[1], 8);
   for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; add('shrub_a', ST[0] + Math.cos(a) * 4.4, ST[1] + Math.sin(a) * 3.8, 0, { sp: k % 2 ? 'rose' : 'hydrangea', k: 1.1 }); }
   // by the plaza: the food cart under a striped umbrella, a chalkboard; picnic blankets out on the east lawn
+  paint(m, (cx + 6.4) * TILE, (cy + 3.8) * TILE, 1.7 * TILE, T.PLAZA, (t) => t === T.GRASS);   // (a paved pad for the cart, off the path)
   add('foodcart', cx + 6, cy + 3.2, 10); add('umbrella_r', cx + 7.6, cy + 3.6, 4);
+  addCounter(m, 'snack', 'Lakeview Park Snack Cart', (cx + 6) * TILE, (cy + 4.2) * TILE, 36);
   for (const [dx, dy, v] of [[10, -3, 0], [15, -1, 1], [12, 8, 0]]) { add('blanket', cx + dx, cy + dy, 0, { v }); add('cooler', cx + dx + 1.3, cy + dy - 0.5, 0, { v: v + 1 }); }
   // trees: groves of big shade trees and blossom on the lawns (clear of the paths and the plaza)
   const treeOk = (tx, ty) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const t = m.tiles[(Math.floor(ty) + dy) * MAP_W + Math.floor(tx) + dx]; if (t !== T.GRASS) return false; } return true; };

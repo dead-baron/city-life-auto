@@ -33,6 +33,7 @@ import { buildGive } from './devgive.js';
 import { DEV_SECTIONS } from './devcats.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
+import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt } from '../shared/rides.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
 import { ANIMAL_ART } from '../shared/animal-art.js';
@@ -170,6 +171,7 @@ function onText(m) {
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
       S.tt = { l: m.tt || [], at: performance.now() / 1000 };
+      S.rides = new Map(); for (const r of m.rides || []) rideOn(r);   // (the balloons already up, the riders on the wheel)
       S.portals = portalCovers(S.map);
       S.ground.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : S.updating ? 'Updating to the latest version...' : `Signed in as ${m.name}`;
@@ -183,6 +185,7 @@ function onText(m) {
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
+      if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
       bag.refresh(); wheel.refresh();
       if (m.dead) { wheel.close(); if (topOverlay() === 'inv') closeOverlay('inv'); }
       if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); if (S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('dev'); } }
@@ -592,6 +595,8 @@ function onEvent(ev) {
     case 'gatebreak': fx.sparks(ev.x, ev.y, 6); for (let k = 0; k < 6; k++) fx.spawn(4, ev.x, ev.y, Math.cos(ev.a + (Math.random() - 0.5)) * 160, Math.sin(ev.a + (Math.random() - 0.5)) * 160, 0.5, 3, k % 2 ? '#f4f4f4' : '#c8262b'); sfx('crash', distVol(ev.x, ev.y) * 0.6); break;
     case 'trainhorn': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y); sfx(ev.s === 2 ? 'trainhorn' : 'trainhornshort', Math.max(0, 1 - d / 2400)); break; }
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
+    case 'ride': rideOn(ev); if (ev.k === 'balloon') { const L = balloonSite(S.map); if (L) sfx('burner', distVol(L.launch.x, L.launch.y)); } break;   // a ride under way: the wheel's cab you're in, a balloon going up
+    case 'rideend': if (S.rides) S.rides.delete(ev.id); break;
     case 'bells': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y), v = Math.max(0, 1 - d / 2600); for (let k = 0; k < (ev.n || 3); k++) setTimeout(() => sfx('churchbell', v * (k % 2 ? 0.85 : 1)), k * 1150); break; }   // (the mission's bells carry a long way)
     case 'alarm': sfx('alert', distVol(ev.x, ev.y)); S.alarms = (S.alarms || []).concat([{ x: ev.x, y: ev.y, until: performance.now() + 20000 }]); break;
     case 'goal': sfx('cash', 1); S.cam.shake = Math.max(S.cam.shake, 3); break;
@@ -2099,7 +2104,7 @@ function prepFrame(dt) {
   // down: like a movie camera, it slowly pulls back from your body (never wider than the server sends)
   const downFor = S.me && S.me.dead ? (S.downFor = (S.downFor || 0) + dt) : (S.downFor = 0);
   const pull = downFor ? 1 + (DOWN_PULL - 1) * Math.min(1, downFor / 9) * (0.5 - 0.5 * Math.cos(Math.min(1, downFor / 9) * Math.PI)) : 1;
-  const targetZoom = baseZoom() / Math.max(pull, 1 + Math.min(0.5, speed / 1300));
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? RIDE_PULL : 1, 1 + Math.min(0.5, speed / 1300));
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -2120,6 +2125,15 @@ function prepFrame(dt) {
     if (L.px === null) { L.px = sp.x; L.py = sp.y; }
     if (t > L.dur || Math.hypot(sp.x - L.px, sp.y - L.py) > 24) S.look = null;
     else { const e = Math.min(1, t / 900, (L.dur - t) / 900), k = e * e * (3 - 2 * e); S.cam.x = tx + (L.x - tx) * k; S.cam.y = ty + (L.y - ty) * k; }
+  }
+  if (S.rides && S.rides.size) {   // rides: forget the ones long over (the end can be missed: a rider gone), point my camera
+    const nowS = performance.now() / 1000;
+    for (const [id, R] of S.rides) if (nowS - R.at > R.d + 4) S.rides.delete(id);
+    const rc = rideCam(tx, ty);
+    if (rc) { S.cam.x = rc[0]; S.cam.y = rc[1]; }
+    // up in my balloon: the burner roars now and then (the pilot keeping her up)
+    const mine = S.me && S.me.ride && S.me.ride.k === 'balloon' ? S.rides.get(S.me.ride.id) : null;
+    if (mine) { const t = nowS - mine.at; if (t > (mine.burn ?? 9) && t < mine.d - 14) { sfx('burner', 0.6); mine.burn = t + 11 + Math.random() * 8; } }
   }
   {
     // keep the camera inside the world (no black void past the map edge)
@@ -2725,7 +2739,7 @@ function walkInAt(x, y) {
 // The walk-in you're standing in (riding the subway under a shop doesn't open it), easing every
 // walk-in's roof fade; `art` gets the ones whose floor plan shows this frame.
 function interiorTick(sp, art) {
-  const b = S.playing && S.ctrlKind !== CTRL.RIDER ? walkInAt(sp.x, sp.y) : null;
+  const b = S.playing && S.ctrlKind !== CTRL.RIDER && !(S.me && S.me.ride) ? walkInAt(sp.x, sp.y) : null;   // (a balloon over a shop doesn't open it)
   S.roofFade ??= {};
   for (const id of S.map.walkIns || []) {
     const want = b && b.id === id ? 1 : 0;
@@ -2929,6 +2943,36 @@ function drawStationClocks(view, now) {
     if (secs === 0 && S.ctrlKind !== CTRL.RIDER) drawBoardingCue(g, S.map.rail, st, now); // a train is in: the platform lights up
     drawStationClock(g, S.map.rail, st, secs, now);
   });
+}
+
+// ---- rides (shared/rides.js; the server: server/systems/rides.js) -------------------------------------------------
+// What's under way, by id: the kind, the cab or the route and the balloon's colours, and when it started on this
+// page's clock (the server says how far in it is). The renderer draws them (art2 host.js _rides); a rider's camera
+// opens out and follows the cab round or the balloon across the country (rideCam).
+function rideOn(r) {
+  if (!S.rides) S.rides = new Map();
+  S.rides.set(r.id, { id: r.id, ped: r.ped, k: r.k, d: r.d, cab: r.cab, r: r.r, pal: r.pal, at: performance.now() / 1000 - (r.el || 0) });
+}
+const RIDE_PULL = 1.42;   // how far a rider's camera pulls back (server/view.js RIDE_ZOOM_OUT keeps a little more in view)
+const rideTmp = {};
+// where the camera looks on my ride, eased in from where I stood and back at the end ([x, y, k] or null)
+function rideCam(tx, ty) {
+  const mine = S.me && S.me.ride, R = mine && S.rides ? S.rides.get(mine.id) : null;
+  if (!R) return null;
+  const t = performance.now() / 1000 - R.at, e = Math.max(0, Math.min(1, t / 1.4, (R.d - t) / 1.4)), k = e * e * (3 - 2 * e);
+  let x, y;
+  if (R.k === 'ferris') {
+    const w = ferrisSite(S.map);
+    if (!w) return null;
+    const c = ferrisCab(w, R.cab, S.loopTime || 0, rideTmp);
+    x = w.x + (c.x - w.x) * 0.5; y = w.y - c.z * 0.75 - 20;   // (up with the cab: at the top the view is out over the bay)
+  } else {
+    const route = balloonRoutes(S.map)[R.r];
+    if (!route) return null;
+    balloonAt(route, Math.max(0, Math.min(t, R.d)), R.d, rideTmp);
+    x = rideTmp.x; y = rideTmp.y - rideTmp.z * 0.55;          // (the basket a little above the middle, the country all round)
+  }
+  return [tx + (x - tx) * k, ty + (y - ty) * k, k];
 }
 
 function setGate(i, open) {

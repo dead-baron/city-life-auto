@@ -17,7 +17,7 @@ export const ITEM_ICON = {
   lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
   purse: '👜', bonds: '📜', jewelry: '💎', scrap: '⚙', wallet: '👛',
-  apple: '🍎', orange: '🍊', grapes: '🍇',
+  apple: '🍎', orange: '🍊', grapes: '🍇', hotdog: '🌭', bread: '🍞', honey: '🍯', lemonade: '🍋', cider: '🧃', redwine: '🍷', whitewine: '🥂',
 };
 const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
 const SLOTS = 4;
@@ -119,7 +119,8 @@ function describe(id) {
   if (id === 'flashlight') return `${keyName('light')} switches it on and off - no hand slot (you keep your weapon); everyone sees the beam`;
   if (id === 'medkit') return `+${it.heal} health, stops bleeding`;
   if (id === 'bandage') return `+${it.heal} health, stops bleeding`;
-  if (it.food) return `+${it.heal} health (doesn't stop bleeding) - or sell it at a corner store or a gas station for about $${it.sell}`;
+  if (it.food) return `+${it.heal} health (doesn't stop bleeding)${it.sell ? ` - or sell it for about $${it.sell}` : ''}`;
+  if (it.buff === 'wine') return 'a glass or two: health comes back faster for 2 minutes';
   if (it.buff === 'coffee') return 'refills stamina, faster recovery for 60s';
   if (it.buff === 'energy') return 'extra stamina and speed for 60s';
   return '';

@@ -17,6 +17,7 @@ import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as picking from './picking.js';
 import * as places from './places.js';
+import * as rides from './rides.js';
 import * as homes from './homes.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
@@ -157,6 +158,8 @@ function standable(world, pos) {
 // foot stands.
 export function savePos(p, ped) {
   if (!ped || ped.onTrain || ped.sub) return;
+  const back = rides.savedSpot(ped); // (up in a balloon or on the wheel: you come back where you boarded)
+  if (back) { p.profile.pos = { x: Math.round(back.x), y: Math.round(back.y), lz: 0 }; return; }
   p.profile.pos = { x: Math.round(ped.x), y: Math.round(ped.y), lz: (ped.lz || 0) > 0.5 ? 1 : 0 };
 }
 
@@ -303,8 +306,8 @@ export function processInputs(world, dt) {
 
 function applyInput(world, p, ped, inp, pressed, dt) {
   if (pressed & IN.LIGHT) economy.toggleLight(world, p); // the flashlight (in the bag, no hand slot)
-  if (ped.hidden) { // inside your home: E brings up the home menu (Leave is on it)
-    if (pressed & (IN.ACTION | IN.VEHICLE)) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
+  if (ped.hidden) { // inside your home: E brings up the home menu (Leave is on it); on a ride: nothing to do but look
+    if ((pressed & (IN.ACTION | IN.VEHICLE)) && !ped.ride) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
     return;
   }
   ped.aimAngle = inp.aim;
@@ -408,6 +411,7 @@ function tackle(world, ped) {
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return null;
+  if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
@@ -473,6 +477,8 @@ export function findInteraction(world, p) {
   if (fruit) return fruit;
   const place = places.interaction(world, p);
   if (place) return place;
+  const ride = rides.interaction(world, p);
+  if (ride) return ride;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);
@@ -544,7 +550,7 @@ export function update(world, dt) {
     // prompt every 4 ticks
     if ((world.tick + (ped.id & 3)) % 4 === 0 && p.conn) {
       const act = findInteraction(world, p);
-      const label = act ? `${act.key || 'E'}: ${act.label}` : '';
+      const label = act ? (act.passive ? act.label : `${act.key || 'E'}: ${act.label}`) : '';   // (passive: just a note, no button - on a ride)
       if (label !== p.prompt) { p.prompt = label; p.meDirty = true; }
     }
   }
@@ -597,7 +603,7 @@ export function buildMe(world, p) {
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: ped && ped.fishing ? { bite: !!(ped.fishing.biteAt && world.time >= ped.fishing.biteAt) } : null,
     reloading: ped ? world.time < ped.reloadUntil : false,
-    buffs: ped ? { coffee: Math.max(0, (ped.buffs.coffee || 0) - world.time), energy: Math.max(0, (ped.buffs.energy || 0) - world.time) } : {},
+    buffs: ped ? { coffee: Math.max(0, (ped.buffs.coffee || 0) - world.time), energy: Math.max(0, (ped.buffs.energy || 0) - world.time), wine: Math.max(0, (ped.buffs.wine || 0) - world.time) } : {},
     vehicles: prof.vehicles.map((v) => v.model),
     garageCap: homes.garageCap(world, prof),
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
@@ -605,5 +611,6 @@ export function buildMe(world, p) {
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
+    ride: rides.meInfo(world, p),
   };
 }

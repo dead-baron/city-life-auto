@@ -431,8 +431,9 @@ export function golfPin() {
 }
 // a Ferris wheel (the wheel in the x-z plane, facing +y): a white double rim on spokes round a hub, two A-frame
 // legs to a boarding deck, sixteen gondolas hanging under the rim in alternating colours, and bulbs along the rim
-// and the spokes (lit at night: on 0..1)
-export function ferrisWheel(on = 0.6) {
+// and the spokes (lit at night: on 0..1). cabs 0: the wheel without its gondolas - in the game they go round
+// (ferrisCab, drawn turning by client/art2/game/host.js; the wheel itself looks the same at any turn)
+export function ferrisWheel(on = 0.6, cabs = 1) {
   const W = 224, Dp = 44, H = 262, m = new Vox(W, Dp, H), cx = W / 2, cz = 136, R0 = 98;
   const steel = m.mat({ ramp: R('#ecebe6'), k: 3, flag: F_NOCAST }), leg = m.mat({ ramp: R('#d8d6d0'), k: 3 }), hub = m.mat({ ramp: R('#8a8e94'), k: 3 });
   const deck = m.mat({ ramp: R('#8a6a4a'), k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -0.8 : 0) }), rail = m.mat({ ramp: R('#2a3a5a'), k: 3 });
@@ -457,12 +458,27 @@ export function ferrisWheel(on = 0.6) {
   m.box(cx - 76, 2, 0, cx + 76, Dp - 2, 8, deck);
   m.fill((x, y, z) => ((y < 4 || y > Dp - 4) && (z > 18 && z < 20 || (Math.round(x) % 8 === 0 && z >= 8 && z < 20)) ? rail : -1), cx - 76, 2, 8, cx + 76, Dp - 2, 20);
   // the gondolas, hanging plumb under the rim between the rims
-  for (let k = 0; k < 16; k++) {
+  for (let k = 0; k < (cabs ? 16 : 0); k++) {
     const a = k / 16 * Math.PI * 2 + Math.PI / 16, gx = cx + Math.cos(a) * R0, gz = cz + Math.sin(a) * R0 - 14, c = cab[k % 4];
     if (gz < 10) continue;
     m.box(gx - 0.5, (yF + yB) / 2 - 0.5, gz + 8, gx + 0.5, (yF + yB) / 2 + 0.5, gz + 14, steel);
     m.box(gx - 7, yF + 1, gz - 6, gx + 7, yB - 1, gz + 2, c); m.box(gx - 7, yF + 1, gz + 2, gx + 7, yF + 2, gz + 6, glass); m.box(gx - 8, yF, gz + 6, gx + 8, yB, gz + 9, roof);
   }
+  return m;
+}
+// one of the wheel's gondolas on its own (colour c 0-3, as on the wheel), its floor at z 0 and the hanger up to the
+// rim at the top: the cab is 14 x 10, glazed above the waist, under a white roof
+export const FERRIS_CAB_COLS = ['#d8342e', '#2f7ac8', '#f0c830', '#3a9a5a'];
+export function ferrisCab(c = 0) {
+  const m = new Vox(18, 14, 20), steel = m.mat({ ramp: R('#ecebe6'), k: 3, flag: F_NOCAST }), body = m.mat({ ramp: R(FERRIS_CAB_COLS[c % 4]), k: 3 });
+  const roof = m.mat({ ramp: R('#f2f0ea'), k: 3 }), glass = m.mat({ ramp: R('#9ac8d8'), k: 3, flag: F_GLASS }), seat = m.mat({ ramp: R('#5a3a2a'), k: 2 });
+  m.box(2, 2, 0, 16, 12, 8, body);                                   // the tub
+  m.box(3, 3, 1, 15, 11, 8, seat);                                   // (inside: the bench)
+  m.box(2, 2, 8, 16, 12, 12, glass);                                 // the windows all round...
+  for (const [x, y] of [[2, 2], [15, 2], [2, 11], [15, 11]]) m.box(x, y, 8, x + 1, y + 1, 12, body);   // ...between the corner posts
+  m.box(1, 1, 12, 17, 13, 15, roof);                                 // the roof
+  m.box(8.5, 6.5, 15, 9.5, 7.5, 20, steel);                          // the hanger (to the rim)
+  m.smooth = 1;
   return m;
 }
 // a market stall (the counter along x, facing +y): a trestle counter of crates heaped with goods (fruit, greens,

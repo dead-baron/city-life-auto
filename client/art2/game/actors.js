@@ -26,6 +26,9 @@
 //   FX_FOR_V1[v1 particle type] = { name, frames } (+ .decal, .event tables), v1ParticleFx / v1ParticleFrame,
 //       v1DecalFx / v1DecalFrame: the v1 pooled particles and decals onto art2 frames
 //   critterKey / critterSprite(kind, frame, left), critterInfo(kind), critterShadow(r)   ambient birds etc.
+//   rideKey / rideSprite(kind, v)   the rides (shared/rides.js): 'cab' a Ferris wheel gondola (colour v 0-3; anchor
+//       the ground point under its floor), 'balloon' a balloon on a flight (palette v 0-3, burner lit; anchor under
+//       the basket)
 //   SPRITES / KEYS   one table per kind for the workers: SPRITES[kind](...args), KEYS[kind](...args)
 //   clearActorCaches(), setActorBudget({ modelMB | lowMem })   the model caches (vehicles are kept packed,
 //       compactVox / renderCompact: 6 bytes a voxel; default 48 MB of vehicle models, 16 MB on lowMem)
@@ -36,6 +39,8 @@ import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICL
 import { animalModel, renderUpright, ANIMALS } from '../animals.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
 import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
+import { ferrisCab } from '../props-park.js';
+import { hotAirBalloon } from '../props-rural.js';
 import { VEHICLE_BY_INDEX, PAINTS } from '../../../shared/vehicles.js';
 
 const TAU = Math.PI * 2;
@@ -594,8 +599,19 @@ export function critterInfo(kind) { const d = CRITTERS[kind]; return d ? { frame
 export function critterShadow(r = 3) { return copySprite(shadowBlob(r)); }
 
 // drop the cached voxel models (a worker under memory pressure; sprites already made stay valid)
+// ---- rides ----------------------------------------------------------------------------------------------------
+// The Ferris wheel's gondolas go round (the static wheel is baked without them) and a flight's balloon crosses the
+// sky: both drawn as the static wheel and the field's balloons draw them. A balloon is a big model (154 x 154 x 266
+// voxels): made once for its sprite and not kept.
+export const rideKey = (kind, v = 0) => `R|${kind === 'balloon' ? 'b' : 'c'}|${(v | 0) & 3}`;
+export function rideSprite(kind, v = 0) {
+  const c = (v | 0) & 3;
+  if (kind === 'balloon') return trimSprite(hotAirBalloon(c, 1).render(0, { dither: 0.3, px: ART_PX }));
+  return objRender('cab' + c, () => ferrisCab(c), 0, 1);
+}
+
 export function clearActorCaches() { for (const c of [MODELS, ANIMAL_MODELS, OBJ_MODELS, TRAIN_MODELS]) c.clear(); LIGHTS.clear(); }
 
 // ---- one table for the workers: sprite(kind, args) and its cache key --------------------------------------------
-export const SPRITES = { vehicle: vehicleSprite, animal: animalSprite, crate: crateSprite, bag: bagSprite, ball: ballSprite, proj: projSprite, train: trainCarSprite, fx: fxSprite, muzzle: muzzleSprite, tracer: tracerSprite, wake: wakeSprite, critter: critterSprite };
-export const KEYS = { vehicle: vehicleKey, animal: animalKey, crate: crateKey, bag: bagKey, ball: ballKey, proj: projKey, train: trainKey, fx: fxKey, muzzle: muzzleKey, tracer: tracerKey, wake: wakeKey, critter: critterKey };
+export const SPRITES = { vehicle: vehicleSprite, animal: animalSprite, crate: crateSprite, bag: bagSprite, ball: ballSprite, proj: projSprite, train: trainCarSprite, fx: fxSprite, muzzle: muzzleSprite, tracer: tracerSprite, wake: wakeSprite, critter: critterSprite, ride: rideSprite };
+export const KEYS = { vehicle: vehicleKey, animal: animalKey, crate: crateKey, bag: bagKey, ball: ballKey, proj: projKey, train: trainKey, fx: fxKey, muzzle: muzzleKey, tracer: tracerKey, wake: wakeKey, critter: critterKey, ride: rideKey };

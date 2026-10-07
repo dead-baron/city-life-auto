@@ -79,10 +79,22 @@ export const ARMORED_VEHICLES = ['armored', 'swat'];
 export const SOAK_HEAL = 5;             // health per second while soaking
 export const SOAK_AFTER_HIT_S = 3;      // ...once you've been out of the fight this long
 
+// Wine (the winery, the golf club bar): health comes back this many times faster for WINE_S
+export const WINE_S = 120;
+export const WINE_REGEN = 2.5;
+
 // Picking fruit (Willow River Orchard, the vineyard's vines): a tree or a vine gives a few, then it's bare a while
 export const PICK_MAX = 3;              // up to this many from one tree or vine...
 export const PICK_REGROW_S = 240;       // ...then nothing more on it for this long
 export const PICK_REACH = 40;           // stand this close to the trunk / the row
+
+// Rides (shared/rides.js, server/systems/rides.js): the Ferris wheel on Westport Pier (one turn of the wheel) and
+// hot-air balloon flights from the Dry Creek Balloon Field (out over the country and back). Not while wanted.
+export const FERRIS_PRICE = 5;
+export const FERRIS_S = 40;             // one turn of the wheel (it turns all the time)
+export const BALLOON_PRICE = 40;
+export const BALLOON_S = 100;           // take-off to touch-down
+export const BALLOONS_UP = 3;           // flights in the air at once (the field has three balloons)
 
 // Clearing your record: pay the fines at the courthouse or Police HQ (not while wanted)
 export const FELONY_FINE = 750;

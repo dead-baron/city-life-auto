@@ -877,7 +877,7 @@ test('weapons: guns drop NPCs/cops in 1-3 shots, players take more; bazooka one-
     let shots = 0;
     for (const v of w.query(p.ped.x + 30, p.ped.y, 200, K.VEH)) w.remove(v); // a parked car in the line of fire made this flaky
     while (!target.dead && shots < 20) {
-      teleport(w, target, p.ped.x + 60, p.ped.y); target.vx = 0; target.vy = 0;
+      teleport(w, target, p.ped.x + 60, p.ped.y); target.vx = 0; target.vy = 0; target.rollT = 0;   // (a dive-roll dodges a bullet: made this flaky)
       p.ped.nextAttack = 0; p.ped.mag.pistol = 99;
       combat.tryAttack(w, p.ped, 0); shots++;
     }

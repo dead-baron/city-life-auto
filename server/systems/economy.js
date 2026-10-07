@@ -18,12 +18,12 @@ import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
 
-import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE } from '../../shared/rules.js';
+import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
   switch (poi.kind) {
-    case 'delivery': case 'evidence': case 'reception': case 'paint': return null;
+    case 'delivery': case 'evidence': case 'reception': case 'paint': case 'ride': return null;   // (a ride's boarding point: server/systems/rides.js)
     case 'gang': return gang.isMember(p) ? 'Syndicate HQ (members)' : 'Syndicate HQ (join the gang)';
     case 'smuggler': return "Smuggler's Den";
     case 'charter': return 'Charter desk (deep-sea fishing)';
@@ -45,9 +45,27 @@ export function poiLabel(world, p, poi) {
     case 'pawn': return 'Pawn window';
     case 'farm': return 'Farm Co-op (harvest contracts)';
     case 'warehouse': return 'Portside Logistics (courier jobs)';
-    default: return poi.outside ? `Counter - ${poi.label}` : `Enter ${poi.label}`;
+    default:
+      if (poi.counter && COUNTER[poi.kind]) return COUNTER[poi.kind].label(poi.label);
+      return poi.outside ? `Counter - ${poi.label}` : `Enter ${poi.label}`;
   }
 }
+
+// The counters out at the countryside places (shared/naturesites.js addCounter): what the prompt says
+// when you walk up, the menu title, and the line under it.
+const COUNTER = {
+  winery: { label: (l) => `${l} - tasting room`, title: (l) => SHOPS.winery.title, sub: 'Estate reds and whites, poured by the bottle: a glass or two and your health comes back faster for a couple of minutes. The cellar pays more for grapes than any shop in town - pick them off the vines up the hill.' },
+  fruitstand: { label: (l) => `${l} (fruit, cider)`, title: (l) => l, sub: 'Fresh off the trees out back - pick your own for free, or buy a bag here. A cup of pressed cider puts the spring back in your step. They buy apples and oranges.' },
+  market: { label: (l) => `${l} - the stalls`, title: (l) => l, sub: 'Bread, fruit and honey from the farms round about. The stallholders buy fruit and honey too.' },
+  snack: { label: (l) => `${l} (hot dogs, lemonade)`, title: (l) => l, sub: 'Hot dogs, ice-cold lemonade and energy drinks.' },
+  tackle: { label: (l) => `${l} (bait, rods; sells fish)`, title: (l) => l, sub: null },
+  clubhouse: { label: (l) => `${l} - the bar`, title: (l) => SHOPS.clubhouse.title, sub: 'Members and guests welcome. Cocktails, coffee, a fine red and a hot dog at the turn.' },
+  farmstand: { label: (l) => `${l} - farm stand (honey)`, title: (l) => SHOPS.farmstand.title, sub: 'Lavender honey from the hives at the end of the rows, and fresh lemonade. They buy honey back.' },
+  salvage: { label: (l) => `${l} - yard office (buys scrap)`, title: (l) => SHOPS.salvage.title, sub: 'The foreman buys component scrap for more than the pawn shop pays. Bring it to the window.' },
+};
+
+// What a counter pays for one of an item: its own price when it has one (the winery pays more for grapes), else the usual
+const sellPrice = (shop, id) => (shop && shop.sellPrice && shop.sellPrice[id]) || ITEMS[id].sell;
 
 // Pay off your felony record (courthouse or Police HQ) - a clean record lets you join the force.
 function recordOption(p, opts) {
@@ -100,6 +118,10 @@ export function buildMenu(world, p, poi) {
         opts.push({ id: `i:${o.id}:${o.price}:${o.qty}`, label: `${ITEMS[o.id].name}${o.qty > 1 ? ' x' + o.qty : ''}`, price: o.price, dis: tool && have > 0, note: tool && have > 0 ? 'have one' : have ? `have ${have}` : '' });
       }
     }
+    if (poi.counter && COUNTER[kind]) {
+      title = COUNTER[kind].title(poi.label);
+      if (COUNTER[kind].sub) sub = COUNTER[kind].sub;
+    }
     if (kind === 'club') {
       title = poi.label;
       sub = 'The bar. A cocktail fills your stamina past full for a minute. Open from dusk till dawn.';
@@ -110,7 +132,7 @@ export function buildMenu(world, p, poi) {
     }
     for (const id of shop.sells || []) {
       const n = prof.inventory[id] || 0;
-      if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -ITEMS[id].sell, note: n > 1 ? 'sells all' : '' });
+      if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(shop, id), note: n > 1 ? 'sells all' : '' });
     }
     if (shop.sellsWeapons) {
       for (const id of Object.keys(prof.weapons)) {
@@ -369,7 +391,7 @@ function execute(world, p, poi, opt) {
       const id = parts[1];
       const n = prof.inventory[id] || 0;
       if (n <= 0) return 'Nothing to sell.';
-      const gain = ITEMS[id].sell * n;
+      const gain = sellPrice(SHOPS[poi.kind === 'vending' ? 'vending' : poi.kind], id) * n;
       prof.inventory[id] = 0;
       prof.bank += gain; // shop sales are paid straight into the bank
       world.notify(p, `Sold ${n}x ${ITEMS[id].name}: $${gain} deposited to your bank.`, 'good');
@@ -619,6 +641,7 @@ function applyDisguise(world, p) {
 export function applyBuff(world, ped, buff) {
   if (buff === 'coffee') { ped.stamina = 100; ped.buffs.coffee = world.time + 60; }
   if (buff === 'energy') { ped.buffs.energy = world.time + 60; ped.stamina = 140; }
+  if (buff === 'wine') ped.buffs.wine = world.time + WINE_S;   // (combat.js: health comes back faster)
 }
 
 // Walk up to a cash machine with money on you and it goes straight into the bank.
@@ -708,7 +731,7 @@ export function useItem(world, p, id) {
   } else if (it.buff) {
     inv[id]--;
     applyBuff(world, ped, it.buff);
-    world.notify(p, `${it.name}: ${it.buff === 'coffee' ? 'stamina refilled, faster recovery' : 'more stamina + speed boost'} for 60s.`, 'good');
+    world.notify(p, it.buff === 'wine' ? `${it.name}: a glass or two - you heal faster for ${Math.round(WINE_S / 60)} minutes.` : `${it.name}: ${it.buff === 'coffee' ? 'stamina refilled, faster recovery' : 'more stamina + speed boost'} for 60s.`, 'good');
   } else { world.notify(p, `You can't use ${it.name}.`, 'info'); return; }
   p.meDirty = true;
   store.touch();

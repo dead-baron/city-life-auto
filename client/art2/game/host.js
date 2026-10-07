@@ -41,6 +41,7 @@ import { lampHead } from '../../render/tiles.js';
 import { countryLightY } from '../../render/country.js';
 import { wind } from '../../render/flora/wind.js';
 import { F_GROUND, F_NOCAST } from '../gbuf.js';
+import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt } from '../../../shared/rides.js';
 
 export { DECK_Z };
 const TAU = Math.PI * 2;
@@ -536,7 +537,8 @@ export class World2 {
     const rx = onTrain ? 28 : inVeh ? 150 : 100, up = onTrain ? 70 : inVeh ? 160 : 128, down = onTrain ? 12 : 44;
     const want = this._fadeWant || (this._fadeWant = new Set());
     want.clear();
-    if (!F.sub && !F.spec) for (const st of this.chunkState.values()) { // (none while spectating)
+    const riding = !!(S.me && S.me.ride);   // (up on the wheel or in a balloon: nothing round your feet to see past)
+    if (!F.sub && !F.spec && !riding) for (const st of this.chunkState.values()) { // (none while spectating)
       if (!st.blds) continue;
       for (const r of st.blds) {
         const b = r[0], m = (this.fades.get(b) || 0) > 0.05 ? 24 : 0;
@@ -890,6 +892,48 @@ export class World2 {
     this.E.drawSprite(sk, c.rx, c.ry, 0, o); this.n.drawn++;
   }
 
+  // ---- the rides (shared/rides.js) -------------------------------------------------------------------------------
+  // The Ferris wheel's sixteen gondolas going round on the world's loop clock (the wheel is baked without them; your
+  // own cab glows a little while you ride it), and every balloon flight under way, from its route and how long it
+  // has been up (main.js keeps S.rides from the server's broadcasts): it fades in as it fills on the field and out
+  // as it empties after touch-down. The burners light up the night (_lights).
+  _rides(F, now) {
+    const A = this.A, S = this.S, E = this.E, lit = this.balLit || (this.balLit = []);
+    lit.length = 0;
+    if (!A || !A.rideKey) return;
+    const o = this.opts;
+    o.flipX = false; o.tint = null; o.xray = false; o.shadow = true; o.alpha = 1;
+    const wheel = ferrisSite(this.map);
+    if (wheel && wheel.x > this.vx0 - 240 && wheel.x < this.vx1 + 240 && wheel.y > this.vy0 - 60 && wheel.y < this.vy1 + 400) {
+      const t = S.loopTime || 0, mine = S.me && S.me.ride && S.me.ride.k === 'ferris' ? S.me.ride.cab : -1, c = this._cab || (this._cab = {});
+      for (let k = 0; k < FERRIS.n; k++) {
+        const col = k % FERRIS.cols, key = this._spr('actors', 'ride', A.rideKey('cab', col), ['cab', col]);
+        if (!key) continue;
+        ferrisCab(wheel, k, t, c);
+        o.flash = k === mine ? 0.16 + 0.1 * Math.sin(now * 4) : 0; o.air = false;
+        E.drawSprite(key, c.x, c.y, c.z, o); this.n.drawn++;
+      }
+    }
+    if (S.rides && S.rides.size) {
+      const routes = balloonRoutes(this.map), at = this._bal || (this._bal = {}), clock = performance.now() / 1000;
+      for (const R of S.rides.values()) {
+        const route = R.k === 'balloon' ? routes[R.r] : null;
+        if (!route) continue;
+        const t = clock - R.at;
+        if (t < 0 || t > R.d + 2.5) continue;
+        balloonAt(route, Math.min(t, R.d), R.d, at);
+        if (at.x < this.vx0 - 200 || at.x > this.vx1 + 200 || at.y - at.z < this.vy0 - 560 || at.y - at.z > this.vy1 + 220) continue;
+        const key = this._spr('actors', 'ride', A.rideKey('balloon', R.pal), ['balloon', R.pal]);
+        if (!key) continue;
+        o.alpha = Math.max(0, Math.min(1, t / 2.5, (R.d + 2.5 - t) / 2.5)); o.flash = 0; o.air = at.z > 24;
+        if (o.alpha <= 0) continue;
+        E.drawSprite(key, at.x, at.y, at.z, o); this.n.drawn++;
+        lit.push(at.x, at.y, at.z, o.alpha);
+      }
+    }
+    o.alpha = 1; o.flash = 0; o.air = false;
+  }
+
   _small(kind, key, args, e, x, y, z0) {
     let sk = this._spr('actors', kind, key, args);
     if (!sk) sk = e._v2k && this.E.hasSprite(e._v2k) ? e._v2k : null;
@@ -909,6 +953,7 @@ export class World2 {
     for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F, 8); }
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
+    this._rides(F, now);
     if (A) {
       for (const c of F.crates) {
         const st = c.flags & 3;
@@ -1394,6 +1439,9 @@ export class World2 {
       if (f.kind === 'boom') { const e = Math.min(1.6, f.t * 3.2); this._light(f.x, f.y, 30, f.r * 1.3, C.fire, 2.4 * e); }
       else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
     }
+    // the balloons' burners (the flame over the basket: shared/rides.js, client/art2/props-rural.js hotAirBalloon)
+    const bl = this.balLit || [];
+    for (let j = 0; j < bl.length; j += 4) this._light(bl[j], bl[j + 1], bl[j + 2] + 46, 150, C.fire, (0.5 + 1.5 * night) * bl[j + 3] * (0.85 + 0.15 * Math.sin(now * 19 + j)));
     let fires = 0;
     for (const o of F.fx.p) { if (!o.on || o.type !== 3 || fires > 26 || !inV(o.x, o.y)) continue; fires++; this._light(o.x, o.y, 10, 70, C.fire, 0.6); }
     // camp fires and flare stacks flicker (the statics' fire lights are left to these)

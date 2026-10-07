@@ -48,6 +48,7 @@ export class HUD {
     if (me.bounty > 0) st.push(`<span class="bad">BOUNTY $${me.bounty}</span>`);
     if (me.buffs?.coffee > 0) st.push(`COFFEE ${Math.ceil(me.buffs.coffee)}s`);
     if (me.buffs?.energy > 0) st.push(`ENERGY ${Math.ceil(me.buffs.energy)}s`);
+    if (me.buffs?.wine > 0) st.push(`WINE ${Math.ceil(me.buffs.wine)}s`);
     if (me.light) st.push('🔦 ON');
     if (me.ghost) st.push('GHOST');
     st.push(`<span class="dim">EXP ${me.cexp} · SAM ${me.sam}</span>`);
@@ -262,9 +263,10 @@ export class HUD {
     const me = this.me;
     // POIs
     g.font = `bold ${big ? 14 : 9}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const skipIc = iconSkip(this.map);
     for (const p of this.map.pois) {
       const icon = POI_ICON[p.kind];
-      if (!icon) continue;
+      if (!icon || skipIc.has(p.id)) continue;
       const [x, y] = toR(p.x, p.y);
       if (x < -10 || y < -10 || x > size + 10 || y > size + 10) continue;
       g.fillStyle = '#000'; g.fillRect(x - (big ? 8 : 5), y - (big ? 8 : 5), big ? 16 : 10, big ? 16 : 10);
@@ -460,9 +462,10 @@ export class HUD {
     // places
     const ic = Math.max(11, Math.min(16, w / 60));
     g.font = `bold ${ic - 3}px monospace`;
+    const skipIc = iconSkip(this.map);
     for (const p of this.map.pois) {
       const icon = POI_ICON[p.kind];
-      if (!icon) continue;
+      if (!icon || skipIc.has(p.id)) continue;
       const [x, y] = P(p.x, p.y);
       g.fillStyle = '#000'; g.fillRect(x - ic / 2, y - ic / 2, ic, ic);
       g.fillStyle = icon[1]; g.fillText(icon[0], x, y + 1);
@@ -591,8 +594,22 @@ const POI_ICON = {
   clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
   fishmarket: ['≈', '#25b8c0'], marina: ['B', '#7de0ff'], rental: ['⛵', '#7de0ff'], farm: ['¥', '#b8e02a'], courthouse: ['J', '#e8d8a8'],
   charter: ['≈', '#7de0ff'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'], station: ['≡', '#f0f0f0'],
-  airport: ['✈', '#9fd0ff'],
+  airport: ['✈', '#9fd0ff'], tackle: ['🎣', '#25b8c0'], winery: ['🍷', '#c04a7a'], clubhouse: ['⛳', '#7de07a'], market: ['🧺', '#e8b060'],
+  fruitstand: ['🍎', '#ff6a5a'], farmstand: ['🍯', '#e0b040'], snack: ['🌭', '#ffb060'], salvage: ['⚙', '#c0c8d0'], ride: ['🎡', '#ff9ad0'],
 };
+// one icon for a place with more than one counter (the market's rows of stalls): the same kind within this of
+// another is left off the maps
+const ICON_MERGE = 640;
+function iconSkip(map) {
+  if (map._iconSkip) return map._iconSkip;
+  const skip = new Set(), kept = [];
+  for (const p of map.pois) {
+    if (!POI_ICON[p.kind]) continue;
+    if (kept.some((q) => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE)) skip.add(p.id); else kept.push(p);
+  }
+  Object.defineProperty(map, '_iconSkip', { value: skip, enumerable: false, configurable: true });
+  return skip;
+}
 
 function buildMinimap(map) {
   const c = document.createElement('canvas');

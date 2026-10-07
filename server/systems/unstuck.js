@@ -24,6 +24,7 @@ function calmFor(world, p) {
 export function canUnstick(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not right now.';
+  if (ped.ride) return 'Not during a ride.';
   if (ped.vehId || ped.onTrain || ped.hidden) return 'Only on foot.';
   if (p.wanted > 0) return 'Not while you\'re wanted - lose the cops first, or surrender.';
   if (calmFor(world, p) < UNSTUCK_CALM_S) return `Not in the middle of a fight - wait ${Math.ceil(UNSTUCK_CALM_S - calmFor(world, p))}s.`;
@@ -130,6 +131,7 @@ export function safeSpot(map, x, y) {
 export function surrender(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not right now.';
+  if (ped.ride) return 'Not during a ride.';
   if (ped.hidden) return 'Step outside first.';
   if (ped.onTrain) return 'Get off the train first.';
   p.unstuck = null;

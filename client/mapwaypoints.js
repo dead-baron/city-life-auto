@@ -31,7 +31,9 @@ export function createMapWaypoints(ctx) {
       const mine = new Set(ctx.myHomes().map((h) => h.id));
       list = list.filter((p) => !mine.has(p.home)).slice(0, 400);
     }
-    return list.map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d).slice(0, g.id === 'homes' ? 12 : 30);
+    return list.map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)
+      .filter((q, i, all) => !all.slice(0, i).some((o) => o.p.label === q.p.label && Math.hypot(o.p.x - q.p.x, o.p.y - q.p.y) < 640))   // (the market's rows of stalls: once)
+      .slice(0, g.id === 'homes' ? 12 : 30);
   }
 
   function render() {

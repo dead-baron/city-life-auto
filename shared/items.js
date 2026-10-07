@@ -58,6 +58,14 @@ export const ITEMS = {
   apple:   { name: 'Crisp Apple',       food: true, heal: 6, sell: 3 },
   orange:  { name: 'Sweet Orange',      food: true, heal: 6, sell: 4 },
   grapes:  { name: 'Bunch of Grapes',   food: true, heal: 8, sell: 6 },
+  // food and drink from the new places' counters (the winery, the stands, the snack carts, the market)
+  hotdog:  { name: 'Hot Dog',           food: true, heal: 15, sell: 0 },
+  bread:   { name: 'Fresh Bread',       food: true, heal: 12, sell: 0 },
+  honey:   { name: 'Lavender Honey',    food: true, heal: 10, sell: 8 },
+  lemonade: { name: 'Lemonade',         stamina: true, buff: 'coffee', sell: 0 },
+  cider:   { name: 'Apple Cider',       stamina: true, buff: 'coffee', sell: 0 },
+  redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
+  whitewine: { name: 'Willow River White', buff: 'wine', sell: 12 },
 };
 
 // What kind of thing an item is (the bag's sections and the dev give menu).
@@ -136,6 +144,14 @@ export const SHOPS = {
     { kind: 'weapon', id: 'spistol', price: 850 }, { kind: 'ammo', id: 'spistol', price: 35, qty: 10 },
   ], sells: ['purse', 'bonds', 'jewelry'] },
   clothing: { title: 'Threads Outfitters', buy: [{ kind: 'service', id: 'outfit', price: 120 }] },
+  // the designed places' counters (shared/naturesites.js); sellPrice: what this counter pays, when it beats the usual
+  winery: { title: 'Willow River Winery - Tasting Room', buy: [{ kind: 'item', id: 'redwine', price: 30, qty: 1 }, { kind: 'item', id: 'whitewine', price: 30, qty: 1 }, { kind: 'item', id: 'bread', price: 8, qty: 1 }], sells: ['grapes'], sellPrice: { grapes: 10 } },
+  fruitstand: { title: 'Willow River Orchard Stand', buy: [{ kind: 'item', id: 'cider', price: 6, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }], sells: ['apple', 'orange'], sellPrice: { apple: 5, orange: 6 } },
+  market: { title: 'Old Town Market', buy: [{ kind: 'item', id: 'bread', price: 7, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }, { kind: 'item', id: 'grapes', price: 8, qty: 2 }, { kind: 'item', id: 'honey', price: 14, qty: 1 }], sells: ['apple', 'orange', 'grapes', 'honey'] },
+  snack: { title: 'Snack Cart', buy: [{ kind: 'item', id: 'hotdog', price: 6, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }, { kind: 'item', id: 'energy', price: 9, qty: 1 }] },
+  clubhouse: { title: 'Cedar Hills Golf Club - The Nineteenth', buy: [{ kind: 'item', id: 'cocktail', price: 20, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'redwine', price: 34, qty: 1 }, { kind: 'item', id: 'hotdog', price: 8, qty: 1 }] },
+  farmstand: { title: 'Cedar Point Lavender - Farm Stand', buy: [{ kind: 'item', id: 'honey', price: 12, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }], sells: ['honey'] },
+  salvage: { title: 'Dry Creek Aircraft Salvage', buy: [], sells: ['scrap'], sellPrice: { scrap: 45 } },
   garage: { title: 'Fresh Coat Garage', buy: [{ kind: 'service', id: 'respray', price: 250 }, { kind: 'service', id: 'wash', price: 20 }, { kind: 'service', id: 'repair', price: 300 }, { kind: 'service', id: 'garage', price: 0 }] },
   dealer: { title: 'Motor Row Dealership', buy: ['bicycle', 'compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports'].map((id) => ({ kind: 'vehicle', id })) },
   marina: { title: 'Harbor Marina', buy: ['jetski', 'dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },

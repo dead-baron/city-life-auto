@@ -6,7 +6,7 @@ import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S } from '../../shared/rules.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -403,7 +403,7 @@ export function update(world, dt) {
       }
       if (e.player && world.tick % 20 === 0) e.player.meDirty = true;
     } else if (e.hp < e.maxHp && now - e.lastHitAt > 10 && e.hp >= e.maxHp * 0.3) {
-      e.hp = Math.min(e.maxHp, e.hp + 1.2 * dt);
+      e.hp = Math.min(e.maxHp, e.hp + 1.2 * (e.buffs && e.buffs.wine > now ? WINE_REGEN : 1) * dt);   // (a glass of wine: faster)
       if (e.player && world.tick % 20 === 0) e.player.meDirty = true;
     }
     e.lastStepX = e.x; e.lastStepY = e.y;

@@ -31,13 +31,14 @@ export function focusOf(world, p) {
 
 // The player's camera rectangle right now (same maths as the client camera).
 export const DOWN_ZOOM_OUT = 1.45; // how far the camera has pulled back once you've been down a while (client: main.js)
+export const RIDE_ZOOM_OUT = 1.45; // ...and on the Ferris wheel or up in a balloon (server/systems/rides.js)
 export function viewRect(world, p, out = {}) {
   const f = focusOf(world, p);
   if (!f) return null;
   const moving = !!(p.ped.vehId || p.ped.onTrain);
   const vx = moving ? f.vx || 0 : 0, vy = moving ? f.vy || 0 : 0;
   const speed = Math.hypot(vx, vy);
-  const zoomOut = p.ped.dead ? DOWN_ZOOM_OUT : 1 + Math.min(0.5, speed / 1300); // down: the camera slowly pulls back
+  const zoomOut = p.ped.dead ? DOWN_ZOOM_OUT : p.ped.ride ? RIDE_ZOOM_OUT : 1 + Math.min(0.5, speed / 1300); // down: the camera slowly pulls back
   const v = p.view || DEFAULT_VIEW;
   const cx = f.x + Math.max(-560, Math.min(560, vx)) * 0.25, cy = f.y + Math.max(-560, Math.min(560, vy)) * 0.25;
   const hw = v.hw * zoomOut, hh = v.hh * zoomOut;

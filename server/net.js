@@ -39,7 +39,7 @@ function fields(world, e) {
   switch (e.kind) {
     // extra: bits 0-4 weapon, 5-6 blink (1 slow, 2 fast, 3 hidden indoors), bit 7 in the water (incl. under a bridge)
     // parent: the vehicle you're in, or the train car you're riding
-    case K.PED: return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0), (WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && isSwimming(world.map, e) ? 128 : 0)];
+    case K.PED: return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0), (WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(world.map, e) ? 128 : 0)];
     case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), 0, 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [0, 1, 0, e.cashOnly ? 0 : e.tier];
