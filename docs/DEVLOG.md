@@ -2369,3 +2369,10 @@ Following the rule in `docs/WORLD-V2.md` ("no stretch of a route goes much more 
 - in the hills and the desert, a stone cairn; in the hills, coin binoculars too.
 
 Nothing solid stands within two tiles of the road.
+
+## 2026-10-06 · Coral Cay's rainforest (concepts N2-A, N2-B, D16)
+
+The island's open middle, which was plain grass, is now tropical rainforest (`shared/naturesites.js` `coralRainforest`).
+- **Trees:** groves of coconut, royal, fan and leaning palms and banana plants, with clearings, two tiles clear of every road and building and four clear of the beach.
+- **The jungle floor** (reserve bit 64): dark forest-floor ground under dense ferns, monstera, elephant ears, birds of paradise and hibiscus (`statics.js` jungle cover).
+- **Coral Cay Falls** sits in the middle: water drops off a mossy basalt ledge into a pool, with mossy boulders round it and a mossy log by the pool. A dirt trail leads in from the nearest road. On the map.

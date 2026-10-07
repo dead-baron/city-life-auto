@@ -275,7 +275,8 @@ export class CityMap {
     this.dist = new Uint8Array(N).fill(WATER_D);
     this.zone = new Uint8Array(N);
     this.river = new Uint8Array(N);       // 1 = river water (fishing, bridges)
-    this.reserve = new Uint8Array(N);     // bit flags: 1 highway band, 2 railway, 4 waterfront strip, 8 under a ramp, 16 kept open (Pelican Key beach)
+    this.reserve = new Uint8Array(N);     // bit flags: 1 highway band, 2 railway, 4 waterfront strip, 8 under a ramp, 16 kept open (Pelican Key beach),
+                                           // 32 a designed nature place (naturesites.js), 64 jungle floor (Coral Cay)
     this.deck = new Uint8Array(N);        // 1 = under the elevated highway
     this.lvl0Block = new Uint8Array(N);   // 1 = solid at ground level (a ramp's embankment)
     this.roadAxis = new Uint8Array(N);    // bit1 vertical-ish road, bit2 horizontal-ish, 3 = junction box

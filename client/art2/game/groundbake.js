@@ -206,7 +206,7 @@ function tileFacts(C) {
     else if (t === T.GRASS) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (inRects(paint, X, Y, 'golf')) m = M_.GOLF;
-      else if (!wild) m = (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn)
+      else if (!wild) m = (b.tres[k] & 64) ? M_.FOREST : (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn)
       else if (st === 'rural' || st === 'airport') m = bio === 2 ? M_.FOREST : bio === 3 ? M_.DRYGRASS : st === 'airport' ? M_.LAWN : M_.PASTURE;
       else if (st === 'desert') m = M_.DRYGRASS;
       else m = bio === 2 ? M_.FOREST : bio === 4 ? (b.tz[k] === Z.EAST ? M_.DRYGRASS : M_.ALPINE) : bio === 3 ? M_.DRYGRASS : bio === 5 ? M_.MEADOW : M_.MEADOW;

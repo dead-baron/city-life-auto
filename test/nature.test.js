@@ -172,3 +172,13 @@ test('country roads: something by the verge every 100 m or so, nothing solid nea
     assert.notEqual(m.tileAt(tx, ty), T.ROAD, `${p.t} at ${Math.round(p.x)},${Math.round(p.y)} stands on the road`);
   }
 });
+
+test('Coral Cay: a rainforest of palm groves on a jungle floor, a waterfall and its pool, a trail in', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'rainforest');
+  assert.ok(s && s.floor > 500, `a big jungle (${s && s.floor} tiles)`);
+  assert.ok(solidNear(s.falls.x, s.falls.y - 6, 12), 'the ledge is solid');
+  assert.equal(tileAt(s.falls.x, s.falls.y + 64), T.WATER, 'the pool');
+  const palms = m.props.filter((q) => q && q.t === 'palm_a' && m.dist[Math.floor(q.y / TILE) * m.w + Math.floor(q.x / TILE)] === 44);
+  assert.ok(palms.length > 150, `palm groves (${palms.length})`);
+  for (const p of palms) { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); assert.notEqual(m.tileAt(tx, ty), T.ROAD); }
+});

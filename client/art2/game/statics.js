@@ -2230,6 +2230,11 @@ function addNature(c, I) {
       lightAt(I, f.x, f.y + 10, 8, 90, [0.8, 0.95, 1], 0.4, 'sign', 0);
       continue;
     }
+    if (s.kind === 'rainforest') {   // the falls in the jungle: over a mossy basalt ledge into the pool
+      const f = s.falls;
+      put(I, { key: `fall:r:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'ledge', w: f.w, drop: f.drop, seed: 13, mist: 0.6 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
+      continue;
+    }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge
       const f = s.falls;
       put(I, { key: `fall:t:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 9, mist: 0.4 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
@@ -2442,12 +2447,17 @@ const NAT_SP = {
   alpine: [['heather', 4], ['juniper', 1], ['aDaisies', 3], ['aLupine', 2], ['paintbrush', 1], ['twisted', 1]],
   dune: [['duneGrass', 4], ['beachGrass', 3], ['icePlant', 1]],
   shore: [['reeds', 3], ['cattails', 3], ['tallGrass', 1]],
+  jungle: [['fern', 5], ['monstera', 4], ['elephant', 3], ['bird', 2], ['hibiscus', 1], ['fern', 3], ['salal', 1]],
 };
 const pickW = (list, u) => { let t = 0; for (const e of list) t += e[1]; let a = u * t; for (const e of list) { a -= e[1]; if (a < 0) return e[0]; } return list[list.length - 1][0]; };
 // what a wild tile grows, or null: [species, scale]
 function coverAt(c, tx, ty, x, y) {
   const M = c.M, i = ty * c.W + tx, t = M.tiles[i];
   if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) return null;
+  if (M.reserve[i] & 64) {   // the jungle floor (Coral Cay): dense big leaves, a few gaps
+    const h = hash(tx, ty, 7121);
+    return h < 0.8 ? [pickW(NAT_SP.jungle, vnoise(x, y, 50, 7123) * 0.7 + hash(tx, ty, 7125) * 0.3), 1 + (h < 0.2 ? 0.2 : 0)] : null;
+  }
   const st = (DISTRICTS[M.dist[i]] || {}).style;
   if (!WILDS.has(st) || st === 'airport') return null;
   const bio = c.biome(x, y), h = hash(tx, ty, 7101), h2 = vnoise(x, y, 70, 7103) * 0.75 + hash(tx, ty, 7103) * 0.25; // (h2: clumps of one plant)
@@ -2483,7 +2493,7 @@ function coverItems(c, I, cx, cy) {
   const ty0 = Math.max(1, Math.floor((cy * CH - 40) / TILE)), ty1 = Math.min(H - 2, Math.floor(((cy + 1) * CH + 110) / TILE));
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
     const i = ty * W + tx;
-    if ((taken && taken[i]) || (c.M.reserve && c.M.reserve[i])) continue;
+    if ((taken && taken[i]) || (c.M.reserve && (c.M.reserve[i] & ~64))) continue;
     const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)
     const r = coverAt(c, tx, ty, x, y);
     if (!r || !coverClear(c, tx, ty, 1)) continue;

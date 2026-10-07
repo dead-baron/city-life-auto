@@ -97,7 +97,80 @@ export function buildNatureSites(m, H) {
   oldMine(m, H);
   farmDressing(m, H);
   roadside(m, H);
+  coralRainforest(m, H);
 }
+
+// ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------
+// The island's open middle grows into tropical rainforest: groves of palms and big-leaved trees with clearings,
+// a jungle floor of ferns, monstera, elephant ears and birds of paradise (statics.js coverAt, reserve bit 64); a
+// waterfall drops off a mossy basalt ledge into a pool in the middle of it, with a trail in from the nearest road.
+function coralRainforest(m, H) {
+  const D = 44, JUNGLE = 64;
+  const ok = (i) => m.dist[i] === D && m.tiles[i] === T.GRASS && !m.reserve[i];
+  // the jungle floor: open grass two tiles clear of roads, buildings and pavement, four clear of the sand
+  const floor = [];
+  let sx = 0, sy = 0;
+  for (let ty = 990; ty < 1150; ty++) for (let tx = 1030; tx < 1205; tx++) {
+    const i = ty * MAP_W + tx;
+    if (!ok(i)) continue;
+    let clear = true;
+    for (let dy = -4; dy <= 4 && clear; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const t = m.tiles[(ty + dy) * MAP_W + tx + dx], d2 = dx * dx + dy * dy;
+      if (((t === T.ROAD || t === T.SIDEWALK || t === T.BUILDING || t === T.PLAZA || t === T.LOT || t === T.WALL) && d2 <= 5) || ((t === T.SAND || t === T.WATER || t === T.DEEP) && d2 <= 16)) { clear = false; break; }
+    }
+    if (!clear) continue;
+    m.reserve[i] |= JUNGLE; floor.push(i); sx += tx; sy += ty;
+  }
+  if (floor.length < 200) return;
+  // the falls: in the middle of the biggest clear patch (the jungle tile with the most jungle round it)
+  let F = null, bestN = -1;
+  for (let k = 0; k < floor.length; k += 3) {
+    const i = floor[k], tx = i % MAP_W, ty = Math.floor(i / MAP_W);
+    let c = 0; for (let dy = -6; dy <= 6; dy += 2) for (let dx = -6; dx <= 6; dx += 2) if (m.reserve[(ty + dy) * MAP_W + tx + dx] & JUNGLE) c++;
+    if (c > bestN) { bestN = c; F = [tx, ty]; }
+  }
+  const fx = (F[0] + 0.5) * TILE, fy = F[1] * TILE;
+  // the ledge (solid) with the pool below it
+  for (let dx = -60; dx <= 60; dx += 14) m.addSolidProp(fx + dx, fy - 6, 10);
+  const pool = [];
+  for (let ty = F[1]; ty <= F[1] + 4; ty++) for (let tx = F[0] - 4; tx <= F[0] + 4; tx++) {
+    const dx = (tx - F[0]) / 4.3, dy = (ty - F[1] - 2) / 2.6;
+    if (dx * dx + dy * dy > 1) continue;
+    const i = ty * MAP_W + tx; m.tiles[i] = T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; pool.push(i);
+  }
+  for (let ty = F[1] - 3; ty <= F[1] + 7; ty++) for (let tx = F[0] - 7; tx <= F[0] + 7; tx++) m.reserve[ty * MAP_W + tx] |= RES;
+  for (const [dx, dy, r] of [[-100, 40, 16], [104, 50, 14], [-60, 120, 13], [70, 126, 15], [-130, -10, 18], [134, -6, 16]]) H.addProp(m, 'boulder', fx + dx, fy + dy, r, { s: r * 2 + 6, style: 'basalt', moss: 1 });
+  // a mossy log with mushrooms by the pool, ferns round it
+  H.addProp(m, 'log', fx - 150, fy + 90, 0, { a: 0.4, len: 110, moss: 1 });
+  for (const [dx, dy] of [[-40, 150], [40, 150], [-170, 60], [170, 70]]) H.addProp(m, 'shrub_a', fx + dx, fy + dy, 0, { sp: 'fern', k: 1.2 });
+  // the trail in: from the falls to the nearest road
+  let best = null;
+  for (let r = 4; r < 40 && !best; r++) for (let a = 0; a < 24; a++) { const tx = Math.round(F[0] + Math.cos(a / 24 * 6.283) * r), ty = Math.round(F[1] + 6 + Math.sin(a / 24 * 6.283) * r); if (m.tiles[ty * MAP_W + tx] === T.ROAD) { best = [tx, ty]; break; } }
+  if (best) {
+    const tr = spline([[fx, fy + 170], [(fx + (best[0] + 0.5) * TILE) / 2 + 40, (fy + 170 + (best[1] + 0.5) * TILE) / 2], [(best[0] + 0.5) * TILE, (best[1] + 0.5) * TILE]], 16);
+    for (const [x, y] of tr) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const i = at(x + dx * 12, y + dy * 12); if (m.tiles[i] === T.GRASS && m.dist[i] === D) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; } }
+  }
+  // the trees: groves of palms and broad-leaved trees, clearings between (a 2-tile jittered grid)
+  for (let k = 0; k < floor.length; k++) {
+    const i = floor[k], tx = i % MAP_W, ty = Math.floor(i / MAP_W);
+    if ((tx & 1) || (ty & 1) || (m.reserve[i] & RES)) continue;
+    const g = 0.6 * vnoise2(tx, ty, 9, 971) + 0.4 * vnoise2(tx, ty, 4, 972), h = hash2(tx, ty, 973);
+    if (h >= smooth01(0.38, 0.62, g) * 0.7) continue;
+    const x = (tx + 0.5 + (hash2(tx, ty, 974) - 0.5)) * TILE, y = (ty + 0.5 + (hash2(tx, ty, 975) - 0.5)) * TILE;
+    const v = hash2(tx, ty, 976), sp = v < 0.35 ? 'coconut' : v < 0.5 ? 'royal' : v < 0.68 ? 'banana' : v < 0.82 ? 'fanSkirt' : 'leaning';
+    H.addProp(m, 'palm_a', x, y, sp === 'banana' ? 0 : 10, { sp, k: sp === 'banana' ? 1.2 : 1.3 + hash2(tx, ty, 977) * 0.3 });
+  }
+  (m.landmarks ||= []).push({ name: 'Coral Cay Falls', type: 'falls', x: Math.round(fx - 240), y: Math.round(fy - 140), w: 480, h: 360 });
+  m.natureSites.push({ kind: 'rainforest', name: 'Coral Cay Rainforest', x: Math.round(sx / floor.length * TILE), y: Math.round(sy / floor.length * TILE), falls: { x: Math.round(fx), y: Math.round(fy), w: 60, drop: 36 }, floor: floor.length });
+}
+// value noise over tiles (s: feature size in tiles), 0..1 (the same as map.js vnoise2)
+function vnoise2(x, y, s, seed) {
+  const fx = x / s, fy = y / s, ix = Math.floor(fx), iy = Math.floor(fy);
+  let tx = fx - ix, ty = fy - iy; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+  const a = hash2(ix, iy, seed), b = hash2(ix + 1, iy, seed), c = hash2(ix, iy + 1, seed), d = hash2(ix + 1, iy + 1, seed);
+  return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+}
+const smooth01 = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // ---- along the country roads: something every 70-110 m (docs/WORLD-V2.md: "no stretch of a route goes much more
 // than about 100 m without a feature"). Small composed bits by the verge, alternating sides, by biome: a road sign,
