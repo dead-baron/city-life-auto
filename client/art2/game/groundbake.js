@@ -79,7 +79,7 @@ mat('PLAZAC', 'slabPlaza', 4); mat('PLAZAS', 'slabStone', 4); mat('PLAZAB', 'bri
 mat('DRIVE', 'slabDrive', 4); mat('APRONG', 'apron', 3); mat('ISLAND', 'slabConcrete', 4); mat('PATH', 'pathGravel', 4); mat('BOARD', 'boardwalk', 4); mat('BOARDV', 'boardwalkV', 4); mat('DOCK', 'planks', 4); mat('DOCKX', 'planksX', 4); mat('DECKWALK', 'slabConcrete', 4);
 mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('FLOOR', 'floorTile', 1); mat('FLOORW', 'floorWood', 1); mat('COUNTER', 'counterTop', 1);
 mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDECK', 'planksX', 1);
-mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2);
+mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2);
 const NM = MATS.length;
 const KIND = new Uint8Array(NM), SHADER = [];
 for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][0]] || null; }
@@ -192,6 +192,7 @@ function tileFacts(C) {
   const { cls, cw } = M.terrainCls;
   const fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
   const parks = M.parkGrounds || [];        // designed town parks (Lakeview Park): lawn and gravel paths whatever the district, the plaza paved
+  const pools = M.pools || [];              // swimming pools (the Stadium Lido): tiled pool water, a pale concrete deck
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, ty = TY0 + j, k = j * TN + i;
     if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
@@ -202,7 +203,8 @@ function tileFacts(C) {
     // water kind / land material
     const X = tx * TILE + 16, Y = ty * TILE + 16, D = DISTRICTS[b.td[k]] || DISTRICTS[13], st = D.style, wild = WSTYLE.has(st), bio = b.tb[k];
     let m;
-    if (t === T.WATER || t === T.DEEP || t === T.BRIDGE) m = M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
+    if ((t === T.WATER || t === T.DEEP) && pools.length && inRects(pools, X, Y)) m = M_.POOL;
+    else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE) m = M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
     else if (t === T.DOCK) m = runAxis(M, tx, ty, T.DOCK) ? M_.DOCK : M_.DOCKX;
     else if (t === T.GRASS) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
@@ -237,7 +239,8 @@ function tileFacts(C) {
       m = fk === 'CORN' ? (long ? M_.CORN : M_.CORNV) : fk === 'PLOW' ? (long ? M_.PLOW : M_.PLOWV) : M_[fk];
     } else if (t === T.SIDEWALK) m = walkOf(D);
     else if (t === T.PLAZA) {
-      if ((b.tres[k] & 4) && (st === 'beach' || st === 'park')) m = runAxis(M, tx, ty, T.PLAZA) ? M_.BOARDV : M_.BOARD;
+      if (pools.length && pools.some((r) => inRect(r.deck, X, Y))) m = M_.PLAZAC;
+      else if ((b.tres[k] & 4) && (st === 'beach' || st === 'park')) m = runAxis(M, tx, ty, T.PLAZA) ? M_.BOARDV : M_.BOARD;
       else if (inRects(parks, X, Y) && !parks.some((r) => inRect(r.plaza, X, Y))) m = M_.PATH;
       else if (st === 'oldtown') m = M_.PLAZAO;
       else if (st === 'park') m = M_.PATH;
@@ -793,7 +796,7 @@ function paint(C, G) {
         const dpt = (b.tdp[k00] * (1 - vx) + b.tdp[k00 + 1] * vx) * (1 - vy) + (b.tdp[k00 + TN] * (1 - vx) + b.tdp[k00 + TN + 1] * vx) * vy;
         const dd = Math.min(1, Math.max(d / 90, dpt));
         const ti = (Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0;
-        const r = m === M_.SEA ? seaPx(X, Y, d, dd, b.tsand[ti], seed + 13) : stillPx(X, Y, d, m === M_.POND ? Math.min(1, d / 50) : dd, m === M_.RIVER ? 1 : 0, b.tsand[ti] === 1 ? 0 : 1, seed + 17);
+        const r = m === M_.POOL ? poolPx(C.M.pools, X, Y, d, seed) : m === M_.SEA ? seaPx(X, Y, d, dd, b.tsand[ti], seed + 13) : stillPx(X, Y, d, m === M_.POND ? Math.min(1, d / 50) : dd, m === M_.RIVER ? 1 : 0, b.tsand[ti] === 1 ? 0 : 1, seed + 17);
         c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER;
         if (r.e) { emi[j] = 255; emi[j + 1] = 246; emi[j + 2] = 222; emi[j + 3] = r.e; }
       } else if (TURFPAL[m] >= 0 && m !== M_.DRYGRASS && m !== M_.ALPINE && m !== M_.FOREST) {
@@ -810,6 +813,31 @@ function paint(C, G) {
       zz[gi] = z; fl[gi] = f;
     }
   }
+}
+// pool water: a tiled floor seen through clear turquoise water - grout lines, a dark band of waterline tiles round
+// the edge, lane lines with T-ends on the floor along the pool (pool.lanes lanes along its long side), the deep end
+// (pool.deep) darker; a fine bright ripple lattice over it all
+const POOLW = ramp('#62c8dc', 6, 3), POOLD = ramp('#2a88b8', 6, 3), POOLL = ramp('#1e3e8a', 4, 2), POOLE = ramp('#1e5a96', 4, 2), PWP = { c: null, nx: 0, ny: 0, e: 0 };
+function poolPx(pools, X, Y, d, seed) {
+  PWP.e = 0;
+  const p = pools.find((r) => inRect(r, X, Y)) || pools[0], deep = p.deep && inRect(p.deep, X, Y);
+  const along = p.w >= p.h, u = along ? X - p.x : Y - p.y, v = along ? Y - p.y : X - p.x, L = along ? p.w : p.h, Wd = along ? p.h : p.w;
+  const big = vnc(X, Y, 23, seed + 3), fine = vnc(X, Y, 5, seed + 5);
+  let t = (deep ? 0.42 : 0.6) + (big - 0.5) * 0.12 + (fine - 0.5) * 0.06;
+  const w = worley(X * 1.1, Y + big * 4, 9, seed + 9, 0.85), lat = w.d2 - w.d1 < 0.55;
+  if (lat) t += 0.2;
+  let R = deep ? POOLD : POOLW;
+  if (((X % 8) === 0 || (Y % 8) === 0) && !lat) t -= 0.12;                          // the grout
+  if (d < 2.2) { R = POOLE; t = 0.5 + (fine - 0.5) * 0.3; }                          // the waterline tiles
+  else if (!deep && p.lanes > 1) {                                                  // the lane lines on the floor
+    const lw = Wd / p.lanes, k = Math.floor(v / lw), cv = (k + 0.5) * lw;
+    if (Math.abs(v - cv) < 2.2 && u > 22 && u < L - 22) { R = POOLL; t = 0.55 + (lat ? 0.2 : 0); }
+    else if (Math.abs(v - cv) < 7 && ((u > 20 && u < 24.5) || (u > L - 24.5 && u < L - 20))) { R = POOLL; t = 0.55; }
+  }
+  PWP.c = sd(R, t, X, Y, 0.6);
+  if (lat && hh(X, Y, seed) > 0.97) PWP.e = 110;
+  PWP.nx = (fine - 0.5) * 0.06; PWP.ny = (big - 0.5) * 0.08;
+  return PWP;
 }
 function interior(kind, x, y, s) {                        // the indoor floors (shop tiles, wooden floors)
   if (kind === 'tileWhite') { const S = 12, lx = x % S, ly = y % S; let t = 0.6 + (hh(Math.floor(x / S), Math.floor(y / S), s + 3) - 0.5) * 0.12; if (lx === 0 || ly === 0) t -= 0.28; else if (lx === 1 || ly === 1) t += 0.08; return sd(TILEW, t, x, y, 0.4); }

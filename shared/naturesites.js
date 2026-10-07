@@ -95,6 +95,7 @@ export function buildNatureSites(m, H) {
   heronMarsh(m, H);
   northshoreGardens(m, H);
   lakeviewPark(m, H);
+  stadiumLido(m, H);
   oldMine(m, H);
   farmDressing(m, H);
   willowRiver(m, H);
@@ -478,6 +479,79 @@ function farmDressing(m, H) {
     for (let x = x0 + 16; x < x0 + w - 8; x += 26) if (Math.abs(x - (x0 + w / 2)) > w * 0.1) H.addProp(m, 'flowers_a', x, y0 + h + 22, 0, { sp: 'sunflowers', k: 1 });
     m.natureSites.push({ kind: 'pasture', name: `${poi.label} Pasture`, x: Math.round(x0 + w / 2), y: Math.round(y0 + h / 2) });
   }
+}
+
+// ---- the Stadium Lido (Westport Stadium park; concept L1) -----------------------------------------------------
+// An outdoor public pool in the park's north-east lawn, behind a chain-link fence with hedges outside it: the
+// changing block along the north side (its kiosk window and changing-room doors to the deck), a four-lane pool
+// with a deep diving end and a springboard, lane ropes, a lifeguard tower, a round hot tub, loungers and striped
+// umbrellas on the pale deck, cafe tables by the kiosk, potted palms; the gate on the south side to the park's
+// cross path, a bike rack and a bench outside it.
+function stadiumLido(m, H) {
+  const park = (m.blocks || []).find((b) => b.park && b.park.label === 'Westport Stadium');
+  if (!park) return;
+  const { ix, iy, iw, ih } = park, cx = ix + Math.floor(iw / 2), cy = iy + Math.floor(ih / 2);
+  // the north-east lawn: the grass round a seed point, bounded by the paths
+  const seen = new Set(), st = [[cx + 12, cy - 8]];
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  while (st.length) {
+    const [tx, ty] = st.pop(), i = ty * MAP_W + tx;
+    if (seen.has(i) || tx < ix || ty < iy || tx >= ix + iw || ty >= iy + ih || m.tiles[i] !== T.GRASS) continue;
+    seen.add(i); x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty);
+    st.push([tx + 1, ty], [tx - 1, ty], [tx, ty + 1], [tx, ty - 1]);
+  }
+  // (the columns that are lawn all the way down: the fountain plaza bites the lawn's south-west corner)
+  const col = (tx) => { for (let ty = y0; ty <= y1; ty++) if (!seen.has(ty * MAP_W + tx)) return false; return true; };
+  while (x0 < x1 && !col(x0)) x0++;
+  while (x1 > x0 && !col(x1)) x1--;
+  const W = x1 - x0 + 1, Hh = y1 - y0 + 1;
+  if (W < 24 || Hh < 12) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  // what the park put there goes (its trees, beds and benches)
+  m.props.forEach((p, i) => { if (p && p.t !== 'painted' && p.x >= x0 * TILE && p.x < (x1 + 1) * TILE && p.y >= y0 * TILE && p.y < (y1 + 1) * TILE) dropProp(m, i); });
+  // inside the fence (a tile in from the lawn's edge all round): the deck
+  const fx0 = x0, fy0 = y0 + 1, fx1 = x1, fy1 = y1;             // (fence on the tile lines x0, x1, y0+1, y1: a lawn strip outside it to the east and north, one south)
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) { const i = ty * MAP_W + tx; m.reserve[i] |= RES; if (tx >= fx0 && tx < fx1 && ty >= fy0 && ty < fy1) m.tiles[i] = T.PLAZA; }
+  // the changing block along the north side: solid
+  const bw = Math.min(10, Math.floor((fx1 - fx0) * 0.42)), bx0 = fx0 + 1, by0 = fy0, bd = 2;
+  for (let ty = by0; ty < by0 + bd; ty++) for (let tx = bx0; tx < bx0 + bw; tx++) m.tiles[ty * MAP_W + tx] = T.WALL;
+  add('poolhouse', bx0 + bw / 2, by0 + bd / 2 - 0.25, 0, { w: bw * TILE, d: bd * TILE - 4 });
+  // the pool: four lanes along x, the deep end at the east with the springboard; water you can swim in
+  const px0 = fx0 + 2, py0 = by0 + bd + 2, pw = Math.min(20, fx1 - fx0 - 8), ph = 6, dw = 5;
+  for (let ty = py0; ty < py0 + ph; ty++) for (let tx = px0; tx < px0 + pw; tx++) { const i = ty * MAP_W + tx; m.tiles[i] = tx >= px0 + pw - dw ? T.DEEP : T.WATER; }
+  const pool = { x: px0 * TILE, y: py0 * TILE, w: pw * TILE, h: ph * TILE, lanes: 4, deep: { x: (px0 + pw - dw) * TILE, y: py0 * TILE, w: dw * TILE, h: ph * TILE }, deck: { x: fx0 * TILE, y: fy0 * TILE, w: (fx1 - fx0) * TILE, h: (fy1 - fy0) * TILE } };
+  (m.pools ||= []).push(pool);
+  const lx = px0 + (pw - dw) / 2;
+  for (let k = 1; k < 4; k++) add('lanerope', lx, py0 + ph * k / 4, 0, { len: (pw - dw) * TILE - 8 });
+  add('lanerope', px0 + pw - dw, py0 + ph / 2, 0, { len: ph * TILE - 8, a: Math.PI / 2 });          // (the rope across the deep end's line)
+  add('diveboard', px0 + pw + 0.9, py0 + ph / 2, 10, { a: Math.PI, len: 64 });
+  add('lguard', px0 - 1.2, py0 + ph - 1, 14, { a: 0 });
+  // the deck: loungers and umbrellas along the north side, the hot tub in the north-east corner, cafe tables by
+  // the kiosk, loungers along the south side too, potted palms at the corners
+  const ly = py0 - 1.1;
+  let k = 0;
+  for (let x = bx0 + bw + 1.2; x < fx1 - 4.5; x += 1.5, k++) { if (k % 3 === 2) add(k % 2 ? 'umbrella_b' : 'umbrella_r', x, ly - 0.2, 4); else add('lounger', x, ly, 6, { a: Math.PI / 2, v: k % 4 }); }
+  add('hottub', fx1 - 2.3, by0 + 1.9, 26, { r: 30 });
+  for (let x = px0 + 1.5, j = 0; x < px0 + pw - dw - 1; x += 1.6, j++) { if (j % 3 === 1) add(j % 2 ? 'umbrella_r' : 'umbrella_b', x, py0 + ph + 1.1, 4); else add('lounger', x, py0 + ph + 0.95, 6, { a: -Math.PI / 2, v: (j + 2) % 4 }); }
+  for (const [dx, dy] of [[0.9, 0.6], [2.6, 0.9]]) { add('cafetable', bx0 + dx, by0 + bd + dy, 6); }
+  add('umbrella_g', bx0 + 1.7, by0 + bd + 0.6, 4);
+  for (const [tx, ty] of [[fx0 + 0.6, fy1 - 0.7], [fx1 - 0.6, fy1 - 0.7], [fx0 + 0.6, py0 - 0.6]]) add('potted', tx, ty, 6);
+  add('chalkboard', bx0 + bw * 0.3, by0 + bd + 0.35, 0);
+  // the fence: chain-link all round on the tile lines, the gate in the south side (solid either side of it)
+  const gx = Math.round((fx0 + fx1) / 2);
+  const runs = [[fx0, fy0, fx1, fy0], [fx0, fy0, fx0, fy1], [fx1, fy0, fx1, fy1], [fx0, fy1, gx - 1, fy1], [gx + 1, fy1, fx1, fy1]];
+  for (const [ax, ay, bx, by] of runs) {
+    add('chainfence', ax, ay, 0, { tx: (bx - ax) * TILE, ty: (by - ay) * TILE });
+    const L = Math.hypot(bx - ax, by - ay) * TILE;
+    for (let d = 0; d <= L; d += 16) m.addSolidProp((ax + (bx - ax) * d / L) * TILE, (ay + (by - ay) * d / L) * TILE, 7);
+  }
+  // outside: hedges along the east and west fences, trees at the corners, the bike rack and a bench by the gate
+  add('hedgerun', fx0 - 0.55, fy0 + 0.5, 0, { tx: 0, ty: (fy1 - fy0 - 1) * TILE });
+  add('hedgerun', fx1 + 0.5, fy0 + 0.5, 0, { tx: 0, ty: (fy1 - fy0 - 1) * TILE });
+  add('bikerack', gx - 2.6, fy1 + 0.55, 6); add('bench_m', gx + 2.8, fy1 + 0.55, 6); add('trashcan', gx + 1.6, fy1 + 0.5, 5);
+  for (const [tx, ty, sp] of [[x0 + 0.4, y0 + 0.4, 'oak'], [x1 + 0.6, y0 + 0.4, 'maple'], [x1 + 0.6, y1 + 0.6, 'oak']]) add('tree_a', tx, ty, 12, { sp, k: 1.3 });
+  (m.landmarks ||= []).push({ name: 'Stadium Lido', type: 'pool', x: fx0 * TILE, y: fy0 * TILE, w: (fx1 - fx0) * TILE, h: (fy1 - fy0) * TILE });
+  m.natureSites.push({ kind: 'pool', name: 'Stadium Lido', x: Math.round((px0 + pw / 2) * TILE), y: Math.round((py0 + ph / 2) * TILE), gate: { x: gx * TILE, y: fy1 * TILE }, house: { x: Math.round((bx0 + bw / 2) * TILE), y: Math.round((by0 + bd) * TILE) } });
 }
 
 // ---- the Old Granite Mine (Granite Peaks; concept N3, the mine's mouth) -----------------------------------------

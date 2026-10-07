@@ -310,3 +310,23 @@ test('Pine Lake: a lake in the Highland pines with a boathouse and dock, a lakes
   assert.ok(s.trees >= 60, `woods round the lake (${s.trees})`);
   assert.ok(m.landmarks.some((l) => l.name === 'Pine Lake'));
 });
+
+test('Stadium Lido: a fenced public pool in the stadium park - swimmable water, a deep end, the changing block solid, no fishing', async () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'pool' && q.name === 'Stadium Lido');
+  assert.ok(s, 'the lido is built');
+  const pool = (m.pools || [])[0];
+  assert.ok(pool && pool.lanes === 4, 'the pool');
+  assert.ok(m.isWater(s.x, s.y), 'water you can swim in');
+  assert.equal(tileAt(pool.deep.x + pool.deep.w / 2, pool.deep.y + pool.deep.h / 2), T.DEEP, 'the deep end');
+  assert.equal(tileAt(pool.x - 20, pool.y + 20), T.PLAZA, 'a paved deck round it');
+  assert.equal(tileAt(s.house.x, s.house.y - 20), T.WALL, 'the changing block is solid');
+  for (const k of ['poolhouse', 'diveboard', 'lanerope', 'lguard', 'hottub', 'lounger', 'chainfence']) assert.ok(m.props.some((q) => q && q.t === k && Math.abs(q.x - s.x) < 600 && Math.abs(q.y - s.y) < 300), k);
+  // the gate is open, the fence either side of it solid
+  const near = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r + 4) return true; return false; };
+  assert.ok(!near(s.gate.x, s.gate.y), 'the gate is open');
+  assert.ok(near(s.gate.x - 4 * TILE, s.gate.y), 'the fence is solid');
+  // no fishing in it
+  const { fishingSpot } = await import('../server/systems/jobs.js');
+  assert.equal(fishingSpot({ map: m }, { x: pool.x - 20, y: pool.y + pool.h / 2, a: 0 }), null, 'no fish in the pool');
+  assert.ok(m.landmarks.some((l) => l.name === 'Stadium Lido'));
+});

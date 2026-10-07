@@ -2552,3 +2552,24 @@ A lake in the pines between the Highland stop and the Pine Ridge Campground (`sh
 - **Canoes render again everywhere.** The world statics drew the water kit's finished canoe sprite as if it were a voxel model, so canoes never appeared, including at Willow River and the marsh. `water.js` `canoe` now hands over the model itself (`{ vox: true }`).
 - Piers can turn (`p.a`) and take a width (`p.w`). New props: `boathouse`, `fbridge` (a footbridge at any angle) and `creekrail` (a timber guard rail at any angle).
 - On the map as Pine Lake, and in the debug menu (🛶 Pine Lake camp). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · The Stadium Lido, a public pool (concept L1)
+
+An outdoor public pool in Westport Stadium park's north-east lawn (`shared/naturesites.js` `stadiumLido`).
+- **The pool:** four lanes, with a deep diving end. You can swim in it (water tiles), but you can't fish in it (`jobs.js` `fishingSpot` skips pools).
+  - A new ground material, `POOL`, draws pool water: clear turquoise over a tiled floor with grout lines, a dark band of waterline tiles, dark-blue lane lines with T-ends, the deep end darker and a fine bright ripple lattice (`groundbake.js` `poolPx`; the map's new `m.pools` list).
+  - Lane ropes float on it: red near the ends, white and blue between, and one across the deep end's line. A springboard on its pedestal sits at the deep end.
+- **The changing block:** solid, along the north side, a new voxel model (`props-park.js` `poolHouse`).
+  - Cream tiles over a brick plinth, with a flat roof, parapet and AC units.
+  - Glass entrance doors and the kiosk window under a teal striped awning.
+  - Two blue changing-room doors with plaques, a clock, a window and a life ring.
+  - A blue sign with a white wave on the parapet, and potted palms.
+- **The deck:** pale concrete slabs (pool decks are drawn as plaza slabs in a park).
+  - Loungers in four colours with red, blue and green striped umbrellas along both sides.
+  - A round hot tub with bubbling water and a handrail in the north-east corner (`hotTub`), and a lifeguard tower at the shallow end.
+  - Café tables under a green umbrella by the kiosk, a chalkboard, potted palms.
+- **The fence:** chain-link all round, solid, with the gate in the south side toward the park's cross path.
+  - Hedges outside it east and west, trees at the corners.
+  - A bike rack, a bench and a bin by the gate.
+- On the map as the Stadium Lido. In the debug menu: 🏊 Stadium Lido (pool). Homes, POIs and buildings unchanged.
+- New props: `poolhouse`, `hottub`, `diveboard`, `lanerope`, `lounger`, `lguard` (the lifeguard tower), `cafetable`, `chainfence` and `hedgerun` (runs of chain-link and hedge at any length).
