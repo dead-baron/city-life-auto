@@ -4,7 +4,7 @@
 // along +x (render at heading PI/2 to run it north-south).
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
-import { F_GLASS, F_NOCAST, hash } from './gbuf.js';
+import { F_GLASS, F_NOCAST, F_THIN, hash } from './gbuf.js';
 
 const R = (h, n = 6, k) => ramp(h, n, k);
 
@@ -109,7 +109,7 @@ export function floodMast(h = 140, on = 0) {
 // a transit stop pole with a sign flag (bus or tram), and a timetable panel
 export function stopPole(color = '#2a5a9a') {
   const m = new Vox(14, 8, 60);
-  const p = m.mat({ ramp: MAT.metal, k: 3 }), f = m.mat({ ramp: R(color), k: 3, shade: (x, y, z) => (Math.abs(z - 52) < 3 && x > 6 ? 2 : 0) }), t = m.mat({ ramp: R('#e8e4d8'), k: 3 });
+  const p = m.mat({ ramp: MAT.metal, k: 3, flag: F_THIN }), f = m.mat({ ramp: R(color), k: 3, flag: F_THIN, shade: (x, y, z) => (Math.abs(z - 52) < 3 && x > 6 ? 2 : 0) }), t = m.mat({ ramp: R('#e8e4d8'), k: 3, flag: F_THIN });
   m.box(2, 3, 0, 4, 5, 58, p); m.box(4, 3, 44, 14, 5, 58, f); m.box(4, 3, 26, 11, 5, 40, t);
   return m;
 }

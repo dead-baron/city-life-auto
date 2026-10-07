@@ -4,7 +4,7 @@
 // Every maker returns a Vox, built along +x (render at heading PI/2 to run it north-south).
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
-import { F_GLASS, F_NOCAST, F_LEAF, F_WATER, hash } from './gbuf.js';
+import { F_GLASS, F_NOCAST, F_LEAF, F_WATER, F_THIN, hash } from './gbuf.js';
 
 const R = (h, n = 6, k) => ramp(h, n, k);
 
@@ -142,8 +142,8 @@ export function hotTub(r = 22) {
 // (+-arm, height - 3) relative to the pole's foot: see poleTops().
 export function powerPole(h = 120, arm = 16) {
   const m = new Vox(arm * 2 + 4, 10, h + 4);
-  const wood = m.mat({ ramp: R('#6a5040'), k: 3, shade: (x, y, z) => (hash(0, 0, Math.floor(z / 3)) - 0.5) * 0.6 });
-  const ins = m.mat({ ramp: R('#c8d0c8'), k: 3 }), can = m.mat({ ramp: MAT.metal, k: 3 });
+  const wood = m.mat({ ramp: R('#6a5040'), k: 3, flag: F_THIN, shade: (x, y, z) => (hash(0, 0, Math.floor(z / 3)) - 0.5) * 0.6 });
+  const ins = m.mat({ ramp: R('#c8d0c8'), k: 3, flag: F_THIN }), can = m.mat({ ramp: MAT.metal, k: 3, flag: F_THIN });
   const c = arm + 2;
   m.cyl('z', c, 5, 0, 2.6, 0, h, wood);
   m.box(1, 4, h - 6, arm * 2 + 3, 7, h - 3, wood);
@@ -171,8 +171,8 @@ export function busShelter(len = 64, on = 0) {
 // a street lamp with a hanging banner (downtown) - lantern style, banner colour
 export function bannerLamp(on = 0, color = '#2a3e7a') {
   const m = new Vox(22, 12, 90);
-  const pole = m.mat({ ramp: R('#262a30'), k: 2 }), glass = m.mat({ ramp: R('#f4d9a0', 5, 3), k: 3, emi: on ? [255, 205, 130, 255] : null, flag: F_NOCAST });
-  const ban = m.mat({ ramp: R(color), k: 3, shade: (x, y, z) => (Math.abs(z - 52) < 5 && Math.abs(x - 15) < 3 ? 2.5 : 0) });
+  const pole = m.mat({ ramp: R('#262a30'), k: 2, flag: F_THIN }), glass = m.mat({ ramp: R('#f4d9a0', 5, 3), k: 3, emi: on ? [255, 205, 130, 255] : null, flag: F_NOCAST });
+  const ban = m.mat({ ramp: R(color), k: 3, flag: F_THIN, shade: (x, y, z) => (Math.abs(z - 52) < 5 && Math.abs(x - 15) < 3 ? 2.5 : 0) });
   m.cyl('z', 6, 6, 0, 3.2, 0, 6, pole); m.cyl('z', 6, 6, 0, 1.6, 6, 76, pole);
   m.box(1, 1, 76, 11, 11, 78, pole); m.box(2, 2, 78, 10, 10, 88, glass); m.box(1, 1, 88, 11, 11, 90, pole);
   m.box(7, 5, 66, 20, 7, 67, pole); m.box(9, 5, 38, 20, 7, 66, ban);
@@ -287,7 +287,7 @@ export function tennisNet(len = 100) {
 }
 export function viewer() {
   const m = new Vox(14, 10, 40);
-  const b = m.mat({ ramp: MAT.metalDark, k: 3 }), br = m.mat({ ramp: R('#4a6a7a'), k: 3 });
+  const b = m.mat({ ramp: MAT.metalDark, k: 3, flag: F_THIN }), br = m.mat({ ramp: R('#4a6a7a'), k: 3, flag: F_THIN });
   m.cyl('z', 7, 5, 0, 2, 0, 28, b); m.box(3, 2, 28, 11, 8, 34, br); m.cyl('y', 4, 0, 33, 2, 6, 10, b); m.cyl('y', 10, 0, 33, 2, 6, 10, b);
   return m;
 }

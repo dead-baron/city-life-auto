@@ -6,7 +6,7 @@
 // with its front facing south (+y), toward the camera, at heading 0.
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
-import { F_GLASS, F_NOCAST, F_LEAF, hash } from './gbuf.js';
+import { F_GLASS, F_NOCAST, F_LEAF, F_THIN, hash } from './gbuf.js';
 
 const R = (h, n = 6, k) => ramp(h, n, k);
 const glowMat = (m, col, e, k = 4) => m.mat({ ramp: R(col, 5, 3), k, emi: e, flag: F_NOCAST });
@@ -86,7 +86,7 @@ export function atmWall(on = 1) {
 // a single parking meter on a post
 export function parkingMeter(on = 1) {
   const m = new Vox(8, 8, 34);
-  const p = m.mat({ ramp: MAT.metalDark, k: 2 }), head = m.mat({ ramp: R('#5a6068'), k: 3 }), red = glowMat(m, '#e8402c', on ? [255, 70, 50, 220] : null);
+  const p = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN }), head = m.mat({ ramp: R('#5a6068'), k: 3, flag: F_THIN }), red = glowMat(m, '#e8402c', on ? [255, 70, 50, 220] : null);
   const win = m.mat({ ramp: MAT.glass, k: 3, flag: F_GLASS });
   m.cyl('z', 4, 4, 0, 2.6, 0, 2, p); m.cyl('z', 4, 4, 0, 1.2, 2, 24, p);
   m.ell(4, 4, 28, 3.6, 3.2, 5.5, head); m.box(2, 6, 28, 6, 8, 31, win); m.box(3, 6, 25, 5, 8, 26, red);
@@ -95,7 +95,7 @@ export function parkingMeter(on = 1) {
 // a lamp post with two arms (boulevard style)
 export function twinLamp(on = 0) {
   const m = new Vox(46, 12, 98);
-  const pole = m.mat({ ramp: R('#3a3e44'), k: 2 }), glass = glowMat(m, '#f4d9a0', on ? [255, 205, 130, 255] : null, 3);
+  const pole = m.mat({ ramp: R('#3a3e44'), k: 2, flag: F_THIN }), glass = glowMat(m, '#f4d9a0', on ? [255, 205, 130, 255] : null, 3);
   m.cyl('z', 23, 6, 0, 4, 0, 8, pole); m.cyl('z', 23, 6, 0, 2, 8, 88, pole);
   m.box(4, 5, 86, 42, 7, 89, pole);
   // the heads: a housing over a glass bowl that shows a lit rim all round from above (the lamp reads as lit)
@@ -139,7 +139,7 @@ export function domeTent(color = '#3a7a3a', seed = 1) {
 // a lattice cell tower: red and white steel legs tapering up, antenna panels and dishes near the top
 export function cellTower(h = 150) {
   const m = new Vox(30, 30, h + 6);
-  const red = m.mat({ ramp: R('#c8342a'), k: 2 }), wh = m.mat({ ramp: R('#ece8e0'), k: 2 }), pan = m.mat({ ramp: R('#d8d8d0'), k: 3 }), base = m.mat({ ramp: MAT.concrete, k: 3 }), box = m.mat({ ramp: R('#9aa0a6'), k: 3 });
+  const red = m.mat({ ramp: R('#c8342a'), k: 2, flag: F_THIN }), wh = m.mat({ ramp: R('#ece8e0'), k: 2, flag: F_THIN }), pan = m.mat({ ramp: R('#d8d8d0'), k: 3, flag: F_THIN }), base = m.mat({ ramp: MAT.concrete, k: 3 }), box = m.mat({ ramp: R('#9aa0a6'), k: 3 });
   const lamp = glowMat(m, '#ff4030', [255, 60, 40, 255]);
   m.box(2, 2, 0, 28, 28, 4, base); m.box(20, 20, 4, 28, 27, 16, box);
   const col = (z) => (Math.floor(z / 14) % 2 ? wh : red);

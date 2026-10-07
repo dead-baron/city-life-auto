@@ -5,7 +5,7 @@
 // dead tree) and simple water: a waterfall curtain with its splash and a small cascade.
 // Voxel models (voxel.js) unless noted; sprites are GBufs anchored at their foot (.ax, .ay).
 import { Vox } from './voxel.js';
-import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_GLASS, F_GROUND, hash, bayer, vnoise } from './gbuf.js';
+import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_GLASS, F_GROUND, F_THIN, hash, bayer, vnoise } from './gbuf.js';
 import { MAT, ramp } from './palette.js';
 
 const R = (c, n = 6, k) => ramp(c, n, k);
@@ -51,8 +51,8 @@ export function minePortal(w = 80, h = 70) {
 // a lantern: 'post' (on a timber post with an arm), 'hang' (alone, to hang from a beam) or 'ground'
 export function lantern(kind = 'post', on = 1) {
   const H = kind === 'post' ? 40 : 12, m = new Vox(kind === 'post' ? 18 : 8, 8, H);
-  const fr = m.mat({ ramp: MAT.metalDark, k: 2 }), gl = m.mat({ ramp: R('#f8d080', 5, 3), k: 4, emi: [...LAMP, 255 * on], flag: F_NOCAST | F_GLASS });
-  const wood = m.mat({ ramp: R('#6a4a30'), k: 3 });
+  const fr = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN }), gl = m.mat({ ramp: R('#f8d080', 5, 3), k: 4, emi: [...LAMP, 255 * on], flag: F_NOCAST | F_GLASS });
+  const wood = m.mat({ ramp: R('#6a4a30'), k: 3, flag: F_THIN });
   const lx = kind === 'post' ? 13 : 4, lz = kind === 'post' ? H - 18 : 1;
   if (kind === 'post') { m.box(2, 2, 0, 6, 6, H, wood); m.box(2, 3, H - 4, 15, 5, H - 2, wood); m.box(lx - 0.5, 3.5, lz + 9, lx + 0.5, 4.5, H - 4, fr); }
   m.box(lx - 2, 2, lz, lx + 2, 6, lz + 2, fr); m.box(lx - 2, 2, lz + 2, lx + 2, 6, lz + 7, gl); m.box(lx - 2.5, 1.5, lz + 7, lx + 2.5, 6.5, lz + 9, fr);

@@ -31,7 +31,7 @@
 // M is the CityMap from shared/map.js generateCity(seed) or its structured clone (same fields, no methods).
 // Deterministic: every choice is hashed from positions and indices. The index over the whole map is built
 // once per M (a WeakMap); the worker caches sprites by key (identical keys = identical sprites).
-import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS } from '../gbuf.js';
+import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
 import { makeBuilding, buildingH, roofDeckZ } from '../buildings.js';
 import { Vox } from '../voxel.js';
@@ -1292,14 +1292,14 @@ function makeZen() {
 }
 // a tiki torch: a bamboo pole, a woven cup and a flame (the beach bonfire, concept N11)
 function tikiTorch() {
-  const m = new Vox(8, 8, 48), bam = m.mat({ ramp: ramp('#b8945a', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 9 === 0 ? -0.9 : 0) });
-  const cup = m.mat({ ramp: ramp('#7a5a34', 6, 3), k: 3 }), fl = m.mat({ ramp: ramp('#f8a030', 5, 3), k: 4, emi: [255, 150, 50, 255], flag: F_NOCAST });
+  const m = new Vox(8, 8, 48), bam = m.mat({ ramp: ramp('#b8945a', 6, 3), k: 3, flag: F_THIN, shade: (x, y, z) => (Math.round(z) % 9 === 0 ? -0.9 : 0) });
+  const cup = m.mat({ ramp: ramp('#7a5a34', 6, 3), k: 3, flag: F_THIN }), fl = m.mat({ ramp: ramp('#f8a030', 5, 3), k: 4, emi: [255, 150, 50, 255], flag: F_NOCAST });
   m.box(3, 3, 0, 5, 5, 38, bam); m.box(2, 2, 37, 6, 6, 42, cup);
   m.fill((x, y, z) => (Math.hypot(x - 4, y - 4) < 2.2 - (z - 42) * 0.3 ? fl : -1), 1, 1, 42, 7, 7, 48);
   return m;
 }
 // a plain timber post (festoon lights hang from these)
-function woodPost(h = 46) { const m = new Vox(6, 6, h + 2), w = m.mat({ ramp: ramp('#7a5434', 6, 3), k: 3 }); m.box(1, 1, 0, 5, 5, h, w); m.box(0, 0, h - 2, 6, 6, h, w); return m; }
+function woodPost(h = 46) { const m = new Vox(6, 6, h + 2), w = m.mat({ ramp: ramp('#7a5434', 6, 3), k: 3, flag: F_THIN }); m.box(1, 1, 0, 5, 5, h, w); m.box(0, 0, h - 2, 6, 6, h, w); return m; }
 // festoon lights: a sagging wire from the item's anchor (height h) to (tx, ty) (height h), warm bulbs every 10 px
 function makeFestoon(r) {
   const { tx, ty, h } = r, G = new GBuf(Math.abs(tx) + 24, Math.abs(ty) + h + 24); G.ax = Math.max(0, -tx) + 12; G.ay = Math.max(0, -ty) + h + 12;
@@ -1329,7 +1329,7 @@ function creekRail(len = 200) {
   return m;
 }
 function wheelStop() { const m = new Vox(26, 6, 4), c = m.mat({ ramp: ramp('#c8c4ba', 6, 3), k: 3 }), y = m.mat({ ramp: ramp('#e0b030', 6, 3), k: 3 }); m.box(1, 1, 0, 25, 5, 3, c); m.box(4, 1, 3, 8, 5, 4, y); m.box(18, 1, 3, 22, 5, 4, y); return m; }
-function speakerPost() { const m = new Vox(10, 10, 22), p = m.mat({ ramp: MAT.metalDark, k: 2 }), b = m.mat({ ramp: ramp('#5a5e66', 6, 3), k: 3 }); m.box(4, 4, 0, 6, 6, 16, p); m.box(1, 3, 13, 9, 7, 21, b); return m; }
+function speakerPost() { const m = new Vox(10, 10, 22), p = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN }), b = m.mat({ ramp: ramp('#5a5e66', 6, 3), k: 3, flag: F_THIN }); m.box(4, 4, 0, 6, 6, 16, p); m.box(1, 3, 13, 9, 7, 21, b); return m; }
 function marquee() {
   const m = new Vox(84, 10, 80), p = m.mat({ ramp: ramp('#2a2c34', 6, 3), k: 3 }), face = m.mat({ ramp: ramp('#e8e0c8', 6, 3), k: 4, emi: [255, 236, 190, 160], shade: (x, y, z) => ((Math.round(x) % 6 < 4 && z > 50 && z < 54) || (Math.round(x) % 5 < 3 && z > 40 && z < 44) ? -3 : 0) });
   const bulbs = m.mat({ ramp: ramp('#ffd070', 5, 3), k: 4, emi: [255, 210, 110, 255], flag: F_NOCAST });
@@ -1373,7 +1373,7 @@ function towerCrane(h = 200, jib = 120) {
 // per head distance in `heads` hanging from the arm; lenses unlit (the live signal colours are the host's)
 function signalModel(L = 70, heads = []) {
   const m = new Vox(L + 10, 14, 92), R = (h) => ramp(h, 6, 3);
-  const pole = m.mat({ ramp: MAT.metalDark, k: 2 }), box = m.mat({ ramp: R('#2c2c30'), k: 2 }), back = m.mat({ ramp: R('#d8b030'), k: 3 });
+  const pole = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN }), box = m.mat({ ramp: R('#2c2c30'), k: 2, flag: F_THIN }), back = m.mat({ ramp: R('#d8b030'), k: 3, flag: F_THIN });
   const lens = ['#7a2a26', '#7a6420', '#246a3a'].map((c) => m.mat({ ramp: ramp(c, 5, 2), k: 1, flag: F_NOCAST }));
   m.cyl('z', 6, 7, 0, 3, 0, 4, pole); m.cyl('z', 6, 7, 0, 2, 4, 86, pole); m.box(6, 6, 82, L + 6, 8, 85, pole);
   const hd = (hx, z0) => { m.box(hx, 4, z0, hx + 7, 11, z0 + 22, box); m.box(hx - 1, 3, z0 - 1, hx + 8, 4, z0 + 23, back); for (let i = 0; i < 3; i++) m.box(hx + 2, 10, z0 + 16 - i * 7, hx + 5, 12, z0 + 20 - i * 7, lens[i]); };

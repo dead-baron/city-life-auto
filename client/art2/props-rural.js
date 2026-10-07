@@ -5,7 +5,7 @@
 // (lion statues, flagpoles, barrier arms, a helipad). Each maker returns a Vox, built along +x.
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
-import { F_GLASS, F_NOCAST, F_LEAF, hash } from './gbuf.js';
+import { F_GLASS, F_NOCAST, F_LEAF, F_THIN, hash } from './gbuf.js';
 
 const R = (h, n = 6, k) => ramp(h, n, k);
 
@@ -141,14 +141,14 @@ export function waterTower(h = 90) {
 export function windsock() { const m = new Vox(30, 6, 48); const p = m.mat({ ramp: MAT.metal, k: 3 }), a = m.mat({ ramp: R('#e8642a'), k: 3 }), w = m.mat({ ramp: R('#ecebe4'), k: 3 }); m.box(2, 2, 0, 4, 4, 46, p); for (let k = 0; k < 24; k++) { const r = 4 - k * 0.12; m.fill((x, y, z) => (Math.hypot(y - 3, z - (42 - k * 0.3)) < r && Math.abs(x - 4 - k) < 0.6 ? (Math.floor(k / 5) % 2 ? w : a) : -1), 4 + k, 0, 30, 5 + k, 6, 48); } return m; }
 // a road sign on two posts: 'arrow' (green with a white arrow) or 'curve' (yellow diamond)
 export function roadSign(kind = 'arrow') {
-  if (kind === 'curve') { const m = new Vox(18, 4, 44); const p = m.mat({ ramp: MAT.metal, k: 2 }), y = m.mat({ ramp: R('#e8c030'), k: 3, shade: (x, yy, z) => (Math.abs(Math.sin((z - 34) * 0.5) * 3 - (x - 9)) < 1.2 ? -3 : 0) }); m.box(8, 1, 0, 10, 3, 30, p); m.fill((x, yy, z) => (Math.abs(x - 9) + Math.abs(z - 34) < 9 && yy > 1 && yy < 3 ? y : -1)); return m; }
+  if (kind === 'curve') { const m = new Vox(18, 4, 44); const p = m.mat({ ramp: MAT.metal, k: 2, flag: F_THIN }), y = m.mat({ ramp: R('#e8c030'), k: 3, flag: F_THIN, shade: (x, yy, z) => (Math.abs(Math.sin((z - 34) * 0.5) * 3 - (x - 9)) < 1.2 ? -3 : 0) }); m.box(8, 1, 0, 10, 3, 30, p); m.fill((x, yy, z) => (Math.abs(x - 9) + Math.abs(z - 34) < 9 && yy > 1 && yy < 3 ? y : -1)); return m; }
   const m = new Vox(50, 4, 52);
-  const p = m.mat({ ramp: MAT.metal, k: 2 }), g = m.mat({ ramp: R('#2e7a4e'), k: 3, shade: (x, y, z) => { const ax = x - 25, az = z - 40; return (Math.abs(az) < 1.5 && ax > -10 && ax < 8) || (ax >= 4 && Math.abs(az) < 10 - ax * 0.8 && ax < 12) ? 3 : 0; } });
+  const p = m.mat({ ramp: MAT.metal, k: 2, flag: F_THIN }), g = m.mat({ ramp: R('#2e7a4e'), k: 3, flag: F_THIN, shade: (x, y, z) => { const ax = x - 25, az = z - 40; return (Math.abs(az) < 1.5 && ax > -10 && ax < 8) || (ax >= 4 && Math.abs(az) < 10 - ax * 0.8 && ax < 12) ? 3 : 0; } });
   m.box(6, 1, 0, 8, 3, 30, p); m.box(42, 1, 0, 44, 3, 30, p); m.box(0, 1, 30, 50, 3, 52, g);
   return m;
 }
 export function propaneTank() { const m = new Vox(60, 24, 30); const t = m.mat({ ramp: R('#ecebe4'), k: 3 }), l = m.mat({ ramp: MAT.metalDark, k: 2 }); m.cyl('x', 0, 12, 16, 11, 8, 52, t); m.ell(8, 12, 16, 8, 11, 11, t); m.ell(52, 12, 16, 8, 11, 11, t); for (const x of [14, 46]) m.box(x, 6, 0, x + 3, 18, 6, l); return m; }
-export function flareStack(on = 1) { const m = new Vox(14, 14, 90); const p = m.mat({ ramp: MAT.metalDark, k: 3 }), f = m.mat({ ramp: R('#f8b040', 5, 3), k: 4, emi: [255, 160, 60, 255 * on], flag: F_NOCAST }); m.cyl('z', 7, 7, 0, 2.6, 0, 76, p); m.box(1, 1, 0, 13, 13, 4, p); if (on) m.fill((x, y, z) => (Math.hypot(x - 7, y - 7) < 3.2 - (z - 76) * 0.2 + Math.sin(z) * 0.5 ? f : -1), 0, 0, 76, 14, 14, 90); return m; }
+export function flareStack(on = 1) { const m = new Vox(14, 14, 90); const p = m.mat({ ramp: MAT.metalDark, k: 3, flag: F_THIN }), f = m.mat({ ramp: R('#f8b040', 5, 3), k: 4, emi: [255, 160, 60, 255 * on], flag: F_NOCAST }); m.cyl('z', 7, 7, 0, 2.6, 0, 76, p); m.box(1, 1, 0, 13, 13, 4, p); if (on) m.fill((x, y, z) => (Math.hypot(x - 7, y - 7) < 3.2 - (z - 76) * 0.2 + Math.sin(z) * 0.5 ? f : -1), 0, 0, 76, 14, 14, 90); return m; }
 
 // ---- forest --------------------------------------------------------------------------------------------
 export function tent(color = '#e0702e') {
@@ -182,7 +182,7 @@ export function mapBoard() {
   return m;
 }
 // a finger post with two pointing boards
-export function fingerPost() { const m = new Vox(30, 6, 44); const p = m.mat({ ramp: R('#6a4a30'), k: 3 }), b = m.mat({ ramp: R('#a8865a'), k: 3 }); m.box(13, 2, 0, 17, 6, 44, p); m.fill((x, y, z) => (y > 2 && y < 5 && ((z > 34 && z < 40 && x > 3 && x < 17 + 10 && !(x > 24 && Math.abs(z - 37) > 27 - x)) || (z > 25 && z < 31 && x > 2 && x < 27 && !(x < 6 && Math.abs(z - 28) > x - 3))) ? b : -1)); return m; }
+export function fingerPost() { const m = new Vox(30, 6, 44); const p = m.mat({ ramp: R('#6a4a30'), k: 3, flag: F_THIN }), b = m.mat({ ramp: R('#a8865a'), k: 3, flag: F_THIN }); m.box(13, 2, 0, 17, 6, 44, p); m.fill((x, y, z) => (y > 2 && y < 5 && ((z > 34 && z < 40 && x > 3 && x < 17 + 10 && !(x > 24 && Math.abs(z - 37) > 27 - x)) || (z > 25 && z < 31 && x > 2 && x < 27 && !(x < 6 && Math.abs(z - 28) > x - 3))) ? b : -1)); return m; }
 // a quarry terrace: a bench of grey rock with a broken face and a gravel top (w along x, h tall)
 export function terrace(w = 300, d = 60, h = 40, seed = 1) {
   const m = new Vox(w, d, h);
@@ -194,7 +194,7 @@ export function terrace(w = 300, d = 60, h = 40, seed = 1) {
 // a wind turbine: tower, nacelle and three blades turning in the plane facing south
 export function windTurbine(h = 260, r = 80, angle = 0.3) {
   const m = new Vox(r * 2 + 8, 24, h + r + 6);
-  const w = m.mat({ ramp: R('#ecebe8'), k: 3 }), cx = r + 4;
+  const w = m.mat({ ramp: R('#ecebe8'), k: 3, flag: F_THIN }), cx = r + 4;
   m.fill((x, y, z) => (Math.hypot(x - cx, y - 12) < 4.5 - z / h * 2 && z < h ? w : -1), 0, 0, 0, r * 2 + 8, 24, h);
   m.box(cx - 5, 4, h - 3, cx + 5, 22, h + 6, w);
   for (let b = 0; b < 3; b++) { const a = angle + b * 2.094; for (let k = 4; k < r; k++) { const x = cx + Math.cos(a) * k, z = h + 2 + Math.sin(a) * k, t = 2.6 - k / r * 1.8; m.box(x - t, 21, z - t * 0.6, x + t, 23, z + t * 0.6, w); } }
@@ -215,7 +215,7 @@ export function lionStatue() {
 // a flagpole with a flag streaming east: 'stars' (a stars-and-stripes style flag) or a hex colour
 export function flagpole(h = 110, flag = 'stars') {
   const m = new Vox(46, 8, h + 4);
-  const p = m.mat({ ramp: MAT.chrome, k: 3 }), red = m.mat({ ramp: R('#c8343a'), k: 3 }), white = m.mat({ ramp: R('#f0eee8'), k: 3 }), blue = m.mat({ ramp: R(flag === 'stars' ? '#2a3a7a' : flag), k: 3 });
+  const p = m.mat({ ramp: MAT.chrome, k: 3, flag: F_THIN }), red = m.mat({ ramp: R('#c8343a'), k: 3, flag: F_THIN }), white = m.mat({ ramp: R('#f0eee8'), k: 3, flag: F_THIN }), blue = m.mat({ ramp: R(flag === 'stars' ? '#2a3a7a' : flag), k: 3, flag: F_THIN });
   m.box(2, 3, 0, 4, 5, h, p); m.ell(3, 4, h + 1, 2, 2, 2, p);
   m.fill((x, y, z) => { const fx = x - 4, fz = h - 2 - z + Math.sin(fx * 0.25) * 1.2; if (fx < 0 || fx > 40 || fz < 0 || fz > 24 || Math.abs(y - 4) > 0.8) return -1; if (flag !== 'stars') return blue; if (fx < 16 && fz < 13) return (Math.round(fx) % 3 === 1 && Math.round(fz) % 3 === 1) ? white : blue; return Math.floor(fz / 2) % 2 ? white : red; }, 0, 0, h - 30, 46, 8, h);
   return m;

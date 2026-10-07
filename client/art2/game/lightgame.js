@@ -23,7 +23,7 @@
 // uniform objects; light.js PRESETS entries work too (missing keys take PRESET_DEFAULTS).
 // blendPresets(a, b, t, out) mixes two presets (numbers and colours) into out (start it as {}: its arrays
 // are created once and reused, so blending every frame allocates nothing; out may be a or b).
-import { F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_AIR } from '../gbuf.js';
+import { F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_AIR, F_THIN } from '../gbuf.js';
 
 // ---- quality tiers (lighting side; the engine adds cache sizes) -----------------------------------------
 // stepC/stepG: the march step grows as t += stepC + t * stepG, so `steps` steps reach `reach` px.
@@ -186,6 +186,7 @@ const HEAD = (T, AP = 1) => `#version 300 es
 #define STEPS ${Math.max(1, T.steps)}
 #define STEPC ${T.stepC.toFixed(4)}
 #define STEPG ${T.stepG.toFixed(4)}
+#define THIN_D 10.0
 #define CONTACT ${T.contact}
 #define BANDS ${T.bands}
 #define REFL ${T.refl}
@@ -293,7 +294,8 @@ float sunVis(vec3 P, ivec2 wq){
       float hz = zOf(b);
       if (hz > R.z + 1.5 && hz - R.z < 140.0) {
         int f2 = flOf(b);
-        if ((f2 & ${F_NOCAST}) == 0) { occ = max(occ, (f2 & ${F_LEAF}) != 0 ? 0.75 : 1.0); if (occ >= 1.0) break; }
+        // (a thin thing - a post, a person - only blocks rays that pass just behind its face)
+        if ((f2 & ${F_NOCAST}) == 0 && ((f2 & ${F_THIN}) == 0 || hz - R.z < THIN_D)) { occ = max(occ, (f2 & ${F_LEAF}) != 0 ? 0.75 : 1.0); if (occ >= 1.0) break; }
       }
       t += STEPC + t * STEPG;
       if (t > shadowLen) break;
@@ -310,7 +312,8 @@ float sunVis(vec3 P, ivec2 wq){
     if (s.x < 0 || s.y < 0 || s.x >= isize.x || s.y >= isize.y) break;
     vec4 b = texelFetch(tB, s, 0);
     float hz = zOf(b);
-    if (hz > R.z + 1.5 && hz - R.z < 140.0 && (flOf(b) & ${F_NOCAST}) == 0) occ = max(occ, 1.0 - float(i - 1) * 0.2);
+    int f2 = flOf(b);
+    if (hz > R.z + 1.5 && hz - R.z < ((f2 & ${F_THIN}) != 0 ? THIN_D : 140.0) && (f2 & ${F_NOCAST}) == 0) occ = max(occ, 1.0 - float(i - 1) * 0.2);
   }
   sh = 1.0 - occ * 0.8;
 #endif

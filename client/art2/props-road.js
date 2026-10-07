@@ -4,7 +4,7 @@
 // loader, an aircraft tug, the control tower and runway lights). Each maker returns a Vox, built along +x.
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
-import { F_GLASS, F_NOCAST, hash } from './gbuf.js';
+import { F_GLASS, F_NOCAST, F_THIN, hash } from './gbuf.js';
 
 const R = (h, n = 6, k) => ramp(h, n, k);
 
@@ -49,7 +49,7 @@ export function platformCanopy(len = 200, d = 40, on = 1) {
   for (let x = 20; x < len - 10; x += 50) m.box(x, d / 2 - 2, 50, x + 18, d / 2 + 2, 52, l);
   return m;
 }
-export function clockPost() { const m = new Vox(16, 10, 64); const p = m.mat({ ramp: R('#2e4a3e'), k: 3 }), f = m.mat({ ramp: R('#f0eee6'), k: 4, shade: (x, y, z) => ((Math.abs(x - 8) < 0.8 && z > 52 && z < 58) || (Math.abs(z - 55) < 0.8 && x > 8 && x < 12) ? -3 : 0) }); m.cyl('z', 8, 5, 0, 2, 0, 46, p); m.cyl('y', 8, 0, 55, 7, 2, 8, p); m.cyl('y', 8, 0, 55, 5.5, 8, 9, f); return m; }
+export function clockPost() { const m = new Vox(16, 10, 64); const p = m.mat({ ramp: R('#2e4a3e'), k: 3, flag: F_THIN }), f = m.mat({ ramp: R('#f0eee6'), k: 4, flag: F_THIN, shade: (x, y, z) => ((Math.abs(x - 8) < 0.8 && z > 52 && z < 58) || (Math.abs(z - 55) < 0.8 && x > 8 && x < 12) ? -3 : 0) }); m.cyl('z', 8, 5, 0, 2, 0, 46, p); m.cyl('y', 8, 0, 55, 7, 2, 8, p); m.cyl('y', 8, 0, 55, 5.5, 8, 9, f); return m; }
 // a metro station entrance at street level: a stair opening in an iron railing, a sign box and lamps
 export function stationEntrance(on = 1, color = '#d8582a') {
   const m = new Vox(70, 44, 54);
@@ -221,7 +221,7 @@ export function produceStand(w = 40) {
 // a wall lamp on a bracket (for alleys; the bracket stands against the wall it's placed by)
 export function wallLamp(on = 0, h = 46) {
   const m = new Vox(8, 12, h + 4);
-  const br = m.mat({ ramp: MAT.metalDark, k: 2 }), sh = m.mat({ ramp: R('#2e3a34'), k: 3 });
+  const br = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN }), sh = m.mat({ ramp: R('#2e3a34'), k: 3, flag: F_THIN });
   const bulb = m.mat({ ramp: R('#fff0c0', 5, 3), k: 4, emi: [255, 214, 150, 90 + on * 165], flag: F_NOCAST });
   m.box(3, 0, 0, 5, 2, h, br); m.box(3, 0, h - 2, 5, 9, h, br);
   m.ell(4, 9, h - 3, 3.6, 3.2, 2.4, sh); m.box(2, 8, h - 6, 6, 11, h - 4, bulb);

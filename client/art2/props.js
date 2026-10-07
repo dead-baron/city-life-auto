@@ -2,7 +2,7 @@
 // everything else. Each maker returns a Vox; render it with .render(heading) and cache the sprite.
 import { Vox } from './voxel.js';
 import { MAT, ramp, hex } from './palette.js';
-import { F_GLASS, F_NOCAST, F_LEAF, hash } from './gbuf.js';
+import { F_GLASS, F_NOCAST, F_LEAF, F_THIN, hash } from './gbuf.js';
 
 const R = (h, n = 6, k) => ramp(h, n, k);
 
@@ -11,7 +11,7 @@ const R = (h, n = 6, k) => ramp(h, n, k);
 export function lampPost(kind = 'cast', on = 0) {
   const lantern = kind === 'cast' || kind === 'iron', tall = lantern ? 74 : 96;
   const m = new Vox(lantern ? 12 : 30, 12, tall + 10);
-  const pole = m.mat({ ramp: kind === 'cast' ? R('#2f5a4a') : kind === 'iron' ? R('#34363c') : MAT.metal, k: 2 });
+  const pole = m.mat({ ramp: kind === 'cast' ? R('#2f5a4a') : kind === 'iron' ? R('#34363c') : MAT.metal, k: 2, flag: F_THIN });
   const glass = m.mat({ ramp: R(kind === 'iron' ? '#f8d088' : '#f4d9a0', 5, 3), k: 3, emi: on ? (kind === 'iron' ? [255, 184, 96, 255] : [255, 200, 120, 255]) : null, flag: F_NOCAST });
   if (lantern) {
     m.cyl('z', 6, 6, 0, 3.2, 0, 6, pole);                  // base
@@ -206,7 +206,7 @@ export function car(type = 'sedan', paint = MAT.paintBlue, opt = {}) {
 // traffic signal on a mast arm reaching over the road; arm points toward +x in the model (turn it)
 export function trafficSignal(arm = 70, state = 'red', on = 1) {
   const m = new Vox(arm + 10, 14, 92);
-  const pole = m.mat({ ramp: MAT.metalDark, k: 2 }), yel = m.mat({ ramp: R('#2c2c30'), k: 2 });
+  const pole = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN }), yel = m.mat({ ramp: R('#2c2c30'), k: 2, flag: F_THIN });
   const lamp = (c, active) => m.mat({ ramp: R(c, 5, 2), k: active ? 4 : 1, emi: active ? [...hex(c), 255 * on] : null, flag: F_NOCAST });
   m.cyl('z', 6, 7, 0, 3, 0, 4, pole); m.cyl('z', 6, 7, 0, 2, 4, 86, pole);
   m.box(6, 6, 82, arm + 6, 8, 85, pole);
@@ -222,7 +222,7 @@ export function trafficSignal(arm = 70, state = 'red', on = 1) {
 // a black cast-iron street lamp with a glowing lantern
 export function streetLamp(on = 0) {
   const m = new Vox(14, 14, 94);
-  const iron = m.mat({ ramp: R('#2a2c34'), k: 3 });
+  const iron = m.mat({ ramp: R('#2a2c34'), k: 3, flag: F_THIN });
   const glass = m.mat({ ramp: R('#f6dca0', 5, 3), k: on ? 4 : 2, emi: on ? [255, 206, 130, 255] : null, flag: F_NOCAST });
   m.cyl('z', 7, 7, 0, 4, 0, 4, iron); m.cyl('z', 7, 7, 0, 3, 4, 10, iron); m.cyl('z', 7, 7, 0, 1.6, 10, 78, iron);
   m.cyl('z', 7, 7, 0, 3.5, 78, 80, iron);
@@ -249,8 +249,8 @@ export function wireBin() {
   m.fill((x, y, z) => { const d = Math.hypot(x - 6, y - 6); return d < 5.5 && z < 17 + 3.5 - d * 0.6 ? junk[Math.floor(hash(x | 0, y | 0, z | 0) * 5)] : -1; }, 0, 0, 10, 12, 12, 20);
   return m;
 }
-export function signPost(color = '#e8e4dc') { const m = new Vox(10, 4, 48); const p = m.mat({ ramp: MAT.metal, k: 2 }), s = m.mat({ ramp: R(color), k: 3 }), r = m.mat({ ramp: R('#c8343a'), k: 3 }); m.box(4, 1, 0, 6, 3, 44, p); m.box(1, 0, 32, 9, 2, 46, s); m.box(3, 0, 40, 7, 1, 44, r); return m; }
-export function pedSignal(on = 1) { const m = new Vox(10, 10, 60); const p = m.mat({ ramp: MAT.metalDark, k: 2 }), h = m.mat({ ramp: R('#2c2c30'), k: 2 }), l = m.mat({ ramp: R('#f08030', 5, 3), k: 3, emi: [255, 140, 60, 220 * on], flag: F_NOCAST }); m.cyl('z', 5, 5, 0, 1.6, 0, 56, p); m.box(1, 2, 40, 9, 9, 52, h); m.box(3, 8, 43, 7, 10, 49, l); return m; }
+export function signPost(color = '#e8e4dc') { const m = new Vox(10, 4, 48); const p = m.mat({ ramp: MAT.metal, k: 2, flag: F_THIN }), s = m.mat({ ramp: R(color), k: 3, flag: F_THIN }), r = m.mat({ ramp: R('#c8343a'), k: 3, flag: F_THIN }); m.box(4, 1, 0, 6, 3, 44, p); m.box(1, 0, 32, 9, 2, 46, s); m.box(3, 0, 40, 7, 1, 44, r); return m; }
+export function pedSignal(on = 1) { const m = new Vox(10, 10, 60); const p = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN }), h = m.mat({ ramp: R('#2c2c30'), k: 2, flag: F_THIN }), l = m.mat({ ramp: R('#f08030', 5, 3), k: 3, emi: [255, 140, 60, 220 * on], flag: F_NOCAST }); m.cyl('z', 5, 5, 0, 1.6, 0, 56, p); m.box(1, 2, 40, 9, 9, 52, h); m.box(3, 8, 43, 7, 10, 49, l); return m; }
 // rooftop kit
 export function roofAC(big = true) {
   const w = big ? 30 : 18, d = big ? 22 : 14, h = big ? 16 : 11;
@@ -376,8 +376,8 @@ export function dog(coat = '#d8a050') {
 // flat head) | 'green' (painted mast, round head) | 'sodium' (galvanised, old box head)
 export function armLamp(arm = 30, on = 1, style = 'cobra') {
   const H = 96, m = new Vox(arm + 12, 10, H + 6);
-  const pole = m.mat({ ramp: style === 'green' ? R('#2f5a4a') : style === 'sodium' ? R('#8a8e94') : R('#6a707a'), k: 3 });
-  const head = m.mat({ ramp: style === 'green' ? R('#264a3e') : R('#4a4e58'), k: 3 });
+  const pole = m.mat({ ramp: style === 'green' ? R('#2f5a4a') : style === 'sodium' ? R('#8a8e94') : R('#6a707a'), k: 3, flag: F_THIN });
+  const head = m.mat({ ramp: style === 'green' ? R('#264a3e') : R('#4a4e58'), k: 3, flag: F_THIN });
   const glass = m.mat({ ramp: R(style === 'sodium' ? '#f6c070' : '#f4ead0', 5, 3), k: on ? 4 : 2, emi: on ? (style === 'sodium' ? [255, 176, 96, 255] : [255, 236, 200, 255]) : null, flag: F_NOCAST });
   m.cyl('z', 3.5, 5, 0, 3, 0, 3, pole); m.cyl('z', 3.5, 5, 0, 1.8, 3, H - 6, pole);
   for (let x = 2; x <= arm + 2; x++) { const t = (x - 2) / arm, z = H - 6 + Math.sin(Math.min(1, t * 2.2) * Math.PI / 2) * 5 - t * 1.2; m.box(x, 4, z, x + 1, 6, z + 2, pole); }

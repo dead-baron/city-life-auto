@@ -2402,3 +2402,16 @@ From the 20:33 feedback list (`docs/DESIGN-NOTES.md`).
   - out of their sight, heat cools 1.8x faster and the search circle spreads wider;
   - once they've lost you, the car already out keeps searching but no more are sent;
   - units sent out there come from a long way off (1.3-2.6 km).
+
+## 2026-10-07 · Thin things cast their own shadows (lamp posts, signals, signs, people)
+
+A street light cast a big triangle from the top of its post down to its foot. The sun shadow is a march through the screen's height map, and it treats every pixel as the front of something solid running well back behind it (up to 140 px). That suits buildings, cars and trees, but a thin upright post then shades the whole wedge between its picture and its real shadow.
+- **A "thin" flag (`F_THIN`, the old character bit, `gbuf.js`):** a thin pixel only blocks the sun for rays that pass within 10 px behind its face (`lightgame.js` `THIN_D`). A post now casts its own shape along the ground from its base: a line, with the lamp head or sign at the far end.
+- **Marked thin:**
+  - every street-light model (arm, lantern, banner, twin, cast-iron and wall lamps);
+  - traffic and crossing signals;
+  - sign posts, road signs and finger posts, bus-stop poles and the clock post;
+  - power poles, the cell tower, wind turbines and the flare stack;
+  - flagpoles, tiki torches, timber posts, lantern posts, the drive-in speakers, parking meters and the coin binoculars.
+- People were already flagged (`F_CHAR`), so their shadows are now short silhouettes from their feet instead of wedges.
+- On Medium the far end of a long post shadow breaks into a dither (the march takes longer steps out there); it reads as the softening of a real shadow's tip.

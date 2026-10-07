@@ -4,10 +4,15 @@
 //   nrm  world normal, RGB = n * 0.5 + 0.5 (X east, Y south, Z up), A = 255 where set
 //   z    height above the ground in world px (Uint16) - what cast shadows and reflections use
 //   emi  emissive RGB + strength in A (lamps, lit windows, neon, headlights)
-//   flag bits: 1 ground, 2 water, 4 casts no shadow, 8 wet-able, 16 character, 32 foliage
+//   flag bits: 1 ground, 2 water, 4 casts no shadow, 8 wet-able, 16 thin (characters, posts), 32 foliage
 // Projection (docs/art-v2/SPEC.md): screen x = X, screen y = Y - Z.
 
 export const F_GROUND = 1, F_WATER = 2, F_NOCAST = 4, F_WET = 8, F_CHAR = 16, F_LEAF = 32, F_GLASS = 64, F_AIR = 128; // F_AIR: up in the air (birds): no mirror image in wet ground or water
+// F_THIN (= F_CHAR): a thin upright thing - a person, a lamp post, a sign. The shadow march treats every other
+// pixel as the front of a solid that runs well back behind it, so a tall thin post smeared a wedge from its top
+// down to its foot; a thin pixel only blocks the sun for rays that pass just behind it (lightgame.js THIN_D), so
+// a post casts its own shape along the ground from its base.
+export const F_THIN = F_CHAR;
 
 export class GBuf {
   constructor(w, h) {
