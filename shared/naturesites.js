@@ -103,6 +103,7 @@ export function buildNatureSites(m, H) {
   lighthouseTidepools(m, H);
   campDressing(m, H);
   redwoodCove(m, H);
+  giantsLoop(m, H);
   beachBonfire(m, H);
   desertCamp(m, H);
   summitTarn(m, H);
@@ -2334,6 +2335,41 @@ function redwoodCove(m, H) {
   if (camp) trail(m, [[camp.x + camp.w * 0.35, camp.y + camp.h], [(C[0] + 8) * TILE, (C[1] - 16) * TILE], [(C[0] + 4) * TILE, (C[1] - 5) * TILE], [(C[0] + 1) * TILE, (C[1] + 1) * TILE]]);
   (m.landmarks ||= []).push({ name: 'Redwood Cove', type: 'tidepools', x: (C[0] - R - 4) * TILE, y: (C[1] - R - 6) * TILE, w: (2 * R + 8) * TILE, h: (2 * R + 14) * TILE });
   m.natureSites.push({ kind: 'redwoodcove', name: 'Redwood Cove', x: C[0] * TILE, y: C[1] * TILE, pools: pools.length, fire });
+}
+
+// ---- the Giants Loop: a walk through the old growth (concepts N1-A, N1-B) --------------------------------------
+// A gravel pull-off on Highland Road with a sign and a map board, and a dirt footpath that loops out through the
+// thickest of the redwood groves and back: the giants (map.js redwoodGroves) stand right along it - their trunks
+// kept a stride off the path (m.noTree), never on it - with fingerposts at the turns and benches to sit and look
+// up. On the map as "Giants Loop".
+function giantsLoop(m, H) {
+  // the trailhead: the north-east side of Highland Road where it passes the grove (tiles)
+  const T0 = [173, 131];
+  let road = null;
+  for (let r = 0; r < 8 && !road; r++) for (let dx = -r; dx <= r && !road; dx++) for (let dy = -r; dy <= r; dy++) if (m.tiles[(T0[1] + dy) * MAP_W + T0[0] + dx] === T.ROAD) { road = [T0[0] + dx, T0[1] + dy]; break; }
+  if (!road) return;
+  // step out from the road to the north-east until clear of it: the lot
+  let lx = road[0], ly = road[1];
+  while (m.tiles[ly * MAP_W + lx] === T.ROAD || m.tiles[ly * MAP_W + lx] === T.SIDEWALK) { lx++; ly--; }
+  lx += 1; ly -= 1;
+  const L = [(lx + 0.5) * TILE, (ly + 0.5) * TILE];
+  for (let ty = ly - 2; ty <= ly + 2; ty++) for (let tx = lx - 2; tx <= lx + 3; tx++) { const i = ty * MAP_W + tx; if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) { m.tiles[i] = T.LOT; m.reserve[i] |= RES; } }
+  // the loop: out north-east into the grove, round and back (control points, tiles from the lot)
+  const P = (dx, dy) => [L[0] + dx * TILE, L[1] + dy * TILE];
+  const cp = [P(3, -1), P(7, -8), P(11, -16), P(18, -21), P(26, -20), P(31, -13), P(29, -5), P(22, -1), P(13, 1), P(5, 0), P(3, -1)];
+  const pts = trail(m, cp);
+  // the giants keep a stride off the path (their trunks, not their crowns: map.js redwoodGroves reads m.noTree)
+  const noTree = (m.noTree ||= new Set());
+  for (const [x, y] of pts) for (let ty = Math.floor((y - 76) / TILE); ty <= Math.floor((y + 76) / TILE); ty++) for (let tx = Math.floor((x - 76) / TILE); tx <= Math.floor((x + 76) / TILE); tx++) if (Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y) < 76) noTree.add(ty * MAP_W + tx);
+  // the trailhead: a lit sign facing the road, the map board, a bench; fingerposts at the far turns; benches on the way
+  H.addProp(m, 'textsign', Math.round(L[0] - 10), Math.round(L[1] + 40), 0, { text: 'GIANTS LOOP', bg: '#3a5a2a', fg: [250, 236, 190], z: 36 });
+  H.addProp(m, 'mapboard', Math.round(L[0] + 52), Math.round(L[1] - 10), 0);
+  H.addProp(m, 'pbench', Math.round(L[0] + 30), Math.round(L[1] + 30), 0);
+  const along = (f) => pts[Math.min(pts.length - 1, Math.floor(f * (pts.length - 1)))];
+  for (const f of [0.18, 0.5, 0.78]) { const [x, y] = along(f); H.addProp(m, 'fingerpost', Math.round(x + 34), Math.round(y + 6), 0); }
+  for (const f of [0.34, 0.62]) { const [x, y] = along(f); H.addProp(m, 'pbench', Math.round(x - 40), Math.round(y + 18), 0); reserveRound(m, x - 40, y + 18, 30); }
+  (m.landmarks ||= []).push({ name: 'Giants Loop', type: 'trail', x: Math.round(L[0] - 80), y: Math.round(L[1] - 23 * TILE), w: 34 * TILE, h: 26 * TILE });
+  m.natureSites.push({ kind: 'trail', name: 'Giants Loop', x: Math.round(L[0]), y: Math.round(L[1]), len: pts.length });
 }
 
 // ---- the oasis in Red Rock Canyon (concepts N4-B, N4-C) ------------------------------------------------------

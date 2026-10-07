@@ -3879,7 +3879,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
   const W = MAP_W, CG = 7, giants = [], forage = (m.forage ||= []);   // (forage: shared/foraging.js)
   const okAt = (tx, ty, pad) => {
     const i = ty * W + tx, t = m.tiles[i];
-    return wild(i) && m.dist[i] === 29 && (t === T.GRASS || t === T.DIRT) && !rocky[i] && !m.lake[i] && !inField(tx, ty, 64) && clear(tx, ty, pad);
+    return wild(i) && m.dist[i] === 29 && (t === T.GRASS || t === T.DIRT) && !rocky[i] && !m.lake[i] && !(m.noTree && m.noTree.has(i)) && !inField(tx, ty, 64) && clear(tx, ty, pad);
   };
   const nearWater = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.WATER || t === T.DEEP) return true; } return false; };
   const roomFor = (x, y, r) => giants.every(([gx2, gy2, gr]) => Math.hypot(gx2 - x, gy2 - y) > gr + r + 18);

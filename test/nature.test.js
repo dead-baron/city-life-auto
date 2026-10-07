@@ -687,3 +687,17 @@ test('Redwood Cove: the giants come down to a sandy cove - tidepools at its nort
   assert.ok(dirt >= 6, `a trail down from the campground (${dirt}/9)`);
   assert.ok(m.landmarks.some((l) => l.name === 'Redwood Cove'));
 });
+
+test('the Giants Loop: a pull-off on Highland Road, a dirt footpath looping out through the giants and back, signs and benches, no trunk on the path', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'trail' && q.name === 'Giants Loop');
+  assert.ok(s, 'the trail is built');
+  assert.equal(tileAt(s.x, s.y), T.LOT, 'the pull-off');
+  assert.ok(m.props.some((q) => q && q.t === 'textsign' && q.text === 'GIANTS LOOP' && Math.hypot(q.x - s.x, q.y - s.y) < 100), 'the sign');
+  assert.ok(m.props.filter((q) => q && q.t === 'fingerpost' && Math.hypot(q.x - s.x, q.y - s.y) < 1400).length >= 3, 'fingerposts');
+  const giants = m.props.filter((q) => q && q.t === 'redwood' && /^giant/.test(q.sp) && Math.hypot(q.x - s.x - 500, q.y - s.y + 350) < 800);
+  assert.ok(giants.length >= 10, `giants along it (${giants.length})`);
+  // no trunk on the path: the giants keep a stride off it (m.noTree: the tiles within 76 px of the path)
+  assert.ok(m.noTree && m.noTree.size > 200, 'the path keeps the giants off');
+  for (const g of giants) assert.ok(!m.noTree.has(Math.floor(g.y / TILE) * m.w + Math.floor(g.x / TILE)), 'no giant stands by the path');
+  assert.ok(m.landmarks.some((l) => l.name === 'Giants Loop'));
+});

@@ -238,7 +238,7 @@ function tileFacts(C) {
       else if (!wild) m = (D.tier === 'industrial' || D.tier === 'rough') ? M_.GRAVEL : M_.DIRT;
       else if (bio === 3 || st === 'desert') m = M_.DESERT;
       else if (bio === 4) m = b.tz[k] === Z.EAST && st !== 'rural' ? M_.REDROCK : st === 'rural' ? M_.DIRT : M_.SCREE;
-      else if (bio === 2) m = M_.FORESTDIRT;
+      else if (bio === 2) m = (b.tres[k] & 32) ? M_.DIRT : M_.FORESTDIRT;   // (32: a designed place's trails and clearings - packed earth, paler than the duff round them)
       else m = M_.DIRT;
     } else if (t === T.SAND) {
       // wild coasts by their land: rock shores below mountains, shingle under the forests, sand elsewhere

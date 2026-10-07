@@ -3118,3 +3118,13 @@ On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesi
 - **A trail** runs down from the Pine Ridge Campground through the giants to the sand.
 - On the map as "Redwood Cove".
 - **Tests:** `test/nature.test.js` covers the pools, the basalt, the life, the stacks, the fire on the sand, no redwood on the sand, the trail, and the landmark. `test/foraging.test.js`: two stars at each tidepool shelf.
+
+## 2026-10-07 · The Giants Loop: a walk through the old growth (concepts N1-A, N1-B)
+
+- **A pull-off on Highland Road** where it passes the thickest grove (`shared/naturesites.js` `giantsLoop`). It has gravel, a lit "GIANTS LOOP" sign facing the road, a map board and a bench.
+- **A dirt footpath** loops from it out through the giants and back, about 160 m round.
+  - The giants stand right along the path, a stride off it (`m.noTree`, which `map.js` `redwoodGroves` reads), never on it.
+  - There are fingerposts at the turns and two benches on the way.
+- **Trails and clearings that designed places cut through the woods** are packed earth now, paler than the duff round them (`groundbake.js`). That covers this loop, Redwood Creek Falls' trail and camp, and the trail down to Redwood Cove.
+- On the map as "Giants Loop".
+- **Tests:** `test/nature.test.js` covers the pull-off, the sign, the fingerposts, the giants along it, and no giant by the path.
