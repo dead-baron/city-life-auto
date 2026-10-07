@@ -37,6 +37,15 @@ export const ARCHETYPES = {
     look: () => ({ t: 3, tc: '#151517', tc2: '#333', l: '#151517', sh: '#111', ht: 5, htc: '#151517', b: 0 }) },
   medic:        { reflex: 0.6, fight: 0.0, speed: 1.15, hp: 120, cash: [0, 0], item: null, day: 0, night: 0,
     look: () => ({ t: 6, tc: '#e8e8e8', tc2: '#2350c8', l: '#1d2a5a', sh: '#111', ht: 1, htc: '#2350c8', b: 0 }) },
+  // out in the open country (npc.js spawnCountry - never in town): backpacks and boots, flannel and jeans
+  hiker:        { reflex: 0.6, fight: 0.4, speed: 1.05, hp: 105, cash: [10, 60], item: ['wallet', 0.2], day: 0, night: 0,
+    look: (r) => ({ t: 0, tc: pickA(r, ['#c8582a', '#2e6a3a', '#2a5a8a', '#d8a030', '#8a2a3a']), tc2: '#ddd', l: pickA(r, ['#8a7a52', '#5a5a48', '#4a4a40']), sh: '#6b4a2a', ht: r() < 0.6 ? pickA(r, [1, 3]) : 0, htc: pickA(r, ['#6a5a3a', '#2e5a38', '#c8582a', '#d8c088']), b: 0 }) },
+  camper:       { reflex: 0.5, fight: 0.45, speed: 1.0, hp: 100, cash: [10, 60], item: ['wallet', 0.2], day: 0, night: 0,
+    look: (r) => ({ t: pickA(r, [2, 4]), tc: pickA(r, ['#3a5a3a', '#8a3a2a', '#2a3a5a', '#6a5a3a']), tc2: '#ddd', l: pickA(r, ['#2a4a8a', '#5a5a48']), sh: '#6b4a2a', ht: r() < 0.45 ? 4 : 0, htc: pickA(r, ['#c8262b', '#2a4a8a', '#3a3a3a']), b: 0 }) },
+  farmer:       { reflex: 0.4, fight: 0.6, speed: 0.95, hp: 115, cash: [20, 90], item: ['wallet', 0.25], day: 0, night: 0,
+    look: (r) => ({ t: 4, tc: pickA(r, ['#a82a2a', '#2a4a8a', '#3a6a3a', '#8a6a2a']), tc2: '#eee', l: '#2a4a8a', sh: '#6b4a2a', ht: r() < 0.8 ? pickA(r, [1, 3]) : 0, htc: pickA(r, ['#d8c088', '#c8262b', '#2a4a8a', '#e8e0c8']), b: 0 }) },
+  nomad:        { reflex: 0.55, fight: 0.6, speed: 1.0, hp: 105, cash: [5, 50], item: null, day: 0, night: 0,
+    look: (r) => ({ t: 4, tc: pickA(r, ['#b89a6a', '#8a6a4a', '#6a5a48']), tc2: '#5a4a3a', l: pickA(r, ['#6a5a48', '#8a7a5a']), sh: '#6b4a2a', ht: 3, htc: pickA(r, ['#c8a878', '#8a6a4a']), b: 0, bandana: r() < 0.5 }) },
 };
 
 function pickA(r, arr) { return arr[Math.floor(r() * arr.length) % arr.length]; }
@@ -54,6 +63,7 @@ const BUILD_WEIGHTS = {
   senior: [8, 2, 0, 0], drunk: [5, 4, 1, 0], socialite: [5, 4, 1, 0], executive: [4, 5, 1, 0], sweeper: [2, 6, 2, 0],
   casual: [2, 6, 2, 0.6], athlete: [0, 4, 5, 1], construction: [0, 3, 5, 2], hustler: [1, 4, 4, 1], mugger: [1, 5, 3, 1],
   syndicate: [0, 3, 5, 3], cop: [0, 4, 5, 1], swat: [0, 2, 5, 3], medic: [1, 6, 2, 0],
+  hiker: [0, 5, 4, 0.5], camper: [1, 6, 2, 0.5], farmer: [0, 4, 5, 1], nomad: [1, 5, 3, 0.5],
 };
 export function rollBuild(r, archetype) {
   const w = BUILD_WEIGHTS[archetype] || [2, 6, 2, 0.5];

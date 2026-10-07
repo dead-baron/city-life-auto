@@ -12,6 +12,7 @@ import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
+import { wildStyle } from './wildlife.js';
 import { crossingLimit } from './trains.js';
 import { inAnyView } from '../view.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
@@ -234,6 +235,12 @@ export function planRoute(world, fromX, fromY, toX, toY) {
 
 // ---- traffic update ----------------------------------------------------------
 const DRIVEWAY_CARS = ['sedan', 'compact', 'pickup', 'sports', 'sedan', 'compact'];
+// Out in the open country the roads are quiet, and what's on them belongs there: farmers' pickups and
+// flatbeds, campers' vans, off-roaders on motorbikes, the odd tanker for the oil field or a dump truck
+// for the quarry - no taxis, buses or bin lorries.
+const COUNTRY_MIX = [['pickup', 40], ['van', 12], ['sedan', 12], ['compact', 8], ['bike', 10], ['flatbed', 8], ['tanker', 2], ['dumptruck', 2], ['boxtruck', 2]];
+const COUNTRY_TARGET_DAY = 2, COUNTRY_TARGET_NIGHT = 1;
+const countryDriver = (model, style) => (model === 'van' ? (rng() < 0.6 ? 'camper' : 'casual') : model === 'pickup' || model === 'flatbed' ? (style === 'rural' || rng() < 0.4 ? 'farmer' : style === 'desert' ? 'nomad' : 'camper') : model === 'bike' ? (rng() < 0.5 ? 'hiker' : 'casual') : 'casual');
 
 export function update(world, dt) {
   if (world.tick % 15 === 3) manage(world);
@@ -420,8 +427,8 @@ function manage(world) {
   const net = world.map.net;
   if (!net) return;
   const night = world.clock.isNight;
-  const target = night ? 10 : 16;
   for (const a of anchors) {
+    const target = wildStyle(world.map, a.x, a.y) ? (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : night ? 10 : 16;
     let count = 0;
     for (const v of world.query(a.x, a.y, 1400, K.VEH)) if (v.ai && v.ai.kind === 'traffic') count++;
     if (count >= target || world.npcCount + world.trafficCount > world.npcBudget) continue;
@@ -444,14 +451,15 @@ function manage(world) {
       const z = edgeZ(e, from, from === e.a ? s : e.len - s);
       if (z > 0.05 && z < 0.95) continue; // not halfway up a ramp
       if (world.query(p.x, p.y, 90, K.VEH).some((q) => sameLevel(q.lz, z))) continue;
-      const st = world.map.districtAt(p.x, p.y).style;
+      const st = world.map.districtAt(p.x, p.y).style, country = e.kind !== 'hwy' ? wildStyle(world.map, p.x, p.y) : null;
       const heavy = e.kind === 'hwy' || st === 'harbor' || st === 'industrial' || st === 'factory' || st === 'airport';
-      const model = weighted(TRAFFIC_MIX.filter(([id]) => !(id === 'bike' && e.kind === 'hwy') && !(e.kind === 'dirt' && TRUCK_MODELS.has(id))).map(([id, wt]) => [id, heavy && TRUCK_MODELS.has(id) ? wt * 3 : wt]));
+      const model = weighted((country ? COUNTRY_MIX : TRAFFIC_MIX).filter(([id]) => !(id === 'bike' && e.kind === 'hwy') && !(e.kind === 'dirt' && TRUCK_MODELS.has(id))).map(([id, wt]) => [id, heavy && TRUCK_MODELS.has(id) ? wt * 3 : wt]));
       const v = world.spawnVehicle(model, p.x, p.y, Math.atan2(p.ty, p.tx), {});
       v.lz = z;
       const sp0 = Math.min(CRUISE[e.kind] || 250, 300) * 0.6;
       v.vx = p.tx * sp0; v.vy = p.ty * sp0;
-      const driver = spawnNpc(world, rng() < 0.15 ? 'executive' : 'casual', p.x, p.y, 'driver');
+      const driver = spawnNpc(world, country ? countryDriver(model, country) : rng() < 0.15 ? 'executive' : 'casual', p.x, p.y, 'driver');
+      if (country) driver.npc.country = true;
       driver.vehId = v.id; driver.seat = 0; v.seats[0] = driver.id; driver.lz = z;
       v.ai = { kind: 'traffic' };
       enterEdge(world, v, e.id, from, lane, s + 30);

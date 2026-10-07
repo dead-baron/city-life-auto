@@ -2596,9 +2596,10 @@ function volleyCourt(m, name, x, y, w, h, margin = 1) {
 // `rail.pts` by arc length; stations and crossings are positions along it.
 export const RAIL_GAUGE = 52;         // px between the outer rails' ties (track bed width ~2 tiles)
 // Rolling stock (wire index = position here). Coaches: seat rows either side of the aisle, doors
-// in the middle; the mail car carries the strongbox at its back end.
+// in the middle; the mail car carries the strongbox at its back end. The front car ('loco') is a
+// cab car: the driver's cab in the nose, closed off by a bulkhead, and seats behind it like a coach.
 export const TRAIN_CARS = [
-  { kind: 'loco', name: 'Locomotive', L: 196, W: 70 },
+  { kind: 'loco', name: 'Front car', L: 196, W: 76 },
   { kind: 'coach', name: 'Passenger coach', L: 212, W: 76 },
   { kind: 'mail', name: 'Mail car', L: 188, W: 76 },
 ];
@@ -2608,6 +2609,9 @@ export const CAR_GAP = 10;               // px between coupled cars
 export const TRAIN_LEN = CONSIST.reduce((a, k) => a + TRAIN_CARS.find((c) => c.kind === k).L, 0) + CAR_GAP * (CONSIST.length - 1);
 export const COACH_SEATS = [-84, -60, -36, 36, 60, 84].flatMap((ox) => [[ox, -23], [ox, 23]]);
 export const COACH_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-48, 0], [48, 0], [72, 0]];
+export const CAB_OX = 50;                                 // the front car's cab bulkhead (riders stay behind it)
+export const LOCO_SEATS = [-84, -60, -36, 36].flatMap((ox) => [[ox, -23], [ox, 23]]);
+export const LOCO_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-48, 0], [22, 0]];
 export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towards the back of the mail car)
 export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards stand
 export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre

@@ -92,9 +92,13 @@ export class HUD {
     // riding a train: next stop, the tunnel, the strongbox
     const tb = $('trainbar'), tr = me.train;
     if (tr && !me.dead) {
-      tb.classList.remove('hidden'); tb.classList.toggle('sub', !!tr.sub);
-      $('tb-where').textContent = tr.car === 'mail' ? 'MAIL CAR' : tr.sub ? 'SUBWAY' : tr.rural ? 'RURAL RUN' : 'ON THE TRAIN';
-      $('tb-next').textContent = tr.at ? `At ${tr.next} - F to get off` : `Next: ${tr.next} · ${tr.eta}s`;
+      // the mail guards' warning: at the door ('door'), then the seconds left to get out (0: they're shooting)
+      const warn = tr.warn ?? null;
+      tb.classList.remove('hidden'); tb.classList.toggle('sub', !!tr.sub); tb.classList.toggle('warn', warn === 'door'); tb.classList.toggle('alarm', warn !== null && warn !== 'door');
+      $('tb-where').textContent = warn === 'door' ? 'MAIL CAR AHEAD' : tr.car === 'mail' ? 'MAIL CAR' : tr.sub ? 'SUBWAY' : tr.rural ? 'RURAL RUN' : 'ON THE TRAIN';
+      $('tb-next').textContent = warn === 'door' ? 'Armed guards - staff only! Walk in and they shoot.'
+        : warn !== null ? (warn > 0 ? `GUARDS: "GET OUT!" - ${warn}` : 'The guards are shooting!')
+          : tr.at ? `At ${tr.next} - F to get off` : `Next: ${tr.next} · ${tr.eta}s`;
       $('tb-crack').classList.toggle('hidden', tr.crack === null);
       if (tr.crack !== null) $('tb-fill').style.width = Math.round(tr.crack * 100) + '%';
     } else tb.classList.add('hidden');

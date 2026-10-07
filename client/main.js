@@ -74,6 +74,7 @@ const S = {
   gateOpen: {}, gateAnim: {}, // police motor pool gates
   xing: [], xingAnim: [], // level crossings: { d: gates down, b: [arm broken, arm broken] }
 };
+S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 
 try { S.token = localStorage.getItem(TOKEN_KEY); } catch { S.token = null; }
@@ -602,6 +603,7 @@ function onEvent(ev) {
     case 'revive': fx.ring(ev.x, ev.y, 30, 'rgba(120,255,160,', 3); fx.floatText(ev.x, ev.y - 20, '+', '#3ddc84'); break;
     case 'poof': case 'fade': if (ev.x !== undefined) fx.ring(ev.x, ev.y, 24, 'rgba(255,255,255,'); break;
     case 'scream': fx.floatText(ev.x, ev.y - 18, 'AAAAH!', '#fff'); break;
+    case 'say': fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;
     case 'yelp': fx.floatText(ev.x, ev.y - 18, 'WHOA!', '#ffd36b'); break;
     case 'thanks': fx.floatText(ev.x, ev.y - 18, 'Thank you!', '#3ddc84'); break;
     case 'bite': fx.splash(ev.x, ev.y, 6); sfx('bite'); break;
@@ -719,9 +721,7 @@ function drawArt2Marks(F) {
     g.globalAlpha = fade; g.save(); g.translate(c.x, c.y - c.z * 0.6); g.rotate(c.a); g.drawImage(c.img, c.sx, c.sy, c.sw, c.sh, -c.w / 2, -c.h / 2, c.w, c.h); g.restore();
   }
   g.globalAlpha = 1;
-  g.font = 'bold 13px monospace'; g.textAlign = 'center';
-  for (const t of fx.texts) { g.globalAlpha = Math.max(0, 1 - t.t / 1.4); g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y - t.t * 30 + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y - t.t * 30); }
-  g.globalAlpha = 1;
+  fx.drawTexts(g);
   for (const v of F.vehs) if (v.d.fs) {
     const txt = `$${v.d.fs.toLocaleString()}`;
     g.font = 'bold 12px monospace'; g.textAlign = 'center';

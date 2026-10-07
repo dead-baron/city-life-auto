@@ -33,6 +33,7 @@ import * as trains from './systems/trains.js';
 import * as rentals from './systems/rentals.js';
 import * as spikes from './systems/spikes.js';
 import * as pets from './systems/pets.js';
+import * as wildlife from './systems/wildlife.js';
 import * as unstuck from './systems/unstuck.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
@@ -49,6 +50,7 @@ const SYSTEMS = [
   ['interiors', interiors.update],  // shop clerks / desk staff in walk-in buildings
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
   ['pets', pets.update],            // lost pets wandering, led home on a collar
+  ['wildlife', wildlife.update],    // animals out in the wilds: deer, coyotes, rabbits, the farms' herds
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen

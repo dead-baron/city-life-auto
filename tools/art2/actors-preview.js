@@ -188,11 +188,11 @@ views.objects = () => {
 };
 // train cars: roof, lit roof (night), the cut-away interior (my train), the empty mail car
 views.trains = () => {
-  const day = new Stage(760, 520), night = new Stage(760, 260);
-  backdrop(day, [[0, 520, 'ballast']]); backdrop(night, [[0, 260, 'ballast']]);
-  [0, 1, 2].forEach((c, i) => { day.put(timed('train', () => A.trainCarSprite(c, 'roof', 0, 32)), 130 + i * 240, 140); day.label(['loco', 'coach', 'mail'][c] + ' roof', 60 + i * 240, 190); });
-  [1, 2].forEach((c, i) => { day.put(A.trainCarSprite(c, i ? 'in-empty' : 'in', 0, 32), 130 + i * 240, 330); day.label(['coach in', 'mail in, empty'][i], 60 + i * 240, 380); });
-  day.put(A.trainCarSprite(0, 'roof', 4, 32), 620, 330); day.put(A.trainCarSprite(1, 'roof', 28, 32), 640, 470);
+  const day = new Stage(760, 660), night = new Stage(760, 260);
+  backdrop(day, [[0, 660, 'ballast']]); backdrop(night, [[0, 260, 'ballast']]);
+  [0, 1, 2].forEach((c, i) => { day.put(timed('train', () => A.trainCarSprite(c, 'roof', 0, 32)), 130 + i * 240, 140); day.label(['front car', 'coach', 'mail'][c] + ' roof', 60 + i * 240, 190); });
+  [0, 1, 2].forEach((c, i) => { day.put(A.trainCarSprite(c, c === 2 ? 'in-empty' : 'in', 0, 32), 130 + i * 240, 330); day.label(['front car in (seats, cab shut)', 'coach in', 'mail in, empty'][i], 40 + i * 240, 380); });
+  day.put(A.trainCarSprite(0, 'roof', 4, 32), 160, 500); day.put(A.trainCarSprite(0, 'in', 28, 32), 420, 520); day.put(A.trainCarSprite(1, 'roof', 28, 32), 640, 520);
   [0, 1, 2].forEach((c, i) => { night.put(A.trainCarSprite(c, 'roof-lit', 0, 32), 130 + i * 240, 140); for (const [x, y, z] of A.trainLights(c).windows) night.light(130 + i * 240 + x, 140 + y, z, 46, [1, 0.8, 0.5], 1.8); for (const [x, y, z] of A.trainLights(c).head) { night.light(130 + i * 240 + x, 140 + y, z, 40, [1, 0.95, 0.8], 3); for (const k of [1, 2, 3]) night.light(130 + i * 240 + x + 30 * k, 140 + y, 12, 40 + 10 * k, [1, 0.9, 0.65], 3.4 - k * 0.8); } });
   return [{ S: day, preset: 'golden' }, { S: night, preset: 'night' }];
 };

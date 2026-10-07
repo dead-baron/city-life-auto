@@ -15,12 +15,15 @@ import * as gangwar from './gangwar.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 import * as trains from './trains.js';
+import * as wildlife from './wildlife.js';
 import { inAnyView } from '../view.js';
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
+const COUNTRY_PREFERRED = new Set([T.DIRT, T.SIDEWALK, T.PLAZA, T.LOT]); // out in the country: the tracks and trails, the yards
 const CIV_TARGET_DAY = 30, CIV_TARGET_NIGHT = 20;
+const COUNTRY_TARGET_DAY = 4, COUNTRY_TARGET_NIGHT = 2; // people round a player out in the open country
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 let rng = mulberry32(99);
 
@@ -222,7 +225,7 @@ function pickWaypoint(world, ped) {
   const n = ped.npc;
   // pedestrians far from every player meander back toward them (keeps visible streets lively)
   let towards = null;
-  if (n.role === 'civ' && rng() < 0.6) {
+  if (n.role === 'civ' && !n.country && rng() < 0.6) {
     let bd = Infinity;
     for (const p of world.players.values()) {
       if (!p.ped || p.ped.dead) continue;
@@ -239,6 +242,9 @@ function pickWaypoint(world, ped) {
     }
   }
   const away = n.awayFrom; n.awayFrom = undefined;
+  // country folk keep round their campground / farm / filling station
+  if (n.patch && Math.hypot(n.patch.x - ped.x, n.patch.y - ped.y) > 420) towards = n.patch;
+  const pref = n.country ? COUNTRY_PREFERRED : PREFERRED;
   for (let k = 0; k < 14; k++) {
     const ang = towards && k < 6 ? Math.atan2(towards.y - ped.y, towards.x - ped.x) + (rng() - 0.5) * 1.6
       : away !== undefined && k < 6 ? away + (rng() - 0.5) * 2 : rng() * Math.PI * 2;
@@ -246,7 +252,7 @@ function pickWaypoint(world, ped) {
     const x = ped.x + Math.cos(ang) * dist, y = ped.y + Math.sin(ang) * dist;
     const t = world.map.tileAtPx(x, y);
     if (!WALK_TILES.has(t)) continue;
-    if (!PREFERRED.has(t) && rng() < 0.6) continue;
+    if (!pref.has(t) && rng() < 0.6) continue;
     if (!crossesRoadOk(world, ped.x, ped.y, x, y)) continue;
     if (world.map.rayTiles(ped.x, ped.y, x, y) < 1) continue;
     n.wx = x; n.wy = y;
@@ -327,7 +333,7 @@ export function onAttacked(world, ped, attacker) {
     return;
   }
   if (n.role === 'cop' && attacker.npc && attacker.npc.role === 'gang') { gangwar.copAttackedByGang(world, ped, attacker); return; }
-  if (n.role === 'railguard') { n.target = attacker.id; n.hostile = true; return; } // shoot at the mail guards and they shoot back
+  if (n.role === 'railguard') { n.target = attacker.id; n.hostile = attacker.id; return; } // shoot at the mail guards and they shoot back (after a moment to draw - trains.js)
   if (n.role === 'cop' || n.role === 'medic') return;
   if (ped.hp < ped.maxHp * NPC_CRITICAL && n.role !== 'gang') { startLimp(world, ped, attacker.x, attacker.y); return; } // too hurt to fight back
   if (n.state === 'passed') { ped.passedOut = false; n.state = 'flee'; n.fx = attacker.x; n.fy = attacker.y; n.until = world.time + 6; return; }
@@ -418,23 +424,57 @@ function manageDensity(world) {
     if (!near && !(e.dead && world.bodies.has(e)) && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e);
   }
   if (world.npcCount >= world.npcBudget * 0.6) return;
-  const target = night ? CIV_TARGET_NIGHT : CIV_TARGET_DAY;
   for (const a of anchors) {
+    // out in the open country it's quiet: a few people, where they belong (spawnCountry)
+    const country = !!wildlife.wildStyle(world.map, a.x, a.y);
+    const target = country ? (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : night ? CIV_TARGET_NIGHT : CIV_TARGET_DAY;
     let count = 0;
     for (const e of world.query(a.x, a.y, 1200, K.PED)) if (e.npc && !e.dead) count++;
     if (count >= target) continue;
     for (let tries = 0; tries < 12; tries++) {
       const ang = rng() * Math.PI * 2, d = 450 + rng() * 800;
       const x = a.x + Math.cos(ang) * d, y = a.y + Math.sin(ang) * d;
-      const t = world.map.tileAtPx(x, y);
-      if (!WALK_TILES.has(t) || t === T.DIRT) continue;
+      const t = world.map.tileAtPx(x, y), style = wildlife.wildStyle(world.map, x, y);
+      if (!WALK_TILES.has(t) || (t === T.DIRT && !style)) continue;
       let tooClose = false;
       for (const b of anchors) if ((b.x - x) ** 2 + (b.y - y) ** 2 < 400 * 400) { tooClose = true; break; }
       if (tooClose || inAnyView(world, x, y, 64)) continue; // just off screen: they walk into view
+      if (style && !isTurf(x, y)) { if (spawnCountry(world, x, y, style, night)) break; continue; }
       spawnByDemographic(world, x, y, night);
       break;
     }
   }
+}
+
+// Out in the open country, people where they belong: campers at the campgrounds, farmers round the
+// farms, workers at the quarry, the oil field, the wind and solar farms, locals at the filling
+// stations and the farmhouses - and only now and then a hiker on the hills, a farmer out in the
+// fields or a nomad in the desert. Nobody just standing about in the middle of nowhere. Returns the
+// new ped, or null when nobody's out here.
+const COUNTRY_FOLK = {
+  camp: [['camper', 6], ['hiker', 4]], stop: [['casual', 5], ['hiker', 3], ['camper', 2]], work: [['construction', 1]],
+  venue: [['casual', 1]], farm: [['farmer', 1]], home: [['farmer', 5], ['casual', 4], ['senior', 1]], shop: [['casual', 6], ['farmer', 3], ['hiker', 1]],
+  air: [['casual', 3], ['construction', 2]],
+};
+const LONER = { wild: 'hiker', rural: 'farmer', desert: 'nomad' };
+function spawnCountry(world, x, y, style, night) {
+  const place = wildlife.placeNear(world.map, x, y, 520);
+  let arche;
+  if (place) {
+    if (rng() > (night ? 0.3 : 0.6)) return null;
+    const list = COUNTRY_FOLK[place.kind] || COUNTRY_FOLK.stop;
+    let r = rng() * list.reduce((t, [, w]) => t + w, 0);
+    arche = list[0][0];
+    for (const [k, w] of list) { r -= w; if (r <= 0) { arche = k; break; } }
+  } else {
+    if (rng() > (night ? 0.02 : 0.08)) return null;
+    if (world.query(x, y, 1500, K.PED).some((e) => e.npc && e.npc.country && !e.npc.patch && !e.dead && !e.vehId)) return null; // one loner about at most
+    arche = LONER[style] || 'hiker';
+  }
+  const ped = spawnNpc(world, arche, x, y, 'civ');
+  ped.npc.country = true;
+  if (place) ped.npc.patch = { x: place.x, y: place.y }; // keeps round its place
+  return ped;
 }
 
 function spawnByDemographic(world, x, y, night) {

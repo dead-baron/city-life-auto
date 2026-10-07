@@ -4,8 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K, T } from '../shared/constants.js';
-import { railAt, CROSSING_ARM, MAIL_BOX, RAIL_MAX_BRIDGE_TILES, PLATFORM_HALF, ISLANDS, CONSIST } from '../shared/map.js';
-import { TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_HEADWAY_S, TRAIN_ACCEL, TRAIN_BRAKE, MAIL_WARN_S, BAIL_HURT_SPEED } from '../shared/rules.js';
+import { railAt, CROSSING_ARM, MAIL_BOX, RAIL_MAX_BRIDGE_TILES, PLATFORM_HALF, ISLANDS, CONSIST, CAB_OX, LOCO_SEATS } from '../shared/map.js';
+import { TRAIN_SPEED, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_HEADWAY_S, TRAIN_ACCEL, TRAIN_BRAKE, MAIL_WARN_S, GUARD_DRAW_S, BAIL_HURT_SPEED } from '../shared/rules.js';
 import { CTRL } from '../shared/protocol.js';
 import * as trains from '../server/systems/trains.js';
 import * as players from '../server/systems/players.js';
@@ -431,26 +431,88 @@ test('rider control kind: the client is told you are on a train', () => {
   assert.equal(CTRL.RIDER, 4);
 });
 
-test('mail car guards order you out before they shoot - and let you go if you leave', () => {
-  const w = makeWorld({ npcBudget: 200 });
-  const { p } = joinPlayer(w);
+// the guards' lines (speech bubbles) sent to this connection
+const evsOf = (conn, from) => conn.sent.slice(from).map((m) => (typeof m === 'string' ? JSON.parse(m) : m)).flatMap((m) => (m && m.t === 'ev' ? m.l : []));
+const said = (conn, from) => evsOf(conn, from).filter((e) => e.e === 'say').map((e) => e.text);
+function mailTrain(w, p) {
   const t = w.trains.find((q) => q.mail >= 0);
   const mail = w.get(t.cars[t.mail].id);
   teleport(w, p.ped, mail.x + 400, mail.y);
   run(w, 1.2); // the guards man their posts while someone's around
   const guards = [...t.riders].map((id) => w.get(id)).filter((q) => q && q.npc && q.npc.role === 'railguard');
   assert.ok(guards.length >= 1, 'guards aboard');
-  trains.board(w, p.ped, t, t.mail, 20, 0, 0);
+  return { t, guards };
+}
+
+test('mail car guards: a warning at the door, a countdown inside, then they shoot - and let you go if you leave', () => {
+  const w = makeWorld({ npcBudget: 200 });
+  const { p, conn } = joinPlayer(w);
+  const { t, guards } = mailTrain(w, p);
+  // in the car in front, nowhere near the door: nothing
+  trains.board(w, p.ped, t, t.mail - 1, 40, 0, 0);
+  run(w, 0.5);
   const hp0 = p.ped.hp;
+  assert.equal(players.buildMe(w, p).train.warn, null);
+  // walk up to the door: they shout at you to stay out and draw on you - no shots
+  let n0 = conn.sent.length;
+  p.ped.onTrain.ox = -(t.cars[t.mail - 1].def.L / 2 - 12) + 20;
+  run(w, MAIL_WARN_S + 1);
+  assert.ok(said(conn, n0).some((s) => /STAY OUT/.test(s)), `a shouted warning (${said(conn, n0)})`);
+  assert.ok(evsOf(conn, n0).some((e) => e.e === 'toast' && /mail car is through that door/.test(e.text)), 'and a toast');
+  assert.equal(players.buildMe(w, p).train.warn, 'door', 'the HUD warns you');
+  assert.ok(guards.some((g) => w.time < (g.aimUntil || 0)), 'guns drawn on you at the door');
+  assert.equal(p.ped.hp, hp0, 'no shots at the door, however long you stand there');
+  // step inside: a countdown, no shots until it runs out
+  n0 = conn.sent.length;
+  p.ped.onTrain.c = t.mail; p.ped.onTrain.ox = t.cars[t.mail].def.L / 2 - 20;
+  w.step();
+  assert.ok(said(conn, n0).some((s) => /OR WE SHOOT/.test(s)), 'ordered out');
+  assert.equal(players.buildMe(w, p).train.warn, MAIL_WARN_S, 'the countdown starts');
   run(w, MAIL_WARN_S - 1);
   assert.equal(p.ped.hp, hp0, 'a warning first, no shots');
-  assert.ok(guards.some((g) => w.time < (g.aimUntil || 0)), 'guns drawn on you');
-  p.ped.onTrain.c = t.mail - 1; // back out into the coach
+  assert.ok(players.buildMe(w, p).train.warn <= 1, 'counting down');
+  p.ped.onTrain.c = t.mail - 1; p.ped.onTrain.ox = 40; // back out into the coach
   run(w, MAIL_WARN_S + 1);
   assert.equal(p.ped.hp, hp0, 'left in time: they let you go');
+  assert.equal(players.buildMe(w, p).train.warn, null);
   p.ped.onTrain.c = t.mail; p.ped.onTrain.ox = 20;
   run(w, MAIL_WARN_S + 2.5);
   assert.ok(p.ped.hp < hp0 || p.ped.dead, 'stayed: they open fire');
+});
+
+test('shoot at a mail guard and they fire back - after a moment to draw', () => {
+  const w = makeWorld({ npcBudget: 200 });
+  const { p } = joinPlayer(w);
+  const { t, guards } = mailTrain(w, p);
+  trains.board(w, p.ped, t, t.mail - 1, 40, 0, 0); // in the coach, well away from the door
+  run(w, 0.5);
+  const hp0 = p.ped.hp;
+  combat.damage(w, guards[0], 5, p.ped, 'pistol');
+  run(w, GUARD_DRAW_S - 0.15);
+  assert.equal(p.ped.hp, hp0, 'drawing, not shooting yet');
+  assert.ok(w.time < (guards[0].aimUntil || 0), 'but the gun is on you');
+  run(w, 3);
+  assert.ok(p.ped.hp < hp0 || p.ped.dead, 'then they shoot');
+  // you get off the train: they calm down (a later visit gets the warning again)
+  trains.alight(w, p.ped, p.ped.x + 200, p.ped.y);
+  run(w, 0.3);
+  assert.ok(!guards[0].npc.hostile, 'no grudge once you\'re gone');
+});
+
+test('the front car has seats behind the cab: walk up through the train, sit there', () => {
+  const w = makeWorld({ npcBudget: 200 });
+  const { p } = joinPlayer(w);
+  const t = w.trains.find((q) => q.mail < 0);
+  const front = w.get(t.cars[0].id);
+  teleport(w, p.ped, front.x + 400, front.y);
+  run(w, 1.2); // commuters aboard while someone's around - the front car too
+  assert.ok([...t.riders].some((id) => { const q = w.get(id); return q && q.npc && q.onTrain.c === 0; }), 'people riding up front');
+  trains.board(w, p.ped, t, 1, 0, 0, 0);
+  w.step();
+  for (let i = 0; i < 80; i++) { const e = w.get(t.cars[p.ped.onTrain.c].id); players.queueInput(p, { seq: seq++, bits: IN.SPRINT, mx: Math.cos(e.a), my: Math.sin(e.a), aim: 0 }); w.step(); }
+  assert.equal(p.ped.onTrain.c, 0, 'through the gangway into the front car');
+  assert.ok(p.ped.onTrain.ox <= CAB_OX - 12 + 0.01, `stopped at the cab bulkhead (${p.ped.onTrain.ox})`);
+  assert.ok(LOCO_SEATS.length >= 8, 'seats');
 });
 
 test('jumping off a train: slow, you just roll; at full speed the landing hurts', () => {

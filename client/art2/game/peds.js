@@ -162,6 +162,32 @@ export function adaptApp(app, ar = null, opt = {}) {
     else if (ar === 'executive' && q < 0.2) out.carry = 'coffee';
     else if (ar === 'socialite' && q < 0.4) out.carry = 'shopping';
   }
+  // the country folk (server/entities.js): hikers with packs, campers in flannel and beanies, farmers in
+  // flannel, jeans and work boots, desert nomads in a long coat, bandana and shades
+  if (ar === 'hiker') {
+    out.back = 'backpack'; out.shoeKind = 'boot'; out.carry = undefined;
+    top.kind = pick(['tee', 'jacket', 'flannel', 'tee'], 30);
+    out.bottom.kind = pick(['shorts', 'cargo', 'cargo'], 31);
+    if (out.hat) out.hat.kind = pick(['bucket', 'cap', 'bucket'], 32);
+  } else if (ar === 'camper') {
+    out.shoeKind = 'boot';
+    top.kind = pick(['flannel', 'hoodie', 'flannel', 'jacket'], 30);
+    if (top.kind === 'flannel') top.color2 = 'white';
+    if (top.kind === 'jacket') top.color2 = 'charcoal';
+    if (r(31) < 0.35) out.carry = 'coffee';
+  } else if (ar === 'farmer') {
+    if (r(30) < 0.5) Object.assign(top, { kind: 'overalls', color: '#3a5a8a', color2: tc }); // bib overalls over the shirt
+    else Object.assign(top, { kind: 'flannel', color2: 'white' });
+    out.bottom.kind = top.kind === 'overalls' ? 'pants' : 'jeans'; if (top.kind === 'overalls') out.bottom.color = '#3a5a8a';
+    out.shoeKind = 'boot';
+    if (out.hat) out.hat.kind = fem ? 'sunhat' : pick(['cowboy', 'trucker', 'cowboy', 'cap'], 32);
+    if (r(33) < 0.45) out.gloves = '#c8a050';
+  } else if (ar === 'nomad') {
+    top.kind = pick(['coat', 'vest'], 30); top.color2 = '#5a4a3a';
+    out.bottom.kind = 'cargo'; out.shoeKind = 'boot'; out.glasses = 'sun';
+    if (!out.bandana && r(34) < 0.6) out.bandana = '#8a3a2e';
+    if (out.hat) out.hat.kind = fem ? 'sunhat' : pick(['cowboy', 'bucket'], 32);
+  }
   if (out.back) out.backColor = pick(['navy', 'charcoal', '#8a3a2e', '#2e5a38', 'brown', 'black'], 24);
   return out;
 }

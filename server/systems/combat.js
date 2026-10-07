@@ -15,6 +15,7 @@ import * as props from './props.js';
 import * as law from './law.js';
 import * as spikes from './spikes.js';
 import * as npc from './npc.js';
+import * as wildlife from './wildlife.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -230,11 +231,12 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (attacker) { ped.lastHitBy = attacker.id; attacker.lastCombatAt = now; }
   if (ped.hp < ped.maxHp * 0.3 && cause !== 'nonlethal') ped.bleeding = true;
   if (ped.fishing && ped.player) { ped.fishing = null; }
-  law.onDamage(world, attacker, ped, amount, cause);
+  if (!ped.wild) law.onDamage(world, attacker, ped, amount, cause); // (an animal: no assault)
   if (ped.player) ped.player.meDirty = true;
   if (cause === 'nonlethal' && ped.hp < 1) ped.hp = 1;
   if (ped.hp <= 0) { kill(world, ped, attacker, cause, dir); return true; }
   if (ped.npc) npc.onAttacked(world, ped, attacker);
+  else if (ped.wild) wildlife.onHurt(world, ped, attacker);
   return false;
 }
 
@@ -249,6 +251,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   if (ped.vehId) vehicles.ejectPed(world, ped, true);
   if (ped.carrying) cargo.dropCrate(world, ped);
   world.emit(ped.x, ped.y, { e: 'death', x: ped.x, y: ped.y, a: dir, id: ped.id });
+  if (ped.wild) return; // an animal: no crime, no tally, no ambulance - the carcass is cleared once nobody's looking (wildlife.js)
   law.onKill(world, attacker, ped, cause);
   if (attacker && attacker.player) attacker.player.profile.stats.kills++;
   if (ped.player) {

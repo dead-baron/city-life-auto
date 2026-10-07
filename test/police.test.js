@@ -185,7 +185,7 @@ test('idle pedestrians look around and then walk off; stranded drivers walk away
   run(w, 1);
   assert.notEqual(ped.a, a0, 'looks around');
   let moved = false;
-  for (let k = 0; k < 20 && !moved; k++) { run(w, 0.5); moved = Math.hypot(ped.x - x0, ped.y - y0) > 20; }
+  for (let k = 0; k < 40 && !moved; k++) { run(w, 0.5); moved = Math.hypot(ped.x - x0, ped.y - y0) > 20; } // (a walker can stop to look round twice in a row: up to 7 s each)
   assert.ok(moved, 'walks off eventually');
   const drv = spawnNpc(w, 'casual', p.ped.x - 200, p.ped.y, 'driver');
   run(w, 0.2);

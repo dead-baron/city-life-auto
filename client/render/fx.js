@@ -147,6 +147,13 @@ export class FX {
   }
   ring(x, y, r, color, max = 0.6) { this.rings.push({ x, y, t: 0, max, r, color }); }
   floatText(x, y, text, color) { this.texts.push({ x, y, text, color, t: 0 }); }
+  // A line said out loud: a speech bubble over the speaker (entity id) for `hold` seconds, following
+  // them (aboard a moving train too) through this.resolve(id) -> { rx, ry }. A new line from the
+  // same speaker replaces the last.
+  say(id, x, y, text, color = '#ffd36b', hold = 2.6) {
+    for (const t of this.texts) if (t.say && t.id === id) t.t = t.max;
+    this.texts.push({ id, x, y, text, color, t: 0, max: hold, say: true });
+  }
 
   update(dt) {
     for (let i = 0; i < MAX_P; i++) {
@@ -284,12 +291,33 @@ export class FX {
       g.strokeStyle = r.color + (1 - k).toFixed(2) + ')'; g.lineWidth = 3;
       g.beginPath(); g.arc(r.x, r.y, r.r * (0.3 + k), 0, 6.28); g.stroke();
     }
+    this.drawTexts(g);
+  }
+
+  // floating text (rising and fading) and speech bubbles, in world px
+  drawTexts(g) {
     g.font = 'bold 13px monospace'; g.textAlign = 'center';
     for (const t of this.texts) {
+      if (t.say) { this.bubble(g, t); continue; }
       g.globalAlpha = Math.max(0, 1 - t.t / 1.4);
       g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y - t.t * 30 + 1);
       g.fillStyle = t.color; g.fillText(t.text, t.x, t.y - t.t * 30);
     }
     g.globalAlpha = 1;
+  }
+  bubble(g, t) {
+    const e = t.id && this.resolve ? this.resolve(t.id) : null;
+    if (e) { t.x = e.rx; t.y = e.ry; } // (gone from view: it stays where they were)
+    const pop = Math.min(1, t.t / 0.12), a = Math.min(pop, (t.max - t.t) / 0.35);
+    if (a <= 0) return;
+    g.font = 'bold 12px monospace';
+    const w = g.measureText(t.text).width + 12, h = 18, x = t.x, y = t.y - 40 - pop * 4;
+    g.globalAlpha = a;
+    g.fillStyle = 'rgba(12,12,16,.88)';
+    g.fillRect(x - w / 2, y - h / 2, w, h);
+    g.beginPath(); g.moveTo(x - 5, y + h / 2); g.lineTo(x + 5, y + h / 2); g.lineTo(x, y + h / 2 + 6); g.closePath(); g.fill(); // the tail, down to the speaker
+    g.strokeStyle = t.color; g.lineWidth = 1.5; g.strokeRect(x - w / 2, y - h / 2, w, h);
+    g.fillStyle = t.color; g.textBaseline = 'middle'; g.fillText(t.text, x, y + 1); g.textBaseline = 'alphabetic';
+    g.font = 'bold 13px monospace';
   }
 }

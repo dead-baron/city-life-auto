@@ -379,8 +379,10 @@ export function ballSprite(t = 0, spin = 0) {
 
 // ---- trains -----------------------------------------------------------------------------------------------
 // TRAIN_CARS in shared/map.js (by wire index): kept in step here so workers needn't load the map generator.
-export const TRAIN_DIMS = [{ kind: 'loco', L: 196, W: 70, H: 66 }, { kind: 'coach', L: 212, W: 76, H: 64 }, { kind: 'mail', L: 188, W: 76, H: 60 }];
+export const TRAIN_DIMS = [{ kind: 'loco', L: 196, W: 76, H: 66 }, { kind: 'coach', L: 212, W: 76, H: 64 }, { kind: 'mail', L: 188, W: 76, H: 60 }];
 const COACH_SEATS = [-84, -60, -36, 36, 60, 84].flatMap((ox) => [[ox, -23], [ox, 23]]);
+const LOCO_SEATS = [-84, -60, -36, 36].flatMap((ox) => [[ox, -23], [ox, 23]]); // the front car: seats behind the cab
+const CAB_OX = 50;                                                              // ...whose bulkhead is this far forward of the middle
 const MAIL_BOX = { ox: -58, oy: 0 };
 // mode: 'roof' (the normal outside view) or 'in' (the cut-away interior of my own train), plus '-lit'
 // (lights on: windows glow, the loco's headlights), '-empty' (the mail car's strongbox gone), '-doors'
@@ -405,10 +407,9 @@ function trainModel(def, mode) {
   const doorM = m.mat({ ramp: Rk(mail ? '#3e4a2a' : '#9aa2ae'), k: 3 }), doorEdge = m.mat({ ramp: Rk('#e0b030'), k: 3 });
   const metal = m.mat({ ramp: MAT.metal, k: 3 }), grille = m.mat({ ramp: Rk('#3a3e46'), k: 2, shade: (x) => ((x | 0) % 2 ? -0.8 : 0.4) });
   const head = m.mat({ ramp: RP('#f6f0d8', 5, 3), k: 3, emi: lit ? [255, 244, 210, 255] : null });
-  const tailM = m.mat({ ramp: RP('#d8302a', 5, 3), k: 2.6, emi: lit ? [255, 40, 28, 160] : null });
   const floorM = m.mat({ ramp: Rk(mail ? '#6a5236' : '#3a4660'), k: 3, shade: (x, y) => (mail ? ((x | 0) % 6 === 0 ? -0.8 : 0) : Math.abs(y - cy) < 4 ? 0.8 : 0) });
   const seatM = m.mat({ ramp: Rk('#2a58b0'), k: 3 }), seatBack = m.mat({ ramp: Rk('#2048a0'), k: 2.6 });
-  const noseL = loco ? 26 : 0, zr = H;
+  const noseL = loco ? 26 : 0, zr = H, cabX = loco ? L / 2 + CAB_OX : L; // the front car: cab ahead of cabX, seats behind
   // what a passenger window shows at (x, z): seat backs low, heads now and then, light above
   const winAt = (x, z) => { const bay = Math.floor(x / 13); if (z < 31) return (x | 0) % 13 < 9 ? seatWin : inner; if (z < 37 && hash(bay, 7, 3) > 0.55 && Math.abs((x % 13) - 6) < 2.2) return head2; return inner; };
   // body shell: rounded plan corners and roof; the loco's cab nose rounds down to a big windscreen
@@ -436,12 +437,11 @@ function trainModel(def, mode) {
     if (z > 18 && z < 23) return stripe;
     // windows / doors / grilles by kind
     const mid = Math.abs(x - L / 2);
-    if (!loco && side && mid < 12 && z < 46) return Math.abs(mid - 11) < 1 ? doorEdge : (z > 26 && z < 42 && Math.abs(mid - 5.5) < 4.5) ? (mail ? inner : winAt(x, z)) : doorM;
-    if (kind === 'coach' && side && z > 25 && z < 43 && ex > 12 && (x | 0) % 26 > 4) return winAt(x, z);
+    if (side && mid < 12 && z < 46) return Math.abs(mid - 11) < 1 ? doorEdge : (z > 26 && z < 42 && Math.abs(mid - 5.5) < 4.5) ? (mail ? inner : winAt(x, z)) : doorM;
+    if ((kind === 'coach' || (loco && x < cabX - 8)) && side && z > 25 && z < 43 && ex > 12 && (x | 0) % 26 > 4) return winAt(x, z);
     if (mail && side && z > 32 && z < 40 && (ex > 10 && ex < 26)) return inner;
-    if (loco && side && z > 26 && z < 44 && x > 24 && x < L - noseL - 30 && ((x | 0) % 4 < 2)) return grille;
-    if (loco && side && z > 25 && z < 43 && x > L - noseL - 28 && x < L - noseL - 4 && (x | 0) % 12 > 2) return winAt(x, z);
-    if (loco && ex < 1.6 && x < L / 2 && z > 30 && z < 42 && Math.abs(y - cy) < cy - 10) return glass;   // the rear cab window
+    if (loco && side && z > 28 && z < 44 && x > cabX + 4 && x < L - noseL - 2) return glass;              // the cab's side windows
+    if (loco && side && Math.abs(x - cabX) < 1 && z > 10) return dark;                                    // the bulkhead seam
     return body;
   }, 0, 0, 0, L, W, H + 2);
   // bogies and wheels, couplers, gangway bellows at the ends
@@ -449,26 +449,28 @@ function trainModel(def, mode) {
     m.box(bx - 14, 6, 0, bx + 14, W - 6, 7, dark);
     for (const wx of [bx - 8, bx + 8]) for (const [ya, yb] of [[4, 8], [W - 8, W - 4]]) m.cyl('y', wx, 0, 5, 5, ya, yb, metal, 2, dark);
   }
-  if (!loco) m.box(0, cy - 14, 10, 2, cy + 14, H - 6, dark);
+  m.box(0, cy - 14, 10, 2, cy + 14, H - 6, dark);
   m.box(L - 2, cy - 14, 10, L, cy + 14, loco ? 16 : H - 6, dark);
   if (loco) {
-    // headlights low on the nose, tail lamps at the back, a yellow warning panel, roof fans and the horn
-    for (const sy of [-1, 1]) { m.fill((x, y, z) => (m.get(x | 0, y | 0, z | 0) && !m.get((x | 0) + 1, y | 0, z | 0) ? head : -1), L - 8, cy + sy * 14 - 3, 12, L, cy + sy * 14 + 3, 17); m.box(0, cy + sy * 20 - 2, 13, 2, cy + sy * 20 + 2, 17, tailM); }
+    // headlights low on the nose, a yellow warning panel, roof fans and the horn (its back end is a gangway)
+    for (const sy of [-1, 1]) m.fill((x, y, z) => (m.get(x | 0, y | 0, z | 0) && !m.get((x | 0) + 1, y | 0, z | 0) ? head : -1), L - 8, cy + sy * 14 - 3, 12, L, cy + sy * 14 + 3, 17);
     m.fill((x, y, z) => (m.get(x | 0, y | 0, z | 0) && !m.get((x | 0) + 1, y | 0, z | 0) && Math.abs(y - cy) < 8 ? doorEdge : -1), L - 8, 0, 19, L, W, 27);
-    for (const fx of [0.2, 0.33, 0.46]) m.cyl('z', fx * L, cy, 0, 9, zr - 1, zr + 2, grille);                       // roof fans
-    m.box(L * 0.6, cy - 3, zr - 1, L * 0.6 + 6, cy + 3, zr + 5, metal);                                                 // horn housing
+    if (!inside) for (const fx of [0.2, 0.33, 0.46]) m.cyl('z', fx * L, cy, 0, 9, zr - 1, zr + 2, grille);          // roof fans (the engine's under the floor)
+    m.box(cabX + 4, cy - 3, zr - 1, cabX + 10, cy + 3, zr + 5, metal);                                                  // horn housing, on the cab roof
   } else if (!inside) {
     m.fill((x, y, z) => (m.get(x | 0, y | 0, z | 0) && Math.abs(y - cy) < 2 && x > 8 && x < L - 8 ? metal : -1), 0, 0, zr - 1, L, W, zr);
     for (const fx of [0.28, 0.72]) { m.box(fx * L - 14, cy - 12, zr - 1, fx * L + 14, cy + 12, zr + 4, metal); m.fill((x, y) => ((x | 0) % 3 === 0 ? grille : -1), fx * L - 12, cy - 10, zr + 3, fx * L + 12, cy + 10, zr + 4); }
   }
-  // cut-away interior (my own train): no roof, walls down to the window sills, floor, seats or mail
-  if (inside && !loco) {
-    const wallZ = 22;
-    m.fill((x, y, z) => (Math.min(x - 1, L - 1 - x) > 2.5 && Math.min(y - 2, W - 2 - y) > 2.5 ? 0 : z > wallZ ? 0 : -1), 0, 0, 10, L, W, m.h);
-    m.box(4, 5, 9, L - 4, W - 5, 10, floorM);
+  // cut-away interior (my own train): no roof, walls down to the window sills, floor, seats or mail.
+  // The front car opens up as far as its cab: the bulkhead (with the cab door) and the cab stay roofed.
+  if (inside) {
+    const wallZ = 22, x1 = cabX;
+    m.fill((x, y, z) => (loco && x > x1 - 3 ? -1 : x - 1 > 2.5 && x1 - 1 - x > 2.5 && Math.min(y - 2, W - 2 - y) > 2.5 ? 0 : z > wallZ ? 0 : -1), 0, 0, 10, x1, W, m.h);
+    m.box(4, 5, 9, x1 - (loco ? 3 : 4), W - 5, 10, floorM);
+    if (loco) m.box(x1 - 3, cy - 7, 10, x1 - 2, cy + 7, 44, doorM); // the cab door, shut
     if (!mail) {
-      for (const [ox, oy] of COACH_SEATS) { const sx = L / 2 + ox, sy = cy + oy; m.box(sx - 9, sy - 10, 10, sx + 9, sy + 10, 14, seatM); m.box(ox < 0 ? sx - 9 : sx + 6, sy - 10, 14, ox < 0 ? sx - 6 : sx + 9, sy + 10, 21, seatBack); }
-      for (const ox of [-48, 0, 48]) m.box(L / 2 + ox - 0.5, cy - 0.5, 10, L / 2 + ox + 0.5, cy + 0.5, 34, metal);
+      for (const [ox, oy] of loco ? LOCO_SEATS : COACH_SEATS) { const sx = L / 2 + ox, sy = cy + oy; m.box(sx - 9, sy - 10, 10, sx + 9, sy + 10, 14, seatM); m.box(ox < 0 ? sx - 9 : sx + 6, sy - 10, 14, ox < 0 ? sx - 6 : sx + 9, sy + 10, 21, seatBack); }
+      for (const ox of loco ? [-48, 0] : [-48, 0, 48]) m.box(L / 2 + ox - 0.5, cy - 0.5, 10, L / 2 + ox + 0.5, cy + 0.5, 34, metal);
     } else {
       const sack = m.mat({ ramp: Rk('#b89a6a'), k: 3 }), shelf = m.mat({ ramp: Rk('#5a4630'), k: 3 });
       for (const [sx, sy] of [[44, -26], [56, 24], [68, -14], [20, 26], [76, 10], [6, -26]]) m.ell(L / 2 + sx, cy + sy, 13, 8, 6, 4, sack);
@@ -478,7 +480,7 @@ function trainModel(def, mode) {
       else m.box(bx - 13, by - 13, 10, bx + 13, by + 13, 10.5, dark);
     }
   }
-  if (doors && !loco) for (const ys of [[0, 3], [W - 3, W]]) m.fill(() => 0, L / 2 - 10, ys[0], 10, L / 2 + 10, ys[1], 46);
+  if (doors) for (const ys of [[0, 3], [W - 3, W]]) m.fill(() => 0, L / 2 - 10, ys[0], 10, L / 2 + 10, ys[1], 46);
   return m;
 }
 export const trainKey = (c, mode = 'roof', hi = 0, N = 32) => `t|${trainDef(c).kind}|${trainMode(mode)}|${wrapHi(hi, N)}|${N}`;
@@ -489,9 +491,9 @@ export function trainCarSprite(c, mode = 'roof', hi = 0, N = 32) {
 }
 // a car's lamps in local coordinates (+x the way it runs): the loco's headlights, window light points
 export function trainLights(c) {
-  const d = trainDef(c), hx = d.L / 2, hy = d.W / 2, win = [];
-  if (d.kind !== 'loco') for (let x = -hx + 20; x < hx - 16; x += 26) win.push([x, -hy, 34], [x, hy, 34]);
-  return { L: d.L, W: d.W, H: d.H, head: d.kind === 'loco' ? [[hx - 3, -14, 14.5], [hx - 3, 14, 14.5]] : [], tail: d.kind === 'loco' ? [[-hx + 1, -20, 15], [-hx + 1, 20, 15]] : [], windows: win };
+  const d = trainDef(c), hx = d.L / 2, hy = d.W / 2, win = [], x1 = d.kind === 'loco' ? CAB_OX - 10 : hx - 16;
+  for (let x = -hx + 20; x < x1; x += 26) win.push([x, -hy, 34], [x, hy, 34]);
+  return { L: d.L, W: d.W, H: d.H, head: d.kind === 'loco' ? [[hx - 3, -14, 14.5], [hx - 3, 14, 14.5]] : [], tail: [], windows: win };
 }
 
 // ---- effects ------------------------------------------------------------------------------------------------

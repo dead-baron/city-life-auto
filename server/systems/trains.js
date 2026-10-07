@@ -11,9 +11,9 @@
 import { inAnyView } from '../view.js';
 import { K, T } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
-import { railAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
+import { railAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, LOCO_SEATS, LOCO_STAND, CAB_OX, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
-import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, BAIL_SPEED } from '../../shared/rules.js';
+import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, GUARD_DRAW_S, BAIL_SPEED } from '../../shared/rules.js';
 import { STAR_HEAT } from '../../shared/constants.js';
 import { KB, TOUCH } from '../../shared/controls.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -39,6 +39,15 @@ const COMMUTERS = ['casual', 'casual', 'executive', 'socialite', 'senior', 'athl
 
 const mod = (a, n) => ((a % n) + n) % n;
 const half = (c) => c.def.L / 2 - 12;
+// how far forward you can walk in a car: the front car's cab is closed off behind its bulkhead
+const fwdMax = (c) => (c.kind === 'loco' ? CAB_OX - 12 : half(c));
+const seatsOf = (c) => (c.kind === 'loco' ? LOCO_SEATS : COACH_SEATS);
+const standOf = (c) => (c.kind === 'loco' ? LOCO_STAND : COACH_STAND);
+// a car people ride in (any but the mail car), at random
+function anyCoach(t) {
+  const k = Math.floor(rng() * (t.cars.length - (t.mail >= 0 ? 1 : 0)));
+  return t.mail >= 0 && k >= t.mail ? k + 1 : k;
+}
 
 // ---- setup ------------------------------------------------------------------------------------
 export function init(world) {
@@ -187,18 +196,19 @@ export function carEntity(world, t, ci) { return world.get(t.cars[ci].id); }
 export function trainOf(world, ped) { return ped && ped.onTrain ? world.trains[ped.onTrain.t] : null; }
 
 // ---- riders -----------------------------------------------------------------------------------
-const passable = (t, ci) => ci >= 1 && ci < t.cars.length;
+const passable = (t, ci) => ci >= 0 && ci < t.cars.length;
 
 // Move a rider along the train: dU backwards (towards the tail) and dO sideways. Walking past
-// the end of a car takes you through the gangway into the next one (never into the cab).
+// the end of a car takes you through the gangway into the next one - all the way up to the seats
+// behind the front car's cab (never into the cab itself).
 function walk(t, r, dU, dO) {
   let ox = r.ox - dU;
   const h = half(t.cars[r.c]);
   if (ox < -h && passable(t, r.c + 1)) { r.c++; ox = half(t.cars[r.c]); }
   else if (ox > h && passable(t, r.c - 1)) { r.c--; ox = -half(t.cars[r.c]); }
-  const h2 = half(t.cars[r.c]);
-  r.ox = clamp(ox, -h2, h2);
-  const w2 = t.cars[r.c].def.W / 2 - 12;
+  const c = t.cars[r.c];
+  r.ox = clamp(ox, -half(c), fwdMax(c));
+  const w2 = c.def.W / 2 - 12;
   r.oy = clamp(r.oy + dO, -w2, w2);
 }
 const uOf = (t, r) => t.cars[r.c].off - r.ox; // distance back from the engine's nose
@@ -215,12 +225,46 @@ function stepRiders(world, t, dt) {
     const [x, y] = localToWorld(e.x, e.y, e.a, r.ox, r.oy);
     p.x = x; p.y = y; p.vx = e.vx; p.vy = e.vy; p.sub = e.sub; p.under = false; p.rollT = 0; p.tumbleUntil = 0; p.airUntil = 0;
     if (p.npc && !p.dead && r.la !== undefined) p.a = e.a + r.la;
-    if (p.player) {
-      const inMail = r.c === t.mail;
-      if (inMail && !r.mailSince) { r.mailSince = now; world.notify(p.player, `MAIL CAR - "Authorised staff only! Get out or we shoot!" You have ${MAIL_WARN_S} seconds.`, 'bad'); }
-      else if (!inMail) r.mailSince = 0;
-    }
+    if (p.player && t.mail >= 0) mailWatch(world, t, p, r, now);
   }
+}
+
+// The mail car is off limits and its guards make that plain. Come up to its door (the back of the
+// car in front of it) and they shout at you to stay out and draw on you; step inside anyway and
+// they give you MAIL_WARN_S seconds to get out before they open fire. The HUD counts it down.
+const MAIL_DOOR_PX = 70; // this close to the gangway into the mail car and the guards see you coming
+const atMailDoor = (t, r) => t.mail > 0 && r.c === t.mail - 1 && r.ox < -half(t.cars[r.c]) + MAIL_DOOR_PX;
+function guardsOf(world, t) {
+  const out = [];
+  if (t.mail < 0) return out;
+  for (const id of t.riders) { const q = world.get(id); if (q && q.npc && q.npc.role === 'railguard' && !q.dead) out.push(q); }
+  return out;
+}
+// a line shouted out loud: it hangs over the speaker's head for a moment
+function shout(world, ped, text) { world.emit(ped.x, ped.y, { e: 'say', id: ped.id, x: ped.x, y: ped.y, text }); }
+function mailWatch(world, t, p, r, now) {
+  const inMail = r.c === t.mail, door = atMailDoor(t, r);
+  const guards = guardsOf(world, t);
+  const caller = guards.find((q) => q.onTrain.c === t.mail) || guards[0] || null;
+  if (!inMail) { r.mailSince = 0; r.fireCalled = false; }
+  // walked well away from the door: come back and they shout again
+  if (!inMail && !door && r.doorWarned && (r.c !== t.mail - 1 || r.ox > -half(t.cars[r.c]) + MAIL_DOOR_PX + 50)) r.doorWarned = false;
+  if (inMail && !r.mailSince) {
+    r.mailSince = now; r.doorWarned = true;
+    if (caller) {
+      shout(world, caller, 'OUT! NOW, OR WE SHOOT!');
+      world.notify(p.player, `MAIL CAR - the guards: "Authorised staff only! Get out or we shoot!" You have ${MAIL_WARN_S} seconds.`, 'bad');
+    }
+  } else if (door && !r.doorWarned && caller) {
+    r.doorWarned = true;
+    shout(world, caller, 'STAFF ONLY - STAY OUT!');
+    world.notify(p.player, `The mail car is through that door. Its armed guards: "Authorised staff only - stay out!" Walk in and you have ${MAIL_WARN_S} seconds to get out before they shoot.`, 'warn');
+  }
+  if (inMail && caller && !r.fireCalled && now - r.mailSince > MAIL_WARN_S) { r.fireCalled = true; shout(world, caller, 'OPEN FIRE!'); }
+  // the HUD: 'door' at the door, then the seconds left inside (0: they're shooting)
+  const hot = guards.some((q) => q.npc.hostile === p.id);
+  const w = !guards.length ? null : hot ? 0 : inMail ? Math.max(0, Math.ceil(MAIL_WARN_S - (now - r.mailSince))) : door ? 'door' : null;
+  if (w !== (r.warnHud ?? null)) { r.warnHud = w; p.player.meDirty = true; }
 }
 
 function seatTaken(world, t, ci, ox, oy) {
@@ -228,10 +272,11 @@ function seatTaken(world, t, ci, ox, oy) {
   return false;
 }
 function freeSpot(world, t, ci, preferSeat) {
-  const lists = preferSeat ? [COACH_SEATS, COACH_STAND] : [COACH_STAND, COACH_SEATS];
+  const seats = seatsOf(t.cars[ci]), stand = standOf(t.cars[ci]);
+  const lists = preferSeat ? [seats, stand] : [stand, seats];
   for (const list of lists) {
     const start = Math.floor(rng() * list.length);
-    for (let k = 0; k < list.length; k++) { const [ox, oy] = list[(start + k) % list.length]; if (!seatTaken(world, t, ci, ox, oy)) return { ox, oy, seat: list === COACH_SEATS }; }
+    for (let k = 0; k < list.length; k++) { const [ox, oy] = list[(start + k) % list.length]; if (!seatTaken(world, t, ci, ox, oy)) return { ox, oy, seat: list === seats }; }
   }
   return null;
 }
@@ -317,30 +362,42 @@ function jumpOff(world, ped) {
 }
 
 // NPC behaviour on board: commuters sit or stand and glance around; spooked ones run down the
-// train; cops hunt their suspect through the cars; the mail guards hold their posts and shoot
-// anyone who comes into the mail car.
+// train; cops hunt their suspect through the cars; the mail guards hold their posts, draw on
+// anyone who comes up to the mail car's door, and shoot anyone still inside once their warning
+// runs out (see mailWatch).
 function npcRide(world, t, p, dt) {
   const n = p.npc, r = p.onTrain, now = world.time;
   if (n.role === 'cop' || n.role === 'railguard') {
     let target = n.target ? world.get(n.target) : null, warning = false;
     if (n.role === 'railguard') {
-      // a trespasser who walks back out of the mail car is let go - unless they cracked the box
-      // or shot at the guards (hostile)
-      if (target && !n.hostile && (!target.onTrain || target.onTrain.c !== t.mail)) target = null;
+      // hostility is aimed at one person (who shot at the guards, or cracked the box), for as long
+      // as they're aboard
+      if (n.hostile) { const f = world.get(n.hostile); if (!f || f.dead || !f.onTrain || f.onTrain.t !== t.i) n.hostile = 0; }
+      // a trespasser who walks back out of the mail car is let go - unless they're the one the
+      // guards are after
+      if (target && target.id !== n.hostile && (!target.onTrain || target.onTrain.c !== t.mail)) target = null;
       if (!target || target.dead || !target.onTrain || target.onTrain.t !== t.i) {
-        target = null;
-        for (const id of t.riders) {
+        target = n.hostile ? world.get(n.hostile) : null;
+        if (!target) for (const id of t.riders) {
           const q = world.get(id);
-          if (!q || !q.player || q.dead || q.onTrain.c !== t.mail) continue;
-          if (now - (q.onTrain.mailSince || now) > MAIL_WARN_S) { target = q; break; }
+          if (!q || !q.player || q.dead) continue;
+          const inside = q.onTrain.c === t.mail;
+          if (!inside && !atMailDoor(t, q.onTrain)) continue;
+          if (inside && now - (q.onTrain.mailSince || now) > MAIL_WARN_S) { target = q; break; }
           // the warning: guns drawn and pointed at you, but no shots yet
           const aim = Math.atan2(q.y - p.y, q.x - p.x);
           p.aimUntil = now + 0.3; p.aimAngle = aim; r.la = aim - world.get(t.cars[r.c].id).a;
+          n.aimId = q.id; n.aimT = now;
           warning = true;
         }
       }
     } else if (target && (target.dead || !target.player || target.player.wanted <= 0)) target = null;
     if (target && target.onTrain && target.onTrain.t === t.i) {
+      // a guard who wasn't already covering you takes a moment to draw before the first shot
+      if (n.drawId !== target.id) {
+        n.drawId = target.id;
+        n.fireAt = n.role === 'railguard' && !(n.aimId === target.id && now - (n.aimT || -9) < 0.5) ? now + GUARD_DRAW_S : now;
+      }
       n.target = target.id;
       const du = uOf(t, target.onTrain) - uOf(t, r);
       const dist = Math.hypot(target.x - p.x, target.y - p.y);
@@ -348,11 +405,11 @@ function npcRide(world, t, p, dt) {
       if (dist < 300) {
         const aim = Math.atan2(target.y - p.y, target.x - p.x);
         p.aimUntil = now + 0.3; p.aimAngle = aim; r.la = aim - world.get(t.cars[r.c].id).a;
-        combat.tryAttack(world, p, aim);
+        if (now >= (n.fireAt || 0)) combat.tryAttack(world, p, aim);
       }
       return;
     }
-    n.target = 0;
+    n.target = 0; n.drawId = 0;
     if (n.role === 'railguard' && n.post) { const du = (t.cars[n.post.c].off - n.post.ox) - uOf(t, r); if (Math.abs(du) > 4) walk(t, r, Math.sign(du) * Math.min(Math.abs(du), WALK * dt), clamp((n.post.oy - r.oy) * 0.2, -2, 2)); }
     if (!warning && now >= (n.lookAt || 0)) { r.la = (r.la || 0) + (rng() - 0.5) * 1.6; n.lookAt = now + 1.5 + rng() * 2.5; }
     return;
@@ -409,7 +466,7 @@ function arrived(world, t) {
     for (const cid of t.riders) { const c = world.get(cid); if (c && c.npc && c.npc.role === 'cop' && !c.dead) cops++; }
     const want = Math.min(4, 1 + q.player.wanted) - cops;
     for (let k = 0; k < want; k++) {
-      const ci = 1 + Math.floor(rng() * (t.cars.length - 1));
+      const ci = Math.floor(rng() * t.cars.length);
       const pt = st.under ? st.platform : doorPoint(world, t, ci, doorSide(world, t, ci, st), 20);
       const cop = spawnNpc(world, q.player.wanted >= 4 ? 'swat' : 'cop', pt.x, pt.y, 'cop');
       cop.weapon = q.player.wanted >= 4 ? 'pshotgun' : 'pistol';
@@ -422,8 +479,7 @@ function arrived(world, t) {
   // new commuters walk up to the doors
   const n = Math.floor(rng() * 4);
   for (let k = 0; k < n; k++) {
-    const ci = 1 + Math.floor(rng() * (t.cars.length - 1));
-    if (ci === t.mail) continue;
+    const ci = anyCoach(t);
     const arche = COMMUTERS[Math.floor(rng() * COMMUTERS.length)];
     if (st.under) { const spot = freeSpot(world, t, ci, true); if (!spot) continue; const q = spawnNpc(world, arche, st.platform.x, st.platform.y, 'civ'); board(world, q, t, ci, spot.ox, spot.oy, 0); q.onTrain.seat = spot.seat; q.onTrain.dest = pickDest(world, t); continue; } // came down the stairs
     const side = doorSide(world, t, ci, st);
@@ -486,7 +542,7 @@ function populate(world, t) {
 // Seat commuters (and the mail guards) aboard a train until each coach has a few.
 function fillRiders(world, t) {
   if (world.npcCount + world.trafficCount > world.npcBudget) return;
-  for (let ci = 1; ci < t.cars.length; ci++) {
+  for (let ci = 0; ci < t.cars.length; ci++) {
     if (ci === t.mail) {
       let guards = 0;
       for (const id of t.riders) { const q = world.get(id); if (q && q.npc && q.npc.role === 'railguard' && !q.dead && q.onTrain.c === ci) guards++; }
@@ -557,8 +613,7 @@ function callWaiting(world, t, si) {
     const q = world.get(id);
     if (!q || q.dead || !q.npc || q.onTrain || Math.hypot(q.x - st.platform.x, q.y - st.platform.y) > st.half + 400) continue;
     q.npc.waitTrain = undefined; q.npc.keep = false;
-    const ci = 1 + Math.floor(rng() * (t.cars.length - 1));
-    if (ci === t.mail) continue;
+    const ci = anyCoach(t);
     if (st.under && st.kiosk) { const k = st.kiosk; walkStairs(world, q, [k.out, k.top, k.deep], { t: t.i, c: ci }); continue; } // in at the mouth and down the steps
     if (st.under) { const spot = freeSpot(world, t, ci, true); if (!spot) continue; board(world, q, t, ci, spot.ox, spot.oy, 0); q.onTrain.seat = spot.seat; q.onTrain.dest = pickDest(world, t); continue; }
     q.npc.boardTrain = { t: t.i, c: ci, side: doorSide(world, t, ci, st) };
@@ -928,25 +983,25 @@ export function interaction(world, p) {
   if (ped.vehId) {
     const v = world.get(ped.vehId);
     const hit = v && climbable(world, ped, v.x, v.y, Math.max(v.def.W / 2 + 40, 56), v.vx, v.vy);
-    return hit ? { label: `Climb onto the ${hit.t.cars[hit.ci].def.name.toLowerCase()}`, run: () => climbOn(world, ped, hit) } : null;
+    return hit ? { label: `Climb onto the ${carLabel(world, hit)}`, run: () => climbOn(world, ped, hit) } : null;
   }
   for (const t of world.trains) {
     const st = stationAt(world, t);
     if (!st) continue;
     if (st.under) {
-      if (atEntrance(st, ped)) return { label: `Down the stairs - board the train at ${st.name}`, run: () => boardAtStation(world, ped, t, 1 + Math.floor(rng() * (t.cars.length - 1))) };
+      if (atEntrance(st, ped)) return { label: `Down the stairs - board the train at ${st.name}`, run: () => boardAtStation(world, ped, t, anyCoach(t)) };
       continue;
     }
     // anywhere on the platform counts: you walk to the nearest open door
     const onPlatform = onPlatformOf(world, st, ped.x, ped.y);
     let best = -1, bd = onPlatform ? Infinity : 140;
-    for (let ci = 1; ci < t.cars.length; ci++) {
+    for (let ci = 0; ci < t.cars.length; ci++) {
       if (ci === t.mail) continue;
       const d = doorPoint(world, t, ci, doorSide(world, t, ci, st), 14);
       const dd = Math.hypot(ped.x - d.x, ped.y - d.y);
       if (dd < bd) { bd = dd; best = ci; }
     }
-    if (best > 0) return { label: `Board the train - next stop ${world.map.rail.stations[(t.stop + 1) % world.map.rail.stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
+    if (best >= 0) return { label: `Board the train - next stop ${world.map.rail.stations[(t.stop + 1) % world.map.rail.stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
   }
   // at a subway entrance with no train in: the countdown, and where to wait
   const sts = world.map.rail.stations;
@@ -958,8 +1013,9 @@ export function interaction(world, p) {
     return { label: `${st.name}: next train in ${Math.floor(eta / 60)}:${String(eta % 60).padStart(2, '0')} - wait in line, F when it's in (to ${nxt})`, run: () => {} };
   }
   const hit = climbable(world, ped, ped.x, ped.y, 48, ped.vx, ped.vy);
-  return hit ? { label: `Hop onto the ${hit.t.cars[hit.ci].def.name.toLowerCase()}`, run: () => climbOn(world, ped, hit) } : null;
+  return hit ? { label: `Hop onto the ${carLabel(world, hit)}`, run: () => climbOn(world, ped, hit) } : null;
 }
+const carLabel = (world, hit) => hit.t.cars[hit.ci].def.name.toLowerCase() + (hit.ci === hit.t.mail && guardsOf(world, hit.t).length ? ' - armed guards!' : '');
 
 // In the queue lane, at the mouth or on the stairs of a subway stop's entrance.
 function atEntrance(st, ped) {
@@ -972,14 +1028,14 @@ function atEntrance(st, ped) {
 // A car you could grab onto from here: close alongside and not much faster than you.
 function climbable(world, ped, x, y, reach, vx, vy) {
   for (const t of world.trains) {
-    for (let ci = 1; ci < t.cars.length; ci++) {
+    for (let ci = 0; ci < t.cars.length; ci++) {
       const e = world.get(t.cars[ci].id);
       if (!e || e.sub || Math.hypot(e.x - x, e.y - y) > t.cars[ci].def.L / 2 + reach) continue;
       const ca = Math.cos(e.a), sa = Math.sin(e.a);
       const lx = (x - e.x) * ca + (y - e.y) * sa, ly = -(x - e.x) * sa + (y - e.y) * ca;
       if (Math.abs(lx) > half(t.cars[ci]) + 8 || Math.abs(ly) > t.cars[ci].def.W / 2 + reach) continue;
       if (Math.hypot(e.vx - vx, e.vy - vy) > 170) continue;
-      return { t, ci, ox: clamp(lx, -half(t.cars[ci]), half(t.cars[ci])), oy: ly >= 0 ? 22 : -22 };
+      return { t, ci, ox: clamp(lx, -half(t.cars[ci]), fwdMax(t.cars[ci])), oy: ly >= 0 ? 22 : -22 };
     }
   }
   return null;
@@ -1081,7 +1137,7 @@ function crackOpen(world, p, t) {
     if (need > 0) law.addHeat(world, p, need, ped.x, ped.y);
     law.logDispatch(world, 'trainRobbery', ped.x, ped.y, p, p.wanted, 'alarm');
   }
-  for (const id of t.riders) { const q = world.get(id); if (q && q.npc && q.npc.role === 'railguard' && !q.dead) { q.npc.target = ped.id; q.npc.hostile = true; } }
+  for (const q of guardsOf(world, t)) { q.npc.target = ped.id; q.npc.hostile = ped.id; }
 }
 
 // ---- the train-robbery job (offered by the fence) ----------------------------------------------
@@ -1198,6 +1254,7 @@ export function meInfo(world, p) {
   return {
     sub: !!e.sub, car: t.cars[ped.onTrain.c].kind, next: next.name, at: !!t.dwellUntil, eta: Math.round(etaTo(world, t, t.stop)),
     crack: p.crack ? Math.min(1, (world.time - p.crack.t0) / STRONGBOX_CRACK_S) : null, rural: onRuralRun(world, t),
+    warn: ped.onTrain.warnHud ?? null, // the mail guards: 'door' (shouted at to stay out), seconds left to get out, 0 = shooting
   };
 }
 

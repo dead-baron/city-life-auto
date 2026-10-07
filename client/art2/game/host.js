@@ -57,6 +57,8 @@ const LOWMEM_CHUNKS = 10;
 const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
 const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown']);
 const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
+const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
+const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
@@ -744,10 +746,13 @@ export class World2 {
   _pet(p, now) {
     const A = this.A, E = this.E;
     if (!A || !A.animalKey) return;
-    const kind = p.d.ar.slice(4), sp = p.as || 0;
-    const pose = sp > 70 ? 'run' : sp > 12 ? 'walk' : now - (p.stillSince ?? now) > 1.2 ? 'sit' : 'idle';
+    const kind = p.d.ar.slice(4), sp = p.as || 0, still = now - (p.stillSince ?? now) > 1.2;
+    // standing still a while: a pet sits, the deer and the livestock put their heads down and graze (now and
+    // then looking up); down or dead: lying on its side
+    const pose = p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still ? 'idle'
+      : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
-    const fr = Math.floor(pose === 'run' ? now * 14 + p.id : pose === 'walk' ? now * 8 + p.id : pose === 'idle' ? now * 3 + p.id : now * 1.5 + p.id) % n;
+    const fr = pose === 'lie' && p.flags & PF.DEAD ? 0 : Math.floor(pose === 'run' ? now * 14 + p.id : pose === 'walk' ? now * 8 + p.id : pose === 'idle' ? now * 3 + p.id : now * 1.5 + p.id) % n;
     let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null;
     if (pose !== p._cp || d8 !== p._cd) { p._cp = pose; p._cd = d8; for (let i = 0; i < n; i++) this._ask('actors', 'animal', A.animalKey(kind, pose, d8, i), [kind, pose, d8, i], 0); }
@@ -819,7 +824,7 @@ export class World2 {
     const def = TRAIN_CARS[c.d.c], A = this.A;
     if (!def || !A || !A.trainKey) return;
     const inside = c.d.tr === myTrain, N = this.tier.N;
-    const mode = `${inside && c.d.c !== 0 ? 'in' : 'roof'}${c.flags & 8 ? '-lit' : ''}${c.flags & 16 ? '-empty' : ''}`;
+    const mode = `${inside ? 'in' : 'roof'}${c.flags & 8 ? '-lit' : ''}${c.flags & 16 ? '-empty' : ''}`;
     const hi = quant(c.ra, N);
     let sk = this._spr('actors', 'train', A.trainKey(c.d.c, mode, hi, N), [c.d.c, mode, hi, N]);
     if (!sk && c._v2k && this.E.hasSprite(c._v2k)) sk = c._v2k;

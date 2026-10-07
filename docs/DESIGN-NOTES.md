@@ -63,12 +63,14 @@ concepts per area.
   - **Deaths:** a death while running slides or rolls to a stop face up, face down or on the side.
   - **Non-lethal hits:** an attacker who isn't killed may stagger and keep coming, or fall and scramble up.
   - **Hits to kill vary.**
-- **Wilderness population [W2 stage 4]:** mostly animals, and only a few people who belong there: campers, hikers,
-  nomads, farmers, off-roaders. Few vehicles.
+- **Wilderness population [done 2026-10-06]:** mostly animals (deer, rabbits, coyotes, raccoons; the farms'
+  livestock), and only a few people who belong there: campers, hikers, nomads, farmers, off-roaders. Few vehicles.
+  World v2 stage 4 places more country sites (trailheads, cabins, ranches) for them to belong to.
 - **Subway stations [W2 stage 6]:** entrances you can see on the street. The station below tells you where you
   are, with stairs up to the surface. No more blind cuts to an underground view.
-- **Train front car [next]:** seats for passengers and players, instead of the whole car given to the engine.
-- **Security train [next]:** the guards warn you as you walk in and wait a second before they attack.
+- **Train front car [done 2026-10-06]:** seats for passengers and players behind a short driver's cab.
+- **Security train [done 2026-10-06]:** the guards shout a warning at the mail car's door and draw on you; inside they
+  count down 4 s before they fire, and a guard who turns on you takes a second to draw.
 
 ## Sharks [W2 stage 5]
 - Extremely rare anywhere in the sea; likeliest round the prison island (still rare).

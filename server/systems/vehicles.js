@@ -176,8 +176,8 @@ function strikePed(world, v, ped, vn, h) {
   world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: Math.atan2(v.vy, v.vx), n: 10 });
   const killed = combat.damage(world, ped, dmg, driver, 'vehicle', Math.atan2(v.vy, v.vx));
   if (killed) v.bloody = true;
-  if (driver) law.hitAndRun(world, driver, ped, killed, v);
-  if (driver && !killed) law.subdue(world, driver, ped);
+  if (driver && !ped.wild) law.hitAndRun(world, driver, ped, killed, v); // (an animal on the road: no crime)
+  if (driver && !killed && !ped.wild) law.subdue(world, driver, ped);
   if (ped.npc) npc.onAttacked(world, ped, driver);
 }
 

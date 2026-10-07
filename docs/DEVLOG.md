@@ -2027,3 +2027,42 @@ Everything here is client-side. Server, shared code and the network are unchange
 - **Building fades keep the inside hidden** (user: walking behind a building showed its whole interior). A fading building now only goes see-through where its picture covers ground outside its own footprint: the street and pavement behind it. Over its footprint it stays, so the interior isn't shown until you walk in through the door. (`chunkbake` adds each building's footprint to `blds`; the engine passes it to the fade.)
 - **Tour:** the combat stop explains the toughness tiers, the dying engine and what blows a vehicle up on the spot. `TUTORIAL_VERSION` 31.
 - **Tests:** toughness by type; a car out of health smokes, burns after 3 s and explodes after 9 s; a blast sets a dying car off.
+
+## 2026-10-06 · Guards warn you at the mail car's door; seats in the front car; the countryside belongs to the animals
+
+- **The mail car's guards warn you before you walk in** (user: you walked in and got shot with no warning).
+  - **At the door:** come within 70 px of the gangway into the mail car and a guard shouts "STAFF ONLY - STAY OUT!" (a speech bubble over them), you get a toast, and both guards draw on you. They never shoot you there.
+  - **Inside:** "OUT! NOW, OR WE SHOOT!", and the train bar at the top turns red and counts down the `MAIL_WARN_S` (4) seconds. "OPEN FIRE!" when it runs out. Walk back out in time and they let you go.
+  - **A moment to draw:** a guard who turns on you without already covering you (you shot at them, or cracked the box) takes `GUARD_DRAW_S` (1 s, new in `shared/rules.js`) to draw before the first shot.
+  - **No lasting grudge:** guards are hostile to the one person who shot at them or cracked the box, and only while that person is aboard. Before, a guard stayed hostile for good, so a later visit got no warning.
+  - **Climbing on from a car** alongside the mail car says "armed guards!" in the prompt.
+  - **Speech bubbles** are a new event (`say`) any system can use: the line hangs over the speaker and follows them, even aboard a moving train.
+- **The front car has seats** (user: the whole front car was given to the engine).
+  - **Layout:** it's now a cab car. The driver's cab is in the nose behind a bulkhead (`CAB_OX`), and a passenger saloon with 8 seats, a door mid-car and windows fills the rest.
+  - **Riding it:** you can walk up through the train into it (the cab stays shut). Commuters sit there, and you can board it at a station or hop on from alongside.
+  - **Art:** it shows the seats with the roof off when it's your train, and it has passenger windows outside. The tail lamps that faced the next car are gone.
+- **Out in the wilds it's quiet, and it belongs to the animals** (user: too many random people and cars in the middle of nowhere; more animals instead).
+  - **Wildlife** (`server/systems/wildlife.js`) round a player out in the open country:
+    - woods and hills: deer, rabbits, coyotes, raccoons (more at night);
+    - desert: coyotes and jackrabbits;
+    - round the farms: cows, sheep, horses, goats and pigs, in small herds.
+  - **How they behave:** they graze and amble about their patch, and bolt from people, cars and gunfire, the herd together. A deer is gone in a flash; a cow lumbers off.
+  - **Hunting and roadkill:** they can be shot or run over with no crime, and they're no witnesses. A carcass stays until nobody's looking.
+  - **Coming and going:** they arrive from out of sight and are cleared away when nobody's near, about 9 round you.
+  - **People:** out in the open country there are at most 4 round you (30 in town), and only where they belong:
+    - campers and hikers at the campgrounds;
+    - farmers round the farms and farmhouses;
+    - workers at the quarry, the oil field and the wind and solar farms;
+    - locals at the filling stations, the drive-in and the country airstrip.
+    
+    In the middle of nowhere there's at most one hiker, farmer or desert nomad about. New country archetypes: hiker (backpack, boots), camper (flannel, beanie), farmer (overalls or flannel, cowboy hat), nomad (long coat, bandana, shades). Country folk don't drift towards the player the way town walkers do.
+  - **Roads:** at most 2 cars round you out there (16 in town), drawn from a country mix: pickups, flatbeds, camper vans, dirt bikes, the odd tanker or dump truck. No taxis, buses or bin lorries.
+  - **Art:** standing animals graze (heads down, looking up now and then), and a dead or downed one lies on its side.
+- **Tour:** the train stops cover the warning at the door and the countdown, the draw delay and the front car's seats; the countryside stop covers the country folk and the wildlife. `TUTORIAL_VERSION` 32.
+- **Tests:**
+  - the door warning, the countdown, being let go;
+  - the guards' draw delay and that they calm down once you're gone;
+  - walking into the front car up to the cab;
+  - wildlife in three wild districts and round the farm, with few people and cars, and none of it in town;
+  - animals bolting as a herd, and from gunfire;
+  - no crime for hunting or roadkill.
