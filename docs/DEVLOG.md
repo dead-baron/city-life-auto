@@ -2529,3 +2529,26 @@ The roadside stop in the Dry Creek Desert was three boxes on a gravel strip. It 
 - **Signs:** a curve warning on the way in and the message board at the lot's west end.
 - **Late paving:** the forecourt and the strip are repaved at the very end of the map build (`map.js` `lateTiles`). Otherwise the bank would choose the newly paved forecourt and move, and the paint shop and cash machines with it. POIs, buildings and homes are identical to before.
 - **Debug menu:** new buttons under Nature & landmarks: ⛽ Roadside stop, 🛩 Desert airstrip, 🌳 Lakeview Park.
+
+## 2026-10-07 · Pine Lake (Highland Woods; concept D15)
+
+A lake in the pines between the Highland stop and the Pine Ridge Campground (`shared/naturesites.js` `pineLake`).
+- **The lake:** a wobbly oval, deep blue in the middle, with lily pads and ducks.
+  - Its outlet creek runs west over mossy rocks to the bay.
+  - The freshwater shore distance is updated, so reed beds and cattails grow at the water.
+- **The boathouse:** a red plank boathouse on the north shore, a new voxel model (`props-wild.js` `boathouse`).
+  - It has board-and-batten walls, white corner boards, a steep dark shingle roof, the open boat door over the water with the slip inside, a window and a life ring.
+  - Beside it a wide timber dock runs out into the lake, with a canoe tied up at it and another drawn up on the bank. You can walk the dock's planks.
+- **The lakeside camp:** on the east shore, at the end of a dirt track from the Highland stop's lot.
+  - Two tents, a lit fire with a log seat, a picnic table, camp chairs, a cooler and a woodpile.
+  - A trail map board and a parking spot.
+  - A timber guard rail where the track runs along the water.
+- **The trail:** a footpath from the Pine Ridge Campground crosses the creek on a timber footbridge (planks underneath) and runs round to the boathouse. A finger post marks it at the campground.
+- **The woods:**
+  - firs, ponderosa pines, spruces and western red cedars, thick on the north and west sides;
+  - ferns, huckleberry and salal under them;
+  - mossy boulders and reeds on the shore.
+  - The shore band is kept as designed, so the wild woods (`buildWilds`) don't plant a redwood at the water's edge.
+- **Canoes render again everywhere.** The world statics drew the water kit's finished canoe sprite as if it were a voxel model, so canoes never appeared, including at Willow River and the marsh. `water.js` `canoe` now hands over the model itself (`{ vox: true }`).
+- Piers can turn (`p.a`) and take a width (`p.w`). New props: `boathouse`, `fbridge` (a footbridge at any angle) and `creekrail` (a timber guard rail at any angle).
+- On the map as Pine Lake, and in the debug menu (🛶 Pine Lake camp). Homes, POIs and buildings unchanged.

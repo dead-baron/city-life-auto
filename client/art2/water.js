@@ -694,6 +694,7 @@ export function canoe(hd = 0, color = '#b83a2e', app = null, o = {}) {
     return hull;
   });
   for (const tx of [0.32, 0.68]) m.box(L * tx, 2, 6, L * tx + 2, Wd - 2, 7, gun);
+  if (o.vox) return m;   // (the model itself, for the world's statics: they turn and light it)
   const g = m.render(hd), out = new GBuf(g.w + 30, g.h + 30); out.ax = g.ax + 15; out.ay = g.ay + 15;
   out.blit(g, 15, 15);
   if (app) {

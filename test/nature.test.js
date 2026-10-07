@@ -289,3 +289,24 @@ test('Route 9: the desert stop dressed like D14 - pumps under a canopy on a pave
   for (const q of m.props) if (q && q.t !== 'painted' && q.t !== 'rwlight' && q.t !== 'lplane' && q.t !== 'drum' && q.t !== 'propane' && Math.abs(q.x - a.x) < 400 && Math.abs(q.y - a.y) < 64) assert.fail(`${q.t} on the strip`);
   assert.ok(!m._late, 'the late paving is applied');
 });
+
+test('Pine Lake: a lake in the Highland pines with a boathouse and dock, a lakeside camp at the end of a track, an outlet creek with a footbridge', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'lakecamp' && q.name === 'Pine Lake');
+  assert.ok(s, 'Pine Lake is built');
+  const i = Math.floor(s.y / TILE) * m.w + Math.floor(s.x / TILE);
+  assert.ok((m.tiles[i] === T.DEEP || m.tiles[i] === T.WATER) && m.lake[i], 'lake water in the middle');
+  assert.ok(m.props.some((q) => q && q.t === 'boathouse' && Math.hypot(q.x - s.boathouse.x, q.y - s.boathouse.y) < 8), 'the boathouse');
+  assert.equal(tileAt(s.pier.x, s.pier.y), T.DOCK, 'the dock is walkable planks');
+  assert.ok(m.props.some((q) => q && q.t === 'canoe' && Math.hypot(q.x - s.pier.x, q.y - s.pier.y) < 120), 'a boat at the dock');
+  // the camp: tents and a fire on dirt, reached by a dirt track
+  for (const k of ['tent', 'campfire', 'picnic', 'woodpile']) assert.ok(m.props.some((q) => q && q.t === k && Math.hypot(q.x - s.camp.x, q.y - s.camp.y) < 200), k);
+  assert.equal(tileAt(s.camp.x, s.camp.y), T.DIRT, 'the camp is on dirt');
+  // the creek runs out to the sea and the trail crosses it on planks
+  assert.ok(s.bridge, 'the footbridge');
+  assert.equal(tileAt(s.bridge.x, s.bridge.y), T.DOCK, 'planks under the footbridge');
+  assert.ok(m.props.some((q) => q && q.t === 'fbridge' && Math.hypot(q.x - s.bridge.x, q.y - s.bridge.y) < 8));
+  // no tree in the water, and nothing tall at the water's edge from the wild woods
+  for (const q of m.props) if (q && (q.t === 'tree_a' || q.t === 'tree_b') && Math.hypot(q.x - s.x, q.y - s.y) < 700) assert.ok(![T.WATER, T.DEEP].includes(tileAt(q.x, q.y)), 'a tree in the lake');
+  assert.ok(s.trees >= 60, `woods round the lake (${s.trees})`);
+  assert.ok(m.landmarks.some((l) => l.name === 'Pine Lake'));
+});

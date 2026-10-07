@@ -100,6 +100,7 @@ export function buildNatureSites(m, H) {
   willowRiver(m, H);
   graniteCove(m, H);
   route9(m, H);
+  pineLake(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -185,6 +186,123 @@ function route9(m, H) {
   add('mapboard', X0 - 1.4, apronY + 1.2, 10);
   add('roadsign', X0 + (s.w >> 1) - 4, Y1 + 3, 4, { k: 'curve', a: 0 });
   m.natureSites.push({ kind: 'diner', name: 'Route 9', x: Math.round((X0 + s.w / 2) * TILE), y: Math.round((apronY + 2) * TILE), forecourt: { x: Math.round(pcx * TILE), y: Math.round((fy0 + 6) * TILE) } });
+}
+
+// ---- Pine Lake (Highland Woods; concept D15) -------------------------------------------------------------------
+// A lake in the pines between the Highland stop and the Pine Ridge Campground. A red boathouse on the north shore
+// with a dock out into the water, a rowboat tied up at it and a canoe on the bank; a lakeside camp on the east shore
+// (two tents, a fire, a table, chairs, a cooler, a woodpile, a fallen log) at the end of a dirt track from the
+// Highland stop, a timber guard rail where the track runs along the water; the outlet creek runs over rocks to the
+// bay, crossed by a timber footbridge on the trail up from the campground; a trailhead board and finger posts;
+// firs, pines and cedars round it all, thick on the north and west, mossy boulders, ferns, reeds, lily pads.
+function pineLake(m, H) {
+  const LX = 136, LY = 216, RX = 12, RY = 6.5, D = 29;
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const land = (i) => m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND;
+  const free = (tx, ty) => { const i = at(tx, ty); return land(i) && !m.reserve[i] && m.dist[i] === D; };
+  for (let ty = LY - RY - 4; ty <= LY + RY + 4; ty++) for (let tx = LX - RX - 4; tx <= LX + RX + 4; tx++) if (!free(tx, ty)) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  const clearR = (tx, ty, r) => m.props.forEach((p, i) => { if (p && p.t !== 'painted' && Math.hypot(p.x / TILE - tx, p.y / TILE - ty) < r) dropProp(m, i); });
+  const way = (cp, r) => { const pts = spline(cp.map(([x, y]) => [x * TILE, y * TILE]), 16); for (const [x, y] of pts) { clearR(x / TILE, y / TILE, r / TILE + 1); paint(m, x, y, r, T.DIRT, (t) => t === T.GRASS || t === T.DIRT || t === T.SAND); } return pts; };
+  clearR(LX, LY, RX + 6);
+  // the lake: a wobbly oval, deep in the middle
+  const wet = new Set();
+  for (let ty = Math.floor(LY - RY - 2); ty <= LY + RY + 2; ty++) for (let tx = Math.floor(LX - RX - 2); tx <= LX + RX + 2; tx++) {
+    const dx = (tx + 0.5 - LX) / RX, dy = (ty + 0.5 - LY) / RY, a = Math.atan2(dy, dx), q = Math.hypot(dx, dy) / (1 + 0.1 * Math.sin(a * 3 + 1.3) + 0.05 * Math.sin(a * 5 + 0.4));
+    if (q > 1) continue;
+    const i = at(tx, ty); m.tiles[i] = q < 0.55 ? T.DEEP : T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; wet.add(i);
+  }
+  // the outlet creek from the lake's north-west end to the bay (land only: the sea stays sea)
+  const creek = spline([[LX - RX * 0.82, LY - RY * 0.45], [LX - RX - 6, LY - 5.2], [LX - RX - 15, LY - 5.8], [LX - RX - 24, LY - 4.6], [LX - RX - 33, LY - 3.6], [LX - RX - 44, LY - 3]].map(([x, y]) => [x * TILE, y * TILE]), 12);
+  for (const [x, y] of creek) clearR(x / TILE, y / TILE, 2);
+  for (let k = 0; k < creek.length; k++) {
+    const [x, y] = creek[k], hw = 18 + (k / creek.length) * 8;
+    for (let ty = Math.floor((y - hw) / TILE); ty <= Math.floor((y + hw) / TILE); ty++) for (let tx = Math.floor((x - hw) / TILE); tx <= Math.floor((x + hw) / TILE); tx++) {
+      const i = ty * MAP_W + tx;
+      if (Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y) > hw || !land(i)) continue;
+      m.tiles[i] = T.WATER; m.land[i] = 0; m.river[i] = 1; m.reserve[i] |= RES; wet.add(i);
+    }
+  }
+  for (let k = 8; k < creek.length - 4; k += 5) { const [x, y] = creek[k], s = k % 2 ? 1 : -1; add('boulder', x / TILE + s * 1.3, y / TILE + s * 0.4, 12, { s: 14 + (k * 7) % 12, moss: 1 }); }
+  // the freshwater shore for the reed beds (statics.js coverAt reads distRiver, quarter tiles)
+  if (m.distRiver) for (const i of wet) { m.distRiver[i] = 0; const tx = i % MAP_W, ty = Math.floor(i / MAP_W); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const j = (ty + dy) * MAP_W + tx + dx; if (wet.has(j)) continue; const d = Math.round(Math.hypot(dx, dy) * 4); if (!m.distRiver[j] || m.distRiver[j] > d) m.distRiver[j] = d; } }
+  const wetAt = (tx, ty) => wet.has(at(tx, ty));
+  // the boathouse on the north shore over the water's edge, its dock out into the lake, a rowboat tied up at it
+  let ny = LY; while (wetAt(LX - 2, ny - 1)) ny--;
+  const BX = LX - 2, BY = ny - 0.6;
+  clearR(BX, BY, 4);
+  add('boathouse', BX, BY, 30);
+  reserveRound(m, BX * TILE, BY * TILE, 3.5 * TILE);
+  const PXT = BX + 3.4;
+  let pe = ny;
+  for (let k = 0; k < 5; k++) { const i = at(PXT, ny + k); if (!wet.has(i) && k > 0) break; for (const o of [-0.5, 0.5]) { const j = at(PXT + o, ny + k); if (wet.has(j) || land(j)) { m.tiles[j] = T.DOCK; m.lake[j] = 0; m.reserve[j] |= RES; } } pe = ny + k + 1; }
+  add('pier', Math.floor(PXT + 0.5), (ny + pe) / 2, 0, { len: Math.round((pe - ny) * TILE + 12), w: 62, a: Math.PI / 2 });
+  add('canoe', PXT + 1.5, pe - 1.2, 0, { a: Math.PI / 2, c: 2 });
+  add('canoe', BX - 4.2, BY + 0.2, 0, { a: 0.25, c: 0 });
+  // the camp on the east shore at the end of the track from the Highland stop
+  let ex = LX; while (wetAt(ex + 1, LY + 1)) ex++;
+  const CX = ex + 5, CY = LY + 1.5;
+  clearR(CX, CY, 6);
+  paint(m, CX * TILE, CY * TILE, 4.2 * TILE, T.DIRT, (t) => t === T.GRASS || t === T.DIRT || t === T.SAND);
+  add('tent', CX - 1.8, CY - 2.6, 12, { v: 0 }); add('tent', CX + 2.4, CY - 1.9, 12, { v: 2 });
+  add('campfire', CX + 0.2, CY + 0.6, 0, { lit: true });
+  add('picnic', CX - 2.6, CY + 1.9, 8); add('chair', CX + 1.5, CY + 1.4, 0, { a: Math.PI * 1.2, v: 1 }); add('chair', CX - 0.9, CY + 1.8, 0, { a: -0.4, v: 2 });
+  add('cooler', CX + 2.4, CY + 2.5, 0, { v: 1 }); add('woodpile', CX + 3.6, CY - 3.6, 8); add('log', CX + 0.4, CY + 3.4, 10, { len: 100, a: 0.05, moss: 1 });   // (a seat south of the fire)
+  m.parking.push({ x: Math.round((CX + 4.2) * TILE), y: Math.round((CY + 2.6) * TILE), a: -Math.PI / 2, drive: true });
+  // (nothing tall just south of the camp or the boathouse: in this view it would stand up over them)
+  for (let ty = Math.floor(CY); ty < CY + 10; ty++) for (let tx = Math.floor(CX - 7); tx < CX + 7; tx++) { const i = at(tx, ty); if (land(i)) m.reserve[i] |= RES; }
+  add('mapboard', CX + 5.2, CY - 1.4, 10);
+  // the dirt track in from the Highland stop's lot, a timber guard rail where it runs along the water
+  const stop = (m.countrySites || []).find((q) => q.name === 'Highland');
+  if (stop) {
+    const pts = way([[stop.x - 0.5, stop.y + stop.h - 2.5], [stop.x - 9, stop.y + stop.h - 4], [CX + 14, CY + 6], [CX + 6, CY + 3.2]], 40);
+    for (let k = 0; k < pts.length - 6; k += 6) {
+      const [x, y] = pts[k], [x2, y2] = pts[k + 6], tx = x / TILE, ty = y / TILE;
+      let nearWater = false; for (let dy = -4; dy <= 0; dy++) for (let dx = -4; dx <= 4; dx++) if (wetAt(tx + dx, ty + dy)) nearWater = true;
+      if (!nearWater) continue;
+      const a = Math.atan2(y2 - y, x2 - x);
+      add('creekrail', (x - Math.sin(a) * 46) / TILE, (y + Math.cos(a) * 46) / TILE, 0, { len: Math.round(Math.hypot(x2 - x, y2 - y)), a });
+    }
+  }
+  // the trail up from the Pine Ridge Campground, over the creek on a timber footbridge, round the north shore
+  const camp = (m.countrySites || []).find((q) => q.name === 'Pine Ridge Campground');
+  let bridge = null;
+  if (camp) {
+    const tp = way([[camp.x + camp.w - 2, camp.y + 0.5], [camp.x + camp.w + 4, camp.y - 7], [LX - RX - 24.5, LY - 1], [LX - RX - 23.5, LY - 10], [LX - RX - 14, LY - 11.5], [LX - RX - 2, LY - 10.5], [BX - 4, BY - 2.5]], 22);
+    // where it crosses the creek: planks over the water, the footbridge over them
+    const cross = tp.filter(([x, y]) => wet.has(at(x / TILE, y / TILE)) && m.river[at(x / TILE, y / TILE)]);
+    if (cross.length) {
+      const mx = cross.reduce((s, q) => s + q[0], 0) / cross.length, my = cross.reduce((s, q) => s + q[1], 0) / cross.length;
+      const k = tp.findIndex((q) => q === cross[0]), a = Math.atan2(tp[Math.min(tp.length - 1, k + 4)][1] - tp[Math.max(0, k - 4)][1], tp[Math.min(tp.length - 1, k + 4)][0] - tp[Math.max(0, k - 4)][0]);
+      for (let d = -64; d <= 64; d += 8) for (const o of [-12, 12]) { const i = at((mx + Math.cos(a) * d - Math.sin(a) * o) / TILE, (my + Math.sin(a) * d + Math.cos(a) * o) / TILE); if (wet.has(i)) { m.tiles[i] = T.DOCK; m.reserve[i] |= RES; } }
+      add('fbridge', mx / TILE, my / TILE, 0, { len: 150, a });
+      bridge = { x: Math.round(mx), y: Math.round(my) };
+    }
+    add('fingerpost', camp.x + camp.w + 4.8, camp.y - 6.4, 4);
+  }
+  // the woods round it: firs, pines and cedars (thick to the north and west), mossy boulders on the shore, reeds
+  // and cattails at the water, ferns and huckleberry under the trees; lily pads and ducks out on the lake
+  const TREES = ['fir', 'pondPine', 'fir', 'spruce', 'cedar'];
+  let nt = 0;
+  for (let ty = Math.floor(LY - RY - 10); ty <= LY + RY + 9; ty++) for (let tx = Math.floor(LX - RX - 12); tx <= LX + RX + 12; tx++) {
+    const i = at(tx, ty);
+    if (!land(i) || m.dist[i] !== D || m.reserve[i]) continue;   // (the camp, the track and the trail are reserved: they stay open)
+    let shore = 9;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (wet.has(i + dy * MAP_W + dx)) shore = Math.min(shore, Math.max(Math.abs(dx), Math.abs(dy)));
+    const h = hash2(tx, ty, 2101), north = ty < LY - 2 || tx < LX - RX + 2;
+    if (shore === 1) { if (h < 0.34) add('shrub_a', tx + 0.5, ty + 0.5, 0, { sp: h < 0.16 ? 'cattails' : 'reeds', k: 1 }); else if (h > 0.86) add('boulder', tx + 0.5, ty + 0.5, 12, { s: 12 + Math.round(h * 14), moss: 1 }); continue; }
+    if (Math.hypot(tx + 0.5 - CX, ty + 0.5 - CY) < 6.5 || Math.hypot(tx + 0.5 - BX, ty + 0.5 - BY) < 4.5) continue;
+    if (h < (north ? 0.2 : 0.09) && shore > 2) { add('tree_a', tx + 0.3 + hash2(tx, ty, 2102) * 0.4, ty + 0.3 + hash2(tx, ty, 2103) * 0.4, 10, { sp: TREES[Math.floor(hash2(tx, ty, 2104) * TREES.length)], k: 1.15 + hash2(tx, ty, 2105) * 0.3 }); m.reserve[i] |= RES; nt++; }
+    else if (h < 0.27) add('shrub_a', tx + 0.5, ty + 0.5, 0, { sp: ['fern', 'huckle', 'salal', 'fern'][Math.floor(hash2(tx, ty, 2106) * 4)], k: 1 });
+    else if (h > 0.975) add('boulder', tx + 0.5, ty + 0.5, 14, { s: 18 + Math.round(hash2(tx, ty, 2107) * 18), moss: 1 });
+  }
+  // the shore band stays as it is drawn here (the wild woods, map.js buildWilds, fill the unreserved ground after: no
+  // redwood stands in the water's edge)
+  for (const i of wet) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const j = i + dy * MAP_W + dx; if (land(j) && m.dist[j] === D) m.reserve[j] |= RES; }
+  for (let j = 0; j < 8; j++) { const tx = LX - RX * 0.7 + hash2(j, 1, 2108) * RX * 0.9, ty = LY - RY * 0.5 + hash2(j, 2, 2108) * RY; if (wetAt(tx, ty) && !wetAt(tx, ty - 1.5) === false) add('lily', tx, ty, 0, { v: j % 4 }); }
+  add('duck', LX + 3, LY + 1.5, 0, { a: 0.5 }); add('duck', LX + 4.2, LY + 2.1, 0, { a: 0.8 });
+  (m.landmarks ||= []).push({ name: 'Pine Lake', type: 'lake', x: Math.round((LX - RX) * TILE), y: Math.round((LY - RY) * TILE), w: Math.round(RX * 2 * TILE), h: Math.round(RY * 2 * TILE) });
+  m.natureSites.push({ kind: 'lakecamp', name: 'Pine Lake', x: LX * TILE, y: LY * TILE, boathouse: { x: Math.round(BX * TILE), y: Math.round(BY * TILE) }, camp: { x: Math.round(CX * TILE), y: Math.round(CY * TILE) }, pier: { x: Math.round(PXT * TILE), y: Math.round(((ny + pe) / 2) * TILE) }, bridge, trees: nt });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------

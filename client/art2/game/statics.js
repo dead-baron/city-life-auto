@@ -1168,8 +1168,8 @@ function voxModel(m, a) {
     case 'raisedBed': return GD.raisedBed(60, 26, 9, (a[0] || 0) + 1); case 'gShed': return GD.gardenShed(52, 38, 32, '#3a6a8a'); case 'ladder': return GD.orchardLadder(46);
     case 'fruitCrate': return GD.fruitCrate('#c8302a', 2);
     case 'beaverDam': return GD.beaverDam(a[0] || 130, 26, 14, 0.6, 3); case 'lodge': return GD.beaverLodge(28, 22, 2);
-    case 'boardwalk': return GD.boardwalk(a[0] || 160, 34, 8, 'ns'); case 'pier': return GD.fishingPier(a[0] || 120, 30, 10, 0.7);
-    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e'); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
+    case 'boardwalk': return GD.boardwalk(a[0] || 160, 34, 8, 'ns'); case 'pier': return GD.fishingPier(a[0] || 120, a[1] || 30, 10, 0.7);
+    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
     case 'beachBar': return WL.beachBar(a[0] ?? 0.5); case 'beachShower': return WL.beachShower(a[0] ?? 1); case 'driftShade': return WL.driftShade(a[0] || 70, a[1] || 50); case 'cliffStairs': return WL.cliffStairs(a[0] || 120, a[1] || 80, a[2] || 28);
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
@@ -1217,8 +1217,8 @@ function vdim(m, a) {
     case 'minePortal': return [80, 22, 78]; case 'mineCart': return [32, 22, 26]; case 'mBarrel': return [14, 14, 18]; case 'chest': return [26, 16, 18]; case 'pickaxe': return [10, 6, 34];
     case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
-    case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, 30, 54];
-    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
+    case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, a[1] || 30, 54];
+    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
     case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
@@ -1683,7 +1683,10 @@ function propItems(c, p, pi, I) {
     case 'beaverdam': V(`bdam:${p.len || 130}`, 'beaverDam', [p.len || 130]); return;
     case 'lodge': V('lodge', 'lodge', []); return;
     case 'boardwalk': V(`bwalk:${p.len || 160}`, 'boardwalk', [p.len || 160], PI / 2); return;
-    case 'pier': V(`pier:${p.len || 120}`, 'pier', [p.len || 120]); lightAt(I, x + (p.len || 120) / 2 - 10, y, 40, 110, [1, 0.8, 0.5], 1.4, 'lamp'); return;
+    case 'pier': { const len = p.len || 120, w = p.w || 30, hd = qa(p.a || 0, 4); V(`pier:${len}:${w}:${hd.toFixed(2)}`, 'pier', [len, w], hd); lightAt(I, x + Math.cos(hd) * (len / 2 - 10), y + Math.sin(hd) * (len / 2 - 10), 40, 110, [1, 0.8, 0.5], 1.4, 'lamp'); return; }
+    case 'creekrail': { const len = Math.max(40, Math.round((p.len || 120) / 8) * 8), hd = qa(p.a || 0, 32); V(`crail:${len}:${hd.toFixed(3)}`, 'creekRail', [len], hd); return; }
+    case 'boathouse': V('bhouse', 'boathouse', [1]); lightAt(I, x, y + 36, 30, 100, [1, 0.8, 0.5], 1.3, 'lamp'); return;
+    case 'fbridge': { const len = p.len || 140, hd = qa(p.a || 0, 16); V(`fbr:${len}:${hd.toFixed(2)}`, 'footbridge', [len, 30, 6], hd); return; }
     case 'canoe': { const col = ['#b83a2e', '#2f6a8a', '#d8c8a0'][p.c || 0]; V(`canoe:${p.c || 0}:${qa(p.a || 0, 8).toFixed(2)}`, 'canoe', [col], qa(p.a || 0, 8)); return; }
     case 'swan': V(`swan:${qa(p.a || 0, 8).toFixed(2)}`, 'swan', [], qa(p.a || 0, 8)); return;
     case 'duck': V(`duck:${qa(p.a || 0, 8).toFixed(2)}`, 'duck', [true], qa(p.a || 0, 8)); return;

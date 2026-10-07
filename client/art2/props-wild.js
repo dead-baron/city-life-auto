@@ -410,6 +410,35 @@ export function beachBar(on = 0.5) {
   m.fill((x, y, z) => { const r = Math.hypot(y - (y0 + d / 2), z - 26); return r >= 4.5 && r < 7.5 ? (Math.floor(Math.atan2(z - 26, y - (y0 + d / 2)) / (Math.PI / 4) + 8) % 2 ? ring : ringW) : -1; }, x1, y0 + d / 2 - 8, 18, x1 + 2, y0 + d / 2 + 8, 34);
   return m;
 }
+// a red plank boathouse (concept D15): board-and-batten walls, a steep shingle roof, the
+// boat door in the south gable end (open: the dark inside and the water), a window and a life ring on the side,
+// white trim at the corners and round the door. The ridge runs north-south; the south end stands over the water.
+export function boathouse(open = 1) {
+  const w = 54, d = 62, H = 34, m = new Vox(w + 8, d + 6, H + 30);
+  const red = m.mat({ ramp: R('#a8352c'), k: 3, shade: (x, y, z) => (Math.round(x + y) % 6 === 0 ? -1 : 0) + (hash(Math.floor((x + y) / 6), 2, 4) - 0.5) * 0.5 + (z < 3 ? -0.6 : 0) });
+  const trim = m.mat({ ramp: R('#ece6da'), k: 3 }), roof = m.mat({ ramp: R('#3e4a46'), k: 3, shade: (x, y, z) => (Math.round(z) % 3 === 0 ? -0.8 : 0) + (hash(Math.round(x / 5), Math.round(z), 8) > 0.85 ? -0.5 : 0) });
+  const dark = m.mat({ ramp: R('#1e2226'), k: 1 }), glass = m.mat({ ramp: R('#3a5a6a'), k: 2, flag: F_GLASS, gloss: 0.5, emi: [255, 214, 150, Math.round(30 * open)] });
+  const ring = m.mat({ ramp: R('#e8442e'), k: 3 }), ringW = m.mat({ ramp: R('#f2eee6'), k: 3 }), wat = m.mat({ ramp: R('#2a5a6a', 5, 3), k: 2, flag: F_WATER | F_NOCAST });
+  const x0 = 4, y0 = 2, x1 = x0 + w, y1 = y0 + d, cx = (x0 + x1) / 2;
+  // walls (the gables rise to the ridge), the open boat door in the south end
+  m.fill((x, y, z) => {
+    const inWall = x < x0 + 3 || x >= x1 - 3 || y < y0 + 3 || y >= y1 - 3;
+    if (!inWall) return -1;
+    const top = H + Math.max(0, (w / 2 - Math.abs(x - cx)) * 0.85);   // (the gable ends' triangles)
+    if (z >= (y < y0 + 3 || y >= y1 - 3 ? top : H)) return -1;
+    if (y >= y1 - 3 && Math.abs(x - cx) < 15 && z < 28) return Math.abs(x - cx) > 13 || z > 26 ? trim : -1;   // the door frame
+    if (Math.abs(x - x0) < 2.5 && Math.abs(x - x0) >= 0 && (y < y0 + 4 || y >= y1 - 4) || Math.abs(x - x1 + 1) < 2.5 && (y < y0 + 4 || y >= y1 - 4)) return trim;   // corner boards
+    return red;
+  }, x0, y0, 0, x1, y1, H + 30);
+  m.box(cx - 13, y1 - 10, 0, cx + 13, y1 - 3, 26, dark);                     // the dark inside the door
+  m.box(cx - 13, y1 - 9, 0, cx + 13, y1 - 3, 2, wat);                        // the water in the slip
+  // a window and the life ring on the east side
+  m.box(x1 - 1, y0 + 14, 14, x1, y0 + 26, 24, glass); m.box(x1 - 1, y0 + 13, 13, x1, y0 + 27, 14, trim); m.box(x1 - 1, y0 + 13, 24, x1, y0 + 27, 25, trim);
+  m.fill((x, y, z) => { const r = Math.hypot(y - (y0 + 40), z - 18); return r >= 4.5 && r < 7.5 ? (Math.floor(Math.atan2(z - 18, y - (y0 + 40)) / (Math.PI / 4) + 8) % 2 ? ring : ringW) : -1; }, x1, y0 + 32, 10, x1 + 2, y0 + 48, 26);
+  // the roof: two steep pitches meeting on the ridge along y, eaves out past the walls
+  m.fill((x, y, z) => { const top = H + 2 + (w / 2 + 4 - Math.abs(x - cx)) * 0.85; return z >= top - 2.5 && z < top ? roof : -1; }, x0 - 4, y0 - 2, H - 2, x1 + 4, y1 + 3, H + 30);
+  return m;
+}
 // an outdoor shower on a little plank deck: a metal pipe up to a head on an arm, a tap, a slatted base
 export function beachShower(run = 1) {
   const m = new Vox(40, 34, 64);
