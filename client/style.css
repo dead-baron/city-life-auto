@@ -262,6 +262,17 @@ body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.arm
   #title { gap: 8px; } #logo { width: min(240px, 34vh * 1.4); } #t-help { font-size: 12px; line-height: 1.4; } #t-note { display: none; }
   #play, #practice { font-size: 20px; padding: 9px 24px; }
   .touch #stick-r, #tbtns button { transform: scale(.9); }
+  /* the top-right column packs into three short rows (weapon; cash and bank; stars, clock and status), so the
+     CAR / ACT / THROW buttons above the right stick don't sit on it (an iPhone in Safari: 340 px tall) */
+  .touch #hud-tr { display: grid; grid-template-columns: auto auto auto; justify-items: end; align-items: baseline; column-gap: 8px; }
+  .touch #weapon { grid-column: 1 / 4; grid-row: 1; min-height: 32px; padding: 1px 4px 1px 14px; }
+  .touch #w-icon canvas { width: 56px; height: 28px; }
+  .touch #w-name { font-size: 12px; } .touch #w-ammo { font-size: 12px; }
+  .touch #money { grid-column: 1 / 3; grid-row: 2; font-size: 22px; margin-top: 0; }
+  .touch #bank { grid-column: 3; grid-row: 2; font-size: 10px; }
+  .touch #stars { grid-column: 1; grid-row: 3; font-size: 14px; min-height: 0; margin-top: 0; }
+  .touch #clock { grid-column: 2; grid-row: 3; font-size: 11px; margin-top: 0; }
+  .touch #faction { grid-column: 3; grid-row: 3; font-size: 9px; letter-spacing: 1px; margin-top: 0; }
 }
 /* portrait phones: controls hug the bottom, HUD compacts */
 body.portrait.touch #hud-tr { max-width: 46vw; }
@@ -274,6 +285,9 @@ body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: ca
 body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: 160px; }
 body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: 160px; }
 body.portrait.touch #helpbox, body.portrait.touch #toasts { margin-left: 0; }
+/* the round buttons (menu, phone, bag...) can't sit between the radar and the cash on a phone held upright (an
+   iPhone: 390 px wide): they go on the right, under the cash and the stars */
+body.portrait.touch #hud-btns { left: auto; right: max(8px, env(safe-area-inset-right)); top: 150px; transform: none; }
 body.portrait.touch #zone-l { top: 50%; width: 50%; }
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: 64px; } #district { font-size: 34px; } }
 

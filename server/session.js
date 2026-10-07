@@ -53,6 +53,8 @@ export function createSession(world, conn, opts) {
       if (!player) return;
       if (msg.t === 'view') { setView(player, msg.hw, msg.hh); return; } // how much world the screen shows
       if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
+      // a client noticing something wrong on its side (it built a different map from the same build): logged, once a connection
+      if (msg.t === 'diag') { if (!conn.diagSaid && typeof msg.what === 'string') { conn.diagSaid = true; console.warn(`[diag] ${player.name}: ${msg.what.slice(0, 300)}`); } return; }
       if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
       if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
       // the bag: use an item, or put one in a quick-wheel slot (null clears it)

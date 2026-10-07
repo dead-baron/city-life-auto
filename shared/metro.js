@@ -17,6 +17,7 @@
 // wide as the road drawn over it. Deterministic: every choice is a hash of where it is.
 import { TILE } from './constants.js';
 import { clipLine } from './citylayout.js';
+import { dsin } from './dmath.js';
 
 const T = (v) => v * TILE;
 function hash(x, y, seed) {
@@ -44,7 +45,9 @@ export const AVES_Y = [
   { y: 556.5, name: 'Bay Avenue' },
   { y: 724.5, name: 'Southside Avenue' }, { y: 808.5, name: 'Dock Avenue' },
 ];
-export const aveY = (a, x) => (a.bow && x > a.bow.x0 && x < a.bow.x1 ? a.y + a.bow.amp * Math.sin(Math.PI * (x - a.bow.x0) / (a.bow.x1 - a.bow.x0)) : a.y);
+// (dsin: the same bits in every engine - BROADWAY below is worked out when this module loads, outside generateCity's
+// deterministic maths: shared/dmath.js)
+export const aveY = (a, x) => (a.bow && x > a.bow.x0 && x < a.bow.x1 ? a.y + a.bow.amp * dsin(Math.PI * (x - a.bow.x0) / (a.bow.x1 - a.bow.x0)) : a.y);
 const CURVED = new Map(AVES_Y.filter((a) => a.bow).map((a) => [a.y, (x) => aveY(a, x)]));
 // Through streets that aren't avenues: Harbor Street (Old Town's way to the Harbor Bridge north, and on
 // south through Southside) and the two streets round Greenfield Park.

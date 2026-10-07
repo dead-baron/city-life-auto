@@ -3004,3 +3004,29 @@ Walk onto either half court and press the action button to pick up a ball (`serv
 - **Stopping:** walk off the court and you put the ball down, with a note of your makes.
 - **On screen:** there's a new basketball sprite, and new sounds for a swish, a make and a clank off the rim.
 - **Test:** in `test/golf.test.js`, alongside golf.
+
+## 2026-10-07 · iPhones and iPads get in: the same world in every browser
+
+- **The bug:** on an iPhone or iPad, the game went back to the title screen right after signing in ("The server and this page are on different versions..."), then reloaded every 30 seconds and never got in.
+  - Every browser on iOS (Chrome too) runs Apple's JavaScript engine. Its `Math.sin`, `cos`, `tan`, `atan2` and `hypot` differ from Chrome's and Node's in the last bit: for a few percent of arguments, and a third of the `hypot` calls.
+  - The page builds the world from the seed and checks its signature against the server's. Those last-bit differences moved tiles and props, so the signatures never matched, and the page took itself for an outdated build and reloaded.
+  - Safari on a Mac had the same problem.
+- **The fix** (`shared/dmath.js`): world generation runs with deterministic versions of those functions.
+  - They're line-for-line ports of fdlibm as V8 has it, plus V8's `hypot`, in plain double arithmetic, which every engine computes the same way.
+  - They give exactly V8's results, so the world on the server and in Chrome hasn't changed (same signature). Safari now builds it bit for bit too.
+  - One of Broadway's points in `shared/metro.js` was worked out with `Math.sin` while the module loads, outside generation. It now uses the deterministic `dsin`.
+- **How it was checked:**
+  - All 31 million maths calls a world build makes are bit-exact against V8.
+  - The whole generated map (every field, every number's bits) is identical in V8 and in JavaScriptCore (Bun).
+  - An emulated iPhone 14 with Safari-like maths reproduced the reload loop on the old build, and gets straight in on the new one.
+- **No reload loop from this again:** if the page and the server are on the same build and the world still comes out different, the page plays on and tells the server (a `[diag]` line in its log) instead of reloading.
+- **iPhone fixes:**
+  - Short landscape screens: the top-right HUD packs into three short rows. In Safari's 340-px-tall view the CAR and ACT buttons used to sit on the stars and the clock.
+  - Portrait: the round buttons move under the cash. They used to run under the radar and the cash.
+  - PLAY no longer shows the "can't go fullscreen" tip on an iPhone every time. It only appears when you tap the fullscreen button.
+  - The sound comes back after iOS suspends it (a call, or switching apps).
+- **Tests** (`test/dmath.test.js`):
+  - The ports are bit-exact against V8 on random arguments of every size.
+  - A world built with the engine's maths nudged by a bit (as Safari's is) comes out identical.
+  - Building it calls no engine-approximated function and no `Math.random`.
+  - Shared code uses `**` only to square.

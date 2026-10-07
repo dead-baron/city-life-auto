@@ -2,14 +2,19 @@
 let ctx = null, master = null;
 const last = new Map();
 
+// Safari (an iPhone above all) starts the sound suspended unless it's made in a tap, and suspends it when the page
+// goes to the background or a call comes in: it's woken on the next touch, click or key, and on coming back.
+function wake() { if (ctx && ctx.state !== 'running') { try { const r = ctx.resume(); if (r && r.catch) r.catch(() => {}); } catch { /* not now */ } } }
 export function initAudio() {
-  if (ctx) return;
+  if (ctx) { wake(); return; }
   try {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain();
     master.gain.value = 0.35;
     master.connect(ctx.destination);
-  } catch { ctx = null; }
+  } catch { ctx = null; return; }
+  for (const ev of ['touchend', 'pointerdown', 'keydown']) window.addEventListener(ev, wake, { passive: true, capture: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
 }
 
 function noiseBuffer(sec) {

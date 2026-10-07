@@ -16,6 +16,7 @@
 
 import { T, TILE, MAP_W, MAP_H } from './constants.js';
 import { mulberry32, hash2 } from './rng.js';
+import { withDeterministicMath } from './dmath.js';
 import { PREFABS } from './prefab-data.js';
 import { LAND, TERRAIN, TERRAIN_CELL } from './worldmask.js';
 import { buildNetwork, stampEdge, stampLine, edgeZ, ROAD_KINDS, sidewalkPx, laneOffset } from './roads.js';
@@ -442,7 +443,14 @@ export function waterKind(map, tx, ty) {
 }
 
 // ---------------------------------------------------------------------------
+// The world from its seed. The server and every client build it and must get the same map to the bit (the client
+// checks mapSignature on joining), so it's built with deterministic trigonometry: the JavaScript engines' own Math.sin
+// & co. differ in the last bit (Safari - every browser on an iPhone or iPad - against Chrome and Node), enough to move
+// a tile or a prop (shared/dmath.js).
 export function generateCity(seed = 1337) {
+  return withDeterministicMath(() => buildCity(seed));
+}
+function buildCity(seed) {
   const m = new CityMap(seed);
   const rand = mulberry32(seed);
   terrain(m);

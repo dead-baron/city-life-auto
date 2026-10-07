@@ -161,7 +161,13 @@ function onText(m) {
       if (S.spec && S.spec.on) { if (S.map.seed !== (m.seed >>> 0)) exitSpectate(); else send({ t: 'dev', c: 'spectate', on: true }); } // back in after a reconnect
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
       S.updating = noteServerBuild(m.build, m.built); // the server runs a newer build: this page reloads into it (client/update.js)
-      if (m.sig && m.sig !== mapSignature(S.map)) { if (S.updating) $('play').disabled = true; else outdatedBuild(m.sig); return; } // the server runs a newer world than this page
+      if (m.sig && m.sig !== mapSignature(S.map)) {
+        // the server runs a newer world than this page: reload into it (client/update.js does the rest) - unless both
+        // are the same build, when a reload would build the same different world again (it used to, every 30 s, on
+        // iPhones: shared/dmath.js): then play on, and tell the server so it shows up in its log
+        if (!(m.build && String(m.build) === myBuild().v)) { if (S.updating) $('play').disabled = true; else outdatedBuild(m.sig); return; }
+        if (!S.mismatchSaid) { S.mismatchSaid = true; console.warn('[map] this browser built a different city from the same build', mapSignature(S.map), 'vs', m.sig); send({ t: 'diag', what: `map signature ${mapSignature(S.map)} vs server ${m.sig} (${navigator.userAgent})` }); }
+      }
       S.ents.clear(); S.pred = null; S.pending = [];
       for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
@@ -794,7 +800,7 @@ function art2Failed(why) {
 function startPlaying() {
   S.playing = true;
   initAudio();
-  if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true);
+  if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true);
   setTimeout(maybeLandscapeTip, 600);
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
@@ -946,7 +952,7 @@ function submitDevPw() {
 $('devpw-go').onclick = submitDevPw;
 $('devpw-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitDevPw(); } else if (e.key === 'Escape') closeOverlay('devpw'); });
 
-const practiceGo = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); setTimeout(maybeLandscapeTip, 1500); startPractice(); };
+const practiceGo = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); setTimeout(maybeLandscapeTip, 1500); startPractice(); };
 const playGo = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
 $('practice').onclick = firstPlay(practiceGo);
 $('play').onclick = firstPlay(playGo);
@@ -1275,7 +1281,7 @@ function firstPlay(go0) {
     // a new player picks graphics first (the recommended preset for this device is highlighted)
     const go = () => (gfxChosen() ? go0() : askGfx(go0));
     if (!TUTORIAL_ON || tutorialSeen()) { go(); return; }
-    if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); // needs this tap's user gesture
+    if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); // needs this tap's user gesture
     // ask in a popup (nothing on the title screen moves around)
     tutAskGo = go;
     if (tutorialSeenOld()) { $('tut-ask-h').textContent = 'THE CITY TOUR HAS BEEN UPDATED'; $('tut-ask-p').textContent = 'New places, rules and features since you last watched it. Take the tour?'; }
@@ -1375,10 +1381,11 @@ $('tut-cv').addEventListener('click', () => tutorialNext());
 // ---- fullscreen, landscape tip, settings ------------------------------------------------------
 const fsSupported = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
 function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
-function toggleFullscreen(force) {
+// auto: on its own as play starts (where it can't - an iPhone - nothing is said; the tip is for a tap on the button)
+function toggleFullscreen(force, auto = false) {
   const want = force ?? !isFullscreen();
   if (!fsSupported) {
-    S.hud?.toast('This browser can\'t go fullscreen from a page. On iPhone: Share → Add to Home Screen, then open City Life Auto from your home screen.', 'info');
+    if (!auto) S.hud?.toast('This browser can\'t go fullscreen from a page. On iPhone: Share → Add to Home Screen, then open City Life Auto from your home screen.', 'info');
     return;
   }
   const el = document.documentElement;
@@ -1393,7 +1400,7 @@ $('b-phone').onclick = () => openPhone();
 $('b-menu').onclick = () => { if (S.playing) { sfx('click', 0.6); if (topOverlay() === 'pause') closeOverlay('pause'); else openOverlay('pause'); } };
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('ph-back').onclick = () => phone.back();
-document.addEventListener('fullscreenchange', () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });
+for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
 
 // Let the phone rotate freely, even in fullscreen and in the installed app. 'any' follows the
 // rotation sensor and overrides an older landscape-only install (Android only refreshes an installed

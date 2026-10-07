@@ -4,6 +4,7 @@
 - **Pushing to `main` deploys live:** the Oracle server (play.deadbaron.com) pulls `main` every 2 minutes (`deploy/auto-update.sh`, `cla-update.timer`) and restarts when `server/` or `shared/` changed - online players get a brief reconnect. Only push when tests pass, and batch server changes. A version that fails its health check is rolled back automatically. GitHub Pages serves the client.
 - Tests: `npm test` (runs `node --test test/*.test.js`). Run `node tools/stamp-version.mjs` before every commit (cache-busting build id).
 - Docs: add a `docs/DEVLOG.md` entry for each feature; keep the README controls table current.
+- The world must come out bit-identical in every JS engine (the client checks the map signature on joining; Safari's `Math.sin` & co. differ from V8's): `generateCity` runs under `withDeterministicMath` (`shared/dmath.js`). In shared code, nothing computed while a module loads may use those Math functions (use `dsin` etc.), `**` only squares, never `Math.random`. `test/dmath.test.js` checks.
 
 ## The tutorial is paused (user, 2026-10-06)
 The tour is disabled in the game (`TUTORIAL_ON` in `client/main.js`) and its tests are skipped: don't spend time
