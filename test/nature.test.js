@@ -359,3 +359,22 @@ test('Wreck Island: an old ship aground on the biggest islet, solid, with its ca
   for (const k of ['barrel', 'crates', 'driftwood']) assert.ok(m.props.some((q) => q && q.t === k && Math.hypot(q.x - s.x, q.y - s.y) < 420), k);
   assert.ok(m.landmarks.some((l) => l.name === 'Wreck Island'));
 });
+
+test('Bluffs Maze Garden: a hedge maze you can walk from every gate to the gazebo at its heart, its hedges solid', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'maze');
+  assert.ok(s, 'the maze is built');
+  const mz = m.mazes[0], X0 = mz.x / TILE, Y0 = mz.y / TILE, S = s.size;
+  // a flood over the paths from the south gate reaches the heart and every other gate (a perfect maze: one way)
+  const open = (x, y) => x >= X0 && y >= Y0 && x < X0 + S && y < Y0 + S && m.tiles[y * m.w + x] !== T.WALL;
+  const seen = new Set(), st = [[Math.floor(s.gate.x / TILE), Y0 + S - 1]];   // (the south gate, just inside)
+  while (st.length) { const [x, y] = st.pop(), k = y * m.w + x; if (seen.has(k) || !open(x, y)) continue; seen.add(k); st.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+  assert.ok(seen.has(Math.floor(s.y / TILE) * m.w + Math.floor(s.x / TILE)), 'the heart can be reached');
+  const mid = Y0 + (S >> 1);
+  for (const [x, y] of [[X0 + (S >> 1), Y0], [X0, mid], [X0 + S - 1, mid]]) assert.ok(seen.has(y * m.w + x), `the gate at ${x},${y} joins up`);
+  // walls are solid ground (no walking through hedges), and every wall has a hedge drawn on it
+  let walls = 0; for (let y = Y0; y < Y0 + S; y++) for (let x = X0; x < X0 + S; x++) if (m.tiles[y * m.w + x] === T.WALL) walls++;
+  assert.ok(walls > S * S * 0.35, `hedges (${walls})`);
+  assert.ok(m.props.filter((q) => q && q.t === 'hedgebox').length >= S, 'hedge sprites');
+  assert.ok(m.props.some((q) => q && q.t === 'gazebo' && Math.hypot(q.x - s.x, q.y - s.y) < 60), 'the gazebo at its heart');
+  assert.ok(m.landmarks.some((l) => l.name === 'Bluffs Maze Garden'));
+});

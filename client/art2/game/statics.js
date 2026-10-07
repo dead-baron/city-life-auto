@@ -348,6 +348,7 @@ export function makeStatic(r) {
     }
     case 'critter': { const fr = critterFrames(r.k); return (fr && fr[r.f || 0]) || EMPTY; }
     case 'lily': { const G = FL.lilyPads(r.s || 1, 7, 2); return G && G.render ? G.render(0) : G; }
+    case 'hbox': return GD.hedgeBox(r.w, r.d, r.h, { seed: r.s || 1, R: FL.FOL(r.c || '#3a7226'), flowers: r.fl ? ramp(r.fl, 6, 3, { light: 0.6 }) : null, fk: 0.1, ragged: 1 });
     case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });
     case 'towel': return makeTowel(r);
     case 'blanket': return makeBlanket(r);
@@ -1729,6 +1730,11 @@ function propItems(c, p, pi, I) {
     case 'seal': { const coat = Math.floor(hh(x, y, 21) * 3); V(`seal:${p.pose || 0}:${coat}:${qa(p.a || 0, 8).toFixed(2)}`, 'seal', [p.pose || 0, coat], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return; }
     case 'gull': V(`gull:${qa(p.a || 0, 8).toFixed(2)}`, 'gull', [], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return;
     case 'crab': V(`crab:${qa(p.a || 0, 8).toFixed(2)}`, 'crab', [], qa(p.a || 0, 8)); return;
+    case 'hedgebox': {   // a clipped hedge of any footprint (a maze's walls): w x d px, h tall, anchored at its south edge's middle
+      const w = p.w || 32, d = p.d || 32, h = p.h || 34, fl = p.fl || null;
+      put(I, { key: `hbox:${w}:${d}:${h}:${fl || ''}:${seed % 4}`, recipe: { t: 'hbox', w, d, h, s: seed % 4 + 1, fl }, x, y, ext: [w / 2 + 6, d + h + 10, w / 2 + 6, 6], pi });
+      return;
+    }
     case 'wreck': { const hd = qa(p.a || 0, 16); V(`wreck:${hd.toFixed(2)}`, 'shipwreck', [220, 64, 40], hd); return; }
     case 'driftwood': V(`dw:${p.len || 50}:${qa(p.a || 0, 8).toFixed(2)}`, 'driftwood', [p.len || 50, 1], qa(p.a || 0, 8)); return;
     case 'starfish': case 'urchin': case 'anemone': {

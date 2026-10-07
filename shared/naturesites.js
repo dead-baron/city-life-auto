@@ -104,6 +104,7 @@ export function buildNatureSites(m, H) {
   pineLake(m, H);
   cedarCreek(m, H);
   wreckIsland(m, H);
+  bluffsMaze(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -404,6 +405,100 @@ function wreckIsland(m, H) {
   add('gull', sx + 3.6, row - 1.2, 0, { a: 0.6, z: 30 }); add('gull', sx + 6.2, row + 4.8, 0, { a: 2.2 }); add('crab', sx + 1.6, row + 2.8, 0, { a: 1.2 }); add('crab', sx + 2.8, row - 3.2, 0, { a: 4.1 });
   (m.landmarks ||= []).push({ name: 'Wreck Island', type: 'wreck', x: (sx - 4) * TILE, y: (row - 8) * TILE, w: 40 * TILE, h: 16 * TILE });
   m.natureSites.push({ kind: 'wreck', name: 'Wreck Island', x: Math.round(X), y: Math.round(Y), beach: { x: (sx + 6) * TILE, y: (row + 1) * TILE } });
+}
+
+// ---- the Bluffs Maze Garden (The Bluffs) ------------------------------------------------------------------------
+// The open lawn in the middle of The Bluffs becomes a formal garden: a square hedge maze (clipped yew walls taller
+// than a person, solid) with a white gazebo and a fountain at its heart, four gates; round it gravel walks between
+// rose parterres and topiary, avenues of cypress and flowering trees out to the streets, benches, lamps and urns.
+// The maze is made fresh from a fixed seed (a depth-first walk over its cells), so it's the same for everyone.
+function bluffsMaze(m, H) {
+  const D = 34, at = (tx, ty) => ty * MAP_W + tx;
+  const CX = 1128, CY = 146, N = 11;                        // the maze: N x N cells, 2 tiles each, walls 1 tile
+  const S = 2 * N + 1, X0 = CX - (S >> 1), Y0 = CY - (S >> 1);
+  const grass = (tx, ty) => { const i = at(tx, ty); return m.tiles[i] === T.GRASS && m.dist[i] === D; };
+  for (let ty = Y0 - 6; ty < Y0 + S + 6; ty++) for (let tx = X0 - 6; tx < X0 + S + 6; tx++) if (!grass(tx, ty) || m.reserve[at(tx, ty)]) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  // the random dressing on this lawn goes (it was scattered by the town greenery)
+  const GX0 = X0 - 22, GX1 = X0 + S + 22, GY0 = Y0 - 26, GY1 = Y0 + S + 22;
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= GX0 * TILE && q.x < GX1 * TILE && q.y >= GY0 * TILE && q.y < GY1 * TILE && grass(Math.floor(q.x / TILE), Math.floor(q.y / TILE))) dropProp(m, i); });
+  for (let ty = GY0; ty < GY1; ty++) for (let tx = GX0; tx < GX1; tx++) if (grass(tx, ty)) m.reserve[at(tx, ty)] |= RES;
+  // carve the maze: walls everywhere, then a depth-first walk opens the cells and the walls between them
+  const wall = new Uint8Array(S * S).fill(1), seen = new Uint8Array(N * N), st = [[N >> 1, N >> 1]];
+  const open = (cx, cy) => { wall[(2 * cy + 1) * S + 2 * cx + 1] = 0; };
+  open(N >> 1, N >> 1); seen[(N >> 1) * N + (N >> 1)] = 1;
+  let k = 0;
+  while (st.length) {
+    const [cx, cy] = st[st.length - 1];
+    const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => { const x = cx + dx, y = cy + dy; return x >= 0 && y >= 0 && x < N && y < N && !seen[y * N + x]; });
+    if (!nb.length) { st.pop(); continue; }
+    const [dx, dy] = nb[Math.floor(hash2(cx * 31 + cy, k++, 2301) * nb.length)];
+    wall[(2 * cy + 1 + dy) * S + 2 * cx + 1 + dx] = 0; open(cx + dx, cy + dy); seen[(cy + dy) * N + cx + dx] = 1; st.push([cx + dx, cy + dy]);
+  }
+  // the heart: a 3 x 3 clearing for the gazebo; the gates in the middle of each side
+  const h0 = (S >> 1) - 2;
+  for (let y = h0; y < h0 + 5; y++) for (let x = h0; x < h0 + 5; x++) wall[y * S + x] = 0;
+  const mid = S >> 1;
+  for (const [x, y] of [[mid, 0], [mid, S - 1], [0, mid], [S - 1, mid]]) wall[y * S + x] = 0;
+  // (the cells either side of each gate open into the maze: the gate cell's neighbour inward is a cell already)
+  // the walls: hedge tiles are solid (WALL; the ground bake draws them as lawn under the hedge), drawn as runs -
+  // each row's horizontal runs as one hedge sprite, the single tiles of the vertical runs stacked
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = at(X0 + x, Y0 + y);
+    m.tiles[i] = wall[y * S + x] ? T.WALL : T.DIRT;
+    m.reserve[i] |= RES | 16;
+  }
+  for (let y = 0; y < S; y++) {
+    let x = 0;
+    while (x < S) {
+      if (!wall[y * S + x]) { x++; continue; }
+      let e = x; while (e + 1 < S && wall[y * S + e + 1]) e++;
+      const len = e - x + 1;
+      add('hedgebox', X0 + x + len / 2, Y0 + y + 1, 0, { w: len * TILE, d: TILE, h: 28, fl: (y === 0 || y === S - 1) ? '#e8f0e8' : null });   // (shoulder high: you see heads over it)
+      x = e + 1;
+    }
+  }
+  // the heart: the gazebo, a fountain basin and benches round it
+  add('gazebo', CX + 0.5, CY + 0.6, 30);
+  for (const [dx, dy] of [[-1.6, 2.1], [2.6, 2.1]]) add('pbench', CX + dx, CY + dy, 0, { a: 0 });
+  // round the maze: a gravel walk all round it, rose parterres in the corners, topiary along the walk, urns at
+  // the gates, lamps; avenues of cypress and flowering trees from the gates out to the edge of the lawn
+  const ring = 3, R0x = X0 - ring, R0y = Y0 - ring, R1x = X0 + S + ring, R1y = Y0 + S + ring;
+  for (let ty = R0y; ty < R1y; ty++) for (let tx = R0x; tx < R1x; tx++) { if (tx >= X0 - 1 && tx < X0 + S + 1 && ty >= Y0 - 1 && ty < Y0 + S + 1) continue; const edge = tx < R0x + 2 || tx >= R1x - 2 || ty < R0y + 2 || ty >= R1y - 2; if (edge && grass(tx, ty)) m.tiles[at(tx, ty)] = T.PLAZA; }
+  for (let ty = Y0 - 1; ty < Y0 + S + 1; ty++) for (const tx of [X0 - 1, X0 + S]) if (grass(tx, ty)) m.tiles[at(tx, ty)] = T.PLAZA;
+  for (let tx = X0 - 1; tx < X0 + S + 1; tx++) for (const ty of [Y0 - 1, Y0 + S]) if (grass(tx, ty)) m.tiles[at(tx, ty)] = T.PLAZA;
+  // the avenues: 2-tile gravel walks from each gate to the streets
+  const walk = (x0, y0, x1, y1) => { for (let ty = Math.min(y0, y1); ty <= Math.max(y0, y1); ty++) for (let tx = Math.min(x0, x1); tx <= Math.max(x0, x1); tx++) if (grass(tx, ty)) m.tiles[at(tx, ty)] = T.PLAZA; };
+  const reach = (x, y, dx, dy) => { let n = 0; while (n < 40 && grass(x + dx * (n + 1), y + dy * (n + 1))) n++; return n; };
+  const gates = [[CX, Y0 - ring - 1, 0, -1], [CX, Y0 + S + ring, 0, 1], [X0 - ring - 1, CY, -1, 0], [X0 + S + ring, CY, 1, 0]];
+  const AV = ['cypress', 'cherry', 'cypress', 'magnolia'];
+  for (const [gx, gy, dx, dy] of gates) {
+    const n = reach(gx, gy, dx, dy);
+    if (n < 3) continue;
+    if (dx) walk(gx, gy, gx + dx * n, gy + 1); else walk(gx, gy, gx + 1, gy + dy * n);
+    for (let s = 3; s < n - 1; s += 3) for (const side of [-1, 2]) { const tx = dx ? gx + dx * s + 0.5 : gx + side + 0.5, ty = dx ? gy + side + 0.5 : gy + dy * s + 0.5; if (grass(Math.floor(tx), Math.floor(ty))) add('tree_a', tx, ty, 10, { sp: AV[(s / 3) % AV.length | 0], k: 1.15 }); }
+  }
+  // the parterres: box-edged beds of roses, lavender and hydrangea in the four corners of the garden round the maze
+  const SP = ['rose', 'lavender', 'hydrangea', 'rose'];
+  for (const [qx, qy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const bx = qx < 0 ? R0x - 9 : R1x + 1, by = qy < 0 ? R0y - 7 : R1y + 1;
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 4; i++) { const tx = bx + 1 + i * 2, ty = by + 1 + j * 2; if (grass(tx, ty) && grass(tx + 1, ty)) add('shrub_a', tx + 0.5, ty + 0.5, 0, { sp: SP[(i + j) % 4], k: 1 }); }
+    for (const [ex, ey] of [[bx, by], [bx + 8, by], [bx, by + 6], [bx + 8, by + 6]]) if (grass(ex, ey)) add('shrub_a', ex + 0.5, ey + 0.5, 0, { sp: 'topBall', k: 1 });
+  }
+  // topiary cones along the walk, lamps at its corners, urns (planters) at the gates, benches facing the maze
+  for (let t = 4; t < S + 2 * ring - 4; t += 4) for (const [tx, ty] of [[R0x + t, R0y + 2.6], [R0x + t, R1y - 2.6], [R0x + 2.6, R0y + t], [R1x - 2.6, R0y + t]]) if (grass(Math.floor(tx), Math.floor(ty))) add('shrub_a', tx + 0.5, ty + 0.5, 0, { sp: 'topCone', k: 1 });
+  for (const [tx, ty] of [[R0x + 1, R0y + 1], [R1x - 1, R0y + 1], [R0x + 1, R1y - 1], [R1x - 1, R1y - 1]]) add('lamp', tx, ty);
+  for (const [tx, ty] of [[CX - 1.6, Y0 - 1.5], [CX + 2.6, Y0 - 1.5], [CX - 1.6, Y0 + S + 1.5], [CX + 2.6, Y0 + S + 1.5], [X0 - 1.5, CY - 1.6], [X0 - 1.5, CY + 2.6], [X0 + S + 1.5, CY - 1.6], [X0 + S + 1.5, CY + 2.6]]) add('planter_fl', tx, ty, 6);
+  for (const [tx, ty] of [[CX - 6, R1y - 0.6], [CX + 7, R1y - 0.6], [CX - 6, R0y + 0.6], [CX + 7, R0y + 0.6]]) add('pbench', tx, ty, 0, { a: ty > CY ? 0 : Math.PI });
+  // big shade trees out on the lawns between the avenues
+  for (const [qx, qy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) for (let j = 0; j < 3; j++) {
+    const tx = CX + qx * (S / 2 + ring + 7 + hash2(qx + 3, j, 2302) * 8), ty = CY + qy * (S / 2 + ring + 2 + hash2(qy + 5, j, 2303) * 8);
+    let ok = true; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!grass(Math.floor(tx) + dx, Math.floor(ty) + dy)) ok = false;
+    if (ok) add('tree_a', tx, ty, 12, { sp: j === 1 ? 'redMaple' : 'oak', k: 1.4 + hash2(qx, qy + j, 2304) * 0.2 });
+  }
+  (m.mazes ||= []).push({ x: X0 * TILE, y: Y0 * TILE, w: S * TILE, h: S * TILE });
+  (m.landmarks ||= []).push({ name: 'Bluffs Maze Garden', type: 'maze', x: X0 * TILE, y: Y0 * TILE, w: S * TILE, h: S * TILE });
+  m.natureSites.push({ kind: 'maze', name: 'Bluffs Maze Garden', x: Math.round((CX + 0.5) * TILE), y: Math.round((CY + 0.5) * TILE), gate: { x: Math.round((CX + 0.5) * TILE), y: Math.round((Y0 + S + 0.5) * TILE) }, size: S });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------

@@ -2604,3 +2604,19 @@ The biggest of the Islets, west of the city, has an old wooden ship run aground 
   - a castaway's tent by a dead campfire;
   - gulls and crabs.
 - On the map as Wreck Island, and in the debug menu (⚓ Wreck Island). Reach it by boat.
+
+## 2026-10-07 · The Bluffs Maze Garden (The Bluffs)
+
+The open lawn in the middle of The Bluffs held a random scatter of trees and flowers. It is now a formal garden round a hedge maze (`shared/naturesites.js` `bluffsMaze`).
+- **The maze:** 11 x 11 cells, with paths and walls each a tile wide, carved by a depth-first walk from a fixed seed, so it is the same for everyone.
+  - It is a perfect maze, so there is exactly one way to the middle, and a gate in the middle of each side.
+  - The hedges are solid (wall tiles) and shoulder high, so you see heads over them. They are clipped yew drawn as runs of a new hedge-box sprite (the gardens kit's `hedgeBox`; new prop `hedgebox` takes any footprint and height). The outer walls flower white.
+  - The paths are gravel, and the ground under the hedges is lawn (`m.mazes`; `groundbake.js`).
+  - NPCs can wander in. They never walk through a hedge.
+- **The heart:** a white gazebo in a clearing, with two benches.
+- **Round it:**
+  - a paved walk with lamps at its corners, flower urns at the gates and benches facing the maze;
+  - avenues from the gates out to the streets, lined with cypress, cherry and magnolia;
+  - rose, lavender and hydrangea parterres with topiary balls in the four corners;
+  - big oaks and red maples out on the lawns.
+- On the map as the Bluffs Maze Garden, and in the debug menu (🌿 Bluffs Maze Garden). Homes, POIs and buildings unchanged.

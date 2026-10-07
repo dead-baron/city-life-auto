@@ -193,6 +193,7 @@ function tileFacts(C) {
   const fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
   const parks = M.parkGrounds || [];        // designed town parks (Lakeview Park): lawn and gravel paths whatever the district, the plaza paved
   const pools = M.pools || [];              // swimming pools (the Stadium Lido): tiled pool water, a pale concrete deck
+  const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, ty = TY0 + j, k = j * TN + i;
     if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
@@ -216,7 +217,8 @@ function tileFacts(C) {
       else if (st === 'desert') m = M_.DRYGRASS;
       else m = bio === 2 ? M_.FOREST : bio === 4 ? (b.tz[k] === Z.EAST ? M_.DRYGRASS : M_.ALPINE) : bio === 3 ? M_.DRYGRASS : bio === 5 ? M_.MEADOW : M_.MEADOW;
     } else if (t === T.DIRT) {
-      if (inRects(quarries, X, Y)) m = M_.QUARRY;
+      if (mazes.length && inRects(mazes, X, Y)) m = M_.PATH;   // (a maze's paths: gravel)
+      else if (inRects(quarries, X, Y)) m = M_.QUARRY;
       else if (inRects(paint, X, Y, 'canyon')) m = M_.REDROCK;
       else if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (b.tres[k] & 2) m = M_.GRAVEL;
@@ -256,6 +258,7 @@ function tileFacts(C) {
       else m = M_.LOT;
     } else if (t === T.ROAD) m = D.road === 'asphalt_worn' ? M_.ROADOLD : M_.ROAD;
     else if (t === T.BUILDING) m = M_.FOUND;
+    else if (t === T.WALL && mazes.length && inRects(mazes, X, Y)) m = M_.LAWN;
     else if (t === T.WALL) m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (b.tres[k] & 32) ? M_.SCREE : M_.WALL;   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
     else if (t === T.FLOOR) { const bi = b.tbld[k], bd = bi >= 0 ? M.buildings[bi] : null; m = bd && /house|apt|home|shack|mansion|farm/.test(bd.kind) ? M_.FLOORW : M_.FLOOR; }
     else if (t === T.COUNTER) m = M_.COUNTER;
