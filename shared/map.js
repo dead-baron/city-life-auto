@@ -24,7 +24,7 @@ import {
   Z, BAND, PARK, CRESCENT, SEEDS,
   clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, slipRamp, acrossWater,
 } from './citylayout.js';
-import { metroRoads } from './metro.js';
+import { metroRoads, HERO } from './metro.js';
 import { buildLevels } from './levels.js';
 import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS, SCENE_SPOTS, SCENE_ISLANDS } from './islands.js';
 import { SCENE_MASKS } from './interior-art.js';
@@ -538,6 +538,7 @@ export function generateCity(seed = 1337) {
   buildWilds(m, rand);
   buildStreetProps(m);
   buildPowerLines(m, { addProp }, (tx, ty) => wildAt(m, tx, ty));
+  buildHeroCorner(m);
   buildBanking(m);
   buildGangHQs(m);
   buildTackleShops(m);
@@ -1518,7 +1519,7 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
   let cands = [];
   if (seaSide) for (const row of rows) {
     if (row.face !== 'S' || !nearSea(row) || m.zoneAt(row.x * TILE, row.y * TILE) !== Z.CITY) continue;
-    for (let k = 0; k < row.iv.length; k++) if (fits(row, row.iv[k])) cands.push([row, k]);
+    for (let k = 0; k < row.iv.length; k++) if (fits(row, row.iv[k]) && !nearHero(row, row.iv[k])) cands.push([row, k]);
   }
   // a building drawn with its front at the bottom (hospitals, stations, shops...) only goes on the
   // north side of a street, facing south, so it's never upside-down; others may face either way
@@ -1531,7 +1532,7 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
       if (pass === 2 && m.zoneAt(row.x * TILE, row.y * TILE) !== m.zoneAt(...seedOf(sp.d))) continue;
       if (pass === 1 && upright) continue;
       if (row.face !== 'S' && pass !== 1 && pass !== 4) continue;
-      for (let k = 0; k < row.iv.length; k++) if (fits(row, row.iv[k])) cands.push([row, k]);
+      for (let k = 0; k < row.iv.length; k++) if (fits(row, row.iv[k]) && !nearHero(row, row.iv[k])) cands.push([row, k]);
     }
     if (cands.length) break;
   }
@@ -1551,6 +1552,9 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
   row.iv = row.iv.filter((v) => v[1] - v[0] > 0);
   return true;
 }
+// the rows round the hero corner are rebuilt by buildHeroCorner: no special business (the only dealership, a
+// hospital...) is put where it would be cleared away
+const nearHero = (row, iv) => row.y < HERO.y + 20 && row.y + row.h > HERO.y - 20 && iv[0] < HERO.x + 30 && iv[1] > HERO.x - 30;
 function seedOf(d) {
   const s = SEEDS.filter((q) => q[0] === d);
   if (!s.length) return [800 * TILE, 500 * TILE];
@@ -3879,6 +3883,137 @@ export function signalArm(m, n, id) {
   return { x: px, y: py, hx: tip.x, hy: tip.y, heads, a: Math.atan2(ry, rx), open: false };
 }
 
+// ---- the hero corner (docs/art-v2/targets R1-A..E, AT1-A..C, AT2) ------------------------------------------------
+// The crossroads the art targets show, built for real in Midtown where Holly Street crosses Madison Street (metro.js
+// HERO lays the crossroads): on the north-west corner a diner with the coffee-cup neon (it sells coffee: a walk-in),
+// on the north-east the corner mart with its striped awning (a convenience store: the clerk, the till, a robbery) and
+// the brick walk-up with its fire escape and water tank beside it, the low flat roofs of the south side, and the
+// street furniture where the targets have it. Whatever the general fill put there is cleared first; the rest of each
+// row is filled back with plain buildings. Buildings carry `art`: the look the renderer gives them (statics.js
+// specOf), so they are the targets' buildings and not the district's dice. Tiles from each block's corner at the
+// crossroads; props in world px from the crossroads' centre.
+export const HERO_CORNER = { district: 'Midtown', diner: 'Starlite Diner', mart: 'Corner Mart', walkup: 'Madison Walk-up' };
+const HERO_BLDS = [
+  // corner: NW | NE | SW | SE; x, y: from the block's corner (tiles, + away from the crossroads); w, h; kind; poi
+  { c: 'NW', x: 0, y: 2, w: 8, h: 8, kind: 'diner', name: HERO_CORNER.diner, poi: 'coffee', door: 2,
+    art: { spec: { floors: 1, style: 'diner', trim: [255, 70, 90], neon: { icon: 'cup', col: [70, 210, 255], x: 150, y: -4 }, parapet: 10, roofMat: 'membrane', lip: 8, rimW: 4 },
+      shop: { kind: 'diner', door: 'right', open: true, people: 4, awning: null, band: null, sign: null },
+      kit: [['ac', 44, 40], ['ac', 92, 40], ['acs', 150, 44], ['vent', 30, 96], ['vent', 210, 92], ['hatch', 180, 120], ['plant', 60, 150], ['ac', 120, 170], ['palm', 214, 168]] } },
+  { c: 'NE', x: 0, y: 1, w: 8, h: 6, kind: 'conv', name: HERO_CORNER.mart, poi: 'convenience', door: 1,
+    art: { spec: { floors: 1, style: 'concrete', wallColor: '#d8d2c4', parapet: 26, roofMat: 'membrane', lip: 10, rimW: 4 },
+      shop: { kind: 'mart', door: 'left', open: true, people: 2, awning: ['#2f8a72', '#f0ece4'], band: ['#d24a4a', '#f0ece4'], clerkShirt: [44, 140, 120], sign: null, grille: false, openSign: { col: [255, 60, 70] } },
+      kit: [['plant', 40, 30], ['plant', 120, 26], ['ac', 190, 44], ['acs', 60, 90], ['vent', 140, 96], ['palm', 214, 120], ['plant', 100, 150]] } },
+  { c: 'NE', x: 8, y: 1, w: 10, h: 8, kind: 'apt2', name: HERO_CORNER.walkup,
+    art: { spec: { floors: 4, style: 'brick', wallColor: '#b0563e', parapet: 8, fireEscape: [168, 96], balconies: false, grime: 0.12, graffiti: 0, ivy: 0, roofMat: 'tar', lip: 10, rimW: 4,
+      doors: [{ x: 48, w: 22, kind: 'door', open: false }], windows: [14, 96, 136, 212, 252, 284], porchLight: true, blank: false },
+      noShop: true, kit: [['tank', 254, 48], ['acs', 60, 40], ['acs', 100, 40], ['vent', 150, 60], ['plant', 210, 120], ['hatch', 40, 150], ['chim', 290, 30]] } },
+  { c: 'NE', x: 18, y: 1, w: 6, h: 8, kind: 'apt1', name: 'Madison Row',
+    art: { spec: { floors: 3, style: 'brickDark', parapet: 8, roofMat: 'tar', lip: 10, rimW: 4, doors: [{ x: 70, w: 20, kind: 'door' }], windows: [16, 44, 120, 150], porchLight: true, blank: false },
+      noShop: true, kit: [['acs', 60, 44], ['vent', 140, 60], ['plant', 100, 150]] } },
+  { c: 'SW', x: 2, y: 2, w: 5, h: 6, kind: 'roof', roof: 'membrane', back: true,
+    art: { spec: { floors: 1, roofMat: 'membrane', lip: 8, rimW: 4 }, kit: [['acs', 40, 40], ['vent', 110, 50], ['acs', 60, 120], ['plant', 120, 150]] } },
+  { c: 'SE', x: 2, y: 1, w: 8, h: 7, kind: 'roof', roof: 'membrane', back: true,
+    art: { spec: { floors: 1, roofMat: 'membrane', lip: 8, rimW: 4 }, kit: [['plant', 44, 30], ['ac', 100, 60], ['acs', 160, 50], ['dish', 200, 120], ['sky', 60, 150], ['vent', 210, 60], ['palm', 230, 180], ['acs', 140, 170]] } },
+  { c: 'SE', x: 11, y: 2, w: 6, h: 6, kind: 'roof', roof: 'tar', back: true,
+    art: { spec: { floors: 1, roofMat: 'tar', lip: 8, rimW: 4 }, kit: [['ac', 60, 50], ['dish', 140, 120], ['vent', 40, 140], ['plant', 150, 40]] } },
+];
+// [prop, dx, dy, solid radius, extra]: the targets' street furniture round the crossroads (black iron lamps, round
+// street trees in grates, the big oak and the palm, planters, benches, hydrants, bins, the hot-dog cart, the hedge)
+const IRON = { style: 'iron' };
+const HERO_PROPS = [
+  ['lamp', -150, -248, 0, IRON], ['lamp', 132, -196, 0, IRON], ['lamp', 118, -520, 0, IRON], ['lamp', -150, 244, 0, IRON], ['lamp', 150, 248, 0, IRON],
+  ['tree_a', -128, -470, 10, { sp: 'street', k: 1.25 }], ['tree_a', -360, -132, 10, { sp: 'maple', k: 1.2 }], ['tree_b', 770, -150, 10, { sp: 'oak', k: 1.35 }],
+  ['tree_a', -232, 170, 10, { sp: 'street', k: 1.2 }], ['palm_a', 772, 150, 10, { sp: 'coconut', k: 1.3 }],
+  ['planter_g', -420, -240, 12], ['planter_g', -300, -240, 12], ['bench_m', -360, -226, 0], ['trashcan', -212, -150, 7],
+  ['potted', 168, -300, 10], ['hydrant', 168, -130, 6], ['trashcan', 192, -118, 7], ['hydrant', 292, -118, 6],
+  ['news_b', 312, -224, 0], ['bench_m', 356, -226, 0], ['vend_cola', 404, -226, 9], ['bags', 548, -226, 0], ['foodcart', 380, -112, 14],
+  ['shrub_a', 600, -110, 0], ['shrub_b', 650, -110, 0], ['shrub_a', 700, -110, 0], ['bollard', -170, 128, 5], ['bollard', 214, 132, 5],
+  ['news_a', -260, -228, 0], ['trashcan', 176, 168, 7],
+];
+function buildHeroCorner(m) {
+  const X0 = HERO.x * TILE, Y0 = HERO.y * TILE;
+  const node = m.nodes.find((n) => n && n.lvl === 0 && n.edges.length === 4 && Math.hypot(n.x - X0, n.y - Y0) < 64);
+  if (!node) return;
+  node.hero = true;
+  const cx = Math.floor(node.x / TILE), cy = Math.floor(node.y / TILE);
+  const blockAt = (tx, ty) => m.blocks.find((b) => tx >= b.x && tx < b.x + b.w && ty >= b.y && ty < b.y + b.h);
+  const find = (sx, sy) => { for (let k = 4; k < 16; k++) { const b = blockAt(cx + sx * k, cy + sy * k); if (b) return b; } return null; };
+  const B = { NW: find(-1, -1), NE: find(1, -1), SW: find(-1, 1), SE: find(1, 1) };
+  if (!B.NW || !B.NE || !B.SW || !B.SE) return;
+  // each block's corner at the crossroads, and which way is away from it (sx, sy)
+  const C = {
+    NW: { x: B.NW.x + B.NW.w, y: B.NW.y + B.NW.h, sx: -1, sy: -1 }, NE: { x: B.NE.x, y: B.NE.y + B.NE.h, sx: 1, sy: -1 },
+    SW: { x: B.SW.x + B.SW.w, y: B.SW.y, sx: -1, sy: 1 }, SE: { x: B.SE.x, y: B.SE.y, sx: 1, sy: 1 },
+  };
+  const rect = (d) => { const c = C[d.c]; return { x: c.sx > 0 ? c.x + d.x : c.x - d.x - d.w, y: c.sy > 0 ? c.y + d.y : c.y - d.y - d.h, w: d.w, h: d.h }; };
+  // clear what the fill put round each corner (the whole depth of the block, as far along as the hero buildings
+  // reach, and the whole of anything that pokes in), then fill the rest of those rows back with plain buildings
+  const ground = DISTRICTS[m.districtAt(node.x, node.y).id].ground;
+  for (const k of ['NW', 'NE', 'SW', 'SE']) {
+    const b = B[k], c = C[k], mine = HERO_BLDS.filter((d) => d.c === k).map(rect);
+    const x0 = Math.min(...mine.map((r) => r.x)), x1 = Math.max(...mine.map((r) => r.x + r.w));
+    const zx0 = c.sx > 0 ? c.x : x0, zx1 = c.sx > 0 ? x1 : c.x;
+    let ex0 = zx0, ex1 = zx1;
+    for (let grew = true; grew;) {   // (until nothing more pokes into the stretch)
+      grew = false;
+      for (const o of m.buildings) if (!o.gone && o.tx < ex1 && o.tx + o.tw > ex0 && o.ty < b.y + b.h && o.ty + o.th > b.y && (o.tx < ex0 || o.tx + o.tw > ex1)) { ex0 = Math.max(b.x, Math.min(ex0, o.tx)); ex1 = Math.min(b.x + b.w, Math.max(ex1, o.tx + o.tw)); grew = true; }
+      if (ex0 <= b.x && ex1 >= b.x + b.w) break;
+    }
+    clearArea(m, ex0, b.y, ex1 - ex0, b.h);
+    m.fill(ex0, b.y, ex1 - ex0, b.h, ground === T.WATER ? T.PLAZA : ground);
+    // the leftovers of the cleared stretch: plain buildings (fronts on the street side of the north blocks)
+    const north = c.sy < 0, fy = north ? b.y : b.y, fh = b.h;
+    for (const [a0, a1] of [[ex0, zx0], [zx1, ex1]]) {
+      let x = a0;
+      while (a1 - x >= 3) {
+        let w = a1 - x <= 12 ? a1 - x : 6 + (hash2(x, fy, 811) * 5 | 0);
+        if (a1 - x - w < 3) w = a1 - x;
+        roofOne(m, { d: b.d }, x, fy + (north ? 0 : 1), w, fh - (north ? 1 : 1), 'tar', Math.floor(hash2(x, fy, 812) * 1e9));
+        if (!north) m.buildings[m.buildings.length - 1].back = true;
+        x += w;
+      }
+    }
+  }
+  // the hero buildings
+  for (const d of HERO_BLDS) {
+    const r = rect(d), bid = m.buildings.length, c = C[d.c];
+    const b = { id: bid, prefab: -1, tx: r.x, ty: r.y, tw: r.w, th: r.h, kind: d.kind, name: d.name || 'Building', business: null, signs: [], hero: true, art: d.art };
+    if (d.back) b.back = true;
+    if (d.kind === 'roof') { m.roofs.push({ tx: r.x, ty: r.y, tw: r.w, th: r.h, kind: d.roof || 'tar', seed: bid * 7919, d: m.dist[r.y * MAP_W + r.x], b: bid }); b.roof = m.roofs.length - 1; }
+    else { b.prefab = m.prefabs.length; m.prefabs.push({ key: d.kind, tx: r.x, ty: r.y, tw: r.w, th: r.h, rot: 0, d: m.dist[r.y * MAP_W + r.x], solid: [0, 0, r.w, r.h], hero: true }); }
+    m.buildings.push(b);
+    for (let ty = r.y; ty < r.y + r.h; ty++) for (let tx = r.x; tx < r.x + r.w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * MAP_W + tx] = bid; }
+    if (c.sy < 0 && d.kind !== 'roof') {
+      // the front door (the tile under the doorway) and the business there
+      const dtx = d.door !== undefined ? (c.sx < 0 ? r.x + r.w - 1 - d.door : r.x + d.door) : r.x + 2;
+      b.door = { tx: dtx, ty: r.y + r.h };
+      if (d.poi) {
+        const px = (dtx + 0.5) * TILE, py = (r.y + r.h + 0.7) * TILE;
+        m.pois.push({ id: m.pois.length, kind: d.poi, label: d.name, x: px, y: py, r: 48, b: bid, fixed: true });
+        b.signs.push({ x: px, y: (r.y + r.h - 0.6) * TILE, text: d.name });
+      }
+    }
+  }
+  // the street furniture: the fill's own is cleared from the pavements round the crossroads first
+  const fx0 = cx - 26, fy0 = cy - 20;
+  dropProps(m, (p) => p.x > fx0 * TILE && p.x < (cx + 27) * TILE && p.y > fy0 * TILE && p.y < (cy + 20) * TILE && m.bld[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)] < 0);
+  for (const [t, dx, dy, sr, ex] of HERO_PROPS) addProp(m, t, node.x + dx, node.y + dy, sr, ex || null);
+}
+// remove the props that match (and their solid bodies)
+function dropProps(m, drop) {
+  const keep = [], remap = new Map(), gone = new Set();
+  m.props.forEach((p, i) => { if (drop(p)) { gone.add(p); return; } remap.set(i, keep.length); keep.push(p); });
+  if (!gone.size) return;
+  m.props = keep;
+  m.lamps = m.lamps.filter((l) => !gone.has(l));
+  m.propSolid = new Map();
+  for (const [k, arr] of m.solidProps) {
+    const kept = arr.filter((e) => (e.pi < 0 ? true : remap.has(e.pi)));
+    for (const e of kept) if (e.pi >= 0) { e.pi = remap.get(e.pi); m.propSolid.set(e.pi, e); }
+    if (kept.length) m.solidProps.set(k, kept); else m.solidProps.delete(k);
+  }
+}
+
 function buildSignals(m) {
   m.signals = [];
   for (const n of m.nodes) {
@@ -3888,7 +4023,7 @@ function buildSignals(m) {
     const st = DISTRICTS[m.districtAt(n.x, n.y).id].style;
     const small = n.edges.every((id) => SPAN_WIRE_ROADS.has(m.edges[id].kind));
     let corners = null;
-    if (small && SPAN_WIRE_STYLES.has(st)) {
+    if (small && SPAN_WIRE_STYLES.has(st) && !n.hero) {   // (the hero corner has its signals on mast arms, as the art targets)
       // corners: between each pair of neighbouring streets, out past the junction box (and across the
       // pavement: a wide one puts the walls further back)
       const dirs = n.edges.map((id) => n.dirs[id]).sort((a, b) => a - b);

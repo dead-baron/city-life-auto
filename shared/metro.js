@@ -53,6 +53,11 @@ const THROUGH = [
   { pts: [[748, 556.5], [748, 650]], name: 'Park Lane' },
   { pts: [[688.5, 580], [774.5, 580]], name: 'Park Street' },
 ];
+// The hero corner: the crossroads of two streets in Midtown that the art targets show (docs/art-v2/targets R1, AT1,
+// AT2: the diner with the coffee-cup neon, the corner mart with its striped awning, the brick walk-up with the fire
+// escapes). The plan lays a crossroads here even where its own draws would run past (map.js buildHeroCorner dresses
+// the four corners). Tiles: x on a tile edge (a street is 6 wide), y the line Madison Street runs along.
+export const HERO = { x: 724, y: 519.5 };
 // Broadway: the diagonal boulevard through the core, from the park corner up to the Civic Center. It
 // bends at the avenue crossings it meets and goes straight through them (a big square where three
 // roads cross) - a diagonal that missed them by a few metres would leave three sets of lights round a
@@ -206,7 +211,8 @@ export function metroRoads(ctx) {
     for (let y = cell.y0, k = 0; k < 12; k++) {
       const p = P(midX, y + 16) || P0;
       const lo = p.depth[0] * 0.72;
-      const want = y + Math.round(lerp(p.depth[0], p.depth[1], hash(midX, y, cell.seed + 11)));
+      let want = y + Math.round(lerp(p.depth[0], p.depth[1], hash(midX, y, cell.seed + 11)));
+      if (HERO.x > cell.x0 && HERO.x < cell.x1 && HERO.y > y && HERO.y < cell.y1 && Math.abs(want - HERO.y) <= 12) want = HERO.y;   // (the hero corner's street)
       if (cell.y1 - want < lo) break;
       const ny = settle(want, sides, bwSide, (v) => v - y >= lo && cell.y1 - v >= lo && bwSide.every((b) => Math.abs(b - v) >= BWSEP) && clearOf(sides, v));
       if (ny === null) break;
@@ -248,15 +254,18 @@ export function metroRoads(ctx) {
       // the streets that reach the row's north side from above (the row above, or across the avenue)
       const prev = endsOn(lns[0]).filter((e) => e.v > cell.x0 + 0.5 && e.v < cell.x1 - 0.5);
       const xsRow = [];
+      let hero = HERO.x > cell.x0 && HERO.x < cell.x1 && (Math.abs(ya - HERO.y) < 0.6 || Math.abs(yb - HERO.y) < 0.6);
       for (let x = cell.x0, n = 0; n < 12; n++) {
         const p = P(x + 24, ym) || P0;
         const lo = p.len[0] * 0.6, hi = p.len[0] * 0.65;
         const want = x + Math.round(lerp(p.len[0], p.len[1], hash(x, ya, cell.seed + 23)));
         const fits = (v) => v - x >= lo && cell.x1 - v >= hi && bwRow.every((b) => Math.abs(b - v) >= BWSEP) && clearOf(lns, v);
         let nx = null;
+        // the hero corner's north-south street, before the plan's own next one would crowd it or run past it
+        if (hero && HERO.x > x && want >= HERO.x - MINSEP && fits(HERO.x)) { nx = HERO.x; hero = false; }
         // carry a street from above straight on (now and then with a real jog) when one is about here
         const cont = prev.find((q) => q.v > x + lo && Math.abs(q.v - want) < p.len[0] * 0.45);
-        if (cont && hash(cont.v, ya, cell.seed + 29) < p.through) {
+        if (nx === null && cont && hash(cont.v, ya, cell.seed + 29) < p.through) {
           const tries = [cont.v];
           if (hash(cont.v, ya, cell.seed + 31) < p.jog) {
             const s = hash(cont.v, ya, cell.seed + 37) < 0.5 ? -1 : 1, j = MINSEP + Math.floor(hash(cont.v, ya, cell.seed + 41) * 7);

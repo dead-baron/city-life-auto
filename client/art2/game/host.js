@@ -573,8 +573,9 @@ export class World2 {
       const sx = sky.sunDir.x, sy = sky.sunDir.y, l = Math.hypot(sx, sy) || 1;
       const elev = Math.atan(0.62 / Math.max(0.3, sky.shadowLen));
       const c = Math.cos(elev), s = Math.sin(elev);
-      const d = p.sunDir || (p.sunDir = [0, 0, 1]);
+      const d = p.sunDir || (p.sunDir = [0, 0, 1]), pz = d[2] / (Math.hypot(d[0], d[1], d[2]) || 1);
       d[0] = -sx / l * c; d[1] = -sy / l * c; d[2] = s;
+      if (this.L.sunKeep) this.L.sunKeep(p, pz, s);
     }
     p.lampsOn = Math.max(p.lampsOn || 0, sky.night);
     p.rain = Math.max(p.rain || 0, rk);

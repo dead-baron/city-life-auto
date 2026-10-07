@@ -660,7 +660,7 @@ function specOf(c, b, A, s, D) {
     if (o.openSign) sh.openSign = { col: [255, 60, 70] };
     spec.shop = sh;
     const dx = typeof sh.door === 'number' ? sh.door + (sh.doorW || 22) / 2 : sh.door === 'left' ? 21 : w - 21;
-    lights.push([dx, 16, 26, 120, [1, 0.8, 0.52], 1.2, 'window']);
+    shopSpill(lights, w, dx);
     if (sh.sign) lights.push([w / 2, 10, 70, 90, L01(bg).map((v) => 0.4 + v * 0.6), 0.5, 'sign']);
   };
   const plainDoors = (o = {}) => {
@@ -913,11 +913,24 @@ function specOf(c, b, A, s, D) {
     Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', x: Math.max(4, Math.round(w / 2 - 26)), v: 66, sx: 2, bg: '#2a3a6a', fg: [250, 236, 200], lit: true }] });
     lights.push([w / 2, 6, 40, 110, [1, 0.88, 0.7], 1.1, 'window']);
   }
+  // a building whose look the map sets (the hero corner, map.js buildHeroCorner): its spec, shopfront and roof kit
+  const ART = b.art || null;
+  if (ART) {
+    const had = !!spec.shop;
+    if (ART.spec) Object.assign(spec, ART.spec);
+    if (ART.noShop) delete spec.shop;
+    else if (ART.shop) {
+      spec.shop = { ...(spec.shop || {}), ...ART.shop };
+      if (ART.shop.sign === null) delete spec.shop.sign;
+      if (!had) shopSpill(lights, w, spec.shop.door === 'left' ? 21 : w - 21);
+    }
+    if (ART.lights) lights.push(...ART.lights);
+  }
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
-    up = upperOf(A, D, rnd, spec, w, d);
-    const K = kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);
+    up = ART ? null : upperOf(A, D, rnd, spec, w, d);
+    const K = ART && ART.kit ? { kit: ART.kit.filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
     // the lit kit lights its roof: festoons, neon signs, skylights
@@ -1108,7 +1121,7 @@ function vdim(m, a) {
     case 'hydrant': return [10, 10, 16]; case 'bin': case 'wireBin': case 'wheelieBin': return [12, 12, 20]; case 'newsBox': return [10, 9, 18]; case 'bench': return [32, 10, 14];
     case 'bollard': return [6, 6, a[0] || 12]; case 'acUnit': return [18, 14, 12]; case 'planter': return [24, 14, 22]; case 'pottedPalm': return [22, 22, 40]; case 'umbrella': return [30, 30, 30];
     case 'dumpster': return [32, 18, 20]; case 'crate': return [14, 14, 13]; case 'hotdogCart': return [40, 24, 56]; case 'armLamp': return [a[0] + 12, 10, 102]; case 'streetLamp': return [14, 14, 94];
-    case 'lampPost': return a[0] === 'cast' ? [12, 12, 84] : [30, 12, 106]; case 'bannerLamp': return [22, 12, 90]; case 'twinLamp': return [46, 12, 98]; case 'wallLamp': return [8, 12, (a[1] || 46) + 4];
+    case 'lampPost': return a[0] === 'cast' || a[0] === 'iron' ? [12, 12, 84] : [30, 12, 106]; case 'bannerLamp': return [22, 12, 90]; case 'twinLamp': return [46, 12, 98]; case 'wallLamp': return [8, 12, (a[1] || 46) + 4];
     case 'busShelter': return [a[0] || 64, 22, 46]; case 'phoneBooth': return [20, 20, 58]; case 'atmWall': return [36, 12, 52]; case 'vending': return [24, 16, 46]; case 'mailbox': return [12, 8, 20];
     case 'tires': return [18, 18, 16]; case 'trashBags': return [30, 24, 16]; case 'pallets': return [28, 24, 6 + 6 * (a[1] || 1)]; case 'oilDrum': return [12, 12, 18]; case 'cableSpool': return [24, 18, 26];
     case 'bikeRack': return [40, 10, 14]; case 'cone': return [10, 10, 16]; case 'planterBox': return [a[0] || 34, a[1] || 34, 26]; case 'fountain': return [(a[0] || 30) * 2 + 2, (a[0] || 30) * 2 + 2, 56];
@@ -1291,6 +1304,7 @@ function fitem(key, sp, seed, x, y, k = 1, extra = null, bare = false) {
 // the species for a planted prop by where it stands: biome (terrain class), district style and zone
 const WILDS = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
 function plantFor(c, p) {
+  if (p.sp) return [p.sp, p.k ?? 1.3];   // (the species set by the map: the hero corner's trees)
   const D = c.dist(p.x, p.y), st = D.style, bio = c.biome(p.x, p.y), u = hh(p.x, p.y, 41), u2 = hh(p.y, p.x, 43), t = p.t;
   const di = c.di(p.x, p.y), tile = c.at(p.x, p.y), wild = WILDS.has(st);
   // the terrain classes only mean something out of town: in the city the district decides
@@ -1350,8 +1364,14 @@ const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'ro
 // ================================================================================================
 // props
 // ================================================================================================
-const LAMP_LIGHT = { cobra: [1, 0.93, 0.8], green: [1, 0.86, 0.62], sodium: [1, 0.7, 0.38], cast: [1, 0.8, 0.52], banner: [1, 0.84, 0.58], twin: [1, 0.9, 0.72] };
+// a lit shopfront's light on the pavement: from the door, and on a wide front from along its windows too
+function shopSpill(lights, w, dx) {
+  if (w < 200) { lights.push([dx, 16, 26, 150, [1, 0.8, 0.52], 1.5, 'window']); return; }
+  for (const x of [w * 0.28, w * 0.72]) lights.push([x, 18, 26, 160, [1, 0.8, 0.52], 1.4, 'window']);
+}
+const LAMP_LIGHT = { cobra: [1, 0.93, 0.8], green: [1, 0.86, 0.62], sodium: [1, 0.7, 0.38], cast: [1, 0.8, 0.52], iron: [1, 0.62, 0.3], banner: [1, 0.84, 0.58], twin: [1, 0.9, 0.72] };
 function lampStyle(c, p) {
+  if (p.style) return p.style;   // (set by the map: the hero corner's black iron lamps)
   const st = c.dist(p.x, p.y).style;
   if (st === 'oldtown' || st === 'civic' || st === 'park' || st === 'luxury') return 'cast';
   if (st === 'towers') return 'banner';
@@ -1374,10 +1394,10 @@ function propItems(c, p, pi, I) {
     case 'lamp': case 'plamp': {
       if (p.wall) { V(`wl:${qa(p.a ?? 0, 8).toFixed(2)}`, 'wallLamp', [1, 46], qa((p.a ?? 0) - PI / 2, 8)); const hx = x + Math.cos(p.a ?? 0) * 8, hy = y + Math.sin(p.a ?? 0) * 8; lightAt(I, hx, hy, 44, 140, [1, 0.85, 0.6], 2.2, 'lamp'); return; }
       const style = lampStyle(c, p), a = t === 'plamp' ? Math.atan2(p.hy - y, p.hx - x) : (p.a ?? -PI / 2);
-      if (style === 'cast' || style === 'banner') {
-        const m = style === 'cast' ? 'lampPost' : 'bannerLamp', args = style === 'cast' ? ['cast', 1] : [1, pick(['#2a3e7a', '#7a2a3a', '#2a5a4a'], hh(x >> 8, y >> 8, 5))];
+      if (style === 'cast' || style === 'iron' || style === 'banner') {
+        const post = style !== 'banner', m = post ? 'lampPost' : 'bannerLamp', args = post ? [style, 1] : [1, pick(['#2a3e7a', '#7a2a3a', '#2a5a4a'], hh(x >> 8, y >> 8, 5))];
         V(`lp:${style}:${args[1]}`, m, args, 0, style === 'banner' ? [6, 6] : null);
-        lightAt(I, x, y + 2, style === 'cast' ? 76 : 84, 200, LAMP_LIGHT[style], 3.4, 'lamp');
+        lightAt(I, x, y + 2, post ? 76 : 84, style === 'iron' ? 175 : 200, LAMP_LIGHT[style], style === 'iron' ? 6 : 3.4, 'lamp');   // (iron: the hero corner's deep amber pools, crisp edged)
         return;
       }
       if (style === 'twin') { const h = qa(a + PI / 2, 8); V(`lp:twin:${h.toFixed(2)}`, 'twinLamp', [1], h); lightAt(I, x, y + 2, 92, 220, LAMP_LIGHT.twin, 3.6, 'lamp'); return; }
@@ -1914,7 +1934,7 @@ function addLots(c, I) {
   const M = c.M;
   M.prefabs.forEach((p, pi) => {
     const pf = PREFABS[p.key];
-    if (!pf) return;
+    if (!pf || p.hero) return;   // (the hero corner dresses itself)
     const x0 = p.tx * TILE, y0 = p.ty * TILE, w = p.tw * TILE, h = p.th * TILE, [sx0, sy0, sx1, sy1] = p.solid || pf.solid, bx0 = x0 + sx0 * TILE, bx1 = x0 + sx1 * TILE, by1 = y0 + sy1 * TILE;   // (a World v2 lot carries its own solid)
     const D = c.dist(x0 + w / 2, y0 + h / 2), rnd = rndOf(pi, 333), front = y0 + h - by1;   // px of lot in front (south) of the building
     const tree = (x, y) => { const pr = plantFor(c, { t: 'tree_a', x, y }); if (pr) flora1(I, pr[0], Math.round(pr[1] * 5) / 5, Math.round(x), Math.round(y)); };

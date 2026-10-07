@@ -12,7 +12,8 @@ export const WORLD_H = MAP_H * TILE;
 // moves homes or the streets under people's feet.
 //   1  the original world (until 2026-10)
 //   2  World v2 stage 1: Metro City's core re-laid (real-sized blocks, pavements by district class)
-export const WORLD_VERSION = 2;
+//   3  the hero corner: Holly Street x Madison Street laid out in Midtown (the art targets' crossroads)
+export const WORLD_VERSION = 3;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);

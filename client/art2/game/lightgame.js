@@ -105,6 +105,16 @@ export function blendPresets(a, b, t, out = {}) {
   return out;
 }
 const pv = (P, k) => P[k] ?? PRESET_DEFAULTS[k];
+const luma3 = (c) => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+// A sun lower in the sky than its preset's lights the flat ground less (lambert): the preset's brightness on the
+// ground is kept, up to half as much again, so golden hour stays golden with its long shadows instead of sinking
+// into dusk an hour early. p: a blended preset (its own arrays), pz: the sine of the preset's own sun elevation,
+// s: the sky's (the host moves the sun to where the clock puts it).
+export function sunKeep(p, pz, s) {
+  if (!(s < pz) || !p.sunCol) return;
+  const k = Math.min(1.5, pz / Math.max(0.05, s));
+  p.sunCol = p.sunCol.map((v) => v * k);
+}
 
 // ---- GL helpers (shared with engine.js) ----------------------------------------------------------------
 export function glProgram(gl, vs, fs, attribs = ['p'], samplers = null, blocks = null) {
@@ -548,8 +558,9 @@ void main(){
     float nz = vnoiseP(w + vec2(mod(time * 8.0, 8192.0), mod(time * 2.0, 8192.0)), vec2(341.3333, 256.0), ivec2(24, 32)) * 0.55
              + vnoiseP(w + vec2(8192.0) - vec2(mod(time * 12.0, 8192.0), mod(time * 4.0, 8192.0)), vec2(64.0), ivec2(128)) * 0.3
              + vnoiseP(w + vec2(mod(time * 16.0, 8192.0), 0.0), vec2(32.0), ivec2(256)) * 0.15;
-    // a thin veil everywhere, thick drifting wisps between clearer gaps; lights glow in it (wide bloom)
-    float f = clamp(fog * exp(-Z / fogH) * (0.1 + 1.3 * smoothstep(0.25, 0.75, nz)), 0.0, 0.92);
+    // a veil everywhere, thicker in the drifting banks than in the clearer gaps between them (never so clear that
+    // the gaps read as holes); lights glow in it (wide bloom)
+    float f = clamp(fog * exp(-Z / fogH) * (0.5 + 0.55 * smoothstep(0.15, 0.85, nz)), 0.0, 0.86);
     vec3 lit = useBQ > 0.5 ? texture(tBQ, min(gl_FragCoord.xy * 0.25 / quarterTex, maxUVq)).rgb * 1.1 : vec3(0.0);
     c = mix(c, fogCol + lit, f);
   }
@@ -742,8 +753,11 @@ export class LightGame {
     gl.uniform1f(u.fog, fog); gl.uniform1f(u.fogH, pv(P, 'fogH')); gl.uniform1f(u.flash, flash); gl.uniform1f(u.shaftK, shaftK);
     gl.uniform1f(u.useBH, useBH); gl.uniform1f(u.useBQ, useBQ);
     gl.uniform3fv(u.hazeCol, pv(P, 'hazeCol')); gl.uniform3fv(u.lift, pv(P, 'lift')); gl.uniform3fv(u.gain, pv(P, 'gain'));
-    gl.uniform3fv(u.fogCol, pv(P, 'fogCol')); gl.uniform3fv(u.flashCol, pv(P, 'flashCol'));
-    const sc = pv(P, 'sunCol'), sm = Math.max(sc[0], sc[1], sc[2], 1e-3);
+    // the fog is lit by the sky: by day the preset's colour, after dark a dim haze (the lamps' glow in it comes
+    // from the bloom), so a misty night stays a night instead of turning grey
+    const sc = pv(P, 'sunCol'), sm = Math.max(sc[0], sc[1], sc[2], 1e-3), fc = pv(P, 'fogCol'), as = pv(P, 'ambSky');
+    const fk = Math.min(1, (luma3(as) + luma3(sc) * Math.max(0, SD[2]) * 0.5) * 2.4);
+    gl.uniform3f(u.fogCol, fc[0] * fk, fc[1] * fk, fc[2] * fk); gl.uniform3fv(u.flashCol, pv(P, 'flashCol'));
     gl.uniform3f(u.shaftCol, sc[0] / sm * 0.55, sc[1] / sm * 0.55, sc[2] / sm * 0.55);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     if (S.mark) S.mark('final');

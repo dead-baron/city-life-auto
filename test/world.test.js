@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
-import { K } from '../shared/constants.js';
+import { K, TILE } from '../shared/constants.js';
+import { DISTRICTS, HERO_CORNER } from '../shared/map.js';
 import { HIDE_TIME_S } from '../shared/rules.js';
 import * as economy from '../server/systems/economy.js';
 import * as vehicles from '../server/systems/vehicles.js';
@@ -168,4 +169,26 @@ test('nightclubs: shutters down by day, open after dark, a bar inside', async ()
   const { p } = joinPlayer(w, { cash: 100 });
   const menu = economy.buildMenu(w, p, club);
   assert.ok(menu.opts.some((o) => /Cocktail/.test(o.label)), 'cocktails at the bar');
+});
+
+test('the hero corner: Holly St x Madison St in Midtown - a signalled crossroads, the walk-in diner and corner mart, iron lamps', () => {
+  const w = makeWorld(), m = w.map;
+  const J = m.nodes.find((n) => n && n.hero);
+  assert.ok(J, 'the crossroads is laid');
+  assert.equal(J.edges.length, 4, 'four ways');
+  assert.equal(DISTRICTS[m.districtAt(J.x, J.y).id].name, HERO_CORNER.district);
+  assert.ok(J.light, 'signalled');
+  const names = new Set(J.edges.map((id) => m.edges[id].name));
+  assert.equal(names.size, 2, `two streets cross (${[...names]})`);
+  for (const [name, kind, sx] of [[HERO_CORNER.diner, 'coffee', -1], [HERO_CORNER.mart, 'convenience', 1]]) {
+    const b = m.buildings.find((o) => o.name === name && !o.gone);
+    assert.ok(b && b.hero && b.art, `${name} stands`);
+    // on its own corner, north of Madison Street
+    assert.ok(Math.sign((b.tx + b.tw / 2) * TILE - J.x) === sx && (b.ty + b.th) * TILE < J.y, `${name} on its corner`);
+    assert.ok(b.walkIn && b.walkIn.units.some((u) => u.kind === kind), `${name} is a walk-in ${kind}`);
+    assert.ok(m.pois.some((p) => p.kind === kind && p.b === b.id), `${name} trades as ${kind}`);
+  }
+  const lamps = m.props.filter((p) => p.t === 'lamp' && Math.abs(p.x - J.x) < 600 && Math.abs(p.y - J.y) < 600);
+  assert.ok(lamps.length >= 5 && lamps.filter((p) => p.style === 'iron').length >= 5, 'black iron lamps round the corner');
+  assert.ok(m.props.some((p) => p.t === 'foodcart' && Math.hypot(p.x - J.x, p.y - J.y) < 600), 'the hot-dog cart');
 });

@@ -1,0 +1,285 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Hero corner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#cv,#fx{position:absolute;left:0;top:0;width:100%;height:100%;display:block}#fx{pointer-events:none}
+#hud{position:absolute;left:6px;bottom:4px;font:11px/1.35 monospace;color:#e4f0ea;text-shadow:0 1px 2px #000;white-space:pre;pointer-events:none}</style></head><body>
+<!-- The hero corner - Holly Street x Madison Street in Midtown (shared/map.js buildHeroCorner), the real map - staged
+     the way the R1 / AT1 / AT2 concepts show it: the same cars, people, dog and incident, in the game's renderer (the
+     chunks baked as the game's workers bake them, 1 art pixel = 2 world px) under the game's own sky at that clock
+     (the presets blended by the time of day, rain and fog as client/art2/game/host.js does), the game's lights (lamps,
+     windows, signals, head and tail lights, sirens, fire) and the game's rain streaks over the top. Serve the repo root.
+       ?s=golden|noon|rain|night|blue|storm|fog|incident   the scenario (and its concept)
+       &min=minutes  override the clock (minutes after midnight)   &q=0..3 quality (default 3)   &hud=0 hides the line
+       &z=zoom &dx=&dy= camera offset from the scenario's framing (world px)   &empty=1 no actors   &nolights=1 ambient only
+     window.done once drawn. -->
+<canvas id="cv"></canvas><canvas id="fx"></canvas><div id="hud"></div>
+<script type="module">
+import { Art2Engine, PRESETS_GAME } from '../../client/art2/game/engine.js';
+import { blendPresets, sunKeep } from '../../client/art2/game/lightgame.js';
+import { bakeChunk, loadProviders, SpriteCache, CHUNK } from '../../client/art2/game/chunkbake.js';
+import * as A from '../../client/art2/game/actors.js';
+import * as Pd from '../../client/art2/game/peds.js';
+import { randomPerson } from '../../client/art2/people.js';
+import { cone } from '../../client/art2/props-transit.js';
+import { F_NOCAST } from '../../client/art2/gbuf.js';
+import { generateCity } from '../../shared/map.js';
+import { signalFor } from '../../shared/roads.js';
+import { skyAt, lampLevel } from '../../client/render/atmos.js';
+import { Weather } from '../../client/render/weather.js';
+
+const q = new URLSearchParams(location.search);
+const SCN = q.get('s') || 'golden', Q = +(q.get('q') ?? 3);
+const cv = document.getElementById('cv'), fxc = document.getElementById('fx'), hud = document.getElementById('hud');
+const W = innerWidth, H = innerHeight;
+const TAU = Math.PI * 2, S_ = Math.PI / 2, N_ = -Math.PI / 2, W_ = Math.PI;
+
+// ---- the scenarios: the clock and weather as the game would have them, and the concept each one is compared with
+// (frame: camera offset from the junction and zoom, matched to the concept's framing)
+const R1 = [224, -130, 1.25], AT4x3 = [203, -78, 1.25];
+const SCENES = {
+  golden:   { min: 1100, frame: R1, ref: 'R1-A_hero-golden' },
+  noon:     { min: 735, frame: R1, ref: 'R1-B_hero-noon' },
+  rain:     { min: 1335, rain: 1, frame: R1, ref: 'R1-C_hero-rain-night', umbrellas: true },
+  night:    { min: 1335, frame: R1, ref: 'R1-E_hero-night-dry' },
+  blue:     { min: 1213, frame: R1, ref: 'AT1-A_blue-hour' },
+  storm:    { min: 1335, rain: 1, flash: 0.12, frame: AT4x3, ref: 'AT1-B_storm', umbrellas: true },
+  fog:      { min: 388, fog: 0.9, frame: R1, ref: 'AT1-C_fog' },
+  incident: { min: 1345, frame: [124, -42, 1.6], ref: 'AT2_night-incident', incident: true },
+};
+const SC = SCENES[SCN] || SCENES.golden;
+const minutes = +(q.get('min') || SC.min), rainK = SC.rain || 0, fogK = SC.fog || 0;
+
+const eng = Art2Engine.create(cv, { quality: Q, artPx: 2 });
+window.eng = eng;
+eng.resize(W, H, 1);
+const fg = fxc.getContext('2d'); fxc.width = W; fxc.height = H;
+await loadProviders();
+A.setArtPx(eng.ap);
+const M = generateCity(1337);
+const J = M.nodes.find((n) => n.hero);
+const zoom = +(q.get('z') || SC.frame[2]);
+const camX = J.x + SC.frame[0] + +(q.get('dx') || 0), camY = J.y + SC.frame[1] + +(q.get('dy') || 0);
+
+// ---- the chunks round the view, baked as the game's workers bake them --------------------------------------------
+const cache = new SpriteCache(200e6), chunks = [];
+const vw = W / zoom, vh = H / zoom;
+for (let cy = Math.floor((camY - vh / 2 - 320) / CHUNK); cy <= Math.floor((camY + vh / 2 + 320) / CHUNK); cy++)
+  for (let cx = Math.floor((camX - vw / 2 - 320) / CHUNK); cx <= Math.floor((camX + vw / 2 + 320) / CHUNK); cx++) {
+    const r = bakeChunk(M, cx, cy, { quality: Q, seed: 1337, artPx: eng.ap }, cache);
+    const g = r.g; g.under = r.under; g.blds = r.blds;
+    eng.uploadChunk(cx, cy, g);
+    chunks.push({ cx, cy, lights: r.lights || [], live: r.live || null });
+  }
+
+// ---- the sky: host.js _preset at this clock -----------------------------------------------------------------------
+const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+const SKY_KEYS = [[0, 'night'], [320, 'night'], [352, 'dawn'], [395, 'dawn'], [470, 'morning'], [600, 'noon'], [900, 'noon'], [1000, 'afternoon'], [1090, 'golden'], [1150, 'golden'], [1192, 'dusk'], [1240, 'night'], [1440, 'night']];
+const P = PRESETS_GAME, sky = skyAt(0, minutes, rainK);
+sky.fog = { k: fogK, spread: 1 };
+let i = 0;
+while (i < SKY_KEYS.length - 2 && SKY_KEYS[i + 1][0] <= minutes) i++;
+const [ma, a] = SKY_KEYS[i], [mb, b] = SKY_KEYS[i + 1];
+let preset = blendPresets(P[a], P[b], smooth((minutes - ma) / Math.max(1, mb - ma)), {});
+if (rainK > 0.01) preset = blendPresets(preset, sky.night > 0.5 ? P.storm : P.rain, Math.min(1, rainK) * 0.92, {});
+if (fogK > 0.02) preset = blendPresets(preset, P.fog, Math.min(1, fogK) * 0.75, {});
+if (sky.sun > 0.05 && sky.sunDir) {
+  const sx = sky.sunDir.x, sy = sky.sunDir.y, l = Math.hypot(sx, sy) || 1, elev = Math.atan(0.62 / Math.max(0.3, sky.shadowLen));
+  const d = preset.sunDir, pz = d[2] / (Math.hypot(d[0], d[1], d[2]) || 1);
+  preset.sunDir = [-sx / l * Math.cos(elev), -sy / l * Math.cos(elev), Math.sin(elev)];
+  sunKeep(preset, pz, Math.sin(elev));
+}
+preset.lampsOn = Math.max(preset.lampsOn || 0, sky.night);
+preset.rain = Math.max(preset.rain || 0, rainK);
+const night = sky.night, nightK = smooth((night - 0.05) / 0.5);
+const lit = night > 0.05 || rainK > 0 || fogK > 0;   // cars drive with their lights on
+
+// ---- the cast ------------------------------------------------------------------------------------------------------
+// cars: [model, paint, dx, dy (world px from the junction), heading (0 east, + south), state]
+// people: [art2 look, pose, dir8 (0 S 1 SW 2 W 3 NW 4 N 5 NE 6 E 7 SE), frame, dx, dy, opts]
+const look = (seed, kind, extra = {}) => ({ ...randomPerson(seed, kind), ...extra });
+const ON = lit ? { lights: true } : {};
+let CARS = [], PEOPLE = [], PETS = [], CONES = [], FIRES = [], CRATES = [];
+if (!SC.incident) {
+  CARS = [
+    [2, 4, -40, -384, S_, { ...ON }],                          // the taxi coming down Holly Street
+    [1, 9, -64, -84, -0.5, { ...ON, brake: true }],            // the teal sedan turning right onto Madison
+    [1, 3, 40, 222, N_, { ...ON }],                            // the dark sedan waiting at the light
+    [4, 13, 590, -48, W_, {}],                                 // the maroon pickup parked with a crate on the bed
+    [12, 2, 768, -40, W_, {}],                                 // the scooter parked behind it
+  ];
+  CRATES = [[4, -29, 0, 3]];                                   // [on car index 3, forward, right, tier]
+  PEOPLE = [
+    [look(11, 'cop'), 'idle', 0, 0, 166, -200],
+    [look(12, 'student'), 'walk0', 1, 2, 222, -150],
+    [look(13, 'commuter', { top: { kind: 'jacket', color: 'brown', color2: 'khaki' } }), 'idle', 4, 0, 290, -214],
+    [look(14, 'office', { fem: true, hair: { style: 'pony', color: 0 }, top: { kind: 'jacket', color: 'navy', color2: 'white' }, glasses: null, carry: null }), 'walk0', 0, 4, 354, -168],
+    [look(15, 'dad', { top: { kind: 'jacket', color: 'grey', color2: 'white' }, hat: { kind: 'cap', color: 'white' } }), 'walk0', 6, 1, 466, -170],
+    [look(16, 'tracksuit', { top: { kind: 'hoodie', color: 'charcoal' }, hat: null, chain: false }), 'idle', 0, 1, 512, -238],
+    [look(17, 'athleisure', { carry: null }), 'walk2', 6, 3, 654, -170],
+    [look(18, 'cook', { hat: { kind: 'cap', color: 'black' } }), 'idle', 2, 0, 424, -108],
+    [look(19, 'commuter', { top: { kind: 'hoodie', color: 'green' } }), 'idle', 5, 1, 360, -86],
+  ];
+  PETS = [['golden', 'walk', 6, 1, 506, -160]];
+  if (SC.umbrellas) { PEOPLE[3][6] = { umbrella: 1 }; PEOPLE[8][6] = { umbrella: 3 }; PEOPLE[4][6] = { umbrella: 0 }; }
+} else {
+  CARS = [
+    [8, 1, 12, -9, 0.3, { lights: true, siren: 1 }],          // the police car across the junction, lights going
+    [1, 3, 283, 0, 0.45, { wreck: true, burn: true }],         // the burning wreck
+    [1, 0, -118, 71, W_ + 0.35, { lights: true, brake: true }],// a red sedan stopped short
+    [1, 2, 509, -50, W_, { lights: true }],                    // a white car held up on Madison
+    [2, 4, -40, -227, S_, { lights: true }],                   // the taxi coming down Holly Street
+    [1, 12, -40, -350, S_, { lights: true }],
+  ];
+  CONES = [[109, -62], [114, 0], [220, 56], [385, 12]];
+  FIRES = [[283, 0]];
+  PEOPLE = [
+    [look(21, 'cop'), 'idle', 1, 0, 78, -62],
+    [look(22, 'cop', { fem: true, hair: { style: 'bun', color: 0 } }), 'idle', 6, 0, 176, -30],
+    [look(23, 'commuter', { top: { kind: 'jacket', color: 'red', color2: 'black' } }), 'idle', 4, 0, 155, 58],
+    [look(24, 'dad'), 'idle', 0, 0, 404, -68],
+    [look(25, 'student', { carry: 'phone' }), 'idle', 3, 0, 405, 66],
+    [look(26, 'athleisure', { top: { kind: 'tee', color: 'pink' }, carry: null }), 'idle', 4, 0, 384, 112],
+    [look(27, 'nightshift'), 'idle', 4, 0, 129, 211],
+    [look(28, 'commuter', { top: { kind: 'jacket', color: 'brown', color2: 'khaki' } }), 'idle', 0, 0, 237, -183],
+    [look(29, 'trucker'), 'idle', 0, 0, 391, -158],
+    [look(30, 'socialite'), 'idle', 0, 0, -230, -165],
+    [look(31, 'punk'), 'idle', 6, 0, -301, -168],
+    [look(32, 'courier'), 'idle', 5, 0, -261, -149],
+  ];
+  PETS = [['golden', 'idle', 6, 0, 413, 130]];
+}
+if (q.get('empty')) CARS = PEOPLE = PETS = CONES = FIRES = CRATES = [];
+
+// ---- sprites (made here, on this thread) ------------------------------------------------------------------------------
+const up = (key, make) => { if (eng.hasSprite(key)) return key; const G = make(); return G && G.w && eng.uploadSprite(key, G) !== false ? key : null; };
+const N = 64, quant = (a) => ((Math.round(a / TAU * N) % N) + N) % N;
+function gbuf(w, h, ax, ay) { const n = w * h; return { w, h, ax, ay, col: new Uint8ClampedArray(n * 4), nrm: new Uint8ClampedArray(n * 4), z: new Uint16Array(n), emi: new Uint8ClampedArray(n * 4), flag: new Uint8Array(n) }; }
+function put(G, x, y, rgb, z, n, flag = 0, e = 0) {
+  if (x < 0 || y < 0 || x >= G.w || y >= G.h) return;
+  const i = y * G.w + x, j = i * 4;
+  G.col[j] = rgb[0]; G.col[j + 1] = rgb[1]; G.col[j + 2] = rgb[2]; G.col[j + 3] = 255;
+  G.nrm[j] = n[0]; G.nrm[j + 1] = n[1]; G.nrm[j + 2] = n[2]; G.nrm[j + 3] = 255;
+  G.z[i] = z; G.flag[i] = flag;
+  if (e) { G.emi[j] = rgb[0]; G.emi[j + 1] = rgb[1]; G.emi[j + 2] = rgb[2]; G.emi[j + 3] = e; }
+}
+const SIG_RGB = [[255, 59, 59], [255, 194, 61], [61, 220, 132]], SIG01 = SIG_RGB.map((c) => c.map((v) => v / 255)), FACE_N = [128, 196, 230, 255];
+const lens = (i) => up(`glamp|${i}`, () => { const G = gbuf(3, 4, 1, 3); for (let y = 0; y < 4; y++) for (let x = 0; x < 3; x++) put(G, x, y, SIG_RGB[i], 4 - y, FACE_N, F_NOCAST, 255); return G; });
+// (host.js _genUmbrella: a shallow dome of 8 panels)
+const UMB = ['#2f5fc8', '#c8262b', '#2b2b33', '#2f9a5a'];
+const umbrella = (ci) => up(`gumb|${ci}`, () => {
+  const base = [1, 3, 5].map((k) => parseInt(UMB[ci].slice(k, k + 2), 16));
+  const R = 13, Hh = 6, w = R * 2 + 1, h = R * 2 + Hh + 3, ax = R, ay = R + Hh + 1, G = gbuf(w, h, ax, ay);
+  for (let Y = -R; Y <= R; Y++) for (let X = -R; X <= R; X++) {
+    const r2 = (X * X + Y * Y) / (R * R);
+    if (r2 > 1) continue;
+    const Z = Math.round(Hh * (1 - r2)), sx = X + ax, sy = Y - Z + ay, zz = Z + 1;
+    if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+    const ii = sy * w + sx;
+    if (G.col[ii * 4 + 3] && G.z[ii] >= zz) continue;
+    const k = r2 > 0.82 ? 0.62 : Math.floor((Math.atan2(Y, X) + Math.PI) / (Math.PI / 4)) & 1 ? 0.84 : 1;
+    const nx = 2 * Hh * X / (R * R), ny = 2 * Hh * Y / (R * R), nl = Math.hypot(nx, ny, 1);
+    put(G, sx, sy, [base[0] * k, base[1] * k, base[2] * k], zz, [128 + nx / nl * 127, 128 + ny / nl * 127, 128 + 127 / nl, 255]);
+  }
+  put(G, ax, ay - Hh - 2, [40, 40, 44], Hh + 3, [128, 128, 255, 255]); put(G, ax, ay - Hh - 1, [40, 40, 44], Hh + 2, [128, 128, 255, 255]);
+  return G;
+});
+
+// ---- one frame -------------------------------------------------------------------------------------------------
+const C = { head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], white: [0.92, 0.94, 1] };
+const wx = new Weather(M);
+wx.flash = SC.flash || 0;
+const lampAt = new Map(); // static lamp light -> its map lamp (index), as host.js _prepLights matches them
+for (const ch of chunks) for (const L of ch.lights) {
+  if (L.kind !== 'lamp') continue;
+  let best = -1, bd = 72 * 72;
+  for (let k = 0; k < M.lamps.length; k++) { const l = M.lamps[k], d = (l.x - L.x) ** 2 + (l.y - L.y) ** 2; if (d < bd) { bd = d; best = k; } }
+  lampAt.set(L, best);
+}
+function frame(t) {
+  const o = { alpha: 1, flipX: false, flash: 0, xray: false, shadow: true, tint: null };
+  eng.beginFrame({ camX, camY, zoom, viewW: vw, viewH: vh, time: t, preset, wet: Math.max(rainK, preset.wet || 0), quality: Q, flash: Math.min(1, wx.flash), fog: fogK, wind: [0.15, 0.3, 1, 0], windT: t });
+  const lights = [];
+  const light = (x, y, z, r, col, k, cone = null) => { if (k > 0.02) lights.push({ x, y, z, r, col, k, cone: cone ? { a: cone[0], spread: cone[1], len: cone[2] } : null, s: k * Math.sqrt(r) / (1 + (Math.hypot(x - camX, y - camY) / 700) ** 2) }); };
+  // the chunks' static lights: lamps by the game's lamp clock, windows and neon with the dark
+  for (const ch of chunks) for (const L of ch.lights) {
+    if (L.kind === 'fire') continue;
+    let kk = L.k;
+    if (L.kind === 'lamp') { const li = lampAt.get(L); kk *= li >= 0 ? lampLevel(li, 0, night) : night > 0.05 ? 1 : 0; }
+    else if (L.night) kk *= nightK;
+    light(L.x, L.y, L.z || 0, L.r, L.col, kk);
+  }
+  // the signal lenses at this phase
+  const sigK = 0.25 + 1.2 * nightK;
+  for (const ch of chunks) for (const h of (ch.live && ch.live.heads) || []) {
+    const n = M.nodes[h.node];
+    if (!n) continue;
+    const s = signalFor(n, h.edge, 21), li = s === 'R' ? 0 : s === 'Y' ? 1 : 2, c = h.L[li];
+    light(c[0] + h.nx * 8, c[1] + h.ny * 8, c[2], 56, SIG01[li], sigK);
+    if (h.ny >= 0.25) { const k = lens(li); o.shadow = false; if (k) eng.drawSprite(k, c[0], c[1], c[2] - 2, o); o.shadow = true; }
+  }
+  // the cars, their lamps, sirens and fires
+  const cars = [];
+  for (const [m, p, dx, dy, hd, st] of CARS) {
+    const d = { m, p, vr: (m * 3 + p) % 8 }, s = { ...st, siren: st.siren ? (Math.floor(t * 6) % 2 ? 1 : 2) : 0 };
+    const hi = quant(hd), x = J.x + dx, y = J.y + dy;
+    const key = up(A.vehicleKey(d, s, hi, N), () => A.vehicleSprite(d, s, hi, N));
+    if (key) eng.drawSprite(key, x, y, 0, o);
+    cars.push({ x, y, hd, d });
+    const L = A.vehicleLights(d), c = Math.cos(hd), sn = Math.sin(hd), hl = L.L / 2;
+    if (st.lights) {
+      light(x + c * hl, y + sn * hl, 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), [hd, 0.42, 340]);
+      for (const sd of [-1, 1]) light(x - c * hl - sn * L.W * 0.31 * sd, y - sn * hl + c * L.W * 0.31 * sd, 8, st.brake ? 60 : 36, C.tail, st.brake ? 1.4 : 0.7);
+    } else if (st.brake) light(x - c * hl, y - sn * hl, 8, 40, C.tail, 0.9);
+    if (st.siren) light(x, y, 24, 240, Math.floor(t * 6) % 2 ? C.red : C.blue, 2.2);
+    if (st.burn) light(x, y, 20, 200, C.fire, 2.2 * (0.75 + 0.25 * Math.sin(t * 23)));
+  }
+  for (const [ci, f, r, tier] of CRATES) {
+    const cr = cars[ci]; if (!cr) continue;
+    const c = Math.cos(cr.hd), sn = Math.sin(cr.hd), hi = ((Math.round(cr.hd / TAU * 16) % 16) + 16) % 16;
+    const key = up(A.crateKey(tier, '', hi, 16), () => A.crateSprite(tier, '', hi, 16));
+    if (key) eng.drawSprite(key, cr.x + c * f - sn * r, cr.y + sn * f + c * r, 10, o);
+  }
+  // people (a cop's flashlight after dark), umbrellas in the rain, pets
+  for (const [app, pose, d8, fr, dx, dy, ex] of PEOPLE) {
+    const x = J.x + dx, y = J.y + dy, key = up(Pd.pedKey(app, pose, d8, fr, 0), () => Pd.pedSprite(app, pose, d8, fr, 0));
+    if (key) eng.drawSprite(key, x, y, 0, o);
+    if (ex && ex.umbrella !== undefined) { const uk = umbrella(ex.umbrella); if (uk) eng.drawSprite(uk, x, y, 44, o); }
+    if (night > 0.35 && app.top && app.top.kind === 'uniform' && app.hat && app.hat.kind === 'police') {
+      const a = [Math.PI / 2, Math.PI * 3 / 4, Math.PI, -Math.PI * 3 / 4, -Math.PI / 2, -Math.PI / 4, 0, Math.PI / 4][d8];
+      light(x + Math.cos(a) * 8, y + Math.sin(a) * 8, 30, 200, C.white, 1.6 * night, [a, 0.32, 200]);
+    }
+  }
+  for (const [kind, pose, d8, fr, dx, dy] of PETS) { const key = up(A.animalKey(kind, pose, d8, fr), () => A.animalSprite(kind, pose, d8, fr)); if (key) eng.drawSprite(key, J.x + dx, J.y + dy, 0, o); }
+  for (const [dx, dy] of CONES) { const key = up('cone', () => cone().render(0.3, { px: eng.ap })); if (key) eng.drawSprite(key, J.x + dx, J.y + dy, 0, o); }
+  // the fire: flames over the wreck, smoke rolling off downwind, a scorch, glass and oil round it
+  for (const [dx, dy] of FIRES) {
+    const x = J.x + dx, y = J.y + dy;
+    for (const [nm, ox, oy] of [['dScorch', 0, 4], ['dOil', 36, 22], ['dLitter', -40, 30]]) { const inf = A.fxInfo(nm); const key = up(A.fxKey(nm, 0), () => A.fxSprite(nm, 0)); if (key && inf) eng.drawDecal(key, x + ox, y + oy, 0.4, 0.9, 0); }
+    o.shadow = false;
+    for (const [nm, ox, oy, z, ph] of [['fireLarge', 0, 2, 6, 0], ['fire', 26, 10, 4, 2], ['fireSmall', -30, -2, 4, 1], ['fireSmall', 40, -6, 10, 3]]) {
+      const inf = A.fxInfo(nm), fr = Math.floor(t * inf.fps + ph) % inf.frames, key = up(A.fxKey(nm, fr), () => A.fxSprite(nm, fr));
+      if (key) eng.drawSprite(key, x + ox, y + oy, z, o);
+    }
+    for (const [ox, oy, z, fr] of [[10, -30, 40, 2], [30, -70, 70, 3], [56, -110, 100, 4], [84, -150, 128, 5]]) { const key = up(A.fxKey('smokeHeavy', fr), () => A.fxSprite('smokeHeavy', fr)); if (key) { o.alpha = 0.85; eng.drawSprite(key, x + ox, y + oy, z, o); o.alpha = 1; } }
+    for (const [ox, oy] of [[-50, 24], [-64, 6], [52, 36]]) { const key = up(A.fxKey('glassShatter', 5), () => A.fxSprite('glassShatter', 5)); if (key) eng.drawSprite(key, x + ox, y + oy, 0, o); }
+    o.shadow = true;
+    light(x, y, 30, 260, C.fire, 2.4);
+  }
+  // the strongest and nearest lights, up to the Ultra tier's 96
+  lights.sort((p, q2) => q2.s - p.s);
+  if (!q.get('nolights')) for (const L of lights.slice(0, 96)) eng.addLight(L);
+  window.info = `lights ${lights.length}`;
+  eng.endFrame();
+  eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, new Uint8Array(4));
+  // the rain streaks over the top (main.js drawRain: the streaks near lights catch their colour)
+  fg.clearRect(0, 0, W, H);
+  if (rainK > 0) {
+    const ls = lights.filter((L) => L.k > 0.6).slice(0, 28).map((L) => ({ x: (L.x - camX) * zoom + W / 2, y: (L.y - L.z * 0 - camY) * zoom + H / 2, r: 150 * zoom, c: L.col.map((v) => Math.round(v * 255)), a: 1 }));
+    wx.drawRain(fg, W, H, 0.016, ls, sky, 2, 0.18, false);
+  }
+  const hh = Math.floor(minutes / 60), mm = String(Math.round(minutes % 60)).padStart(2, '0');
+  hud.textContent = q.get('hud') === '0' ? '' : `${SCN}  ${hh}:${mm}  Holly St x Madison St, Midtown  (vs ${SC.ref})`;
+}
+// a second frame once every sprite is up (the first uploads them)
+frame(1.37); frame(1.37);
+window.done = true;
+</script></body></html>

@@ -260,7 +260,10 @@ a big screen zoomed out while driving never makes the chunks on screen push each
 - **Wind-blown things,** only in windy spells and gales: leaves where things grow, the odd sheet of paper or
   plastic bag in town, nothing over water, sand or desert. Manhole steam bends over with the wind.
 - **Checking it:** `tools/art2/live-test.html` renders the real map at a fixed camera and a controlled clock,
-  wind and rain, frame by frame.
+  wind and rain, frame by frame. `tools/art2/hero-corner.html?s=golden|noon|rain|night|blue|storm|fog|incident`
+  stages the art targets' crossroads (Holly St x Madison St, Midtown) the way R1-A..E, AT1-A..C and AT2 show it -
+  their cars, people, dog and incident - under the game's own sky at that clock, its lights and its rain, framed
+  like each concept, for side-by-side comparisons.
 
 ## Rollout
 1. Done: the new renderer is the default everywhere; `?art=1` forces v1 (troubleshooting only).

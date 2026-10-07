@@ -7,12 +7,13 @@ import { F_GLASS, F_NOCAST, F_LEAF, hash } from './gbuf.js';
 const R = (h, n = 6, k) => ramp(h, n, k);
 
 // ---- street furniture -----------------------------------------------------------------------------
+// kind: 'cast' (old-town green cast iron), 'iron' (the same lantern in black iron), or the plain arm lamp
 export function lampPost(kind = 'cast', on = 0) {
-  const tall = kind === 'cast' ? 74 : 96;
-  const m = new Vox(kind === 'cast' ? 12 : 30, 12, tall + 10);
-  const pole = m.mat({ ramp: kind === 'cast' ? R('#2f5a4a') : MAT.metal, k: 2 });
-  const glass = m.mat({ ramp: R('#f4d9a0', 5, 3), k: 3, emi: on ? [255, 200, 120, 255] : null, flag: F_NOCAST });
-  if (kind === 'cast') {
+  const lantern = kind === 'cast' || kind === 'iron', tall = lantern ? 74 : 96;
+  const m = new Vox(lantern ? 12 : 30, 12, tall + 10);
+  const pole = m.mat({ ramp: kind === 'cast' ? R('#2f5a4a') : kind === 'iron' ? R('#34363c') : MAT.metal, k: 2 });
+  const glass = m.mat({ ramp: R(kind === 'iron' ? '#f8d088' : '#f4d9a0', 5, 3), k: 3, emi: on ? (kind === 'iron' ? [255, 184, 96, 255] : [255, 200, 120, 255]) : null, flag: F_NOCAST });
+  if (lantern) {
     m.cyl('z', 6, 6, 0, 3.2, 0, 6, pole);                  // base
     m.cyl('z', 6, 6, 0, 1.6, 6, tall, pole);
     m.box(1, 1, tall + 2, 11, 11, tall + 4, pole);        // lantern: cap, glass, base ring
