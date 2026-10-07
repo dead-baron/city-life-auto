@@ -2817,4 +2817,5 @@ A ring of standing stones on the grassy headland over the north sea (`shared/nat
 - **The ring:** ten weathered megaliths round a flat altar stone, one of them fallen. Two taller stones stand out on the point.
 - **The stones** are a new model (`props-rural.js` `standingStone`; prop `mstone`). Each is a rough grey slab that tapers and leans, with pitted faces, lichen on the weather side and moss at the foot. No two are alike, and they are solid.
 - **Round it:** heather and paintbrush, and a worn path up from the observatory road.
+- **Off the point:** a sea arch stands in the surf (`props-wild.js` `seaArch`; prop `seaarch`). It has rough legs of dark layered rock, barnacles and wet rock at the waterline, and a cap of grass and thrift with a gull on top. Only its legs are solid, so you can take a boat through it.
 - On the map, and in the debug menu (🗿 The Sentinel Stones). Homes, POIs and buildings unchanged.

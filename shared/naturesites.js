@@ -260,8 +260,8 @@ function hilltopTrack(m, H) {
 
 // ---- The Sentinel Stones (Granite Peaks, the headland north of the observatory; original) ------------------------
 // A ring of standing stones on the grassy headland over the north sea: ten weathered megaliths round a flat altar
-// stone, one of them fallen, two more out on the point; heather and paintbrush round them, and a worn path up from
-// the observatory road.
+// stone, one of them fallen, two more out on the point; a sea arch in the surf off the point (boats can go through
+// it); heather and paintbrush round them, and a worn path up from the observatory road.
 function sentinelStones(m, H) {
   const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
   const CX = 744, CY = 31;
@@ -279,6 +279,15 @@ function sentinelStones(m, H) {
   add('mstone', CX, CY + 0.2, 16, { w: 48, d: 28, h: 11, v: 9 });   // (the altar)
   // two more out on the point, the tallest
   for (const [dx, dy, h, v] of [[-1.2, -7.4, 62, 11], [1.6, -8.6, 54, 12]]) if (m.tiles[at(CX + dx, CY + dy)] === T.GRASS) add('mstone', CX + dx, CY + dy, 12, { w: 26, d: 13, h: h + 8, v, lean: dx * 0.02 });
+  // the sea arch off the point: you can take a boat through it (only its legs are solid)
+  for (const [dx, dy] of [[-2, -16.5], [-3, -18], [1, -17.5]]) {
+    const ax = CX + dx, ay = CY + dy, ok = [-2.5, 0, 2.5].every((o) => { const t = m.tiles[at(ax + o, ay)]; return t === T.WATER || t === T.DEEP; });
+    if (!ok) continue;
+    add('seaarch', ax, ay, 0, { w: 150, d: 56, h: 96 });
+    for (const sd of [-1, 1]) for (const oy of [-10, 10]) m.addSolidProp(Math.round(ax * TILE + sd * 56), Math.round(ay * TILE + oy), 16);
+    add('gull', ax + 1.6, ay - 0.2, 0, { a: 2.2, z: 98 });
+    break;
+  }
   // heather and paintbrush round the stones
   for (let j = 0; j < 30; j++) { const a = hash2(j, 1, 3902) * Math.PI * 2, r = 5 + hash2(j, 2, 3902) * 3, x = CX + Math.cos(a) * r, y = CY + Math.sin(a) * r * 0.8; if (m.tiles[at(x, y)] === T.GRASS) add('shrub_a', x, y, 0, { sp: j % 3 === 1 ? 'paintbrush' : 'heather', k: 1 }); }
   // the worn path up from the observatory road to the ring

@@ -616,5 +616,8 @@ test('The Sentinel Stones: a ring of standing stones round an altar on the headl
   assert.ok(ring.length >= 10, `the ring and the altar (${ring.length})`);
   const solid = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r) return true; return false; };
   assert.ok(ring.every((q) => solid(q.x, q.y)), 'the stones are solid');
+  const arch = m.props.find((q) => q && q.t === 'seaarch' && Math.hypot(q.x - s.x, q.y - s.y) < 24 * TILE);
+  assert.ok(arch, 'the sea arch off the point');
+  assert.ok(m.isWater(arch.x, arch.y) && !solid(arch.x, arch.y), 'a boat can go through it');
   assert.ok(m.landmarks.some((l) => l.name === 'The Sentinel Stones'));
 });
