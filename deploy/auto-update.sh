@@ -14,6 +14,28 @@ NEW=$(git rev-parse origin/main)
 BAD_FILE="${CLA_BAD_FILE:-$HOME/.cla-bad-commit}"   # a version that failed to start: don't retry it every 2 minutes
 [ -f "$BAD_FILE" ] && [ "$(cat "$BAD_FILE")" = "$NEW" ] && exit 0
 
+# Wait for the page. The moment the new version.json lands here the server tells every player's page about the
+# new build, and the pages wait for GitHub Pages to serve it - so don't move until Pages has published it
+# (usually 1-3 minutes after a push; this runs every 2). On 2026-10-07 Pages skipped a push: the server moved
+# on its own and every page sat on "Updating...". If the published page can't be reached at all, go ahead as
+# before; if it still shows an older build after an hour, go ahead too, and say so.
+PAGES_URL="${CLA_PAGES_URL:-https://deadbaron.com/city-life-auto}"
+ver() { grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4; }
+WANT=$(git show origin/main:version.json 2>/dev/null | ver || true)
+LIVE=$(curl -sf -m 10 "$PAGES_URL/version.json?b=$(date +%s)" | ver || true)
+WAIT_FILE="${CLA_DATA_DIR:-/home/ubuntu/cla-data}/pages-wait"
+if [ -n "$WANT" ] && [ -n "$LIVE" ] && [ "$LIVE" != "$WANT" ]; then
+  SINCE=$(date +%s)
+  if [ -f "$WAIT_FILE" ] && [ "$(cut -d' ' -f1 "$WAIT_FILE")" = "$NEW" ]; then SINCE=$(cut -d' ' -f2 "$WAIT_FILE"); else echo "$NEW $SINCE" > "$WAIT_FILE"; fi
+  WAITED=$(( $(date +%s) - SINCE ))
+  if [ "$WAITED" -lt 3600 ]; then
+    echo "auto-update: ${NEW:0:7} is on GitHub; waiting for Pages to publish build $WANT (it serves $LIVE; ${WAITED}s so far)"
+    exit 0
+  fi
+  echo "auto-update: Pages still serves $LIVE after an hour - updating to ${NEW:0:7} anyway (push again to republish the page)"
+fi
+rm -f "$WAIT_FILE"
+
 if ! git merge -q --ff-only origin/main; then
   echo "auto-update: local edits on the server block the update - skipping (run: git status)"
   exit 1

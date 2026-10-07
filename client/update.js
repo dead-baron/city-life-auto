@@ -4,14 +4,16 @@
 // older server), version.json on the web shows a newer one (checked every minute) - the page:
 //  1. shows a small "Updating to the latest version..." notice (the game carries on meanwhile);
 //  2. waits until version.json (uncached) serves that build - GitHub Pages can lag the game server by a
-//     minute or two - looking every 5 s, for up to 3 minutes (then it goes ahead anyway);
+//     minute or two, and now and then skips a push altogether - looking every 5 s, then every 30 s after
+//     3 minutes, for as long as it takes: refreshing before the web has the build only loads the old page again
+//     (on 2026-10-07 a skipped publish had every page refreshing every few minutes);
 //  3. hard-refreshes: drops this game's service-worker caches, forgets the last build (so boot.js re-fetches
 //     every file with cache: 'reload'), refreshes the page's own cached copy and reloads with ?fresh=.
 // The server puts players back fresh at a spawn point when they return on the new build (players.join).
 // Never a reload loop: a device that keeps coming back on the old build tries again at most every 30 s
 // (sessionStorage), and after a few tries leaves it to the player.
 const KEY = 'cla.build', TRY = 'cla.updateTry';
-const POLL_MS = 60000, CHECK_MS = 5000, GIVE_UP_MS = 180000, RETRY_MS = 30000, MAX_TRIES = 5;
+const POLL_MS = 60000, CHECK_MS = 5000, SLOW_AFTER_MS = 180000, SLOW_MS = 30000, RETRY_MS = 30000, MAX_TRIES = 5;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const bust = () => Date.now().toString(36);
 
@@ -80,14 +82,17 @@ function begin(v) {
   return true;
 }
 
-// GitHub Pages can lag the game server: wait until the web serves this build (or give up waiting and go)
+// GitHub Pages can lag the game server (or skip a push until the next one): wait until the web serves this
+// build, however long that takes - only then is there something new to refresh into
 async function waitForWeb(v) {
   const t0 = Date.now();
+  let slow = false;
   for (;;) {
     if (pending !== v) return; // an even newer build came along
     const m = await readMeta();
-    if ((m && m.version === v) || Date.now() - t0 > GIVE_UP_MS) break;
-    await wait(CHECK_MS);
+    if (m && m.version === v) break;
+    if (!slow && Date.now() - t0 > SLOW_AFTER_MS) { slow = true; notice('A new version is on its way - this page will refresh as soon as it is published.'); }
+    await wait(slow ? SLOW_MS : CHECK_MS);
   }
   if (pending === v) hardRefresh(v);
 }

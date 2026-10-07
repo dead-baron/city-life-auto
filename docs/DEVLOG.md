@@ -3049,3 +3049,13 @@ Walk onto either half court and press the action button to pick up a ball (`serv
 - **Tests:**
   - `test/water.test.js`: the raceway race's course, laps and finish.
   - `test/business.test.js`: the slides' paths, the climb, a ride down each slide in turn, and logging off on the slide.
+
+## 2026-10-07 · No more "Updating..." loops when GitHub Pages lags or skips a push
+
+- **What happened:** GitHub Pages silently skipped publishing a push (the raceway and water slides). The game server pulled that push anyway (it checks GitHub every 2 minutes) and told every page there was a new build. Each page waited 3 minutes for Pages to serve it, reloaded into the same old page, and went round again: "Updating to the latest version..." on every device. Re-publishing the page (an empty commit) ended it.
+- **The server waits for the page** (`deploy/auto-update.sh`). It moves to a new commit only once GitHub Pages serves that commit's build in `version.json`, which usually takes 1-3 minutes after a push.
+  - The log says what it's waiting for: `journalctl -u cla-update`.
+  - If the published page can't be reached at all, it goes ahead as before.
+  - If Pages still shows an older build after an hour, it goes ahead and says so; pushing again republishes the page.
+- **Pages never refresh early** (`client/update.js`). A page told about a new build refreshes only once the web serves it, however long that takes. It checks every 5 s, then every 30 s after 3 minutes, and says the new version is on its way. Refreshing sooner only ever reloaded the old page.
+- Checked in a sandbox (a local repo and a fake Pages site): the script waits while the page is behind, moves when it's published, goes ahead when Pages is unreachable, and goes ahead after the hour.
