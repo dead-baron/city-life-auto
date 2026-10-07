@@ -3128,3 +3128,13 @@ On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesi
 - **Trails and clearings that designed places cut through the woods** are packed earth now, paler than the duff round them (`groundbake.js`). That covers this loop, Redwood Creek Falls' trail and camp, and the trail down to Redwood Cove.
 - On the map as "Giants Loop".
 - **Tests:** `test/nature.test.js` covers the pull-off, the sign, the fingerposts, the giants along it, and no giant by the path.
+
+## 2026-10-07 · Walking while aiming; an open view of Redwood Creek Falls
+
+- **Walking while aiming has a walk** (backlog bug). Moving with a gun up used to freeze the legs in the aiming stance.
+  - Now the legs keep the walk's stride while the arms and torso hold the aim. This is the new `aimw` pose (6 frames: `client/art2/people.js`, `peds.js` `pedFrame`; `client/main.js` `pedLook` picks it when aiming and moving).
+  - The old renderer shows the aiming stance as before.
+- **Redwood Creek Falls is in view.**
+  - The two hand-placed giants that stood between the road and the pool have moved up and down the road, and one by the pool has moved to its west side.
+  - No grove giant stands in front of the pool (`m.noTree`). Ferns still grow there.
+  - From the south you see the creek coming down, the falls, the pool and the footbridge, framed by giants on both sides.

@@ -2531,7 +2531,11 @@ function redwoodCreek(m, H) {
   const tr = trail(m, [P(-300, -(RW + 150)), P(-120, -(RW + 260)), [fb[0] - bx * 120, fb[1] - by * 120]]);
   const tr2 = trail(m, [[fb[0] + bx * 110, fb[1] + by * 110], [camp[0] - 130, camp[1] + 40]]);
   // giant redwoods round the bridge and the falls (the wilds add their own further out)
-  const giants = [P(140, RW + 120), P(-60, RW + 190), P(260, -(RW + 110)), P(-180, -(RW + 220)), [F[0] - 190, F[1] - 40], [F[0] + 190, F[1] - 70], [pool[0] - 220, pool[1] + 150], [camp[0] + 170, camp[1] - 150], [C.x - 330, C.y + 160]];
+  const giants = [P(430, RW + 130), P(-330, RW + 170), P(260, -(RW + 110)), P(-180, -(RW + 220)), [F[0] - 190, F[1] - 40], [F[0] + 190, F[1] - 70], [pool[0] - 300, pool[1] - 30], [camp[0] + 170, camp[1] - 150], [C.x - 330, C.y + 160]];
+  // the view of the falls from the south is kept open: no giant's trunk in front of the pool (map.js redwoodGroves
+  // reads m.noTree; ferns still grow there) - the ones round it frame it instead
+  const noTree = (m.noTree ||= new Set());
+  for (let ty = Math.floor((pool[1] + 30) / TILE); ty <= Math.floor((pool[1] + 760) / TILE); ty++) for (let tx = Math.floor((pool[0] - 250) / TILE); tx <= Math.floor((pool[0] + 250) / TILE); tx++) noTree.add(ty * MAP_W + tx);
   for (const [x, y] of giants) {
     const i = at(x, y);
     if (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT) continue;

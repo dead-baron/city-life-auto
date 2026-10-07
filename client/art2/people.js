@@ -39,7 +39,7 @@ const LT = (() => { const v = [-0.6, 0.38, 0.7], l = Math.hypot(v[0], v[1], v[2]
 export const PERSON_CAM = { elevation: 35, zScale: CA };          // world px of height per model unit = zScale
 // seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car
 export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9 };
-export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2,
+export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2,
   // hit reactions: a stagger (0-1 knocked back, 2-3 shoved forward), a limp, crawling on the stomach, down on the face or the
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
   stagger: 4, limp: 6, crawl: 4, downF: 2, downB: 2, deadF: 1, deadS: 1 };
@@ -327,6 +327,12 @@ function rig(D, A, pose, f, kind, acc) {
     };
   } else if (pose === 'swing') { swingPose(D, P, kind, f % 3, f < 3 ? 1 : -1); P.acc = false; }
   else if (pose === 'aim') { aimPose(D, P, kind, f === 1); P.acc = false; }
+  else if (pose === 'aimw') {   // walking while aiming: the legs keep the walk's stride, the arms and torso hold the aim
+    gait(D, P, 0, f / 6, false);
+    const legs = { fL: P.fL, fR: P.fR, toeL: P.toeL, toeR: P.toeR, pel: P.pel.slice(), pelYaw: P.pelYaw, splay: P.splay };
+    aimPose(D, P, kind, false);
+    Object.assign(P, legs); P.acc = false;
+  }
   else if (pose === 'carry') {
     gait(D, P, 0, f / 6, false); P.lean = -0.05; P.acc = false;
     P.hands = (S) => { for (const [k, s] of [['L', -1], ['R', 1]]) { P['h' + k] = vadd(S.chest, mv(S.SP, [s * 6.6, 7.0, -3.8])); P['el' + k] = [s, -0.4, -0.6]; P['open' + k] = 1; } };
