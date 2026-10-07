@@ -14,6 +14,8 @@
 import { T, TILE, MAP_W, MAP_H } from './constants.js';
 import { hash2 } from './rng.js';
 
+const DISTRICT_NAMES = { beaches: [43, 44, 14, 10] };   // Gull Harbor, Coral Cay, Pelican Key, Sunset Beach
+
 const RES = 32;
 const at = (x, y) => Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE);
 // distance from (x, y) to a polyline, and the parameter (0..1 along it) of the nearest point
@@ -84,6 +86,114 @@ export function buildNatureSites(m, H) {
   redwoodCreek(m, H);
   canyonOasis(m, H);
   lighthouseTidepools(m, H);
+  campDressing(m, H);
+  beachBonfire(m, H);
+  desertCamp(m, H);
+}
+
+// ---- the campgrounds, lived in (concept N11, the forest camps) -------------------------------------------------
+// Round every campground fire: camp chairs or a log bench facing it, a cooler, a lantern on a post, a woodpile,
+// and festoon lights strung over a few pitches.
+function campDressing(m, H) {
+  const free = (x, y) => { const t = m.tiles[at(x, y)]; return t === T.DIRT || t === T.GRASS; };
+  for (const L of (m.landmarks || []).filter((l) => l.type === 'camp')) {
+    const fires = m.props.filter((p) => p && p.t === 'campfire' && p.x >= L.x && p.x < L.x + L.w && p.y >= L.y && p.y < L.y + L.h);
+    fires.forEach((f, k) => {
+      const h = (n) => hash2(Math.round(f.x) + n * 13, Math.round(f.y), 901 + n);
+      // seats: two chairs (south-west and south-east of the fire) or a log bench south of it
+      if (h(1) < 0.55) { for (const [dx, dy, a] of [[-26, 14, -0.6], [24, 16, -2.5]]) if (free(f.x + dx, f.y + dy)) H.addProp(m, 'chair', f.x + dx, f.y + dy, 0, { a, v: Math.floor(h(2) * 4) }); }
+      else if (free(f.x, f.y + 26)) H.addProp(m, 'log', f.x, f.y + 26, 0, { a: 0, len: 80, seat: 1 });
+      if (h(3) < 0.6 && free(f.x + 30, f.y - 12)) H.addProp(m, 'cooler', f.x + 30, f.y - 12, 0, { v: Math.floor(h(4) * 3) });
+      if (h(5) < 0.5 && free(f.x - 34, f.y - 20)) H.addProp(m, 'lantern', f.x - 34, f.y - 20, 0);
+      if (h(6) < 0.35 && free(f.x + 40, f.y + 10)) H.addProp(m, 'woodpile', f.x + 40, f.y + 10, 0);
+      // festoon lights from the tent's corner to a post past the fire on every third pitch
+      const tent = m.props.find((p) => p && p.t === 'tent' && Math.hypot(p.x - f.x, p.y - f.y) < 120);
+      if (tent && k % 3 === 0) H.addProp(m, 'festoon', tent.x + 14, tent.y - 4, 0, { tx: Math.round(f.x + 44 - (tent.x + 14)), ty: Math.round(f.y - 30 - (tent.y - 4)), h: 34 });
+    });
+  }
+}
+
+// ---- a bonfire on the beach (concept N11, the beach camp) -------------------------------------------------------
+// On the open sand of Gull Harbor, clear of the road: a big driftwood fire ringed with logs, a surfboard stuck in the
+// sand, towels, a cooler, two tiki torches.
+function beachBonfire(m, H) {
+  const cand = [];
+  for (const want of DISTRICT_NAMES.beaches) {
+    for (let ty = 3; ty < MAP_H - 3; ty++) for (let tx = 4; tx < MAP_W - 4; tx++) {
+      const i = ty * MAP_W + tx;
+      if (m.tiles[i] !== T.SAND || m.dist[i] !== want || m.reserve[i]) continue;
+      let ok = true;
+      for (let dy = -2; dy <= 2 && ok; dy++) for (let dx = -3; dx <= 3; dx++) { const t = m.tiles[(ty + dy) * MAP_W + tx + dx]; if (t !== T.SAND || m.reserve[(ty + dy) * MAP_W + tx + dx]) { ok = false; break; } }
+      if (!ok) continue;
+      let sea = 99; for (let r = 3; r < 10 && sea === 99; r++) for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r]]) { const t = m.tiles[(ty + dy) * MAP_W + tx + dx]; if (t === T.WATER || t === T.DEEP) { sea = r; break; } }
+      if (sea < 99) cand.push([tx, ty, sea]);
+    }
+    if (cand.length) break;
+  }
+  if (!cand.length) return;
+  cand.sort((a, b) => a[2] - b[2] || hash2(a[0], a[1], 920) - hash2(b[0], b[1], 920));
+  const [tx, ty] = cand[Math.floor(cand.length * 0.3)], X = (tx + 0.5) * TILE, Y = (ty + 0.5) * TILE;
+  for (let dy = -3; dy <= 3; dy++) for (let dx = -4; dx <= 4; dx++) m.reserve[(ty + dy) * MAP_W + tx + dx] |= RES;
+  H.addProp(m, 'campfire', X, Y, 0, { lit: 1, big: 1 });
+  for (const [dx, dy, a] of [[0, 30, 0], [-36, -4, 1.4], [36, -2, 1.75]]) H.addProp(m, 'driftwood', X + dx, Y + dy, 0, { a, len: 50, seat: 1 });
+  H.addProp(m, 'surfboard', X - 64, Y - 26, 0, { v: 1 });
+  H.addProp(m, 'surfboard', X - 54, Y - 30, 0, { v: 2 });
+  H.addProp(m, 'cooler', X + 50, Y + 22, 0, { v: 0 });
+  for (const [dx, dy, v] of [[-34, 52, 0], [22, 54, 1]]) H.addProp(m, 'towel', X + dx, Y + dy, 0, { v });
+  for (const [dx, dy] of [[-70, 20], [72, -24]]) H.addProp(m, 'torch', X + dx, Y + dy, 0);
+  (m.landmarks ||= []).push({ name: 'Bonfire Beach', type: 'bonfire', x: Math.round(X - 200), y: Math.round(Y - 150), w: 400, h: 300 });
+  m.natureSites.push({ kind: 'bonfire', name: 'Bonfire Beach', x: Math.round(X), y: Math.round(Y) });
+}
+
+// ---- a camp in the desert (concept N11, the desert camp) --------------------------------------------------------
+// At the end of the Mirage Track: two pickups nosed in, a fire pit ringed with stones, camp chairs, festoon lights
+// on posts, a windmill over a water trough, saguaros round it.
+function desertCamp(m, H) {
+  const road = (m.roads || []).find((r) => r.name === 'Mirage Track');
+  if (!road) return;
+  const end = road.pts[road.pts.length - 1], prev = road.pts[road.pts.length - 2];
+  const ux = (end.x - prev.x), uy = (end.y - prev.y), ul = Math.hypot(ux, uy) || 1, dx = ux / ul, dy = uy / ul;
+  // the camp near the track's end, on the open ground with the most room (the track runs down to a lake)
+  const r0 = 170, landT = (t) => t === T.DIRT || t === T.SAND || t === T.GRASS;
+  let X = 0, Y = 0, best = -1;
+  for (let oy = -420; oy <= 420; oy += 32) for (let ox = -420; ox <= 420; ox += 32) {
+    const x = end.x + ox, y = end.y + oy;
+    let room = 0;
+    for (let r = 32; r <= 260; r += 32) {
+      let ok = true;
+      for (let a = 0; a < 16 && ok; a++) { const i = at(x + Math.cos(a / 16 * 6.283) * r, y + Math.sin(a / 16 * 6.283) * r); if (!landT(m.tiles[i]) || m.reserve[i]) ok = false; }
+      if (!ok) break;
+      room = r;
+    }
+    const score = room - Math.hypot(ox, oy) * 0.15;
+    if (room >= 200 && score > best) { best = score; X = x; Y = y; }
+  }
+  if (best < 0) return;
+  for (let ty = Math.floor((Y - r0) / TILE); ty <= Math.floor((Y + r0) / TILE); ty++) for (let tx = Math.floor((X - r0) / TILE); tx <= Math.floor((X + r0) / TILE); tx++) {
+    const i = ty * MAP_W + tx, d = Math.hypot((tx + 0.5) * TILE - X, (ty + 0.5) * TILE - Y);
+    if (d > r0 || (m.tiles[i] !== T.DIRT && m.tiles[i] !== T.SAND && m.tiles[i] !== T.GRASS)) continue;
+    if (d < r0 - 30) m.tiles[i] = T.DIRT;
+    m.reserve[i] |= RES;
+  }
+  // a dirt way in from the track's end to the camp
+  { const L = Math.hypot(X - end.x, Y - end.y), ex = (X - end.x) / (L || 1), ey = (Y - end.y) / (L || 1);
+    for (let k = 0; k <= L; k += 16) for (let o = -24; o <= 24; o += 16) { const i = at(end.x + ex * k - ey * o, end.y + ey * k + ex * o); if (m.tiles[i] === T.SAND || m.tiles[i] === T.GRASS) m.tiles[i] = T.DIRT; if (landT(m.tiles[i])) m.reserve[i] |= RES; } }
+  void dx; void dy;
+  H.addProp(m, 'campfire', X, Y, 0, { lit: 1, tire: 1 });
+  for (const [ox, oy, a] of [[-30, 14, -0.6], [28, 18, -2.5], [-6, -30, 1.6]]) H.addProp(m, 'chair', X + ox, Y + oy, 0, { a, v: 2 });
+  H.addProp(m, 'cooler', X + 40, Y - 20, 0, { v: 1 });
+  // the pickups, side by side west of the fire, nosed toward it
+  for (const o of [-1, 1]) m.parking.push({ x: X - 110, y: Y + o * 44, a: 0, drive: true });
+  // festoon lights on three posts round the north of the fire
+  const posts = [[X - 80, Y - 60], [X + 10, Y - 84], [X + 96, Y - 50]];
+  for (const [x, y] of posts) H.addProp(m, 'post', x, y, 5);
+  for (let k = 1; k < posts.length; k++) H.addProp(m, 'festoon', posts[k - 1][0], posts[k - 1][1], 0, { tx: Math.round(posts[k][0] - posts[k - 1][0]), ty: Math.round(posts[k][1] - posts[k - 1][1]), h: 44 });
+  // the windmill and its trough to the east, saguaros round about
+  H.addProp(m, 'windmill', X + 150, Y - 10, 18);
+  H.addProp(m, 'trough', X + 150, Y + 34, 10);
+  for (const [ox, oy] of [[-150, -90], [-60, 130], [120, 120], [200, -110]]) H.addProp(m, 'cactus', X + ox, Y + oy, 8, { sp: 'saguaroBig', k: 1 });
+  (m.landmarks ||= []).push({ name: 'Mirage Camp', type: 'camp', x: Math.round(X - 180), y: Math.round(Y - 140), w: 360, h: 280 });
+  m.natureSites.push({ kind: 'desertcamp', name: 'Mirage Camp', x: Math.round(X), y: Math.round(Y) });
 }
 
 // ---- Lighthouse Rock: the keeper's cottage and the tidepools (concepts N8, N8-B, N8-C) -------------------------

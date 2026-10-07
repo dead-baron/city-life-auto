@@ -88,3 +88,19 @@ test('Lighthouse Rock: tidepools among barnacled rocks, life in them, sea stacks
   assert.equal(isle.filter((q) => q.t === 'cactus').length, 0, 'no cactus on Lighthouse Rock');
   assert.ok(m.landmarks.some((l) => l.name === 'Lighthouse Tidepools'));
 });
+
+test('camps: campground fires get seats and kit; a bonfire on the beach; a desert camp on dry ground', () => {
+  const camps = m.landmarks.filter((l) => l.type === 'camp' && l.name.endsWith('Campground'));
+  for (const L of camps) {
+    const inL = (p) => p.x >= L.x && p.x < L.x + L.w && p.y >= L.y && p.y < L.y + L.h;
+    const kit = m.props.filter((p) => p && inL(p) && ['chair', 'cooler', 'lantern', 'festoon', 'woodpile'].includes(p.t));
+    assert.ok(kit.length >= 4, `${L.name}: camp kit (${kit.length})`);
+  }
+  const b = m.natureSites.find((q) => q.kind === 'bonfire');
+  assert.ok(b, 'the bonfire is built');
+  assert.equal(tileAt(b.x, b.y), T.SAND);
+  assert.ok(m.props.some((p) => p && p.t === 'campfire' && p.big && Math.hypot(p.x - b.x, p.y - b.y) < 8), 'a big fire');
+  const d = m.natureSites.find((q) => q.kind === 'desertcamp');
+  assert.ok(d, 'the desert camp is built');
+  for (const p of m.props.filter((q) => q && Math.hypot(q.x - d.x, q.y - d.y) < 240 && ['campfire', 'chair', 'windmill', 'post', 'cooler'].includes(q.t))) assert.notEqual(tileAt(p.x, p.y), T.WATER, `${p.t} on dry ground`);
+});

@@ -2281,3 +2281,19 @@ nothing else in the world moves).
   - a low seal rock with grey seals hauled out on it and a gull.
 - **Sea islands are never desert:** Lighthouse Rock and the Islets grow grassland and coastal plants where the terrain map said dry (no cactus on a sea rock), and their rocks are basalt (`SEA_ISLES`).
 - On the map as "Lighthouse Tidepools". Tests in `test/nature.test.js`.
+
+## 2026-10-06 · Camps from the N11 concepts: lived-in campgrounds, a beach bonfire, a desert camp
+
+- **The campgrounds** (Pine Ridge, Granite Cove, Cedar Hills) now look lived in. Round every fire there are camp chairs or a log bench, and often a cooler, a lantern on a post and a woodpile. Every third pitch has festoon lights strung from the tent past the fire.
+- **Bonfire Beach** (Gull Harbor): a big driftwood fire on the open sand, ringed with driftwood logs. Two surfboards stand in the sand, with towels, a cooler and two lit tiki torches.
+- **Mirage Camp** is at the end of the Mirage Track in the Dry Creek desert, on the open ground beside the lake:
+  - a fire pit with camp chairs and a cooler;
+  - festoon lights strung between three posts;
+  - a windmill over a water trough;
+  - saguaros round it;
+  - parking for two pickups.
+- **New art:**
+  - camp chairs in four colours;
+  - coolers, surfboards, towels, tiki torches and timber posts;
+  - festoon lights: a sagging wire with warm bulbs that glow and light the ground.
+- Tests in `test/nature.test.js`.

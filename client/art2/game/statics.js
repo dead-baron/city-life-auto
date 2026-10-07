@@ -314,6 +314,8 @@ export function makeStatic(r) {
     case 'rock': return makeRock(r);
     case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist });
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
+    case 'festoon': return makeFestoon(r);
+    case 'towel': return makeTowel(r);
     case 'stack': return seaStack(r.s || 1, r.r || 26, r.h || 150, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 2 } });
     case 'sealrock': return outcrop(r.s || 3, r.w || 120, r.d || 70, r.h || 26, 'basalt', { barnacles: 0.8, wet: 12, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, (r.h || 26) * 0.7], [8, r.h || 26]] });
     case 'crit': return r.k === 'starfish' ? WL.starfish(r.col || '#d8583a', 5, r.s || 1) : r.k === 'urchin' ? WL.urchin(4, r.s || 1, r.col || '#3a2448') : WL.anemone(4, r.s || 1);
@@ -1123,6 +1125,8 @@ function voxModel(m, a) {
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
     case 'creekRail': return creekRail(a[0] || 200);
+    case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
+    case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46);
     case 'cottage': return WL.cottage(a[0] || 84, a[1] || 54, a[2] ?? 0.5); case 'seal': return WL.seal(a[0] || 0, ['#8a8a92', '#6e6e78', '#9a9088'][a[1] || 0]); case 'gull': return WL.gull(false);
     case 'crab': return WL.crab(); case 'driftwood': return WL.driftwood(a[0] || 50, a[1] || 1);
     case 'footbridge': return WT.footbridge(a[0] || 140, a[1] || 26, a[2] || 8);
@@ -1162,6 +1166,7 @@ function vdim(m, a) {
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
     case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
+    case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
     case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'driftwood': return [a[0] || 50, 16, 10];
     case 'mapBoard': return [40, 12, 50]; case 'lantern': return [12, 12, 40];
     case 'lumber': return [60, 24, 18]; case 'crates': return [32, 28, 30]; case 'cctv': return [22, 8, (a[0] || 64) + 2]; case 'signal': return [(a[0] || 70) + 10, 14, 92]; case 'bbframe': return [a[0] || 132, 10, (a[1] || 54) + (a[2] || 36) + 6]; case 'cabbages': return [(a[0] || 3) * 18, (a[1] || 3) * 18, 14]; case 'cornRow': return [120, 60, 36]; case 'wheatRow': return [120, 50, 22]; case 'ropeLine': return [a[0] || 60, 6, 20]; case 'silo': return [44, 44, (a[0] || 90) + 22]; case 'craneTower': return [(a[1] || 120) + 40, 30, (a[0] || 200) + 16];
@@ -1225,6 +1230,34 @@ function crateStack(seed = 1) {
   const c = (i) => m.mat({ ramp: ramp(cols[i % 3], 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 7 === 0 || Math.round(x) % 7 === 0 ? -0.6 : 0) });
   m.box(1, 1, 0, 15, 15, 14, c(0)); m.box(16, 3, 0, 30, 17, 14, c(1)); m.box(8, 12, 0, 22, 26, 14, c(2)); if (seed % 2) m.box(4, 4, 14, 18, 18, 28, c(1));
   return m;
+}
+// a tiki torch: a bamboo pole, a woven cup and a flame (the beach bonfire, concept N11)
+function tikiTorch() {
+  const m = new Vox(8, 8, 48), bam = m.mat({ ramp: ramp('#b8945a', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 9 === 0 ? -0.9 : 0) });
+  const cup = m.mat({ ramp: ramp('#7a5a34', 6, 3), k: 3 }), fl = m.mat({ ramp: ramp('#f8a030', 5, 3), k: 4, emi: [255, 150, 50, 255], flag: F_NOCAST });
+  m.box(3, 3, 0, 5, 5, 38, bam); m.box(2, 2, 37, 6, 6, 42, cup);
+  m.fill((x, y, z) => (Math.hypot(x - 4, y - 4) < 2.2 - (z - 42) * 0.3 ? fl : -1), 1, 1, 42, 7, 7, 48);
+  return m;
+}
+// a plain timber post (festoon lights hang from these)
+function woodPost(h = 46) { const m = new Vox(6, 6, h + 2), w = m.mat({ ramp: ramp('#7a5434', 6, 3), k: 3 }); m.box(1, 1, 0, 5, 5, h, w); m.box(0, 0, h - 2, 6, 6, h, w); return m; }
+// festoon lights: a sagging wire from the item's anchor (height h) to (tx, ty) (height h), warm bulbs every 10 px
+function makeFestoon(r) {
+  const { tx, ty, h } = r, G = new GBuf(Math.abs(tx) + 24, Math.abs(ty) + h + 24); G.ax = Math.max(0, -tx) + 12; G.ay = Math.max(0, -ty) + h + 12;
+  wireLine(G, 0, 0, h, tx, ty, h, 10, [40, 36, 34]);
+  const n = Math.max(2, Math.round(Math.hypot(tx, ty) / 10)), cols = [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
+  for (let i = 1; i < n; i++) {
+    const t = i / n, X = tx * t, Y = ty * t, Z = h - 10 * 4 * t * (1 - t) - 2, px = Math.round(G.ax + X), py = Math.round(G.ay + Y - Z), c = cols[i % 3];
+    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) if (G.inside(px + dx, py + dy)) G.put(px + dx, py + dy, c, [0, 0.3, 0.95], Z, [c[0], c[1], c[2], 255], F_NOCAST);
+  }
+  return G;
+}
+// a beach towel laid on the sand
+function makeTowel(r) {
+  const w = 18, h = 34, G = new GBuf(w, h); G.ax = w / 2; G.ay = h / 2;
+  const a = [[216, 70, 60], [60, 120, 200], [240, 190, 60]][r.v || 0], b = [244, 240, 228];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) G.put(x, y, Math.floor(y / 5) % 2 ? a : b, [0, 0, 1], 1, null, F_GROUND);
+  return G;
 }
 // a creek bridge's rail: a stone kerb with timber posts and two rails (Redwood Creek, concepts N1-C/D)
 function creekRail(len = 200) {
@@ -1482,7 +1515,7 @@ function propItems(c, p, pi, I) {
     case 'crates': V(`crt:${seed % 2}`, 'crates', [seed % 2]); return;
     case 'foodcart': V('fc', 'hotdogCart', [1]); lightAt(I, x, y + 6, 40, 70, [1, 0.8, 0.5], 0.8, 'sign'); return;
     case 'tent': { const col = ['#e07b20', '#3f8a3a', '#2f6fc8'][p.v || 0]; V(`tent:${p.v || 0}`, 'tent', [col]); return; }
-    case 'campfire': V(`cf:${p.lit ? 1 : 0}`, 'campfire', [p.lit ? 1 : 0]); if (p.lit) lightAt(I, x, y, 14, 150, LIGHT.fire, 2.2, 'fire', 0); return;
+    case 'campfire': V(`cf:${p.lit ? 1 : 0}`, 'campfire', [p.lit ? 1 : 0]); if (p.lit) lightAt(I, x, y, 14, p.big ? 220 : 150, LIGHT.fire, p.big ? 3 : 2.2, 'fire', 0); return;
     case 'picnic': V('pic', 'picnic', [], qa(u * PI, 2)); return;
     case 'billboard': put(I, { key: `bb:${(p.ad || 0) % ADS.length}`, recipe: { t: 'grp', parts: [[{ t: 'v', m: 'bbframe', a: [] }, 0, 0, 0], [{ t: 'sign', k: 'ad', ad: (p.ad || 0) % ADS.length, w: 132, h: 54, z: 36 }, 0, 2, 0]] }, x, y, ext: [82, 170, 82, 76], pi }); lightAt(I, x, y + 8, 110, 140, [1, 0.96, 0.85], 1.2, 'sign'); return;
     case 'pipes': V(`pip:${seed % 2}`, 'pipes', [seed % 2], qa(u * PI, 2)); return;
@@ -1520,6 +1553,21 @@ function propItems(c, p, pi, I) {
       return;
     }
     case 'mapboard': V('mapb', 'mapBoard', []); return;
+    case 'chair': V(`chr:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, 'chair', [p.v || 0], qa(p.a || 0, 8)); return;
+    case 'cooler': V(`col:${p.v || 0}`, 'cooler', [p.v || 0], qa(u * TAU, 4)); return;
+    case 'woodpile': V('wpile', 'woodpile', [], qa(u * PI, 2)); return;
+    case 'surfboard': V(`surf:${p.v || 0}`, 'surfboard', [p.v || 0], qa(0.3 + u, 8)); return;
+    case 'towel': put(I, { key: `towel:${p.v || 0}`, recipe: { t: 'towel', v: p.v || 0 }, x, y, ext: [12, 20, 12, 20], pi }); return;
+    case 'torch': V('tiki', 'tiki', []); lightAt(I, x, y, 46, 120, LIGHT.fire, 1.6, 'fire', 0); return;
+    case 'post': V(`post:${p.h || 46}`, 'post', [p.h || 46]); return;
+    case 'windmill': V('wmill', 'windmill', [120]); return;
+    case 'trough': V('trough', 'trough', []); return;
+    case 'festoon': {
+      const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40;
+      put(I, { key: `fest:${tx}:${ty}:${h}`, recipe: { t: 'festoon', tx, ty, h }, x, y, ext: [Math.max(0, -tx) + 16, h + Math.max(0, -ty) + 16, Math.max(0, tx) + 16, Math.max(0, ty) + 16], pi });
+      for (let k = 1; k < 4; k++) lightAt(I, x + tx * k / 4, y + ty * k / 4, h - 6, 90, [1, 0.8, 0.5], 0.9, 'window');
+      return;
+    }
     case 'cottage': V(`cot:${p.w || 84}:${p.d || 54}`, 'cottage', [p.w || 84, p.d || 54, 0.6]); lightAt(I, x, y + 6, 22, 110, [1, 0.8, 0.5], 1.4, 'window'); return;
     case 'seal': { const coat = Math.floor(hh(x, y, 21) * 3); V(`seal:${p.pose || 0}:${coat}:${qa(p.a || 0, 8).toFixed(2)}`, 'seal', [p.pose || 0, coat], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return; }
     case 'gull': V(`gull:${qa(p.a || 0, 8).toFixed(2)}`, 'gull', [], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return;
