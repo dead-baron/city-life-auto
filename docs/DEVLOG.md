@@ -3220,3 +3220,8 @@ The roads laid out by rule rather than for a place are being reworked (playtest:
   - Same park: the lazy river, the slide tower and the three slides.
   - The layout is drawn from the park's corner (`naturesites.js` `WP_AT`), so it can move again.
 - **Tests:** `test/nature.test.js` and `test/business.test.js` follow the water park's new name.
+
+## 2026-10-07 · A cleaner title screen on phones
+
+- **No more "turn your phone sideways" message.** The game plays in portrait or landscape. A note about that will come back later in the tutorial and the guide.
+- **No controls text on the title screen.** The controls live on the pause menu's Controls page (the same text, now kept in a `<template>`).

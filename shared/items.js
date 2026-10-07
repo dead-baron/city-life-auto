@@ -1,4 +1,5 @@
 import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS } from './rules.js';
+import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
 export const WEAPONS = {
@@ -74,21 +75,87 @@ export const ITEMS = {
   redcap:  { name: 'Redcap Toadstool',  loot: true, sell: 2 },      // (pretty and poisonous: nobody eats one)
   ghostglass: { name: 'Ghostglass Caps', loot: true, illegal: true, sell: 0 },   // the glowing hallucinogen: only the black market buys them, and the police take them
   goldStar: { name: 'Golden Star',      loot: true, sell: 150 },    // a rare sea star that glows, from the tidepools
-  // hunting (server/systems/hunting.js): what a field-dressed animal gives, and the meat cooked over a fire
+  // hunting (server/systems/hunting.js, shared/fauna.js): what a field-dressed animal gives - meat, a hide or a pelt
+  // (graded: see GRADED below), the parts the trappers pay for - and the meat cooked over a fire. Cooked game is
+  // hearty: it heals and builds you up (a while of more health: HEARTY_HP, HEARTY_S in rules.js).
   venison: { name: 'Raw Venison',       game: true, sell: 9 },
+  elkMeat: { name: 'Raw Elk',           game: true, sell: 12 },
+  mooseMeat: { name: 'Raw Moose',       game: true, sell: 14 },
+  boarMeat: { name: 'Raw Boar',         game: true, sell: 10 },
+  bearMeat: { name: 'Raw Bear Meat',    game: true, sell: 12 },
+  grizzlyMeat: { name: 'Raw Grizzly Meat', game: true, sell: 14 },
+  cougarMeat: { name: 'Raw Lion Meat',  game: true, sell: 8 },
+  goatMeat: { name: 'Raw Goat',         game: true, sell: 9 },
+  gameMeat: { name: 'Raw Game Meat',    game: true, sell: 5 },
   rabbitMeat: { name: 'Raw Rabbit',     game: true, sell: 4 },
-  venisonSteak: { name: 'Venison Steak', food: true, heal: 35, sell: 16 },
+  birdMeat: { name: 'Raw Bird',         game: true, sell: 4 },
+  turkeyMeat: { name: 'Raw Turkey',     game: true, sell: 8 },
+  gooseMeat: { name: 'Raw Goose',       game: true, sell: 7 },
+  venisonSteak: { name: 'Venison Steak', food: true, heal: 35, hearty: true, sell: 16 },
+  elkSteak: { name: 'Elk Steak',        food: true, heal: 40, hearty: true, sell: 20 },
+  mooseRoast: { name: 'Moose Roast',    food: true, heal: 45, hearty: true, sell: 24 },
+  boarChops: { name: 'Boar Chops',      food: true, heal: 35, hearty: true, sell: 18 },
+  bearStew: { name: 'Bear Stew',        food: true, heal: 45, hearty: true, sell: 22 },
+  goatStew: { name: 'Goat Stew',        food: true, heal: 35, hearty: true, sell: 16 },
+  gameSteak: { name: 'Game Steak',      food: true, heal: 25, sell: 10 },
   rabbitRoast: { name: 'Roast Rabbit',  food: true, heal: 18, sell: 8 },
-  deerHide: { name: 'Deer Hide',        game: true, sell: 30 },
+  roastBird: { name: 'Roast Bird',      food: true, heal: 18, sell: 8 },
+  roastTurkey: { name: 'Roast Turkey',  food: true, heal: 30, hearty: true, sell: 14 },
+  roastGoose: { name: 'Roast Goose',    food: true, heal: 28, hearty: true, sell: 13 },
+  deerHide: { name: 'Deer Hide',        game: true, pelt: true, sell: 30 },
+  elkHide: { name: 'Elk Hide',          game: true, pelt: true, sell: 45 },
+  mooseHide: { name: 'Moose Hide',      game: true, pelt: true, sell: 55 },
+  goatHide: { name: 'Mountain Goat Hide', game: true, pelt: true, sell: 34 },
+  boarHide: { name: 'Boar Hide',        game: true, pelt: true, sell: 28 },
+  bearPelt: { name: 'Black Bear Pelt',  game: true, pelt: true, sell: 85 },
+  grizzlyPelt: { name: 'Grizzly Pelt',  game: true, pelt: true, sell: 150 },
+  cougarPelt: { name: 'Mountain Lion Pelt', game: true, pelt: true, sell: 120 },
+  bobcatPelt: { name: 'Bobcat Pelt',    game: true, pelt: true, sell: 60 },
+  coyotePelt: { name: 'Coyote Pelt',    game: true, pelt: true, sell: 24 },
+  redFoxPelt: { name: 'Red Fox Pelt',   game: true, pelt: true, sell: 55 },
+  greyFoxPelt: { name: 'Grey Fox Pelt', game: true, pelt: true, sell: 50 },
+  raccoonPelt: { name: 'Raccoon Pelt',  game: true, pelt: true, sell: 14 },
+  beaverPelt: { name: 'Beaver Pelt',    game: true, pelt: true, sell: 60 },
+  otterPelt: { name: 'River Otter Pelt', game: true, pelt: true, sell: 75 },
+  rabbitPelt: { name: 'Rabbit Pelt',    game: true, pelt: true, sell: 10 },
+  squirrelPelt: { name: 'Squirrel Pelt', game: true, pelt: true, sell: 6 },
   antlers: { name: 'Deer Antlers',      game: true, sell: 45 },
-  rabbitPelt: { name: 'Rabbit Pelt',    game: true, sell: 10 },
-  coyotePelt: { name: 'Coyote Pelt',    game: true, sell: 24 },
-  raccoonPelt: { name: 'Raccoon Pelt',  game: true, sell: 14 },
+  elkAntlers: { name: 'Elk Antlers',    game: true, sell: 70 },
+  mooseAntlers: { name: 'Moose Antlers', game: true, sell: 90 },
+  goatHorns: { name: 'Mountain Goat Horns', game: true, sell: 40 },
+  boarTusks: { name: 'Boar Tusks',      game: true, sell: 35 },
+  bearClaws: { name: 'Bear Claws',      game: true, sell: 40 },
+  cougarFangs: { name: 'Lion Fangs',    game: true, sell: 50 },
+  castoreum: { name: 'Castoreum',       game: true, sell: 30 },   // (beaver musk: the perfumers pay for it)
+  quailFeathers: { name: 'Quail Plumes', game: true, sell: 3 },
+  pheasantFeathers: { name: 'Pheasant Tail Feathers', game: true, sell: 6 },
+  turkeyFeathers: { name: 'Turkey Feathers', game: true, sell: 5 },
+  duckFeathers: { name: 'Duck Feathers', game: true, sell: 3 },
+  gooseFeathers: { name: 'Goose Down',  game: true, sell: 4 },
   lemonade: { name: 'Lemonade',         stamina: true, buff: 'coffee', sell: 0 },
   cider:   { name: 'Apple Cider',       stamina: true, buff: 'coffee', sell: 0 },
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
   whitewine: { name: 'Willow River White', buff: 'wine', sell: 12 },
 };
+
+// Hides and pelts come in grades (shared/fauna.js gradeOf: how cleanly it was taken, and skinned with a hunting
+// knife or not): the plain id is a good one; id_1 a poor one (torn, holed), id_3 a perfect one. The rare pure white
+// animals give a legendary pelt of their own (legend_<kind>), worth a great deal to the right buyer.
+export const GRADED = Object.keys(ITEMS).filter((id) => ITEMS[id].pelt);
+for (const id of GRADED) {
+  const b = ITEMS[id];
+  ITEMS[id + '_1'] = { name: 'Poor ' + b.name, game: true, pelt: true, grade: 1, base: id, sell: Math.max(1, Math.round(b.sell * 0.45)) };
+  ITEMS[id + '_3'] = { name: 'Perfect ' + b.name, game: true, pelt: true, grade: 3, base: id, sell: Math.round(b.sell * 1.75) };
+}
+for (const [kind, S] of Object.entries(SPECIES)) {
+  if (!S.legend) continue;
+  const big = { tiny: 220, small: 380, medium: 650, large: 950, huge: 1300 }[S.size] || 500;
+  ITEMS['legend_' + kind] = { name: `Pelt of ${S.legend.name.replace(/^the /, 'the ')}`, game: true, pelt: true, legendary: kind, sell: big };
+}
+// the pelt / hide item of a species (the loot entry that is a pelt), or null
+export const peltOf = (kind) => { const S = SPECIES[kind]; const e = S && S.loot.find(([id]) => ITEMS[id] && ITEMS[id].pelt); return e ? e[0] : null; };
+// an item id with its grade (2: the plain id)
+export const graded = (id, g) => (ITEMS[id] && ITEMS[id].pelt && g !== 2 && ITEMS[id + '_' + g] ? id + '_' + g : id);
 
 // What kind of thing an item is (the bag's sections and the dev give menu).
 export const ITEM_CATS = [

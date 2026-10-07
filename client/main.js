@@ -804,7 +804,6 @@ function startPlaying() {
   S.playing = true;
   initAudio();
   if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true);
-  setTimeout(maybeLandscapeTip, 600);
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (S.me) S.hud.setMe(S.me);
@@ -955,7 +954,7 @@ function submitDevPw() {
 $('devpw-go').onclick = submitDevPw;
 $('devpw-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitDevPw(); } else if (e.key === 'Escape') closeOverlay('devpw'); });
 
-const practiceGo = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); setTimeout(maybeLandscapeTip, 1500); startPractice(); };
+const practiceGo = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); startPractice(); };
 const playGo = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
 $('practice').onclick = firstPlay(practiceGo);
 $('play').onclick = firstPlay(playGo);
@@ -1502,15 +1501,6 @@ if (standalone) $('s-install').classList.add('hidden');
 // drop the one-off ?fresh= marker so it doesn't stick to bookmarks
 if (new URLSearchParams(location.search).has('fresh')) { const u = new URL(location.href); u.searchParams.delete('fresh'); history.replaceState(null, '', u.href); }
 
-let landTipShown = false;
-function maybeLandscapeTip() {
-  if (landTipShown || input.device !== 'touch' || innerHeight <= innerWidth) return;
-  landTipShown = true;
-  const el = $('land-tip');
-  el.classList.remove('hidden', 'fade');
-  setTimeout(() => el.classList.add('fade'), 4200);
-  setTimeout(() => el.classList.add('hidden'), 5600);
-}
 
 // ---- overlays: pause menu, settings, controls, dev panel - all navigable with a gamepad --------
 // Start (or Esc) opens the pause menu; D-pad / left stick moves, A selects, left/right changes a
@@ -1521,7 +1511,7 @@ function topOverlay() { return overlays[overlays.length - 1] || null; }
 function openOverlay(id) {
   if (topOverlay() === id) return;
   if (id === 'settings') { syncSettings(); syncAccount(); }
-  if (id === 'controls') $('c-body').innerHTML = $('t-help').innerHTML;
+  if (id === 'controls') $('c-body').innerHTML = $('help-tpl').innerHTML;
   if (id === 'players' || id === 'bigmap' || id === 'dev') requestPlayers();
   if (id === 'pause') {
     requestPlayers();
@@ -1794,7 +1784,6 @@ function onResize() {
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   if (S.art2) S.art2.resize(W, H, DPR);
   document.body.classList.toggle('portrait', H > W);
-  if (S.playing) maybeLandscapeTip();
   sendView();
 }
 // Tell the server how much world this screen shows at rest, so it spawns things just out of

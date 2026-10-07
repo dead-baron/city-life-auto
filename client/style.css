@@ -181,18 +181,13 @@ body.kbm #b-fs { display: none; }
 #play:disabled { opacity: .45; cursor: wait; }
 #play:not(:disabled):hover, #practice:hover { transform: skewX(-10deg) translateY(-2px); }
 #t-practice { font-size: 14px; color: var(--dim); max-width: 560px; line-height: 1.45; margin-top: -4px; }
-#t-help { font-size: 14px; color: #c8cad8; max-width: 820px; line-height: 1.6; }
-#t-help b { color: #fff; font-family: var(--display); font-weight: normal; letter-spacing: 1px; margin-right: 6px; }
 #t-tools { display: flex; gap: 10px; }
 #t-tools button { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #fff; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25); padding: 6px 14px; cursor: pointer; }
 body.kbm #t-fs { display: none; }
 #t-note { font-size: 13px; color: #6c7096; }
 #t-ver { font-size: 11px; color: #4c5070; letter-spacing: 1px; }
 
-#land-tip { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); z-index: 35; background: rgba(0,0,0,.82); color: #fff; padding: 14px 18px; border-left: 4px solid var(--accent); font-size: 18px; font-weight: 700; max-width: 84vw; text-align: center; pointer-events: none; transition: opacity 1.3s; }
-#land-tip span { display: inline-block; font-size: 26px; margin-right: 8px; vertical-align: middle; animation: spin 2s ease-in-out infinite; }
 @keyframes spin { 50% { transform: rotate(-90deg); } }
-#land-tip.fade { opacity: 0; }
 
 /* ---- touch controls ---- */
 #touch { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
@@ -259,7 +254,7 @@ body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.arm
 
 /* short landscape phones */
 @media (max-height: 430px) {
-  #title { gap: 8px; } #logo { width: min(240px, 34vh * 1.4); } #t-help { font-size: 12px; line-height: 1.4; } #t-note { display: none; }
+  #title { gap: 8px; } #logo { width: min(240px, 34vh * 1.4); } #t-note { display: none; }
   #play, #practice { font-size: 20px; padding: 9px 24px; }
   .touch #stick-r, #tbtns button { transform: scale(.9); }
   /* the top-right column packs into three short rows (weapon; cash and bank; stars, clock and status), so the
