@@ -91,6 +91,75 @@ export function buildNatureSites(m, H) {
   desertCamp(m, H);
   summitTarn(m, H);
   heronMarsh(m, H);
+  northshoreGardens(m, H);
+}
+
+// clear a map prop away (its picture and its solid footprint): for a designed place that replaces random dressing
+function dropProp(m, i) {
+  const p = m.props[i];
+  if (!p) return;
+  const e = m.propSolid && m.propSolid.get(i);
+  if (e) {
+    for (const arr of m.solidProps.values()) { const k = arr.indexOf(e); if (k >= 0) { arr.splice(k, 1); break; } }
+    m.propSolid.delete(i);
+  }
+  m.props[i] = { t: 'painted', x: p.x, y: p.y };   // (kept in place: other props keep their indices)
+}
+
+// ---- Northshore Botanical Gardens (concept N6) ----------------------------------------------------------------------
+// Northshore Commons, laid out as the gardens: the Japanese garden round the pond (a red bridge, stone lanterns, a
+// little waterfall, maples, raked gravel, koi), the glasshouse and the orchard, the kitchen garden (raised beds,
+// sunflowers, a scarecrow, the potting shed), the lavender and the beehives, roses round the fountain and a statue.
+function northshoreGardens(m, H) {
+  const park = (m.blocks || []).find((b) => b.park && b.park.label === 'Northshore Commons');
+  if (!park) return;
+  const { ix, iy, iw, ih } = park, cx = ix + Math.floor(iw / 2), cy = iy + Math.floor(ih / 2);
+  const P = (tx, ty) => [(tx + 0.5) * TILE, (ty + 0.5) * TILE];
+  // the park's random trees, shrubs, flowers and mosaics give way (lamps, benches and the fountain stay)
+  const RANDOM = new Set(['tree_a', 'tree_b', 'shrub_a', 'flowers_a', 'flowers_big', 'mosaic']);
+  m.props.forEach((p, i) => { if (p && RANDOM.has(p.t) && p.x >= ix * TILE && p.x < (ix + iw) * TILE && p.y >= iy * TILE && p.y < (iy + ih) * TILE) dropProp(m, i); });
+  for (let ty = iy; ty < iy + ih; ty++) for (let tx = ix; tx < ix + iw; tx++) m.reserve[ty * MAP_W + tx] |= RES;
+  const q = { x0: ix + 6, x1: cx - 2, y0: iy + 6, y1: cy - 2 };          // the north-west quarter inside the ring path
+  const E = { x0: cx + 2, x1: ix + iw - 6, y0: iy + 6, y1: cy - 2 };     // north-east (the pond)
+  const S = { x0: ix + 6, x1: cx - 2, y0: cy + 3, y1: iy + ih - 6 };     // south-west
+  const T2 = { x0: cx + 2, x1: ix + iw - 6, y0: cy + 3, y1: iy + ih - 6 }; // south-east
+  const add = (t, tx, ty, r = 0, extra = null) => { const [x, y] = P(tx, ty); H.addProp(m, t, x, y, r, extra); };
+  // NW: the glasshouse along the north, the orchard in rows below it with ladders and fruit crates
+  add('greenhouse', (q.x0 + q.x1) / 2, q.y0 + 2.2, 0);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -5; dx <= 5; dx++) m.addSolidProp(((q.x0 + q.x1) / 2 + dx * 0.45 + 0.5) * TILE, (q.y0 + 1.6 + dy * 0.8) * TILE, 10);
+  let k = 0;
+  for (let ty = q.y0 + 6; ty <= q.y1 - 1; ty += 3) for (let tx = q.x0 + 1; tx <= q.x1 - 1; tx += 3, k++) add('tree_a', tx, ty, 10, { sp: k % 3 === 2 ? 'orange' : 'apple', k: 1.2 });
+  add('ladder', q.x0 + 2.6, q.y0 + 6.4, 0); add('fruitcrate', q.x0 + 4.4, q.y0 + 8.2, 0); add('fruitcrate', q.x0 + 4.9, q.y0 + 8.4, 0);
+  // NE: the Japanese garden round the pond
+  const pondT = []; for (let ty = E.y0; ty <= E.y1; ty++) for (let tx = E.x0; tx <= E.x1; tx++) { const t = m.tiles[ty * MAP_W + tx]; if (t === T.WATER || t === T.DEEP) pondT.push([tx, ty]); }
+  if (pondT.length) {
+    const px = pondT.reduce((a, p) => a + p[0], 0) / pondT.length, py = pondT.reduce((a, p) => a + p[1], 0) / pondT.length;
+    // the red bridge across the pond's narrow middle (planks underneath: you can walk it)
+    for (let tx = Math.floor(px) - 5; tx <= Math.floor(px) + 5; tx++) { const i = Math.round(py) * MAP_W + tx; if (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP) m.tiles[i] = T.DOCK; }
+    add('redbridge', px, Math.round(py), 0, { len: 11 * TILE });
+    for (const [dx, dy] of [[-6.5, -3], [6.5, 3.5], [-5, 4], [4.5, -4.5]]) add('stonelantern', px + dx, py + dy, 6);
+    add('fallsmall', px + 3, py - 5.6, 0);
+    for (const [dx, dy] of [[-7.5, -5], [7.5, -4], [-7, 5.5]]) add('tree_a', px + dx, py + dy, 10, { sp: 'redMaple', k: 1.25 });
+    add('tree_a', px + 7.5, py + 6, 10, { sp: 'cherry', k: 1.3 });
+    for (let j = 0; j < 6; j++) add('koi', px - 3 + (j % 3) * 2.6, py - 2 + Math.floor(j / 3) * 3.4, 0, { v: j % 4, a: j * 1.1 });
+    for (let j = 0; j < 3; j++) add('lily', px - 4 + j * 4, py + 2.5 - (j % 2) * 4, 0, { v: j });
+  }
+  add('gravelgarden', E.x1 - 3, E.y1 - 1.5, 0);
+  // the centre: roses round the fountain plaza, the statue north of it
+  for (const [dx, dy] of [[-6, -5.5], [6, -5.5], [-6, 5.5], [6, 5.5], [-3, -6], [3, -6], [-3, 6], [3, 6]]) add('shrub_a', cx + dx, cy + dy, 0, { sp: 'rose', k: 1.1 });
+  add('statue', cx, cy - 7.2, 8);
+  // SW: the kitchen garden: raised beds in rows, sunflowers along the back, the scarecrow, the potting shed
+  for (let ty = S.y0 + 3; ty <= S.y1 - 2; ty += 3) for (let tx = S.x0 + 2; tx <= S.x1 - 3; tx += 4) add('raisedbed', tx + 1, ty, 0, { v: (tx + ty) % 4 });
+  for (let tx = S.x0 + 1; tx <= S.x1 - 1; tx += 1.5) add('shrub_a', tx, S.y0 + 0.8, 0, { sp: 'sunflowers', k: 1 });
+  add('scarecrow', (S.x0 + S.x1) / 2, S.y0 + 4.6, 0);
+  add('shed', S.x0 + 1.2, S.y1 - 0.8, 0);
+  for (let dx = -1; dx <= 1; dx++) m.addSolidProp((S.x0 + 1.7 + dx * 0.5) * TILE, (S.y1 - 1.1) * TILE, 10);
+  add('wheelbarrow', S.x0 + 3.6, S.y1 - 0.6, 0);
+  // SE: lavender in rows, the beehives along the east
+  for (let ty = T2.y0 + 1; ty <= T2.y1 - 1; ty += 2) for (let tx = T2.x0 + 1; tx <= T2.x1 - 5; tx += 1.4) add('shrub_a', tx, ty, 0, { sp: 'lavender', k: 1 });
+  for (let j = 0; j < 5; j++) add('beehive', T2.x1 - 2, T2.y0 + 2 + j * 2.4, 6, { v: j % 3 });
+  (m.landmarks ||= []).push({ name: 'Northshore Botanical Gardens', type: 'gardens', x: ix * TILE, y: iy * TILE, w: iw * TILE, h: ih * TILE });
+  m.natureSites.push({ kind: 'gardens', name: 'Northshore Botanical Gardens', x: cx * TILE, y: cy * TILE });
 }
 
 // ---- Heron Marsh (Lake District; concepts N7, NK1-O) --------------------------------------------------------------

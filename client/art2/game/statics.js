@@ -316,6 +316,8 @@ export function makeStatic(r) {
     case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist });
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);
+    case 'koi': { const G = new GBuf(24, 24); G.ax = 12; G.ay = 12; GD.koi(G, 12, 12, r.a || 0, r.v || 0, 9); return G; }
+    case 'zen': return makeZen();
     case 'critter': { const fr = critterFrames(r.k); return (fr && fr[r.f || 0]) || EMPTY; }
     case 'lily': { const G = FL.lilyPads(r.s || 1, 7, 2); return G && G.render ? G.render(0) : G; }
     case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });
@@ -1129,6 +1131,10 @@ function voxModel(m, a) {
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
     case 'creekRail': return creekRail(a[0] || 200);
+    case 'greenhouse': return GD.greenhouse(150, 80, 40, 30, 0.6, 1); case 'gStatue': return GD.gardenStatue(); case 'stoneLantern': return GD.stoneLantern(a[0] ?? 0.6);
+    case 'redBridge': return GD.redBridge(a[0] || 110, 26, 16); case 'beehive': return GD.beehive(['#e0b850', '#d8a848', '#e8c060'][a[0] || 0], (a[0] || 0) + 3);
+    case 'raisedBed': return GD.raisedBed(60, 26, 9, (a[0] || 0) + 1); case 'gShed': return GD.gardenShed(52, 38, 32, '#3a6a8a'); case 'ladder': return GD.orchardLadder(46);
+    case 'fruitCrate': return GD.fruitCrate('#c8302a', 2);
     case 'beaverDam': return GD.beaverDam(a[0] || 130, 26, 14, 0.6, 3); case 'lodge': return GD.beaverLodge(28, 22, 2);
     case 'boardwalk': return GD.boardwalk(a[0] || 160, 34, 8, 'ns'); case 'pier': return GD.fishingPier(a[0] || 120, 30, 10, 0.7);
     case 'canoe': return WT.canoe(0, a[0] || '#b83a2e'); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
@@ -1174,6 +1180,8 @@ function vdim(m, a) {
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
     case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
+    case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
+    case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
     case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, 30, 54];
     case 'canoe': return [64, 16, 12]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
@@ -1241,6 +1249,14 @@ function crateStack(seed = 1) {
   const c = (i) => m.mat({ ramp: ramp(cols[i % 3], 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 7 === 0 || Math.round(x) % 7 === 0 ? -0.6 : 0) });
   m.box(1, 1, 0, 15, 15, 14, c(0)); m.box(16, 3, 0, 30, 17, 14, c(1)); m.box(8, 12, 0, 22, 26, 14, c(2)); if (seed % 2) m.box(4, 4, 14, 18, 18, 28, c(1));
   return m;
+}
+// a raked gravel garden: an oval of pale gravel raked in rings round three stones (the gardens, concept N6)
+function makeZen() {
+  const w = 128, h = 84, G = new GBuf(w, h + 30); G.ax = w / 2; G.ay = h / 2 + 30;
+  const stones = [[-28, -6, 9], [18, 4, 12], [36, -14, 6]];
+  GD.rakedGravel(G, (x, y) => ((x - w / 2) / (w / 2 - 2)) ** 2 + ((y - G.ay) / (h / 2 - 2)) ** 2 <= 1, stones.map(([dx, dy, r]) => [w / 2 + dx, G.ay + dy, r]), { seed: 5 });
+  for (const [dx, dy, r] of stones) zPut(G, rockLump(dx + 40, r * 2, 'granite', { moss: 0.3 }), w / 2 + dx, G.ay + dy, 0);
+  return G;
 }
 // a tiki torch: a bamboo pole, a woven cup and a flame (the beach bonfire, concept N11)
 function tikiTorch() {
@@ -1564,6 +1580,19 @@ function propItems(c, p, pi, I) {
       return;
     }
     case 'mapboard': V('mapb', 'mapBoard', []); return;
+    case 'greenhouse': V('ghouse', 'greenhouse', []); lightAt(I, x, y, 30, 160, [1, 0.88, 0.62], 1.2, 'window'); return;
+    case 'statue': V('gstat', 'gStatue', []); return;
+    case 'stonelantern': V('slant', 'stoneLantern', [0.7]); lightAt(I, x, y + 2, 24, 80, [1, 0.8, 0.5], 1.1, 'lamp'); return;
+    case 'redbridge': V(`rbr:${p.len || 110}`, 'redBridge', [p.len || 110]); return;
+    case 'beehive': V(`bhive:${p.v || 0}`, 'beehive', [p.v || 0]); return;
+    case 'raisedbed': V(`rbed:${p.v || 0}`, 'raisedBed', [p.v || 0]); return;
+    case 'shed': V('gshed', 'gShed', []); return;
+    case 'ladder': V('oladder', 'ladder', [], 0.5); return;
+    case 'fruitcrate': V('fcrate', 'fruitCrate', []); return;
+    case 'scarecrow': V('scare', 'scarecrow', []); return;
+    case 'fallsmall': put(I, { key: 'curt:16:30', recipe: { t: 'curtain', w: 16, h: 30, seed: 7 }, x, y, ext: [40, 60, 40, 30], pi }); return;
+    case 'koi': put(I, { key: `koi:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, recipe: { t: 'koi', v: p.v || 0, a: qa(p.a || 0, 8) }, x, y, ext: [12, 12, 12, 12], pi }); return;
+    case 'gravelgarden': put(I, { key: 'zen', recipe: { t: 'zen' }, x, y, ext: [70, 50, 70, 50], pi }); return;
     case 'beaverdam': V(`bdam:${p.len || 130}`, 'beaverDam', [p.len || 130]); return;
     case 'lodge': V('lodge', 'lodge', []); return;
     case 'boardwalk': V(`bwalk:${p.len || 160}`, 'boardwalk', [p.len || 160], PI / 2); return;

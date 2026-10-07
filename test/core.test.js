@@ -917,7 +917,11 @@ test('a vehicle out of health rolls to a stop, smokes, burns, then explodes - a 
   const { DEAD_FIRE_S, DEAD_BOOM_S } = await import('../shared/rules.js');
   const w = makeWorld();
   const p = joinPlayer(w).p;
-  const car = w.spawnVehicle('sedan', p.ped.x + 300, p.ped.y, 0, { npcOwned: false });
+  // (on a long straight road: rolling on from a random spot it could end in the water and sink instead)
+  const road = straightRoad(w.map, 1600);
+  teleport(w, p.ped, road.x + 100, road.y - road.hw - 40);   // (a player nearby keeps the car simulated)
+  const car = w.spawnVehicle('sedan', road.x + 200, road.y, 0, { npcOwned: false });
+  for (const e of [...w.entities.values()]) if (e.kind === K.VEH && e !== car && Math.abs(e.y - road.y) < 200) w.remove(e);
   car.vx = 400;
   vehicles.damageVehicle(w, car, 9999, p.ped);
   assert.ok(car.dead && !car.wreckAt, 'the engine is dead, the car still whole');
@@ -930,7 +934,7 @@ test('a vehicle out of health rolls to a stop, smokes, burns, then explodes - a 
   for (let i = 0; i < 20 * (DEAD_BOOM_S - DEAD_FIRE_S + 0.3); i++) w.step();
   assert.ok(car.wreckAt, `exploded after ${DEAD_BOOM_S} s`);
   // a dying car set off by a blast next to it
-  const car2 = w.spawnVehicle('sedan', p.ped.x + 900, p.ped.y, 0, { npcOwned: false });
+  const car2 = w.spawnVehicle('sedan', road.x + 1400, road.y, 0, { npcOwned: false });
   vehicles.damageVehicle(w, car2, 9999, null);
   assert.ok(car2.dead && !car2.wreckAt);
   vehicles.damageVehicle(w, car2, 10, null, false, true);

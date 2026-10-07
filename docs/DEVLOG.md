@@ -2323,3 +2323,18 @@ Heron Lake's east side opens into a marsh (`shared/naturesites.js` `heronMarsh`)
 - **Round the edges and on the water:** willows; swans, ducks and a heron.
 - **Meadow grass:** a designed nature place in town (reserve bit 32) grows meadow grass instead of the district's lawn (`groundbake.js`).
 - On the map as "Heron Marsh". Tests in `test/nature.test.js`.
+
+## 2026-10-06 · Northshore Botanical Gardens (concept N6)
+
+Northshore Commons is laid out as the gardens (`shared/naturesites.js` `northshoreGardens`). The park's random trees, shrubs, flowers and mosaics give way; their solid footprints go with them (`dropProp`). Lamps, benches and the fountain stay.
+- **North-west:** the glasshouse (it glows at night) and an orchard of apple and orange trees in rows, with a ladder and fruit crates.
+- **North-east, the Japanese garden:**
+  - a red bridge across the pond (planks underneath, so you can walk it);
+  - stone lanterns, a little waterfall, red maples and a cherry;
+  - koi and lilies in the water;
+  - a raked gravel garden round three stones.
+- **The centre:** roses round the fountain, a statue north of it.
+- **South-west, the kitchen garden:** raised beds in rows, sunflowers, a scarecrow, the potting shed, a wheelbarrow.
+- **South-east:** lavender in rows and five beehives.
+- On the map as "Northshore Botanical Gardens".
+- **Test fixes:** the dying-car test rolls its car down a long straight road with the player beside it. From a random spot it could roll into water, or be too far from anyone to be simulated.

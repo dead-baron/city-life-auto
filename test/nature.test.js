@@ -129,3 +129,17 @@ test('Heron Marsh: channels and reed islands, a boardwalk you can walk, the beav
   assert.ok(m.props.filter((q) => q && (q.sp === 'cattails' || q.sp === 'reeds') && Math.hypot(q.x - s.x, q.y - s.y) < 700).length >= 30, 'reeds and cattails');
   assert.ok(m.landmarks.some((l) => l.name === 'Heron Marsh'));
 });
+
+test('Northshore Botanical Gardens: the random park dressing gives way to the garden; the bridge is walkable', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'gardens');
+  assert.ok(s, 'the gardens are built');
+  const near = (t) => m.props.filter((q) => q && q.t === t && Math.hypot(q.x - s.x, q.y - s.y) < 900).length;
+  for (const t of ['greenhouse', 'redbridge', 'stonelantern', 'raisedbed', 'beehive', 'statue', 'scarecrow']) assert.ok(near(t) >= 1, t);
+  assert.ok(m.props.filter((q) => q && q.sp === 'lavender' && Math.hypot(q.x - s.x, q.y - s.y) < 900).length >= 10, 'lavender rows');
+  // the bridge's planks cross the pond
+  const br = m.props.find((q) => q && q.t === 'redbridge');
+  assert.equal(tileAt(br.x, br.y), T.DOCK, 'planks under the red bridge');
+  // a dropped prop leaves no solid behind
+  for (const [i, p] of m.props.entries()) if (p && p.t === 'painted' && Math.hypot(p.x - s.x, p.y - s.y) < 900) assert.ok(!m.propSolid.has(i), 'no solid left for a cleared prop');
+  assert.ok(m.landmarks.some((l) => l.name === 'Northshore Botanical Gardens'));
+});
