@@ -2734,3 +2734,7 @@ The open ground south of the oil field road, east of Willow River, is now a vine
 - **The drive:** in from the road under a ranch gate (`gatearch`, the rural gate arch now in the game), lined with Italian cypresses. The vineyard's lit sign stands at the road.
 - **Round it:** olive trees down the west side, lavender along the courtyard and cypresses at the corners.
 - On the map as Willow River Vineyard, and in the debug menu (🍇 Willow River Vineyard). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · The Hilltop Mansion's track (Dry Creek Desert)
+
+The Hilltop Mansion's drive used to run north into the open desert and stop, and the Farm Road stopped short in the sand nearby. A dirt track now joins them (`shared/naturesites.js` `hilltopTrack`): it leaves the road's end with a mailbox and a name board, and runs across the desert to the gate posts at the top of the drive. The track is drawn as dirt (`m.tracks`), and the scrub and rocks are kept off it. Homes, POIs and buildings unchanged.

@@ -505,3 +505,15 @@ test('Willow River Vineyard: rows of vines either side of a track east of the ri
   assert.ok(m.props.filter((q) => q && q.t === 'festoon' && Math.hypot(q.x - s.x, q.y - s.y) < 16 * TILE).length >= 4, 'string lights over the terrace');
   assert.ok(m.landmarks.some((l) => l.name === 'Willow River Vineyard'));
 });
+
+test('the Hilltop Mansion\'s drive is joined to the end of the Farm Road by a dirt track', () => {
+  const h = m.homes.find((q) => q.name === 'Hilltop Mansion');
+  assert.ok(h, 'the mansion');
+  const g = h.garageDoor || h.garage;
+  const t = (m.tracks || []).find((r) => Math.abs(r.pts[r.pts.length - 1][0] - g.x) < 2 * TILE && Math.abs(r.pts[r.pts.length - 1][1] - g.y) < 40 * TILE);
+  assert.ok(t, 'a track ends at the top of the drive');
+  const [x0, y0] = t.pts[0], [x1, y1] = t.pts[t.pts.length - 1];
+  let road = false; for (let k = 0; k <= 5; k++) if (tileAt(x0, y0 + k * TILE) === T.ROAD) road = true;
+  assert.ok(road, 'it starts at the road');
+  assert.equal(tileAt(x1, y1 + TILE), T.LOT, 'and ends on the drive');
+});

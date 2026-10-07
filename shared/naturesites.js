@@ -112,8 +112,33 @@ export function buildNatureSites(m, H) {
   northPointCourts(m, H);
   westportPier(m, H);
   vineyard(m, H);
+  hilltopTrack(m, H);
   roadside(m, H);
   coralRainforest(m, H);
+}
+
+// ---- The Hilltop Mansion's track (Dry Creek Desert) ------------------------------------------------------------
+// The mansion on the rise east of the Farm Road had a drive that ran north into the open desert and stopped, and the
+// Farm Road itself stops short in the sand: a dirt track now joins them, from the road's end across the desert to
+// the top of the drive, with a mailbox and a name board at the road's end and the drive's gate posts at the top.
+function hilltopTrack(m, H) {
+  const h = (m.homes || []).find((q) => q.name === 'Hilltop Mansion'), fr = (m.edges || []).filter((e) => e.name === 'Farm Road' && e.lvl === 0);
+  if (!h || !fr.length) return;
+  let end = null;
+  for (const e of fr) for (const q of [e.pts[0], e.pts[e.pts.length - 1]]) if (!end || q.y < end.y) end = q;
+  const g = h.garageDoor || h.garage, gx = g.x; let gy = g.y;
+  while (gy > g.y - 40 * TILE && m.tiles[at(gx, gy - TILE)] === T.LOT) gy -= TILE;
+  if (m.tiles[at(gx, gy)] !== T.LOT || Math.hypot(gx - end.x, gy - end.y) > 100 * TILE) return;
+  const top = [gx, Math.floor(gy / TILE) * TILE + 8], dx = top[0] - end.x;
+  const pts = spline([[end.x, end.y - 20], [end.x + 30, end.y - 70], [end.x + dx * 0.3, end.y - 60 + (top[1] - end.y) * 0.2], [end.x + dx * 0.65, top[1] - 70], [top[0] - 90, top[1] - 34], [top[0], top[1] - 6]], 12);
+  for (const [x, y] of pts) { const i = at(x, y); if (m.tiles[i] !== T.DIRT && m.tiles[i] !== T.GRASS && m.tiles[i] !== T.SAND && m.tiles[i] !== T.LOT && m.tiles[i] !== T.ROAD) return; }
+  for (const [x, y] of pts) m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < 40) dropProp(m, i); });
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  (m.tracks ||= []).push({ pts, hw: 28, bb: [x0 - 40, y0 - 40, x1 + 40, y1 + 40] });
+  for (const [x, y] of pts) reserveRound(m, x, y, 34);
+  H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
+  H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
+  for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
 }
 
 // ---- Willow River Vineyard (Dry Creek Desert, east of the river; original) --------------------------------------------
