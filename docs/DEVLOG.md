@@ -2357,3 +2357,15 @@ Beside the road below the quarry (`shared/naturesites.js` `oldMine`), a granite 
   - a windmill, a water trough and hay bales;
   - sunflowers along the fence.
   - The farm animals already graze round the farms (`wildlife.js`), so they have somewhere that looks like theirs.
+
+## 2026-10-06 · Something by every country road
+
+Following the rule in `docs/WORLD-V2.md` ("no stretch of a route goes much more than about 100 m without a feature"), the country roads and dirt tracks (5.2 km of them) now have about 50 small roadside scenes, one every 70-110 m, on alternating sides (`shared/naturesites.js` `roadside`), chosen by biome:
+- road signs (curve warnings, direction boards);
+- in farmland: a mailbox at a farm gate with fence runs either way, a fruit stand with sunflowers, or stacked hay bales;
+- a gravel lay-by with a bench and a bin;
+- a picnic table under a tree;
+- in the woods, a trailhead: a finger post, a map board and a log pile;
+- in the hills and the desert, a stone cairn; in the hills, coin binoculars too.
+
+Nothing solid stands within two tiles of the road.

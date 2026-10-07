@@ -1158,6 +1158,7 @@ function voxModel(m, a) {
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
     case 'creekRail': return creekRail(a[0] || 200);
+    case 'roadSign': return U.roadSign(a[0] || 'arrow'); case 'fingerPost': return U.fingerPost(); case 'stand': return RD.produceStand(40);
     case 'minePortal': return WL.minePortal(80, 70); case 'mineCart': return WL.mineCart(true); case 'mBarrel': return WL.barrel('#8a5a34');
     case 'chest': return WL.chest(); case 'pickaxe': return WL.pickaxe();
     case 'greenhouse': return GD.greenhouse(150, 80, 40, 30, 0.6, 1); case 'gStatue': return GD.gardenStatue(); case 'stoneLantern': return GD.stoneLantern(a[0] ?? 0.6);
@@ -1209,6 +1210,7 @@ function vdim(m, a) {
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
     case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
+    case 'roadSign': return a[0] === 'curve' ? [18, 4, 44] : [50, 4, 52]; case 'fingerPost': return [30, 6, 44]; case 'stand': return [44, 18, 24];
     case 'minePortal': return [80, 22, 78]; case 'mineCart': return [32, 22, 26]; case 'mBarrel': return [14, 14, 18]; case 'chest': return [26, 16, 18]; case 'pickaxe': return [10, 6, 34];
     case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
@@ -1610,6 +1612,9 @@ function propItems(c, p, pi, I) {
       return;
     }
     case 'mapboard': V('mapb', 'mapBoard', []); return;
+    case 'roadsign': { const k = p.k || 'arrow', hd = qa((p.a || 0) + PI / 2, 8); V(`rsign:${k}:${hd.toFixed(2)}`, 'roadSign', [k], hd); return; }
+    case 'fingerpost': V('fpost', 'fingerPost', [], qa(u * PI, 4)); return;
+    case 'stand': V('pstand', 'stand', []); return;
     case 'cliff': put(I, { key: `cliff:${p.w}:${p.d}:${p.h}:${p.s || 1}`, recipe: { t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1 }, x, y, ext: [p.w / 2 + 20, p.d + p.h + 30, p.w / 2 + 20, 20], pi }); return;
     case 'mineportal': V('mport', 'minePortal', []); lightAt(I, x, y + 6, 30, 90, [1, 0.75, 0.4], 0.8, 'lamp'); return;
     case 'minecart': V('mcart', 'mineCart', [], PI / 2); return;

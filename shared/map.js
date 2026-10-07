@@ -536,7 +536,7 @@ export function generateCity(seed = 1337) {
   buildEstates(m, rand);
   buildOutposts(m, rand);
   buildScenePaintings(m);
-  buildNatureSites(m, { addProp });
+  buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * MAP_W + tx], terrainAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')) });
   buildWilds(m, rand);
   buildStreetProps(m);
   buildPowerLines(m, { addProp }, (tx, ty) => wildAt(m, tx, ty));

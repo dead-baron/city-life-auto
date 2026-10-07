@@ -162,3 +162,13 @@ test('farms: a fenced pasture (solid fence) by every farm, open grass inside', (
     assert.ok(!m.props.some((p) => p && (p.t === 'tree_a' || p.t === 'tree_b') && Math.abs(p.x - s.x) < 170 && Math.abs(p.y - s.y) < 130), 'no tree in the pasture');
   }
 });
+
+test('country roads: something by the verge every 100 m or so, nothing solid near the road', () => {
+  assert.ok(m.roadsideN >= 40, `roadside features (${m.roadsideN})`);
+  const kinds = new Set(['roadsign', 'mailbox', 'stand', 'fingerpost', 'mapboard', 'pbench', 'picnic', 'scope', 'hayBale']);
+  for (const p of m.props) {
+    if (!p || !kinds.has(p.t)) continue;
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    assert.notEqual(m.tileAt(tx, ty), T.ROAD, `${p.t} at ${Math.round(p.x)},${Math.round(p.y)} stands on the road`);
+  }
+});

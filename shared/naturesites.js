@@ -83,6 +83,8 @@ function trail(m, cp) {
 // H: { addProp(m, t, x, y, solidR, extra) }
 export function buildNatureSites(m, H) {
   m.natureSites = [];
+  Object.defineProperty(m, '_distStyle', { value: H.distStyle || [], enumerable: false, configurable: true });
+  if (H.terrainAt && m.terrainCls && !m.terrainCls.at) Object.defineProperty(m.terrainCls, 'at', { value: (tx, ty) => H.terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty), enumerable: false });
   redwoodCreek(m, H);
   canyonOasis(m, H);
   lighthouseTidepools(m, H);
@@ -94,6 +96,72 @@ export function buildNatureSites(m, H) {
   northshoreGardens(m, H);
   oldMine(m, H);
   farmDressing(m, H);
+  roadside(m, H);
+}
+
+// ---- along the country roads: something every 70-110 m (docs/WORLD-V2.md: "no stretch of a route goes much more
+// than about 100 m without a feature"). Small composed bits by the verge, alternating sides, by biome: a road sign,
+// a mailbox at a farm gate with a fence run, a fruit stand, hay bales, a lay-by with a bench and a bin, a picnic
+// table under a tree, a trail sign and map board, a log pile, a rock cairn, a viewpoint with coin binoculars.
+// Nothing solid within two tiles of the road (signs and boxes are small and walk-through).
+function roadside(m, H) {
+  const country = (i) => { const st = (m._distStyle && m._distStyle[m.dist[i]]) || ''; return st === 'wild' || st === 'rural' || st === 'desert'; };
+  const placed = [];
+  const clearAt = (x, y, r) => {
+    for (let ty = Math.floor((y - r) / TILE); ty <= Math.floor((y + r) / TILE); ty++) for (let tx = Math.floor((x - r) / TILE); tx <= Math.floor((x + r) / TILE); tx++) {
+      const i = ty * MAP_W + tx, t = m.tiles[i];
+      if (m.reserve[i] || (t !== T.GRASS && t !== T.DIRT && t !== T.SAND)) return false;
+    }
+    return placed.every(([px, py]) => Math.hypot(px - x, py - y) > 900);
+  };
+  const BIO = (x, y) => (m.terrainCls ? m.terrainCls.at(Math.floor(x / TILE), Math.floor(y / TILE)) : 1);
+  let n = 0;
+  for (const r of m.roads || []) {
+    if ((r.kind !== 'rural' && r.kind !== 'dirt') || !r.pts || r.pts.length < 2) continue;
+    const pts = r.pts, segs = [];
+    let L = 0;
+    for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); segs.push([L, l]); L += l; }
+    const at = (s) => { let k = 0; while (k < segs.length - 1 && segs[k][0] + segs[k][1] < s) k++; const [s0, l] = segs[k], t = l ? (s - s0) / l : 0, a = pts[k], b = pts[k + 1]; return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, dx: (b.x - a.x) / (l || 1), dy: (b.y - a.y) / (l || 1) }; };
+    const hw = r.hw || 48;
+    for (let s = 500 + hash2(r.id || n, 1, 960) * 900; s < L - 300; s += 1700 + hash2(Math.round(s), r.id || 0, 961) * 900) {
+      // a spot: this side or the other, here or a little either way along the road
+      let q = null, x = 0, y = 0, i = 0, nx = 0, ny = 0, found = false;
+      const side0 = hash2(Math.round(s), 2, 962) < 0.5 ? -1 : 1;
+      for (const ds of [0, 220, -220, 440]) for (const side of [side0, -side0]) {
+        if (found || s + ds < 200 || s + ds > L - 200) continue;
+        q = at(s + ds); nx = -q.dy * side; ny = q.dx * side;
+        x = q.x + nx * (hw + 96); y = q.y + ny * (hw + 96); i = Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE);
+        if (country(i) && clearAt(x, y, 30)) found = true;
+      }
+      if (!found) continue;
+      placed.push([x, y]); n++;
+      const bio = BIO(x, y), st = m._distStyle[m.dist[i]], u = hash2(Math.round(x), Math.round(y), 963), a = Math.atan2(q.dy, q.dx);
+      const ax = x + nx * 40, ay = y + ny * 40;   // a little further from the road (for anything solid-ish)
+      if (u < 0.16) H.addProp(m, 'roadsign', x, y, 0, { k: hash2(n, 3, 964) < 0.5 ? 'curve' : 'arrow', a });
+      else if (st === 'rural' && u < 0.45) {   // farmland: a mailbox at a gate with a fence run, or a fruit stand, or hay
+        const v = hash2(n, 4, 965);
+        if (v < 0.4) {
+          H.addProp(m, 'mailbox', x, y, 0);
+          H.addProp(m, 'rail', x + q.dx * 40, y + q.dy * 40, 0, { tx: Math.round(q.dx * 220), ty: Math.round(q.dy * 220) });
+          H.addProp(m, 'rail', x - q.dx * 40, y - q.dy * 40, 0, { tx: Math.round(-q.dx * 220), ty: Math.round(-q.dy * 220) });
+        } else if (v < 0.7) { H.addProp(m, 'stand', x, y, 0); H.addProp(m, 'flowers_a', x + q.dx * 50, y + q.dy * 50, 0, { sp: 'sunflowers', k: 1 }); }
+        else for (let k = 0; k < 3; k++) H.addProp(m, 'hayBale', ax + q.dx * (k - 1) * 30, ay + q.dy * (k - 1) * 30, 0);
+      } else if (u < 0.62) {   // a lay-by: gravel, a bench and a bin
+        for (let k = -2; k <= 2; k++) { const j = Math.floor((y + q.dy * k * 28) / TILE) * MAP_W + Math.floor((x + q.dx * k * 28) / TILE); if (m.tiles[j] === T.GRASS) m.tiles[j] = T.DIRT; }
+        H.addProp(m, 'pbench', ax, ay, 0);
+        H.addProp(m, 'trashcan', ax + q.dx * 40, ay + q.dy * 40, 0);
+      } else if (u < 0.74) {   // a picnic table under a tree
+        H.addProp(m, 'picnic', ax, ay, 0);
+        H.addProp(m, 'tree_a', ax + nx * 80, ay + ny * 80 - 10, 12, { g: bio === 2 ? 1 : 2 });
+      } else if (u < 0.84 && (bio === 2 || st === 'wild')) {   // a trailhead: the sign, a map board, a log pile
+        H.addProp(m, 'fingerpost', x, y, 0); H.addProp(m, 'mapboard', ax, ay, 0); H.addProp(m, 'lumber', ax + q.dx * 60, ay + q.dy * 60, 0);
+      } else if (u < 0.92 && (bio === 4 || bio === 3)) {   // a cairn of stones; in the hills, coin binoculars too
+        H.addProp(m, 'boulder', ax + nx * 30, ay + ny * 30, 12, { s: 28 });
+        if (bio === 4) H.addProp(m, 'scope', ax, ay, 0);
+      } else H.addProp(m, 'roadsign', x, y, 0, { k: 'arrow', a });
+    }
+  }
+  Object.defineProperty(m, 'roadsideN', { value: n, enumerable: false, configurable: true });
 }
 
 // ---- the farms (concept D13): a fenced pasture with a windmill and trough beside each farmstead, sunflowers
