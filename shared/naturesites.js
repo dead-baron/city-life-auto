@@ -119,6 +119,7 @@ export function buildNatureSites(m, H) {
   fernGorge(m, H);
   sentinelStones(m, H);
   marketSquare(m, H);
+  boneyard(m, H);
   golfClub(m, H);
   driveTracks(m, H);
   roadside(m, H);
@@ -257,6 +258,38 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- The Dry Creek boneyard (east of the airstrip's runway; original) ---------------------------------------------
+// Old airliners parked for good on the desert east of the runway, in two herringbone rows behind a chain-link fence:
+// their liveries sun-faded, white covers on the cockpit windows, red covers on the engines, an engine missing here and
+// there; a gate from the airstrip's side with the yard's sign, oil drums about.
+function boneyard(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const X0 = 1248, X1 = 1279, Y0 = 632, Y1 = 704;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 42 || m.dist[i] === 41);
+  for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1 - 4; tx++) if (!open(at(tx, ty))) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
+  for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) { const i = at(tx, ty); if (open(i)) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; } }
+  // the planes: two rows, nose out at a slant (herringbone), every one a little different
+  let n = 0;
+  for (let r = 0; r < 6; r++) for (const [cx, a] of [[X0 + 8, -0.55], [X0 + 22.5, Math.PI + 0.55]]) {
+    const cy = Y0 + 6.5 + r * 11.5, ux = Math.cos(a), uy = Math.sin(a);
+    add('storedplane', cx, cy, 0, { a, c: (r * 2 + (cx > X0 + 10 ? 1 : 0)) % 5, v: r * 2 + (cx > X0 + 10 ? 1 : 0) });
+    for (let d = -130; d <= 130; d += 26) m.addSolidProp(Math.round(cx * TILE + ux * d), Math.round(cy * TILE + uy * d), 20);   // (the fuselage; you walk under the wings)
+    n++;
+  }
+  // the fence round it, the gate on the runway side with the sign
+  const fence = [[X0, Y0, X1, Y0], [X1, Y0, X1, Y1], [X0, Y1, X1, Y1], [X0, Y0, X0, Y0 + 32], [X0, Y0 + 38, X0, Y1]];
+  for (const [ax, ay, bx, by] of fence) {
+    add('chainfence', ax, ay, 0, { tx: (bx - ax) * TILE, ty: (by - ay) * TILE });
+    const L = Math.hypot(bx - ax, by - ay) * TILE; for (let d = 0; d <= L; d += 16) m.addSolidProp(Math.round(ax * TILE + (bx - ax) / Math.hypot(bx - ax, by - ay) * d), Math.round(ay * TILE + (by - ay) / Math.hypot(bx - ax, by - ay) * d), 6);
+  }
+  add('textsign', X0 - 1.6, Y0 + 39.6, 0, { text: 'AIRCRAFT STORAGE', z: 30, sx: 1, bg: '#3a3e44', fg: [240, 230, 200] });
+  for (const [dx, dy] of [[3, 3], [28, 70], [14, 40]]) add('drum', X0 + dx, Y0 + dy, 9);
+  (m.landmarks ||= []).push({ name: 'Dry Creek Boneyard', type: 'boneyard', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
+  m.natureSites.push({ kind: 'boneyard', name: 'Dry Creek Boneyard', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), planes: n, gate: { x: X0 * TILE, y: (Y0 + 35) * TILE } });
 }
 
 // ---- The Old Town market (Old Town's big cobbled square; original) -----------------------------------------------

@@ -634,3 +634,14 @@ test('Old Town Market: rows of market stalls and string lights on Old Town\'s co
   for (const p of m.pois) for (const q of m.props) if (q && q.t === 'mstall') assert.ok(Math.hypot(p.x - q.x, p.y - q.y) > 2 * TILE, `${p.label} is clear`);
   assert.ok(m.landmarks.some((l) => l.name === 'Old Town Market'));
 });
+
+test('Dry Creek Boneyard: rows of stored airliners behind a fence east of the airstrip\'s runway, a gate on the runway side', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'boneyard');
+  assert.ok(s, 'the boneyard is there');
+  assert.equal(s.planes, 12, 'twelve planes');
+  const planes = m.props.filter((q) => q && q.t === 'storedplane');
+  const solid = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r) return true; return false; };
+  assert.ok(planes.every((q) => solid(q.x, q.y)), 'their fuselages are solid');
+  assert.ok(!solid(s.gate.x, s.gate.y), 'the gate is open');
+  assert.ok(m.landmarks.some((l) => l.name === 'Dry Creek Boneyard'));
+});

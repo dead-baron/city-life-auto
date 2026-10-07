@@ -95,12 +95,15 @@ export function kayakRack(n = 3) { const m = new Vox(46, 26, 26); const f = m.ma
 
 // ---- airport -------------------------------------------------------------------------------------------
 // a narrow-body airliner, nose toward +x, white with a coloured tail and cheatline
-export function airliner(len = 460, span = 420, color = '#c83a30') {
+export function airliner(len = 460, span = 420, color = '#c83a30', stored = 0) {
+  // stored (a seed, > 0): parked for good in the desert - the livery sun-faded, white covers on the cockpit
+  // windows, red covers on the engine intakes, and on some an engine gone from its pylon
+  if (stored) { const c = parseInt(color.slice(1), 16), f = (k) => Math.round(((c >> k) & 255) * 0.55 + 0xc4 * 0.45); color = '#' + ((f(16) << 16) | (f(8) << 8) | f(0)).toString(16).padStart(6, '0'); }
   const H = 140, m = new Vox(len, span, H), cy = span / 2;
   const body = m.mat({ ramp: R('#ecebe6'), k: 3, shade: (x, y, z) => (Math.round(x) % 46 === 0 ? -0.4 : 0) });
   const livery = m.mat({ ramp: R(color), k: 3 }), win = m.mat({ ramp: R('#2a3444'), k: 2, flag: F_GLASS }), grey = m.mat({ ramp: R('#a8acb4'), k: 3 }), dk = m.mat({ ramp: R('#2a2c34'), k: 2 }), tyre = m.mat({ ramp: MAT.tyre, k: 1 });
   const nav = (c) => m.mat({ ramp: R(c, 5, 3), k: 4, emi: c === '#e83a30' ? [255, 60, 50, 255] : c === '#40d070' ? [80, 255, 120, 255] : [255, 255, 240, 255], flag: F_NOCAST });
-  const fz = 40, fr = 22;
+  const fz = 40, fr = 22, cover = m.mat({ ramp: R('#f2f0ea'), k: 3 }), red = m.mat({ ramp: R('#c8342e'), k: 3 });
   m.fill((x, y, z) => {
     const t = x / len;
     let r = fr;
@@ -109,7 +112,7 @@ export function airliner(len = 460, span = 420, color = '#c83a30') {
     const zc = fz + (t < 0.14 ? (0.14 - t) * 60 : 0);
     const d = Math.hypot(y - cy, (z - zc) * 1.05);
     if (d > r) return -1;
-    if (t > 0.86 && z > zc + r * 0.25 && Math.abs(y - cy) < r * 0.7 && t < 0.95) return win;     // cockpit windows
+    if (t > 0.86 && z > zc + r * 0.25 && Math.abs(y - cy) < r * 0.7 && t < 0.95) return stored ? cover : win;     // cockpit windows
     if (Math.abs(z - (zc + r * 0.38)) < 1.4 && t > 0.18 && t < 0.84 && Math.round(x) % 6 < 3) return win;   // cabin windows
     if (z < zc - r * 0.2 && z > zc - r * 0.45 && t > 0.2 && t < 0.85) return livery;
     if (z < zc - r * 0.6) return grey;
@@ -118,7 +121,7 @@ export function airliner(len = 460, span = 420, color = '#c83a30') {
   // wings (swept), engines under them
   const wx = len * 0.48;
   m.fill((x, y, z) => { const dy = Math.abs(y - cy), sweep = dy * 0.42, chord = 70 - dy * 0.22; if (dy < fr - 2 || dy > span / 2 - 2) return -1; const lx = wx - sweep; if (x > lx || x < lx - chord) return -1; return z >= fz - 6 + dy * 0.05 && z < fz - 2 + dy * 0.05 ? (dy > span / 2 - 8 ? livery : body) : -1; }, 0, 0, fz - 8, len, span, fz + 14);
-  for (const s of [-1, 1]) { const ey = cy + s * span * 0.2; m.cyl('x', 0, ey, fz - 16, 9, wx - span * 0.2 * 0.42 - 20, wx - span * 0.2 * 0.42 + 26, grey); m.cyl('x', 0, ey, fz - 16, 6.5, wx - span * 0.2 * 0.42 + 24, wx - span * 0.2 * 0.42 + 27, dk); }
+  for (const s of [-1, 1]) { if (stored && stored % 3 === 0 && s > 0) continue; const ey = cy + s * span * 0.2; m.cyl('x', 0, ey, fz - 16, 9, wx - span * 0.2 * 0.42 - 20, wx - span * 0.2 * 0.42 + 26, grey); m.cyl('x', 0, ey, fz - 16, 6.5, wx - span * 0.2 * 0.42 + 24, wx - span * 0.2 * 0.42 + 27, stored ? red : dk); }
   // tail: fin and stabilisers
   m.fill((x, y, z) => { const t = (x - 6) / 70; if (t < 0 || t > 1 || Math.abs(y - cy) > 1.5) return -1; return z > fz + 14 && z < fz + 14 + (1 - t * 0.2) * 70 * (1 - Math.max(0, t - 0.6) * 1.8) && x > 6 + (z - fz - 14) * 0.6 ? livery : -1; }, 0, 0, fz, 90, span, H);
   m.fill((x, y, z) => { const dy = Math.abs(y - cy); if (dy > 80 || dy < 4) return -1; const lx = 50 - dy * 0.35; return x < lx && x > lx - 34 + dy * 0.12 && z >= fz + 6 && z < fz + 9 ? body : -1; }, 0, 0, fz, 90, span, fz + 12);

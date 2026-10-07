@@ -1147,7 +1147,7 @@ function voxModel(m, a) {
     case 'powerPole': return D.powerPole(a[0], a[1]); case 'tent': return U.tent(a[0]); case 'domeTent': return K.domeTent(a[0], a[1]); case 'campfire': return U.campfire(a[0]);
     case 'picnic': return U.picnicTable(); case 'pumpJack': return U.pumpJack(a[0]); case 'turbine': return U.windTurbine(a[0], a[1], a[2]); case 'flare': return U.flareStack(a[0]);
     case 'tank': return X.storageTank(a[0], a[1], a[2]); case 'cellTower': return K.cellTower(a[0]); case 'screen': return K.outdoorScreen(a[0], a[1]); case 'solar': return TW.solarPanel(a[0], a[1]);
-    case 'runwayLight': return RD.runwayLight(a[0]); case 'viewer': return D.viewer(); case 'wheelbarrow': return U.wheelbarrow(); case 'airliner': return RD.airliner(a[0], a[1], a[2]);
+    case 'runwayLight': return RD.runwayLight(a[0]); case 'viewer': return D.viewer(); case 'wheelbarrow': return U.wheelbarrow(); case 'airliner': return RD.airliner(a[0], a[1], a[2], a[3] || 0);
     case 'lighthouse': return WL.lighthouse(a[0], a[1]); case 'pillar': return RD.pillar(a[0], a[1], a[2]); case 'canopy': return U.fuelCanopy(a[0], a[1], a[2], a[3]); case 'fuelPump': return U.fuelPump(a[0], a[1]);
     case 'platformCanopy': return RD.platformCanopy(a[0], a[1], a[2]); case 'stationEntrance': return RD.stationEntrance(a[0], a[1]); case 'crossingSignal': return RD.crossingSignal(a[0], a[1]);
     case 'controlTower': return RD.controlTower(a[0], a[1]); case 'fence': return D.fence(a[0], a[1], a[2] || {}); case 'fenceKind': return K.fenceKind(a[0], a[1]); case 'gatePillar': return D.gatePillar(a[0], a[1]);
@@ -1745,6 +1745,7 @@ function propItems(c, p, pi, I) {
     case 'balloonlaid': V(`blaid:${(p.v || 0) % 4}:${qa(p.a || 0, 8).toFixed(2)}`, 'balloonLaid', [(p.v || 0) % 4], qa(p.a || 0, 8)); return;
     case 'fan': V(`ifan:${qa(p.a || 0, 8).toFixed(2)}`, 'inflationFan', [], qa(p.a || 0, 8)); return;
     case 'mission': V('mission', 'missionRuins', []); return;
+    case 'storedplane': { const col = ['#c83a30', '#2a5aa8', '#2a8a6a', '#e8a030', '#7a3a8a'][(p.c || 0) % 5], st = (p.v || 0) % 6 + 1, hd = qa(p.a || 0, 16); V(`spl:${col}:${st}:${hd.toFixed(2)}`, 'airliner', [300, 270, col, st], hd); return; }
     case 'mstall': { const k = (p.v || 0) % 4, col = ['#c8343a', '#2f7a5c', '#2f6ab0', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 4); V(`mstall:${k}:${col}:${hd.toFixed(2)}`, 'marketStall', [k, col], hd); return; }
     case 'seaarch': V(`sarch:${p.w || 150}:${qa(p.a || 0, 8).toFixed(2)}`, 'seaArch', [p.w || 150, p.d || 56, p.h || 96, 3], qa(p.a || 0, 8)); return;
     case 'mstone': { const w = p.w || 16, d = p.d || 9, h = p.h || 48, sd = (p.v || 0) % 8 + 1, ln = Math.round((p.lean || 0) * 20) / 20; V(`mst:${w}:${d}:${h}:${sd}:${ln}:${qa(p.a || 0, 8).toFixed(2)}`, 'standingStone', [w, d, h, sd, ln], qa(p.a || 0, 8)); return; }

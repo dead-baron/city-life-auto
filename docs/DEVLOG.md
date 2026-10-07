@@ -2848,3 +2848,11 @@ Fruit can now be picked, eaten and sold (`server/systems/picking.js`; the map's 
 - The README's controls table mentions picking under Interact.
 
 **Test fix:** the gunshot test sometimes failed because a bullet from its first shots was still in the air and hit the victim again, dropping them below the crawl line. It now clears bullets in flight first. It also accepts a crawl, which is still the badly hurt getting away, in case something passing hurts them more.
+
+## 2026-10-07 · The Dry Creek Boneyard (east of the airstrip's runway; original)
+
+Old airliners parked for good on the desert east of the Dry Creek Airstrip's runway, behind a chain-link fence (`shared/naturesites.js` `boneyard`):
+- **The planes:** twelve of them in two herringbone rows, noses out at a slant. The airliner model takes a `stored` seed (`props-road.js` `airliner`; prop `storedplane`): the livery is sun-faded, the cockpit windows have white covers and the engine intakes red ones, and on some an engine is gone from its pylon.
+- **Getting round them:** the fuselages are solid, and you walk under the wings.
+- **The yard:** a gate on the runway side with the yard's sign, and oil drums about.
+- On the map, and in the debug menu (✈ Dry Creek Boneyard). Homes, POIs and buildings unchanged.
