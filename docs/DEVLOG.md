@@ -2863,3 +2863,22 @@ The open coastal ground south of the Cedar Isle Loop, east of the hotel, is now 
 - **The rows:** about 340 lavender plants in thirteen rows. They make purple stripes on strips of pale soil, with green grass between, and catch the light at golden hour.
 - **Round the rows:** olive trees and a bench at the top looking down the rows, beehives along the east side, and crates of cut bunches with a wheelbarrow and the farm's sign at the bottom.
 - On the map, and in the debug menu (💜 Cedar Point Lavender). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Wayside finds: little scenes in the country between places
+
+The empty ground between the designed places now has about forty small scenes to come across off the roads (`shared/naturesites.js` `waysideFinds`; listed in `m.wayside`). Each district's finds suit it:
+
+| Find | What's there | Where |
+|---|---|---|
+| A camp someone left | a tent, a dead fire, a log seat, a cooler and a camp chair | the woods and hills |
+| A picnic spot | a table, a blanket, a cooler and a bin | |
+| A lookout | a bench, the trail map and a finger post | |
+| A cairn of stacked stones | | the peaks and the desert |
+| A lone standing stone | | the woods and the peaks |
+| A woodcutter's clearing | a woodpile and logs | |
+| A row of beehives | with a bench | the farmland |
+| An old prospector's spot | a chest, a pickaxe and red rocks by a saguaro | the desert |
+
+- There are at most eight in a district, at least 26 tiles apart, well clear of roads, buildings, water and every other place.
+- Trees are kept off the ground just south of each one, so it isn't hidden behind them in this view.
+- Homes, POIs and buildings unchanged.

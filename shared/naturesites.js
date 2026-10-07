@@ -121,6 +121,7 @@ export function buildNatureSites(m, H) {
   marketSquare(m, H);
   boneyard(m, H);
   lavenderFields(m, H);
+  waysideFinds(m, H);
   golfClub(m, H);
   driveTracks(m, H);
   roadside(m, H);
@@ -259,6 +260,55 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- Wayside finds: small things to come across in the open country between places ---------------------------------
+// The empty ground between the designed places gets a scatter of little scenes, each found by walking or riding off
+// the road: a camp someone left (a tent, a dead fire, a log seat, a cooler), a picnic spot, a lookout bench with a
+// trail map, a cairn on a hilltop, a lone standing stone, a woodcutter's clearing, a row of beehives, an old
+// prospector's spot in the desert (a chest, a pickaxe, rocks). Off the roads, away from every other place.
+function waysideFinds(m, H) {
+  const at = (tx, ty) => ty * MAP_W + tx;
+  const KINDS = {
+    29: ['camp', 'woodcut', 'picnic', 'lookout', 'menhir'],   // Highland Woods
+    40: ['camp', 'woodcut', 'picnic', 'lookout'],             // Cedar Hills
+    33: ['cairn', 'lookout', 'menhir', 'camp', 'cairn'],      // Granite Peaks
+    9: ['apiary', 'picnic', 'apiary'],                        // Dry Creek
+    38: ['apiary', 'picnic'],                                 // Cedar Farms
+    41: ['prospect', 'cairn', 'prospect'],                    // Dry Creek Desert
+  };
+  const hard = new Set([T.ROAD, T.BRIDGE, T.LOT, T.BUILDING, T.WALL, T.WATER, T.DEEP, T.SIDEWALK, T.PLAZA, T.DOCK, T.FIELD]);
+  const placed = [];
+  const far = (tx, ty) => placed.every(([x, y]) => Math.hypot(x - tx, y - ty) > 26) && (m.natureSites || []).every((q) => Math.hypot(q.x / TILE - tx, q.y / TILE - ty) > 22) && (m.countrySites || []).every((q) => Math.hypot((q.x + (q.w || 0) / 2) / TILE - tx, (q.y + (q.h || 0) / 2) / TILE - ty) > 16);
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  for (let gy = 10; gy < MAP_H - 10; gy += 18) for (let gx = 10; gx < MAP_W - 10; gx += 18) {
+    const tx = gx + Math.floor(hash2(gx, gy, 4101) * 8) - 4, ty = gy + Math.floor(hash2(gx, gy, 4102) * 8) - 4, d = m.dist[at(tx, ty)], kinds = KINDS[d];
+    if (!kinds || placed.length >= 48 || hash2(gx, gy, 4103) > 0.55 || placed.filter((q) => q[3] === d).length >= 8) continue;   // (at most 8 in a district)
+    let ok = true;
+    for (let dy = -7; dy <= 7 && ok; dy++) for (let dx = -7; dx <= 7; dx++) {
+      const i = at(tx + dx, ty + dy), t = m.tiles[i];
+      if (hard.has(t)) { ok = false; break; }
+      if (Math.abs(dx) <= 3 && Math.abs(dy) <= 3 && ((m.reserve[i] & RES) || m.dist[i] !== d || !(t === T.GRASS || t === T.DIRT || t === T.SAND))) { ok = false; break; }
+    }
+    if (!ok || !far(tx, ty)) continue;
+    const kind = kinds[Math.floor(hash2(gx, gy, 4104) * kinds.length)], h = (k) => hash2(gx + k, gy, 4105 + k);
+    m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.abs(q.x / TILE - tx - 0.5) < 3.2 && Math.abs(q.y / TILE - ty - 0.5) < 3.2) dropProp(m, i); });
+    for (let dy = -3; dy <= 7; dy++) for (let dx = -3; dx <= 3; dx++) { const i = at(tx + dx, ty + dy); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) m.reserve[i] |= RES; }   // (and nothing tall just south of it: in this view it would stand in front)
+    m.props.forEach((q, i) => { if (q && q.t !== 'painted' && /^tree/.test(q.t) && Math.abs(q.x / TILE - tx - 0.5) < 3.5 && q.y / TILE - ty > 0 && q.y / TILE - ty < 8) dropProp(m, i); });
+    const X = tx + 0.5, Y = ty + 0.5;
+    switch (kind) {
+      case 'camp': add('tent', X - 1.2, Y - 1, 12, { v: Math.floor(h(1) * 3) }); add('campfire', X + 0.8, Y + 0.6, 0, { lit: false }); add('log', X + 0.8, Y + 2, 8, { len: 70, a: 0.1 }); add('cooler', X - 1.4, Y + 1.2, 0, { v: Math.floor(h(2) * 3) }); add('chair', X + 2.2, Y + 0.4, 0, { a: Math.PI, v: Math.floor(h(3) * 4) }); break;
+      case 'picnic': add('picnic', X, Y, 10); add('blanket', X + 2, Y + 1, 0, { v: Math.floor(h(1) * 3) }); add('cooler', X + 2.8, Y + 0.4, 0, { v: Math.floor(h(2) * 3) }); add('trashcan', X - 2, Y - 0.6, 6); break;
+      case 'lookout': add('pbench', X, Y, 8, { a: Math.PI / 2 }); add('mapboard', X + 2, Y - 0.4, 10); add('fingerpost', X - 2, Y + 0.2, 4); break;
+      case 'cairn': add('boulder', X, Y, 14, { s: 30 }); add('boulder', X + 0.1, Y - 0.15, 0, { s: 20, z: 18 }); add('boulder', X - 0.05, Y - 0.3, 0, { s: 12, z: 30 }); for (let k = 0; k < 4; k++) add('boulder', X + (h(k + 4) - 0.5) * 4, Y + (h(k + 8) - 0.5) * 4, 0, { s: 8 + Math.round(h(k + 12) * 8) }); break;
+      case 'menhir': add('mstone', X, Y, 12, { w: 22, d: 12, h: 60 + Math.round(h(1) * 20), v: Math.floor(h(2) * 8), lean: (h(3) - 0.5) * 0.2 }); add('boulder', X + 1.6, Y + 1, 0, { s: 14, moss: 1 }); break;
+      case 'woodcut': add('woodpile', X, Y - 0.6, 8); add('log', X - 1.2, Y + 1.2, 10, { len: 110, a: 0.3, moss: 0 }); add('log', X + 1.6, Y + 0.8, 8, { len: 70, a: -0.5 }); add('boulder', X + 2, Y - 1.6, 0, { s: 12 }); break;
+      case 'apiary': for (let k = 0; k < 4; k++) add('beehive', X - 2.4 + k * 1.6, Y, 6, { v: k % 3 }); add('pbench', X, Y + 2, 8, { a: -Math.PI / 2 }); break;
+      case 'prospect': add('chest', X, Y, 10); add('pickaxe', X + 0.9, Y + 0.3, 0); for (let k = 0; k < 3; k++) add('boulder', X + (h(k + 4) - 0.5) * 5, Y + (h(k + 8) - 0.5) * 4, 14, { s: 22 + Math.round(h(k + 12) * 18) }); add('tree_a', X + 2.4, Y - 1.8, 8, { sp: 'saguaroMid', k: 1.1 }); break;
+    }
+    placed.push([tx, ty, kind, d]);
+  }
+  m.wayside = placed.map(([x, y, kind]) => ({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE, kind }));
 }
 
 // ---- Cedar Point Lavender (Cedar Farms, on the coast below the Cedar Isle Loop; original) ---------------------------

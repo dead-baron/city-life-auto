@@ -655,3 +655,15 @@ test('Cedar Point Lavender: rows of lavender on soil strips on the coast below t
   assert.ok(near.every((q) => tileAt(q.x, q.y) === T.DIRT), 'each on its soil strip');
   assert.ok(m.landmarks.some((l) => l.name === 'Cedar Point Lavender'));
 });
+
+test('wayside finds: little scenes in the open country between places (camps, picnic spots, lookouts, cairns, standing stones, beehives, a prospector\'s chest), off the roads', () => {
+  const ws = m.wayside || [];
+  assert.ok(ws.length >= 30, `finds (${ws.length})`);
+  assert.ok(new Set(ws.map((q) => q.kind)).size >= 6, 'of many kinds');
+  for (const q of ws) {
+    let road = false;
+    for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) { const t = tileAt(q.x + dx * TILE, q.y + dy * TILE); if (t === T.ROAD || t === T.BUILDING) road = true; }
+    assert.ok(!road, `${q.kind} at ${q.x},${q.y} is off the road`);
+  }
+  for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) assert.ok(Math.hypot(ws[i].x - ws[j].x, ws[i].y - ws[j].y) > 20 * TILE, 'spread out');
+});
