@@ -2759,3 +2759,14 @@ Four more homes out in the wilds had drives that ran off into the trees and stop
 - A track is only laid where it can get there over open ground.
 - The same check skips the Hilltop Mansion, which already has its own track.
 - A test fails if a home's drive in the wilds is left without a way to a road. Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Willow River Orchard, and the Seal Islets off Westport Pier
+
+**Willow River Orchard** (Dry Creek; original). An apple orchard now fills the watered ground between the vineyard and the head of the Farm Road (`shared/naturesites.js` `orchard`):
+- rows of apple trees on lush green grass, with a row of oranges along the bottom;
+- ladders against the trees and crates of picked fruit in the alleys, a wheelbarrow, and beehives along the top;
+- a fruit stand at the head of the Farm Road, with crates of apples, its "FRESH APPLES" sign and a place to pull in.
+
+On the map, and in the debug menu (🍎 Willow River Orchard).
+
+**Seal Islets.** The two little islets in the bay west of Westport Pier are where the seals haul out now. There are a dozen on the sand along their shores, facing the water, and two more with a gull on a barnacled rock between the islets. The coin telescope at the end of the pier looks straight at them. On the map, and in the debug menu (🦭 Seal Islets). Homes, POIs and buildings unchanged.

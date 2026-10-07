@@ -112,6 +112,7 @@ export function buildNatureSites(m, H) {
   northPointCourts(m, H);
   westportPier(m, H);
   vineyard(m, H);
+  orchard(m, H);
   hilltopTrack(m, H);
   golfClub(m, H);
   driveTracks(m, H);
@@ -251,6 +252,41 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- Willow River Orchard (Dry Creek, below the vineyard; original) ------------------------------------------------
+// An apple orchard on the watered ground between the vineyard and the head of the Farm Road: trees in rows on green
+// grass, a row of oranges at the bottom, ladders against the trees and crates of fruit in the alleys, a
+// wheelbarrow, beehives along the top for the blossom, and a fruit stand at the road with its sign.
+function orchard(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const X0 = 1100, X1 = 1131, Y0 = 438, Y1 = 463;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);
+  for (let ty = Y0 - 1; ty <= Y1 + 1; ty++) for (let tx = X0 - 1; tx <= X1 + 1; tx++) if (!open(at(tx, ty))) return;
+  const road = (m.edges || []).find((e) => e.name === 'Farm Road' && e.lvl === 0);
+  if (!road) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= (X0 - 1) * TILE && q.x < (X1 + 2) * TILE && q.y >= (Y0 - 1) * TILE && q.y < (Y1 + 2) * TILE) dropProp(m, i); });
+  for (let ty = Y0 - 1; ty <= Y1 + 1; ty++) for (let tx = X0 - 1; tx <= X1 + 1; tx++) { const i = at(tx, ty); m.tiles[i] = T.GRASS; m.reserve[i] |= RES | 128; }
+  let n = 0;
+  for (let ty = Y0 + 1.5, r = 0; ty <= Y1 - 1; ty += 3.2, r++) for (let tx = X0 + 1.5, c = 0; tx <= X1 - 1; tx += 3.2, c++) {
+    add('tree_a', tx + (r % 2) * 0.3, ty, 10, { sp: r === 7 ? 'orange' : 'apple', k: 1.15 + hash2(c, r, 3601) * 0.2 }); n++;
+  }
+  // the work in the alleys: ladders against trees, crates of picked fruit, a wheelbarrow
+  for (const [tx, ty] of [[X0 + 4.2, Y0 + 2.6], [X0 + 13.8, Y0 + 9], [X0 + 23.4, Y0 + 15.4], [X0 + 8.8, Y0 + 18.6]]) { add('ladder', tx, ty, 0); add('fruitcrate', tx + 1.2, ty + 1.1, 0); add('fruitcrate', tx + 1.7, ty + 1.3, 0); }
+  add('wheelbarrow', X0 + 17.2, Y0 + 6.1, 0);
+  for (let j = 0; j < 5; j++) add('beehive', X0 + 2 + j * 1.6, Y0 - 0.6, 6, { v: j % 3 });
+  // the fruit stand at the head of the Farm Road, its sign, crates of apples
+  const end = road.pts.reduce((b, q) => (!b || q.y < b.y ? q : b), null);
+  const sx = end.x / TILE - 3.2, sy = end.y / TILE + 3;
+  if (open(at(sx, sy)) || (m.reserve[at(sx, sy)] & RES) === 0) {
+    add('stand', sx, sy, 12);
+    for (const dx of [-1.4, 1.4]) add('fruitcrate', sx + dx, sy + 0.9, 0);
+    add('textsign', sx, sy - 1.6, 0, { text: 'FRESH APPLES', z: 26, sx: 1, bg: '#8a2a24', fg: [250, 236, 200] });
+    m.parking.push({ x: Math.round((sx + 0.4) * TILE), y: Math.round((sy + 2.4) * TILE), a: Math.PI / 2, drive: true });
+  }
+  (m.landmarks ||= []).push({ name: 'Willow River Orchard', type: 'orchard', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
+  m.natureSites.push({ kind: 'orchard', name: 'Willow River Orchard', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), trees: n });
 }
 
 // ---- Willow River Vineyard (Dry Creek Desert, east of the river; original) --------------------------------------------
@@ -416,6 +452,29 @@ function westportPier(m, H) {
   }
   add('foodcart', sx + 2.2, RY - 3.9, 10); add('umbrella_r', sx + 3.8, RY - 3.4, 4); add('cafetable', sx + 0.6, RY - 3.2, 6);
   add('textsign', sx + 1.6, RY + 3.75, 0, { text: 'WESTPORT PIER', z: 50, bg: '#1d3f6e', fg: [255, 226, 120] });
+  // the seal islets out in the bay to the west (the telescope looks at them): seals hauled out on the sand along
+  // their shores, more on a barnacled rock between them, gulls, driftwood
+  const isl = (tx, ty) => { const i = at(tx, ty); return m.dist[i] === 20 && (m.tiles[i] === T.SAND || m.tiles[i] === T.DIRT || m.tiles[i] === T.GRASS); };
+  let ns = 0;
+  for (let ty = HY0 - 44; ty <= HY1 + 6 && ns < 14; ty += 1) for (let tx = HX0 - 34; tx < HX0 - 8 && ns < 14; tx++) {
+    const i = at(tx, ty);
+    if (m.tiles[i] !== T.SAND || !isl(tx, ty) || hash2(tx, ty, 3501) > 0.16) continue;
+    let sea = null; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (wet(at(tx + dx, ty + dy))) sea = [dx, dy];
+    if (!sea) continue;
+    const a = Math.atan2(sea[1], sea[0]) + (hash2(tx, ty, 3502) - 0.5) * 1.4;   // (facing the water, more or less)
+    H.addProp(m, 'seal', Math.round((tx + 0.5) * TILE), Math.round((ty + 0.5) * TILE), 0, { pose: hash2(tx, ty, 3503) < 0.4 ? 1 : 0, a });
+    ns++;
+  }
+  if (ns) {
+    const rx = (HX0 - 12) * TILE, ry = (RY - 22) * TILE;
+    if (wet(at(rx / TILE, ry / TILE))) {
+      H.addProp(m, 'sealrock', Math.round(rx), Math.round(ry), 40, { w: 110, d: 64 });
+      for (const [dx, dy, pz, a] of [[-22, -4, 0, 0.4], [20, 6, 1, 2.6]]) H.addProp(m, 'seal', Math.round(rx + dx), Math.round(ry + dy), 0, { pose: pz, a, z: 30 });
+      H.addProp(m, 'gull', Math.round(rx + 4), Math.round(ry - 14), 0, { a: 1.2, z: 34 });
+    }
+  }
+  // (the seals' islets get a name on the map when there are seals on them)
+  if (ns >= 4) (m.landmarks ||= []).push({ name: 'Seal Islets', type: 'seals', x: (HX0 - 34) * TILE, y: (HY0 - 40) * TILE, w: 26 * TILE, h: 44 * TILE });
   (m.landmarks ||= []).push({ name: 'Westport Pier', type: 'pier', x: HX0 * TILE, y: HY0 * TILE, w: (sx - HX0) * TILE, h: (HY1 - HY0 + 3) * TILE });
   m.natureSites.push({ kind: 'pier', name: 'Westport Pier', x: Math.round((sx - 2) * TILE), y: RY * TILE, head: { x: Math.round((HX0 + HX1 + 1) / 2 * TILE), y: RY * TILE }, len: L, root: { x: sx * TILE, y: RY * TILE } });
 }

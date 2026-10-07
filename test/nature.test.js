@@ -554,3 +554,22 @@ test('every home out in the wilds whose drive stops short of a road has a dirt t
   }
   assert.ok(checked >= 4, `the wilds' drives were checked (${checked})`);
 });
+
+test('Willow River Orchard: rows of fruit trees on watered grass below the vineyard, ladders and crates, a fruit stand at the head of the Farm Road', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'orchard');
+  assert.ok(s, 'the orchard is planted');
+  assert.ok(s.trees >= 60, `rows of trees (${s.trees})`);
+  const near = (t, r) => m.props.filter((q) => q && q.t === t && Math.hypot(q.x - s.x, q.y - s.y) < r * TILE).length;
+  assert.ok(near('ladder', 20) >= 3 && near('fruitcrate', 20) >= 6, 'ladders and crates');
+  assert.ok(near('stand', 30) >= 1, 'the fruit stand');
+  assert.equal(tileAt(s.x, s.y), T.GRASS, 'green grass under the trees');
+  assert.ok(m.landmarks.some((l) => l.name === 'Willow River Orchard'));
+});
+
+test('Seal Islets: seals hauled out on the islets off Westport Pier, and on a rock between them', () => {
+  const pier = (m.natureSites || []).find((q) => q.kind === 'pier');
+  const seals = m.props.filter((q) => q && q.t === 'seal' && q.x < pier.head.x && Math.abs(q.y - pier.y) < 50 * TILE);
+  assert.ok(seals.length >= 6, `seals (${seals.length})`);
+  for (const q of seals) if (!q.z) assert.ok(!m.isWater(q.x, q.y), 'hauled out on land');
+  assert.ok(m.landmarks.some((l) => l.name === 'Seal Islets'));
+});
