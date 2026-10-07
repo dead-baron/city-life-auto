@@ -491,7 +491,8 @@ export function arrest(world, cop, target) {
     t.meDirty = true;
     store.touch();
   } else {
-    // NPC suspect taken into custody
+    // NPC suspect taken into custody (a mugger still holding the purse drops it first)
+    if (target.npc && target.npc.hasPurse) npc.onMuggerDowned(world, target);
     phone.onCriminalStopped(world, cop, target);
     world.emit(target.x, target.y, { e: 'poof', x: target.x, y: target.y });
     world.remove(target);

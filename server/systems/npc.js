@@ -567,6 +567,9 @@ function mugRun(world, ped, now) {
       for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - v.x, p.ped.y - v.y) < 900) world.notify(p, 'Snatch-and-grab! A mugger grabbed a purse - stop them (no penalty).', 'warn');
       events.add(world, { kind: 'snatch', x: ped.x, y: ped.y, thief: ped.id, victim: v.id, until: now + 150 });
       n.fx = v.x; n.fy = v.y;
+      // somebody calls it in: most of the time a squad car comes for the mugger (police.js npcCalls) - unless it's a
+      // player officer's patrol call (theirs to stop)
+      if (!n.patrolFor && rng() < 0.75) (world.npcCalls ||= []).push({ id: ped.id, at: now + 5 + rng() * 6 });
       return NO_INPUT;
     }
     return seek(ped, v.x, v.y, true);

@@ -23,6 +23,7 @@ function unitsWanted(stars) { return stars <= 0 ? 0 : Math.min(6, stars + (stars
 export function update(world, dt) {
   world.police ??= new Set();
   if (world.tick % 20 === 7) dispatch(world);
+  if (world.npcCalls && world.npcCalls.length && world.tick % 10 === 3) npcCalls(world);
   for (const vid of [...world.police]) {
     const v = world.get(vid);
     if (!v) { world.police.delete(vid); continue; }
@@ -110,9 +111,91 @@ function armCop(cop, stars, swat) {
   cop.npc.backup = stars >= 3 ? 'pistol' : 'baton';
 }
 
+// ---- NPC crime: the police go after NPC crooks too ------------------------------------------------------------
+// A mugger who gets away with a purse (npc.js mugRun) is called in (world.npcCalls): a few seconds later one squad
+// car is sent after them from out of sight, sirens on. It drives up, the crew jumps out, tases the crook and cuffs
+// them (into custody: law.js arrest - the purse falls where they're tased, for the victim or a passer-by). It gives
+// up if they get clean away (out of the crew's sight for a while) or after two minutes, and drives off.
+const NPC_CHASE_S = 120;
+function npcCalls(world) {
+  const now = world.time, keep = [];
+  for (const c of world.npcCalls) {
+    if (c.at > now) { keep.push(c); continue; }
+    const t = world.get(c.id);
+    if (!t || t.dead || !t.npc || !t.npc.hasPurse) continue;
+    let busy = false;
+    for (const vid of world.police) { const v = world.get(vid); if (v && v.ai && v.ai.npcTarget === t.id) { busy = true; break; } }
+    if (!busy) spawnNpcUnit(world, t);
+  }
+  world.npcCalls = keep;
+}
+function spawnNpcUnit(world, t) {
+  const n = spawnPoint(world, { ped: t }, t.x, t.y, { at: { x: t.x, y: t.y }, minD: 520, maxD: 1150, clearPx: 360 });
+  if (!n) return null;
+  const v = world.spawnVehicle('police', n.x + 32, n.y + 32, Math.atan2(t.y - n.y, t.x - n.x), {});
+  v.despawnable = false;
+  v.sirenOn = true;
+  for (let i = 0; i < 2; i++) {
+    const cop = spawnNpc(world, 'cop', v.x, v.y, 'cop');
+    cop.npc.unit = v.id; cop.vehId = v.id; cop.seat = i; v.seats[i] = cop.id;
+    armCop(cop, 1, false);
+  }
+  v.ai = { kind: 'police', target: null, npcTarget: t.id, since: world.time, seenAt: world.time, lx: t.x, ly: t.y, mode: 'drive', route: null, routeAt: 0, swat: false };
+  t.npc.keep = true;
+  world.police.add(v.id);
+  return v;
+}
+function runNpcUnit(world, v, crew, dt) {
+  const ai = v.ai, now = world.time, t = world.get(ai.npcTarget);
+  const gone = !t || t.dead || t.removed || !t.npc;
+  if (!gone) {
+    const near = (x, y, r) => Math.hypot(t.x - x, t.y - y) < r && world.map.los(x, y, t.x, t.y);
+    if (near(v.x, v.y, 700) || crew.some((c) => !c.vehId && near(c.x, c.y, 520))) { ai.seenAt = now; ai.lx = t.x; ai.ly = t.y; }
+  }
+  if (gone || v.wreckAt || now - ai.since > NPC_CHASE_S || now - ai.seenAt > 25) { if (t && t.npc) t.npc.keep = false; standDown(world, v, crew, dt); return; }
+  const seen = now - ai.seenAt < 2, kx = seen ? t.x : ai.lx, ky = seen ? t.y : ai.ly;
+  const driver = v.seats[0] ? world.get(v.seats[0]) : null;
+  if (ai.mode === 'drive') {
+    if (!driver || driver.dead) { ai.mode = 'foot'; for (const c of crew) if (c.vehId) vehicles.ejectPed(world, c, true); return; }
+    const dist = Math.hypot(kx - v.x, ky - v.y);
+    if (dist < 190) { ai.mode = 'foot'; v.input = { throttle: 0, steer: 0, hb: true }; for (const c of crew) { vehicles.ejectPed(world, c, true); c.npc.state = 'chase'; } return; }
+    if (seen && dist < 520) driveToward(world, v, kx, ky, 300, {});
+    else {
+      if (!ai.route || now - ai.routeAt > 3) { ai.route = planRoute(world, v.x, v.y, kx, ky); ai.routeAt = now; }
+      while (ai.route.length > 1 && Math.hypot(ai.route[0].x - v.x, ai.route[0].y - v.y) < 60) ai.route.shift();
+      driveToward(world, v, ai.route[0].x, ai.route[0].y, 480, {});
+    }
+    return;
+  }
+  // on foot: run them down, tase them, cuff them
+  for (const c of crew) {
+    if (c.vehId) continue;
+    const d = Math.hypot(t.x - c.x, t.y - c.y), stunned = now < t.stunUntil || now < t.downUntil;
+    let inp;
+    if (stunned && d < 30) { law.arrest(world, c, t); inp = { bits: 0, mx: 0, my: 0, aim: 0 }; }
+    else if (!seen && d > 250) inp = seek(c, kx, ky, true);
+    else {
+      inp = seek(c, t.x, t.y, true);
+      inp.aim = Math.atan2(t.y - c.y, t.x - c.x); inp.bits |= IN.AIMING;
+      if (d < 150 && !stunned && now > (c.npc.nextTase || 0) && world.map.los(c.x, c.y, t.x, t.y)) { c.weapon = 'taser'; inp.bits |= IN.FIRE; c.npc.nextTase = now + 2.5; }
+      if (d < 24) { inp.mx *= 0.2; inp.my *= 0.2; }
+    }
+    if (now >= c.downUntil && now >= c.stunUntil) {
+      pedStep(c, inp, dt, world.map, players.pedMods(world, c));
+      if (inp.bits & IN.FIRE) combat.tryAttack(world, c, inp.aim);
+    }
+  }
+}
+
 function runUnit(world, v, dt) {
   const ai = v.ai;
   if (!ai || ai.kind !== 'police') { world.police.delete(v.id); v.despawnable = true; return; }
+  if (ai.npcTarget) {
+    const crew = [];
+    for (const e of world.entities.values()) if (e.kind === K.PED && e.npc && e.npc.unit === v.id && !e.dead) crew.push(e);
+    runNpcUnit(world, v, crew, dt);
+    return;
+  }
   const now = world.time;
   const p = world.players.get(ai.target);
   const crew = [];

@@ -335,3 +335,24 @@ test('police units roll in from off screen and clear of you; lost in the wilds, 
   assert.ok(sent.length <= WILD_UNITS, `at most ${WILD_UNITS} unit(s) sent after losing you in the wilds (${sent.length})`);
   for (const id of sent) { const v = w.get(id); assert.ok(Math.hypot(v.x - open.x, v.y - open.y) > 1100, 'from a long way off'); }
 });
+
+test('NPC cops go after NPC crooks: a mugger who gets away with a purse is called in; a squad car comes, the crew tases and cuffs them, the purse is dropped', () => {
+  const w = makeWorld();
+  // a street downtown: a road node with a sidewalk beside it
+  const node = w.map.nodes.find((n) => n.lvl === 0 && n.x > 20000 && n.x < 24000 && n.y > 14000 && n.y < 17000);
+  assert.ok(node, 'a street');
+  const crook = spawnNpc(w, 'mugger', node.x + 32, node.y + 32, 'mugger');
+  crook.npc.hasPurse = true; crook.npc.flagged = true; crook.npc.keep = true; crook.npc.state = 'idle';   // (stands about: the chase is the police's, not the crook's running)
+  (w.npcCalls ||= []).push({ id: crook.id, at: w.time + 1 });
+  let unit = null, purse = false, gone = false;
+  for (let s = 0; s < 90 * 2 && !gone; s++) {
+    run(w, 0.5);
+    for (const vid of w.police || []) { const v = w.get(vid); if (v && v.ai && v.ai.npcTarget === crook.id) unit = v; }
+    for (const e of w.entities.values()) if (e.kind === K.BAG && Math.hypot(e.x - crook.x, e.y - crook.y) < 200) purse = true;
+    gone = !w.get(crook.id);
+  }
+  assert.ok(unit, 'a squad car was sent');
+  assert.ok(unit.sirenOn !== undefined, 'with its siren');
+  assert.ok(gone, 'the crook was taken into custody');
+  assert.ok(purse, 'the purse was dropped');
+});

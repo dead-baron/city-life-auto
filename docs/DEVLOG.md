@@ -3145,3 +3145,13 @@ On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesi
   - Before, only the sections with a room you could walk into were cut away when you stepped inside. A hospital showed one open room next to a roofed block with its helipad.
   - Now every section of a walk-in building has a cut-away version (`statics.js` `addBuildings`, `cutRecipe`), so the whole building opens as one.
   - A section with no room of its own (a wing) shows its floor all across, with the walls cut low round it.
+
+## 2026-10-07 · The police go after NPC crooks too
+
+- **A mugger who gets away with a purse gets called in** (backlog: "NPC cops go after NPC criminals").
+  - Three times in four, someone calls it in (`npc.js` `mugRun` → `world.npcCalls`). A few seconds later, one squad car is sent after the mugger from out of sight, sirens on (`police.js` `npcCalls`, `spawnNpcUnit`, `runNpcUnit`).
+  - The car drives up and the crew jumps out. They run the mugger down, tase them and cuff them, and the mugger is taken into custody (`law.js` `arrest`).
+  - The purse falls where the mugger was caught, for the victim or a passer-by to pick up.
+  - The unit gives up and drives off if the mugger gets clean away (out of the crew's sight for 25 s) or after two minutes.
+  - A player officer's patrol call stays theirs: no squad car is sent after that mugger.
+- **Tests:** `test/police.test.js`: a mugger called in, the squad car sent, custody, the purse dropped.
