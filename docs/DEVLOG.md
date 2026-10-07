@@ -2800,3 +2800,13 @@ A trailhead and a little gorge in the woods east of the Ridge Track (`shared/nat
   - the outlet creek runs on over stepping stones (you can cross dry-footed) to a reedy pond with cattails and more lilies;
   - mossy boulders, a fallen log, firs, maples and one red maple round it, and ferns thick on the banks.
 - On the map as Fern Gorge, and in the debug menu (🌿 Fern Gorge). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · A Ferris wheel on Westport Pier
+
+A Ferris wheel now stands on the south side of Westport Pier's head (`props-park.js` `ferrisWheel`; prop `ferris`).
+- **The wheel:** a white double rim on sixteen spokes round a hub, with two A-frame legs down to a boarding deck.
+- **The gondolas:** sixteen of them, hanging under the rim in red, blue, yellow and green.
+- **At night:** bulbs along the rim and every other spoke light up, and the wheel throws a warm glow over the deck and the water.
+- **Getting round it:** the legs are solid, and you walk under the wheel to the deck.
+
+At golden hour its shadow stretches across the bay.

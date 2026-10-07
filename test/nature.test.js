@@ -472,6 +472,7 @@ test('Westport Pier: a timber fishing pier out to sea from the end of a Westport
   // the head: the bait shack, lamps along the whole pier, benches
   const onPier = (q) => q && q.x < s.root.x && q.x > s.head.x - 6 * TILE && Math.abs(q.y - s.y) < 8 * TILE;
   assert.equal(m.props.filter((q) => onPier(q) && q.t === 'baitshack').length, 1, 'the bait shack');
+  assert.equal(m.props.filter((q) => onPier(q) && q.t === 'ferris').length, 1, 'the Ferris wheel');
   assert.ok(m.props.filter((q) => onPier(q) && q.t === 'lamp').length >= 10, 'lamps all the way out');
   assert.ok(m.props.filter((q) => onPier(q) && q.t === 'pbench').length >= 8, 'benches');
   // ashore: sand either side of the pier's root

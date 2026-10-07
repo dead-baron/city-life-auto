@@ -429,3 +429,39 @@ export function golfPin() {
   m.fill((x, y, z) => { const fx = x - 2.5, fz = 33 - z + Math.sin(fx * 0.5) * 0.6; return fx >= 0 && fx < 10 && fz >= 0 && fz < 7 - fx * 0.25 ? f : -1; }, 2, 1, 24, 14, 3, 34);
   return m;
 }
+// a Ferris wheel (the wheel in the x-z plane, facing +y): a white double rim on spokes round a hub, two A-frame
+// legs to a boarding deck, sixteen gondolas hanging under the rim in alternating colours, and bulbs along the rim
+// and the spokes (lit at night: on 0..1)
+export function ferrisWheel(on = 0.6) {
+  const W = 224, Dp = 44, H = 262, m = new Vox(W, Dp, H), cx = W / 2, cz = 136, R0 = 98;
+  const steel = m.mat({ ramp: R('#ecebe6'), k: 3, flag: F_NOCAST }), leg = m.mat({ ramp: R('#d8d6d0'), k: 3 }), hub = m.mat({ ramp: R('#8a8e94'), k: 3 });
+  const deck = m.mat({ ramp: R('#8a6a4a'), k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -0.8 : 0) }), rail = m.mat({ ramp: R('#2a3a5a'), k: 3 });
+  const bulb = m.mat({ ramp: R('#fff0b0', 5, 3), k: 4, emi: [255, 226, 150, Math.round(255 * on)], flag: F_NOCAST });
+  const cab = ['#d8342e', '#2f7ac8', '#f0c830', '#3a9a5a'].map((c) => m.mat({ ramp: R(c), k: 3 })), roof = m.mat({ ramp: R('#f2f0ea'), k: 3 }), glass = m.mat({ ramp: R('#9ac8d8'), k: 3, flag: F_GLASS });
+  const yF = 16, yB = 28;
+  // the rims (front and back) and the bulbs on them
+  for (const y of [yF, yB]) m.fill((x, yy, z) => { const d = Math.hypot(x - cx, z - cz); return Math.abs(d - R0) < 1.6 ? steel : -1; }, 0, y - 1, cz - R0 - 3, W, y + 1, cz + R0 + 3);
+  for (let k = 0; k < 64; k++) { const a = k / 64 * Math.PI * 2, x = cx + Math.cos(a) * (R0 + 1.5), z = cz + Math.sin(a) * (R0 + 1.5); m.box(x - 0.8, yF - 2, z - 0.8, x + 0.8, yF - 0.5, z + 0.8, bulb); }
+  // the spokes, and bulbs along every other one
+  for (let k = 0; k < 16; k++) {
+    const a = k / 16 * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+    for (let r = 8; r < R0; r += 1) for (const y of [yF, yB]) m.box(cx + ca * r - 0.5, y - 0.5, cz + sa * r - 0.5, cx + ca * r + 0.5, y + 0.5, cz + sa * r + 0.5, steel);
+    if (k % 2 === 0) for (let r = 16; r < R0; r += 10) m.box(cx + ca * r - 0.7, yF - 1.8, cz + sa * r - 0.7, cx + ca * r + 0.7, yF - 0.4, cz + sa * r + 0.7, bulb);
+    // cross ties between the rims at the spoke ends
+    m.box(cx + ca * R0 - 0.8, yF, cz + sa * R0 - 0.8, cx + ca * R0 + 0.8, yB, cz + sa * R0 + 0.8, steel);
+  }
+  m.cyl('y', cx, 0, cz, 7, yF - 4, yB + 4, hub);
+  // the A-frame legs, front and back, down to the deck
+  for (const y of [yF - 6, yB + 6]) for (const sd of [-1, 1]) for (let t = 0; t <= 1; t += 0.01) { const x = cx + sd * t * 62, z = cz - t * (cz - 8); m.box(x - 2, y - 1.5, z - 1.5, x + 2, y + 1.5, z + 1.5, leg); }
+  // the boarding deck and its rail
+  m.box(cx - 76, 2, 0, cx + 76, Dp - 2, 8, deck);
+  m.fill((x, y, z) => ((y < 4 || y > Dp - 4) && (z > 18 && z < 20 || (Math.round(x) % 8 === 0 && z >= 8 && z < 20)) ? rail : -1), cx - 76, 2, 8, cx + 76, Dp - 2, 20);
+  // the gondolas, hanging plumb under the rim between the rims
+  for (let k = 0; k < 16; k++) {
+    const a = k / 16 * Math.PI * 2 + Math.PI / 16, gx = cx + Math.cos(a) * R0, gz = cz + Math.sin(a) * R0 - 14, c = cab[k % 4];
+    if (gz < 10) continue;
+    m.box(gx - 0.5, (yF + yB) / 2 - 0.5, gz + 8, gx + 0.5, (yF + yB) / 2 + 0.5, gz + 14, steel);
+    m.box(gx - 7, yF + 1, gz - 6, gx + 7, yB - 1, gz + 2, c); m.box(gx - 7, yF + 1, gz + 2, gx + 7, yF + 2, gz + 6, glass); m.box(gx - 8, yF, gz + 6, gx + 8, yB, gz + 9, roof);
+  }
+  return m;
+}

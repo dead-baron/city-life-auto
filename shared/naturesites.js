@@ -476,8 +476,9 @@ function vineyard(m, H) {
 // ---- Westport Pier (the Westport coast below the airport; original, with the NK1-C dock kit) -------------------
 // The side road that runs west from the coast road to the sea goes on as a long timber fishing pier out over the
 // bay, with a T-head at the end: rails along both sides, black iron lamps in pairs, benches facing the water, life
-// rings, a bait and tackle shack, a fish-cleaning table, a cooler, a coin telescope looking out to sea, gulls on the
-// rail posts, a float off the head's south side with two little boats tied up and a gap in the rail to reach it.
+// rings, a bait and tackle shack, a fish-cleaning table, a cooler, a coin telescope looking out to sea, a Ferris
+// wheel lit up at night, gulls on the rail posts, a float off the head's south side with two little boats tied up
+// and a gap in the rail to reach it.
 // Ashore: sand either side of the pier (a lifeguard tower, umbrellas, towels and a surfboard), a lawn behind with
 // fan palms, picnic tables and benches facing the sunset, a snack cart by the pier, and the pier's lit sign.
 // The pier faces west: the sun sets over its end.
@@ -534,6 +535,9 @@ function westportPier(m, H) {
   add('pbench', HX0 + 1.0, RY - 1.6, 8, { a: Math.PI, lift: 4 }); add('pbench', HX0 + 1.0, RY + 1.8, 8, { a: Math.PI, lift: 4 });
   add('pbench', HX0 + 5.8, HY1 + 0.5, 8, { a: Math.PI / 2, lift: 4 });
   add('scope', HX0 + 0.8, RY + 0.1, 6, { lift: 4 });
+  // the Ferris wheel on the head's south side, lit at night (its legs solid; you walk under the wheel to the deck)
+  add('ferris', HX0 + 4, HY1 - 1.3, 0);
+  for (const sd of [-1, 1]) for (const dy of [-12, 12]) m.addSolidProp(Math.round((HX0 + 4) * TILE + sd * 60), Math.round((HY1 - 1.3) * TILE + dy), 6);
   for (const [tx, ty, a] of [[HX0 + 0.1, RY - 5.2, 2.4], [sx - 12.1, RY - 1.95, -0.6], [HX1 + 0.92, HY1 + 0.8, 0.9]]) add('gull', tx, ty, 0, { a, z: 30 });
   // the float: two little boats tied up, cleats at its corners
   add('canoe', FX0 + 1.6, HY1 + 3.35, 0, { a: 0, c: 0 }); add('canoe', FX1 + 1.5, HY1 + 2.0, 0, { a: Math.PI / 2, c: 2 });
