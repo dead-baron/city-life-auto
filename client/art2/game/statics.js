@@ -313,7 +313,8 @@ export function makeStatic(r) {
     case 'sign': return makeSignBoard(r);
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
-    case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist });
+    case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams });
+    case 'sbridge': return makeStoneBridge(r);
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);
     case 'koi': { const G = new GBuf(24, 24); G.ax = 12; G.ay = 12; GD.koi(G, 12, 12, r.a || 0, r.v || 0, 9); return G; }
@@ -1167,7 +1168,8 @@ function voxModel(m, a) {
     case 'fruitCrate': return GD.fruitCrate('#c8302a', 2);
     case 'beaverDam': return GD.beaverDam(a[0] || 130, 26, 14, 0.6, 3); case 'lodge': return GD.beaverLodge(28, 22, 2);
     case 'boardwalk': return GD.boardwalk(a[0] || 160, 34, 8, 'ns'); case 'pier': return GD.fishingPier(a[0] || 120, 30, 10, 0.7);
-    case 'canoe': return WT.canoe(0, a[0] || '#b83a2e'); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
+    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e'); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
+    case 'beachBar': return WL.beachBar(a[0] ?? 0.5); case 'beachShower': return WL.beachShower(a[0] ?? 1); case 'driftShade': return WL.driftShade(a[0] || 70, a[1] || 50); case 'cliffStairs': return WL.cliffStairs(a[0] || 120, a[1] || 80, a[2] || 28);
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
     case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46);
@@ -1215,7 +1217,8 @@ function vdim(m, a) {
     case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
     case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, 30, 54];
-    case 'canoe': return [64, 16, 12]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
+    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
+    case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
     case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'driftwood': return [a[0] || 50, 16, 10];
@@ -1316,6 +1319,24 @@ function makeTowel(r) {
   const w = 18, h = 34, G = new GBuf(w, h); G.ax = w / 2; G.ay = h / 2;
   const a = [[216, 70, 60], [60, 120, 200], [240, 190, 60]][r.v || 0], b = [244, 240, 228];
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) G.put(x, y, Math.floor(y / 5) % 2 ? a : b, [0, 0, 1], 1, null, F_GROUND);
+  return G;
+}
+// An old two-arch stone bridge carrying a country road over a river (Willow River; concept W1). The water kit's model
+// (water.js stoneBridge) stands its deck faceH above the water; here the road is the map's own (flat) and the river
+// runs beside it at the same level, so: the deck is taken off (the road's surface shows through), every height comes
+// down by faceH (the parapets stand 11 px off the road, the face lies flat), and the picture is anchored faceH below
+// the road's centre - the deck edge lands on the road edge, the arched face hangs below it over the water like a
+// bridge seen from downstream, and cars on the road draw over it.
+function makeStoneBridge(r) {
+  const m = WT.stoneBridge(r.len, r.roadW, r.faceH, 2, { seed: 23, under: true });
+  const G = vrender(m, r.hd || 0), fh = r.faceH;
+  for (let i = 0; i < G.w * G.h; i++) {
+    if (!G.col[i * 4 + 3]) continue;
+    const z = G.z[i];
+    if (z >= fh - 2 && z < fh + 1 && G.nrm[i * 4 + 2] > 230) { G.col[i * 4 + 3] = 0; continue; }   // the deck's top: gone
+    G.z[i] = Math.max(0, z - fh);
+  }
+  G.ay -= fh;   // (the anchor: the road's centre line)
   return G;
 }
 // a creek bridge's rail: a stone kerb with timber posts and two rails (Redwood Creek, concepts N1-C/D)
@@ -1640,11 +1661,15 @@ function propItems(c, p, pi, I) {
     case 'lodge': V('lodge', 'lodge', []); return;
     case 'boardwalk': V(`bwalk:${p.len || 160}`, 'boardwalk', [p.len || 160], PI / 2); return;
     case 'pier': V(`pier:${p.len || 120}`, 'pier', [p.len || 120]); lightAt(I, x + (p.len || 120) / 2 - 10, y, 40, 110, [1, 0.8, 0.5], 1.4, 'lamp'); return;
-    case 'canoe': V(`canoe:${qa(p.a || 0, 8).toFixed(2)}`, 'canoe', ['#b83a2e'], qa(p.a || 0, 8)); return;
+    case 'canoe': { const col = ['#b83a2e', '#2f6a8a', '#d8c8a0'][p.c || 0]; V(`canoe:${p.c || 0}:${qa(p.a || 0, 8).toFixed(2)}`, 'canoe', [col], qa(p.a || 0, 8)); return; }
     case 'swan': V(`swan:${qa(p.a || 0, 8).toFixed(2)}`, 'swan', [], qa(p.a || 0, 8)); return;
     case 'duck': V(`duck:${qa(p.a || 0, 8).toFixed(2)}`, 'duck', [true], qa(p.a || 0, 8)); return;
     case 'heron': put(I, { key: 'heron:0', recipe: { t: 'critter', k: 'heron', f: 0 }, x, y, ext: [24, 44, 24, 10], pi }); return;
     case 'lily': put(I, { key: `lily:${p.v || 0}`, recipe: { t: 'lily', s: (p.v || 0) + 1 }, x, y, ext: [50, 30, 50, 30], pi }); return;
+    case 'beachbar': V('bbar', 'beachBar', [0.6]); lightAt(I, x, y + 30, 30, 110, [1, 0.8, 0.5], 1.2, 'window'); return;
+    case 'shower': V('bshow', 'beachShower', [1]); return;
+    case 'driftshade': V(`dshade:${p.w || 70}:${p.d || 50}`, 'driftShade', [p.w || 70, p.d || 50]); return;
+    case 'stairs': V(`cstairs:${p.len || 120}:${p.h || 80}`, 'cliffStairs', [p.len || 120, p.h || 80, p.w || 28], 0, [((p.w || 28) + 6) / 2, (p.len || 120) + 2]); return;
     case 'logcabin': V('lcab', 'logCabin', [96, 60, 0.6]); lightAt(I, x, y + 8, 22, 120, [1, 0.78, 0.46], 1.4, 'window'); return;
     case 'lookout': V('lkout', 'lookout', [110, 0.6]); lightAt(I, x, y, 130, 140, [1, 0.82, 0.5], 1.2, 'window'); return;
     case 'outcrop': put(I, { key: `oc:${p.style || 'granite'}:${p.w || 80}:${p.d || 50}:${p.h || 46}:${(p.s || 1) % 4}`, recipe: { t: 'outcrop', style: p.style || 'granite', w: p.w || 80, d: p.d || 50, h: p.h || 46, s: (p.s || 1) % 4 }, x, y, ext: [(p.w || 80) / 2 + 16, (p.h || 46) + (p.d || 50) / 2 + 20, (p.w || 80) / 2 + 16, (p.d || 50) / 2 + 16], pi }); return;
@@ -2240,6 +2265,20 @@ function addNature(c, I) {
       put(I, { key: `fall:t:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 9, mist: 0.4 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
       continue;
     }
+    if (s.kind === 'river') {   // Willow River (concept W1): the falls between basalt walls, the old stone bridge, the barn
+      const f = s.falls;
+      for (const cw of s.cliffs || []) put(I, vitem(`cliffw:${cw.len}:${cw.h}:${cw.seed}`, 'cliffWall', [cw.len, cw.h, 60, cw.seed], cw.x, cw.y, 0));
+      put(I, { key: `fall:w:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 17, mist: 0.8, upper: [[-64, -34], [-26, 6], [14, 38], [46, 64]], streams: [[-62, -40], [-30, -6], [4, 28], [38, 62]] }, x: Math.round(f.x), y: Math.round(f.y), ext: [f.w / 2 + 80, f.drop + 120, f.w / 2 + 80, 60] });
+      lightAt(I, f.x, f.y + 10, 12, 140, [0.75, 0.9, 1], 0.5, 'sign', 0);
+      const b = s.bridge, len = Math.round(b.half * 2 + 20);
+      put(I, { key: `sbr:${len}:${b.roadHw}:${qa(b.a, 64).toFixed(3)}`, recipe: { t: 'sbridge', len, roadW: b.roadHw * 2, faceH: 46, hd: qa(b.a, 64) }, x: Math.round(b.x), y: Math.round(b.y), ext: [len / 2 + 30, b.roadHw + 60, len / 2 + 30, b.roadHw + 90] });
+      if (s.barn) {
+        const { tx, ty, tw, th } = s.barn;
+        const spec = { w: tw * TILE, d: th * TILE, seed: 777, glowOnly: true, night: NIGHT, style: 'siding', wallColor: '#a8342e', pitch: 'gable', ridge: 'ns', slope: 0.62, roof: 'shingle', roofColor: '#6a6a70', doors: [{ x: Math.round(tw * TILE / 2) - 36, w: 72, kind: 'garage', open: true, h: 64 }], windows: [16, tw * TILE - 34] };
+        put(I, { key: 'wr:barn', recipe: { t: 'b', spec, kit: [] }, x: tx * TILE, y: (ty + th) * TILE, ext: [2, th * TILE + 200, tw * TILE + 2, 4] });
+      }
+      continue;
+    }
     if (s.kind !== 'creek') continue;
     // the bridge: a rail along each edge of the road where the creek runs under it
     const b = s.bridge, nx = -Math.sin(b.a), ny = Math.cos(b.a), hd = qa(b.a, 64), len = Math.round(b.half * 2);
@@ -2426,6 +2465,11 @@ function coverClear(c, tx, ty, r, dirt = false) {
   for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = c.tile(tx + dx, ty + dy); if (COVER_HARD.has(t) || (dirt && t === T.DIRT)) return false; }
   return true;
 }
+// the same next to fresh water: reeds may stand at the water's edge (nothing hard round them, water allowed)
+function coverClearWet(c, tx, ty) {
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const t = c.tile(tx + dx, ty + dy); if (t !== T.WATER && t !== T.DEEP && COVER_HARD.has(t)) return false; }
+  return true;
+}
 
 // ================================================================================================
 // ground cover: what carpets the wild between the map's trees and rocks - fern beds under the woods, drifts of
@@ -2464,6 +2508,14 @@ function coverAt(c, tx, ty, x, y) {
   if (M.reserve[i] & 64) {   // the jungle floor (Coral Cay): dense big leaves, a few gaps
     const h = hash(tx, ty, 7121);
     return h < 0.8 ? [pickW(NAT_SP.jungle, vnoise(x, y, 50, 7123) * 0.7 + hash(tx, ty, 7125) * 0.3), 1 + (h < 0.2 ? 0.2 : 0)] : null;
+  }
+  if (M.reserve[i] & 128) {   // a river's lush banks (Willow River): reed beds along the water, meadow grass and flowers further up
+    const h = hash(tx, ty, 7141), pb = vnoise(x, y, 80, 7143), pa = vnoise(x, y, 160, 7147), h2 = vnoise(x, y, 60, 7145) * 0.7 + hash(tx, ty, 7149) * 0.3;
+    if (t === T.SAND) return h < 0.07 ? [pickW(NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars)
+    const d = M.distRiver ? M.distRiver[i] : 99;
+    if (d > 0 && d <= 6) return pb > 0.3 && h < 0.85 ? [pickW(NAT_SP.shore, h2), 1 + (h < 0.3 ? 0.15 : 0)] : null;
+    if (pa > 0.6 && h < 0.34) return [pickW([NAT_SP.meadowA, NAT_SP.meadowB, NAT_SP.meadowD][Math.floor(vnoise(x, y, 400, 7151) * 3) % 3], h2), 1];
+    return h < 0.14 ? [pickW(NAT_SP.meadowGrass, h2), 1] : null;
   }
   const st = (DISTRICTS[M.dist[i]] || {}).style;
   if (TOWN_COVER[st] && t === T.GRASS) {   // the open grass in town: light drifts of what grows there
@@ -2504,10 +2556,11 @@ function coverItems(c, I, cx, cy) {
   const ty0 = Math.max(1, Math.floor((cy * CH - 40) / TILE)), ty1 = Math.min(H - 2, Math.floor(((cy + 1) * CH + 110) / TILE));
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
     const i = ty * W + tx;
-    if ((taken && taken[i]) || (c.M.reserve && (c.M.reserve[i] & ~64))) continue;
+    const res = c.M.reserve ? c.M.reserve[i] : 0, lush = res & 128;   // (128: a river's lush banks - reeds right to the water)
+    if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16)) continue;
     const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)
     const r = coverAt(c, tx, ty, x, y);
-    if (!r || !coverClear(c, tx, ty, 1)) continue;
+    if (!r || !(lush ? coverClearWet(c, tx, ty) : coverClear(c, tx, ty, 1))) continue;
     const [sp, k] = r, v = Math.floor(hash(tx, ty, 13) * NV(sp));
     out.push(fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k));
   }

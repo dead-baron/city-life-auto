@@ -205,6 +205,7 @@ function tileFacts(C) {
     else if (t === T.DOCK) m = runAxis(M, tx, ty, T.DOCK) ? M_.DOCK : M_.DOCKX;
     else if (t === T.GRASS) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
+      else if (b.tres[k] & 128) m = M_.PASTURE;                 // (a river's lush banks, even in dry country: Willow River)
       else if (inRects(paint, X, Y, 'golf')) m = M_.GOLF;
       else if (!wild) m = (b.tres[k] & 64) ? M_.FOREST : (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn)
       else if (st === 'rural' || st === 'airport') m = bio === 2 ? M_.FOREST : bio === 3 ? M_.DRYGRASS : st === 'airport' ? M_.LAWN : M_.PASTURE;
@@ -222,7 +223,9 @@ function tileFacts(C) {
       else m = M_.DIRT;
     } else if (t === T.SAND) {
       // wild coasts by their land: rock shores below mountains, shingle under the forests, sand elsewhere
-      if ((bio === 4 || (bio === 2 && wild)) && WSTYLE.has(st) && st !== 'beach') m = bio === 4 ? (vnc(X, Y, 211, seed + 3) > 0.35 ? M_.ROCKSHORE : M_.SHINGLE) : (vnc(X, Y, 173, seed + 5) > 0.5 ? M_.SHINGLE : M_.BEACH);
+      if (b.tres[k] & 128) m = M_.SHINGLE;                      // (a river's gravel bars)
+      else if ((b.tres[k] & 36) === 36) m = M_.BEACH;            // (a designed beach - the cove's sand - whatever the coast round it)
+      else if ((bio === 4 || (bio === 2 && wild)) && WSTYLE.has(st) && st !== 'beach') m = bio === 4 ? (vnc(X, Y, 211, seed + 3) > 0.35 ? M_.ROCKSHORE : M_.SHINGLE) : (vnc(X, Y, 173, seed + 5) > 0.5 ? M_.SHINGLE : M_.BEACH);
       else m = (bio === 3 || st === 'desert') && M.distSea[g] > 24 ? M_.DUNE : M_.BEACH;
     }
     else if (t === T.FIELD) {
@@ -247,7 +250,7 @@ function tileFacts(C) {
       else m = M_.LOT;
     } else if (t === T.ROAD) m = D.road === 'asphalt_worn' ? M_.ROADOLD : M_.ROAD;
     else if (t === T.BUILDING) m = M_.FOUND;
-    else if (t === T.WALL) m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : M_.WALL;
+    else if (t === T.WALL) m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (b.tres[k] & 32) ? M_.SCREE : M_.WALL;   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
     else if (t === T.FLOOR) { const bi = b.tbld[k], bd = bi >= 0 ? M.buildings[bi] : null; m = bd && /house|apt|home|shack|mansion|farm/.test(bd.kind) ? M_.FLOORW : M_.FLOOR; }
     else if (t === T.COUNTER) m = M_.COUNTER;
     else m = M_.FOUND;

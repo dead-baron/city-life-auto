@@ -154,7 +154,7 @@ test('the Old Granite Mine: a solid cliff with its adit, rails and a cart out of
 });
 
 test('farms: a fenced pasture (solid fence) by every farm, open grass inside', () => {
-  const pastures = m.natureSites.filter((q) => q.kind === 'pasture');
+  const pastures = m.natureSites.filter((q) => q.kind === 'pasture' && m.pois.some((p) => p.kind === 'farm' && q.name === `${p.label} Pasture`));   // (not Willow River's paddock)
   assert.equal(pastures.length, m.pois.filter((p) => p.kind === 'farm').length, 'one per farm');
   for (const s of pastures) {
     assert.equal(tileAt(s.x, s.y), T.GRASS, 'grass inside');
@@ -181,4 +181,53 @@ test('Coral Cay: a rainforest of palm groves on a jungle floor, a waterfall and 
   const palms = m.props.filter((q) => q && q.t === 'palm_a' && m.dist[Math.floor(q.y / TILE) * m.w + Math.floor(q.x / TILE)] === 44);
   assert.ok(palms.length > 150, `palm groves (${palms.length})`);
   for (const p of palms) { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); assert.notEqual(m.tileAt(tx, ty), T.ROAD); }
+});
+
+test('Willow River: falls over a basalt escarpment, a stone bridge on the Oil Field Road, a lake below, a barn and a paddock', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'river');
+  assert.ok(s, 'the river is built');
+  assert.equal(DISTRICTS[m.dist[Math.floor(s.y / TILE) * m.w + Math.floor(s.x / TILE)]].name, 'Dry Creek');
+  // the road runs on over the river; water on both sides of it; stone parapets along both edges
+  const b = s.bridge, ux = Math.cos(b.a), uy = Math.sin(b.a), nx = -uy, ny = ux;
+  assert.equal(tileAt(b.x, b.y), T.ROAD, 'the road runs on over the river');
+  let water = 0;
+  for (const side of [-1, 1]) for (let t = 0; t < 80; t += 8) if (tileAt(b.x + nx * side * (b.roadHw + 16 + t), b.y + ny * side * (b.roadHw + 16 + t)) === T.WATER) { water++; break; }
+  assert.equal(water, 2, 'the river on both sides of the road');
+  for (const side of [-1, 1]) for (const k of [-100, 0, 100]) assert.ok(solidNear(b.x + ux * k + nx * side * (b.roadHw + 6), b.y + uy * k + ny * side * (b.roadHw + 6), 14), 'a parapet along each edge');
+  // fresh water: fishable river and lake, the lake flagged as a lake
+  const ri = Math.floor(s.pool.y / TILE) * m.w + Math.floor(s.pool.x / TILE), li = Math.floor(s.lake.y / TILE) * m.w + Math.floor(s.lake.x / TILE);
+  assert.ok(m.river[ri] && m.tiles[ri] === T.WATER, 'the plunge pool is river water');
+  assert.ok(m.lake[li] && m.river[li] && m.tiles[li] === T.WATER, 'Willow Lake is a lake');
+  // the escarpment either side of the falls is solid rock; the falls' notch is open water
+  let rock = 0;
+  for (const cw of s.cliffs) for (let k = -0.4; k <= 0.4; k += 0.2) if (tileAt(cw.x + ux * cw.len * k, cw.y + uy * cw.len * k - 30) === T.WALL) rock++;
+  assert.ok(rock >= 8, `the escarpment is rock (${rock})`);
+  // it stays off the railway and the city highway (no water within reach of either)
+  for (const p of m.rail.pts) if (Math.abs(p.x - s.lake.x) < 1600 && Math.abs(p.y - s.lake.y) < 1600) assert.notEqual(tileAt(p.x, p.y), T.WATER, 'no water on the line');
+  // the barn is solid; the paddock is in the nature sites (the livestock graze there); willows and reeds' shore
+  assert.ok(s.barn && tileAt((s.barn.tx + 3) * TILE, (s.barn.ty + 2) * TILE) === T.WALL, 'the barn stands solid');
+  assert.ok(m.natureSites.some((q) => q.kind === 'pasture' && q.name === 'Willow River Pasture'), 'the paddock');
+  assert.ok(m.props.filter((q) => q && q.sp === 'willow' && Math.hypot(q.x - s.x, q.y - s.y) < 2000).length >= 8, 'willows along it');
+  assert.ok(m.props.some((q) => q && q.t === 'canoe' && Math.hypot(q.x - s.lake.x, q.y - s.lake.y) < 700), 'a boat on the lake');
+  assert.ok(m.landmarks.some((l) => l.name === 'Willow River Falls') && m.landmarks.some((l) => l.name === 'Willow Lake'));
+});
+
+test('Granite Cove: a sandy bay in the cliffs below the campground, steps down, a beach bar, open sea water', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'cove');
+  assert.ok(s, 'the cove is built');
+  const ti = (x, y) => Math.floor(y / TILE) * m.w + Math.floor(x / TILE);
+  // the bay is sea water (not river, not lake) you can swim in, joined to the open sea
+  const bay = ti(s.x, s.y + 4 * TILE);
+  assert.ok(m.tiles[bay] === T.WATER && !m.land[bay] && !m.river[bay] && !m.lake[bay], 'the bay is sea');
+  // a beach of sand between the cliffs and the water; the cliffs are solid rock, with a gap for the steps
+  assert.equal(tileAt(s.x, s.y - 3 * TILE), T.SAND, 'sand on the beach');
+  let rock = 0;
+  for (const [dx, dy] of [[-9, -6], [9, -6], [-11, -3], [11, -3], [-4, -10], [5, -10]]) if (tileAt(s.x + dx * TILE, s.y + dy * TILE) === T.WALL) rock++;
+  assert.ok(rock >= 5, `cliffs round the back and sides (${rock})`);
+  assert.notEqual(tileAt(s.steps.x, (s.steps.y0 + s.steps.y1) / 2), T.WALL, 'the steps go up through a gap');
+  assert.ok(m.props.some((q) => q && q.t === 'stairs' && Math.hypot(q.x - s.steps.x, q.y - s.steps.y1) < 20), 'the steps');
+  assert.ok(m.props.some((q) => q && q.t === 'beachbar' && Math.hypot(q.x - s.bar.x, q.y - s.bar.y) < 20), 'the beach bar');
+  assert.ok(m.props.filter((q) => q && /^umbrella_/.test(q.t) && Math.hypot(q.x - s.x, q.y - s.y) < 300).length >= 3, 'umbrellas on the sand');
+  for (const q of m.props) if (q && (q.t === 'towel' || /^umbrella_/.test(q.t)) && Math.hypot(q.x - s.x, q.y - s.y) < 400) assert.equal(tileAt(q.x, q.y), T.SAND, `${q.t} on the sand`);
+  assert.ok(m.landmarks.some((l) => l.name === 'Granite Cove'));
 });

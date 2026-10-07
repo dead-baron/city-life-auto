@@ -371,3 +371,88 @@ export function chimneySmoke(seed = 1, h = 60) {
 }
 // a little cascade over a ledge (oasis, creeks): a short fall with step lines
 export const cascade = (w = 22, h = 30, seed = 2) => waterfall(w, h, seed);
+
+// ---- the cove (concept L9) ------------------------------------------------------------------------------------
+// a beach bar shack against the cliff: weathered plank walls, a tin roof sloping to the front, a counter open to
+// the south under a green-and-white striped awning on two posts, shelves of bright bottles and jars behind the
+// counter, a chalkboard by the door, a life ring on the east wall
+export function beachBar(on = 0.5) {
+  const w = 96, d = 50, H = 42, m = new Vox(w + 12, d + 34, H + 22);
+  const wood = m.mat({ ramp: R('#a0805c'), k: 3, shade: (x, y, z) => (Math.round(x + y) % 7 === 0 ? -1 : 0) + (hash(Math.floor((x + y) / 7), 1, 3) - 0.5) * 0.7 + (z < 4 ? -0.5 : 0) });
+  const dark = m.mat({ ramp: R('#5a4232'), k: 3 }), counter = m.mat({ ramp: R('#c49a62'), k: 4, shade: (x) => (Math.round(x) % 12 === 0 ? -0.8 : 0) });
+  const tin = m.mat({ ramp: R('#8e8a80'), k: 3, shade: (x, y) => (Math.round(x) % 6 < 2 ? -0.7 : 0.2) + (hash(Math.round(x / 12), Math.round(y / 9), 7) > 0.8 ? -0.6 : 0) });
+  const rust = m.mat({ ramp: R('#9a5a34'), k: 3 });
+  const aw1 = m.mat({ ramp: R('#2f8a5a'), k: 3 }), aw2 = m.mat({ ramp: R('#ece6d6'), k: 3 });
+  const inside = m.mat({ ramp: R('#3a2c24'), k: 1 }), board = m.mat({ ramp: R('#2a302c'), k: 2 }), chalk = m.mat({ ramp: R('#e8e4d8'), k: 3 });
+  const ring = m.mat({ ramp: R('#e8442e'), k: 3 }), ringW = m.mat({ ramp: R('#f2eee6'), k: 3 });
+  const bot = ['#d8342e', '#e8b830', '#3a8ad8', '#5ab84a', '#e86a9a', '#f08a2a'].map((c) => m.mat({ ramp: R(c, 5, 3), k: 4, emi: on ? [255, 210, 150, Math.round(40 * on)] : null }));
+  const x0 = 6, y0 = 4, x1 = x0 + w, y1 = y0 + d;
+  m.box(x0, y0, 0, x1, y1, 1, inside);                                                   // the floor inside, dark
+  m.box(x0, y0, 0, x1, y0 + 4, H, wood);                                                 // back wall
+  m.box(x0, y0, 0, x0 + 4, y1, H, wood); m.box(x1 - 4, y0, 0, x1, y1, H, wood);           // the ends
+  m.box(x0, y1 - 4, 0, x1, y1, 18, wood); m.box(x0, y1 - 4, 36, x1, y1, H, wood);         // the front: below the counter, above the opening
+  for (const x of [x0 + 30, x1 - 34]) m.box(x, y1 - 4, 18, x + 4, y1, 36, wood);           // (posts in the opening)
+  m.box(x0 - 1, y1 - 6, 18, x1 + 1, y1 + 5, 21, counter);                                 // the counter board, out over the front
+  for (const z of [16, 25]) {                                                             // shelves of bottles and jars behind it
+    m.box(x0 + 6, y0 + 4, z, x1 - 6, y0 + 9, z + 1, dark);
+    for (let x = x0 + 8; x < x1 - 8; x += 4) { const k = Math.floor(hash(x, z, 5) * bot.length), h = 3 + Math.floor(hash(x, z, 6) * 4); m.box(x, y0 + 5, z + 1, x + 2, y0 + 8, z + 1 + h, bot[k]); }
+  }
+  m.box(x0 + 10, y1 - 14, 0, x0 + 26, y1 - 5, 16, dark);                                  // a fridge chest under the counter
+  // the tin roof, sloping down to the front and over the sides, a rusty ridge
+  m.fill((x, y, z) => { const top = H + 16 - (y - y0 + 4) * 0.28; return z >= top - 2 && z < top ? (y < y0 + 4 ? rust : tin) : -1; }, x0 - 3, y0 - 4, H, x1 + 3, y1 + 4, H + 18);
+  // the striped awning over the counter, out on two posts
+  m.fill((x, y, z) => { const top = 38 - (y - y1) * 0.42; return z >= top - 1.5 && z < top ? (Math.floor((x - x0) / 8) % 2 ? aw1 : aw2) : -1; }, x0 - 2, y1, 28, x1 + 2, y1 + 24, 40);
+  for (let x = x0 - 2; x < x1 + 2; x += 8) m.ell(x + 4, y1 + 23, 27.6, 4, 1.2, 2.2, Math.floor((x - x0) / 8) % 2 ? aw1 : aw2);   // the scalloped edge
+  for (const x of [x0 - 1, x1 - 2]) m.box(x, y1 + 21, 0, x + 3, y1 + 24, 30, dark);
+  // the chalkboard on its easel by the front, the life ring on the east wall
+  m.box(x1 + 2, y1 + 8, 0, x1 + 3, y1 + 10, 22, dark); m.box(x1 + 8, y1 + 8, 0, x1 + 9, y1 + 10, 22, dark);
+  m.fill((x, y, z) => (y === y1 + 10 && z >= 8 && z < 22 ? (z > 18 || (Math.round(z) % 3 === 0 && hash(Math.round(x), Math.round(z), 9) > 0.35) ? chalk : board) : -1), x1 + 1, y1 + 9, 8, x1 + 10, y1 + 11, 22);
+  m.fill((x, y, z) => { const r = Math.hypot(y - (y0 + d / 2), z - 26); return r >= 4.5 && r < 7.5 ? (Math.floor(Math.atan2(z - 26, y - (y0 + d / 2)) / (Math.PI / 4) + 8) % 2 ? ring : ringW) : -1; }, x1, y0 + d / 2 - 8, 18, x1 + 2, y0 + d / 2 + 8, 34);
+  return m;
+}
+// an outdoor shower on a little plank deck: a metal pipe up to a head on an arm, a tap, a slatted base
+export function beachShower(run = 1) {
+  const m = new Vox(40, 34, 64);
+  const deck = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -1.1 : 0) + (hash(Math.floor(x / 6), 2, 5) - 0.5) * 0.6 });
+  const post = m.mat({ ramp: MAT.woodDark, k: 3 }), pipe = m.mat({ ramp: MAT.metal, k: 4, flag: F_THIN }), wat = m.mat({ ramp: R('#cfeaf2', 5, 3), k: 3, flag: F_WATER | F_NOCAST });
+  m.box(2, 4, 0, 38, 32, 4, deck);
+  for (const [x, y] of [[2, 4], [34, 4], [2, 28], [34, 28]]) m.box(x, y, 0, x + 4, y + 4, 5, post);
+  m.box(8, 8, 4, 12, 12, 34, post);                                                       // a timber post the pipe is strapped to
+  m.box(12, 9, 4, 14, 11, 56, pipe); m.box(12, 9, 54, 26, 11, 56, pipe);                 // the pipe and its arm
+  m.ell(26, 10, 53, 4, 4, 1.6, pipe);                                                     // the rose
+  m.box(14, 11, 30, 18, 13, 32, pipe);                                                    // the tap
+  if (run) for (let k = 0; k < 18; k++) { const x = 23 + hash(k, 1, 9) * 7, y = 7 + hash(k, 2, 9) * 7, z = 8 + hash(k, 3, 9) * 42; m.box(x, y, z, x + 1, y + 1, z + 2, wat); }
+  return m;
+}
+// a driftwood shade: four silvered posts, crossbeams and a lattice of branches over the top, a few shells hung on
+// twine (a shady spot to lie on a towel)
+export function driftShade(w = 70, d = 50) {
+  const H = 40, m = new Vox(w + 8, d + 8, H + 10);
+  const dw = m.mat({ ramp: R('#b8aa94', 6, 3, { dark: 0.55 }), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(y / 2) + Math.round(z / 3), 4) - 0.5) * 0.9 });
+  const dk = m.mat({ ramp: R('#7a6a58'), k: 3 }), shell = m.mat({ ramp: R('#f2e2d0'), k: 3 });
+  const lean = (x, y, dx, dy) => { for (let z = 0; z < H; z++) { const t = z / H; m.box(x + dx * t, y + dy * t, z, x + dx * t + 3, y + dy * t + 3, z + 1, dw); } };
+  lean(3, 3, 2, 1); lean(w + 1, 3, -2, 1); lean(3, d + 1, 1, -2); lean(w + 1, d + 1, -1, -2);
+  for (const y of [5, d + 1]) m.box(2, y, H - 2, w + 6, y + 3, H + 1, dw);                // crossbeams east-west
+  for (let k = 0; k < 9; k++) {                                                            // branches across the top, every which way
+    const y = 6 + hash(k, 1, 7) * (d - 6), a = (hash(k, 2, 7) - 0.5) * 0.7, L = w + 6;
+    for (let s = 0; s < L; s += 1) { const x = 2 + s, yy = y + Math.tan(a) * (s - L / 2); if (yy < 2 || yy > d + 4) continue; m.box(x, yy, H + 1 + (k % 2), x + 1, yy + 1.6, H + 2.4 + (k % 2), k % 3 ? dw : dk); }
+  }
+  for (const [x, y] of [[w * 0.3, 6], [w * 0.62, 6], [w * 0.45, d]]) { m.box(x, y, H - 12, x + 0.6, y + 0.6, H - 2, dk); m.ell(x, y, H - 13, 1.4, 1, 1.6, shell); }
+  return m;
+}
+// wooden steps up the face of a cliff (len deep, rising h to the top at the north end), on two stringers, with a
+// post every few steps and a rope rail either side
+export function cliffStairs(len = 120, h = 80, w = 28) {
+  const m = new Vox(w + 6, len + 4, h + 26);
+  const tread = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x, y) => (Math.round(y) % 9 === 0 ? -1.2 : 0) + (hash(Math.floor(y / 9), Math.round(x / 8), 6) - 0.5) * 0.6 });
+  const str = m.mat({ ramp: MAT.woodDark, k: 3 }), post = m.mat({ ramp: MAT.woodDark, k: 3, flag: F_THIN }), rope = m.mat({ ramp: R('#d8c49a'), k: 3, flag: F_THIN });
+  const zAt = (y) => Math.max(0, (len - y) / len * h);                                    // y 0 = the top (north), len = the foot
+  for (let y = 0; y < len; y++) {
+    const z = Math.floor(zAt(y) / 6) * 6;                                                 // 6 px risers
+    m.box(3, y + 2, Math.max(0, z - 2), w + 3, y + 3, z + 2, tread);
+    m.box(1, y + 2, Math.max(0, zAt(y) - 6), 3, y + 3, zAt(y) + 2, str); m.box(w + 3, y + 2, Math.max(0, zAt(y) - 6), w + 5, y + 3, zAt(y) + 2, str);
+  }
+  for (let y = 4; y < len; y += 22) for (const x of [1, w + 3]) m.box(x, y, zAt(y), x + 2, y + 2, zAt(y) + 20, post);
+  for (const x of [1.5, w + 3.5]) for (let y = 4; y < len - 1; y++) { const k = ((y - 4) % 22) / 22, sag = Math.sin(k * Math.PI) * 3; m.box(x, y, zAt(y) + 17 - sag, x + 1, y + 1, zAt(y) + 18.4 - sag, rope); }
+  return m;
+}

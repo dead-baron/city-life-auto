@@ -496,11 +496,14 @@ export function fallModel(o = {}) {
     // the upper (or only) fall: a sheet that leaves the lip and curves out a little as it falls
     const lo1 = tier2 ? mid - 2 : 0, w1 = kind === 'cliff' ? width : width - 4;
     sheetTop = () => drop;
+    const ups = o.upper || null;   // (o.upper: the top fall split into strands [lo, hi] across the notch, basalt between)
     m.fill((x, y, z) => {
       if (!inNotch(x, -w1 / 2 + Math.sin(z * 0.2 + x) * 0.6, w1 / 2)) return -1;
+      if (ups && !ups.some(([lo, hi]) => inNotch(x, lo + Math.sin(z * 0.3 + lo) * 0.8, hi))) return -1;
       const out = (drop - z) * 0.12 + Math.min(3, (drop - z) * 0.04);
       return y >= d1 + out - 1 && y < d1 + out + 2 ? sheet : -1;
     }, 0, d1 - 2, lo1, W, d1 + Math.ceil(drop * 0.2) + 4, drop);
+    if (ups) for (let i = 0; i < ups.length - 1; i++) { const a = ups[i][1], b = ups[i + 1][0]; m.fill((x, y, z) => (inNotch(x, a, b) && y >= d1 - 4 && y < d1 + 2 && z >= lo1 && z < drop + 1 + hash(Math.round(x / 3), 2, seed) * 2 ? rock : -1), 0, d1 - 4, lo1, W, d1 + 2, drop + 3); }
     if (tier2) {
       // the shelf pool, its foam, then the split lower falls
       m.fill((x, y, z) => (inNotch(x, -width / 2 + 3, width / 2 - 3) && z >= mid - 2 && z < mid ? (y < d1 + 10 && hash(Math.round(x), Math.round(y), seed + Math.round(frame.v)) > 0.35 ? foam : wtop) : -1), 0, d1, mid - 2, W, d2, mid);
@@ -583,11 +586,15 @@ export function stoneBridge(len = 260, roadW = 96, faceH = 26, arches = 2, o = {
   const cope = m.mat({ ramp: R('#b4aa9a', 6, 3), k: 3, shade: (x) => (Math.round(x) % 14 === 0 ? -1 : 0) });
   const moss = m.mat({ ramp: MOSS, k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.5 });
   const deck = deckMats(m, d, par);
+  // o.under: the arches' openings shut with the dark under the bridge and a line of water at its foot, on the face
+  // (for a river drawn at the road's level, where nothing shows through the arch)
+  const dark = o.under ? m.mat({ ramp: R('#1e2a2c', 5, 2), k: 1, shade: (x, y, z) => (z > rise * 0.6 ? -0.6 : 0) + (hash(Math.round(x), Math.round(z), 3) - 0.5) * 0.4 }) : 0;
+  const wat = o.under ? m.mat({ ramp: WATER.river, k: 2, flag: F_WATER | F_NOCAST, shade: (x, y, z) => (hash(Math.round(x), Math.round(z), 4) - 0.5) * 1.2 - 0.8 }) : 0;
   const ab = Math.round(len * 0.14), pier = 16, span = (len - ab * 2 - pier * (arches - 1)) / arches, rise = faceH - 8;
   const archAt = (x, z) => { for (let a = 0; a < arches; a++) { const x0 = ab + a * (span + pier), c = x0 + span / 2; const q = ((x - c) / (span / 2)) ** 2 + (z / rise) ** 2; if (q < 1) return q; } return 9; };
   m.fill((x, y, z) => {
     const q = archAt(x, z);
-    if (q < 1) return -1;
+    if (q < 1) return o.under && y >= d - 2 ? (z < 3 ? wat : dark) : -1;
     if (z >= faceH) { // parapets
       if (y >= par && y < d - par) return -1;
       return z >= faceH + 8 ? cope : (z < faceH + 3 && hash(Math.round(x), Math.round(y) + Math.round(z), seed) > 0.93 ? moss : st);

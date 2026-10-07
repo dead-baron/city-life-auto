@@ -66,6 +66,7 @@ export function wildPlaces(map) {
   for (const l of map.landmarks || []) { const k = SITE_KIND[l.type]; if (k) out.push({ kind: k, x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2 }); }
   for (const p of map.pois || []) { const k = POI_KIND[p.kind]; if (k && wildStyle(map, p.x, p.y)) out.push({ kind: k, x: p.x, y: p.y }); }
   for (const f of map.fields || []) if (wildStyle(map, f.x + f.w / 2, f.y + f.h / 2)) out.push({ kind: 'farm', x: f.x + f.w / 2, y: f.y + f.h / 2 });
+  for (const q of map.natureSites || []) if (q.kind === 'pasture' && wildStyle(map, q.x, q.y)) out.push({ kind: 'farm', x: q.x, y: q.y });   // (the paddocks: livestock graze there)
   map._wildPlaces = out;
   return out;
 }

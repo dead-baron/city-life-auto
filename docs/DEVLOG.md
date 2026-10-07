@@ -2450,3 +2450,40 @@ From the feedback on the debug menu (`docs/DESIGN-NOTES.md`).
   - jumps to eight times of day;
   - freeze the clock.
 - **Buttons no longer stay lit:** a pressed button kept its yellow highlight for good. It now lights only while it presses in.
+
+## 2026-10-07 · Willow River (Dry Creek; concepts W1, W2, NK1-E)
+
+The river through the country: north of the oil field in Dry Creek (`shared/naturesites.js` `willowRiver`).
+- **The falls:**
+  - a creek runs off the wooded headland on the north coast and drops over a basalt escarpment (columns with mossy tops, solid rock) in a broad two-tier fall, split into strands with basalt between (`water.js` fall `upper` / `streams`);
+  - pines on the escarpment's shoulders;
+  - a plunge pool, then a run of rapids among mossy boulders.
+- **The old stone bridge:** the river runs under the Dry Creek Oil Field Road. From downstream you see a two-arch stone face with the river flowing out of the dark arches, and stone parapets along both edges of the road.
+  - The water kit's `stoneBridge` is drawn with its deck taken off (the road's own surface shows) and its heights brought down to the road, so cars draw over it (`statics.js` `makeStoneBridge`).
+  - The arches' openings are filled with the dark under the bridge and a line of water (`o.under`).
+- **Below the bridge:** gentle bends with gravel bars on the inside (shingle), dense reed beds and cattails at the water's edge, meadow flowers on the lush banks, and willows.
+  - An angler's chair and cooler sit on the first bar; a canoe is drawn up on the next.
+- **Willow Lake:** the river ends here, with a jetty and a rowboat, a canoe out on the water, ducks, a swan and a heron.
+- **The farm:** a red barn with its doors open and hay bales outside, north-west of the bridge; a fenced paddock with a trough south-east of it, where the livestock now graze (`wildlife.js` takes the nature sites' paddocks as farm places); a corn patch beyond.
+- **Lush banks in dry country:** a new reserve bit, 128, marks a river's banks.
+  - The ground bake draws them as green pasture (gravel bars as shingle).
+  - The ground cover grows reeds right to the water and meadow plants further up (`coverAt`, `coverClearWet`).
+  - The freshwater shore distance (`distRiver`) is updated for the new water.
+- On the map: Willow River Falls and Willow Lake. Fresh water: fishable, swimmable, and boats float on it. Homes unchanged.
+
+## 2026-10-07 · Granite Cove (Granite Peaks; concept L9)
+
+A little sandy cove bitten into the rocky south-west coast of Granite Peaks, below the campground it was named after (`shared/naturesites.js` `graniteCove`).
+- **The cove:**
+  - granite cliffs round the back and down both sides to the water (solid rock, drawn as granite bands with their faces to the beach);
+  - open sea water in the bay, with surf on the sand;
+  - boulders at the headlands' feet.
+- **The way down:** wooden steps with rope rails go down the cliff through a gap in the rock (`props-wild.js` `cliffStairs`). A trail runs from the campground road to the top of the steps, with a map board and a finger post.
+- **On the sand:**
+  - a beach bar shack against the cliff: weathered planks, a tin roof, a counter under a green-and-white striped awning on two posts, shelves of bright bottles, a chalkboard and a life ring (`beachBar`);
+  - an outdoor shower on a plank deck (`beachShower`);
+  - a driftwood shade with a towel under it (`driftShade`);
+  - towels, three umbrellas, folding chairs, a cooler, a surfboard by the bar, and driftwood at the tide line.
+- **The cliff top:** agaves, ice plant, hibiscus, bougainvillea and yuccas along the edge.
+- **The ground:** a designed beach (reserve bits 32 + 4) is drawn as sand even on a rock coast, and a designed place's rock tiles as natural rubble round their sprites instead of the dark wall material (`groundbake.js`).
+- On the map. Homes unchanged.
