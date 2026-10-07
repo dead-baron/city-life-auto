@@ -453,3 +453,23 @@ export function missionRuins() {
   for (const [cx, cy, r] of [[70, 110, 14], [44, 104, 10], [ax + 6, 86, 9], [ax - 6, 140, 10], [100, 70, 8], [nx0 - 6, 112, 9]]) m.ell(cx, cy, 2, r, r * 0.7, 4 + r * 0.25, rub);
   return m;
 }
+
+// ---- standing stones ----------------------------------------------------------------------------------------
+// one weathered megalith: a rough slab of grey stone (w x d at the foot, h tall) tapering a little and leaning,
+// its faces pitted, lichen on the weather side, moss at the foot; a flat one (h small) is the altar or a fallen stone
+export function standingStone(w = 16, d = 9, h = 48, seed = 1, lean = 0) {
+  const W = Math.ceil(w + Math.abs(lean) * h + 6), m = new Vox(W, d + 6, h + 2);
+  const st = m.mat({ ramp: R('#8a8a86'), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2) + Math.round(y / 2), seed) - 0.5) * 0.9 + (hash(Math.round(x / 6), Math.round(z / 5), seed + 1) - 0.5) * 0.6 });
+  const lichen = m.mat({ ramp: R('#b8b878'), k: 3 }), moss = m.mat({ ramp: R('#5a7a34'), k: 3, flag: F_LEAF });
+  const x0 = 3 + Math.max(0, -lean * h);
+  m.fill((x, y, z) => {
+    const t = z / h, cx = x0 + w / 2 + lean * z, hw = w / 2 * (1 - t * 0.25) - (t > 0.85 ? (t - 0.85) * 18 * hash(Math.round(x), 3, seed) : 0), hd = d / 2 * (1 - t * 0.2);
+    const n = (hash(Math.round(x / 3), Math.round(z / 3), seed + 2) - 0.5) * 2.2;
+    if (Math.abs(x - cx) > hw + n * 0.5 || Math.abs(y - (3 + d / 2)) > hd + n * 0.4 || z > h - Math.abs(x - cx) * 0.35 * hash(seed, 4, 7)) return -1;
+    if (z < 3 && hash(Math.round(x), Math.round(y), seed + 3) > 0.5) return moss;
+    if (y < 4 && hash(Math.round(x / 2), Math.round(z / 2), seed + 4) > 0.82) return lichen;
+    return st;
+  });
+  m.smooth = 1;
+  return m;
+}

@@ -2810,3 +2810,11 @@ A Ferris wheel now stands on the south side of Westport Pier's head (`props-park
 - **Getting round it:** the legs are solid, and you walk under the wheel to the deck.
 
 At golden hour its shadow stretches across the bay.
+
+## 2026-10-07 · The Sentinel Stones (Granite Peaks, the headland north of the observatory; original)
+
+A ring of standing stones on the grassy headland over the north sea (`shared/naturesites.js` `sentinelStones`):
+- **The ring:** ten weathered megaliths round a flat altar stone, one of them fallen. Two taller stones stand out on the point.
+- **The stones** are a new model (`props-rural.js` `standingStone`; prop `mstone`). Each is a rough grey slab that tapers and leans, with pitted faces, lichen on the weather side and moss at the foot. No two are alike, and they are solid.
+- **Round it:** heather and paintbrush, and a worn path up from the observatory road.
+- On the map, and in the debug menu (🗿 The Sentinel Stones). Homes, POIs and buildings unchanged.

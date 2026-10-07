@@ -608,3 +608,13 @@ test('Fern Gorge: a trailhead on the Ridge Track, a trail to a spring pool spill
   assert.ok(m.props.filter((q) => q && q.t === 'lily' && Math.hypot(q.x - s.x, q.y - s.y) < 16 * TILE).length >= 5, 'lily pads');
   assert.ok(m.landmarks.some((l) => l.name === 'Fern Gorge'));
 });
+
+test('The Sentinel Stones: a ring of standing stones round an altar on the headland north of the observatory', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'stones');
+  assert.ok(s, 'the stones are there');
+  const ring = m.props.filter((q) => q && q.t === 'mstone' && Math.hypot(q.x - s.x, q.y - s.y) < 5 * TILE);
+  assert.ok(ring.length >= 10, `the ring and the altar (${ring.length})`);
+  const solid = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r) return true; return false; };
+  assert.ok(ring.every((q) => solid(q.x, q.y)), 'the stones are solid');
+  assert.ok(m.landmarks.some((l) => l.name === 'The Sentinel Stones'));
+});

@@ -117,6 +117,7 @@ export function buildNatureSites(m, H) {
   balloonField(m, H);
   missionRuins(m, H);
   fernGorge(m, H);
+  sentinelStones(m, H);
   golfClub(m, H);
   driveTracks(m, H);
   roadside(m, H);
@@ -255,6 +256,36 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- The Sentinel Stones (Granite Peaks, the headland north of the observatory; original) ------------------------
+// A ring of standing stones on the grassy headland over the north sea: ten weathered megaliths round a flat altar
+// stone, one of them fallen, two more out on the point; heather and paintbrush round them, and a worn path up from
+// the observatory road.
+function sentinelStones(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const CX = 744, CY = 31;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === 33;
+  for (let ty = CY - 4; ty <= CY + 4; ty++) for (let tx = CX - 5; tx <= CX + 5; tx++) if (!open(at(tx, ty))) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x / TILE - CX, q.y / TILE - CY + 3) < 9) dropProp(m, i); });
+  for (let ty = CY - 10; ty <= CY + 6; ty++) for (let tx = CX - 7; tx <= CX + 7; tx++) { const i = at(tx, ty); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) m.reserve[i] |= RES; }
+  // the ring: ten stones, the third one fallen
+  for (let k = 0; k < 10; k++) {
+    const a = k / 10 * Math.PI * 2 + 0.2, r = 3.6 + hash2(k, 1, 3901) * 0.3, x = CX + Math.cos(a) * r, y = CY + Math.sin(a) * r * 0.9;
+    if (k === 3) { add('mstone', x + 0.5, y + 0.2, 10, { w: 46, d: 16, h: 10, v: k, a: a + 1.2 }); continue; }
+    add('mstone', x, y, 11, { w: 20 + Math.round(hash2(k, 2, 3901) * 8), d: 11 + Math.round(hash2(k, 3, 3901) * 4), h: 46 + Math.round(hash2(k, 4, 3901) * 20), v: k, lean: (hash2(k, 5, 3901) - 0.5) * 0.16, a: a + Math.PI / 2 });
+  }
+  add('mstone', CX, CY + 0.2, 16, { w: 48, d: 28, h: 11, v: 9 });   // (the altar)
+  // two more out on the point, the tallest
+  for (const [dx, dy, h, v] of [[-1.2, -7.4, 62, 11], [1.6, -8.6, 54, 12]]) if (m.tiles[at(CX + dx, CY + dy)] === T.GRASS) add('mstone', CX + dx, CY + dy, 12, { w: 26, d: 13, h: h + 8, v, lean: dx * 0.02 });
+  // heather and paintbrush round the stones
+  for (let j = 0; j < 30; j++) { const a = hash2(j, 1, 3902) * Math.PI * 2, r = 5 + hash2(j, 2, 3902) * 3, x = CX + Math.cos(a) * r, y = CY + Math.sin(a) * r * 0.8; if (m.tiles[at(x, y)] === T.GRASS) add('shrub_a', x, y, 0, { sp: j % 3 === 1 ? 'paintbrush' : 'heather', k: 1 }); }
+  // the worn path up from the observatory road to the ring
+  const road = (m.edges || []).filter((e) => e.lvl === 0 && e.kind !== 'hwy').map((e) => e.pts).flat().reduce((b, q) => { const d = Math.hypot(q.x / TILE - CX, q.y / TILE - CY - 20); return !b || d < b.d ? { x: q.x, y: q.y, d } : b; }, null);
+  if (road && road.d < 40) trail(m, [[road.x, road.y - 40], [(CX + 3) * TILE, (CY + 14) * TILE], [(CX + 1) * TILE, (CY + 5.2) * TILE]]);
+  (m.landmarks ||= []).push({ name: 'The Sentinel Stones', type: 'stones', x: (CX - 5) * TILE, y: (CY - 8) * TILE, w: 10 * TILE, h: 13 * TILE });
+  m.natureSites.push({ kind: 'stones', name: 'The Sentinel Stones', x: CX * TILE, y: CY * TILE, ring: 10 });
 }
 
 // ---- Fern Gorge (Highland Woods, off the Ridge Track; concepts NK1-B, NK1-N, NK1-A) ------------------------------
