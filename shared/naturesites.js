@@ -145,6 +145,8 @@ export function buildNatureSites(m, H) {
   driveTracks(m, H);
   roadside(m, H);
   coralRainforest(m, H);
+  beaverPonds(m, H);
+  huntingCamps(m, H);
 }
 
 // ---- Cedar Hills Golf Club (Cedar Hills, on the south island's west shore; original) ---------------------------
@@ -2919,4 +2921,134 @@ function lakeviewPark(m, H) {
   (m.landmarks ||= []).push({ name: 'Lakeview Park', type: 'park', x: ix * TILE, y: iy * TILE, w: iw * TILE, h: ih * TILE });
   (m.parkGrounds ||= []).push({ x: ix * TILE, y: iy * TILE, w: iw * TILE, h: ih * TILE, plaza: { x: (cx - 4) * TILE, y: (cy - 4) * TILE, w: 8 * TILE, h: 8 * TILE } });   // (the ground: lawn, gravel paths)
   m.natureSites.push({ kind: 'park', name: 'Lakeview Park', x: cx * TILE, y: cy * TILE, bridge: { x: (BX + 0.5) * TILE, y: (BY + 1) * TILE }, gazebo: P(GZ[0], GZ[1]) });
+}
+
+// ---- hunting country: beaver ponds, the hunting camps, the trappers and the butchers -----------------------------
+// Beaver ponds (m.beaverPonds: wildlife.js keeps the beavers to them): on a creek in the wilds the beavers have dammed
+// it - a dam of sticks and mud across the water, the pond backed up behind it, their lodge in the pond, and round the
+// banks the trees they've been at: pencil-point stumps in a ring of chips, a trunk gnawed to an hourglass and still
+// standing, a felled one lying toward the water. Heron Marsh's dam (heronMarsh) is one of them.
+// { x, y, r, dam: { x, y }, lodge: { x, y }, trees: [{ x, y }] } (trees: where a beaver goes to gnaw)
+const BEAVER_CREEKS = [[216, 165, 'Redwood Creek'], [575, 104, 'Tarn Creek'], [1082, 330, 'Willow River']];
+function beaverPonds(m, H) {
+  m.beaverPonds ||= [];
+  const water = (i) => m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP;
+  const bank = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !m.lake[i] && !m.river[i];
+  // Heron Marsh's outflow dam (heronMarsh put the dam and the lodge there)
+  const dam0 = m.props.find((p) => p && p.t === 'beaverdam'), lodge0 = dam0 && m.props.find((p) => p && p.t === 'lodge' && Math.hypot(p.x - dam0.x, p.y - dam0.y) < 200);
+  if (dam0) m.beaverPonds.push({ x: Math.round(dam0.x - 40), y: Math.round(dam0.y - 90), r: 300, dam: { x: dam0.x, y: dam0.y }, lodge: lodge0 ? { x: lodge0.x, y: lodge0.y } : { x: dam0.x - 60, y: dam0.y - 80 }, trees: gnawedTrees(m, H, dam0.x - 30, dam0.y - 60, 7) });
+  for (const [cx, cy, name] of BEAVER_CREEKS) {
+    // the dam row: the narrowest, straightest run of the creek near (cx, cy) that flows north-south, banks both sides
+    let best = null;
+    for (let ty = cy - 8; ty <= cy + 8; ty++) for (let tx = cx - 6; tx <= cx + 6; tx++) {
+      const i = ty * MAP_W + tx;
+      if (!m.river[i] || !water(i)) continue;
+      let l = 0, r = 0;
+      while (l < 6 && water(i - l - 1)) l++;
+      while (r < 6 && water(i + r + 1)) r++;
+      const w = l + r + 1, f = m.flow && m.flow.get(i);
+      if (w > 4 || !bank(i - l - 2) || !bank(i + r + 2) || (f !== undefined && ![3, 4, 5, 11, 12, 13].includes(f))) continue;
+      const sc = -w * 4 - Math.abs(l - r) * 3 - Math.hypot(tx - cx, ty - cy) * 0.5;
+      if (!best || sc > best.sc) best = { sc, x0: tx - l, x1: tx + r, ty, up: f !== undefined && f >= 11 ? 1 : -1 };   // (up: which way is upstream, in rows)
+    }
+    if (!best) continue;
+    const dx = (best.x0 + best.x1 + 1) / 2 * TILE, dy = (best.ty + 0.5) * TILE, len = (best.x1 - best.x0 + 1) * TILE + 56;
+    for (let x = -len / 2 + 8; x <= len / 2 - 8; x += 14) m.addSolidProp(dx + x, dy, 9);
+    H.addProp(m, 'beaverdam', Math.round(dx), Math.round(dy), 0, { len: Math.round(len) });
+    // the pond backed up behind it: still water upstream over the low banks (never over a road or anything built)
+    const px = dx, py = dy + best.up * 120, rx = 120 + (best.x1 - best.x0) * 10, ry = 100;
+    for (let ty = Math.floor((py - ry) / TILE); ty <= Math.floor((py + ry) / TILE); ty++) for (let tx = Math.floor((px - rx) / TILE); tx <= Math.floor((px + rx) / TILE); tx++) {
+      const i = ty * MAP_W + tx, q = (((tx + 0.5) * TILE - px) / rx) ** 2 + (((ty + 0.5) * TILE - py) / ry) ** 2;
+      if (q > 1 - hash2(tx, ty, 5101) * 0.25 || (ty - best.ty) * best.up <= 0 || KEEP.has(m.tiles[i]) || m.river[i]) continue;
+      if (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT && m.tiles[i] !== T.SAND) continue;
+      m.tiles[i] = T.WATER; m.lake[i] = 1; m.land[i] = 0; m.reserve[i] |= RES;
+    }
+    reserveRound(m, px, py, Math.max(rx, ry) + 30);
+    // the lodge in the pond, off to one side of the channel
+    const lx = px + (hash2(cx, cy, 5102) < 0.5 ? -1 : 1) * rx * 0.45, ly = py + best.up * 20;
+    H.addProp(m, 'lodge', Math.round(lx), Math.round(ly), 22);
+    m.beaverPonds.push({ x: Math.round(px), y: Math.round(py), r: 320, dam: { x: Math.round(dx), y: Math.round(dy) }, lodge: { x: Math.round(lx), y: Math.round(ly) }, trees: gnawedTrees(m, H, px, py, 8), name });
+  }
+}
+// the beavers' work round a pond: stumps, a half-gnawed trunk or two still standing, a felled tree toward the water
+function gnawedTrees(m, H, px, py, n) {
+  const out = [], ok = (x, y) => { const i = at(x, y); return (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !m.lake[i] && !m.river[i]; };
+  for (let k = 0, made = 0; k < n * 6 && made < n; k++) {
+    const a = hash2(k, Math.round(px), 5103) * Math.PI * 2, r = 150 + hash2(k, Math.round(py), 5104) * 140;
+    const x = Math.round(px + Math.cos(a) * r), y = Math.round(py + Math.sin(a) * r * 0.8);
+    if (!ok(x, y) || out.some((q) => Math.hypot(q.x - x, q.y - y) < 46)) continue;
+    // near the water's edge: within a few tiles of it
+    let near = false;
+    for (let d = 32; d <= 128 && !near; d += 32) for (let j = 0; j < 8 && !near; j++) { const i = at(x + Math.cos(j * 0.785) * d, y + Math.sin(j * 0.785) * d); near = m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP; }
+    if (!near) continue;
+    const kind = made % 4 === 1 ? 1 : made % 4 === 3 ? 2 : 0;   // 0 a pencil-point stump, 1 gnawed to an hourglass, standing; 2 felled
+    if (kind === 2) H.addProp(m, 'gnawlog', x, y, 0, { a: +Math.atan2(py - y, px - x).toFixed(2), len: 70 + Math.round(hash2(k, 7, 5105) * 40) });
+    else H.addProp(m, 'gnawstump', x, y, 7, { v: kind });
+    out.push({ x, y });
+    made++;
+  }
+  return out;
+}
+
+// The hunting camps, the trappers' cabins and the game butchers (shared/items.js SHOPS huntcamp, trapper, butcher;
+// the Highland Hunting Lodge is giantsLoop's): each in the country its game comes from, a clearing on open ground off
+// a road or a track - a canvas wall tent or a log cabin, a fire, hides stretched on racks, a woodpile, a sign, the
+// counter, a pickup or two parked up.
+const HUNT_PLACES = [
+  { kind: 'huntcamp', name: 'Ridge Trail Hunting Camp', road: 'Ridge Trail', sign: 'HUNTING CAMP', tents: 2 },          // goats on the cliffs, lions, grizzlies
+  { kind: 'huntcamp', name: 'Canyon Track Hunting Camp', road: 'Canyon Track', sign: 'HUNTING CAMP', tents: 2 },        // coyotes, bobcats, quail
+  { kind: 'trapper', name: "Heron Marsh Trapper's Cabin", near: 'Heron Marsh', sign: 'TRAPPER', cabin: true },         // beaver, otter, ducks and geese, moose
+  { kind: 'trapper', name: "Redwood Creek Trapper's Cabin", pond: 'Redwood Creek', sign: 'TRAPPER', cabin: true },     // the redwoods' beaver pond
+  { kind: 'butcher', name: 'Cedar Farms Game Butcher', road: 'Section Road', sign: 'GAME BUTCHER', cabin: true },      // pheasant, turkey, boar
+];
+function huntingCamps(m, H) {
+  const landT = (t) => t === T.GRASS || t === T.DIRT || t === T.SAND;
+  for (const P of HUNT_PLACES) {
+    let ax, ay;
+    if (P.road) { const r = (m.roads || []).filter((q) => q.name === P.road).sort((a, b) => b.pts.length - a.pts.length)[0]; if (!r) continue; const mid = r.pts[Math.floor(r.pts.length / 2)]; ax = mid.x; ay = mid.y; }
+    else if (P.near) { const s = m.natureSites.find((q) => q.name === P.near); if (!s) continue; ax = s.x; ay = s.y; }
+    else { const b = (m.beaverPonds || []).find((q) => q.name === P.pond); if (!b) continue; ax = b.x; ay = b.y; }
+    // a clearing with room, near the anchor (in its district), clear of anything built or reserved
+    let X = 0, Y = 0, best = -1;
+    const home = m.dist[at(ax, ay)];
+    for (let oy = -640; oy <= 640; oy += 32) for (let ox = -640; ox <= 640; ox += 32) {
+      const x = ax + ox, y = ay + oy, d0 = Math.hypot(ox, oy);
+      if (d0 < 220 || m.dist[at(x, y)] !== home) continue;
+      let room = 0;
+      for (let r = 32; r <= 200; r += 28) {
+        let ok = true;
+        for (let k = 0; k < 14 && ok; k++) { const i = at(x + Math.cos(k / 14 * 6.283) * r, y + Math.sin(k / 14 * 6.283) * r); if (!landT(m.tiles[i]) || m.reserve[i] || m.lake[i] || m.river[i]) ok = false; }
+        if (!ok) break;
+        room = r;
+      }
+      const sc = room - d0 * 0.12;
+      if (room >= 172 && sc > best) { best = sc; X = x; Y = y; }
+    }
+    if (best < 0) continue;
+    X = Math.round(X); Y = Math.round(Y);
+    paint(m, X, Y, 150, T.DIRT, landT);
+    reserveRound(m, X, Y, 190);
+    // the way in: a dirt track to the nearest road
+    let rx = null, rd = 1e9;
+    for (const r of m.roads || []) for (const q of r.pts) { const d = Math.hypot(q.x - X, q.y - Y); if (d < rd) { rd = d; rx = q; } }
+    if (rx && rd < 900) { const L = rd, ex = (rx.x - X) / L, ey = (rx.y - Y) / L; for (let k = 120; k <= L; k += 16) for (let o = -20; o <= 20; o += 20) { const i = at(X + ex * k - ey * o, Y + ey * k + ex * o); if (landT(m.tiles[i])) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; } } }
+    if (P.cabin) {
+      for (let dy = -22; dy <= 22; dy += 14) for (let dx = -40; dx <= 40; dx += 14) m.addSolidProp(X + dx, Y - 40 + dy, 10);
+      H.addProp(m, 'cottage', X, Y - 14, 0, { w: 92, d: 56, log: 1 });
+      H.addProp(m, 'woodpile', X - 78, Y - 20, 0);
+    } else {
+      for (let k = 0; k < (P.tents || 1); k++) H.addProp(m, 'tent', X - 70 + k * 120, Y - 50, 12, { v: 3 });
+      H.addProp(m, 'woodpile', X + 110, Y - 30, 0);
+    }
+    H.addProp(m, 'campfire', X + 40, Y + 70, 0, { lit: 1 });
+    for (const [ox, oy, a] of [[14, 96, -0.9], [70, 92, -2.3]]) H.addProp(m, 'chair', X + ox, Y + oy, 0, { a, v: 2 });
+    for (let k = 0; k < (P.kind === 'butcher' ? 1 : 2); k++) H.addProp(m, 'hiderack', X - 110 + k * 46, Y + 40, 6, { v: (k + P.name.length) % 3 });
+    H.addProp(m, 'lantern', X - 20, Y + 30, 0);
+    if (P.kind === 'butcher') H.addProp(m, 'cooler', X + 80, Y + 20, 0, { v: 1 });
+    H.addProp(m, 'textsign', X + 120, Y + 60, 0, { text: P.sign, bg: '#4a3020', fg: [244, 226, 180], z: 30 });
+    addCounter(m, P.kind, P.name, X, Y + 30);
+    for (const o of [-1, 1]) m.parking.push({ x: X + 150, y: Y - 10 + o * 46, a: Math.PI / 2, drive: true });
+    (m.landmarks ||= []).push({ name: P.name, type: P.kind, x: X - 170, y: Y - 130, w: 340, h: 260 });
+    m.natureSites.push({ kind: P.kind, name: P.name, x: X, y: Y });
+  }
 }

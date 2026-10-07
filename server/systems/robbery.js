@@ -27,7 +27,7 @@ function clerkUnit(world, clerk) {
 // The clerk you're pointing a gun at, if any.
 function targetClerk(world, ped) {
   const w = WEAPONS[ped.weapon];
-  if (!w || (w.type !== 'gun' && w.type !== 'rocket') || ped.vehId || world.time > (ped.aimUntil || 0)) return null;
+  if (!w || (w.type !== 'gun' && w.type !== 'rocket' && w.type !== 'bow') || ped.vehId || world.time > (ped.aimUntil || 0)) return null;
   let best = null, bd = REACH;
   for (const e of world.query(ped.x, ped.y, REACH, K.PED)) {
     if (!e.npc || !e.npc.desk || e.dead || e.npc.role === 'cop') continue;

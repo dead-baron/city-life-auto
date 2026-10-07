@@ -61,6 +61,7 @@ export function tryAttack(world, ped, aim) {
     npc.onGunfire(world, ped.x, ped.y, ped);
     return true;
   }
+  if (w.type === 'bow') { loose(world, ped, w, aim); return true; }
   if (w.type === 'taser') { taser(world, ped, w, aim); return true; }
   if (w.type === 'spray') { spray(world, ped, w, aim); return true; }
   if (w.type === 'deploy') { spikes.deploy(world, ped, aim); return true; }
@@ -128,6 +129,57 @@ function melee(world, ped, w, aim) {
   damage(world, best, dmg, ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
   if (floored) law.subdue(world, ped, best);
   return true;
+}
+
+// A bow: the arrow flies (stepArrow), the string twangs - nobody but someone right beside you hears it, and the
+// animals don't take it for a gunshot - and the next arrow is nocked if there is one.
+function loose(world, ped, w, aim) {
+  const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0);
+  const sx = ped.x + Math.cos(a) * 16, sy = ped.y + Math.sin(a) * 16;
+  const proj = world.spawnProjectile(ped.id, sx, sy, a, w.speed || 800, w.range, w.id);
+  if (proj) proj.lz = ped.lz || 0;
+  world.emit(sx, sy, { e: 'loose', x: sx, y: sy, a: +a.toFixed(2), id: ped.id, w: w.i });
+  npc.onGunfire(world, ped.x, ped.y, ped, 45);
+  if (ped.player && (ped.player.profile.weapons[w.id] || 0) > 0) { ped.reloadUntil = world.time + (w.reload || 1.1); ped.pendingReload = w.id; }
+}
+
+// An arrow in flight: into the first person, animal or vehicle on its line, or it sticks in the ground or a wall
+// where it stops (the arrows left lying can be picked up again: hunting.js). One in an animal stays in it until
+// the carcass is dressed (and comes back to you then).
+function stepArrow(world, p, dt, owner) {
+  const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
+  const hit = traceTarget(world, owner ? { ...owner, lz: p.lz || 0, id: owner.id, vehId: owner.vehId, npc: owner.npc, sub: owner.sub } : { id: -1, vehId: 0, lz: p.lz || 0 }, p.x, p.y, nx, ny, true);
+  const step = Math.hypot(nx - p.x, ny - p.y);
+  const w = WEAPONS[p.weapon], a = Math.atan2(p.vy, p.vx);
+  if (hit.kind === K.PED && hit.id !== p.owner) {
+    const t = hit;
+    world.emit(t.x, t.y, { e: 'blood', x: t.x, y: t.y, a, n: 7, g: 1 });
+    world.emit(t.x, t.y, { e: 'arrowhit', x: t.x, y: t.y, a: +a.toFixed(2), id: t.id });
+    const mult = t.wild ? (w.wild || 1) : t.player || !(owner && owner.player) ? 1 : NPC_GUN_MULT / (t.grit || 1);
+    const dmg = w.dmg * mult * (0.9 + world.rand() * 0.2);
+    if (world.rand() < 0.7) t.bleeding = true;   // an arrow cuts: it bleeds (a trail to follow)
+    if (t.wild) t.arrows = (t.arrows || 0) + 1;
+    if (!t.dead && hurtable(world, t)) reactions.shot(world, t, owner || t, w, { n: 1, dist: p.dist, a, lethal: t.hp - dmg <= 0 });
+    damage(world, t, dmg, owner, 'arrow', a);
+    world.remove(p);
+    return;
+  }
+  if (hit.kind === K.VEH && hit.id !== p.owner) {
+    world.emit(nx, ny, { e: 'spark', x: nx, y: ny });
+    vehicles.damageVehicle(world, hit, 4, owner);
+    world.remove(p);
+    return;
+  }
+  p.dist += step;
+  if (hit.hitT < 1 || p.dist > p.maxDist) {
+    const t = hit.hitT < 1 ? hit.hitT : 1, ex = p.x + (nx - p.x) * t, ey = p.y + (ny - p.y) * t;
+    world.emit(ex, ey, { e: 'arrowstick', x: Math.round(ex), y: Math.round(ey), a: +a.toFixed(2), wall: hit.hitT < 1 ? 1 : 0 });
+    // (one that came down in the open can be picked up again)
+    if (hit.hitT >= 1 && owner && owner.player) { (world.arrows ||= []).push({ x: ex, y: ey, a, owner: owner.id, t: world.time }); if (world.arrows.length > 80) world.arrows.shift(); owner.player.meDirty = true; }
+    world.remove(p);
+    return;
+  }
+  p.x = nx; p.y = ny;
 }
 
 function backstabbable(world, attacker, victim) {
@@ -223,7 +275,8 @@ function hitscan(world, ped, w, a, acc) {
     if (world.rand() < 0.35) hit.bleeding = true;
     // guns are deadly against NPCs / police (1-3 shots); players keep more staying power; some
     // people are just harder to put down (grit)
-    const mult = hit.player || !ped.player ? 1 : NPC_GUN_MULT / (hit.grit || 1); // your shots are deadly; NPC-vs-NPC gunfights last a while
+    // (an animal takes the gun's own damage - its hp is set for that - and a hunting gun's extra: w.wild)
+    const mult = hit.wild ? (w.wild || 1) : hit.player || !ped.player ? 1 : NPC_GUN_MULT / (hit.grit || 1); // your shots are deadly; NPC-vs-NPC gunfights last a while
     const h = acc.get(hit) || { n: 0, dmg: 0, a, dist: Math.hypot(hit.x - ped.x, hit.y - ped.y) };
     h.n++; h.dmg += w.dmg * mult * (0.9 + world.rand() * 0.2); h.a = a;
     acc.set(hit, h);
@@ -247,13 +300,14 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   const now = world.time;
   if (ped.hidden || ped.pet || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet
   if (ped.player && ped.player.invincible) return false;          // dev: invincible
+  if (ped.wild) wildlife.noteHit(world, ped, attacker, cause);   // (how it was taken: the grade of the hide)
   ped.hp -= amount;
   ped.lastHitAt = now;
   ped.lastCombatAt = now;
   if (attacker) { ped.lastHitBy = attacker.id; attacker.lastCombatAt = now; }
   if (ped.hp < ped.maxHp * 0.3 && cause !== 'nonlethal') ped.bleeding = true;
   if (ped.fishing && ped.player) { ped.fishing = null; }
-  if (!ped.wild) law.onDamage(world, attacker, ped, amount, cause); // (an animal: no assault)
+  if (!ped.wild && !(attacker && attacker.wild)) law.onDamage(world, attacker, ped, amount, cause); // (an animal: no assault - either way round)
   if (ped.player) ped.player.meDirty = true;
   if (cause === 'nonlethal' && ped.hp < 1) ped.hp = 1;
   if (ped.hp <= 0) { kill(world, ped, attacker, cause, dir); return true; }
@@ -272,7 +326,8 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   if (ped.vehId) { vehicles.ejectPed(world, ped, true); ped.vx *= 0.3; ped.vy *= 0.3; }
   if (ped.carrying) cargo.dropCrate(world, ped);
   reactions.died(world, ped, cause, dir); // the fall (a slide, a roll, knocked back, a crumple) and the death event: how they lie
-  if (ped.wild) return; // an animal: no crime, no tally, no ambulance - the carcass is cleared once nobody's looking (wildlife.js)
+  if (ped.wild) { wildlife.onKilled(world, ped, attacker, cause); return; } // an animal: no crime, no tally, no ambulance - the carcass is cleared once nobody's looking (wildlife.js)
+  if (attacker && attacker.wild) { if (ped.player) players.onPedDeath(world, ped, attacker, `Mauled by ${attacker.name || 'a wild animal'}.`); else { npc.onDeath(world, ped, null); world.bodies.add(ped); } return; }   // (killed by an animal: nobody's crime)
   law.onKill(world, attacker, ped, cause);
   if (attacker && attacker.player) attacker.player.profile.stats.kills++;
   if (ped.player) {
@@ -320,7 +375,7 @@ export function reload(world, ped) {
   if (!w || !w.mag || !ped.player) return;
   const total = ammoOf(ped, w.id);
   if ((ped.mag[w.id] || 0) >= Math.min(w.mag, total)) return;
-  ped.reloadUntil = world.time + 1.1;
+  ped.reloadUntil = world.time + (w.reload || 1.1);
   ped.pendingReload = w.id;
   ped.player.meDirty = true;
 }
@@ -433,8 +488,9 @@ function slideBody(world, e, dt, now) {
 }
 
 function stepProjectile(world, p, dt) {
-  const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
   const owner = world.get(p.owner);
+  if (p.weapon === 'bow') return stepArrow(world, p, dt, owner);
+  const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
   const hit = traceTarget(world, owner ? { ...owner, lz: p.lz || 0, id: owner.id, vehId: owner.vehId, npc: owner.npc, sub: owner.sub } : { id: -1, vehId: 0, lz: p.lz || 0 }, p.x, p.y, nx, ny, true);
   p.dist += Math.hypot(nx - p.x, ny - p.y);
   if ((hit.kind && hit.id !== p.owner) || hit.hitT < 1 || p.dist > p.maxDist) {

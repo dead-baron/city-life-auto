@@ -49,6 +49,8 @@ export class HUD {
     if (me.buffs?.coffee > 0) st.push(`COFFEE ${Math.ceil(me.buffs.coffee)}s`);
     if (me.buffs?.energy > 0) st.push(`ENERGY ${Math.ceil(me.buffs.energy)}s`);
     if (me.buffs?.wine > 0) st.push(`WINE ${Math.ceil(me.buffs.wine)}s`);
+    if (me.buffs?.hearty > 0) st.push(`HEARTY ${Math.ceil(me.buffs.hearty / 60)}m`);
+    if (me.buffs?.scent > 0) st.push(`SCENT ${Math.ceil(me.buffs.scent)}s`);
     if (me.light) st.push('🔦 ON');
     if (me.ghost) st.push('GHOST');
     st.push(`<span class="dim">EXP ${me.cexp} · SAM ${me.sam}</span>`);

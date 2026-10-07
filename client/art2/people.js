@@ -225,6 +225,7 @@ const ICLS = {
   pistol: 'gun1', revolver: 'gun1', taser: 'gun1', silencedPistol: 'gun1', pepperSpray: 'gun1', shotgun: 'gun2', rifle: 'gun2', smg: 'gun2', sniper: 'gun2',
   rocketLauncher: 'rocket', bat: 'big', sledgehammer: 'big', crowbar: 'one', nightstick: 'one', knife: 'knife', sword: 'blade', katana: 'blade', energyBlade: 'blade',
   chainsaw: 'saw', fishingRod: 'rod', medkit: 'bill', bandage: 'bill', cash: 'bill', keys: 'bill', phone: 'phone', bottle: 'bill', coffee: 'bill', spikeStrip: 'bill',
+  huntKnife: 'knife', bow: 'gun1', varmintRifle: 'gun2',   // (the bow: held out and aimed like a pistol, its limbs up and down)
   flashlight: 'gun1', // held out like a pistol: low in front at rest, up and pointed when aiming
   umbrella: 'umb',     // held up in the right hand, the shaft straight up (the other arm swings free)
 };

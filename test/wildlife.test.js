@@ -8,6 +8,8 @@ import { K, T } from '../shared/constants.js';
 import { DISTRICTS } from '../shared/map.js';
 import * as wildlife from '../server/systems/wildlife.js';
 import * as combat from '../server/systems/combat.js';
+import * as players from '../server/systems/players.js';
+import { APOSE } from '../shared/fauna.js';
 
 // a ground point near the middle of a district
 function middleOf(w, name) {
@@ -73,6 +75,18 @@ test('out in the wilds: animals round you, a few people who belong there, quiet 
   assert.equal(wildlife.animals(w).filter((a) => Math.hypot(a.x - wood.x, a.y - wood.y) < 1500).length, 0, 'gone once nobody is near');
 });
 
+// walk a player along (mx, my) for secs (or until stop() says so); returns the closest it got to `to`
+let seq = 1;
+function walk(w, p, mx, my, secs, to = null, stop = () => false) {
+  let closest = Infinity;
+  for (let i = 0; i < secs * 20 && !stop(); i++) {
+    players.queueInput(p, { seq: seq++, bits: 0, mx, my, aim: Math.atan2(my, mx) });
+    w.step();
+    if (to) closest = Math.min(closest, Math.hypot(to.x - p.ped.x, to.y - p.ped.y));
+  }
+  return closest;
+}
+
 test('animals bolt from you (the herd runs together); hitting one with a car or a bullet is no crime', () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
@@ -80,14 +94,19 @@ test('animals bolt from you (the herd runs together); hitting one with a car or 
   clear(w);
   teleport(w, p.ped, at.x + 900, at.y);
   const a = wildlife.spawnAnimal(w, 'deer', at.x, at.y, 77), b = wildlife.spawnAnimal(w, 'deer', at.x + 30, at.y + 10, 77);
+  b.wild.lead = false; a.wild.lead = true;
+  w.windHold = { a: Math.PI / 2, s: 0.6 };   // (a cross wind: no scent either way)
   run(w, 1);
   assert.ok(Math.hypot(a.vx, a.vy) < 80, 'grazing while nobody is near');
-  // walk up on them
-  teleport(w, p.ped, at.x - 150, at.y);
+  // walk straight up on them in plain sight: they see you coming and bolt before you're close
+  teleport(w, p.ped, a.x - 560, a.y);
+  const closest = walk(w, p, 0.85, 0, 8, a, () => a.wild.state === 'flee');
+  assert.equal(a.wild.state, 'flee', 'the deer bolts');
+  assert.ok(closest > 200, `long before you're on top of it (${Math.round(closest)} px)`);
+  assert.equal(b.wild.state, 'flee', 'and the rest of the herd with it');
+  walk(w, p, 0, 0, 0.1);   // (stop walking)
   const d0 = Math.hypot(a.x - p.ped.x, a.y - p.ped.y);
   run(w, 1.2);
-  assert.equal(a.wild.state, 'flee', 'the deer bolts');
-  assert.equal(b.wild.state, 'flee', 'and the rest of the herd with it');
   assert.ok(Math.hypot(a.vx, a.vy) > 200, `running (${Math.round(Math.hypot(a.vx, a.vy))} px/s)`);
   assert.ok(Math.hypot(a.x - p.ped.x, a.y - p.ped.y) > d0 + 150, 'away from you');
   // shoot one: it dies, nobody calls it in, no ambulance comes for it
@@ -107,6 +126,55 @@ test('animals bolt from you (the herd runs together); hitting one with a car or 
   for (let i = 0; i < 20 && !r.dead && r.hp === r.maxHp; i++) w.step();
   assert.ok(r.dead || r.hp < r.maxHp, 'hit');
   assert.equal(p.wanted, 0, 'roadkill is no crime');
+});
+
+test('stalking: creep up slowly from downwind and you get much closer than walking up', () => {
+  const tryApproach = (creep) => {
+    const w = makeWorld();
+    const { p } = joinPlayer(w);
+    const at = middleOf(w, 'Highland Woods');
+    clear(w);
+    for (const arr of w.map.solidProps.values()) for (const e of arr) if (Math.abs(e.y - at.y) < 60 && e.x > at.x - 700 && e.x < at.x + 60) e.off = true;
+    const a = wildlife.spawnAnimal(w, 'deer', at.x, at.y, 0);
+    a.wild.lead = true; a.a = 0;   // grazing, facing east, away from you: you come from the west
+    a.wild.until = w.time + 999; a.wild.act = APOSE.graze;
+    w.windHold = { a: Math.PI, s: 0.8 };   // the wind blows from the deer toward you (west): no scent of you reaches it
+    teleport(w, p.ped, at.x - 600, at.y);
+    run(w, 0.5);
+    return walk(w, p, creep ? 0.3 : 0.9, 0, creep ? 30 : 10, a, () => a.wild.state === 'flee' || a.wild.state === 'trotoff' || Math.hypot(a.x - p.ped.x, a.y - p.ped.y) < 60);
+  };
+  const walked = tryApproach(false), crept = tryApproach(true);
+  assert.ok(crept < walked - 60, `creeping got closer (${Math.round(crept)} px) than walking (${Math.round(walked)} px)`);
+});
+
+test('the wilds by habitat: elk and bears in the redwoods, goats on the cliffs, ducks on the water, quail in coveys', () => {
+  const w = makeWorld();
+  const m = w.map;
+  const tagsAt = (name) => { const at = middleOf(w, name); return wildlife.habitatAt(m, at.x, at.y); };
+  const hw = tagsAt('Highland Woods');
+  assert.ok(hw.forest || hw.meadow, `Highland Woods is forest or meadow (${Object.keys(hw)})`);
+  assert.ok(tagsAt('Granite Peaks').mountain, 'Granite Peaks is mountain country');
+  assert.ok(tagsAt('Dry Creek Desert').desert, 'the desert');
+  // a lake reads as a lake
+  const lakeTile = m.tiles.findIndex((t, i) => m.lake[i] && (t === T.WATER || t === T.DEEP) && wildlife.wildStyle(m, (i % m.w) * 32, Math.floor(i / m.w) * 32));
+  const lt = wildlife.habitatAt(m, (lakeTile % m.w) * 32 + 16, Math.floor(lakeTile / m.w) * 32 + 16);
+  assert.ok(lt.lake || lt.pond, `a lake (${Object.keys(lt)})`);
+  // a covey: a cock, a hen and a string of chicks that follow her
+  const { p } = joinPlayer(w);
+  const at = middleOf(w, 'Highland Woods');
+  clear(w);
+  teleport(w, p.ped, at.x + 1200, at.y);
+  let made = 0;
+  for (let k = 0; k < 20 && !made; k++) {
+    for (const e of [...w.entities.values()]) if (e.wild) w.remove(e);
+    made = wildlife.spawnGroup(w, 'quail', at.x, at.y);
+    if (!wildlife.animals(w).some((e) => e.wild.young)) made = 0;
+  }
+  const covey = wildlife.animals(w).filter((e) => e.wild.kind === 'quail');
+  assert.ok(covey.length >= 4 && covey.some((e) => e.wild.young), `a covey with chicks (${covey.length})`);
+  const hen = covey.find((e) => !e.wild.young && e.wild.lead);
+  run(w, 2);
+  for (const c of covey.filter((e) => e.wild.young)) assert.ok(Math.hypot(c.x - hen.x, c.y - hen.y) < 120, 'the chicks keep near the hen');
 });
 
 test('shots scare the animals off', () => {

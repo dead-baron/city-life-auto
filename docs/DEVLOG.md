@@ -3225,3 +3225,71 @@ The roads laid out by rule rather than for a place are being reworked (playtest:
 
 - **No more "turn your phone sideways" message.** The game plays in portrait or landscape. A note about that will come back later in the tutorial and the guide.
 - **No controls text on the title screen.** The controls live on the pause menu's Controls page (the same text, now kept in a `<template>`).
+
+## 2026-10-07 · The wilds come alive: 23 species, stalking, bows, beaver ponds, camps, furs and legends
+
+- **Who lives out there** (`shared/fauna.js`; playtest: "make the new wildlife live and react in the wilderness the way they would in real life"):
+  - Deer, elk, moose, mountain goats, wild boar, black bears, grizzlies, mountain lions, bobcats, coyotes, red and grey foxes, raccoons, beavers, river and sea otters, rabbits, squirrels, quail, pheasants, wild turkeys, mallards and Canada geese.
+  - Each has its size, speeds, senses, temper, group, hours, habitat, diet and what it gives.
+- **Where and when** (`wildlife.js` `habitatAt`, `populate`): every spawn point is read for its habitat (redwoods, forest, meadow, scrub, desert, mountain, cliff, farmland, creek, river, lake, pond, marsh, kelp, beaver pond).
+  - Animals come in from out of sight, weighted by how much they like the place and whether it's their hour: deer and elk at dawn and dusk, raccoons and coyotes at night, the birds by day.
+  - They come as they live: herds with a lead animal, a mother with fawns, calves, cubs, kits or ducklings, a covey of quail with a string of chicks, a pair, alone.
+- **How they live a day**: grazing, browsing, rooting and pecking, wandering off to drink, bedding down out of their hours.
+  - Beavers work their pond: off to the gnawed trees on the bank, back to the dam, into the lodge.
+  - Otters swim and dive; ducks and geese paddle and take off; pheasants flush; squirrels run up a tree.
+  - Quail scatter when startled and the hen calls the chicks back.
+- **They sense you**: sight (wide-eyed prey see almost all round; movement catches the eye; less at night; a flashlight gives you away), hearing (running, a car, a gunshot - not a bow) and smell from downwind (`world.wind`).
+  - Stalking works: a creep (the walk key, a gentle push of the stick) is near silent.
+  - A grazing animal's head is down between its looks round, so it sees far less then.
+  - Trunks and rocks between you and it hide you; standing in cover helps.
+  - Creeping up from behind and downwind gets you within ~80 px; walking up gets noticed at ~400 px.
+- **What they do about it** is their temper:
+  - Skittish ones stare, then bolt with the herd.
+  - Wary ones trot off.
+  - Curious ones watch and follow.
+  - Elusive predators slip away.
+  - A sow with cubs, a moose or a boar warns, bluff-charges and attacks if you don't back off; a grizzly charges.
+  - Rarely, at dusk or night with you alone and on foot, a mountain lion or a bear decides you're prey: it stalks you from behind, freezes when you look round, and rushes you. "Mauled by a grizzly bear" is no one's crime.
+- **Hit**: they flinch and stagger like people. Badly hurt, they limp and bleed out over a minute or two, bed down when weak, and leave a blood trail to follow.
+- **The hunt** (`hunting.js`):
+  - Every species can be field dressed, longer for the big ones.
+  - How it was taken sets the grade of the hide (`gradeOf`). One clean shot from the right weapon gives a perfect hide; too little gun, a shotgun into a deer, several shots or a blade give a poorer one.
+  - Run over or blown up, the hide is ruined and much of the meat with it; roadkill's meat has spoiled.
+  - Without a Hunting Knife the hide tears a grade and meat is wasted.
+  - The young aren't worth dressing. Sea otters are protected: a $750 wardens' fine.
+- **Legends**: now and then one is born pure white and glowing (the White Hart, the Ghost Elk, the Pale Bear, the Moonlit Lion and more). It is warier and tougher, and the city feed reports a sighting.
+  - It gives a legendary pelt worth hundreds.
+  - Bringing one down makes the feed.
+- **New weapons** (`shared/items.js`, `combat.js`):
+  - The Hunting Bow: a real arrow in flight, silent (no gunshot alarm), 12 arrows to start. The next arrow nocks itself; arrows come back from the carcass, and a miss lies where it fell until you walk over it.
+  - The Hunting Knife.
+  - The Varmint Rifle for small game and birds.
+  - Hunting guns get extra stopping power on game (the hunting rifle drops an elk), and other guns now do their own damage to animals rather than the people-tuned multiplier.
+  - A hunter's shot out in the open country is no crime.
+- **Gear**: the Ghillie Camo Cloak (the animals see you far less) and Cover Scent (no animal smells you for five minutes).
+- **Meals**: everything cooks over a campfire. The big game makes a hearty meal: +25 health for ten minutes (HEARTY on the HUD).
+- **The hunting country** (`naturesites.js` `huntingCamps`, `beaverPonds`):
+  - Hunting camps at Ridge Trail (Granite Peaks) and Canyon Track (Dry Creek Desert): canvas wall tents, hide racks, a fire and an outfitter.
+  - Trapper's cabins by Heron Marsh and Redwood Creek.
+  - A game butcher in Cedar Farms.
+  - Beaver ponds on Redwood Creek, Tarn Creek and the Willow River, plus Heron Marsh's dam. Each has a stick dam, the pond backed up behind it, a lodge, and pencil-point stumps, hourglass trunks and felled trees round the banks.
+- **Buyers and crafting**:
+  - The lodge sells the whole kit and pays best for everything.
+  - The camps pay a little less, the trapper most for pelts and parts, the butcher most for meat.
+  - The trapper's bench and the lodge make leather gloves, moccasins, fur hats, buckskin jackets, bearskin coats, grizzly rugs, the camo cloak, and arrows fletched from feathers. The city clothing shops pay best for the clothing.
+- **The art** (`client/art2/animals.js`, `birds.js`):
+  - Every new species on the four-legged rig: antlers (deer, an elk's rack, a moose's palms), humps, tusks, tails (a lion's, a fox's brush, a beaver's paddle, a squirrel's plume).
+  - The young: smaller, a fawn's spots, a piglet's stripes.
+  - The legends: white with a faint glow, and a pale light about them at night.
+  - New poses: alert, stalking, reared on the hind legs, swimming, a sea otter floating on its back, a squirrel on a trunk, dead on its side.
+  - A voxel bird rig for the game birds (walk, run, peck, swim, fly with a wingbeat, dead).
+  - The server says what each animal is doing (`APOSE` in the snapshot's extra byte).
+  - Also new: arrows in flight and lying in the grass, the bow, knife and varmint rifle in hand, gnawed stumps and logs, hide racks, a canvas tent.
+  - Sounds: a bowstring, an arrow striking home, a bear's roar, a lion's scream, wings bursting up, a goose's honk.
+- **Debug menu**:
+  - Give Weapons now gives every weapon in the game.
+  - A new "Hunting & wildlife" section: the hunting kit, every animal (calm ones to look at, a legend, a lion stalking you), wind in your face, and the lodge, camps, trappers, butcher and beaver ponds.
+- **Concept prompts**: AN4-AN7 and HU3-HU7 in the prompt pack (the new species, the water's edge, the young and the legends, hit and wounded, the bow in use, a beaver pond, the camps, the furs, the hunter hunted).
+- **Tests**:
+  - `test/wildlife.test.js`: bolting, stalking from downwind, habitats and coveys.
+  - `test/hunting.test.js`: grades, the knife, roadkill, the young, otters, legends, the bow, bleeding out, hearty meals, the camps, crafting, beaver ponds and the dev commands.

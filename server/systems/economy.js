@@ -3,7 +3,7 @@
 // vehicles, Fresh Coat garage (respray / wash / repair / disguise), clothing disguises,
 // police HQ badge desk and the courthouse bounty office.
 import { K } from '../../shared/constants.js';
-import { WEAPONS, ITEMS, SHOPS } from '../../shared/items.js';
+import { WEAPONS, ITEMS, SHOPS, CRAFTS, MATERIAL_NAME, materialIds } from '../../shared/items.js';
 import { VEHICLES, PAINTS, respray } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
@@ -18,7 +18,7 @@ import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
 
-import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S } from '../../shared/rules.js';
+import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 export function poiLabel(world, p, poi) {
@@ -62,8 +62,36 @@ const COUNTER = {
   clubhouse: { label: (l) => `${l} - the bar`, title: (l) => SHOPS.clubhouse.title, sub: 'Members and guests welcome. Cocktails, coffee, a fine red and a hot dog at the turn.' },
   farmstand: { label: (l) => `${l} - farm stand (honey)`, title: (l) => SHOPS.farmstand.title, sub: 'Lavender honey from the hives at the end of the rows, and fresh lemonade. They buy honey back.' },
   salvage: { label: (l) => `${l} - yard office (buys scrap)`, title: (l) => SHOPS.salvage.title, sub: 'The foreman buys component scrap for more than the pawn shop pays. Bring it to the window.' },
-  lodge: { label: (l) => `${l} (rifles; buys game and hides)`, title: (l) => SHOPS.lodge.title, sub: 'Hunting rifles and rounds. Bring in what you shoot - field dress it where it fell - and they pay best for venison, hides and antlers. Cook the meat over a campfire for a good meal.' },
+  lodge: { label: (l) => `${l} (hunting gear; buys game, hides and pelts)`, title: (l) => SHOPS.lodge.title, sub: 'Rifles, bows and arrows, knives, the varmint rifle, a ghillie cloak and cover scent. Bring in what you take - field dress it where it fell, with a Hunting Knife for a whole hide - and they pay best for it: one clean shot from the right weapon makes a perfect hide. The work bench makes clothing from hides and pelts.' },
+  huntcamp: { label: (l) => `${l} (ammunition, arrows; buys game)`, title: (l) => l, sub: 'Rounds, arrows, knives and cover scent for the hunt. The outfitter buys what you bring in, for a little less than the lodge.' },
+  trapper: { label: (l) => `${l} (pelts and furs; makes clothing)`, title: (l) => l, sub: 'The trapper pays best for pelts, hides, antlers, claws and feathers - and at the bench makes gloves, moccasins, fur hats, buckskin and bearskin from them. The city clothing shops pay well for those.' },
+  butcher: { label: (l) => `${l} (buys meat)`, title: (l) => l, sub: 'Raw game and cooked meals: the butcher pays more for meat than anyone.' },
 };
+
+// The work bench (a trapper's cabin, the lodge): what can be made from what's in the bag (shared/items.js CRAFTS)
+const have = (prof, mat) => materialIds(mat).reduce((n, id) => n + (prof.inventory[id] || 0), 0);
+function craftOptions(p, opts) {
+  const prof = p.profile;
+  for (const c of CRAFTS) {
+    const missing = c.needs.filter(([mat, n]) => have(prof, mat) < n);
+    const what = c.needs.map(([mat, n]) => `${n} ${MATERIAL_NAME[mat] || ITEMS[mat].name.toLowerCase()}`).join(' + ');
+    const noBow = c.ammo && prof.weapons[c.ammo[0]] === undefined;
+    opts.push({ id: `craft:${c.id}`, label: `Make ${c.ammo ? c.name : ITEMS[c.id].name} (${what})`, dis: missing.length > 0 || noBow, note: noBow ? 'need a bow' : missing.length ? 'not enough' : 'make' });
+  }
+}
+function craft(world, p, id) {
+  const c = CRAFTS.find((q) => q.id === id), prof = p.profile;
+  if (!c) return 'Nothing like that is made here.';
+  if (c.needs.some(([mat, n]) => have(prof, mat) < n)) return 'You don\'t have what it takes.';
+  for (const [mat, n] of c.needs) {
+    let left = n;
+    for (const mid of materialIds(mat)) { const k = Math.min(left, prof.inventory[mid] || 0); if (k > 0) { prof.inventory[mid] -= k; if (!prof.inventory[mid]) delete prof.inventory[mid]; left -= k; } if (!left) break; }
+  }
+  if (c.ammo) { prof.weapons[c.ammo[0]] = (prof.weapons[c.ammo[0]] || 0) + c.ammo[1]; world.notify(p, `${c.name}: ${c.ammo[1]} arrows in your quiver.`, 'good'); }
+  else { prof.inventory[c.id] = (prof.inventory[c.id] || 0) + 1; world.notify(p, `Made: ${ITEMS[c.id].name}.${ITEMS[c.id].crafted ? ' The clothing shops in the city pay best for it.' : ''}`, 'good'); }
+  store.touch();
+  return null;
+}
 
 // What a counter pays for one of an item: its own price when it has one (the winery pays more for grapes), else the usual
 const sellPrice = (shop, id) => (shop && shop.sellPrice && shop.sellPrice[id]) || ITEMS[id].sell;
@@ -113,7 +141,7 @@ export function buildMenu(world, p, poi) {
     title = shop.title;
     for (const o of shop.buy) {
       if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));
-      else if (o.kind === 'ammo') opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? 'need weapon' : `have ${prof.weapons[o.id]}` });
+      else if (o.kind === 'ammo') { const an = WEAPONS[o.id].ammoName; opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: an ? `${an[0].toUpperCase()}${an.slice(1)} x${o.qty}` : `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? `need the ${WEAPONS[o.id].name}` : `have ${prof.weapons[o.id]}` }); }
       else if (o.kind === 'item') {
         const have = prof.inventory[o.id] || 0, tool = !!ITEMS[o.id].tool; // a tool is never used up: one is enough
         opts.push({ id: `i:${o.id}:${o.price}:${o.qty}`, label: `${ITEMS[o.id].name}${o.qty > 1 ? ' x' + o.qty : ''}`, price: o.price, dis: tool && have > 0, note: tool && have > 0 ? 'have one' : have ? `have ${have}` : '' });
@@ -135,6 +163,7 @@ export function buildMenu(world, p, poi) {
       const n = prof.inventory[id] || 0;
       if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(shop, id), note: n > 1 ? 'sells all' : '' });
     }
+    if (shop.crafts) craftOptions(p, opts);
     if (shop.sellsWeapons) {
       for (const id of Object.keys(prof.weapons)) {
         if (id === 'fists' || id === 'taser' || id === 'baton') continue;
@@ -191,8 +220,9 @@ export function buildMenu(world, p, poi) {
     }
     case 'clothing':
       title = SHOPS.clothing.title;
-      sub = 'A fresh outfit drops your public wanted level to 0 (if no cop is watching). Your peak record is remembered.';
+      sub = 'A fresh outfit drops your public wanted level to 0 (if no cop is watching). Your peak record is remembered. They buy handmade furs and buckskin.';
       opts.push({ id: 'outfit', label: 'Buy a new outfit', price: 120, dis: p.badge, note: p.badge ? 'off duty only' : '' });
+      for (const id of SHOPS.clothing.sells) { const n = prof.inventory[id] || 0; if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(SHOPS.clothing, id), note: n > 1 ? 'sells all' : '' }); }
       break;
     case 'garage': {
       title = SHOPS.garage.title;
@@ -363,7 +393,7 @@ function execute(world, p, poi, opt) {
       const id = parts[1], price = Number(parts[2]);
       if (!pay(p, price)) return 'Not enough money.';
       const w = WEAPONS[id];
-      prof.weapons[id] = w.mag ? w.mag * 2 : 0;
+      prof.weapons[id] = w.starter ?? (w.mag ? w.mag * 2 : 0);
       if (w.mag) ped.mag[id] = w.mag;
       combat.selectWeapon(world, ped, id);
       world.notify(p, `Bought ${w.name}.`, 'good');
@@ -388,6 +418,7 @@ function execute(world, p, poi, opt) {
       store.touch();
       return null;
     }
+    case 'craft': return craft(world, p, parts[1]);
     case 's': {
       const id = parts[1];
       const n = prof.inventory[id] || 0;
@@ -643,6 +674,24 @@ export function applyBuff(world, ped, buff) {
   if (buff === 'coffee') { ped.stamina = 100; ped.buffs.coffee = world.time + 60; }
   if (buff === 'energy') { ped.buffs.energy = world.time + 60; ped.stamina = 140; }
   if (buff === 'wine') ped.buffs.wine = world.time + WINE_S;   // (combat.js: health comes back faster)
+  if (buff === 'scent') ped.buffs.scent = world.time + SCENT_S;   // (wildlife.js: no animal smells you)
+  // a hearty meal (cooked big game): more health while it lasts - topped up, not stacked (heartyEnd puts it back)
+  if (buff === 'hearty') {
+    if (!(ped.buffs.hearty > world.time)) { ped.baseHp = ped.baseHp || ped.maxHp; ped.maxHp = ped.baseHp + HEARTY_HP; ped.hp += HEARTY_HP; }
+    ped.buffs.hearty = world.time + HEARTY_S;
+  }
+}
+// the hearty meal wears off: back to your usual health
+function heartyEnd(world) {
+  const now = world.time;
+  for (const p of world.players.values()) {
+    const ped = p.ped;
+    if (!ped || !ped.buffs.hearty || ped.buffs.hearty > now) continue;
+    delete ped.buffs.hearty;
+    ped.maxHp = ped.baseHp || 100;
+    ped.hp = Math.min(ped.hp, ped.maxHp);
+    p.meDirty = true;
+  }
 }
 
 // Walk up to a cash machine with money on you and it goes straight into the bank.
@@ -724,15 +773,16 @@ export function useItem(world, p, id) {
   if (it.light) { toggleLight(world, p); return; }
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {
-    if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding)) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }
+    if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding) && !(it.hearty && !(ped.buffs.hearty > world.time + HEARTY_S * 0.5))) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }
     inv[id]--;
+    if (it.hearty) applyBuff(world, ped, 'hearty');
     ped.hp = Math.min(ped.maxHp, ped.hp + it.heal); if (it.stopBleed) ped.bleeding = false;   // (food doesn't stop bleeding)
     world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
-    world.notify(p, it.food ? `Ate a ${it.name.replace(/^Bunch of /, 'bunch of ')}.` : `Used ${it.name}.`, 'good');
+    world.notify(p, it.food ? `Ate a ${it.name.replace(/^Bunch of /, 'bunch of ')}.${it.hearty ? ` A hearty meal: +${HEARTY_HP} health for ${Math.round(HEARTY_S / 60)} minutes.` : ''}` : `Used ${it.name}.`, 'good');
   } else if (it.buff) {
     inv[id]--;
     applyBuff(world, ped, it.buff);
-    world.notify(p, it.buff === 'wine' ? `${it.name}: a glass or two - you heal faster for ${Math.round(WINE_S / 60)} minutes.` : `${it.name}: ${it.buff === 'coffee' ? 'stamina refilled, faster recovery' : 'more stamina + speed boost'} for 60s.`, 'good');
+    world.notify(p, it.buff === 'wine' ? `${it.name}: a glass or two - you heal faster for ${Math.round(WINE_S / 60)} minutes.` : it.buff === 'scent' ? `${it.name}: no animal will smell you for ${Math.round(SCENT_S / 60)} minutes, whatever the wind.` : `${it.name}: ${it.buff === 'coffee' ? 'stamina refilled, faster recovery' : 'more stamina + speed boost'} for 60s.`, 'good');
   } else { world.notify(p, `You can't use ${it.name}.`, 'info'); return; }
   p.meDirty = true;
   store.touch();
@@ -761,6 +811,7 @@ export function update(world) {
   if (world.tick % 5 !== 0) return;
   const now = world.time;
   quickDeposits(world);
+  heartyEnd(world);
   for (const poi of world.map.pois) {
     if (poi.kind !== 'reception') continue;
     for (const p of world.players.values()) {

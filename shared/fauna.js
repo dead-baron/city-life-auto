@@ -43,7 +43,7 @@ export const SPECIES = {
     active: 'dawn-dusk', habitat: { lake: 5, marsh: 5, mountain: 1 }, diet: 'browse', warnAt: 150, charges: 0.7,
     loot: [['mooseMeat', 7, 10], ['mooseHide', 1, 1], ['mooseAntlers', 1, 1, 0.5]], legend: { name: 'the White Moose', p: 0.012 },
   },
-  goat: {
+  mtgoat: {
     name: 'Mountain Goat', size: 'medium', hp: 70, walk: 36, trot: 110, run: 230,
     sense: { sight: 420, hear: 260, smell: 300 }, temper: 'wary', group: { kind: 'herd', n: [2, 5], young: 'kid', youngP: 0.45 },
     active: 'day', habitat: { cliff: 6, mountain: 2 }, diet: 'graze', nimble: true,
@@ -184,6 +184,7 @@ export function huntClass(weaponId, cause) {
   if (cause === 'vehicle' || cause === 'train' || cause === 'crash') return 'vehicle';
   if (cause === 'explosion' || weaponId === 'rocket') return 'blast';
   if (cause === 'fall' || cause === 'bleed') return null;
+  if (cause === 'arrow') return 'bow';
   switch (weaponId) {
     case 'bow': return 'bow';
     case 'varmint': return 'varmint';
@@ -219,8 +220,15 @@ export const GRADE_NAME = ['', 'Poor', '', 'Perfect'];
 // beds off the rocky coasts), beaver (a beaver pond: map.beaverPonds), park.
 export const HABITATS = ['redwood', 'forest', 'meadow', 'scrub', 'desert', 'mountain', 'cliff', 'farm', 'water', 'river', 'creek', 'lake', 'pond', 'marsh', 'kelp', 'beaver', 'park'];
 
-// what a raw animal part becomes over a fire (hunting.js COOKS), and the meals (cooked meat with something
-// foraged: a hearty meal) - see shared/items.js for what each gives
+// What the client draws an animal doing (the snapshot's extra byte, bits 0-4; bit 7: in the water). 0: work it out
+// from the speed (stand / walk / trot / run).
+export const APOSE = {
+  auto: 0, graze: 1, alert: 2, stalk: 3, charge: 4, rear: 5, swim: 6, gnaw: 7, rest: 8, drink: 9, call: 10, attack: 11,
+  fly: 12, climb: 13, float: 14, dive: 15, peck: 16, sit: 17, warn: 18, eat: 19, flinch: 20,
+};
+
+// What raw meat becomes over a campfire (hunting.js), one for one - see shared/items.js for what each gives (the
+// big game's cooked meals are hearty: economy.js)
 export const COOKS = {
   venison: 'venisonSteak', rabbitMeat: 'rabbitRoast', elkMeat: 'elkSteak', mooseMeat: 'mooseRoast', boarMeat: 'boarChops',
   bearMeat: 'bearStew', grizzlyMeat: 'bearStew', cougarMeat: 'gameSteak', goatMeat: 'goatStew', gameMeat: 'gameSteak',

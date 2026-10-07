@@ -93,6 +93,13 @@ export function sfx(name, vol = 1) {
     case 'golfcup': if (throttle('golfcup', 400)) { tone(660, 0.08, 0.14 * vol, 'triangle'); setTimeout(() => tone(520, 0.1, 0.12 * vol, 'triangle'), 90); setTimeout(() => tone(990, 0.18, 0.12 * vol, 'sine'), 260); } break;   // (the rattle in the cup)
     case 'burner': if (throttle('burner', 900)) { noise(1.5, 380, 0.6, 0.42 * vol, 'lowpass'); noise(1.2, 1900, 0.5, 0.08 * vol, 'bandpass'); } break;   // (a balloon's burner: a long roar)
     case 'rumble': if (throttle('rumble', 260)) noise(0.3, 160, 0.8, 0.22 * vol); break;
+    // the hunt: a bowstring, an arrow striking home, a bear's roar, a lion's scream, wings bursting up, a goose's honk
+    case 'twang': if (throttle('twang', 80)) { tone(150, 0.16, 0.2 * vol, 'triangle', -50); noise(0.1, 3200, 0.8, 0.1 * vol, 'highpass'); } break;
+    case 'thwack': if (throttle('thwack', 60)) { noise(0.05, 900, 1.2, 0.35 * vol); tone(170, 0.07, 0.14 * vol, 'sine', -70); } break;
+    case 'growl': if (throttle('growl', 600)) { noise(0.7, 170, 1.4, 0.55 * vol, 'bandpass'); tone(68, 0.7, 0.26 * vol, 'sawtooth', -22); } break;
+    case 'screech': if (throttle('screech', 800)) { tone(980, 0.55, 0.07 * vol, 'sawtooth', -560); noise(0.45, 2400, 2, 0.12 * vol, 'bandpass'); } break;
+    case 'flutter': if (throttle('flutter', 250)) for (let k = 0; k < 6; k++) setTimeout(() => noise(0.05, 1700, 1.4, 0.14 * vol, 'bandpass'), k * 42); break;
+    case 'honk': if (throttle('honk', 300)) { tone(330, 0.14, 0.08 * vol, 'square', -40); setTimeout(() => tone(310, 0.16, 0.08 * vol, 'square', -50), 180); } break;
     default: break;
   }
 }

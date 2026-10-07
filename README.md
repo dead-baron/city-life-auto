@@ -50,6 +50,9 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Golf: aim, then hold and let go at the top of the meter (by your ball; each shot starts aimed at the flag) | Mouse · hold left click | Right stick · hold RT | Aim stick · hold FIRE |
 | Shoot hoops (North Point Courts: E for a ball, then hold and let go in the meter's green band) | E · hold left click | B · hold RT | ACT · hold FIRE |
 | Fish over the side (still boat, far out at sea) | E | B | ACT |
+| Stalk game: creep (slow is quiet; keep downwind and behind trees and rocks; move while it grazes, freeze when it looks up) | C or Ctrl + move | push the stick gently | push the thumb gently |
+| Hunting bow: draw and loose (silent; the next arrow nocks itself; arrows come back when you dress the carcass, and you pick up a miss by walking over it) | hold right mouse, click | LT, RT | aim stick, FIRE |
+| Field dress a carcass (a Hunting Knife takes the hide off whole) / cook raw meat at a lit campfire / sell game, make clothing at a trapper's bench | E | B | ACT |
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
 | Stuck? Get unstuck (stand still 5 s, not wanted, not just after a fight) / Surrender (tap twice: respawn, or turn yourself in when wanted) | Esc → Stuck? / Surrender | Start → Stuck? / Surrender | ☰ → Stuck? / Surrender |
 | Players online (names, roles, districts) | Esc → Players online, or M → Players online | Start → Players online | ☰ → Players online |

@@ -261,6 +261,8 @@ export function onKill(world, attacker, victim, cause) {
 
 export function gunfire(world, ped, hitSomeone) {
   if (!ped.player || hitSomeone || ped.player.badge) return;
+  const w = WEAPONS[ped.weapon];
+  if (w && w.hunting && wildStyle(world.map, ped.x, ped.y)) return;   // a hunter's shot out in the open country is no crime
   const now = world.time;
   if (now - (ped.lastHitAt || -99) < 10) return; // returning fire
   if (now - (ped.lastBrandish || -99) < 4) return;

@@ -1194,6 +1194,7 @@ function voxModel(m, a) {
     case 'lantern': return WL.lantern(a[0] || 'post', a[1] ?? 1);
     case 'fallenLog': return GD.fallenLog(a[0] || 110, a[1] || 11, a[2] || 1, a[3] ? { moss: 0.45, mossCol: '#4a7028', stubs: 2 } : { moss: 0.1, stubs: 2, bark: '#8a5a3a' });
     case 'cabbages': return K.cabbages(a[0] || 3, a[1] || 3); case 'cornRow': return U.cornField(120, 60, (a[0] || 0) + 1); case 'wheatRow': return K.wheatPatch(120, 50, (a[0] || 0) + 1); case 'ropeLine': return TW.ropeLine(a[0] || 60);
+    case 'gnawStump': return GD.gnawedStump(a[0] || 0, a[1] || 1); case 'gnawLog': return GD.gnawedLog(a[0] || 90, a[1] || 2); case 'hideRack': return GD.hideRack(a[0] || 0);
     default: return EMPTY_VOX();
   }
 }
@@ -1201,6 +1202,7 @@ const EMPTY_VOX = () => new Vox(1, 1, 1);
 // model sizes [w, d, h] for each name (used for the chunk extents without building the model)
 function vdim(m, a) {
   switch (m) {
+    case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
     case 'hydrant': return [10, 10, 16]; case 'bin': case 'wireBin': case 'wheelieBin': return [12, 12, 20]; case 'newsBox': return [10, 9, 18]; case 'bench': return [32, 10, 14];
     case 'bollard': return [6, 6, a[0] || 12]; case 'acUnit': return [18, 14, 12]; case 'planter': return [24, 14, 22]; case 'pottedPalm': return [22, 22, 40]; case 'umbrella': return [30, 30, 30];
     case 'dumpster': return [32, 18, 20]; case 'crate': return [14, 14, 13]; case 'hotdogCart': return [40, 24, 56]; case 'armLamp': return [a[0] + 12, 10, 102]; case 'streetLamp': return [14, 14, 94];
@@ -1664,7 +1666,7 @@ function propItems(c, p, pi, I) {
     case 'bikerack': V('bkr', 'bikeRack', [3]); return;
     case 'crates': V(`crt:${seed % 2}`, 'crates', [seed % 2]); return;
     case 'foodcart': V('fc', 'hotdogCart', [1]); lightAt(I, x, y + 6, 40, 70, [1, 0.8, 0.5], 0.8, 'sign'); return;
-    case 'tent': { const col = ['#e07b20', '#3f8a3a', '#2f6fc8'][p.v || 0]; V(`tent:${p.v || 0}`, 'tent', [col]); return; }
+    case 'tent': { const col = ['#e07b20', '#3f8a3a', '#2f6fc8', '#c8b88a'][p.v || 0]; V(`tent:${p.v || 0}`, 'tent', [col]); return; }   // (v 3: a hunting camp's canvas wall tent)
     case 'campfire': V(`cf:${p.lit ? 1 : 0}`, 'campfire', [p.lit ? 1 : 0]); if (p.lit) lightAt(I, x, y, 14, p.big ? 220 : 150, LIGHT.fire, p.big ? 3 : 2.2, 'fire', 0); return;
     case 'picnic': V('pic', 'picnic', [], qa(u * PI, 2)); return;
     case 'billboard': put(I, { key: `bb:${(p.ad || 0) % ADS.length}`, recipe: { t: 'grp', parts: [[{ t: 'v', m: 'bbframe', a: [] }, 0, 0, 0], [{ t: 'sign', k: 'ad', ad: (p.ad || 0) % ADS.length, w: 132, h: 54, z: 36 }, 0, 2, 0]] }, x, y, ext: [82, 170, 82, 76], pi }); lightAt(I, x, y + 8, 110, 140, [1, 0.96, 0.85], 1.2, 'sign'); return;
@@ -1754,6 +1756,9 @@ function propItems(c, p, pi, I) {
     case 'koi': put(I, { key: `koi:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, recipe: { t: 'koi', v: p.v || 0, a: qa(p.a || 0, 8) }, x, y, ext: [12, 12, 12, 12], pi }); return;
     case 'gravelgarden': put(I, { key: 'zen', recipe: { t: 'zen' }, x, y, ext: [70, 50, 70, 50], pi }); return;
     case 'beaverdam': V(`bdam:${p.len || 130}`, 'beaverDam', [p.len || 130]); return;
+    case 'gnawstump': V(`gstump:${p.v || 0}`, 'gnawStump', [p.v || 0, 1 + (seed % 5)]); return;   // (the beavers' work round a pond)
+    case 'gnawlog': { const len = Math.round((p.len || 90) / 10) * 10, hd = qa(p.a || 0, 8); V(`glog:${len}:${hd.toFixed(2)}`, 'gnawLog', [len, 2], hd); return; }
+    case 'hiderack': V(`hrack:${(p.v || 0) % 3}`, 'hideRack', [(p.v || 0) % 3]); return;   // (a hunting camp, a trapper's cabin)
     case 'lodge': V('lodge', 'lodge', []); return;
     case 'boardwalk': V(`bwalk:${p.len || 160}`, 'boardwalk', [p.len || 160], PI / 2); return;
     case 'pier': { const len = p.len || 120, w = p.w || 30, hd = qa(p.a || 0, 4); V(`pier:${len}:${w}:${hd.toFixed(2)}`, 'pier', [len, w], hd); lightAt(I, x + Math.cos(hd) * (len / 2 - 10), y + Math.sin(hd) * (len / 2 - 10), 40, 110, [1, 0.8, 0.5], 1.4, 'lamp'); return; }

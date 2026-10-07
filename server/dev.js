@@ -16,10 +16,20 @@ import * as cruiser from './systems/cruiser.js';
 import * as trains from './systems/trains.js';
 import * as devmode from './devmode.js';
 import * as pets from './systems/pets.js';
+import * as wildlife from './systems/wildlife.js';
+import { SPECIES } from '../shared/fauna.js';
+
+// make a live animal the pure white legend of its kind (dev: see one up close)
+function w2legend(world, e) {
+  const S = SPECIES[e.wild.kind];
+  if (!S || !S.legend) return;
+  world.remove(e);
+  wildlife.spawnAnimal(world, e.wild.kind, e.x, e.y, e.wild.herd, { legend: true, lead: true });
+}
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -30,6 +40,7 @@ export const NEAR_KINDS = {
   race: (m) => (m.races || []).filter((r) => r.start).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: r.kind === 'jetski' ? 'jetski' : r.kind === 'boat' ? 'speedboat' : null })),
   venue: (m) => (m.venues || []).filter((v) => v.rect).map((v) => ({ x: v.rect.x + v.rect.w / 2, y: v.rect.y + v.rect.h + 24, name: v.name || v.kind })),
   nature: (m) => (m.natureSites || []).map((q) => ({ x: q.x, y: q.y, name: q.name || q.kind })),
+  beaver: (m) => (m.beaverPonds || []).map((b) => ({ x: b.x + 160, y: b.y + 140, name: `${b.name || 'Heron Marsh'} beaver pond` })),
 };
 export function nearTargets(m, k) {
   if (NEAR_KINDS[k]) return NEAR_KINDS[k](m);
@@ -179,14 +190,51 @@ export function command(world, p, c, msg) {
       v.lz = ped.lz || 0; // up on the highway with you
       break;
     }
-    case 'guns': // weapons with ammo, med kits, and every tool / bit of equipment (flashlight, revive kit)
-      for (const id of ['bat', 'pistol', 'shotgun', 'rifle', 'smg', 'rocket', 'rod']) {
-        const w = WEAPONS[id];
-        prof.weapons[id] = (prof.weapons[id] || 0) + (w.mag ? w.mag * 5 : 0);
+    case 'guns': // every weapon in the game with ammo (the police's and the hunters' too), med kits, and every tool / bit of equipment
+      for (const [id, w] of Object.entries(WEAPONS)) {
+        if (id === 'fists' || w.type === 'deploy') continue;
+        prof.weapons[id] = (prof.weapons[id] || 0) + (w.mag ? Math.max(w.mag * 5, w.starter || 0) : 0);
         if (w.mag && ped) ped.mag[id] = w.mag;
       }
       prof.inventory.medkit = (prof.inventory.medkit || 0) + 3;
       for (const id of TOOL_ITEMS()) prof.inventory[id] = Math.max(1, prof.inventory[id] || 0);
+      break;
+    case 'hunt': // the hunter's kit: the hunting rifle, the bow and arrows, the varmint rifle, the hunting knife, the cloak, scent
+      for (const id of ['huntrifle', 'bow', 'varmint', 'huntknife']) { const w = WEAPONS[id]; prof.weapons[id] = (prof.weapons[id] || 0) + (w.mag ? Math.max(w.mag * 4, 30) : 0); if (w.mag && ped) ped.mag[id] = w.mag; }
+      prof.inventory.camoCloak = 1; prof.inventory.coverScent = (prof.inventory.coverScent || 0) + 3; prof.inventory.flashlight = Math.max(1, prof.inventory.flashlight || 0);
+      if (ped) combat.selectWeapon(world, ped, 'bow');
+      world.notify(p, '[dev] Hunting kit: rifle, bow + arrows, varmint rifle, hunting knife, ghillie cloak, cover scent.', 'info');
+      break;
+    case 'animal': { // an animal (or its group) out of sight nearby: msg.k kind, msg.young / msg.legend, msg.stalk (a predator that stalks you)
+      if (!ped) break;
+      const kind = String(msg.k || 'deer');
+      if (!SPECIES[kind] && !wildlife.LIVESTOCK[kind]) { world.notify(p, `[dev] No animal "${kind}".`, 'warn'); break; }
+      const S = SPECIES[kind];
+      const ang = ped.a + Math.PI + (Math.random() - 0.5), d = msg.stalk ? 520 : 300;
+      let x = ped.x + Math.cos(ang) * d, y = ped.y + Math.sin(ang) * d;
+      if (S && (S.swims === 'float' || kind === 'beaver' || kind === 'otter' || kind === 'duck' || kind === 'goose')) { const wat = standAt(world, x, y, 900, true); if (wat) { x = wat.x; y = wat.y; } }
+      else { const g = standAt(world, x, y, 400); if (g) { x = g.x; y = g.y; } }
+      if (S && msg.stalk) {   // one of them, on your trail
+        const a = wildlife.spawnAnimal(world, kind, x, y, 0, { lead: true });
+        a.wild.predator = true; a.wild.stalkOf = ped.id; a.wild.state = 'stalk'; a.wild.until = world.time + 60;
+        world.notify(p, `[dev] ${a.name} is stalking you.`, 'info');
+        break;
+      }
+      if (S && !msg.single) {
+        const n = wildlife.spawnGroup(world, kind, x, y, false);
+        if (msg.legend || msg.young) for (const e of wildlife.animals(world)) if (e.wild.kind === kind && Math.hypot(e.x - x, e.y - y) < 120 && e.wild.lead) { if (msg.legend) { w2legend(world, e); } break; }
+        world.notify(p, `[dev] ${S.name} x${n} nearby.`, 'info');
+      } else {
+        const a = wildlife.spawnAnimal(world, kind, x, y, 0, { young: !!msg.young, legend: !!msg.legend, lead: true });
+        world.notify(p, `[dev] ${a.name} nearby.`, 'info');
+      }
+      if (msg.calm) for (const e of wildlife.animals(world)) if (Math.hypot(e.x - x, e.y - y) < 160) e.wild.calmUntil = world.time + (Number(msg.calm) > 1 ? Number(msg.calm) : 40);   // (calm a while: to look at)
+      break;
+    }
+    case 'wind': // where the wind blows from: msg.a (radians) - or back to the weather's own
+      world.windHold = Number.isFinite(msg.a) ? { a: msg.a, s: 0.8 } : null;
+      if (ped && msg.toMe) world.windHold = { a: Math.atan2(-Math.sin(ped.a), -Math.cos(ped.a)), s: 0.8 };
+      world.notify(p, world.windHold ? '[dev] The wind is held.' : '[dev] The wind is free again.', 'info');
       break;
     case 'give': { const err = give(world, p, msg); if (err) world.notify(p, err, 'warn'); break; }
     case 'cargo': {

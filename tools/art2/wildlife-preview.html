@@ -1,0 +1,57 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 wildlife</title>
+<style>body{margin:0;background:#4a4e58;color:#eee;font:11px monospace}canvas{image-rendering:pixelated;display:block}</style></head><body><canvas id="c"></canvas>
+<!-- The wild animals and the game birds (shared/fauna.js) as the live game draws them (renderUpright, the character
+     view): a row per kind - standing (3/4 and side), walking, running, grazing, alert, stalking, reared or swimming,
+     dead on its side, the young, the legend. ?z= zoom, ?time=noon|dusk|night -->
+<script type="module">
+import { animalModel, renderUpright, ANIMALS } from '../../client/art2/animals.js';
+import { birdModel, BIRDS } from '../../client/art2/birds.js';
+import { GBuf } from '../../client/art2/gbuf.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+const q = new URLSearchParams(location.search), Z = Number(q.get('z') || 2), T = q.get('time') || 'noon';
+const WILD = ['deer', 'elk', 'moose', 'mtgoat', 'boar', 'blackbear', 'grizzly', 'cougar', 'bobcat', 'coyote', 'redfox', 'greyfox', 'raccoon', 'beaver', 'otter', 'seaotter', 'rabbit', 'squirrel'];
+const BIRD = Object.keys(BIRDS);
+const cols = 12, cw = 92, rows = WILD.length + BIRD.length, chH = (k) => (['moose', 'elk', 'grizzly'].includes(k) ? 104 : 74);
+let H = 10; const ys = []; for (const k of [...WILD, ...BIRD]) { H += chH(k); ys.push(H - 10); }
+const W = cols * cw + 10;
+const G = new GBuf(W, H);
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = 112 + ((x * 7 + y * 13) % 5) * 2; G.put(x, y, [v - 10, v + 4, v - 14], [0, 0, 1], 0, null, 1); }
+const items = [];
+const put = (m, hd, x, y) => items.push([m, hd, x, y]);
+WILD.forEach((k, r) => {
+  const y = ys[r], X = (c) => 46 + c * cw;
+  const swims = ['beaver', 'otter', 'seaotter', 'moose'].includes(k), bear = k === 'blackbear' || k === 'grizzly';
+  put(animalModel(k, { pose: 'stand' }), 0.55, X(0), y);
+  put(animalModel(k, { pose: 'stand' }), 0, X(1), y);
+  put(animalModel(k, { phase: 0.25 }), 0, X(2), y);
+  put(animalModel(k, { phase: 0.4, gait: 'run' }), 0, X(3), y);
+  put(animalModel(k, { pose: 'graze' }), 0, X(4), y);
+  put(animalModel(k, { pose: 'alert' }), Math.PI / 2, X(5), y);
+  put(animalModel(k, { pose: 'stalk', phase: 0.2 }), 0, X(6), y);
+  put(animalModel(k, { pose: bear ? 'rear' : k === 'squirrel' ? 'climb' : swims ? (k === 'seaotter' ? 'float' : 'swim') : 'lie' }), bear ? 0.5 : 0, X(7), y);
+  put(animalModel(k, { pose: 'dead' }), 0, X(8), y);
+  put(animalModel(k + ':y', { pose: 'stand' }), 0.55, X(9), y);
+  put(animalModel(k + ':L', { pose: 'stand' }), 0.55, X(10), y);
+  put(animalModel(k + ':L', { pose: 'graze' }), Math.PI, X(11), y);
+});
+BIRD.forEach((k, r) => {
+  const y = ys[WILD.length + r], X = (c) => 46 + c * cw;
+  put(birdModel(k, { pose: 'stand' }), 0.55, X(0), y);
+  put(birdModel(k, { pose: 'stand' }), 0, X(1), y);
+  put(birdModel(k, { phase: 0.25 }), 0, X(2), y);
+  put(birdModel(k, { phase: 0.5, gait: 'run' }), 0, X(3), y);
+  put(birdModel(k, { pose: 'peck' }), 0, X(4), y);
+  put(birdModel(k, { pose: 'alert' }), Math.PI / 2, X(5), y);
+  put(birdModel(k, { pose: 'fly', phase: 0 }), 0.3, X(6), y - 26);
+  put(birdModel(k, { pose: 'fly', phase: 0.5 }), 0.3, X(7), y - 26);
+  put(birdModel(k, { pose: 'swim' }), 0.55, X(8), y);
+  put(birdModel(k, { pose: 'dead' }), 0, X(9), y);
+  put(birdModel(k + ':y', { pose: 'stand' }), 0.55, X(10), y);
+  put(birdModel(k + ':L', { pose: 'stand' }), 0.55, X(11), y);
+});
+items.sort((a, b) => a[3] - b[3]);
+for (const [m, hd, x, y] of items) { const s = renderUpright(m, hd); G.blit(s, x - s.ax, y - s.ay); }
+const cv = document.getElementById('c'); cv.width = W * Z; cv.height = H * Z;
+const L = new Lighter(cv); L.setScene(G); L.render(PRESETS[T] || PRESETS.noon, [], 0);
+window.done = true;
+</script></body></html>

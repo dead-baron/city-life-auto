@@ -98,6 +98,13 @@ export const FORAGE_FENCE_GHOSTGLASS = 70;   // what the Back-Alley Exchange pay
 export const HUNT_REACH = 40;            // stand this close to the carcass / the fire
 export const HUNT_DRESS_S = 3;           // standing still, working
 export const HUNT_COOK_S = 4;
+export const WARDEN_FINE = 750;          // shooting a protected animal (the sea otters)
+export const ARROW_PICKUP_PX = 22;       // walk this close to an arrow lying on the ground to pick it up...
+export const ARROW_KEEP_S = 240;         // ...before it's lost in the grass
+// A hearty meal (the big game cooked: steaks, roasts, stews) builds you up: this much more health, for this long
+export const HEARTY_HP = 25;
+export const HEARTY_S = 600;
+export const SCENT_S = 300;               // cover scent: no animal smells you this long
 
 // Stripping the boneyard's stored airliners for parts (server/systems/places.js): stand by a fuselage and work at it
 // a few seconds for component scrap (the yard office buys it); then that plane is stripped bare a while

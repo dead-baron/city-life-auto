@@ -25,7 +25,12 @@ export const WEAPONS = {
   pshotgun: { i: 18, name: 'Police Shotgun',          type: 'gun', dmg: 11, range: 300, spread: 0.2, cd: 0.85, mag: 7, pellets: 7, police: true },
   pepper:   { i: 20, name: 'Pepper Spray',    type: 'spray', dmg: 1, range: 95, arc: 0.95, cd: 0.9, stun: 3, mag: 6, nonLethal: true },
   spikes:   { i: 21, name: 'Spike Strip',     type: 'deploy', cd: 2, police: true },
-  huntrifle: { i: 22, name: 'Hunting Rifle',  type: 'gun', dmg: 75, range: 950, spread: 0.005, cd: 1.25, mag: 5 },   // bolt-action, scoped: one clean shot drops a deer
+  huntrifle: { i: 22, name: 'Hunting Rifle',  type: 'gun', dmg: 75, range: 950, spread: 0.005, cd: 1.25, mag: 5, hunting: true, wild: 2.1 },   // bolt-action, scoped: one clean shot drops a deer
+  // the rest of the hunter's kit (server/systems/hunting.js): the knife that skins a hide whole, a bow that kills
+  // without a sound (an arrow in flight: combat.js), and a light rifle for small game and birds
+  huntknife: { i: 23, name: 'Hunting Knife',  type: 'melee', dmg: 30, range: 27, arc: 1.1, cd: 0.42, bleed: true, quiet: true, backstab: true, skins: true },
+  bow:      { i: 24, name: 'Hunting Bow',     type: 'bow', dmg: 62, range: 560, speed: 860, spread: 0.01, cd: 0.3, mag: 1, reload: 0.75, quiet: true, hunting: true, wild: 1.5, ammoName: 'arrows', starter: 12 },
+  varmint:  { i: 25, name: 'Varmint Rifle',   type: 'gun', dmg: 30, range: 820, spread: 0.006, cd: 0.6, mag: 10, hunting: true },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -132,6 +137,18 @@ export const ITEMS = {
   turkeyFeathers: { name: 'Turkey Feathers', game: true, sell: 5 },
   duckFeathers: { name: 'Duck Feathers', game: true, sell: 3 },
   gooseFeathers: { name: 'Goose Down',  game: true, sell: 4 },
+  // the hunter's gear: the ghillie cloak (in the bag, it's worn: the animals see you far less - wildlife.js), cover
+  // scent (dab it on and no animal smells you for a few minutes, whichever way the wind blows)
+  camoCloak: { name: 'Ghillie Camo Cloak', tool: true, camo: true, sell: 150 },
+  coverScent: { name: 'Cover Scent', buff: 'scent', sell: 4 },
+  // made from hides and pelts at a trapper's cabin or the lodge's work bench (CRAFTS): clothing and furs the city's
+  // clothing shops pay best for
+  leatherGloves: { name: 'Leather Gloves', crafted: true, sell: 70 },
+  moccasins: { name: 'Moccasins', crafted: true, sell: 95 },
+  furHat: { name: 'Fur Trapper Hat', crafted: true, sell: 130 },
+  buckskinJacket: { name: 'Buckskin Jacket', crafted: true, sell: 240 },
+  bearCoat: { name: 'Bearskin Coat', crafted: true, sell: 420 },
+  bearRug: { name: 'Grizzly Rug', crafted: true, sell: 560 },
   lemonade: { name: 'Lemonade',         stamina: true, buff: 'coffee', sell: 0 },
   cider:   { name: 'Apple Cider',       stamina: true, buff: 'coffee', sell: 0 },
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
@@ -157,15 +174,43 @@ export const peltOf = (kind) => { const S = SPECIES[kind]; const e = S && S.loot
 // an item id with its grade (2: the plain id)
 export const graded = (id, g) => (ITEMS[id] && ITEMS[id].pelt && g !== 2 && ITEMS[id + '_' + g] ? id + '_' + g : id);
 
+// What the trapper's cabins and the lodge's work bench make (economy.js): needs [[material, n]], a material an item
+// id - any grade of a hide or pelt counts, the poorest used first - or a group (MATERIALS); gives the item, or ammo
+// [weapon, n] (arrows fletched with feathers). The legendary pelts are too good to cut up.
+export const MATERIALS = {
+  feathers: ['quailFeathers', 'pheasantFeathers', 'turkeyFeathers', 'duckFeathers', 'gooseFeathers'],
+  furs: ['raccoonPelt', 'redFoxPelt', 'greyFoxPelt', 'beaverPelt', 'otterPelt', 'coyotePelt', 'bobcatPelt'],
+  heavyHide: ['elkHide', 'mooseHide'],
+};
+export const MATERIAL_NAME = { feathers: 'feathers', furs: 'furs (fox, raccoon, beaver, otter, coyote, bobcat)', heavyHide: 'elk or moose hide' };
+export const CRAFTS = [
+  { id: 'arrows', name: 'Fletch 8 arrows', needs: [['feathers', 2]], ammo: ['bow', 8] },
+  { id: 'leatherGloves', needs: [['deerHide', 1]] },
+  { id: 'moccasins', needs: [['heavyHide', 1]] },
+  { id: 'furHat', needs: [['furs', 2]] },
+  { id: 'buckskinJacket', needs: [['deerHide', 3]] },
+  { id: 'camoCloak', needs: [['deerHide', 2], ['rabbitPelt', 2]] },
+  { id: 'bearCoat', needs: [['bearPelt', 1], ['deerHide', 1]] },
+  { id: 'bearRug', needs: [['grizzlyPelt', 1]] },
+];
+// the items that count as a material, poorest first
+export function materialIds(mat) {
+  const out = [];
+  for (const b of MATERIALS[mat] || [mat]) for (const id of ITEMS[b] && ITEMS[b].pelt ? [b + '_1', b, b + '_3'] : [b]) if (ITEMS[id]) out.push(id);
+  return out;
+}
+export const CRAFTED = Object.keys(ITEMS).filter((id) => ITEMS[id].crafted);
+
 // What kind of thing an item is (the bag's sections and the dev give menu).
 export const ITEM_CATS = [
   { id: 'tools', name: 'Tools & equipment' }, { id: 'medical', name: 'Medical' }, { id: 'drinks', name: 'Drinks' },
-  { id: 'bait', name: 'Fishing bait' }, { id: 'fish', name: 'Fish' }, { id: 'food', name: 'Food' }, { id: 'game', name: 'Game & hides' }, { id: 'loot', name: 'Loot & valuables' },
+  { id: 'bait', name: 'Fishing bait' }, { id: 'fish', name: 'Fish' }, { id: 'food', name: 'Food' }, { id: 'game', name: 'Game & hides' },
+  { id: 'crafted', name: 'Crafted goods' }, { id: 'loot', name: 'Loot & valuables' },
 ];
 export function itemCat(id) {
   const it = ITEMS[id];
   if (!it) return null;
-  return it.tool ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : it.game ? 'game' : 'loot';
+  return it.tool ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : it.game ? 'game' : it.crafted ? 'crafted' : 'loot';
 }
 
 // GDD §8 crate rarity tiers
@@ -185,6 +230,13 @@ export function bagTier(value) {
   return 4;
 }
 export const BAG_NAMES = [null, 'Canvas Duffel', 'Tactical Backpack', 'Security Case', 'Gold Lockbox'];
+
+// What the hunting buyers take: every game item (meat, hides and pelts in every grade, the legends, the parts) and
+// the cooked game; payFor: what they pay - the usual price times k
+function GAME_GOODS() { return Object.keys(ITEMS).filter((id) => ITEMS[id].game || (ITEMS[id].food && COOKED.has(id))); }
+const COOKED = new Set(['venisonSteak', 'elkSteak', 'mooseRoast', 'boarChops', 'bearStew', 'goatStew', 'gameSteak', 'rabbitRoast', 'roastBird', 'roastTurkey', 'roastGoose']);
+const COOKED_OR_RAW = (id) => COOKED.has(id) || (ITEMS[id].game && /Meat$|^venison$/.test(id));
+function payFor(ids, k) { const o = {}; for (const id of ids) o[id] = Math.round(ITEMS[id].sell * k); return o; }
 
 // Shop catalogs: buy = [{kind:'weapon'|'ammo'|'item'|'vehicle'|'service', id, price, qty}], sells = item ids accepted.
 export const SHOPS = {
@@ -233,7 +285,7 @@ export const SHOPS = {
     { kind: 'weapon', id: 'shotgun', price: 700 }, { kind: 'ammo', id: 'shotgun', price: 40, qty: 12 },
     { kind: 'weapon', id: 'spistol', price: 850 }, { kind: 'ammo', id: 'spistol', price: 35, qty: 10 },
   ], sells: ['purse', 'bonds', 'jewelry'] },
-  clothing: { title: 'Threads Outfitters', buy: [{ kind: 'service', id: 'outfit', price: 120 }] },
+  clothing: { title: 'Threads Outfitters', buy: [{ kind: 'service', id: 'outfit', price: 120 }], sells: CRAFTED, sellPrice: payFor(CRAFTED, 1.5) },   // (the city pays best for furs and buckskin)
   // the designed places' counters (shared/naturesites.js); sellPrice: what this counter pays, when it beats the usual
   winery: { title: 'Willow River Winery - Tasting Room', buy: [{ kind: 'item', id: 'redwine', price: 30, qty: 1 }, { kind: 'item', id: 'whitewine', price: 30, qty: 1 }, { kind: 'item', id: 'bread', price: 8, qty: 1 }], sells: ['grapes'], sellPrice: { grapes: 10 } },
   fruitstand: { title: 'Willow River Orchard Stand', buy: [{ kind: 'item', id: 'cider', price: 6, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }], sells: ['apple', 'orange'], sellPrice: { apple: 5, orange: 6 } },
@@ -242,9 +294,26 @@ export const SHOPS = {
   clubhouse: { title: 'Cedar Hills Golf Club - The Nineteenth', buy: [{ kind: 'item', id: 'cocktail', price: 20, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'redwine', price: 34, qty: 1 }, { kind: 'item', id: 'hotdog', price: 8, qty: 1 }] },
   farmstand: { title: 'Cedar Point Lavender - Farm Stand', buy: [{ kind: 'item', id: 'honey', price: 12, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }], sells: ['honey', 'lavender'], sellPrice: { lavender: 6 } },
   salvage: { title: 'Dry Creek Aircraft Salvage', buy: [], sells: ['scrap'], sellPrice: { scrap: 45 } },
-  lodge: { title: 'Highland Hunting Lodge', buy: [{ kind: 'weapon', id: 'huntrifle', price: 900 }, { kind: 'ammo', id: 'huntrifle', price: 35, qty: 10 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }, { kind: 'item', id: 'venisonSteak', price: 30, qty: 1 }],
-    sells: ['venison', 'rabbitMeat', 'deerHide', 'antlers', 'rabbitPelt', 'coyotePelt', 'raccoonPelt', 'venisonSteak', 'rabbitRoast'],
-    sellPrice: { venison: 14, rabbitMeat: 6, deerHide: 42, antlers: 65, rabbitPelt: 14, coyotePelt: 34, raccoonPelt: 20 } },
+  // the hunting places (shared/naturesites.js): the Highland Hunting Lodge sells the whole kit and buys everything a
+  // hunter brings in, best of all; the camps' outfitters (by the cliffs, in the desert, at the marsh, on the farmland's
+  // edge) keep ammunition, arrows and knives and buy what's hunted round them; the trapper pays most for pelts and
+  // parts (and makes clothing from them: CRAFTS); the butcher pays most for meat
+  lodge: { title: 'Highland Hunting Lodge', buy: [
+    { kind: 'weapon', id: 'huntrifle', price: 900 }, { kind: 'ammo', id: 'huntrifle', price: 35, qty: 10 },
+    { kind: 'weapon', id: 'bow', price: 420 }, { kind: 'ammo', id: 'bow', price: 30, qty: 12 },
+    { kind: 'weapon', id: 'varmint', price: 520 }, { kind: 'ammo', id: 'varmint', price: 20, qty: 20 },
+    { kind: 'weapon', id: 'huntknife', price: 120 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 },
+    { kind: 'item', id: 'camoCloak', price: 380, qty: 1 }, { kind: 'item', id: 'coverScent', price: 15, qty: 2 }, { kind: 'item', id: 'venisonSteak', price: 30, qty: 1 }],
+    sells: [...GAME_GOODS(), ...CRAFTED], sellPrice: payFor(GAME_GOODS(), 1.4), crafts: true },
+  huntcamp: { title: 'Hunting Camp Outfitter', buy: [
+    { kind: 'ammo', id: 'huntrifle', price: 40, qty: 10 }, { kind: 'ammo', id: 'bow', price: 34, qty: 12 }, { kind: 'ammo', id: 'varmint', price: 24, qty: 20 },
+    { kind: 'weapon', id: 'huntknife', price: 140 }, { kind: 'weapon', id: 'bow', price: 480 }, { kind: 'item', id: 'coverScent', price: 18, qty: 2 },
+    { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'coffee', price: 8, qty: 1 }],
+    sells: GAME_GOODS(), sellPrice: payFor(GAME_GOODS(), 1.15) },
+  trapper: { title: "Trapper's Cabin", buy: [{ kind: 'weapon', id: 'huntknife', price: 110 }, { kind: 'ammo', id: 'bow', price: 28, qty: 12 }, { kind: 'item', id: 'coverScent', price: 12, qty: 2 }],
+    sells: [...GAME_GOODS().filter((id) => !COOKED_OR_RAW(id)), ...CRAFTED], sellPrice: { ...payFor(GAME_GOODS().filter((id) => !COOKED_OR_RAW(id)), 1.6), ...payFor(CRAFTED, 1.15) }, crafts: true },
+  butcher: { title: 'Butcher', buy: [{ kind: 'item', id: 'venisonSteak', price: 28, qty: 1 }, { kind: 'item', id: 'bearStew', price: 34, qty: 1 }, { kind: 'item', id: 'roastTurkey', price: 22, qty: 1 }],
+    sells: GAME_GOODS().filter(COOKED_OR_RAW), sellPrice: payFor(GAME_GOODS().filter(COOKED_OR_RAW), 1.8) },
   garage: { title: 'Fresh Coat Garage', buy: [{ kind: 'service', id: 'respray', price: 250 }, { kind: 'service', id: 'wash', price: 20 }, { kind: 'service', id: 'repair', price: 300 }, { kind: 'service', id: 'garage', price: 0 }] },
   dealer: { title: 'Motor Row Dealership', buy: ['bicycle', 'compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports'].map((id) => ({ kind: 'vehicle', id })) },
   marina: { title: 'Harbor Marina', buy: ['jetski', 'dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },

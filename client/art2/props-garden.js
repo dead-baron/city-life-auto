@@ -355,6 +355,69 @@ export function fallenLog(len = 200, r = 18, seed = 1, o = {}) {
   return m;
 }
 
+// ---- the beavers' work and the hunters' camps -------------------------------------------------------------------
+// a tree the beavers have been at: v 0 a pencil-point stump (gnawed to a cone from all round, the pale wood showing,
+// a ring of chips), v 1 a trunk gnawed to an hourglass and still standing (a little crown of leaves up top)
+export function gnawedStump(v = 0, seed = 1) {
+  const r = 6, H = v ? 46 : 12, m = new Vox(30, 30, H + 14), cx = 15, cy = 15;
+  const bark = m.mat({ ramp: R('#6a4a34', 6, 3), k: 3, shade: (x, y, z) => (Math.round(Math.atan2(y - cy, x - cx) * 4) % 2 ? -0.6 : 0.2) });
+  const wood = m.mat({ ramp: R('#e2c08a', 6, 3), k: 4, shade: (x, y, z) => (Math.round(z) % 2 ? -0.35 : 0.2) });
+  const chip = m.mat({ ramp: R('#d8b47c', 5, 2), k: 3 }), leaf = m.mat({ ramp: F.FOL('#4e7a2c'), k: 4, flag: F_LEAF });
+  const cut = v ? 13 : 7;   // where the teeth went in
+  m.fill((x, y, z) => {
+    const d = Math.hypot(x - cx, y - cy);
+    if (!v) {   // the stump: bark up to the cut, then a gnawed cone to a point
+      if (z < cut) return d <= r ? bark : -1;
+      const rr = r * (1 - (z - cut) / 6);
+      return d <= rr ? wood : -1;
+    }
+    // the hourglass: the trunk narrowed to a waist where it's been chewed
+    const w = Math.abs(z - cut) < 4 ? r * (0.38 + Math.abs(z - cut) * 0.155) : r;
+    return d <= w ? (Math.abs(z - cut) < 4 ? wood : bark) : -1;
+  }, 0, 0, 0, 30, 30, H);
+  if (v) m.ell(cx, cy, H + 4, 9, 9, 7, leaf);
+  for (let i = 0; i < 22; i++) { const a = hash(i, 1, seed) * Math.PI * 2, d = 7 + hash(i, 2, seed) * 7; m.box(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 0, cx + Math.cos(a) * d + 1.6, cy + Math.sin(a) * d + 1, 1, chip); }
+  m.smooth = 1;
+  return m;
+}
+// a tree the beavers felled, lying where it came down: the gnawed point at its foot, the branches stripped back to
+// pale wood where they've been eating the bark, chips round the foot (built along +x, the foot at x = 0)
+export function gnawedLog(len = 90, seed = 2) {
+  const r = 5, m = new Vox(len + 14, 26, 16), cy = 13, cz = r;
+  const bark = m.mat({ ramp: R('#6a4a34', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.floor(x / 4), Math.round(Math.atan2(z - cz, y - cy) * 3), seed) - 0.5) * 0.9 });
+  const wood = m.mat({ ramp: R('#e2c08a', 6, 3), k: 4 }), chip = m.mat({ ramp: R('#d8b47c', 5, 2), k: 3 });
+  m.fill((x, y, z) => {
+    const t = x - 6;
+    if (t < 0 || t > len) return -1;
+    const rr = t < 7 ? r * (t / 7) : r * (1 - (t / len) * 0.5), d = Math.hypot(y - cy, z - cz);
+    if (d > rr) return -1;
+    return t < 7 || (hash(Math.floor(t / 6), 3, seed) > 0.7 && z > cz) ? wood : bark;   // the point, and patches stripped of bark
+  });
+  for (let i = 0; i < 4; i++) { const x = 30 + hash(i, 1, seed) * (len - 40), s = i % 2 ? 1 : -1, l = 6 + hash(i, 2, seed) * 6; for (let k = 0; k < l; k += 0.5) m.box(x + k * 0.6, cy + s * (2 + k * 0.7), cz + 1 + k * 0.3, x + k * 0.6 + 1.2, cy + s * (2 + k * 0.7) + 1, cz + 2 + k * 0.3, k > l * 0.6 ? wood : bark); }
+  for (let i = 0; i < 16; i++) { const x = 2 + hash(i, 5, seed) * 12, y = cy + (hash(i, 6, seed) - 0.5) * 16; m.box(x, y, 0, x + 1.6, y + 1, 1, chip); }
+  m.smooth = 1;
+  return m;
+}
+// a hide stretched to dry on a rack of poles lashed together: v 0 a deer hide, 1 a dark bear pelt, 2 a fox pelt
+// (built facing +y, the hide's face toward the south)
+export function hideRack(v = 0) {
+  const m = new Vox(40, 16, 44), pole = m.mat({ ramp: R('#7a5a3a', 6, 3), k: 3 }), lash = m.mat({ ramp: R('#c8a874', 5, 2), k: 3 });
+  const hide = m.mat({ ramp: R(['#c89a62', '#3a2e2a', '#c8682e'][v % 3], 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2), 7) - 0.5) * 0.7 });
+  const flesh = m.mat({ ramp: R('#e8d4b0', 5, 2), k: 3 });
+  for (const x of [4, 35]) for (let z = 0; z < 42; z++) m.box(x + (z > 30 ? (x < 10 ? 0.6 : -0.6) * (z - 30) * 0.2 : 0), 7, z, x + 2.2, 9.2, z + 1, pole);
+  for (const z of [8, 36]) m.box(3, 7, z, 38, 9, z + 2, pole);
+  // the hide: a stretched pelt shape, laced to the frame at its points
+  m.fill((x, y, z) => {
+    const u = (x - 20) / 13, w = (z - 22) / 12;
+    if (Math.abs(y - 8) > 0.8) return -1;
+    const edge = Math.abs(u) ** 1.6 + Math.abs(w) ** 1.6 - 0.12 * Math.cos(u * 6) * Math.cos(w * 4);
+    return edge <= 1 ? (y > 8.4 ? hide : flesh) : -1;
+  }, 6, 6, 9, 35, 10, 36);
+  for (const [x, z] of [[8, 12], [8, 32], [32, 12], [32, 32], [20, 10], [20, 34]]) m.box(x, 7, z, x + 1, 9, z + 1, lash);
+  m.smooth = 1;
+  return m;
+}
+
 // ---- the hot springs (concept L7) ----------------------------------------------------------------------------
 // a bath pavilion: a timber shelter on a raised plank deck, four posts, a dark tile roof with its ridge east-west and
 // the eaves turned up at the corners, a bench and wooden buckets under it, a bamboo spout pouring into a stone

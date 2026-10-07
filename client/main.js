@@ -652,6 +652,14 @@ function onEvent(ev) {
     case 'cast': fx.splash(ev.x, ev.y, 4); break;
     case 'catch': fx.splash(ev.x, ev.y, 12); fx.floatText(ev.x, ev.y - 20, 'Caught!', '#7de0ff'); sfx('cash'); break;
     case 'heal': fx.ring(ev.x, ev.y, 26, 'rgba(120,255,160,'); break;
+    // the hunt (combat.js arrows, wildlife.js): a bow loosed, an arrow striking home or into the ground, an animal's
+    // roar as it charges, its swipe landing, birds bursting up
+    case 'loose': sfx('twang', distVol(ev.x, ev.y)); break;
+    case 'arrowhit': sfx('thwack', distVol(ev.x, ev.y)); break;
+    case 'arrowstick': sfx('thwack', distVol(ev.x, ev.y) * 0.5); if (ev.wall) fx.sparks(ev.x, ev.y, 2); break;
+    case 'roar': sfx(ev.k === 'cougar' || ev.k === 'bobcat' ? 'screech' : ev.k === 'goose' ? 'honk' : 'growl', distVol(ev.x, ev.y)); if (distVol(ev.x, ev.y) > 0.75 && (ev.k === 'grizzly' || ev.k === 'moose')) S.cam.shake = Math.max(S.cam.shake, 3); break;
+    case 'maul': { const t = S.ents.get(ev.t); if (t) { t.hitAt = S.loopClock; t.hitA = ev.a; t.barUntil = S.loopClock + 4; } sfx('hit', distVol(ev.x, ev.y) * 1.4); if (ev.t === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 8); break; }
+    case 'flush': sfx('flutter', distVol(ev.x, ev.y)); fx.flutter(ev.x, ev.y, 5, ['#8a6a4a', '#c8b48a', '#4a3a2a'], Math.random, 70, 70); break;
     default: break;
   }
 }
@@ -849,7 +857,7 @@ function setupDev() {
   const cmds = box.querySelector('.dev-cmds');
   const add = (label, cls, run) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; if (run) devPress(b, label, run); cmds.appendChild(b); return b; };
   // 1. weapons and tools, one press; anything else to anyone from the give panel under it
-  add('🔫 Give weapons + tools', 'dev-top', () => send({ t: 'dev', c: 'guns' }));
+  add('🔫 Give every weapon + tools', 'dev-top', () => send({ t: 'dev', c: 'guns' }));
   const giveBtn = add('🎁 Give anything to me or a player…', 'dev-give-toggle');
   const giveBox = document.createElement('div'); giveBox.id = 'dev-give'; giveBox.className = 'hidden'; cmds.appendChild(giveBox);
   S.devGive = buildGive(giveBox, { send, press: devPress, players: () => (S.plist && S.plist.l) || [] });
@@ -2415,7 +2423,12 @@ function drawWorldV1(F) {
     }
   }
   if (!sub) coverWalkIns(view);
-  for (const pr of projs) { g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra); g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); g.restore(); }
+  for (const pr of projs) {
+    g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra);
+    if (pr.d && pr.d.w === 24) { g.fillStyle = '#c8a46c'; g.fillRect(-11, -1, 22, 2); g.fillStyle = '#d8dde2'; g.fillRect(10, -2, 3, 4); g.fillStyle = '#c84a32'; g.fillRect(-11, -3, 5, 6); }   // an arrow
+    else { g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); }
+    g.restore();
+  }
 
   if (!sub) { // (none of it down in the subway)
     drawBays(view);
@@ -3211,7 +3224,7 @@ function drawSwimRipples(p, now) {
 // A lost pet: the drawn dog or cat. Top-down art turns to face where it's going; the 3/4 art
 // faces the camera and mirrors left / right. A little bob while it trots.
 function drawAnimal(p, now) {
-  const key = p.d.ar.slice(4), art = ANIMAL_ART[key];
+  const key = p.d.ar.slice(4).split(':')[0], art = ANIMAL_ART[key];   // (a wild one's ':y' young / ':L' legend: drawn as its kind)
   const sp = p.as || 0;
   // walking / running frames by speed; a pet that has stood still a moment sits down (p.stillSince: pedVisual)
   if (p.stillSince === undefined) p.stillSince = now;

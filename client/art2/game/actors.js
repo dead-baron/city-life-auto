@@ -37,6 +37,7 @@ import { Vox } from '../voxel.js';
 import { ramp, MAT } from '../palette.js';
 import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICLE_DIMS } from '../vehicles.js';
 import { animalModel, renderUpright, ANIMALS } from '../animals.js';
+import { birdModel, BIRDS } from '../birds.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
 import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
 import { ferrisCab } from '../props-park.js';
@@ -224,22 +225,40 @@ export function vehicleLights(d) {
 // dogs, cats, farm and wild animals) works too. Poses and their frame counts: idle 4 (tail wag, panting),
 // walk 4, run 4, sit 2, lie 2, graze 2 (head down - sniffing for pets). dir8: 0 S, 1 SW, 2 W, 3 NW, 4 N,
 // 5 NE, 6 E, 7 SE (the v1 order). Animals use the upright character view (animals.js renderUpright).
+// The wild animals arrive as 'pet:<kind>' too (server/systems/wildlife.js: shared/fauna.js kinds), with ':y' for the
+// young and ':L' for a legend (the kind's variants in animals.js and birds.js). Their poses: stalk 4 (low, creeping),
+// alert 1 (head up), rear 2 (a bear up on its hind legs), swim 2 (head and back above the water), float 2 (a sea
+// otter on its back), climb 2 (a squirrel on a trunk), dead 1 (on its side); the game birds: peck 2, fly 4 (the
+// wingbeat), swim 2, alert 1, dead 1.
 const PET_ART = { dog_golden: 'golden', dog_retriever: 'golden', dog_black: 'lab', dog_spaniel: 'spaniel', dog_pup: 'puppy', cat_black: 'catBlack', cat_grey: 'catTabby', cat_ginger: 'catGinger' };
-export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2 };
-export function animalKind(kind) { let k = String(kind ?? ''); if (k.startsWith('pet:')) k = k.slice(4); return PET_ART[k] || (ANIMALS[k] ? k : 'golden'); }
+export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4 };
+export function animalKind(kind) {
+  let k = String(kind ?? '');
+  if (k.startsWith('pet:')) k = k.slice(4);
+  const [base, v] = k.split(':');
+  if (PET_ART[base]) return PET_ART[base];
+  if (!ANIMALS[base] && !BIRDS[base]) return 'golden';
+  return v === 'y' || v === 'L' ? `${base}:${v}` : base;
+}
 const animPose = (pose) => (ANIMAL_FRAMES[pose] ? pose : pose === 'move' ? 'walk' : 'idle');
 const wrap8 = (d) => ((Math.round(d) % 8) + 8) % 8;
 export function animalKey(kind, pose = 'idle', dir8 = 0, frame = 0) {
   const k = animalKind(kind), p = animPose(pose), n = ANIMAL_FRAMES[p];
   return `a|${k}|${p}|${wrap8(dir8)}|${(((frame | 0) % n) + n) % n}`;
 }
+export const isBird = (kind) => !!BIRDS[animalKind(kind).split(':')[0]];
 // animal models stay full Vox (renderUpright reads them): ~17 bytes a voxel, a dog ~1.4 MB, a cow ~7 MB
 const ANIMAL_MODELS = new LRU(24, 16e6);
 export function animalSprite(kind, pose = 'idle', dir8 = 0, frame = 0) {
   const k = animalKind(kind), p = animPose(pose), n = ANIMAL_FRAMES[p], f = (((frame | 0) % n) + n) % n;
-  const o = p === 'walk' ? { phase: f / n, wag: f / n } : p === 'run' ? { phase: f / n, gait: 'run', pant: 1 } : p === 'sit' ? { pose: 'sit', wag: f * 0.25, pant: 1 }
-    : p === 'lie' ? { pose: 'lie', wag: f * 0.2 } : p === 'graze' ? { pose: 'graze', wag: f * 0.25 } : { wag: f * 0.22, pant: f >> 1 };
-  const m = ANIMAL_MODELS.get(`${k}|${p}|${f}`, () => { const mm = animalModel(k, o); mm.bytes = mm.w * mm.d * mm.h * 17; return mm; });
+  const bird = !!BIRDS[k.split(':')[0]];
+  let o;
+  if (bird) o = p === 'walk' ? { phase: f / n, gait: 'walk' } : p === 'run' ? { phase: f / n, gait: 'run' } : p === 'fly' ? { pose: 'fly', phase: f / n } : p === 'graze' || p === 'peck' ? { pose: 'peck' } : p === 'swim' || p === 'float' ? { pose: 'swim' } : p === 'dead' || p === 'lie' ? { pose: 'dead' } : p === 'alert' ? { pose: 'alert' } : { pose: 'stand' };
+  else o = p === 'walk' ? { phase: f / n, wag: f / n } : p === 'run' ? { phase: f / n, gait: 'run', pant: 1 } : p === 'sit' ? { pose: 'sit', wag: f * 0.25, pant: 1 }
+    : p === 'lie' ? { pose: 'lie', wag: f * 0.2 } : p === 'graze' || p === 'peck' ? { pose: 'graze', wag: f * 0.25 } : p === 'stalk' ? { pose: 'stalk', phase: f / n }
+      : p === 'alert' ? { pose: 'alert' } : p === 'rear' ? { pose: 'rear', wag: f * 0.3 } : p === 'swim' ? { pose: 'swim', phase: f / n } : p === 'float' ? { pose: 'float' }
+        : p === 'climb' ? { pose: 'climb' } : p === 'dead' ? { pose: 'dead' } : p === 'fly' ? { gait: 'run', phase: f / n } : { wag: f * 0.22, pant: f >> 1 };
+  const m = ANIMAL_MODELS.get(`${k}|${p}|${f}`, () => { const mm = bird ? birdModel(k, o) : animalModel(k, o); mm.bytes = mm.w * mm.d * mm.h * 17; return mm; });
   return trimSprite(renderUpright(m, Math.PI / 2 + wrap8(dir8) * Math.PI / 4, { px: ART_PX }));
 }
 
@@ -362,9 +381,18 @@ export function crateSprite(tier, label = '', hi = 0, N = 16) { const k = label 
 export const bagKey = (tier, hi = 0, N = 16) => `g|${Math.max(0, Math.min(4, tier | 0))}|${wrapHi(hi, N)}|${N}`;
 export function bagSprite(tier, hi = 0, N = 16) { const t = Math.max(0, Math.min(4, tier | 0)); return objRender('bag' + t, () => bagModel(t), hi, N); }
 export const projKey = (w, hi = 0, N = 32) => `p|${w | 0}|${wrapHi(hi, N)}|${N}`;
-// a projectile (the rocket, weapon 12; any weapon gets the rocket) flying at its launch height (z ~14);
-// anchor = the ground point under it, the exhaust glows
-export function projSprite(w, hi = 0, N = 32) { return objRender('rocket', rocketModel, hi, N); }
+// a projectile flying at its launch height (z ~14): the rocket (weapon 12; any weapon but the bow gets the rocket),
+// its exhaust glowing; an arrow (the bow, weapon 24: a cedar shaft, a steel broadhead, red and white fletching).
+// Anchor = the ground point under it.
+export function projSprite(w, hi = 0, N = 32) { return (w | 0) === 24 ? objRender('arrow', arrowModel, hi, N) : objRender('rocket', rocketModel, hi, N); }
+function arrowModel() {
+  const m = objModel(30, 7, 18), cy = 3.5, cz = 14;
+  const shaft = m.mat({ ramp: RP('#c8a46c'), k: 3 }), head = m.mat({ ramp: MAT.chrome, k: 3 }), red = m.mat({ ramp: RP('#c84a32'), k: 3 }), white = m.mat({ ramp: RP('#ece8e0', 5, 2), k: 3 });
+  m.box(3, cy - 0.5, cz - 0.5, 25, cy + 0.5, cz + 0.5, shaft);
+  m.fill((x, y, z) => { const t = (x - 25) / 4; return t >= 0 && t <= 1 && Math.abs(y - cy) < 1.8 * (1 - t) + 0.3 && Math.abs(z - cz) < 0.6 ? head : -1; }, 25, 0, 0, 30, 7, 18);
+  for (const [o, mt] of [[1.8, red], [-1.8, red], [0, white]]) m.fill((x, y, z) => { const t = (x - 3) / 5; if (t < 0 || t > 1) return -1; const r = 0.4 + 1.6 * Math.sin(t * Math.PI * 0.9); return o ? (Math.abs(z - cz) < 0.5 && (o > 0 ? y - cy : cy - y) > 0.4 && Math.abs(y - cy) < r ? mt : -1) : (Math.abs(y - cy) < 0.5 && z - cz > 0.4 && z - cz < r ? mt : -1); }, 3, 0, 0, 9, 7, 18);
+  return m;
+}
 
 // balls: a painted sphere (t 0 soccer, 1 volleyball, 2 a golf ball: small, white, dimpled), spin 0..3 turns the
 // pattern as it rolls; anchor = the ground contact, z from 0 at the bottom to the top of the ball
@@ -577,7 +605,7 @@ const wake16 = (hi, N) => wrapHi(Math.round(wrapHi(hi, N) * 16 / N), 16);
 export const wakeKey = (d, hi, N = 32, frame = 0) => `w|${vehType(d)}|${wake16(hi, N)}|${(frame | 0) & 3}`;
 export function wakeSprite(d, hi = 0, N = 32, frame = 0) { const L = vehicleLights(d), fr = memo(wakeFrames, L.L, L.W, wake16(hi, N) * TAU / 16); return trimSprite(fr[(frame | 0) & 3]); }
 // the shot effect for a weapon index (shared/items.js WEAPON_BY_INDEX): muzzle size, tracer colour
-export const SHOT_FX = { 6: [0, 'white'], 7: [0, 'orange'], 8: [1, 'orange'], 9: [2, 'orange'], 10: [2, 'orange'], 11: [1, 'orange'], 12: [2, 'orange'], 14: [0, 'orange'], 15: [2, 'orange'], 16: [2, 'white'], 17: [2, 'orange'], 18: [2, 'orange'], 19: [0, 'white'] };
+export const SHOT_FX = { 6: [0, 'white'], 7: [0, 'orange'], 8: [1, 'orange'], 9: [2, 'orange'], 10: [2, 'orange'], 11: [1, 'orange'], 12: [2, 'orange'], 14: [0, 'orange'], 15: [2, 'orange'], 16: [2, 'white'], 17: [2, 'orange'], 18: [2, 'orange'], 19: [0, 'white'], 22: [2, 'white'], 25: [1, 'white'] };
 
 // How the v1 pooled particles and decals (client/render/fx.js) map onto art2 frames, so the existing FX
 // state can drive the new renderer unchanged. FX_FOR_V1[particle type] = { name, frames }: every particle set

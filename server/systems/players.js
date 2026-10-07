@@ -616,7 +616,7 @@ export function buildMe(world, p) {
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: ped && ped.fishing ? { bite: !!(ped.fishing.biteAt && world.time >= ped.fishing.biteAt) } : null,
     reloading: ped ? world.time < ped.reloadUntil : false,
-    buffs: ped ? { coffee: Math.max(0, (ped.buffs.coffee || 0) - world.time), energy: Math.max(0, (ped.buffs.energy || 0) - world.time), wine: Math.max(0, (ped.buffs.wine || 0) - world.time) } : {},
+    buffs: ped ? { coffee: Math.max(0, (ped.buffs.coffee || 0) - world.time), energy: Math.max(0, (ped.buffs.energy || 0) - world.time), wine: Math.max(0, (ped.buffs.wine || 0) - world.time), hearty: Math.max(0, (ped.buffs.hearty || 0) - world.time), scent: Math.max(0, (ped.buffs.scent || 0) - world.time) } : {},
     vehicles: prof.vehicles.map((v) => v.model),
     garageCap: homes.garageCap(world, prof),
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
@@ -625,5 +625,6 @@ export function buildMe(world, p) {
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
     ride: rides.meInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p),
+    arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,
   };
 }

@@ -27,6 +27,8 @@ export class Vox {
   box(x0, y0, z0, x1, y1, z1, m) { for (let z = Math.max(0, z0 | 0); z < Math.min(this.h, z1); z++) for (let y = Math.max(0, y0 | 0); y < Math.min(this.d, y1); y++) for (let x = Math.max(0, x0 | 0); x < Math.min(this.w, x1); x++) this.v[this.idx(x, y, z)] = m; this.prepared = false; }
   // fn(x, y, z) -> material or -1 to leave as is, over a bounding box (whole model by default)
   fill(fn, x0 = 0, y0 = 0, z0 = 0, x1 = this.w, y1 = this.d, z1 = this.h) {
+    // (kept inside the model: a shape that pokes out past an edge is cut there, never wrapped round to the far side)
+    x0 = Math.max(0, x0); y0 = Math.max(0, y0); z0 = Math.max(0, z0); x1 = Math.min(this.w, x1); y1 = Math.min(this.d, y1); z1 = Math.min(this.h, z1);
     for (let z = z0; z < z1; z++) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const m = fn(x + 0.5, y + 0.5, z + 0.5); if (m >= 0) this.v[this.idx(x, y, z)] = m; }
     this.prepared = false;
   }

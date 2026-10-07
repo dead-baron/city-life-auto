@@ -44,6 +44,7 @@ import { countryLightY } from '../../render/country.js';
 import { wind } from '../../render/flora/wind.js';
 import { F_GROUND, F_NOCAST } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
+import { SPECIES, APOSE } from '../../../shared/fauna.js';
 
 export { DECK_Z };
 const TAU = Math.PI * 2;
@@ -63,6 +64,29 @@ const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // people flat on the ground (main.js pedLook)
 const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
+// A wild animal's pose (actors.js ANIMAL_FRAMES) from what the server says it's doing (shared/fauna.js APOSE, the
+// snapshot's extra byte) and how fast it's going: flying, swimming (a sea otter floats on its back), up a trunk,
+// reared, charging, stalking low, bedded down, head down feeding, head up and alert; else by its speed. Dead: on its
+// side (a bird with a wing out).
+const BEARS = new Set(['blackbear', 'grizzly']);
+function wildPose(p, S2, base, sp) {
+  if (p.flags & PF.DEAD) return 'dead';
+  if (p.flags & PF.DOWN) return 'lie';
+  const ap = (p.extra || 0) & 31;
+  if (ap === APOSE.fly) return 'fly';
+  if (p.swim) return base === 'seaotter' && (ap === APOSE.float || sp < 25) ? 'float' : 'swim';
+  switch (ap) {
+    case APOSE.climb: return 'climb';
+    case APOSE.rear: case APOSE.attack: return BEARS.has(base) ? 'rear' : sp > 30 ? 'run' : 'alert';
+    case APOSE.charge: return 'run';
+    case APOSE.stalk: return sp > 6 ? 'stalk' : 'stalk';
+    case APOSE.rest: return S2.bird ? 'idle' : 'lie';
+    case APOSE.sit: return S2.bird ? 'idle' : 'sit';
+    case APOSE.graze: case APOSE.gnaw: case APOSE.drink: case APOSE.eat: case APOSE.peck: return sp > 12 ? 'walk' : S2.bird ? 'peck' : 'graze';
+    case APOSE.alert: case APOSE.warn: case APOSE.call: case APOSE.flinch: return sp > 12 ? 'walk' : 'alert';
+    default: return sp > 70 ? 'run' : sp > 12 ? 'walk' : 'idle';
+  }
+}
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
@@ -188,6 +212,7 @@ const SKY_KEYS = [[0, 'night'], [320, 'night'], [352, 'dawn'], [395, 'dawn'], [4
 const C = {
   head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], flash: [1, 0.9, 0.67],
   sodium: [1, 0.73, 0.43], window: [1, 0.77, 0.47], warm: [1, 0.8, 0.55], white: [0.92, 0.94, 1], moon: [0.6, 0.67, 1], cyan: [0.47, 0.9, 1],
+  legend: [0.82, 0.9, 1],
 };
 // signal lenses red, amber, green (v1's SIG_COL), and as light colours
 const SIG_RGB = [[255, 59, 59], [255, 194, 61], [61, 220, 132]], SIG_RGB01 = SIG_RGB.map((c) => c.map((v) => v / 255));
@@ -803,20 +828,29 @@ export class World2 {
   _pet(p, now) {
     const A = this.A, E = this.E;
     if (!A || !A.animalKey) return;
-    const kind = p.d.ar.slice(4), sp = p.as || 0, still = now - (p.stillSince ?? now) > 1.2;
-    // standing still a while: a pet sits, the deer and the livestock put their heads down and graze (now and
-    // then looking up); down or dead: lying on its side
-    const pose = p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still ? 'idle'
-      : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
+    const kind = p.d.ar.slice(4), base = kind.split(':')[0], sp = p.as || 0, still = now - (p.stillSince ?? now) > 1.2;
+    const S2 = SPECIES[base];
+    // a wild animal: what it's doing comes from the server (fauna.js APOSE in the extra byte; bit 7 in the water);
+    // a pet or a farm animal: standing still a while it sits, or puts its head down and grazes (now and then looking
+    // up); down or dead: lying on its side
+    const pose = S2 ? wildPose(p, S2, base, sp)
+      : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still ? 'idle'
+        : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
-    const fr = pose === 'lie' && p.flags & PF.DEAD ? 0 : Math.floor(pose === 'run' ? now * 14 + p.id : pose === 'walk' ? now * 8 + p.id : pose === 'idle' ? now * 3 + p.id : now * 1.5 + p.id) % n;
+    const rate = pose === 'run' ? 14 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? 3 : pose === 'swim' ? 2.5 : 1.5;
+    const fr = pose === 'dead' || (pose === 'lie' && p.flags & PF.DEAD) ? 0 : Math.floor(now * rate + p.id) % n;
     let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null;
     if (pose !== p._cp || d8 !== p._cd) { p._cp = pose; p._cd = d8; for (let i = 0; i < n; i++) this._ask('actors', 'animal', A.animalKey(kind, pose, d8, i), [kind, pose, d8, i], 0); }
     if (!sk) return;
     p._v2k = sk;
     const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
-    E.drawSprite(sk, p.rx, p.ry, this._z0(p, false), o); this.n.drawn++;
+    // up in the air (a bird in flight: its shadow on the ground below), or up a trunk (a squirrel)
+    const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : 0;
+    o.air = pose === 'fly';
+    if (p.hitAt !== undefined && now - p.hitAt < 0.12) o.flash = 0.6;   // (hit: a white flash, like people)
+    E.drawSprite(sk, p.rx, p.ry, this._z0(p, false) + up, o); this.n.drawn++;
+    o.air = false;
   }
 
   // a vehicle: the actors provider's model at heading hi of N (by tier), its lights, brakes, siren, wreck;
@@ -1022,6 +1056,12 @@ export class World2 {
         const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0;
         if (!this.projWarm.has(w)) { this.projWarm.add(w); for (let h = 0; h < N; h++) this.warmQ.unshift(['actors', 'proj', A.projKey(w, h, N), [w, h, N], -1]); }
         this._small('proj', A.projKey(w, hi, N), [w, hi, N], pr, pr.rx, pr.ry, 14 + ((pr.rz || 0) > 0.01 ? DECK_Z * pr.rz : 0));
+      }
+      // your arrows lying where they came down (me.arrows: walk over one to pick it up), on the ground
+      const ma = S.me && S.me.arrows;
+      if (ma) {
+        this._arrowE ||= [];
+        ma.forEach(([x, y, a], i) => { const N = 32, hi = quant(a, N), e = this._arrowE[i] || (this._arrowE[i] = {}); this._small('proj', A.projKey(24, hi, N), [24, hi, N], e, x, y, -12); });
       }
     }
     // the birds (simulated in main.js): the providers' pigeons and gulls, flapping when they fly
@@ -1490,6 +1530,8 @@ export class World2 {
       this._light(p.rx + Math.cos(p.ra) * 8, p.ry + Math.sin(p.ra) * 8, 30 + this._z0(p, false), len, C.white, 1.6 * (torch ? Math.max(night, 0.3) : night), [p.ra, 0.32, len]);
     }
     if (night > 0.35) { const sp = F.sp; this._light(sp.x, sp.y, 40 + (sp.z ? DECK_Z * sp.z : 0), 100, C.moon, 0.5 * night); }
+    // the legends (the pure white animals, 'pet:<kind>:L'): a faint pale glow about them, plain at night
+    for (const p of F.peds) if (p.d && p.d.ar && p.d.ar.endsWith(':L') && !(p.flags & PF.DEAD) && inV(p.rx, p.ry)) this._light(p.rx, p.ry, 14, 110, C.legend, 0.35 + 1.1 * nightK * (0.85 + 0.15 * Math.sin(now * 1.7 + p.id)));
     for (const f of S.flashes) {
       if (f.kind === 'boom') { const e = Math.min(1.6, f.t * 3.2); this._light(f.x, f.y, 30, f.r * 1.3, C.fire, 2.4 * e); }
       else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
