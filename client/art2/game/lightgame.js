@@ -25,6 +25,7 @@
 // are created once and reused, so blending every frame allocates nothing; out may be a or b).
 import { F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_AIR, F_THIN } from '../gbuf.js';
 
+const BEAM_K = 0.9;   // how bright the canopy's beams are (lightgame render: x the sun's strength, more when it is low)
 // ---- quality tiers (lighting side; the engine adds cache sizes) -----------------------------------------
 // stepC/stepG: the march step grows as t += stepC + t * stepG, so `steps` steps reach `reach` px.
 export const LIGHT_TIERS = [
@@ -177,6 +178,31 @@ float bayer4(ivec2 q){ int i = (q.y & 3) * 4 + (q.x & 3);
 float hash2(ivec2 p){ uint h = uint(p.x) * 374761393u + uint(p.y) * 668265263u; h = (h ^ (h >> 13u)) * 1274126177u; return float((h ^ (h >> 16u)) & 16777215u) / 16777216.0; }
 `;
 
+// The redwood canopy (canopy.js), shared by the light (LIT_DECL canopyVis: the sunflecks) and the god rays
+// (SHAFT_FS: the beams), so the beams come down through the very gaps the flecks shine through. tCan: how thick
+// the crowns are per cell of its box; canO: the box's world origin (px) and 1 / its size (px); canH: the layer's
+// height (px), 0 when none is in view. canopyCover(c, d): at world point c of the layer, how much of the sun the
+// leaf clumps there take (0..1: noise anchored to the world, stirring with the wind; 0 outside the crowns), d the
+// crowns' thickness. Needs time and wind4.
+const CANOPY_GLSL = `
+uniform sampler2D tCan; uniform vec4 canO; uniform float canH;
+float cnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  ivec2 c = ivec2(i);
+  return mix(mix(hash2(c), hash2(c + ivec2(1, 0)), f.x), mix(hash2(c + ivec2(0, 1)), hash2(c + ivec2(1, 1)), f.x), f.y);
+}
+float canopyCover(vec2 c, out float d){
+  vec2 uv = (c - canO.xy) * canO.zw;
+  d = 0.0;
+  if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) return 0.0;
+  d = texture(tCan, uv).r;
+  if (d < 0.01) return 0.0;
+  vec2 dr = wind4.zw * (time * (3.0 + wind4.x * 12.0));
+  float n = cnoise((c + dr) * 0.022) * 0.62 + cnoise((c - dr * 0.5) * 0.06) * 0.38;
+  return smoothstep(n - 0.05, n + 0.05, d * 0.7 + 0.1);
+}
+`;
+
 // AP: world px per art pixel (engine.js): the dithers, the water's waves and foam and the rain marks are worked
 // out once per art pixel of the world (they are part of the pixel art); the light itself stays per world px
 const HEAD = (T, AP = 1) => `#version 300 es
@@ -212,6 +238,15 @@ float wnoise(vec2 p){
   vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   ivec2 c = ivec2(i);
   return mix(mix(hash2(c), hash2(c + ivec2(1, 0)), f.x), mix(hash2(c + ivec2(0, 1)), hash2(c + ivec2(1, 1)), f.x), f.y);
+}
+${CANOPY_GLSL}
+// The canopy far overhead: where the ray from P toward the sun meets it, the crowns' thickness there and their
+// leaf clumps take the sun but for the gaps between - the sunflecks on the forest floor, the light on the trunks.
+float canopyVis(vec3 P){
+  float up = canH - P.z;
+  if (up <= 0.0 || sunDir.z < 0.04) return 1.0;
+  float d;
+  return 1.0 - canopyCover(worg + P.xy + sunDir.xy * (up / sunDir.z), d) * 0.94;
 }
 // Water. Open water rolls with little waves along the wind (the normal tilts with them; the sun glints off the
 // crests in crisp pixels). Near a shore - code: the shore distance the ground bake keeps in the albedo's alpha
@@ -317,7 +352,7 @@ float sunVis(vec3 P, ivec2 wq){
   }
   sh = 1.0 - occ * 0.8;
 #endif
-  return sh;
+  return canH > 0.0 && sh > 0.0 ? sh * canopyVis(P) : sh;
 }
 // the point and cone lights of this pixel's tile reaching P; on wet ground (wg) also the wobbling
 // streak each light leaves below its foot
@@ -492,21 +527,47 @@ void main(){
   o = s;
 }`;
 
-// god rays at quarter size: sunlit ground smeared toward the sun, kept over shade
-const SHAFT_FS = `#version 300 es
+// god rays at quarter size. r: sunlit ground smeared toward the sun, kept over shade (High and Ultra, a low sun).
+// g: under the redwood canopy (every tier), the beams themselves - the sunlit air in front of what is drawn at
+// this pixel: up the column of air over it (from the surface's height to the canopy: what is behind the
+// surface is hidden), the share of points whose way to the sun goes out through a gap in the crowns.
+const SHAFT_FS = (T) => `#version 300 es
 precision highp float; precision highp int; precision highp sampler2D;
+#define SMEAR ${T.shafts}
+#define BEAMN ${T.rays > 1 ? 14 : T.rays > 0 ? 11 : 8}
 layout(location=0) out vec4 o;
-uniform sampler2D tLit; uniform vec2 fullTex, maxUV, sdir; uniform float slen; uniform ivec2 org;
+uniform sampler2D tLit, tB; uniform vec2 fullTex, maxUV, sdir; uniform float slen, smear; uniform ivec2 org;
+uniform vec3 sunDir; uniform vec2 worg; uniform vec4 wind4; uniform float time;
 ${GLSL_COMMON}
+${CANOPY_GLSL}
 void main(){
   vec2 p = gl_FragCoord.xy * 4.0;
-  float j = hash2(ivec2(gl_FragCoord.xy) + org / 4), acc = 0.0, ws = 0.0;
-  for (int i = 0; i < 24; i++) {
-    float t = (float(i) + j) / 24.0, w = 1.0 - t * 0.7;
-    acc += texture(tLit, min((p + sdir * (t * slen)) / fullTex, maxUV)).a * w; ws += w;
+  float j = hash2(ivec2(gl_FragCoord.xy) + org / 4), acc = 0.0, beam = 0.0;
+#if SMEAR
+  if (smear > 0.0) {
+    float ws = 0.0;
+    for (int i = 0; i < 24; i++) {
+      float t = (float(i) + j) / 24.0, w = 1.0 - t * 0.7;
+      acc += texture(tLit, min((p + sdir * (t * slen)) / fullTex, maxUV)).a * w; ws += w;
+    }
+    float here = texture(tLit, min(p / fullTex, maxUV)).a;
+    acc = acc / ws * (1.0 - 0.8 * here);
   }
-  float here = texture(tLit, min(p / fullTex, maxUV)).a;
-  o = vec4(acc / ws * (1.0 - 0.8 * here), 0.0, 0.0, 1.0);
+#endif
+  if (canH > 0.0 && sunDir.z > 0.04) {
+    vec2 q = min(p, fullTex * maxUV);
+    float z0 = zOf(texelFetch(tB, ivec2(q), 0)), z1 = canH;
+    if (z1 > z0 + 4.0) {
+      for (int i = 0; i < BEAMN; i++) {
+        float z = mix(z0, z1, (float(i) + j) / float(BEAMN)), d;
+        vec2 a = worg + vec2(q.x, q.y + z);                              // the air at height z over this pixel
+        float cov = canopyCover(a + sunDir.xy * ((canH - z) / sunDir.z), d);
+        beam += (1.0 - cov) * smoothstep(0.08, 0.45, d);                 // (through a gap, not round the edge)
+      }
+      beam *= (z1 - z0) / (float(BEAMN) * canH);
+    }
+  }
+  o = vec4(acc, beam, 0.0, 1.0);
 }`;
 
 // final: wet reflections, god rays, fog, bloom, lightning, haze, grade
@@ -516,7 +577,7 @@ uniform sampler2D tLit, tB, tBH, tBQ, tSh;
 uniform vec2 halfTex, quarterTex, maxUVh, maxUVq;
 uniform ivec2 org;
 uniform vec4 view;
-uniform float wet, reflK, bloomK, haze, sat, contrast, time, fog, fogH, flash, shaftK, useBH, useBQ;
+uniform float wet, reflK, bloomK, haze, sat, contrast, time, fog, fogH, flash, shaftK, beamK, useBH, useBQ;
 uniform vec3 hazeCol, lift, gain, fogCol, flashCol, shaftCol;
 ${GLSL_COMMON}
 // value noise on a lattice of cell px that repeats every per cells (so it wraps seamlessly with org)
@@ -552,9 +613,18 @@ void main(){
     }
   }
 #endif
-#if SHAFTS
-  if (shaftK > 0.0) c += texture(tSh, min(gl_FragCoord.xy * 0.25 / quarterTex, maxUVq)).r * shaftK * shaftCol;
-#endif
+  if (shaftK > 0.0 || beamK > 0.0) {
+    vec2 sv = texture(tSh, min(gl_FragCoord.xy * 0.25 / quarterTex, maxUVq)).rg;
+    float bm = clamp(sv.g * 4.5, 0.0, 1.0);                          // (the beams stand out of the haze between)
+    c += (sv.r * shaftK + (bm * bm * 0.6 + bm * 0.15) * beamK) * shaftCol;
+    // dust in the beams: specks drifting down through the light, glinting now and then (2 px, on the world)
+    if (sv.g > 0.03) {
+      vec2 wp = vec2(q + org) + vec2(sin(time * 0.23) * 9.0 + time * 1.5, -time * 6.0);
+      vec2 m = mod(wp, 12.0);
+      float hh = hash2(ivec2(floor(wp / 12.0)) + ivec2(71, 13));
+      if (hh > 0.9 && m.x < 2.0 && m.y < 2.0) c += shaftCol * (sv.g * beamK * 5.0 * (0.4 + 0.6 * sin(time * (1.3 + hh * 4.0) + hh * 60.0)));
+    }
+  }
   if (fog > 0.0) {
     vec2 w = vec2(float(q.x + org.x), float(q.y + org.y) + Z);
     // banks stretched east-west (cells 341 x 256), finer wisps (64, 32), all drifting
@@ -589,6 +659,10 @@ export class LightGame {
     this.progs = new Map(); this.ti = 2; this.T = LIGHT_TIERS[2]; this.ap = 1;   // (ap: set by the engine before the first program)
     this.cw = 0; this.ch = 0; this.texs = []; this.fbos = [];
     this.sd = new Float32Array(3);
+    // (a texel of nothing for the canopy's unit when there's no canopy in view: never a texture being drawn to)
+    this.tNone = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.tNone);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 1, 1, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array(1));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
   setTier(i) { this.ti = Math.max(0, Math.min(3, i | 0)); this.T = LIGHT_TIERS[this.ti]; }
   prog(name) {
@@ -596,18 +670,18 @@ export class LightGame {
     let p = this.progs.get(key);
     if (p) return p;
     const gl = this.gl, H = HEAD(this.T, this.ap);
-    if (name === 'lit') p = glProgram(gl, TRI_VS, H + LIT_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3 }, { Lights: 0 });
-    else if (name === 'lighth') p = glProgram(gl, TRI_VS, H + LIGHTH_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3 }, { Lights: 0 });
-    else if (name === 'compose') p = glProgram(gl, TRI_VS, H + COMPOSE_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3, tLH: 4, tRH: 5 }, { Lights: 0 });
+    if (name === 'lit') p = glProgram(gl, TRI_VS, H + LIT_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3, tCan: 6 }, { Lights: 0 });
+    else if (name === 'lighth') p = glProgram(gl, TRI_VS, H + LIGHTH_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3, tCan: 6 }, { Lights: 0 });
+    else if (name === 'compose') p = glProgram(gl, TRI_VS, H + COMPOSE_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3, tLH: 4, tRH: 5, tCan: 6 }, { Lights: 0 });
     else if (name === 'final') p = glProgram(gl, TRI_VS, H + FINAL_FS, ['p'], { tLit: 0, tB: 1, tBH: 2, tBQ: 3, tSh: 4 });
     else if (name === 'extract') p = glProgram(gl, TRI_VS, EXTRACT_FS, ['p'], { tLit: 0, tC: 1 });
     else if (name === 'blur') p = glProgram(gl, TRI_VS, BLUR_FS, ['p'], { src: 0 });
-    else p = glProgram(gl, TRI_VS, SHAFT_FS, ['p'], { tLit: 0 });
+    else p = glProgram(gl, TRI_VS, SHAFT_FS(this.T), ['p'], { tLit: 0, tB: 1, tCan: 6 });
     this.progs.set(key, p);
     return p;
   }
   // compile the current tier's programs now (avoids a hitch on the first frame)
-  warm() { for (const n of this.T.half ? ['lighth', 'compose', 'final'] : ['lit', 'extract', 'blur', 'shaft', 'final']) this.prog(n); }
+  warm() { for (const n of this.T.half ? ['lighth', 'compose', 'blur', 'shaft', 'final'] : ['lit', 'extract', 'blur', 'shaft', 'final']) this.prog(n); }
   // targets for a scene capacity of cw x ch texels (kept until a bigger one is needed)
   ensure(cw, ch) {
     if (cw === this.cw && ch === this.ch) return;
@@ -653,7 +727,7 @@ export class LightGame {
     gl.bindTexture(gl.TEXTURE_2D, this.tTiles);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, stride, ty, gl.RED_INTEGER, gl.UNSIGNED_BYTE, D);
   }
-  dispose() { this.free(); for (const p of this.progs.values()) this.gl.deleteProgram(p.p); this.progs.clear(); }
+  dispose() { this.free(); for (const p of this.progs.values()) this.gl.deleteProgram(p.p); this.progs.clear(); if (this.tNone) this.gl.deleteTexture(this.tNone); this.tNone = null; }
   bind(unit, t) { const gl = this.gl; gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); }
   blur(src, srcW, srcH, usedW, usedH, fbo, w, h, dx, dy, scale) {
     const gl = this.gl, p = this.prog('blur');
@@ -675,6 +749,12 @@ export class LightGame {
     gl.uniform1i(u.nL, S.nL);
     if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
     if (u.wind4) { const W = S.wind; gl.uniform4f(u.wind4, W ? W[0] : 0.1, W ? W[1] : 0.3, W ? W[2] : 1, W ? W[3] : 0); }
+    this.canUniforms(u, S.can);
+  }
+  canUniforms(u, c) {
+    const gl = this.gl;
+    if (u.canH) gl.uniform1f(u.canH, c ? c.hc : 0);
+    if (u.canO && c) gl.uniform4f(u.canO, c.x0, c.y0, 1 / (c.w * c.cell), 1 / (c.h * c.cell));
   }
   // S: { A, B, C: scene textures; w, h: used size; preset; wet; time; flash; nL; ubo; org: [x, y] (origin
   //      mod 8192); view: [x, y, w, h] (the visible rectangle in scene texels); out: framebuffer for the
@@ -688,7 +768,7 @@ export class LightGame {
     SD[0] = sd[0] / sl; SD[1] = sd[1] / sl; SD[2] = sd[2] / sl;
     const wet = Math.max(pv(P, 'wet'), S.wet || 0), flash = Math.max(pv(P, 'flash'), S.flash || 0), fog = Math.max(pv(P, 'fog'), S.fog || 0);
     const hw = Math.ceil(w / 2), hh = Math.ceil(h / 2), qw = Math.ceil(w / 4), qh = Math.ceil(h / 4);
-    this.bind(0, S.A); this.bind(1, S.B); this.bind(2, S.C); this.bind(3, this.tTiles);
+    this.bind(0, S.A); this.bind(1, S.B); this.bind(2, S.C); this.bind(3, this.tTiles); this.bind(6, S.can && S.canTex ? S.canTex : this.tNone);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, S.ubo);
     let p, u;
     if (T.half) {
@@ -726,18 +806,26 @@ export class LightGame {
       useBQ = 1;
       if (S.mark) S.mark('bloom');
     }
-    // ---- god rays (low sun only)
-    let shaftK = 0;
-    const shafts = pv(P, 'shafts');
-    if (T.shafts && shafts > 0 && SD[2] > 0.05 && SD[2] < 0.75) {
+    // ---- god rays: the low sun's over sunlit ground (High, Ultra) and, on every tier, the beams coming down
+    // through the redwood canopy (brighter the lower and stronger the sun)
+    let shaftK = 0, beamK = 0;
+    const shafts = pv(P, 'shafts'), sc = pv(P, 'sunCol');
+    if (T.shafts && shafts > 0 && SD[2] > 0.05 && SD[2] < 0.75) shaftK = shafts * Math.min(1, (0.75 - SD[2]) * 3);
+    if (S.can && S.canTex && SD[2] > 0.05) beamK = Math.min(1.6, luma3(sc)) * (0.45 + 0.55 * (1 - SD[2])) * (pv(P, 'beams') ?? 1) * BEAM_K;
+    if (shaftK > 0 || beamK > 0.01) {
       const ux = SD[0], uy = SD[1] - SD[2], ul = Math.hypot(ux, uy) || 1;
-      shaftK = shafts * Math.min(1, (0.75 - SD[2]) * 3);
       p = this.prog('shaft'); u = p.u;
       gl.useProgram(p.p);
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.fSA); gl.viewport(0, 0, qw, qh);
-      this.bind(0, this.tLit);
+      this.bind(0, this.tLit); this.bind(1, S.B); this.bind(6, S.can && S.canTex ? S.canTex : this.tNone);
       gl.uniform2f(u.fullTex, cw, ch); gl.uniform2f(u.maxUV, (w - 0.5) / cw, (h - 0.5) / ch);
       gl.uniform2f(u.sdir, -ux / ul, -uy / ul); gl.uniform1f(u.slen, Math.min(480, 200 / SD[2] * ul)); gl.uniform2i(u.org, S.org[0], S.org[1]);
+      if (u.smear) gl.uniform1f(u.smear, shaftK > 0 ? 1 : 0);
+      if (u.sunDir) gl.uniform3fv(u.sunDir, SD);
+      if (u.time) gl.uniform1f(u.time, S.time % 4096);
+      if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
+      if (u.wind4) { const W = S.wind; gl.uniform4f(u.wind4, W ? W[0] : 0.1, W ? W[1] : 0.3, W ? W[2] : 1, W ? W[3] : 0); }
+      this.canUniforms(u, beamK > 0.01 ? S.can : null);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       this.blur(this.tSA, this.qw, this.qh, qw, qh, this.fSB, qw, qh, 1, 0, 1);
       this.blur(this.tSB, this.qw, this.qh, qw, qh, this.fSA, qw, qh, 0, 1, 1);
@@ -753,12 +841,12 @@ export class LightGame {
     gl.uniform2i(u.org, S.org[0], S.org[1]); gl.uniform4f(u.view, S.view[0], S.view[1], S.view[2], S.view[3]);
     gl.uniform1f(u.wet, wet); gl.uniform1f(u.reflK, pv(P, 'reflK')); gl.uniform1f(u.bloomK, bloomK); gl.uniform1f(u.haze, pv(P, 'haze'));
     gl.uniform1f(u.sat, pv(P, 'sat')); gl.uniform1f(u.contrast, pv(P, 'contrast')); gl.uniform1f(u.time, S.time % 4096);
-    gl.uniform1f(u.fog, fog); gl.uniform1f(u.fogH, pv(P, 'fogH')); gl.uniform1f(u.flash, flash); gl.uniform1f(u.shaftK, shaftK);
+    gl.uniform1f(u.fog, fog); gl.uniform1f(u.fogH, pv(P, 'fogH')); gl.uniform1f(u.flash, flash); gl.uniform1f(u.shaftK, shaftK); gl.uniform1f(u.beamK, beamK);
     gl.uniform1f(u.useBH, useBH); gl.uniform1f(u.useBQ, useBQ);
     gl.uniform3fv(u.hazeCol, pv(P, 'hazeCol')); gl.uniform3fv(u.lift, pv(P, 'lift')); gl.uniform3fv(u.gain, pv(P, 'gain'));
     // the fog is lit by the sky: by day the preset's colour, after dark a dim haze (the lamps' glow in it comes
     // from the bloom), so a misty night stays a night instead of turning grey
-    const sc = pv(P, 'sunCol'), sm = Math.max(sc[0], sc[1], sc[2], 1e-3), fc = pv(P, 'fogCol'), as = pv(P, 'ambSky');
+    const sm = Math.max(sc[0], sc[1], sc[2], 1e-3), fc = pv(P, 'fogCol'), as = pv(P, 'ambSky');
     const fk = Math.min(1, (luma3(as) + luma3(sc) * Math.max(0, SD[2]) * 0.5) * 2.4);
     gl.uniform3f(u.fogCol, fc[0] * fk, fc[1] * fk, fc[2] * fk); gl.uniform3fv(u.flashCol, pv(P, 'flashCol'));
     gl.uniform3f(u.shaftCol, sc[0] / sm * 0.55, sc[1] / sm * 0.55, sc[2] / sm * 0.55);

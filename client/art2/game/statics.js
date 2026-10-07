@@ -49,6 +49,7 @@ import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
 import * as TR from '../trees.js';
+import * as RW from '../redwoods.js';
 import { boulder as rockLump, outcrop, rockSprite, seaStack, crystals } from '../terrain.js';
 import { distSq } from '../scene.js';
 import { SCENE_MASKS } from '../../../shared/interior-art.js';
@@ -304,6 +305,7 @@ export function makeStatic(r) {
     case 'cut': return makeCut(r);
     case 'v': return voxSprite(voxModel(r.m, r.a || []), r.hd || 0, r.pv || null);
     case 'f': return makeFlora(r);
+    case 'rw': return r.k === 'stump' ? RW.oldStump(11 + r.s * 7, 26) : RW.nurseLog(5 + r.s * 13, r.len || 200, 18, r.flip);   // (redwoods.js: an old stump, a fallen giant)
     case 'deck': return makeDeck(r);
     case 'sg': return makeSignal(r);
     case 'span': return makeSpan(r);
@@ -1455,11 +1457,15 @@ const SPECIES = {
   young: [FL.youngTree, 26, 114], flowerTree: [FL.flowerTree, 42, 124], magnolia: [FL.magnoliaTree, 44, 118], cherry: [FL.cherryTree, 42, 118], maple: [FL.mapleGreen, 48, 106],
   mapleAutumn: [FL.mapleAutumn, 48, 104], oak: [FL.bigOak, 66, 124], birch: [FL.birchClump, 48, 110], aspen: [FL.aspenGrove, 48, 112], willow: [FL.weepingWillow, 44, 106],
   apple: [FL.appleTree, 40, 92], orange: [FL.orangeTree, 40, 90], olive: [(s) => TR.olive(s, 92, 42), 48, 94], cypress: [(s) => TR.cypress(s, 112, 13), 18, 108],
-  fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => FL.redwood(s, 230), 70, 250],
+  fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 110, 405],
   mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 50, 114], larch: [FL.goldenLarch, 38, 154],
   mesquite: [FL.mesquite, 48, 116], paloVerde: [FL.paloVerde, 54, 115], joshua: [FL.joshuaTree, 52, 101], deadSnag: [FL.deadSnag, 38, 77],
   coconut: [FL.coconutPalm, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
   smallPalm: [(s) => TR.fanPalm(s, 46), 36, 76], coastCypress: [FL.coastalCypress, 80, 98], banana: [FL.banana, 60, 99],
+  // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
+  giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
+  redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 100, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
+  fernR: [(s) => RW.swordFernArt(s, 78 + (s % 3) * 8), 52, 64],
   // shrubs, bushes and flowers
   hedge: [FL.hedge, 38, 51], topBall: [FL.topiaryBall, 20, 57], topCone: [FL.topiaryCone, 17, 66], rose: [FL.roseBush, 24, 41], hydrangea: [FL.hydrangea, 27, 41], lavender: [FL.lavender, 28, 45],
   tulips: [FL.tulipPlanter, 26, 41], daffodils: [FL.daffodilPlanter, 27, 41], boxStone: [(s) => FL.flowerBox(s, 'stone'), 34, 41], boxIron: [(s) => FL.flowerBox(s, 'iron'), 33, 38], pampas: [FL.pampasGrass, 56, 89],
@@ -1559,7 +1565,13 @@ function plantFor(c, p) {
   }
   return null;
 }
-const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c', 'flowers_a', 'flowers_big', 'cactus']);
+const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c', 'flowers_a', 'flowers_big', 'cactus', 'redwood']);
+// The giant redwoods fade like buildings when you're behind or under them (chunkbake.js composites them with the
+// buildings, each with a fade id, TREE_FADE + its prop index; the host eases the ones round you out and back): only
+// their foot - a trunk's width round its base - stays. RW_R: the trunk's half width by species. Only a tree whose
+// trunk (or the sprays just round it) covers you fades - fbox, narrower than the picture - not every crown nearby.
+export const TREE_FADE = 1e6;
+const RW_R = { giantL: 70, giant: 54, giantS: 40, redwood2: 16 };
 const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'royal', 'mtnPine', 'maple']), NV = (sp) => (NV5.has(sp) ? 4 : 3);
 
 // ================================================================================================
@@ -1584,6 +1596,11 @@ function lampStyle(c, p) {
 function propItems(c, p, pi, I) {
   const t = p.t, x = p.x, y = p.y, u = hh(x, y, 7), seed = Math.floor(hh(x, y, 9) * 6);
   const V = (key, m, a, hd = 0, pv = null, extra = null) => put(I, vitem(key, m, a, x, y, hd, pv, { pi, ...(p.lift ? { z0: p.lift } : null), ...(extra || {}) }));   // (p.lift: stands on something raised, a pier's deck)
+  if (t === 'redwood') {
+    const sp = SPECIES[p.sp] ? p.sp : 'giant', S = SPECIES[sp], v = Math.floor(hh(x, y, 13) * NV(sp)), tr = RW_R[sp] || 20, rr = tr * 1.35, fw = tr * 1.5 + 24;
+    put(I, { key: `f:${sp}:${v}:1`, recipe: { t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k: 1 }, x, y, ext: [S[1], S[2], S[1], 60], fbox: [fw, S[2], fw, 60], pi, fade: 1, b: TREE_FADE + pi, fp: [x + rr, y - rr * 0.5, x - rr, y + rr * 0.5] });   // (x0 > x1: an ellipse, engine.js STATIC_FS)
+    return;
+  }
   if (PLANTS.has(t)) {
     const r = plantFor(c, p);
     if (!r) return;
@@ -1821,6 +1838,8 @@ function propItems(c, p, pi, I) {
       V(`log:${len}:${hd.toFixed(2)}:${mossy}:${seed % 2}`, 'fallenLog', [len, 11, 1 + (seed % 2), mossy], hd);
       return;
     }
+    case 'rwstump': { const v = seed % 3; put(I, { key: `rwstump:${v}`, recipe: { t: 'rw', k: 'stump', s: v }, x, y, ext: [40, 50, 40, 30], pi }); return; }   // (an old-growth stump: the heart of a fairy ring)
+    case 'rwlog': { const len = clamp(Math.round((p.len || 200) / 24) * 24, 120, 320), v = seed % 2; put(I, { key: `rwlog:${len}:${v}:${p.flip ? 1 : 0}`, recipe: { t: 'rw', k: 'log', s: v, len, flip: p.flip ? 1 : 0 }, x, y, ext: [len / 2 + 40, 80, len / 2 + 40, 20], pi }); return; }   // (a fallen giant)
     case 'cart': case 'stall': case 'produce_a': case 'produce_b': V(`stl:${seed % 3}`, 'umbrella', ['#f0ece4', pick(['#c8343a', '#2f7a5c', '#e8c040'], seed / 6)]); return;
     default: V(`misc:${t}`, 'crate', [1]);
   }
@@ -2605,7 +2624,7 @@ function coverClearWet(c, tx, ty) {
 const NAT_SP = {
   // [species, weight] by the patch a tile falls in
   forest: [['fern', 6], ['fern', 6], ['salal', 5], ['huckle', 2], ['berry', 1], ['bracken', 1], ['foxglove', 1]],
-  redwood: [['fern', 9], ['salal', 3], ['huckle', 1], ['bracken', 1], ['foxglove', 1]],
+  redwood: [['fernR', 12], ['salal', 1], ['huckle', 1], ['bracken', 1], ['foxglove', 1]],
   meadowA: [['lupines', 1]], meadowB: [['poppies', 3], ['tallGrass', 1]], meadowC: [['lupines', 1], ['berryShrub', 1]], meadowD: [['poppies', 1], ['lupines', 1], ['tallGrass', 1]],
   meadowGrass: [['tallGrass', 5], ['berryShrub', 1], ['pampas', 1]],
   desert: [['creosote', 4], ['bursage', 3], ['brittle', 2], ['dryGrass', 3], ['sage', 2], ['tumble', 1]],
@@ -2654,6 +2673,12 @@ function coverAt(c, tx, ty, x, y) {
   if (t === T.SAND || bio === 5) {
     const back = M.distSea ? M.distSea[i] : 99;   // (quarter tiles) dune grass only behind the wet sand
     return back > 14 && pa > 0.45 && h < 0.35 ? [pickW(NAT_SP.dune, h2), 1] : null;
+  }
+  if (bio === 2 && c.di(x, y) === 29) {   // the redwood floor: beds of big sword ferns (each a stride or two across), carpets of sorrel, the duff between
+    const fp = vnoise(x, y, 150, 7163) * 0.7 + vnoise(x, y, 46, 7165) * 0.3;
+    if (fp > 0.48 && h < 0.4) return [pickW(NAT_SP.redwood, h2), 1];
+    if (vnoise(x, y, 120, 7161) > 0.55 && h < 0.62) return ['sorrel', 1];
+    return h < 0.05 ? [pickW(NAT_SP.redwood, h2), 1] : null;
   }
   if (bio === 2) {                                                      // the woods: a fern bed nearly everywhere
     if (pb < 0.25 && h < 0.8) return null;                              // (sunlit gaps)

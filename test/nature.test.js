@@ -33,7 +33,7 @@ test('Redwood Creek: Highland Road crosses the creek on a railed bridge; falls, 
   assert.equal(tileAt(s.pulloff.x, s.pulloff.y), T.LOT);
   assert.ok(near('picnic', s.pulloff, 90), 'a picnic table at the pull-off');
   // giant redwoods, and the place on the map
-  assert.ok(m.props.filter((q) => q && q.sp === 'redwood' && Math.hypot(q.x - s.x, q.y - s.y) < 900).length >= 6, 'giant redwoods round it');
+  assert.ok(m.props.filter((q) => q && q.t === 'redwood' && /^giant/.test(q.sp) && Math.hypot(q.x - s.x, q.y - s.y) < 900).length >= 6, 'giant redwoods round it');
   assert.ok(m.landmarks.some((l) => l.name === 'Redwood Creek Falls'));
 });
 

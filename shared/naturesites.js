@@ -14,6 +14,10 @@
 import { T, TILE, MAP_W, MAP_H } from './constants.js';
 import { hash2 } from './rng.js';
 
+// the giant redwoods' trunks (solid radius, px) by size - Highland Woods' groves (map.js redwoodGroves) and the
+// ones placed by hand here; the art is client/art2/redwoods.js (statics.js SPECIES giantL ... redwood2)
+export const REDWOOD_TRUNK = { giantL: 62, giant: 48, giantS: 36, redwood2: 14 };
+
 const DISTRICT_NAMES = { beaches: [43, 44, 14, 10] };   // Gull Harbor, Coral Cay, Pelican Key, Sunset Beach
 
 const RES = 32;
@@ -2382,8 +2386,9 @@ function redwoodCreek(m, H) {
   for (const [x, y] of giants) {
     const i = at(x, y);
     if (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT) continue;
-    H.addProp(m, 'tree_a', Math.round(x), Math.round(y), 14, { sp: 'redwood', k: 1.45 + hash2(Math.round(x), Math.round(y), 5) * 0.2 });
-    reserveRound(m, x, y, 50);
+    const sp = hash2(Math.round(x), Math.round(y), 5) < 0.35 ? 'giantL' : 'giant';   // (the map's giants: map.js REDWOOD_SIZES, redwoods.js)
+    H.addProp(m, 'redwood', Math.round(x), Math.round(y), REDWOOD_TRUNK[sp], { sp, k: 1 });
+    reserveRound(m, x, y, 80);
   }
   // keep the wilds' trees off the banks a little (ferns grow there instead)
   for (const p of up.concat(down)) reserveRound(m, p[0], p[1], 64);

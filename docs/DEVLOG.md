@@ -3059,3 +3059,28 @@ Walk onto either half court and press the action button to pick up a ball (`serv
   - If Pages still shows an older build after an hour, it goes ahead and says so; pushing again republishes the page.
 - **Pages never refresh early** (`client/update.js`). A page told about a new build refreshes only once the web serves it, however long that takes. It checks every 5 s, then every 30 s after 3 minutes, and says the new version is on its way. Refreshing sooner only ever reloaded the old page.
 - Checked in a sandbox (a local repo and a fake Pages site): the script waits while the page is behind, moves when it's published, goes ahead when Pages is unreachable, and goes ahead after the hour.
+
+## 2026-10-07 · Highland Woods: old-growth redwoods, light through the canopy, god rays (concepts N1-A, N1-B, N1-E)
+
+- **Giant redwoods** (`client/art2/redwoods.js`) now fill Highland Woods in groves with clearings between (`shared/map.js` `redwoodGroves`, on a jittered 7-tile grid).
+  - Three sizes of old giant, up to 720 px tall, with trunks three to five strides across (solid 36-62 px). Each has fluted cinnamon bark, a flared foot with roots and moss, and burls.
+  - Some have a fire-scarred hollow ("goosepen") at the foot. Now and then a dead silver spike top stands out of the crown.
+  - The crown is a ragged column of drooping boughs hung with feathery sprays: fishbone sprigs over a dark mass of foliage.
+  - Second-growth redwoods are slender cones. They stand in fairy rings round an old stump, or between the giants.
+  - Fallen giants (nurse logs) lie across the floor with ferns and seedlings on them.
+  - Douglas firs and tanoaks fill the gaps, with big-leaf maples by the water.
+  - The giants are drawn at the art pixel (half size, composited at 2x) so the dither stays crisp. That gives twice the tree for the same memory.
+  - The hand-placed trees round Redwood Creek Falls are giants too.
+- **The floor**: beds of big sword ferns, carpets of redwood sorrel and the duff showing between them.
+  - The new fern (`swordFernArt`) is a rosette of arching fronds. Each frond has a rachis and paired leaflets.
+  - A little salal, huckleberry, bracken and foxglove grow in among them.
+- **Light through the canopy** (`client/art2/game/canopy.js`, `lightgame.js` `canopyVis`). The crowns stand far above the shadow march's reach, so the light treats them as a layer 400 px up.
+  - A grid of how thick the crowns are (built once from the map) and world-anchored leaf-clump noise that stirs with the wind take the sun. Only the gaps let it through.
+  - The result is sunflecks on the floor and dappled light on the trunks, moving with the sun through the day. It works on every quality tier.
+- **God rays through the gaps** (`SHAFT_FS`), on every tier, Low included.
+  - Over each pixel, the air in front of what's drawn there is lit where its way to the sun goes out through a gap in the crowns. The sum makes beams slanting down from the canopy, with dust drifting and glinting in them.
+  - They're brightest with a low strong sun. Golden hour in the redwoods is the money shot.
+- **Seeing past them**: a giant fades like a building when its trunk (or the sprays round it) covers you, not every crown nearby.
+  - A new `fbox` on a statics item gives a fade box narrower than the picture.
+  - Only an ellipse at its foot stays. `uFoot` with x0 > x1 is an ellipse in `STATIC_FS`.
+- **Tests:** the falls' giants (`test/nature.test.js`); the rest unchanged.

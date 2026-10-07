@@ -12,6 +12,7 @@
        &fade=0.88    fades every building in view that far (the see-through you get walking behind one)
        &artpx=1      the art at full resolution (default 2: 1 art pixel = 2 world px, as in the game)
        &lights=1     the baked static lights (lamps, windows, signs) added at that strength, as the game does at night
+       &canopy=0     without the redwoods' canopy in the light (canopy.js)
        &cabs=T       the Ferris wheel's gondolas where they are at loop time T (shared/rides.js; the wheel bakes without)
        &balloon=r,t,pal  a balloon flight on route r (balloonRoutes) t seconds after lift-off, in palette pal
        &slide=k,t[,k,t...]  someone on Splash Bay's slide k t seconds after boarding (slideRider; drawn as host.js _slider)
@@ -23,6 +24,7 @@ import { bakeChunk, loadProviders, SpriteCache, CHUNK } from '../../client/art2/
 import { generateCity } from '../../shared/map.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../shared/rides.js';
 import * as Act from '../../client/art2/game/actors.js';
+import { canopyGrid } from '../../client/art2/game/canopy.js';
 const q = new URLSearchParams(location.search);
 const [camX, camY] = (q.get('cam') || '18300,12780').split(',').map(Number);
 const Q = +(q.get('q') ?? 2), R = +(q.get('r') ?? 1), PN = q.get('p') || 'noon';
@@ -38,6 +40,7 @@ const zoom = +(q.get('z') || long / (vh * 16 / 9));
 const t0 = performance.now();
 await loadProviders();
 const M = generateCity(1337);
+if (q.get('canopy') !== '0') eng.setCanopy(canopyGrid(M));   // (the redwoods' canopy for the light; &canopy=0 without)
 const cache = new SpriteCache(200e6);
 const ccx = Math.floor(camX / CHUNK), ccy = Math.floor(camY / CHUNK);
 const fades = new Map(), fadeK = +(q.get('fade') || 0);

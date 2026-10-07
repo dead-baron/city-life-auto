@@ -31,7 +31,7 @@ import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTAT
 import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
 import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
-import { buildNatureSites } from './naturesites.js';
+import { buildNatureSites, REDWOOD_TRUNK } from './naturesites.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 
 export { Z };
@@ -3762,7 +3762,9 @@ const WILD_CLEAR = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.FIELD, T.LOT, T.WALL
 // The terrain class a wild district really grows: the little sea islands (Lighthouse Rock, the Islets) are never
 // desert (grassland where the terrain says dry), and Granite Peaks is mountain where it says dry.
 export const SEA_ISLES = new Set([19, 20]);
-export const wildBiome = (d, c) => (c === 3 ? (SEA_ISLES.has(d) ? 1 : d === 33 ? 4 : c) : c);
+// (Highland Woods is old-growth redwood forest throughout: its meadow, rock and desert patches are forest too -
+// only the water and the beaches keep their own)
+export const wildBiome = (d, c) => (d === 29 ? (c === 0 || c === 5 ? c : 2) : c === 3 ? (SEA_ISLES.has(d) ? 1 : d === 33 ? 4 : c) : c);
 const seaIsle = wildBiome;
 // The open grass in town (the suburbs, the luxury hills, the beach towns, old town): groves of mature trees with
 // lawns between, three tiles clear of every road, building, pavement and lot; the species by district (statics.js
@@ -3833,7 +3835,7 @@ function buildWilds(m, rand) {
   for (let gy = 2; gy < MAP_H - 3; gy += CELL) for (let gx = 2; gx < W - 3; gx += CELL) {
     const fx = gx + hash2(gx, gy, 3) * CELL, fy = gy + hash2(gx, gy, 4) * CELL, tx = Math.floor(fx), ty = Math.floor(fy);
     const i = ty * W + tx;
-    if (!wild(i)) continue;
+    if (!wild(i) || m.dist[i] === 29) continue;   // (Highland Woods: redwoodGroves below)
     const t = m.tiles[i];
     if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
     const c = seaIsle(m.dist[i], terrainAt(cls, cw, tx, ty)), h = hash2(gx, gy, 61);
@@ -3860,7 +3862,75 @@ function buildWilds(m, rand) {
     const sv = vnoise2(gx, gy, 40, 73), stand = sv < 0.38 ? 0 : sv < 0.55 ? 1 : sv < 0.78 ? 2 : 3;
     addProp(m, hash2(gx, gy, 62) < 0.5 ? 'tree_a' : 'tree_b', x, y, 12, { g: stand });
   }
+  redwoodGroves(m, wild, inField, clear, rocky);
   void rand;
+}
+
+// Highland Woods: old-growth coast redwoods (concepts N1-A, N1-B, N1-E). Giants stand in groves with sunlit clearings
+// between (a jittered 7-tile grid: a tree every 7 m or so where the grove is thick), three sizes - the tallest
+// 720 px, trunks three to five strides across; now and then a fairy ring instead - five to seven second-growth
+// redwoods round the old stump they sprouted from - or a fallen giant (a nurse log) lying across the floor. Between
+// the giants, a Douglas fir or a tanoak where there's room, big-leaf maples by the water. The giants are their own
+// prop type ('redwood': no car knocks one over); everything keeps three tiles off roads and buildings. The fern beds
+// and the sorrel are the renderer's (statics.js coverAt).
+export const REDWOOD_SIZES = REDWOOD_TRUNK;   // species -> trunk radius (solid)
+function redwoodGroves(m, wild, inField, clear, rocky) {
+  const W = MAP_W, CG = 7, giants = [];
+  const okAt = (tx, ty, pad) => {
+    const i = ty * W + tx, t = m.tiles[i];
+    return wild(i) && m.dist[i] === 29 && (t === T.GRASS || t === T.DIRT) && !rocky[i] && !m.lake[i] && !inField(tx, ty, 64) && clear(tx, ty, pad);
+  };
+  const nearWater = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.WATER || t === T.DEEP) return true; } return false; };
+  const roomFor = (x, y, r) => giants.every(([gx2, gy2, gr]) => Math.hypot(gx2 - x, gy2 - y) > gr + r + 18);
+  for (let gy = 2; gy < MAP_H - 3; gy += CG) for (let gx = 2; gx < W - 3; gx += CG) {
+    const tx = gx + Math.floor(hash2(gx, gy, 301) * CG), ty = gy + Math.floor(hash2(gx, gy, 302) * CG);
+    if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= MAP_H - 3 || m.dist[ty * W + tx] !== 29) continue;
+    const g = 0.6 * vnoise2(gx, gy, 20, 303) + 0.4 * vnoise2(gx, gy, 8, 304), h = hash2(gx, gy, 305);   // (g: the groves; low g a clearing)
+    if (h >= smooth01(0.26, 0.5, g) * 0.92) continue;
+    if (!okAt(tx, ty, 3) || nearWater(tx, ty, 2)) continue;
+    const x = Math.round((tx + hash2(gx, gy, 306)) * TILE), y = Math.round((ty + hash2(gx, gy, 307)) * TILE), u = hash2(gx, gy, 308);
+    // a fairy ring: second-growth redwoods round an old stump (in the thick of a grove)
+    if (g > 0.45 && u < 0.08 && okAt(tx, ty, 5) && roomFor(x, y, 110)) {
+      addProp(m, 'rwstump', x, y, 18, { r: 26 });
+      giants.push([x, y, 26]);
+      const n = 5 + Math.floor(hash2(gx, gy, 309) * 3), R = 78 + hash2(gx, gy, 310) * 22, a0 = hash2(gx, gy, 311) * Math.PI * 2;
+      for (let k = 0; k < n; k++) {
+        const a = a0 + (k / n) * Math.PI * 2 + (hash2(gx + k, gy, 312) - 0.5) * 0.4, rx = Math.round(x + Math.cos(a) * R), ry = Math.round(y + Math.sin(a) * R * 0.8);
+        const ktx = Math.floor(rx / TILE), kty = Math.floor(ry / TILE);
+        if (!okAt(ktx, kty, 2)) continue;
+        addProp(m, 'redwood', rx, ry, REDWOOD_SIZES.redwood2, { sp: 'redwood2', k: 1 });
+        giants.push([rx, ry, 16]);
+      }
+      continue;
+    }
+    // a fallen giant, lying roughly east-west, solid along its length
+    if (g > 0.35 && u > 0.94 && okAt(tx, ty, 6) && roomFor(x, y, 150)) {
+      const len = 180 + Math.floor(hash2(gx, gy, 313) * 5) * 24, a = 0, flip = hash2(gx, gy, 315) < 0.5 ? 1 : 0;   // (drawn east-west: redwoods.js nurseLog)
+      addProp(m, 'rwlog', x, y, 0, { len, a: Math.round(a * 100) / 100, flip });
+      for (const kk of [-0.4, -0.2, 0, 0.2, 0.4]) m.addSolidProp(x + Math.cos(a) * len * kk, y + Math.sin(a) * len * kk * 0.7 - 6, 15);
+      giants.push([x, y, 60]);
+      continue;
+    }
+    const sp = u < 0.22 ? 'giantL' : u < 0.7 ? 'giant' : 'giantS', r = REDWOOD_SIZES[sp];
+    if (!roomFor(x, y, r) || (r > 40 && !okAt(tx, ty, 4))) continue;   // (the biggest keep their flared feet off the road)
+    addProp(m, 'redwood', x, y, r, { sp, k: 1 });
+    giants.push([x, y, r]);
+  }
+  // between the giants: a Douglas fir or a tanoak where there's room, big-leaf maples by the water
+  const CU = 3;
+  for (let gy = 2; gy < MAP_H - 3; gy += CU) for (let gx = 2; gx < W - 3; gx += CU) {
+    const tx = gx + Math.floor(hash2(gx, gy, 321) * CU), ty = gy + Math.floor(hash2(gx, gy, 322) * CU);
+    if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= MAP_H - 3 || m.dist[ty * W + tx] !== 29) continue;
+    const h = hash2(gx, gy, 323), wet = nearWater(tx, ty, 4);
+    if (h >= (wet ? 0.3 : 0.11) || !okAt(tx, ty, 2)) continue;
+    const x = Math.round((tx + hash2(gx, gy, 324)) * TILE), y = Math.round((ty + hash2(gx, gy, 325)) * TILE);
+    if (!roomFor(x, y, 30)) continue;
+    const u = hash2(gx, gy, 326);
+    const sp = wet ? (u < 0.7 ? 'maple' : 'mapleAutumn') : u < 0.45 ? 'fir' : u < 0.8 ? 'oak' : 'redwood2';
+    if (sp === 'redwood2') { addProp(m, 'redwood', x, y, REDWOOD_SIZES.redwood2, { sp, k: 1 }); giants.push([x, y, 16]); continue; }
+    addProp(m, 'tree_a', x, y, 12, { sp, k: sp === 'fir' ? 1.7 + hash2(gx, gy, 327) * 0.3 : sp === 'oak' ? 1.0 + hash2(gx, gy, 327) * 0.2 : 1.3 });
+    giants.push([x, y, 14]);
+  }
 }
 
 // You respawn at the hospitals and clinics: nothing may stand in front of one (in this view a building south of

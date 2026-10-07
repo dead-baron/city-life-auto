@@ -187,7 +187,8 @@ export function groundHeights(G, ox, oy) {
 // opt: { quality 0..3, seed, cutaway (building index), lowMem, groundCol (v1 ground pixels, RGBA), artPx (2: the
 // statics land on the art grid - the engine draws the chunk at 1 art pixel = 2 world px) }
 // cache: SpriteCache for makeStatic results (one per worker); P: providers (default: the loaded ones)
-const isBuilding = (it) => (it.recipe && it.recipe.t === 'b' && !it.recipe.frame ? 1 : 0);
+// (and what fades like one: the giant redwoods - statics.js marks them fade, with their own fade id in b)
+const isBuilding = (it) => (it.fade || (it.recipe && it.recipe.t === 'b' && !it.recipe.frame) ? 1 : 0);
 export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
   const it = bakeSteps(M, cx, cy, opt, cache, P);
   let r = it.next();
@@ -237,7 +238,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
         k = local.get(it.b) || 0;
         if (!k && blds.length < 63) { k = blds.length + 1; local.set(it.b, k); blds.push([it.b, Infinity, Infinity, -Infinity, -Infinity, -Infinity, Infinity, Infinity, -Infinity, -Infinity]); }
         if (k) {
-          const r = blds[k - 1], e = it.ext || [0, 0, 0, 0];
+          const r = blds[k - 1], e = it.fbox || it.ext || [0, 0, 0, 0];   // (fbox: what fades it, when narrower than its picture)
           r[1] = Math.min(r[1], it.x - e[0]); r[2] = Math.min(r[2], it.y - (it.z0 || 0) - e[1]); r[3] = Math.max(r[3], it.x + e[2]); r[4] = Math.max(r[4], it.y + e[3]); r[5] = Math.max(r[5], it.y);
           if (it.fp) { r[6] = Math.min(r[6], it.fp[0]); r[7] = Math.min(r[7], it.fp[1]); r[8] = Math.max(r[8], it.fp[2]); r[9] = Math.max(r[9], it.fp[3]); }
         }

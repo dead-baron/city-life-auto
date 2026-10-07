@@ -199,7 +199,8 @@ void main(){
       float f = uFade[k];
       vec4 fp = uFoot[k];
       vec2 sp = vec2(src * AP) + 0.5 * float(AP);   // (world px: the art pixel's centre)
-      if (sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w) f = 0.0;   // over its own footprint: stays
+      // over its own footprint it stays (x0 > x1: the footprint is the ellipse in that box - a tree's foot)
+      if (fp.x <= fp.z ? sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w : length((sp - (fp.xy + fp.zw) * 0.5) / max((fp.xw - fp.zy) * 0.5, vec2(1.0))) < 1.0) f = 0.0;
       if (f > 0.002) {
         a.rgb = mix(a.rgb, u.rgb, f);
         c.rgb *= 1.0 - f;
@@ -392,6 +393,7 @@ export class Art2Engine {
     this.pPresent = glProgram(gl, TRI_VS, PRESENT_FS, ['p'], { tF: 0 });
     this.pXray = glProgram(gl, XRAY_VS, XRAY_FS, IA, { tA: 3, tB: 4, tS: 6 });
     this.light = new LightGame(gl, this.vaoTri); this.light.ap = this.ap; this.light.setTier(this.q); this.light.warm();
+    this.tCan = null; this._upCanopy();
     this.slots = []; this.chunks = new Map();
     this.sprites = new Map(); this.atlas = null; this.pages = []; this._allocAtlas();
     this.cw = 0; this.ch = 0; this.tA = this.tB = this.tC = this.rbDepth = this.fbScene = this.fbOut = null;
@@ -436,6 +438,29 @@ export class Art2Engine {
     return this.cropScr;
   }
 
+  // ---- the canopy (canopy.js canopyGrid: { data, w, h, x0, y0, cell, hc } or null) ---------------------------
+  // the light's layer of tall crowns (lightgame.js canopyVis): one R8 texture, kept to upload again after a
+  // context restore
+  setCanopy(c) { this.canopy = c && c.data && c.w > 0 && c.h > 0 ? c : null; if (!this.lost) this._upCanopy(); }
+  _upCanopy() {
+    const gl = this.gl, c = this.canopy;
+    if (this.tCan) { gl.deleteTexture(this.tCan); this.tCan = null; }
+    if (!c || c.w > this.maxTex || c.h > this.maxTex) return;
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, c.w, c.h, 0, gl.RED, gl.UNSIGNED_BYTE, c.data);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.tCan = t;
+  }
+  // is any of the canopy over the view (with the reach of its shade)? the light skips it when not
+  _canopyInView() {
+    const c = this.canopy;
+    if (!this.tCan || !c) return false;
+    const m = 900;
+    return this.ox + this.SW > c.x0 - m && this.ox < c.x0 + c.w * c.cell + m && this.oy + this.SH > c.y0 - m && this.oy < c.y0 + c.h * c.cell + m;
+  }
+
   // ---- quality, size, lifecycle -----------------------------------------------------------------------------
   setQuality(q) {
     q = clampQ(q);
@@ -472,6 +497,7 @@ export class Art2Engine {
       this._freeScene(); this.light.dispose();
       for (const s of this.slots) for (const t of s.t) gl.deleteTexture(t);
       for (const t of this.atlas) gl.deleteTexture(t);
+      if (this.tCan) gl.deleteTexture(this.tCan);
       for (const p of [this.pStatic, this.pSprite, this.pDecal, this.pPresent, this.pXray]) gl.deleteProgram(p.p);
       for (const b of [this.vbTri, this.vbQuad, this.ibSpr, this.ibDec, this.ibXr, this.uboBuf]) gl.deleteBuffer(b);
       for (const v of [this.vaoTri, this.vaoQuad, this.vaoSpr, this.vaoDec, this.vaoXr]) gl.deleteVertexArray(v);
@@ -776,6 +802,7 @@ export class Art2Engine {
     LS.A = this.tA; LS.B = this.tB; LS.C = this.tC; LS.w = this.SW; LS.h = this.SH; LS.preset = this.P;
     LS.wet = this.wet; LS.time = this.time; LS.flash = this.flash; LS.fog = this.fog;
     const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind;
+    LS.can = this._canopyInView() ? this.canopy : null; LS.canTex = this.tCan;
     LS.nL = this._packLights(); LS.ubo = this.uboBuf; LS.out = this.fbOut; LS.mark = this.profile ? this._mark : null;
     this.light.bin(this.ubo, LS.nL, this.SW, this.SH, Math.max(this.P.wet ?? 0, this.wet) > 0);
     this.light.render(LS);
