@@ -37,7 +37,8 @@ test('country set pieces: all placed on open ground, each reachable by road, and
   const count = (t) => m.props.filter((p) => p.t === t).length;
   assert.ok(count('tent') >= 8 && count('campfire') >= 8, 'campgrounds pitched');
   assert.ok(count('turbine') >= 6, `wind turbines (${count('turbine')})`);
-  assert.ok(count('pumpjack') >= 6 && count('otank') === 3, 'the oil field');
+  const oil = m.countrySites.find((s) => s.type === 'oil'), inOil = (p) => p.x > oil.x * TILE && p.x < (oil.x + oil.w) * TILE && p.y > oil.y * TILE && p.y < (oil.y + oil.h) * TILE;
+  assert.ok(count('pumpjack') >= 6 && m.props.filter((p) => p.t === 'otank' && inOil(p)).length === 3, 'the oil field');   // (Route 9's lease has a tank of its own)
   assert.ok(count('solar') >= 60, 'the solar farm');
   assert.equal(count('dscreen'), 1); assert.equal(count('dome'), 1); assert.equal(m.raceways.length, 1); assert.equal(m.quarries.length, 1);
   assert.ok(count('radiotower') >= 3, 'radio masts');

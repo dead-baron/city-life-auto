@@ -138,6 +138,38 @@ export function waterTower(h = 90) {
   m.fill((x, y, z) => (Math.hypot(x - 20, y - 20) < 19 - (z - h - 28) * 1.6 ? cap : -1), 0, 0, h + 28, 40, 40, h + 40);
   return m;
 }
+// a high-wing single-engine light plane parked on its gear (nose along +x): white with a coloured cheat line,
+// cabin windows under the wing, struts, a fin with a stripe, a two-blade prop (a grey blur)
+export function lightPlane(col = '#c83a30') {
+  const S = 1.3, m = new Vox(Math.ceil(66 * S), Math.ceil(86 * S), Math.ceil(30 * S)), cy = 43 * S;
+  const body = m.mat({ ramp: R('#ecebe4'), k: 3 }), stripe = m.mat({ ramp: R(col), k: 3 }), glass = m.mat({ ramp: R('#2a3a4a'), k: 2, flag: F_GLASS, gloss: 0.6 });
+  const dark = m.mat({ ramp: MAT.tyre, k: 2 }), metal = m.mat({ ramp: MAT.metal, k: 2, flag: F_THIN }), prop = m.mat({ ramp: R('#5a5e66'), k: 2, flag: F_NOCAST });
+  const box = (x0, y0, z0, x1, y1, z1, mt) => m.box(x0 * S, y0 * S, z0 * S, x1 * S, y1 * S, z1 * S, mt);
+  // the fuselage: round in section, thin at the tail, a blunt nose (u, v, w: the unscaled model's coordinates)
+  m.fill((X, Y, Z) => {
+    const x = X / S, y = Y / S, z = Z / S, c = 43;
+    const t = x < 22 ? 0.35 + (x - 4) / 18 * 0.65 : x > 54 ? 1 - (x - 54) / 9 * 0.45 : 1;
+    if (x < 4 || x > 63 || t <= 0) return -1;
+    const zc = x < 22 ? 14 + (22 - x) * 0.18 : 14, ry = 5.4 * t, rz = 6 * t;
+    if (((y - c) / ry) ** 2 + ((z - zc) / rz) ** 2 > 1) return -1;
+    if (x > 30 && x < 47 && z > zc + 0.5 && z < zc + 5 && Math.abs(y - c) > ry * 0.55) return glass;   // the cabin windows
+    if (x > 44 && x < 50 && z > zc + 2 && Math.abs(y - c) < ry * 0.7) return glass;                       // the windscreen
+    return Math.abs(z - (zc - 1)) < 0.9 && x > 8 ? stripe : body;
+  }, 0, Math.floor(30 * S), Math.floor(4 * S), Math.ceil(66 * S), Math.ceil(56 * S), Math.ceil(26 * S));
+  // the high wing across the cabin roof, coloured tips
+  for (let y = 0; y < 86; y++) box(32, y, 20, 45, y + 1, 22, Math.abs(y - 43) > 36 ? stripe : body);
+  // struts from the belly to under the wing
+  for (const s of [-1, 1]) for (let k = 0; k <= 20; k++) box(38, 43 + s * (5 + k), 9 + k * 0.55, 40, 43 + s * (5 + k) + 1, 10 + k * 0.55, metal);
+  // the tail: a stabiliser and a fin with a stripe
+  box(3, 30, 16, 12, 56, 17.5, body);
+  m.fill((X, Y, Z) => { const x = X / S, y = Y / S, z = Z / S; return y > 42 && y < 44 && z > 16 && z < 16 + (x - 2) * 1.2 && x < 15 && z < 30 ? (z > 23 && z < 26 ? stripe : body) : -1; }, Math.floor(2 * S), Math.floor(42 * S), Math.floor(16 * S), Math.ceil(15 * S), Math.ceil(44 * S), Math.ceil(30 * S));
+  // the gear: two mains on legs, a nose wheel; the spinner and the prop's blur
+  for (const s of [-1, 1]) { box(39, 43 + s * 4, 4, 41, 43 + s * 9, 9, metal); m.cyl('y', 40 * S, 0, 3 * S, 3 * S, (43 + s * 9 - 1) * S, (43 + s * 9 + 2) * S, dark); }
+  box(55, 42.5, 3, 56, 43.5, 9, metal); m.cyl('y', 55.5 * S, 0, 2.6 * S, 2.6 * S, 42 * S, 44 * S, dark);
+  m.ell(63 * S, cy, 14 * S, 2.5 * S, 2 * S, 2 * S, stripe);
+  m.fill((x, y, z) => (Math.hypot(y - cy, z - 14 * S) < 11 * S && Math.abs(Math.atan2(z - 14 * S, y - cy) % Math.PI) < 0.5 ? prop : -1), Math.floor(64 * S), Math.floor(cy - 12 * S), 0, Math.ceil(65 * S), Math.ceil(cy + 12 * S), Math.ceil(30 * S));
+  return m;
+}
 export function windsock() { const m = new Vox(30, 6, 48); const p = m.mat({ ramp: MAT.metal, k: 3 }), a = m.mat({ ramp: R('#e8642a'), k: 3 }), w = m.mat({ ramp: R('#ecebe4'), k: 3 }); m.box(2, 2, 0, 4, 4, 46, p); for (let k = 0; k < 24; k++) { const r = 4 - k * 0.12; m.fill((x, y, z) => (Math.hypot(y - 3, z - (42 - k * 0.3)) < r && Math.abs(x - 4 - k) < 0.6 ? (Math.floor(k / 5) % 2 ? w : a) : -1), 4 + k, 0, 30, 5 + k, 6, 48); } return m; }
 // a road sign on two posts: 'arrow' (green with a white arrow) or 'curve' (yellow diamond)
 export function roadSign(kind = 'arrow') {

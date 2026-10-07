@@ -99,8 +99,92 @@ export function buildNatureSites(m, H) {
   farmDressing(m, H);
   willowRiver(m, H);
   graniteCove(m, H);
+  route9(m, H);
   roadside(m, H);
   coralRainforest(m, H);
+}
+
+// ---- Route 9 (Dry Creek Desert; concept D14) ---------------------------------------------------------------------
+// The roadside stop out in the desert, dressed like the concept: a fuel forecourt with pumps under a canopy in front
+// of the filling station, a water tower, the oil lease behind a rail fence (pump jacks, a flare stack, tanks), a dirt
+// airstrip on the east side with a light plane, a windsock and edge lights, a bench and planters at the diner, a
+// vending machine and a phone at the quick stop, saguaros, prickly pear, ocotillo, sandstone boulders, tumbleweeds.
+// The buildings and their businesses stay as they are (countryside.js stop: the quick stop, the diner, the fuel).
+function route9(m, H) {
+  const s = (m.countrySites || []).find((q) => q.name === 'Route 9');
+  const by = (n) => m.buildings.find((b) => b && b.name === n);
+  const fuel = by('Route 9 Fuel'), qs = by('Route 9 Quick Stop'), dn = by('Route 9 Diner');
+  if (!s || !fuel || !qs || !dn) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const open = (tx, ty) => { const t = m.tiles[at(tx, ty)]; return t === T.GRASS || t === T.DIRT || t === T.SAND; };
+  const clear = (x0, y0, x1, y1) => m.props.forEach((p, i) => { if (p && p.t !== 'painted' && p.x >= x0 * TILE && p.x < x1 * TILE && p.y >= y0 * TILE && p.y < y1 * TILE) dropProp(m, i); });
+  // (paving waits till the map's businesses are placed - map.js lateTiles - or a bank would move onto the forecourt)
+  const mine = new Set();
+  const claim = (x0, y0, x1, y1, t = null) => { for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) { if (!open(tx, ty)) continue; if (t) (m._late ||= []).push(at(tx, ty), t); m.reserve[at(tx, ty)] |= RES; if (t) mine.add(at(tx, ty)); } };
+  const solidRun = (ax, ay, bx, by) => { H.addProp(m, 'rail', ax * TILE, ay * TILE, 0, { tx: (bx - ax) * TILE, ty: (by - ay) * TILE }); const L = Math.hypot(bx - ax, by - ay) * TILE; for (let k = 0; k <= L; k += 16) m.addSolidProp((ax + (bx - ax) * k / L) * TILE, (ay + (by - ay) * k / L) * TILE, 7); };
+  const X0 = s.x, X1 = s.x + s.w, Y0 = s.y, Y1 = s.y + s.h, apronY = Y1 - 4;
+  // the fuel forecourt: paved from the diner's east wall to the lot's edge, pumps on two islands under a canopy
+  const fx0 = dn.tx + dn.tw + 1, fy0 = fuel.ty + fuel.th;
+  clear(fx0, fy0, X1, apronY);
+  claim(fx0, fy0, X1, apronY, T.LOT);
+  const pcx = (fx0 + X1) / 2;
+  // (one island of four pumps: one long canopy over them, statics.js addSetPieces)
+  for (const [dx, dy] of [[-3.6, 5.5], [-1.2, 5.5], [1.2, 5.5], [3.6, 5.5]]) { const x = (pcx + dx) * TILE, y = (fy0 + dy) * TILE; (m.sitePumps ||= []).push({ x, y }); m.addSolidProp(x, y, 9); }
+  add('propane', X1 - 1.6, apronY - 1.2, 10, { a: Math.PI / 2 });
+  add('tires', fuel.tx - 0.8, fuel.ty + 1.6, 8); add('drum', fuel.tx - 1.6, fuel.ty + 0.8, 6); add('drum', fuel.tx - 2.3, fuel.ty + 1.3, 6);
+  // at the diner and the quick stop
+  const fy = dn.ty + dn.th + 0.45;
+  add('planter_g', dn.tx + 0.7, fy, 6); add('bench_m', dn.tx + dn.tw - 3.4, fy, 6); add('trashcan', dn.tx + dn.tw - 1.7, fy, 5); add('planter_g', dn.tx + dn.tw - 0.5, fy, 6);   // (clear of the door and the cash machine beside it)
+  add('news_a', dn.tx - 0.6, fy - 0.2, 4); add('news_b', dn.tx - 1.3, fy - 0.2, 4);
+  const qy = qs.ty + qs.th + 0.6;
+  add('vend_cola', qs.tx + 0.8, qy, 7); add('phonebox', qs.tx + qs.tw - 0.8, qy, 8); add('trashcan', qs.tx + 2.2, qy, 5);
+  // behind: a rail fence along the back of the lot, the water tower at its east end
+  clear(X0 - 1, Y0 - 18, X1 + 4, Y0);
+  solidRun(X0, Y0 - 1.3, X1 + 0.5, Y0 - 1.3);
+  add('watertower', X1 + 1.6, Y0 + 0.4, 16, { h: 92 });
+  // the oil lease past the fence: nodding donkeys, a flare stack, two tanks with drums at their feet
+  claim(X0 - 1, Y0 - 17, X1 + 4, Y0 - 1);
+  [[X0 + 6, Y0 - 9.5, 0.1], [X0 + 18, Y0 - 13, 0.45], [X0 + 29, Y0 - 8.5, 0.8]].forEach(([tx, ty, ph]) => { if (open(tx, ty)) add('pumpjack', tx, ty, 18, { ph }); });
+  if (open(X1 - 9, Y0 - 11)) add('flare', X1 - 9, Y0 - 11, 8);
+  if (open(X1 - 1.5, Y0 - 8)) add('otank', X1 - 1.5, Y0 - 8, 26);
+  if (open(X1 - 5.5, Y0 - 6.5)) add('propane', X1 - 5.5, Y0 - 6.5, 12, { a: 0 });
+  for (let k = 0; k < 4; k++) add('drum', X1 - 6.2 + k * 0.7, Y0 - 4.6 + (k % 2) * 0.5, 6);
+  // the airstrip east of the lot: a compacted strip with edge lights, an apron with the plane, a windsock
+  const sx0 = X1 + 5, sy0 = Y0 + 4;
+  let sx1 = sx0;
+  while (sx1 < sx0 + 36 && [0, 1, 2, 3].every((k) => open(sx1, sy0 + k) && !(m.reserve[at(sx1, sy0 + k)] & ~RES))) sx1++;
+  if (sx1 - sx0 >= 18) {
+    clear(sx0 - 2, sy0 - 4, sx1 + 2, sy0 + 9);
+    claim(sx0, sy0, sx1, sy0 + 4, T.LOT);
+    claim(sx0, sy0 + 4, sx0 + 10, sy0 + 8, T.LOT);
+    claim(sx0 - 2, sy0 - 3, sx1 + 2, sy0 + 9);
+    for (let x = sx0 + 1; x < sx1; x += 4) { add('rwlight', x, sy0 + 0.15, 0, { c: 'w' }); add('rwlight', x, sy0 + 3.85, 0, { c: 'w' }); }
+    for (const y of [sy0 + 1, sy0 + 2.5]) { add('rwlight', sx0 + 0.2, y, 0, { c: 'g' }); add('rwlight', sx1 - 0.2, y, 0, { c: 'r' }); }
+    add('lplane', sx0 + 4.5, sy0 + 6.1, 26, { c: 0, a: 0 });
+    add('windsock', sx0 + 13, sy0 - 1.8, 4, { a: 0.2 });
+    add('drum', sx0 + 8.6, sy0 + 7.2, 6); add('drum', sx0 + 9.2, sy0 + 6.6, 6);
+    m.natureSites.push({ kind: 'airstrip', name: 'Route 9 Airstrip', x: Math.round((sx0 + sx1) / 2 * TILE), y: Math.round((sy0 + 2) * TILE), plane: { x: Math.round((sx0 + 4.5) * TILE), y: Math.round((sy0 + 6.1) * TILE) } });
+  }
+  // the desert round it: saguaros, prickly pear, cholla, ocotillo, agave, yucca, creosote; sandstone boulders; tumbleweeds
+  const near = (tx, ty, d) => { for (let dy = -d; dy <= d; dy++) for (let dx = -d; dx <= d; dx++) { const t = m.tiles[at(tx + dx, ty + dy)]; if (t === T.ROAD || t === T.LOT || t === T.BUILDING || t === T.WATER || t === T.DEEP || t === T.WALL) return true; } return false; };
+  const SMALL = ['pear', 'barrel', 'cholla', 'ocotillo', 'agave', 'yucca', 'creosote', 'brittle', 'pear', 'sage'];
+  let nBig = 0, nSmall = 0, nRock = 0;
+  for (let ty = Y0 - 22; ty < Y1 + 16; ty++) for (let tx = X0 - 14; tx < X1 + 44; tx++) {
+    const h = hash2(tx, ty, 1901);
+    if (h > 0.06 || !open(tx, ty) || (m.reserve[at(tx, ty)] & ~RES) || near(tx, ty, 1)) continue;
+    if ([-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => mine.has(at(tx + dx, ty + dy)))) || (tx >= X0 - 1 && tx < X1 + 4 && ty >= Y0 - 2 && ty < Y1)) continue;   // (the lot, the forecourt and the strip stay clear)
+    if (tx >= X0 - 1 && tx < X1 + 4 && ty >= Y0 - 17 && ty < Y0 - 2 && h > 0.016) continue;   // (the lease: a few saguaros and rocks only)
+    const jx = hash2(tx, ty, 1902) * 0.6 + 0.2, jy = hash2(tx, ty, 1903) * 0.6 + 0.2;
+    if (h < 0.011 && nBig < 14) { add('tree_a', tx + jx, ty + jy, 8, { sp: h < 0.006 ? 'saguaroBig' : 'saguaroMid', k: 1.1 }); nBig++; }
+    else if (h < 0.016 && nRock < 12) { add('boulder', tx + jx, ty + jy, 18, { s: 26 + Math.round(hash2(tx, ty, 1904) * 22) }); nRock++; }
+    else if (h < 0.019) add('shrub_a', tx + jx, ty + jy, 0, { sp: 'tumble', k: 1 });
+    else if (nSmall < 70) { add('shrub_a', tx + jx, ty + jy, 0, { sp: SMALL[Math.floor(hash2(tx, ty, 1905) * SMALL.length)], k: 1 }); nSmall++; }
+  }
+  // signs: a curve warning on the way in, the message board at the lot's west end
+  add('mapboard', X0 - 1.4, apronY + 1.2, 10);
+  add('roadsign', X0 + (s.w >> 1) - 4, Y1 + 3, 4, { k: 'curve', a: 0 });
+  m.natureSites.push({ kind: 'diner', name: 'Route 9', x: Math.round((X0 + s.w / 2) * TILE), y: Math.round((apronY + 2) * TILE), forecourt: { x: Math.round(pcx * TILE), y: Math.round((fy0 + 6) * TILE) } });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------

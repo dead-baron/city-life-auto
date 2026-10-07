@@ -57,5 +57,6 @@ export const DEV_SECTIONS = [
     ['🔭 Fire lookout', 'near', { k: 'lookout' }], ['🦢 Heron Marsh', 'near', { k: 'marsh' }], ['🌸 Botanical gardens', 'near', { k: 'gardens' }],
     ['⛏ Old mine', 'near', { k: 'mine' }], ['🔭 Observatory', 'near', { k: 'observatory' }], ['🪨 Quarry', 'near', { k: 'quarry' }],
     ['🌬 Wind farm', 'near', { k: 'wind' }], ['🛢 Oil field', 'near', { k: 'oil' }], ['☀ Solar farm', 'near', { k: 'solar' }],
+    ['⛽ Roadside stop', 'near', { k: 'stop' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }], ['🌳 Lakeview Park', 'near', { k: 'park' }],
   ] },
 ];

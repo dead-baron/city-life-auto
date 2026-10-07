@@ -1150,7 +1150,7 @@ function voxModel(m, a) {
     case 'controlTower': return RD.controlTower(a[0], a[1]); case 'fence': return D.fence(a[0], a[1], a[2] || {}); case 'fenceKind': return K.fenceKind(a[0], a[1]); case 'gatePillar': return D.gatePillar(a[0], a[1]);
     case 'compoundWall': return TW.compoundWall(a[0], a[1], a[2]); case 'guardTower': return TW.guardTower(a[0], a[1]); case 'hedge': return P.hedge(a[0], a[1]); case 'volleyNet': return P.volleyNet(a[0]);
     case 'soccerGoal': return PK.soccerGoal(a[0], a[1], a[2]); case 'terrace': return U.terrace(a[0], a[1], a[2], a[3]); case 'hayBale': return U.hayBale(a[0]); case 'scarecrow': return U.scarecrow();
-    case 'windmill': return U.windmill(a[0]); case 'waterTower': return U.waterTower(a[0]); case 'piling': return P.piling(a[0]); case 'mooring': return X.mooringBollard(); case 'lounger': return D.lounger(a[0]);
+    case 'windmill': return U.windmill(a[0]); case 'waterTower': return U.waterTower(a[0]); case 'lightPlane': return U.lightPlane(a[0]); case 'windsock': return U.windsock(); case 'piling': return P.piling(a[0]); case 'mooring': return X.mooringBollard(); case 'lounger': return D.lounger(a[0]);
     case 'hammock': return TW.hammock(a[0]); case 'boulder': return D.boulder(a[0], a[1], a[2]); case 'statue': return PK.statue(); case 'flagpole': return U.flagpole(a[0], a[1]); case 'jersey': return K.jerseyBarrier(a[0], a[1]);
     case 'forklift': return X.forklift(a[0], a[1]); case 'container': return X.container(a[0], a[1]); case 'clockPost': return RD.clockPost(); case 'stopPole': return X.stopPole(a[0]); case 'gazebo': return PK.gazebo(); case 'archBridge': return PK.archBridge(a[0] || 120, a[1] || 26, a[2] || 16); case 'parkSign': return PK.parkSign(a[0]);
     case 'beachChair': return PK.beachChair(a[0]); case 'lifeguard': return P.lifeguardTower(); case 'cafeTable': return P.cafeTable(); case 'chalkboard': return P.chalkboard(); case 'topiary': return D.topiary(a[0], a[1]);
@@ -1204,7 +1204,7 @@ function vdim(m, a) {
     case 'fence': return [a[1] || 60, 6, ({ picket: 16, wood: 30, chain: 32, iron: 28, stone: 12 }[a[0]] || 20) + 6]; case 'fenceKind': return [a[1] || 60, 6, 26]; case 'gatePillar': return [14, 14, (a[1] || 36) + 16];
     case 'compoundWall': return [a[0] || 80, 10, (a[1] || 40) + 8]; case 'guardTower': return [40, 40, (a[0] || 70) + 40]; case 'hedge': return [a[0] || 40, 10, (a[1] || 12) + 3]; case 'volleyNet': return [a[0] || 70, 4, 26];
     case 'soccerGoal': return [a[2] || 18, a[0] || 60, a[1] || 32]; case 'terrace': return [a[0] || 300, a[1] || 60, a[2] || 40]; case 'hayBale': return [24, 16, 16]; case 'scarecrow': return [30, 8, 56];
-    case 'windmill': return [40, 40, (a[0] || 120) + 26]; case 'waterTower': return [40, 40, (a[0] || 90) + 40]; case 'piling': return [8, 8, a[0] || 20]; case 'mooring': return [14, 14, 16]; case 'lounger': return [34, 14, 16];
+    case 'windmill': return [40, 40, (a[0] || 120) + 26]; case 'waterTower': return [40, 40, (a[0] || 90) + 40]; case 'lightPlane': return [86, 112, 39]; case 'windsock': return [30, 6, 48]; case 'piling': return [8, 8, a[0] || 20]; case 'mooring': return [14, 14, 16]; case 'lounger': return [34, 14, 16];
     case 'hammock': return [a[0] || 40, 10, 22]; case 'boulder': return [Math.ceil((a[1] || 22) * 1.2) + 4, Math.ceil((a[1] || 22) * 1.2) + 4, Math.ceil((a[1] || 22) * 0.9) + 2]; case 'statue': return [24, 24, 84];
     case 'flagpole': return [46, 8, (a[0] || 110) + 4]; case 'jersey': return [a[0] || 48, 14, 18]; case 'forklift': return [46, 26, 50]; case 'container': return [a[1] || 130, 54, 58]; case 'clockPost': return [16, 10, 64];
     case 'stopPole': return [14, 8, 60]; case 'gazebo': return [74, 74, 86]; case 'archBridge': return [a[0] || 120, a[1] || 26, (a[2] || 16) + 22]; case 'parkSign': return [26, 6, 30]; case 'beachChair': return [26, 14, 16]; case 'lifeguard': return [34, 30, 46]; case 'cafeTable': return [14, 14, 12]; case 'chalkboard': return [12, 8, 18];
@@ -1624,6 +1624,10 @@ function propItems(c, p, pi, I) {
     case 'plane': V(`pln:${qa(p.a ?? -PI / 2, 8).toFixed(2)}`, 'airliner', [300, 270, pick(['#c83a30', '#2a5aa8', '#2a8a6a'], u)], qa(p.a ?? -PI / 2, 8)); return;
     case 'radiotower': V('rt', 'cellTower', [190]); lightAt(I, x, y, 196, 70, [1, 0.15, 0.1], 1.4, 'sign', 1); return;
     case 'otank': V('otk', 'tank', [46, 96, '#a8acb0']); return;
+    case 'lplane': { const c = ['#c83a30', '#2a5aa8', '#2a8a6a', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 8); V(`lpl:${c}:${hd.toFixed(2)}`, 'lightPlane', [c], hd); return; }
+    case 'windsock': V(`wsk:${qa(p.a || 0, 8).toFixed(2)}`, 'windsock', [], qa(p.a || 0, 8)); return;
+    case 'watertower': V(`wtw:${p.h || 90}`, 'waterTower', [p.h || 90]); return;
+    case 'propane': V(`prp:${qa(p.a || 0, 4).toFixed(2)}`, 'propane', [], qa(p.a || 0, 4)); return;
     case 'scope': V('scp', 'viewer', []); return;
     case 'dome': V('dome', 'dome', [150]); lightAt(I, x, y + 40, 40, 120, [1, 0.85, 0.6], 1, 'window'); return;
     case 'flare': V('flr', 'flare', [1]); lightAt(I, x, y, 92, 200, LIGHT.fire, 2.4, 'fire', 0); return;

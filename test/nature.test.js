@@ -271,3 +271,21 @@ test('Lakeview Park: gravel paths from the gates to the fountain, a duck pond wi
   assert.ok((m.parkGrounds || []).some((r) => inPark(r.x + 1, r.y + 1) && r.plaza && inPark(r.plaza.x, r.plaza.y)));
   assert.ok(m.landmarks.some((l) => l.name === 'Lakeview Park'));
 });
+
+test('Route 9: the desert stop dressed like D14 - pumps under a canopy on a paved forecourt, the oil lease, an airstrip with a plane; its businesses where they were', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'diner' && q.name === 'Route 9');
+  assert.ok(s, 'Route 9 is dressed');
+  const pumps = m.pumps.filter((p) => Math.hypot(p.x - s.forecourt.x, p.y - s.forecourt.y) < 220);
+  assert.equal(pumps.length, 4, 'four pumps on the forecourt');
+  for (const p of pumps) assert.equal(tileAt(p.x, p.y), T.LOT, 'pumps on paving');
+  // the stop's businesses stay: the quick stop, the bank (in the diner) and the fuel counter
+  const kinds = m.pois.filter((p) => Math.abs(p.x - s.x) < 900 && Math.abs(p.y - s.y) < 500).map((p) => p.kind);
+  for (const k of ['convenience', 'bank', 'delivery']) assert.ok(kinds.includes(k), k);
+  const a = (m.natureSites || []).find((q) => q.kind === 'airstrip');
+  assert.ok(a, 'the airstrip');
+  assert.equal(tileAt(a.x, a.y), T.LOT, 'the strip is paved');
+  assert.ok(m.props.some((q) => q && q.t === 'lplane' && Math.hypot(q.x - a.plane.x, q.y - a.plane.y) < 20), 'the plane');
+  for (const k of ['pumpjack', 'flare', 'watertower', 'windsock', 'otank']) assert.ok(m.props.some((q) => q && q.t === k && Math.abs(q.x - s.x) < 2400 && Math.abs(q.y - s.y) < 1200), k);
+  for (const q of m.props) if (q && q.t !== 'painted' && q.t !== 'rwlight' && q.t !== 'lplane' && q.t !== 'drum' && q.t !== 'propane' && Math.abs(q.x - a.x) < 400 && Math.abs(q.y - a.y) < 64) assert.fail(`${q.t} on the strip`);
+  assert.ok(!m._late, 'the late paving is applied');
+});

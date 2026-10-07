@@ -2509,3 +2509,23 @@ The city park on Lakeview's south shore was a lawn with a square ring path and s
   - park signs at the gates.
 - The east side backs onto the railway, so there is no east gate.
 - On the map as Lakeview Park. Homes unchanged.
+
+## 2026-10-07 · Route 9, the desert stop (concept D14)
+
+The roadside stop in the Dry Creek Desert was three boxes on a gravel strip. It is now dressed like the D14 desert diner (`shared/naturesites.js` `route9`). Its buildings and businesses stay where they were: the quick stop, the bank in the diner, and the fuel counter.
+- **The fuel forecourt:** paved in front of the filling station. Four pumps stand on one island under a long canopy with a lit red band.
+  - The map now lets a designed place add its own pumps (`m.sitePumps`). `buildCornerStores` starts from them, and the client draws the canopy over them as for any Gas 'n Go.
+  - A propane tank, tyres and oil drums sit by the station.
+- **At the diner and the quick stop:**
+  - planters, a bench and a bin beside the bank's door, kept clear of its cash machine;
+  - newspaper boxes;
+  - a cola machine and a phone booth at the quick stop.
+- **Behind the lot:** a rail fence along the back, with a wooden water tower at its east end.
+  - Past the fence is the oil lease: three nodding pump jacks, a flare stack, a tank and a propane tank with drums at their feet.
+- **The airstrip:** a paved strip east of the lot with white edge lights and green/red threshold lights.
+  - A light plane is parked on the apron. It is a new voxel model: a high-wing single engine with a coloured cheat line, cabin windows, struts, a striped fin and a prop blur (`props-rural.js` `lightPlane`).
+  - Also a windsock (now hooked up as a prop) and fuel drums.
+- **The desert round it:** saguaros, prickly pear, barrel cactus, cholla, ocotillo, agave, yucca, creosote and sage; red sandstone boulders; tumbleweeds. The paving and the strip are kept clear.
+- **Signs:** a curve warning on the way in and the message board at the lot's west end.
+- **Late paving:** the forecourt and the strip are repaved at the very end of the map build (`map.js` `lateTiles`). Otherwise the bank would choose the newly paved forecourt and move, and the paint shop and cash machines with it. POIs, buildings and homes are identical to before.
+- **Debug menu:** new buttons under Nature & landmarks: ⛽ Roadside stop, 🛩 Desert airstrip, 🌳 Lakeview Park.

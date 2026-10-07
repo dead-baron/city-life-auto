@@ -561,6 +561,7 @@ export function generateCity(seed = 1337) {
   aimLamps(m);
   m.levels = buildLevels(m);
   buildCameras(m, rand);
+  lateTiles(m);
 
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');
   const pd = m.pois.find((p) => p.kind === 'police');
@@ -2464,12 +2465,22 @@ function carvePoolLot(m, sb) {
   return null;
 }
 
+// Ground a designed place repaves once every business, cash machine and camera has found its spot, so none of
+// those choices move because of it (naturesites.js route9: the fuel forecourt and the airstrip). Pairs in m._late:
+// tile index, new tile.
+function lateTiles(m) {
+  const L = m._late;
+  if (!L) return;
+  for (let k = 0; k < L.length; k += 2) m.tiles[L[k]] = L[k + 1];
+  delete m._late;
+}
+
 // Corner stores: the convenience-store storefronts become real shops you can walk into (and
 // rob). A few of them, out on the main roads, are Gas 'n Go stations with pumps out front.
 function buildCornerStores(m) {
   const conv = m.pois.filter((p) => p.kind === 'delivery' && m.buildings[p.b] && (m.buildings[p.b].kind === 'conv' || m.buildings[p.b].kind === 'liquor' || m.buildings[p.b].kind === 'quickstop'));
   const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
-  m.pumps = [];
+  m.pumps = (m.sitePumps || []).slice();   // (the designed places' own forecourts first: naturesites.js route9)
   const gas = [];
   for (const p of [...conv].sort((a, b) => hash2(a.x | 0, a.y | 0, 41) - hash2(b.x | 0, b.y | 0, 41))) {
     if (m.buildings[p.b].kind === 'liquor' || gas.length >= 5 || gas.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 3500)) continue;
