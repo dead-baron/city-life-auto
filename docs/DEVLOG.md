@@ -2882,3 +2882,10 @@ The empty ground between the designed places now has about forty small scenes to
 - There are at most eight in a district, at least 26 tiles apart, well clear of roads, buildings, water and every other place.
 - Trees are kept off the ground just south of each one, so it isn't hidden behind them in this view.
 - Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Ring the old mission's bells
+
+Stand at the Old Mission Ruins' great doorway and press the action button to haul on the old rope (`server/systems/places.js`, a home for small things to do at the designed places).
+- **The sound:** three slow strikes ring out over the desert for everyone nearby. It is a new deep bell with its hum and overtones (`client/audio.js` `churchbell`), and it carries about twice as far as other sounds.
+- **While they ring:** you can't ring them again until they stop.
+- The README's controls table mentions the bells under Interact.

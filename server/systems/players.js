@@ -16,6 +16,7 @@ import * as law from './law.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as picking from './picking.js';
+import * as places from './places.js';
 import * as homes from './homes.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
@@ -470,6 +471,8 @@ export function findInteraction(world, p) {
 
   const fruit = picking.interaction(world, p);
   if (fruit) return fruit;
+  const place = places.interaction(world, p);
+  if (place) return place;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);

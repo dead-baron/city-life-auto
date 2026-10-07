@@ -436,3 +436,25 @@ test('picking fruit: apples at the orchard, grapes on the vines; a tree is picke
   economy.handleMenu(w, p, store_.id, 's:apple');
   assert.ok(p.profile.bank > bank0 && !p.profile.inventory.apple, `sold the apples (bank ${bank0} -> ${p.profile.bank})`);
 });
+
+test('the old mission\'s bells: ring them from the doorway; three strikes everyone near hears; not again while they ring', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const ms = w.map.natureSites.find((q) => q.kind === 'mission');
+  assert.ok(ms, 'the mission is on the map');
+  teleport(w, p.ped, ms.door.x, ms.door.y);
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /Ring the mission bells/.test(act.label), `the prompt (${act && act.label})`);
+  const evs = [];
+  const emit0 = w.emit.bind(w);
+  w.emit = (x, y, ev) => { if (ev.e === 'bells') evs.push(ev); emit0(x, y, ev); };
+  act.run();
+  assert.equal(evs.length, 1, 'the bells ring');
+  assert.equal(evs[0].n, 3, 'three strikes');
+  players.findInteraction(w, p).run();
+  assert.equal(evs.length, 1, 'not again while they ring');
+  run(w, 7);
+  players.findInteraction(w, p).run();
+  assert.equal(evs.length, 2, 'again once they stop');
+  w.emit = emit0;
+});
