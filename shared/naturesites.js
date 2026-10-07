@@ -90,6 +90,74 @@ export function buildNatureSites(m, H) {
   beachBonfire(m, H);
   desertCamp(m, H);
   summitTarn(m, H);
+  heronMarsh(m, H);
+}
+
+// ---- Heron Marsh (Lake District; concepts N7, NK1-O) --------------------------------------------------------------
+// Heron Lake's east side opens into a marsh: channels of still water between reed islands, lily pads, a boardwalk
+// with rails across it; a beaver dam where the lake spills out to the south with the lodge beside it; a fishing
+// pier with a lantern on the west shore, a canoe on the bank; willows round the edges; herons, swans and ducks.
+function heronMarsh(m, H) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
+  for (let ty = 970; ty < 1030; ty++) for (let tx = 660; tx < 710; tx++) if (m.lake[ty * MAP_W + tx]) { n++; x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
+  if (n < 100) return;
+  const cyL = (y0 + y1) / 2, open = (i) => m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT;
+  const setWater = (i) => { m.tiles[i] = T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; };
+  // the marsh: east of the lake, channels where a noise is low, reed islands between
+  const marsh = [];
+  for (let ty = y0 + 2; ty <= y1 - 2; ty++) for (let tx = x1 - 3; tx <= x1 + 13; tx++) {
+    const i = ty * MAP_W + tx;
+    if (!open(i) || m.reserve[i]) continue;
+    const e = (tx - x1) / 13, v = 0.55 * hash2(tx >> 1, ty >> 1, 941) + 0.45 * hash2(tx >> 2, ty >> 2, 942);
+    if (v < 0.62 - e * 0.25) { setWater(i); marsh.push(i); } else m.reserve[i] |= RES;
+  }
+  // the outflow: from the lake's south tip, a creek south-east, the beaver dam across its mouth
+  let sx = 0, sy = 0;
+  for (let tx = x0; tx <= x1; tx++) for (let ty = y1; ty >= y0; ty--) if (m.lake[ty * MAP_W + tx]) { if (ty > sy) { sy = ty; sx = tx; } break; }
+  const mouth = [(sx + 0.5) * TILE, (sy + 1) * TILE];
+  const creek = spline([[mouth[0], mouth[1] - 8], [mouth[0] + 40, mouth[1] + 140], [mouth[0] + 150, mouth[1] + 260], [mouth[0] + 210, mouth[1] + 420]]);
+  carveWater(m, creek, (t) => 26 + t * 6);
+  for (const p of creek) reserveRound(m, p[0], p[1], 50);
+  const dam = [mouth[0] + 8, mouth[1] + 36];
+  for (let dx = -60; dx <= 60; dx += 14) m.addSolidProp(dam[0] + dx, dam[1], 10);
+  H.addProp(m, 'beaverdam', Math.round(dam[0]), Math.round(dam[1]), 0, { len: 130 });
+  H.addProp(m, 'lodge', Math.round(mouth[0] - 70), Math.round(mouth[1] - 50), 26);
+  // the boardwalk: north to south over the marsh, planks (dock tiles) wherever it crosses water, rails drawn over
+  const bx = Math.round((x1 + 7) * TILE), by0 = Math.round((y0 + 3) * TILE), by1 = Math.round((y1 - 3) * TILE);
+  for (let y = by0; y <= by1; y += TILE) for (const o of [-16, 16]) { const i = at(bx + o, y); if (m.tiles[i] === T.WATER || open(i)) { m.tiles[i] = T.DOCK; m.lake[i] = 0; m.reserve[i] |= RES; } }
+  H.addProp(m, 'boardwalk', bx, Math.round((by0 + by1) / 2), 0, { len: by1 - by0 + 32 });
+  // the fishing pier on the west shore, the canoe beside it
+  const py = Math.round(cyL * TILE), px0 = (x0 - 1) * TILE;
+  let pierEnd = px0;
+  for (let k = 1; k <= 5; k++) { const i = at(px0 + k * TILE + 16, py); if (m.tiles[i] !== T.WATER) break; for (const o of [-16, 16]) { const j = at(px0 + k * TILE + 16, py + o); if (m.tiles[j] === T.WATER) { m.tiles[j] = T.DOCK; m.reserve[j] |= RES; } } pierEnd = px0 + k * TILE + 16; }
+  if (pierEnd > px0) H.addProp(m, 'pier', Math.round((px0 + pierEnd) / 2 + 16), py, 0, { len: pierEnd - px0 + 16 });
+  H.addProp(m, 'canoe', px0 - 40, py + 70, 0, { a: 1.3 });
+  // lily pads in the quiet water, cattails and reeds on the islands' edges
+  for (let k = 0; k < 14; k++) {
+    const i = marsh.length ? marsh[Math.floor(hash2(k, 1, 943) * marsh.length)] : -1;
+    if (i < 0) break;
+    H.addProp(m, 'lily', (i % MAP_W + 0.5) * TILE, (Math.floor(i / MAP_W) + 0.5) * TILE, 0, { v: k % 4 });
+  }
+  for (let k = 0; k < 6; k++) H.addProp(m, 'lily', (x0 + 3 + hash2(k, 2, 944) * (x1 - x0 - 6)) * TILE, (y0 + 3 + hash2(k, 3, 944) * (y1 - y0 - 6)) * TILE, 0, { v: k % 4 });
+  // reeds and cattails thick on the islands' edges and along the lake's east shore
+  for (let ty = y0; ty <= y1 + 2; ty++) for (let tx = x1 - 4; tx <= x1 + 14; tx++) {
+    const i = ty * MAP_W + tx;
+    if (!open(i)) continue;
+    const wet = [i - 1, i + 1, i - MAP_W, i + MAP_W].filter((j) => m.tiles[j] === T.WATER).length;
+    if (!wet || hash2(tx, ty, 947) < 0.25) continue;
+    const r = hash2(tx, ty, 948), sp = r < 0.45 ? 'cattails' : r < 0.85 ? 'reeds' : 'tallGrass';
+    H.addProp(m, 'shrub_a', (tx + 0.2 + hash2(tx, ty, 949) * 0.6) * TILE, (ty + 0.2 + hash2(tx, ty, 950) * 0.6) * TILE, 0, { sp, k: 1 });
+  }
+  // willows round the edges, the waterfowl and the herons
+  for (const [tx, ty] of [[x0 - 2, y0 + 4], [x0 - 3, cyL + 5], [x1 + 2, y0 - 1], [x1 + 15, cyL], [x0 + 4, y1 + 3], [x1 + 14, y1 - 2]]) {
+    const i = Math.round(ty) * MAP_W + Math.round(tx);
+    if (!open(i)) continue;
+    H.addProp(m, 'tree_a', (Math.round(tx) + 0.5) * TILE, (Math.round(ty) + 0.5) * TILE, 12, { sp: 'willow', k: 1.5 });
+  }
+  for (const [fx, fy, t] of [[0.3, 0.3, 'swan'], [0.42, 0.36, 'swan'], [0.6, 0.62, 'duck'], [0.64, 0.66, 'duck'], [0.58, 0.7, 'duck']]) H.addProp(m, t, (x0 + fx * (x1 - x0)) * TILE, (y0 + fy * (y1 - y0)) * TILE, 0, { a: hash2(Math.round(fx * 100), 1, 945) * 6.28 });
+  for (let k = 0, placed = 0; k < marsh.length && placed < 2; k += 7) { const i = marsh[k]; if (hash2(k, 4, 946) < 0.5) continue; H.addProp(m, 'heron', (i % MAP_W + 0.5) * TILE, (Math.floor(i / MAP_W) + 0.5) * TILE, 0); placed++; }
+  (m.landmarks ||= []).push({ name: 'Heron Marsh', type: 'marsh', x: (x0 - 4) * TILE, y: (y0 - 2) * TILE, w: (x1 - x0 + 20) * TILE, h: (y1 - y0 + 8) * TILE });
+  m.natureSites.push({ kind: 'marsh', name: 'Heron Marsh', x: Math.round((x1 + 6) * TILE), y: Math.round(cyL * TILE), dam: { x: Math.round(dam[0]), y: Math.round(dam[1]) }, boardwalk: { x: bx, y0: by0, y1: by1 }, marsh: marsh.length });
 }
 
 // ---- Granite Peaks: Summit Tarn and the fire lookout (concept N5) -----------------------------------------------

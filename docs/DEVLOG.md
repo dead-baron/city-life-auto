@@ -2312,3 +2312,14 @@ nothing else in the world moves).
 - **Granite Peaks is mountain everywhere:** where the terrain map said dry, it now grows pines, heather and alpine flowers with granite rocks, instead of cactus and red sandstone (`wildBiome` in `shared/map.js`, shared with the ground and the art).
 - **The alpine ground cover is lighter:** fewer juniper mats, more daisies and lupines.
 - **Test fix:** the driving-prediction test clears other cars off its road; a parked or passing car could bump the test car and make it flaky.
+
+## 2026-10-06 · Heron Marsh (Lake District; concepts N7, NK1-O)
+
+Heron Lake's east side opens into a marsh (`shared/naturesites.js` `heronMarsh`).
+- **The marsh** is channels of still water between reed islands, thick with cattails, reeds and tall grass, and lily pads float in the quiet water.
+- **A boardwalk with rails** runs north to south across it. It is planks the whole way, so you can walk it.
+- **The beaver dam** sits where the lake spills out into a creek to the south (solid), with the lodge in the lake beside it.
+- **On the west shore:** a fishing pier with its lantern, and a canoe on the bank.
+- **Round the edges and on the water:** willows; swans, ducks and a heron.
+- **Meadow grass:** a designed nature place in town (reserve bit 32) grows meadow grass instead of the district's lawn (`groundbake.js`).
+- On the map as "Heron Marsh". Tests in `test/nature.test.js`.

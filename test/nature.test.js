@@ -116,3 +116,16 @@ test('Granite Peaks: Summit Tarn spills over a solid ledge into a creek; the cab
   const peaks = m.props.filter((q) => q && m.dist[Math.floor(q.y / TILE) * m.w + Math.floor(q.x / TILE)] === 33);
   assert.equal(peaks.filter((q) => q.t === 'cactus').length, 0, 'no cactus in Granite Peaks');
 });
+
+test('Heron Marsh: channels and reed islands, a boardwalk you can walk, the beaver dam (solid), the pier, wildlife', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'marsh');
+  assert.ok(s && s.marsh > 60, `marsh channels (${s && s.marsh})`);
+  let planks = 0;
+  for (let y = s.boardwalk.y0; y <= s.boardwalk.y1; y += 32) if (tileAt(s.boardwalk.x, y) === T.DOCK) planks++;
+  assert.ok(planks >= 6, `the boardwalk is planks all the way (${planks})`);
+  assert.ok(solidNear(s.dam.x, s.dam.y, 12), 'the beaver dam is solid');
+  const near = (t) => m.props.filter((q) => q && q.t === t && Math.hypot(q.x - s.x, q.y - s.y) < 1400).length;
+  assert.ok(near('lily') >= 8 && near('swan') >= 1 && near('duck') >= 2 && near('heron') >= 1, 'lilies, swans, ducks, a heron');
+  assert.ok(m.props.filter((q) => q && (q.sp === 'cattails' || q.sp === 'reeds') && Math.hypot(q.x - s.x, q.y - s.y) < 700).length >= 30, 'reeds and cattails');
+  assert.ok(m.landmarks.some((l) => l.name === 'Heron Marsh'));
+});

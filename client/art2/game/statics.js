@@ -46,6 +46,7 @@ import * as WL from '../props-wild.js';
 import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
 import * as WT from '../water.js';
+import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
 import * as TR from '../trees.js';
 import { boulder as rockLump, outcrop, rockSprite, seaStack } from '../terrain.js';
@@ -315,6 +316,8 @@ export function makeStatic(r) {
     case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist });
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);
+    case 'critter': { const fr = critterFrames(r.k); return (fr && fr[r.f || 0]) || EMPTY; }
+    case 'lily': { const G = FL.lilyPads(r.s || 1, 7, 2); return G && G.render ? G.render(0) : G; }
     case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });
     case 'towel': return makeTowel(r);
     case 'stack': return seaStack(r.s || 1, r.r || 26, r.h || 150, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 2 } });
@@ -1126,6 +1129,9 @@ function voxModel(m, a) {
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
     case 'creekRail': return creekRail(a[0] || 200);
+    case 'beaverDam': return GD.beaverDam(a[0] || 130, 26, 14, 0.6, 3); case 'lodge': return GD.beaverLodge(28, 22, 2);
+    case 'boardwalk': return GD.boardwalk(a[0] || 160, 34, 8, 'ns'); case 'pier': return GD.fishingPier(a[0] || 120, 30, 10, 0.7);
+    case 'canoe': return WT.canoe(0, a[0] || '#b83a2e'); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
     case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46);
@@ -1168,6 +1174,8 @@ function vdim(m, a) {
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
     case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
+    case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, 30, 54];
+    case 'canoe': return [64, 16, 12]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
     case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'driftwood': return [a[0] || 50, 16, 10];
@@ -1556,6 +1564,15 @@ function propItems(c, p, pi, I) {
       return;
     }
     case 'mapboard': V('mapb', 'mapBoard', []); return;
+    case 'beaverdam': V(`bdam:${p.len || 130}`, 'beaverDam', [p.len || 130]); return;
+    case 'lodge': V('lodge', 'lodge', []); return;
+    case 'boardwalk': V(`bwalk:${p.len || 160}`, 'boardwalk', [p.len || 160], PI / 2); return;
+    case 'pier': V(`pier:${p.len || 120}`, 'pier', [p.len || 120]); lightAt(I, x + (p.len || 120) / 2 - 10, y, 40, 110, [1, 0.8, 0.5], 1.4, 'lamp'); return;
+    case 'canoe': V(`canoe:${qa(p.a || 0, 8).toFixed(2)}`, 'canoe', ['#b83a2e'], qa(p.a || 0, 8)); return;
+    case 'swan': V(`swan:${qa(p.a || 0, 8).toFixed(2)}`, 'swan', [], qa(p.a || 0, 8)); return;
+    case 'duck': V(`duck:${qa(p.a || 0, 8).toFixed(2)}`, 'duck', [true], qa(p.a || 0, 8)); return;
+    case 'heron': put(I, { key: 'heron:0', recipe: { t: 'critter', k: 'heron', f: 0 }, x, y, ext: [24, 44, 24, 10], pi }); return;
+    case 'lily': put(I, { key: `lily:${p.v || 0}`, recipe: { t: 'lily', s: (p.v || 0) + 1 }, x, y, ext: [50, 30, 50, 30], pi }); return;
     case 'logcabin': V('lcab', 'logCabin', [96, 60, 0.6]); lightAt(I, x, y + 8, 22, 120, [1, 0.78, 0.46], 1.4, 'window'); return;
     case 'lookout': V('lkout', 'lookout', [110, 0.6]); lightAt(I, x, y, 130, 140, [1, 0.82, 0.5], 1.2, 'window'); return;
     case 'outcrop': put(I, { key: `oc:${p.style || 'granite'}:${p.w || 80}:${p.d || 50}:${p.h || 46}:${(p.s || 1) % 4}`, recipe: { t: 'outcrop', style: p.style || 'granite', w: p.w || 80, d: p.d || 50, h: p.h || 46, s: (p.s || 1) % 4 }, x, y, ext: [(p.w || 80) / 2 + 16, (p.h || 46) + (p.d || 50) / 2 + 20, (p.w || 80) / 2 + 16, (p.d || 50) / 2 + 16], pi }); return;
