@@ -3138,3 +3138,10 @@ On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesi
   - The two hand-placed giants that stood between the road and the pool have moved up and down the road, and one by the pool has moved to its west side.
   - No grove giant stands in front of the pool (`m.noTree`). Ferns still grow there.
   - From the south you see the creek coming down, the falls, the pool and the footbridge, framed by giants on both sides.
+
+## 2026-10-07 · Inside a hospital, the whole building opens up
+
+- **Walk-in buildings are cut away whole** (backlog: "hospitals and large interiors should be one transparent building when you're inside").
+  - Before, only the sections with a room you could walk into were cut away when you stepped inside. A hospital showed one open room next to a roofed block with its helipad.
+  - Now every section of a walk-in building has a cut-away version (`statics.js` `addBuildings`, `cutRecipe`), so the whole building opens as one.
+  - A section with no room of its own (a wing) shows its floor all across, with the walls cut low round it.

@@ -1022,7 +1022,9 @@ function addBuildings(c, I) {
         if (up) { const zU = zD + roofDeckZ(up.spec); top = Math.max(top, zD + buildingH(up.spec) + 4, kTop(up.kit, zU)); }
         const key = `b:${bi}:${s.k}`;
         it = { key, recipe: { t: 'b', spec, kit, up, stands: !!s.stands }, x: x0, y: y1, ext: [2, d + top + 4, w + 2, 4] };
-        if (b.walkIn && s.walk) {
+        // inside a walk-in building the whole of it is cut away - the rooms you can walk into and the wings you
+        // can't (a hospital's) alike - so it reads as one building, not one open room beside a roofed block
+        if (b.walkIn) {
           const sec = s, bld = b, base = it;
           it.cut = () => base._cut || (base._cut = { ...base, key: 'cut:' + base.key, recipe: cutRecipe(c, bld, sec, spec), ext: [2, d + Math.min(buildingH(spec), 120) + 12, w + 2, 4] });
         }
@@ -2727,7 +2729,10 @@ function cutRecipe(c, b, s, spec) {
     if (ux1 < ux0) continue;
     units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE });
   }
-  return { t: 'cut', w: W, d: Dd, H: Math.min(buildingH(spec), 120), wall: spec.style || 'stucco', wallColor: spec.wallColor || null, seed: spec.seed, units, inY0: (wi.y0 - s.ty) * TILE, inY1: (wi.y1 - s.ty + 1) * TILE };
+  // a wing with no room you walk into (a hospital's wards): its floor all across, walls cut low round it
+  const inY0 = Math.max(32, Math.min(Dd - 64, (wi.y0 - s.ty) * TILE)), inY1 = Math.max(inY0 + 32, Math.min(Dd - 32, (wi.y1 - s.ty + 1) * TILE));
+  const wing = units.length ? null : FLOORK[(wi.units[0] || {}).kind] || 'tileWhite';
+  return { t: 'cut', w: W, d: Dd, H: Math.min(buildingH(spec), 120), wall: spec.style || 'stucco', wallColor: spec.wallColor || null, seed: spec.seed, units, inY0: wing ? inY0 : (wi.y0 - s.ty) * TILE, inY1: wing ? inY1 : (wi.y1 - s.ty + 1) * TILE, wing };
 }
 function makeCut(r) {
   const { w, d, H } = r, CUT = 18, G = new GBuf(w, d + H + 8); G.ax = 0; G.ay = d + H + 8;
@@ -2735,11 +2740,12 @@ function makeCut(r) {
   const gy = (Y, z) => G.ay - d + Y - z;   // sprite row of ground point Y (from the section's north edge) at height z
   const wallAt = (u, v) => (r.wall === 'brick' || r.wall === 'brickDark') ? ((v % 4 === 0 || (u + (Math.floor(v / 4) & 1) * 4) % 8 === 0) ? MAT.concrete[2] : WR[3 - ((hash(u >> 3, v >> 2, r.seed) * 2) | 0)]) : WR[3 + (hash(u >> 2, v >> 2, r.seed) > 0.85 ? -1 : 0)];
   const px = (x, Y, z, c, n, f = 0) => zw(G, x, gy(Y, z), c, n, z, f);
-  // floor
+  // floor (a wing's all across it)
   for (const u of r.units) {
     const fk = FLOORK[u.kind] || 'woodFloor';
     for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
+  if (r.wing) for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = 0; x < w; x++) px(x, Y, 0, groundPixel(r.wing, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   // the back wall: full height, its face toward the camera, its top a cap
   for (let x = 0; x < w; x++) {
     for (let v = 0; v < H; v++) px(x, r.inY0, v, wallAt(x, v), [0, 1, 0]);
