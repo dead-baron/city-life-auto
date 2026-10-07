@@ -536,3 +536,21 @@ test('Cedar Hills Golf Club: three holes with greens, flags, bunkers, a pond and
   for (const q of m.props) if (q && q.t === 'tree_a' && q.x >= pt.x && q.x < pt.x + pt.w && q.y >= pt.y && q.y < pt.y + pt.h) for (const g of m.golf.greens) assert.ok(Math.hypot(q.x - g.x, q.y - g.y) > g.r, 'trees off the greens');
   assert.ok(m.landmarks.some((l) => l.name === 'Cedar Hills Golf Club'));
 });
+
+test('every home out in the wilds whose drive stops short of a road has a dirt track from the drive to the nearest road', () => {
+  const at = (tx, ty) => ty * m.w + tx;
+  let checked = 0;
+  for (const h of m.homes) {
+    const g = h.garageDoor || h.garage;
+    if (!g) continue;
+    const sx = Math.floor(g.x / TILE), sy = Math.floor(g.y / TILE), drive = new Set(), q = [];
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const i = at(sx + dx, sy + dy); if (m.tiles[i] === T.LOT && !drive.has(i)) { drive.add(i); q.push(i); } }
+    let joined = false;
+    while (q.length && drive.size < 300) { const i = q.pop(), x = i % m.w, y = Math.floor(i / m.w); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = at(x + dx, y + dy), t = m.tiles[j]; if (t === T.ROAD || t === T.BRIDGE || t === T.SIDEWALK) joined = true; else if (t === T.LOT && !drive.has(j)) { drive.add(j); q.push(j); } } }
+    if (joined || drive.size < 6) continue;
+    checked++;
+    const near = (m.tracks || []).some((r) => r.pts.some(([x, y]) => [...drive].some((i) => Math.hypot((i % m.w + 0.5) * TILE - x, (Math.floor(i / m.w) + 0.5) * TILE - y) < 3 * TILE)));
+    assert.ok(near, `${h.name}: a track to its drive`);
+  }
+  assert.ok(checked >= 4, `the wilds' drives were checked (${checked})`);
+});

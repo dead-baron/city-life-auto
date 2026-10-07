@@ -114,6 +114,7 @@ export function buildNatureSites(m, H) {
   vineyard(m, H);
   hilltopTrack(m, H);
   golfClub(m, H);
+  driveTracks(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -182,6 +183,50 @@ function golfClub(m, H) {
   }
   (m.landmarks ||= []).push({ name: 'Cedar Hills Golf Club', type: 'golf', x: pt.x, y: pt.y, w: pt.w, h: pt.h });
   m.natureSites.push({ kind: 'golf', name: 'Cedar Hills Golf Club', x: Math.round((PX + 44.5) * TILE), y: Math.round((PY + 9) * TILE), greens: golf.greens.length, pond: { x: POND[0] * TILE, y: POND[1] * TILE }, trees: n });
+}
+
+// ---- Tracks to the cottages in the wilds ------------------------------------------------------------------------
+// A few homes out in the wilds (creekside cottages in the woods, the hills and the farmland) have a drive that runs
+// off into the trees and stops short of any road. Each now gets a dirt track from the end of its drive to the
+// nearest road, where it can get there over open ground, and a mailbox where it meets the road.
+function driveTracks(m, H) {
+  const at = (tx, ty) => ty * MAP_W + tx, N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const roadPts = [];
+  for (const e of m.edges || []) if (e.lvl === 0 && e.kind !== 'hwy' && !e.bridge) for (let k = 1; k < e.pts.length; k++) { const a = e.pts[k - 1], b = e.pts[k], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 32)); for (let j = 0; j <= n; j++) roadPts.push([a.x + (b.x - a.x) * j / n, a.y + (b.y - a.y) * j / n]); }
+  const openLand = (t) => t === T.GRASS || t === T.DIRT || t === T.SAND || t === T.LOT;
+  for (const h of m.homes || []) {
+    const g = h.garageDoor || h.garage;
+    if (!g) continue;
+    const sx = Math.floor(g.x / TILE), sy = Math.floor(g.y / TILE), drive = new Set(), q = [];
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const i = at(sx + dx, sy + dy); if (m.tiles[i] === T.LOT && !drive.has(i)) { drive.add(i); q.push(i); } }
+    let joined = false;
+    while (q.length && drive.size < 300) {
+      const i = q.pop(), x = i % MAP_W, y = Math.floor(i / MAP_W);
+      for (const [dx, dy] of N4) { const j = at(x + dx, y + dy), t = m.tiles[j]; if (t === T.ROAD || t === T.BRIDGE || t === T.SIDEWALK) joined = true; else if (t === T.LOT && !drive.has(j)) { drive.add(j); q.push(j); } }
+    }
+    if (joined || drive.size < 6) continue;
+    // the drive's far end, and whether a track already comes to it (the Hilltop Mansion's)
+    let end = null, ed = -1;
+    for (const i of drive) { const x = (i % MAP_W + 0.5) * TILE, y = (Math.floor(i / MAP_W) + 0.5) * TILE, d = Math.hypot(x - g.x, y - g.y); if (d > ed) { ed = d; end = [x, y]; } }
+    if ((m.tracks || []).some((r) => r.pts.some(([x, y]) => Math.hypot(x - end[0], y - end[1]) < 3 * TILE))) continue;
+    // the nearest road, reached over open ground
+    let best = null, bd = 90 * TILE;
+    for (const [x, y] of roadPts) { const d = Math.hypot(x - end[0], y - end[1]); if (d < bd) { bd = d; best = [x, y]; } }
+    if (!best) continue;
+    const len = Math.hypot(best[0] - end[0], best[1] - end[1]), ux = (best[0] - end[0]) / len, uy = (best[1] - end[1]) / len, bend = (hash2(sx, sy, 3401) - 0.5) * Math.min(160, len * 0.2);
+    const pts = spline([end, [end[0] + (best[0] - end[0]) * 0.45 - uy * bend, end[1] + (best[1] - end[1]) * 0.45 + ux * bend], [best[0] - ux * 40, best[1] - uy * 40], best], 12);
+    let ok = true;
+    for (const [x, y] of pts) { const t = m.tiles[at(Math.floor(x / TILE), Math.floor(y / TILE))]; if (!openLand(t) && t !== T.ROAD && t !== T.SIDEWALK) { ok = false; break; } }
+    if (!ok) continue;
+    for (const [x, y] of pts) m.props.forEach((p, i) => { if (p && p.t !== 'painted' && Math.hypot(p.x - x, p.y - y) < 36) dropProp(m, i); });
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    (m.tracks ||= []).push({ pts, hw: 26, bb: [x0 - 40, y0 - 40, x1 + 40, y1 + 40], home: h.id });
+    for (const [x, y] of pts) reserveRound(m, x, y, 30);
+    // the mailbox by the road, to one side of the track
+    let mx = best[0] - ux * 70 - uy * 44, my = best[1] - uy * 70 + ux * 44;
+    if (!openLand(m.tiles[at(Math.floor(mx / TILE), Math.floor(my / TILE))])) { mx = best[0] - ux * 70 + uy * 44; my = best[1] - uy * 70 - ux * 44; }
+    if (openLand(m.tiles[at(Math.floor(mx / TILE), Math.floor(my / TILE))])) H.addProp(m, 'mailbox', Math.round(mx), Math.round(my), 0);
+  }
 }
 
 // ---- The Hilltop Mansion's track (Dry Creek Desert) ------------------------------------------------------------
