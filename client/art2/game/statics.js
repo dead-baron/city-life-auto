@@ -349,13 +349,14 @@ export function makeStatic(r) {
     case 'critter': { const fr = critterFrames(r.k); return (fr && fr[r.f || 0]) || EMPTY; }
     case 'lily': { const G = FL.lilyPads(r.s || 1, 7, 2); return G && G.render ? G.render(0) : G; }
     case 'steam': return GD.steam(r.w, r.h, r.s || 1);
+    case 'court': return makeCourt(r);
     case 'hbox': return GD.hedgeBox(r.w, r.d, r.h, { seed: r.s || 1, R: FL.FOL(r.c || '#3a7226'), flowers: r.fl ? ramp(r.fl, 6, 3, { light: 0.6 }) : null, fk: 0.1, ragged: 1 });
     case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });
     case 'towel': return makeTowel(r);
     case 'blanket': return makeBlanket(r);
     case 'stack': return seaStack(r.s || 1, r.r || 26, r.h || 150, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 2 } });
     case 'sealrock': return outcrop(r.s || 3, r.w || 120, r.d || 70, r.h || 26, 'basalt', { barnacles: 0.8, wet: 12, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, (r.h || 26) * 0.7], [8, r.h || 26]] });
-    case 'crit': return r.k === 'starfish' ? WL.starfish(r.col || '#d8583a', 5, r.s || 1) : r.k === 'urchin' ? WL.urchin(4, r.s || 1, r.col || '#3a2448') : WL.anemone(4, r.s || 1);
+    case 'crit': return r.k === 'starfish' ? WL.starfish(r.col || '#d8583a', r.glow ? 6 : 5, r.s || 1, r.glow || 0) : r.k === 'urchin' ? WL.urchin(4, r.s || 1, r.col || '#3a2448') : WL.anemone(4, r.s || 1);
     case 'mesas': return makeMesas(r);
     default: return EMPTY;
   }
@@ -1171,7 +1172,7 @@ function voxModel(m, a) {
     case 'fruitCrate': return GD.fruitCrate('#c8302a', 2);
     case 'beaverDam': return GD.beaverDam(a[0] || 130, 26, 14, 0.6, 3); case 'lodge': return GD.beaverLodge(28, 22, 2);
     case 'boardwalk': return GD.boardwalk(a[0] || 160, 34, 8, 'ns'); case 'pier': return GD.fishingPier(a[0] || 120, a[1] || 30, 10, 0.7);
-    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'poolHouse': return PK.poolHouse(a[0], a[1]); case 'hotTub': return PK.hotTub(a[0]); case 'divingBoard': return PK.divingBoard(a[0]); case 'laneRope': return PK.laneRope(a[0]); case 'culvert': return PK.culvert(a[0], a[1], a[2]); case 'bathPavilion': return GD.bathPavilion(a[0] ?? 0.6); case 'waterSlide': return PK.waterSlide(a[0], a[1], a[2], a[3], a[4]); case 'ringFloat': return PK.ringFloat(a[0]); case 'slideTower': return PK.slideTower(a[0], a[1], a[2]); case 'bambooFence': return GD.bambooFence(a[0] || 80, a[1] || 30); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
+    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'poolHouse': return PK.poolHouse(a[0], a[1]); case 'hotTub': return PK.hotTub(a[0]); case 'divingBoard': return PK.divingBoard(a[0]); case 'laneRope': return PK.laneRope(a[0]); case 'culvert': return PK.culvert(a[0], a[1], a[2]); case 'basketHoop': return PK.basketHoop(); case 'boombox': return PK.boombox(); case 'bleachers': return PK.bleachers(a[0], a[1]); case 'bathPavilion': return GD.bathPavilion(a[0] ?? 0.6); case 'waterSlide': return PK.waterSlide(a[0], a[1], a[2], a[3], a[4]); case 'ringFloat': return PK.ringFloat(a[0]); case 'slideTower': return PK.slideTower(a[0], a[1], a[2]); case 'bambooFence': return GD.bambooFence(a[0] || 80, a[1] || 30); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
     case 'beachBar': return WL.beachBar(a[0] ?? 0.5); case 'beachShower': return WL.beachShower(a[0] ?? 1); case 'driftShade': return WL.driftShade(a[0] || 70, a[1] || 50); case 'cliffStairs': return WL.cliffStairs(a[0] || 120, a[1] || 80, a[2] || 28);
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
@@ -1220,7 +1221,7 @@ function vdim(m, a) {
     case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
     case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, a[1] || 30, 54];
-    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'bathPavilion': return [84, 62, 68]; case 'ringFloat': return [22, 22, 6]; case 'waterSlide': return [Math.ceil(Math.abs(a[0] || 0) + 112), (a[1] || 240) + 18, (a[2] || 84) + 20]; case 'slideTower': return [(a[0] || 96) + 30, (a[1] || 56) + 8, (a[2] || 84) + 36]; case 'bambooFence': return [a[0] || 80, 6, (a[1] || 30) + 2]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
+    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'basketHoop': return [36, 30, 64]; case 'boombox': return [16, 6, 12]; case 'bleachers': return [a[0] || 120, (a[1] || 4) * 10 + 8, (a[1] || 4) * 8 + 22]; case 'bathPavilion': return [84, 62, 68]; case 'ringFloat': return [22, 22, 6]; case 'waterSlide': return [Math.ceil(Math.abs(a[0] || 0) + 112), (a[1] || 240) + 18, (a[2] || 84) + 20]; case 'slideTower': return [(a[0] || 96) + 30, (a[1] || 56) + 8, (a[2] || 84) + 36]; case 'bambooFence': return [a[0] || 80, 6, (a[1] || 30) + 2]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
     case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
@@ -1342,6 +1343,32 @@ function makeBlanket(r) {
 // down by faceH (the parapets stand 11 px off the road, the face lies flat), and the picture is anchored faceH below
 // the road's centre - the deck edge lands on the road edge, the arched face hangs below it over the water like a
 // bridge seen from downstream, and cars on the road draw over it.
+// a painted half court on the ground (concept G2): w x d px, the hoop's baseline at the north edge. Worn blue
+// paint with a red key, white lines (the sidelines and baseline, the key, the free-throw circle, the three-point
+// arc, the half-court line with its circle at the south edge), cracks and scuffs. Flat ground (anchor: the middle
+// of the north edge).
+function makeCourt(r) {
+  const w = r.w, d = r.d, G = new GBuf(w, d); G.ax = Math.round(w / 2); G.ay = 0;
+  const BLUE = ramp(r.c1 || '#3a5a8a', 6, 3), RED = ramp(r.c2 || '#9a3a32', 6, 3), WHITE = ramp('#ecebe4', 5, 3), cx = w / 2;
+  for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) {
+    const dx = x + 0.5 - cx, keyW = w * 0.2, inKey = Math.abs(dx) < keyW && y < d * 0.42;
+    let R = inKey ? RED : BLUE, t = 0.5 + (hash(x >> 2, y >> 2, 71) - 0.5) * 0.18 + (hash(x, y, 72) > 0.93 ? -0.18 : 0);
+    // worn patches and cracks
+    if (vnoise(x, y, 23, 73) > 0.72) t -= 0.12;
+    const crack = Math.abs(Math.sin((x * 0.11 + y * 0.07) + vnoise(x, y, 31, 74) * 6)) < 0.03 && hash(x >> 3, y >> 3, 75) > 0.6;
+    if (crack) t -= 0.3;
+    // the lines (2 px wide)
+    const L = 2, onLine =
+      x < L || x >= w - L || y < L || y >= d - L ||                                                  // sidelines, baseline, half-court
+      (Math.abs(Math.abs(dx) - keyW) < L / 2 + 0.5 && y < d * 0.42) || (Math.abs(y - d * 0.42) < L / 2 + 0.5 && Math.abs(dx) < keyW) ||   // the key
+      Math.abs(Math.hypot(dx, y - d * 0.42) - keyW * 0.95) < L / 2 + 0.3 && y > d * 0.42 ||        // the free-throw circle
+      (Math.abs(Math.hypot(dx, (y - 6) * 1.0) - w * 0.42) < L / 2 + 0.3 && y > 6) ||                 // the three-point arc
+      Math.abs(Math.hypot(dx, y - d) - w * 0.15) < L / 2 + 0.3;                                       // the centre circle (half of it)
+    if (onLine) { R = WHITE; t = 0.62 + (hash(x, y, 76) - 0.5) * 0.2 - (hash(x >> 1, y >> 1, 77) > 0.85 ? 0.25 : 0); }
+    G.put(x, y, R[Math.max(0, Math.min(R.length - 1, Math.round(t * (R.length - 1) + bayer(x, y) * 0.6)))], [0, 0, 1], 0, null, F_GROUND);
+  }
+  return G;
+}
 function makeStoneBridge(r) {
   const m = WT.stoneBridge(r.len, r.roadW, r.faceH, 2, { seed: 23, under: true });
   const G = vrender(m, r.hd || 0), fh = r.faceH;
@@ -1681,6 +1708,10 @@ function propItems(c, p, pi, I) {
     case 'scarecrow': V('scare', 'scarecrow', []); return;
     case 'fallsmall': { const w = p.w || 16, h = p.h || 30; put(I, { key: `curt:${w}:${h}`, recipe: { t: 'curtain', w, h, seed: 7 }, x, y, ext: [w + 24, h + 30, w + 24, 30], pi }); return; }
     case 'steam': { const w = p.w || 80, h = p.h || 50, s = p.s || 1; put(I, { key: `steam:${w}:${h}:${s}`, recipe: { t: 'steam', w, h, s }, x, y, ext: [w / 2 + 14, h + 20, w / 2 + 14, 8], pi }); return; }
+    case 'court': { const w = p.w || 256, d = p.d || 240; put(I, { key: `court:${w}:${d}:${p.c1 || ''}:${p.c2 || ''}`, recipe: { t: 'court', w, d, c1: p.c1, c2: p.c2 }, x, y, ext: [w / 2 + 2, 2, w / 2 + 2, d + 2], pi }); return; }
+    case 'hoop': V('bhoop', 'basketHoop', [], 0, [18, 4]); return;
+    case 'boombox': V('bbox', 'boombox', []); return;
+    case 'bleachers': { const len = Math.round((p.len || 120) / 8) * 8, rows = p.rows || 4; V(`blch:${len}:${rows}`, 'bleachers', [len, rows]); return; }
     case 'cliffwall': { const len = Math.round((p.len || 160) / 8) * 8, h = p.h || 70, dp = p.d || 60, sd = p.s || 1; put(I, vitem(`cliffw:${len}:${h}:${sd}:${dp}`, 'cliffWall', [len, h, dp, sd], x, y, 0, null, { pi })); return; }
     case 'coastfall': { const w = p.w || 28, drop = p.drop || 66, sd = p.s || 11; put(I, { key: `fall:c:${w}:${drop}:${sd}`, recipe: { t: 'fall', kind: p.kind || 'cliff', w, drop, seed: sd, mist: p.mist ?? 0.7 }, x, y, ext: [w / 2 + 80, drop + 130, w / 2 + 80, 50], pi }); lightAt(I, x, y + 10, 12, 130, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
     case 'wslide': {   // a water slide from its tower (x, y: the start, at the tower's south face) down to its pool
@@ -1754,7 +1785,10 @@ function propItems(c, p, pi, I) {
     case 'driftwood': V(`dw:${p.len || 50}:${qa(p.a || 0, 8).toFixed(2)}`, 'driftwood', [p.len || 50, 1], qa(p.a || 0, 8)); return;
     case 'starfish': case 'urchin': case 'anemone': {
       const v = p.v || 0, col = t === 'starfish' ? ['#d8583a', '#e8a040', '#c84a8a', '#d8583a'][v] : t === 'urchin' ? ['#3a2448', '#5a2a5a', '#3a2448', '#2a3a5a'][v] : null;
-      put(I, { key: `crit:${t}:${v}`, recipe: { t: 'crit', k: t, col, s: v + 1 }, x, y, ext: [12, 12, 12, 12], pi });
+      // one starfish in five is a glowing star (concept N8-C): golden, lit from within, a soft pool of light round it
+      const glow = t === 'starfish' && hh(x, y, 61) < 0.2;
+      put(I, { key: `crit:${t}:${v}${glow ? ':g' : ''}`, recipe: glow ? { t: 'crit', k: t, col: '#f0c040', s: v + 1, glow: 1 } : { t: 'crit', k: t, col, s: v + 1 }, x, y, ext: [12, 12, 12, 12], pi });
+      if (glow) lightAt(I, x, y, 3, 64, [1, 0.82, 0.4], 1.3, 'sign');
       return;
     }
     case 'seastack': put(I, { key: `stack:${p.s || 1}:${p.r || 26}:${p.h || 150}`, recipe: { t: 'stack', s: p.s || 1, r: p.r || 26, h: p.h || 150 }, x, y, ext: [(p.r || 26) * 1.6 + 10, (p.h || 150) + 40, (p.r || 26) * 1.6 + 10, (p.r || 26) + 20], pi }); return;

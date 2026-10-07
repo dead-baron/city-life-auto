@@ -250,3 +250,43 @@ export function slideTower(w = 96, d = 56, h = 84) {
   for (const [x, y] of [[x0 + 2, y0 + 2], [x1 - 4, y0 + 2], [x0 + 2, y1 - 4], [x1 - 4, y1 - 4]]) m.box(x, y, h, x + 2, y + 2, h + 24, blue);
   return m;
 }
+
+// ---- streetball (concept G2) --------------------------------------------------------------------------------
+// a basketball hoop on a steel post at the back of the court, the board facing the court (+y, toward the camera):
+// a padded post, a cantilever arm, a white backboard with an orange square, the orange rim and a white chain net
+export function basketHoop() {
+  const m = new Vox(36, 30, 64), cx = 18;
+  const post = m.mat({ ramp: R('#2a3a5a'), k: 3 }), pad = m.mat({ ramp: R('#2a4a8a'), k: 3 }), board = m.mat({ ramp: R('#f2f0ea'), k: 4 });
+  const sq = m.mat({ ramp: R('#e86a2a'), k: 3 }), rim = m.mat({ ramp: R('#e8642a'), k: 4 }), net = m.mat({ ramp: R('#e8e8e4'), k: 4, flag: F_NOCAST });
+  m.box(cx - 2, 2, 0, cx + 2, 6, 56, post); m.box(cx - 3, 1, 0, cx + 3, 7, 22, pad);
+  for (let k = 0; k < 10; k++) m.box(cx - 1.5, 4 + k, 52 - k * 0.2, cx + 1.5, 5 + k, 55 - k * 0.2, post);   // the arm
+  m.box(cx - 15, 13, 40, cx + 15, 15, 60, board);
+  for (const [x0, z0, x1, z1] of [[cx - 6, 44, cx + 6, 45], [cx - 6, 52, cx + 6, 53], [cx - 6, 44, cx - 5, 53], [cx + 5, 44, cx + 6, 53]]) m.box(x0, 15, z0, x1, 16, z1, sq);
+  for (const [x0, z0, x1, z1] of [[cx - 15, 40, cx + 15, 41], [cx - 15, 59, cx + 15, 60], [cx - 15, 40, cx - 14, 60], [cx + 14, 40, cx + 15, 60]]) m.box(x0, 15, z0, x1, 16, z1, sq);
+  m.fill((x, y, z) => { const d = Math.hypot(x - cx, y - 21); return z >= 42 && z < 43 && d > 4.5 && d < 6 ? rim : -1; }, cx - 7, 14, 41, cx + 7, 28, 44);
+  m.fill((x, y, z) => { const t = (42 - z) / 9, rr = 5.2 - t * 2; const d = Math.hypot(x - cx, y - 21); return t >= 0 && t <= 1 && Math.abs(d - rr) < 0.7 && (Math.round(Math.atan2(y - 21, x - cx) * 3 + z) % 2 === 0) ? net : -1; }, cx - 7, 14, 33, cx + 7, 28, 42);
+  return m;
+}
+// aluminium bleachers: n rows stepping up to the north (the seats face +y, the court), a steel frame, rails at
+// the back and ends; built along +x
+export function bleachers(len = 120, rows = 4) {
+  const D = rows * 10 + 8, m = new Vox(len, D, rows * 8 + 22);
+  const seat = m.mat({ ramp: R('#c8ccd0'), k: 4, shade: (x) => (Math.round(x) % 20 === 0 ? -0.6 : 0) }), foot = m.mat({ ramp: R('#9aa0a6'), k: 3 }), frame = m.mat({ ramp: R('#5a6068'), k: 3, flag: F_NOCAST });
+  for (let r = 0; r < rows; r++) {
+    const y1 = D - 4 - r * 10, z = 8 + r * 8;
+    m.box(1, y1 - 4, z, len - 1, y1, z + 2, seat);            // the seat plank
+    m.box(1, y1, z - 6, len - 1, y1 + 3, z - 4, foot);        // the foot board below it
+  }
+  for (let x = 2; x < len; x += 30) for (let r = 0; r <= rows; r++) { const y1 = D - 4 - Math.min(r, rows - 1) * 10; m.box(x, y1 - 2, 0, x + 2, y1, 8 + Math.min(r, rows - 1) * 8, frame); }
+  m.box(0, 2, 8 + (rows - 1) * 8, len, 4, 8 + (rows - 1) * 8 + 14, frame);          // the back rail
+  for (const x of [0, len - 2]) for (let k = 0; k < rows * 10; k++) m.box(x, D - 4 - k, 8 + k * 0.8, x + 2, D - 3 - k, 10 + k * 0.8 + 8, frame);   // the end rails
+  return m;
+}
+// a boombox on the ground: a black box with two speaker cones, a handle and a red light
+export function boombox() {
+  const m = new Vox(16, 6, 12), b = m.mat({ ramp: R('#2a2c30'), k: 3 }), cone = m.mat({ ramp: R('#5a5e66'), k: 2 }), led = m.mat({ ramp: R('#e83a30'), k: 4, emi: [255, 60, 40, 120] }), h = m.mat({ ramp: R('#9aa0a8'), k: 3 });
+  m.box(0, 0, 0, 16, 6, 8, b);
+  for (const x of [4, 12]) m.fill((X, y, z) => (Math.hypot(X - x, z - 4) < 2.6 ? cone : -1), x - 3, 5, 1, x + 3, 6, 8);
+  m.box(7, 5, 5, 9, 6, 6, led); m.box(2, 2, 8, 3, 4, 11, h); m.box(13, 2, 8, 14, 4, 11, h); m.box(2, 2, 10, 14, 4, 11, h);
+  return m;
+}

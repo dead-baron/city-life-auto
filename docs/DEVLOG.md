@@ -2685,3 +2685,20 @@ The beach below the Cedar Point Wind Farm road, dressed like the coast-road tide
   - four sea stacks out in the surf, with a gull on one.
 - **The cliff top:** firs and pines, and a pull-off with a bench and a trail map board looking over the falls.
 - On the map as Driftwood Point, and in the debug menu (🪵 Driftwood Point). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · North Point Courts (North Point; concept G2-B), and glowing stars in the tidepools (N8-C)
+
+**North Point Courts.** The open lawn block in North Point is now a streetball park (`shared/naturesites.js` `northPointCourts`).
+- **The courts:** two painted half courts side by side, on asphalt inside a chain-link fence.
+  - One is blue with a red key, the other green with an ochre key. Both have white lines (sidelines, baseline, key, free-throw circle, three-point arc, the half-court circle), worn patches and cracks.
+  - The courts are a new ground sprite (`statics.js` `makeCourt`; prop `court`).
+- **The hoops:** one at the back of each court, facing it: a padded post, a cantilever arm, a white backboard with an orange square, the rim and a chain net (`props-park.js` `basketHoop`).
+- **Behind them:** aluminium bleachers with four rows (`bleachers`; solid), a bin and a boombox (`boombox`).
+- **Round it:**
+  - the fence is solid, with a gate in the middle of the south side and a path out to the sidewalk;
+  - benches, a bin and a bike rack outside the gate;
+  - lamps at the fence's corners;
+  - plane trees down both sides of the block, hedges and flower beds.
+- On the map as North Point Courts, and in the debug menu (🏀 North Point Courts).
+
+**Glowing stars.** One starfish in five in the tidepools (Lighthouse Tidepools, Driftwood Point) is now a glowing star. It is golden, lit from within, and casts a soft pool of light at dusk and at night. Homes, POIs and buildings unchanged.

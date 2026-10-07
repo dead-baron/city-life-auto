@@ -109,6 +109,7 @@ export function buildNatureSites(m, H) {
   hotSprings(m, H);
   splashBay(m, H);
   driftwoodPoint(m, H);
+  northPointCourts(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -744,6 +745,57 @@ function driftwoodPoint(m, H) {
   add('mapboard', FX + 4.6, RY - 3.2, 10);
   (m.landmarks ||= []).push({ name: 'Driftwood Point', type: 'falls', x: (X0 - 4) * TILE, y: RY * TILE, w: (X1 - X0 + 12) * TILE, h: 16 * TILE });
   m.natureSites.push({ kind: 'coastfalls', name: 'Driftwood Point', x: Math.round(FX * TILE), y: Math.round((RY + 2.2) * TILE), steps: { x: (GX + 1) * TILE, y: (RY + 1) * TILE }, pools: pools.length, stacks: stacks.length });
+}
+
+// ---- North Point Courts (North Point; concept G2-B) -------------------------------------------------------------
+// The open lawn block in North Point becomes a streetball park: two painted half courts side by side inside a
+// chain-link fence, a hoop at the back of each facing the court, aluminium bleachers behind them, benches, lamps
+// and bins along the sidewalk, a gate on the south side; plane trees and hedges round the block's edges.
+function northPointCourts(m, H) {
+  const at = (tx, ty) => ty * MAP_W + tx;
+  const blk = (m.blocks || []).find((b) => b.ix === 839 && b.iy === 123 && !b.park);
+  if (!blk) return;
+  const X0 = blk.ix, Y0 = blk.iy, X1 = blk.ix + blk.iw - 1, Y1 = blk.iy + blk.ih - 1;
+  for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) { const i = at(tx, ty); if (m.tiles[i] !== T.GRASS || m.reserve[i] || m.dist[i] !== 32) return; }
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
+  // the fenced court area: centred, 2 x 9 tiles wide, 13 deep (bleachers 3 + courts 9 + a margin)
+  const CW = 9, cx0 = X0 + Math.floor((blk.iw - 2 * CW) / 2), cy0 = Y0 + 2, cy1 = Y1 - 1;
+  const fx0 = cx0 - 1, fx1 = cx0 + 2 * CW + 1;
+  for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) {
+    const i = at(tx, ty); m.reserve[i] |= RES | 16;
+    if (tx >= fx0 && tx < fx1 && ty >= cy0 && ty < cy1) m.tiles[i] = T.LOT;     // (asphalt under the courts and the bleachers)
+  }
+  // the courts: painted half courts, the baseline 4 tiles in from the fence's north side; the hoops on it
+  const by = cy0 + 3.6, cd = cy1 - by;
+  for (let k = 0; k < 2; k++) {
+    const ccx = cx0 + k * CW + CW / 2;
+    add('court', ccx, by, 0, { w: CW * TILE - 8, d: Math.round(cd * TILE) - 4, c1: k ? '#3a6a5a' : '#3a5a8a', c2: k ? '#8a6a32' : '#9a3a32' });
+    add('hoop', ccx, by - 0.1, 8);
+    add('bleachers', ccx, cy0 + 1.6, 0, { len: (CW - 2) * TILE, rows: 4 });
+    for (let tx = Math.floor(ccx - CW / 2 + 1); tx < ccx + CW / 2 - 1; tx++) m.addSolidProp((tx + 0.5) * TILE, (cy0 + 1.6) * TILE, 12);   // (the bleachers: solid)
+  }
+  add('trashcan', cx0 + CW, cy0 + 0.8, 5); add('boombox', cx0 + CW + 0.6, cy0 + 2.3, 0);
+  // the fence: chain-link all round on the tile lines, solid; the gate in the middle of the south side
+  const gx = cx0 + CW;
+  for (const [ax, ay, bx, by2] of [[fx0, cy0, fx1, cy0], [fx0, cy0, fx0, cy1], [fx1, cy0, fx1, cy1], [fx0, cy1, gx - 1, cy1], [gx + 1, cy1, fx1, cy1]]) {
+    add('chainfence', ax, ay, 0, { tx: (bx - ax) * TILE, ty: (by2 - ay) * TILE });
+    const L = Math.hypot(bx - ax, by2 - ay) * TILE;
+    for (let d = 0; d <= L; d += 16) m.addSolidProp((ax + (bx - ax) * d / L) * TILE, (ay + (by2 - ay) * d / L) * TILE, 7);
+  }
+  // round it: a paved walk from the gate to the sidewalk, benches and bins outside the fence, lamps at its corners,
+  // plane trees and hedges along the block's edges, a bike rack by the gate
+  for (let ty = cy1; ty <= Y1 + 3; ty++) for (const tx of [gx - 1, gx, gx + 1]) { const i = at(tx, ty); if (m.tiles[i] === T.SIDEWALK || m.tiles[i] === T.ROAD) break; m.tiles[i] = T.PLAZA; m.reserve[i] |= RES; }   // (on out to the sidewalk: no street tree in the way)
+  for (let ty = Y1 + 1; ty <= Y1 + 2; ty++) for (let tx = gx - 3; tx <= gx + 3; tx++) m.reserve[at(tx, ty)] |= RES;
+  for (let tx = fx0; tx <= fx1; tx++) m.tiles[at(tx, cy1)] = m.tiles[at(tx, cy1)] === T.LOT ? T.PLAZA : m.tiles[at(tx, cy1)];
+  for (const [tx, ty] of [[fx0 - 0.5, cy0 - 0.5], [fx1 + 0.5, cy0 - 0.5], [fx0 - 0.5, cy1 + 0.5], [fx1 + 0.5, cy1 + 0.5]]) add('lamp', tx, ty);
+  for (const tx of [gx - 4.5, gx + 4.5]) add('pbench', tx, cy1 + 0.9, 0, { a: Math.PI });
+  add('trashcan', gx - 2.2, cy1 + 0.8, 5); add('bikerack', gx + 2.4, cy1 + 0.9, 6);
+  for (let ty = Y0 + 1; ty < Y1; ty += 4) for (const tx of [X0 + 1, X1 - 0.6]) if (tx < fx0 - 1.2 || tx > fx1 + 1.2) add('tree_a', tx, ty + 0.5, 12, { sp: 'street', k: 1.15 });
+  for (const [tx, len] of [[X0 + 0.5, fx0 - X0 - 1], [fx1 + 1.5, X1 - fx1 - 1]]) if (len > 1) add('hedgerun', tx, Y1 - 0.4, 0, { tx: len * TILE, ty: 0, h: 14 });
+  for (let tx = X0 + 1; tx < X1; tx += 3) if (tx < fx0 - 1 || tx > fx1 + 1) add('shrub_a', tx + 0.5, Y0 + 0.6, 0, { sp: ['hydrangea', 'rose', 'lavender'][tx % 3], k: 1 });
+  (m.landmarks ||= []).push({ name: 'North Point Courts', type: 'courts', x: fx0 * TILE, y: cy0 * TILE, w: (fx1 - fx0) * TILE, h: (cy1 - cy0) * TILE });
+  m.natureSites.push({ kind: 'courts', name: 'North Point Courts', x: Math.round(gx * TILE), y: Math.round((by + cd / 2) * TILE), gate: { x: gx * TILE + 16, y: cy1 * TILE + 16 }, hoops: [cx0 + CW / 2, cx0 + CW * 1.5].map((x) => ({ x: Math.round(x * TILE), y: Math.round((by - 0.1) * TILE) })) });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------

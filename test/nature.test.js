@@ -442,3 +442,17 @@ test('Driftwood Point: basalt cliffs under the Cedar Point road, a creek falling
   for (let ty = farm.y; ty < farm.y + farm.h; ty++) for (let tx = farm.x; tx < farm.x + farm.w; tx++) assert.ok(!m.river[ty * m.w + tx], 'no creek through the wind farm');
   assert.ok(m.landmarks.some((l) => l.name === 'Driftwood Point'));
 });
+
+test('North Point Courts: two fenced half courts with hoops and bleachers on the lawn block in North Point, a gate out to the sidewalk', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'courts');
+  assert.ok(s, 'the courts are built');
+  assert.equal(m.props.filter((q) => q && q.t === 'court').length, 2, 'two painted half courts');
+  for (const h of s.hoops) assert.ok(m.props.some((q) => q && q.t === 'hoop' && Math.hypot(q.x - h.x, q.y - h.y) < 8), 'a hoop at the back of each court');
+  assert.equal(m.props.filter((q) => q && q.t === 'bleachers').length, 2, 'bleachers');
+  // in through the gate, out to the sidewalk, with nothing solid in the way
+  const solid = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r + 4) return true; return false; };
+  for (let k = 0; k <= 3; k++) assert.ok(!solid(s.gate.x, s.gate.y + k * TILE), `the way out is clear (${k})`);
+  assert.equal(tileAt(s.gate.x, s.gate.y), T.PLAZA, 'a path through the gate');
+  assert.ok(solid(s.gate.x - 4 * TILE, s.gate.y - 16), 'the fence is solid');
+  assert.ok(m.landmarks.some((l) => l.name === 'North Point Courts'));
+});

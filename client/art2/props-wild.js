@@ -206,13 +206,14 @@ export function driftwood(len = 60, seed = 1) {
   return m;
 }
 // tidepool critters: flat sprites (lie them on rock or under shallow water)
-export function starfish(col = '#d8583a', r = 6, seed = 1) {
+export function starfish(col = '#d8583a', r = 6, seed = 1, glow = 0) {
   const S = R(col, 5, 2), G = new GBuf(r * 2 + 3, r * 2 + 3), c = r + 1; G.ax = c; G.ay = c;
+  const em = glow ? [255, 214, 96, Math.round(150 * glow)] : null;   // (a glowing star: it lights up the pool at dusk - concept N8-C)
   const a0 = hash(seed, 1, 3) * 6.28;
   for (let y = -r - 1; y <= r + 1; y++) for (let x = -r - 1; x <= r + 1; x++) {
     const d = Math.hypot(x, y * 1.25), a = Math.atan2(y, x) - a0, arm = 0.35 + 0.65 * Math.pow(Math.abs(Math.cos(a * 2.5)), 3);
     if (d > r * arm + 0.6) continue;
-    G.put(c + x, c + y, pick(S, 0.65 - y / r * 0.2 - x / r * 0.1 + (hash(x, y, seed) > 0.8 ? 0.2 : 0) - d / r * 0.15, x, y), [0, 0, 1], 1);
+    G.put(c + x, c + y, pick(S, 0.65 - y / r * 0.2 - x / r * 0.1 + (hash(x, y, seed) > 0.8 ? 0.2 : 0) - d / r * 0.15, x, y), [0, 0, 1], 1, em && d < r * arm - 0.4 ? em : null);
   }
   G.outline(0.5); return G;
 }
