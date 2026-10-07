@@ -2573,3 +2573,20 @@ An outdoor public pool in Westport Stadium park's north-east lawn (`shared/natur
   - A bike rack, a bench and a bin by the gate.
 - On the map as the Stadium Lido. In the debug menu: 🏊 Stadium Lido (pool). Homes, POIs and buildings unchanged.
 - New props: `poolhouse`, `hottub`, `diveboard`, `lanerope`, `lounger`, `lguard` (the lifeguard tower), `cafetable`, `chainfence` and `hedgerun` (runs of chain-link and hedge at any length).
+
+## 2026-10-07 · Cedar Creek (Lake District, Cedar Falls; concepts NK1-K, NK1-L, NK1-H)
+
+The two ponds east of Cedar Falls are now joined by a creek (`shared/naturesites.js` `cedarCreek`).
+- **Cedar Creek Falls:** the creek spills out of the north pond over a mossy ledge, the little falls the town is named for.
+- **The creek:** it winds south between rocky banks.
+  - The banks are lush, with reeds and cattails in the shallows and meadow flowers further up (reserve bit 128).
+  - Mossy rocks, stepping stones, fallen logs, ferns, hydrangeas and berry shrubs line it.
+  - Willows stand by the ponds, with birches, cherry, magnolia, a flowering tree and a maple along the creek.
+- **The culvert:** it runs under Falls Road through a stone culvert (`props-park.js` `culvert`).
+  - Each edge of the road has a headwall of squared stone with a cap course, moss in the joints and wing walls.
+  - Downstream, the arch faces you with the creek spilling out of the dark; upstream, its plain back is to the road. The parapets are solid.
+- **The trail:** a dirt trail follows the creek from shore to shore.
+  - A timber footbridge carries it across where it changes banks above the road.
+  - Below the road, an arched footbridge crosses to the west lawn.
+  - Benches face the water, with lamps and park signs.
+- On the map as Cedar Creek Falls, and in the debug menu (🏞 Cedar Creek). Homes, POIs and buildings unchanged.

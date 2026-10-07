@@ -330,3 +330,21 @@ test('Stadium Lido: a fenced public pool in the stadium park - swimmable water, 
   assert.equal(fishingSpot({ map: m }, { x: pool.x - 20, y: pool.y + pool.h / 2, a: 0 }), null, 'no fish in the pool');
   assert.ok(m.landmarks.some((l) => l.name === 'Stadium Lido'));
 });
+
+test('Cedar Creek: a creek joins the Lake District ponds over a little falls, under Falls Road through a culvert, with a trail and footbridges', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'towncreek' && q.name === 'Cedar Creek');
+  assert.ok(s, 'the creek is built');
+  // running water between the falls and the road, and below the road; the road itself untouched
+  let below = 0; for (let dx = -3; dx <= 3; dx++) if (tileAt(s.falls.x + dx * TILE, s.falls.y + 2 * TILE) === T.WATER) below++;
+  assert.ok(below >= 1, 'the creek below the falls');
+  assert.equal(tileAt(s.bridge.x, s.bridge.y), T.ROAD, 'Falls Road still crosses it');
+  assert.equal(tileAt(s.arch.x, s.arch.y), T.DOCK, 'planks under the arch footbridge');
+  assert.ok(s.footbridge && tileAt(s.footbridge.x, s.footbridge.y) === T.DOCK, 'planks under the timber footbridge');
+  for (const k of ['fbridge', 'archbridge']) assert.ok(m.props.some((q) => q && q.t === k && Math.hypot(q.x - s.x, q.y - s.y) < 1400), k);
+  // nothing stands on the road from the creek's dressing
+  for (const q of m.props) if (q && ['boulder', 'log', 'lamp', 'pbench', 'tree_a'].includes(q.t) && Math.hypot(q.x - s.bridge.x, q.y - s.bridge.y) < 300) assert.ok(![T.ROAD].includes(tileAt(q.x, q.y)), `${q.t} on the road`);
+  // the parapets over the culvert are solid
+  const solid = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of m.solidProps.get((Math.floor(y / TILE) + dy) * m.w + Math.floor(x / TILE) + dx) || []) if (Math.hypot(e.x - x, e.y - y) < e.r + 4) return true; return false; };
+  assert.ok(solid(s.bridge.x, s.bridge.y - s.bridge.roadHw - 6) && solid(s.bridge.x, s.bridge.y + s.bridge.roadHw + 6), 'the parapets');
+  assert.ok(m.landmarks.some((l) => l.name === 'Cedar Creek Falls'));
+});

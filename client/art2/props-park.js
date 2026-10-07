@@ -179,3 +179,27 @@ export function laneRope(len = 400) {
   for (let x = 0; x < len; x += 4) { const end = x < 48 || x > len - 48, k = Math.floor(x / 4); m.box(x, 0, 0, x + 4, 4, 3, end ? red : k % 4 < 2 ? white : blue); }
   return m;
 }
+// a culvert's stone headwall (concepts NK1-K, NK1-L): a wall of squared stone along a road's edge with one arched
+// opening for the creek (dark inside, the water spilling out over a lip), a cap course on top, moss in the joints,
+// wing walls angled back at each end. Built along +x, the arch's face toward +y (turn it to face down the creek).
+export function culvert(len = 150, h = 34, aw = 60) {
+  const m = new Vox(len, 22, h + 4), cx = len / 2, ah = Math.min(h - 8, aw * 0.42);
+  const blocks = (x, z) => { const r = Math.floor(z / 6), off = (r & 1) * 7, bx = Math.floor((x + off) / 14); return (Math.round(z) % 6 === 0 || Math.round(x + off) % 14 === 0 ? -1.1 : 0) + (hash(bx, r, 41) - 0.5) * 0.7; };
+  const st = m.mat({ ramp: R('#9a9282', 7, 3), k: 3, shade: (x, y, z) => blocks(x, z) + (z < 4 ? -0.6 : 0) });
+  const cap = m.mat({ ramp: R('#b4ac9c', 6, 3), k: 3, shade: (x) => (Math.round(x) % 18 === 0 ? -1 : 0) });
+  const ring = m.mat({ ramp: R('#a89c8a', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(Math.atan2(z, x - cx) * 9), 1, 43) - 0.5) * 0.9 });
+  const dark = m.mat({ ramp: R('#1a2224', 5, 2), k: 1 }), moss = m.mat({ ramp: R('#5a7a34', 6, 3), k: 3, flag: F_LEAF });
+  const wat = m.mat({ ramp: R('#4aa8c0', 5, 3), k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), 7) > 0.8 ? 1.2 : 0) });
+  const inArch = (x, z) => ((x - cx) / (aw / 2)) ** 2 + (z / ah) ** 2 < 1;
+  m.fill((x, y, z) => {
+    if (y < 6 || y > 16) return -1;
+    if (inArch(x, z)) return y > 14 ? (z < 3 ? wat : -1) : y > 11 ? dark : -1;   // the opening: dark inside, the water at its foot
+    if (((x - cx) / (aw / 2 + 5)) ** 2 + (z / (ah + 5)) ** 2 < 1) return ring;     // the arch ring
+    return z < h ? st : -1;
+  });
+  m.box(0, 5, h, len, 17, h + 3, cap);                                                // the cap course
+  for (let x = 3; x < len; x += 11) if (hash(x, 9, 41) > 0.55) m.box(x, 15, h - 2 - hash(x, 2, 41) * 10, x + 3 + hash(x, 4, 41) * 4, 17, h, moss);
+  for (const sx of [0, len - 10]) m.fill((x, y, z) => (z < h - (y - 16) * 1.5 && y >= 16 ? st : -1), sx, 16, 0, sx + 10, 22, h);   // the wing walls
+  m.box(cx - aw / 2 + 4, 16, 0, cx + aw / 2 - 4, 22, 2, wat);                      // the water spilling out
+  return m;
+}

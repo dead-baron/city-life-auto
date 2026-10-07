@@ -102,6 +102,7 @@ export function buildNatureSites(m, H) {
   graniteCove(m, H);
   route9(m, H);
   pineLake(m, H);
+  cedarCreek(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -304,6 +305,75 @@ function pineLake(m, H) {
   add('duck', LX + 3, LY + 1.5, 0, { a: 0.5 }); add('duck', LX + 4.2, LY + 2.1, 0, { a: 0.8 });
   (m.landmarks ||= []).push({ name: 'Pine Lake', type: 'lake', x: Math.round((LX - RX) * TILE), y: Math.round((LY - RY) * TILE), w: Math.round(RX * 2 * TILE), h: Math.round(RY * 2 * TILE) });
   m.natureSites.push({ kind: 'lakecamp', name: 'Pine Lake', x: LX * TILE, y: LY * TILE, boathouse: { x: Math.round(BX * TILE), y: Math.round(BY * TILE) }, camp: { x: Math.round(CX * TILE), y: Math.round(CY * TILE) }, pier: { x: Math.round(PXT * TILE), y: Math.round(((ny + pe) / 2) * TILE) }, bridge, trees: nt });
+}
+
+// ---- Cedar Creek (Lake District, Cedar Falls; concepts NK1-K, NK1-L, NK1-H) ------------------------------------
+// The two ponds east of Cedar Falls joined by a creek: it spills out of the north pond over a mossy ledge (the little
+// falls the town is named for), winds south between rocky banks under willows, birches and blossom, runs under Falls
+// Road through a two-arch stone culvert with parapets, and on past a stone arch footbridge into the south pond. A
+// dirt trail follows it from shore to shore (a timber footbridge where it changes banks), with benches, lamps and
+// park signs; reeds and cattails in the shallows, stepping stones, mossy rocks and logs on the banks.
+function cedarCreek(m, H) {
+  const LUSH = 128, at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const AX = 600, AY = 950, BX = 592, BY = 1025;
+  if (!m.lake[at(AX, AY)] || !m.lake[at(BX, BY)] || m.dist[at(AX, AY)] !== 37) return;
+  const road = (m.roads || []).find((r) => r.name === 'Falls Road' && r.lvl === 0 && r.pts.some((q) => Math.abs(q.x / TILE - AX) < 30 && Math.abs(q.y / TILE - 988) < 8));
+  if (!road) return;
+  let ay = AY; while (m.lake[at(AX, ay + 1)]) ay++;              // the north pond's south shore (its last water row)
+  let by = BY; while (m.lake[at(BX, by - 1)]) by--;              // the south pond's north shore
+  // where the creek crosses the road: the road's segment over x AX, its direction
+  let C = null;
+  for (let k = 1; k < road.pts.length; k++) { const a = road.pts[k - 1], b = road.pts[k]; if ((a.x - AX * TILE) * (b.x - AX * TILE) <= 0 && a.x !== b.x) { const t = (AX * TILE - a.x) / (b.x - a.x); C = { x: AX * TILE, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x) }; break; } }
+  if (!C) return;
+  const RW = 176;                                                 // (the road with its sidewalks, half)
+  // the creek: out of the north pond, a bend west, back east, square under the road, two bends, into the south pond
+  const cy = C.y / TILE;
+  const pts = spline([[AX + 1, ay - 0.5], [AX + 0.5, ay + 3], [AX - 3, ay + 7], [AX + 1.5, cy - 7], [AX, cy - 2], [AX, cy + 2], [AX - 1.5, cy + 7], [AX + 3, cy + 13], [AX - 2.5, cy + 20], [BX + 1, by + 0.5]].map(([x, y]) => [x * TILE, y * TILE]), 12);
+  // (nothing of the park's dressing may stand in it or on its banks)
+  m.props.forEach((q, i) => { if (!q || q.t === 'painted') return; const [d] = nearest(pts, q.x, q.y); if (d < 3 * TILE) dropProp(m, i); });
+  const wet = carveWater(m, pts, (s) => 28 + 8 * Math.sin(s * 19) + (s < 0.06 ? 10 : 0));
+  for (const i of wet) m.lake[i] = 0;
+  const wetSet = new Set(wet);
+  // the banks: lush (reeds to the water, meadow flowers further up), designed
+  for (const i of wet) for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const j = i + dy * MAP_W + dx; if (m.tiles[j] === T.GRASS && m.dist[j] === 37) m.reserve[j] |= RES | LUSH; }
+  if (m.distRiver) for (const i of wet) { m.distRiver[i] = 0; const tx = i % MAP_W, ty = Math.floor(i / MAP_W); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const j = (ty + dy) * MAP_W + tx + dx; if (wetSet.has(j)) continue; const d = Math.round(Math.hypot(dx, dy) * 4); if (!m.distRiver[j] || m.distRiver[j] > d) m.distRiver[j] = d; } }
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  const ptAt = (s) => pts[Math.max(0, Math.min(pts.length - 1, Math.round(s * (pts.length - 1))))];
+  const side = (s, off) => { const k = Math.max(1, Math.min(pts.length - 1, Math.round(s * (pts.length - 1)))), [x0, y0] = pts[k - 1], [x1, y1] = pts[k], l = Math.hypot(x1 - x0, y1 - y0) || 1; return [(x1 - (y1 - y0) / l * off) / TILE, (y1 + (x1 - x0) / l * off) / TILE]; };
+  // the falls: over a mossy ledge just below the north pond (facing south: the water falls toward you)
+  const F = [pts[0][0], (ay + 2.6) * TILE];
+  // the culvert's mouths stay clear (no reeds grow in front of the arches)
+  for (const i of wet) { const ty = Math.floor(i / MAP_W); if (Math.abs(ty + 0.5 - cy) < RW / TILE + 2.5) for (let dx = -2; dx <= 2; dx++) m.reserve[i + dx] |= 16; }
+  // the culvert under the road: the stone faces with their arches and parapets (statics.js draws the bridge)
+  for (const sd of [-1, 1]) for (let u = -70; u <= 70; u += 20) m.addSolidProp(C.x + Math.cos(C.a) * u - Math.sin(C.a) * sd * (RW + 6), C.y + Math.sin(C.a) * u + Math.cos(C.a) * sd * (RW + 6), 8);
+  // the trail: from the north pond's shore down the west bank to the road, over a timber footbridge to the east bank
+  // below the road, down to the south pond; dirt, kept clear
+  const trailPts = (cp) => { const tp = spline(cp.map(([x, y]) => [x * TILE, y * TILE]), 14); for (const [x, y] of tp) paint(m, x, y, 22, T.DIRT, (t) => t === T.GRASS || t === T.DIRT); return tp; };
+  trailPts([[AX - 6, ay + 1.5], [AX - 7.5, ay + 5], [AX - 5, cy - 12]]);
+  const t2 = trailPts([[AX - 5, cy - 12], [AX + 0, cy - 12.2], [AX + 5.5, cy - 12.4]]);   // (over the creek: the footbridge)
+  trailPts([[AX + 5.5, cy - 12.4], [AX + 6.5, cy - 8.5], [AX + 5.5, cy - 5.5]]);          // (to the road's sidewalk)
+  trailPts([[AX + 5.5, cy + 5.5], [AX + 6.5, cy + 10], [AX + 2.5, by - 2.5], [BX + 6, by + 0.5]]);
+  // planks where the trail crosses the water (the footbridge stands on them)
+  let fb = null;
+  { const cross = t2.filter(([x, y]) => wetSet.has(at(x / TILE, y / TILE))); if (cross.length) { const mx = cross.reduce((a, q) => a + q[0], 0) / cross.length, my = cross.reduce((a, q) => a + q[1], 0) / cross.length; for (let d = -80; d <= 80; d += 8) for (const o of [-12, 12]) { const i = at((mx + d) / TILE, (my + o) / TILE); if (wetSet.has(i)) { m.tiles[i] = T.DOCK; m.reserve[i] |= RES; } } fb = { x: mx, y: my }; add('fbridge', mx / TILE, my / TILE, 0, { len: 130, a: 0 }); } }
+  // the stone arch footbridge below the road (a path across from the east trail to the west lawn)
+  const sb = ptAt(0.78), ab = { x: sb[0], y: sb[1] };
+  { for (let d = -64; d <= 64; d += 8) for (const o of [-12, 12]) { const i = at((ab.x + d) / TILE, (ab.y + o) / TILE); if (wetSet.has(i)) { m.tiles[i] = T.DOCK; m.reserve[i] |= RES; } } add('archbridge', ab.x / TILE, ab.y / TILE, 0, { len: 5 * TILE }); trailPts([[ab.x / TILE - 2.6, ab.y / TILE], [ab.x / TILE - 6, ab.y / TILE + 1.5], [ab.x / TILE - 10, ab.y / TILE + 1]]); trailPts([[ab.x / TILE + 2.6, ab.y / TILE], [ab.x / TILE + 5.4, ab.y / TILE + 0.4]]); }
+  // the banks: mossy rocks and stepping stones, logs, reeds and cattails, ferns and flowering shrubs
+  const grass = (x, y) => m.tiles[at(x, y)] === T.GRASS || m.tiles[at(x, y)] === T.DIRT;
+  for (const [s, off, r] of [[0.1, -40, 12], [0.14, 44, 14], [0.2, -38, 10], [0.33, 40, 11], [0.37, -42, 13], [0.6, 40, 12], [0.66, -44, 10], [0.86, 42, 12], [0.9, -40, 11]]) { const [x, y] = side(s, off); if (grass(x, y)) add('boulder', x, y, r, { s: r * 2 + 4, moss: 1 }); }
+  for (const [s, off] of [[0.5, -12], [0.52, 6], [0.54, 18]]) { const [x, y] = side(s, off); add('boulder', x, y, 0, { s: 10, moss: 1 }); }   // (stepping stones)
+  for (const [s, off, a] of [[0.27, -60, 0.15], [0.64, -64, -0.2]]) { const [x, y] = side(s, off); if (grass(x, y)) add('log', x, y, 10, { len: 90, a, moss: 1 }); }   // (lying across the view: along it they read as posts)
+  for (let k = 0; k < 26; k++) { const s = hash2(k, 1, 2201), off = (hash2(k, 2, 2201) < 0.5 ? -1 : 1) * (36 + hash2(k, 3, 2201) * 12), [x, y] = side(s, off); if (m.tiles[at(x, y)] === T.GRASS && Math.abs(y - cy) > (RW / TILE) + 2.5) add('shrub_a', x, y, 0, { sp: ['reeds', 'cattails', 'fern', 'hydrangea', 'berryShrub', 'reeds'][k % 6], k: 1 }); }
+  // trees: willows by the ponds, birches, blossom and maples along the creek, oaks further out
+  const TREES = [[0.05, -90, 'willow', 1.45], [0.04, 96, 'willow', 1.4], [0.18, 84, 'birch', 1.3], [0.24, -96, 'cherry', 1.3], [0.3, 92, 'maple', 1.4], [0.42, -88, 'flowerTree', 1.3], [0.62, 96, 'birch', 1.3], [0.68, -92, 'magnolia', 1.3], [0.8, 100, 'cherry', 1.3], [0.92, -86, 'willow', 1.45], [0.96, 104, 'oak', 1.5]];
+  for (const [s, off, sp, k] of TREES) { const [x, y] = side(s, off); if (m.tiles[at(x, y)] === T.GRASS) { add('tree_a', x, y, 12, { sp, k }); reserveRound(m, x * TILE, y * TILE, 40); } }
+  // by the trail: benches facing the water, lamps, park signs at each end
+  for (const [s, off, a] of [[0.12, -70, 0], [0.88, 76, 0]]) { const [x, y] = side(s, off); if (grass(x, y)) add('pbench', x, y, 0, { a }); }
+  for (const [s, off] of [[0.2, -66], [0.7, 66], [0.95, 70]]) { const [x, y] = side(s, off); if (grass(x, y)) add('lamp', x, y); }
+  add('parksign', AX - 7.6, cy - 3.6, 0); add('parksign', AX + 7.2, cy + 4.4, 0);
+  (m.landmarks ||= []).push({ name: 'Cedar Creek Falls', type: 'falls', x: Math.round(F[0] - 160), y: Math.round(F[1] - 120), w: 320, h: 240 });
+  m.natureSites.push({ kind: 'towncreek', name: 'Cedar Creek', x: Math.round(F[0]), y: Math.round(F[1] + 120), falls: { x: Math.round(F[0]), y: Math.round(F[1]), w: 64, drop: 22 }, bridge: { x: Math.round(C.x), y: Math.round(C.y), a: C.a, half: 70, roadHw: RW }, footbridge: fb && { x: Math.round(fb.x), y: Math.round(fb.y) }, arch: { x: Math.round(ab.x), y: Math.round(ab.y) } });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------

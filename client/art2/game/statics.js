@@ -1169,7 +1169,7 @@ function voxModel(m, a) {
     case 'fruitCrate': return GD.fruitCrate('#c8302a', 2);
     case 'beaverDam': return GD.beaverDam(a[0] || 130, 26, 14, 0.6, 3); case 'lodge': return GD.beaverLodge(28, 22, 2);
     case 'boardwalk': return GD.boardwalk(a[0] || 160, 34, 8, 'ns'); case 'pier': return GD.fishingPier(a[0] || 120, a[1] || 30, 10, 0.7);
-    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'poolHouse': return PK.poolHouse(a[0], a[1]); case 'hotTub': return PK.hotTub(a[0]); case 'divingBoard': return PK.divingBoard(a[0]); case 'laneRope': return PK.laneRope(a[0]); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
+    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'poolHouse': return PK.poolHouse(a[0], a[1]); case 'hotTub': return PK.hotTub(a[0]); case 'divingBoard': return PK.divingBoard(a[0]); case 'laneRope': return PK.laneRope(a[0]); case 'culvert': return PK.culvert(a[0], a[1], a[2]); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
     case 'beachBar': return WL.beachBar(a[0] ?? 0.5); case 'beachShower': return WL.beachShower(a[0] ?? 1); case 'driftShade': return WL.driftShade(a[0] || 70, a[1] || 50); case 'cliffStairs': return WL.cliffStairs(a[0] || 120, a[1] || 80, a[2] || 28);
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
@@ -1218,7 +1218,7 @@ function vdim(m, a) {
     case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
     case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, a[1] || 30, 54];
-    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
+    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
     case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
@@ -2312,6 +2312,16 @@ function addNature(c, I) {
         const spec = { w: tw * TILE, d: th * TILE, seed: 777, glowOnly: true, night: NIGHT, style: 'siding', wallColor: '#a8342e', pitch: 'gable', ridge: 'ns', slope: 0.62, roof: 'shingle', roofColor: '#6a6a70', doors: [{ x: Math.round(tw * TILE / 2) - 36, w: 72, kind: 'garage', open: true, h: 64 }], windows: [16, tw * TILE - 34] };
         put(I, { key: 'wr:barn', recipe: { t: 'b', spec, kit: [] }, x: tx * TILE, y: (ty + th) * TILE, ext: [2, th * TILE + 200, tw * TILE + 2, 4] });
       }
+      continue;
+    }
+    if (s.kind === 'towncreek') {   // Cedar Creek: the little falls out of the pond, the stone culvert under the road
+      const f = s.falls;
+      put(I, { key: `fall:t:${f.w}:${f.drop}`, recipe: { t: 'fall', w: f.w, drop: f.drop, seed: 9, mist: 0.3 }, x: Math.round(f.x), y: Math.round(f.y + 8), ext: [f.w / 2 + 60, f.drop + 90, f.w / 2 + 60, 40] });
+      lightAt(I, f.x, f.y + 16, 8, 100, [0.75, 0.9, 1], 0.4, 'sign', 0);
+      // the culvert's headwalls on the road's two edges: the arch faces down the creek (south) on the downstream side,
+      // up it on the upstream side (its plain back to the road)
+      const b = s.bridge, nx = -Math.sin(b.a), ny = Math.cos(b.a), hd = qa(b.a, 64), len = Math.round(b.half * 2 + 10);
+      for (const sd of [-1, 1]) put(I, vitem(`culv:${len}:${(sd > 0 ? hd : hd + PI).toFixed(3)}`, 'culvert', [len, 34, 62], Math.round(b.x + nx * sd * (b.roadHw + 10)), Math.round(b.y + ny * sd * (b.roadHw + 10)), sd > 0 ? hd : qa(b.a + PI, 64)));
       continue;
     }
     if (s.kind !== 'creek') continue;
