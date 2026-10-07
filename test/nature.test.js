@@ -667,3 +667,23 @@ test('wayside finds: little scenes in the open country between places (camps, pi
   }
   for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) assert.ok(Math.hypot(ws[i].x - ws[j].x, ws[i].y - ws[j].y) > 20 * TILE, 'spread out');
 });
+
+test('Redwood Cove: the giants come down to a sandy cove - tidepools at its north end, a rocky beach at its south, sea stacks off the point, a fire ring, a trail from the campground', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'redwoodcove');
+  assert.ok(s, 'the cove is built');
+  assert.ok(s.pools >= 8, `tidepools (${s.pools})`);
+  const near = (q, r) => Math.hypot(q.x - s.x, q.y - s.y) < r;
+  assert.ok(m.props.filter((q) => q && q.style === 'basalt' && near(q, 700)).length >= 20, 'basalt round the pools and down the rocky beach');
+  assert.ok(m.props.filter((q) => q && /^(starfish|urchin|anemone)$/.test(q.t) && near(q, 700)).length >= 12, 'life in the pools');
+  assert.ok(m.props.filter((q) => q && q.t === 'seastack' && near(q, 900)).length >= 3, 'sea stacks off the point');
+  assert.ok(s.fire && m.props.some((q) => q && q.t === 'campfire' && Math.hypot(q.x - s.fire.x, q.y - s.fire.y) < 4), 'the fire ring');
+  assert.equal(tileAt(s.fire.x, s.fire.y), T.SAND, 'on the sand');
+  assert.ok(m.props.filter((q) => q && q.t === 'redwood' && near(q, 900)).length >= 4, 'giant redwoods behind the beach');
+  for (const q of m.props) if (q && q.t === 'redwood' && near(q, 900)) assert.notEqual(tileAt(q.x, q.y), T.SAND, 'no redwood stands on the sand');
+  // the trail from the campground: dirt most of the way
+  const camp = m.landmarks.find((l) => l.name === 'Pine Ridge Campground');
+  let dirt = 0;
+  for (let k = 1; k < 10; k++) { const x = camp.x + camp.w * 0.35 + (s.x + 8 * TILE - camp.x - camp.w * 0.35) * k / 10, y = camp.y + camp.h + (s.y - 16 * TILE - camp.y - camp.h) * k / 10; for (let d = -2; d <= 2; d++) if (tileAt(x + d * TILE, y) === T.DIRT) { dirt++; break; } }
+  assert.ok(dirt >= 6, `a trail down from the campground (${dirt}/9)`);
+  assert.ok(m.landmarks.some((l) => l.name === 'Redwood Cove'));
+});

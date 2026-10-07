@@ -3103,3 +3103,18 @@ Walk onto either half court and press the action button to pick up a ball (`serv
   - The glowing ones cast a soft pool of light at night.
 - The bag has icons for the new finds.
 - **Tests:** `test/foraging.test.js` covers where they grow, picking, bare for everyone, growing back, selling, contraband confiscated on arrest, and the golden star.
+
+## 2026-10-07 · Redwood Cove: the giants come down to the sea (concepts N8, N8-B, N8-C, N8-D)
+
+On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesites.js` `redwoodCove`):
+- **The beach** is widened a few tiles into the woods, with a ragged edge. The giant redwoods stand right behind it.
+- **The tidepool shelf** fills the cove's north end: about sixteen shallow pools ringed with barnacled basalt.
+  - Anemones, urchins, sea stars and crabs live in them.
+  - Two pools hold a **golden star** you can take (foraging), the same as at Lighthouse Rock.
+- **The rocky beach** at the south end is basalt and cobbles down to the water.
+- **Offshore**, sea stacks with gulls on them and a seal rock with seals stand off the point. They're solid, so boats steer round them.
+- **Driftwood** lies up the sand.
+- **A fire ring** with driftwood seats faces west over the water, for the sunset and the stars.
+- **A trail** runs down from the Pine Ridge Campground through the giants to the sand.
+- On the map as "Redwood Cove".
+- **Tests:** `test/nature.test.js` covers the pools, the basalt, the life, the stacks, the fire on the sand, no redwood on the sand, the trail, and the landmark. `test/foraging.test.js`: two stars at each tidepool shelf.

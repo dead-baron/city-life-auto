@@ -13,21 +13,25 @@ import * as foraging from '../server/systems/foraging.js';
 
 const watch = (w) => { const evs = [], b0 = w.broadcast.bind(w); w.broadcast = (ev) => { if (ev.e === 'forage') evs.push(ev); b0(ev); }; return evs; };
 
-test('the redwood floor has mushrooms to find (most good eating, some poison, a few illegal), the tidepools two golden stars', () => {
+test('the redwood floor has mushrooms to find (most good eating, some poison, a few illegal), each tidepool shelf two golden stars', () => {
   const w = makeWorld();
   const F = w.map.forage || [];
   const by = (k) => F.filter((f) => f.k === k);
   assert.ok(by('goldTrumpet').length + by('bunCap').length + by('shelfOyster').length >= 60, 'plenty of good eating');
   assert.ok(by('redcap').length >= 10, 'redcaps');
   assert.ok(by('ghostglass').length >= 2 && by('ghostglass').length <= 12, `ghostglass is rare (${by('ghostglass').length})`);
-  assert.equal(by('goldStar').length, 2, 'two golden stars');
+  assert.equal(by('goldStar').length, 4, 'four golden stars: two at each tidepool shelf');
   for (const f of F) assert.ok(FORAGE_KINDS[f.k] && ITEMS[FORAGE_KINDS[f.k].item], `${f.k} is a kind with an item`);
   // the mushrooms grow in Highland Woods, by the giants; the stars at the Lighthouse Tidepools
   const giants = w.map.props.filter((p) => p.t === 'redwood' && /^giant/.test(p.sp));
   const near = (f) => giants.some((g) => Math.hypot(g.x - f.x, g.y - f.y) < 120);
   assert.ok(by('goldTrumpet').filter(near).length >= by('goldTrumpet').length * 0.6, 'at the feet of the giants');
-  const tp = w.map.landmarks.find((l) => l.name === 'Lighthouse Tidepools');
-  for (const s of by('goldStar')) assert.ok(s.x > tp.x - 200 && s.x < tp.x + tp.w + 400 && s.y > tp.y - 200 && s.y < tp.y + tp.h + 200, 'a star in the tidepools');
+  const inside = (s, l) => s.x > l.x - 200 && s.x < l.x + l.w + 400 && s.y > l.y - 200 && s.y < l.y + l.h + 200;
+  for (const name of ['Lighthouse Tidepools', 'Redwood Cove']) {
+    const tp = w.map.landmarks.find((l) => l.name === name);
+    assert.ok(tp, name);
+    assert.equal(by('goldStar').filter((s) => inside(s, tp)).length, 2, `two stars in the pools at ${name}`);
+  }
 });
 
 test('pick mushrooms: a few in the bag, the spot bare for everyone until it grows back; the market buys them', () => {

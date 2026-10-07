@@ -102,6 +102,7 @@ export function buildNatureSites(m, H) {
   canyonWash(m, H);
   lighthouseTidepools(m, H);
   campDressing(m, H);
+  redwoodCove(m, H);
   beachBonfire(m, H);
   desertCamp(m, H);
   summitTarn(m, H);
@@ -2224,6 +2225,115 @@ function lighthouseTidepools(m, H) {
   for (const [X, Y] of pools.slice(0, 3)) H.addProp(m, 'gull', X - 30, Y - 22, 0, { a: 2.4, z: 0 });
   (m.landmarks ||= []).push({ name: 'Lighthouse Tidepools', type: 'tidepools', x: (cx + 18) * TILE, y: (cy - 16) * TILE, w: 26 * TILE, h: 30 * TILE });
   m.natureSites.push({ kind: 'tidepools', name: 'Lighthouse Tidepools', x: (cx + 30) * TILE, y: cy * TILE, pools: pools.length, cottage: { x: kx, y: ky } });
+}
+
+// ---- Redwood Cove: where the giant redwoods come down to the sea (concepts N8, N8-B, N8-C, N8-D) ----------------
+// On Highland Woods' west shore, below the Pine Ridge Campground, a sandy cove sits under the giants. The beach is
+// widened into the woods. Its north end is a shelf of tidepools: barnacled basalt round shallow pools of anemones,
+// urchins, crabs and sea stars, two of them holding the rare golden star you can take (shared/foraging.js). Its
+// south end is a rocky beach of basalt and cobbles. Sea stacks stand off the point with gulls on them, driftwood
+// lies up the sand, and a fire ring with driftwood seats looks out west over the water for the sunset and the
+// stars. A trail runs down from the campground. On the map as "Redwood Cove".
+function redwoodCove(m, H) {
+  const C = [58, 283], R = 13;                                   // the cove (tiles), on the west shore
+  const inBox = (tx, ty) => Math.abs(tx - C[0]) <= R + 4 && Math.abs(ty - C[1]) <= R + 8;
+  const isT = (tx, ty, t) => m.tiles[ty * MAP_W + tx] === t;
+  const sand0 = [];
+  for (let ty = C[1] - R - 8; ty <= C[1] + R + 8; ty++) for (let tx = C[0] - R - 4; tx <= C[0] + R + 4; tx++) if (isT(tx, ty, T.SAND) && m.dist[ty * MAP_W + tx] === 29) sand0.push([tx, ty]);
+  if (sand0.length < 40) return;
+  // widen the beach three tiles into the woods (a ragged edge)
+  const widen = [];
+  for (let ty = C[1] - R - 6; ty <= C[1] + R + 6; ty++) for (let tx = C[0] - R - 2; tx <= C[0] + R + 4; tx++) {
+    const i = ty * MAP_W + tx;
+    if (!inBox(tx, ty) || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT) || m.reserve[i]) continue;
+    const reach = 2 + Math.floor(hash2(tx, ty, 1501) * 2.2);
+    let near = false;
+    for (let dy = -reach; dy <= reach && !near; dy++) for (let dx = -reach; dx <= reach; dx++) if (isT(tx + dx, ty + dy, T.SAND) && dx * dx + dy * dy <= reach * reach) { near = true; break; }
+    if (near) widen.push(i);
+  }
+  for (const i of widen) { m.tiles[i] = T.SAND; m.reserve[i] |= RES; }
+  for (const [tx, ty] of sand0) m.reserve[ty * MAP_W + tx] |= RES;
+  const isSand = (tx, ty) => isT(tx, ty, T.SAND);
+  const water = (tx, ty) => isT(tx, ty, T.WATER) || isT(tx, ty, T.DEEP);
+  // the tidepool shelf: the north half of the cove
+  const pools = [];
+  for (let gy = C[1] - R - 6; gy <= C[1] - 1; gy += 3) for (let gx = C[0] - R - 2; gx <= C[0] + R; gx += 3) {
+    const px = gx + Math.floor(hash2(gx, gy, 1502) * 3), py = gy + Math.floor(hash2(gx, gy, 1503) * 3);
+    if (!isSand(px, py) || [isSand(px + 1, py), isSand(px, py + 1), isSand(px - 1, py), isSand(px, py - 1)].filter(Boolean).length < 3) continue;
+    if (hash2(gx, gy, 1504) < 0.15) continue;
+    const rx = 1.1 + hash2(gx, gy, 1505) * 0.9, ry = 0.8 + hash2(gx, gy, 1506) * 0.6, X = (px + 0.5) * TILE, Y = (py + 0.5) * TILE;
+    for (let ty = py - 2; ty <= py + 2; ty++) for (let tx = px - 2; tx <= px + 2; tx++) {
+      if (((tx - px) / rx) ** 2 + ((ty - py) / ry) ** 2 > 1 || !isSand(tx, ty)) continue;
+      const i = ty * MAP_W + tx; m.tiles[i] = T.WATER; m.reserve[i] |= RES;   // (land stays: a shallow pool, not the sea)
+    }
+    pools.push([X, Y, rx * TILE, ry * TILE, gx, gy]);
+  }
+  const life = ['starfish', 'starfish', 'urchin', 'anemone', 'urchin', 'anemone'];
+  for (const [X, Y, RX, RY, gx, gy] of pools) {
+    const n = 2 + Math.floor(hash2(gx, gy, 1507) * 3);
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + hash2(gx, gy, 1508 + k) * 1.2, r = 14 + Math.floor(hash2(gx + k, gy, 1509) * 3) * 4;
+      const x = X + Math.cos(a) * (RX + r * 0.6), y = Y + Math.sin(a) * (RY + r * 0.5);
+      if (m.tiles[at(x, y)] !== T.SAND) continue;
+      H.addProp(m, 'boulder', Math.round(x), Math.round(y), Math.round(r * 0.75), { s: r * 2 + 4, style: 'basalt', barn: 1 });
+    }
+    for (let k = 0; k < 4; k++) {
+      const x = X + (hash2(gx, gy + k, 1510) - 0.5) * RX * 1.2, y = Y + (hash2(gx + k, gy, 1511) - 0.5) * RY * 1.1;
+      if (m.tiles[at(x, y)] !== T.WATER) continue;
+      H.addProp(m, life[Math.floor(hash2(gx, gy, 1512 + k) * life.length)], Math.round(x), Math.round(y), 0, { v: Math.floor(hash2(gx, gy, 1513 + k) * 4) });
+    }
+    if (hash2(gx, gy, 1514) < 0.4) H.addProp(m, 'crab', Math.round(X + RX + 10), Math.round(Y + 4), 0, { a: Math.round(hash2(gx, gy, 1515) * 628) / 100 });
+  }
+  // two of the pools hold a golden star (shared/foraging.js)
+  for (const [X, Y, RX] of pools.slice().sort((a, b) => hash2(a[4], a[5], 1516) - hash2(b[4], b[5], 1516)).slice(0, 2)) (m.forage ||= []).push({ x: Math.round(X + RX * 0.45), y: Math.round(Y + 2), k: 'goldStar' });
+  // the rocky beach: the south half, basalt and cobbles down to the water
+  for (let gy = C[1] + 2; gy <= C[1] + R + 6; gy += 2) for (let gx = C[0] - R - 2; gx <= C[0] + R; gx += 2) {
+    const tx = gx + Math.floor(hash2(gx, gy, 1517) * 2), ty = gy + Math.floor(hash2(gx, gy, 1518) * 2);
+    if (!isSand(tx, ty) || hash2(gx, gy, 1519) > 0.32) continue;
+    let sea = false; for (let d = 1; d <= 3 && !sea; d++) if (water(tx - d, ty) || water(tx, ty + d) || water(tx, ty - d)) sea = true;   // (down by the water)
+    if (!sea && hash2(gx, gy, 1520) > 0.3) continue;
+    const r = 8 + Math.floor(hash2(gx, gy, 1521) * 4) * 3;
+    H.addProp(m, 'boulder', Math.round((tx + 0.5) * TILE), Math.round((ty + 0.5) * TILE), Math.round(r * 0.7), { s: r * 2 + 4, style: 'basalt', barn: hash2(gx, gy, 1522) < 0.5 ? 1 : 0 });
+  }
+  // driftwood up the sand, a fire ring with driftwood seats looking west over the water
+  const dry = sand0.filter(([tx, ty]) => isSand(tx, ty) && !water(tx - 1, ty) && !water(tx - 2, ty) && ty > C[1] - 2 && ty < C[1] + 6);
+  for (let k = 0; k < 5; k++) { const [tx, ty] = sand0[Math.floor(hash2(k, 7, 1523) * sand0.length)]; if (isSand(tx, ty)) H.addProp(m, 'driftwood', (tx + 0.5) * TILE, (ty + 0.5) * TILE, 0, { a: Math.round(hash2(k, 8, 1523) * 314) / 100, len: 40 + Math.floor(hash2(k, 9, 1523) * 3) * 12 }); }
+  let fire = null;
+  if (dry.length) {
+    dry.sort((a, b) => Math.hypot(a[0] - C[0] - 2, a[1] - C[1] - 2) - Math.hypot(b[0] - C[0] - 2, b[1] - C[1] - 2));
+    const [tx, ty] = dry[0], X = (tx + 0.5) * TILE, Y = (ty + 0.5) * TILE;
+    fire = { x: X, y: Y };
+    H.addProp(m, 'campfire', X, Y, 0, { lit: 1 });
+    for (const [dx, dy, a] of [[6, -34, 0.1], [40, 4, 1.6], [4, 36, 3.1]]) H.addProp(m, 'driftwood', X + dx, Y + dy, 0, { a, len: 54, seat: 1 });
+    reserveRound(m, X, Y, 90);
+  }
+  // offshore: sea stacks and a seal rock off the point, gulls on them (solid: boats steer round them)
+  const spots = [];
+  for (let ty = C[1] - R - 8; ty <= C[1] + R + 8; ty += 2) for (let tx = C[0] - R - 16; tx <= C[0]; tx += 2) {
+    if (!water(tx, ty)) continue;
+    let near = 99; for (let r = 1; r < 10 && near === 99; r++) for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r]]) if (!water(tx + dx, ty + dy)) { near = r; break; }
+    if (near >= 3 && near <= 8) spots.push([tx, ty]);
+  }
+  spots.sort((a, b) => hash2(a[0], a[1], 1524) - hash2(b[0], b[1], 1524));
+  const used = [];
+  const take = (gap) => { for (const sp of spots) if (used.every((u) => Math.hypot(u[0] - sp[0], u[1] - sp[1]) >= gap)) { used.push(sp); return sp; } return null; };
+  for (let k = 0; k < 4; k++) {
+    const sp = take(6); if (!sp) break;
+    const r = 22 + k * 5, h = 120 + ((k * 37) % 3) * 40;
+    H.addProp(m, 'seastack', (sp[0] + 0.5) * TILE, (sp[1] + 0.5) * TILE, r, { r, h, s: (k % 3) + 1 });
+    if (k < 2) H.addProp(m, 'gull', (sp[0] + 0.5) * TILE + 6, (sp[1] + 0.5) * TILE - 8, 0, { a: 0.4 + k, z: h - 10 });
+  }
+  const sr = take(5);
+  if (sr) {
+    const X = (sr[0] + 0.5) * TILE, Y = (sr[1] + 0.5) * TILE;
+    H.addProp(m, 'sealrock', X, Y, 40, { w: 120, d: 70 });
+    for (const [dx, dy, p, a] of [[-22, -4, 0, 0.5], [20, 6, 1, 2.6]]) H.addProp(m, 'seal', X + dx, Y + dy, 0, { pose: p, a, z: 32 });
+  }
+  // the trail down from the Pine Ridge Campground (south of it) through the giants to the sand
+  const camp = (m.landmarks || []).find((l) => l.name === 'Pine Ridge Campground');
+  if (camp) trail(m, [[camp.x + camp.w * 0.35, camp.y + camp.h], [(C[0] + 8) * TILE, (C[1] - 16) * TILE], [(C[0] + 4) * TILE, (C[1] - 5) * TILE], [(C[0] + 1) * TILE, (C[1] + 1) * TILE]]);
+  (m.landmarks ||= []).push({ name: 'Redwood Cove', type: 'tidepools', x: (C[0] - R - 4) * TILE, y: (C[1] - R - 6) * TILE, w: (2 * R + 8) * TILE, h: (2 * R + 14) * TILE });
+  m.natureSites.push({ kind: 'redwoodcove', name: 'Redwood Cove', x: C[0] * TILE, y: C[1] * TILE, pools: pools.length, fire });
 }
 
 // ---- the oasis in Red Rock Canyon (concepts N4-B, N4-C) ------------------------------------------------------
