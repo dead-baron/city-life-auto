@@ -29,7 +29,7 @@ export { SEATS };
 const WEAPON_ITEM = {
   fists: null, bat: 'bat', knife: 'knife', crowbar: 'crowbar', sledge: 'sledgehammer', baton: 'nightstick', taser: 'taser', pistol: 'pistol', revolver: 'revolver',
   shotgun: 'shotgun', rifle: 'rifle', smg: 'smg', rocket: 'rocketLauncher', rod: 'fishingRod', service: 'pistol', prifle: 'rifle', psniper: 'sniper', passault: 'rifle',
-  pshotgun: 'shotgun', spistol: 'silencedPistol', pepper: 'pepperSpray', spikes: 'spikeStrip',
+  pshotgun: 'shotgun', spistol: 'silencedPistol', pepper: 'pepperSpray', spikes: 'spikeStrip', huntrifle: 'sniper',
 };
 export function weaponItem(w) {
   if (w === null || w === undefined || w === '') return null;

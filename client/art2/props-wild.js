@@ -152,10 +152,12 @@ export function lighthouse(h = 140, on = 1) {
   return m;
 }
 // a whitewashed cottage with a red tile roof (ridge along x), a chimney, windows and a door on the south
-export function cottage(w = 84, d = 54, on = 0.4) {
+// log: a log cabin (the hunting lodge): stacked round logs with dark chinks, a green tin roof, a porch light
+export function cottage(w = 84, d = 54, on = 0.4, log = 0) {
   const H = 30, m = new Vox(w + 4, d + 6, H + 34);
-  const wall = m.mat({ ramp: R('#ece6da'), k: 4, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z / 3), 5) > 0.92 ? -0.4 : 0) });
-  const tile = m.mat({ ramp: R('#b04634'), k: 3, shade: (x, y, z) => (Math.round(x) % 5 === 0 ? -0.6 : 0) + (Math.round(y + z) % 4 === 0 ? -0.8 : 0) + (z > H + 27 ? 1.2 : 0) + (z < H + 2 ? -1 : 0) });
+  const wall = log ? m.mat({ ramp: R('#8a5a34'), k: 4, shade: (x, y, z) => { const r = Math.round(z) % 5; return (r === 0 ? -1.4 : r === 4 ? 0.7 : 0.2) + (hash(Math.round(x / 7), Math.round(z / 5), 5) - 0.5) * 0.6; } })
+    : m.mat({ ramp: R('#ece6da'), k: 4, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z / 3), 5) > 0.92 ? -0.4 : 0) });
+  const tile = m.mat({ ramp: R(log ? '#3e6a46' : '#b04634'), k: 3, shade: (x, y, z) => (Math.round(x) % (log ? 3 : 5) === 0 ? -0.6 : 0) + (!log && Math.round(y + z) % 4 === 0 ? -0.8 : 0) + (z > H + 27 ? 1.2 : 0) + (z < H + 2 ? -1 : 0) });
   const trim = m.mat({ ramp: R('#4e7a7e'), k: 3 }), glass = m.mat({ ramp: R('#ffd890', 5, 3), k: 3, emi: [255, 210, 140, 200 * on], flag: F_GLASS }), stone = m.mat({ ramp: R('#9a9086'), k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -0.8 : 0) });
   m.box(2, 3, 0, w + 2, d + 3, H, wall);
   m.fill((x, y, z) => { const r = d / 2 + 4 - (z - H) * 1.05; return Math.abs(y - (d / 2 + 3)) <= r ? tile : -1; }, 0, 0, H, w + 4, d + 6, H + 30);

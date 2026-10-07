@@ -3178,3 +3178,19 @@ On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesi
 - **The gorge at Redwood Creek Falls** (concept N1-E):
   - Columnar basalt walls stand either side of the falls, mossy on top and solid along their faces.
   - Mossy boulders lie tumbled below them.
+
+## 2026-10-07 · Hunting: the rifle, field dressing, the campfire and the lodge
+
+- **Game** (backlog: "hunting with rifles and bows; meat and materials to cook and sell"). The deer, rabbits, coyotes and raccoons of the wilds (`wildlife.js`) are game; a farmer's livestock is not ("Somebody's livestock - not game").
+- **The hunting rifle** (`shared/items.js` `huntrifle`): bolt-action and scoped, long range, slow to work. One clean shot drops a deer.
+  - It sells for $900 at the new Highland Hunting Lodge, and $1,100 at the bait and tackle shop. Rounds come in tens.
+- **Field dressing** (`server/systems/hunting.js`): stand over what you shot and press the action button. You kneel and work for a few seconds; moving or getting hit stops you.
+  - A deer gives 3-5 raw venison and a hide, and now and then its antlers. A rabbit gives meat and a pelt; a coyote or a raccoon, a pelt.
+  - The carcass is gone after.
+- **Cooking**: stand by any lit campfire (the campgrounds, the camps, the beach fires) with raw meat in your bag and press the action button. A few seconds later it all comes off the fire cooked: venison steaks and roast rabbit, real food that heals.
+- **The Highland Hunting Lodge**: a log cabin with a green tin roof across the lot from the Giants Loop trailhead, its counter on the porch (`naturesites.js` `giantsLoop`, `economy.js` `COUNTER.lodge`).
+  - It sells the rifle, rounds, a flashlight and steaks.
+  - It pays best for meat, hides and antlers. The pawn shop and the fence take them for less.
+- **The bag** has a new section, "Game & hides".
+- **Tests:** `test/hunting.test.js` covers the one-shot deer, field dressing, livestock that isn't game, cooking at a campfire and selling at the lodge. The roadkill check in `test/wildlife.test.js` now clears the car's lane first, because the lodge moved the test's open-country spot next to a tree.
+- **Next:** bows and arrows.

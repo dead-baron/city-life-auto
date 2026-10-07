@@ -552,7 +552,7 @@ function onEvent(ev) {
       if (w && w.silenced) { sfx('swing', distVol(ev.x1, ev.y1) * 0.5); break; } // a suppressed cough, no muzzle flash
       S.flashes.push({ x: ev.x1, y: ev.y1, t: 0.065, a: Math.atan2(ev.y2 - ev.y1, ev.x2 - ev.x1), r: 170 });
       fx.spawn(4, ev.x1, ev.y1, 0, 0, 0.05, 6, '#fff3b0');
-      sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
+      sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun' || w.id === 'huntrifle') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
     }
     case 'blood': if (ev.g) fx.bulletHit(ev.x, ev.y, ev.a, now); else fx.blood(ev.x, ev.y, ev.a, ev.n, now); sfx('hit', distVol(ev.x, ev.y)); break;

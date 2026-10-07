@@ -94,6 +94,11 @@ export const FORAGE_REACH = 38;          // stand this close to it
 export const FORAGE_REGROW_S = { goldTrumpet: 420, bunCap: 420, shelfOyster: 360, redcap: 300, ghostglass: 1200, goldStar: 2400 };
 export const FORAGE_FENCE_GHOSTGLASS = 70;   // what the Back-Alley Exchange pays a cap (nobody else will touch them)
 
+// Hunting (server/systems/hunting.js): field-dressing what you shot, cooking the meat over a campfire
+export const HUNT_REACH = 40;            // stand this close to the carcass / the fire
+export const HUNT_DRESS_S = 3;           // standing still, working
+export const HUNT_COOK_S = 4;
+
 // Stripping the boneyard's stored airliners for parts (server/systems/places.js): stand by a fuselage and work at it
 // a few seconds for component scrap (the yard office buys it); then that plane is stripped bare a while
 export const SALVAGE_S = 4;             // standing still, working

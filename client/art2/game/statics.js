@@ -1181,7 +1181,7 @@ function voxModel(m, a) {
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
     case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46);
-    case 'cottage': return WL.cottage(a[0] || 84, a[1] || 54, a[2] ?? 0.5); case 'seal': return WL.seal(a[0] || 0, ['#8a8a92', '#6e6e78', '#9a9088'][a[1] || 0]); case 'gull': return WL.gull(false);
+    case 'cottage': return WL.cottage(a[0] || 84, a[1] || 54, a[2] ?? 0.5, a[3] || 0); case 'seal': return WL.seal(a[0] || 0, ['#8a8a92', '#6e6e78', '#9a9088'][a[1] || 0]); case 'gull': return WL.gull(false);
     case 'crab': return WL.crab(); case 'seaArch': return WL.seaArch(a[0] || 150, a[1] || 56, a[2] || 96, a[3] || 3); case 'driftwood': return WL.driftwood(a[0] || 50, a[1] || 1); case 'shipwreck': return WL.shipwreck(a[0] || 220, a[1] || 64, a[2] || 40);
     case 'footbridge': return WT.footbridge(a[0] || 140, a[1] || 26, a[2] || 8);
     case 'mapBoard': return U.mapBoard();
@@ -1813,7 +1813,7 @@ function propItems(c, p, pi, I) {
       for (let k = 1; k < 4; k++) lightAt(I, x + tx * k / 4, y + ty * k / 4, h - 6, 90, [1, 0.8, 0.5], 0.9, 'window');
       return;
     }
-    case 'cottage': V(`cot:${p.w || 84}:${p.d || 54}`, 'cottage', [p.w || 84, p.d || 54, 0.6]); lightAt(I, x, y + 6, 22, 110, [1, 0.8, 0.5], 1.4, 'window'); return;
+    case 'cottage': V(`cot:${p.w || 84}:${p.d || 54}:${p.log ? 1 : 0}`, 'cottage', [p.w || 84, p.d || 54, 0.6, p.log ? 1 : 0]); lightAt(I, x, y + 6, 22, 110, [1, 0.8, 0.5], 1.4, 'window'); return;   // (p.log: the hunting lodge's log cabin)
     case 'seal': { const coat = Math.floor(hh(x, y, 21) * 3); V(`seal:${p.pose || 0}:${coat}:${qa(p.a || 0, 8).toFixed(2)}`, 'seal', [p.pose || 0, coat], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return; }
     case 'gull': V(`gull:${qa(p.a || 0, 8).toFixed(2)}`, 'gull', [], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return;
     case 'crab': V(`crab:${qa(p.a || 0, 8).toFixed(2)}`, 'crab', [], qa(p.a || 0, 8)); return;

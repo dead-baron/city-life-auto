@@ -62,6 +62,7 @@ const COUNTER = {
   clubhouse: { label: (l) => `${l} - the bar`, title: (l) => SHOPS.clubhouse.title, sub: 'Members and guests welcome. Cocktails, coffee, a fine red and a hot dog at the turn.' },
   farmstand: { label: (l) => `${l} - farm stand (honey)`, title: (l) => SHOPS.farmstand.title, sub: 'Lavender honey from the hives at the end of the rows, and fresh lemonade. They buy honey back.' },
   salvage: { label: (l) => `${l} - yard office (buys scrap)`, title: (l) => SHOPS.salvage.title, sub: 'The foreman buys component scrap for more than the pawn shop pays. Bring it to the window.' },
+  lodge: { label: (l) => `${l} (rifles; buys game and hides)`, title: (l) => SHOPS.lodge.title, sub: 'Hunting rifles and rounds. Bring in what you shoot - field dress it where it fell - and they pay best for venison, hides and antlers. Cook the meat over a campfire for a good meal.' },
 };
 
 // What a counter pays for one of an item: its own price when it has one (the winery pays more for grapes), else the usual

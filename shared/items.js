@@ -24,6 +24,7 @@ export const WEAPONS = {
   pshotgun: { i: 18, name: 'Police Shotgun',          type: 'gun', dmg: 11, range: 300, spread: 0.2, cd: 0.85, mag: 7, pellets: 7, police: true },
   pepper:   { i: 20, name: 'Pepper Spray',    type: 'spray', dmg: 1, range: 95, arc: 0.95, cd: 0.9, stun: 3, mag: 6, nonLethal: true },
   spikes:   { i: 21, name: 'Spike Strip',     type: 'deploy', cd: 2, police: true },
+  huntrifle: { i: 22, name: 'Hunting Rifle',  type: 'gun', dmg: 75, range: 950, spread: 0.005, cd: 1.25, mag: 5 },   // bolt-action, scoped: one clean shot drops a deer
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -73,6 +74,16 @@ export const ITEMS = {
   redcap:  { name: 'Redcap Toadstool',  loot: true, sell: 2 },      // (pretty and poisonous: nobody eats one)
   ghostglass: { name: 'Ghostglass Caps', loot: true, illegal: true, sell: 0 },   // the glowing hallucinogen: only the black market buys them, and the police take them
   goldStar: { name: 'Golden Star',      loot: true, sell: 150 },    // a rare sea star that glows, from the tidepools
+  // hunting (server/systems/hunting.js): what a field-dressed animal gives, and the meat cooked over a fire
+  venison: { name: 'Raw Venison',       game: true, sell: 9 },
+  rabbitMeat: { name: 'Raw Rabbit',     game: true, sell: 4 },
+  venisonSteak: { name: 'Venison Steak', food: true, heal: 35, sell: 16 },
+  rabbitRoast: { name: 'Roast Rabbit',  food: true, heal: 18, sell: 8 },
+  deerHide: { name: 'Deer Hide',        game: true, sell: 30 },
+  antlers: { name: 'Deer Antlers',      game: true, sell: 45 },
+  rabbitPelt: { name: 'Rabbit Pelt',    game: true, sell: 10 },
+  coyotePelt: { name: 'Coyote Pelt',    game: true, sell: 24 },
+  raccoonPelt: { name: 'Raccoon Pelt',  game: true, sell: 14 },
   lemonade: { name: 'Lemonade',         stamina: true, buff: 'coffee', sell: 0 },
   cider:   { name: 'Apple Cider',       stamina: true, buff: 'coffee', sell: 0 },
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
@@ -82,12 +93,12 @@ export const ITEMS = {
 // What kind of thing an item is (the bag's sections and the dev give menu).
 export const ITEM_CATS = [
   { id: 'tools', name: 'Tools & equipment' }, { id: 'medical', name: 'Medical' }, { id: 'drinks', name: 'Drinks' },
-  { id: 'bait', name: 'Fishing bait' }, { id: 'fish', name: 'Fish' }, { id: 'food', name: 'Food' }, { id: 'loot', name: 'Loot & valuables' },
+  { id: 'bait', name: 'Fishing bait' }, { id: 'fish', name: 'Fish' }, { id: 'food', name: 'Food' }, { id: 'game', name: 'Game & hides' }, { id: 'loot', name: 'Loot & valuables' },
 ];
 export function itemCat(id) {
   const it = ITEMS[id];
   if (!it) return null;
-  return it.tool ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : 'loot';
+  return it.tool ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : it.game ? 'game' : 'loot';
 }
 
 // GDD §8 crate rarity tiers
@@ -145,6 +156,7 @@ export const SHOPS = {
   tackle: { title: 'Hook & Line Bait and Tackle', buy: [
     { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'worms', price: 10, qty: 5 }, { kind: 'item', id: 'shrimp', price: 20, qty: 5 },
     { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'glowlure', price: 30, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 },
+    { kind: 'weapon', id: 'huntrifle', price: 1100 }, { kind: 'ammo', id: 'huntrifle', price: 40, qty: 10 },
   ], sells: ['bass', 'catfish', 'salmon', 'tuna', 'grouper', 'swordfish', 'marlin'] },
   fishmarket: { title: 'Dockside Fish Market', buy: [{ kind: 'weapon', id: 'rod', price: 75 }, { kind: 'item', id: 'lure', price: 25, qty: 3 }], sells: ['bass', 'catfish', 'salmon', 'tuna', 'grouper', 'swordfish', 'marlin'] },
   charter: { title: 'Pelican Key Charters', buy: [{ kind: 'weapon', id: 'rod', price: 90 }, { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 }], sells: ['grouper', 'swordfish', 'marlin', 'tuna', 'salmon'] },
@@ -163,6 +175,9 @@ export const SHOPS = {
   clubhouse: { title: 'Cedar Hills Golf Club - The Nineteenth', buy: [{ kind: 'item', id: 'cocktail', price: 20, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'redwine', price: 34, qty: 1 }, { kind: 'item', id: 'hotdog', price: 8, qty: 1 }] },
   farmstand: { title: 'Cedar Point Lavender - Farm Stand', buy: [{ kind: 'item', id: 'honey', price: 12, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }], sells: ['honey', 'lavender'], sellPrice: { lavender: 6 } },
   salvage: { title: 'Dry Creek Aircraft Salvage', buy: [], sells: ['scrap'], sellPrice: { scrap: 45 } },
+  lodge: { title: 'Highland Hunting Lodge', buy: [{ kind: 'weapon', id: 'huntrifle', price: 900 }, { kind: 'ammo', id: 'huntrifle', price: 35, qty: 10 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }, { kind: 'item', id: 'venisonSteak', price: 30, qty: 1 }],
+    sells: ['venison', 'rabbitMeat', 'deerHide', 'antlers', 'rabbitPelt', 'coyotePelt', 'raccoonPelt', 'venisonSteak', 'rabbitRoast'],
+    sellPrice: { venison: 14, rabbitMeat: 6, deerHide: 42, antlers: 65, rabbitPelt: 14, coyotePelt: 34, raccoonPelt: 20 } },
   garage: { title: 'Fresh Coat Garage', buy: [{ kind: 'service', id: 'respray', price: 250 }, { kind: 'service', id: 'wash', price: 20 }, { kind: 'service', id: 'repair', price: 300 }, { kind: 'service', id: 'garage', price: 0 }] },
   dealer: { title: 'Motor Row Dealership', buy: ['bicycle', 'compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports'].map((id) => ({ kind: 'vehicle', id })) },
   marina: { title: 'Harbor Marina', buy: ['jetski', 'dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },

@@ -2373,6 +2373,17 @@ function giantsLoop(m, H) {
   const along = (f) => pts[Math.min(pts.length - 1, Math.floor(f * (pts.length - 1)))];
   for (const f of [0.18, 0.5, 0.78]) { const [x, y] = along(f); H.addProp(m, 'fingerpost', Math.round(x + 34), Math.round(y + 6), 0); }
   for (const f of [0.34, 0.62]) { const [x, y] = along(f); H.addProp(m, 'pbench', Math.round(x - 40), Math.round(y + 18), 0); reserveRound(m, x - 40, y + 18, 30); }
+  // the Highland Hunting Lodge: a log cabin across the lot from the trailhead (solid), its counter on the porch
+  const lodge = P(9, 4);
+  for (let ty = Math.floor((lodge[1] - 90) / TILE); ty <= Math.floor((lodge[1] + 70) / TILE); ty++) for (let tx = Math.floor((lodge[0] - 110) / TILE); tx <= Math.floor((lodge[0] + 110) / TILE); tx++) {
+    const i = ty * MAP_W + tx;
+    if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; noTree.add(i); }
+  }
+  for (let dy = -22; dy <= 22; dy += 14) for (let dx = -48; dx <= 48; dx += 14) m.addSolidProp(lodge[0] + dx, lodge[1] + dy - 4, 10);
+  H.addProp(m, 'cottage', Math.round(lodge[0]), Math.round(lodge[1] + 26), 0, { w: 100, d: 56, log: 1 });
+  H.addProp(m, 'textsign', Math.round(lodge[0] + 74), Math.round(lodge[1] + 46), 0, { text: 'HUNTING LODGE', bg: '#5a3a22', fg: [250, 230, 180], z: 30 });
+  H.addProp(m, 'woodpile', Math.round(lodge[0] - 86), Math.round(lodge[1] + 20), 0);
+  addCounter(m, 'lodge', 'Highland Hunting Lodge', lodge[0], lodge[1] + 44);
   (m.landmarks ||= []).push({ name: 'Giants Loop', type: 'trail', x: Math.round(L[0] - 80), y: Math.round(L[1] - 23 * TILE), w: 34 * TILE, h: 26 * TILE });
   m.natureSites.push({ kind: 'trail', name: 'Giants Loop', x: Math.round(L[0]), y: Math.round(L[1]), len: pts.length });
 }
