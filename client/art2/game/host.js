@@ -529,9 +529,11 @@ export class World2 {
   // what is behind them). Driving clears a wider space. A building already fading keeps a slightly bigger box,
   // so walking along its edge doesn't make it flicker.
   _fades(F, sp) {
-    const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false;
+    const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false, onTrain = F.myTrain !== undefined && F.myTrain >= 0;
     const z0 = (sp.z || 0) > 0.01 ? DECK_Z * sp.z : this._gz(sp.x, sp.y), px = sp.x, py = sp.y, sy = py - z0;
-    const rx = inVeh ? 150 : 100, up = inVeh ? 160 : 128, down = 44;
+    // On a train only what really stands over you fades (passing beside buildings, the ones either side of the
+    // track kept fading in and out); in a car a wider space round you, on foot a little less.
+    const rx = onTrain ? 28 : inVeh ? 150 : 100, up = onTrain ? 70 : inVeh ? 160 : 128, down = onTrain ? 12 : 44;
     const want = this._fadeWant || (this._fadeWant = new Set());
     want.clear();
     if (!F.sub && !F.spec) for (const st of this.chunkState.values()) { // (none while spectating)

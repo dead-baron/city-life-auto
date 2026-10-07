@@ -1,7 +1,7 @@
 // Law & tri-faction systems: witness network (GDD §6), legal immunity matrix (§7),
 // heat/wanted stars with the 3-second flare and expanding search circle, peak-wanted
 // disguise memory (§4B), enforcer badge + demotion (§4C), bounties and arrests.
-import { K, FACTION, STAR_HEAT, starsForHeat } from '../../shared/constants.js';
+import { K, FACTION, STAR_HEAT, starsForHeat, TILE, MAP_W } from '../../shared/constants.js';
 import * as revive from './revive.js';
 import { angleDiff } from '../../shared/math.js';
 import { isTurf } from '../../shared/map.js';
@@ -10,6 +10,7 @@ import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as phone from './phone.js';
 import * as events from './events.js';
+import { wildStyle } from './wildlife.js';
 
 export const CRIMES = {
   assault:     { heat: 15, label: 'Assault' },
@@ -30,8 +31,24 @@ export const CRIMES = {
   trainRobbery: { heat: 50, label: 'Train robbery', felony: true },
 };
 
-import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR } from '../../shared/rules.js';
+import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL } from '../../shared/rules.js';
 export { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, SERVICE_AMMO, SUBDUE_S, POLICE_RANKS };
+
+// How far the police can spot a wanted suspect at (x, y), as a share of their town range (420 px):
+// 1 in town; out in the wilds less (fewer eyes, more ground to cover), and on foot in thick
+// cover - the trees, logs and rocks within a couple of tiles - less again.
+const SIGHT_PX = 420;
+export function sightFactor(map, x, y, onFoot = true) {
+  if (!wildStyle(map, x, y)) return 1;
+  if (!onFoot || !map.solidProps) return WILD_SIGHT;
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  let n = 0;
+  for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
+    const a = map.solidProps.get((ty + j) * MAP_W + tx + i);
+    if (a) for (const e of a) if (!e.off) n++;
+  }
+  return WILD_SIGHT * (1 - COVER_SIGHT * Math.min(1, n / 6));
+}
 
 // Police misconduct grace: officers can get away with a few offences; each one is forgotten
 // after MISCONDUCT_RESET_MS. Going over the limit costs the badge.
@@ -276,7 +293,8 @@ export function update(world, dt) {
     if (!ped || ped.dead) continue;
     if (p.wanted > 0) {
       let seen = false;
-      if (!ped.hidden) for (const e of world.query(ped.x, ped.y, 420, K.PED)) {
+      const sight = sightFactor(world.map, ped.x, ped.y, !ped.vehId);
+      if (!ped.hidden) for (const e of world.query(ped.x, ped.y, SIGHT_PX * sight, K.PED)) {
         if (!isCop(e) || e.dead || e === ped) continue;
         if (canSee(world, e, ped)) { seen = true; break; }
       }
@@ -291,8 +309,10 @@ export function update(world, dt) {
       if (seen) { p.seenAt = now; p.lastSeenX = ped.x; p.lastSeenY = ped.y; p.searchR = 60; }
       const unseen = now - p.seenAt;
       if (unseen > 3) {
-        p.searchR = Math.min(1100, p.searchR + 28 * dt);
-        const rate = unseen > 20 ? 2.4 : 1.2;
+        // out in the wilds the trail goes cold faster: the search spreads wider and heat cools quicker
+        const wild = sight < 1;
+        p.searchR = Math.min(wild ? 1500 : 1100, p.searchR + (wild ? 42 : 28) * dt);
+        const rate = (unseen > 20 ? 2.4 : 1.2) * (wild ? WILD_COOL : 1);
         p.heat = Math.max(0, p.heat - rate * dt);
         const stars = starsForHeat(p.heat);
         if (stars < p.wanted) {

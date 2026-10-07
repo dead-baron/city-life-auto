@@ -35,6 +35,8 @@ export function saveSettings() { try { localStorage.setItem('cla.settings', JSON
 // both at once made the game flip between pad and mouse every frame (the top buttons blinked
 // and the HUD kept re-laying itself out). Ask for the raw pad, and while the pad is in use, ignore
 // mouse events for picking the device.
+// how far out a stick (or the touch thumb) is pushed to sprint: only the keyboard has a run key (Shift)
+export const FULL_STICK = 0.9;
 import { IS_CONSOLE, DEVICE_FORCED } from './platform.js';
 export { IS_CONSOLE };
 try { if (typeof navigator !== 'undefined' && 'gamepadInputEmulation' in navigator) navigator.gamepadInputEmulation = 'gamepad'; } catch { /* read-only */ }
@@ -327,7 +329,7 @@ export function sample(view) {
     if (p.r3) bits |= IN.RELOAD;
     if (p.up) bits |= view.inVehicle ? IN.HORN : IN.LIGHT; // D-pad up: horn / siren in a vehicle, the flashlight on foot
     if (view.inVehicle) { if (!driving && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
-    else if (p.l3 || p.lt > 0.4) bits |= IN.SPRINT;
+    else if (Math.hypot(p.lx, p.ly) > FULL_STICK) bits |= IN.SPRINT;  // no run button on a pad: the stick all the way out sprints
     const rmag = Math.hypot(p.rx, p.ry);
     if (rmag > 0.15) { padAim = Math.atan2(p.ry, p.rx); padAimUntil = performance.now() + 450; }
     if (performance.now() < padAimUntil) { aim = padAim; bits |= IN.AIMING; }
@@ -342,7 +344,7 @@ export function sample(view) {
     if (held || (recent && (view.armed || touch.btn.has('fire')))) { aim = touch.aim; bits |= IN.AIMING; }
     if (touch.firing || touch.btn.has('fire') || touch.tapped.has('fire')) bits |= IN.FIRE;
     const tb = touch.btn, tt = touch.tapped;
-    if (tb.has('sprint')) bits |= IN.SPRINT;
+    if (!view.inVehicle && Math.hypot(touch.lx, touch.ly) > FULL_STICK) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out)
     if (tb.has('dive') || tt.has('dive')) bits |= IN.DIVE;
     if (tb.has('action') || tt.has('action')) bits |= IN.ACTION;
     if (tb.has('vehicle') || tt.has('vehicle')) bits |= IN.VEHICLE;

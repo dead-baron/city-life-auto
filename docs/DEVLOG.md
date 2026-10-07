@@ -2387,3 +2387,18 @@ The biggest bare areas left were the town districts' open grass: West Hills, the
   - lavender, hydrangea and roses in the luxury hills;
   - beach grass, ice plant, hibiscus and bougainvillea in the beach towns.
 - Homes and businesses are unchanged. World v2 stage 2 (the residential belts) will lay real lots over much of this later.
+
+## 2026-10-07 · Backlog: run with the stick, train fades, the Cedar Falls clinic, lying low in the wilds
+
+From the 20:33 feedback list (`docs/DESIGN-NOTES.md`).
+- **Run without a button on pad and touch:** pushing the move stick (or the touch thumb) all the way out runs; only the keyboard keeps a run key (Shift).
+  - `client/input.js` `FULL_STICK` (0.9 of full travel). The touch SPRINT button is gone; the README controls tables and `shared/controls.js` say "full stick" / "full thumb".
+- **Riding a train, buildings no longer fade beside you:** on a train only what is really in front of your car fades (a narrow window above the car), so rolling between two buildings doesn't wash both out (`host.js` `_fades`).
+- **The Cedar Falls clinic is in the open:** filler blocks (no business, home or walk-in) standing in the 8 tiles in front of a hospital or clinic are cleared to plaza, so the doors and the respawn point can be seen. This took two blocks in front of the Cedar Falls Clinic and one in front of the Westside Clinic (`shared/map.js` `clearHospitalFronts`; homes unchanged).
+- **The police don't pop up on you any more:** a new unit always rolls in from a road off every player's screen, at least 650 px from anyone, and not on the road straight ahead of a suspect fleeing at speed - they come up from behind or the side. If no road fits, the search ring widens; if still nothing, no unit is sent this second (`police.js` `spawnPoint`).
+- **Lying low in the wilds** (woods, farmland, desert), with the numbers in `shared/rules.js`:
+  - the police spot you at 70% of their town range;
+  - on foot in thick trees, logs or rocks, down to about 40% (`law.js` `sightFactor` counts the solid things within two tiles);
+  - out of their sight, heat cools 1.8x faster and the search circle spreads wider;
+  - once they've lost you, the car already out keeps searching but no more are sent;
+  - units sent out there come from a long way off (1.3-2.6 km).

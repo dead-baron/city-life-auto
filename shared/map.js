@@ -551,6 +551,7 @@ export function generateCity(seed = 1337) {
   buildCornerStores(m);
   buildInteriors(m);
   buildDealerLots(m);
+  clearHospitalFronts(m);
   buildRailway(m, railPts);
   buildOffshore(m, rand);
   buildBoatDocks(m);
@@ -3815,6 +3816,24 @@ function buildWilds(m, rand) {
     addProp(m, hash2(gx, gy, 62) < 0.5 ? 'tree_a' : 'tree_b', x, y, 12, { g: stand });
   }
   void rand;
+}
+
+// You respawn at the hospitals and clinics: nothing may stand in front of one (in this view a building south of
+// it hides its door and forecourt). Plain filler buildings (no business, no home) in the band from its front
+// down to the street go, and their ground joins the forecourt.
+function clearHospitalFronts(m) {
+  for (const h of m.buildings) {
+    if (!h || h.gone || h.kind !== 'hospital') continue;
+    for (let ty = h.ty + h.th; ty < h.ty + h.th + 8; ty++) for (let tx = h.tx; tx < h.tx + h.tw; tx++) {
+      const id = m.bld[ty * MAP_W + tx];
+      if (id < 0 || id === h.id) continue;
+      const b = m.buildings[id];
+      if (!b || b.gone || b.kind !== 'roof' || b.business || b.home !== undefined || b.walkIn || m.pois.some((p) => p.b === id)) continue;
+      b.gone = true;
+      if (b.roof >= 0 && m.roofs[b.roof]) m.roofs[b.roof].gone = true;
+      for (let y = b.ty; y < b.ty + b.th; y++) for (let x = b.tx; x < b.tx + b.tw; x++) { m.set(x, y, T.PLAZA); m.bld[y * MAP_W + x] = -1; }
+    }
+  }
 }
 
 function buildStreetProps(m) {

@@ -81,6 +81,12 @@ export const FELONY_FINE = 750;
 export const GANG_PROVOKE_SPEED = 330;     // a cop driving faster than this right past gang members sets them off
 export const SHOOTOUT_EVERY_S = [180, 300]; // how often a gang-police shootout breaks out near turf (if a player is around)
 
+// Lying low in the wilds (woods, farmland, desert): fewer eyes and more cover than in town
+export const WILD_SIGHT = 0.7;       // the police spot a wanted suspect out there at this share of their town range...
+export const COVER_SIGHT = 0.45;     // ...and on foot in thick trees or rocks, up to this much less again
+export const WILD_COOL = 1.8;        // out of sight in the wilds, heat cools this many times faster
+export const WILD_UNITS = 1;         // ...and once they've lost you, no more cars join the search beyond this many
+
 // Spray & Go paint shops
 export const PAINT_PRICE = 150;      // a new colour (no repairs)
 export const PAINT_TIME_S = 3.5;     // shutter down this long while they spray

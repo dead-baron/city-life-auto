@@ -13,6 +13,8 @@ import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
+import { wildStyle } from './wildlife.js';
+import { WILD_UNITS } from '../../shared/rules.js';
 
 const rng = mulberry32(911);
 
@@ -34,7 +36,9 @@ function dispatch(world) {
   for (const p of world.players.values()) {
     if (!p.ped || p.ped.dead || p.wanted <= 0) continue;
     const have = units.get(p.pid) || 0;
-    if (have >= unitsWanted(p.wanted)) continue;
+    // lying low out in the wilds: once they've lost you, the cars already out keep searching but no more are sent
+    const lost = world.time - p.seenAt > 3 && !!wildStyle(world.map, p.ped.x, p.ped.y);
+    if (have >= (lost ? Math.min(WILD_UNITS, unitsWanted(p.wanted)) : unitsWanted(p.wanted))) continue;
     spawnUnit(world, p);
   }
 }
@@ -44,22 +48,45 @@ export function respondTo(world, p, x, y, count = 3) {
   for (let i = 0; i < count; i++) spawnUnit(world, p, { at: { x, y }, minD: 380, maxD: 950, clearPx: 300, noMoto: true });
 }
 
-function spawnUnit(world, p, o = {}) {
+// Where a new unit rolls in from: a road node in a ring round the suspect's last known position,
+// never on anyone's screen and well clear of every player (no cops popping up right on you), and
+// not on the road straight ahead of a suspect fleeing at speed - they come up from behind or the
+// side. Out in the wilds the ring is wider (help is a long drive away). If nothing fits, the ring
+// widens; if still nothing, no unit this time (dispatch tries again in a second).
+const AHEAD_COS = 0.5;  // within 60 degrees of a fleeing suspect's heading counts as ahead
+const FLEE_SPEED = 150; // px/s: slower than this nobody is fleeing anywhere in particular
+function spawnPoint(world, p, tx, ty, o) {
   const m = world.map;
-  const tx = o.at ? o.at.x : p.seenAt && world.time - p.seenAt < 3 ? p.ped.x : p.lastSeenX;
-  const ty = o.at ? o.at.y : p.seenAt && world.time - p.seenAt < 3 ? p.ped.y : p.lastSeenY;
-  const cands = m.nodes.filter((n) => {
-    if (n.lvl !== 0) return false;
-    const d = Math.hypot(n.x - tx, n.y - ty);
-    if (d < (o.minD || 750) || d > (o.maxD || 1400)) return false;
-    for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - n.x, q.ped.y - n.y) < (o.clearPx || 650)) return false;
-    if (world.query(n.x + 32, n.y + 32, 80, K.VEH).length) return false;
-    return true;
-  });
-  if (!cands.length) return;
-  const hidden = cands.filter((n) => !inAnyView(world, n.x + 32, n.y + 32, 100)); // roll in from off screen when possible
-  const pool = hidden.length ? hidden : cands;
-  const n = pool[Math.floor(rng() * pool.length)];
+  const wild = !o.at && !!wildStyle(m, p.ped.x, p.ped.y);
+  const minD = o.minD || (wild ? 1300 : 750), maxD = o.maxD || (wild ? 2600 : 1400), clear = o.clearPx || (wild ? 1100 : 650);
+  const f = p.ped.vehId ? world.get(p.ped.vehId) || p.ped : p.ped;
+  const fvx = f.vx || 0, fvy = f.vy || 0, fsp = Math.hypot(fvx, fvy);
+  for (const [lo, hi] of [[minD, maxD], [maxD, maxD * 1.6], [maxD * 1.6, maxD * 2.4]]) {
+    const ok = [], behind = [];
+    for (const n of m.nodes) {
+      if (n.lvl !== 0) continue;
+      const d = Math.hypot(n.x - tx, n.y - ty);
+      if (d < lo || d > hi) continue;
+      let near = false;
+      for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - n.x, q.ped.y - n.y) < clear) { near = true; break; }
+      if (near || inAnyView(world, n.x + 32, n.y + 32, 140)) continue;
+      if (world.query(n.x + 32, n.y + 32, 80, K.VEH).length) continue;
+      ok.push(n);
+      const dx = n.x - p.ped.x, dy = n.y - p.ped.y;
+      if (fsp < FLEE_SPEED || (dx * fvx + dy * fvy) < AHEAD_COS * Math.hypot(dx, dy) * fsp) behind.push(n);
+    }
+    const pool = behind.length ? behind : ok;
+    if (pool.length) return pool[Math.floor(rng() * pool.length)];
+  }
+  return null;
+}
+
+function spawnUnit(world, p, o = {}) {
+  const fresh = p.seenAt && world.time - p.seenAt < 3;
+  const tx = o.at ? o.at.x : fresh ? p.ped.x : p.lastSeenX;
+  const ty = o.at ? o.at.y : fresh ? p.ped.y : p.lastSeenY;
+  const n = spawnPoint(world, p, tx, ty, o);
+  if (!n) return null;
   const swat = p.wanted >= 4 && rng() < 0.5;
   const moto = !o.noMoto && !swat && p.wanted <= 3 && rng() < 0.3; // motorcycle cops: one rider, fast, fragile
   const a = Math.atan2(ty - n.y, tx - n.x);
@@ -75,6 +102,7 @@ function spawnUnit(world, p, o = {}) {
   }
   v.ai = { kind: 'police', target: p.pid, mode: 'drive', route: null, routeAt: 0, swat };
   world.police.add(v.id);
+  return v;
 }
 
 function armCop(cop, stars, swat) {

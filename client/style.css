@@ -218,7 +218,6 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 #tbtns .act { right: calc(max(22px, env(safe-area-inset-right)) + 8px); bottom: 166px; }
 #tbtns .car { right: calc(max(22px, env(safe-area-inset-right)) + 74px); bottom: 186px; }
 #tbtns .throw { right: calc(max(22px, env(safe-area-inset-right)) + 140px); bottom: 176px; }
-#tbtns .sprint { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 14px; width: 66px; height: 48px; border-radius: 24px; font-size: 12px; }
 #tbtns .horn, #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 74px; width: 58px; height: 46px; border-radius: 23px; font-size: 12px; }
 #tbtns .wpn { display: none; }
 #tbtns .heal { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 10px; width: 52px; height: 30px; border-radius: 15px; font-size: 11px; }
@@ -231,7 +230,7 @@ body:not(.can-call) #tbtns .cruiser { display: none; }
 #dev-btn { top: 8px; left: calc(50% + 72px); width: 50px !important; height: 34px !important; border-radius: 8px !important; font-size: 11px !important; }
 #tbtns .veh { display: none; }
 body.in-veh #tbtns .dive .foot { display: none; } body.in-veh #tbtns .dive .veh { display: inline; }
-body:not(.in-veh) #tbtns .horn, body.in-veh #tbtns .sprint, body:not(.carrying) #tbtns .throw, body:not(.armed) #tbtns .reload { display: none; }
+body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.armed) #tbtns .reload { display: none; }
 
 /* touch HUD arrangement: radar moves top-left (the left thumb owns the bottom-left) */
 .touch #net, .touch #w-carry { display: none; }
@@ -271,7 +270,6 @@ body.portrait.touch #weapon { display: none; }
 body.portrait.touch #helpbox, body.portrait.touch #toasts { left: max(10px, env(safe-area-inset-left)); top: 200px; max-width: 80vw; width: auto; }
 body.portrait.touch #toasts { top: 250px; width: 80vw; }
 body.portrait.touch #job { top: auto; bottom: 300px; max-width: 86vw; }
-body.portrait.touch #tbtns .sprint { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 186px; }
 body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
 body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: 160px; }
 body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: 160px; }

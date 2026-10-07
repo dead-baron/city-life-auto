@@ -231,3 +231,107 @@ test('pepper spray blinds whoever is in front of you; a spike strip shreds the t
   w.time += SPIKE_STRIP_S + 1; w.step(); w.step();
   assert.equal(w.spikes.length, 0);
 });
+
+// ---------------------------------------------------------------------------
+// Lying low in the wilds, and units that roll in from out of sight.
+import * as law from '../server/systems/law.js';
+import * as police from '../server/systems/police.js';
+import { wildStyle } from '../server/systems/wildlife.js';
+import { viewRect } from '../server/view.js';
+import { STAR_HEAT, TILE, MAP_W } from '../shared/constants.js';
+import { WILD_SIGHT, COVER_SIGHT, WILD_COOL, WILD_UNITS } from '../shared/rules.js';
+
+// An open spot out in the wilds (no cover within a few tiles, no buildings for 500 px east of it).
+function openWildSpot(w) {
+  const m = w.map;
+  for (const n of m.nodes) {
+    if (n.lvl !== 0 || wildStyle(m, n.x, n.y) !== 'wild') continue;
+    const x = n.x + 32, y = n.y + 32;
+    if (law.sightFactor(m, x, y) !== WILD_SIGHT) continue;
+    if (!m.los(x, y, x + 500, y) || !m.isWalkable(x, y)) continue;
+    return { x, y };
+  }
+  return null;
+}
+// A spot deep in a grove: trees all round.
+function groveSpot(w) {
+  const m = w.map;
+  let best = null, bf = 1;
+  for (const k of m.solidProps.keys()) {
+    const tx = k % MAP_W, ty = Math.floor(k / MAP_W);
+    if ((tx + ty) % 7) continue;
+    const x = tx * TILE + 16, y = ty * TILE + 16;
+    if (!wildStyle(m, x, y)) continue;
+    const f = law.sightFactor(m, x, y);
+    if (f < bf) { bf = f; best = { x, y, f }; }
+  }
+  return best;
+}
+
+test('wilds: the police see less far out there, less again in the trees, and lose you faster', () => {
+  const w = makeWorld();
+  const town = hq(w);
+  assert.equal(law.sightFactor(w.map, town.x, town.y), 1, 'in town the police see the full range');
+  const open = openWildSpot(w);
+  assert.ok(open, 'an open spot out in the wilds');
+  const grove = groveSpot(w);
+  assert.ok(grove && grove.f < WILD_SIGHT * (1 - COVER_SIGHT * 0.6), `thick cover in a grove (${grove && grove.f.toFixed(2)})`);
+  assert.equal(law.sightFactor(w.map, grove.x, grove.y, false), WILD_SIGHT, 'a vehicle gets no cover from the trees');
+
+  // a cop 350 px off with a clear view: spotted in town range, not out in the wilds
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, open.x, open.y);
+  law.addHeat(w, p, STAR_HEAT[2] + 5, open.x, open.y);
+  p.seenAt = w.time - 10;
+  const cop = spawnNpc(w, 'cop', open.x + 350, open.y, 'cop');
+  law.update(w, 0.05);
+  assert.ok(w.time - p.seenAt > 5, 'the cop at 350 px misses you out in the wilds');
+  teleport(w, cop, open.x + 250, open.y);
+  law.update(w, 0.05);
+  assert.ok(w.time - p.seenAt < 1, 'closer in, he spots you');
+  w.remove(cop);
+
+  // heat cools faster out of sight in the wilds than in town
+  const cool = (x, y) => {
+    teleport(w, p.ped, x, y);
+    p.heat = STAR_HEAT[3] + 20; p.wanted = 3; p.seenAt = w.time - 10;
+    const before = p.heat;
+    w.tick = 1; // off the camera-check ticks: no traffic camera pings either
+    for (let i = 0; i < 40; i++) law.update(w, 0.05);
+    return before - p.heat;
+  };
+  const wildDrop = cool(open.x, open.y);
+  let tx = town.x, ty = town.y + 400;
+  for (const n of w.map.nodes) if (n.lvl === 0 && !wildStyle(w.map, n.x, n.y) && law.sightFactor(w.map, n.x + 32, n.y + 32) === 1 && !w.query(n.x + 32, n.y + 32, 500, K.PED).some((e) => e.npc && e.npc.role === 'cop')) { tx = n.x + 32; ty = n.y + 32; break; }
+  const townDrop = cool(tx, ty);
+  assert.ok(Math.abs(wildDrop / townDrop - WILD_COOL) < 0.05, `cools ${WILD_COOL}x faster (${wildDrop.toFixed(2)} vs ${townDrop.toFixed(2)})`);
+});
+
+test('police units roll in from off screen and clear of you; lost in the wilds, no more are sent', () => {
+  const w = makeWorld();
+  const road = straightRoad(w.map, 1400);
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, road.x + road.len / 2, road.y);
+  law.addHeat(w, p, STAR_HEAT[4] + 5, p.ped.x, p.ped.y);
+  p.seenAt = w.time;
+  const rect = viewRect(w, p, {});
+  const before = new Set(w.police || []);
+  for (let i = 0; i < 6; i++) { w.tick = 7 + 20 * i; p.seenAt = w.time; police.update(w, 0.05); }
+  const fresh = [...w.police].filter((id) => !before.has(id)).map((id) => w.get(id));
+  assert.ok(fresh.length >= 3, `units dispatched (${fresh.length})`);
+  for (const v of fresh) {
+    const onScreen = v.x > rect.x0 - 100 && v.x < rect.x1 + 100 && v.y > rect.y0 - 100 && v.y < rect.y1 + 100;
+    assert.ok(!onScreen, `unit ${v.id} spawned off screen`);
+    assert.ok(Math.hypot(v.x - p.ped.x, v.y - p.ped.y) > 650, 'and well clear of you');
+  }
+  for (const v of fresh) { for (const sid of v.seats) if (sid) w.remove(w.get(sid)); w.police.delete(v.id); w.remove(v); }
+
+  // out in the wilds and out of sight: the search goes on with what's out there, nothing new joins
+  const open = openWildSpot(w);
+  teleport(w, p.ped, open.x, open.y);
+  p.lastSeenX = open.x; p.lastSeenY = open.y; p.seenAt = w.time - 10;
+  for (let i = 0; i < 6; i++) { w.tick = 7 + 20 * i; police.update(w, 0.05); }
+  const sent = [...w.police].filter((id) => { const v = w.get(id); return v && v.ai && v.ai.target === p.pid; });
+  assert.ok(sent.length <= WILD_UNITS, `at most ${WILD_UNITS} unit(s) sent after losing you in the wilds (${sent.length})`);
+  for (const id of sent) { const v = w.get(id); assert.ok(Math.hypot(v.x - open.x, v.y - open.y) > 1100, 'from a long way off'); }
+});

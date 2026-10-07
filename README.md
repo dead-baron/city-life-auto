@@ -38,7 +38,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Aim / attack | Mouse / left click | Right stick (full deflection auto-fires) / RT | Right stick (push far to fire) |
 | Interact (shops, crates, loot, arrest, fishing) | E | B | E |
 | Enter / exit vehicle | F | X | CAR |
-| Sprint | Shift | L3 / LT | RUN (toggle) |
+| Sprint | Shift | Push the left stick all the way | Push the left thumb all the way |
 | Dive roll / handbrake (in a car: e-brake skid turn / drift; held with gas = burnout, + steer = donuts) | Space | A | ROLL / BRAKE |
 | Drift: brake while steering at speed | S + A/D (tank) · pull back to one side (point) | LT + stick | pull back to one side |
 | Power slide: floor it through a tight turn (hold the gas + counter-steer to keep it sideways, lift to grip) | W + A/D at speed | RT + stick | push far to one side at speed |
@@ -109,7 +109,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Drive-by | Mouse aim + click | Right stick aim, push all the way to fire | Aim stick / FIRE |
 | Aim | Mouse cursor | Right stick | Right stick |
 | Fire / punch (on foot) | Click | RT | FIRE button, or push the aim stick into its red ring |
-| Sprint | Shift | LT / L3 | SPRINT |
+| Sprint | Shift | Left stick all the way out | Left thumb all the way out |
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
 | Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | tap the weapon box · RELOAD · ITEMS · 🎒 |

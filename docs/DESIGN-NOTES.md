@@ -95,13 +95,13 @@ Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
   bigger download wouldn't help; a later option is baking the area round your spawn during the loading screen.
 - **Lamp-post shadows:** a street light casts a big triangle from the top of the post down to its foot. It should
   cast the post's own shape out from its base (the shadow of a thin upright thing in 3D).
-- **Running without a button:** only the keyboard keeps a run key (Shift). On a gamepad or touch, a full stick
+- **Running without a button [done 2026-10-07]:** only the keyboard keeps a run key (Shift). On a gamepad or touch, a full stick
   is full speed.
-- **On a train, buildings fade too soon.** They go see-through when you pass beside them, so between two
+- **On a train, buildings fade too soon [done 2026-10-07].** They go see-through when you pass beside them, so between two
   buildings both fade. On a train, fade only what you are really behind, or nothing.
 - **NPCs walk through the train** when boarding or passing. They should go round it, and board and alight from
   the platform.
-- **The Cedar Falls clinic:** a building in front of it hides the interior when you respawn there.
+- **The Cedar Falls clinic [done 2026-10-07]:** a building in front of it hides the interior when you respawn there.
 - **The debug menu:**
   - **Buttons stay lit:** they stay highlighted after use (4 stars and then clear wanted both stay yellow).
   - **Easy access:** a small debug icon on every device (a pink circle with a bug, grey and see-through until
@@ -111,7 +111,7 @@ Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
   - **A testing category per feature** (jobs, events, world events, items...) that spawns the thing or takes you
     there.
   - **Weather controls.**
-- **Police in the wilderness:** cops shouldn't spawn right on you while you flee. Fleeing into the wilderness makes
+- **Police in the wilderness [done 2026-10-07]:** cops shouldn't spawn right on you while you flee. Fleeing into the wilderness makes
   you harder to find.
 - **Umbrellas:** NPCs hold the umbrella in one hand.
 
