@@ -41,6 +41,8 @@ import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
 import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
 import { ferrisCab } from '../props-park.js';
 import { hotAirBalloon } from '../props-rural.js';
+import { groundSprite as forageGround } from '../forage.js';
+import { starfish } from '../props-wild.js';
 import { VEHICLE_BY_INDEX, PAINTS } from '../../../shared/vehicles.js';
 
 const TAU = Math.PI * 2;
@@ -643,8 +645,15 @@ export function rideSprite(kind, v = 0) {
   return objRender('cab' + c, () => ferrisCab(c), 0, 1);
 }
 
+// ---- foraging (shared/foraging.js) ----------------------------------------------------------------------------------
+// What you can pick where it grows (the host draws it while the spot isn't picked bare): the mushrooms as the forage
+// art draws them on the forest floor, on a log or at a stump (client/art2/forage.js groundSprite), and the tidepools'
+// golden sea star, lit from within. v: one of four looks.
+export const forageKey = (art, v = 0) => `F|${art}|${(v | 0) & 3}`;
+export function forageSprite(art, v = 0) { return art === 'star' ? starfish('#f0c040', 6, 1 + ((v | 0) & 3), 1) : forageGround(art, (v | 0) & 3); }
+
 export function clearActorCaches() { for (const c of [MODELS, ANIMAL_MODELS, OBJ_MODELS, TRAIN_MODELS]) c.clear(); LIGHTS.clear(); }
 
 // ---- one table for the workers: sprite(kind, args) and its cache key --------------------------------------------
-export const SPRITES = { vehicle: vehicleSprite, animal: animalSprite, crate: crateSprite, bag: bagSprite, ball: ballSprite, proj: projSprite, train: trainCarSprite, fx: fxSprite, muzzle: muzzleSprite, tracer: tracerSprite, wake: wakeSprite, critter: critterSprite, ride: rideSprite };
-export const KEYS = { vehicle: vehicleKey, animal: animalKey, crate: crateKey, bag: bagKey, ball: ballKey, proj: projKey, train: trainKey, fx: fxKey, muzzle: muzzleKey, tracer: tracerKey, wake: wakeKey, critter: critterKey, ride: rideKey };
+export const SPRITES = { vehicle: vehicleSprite, animal: animalSprite, crate: crateSprite, bag: bagSprite, ball: ballSprite, proj: projSprite, train: trainCarSprite, fx: fxSprite, muzzle: muzzleSprite, tracer: tracerSprite, wake: wakeSprite, critter: critterSprite, ride: rideSprite, forage: forageSprite };
+export const KEYS = { vehicle: vehicleKey, animal: animalKey, crate: crateKey, bag: bagKey, ball: ballKey, proj: projKey, train: trainKey, fx: fxKey, muzzle: muzzleKey, tracer: tracerKey, wake: wakeKey, critter: critterKey, ride: rideKey, forage: forageKey };

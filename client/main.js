@@ -76,6 +76,7 @@ const S = {
   bayOpen: {}, bayAnim: {}, // paint-shop shutters
   garageOpen: {}, garageAnim: {}, // home garage doors
   gateOpen: {}, gateAnim: {}, // police motor pool gates
+  forageGone: new Set(),      // foraging spots picked bare (map.forage indices; server/systems/foraging.js)
   xing: [], xingAnim: [], // level crossings: { d: gates down, b: [arm broken, arm broken] }
 };
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
@@ -174,6 +175,7 @@ function onText(m) {
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
+      S.forageGone = new Set(m.forage || []);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       if (S.art2) S.art2.resync(); // (back in after a reconnect: the art v2 bakes follow the server's broken props)
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
@@ -599,6 +601,7 @@ function onEvent(ev) {
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
+    case 'forage': if (ev.up) S.forageGone.delete(ev.i); else S.forageGone.add(ev.i); break;
     case 'xing': S.xing[ev.i] = { d: ev.d, b: ev.b }; break;
     case 'tt': S.tt = { l: ev.l, at: performance.now() / 1000 }; break; // station clocks
     case 'gatebreak': fx.sparks(ev.x, ev.y, 6); for (let k = 0; k < 6; k++) fx.spawn(4, ev.x, ev.y, Math.cos(ev.a + (Math.random() - 0.5)) * 160, Math.sin(ev.a + (Math.random() - 0.5)) * 160, 0.5, 3, k % 2 ? '#f4f4f4' : '#c8262b'); sfx('crash', distVol(ev.x, ev.y) * 0.6); break;

@@ -2197,6 +2197,9 @@ function lighthouseTidepools(m, H) {
     }
     if (hash2(gx, gy, 813) < 0.4) H.addProp(m, 'crab', Math.round(X + RX + 10), Math.round(Y + 4), 0, { a: Math.round(hash2(gx, gy, 814) * 628) / 100 });
   }
+  // the rare golden stars you can take (shared/foraging.js): in two of the pools, at the water's edge
+  const starPools = pools.slice().sort((a, b) => hash2(a[4], a[5], 817) - hash2(b[4], b[5], 817)).slice(0, 2);
+  for (const [X, Y, RX] of starPools) (m.forage ||= []).push({ x: Math.round(X + RX * 0.45), y: Math.round(Y + 2), k: 'goldStar' });
   // driftwood up the beach
   for (let k = 0; k < 4; k++) { const [tx, ty] = shelf[Math.floor(hash2(k, 3, 815) * shelf.length)]; if (m.tiles[ty * MAP_W + tx] === T.SAND) H.addProp(m, 'driftwood', (tx + 0.5) * TILE, (ty + 0.5) * TILE, 0, { a: Math.round(hash2(k, 4, 815) * 314) / 100, len: 40 + Math.floor(hash2(k, 5, 815) * 3) * 10 }); }
   // offshore: sea stacks and the seal rock, in the water east of the shelf (solid: boats steer round them)

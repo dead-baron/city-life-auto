@@ -88,6 +88,12 @@ export const PICK_MAX = 3;              // up to this many from one tree or vine
 export const PICK_REGROW_S = 240;       // ...then nothing more on it for this long
 export const PICK_REACH = 40;           // stand this close to the trunk / the row
 
+// Foraging (shared/foraging.js, server/systems/foraging.js): mushrooms on the redwood floor, the tidepools' golden stars.
+// A spot gives a few, then it's bare until it grows back (by kind, seconds)
+export const FORAGE_REACH = 38;          // stand this close to it
+export const FORAGE_REGROW_S = { goldTrumpet: 420, bunCap: 420, shelfOyster: 360, redcap: 300, ghostglass: 1200, goldStar: 2400 };
+export const FORAGE_FENCE_GHOSTGLASS = 70;   // what the Back-Alley Exchange pays a cap (nobody else will touch them)
+
 // Stripping the boneyard's stored airliners for parts (server/systems/places.js): stand by a fuselage and work at it
 // a few seconds for component scrap (the yard office buys it); then that plane is stripped bare a while
 export const SALVAGE_S = 4;             // standing still, working

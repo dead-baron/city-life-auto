@@ -5,7 +5,7 @@ import { K, FACTION, STAR_HEAT, starsForHeat, TILE, MAP_W } from '../../shared/c
 import * as revive from './revive.js';
 import { angleDiff } from '../../shared/math.js';
 import { isTurf } from '../../shared/map.js';
-import { WEAPONS } from '../../shared/items.js';
+import { WEAPONS, ITEMS } from '../../shared/items.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as phone from './phone.js';
@@ -438,6 +438,7 @@ function bookBody(world, cop, body) {
       const fine = Math.min(t.profile.cash, 150 * b.stars);
       t.profile.cash -= fine;
       for (const id of ['smg', 'rocket']) if (t.profile.weapons[id] !== undefined) delete t.profile.weapons[id];
+      for (const id of Object.keys(t.profile.inventory || {})) if (ITEMS[id] && ITEMS[id].illegal) delete t.profile.inventory[id];   // (ghostglass caps)
       world.notify(t, `Your body was booked by ${cop && cop.player ? cop.player.name : 'the police'}: fined $${fine}, illegal weapons confiscated.`, 'bad');
       t.meDirty = true;
     }
@@ -466,6 +467,7 @@ export function arrest(world, cop, target) {
     const fine = Math.min(t.profile.cash, BUST_FINE_PER_STAR * stars);
     t.profile.cash -= fine;
     for (const id of ['smg', 'rocket']) if (t.profile.weapons[id] !== undefined) delete t.profile.weapons[id];
+    for (const id of Object.keys(t.profile.inventory || {})) if (ITEMS[id] && ITEMS[id].illegal) delete t.profile.inventory[id];   // (ghostglass caps)
     if (target.carrying) { const c = world.get(target.carrying); target.carrying = 0; if (c) world.remove(c); }
     if (target.weapon === 'smg' || target.weapon === 'rocket') target.weapon = 'fists';
     const reward = ARREST_REWARD_PER_STAR * stars;

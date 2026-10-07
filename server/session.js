@@ -13,6 +13,7 @@ import * as phone from './systems/phone.js';
 import * as paint from './systems/paint.js';
 import * as station from './systems/station.js';
 import * as gates from './systems/gates.js';
+import * as foraging from './systems/foraging.js';
 import * as trains from './systems/trains.js';
 import * as rides from './systems/rides.js';
 import { brokenList } from './systems/props.js';
@@ -46,7 +47,7 @@ export function createSession(world, conn, opts) {
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const { profile, token } = opts.login(msg.token);
         // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
-        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, sig: mapSignature(world.map), tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), xing: trains.crossingStates(world), tt: trains.timetable(world), rides: rides.active(world) });
+        conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, sig: mapSignature(world.map), tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), forage: foraging.goneList(world), xing: trains.crossingStates(world), tt: trains.timetable(world), rides: rides.active(world) });
         player = players.join(world, conn, profile, { clientBuild: typeof msg.cb === 'string' ? msg.cb.slice(0, 40) : null, clientBuiltAt: Number(msg.cbt) || 0 });
         return;
       }

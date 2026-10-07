@@ -31,6 +31,7 @@
 import { CHUNK, DECK_Z, groundZ } from './chunkbake.js';
 import { WorkerPool } from './pool.js';
 import { canopyGrid } from './canopy.js';
+import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/map.js';
@@ -961,6 +962,30 @@ export class World2 {
     o.xray = false;
   }
 
+  // ---- foraging (shared/foraging.js) ---------------------------------------------------------------------------
+  // The mushrooms on the redwood floor and the tidepools' golden stars, where they grow, while they're there (the
+  // server says which spots are picked bare: S.forageGone). The glowing ones light up the dark round them (_lights).
+  _forage(F) {
+    const list = this.map.forage, A = this.A, lit = this.fgLit || (this.fgLit = []);
+    lit.length = 0;
+    if (!list || !list.length || !A || !A.forageKey) return;
+    let g = this._fgrid;
+    if (!g) { g = this._fgrid = new Map(); list.forEach((f, i) => { const k = Math.floor(f.y / 512) * 4096 + Math.floor(f.x / 512); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }); }
+    const gone = this.S.forageGone, o = this.opts;
+    o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false; o.air = false;
+    for (let cy = Math.floor((this.vy0 - 40) / 512); cy <= Math.floor((this.vy1 + 60) / 512); cy++) for (let cx = Math.floor((this.vx0 - 40) / 512); cx <= Math.floor((this.vx1 + 40) / 512); cx++) {
+      for (const i of g.get(cy * 4096 + cx) || []) {
+        const f = list[i], K = FORAGE_KINDS[f.k];
+        if (!K || (gone && gone.has(i)) || f.x < this.vx0 - 30 || f.x > this.vx1 + 30 || f.y < this.vy0 - 10 || f.y > this.vy1 + 40) continue;
+        const v = i & 3, key = this._spr('actors', 'forage', A.forageKey(K.art, v), [K.art, v]);
+        if (K.glow) lit.push(f.x, f.y, K.glow);
+        if (!key) continue;
+        this.E.drawSprite(key, f.x, f.y, this._gz(f.x, f.y), o); this.n.drawn++;
+      }
+    }
+    void F;
+  }
+
   _small(kind, key, args, e, x, y, z0) {
     let sk = this._spr('actors', kind, key, args);
     if (!sk) sk = e._v2k && this.E.hasSprite(e._v2k) ? e._v2k : null;
@@ -981,6 +1006,7 @@ export class World2 {
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
     this._rides(F, now);
+    this._forage(F);
     if (A) {
       for (const c of F.crates) {
         const st = c.flags & 3;
@@ -1427,6 +1453,8 @@ export class World2 {
       }
     }
     if (night > 0.05) this._v1StaticLights(F, (x, y) => inV(x, y) && !this._litChunk(x, y), nightK);
+    // the glowing mushrooms and golden stars (_forage): a soft pool of their colour in the dark
+    if (nightK > 0.02 && this.fgLit) for (let i = 0; i < this.fgLit.length; i += 3) this._light(this.fgLit[i], this.fgLit[i + 1], 5, 58, this.fgLit[i + 2], 1.2 * nightK);
     // 2. moving lights
     for (const v of F.vehs) {
       const def = VEHICLE_BY_INDEX[v.d.m];

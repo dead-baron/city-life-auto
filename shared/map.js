@@ -32,6 +32,7 @@ import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
 import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
 import { buildNatureSites, REDWOOD_TRUNK } from './naturesites.js';
+import { mushroomAtFoot } from './foraging.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 
 export { Z };
@@ -3875,7 +3876,7 @@ function buildWilds(m, rand) {
 // and the sorrel are the renderer's (statics.js coverAt).
 export const REDWOOD_SIZES = REDWOOD_TRUNK;   // species -> trunk radius (solid)
 function redwoodGroves(m, wild, inField, clear, rocky) {
-  const W = MAP_W, CG = 7, giants = [];
+  const W = MAP_W, CG = 7, giants = [], forage = (m.forage ||= []);   // (forage: shared/foraging.js)
   const okAt = (tx, ty, pad) => {
     const i = ty * W + tx, t = m.tiles[i];
     return wild(i) && m.dist[i] === 29 && (t === T.GRASS || t === T.DIRT) && !rocky[i] && !m.lake[i] && !inField(tx, ty, 64) && clear(tx, ty, pad);
@@ -3893,6 +3894,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     if (g > 0.45 && u < 0.08 && okAt(tx, ty, 5) && roomFor(x, y, 110)) {
       addProp(m, 'rwstump', x, y, 18, { r: 26 });
       giants.push([x, y, 26]);
+      forage.push({ x: x + 6, y: y + 30, k: hash2(gx * 7 + 1, gy * 11 + 2, 93491) < 0.55 ? 'ghostglass' : 'goldTrumpet' });   // (the old stump's rot feeds them)
       const n = 5 + Math.floor(hash2(gx, gy, 309) * 3), R = 78 + hash2(gx, gy, 310) * 22, a0 = hash2(gx, gy, 311) * Math.PI * 2;
       for (let k = 0; k < n; k++) {
         const a = a0 + (k / n) * Math.PI * 2 + (hash2(gx + k, gy, 312) - 0.5) * 0.4, rx = Math.round(x + Math.cos(a) * R), ry = Math.round(y + Math.sin(a) * R * 0.8);
@@ -3909,12 +3911,20 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
       addProp(m, 'rwlog', x, y, 0, { len, a: Math.round(a * 100) / 100, flip });
       for (const kk of [-0.4, -0.2, 0, 0.2, 0.4]) m.addSolidProp(x + Math.cos(a) * len * kk, y + Math.sin(a) * len * kk * 0.7 - 6, 15);
       giants.push([x, y, 60]);
+      forage.push({ x: Math.round(x + (hash2(gx, gy, 334) - 0.5) * len * 0.5), y: y + 24, k: 'shelfOyster' });   // (on its side, toward you)
+      if (hash2(gx * 5 + 9, gy * 7 + 4, 61331) < 0.3) forage.push({ x: Math.round(x + (flip ? 1 : -1) * (len / 2 + 6)), y: y + 26, k: 'ghostglass' });   // (by the root plate)
       continue;
     }
     const sp = u < 0.22 ? 'giantL' : u < 0.7 ? 'giant' : 'giantS', r = REDWOOD_SIZES[sp];
     if (!roomFor(x, y, r) || (r > 40 && !okAt(tx, ty, 4))) continue;   // (the biggest keep their flared feet off the road)
     addProp(m, 'redwood', x, y, r, { sp, k: 1 });
     giants.push([x, y, r]);
+    // mushrooms in the damp at the foot of one giant in three (on the side toward you - behind it they'd be hidden -
+    // clear of the trunk)
+    if (hash2(gx, gy, 330) < 0.34) {
+      const a = Math.PI * (0.14 + hash2(gx * 13 + 7, gy * 3 + 1, 52711) * 0.72), d = r + 24;
+      forage.push({ x: Math.round(x + Math.cos(a) * d), y: Math.round(y + Math.sin(a) * d * 0.8), k: mushroomAtFoot(hash2(gx * 3 + 17, gy * 5 + 3, 77177)) });
+    }
   }
   // between the giants: a Douglas fir or a tanoak where there's room, big-leaf maples by the water
   const CU = 3;

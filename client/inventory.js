@@ -18,6 +18,7 @@ export const ITEM_ICON = {
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
   purse: '👜', bonds: '📜', jewelry: '💎', scrap: '⚙', wallet: '👛',
   apple: '🍎', orange: '🍊', grapes: '🍇', hotdog: '🌭', bread: '🍞', honey: '🍯', lemonade: '🍋', cider: '🧃', redwine: '🍷', whitewine: '🥂', lavender: '💜', nugget: '🟡', quartz: '🔷', doubloon: '🪙',
+  goldTrumpet: '🍄', bunCap: '🍄', shelfOyster: '🍄', redcap: '🍄', ghostglass: '🔮', goldStar: '⭐',
 };
 const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
 const SLOTS = 4;

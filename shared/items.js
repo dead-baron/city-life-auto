@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE } from './rules.js';
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS } from './rules.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
 export const WEAPONS = {
@@ -66,6 +66,13 @@ export const ITEMS = {
   nugget:  { name: 'Gold Nugget',       loot: true, sell: 90 },   // (chipped out at the Old Granite Mine)
   quartz:  { name: 'Quartz Crystal',    loot: true, sell: 12 },
   doubloon: { name: 'Old Doubloon',     loot: true, sell: 70 },   // (found in the wreck on Wreck Island)
+  // found wild (shared/foraging.js): mushrooms on the redwood floor, the tidepools' rare golden stars
+  goldTrumpet: { name: 'Golden Trumpets', food: true, heal: 8, sell: 12 },
+  bunCap:  { name: 'Bun Caps',          food: true, heal: 8, sell: 10 },
+  shelfOyster: { name: 'Shelf Oysters', food: true, heal: 6, sell: 8 },
+  redcap:  { name: 'Redcap Toadstool',  loot: true, sell: 2 },      // (pretty and poisonous: nobody eats one)
+  ghostglass: { name: 'Ghostglass Caps', loot: true, illegal: true, sell: 0 },   // the glowing hallucinogen: only the black market buys them, and the police take them
+  goldStar: { name: 'Golden Star',      loot: true, sell: 150 },    // a rare sea star that glows, from the tidepools
   lemonade: { name: 'Lemonade',         stamina: true, buff: 'coffee', sell: 0 },
   cider:   { name: 'Apple Cider',       stamina: true, buff: 'coffee', sell: 0 },
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
@@ -129,12 +136,12 @@ export const SHOPS = {
   vending: { title: 'Vending Machine', buy: [{ kind: 'item', id: 'energy', price: 8, qty: 1 }] },
   pawn: { title: 'Second Chance Pawn', buy: [
     { kind: 'weapon', id: 'pistol', price: 320 }, { kind: 'weapon', id: 'bat', price: 80 }, { kind: 'weapon', id: 'knife', price: 60 },
-  ], sells: ['purse', 'bonds', 'jewelry', 'scrap', 'wallet', 'medkit', 'nugget', 'quartz', 'doubloon'], sellsWeapons: true },
+  ], sells: ['purse', 'bonds', 'jewelry', 'scrap', 'wallet', 'medkit', 'nugget', 'quartz', 'doubloon', 'goldStar', 'redcap'], sellsWeapons: true },
   fence: { title: 'Back-Alley Exchange (Black Market)', buy: [
     { kind: 'weapon', id: 'smg', price: 1300 }, { kind: 'ammo', id: 'smg', price: 50, qty: 30 },
     { kind: 'weapon', id: 'spistol', price: 950 }, { kind: 'ammo', id: 'spistol', price: 40, qty: 10 },
     { kind: 'weapon', id: 'rocket', price: 6000 }, { kind: 'ammo', id: 'rocket', price: 400, qty: 1 },
-  ], sells: ['purse', 'bonds', 'jewelry'] },
+  ], sells: ['purse', 'bonds', 'jewelry', 'ghostglass', 'goldStar'], sellPrice: { ghostglass: FORAGE_FENCE_GHOSTGLASS, goldStar: 175 } },
   tackle: { title: 'Hook & Line Bait and Tackle', buy: [
     { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'worms', price: 10, qty: 5 }, { kind: 'item', id: 'shrimp', price: 20, qty: 5 },
     { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'glowlure', price: 30, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 },
@@ -151,7 +158,7 @@ export const SHOPS = {
   // the designed places' counters (shared/naturesites.js); sellPrice: what this counter pays, when it beats the usual
   winery: { title: 'Willow River Winery - Tasting Room', buy: [{ kind: 'item', id: 'redwine', price: 30, qty: 1 }, { kind: 'item', id: 'whitewine', price: 30, qty: 1 }, { kind: 'item', id: 'bread', price: 8, qty: 1 }], sells: ['grapes'], sellPrice: { grapes: 10 } },
   fruitstand: { title: 'Willow River Orchard Stand', buy: [{ kind: 'item', id: 'cider', price: 6, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }], sells: ['apple', 'orange'], sellPrice: { apple: 5, orange: 6 } },
-  market: { title: 'Old Town Market', buy: [{ kind: 'item', id: 'bread', price: 7, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }, { kind: 'item', id: 'grapes', price: 8, qty: 2 }, { kind: 'item', id: 'honey', price: 14, qty: 1 }], sells: ['apple', 'orange', 'grapes', 'honey', 'lavender'] },
+  market: { title: 'Old Town Market', buy: [{ kind: 'item', id: 'bread', price: 7, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }, { kind: 'item', id: 'grapes', price: 8, qty: 2 }, { kind: 'item', id: 'honey', price: 14, qty: 1 }], sells: ['apple', 'orange', 'grapes', 'honey', 'lavender', 'goldTrumpet', 'bunCap', 'shelfOyster'], sellPrice: { goldTrumpet: 18, bunCap: 15, shelfOyster: 11 } },
   snack: { title: 'Snack Cart', buy: [{ kind: 'item', id: 'hotdog', price: 6, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }, { kind: 'item', id: 'energy', price: 9, qty: 1 }] },
   clubhouse: { title: 'Cedar Hills Golf Club - The Nineteenth', buy: [{ kind: 'item', id: 'cocktail', price: 20, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'redwine', price: 34, qty: 1 }, { kind: 'item', id: 'hotdog', price: 8, qty: 1 }] },
   farmstand: { title: 'Cedar Point Lavender - Farm Stand', buy: [{ kind: 'item', id: 'honey', price: 12, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }], sells: ['honey', 'lavender'], sellPrice: { lavender: 6 } },

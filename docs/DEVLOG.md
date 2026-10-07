@@ -3084,3 +3084,22 @@ Walk onto either half court and press the action button to pick up a ball (`serv
   - A new `fbox` on a statics item gives a fade box narrower than the picture.
   - Only an ellipse at its foot stays. `uFoot` with x0 > x1 is an ellipse in `STATIC_FS`.
 - **Tests:** the falls' giants (`test/nature.test.js`); the rest unchanged.
+
+## 2026-10-07 · Mushroom hunting in the redwoods, and the tidepools' golden stars
+
+- **Foraging** (`shared/foraging.js`, `server/systems/foraging.js`). Highland Woods' floor has mushrooms to find. Stand by one and press the action button: a few go in your bag, and that spot is bare until it grows back (`rules.js` `FORAGE_REGROW_S`).
+  - **Golden trumpets and bun caps** grow at the feet of one giant in three, on the side toward you. They're good eating (a little health) and the Old Town market pays best for them.
+  - **Shelf oysters** grow on the nurse logs.
+  - **Redcaps** are pretty and poisonous: not food, but a pawn shop takes them as curiosities.
+  - **Ghostglass caps** (illegal, fictional) glow blue in the dark. They grow round the old stumps of the fairy rings and by the root plates of fallen giants, and they're rare.
+    - Only the Back-Alley Exchange buys them.
+    - An arrest, or having your body booked, confiscates them, along with the illegal weapons.
+- **The golden stars**: two of the Lighthouse Tidepools' pools hold a rare glowing sea star you can lift.
+  - One takes 40 minutes to come back.
+  - The pawn shop buys them, and the Back-Alley Exchange pays more.
+- **Everyone sees the same forest.**
+  - Picks and regrowth are broadcast (`{ e: 'forage', i, up }`), and the welcome carries the bare spots.
+  - The art v2 host draws each find where it grows, while it's there (`client/art2/forage.js` ground sprites; `actors.js` `forageSprite`).
+  - The glowing ones cast a soft pool of light at night.
+- The bag has icons for the new finds.
+- **Tests:** `test/foraging.test.js` covers where they grow, picking, bare for everyone, growing back, selling, contraband confiscated on arrest, and the golden star.
