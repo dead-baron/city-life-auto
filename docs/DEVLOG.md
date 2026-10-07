@@ -2423,3 +2423,30 @@ Under an open umbrella, people (NPCs and players, standing or walking) now hold 
 - **The canopy:** the renderer draws it on the shaft's top for the sprite's heading (`game/peds.js` `umbrellaTop`), so it sits over the right side of the head.
 - **A better canopy:** eight panels with darker ribs and a scalloped rim. It is sampled finely enough that the near slope no longer shows gaps (stripes of the person through it).
 - **Fallbacks:** anyone holding something else (a weapon, the flashlight), or in another pose, keeps the old centred canopy.
+
+## 2026-10-07 · Nobody walks through a train
+
+People walked straight through a train standing at a platform. Only a moving train pushed people aside, so commuters stepping off, waiting at the edge or wandering across the line went through the cars.
+- **A standing train is solid** (`trains.js` `collide`): it holds everyone out of its cars, players and NPCs. Only a moving train hurts. The client predicts the same push for your own character (`main.js` `pushOutOfTrains`), so walking into a coach holds you at its side instead of jittering.
+- **Stepping off:** a commuter stepping off at a platform comes out of the door, then walks a few steps away from the train onto the platform before going about their day.
+- **Waiting:** commuters waiting for a train stand back from the edge, out of the band a train sweeps.
+- **Picking where to walk:** wanderers never pick a spot that takes them into a train or across the line in front of one (`trains.js` `railBlocked`, used by `npc.js` `pickWaypoint`), so they go along the platform instead.
+
+## 2026-10-07 · The debug menu, reorganised
+
+From the feedback on the debug menu (`docs/DESIGN-NOTES.md`).
+- **One tap to get in:** the pink 🐞 bug button sits in the HUD row on every device. It is grey and see-through until Dev Debug Mode is on. Tapping it, the top option of the pause menu (on a pad), or ` on a keyboard opens the menu straight away, switching dev mode on first if it's off.
+- **Order:**
+  1. 🔫 give weapons and tools;
+  2. 🎁 give anything;
+  3. 📍 teleport anywhere;
+  4. 🎥 spectate;
+  5. a section per feature (`client/devcats.js`), one open at a time so the list stays short on a pad.
+  - Everyone online is in the right-hand column; left and right on a pad jump across.
+- **The feature sections:** weather and time, me, wanted and police, vehicles, trains, jobs, crime, events and sport, shops and services, homes, and nature and landmarks. Each button spawns the thing or takes you to the nearest place it happens: a new `near` dev command (`server/dev.js`) puts you on open ground beside the nearest place of that kind (at the desk for walk-in shops). For the water races it puts you on the nearest shore with the race's craft waiting in the water.
+- **Weather and time controls:**
+  - rain for 10 minutes, clear skies, and hold the weather (no change until you let it go);
+  - a lightning strike, thick fog, light mist, or fog back to the clock (these change only your own screen);
+  - jumps to eight times of day;
+  - freeze the clock.
+- **Buttons no longer stay lit:** a pressed button kept its yellow highlight for good. It now lights only while it presses in.

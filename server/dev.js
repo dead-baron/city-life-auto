@@ -1,7 +1,8 @@
 // Playtest/debug commands: accepted when the server runs with CLA_DEV=1 (offline practice), or
 // online from a player in Dev Debug Mode (devmode.js - nothing they do there is saved).
 import { surfaceZ } from '../shared/levels.js';
-import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT } from '../shared/constants.js';
+import { PED_BLOCK } from '../shared/map.js';
+import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT, T, WEATHER } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { WEAPONS, ITEMS } from '../shared/items.js';
 import { store } from './store.js';
@@ -18,7 +19,54 @@ import * as pets from './systems/pets.js';
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold'];
+
+// "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
+// landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
+// closest one to the player and puts them on open ground beside it (inside, at the desk, for walk-ins).
+export const NEAR_KINDS = {
+  subway: (m) => m.rail.stations.filter((s) => s.under && s.kiosk).map((s) => ({ x: s.kiosk.out.x, y: s.kiosk.out.y, name: s.name })),
+  platform: (m) => m.rail.stations.filter((s) => !s.under).map((s) => ({ x: s.platform.x, y: s.platform.y, name: s.name })),
+  race: (m) => (m.races || []).filter((r) => r.start).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: r.kind === 'jetski' ? 'jetski' : r.kind === 'boat' ? 'speedboat' : null })),
+  venue: (m) => (m.venues || []).filter((v) => v.rect).map((v) => ({ x: v.rect.x + v.rect.w / 2, y: v.rect.y + v.rect.h + 24, name: v.name || v.kind })),
+  nature: (m) => (m.natureSites || []).map((q) => ({ x: q.x, y: q.y, name: q.name || q.kind })),
+};
+export function nearTargets(m, k) {
+  if (NEAR_KINDS[k]) return NEAR_KINDS[k](m);
+  const pois = m.pois.filter((q) => q.kind === k).map((q) => ({ x: q.x, y: q.y, name: q.label || q.name || k }));   // (walk-ins: at the desk inside)
+  if (pois.length) return pois;
+  const lm = (m.landmarks || []).filter((l) => l.type === k).map((l) => ({ x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2, name: l.name || k }));
+  if (lm.length) return lm;
+  return (m.natureSites || []).filter((q) => q.kind === k).map((q) => ({ x: q.x, y: q.y, name: q.name || k }));
+}
+// open ground you can stand on (or, water: open water), as close to (x, y) as there is within reach
+function standAt(world, x, y, reach = 320, water = false) {
+  const m = world.map;
+  const ok = (px, py) => { const t = m.tileAtPx(px, py); return water ? t === T.WATER || t === T.DEEP : !PED_BLOCK[t] && !m.isWater(px, py); };
+  if (ok(x, y)) return { x, y };
+  for (let r = 16; r <= reach; r += 16) for (let k = 0, n = Math.max(16, Math.round(r / 10)); k < n; k++) { const a = (k / n) * Math.PI * 2, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; if (ok(px, py)) return { x: px, y: py }; }
+  return null;
+}
+export function near(world, p, k) {
+  const ped = p.ped;
+  if (!ped || ped.dead) return '[dev] Not while you\'re down.';
+  const list = nearTargets(world.map, String(k || '').slice(0, 24));
+  if (!list.length) return `[dev] There's no "${k}" on this map.`;
+  let best = null, bd = Infinity;
+  for (const q of list) { const d = Math.hypot(q.x - ped.x, q.y - ped.y); if (d > 120 && d < bd) { bd = d; best = q; } } // (the next one along if you're already at one)
+  best ||= list[0];
+  const at = standAt(world, best.x, best.y, best.craft ? 1800 : 320);   // (a race out on the water: the nearest shore)
+  if (!at) return `[dev] Couldn't find open ground by ${best.name}.`;
+  if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
+  if (ped.vehId) return '[dev] Get out of the vehicle first.';
+  ped.sub = false; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
+  if (best.craft) { // and the right craft in the water beside you
+    const wat = standAt(world, at.x + Math.sign(best.x - at.x) * 40, at.y + Math.sign(best.y - at.y) * 40, 400, true);
+    if (wat) { const v = world.spawnVehicle(best.craft, wat.x, wat.y, Math.atan2(best.y - wat.y, best.x - wat.x), { npcOwned: false }); v.issuedTo = p.pid; }
+  }
+  world.notify(p, `[dev] At ${best.name}.`, 'info');
+  return null;
+}
 
 export const GIVE_MAX = 999;
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -72,8 +120,14 @@ export function command(world, p, c, msg) {
   const ped = p.ped;
   const prof = p.profile;
   switch (c) {
-    case 'rain': env.startRain(world, 300); break;
-    case 'clear': env.stopRain(world); break;
+    case 'rain': env.startRain(world, Math.max(30, Math.min(3600, Number(msg.s) || 300))); if (world.weatherHold) world.weatherHold.w = WEATHER.RAIN; break;   // (msg.s: for how long)
+    case 'clear': env.stopRain(world); if (world.weatherHold) world.weatherHold.w = WEATHER.CLEAR; break;
+    case 'wxhold': // hold the weather as it is (rain keeps falling, or no rain rolls in) until let go
+      world.weatherHold = world.weatherHold ? null : { w: world.weather };
+      if (!world.weatherHold && world.weather === WEATHER.RAIN) world.rainUntil = world.time + 120;
+      world.notify(p, world.weatherHold ? '[dev] Weather held: no change until you let it go.' : '[dev] Weather back to normal.', 'info'); break;
+    case 'clockhold': world.clockHold = !world.clockHold; world.notify(p, world.clockHold ? '[dev] Clock frozen at this time of day.' : '[dev] Clock running again.', 'info'); break;
+    case 'near': { const err = near(world, p, msg.k); if (err) world.notify(p, err, 'warn'); break; }
     case 'night': world.loopTime = DAY_PART_S + 5; break;
     case 'day': world.loopTime = 90; break;
     case 'time': { // jump the clock to a time of day: msg.m minutes after midnight

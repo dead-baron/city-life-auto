@@ -99,10 +99,10 @@ Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
   is full speed.
 - **On a train, buildings fade too soon [done 2026-10-07].** They go see-through when you pass beside them, so between two
   buildings both fade. On a train, fade only what you are really behind, or nothing.
-- **NPCs walk through the train** when boarding or passing. They should go round it, and board and alight from
+- **NPCs walk through the train [done 2026-10-07]** when boarding or passing. They should go round it, and board and alight from
   the platform.
 - **The Cedar Falls clinic [done 2026-10-07]:** a building in front of it hides the interior when you respawn there.
-- **The debug menu:**
+- **The debug menu [done 2026-10-07]:**
   - **Buttons stay lit:** they stay highlighted after use (4 stars and then clear wanted both stay yellow).
   - **Easy access:** a small debug icon on every device (a pink circle with a bug, grey and see-through until
     activated), or the top option of the menu on a controller. It opens the menu straight away.

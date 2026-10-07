@@ -51,8 +51,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
 | Stuck? Get unstuck (stand still 5 s, not wanted, not just after a fight) / Surrender (tap twice: respawn, or turn yourself in when wanted) | Esc → Stuck? / Surrender | Start → Stuck? / Surrender | ☰ → Stuck? / Surrender |
 | Players online (names, roles, districts) | Esc → Players online, or M → Players online | Start → Players online | ☰ → Players online |
-| Dev Debug Mode (online testing, no password; your progress carries on - whatever you get in it stays when you leave) | Esc → Dev Debug Mode (opens the debug menu; ` or the 🛠 button toggles it) | Start → Dev Debug Mode | ☰ → Dev Debug Mode, then the 🛠 button |
-| Dev give: any weapon (with magazines), tool, item, drink, bait, fish or loot - or everything - to yourself or any player online | ` → 🎁 Give (category, thing, how many, who) | Start → Dev Debug Mode → 🎁 Give (D-pad / stick, ← → to choose) | 🛠 → 🎁 Give |
+| Debug menu (online testing, no password: opening it switches Dev Debug Mode on; your progress carries on - whatever you get in it stays when you leave). Give weapons, teleport, spectate, then a section per feature (weather & time, me, the law, vehicles, trains, jobs, crime, events, shops, homes, nature) that spawns the thing or takes you to the nearest place it happens; everyone online on the right | ` or the pink 🐞 button (grey until dev mode is on); Esc → 🐞 Debug menu | Start → 🐞 Debug menu (the top option); ← → jumps between the commands and the players | the pink 🐞 button at the top |
+| Dev give: any weapon (with magazines), tool, item, drink, bait, fish or loot - or everything - to yourself or any player online | ` → 🎁 Give (category, thing, how many, who) | Start → 🐞 Debug menu → 🎁 Give (D-pad / stick, ← → to choose) | 🐞 → 🎁 Give |
 | Police HQ: walk in (front desk → armory → motor pool) | E at the door, E inside for the desk | B / A | ACT, or the ▲ Front desk button |
 | Navigate menus (pause, phone, shops, settings) | W/S or ↑/↓, Enter / Space / E to pick, Esc back | D-pad / stick, A pick, B back | tap |
 | Phone (places, jobs, waypoints) | P | D-pad ← | 📱 |
@@ -76,8 +76,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN |
 | City map + waypoints (pick a category / place, or click the map) | M | Pause → Map (D-pad / stick, A pick, B back) | tap the radar or ▦, then tap |
 | Zoom the city map / look around / find yourself | mouse wheel or + / − · drag · C (or the + − ⌖ buttons) | RT / LT · right stick | pinch · drag · + − ⌖ buttons |
-| Dev teleport to any district, station or landmark | ` → 📍 Teleport (map or list) | Start → Dev Debug Mode → 📍 Teleport | 🛠 → 📍 Teleport |
-| Dev spectator: free camera over the whole world, art layers, schematic view, PNG / hi-res PNG screenshots | ` → 🎥 Spectator; WASD / arrows fly (Shift faster), E / Q or wheel zoom, drag pans, C find me, P save PNG, H hide panel, Esc exit | Start → Dev Debug Mode → 🎥 Spectator; left stick flies, RT / LT zoom, X save PNG, Y hide panel, B exit | 🛠 → 🎥 Spectator; drag to fly, pinch to zoom |
+| Dev teleport to any district, station or landmark | ` → 📍 Teleport (map or list) | Start → 🐞 Debug menu → 📍 Teleport | 🐞 → 📍 Teleport |
+| Dev spectator: free camera over the whole world, art layers, schematic view, PNG / hi-res PNG screenshots | ` → 🎥 Spectator; WASD / arrows fly (Shift faster), E / Q or wheel zoom, drag pans, C find me, P save PNG, H hide panel, Esc exit | Start → 🐞 Debug menu → 🎥 Spectator; left stick flies, RT / LT zoom, X save PNG, Y hide panel, B exit | 🐞 → 🎥 Spectator; drag to fly, pinch to zoom |
 
 ## Project layout
 
@@ -115,6 +115,6 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | tap the weapon box · RELOAD · ITEMS · 🎒 |
 | Flashlight on / off (once you have one) | L | D-pad ↑ (on foot) | 🔦 |
 | World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
-| Pause menu (map, players online, settings, controls, Dev Debug Mode) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
+| Pause menu (debug menu, map, players online, settings, controls) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
 
 Settings (⚙) include Graphics: a preset (Low / Medium / High / Ultra, picked for your device on first play - phones, tablets and consoles start on Medium, desktops on High or Ultra) plus a switch for each effect (lighting, vegetation off / still / live, vegetation density, wind sway, trampled grass and crops, golden-hour glow, shadows, puddle reflections, rain and fog detail, particles, render sharpness, tilt-shift blur), classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen, plus your account transfer code: copy it on one device and paste it on another to play the same character there.

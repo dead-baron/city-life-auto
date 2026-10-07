@@ -330,7 +330,7 @@ export function onPlatformOf(world, st, x, y) {
 }
 
 // Step off at a station: onto the platform, or up the stairs to the street from the subway.
-function alightAtStation(world, t, ped) {
+export function alightAtStation(world, t, ped) {
   const st = stationAt(world, t);
   if (!st) return false;
   if (st.under && st.kiosk && ped.npc) { // up the stairs and out onto the street
@@ -341,7 +341,16 @@ function alightAtStation(world, t, ped) {
   }
   if (st.under && st.kiosk) { alight(world, ped, st.kiosk.out.x + (rng() - 0.5) * 10, st.kiosk.out.y + (rng() - 0.5) * 12); }
   else if (st.under) { const a = rng() * 6.28; alight(world, ped, st.platform.x + Math.cos(a) * 14, st.platform.y + Math.sin(a) * 14); }
-  else { const pt = doorPoint(world, t, ped.onTrain.c, doorSide(world, t, ped.onTrain.c, st), 22 + rng() * 12); alight(world, ped, pt.x, pt.y); }
+  else {
+    const ci = ped.onTrain.c, side = doorSide(world, t, ci, st), pt = doorPoint(world, t, ci, side, 22 + rng() * 12);
+    alight(world, ped, pt.x, pt.y);
+    if (ped.npc) { // out of the door, then away from the train onto the platform before going about their day
+      const e = world.get(t.cars[ci].id), out = doorPoint(world, t, ci, side, 46 + rng() * 14), along = (rng() - 0.5) * 80;
+      const n = ped.npc;
+      n.state = 'wander'; n.until = world.time + 5; n.wx = out.x + Math.cos(e.a) * along; n.wy = out.y + Math.sin(e.a) * along;
+    }
+    return true;
+  }
   if (ped.npc) { ped.npc.state = 'wander'; ped.npc.until = 0; ped.npc.wx = ped.x; ped.npc.wy = ped.y; }
   return true;
 }
@@ -603,7 +612,7 @@ function waitSpot(world, st, n = 0) {
   if (st.under && st.kiosk) { const q = st.kiosk.queue[Math.min(n, st.kiosk.queue.length - 1)]; return { x: q.x, y: q.y + (rng() - 0.5) * 4 }; } // in line in the queue lane
   if (st.under) { const a = rng() * 6.28; return { x: st.platform.x + Math.cos(a) * 26, y: st.platform.y + Math.sin(a) * 26 }; }
   const q = railAt(world.map.rail, st.s + (rng() - 0.5) * st.half * 1.6);
-  const off = 62 + rng() * 26;
+  const off = 74 + rng() * 22; // (back from the edge: clear of the band a train sweeps)
   return { x: q.x - Math.sin(q.a) * st.side * off, y: q.y + Math.cos(q.a) * st.side * off };
 }
 // A train has pulled in at station si: whoever is waiting there gets on.
@@ -714,6 +723,31 @@ export function railThreat(world, x, y, lookS = 4.5, standing = false) {
   }
   return null;
 }
+// Would walking straight from (x1, y1) to (x2, y2) take you into a train - one standing over that
+// stretch of line, or one on its way? (NPCs picking where to walk: they go round, or along the
+// platform, instead of into the train.) Coming closer to the track than the band a train sweeps, or
+// crossing it, counts.
+export function railBlocked(world, x1, y1, x2, y2) {
+  const rail = world.map.rail;
+  if (!rail || !world.trains || !world.trains.length) return false;
+  const idx = railTiles(world), now = world.time;
+  let prev = 0;
+  for (let k = 1; k <= 8; k++) {
+    const x = x1 + (x2 - x1) * k / 8, y = y1 + (y2 - y1) * k / 8;
+    const i = idx.get(Math.floor(y / 32) * 100000 + Math.floor(x / 32));
+    if (i === undefined) { prev = 0; continue; }
+    const p = rail.pts[i], q = rail.pts[(i + 1) % rail.pts.length];
+    const a = Math.atan2(q.y - p.y, q.x - p.x), off = (x - p.x) * -Math.sin(a) + (y - p.y) * Math.cos(a), sg = off < 0 ? -1 : 1;
+    const into = Math.abs(off) < DANGER_PX || (prev && sg !== prev);
+    prev = sg;
+    if (!into) continue;
+    for (const t of world.trains) {
+      const wait = t.dwellUntil ? t.dwellUntil - now : 0;
+      if (mod(t.s - p.s, rail.len) < t.len + 30 || (mod(p.s - t.s, rail.len) < Math.max(320, t.v * 4.5) && wait < 3)) return true;
+    }
+  }
+  return false;
+}
 // NPC pedestrians: step off the line when a train is coming - most of them. Now and then
 // someone isn't paying attention (headphones in, looking at their phone) and doesn't notice.
 const MISJUDGE = 0.06;
@@ -801,14 +835,15 @@ function collide(world, t, dt) {
         if (d && d.player && now - (d.player.trainWarnAt || -9) > 2) { d.player.trainWarnAt = now; world.notify(d.player, 'You\'re being dragged by the train - steer off the tracks!', 'bad'); }
       }
     }
-    if (t.v < 1) continue;
+    // people: a train is solid whether it's moving or standing at a platform (nobody walks through it);
+    // only a moving one hurts
     for (const p of world.query(e.x, e.y, hl + 30, K.PED)) {
       if ((p.lz || 0) > 0.3) continue;
       if (p.onTrain || p.vehId || p.hidden || isSwimming(world.map, p)) continue;
       const h = circleVsObb(p.x, p.y, p.r, e.x, e.y, e.a, hl, hw);
       if (!h) continue;
       p.x += h.nx * h.depth; p.y += h.ny * h.depth;
-      if (p.dead) continue;
+      if (p.dead || t.v < 1) continue;
       const closing = (e.vx - p.vx) * h.nx + (e.vy - p.vy) * h.ny;
       if (t.v > 50 && closing > 40 && now > (p.hitImmuneUntil || 0)) {
         p.hitImmuneUntil = now + 0.8;

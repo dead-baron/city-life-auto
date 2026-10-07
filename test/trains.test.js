@@ -12,6 +12,7 @@ import * as players from '../server/systems/players.js';
 import * as economy from '../server/systems/economy.js';
 import * as cargo from '../server/systems/cargo.js';
 import * as combat from '../server/systems/combat.js';
+import { spawnNpc } from '../server/systems/npc.js';
 import { IN } from '../shared/input.js';
 
 const mod = (a, n) => ((a % n) + n) % n;
@@ -298,7 +299,6 @@ test('subway entrances: a kiosk on a plaza by the street, a queue lane with a co
   const wait = players.findInteraction(w, p);
   assert.ok(wait && /next train in \d+:\d\d/.test(wait.label), wait && wait.label);
   // a commuter in line goes down when the train is in, and rides it
-  const { spawnNpc } = await import('../server/systems/npc.js');
   const c = spawnNpc(w, 'casual', k.queue[0].x, k.queue[0].y, 'civ');
   c.npc.waitTrain = si; c.npc.waitX = k.queue[0].x; c.npc.waitY = k.queue[0].y; c.npc.waitGiveUp = w.time + 999; c.npc.keep = true;
   w.waiting ??= new Map(); w.waiting.set(si, [c.id]);
@@ -552,4 +552,41 @@ test('the subway has a visible way in and out: each portal stands in the open, n
       assert.ok(!m.deck[Math.floor(y / 32) * m.w + Math.floor(x / 32)], `portal at ${Math.round(p.x)},${Math.round(p.y)} is in the open`);
     }
   }
+});
+
+test('a train at a platform is solid: nobody walks through it, wanderers go round, riders step off onto the platform and away', () => {
+  const w = makeWorld();
+  const rail = w.map.rail;
+  const t = w.trains.find((u) => u.dwellUntil && !rail.stations[u.stop].under);
+  assert.ok(t, 'a train standing at a platform above ground');
+  t.dwellUntil = w.time + 9999;
+  const st = rail.stations[t.stop];
+  const ci = t.cars.length - 1, car = w.get(t.cars[ci].id), hl = t.cars[ci].def.L / 2, hw = t.cars[ci].def.W / 2;
+  const nx = -Math.sin(car.a), ny = Math.cos(car.a);
+  const side = Math.sign((st.platform.x - car.x) * nx + (st.platform.y - car.y) * ny) || 1;
+  const offOf = (q) => (q.x - car.x) * nx + (q.y - car.y) * ny;
+  const inside = (q) => { const lx = (q.x - car.x) * Math.cos(car.a) + (q.y - car.y) * Math.sin(car.a); return Math.abs(lx) < hl - 2 && Math.abs(offOf(q)) < hw - 2; };
+  // a player walking straight at the side of the coach stops against it
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, car.x + nx * side * 80, car.y + ny * side * 80);
+  for (let i = 0; i < 60; i++) { players.queueInput(p, { seq: seq++, bits: 0, mx: -nx * side, my: -ny * side, aim: 0 }); w.step(); assert.ok(!inside(p.ped), 'the player is never inside the coach'); }
+  assert.ok(offOf(p.ped) * side > 30, `the player is held at its side (${offOf(p.ped).toFixed(0)})`);
+  // an NPC on the platform told to walk across the line doesn't walk through it either
+  const q = spawnNpc(w, 'casual', car.x + nx * side * 90, car.y + ny * side * 90, 'civ');
+  q.npc.state = 'wander'; q.npc.wx = car.x - nx * side * 120; q.npc.wy = car.y - ny * side * 120; q.npc.until = w.time + 6;
+  for (let i = 0; i < 100; i++) { w.step(); assert.ok(!inside(q), 'the NPC is never inside the coach'); }
+  assert.ok(offOf(q) * side > 30, 'still on the platform side');
+  // picking where to walk next: a waypoint into (or across) the train is out, one along the platform is fine
+  const px = car.x + nx * side * 90, py = car.y + ny * side * 90, ca = Math.cos(car.a), sa = Math.sin(car.a);
+  assert.ok(trains.railBlocked(w, px, py, car.x - nx * side * 120, car.y - ny * side * 120), 'across the line, through the train: blocked');
+  assert.ok(trains.railBlocked(w, px, py, car.x + nx * side * 20, car.y + ny * side * 20), 'up to its side: blocked');
+  assert.ok(!trains.railBlocked(w, px, py, px + ca * 90, py + sa * 90), 'along the platform: fine');
+  // stepping off: out of the door, then away from the train onto the platform
+  const r = spawnNpc(w, 'casual', car.x, car.y, 'civ');
+  trains.board(w, r, t, ci, 0, 0, 0);
+  r.onTrain.dest = t.stop;
+  trains.alightAtStation(w, t, r);
+  assert.ok(!r.onTrain && offOf(r) * side > 38, `stepped off on the platform side (${offOf(r).toFixed(0)})`);
+  for (let i = 0; i < 60; i++) { w.step(); assert.ok(!inside(r), 'never back through the coach'); }
+  assert.ok(offOf(r) * side > 70, `walked away from the edge (${offOf(r).toFixed(0)})`);
 });

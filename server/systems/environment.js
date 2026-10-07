@@ -11,6 +11,7 @@ export function init(world) {
 
 export function update(world) {
   const now = world.time;
+  if (world.weatherHold) { world.nextWeatherRoll = now + 150; if (world.weatherHold.w === WEATHER.RAIN) world.rainUntil = Math.max(world.rainUntil, now + 60); } // (dev: the weather held as it is)
   if (world.weather === WEATHER.RAIN && now >= world.rainUntil) {
     world.weather = WEATHER.CLEAR;
     world.broadcast({ e: 'toast', text: 'The rain has stopped. Streets are drying out.', tone: 'info' });

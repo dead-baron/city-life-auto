@@ -278,6 +278,7 @@ function pickWaypoint(world, ped) {
     if (!pref.has(t) && rng() < 0.6) continue;
     if (!crossesRoadOk(world, ped.x, ped.y, x, y)) continue;
     if (world.map.rayTiles(ped.x, ped.y, x, y) < 1) continue;
+    if (world.map.rail && trains.railBlocked(world, ped.x, ped.y, x, y)) continue; // not into (or across the line in front of) a train
     n.wx = x; n.wy = y;
     return;
   }

@@ -1,7 +1,7 @@
 // City Life Auto browser client: a "dumb window" that sends input vectors, predicts only
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
-import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H } from '../shared/constants.js';
+import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS } from '../shared/constants.js';
 import { generateCity, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
 import { signalFor } from '../shared/roads.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
@@ -10,7 +10,7 @@ import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/proto
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
-import { lerp, lerpAngle, localToWorld } from '../shared/math.js';
+import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { buildTeleport } from './devtp.js';
 import { createInventory, createWheel } from './inventory.js';
@@ -30,6 +30,7 @@ import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev
 import { initAudio, sfx } from './audio.js';
 import { noteServerBuild, myBuild } from './update.js';
 import { buildGive } from './devgive.js';
+import { DEV_SECTIONS } from './devcats.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
@@ -277,10 +278,22 @@ function reconcile(s) {
   } else { S.smooth.x = 0; S.smooth.y = 0; S.smooth.a = 0; }
 }
 
+// A train is solid, standing at a platform or moving (the server pushes people out of its cars): predict that too, so
+// walking into the side of one holds you there instead of jittering back.
+function pushOutOfTrains(s) {
+  if ((s.lz || 0) > 0.3) return;
+  for (const e of S.ents.values()) {
+    if (e.kind !== K.TRAIN || (e.flags & 1) || !e.d || !e.buf.length) continue;   // (subway cars run underground)
+    const def = TRAIN_CARS[e.d.c] || TRAIN_CARS[1], b = e.buf[e.buf.length - 1];   // (where the server last had it)
+    if (Math.abs(b.x - s.x) > def.L / 2 + 40 || Math.abs(b.y - s.y) > def.L / 2 + 40) continue;
+    const h = circleVsObb(s.x, s.y, PED_RADIUS, b.x, b.y, b.a, def.L / 2, def.W / 2);
+    if (h) { s.x += h.nx * h.depth; s.y += h.ny * h.depth; }
+  }
+}
 function stepPred(inp) {
   const P = S.pred;
   if (!P) return;
-  if (P.kind === 'ped') pedStep(P.s, inp, DT, S.map, P.mods);
+  if (P.kind === 'ped') { pedStep(P.s, inp, DT, S.map, P.mods); pushOutOfTrains(P.s); }
   else {
     vehStep(P.s, driveInput(P.s, inp), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
     // predict smashing street furniture exactly like the server does (same momentum loss), so
@@ -774,46 +787,61 @@ function startPlaying() {
   if (S.me) S.hud.setMe(S.me);
 }
 
-// The debug menu: commands on the left (give weapons first, leave dev mode last), everyone
-// online on the right with per-player buttons. Every button presses in, clicks, and pops a
-// little note saying what it did.
-const DEV_CMDS = [
-  ['guns', '🔫 Give weapons + tools'], ['god', '🛡 Invincible (toggle)'], ['heal', '❤ Heal'], ['money', '💵 +$25k'],
-  ['car', '🏎 Spawn sports car', { m: 'sports' }], ['car', '🛻 Spawn pickup', { m: 'pickup' }], ['car', '🚤 Spawn speedboat', { m: 'speedboat' }], ['cargo', '📦 Loaded flatbed (cargo test)'],
-  ['calltrain', '🚉 Call a train to this station'], ['train', '🚆 Hop on the nearest train'],
-  ['rain', '🌧 Start rain'], ['clear', '☀ Stop rain'], ['night', '🌙 Jump to night'], ['day', '🌅 Jump to day'],
-  ['wanted', '★★ 2 stars', { n: 2 }], ['wanted', '★★★★ 4 stars', { n: 4 }], ['clean', '🧽 Clear wanted'], ['record', '📜 Wipe criminal record'],
-  ['samaritan', '😇 +50 Samaritan'], ['pet', '🐶 Lost pet nearby'], ['cop', '👮 Join the police'], ['promote', '⬆ Promote police rank'],
-  ['drop', '🎁 Contraband drop', { n: 4 }], ['snatch', '👜 Snatch-and-grab nearby'], ['shootout', '💥 Gang vs police shootout'], ['die', '☠ Die (respawn test)'],
-];
+// The debug menu: give weapons first, teleport anywhere second, the free camera third, then a section per
+// feature (client/devcats.js: weather and time, me, the law, vehicles, trains, jobs, crime, events, shops, homes,
+// nature) that spawns the thing or takes you to the nearest place it happens - one section open at a time, so
+// it stays short on a pad. Everyone online sits in the right-hand column (left / right on a pad jumps across).
+// Every button presses in, clicks, and pops a note saying what it did.
 function devPress(b, label, run) {
   b.onclick = () => {
     b.classList.remove('pressed'); void b.offsetWidth; b.classList.add('pressed');
+    clearTimeout(b._pt); b._pt = setTimeout(() => b.classList.remove('pressed'), 380);   // (lit while it presses in, then back)
+    if (input.device !== 'gamepad') b.blur();
     sfx('click', 0.8);
-    S.hud.toast(`🛠 ${label.replace(/^[^A-Za-z+$]+/, '')}`, 'info');
+    S.hud.toast(`🛠 ${label.replace(/^[^A-Za-z0-9+$]+/, '')}`, 'info');
     run();
   };
+}
+// commands that only change your own screen
+function devLocal(c, extra) {
+  if (c === '@bolt') { if (S.wx) { S.wx.flash = 1; S.wx.thunderIn = 0.5 + Math.random(); } }
+  else if (c === '@fog') S.fogForce = extra ? { k: extra.k, spread: extra.spread } : null;
+}
+// Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team
+// and friends are testing; if the server asks for one after all, its prompt opens).
+function openDebug() {
+  if (S.dev || S.devMode) { if (topOverlay() !== 'dev') openOverlay('dev'); return; }
+  if (!S.welcomed) return;
+  S.openDevOnEnter = true;
+  send({ t: 'devmode', pw: '' });
+  setTimeout(() => { if (!S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('devpw'); } }, 2000);
 }
 function setupDev() {
   const box = $('dev');
   const on = S.dev || S.devMode;
-  $('b-dev').classList.toggle('hidden', !on);
+  $('b-dev').classList.toggle('on', !!on);
+  $('b-dev').title = on ? 'Debug menu' : 'Debug menu (switches Dev Debug Mode on)';
   if (!on) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  box.innerHTML = `<div class="dev-head"><b>${S.devMode ? 'DEV DEBUG MODE · your progress is kept' : 'DEV / PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><button class="dev-tp-toggle">📍 Teleport to a district or landmark…</button><div id="dev-tp" class="hidden"></div><button class="dev-give-toggle">🎁 Give items to me or a player…</button><div id="dev-give" class="hidden"></div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
+  box.innerHTML = `<div class="dev-head"><b>🐞 ${S.devMode ? 'DEBUG · your progress is kept' : 'DEBUG · PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
   box.querySelector('.dev-x').onclick = () => closeOverlay('dev');
-  // give: anything in the game (weapons, tools, items) to yourself or anyone online (client/devgive.js)
-  const giveBox = box.querySelector('#dev-give'), giveBtn = box.querySelector('.dev-give-toggle');
+  const cmds = box.querySelector('.dev-cmds');
+  const add = (label, cls, run) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; if (run) devPress(b, label, run); cmds.appendChild(b); return b; };
+  // 1. weapons and tools, one press; anything else to anyone from the give panel under it
+  add('🔫 Give weapons + tools', 'dev-top', () => send({ t: 'dev', c: 'guns' }));
+  const giveBtn = add('🎁 Give anything to me or a player…', 'dev-give-toggle');
+  const giveBox = document.createElement('div'); giveBox.id = 'dev-give'; giveBox.className = 'hidden'; cmds.appendChild(giveBox);
   S.devGive = buildGive(giveBox, { send, press: devPress, players: () => (S.plist && S.plist.l) || [] });
   giveBtn.onclick = () => {
     const open = giveBox.classList.toggle('hidden') === false;
-    giveBtn.textContent = open ? '🎁 Give ▲ (hide)' : '🎁 Give items to me or a player…';
+    giveBtn.textContent = open ? '🎁 Give ▲ (hide)' : '🎁 Give anything to me or a player…';
     if (open) { requestPlayers(); S.devGive.refreshTargets(); }
   };
-  // teleport: a map of every district, station and landmark (built the first time it's opened)
-  const tpBox = box.querySelector('#dev-tp'), tpBtn = box.querySelector('.dev-tp-toggle');
+  // 2. teleport anywhere: a map of every district, station and landmark (built the first time it's opened)
+  const tpBtn = add('📍 Teleport anywhere…', 'dev-tp-toggle');
+  const tpBox = document.createElement('div'); tpBox.id = 'dev-tp'; tpBox.className = 'hidden'; cmds.appendChild(tpBox);
   tpBtn.onclick = () => {
     const open = tpBox.classList.toggle('hidden') === false;
-    tpBtn.textContent = open ? '📍 Teleport ▲ (hide)' : '📍 Teleport to a district or landmark…';
+    tpBtn.textContent = open ? '📍 Teleport ▲ (hide)' : '📍 Teleport anywhere…';
     if (open && !tpBox.childElementCount && S.map) buildTeleport(tpBox, S.map, (pl) => {
       sfx('click', 0.8);
       send({ t: 'dev', c: 'tp', x: Math.round(pl.x), y: Math.round(pl.y) });
@@ -821,28 +849,36 @@ function setupDev() {
       closeOverlay('dev');
     });
   };
-  const cmds = box.querySelector('.dev-cmds');
-  const specB = document.createElement('button');
-  specB.textContent = '🎥 Spectator (free camera)'; specB.className = 'dev-spec';
-  devPress(specB, 'Spectator: fly round the city', () => enterSpectate());
-  cmds.appendChild(specB);
-  for (const [c, label, extra] of DEV_CMDS) {
-    const b = document.createElement('button');
-    b.textContent = label;
-    if (c === 'god') { b.id = 'dev-god'; b.classList.toggle('on', !!(S.me && S.me.god)); }
-    devPress(b, label, () => send({ t: 'dev', c, ...(extra || {}) }));
-    cmds.appendChild(b);
+  // 3. the free camera
+  add('🎥 Spectate (free camera)', 'dev-spec', () => enterSpectate());
+  // then a section per feature, one open at a time
+  const bodies = [];
+  for (const sec of DEV_SECTIONS) {
+    const head = add(`${sec.title}`, 'dev-sec');
+    const body = document.createElement('div'); body.className = 'dev-sec-body hidden'; cmds.appendChild(body);
+    bodies.push([sec.id, head, body]);
+    for (const [label, c, extra] of sec.items) {
+      const b = document.createElement('button'); b.textContent = label;
+      if (c === 'god') { b.id = 'dev-god'; b.classList.toggle('on', !!(S.me && S.me.god)); }
+      const goes = c === 'near' || c === 'train';
+      devPress(b, label, () => { if (c[0] === '@') devLocal(c, extra); else send({ t: 'dev', c, ...(extra || {}) }); if (goes) closeOverlay('dev'); });
+      body.appendChild(b);
+    }
+    head.onclick = () => {
+      const open = body.classList.contains('hidden');
+      for (const [, h, bd] of bodies) { bd.classList.add('hidden'); h.classList.remove('open'); }
+      if (open) { body.classList.remove('hidden'); head.classList.add('open'); }
+      S.devOpenSec = open ? sec.id : null;
+      sfx('click', 0.5);
+      if (input.device !== 'gamepad') head.blur();
+    };
+    if (S.devOpenSec === sec.id) { body.classList.remove('hidden'); head.classList.add('open'); }
   }
-  if (S.devMode) {
-    const leave = document.createElement('button');
-    leave.textContent = '⏏ Leave dev mode (keep my progress)'; leave.className = 'dev-leave';
-    devPress(leave, 'Leaving dev mode', () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); });
-    cmds.appendChild(leave);
-  }
+  if (S.devMode) add('⏏ Leave dev mode (keep my progress)', 'dev-leave', () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); });
   renderDevPlayers();
   box.classList.add('hidden');
   $('dev-btn').classList.remove('hidden');
-  if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Tap 🛠 (or press `) for the cheats panel.' : 'Dev mode: tap 🛠 or press ` (backtick) for the playtest panel.', 'info');
+  if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Tap 🐞 (or press `) for the cheats panel.' : 'Dev mode: tap 🐞 or press ` (backtick) for the playtest panel.', 'info');
 }
 function renderDevPlayers() {
   if (S.devGive) S.devGive.refreshTargets(); // the give menu's "give to" list
@@ -937,12 +973,12 @@ initInput(canvas, {
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
-    if (k === 'Backquote' && (S.dev || S.devMode)) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); }
+    if (k === 'Backquote' && S.playing) { if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
   onKeyUp(k) { if (S.spec) S.spec.key(k, false); if (k === 'KeyX' && wheel.open) wheel.release(performance.now() - (S.wheelAt || 0) < 250); },
   onItems() { if (S.spec && S.spec.on) return; if (canWheel()) { if (wheel.open) wheel.close(); else wheel.show(true); } },
-  onDev() { if (S.dev || S.devMode) { if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); } },
+  onDev() { if (!S.playing) return; if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
   onPhone() { if (S.playing) openPhone(); },
@@ -1341,7 +1377,7 @@ for (const id of ['b-fs', 't-fs', 's-fs']) $(id).onclick = () => toggleFullscree
 $('b-map').onclick = () => { if (S.playing) toggleMap(!S.bigmap); };
 $('b-phone').onclick = () => openPhone();
 $('b-menu').onclick = () => { if (S.playing) { sfx('click', 0.6); if (topOverlay() === 'pause') closeOverlay('pause'); else openOverlay('pause'); } };
-$('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openOverlay('dev'); };
+$('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('ph-back').onclick = () => phone.back();
 document.addEventListener('fullscreenchange', () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });
 
@@ -1466,10 +1502,9 @@ function openOverlay(id) {
   if (id === 'pause') {
     requestPlayers();
     document.querySelectorAll('#pause .online-only').forEach((b) => b.classList.toggle('hidden', !!S.practice));
-    $('p-devmode').textContent = S.devMode ? '⏏ Leave Dev Debug Mode (keep my progress)' : 'Dev Debug Mode';
-    // the debug menu goes to the top of the options while you're in dev mode
-    const dbg = document.querySelector('#pause [data-p="dev"]'); dbg.parentNode.insertBefore(dbg, dbg.parentNode.firstChild);
-    document.querySelectorAll('#pause .dev-only').forEach((b) => b.classList.toggle('hidden', !S.dev && !S.devMode));
+    // the debug menu is the top option (it switches Dev Debug Mode on if needed); leaving dev mode lower down
+    $('p-devmode').textContent = '⏏ Leave Dev Debug Mode (keep my progress)';
+    $('p-devmode').classList.toggle('hidden', !S.devMode || !!S.practice);
   }
   if (id === 'pause') { document.querySelectorAll('#pause .cop-only').forEach((b) => b.classList.toggle('hidden', !(S.me && S.me.cruiser))); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
   overlays.push(id);
@@ -1534,6 +1569,12 @@ function overlayPad() {
   if (topOverlay() === 'bigmap' && input.menuBack && mapwp.inGroup) { mapwp.back(); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
   if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
+  if (topOverlay() === 'dev' && el && el.tagName === 'BUTTON' && input.menuLR) { // the debug menu: across to the players and back
+    const other = el.closest('#dev-players') ? $('dev').querySelector('.dev-cmds') : $('dev-players');
+    const to = other && f.find((b) => other.contains(b));
+    if (to) { ovFocus = f.indexOf(to); focusOverlay(); }
+    return true;
+  }
   if (el && input.menuLR) {
     if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + input.menuLR + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); }
     else if (el.type === 'checkbox') { el.checked = input.menuLR > 0; el.dispatchEvent(new Event('change')); }
@@ -1627,7 +1668,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
       else { b.dataset.armed = String(performance.now()); b.textContent = S.me && S.me.wanted > 0 ? 'Tap again: turn yourself in (fine)' : 'Tap again: give up and respawn'; }
     }
     else if (a === 'fullscreen') toggleFullscreen();
-    else if (a === 'dev') openOverlay('dev');
+    else if (a === 'dev') { closeOverlay('pause'); sfx('click', 0.8); openDebug(); }
     else if (a === 'players') { closeOverlay('pause'); openOverlay('players'); renderPlayers(); }
     else if (a === 'devmode') { closeOverlay('pause'); sfx('click', 0.8); if (S.devMode) send({ t: 'devmode', leave: true }); else { send({ t: 'devmode', pw: '' }); S.openDevOnEnter = true; } }
     else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }

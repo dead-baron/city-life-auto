@@ -44,7 +44,7 @@
     <div id="w-carry"></div>
     <div id="fishbar" class="hidden"></div>
     <div id="net"></div>
-    <div id="hud-btns"><button id="b-menu" title="Menu (players online, debug, settings)">☰</button><button id="b-phone" title="Phone">📱</button><button id="b-bag" title="Bag (inventory)">🎒</button><button id="b-map" title="World map">▦</button><button id="b-settings" title="Settings">⚙</button><button id="b-fs" title="Fullscreen">⛶</button><button id="b-dev" class="hidden" title="Debug menu">🛠</button></div>
+    <div id="hud-btns"><button id="b-menu" title="Menu (players online, debug, settings)">☰</button><button id="b-phone" title="Phone">📱</button><button id="b-bag" title="Bag (inventory)">🎒</button><button id="b-map" title="World map">▦</button><button id="b-settings" title="Settings">⚙</button><button id="b-fs" title="Fullscreen">⛶</button><button id="b-dev" title="Debug menu"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"><path d="M9.5 5.2 8 3.4M14.5 5.2 16 3.4M5.4 9.6 3.2 8.6M18.6 9.6l2.2-1M5 13.6H2.6M19 13.6h2.4M5.6 17.6l-2.2 1.4M18.4 17.6l2.2 1.4"/></g><ellipse cx="12" cy="7.4" rx="3.2" ry="2.6" fill="#fff"/><ellipse cx="12" cy="14.2" rx="5.6" ry="6.6" fill="#fff"/><path d="M12 8.6v12" stroke="#e8559a" stroke-width="1.3"/></svg></button></div>
   </div>
   <span id="hp-text" class="hidden"></span>
 
@@ -168,7 +168,7 @@
     <div class="mhead"><h2>PAUSED</h2><button class="x" data-close>✕</button></div>
     <p class="msub" id="p-sub">Game menu</p>
     <div class="m-opts">
-      <button class="opt dev-only" data-p="dev">🛠 Debug menu</button>
+      <button class="opt" data-p="dev">🐞 Debug menu</button>
       <button class="opt" data-p="resume">Resume</button>
       <button class="opt" data-p="phone">Phone (places, jobs, waypoints)</button>
       <button class="opt" data-p="map">Map</button>
@@ -179,7 +179,7 @@
       <button class="opt" data-p="unstuck">Stuck? Get unstuck</button>
       <button class="opt" data-p="surrender" id="p-surrender">Surrender (respawn)</button>
       <button class="opt" data-p="fullscreen">Toggle fullscreen</button>
-      <button class="opt online-only" data-p="devmode" id="p-devmode">🛠 Dev Debug Mode</button>
+      <button class="opt online-only hidden" data-p="devmode" id="p-devmode">⏏ Leave Dev Debug Mode (keep my progress)</button>
       <button class="opt" data-p="title">Back to title screen</button>
     </div>
   </div></div>

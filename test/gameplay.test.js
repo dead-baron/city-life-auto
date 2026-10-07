@@ -325,3 +325,54 @@ test('dev give: anything to yourself or another online player, any quantity, or 
   s.onMessage(JSON.stringify({ t: 'dev', c: 'give', kind: 'item', id: 'medkit', n: 50 }), false);
   assert.ok(!(r.prof.inventory.medkit > 1), 'not without dev mode');
 });
+
+// ---------------------------------------------------------------------------
+// The debug menu's feature sections: every "take me there" button finds a place, and lands you on open ground.
+import { DEV_SECTIONS } from '../client/devcats.js';
+import * as devCmds from '../server/dev.js';
+import { PED_BLOCK as DEV_PED_BLOCK } from '../shared/map.js';
+
+test('debug menu: every "take me there" button has somewhere to go, and puts you on open ground beside it', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const kinds = new Set();
+  for (const sec of DEV_SECTIONS) for (const [, c, extra] of sec.items) if (c === 'near') kinds.add(extra.k);
+  assert.ok(kinds.size > 30, `${kinds.size} kinds of place`);
+  for (const k of kinds) {
+    const list = devCmds.nearTargets(w.map, k);
+    assert.ok(list.length, `somewhere to go for "${k}"`);
+    const err = devCmds.near(w, p, k);
+    assert.equal(err, null, `${k}: ${err}`);
+    assert.ok(!DEV_PED_BLOCK[w.map.tileAtPx(p.ped.x, p.ped.y)] && !w.map.isWater(p.ped.x, p.ped.y), `${k}: on open ground`);
+    const d = Math.min(...list.map((q) => Math.hypot(q.x - p.ped.x, q.y - p.ped.y)));
+    if (k === 'race') { // out on the water: the nearest shore, with the race's craft waiting beside you
+      assert.ok(d < 1800, `race: on the shore nearby (${Math.round(d)} px)`);
+      assert.ok([...w.entities.values()].some((v) => v.issuedTo === p.pid && v.def && v.def.kind === 'boat' && Math.hypot(v.x - p.ped.x, v.y - p.ped.y) < 460), 'race: a craft in the water beside you');
+    } else assert.ok(d < 340, `${k}: beside it (${Math.round(d)} px)`);
+  }
+});
+
+test('debug menu: hold the weather, freeze the clock, rain for as long as asked', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  devCmds.command(w, p, 'rain', { s: 40 });
+  assert.equal(w.weather, 1);
+  devCmds.command(w, p, 'wxhold', {});
+  for (let i = 0; i < 20 * 50; i++) w.step();
+  assert.equal(w.weather, 1, 'still raining past its 40 s: held');
+  devCmds.command(w, p, 'clear', {});
+  for (let i = 0; i < 20; i++) w.step();
+  assert.equal(w.weather, 0, 'cleared while held');
+  w.nextWeatherRoll = w.time; w.rand = () => 0;   // (a roll that would start the rain)
+  for (let i = 0; i < 20 * 3; i++) w.step();
+  assert.equal(w.weather, 0, 'and it stays dry while held');
+  devCmds.command(w, p, 'wxhold', {});
+  devCmds.command(w, p, 'time', { m: 720 });
+  devCmds.command(w, p, 'clockhold', {});
+  const t0 = w.loopTime;
+  for (let i = 0; i < 20 * 5; i++) w.step();
+  assert.equal(w.loopTime, t0, 'the clock is frozen');
+  devCmds.command(w, p, 'clockhold', {});
+  for (let i = 0; i < 20; i++) w.step();
+  assert.ok(w.loopTime > t0, 'and runs again');
+});

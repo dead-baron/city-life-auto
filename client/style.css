@@ -403,8 +403,8 @@ body.portrait #bm-panel { width: calc(100vw - 24px); max-height: 34vh; }
 #dev .dev-cmds, #dev #dev-players { max-height: calc(90vh - 60px); overflow-y: auto; }
 #dev #dev-players { border-left: 1px solid #333; padding-left: 10px; }
 #dev button { transition: transform .06s, background .1s; touch-action: manipulation; }
-#dev button:active, #dev button.pressed { transform: scale(.95) translateY(1px); background: #f2c21b !important; color: #111 !important; }
-#dev button.pressed { animation: devpress .35s ease-out forwards; }
+#dev button:active { transform: scale(.95) translateY(1px); background: #f2c21b !important; color: #111 !important; }
+#dev button.pressed { animation: devpress .35s ease-out; }   /* lit while it presses in, then back to normal (no lasting highlight) */
 @keyframes devpress { 0% { transform: scale(.93) translateY(1px); background: #f2c21b; color: #111; } 100% { transform: none; } }
 #dev button.on { border-color: #3ddc84 !important; box-shadow: inset 0 0 0 1px #3ddc84; }
 #dev .dev-pl i { color: var(--warn); font-style: normal; font-size: 11px; }
@@ -560,3 +560,19 @@ body.portrait.touch #tbtns .light { left: max(10px, env(safe-area-inset-left)); 
 .art2-err p { margin: 0 0 12px; color: #c9c3b4; font-weight: 500; }
 .art2-err button { font: inherit; padding: 8px 18px; border-radius: 8px; border: 2px solid #c8a24a; background: #1d2742; color: #ffd36b; cursor: pointer; min-height: 44px; }
 .art2-err.hidden { display: none; }
+
+/* the debug button on the HUD: a pink circle with a bug; grey and see-through until Dev Debug Mode is on */
+#hud-btns #b-dev { background: #e8559a; border-color: #ffc2de; display: inline-flex; align-items: center; justify-content: center; padding: 0; filter: grayscale(1); opacity: .45; transition: opacity .15s, filter .15s; }
+#hud-btns #b-dev.on { filter: none; opacity: 1; box-shadow: 0 0 0 2px rgba(232,85,154,.35); }
+#hud-btns #b-dev:hover { opacity: .9; }
+/* the debug menu: the top three, the feature sections (one open at a time) */
+#dev .dev-top { background: #5a1f3c !important; border-color: #e8559a !important; font-size: 15px !important; }
+#dev .dev-spec { background: #1f3a2c !important; border-color: #3ddc84 !important; margin-bottom: 6px; }
+#dev .dev-sec { text-align: left; background: #26262c !important; border-color: #444 !important; margin-top: 6px !important; position: relative; padding-right: 24px !important; }
+#dev .dev-sec::after { content: '▸'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #e8559a; }
+#dev .dev-sec.open { border-color: #e8559a !important; color: #ffd3e7 !important; }
+#dev .dev-sec.open::after { content: '▾'; }
+#dev .dev-sec-body { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px 0 2px 8px; border-left: 2px solid #e8559a; margin: 2px 0 4px 4px; }
+#dev .dev-sec-body.hidden { display: none; }
+#dev .dev-sec-body button { margin-top: 0 !important; font-size: 13px !important; text-align: left; }
+@media (max-width: 560px) { #dev .dev-sec-body { grid-template-columns: 1fr; } }

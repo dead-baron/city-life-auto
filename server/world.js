@@ -218,7 +218,7 @@ export class World {
     const t0 = performance.now();
     this.tick++;
     this.time += DT;
-    this.loopTime = (this.loopTime + DT) % DAY_LOOP_S;
+    if (!this.clockHold) this.loopTime = (this.loopTime + DT) % DAY_LOOP_S; // (dev: the clock can be frozen)
 
     const systems = SYSTEMS;
     for (let i = 0; i < systems.length; i++) {
