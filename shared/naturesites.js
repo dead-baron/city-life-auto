@@ -106,6 +106,7 @@ export function buildNatureSites(m, H) {
   cedarCreek(m, H);
   wreckIsland(m, H);
   bluffsMaze(m, H);
+  hotSprings(m, H);
   roadside(m, H);
   coralRainforest(m, H);
 }
@@ -500,6 +501,77 @@ function bluffsMaze(m, H) {
   (m.mazes ||= []).push({ x: X0 * TILE, y: Y0 * TILE, w: S * TILE, h: S * TILE });
   (m.landmarks ||= []).push({ name: 'Bluffs Maze Garden', type: 'maze', x: X0 * TILE, y: Y0 * TILE, w: S * TILE, h: S * TILE });
   m.natureSites.push({ kind: 'maze', name: 'Bluffs Maze Garden', x: Math.round((CX + 0.5) * TILE), y: Math.round((CY + 0.5) * TILE), gate: { x: Math.round((CX + 0.5) * TILE), y: Math.round((Y0 + S + 0.5) * TILE) }, size: S });
+}
+
+// ---- Granite Hot Springs (Granite Peaks; concept L7) -----------------------------------------------------------
+// Three hot pools stepping down a granite hillside north of the coast highway: the spring wells up in the top pool
+// under a rock face, spills in little cascades to the big middle pool and the lower one; boulders round every rim,
+// steam over the water, stone lanterns and paper lanterns on posts, red maples and pines, a bamboo fence round the
+// baths with a bath pavilion (benches, buckets, a bamboo spout) on the lower pool, stone steps up from the road.
+// The water is hot spring water (m.springs: the ground bake's milky mineral blue-green); you can get in.
+function hotSprings(m, H) {
+  const D = 33, at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const open = (tx, ty) => { const i = at(tx, ty); return (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !m.reserve[i] && m.dist[i] === D; };
+  const CX = 603, CY = 125;
+  for (let ty = CY - 14; ty <= CY + 15; ty++) for (let tx = CX - 16; tx <= CX + 16; tx++) if (!open(tx, ty)) return;
+  // the road below: the highway's north edge under the site
+  let ry = CY + 15; while (ry < CY + 30 && m.tiles[at(CX, ry)] !== T.ROAD) ry++;
+  if (m.tiles[at(CX, ry)] !== T.ROAD) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.abs(q.x / TILE - CX) < 17 && q.y / TILE > CY - 15 && q.y / TILE < ry) dropProp(m, i); });
+  for (let ty = CY - 14; ty < ry; ty++) for (let tx = CX - 16; tx <= CX + 16; tx++) if (open(tx, ty)) m.reserve[at(tx, ty)] |= RES;
+  // the pools: [cx, cy, rx, ry] in tiles - top (small, under the rock), middle (big), lower (by the pavilion)
+  const POOLS = [[CX - 4, CY - 8, 4.2, 2.6], [CX + 1, CY - 2, 7.4, 3.4], [CX - 5, CY + 5, 5, 2.6]];
+  const wet = [];
+  for (const [px, py, rx, ry2] of POOLS) {
+    for (let ty = Math.floor(py - ry2 - 1); ty <= py + ry2 + 1; ty++) for (let tx = Math.floor(px - rx - 1); tx <= px + rx + 1; tx++) {
+      const dx = (tx + 0.5 - px) / rx, dy = (ty + 0.5 - py) / ry2, a = Math.atan2(dy, dx), q = Math.hypot(dx, dy) / (1 + 0.12 * Math.sin(a * 3 + px) + 0.06 * Math.sin(a * 5 + py));
+      if (q > 1) continue;
+      const i = at(tx, ty); m.tiles[i] = q < 0.5 && rx > 5 ? T.DEEP : T.WATER; m.reserve[i] |= RES | 16; wet.push(i);
+    }
+    (m.springs ||= []).push({ x: px * TILE, y: py * TILE, rx: (rx + 0.6) * TILE, ry: (ry2 + 0.6) * TILE });
+  }
+  const wetSet = new Set(wet), isWet = (tx, ty) => wetSet.has(at(tx, ty));
+  // the rock face behind the top pool (solid granite) the spring wells out from
+  const RX = CX - 4, RY = CY - 12;
+  for (let ty = RY - 1; ty <= RY; ty++) for (let tx = RX - 4; tx <= RX + 4; tx++) { m.tiles[at(tx, ty)] = T.WALL; m.reserve[at(tx, ty)] |= RES; }
+  add('outcrop', RX, RY + 1, 0, { w: 9 * TILE, d: 2 * TILE, h: 44, style: 'granite', s: 3 });
+  add('fallsmall', RX + 0.5, RY + 1.6, 0, { w: 14, h: 26 });
+  // the cascades: where each pool spills into the next (a little curtain of water over the rim stones)
+  add('fallsmall', CX - 1.2, CY - 5.4, 0, { w: 18, h: 14 });
+  add('fallsmall', CX - 3.4, CY + 2.2, 0, { w: 16, h: 12 });
+  // boulders round every rim (solid, mossy granite), close-packed; steam over each pool
+  let k = 0;
+  for (const [px, py, rx, ry2] of POOLS) {
+    const n = Math.round((rx + ry2) * 2.4);
+    for (let j = 0; j < n; j++, k++) {
+      const a = j / n * Math.PI * 2 + hash2(k, 1, 2501) * 0.3, rr = 1.12 + hash2(k, 2, 2501) * 0.18, tx = px + Math.cos(a) * rx * rr, ty = py + Math.sin(a) * ry2 * rr;
+      if (isWet(tx, ty) || Math.abs(Math.sin(a)) > 0.92 && Math.sin(a) > 0 && px === CX + 1) continue;   // (a gap in the big pool's south rim: the way in)
+      const sz = 22 + Math.round(hash2(k, 3, 2501) * 16);
+      add('boulder', tx, ty, Math.round(sz * 0.5), { s: sz, style: 'basalt', moss: hash2(k, 4, 2501) < 0.25 ? 1 : 0 });   // (dark rocks round the hot water)
+    }
+    add('steam', px, py + ry2 * 0.4, 0, { w: Math.round(rx * TILE * 1.4), h: 46 + Math.round(rx * 3), s: Math.round(px + py) % 5 + 1 });
+  }
+  // the bath pavilion on the lower pool's west side, a bamboo fence round the baths (a gate on the south side)
+  add('bathpav', CX - 12, CY + 5.4, 0);
+  for (let tx = CX - 13; tx <= CX - 11; tx++) for (let ty = CY + 4; ty <= CY + 5; ty++) { const i = at(tx, ty); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) m.tiles[i] = T.WALL; }
+  const fence = [[CX - 15, CY - 13, CX + 13, CY - 13], [CX - 15, CY - 13, CX - 15, CY + 9], [CX + 13, CY - 13, CX + 13, CY + 9], [CX - 15, CY + 9, CX - 2, CY + 9], [CX + 2, CY + 9, CX + 13, CY + 9]];
+  for (const [ax, ay, bx, by] of fence) {
+    const L = Math.hypot(bx - ax, by - ay), ns = ax === bx;
+    for (let s0 = 0; s0 < L; s0 += 2.5) { const l = Math.min(2.5, L - s0); add('bamboo', ns ? ax : ax + s0 + l / 2, ns ? ay + s0 + l / 2 : ay, 0, { len: Math.round(l * TILE), a: ns ? Math.PI / 2 : 0 }); }
+    for (let d = 0; d <= L * TILE; d += 16) m.addSolidProp((ax + (bx - ax) * d / (L * TILE)) * TILE, (ay + (by - ay) * d / (L * TILE)) * TILE, 7);
+  }
+  // stone steps up from the road through the gate: a flagstone path (plaza) to the big pool's south rim
+  for (let ty = CY + 2; ty < ry; ty++) for (const tx of [CX - 1, CX, CX + 1]) { const i = at(tx, ty); if (!wetSet.has(i) && m.tiles[i] !== T.WALL && m.tiles[i] !== T.ROAD && m.tiles[i] !== T.SIDEWALK) m.tiles[i] = T.PLAZA; }
+  // lanterns: stone lanterns by the pools, paper lanterns on posts along the path and at the gate
+  for (const [tx, ty] of [[CX - 9, CY - 9], [CX + 9, CY - 6], [CX + 7, CY + 4], [CX - 9, CY + 1]]) add('stonelantern', tx, ty, 6);
+  for (const [tx, ty] of [[CX - 2.2, CY + 9.6], [CX + 2.2, CY + 9.6], [CX - 2.2, CY + 13], [CX + 2.2, CY + 13]]) add('lantern', tx, ty, 4);
+  // the trees: red maples (the concept's autumn colour) and pines inside and round the fence, ferns and moss rocks
+  for (const [tx, ty, sp] of [[CX - 12, CY - 9, 'mapleAutumn'], [CX + 10, CY - 10, 'mtnPine'], [CX + 10, CY + 1, 'mapleAutumn'], [CX - 12, CY - 2, 'mtnPine'], [CX + 6, CY - 11, 'mapleAutumn'], [CX - 7, CY + 8, 'mapleAutumn']]) add('tree_a', tx, ty, 12, { sp, k: 1.3 });
+  for (const [tx, ty, sp] of [[CX - 19, CY - 6, 'mtnPine'], [CX + 17, CY - 8, 'mapleAutumn'], [CX - 18, CY + 6, 'mapleAutumn'], [CX + 17, CY + 5, 'mtnPine'], [CX - 6, CY - 17, 'mtnPine'], [CX + 6, CY - 16, 'mtnFir'], [CX + 18, CY + 11, 'mapleAutumn'], [CX - 18, CY + 12, 'mtnPine']]) if (open(Math.floor(tx), Math.floor(ty)) || m.reserve[at(tx, ty)] & RES) add('tree_a', tx, ty, 12, { sp, k: 1.4 });
+  for (let j = 0; j < 22; j++) { const tx = CX - 14 + hash2(j, 1, 2502) * 28, ty = CY - 12 + hash2(j, 2, 2502) * 20; const i = at(tx, ty); if ((m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !wetSet.has(i)) add('shrub_a', tx, ty, 0, { sp: ['fern', 'salal', 'fern', 'heather'][j % 4], k: 1 }); }
+  (m.landmarks ||= []).push({ name: 'Granite Hot Springs', type: 'springs', x: (CX - 15) * TILE, y: (CY - 13) * TILE, w: 28 * TILE, h: 22 * TILE });
+  m.natureSites.push({ kind: 'springs', name: 'Granite Hot Springs', x: Math.round((CX + 1) * TILE), y: Math.round((CY - 2) * TILE), gate: { x: CX * TILE + 16, y: (CY + 9) * TILE + 16 }, pools: POOLS.length });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------

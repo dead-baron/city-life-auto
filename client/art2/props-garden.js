@@ -354,3 +354,55 @@ export function fallenLog(len = 200, r = 18, seed = 1, o = {}) {
   m.smooth = 1;
   return m;
 }
+
+// ---- the hot springs (concept L7) ----------------------------------------------------------------------------
+// a bath pavilion: a timber shelter on a raised plank deck, four posts, a dark tile roof with its ridge east-west and
+// the eaves turned up at the corners, a bench and wooden buckets under it, a bamboo spout pouring into a stone
+// basin, a paper lantern hanging at the front (lit when `on`). Built along +x, the open front toward +y.
+export function bathPavilion(on = 0.6) {
+  const w = 72, d = 50, H = 34, m = new Vox(w + 12, d + 12, H + 34), x0 = 6, y0 = 4, x1 = x0 + w, y1 = y0 + d;
+  const deck = m.mat({ ramp: R('#9a7652', 6, 3), k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -1 : 0) + (hash(Math.floor(x / 6), 3, 5) - 0.5) * 0.6 });
+  const post = m.mat({ ramp: R('#5a3e2a', 6, 3), k: 3 }), wall = m.mat({ ramp: R('#a88a62', 6, 3), k: 3, shade: (x, y, z) => (Math.round(x + y) % 5 === 0 ? -0.8 : 0) });
+  const tile = m.mat({ ramp: R('#3a3e46', 6, 3), k: 3, shade: (x, y, z) => (Math.round(x) % 4 === 0 ? -0.9 : 0) + (Math.round(z) % 3 === 0 ? -0.4 : 0) });
+  const ridge = m.mat({ ramp: R('#2a2c32', 5, 2), k: 2 }), bench = m.mat({ ramp: R('#b8925e', 6, 3), k: 3 }), band = m.mat({ ramp: R('#2a3a5a', 5, 2), k: 2 });
+  const stone = m.mat({ ramp: STONE, k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(y / 2), 7) - 0.5) * 0.9 }), bam = m.mat({ ramp: R('#8aa04a', 6, 3), k: 3 });
+  const wat = m.mat({ ramp: R('#8ad8d8', 5, 3), k: 3, flag: F_WATER | F_NOCAST }), lamp = m.mat({ ramp: R('#f0d8a0', 5, 3), k: 4, emi: [255, 200, 120, Math.round(170 * on)] });
+  m.box(x0, y0, 0, x1, y1, 5, deck);                                             // the raised deck
+  for (const [x, y] of [[x0 + 2, y0 + 2], [x1 - 6, y0 + 2], [x0 + 2, y1 - 6], [x1 - 6, y1 - 6]]) m.box(x, y, 5, x + 4, y + 4, H, post);
+  m.box(x0 + 2, y0 + 2, 5, x1 - 2, y0 + 5, H - 4, wall);                          // the back wall (a screen of planks)
+  m.box(x0 + 8, y0 + 8, 5, x1 - 8, y0 + 16, 13, bench);                           // the bench along it
+  for (const [x, y] of [[x0 + 14, y0 + 24], [x0 + 22, y0 + 26], [x1 - 22, y0 + 24]]) { m.cyl('z', x, y, 0, 4, 5, 12, bench); m.box(x - 4, y - 0.5, 9, x + 4, y + 0.5, 10, band); }   // buckets
+  // the stone basin by the front-right post, the bamboo spout over it
+  m.cyl('z', x1 - 14, y1 - 12, 0, 7, 5, 12, stone); m.cyl('z', x1 - 14, y1 - 12, 0, 5, 10, 12, wat);
+  m.box(x1 - 6, y1 - 13, 18, x1 - 2, y1 - 11, 20, bam); for (let k = 0; k < 8; k++) m.box(x1 - 6 - k, y1 - 13, 18 - k * 0.2, x1 - 5 - k, y1 - 11, 20 - k * 0.2, bam);
+  // the roof: two pitches from a ridge along x, eaves out past the posts, the corners turned up
+  m.fill((x, y, z) => { const ey = Math.min(y - (y0 - 6), (y1 + 6) - y), top = H + 4 + Math.min(18, ey * 0.62) + (x < x0 + 4 || x > x1 - 4 ? 2 : 0) + (ey < 4 && (x < x0 + 6 || x > x1 - 6) ? 2 : 0); return ey >= 0 && z >= top - 3 && z < top ? tile : -1; }, x0 - 6, y0 - 6, H, x1 + 6, y1 + 6, H + 30);
+  m.box(x0 - 6, (y0 + y1) / 2 - 1.5, H + 21, x1 + 6, (y0 + y1) / 2 + 1.5, H + 24, ridge);
+  // the paper lantern hanging at the front middle
+  m.box((x0 + x1) / 2 - 0.5, y1 - 2, H - 8, (x0 + x1) / 2 + 0.5, y1 - 1, H, post); m.ell((x0 + x1) / 2, y1 - 1.5, H - 13, 4, 4, 6, lamp);
+  return m;
+}
+// a bamboo fence: a row of canes lashed to three rails, a darker cap rail; along +x
+export function bambooFence(len = 80, h = 30) {
+  const m = new Vox(len, 6, h + 2);
+  const cane = m.mat({ ramp: R('#a8b058', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 9 === 0 ? -1 : 0) + (hash(Math.floor(x / 3), 2, 7) - 0.5) * 0.7 }), rail = m.mat({ ramp: R('#6a5434', 6, 3), k: 3 });
+  for (let x = 0; x < len; x += 3) m.box(x, 2, 0, x + 2.4, 4, h - (hash(x, 1, 9) > 0.7 ? 2 : 0), cane);
+  for (const z of [6, h * 0.55, h - 4]) m.box(0, 1, z, len, 5, z + 2, rail);
+  m.box(0, 1, h, len, 5, h + 2, rail);
+  return m;
+}
+// steam over hot water (a sprite): soft white wisps rising and drifting, w wide over the water, rising to h;
+// partly see-through and casting no shadow (like a waterfall's mist)
+export function steam(w = 80, h = 50, seed = 1) {
+  const G = new GBuf(Math.ceil(w) + 20, Math.ceil(h) + 20); G.ax = Math.round(G.w / 2); G.ay = G.h - 4;
+  for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
+    const u = (x - G.ax) / (w / 2), v = (G.ay - y) / h; if (v < 0 || v > 1.1) continue;
+    const env = Math.max(0, 1 - u * u * (0.7 + v)) * Math.sin(Math.PI * Math.min(1, v * 1.1)) * (1 - v * 0.55);
+    const wisp = vnoise(x + v * 18 * Math.sin(seed), y * 0.7, 9, seed + 11) * 0.65 + vnoise(x * 0.6, y, 4, seed + 13) * 0.35;
+    const a = env * (wisp - 0.3) * 3.2; if (a <= 0.08) continue;
+    const j = (y * G.w + x) * 4; G.col[j] = 240; G.col[j + 1] = 244; G.col[j + 2] = 246; G.col[j + 3] = Math.round(Math.min(0.78, a) * 255);
+    G.nrm[j] = 128; G.nrm[j + 1] = 128; G.nrm[j + 2] = 255; G.nrm[j + 3] = 255;
+    G.z[y * G.w + x] = Math.round(v * h); G.flag[y * G.w + x] = F_NOCAST;
+  }
+  return G;
+}

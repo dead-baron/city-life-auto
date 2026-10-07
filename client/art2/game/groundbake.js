@@ -79,7 +79,7 @@ mat('PLAZAC', 'slabPlaza', 4); mat('PLAZAS', 'slabStone', 4); mat('PLAZAB', 'bri
 mat('DRIVE', 'slabDrive', 4); mat('APRONG', 'apron', 3); mat('ISLAND', 'slabConcrete', 4); mat('PATH', 'pathGravel', 4); mat('BOARD', 'boardwalk', 4); mat('BOARDV', 'boardwalkV', 4); mat('DOCK', 'planks', 4); mat('DOCKX', 'planksX', 4); mat('DECKWALK', 'slabConcrete', 4);
 mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('FLOOR', 'floorTile', 1); mat('FLOORW', 'floorWood', 1); mat('COUNTER', 'counterTop', 1);
 mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDECK', 'planksX', 1);
-mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2);
+mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2); mat('SPRING', '', 2);
 const NM = MATS.length;
 const KIND = new Uint8Array(NM), SHADER = [];
 for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][0]] || null; }
@@ -193,6 +193,7 @@ function tileFacts(C) {
   const fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
   const parks = M.parkGrounds || [];        // designed town parks (Lakeview Park): lawn and gravel paths whatever the district, the plaza paved
   const pools = M.pools || [];              // swimming pools (the Stadium Lido): tiled pool water, a pale concrete deck
+  const springs = M.springs || [];          // hot spring pools: milky blue-green mineral water (ellipses)
   const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
   const tracks = (M.tracks || []).filter((r) => r.bb[2] >= TX0 * TILE - 64 && r.bb[0] <= (TX0 + TN) * TILE + 64 && r.bb[3] >= TY0 * TILE - 64 && r.bb[1] <= (TY0 + TN) * TILE + 64);   // dirt tracks off-road (Red Rock Canyon)
   const onTrack = (X, Y) => tracks.some((r) => { if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
@@ -207,6 +208,7 @@ function tileFacts(C) {
     const X = tx * TILE + 16, Y = ty * TILE + 16, D = DISTRICTS[b.td[k]] || DISTRICTS[13], st = D.style, wild = WSTYLE.has(st), bio = b.tb[k];
     let m;
     if ((t === T.WATER || t === T.DEEP) && pools.length && inRects(pools, X, Y)) m = M_.POOL;
+    else if ((t === T.WATER || t === T.DEEP) && springs.length && springs.some((e) => ((X - e.x) / e.rx) ** 2 + ((Y - e.y) / e.ry) ** 2 < 1.6)) m = M_.SPRING;
     else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE) m = M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
     else if (t === T.DOCK) m = runAxis(M, tx, ty, T.DOCK) ? M_.DOCK : M_.DOCKX;
     else if (t === T.GRASS) {
@@ -803,7 +805,7 @@ function paint(C, G) {
         const dpt = (b.tdp[k00] * (1 - vx) + b.tdp[k00 + 1] * vx) * (1 - vy) + (b.tdp[k00 + TN] * (1 - vx) + b.tdp[k00 + TN + 1] * vx) * vy;
         const dd = Math.min(1, Math.max(d / 90, dpt));
         const ti = (Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0;
-        const r = m === M_.POOL ? poolPx(C.M.pools, X, Y, d, seed) : m === M_.SEA ? seaPx(X, Y, d, dd, b.tsand[ti], seed + 13) : stillPx(X, Y, d, m === M_.POND ? Math.min(1, d / 50) : dd, m === M_.RIVER ? 1 : 0, b.tsand[ti] === 1 ? 0 : 1, seed + 17);
+        const r = m === M_.POOL ? poolPx(C.M.pools, X, Y, d, seed) : m === M_.SPRING ? springPx(X, Y, d, seed) : m === M_.SEA ? seaPx(X, Y, d, dd, b.tsand[ti], seed + 13) : stillPx(X, Y, d, m === M_.POND ? Math.min(1, d / 50) : dd, m === M_.RIVER ? 1 : 0, b.tsand[ti] === 1 ? 0 : 1, seed + 17);
         c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER;
         if (r.e) { emi[j] = 255; emi[j + 1] = 246; emi[j + 2] = 222; emi[j + 3] = r.e; }
       } else if (TURFPAL[m] >= 0 && m !== M_.DRYGRASS && m !== M_.ALPINE && m !== M_.FOREST) {
@@ -845,6 +847,20 @@ function poolPx(pools, X, Y, d, seed) {
   if (lat && hh(X, Y, seed) > 0.97) PWP.e = 110;
   PWP.nx = (fine - 0.5) * 0.06; PWP.ny = (big - 0.5) * 0.08;
   return PWP;
+}
+// hot spring water: milky blue-green over pale mineral rock, a crust of white mineral at the edge, slow swirls of
+// lighter water and rising bubbles that glint
+const SPRW = ramp('#80c4bc', 6, 3), SPRE = ramp('#d8dccc', 5, 2), SPP = { c: null, nx: 0, ny: 0, e: 0 };
+function springPx(X, Y, d, seed) {
+  SPP.e = 0;
+  const big = vnc(X, Y, 19, seed + 41), fine = vnc(X, Y, 4, seed + 43), sw = vnc(X + big * 12, Y - big * 9, 9, seed + 45);
+  let t = 0.5 + (big - 0.5) * 0.22 + (sw > 0.62 ? 0.16 : sw < 0.3 ? -0.08 : 0) + (fine - 0.5) * 0.05 - Math.min(1, d / 30) * 0.12;
+  let R = SPRW;
+  if (d < 2.6) { R = SPRE; t = 0.55 + (fine - 0.5) * 0.4; }                         // the mineral crust at the rim
+  else if (hh(X >> 1, Y >> 1, seed + 47) > 0.996) { t = 0.9; SPP.e = 60; }         // bubbles
+  SPP.c = sd(R, t, X, Y, 0.6);
+  SPP.nx = (fine - 0.5) * 0.05; SPP.ny = (big - 0.5) * 0.06;
+  return SPP;
 }
 function interior(kind, x, y, s) {                        // the indoor floors (shop tiles, wooden floors)
   if (kind === 'tileWhite') { const S = 12, lx = x % S, ly = y % S; let t = 0.6 + (hh(Math.floor(x / S), Math.floor(y / S), s + 3) - 0.5) * 0.12; if (lx === 0 || ly === 0) t -= 0.28; else if (lx === 1 || ly === 1) t += 0.08; return sd(TILEW, t, x, y, 0.4); }

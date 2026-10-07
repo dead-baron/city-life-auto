@@ -2631,3 +2631,22 @@ The flat red floor of Red Rock Canyon now has the concepts' dry wash and dirt ro
   - It has a parking spot, a map board at the end and a road sign where it leaves the road.
   - Tracks are a new map list, `m.tracks` (polylines with a half-width), drawn as dirt over the desert or the canyon's red rock (`groundbake.js`).
 - On the map as Red Rock Wash. Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Granite Hot Springs (Granite Peaks; concept L7)
+
+Three hot pools stepping down a hillside in the Granite Peaks, north of the coast highway (`shared/naturesites.js` `hotSprings`).
+- **The pools:**
+  - The spring wells up in the top pool under a granite rock face (solid) and spills in little cascades to the big middle pool and the lower one.
+  - You can get in: they are water tiles.
+  - The water is a new ground material, `SPRING`: milky blue-green mineral water with slow swirls of lighter water, a white mineral crust at the rim and a few rising bubbles (`groundbake.js` `springPx`; the map's `m.springs`).
+- **Round the water:**
+  - close-packed dark rocks ring every rim;
+  - steam rises over each pool (a new `steam` sprite of soft, partly see-through white wisps that cast no shadow);
+  - stone lanterns by the pools;
+  - red autumn maples and mountain pines, with ferns, salal and heather.
+- **The bath pavilion:** a new voxel model (`props-garden.js` `bathPavilion`) on the lower pool's west side.
+  - A timber shelter on a plank deck with a dark tile roof and turned-up eaves.
+  - A bench, wooden buckets and a bamboo spout pouring into a stone basin, with a paper lantern lit at night.
+- **The garden:** a bamboo fence runs round the baths (`bambooFence`; solid). A flagstone path comes up from the road through the gate, with paper lanterns on posts either side.
+- `fallsmall` (a small cascade) now takes a width and height.
+- On the map as Granite Hot Springs, and in the debug menu (♨ Granite Hot Springs). Homes, POIs and buildings unchanged.

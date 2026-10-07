@@ -391,3 +391,16 @@ test('Red Rock Wash: a dry wash of gravel from the oasis to the beach, and a dir
   assert.ok(Math.hypot(t[t.length - 1][0] - o.x, t[t.length - 1][1] - o.y) < 400, 'it ends by the oasis');
   for (const q of m.props) if (q && q.t === 'tree_a') for (const [x, y] of t) assert.ok(Math.hypot(q.x - x, q.y - y) > 20, 'a tree on the track');
 });
+
+test('Granite Hot Springs: three hot pools in the Granite Peaks you can get into, rimmed with rocks, steam over them, a pavilion and a fenced garden', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'springs');
+  assert.ok(s, 'the springs are built');
+  assert.ok(m.isWater(s.x, s.y), 'hot water to sit in');
+  assert.equal((m.springs || []).length, 3, 'three pools');
+  for (const e of m.springs) assert.ok(m.isWater(e.x, e.y), 'each pool is water');
+  for (const k of ['steam', 'bathpav', 'bamboo', 'stonelantern', 'fallsmall']) assert.ok(m.props.some((q) => q && q.t === k && Math.abs(q.x - s.x) < 700 && Math.abs(q.y - s.y) < 500), k);
+  assert.ok(m.props.filter((q) => q && q.t === 'boulder' && Math.abs(q.x - s.x) < 600 && Math.abs(q.y - s.y) < 450).length >= 30, 'rocks round the pools');
+  // the way in: the gate in the fence is open, the path up from the road is paved
+  assert.equal(tileAt(s.gate.x, s.gate.y), T.PLAZA, 'a flagstone path through the gate');
+  assert.ok(m.landmarks.some((l) => l.name === 'Granite Hot Springs'));
+});
