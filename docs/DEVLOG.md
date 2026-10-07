@@ -2487,3 +2487,25 @@ A little sandy cove bitten into the rocky south-west coast of Granite Peaks, bel
 - **The cliff top:** agaves, ice plant, hibiscus, bougainvillea and yuccas along the edge.
 - **The ground:** a designed beach (reserve bits 32 + 4) is drawn as sand even on a rock coast, and a designed place's rock tiles as natural rubble round their sprites instead of the dark wall material (`groundbake.js`).
 - On the map. Homes unchanged.
+
+## 2026-10-07 · Lakeview Park, made over (concept D11)
+
+The city park on Lakeview's south shore was a lawn with a square ring path and some random trees. It is now laid out like the D11 concept (`shared/naturesites.js` `lakeviewPark`).
+- **The paths:** warm gravel paths, about two tiles wide, that wander in from the west, north and south gates to the fountain plaza. One loop goes round the pond and two loops go through the east lawns. The fountain plaza stays paved.
+  - A new map list, `parkGrounds`, tells the ground bake to draw the park as lawn and gravel paths in any district, with its plaza left paved (`groundbake.js`).
+  - The courier's pick-up counter is still on a path.
+- **The duck pond:** two lobes with a narrow neck between them.
+  - An arched wooden footbridge crosses the neck. You walk on the planks underneath, and it joins the paths at both ends (`props-park.js` `archBridge`).
+  - Weeping willows stand round the edge, with reed beds and cattails, set stones, hydrangeas and berry shrubs on the banks.
+  - Lily pads, ducks and a swan are on the water.
+- **The east lawns:** a green-roofed gazebo on its own round, and a statue in a ring of roses and hydrangeas. There is a food cart with a striped umbrella by the plaza.
+  - Picnic blankets (red or blue check) with coolers are out on the grass (`statics.js` `makeBlanket`).
+  - A cherry grove stands in the middle.
+- **Trees:** groves of oaks, maples, magnolia, cherry and flowering trees on the lawns. A ring of big trees inside the railings screens the streets, with gaps where the paths come in.
+- **Along the paths:**
+  - flower beds (roses, hydrangeas, lavender, daisies, lupines) and shrubs;
+  - lamps and bins;
+  - benches facing the path, placed only beside the east-west runs, since seen side-on a bench reads as a post (benches now honour a set facing, `p.a`);
+  - park signs at the gates.
+- The east side backs onto the railway, so there is no east gate.
+- On the map as Lakeview Park. Homes unchanged.

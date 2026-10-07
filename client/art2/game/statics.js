@@ -350,6 +350,7 @@ export function makeStatic(r) {
     case 'lily': { const G = FL.lilyPads(r.s || 1, 7, 2); return G && G.render ? G.render(0) : G; }
     case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });
     case 'towel': return makeTowel(r);
+    case 'blanket': return makeBlanket(r);
     case 'stack': return seaStack(r.s || 1, r.r || 26, r.h || 150, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 2 } });
     case 'sealrock': return outcrop(r.s || 3, r.w || 120, r.d || 70, r.h || 26, 'basalt', { barnacles: 0.8, wet: 12, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, (r.h || 26) * 0.7], [8, r.h || 26]] });
     case 'crit': return r.k === 'starfish' ? WL.starfish(r.col || '#d8583a', 5, r.s || 1) : r.k === 'urchin' ? WL.urchin(4, r.s || 1, r.col || '#3a2448') : WL.anemone(4, r.s || 1);
@@ -1151,7 +1152,7 @@ function voxModel(m, a) {
     case 'soccerGoal': return PK.soccerGoal(a[0], a[1], a[2]); case 'terrace': return U.terrace(a[0], a[1], a[2], a[3]); case 'hayBale': return U.hayBale(a[0]); case 'scarecrow': return U.scarecrow();
     case 'windmill': return U.windmill(a[0]); case 'waterTower': return U.waterTower(a[0]); case 'piling': return P.piling(a[0]); case 'mooring': return X.mooringBollard(); case 'lounger': return D.lounger(a[0]);
     case 'hammock': return TW.hammock(a[0]); case 'boulder': return D.boulder(a[0], a[1], a[2]); case 'statue': return PK.statue(); case 'flagpole': return U.flagpole(a[0], a[1]); case 'jersey': return K.jerseyBarrier(a[0], a[1]);
-    case 'forklift': return X.forklift(a[0], a[1]); case 'container': return X.container(a[0], a[1]); case 'clockPost': return RD.clockPost(); case 'stopPole': return X.stopPole(a[0]); case 'gazebo': return PK.gazebo();
+    case 'forklift': return X.forklift(a[0], a[1]); case 'container': return X.container(a[0], a[1]); case 'clockPost': return RD.clockPost(); case 'stopPole': return X.stopPole(a[0]); case 'gazebo': return PK.gazebo(); case 'archBridge': return PK.archBridge(a[0] || 120, a[1] || 26, a[2] || 16); case 'parkSign': return PK.parkSign(a[0]);
     case 'beachChair': return PK.beachChair(a[0]); case 'lifeguard': return P.lifeguardTower(); case 'cafeTable': return P.cafeTable(); case 'chalkboard': return P.chalkboard(); case 'topiary': return D.topiary(a[0], a[1]);
     case 'trough': return U.trough(); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
     case 'dome': return obsDome(a[0] || 90); case 'marquee': return marquee(); case 'speaker': return speakerPost(); case 'portal': return portal(a[0] || 100); case 'wheelStop': return wheelStop();
@@ -1206,7 +1207,7 @@ function vdim(m, a) {
     case 'windmill': return [40, 40, (a[0] || 120) + 26]; case 'waterTower': return [40, 40, (a[0] || 90) + 40]; case 'piling': return [8, 8, a[0] || 20]; case 'mooring': return [14, 14, 16]; case 'lounger': return [34, 14, 16];
     case 'hammock': return [a[0] || 40, 10, 22]; case 'boulder': return [Math.ceil((a[1] || 22) * 1.2) + 4, Math.ceil((a[1] || 22) * 1.2) + 4, Math.ceil((a[1] || 22) * 0.9) + 2]; case 'statue': return [24, 24, 84];
     case 'flagpole': return [46, 8, (a[0] || 110) + 4]; case 'jersey': return [a[0] || 48, 14, 18]; case 'forklift': return [46, 26, 50]; case 'container': return [a[1] || 130, 54, 58]; case 'clockPost': return [16, 10, 64];
-    case 'stopPole': return [14, 8, 60]; case 'gazebo': return [74, 74, 86]; case 'beachChair': return [26, 14, 16]; case 'lifeguard': return [34, 30, 46]; case 'cafeTable': return [14, 14, 12]; case 'chalkboard': return [12, 8, 18];
+    case 'stopPole': return [14, 8, 60]; case 'gazebo': return [74, 74, 86]; case 'archBridge': return [a[0] || 120, a[1] || 26, (a[2] || 16) + 22]; case 'parkSign': return [26, 6, 30]; case 'beachChair': return [26, 14, 16]; case 'lifeguard': return [34, 30, 46]; case 'cafeTable': return [14, 14, 12]; case 'chalkboard': return [12, 8, 18];
     case 'topiary': return [16, 16, 30]; case 'trough': return [36, 16, 12]; case 'woodpile': return [30, 12, 16]; case 'propane': return [60, 24, 30]; case 'barrierArm': return [a[0] || 70, 10, 30];
     case 'gantryCrane': return [70, a[0] || 170, (a[1] || 200) + 6]; case 'dome': return [(a[0] || 90) + 10, (a[0] || 90) + 10, (a[0] || 90) * 0.8 + 30]; case 'marquee': return [84, 10, 80]; case 'speaker': return [10, 10, 22];
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
@@ -1317,8 +1318,20 @@ function makeFestoon(r) {
 // a beach towel laid on the sand
 function makeTowel(r) {
   const w = 18, h = 34, G = new GBuf(w, h); G.ax = w / 2; G.ay = h / 2;
-  const a = [[216, 70, 60], [60, 120, 200], [240, 190, 60]][r.v || 0], b = [244, 240, 228];
+  const a = [[216, 70, 60], [60, 120, 200], [240, 190, 60], [60, 160, 110]][(r.v || 0) % 4], b = [244, 240, 228];
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) G.put(x, y, Math.floor(y / 5) % 2 ? a : b, [0, 0, 1], 1, null, F_GROUND);
+  return G;
+}
+// a picnic blanket: red (or blue) gingham with a fringe, flat on the grass
+function makeBlanket(r) {
+  const w = 44, h = 34, G = new GBuf(w, h); G.ax = w / 2; G.ay = h / 2;
+  const c = [[200, 50, 50], [50, 90, 170]][(r.v || 0) % 2], white = [244, 240, 230], mid = c.map((v, k) => Math.round((v + white[k]) / 2));
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const fringe = x < 2 || x >= w - 2;
+    if (fringe && (y % 2)) continue;
+    const a = Math.floor(x / 5) % 2, b = Math.floor(y / 5) % 2;
+    G.put(x, y, fringe ? white : a && b ? c : a || b ? mid : white, [0, 0, 1], 1, null, F_GROUND);
+  }
   return G;
 }
 // An old two-arch stone bridge carrying a country road over a river (Willow River; concept W1). The water kit's model
@@ -1571,7 +1584,9 @@ function propItems(c, p, pi, I) {
     case 'dump_g': case 'dump_b': case 'dump_o': { const col = { dump_g: '#2f6a54', dump_b: '#2f4a7a', dump_o: '#b8682a' }[t], hd = c.roadDir(x, y) !== null ? qa(c.roadDir(x, y) - PI / 2, 4) : 0; V(`dmp:${t}:${hd.toFixed(2)}`, 'dumpster', [col], hd); return; }
     case 'tires': V(`tir:${seed % 3}`, 'tires', [2 + seed % 3]); return;
     case 'mailbox': V(`mb:${seed % 3}`, 'mailbox', [pick(['#2c3a66', '#3a3a40', '#8a2a2e'], seed / 6)]); return;
-    case 'bench_a': case 'bench_b': case 'bench_m': case 'pbench': { const rd = c.roadDir(x, y, 3), hd = rd !== null ? qa(rd - PI / 2, 4) : qa(Math.floor(u * 4) * PI / 2, 4); V(`bn:${hd.toFixed(2)}`, 'bench', [], hd); return; }
+    case 'bench_a': case 'bench_b': case 'bench_m': case 'pbench': { const rd = p.a !== undefined ? null : c.roadDir(x, y, 3), hd = p.a !== undefined ? qa(p.a, 4) : rd !== null ? qa(rd - PI / 2, 4) : qa(Math.floor(u * 4) * PI / 2, 4);   // (p.a: set by a designed place, facing its path)
+      V(`bn:${hd.toFixed(2)}`, 'bench', [], hd); return;
+    }
     case 'bags': V(`bags:${seed % 3}`, 'trashBags', [2 + seed % 3, seed]); return;
     case 'phonebox': V('phone', 'phoneBooth', [1]); lightAt(I, x, y + 4, 48, 70, [0.85, 1, 0.85], 0.9, 'sign'); return;
     case 'atmw': { const col = { neon: '#e83a9a', kiosk: '#3a6ab0' }[p.v] || null; V('atm', 'atmWall', [1]); lightAt(I, x, y + 8, 32, 60, [0.5, 0.8, 1], 0.9, 'sign'); void col; return; }
@@ -1646,6 +1661,10 @@ function propItems(c, p, pi, I) {
     case 'rails': put(I, { key: `rails:${p.len || 200}`, recipe: { t: 'rails', len: p.len || 200 }, x, y, ext: [20, (p.len || 200) / 2 + 10, 20, (p.len || 200) / 2 + 10], pi }); return;
     case 'greenhouse': V('ghouse', 'greenhouse', []); lightAt(I, x, y, 30, 160, [1, 0.88, 0.62], 1.2, 'window'); return;
     case 'statue': V('gstat', 'gStatue', []); return;
+    case 'gazebo': V('gazebo', 'gazebo', []); lightAt(I, x, y - 10, 60, 120, [1, 0.86, 0.6], 1.0, 'window'); return;
+    case 'archbridge': V(`abr:${p.len || 120}:${qa(p.a || 0, 4).toFixed(2)}`, 'archBridge', [p.len || 120, 26, 16], qa(p.a || 0, 4)); return;
+    case 'parksign': V('psign', 'parkSign', []); return;
+    case 'blanket': put(I, { key: `blanket:${p.v || 0}`, recipe: { t: 'blanket', v: p.v || 0 }, x, y, ext: [24, 20, 24, 20], pi }); return;
     case 'stonelantern': V('slant', 'stoneLantern', [0.7]); lightAt(I, x, y + 2, 24, 80, [1, 0.8, 0.5], 1.1, 'lamp'); return;
     case 'redbridge': V(`rbr:${p.len || 110}`, 'redBridge', [p.len || 110]); return;
     case 'beehive': V(`bhive:${p.v || 0}`, 'beehive', [p.v || 0]); return;

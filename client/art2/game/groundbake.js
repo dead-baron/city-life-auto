@@ -191,6 +191,7 @@ function tileFacts(C) {
   const { M, b, TX0, TY0, seed } = C;
   const { cls, cw } = M.terrainCls;
   const fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
+  const parks = M.parkGrounds || [];        // designed town parks (Lakeview Park): lawn and gravel paths whatever the district, the plaza paved
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, ty = TY0 + j, k = j * TN + i;
     if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
@@ -207,6 +208,7 @@ function tileFacts(C) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (b.tres[k] & 128) m = M_.PASTURE;                 // (a river's lush banks, even in dry country: Willow River)
       else if (inRects(paint, X, Y, 'golf')) m = M_.GOLF;
+      else if (inRects(parks, X, Y)) m = hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK;
       else if (!wild) m = (b.tres[k] & 64) ? M_.FOREST : (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn)
       else if (st === 'rural' || st === 'airport') m = bio === 2 ? M_.FOREST : bio === 3 ? M_.DRYGRASS : st === 'airport' ? M_.LAWN : M_.PASTURE;
       else if (st === 'desert') m = M_.DRYGRASS;
@@ -236,6 +238,7 @@ function tileFacts(C) {
     } else if (t === T.SIDEWALK) m = walkOf(D);
     else if (t === T.PLAZA) {
       if ((b.tres[k] & 4) && (st === 'beach' || st === 'park')) m = runAxis(M, tx, ty, T.PLAZA) ? M_.BOARDV : M_.BOARD;
+      else if (inRects(parks, X, Y) && !parks.some((r) => inRect(r.plaza, X, Y))) m = M_.PATH;
       else if (st === 'oldtown') m = M_.PLAZAO;
       else if (st === 'park') m = M_.PATH;
       else m = PLAZAS[D.plaza] ?? M_.PLAZAC;

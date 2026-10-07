@@ -94,6 +94,7 @@ export function buildNatureSites(m, H) {
   summitTarn(m, H);
   heronMarsh(m, H);
   northshoreGardens(m, H);
+  lakeviewPark(m, H);
   oldMine(m, H);
   farmDressing(m, H);
   willowRiver(m, H);
@@ -1047,7 +1048,7 @@ function graniteCove(m, H) {
     const a = Math.PI * (1.08 + 0.84 * k / 25), r = 12.9 + hash2(k, 1, 981) * 2.2, tx = CX + 0.5 + Math.cos(a) * r * 1.05, ty = CY + 0.5 + Math.sin(a) * r;
     const i = Math.floor(ty) * MAP_W + Math.floor(tx);
     if (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT) continue;
-    const sp = ['agave', 'agave', 'icePlant', 'hibiscus', 'bougainvillea', 'agave', 'yucca'][Math.floor(hash2(k, 2, 982) * 7)];
+    const sp = ['agave', 'agave', 'icePlant', 'hibiscus', 'bougain', 'agave', 'yucca'][Math.floor(hash2(k, 2, 982) * 7)];
     H.addProp(m, 'shrub_a', Math.round(tx * TILE), Math.round(ty * TILE), 0, { sp, k: 1.1 + hash2(k, 3, 983) * 0.3 });
   }
   // on the sand: the beach bar against the east cliff, the shower beside it, the driftwood shade at the west end,
@@ -1066,4 +1067,117 @@ function graniteCove(m, H) {
   // on the map and in the debug teleport
   (m.landmarks ||= []).push({ name: 'Granite Cove', type: 'cove', x: (CX - 13) * TILE, y: (CY - 13) * TILE, w: 27 * TILE, h: 24 * TILE });
   m.natureSites.push({ kind: 'cove', name: 'Granite Cove', x: (CX + 0.5) * TILE, y: CY * TILE, bar: { x: bar[0], y: bar[1] }, steps: { x: stepFoot[0], y0: stepTop[1], y1: stepFoot[1] } });
+}
+
+// ---- Lakeview Park (concept D11) ------------------------------------------------------------------------------
+// The park's grid of straight paths gives way to the D11 park: paths that wander between the lawns and meet at the
+// fountain plaza, a duck pond in two lobes with an arched timber footbridge over its neck, weeping willows round it,
+// reeds and lily pads; a gazebo on its own little round in the east lawns, a statue in a ring of roses, a food cart
+// under a striped umbrella by the plaza, picnic blankets on the grass, groves of big shade trees and blossom, flower
+// beds along the paths, benches facing the paths and lamps along them, a park sign at each gate.
+function lakeviewPark(m, H) {
+  const park = (m.blocks || []).find((b) => b.park && b.park.label === 'Lakeview Park');
+  if (!park) return;
+  const { ix, iy, iw, ih } = park, cx = ix + Math.floor(iw / 2), cy = iy + Math.floor(ih / 2);
+  const inPark = (tx, ty) => tx >= ix && tx < ix + iw && ty >= iy && ty < iy + ih;
+  const P = (tx, ty) => [Math.round((tx + 0.5) * TILE), Math.round((ty + 0.5) * TILE)];
+  const add = (t, tx, ty, r = 0, extra = null) => { const [x, y] = P(tx, ty); H.addProp(m, t, x, y, r, extra); };
+  // the random dressing and the ring path's lamps go (the fountain, its benches and the courier counter stay)
+  const RANDOM = new Set(['tree_a', 'tree_b', 'shrub_a', 'flowers_a', 'flowers_big', 'mosaic', 'lamp']);
+  m.props.forEach((p, i) => { if (p && RANDOM.has(p.t) && inPark(Math.floor(p.x / TILE), Math.floor(p.y / TILE))) dropProp(m, i); });
+  const plaza = (tx, ty) => Math.abs(tx + 0.5 - cx) <= 4 && Math.abs(ty + 0.5 - cy) <= 4;
+  for (let ty = iy; ty < iy + ih; ty++) for (let tx = ix; tx < ix + iw; tx++) {
+    const i = ty * MAP_W + tx;
+    m.reserve[i] |= RES;
+    if (m.tiles[i] === T.PLAZA && !plaza(tx, ty)) m.tiles[i] = T.GRASS;   // (the straight paths)
+  }
+  // the paths: 2 tiles wide, wandering from each gate to the plaza, a loop round the pond and one through the east lawns
+  const path = (cp) => { for (const [x, y] of spline(cp.map(([tx, ty]) => [(tx + 0.5) * TILE, (ty + 0.5) * TILE]), 12)) paint(m, x, y, 30, T.PLAZA, (t) => t === T.GRASS); };
+  const W = ix, E = ix + iw - 1, N = iy, S = iy + ih - 1;
+  path([[W, cy - 0.5], [W + 7, cy - 2], [W + 15, cy - 5], [cx - 13, cy - 6], [cx - 6, cy - 2], [cx - 4, cy - 0.5]]);                 // west gate
+  path([[E - 8, cy + 2], [E - 18, cy + 4], [cx + 12, cy + 4], [cx + 6, cy + 1.5], [cx + 4, cy]]);                               // the east lawns (the railway behind them: no gate)
+  path([[cx - 0.5, N], [cx - 2.5, N + 5], [cx + 0.5, N + 9], [cx - 0.5, cy - 4]]);                                                    // north gate
+  path([[cx - 0.5, S], [cx + 2.5, S - 5], [cx - 0.5, S - 9], [cx - 0.5, cy + 4]]);                                                    // south gate
+  path([[W + 15, cy - 5], [W + 9, cy - 11], [W + 20, cy - 13], [cx - 9, cy - 10], [cx - 4, cy - 4]]);                                // round the pond's north
+  path([[W + 7, cy - 2], [W + 6, cy + 6], [W + 14, cy + 12], [cx - 12, cy + 12], [cx - 4, cy + 4]]);                                 // round its south
+  path([[cx + 4, cy - 4], [cx + 12, cy - 10], [E - 16, cy - 12], [E - 8, cy - 6], [E - 8, cy + 2]]);                                 // east lawns, north loop
+  path([[cx + 12, cy + 4], [cx + 16, cy + 11], [E - 14, cy + 13], [E - 8, cy + 2]]);                                                  // and south
+  // the duck pond: two lobes and a neck between the west paths, deep in the middle of each lobe
+  const lobes = [[W + 14, cy - 5.5, 7.5, 4.2], [cx - 15, cy + 6, 7, 4.2]];   // (the south lobe clear of the bridge's rows: both ends land on grass)
+  for (let ty = iy + 2; ty < iy + ih - 2; ty++) for (let tx = ix + 2; tx < cx - 4; tx++) {
+    let q = 9;
+    for (const [lx, ly, rx, ry] of lobes) q = Math.min(q, ((tx + 0.5 - lx) / rx) ** 2 + ((ty + 0.5 - ly) / ry) ** 2);
+    const neck = Math.abs((tx + 0.5) - (W + 14 + cx - 15) / 2) < 3.2 && ty + 0.5 > cy - 3 && ty + 0.5 < cy + 3;
+    if (q > 1 && !neck) continue;
+    const i = ty * MAP_W + tx;
+    m.tiles[i] = q < 0.4 ? T.DEEP : T.WATER;
+  }
+  // the bridge over the neck (planks underneath: you walk it), east-west
+  const BX = (W + 14 + cx - 15) / 2, BY = cy - 1;
+  for (let tx = Math.floor(BX - 4); tx <= Math.ceil(BX + 4); tx++) for (const ty of [Math.floor(BY), Math.floor(BY) + 1]) { const i = ty * MAP_W + tx; if (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP) m.tiles[i] = T.DOCK; else if (m.tiles[i] === T.GRASS) m.tiles[i] = T.PLAZA; }
+  add('archbridge', BX, BY + 0.5, 0, { len: 9 * TILE });
+  path([[BX - 5, BY + 0.5], [BX - 9, BY - 1], [W + 7, cy - 2]]); path([[BX + 5, BY + 0.5], [BX + 9, BY], [cx - 6, cy - 2]]);
+  // round the pond: willows, rocks, reeds and cattails at the edge, lily pads and ducks on it
+  const lawn3 = (tx, ty) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (m.tiles[(Math.floor(ty) + dy) * MAP_W + Math.floor(tx) + dx] !== T.GRASS) return false; return true; };
+  lobes.forEach(([lx, ly, rx, ry], j) => { for (const a of j ? [0.5, 1.6, 2.6, 5.6] : [2.4, 3.3, 4.3, 5.1]) { const tx = lx + Math.cos(a) * (rx + 1.7), ty = ly + Math.sin(a) * (ry + 1.5); if (lawn3(tx, ty)) add('tree_a', tx, ty, 12, { sp: 'willow', k: 1.45 }); } });
+  let e = 0;
+  for (let ty = iy + 2; ty < iy + ih - 2; ty++) for (let tx = ix + 2; tx < cx - 4; tx++) {
+    const i = ty * MAP_W + tx;
+    if (m.tiles[i] !== T.GRASS) continue;
+    const wet = [i - 1, i + 1, i - MAP_W, i + MAP_W].some((j) => m.tiles[j] === T.WATER || m.tiles[j] === T.DEEP);
+    if (!wet) continue;
+    const h = hash2(tx, ty, 991);
+    if (h < 0.28) add('shrub_a', tx + hash2(tx, ty, 992) * 0.4 - 0.2, ty, 0, { sp: h < 0.14 ? 'cattails' : 'reeds', k: 1 });
+    else if (h > 0.72 && e++ < 26) add('boulder', tx + (hash2(tx, ty, 998) - 0.5) * 0.5, ty + (hash2(ty, tx, 998) - 0.5) * 0.5, 0, { s: 9 + Math.round((h - 0.72) * 30) });   // (stones set round the edge)
+    else if (h > 0.5 && h < 0.58) add('shrub_a', tx, ty, 0, { sp: h < 0.54 ? 'hydrangea' : 'berryShrub', k: 0.9 });
+  }
+  for (const [lx, ly] of lobes) { for (let j = 0; j < 5; j++) add('lily', lx - 3 + j * 1.6, ly + (j % 2 ? 1.6 : -1.4), 0, { v: j % 4 }); add('duck', lx + 1, ly - 0.6, 0, { a: 0.4 }); add('duck', lx + 2.2, ly - 0.2, 0, { a: 0.6 }); }
+  add('swan', lobes[1][0] - 2, lobes[1][1] + 1, 0, { a: 2.6 });
+  // the gazebo on its round in the east lawns' north, the statue in its ring of roses to the south
+  const GZ = [E - 16, cy - 7], ST = [E - 18, cy + 8];
+  for (const [c, r] of [[GZ, 3.2], [ST, 3.4]]) { const [x, y] = P(c[0], c[1]); paint(m, x, y, r * TILE, T.PLAZA, (t) => t === T.GRASS); }
+  add('gazebo', GZ[0], GZ[1] + 1.1, 30);
+  add('statue', ST[0], ST[1], 8);
+  for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; add('shrub_a', ST[0] + Math.cos(a) * 4.4, ST[1] + Math.sin(a) * 3.8, 0, { sp: k % 2 ? 'rose' : 'hydrangea', k: 1.1 }); }
+  // by the plaza: the food cart under a striped umbrella, a chalkboard; picnic blankets out on the east lawn
+  add('foodcart', cx + 6, cy + 3.2, 10); add('umbrella_r', cx + 7.6, cy + 3.6, 4);
+  for (const [dx, dy, v] of [[10, -3, 0], [15, -1, 1], [12, 8, 0]]) { add('blanket', cx + dx, cy + dy, 0, { v }); add('cooler', cx + dx + 1.3, cy + dy - 0.5, 0, { v: v + 1 }); }
+  // trees: groves of big shade trees and blossom on the lawns (clear of the paths and the plaza)
+  const treeOk = (tx, ty) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const t = m.tiles[(Math.floor(ty) + dy) * MAP_W + Math.floor(tx) + dx]; if (t !== T.GRASS) return false; } return true; };
+  const groves = [[W + 4, N + 3, 'oak'], [W + 3, S - 3, 'maple'], [cx - 7, N + 3, 'oak'], [cx + 8, N + 3, 'maple'], [cx + 7, S - 3, 'oak'], [E - 4, N + 4, 'magnolia'], [E - 4, S - 4, 'oak'], [cx + 13, cy - 2, 'cherry'], [cx - 22, S - 2, 'cherry']];
+  const trees = [];
+  const plant = (tx, ty, sp, k) => { if (!inPark(Math.floor(tx), Math.floor(ty)) || !treeOk(tx, ty) || trees.some(([x, y]) => Math.hypot(x - tx, y - ty) < 2.6)) return; trees.push([tx, ty]); add('tree_a', tx, ty, 12, { sp, k }); };
+  for (const [gx, gy, sp] of groves) for (let k = 0; k < 7; k++) {
+    const tx = gx + (hash2(gx, k, 993) - 0.5) * 10, ty = gy + (hash2(gy, k, 994) - 0.5) * 5;
+    plant(tx, ty, k === 3 && sp !== 'cherry' ? 'flowerTree' : sp, 1.35 + hash2(gx, k, 995) * 0.25);
+  }
+  // and a ring of big trees just inside the railings, screening the streets (gaps where the paths come in)
+  const RING = ['oak', 'maple', 'oak', 'redMaple', 'oak', 'birch'];
+  for (let k = 0, d = 0; d < 2 * (iw + ih) - 8; k++, d += 4.2 + hash2(k, 3, 999) * 2.4) {
+    const side = d < iw - 3 ? 0 : d < iw + ih - 6 ? 1 : d < 2 * iw + ih - 9 ? 2 : 3;
+    const u = side === 0 ? d : side === 1 ? d - (iw - 3) : side === 2 ? d - (iw + ih - 6) : d - (2 * iw + ih - 9);
+    const tx = side === 0 ? ix + 2 + u : side === 2 ? ix + iw - 2 - u : side === 1 ? ix + iw - 2.2 : ix + 1.8;
+    const ty = side === 1 ? iy + 2 + u : side === 3 ? iy + ih - 2 - u : side === 0 ? iy + 1.8 : iy + ih - 2.2;
+    plant(tx + (hash2(k, 1, 999) - 0.5) * 0.8, ty + (hash2(k, 2, 999) - 0.5) * 0.8, RING[k % RING.length], 1.3 + hash2(k, 4, 999) * 0.3);
+  }
+  // along the paths: flower beds, benches facing the path, lamps and bins
+  const SP = ['rose', 'hydrangea', 'lavender', 'daisies', 'lupines'];
+  let nb = 0, nl = 0, nf = 0;
+  for (let ty = iy + 1; ty < iy + ih - 1; ty++) for (let tx = ix + 1; tx < ix + iw - 1; tx++) {
+    const i = ty * MAP_W + tx;
+    if (m.tiles[i] !== T.GRASS) continue;
+    const nbr = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([dx, dy]) => m.tiles[i + dy * MAP_W + dx] === T.PLAZA);
+    if (!nbr) continue;
+    const h = hash2(tx, ty, 996);
+    if (h < 0.05 && nb < 22 && nbr[1]) {   // (benches only beside the east-west runs: they face up or down the screen - seen side-on they read as posts)
+      add('pbench', tx, ty, 0, { a: Math.atan2(-nbr[1], -nbr[0]) + Math.PI / 2 }); if (h < 0.012) add('trashcan', tx + 0.9, ty, 0); nb++;
+    }
+    else if (h > 0.955 && nl < 26) { add('lamp', tx + nbr[0] * 0.4, ty + nbr[1] * 0.4); nl++; }
+    else if (h > 0.6 && h < 0.69 && nf < 110) { add('shrub_a', tx, ty, 0, { sp: SP[Math.floor(hash2(tx >> 2, ty >> 2, 997) * SP.length)], k: 1 }); nf++; }
+    else if (h > 0.8 && h < 0.83 && !trees.some(([x, y]) => Math.hypot(x - tx, y - ty) < 1.6)) add('shrub_a', tx, ty, 0, { sp: ['hydrangea', 'berryShrub', 'salal', 'topBall'][Math.floor(hash2(tx >> 3, ty >> 3, 990) * 4)], k: 1.1 });   // (shrubs along the edges)
+  }
+  for (const [tx, ty] of [[W + 1.5, cy - 2.6], [cx + 1.8, N + 1.4], [cx - 2.8, S - 1.4]]) add('parksign', tx, ty, 0);
+  (m.landmarks ||= []).push({ name: 'Lakeview Park', type: 'park', x: ix * TILE, y: iy * TILE, w: iw * TILE, h: ih * TILE });
+  (m.parkGrounds ||= []).push({ x: ix * TILE, y: iy * TILE, w: iw * TILE, h: ih * TILE, plaza: { x: (cx - 4) * TILE, y: (cy - 4) * TILE, w: 8 * TILE, h: 8 * TILE } });   // (the ground: lawn, gravel paths)
+  m.natureSites.push({ kind: 'park', name: 'Lakeview Park', x: cx * TILE, y: cy * TILE, bridge: { x: (BX + 0.5) * TILE, y: (BY + 1) * TILE }, gazebo: P(GZ[0], GZ[1]) });
 }

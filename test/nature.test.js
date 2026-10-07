@@ -231,3 +231,43 @@ test('Granite Cove: a sandy bay in the cliffs below the campground, steps down, 
   for (const q of m.props) if (q && (q.t === 'towel' || /^umbrella_/.test(q.t)) && Math.hypot(q.x - s.x, q.y - s.y) < 400) assert.equal(tileAt(q.x, q.y), T.SAND, `${q.t} on the sand`);
   assert.ok(m.landmarks.some((l) => l.name === 'Granite Cove'));
 });
+
+test('Lakeview Park: gravel paths from the gates to the fountain, a duck pond with a footbridge, the gazebo and the statue', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'park' && q.name === 'Lakeview Park');
+  assert.ok(s, 'the park is built');
+  const park = m.blocks.find((b) => b.park && b.park.label === 'Lakeview Park');
+  const { ix, iy, iw, ih } = park;
+  const inPark = (x, y) => x >= ix * TILE && x < (ix + iw) * TILE && y >= iy * TILE && y < (iy + ih) * TILE;
+  // the fountain plaza stays, and the courier's counter in the park stands on a path
+  assert.ok(m.props.some((q) => q && q.t === 'fountain' && inPark(q.x, q.y)), 'the fountain');
+  for (const p of m.pois.filter((q) => inPark(q.x, q.y))) assert.equal(tileAt(p.x, p.y), T.PLAZA, `${p.kind} on a path`);
+  // every path tile joins up: from the west gate you reach the fountain plaza, the gazebo and the statue on foot
+  const walk = (t) => t === T.PLAZA || t === T.DOCK;
+  const start = [ix, Math.floor(s.y / TILE)];
+  assert.ok(walk(m.tiles[start[1] * m.w + start[0]]), 'a path at the west gate');
+  const seen = new Set([start[1] * m.w + start[0]]), q = [start];
+  while (q.length) {
+    const [x, y] = q.pop();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy, i = ny * m.w + nx;
+      if (nx < ix || ny < iy || nx >= ix + iw || ny >= iy + ih || seen.has(i) || !walk(m.tiles[i])) continue;
+      seen.add(i); q.push([nx, ny]);
+    }
+  }
+  const reach = (x, y) => seen.has(Math.floor(y / TILE) * m.w + Math.floor(x / TILE));
+  assert.ok(reach(s.x, s.y), 'the fountain plaza is on the paths');
+  assert.ok(reach(s.bridge.x, s.bridge.y), 'the footbridge is on the paths');
+  assert.ok(reach(s.gazebo[0], s.gazebo[1] + 2 * TILE), 'the gazebo is on the paths');
+  // the pond: water both sides of the bridge, planks under it; lilies on the water, willows on the grass
+  assert.equal(tileAt(s.bridge.x, s.bridge.y), T.DOCK, 'planks under the bridge');
+  assert.ok(m.props.some((q) => q && q.t === 'archbridge' && Math.hypot(q.x - s.bridge.x, q.y - s.bridge.y) < 40), 'the arched footbridge');
+  const lilies = m.props.filter((q) => q && q.t === 'lily' && inPark(q.x, q.y));
+  assert.ok(lilies.length >= 6, 'lily pads');
+  for (const l of lilies) assert.ok([T.WATER, T.DEEP].includes(tileAt(l.x, l.y)), 'lilies on the water');
+  for (const t of m.props) if (t && t.t === 'tree_a' && inPark(t.x, t.y)) assert.equal(tileAt(t.x, t.y), T.GRASS, 'trees on the lawns');
+  assert.ok(m.props.filter((q) => q && q.t === 'tree_a' && inPark(q.x, q.y)).length >= 35, 'a well-treed park');
+  for (const k of ['gazebo', 'statue', 'foodcart', 'blanket', 'swan', 'parksign']) assert.ok(m.props.some((q) => q && q.t === k && inPark(q.x, q.y)), k);
+  // the ground is lawn and gravel paths (the plaza paved): the ground bake reads parkGrounds
+  assert.ok((m.parkGrounds || []).some((r) => inPark(r.x + 1, r.y + 1) && r.plaza && inPark(r.plaza.x, r.plaza.y)));
+  assert.ok(m.landmarks.some((l) => l.name === 'Lakeview Park'));
+});
