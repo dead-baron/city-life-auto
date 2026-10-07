@@ -2,7 +2,7 @@
 // Metro City on the central island - its streets (avenues, Broadway on the diagonal, each
 // district's own blocks) are laid in metro.js; here are the elevated ring highway with slip ramps
 // to one-way frontage roads either side, curving coast and river drives, Bayside Heights'
-// crescents - and across the river Southbank's winding suburban streets with cul-de-sacs. East of
+// Arts District - and across the river Southbank's winding suburban streets with cul-de-sacs. East of
 // the city the farm country of Dry Creek. Bridges lead out to the wild islands that come later.
 //
 // Everything here is in tiles unless a name says px. The generator (map.js) turns the road
@@ -19,8 +19,6 @@ export const RING_R = 20;      // corner radius
 export const BAND = 20;        // ring centre line -> frontage road centre line
 // Greenfield Park: a whole superblock with no streets through it.
 export const PARK = { x0: 688, y0: 584, x1: 748, y1: 642, label: 'Greenfield Park' };
-// Bayside Heights: crescents around a round green instead of a grid.
-export const CRESCENT = { x: 958, y: 520, r: [12, 26] };
 
 // District seeds per zone: [district id, x, y]. Tiles take the nearest seed in their zone
 // (with a little noise so borders wander), then a few hard overrides (the park).
@@ -29,7 +27,7 @@ export const SEEDS = [
   [1, 700, 505], [1, 705, 560], [1, 745, 520],                  // Midtown
   [4, 805, 505], [4, 850, 530], [4, 815, 555], [4, 862, 498],   // Downtown
   [5, 905, 468], [5, 892, 500],                                // Civic Center
-  [16, 958, 520], [16, 985, 470], [16, 985, 575],              // Bayside Heights
+  [16, 985, 470], [16, 985, 575], [16, 1000, 530],             // Bayside Heights (the Arts District: metro.js ARTS)
   [7, 790, 603], [7, 840, 610], [7, 770, 625],                  // Neon Strip
   [17, 890, 585], [17, 915, 560],                               // The Pink Mile
   [18, 960, 360], [18, 1000, 380], [18, 910, 390], [18, 840, 395], [18, 985, 335], // Old Town

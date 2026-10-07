@@ -1,5 +1,5 @@
 // Rides: the Ferris wheel on Westport Pier, hot-air balloon flights from the Dry Creek Balloon Field and the water
-// slides at Splash Bay (the wheel, the routes, the slides: shared/rides.js). Walk up to the boarding point and buy a
+// slides at Splash Canyon (the wheel, the routes, the slides: shared/rides.js). Walk up to the boarding point and buy a
 // ticket and you're aboard - out of the street like someone indoors (nobody can see you or hurt you, and there's
 // nothing to do but take in the view) while your camera opens out: the wheel takes you once round, a flight drifts
 // out over the country and comes down back at the field, and at the slide tower you climb the stair and go down a

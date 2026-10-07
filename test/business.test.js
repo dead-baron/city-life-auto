@@ -1,7 +1,7 @@
 // The new places as businesses and days out: the counters at the countryside places (the winery's tasting room,
 // the orchard's fruit stand, the market's stalls, the snack carts, the golf club's bar, the lavender farm stand,
 // the boneyard's salvage office, the pier's bait shop), and the rides (the Ferris wheel on Westport Pier, balloon
-// flights from the Dry Creek Balloon Field, the water slides at Splash Bay).
+// flights from the Dry Creek Balloon Field, the water slides at Splash Canyon).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
@@ -44,7 +44,7 @@ test('every countryside place with a business has a counter: its own prompt, and
   // the market has a counter in front of each row of stalls, but the phone and the maps list it once
   assert.ok(w.map.pois.filter((q) => q.counter && q.kind === 'market').length >= 2, 'a counter at each row');
   // the rides' boarding points are places too (the phone lists them), with no menu of their own
-  for (const label of ['Westport Pier Ferris Wheel', 'Dry Creek Balloon Flights', 'Splash Bay Water Slides']) {
+  for (const label of ['Westport Pier Ferris Wheel', 'Dry Creek Balloon Flights', 'Splash Canyon Water Slides']) {
     const poi = w.map.pois.find((q) => q.kind === 'ride' && q.label === label);
     assert.ok(poi, label);
     assert.equal(economy.poiLabel(w, p, poi), null, `${label}: the ride itself answers the action button`);
@@ -183,7 +183,7 @@ test('balloon flights: $40, the balloon drifts out over the country on its route
   assert.notEqual(flyers[0].ped.ride.r, flyers[1].ped.ride.r, 'flights take turns at the routes');
 });
 
-test('the water slides at Splash Bay: free - up the tower stair, down the next slide in turn, and out with a splash in its pool', () => {
+test('the water slides at Splash Canyon: free - up the tower stair, down the next slide in turn, and out with a splash in its pool', () => {
   const w = makeWorld();
   const site = slideSite(w.map);
   assert.ok(site && site.slides.length === 3, 'three slides');
@@ -202,7 +202,7 @@ test('the water slides at Splash Bay: free - up the tower stair, down the next s
   const evs = watchRides(w), splashes = [], e0 = w.emit.bind(w);
   w.emit = (x, y, ev) => { if (ev.e === 'splash') splashes.push(ev); e0(x, y, ev); };
   teleport(w, p.ped, site.board.x - 10, site.board.y + 8);
-  assert.equal(economy.poiLabel(w, p, w.map.pois.find((q) => q.label === 'Splash Bay Water Slides')), null, 'the ride answers the button');
+  assert.equal(economy.poiLabel(w, p, w.map.pois.find((q) => q.label === 'Splash Canyon Water Slides')), null, 'the ride answers the button');
   let act = players.findInteraction(w, p);
   assert.ok(act && /Climb the tower and ride the blue tube/.test(act.label), `the prompt (${act && act.label})`);
   act.run();

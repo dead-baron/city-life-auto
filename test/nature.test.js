@@ -405,7 +405,7 @@ test('Granite Hot Springs: three hot pools in the Granite Peaks you can get into
   assert.ok(m.landmarks.some((l) => l.name === 'Granite Hot Springs'));
 });
 
-test('Splash Bay Water Park: a fenced water park at Gull Harbor - a lazy river round an island, three slides into splash pools, no fishing', async () => {
+test('Splash Canyon Water Park: a fenced water park on the mainland (the desert edge of town by the Eastern Parkway) - a lazy river round an island, three slides into splash pools, no fishing', async () => {
   const s = (m.natureSites || []).find((q) => q.kind === 'waterpark');
   assert.ok(s, 'the water park is built');
   const river = (m.pools || []).find((p) => p.ring);
@@ -421,7 +421,7 @@ test('Splash Bay Water Park: a fenced water park at Gull Harbor - a lazy river r
   assert.equal(tileAt(s.gate.x + TILE, s.gate.y), T.PLAZA, 'in through the gate');
   const { fishingSpot } = await import('../server/systems/jobs.js');
   assert.equal(fishingSpot({ map: m }, { x: g.cx + g.rx + g.hw + 30, y: g.cy, a: Math.PI }), null, 'no fish in the lazy river');
-  assert.ok(m.landmarks.some((l) => l.name === 'Splash Bay Water Park'));
+  assert.ok(m.landmarks.some((l) => l.name === 'Splash Canyon Water Park'));
 });
 
 test('Driftwood Point: basalt cliffs under the Cedar Point road, a creek falling to the beach, steps down, tidepools and sea stacks', () => {

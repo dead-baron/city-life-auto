@@ -58,7 +58,7 @@ const TIERS = [
 ];
 const LOWMEM_CHUNKS = 10;
 const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
-const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown']);
+const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown', 'arts']);
 const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // people flat on the ground (main.js pedLook)
@@ -900,7 +900,7 @@ export class World2 {
   // The Ferris wheel's sixteen gondolas going round on the world's loop clock (the wheel is baked without them; your
   // own cab glows a little while you ride it), and every balloon flight under way, from its route and how long it
   // has been up (main.js keeps S.rides from the server's broadcasts): it fades in as it fills on the field and out
-  // as it empties after touch-down. The burners light up the night (_lights). And the sliders at Splash Bay: up the
+  // as it empties after touch-down. The burners light up the night (_lights). And the sliders at Splash Canyon: up the
   // tower's stair, then down their slide on their backs, feet first (_slider).
   _rides(F, now) {
     const A = this.A, S = this.S, E = this.E, lit = this.balLit || (this.balLit = []);

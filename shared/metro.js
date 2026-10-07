@@ -1,6 +1,6 @@
 // World v2: the streets of Metro City (docs/WORLD-V2.md, stage 1). The island keeps its skeleton - the
 // elevated ring highway with its frontage roads, the avenues that cross under it and carry on over the
-// bridges, Broadway on the diagonal, Bayside Heights' crescents, Pine Hills' winding drives - but the
+// bridges, Broadway on the diagonal, Pine Hills' winding drives - but the
 // uniform grid between the avenues is gone. Each district lays its own streets between them:
 //  * the blocks are real-sized and every one is different: the east-west streets (and so the block
 //    depths) are spaced by the district's pattern, and every row of blocks picks its own north-south
@@ -56,6 +56,11 @@ const THROUGH = [
   { pts: [[748, 556.5], [748, 650]], name: 'Park Lane' },
   { pts: [[688.5, 580], [774.5, 580]], name: 'Park Street' },
 ];
+// The Arts District (map.js ARTS): where Bayside Heights' crescents wheeled round a green. Its east end, between
+// Northbridge Avenue and the highway's frontage road, is the Metro Museum of Art's block, its front on Museum
+// Square: the paved triangle below it, down to where the frontage road bends away (too ragged for buildings).
+export const ARTS = { x0: 916, y0: 481, x1: 1004, y1: 541 };
+export const MUSEUM_SQUARE = { x0: 961, y0: 512, x1: 1002, y1: 550 };
 // The hero corner: the crossroads of two streets in Midtown that the art targets show (docs/art-v2/targets R1, AT1,
 // AT2: the diner with the coffee-cup neon, the corner mart with its striped awning, the brick walk-up with the fire
 // escapes). The plan lays a crossroads here even where its own draws would run past (map.js buildHeroCorner dresses
@@ -87,6 +92,10 @@ export const PATTERNS = {
   industrial: { depth: [44, 64], len: [56, 96], through: 0.7, jog: 0.1, alley: 0, alleyMin: 99, passage: 0, passMin: 999, plaza: 0 },
   factory: { depth: [44, 64], len: [56, 96], through: 0.7, jog: 0.1, alley: 0, alleyMin: 99, passage: 0, passMin: 999, plaza: 0 },
   harbor: { depth: [44, 64], len: [56, 96], through: 0.6, jog: 0.15, alley: 0, alleyMin: 99, passage: 0, passMin: 999, plaza: 0 },
+  // Bayside Heights: big quiet blocks, the odd garden square
+  luxury: { depth: [40, 52], len: [48, 76], through: 0.55, jog: 0.15, alley: 0.25, alleyMin: 46, passage: 0, passMin: 999, plaza: 0.1 },
+  // the Arts District: walkable blocks cut by passages (the galleries open onto them), small squares
+  arts: { depth: [30, 40], len: [34, 56], through: 0.5, jog: 0.3, alley: 0.8, alleyMin: 30, passage: 0.5, passMin: 44, plaza: 0.14 },
 };
 
 // Where the local streets are laid: areas cut into cells by the avenues and through streets (their
@@ -95,7 +104,8 @@ export const PATTERNS = {
 const AREAS = [
   { name: 'innerNW', xs: [668, 688.5, 774.5], ys: [450, 476.5, 556.5] },
   { name: 'innerSW', xs: [688.5, 748, 774.5], ys: [556.5, 580, 634] },
-  { name: 'inner', xs: [774.5, 868.5, 958.5, 1002], ys: [450, 476.5, 556.5, 634] },
+  { name: 'inner', xs: [774.5, 868.5, 958.5], ys: [450, 476.5, 556.5, 634] },
+  { name: 'baysideN', xs: [958.5, 1002], ys: [450, 476.5] },   // (below North Boulevard: the museum's block, no streets)
   { name: 'oldtown', xs: [770, 868.5, 958.5, 1018, 1047], ys: [292, 380.5, 410] },
   { name: 'northwest', xs: [600, 688.5, 774.5], ys: [384, 452] },
   { name: 'west', xs: [556, 598.5, 630], ys: [428, 476.5, 556.5, 664] },
@@ -139,7 +149,7 @@ export function metroRoads(ctx) {
     if (rd < BAND + 1) return false;
     if (rd < BAND + 13 && ctx.ringH[i] === (vertical ? 2 : 1)) return false;
     const d = m.dist[i];
-    if (!ctx.gridded(d)) return false; // Bayside's crescents, Pine Hills' drives, the park keep their own plans
+    if (!ctx.gridded(d)) return false; // Pine Hills' drives and the park keep their own plans
     return z !== Z.SOUTH || d === 6;
   };
   const aves = [];

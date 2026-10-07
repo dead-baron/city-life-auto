@@ -62,8 +62,9 @@ export const ISLAND_ESTATES = [
 // Farm stands (the harvest contracts besides Dry Creek's co-op): [x, y, name, door faces south]
 export const FARM_STANDS = [[724, 943, 'Cedar Farms Market', false]];
 
-// Places the Gull Isles villages sit round: [x, y, radius]
-export const VILLAGES = [[118, 1028, 20, 'Gull Harbor'], [1118, 1066, 18, 'Coral Cay']];
+// The Gull Isles villages (their roads: islandRoads; the harbour, the jetties, the cabins: map.js buildGullIsles):
+// [x, y, name] - Gull Harbor on the big island's southern bay, Coral Cay round the cove on the jungle island's south shore
+export const VILLAGES = [[158, 1046, 'Gull Harbor'], [1110, 1098, 'Coral Cay']];
 
 // ---------------------------------------------------------------------------------------------
 // Road lines for everything outside Metro City. ctx: { m, lines, isLand(x,y), zoneOf(x,y), seaD(x,y),
@@ -203,19 +204,28 @@ export function islandRoads(ctx) {
   dirt(ctx, [[1220, 740], [1250, 780]], 'Mesa Track');
   dirt(ctx, [[1200, 520], [1230, 470], [1240, 400]], 'Canyon Track');
 
-  // --- the Gull Isles villages: a round green with lanes out to the shore -------------------------
-  for (const [cx, cy, r, name] of VILLAGES) {
-    const circ = [];
-    for (let k = 0; k <= 48; k++) { const a = (k / 48) * Math.PI * 2; circ.push(P(cx + Math.cos(a) * r, cy + Math.sin(a) * r)); }
-    measure(circ);
-    const ok = (x, y) => land(x, y) && seaD(x, y) >= 3;
-    for (const p of clipLine(circ, ok, 10 * TILE, 12)) lines.push({ pts: p, kind: 'art', lvl: 0, name: `${name} Circle` });
-    for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * Math.PI * 2 + 0.3;
-      const sp = [P(cx + Math.cos(a) * r, cy + Math.sin(a) * r), P(cx + Math.cos(a) * (r + 34), cy + Math.sin(a) * (r + 34))];
-      for (const p of clipLine(sp, (x, y) => ok(x, y) && seaD(x, y) >= 4, 6 * TILE, 8).slice(0, 1)) lines.push({ pts: p, kind: 'st', lvl: 0, name: `${name} Lane`, culdesac: true });
-    }
-  }
+  // --- the Gull Isles: reached only by boat, so each village is laid out round where the boats come in, with no
+  // more road than it needs (no junction bigger than a T, no traffic circles, no avenues to nowhere).
+  // Gull Harbor: a fishing village round the sheltered bay on the big island's south side - Quay Street along the
+  // harbour (the quay and the jetties below it: map.js buildGullIsles), High Street up the hill from it with two lanes
+  // across, one lane on over the island to the car park behind Bonfire Beach, and dirt tracks out to the lighthouse
+  // on the south-west point and the lookout on the west one.
+  const gull = (pts, kind, name, minSea = 3) => {
+    for (const p of clipLine(path(pts, 6), (x, y) => land(x, y) && zoneOf(x, y) === Z.GULL && seaD(x, y) >= minSea, 6 * TILE, 12)) lines.push({ pts: p, kind, lvl: 0, name, ...(kind === 'dirt' || /Track|Beach Road/.test(name) ? { culdesac: true } : {}) });
+  };
+  gull([[121, 1051], [138, 1053], [158, 1053], [176, 1052], [194, 1048]], 'st', 'Quay Street');
+  gull([[158, 1053], [158, 1030], [158, 1008]], 'st', 'High Street');
+  gull([[126, 1030], [158, 1030], [176, 1030]], 'minor', 'Chapel Lane');
+  gull([[136, 1012], [158, 1012], [178, 1012]], 'minor', 'Mill Lane');
+  gull([[124, 1030], [123, 1040], [122, 1051]], 'minor', 'Net Lane');
+  gull([[158, 1008], [156, 996], [150, 988]], 'minor', 'Beach Road');
+  gull([[126, 1030], [104, 1023], [80, 1017], [66, 1014]], 'dirt', 'Gull Point Track');
+  gull([[121, 1051], [124, 1066], [128, 1080], [136, 1090]], 'dirt', 'Lighthouse Track', 2);
+  // Coral Cay: a handful of cabins round the cove on the jungle island's south shore (its jetty: buildGullIsles), a
+  // sandy lane along the cove, a track up through the rainforest to the falls, another out to the west beach.
+  gull([[1078, 1094], [1100, 1096], [1124, 1096], [1150, 1094]], 'dirt', 'Cove Lane', 2);
+  gull([[1110, 1096], [1112, 1078], [1116, 1058], [1120, 1044]], 'dirt', 'Jungle Track', 2);
+  gull([[1080, 1095], [1069, 1080], [1061, 1064]], 'dirt', 'West Beach Track', 2);
   void rand;
   return out;
 }

@@ -465,7 +465,7 @@ export function buildPowerLines(m, H, wildAt) {
       if (prev && ++run >= 3 && hash2(e.id, Math.round(s), 8061) < 0.45) { side = -side; run = 0; }
       const pt = pointAt(e.pts, s);
       let x = 0, y = 0, ok = false;
-      for (const off of [e.hw - 14, e.hw - 30, e.hw + 2]) { x = pt.x - pt.ty * off * side; y = pt.y + pt.tx * off * side; if (okWalk(x, y)) { ok = true; break; } }
+      for (const off of [e.hw - 14, e.hw - 30, e.hw + 2]) { x = pt.x - pt.ty * off * side; y = pt.y + pt.tx * off * side; if (okWalk(x, y) && TOWN.has(styleAt(x, y))) { ok = true; break; } }   // (a street that runs on into the shops leaves its poles behind)
       if (!ok) { prev = null; continue; }
       const p = H.addProp(m, 'upole', Math.round(x), Math.round(y), 5);
       if (prev && Math.hypot(prev.x - x, prev.y - y) < 12 * TILE) { p.wx = prev.x; p.wy = prev.y; }

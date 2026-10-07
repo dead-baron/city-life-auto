@@ -3194,3 +3194,29 @@ On Highland Woods' west shore, below the Pine Ridge Campground (`shared/naturesi
 - **The bag** has a new section, "Game & hides".
 - **Tests:** `test/hunting.test.js` covers the one-shot deer, field dressing, livestock that isn't game, cooking at a campfire and selling at the lodge. The roadkill check in `test/wildlife.test.js` now clears the car's lane first, because the lodge moved the test's open-country spot next to a tree.
 - **Next:** bows and arrows.
+
+## 2026-10-07 · Roads that go somewhere: the Arts District, the Gull Isles villages, Splash Canyon
+
+The roads laid out by rule rather than for a place are being reworked (playtest: "this massive traffic circle is strange ... there shouldn't be these types of streets and roundabouts unless they logically make sense").
+
+- **The Arts District** (new district, id 46, style `arts`) stands where Bayside Heights' crescents wheeled round a green. That was two rings of road with eight spokes and nothing built on it.
+  - The crescents are gone (`map.js` layoutRoads). The district is a rectangle between North Boulevard, the Civic Center, Madison Street and the highway's frontage road (`metro.js` ARTS).
+  - Its streets come from the city planner like everyone else's (`PATTERNS.arts`: walkable blocks, passages, small squares). Bayside Heights got a pattern of its own too (`PATTERNS.luxury`).
+  - East of Northbridge Avenue is the **Metro Museum of Art**. Its front opens onto **Museum Square**: the paved triangle down to where the frontage road bends away, with a fountain, four statues, plane trees, benches and cafe tables (`paveMuseumSquare`, `dressMuseumSquare`).
+  - West of the avenue are **The Playhouse**, **Gallery Nine**, Second Spin Records, Easel Cafe, and lofts and studios.
+    - A special can now ask for a spot (`at`), and those go first.
+    - A row that runs across the district's edge is split between the two districts (`artsSplit`).
+  - Its look (`statics.js`): painted brick (oxblood, teal, mustard, terracotta, sage, chalk), shuttered rows mixed with loft walk-ups, street art on side walls, ginkgos, cast-iron lamps, brick pavements.
+- **The Gull Isles** lost their traffic circles: a round green with six spoke roads on each island, reachable only by boat (`islands.js`).
+  - **Gull Harbor** is now a fishing village round the sheltered bay on its south side:
+    - Quay Street along the harbour, with timber quay decking below it and three jetties out into the bay, fishing boats tied up along them (`map.js` buildGullIsles).
+    - High Street up the hill, with Chapel, Mill and Net Lanes off it.
+    - The Fish Shack, The Anchor and the general store.
+    - Beach Road on over the island to Bonfire Beach.
+    - Dirt tracks out to the west point and to **Gull Point Light** on the south-west point.
+  - **Coral Cay** is a beach bar and three cabins along a sandy lane round the cove on its south shore, palms and loungers on the sand. A track runs up through the rainforest to the falls, and another out to the west beach.
+  - Each island has a boat hire, so there's always a way back to the mainland.
+- **The water park moved to the mainland** (backlog: "out of the way, not replacing developed hand crafted areas"). It is now **Splash Canyon Water Park**, on open desert where the Eastern Parkway leaves Southside, its gate on the parkway's pavement.
+  - Same park: the lazy river, the slide tower and the three slides.
+  - The layout is drawn from the park's corner (`naturesites.js` `WP_AT`), so it can move again.
+- **Tests:** `test/nature.test.js` and `test/business.test.js` follow the water park's new name.

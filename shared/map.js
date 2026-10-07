@@ -4,8 +4,8 @@
 // The world follows the world map concept (tools/data/worldmap-concept.webp, one pixel = one
 // tile). On the central island stands Metro City (citylayout.js and metro.js for the plan): avenues,
 // each district's own real-sized blocks, Broadway on the diagonal, an elevated ring highway with slip ramps, curving coast and river
-// drives, wealth tiers that blend into each other from the downtown towers and Bayside Heights'
-// crescents to the rough Yards and Southside; across the river the winding streets of Southbank,
+// drives, wealth tiers that blend into each other from the downtown towers and Bayside Heights
+// to the rough Yards and Southside; across the river the winding streets of Southbank,
 // east of town the farms and desert of Dry Creek. Around it (islands.js): Westport with its port
 // and international airport on the west island, Northshore under the Granite Peaks in the north,
 // Cedar Isle in the south, the little town on Pelican Key, all joined by highways over long
@@ -22,10 +22,10 @@ import { LAND, TERRAIN, TERRAIN_CELL } from './worldmask.js';
 import { buildNetwork, stampEdge, stampLine, edgeZ, ROAD_KINDS, sidewalkPx, laneOffset } from './roads.js';
 import { measure, pointAt, rounded, project, cubic, quad, segX } from './geom.js';
 import {
-  Z, BAND, PARK, CRESCENT, SEEDS,
+  Z, BAND, PARK, SEEDS,
   clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, diamondRamp, acrossWater,
 } from './citylayout.js';
-import { metroRoads, HERO } from './metro.js';
+import { metroRoads, HERO, ARTS, MUSEUM_SQUARE } from './metro.js';
 import { buildLevels } from './levels.js';
 import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS, SCENE_SPOTS, SCENE_ISLANDS } from './islands.js';
 import { SCENE_MASKS } from './interior-art.js';
@@ -139,6 +139,9 @@ export const DISTRICTS = [
   { id: 43, name: 'Gull Harbor', isl: 'Gull Isles', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
   { id: 44, name: 'Coral Cay', isl: 'Gull Isles', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
   { id: 45, name: 'Paradise Cay', isl: '', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.SAND, turf: false },
+  // where Bayside Heights' crescents used to wheel round a green: galleries, studios, cafes and lofts in painted brick
+  // between the Civic Center and the bay, the Metro Museum of Art and The Playhouse among them
+  { id: 46, name: 'Arts District', isl: 'Metro City', style: 'arts', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
 ];
 const WATER_D = 13;
 // Districts nobody builds in: woods, hills, mountains, farmland, desert, airfields.
@@ -159,6 +162,8 @@ const STYLE = {
   harbor: { minW: 14, minH: 13, gen: { warehouse: 4, industrial: 1, repair: 1, junkyard: 0.3 }, filler: 'yard', roof: 0.55, roofKinds: ['metal', 'tar'] },
   luxury: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house3: 1, hotel: 1, rest2: 0.6, tower2: 0.5, house6: 1.5, house4: 1, house5: 1, house9: 1.2, royale: 0.6, diamond: 0.6, crown: 0.5 }, filler: 'park', roof: 0.2, roofKinds: ['tile', 'glass'] },
   redlight: { minW: 12, minH: 12, gen: { shops1: 0.6, shops2: 0.6, club: 1, rest1: 1, conv: 1, hotel: 1, apt2: 1, clubnova: 0.6, clubeclipse: 0.8, quickstop: 0.5, liquor: 0.6, tattoo: 0.8, shanty1: 0.4 }, filler: 'parking', roof: 0.45, roofKinds: ['tar', 'tile'] },
+  // the Arts District: galleries and boutiques, cafes and bistros, lofts over the studios, a theatre or two
+  arts: { minW: 12, minH: 12, gen: { shops1: 0.7, shops2: 0.7, rest2: 2, greenbistro: 1.6, redawning: 1.2, boutique: 1.4, rest1: 0.8, diner: 0.6, apt1: 1.4, apt3: 1, apt4: 1.2, theatre: 0.5, tattoo: 0.6, club: 0.4, conv: 0.8, arcade: 0.3 }, filler: 'plaza', roof: 0.5, roofKinds: ['tar', 'gravel'] },
   oldtown: { minW: 12, minH: 12, gen: { shops1: 0.6, shops2: 0.6, apt2: 2, house1: 1, house3: 1, conv: 2, rest1: 1.5, club: 0.3, repair: 0.6, quickstop: 1.4, apt3: 0.6, boutique: 0.4, liquor: 0.8, diner: 0.6, greenbistro: 0.5, house7: 0.6 }, filler: 'yard', roof: 0.5, roofKinds: ['tar', 'tile', 'gravel'] },
   beach: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, rest2: 1.5, rest1: 1, hotel: 0.6, conv: 0.5, beachbar: 1.2, house5: 0.6, house9: 0.8, diner: 0.6 }, filler: 'plaza', roof: 0.15, roofKinds: ['tile'] },
   park: { minW: 14, minH: 14, gen: { rest2: 1 }, filler: 'park', roof: 0, roofKinds: ['tile'] },
@@ -207,6 +212,12 @@ const SPECIALS = [
   { d: 17, prefab: 'hotel', biz: ['delivery'], names: ['Hourly Hearts Motel'] },
   { d: 18, prefab: 'conv', biz: ['delivery'], names: ['Rusty Anchor Motel'] },
   { d: 16, prefab: 'hotel', biz: ['delivery'], names: ['The Bayside Ritz'] },
+  // the Arts District
+  { d: 46, prefab: 'bank', biz: ['delivery'], names: ['Metro Museum of Art'], at: [978, 505] },   // (its front on Museum Square)
+  { d: 46, prefab: 'theatre', biz: ['delivery'], names: ['The Playhouse'], at: [930, 505] },
+  { d: 46, prefab: 'boutique', biz: ['delivery'], names: ['Gallery Nine'] },
+  { d: 46, prefab: 'greenbistro', biz: ['coffee'], names: ['Easel Cafe'] },
+  { d: 46, prefab: 'redawning', biz: ['delivery'], names: ['Second Spin Records'] },
   // Westport
   { d: 23, prefab: 'hospital', biz: ['hospital'], names: ['Westport General'] },
   { d: 23, prefab: 'police2', biz: ['police'], names: ['Westport PD'] },
@@ -239,6 +250,11 @@ const SPECIALS = [
   { d: 35, prefab: 'fuel', biz: ['delivery'], names: ['FuelMax Cedar Falls'] },
   { d: 26, prefab: 'junkyard', biz: ['delivery'], names: ['J&R Salvage'] },
   { d: 30, prefab: 'construction', biz: ['construction'], names: ['Old Quarter Redevelopment'] },
+  // Gull Harbor, the fishing village on the Gull Isles (its quay and jetties: buildGullIsles)
+  { d: 43, prefab: 'rest1', biz: ['fishmarket'], names: ['Gull Harbor Fish Shack'] },
+  { d: 43, prefab: 'conv', biz: ['convenience'], names: ['Harbor General Store'] },
+  { d: 43, prefab: 'rest2', biz: ['coffee'], names: ['The Salty Gull Cafe'] },
+  { d: 43, prefab: 'beachbar', biz: ['delivery'], names: ['The Anchor'] },
   // storefront rows cut whole from the street paintings: one business behind each door
   { d: 23, prefab: 'shops1', biz: ['delivery', 'delivery', 'delivery', 'clothing', 'coffee'], names: ["Joe's Burgers", 'Riverside Books', 'Pixel Tech', 'Thread & Co.', 'Brew Haven Coffee'] },
   { d: 31, prefab: 'shops1', biz: ['delivery', 'delivery', 'delivery', 'clothing', 'coffee'], names: ["Joe's Burgers North", 'Northshore Books', 'Pixel Tech Northshore', 'Thread & Co. North', 'Brew Haven North'] },
@@ -460,6 +476,7 @@ function buildCity(seed) {
   const lines = layoutRoads(m, rand);
   const net = repairRoads(m, lines, seed);
   m.net = net; m.nodes = net.nodes; m.edges = net.edges; m.roads = net.edges;
+  for (const n of m.nodes) if (n.light && m.zone[Math.floor(n.y / TILE) * MAP_W + Math.floor(n.x / TILE)] === Z.GULL) n.light = false;   // (no traffic lights in the island villages)
   rasterRoads(m);
   rampGores(m);
   const railPts = m.railPts;
@@ -467,6 +484,7 @@ function buildCity(seed) {
   buildStationLots(m);
   reserveSubwayPlazas(m);
   waterfrontStrip(m);
+  paveMuseumSquare(m);   // (before the blocks: the museum's block fronts onto it)
   // Pelican Key's beach end (the bar, the charter dock, the court) stays open; the town is east of it
   {
     const [px0, py0, px1, py1] = ISLANDS.P.box;
@@ -557,10 +575,12 @@ function buildCity(seed) {
   buildEstates(m, rand);
   buildOutposts(m, rand);
   buildScenePaintings(m);
+  buildGullIsles(m, rand);
   buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * MAP_W + tx], terrainAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')) });
   buildWilds(m, rand);
   buildTownGreen(m);
   buildStreetProps(m);
+  dressMuseumSquare(m);
   buildPowerLines(m, { addProp, distStyle: DISTRICTS.map((d) => (d ? d.style : '')) }, (tx, ty) => wildAt(m, tx, ty));
   buildHeroCorner(m);
   buildBanking(m);
@@ -782,6 +802,7 @@ function paintDistricts(m) {
     const z = m.zone[i];
     if (!seeded.has(z)) continue;
     if (x >= PARK.x0 + 3 && x < PARK.x1 - 3 && y >= PARK.y0 + 3 && y < PARK.y1 - 3) { m.dist[i] = 12; continue; }
+    if (z === Z.CITY && x >= ARTS.x0 && x < ARTS.x1 && y >= ARTS.y0 && y < ARTS.y1) { m.dist[i] = 46; continue; }
     const wx = x + 7 * Math.sin(y / 17.3) + 4 * Math.sin((x + y) / 9.1), wy = y + 7 * Math.sin(x / 15.7) + 4 * Math.cos((x - y) / 8.3);
     let best = null, bd = Infinity;
     for (const s of seeds) {
@@ -816,8 +837,9 @@ function paintDistricts(m) {
 // ---------------------------------------------------------------------------
 // Road lines (px) for the network builder.
 // Districts with a street plan of their own (no blocks from metro.js): Pine Hills' winding drives and
-// courts, Greenfield Park, Bayside Heights' crescents.
-const OWN_PLAN = new Set([0, 12, 16]);
+// courts, Greenfield Park. (Bayside Heights' crescents and their spokes are gone: a wheel of asphalt round a green
+// with nothing built on it. The Arts District stands there now, on streets like the rest of the city's.)
+const OWN_PLAN = new Set([0, 12]);
 function layoutRoads(m, rand) {
   const W = MAP_W;
   const lines = [];
@@ -860,18 +882,6 @@ function layoutRoads(m, rand) {
   // irregular blocks, service alleys and plazas between them
   const metro = metroRoads({ m, Z, BAND, at, inPark, lines, ringH, styleOf: (d) => DISTRICTS[d].style, gridded: (d) => !OWN_PLAN.has(d) });
   m.plazas = metro.plazas;
-  // Bayside Heights: two crescents round a green, spokes out to the avenues
-  for (const r of CRESCENT.r) {
-    const circ = [];
-    for (let k = 0; k <= 72; k++) { const a = (k / 72) * Math.PI * 2; circ.push({ x: (CRESCENT.x + Math.cos(a) * r) * TILE, y: (CRESCENT.y + Math.sin(a) * r) * TILE }); }
-    for (const p of clipLine(circ, (x, y) => isLand(x, y) && rD(x, y) >= BAND - 1 && zoneOf(x, y) === Z.CITY && seaD(x, y) >= 8, 10 * TILE, 12)) lines.push({ pts: p, kind: 'drive', lvl: 0, name: 'Bayside Crescent' });
-  }
-  for (let k = 0; k < 8; k++) {
-    const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
-    const r0 = CRESCENT.r[0], r1 = CRESCENT.r[1] + 10;
-    const sp = [{ x: (CRESCENT.x + Math.cos(a) * r0) * TILE, y: (CRESCENT.y + Math.sin(a) * r0) * TILE }, { x: (CRESCENT.x + Math.cos(a) * r1) * TILE, y: (CRESCENT.y + Math.sin(a) * r1) * TILE }];
-    for (const p of clipLine(sp, (x, y) => isLand(x, y) && rD(x, y) >= BAND - 1 && zoneOf(x, y) === Z.CITY && seaD(x, y) >= 8, 6 * TILE, 8)) lines.push({ pts: p, kind: 'st', lvl: 0, name: 'Bayside Walk' });
-  }
   // coast drives (around the city and Southbank, away from the ring) and river drives
   const coastOk = (x, y) => { const z = zoneOf(x, y); return (z === Z.CITY || z === Z.SOUTH) && rD(x, y) >= BAND + 1 && !inPark(x, y); };
   for (const c of contours(m.distSea, W, MAP_H, 9 * 4, (x, y) => { const z = m.zone[y * W + x]; return z === Z.CITY || z === Z.SOUTH; }, 540, 220, 1060, 920)) {
@@ -948,7 +958,7 @@ function layoutRoads(m, rand) {
         return P.some((q) => { const low = r.z0 > 0.5 ? q.s / len > mid : q.s / len < mid; return low && (!isLand(q.x / TILE, q.y / TILE) || !isLand(q.x / TILE + 2, q.y / TILE) || !isLand(q.x / TILE - 2, q.y / TILE)); });
       };
       if (pair.some(wet)) continue;
-      // nor cross another street on the ground (the frontage road, a crescent): only the avenue it meets
+      // nor cross another street on the ground (the frontage road, a side street): only the avenue it meets
       const near = lines.filter((l) => l.lvl === 0 && l !== cx.ave && l.pts.length >= 2);
       const crosses = (r) => {
         const P = r.pts.map((q) => ({ x: q.x, y: q.y })), len = measure(P), mid = (r.zr[0] + r.zr[1]) / 2, hwR = ROAD_KINDS.ramp.w * TILE / 2;
@@ -1552,7 +1562,7 @@ function rowFits(row, pf, iv) {
 }
 
 function placeSpecials(m, rows, rand) {
-  const order = SPECIALS.map((s, i) => ({ ...s, i })).sort((a, b) => PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);
+  const order = SPECIALS.map((s, i) => ({ ...s, i })).sort((a, b) => (b.at ? 1 : 0) - (a.at ? 1 : 0) || PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);   // (one planned for a spot goes first)
   // Two rounds: first every business looks for a lot in its own district (so a big one from elsewhere
   // can't take the only lot a district has for its own); then the rest look in the districts named as
   // their second home (alt), elsewhere on the same part of the world, then for a smaller lot there, and
@@ -1566,7 +1576,8 @@ function placeSpecials(m, rows, rand) {
   }
 }
 function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
-  const fits = (row, iv) => (shrink < 1 && row.v2 ? !!LOT[sp.prefab] && iv[1] - iv[0] >= Math.ceil(LOT[sp.prefab][0] * shrink) && row.h >= Math.ceil(LOT[sp.prefab][2] * 0.62 * shrink) : rowFits(row, sp.prefab, iv));
+  // (a special planned for a spot takes a real-sized v2 lot there, like any other in that row)
+  const fits = (row, iv) => ((shrink < 1 || sp.at) && row.v2 ? !!LOT[sp.prefab] && iv[1] - iv[0] >= Math.ceil(LOT[sp.prefab][0] * shrink) && row.h >= Math.ceil(LOT[sp.prefab][2] * 0.62 * shrink) : rowFits(row, sp.prefab, iv));
   // the boat shop wants the water: any south-facing row in the city near the sea
   const seaSide = sp.biz.includes('marina');
   const nearSea = (row) => m.distSea[Math.min(MAP_H - 1, row.y + row.h) * MAP_W + row.x + (row.w >> 1)] < 24 * 4;
@@ -1592,10 +1603,12 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
   }
   if (!cands.length) return false;
   if (seaSide) { const near = cands.filter(([row]) => nearSea(row)); if (near.length) cands = near; const home = cands.filter(([row]) => row.d === sp.d); if (home.length) cands = home; }
-  // prefer lots near the heart of the district
-  const [sx, sy] = seedOf(sp.d);
-  cands.sort((a, b) => Math.hypot(a[0].x * TILE - sx, a[0].y * TILE - sy) - Math.hypot(b[0].x * TILE - sx, b[0].y * TILE - sy));
-  const [row, k] = cands[Math.floor(rand() * Math.min(cands.length, 4))];
+  // prefer lots near the heart of the district (or right at the spot a special was planned for: at, tiles)
+  const [sx, sy] = sp.at ? [sp.at[0] * TILE, sp.at[1] * TILE] : seedOf(sp.d);
+  const mid = (c) => [(c[0].iv[c[1]][0] + c[0].iv[c[1]][1]) / 2 * TILE, (c[0].y + c[0].h / 2) * TILE];
+  cands.sort((a, b) => (sp.at ? Math.hypot(mid(a)[0] - sx, mid(a)[1] - sy) - Math.hypot(mid(b)[0] - sx, mid(b)[1] - sy) : Math.hypot(a[0].x * TILE - sx, a[0].y * TILE - sy) - Math.hypot(b[0].x * TILE - sx, b[0].y * TILE - sy)));
+  const pickR = rand();
+  const [row, k] = cands[sp.at ? 0 : Math.floor(pickR * Math.min(cands.length, 4))];
   const iv = row.iv[k];
   const pf = lotDims(row, sp.prefab, iv[1] - iv[0]);
   if (row.v2) { pf.tw = Math.min(pf.tw, iv[1] - iv[0]); pf.th = Math.min(pf.th, row.h); }
@@ -1611,6 +1624,7 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
 const nearHero = (row, iv) => row.y < HERO.y + 20 && row.y + row.h > HERO.y - 20 && iv[0] < HERO.x + 30 && iv[1] > HERO.x - 30;
 function seedOf(d) {
   const s = SEEDS.filter((q) => q[0] === d);
+  if (d === 46) return [(ARTS.x0 + ARTS.x1) / 2 * TILE, (ARTS.y0 + ARTS.y1) / 2 * TILE];   // (laid out by a rectangle, not seeds)
   if (!s.length) return [800 * TILE, 500 * TILE];
   return [s.reduce((a, q) => a + q[1], 0) / s.length * TILE, s.reduce((a, q) => a + q[2], 0) / s.length * TILE];
 }
@@ -1849,11 +1863,12 @@ const LOT = {
 // How deep a row of fronts is, by district (tiles); and how wide the plain buildings are (the backs
 // along a street to the north, the infill).
 const V2DEPTH = { towers: [20, 28], civic: [16, 26], commercial: [12, 18], nightlife: [12, 16], redlight: [11, 15], oldtown: [8, 12], apartments: [13, 18],
-  southside: [10, 15], industrial: [18, 28], factory: [18, 28], harbor: [18, 28], beach: [12, 18], luxury: [14, 22], houses: [14, 20], park: [10, 14] };
+  southside: [10, 15], industrial: [18, 28], factory: [18, 28], harbor: [18, 28], beach: [12, 18], luxury: [14, 22], houses: [14, 20], park: [10, 14], arts: [16, 20] };
 const V2W = { towers: [16, 26], civic: [16, 26], commercial: [6, 12], nightlife: [6, 12], redlight: [6, 10], oldtown: [4, 8], apartments: [10, 16],
-  southside: [7, 12], industrial: [18, 32], factory: [18, 32], harbor: [18, 32], beach: [8, 14], luxury: [12, 20], houses: [10, 14], park: [8, 12] };
+  southside: [7, 12], industrial: [18, 32], factory: [18, 32], harbor: [18, 32], beach: [8, 14], luxury: [12, 20], houses: [10, 14], park: [8, 12], arts: [5, 10] };
 // Metro City is World v2 (the whole central island north of the river, and Southside south of it).
-const v2At = (m, b) => { const i = (b.y + (b.h >> 1)) * MAP_W + b.x + (b.w >> 1); return m.zone[i] === Z.CITY || m.dist[i] === 6; };
+// (and the Gull Isles' villages: a few small blocks between their lanes, lots sized to fit)
+const v2At = (m, b) => { const i = (b.y + (b.h >> 1)) * MAP_W + b.x + (b.w >> 1); return m.zone[i] === Z.CITY || m.dist[i] === 6 || (m.zone[i] === Z.GULL && (frontage(m, b, 'S') === 'street' || frontage(m, b, 'N') === 'street')); };
 
 // Where the building stands in a v2 lot that needs open ground (fractions of the lot): the police station's
 // yard for its motor pool, the car dealer's display lot, the strip mall's car park, the school yard, the
@@ -1884,7 +1899,17 @@ function frontage(m, b, face) {
   return street >= n * 0.3 ? 'street' : alley >= n * 0.45 ? 'alley' : null;
 }
 // Districts built wall to wall: what's left inside a block is built over rather than left open.
-const BUILT_UP = new Set(['towers', 'civic', 'commercial', 'nightlife', 'redlight', 'oldtown', 'apartments', 'southside', 'industrial', 'factory', 'harbor']);
+const BUILT_UP = new Set(['towers', 'civic', 'commercial', 'nightlife', 'redlight', 'oldtown', 'apartments', 'southside', 'industrial', 'factory', 'harbor', 'arts']);
+
+// A row of fronts that runs on across the Arts District's west edge (the Civic Center's long block below North
+// Boulevard) is two rows, each its own district's, so the galleries and the theatre get the arts end of it.
+function artsSplit(m, row) {
+  const X = ARTS.x0;
+  if (row.y + row.h <= ARTS.y0 || row.y >= ARTS.y1 || row.x > X - 8 || row.x + row.w < X + 8) return [row];
+  const left = { ...row, w: X - row.x, iv: [[row.x, X]], d: m.dist[(row.y + (row.h >> 1)) * MAP_W + row.x + ((X - row.x) >> 1)] };
+  const right = { ...row, x: X, w: row.x + row.w - X, iv: [[X, row.x + row.w]], d: 46 };
+  return [left, right];
+}
 
 // One block of the v2 city. The side on a street to the south is the front: a row of lots facing the
 // camera, as deep as the district builds (businesses and homes go there, filled later by placeSpecials
@@ -1902,7 +1927,7 @@ function v2Block(m, b, rows, rand) {
     let depth = Math.min(b.h, D[0] + Math.floor(rand() * (D[1] - D[0] + 1)));
     if (fN === 'street' && b.h >= 2 * D[0] + 2) depth = Math.min(depth, Math.floor(b.h / 2)); // two rows back to back
     if (b.h - depth < 5) depth = b.h;                                                         // no thin strip behind
-    rows.push({ b, d: b.d, x: b.x, y: y1 - depth, w: b.w, h: depth, face: 'S', iv: [[b.x, b.x + b.w]], v2: true });
+    rows.push(...artsSplit(m, { b, d: b.d, x: b.x, y: y1 - depth, w: b.w, h: depth, face: 'S', iv: [[b.x, b.x + b.w]], v2: true }));
     y1 -= depth;
   }
   const h = y1 - b.y;
@@ -1975,6 +2000,67 @@ function fillScraps(m, rand) {
     const kinds = (STYLE[st] && STYLE[st].roofKinds) || ['tar'];
     roofOne(m, { d: m.dist[i0] }, x0, y0, w, h, kinds[Math.floor(rand() * kinds.length)], Math.floor(rand() * 1e9));
   }
+}
+
+// Museum Square (metro.js MUSEUM_SQUARE): the open ground between the Metro Museum of Art's block, Northbridge Avenue
+// and the bend of the highway's frontage road, paved and kept open before the blocks are found.
+function paveSquare(m, R) {
+  const out = [];
+  for (let ty = R.y0; ty < R.y1; ty++) for (let tx = R.x0; tx < R.x1; tx++) {
+    const i = ty * MAP_W + tx;
+    if (!m.land[i] || m.zone[i] !== Z.CITY || m.tiles[i] !== T.GRASS || (m.reserve[i] & ~16) || m.deck[i] || m.lvl0Block[i]) continue;
+    m.tiles[i] = T.PLAZA; m.reserve[i] |= 16; out.push(i);
+  }
+  return out;
+}
+function paveMuseumSquare(m) {
+  const R = { x0: Math.ceil(MUSEUM_SQUARE.x0), y0: MUSEUM_SQUARE.y0, x1: Math.floor(MUSEUM_SQUARE.x1), y1: MUSEUM_SQUARE.y1 };
+  Object.defineProperty(m, '_museumSq', { value: paveSquare(m, R), enumerable: false, configurable: true });
+}
+// ...and dressed once the buildings stand: the fountain at its heart, statues on their plinths round it, plane trees and
+// benches along its edges, cafe tables out in front of the museum's steps, lamps.
+function dressMuseumSquare(m) {
+  const sq = m._museumSq || [];
+  if (sq.length < 40) return;
+  const W = MAP_W, open = new Set(sq);
+  // how far each tile is from the square's edge (tiles), so the big pieces stand in the open middle
+  const inner = (i, r) => { const x = i % W, y = (i / W) | 0; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!open.has((y + dy) * W + x + dx) || m.bld[(y + dy) * W + x + dx] >= 0) return false; return true; };
+  let sx = 0, sy = 0, n = 0;
+  for (const i of sq) if (inner(i, 2)) { sx += i % W; sy += (i / W) | 0; n++; }
+  if (!n) return;
+  const cx = sx / n, cy = sy / n;
+  const best = (pred, score) => { let b = -1, bs = Infinity; for (const i of sq) { if (!pred(i)) continue; const v = score(i % W, (i / W) | 0); if (v < bs) { bs = v; b = i; } } return b; };
+  const used = [];
+  const free = (x, y, r) => used.every(([ux, uy, ur]) => Math.hypot(ux - x, uy - y) >= ur + r);
+  const put = (t, i, r, solid = 0, extra = null) => { const x = (i % W) + 0.5, y = ((i / W) | 0) + 0.5; used.push([x, y, r]); addProp(m, t, x * TILE, y * TILE, solid, extra); };
+  const f = best((i) => inner(i, 3), (x, y) => Math.hypot(x - cx, y - cy));
+  if (f >= 0) put('fountain', f, 4, 36);
+  // statues round the fountain
+  for (let k = 0; k < 4; k++) {
+    const a = k / 4 * Math.PI * 2 + 0.6;
+    const tx = cx + Math.cos(a) * 9, ty = cy + Math.sin(a) * 6;
+    const i = best((j) => inner(j, 1) && free(j % W + 0.5, ((j / W) | 0) + 0.5, 2.5), (x, y) => Math.hypot(x - tx, y - ty));
+    if (i >= 0 && Math.hypot(i % W - tx, ((i / W) | 0) - ty) < 6) put('statue', i, 2.5, 8);
+  }
+  // trees and benches along the edges, lamps between
+  let k = 0;
+  for (const i of sq) {
+    const x = i % W, y = (i / W) | 0;
+    if (inner(i, 1) || (x * 7 + y * 3) % 5) continue;
+    if (!free(x + 0.5, y + 0.5, 2.6)) continue;
+    const t = k % 3 === 0 ? 'tree_b' : k % 3 === 1 ? 'bench_m' : 'lamp';
+    put(t, i, 2.6, t === 'tree_b' ? 12 : 0);
+    k++;
+  }
+  // cafe tables in front of the museum's steps
+  const mus = m.buildings.find((b) => b.name === 'Metro Museum of Art' && !b.gone);
+  if (mus) for (let j = 0; j < 4; j++) {
+    const tx = mus.tx + mus.tw * (0.18 + j * 0.21), ty = mus.ty + mus.th + 2.2;
+    const i = Math.floor(ty) * W + Math.floor(tx);
+    if (open.has(i) && free(tx, ty, 1.6)) { used.push([tx, ty, 1.6]); addProp(m, j % 2 ? 'cafetable' : 'umbrella_r', tx * TILE, ty * TILE, 0); }
+  }
+  (m.squares ||= []).push({ x: Math.floor(cx) - 6, y: Math.floor(cy) - 4, w: 12, h: 8, name: 'Museum Square' });
+  (m.landmarks ||= []).push({ name: 'Museum Square', type: 'square', x: Math.round((cx - 8) * TILE), y: Math.round((cy - 6) * TILE), w: 16 * TILE, h: 12 * TILE });
 }
 
 // An open square: paving, a fountain in the middle, trees and benches round it, lamps at the corners.
@@ -2064,7 +2150,7 @@ function buildBanking(m) {
 // nightclubs and some corner stores have one inside. Only where a district has no building
 // front to use at all does a freestanding kiosk go up, at the edge of the pavement. Deposits are
 // quick (see server/systems/economy.js), so cash need never be carried far.
-const ATM_TARGET = { towers: 5, commercial: 5, nightlife: 4, redlight: 4, oldtown: 4, civic: 4, apartments: 4, southside: 4, houses: 3, luxury: 3, beach: 3, harbor: 3, industrial: 3, factory: 2, park: 2, airport: 2, rural: 2, desert: 2, rocky: 0, wild: 1, water: 0 };
+const ATM_TARGET = { towers: 5, commercial: 5, nightlife: 4, redlight: 4, oldtown: 4, civic: 4, apartments: 4, southside: 4, arts: 4, houses: 3, luxury: 3, beach: 3, harbor: 3, industrial: 3, factory: 2, park: 2, airport: 2, rural: 2, desert: 2, rocky: 0, wild: 1, water: 0 };
 const ATM_SPACING = 700;
 // lots with a cash machine painted beside the door: x fraction of the lot (no sprite needed)
 const PAINTED_ATM = { bank2: 0.488 };
@@ -2079,6 +2165,7 @@ function atmSpot(m, b, x, loose = false) {
   const F = loose ? FOOT_LOOSE : FOOT;
   const wy = (b.ty + b.th) * TILE;
   if (onSubwayPlaza(m, x, wy + 8)) return false;
+  if (/Museum|Playhouse|Theatre|Chapel/.test(b.name || '')) return false;   // (not set into the front of a museum or a theatre)
   if (x < b.tx * TILE + 22 || x > (b.tx + b.tw) * TILE - 22) return false;
   for (const dx of [-18, 0, 18]) if (m.tileAtPx(x + dx, wy - 6) !== T.BUILDING || !F.has(m.tileAtPx(x + dx, wy + 8))) return false;
   if (!FOOT_LOOSE.has(m.tileAtPx(x, wy + 36))) return false; // room to stand at it
@@ -2351,6 +2438,7 @@ function buildPaintShops(m) {
   const road = (tx, ty) => { const t = m.tileAt(tx, ty); return t === T.ROAD || t === T.LOT || t === T.SIDEWALK || t === T.PLAZA; };
   const cands = m.pois.filter((p) => {
     if (p.kind !== 'delivery' || p.b === undefined || p.fixed) return false;
+    if (m.zoneAt(p.x, p.y) === Z.GULL) return false;   // (a respray shop on an island you can't drive to)
     const b = m.buildings[p.b];
     return b && b.tw >= 5 && b.th >= 5;
   });
@@ -3050,6 +3138,79 @@ function jetty(m, sx, sy, dx, dy, len, w = 3) {
   return tip;
 }
 
+// The Gull Isles' two villages, reached by boat (their streets: islands.js islandRoads). Gull Harbor: the quay along
+// the harbour below Quay Street - timber decking from the pavement to the water - with three jetties out into the
+// sheltered bay and the fishing boats tied up along them, nets and crates on the quay, and a lighthouse on the south-
+// west point at the end of its track. Coral Cay: the beach bar and a few cabins along the lane round the cove, palms
+// and loungers on the sand; the boat hire's pier (buildBoatDocks) goes into the cove.
+function buildGullIsles(m, rand) {
+  const W = MAP_W, at = (x, y) => y * W + x;
+  m.gullIsles = [];
+  // --- Gull Harbor ---
+  const quay = [];
+  for (let tx = 128; tx <= 194; tx++) {
+    let seenRoad = false, y = 1046;
+    for (; y < 1064; y++) { const t = m.tiles[at(tx, y)]; if (t === T.ROAD) seenRoad = true; else if (seenRoad && t !== T.SIDEWALK) break; }
+    if (!seenRoad) continue;
+    for (let k = 0; k < 9 && y < 1072; k++, y++) {
+      const i = at(tx, y), t = m.tiles[i];
+      if (t === T.WATER || t === T.DEEP) break;
+      if (t !== T.GRASS && t !== T.SAND && t !== T.DIRT && t !== T.PLAZA) break;
+      if (m.zone[i] !== Z.GULL || m.bld[i] >= 0) break;
+      m.tiles[i] = T.DOCK; m.reserve[i] |= 16; quay.push(i);
+    }
+  }
+  const boats = [];
+  for (const jx of [146, 164, 180]) {
+    // from the quay out into the bay (only where the water is right below the quay)
+    let y0 = 1050; while (y0 < 1070 && m.tiles[at(jx, y0)] !== T.DOCK) y0++;
+    if (y0 >= 1070) continue;
+    const tip = jetty(m, jx, y0, 0, 1, 8);
+    for (let k = 0; k < 3; k++) for (const side of [-1, 1]) if (rand() < 0.75) boats.push({ x: (jx + side * 2.6) * TILE, y: (tip.y - 1 - k * 2.6) * TILE, a: Math.PI / 2, kind: rand() < 0.75 ? 'dinghy' : 'speedboat' });
+    addProp(m, 'lamp', (jx + 1.6) * TILE, (tip.y + 0.4) * TILE);
+  }
+  for (const b of boats) m.marina.push(b);
+  // nets, crates and lobster pots on the quay, a bench or two looking out over the water
+  let k = 0;
+  for (const i of quay) {
+    const x = i % W, y = (i / W) | 0;
+    if (hash2(x, y, 801) > 0.05 || m.tiles[at(x, y + 1)] === T.WATER) continue;
+    addProp(m, ['crates', 'pallet', 'bench_m', 'drum', 'crates'][k++ % 5], (x + 0.5) * TILE, (y + 0.5) * TILE, 0);
+  }
+  // the lighthouse on the south-west point, where its track ends
+  const lh = [139, 1093];
+  if (m.zone[at(lh[0], lh[1])] === Z.GULL && m.land[at(lh[0], lh[1])]) {
+    clearArea(m, lh[0] - 4, lh[1] - 4, 10, 10);
+    for (let ty = lh[1] - 3; ty < lh[1] + 5; ty++) for (let tx = lh[0] - 3; tx < lh[0] + 6; tx++) if (m.land[at(tx, ty)] && m.tiles[at(tx, ty)] !== T.ROAD) { m.tiles[at(tx, ty)] = T.DIRT; m.reserve[at(tx, ty)] |= 16; }
+    simpleBuilding(m, lh[0] - 1, lh[1] - 2, 4, 4, 'Gull Point Light', 'lighthouse', 43, 'tile', { x: (lh[0] + 1) * TILE, y: (lh[1] + 2.4) * TILE, text: 'Gull Point Light' });
+    (m.landmarks ||= []).push({ name: 'Gull Point Light', type: 'lighthouse', x: (lh[0] - 6) * TILE, y: (lh[1] - 8) * TILE, w: 14 * TILE, h: 14 * TILE });
+  }
+  (m.landmarks ||= []).push({ name: 'Gull Harbor', type: 'harbor', x: 128 * TILE, y: 1040 * TILE, w: 66 * TILE, h: 34 * TILE });
+  m.gullIsles.push({ name: 'Gull Harbor', x: 186 * TILE, y: 1060 * TILE, rent: 'Gull Harbor Boat Hire' });
+  // --- Coral Cay ---
+  const lane = 1095;   // Cove Lane, along the cove's north shore
+  const cabins = [[1090, 'Coral Cay Beach Bar'], [1116, 'Beach Cabin'], [1127, 'Beach Cabin'], [1138, 'Beach Cabin']];
+  for (const [cx, name] of cabins) {
+    const bar = name !== 'Beach Cabin', w = bar ? 10 : 7, h = 5, y = lane - 3 - h;
+    let ok = true;
+    for (let ty = y - 1; ty < y + h + 1 && ok; ty++) for (let tx = cx - 1; tx < cx + w + 1; tx++) { const i = at(tx, ty); if (!m.land[i] || m.zone[i] !== Z.GULL || m.tiles[i] === T.ROAD || m.tiles[i] === T.DIRT || m.bld[i] >= 0 || m.tiles[i] === T.WATER) { ok = false; break; } }
+    if (!ok) continue;
+    clearArea(m, cx - 1, y - 1, w + 2, h + 4);
+    for (let ty = y + h; ty < lane - 1; ty++) for (let tx = cx + 1; tx < cx + w - 1; tx++) { m.tiles[at(tx, ty)] = T.SAND; m.reserve[at(tx, ty)] |= 16; }   // (the porch steps down to the lane)
+    const b = simpleBuilding(m, cx, y, w, h, name, bar ? 'beachbar' : 'cabin', 44, 'tile', bar ? { x: (cx + w / 2) * TILE, y: (y + h + 0.4) * TILE, text: 'Beach Bar' } : null);
+    if (bar) {
+      m.pois.push({ id: m.pois.length, kind: 'delivery', label: name, x: (cx + w / 2) * TILE, y: (y + h + 0.8) * TILE, r: 44, b: b.id, fixed: true });
+      addProp(m, 'umbrella_y', (cx + w + 1.6) * TILE, (y + h + 1.2) * TILE, 0); addProp(m, 'cafetable', (cx - 1.4) * TILE, (y + h + 1.4) * TILE, 0);
+    }
+  }
+  for (let j = 0; j < 30; j++) {
+    const tx = 1100 + Math.floor(rand() * 26), ty = 1098 + Math.floor(rand() * 6), t = m.tiles[at(tx, ty)];
+    if (t === T.SAND && m.zone[at(tx, ty)] === Z.GULL && !m.reserve[at(tx, ty)]) addProp(m, j % 3 ? 'palm_a' : 'lounger', (tx + 0.5) * TILE, (ty + 0.5) * TILE, j % 3 ? 10 : 0, j % 3 ? { sp: 'coconut', k: 1.25 } : { a: Math.PI / 2, v: j % 4 });
+  }
+  (m.landmarks ||= []).push({ name: 'Coral Cay Cove', type: 'cove', x: 1096 * TILE, y: 1096 * TILE, w: 30 * TILE, h: 28 * TILE });
+  m.gullIsles.push({ name: 'Coral Cay', x: 1111 * TILE, y: 1101 * TILE, rent: 'Coral Cay Dive & Boat Hire' });
+}
+
 function buildOffshore(m, rand) {
   // --- Pelican Key: beach island with a bar, a charter dock and jetskis -------------------------
   const P = ISLANDS.P;
@@ -3225,7 +3386,7 @@ function filler(m, row, x, w, st, rand, backLot = false) {
   fillerInner(m, row, x, w, st, rand, backLot);
 }
 // Town styles where the street frontage runs on in brick between the buildings.
-const URBAN = new Set(['commercial', 'oldtown', 'nightlife', 'redlight', 'southside', 'industrial', 'factory', 'harbor', 'towers', 'apartments']);
+const URBAN = new Set(['commercial', 'oldtown', 'nightlife', 'redlight', 'southside', 'industrial', 'factory', 'harbor', 'towers', 'apartments', 'arts']);
 // A brick wall along a row of tiles (1 tile deep) - with a gateway somewhere along it when asked.
 function streetWall(m, x, y, w, rand, gate) {
   if (w < 2) return;
@@ -3665,6 +3826,7 @@ function buildBoatDocks(m) {
   if (m.publicPier) anchors.push({ x: m.publicPier.x, y: m.publicPier.y + 6 * TILE, name: 'Sunset Beach Boat Rentals' });
   if (marinaPoi) anchors.push({ x: marinaPoi.x, y: marinaPoi.y, name: 'Harbor Boat & Jet Ski Hire' });
   if (m.pelican) anchors.push({ x: m.pelican.dock.x, y: m.pelican.dock.y, name: 'Pelican Key Jet Skis' });
+  for (const v of m.gullIsles || []) anchors.push({ x: v.x, y: v.y, name: v.rent });   // (the only way off the Gull Isles is by boat)
   for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: (lk[0] + lk[2] / 2) * TILE, y: (lk[1] + lk[3] / 2) * TILE, name: `${lk[4]} Boat Hire`, lake: true });
   for (const an of anchors) {
     const cx = Math.floor(an.x / TILE), cy = Math.floor(an.y / TILE);
@@ -3995,6 +4157,7 @@ function buildStreetProps(m) {
         southside: ['bags', 'dump_o', 'tires', 'shrub_b', 'rubble', 'trashpile', 'phonebox'], harbor: ['drum', 'pallet', 'spool', 'dump_b', 'crates'], factory: ['dump_g', 'drum', 'pallet_s', 'cone', 'tires', 'crates'], park: ['tree_a', 'bench_a', 'shrub_a'],
         luxury: ['palm_s', 'planter_sq', 'flowers_a', 'tree_a', 'bench_m', 'bollard'], redlight: ['trashcan', 'bags', 'news_b', 'dump_o', 'palm_s', 'trashpile', 'phonebox'], oldtown: ['trashcan', 'bags', 'mailbox', 'dump_g', 'news_c', 'tires', 'phonebox', 'tree_b'],
         beach: ['palm_a', 'palm_d', 'bench_m', 'umbrella_y', 'trashcan'],
+        arts: ['bikerack', 'planter_g', 'bench_m', 'news_c', 'trashcan', 'tree_b', 'flowers_a', 'bikerack'],
       }[d.style] || ['trashcan'];
       const t = pool[Math.floor(hash2(tx, ty, 5) * pool.length)];
       addProp(m, t, x, y, t.startsWith('tree') || t.startsWith('dump') || t === 'crates' || t === 'phonebox' ? 10 : t === 'bollard' ? 5 : 0);
@@ -4084,7 +4247,7 @@ function dressAlleys(m) {
 // has a mast-arm pole on its kerb with an arm reaching right across the incoming lanes and a head
 // over every lane, so a wide road is covered end to end. A pole is street furniture: hit it hard
 // enough and it goes over.
-const SPAN_WIRE_STYLES = new Set(['towers', 'commercial', 'nightlife', 'oldtown', 'redlight', 'civic', 'apartments']);
+const SPAN_WIRE_STYLES = new Set(['towers', 'commercial', 'nightlife', 'oldtown', 'redlight', 'civic', 'apartments', 'arts']);
 const SPAN_WIRE_ROADS = new Set(['st', 'minor', 'drive', 'front']);
 const POLE_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.GRASS, T.LOT, T.DIRT, T.SAND]);
 

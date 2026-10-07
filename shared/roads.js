@@ -42,7 +42,7 @@ export const ROAD_KINDS = {
 // districts (shopping streets, nightlife, the civic quarter, the beachfront), 64 px everywhere else
 // people live or work (homes, apartments, old town's narrow streets, industry, the port, parks).
 export const SIDEWALK = { downtown: 112, commercial: 96, residential: 64 };
-const SIDEWALK_CLASS = { towers: 'downtown', commercial: 'commercial', civic: 'commercial', nightlife: 'commercial', redlight: 'commercial', beach: 'commercial' };
+const SIDEWALK_CLASS = { towers: 'downtown', commercial: 'commercial', civic: 'commercial', nightlife: 'commercial', redlight: 'commercial', beach: 'commercial', arts: 'commercial' };
 // The pavement (px) beside a road of this kind running through a district of this style.
 export function sidewalkPx(kind, style) {
   const w = (ROAD_KINDS[kind] || ROAD_KINDS.st).walk;

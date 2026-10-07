@@ -1,5 +1,5 @@
 // Rides: the Ferris wheel on Westport Pier, hot-air balloon flights from the Dry Creek Balloon Field and the water
-// slides at Splash Bay. server/systems/rides.js sells the tickets and carries the riders; the client draws the
+// slides at Splash Canyon. server/systems/rides.js sells the tickets and carries the riders; the client draws the
 // wheel's cabs going round, the balloons in the air and the sliders (client/art2/game/host.js) and points the
 // rider's camera (client/main.js). Everything here is a pure function of the map and the clock, so the server, the
 // rider's camera and everyone watching agree on where a cab, a balloon or a slider is.
@@ -135,7 +135,7 @@ export function balloonAt(route, t, dur, out = {}) {
   return out;
 }
 
-// ---- the Splash Bay water slides ----------------------------------------------------------------------------------
+// ---- the Splash Canyon water slides -------------------------------------------------------------------------------
 // The slides as the art builds them (client/art2/props-park.js waterSlide: from the tower's top deck at (x, y), z up,
 // a channel swinging out in an S and down to (x + dx, y + len) in its splash pool), and the stair up the tower's east
 // side (slideTower: three flights, the first from the north end, turning at each landing). Down an open flume you

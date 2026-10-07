@@ -397,7 +397,9 @@ const WALLS = {
   southside: ['#a89e8c', '#9a9284', '#8e9a8a', '#a49484', '#b0a490'], nightlife: ['#3a2a4a', '#2a2c3a', '#4a2a3a', '#2e3a44', '#3a3040'],
   redlight: ['#4a2a44', '#5a2a3a', '#3a2a4a', '#5a3a4a'], luxury: ['#ece2d0', '#e8dcc6', '#f0e8da', '#e2d4bc', '#dccfb6'],
   beach: ['#8ec8c0', '#e8a0b4', '#f0d890', '#e8e0d0', '#a8d0e0', '#f0c0a0'], houses: ['#e6d9bf', '#d8c6a2', '#c8d4da', '#e8e1d2', '#d6b598', '#bfcfb4', '#cdc2ac', '#d8cfc0', '#c6c0b4'],
-  civic: ['#d4c8b0', '#c8bca4', '#d8d0bc', '#cfc6b0'], industrial: ['#7a8a94', '#8a7a6a', '#6a7a6a', '#9a9a8e', '#7e848a', '#8a8478'], rural: ['#e4e0d4', '#d8ccb4', '#c8b8a0', '#e8dcc4'],
+  civic: ['#d4c8b0', '#c8bca4', '#d8d0bc', '#cfc6b0'],
+  // the Arts District: painted brick - oxblood, teal, mustard, terracotta, sage, chalk white, dusty plum
+  arts: ['#a8483a', '#3e8a86', '#d8a83a', '#c86a48', '#8aa47a', '#e8e0cc', '#8a5a7a', '#b8584a'], industrial: ['#7a8a94', '#8a7a6a', '#6a7a6a', '#9a9a8e', '#7e848a', '#8a8478'], rural: ['#e4e0d4', '#d8ccb4', '#c8b8a0', '#e8dcc4'],
 };
 const ROOFC = ['#5e6270', '#585c68', '#6a5a50', '#4e5a66', '#6a6e78', '#5a4e4a', '#46505a', '#4a5a50', '#6a4e44'];
 const TILEC = ['#94503a', '#8a4a3c', '#9c5a3a', '#7e4436', '#946446', '#8a5640'];
@@ -432,6 +434,7 @@ function archOf(c, b) {
   if (rk === 'glass') return st === 'towers' ? 'glass' : st === 'luxury' ? 'condo' : st === 'airport' ? 'terminal' : 'office';
   if (rk === 'metal') return st === 'southside' ? 'shed' : st === 'airport' ? 'hangar' : 'warehouse';
   if (rk === 'tile') return st === 'houses' || st === 'rural' ? 'house' : st === 'luxury' || st === 'beach' ? 'villa' : 'townhouse';
+  if (st === 'arts') return ((b.id * 2654435761) >>> 0) % 5 < 3 ? 'oldrow' : 'walkup';   // (painted-brick rows and loft walk-ups, mixed)
   return { towers: 'office', commercial: 'mixed', apartments: 'walkup', oldtown: 'oldrow', southside: 'rough', nightlife: 'nightrow', redlight: 'nightrow', industrial: 'warehouse',
     factory: 'warehouse', harbor: 'warehouse', civic: 'civicblock', luxury: 'condo', beach: 'beachblock', houses: 'house', park: 'pavilion', airport: 'hangar', rural: 'house' }[st] || 'mixed';
 }
@@ -785,7 +788,7 @@ function specOf(c, b, A, s, D) {
     case 'walkup': case 'rough': {
       const fl = A === 'rough' ? 1 + Math.floor(rnd() * 3) : st === 'apartments' ? 3 + Math.floor(rnd() * 3) : st === 'southside' ? 2 + Math.floor(rnd() * 2) : 3 + Math.floor(rnd() * 2);
       const style = rnd() < 0.6 ? 'brick' : rnd() < 0.55 ? 'brickDark' : pick(['stucco', 'peach', 'concrete'], rnd());
-      Object.assign(spec, { floors: fl, style, wallColor: wall(st === 'southside' ? 'southside' : 'apartments'), parapet: 6 + (rnd() * 4 | 0),
+      Object.assign(spec, { floors: fl, style, wallColor: wall(st === 'southside' ? 'southside' : st === 'arts' ? 'arts' : 'apartments'), parapet: 6 + (rnd() * 4 | 0),
         grime: rough ? 0.8 : low ? 0.45 : 0.18, graffiti: rough ? 1 + (rnd() < 0.5 ? 1 : 0) : low && rnd() < 0.3 ? 1 : 0, tagText: rough && rnd() < 0.5 ? pick(['SOUTH', 'RATS', 'VIBE', 'KING', 'ZONE', 'REBEL', 'OMEN', 'CREW'], rnd()) : null,
         boarded: rough ? 0.22 : 0, ivy: (st === 'oldtown' || st === 'apartments') && rnd() < 0.3 ? 0.4 : 0 });
       if (fl >= 2 && w >= 130 && rnd() < 0.55) spec.fireEscape = [clamp(Math.round(w * (0.5 + rnd() * 0.25)) - 25, 8, w - 60), 50];
@@ -828,7 +831,8 @@ function specOf(c, b, A, s, D) {
       const town = A === 'oldrow' || A === 'townhouse';
       const fl = A === 'pavilion' ? 1 : A === 'civicblock' ? 2 + Math.floor(rnd() * 2) : A === 'nightrow' ? 2 + Math.floor(rnd() * 2) : town ? 2 + Math.floor(rnd() * 2) : 2 + Math.floor(rnd() * 3);
       const style = A === 'nightrow' ? pick(['brickDark', 'stucco', 'stucco', 'brick'], rnd()) : A === 'civicblock' ? pick(['stone', 'concrete'], rnd()) : town ? pick(['peach', 'stucco', 'stucco', 'brick'], rnd()) : pick(['stucco', 'brick', 'concrete', 'stucco', 'brickDark'], rnd());
-      Object.assign(spec, { floors: fl, style, wallColor: wall(A === 'nightrow' ? (st === 'redlight' ? 'redlight' : 'nightlife') : A === 'civicblock' ? 'civic' : town ? 'oldtown' : 'commercial'), parapet: 6 + (rnd() * 6 | 0) });
+      Object.assign(spec, { floors: fl, style, wallColor: wall(A === 'nightrow' ? (st === 'redlight' ? 'redlight' : 'nightlife') : A === 'civicblock' ? 'civic' : st === 'arts' ? 'arts' : town ? 'oldtown' : 'commercial'), parapet: 6 + (rnd() * 6 | 0) });
+      if (st === 'arts' && !front && rnd() < 0.3) spec.graffiti = 1;   // (street art on the side walls)
       if (town) { if (rnd() < 0.6) spec.shutters = pick(SHUT, rnd()); if (fl >= 2 && rnd() < 0.4) spec.balconies = true; if (rnd() < 0.3) spec.ivy = 0.35; if (A === 'townhouse' && s.th <= 10 && s.tw <= 14) { Object.assign(spec, { pitch: rnd() < 0.6 ? 'hip' : 'gable', roof: 'tile', roofColor: pick(TILEC, rnd()), slope: 0.42 }); pitched = true; } }
       if (low) { spec.grime = 0.35; if (rnd() < 0.3) spec.graffiti = 1; }
       if (front && A !== 'civicblock') {
@@ -895,10 +899,12 @@ function specOf(c, b, A, s, D) {
       const fl = A === 'bank' ? 2 + (rnd() < 0.5 ? 1 : 0) : 2;
       Object.assign(spec, { floors: fl, style: 'stone', wallColor: pick(['#d4c8b0', '#c8bca4', '#dcd2bc'], rnd()), parapet: 8 });
       const pw = clamp(Math.round(w * 0.46), 90, 160);
-      if (w >= 140) spec.portico = { x: Math.round(w / 2 - pw / 2), w: pw, cols: 4, text: A === 'court' ? 'COURTHOUSE' : A === 'cityhall' ? 'CITY HALL' : 'BANK' };
+      const museum = /MUSEUM/i.test(b.name || '');
+      if (w >= 140) spec.portico = { x: Math.round(w / 2 - pw / 2), w: pw, cols: 4, text: A === 'court' ? 'COURTHOUSE' : A === 'cityhall' ? 'CITY HALL' : museum ? 'MUSEUM' : 'BANK' };
       spec.doors = [{ x: Math.round(w / 2 - 14), w: 28, kind: 'door', h: 50, open: A === 'bank' }];
       spec.windows = winXs(w, [[w / 2 - pw / 2, w / 2 + pw / 2]], 30);
-      if (A === 'bank' && named && w >= 120) spec.plaques = [{ text: clean(named, 18), x: 6, v: 70, sx: 1, bg: '#2a3a2a', fg: [236, 214, 150], lit: true }];
+      if (A === 'bank' && named && w >= 120) spec.plaques = [{ text: clean(museum ? 'MUSEUM OF ART' : named, 18), x: 6, v: 70, sx: 1, bg: museum ? '#5a1e24' : '#2a3a2a', fg: [236, 214, 150], lit: true }];
+      if (museum) spec.doors[0].open = true;
       lights.push([w / 2, 12, 40, 110, [1, 0.85, 0.6], 1, 'window']);
       upperLights(fl, 0);
       break;
@@ -1531,6 +1537,7 @@ function plantFor(c, p) {
     if (st === 'beach' || coastal) return [pick(['coconut', 'royal', 'leaning', 'fanSkirt'], u), 1.25];
     if (st === 'luxury') return [t === 'tree_a' ? pick(['royal', 'royal', 'cypress', 'olive', 'magnolia'], u) : pick(['magnolia', 'flowerTree', 'cypress', 'olive'], u), 1.3];
     if (st === 'oldtown') return [pick(['cherry', 'olive', 'cypress', 'magnolia', 'flowerTree', 'street'], u), 1.3];
+    if (st === 'arts') return [pick(['ginkgo', 'street', 'cherry', 'ginkgo', 'magnolia'], u), 1.3];
     if (st === 'houses' || st === 'rural') return [pick(t === 'tree_a' ? ['oak', 'maple', 'birch', 'mapleAutumn', 'flowerTree', 'apple'] : ['cherry', 'magnolia', 'maple', 'oak', 'redMaple'], u), 1.35];
     if (st === 'southside' || st === 'industrial' || st === 'factory' || st === 'harbor') return [pick(['young', 'maple', 'young', 'street', 'deadSnag'], u), 1.25];
     if (st === 'nightlife' || st === 'redlight') return [pick(['royal', 'street', 'ginkgo', 'coconut'], u), 1.3];
@@ -1588,7 +1595,7 @@ const LAMP_LIGHT = { cobra: [1, 0.93, 0.8], green: [1, 0.86, 0.62], sodium: [1, 
 function lampStyle(c, p) {
   if (p.style) return p.style;   // (set by the map: the hero corner's black iron lamps)
   const st = c.dist(p.x, p.y).style;
-  if (st === 'oldtown' || st === 'civic' || st === 'park' || st === 'luxury') return 'cast';
+  if (st === 'oldtown' || st === 'civic' || st === 'park' || st === 'luxury' || st === 'arts') return 'cast';
   if (st === 'towers') return 'banner';
   if (st === 'nightlife' || st === 'redlight' || st === 'beach') return 'twin';
   if (st === 'southside' || st === 'industrial' || st === 'harbor' || st === 'factory' || st === 'rural' || WILDS.has(st)) return 'sodium';
@@ -2520,7 +2527,7 @@ function addLots(c, I) {
 // so trees only stand where nobody walks and the rest is low enough to walk through.
 // ================================================================================================
 const YARD = { houses: ['rose', 'hydrangea', 'lavender', 'topBall', 'hydrangea', 'boxStone'], luxury: ['topBall', 'topCone', 'lavender', 'rose', 'topBall'], beach: ['hibiscus', 'bougain', 'bird', 'monstera'],
-  rural: ['berryShrub', 'rose', 'lupines', 'hydrangea'], desert: ['agave', 'yucca', 'barrel', 'pear'], southside: ['tallGrass', 'dryGrass', 'berryShrub', 'rose'], oldtown: ['lavender', 'rose', 'boxIron', 'hydrangea'] };
+  rural: ['berryShrub', 'rose', 'lupines', 'hydrangea'], desert: ['agave', 'yucca', 'barrel', 'pear'], southside: ['tallGrass', 'dryGrass', 'berryShrub', 'rose'], oldtown: ['lavender', 'rose', 'boxIron', 'hydrangea'], arts: ['lavender', 'boxIron', 'rose', 'pampas'] };
 const HOUSEY = new Set(['house', 'villa', 'farmhouse', 'cabin', 'cottage', 'mansion']);
 function flora1(I, sp, k, x, y, bare = true) { const v = Math.floor(hh(x, y, 13) * NV(sp)); put(I, fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, null, bare)); }
 function addYards(c, I) {
@@ -2563,7 +2570,7 @@ function addCameras(c, I) {
   }
 }
 // shopfronts: pots either side of the door, a sandwich board, tables out front of cafes where the pavement is wide
-const POTS = { luxury: ['topBall', 'topCone'], towers: ['topCone', 'topBall'], oldtown: ['boxIron', 'lavender'], beach: ['pot', 'hibiscus'], nightlife: ['pot', 'topBall'], redlight: ['pot'], commercial: ['plg', 'boxStone', 'topBall'] };
+const POTS = { luxury: ['topBall', 'topCone'], towers: ['topCone', 'topBall'], oldtown: ['boxIron', 'lavender'], arts: ['boxIron', 'pot', 'lavender'], beach: ['pot', 'hibiscus'], nightlife: ['pot', 'topBall'], redlight: ['pot'], commercial: ['plg', 'boxStone', 'topBall'] };
 function addFrontage(c, I) {
   for (const f of I.fronts) {
     const { x0, y1, w, dx, dw, kind, st } = f, rnd = rndOf(x0, y1 + 7);
