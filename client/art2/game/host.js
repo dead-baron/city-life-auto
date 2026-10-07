@@ -30,6 +30,7 @@
 // api: helpers lent by main.js (pedLook, vehLift, birds, umbrella colours, seats, scales).
 import { CHUNK, DECK_Z, groundZ } from './chunkbake.js';
 import { WorkerPool } from './pool.js';
+import { canopyGrid } from './canopy.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/map.js';
@@ -287,6 +288,8 @@ export class World2 {
     this.noBake = /[?&]art2nobake\b/.test(typeof location !== 'undefined' ? location.search : '');
     this.ready = true; // drawable at once: placeholders stand in until bakes land
     if (engine.onContextLost) engine.onContextLost((what) => this._contextLost(what));
+    // the redwoods' canopy for the light (sunflecks, the beams through the gaps): once per map
+    if (engine.setCanopy) { try { engine.setCanopy(canopyGrid(this.map)); } catch (e) { console.warn('[art2] canopy', e); } }
   }
 
   async init() {
