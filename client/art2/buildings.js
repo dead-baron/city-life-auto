@@ -299,7 +299,7 @@ function roofDeck(G, spec, w, d, H, seed, style) {
     const T = new Float32Array(iw * id), RI = new Uint8Array(iw * id), F = (sx, sy, s) => noiseField(w, d, sx, sy, s);
     const each = (fn) => { for (let v = 0, i = 0; v < id; v++) for (let u = 0; u < iw; u++, i++) fn(u, v, i, u + rw, v + rw); };
     switch (mat) {
-      case 'gravel': { const A = F(4, 4, seed + 5), B = F(40, 40, seed); each((u, v, i, x, y) => { const j = y * w + x, h1 = hash(x, y, seed + 2); T[i] = 0.46 + (A[j] - 0.5) * 0.3 + (h1 > 0.82 ? 0.22 : h1 < 0.14 ? -0.22 : 0) + (B[j] - 0.5) * 0.12; }); break; }
+      case 'gravel': { const A = F(4, 4, seed + 5), B = F(40, 40, seed); each((u, v, i, x, y) => { const j = y * w + x, h1 = hash(x, y, seed + 2); T[i] = 0.5 + (A[j] - 0.5) * 0.2 + (h1 > 0.86 ? 0.12 : h1 < 0.1 ? -0.12 : 0) + (B[j] - 0.5) * 0.12; }); break; }   // (calm: the art pixel shows the stones)
       case 'membrane': { const A = F(30, 30, seed + 4); each((u, v, i, x, y) => { const h1 = hash(x, y, seed + 2), s = u % 46; T[i] = 0.56 + (A[y * w + x] - 0.5) * 0.12 + (h1 > 0.97 ? 0.08 : 0) + (s === 0 ? 0.12 : s === 1 ? -0.08 : 0); }); break; }
       case 'metal': {
         const A = F(26, 26, seed), B = F(10, 42, seed + 9);

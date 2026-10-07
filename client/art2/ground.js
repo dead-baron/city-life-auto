@@ -1004,23 +1004,25 @@ export const GSHADE = {
     if (lx === 0 || ly === 0) return at(R, 1);
     return sd(R, 0.62 + (sh - 0.5) * 0.16 + (vnc(x, y, 11, s + 5) - 0.5) * 0.1 + (lx === 1 || ly === 1 ? 0.06 : 0) + (hh(x, y, s) > 0.95 ? 0.07 : 0), x, y, 0.45);
   },
+  // (asphalt reads as one calm surface, as in the concepts: broad tone, a fleck of aggregate here and there - the
+  // cracks, patches, stains and paint carry the detail)
   asphaltFresh(x, y, s) {
     const h = hh(x, y, s), big = vnc(x, y, 61, s + 3), m = vnc(x, y, 13, s + 5);
-    if (hh(x >> 1, y >> 1, s + 7) > 0.993) return at(AGG, ((x & 1) === 0 && (y & 1) === 0) ? 1 : 0);
-    if (h > 0.985) return at(AGG, (hh(x, y, s + 1) * 2) | 0);
-    return sd(ASPF, 0.5 + (big - 0.5) * 0.22 + (m - 0.5) * 0.18 + (h < 0.08 ? -0.2 : h > 0.86 ? 0.12 : 0), x, y, 0.7);
+    if (hh(x >> 1, y >> 1, s + 7) > 0.998) return at(AGG, ((x & 1) === 0 && (y & 1) === 0) ? 1 : 0);
+    if (h > 0.995) return at(AGG, (hh(x, y, s + 1) * 2) | 0);
+    return sd(ASPF, 0.5 + (big - 0.5) * 0.2 + (m - 0.5) * 0.12 + (h < 0.08 ? -0.1 : h > 0.86 ? 0.06 : 0), x, y, 0.45);
   },
   asphaltOld(x, y, s) {
     const h = hh(x, y, s), big = vnc(x, y, 47, s + 3), m = vnc(x, y, 11, s + 5);
-    if (h > 0.985) return at(AGG, (hh(x, y, s + 1) * 2) | 0);
-    return sd(ASPO, 0.5 + (big - 0.5) * 0.3 + (m - 0.5) * 0.24 + (h < 0.07 ? -0.22 : h > 0.88 ? 0.14 : 0), x, y, 0.8);
+    if (h > 0.994) return at(AGG, (hh(x, y, s + 1) * 2) | 0);
+    return sd(ASPO, 0.5 + (big - 0.5) * 0.28 + (m - 0.5) * 0.16 + (h < 0.07 ? -0.12 : h > 0.88 ? 0.07 : 0), x, y, 0.5);
   },
   lotAsphalt(x, y, s) {
     const h = hh(x, y, s), big = vnc(x, y, 37, s + 3), m = vnc(x, y, 9, s + 5);
-    if (h > 0.98) return at(AGG, (hh(x, y, s + 1) * 3) | 0);
-    let t = 0.52 + (big - 0.5) * 0.34 + (m - 0.5) * 0.24 + (h < 0.07 ? -0.2 : h > 0.88 ? 0.12 : 0);
+    if (h > 0.992) return at(AGG, (hh(x, y, s + 1) * 3) | 0);
+    let t = 0.52 + (big - 0.5) * 0.3 + (m - 0.5) * 0.16 + (h < 0.07 ? -0.1 : h > 0.88 ? 0.06 : 0);
     if (vnc(x, y, 19, s + 47) > 0.78) t -= 0.18;              // oil and tyre grime
-    return sd(ASPO, t, x, y, 0.8);
+    return sd(ASPO, t, x, y, 0.5);
   },
   yardSlab(x, y, s) {
     const S = 64, lx = x % S, ly = y % S, sh = hh(Math.floor(x / S), Math.floor(y / S), s + 7);
