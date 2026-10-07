@@ -2252,3 +2252,19 @@ nothing else in the world moves).
 - **On the map** as "Redwood Creek Falls" (and in the debug teleport's Landmarks).
 - **Reserve bit 32** keeps the wilds' random trees off the creek's banks, the clearing and the trails.
 - **Tests:** `test/nature.test.js` covers the bridge, the rails, the pool, the solid ledge, the footbridge, the camp, the pull-off, the redwoods and the landmark. It also checks the wild grows in groves of one kind of tree, clear of the roads.
+
+## 2026-10-06 · Red Rock Canyon raised: sandstone mesas, a natural arch, and the oasis (concepts N4, N4-B, N4-C)
+
+- **The mesas.** Red Rock Canyon's solid tiles (the scene painting's mask) were flat ground with rocks scattered on it. They now stand as stepped red sandstone mesas and buttes (`statics.js` `makeMesas`, terrain.js).
+  - Each solid region has its own ledges and height, up to about 180 px.
+  - There is scrub on the ledges and tops.
+  - A natural arch spans from the big north mesa to the low block east of it, and you can walk under it.
+  - It is one sprite drawn at the art pixel (half size) and composited at 2x (`chunkbake.js` `compositeDepth2`, `s.ap2`).
+  - `terrain.js` shapes now accept a ready distance field (`{ sdf }`).
+- **The oasis** (`shared/naturesites.js` `canyonOasis`):
+  - a spring falls down the north mesa's cliff into a pool you can swim in;
+  - date and fan palms stand to either side (solid trunks), with a banana palm;
+  - reeds and cattails line the water, with ferns and elephant ears at the foot of the cliff;
+  - sandstone boulders sit round it;
+  - on the map as "Canyon Oasis".
+- **Tests:** the pool, the solid cliff behind the spring, the palms, the solid mesas, the landmark (`test/nature.test.js`).

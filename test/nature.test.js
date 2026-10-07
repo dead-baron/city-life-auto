@@ -60,3 +60,16 @@ test('the wild grows in groves of one kind of tree, clear of the roads', () => {
   for (const p of wild.slice(0, 3000)) for (const q of grid.get(k(p.x, p.y)) || []) if (q !== p && Math.hypot(q.x - p.x, q.y - p.y) < 90) { pairs++; if (q.g === p.g) same++; }
   assert.ok(same / pairs > 0.85, `stands are one kind (${(same / pairs * 100).toFixed(0)}%)`);
 });
+
+test('Red Rock Canyon: the oasis pool under the north mesa, the spring, palms; the mesas stay solid', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'oasis');
+  assert.ok(s, 'the oasis is built');
+  assert.equal(tileAt(s.x, s.y), T.WATER, 'a pool you can swim in');
+  assert.equal(tileAt(s.spring.x, s.spring.y - 40), T.WALL, 'the spring falls down the solid cliff');
+  assert.ok(m.props.filter((q) => q && q.sp && /palm|date|desertFan|coconut/i.test(q.sp) && Math.hypot(q.x - s.x, q.y - s.y) < 240).length >= 3, 'palms round it');
+  const pt = m.paintings.find((p) => p.key === 'canyon');
+  let wall = 0;
+  for (let ty = pt.y / TILE; ty < (pt.y + pt.h) / TILE; ty++) for (let tx = pt.x / TILE; tx < (pt.x + pt.w) / TILE; tx++) if (m.tiles[ty * m.w + tx] === T.WALL) wall++;
+  assert.ok(wall > 400, `the mesas are solid (${wall} tiles)`);
+  assert.ok(m.landmarks.some((l) => l.name === 'Canyon Oasis'));
+});

@@ -82,6 +82,39 @@ function trail(m, cp) {
 export function buildNatureSites(m, H) {
   m.natureSites = [];
   redwoodCreek(m, H);
+  canyonOasis(m, H);
+}
+
+// ---- the oasis in Red Rock Canyon (concepts N4-B, N4-C) ------------------------------------------------------
+// The canyon's mesas are the scene painting's solid tiles (map.js buildScenePaintings), raised by the renderer
+// (statics.js makeMesas). Under the big north mesa's south face: a spring falls down the cliff into a pool ringed
+// with palms, reeds and ferns.
+function canyonOasis(m, H) {
+  const pt = (m.paintings || []).find((p) => p.key === 'canyon');
+  if (!pt) return;
+  const T0 = (tx, ty) => [pt.x + tx * TILE, pt.y + ty * TILE];
+  const [cx, cy] = T0(26.5, 8.1), rx = 104, ry = 50;
+  const pool = [];
+  for (let ty = Math.floor((cy - ry - 8) / TILE); ty <= Math.floor((cy + ry + 8) / TILE); ty++) for (let tx = Math.floor((cx - rx - 8) / TILE); tx <= Math.floor((cx + rx + 8) / TILE); tx++) {
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, a = Math.atan2(y - cy, x - cx), wob = 1 + Math.sin(a * 3 + 1.3) * 0.12;
+    if (((x - cx) / (rx * wob)) ** 2 + ((y - cy) / (ry * wob)) ** 2 > 1) continue;
+    const i = ty * MAP_W + tx;
+    if (m.tiles[i] !== T.DIRT && m.tiles[i] !== T.GRASS && m.tiles[i] !== T.SAND) continue;
+    m.tiles[i] = T.WATER; m.land[i] = 0; m.river[i] = 1; m.reserve[i] |= RES; pool.push(i);
+  }
+  if (!pool.length) return;
+  // the spring: down the cliff behind the pool (its foot at the face, which is solid rock)
+  const fx = cx - 6, fy = pt.y + 6 * TILE + 6;
+  // palms round it (solid trunks), reeds and cattails at the water, ferns and a few sandstone boulders
+  for (const [dx, dy, sp, k] of [[-150, -16, 'date', 1.4], [146, -22, 'desertFan', 1.45], [-168, 40, 'desertFan', 1.15], [150, 44, 'date', 1.2], [-118, 72, 'banana', 0.9]]) {
+    H.addProp(m, 'palm_a', Math.round(cx + dx), Math.round(cy + dy), sp === 'banana' ? 0 : 10, { sp, k });
+  }
+  for (const [dx, dy, sp] of [[-112, 22, 'cattails'], [-96, 48, 'reeds'], [104, 34, 'cattails'], [118, 8, 'reeds'], [64, 58, 'reeds'], [-46, 60, 'cattails'], [-124, -14, 'fern'], [128, -10, 'fern'], [-60, -44, 'fern'], [70, -46, 'elephant']]) {
+    H.addProp(m, 'shrub_a', Math.round(cx + dx), Math.round(cy + dy), 0, { sp, k: 1 });
+  }
+  for (const [dx, dy, r] of [[-190, 4, 16], [186, 16, 14], [10, 74, 12], [-150, 92, 12]]) H.addProp(m, 'boulder', Math.round(cx + dx), Math.round(cy + dy), r, { s: r * 2 + 6 });
+  (m.landmarks ||= []).push({ name: 'Canyon Oasis', type: 'oasis', x: Math.round(cx - 220), y: Math.round(cy - 160), w: 440, h: 300 });
+  m.natureSites.push({ kind: 'oasis', name: 'Canyon Oasis', x: Math.round(cx), y: Math.round(cy), spring: { x: Math.round(fx), y: Math.round(fy), w: 18, h: 104 } });
 }
 
 // ---- Redwood Creek ------------------------------------------------------------------------------------------

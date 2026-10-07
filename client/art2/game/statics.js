@@ -48,7 +48,9 @@ import * as GD from '../props-garden.js';
 import * as WT from '../water.js';
 import * as FL from '../flora.js';
 import * as TR from '../trees.js';
-import { boulder as rockLump, outcrop } from '../terrain.js';
+import { boulder as rockLump, outcrop, rockSprite } from '../terrain.js';
+import { distSq } from '../scene.js';
+import { SCENE_MASKS } from '../../../shared/interior-art.js';
 import { groundPixel } from '../ground.js';
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
@@ -311,6 +313,8 @@ export function makeStatic(r) {
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
     case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist });
+    case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
+    case 'mesas': return makeMesas(r);
     default: return EMPTY;
   }
 }
@@ -1952,7 +1956,9 @@ function addSetPieces(c, I) {
       for (let k = 0; k < 5; k++) { const [tx, ty] = grass[Math.floor(rnd() * grass.length)]; put(I, vitem('flag:golf', 'flagpole', [40, '#d8343a'], (tx + 0.5) * TILE, (ty + 0.5) * TILE)); }
     } else if (pt.key === 'canyon') {
       const open = tilesIn((t) => t === T.DIRT || t === T.GRASS || t === T.SAND);
-      for (let k = 0; k < Math.min(26, open.length / 40); k++) { const [tx, ty] = open[Math.floor(rnd() * open.length)]; const big = rnd() < 0.4; put(I, { key: `can:${k % 6}:${big ? 1 : 0}`, recipe: { t: 'rock', style: 'sandstone', size: big ? 52 : 32, s: k % 6 }, x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, ext: [110, 120, 110, 60] }); }
+      // the mesas, buttes and the arch: the painting's solid tiles raised as stepped sandstone (one big sprite)
+      put(I, { key: 'mesas:canyon', recipe: { t: 'mesas', mask: 'canyon', seed: 41 }, x: pt.x, y: pt.y + pt.h, ext: [0, pt.h + MESA_MAXH * 2 + 8, pt.w, 6] });
+      for (let k = 0; k < Math.min(10, open.length / 80); k++) { const [tx, ty] = open[Math.floor(rnd() * open.length)]; const big = rnd() < 0.4; put(I, { key: `can:${k % 6}:${big ? 1 : 0}`, recipe: { t: 'rock', style: 'sandstone', size: big ? 52 : 32, s: k % 6 }, x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, ext: [110, 120, 110, 60] }); }
       // desert scrub between the rocks
       for (let k = 0; k < Math.min(90, open.length / 10); k++) { const [tx, ty] = open[Math.floor(rnd() * open.length)]; flora1(I, pick(['creosote', 'sage', 'bursage', 'dryGrass', 'brittle', 'creosote', 'barrel', 'agave', 'ocotillo', 'yucca', 'tumble', 'cholla', 'dFlowers'], rnd()), 1, Math.round((tx + rnd()) * TILE), Math.round((ty + rnd()) * TILE)); }
     }
@@ -2004,10 +2010,68 @@ function addSetPieces(c, I) {
 }
 
 // ================================================================================================
+// raised terrain for a masked scene place (Red Rock Canyon, concepts N4, N4-B, N4-C): the mask's solid tiles
+// become stepped sandstone mesas and buttes (terrain.js), with a natural arch between two of them. Made at the
+// art pixel (half size: 1 px here = 2 world px) as one sprite and composited at 2x (chunkbake ap2).
+// ================================================================================================
+const MESA_MAXH = 96;   // (half px)
+const MESAS = {
+  canyon: {
+    // tiers [[inset, height]...] in half px, by region in reading order (A: the west butte, B: the tall butte,
+    // C: the big north mesa, D and E: low blocks, F: the big south mesa, G: the south-east pillar)
+    tiers: [[[0, 30], [6, 58]], [[0, 34], [7, 66], [15, 90]], [[0, 30], [9, 56], [19, 78]], [[0, 16], [4, 28]], [[0, 18], [4, 30]], [[0, 28], [9, 52], [20, 74]], [[0, 24], [5, 46]]],
+    // the arch: from the tail of the north mesa east to the low block (tile coords), its height and thickness (half px)
+    arch: { path: [[30.1, 11.2], [32.7, 11.7], [35.6, 12.7]], width: 15, h: 60, thick: 14 },
+  },
+};
+function makeMesas(r) {
+  const mk = SCENE_MASKS[r.mask], spec = MESAS[r.mask];
+  if (!mk || !spec) return EMPTY;
+  const S = 2, TS = TILE / S, W = mk.w * TS, D = mk.h * TS;
+  // the solid regions of the mask (4-connected, reading order)
+  const lab = new Int16Array(mk.w * mk.h).fill(-1), regs = [];
+  for (let y = 0; y < mk.h; y++) for (let x = 0; x < mk.w; x++) {
+    if (mk.rows[y][x] !== '#' || lab[y * mk.w + x] >= 0) continue;
+    const id = regs.length, st = [[x, y]], R = { id, x0: x, y0: y, x1: x, y1: y };
+    lab[y * mk.w + x] = id;
+    while (st.length) {
+      const [a, b] = st.pop();
+      R.x0 = Math.min(R.x0, a); R.y0 = Math.min(R.y0, b); R.x1 = Math.max(R.x1, a); R.y1 = Math.max(R.y1, b);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = a + dx, Y = b + dy; if (X >= 0 && Y >= 0 && X < mk.w && Y < mk.h && mk.rows[Y][X] === '#' && lab[Y * mk.w + X] < 0) { lab[Y * mk.w + X] = id; st.push([X, Y]); } }
+    }
+    regs.push(R);
+  }
+  const VEG = { kind: 'sage', density: 0.012, band: 3, inner: 0.003, size: 2, bloom: true };
+  const G = rockSprite(W, D, MESA_MAXH, (T) => {
+    for (const R of regs) {
+      const pad = 12, x0 = Math.max(0, R.x0 * TS - pad), y0 = Math.max(0, R.y0 * TS - pad), x1 = Math.min(W, (R.x1 + 1) * TS + pad), y1 = Math.min(D, (R.y1 + 1) * TS + pad);
+      const bw = x1 - x0, bh = y1 - y0, ins = new Uint8Array(bw * bh), out = new Uint8Array(bw * bh);
+      for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+        const tx = Math.floor((x0 + x) / TS), ty = Math.floor((y0 + y) / TS), inside = lab[ty * mk.w + tx] === R.id ? 1 : 0;
+        ins[y * bw + x] = inside; out[y * bw + x] = 1 - inside;
+      }
+      const dIn = distSq(out, bw, bh), dOut = distSq(ins, bw, bh), g = new Float32Array(bw * bh);
+      for (let i = 0; i < bw * bh; i++) g[i] = ins[i] ? Math.sqrt(dIn[i]) - 0.5 : 0.5 - Math.sqrt(dOut[i]);
+      const f = (x, y) => (x < x0 || y < y0 || x >= x1 || y >= y1 ? -99 : g[(y - y0) * bw + (x - x0)]);
+      T.plateau({ sdf: { bb: [x0, y0, x1, y1], f, r: Math.min(bw, bh) / 2 } }, { style: 'sandstone', tiers: spec.tiers[R.id] || [[0, 30], [8, 50]], veg: VEG, seed: (r.seed || 41) + R.id * 7, jag: 12, block: 11 });
+    }
+    if (spec.arch) { const a = spec.arch; T.arch(a.path.map(([x, y]) => [x * TS, y * TS]), a.width, a.h, a.thick, { style: 'sandstone', veg: { kind: 'dry', density: 0.08, band: 3, inner: 0.002 }, seed: (r.seed || 41) + 99 }); }
+  }, 0, D, r.seed || 41);
+  G.ax *= S; G.ay *= S; G.ap2 = S;
+  return G;
+}
+
+// ================================================================================================
 // designed nature places (shared/naturesites.js): what stands on the map's tiles there
 // ================================================================================================
 function addNature(c, I) {
   for (const s of c.M.natureSites || []) {
+    if (s.kind === 'oasis') {   // the spring down the cliff into the pool
+      const f = s.spring;
+      put(I, { key: `curt:${f.w}:${f.h}`, recipe: { t: 'curtain', w: f.w, h: f.h, seed: 4 }, x: f.x, y: f.y, ext: [f.w + 20, f.h + 30, f.w + 20, 30] });
+      lightAt(I, f.x, f.y + 10, 8, 90, [0.8, 0.95, 1], 0.4, 'sign', 0);
+      continue;
+    }
     if (s.kind !== 'creek') continue;
     // the bridge: a rail along each edge of the road where the creek runs under it
     const b = s.bridge, nx = -Math.sin(b.a), ny = Math.cos(b.a), hd = qa(b.a, 64), len = Math.round(b.half * 2);

@@ -111,6 +111,9 @@ export class Terrain {
       const [rx, ry, rw, rh, rr = 0] = s.rect; bb = [rx - pad, ry - pad, rx + rw + pad, ry + rh + pad];
       f = (x, y) => { const qx = Math.abs(x + 0.5 - rx - rw / 2) - rw / 2 + rr, qy = Math.abs(y + 0.5 - ry - rh / 2) - rh / 2 + rr; return rr - (Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0)); };
       s._r = Math.min(rw, rh) / 2;
+    } else if (s.sdf) {
+      // a ready signed distance (+ inside) over a bounding box: { sdf: { bb: [x0, y0, x1, y1], f(x, y), r } }
+      bb = s.sdf.bb.slice(); f = s.sdf.f; s._r = s.sdf.r ?? 30;
     } else if (s.path) {
       const P = s.path, hw = s.width / 2, xs = P.map((p) => p[0]), ys = P.map((p) => p[1]);
       bb = [Math.min(...xs) - hw - pad, Math.min(...ys) - hw - pad, Math.max(...xs) + hw + pad, Math.max(...ys) + hw + pad];

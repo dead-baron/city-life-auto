@@ -106,6 +106,7 @@ export function flatGround(M, cx, cy, opt = {}) {
 // ---- compositing ---------------------------------------------------------------------------------------------
 // Sprite s with its top-left at chunk pixel (sx, sy), heights raised by z0, depth-tested into G.
 export function compositeDepth(G, s, sx, sy, z0 = 0, bid = null, k = 0) {
+  if (s.ap2) return compositeDepth2(G, s, sx, sy, z0, bid, k);
   const x0 = Math.max(0, -sx), y0 = Math.max(0, -sy), x1 = Math.min(s.w, G.w - sx), y1 = Math.min(s.h, G.h - sy);
   if (x1 <= x0 || y1 <= y0) return 0;
   const sc = s.col, sn = s.nrm, se = s.emi, sz = s.z, sf = s.flag, dc = G.col, dn = G.nrm, de = G.emi, dz = G.z, df = G.flag;
@@ -130,6 +131,36 @@ export function compositeDepth(G, s, sx, sy, z0 = 0, bid = null, k = 0) {
       dz[di] = Math.min(65535, Math.max(hz, 0)); df[di] = sf[si];
       if (bid) bid[di] = k;
       n++;
+    }
+  }
+  return n;
+}
+
+// The same for a sprite made at the art pixel (s.ap2 = 2: big terrain made at half size): each of its pixels covers
+// 2 x 2 of the chunk's, its heights doubled.
+function compositeDepth2(G, s, sx, sy, z0 = 0, bid = null, k = 0) {
+  const S = 2, sc = s.col, sn = s.nrm, se = s.emi, sz = s.z, sf = s.flag, dc = G.col, dn = G.nrm, de = G.emi, dz = G.z, df = G.flag;
+  const X0 = Math.max(0, Math.floor(-sx / S)), Y0 = Math.max(0, Math.floor(-sy / S)), X1 = Math.min(s.w, Math.ceil((G.w - sx) / S)), Y1 = Math.min(s.h, Math.ceil((G.h - sy) / S));
+  let n = 0;
+  for (let Y = Y0; Y < Y1; Y++) for (let X = X0; X < X1; X++) {
+    const si = Y * s.w + X, sj = si * 4, a = sc[sj + 3];
+    if (!a) continue;
+    const hz = sz[si] * S + z0;
+    for (let v = 0; v < S; v++) {
+      const y = sy + Y * S + v; if (y < 0 || y >= G.h) continue;
+      for (let u = 0; u < S; u++) {
+        const x = sx + X * S + u; if (x < 0 || x >= G.w) continue;
+        const di = y * G.w + x, top = dz[di], ground = df[di] & F_GROUND;
+        if (hz < (ground ? top - GROUND_TOL : top)) continue;
+        const dj = di * 4;
+        if (a < 255) { const kk = a / 255; dc[dj] += (sc[sj] - dc[dj]) * kk; dc[dj + 1] += (sc[sj + 1] - dc[dj + 1]) * kk; dc[dj + 2] += (sc[sj + 2] - dc[dj + 2]) * kk; continue; }
+        dc[dj] = sc[sj]; dc[dj + 1] = sc[sj + 1]; dc[dj + 2] = sc[sj + 2]; dc[dj + 3] = 255;
+        dn[dj] = sn[sj]; dn[dj + 1] = sn[sj + 1]; dn[dj + 2] = sn[sj + 2]; dn[dj + 3] = sn[sj + 3];
+        de[dj] = se[sj]; de[dj + 1] = se[sj + 1]; de[dj + 2] = se[sj + 2]; de[dj + 3] = se[sj + 3];
+        dz[di] = Math.min(65535, Math.max(hz, 0)); df[di] = sf[si];
+        if (bid) bid[di] = k;
+        n++;
+      }
     }
   }
   return n;
