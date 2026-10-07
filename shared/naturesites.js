@@ -120,6 +120,7 @@ export function buildNatureSites(m, H) {
   sentinelStones(m, H);
   marketSquare(m, H);
   boneyard(m, H);
+  lavenderFields(m, H);
   golfClub(m, H);
   driveTracks(m, H);
   roadside(m, H);
@@ -258,6 +259,40 @@ function hilltopTrack(m, H) {
   H.addProp(m, 'mailbox', Math.round(end.x + 60), Math.round(end.y - 16), 0);
   H.addProp(m, 'textsign', Math.round(end.x - 64), Math.round(end.y - 30), 0, { text: 'HILLTOP', z: 26, sx: 1, bg: '#4a3a2a', fg: [236, 214, 170] });
   for (const sd of [-1, 1]) H.addProp(m, 'post', Math.round(top[0] + sd * 64), Math.round(top[1] + 10), 5, { h: 40 });
+}
+
+// ---- Cedar Point Lavender (Cedar Farms, on the coast below the Cedar Isle Loop; original) ---------------------------
+// Rows of lavender sweeping across the open coastal ground south of the highway, purple stripes on pale soil with
+// green between; a few olive trees and a white bench at the top, beehives along the east side, a wooden cart of
+// cut bunches and the farm's sign by the path in from the beach.
+function lavenderFields(m, H) {
+  const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
+  const X0 = 724, X1 = 750, Y0 = 1097, Y1 = 1123;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === 38;
+  let bad = 0; for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) if (!open(at(tx, ty))) bad++;
+  if (bad > 12) return;
+  const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
+  // the rows: a strip of soil under each (every other row of tiles), green between
+  let n = 0;
+  for (let ty = Y0 + 1; ty <= Y1 - 1; ty++) for (let tx = X0; tx <= X1; tx++) {
+    const i = at(tx, ty);
+    if (!open(i)) continue;
+    m.reserve[i] |= RES;
+    if ((ty - Y0) % 2 === 1) m.tiles[i] = T.DIRT; else { m.tiles[i] = T.GRASS; m.reserve[i] |= 128; }
+  }
+  for (let ty = Y0 + 1.5; ty <= Y1 - 1; ty += 2) for (let tx = X0 + 0.6; tx <= X1 + 0.4; tx += 0.95) {
+    if (!open(at(tx, ty)) && m.tiles[at(tx, ty)] !== T.DIRT) continue;
+    add('shrub_a', tx + (hash2(Math.round(tx * 4), Math.round(ty), 4001) - 0.5) * 0.2, ty, 0, { sp: 'lavender', k: 1.05 + hash2(Math.round(tx * 4), Math.round(ty), 4002) * 0.2 }); n++;
+  }
+  // the top: olive trees and a bench looking down the rows; beehives along the east side; the cart and the sign
+  for (const [dx, k] of [[2, 1.4], [12, 1.3], [22, 1.45]]) add('tree_a', X0 + dx, Y0 - 1.2, 12, { sp: 'olive', k });
+  add('pbench', X0 + 7, Y0 - 0.6, 8, { a: Math.PI / 2 });
+  for (let j = 0; j < 4; j++) add('beehive', X1 + 1.6, Y0 + 4 + j * 2.6, 6, { v: j % 3 });
+  add('fruitcrate', X0 + 3.4, Y1 + 0.9, 0); add('fruitcrate', X0 + 4.1, Y1 + 1.1, 0); add('wheelbarrow', X0 + 6, Y1 + 1, 0);
+  add('textsign', X0 + 1, Y1 + 1.6, 0, { text: 'CEDAR POINT LAVENDER', z: 26, sx: 1, bg: '#5a3a8a', fg: [250, 240, 210] });
+  (m.landmarks ||= []).push({ name: 'Cedar Point Lavender', type: 'lavender', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
+  m.natureSites.push({ kind: 'lavender', name: 'Cedar Point Lavender', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), plants: n });
 }
 
 // ---- The Dry Creek boneyard (east of the airstrip's runway; original) ---------------------------------------------

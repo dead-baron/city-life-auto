@@ -645,3 +645,13 @@ test('Dry Creek Boneyard: rows of stored airliners behind a fence east of the ai
   assert.ok(!solid(s.gate.x, s.gate.y), 'the gate is open');
   assert.ok(m.landmarks.some((l) => l.name === 'Dry Creek Boneyard'));
 });
+
+test('Cedar Point Lavender: rows of lavender on soil strips on the coast below the Cedar Isle Loop', () => {
+  const s = (m.natureSites || []).find((q) => q.kind === 'lavender');
+  assert.ok(s, 'the lavender is planted');
+  assert.ok(s.plants >= 250, `rows of lavender (${s.plants})`);
+  const near = m.props.filter((q) => q && q.t === 'shrub_a' && q.sp === 'lavender' && Math.hypot(q.x - s.x, q.y - s.y) < 16 * TILE);
+  assert.ok(near.length >= 250, 'the plants are there');
+  assert.ok(near.every((q) => tileAt(q.x, q.y) === T.DIRT), 'each on its soil strip');
+  assert.ok(m.landmarks.some((l) => l.name === 'Cedar Point Lavender'));
+});

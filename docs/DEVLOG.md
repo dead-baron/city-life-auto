@@ -2856,3 +2856,10 @@ Old airliners parked for good on the desert east of the Dry Creek Airstrip's run
 - **Getting round them:** the fuselages are solid, and you walk under the wings.
 - **The yard:** a gate on the runway side with the yard's sign, and oil drums about.
 - On the map, and in the debug menu (✈ Dry Creek Boneyard). Homes, POIs and buildings unchanged.
+
+## 2026-10-07 · Cedar Point Lavender (Cedar Farms, on the coast below the Cedar Isle Loop; original)
+
+The open coastal ground south of the Cedar Isle Loop, east of the hotel, is now a lavender farm (`shared/naturesites.js` `lavenderFields`):
+- **The rows:** about 340 lavender plants in thirteen rows. They make purple stripes on strips of pale soil, with green grass between, and catch the light at golden hour.
+- **Round the rows:** olive trees and a bench at the top looking down the rows, beehives along the east side, and crates of cut bunches with a wheelbarrow and the farm's sign at the bottom.
+- On the map, and in the debug menu (💜 Cedar Point Lavender). Homes, POIs and buildings unchanged.
