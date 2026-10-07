@@ -880,18 +880,19 @@ export const sapling = (seed = 1, h = 26) => conifer(seed, { h, r: h * 0.3, R: F
 // ---- forest trees (E3b) -----------------------------------------------------------------------------------
 export function redwood(seed = 1, h = 150) {
   h *= SIZE;
-  const rnd = mulberry32(seed * 271 + 1), G = sprite(90 * SIZE, h + 16, 5), cx = G.ax, foot = G.ay, tw = 10.5 * tk(), top = foot - h, lobes = [], stubs = [];
-  for (let y = foot - h * 0.3; y > top + 6; y -= 7 + rnd() * 4) for (const side of [-1, 1]) {
-    if (rnd() < 0.22) continue;
-    const r = 5 + rnd() * 3.2, x = cx + side * (tw * (1 - (foot - y) / h * 0.35) + 2 + rnd() * 8);
-    lobes.push({ x, y, r, ry: r * 0.78, dz: rnd() < 0.3 ? 30 : 0 }); stubs.push([[cx + side * tw * 0.5, y + 2], [(cx + x) / 2, y + 2], [x, y + 1]]);
-    if (rnd() < 0.5) lobes.push({ x: x + side * (r + 2), y: y + 3, r: r * 0.7, ry: r * 0.55 });
+  // (a giant: a trunk two strides across, flared at the foot; dense sprays of foliage up the top two thirds)
+  const rnd = mulberry32(seed * 271 + 1), G = sprite(132 * SIZE, h + 16, 5), cx = G.ax, foot = G.ay, tw = 17 * tk(), top = foot - h, lobes = [], stubs = [];
+  for (let y = foot - h * 0.36; y > top + 6; y -= 6 + rnd() * 4) for (const side of [-1, 1]) {
+    if (rnd() < 0.12) continue;
+    const up = (foot - y) / h, r = (7 + rnd() * 5) * (1.15 - up * 0.45), x = cx + side * (tw * (1 - up * 0.45) + 3 + rnd() * 13 * (1.1 - up * 0.6));
+    lobes.push({ x, y, r, ry: r * 0.74, dz: rnd() < 0.3 ? 30 : 0 }); stubs.push([[cx + side * tw * 0.5, y + 2], [(cx + x) / 2, y + 2], [x, y + 1]]);
+    if (rnd() < 0.6) lobes.push({ x: x + side * (r + 2), y: y + 3, r: r * 0.72, ry: r * 0.55 });
   }
-  lobes.push({ x: cx, y: top + 8, r: 9, ry: 7 }, { x: cx - 8, y: top + 14, r: 6.5, ry: 5 }, { x: cx + 8, y: top + 15, r: 6.5, ry: 5 });
+  lobes.push({ x: cx, y: top + 9, r: 13, ry: 10 }, { x: cx - 11, y: top + 17, r: 9.5, ry: 7 }, { x: cx + 11, y: top + 18, r: 9.5, ry: 7 });
   const cls = massEll(lobes, rnd, 3.2, 1.7), R = FOL('#467a2c');
   const mid = () => {
-    limb(G, [cx, foot + 1], [cx + 1, foot - h * 0.5], [cx, top + 4], tw, tw * 0.6, BARK_RED, { flare: 1.3, seed, tex: 'flute', k: 0.58 });
-    for (const s2 of [-1, 1, -0.45, 0.5]) limb(G, [cx + s2 * tw * 0.5, foot - tw * 1.4], [cx + s2 * tw * 1.3, foot - 3], [cx + s2 * (tw * 1.8 + 4), foot + 1], tw * 0.38, 1.2, BARK_RED, { seed: seed + 5, tex: 'flute' });
+    limb(G, [cx, foot + 1], [cx + 1, foot - h * 0.5], [cx, top + 4], tw, tw * 0.5, BARK_RED, { flare: 1.25, seed, tex: 'flute', k: 0.58 });
+    for (const s2 of [-1, 1, -0.45, 0.5]) limb(G, [cx + s2 * tw * 0.5, foot - tw * 1.2], [cx + s2 * tw * 1.3, foot - 3], [cx + s2 * (tw * 1.8 + 4), foot + 1], tw * 0.38, 1.2, BARK_RED, { seed: seed + 5, tex: 'flute' });
     for (const [p0, p1, p2] of stubs) limb(G, p0, p1, p2, 1.2, 0.7, BARK_RED, { seed, k: 0.3 });
   };
   paintClusters(G, cls, { R, seed, core: false, mid, backW: 0.5, leaf: 'round' });

@@ -30,6 +30,7 @@ import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTAT
 import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
 import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
+import { buildNatureSites } from './naturesites.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 
 export { Z };
@@ -535,6 +536,7 @@ export function generateCity(seed = 1337) {
   buildEstates(m, rand);
   buildOutposts(m, rand);
   buildScenePaintings(m);
+  buildNatureSites(m, { addProp });
   buildWilds(m, rand);
   buildStreetProps(m);
   buildPowerLines(m, { addProp }, (tx, ty) => wildAt(m, tx, ty));

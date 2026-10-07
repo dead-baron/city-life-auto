@@ -2236,3 +2236,19 @@ The first pass of the environment work (`docs/WORLD-V2.md` "Nature is designed, 
   - the static index keeps only which props show in each chunk and makes their items when the chunk is baked (index 19.8 MB down to 10.3 MB per worker);
   - the old undergrowth pass that indexed every wild plant is gone.
 - **Cost:** a wild chunk bakes in about 274 ms instead of 218 ms (node, warm cache).
+
+## 2026-10-06 · Redwood Creek: the first designed nature place (concepts N1-C, N1-D, N1-E)
+
+Highland Road crosses a creek in the redwoods (`shared/naturesites.js`, laid out by hand relative to the road, so
+nothing else in the world moves).
+- **The creek** comes out of the woods to the north and drops over a mossy basalt ledge into a pool. It runs south-west under the road and on into the woods, with mossy boulders in it and a log fallen across it above the falls.
+  - It is river water: you can swim in it.
+  - The road runs on over it; stone kerbs with timber rails along both edges keep cars on the bridge.
+- **The falls** are the water kit's ledge fall (`water.js` `waterfall`), solid along the ledge.
+- **A footbridge** of planks crosses the creek below the pool.
+- **A campsite** sits in the clearing by the pool: a lit fire, log benches, two tents, a picnic table, a map board and a lantern.
+- **A picnic pull-off** is by the road, with a gravel lot, a picnic table, a bin and a map board. A dirt trail runs from it up the creek to the footbridge and the camp.
+- **Giant redwoods** stand round the bridge and the falls. The redwood art now has a trunk two strides across, flared at the foot, with dense sprays of foliage up its top two thirds.
+- **On the map** as "Redwood Creek Falls" (and in the debug teleport's Landmarks).
+- **Reserve bit 32** keeps the wilds' random trees off the creek's banks, the clearing and the trails.
+- **Tests:** `test/nature.test.js` covers the bridge, the rails, the pool, the solid ledge, the footbridge, the camp, the pull-off, the redwoods and the landmark. It also checks the wild grows in groves of one kind of tree, clear of the roads.

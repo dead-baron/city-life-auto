@@ -45,6 +45,7 @@ import * as X from '../props-transit.js';
 import * as WL from '../props-wild.js';
 import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
+import * as WT from '../water.js';
 import * as FL from '../flora.js';
 import * as TR from '../trees.js';
 import { boulder as rockLump, outcrop } from '../terrain.js';
@@ -239,6 +240,7 @@ export function staticIndex(M) {
     addDecks(c, I);
     addRail(c, I);
     addSetPieces(c, I);
+    addNature(c, I);
     addCameras(c, I);
     addYards(c, I);
     addFrontage(c, I);
@@ -308,6 +310,7 @@ export function makeStatic(r) {
     case 'sign': return makeSignBoard(r);
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
+    case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist });
     default: return EMPTY;
   }
 }
@@ -1112,6 +1115,10 @@ function voxModel(m, a) {
     case 'gravel': return gravelPile(a[0] || 1); case 'rubble': return rubblePile(a[0] || 1); case 'trashPile': return trashPile(a[0] || 1); case 'pipes': return pipeStack(a[0] || 1); case 'lumber': return lumberStack(a[0] || 1, a[1] || 0);
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
+    case 'creekRail': return creekRail(a[0] || 200);
+    case 'footbridge': return WT.footbridge(a[0] || 140, a[1] || 26, a[2] || 8);
+    case 'mapBoard': return U.mapBoard();
+    case 'lantern': return WL.lantern(a[0] || 'post', a[1] ?? 1);
     case 'fallenLog': return GD.fallenLog(a[0] || 110, a[1] || 11, a[2] || 1, a[3] ? { moss: 0.45, mossCol: '#4a7028', stubs: 2 } : { moss: 0.1, stubs: 2, bark: '#8a5a3a' });
     case 'cabbages': return K.cabbages(a[0] || 3, a[1] || 3); case 'cornRow': return U.cornField(120, 60, (a[0] || 0) + 1); case 'wheatRow': return K.wheatPatch(120, 50, (a[0] || 0) + 1); case 'ropeLine': return TW.ropeLine(a[0] || 60);
     default: return EMPTY_VOX();
@@ -1145,6 +1152,8 @@ function vdim(m, a) {
     case 'gantryCrane': return [70, a[0] || 170, (a[1] || 200) + 6]; case 'dome': return [(a[0] || 90) + 10, (a[0] || 90) + 10, (a[0] || 90) * 0.8 + 30]; case 'marquee': return [84, 10, 80]; case 'speaker': return [10, 10, 22];
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
+    case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
+    case 'mapBoard': return [40, 12, 50]; case 'lantern': return [12, 12, 40];
     case 'lumber': return [60, 24, 18]; case 'crates': return [32, 28, 30]; case 'cctv': return [22, 8, (a[0] || 64) + 2]; case 'signal': return [(a[0] || 70) + 10, 14, 92]; case 'bbframe': return [a[0] || 132, 10, (a[1] || 54) + (a[2] || 36) + 6]; case 'cabbages': return [(a[0] || 3) * 18, (a[1] || 3) * 18, 14]; case 'cornRow': return [120, 60, 36]; case 'wheatRow': return [120, 50, 22]; case 'ropeLine': return [a[0] || 60, 6, 20]; case 'silo': return [44, 44, (a[0] || 90) + 22]; case 'craneTower': return [(a[1] || 120) + 40, 30, (a[0] || 200) + 16];
     default: return [24, 24, 24];
   }
@@ -1205,6 +1214,16 @@ function crateStack(seed = 1) {
   const m = new Vox(32, 28, 30), cols = ['#a0703c', '#8a6a42', '#b08048'];
   const c = (i) => m.mat({ ramp: ramp(cols[i % 3], 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 7 === 0 || Math.round(x) % 7 === 0 ? -0.6 : 0) });
   m.box(1, 1, 0, 15, 15, 14, c(0)); m.box(16, 3, 0, 30, 17, 14, c(1)); m.box(8, 12, 0, 22, 26, 14, c(2)); if (seed % 2) m.box(4, 4, 14, 18, 18, 28, c(1));
+  return m;
+}
+// a creek bridge's rail: a stone kerb with timber posts and two rails (Redwood Creek, concepts N1-C/D)
+function creekRail(len = 200) {
+  const m = new Vox(len, 10, 26), st = m.mat({ ramp: ramp('#8e877a', 6, 3), k: 3, shade: (x, y, z) => ((Math.round(x) % 14 === 0 || Math.round(z) === 5) ? -0.8 : 0) + (hash(Math.round(x / 3), Math.round(z), 11) - 0.5) * 0.6 });
+  const moss = m.mat({ ramp: ramp('#5a7a34', 6, 3), k: 3, flag: F_LEAF }), wd = m.mat({ ramp: ramp('#7a5434', 6, 3), k: 3, shade: (x) => (hash(Math.round(x), 2, 7) - 0.5) * 0.6 });
+  m.box(0, 1, 0, len, 9, 10, st);
+  for (let x = 2; x < len; x += 9) if (hash(x, 3, 5) > 0.55) m.box(x, 1, 9, x + 3 + hash(x, 4, 5) * 4, 9, 11, moss);
+  for (let x = 6; x < len - 2; x += 30) m.box(x, 3, 10, x + 4, 7, 26, wd);
+  m.box(2, 4, 17, len - 2, 6, 19, wd); m.box(2, 4, 23, len - 2, 6, 25, wd);
   return m;
 }
 function wheelStop() { const m = new Vox(26, 6, 4), c = m.mat({ ramp: ramp('#c8c4ba', 6, 3), k: 3 }), y = m.mat({ ramp: ramp('#e0b030', 6, 3), k: 3 }); m.box(1, 1, 0, 25, 5, 3, c); m.box(4, 1, 3, 8, 5, 4, y); m.box(18, 1, 3, 22, 5, 4, y); return m; }
@@ -1271,7 +1290,7 @@ const SPECIES = {
   young: [FL.youngTree, 26, 114], flowerTree: [FL.flowerTree, 42, 124], magnolia: [FL.magnoliaTree, 44, 118], cherry: [FL.cherryTree, 42, 118], maple: [FL.mapleGreen, 48, 106],
   mapleAutumn: [FL.mapleAutumn, 48, 104], oak: [FL.bigOak, 66, 124], birch: [FL.birchClump, 48, 110], aspen: [FL.aspenGrove, 48, 112], willow: [FL.weepingWillow, 44, 106],
   apple: [FL.appleTree, 40, 92], orange: [FL.orangeTree, 40, 90], olive: [(s) => TR.olive(s, 92, 42), 48, 94], cypress: [(s) => TR.cypress(s, 112, 13), 18, 108],
-  fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => FL.redwood(s, 230), 50, 250],
+  fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => FL.redwood(s, 230), 70, 250],
   mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 50, 114], larch: [FL.goldenLarch, 38, 154],
   mesquite: [FL.mesquite, 48, 116], paloVerde: [FL.paloVerde, 54, 115], joshua: [FL.joshuaTree, 52, 101], deadSnag: [FL.deadSnag, 38, 77],
   coconut: [FL.coconutPalm, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
@@ -1490,8 +1509,10 @@ function propItems(c, p, pi, I) {
       put(I, { key: `rk:${style}:${size}:${seed % 2}:${bio === 2 ? 1 : 0}`, recipe: { t: 'rock', style, size, s: seed % 2, moss: bio === 2 ? 0.5 : 0 }, x, y, ext: [size * 1.4 + 16, size * 1.8 + 24, size * 1.4 + 16, size + 14], pi });
       return;
     }
+    case 'mapboard': V('mapb', 'mapBoard', []); return;
+    case 'lantern': V('lant', 'lantern', ['post', 1]); lightAt(I, x, y, 30, 110, [1, 0.78, 0.46], 1.4, 'lamp'); return;
     case 'log': { // a fallen log at the edge of a grove (mossy in the woods)
-      const len = clamp(Math.round((p.len || 110) / 20) * 20, 80, 160), hd = qa(p.a || 0, 8), mossy = c.biome(x, y) === 2 ? 1 : 0;
+      const len = clamp(Math.round((p.len || 110) / 20) * 20, 80, 160), hd = qa(p.a || 0, 8), mossy = p.moss || c.biome(x, y) === 2 ? 1 : 0;
       V(`log:${len}:${hd.toFixed(2)}:${mossy}:${seed % 2}`, 'fallenLog', [len, 11, 1 + (seed % 2), mossy], hd);
       return;
     }
@@ -1980,6 +2001,25 @@ function addSetPieces(c, I) {
     put(I, vitem('scare', 'scarecrow', [], f.x + f.w * 0.5, f.y + f.h * 0.4));
     for (let k = 0; k < 3; k++) put(I, vitem('hay:1', 'hayBale', [true], f.x + 30 + k * 34, f.y + f.h + 26));
   });
+}
+
+// ================================================================================================
+// designed nature places (shared/naturesites.js): what stands on the map's tiles there
+// ================================================================================================
+function addNature(c, I) {
+  for (const s of c.M.natureSites || []) {
+    if (s.kind !== 'creek') continue;
+    // the bridge: a rail along each edge of the road where the creek runs under it
+    const b = s.bridge, nx = -Math.sin(b.a), ny = Math.cos(b.a), hd = qa(b.a, 64), len = Math.round(b.half * 2);
+    for (const side of [-1, 1]) put(I, vitem(`crail:${len}:${hd.toFixed(3)}`, 'creekRail', [len], Math.round(b.x + nx * side * (b.roadHw + 7)), Math.round(b.y + ny * side * (b.roadHw + 7)), hd));
+    // the falls: water over a mossy basalt ledge, facing south, its foot on the pool's north shore
+    const f = s.falls;
+    put(I, { key: `fall:${f.w}:${f.drop}`, recipe: { t: 'fall', w: f.w, drop: f.drop, seed: 5, mist: 0.35 }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + 60, f.drop + 90, f.w / 2 + 60, 40] });
+    lightAt(I, f.x, f.y + 20, 10, 120, [0.75, 0.9, 1], 0.5, 'sign', 0);   // (the white water catches the light)
+    // the footbridge across the creek below the pool
+    const fb = s.footbridge, fh = qa(fb.a, 16);
+    put(I, vitem(`fbr:${fb.len}:${fh.toFixed(2)}`, 'footbridge', [fb.len, 30, 6], Math.round(fb.x), Math.round(fb.y), fh));
+  }
 }
 
 // ================================================================================================
