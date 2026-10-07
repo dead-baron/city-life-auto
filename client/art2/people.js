@@ -39,7 +39,10 @@ const LT = (() => { const v = [-0.6, 0.38, 0.7], l = Math.hypot(v[0], v[1], v[2]
 export const PERSON_CAM = { elevation: 35, zScale: CA };          // world px of height per model unit = zScale
 // seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car
 export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9 };
-export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2 };
+export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2,
+  // hit reactions: a stagger (0-1 knocked back, 2-3 shoved forward), a limp, crawling on the stomach, down on the face or the
+  // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
+  stagger: 4, limp: 6, crawl: 4, downF: 2, downB: 2, deadF: 1, deadS: 1 };
 const ALIAS = { move0: 'walk0', move1: 'walk1', move2: 'walk2', move3: 'walk3', jog: 'walk1', run: 'walk2', sprint: 'walk3', held: 'idle', stand: 'idle' };
 export const HAIR_STYLES = ['spiky', 'short', 'buzz', 'bald', 'afro', 'long', 'wavy', 'pony', 'bun', 'braids', 'dreads', 'mohawk', 'slick', 'curly', 'bob'];
 export const TOP_KINDS = ['tee', 'tank', 'polo', 'shirt', 'hoodie', 'jacket', 'suit', 'leather', 'puffer', 'flannel', 'hawaiian', 'vest', 'hivis', 'uniform', 'tactical', 'scrubs', 'apron', 'overalls', 'tracksuit', 'jersey', 'coat', 'cardigan', 'dress', 'fur', 'none', 'bikini', 'swimsuit', 'towel'];
@@ -355,6 +358,77 @@ function rig(D, A, pose, f, kind, acc) {
       P.fL = [-D.hipX - 0.6, 5.8, D.ank]; P.kneeL = [0, 1, 0.6]; P.ground = false;
       P.hands = (S) => { P.hL = [-4.6, 9.4, 2.6]; P.hR = [5.0, 5.6, 4.2]; P.openL = P.openR = 1; };
     }
+  } else if (pose === 'stagger') {
+    // hit: frames 0-1 knocked back on the heels (hit from the front), 2-3 shoved forward (hit from behind); the second of each
+    // pair is the catch, finding the feet again. A held weapon stays in the right hand.
+    const fw = f >= 2, k = f & 1;
+    P.acc = false;
+    if (!fw) {
+      P.lean = [-0.32, -0.12][k]; P.headPitch = [-0.38, -0.12][k]; P.pel = [0, [-1.8, -0.9][k], D.pelZ - [0.7, 0.3][k]];
+      P.fL = [-D.hipX - 0.8, [-4.6, -3.2][k], D.ank]; P.fR = [D.hipX + 1.0, [2.4, 1.6][k], D.ank]; P.kneeL = [0, 1, 0.2];
+    } else {
+      P.lean = [0.46, 0.22][k]; P.headPitch = [0.32, 0.12][k]; P.pel = [0, [1.5, 0.8][k], D.pelZ - [0.9, 0.4][k]];
+      P.fL = [-D.hipX - 0.6, [5.6, 3.6][k], D.ank]; P.fR = [D.hipX + 1.0, [-2.6, -1.6][k], D.ank];
+    }
+    P.hands = (S) => {
+      if (kind) restHold(D, P, S, kind);
+      else P.hR = fw ? vadd(S.shR, [[4.2, 3.0][k], [-3.4, -1.4][k], [-4.4, -8.2][k]]) : vadd(S.shR, [[3.8, 2.4][k], [5.6, 2.8][k], [-2.4, -8.0][k]]);
+      P.hL = fw ? vadd(S.shL, [[-4.4, -3.0][k], [-4.0, -1.6][k], [-5.0, -8.6][k]]) : vadd(S.shL, [[-3.6, -2.6][k], [6.4, 3.2][k], [-4.0, -8.6][k]]);
+      P.elL = [-1, 0, -0.3]; P.elR = [1, 0, -0.3]; P.openL = 1; if (!kind) P.openR = 1;
+    };
+  } else if (pose === 'limp') {
+    // walking on a bad right leg: it barely swings or lifts, the body lurches over it, a hand clutches the thigh
+    const ph = f / 6;
+    gait(D, P, 0, ph, true);
+    const fr = P.fR, sw = P.hands;
+    P.fR = [fr[0] + 0.4, fr[1] * 0.5 - 1.2, D.ank + Math.min(0.5, fr[2] - D.ank)]; P.kneeR = [0, 0.3, 0];
+    const load = Math.max(0, Math.sin(2 * Math.PI * ph));
+    P.tilt = 0.05 + 0.1 * load; P.lean = 0.16; P.headPitch = 0.1; P.pel = [P.pel[0] + 0.6 * load, P.pel[1], P.pel[2] - 0.9 * load];
+    P.hands = (S) => {
+      if (sw) sw(S);
+      if (kind) restHold(D, P, S, kind);
+      else { P.hR = vadd(S.pel, mv(S.PF, [D.hipX + 1.8, 2.4, -2.6])); P.elR = [1, -0.4, -0.4]; }
+    };
+  } else if (pose === 'crawl') {
+    // on the stomach, dragging along: the arms reach out ahead in turn, the opposite knee draws up and out and pushes
+    const s = [0, 1, 0, -1][f], top = D.pelZ + D.neckUp + D.headUp;
+    P.acc = false; P.ground = true; P.rise = 0.3; P.lean = 0; P.headPitch = -0.55;
+    P.root = rx(Math.PI / 2 - 0.1);
+    P.fL = [-D.hipX - 1 - 2.6 * Math.max(0, -s), 2.4, D.ank + 5.5 * Math.max(0, -s)]; P.kneeL = [-1, 0.3, 0];
+    P.fR = [D.hipX + 1 + 2.6 * Math.max(0, s), 2.4, D.ank + 5.5 * Math.max(0, s)]; P.kneeR = [1, 0.3, 0];
+    P.hands = (S) => { P.hL = [-4.6, 4.6, top - 3 + 4 * s]; P.hR = [4.6, 4.6, top - 3 - 4 * s]; P.elL = [-1, 0.3, 0]; P.elR = [1, 0.3, 0]; P.openL = P.openR = 1; };
+  } else if (pose === 'downF') {
+    // down on the face (a faceplant, a slide): flat, then pushing up on the hands to get back on the feet
+    P.acc = false; P.ground = true; P.headPitch = f ? -0.5 : -0.2; P.headYaw = f ? 0 : 0.7; P.lean = 0;
+    P.root = rx(Math.PI / 2 - (f ? 0.32 : 0.04));
+    P.fL = [-D.hipX - 1.2, 1.6, D.ank]; P.fR = [D.hipX + 2.6, 2.2, D.ank + (f ? 0 : 3.6)]; P.kneeR = [1, 0.4, 0];
+    P.hands = (S) => {
+      if (f) { P.hL = vadd(S.shL, [-1.6, 7.4, 1.2]); P.hR = vadd(S.shR, [1.6, 7.4, 1.2]); }
+      else { P.hL = vadd(S.shL, [-4.4, 3.6, 7.6]); P.hR = vadd(S.shR, [4.8, 4.4, -6.4]); }
+      P.elL = [-1, 0, -0.2]; P.elR = [1, 0, -0.2]; P.openL = P.openR = 1;
+    };
+  } else if (pose === 'downB') {
+    // knocked flat on the back: lying there, then up on the elbows to get up
+    P.acc = false; P.ground = true; P.headPitch = f ? 0.35 : 0.1; P.lean = f ? 0.38 : 0;
+    P.root = [-1, 0, 0, 0, 0, 1, 0, 1, 0];
+    P.fL = [-D.hipX - 1.4, 0.8, D.ank]; P.fR = [D.hipX + 1.6, f ? 4.6 : 0.4, D.ank + (f ? 4.4 : 0.6)]; P.kneeR = [0.3, 1, 0];
+    P.hands = (S) => {
+      if (f) { P.hL = vadd(S.shL, [-3.2, -4.6, -6.4]); P.hR = vadd(S.shR, [3.2, -4.6, -6.4]); }
+      else { P.hL = vadd(S.shL, [-6.6, 0.8, -8.4]); P.hR = vadd(S.shR, [7.2, 1.4, -7.6]); }
+      P.elL = [-1, -0.6, 0]; P.elR = [1, -0.6, 0]; P.openL = P.openR = 1;
+    };
+  } else if (pose === 'deadF') {
+    // dead face down: one arm up by the head, one down by the side, a leg drawn up, the face turned to the side
+    P.acc = false; P.ground = true; P.headYaw = 0.95; P.headPitch = -0.15; P.eyes = 0; P.lean = 0;
+    P.root = rx(Math.PI / 2);
+    P.fL = [-D.hipX - 1.4, 1.2, D.ank]; P.fR = [D.hipX + 4.2, 2.0, D.ank + 4.6]; P.kneeR = [1, 0.3, 0];
+    P.hands = (S) => { P.hL = vadd(S.shL, [-5.4, 2.4, 9.0]); P.hR = vadd(S.shR, [3.0, 3.0, -13.0]); P.elL = [-1, 0, 0]; P.elR = [1, 0, 0]; P.openL = P.openR = 1; };
+  } else if (pose === 'deadS') {
+    // dead on the side, curled a little: knees bent, arms fallen forward
+    P.acc = false; P.ground = true; P.headPitch = 0.35; P.eyes = 0; P.lean = 0.3;
+    P.fL = [-D.hipX, 5.2, D.ank + 2.6]; P.fR = [D.hipX, 7.4, D.ank + 5.0]; P.kneeL = P.kneeR = [0, 1, 0.4];
+    P.hands = (S) => { P.hL = vadd(S.chest, mv(S.SP, [-2.4, 7.0, -6.4])); P.hR = vadd(S.chest, mv(S.SP, [2.8, 8.2, -3.0])); P.elL = [-1, 0, -0.5]; P.elR = [1, 0, -0.5]; P.openL = P.openR = 1; };
+    P.root = [0, -1, 0, 0, 0, 1, -1, 0, 0]; P.pivot = P.pel.slice();
   } else if (pose === 'down') {
     P.acc = false; P.ground = true; P.lean = 0.5; P.headPitch = 0.3;
     P.fL = [-D.hipX, 5.6 + f, D.pelZ - 9.5]; P.fR = [D.hipX, 4.2, D.pelZ - 10.8 + f * 0.8]; P.kneeL = P.kneeR = [0, 1, 0.4];
@@ -1198,7 +1272,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'drive'].includes(pn)) kind = null;
+  if (['carry', 'handsup', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS'].includes(pn)) kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A), P = rig(D, A, pn, f, kind, acc);

@@ -17,7 +17,7 @@ import * as vehicles from './vehicles.js';
 import * as trains from './trains.js';
 import * as wildlife from './wildlife.js';
 import { inAnyView } from '../view.js';
-import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED } from '../../shared/rules.js';
+import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
@@ -25,6 +25,7 @@ const COUNTRY_PREFERRED = new Set([T.DIRT, T.SIDEWALK, T.PLAZA, T.LOT]); // out 
 const CIV_TARGET_DAY = 30, CIV_TARGET_NIGHT = 20;
 const COUNTRY_TARGET_DAY = 4, COUNTRY_TARGET_NIGHT = 2; // people round a player out in the open country
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
+const CRAWL_SPEED = 0.17; // dragging themselves along on the stomach: this fraction of walking pace
 let rng = mulberry32(99);
 
 export function spawnNpc(world, archetype, x, y, role = 'civ') {
@@ -102,8 +103,9 @@ export function update(world, dt) {
     if ((n.role === 'cop' && !n.beat) || n.role === 'medic') continue; // other systems drive these
     if (now < ped.downUntil || now < ped.stunUntil) continue;
     if (n.state === 'passed') { ped.vx = 0; ped.vy = 0; continue; }
-    // critically hurt: no more fighting - limp away from the trouble, bleeding
-    if (n.state !== 'limp' && n.role !== 'cop' && ped.hp < ped.maxHp * NPC_CRITICAL) startLimp(world, ped, n.fx ?? ped.x + 1, n.fy ?? ped.y);
+    // critically hurt: no more fighting - limp away from the trouble, bleeding; the worst hurt may crawl
+    if (n.state !== 'limp' && n.state !== 'crawl' && n.role !== 'cop' && ped.hp < ped.maxHp * NPC_CRITICAL) startLimp(world, ped, n.fx ?? ped.x + 1, n.fy ?? ped.y);
+    if (n.state === 'limp' && ped.hp < ped.maxHp * CRAWL_HP && !n.crawlRolled) { n.crawlRolled = true; if (rng() < 0.6) startCrawl(world, ped, n.fx ?? ped.x + 1, n.fy ?? ped.y); }
     // ended up in the water (thrown from a car, knocked off a dock): swim for the nearest shore
     if (isSwimming(world.map, ped)) {
       if (!n.shore || now > (n.shoreAt || 0)) {
@@ -115,7 +117,7 @@ export function update(world, dt) {
       }
       if (n.shore) { pedStep(ped, seek(ped, n.shore.x, n.shore.y, true), dt, world.map, walkMods(world, ped, 1)); continue; }
     }
-    if (n.role === 'civ' || n.role === 'mugger') checkDive(world, ped, now);
+    if ((n.role === 'civ' || n.role === 'mugger') && n.state !== 'crawl') checkDive(world, ped, now);
     let inp = NO_INPUT, factor = 0.55;
     switch (n.state) {
       case 'wander': inp = wander(world, ped, now); factor = rain && !ped.umbrella ? 0.85 : 0.55; break;
@@ -138,6 +140,7 @@ export function update(world, dt) {
       }
       case 'fight': inp = fight(world, ped, now); factor = 1; break;
       case 'limp': inp = limp(world, ped, now); factor = LIMP_SPEED; break;
+      case 'crawl': inp = crawl(world, ped, now); factor = CRAWL_SPEED; break;
       case 'mug': inp = mugRun(world, ped, now); factor = 1; break;
       case 'waitHelp': {
         if (now > n.until) { n.state = 'wander'; n.keep = false; n.robbed = false; }
@@ -159,6 +162,8 @@ export function update(world, dt) {
       if (trains.railThreat(world, ped.x + inp.mx / m * 26, ped.y + inp.my / m * 26, 4.5, true) && !trains.railThreat(world, ped.x, ped.y, 4.5, true)) inp = NO_INPUT;
     }
     if (n.sway && (inp.mx || inp.my)) { const s = Math.sin(now * 3 + ped.id) * 0.6; const mx = inp.mx, my = inp.my; inp = { ...inp, mx: mx - my * s, my: my + mx * s }; }
+    // staggered by a hit: a moment's check - slowed right down, no swing or shot (then on they come, or on they run)
+    if (now < (ped.staggerUntil || 0)) inp = { ...inp, bits: inp.bits & ~IN.FIRE & ~IN.SPRINT, mx: inp.mx * 0.25, my: inp.my * 0.25 };
     pedStep(ped, inp, dt, world.map, walkMods(world, ped, factor));
     if (inp.bits & IN.FIRE) combat.tryAttack(world, ped, inp.aim);
     ped.umbrella = rain && n.umbrellaType && n.state === 'wander';
@@ -187,6 +192,24 @@ function limp(world, ped, now) {
   }
   const gait = 0.45 + 0.55 * Math.abs(Math.sin(now * 4.2 + ped.id)); // step, drag, step, drag
   inp.mx *= gait; inp.my *= gait;
+  return inp;
+}
+
+// Too badly hurt to stand: dragging themselves away on their stomach from whoever hurt them, slowly, for as
+// long as they can - then they lie still where they got to.
+function startCrawl(world, ped, fx, fy) {
+  const n = ped.npc;
+  n.state = 'crawl'; n.fx = fx; n.fy = fy; n.until = world.time + 12 + rng() * 12; n.target = 0; n.fleeBias = 0;
+  ped.bleeding = true;
+}
+function crawl(world, ped, now) {
+  const n = ped.npc;
+  if (now > n.until) { n.state = 'passed'; ped.passedOut = true; ped.vx = 0; ped.vy = 0; return NO_INPUT; }
+  const away = Math.atan2(ped.y - n.fy, ped.x - n.fx) + (n.fleeBias || 0);
+  const tx = ped.x + Math.cos(away) * 60, ty = ped.y + Math.sin(away) * 60;
+  if (PED_BLOCK[world.map.tileAtPx(tx, ty)]) n.fleeBias = (n.fleeBias || 0) + 0.5;
+  const inp = seek(ped, tx, ty, false), pull = 0.35 + 0.65 * Math.abs(Math.sin(now * 3.2 + ped.id)); // reach, drag, reach, drag
+  inp.mx *= pull; inp.my *= pull;
   return inp;
 }
 
@@ -327,6 +350,7 @@ function fight(world, ped, now) {
 export function onAttacked(world, ped, attacker) {
   if (!ped.npc || ped.dead || !attacker || attacker === ped) return;
   const n = ped.npc;
+  if (n.state === 'crawl') { n.fx = attacker.x; n.fy = attacker.y; return; } // still dragging themselves away - from you, now
   if (n.desk) { // staff behind a counter: a desk cop fights back, everyone else runs
     n.desk = null; n.keep = false;
     if (n.role === 'cop') { ped.weapon = 'pistol'; startFight(world, ped, attacker, 30); } else flee(world, ped, attacker.x, attacker.y, 10);

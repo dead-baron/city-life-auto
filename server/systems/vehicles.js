@@ -280,7 +280,8 @@ function bail(world, ped, v, spd, seat = ped.seat) {
 // tuck and roll, a faceplant, or sliding along on your back - and the hurt that goes with it.
 // Clients animate the arc from the 'fling' event; the server owns the path and the damage.
 export const LANDINGS = ['roll', 'face', 'slide'];
-export function fling(world, ped, vx, vy, attacker = null, cause = 'bail', dmgMul = 1) {
+// o (hit reactions, reactions.js): { kind, air, slide, getUp } override the bail's own choices.
+export function fling(world, ped, vx, vy, attacker = null, cause = 'bail', dmgMul = 1, o = null) {
   const now = world.time;
   const spd = Math.hypot(vx, vy);
   // Bailing out: slow, you just tuck and roll and come up unhurt (even if you roll into
@@ -289,15 +290,16 @@ export function fling(world, ped, vx, vy, attacker = null, cause = 'bail', dmgMu
   const soft = cause === 'bail' && spd < BAIL_HURT_SPEED;
   ped.tumbleSoft = soft;
   const over = cause === 'bail' ? Math.max(0, (spd - BAIL_HURT_SPEED) / 400) : 0;
-  const kind = soft ? 'roll' : cause === 'bail' ? (world.rand() < 0.25 + over * 0.45 ? 'face' : world.rand() < 0.5 ? 'roll' : 'slide') : LANDINGS[Math.floor(world.rand() * LANDINGS.length)];
-  const air = Math.max(0.28, Math.min(0.75, 0.2 + spd / 1100)) * (0.85 + world.rand() * 0.3);
-  const slide = kind === 'face' ? 0.25 : kind === 'roll' ? Math.min(1.4, 0.5 + spd / 700) : Math.min(1.8, 0.6 + spd / 600);
-  const getUp = kind === 'face' ? 1.1 : 0.7;
+  const kind = (o && o.kind) || (soft ? 'roll' : cause === 'bail' ? (world.rand() < 0.25 + over * 0.45 ? 'face' : world.rand() < 0.5 ? 'roll' : 'slide') : LANDINGS[Math.floor(world.rand() * LANDINGS.length)]);
+  const air = o && o.air !== undefined ? o.air : Math.max(0.28, Math.min(0.75, 0.2 + spd / 1100)) * (0.85 + world.rand() * 0.3);
+  const slide = o && o.slide !== undefined ? o.slide : kind === 'face' ? 0.25 : kind === 'roll' ? Math.min(1.4, 0.5 + spd / 700) : Math.min(1.8, 0.6 + spd / 600);
+  const getUp = o && o.getUp !== undefined ? o.getUp : kind === 'face' ? 1.1 : 0.7;
   ped.vx = vx; ped.vy = vy; ped.rollT = 0;
   ped.airUntil = now + air;
   ped.tumbleUntil = now + air + slide;
   ped.downUntil = Math.max(ped.downUntil || 0, now + air + slide + getUp);
-  ped.a = Math.atan2(vy, vx);
+  ped.flungKind = kind;
+  if (spd > 1) ped.a = Math.atan2(vy, vx);
   world.emit(ped.x, ped.y, { e: 'fling', id: ped.id, d: +air.toFixed(2), k: kind, x: ped.x, y: ped.y });
   // landing hurts more the faster you were going; a faceplant a little extra
   const dmg = cause === 'bail'

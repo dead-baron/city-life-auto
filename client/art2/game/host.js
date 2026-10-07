@@ -58,6 +58,7 @@ const MARGIN = 420;        // world px baked round the view (shadows fall in fro
 const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown']);
 const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
+const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // people flat on the ground (main.js pedLook)
 const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
@@ -686,7 +687,7 @@ export class World2 {
     if (p.blink === 3 || !Pd || !Pd.pedKey) return;
     const api = this.api, L = api.pedLook(p, now), f = p.flags, pose = L.pose;
     const d8 = dir8(p.ra);
-    const lying = !L.upright && (pose === 'down' || pose === 'dead') && !L.flying && !L.swimming;
+    const lying = !L.upright && LYING.has(pose) && !L.flying && !L.swimming;
     const ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
     let lift = 0;
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }

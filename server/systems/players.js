@@ -548,6 +548,7 @@ export function pedFlags(world, ped) {
   let f = 0;
   if (ped.dead) f |= PF.DEAD;
   if (now < ped.downUntil || ped.passedOut) f |= PF.DOWN;
+  if (ped.npc && ped.npc.state === 'crawl') f |= PF.DOWN | PF.ROLL; // (down + rolling: crawling along on the stomach)
   if (now < ped.stunUntil) f |= PF.STUN;
   if (ped.vehId) { if (ped.seat > 0) f |= PF.PASSENGER; } else if (ped.prevBits & IN.SPRINT && Math.hypot(ped.vx, ped.vy) > 140) f |= PF.SPRINT;
   if (now < ped.attackAnimUntil) f |= PF.ATTACK;

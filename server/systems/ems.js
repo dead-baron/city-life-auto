@@ -145,7 +145,7 @@ function runAmbulance(world, v, dt, now) {
       // along it gets no nearer): close enough to work from there
       const nearer = c.emsD === undefined || d < c.emsD - 8 * dt;
       c.emsD = d;
-      c.emsStuck = d < 90 && !nearer ? (c.emsStuck || 0) + dt : 0;
+      c.emsStuck = d < 140 && !nearer ? (c.emsStuck || 0) + dt : 0; // (a body that slid behind a counter or a wall: they work from as near as they can get)
       if (d < 26 || c.emsStuck > 1.5) { atBody++; c.kneelUntil = now + 0.5; c.a = Math.atan2(body.y - c.y, body.x - c.x); } // down on one knee beside them
     }
     if (atBody > 0) {

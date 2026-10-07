@@ -53,7 +53,7 @@ is World v2 stage 4: see "Nature is designed, not scattered" in `docs/WORLD-V2.m
 concepts per area.
 
 **World and NPCs:**
-- **Hit reactions [next]:** a varied set of reactions, animations and physics for people and players.
+- **Hit reactions [done 2026-10-06, `server/systems/reactions.js`]:** a varied set of reactions, animations and physics for people and players.
   - **Bullets:** knocked back and sliding; or a trip, a roll and back up running; a limp once hit; crawling away
     on the stomach.
   - **Shotgun at close range:** knocks people far back and almost always kills.

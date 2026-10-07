@@ -55,6 +55,10 @@ export const NPC_GUN_MULT = 6;          // gun damage vs NPCs and police (1-2 sh
 export const NPC_GRIT = [[0.75, 30], [1, 45], [1.6, 17], [2.5, 8]]; // [how much more a bullet takes to drop them, % of people]: some go down at the first shot, a few take three or four
 export const NPC_CRITICAL = 0.3;        // below this share of health people bleed; NPCs stop fighting and limp off
 export const LIMP_SPEED = 0.35;         // a critically hurt NPC limps along at this fraction of walking pace
+export const SHOTGUN_CLOSE_PX = 130;     // a shotgun blast (3+ pellets in) closer than this hits harder the closer it is and throws people off their feet...
+export const SHOTGUN_CLOSE_MULT = 2.6;   // ...up to this many times its damage at point blank: almost always a kill, player or not
+export const HIT_LIMP_S = 25;            // knocked off their feet by a bullet, people get back up limping this long
+export const CRAWL_HP = 0.15;            // below this share of health the badly hurt may crawl off on their stomachs instead of limping
 // Vehicle toughness: crash, gunfire and blast damage is divided by this, by kind (heavy: trucks, vans, buses -
 // anything with mass 2.4 and up). Motorcycles are the most fragile but no longer take it all.
 export const VEHICLE_TOUGH = { car: 1.8, heavy: 2.1, boat: 1.6, bike: 1.25 };

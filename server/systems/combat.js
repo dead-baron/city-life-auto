@@ -6,7 +6,7 @@ import { isSwimming, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS } from '../../shared/rules.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -16,6 +16,7 @@ import * as law from './law.js';
 import * as spikes from './spikes.js';
 import * as npc from './npc.js';
 import * as wildlife from './wildlife.js';
+import * as reactions from './reactions.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -65,10 +66,12 @@ export function tryAttack(world, ped, aim) {
   if (w.type === 'deploy') { spikes.deploy(world, ped, aim); return true; }
   const pellets = w.pellets || 1;
   let hitAny = false;
+  const hits = new Map(); // ped -> { n pellets, dmg, a, dist }: a blast lands on each person as one hit
   for (let k = 0; k < pellets; k++) {
     const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0);
-    if (hitscan(world, ped, w, a)) hitAny = true;
+    if (hitscan(world, ped, w, a, hits)) hitAny = true;
   }
+  for (const [t, h] of hits) shotHits(world, t, ped, w, h);
   if (w.silenced) npc.onGunfire(world, ped.x, ped.y, ped, 70); // a suppressor's cough: only people right there notice
   else { law.gunfire(world, ped, hitAny); npc.onGunfire(world, ped.x, ped.y, ped); }
   return true;
@@ -91,6 +94,7 @@ function melee(world, ped, w, aim) {
   world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
   if (!best) return true;
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
+  const was = { speed: Math.hypot(best.vx, best.vy), heading: Math.atan2(best.vy, best.vx) }; // (for the reaction: running into it?)
   const poise = best.build ? best.build.poise : 1;
   const str = ped.build ? ped.build.str : 1;
   const push = (w.push || 170) * str / poise;
@@ -119,7 +123,9 @@ function melee(world, ped, w, aim) {
   const floored = now < best.downUntil || now < best.stunUntil;
   // a knife from behind (or into someone who never saw it coming) kills outright
   if (w.backstab && !best.dead && backstabbable(world, ped, best)) { world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: 10 }); damage(world, best, 9999, ped, 'melee', dir); return true; }
-  damage(world, best, w.dmg * mult * (0.85 + world.rand() * 0.3), ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
+  const dmg = w.dmg * mult * (0.85 + world.rand() * 0.3);
+  if (!best.dead && hurtable(world, best) && (w.nonLethal || best.hp - dmg > 0)) reactions.blow(world, best, ped, w, dir, was); // a stagger, or off their feet
+  damage(world, best, dmg, ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
   if (floored) law.subdue(world, ped, best);
   return true;
 }
@@ -191,7 +197,21 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true) {
   return best || { kind: 0, hitT: tWall };
 }
 
-function hitscan(world, ped, w, a) {
+// Whether damage() would hurt this person at all (indoors, spawn protection, a lost pet, dev invincibility).
+function hurtable(world, ped) {
+  return !(ped.hidden || ped.pet || world.time < (ped.protectUntil || 0) || (ped.player && ped.player.invincible));
+}
+
+// The bullets (or a blast's pellets) that hit one person, as one hit: a shotgun at close range hits harder
+// the closer it is; the body reacts (reactions.js) before the damage, so a fatal blast throws it too.
+function shotHits(world, t, shooter, w, h) {
+  let dmg = h.dmg;
+  if (h.n >= 3 && h.dist < SHOTGUN_CLOSE_PX) dmg *= 1 + (SHOTGUN_CLOSE_MULT - 1) * (1 - h.dist / SHOTGUN_CLOSE_PX);
+  if (!t.dead && hurtable(world, t)) reactions.shot(world, t, shooter, w, { n: h.n, dist: h.dist, a: h.a, lethal: t.hp - dmg <= 0 });
+  damage(world, t, dmg, shooter, 'gun', h.a);
+}
+
+function hitscan(world, ped, w, a, acc) {
   const x1 = ped.x + Math.cos(a) * 14, y1 = ped.y + Math.sin(a) * 14;
   const x2 = ped.x + Math.cos(a) * w.range, y2 = ped.y + Math.sin(a) * w.range;
   const hit = traceTarget(world, ped, x1, y1, x2, y2, true);
@@ -204,7 +224,9 @@ function hitscan(world, ped, w, a) {
     // guns are deadly against NPCs / police (1-3 shots); players keep more staying power; some
     // people are just harder to put down (grit)
     const mult = hit.player || !ped.player ? 1 : NPC_GUN_MULT / (hit.grit || 1); // your shots are deadly; NPC-vs-NPC gunfights last a while
-    damage(world, hit, w.dmg * mult * (0.9 + world.rand() * 0.2), ped, 'gun', a);
+    const h = acc.get(hit) || { n: 0, dmg: 0, a, dist: Math.hypot(hit.x - ped.x, hit.y - ped.y) };
+    h.n++; h.dmg += w.dmg * mult * (0.9 + world.rand() * 0.2); h.a = a;
+    acc.set(hit, h);
     return true;
   }
   if (hit.kind === K.VEH) {
@@ -247,10 +269,9 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   ped.deadAt = world.time;
   ped.hp = 0;
   ped.bleeding = false;
-  ped.vx *= 0.3; ped.vy *= 0.3;
-  if (ped.vehId) vehicles.ejectPed(world, ped, true);
+  if (ped.vehId) { vehicles.ejectPed(world, ped, true); ped.vx *= 0.3; ped.vy *= 0.3; }
   if (ped.carrying) cargo.dropCrate(world, ped);
-  world.emit(ped.x, ped.y, { e: 'death', x: ped.x, y: ped.y, a: dir, id: ped.id });
+  reactions.died(world, ped, cause, dir); // the fall (a slide, a roll, knocked back, a crumple) and the death event: how they lie
   if (ped.wild) return; // an animal: no crime, no tally, no ambulance - the carcass is cleared once nobody's looking (wildlife.js)
   law.onKill(world, attacker, ped, cause);
   if (attacker && attacker.player) attacker.player.profile.stats.kills++;
@@ -274,11 +295,11 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
     const d = Math.hypot(e.x - x, e.y - y);
     const f = 1 - d / r;
     if (f <= 0) continue;
-    if (e.kind === K.PED && !e.dead && !e.vehId && !(e.blastSafeUntil > world.time)) {
+    if (e.kind === K.PED && !e.vehId && !(e.blastSafeUntil > world.time)) {
+      // thrown through the air - the dead too (reactions.js)
       const a = Math.atan2(e.y - y, e.x - x);
-      e.vx += Math.cos(a) * 300 * f; e.vy += Math.sin(a) * 300 * f;
-      e.downUntil = world.time + 1.5;
-      damage(world, e, dmg * f + 10, attacker, 'explosion', a);
+      if (e.dead || hurtable(world, e)) reactions.blasted(world, e, a, f);
+      if (!e.dead) damage(world, e, dmg * f + 10, attacker, 'explosion', a);
     } else if (e.kind === K.VEH && e.id !== excludeVehId && !e.wreckAt) {
       const a = Math.atan2(e.y - y, e.x - x);
       e.vx += Math.cos(a) * 220 * f / e.def.mass; e.vy += Math.sin(a) * 220 * f / e.def.mass;
@@ -327,7 +348,8 @@ export function update(world, dt) {
   const dryWeather = world.weather !== WEATHER.RAIN;
   for (const e of world.entities.values()) {
     if (e.kind === K.PROJ) { stepProjectile(world, e, dt); continue; }
-    if (e.kind !== K.PED || e.dead) continue;
+    if (e.kind !== K.PED) continue;
+    if (e.dead) { if (now < (e.tumbleUntil || 0)) slideBody(world, e, dt, now); continue; }
     // reload completion
     if (e.pendingReload && now >= e.reloadUntil) {
       const w = WEAPONS[e.pendingReload];
@@ -386,6 +408,16 @@ export function update(world, dt) {
       } else { e.vx *= 0.8; e.vy *= 0.8; e.x += e.vx * dt; e.y += e.vy * dt; if (world.map.levels) levelStep(world.map, e, PED_RADIUS); }
     }
   }
+}
+
+// A body thrown, or cut down on the run, slides on to a stop (through the air first, then along the ground;
+// walls stop it).
+function slideBody(world, e, dt, now) {
+  const k = Math.exp(-(now < (e.airUntil || 0) ? AIR_FRICTION : TUMBLE_FRICTION) * dt);
+  e.vx *= k; e.vy *= k; e.x += e.vx * dt; e.y += e.vy * dt;
+  collideCircle(e, PED_RADIUS, world.map, SWIM_BLOCK);
+  if (world.map.levels) levelStep(world.map, e, PED_RADIUS);
+  world.place(e);
 }
 
 function stepProjectile(world, p, dt) {

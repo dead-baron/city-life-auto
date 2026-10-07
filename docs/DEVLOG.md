@@ -2066,3 +2066,50 @@ Everything here is client-side. Server, shared code and the network are unchange
   - wildlife in three wild districts and round the farm, with few people and cars, and none of it in town;
   - animals bolting as a herd, and from gunfire;
   - no crime for hunting or roadkill.
+
+## 2026-10-06 · Hits move people: staggers, knockdowns, trips, faceplants, death slides, limping and crawling
+
+User: NPCs and players should react to hits, with knockback, slides, trips and rolls, limping, crawling, shotgun knockback, explosions throwing people, bat hits and death slides. The reactions live in `server/systems/reactions.js`.
+
+- **Bullets.** A hit person:
+  - **Staggers:** thrown back on their heels, or shoved forward if hit from behind.
+  - **Goes down:** knocked off their feet and slides back along the ground on their back, or now and then is spun round and down.
+  - **Running away:** trips into a roll, or goes down on their face and slides.
+  - **Charging at you:** the bullet may only check them for a moment. Or they hit the ground face first, scramble up and keep coming.
+  - **Who goes over:** police, rail guards, gang members and big builds keep their feet more often.
+  - **Getting up:** anyone knocked down by a bullet gets up limping for `HIT_LIMP_S` (25 s).
+  - **Players** keep control: a stagger and a shove only.
+- **Shotguns at close range.** A blast with 3 or more pellets in, closer than `SHOTGUN_CLOSE_PX` (130 px), hits harder the closer it is: up to `SHOTGUN_CLOSE_MULT` (2.6x) point blank, which nearly always kills, players included. It throws the person (or the body) back off their feet. The pellets of a blast now land as one hit per person.
+- **Explosions** throw people through the air, further the closer they were, and the bodies of the dead too.
+- **Melee.**
+  - **Heavy weapons** (bats, crowbars, sledgehammers, batons) now and then knock someone flat on their back. Hit a runner and they go over onto their face or into a roll.
+  - **Every blow** staggers.
+  - **Combo knockdowns** work as before.
+- **Deaths.**
+  - **Cut down on the run:** the body slides on (face first, or on the back if they were going backwards) or rolls to a stop.
+  - **Standing:** the body is knocked back onto its back, or crumples face down or on its side.
+  - **Thrown bodies** (a blast, a shotgun) land as they were thrown.
+  - **On the wire:** the death event says how the body lies, and dead bodies now slide (`combat.update`).
+- **Crawling.** Badly hurt people below `CRAWL_HP` (15 %) may drag themselves away on their stomachs instead of limping (slowly, away from whoever hurt them), then lie still. It's sent as down + rolling.
+- **Limping.** Anyone bleeding or limping walks with a limp: a stiff right leg, a lurch, a hand clutching the thigh.
+- **Art.** New people poses (`client/art2/people.js`):
+  - `stagger` (back on the heels and the catch; shoved forward and the catch);
+  - `limp`, a 6-frame gait;
+  - `crawl`, 4 frames;
+  - `downF`, face down then pushing up to get up;
+  - `downB`, flat on the back then up on the elbows;
+  - `deadF` (face down) and `deadS` (on the side), next to `dead` on the back.
+  
+  The client picks them from the new `react` event (staggers), the `fling` landings and the death event (`main.js pedLook`).
+- **NPCs.** A staggered NPC is slowed right down and can't swing or shoot for the moment, then carries on: fighting, or running.
+- **Paramedics** work from as near as they can get (up to 140 px, was 90) when a body has slid behind a counter or a wall.
+- **Tour:** the combat stop explains it all. `TUTORIAL_VERSION` 33.
+- **Tests** (`test/reactions.test.js`):
+  - the mix of staggers, knockdowns, trips and faceplants;
+  - limping after a knockdown;
+  - chargers coming on after a stagger;
+  - point-blank shotgun kills and throws, and ordinary hits at range;
+  - explosions throwing the living and the dead;
+  - death slides and how bodies lie;
+  - bat trips;
+  - crawling.

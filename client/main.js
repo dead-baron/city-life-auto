@@ -529,7 +529,13 @@ function onEvent(ev) {
     }
     case 'blood': if (ev.g) fx.bulletHit(ev.x, ev.y, ev.a, now); else fx.blood(ev.x, ev.y, ev.a, ev.n, now); sfx('hit', distVol(ev.x, ev.y)); break;
     case 'drip': fx.drip(ev.x, ev.y, now); break; // a bleeding person's trail
-    case 'death': fx.decal(5, ev.x - Math.cos(ev.a) * 4, ev.y - Math.sin(ev.a) * 4, ev.a, 14, '#6a0a10', now, 0.9); break;
+    case 'death': { fx.decal(5, ev.x - Math.cos(ev.a) * 4, ev.y - Math.sin(ev.a) * 4, ev.a, 14, '#6a0a10', now, 0.9); const e = S.ents.get(ev.id); if (e && ev.k) e.deadK = ev.k; break; }
+    case 'react': { // a hit: the stagger (and the hit flash) - a shove on the heels, or forward from behind
+      const e = S.ents.get(ev.id);
+      if (e) { e.reactAt = S.loopClock; e.reactD = ev.d; e.reactA = ev.a; e.hitAt = S.loopClock; e.hitA = ev.a; e.barUntil = S.loopClock + 4; }
+      if (ev.id === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 3);
+      break;
+    }
     case 'crash': fx.sparks(ev.x, ev.y, 4 + Math.round(ev.p * 8)); sfx('crash', distVol(ev.x, ev.y) * (0.4 + ev.p)); if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, ev.p * 6); break;
     case 'explode': fx.explosion(ev.x, ev.y, ev.r, now); sfx('explode', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 14 * distVol(ev.x, ev.y)); S.flashes.push({ x: ev.x, y: ev.y, t: 0.55, r: ev.r * 4, kind: 'boom' }); break;
     case 'spark': fx.sparks(ev.x, ev.y, 3); break;
@@ -1915,6 +1921,7 @@ const SWING_TIME = 0.3;
 function pedPose(e) {
   const f = e.flags;
   if (f & PF.DEAD) return 'dead';
+  if ((f & PF.DOWN) && (f & PF.ROLL)) return 'crawl'; // (down + rolling: dragging themselves along on the stomach)
   if (f & (PF.DOWN | PF.STUN)) return 'down';
   if (f & PF.ROLL) return 'roll';
   if (f & PF.FISHING) return e.d && e.d.ar === 'medic' ? 'kneel' : 'fish';
@@ -3061,7 +3068,18 @@ function pedLook(p, now) {
   const flRecent = flT < (p.flingDur || 0) + 3;
   if (flying) pose = flK === 'roll' ? 'roll' : 'down';
   else if (pose === 'down' && !(f & PF.DEAD) && (p.as || 0) > 70 && !(flRecent && flK !== 'roll')) pose = 'roll'; // tumbling along
-  let fr = pose === 'move' || pose === 'carry' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1 : 0;
+  // how they lie: the dead as they fell (the death event: face down, on the back, on the side - else as their last
+  // throw landed); the knocked down on the face or the back after a faceplant or a slide, pushing up to get up
+  const tL = flT - (p.flingDur || 0);
+  if (pose === 'dead') pose = DEAD_POSE[p.deadK || (flRecent && FLING_LIE[flK]) || DEAD_BY_ID[p.id % 3]] || 'dead';
+  else if (pose === 'down' && !flying && !(f & PF.STUN) && flRecent && (flK === 'face' || flK === 'slide')) pose = flK === 'face' ? 'downF' : 'downB';
+  // a hit: a stagger back on the heels (or forward, hit from behind); hurt and walking: a limp
+  const rT = p.reactAt !== undefined ? now - p.reactAt : 99, stag = rT < (p.reactD || 0) && STAGGER_FROM.has(pose);
+  if (stag) pose = 'stagger';
+  else if (pose === 'move' && (f & PF.BLEED) && !(f & PF.SPRINT) && (p.as || 0) < 175) pose = 'limp';
+  let fr = pose === 'move' || pose === 'carry' || pose === 'limp' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1
+    : pose === 'stagger' ? (Math.cos((p.reactA || 0) - (p.ra || 0)) > 0.2 ? 2 : 0) + (rT > p.reactD * 0.45 ? 1 : 0)
+      : pose === 'crawl' ? Math.floor(now * 3.2 + p.id) % 4 : (pose === 'downF' || pose === 'downB') && tL > 0.55 ? 1 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   const L = p._look || (p._look = {});
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent;
@@ -3083,7 +3101,7 @@ function pedVisual(p, now) {
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
   if (L.swimming && (p.as || 0) > 30 && Math.random() < 0.12 && S.map.tileAtPx(p.rx, p.ry) !== T.BRIDGE) S.fx.splash(p.rx, p.ry, 2);
   // lying still (the drawn body on the ground) doesn't drip; standing, the sparks fly round the head
-  const lying = !L.upright && (L.pose === 'down' || L.pose === 'dead') && !L.flying && !L.swimming && (!!S.art2 || !!lyingSprite(p.d.app, L.pose === 'dead' ? 1 : 0));
+  const lying = !L.upright && LYING.has(L.pose) && !L.flying && !L.swimming && (!!S.art2 || !!lyingSprite(p.d.app, L.pose.startsWith('dead') ? 1 : 0));
   if (!lying && (f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - (L.upright ? 20 : 0) + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
@@ -3092,7 +3110,8 @@ function drawPed(p, now) {
   if (f & PF.INVEH) return;
   if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { drawAnimal(p, now); return; }
   if (p.blink === 3) return; // inside a home
-  const { pose, fr, lvl, hitK, flT, flying, flK, flRecent, swimming } = pedLook(p, now);
+  const { pose: pose0, fr, lvl, hitK, flT, flying, flK, flRecent, swimming } = pedLook(p, now);
+  const pose = V1_POSE[pose0] || pose0;
   if (swimming) drawSwimRipples(p, now);
   const team = S.pedTeam && S.pedTeam.get(p.id);
   if (team !== undefined) { g.strokeStyle = team === 0 ? '#ff3b3b' : '#3b8bff'; g.lineWidth = 3; g.beginPath(); g.ellipse(p.rx, p.ry + 4, 13, 8, 0, 0, 6.28); g.stroke(); }
@@ -3161,7 +3180,12 @@ function drawPed(p, now) {
 }
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
-const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'carry', 'fish', 'kneel']);
+const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'carry', 'fish', 'kneel', 'stagger', 'limp']);
+const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // flat on the ground (art2 people.js poses)
+const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'punch', 'swing', 'carry']);
+const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
+// the old renderer's sprites for the poses it doesn't have (the subway view)
+const V1_POSE = { stagger: 'idle', limp: 'move', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;
