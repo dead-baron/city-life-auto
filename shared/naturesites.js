@@ -361,7 +361,8 @@ function boneyard(m, H) {
   let n = 0;
   for (let r = 0; r < 6; r++) for (const [cx, a] of [[X0 + 8, -0.55], [X0 + 22.5, Math.PI + 0.55]]) {
     const cy = Y0 + 6.5 + r * 11.5, ux = Math.cos(a), uy = Math.sin(a);
-    add('storedplane', cx, cy, 0, { a, c: (r * 2 + (cx > X0 + 10 ? 1 : 0)) % 5, v: r * 2 + (cx > X0 + 10 ? 1 : 0) });
+    const c = (r * 2 + (cx > X0 + 10 ? 1 : 0)) % 3;
+    add('storedplane', cx, cy, 0, { a, c, v: c * 2 + (r > 2 ? 1 : 0) });   // (a few liveries and states between them: fewer sprites to bake)
     for (let d = -130; d <= 130; d += 26) m.addSolidProp(Math.round(cx * TILE + ux * d), Math.round(cy * TILE + uy * d), 20);   // (the fuselage; you walk under the wings)
     n++;
   }
