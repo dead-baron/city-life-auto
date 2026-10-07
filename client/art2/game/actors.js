@@ -367,9 +367,10 @@ export function projSprite(w, hi = 0, N = 32) { return objRender('rocket', rocke
 // balls: a painted sphere (t 0 soccer, 1 volleyball, 2 a golf ball: small, white, dimpled), spin 0..3 turns the
 // pattern as it rolls; anchor = the ground contact, z from 0 at the bottom to the top of the ball
 const ICO = (() => { const p = (1 + Math.sqrt(5)) / 2, v = []; for (const a of [-1, 1]) for (const b of [-p, p]) { v.push(norm([0, a, b]), norm([a, b, 0]), norm([b, 0, a])); } return v; })();
-export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(2, t | 0))}|${((spin % 4) + 4) % 4}`;
+export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(3, t | 0))}|${((spin % 4) + 4) % 4}`;
 export function ballSprite(t = 0, spin = 0) {
   if ((t | 0) === 2) return golfBall();
+  if ((t | 0) === 3) return basketball(spin);
   const r = 5.5, S = 15, G = new GBuf(S, S), cx = 7.5, cyy = S - 1.5 - r, rot = (((spin % 4) + 4) % 4) * Math.PI / 4 + 0.3;
   G.ax = 7; G.ay = S - 2;
   const W = RP('#ecebe6', 5, 2), K = RP('#2a2a30', 5, 2), Y = RP('#e8c84a', 5, 2), B = RP('#2f56b0', 5, 2), L = norm([-0.55, -0.62, 0.56]);
@@ -392,6 +393,22 @@ export function ballSprite(t = 0, spin = 0) {
   return G;
 }
 
+// a basketball: orange, its black seams turning with the spin
+function basketball(spin = 0) {
+  const r = 4.6, S = 12, G = new GBuf(S, S), cx = 6, cyy = S - 1 - r, rot = (((spin % 4) + 4) % 4) * Math.PI / 4;
+  G.ax = 6; G.ay = S - 1;
+  const O = RP('#e0702a', 5, 2), B = RP('#1e1a18', 4, 1), L = norm([-0.55, -0.62, 0.56]), cr = Math.cos(rot), sr = Math.sin(rot);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = (x + 0.5 - cx) / r, v = (y + 0.5 - cyy) / r, q = u * u + v * v;
+    if (q > 1) continue;
+    const w = Math.sqrt(1 - q), n = norm([u, (v + w) * 0.7071, (w - v) * 0.7071]), lit = n[0] * L[0] + n[1] * L[1] + n[2] * L[2];
+    const px = n[0] * cr - n[2] * sr, pz = n[0] * sr + n[2] * cr, seam = Math.abs(px) < 0.12 || Math.abs(n[1]) < 0.1 || Math.abs(Math.abs(pz) - 0.7) < 0.1;
+    const R = seam ? B : O, tt = 0.5 + lit * 0.38;
+    G.put(x, y, R[Math.max(0, Math.min(R.length - 1, Math.round(tt * (R.length - 1))))], n, r + n[2] * r, null, 0);
+  }
+  G.outline(0.5, false);
+  return G;
+}
 function golfBall() {
   const r = 2.6, S = 8, G = new GBuf(S, S), cx = 4, cyy = S - 1 - r;
   G.ax = 4; G.ay = S - 1;

@@ -93,10 +93,20 @@ export const PICK_REACH = 40;           // stand this close to the trunk / the r
 export const SALVAGE_S = 4;             // standing still, working
 export const SALVAGE_REGROW_S = 900;    // ...then nothing more on that plane for this long
 export const SALVAGE_REACH = 58;        // this close to the fuselage's line
+// ...chipping at the Old Granite Mine's seams with the old pick: quartz, and now and then a gold nugget
+export const PROSPECT_S = 6;
+export const PROSPECT_REGROW_S = 600;
+export const PROSPECT_GOLD = 0.18;      // the chance of a nugget
+// ...searching the wreck on Wreck Island: an old doubloon now and then
+export const WRECK_S = 5;
+export const WRECK_REGROW_S = 900;
+export const WRECK_COIN = 0.4;          // the chance of a coin (a quarter of those: two)
 
 // The Bluffs Maze against the clock (server/systems/places.js): in through a gate, the clock runs till you reach the
 // gazebo in the middle; your best time is kept, and the first time you make it the gardeners pay you a prize
 export const MAZE_PRIZE = 50;
+// ...and a lap of the Stadium Lido's lanes (the shallow wall to the rope across the deep end and back)
+export const LAP_PRIZE = 25;
 
 // Rides (shared/rides.js, server/systems/rides.js): the Ferris wheel on Westport Pier (one turn of the wheel) and
 // hot-air balloon flights from the Dry Creek Balloon Field (out over the country and back). Not while wanted.

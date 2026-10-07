@@ -1063,7 +1063,7 @@ export class World2 {
     }
     if (A.muzzleKey) for (let f = 0; f < 3; f++) for (let hi = 0; hi < 16; hi++) q.push(['actors', 'muzzle', A.muzzleKey(1, hi, 16, f), [1, hi, 16, f], P + 1]);
     if (A.critterKey && A.critterInfo) for (const kind of ['pigeon', 'seagull']) { const inf = A.critterInfo(kind); if (inf) for (let f = 0; f < inf.frames; f++) for (const l of [false, true]) q.push(['actors', 'critter', A.critterKey(kind, f, l), [kind, f, l], P]); }
-    if (A.ballKey) for (const t of [0, 1, 2]) for (let s = 0; s < 4; s++) q.push(['actors', 'ball', A.ballKey(t, s), [t, s], P + 1]);
+    if (A.ballKey) for (const t of [0, 1, 2, 3]) for (let s = 0; s < 4; s++) q.push(['actors', 'ball', A.ballKey(t, s), [t, s], P + 1]);
   }
   _fx(name) { let i = this.fxInf[name]; if (i === undefined) i = this.fxInf[name] = (this.A && this.A.fxInfo ? this.A.fxInfo(name) : null) || null; return i; }
   _z0(e, water) {

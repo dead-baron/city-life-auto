@@ -2973,3 +2973,34 @@ The golf course can be played now: three holes (par 4, 4 and 3), with the course
 - **On screen:** the HUD's tracker shows the hole, par, stroke and club, and marks your ball when you're away from it (the flag when you're at it). Your ball has a ring round it. There are new sounds for a club, a putt and the cup.
 - **Giving up a hole:** walk away from your ball for 25 seconds, drive off or go down, and the hole is given up and the ball taken away. A ball whose golfer has logged off is cleared.
 - **Tests:** `test/golf.test.js` covers the course, teeing off and a drive, putting (a putt that's too hard runs over, one that dies at the hole drops, the hole-in-one prize, the best score kept), and the water and out-of-bounds penalties. A simulated golfer playing to the meter makes par or better on all three holes.
+
+## 2026-10-07 · Prospecting at the old mine, the shipwreck, laps at the lido
+
+- **Work spots** (`server/systems/places.js`). The boneyard's stripping is now one of several spots you work at by standing still. Each spot is shared by everyone and rests a while after someone works it. Moving, a hit or a car stops the work.
+
+  | Spot | Where | Time | Finds | Rests for |
+  |---|---|---|---|---|
+  | Boneyard airliners (as before) | beside a fuselage | 4 s | component scrap | 15 min |
+  | Old Granite Mine seams | the mine's mouth and each crystal vein | 6 s | quartz crystals ($12) about half the time, a gold nugget ($90) about one time in six | 10 min |
+  | Wreck on Wreck Island | the bow, amidships and the stern | 5 s | an old doubloon ($70) about 40% of the time, sometimes two | 15 min |
+
+  The spots are listed on the sites (`seams` on the mine, `search` on the wreck), the numbers are in `shared/rules.js` (`PROSPECT_*`, `WRECK_*`), and any pawn shop buys the finds.
+- **A lap of the Stadium Lido.**
+  - Get in the water at the shallow end's wall and you're ready. Push off and the clock starts.
+  - Swim to the rope across the deep end and back to the wall.
+  - The HUD's tracker shows the time and marks the rope, then the wall.
+  - At the end you get your time, your best (kept in your profile) and the day's five fastest. The first lap pays $25 (`LAP_PRIZE`).
+  - Climbing out or leaving the lanes calls the lap off.
+- Tests in `test/business.test.js`.
+
+## 2026-10-07 · Shooting hoops at North Point Courts
+
+Walk onto either half court and press the action button to pick up a ball (`server/systems/hoops.js`; the rims and the power are in `shared/hoops.js`).
+
+- **Shooting:** hold the attack button and let go. It's golf's meter, with a green band beside you that drops the ball in from where you stand. Further out, the band sits higher and is narrower: a long shot needs a harder, more exact release.
+- **The ball:** it arcs up to the hoop and goes in (a clean swish near the band's middle), comes up short off the front of the rim, or goes long off the backboard. Then it bounces back to you.
+- **Scoring:** makes in a row are your streak, and your best streak is kept. Every fifth in a row shows the day's best streaks. The HUD's tracker shows the streak and your makes and shots, and marks the rim.
+- **Where you can shoot from:** shots are taken from 1¼ to 9 m out. Too close or too far, and the prompt says so.
+- **Stopping:** walk off the court and you put the ball down, with a note of your makes.
+- **On screen:** there's a new basketball sprite, and new sounds for a swish, a make and a clank off the rim.
+- **Test:** in `test/golf.test.js`, alongside golf.

@@ -40,6 +40,7 @@ import * as barriers from './systems/barriers.js';
 import * as rides from './systems/rides.js';
 import * as places from './systems/places.js';
 import * as golf from './systems/golf.js';
+import * as hoops from './systems/hoops.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -68,6 +69,7 @@ const SYSTEMS = [
   ['races', races.update],
   ['minigames', minigames.update],  // soccer pitch, beach volleyball          // jetski / boat races
   ['golf', golf.update],            // Cedar Hills Golf Club: the balls in play
+  ['hoops', hoops.update],          // North Point Courts: shooting hoops
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop

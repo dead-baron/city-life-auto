@@ -36,7 +36,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 |---|---|---|---|
 | Move / steer | WASD | Left stick (RT gas, LT brake in cars) | Left stick |
 | Aim / attack | Mouse / left click | Right stick (full deflection auto-fires) / RT | Right stick (push far to fire) |
-| Interact (shops and the countryside counters, crates, loot, arrest, fishing, picking fruit at the orchard and the vineyard, cutting lavender, stripping the boneyard's planes for parts, ringing the old mission's bells, the pier's coin telescope, the Ferris wheel and balloon flights, teeing off at the golf club) | E | B | E |
+| Interact (shops and the countryside counters, crates, loot, arrest, fishing, picking fruit at the orchard and the vineyard, cutting lavender, stripping the boneyard's planes for parts, chipping for gold at the old mine, searching the shipwreck, ringing the old mission's bells, the pier's coin telescope, the Ferris wheel and balloon flights, teeing off at the golf club) | E | B | E |
 | Enter / exit vehicle | F | X | CAR |
 | Sprint | Shift | Push the left stick all the way | Push the left thumb all the way |
 | Dive roll / handbrake (in a car: e-brake skid turn / drift; held with gas = burnout, + steer = donuts) | Space | A | ROLL / BRAKE |
@@ -48,6 +48,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Rob a store (gun on the clerk; lower it to stop) | Hold right mouse / aim at the clerk | LT aimed at the clerk | aim stick at the clerk |
 | Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
 | Golf: aim, then hold and let go at the top of the meter (by your ball; each shot starts aimed at the flag) | Mouse · hold left click | Right stick · hold RT | Aim stick · hold FIRE |
+| Shoot hoops (North Point Courts: E for a ball, then hold and let go in the meter's green band) | E · hold left click | B · hold RT | ACT · hold FIRE |
 | Fish over the side (still boat, far out at sea) | E | B | ACT |
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
 | Stuck? Get unstuck (stand still 5 s, not wanted, not just after a fight) / Surrender (tap twice: respawn, or turn yourself in when wanted) | Esc → Stuck? / Surrender | Start → Stuck? / Surrender | ☰ → Stuck? / Surrender |

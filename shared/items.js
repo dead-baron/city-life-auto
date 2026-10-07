@@ -63,6 +63,9 @@ export const ITEMS = {
   bread:   { name: 'Fresh Bread',       food: true, heal: 12, sell: 0 },
   honey:   { name: 'Lavender Honey',    food: true, heal: 10, sell: 8 },
   lavender: { name: 'Lavender Bunch',   sell: 4 },
+  nugget:  { name: 'Gold Nugget',       loot: true, sell: 90 },   // (chipped out at the Old Granite Mine)
+  quartz:  { name: 'Quartz Crystal',    loot: true, sell: 12 },
+  doubloon: { name: 'Old Doubloon',     loot: true, sell: 70 },   // (found in the wreck on Wreck Island)
   lemonade: { name: 'Lemonade',         stamina: true, buff: 'coffee', sell: 0 },
   cider:   { name: 'Apple Cider',       stamina: true, buff: 'coffee', sell: 0 },
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
@@ -126,7 +129,7 @@ export const SHOPS = {
   vending: { title: 'Vending Machine', buy: [{ kind: 'item', id: 'energy', price: 8, qty: 1 }] },
   pawn: { title: 'Second Chance Pawn', buy: [
     { kind: 'weapon', id: 'pistol', price: 320 }, { kind: 'weapon', id: 'bat', price: 80 }, { kind: 'weapon', id: 'knife', price: 60 },
-  ], sells: ['purse', 'bonds', 'jewelry', 'scrap', 'wallet', 'medkit'], sellsWeapons: true },
+  ], sells: ['purse', 'bonds', 'jewelry', 'scrap', 'wallet', 'medkit', 'nugget', 'quartz', 'doubloon'], sellsWeapons: true },
   fence: { title: 'Back-Alley Exchange (Black Market)', buy: [
     { kind: 'weapon', id: 'smg', price: 1300 }, { kind: 'ammo', id: 'smg', price: 50, qty: 30 },
     { kind: 'weapon', id: 'spistol', price: 950 }, { kind: 'ammo', id: 'spistol', price: 40, qty: 10 },

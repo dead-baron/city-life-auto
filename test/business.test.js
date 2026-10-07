@@ -8,7 +8,7 @@ import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
 import { SHOPS, ITEMS } from '../shared/items.js';
 import { TILE } from '../shared/constants.js';
 import { PED_BLOCK } from '../shared/map.js';
-import { FERRIS_PRICE, FERRIS_S, BALLOON_PRICE, BALLOON_S, BALLOONS_UP, WINE_S, SALVAGE_S, SALVAGE_REGROW_S, MAZE_PRIZE } from '../shared/rules.js';
+import { FERRIS_PRICE, FERRIS_S, BALLOON_PRICE, BALLOON_S, BALLOONS_UP, WINE_S, SALVAGE_S, SALVAGE_REGROW_S, MAZE_PRIZE, PROSPECT_S, WRECK_S, LAP_PRIZE } from '../shared/rules.js';
 import { FERRIS, ferrisSite, balloonSite, balloonRoutes, balloonAt, ferrisCab, ferrisBoardCab, BALLOON_ALT } from '../shared/rides.js';
 import * as economy from '../server/systems/economy.js';
 import * as combat from '../server/systems/combat.js';
@@ -212,11 +212,11 @@ test('the boneyard: strip a stored airliner for parts (standing still a few seco
   let act = players.findInteraction(w, p);
   assert.ok(act && /Strip parts off the plane/.test(act.label), `the prompt (${act && act.label})`);
   act.run();
-  assert.ok(p.ped.salvage, 'at work');
+  assert.ok(p.ped.work, 'at work');
   assert.ok(players.findInteraction(w, p).passive, 'a note while working, not a button');
   // walking off stops you
   run(w, 1); teleport(w, p.ped, sx + 40, sy); run(w, 0.3);
-  assert.ok(!p.ped.salvage && !(p.profile.inventory.scrap > 0), 'walked away: nothing');
+  assert.ok(!p.ped.work && !(p.profile.inventory.scrap > 0), 'walked away: nothing');
   // stand still the whole time: scrap
   teleport(w, p.ped, sx, sy);
   players.findInteraction(w, p).run();
@@ -302,4 +302,57 @@ test('the Bluffs Maze against the clock: in through a gate, the clock runs to th
   teleport(w, p.ped, inGate.x, inGate.y); run(w, 1);
   teleport(w, p.ped, mz.gate.x, mz.rect.y1 + 40); run(w, 0.2);
   assert.equal(p.maze, null, 'gave up');
+});
+
+test('the Old Granite Mine: chip at a seam with the old pick (quartz, now and then a gold nugget); the wreck on Wreck Island: search it for old doubloons; the pawn shop buys them', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const mine = w.map.natureSites.find((q) => q.kind === 'mine'), wreck = w.map.natureSites.find((q) => q.kind === 'wreck');
+  assert.ok(mine && mine.seams.length >= 3 && wreck && wreck.search.length === 3, 'the seams and the wreck\'s spots');
+  const work = (spot, roll, s) => {
+    teleport(w, p.ped, spot.x, spot.y);
+    const act = players.findInteraction(w, p);
+    const r0 = w.rand; w.rand = () => roll;
+    act.run();
+    run(w, s + 0.5);
+    w.rand = r0;
+    return act.label;
+  };
+  assert.ok(/Chip at the seam/.test(work(mine.seams[1], 0.05, PROSPECT_S)), 'the prompt at a seam');
+  assert.equal(p.profile.inventory.nugget, 1, 'a gold nugget');
+  assert.ok(/Worked out/.test(players.findInteraction(w, p).label), 'that seam is worked out a while');
+  work(mine.seams[2], 0.3, PROSPECT_S);
+  assert.equal(p.profile.inventory.quartz, 2, 'quartz');
+  assert.ok(/Search the wreck/.test(work(wreck.search[1], 0.2, WRECK_S)), 'the prompt at the wreck');
+  assert.equal(p.profile.inventory.doubloon, 1, 'an old doubloon');
+  // the pawn shop buys the lot
+  const pawn = w.map.pois.find((q) => q.kind === 'pawn');
+  teleport(w, p.ped, pawn.x, pawn.y);
+  const bank0 = p.profile.bank;
+  economy.openMenu(w, p, pawn);
+  for (const id of ['nugget', 'quartz', 'doubloon']) economy.handleMenu(w, p, pawn.id, `s:${id}`);
+  assert.equal(p.profile.bank - bank0, ITEMS.nugget.sell + 2 * ITEMS.quartz.sell + ITEMS.doubloon.sell, 'sold');
+});
+
+test('a lap of the Stadium Lido against the clock: push off the wall, the rope at the deep end and back; a prize the first time, your best kept', () => {
+  const w = makeWorld();
+  const { p, conn } = joinPlayer(w, { cash: 0 });
+  const pool = (w.map.pools || []).find((q) => q.deep && q.lanes);
+  assert.ok(pool, 'the lido');
+  const y = pool.y + pool.h * 0.375, step = (x, s = 0.2) => { teleport(w, p.ped, x, y); run(w, s); };
+  step(pool.x + 20);
+  assert.ok(p.lap && p.lap.phase === 'wall', 'in the water at the wall: ready');
+  step(pool.x + 120, 3);
+  assert.ok(p.lap.phase === 'out' && p.lap.t0, 'pushed off: the clock runs');
+  assert.ok(/Lido lap/.test(players.buildMe(w, p).job.text), 'the HUD tracker');
+  step(pool.deep.x - 10, 3);
+  assert.equal(p.lap.phase, 'back', 'turned at the rope');
+  step(pool.x + 20);
+  assert.ok(p.profile.lapBest > 5 && p.profile.lapBest < 8, `the time (${p.profile.lapBest})`);
+  assert.equal(p.profile.cash, LAP_PRIZE, 'the first lap: a prize');
+  assert.ok(conn.sent.some((o) => String(typeof o === 'string' ? o : JSON.stringify(o)).includes("Today's fastest: 1. ")), 'the day\'s fastest');
+  // out of the water mid-lap: off
+  step(pool.x + 120);
+  teleport(w, p.ped, pool.x + 120, pool.y - 40); run(w, 0.2);
+  assert.equal(p.lap, null, 'climbed out: the lap is off');
 });

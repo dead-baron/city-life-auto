@@ -35,6 +35,7 @@ import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardin
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt } from '../shared/rides.js';
 import { swingMeter, carry as golfCarry } from '../shared/golf.js';
+import { courtHoops, idealPower, shotWindow } from '../shared/hoops.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
 import { ANIMAL_ART } from '../shared/animal-art.js';
@@ -354,7 +355,7 @@ function fixedStep() {
   if (S.pending.length > 60) S.pending.shift();
   if (S.pred) { S.pred.prev = { ...S.pred.s }; stepPred(dq); }
   // predict our own melee swing so punches animate the instant you click
-  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near)) {   // (by your golf ball it's a swing of the club)
+  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near) && !S.me.hoops) {   // (by your golf ball it's a swing of the club)
     const w = WEAPONS[S.me.weapon];
     if (w && w.type === 'melee' && S.loopClock >= (S.localSwingReady || 0)) {
       const e = S.ents.get(S.ctrlId);
@@ -600,6 +601,7 @@ function onEvent(ev) {
     case 'golfhit': sfx(ev.k ? 'golfhit' : 'putt', distVol(ev.x, ev.y)); break;   // (golf: server/systems/golf.js)
     case 'golfcup': sfx('golfcup', distVol(ev.x, ev.y)); break;
     case 'golfsplash': sfx('splash', distVol(ev.x, ev.y)); break;
+    case 'hoop': sfx(ev.in ? (ev.sw ? 'swish' : 'hoopin') : 'clank', distVol(ev.x, ev.y)); break;   // (shooting hoops: server/systems/hoops.js)
     case 'ride': rideOn(ev); if (ev.k === 'balloon') { const L = balloonSite(S.map); if (L) sfx('burner', distVol(L.launch.x, L.launch.y)); } break;   // a ride under way: the wheel's cab you're in, a balloon going up
     case 'rideend': if (S.rides) S.rides.delete(ev.id); break;
     case 'bells': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y), v = Math.max(0, 1 - d / 2600); for (let k = 0; k < (ev.n || 3); k++) setTimeout(() => sfx('churchbell', v * (k % 2 ? 0.85 : 1)), k * 1150); break; }   // (the mission's bells carry a long way)
@@ -2721,6 +2723,11 @@ function drawBays(view) {
 // Soccer ball / volleyball: shadow on the ground, the ball lifted by its height.
 function drawBall(b) {
   const z = (b.extra || 0) * 2;
+  if (b.d.t === 3) { // a basketball
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 1, 4.6, 2.6, 0, 0, 6.28); g.fill();
+    g.fillStyle = '#e0702a'; g.beginPath(); g.arc(b.rx, b.ry - z - 4.6, 4.6, 0, 6.28); g.fill(); g.strokeStyle = '#1e1a18'; g.lineWidth = 1; g.stroke();
+    return;
+  }
   if (b.d.t === 2) { // a golf ball: small and white, its shadow below it
     g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 1, 2.6, 1.6, 0, 0, 6.28); g.fill();
     g.fillStyle = '#f6f6f2'; g.beginPath(); g.arc(b.rx, b.ry - z - 2, 2.6, 0, 6.28); g.fill(); g.strokeStyle = '#3a3f48'; g.lineWidth = 0.8; g.stroke();
@@ -2961,8 +2968,9 @@ function drawStationClocks(view, now) {
 // lingers on screen a moment (S.golfShown). Each new shot starts aimed at the flag (the server takes your aim from
 // the last input, so a pad or touch player who doesn't touch the aim stick hits straight at the pin).
 function golfSwingStep(inp) {
-  const G = S.me && S.me.golf;
-  if (!G || !G.near) { if (S.golfHold >= 0) S.golfHold = -1; return; }
+  const G = S.me && S.me.golf, Hh = S.me && S.me.hoops;
+  if (!(G && G.near) && !(Hh && Hh.ready)) { if (S.golfHold >= 0) S.golfHold = -1; return; }
+  if (!G) { if (inp.bits & IN.FIRE) S.golfHold = S.golfHold >= 0 ? S.golfHold + DT : 0; else if (S.golfHold >= 0) { S.golfShown = { p: swingMeter(S.golfHold), until: performance.now() + 900 }; S.golfHold = -1; } return; }
   const key = `${G.ball}:${G.s}`;
   if (S.golfAimFor !== key && G.pin) {
     const b = S.ents.get(G.ball);
@@ -2975,6 +2983,22 @@ function golfSwingStep(inp) {
 function golfAimNow() {
   if (input.device === 'keyboard') { const sp = worldToScreen(selfPos()), m = mouseScreen(); if (sp && m) return Math.atan2(m.y - sp.y, m.x - sp.x); }
   return S.lastAim || 0;
+}
+// shooting hoops: the meter beside you, with the band that drops it in from where you stand
+function drawHoops(g, z) {
+  const Hh = S.me && S.me.hoops;
+  if (!Hh || S.me.dead) return;
+  const holding = S.golfHold >= 0, shown = !holding && S.golfShown && performance.now() < S.golfShown.until ? S.golfShown.p : null;
+  if (!Hh.ready && shown === null) return;
+  const hp = courtHoops(S.map)[Hh.k], sp = selfPos();
+  if (!hp) return;
+  const d = Math.hypot(hp.rim.x - sp.x, hp.rim.y - sp.y), ideal = idealPower(d), win = shotWindow(d), p = holding ? swingMeter(S.golfHold) : shown ?? 0;
+  const x = sp.x + 18, y = sp.y - 34, h = 40, w = 6;
+  g.save(); g.globalAlpha = 0.95;
+  g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x - 1 / z, y - 1 / z, w + 2 / z, h + 2 / z);
+  g.fillStyle = 'rgba(80,220,110,.55)'; g.fillRect(x, y + h * (1 - Math.min(1, ideal + win)), w, h * (Math.min(1, ideal + win) - Math.max(0, ideal - win)));
+  if (holding || shown !== null) { g.fillStyle = Math.abs(p - ideal) <= win ? '#7dff7a' : '#ff8a3a'; g.fillRect(x + 1 / z, y + h * (1 - p) - 1.5 / z, w - 2 / z, 3 / z); }
+  g.restore();
 }
 // your ball ringed; by it, the aim line out as far as the swing would carry and the meter beside you
 function drawGolf(g, z, now) {
@@ -3632,6 +3656,7 @@ function drawWorldLabels(peds, vehs, now, z) {
     g.beginPath(); g.moveTo(w.x, w.y - 30 + bob); g.lineTo(w.x + 8, w.y - 20 + bob); g.lineTo(w.x, w.y - 10 + bob); g.lineTo(w.x - 8, w.y - 20 + bob); g.closePath(); g.fill(); g.stroke(); g.restore();
   }
   drawGolf(g, z, now);
+  drawHoops(g, z);
   if (me && me.job) {
     g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     const bob = Math.sin(now * 4) * 5;

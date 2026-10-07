@@ -1130,7 +1130,9 @@ function wreckIsland(m, H) {
   add('campfire', sx + 8.6, row + 3.2, 0, { lit: false }); add('tent', sx + 9.8, row + 1.6, 12, { v: 0 });
   add('gull', sx + 3.6, row - 1.2, 0, { a: 0.6, z: 30 }); add('gull', sx + 6.2, row + 4.8, 0, { a: 2.2 }); add('crab', sx + 1.6, row + 2.8, 0, { a: 1.2 }); add('crab', sx + 2.8, row - 3.2, 0, { a: 4.1 });
   (m.landmarks ||= []).push({ name: 'Wreck Island', type: 'wreck', x: (sx - 4) * TILE, y: (row - 8) * TILE, w: 40 * TILE, h: 16 * TILE });
-  m.natureSites.push({ kind: 'wreck', name: 'Wreck Island', x: Math.round(X), y: Math.round(Y), beach: { x: (sx + 6) * TILE, y: (row + 1) * TILE } });
+  // where to search it: the bow up the beach, the stove-in side amidships, the stern in the shallows (beside the hull)
+  const search = [-70, 0, 70].map((u) => ({ x: Math.round(X + Math.cos(a) * u - Math.sin(a) * 40), y: Math.round(Y + Math.sin(a) * u + Math.cos(a) * 40) }));
+  m.natureSites.push({ kind: 'wreck', name: 'Wreck Island', x: Math.round(X), y: Math.round(Y), beach: { x: (sx + 6) * TILE, y: (row + 1) * TILE }, search });
 }
 
 // ---- the Bluffs Maze Garden (The Bluffs) ------------------------------------------------------------------------
@@ -1518,7 +1520,9 @@ function northPointCourts(m, H) {
   for (const [tx, len] of [[X0 + 0.5, fx0 - X0 - 1], [fx1 + 1.5, X1 - fx1 - 1]]) if (len > 1) add('hedgerun', tx, Y1 - 0.4, 0, { tx: len * TILE, ty: 0, h: 14 });
   for (let tx = X0 + 1; tx < X1; tx += 3) if (tx < fx0 - 1 || tx > fx1 + 1) add('shrub_a', tx + 0.5, Y0 + 0.6, 0, { sp: ['hydrangea', 'rose', 'lavender'][tx % 3], k: 1 });
   (m.landmarks ||= []).push({ name: 'North Point Courts', type: 'courts', x: fx0 * TILE, y: cy0 * TILE, w: (fx1 - fx0) * TILE, h: (cy1 - cy0) * TILE });
-  m.natureSites.push({ kind: 'courts', name: 'North Point Courts', x: Math.round(gx * TILE), y: Math.round((by + cd / 2) * TILE), gate: { x: gx * TILE + 16, y: cy1 * TILE + 16 }, hoops: [cx0 + CW / 2, cx0 + CW * 1.5].map((x) => ({ x: Math.round(x * TILE), y: Math.round((by - 0.1) * TILE) })) });
+  // (each hoop: its post; the rim hangs 17 px out over the court, 43 px up - shoot hoops: server/systems/hoops.js; its half court)
+  m.natureSites.push({ kind: 'courts', name: 'North Point Courts', x: Math.round(gx * TILE), y: Math.round((by + cd / 2) * TILE), gate: { x: gx * TILE + 16, y: cy1 * TILE + 16 },
+    hoops: [cx0 + CW / 2, cx0 + CW * 1.5].map((x) => ({ x: Math.round(x * TILE), y: Math.round((by - 0.1) * TILE), rim: { x: Math.round(x * TILE), y: Math.round((by - 0.1) * TILE + 17), z: 43 }, court: { x0: Math.round((x - CW / 2) * TILE), y0: Math.round(by * TILE), x1: Math.round((x + CW / 2) * TILE), y1: Math.round(cy1 * TILE) } })) });
 }
 
 // ---- Coral Cay's rainforest (concepts N2-A, N2-B, D16) ------------------------------------------------------------
@@ -1801,11 +1805,12 @@ function oldMine(m, H) {
   H.addProp(m, 'minecart', X, face + 3.2 * TILE, 12);
   for (const sx of [-1, 1]) { H.addProp(m, 'lantern', X + sx * 58, face + 22, 4); }
   for (const [dx, dy, t, r] of [[-110, 40, 'crates', 12], [-88, 76, 'barrel', 8], [-128, 84, 'barrel', 8], [104, 50, 'chest', 10], [124, 90, 'pickaxe', 0], [86, 96, 'lumber', 10]]) H.addProp(m, t, X + dx, face + dy, r);
-  for (const [dx, dy, size] of [[-150, 14, 30], [150, 18, 26], [-74, 12, 18]]) H.addProp(m, 'crystal', X + dx, face + dy, 0, { size });
+  const seams = [{ x: Math.round(X), y: Math.round(face + 22) }];   // (where you can chip for gold: the mouth and each crystal vein - server/systems/places.js)
+  for (const [dx, dy, size] of [[-150, 14, 30], [150, 18, 26], [-74, 12, 18]]) { H.addProp(m, 'crystal', X + dx, face + dy, 0, { size }); seams.push({ x: Math.round(X + dx), y: Math.round(face + dy + 16) }); }
   for (const [dx, dy, r] of [[-250, -40, 30], [256, -30, 26]]) H.addProp(m, 'outcrop', X + dx, face + dy, r, { w: 100, d: 64, h: 70, s: dx > 0 ? 5 : 6, style: 'granite' });
   for (const [dx, dy] of [[-200, 150], [180, 140]]) H.addProp(m, 'gravel', X + dx, face + dy, 0);
   (m.landmarks ||= []).push({ name: 'Old Granite Mine', type: 'mine', x: Math.round(X - 260), y: Math.round(face - 220), w: 520, h: 420 });
-  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face) });
+  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face), seams });
 }
 
 // clear a map prop away (its picture and its solid footprint): for a designed place that replaces random dressing

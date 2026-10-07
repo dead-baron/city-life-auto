@@ -82,6 +82,9 @@ export function sfx(name, vol = 1) {
     case 'churchbell': if (throttle('churchbell', 600)) { tone(196, 2.8, 0.2 * vol, 'sine'); tone(392, 2.2, 0.09 * vol, 'sine'); tone(466, 1.6, 0.05 * vol, 'triangle'); tone(784, 0.9, 0.04 * vol, 'sine'); noise(0.05, 1800, 1, 0.12 * vol, 'bandpass'); } break;   // (the old mission's bells: a deep strike with its hum and overtones)
     case 'golfhit': if (throttle('golfhit', 120)) { tone(1500, 0.05, 0.16 * vol, 'triangle', -500); noise(0.06, 2600, 0.8, 0.22 * vol, 'highpass'); } break;   // (a club on the ball: a sharp click)
     case 'putt': if (throttle('putt', 120)) tone(900, 0.05, 0.1 * vol, 'triangle', -300); break;
+    case 'swish': if (throttle('swish', 300)) noise(0.25, 2400, 0.6, 0.22 * vol, 'bandpass'); break;   // (a basketball through the net)
+    case 'hoopin': if (throttle('hoopin', 300)) { tone(420, 0.06, 0.12 * vol, 'triangle', -80); noise(0.2, 2200, 0.6, 0.16 * vol, 'bandpass'); } break;
+    case 'clank': if (throttle('clank', 200)) { tone(310, 0.18, 0.14 * vol, 'square', -60); tone(620, 0.1, 0.06 * vol, 'triangle'); } break;   // (off the rim)
     case 'golfcup': if (throttle('golfcup', 400)) { tone(660, 0.08, 0.14 * vol, 'triangle'); setTimeout(() => tone(520, 0.1, 0.12 * vol, 'triangle'), 90); setTimeout(() => tone(990, 0.18, 0.12 * vol, 'sine'), 260); } break;   // (the rattle in the cup)
     case 'burner': if (throttle('burner', 900)) { noise(1.5, 380, 0.6, 0.42 * vol, 'lowpass'); noise(1.2, 1900, 0.5, 0.08 * vol, 'bandpass'); } break;   // (a balloon's burner: a long roar)
     case 'rumble': if (throttle('rumble', 260)) noise(0.3, 160, 0.8, 0.22 * vol); break;

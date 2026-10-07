@@ -1,5 +1,6 @@
 // Golf at Cedar Hills Golf Club: teeing off, the swing (hold the attack button, let go: the meter), the ball's flight
-// and roll by the lie, the cup, penalties, the score against par, giving a hole up.
+// and roll by the lie, the cup, penalties, the score against par, giving a hole up. And shooting hoops at North Point
+// Courts with the same meter.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
@@ -7,6 +8,7 @@ import { IN } from '../shared/input.js';
 import { DT } from '../shared/constants.js';
 import { GOLF_FEE, HOLE_IN_ONE_PRIZE, CLUBS, LIES, swingMeter, lieAt, clubFor, launchSpeed, carry, SWING_S } from '../shared/golf.js';
 import * as golf from '../server/systems/golf.js';
+import { courtHoops, idealPower, shotWindow } from '../shared/hoops.js';
 
 // a swing: press the attack button by the ball, hold it while the meter rises to `power`, let go - through the input
 // queue, one input a tick, as the game does it
@@ -127,4 +129,37 @@ test('golf: into the pond or out of bounds costs a stroke and the ball comes bac
   settle(w, p);
   assert.equal(p.golf.strokes, 4, 'another shot and another penalty');
   assert.ok(Math.hypot(b.x - from2.x, b.y - from2.y) < 1, 'back again');
+});
+
+test('hoops at North Point Courts: pick up a ball, hold and let go in the band - in, or short off the rim; the streak and your best', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const hs = courtHoops(w.map);
+  assert.equal(hs.length, 2, 'two hoops');
+  const rim = hs[0].rim, x = rim.x + 40, y = rim.y + 140, d = Math.hypot(rim.x - x, rim.y - y);
+  teleport(w, p.ped, x, y);
+  let act = players.findInteraction(w, p);
+  assert.ok(act && /Shoot hoops/.test(act.label), `the prompt (${act && act.label})`);
+  act.run();
+  assert.ok(p.hoops, 'a ball in hand');
+  act = players.findInteraction(w, p);
+  assert.ok(act.key === 'CLICK' && /green/.test(act.label), 'shoot with the attack button');
+  const me = players.buildMe(w, p);
+  assert.ok(me.hoops && me.hoops.ready && /Hoops/.test(me.job.text), 'the HUD');
+  const shoot = (power) => { swing(w, p, 0, power); run(w, 1.6); };
+  shoot(idealPower(d));
+  assert.equal(p.hoops.made, 1, 'in');
+  shoot(idealPower(d));
+  assert.equal(p.hoops.streak, 2, 'two in a row');
+  assert.equal(p.profile.hoopsBest, 2, 'your best streak');
+  shoot(Math.max(0.05, idealPower(d) - shotWindow(d) - 0.15));
+  assert.equal(p.hoops.streak, 0, 'short: the streak is over');
+  assert.equal(p.hoops.shots, 3, 'three shots');
+  assert.ok(![...w.entities.values()].some((e) => e.ballKind === 'hoop'), 'the ball comes back');
+  // too close: no shot
+  teleport(w, p.ped, rim.x, rim.y + 20);
+  assert.ok(/Too close/.test(players.findInteraction(w, p).label), 'too close');
+  // off the court: the ball goes down
+  teleport(w, p.ped, rim.x + 2000, rim.y + 400); run(w, 0.2);
+  assert.equal(p.hoops, null, 'walked off');
 });
