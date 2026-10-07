@@ -21,8 +21,10 @@ const TILE = 32;
 // Road classes. w: total width (tiles); nl: lanes per direction; median (px) between the two
 // directions; light: may get traffic lights; walk: the pavement either side - 'district' (the class
 // of the district the road runs through, SIDEWALK below), px, or 0 for none.
+// Highways run two lanes each way (81 px lanes); where a ramp joins or leaves, its acceleration or
+// deceleration lane runs alongside as a third (the ramp's own first or last stretch, beside the deck).
 export const ROAD_KINDS = {
-  hwy: { w: 14, nl: 3, median: 28, light: false, deck: true, walk: 0 },
+  hwy: { w: 11, nl: 2, median: 28, light: false, deck: true, walk: 0 },
   ave: { w: 9, nl: 2, median: 14, light: true, walk: 'district' },
   blvd: { w: 9, nl: 2, median: 14, light: true, walk: 'district' },  // a curving boulevard (same section as an avenue)
   st: { w: 6, nl: 1, median: 0, light: true, walk: 'district' },
@@ -66,8 +68,10 @@ function subLine(pts, s0, s1) {
   return out;
 }
 
-// lines: [{ pts: [{x,y}] (px), kind, lvl: 0 | 1 | 'ramp', name?, oneway?, z0?, z1? }]
-// For ramps z0/z1 give the height at the first and last point (0 ground, 1 deck).
+// lines: [{ pts: [{x,y}] (px), kind, lvl: 0 | 1 | 'ramp', name?, oneway?, z0?, z1?, zr? }]
+// For ramps z0/z1 give the height at the first and last point (0 ground, 1 deck); zr [t0, t1] (fractions of
+// the length from the first point) is where the climb happens - level before and after (a ramp's run along the
+// deck as an auxiliary lane, its level run-out to the street).
 export function buildNetwork(lines, seed = 1) {
   const L = lines.filter((l) => l.pts.length >= 2).map((l, i) => {
     const pts = l.pts.map((p) => ({ x: p.x, y: p.y }));
@@ -201,6 +205,7 @@ export function buildNetwork(lines, seed = 1) {
         id: edges.length, a: na.id, b: nb.id, pts, len: 0, kind: l.kind, lvl, za, zb, name: l.name || '',
         w: K.w * TILE, hw: (K.w * TILE) / 2, nl: K.nl, median: K.median, oneway: !!(l.oneway || K.oneway), bridge: false, culdesac: !!l.culdesac,
       };
+      if (l.lvl === 'ramp' && l.zr && c0.s < 1 && c1.s > l.len - 1) e.zr = l.zr.slice(); // (a whole ramp: its climb as laid)
       e.len = measure(e.pts);
       edges.push(e);
       na.edges.push(e.id); nb.edges.push(e.id);
@@ -278,6 +283,9 @@ function finishNetwork(nodes0, edges0, seed) {
     n.trim = {};
     for (const id of ids) {
       const e = edges[id];
+      // a ramp at a merge on the deck starts (or ends) right there, in line with the outer lane it peels off from
+      // (or tapers into): no junction box to clear
+      if (n.merge && e.lvl === 'ramp') { n.trim[id] = 0; continue; }
       let t = 0;
       for (const oid of ids) {
         if (oid === id) continue;
@@ -383,13 +391,15 @@ export function lanePath(net, e, from, k) {
   return pts;
 }
 
-// Height of the road surface (0 ground .. 1 deck) at arc length s from node `from`.
+// Height of the road surface (0 ground .. 1 deck) at arc length s from node `from`: eased, and on a ramp with
+// e.zr only between those fractions of its length (level before and after).
 export function edgeZ(e, from, s) {
   if (e.lvl !== 'ramp') return e.lvl === 1 ? 1 : 0;
-  const t = Math.max(0, Math.min(1, s / e.len));
-  const z0 = e.a === from ? e.za : e.zb, z1 = e.a === from ? e.zb : e.za;
+  let t = Math.max(0, Math.min(1, s / e.len));
+  if (e.a !== from) t = 1 - t;              // (measured from end a)
+  if (e.zr) t = Math.max(0, Math.min(1, (t - e.zr[0]) / Math.max(1e-6, e.zr[1] - e.zr[0])));
   const u = t * t * (3 - 2 * t);
-  return z0 + (z1 - z0) * u;
+  return e.za + (e.zb - e.za) * u;
 }
 
 // Turn path through a junction: from the end of the incoming lane to the start of the outgoing
@@ -408,7 +418,7 @@ export function turnPath(p0, d0, p1, d1, n = 6) {
 }
 
 // Which edges a driver may take leaving node n having arrived along inEdge (no U-turns unless
-// it's a dead end; on the deck only gentle diverges).
+// it's a dead end; on the deck only gentle diverges; a ramp's foot is an ordinary junction).
 export function exitsFrom(net, n, inEdge) {
   const inDir = n.dirs[inEdge] + Math.PI; // heading on arrival
   const out = [];
@@ -416,8 +426,7 @@ export function exitsFrom(net, n, inEdge) {
     const eid = +id;
     if (eid === inEdge) continue;
     const turn = Math.abs(wrap(n.dirs[eid] - inDir));
-    const e = net.edges[eid];
-    if (turn > (n.lvl === 1 || e.lvl === 'ramp' || net.edges[inEdge].lvl === 'ramp' ? 1.15 : 2.3)) continue;
+    if (turn > (n.lvl === 1 ? 1.15 : 2.3)) continue;
     out.push({ edge: eid, to, turn: wrap(n.dirs[eid] - inDir) });
   }
   if (!out.length && n.links[inEdge] !== undefined) out.push({ edge: inEdge, to: n.links[inEdge], turn: Math.PI });

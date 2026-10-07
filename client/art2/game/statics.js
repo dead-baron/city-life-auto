@@ -1655,23 +1655,27 @@ function makeDeck(r) {
     blocks.push(S.filter((s) => { let t = (X - s.ax) * s.ux + (Y - s.ay) * s.uy; t = t < 0 ? 0 : t > s.len ? s.len : t; return Math.hypot(X - s.ax - s.ux * t, Y - s.ay - s.uy * t) <= s.hw + 24; }));
   }
   const asph = asphaltTex();
+  // (a segment's surface height runs on past its ends along its own slope: round the bend where the next piece of a
+  // sloping ramp takes over, the two meet at the same height instead of stepping - no rings across the ramp)
+  const zOf = (s, tt) => Math.max(0, (s.za + (s.zb - s.za) * tt / s.len) * LIFT);
   const at = (X, Y) => {
     bs = null;
     for (const s of cand) {
-      let t = (X - s.ax) * s.ux + (Y - s.ay) * s.uy; t = t < 0 ? 0 : t > s.len ? s.len : t;
+      const tt = (X - s.ax) * s.ux + (Y - s.ay) * s.uy, t = tt < 0 ? 0 : tt > s.len ? s.len : tt;
       const dx = X - s.ax - s.ux * t, dy = Y - s.ay - s.uy * t, d = Math.sqrt(dx * dx + dy * dy);
       if (d > s.hw) continue;
-      const z = (s.za + (s.zb - s.za) * t / s.len) * LIFT;
+      const z = zOf(s, tt);
       if (!bs || z > bz + 0.6 || (Math.abs(z - bz) <= 0.6 && d / s.hw < bd / bs.hw)) { bz = z; bs = s; bd = d; bu = s.ux * dy - s.uy * dx; bt = t; }
     }
     return bs;
   };
   // inside another segment's running surface (a ramp joining, or the next piece of the same road past this one's
   // rounded end): no parapet there
-  const open = (X, Y, z, me) => { for (const s of cand) { if (s === me) continue; let t = (X - s.ax) * s.ux + (Y - s.ay) * s.uy; t = t < 0 ? 0 : t > s.len ? s.len : t; const d = Math.hypot(X - s.ax - s.ux * t, Y - s.ay - s.uy * t), zz = (s.za + (s.zb - s.za) * t / s.len) * LIFT; if (d < s.hw - PAR && Math.abs(zz - z) < 7) return true; } return false; };
+  const open = (X, Y, z, me) => { for (const s of cand) { if (s === me) continue; const tt = (X - s.ax) * s.ux + (Y - s.ay) * s.uy, t = tt < 0 ? 0 : tt > s.len ? s.len : tt; const d = Math.hypot(X - s.ax - s.ux * t, Y - s.ay - s.uy * t), zz = zOf(s, tt); if (d < s.hw - PAR && Math.abs(zz - z) < 7) return true; } return false; };
   // per pixel: top height (-1 none), surface height, what it is (1 road, 2 parapet, 3 median barrier), colour
   const W = w, H2 = h + 1, top = new Float32Array(W * H2).fill(-1), surf = new Float32Array(W * H2), kind = new Uint8Array(W * H2), rampF = new Uint8Array(W * H2);
-  const NUP = [0, 0, 1], NS = [0, 1, 0], AC = [0, 0, 0];             // shared (G.put copies them)
+  const pc = new Uint8Array(W * H2 * 3), pf = new Uint8Array(W * H2);  // (each pixel's colour and flags, for the slope fill)
+  const NUP = [0, 0, 1], NS = [0, 1, 0], AC = [0, 0, 0], FC = [0, 0, 0];             // shared (G.put copies them)
   for (let yy = 0; yy < H2; yy++) for (let xx = 0; xx < W; xx++) {
     const X = x0 + xx, Y = y0 + yy;
     cand = blocks[(yy >> 5) * BW + (xx >> 5)];
@@ -1700,6 +1704,17 @@ function makeDeck(r) {
       if (hash(X >> 3, Y >> 3, 17) > 0.97 && c === AC) { AC[0] *= 0.86; AC[1] *= 0.86; AC[2] *= 0.86; }
     }
     zw(G, xx, yy + TM - Math.round(zz), c, n, zz, f);
+    pc[i * 3] = c[0]; pc[i * 3 + 1] = c[1]; pc[i * 3 + 2] = c[2]; pf[i] = f;
+  }
+  // a ramp sloping down toward the south spreads over more screen rows than it has rows of road: the rows between
+  // one row and the next take the upper one's colour (or the ground under the ramp shows through in stripes)
+  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < W; xx++) {
+    const i = yy * W + xx, tz = top[i], nz = top[i + W];
+    if (tz < 0 || nz < 0 || tz - nz > 2.5) continue;               // (nothing below, or a real step: its face is drawn next)
+    const r0 = yy + TM - Math.round(tz), r1 = yy + 1 + TM - Math.round(nz);
+    if (r1 <= r0 + 1) continue;
+    FC[0] = pc[i * 3]; FC[1] = pc[i * 3 + 1]; FC[2] = pc[i * 3 + 2];
+    for (let r = r0 + 1; r < r1; r++) zw(G, xx, r, FC, NUP, tz - (r - r0) * 0.5, pf[i]);
   }
   // south faces: where the next row south is lower (or no deck), the deck's edge (and parapet) drops; a ramp's
   // embankment wall goes down to the ground, the elevated deck shows its slab edge only (it stands on pillars)

@@ -5,7 +5,11 @@
 - Tests: `npm test` (runs `node --test test/*.test.js`). Run `node tools/stamp-version.mjs` before every commit (cache-busting build id).
 - Docs: add a `docs/DEVLOG.md` entry for each feature; keep the README controls table current.
 
-## Keep the tutorial in sync (standing rule)
+## The tutorial is paused (user, 2026-10-06)
+The tour is disabled in the game (`TUTORIAL_ON` in `client/main.js`) and its tests are skipped: don't spend time
+updating it with each change. The user will redesign it later; the rules below apply again once it is back.
+
+## Keep the tutorial in sync (standing rule, paused - see above)
 The city tour lives in `shared/tutorial.js` and is played by `client/tutorial.js` over the live map.
 - Whenever gameplay, rules, controls, places or the map change, update the tour in the same change.
 - Places are referenced by POI kind / district / island, never coordinates; `{{kind}}` / `{{kind:where}}` resolve to live names and districts, and island stops list their places from the map automatically.

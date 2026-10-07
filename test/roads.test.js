@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer } from './helpers.js';
 import { pointAt, measure } from '../shared/geom.js';
-import { edgeZ, ROAD_RANK } from '../shared/roads.js';
+import { edgeZ, ROAD_RANK, laneOffset } from '../shared/roads.js';
 import { BARRIER_BREAK_SPEED } from '../shared/rules.js';
 
 function drive(w, p, car, pts, maxTicks = 500) {
@@ -45,7 +45,7 @@ test('every highway ramp can be driven, from the lane that feeds it to where it 
     let pre = [];
     if (feed) {
       const fp = feed.b === e.a ? feed.pts : feed.pts.slice().reverse();
-      const lane = feed.kind === 'hwy' ? 189 : 0;
+      const lane = feed.kind === 'hwy' ? laneOffset(feed, 0) : 0;   // (the outer lane the deceleration lane peels off)
       const off = fp.map((q, i) => { const a = fp[Math.max(0, i - 1)], b = fp[Math.min(fp.length - 1, i + 1)]; const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1; return { x: q.x - (dy / l) * lane, y: q.y + (dx / l) * lane }; });
       const L = measure(off);
       pre = off.filter((q) => q.s > L - 900 && q.s < L - 60).map((q) => ({ x: q.x, y: q.y }));

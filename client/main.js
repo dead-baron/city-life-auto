@@ -1209,6 +1209,8 @@ function checkWaypoint() {
 }
 
 // ---- tutorial: guided tour over the live city map ---------------------------------------------
+// Paused (user, 2026-10-06): the tour is not offered and not kept in sync with the game until it is redesigned.
+const TUTORIAL_ON = false;
 let tutMap = null;
 // `then` runs once the tour is finished or skipped (first play: tour first, then into the city)
 function openTutorial(chapter, then) {
@@ -1222,8 +1224,7 @@ function firstPlay(go0) {
   return () => {
     // a new player picks graphics first (the recommended preset for this device is highlighted)
     const go = () => (gfxChosen() ? go0() : askGfx(go0));
-    if (!gfxChosen() && tutorialSeen()) { askGfx(go0); return; }
-    if (tutorialSeen()) { go(); return; }
+    if (!TUTORIAL_ON || tutorialSeen()) { go(); return; }
     if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true); // needs this tap's user gesture
     // ask in a popup (nothing on the title screen moves around)
     tutAskGo = go;
@@ -1306,6 +1307,7 @@ function syncGfxPanel() {
 $('tut-ask-watch').onclick = () => { const go = tutAskGo; tutAskGo = null; closeOverlay('tut-ask'); openTutorial(null, go); };
 $('tut-ask-skip').onclick = () => { const go = tutAskGo; tutAskGo = null; markTutorialSeen(); closeOverlay('tut-ask'); if (go) go(); };
 $('t-tutorial').onclick = () => openTutorial();
+if (!TUTORIAL_ON) $('t-tutorial').classList.add('hidden');
 // back to the game you left (the city kept running while you were on the title screen)
 $('t-resume').onclick = () => {
   if (!S.welcomed) { $('t-resume').classList.add('hidden'); return; }

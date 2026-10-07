@@ -2164,3 +2164,29 @@ The crossroads the R1 / AT1 / AT2 art targets show is now a real place: **Holly 
   - **Shopfronts light the pavement** along their whole front, not just at the door.
   - **Black iron lamps** (`lampPost('iron')`) throw deep amber, crisp-edged pools.
 - **Tests:** the corner's crossroads, district, walk-in diner and mart, lamps and cart (`test/world.test.js`). The tour mentions the corner in Metro City.
+
+## 2026-10-06 · World v2 stage 1b: a two-lane highway with diamond interchanges; the deck raised
+
+The ring highway now runs **two lanes each way**, and you get on and off it at **diamond interchanges** where it crosses the avenues, instead of slip ramps that ended in the middle of the frontage roads. Details in `docs/WORLD-V2.md`, stage 1b.
+- **Lanes** (`shared/roads.js` `ROAD_KINDS.hwy`): 11 tiles wide, two 81 px lanes each way and a 28 px median. The island highways narrow the same way.
+- **Off-ramps** (`shared/citylayout.js` `diamondRamp`):
+  - a taper peels off the outer lane;
+  - a deceleration lane runs alongside the deck (the third lane at a merge);
+  - an eased descent (`zr`: the climb only between those points);
+  - a level run-out;
+  - then the avenue, square-on (at least 45 degrees on a slanted crossing), at the ramps' own junction beside the bridge: signalled, or a stop line when the frontage road's lights are too close.
+  - On-ramps are the mirror image.
+- **Where:** 4 avenues: Bay Avenue and Central Avenue (south) with ramps both sides; Central Avenue (north) and Northbridge Avenue on the inner side only, where the sea or the river leaves no room outside. A ramp never stands in the water or crosses another street.
+- **Traffic:**
+  - a car heading for an off-ramp drifts into the outer lane along the way;
+  - at a ramp's foot you can turn either way or go straight across onto the other ramp;
+  - queued cars stop with a gap that varies per driver, instead of bumper to bumper.
+- **The deck stands 88 px up** (was 44). Trucks, buses and trains pass under it instead of poking through, which fixes the train sticking out of the deck on the curve.
+- **Art:**
+  - ramps no longer show rings or stripes on their slopes (a segment's height runs on past its ends, and the rows a slope spreads over are filled);
+  - the aux lanes merge into the deck with no parapet between.
+- **Also tonight:**
+  - the tutorial is switched off;
+  - no see-through outline on a motorcycle rider;
+  - checkpoint branch `checkpoint-art-16bit`.
+- **`WORLD_VERSION` 4:** homes from before are bought back.

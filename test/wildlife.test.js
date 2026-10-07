@@ -23,7 +23,10 @@ function middleOf(w, name) {
   assert.ok(n > 0, name);
   const cx = sx / n, cy = sy / n;
   pts.sort((a, b) => (a[0] - cx) ** 2 + (a[1] - cy) ** 2 - ((b[0] - cx) ** 2 + (b[1] - cy) ** 2));
-  return { x: pts[0][0] * 32 + 16, y: pts[0][1] * 32 + 16 };
+  // the open country: the nearest such spot to the middle that is well away from any business or home (a roadside
+  // stop or a cottage brings its own people)
+  const far = pts.find(([tx, ty]) => m.pois.every((q) => Math.hypot(q.x - tx * 32, q.y - ty * 32) > 1700)) || pts[0];
+  return { x: far[0] * 32 + 16, y: far[1] * 32 + 16 };
 }
 function clear(w) { for (const e of [...w.entities.values()]) if ((e.kind === K.PED && !e.player) || (e.kind === K.VEH && !e.owner)) w.remove(e); }
 

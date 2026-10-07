@@ -52,7 +52,7 @@ import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roads.js';
 
 export const CHUNK = 768;
 const PAD = 48, WN = CHUNK + PAD * 2, WA = WN * WN, TP = 4, TN = WN / TILE + TP * 2 + 1;
-const DECK_LIFT = 44;                                  // shared/levels.js: px per deck level (ramp heights)
+const DECK_LIFT = 88;                                  // shared/levels.js: px per deck level (ramp heights)
 const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 const TREES = new Set(['tree_a', 'tree_b']), PALMS = new Set(['palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s']);
 

@@ -93,19 +93,39 @@ function enterEdge(world, v, edgeId, from, lane, s0 = 0) {
   const net = world.map.net;
   const ai = v.ai;
   const e = net.edges[edgeId];
-  ai.edge = edgeId; ai.from = from; ai.lane = lane;
-  const lp = lanePath(net, e, from, lane);
+  const to = e.a === from ? e.b : e.a;
+  ai.edge = edgeId; ai.from = from;
+  ai.next = chooseExit(world, net.nodes[to], edgeId);
+  // heading up the deck for an off-ramp from the inside lane: over to the outer lane on the way (the ramp's
+  // deceleration lane peels off it)
+  let lp;
+  if (lane > 0 && ai.next && net.nodes[to].lvl === 1 && net.edges[ai.next.edge].lvl === 'ramp') { lp = laneChangePath(net, e, from, lane, 0, s0); lane = 0; }
+  else lp = lanePath(net, e, from, lane);
+  ai.lane = lane;
   let i0 = 0;
   while (i0 < lp.length - 1 && lp[i0 + 1].s <= s0) i0++;
   const pts = stride(lp, i0 + 1);
-  const to = e.a === from ? e.b : e.a;
   const stop = pts[pts.length - 1] || { x: lp[lp.length - 1].x, y: lp[lp.length - 1].y };
   Object.assign(stop, { stop: true, node: to, edge: edgeId });
   if (!pts.length) pts.push(stop);
   ai.pts = pts;
   ai.kindSpeed = CRUISE[e.kind] || 250;
-  ai.next = chooseExit(world, net.nodes[to], edgeId);
   ai.turning = !!ai.next && Math.abs(ai.next.turn) > 0.5;
+}
+// Lane k0 drifting over to lane k1 along the last stretch of edge e (up to 700 px, eased), from arc length s0 on.
+function laneChangePath(net, e, from, k0, k1, s0 = 0) {
+  const a = lanePath(net, e, from, k0), b = lanePath(net, e, from, k1);
+  const L = a[a.length - 1].s, Lb = b[b.length - 1].s;
+  const sEnd = Math.max(s0 + 1, L - 40), sStart = Math.max(s0, sEnd - Math.min(700, L * 0.7));
+  const out = [];
+  for (let s = 0; ; s = Math.min(L, s + 40)) {
+    const p = pointAt(a, s), q = pointAt(b, (s / Math.max(1, L)) * Lb);
+    const t = clamp((s - sStart) / Math.max(1, sEnd - sStart), 0, 1), u = t * t * (3 - 2 * t);
+    out.push({ x: p.x + (q.x - p.x) * u, y: p.y + (q.y - p.y) * u });
+    if (s >= L) break;
+  }
+  measure(out);
+  return out;
 }
 
 // Through the junction at the end of the current edge onto the chosen next one.
@@ -185,9 +205,12 @@ function lookAhead(v, pts, look) {
   return { x: px, y: py };
 }
 
+// How much room a driver leaves to the car in front when stopped (px, 0.6-2.4 m): some creep right up, others hang
+// back - fixed per vehicle, so a queue at the lights looks like people driving, not a train of bumpers.
+const standoff = (v) => v.standoff ?? (v.standoff = 14 + (Math.imul(v.id | 0, 2654435761) >>> 0) % 44);
 function obstacleSpeed(world, v, fwd) {
   const c = Math.cos(v.a), s = Math.sin(v.a);
-  const look = v.def.L / 2 + 50 + Math.max(0, fwd) * 0.7;
+  const look = v.def.L / 2 + 50 + standoff(v) + Math.max(0, fwd) * 0.7;
   let limit = Infinity;
   for (const e of world.query(v.x + c * look / 2, v.y + s * look / 2, look / 2 + 40)) {
     if (e === v) continue;
@@ -198,7 +221,7 @@ function obstacleSpeed(world, v, fwd) {
     const lx = dx * c + dy * s, ly = -dx * s + dy * c;
     const halfOther = e.kind === K.VEH ? e.def.W / 2 : 10;
     if (lx < 0 || lx > look + 40 || Math.abs(ly) > v.def.W / 2 + halfOther - 4) continue;
-    const gap = lx - v.def.L / 2 - (e.kind === K.VEH ? e.def.L / 2 : 10) - 10;
+    const gap = lx - v.def.L / 2 - (e.kind === K.VEH ? e.def.L / 2 : 10) - 10 - (e.kind === K.VEH ? standoff(v) : 0);
     limit = Math.min(limit, Math.max(0, gap * 1.8));
   }
   return limit;

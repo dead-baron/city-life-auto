@@ -36,7 +36,7 @@ import { GBuf, hash, F_GROUND, F_WATER, F_WET, F_LEAF } from '../gbuf.js';
 import { T, MAP_W, MAP_H, TILE } from '../../../shared/constants.js';
 
 export const CHUNK = 768;
-export const DECK_Z = 44;           // height of the elevated highway deck (lz = 1); shared/levels.js DECK_LIFT
+export const DECK_Z = 88;           // height of the elevated highway deck (lz = 1); shared/levels.js DECK_LIFT
 export const GROUND_TOL = 4;        // flat ground this much higher than a sprite pixel still lets it through
 export const GH_CELL = 4, GH_EXTRA = 64;
 export const GH_W = CHUNK / GH_CELL, GH_H = (CHUNK + GH_EXTRA) / GH_CELL;

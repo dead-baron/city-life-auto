@@ -1,6 +1,10 @@
 // The city tour must stay true to the game. These tests fail when the map, the rules or the
 // controls change in a way the tutorial (shared/tutorial.js) doesn't cover yet.
-import { test } from 'node:test';
+import { test as nodeTest } from 'node:test';
+// The tour is paused (user, 2026-10-06): disabled in the game and no longer kept in sync with every change until it
+// is redesigned. These checks come back with it.
+const PAUSED = 'the tutorial is paused until its redesign (user, 2026-10-06)';
+const test = (name, fn) => nodeTest(name, { skip: PAUSED }, fn);
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { generateCity, ISLANDS, DISTRICTS } from '../shared/map.js';

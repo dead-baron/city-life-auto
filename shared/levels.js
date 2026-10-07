@@ -11,7 +11,8 @@ import { edgeZ } from './roads.js';
 import { BARRIER_BREAK_SPEED } from './rules.js';
 
 export const GROUND_Z = 0.3;  // below this you're on the ground (tile collisions apply)
-export const DECK_LIFT = 44;  // screen px a thing on the deck is drawn above its ground position (render only)
+export const DECK_LIFT = 88;  // screen px a thing on the deck is drawn above its ground position (render only): high enough
+                              // that the tallest trucks, buses and trains pass under the deck's slab without showing through it
 const CELL = 256;
 // Barriers (parapets) come in pieces this long; a piece smashed through stays open until the
 // road crew put it back. Key: "<edge>:<side>:<piece>" (side +1 = right of the edge's direction).

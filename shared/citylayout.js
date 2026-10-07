@@ -129,50 +129,87 @@ export function ringLine() {
   return pts;
 }
 
-// Where the slip ramps go: at every other avenue crossing (by arc length along the clockwise
-// ring), never where something else passes under the deck within a ramp's reach.
+// Where the interchanges go: at every other avenue crossing (by arc length along the clockwise ring), never
+// where something else (another avenue, the railway) passes under the deck within a ramp's reach.
+export const RAMP_REACH = 1900;   // px along the ring from the avenue to where a ramp leaves (or joins) the deck
 export function rampSites(ringPts, crossS, keepOut) {
   const L = ringPts[ringPts.length - 1].s;
   const sorted = crossS.slice().sort((a, b) => a - b);
   const sites = [];
   for (const s of sorted) {
-    if (sites.length && s - sites[sites.length - 1] < 4300) continue;
-    if (sites.length && L - s + sites[0] < 4300) continue;
-    const clear = keepOut.every((k) => { const d = Math.abs(((k - s) % L + L * 1.5) % L - L / 2); return d > 2120 || d < 1; });
+    if (sites.length && s - sites[sites.length - 1] < 2 * RAMP_REACH + 500) continue;
+    if (sites.length && L - s + sites[0] < 2 * RAMP_REACH + 500) continue;
+    const clear = keepOut.every((k) => { const d = Math.abs(((k - s) % L + L * 1.5) % L - L / 2); return d > RAMP_REACH + 220 || d < 1; });
     if (clear) sites.push(s);
   }
   return sites;
 }
 
-// One slip ramp between the deck and a frontage road. dir +1: clockwise carriageway (inner side),
-// -1: anticlockwise (outer side). off: leaving the highway (true) or joining it.
-export function slipRamp(ringPts, front, s, dirSign, off) {
+// One ramp of a diamond interchange where an avenue passes under the deck (docs/WORLD-V2.md, "Highway ramps"):
+//   off-ramp (off = true): a deceleration lane peels off the outer lane along a taper, runs alongside the deck as
+//   a third lane, bends away in a gentle curve while it eases down the embankment, levels out, and meets the
+//   avenue square-on at the ramp's own signalled junction, well clear of the bridge;
+//   on-ramp: the mirror image - level start at the avenue, an eased climb through the curve, then an acceleration
+//   lane alongside the deck that tapers into the outer lane.
+// s: the crossing's arc length on the ring; ave: { x, y, dx, dy } the avenue's point and direction there; dirSign
+// +1 for the clockwise carriageway (ramps on the inner side), -1 anticlockwise (outer side). o: { lane, aux, D }
+// - the outer lane's and the auxiliary lane's offsets from the ring's centre line, and how far out (from the
+// ring's centre line) the ramps meet the avenue. Returns { pts, z0, z1, zr, foot } or null (too skewed a crossing).
+export function diamondRamp(ringPts, s, ave, dirSign, off, o) {
   const L = ringPts[ringPts.length - 1].s;
-  const at = (q) => pointAt(ringPts, ((q % L) + L) % L);
-  // travel direction along the ring for this carriageway, and its right-hand side
-  const sDeck = off ? s - 2000 * dirSign : s + 2000 * dirSign;
-  const sGround = off ? s - 700 * dirSign : s + 700 * dirSign;
-  const pd = at(sDeck), pg = at(sGround);
-  const tdx = pd.tx * dirSign, tdy = pd.ty * dirSign;
-  const gdx = pg.tx * dirSign, gdy = pg.ty * dirSign;
-  // right of travel: (-ty, tx)
-  const deckPt = { x: pd.x - tdy * 7 * TILE * 0.82, y: pd.y + tdx * 7 * TILE * 0.82 };
-  const groundPt = { x: pg.x - gdy * BAND * TILE, y: pg.y + gdx * BAND * TILE };
-  // snap the ground end onto the frontage road itself
-  let best = null;
-  for (const piece of front) {
-    if (piece[0].s === undefined) measure(piece);
-    const pr = project(piece, groundPt);
-    if (pr && (!best || pr.d < best.d)) best = pr;
+  const at = (q) => {
+    const a = pointAt(ringPts, ((q - 24) % L + L) % L), b = pointAt(ringPts, ((q + 24) % L + L) % L), c = pointAt(ringPts, ((q % L) + L) % L);
+    const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1;
+    return { x: c.x, y: c.y, tx: (dx / l) * dirSign, ty: (dy / l) * dirSign }; // tangent along this carriageway's travel
+  };
+  const side = (p, d) => ({ x: p.x - p.ty * d, y: p.y + p.tx * d }); // d px to the right of travel
+  const C = at(s);
+  const rx = -C.ty, ry = C.tx;
+  // the avenue, pointing out to this carriageway's side; the ramp junction where it is D px out from the ring
+  let dx = ave.dx, dy = ave.dy;
+  if (dx * rx + dy * ry < 0) { dx = -dx; dy = -dy; }
+  const cosA = dx * rx + dy * ry;
+  if (cosA < 0.6) return null;                 // (crossing too skewed for a diamond)
+  const k = o.D / cosA, T = { x: ave.x + dx * k, y: ave.y + dy * k };
+  const RUN = 450, sg = off ? -1 : 1;           // (off: upstream of the avenue; on: downstream - along the ring that is
+                                                // s - q for the clockwise carriageway, s + q for the other)
+  // square-on: the last stretch runs across the avenue in the direction of travel. Where the avenue crosses the
+  // ring at a slant that would pull the foot in under the bridge on one side, the run-out leans toward the ring's
+  // own direction - never so far that it meets the avenue at less than 45 degrees.
+  let ax = -dy, ay = dx;
+  if (ax * C.tx + ay * C.ty < 0) { ax = -ax; ay = -ay; }
+  let nx = ax, ny = ay, F = null;
+  for (let w = 0; w <= 1.001; w += 0.125) {
+    let mx = ax + (C.tx - ax) * w, my = ay + (C.ty - ay) * w;
+    const ml = Math.hypot(mx, my) || 1; mx /= ml; my /= ml;
+    if (Math.abs(mx * dx + my * dy) > 0.72) break;           // (sharper than 45 degrees to the avenue)
+    const f = { x: T.x + sg * mx * RUN, y: T.y + sg * my * RUN }, out = (f.x - C.x) * rx + (f.y - C.y) * ry;
+    if (out >= o.D * 0.8 && out <= o.D * 1.35) { nx = mx; ny = my; F = f; break; } // (clear of the bridge, inside the frontage road)
   }
-  if (!best || best.d > 6 * TILE) return null;
-  const gp = { x: best.x, y: best.y };
-  const span = Math.hypot(gp.x - deckPt.x, gp.y - deckPt.y);
-  const a = off ? deckPt : gp, b = off ? gp : deckPt;
-  const ta = off ? { x: tdx, y: tdy } : { x: gdx, y: gdy }, tb = off ? { x: gdx, y: gdy } : { x: tdx, y: tdy };
-  const pts = cubic(a, { x: a.x + ta.x * span * 0.42, y: a.y + ta.y * span * 0.42 }, { x: b.x - tb.x * span * 0.42, y: b.y - tb.y * span * 0.42 }, b, 20);
-  return { pts, z0: off ? 1 : 0, z1: off ? 0 : 1 };
+  if (!F) return null;
+  // along the deck: the taper (outer lane -> auxiliary lane) and the auxiliary lane itself
+  const deck = [];
+  const q0 = RAMP_REACH, q1 = RAMP_REACH - 350, q2 = RAMP_REACH - 650;
+  for (let q = q0; q >= q2 - 0.1; q -= 25) {
+    const u = q > q1 ? (q0 - q) / (q0 - q1) : 1, e = u * u * (3 - 2 * u);
+    deck.push(side(at(s + sg * dirSign * q), o.lane + (o.aux - o.lane) * e));
+  }
+  const P2 = deck[deck.length - 1], t2 = at(s + sg * dirSign * q2);
+  const span = Math.hypot(F.x - P2.x, F.y - P2.y);
+  // the curve between them: leaving the deck along the travel direction, arriving square to the avenue
+  const curve = cubic(P2, { x: P2.x - sg * t2.tx * span * 0.42, y: P2.y - sg * t2.ty * span * 0.42 }, { x: F.x + sg * nx * span * 0.42, y: F.y + sg * ny * span * 0.42 }, F, 24);
+  // (built from the deck end outward; an off-ramp runs the other way)
+  let pts = deck.concat(curve.slice(1)).concat([{ x: T.x, y: T.y }]);
+  if (off) {
+    // from the deck to the avenue: level along the deck, the descent, the level run-out
+    const len = measureLen(pts), a = measureLen(deck), b = len - RUN;
+    return { pts, z0: 1, z1: 0, zr: [a / len, b / len], foot: F, end: T };
+  }
+  pts = pts.reverse();
+  const len = measureLen(pts), a = RUN, b = len - measureLen(deck);
+  return { pts, z0: 0, z1: 1, zr: [a / len, b / len], foot: F, end: T };
 }
+const measureLen = (pts) => { let l = 0; for (let i = 1; i < pts.length; i++) l += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); return l; };
 
 // Straight run from (x, y) heading (dx, dy) across water to the next land: returns the far shore
 // point and the water length, or null.

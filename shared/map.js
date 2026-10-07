@@ -18,11 +18,11 @@ import { T, TILE, MAP_W, MAP_H } from './constants.js';
 import { mulberry32, hash2 } from './rng.js';
 import { PREFABS } from './prefab-data.js';
 import { LAND, TERRAIN, TERRAIN_CELL } from './worldmask.js';
-import { buildNetwork, stampEdge, stampLine, edgeZ, ROAD_KINDS, sidewalkPx } from './roads.js';
+import { buildNetwork, stampEdge, stampLine, edgeZ, ROAD_KINDS, sidewalkPx, laneOffset } from './roads.js';
 import { measure, pointAt, rounded, project, cubic, quad, segX } from './geom.js';
 import {
   Z, BAND, PARK, CRESCENT, SEEDS,
-  clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, slipRamp, acrossWater,
+  clipLine, offsetLoop, contours, smoothLine, ringLine, rampSites, diamondRamp, acrossWater,
 } from './citylayout.js';
 import { metroRoads, HERO } from './metro.js';
 import { buildLevels } from './levels.js';
@@ -879,8 +879,10 @@ function layoutRoads(m, rand) {
     }
   }
 
-  // highway slip ramps: diamond-free "Texas" style onto the one-way frontage roads
-  const crossS = [];
+  // highway interchanges: diamonds where the ring crosses an avenue (citylayout.js diamondRamp). Each carriageway
+  // gets an off-ramp before the avenue and an on-ramp after it, meeting the avenue at their own signalled
+  // junction out beside the bridge (the frontage roads keep their own junctions further out).
+  const crossS = [], crossAt = [];
   for (const g of metro.aves.filter((q) => q.kind === 'ave' || q.kind === 'blvd')) {
     for (let k = 0; k + 1 < g.pts.length; k++) {
       for (let j = 0; j + 1 < ring.length; j++) {
@@ -889,30 +891,51 @@ function layoutRoads(m, rand) {
         if (Math.abs(den) < 1e-9) continue;
         const t = ((c.x - a.x) * (d.y - c.y) - (c.y - a.y) * (d.x - c.x)) / den;
         const u = ((c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)) / den;
-        if (t >= 0 && t <= 1 && u >= 0 && u <= 1) crossS.push(c.s + (d.s - c.s) * u);
+        if (t < 0 || t > 1 || u < 0 || u > 1) continue;
+        const l = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        crossS.push(c.s + (d.s - c.s) * u);
+        crossAt.push({ s: c.s + (d.s - c.s) * u, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, dx: (b.x - a.x) / l, dy: (b.y - a.y) / l, ave: g });
       }
     }
   }
   m.ringCross = crossS;
   const keep = crossS.concat(m.railRingCross || []);
   const sites = rampSites(ring, crossS, keep);
+  const HWY = ROAD_KINDS.hwy, laneOut = laneOffset({ w: HWY.w * TILE, nl: HWY.nl, median: HWY.median, oneway: false }, 0);
+  const RAMP_O = { lane: laneOut, aux: laneOut + (HWY.w * TILE / 2 - HWY.median / 2) / HWY.nl, D: 320 };
   m.ramps = [];
   for (const s of sites) {
+    const cx = crossAt.find((c) => Math.abs(c.s - s) < 1);
+    if (!cx) continue;
     for (const dir of [1, -1]) {
-      const front = dir > 0 ? innerPieces : outerPieces;
-      if (!front.length) continue;
-      for (const off of [true, false]) {
-        const r = slipRamp(ring, front, s, dir, off);
-        if (!r) continue;
-        // the ground end must land on a frontage road on land, and the low half of the ramp
-        // (an embankment) can't stand in the water
-        const g = off ? r.pts[r.pts.length - 1] : r.pts[0];
-        if (!isLand(g.x / TILE, g.y / TILE)) continue;
-        const low = off ? r.pts.slice(Math.floor(r.pts.length / 2)) : r.pts.slice(0, Math.ceil(r.pts.length / 2));
-        if (low.some((q) => !isLand(q.x / TILE, q.y / TILE) || !isLand(q.x / TILE + 2, q.y / TILE) || !isLand(q.x / TILE - 2, q.y / TILE))) continue;
-        lines.push({ pts: r.pts, kind: 'ramp', lvl: 'ramp', z0: r.z0, z1: r.z1, name: off ? 'Exit ramp' : 'On-ramp' });
-        m.ramps.push({ s, dir, off });
-      }
+      const pair = [true, false].map((off) => diamondRamp(ring, s, cx, dir, off, RAMP_O));
+      // both ramps of a side, or neither: their foot and run-out on land, the junction on the avenue's land
+      if (pair.some((r) => !r)) continue;
+      // (the lower half of a ramp is an embankment and a street: it can't stand in the water)
+      const wet = (r) => {
+        const P = r.pts.map((q) => ({ x: q.x, y: q.y })), len = measure(P), mid = (r.zr[0] + r.zr[1]) / 2;
+        return P.some((q) => { const low = r.z0 > 0.5 ? q.s / len > mid : q.s / len < mid; return low && (!isLand(q.x / TILE, q.y / TILE) || !isLand(q.x / TILE + 2, q.y / TILE) || !isLand(q.x / TILE - 2, q.y / TILE)); });
+      };
+      if (pair.some(wet)) continue;
+      // nor cross another street on the ground (the frontage road, a crescent): only the avenue it meets
+      const near = lines.filter((l) => l.lvl === 0 && l !== cx.ave && l.pts.length >= 2);
+      const crosses = (r) => {
+        const P = r.pts.map((q) => ({ x: q.x, y: q.y })), len = measure(P), mid = (r.zr[0] + r.zr[1]) / 2, hwR = ROAD_KINDS.ramp.w * TILE / 2;
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        for (const q of P) { x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
+        const cand = near.filter((l) => { const b = l.box || (l.box = l.pts.reduce((a, q) => [Math.min(a[0], q.x), Math.min(a[1], q.y), Math.max(a[2], q.x), Math.max(a[3], q.y)], [Infinity, Infinity, -Infinity, -Infinity])); return b[0] < x1 + 500 && b[2] > x0 - 500 && b[1] < y1 + 500 && b[3] > y0 - 500; });
+        return P.some((q) => {
+          const low = r.z0 > 0.5 ? q.s / len > mid : q.s / len < mid;
+          if (!low || Math.hypot(q.x - r.end.x, q.y - r.end.y) < 260) return false;   // (the end meets the avenue)
+          return cand.some((l) => { const pr = project(l.pts.map((p) => ({ x: p.x, y: p.y })), q); return pr && pr.d < hwR + ((ROAD_KINDS[l.kind] || ROAD_KINDS.st).w * TILE) / 2 + 24; });
+        });
+      };
+      if (pair.some(crosses)) continue;
+      pair.forEach((r, k) => {
+        const off = k === 0;
+        lines.push({ pts: r.pts, kind: 'ramp', lvl: 'ramp', z0: r.z0, z1: r.z1, zr: r.zr, name: off ? `Exit to ${cx.ave.name || 'the avenue'}` : `On-ramp from ${cx.ave.name || 'the avenue'}` });
+        m.ramps.push({ s, dir, off, foot: r.foot, end: r.end, ave: cx.ave.name || '' });
+      });
     }
   }
 
@@ -1058,7 +1081,7 @@ function clipAtHighways(lines) {
         if (x) cuts.push(pts[i].s + (pts[i + 1].s - pts[i].s) * x.t);
       }
     }
-    const gap = 14 * TILE / 2 + 3 * TILE;
+    const gap = ROAD_KINDS.hwy.w * TILE / 2 + 3 * TILE; // (3 tiles clear of the highway's edge)
     // an end that stops right beside a highway is pulled back too (it would snap onto it)
     const near = (q) => hw.some((h) => { if (q.x < h.box.x0 - gap || q.x > h.box.x1 + gap || q.y < h.box.y0 - gap || q.y > h.box.y1 + gap) return false; const pr = project(h.pts, q); return pr && pr.d < gap; });
     if (near(pts[0])) { let s1 = 0; while (s1 < L && near(pointAt(pts, s1))) s1 += 16; cuts.push(Math.min(L, s1) - gap); }

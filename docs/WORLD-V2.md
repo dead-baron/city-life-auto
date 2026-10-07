@@ -150,7 +150,7 @@ with vehicle access, a bed and a place to cook; waterfront ones with a dock and 
   switched on with stage 1; stage 0 left the world unchanged). Highway lane
   counts are unchanged so far (3 each way on the ring): the deck art and levels depend on them, they change with
   the highway stage. Previews: `tools/world2/preview.mjs` -> `docs/world-v2/`.
-- **Stage 1 (done but for the highway, 2026-10-06):** Metro City's streets come from `shared/metro.js` (avenues + Broadway kept as
+- **Stage 1 (done, 2026-10-06):** Metro City's streets come from `shared/metro.js` (avenues + Broadway kept as
   the skeleton, `PATTERNS` per district between them: varied block depths and lengths, staggered side streets with
   jogs and T-junctions, service alleys behind the rows, plazas, Old Town's wandering lanes); the central island and
   Southside are filled with real-sized lots (`LOT`, `v2Block`, `fillRowV2` in `shared/map.js`); pavements by
@@ -169,3 +169,25 @@ with vehicle access, a bed and a place to cook; waterfront ones with a dock and 
   sits in Midtown, Portside Logistics in The Yards or Southside. Known gaps for stage 2: Pine Hills keeps its
   old plan and has no home for sale (one in the original world); Metro City has few homes (Southside 13, a
   handful elsewhere; 116 world-wide against 125 in the original world).
+- **Stage 1b (done, 2026-10-06): the highway.**
+  - **Lanes:** two each way, 81 px each (`ROAD_KINDS.hwy`: 11 tiles with a 28 px median), on the ring and on the
+    island highways. Where a ramp joins or leaves, its acceleration or deceleration lane runs alongside the deck as
+    a third lane.
+  - **Diamond interchanges** where the ring crosses an avenue (`citylayout.js` `diamondRamp`, `map.js`
+    `layoutRoads`). They sit at 4 avenues (Bay, Central x2, Northbridge); 2 of them have ramps on one side only,
+    where the sea or the river leaves no room on the outer side.
+  - **Off-ramps:** a 350 px taper off the outer lane, 300 px alongside the deck, an eased descent over ~800 px
+    (`zr`: level before and after the climb), a 450 px level run-out, then the avenue at the ramps' own junction,
+    320 px out from the ring's centre line. It is signalled, or a stop line where the frontage road's junction is
+    too close.
+  - **On-ramps:** the mirror image. A slanted crossing leans its run-out toward the ring, never under 45 degrees
+    to the avenue.
+  - **Ramp checks:** no ramp foot stands in the water or crosses another street.
+  - **The old slip ramps onto the frontage roads are gone;** the frontage roads stay as one-way streets.
+  - **Traffic:** a car heading for an off-ramp drifts over to the outer lane along the way (`traffic.js`
+    `laneChangePath`). A ramp's foot is an ordinary junction, so you can turn either way onto the avenue or go
+    straight on to the other ramp. Queued cars keep a gap that varies per driver.
+  - **The deck stands 88 px up** (was 44), so trucks, buses and trains pass under it without showing through.
+  - **`WORLD_VERSION` 4.**
+  - **Still open:** a third lane over long stretches between interchanges (needs lane drops in the traffic AI)
+    and partial cloverleafs for the biggest crossings.

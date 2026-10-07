@@ -72,6 +72,53 @@ concepts per area.
 - **Security train [done 2026-10-06]:** the guards shout a warning at the mail car's door and draw on you; inside they
   count down 4 s before they fire, and a guard who turns on you takes a second to draw.
 
+## From play-testing (2026-10-06 evening, 20:33)
+The 16-bit art pass is in a good spot: checkpoint branch `checkpoint-art-16bit` (commit 474d1bf, build
+`bbb0378cd2c1`, tested by the user on desktop). The tutorial is paused: disabled in the game and no longer kept in
+sync until the user redesigns it. Its replacement is planned in the doc "City Life Auto: New-Player Tutorial & Game
+Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
+- a quick start under a minute (12 animated shots, controls by device first);
+- an in-game Game Guide (a visual wiki in 8 sections, every place with a Set waypoint button);
+- the ChatGPT image prompts for both, kept in order. New tutorial needs go into that doc, not the game.
+
+**With the highway stage (World v2 1b) [now]:**
+- **Vehicles clip through the top of the highway, and the train sticks out of it on a curve:** raise the deck.
+- **Spacing in traffic queues:** cars stop bumper to bumper. Leave a gap that varies per driver, some close and
+  some roomier.
+- **The rider's see-through outline** shows through a motorcycle. Don't show it on vehicles where you can see the
+  rider.
+
+**Next, after the highway stage:**
+- **Graphics stop loading on mobile** (Pixel 7 Pro, Medium) after a lot of travel round the world. They load
+  sooner when frontloaded; a bigger download up front is fine if it helps.
+- **Lamp-post shadows:** a street light casts a big triangle from the top of the post down to its foot. It should
+  cast the post's own shape out from its base (the shadow of a thin upright thing in 3D).
+- **Running without a button:** only the keyboard keeps a run key (Shift). On a gamepad or touch, a full stick
+  is full speed.
+- **On a train, buildings fade too soon.** They go see-through when you pass beside them, so between two
+  buildings both fade. On a train, fade only what you are really behind, or nothing.
+- **NPCs walk through the train** when boarding or passing. They should go round it, and board and alight from
+  the platform.
+- **The Cedar Falls clinic:** a building in front of it hides the interior when you respawn there.
+- **The debug menu:**
+  - **Buttons stay lit:** they stay highlighted after use (4 stars and then clear wanted both stay yellow).
+  - **Easy access:** a small debug icon on every device (a pink circle with a bug, grey and see-through until
+    activated), or the top option of the menu on a controller. It opens the menu straight away.
+  - **Order:** give weapons first, teleport anywhere second, spectate third, with the online player list beside
+    it, easy to reach with a stick, d-pad, mouse or touch.
+  - **A testing category per feature** (jobs, events, world events, items...) that spawns the thing or takes you
+    there.
+  - **Weather controls.**
+- **Police in the wilderness:** cops shouldn't spawn right on you while you flee. Fleeing into the wilderness makes
+  you harder to find.
+- **Umbrellas:** NPCs hold the umbrella in one hand.
+
+**Then, through the night: the environment pass.**
+- Make the procedural nature and the points of interest as close to the concepts as possible (N1-N10, D9-D17,
+  E1-E3f, W1-W2).
+- Build specific places to the concepts' standard; the user will help fill in around them.
+- More variety in the nature assets. More nature concepts are coming.
+
 ## Sharks [W2 stage 5]
 - Extremely rare anywhere in the sea; likeliest round the prison island (still rare).
 - Fins are seen now and then: sharks hunting near the surface.

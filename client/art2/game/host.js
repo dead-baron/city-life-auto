@@ -818,7 +818,7 @@ export class World2 {
         if (!rk) rk = p._v2r && E.hasSprite(p._v2r) ? p._v2r : null;
         if (!rk) continue;
         p._v2r = rk;
-        o.xray = p.id === myPed; o.alpha = 1;
+        o.xray = false; o.alpha = 1;   // (a rider sits in the open: no see-through outline through the bike)
         E.drawSprite(rk, x, y, Math.max(0, z0), o);
       }
     }
