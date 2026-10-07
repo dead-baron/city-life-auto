@@ -1285,7 +1285,9 @@ function edges(C, G) {
         setC(G, gi, c); putN(G, gi, 0, 2.2); G.z[gi] = Math.max(0, H - r + 1); G.flag[gi] = F_GROUND | F_WET;
         break;
       }
-      if (m === M_.TRACK) {                                     // red-and-white kerbs along a race track's edges
+      if (m === M_.TRACK) {                                     // red-and-white kerbs along a race track's edges; the chequered start line
+        const sl = (C.M.raceways || []).find((r) => r.start && X >= r.start.x && X < r.start.x + r.start.w && Y >= r.start.y && Y < r.start.y + r.start.h);
+        if (sl) setC(G, gi, ((Math.floor((X - sl.start.x) / 8) + Math.floor((Y - sl.start.y) / 8)) & 1) ? MAT.metalDark[0] : sd(MAT.paintWhite, 0.8, X, Y, 0.3));
         let edge = 0;
         for (let r = 1; r <= 7 && !edge; r++) if (M[i - r] !== M_.TRACK || M[i + r] !== M_.TRACK || M[i - r * WN] !== M_.TRACK || M[i + r * WN] !== M_.TRACK) edge = r;
         if (edge) { setC(G, gi, ((Math.floor(X / 14) + Math.floor(Y / 14)) & 1) ? sd(MAT.kerbRed, 0.6, X, Y, 0.3) : sd(MAT.paintWhite, 0.7, X, Y, 0.3)); G.z[gi] = Z[i] + 1; }

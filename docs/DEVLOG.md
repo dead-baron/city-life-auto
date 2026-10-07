@@ -3030,3 +3030,22 @@ Walk onto either half court and press the action button to pick up a ball (`serv
   - A world built with the engine's maths nudged by a bit (as Safari's is) comes out identical.
   - Building it calls no engine-approximated function and no `Math.random`.
   - Shared code uses `**` only to square.
+
+## 2026-10-07 · A race at the Westport Raceway, and the Splash Bay water slides
+
+- **Three laps of the Westport Raceway** (`server/systems/races.js`; the course: `shared/map.js`, after the water races).
+  - Anything with wheels can enter. Pull up behind the chequered start line, which the oval now has (`shared/countryside.js` `track.start`, drawn by `groundbake.js`).
+  - The countdown gives others time to join, then it's three laps of eight checkpoints round the oval. Each lap's time comes up as you finish it.
+  - The prize is $300. Races keep their rules from before: forfeit if you leave your vehicle, die or wander off.
+  - The start is a place on the maps and the phone (a 🏁 icon).
+- **The water slides at Splash Bay** (a ride: `server/systems/rides.js`; the slides and the stair: `shared/rides.js`). They're free.
+  - At the foot of the slide tower's east side, the action button takes the next slide in turn: the blue tube, the red flume, the yellow flume.
+  - You walk up the tower's three flights of stairs and along the top deck to the slide's bay. Then you go down on your back, feet first, slow off the top and faster all the way to the bottom. In the tube you're out of sight, though you see yourself through it.
+  - It ends with a splash in the slide's pool, and you're swimming.
+  - Everyone sees the sliders: the ride is broadcast and drawn from the shared path, like the balloons.
+  - Like the other rides: nobody can hurt you on it, and not while wanted, carrying a crate or driving.
+  - The tower's canopy is higher now, so people on the top deck stand under it.
+  - `tools/art2/live-test.html` takes `&slide=k,t` to look at sliders at any moment.
+- **Tests:**
+  - `test/water.test.js`: the raceway race's course, laps and finish.
+  - `test/business.test.js`: the slides' paths, the climb, a ride down each slide in turn, and logging off on the slide.

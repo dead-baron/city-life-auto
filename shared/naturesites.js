@@ -1328,19 +1328,24 @@ function splashBay(m, H) {
   add('outcrop', 130.5, 977.2, 0, { w: 90, d: 40, h: 34, style: 'granite', s: 2 }); add('fallsmall', 130.5, 977.6, 0, { w: 14, h: 20 });
   for (const [tx, ty, sp] of [[126.8, 976.6, 'hibiscus'], [133.8, 974.8, 'bird'], [128.6, 972.9, 'monstera']]) add('shrub_a', tx, ty, 0, { sp, k: 1 });
   for (const [tx, ty, v] of [[122.4, 974.6, 0], [137.7, 976.8, 2], [131, 970.3, 1], [125.6, 980.4, 3]]) add('ringfloat', tx, ty, 0, { v });
-  // the slide tower (solid) at the north of the east half; three slides down to three splash pools
+  // the slide tower (solid) at the north of the east half; three slides down to three splash pools. The slides are
+  // rides (server/systems/rides.js; the path down and the stair up: shared/rides.js): you board at the foot of the
+  // tower's east side, by its stair.
   const TX = 151, TY = 966;   // the tower's south face, tiles
   for (let ty = TY - 2; ty < TY; ty++) for (let tx = TX - 2; tx < TX + 2; tx++) m.tiles[at(tx, ty)] = T.WALL;
   add('stower', TX, TY - 0.9, 0);
-  const SP = [[144, 'tube', '#2a6ab8'], [150, 'flume', '#d8342e'], [156, 'flume', '#e8b830']];
-  SP.forEach(([px, kind, c], k) => {
+  const SP = [[144, 'tube', '#2a6ab8', 'the blue tube'], [150, 'flume', '#d8342e', 'the red flume'], [156, 'flume', '#e8b830', 'the yellow flume']], slides = [];
+  SP.forEach(([px, kind, c, name], k) => {
     const pw = 4, ph = 4, py = 977, x = px - pw / 2;
     for (let ty = py; ty < py + ph; ty++) for (let tx = x; tx < x + pw; tx++) m.tiles[at(tx, ty)] = ty === py + ph - 1 || tx === x || tx === x + pw - 1 ? T.WATER : T.DEEP;
     (m.pools ||= []).push({ x: x * TILE, y: py * TILE, w: pw * TILE, h: ph * TILE, lanes: 0, deck });
-    const sx = (TX - 1 + k) * TILE + 16, sy = TY * TILE + 2;
-    add('wslide', sx / TILE, sy / TILE, 0, { dx: px * TILE - sx, len: (py - TY) * TILE + 30, z: 84, kind, c });
+    const sx = (TX - 1 + k) * TILE + 16, sy = TY * TILE + 2, dx = px * TILE - sx, len = (py - TY) * TILE + 30;
+    add('wslide', sx / TILE, sy / TILE, 0, { dx, len, z: 84, kind, c });
+    slides.push({ x: sx, y: sy, dx, len, z: 84, kind, name });
     add('lguard', px + 2.6, py + 1.2, 12, { a: Math.PI });
   });
+  const board = { x: TX * TILE + 74, y: Math.round((TY - 0.9) * TILE) };
+  addCounter(m, 'ride', 'Splash Bay Water Slides', board.x, board.y, 40);
   // the changing block along the north side (solid), facing the deck; the snack cart by it, the gate on the west
   const bx0 = 120, bw = 9;
   for (let ty = Y0 + 1; ty <= Y0 + 2; ty++) for (let tx = bx0; tx < bx0 + bw; tx++) m.tiles[at(tx, ty)] = T.WALL;
@@ -1365,7 +1370,7 @@ function splashBay(m, H) {
   add('textsign', X0 - 2, gy - 1.3, 0, { text: 'SPLASH BAY', z: 46, bg: '#1a5a9a', fg: [255, 226, 90] });
   add('bikerack', X0 - 2.4, gy + 2.6, 6); add('trashcan', X0 - 1.2, gy + 2.4, 5);
   (m.landmarks ||= []).push({ name: 'Splash Bay Water Park', type: 'waterpark', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
-  m.natureSites.push({ kind: 'waterpark', name: 'Splash Bay Water Park', x: Math.round(ring.cx), y: Math.round(ring.cy + ring.ry), gate: { x: X0 * TILE + 16, y: gy * TILE + 16 }, tower: { x: TX * TILE, y: TY * TILE } });
+  m.natureSites.push({ kind: 'waterpark', name: 'Splash Bay Water Park', x: Math.round(ring.cx), y: Math.round(ring.cy + ring.ry), gate: { x: X0 * TILE + 16, y: gy * TILE + 16 }, tower: { x: TX * TILE, y: TY * TILE }, slides, board });
 }
 
 // ---- Driftwood Point (Cedar Hills; concept N8-D) ---------------------------------------------------------------

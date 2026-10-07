@@ -14,13 +14,14 @@
        &lights=1     the baked static lights (lamps, windows, signs) added at that strength, as the game does at night
        &cabs=T       the Ferris wheel's gondolas where they are at loop time T (shared/rides.js; the wheel bakes without)
        &balloon=r,t,pal  a balloon flight on route r (balloonRoutes) t seconds after lift-off, in palette pal
+       &slide=k,t[,k,t...]  someone on Splash Bay's slide k t seconds after boarding (slideRider; drawn as host.js _slider)
      window.render(t, windT) draws another frame at that clock (returns when done); window.ready once baked. -->
 <canvas id="cv"></canvas><div id="hud"></div>
 <script type="module">
 import { Art2Engine, PRESETS_GAME } from '../../client/art2/game/engine.js';
 import { bakeChunk, loadProviders, SpriteCache, CHUNK } from '../../client/art2/game/chunkbake.js';
 import { generateCity } from '../../shared/map.js';
-import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt } from '../../shared/rides.js';
+import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../shared/rides.js';
 import * as Act from '../../client/art2/game/actors.js';
 const q = new URLSearchParams(location.search);
 const [camX, camY] = (q.get('cam') || '18300,12780').split(',').map(Number);
@@ -59,6 +60,18 @@ if (q.get('cabs') !== null) {
 if (q.get('balloon')) {
   const [r, t, pal] = q.get('balloon').split(',').map(Number), route = balloonRoutes(M)[r || 0];
   if (route) { const at = balloonAt(route, t, 100); sprites.push([sprite(Act.rideKey('balloon', pal || 0), () => Act.rideSprite('balloon', pal || 0)), at.x, at.y, at.z, at.z > 24]); if (lightK) lights.push({ x: at.x, y: at.y, z: at.z + 46, r: 150, col: [1, 0.55, 0.2], k: 1.6 }); }
+}
+if (q.get('slide')) {
+  const Pd = await import('../../client/art2/game/peds.js'), { makeAppearance } = await import('../../server/entities.js'), { dir8 } = await import('../../client/render/chars.js');
+  const site = slideSite(M), v = q.get('slide').split(',').map(Number);
+  let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i + 1 < v.length; i += 2) {
+    const k = v[i], at = slideRider(site, k, v[i + 1]), climbing = at.phase === 0, tube = !climbing && site.slides[k].kind === 'tube' && at.at > 0.01 && at.at < 0.99;
+    const app = Pd.adaptApp(makeAppearance(rnd, 'casual'), 'casual'), d8 = dir8(at.a), pose = climbing ? 'walk0' : 'downB', fr = climbing ? Pd.pedFrame('walk0', Math.floor(at.dist / 4.6)) : 0;
+    if (tube) continue;
+    const key = 'slider:' + i + ':' + Pd.pedKey(app, pose, d8, fr, 0);
+    sprites.push([sprite(key, () => Pd.pedSprite(app, pose, d8, fr, 0)), at.x, at.y, at.z + (climbing ? 1 : 2), false]);
+  }
 }
 const P = { ...(PRESETS_GAME[PN] || PRESETS_GAME.noon) };
 const wind = [ws, wg, wdx, wdy];
