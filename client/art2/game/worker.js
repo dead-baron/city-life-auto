@@ -5,12 +5,14 @@
 // Protocol (pool.js): in  { id, op, args }   out { id, ok: true, result, ms } | { id, ok: false, error }
 //   init       { M, lowMem }       WorldData (a structured clone of the client's CityMap); answers with
 //                                  which providers loaded
-//   bakeChunk  { cx, cy, opt }     -> { cx, cy, g, lights, gh, ms, ... }  (g: the engine's packed planes
-//                                  {w,h,ax,ay,p0,p1,p2}, or {w,h,ax,ay,col,nrm,z,emi,flag}); it pauses every
-//                                  few ms (chunkbake.bakeSteps), so sprite jobs sent meanwhile run in between
+//   init       + artPx (1 | 2): world px per art pixel - chunks and sprites go out at art resolution
+//   bakeChunk  { cx, cy, opt }     -> { cx, cy, g, under, lights, gh, ms, ... }  (g: the engine's packed planes
+//                                  {w,h,ax,ay,ap,p0,p1,p2} at art resolution; under: the art-resolution under
+//                                  layer, or null when the chunk has no buildings); it pauses every few ms
+//                                  (chunkbake.bakeSteps), so sprite jobs sent meanwhile run in between
 //   sprite     { kind, key, a }    kind: ped (peds.pedSprite) or any actors.SPRITES kind (vehicle, animal, crate,
 //                                  bag, ball, proj, train, fx, muzzle, tracer, critter); a: its arguments
-//                                  -> { g } (the provider's G-buffer)
+//                                  -> { g } (the provider's G-buffer as art-resolution planes)
 //   stats      {}                  cache sizes and timings
 //   patch      { props, reset }    world changes, no answer: props [[index, broken {a} | null]] (reset: none broken first)
 // Every result's typed arrays are transferred. A provider that throws answers with an error (the host
@@ -25,7 +27,7 @@ const chan = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null
 if (chan) chan.port1.onmessage = () => { const f = waiting.shift(); if (f) f(); };
 const pause = () => new Promise((res) => { if (chan) { waiting.push(res); chan.port2.postMessage(0); } else setTimeout(res, 0); });
 
-let M = null, statCache = null, sprCache = null;
+let M = null, statCache = null, sprCache = null, ART = 2;
 const P = { actors: null, peds: null, errors: {} };
 const stats = { chunks: 0, chunkMs: 0, sprites: 0, spriteMs: 0, errors: 0 };
 
@@ -42,28 +44,31 @@ const SPRITE_FN = {
   ped: () => P.peds && P.peds.pedSprite,
 };
 
-// a G-buffer as a message: packed into the engine's three planes here (gbuf.js packGBuf: fresh arrays,
-// so a cached original stays whole) when this gbuf.js has it, else the five maps (copied if cached)
-function pack(g, copy, transfer) {
-  if (GB.packGBuf) {
-    const pk = GB.packGBuf(g);
-    const o = { w: g.w, h: g.h, ax: g.ax || 0, ay: g.ay || 0, p0: pk.p0, p1: pk.p1, p2: pk.p2 };
-    transfer.push(pk.p0.buffer, pk.p1.buffer, pk.p2.buffer);
-    return o;
-  }
-  const o = { w: g.w, h: g.h, ax: g.ax || 0, ay: g.ay || 0 };
-  for (const k of ['col', 'nrm', 'z', 'emi', 'flag']) { const a = copy ? g[k].slice() : g[k]; o[k] = a; transfer.push(a.buffer); }
-  return o;
+// a G-buffer as a message: packed into the engine's three planes here (gbuf.js packGBuf: fresh arrays, so a
+// cached original stays whole) and turned into art pixels (gbuf.js downsample2: 1 art pixel = ART world px) unless
+// its provider drew it at that size already (g.ap: the voxel renders); a chunk's "under" layer goes with it
+function pack(g, transfer, under = null, run = 0) {
+  let pk = GB.packGBuf(g), u = null;
+  if (ART > 1 && (g.ap || 1) < ART) {
+    const d = GB.downsample2(pk, { run });
+    if (under) u = GB.downsampleUnder(under, g.w, g.h, d.pick);
+    pk = d;
+  } else u = under;
+  const o = { w: pk.w, h: pk.h, ax: pk.ax || 0, ay: pk.ay || 0, ap: pk.ap || g.ap || 1, p0: pk.p0, p1: pk.p1, p2: pk.p2 };
+  transfer.push(o.p0.buffer, o.p1.buffer, o.p2.buffer);
+  if (u) transfer.push(u.buffer);
+  return { o, u };
 }
 
 let ready = null;
 async function init(args) {
-  M = args.M;
+  M = args.M; ART = args.artPx === 1 ? 1 : 2;
   try { const { CityMap } = await import('../../../shared/map.js'); Object.setPrototypeOf(M, CityMap.prototype); } catch (e) { P.errors.map = String((e && e.message) || e); }
   const lowMem = !!args.lowMem;
   statCache = new SpriteCache((lowMem ? 40 : (args.workers || 3) >= 4 ? 90 : 120) * 1e6); // (four workers: a little less each)
   sprCache = new SpriteCache((lowMem ? 8 : 32) * 1e6);
   const [pc] = await Promise.all([loadProviders(), loadActors()]);
+  if (P.actors && P.actors.setArtPx) P.actors.setArtPx(ART);   // (voxel things render straight at the art pixel)
   return { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors } };
 }
 
@@ -85,16 +90,16 @@ async function handle(msg) {
   if (!M && op !== 'stats') throw new Error('worker not initialised');
   if (op === 'bakeChunk') {
     const { cx, cy, opt } = args;
-    const it = bakeSteps(M, cx, cy, opt || {}, statCache, chunkProviders);
+    const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART }, statCache, chunkProviders);
     let step = it.next();
     while (!step.done) { await pause(); step = it.next(); }
     const r = step.value;
     const transfer = [];
-    const g = pack(r.g, false, transfer);
+    // (the under layer only matters where there are buildings to fade)
+    const { o: g, u: under } = pack(r.g, transfer, r.under && r.blds && r.blds.length ? r.under : null, GB.CHUNK_RUN);
     transfer.push(r.gh.buffer);
-    if (r.under) transfer.push(r.under.buffer);
     stats.chunks++; stats.chunkMs += performance.now() - t0;
-    self.postMessage({ id, ok: true, result: { cx, cy, g, under: r.under || null, blds: r.blds || [], lights: r.lights, gh: r.gh, live: r.live, n: r.n, items: r.items, made: r.made, bake: r.ms, errors: r.errors }, ms: performance.now() - t0 }, transfer);
+    self.postMessage({ id, ok: true, result: { cx, cy, g, under, blds: r.blds || [], lights: r.lights, gh: r.gh, live: r.live, n: r.n, items: r.items, made: r.made, bake: r.ms, errors: r.errors }, ms: performance.now() - t0 }, transfer);
     return;
   }
   if (op === 'sprite') {
@@ -104,7 +109,7 @@ async function handle(msg) {
     const g = key ? sprCache.get(key, () => fn(...a)) : fn(...a);
     if (!g || !g.w) throw new Error(`${kind} provider gave nothing`);
     const transfer = [];
-    const out = pack(g, !!key, transfer);
+    const out = pack(g, transfer).o;
     stats.sprites++; stats.spriteMs += performance.now() - t0;
     self.postMessage({ id, ok: true, result: { g: out }, ms: performance.now() - t0 }, transfer);
     return;

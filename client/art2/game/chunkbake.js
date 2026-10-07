@@ -153,7 +153,8 @@ export function groundHeights(G, ox, oy) {
 }
 
 // ---- the bake ---------------------------------------------------------------------------------------------
-// opt: { quality 0..3, seed, cutaway (building index), lowMem, groundCol (v1 ground pixels, RGBA) }
+// opt: { quality 0..3, seed, cutaway (building index), lowMem, groundCol (v1 ground pixels, RGBA), artPx (2: the
+// statics land on the art grid - the engine draws the chunk at 1 art pixel = 2 world px) }
 // cache: SpriteCache for makeStatic results (one per worker); P: providers (default: the loaded ones)
 const isBuilding = (it) => (it.recipe && it.recipe.t === 'b' && !it.recipe.frame ? 1 : 0);
 export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
@@ -168,7 +169,7 @@ export function bakeChunk(M, cx, cy, opt = {}, cache = null, P = providers) {
 const SLICE_MS = 10;
 export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
   const t0 = now();
-  const ox = cx * CHUNK, oy = cy * CHUNK;
+  const ox = cx * CHUNK, oy = cy * CHUNK, ag = opt.artPx === 2 ? 2 : 1;
   let G = null, groundErr = null;
   if (P.ground && !opt.groundCol) {
     try {
@@ -216,7 +217,8 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
       } catch (e) { staticErr = staticErr || `makeStatic(${it.key}): ${(e && e.message) || e}`; continue; }
       if (!s || !s.w) continue;
       const z0 = it.z0 || 0;
-      const sx = Math.round(it.x - (s.ax || 0)) - ox, sy = Math.round(it.y - z0 - (s.ay || 0)) - oy;
+      // (on the art grid: whole art pixels of the world, so what a sprite paints in pairs of px stays whole)
+      const sx = Math.round((it.x - (s.ax || 0)) / ag) * ag - ox, sy = Math.round((it.y - z0 - (s.ay || 0)) / ag) * ag - oy;
       n += compositeDepth(G, s, sx, sy, z0, k ? bid : null, k) ? 1 : 0;
     }
     for (const it of items) { // (once per item: the chunk its anchor is in)

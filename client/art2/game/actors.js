@@ -45,7 +45,7 @@ export function trimSprite(G, pad = 1) {
   const { w, h, col } = G;
   let x0 = w, y0 = h, x1 = -1, y1 = -1;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (col[(y * w + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-  if (x1 < 0) { const E = new GBuf(1, 1); E.ax = 0; E.ay = 0; return E; }
+  if (x1 < 0) { const E = new GBuf(1, 1); E.ax = 0; E.ay = 0; if (G.ap) E.ap = G.ap; return E; }
   x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
   const S = new GBuf(x1 - x0 + 1, y1 - y0 + 1);
   for (let y = y0; y <= y1; y++) {
@@ -54,6 +54,7 @@ export function trimSprite(G, pad = 1) {
     S.emi.set(G.emi.subarray(si * 4, (si + n) * 4), di * 4); S.z.set(G.z.subarray(si, si + n), di); S.flag.set(G.flag.subarray(si, si + n), di);
   }
   S.ax = (G.ax ?? 0) - x0; S.ay = (G.ay ?? 0) - y0;
+  if (G.ap) S.ap = G.ap;
   return S;
 }
 
@@ -94,15 +95,18 @@ export function compactVox(m) {
   return { w, d, h, v, N, AO, SH, mats, sheen: (m.look && m.look.sheen) ?? 1, bytes: n * 6 + 256 };
 }
 const NBUF = [0, 0, 0];
+// opt.px: world px per art pixel (1, or the live game's 2): one ray per art pixel, so the model is drawn straight
+// at the art pixel - its shading, dither and outline on the art grid (crisper than shrinking a full-size render);
+// the anchor lands on an art pixel corner and G.ap says the size
 export function renderCompact(C, heading = 0, opt = {}) {
-  const { w, d, h, v, N, AO, SH, mats, sheen } = C, wd = w * d;
-  const R = Math.ceil(Math.hypot(w, d) / 2) + 2;
-  const G = new GBuf(2 * R, 2 * R + h + 2);
-  G.ax = R; G.ay = R + h;
-  const c = Math.cos(heading), s = Math.sin(heading), dither = opt.dither ?? 0.5, fo = opt.flag || 0;
+  const { w, d, h, v, N, AO, SH, mats, sheen } = C, wd = w * d, S = opt.px || 1;
+  const R = Math.ceil(Math.hypot(w, d) / 2) + 2, ax = Math.ceil(R / S), ay = Math.ceil((R + h) / S);
+  const G = new GBuf(2 * ax, ay + Math.ceil((R + 2) / S));
+  G.ax = ax; G.ay = ay; if (S > 1) G.ap = S;
+  const c = Math.cos(heading), s = Math.sin(heading), dither = opt.dither ?? 0.5, fo = opt.flag || 0, brk = 5 + (S - 1) * 2;
   const depth = new Float32Array(G.w * G.h).fill(-1e9), sh0 = { w, d };
   for (let py = 0; py < G.h; py++) for (let px = 0; px < G.w; px++) {
-    const X = px - R + 0.5, sy = py - G.ay + 0.5;
+    const X = (px - ax) * S + 0.5, sy = (py - ay) * S + 0.5;
     for (let Z = h - 1; Z >= 0; Z--) {
       const Y = sy + Z + 0.5, mx = c * X + s * Y + w / 2, my = -s * X + c * Y + d / 2;
       if (mx < 0 || my < 0 || mx >= w || my >= d) continue;
@@ -128,11 +132,16 @@ export function renderCompact(C, heading = 0, opt = {}) {
     const i = py * G.w + px, j = i * 4;
     if (!G.col[j + 3]) continue;
     const me = depth[i], up = depth[i - G.w], lf = depth[i - 1], rt = depth[i + 1];
-    if ((up > -1e8 && up - me > 5) || (lf > -1e8 && lf - me > 5) || (rt > -1e8 && rt - me > 5)) { G.col[j] *= 0.62; G.col[j + 1] *= 0.6; G.col[j + 2] = G.col[j + 2] * 0.66 + 8; }
+    if ((up > -1e8 && up - me > brk) || (lf > -1e8 && lf - me > brk) || (rt > -1e8 && rt - me > brk)) { G.col[j] *= 0.62; G.col[j + 1] *= 0.6; G.col[j + 2] = G.col[j + 2] * 0.66 + 8; }
   }
   G.outline(0.42, true);
   return G;
 }
+// the art pixel the voxel things (vehicles, trains, animals, crates, bags, rockets) are drawn at: 1 world px, or
+// the live game's 2 (worker.js sets it; the preview tools draw full size unless they ask)
+let ART_PX = 1;
+export function setArtPx(k) { ART_PX = k === 2 ? 2 : 1; }
+export const artPx = () => ART_PX;
 // model caches: vehicles by bytes (a compact sedan ~1.3 MB, a bus ~5 MB), trains by count
 let MODEL_MB = 48;
 const MODELS = new LRU(64, MODEL_MB * 1e6);
@@ -183,7 +192,7 @@ function vehModel(d, s) {
 // vehicle's centre on the ground
 export function vehicleSprite(d, st, hi = 0, N = 32) {
   const s = normSt(st), C = vehModel(d, s), a = wrapHi(hi, N) * TAU / N;
-  return trimSprite(renderCompact(C, a, { dither: 0.35 }));
+  return trimSprite(renderCompact(C, a, { dither: 0.35, px: ART_PX }));
 }
 // lamp and fitting positions in local coordinates at heading 0 (+x forward, +y right, z up, origin the
 // centre on the ground): head / tail / brake / rev lamps [[x, y, z]], siren [[x, y, z, colour]] (0 red,
@@ -224,7 +233,7 @@ export function animalSprite(kind, pose = 'idle', dir8 = 0, frame = 0) {
   const o = p === 'walk' ? { phase: f / n, wag: f / n } : p === 'run' ? { phase: f / n, gait: 'run', pant: 1 } : p === 'sit' ? { pose: 'sit', wag: f * 0.25, pant: 1 }
     : p === 'lie' ? { pose: 'lie', wag: f * 0.2 } : p === 'graze' ? { pose: 'graze', wag: f * 0.25 } : { wag: f * 0.22, pant: f >> 1 };
   const m = ANIMAL_MODELS.get(`${k}|${p}|${f}`, () => { const mm = animalModel(k, o); mm.bytes = mm.w * mm.d * mm.h * 17; return mm; });
-  return trimSprite(renderUpright(m, Math.PI / 2 + wrap8(dir8) * Math.PI / 4));
+  return trimSprite(renderUpright(m, Math.PI / 2 + wrap8(dir8) * Math.PI / 4, { px: ART_PX }));
 }
 
 // ---- small objects --------------------------------------------------------------------------------------
@@ -340,7 +349,7 @@ function rocketModel() {
   return m;
 }
 const OBJ_MODELS = new LRU(16);
-const objRender = (key, make, hi, N) => { const m = OBJ_MODELS.get(key, () => { const mm = make(); patchHidden(mm); return mm; }); return trimSprite(m.render(wrapHi(hi, N) * TAU / N, { dither: 0.3 })); };
+const objRender = (key, make, hi, N) => { const m = OBJ_MODELS.get(key, () => { const mm = make(); patchHidden(mm); return mm; }); return trimSprite(m.render(wrapHi(hi, N) * TAU / N, { dither: 0.3, px: ART_PX })); };
 export const crateKey = (tier, label = '', hi = 0, N = 16) => `c|${label === 'Produce Box' ? 'P' : Math.max(1, Math.min(4, tier | 0))}|${wrapHi(hi, N)}|${N}`;
 export function crateSprite(tier, label = '', hi = 0, N = 16) { const k = label === 'Produce Box' ? 'P' : Math.max(1, Math.min(4, tier | 0)); return objRender('crate' + k, () => crateModel(tier, label), hi, N); }
 export const bagKey = (tier, hi = 0, N = 16) => `g|${Math.max(0, Math.min(4, tier | 0))}|${wrapHi(hi, N)}|${N}`;
@@ -487,7 +496,7 @@ export const trainKey = (c, mode = 'roof', hi = 0, N = 32) => `t|${trainDef(c).k
 const TRAIN_MODELS = new LRU(3);
 export function trainCarSprite(c, mode = 'roof', hi = 0, N = 32) {
   const def = trainDef(c), md = trainMode(mode), C = TRAIN_MODELS.get(def.kind + '|' + md, () => { const mm = trainModel(def, md); patchHidden(mm); return compactVox(mm); });
-  return trimSprite(renderCompact(C, wrapHi(hi, N) * TAU / N, { dither: 0.3 }));
+  return trimSprite(renderCompact(C, wrapHi(hi, N) * TAU / N, { dither: 0.3, px: ART_PX }));
 }
 // a car's lamps in local coordinates (+x the way it runs): the loco's headlights, window light points
 export function trainLights(c) {

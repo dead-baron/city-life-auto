@@ -45,6 +45,13 @@ sprite's ground point), emi (RGBA8: rgb + strength), flag (Uint8: 1 ground, 2 wa
 these are transferable typed arrays. Workers return `{w, h, ax, ay, col, nrm, z, emi, flag}` and transfer
 the buffers.
 
+**The art pixel** (SPEC "Scale"): the engine draws textures at 1 art pixel = `engine.ap` world px (2; `?artpx=1`
+draws full size for comparisons). Workers send art-resolution planes `{w, h, ax, ay, ap, p0, p1, p2}` (packed,
+then `downsample2`d unless the provider drew at the art pixel already: `G.ap = 2` from the voxel renders);
+chunks are 384 x 384 texels, and their under layer only goes along when the chunk has buildings to fade.
+Sprites snap to whole art pixels of the world; the host rounds the camera's anchor (the player) to the same
+grid so the player stays steady.
+
 **Height `z` of a sprite pixel** is its true height above the sprite's own ground point. The engine adds:
 - the ground height under the thing (for example the deck height for a car on the highway);
 - 0 for flat ground.

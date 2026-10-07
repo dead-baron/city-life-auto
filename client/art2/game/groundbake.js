@@ -132,7 +132,9 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   const q = opt.quality ?? 2, seed = ((opt.seed ?? M.seed ?? 1337) | 0) & 0xffff;
   const X0 = cx * CHUNK, Y0 = cy * CHUNK, WX0 = X0 - PAD, WY0 = Y0 - PAD;
   const TX0 = Math.floor(WX0 / TILE) - TP, TY0 = Math.floor(WY0 / TILE) - TP;
-  const C = { M, b, q, seed, X0, Y0, WX0, WY0, TX0, TY0, deckZ: opt.deckZ ?? 6, E: [] };
+  // ap 2: the live game draws the chunk at 1 art pixel = 2 world px - the paint (lane lines, zebras, stop lines,
+  // arrows, stalls, court lines, wear) is decided once per art pixel so it comes out in whole art pixels
+  const C = { M, b, q, seed, X0, Y0, WX0, WY0, TX0, TY0, deckZ: opt.deckZ ?? 6, E: [], ap: opt.artPx === 2 ? 2 : 1 };
   const G = new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
   const prof = opt.profile ? {} : null;
   C.prof = prof;
@@ -836,18 +838,20 @@ function lineSpec(e) {
   return L;
 }
 function markings(C, G) {
-  const { M, b, seed, WX0, WY0, TX0, TY0, q } = C;
+  const { M, b, seed, WX0, WY0, TX0, TY0, q } = C, A2 = C.ap === 2;
   for (const e of C.E) { if (!e._gb.lines) { const L = lineSpec(e); e._gb.lines = Float32Array.from(L.flat()); } }
   for (let y = 0; y < CHUNK; y++) {
-    const py = y + PAD, Y = WY0 + py;
+    const py = y + PAD, rpy = (A2 ? y & ~1 : y) + PAD, Y = WY0 + rpy;
     for (let x = 0; x < CHUNK; x++) {
       const px = x + PAD, i = py * WN + px, m = b.mat[i];
       if (m !== M_.ROAD && m !== M_.ROADOLD && m !== M_.DECK && m !== M_.DECKF && m !== M_.GORE && m !== M_.DIRTROAD) continue;
-      const X = WX0 + px, gi = y * CHUNK + x, k = b.rE[i], a = b.aux[i];
+      // (the paint of the art pixel this px is in: read at its top-left px - A2 - for all four of its px)
+      const rpx = (A2 ? x & ~1 : x) + PAD, ri = rpy * WN + rpx;
+      const X = WX0 + rpx, gi = y * CHUNK + x, k = b.rE[ri], a = b.aux[ri];
       let wear = b.twear[(Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0];
       if (a & A_CHEV) { chevron(C, G, gi, X, Y); continue; }
       if (k < 0) continue;
-      const e = C.E[k], I = e._gb, s = b.rS[i], v = b.rV[i];
+      const e = C.E[k], I = e._gb, s = b.rS[ri], v = b.rV[ri];
       if (e.kind === 'hwy' || e.kind === 'ramp') wear = Math.min(wear, 0.12);
       if (e.kind === 'hwy' && Math.abs(v) < e.median / 2 - 4 && s > I.t0 - 6 && s < I.t1 + 6) {     // the concrete median
         const av = Math.abs(v), edge = av > e.median / 2 - 6;
@@ -934,17 +938,28 @@ function chevron(C, G, gi, X, Y) {
 }
 // visit the chunk pixels inside a rotated rectangle: centre (x, y), unit direction (ux, uy) of its u axis, half
 // extents hu (along u) and hv (across, v positive to the right of u); fn(gi, u, v, gx, gy, i) (i: window index)
+// (ap 2: u, v at the centre of each px's art pixel and gx, gy its top-left - one decision per art pixel)
 function rect(C, x, y, ux, uy, hu, hv, fn) {
-  const ex = Math.abs(ux) * hu + Math.abs(uy) * hv, ey = Math.abs(uy) * hu + Math.abs(ux) * hv;
-  const x0 = Math.max(0, Math.floor(x - ex - C.X0)), x1 = Math.min(CHUNK - 1, Math.ceil(x + ex - C.X0));
-  const y0 = Math.max(0, Math.floor(y - ey - C.Y0)), y1 = Math.min(CHUNK - 1, Math.ceil(y + ey - C.Y0));
+  const ex = Math.abs(ux) * hu + Math.abs(uy) * hv, ey = Math.abs(uy) * hu + Math.abs(ux) * hv, A2 = C.ap === 2;
+  let x0 = Math.max(0, Math.floor(x - ex - C.X0)), x1 = Math.min(CHUNK - 1, Math.ceil(x + ex - C.X0));
+  let y0 = Math.max(0, Math.floor(y - ey - C.Y0)), y1 = Math.min(CHUNK - 1, Math.ceil(y + ey - C.Y0));
+  if (A2) { x0 &= ~1; y0 &= ~1; x1 = Math.min(CHUNK - 1, x1 | 1); y1 = Math.min(CHUNK - 1, y1 | 1); }
   for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) {
-    const dx = gx + C.X0 + 0.5 - x, dy = gy + C.Y0 + 0.5 - y, u = dx * ux + dy * uy, v = dy * ux - dx * uy;
+    const qx = A2 ? gx & ~1 : gx, qy = A2 ? gy & ~1 : gy, h = A2 ? 1 : 0.5;
+    const dx = qx + C.X0 + h - x, dy = qy + C.Y0 + h - y, u = dx * ux + dy * uy, v = dy * ux - dx * uy;
     if (u < -hu || u > hu || v < -hv || v > hv) continue;
-    fn(gy * CHUNK + gx, u, v, gx, gy, (gy + PAD) * WN + gx + PAD);
+    fn(gy * CHUNK + gx, u, v, qx, qy, (gy + PAD) * WN + gx + PAD);
   }
 }
-function plot(C, G, X, Y, fn) { const x = Math.floor(X - C.X0), y = Math.floor(Y - C.Y0); if (x >= 0 && y >= 0 && x < CHUNK && y < CHUNK) fn(y * CHUNK + x, x, y); }
+function plot(C, G, X, Y, fn) {
+  let x = Math.floor(X - C.X0), y = Math.floor(Y - C.Y0);
+  if (C.ap === 2) {   // (the whole art pixel)
+    x &= ~1; y &= ~1;
+    for (let k = 0; k < 4; k++) { const xx = x + (k & 1), yy = y + (k >> 1); if (xx >= 0 && yy >= 0 && xx < CHUNK && yy < CHUNK) fn(yy * CHUNK + xx, x, y); }
+    return;
+  }
+  if (x >= 0 && y >= 0 && x < CHUNK && y < CHUNK) fn(y * CHUNK + x, x, y);
+}
 // stop lines on the approaches to signalled junctions (across the lanes arriving at the junction)
 function stopLines(C, G) {
   const { M, b } = C;

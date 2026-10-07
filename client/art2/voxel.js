@@ -66,17 +66,19 @@ export class Vox {
     this.prepared = true;
   }
 
-  // Draw the model at a heading (radians; 0 = model x pointing east, positive turns toward south).
+  // Draw the model at a heading (radians; 0 = model x pointing east, positive turns toward south). opt.px:
+  // world px per art pixel (1, or the live game's 2: one ray per art pixel, G.ap = 2).
   render(heading = 0, opt = {}) {
     this.prepare(opt.smooth ?? this.smooth ?? 1);
-    const { w, d, h } = this;
-    const R = Math.ceil(Math.hypot(w, d) / 2) + 2;
-    const G = new GBuf(2 * R, 2 * R + h + 2);
-    G.ax = R; G.ay = R + h;  // where the model's centre on the ground lands
-    const c = Math.cos(heading), s = Math.sin(heading);
+    const { w, d, h } = this, S = opt.px || 1;
+    const R = Math.ceil(Math.hypot(w, d) / 2) + 2, ax = Math.ceil(R / S), ay = Math.ceil((R + h) / S);
+    const G = new GBuf(2 * ax, ay + Math.ceil((R + 2) / S));
+    G.ax = ax; G.ay = ay;  // where the model's centre on the ground lands
+    if (S > 1) G.ap = S;
+    const c = Math.cos(heading), s = Math.sin(heading), brk = 5 + (S - 1) * 2;
     const depth = new Float32Array(G.w * G.h).fill(-1e9);
     for (let py = 0; py < G.h; py++) for (let px = 0; px < G.w; px++) {
-      const X = px - R + 0.5, sy = py - G.ay + 0.5;
+      const X = (px - ax) * S + 0.5, sy = (py - ay) * S + 0.5;
       for (let Z = h - 1; Z >= 0; Z--) {
         const Y = sy + Z + 0.5;
         const mx = c * X + s * Y + w / 2, my = -s * X + c * Y + d / 2;
@@ -105,7 +107,7 @@ export class Vox {
         if (!G.col[j + 3]) continue;
         const me = depth[i];
         const up = depth[i - G.w], lf = depth[i - 1], rt = depth[i + 1];
-        if ((up > -1e8 && up - me > 5) || (lf > -1e8 && lf - me > 5) || (rt > -1e8 && rt - me > 5)) {
+        if ((up > -1e8 && up - me > brk) || (lf > -1e8 && lf - me > brk) || (rt > -1e8 && rt - me > brk)) {
           G.col[j] *= 0.62; G.col[j + 1] *= 0.6; G.col[j + 2] = G.col[j + 2] * 0.66 + 8;
         }
       }

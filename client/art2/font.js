@@ -21,13 +21,17 @@ export function textWidth(text, opt = {}) {
 }
 export function drawText(plot, text, x0, y0, opt = {}) {
   const sx = opt.sx || 1, sy = opt.sy || sx, gap = opt.gap ?? 1;
+  // letters of 2 px pixels (or 4, 6...) start on even px and drop their shadow a whole letter pixel, so the live
+  // game's art pixels (2 world px, gbuf.js downsample2) take each letter pixel whole: the words stay readable
+  const even = sx % 2 === 0 && sy % 2 === 0, so = even ? 2 : 1;
+  if (even) { x0 = Math.round(x0 / 2) * 2; y0 = Math.round(y0 / 2) * 2; }
   for (const pass of opt.shadow ? [1, 0] : [0]) {
     let x = x0;
     for (const ch of text.toUpperCase()) {
       const g = GLYPHS[ch] || GLYPHS[' '];
       for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) {
         if (g[r * 3 + c] !== '1') continue;
-        for (let yy = 0; yy < sy; yy++) for (let xx = 0; xx < sx; xx++) plot(x + c * sx + xx + pass, y0 + r * sy + yy + pass, pass);
+        for (let yy = 0; yy < sy; yy++) for (let xx = 0; xx < sx; xx++) plot(x + c * sx + xx + pass * so, y0 + r * sy + yy + pass * so, pass);
       }
       x += 3 * sx + gap * sx;
     }

@@ -182,3 +182,148 @@ export function packGBuf(g, p0 = null, p1 = null, p2 = null) {
   }
   return { w: g.w, h: g.h, ax: g.ax ?? 0, ay: g.ay ?? 0, p0, p1, p2 };
 }
+
+// ---- the pixel-art grid (docs/art-v2/SPEC.md "Scale") -------------------------------------------------------
+// The live renderer draws every texture at 1 art pixel = ART_PX world px (the 16-bit look: chunky pixels),
+// while the lighting stays per world px (smooth light over them). The generators paint at 1 texel per world
+// px; downsample2 turns packed planes into art pixels a 2 x 2 block at a time, and every map of an art pixel
+// comes from one real texel (height, normal, flags and glow stay consistent):
+//   - glow first: a block where some texels glow and some don't takes its brightest glowing texel (small lamps
+//     and lit windows survive);
+//   - an edge - the block's colour range stands out from its neighbours' (an outline, a kerb line, a window
+//     frame, a lane line) - keeps the texel that differs most from its 4 x 4 surroundings, dark or light (ties
+//     go to the darker), so one-pixel lines and outlines survive at full strength;
+//   - texture and flat colour take the block's average colour (fine noise calms down), with the other maps of
+//     its most typical texel;
+//   - sprites: a block is drawn when at least 2 of its 4 texels are; a sprite gets a 1 px margin first when
+//     its anchor is odd, so the anchor lands on an art pixel corner.
+// pk: {w, h, ax, ay, p0, p1?, p2?} (packGBuf planes; p0 alone for an albedo-only image). opts.opaque: every
+// texel counts as covered (p0 alpha is a code, not coverage); opts.run: an edge texel needs this many like it in
+// the 4 x 4 window (CHUNK_RUN for chunks: lines yes, flecks of texture no; sprites 0). Returns {w, h, ax, ay, p0,
+// p1, p2, ap: ART_PX, pick} - pick: the source texel of each art pixel (-1: empty).
+export const ART_PX = 2, CHUNK_RUN = 4;
+const EDGE_K = 1.5, EDGE_C = 12, GLOW_MIN = 24;
+export function downsample2(pk, opts = {}) {
+  const W = pk.w | 0, H = pk.h | 0, ax0 = Math.round(pk.ax || 0), ay0 = Math.round(pk.ay || 0);
+  const mx = ax0 & 1, my = ay0 & 1;                       // the margin that makes the anchor even
+  const w = (W + mx + 1) >> 1, h = (H + my + 1) >> 1, n = w * h;
+  const A = pk.p0, B = pk.p1 || null, C = pk.p2 || null, opaque = !!opts.opaque, run = opts.run | 0;
+  const p0 = new Uint8Array(n * 4), p1 = B ? new Uint8Array(n * 4) : null, p2 = C ? new Uint8Array(n * 4) : null;
+  const pick = new Int32Array(n).fill(-1), R = new Uint8Array(n), T = new Int32Array(4), NB = new Uint8Array(8), dbg = opts.debug ? new Uint8Array(n) : null;
+  // pass 1: each block's covered texels and colour range (L1 / 3 over r, g, b: hue edges count, not only brightness)
+  const cnt = new Uint8Array(n), tex = new Int32Array(n * 4);
+  for (let by = 0; by < h; by++) for (let bx = 0; bx < w; bx++) {
+    const o = by * w + bx;
+    let c = 0;
+    for (let dy = 0; dy < 2; dy++) {
+      const y = 2 * by - my + dy;
+      if (y < 0 || y >= H) continue;
+      for (let dx = 0; dx < 2; dx++) {
+        const x = 2 * bx - mx + dx;
+        if (x < 0 || x >= W) continue;
+        const i = y * W + x;
+        if (opaque || A[i * 4 + 3] >= 128) tex[o * 4 + c++] = i;
+      }
+    }
+    cnt[o] = c;
+    let r = 0;
+    for (let a = 0; a < c; a++) for (let b = a + 1; b < c; b++) {
+      const ia = tex[o * 4 + a] * 4, ib = tex[o * 4 + b] * 4;
+      const d = (Math.abs(A[ia] - A[ib]) + Math.abs(A[ia + 1] - A[ib + 1]) + Math.abs(A[ia + 2] - A[ib + 2])) / 3;
+      if (d > r) r = d;
+    }
+    R[o] = r;
+  }
+  // pass 2: pick
+  for (let by = 0; by < h; by++) for (let bx = 0; bx < w; bx++) {
+    const o = by * w + bx, c = cnt[o];
+    if (c < (opaque ? 1 : 2)) continue;
+    for (let k = 0; k < c; k++) T[k] = tex[o * 4 + k];
+    let best = -1, avg = false, ar = 0, ag = 0, ab = 0;
+    // glow first
+    if (C) {
+      let ne = 0, be = -1;
+      for (let k = 0; k < c; k++) { const j = T[k] * 4, e = C[j] + C[j + 1] + C[j + 2]; if (e > GLOW_MIN) { ne++; if (e > be) { be = e; best = T[k]; } } }
+      if (ne === c) best = -1;                             // all glowing: an ordinary block of glow
+      else if (dbg && best >= 0) dbg[o] = 2;
+    }
+    if (best < 0) {
+      // the neighbours' typical range (texture), against which an edge stands out: a low one of the eight (the
+      // third lowest), so the blocks a line runs on through don't hide it
+      let sn = 0;
+      for (let yy = by - 1; yy <= by + 1; yy++) {
+        if (yy < 0 || yy >= h) continue;
+        for (let xx = bx - 1; xx <= bx + 1; xx++) { if (xx < 0 || xx >= w || (xx === bx && yy === by)) continue; NB[sn++] = R[yy * w + xx]; }
+      }
+      let rn = 0;
+      if (sn) {
+        const kth = Math.max(0, ((sn * 3) >> 3) - 1);   // (8 neighbours: the 3rd lowest)
+        for (let a = 1; a < sn; a++) { const v = NB[a]; let b = a - 1; while (b >= 0 && NB[b] > v) { NB[b + 1] = NB[b]; b--; } NB[b + 1] = v; }
+        rn = NB[kth];
+      }
+      if (c > 1 && R[o] > EDGE_K * rn + EDGE_C) {
+        // an edge: the texel that differs most from the 4 x 4 window round the block (ties: the darker)
+        let mr = 0, mg = 0, mb = 0, m = 0;
+        for (let y = 2 * by - my - 1; y <= 2 * by - my + 2; y++) {
+          if (y < 0 || y >= H) continue;
+          for (let x = 2 * bx - mx - 1; x <= 2 * bx - mx + 2; x++) {
+            if (x < 0 || x >= W) continue;
+            const j = (y * W + x) * 4;
+            if (!opaque && A[j + 3] < 128) continue;
+            mr += A[j]; mg += A[j + 1]; mb += A[j + 2]; m++;
+          }
+        }
+        mr /= m; mg /= m; mb /= m;
+        let bs = -1e9, bd = 0;
+        for (let k = 0; k < c; k++) {
+          const j = T[k] * 4, dm = (Math.abs(A[j] - mr) + Math.abs(A[j + 1] - mg) + Math.abs(A[j + 2] - mb)) / 3, s = dm - (A[j] * 0.3 + A[j + 1] * 0.59 + A[j + 2] * 0.11) * 0.02;
+          if (s > bs) { bs = s; best = T[k]; bd = dm; }
+        }
+        // a big painted surface (a chunk: opts.run) also asks for enough like it in the 4 x 4 window - a line or
+        // an outline running through - or it is a fleck of texture (a blade of grass, a flower, a pebble) that
+        // would come out four times its size: the block is texture after all. (Sprites keep their one-pixel
+        // details: an eye, a button.)
+        if (run > 1) {
+          const j0 = best * 4;
+          let sim = 0;
+          for (let y = 2 * by - my - 1; y <= 2 * by - my + 2; y++) {
+            if (y < 0 || y >= H) continue;
+            for (let x = 2 * bx - mx - 1; x <= 2 * bx - mx + 2; x++) {
+              if (x < 0 || x >= W) continue;
+              const j = (y * W + x) * 4;
+              if (!opaque && A[j + 3] < 128) continue;
+              // (on the feature's side: nearer the picked texel than the surroundings - worn or dithered paint counts)
+              if (Math.abs(A[j] - A[j0]) + Math.abs(A[j + 1] - A[j0 + 1]) + Math.abs(A[j + 2] - A[j0 + 2]) < Math.abs(A[j] - mr) + Math.abs(A[j + 1] - mg) + Math.abs(A[j + 2] - mb)) sim++;
+            }
+          }
+          if (sim < Math.max(2, Math.ceil(run * m / 16))) best = -1;   // (fewer at a border: the window is cut short)
+        }
+        if (dbg) dbg[o] = best >= 0 ? 1 : 3;
+      }
+      if (best < 0) {
+        // texture or flat colour: the average, with the most typical texel's other maps
+        for (let k = 0; k < c; k++) { const j = T[k] * 4; ar += A[j]; ag += A[j + 1]; ab += A[j + 2]; }
+        ar /= c; ag /= c; ab /= c; avg = true;
+        let bd = 1e9;
+        for (let k = 0; k < c; k++) { const j = T[k] * 4, d = Math.abs(A[j] - ar) + Math.abs(A[j + 1] - ag) + Math.abs(A[j + 2] - ab); if (d < bd) { bd = d; best = T[k]; } }
+      }
+    }
+    pick[o] = best;
+    const s = best * 4, d = o * 4;
+    if (avg) { p0[d] = ar + 0.5; p0[d + 1] = ag + 0.5; p0[d + 2] = ab + 0.5; } else { p0[d] = A[s]; p0[d + 1] = A[s + 1]; p0[d + 2] = A[s + 2]; }
+    p0[d + 3] = A[s + 3];
+    if (p1) { p1[d] = B[s]; p1[d + 1] = B[s + 1]; p1[d + 2] = B[s + 2]; p1[d + 3] = B[s + 3]; }
+    if (p2) { p2[d] = C[s]; p2[d + 1] = C[s + 1]; p2[d + 2] = C[s + 2]; p2[d + 3] = C[s + 3]; }
+  }
+  // empty art pixels: no albedo, the up normal (as packGBuf leaves them)
+  if (p1) for (let o = 0; o < n; o++) if (pick[o] < 0) { p1[o * 4 + 3] = OCT_MID; p2[o * 4 + 3] = OCT_MID; }
+  return { w, h, ax: (ax0 + mx) >> 1, ay: (ay0 + my) >> 1, p0, p1, p2, ap: ART_PX, pick, dbg };
+}
+// a chunk's "under" layer (RGBA8: rgb the ground before its buildings, alpha the local number of the building on
+// top) at art resolution: its own colours by the same rule, the building number of the texel the chunk's art
+// pixel came from (pick: downsample2's)
+export function downsampleUnder(under, W, H, pick) {
+  const d = downsample2({ w: W, h: H, ax: 0, ay: 0, p0: under }, { opaque: true, run: CHUNK_RUN }), out = d.p0;
+  for (let o = 0; o < pick.length; o++) out[o * 4 + 3] = pick[o] >= 0 ? under[pick[o] * 4 + 3] : 0;
+  return out;
+}

@@ -8,7 +8,22 @@ Every v2 asset follows these rules. The numbers were measured from the approved 
 - **Positions don't change:** the server's top-down world coordinates are the ground plane, unchanged.
 
 ## Scale
-- **1 art pixel = 1 world pixel ≈ 4.5 cm** (22 px per metre). A tile is 32 px.
+- **World:** 1 world pixel ≈ 4.5 cm (22 px per metre). A tile is 32 px. All sizes below are world px.
+- **The art pixel is 2 world pixels** (the 16-bit look). The live renderer draws every texture - ground, buildings,
+  props, vehicles, people, decals - at 1 art pixel = 2 x 2 world px, on one grid anchored to the world, while
+  lighting, shadows, bloom and fog stay per world pixel: chunky SNES-style pixels under smooth modern light
+  (Octopath Traveler, Eastward). The camera framing is unchanged.
+  - Generators may keep painting at 1 px per world px; the bake turns their output into art pixels
+    (`gbuf.js downsample2`: lamps first, then edges and lines - the texel that stands out most - and the
+    average colour of texture and flat paint). Chunks drop lone flecks of texture (a grass blade, a pebble)
+    instead of blowing them up to 2 x 2.
+  - Paint that must stay crisp is drawn in whole art pixels: road paint (lane lines, zebras, stop lines,
+    arrows, stalls, court lines) is decided once per art pixel, statics land on even world px, and letters
+    of 2 px pixels start on even px with a whole-pixel drop shadow. Draw new sign text with `sx: 2`.
+  - Voxel things (vehicles, trains, animals, crates, bags, rockets) are rendered straight at the art pixel
+    (one ray per art pixel, outlines and dither on the art grid).
+  - Design new detail for the art pixel: lines and outlines at least 2 world px wide, features that matter
+    (eyes, lamps, letters) on even px.
 - **People:** an adult is 38–42 px tall, about 3.5–4 heads, with big readable silhouettes. People are not shrunk next to buildings: a door (2.1 m) is about 46 px, and a person reaches about 85% of a door.
 - **Vehicles:** a sedan is 100×48 px on the ground and its body about 30 px high. Every vehicle keeps its server footprint.
 - **Buildings:** about 66 px per storey (3 m). A one-storey shop is about 70–80 px to the parapet; a three-storey walk-up about 200 px.

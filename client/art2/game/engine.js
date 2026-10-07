@@ -24,7 +24,8 @@
 //   - setChunkFallback is a no-op when the chunk is baked or already shows that same source object
 //     (call it every frame until the bake lands; dropChunk first to force a refresh of a redrawn canvas).
 //   - drawSprite returns false when the sprite is not resident (upload it, draw next frame) and snaps the
-//     sprite to whole world px. o.alpha < 1 is an ordered-dither fade (a G-buffer cannot blend).
+//     sprite to the art grid (whole art pixels of the world). o.alpha < 1 is an ordered-dither fade (a G-buffer
+//     cannot blend), in whole art pixels.
 //   - o.shadow === false stops the sprite casting a shadow; o.flash whitens it and adds glow; o.air marks it as
 //     up in the air (birds: no mirror image in wet ground or water).
 //   - f.wet / f.flash / f.fog (optional) raise the preset's wet, lightning flash and fog.
@@ -40,13 +41,14 @@
 //   sidewalks (grass tufts taller than 4 px still cover feet). Decals test at 3.5 px over z0 (so only the
 //   ground takes them) and blend into albedo only.
 // Memory (GPU; RGBA8 everywhere, no float targets, no extensions required):
-//   chunk slot 768^2 x 12 B = 6.75 MiB (slots are created on demand up to the tier cap and reused, never
-//   re-allocated); atlas page 1024^2 x 12 B = 12 MiB (three TEXTURE_2D_ARRAYs allocated per tier);
-//   frame ~21 B per scene texel (scene 12 + depth 2 + lit 4 + half/quarter bloom, shafts, light tiles ~3),
-//   allocated on the first frame and grown in 128 px steps only when the view needs more.
-//   A baked chunk also keeps its "under" layer (the chunk before its buildings, RGBA8 2.25 MiB) for the
-//   building fades: 9 MiB a slot. Caches at the cap: Low 12 chunks + 4 pages = 108 + 48 MiB; Medium 14 + 6 =
-//   126 + 72; High 18 + 8 = 162 + 96; Ultra 26 + 10 = 234 + 120. lowMem: 10 chunks + 4 pages = 90 + 48.
+//   chunk slot (768 / ap)^2 x 12 B = 1.69 MiB at ap 2 (6.75 at ap 1; slots are created on demand up to the tier
+//   cap and reused, never re-allocated); atlas page 1024^2 x 12 B = 12 MiB (three TEXTURE_2D_ARRAYs allocated
+//   per tier; at ap 2 a page holds four times the sprites); frame ~21 B per scene texel (scene 12 + depth 2 +
+//   lit 4 + half/quarter bloom, shafts, light tiles ~3), allocated on the first frame and grown in 128 px steps
+//   only when the view needs more.
+//   A baked chunk with buildings also keeps its "under" layer (the chunk before its buildings, RGBA8, 0.56 MiB
+//   at ap 2) for the building fades: 2.25 MiB a slot. Caches at the cap (ap 2): Low 12 chunks + 4 pages = 27 +
+//   48 MiB; Medium 14 + 6 = 32 + 72; High 18 + 8 = 41 + 96; Ultra 26 + 10 = 59 + 120. lowMem: 10 + 4 = 23 + 48.
 //   The host reserves as many slots as the view needs (zoomed out driving on a 1080p screen: up to 15), so
 //   the cap only grows past these when the view itself is bigger. Frame: ~27 MiB for 1280x720 or a phone
 //   (1.1-1.3 M texels), ~52 MiB at 1080p, ~94 MiB at 1440p zoomed out to 1.5x.
@@ -70,15 +72,22 @@
 //   (the 3 x 110 step sun march at golden hour). The lit pass is 50-75 % of a frame (the march by day, the
 //   lights at night), final 15-35 % when wet (mirror march) or foggy, static + present + bloom ~10 %,
 //   sprites and decals < 1 %. A real GPU is ~1000x faster.
-// Integration notes: sprites snap to whole world px while the camera scrolls with sub-texel precision, so
-//   pass camX/camY as the player's rounded position (+ the smooth look-ahead) to keep the player steady.
+// Integration notes: sprites snap to the art grid (engine.ap world px) while the camera scrolls with sub-texel
+//   precision, so pass camX/camY as the player's position rounded to that grid (+ the smooth look-ahead) to keep
+//   the player steady.
 //   Decals on decks need z0. Lights are world px; static lights from chunks must be added each frame.
-import { F_GROUND, F_LEAF, packGBuf, octEncode, OCT_MID } from '../gbuf.js';
+import { F_GROUND, F_LEAF, packGBuf, octEncode, OCT_MID, downsample2, downsampleUnder, ART_PX, CHUNK_RUN } from '../gbuf.js';
 import { LightGame, LIGHT_TIERS, MAX_LIGHTS, LIGHT_FLOATS, PRESETS_GAME, PRESET_DEFAULTS, blendPresets, glProgram, glTex, glFbo, TRI_VS, GLSL_COMMON } from './lightgame.js';
-export { PRESETS_GAME, PRESET_DEFAULTS, blendPresets, LIGHT_TIERS };
+export { PRESETS_GAME, PRESET_DEFAULTS, blendPresets, LIGHT_TIERS, ART_PX };
 
 export const CHUNK_PX = 768;
 export const ATLAS_PX = 1024;
+// The pixel-art grid: every texture - chunks, sprites, decals - is drawn at 1 art pixel = ap world px (opts.artPx,
+// default ART_PX = 2), on one grid anchored to the world (chunks start on it, sprites snap to it), while the
+// scene, the depth test and the lighting stay per world px: chunky 16-bit pixels under smooth modern light.
+// Chunk textures are CHUNK_PX / ap texels a side; a sprite record's w, h, ax, ay are art texels and r.ap its
+// world px per texel. Anything uploaded at full resolution (a GBuf, or planes without .ap) is turned into art
+// pixels on the way in (gbuf.js downsample2); the workers send art-resolution planes ({..., ap}).
 // cache budgets per quality (GAME-RENDERER.md "Quality tiers"); lighting settings live in LIGHT_TIERS
 // sway: how the vegetation moves with the wind (STATIC_FS uSway: 1 gust shading only, 3 leaning up to 2 texels,
 // 4 up to 3)
@@ -118,8 +127,12 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // A texel looks for the leaf that leans onto it among its neighbours (up to uSway - 1 texels either side; the
 // tallest wins, as in the depth rule); where a leaf leans away and nothing takes its place, the texel beside it
 // shows through. Gusts also brighten the leaves they bend (bands of wind sweeping over a wheat field).
-// uSway: 0 off, 1 gust shading only (Low), 2-4 leaning up to 1-3 texels.
-const STATIC_FS = HDR + `
+// uSway: 0 off, 1 gust shading only (Low), 2-4 leaning up to 1-3 world px (whole art pixels: 1 or 2 at ap 2).
+// A chunk texel is an art pixel (AP world px a side, CTX texels a chunk): every world px of it fetches the same
+// texel and computes the same lean, fade and dither, so it moves and fades as one pixel.
+const STATIC_FS = (AP) => HDR + `
+#define AP ${AP}
+#define CTX ${CHUNK_PX / AP}
 uniform sampler2D t0, t1, t2, t3; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64]; uniform vec4 uFoot[64];
 uniform vec4 uWind; uniform float uWindT; uniform int uSway; uniform vec2 uChunk;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
@@ -135,18 +148,18 @@ float gustAt(vec2 w){
 float ampOf(float h, int f){ return (f & ${F_GROUND}) != 0 ? clamp(h / 7.0, 0.0, 1.0) * 1.6 : clamp((h - 10.0) / 70.0, 0.0, 1.4) * 2.2; }
 int leanOf(float pw, float pi, float h, int f, int R){
   float k = (f & ${F_GROUND}) != 0 ? 0.4 : 1.0;
-  return clamp(int(round((pw + pi * k) * ampOf(h, f))), -R, R);
+  return clamp(int(round((pw + pi * k) * ampOf(h, f) / float(AP))), -R, R);
 }
 void main(){
-  ivec2 q = ivec2(gl_FragCoord.xy - uOff), src = q;
-  vec4 b = texelFetch(t1, q, 0);
+  ivec2 q = ivec2(gl_FragCoord.xy - uOff), t = q / AP, src = t;   // the chunk's world px, its art texel
+  vec4 b = texelFetch(t1, t, 0);
   float gb = 0.0;
   if (uSway > 0) {
-    vec2 w = uChunk + vec2(q);
+    vec2 w = uChunk + vec2(t * AP) + 0.5 * float(AP);
     float g = gustAt(w), s = uWind.x;
     gb = s * (0.35 + 0.65 * g) * smoothstep(0.15, 0.5, s);
     if (uSway > 1) {
-      int R = uSway - 1;
+      int R = (uSway - 1 + AP - 1) / AP;
       float pw = s * ((1.0 - uWind.y) * 0.6 + uWind.y * g * 1.3) * uWind.z;
       // (the fields change slowly across the ground, so a whole plant leans as one)
       float pi = sin(uWindT * 1.25 + w.x * 0.0045 + w.y * 0.006) * 0.3 + sin(uWindT * 0.7 + w.x * 0.0021 - w.y * 0.003) * 0.15;
@@ -157,19 +170,19 @@ void main(){
       int bestK = own == 0 ? 0 : 99;
       for (int k = -3; k <= 3; k++) {
         if (k == 0 || abs(k) > R) continue;
-        int sx = q.x - k;
-        if (sx < 0 || sx > ${CHUNK_PX - 1}) continue;
-        vec4 sb = texelFetch(t1, ivec2(sx, q.y), 0);
+        int sx = t.x - k;
+        if (sx < 0 || sx > CTX - 1) continue;
+        vec4 sb = texelFetch(t1, ivec2(sx, t.y), 0);
         int sf = flOf(sb);
         if ((sf & ${F_LEAF}) == 0) continue;
         float sh = zOf(sb);
         if (sh > bestH && leanOf(pw, pi, sh, sf, R) == k) { bestH = sh; bestK = k; }
       }
       if (bestK == 99) {
-        ivec2 s2 = ivec2(clamp(q.x - own, 0, ${CHUNK_PX - 1}), q.y);
+        ivec2 s2 = ivec2(clamp(t.x - own, 0, CTX - 1), t.y);
         vec4 b2 = texelFetch(t1, s2, 0);
         if ((flOf(b2) & ${F_LEAF}) == 0) { src = s2; b = b2; }
-      } else if (bestK != 0) { src = ivec2(q.x - bestK, q.y); b = texelFetch(t1, src, 0); }
+      } else if (bestK != 0) { src = ivec2(t.x - bestK, t.y); b = texelFetch(t1, src, 0); }
     }
   }
   vec4 a = texelFetch(t0, src, 0);
@@ -185,12 +198,12 @@ void main(){
     if (k > 0 && k < 64) {
       float f = uFade[k];
       vec4 fp = uFoot[k];
-      vec2 sp = vec2(src);
+      vec2 sp = vec2(src * AP) + 0.5 * float(AP);   // (world px: the art pixel's centre)
       if (sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w) f = 0.0;   // over its own footprint: stays
       if (f > 0.002) {
         a.rgb = mix(a.rgb, u.rgb, f);
         c.rgb *= 1.0 - f;
-        if (f > 0.55 + bayer4(ivec2(gl_FragCoord.xy)) * 0.2) {
+        if (f > 0.55 + bayer4(src) * 0.2) {
           gl_FragDepth = 1.0;
           o0 = vec4(a.rgb, 1.0); o1 = vec4(0.0, 0.0, ${(F_GROUND | 8) / 255}, ${OCT_MID / 255}); o2 = vec4(c.rgb, ${OCT_MID / 255});
           return;
@@ -203,7 +216,7 @@ void main(){
   o0 = vec4(a.rgb, a.a); o1 = b; o2 = c;
 }`;
 // instanced sprite quads: iDst (x, y, w, h in scene texels), iSrc (atlas x, y, layer, bits 1 flipX 2 no
-// shadow), iPar (z0, alpha, flash, 0), iTint (r, g, b, 0)
+// shadow), iPar (z0, alpha, flash, world px per atlas texel), iTint (r, g, b, 0)
 const SPRITE_VS = `#version 300 es
 in vec2 c; in vec4 iDst; in vec4 iSrc; in vec4 iPar; in vec4 iTint;
 uniform vec2 uScene;
@@ -219,13 +232,14 @@ uniform sampler2DArray tA, tB, tC; uniform ivec2 org;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
 void main(){
-  ivec2 fq = ivec2(gl_FragCoord.xy), l = fq - ivec2(vDst.xy);
+  int k = max(1, int(vPar.w + 0.5));
+  ivec2 fq = ivec2(gl_FragCoord.xy), l = (fq - ivec2(vDst.xy)) / k;
   int bits = int(vSrc.w + 0.5);
-  if ((bits & 1) != 0) l.x = int(vDst.z + 0.5) - 1 - l.x;
+  if ((bits & 1) != 0) l.x = int(vDst.z + 0.5) / k - 1 - l.x;
   ivec3 s = ivec3(int(vSrc.x + 0.5) + l.x, int(vSrc.y + 0.5) + l.y, int(vSrc.z + 0.5));
   vec4 a = texelFetch(tA, s, 0);
   if (a.a < 0.5) discard;
-  if (vPar.y < 0.999 && vPar.y < bayer4(fq + org) + 0.5) discard;
+  if (vPar.y < 0.999 && vPar.y < bayer4((fq + org) / k) + 0.5) discard;   // (the fade dithers whole art pixels)
   vec4 b = texelFetch(tB, s, 0), c = texelFetch(tC, s, 0);
   float h = zOf(b) + vPar.x;
   int fl = flOf(b);
@@ -240,22 +254,27 @@ void main(){
   o2 = vec4(min(c.rgb + vec3(vPar.z * 0.85), vec3(1.0)), c.a);
 }`;
 // flat ground decals, rotated about their anchor: iA (anchor x, y, cos, sin), iSrc (atlas x, y, layer),
-// iSz (w, h, ax, ay), iPar (alpha, z0)
+// iSz (w, h, ax, ay in atlas texels), iPar (alpha, z0, world px per texel). A decal is sampled once per art pixel
+// of the world's grid (at its centre), so even turned it lands in whole art pixels; the quad grows a texel each
+// side so the art pixels its edge cuts are whole too.
 const DECAL_VS = `#version 300 es
 in vec2 c; in vec4 iA; in vec4 iSrc; in vec4 iSz; in vec4 iPar;
 uniform vec2 uScene;
 flat out vec4 vA; flat out vec4 vSrc; flat out vec4 vSz; flat out vec4 vPar;
 void main(){
   vA = iA; vSrc = iSrc; vSz = iSz; vPar = iPar;
-  vec2 lc = c * iSz.xy - iSz.zw, p = iA.xy + vec2(lc.x * iA.z - lc.y * iA.w, lc.x * iA.w + lc.y * iA.z);
+  vec2 lc = (c * (iSz.xy + 2.0) - iSz.zw - 1.0) * max(iPar.z, 1.0), p = iA.xy + vec2(lc.x * iA.z - lc.y * iA.w, lc.x * iA.w + lc.y * iA.z);
   gl_Position = vec4(p / uScene * 2.0 - 1.0, 0.0, 1.0);
 }`;
 const DECAL_FS = HDR + `
 flat in vec4 vA; flat in vec4 vSrc; flat in vec4 vSz; flat in vec4 vPar;
-uniform sampler2DArray tA;
+uniform sampler2DArray tA; uniform ivec2 org;
 layout(location=0) out vec4 o0;
 void main(){
-  vec2 d = gl_FragCoord.xy - vA.xy, lc = vec2(d.x * vA.z + d.y * vA.w, -d.x * vA.w + d.y * vA.z) + vSz.zw;
+  int k = max(1, int(vPar.z + 0.5));
+  ivec2 fq = ivec2(gl_FragCoord.xy);
+  vec2 cen = vec2(fq - (fq + org) % k) + 0.5 * float(k);
+  vec2 d = cen - vA.xy, lc = vec2(d.x * vA.z + d.y * vA.w, -d.x * vA.w + d.y * vA.z) / float(k) + vSz.zw;
   ivec2 l = ivec2(floor(lc));
   if (l.x < 0 || l.y < 0 || l.x >= int(vSz.x + 0.5) || l.y >= int(vSz.y + 0.5)) discard;
   vec4 a = texelFetch(tA, ivec3(int(vSrc.x + 0.5) + l.x, int(vSrc.y + 0.5) + l.y, int(vSrc.z + 0.5)), 0);
@@ -299,8 +318,11 @@ void main(){
   vec2 t = vec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y) * uInvS + uOff;
   ivec2 tq = ivec2(floor(t));
   if (t.x < 0.0 || t.y < 0.0 || t.x >= uMax.x || t.y >= uMax.y) discard;
+  int k = max(1, int(vPar.w + 0.5));
   ivec2 l = tq - ivec2(vDst.xy);
-  int w = int(vDst.z + 0.5), h = int(vDst.w + 0.5), bits = int(vSrc.w + 0.5);
+  if (l.x < 0 || l.y < 0) discard;
+  l /= k;                                          // (the sprite's art texel)
+  int w = int(vDst.z + 0.5) / k, h = int(vDst.w + 0.5) / k, bits = int(vSrc.w + 0.5);
   if (cov(l, w, h, bits) < 0.5) discard;
   float hs = zOf(texelFetch(tS, tq, 0)), h0 = zOf(texelFetch(tB, at(l, w, bits), 0)) + vPar.x;
   if (hs <= h0 + 0.5) discard;
@@ -325,6 +347,7 @@ export class Art2Engine {
   constructor(canvas, gl, opts) {
     this.cv = canvas; this.gl = gl;
     this.q = clampQ(opts.quality ?? 2); this.lowMem = !!opts.lowMem; this.profile = !!opts.profile;
+    this.ap = opts.artPx === 1 ? 1 : ART_PX; this.ctx = CHUNK_PX / this.ap;   // world px per art pixel; chunk texels a side
     this.dpr = 1; this.frameNo = 1; this.inFrame = false; this.lost = false; this.lostCb = null; this.disposed = false;
     // per-frame records, allocated once (grown only if a frame needs more)
     this.inst = new Float32Array(1024 * FL); this.nInst = 0;
@@ -363,12 +386,12 @@ export class Art2Engine {
     this.vaoSpr = this._instVao(this.ibSpr); this.vaoDec = this._instVao(this.ibDec); this.vaoXr = this._instVao(this.ibXr);
     this.uboBuf = gl.createBuffer(); gl.bindBuffer(gl.UNIFORM_BUFFER, this.uboBuf); gl.bufferData(gl.UNIFORM_BUFFER, this.ubo.byteLength, gl.DYNAMIC_DRAW); gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     const IA = ['c', 'iDst', 'iSrc', 'iPar', 'iTint'];
-    this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS, ['c'], { t0: 0, t1: 1, t2: 2, t3: 7 });
+    this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS(this.ap), ['c'], { t0: 0, t1: 1, t2: 2, t3: 7 });
     this.pSprite = glProgram(gl, SPRITE_VS, SPRITE_FS, IA, { tA: 3, tB: 4, tC: 5 });
     this.pDecal = glProgram(gl, DECAL_VS, DECAL_FS, ['c', 'iA', 'iSrc', 'iSz', 'iPar'], { tA: 3 });
     this.pPresent = glProgram(gl, TRI_VS, PRESENT_FS, ['p'], { tF: 0 });
     this.pXray = glProgram(gl, XRAY_VS, XRAY_FS, IA, { tA: 3, tB: 4, tS: 6 });
-    this.light = new LightGame(gl, this.vaoTri); this.light.setTier(this.q); this.light.warm();
+    this.light = new LightGame(gl, this.vaoTri); this.light.ap = this.ap; this.light.setTier(this.q); this.light.warm();
     this.slots = []; this.chunks = new Map();
     this.sprites = new Map(); this.atlas = null; this.pages = []; this._allocAtlas();
     this.cw = 0; this.ch = 0; this.tA = this.tB = this.tC = this.rbDepth = this.fbScene = this.fbOut = null;
@@ -468,8 +491,8 @@ export class Art2Engine {
     if (s) return s;
     for (const x of this.slots) if (x.key < 0) { s = x; break; }
     if (!s && this.slots.length < this._chunksCap()) {
-      const gl = this.gl;
-      s = { t: [glTex(gl, CHUNK_PX, CHUNK_PX), glTex(gl, CHUNK_PX, CHUNK_PX), glTex(gl, CHUNK_PX, CHUNK_PX)], key: -1, cx: 0, cy: 0, real: false, src: null, used: 0 };
+      const gl = this.gl, T = this.ctx;
+      s = { t: [glTex(gl, T, T), glTex(gl, T, T), glTex(gl, T, T)], key: -1, cx: 0, cy: 0, real: false, src: null, used: 0 };
       this.slots.push(s);
     }
     if (!s) { for (const x of this.slots) if (!s || x.used < s.used) s = x; this.chunks.delete(s.key); }
@@ -488,10 +511,17 @@ export class Art2Engine {
   }
   uploadChunk(cx, cy, g) {
     if (this.lost || !g) return false;
-    const gl = this.gl, s = this._slot(cx, cy), pk = g.p0 ? g : this._pack(g);
-    const w = Math.min(g.w, CHUNK_PX), h = Math.min(g.h, CHUNK_PX);
-    if (w < CHUNK_PX || h < CHUNK_PX) { this._clearTex(s.t[0], 0, 0, 0, 0); this._clearTex(s.t[1], 0, 0, 0, OCT_MID / 255); this._clearTex(s.t[2], 0, 0, 0, OCT_MID / 255); }
-    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, g.w);
+    const gl = this.gl, s = this._slot(cx, cy), T = this.ctx;
+    let pk = g.p0 ? g : this._pack(g), under = g.under || null;
+    if ((g.ap || 1) < this.ap) {
+      // full resolution (baked on this thread, or planes packed elsewhere): to art pixels here
+      const d = downsample2({ w: g.w, h: g.h, ax: 0, ay: 0, p0: pk.p0, p1: pk.p1, p2: pk.p2 }, { run: CHUNK_RUN });
+      if (under) under = under.length >= g.w * g.h * 4 ? downsampleUnder(under, g.w, g.h, d.pick) : null;
+      pk = d;
+    }
+    const w = Math.min(pk.w, T), h = Math.min(pk.h, T);
+    if (w < T || h < T) { this._clearTex(s.t[0], 0, 0, 0, 0); this._clearTex(s.t[1], 0, 0, 0, OCT_MID / 255); this._clearTex(s.t[2], 0, 0, 0, OCT_MID / 255); }
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, pk.w);
     for (let i = 0; i < 3; i++) { gl.bindTexture(gl.TEXTURE_2D, s.t[i]); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, i === 0 ? pk.p0 : i === 1 ? pk.p1 : pk.p2); }
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
     s.bids = g.blds && g.blds.length ? g.blds.map((r) => r[0]) : null;
@@ -502,10 +532,10 @@ export class Art2Engine {
       F4.fill(0);
       g.blds.forEach((r, i) => { if (i < 63 && r.length >= 10 && isFinite(r[6])) { const j = (i + 1) * 4; F4[j] = r[6] - ox; F4[j + 1] = r[7] - oy; F4[j + 2] = r[8] - ox; F4[j + 3] = r[9] - oy; } });
     }
-    if (g.under && g.under.length >= CHUNK_PX * CHUNK_PX * 4) {
-      if (!s.t[3]) s.t[3] = glTex(gl, CHUNK_PX, CHUNK_PX);
-      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, g.w);
-      gl.bindTexture(gl.TEXTURE_2D, s.t[3]); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, g.under);
+    if (under && s.bids && under.length >= T * T * 4) {
+      if (!s.t[3]) s.t[3] = glTex(gl, T, T);
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, pk.w);
+      gl.bindTexture(gl.TEXTURE_2D, s.t[3]); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, under);
       gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
       s.under = true;
     } else s.under = false;
@@ -516,13 +546,13 @@ export class Art2Engine {
     if (this.lost || !source) return false;
     const ex = this.chunks.get(ckey(cx, cy));
     if (ex && (ex.real || ex.src === source)) return true;
-    const gl = this.gl, s = this._slot(cx, cy);
+    const gl = this.gl, s = this._slot(cx, cy), T = this.ctx;
     let src = source;
     const sw = source.width || source.videoWidth || 0, sh = source.height || source.videoHeight || 0;
-    if (sw !== CHUNK_PX || sh !== CHUNK_PX) {
-      if (!this.scaleCv) { this.scaleCv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(CHUNK_PX, CHUNK_PX) : document.createElement('canvas'); this.scaleCv.width = this.scaleCv.height = CHUNK_PX; this.scaleG = this.scaleCv.getContext('2d'); }
-      this.scaleG.clearRect(0, 0, CHUNK_PX, CHUNK_PX); this.scaleG.imageSmoothingEnabled = false;
-      this.scaleG.drawImage(source, 0, 0, CHUNK_PX, CHUNK_PX);
+    if (sw !== T || sh !== T) {
+      if (!this.scaleCv) { this.scaleCv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(T, T) : document.createElement('canvas'); this.scaleCv.width = this.scaleCv.height = T; this.scaleG = this.scaleCv.getContext('2d'); }
+      this.scaleG.clearRect(0, 0, T, T); this.scaleG.imageSmoothingEnabled = false;
+      this.scaleG.drawImage(source, 0, 0, T, T);
       src = this.scaleCv;
     }
     gl.bindTexture(gl.TEXTURE_2D, s.t[0]);
@@ -569,7 +599,7 @@ export class Art2Engine {
     if (r) return r;
     const pl = this._place(w, h);
     if (!pl) return null;
-    r = { key, layer: pl.s.page.i, x: pl.x, y: pl.s.y, w, h, ax: 0, ay: 0, shelf: pl.s, used: 0 };
+    r = { key, layer: pl.s.page.i, x: pl.x, y: pl.s.y, w, h, ax: 0, ay: 0, ap: 1, shelf: pl.s, used: 0 };
     pl.s.list.push(r); this.sprites.set(key, r);
     // (a fresh upload counts as a use: what was just asked for ahead isn't the first thing pushed out)
     if (pl.s.used < this.frameNo) pl.s.used = this.frameNo;
@@ -583,9 +613,11 @@ export class Art2Engine {
   }
   uploadSprite(key, g) {
     if (this.lost || !g) return false;
-    const W0 = g.w | 0, H0 = g.h | 0;
-    if (W0 <= 0 || H0 <= 0) return false;
-    const pk = g.p0 ? g : this._pack(g);
+    if ((g.w | 0) <= 0 || (g.h | 0) <= 0) return false;
+    let pk = g.p0 ? g : this._pack(g), ap = g.ap || 1;
+    // at full resolution (made on this thread): to art pixels first
+    if (ap < this.ap) { pk = downsample2({ w: g.w | 0, h: g.h | 0, ax: g.ax ?? 0, ay: g.ay ?? 0, p0: pk.p0, p1: pk.p1, p2: pk.p2 }); ap = this.ap; }
+    const W0 = pk.w | 0, H0 = pk.h | 0;
     // crop to what is drawn (a voxel render is a square round its model): the atlas holds twice as much
     const A = pk.p0;
     let x0 = W0, y0 = H0, x1 = -1, y1 = -1;
@@ -599,7 +631,7 @@ export class Art2Engine {
     if (w > ATLAS_PX || h > ATLAS_PX) return false;
     const r = this._rec(key, w, h);
     if (!r) return false;
-    r.ax = (g.ax ?? 0) - x0; r.ay = (g.ay ?? 0) - y0;
+    r.ax = (pk.ax ?? g.ax ?? 0) - x0; r.ay = (pk.ay ?? g.ay ?? 0) - y0; r.ap = ap;
     if (w === W0 && h === H0) { this._subImage(r, 0, pk.p0); this._subImage(r, 1, pk.p1); this._subImage(r, 2, pk.p2); return true; }
     // the cropped rectangle copied out on the CPU: a 3D upload with UNPACK_SKIP_ROWS is refused by browsers
     // (INVALID_OPERATION unless UNPACK_IMAGE_HEIGHT is set too), which left every sprite with empty top rows
@@ -612,16 +644,16 @@ export class Art2Engine {
     }
     return true;
   }
-  // v1 art as a sprite: albedo from the canvas, a normal facing the camera, z rising 1 px per row from the
-  // bottom row (opts.flat: lying on the ground, z 0, normal up), opts.flags, opts.emissive 0..1 (glows with
-  // its own colour; reads the canvas back once)
+  // a canvas as a sprite (1 texel = 1 world px: not on the art grid; the game no longer uses it): albedo from
+  // the canvas, a normal facing the camera, z rising 1 px per row from the bottom row (opts.flat: lying on the
+  // ground, z 0, normal up), opts.flags, opts.emissive 0..1 (glows with its own colour; reads the canvas back once)
   uploadSpriteFromCanvas(key, canvas, ax, ay, opts = EMPTY) {
     if (this.lost || !canvas) return false;
     const w = canvas.width | 0, h = canvas.height | 0;
     if (w <= 0 || h <= 0 || w > ATLAS_PX || h > ATLAS_PX) return false;
     const r = this._rec(key, w, h);
     if (!r) return false;
-    r.ax = ax ?? w / 2; r.ay = ay ?? h;
+    r.ax = ax ?? w / 2; r.ay = ay ?? h; r.ap = 1;
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.atlas[0]);
     gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, r.x, r.y, r.layer, w, h, 1, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
@@ -676,15 +708,18 @@ export class Art2Engine {
     if (!r) return false;
     const alpha = o.alpha ?? 1;
     if (alpha <= 0) return true;
-    const dx = Math.round(x - r.ax) - this.ox, dy = Math.round(y - r.ay - z0) - this.oy;
-    if (dx >= this.SW || dy >= this.SH || dx + r.w <= 0 || dy + r.h <= 0) return true;
+    // the top-left snapped to the art grid (whole art pixels of the world), so a sprite's pixels line up with
+    // the ground's
+    const k = r.ap, W = r.w * k, H = r.h * k;
+    const dx = Math.round((x - r.ax * k) / k) * k - this.ox, dy = Math.round((y - z0 - r.ay * k) / k) * k - this.oy;
+    if (dx >= this.SW || dy >= this.SH || dx + W <= 0 || dy + H <= 0) return true;
     const f = this.frameNo;
     r.used = f; r.shelf.used = f; this.pages[r.layer].used = f;
     if (this.nInst * FL >= this.inst.length) this.inst = this._grow(this.inst, this.ibSpr);
     const A = this.inst, b = this.nInst++ * FL, t = o.tint;
-    A[b] = dx; A[b + 1] = dy; A[b + 2] = r.w; A[b + 3] = r.h;
+    A[b] = dx; A[b + 1] = dy; A[b + 2] = W; A[b + 3] = H;
     A[b + 4] = r.x; A[b + 5] = r.y; A[b + 6] = r.layer; A[b + 7] = (o.flipX ? 1 : 0) | (o.shadow === false ? 2 : 0) | (o.air ? 4 : 0);
-    A[b + 8] = z0; A[b + 9] = alpha; A[b + 10] = o.flash || 0; A[b + 11] = 0;
+    A[b + 8] = z0; A[b + 9] = alpha; A[b + 10] = o.flash || 0; A[b + 11] = k;
     A[b + 12] = t ? t[0] : 1; A[b + 13] = t ? t[1] : 1; A[b + 14] = t ? t[2] : 1; A[b + 15] = 0;
     if (o.xray) {
       if (this.nXr * FL >= this.xr.length) this.xr = this._grow(this.xr, this.ibXr);
@@ -698,7 +733,7 @@ export class Art2Engine {
     const r = this.sprites.get(key);
     if (!r) return false;
     if (alpha <= 0) return true;
-    const ax = Math.round(x) - this.ox, ay = Math.round(y - z0) - this.oy, ext = r.w + r.h;
+    const ax = Math.round(x) - this.ox, ay = Math.round(y - z0) - this.oy, ext = (r.w + r.h + 2) * r.ap;
     if (ax - ext >= this.SW || ay - ext >= this.SH || ax + ext <= 0 || ay + ext <= 0) return true;
     const f = this.frameNo;
     r.used = f; r.shelf.used = f; this.pages[r.layer].used = f;
@@ -707,7 +742,7 @@ export class Art2Engine {
     D[b] = ax; D[b + 1] = ay; D[b + 2] = Math.cos(angle); D[b + 3] = Math.sin(angle);
     D[b + 4] = r.x; D[b + 5] = r.y; D[b + 6] = r.layer; D[b + 7] = 0;
     D[b + 8] = r.w; D[b + 9] = r.h; D[b + 10] = r.ax; D[b + 11] = r.ay;
-    D[b + 12] = alpha; D[b + 13] = z0; D[b + 14] = 0; D[b + 15] = 0;
+    D[b + 12] = alpha; D[b + 13] = z0; D[b + 14] = r.ap; D[b + 15] = 0;
     return true;
   }
   // L: {x, y (world ground point), z (height), r (radius px), col [r,g,b] 0..1, k, cone?: {a, spread, len}}
@@ -845,7 +880,7 @@ export class Art2Engine {
     gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE);
     gl.depthMask(false);
     gl.useProgram(p.p); gl.bindVertexArray(this.vaoDec); this._bindAtlas();
-    gl.uniform2f(p.u.uScene, this.SW, this.SH);
+    gl.uniform2f(p.u.uScene, this.SW, this.SH); gl.uniform2i(p.u.org, this.org[0], this.org[1]);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.ibDec); gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.dec, 0, this.nDec * FL);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.nDec);
     gl.disable(gl.BLEND); gl.depthMask(true); gl.drawBuffers(this.DB3);
@@ -918,9 +953,10 @@ export class Art2Engine {
     let baked = 0, shelves = 0;
     for (const s of this.chunks.values()) if (s.real) baked++;
     for (const pg of this.pages) shelves += pg.shelves.length;
-    const bytes = this.slots.length * CHUNK_PX * CHUNK_PX * 12 + this.slots.filter((x) => x.t[3]).length * CHUNK_PX * CHUNK_PX * 4 + this.pages.length * ATLAS_PX * ATLAS_PX * 12 + this.cw * this.ch * 14 + (this.light ? this.light.bytes() : 0);
+    const T2 = this.ctx * this.ctx;
+    const bytes = this.slots.length * T2 * 12 + this.slots.filter((x) => x.t[3]).length * T2 * 4 + this.pages.length * ATLAS_PX * ATLAS_PX * 12 + this.cw * this.ch * 14 + (this.light ? this.light.bytes() : 0);
     return {
-      chunks: this.chunks.size, baked, slots: this.slots.length, sprites: this.sprites.size, pages: this.pages.length, shelves,
+      chunks: this.chunks.size, baked, slots: this.slots.length, sprites: this.sprites.size, pages: this.pages.length, shelves, artPx: this.ap,
       gpuMB: Math.round(bytes / 1048576 * 10) / 10, msGpuApprox: Math.round(this.msGpu * 100) / 100, lights: this.lightsUsed,
       lightsIn: this.last.lights, drawn: this.last.sprites, decals: this.last.decals, chunksDrawn: this.last.chunks, quality: this.q,
       scene: [this.SW, this.SH], capacity: [this.cw, this.ch], timer: this.profile ? 'sync' : this.timer ? 'ext' : 'cpu', passes: this.times,

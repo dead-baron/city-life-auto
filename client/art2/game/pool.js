@@ -29,8 +29,8 @@ export function poolSize(lowMem) {
 }
 
 export class WorkerPool {
-  constructor({ lowMem = false, size = poolSize(lowMem), url = new URL('./worker.js', import.meta.url) } = {}) {
-    this.url = url; this.lowMem = lowMem;
+  constructor({ lowMem = false, artPx = 2, size = poolSize(lowMem), url = new URL('./worker.js', import.meta.url) } = {}) {
+    this.url = url; this.lowMem = lowMem; this.artPx = artPx;
     this.workers = [];
     this.queue = [];               // { key, op, args, prio, done, seq } (sorted when dispatching)
     this.jobs = new Map();         // key -> job (queued or running)
@@ -55,7 +55,7 @@ export class WorkerPool {
 
   // Send the world to every worker. Resolves once all have answered (or failed).
   init(M) {
-    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length };
+    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx };
     let post = 0;
     const answers = this.workers.filter((w) => w.alive).map((w) => new Promise((res) => {
       const id = this.nextId++;

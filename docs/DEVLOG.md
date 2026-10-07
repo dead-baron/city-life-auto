@@ -2113,3 +2113,36 @@ User: NPCs and players should react to hits, with knockback, slides, trips and r
   - death slides and how bodies lie;
   - bat trips;
   - crawling.
+
+## 2026-10-06 · 16-bit pixels under modern light: the art pixel is now 2 world pixels
+
+The live renderer draws every texture at **1 art pixel = 2 x 2 world pixels**: ground, buildings, props, vehicles, people, animals, effects and decals. The scene, the depth test and the lighting stay per world pixel, so sun and shadows, lamp light, bloom, god rays, fog and wet reflections stay smooth over chunky SNES-style pixels (the Octopath Traveler / Eastward blend). The camera framing is unchanged. `?artpx=1` shows the old full-size art for comparison.
+- **One pixel grid.**
+  - Chunks start on it.
+  - Statics are placed on even world px.
+  - Sprites snap to whole art pixels of the world.
+  - The camera's anchor (the player) rounds to the same grid, so the player stays steady while the look-ahead scrolls smoothly.
+- **Turning painted art into art pixels** (`gbuf.js downsample2`): every art pixel takes its height, normal, flags and glow from one real texel.
+  - **Glow first:** a small lamp or a lit window survives.
+  - **Edges and lines** keep the texel that stands out most from its surroundings, dark or light, so outlines, kerb lines, window frames and lane lines come through at full strength.
+  - **Texture and flat paint** take the average colour, which calms the noise down.
+  - **Chunks** also drop lone flecks of texture (a grass blade, a flower, a pebble) instead of blowing them up to four times their size.
+  - **Sprites** keep their one-pixel details (eyes, buttons) and need 2 of 4 texels to draw a pixel.
+  - It runs in the bake workers (about 50 ms a chunk against about 900 ms of baking).
+- **Crisp by construction.**
+  - Road paint (lane lines, double yellows, zebras, stop lines, arrows, parking stalls, court lines, wear) is decided once per art pixel in the ground bake.
+  - Letters drawn 2 px a pixel start on even px and drop their shadow a whole pixel, so every sign stays readable (THE GRAND THEATRE, CINEMA, BANK).
+- **Voxel things are drawn straight at the art pixel:** vehicles, trains, animals, crates, bags and rockets get one ray per art pixel, with their shading, dither and outline on the art grid. That is crisper than shrinking a full-size render.
+- **Engine** (`engine.js`):
+  - chunk textures are 384 x 384;
+  - sprites carry their world px per texel (`r.ap`);
+  - decals are sampled once per art pixel of the world, so they turn in whole pixels;
+  - fades, sway and the x-ray outline work in art pixels;
+  - the lighting's pixel effects (water glints, foam, rain rings, shadow-edge dither, wet streaks) are worked out per art pixel.
+- **Memory:** chunk textures take a quarter of the memory (a slot 1.7 MiB instead of 6.75), and an atlas page holds four times the sprites.
+- **Docs:** `docs/art-v2/SPEC.md` "Scale" (design new detail for the 2 px art pixel: lines at least 2 px, letters with `sx: 2`) and `GAME-RENDERER.md`.
+- **Tests** (`test/art2.test.js`):
+  - outlines, lines and lamps survive while flecks are dropped;
+  - coverage and the anchor;
+  - the voxel renders at the art pixel;
+  - letters on even px.

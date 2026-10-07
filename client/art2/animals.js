@@ -150,14 +150,14 @@ export function animalModel(kind, o = {}) {
 // shows its face, chest and legs. Same shading, inner depth lines and outline; z is the true height.
 export function renderUpright(m, heading = 0, opt = {}) {
   m.prepare(opt.smooth ?? m.smooth ?? 1);
-  const { w, d, h } = m, fy = opt.fy ?? 0.38, dither = opt.dither ?? 0.4;
-  const R = Math.ceil(Math.hypot(w, d) / 2) + 2, Ry = Math.ceil(R * fy) + 1;
-  const G = new GBuf(2 * R, 2 * Ry + h + 2);
-  G.ax = R; G.ay = Ry + h;
-  const c = Math.cos(heading), s = Math.sin(heading);
+  const { w, d, h } = m, fy = opt.fy ?? 0.38, dither = opt.dither ?? 0.4, S = opt.px || 1;   // (opt.px: world px per art pixel)
+  const R = Math.ceil(Math.hypot(w, d) / 2) + 2, Ry = Math.ceil(R * fy) + 1, ax = Math.ceil(R / S), ay = Math.ceil((Ry + h) / S);
+  const G = new GBuf(2 * ax, ay + Math.ceil((Ry + 2) / S));
+  G.ax = ax; G.ay = ay; if (S > 1) G.ap = S;
+  const c = Math.cos(heading), s = Math.sin(heading), brk = 3.5 + (S - 1) * 2;
   const depth = new Float32Array(G.w * G.h).fill(-1e9);
   for (let py = 0; py < G.h; py++) for (let px = 0; px < G.w; px++) {
-    const X = px - R + 0.5, sy = py - G.ay + 0.5;
+    const X = (px - ax) * S + 0.5, sy = (py - ay) * S + 0.5;
     for (let Z = h - 1; Z >= 0; Z--) {
       const Y = (sy + Z + 0.5) / fy;
       const mx = c * X + s * Y + w / 2, my = -s * X + c * Y + d / 2;
@@ -180,7 +180,7 @@ export function renderUpright(m, heading = 0, opt = {}) {
     const i = py * G.w + px, j = i * 4;
     if (!G.col[j + 3]) continue;
     const me = depth[i], up = depth[i - G.w], lf = depth[i - 1], rt = depth[i + 1];
-    if ((up > -1e8 && up - me > 3.5) || (lf > -1e8 && lf - me > 3.5) || (rt > -1e8 && rt - me > 3.5)) { G.col[j] *= 0.62; G.col[j + 1] *= 0.6; G.col[j + 2] = G.col[j + 2] * 0.66 + 8; }
+    if ((up > -1e8 && up - me > brk) || (lf > -1e8 && lf - me > brk) || (rt > -1e8 && rt - me > brk)) { G.col[j] *= 0.62; G.col[j + 1] *= 0.6; G.col[j + 2] = G.col[j + 2] * 0.66 + 8; }
   }
   G.outline(0.42, true);
   return G;

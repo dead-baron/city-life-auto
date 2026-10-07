@@ -167,7 +167,10 @@ float bayer4(ivec2 q){ int i = (q.y & 3) * 4 + (q.x & 3);
 float hash2(ivec2 p){ uint h = uint(p.x) * 374761393u + uint(p.y) * 668265263u; h = (h ^ (h >> 13u)) * 1274126177u; return float((h ^ (h >> 16u)) & 16777215u) / 16777216.0; }
 `;
 
-const HEAD = (T) => `#version 300 es
+// AP: world px per art pixel (engine.js): the dithers, the water's waves and foam and the rain marks are worked
+// out once per art pixel of the world (they are part of the pixel art); the light itself stays per world px
+const HEAD = (T, AP = 1) => `#version 300 es
+#define AP ${AP}
 #define MAXL ${T.maxL}
 #define RAYS ${T.rays}
 #define STEPS ${Math.max(1, T.steps)}
@@ -306,7 +309,7 @@ float sunVis(vec3 P, ivec2 wq){
 // the point and cone lights of this pixel's tile reaching P; on wet ground (wg) also the wobbling
 // streak each light leaves below its foot
 void pointLights(vec3 P, vec3 n, ivec2 q, bool wg, inout vec3 light, inout vec3 refl){
-  float wy = P.y + float(org.y);
+  float wy = floor((P.y + float(org.y)) / float(AP)) * float(AP);
   ivec2 tile = q / ${TILE};
   int tb = tile.x * ${TILE_K}, cnt = min(nL, int(texelFetch(tTiles, ivec2(tb, tile.y), 0).r));
   for (int j = 0; j < ${TILE_K - 1}; j++) {
@@ -383,13 +386,13 @@ void main(){
   vec3 n = octDec(B.a, C.a);
   float Z = zOf(B);
   int fl = flOf(B);
-  ivec2 wq = q + org;
+  ivec2 wq = (q + org) / AP;                                       // the art pixel of the world
   vec3 P = vec3(float(q.x) + 0.5, float(q.y) + 0.5 + Z, Z);
   float sh = dot(n, sunDir) > 0.0 && sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, wq) : 1.0;
   vec3 plight = vec3(0.0), refl = vec3(0.0);
   pointLights(P, n, q, (fl & ${F_GROUND}) != 0 && wet > 0.0, plight, refl);
   vec3 alb = pow(A.rgb, vec3(2.2));
-  vec2 w = worg + vec2(q) + 0.5;
+  vec2 w = (floor((worg + vec2(q)) / float(AP)) + 0.5) * float(AP);   // (its centre, world px)
   float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, wq) : 0.0;
   o0 = shade(alb, n, fl, sh, plight, refl, C.rgb, wq);
   float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * sh + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
@@ -408,7 +411,7 @@ void main(){
   float Z = zOf(B);
   int fl = flOf(B);
   vec3 P = vec3(float(q.x) + 0.5, float(q.y) + 0.5 + Z, Z);
-  float sh = sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, q + org) : 1.0;
+  float sh = sunDir.z > 0.02 && shadowLen > 0.0 ? sunVis(P, (q + org) / AP) : 1.0;
   vec3 plight = vec3(0.0), refl = vec3(0.0);
   pointLights(P, n, q, (fl & ${F_GROUND}) != 0 && wet > 0.0, plight, refl);
   oL = vec4(sqrt(clamp(plight * 0.125, 0.0, 1.0)), sh);
@@ -443,9 +446,10 @@ void main(){
   }
   vec4 LH = texelFetch(tLH, pick, 0);
   vec3 alb = pow(A.rgb, vec3(2.2));
-  vec2 w = worg + vec2(q) + 0.5;
-  float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, q + org) : 0.0;
-  o0 = shade(alb, n, fl, LH.a, LH.rgb * LH.rgb * 8.0, R.rgb * R.rgb * 4.0, C.rgb, q + org);
+  vec2 w = (floor((worg + vec2(q)) / float(AP)) + 0.5) * float(AP);
+  ivec2 wq = (q + org) / AP;
+  float gl = (fl & ${F_GROUND}) != 0 ? waterSurf(alb, n, fl, A.a * 255.0, w, wq) : 0.0;
+  o0 = shade(alb, n, fl, LH.a, LH.rgb * LH.rgb * 8.0, R.rgb * R.rgb * 4.0, C.rgb, wq);
   float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * LH.a + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
   if (add > 0.0) o0.rgb = min(o0.rgb + vec3(add), vec3(1.0));
 }`;
@@ -520,7 +524,7 @@ void main(){
   // Open water mirrors what stands in and beside it in any weather.
   float rk = (fl & ${F_WATER}) != 0 ? max(wet * reflK, 0.5) : wet * reflK;
   if (rk > 0.0 && (fl & ${F_GROUND}) != 0) {
-    float wy = float(q.y + org.y);
+    float wy = float((q.y + org.y) / AP * AP);
     float wob = (sin(wy * 0.7854 + time * 3.14159) * 0.6 + sin(wy * 1.5708) * 0.4) * ((fl & ${F_WATER}) != 0 ? 1.6 : 1.0);
     for (int k = 1; k <= REFL; k++) {
       float t = float(k) * REFLSTEP;
@@ -568,7 +572,7 @@ export class LightGame {
   // gl: the engine's context; tri: a VAO holding the full-screen triangle at attribute 0
   constructor(gl, tri) {
     this.gl = gl; this.tri = tri;
-    this.progs = new Map(); this.ti = 2; this.T = LIGHT_TIERS[2];
+    this.progs = new Map(); this.ti = 2; this.T = LIGHT_TIERS[2]; this.ap = 1;   // (ap: set by the engine before the first program)
     this.cw = 0; this.ch = 0; this.texs = []; this.fbos = [];
     this.sd = new Float32Array(3);
   }
@@ -577,7 +581,7 @@ export class LightGame {
     const key = name + this.ti;
     let p = this.progs.get(key);
     if (p) return p;
-    const gl = this.gl, H = HEAD(this.T);
+    const gl = this.gl, H = HEAD(this.T, this.ap);
     if (name === 'lit') p = glProgram(gl, TRI_VS, H + LIT_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3 }, { Lights: 0 });
     else if (name === 'lighth') p = glProgram(gl, TRI_VS, H + LIGHTH_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3 }, { Lights: 0 });
     else if (name === 'compose') p = glProgram(gl, TRI_VS, H + COMPOSE_FS, ['p'], { tA: 0, tB: 1, tC: 2, tTiles: 3, tLH: 4, tRH: 5 }, { Lights: 0 });

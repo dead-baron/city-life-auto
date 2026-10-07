@@ -239,7 +239,9 @@ export class World2 {
     const q = qualityOf(o.gfx, o.lowMem);
     let engine = null;
     if (/[?&]art2nogl\b/.test(location.search)) { World2.lastWhy = 'no WebGL2 (?art2nogl)'; return null; } // (testing: as if there were no WebGL2)
-    if (E && E.Art2Engine) { try { engine = E.Art2Engine.create(o.canvas, { quality: q, lowMem: !!o.lowMem }); } catch (e) { console.error('[art2] engine', e); engine = null; why = String((e && e.message) || e); } if (!engine) why = why || E.Art2Engine.lastWhy || ''; }
+    // the art pixel: 2 world px (the 16-bit look); ?artpx=1 draws the art at full resolution (comparisons)
+    const artPx = /[?&]artpx=1\b/.test(location.search) ? 1 : 2;
+    if (E && E.Art2Engine) { try { engine = E.Art2Engine.create(o.canvas, { quality: q, lowMem: !!o.lowMem, artPx }); } catch (e) { console.error('[art2] engine', e); engine = null; why = String((e && e.message) || e); } if (!engine) why = why || E.Art2Engine.lastWhy || ''; }
     if (!engine && /[?&]art2stub\b/.test(location.search)) engine = new StubEngine(o.canvas);
     if (!engine) { World2.lastWhy = why || 'WebGL2 is not available'; console.warn('[art2] no engine:', World2.lastWhy); return null; }
     const w = new World2(o, engine, L, q);
@@ -296,7 +298,7 @@ export class World2 {
     const M = worldData(this.map);
     this.t.clonePrep = performance.now() - t0;
     try {
-      this.pool = new WorkerPool({ lowMem: this.lowMem });
+      this.pool = new WorkerPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 });
       const r = await this.pool.init(M);
       this.t.post = r.ms.post; this.t.workerInit = r.ms.init;
       const p = r.providers || {};
@@ -343,9 +345,9 @@ export class World2 {
     this.F = F;
     const q = qualityOf(this.gfx, this.lowMem);
     if (q !== this.q) { this.q = q; this.tier = TIERS[q]; if (E.setQuality) E.setQuality(q); }
-    // sprites snap to whole world px: the camera moves with the player's rounded position (plus the smooth
+    // sprites snap to the art grid: the camera moves with the player's position rounded to it (plus the smooth
     // look-ahead) so the player stays steady on screen (engine.js integration notes)
-    const sp = F.sp, camX = Math.round(sp.x) + (S.cam.x - sp.x) - F.shx / z, camY = Math.round(sp.y) + (S.cam.y - sp.y) - F.shy / z;
+    const ap = E.ap || 1, sp = F.sp, camX = Math.round(sp.x / ap) * ap + (S.cam.x - sp.x) - F.shx / z, camY = Math.round(sp.y / ap) * ap + (S.cam.y - sp.y) - F.shy / z;
     const hw = this.W / 2 / z, hh = this.H / 2 / z;
     this.vx0 = camX - hw; this.vx1 = camX + hw; this.vy0 = camY - hh; this.vy1 = camY + hh;
     this.camX = camX; this.camY = camY;
