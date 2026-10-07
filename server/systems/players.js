@@ -18,6 +18,7 @@ import * as jobs from './jobs.js';
 import * as picking from './picking.js';
 import * as places from './places.js';
 import * as rides from './rides.js';
+import * as golf from './golf.js';
 import * as homes from './homes.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
@@ -350,8 +351,9 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (ped.hardLanding) { ped.hardLanding = false; combat.damage(world, ped, 45, null, 'fall'); ped.tumbleUntil = world.time + 0.8; }
   if (tumbling) tumbleImpact(world, ped, v0, dt, fr);
   if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
-  const kicked = (pressed & IN.FIRE) && !ped.carrying && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
-  if ((inp.bits & IN.FIRE) && !kicked) {
+  const swung = golf.input(world, p, ped, inp, pressed, dt);   // (by your golf ball the attack button swings the club)
+  const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
+  if ((inp.bits & IN.FIRE) && !kicked && !swung) {
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   }
@@ -479,6 +481,8 @@ export function findInteraction(world, p) {
   if (place) return place;
   const ride = rides.interaction(world, p);
   if (ride) return ride;
+  const tee = golf.interaction(world, p);
+  if (tee) return tee;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);
@@ -597,7 +601,7 @@ export function buildMe(world, p) {
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, job: minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
+    prompt: p.prompt, job: golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || places.mazeTarget(world, p) || phone.jobTarget(world, p),
     radar: law.radarFor(world, p), bounty: p.bounty,
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
@@ -611,6 +615,6 @@ export function buildMe(world, p) {
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
-    ride: rides.meInfo(world, p),
+    ride: rides.meInfo(world, p), golf: golf.meInfo(world, p),
   };
 }

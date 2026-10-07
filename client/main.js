@@ -34,6 +34,7 @@ import { DEV_SECTIONS } from './devcats.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt } from '../shared/rides.js';
+import { swingMeter, carry as golfCarry } from '../shared/golf.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
 import { ANIMAL_ART } from '../shared/animal-art.js';
@@ -344,6 +345,7 @@ function fixedStep() {
   if (menuUp || performance.now() < (S.inputMuteUntil || 0)) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
   if (S.suppressBits) { const held = inp.bits & S.suppressBits; inp.bits &= ~S.suppressBits; S.suppressBits &= held; }
   if (inp.bits & IN.AIMING) { S.lastAim = inp.aim; S.lastAimAt = performance.now(); S.lastFire = !!(inp.bits & IN.FIRE); }
+  golfSwingStep(inp);
   S.seq++;
   const mxq = quantizeAxis(inp.mx), myq = quantizeAxis(inp.my), aq = quantizeAngle(inp.aim);
   send(encodeInput(S.seq, inp.bits, mxq, myq, aq));
@@ -352,7 +354,7 @@ function fixedStep() {
   if (S.pending.length > 60) S.pending.shift();
   if (S.pred) { S.pred.prev = { ...S.pred.s }; stepPred(dq); }
   // predict our own melee swing so punches animate the instant you click
-  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead) {
+  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near)) {   // (by your golf ball it's a swing of the club)
     const w = WEAPONS[S.me.weapon];
     if (w && w.type === 'melee' && S.loopClock >= (S.localSwingReady || 0)) {
       const e = S.ents.get(S.ctrlId);
@@ -595,6 +597,9 @@ function onEvent(ev) {
     case 'gatebreak': fx.sparks(ev.x, ev.y, 6); for (let k = 0; k < 6; k++) fx.spawn(4, ev.x, ev.y, Math.cos(ev.a + (Math.random() - 0.5)) * 160, Math.sin(ev.a + (Math.random() - 0.5)) * 160, 0.5, 3, k % 2 ? '#f4f4f4' : '#c8262b'); sfx('crash', distVol(ev.x, ev.y) * 0.6); break;
     case 'trainhorn': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y); sfx(ev.s === 2 ? 'trainhorn' : 'trainhornshort', Math.max(0, 1 - d / 2400)); break; }
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
+    case 'golfhit': sfx(ev.k ? 'golfhit' : 'putt', distVol(ev.x, ev.y)); break;   // (golf: server/systems/golf.js)
+    case 'golfcup': sfx('golfcup', distVol(ev.x, ev.y)); break;
+    case 'golfsplash': sfx('splash', distVol(ev.x, ev.y)); break;
     case 'ride': rideOn(ev); if (ev.k === 'balloon') { const L = balloonSite(S.map); if (L) sfx('burner', distVol(L.launch.x, L.launch.y)); } break;   // a ride under way: the wheel's cab you're in, a balloon going up
     case 'rideend': if (S.rides) S.rides.delete(ev.id); break;
     case 'bells': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y), v = Math.max(0, 1 - d / 2600); for (let k = 0; k < (ev.n || 3); k++) setTimeout(() => sfx('churchbell', v * (k % 2 ? 0.85 : 1)), k * 1150); break; }   // (the mission's bells carry a long way)
@@ -2716,6 +2721,11 @@ function drawBays(view) {
 // Soccer ball / volleyball: shadow on the ground, the ball lifted by its height.
 function drawBall(b) {
   const z = (b.extra || 0) * 2;
+  if (b.d.t === 2) { // a golf ball: small and white, its shadow below it
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 1, 2.6, 1.6, 0, 0, 6.28); g.fill();
+    g.fillStyle = '#f6f6f2'; g.beginPath(); g.arc(b.rx, b.ry - z - 2, 2.6, 0, 6.28); g.fill(); g.strokeStyle = '#3a3f48'; g.lineWidth = 0.8; g.stroke();
+    return;
+  }
   const volley = b.d.t === 1;
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 4, 7 - Math.min(3, z / 40), 4, 0, 0, 6.28); g.fill();
   const y = b.ry - z;
@@ -2943,6 +2953,50 @@ function drawStationClocks(view, now) {
     if (secs === 0 && S.ctrlKind !== CTRL.RIDER) drawBoardingCue(g, S.map.rail, st, now); // a train is in: the platform lights up
     drawStationClock(g, S.map.rail, st, secs, now);
   });
+}
+
+// ---- golf (shared/golf.js; the server: server/systems/golf.js) ------------------------------------------------------
+// The swing as this page sees it, one fixed step at a time exactly as the server counts it: S.golfHold is how long
+// the attack button has been held by your ball (the meter: swingMeter), -1 when it isn't; the last swing's meter
+// lingers on screen a moment (S.golfShown). Each new shot starts aimed at the flag (the server takes your aim from
+// the last input, so a pad or touch player who doesn't touch the aim stick hits straight at the pin).
+function golfSwingStep(inp) {
+  const G = S.me && S.me.golf;
+  if (!G || !G.near) { if (S.golfHold >= 0) S.golfHold = -1; return; }
+  const key = `${G.ball}:${G.s}`;
+  if (S.golfAimFor !== key && G.pin) {
+    const b = S.ents.get(G.ball);
+    if (b && b.rx !== undefined) { S.lastAim = Math.atan2(G.pin.y - b.ry, G.pin.x - b.rx); S.golfAimFor = key; }
+  }
+  if (inp.bits & IN.FIRE) S.golfHold = S.golfHold >= 0 ? S.golfHold + DT : 0;
+  else if (S.golfHold >= 0) { S.golfShown = { p: swingMeter(S.golfHold), until: performance.now() + 900 }; S.golfHold = -1; }
+}
+// where the swing points now: the mouse from your character, else the last aim (the pad's right stick, the aim stick)
+function golfAimNow() {
+  if (input.device === 'keyboard') { const sp = worldToScreen(selfPos()), m = mouseScreen(); if (sp && m) return Math.atan2(m.y - sp.y, m.x - sp.x); }
+  return S.lastAim || 0;
+}
+// your ball ringed; by it, the aim line out as far as the swing would carry and the meter beside you
+function drawGolf(g, z, now) {
+  const G = S.me && S.me.golf, b = G && S.ents.get(G.ball);
+  if (!G || !b || b.rx === undefined || S.me.dead) return;
+  const bz = (b.extra || 0) * 2, by = b.ry - bz - 2;
+  g.save();
+  g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1.5 / z;
+  g.beginPath(); g.arc(b.rx, by, 7 + Math.sin(now * 5) * 1.5, 0, 6.28); g.stroke();
+  if (G.near) {
+    const holding = S.golfHold >= 0, shown = !holding && S.golfShown && performance.now() < S.golfShown.until ? S.golfShown.p : null;
+    const p = holding ? swingMeter(S.golfHold) : shown ?? 1, a = golfAimNow(), d = golfCarry(G.club, p);
+    g.globalAlpha = holding ? 0.95 : 0.5; g.setLineDash([6 / z, 5 / z]); g.strokeStyle = '#fff8c0'; g.lineWidth = 2 / z;
+    g.beginPath(); g.moveTo(b.rx, by); g.lineTo(b.rx + Math.cos(a) * d, by + Math.sin(a) * d); g.stroke(); g.setLineDash([]);
+    g.beginPath(); g.arc(b.rx + Math.cos(a) * d, by + Math.sin(a) * d, 5 / z, 0, 6.28); g.stroke();
+    if (holding || shown !== null) {   // the meter: a bar beside you, green to the top, red past it
+      const sp = selfPos(), x = sp.x + 18, y = sp.y - 34, h = 40, w = 6;
+      g.globalAlpha = 0.95; g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x - 1 / z, y - 1 / z, w + 2 / z, h + 2 / z);
+      g.fillStyle = p > 0.92 ? '#7dff7a' : p > 0.6 ? '#ffd400' : '#ff8a3a'; g.fillRect(x, y + h * (1 - p), w, h * p);
+    }
+  }
+  g.restore();
 }
 
 // ---- rides (shared/rides.js; the server: server/systems/rides.js) -------------------------------------------------
@@ -3577,6 +3631,7 @@ function drawWorldLabels(peds, vehs, now, z) {
     g.save(); g.globalAlpha = 0.85; g.fillStyle = '#4fd6ff'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     g.beginPath(); g.moveTo(w.x, w.y - 30 + bob); g.lineTo(w.x + 8, w.y - 20 + bob); g.lineTo(w.x, w.y - 10 + bob); g.lineTo(w.x - 8, w.y - 20 + bob); g.closePath(); g.fill(); g.stroke(); g.restore();
   }
+  drawGolf(g, z, now);
   if (me && me.job) {
     g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     const bob = Math.sin(now * 4) * 5;

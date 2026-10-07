@@ -38,6 +38,8 @@ import * as unstuck from './systems/unstuck.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
 import * as rides from './systems/rides.js';
+import * as places from './systems/places.js';
+import * as golf from './systems/golf.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -46,6 +48,7 @@ const SYSTEMS = [
   ['inputs', players.processInputs],// player-controlled peds + vehicle inputs
   ['homes', homes.update],          // going inside your home (hide), step-out protection
   ['rides', rides.update],          // the Ferris wheel, balloon flights: carrying the riders, setting them down
+  ['places', places.update],        // things to do at the places: stripping the boneyard's planes for parts
   ['gates', gates.update],          // sliding gates (motor pools, Syndicate compound)
   ['station', station.update],
   ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking
@@ -64,6 +67,7 @@ const SYSTEMS = [
   ['paint', paint.update],          // Spray & Go paint shop bays
   ['races', races.update],
   ['minigames', minigames.update],  // soccer pitch, beach volleyball          // jetski / boat races
+  ['golf', golf.update],            // Cedar Hills Golf Club: the balls in play
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop

@@ -2940,3 +2940,36 @@ Two rides at the new places (`shared/rides.js` has the wheel and the routes, `se
 - **While you ride:** you're out of the street like someone indoors. Nobody can see or hurt you, you can't act, and the prompt shows the seconds left. You can't board while wanted, carrying a crate or driving. If you log off mid-ride you come back at the boarding point. The server sends you a wider area while you ride, to match the wider camera.
 - **Smaller changes:** the field's standing red balloon moved south-east so it doesn't stand in front of the booking table. Both rides' boarding points are places on the phone and the maps.
 - **Tests:** `test/business.test.js` covers the counters' prompts and menus, the better prices at the winery and the salvage yard, wine's faster healing, a hot dog, both rides from boarding to stepping off, the three-balloon limit, the routes, and a ride ending cleanly when something else takes you off it.
+
+## 2026-10-07 · More to do at the places: the boneyard, the lavender rows and the maze
+
+- **Strip the boneyard's planes for parts (Dry Creek Boneyard).** Stand beside a stored airliner's fuselage (under the wing) and press the action button, then stand still for four seconds while you work at it with a wrench. You get a piece of component scrap, sometimes two, and the yard office by the gate buys it at $45. That plane is then stripped bare for 15 minutes. Moving, taking a hit or getting into a car stops the work. (`server/systems/places.js`; the planes are listed on the boneyard's site record; `SALVAGE_*` in `shared/rules.js`.)
+- **Cut lavender (Cedar Point Lavender).** Every other plant along the rows is a stretch you can cut from the path between them: one to three bunches, then it's cut for a while, like the orchard and the vineyard. A Lavender Bunch sells at the farm stand ($6, its best price) and at the market in Old Town ($4). The picking notes now say where each crop sells best; for example, grapes go to the winery.
+- **The Bluffs Maze against the clock.** Step in through any of the four gates and the clock starts. The HUD's tracker shows the time so far and marks the gazebo in the middle. Reach the gazebo and you get your time, your best (kept in your profile) and the day's five fastest. The first time you make it, the gardeners pay you $50 (`MAZE_PRIZE`). Leaving through a gate stops the clock, and walking back out after finishing doesn't restart it.
+- Tests in `test/business.test.js` cover all three.
+
+## 2026-10-07 · Golf at Cedar Hills Golf Club
+
+The golf course can be played now: three holes (par 4, 4 and 3), with the course's bunkers, pond and trees in play (`server/systems/golf.js`; the clubs, the lies and the meter are in `shared/golf.js`, so the client draws from the same numbers).
+
+- **Teeing off:** step onto a hole's tee and press the action button. The green fee is $5 a hole, and your ball is put down on the tee.
+- **The swing:** stand by your ball, aim with the mouse, the right stick or the aim stick, and hold the attack button. A meter beside you rises over a second and falls back while you hold. Let go at the top for a full swing.
+  - A dashed line from the ball shows your aim and how far the swing would carry.
+  - Each shot starts aimed at the flag, so on a pad or touch you can just hold and let go.
+  - The attack button never punches while you're at your ball.
+- **The club suits the lie:**
+
+  | Club | When |
+  |---|---|
+  | Driver | off the tee and down the fairway |
+  | Iron | from the rough |
+  | Wedge | within about 9 m of the pin |
+  | Sand wedge | out of a greenside bunker (from a fairway bunker far from the green, an iron, which the sand slows) |
+  | Putter | on the green |
+
+- **The ball:** it flies and casts its shadow, and bounces and rolls by what it lands on. It's quick on the green, steady on the fairway, slow in the rough and dead in the sand. It glances off trees, golf carts, benches and the clubhouse. It drops into the cup only when it rolls over the hole slowly; too fast and it runs past.
+- **Penalties:** the pond or out of bounds costs a stroke, and the ball goes back where you hit it from. After ten strokes you pick up.
+- **Scoring:** holing out names your score against par (birdie, eagle, bogey...), and your best on each hole is kept. A hole in one pays the club's $500 prize, once per hole for each player.
+- **On screen:** the HUD's tracker shows the hole, par, stroke and club, and marks your ball when you're away from it (the flag when you're at it). Your ball has a ring round it. There are new sounds for a club, a putt and the cup.
+- **Giving up a hole:** walk away from your ball for 25 seconds, drive off or go down, and the hole is given up and the ball taken away. A ball whose golfer has logged off is cleared.
+- **Tests:** `test/golf.test.js` covers the course, teeing off and a drive, putting (a putt that's too hard runs over, one that dies at the hole drops, the hole-in-one prize, the best score kept), and the water and out-of-bounds penalties. A simulated golfer playing to the meter makes par or better on all three holes.

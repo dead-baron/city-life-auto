@@ -8,7 +8,7 @@ import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
 import { SHOPS, ITEMS } from '../shared/items.js';
 import { TILE } from '../shared/constants.js';
 import { PED_BLOCK } from '../shared/map.js';
-import { FERRIS_PRICE, FERRIS_S, BALLOON_PRICE, BALLOON_S, BALLOONS_UP, WINE_S } from '../shared/rules.js';
+import { FERRIS_PRICE, FERRIS_S, BALLOON_PRICE, BALLOON_S, BALLOONS_UP, WINE_S, SALVAGE_S, SALVAGE_REGROW_S, MAZE_PRIZE } from '../shared/rules.js';
 import { FERRIS, ferrisSite, balloonSite, balloonRoutes, balloonAt, ferrisCab, ferrisBoardCab, BALLOON_ALT } from '../shared/rides.js';
 import * as economy from '../server/systems/economy.js';
 import * as combat from '../server/systems/combat.js';
@@ -198,4 +198,108 @@ test('a ride ends cleanly if something else takes you off it (a dev teleport), a
     const k = ferrisBoardCab(t), z = ferrisCab(wheel, k, t).z;
     for (let j = 0; j < FERRIS.n; j++) assert.ok(ferrisCab(wheel, j, t).z >= z - 0.01, `t ${t.toFixed(1)}: cab ${k} is the lowest`);
   }
+});
+
+test('the boneyard: strip a stored airliner for parts (standing still a few seconds), sell the scrap at the yard office; that plane is bare a while', () => {
+  const w = makeWorld();
+  const { p, conn } = joinPlayer(w);
+  const by = w.map.natureSites.find((q) => q.kind === 'boneyard');
+  assert.ok(by && by.stored.length === by.planes, 'the stored planes are listed');
+  const q = by.stored[3], ux = Math.cos(q.a), uy = Math.sin(q.a);
+  // under the wing, beside the fuselage (the fuselage itself is solid)
+  const sx = q.x - uy * 46 + ux * 20, sy = q.y + ux * 46 + uy * 20;
+  teleport(w, p.ped, sx, sy);
+  let act = players.findInteraction(w, p);
+  assert.ok(act && /Strip parts off the plane/.test(act.label), `the prompt (${act && act.label})`);
+  act.run();
+  assert.ok(p.ped.salvage, 'at work');
+  assert.ok(players.findInteraction(w, p).passive, 'a note while working, not a button');
+  // walking off stops you
+  run(w, 1); teleport(w, p.ped, sx + 40, sy); run(w, 0.3);
+  assert.ok(!p.ped.salvage && !(p.profile.inventory.scrap > 0), 'walked away: nothing');
+  // stand still the whole time: scrap
+  teleport(w, p.ped, sx, sy);
+  players.findInteraction(w, p).run();
+  run(w, SALVAGE_S + 0.5);
+  const got = p.profile.inventory.scrap || 0;
+  assert.ok(got >= 1 && got <= 2, `scrap (${got})`);
+  assert.ok(conn.sent.some((o) => JSON.stringify(o).includes('yard office')), 'a note says where to sell it');
+  act = players.findInteraction(w, p);
+  assert.ok(/Stripped bare/.test(act.label), 'that plane is bare now');
+  act.run();
+  run(w, SALVAGE_S + 0.5);
+  assert.equal(p.profile.inventory.scrap, got, 'nothing more from it');
+  w.time += SALVAGE_REGROW_S + 1;
+  assert.ok(/Strip parts/.test(players.findInteraction(w, p).label), 'worth stripping again later');
+  // the yard office buys it
+  const office = counterOf(w, 'salvage');
+  at(w, p, office);
+  const bank0 = p.profile.bank;
+  economy.openMenu(w, p, office);
+  economy.handleMenu(w, p, office.id, 's:scrap');
+  assert.equal(p.profile.bank - bank0, got * SHOPS.salvage.sellPrice.scrap, 'paid for the scrap');
+});
+
+test('Cedar Point Lavender: cut lavender from the rows; the farm stand pays best for it, the market buys it too', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const rows = (w.map.pickables || []).filter((q) => q.item === 'lavender');
+  assert.ok(rows.length >= 60, `stretches of row to cut (${rows.length})`);
+  const q = rows[Math.floor(rows.length / 2)];
+  teleport(w, p.ped, q.x, q.y + 10);
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /Cut lavender/.test(act.label), `the prompt (${act && act.label})`);
+  act.run();
+  const got = p.profile.inventory.lavender || 0;
+  assert.ok(got >= 1, `lavender (${got})`);
+  assert.ok(p.toasts.some((t) => t.text.includes('farm stand')), 'a note says where to sell it');
+  assert.ok(/Picked clean/.test(players.findInteraction(w, p).label), 'that stretch is cut');
+  const stand = counterOf(w, 'farmstand');
+  at(w, p, stand);
+  const bank0 = p.profile.bank;
+  economy.openMenu(w, p, stand);
+  economy.handleMenu(w, p, stand.id, 's:lavender');
+  assert.equal(p.profile.bank - bank0, got * SHOPS.farmstand.sellPrice.lavender, 'the farm stand buys it');
+  assert.ok(SHOPS.farmstand.sellPrice.lavender > ITEMS.lavender.sell && SHOPS.market.sells.includes('lavender'), 'best at the farm, the market too');
+});
+
+test('the Bluffs Maze against the clock: in through a gate, the clock runs to the gazebo; a prize the first time, your best kept, the day\'s fastest listed', () => {
+  const w = makeWorld();
+  const { p, conn } = joinPlayer(w, { cash: 0 });
+  const mz = w.map.natureSites.find((q) => q.kind === 'maze');
+  assert.ok(mz && mz.rect && mz.heart, 'the maze');
+  const inGate = { x: mz.gate.x, y: mz.rect.y1 - 10 };   // (just inside the south gate)
+  teleport(w, p.ped, mz.gate.x, mz.rect.y1 + 40);
+  run(w, 0.2);
+  assert.ok(!p.maze, 'outside: no clock');
+  teleport(w, p.ped, inGate.x, inGate.y);
+  run(w, 0.2);
+  assert.ok(p.maze && p.maze.t0, 'in through the gate: the clock runs');
+  const job = players.buildMe(w, p).job;
+  assert.ok(job && /Bluffs Maze/.test(job.text) && job.x === mz.heart.x, `the HUD tracker (${job && job.text})`);
+  run(w, 20);
+  teleport(w, p.ped, mz.heart.x, mz.heart.y + 50);
+  run(w, 0.2);
+  assert.ok(p.maze.done, 'made it to the middle');
+  assert.equal(p.profile.cash, MAZE_PRIZE, 'the first time: a prize');
+  const first = p.profile.mazeBest;
+  assert.ok(first >= 20 && first < 22, `the time (${first})`);
+  assert.ok(conn.sent.some((o) => String(typeof o === 'string' ? o : JSON.stringify(o)).includes("Today's fastest: 1. ")), 'the day\'s fastest');
+  assert.equal(players.buildMe(w, p).job, null, 'the tracker goes');
+  // walking back out through the maze doesn't start the clock again; out and back in does
+  teleport(w, p.ped, inGate.x, inGate.y); run(w, 0.2);
+  assert.ok(p.maze.done, 'still done on the way out');
+  teleport(w, p.ped, mz.gate.x, mz.rect.y1 + 40); run(w, 0.2);
+  assert.equal(p.maze, null, 'out');
+  teleport(w, p.ped, inGate.x, inGate.y); run(w, 0.2);
+  assert.ok(p.maze && p.maze.t0, 'a new run');
+  run(w, 8);
+  teleport(w, p.ped, mz.heart.x, mz.heart.y + 50); run(w, 0.2);
+  assert.ok(p.profile.mazeBest < first, 'a new best');
+  assert.equal(p.profile.cash, MAZE_PRIZE, 'the prize is only the first time');
+  // leaving through a gate mid-run stops the clock
+  teleport(w, p.ped, mz.gate.x, mz.rect.y1 + 40); run(w, 0.2);
+  teleport(w, p.ped, inGate.x, inGate.y); run(w, 1);
+  teleport(w, p.ped, mz.gate.x, mz.rect.y1 + 40); run(w, 0.2);
+  assert.equal(p.maze, null, 'gave up');
 });

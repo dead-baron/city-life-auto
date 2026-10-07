@@ -88,6 +88,16 @@ export const PICK_MAX = 3;              // up to this many from one tree or vine
 export const PICK_REGROW_S = 240;       // ...then nothing more on it for this long
 export const PICK_REACH = 40;           // stand this close to the trunk / the row
 
+// Stripping the boneyard's stored airliners for parts (server/systems/places.js): stand by a fuselage and work at it
+// a few seconds for component scrap (the yard office buys it); then that plane is stripped bare a while
+export const SALVAGE_S = 4;             // standing still, working
+export const SALVAGE_REGROW_S = 900;    // ...then nothing more on that plane for this long
+export const SALVAGE_REACH = 58;        // this close to the fuselage's line
+
+// The Bluffs Maze against the clock (server/systems/places.js): in through a gate, the clock runs till you reach the
+// gazebo in the middle; your best time is kept, and the first time you make it the gardeners pay you a prize
+export const MAZE_PRIZE = 50;
+
 // Rides (shared/rides.js, server/systems/rides.js): the Ferris wheel on Westport Pier (one turn of the wheel) and
 // hot-air balloon flights from the Dry Creek Balloon Field (out over the country and back). Not while wanted.
 export const FERRIS_PRICE = 5;

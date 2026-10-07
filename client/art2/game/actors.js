@@ -364,11 +364,12 @@ export const projKey = (w, hi = 0, N = 32) => `p|${w | 0}|${wrapHi(hi, N)}|${N}`
 // anchor = the ground point under it, the exhaust glows
 export function projSprite(w, hi = 0, N = 32) { return objRender('rocket', rocketModel, hi, N); }
 
-// balls: a painted sphere (t 0 soccer, 1 volleyball), spin 0..3 turns the pattern as it rolls; anchor =
-// the ground contact, z from 0 at the bottom to the top of the ball
+// balls: a painted sphere (t 0 soccer, 1 volleyball, 2 a golf ball: small, white, dimpled), spin 0..3 turns the
+// pattern as it rolls; anchor = the ground contact, z from 0 at the bottom to the top of the ball
 const ICO = (() => { const p = (1 + Math.sqrt(5)) / 2, v = []; for (const a of [-1, 1]) for (const b of [-p, p]) { v.push(norm([0, a, b]), norm([a, b, 0]), norm([b, 0, a])); } return v; })();
-export const ballKey = (t, spin = 0) => `b|${t ? 1 : 0}|${((spin % 4) + 4) % 4}`;
+export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(2, t | 0))}|${((spin % 4) + 4) % 4}`;
 export function ballSprite(t = 0, spin = 0) {
+  if ((t | 0) === 2) return golfBall();
   const r = 5.5, S = 15, G = new GBuf(S, S), cx = 7.5, cyy = S - 1.5 - r, rot = (((spin % 4) + 4) % 4) * Math.PI / 4 + 0.3;
   G.ax = 7; G.ay = S - 2;
   const W = RP('#ecebe6', 5, 2), K = RP('#2a2a30', 5, 2), Y = RP('#e8c84a', 5, 2), B = RP('#2f56b0', 5, 2), L = norm([-0.55, -0.62, 0.56]);
@@ -388,6 +389,21 @@ export function ballSprite(t = 0, spin = 0) {
     G.put(x, y, col, n, r + n[2] * r, null, 0);
   }
   G.outline(0.45, false);
+  return G;
+}
+
+function golfBall() {
+  const r = 2.6, S = 8, G = new GBuf(S, S), cx = 4, cyy = S - 1 - r;
+  G.ax = 4; G.ay = S - 1;
+  const W = RP('#f4f4f0', 5, 2), L = norm([-0.55, -0.62, 0.56]);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = (x + 0.5 - cx) / r, v = (y + 0.5 - cyy) / r, q = u * u + v * v;
+    if (q > 1) continue;
+    const w = Math.sqrt(1 - q), n = norm([u, (v + w) * 0.7071, (w - v) * 0.7071]), lit = n[0] * L[0] + n[1] * L[1] + n[2] * L[2];
+    const tt = 0.62 + lit * 0.32 - (((x + y) & 1) && q < 0.6 ? 0.06 : 0);   // (the dimples: a faint check)
+    G.put(x, y, W[Math.max(0, Math.min(W.length - 1, Math.round(tt * (W.length - 1))))], n, r + n[2] * r, null, 0);
+  }
+  G.outline(0.5, false);
   return G;
 }
 

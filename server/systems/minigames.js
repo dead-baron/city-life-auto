@@ -42,7 +42,7 @@ function resetBall(world, venue, st, side = -1) {
 // A player swings at the ball (fire / punch). Returns true when the ball was in reach.
 export function tryKick(world, ped, aim) {
   for (const b of world.query(ped.x, ped.y, 40, K.BALL)) {
-    if (Math.hypot(b.x - ped.x, b.y - ped.y) > 36) continue;
+    if (b.ballKind === 'golf' || Math.hypot(b.x - ped.x, b.y - ped.y) > 36) continue;   // (a golf ball takes a club: golf.js)
     const venue = world.map.venues[b.venue];
     if (venue.kind === 'soccer') {
       b.vx = Math.cos(aim) * 560; b.vy = Math.sin(aim) * 560;

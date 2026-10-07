@@ -153,20 +153,21 @@ function golfClub(m, H) {
   // the old painting's solid block goes back to grass
   for (let ty = PY; ty < PY + PH; ty++) for (let tx = PX; tx < PX + PW; tx++) { const i = at(tx, ty); if (m.tiles[i] === T.WALL) m.tiles[i] = T.GRASS; }
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= pt.x && q.x < pt.x + pt.w && q.y >= pt.y && q.y < pt.y + pt.h) dropProp(m, i); });
-  // the holes: [tee, fairway control points, green]
+  // the holes: [tee, fairway control points, green, par] (play them: server/systems/golf.js)
   const holes = [
-    { tee: [38, 8.5], way: [[35, 8.6], [28, 9.4], [20, 9.8], [14, 9.6]], green: [10.5, 9.5] },
-    { tee: [7.5, 16.5], way: [[10, 17.8], [16, 20.5], [22, 25.5], [27, 28.2]], green: [30.5, 29] },
-    { tee: [37, 31.5], way: [[39, 29], [42, 25], [45, 21], [46.5, 19.5]], green: [47, 16] },
+    { tee: [38, 8.5], way: [[35, 8.6], [28, 9.4], [20, 9.8], [14, 9.6]], green: [10.5, 9.5], par: 4 },
+    { tee: [7.5, 16.5], way: [[10, 17.8], [16, 20.5], [22, 25.5], [27, 28.2]], green: [30.5, 29], par: 4 },
+    { tee: [37, 31.5], way: [[39, 29], [42, 25], [45, 21], [46.5, 19.5]], green: [47, 16], par: 3 },
   ];
-  const golf = { greens: [], tees: [], fairways: [] };
+  const golf = { greens: [], tees: [], fairways: [], holes: [], rect: { x0: pt.x, y0: pt.y, x1: pt.x + pt.w, y1: pt.y + pt.h } };
   holes.forEach((h, k) => {
     golf.greens.push({ x: P(...h.green)[0], y: P(...h.green)[1], r: 2.7 * TILE });
     golf.tees.push({ x: (PX + h.tee[0] - 1.2) * TILE, y: (PY + h.tee[1] - 0.8) * TILE, w: 2.4 * TILE, h: 1.6 * TILE });
     golf.fairways.push({ pts: spline(h.way.map((q) => P(...q)), 24), hw: 2.6 * TILE });
     add('golfflag', h.green[0] + 0.4, h.green[1] - 0.3, 3);
     add('pbench', h.tee[0], h.tee[1] + 1.6, 8, { a: Math.PI / 2 });
-    void k;
+    const [tx, ty] = P(...h.tee), [px, py] = P(h.green[0] + 0.4, h.green[1] - 0.3);
+    golf.holes.push({ n: k + 1, par: h.par, tee: { x: Math.round(tx), y: Math.round(ty) }, pin: { x: Math.round(px), y: Math.round(py) }, green: k });
   });
   // the practice green by the clubhouse, three flags on it
   golf.greens.push({ x: P(40, 15)[0], y: P(40, 15)[1], r: 2.2 * TILE });
@@ -340,9 +341,10 @@ function lavenderFields(m, H) {
     m.reserve[i] |= RES;
     if ((ty - Y0) % 2 === 1) m.tiles[i] = T.DIRT; else { m.tiles[i] = T.GRASS; m.reserve[i] |= 128; }
   }
-  for (let ty = Y0 + 1.5; ty <= Y1 - 1; ty += 2) for (let tx = X0 + 0.6; tx <= X1 + 0.4; tx += 0.95) {
+  for (let ty = Y0 + 1.5; ty <= Y1 - 1; ty += 2) for (let tx = X0 + 0.6, j = 0; tx <= X1 + 0.4; tx += 0.95, j++) {
     if (!open(at(tx, ty)) && m.tiles[at(tx, ty)] !== T.DIRT) continue;
     add('shrub_a', tx + (hash2(Math.round(tx * 4), Math.round(ty), 4001) - 0.5) * 0.2, ty, 0, { sp: 'lavender', k: 1.05 + hash2(Math.round(tx * 4), Math.round(ty), 4002) * 0.2 }); n++;
+    if (j % 2 === 0) (m.pickables ||= []).push({ x: Math.round((tx + 0.45) * TILE), y: Math.round((ty + 0.55) * TILE), item: 'lavender', row: 1 });   // (cut from the path between the rows)
   }
   // the top: olive trees and a bench looking down the rows; beehives along the east side; the cart and the sign
   for (const [dx, k] of [[2, 1.4], [12, 1.3], [22, 1.45]]) add('tree_a', X0 + dx, Y0 - 1.2, 12, { sp: 'olive', k });
@@ -370,10 +372,12 @@ function boneyard(m, H) {
   for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) { const i = at(tx, ty); if (open(i)) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; } }
   // the planes: two rows, nose out at a slant (herringbone), every one a little different
   let n = 0;
+  const stored = [];   // (the planes, for stripping parts off them: server/systems/places.js)
   for (let r = 0; r < 6; r++) for (const [cx, a] of [[X0 + 8, -0.55], [X0 + 22.5, Math.PI + 0.55]]) {
     const cy = Y0 + 6.5 + r * 11.5, ux = Math.cos(a), uy = Math.sin(a);
     const c = (r * 2 + (cx > X0 + 10 ? 1 : 0)) % 3;
     add('storedplane', cx, cy, 0, { a, c, v: c * 2 + (r > 2 ? 1 : 0) });   // (a few liveries and states between them: fewer sprites to bake)
+    stored.push({ x: Math.round(cx * TILE), y: Math.round(cy * TILE), a: +a.toFixed(3), half: 130 });
     for (let d = -130; d <= 130; d += 26) m.addSolidProp(Math.round(cx * TILE + ux * d), Math.round(cy * TILE + uy * d), 20);   // (the fuselage; you walk under the wings)
     n++;
   }
@@ -389,7 +393,7 @@ function boneyard(m, H) {
   addCounter(m, 'salvage', 'Dry Creek Aircraft Salvage', (X0 + 3.4) * TILE, (Y0 + 31.6) * TILE, 40);   // (the yard office, a container by the gate: they buy scrap)
   for (const [dx, dy] of [[3, 3], [28, 70], [14, 40]]) add('drum', X0 + dx, Y0 + dy, 9);
   (m.landmarks ||= []).push({ name: 'Dry Creek Boneyard', type: 'boneyard', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
-  m.natureSites.push({ kind: 'boneyard', name: 'Dry Creek Boneyard', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), planes: n, gate: { x: X0 * TILE, y: (Y0 + 35) * TILE } });
+  m.natureSites.push({ kind: 'boneyard', name: 'Dry Creek Boneyard', x: Math.round((X0 + X1) / 2 * TILE), y: Math.round((Y0 + Y1) / 2 * TILE), planes: n, gate: { x: X0 * TILE, y: (Y0 + 35) * TILE }, stored, rect: { x0: X0 * TILE, y0: Y0 * TILE, x1: (X1 + 1) * TILE, y1: (Y1 + 1) * TILE } });
 }
 
 // ---- The Old Town market (Old Town's big cobbled square; original) -----------------------------------------------
@@ -1220,7 +1224,8 @@ function bluffsMaze(m, H) {
   }
   (m.mazes ||= []).push({ x: X0 * TILE, y: Y0 * TILE, w: S * TILE, h: S * TILE });
   (m.landmarks ||= []).push({ name: 'Bluffs Maze Garden', type: 'maze', x: X0 * TILE, y: Y0 * TILE, w: S * TILE, h: S * TILE });
-  m.natureSites.push({ kind: 'maze', name: 'Bluffs Maze Garden', x: Math.round((CX + 0.5) * TILE), y: Math.round((CY + 0.5) * TILE), gate: { x: Math.round((CX + 0.5) * TILE), y: Math.round((Y0 + S + 0.5) * TILE) }, size: S });
+  m.natureSites.push({ kind: 'maze', name: 'Bluffs Maze Garden', x: Math.round((CX + 0.5) * TILE), y: Math.round((CY + 0.5) * TILE), gate: { x: Math.round((CX + 0.5) * TILE), y: Math.round((Y0 + S + 0.5) * TILE) }, size: S,
+    rect: { x0: X0 * TILE, y0: Y0 * TILE, x1: (X0 + S) * TILE, y1: (Y0 + S) * TILE }, heart: { x: Math.round((X0 + (S >> 1) + 0.5) * TILE), y: Math.round((Y0 + (S >> 1) + 0.5) * TILE), r: Math.round(2.4 * TILE) } });
 }
 
 // ---- Granite Hot Springs (Granite Peaks; concept L7) -----------------------------------------------------------
