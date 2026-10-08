@@ -58,7 +58,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
   // (baked chunks: many small requests a second while moving - counted in the monthly data, not the per-address rate)
-  if (artCdn && path.startsWith('/art/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (artCdn.handle(path, req, res)) return; }
+  if (artCdn && path.startsWith('/art/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (artCdn.handle(path + (url.search || ''), req, res)) return; }
   if (limits && path !== '/health') {
     const why = limits.checkHttp(clientIp(req, config.trustProxy));
     if (why) { res.writeHead(why === 'quota' ? 503 : 429, { 'content-type': 'text/plain', 'retry-after': '60' }); res.end(why === 'quota' ? QUOTA_MSG : 'Too many requests'); return; }
@@ -160,6 +160,8 @@ function loop() {
 }
 
 setInterval(() => store.flush(), config.saveIntervalMs).unref();
+// the art from the server bakes round the players online first (server/artcdn.js focus)
+if (artCdn) setInterval(() => { const pts = []; for (const p of world.players.values()) if (p.conn && p.ped) pts.push({ x: p.ped.x, y: p.ped.y }); artCdn.focus(pts); }, 4000).unref();
 
 // Update warning: deploy/auto-update.sh writes the restart time (epoch ms) to <data>/update-at
 // a minute before it restarts the server with a new version; everyone online gets a countdown.

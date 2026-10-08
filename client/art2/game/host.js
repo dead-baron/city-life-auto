@@ -451,7 +451,7 @@ export class World2 {
     const T = this.part, mk = (k) => { const n = performance.now(); T[k] = (T[k] || 0) * 0.9 + (n - this.pt) * 0.1; this.pt = n; };
     this.pt = t0;
     this._chunks(F); mk('chunks');
-    this._prebake(F); mk('prebake');
+    this._fetchAhead(F); this._prebake(F); mk('prebake');
     const preset = this._preset(F);
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
@@ -652,15 +652,49 @@ export class World2 {
     while (n > 0 && pre.list.length) {
       const k = pre.list.shift(), cx = k % 1000, cy = Math.floor(k / 1000), kk = `${this.q}:${k}`;
       if (pre.kept.has(kk) || this.E.hasChunk(cx, cy) || (this.ver.get(k) || 0)) continue;   // (kept, drawn, or changed by players)
+      if (this.fa && this.fa.out.has(`f${cx},${cy},${this.q}`)) continue;   // (on its way from the server: _fetchAhead)
       const jk = `cB${cx},${cy},${this.q}`;
       if (P.has(jk)) continue;
       n--; pre.out.add(jk);
       const q = this.q;
       P.request(jk, 'prebakeChunk', { cx, cy, opt: { quality: q, seed: this.map.seed, lowMem: this.lowMem }, ck: `q${q}|a${this.E.ap || 1}|u1|${cx},${cy}` }, 50000 + pre.n++, (r, err) => {
         pre.out.delete(jk);
-        if (err === 'no workers') return;
+        if (err === 'no workers' || (r && r.soon)) return;   // (the server has it in a moment: _fetchAhead picks it up)
         pre.kept.add(`${q}:${k}`);   // (kept now - or failed: not tried again this session)
         if (r && r.kept) { if (r.had) pre.had++; else pre.done++; }
+      });
+    }
+  }
+  // While the art comes from the server (server/artcdn.js, worker.js fetchChunk): the chunks round you and on the roads
+  // ahead are downloaded into the store in parallel - a download is cheap next to a bake, and it never waits on the bakes
+  // the screen needs. What the server hasn't baked yet is left to _prebake (baked here when there's time). Off with the
+  // phone's data saver, while the page is hidden, and for the session once the workers say the server's art is off.
+  _fetchAhead(F) {
+    const P = this.pool;
+    if (!this.cdn || this.cdnOff || !this.artKey || this.lowMem || this.noBake || !P || P.dead || !P.ready) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    const pre = this.pre || (this.pre = { list: [], at: -1e9, out: new Set(), kept: new Set(), cx: -99, cy: -99, n: 0, done: 0, had: 0 });
+    const fa = this.fa || (this.fa = { out: new Set(), tried: new Map(), n: 0, got: 0, had: 0, miss: 0, pausedAt: -1e9 });
+    const now = F.now;
+    if (now - fa.pausedAt < 15) return;   // (the server's still baking this part of the world: look again in a bit)
+    const pcx = Math.floor(this.camX / CHUNK), pcy = Math.floor(this.camY / CHUNK);
+    if (now - pre.at > 1.5 || pcx !== pre.cx || pcy !== pre.cy) { pre.list = this._prebakeList(); pre.at = now; pre.cx = pcx; pre.cy = pcy; }
+    const MAX = isPhone() ? 4 : 6;
+    for (const k of pre.list) {
+      if (fa.out.size >= MAX) break;
+      const cx = k % 1000, cy = Math.floor(k / 1000), q = this.q, kk = `${q}:${k}`;
+      if (pre.kept.has(kk) || this.E.hasChunk(cx, cy) || (this.ver.get(k) || 0)) continue;
+      if (now - (fa.tried.get(kk) ?? -1e9) < 20) continue;   // (not there a moment ago)
+      const jk = `f${cx},${cy},${q}`;
+      if (P.has(jk)) continue;
+      fa.out.add(jk); fa.tried.set(kk, now);
+      if (fa.tried.size > 4000) fa.tried.clear();
+      P.request(jk, 'fetchChunk', { cx, cy, q, ck: `q${q}|a${this.E.ap || 1}|u1|${cx},${cy}` }, 40000 + fa.n++, (r, err) => {
+        fa.out.delete(jk);
+        if (err || !r) return;
+        if (r.off) { this.cdnOff = true; return; }
+        if (r.kept) { pre.kept.add(kk); if (r.had) fa.had++; else fa.got++; }
+        else { fa.miss++; if (r.paused) fa.pausedAt = now; }
       });
     }
   }
@@ -1932,6 +1966,7 @@ export class World2 {
       pool: this.pool ? this.pool.stats() : null, t: { ...this.t, bakeAvg: this.t.bakeN ? this.t.bakeSum / this.t.bakeN : 0 }, n: { ...this.n },
       upQ: this.upQ.size, sprOut: this.sprOut, warmQ: this.warmQ.length, fades: this.fades.size, badKeys: this.badKeys.size, lastErr: this.lastErr, engine: es, part: this.part,
       ahead: this.pre ? { baked: this.pre.done, had: this.pre.had, out: this.pre.out.size, list: this.pre.list.length } : null, late: this.late || null,
+      fetched: this.fa ? { got: this.fa.got, had: this.fa.had, miss: this.fa.miss, out: this.fa.out.size, off: !!this.cdnOff } : null,
     };
   }
   diag() {

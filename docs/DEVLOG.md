@@ -3683,3 +3683,54 @@ While a player's phone menu is open their character holds the phone, head down, 
 - **The art hash is rooted at what a kept chunk is made by** (`tools/stamp-version.mjs` `ART_ROOTS`: `chunkbake.js`, the new `chunkpack.js` with the packing the page and the server share, `chunkstore.js`). The bake worker round them is left out, so tuning how chunks are fetched and downloaded no longer throws away every kept chunk.
   - This one change rebakes the art once: the server prewarms it again, and phones bake locally meanwhile.
 - **Tests:** `test/ledges.test.js` (every falls, down and not back up, the steps both ways), `test/phones.test.js` (filming, running instead, the descriptor, tougher players, trains), `test/barriers.test.js` (the deck drawn open at a smashed piece and only there).
+
+## 2026-10-08 · Art from the server, faster: downloads ahead, stand-ins after a new build, baking round the players
+The user, on mobile: teleporting and driving still reached places where the art was loading.
+- **Downloads ahead, in their own lane:**
+  - While the server has the art, the chunks round you and on the roads ahead are downloaded into the browser's store in parallel: up to 4 at a time on a phone, 6 elsewhere (`host.js` `_fetchAhead`, `worker.js` `fetchChunk`).
+  - Coming to one later is then a read from the store, tens of ms instead of a bake.
+  - The worker pool sends downloads out in a lane of their own, two per worker (`pool.js` `LIGHT_PER_WORKER`). In the queue with the sprites and bakes they never went out: on a phone moving through town those keep every slot busy.
+- **Waiting for the server when that's quicker:**
+  - A 404 now says when the chunk should be ready (`x-art-eta`).
+  - A page that is about to bake a chunk itself waits for the server's instead when it's due sooner than its own bake (about 1.6 s on a phone), so the same chunk isn't baked twice.
+- **After a new build: the previous art stands in:**
+  - The server keeps the build before's chunks.
+  - Pages still on that build get their own chunks from them.
+  - Everyone else gets them as stand-ins (`x-art-stale`): shown, never kept, replaced the moment this build's chunk arrives. That beats the plain placeholder, and art changes are pushed often.
+- **The server bakes round the players first:**
+  - After the chunks pages ask for, the server bakes a 9 x 9 square of chunks round each player online, nearest first (`artcdn.js` `focus`, fed every 4 s by `server/index.js`).
+  - This covers the background qualities, plus any quality a page asked for in the last ten minutes, so a High-preset player's chunks get baked too.
+  - After a new build, the art where people are comes back first.
+- **Look-aheads aren't queued on the server** (`?pre=1`): only what pages are about to show is asked for, so many players' look-ahead can't crowd it out.
+- **A weak connection no longer switches the server's art off for the session:**
+  - A run of failures pauses downloads for two minutes; they switch off only after three such runs with no download in between.
+  - Downloads slower than local bakes pause for three minutes, then get another chance.
+- **Device reports** (`/perf`) now show the chunks fetched ahead, the misses, and whether the server's art was switched off.
+- **Tests:**
+  - `test/pool.test.js`: downloads go out while the main lane is full.
+  - `test/artcdn.test.js`: the ready time, look-aheads never queued, the previous build kept and used as stand-ins, player-centred baking.
+
+## 2026-10-08 · Art from the server, faster: downloads ahead, stand-ins after a new build, baking round the players
+The user, on mobile: teleporting and driving still reached places where the art was loading.
+- **Downloads ahead, in their own lane:**
+  - While the server has the art, the chunks round you and on the roads ahead are downloaded into the browser's store in parallel: up to 4 at a time on a phone, 6 elsewhere (`host.js` `_fetchAhead`, `worker.js` `fetchChunk`).
+  - Coming to one later is then a read from the store, tens of ms instead of a bake.
+  - The worker pool sends downloads out in a lane of their own, two per worker (`pool.js` `LIGHT_PER_WORKER`). In the queue with the sprites and bakes they never went out: on a phone moving through town those keep every slot busy.
+- **Waiting for the server when that's quicker:**
+  - A 404 now says when the chunk should be ready (`x-art-eta`).
+  - A page about to bake a chunk itself waits for the server's instead when it's due sooner than its own bake (about 1.6 s on a phone), so the same chunk isn't baked twice.
+- **After a new build: the previous art stands in:**
+  - The server keeps the build before's chunks. Pages still on that build get their own chunks from them.
+  - Everyone else gets them as stand-ins (`x-art-stale`): shown, never kept, and replaced the moment this build's chunk arrives. That beats the plain placeholder, and art changes are pushed often.
+- **The server bakes round the players first:**
+  - After the chunks pages ask for, the server bakes a 9 x 9 square of chunks round each player online, nearest first (`artcdn.js` `focus`, fed every 4 s by `server/index.js`).
+  - This covers the background qualities, plus any quality a page asked for in the last ten minutes, so a High-preset player's chunks get baked too.
+  - After a new build, the art where people are comes back first.
+- **Look-aheads aren't queued on the server** (`?pre=1`): only what pages are about to show is asked for, so many players' look-ahead can't crowd it out.
+- **A weak connection no longer switches the server's art off for the session:**
+  - A run of failures pauses downloads for two minutes; they switch off only after three such runs with no download in between.
+  - Downloads slower than local bakes pause for three minutes, then get another chance.
+- **Device reports** (`/perf`) now show the chunks fetched ahead, the misses, and whether the server's art was switched off.
+- **Tests:**
+  - `test/pool.test.js`: downloads go out while the main lane is full.
+  - `test/artcdn.test.js`: the ready time, look-aheads never queued, the previous build kept and used as stand-ins, player-centred baking.

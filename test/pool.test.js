@@ -99,3 +99,26 @@ test('pool: phones keep much smaller caches than desktops', () => {
   // what four workers on a phone may cache altogether (each also holds the world, ~65 MB)
   assert.ok(4 * (phone.stat + phone.spr + phone.model) <= 300);
 });
+
+test('pool: downloads (fetchChunk) go out in their own lane, never stuck behind a full queue of sprites and bakes', async () => {
+  made.length = 0;
+  const pool = new WorkerPool({ size: 1, url: 'x', timing: fast });
+  await pool.init({});
+  made[0].hang = true;   // (the main lane stays full: nothing it takes ever finishes)
+  for (let i = 0; i < 10; i++) pool.request(`s${i}`, 'sprite', {}, 0, () => {});
+  pool.request('cB1', 'prebakeChunk', {}, 50000, () => {});
+  const a = new Promise((res) => pool.request('f1,1,1', 'fetchChunk', {}, 40000, (r, err) => res({ r, err })));
+  pool.request('f2,1,1', 'fetchChunk', {}, 40001, () => {});
+  pool.request('f3,1,1', 'fetchChunk', {}, 40002, () => {});
+  assert.ok(pool.jobs.get('f1,1,1').w && pool.jobs.get('f2,1,1').w, 'two downloads out at once');
+  assert.ok(!pool.jobs.get('f3,1,1').w, 'a third waits for one of them');
+  assert.equal(made[0].inbox.filter((m) => m.op === 'sprite').length, 4, 'the main lane: four jobs at a time as before');
+  // the worker answers the downloads (it's only the sprites that hang): the third goes out
+  made[0].hang = false;
+  const ids = made[0].inbox.filter((m) => m.op === 'fetchChunk').map((m) => m.id);
+  for (const id of ids) made[0].onmessage({ data: { id, ok: true, result: { kept: true }, ms: 5 } });
+  const out = await a;
+  assert.ok(out.r && out.r.kept, 'answered');
+  assert.ok(pool.jobs.get('f3,1,1') && pool.jobs.get('f3,1,1').w, 'the third went out');
+  pool.dispose();
+});

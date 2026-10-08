@@ -32,6 +32,11 @@
 // caches; phones get much smaller caches (cacheBudget) - four workers with desktop caches took a phone past
 // what it could hold after a long drive round the world, and the art stopped arriving.
 const PER_WORKER = 4, STUCK_MS = 60000, INIT_STUCK_MS = 90000;
+// Downloads (a job key starting 'f': worker.js fetchChunk) wait on the network, not the CPU: they go out in a lane of
+// their own, LIGHT_PER_WORKER at a time on each worker, never queued behind the sprites and bakes (which on a phone keep
+// every slot busy while you move, so a download put in line with them never went out).
+const LIGHT_PER_WORKER = 2;
+const isLight = (key) => key.charCodeAt(0) === 102;   // 'f'
 const STREAK = { s: 8, c: 1 }; // jobs of a class in a row before another waiting class gets a turn
 const RESPAWN_MS = [1000, 2000, 4000, 8000]; // wait before replacing a worker, by how many were replaced lately
 const RESPAWN_WINDOW = 120000, RESPAWN_MAX = 8;
@@ -80,12 +85,13 @@ export class WorkerPool {
     this.pending = new Set();      // slots waiting for their replacement
     this.timers = new Set();
     this.props = new Map();        // the world's changes so far: prop index -> its broken state (replayed to a new worker)
+    this.barriers = new Set();     // highway barrier pieces smashed through (worker.js patch barriers; replayed too)
     this.lastWhy = '';
     for (let i = 0; i < size; i++) this.workers.push(this._spawn(i));
     this.watch = setInterval(() => this._watchdog(), this.T.watch);
   }
   _spawn(i) {
-    const w = { i, wk: null, busy: 0, baking: 0, alive: true, running: new Set() };
+    const w = { i, wk: null, busy: 0, baking: 0, light: 0, alive: true, running: new Set() };
     try { w.wk = new Worker(this.url, { type: 'module', name: `art2-bake-${i}` }); } catch (e) { w.alive = false; w.err = String(e); return w; }
     w.wk.onmessage = (e) => this._onMessage(w, e.data);
     w.wk.onerror = (e) => { e.preventDefault && e.preventDefault(); this._kill(w, `worker error: ${e.message || e}`); };
@@ -93,13 +99,13 @@ export class WorkerPool {
     return w;
   }
   get size() { return this.workers.filter((w) => w.alive).length; }
-  get idle() { return !this.queue.length && this.workers.every((w) => !w.busy); }
+  get idle() { return !this.queue.length && this.workers.every((w) => !w.busy && !w.light); }
 
   // Send the world to every worker (or, with key, let each read it from the browser's copy). Resolves once all have
   // answered (or failed).
   init(M, key = null, keep = null) {
     this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model, artKey: (keep && keep.artKey) || null, keepCap: keepCap(this.lowMem),
-      cdn: (keep && keep.cdn) || null, saveData: !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData) };   // (the art from the server: worker.js)
+      cdn: (keep && keep.cdn) || null, saveData: !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData), phone: isPhone() };   // (the art from the server: worker.js; a phone's bakes are slow - worth waiting for the server's)
     let post = 0;
     const answers = this.workers.filter((w) => w.alive).map((w) => new Promise((res) => {
       const t = performance.now();
@@ -154,6 +160,8 @@ export class WorkerPool {
     if (op === 'patch' && args) {
       if (args.reset) this.props.clear();
       for (const [i, br] of args.props || []) { if (br) this.props.set(i, br); else this.props.delete(i); }
+      if (args.reset && args.barriers) this.barriers.clear();
+      for (const [k, on] of args.barriers || []) { if (on) this.barriers.add(k); else this.barriers.delete(k); }
     }
     for (const w of this.workers) if (w.alive) { try { w.wk.postMessage({ id: 0, op, args }); } catch { /* it will be replaced */ } }
   }
@@ -170,7 +178,7 @@ export class WorkerPool {
   // high-priority sprites can't starve the bakes (or the other way round).
   // bakeOk: a free slot can take a chunk bake (null when nothing waiting may go now)
   _next(bakeOk = true) {
-    const q = this.queue, s = this.streak, ok = (x) => bakeOk || x.key[0] !== 'c';
+    const q = this.queue, s = this.streak, ok = (x) => !isLight(x.key) && (bakeOk || x.key[0] !== 'c');
     let i = q.findIndex(ok);
     if (i < 0) return null;
     if (s.n >= (STREAK[s.cls] || 8)) { const j = q.findIndex((x) => x.key[0] !== s.cls && ok(x)); if (j >= 0) i = j; }
@@ -181,6 +189,19 @@ export class WorkerPool {
   _pump() {
     if (!this.ready || !this.queue.length) return;
     this.queue.sort((a, b) => a.prio - b.prio || a.seq - b.seq);
+    // the downloads' own lane (see LIGHT_PER_WORKER)
+    for (let i = 0; i < this.queue.length;) {
+      const job = this.queue[i];
+      if (!isLight(job.key)) { i++; continue; }
+      let best = null;
+      for (const w of this.workers) if (w.alive && w.light < LIGHT_PER_WORKER && (!best || w.light < best.light)) best = w;
+      if (!best) break;
+      this.queue.splice(i, 1);
+      job.id = this.nextId++; job.w = best; job.t0 = performance.now(); job.light = true;
+      best.light++;
+      this.byId.set(job.id, job); best.running.add(job);
+      try { best.wk.postMessage({ id: job.id, op: job.op, args: job.args }); } catch (e) { this._finish(job, null, `could not send: ${e.message || e}`); }
+    }
     for (;;) {
       if (!this.queue.length) return;
       let best = null, bakeOk = false;
@@ -204,7 +225,11 @@ export class WorkerPool {
   }
   _finish(job, result, err, ms) {
     this.byId.delete(job.id);
-    if (job.w) { job.w.busy = Math.max(0, job.w.busy - 1); job.w.running.delete(job); if (job.key && job.key[0] === 'c' && job.w.baking) job.w.baking--; }
+    if (job.w) {
+      if (job.light) job.w.light = Math.max(0, job.w.light - 1); else job.w.busy = Math.max(0, job.w.busy - 1);
+      job.w.running.delete(job);
+      if (job.key && job.key[0] === 'c' && job.w.baking) job.w.baking--;
+    }
     if (!job.init && this.jobs.get(job.key) === job) this.jobs.delete(job.key);
     if (err) this.counts.failed++; else this.counts.done++;
     if (result && ms !== undefined) result.workerMs = ms;
@@ -248,7 +273,7 @@ export class WorkerPool {
     if (!nw.alive) { this.lastWhy = nw.err || 'the worker could not start'; this._scheduleRespawn(i); this._checkDead(); return; }
     // the world, then what has changed in it (applied once the world is in: the worker answers in order)
     if (!this._postInit(nw, () => {})) return;
-    if (this.props.size) { try { nw.wk.postMessage({ id: 0, op: 'patch', args: { props: [...this.props], reset: true } }); } catch { /* replaced again */ } }
+    if (this.props.size || this.barriers.size) { try { nw.wk.postMessage({ id: 0, op: 'patch', args: { props: [...this.props], ...(this.barriers.size ? { barriers: [...this.barriers].map((k) => [k, 1]) } : null), reset: true } }); } catch { /* replaced again */ } }
     this._pump();
   }
   // a job running far too long (a provider stuck in a loop), or a worker that never finished taking the world:

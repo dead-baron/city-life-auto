@@ -79,12 +79,14 @@ function pack(g, transfer, under = null, run = 0) {
 // are in by the time the world arrives.
 const MODS = Promise.all([loadProviders(), loadActors(), import('../../../shared/map.js').catch((e) => { P.errors.map = String((e && e.message) || e); return null; })]);
 MODS.catch(() => {});
-let ready = null, worldIn = null, KEEP = null;
+let ready = null, worldIn = null, KEEP = null, PHONE = false;
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 async function init(args) {
   ART = args.artPx === 1 ? 1 : 2;
   KEEP = args.artKey && canKeep() ? { art: args.artKey, n: 0, q: Promise.resolve(), tidy: !!args.tidy, cap: args.keepCap || 80 } : null;
   CDN.base = KEEP && typeof args.cdn === 'string' && /^https?:\/\//.test(args.cdn) && typeof fetch === 'function' ? args.cdn : null;
   CDN.saveData = !!args.saveData;
+  PHONE = !!args.phone;
   if (KEEP && KEEP.tidy) setTimeout(() => tidy(KEEP.art, KEEP.cap), 4000);   // (once things have settled; and every so often after)
   const lowMem = !!args.lowMem;
   // (the pool says how much; without that: four workers a little less each)
@@ -106,37 +108,66 @@ async function init(args) {
 // baked next there; here it's baked meanwhile and not asked for again for a while; a run of them (the server is still
 // at it) pauses the asking. A failing network pauses it longer, and stops it for the session after a few failures; so
 // do downloads that turn out slower than bakes here (a weak connection).
-const CDN_TIMEOUT_MS = 4000;
-const CDN = { base: null, saveData: false, pauseUntil: 0, miss: new Map(), missRun: 0, fails: 0, off: false, n: 0, ms: 0, misses: 0 };
-async function fromCdn(cx, cy, q, ck) {
+const CDN_TIMEOUT_MS = 4000, CDN_SOON_MS = 6000;
+const CDN = { base: null, saveData: false, pauseUntil: 0, miss: new Map(), missRun: 0, fails: 0, offs: 0, off: false, n: 0, ms: 0, misses: 0, soon: 0, waited: 0, fetched: 0, stale: 0, slow: 0 };
+// what a bake here takes, on average (none yet: a guess by device)
+const bakeHereMs = () => { const n = stats.chunks - (stats.kept || 0); return n >= 2 ? (stats.bakeOnlyMs || 0) / n : PHONE ? 1600 : 600; };
+// The server's chunk: { ...the chunk } (unpacked; kept in the store under ck), or null; { soon: ms } when the server is
+// baking it and says when it should be ready (server/artcdn.js x-art-eta); { ...the chunk, stale: true } (plus soon,
+// maybe) when what came is the previous build's chunk, sent while this build's is baked: a stand-in only, never kept.
+// o.force: ask even inside its back-off (the retry after a 'soon'); o.keepOnly: only into the store, not unpacked
+// ({ kept: true }); o.pre: a look ahead, which the server neither queues nor answers with a stand-in.
+async function fromCdn(cx, cy, q, ck, o = null) {
   if (!CDN.base || CDN.off || !KEEP) return null;
   const now = performance.now(), mk = `${q}/${cx}/${cy}`;
-  if (now < CDN.pauseUntil || (CDN.miss.get(mk) || 0) > now) return null;
+  if (now < CDN.pauseUntil || (!(o && o.force) && (CDN.miss.get(mk) || 0) > now)) return null;
   const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timer = ctl ? setTimeout(() => ctl.abort(), CDN_TIMEOUT_MS) : 0;
   try {
-    const res = await fetch(`${CDN.base}${KEEP.art}/${q}/${ART}/${cx}/${cy}`, ctl ? { signal: ctl.signal } : {});
+    const res = await fetch(`${CDN.base}${KEEP.art}/${q}/${ART}/${cx}/${cy}${o && o.pre ? '?pre=1' : ''}`, ctl ? { signal: ctl.signal } : {});
+    const hdr = (k) => (res.headers && res.headers.get ? res.headers.get(k) : null);
+    const eta = Number(hdr('x-art-eta')) || 0, soon = eta > 0 && eta < CDN_SOON_MS ? eta : 0;
     if (res.status !== 200) {
-      CDN.misses++; CDN.miss.set(mk, now + 30000);
+      CDN.misses++;
       if (CDN.miss.size > 2000) CDN.miss.clear();
-      if (++CDN.missRun >= 6) { CDN.missRun = 0; CDN.pauseUntil = now + 15000; }
+      // being baked, and soon ready: ask again then (not a miss in a row - the server is keeping up)
+      if (soon) { CDN.soon++; CDN.miss.set(mk, now + soon * 0.8); return { soon }; }
+      CDN.miss.set(mk, now + (o && o.pre ? 12000 : 30000));
+      if (!(o && o.pre) && ++CDN.missRun >= 6) { CDN.missRun = 0; CDN.pauseUntil = now + 15000; }
       return null;
     }
+    const stale = hdr('x-art-stale') === '1';
     const f = parseChunkFile(await res.arrayBuffer());
-    const got = f ? await unpackChunk(f.meta, f.z) : null;
+    if (!f) return null;
+    CDN.missRun = 0; CDN.fails = 0; CDN.offs = 0;
+    if (stale) {   // (the previous build's: shown until this build's comes, never kept)
+      CDN.stale++;
+      if (soon) CDN.miss.set(mk, now + soon * 0.8);
+      if (o && o.keepOnly) return null;
+      const got = await unpackChunk(f.meta, f.z);
+      if (!got) return null;
+      got.stale = true; got.cdn = true; got.dlMs = performance.now() - now; if (soon) got.soon = soon;
+      return got;
+    }
+    const got = o && o.keepOnly ? { kept: true } : await unpackChunk(f.meta, f.z);
     if (!got) return null;
-    CDN.missRun = 0; CDN.fails = 0;
     const ms = performance.now() - now;
-    CDN.n++; CDN.ms += ms;
-    // (slower than a bake here, over a good few of each: the connection's the bottleneck - bake from now on)
-    if (CDN.n >= 8 && stats.chunks - (stats.kept || 0) >= 4 && CDN.ms / CDN.n > 2 * (stats.bakeOnlyMs || 0) / Math.max(1, stats.chunks - (stats.kept || 0))) CDN.off = true;
+    if (o && o.keepOnly) CDN.fetched++;
+    else {
+      CDN.n++; CDN.ms += ms;
+      // (slower than a bake here, over a good few of each: the connection's the bottleneck - bake here a while, then
+      // try again with a clean slate)
+      if (CDN.n >= 8 && stats.chunks - (stats.kept || 0) >= 4 && CDN.ms / CDN.n > 2 * bakeHereMs()) { CDN.slow++; CDN.n = 0; CDN.ms = 0; CDN.pauseUntil = now + 180000; }
+    }
     if (ck) KEEP.q = KEEP.q.then(() => putChunkZ(ck, f.meta, f.z)).then(() => { if (KEEP.tidy && ++KEEP.n % 12 === 0) return tidy(KEEP.art, KEEP.cap); return null; }).catch(() => {});
     got.dlMs = ms; got.cdn = true;
     return got;
   } catch (e) {
+    // (the network failing - a timeout on a weak signal, a dropped connection: a pause, longer after a run of them;
+    // only three runs without a single download in between switch it off for the session)
     CDN.err = String((e && e.message) || e).slice(0, 160);
     CDN.pauseUntil = performance.now() + 20000;
-    if (++CDN.fails >= 4) CDN.off = true;
+    if (++CDN.fails >= 4) { CDN.fails = 0; CDN.pauseUntil = performance.now() + 120000; if (++CDN.offs >= 3) CDN.off = true; }
     return null;
   } finally { if (timer) clearTimeout(timer); }
 }
@@ -215,7 +246,12 @@ async function handle(msg) {
       // the server's, as the map laid it out (kept under the plain key): exactly this chunk when nothing a player changed
       // is near it, else a stand-in that's right but for a few broken props until its own bake lands
       stats.peekN = (stats.peekN || 0) + 1; if (got) stats.peekHit = (stats.peekHit || 0) + 1;
-      if (!got && !/\|c/.test(ck) && args.q !== undefined) { stats.peekCdn = (stats.peekCdn || 0) + 1; got = await fromCdn(cx, cy, args.q, base); exact = !d; }
+      if (!got && !/\|c/.test(ck) && args.q !== undefined) {
+        stats.peekCdn = (stats.peekCdn || 0) + 1;
+        got = await fromCdn(cx, cy, args.q, base);
+        if (got && !got.g) got = null;   // (only 'soon': nothing to show yet)
+        exact = !!got && !d && !got.stale;   // (the previous build's chunk: a stand-in until this build's lands)
+      }
     }
     if (!got) { self.postMessage({ id, ok: true, result: { none: true }, ms: performance.now() - t0 }); return; }
     const transfer = [got.g.p0.buffer, got.g.p1.buffer, got.g.p2.buffer];
@@ -231,7 +267,11 @@ async function handle(msg) {
     const d0 = dirtySig(cx, cy), ck = `${KEEP.art}|${args.ck}${d0 ? '|d' + d0 : ''}`;
     if (await hasChunk(ck)) { self.postMessage({ id, ok: true, result: { kept: true, had: true }, ms: performance.now() - t0 }); return; }
     // (the server's, when it has it and the data saver is off: kept as it came)
-    if (!d0 && !CDN.saveData && (await fromCdn(cx, cy, opt.quality, ck))) { stats.prebaked = (stats.prebaked || 0) + 1; self.postMessage({ id, ok: true, result: { kept: true, cdn: true }, ms: performance.now() - t0 }); return; }
+    if (!d0 && !CDN.saveData) {
+      const dl = await fromCdn(cx, cy, opt.quality, ck, { keepOnly: true, pre: true });
+      if (dl && dl.soon) { self.postMessage({ id, ok: true, result: { kept: false, soon: true }, ms: performance.now() - t0 }); return; }   // (the server has it in a moment: no bake here)
+      if (dl) { stats.prebaked = (stats.prebaked || 0) + 1; self.postMessage({ id, ok: true, result: { kept: true, cdn: true }, ms: performance.now() - t0 }); return; }
+    }
     const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART, scratch: ART > 1 }, statCache, chunkProviders);
     let step = it.next();
     while (!step.done) { await pause(); step = it.next(); }
@@ -244,6 +284,16 @@ async function handle(msg) {
     }
     stats.prebaked = (stats.prebaked || 0) + 1; stats.prebakeMs = (stats.prebakeMs || 0) + performance.now() - t0;
     self.postMessage({ id, ok: true, result: { kept }, ms: performance.now() - t0 });
+    return;
+  }
+  if (op === 'fetchChunk') {   // (the server's chunk into the store, nothing baked here: host.js _fetchAhead)
+    const { cx, cy, q } = args;
+    if (!KEEP || !args.ck || !CDN.base || CDN.off || CDN.saveData) { self.postMessage({ id, ok: true, result: { kept: false, off: true }, ms: 0 }); return; }
+    if (dirtySig(cx, cy)) { self.postMessage({ id, ok: true, result: { kept: false }, ms: 0 }); return; }   // (players changed things near it: baked here)
+    const ck = `${KEEP.art}|${args.ck}`;
+    if (await hasChunk(ck)) { self.postMessage({ id, ok: true, result: { kept: true, had: true }, ms: performance.now() - t0 }); return; }
+    const dl = await fromCdn(cx, cy, q, ck, { keepOnly: true, pre: true });
+    self.postMessage({ id, ok: true, result: dl && !dl.soon ? { kept: true } : { kept: false, soon: !!(dl && dl.soon), paused: performance.now() < CDN.pauseUntil }, ms: performance.now() - t0 });
     return;
   }
   if (op === 'bakeChunk') {
@@ -262,7 +312,13 @@ async function handle(msg) {
         return;
       }
       // the server's (as the map laid it out, not cut away)
-      const dl = !d0 && (opt.cutaway === undefined || opt.cutaway < 0) ? await fromCdn(cx, cy, opt.quality, ck) : null;
+      let dl = !d0 && (opt.cutaway === undefined || opt.cutaway < 0) ? await fromCdn(cx, cy, opt.quality, ck) : null;
+      // being baked on the server and ready sooner than a bake here would be (a phone: a second or more): wait for it
+      // (the previous build's chunk, sent meanwhile, is the page's to show from a peek - a bake wants this build's)
+      if (dl && dl.soon) {
+        if (dl.soon < 0.85 * bakeHereMs()) { CDN.waited++; await sleep(dl.soon + 120); dl = await fromCdn(cx, cy, opt.quality, ck, { force: true }); }
+      }
+      if (dl && (dl.stale || !dl.g)) dl = null;
       if (dl) {
         const transfer = [dl.g.p0.buffer, dl.g.p1.buffer, dl.g.p2.buffer];
         if (dl.under) transfer.push(dl.under.buffer);
@@ -303,7 +359,7 @@ async function handle(msg) {
   }
   if (op === 'stats') {
     const c = (k) => (k ? { bytes: k.bytes, n: k.m.size, max: k.max, hits: k.hits, misses: k.misses } : null);
-    self.postMessage({ id, ok: true, result: { ...stats, cdn: { n: CDN.n, ms: Math.round(CDN.ms), misses: CDN.misses, fails: CDN.fails, off: CDN.off, on: !!CDN.base, err: CDN.err || '' }, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
+    self.postMessage({ id, ok: true, result: { ...stats, cdn: { n: CDN.n, ms: Math.round(CDN.ms), misses: CDN.misses, fails: CDN.fails, off: CDN.off, on: !!CDN.base, err: CDN.err || '', soon: CDN.soon, waited: CDN.waited, fetched: CDN.fetched, stale: CDN.stale, slow: CDN.slow, paused: performance.now() < CDN.pauseUntil }, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
     return;
   }
   throw new Error(`unknown op ${op}`);

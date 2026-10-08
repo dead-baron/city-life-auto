@@ -2085,6 +2085,7 @@ function perfReport(nowMs) {
       late: L.of ? +(100 * L.frames / L.of).toFixed(1) : 0, lateMove: L.moving ? +(100 * L.movingLate / L.moving).toFixed(1) : 0, lateMax: +(L.max || 0).toFixed(1), moving: L.of ? +(100 * L.moving / L.of).toFixed(0) : 0,
       ahead: a2.ahead ? a2.ahead.baked : 0,
       cdn: a2.n ? a2.n.cdn || 0 : 0, cdnMs: a2.n && a2.n.cdn && a2.t ? Math.round((a2.t.cdnSum || 0) / a2.n.cdn) : 0,
+      fetched: a2.fetched ? a2.fetched.got + a2.fetched.had : 0, fetchMiss: a2.fetched ? a2.fetched.miss : 0, cdnOff: a2.fetched && a2.fetched.off ? 1 : 0,
     } });
     return;
   }
