@@ -45,7 +45,8 @@ export class HUD {
     const st = [];
     if (me.bleeding) st.push('<span class="bad">BLEEDING</span>');
     if (me.peak > 0) st.push(`RECORD ${'★'.repeat(me.peak)}${me.disguised ? ' (DISGUISED)' : ''}`);
-    if (me.bounty > 0) st.push(`<span class="bad">BOUNTY $${me.bounty}</span>`);
+    // (btime: the bounty placed on you - its clock only runs while you're out in the city: server/systems/bounties.js)
+    if (me.bounty > 0) st.push(`<span class="bad">💀 BOUNTY $${me.bounty.toLocaleString('en-US')}${me.btime ? ` · ${Math.max(1, Math.ceil(me.btime.left / 60))}m${me.btime.paused ? ' (paused)' : ''}` : ''}</span>`);
     if (me.buffs?.coffee > 0) st.push(`COFFEE ${Math.ceil(me.buffs.coffee)}s`);
     if (me.buffs?.energy > 0) st.push(`ENERGY ${Math.ceil(me.buffs.energy)}s`);
     if (me.buffs?.wine > 0) st.push(`WINE ${Math.ceil(me.buffs.wine)}s`);

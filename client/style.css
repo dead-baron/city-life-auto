@@ -359,6 +359,19 @@ body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
 .ph-card.saw em { display: block; margin-top: 6px; font-style: normal; color: #7fe07f; font-weight: 600; }
 .ph-card button { display: block; margin-top: 8px; width: 100%; padding: 7px; border-radius: 8px; border: 1px solid #ff5a4a; background: rgba(255,90,74,.15); color: #fff; font: 600 13px Rubik, sans-serif; cursor: pointer; }
 .ph-hint, .ph-empty { color: #8a90a2; font-size: 12.5px; margin: 6px 2px; }
+/* the Bounties app (client/phone.js): gold for the money on someone's head */
+.ph-app.bty b { color: #ffcf4a; text-shadow: 0 0 6px rgba(255,207,74,.55); }
+.ph-card.bty, .ph-card.bty-own { border-left-color: #ffcf4a; }
+.ph-card.bty-me { border-left-color: #ff5a4a; background: #2a1f24; }
+.ph-card.bty-rev { border-left-color: #ff9a2a; }
+.ph-card .amt { float: right; color: #ffcf4a; font: 16px Anton, Impact, sans-serif; letter-spacing: .5px; }
+.ph-card.bty small, .ph-card.bty-own small, .ph-card.bty-me small, .ph-card.bty-rev small { display: block; margin-top: 3px; color: #a3a9ba; font-size: 12px; }
+.ph-card.bty em { display: block; margin-top: 6px; font-style: normal; color: #7fe07f; font-weight: 600; }
+.ph-card.bty button, .ph-card.bty-rev button { border-color: #ffcf4a; background: rgba(255,207,74,.12); }
+.ph-card button:disabled { opacity: .45; cursor: default; }
+.ph-amts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.ph-amts button { margin-top: 0; padding: 7px 2px; }
+.ph-card button.pfocus { outline: 2px solid #fff; border-color: #fff; }
 body.portrait #phone { justify-content: center; padding: 0; }
 
 #tut-ask, #gfx-ask { position: absolute; inset: 0; z-index: 44; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }

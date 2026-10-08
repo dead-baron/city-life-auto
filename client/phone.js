@@ -1,7 +1,8 @@
 // The in-game phone: find places (nearest of each kind, read from the shared map), browse the
 // job board (deliveries priced $ / $$ / $$$ by distance, farm harvests, police patrols), take
-// or cancel your one job, and set a waypoint. It lives in the overlay system, so a controller
-// navigates it like every other menu.
+// or cancel your one job, and set a waypoint. The Bounties app (server/systems/bounties.js): the
+// contracts out, taking one, and putting a bounty on someone who keeps killing you. It lives in the
+// overlay system, so a controller navigates it like every other menu.
 import { JOB_TIERS } from '../shared/rules.js';
 import { districtAt } from '../shared/tutorial.js';
 
@@ -32,7 +33,7 @@ const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '�
 
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
-  let screen = 'home', group = null, board = null, feed = null;
+  let screen = 'home', group = null, board = null, feed = null, bty = null;
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
 
@@ -51,6 +52,7 @@ export function createPhone(ctx) {
           <button class="ph-app" data-go="jobs"><b>💼</b>Jobs${ctx.isCop() ? ' & patrols' : ''}</button>
           <button class="ph-app atm" data-act="atm"><b>$</b>Nearest ATM</button>
           <button class="ph-app" data-go="feed"><b>📰</b>City feed</button>
+          <button class="ph-app bty" data-go="bounties"><b>💀</b>Bounties</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
         </div>
         ${wp ? `<div class="ph-card">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</div>` : ''}
@@ -70,6 +72,8 @@ export function createPhone(ctx) {
       el.innerHTML = '<h3>City feed</h3><p class="ph-hint">What\'s going on anywhere in the city. Tap one to set a waypoint.</p>' + (!feed ? '<p class="ph-empty">Loading…</p>'
         : feed.length ? feed.map((f, i) => `<button class="ph-row feed ${esc(f.kind)}" data-feed="${i}"${f.x === null ? ' disabled' : ''}><span class="ic">${FEED_ICON[f.kind] || '•'}</span><span class="nm">${esc(f.text)}<small>${esc(f.where || 'the city')} · ${ago(f.ago)}</small></span><span class="d">${f.x === null ? '' : m(dist(f))}</span></button>`).join('')
           : '<p class="ph-empty">Quiet out there right now.</p>');
+    } else if (screen === 'bounties') {
+      el.innerHTML = bountiesHtml();
     } else if (screen === 'jobs') {
       if (!board) { el.innerHTML = '<p class="ph-empty">Loading jobs…</p>'; return; }
       const job = board.job;
@@ -85,7 +89,24 @@ export function createPhone(ctx) {
   }
 
   function wire(el) {
-    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } render(); };
+    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); render(); };
+    for (const b of el.querySelectorAll('[data-btake]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'btake', id: b.dataset.btake }); };
+    for (const b of el.querySelectorAll('[data-bplace]')) b.onclick = () => { const [pid, amt] = b.dataset.bplace.split(':'); b.disabled = true; ctx.send({ t: 'phone', a: 'bplace', pid, amt: Number(amt) }); };
+    for (const b of el.querySelectorAll('[data-bseen]')) b.onclick = () => {
+      const c = bty && bty.list.find((q) => q.id === b.dataset.bseen);
+      if (!c || !c.seen) return;
+      ctx.setWaypoint({ x: c.seen.x, y: c.seen.y, label: `${c.name} - last seen` });
+      ctx.toast(`Waypoint: round where ${c.name} was last seen (${c.seen.d})`, 'info');
+      ctx.close();
+    };
+    for (const b of el.querySelectorAll('[data-act="court"]')) b.onclick = () => {
+      const me = ctx.pos();
+      const ct = ctx.map().pois.filter((p) => p.kind === 'courthouse').sort((a, q) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(q.x - me.x, q.y - me.y))[0];
+      if (!ct) return;
+      ctx.setWaypoint({ x: ct.x, y: ct.y, label: ct.label });
+      ctx.toast(`Waypoint set: ${ct.label}`, 'info');
+      ctx.close();
+    };
     for (const b of el.querySelectorAll('[data-feed]')) b.onclick = () => {
       const f = feed && feed[Number(b.dataset.feed)];
       if (!f || f.x === null) return;
@@ -116,10 +137,46 @@ export function createPhone(ctx) {
     for (const b of el.querySelectorAll('[data-act="clearwp"]')) b.onclick = () => { ctx.setWaypoint(null); render(); };
   }
 
+  // ---- the Bounties app ----------------------------------------------------------------------------------------------
+  const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
+  const mins = (s) => (s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min` : `${Math.max(1, Math.round(s / 60))} min`);
+  const ago = (s) => (s < 45 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} days ago`);
+  function bountiesHtml() {
+    if (!bty) return '<h3>Bounties</h3><p class="ph-empty">Loading…</p>';
+    const list = bty.list || [];
+    const onMe = list.filter((c) => c.me), mine = list.filter((c) => c.own && !c.me), board = list.filter((c) => !c.me && !c.own);
+    let h = '<h3>Bounties</h3>';
+    // someone who keeps killing you: put a price on their head
+    for (const r of bty.revenge || []) {
+      h += `<div class="ph-card bty-rev"><b>${esc(r.name)} keeps killing you.</b> Put a price on their head: your own money from the bank, held in escrow. It's paid only to a hunter who gets them, and comes back to you if nobody does.<small>${r.has ? 'You have a bounty out on them already.' : `${mins(r.left)} left to decide · bank ${money(bty.bank)}`}</small>`
+        + (r.has ? '' : `<div class="ph-amts">${bty.amounts.map((a) => `<button data-bplace="${esc(r.pid)}:${a}"${bty.bank < a || bty.wanted ? ' disabled' : ''}>${money(a)}</button>`).join('')}</div>${bty.wanted ? '<small>Not while you\'re wanted.</small>' : ''}`)
+        + '</div>';
+    }
+    const clock = (c) => (c.on ? `${mins(c.left)} left` : `${mins(c.left)} left · clock stopped while they're away`);
+    if (onMe.length) h += `<div class="ph-card bty-me"><b>💀 On your head: ${money(onMe.reduce((n, c) => n + c.amount, 0))}</b>${onMe.map((c) => `<small>${money(c.amount)} from ${esc(c.by)} · ${clock(c)} · ${c.takers ? `${c.takers} hunter${c.takers === 1 ? '' : 's'} on it` : 'no hunter on it yet'}</small>`).join('')}<small>The clock only runs while you're out in the city - hiding at home or logging off stops it.</small></div>`;
+    if (mine.length) h += '<h3>Your bounties out</h3>' + mine.map((c) => `<div class="ph-card bty-own"><b>${esc(c.name)}</b> <span class="amt">${money(c.amount)}</span><small>${clock(c)} · ${c.takers ? `${c.takers} hunter${c.takers === 1 ? '' : 's'} on it` : 'no hunter on it yet'}</small></div>`).join('');
+    h += '<h3>Contracts</h3>' + (bty.hunter
+      ? '<p class="ph-hint">Take one and its target shows on your radar while they\'re out in the city. Kill, arrest or detain them (knock them down, then walk up) to collect.</p>'
+      : `<p class="ph-hint">Contracts are for licensed bounty hunters (${bty.need}+ Samaritan, not wanted) and officers on duty. Register at the courthouse.</p><button class="ph-row" data-act="court"><span class="ic">⚖</span><span class="nm">Courthouse<small>set a waypoint</small></span></button>`);
+    h += board.length ? board.map((c) => `<div class="ph-card bty"><b>${esc(c.name)}</b> <span class="amt">${money(c.amount)}</span>`
+      + `<small>Wearing: ${esc(c.desc)}</small>`
+      + `<small>${c.seen ? `Last seen: ${esc(c.seen.d || 'out of town')}, ${ago(c.seen.ago)}` : 'Not seen yet'}${c.on ? '' : ' · away right now'}</small>`
+      + `<small>${clock(c)} · ${c.takers ? `${c.takers} hunter${c.takers === 1 ? '' : 's'} on it` : 'nobody on it yet'}</small>`
+      + (c.mine ? `<em>✓ Your contract</em>${c.seen ? `<button data-bseen="${esc(c.id)}">📍 Head for where they were last seen</button>` : ''}`
+        : `<button data-btake="${esc(c.id)}"${bty.hunter && !bty.wanted ? '' : ' disabled'}>🎯 Take the contract</button>`)
+      + '</div>').join('') : '<p class="ph-empty">No bounties out right now.</p>';
+    return h;
+  }
+
   return {
     open() { screen = 'home'; group = null; render(); ctx.send({ t: 'phone', a: 'board' }); },
     back() { if (screen === 'group') screen = 'places'; else screen = 'home'; render(); return true; },
     onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
+    onBounties(msg) {
+      bty = msg;
+      if (msg.err) ctx.toast(msg.err, 'warn');
+      if (screen === 'bounties') render();
+    },
     onBoard(msg) {
       board = msg;
       if (msg.err) ctx.toast(msg.err, 'warn');

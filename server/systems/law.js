@@ -10,6 +10,7 @@ import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as phone from './phone.js';
 import * as events from './events.js';
+import * as bounties from './bounties.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
@@ -187,9 +188,10 @@ export function colourName(hex) {
 }
 // what someone is wearing, as a witness would put it, and the key a match is made on
 export const outfitKey = (ped) => { const a = ped.app || {}; return [a.t, a.tc, a.l, a.ht || 0, a.ht ? a.htc : ''].join('|'); };
+export const outfitText = (a) => { a = a || {}; return `${colourName(a.tc)} top, ${colourName(a.l)} trousers${a.ht ? `, a ${colourName(a.htc)} hat` : ''}`; };
 function looks(world, ped) {
   const a = ped.app || {}, v = ped.vehId ? world.get(ped.vehId) : null;
-  let d = `${colourName(a.tc)} top, ${colourName(a.l)} trousers${a.ht ? `, a ${colourName(a.htc)} hat` : ''}`;
+  let d = outfitText(a);
   if (v && v.def) d += ` - in a ${colourName(PAINTS[v.paint] || '#888')} ${String(v.def.name || 'car').toLowerCase()}`;
   return { desc: d, key: outfitKey(ped), veh: v && v.def ? `${v.def.id}|${v.paint}` : null };
 }
@@ -280,7 +282,6 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   if (p.badge && type === 'brandish') return;
 
   p.profile.criminalExp += Math.round(spec.heat / 2);
-  if (victim && victim.player) victim.player.robbedBy.set(p.pid, now);
   store.touch();
   if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return; }
   const w = witnesses(world, x, y, ped, victim, (type === 'brandish' || type === 'murder') && !opts.quiet, type);
@@ -316,7 +317,7 @@ export function addHeat(world, p, amount, x, y) {
   prof.peakWantedAt = Date.now();
   p.faction = FACTION.CRIMINAL;
   if (p.wanted >= 4) p.cityBounty = Math.max(p.cityBounty || 0, 500 * p.wanted);
-  p.bounty = (p.placedBounty || 0) + (p.cityBounty || 0);
+  bounties.sync(world, p);
   if (p.hunter && p.wanted > 0) { p.hunter = false; world.notify(p, 'Bounty Hunter license suspended while wanted.', 'bad'); }
   p.meDirty = true;
   store.touch();
@@ -324,7 +325,7 @@ export function addHeat(world, p, amount, x, y) {
 
 export function clearWanted(world, p) {
   p.heat = 0; p.wanted = 0; p.flareUntil = 0; p.searchR = 0; p.cityBounty = 0;
-  p.bounty = p.placedBounty || 0;
+  bounties.sync(world, p);
   p.faction = p.badge ? FACTION.ENFORCER : FACTION.CITIZEN;
   p.meDirty = true;
 }
@@ -334,6 +335,8 @@ export function onDamage(world, attacker, victim, amount, cause) {
   if (!attacker || attacker === victim) return;
   const now = world.time;
   victim.aggressors.set(attacker.id, now);
+  // who started it, between two players (bounties.js selfDefence): a blow that isn't hitting back
+  if (attacker.player && victim.player) { const back = attacker.aggressors.get(victim.id); if (back === undefined || now - back >= 60) (attacker.started ||= new Map()).set(victim.id, now); }
   if (!attacker.player || cause === 'vehicle') return;
   if (victim.hp <= 0) return; // a lethal hit is reported (or not) as the killing itself
   attacker.recentAssault = attacker.recentAssault || new Map();
@@ -345,12 +348,14 @@ export function onDamage(world, attacker, victim, amount, cause) {
 
 export function onKill(world, attacker, victim, cause) {
   if (!attacker || !attacker.player || attacker === victim) return;
-  const p = attacker.player;
-  // bounty claim (GDD §4C bounty hunters / immunity for dropping a bounty target)
-  if (victim.player && victim.player.bounty > 0 && (p.hunter || p.badge)) claimBounty(world, p, victim.player);
+  const p = attacker.player, vp = victim.player;
+  // a kill towards a revenge bounty (bounties.js): not a wanted or marked victim, not police work, not self-defence
+  const counts = !!vp && !isFlagged(world, victim) && !p.badge && !bounties.selfDefence(world, attacker, victim);
   const type = cause === 'vehicle' ? 'vehKill' : (isCop(victim) ? 'copMurder' : 'murder');
   attacker.recentAssault?.set(victim.id, world.time);
+  // (the crime first: dropping a bounty target is no murder - GDD §4C immunity - even when it's the last bounty on them)
   crime(world, attacker, type, victim, victim.x, victim.y, { quiet: !!attacker.quietWeapon && cause !== 'vehicle' });
+  if (vp) { bounties.collect(world, p, vp, 'kill'); if (counts) bounties.noteKill(world, p, vp); }
 }
 
 export function gunfire(world, ped, hitSomeone) {
@@ -430,7 +435,6 @@ export function update(world, dt) {
     if (p.wanted === 0 && prof.peakWanted > 0 && Date.now() - prof.peakWantedAt > 600000) {
       prof.peakWanted--; prof.peakWantedAt = Date.now(); store.touch(); p.meDirty = true;
     }
-    if (p.placedBountyUntil && now > p.placedBountyUntil) { p.placedBounty = 0; p.placedBountyUntil = 0; p.bounty = p.cityBounty || 0; p.meDirty = true; }
     if (world.tick % 10 === 0 && (p.badge || p.hunter || p.wanted > 0)) p.meDirty = true;
   }
   // cops spot visible contraband even on clean players
@@ -470,14 +474,7 @@ export function radarFor(world, p) {
       else out.push({ k: 'search', x: Math.round(q.lastSeenX), y: Math.round(q.lastSeenY), r: Math.round(q.searchR), s: q.wanted, f: Math.max(0.15, q.heat / 160) });
     }
   }
-  if (p.hunter || p.badge) {
-    const ping = Math.floor(now / 5);
-    for (const q of world.players.values()) {
-      if (q === p || q.bounty <= 0 || !q.ped) continue;
-      const jx = ((ping * 7919 + q.ped.id * 31) % 160) - 80, jy = ((ping * 104729 + q.ped.id * 17) % 160) - 80;
-      out.push({ k: 'bounty', x: Math.round(q.ped.x + jx), y: Math.round(q.ped.y + jy), r: 140, b: q.bounty, n: q.name });
-    }
-  }
+  bounties.radar(world, p, out);   // the targets of your contracts (and the city's bounties: hunters, officers)
   return out;
 }
 
@@ -573,7 +570,7 @@ export function arrest(world, cop, target) {
     if (target.weapon === 'smg' || target.weapon === 'rocket') target.weapon = 'fists';
     const reward = ARREST_REWARD_PER_STAR * stars;
     if (cop && cop.player) {
-      if (t.bounty > 0) claimBounty(world, cop.player, t);
+      bounties.collect(world, cop.player, t, 'arrest');
       cop.player.profile.cash += reward + fine;
       cop.player.profile.samaritan += 5 * stars;
       cop.player.profile.stats.arrests++;
@@ -604,40 +601,6 @@ export function arrest(world, cop, target) {
       cop.player.meDirty = true;
     }
   }
-}
-
-export function claimBounty(world, hunter, target) {
-  const amount = target.bounty;
-  if (amount <= 0) return;
-  hunter.profile.cash += amount;
-  hunter.profile.samaritan += 10;
-  if (hunter.badge) addPolicePts(world, hunter, 15);
-  world.notify(hunter, `Bounty on ${target.name} claimed: +$${amount}`, 'good');
-  world.notify(target, 'The bounty on your head was collected.', 'bad');
-  events.feed(world, { kind: 'bounty', text: `${hunter.name} collected the $${amount} bounty on ${target.name}`, x: target.ped ? target.ped.x : undefined, y: target.ped ? target.ped.y : undefined });
-  target.placedBounty = 0; target.cityBounty = 0; target.bounty = 0; target.placedBountyUntil = 0;
-  hunter.meDirty = true; target.meDirty = true;
-  store.touch();
-}
-
-export function placeBounty(world, p, targetPid, amount) {
-  const t = world.players.get(targetPid);
-  if (!t) return 'That person is not in the city right now.';
-  if (p.wanted > 0) return 'Criminals are barred from placing bounties.';
-  const when = p.robbedBy.get(targetPid);
-  if (when === undefined || world.time - when > 1800) return 'You can only place a bounty on someone who attacked or robbed you recently.';
-  if (amount < 100) return 'Minimum bounty is $100.';
-  if (p.profile.bank < amount) return 'Bounties are paid from your bank balance - not enough funds.';
-  p.profile.bank -= amount;
-  t.placedBounty = (t.placedBounty || 0) + amount;
-  t.placedBountyUntil = world.time + 1800;
-  t.bounty = t.placedBounty + (t.cityBounty || 0);
-  world.notify(t, `A $${amount} bounty was placed on your head!`, 'bad');
-  for (const q of world.players.values()) if (q.hunter) world.notify(q, `New contract: $${t.bounty} on ${t.name}`, 'info');
-  events.feed(world, { kind: 'bounty', text: `$${t.bounty} bounty posted on ${t.name}` });
-  p.meDirty = true; t.meDirty = true;
-  store.touch();
-  return null;
 }
 
 export function goOnDuty(world, p) {

@@ -9,6 +9,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { playerOutfit } from '../entities.js';
 import { store } from '../store.js';
 import * as law from './law.js';
+import * as bounties from './bounties.js';
 import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
@@ -206,16 +207,12 @@ export function buildMenu(world, p, poi) {
       break;
     }
     case 'courthouse': {
-      sub = p.hunter ? 'Licensed Bounty Hunter: targets appear as radar pings.' : `Register as a Bounty Hunter (${law.HUNTER_MIN_SAMARITAN}+ Samaritan, not wanted).`;
+      sub = p.hunter ? 'Licensed Bounty Hunter: take contracts in the Bounties app on your phone - their targets show on your radar.' : `Register as a Bounty Hunter (${law.HUNTER_MIN_SAMARITAN}+ Samaritan, not wanted), then take contracts in the Bounties app on your phone.`;
       recordOption(p, opts);
       opts.push(p.hunter ? { id: 'hunter:off', label: 'Hand in hunter license' } : { id: 'hunter:on', label: 'Register as Bounty Hunter' });
-      for (const [pid, t] of p.robbedBy) {
-        const q = world.players.get(pid);
-        if (!q || world.time - t > 1800) continue;
-        for (const amt of [100, 500, 1000]) opts.push({ id: `bounty:${pid}:${amt}`, label: `Place $${amt} bounty on ${q.name}`, price: amt, note: 'from bank' });
-      }
-      const active = [...world.players.values()].filter((q) => q.bounty > 0);
-      if (active.length) sub += ' Active: ' + active.map((q) => `${q.name} $${q.bounty}`).join(', ');
+      bounties.courthouseOptions(world, p, opts);   // someone who keeps killing you: put a price on their head
+      const active = bounties.summary(world);
+      sub += active.length ? ` Bounties out: ${active.join(', ')}.` : ' No bounties out right now.';
       break;
     }
     case 'clothing':
@@ -502,11 +499,11 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'hunter': {
-      if (parts[1] === 'on') { const e = law.registerHunter(world, p); if (e) return e; world.notify(p, 'Licensed. Bounty targets show as radar pings.', 'good'); }
+      if (parts[1] === 'on') { const e = law.registerHunter(world, p); if (e) return e; world.notify(p, 'Licensed. Take contracts in the Bounties app on your phone: their targets show as rough pings on your radar.', 'good'); }
       else { p.hunter = false; }
       return null;
     }
-    case 'bounty': return law.placeBounty(world, p, parts[1], Number(parts[2]));
+    case 'bounty': return bounties.place(world, p, parts[1], Number(parts[2]));
     case 'outfit': {
       const blocked = disguiseBlocked(world, p);
       if (blocked) return blocked;

@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BUDGET, codeReport, assetReport, cpuReport, closure, overBudget } from '../tools/perf.mjs';
-import { worldHash, artHash, canonicalHash } from '../tools/stamp-version.mjs';
+import { worldHash, artHash, canonicalHash, codeHash, ART_SKIP } from '../tools/stamp-version.mjs';
 import { generateCity, cityData, cityFromData, CityMap, mapSignature } from '../shared/map.js';
 
 const say = (list) => list.map(([w, v, b, a]) => `${w}: ${v} (budget ${b}) - ${a}`).join('\n');
@@ -61,6 +61,11 @@ test('version.json knows the world and the art (run node tools/stamp-version.mjs
   assert.equal(v.world, world, 'the world changed since version.json was stamped: browsers would keep using the city they built before');
   assert.equal(v.art, (await artHash(undefined, world)).hash, 'the art changed since version.json was stamped: browsers would keep showing chunks baked by the old art');
   assert.equal(v.hashes.length, v.files.length, 'a hash for every file (boot.js fetches only what changed)');
+  // the gameplay numbers are left out of the art hash (a rule tweak keeps every browser's baked chunks): so the art
+  // itself mustn't read them
+  const art = codeHash('client/art2/game/worker.js', undefined, ART_SKIP).files;
+  assert.ok(!art.includes('shared/rules.js'));
+  for (const f of art.filter((q) => q.startsWith('client/art2/'))) assert.ok(!/from\s+['"][./]*(shared\/)?rules\.js['"]/.test(readFileSync(new URL('../' + f, import.meta.url), 'utf8')), `${f} reads shared/rules.js: the art hash wouldn't see a change to it (tools/stamp-version.mjs ART_SKIP)`);
 });
 
 test('device reports: one a connection, cleaned up, kept newest first and listed at /perf', async () => {

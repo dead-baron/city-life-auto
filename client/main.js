@@ -236,6 +236,7 @@ function onText(m) {
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'board': phone.onBoard(m); break;
     case 'feed': phone.onFeed(m); break;
+    case 'bounties': phone.onBounties(m); break;
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
@@ -3894,6 +3895,35 @@ function drawSpanWire(sg, n) {
   }
 }
 
+// The golden skull over a player with a bounty on their head (server/systems/bounties.js; descriptor bt), for everyone
+// to see - the target too. A little pixel skull, made once and drawn crisp at any zoom, with a slow gold glow.
+const SKULL = ['...#####...', '.#########.', '###########', '###########', '##...#...##', '##...#...##', '###########', '.####.####.', '..#######..', '..#.#.#.#..', '..#######..'];
+let skullImg = null;
+function skullSprite() {
+  if (skullImg) return skullImg;
+  const n = SKULL.length, c = document.createElement('canvas');
+  c.width = n + 2; c.height = n + 2;
+  const k = c.getContext('2d'), on = (x, y) => SKULL[y] && SKULL[y][x] === '#';
+  k.fillStyle = '#2a1600';   // the outline (and, inside, the eyes, the nose and between the teeth)
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (on(x, y)) k.fillRect(x, y, 3, 3);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    if (!on(x, y)) continue;
+    k.fillStyle = !on(x - 1, y - 1) || !on(x, y - 1) ? '#ffe795' : !on(x + 1, y + 1) || !on(x, y + 1) ? '#c47f12' : '#f4b929';
+    k.fillRect(x + 1, y + 1, 1, 1);
+  }
+  return (skullImg = c);
+}
+function drawSkull(x, y, z, now) {
+  const s = 26 / z, bob = Math.sin(now * 2.4) * 2 / z;
+  const glow = g.createRadialGradient(x, y + bob, 0, x, y + bob, s);
+  glow.addColorStop(0, `rgba(255,205,70,${0.32 + 0.14 * Math.sin(now * 3.1)})`); glow.addColorStop(1, 'rgba(255,205,70,0)');
+  g.fillStyle = glow; g.fillRect(x - s, y + bob - s, s * 2, s * 2);
+  const sm = g.imageSmoothingEnabled;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(skullSprite(), x - s / 2, y + bob - s / 2, s, s);
+  g.imageSmoothingEnabled = sm;
+}
+
 function drawWorldLabels(peds, vehs, now, z) {
   const fs = 12 / z;
   g.textAlign = 'center';
@@ -3901,6 +3931,7 @@ function drawWorldLabels(peds, vehs, now, z) {
   for (const p of peds) {
     if (p.flags & PF.INVEH && !p.d.pl) continue;
     const py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
+    if (p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - ((p.flags & PF.FLARE) ? 72 : 48) / z, z, now);
     if (p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;

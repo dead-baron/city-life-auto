@@ -9,6 +9,7 @@ import { store } from './store.js';
 import * as env from './systems/environment.js';
 import * as jobs from './systems/jobs.js';
 import * as law from './systems/law.js';
+import * as bounties from './systems/bounties.js';
 import * as combat from './systems/combat.js';
 import * as npc from './systems/npc.js';
 import * as gangwar from './systems/gangwar.js';
@@ -30,7 +31,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -158,6 +159,9 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'clean': law.clearWanted(world, p); prof.peakWanted = 0; break;
+    case 'bounty': bounties.devOnMe(world, p); break;                         // a test bounty on your own head
+    case 'hunter': law.clearWanted(world, p); if (p.badge) law.goOffDuty(world, p); p.hunter = true; p.faction = 'hunter'; p.meDirty = true; world.notify(p, '[dev] Licensed bounty hunter: take contracts in the Bounties app.', 'info'); break;
+    case 'revenge': { const err = bounties.devUnlock(world, p); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }
     case 'record': // wipe the criminal record: no wanted level, no felonies, no peak-wanted memory
       law.clearWanted(world, p); prof.peakWanted = 0; prof.felonies = 0; prof.firedUntil = 0; p.disguised = false;
       world.notify(p, '[dev] Criminal record wiped - no felonies on file.', 'info'); p.meDirty = true; break;

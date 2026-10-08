@@ -126,7 +126,7 @@ Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
 plasma blade and its wanderer), the soft world border, then roads stage 2. Concepts for everything new are in the
 prompt pack: SU1-SU4 (the subway underground), SK1-SK8 (skating and bikes), CR1-CR2 (witnesses), BO1 (bounties).
 
-**Witnesses and reporting by district [next]**
+**Witnesses and reporting by district [done 2026-10-07]**
 - Who notices a crime and calls it in depends on who they are and where they are. A high-income NPC in a
   high-income district is far more likely to witness and report than a low-income NPC in a poor district, where
   many look away. Crime is easier in the rough parts of town.
@@ -146,8 +146,13 @@ prompt pack: SU1-SU4 (the subway underground), SK1-SK8 (skating and bikes), CR1-
   - **No abuse:** only crimes you actually saw can be called in; one unit per call, with a cooldown per caller,
     so it can't summon a fleet that goes after someone else.
 
-**Bounties rework [next; cross-server boards later]**
-- **Already built:** the courthouse bounty office, bounties paid from the bank on a recent attacker, the hunter's
+**Bounties rework [done 2026-10-07; party splits and cross-server boards later]**
+- **Built** (`server/systems/bounties.js`, DEVLOG 2026-10-07): the unlock after 3 kills in an hour (not counting
+  police work, wanted victims or self-defence), escrow from the bank, 45 minutes counted only while the target is out
+  in the city, the announcement and the golden skull, the Bounties phone app (contracts, last seen, taking one,
+  placing one), payment only to a hunter or officer who took the contract (a kill, an arrest, or detaining the target
+  alive), refunds when it runs out. Party splits wait for parties; cross-server boards wait for a second server.
+- **Before the rework:** the courthouse bounty office, bounties paid from the bank on a recent attacker, the hunter's
   licence, radar pings, and the payout on a kill or an arrest.
 - **When:** the option to place one unlocks after the same player kills you 3 times within an hour on the same
   server. It is a revenge measure.

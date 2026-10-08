@@ -13,6 +13,7 @@ import * as vehicles from './vehicles.js';
 import * as combat from './combat.js';
 import * as cargo from './cargo.js';
 import * as law from './law.js';
+import * as bounties from './bounties.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
 import * as picking from './picking.js';
@@ -82,7 +83,7 @@ export function join(world, conn, profile, opts = {}) {
     known: new Map(), ghostUntil: 0, respawnAt: 0, meDirty: true, meTick: 0, toasts: [],
     faction: FACTION.CITIZEN, badge: false, hunter: false,
     heat: 0, wanted: 0, flareUntil: 0, lastSeenX: 0, lastSeenY: 0, seenAt: 0, searchR: 0, disguised: false,
-    victims: new Map(), robbedBy: new Map(), bounty: 0,
+    bounty: 0, cityBounty: 0, skull: false,   // (bounties.js sync: the bounties on their head, and the skull over it)
     menu: null, job: null, prompt: '', promptKey: '', lastHealAt: 0, deathCause: '',
     joinedAt: world.time, lastPosSave: 0, dev: world.dev, build: world.build,
   };
@@ -105,6 +106,7 @@ export function join(world, conn, profile, opts = {}) {
     ? `The game was updated: everyone starts over for this one - a brand-new start at ${p.lastSpawnName || 'the hospital'}.`
     : `The game was updated: fresh start at ${p.lastSpawnName || 'the hospital'}. Your money, things and homes are all still yours.`, 'warn');
   else world.notify(p, `Welcome to City Life Auto, ${p.name}. You are a clean Citizen.`, 'info');
+  bounties.onJoin(world, p);   // bounties still on their head from before they logged off
   return p;
 }
 
@@ -458,6 +460,10 @@ export function findInteraction(world, p) {
     const target = law.arrestTarget(world, p);
     if (target) return { label: target.dead ? 'Book the suspect\'s body' : `Cuff ${target.name || 'suspect'}`, run: () => law.arrest(world, ped, target) };
   }
+  {   // a bounty target you took the contract on, down within reach: bring them in alive
+    const target = bounties.detainTarget(world, p);
+    if (target) return { label: `Detain ${target.player.name} (collect the bounty)`, run: () => bounties.detain(world, ped, target) };
+  }
 
   const bag = cargo.nearestBag(world, ped, true);
   if (bag) return { label: `Grab loot ($${bag.cash}${Object.keys(bag.items).length || Object.keys(bag.weapons).length ? ' + items' : ''})`, run: () => cargo.lootBag(world, p, bag) };
@@ -521,7 +527,7 @@ export function onPedDeath(world, ped, killer, cause) {
   if (!p) return;
   revive.clearDown(world, p);
   p.channel = null; p.giveTo = null;
-  p.downWanted = p.wanted > 0 ? { wanted: p.wanted, heat: p.heat } : null; // restored if someone revives you
+  p.downWanted = p.wanted > 0 ? { wanted: p.wanted, heat: p.heat, city: p.cityBounty || 0 } : null; // restored if someone revives you
   p.respawnAt = world.time + RESPAWN_SECONDS;
   p.respawnChoice = homes.defaultChoice(world, p, { x: ped.x, y: ped.y }); // pre-selected; change it on the death screen
   p.deathCause = cause || 'You flatlined.';
@@ -531,6 +537,7 @@ export function onPedDeath(world, ped, killer, cause) {
   p.badge = false; p.hunter = false; p.faction = FACTION.CITIZEN;
   p.profile.peakWanted = 0;
   p.heat = 0; p.wanted = 0; p.disguised = false;
+  p.cityBounty = 0; bounties.sync(world, p);   // the city's bounty goes with the stars; the ones placed on you stick
   if (p.job && p.job.failOnDeath) jobs.failJob(world, p, 'Job failed - you died.');
   jobs.cancelFishing(world, p);
   cargo.dropEverything(world, ped, p.name);
@@ -617,7 +624,7 @@ export function buildMe(world, p) {
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, job: places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
-    radar: law.radarFor(world, p), bounty: p.bounty,
+    radar: law.radarFor(world, p), bounty: p.bounty, btime: bounties.meInfo(p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: ped && ped.fishing ? { bite: !!(ped.fishing.biteAt && world.time >= ped.fishing.biteAt) } : null,

@@ -10,6 +10,7 @@ import { VEHICLES } from '../shared/vehicles.js';
 import { IN } from '../shared/input.js';
 import { issueToken, verifyToken } from '../server/auth.js';
 import * as law from '../server/systems/law.js';
+import * as bounties from '../server/systems/bounties.js';
 import * as cargo from '../server/systems/cargo.js';
 import * as economy from '../server/systems/economy.js';
 import * as jobs from '../server/systems/jobs.js';
@@ -257,16 +258,16 @@ test('enforcer badge needs Samaritan points; misconduct gets you fired', () => {
   assert.equal(law.misconductFor(p).n, 0, 'old misconduct forgotten');
 });
 
-test('bounty: robbed citizen can place a bounty, criminals cannot', () => {
+test('bounty: only on someone who keeps killing you, and criminals cannot place one (more: bounties.test.js)', () => {
   const w = makeWorld();
   const a = joinPlayer(w, { bank: 2000 });
-  const b = joinPlayer(w);
-  assert.match(law.placeBounty(w, a.p, b.p.pid, 500), /recently/);
-  a.p.robbedBy.set(b.p.pid, w.time);
-  assert.equal(law.placeBounty(w, a.p, b.p.pid, 500), null);
+  const b = joinPlayer(w), c = joinPlayer(w);
+  assert.match(bounties.place(w, a.p, b.p.pid, 500), /killed you/);
+  a.prof.revenge = { [b.p.pid]: { name: b.p.name, until: Date.now() + 60000 }, [c.p.pid]: { name: c.p.name, until: Date.now() + 60000 } };
+  assert.equal(bounties.place(w, a.p, b.p.pid, 500), null);
   assert.equal(b.p.bounty, 500);
   law.addHeat(w, a.p, 20, 0, 0);
-  assert.match(law.placeBounty(w, a.p, b.p.pid, 100), /Criminals/);
+  assert.match(bounties.place(w, a.p, c.p.pid, 250), /Criminals/);
 });
 
 test('vehicle entry from foot and wreck ejection', () => {

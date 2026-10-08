@@ -24,6 +24,7 @@ export const DEV_SECTIONS = [
     ['★★ 2 stars', 'wanted', { n: 2 }], ['★★★★ 4 stars', 'wanted', { n: 4 }], ['🧽 Clear wanted', 'clean'],
     ['👮 Join the police', 'cop'], ['⬆ Promote police rank', 'promote'], ['🏛 Police station', 'near', { k: 'police' }],
     ['⚖ Courthouse', 'near', { k: 'courthouse' }], ['💥 Gang vs police shootout', 'shootout'],
+    ['💀 A test bounty on me (the golden skull)', 'bounty'], ['🎯 Licensed bounty hunter', 'hunter'], ['💀 Let me put a bounty on the nearest player', 'revenge'],
   ] },
   { id: 'veh', title: '🚗 Vehicles', items: [
     ['🏎 Sports car', 'car', { m: 'sports' }], ['🛻 Pickup', 'car', { m: 'pickup' }], ['🏍 Motorbike', 'car', { m: 'bike' }],

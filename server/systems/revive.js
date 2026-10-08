@@ -15,6 +15,7 @@ import { IN } from '../../shared/input.js';
 import { store } from '../store.js';
 import * as events from './events.js';
 import * as ems from './ems.js';
+import { sync as syncBounty } from './bounties.js';
 
 const REACH = 48;      // stand this close to a downed player to work on them
 const KEEP_REACH = 70; // ...and don't wander further than this while you do
@@ -143,7 +144,7 @@ export function revive(world, ped, opts = {}) {
   ped.bookable = null;
   p.respawnAt = 0; p.respawnChoice = null;
   // the wanted level they went down with comes back with them: going down is no escape
-  if (p.downWanted) { p.heat = p.downWanted.heat; p.wanted = p.downWanted.wanted; p.downWanted = null; }
+  if (p.downWanted) { p.heat = p.downWanted.heat; p.wanted = p.downWanted.wanted; p.cityBounty = p.downWanted.city || 0; p.downWanted = null; syncBounty(world, p); }
   world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
   const by = opts.by && opts.by.player;
   world.notify(p, opts.ambulance ? `Paramedics got you back on your feet. $${AMBULANCE_FEE} from your bank. Your things are in the bag beside you.`

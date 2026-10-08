@@ -1,5 +1,7 @@
 // Gameplay rules shared by the authoritative server and the client (tutorial, HUD hints).
 // Change a number here and both the game and the tutorial text follow automatically.
+// Nothing here may change what the art draws: the art hash leaves this file out (tools/stamp-version.mjs ART_SKIP), so
+// tweaking a rule doesn't throw away the chunks every browser has baked.
 
 // Police force
 export const ENFORCER_MIN_SAMARITAN = 25;     // Samaritan points needed for a badge (plus zero felonies)
@@ -183,6 +185,18 @@ export const SAW_S = 60;                 // how long a crime you saw can be call
 export const REPORT_COOLDOWN_S = 90;     // one call per player this often
 export const REPORT_SEARCH_S = 45;       // the unit looks round the caller this long
 export const REPORT_SPOT_PX = 360;       // ...and knows the suspect when it has them in sight this close
+
+// Bounties (server/systems/bounties.js): a revenge measure. The same player kills you again and again, and you can put a
+// price on their head - your own money, held in escrow, paid only to a hunter who took the contract and kills, arrests or
+// detains them, and back in your bank if nobody does before it runs out.
+export const BOUNTY_KILLS = 3;                    // the same player kills you this many times...
+export const BOUNTY_KILLS_S = 3600;               // ...within this long (s), and you can put a bounty on them
+export const BOUNTY_UNLOCK_S = 3600;              // the chance to place it lasts this long
+export const BOUNTY_AMOUNTS = [250, 500, 1000, 2500]; // what a bounty can be (from your bank)
+export const BOUNTY_RUN_S = 2700;                 // a bounty lasts this long, counted only while its target is out in the city
+export const BOUNTY_LAPSE_DAYS = 3;               // ...and is refunded anyway if its target hasn't been back for this many days
+export const BOUNTY_SEEN_S = 30;                  // the board's "last seen" for a target is this fresh at best
+export const BOUNTY_ALIVE_SAM = 5;                // a hunter who brings the target in alive (detained) earns this many Samaritan points more
 
 // Spray & Go paint shops
 export const PAINT_PRICE = 150;      // a new colour (no repairs)

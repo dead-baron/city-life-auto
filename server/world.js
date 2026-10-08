@@ -6,6 +6,7 @@ import * as vehicles from './systems/vehicles.js';
 import * as combat from './systems/combat.js';
 import * as cargo from './systems/cargo.js';
 import * as law from './systems/law.js';
+import * as bounties from './systems/bounties.js';
 import * as npc from './systems/npc.js';
 import * as traffic from './systems/traffic.js';
 import * as police from './systems/police.js';
@@ -85,7 +86,8 @@ const SYSTEMS = [
   ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
   ['cargo', cargo.update],          // crates, loot bags
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
-  ['law', law.update],              // heat decay, search circles, bounties
+  ['law', law.update],              // heat decay, search circles
+  ['bounties', bounties.update],    // bounty clocks (while the target is out in the city), refunds, last seen
   ['jobs', jobs.update],            // contraband drops, fishing, jobs
   ['foraging', foraging.update],    // picked mushroom spots and tidepool stars growing back
   ['hunting', hunting.update],      // field-dressing game, cooking over the fire

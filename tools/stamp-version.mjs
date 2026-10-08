@@ -13,11 +13,11 @@ import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-// a hash of a module and everything it imports, however deep
-export function codeHash(entry, root = ROOT) {
+// a hash of a module and everything it imports, however deep (but the files in skip)
+export function codeHash(entry, root = ROOT, skip = null) {
   const seen = new Set(), wh = createHash('sha1');
   const visit = (f) => {
-    if (seen.has(f)) return;
+    if (seen.has(f) || (skip && skip.has(relative(root, f)))) return;
     seen.add(f);
     const src = readFileSync(f, 'utf8');
     // (every relative .js path written in it: static and dynamic imports, paths handed to a loader, worker URLs)
@@ -69,9 +69,12 @@ export async function worldHash(root = ROOT, map = null) {
   const { generateCity, cityData } = await import(pathToFileURL(join(root, 'shared/map.js')).href);
   return { hash: canonicalHash(cityData(map || generateCity(1337))).slice(0, 12) };
 }
-// everything a chunk bake reads: the bake worker's code (the world generator's included), and the world itself
+// everything a chunk bake reads: the bake worker's code (the world generator's included), and the world itself. Not the
+// gameplay numbers (shared/rules.js: prices, timings, odds - nothing a bake draws): they change often, and each change
+// would throw away every browser's baked chunks.
+export const ART_SKIP = new Set(['shared/rules.js']);
 export async function artHash(root = ROOT, world = null) {
-  const code = codeHash('client/art2/game/worker.js', root), w = world || (await worldHash(root)).hash;
+  const code = codeHash('client/art2/game/worker.js', root, ART_SKIP), w = world || (await worldHash(root)).hash;
   return { hash: createHash('sha1').update(code.hash + w).digest('hex').slice(0, 12), files: code.files };
 }
 // the stamp (only when run as a script: tests import worldHash)

@@ -3446,3 +3446,46 @@ The user's report: art loading slowly on a Pixel 7 Pro (and on an iPhone 14). I 
     - a kept city is the city, value for value;
     - version.json's `world` and `art` hashes are current (stamping now generates the city to hash it, about 5 s).
 - **Not measured here:** real phone GPUs (the test machine has none). The `/perf` page and the overlay are how we'll see the Pixel and the iPhone. Safari reports 4 cores on an iPhone, so it gets 3 bake workers.
+
+## 2026-10-07 · Bounties: a revenge measure, with escrow, contracts and a golden skull
+
+From the design notes ("Bounties rework"): a bounty is a revenge measure for being killed again and again by the same player. It's paid with your own money and only goes to a hunter who earns it (`server/systems/bounties.js`; the numbers are in `shared/rules.js`).
+- **When you can place one:**
+  - The same player kills you 3 times within an hour. You're told, and for the next hour you can put a price on their head from the new **Bounties** app on the phone, or at the courthouse desk.
+  - Kills that are the law's business don't count: a wanted (or already marked) victim, an officer on duty, or someone defending themselves. Self-defence means the victim hit them lately and they didn't throw the first blow.
+  - One chance per three kills, and one bounty from you on someone at a time.
+- **The money:**
+  - $250, $500, $1,000 or $2,500, out of your bank and held in escrow.
+  - It's paid only to a hunter who took the contract and kills, arrests or detains the target.
+  - It comes back to your bank if nobody does (online or not).
+  - Criminals can't place one.
+- **How long:**
+  - 45 minutes, counted only while the target is out in the city: online, alive and not inside a home. Logging off or hiding stops the clock, so they can't run it out.
+  - It sticks through deaths from anything else, and through logging off: the bounties are stored on the target's profile, so a server restart keeps them too.
+  - A target who never comes back: refunded after 3 days.
+- **Everyone knows:**
+  - A message to everyone online when it's placed and when it's collected. The target is told when a hunter takes the contract.
+  - A **golden skull** floats over the target for as long as it lasts, seen by everyone (the target too). It's a little pixel skull with a slow gold glow (the `bt` flag on their descriptor; `client/main.js` `drawSkull`).
+  - The HUD shows "💀 BOUNTY $1,000 · 32m", and "(paused)" while the clock is stopped.
+- **Hunters** (licensed bounty hunters, and officers on duty):
+  - The Bounties app lists every contract out, with loose information: the name, what they're wearing, the district they were last seen in and when (updated every 30 s while they're out), the time left and how many hunters are on it. Targets out in the city are listed first.
+  - Take a contract and its target shows as a rough ping on your radar while they're out in the city (not inside a home). There's a waypoint to round where they were last seen.
+  - **Collecting:**
+    - A **kill**, or an **arrest** by an officer who took it.
+    - Or **detaining them alive**: knock them down or stun them, then walk up and "Detain". They're taken in to the courthouse and let go, and you earn 5 more Samaritan points.
+    - A target who's wanted as well is handed to the police: that's an arrest.
+  - Only the hunters who took a contract are paid. Anyone else can drop a marked target without it being murder, but gets nothing, and the bounty stays.
+- **Also fixed:**
+  - Collecting a bounty on a target who wasn't wanted counted as murder: the bounty was cleared before the crime was looked at.
+  - The city's bounty (4+ stars) stayed after the wanted level ended with a death, so the player stayed "fair game". It now goes with the stars, and comes back if you're revived.
+- **Kept chunks survive rule tweaks:** the art hash (version.json `art`) no longer covers `shared/rules.js`. That file holds gameplay numbers, which nothing a bake draws depends on. A rules change like this one would otherwise have thrown away every browser's baked chunks (`tools/stamp-version.mjs` `ART_SKIP`; `test/perf.test.js` checks that no art module reads the rules). This build still bakes afresh once, because the hash changed.
+- **Dev:** debug menu → Wanted & police: a test bounty on yourself, a hunter licence, and the chance to put a bounty on the nearest player.
+- **Later:** split between the members of a party (when there are parties); bounty boards across servers (when there's a second server).
+- **Tests:** `test/bounties.test.js`:
+  - the three kills, and what doesn't count;
+  - placing one (escrow, the amounts, the announcement, the skull on the wire);
+  - taking contracts and collecting on a kill, an arrest and a detention;
+  - nothing for a non-taker;
+  - the clock through hiding, deaths, logging off and coming back;
+  - refunds, and the lapse after days away;
+  - the courthouse desk.

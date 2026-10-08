@@ -12,6 +12,7 @@ import * as events from './events.js';
 import { spawnNpc } from './npc.js';
 import * as law from './law.js';
 import * as police from './police.js';
+import * as bounties from './bounties.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -172,6 +173,10 @@ export function handle(world, p, msg) {
     const err = law.reportSaw(world, p, msg.id, police);
     return { ...boardFor(world, p), err: err || null };
   }
+  // the Bounties app (bounties.js): the contracts out, taking one, putting one on someone who keeps killing you
+  if (a === 'bounties') return bounties.boardFor(world, p);
+  if (a === 'btake') { const err = bounties.take(world, p, msg.id); return { ...bounties.boardFor(world, p), err: err || null }; }
+  if (a === 'bplace') { const err = bounties.place(world, p, String(msg.pid || ''), Number(msg.amt)); return { ...bounties.boardFor(world, p), err: err || null, ok: !err }; }
   return null;
 }
 
