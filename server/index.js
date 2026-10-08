@@ -16,6 +16,7 @@ import { createSession } from './session.js';
 import { World } from './world.js';
 import * as players from './systems/players.js';
 import { readBuild, watchBuild } from './build.js';
+import { createArtCdn } from './artcdn.js';
 import { generateCity } from '../shared/map.js';
 import { TICK_MS } from '../shared/constants.js';
 
@@ -34,20 +35,27 @@ const BUILD_FILE = join(config.root, 'version.json');
 const bootBuild = readBuild(BUILD_FILE);
 const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget, build: bootBuild && bootBuild.v, buildAt: bootBuild && bootBuild.at, freshOnUpdate: config.freshOnUpdate });
 console.log(`[server] build ${bootBuild ? bootBuild.v : '(no version.json)'} · fresh start on update: ${config.freshOnUpdate}`);
+// the art from the server: the world's chunks baked here and downloaded by the pages (server/artcdn.js)
+let artCdn = null;
+try { artCdn = createArtCdn({ map, root: config.root, dataDir: config.dataDir, seed: config.seed, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[art] not serving chunks:', e); }
 // Client-only updates arrive without a restart (deploy/auto-update.sh pulls them): look at version.json
 // every 20 s and tell every page about a new build, so they reload into it (client/update.js).
 watchBuild(BUILD_FILE, 20000, (b) => {
   console.log(`[server] new build on disk: ${b.v} (was ${world.build || 'none'}) - telling players to update`);
   players.announceBuild(world, b);
+  if (artCdn) artCdn.rebuild();   // (a new build of the art: its chunks baked afresh)
 }, bootBuild && bootBuild.v);
 const startedAt = Date.now();
 // always on for metering; each limit only acts when configured (see config.js)
 const limits = createLimits({ dataDir: config.dataDir, monthlyGB: config.monthlyGB, maxPerIp: config.maxPerIp, connPerMinute: config.connPerMinute, httpPerMinute: config.httpPerMinute });
+
 const QUOTA_MSG = 'The city is closed for the rest of the month (monthly data limit reached). It reopens on the 1st!';
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
+  // (baked chunks: many small requests a second while moving - counted in the monthly data, not the per-address rate)
+  if (artCdn && path.startsWith('/art/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (artCdn.handle(path, req, res)) return; }
   if (limits && path !== '/health') {
     const why = limits.checkHttp(clientIp(req, config.trustProxy));
     if (why) { res.writeHead(why === 'quota' ? 503 : 429, { 'content-type': 'text/plain', 'retry-after': '60' }); res.end(why === 'quota' ? QUOTA_MSG : 'Too many requests'); return; }
@@ -130,6 +138,7 @@ function statsSnapshot() {
     weather: world.weather, clock: Math.round(world.clock.minutes), droppedSnapshots: world.stats.dropped || 0,
     systemMs: world.profile(),
     traffic: limits ? limits.summary() : null,
+    art: artCdn ? artCdn.summary() : null,
   };
 }
 
@@ -187,6 +196,7 @@ setInterval(() => {
 
 function shutdown(sig) {
   console.log(`[server] ${sig} received - saving and shutting down`);
+  if (artCdn) artCdn.stop();
   for (const p of world.players.values()) {
     if (p.ped && !p.ped.dead) players.savePos(p, p.ped);
     if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server restarting - your progress is saved. Reconnecting...' }); } catch { /* closed */ } }

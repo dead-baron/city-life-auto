@@ -249,6 +249,11 @@ export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Dry Creek 
 // Buses (server/systems/transit.js)
 export const BUS_FARE = 2;                 // a ride, any distance round the line (cash first, then the bank)
 export const BUS_DWELL_S = 7;              // a bus waits at each stop this long with its doors open
+// Taxis (server/systems/transit.js)
+export const TAXI_FLAG = 5;                // the meter starts at this...
+export const TAXI_PER_KM = 30;             // ...and runs this much a kilometre driven (1 m = a tile); paid getting out
+export const TAXI_WAIT_S = 60;             // a taxi you hailed or called waits this long at the kerb for you
+export const TAXI_REFUSE_STARS = 2;        // no taxi stops for anyone this wanted
 export const HIGHWAY_SPEED = 560;          // traffic cruising speed up on the ring highway (px/s)
 export const BARRIER_BREAK_SPEED = 300;    // ram a highway barrier this fast (px/s, straight into it) and it gives way
 export const BARRIER_REPAIR_S = 300;       // the road crew puts a smashed barrier back after this long (when nobody's looking)

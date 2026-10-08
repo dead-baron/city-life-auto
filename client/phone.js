@@ -101,6 +101,8 @@ export function createPhone(ctx) {
       ctx.toast(`Waypoint: the ${L.name} stop at ${st.n}`, 'info');
       ctx.close();
     };
+    for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call' }); };
+    for (const b of el.querySelectorAll('[data-act="taxicancel"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'cancel' }); };
     for (const b of el.querySelectorAll('[data-rail]')) b.onclick = () => {
       const st = ctx.map().rail && ctx.map().rail.stations[Number(b.dataset.rail)];
       if (!st) return;
@@ -162,7 +164,13 @@ export function createPhone(ctx) {
   function transitHtml() {
     let h = '<h3>Transit</h3>';
     if (!transit) return h + '<p class="ph-empty">Loading…</p>';
-    h += `<p class="ph-hint">Wait at a stop and board the bus when it pulls up ($${transit.fare}, any distance). Get off at any stop with the vehicle key. Tap a stop for a waypoint.</p>`;
+    // a taxi: call one (or hail one going by), or how yours is getting on
+    const tx = transit.taxi;
+    h += '<h3>🚕 Taxi</h3>' + (tx
+      ? `<div class="ph-card">${tx.st === 'pickup' ? `Your taxi is on its way (about ${Math.max(5, tx.eta)}s) - the yellow square on your map.` : tx.st === 'wait' ? 'Your taxi is waiting at the kerb - get in the back.' : tx.st === 'dest' ? 'Where to? Set a waypoint (Places, or tap the map).' : tx.st === 'ride' ? `On the way to ${esc(tx.to)}: ${tx.m} m, $${tx.fare} so far.` : `There: $${tx.fare}.`}${tx.st === 'pickup' || tx.st === 'wait' ? '<button data-act="taxicancel">Cancel the taxi</button>' : ''}</div>`
+      : `<button class="ph-row" data-act="taxicall"><span class="ic">🚕</span><span class="nm">Call a taxi<small>$${transit.taxiFlag} + $${transit.taxiKm} a km, paid when you get out · or hail one going by</small></span></button>`)
+      + '<p class="ph-hint">Your waypoint is where the driver takes you. Skip the ride on the way for the whole fare.</p>';
+    h += `<h3>🚌 Buses</h3><p class="ph-hint">Wait at a stop and board the bus when it pulls up ($${transit.fare}, any distance). Get off at any stop with the vehicle key. Tap a stop for a waypoint.</p>`;
     let near = null, nd = Infinity;
     for (const L of transit.lines) L.stops.forEach((st, k) => { const d = dist(st); if (d < nd) { nd = d; near = `${L.id}:${k}`; } });
     for (const L of transit.lines) {

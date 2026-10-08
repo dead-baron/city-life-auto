@@ -49,6 +49,8 @@ Your main site repo `dead-baron.github.io` already serves `deadbaron.com` (it ha
 
 Environment variables (in `deploy/city-life-auto.service`): `PORT`, `HOST`, `CLA_DATA_DIR`, `CLA_ORIGINS` (allowed page origins for WebSockets), `CLA_MAX_PLAYERS`, `CLA_NPC_BUDGET`, `CLA_SECRET`, `CLA_SEED`, `CLA_DEV` (never `1` in production), `CLA_FRESH_ON_UPDATE` (below).
 
+**The art from the server** (`server/artcdn.js`): the server bakes the world's art chunks with the page's own bake code, in a background thread at the lowest CPU priority, keeps them under `<CLA_DATA_DIR>/art/<art hash>/` (about 0.6 GB per quality; another build's are deleted) and serves them at `/art/...`; phones download a chunk instead of baking it. `CLA_ART_THREADS` bake threads (default: 1 on a 2-core server, 2 on 4 cores or more; `0` switches it off), `CLA_ART_PREWARM` the qualities baked in the background (default `1`, Medium: what most phones use; e.g. `1,2` adds High). The whole map takes roughly 40 minutes a quality on one Ampere core after a build that changes the art; meanwhile what players ask for is baked first, and the pages bake the rest themselves as before. Progress: `/stats` → `art`.
+
 `CLA_FRESH_ON_UPDATE` - what happens to a player the first time they come back after an update (a new build):
 - `spawn` (default): a fresh start at a spawn point (their home if they picked one, else a hospital), on foot, not wanted, carrying nothing, full health. Money, items, weapons, homes and cars are kept.
 - `all`: the same, and their progress is wiped too (money, bank, items, weapons, EXP, record, cars, homes; name and look are kept). Use it for updates that need everyone to start over.

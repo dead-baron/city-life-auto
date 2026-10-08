@@ -98,7 +98,8 @@ export class WorkerPool {
   // Send the world to every worker (or, with key, let each read it from the browser's copy). Resolves once all have
   // answered (or failed).
   init(M, key = null, keep = null) {
-    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model, artKey: (keep && keep.artKey) || null, keepCap: keepCap(this.lowMem) };
+    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model, artKey: (keep && keep.artKey) || null, keepCap: keepCap(this.lowMem),
+      cdn: (keep && keep.cdn) || null, saveData: !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData) };   // (the art from the server: worker.js)
     let post = 0;
     const answers = this.workers.filter((w) => w.alive).map((w) => new Promise((res) => {
       const t = performance.now();

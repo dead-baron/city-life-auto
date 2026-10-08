@@ -26,6 +26,8 @@
 //   init       { key } instead of M: the city this browser keeps (client/worldcache.js) - read here, in parallel with
 //              the other workers, instead of copied over by the page; answers needWorld: true when it isn't there,
 //              and waits for a 'world' { M } (everything sent meanwhile waits too)
+//   init       + cdn, saveData: the art from the server (server/artcdn.js) - a chunk it has baked already is downloaded
+//              instead of baked here (bakeChunk, prebakeChunk; not prebakeChunk with saveData: the phone's data saver)
 //   stats      {}                  cache sizes, hit rates and timings
 //   patch      { props, reset }    world changes, no answer: props [[index, broken {a} | null]] (reset: none broken first)
 // Every result's typed arrays are transferred. A provider that throws answers with an error (the host
@@ -34,7 +36,7 @@
 import { bakeSteps, loadProviders, SpriteCache, providers as chunkProviders } from './chunkbake.js';
 import * as GB from '../gbuf.js';
 import { readWorld } from '../../worldcache.js';
-import { getChunk, hasChunk, putChunk, packChunk, tidy, canKeep } from './chunkstore.js';
+import { getChunk, hasChunk, putChunk, putChunkZ, packChunk, unpackChunk, parseChunkFile, tidy, canKeep } from './chunkstore.js';
 
 // A pause that lets the messages already waiting for this worker run first (a message to ourselves goes to the
 // back of the queue): a bake pauses at each of its yields, so the sprite a thing on screen is waiting for is made
@@ -87,6 +89,8 @@ let ready = null, worldIn = null, KEEP = null;
 async function init(args) {
   ART = args.artPx === 1 ? 1 : 2;
   KEEP = args.artKey && canKeep() ? { art: args.artKey, n: 0, q: Promise.resolve(), tidy: !!args.tidy, cap: args.keepCap || 80 } : null;
+  CDN.base = KEEP && typeof args.cdn === 'string' && /^https?:\/\//.test(args.cdn) && typeof fetch === 'function' ? args.cdn : null;
+  CDN.saveData = !!args.saveData;
   if (KEEP && KEEP.tidy) setTimeout(() => tidy(KEEP.art, KEEP.cap), 4000);   // (once things have settled; and every so often after)
   const lowMem = !!args.lowMem;
   // (the pool says how much; without that: four workers a little less each)
@@ -101,6 +105,48 @@ async function init(args) {
   const m = args.M || (args.key ? await readWorld(args.key) : null);
   return { mapMod, m, result: { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors }, modsMs, readMs: args.M ? 0 : performance.now() - t1, needWorld: !m } };
 }
+// ---- the art from the server (server/artcdn.js) ---------------------------------------------------------------------
+// The server bakes the world's chunks with this same code and keeps them: one it has is downloaded (about 250 KB, a
+// fraction of the time a bake takes on a phone) and kept in the store like a bake. Only chunks as the map laid them out
+// (nothing a player changed near them, not cut away round a building). A 404 is one the server hasn't baked yet - it's
+// baked next there; here it's baked meanwhile and not asked for again for a while; a run of them (the server is still
+// at it) pauses the asking. A failing network pauses it longer, and stops it for the session after a few failures; so
+// do downloads that turn out slower than bakes here (a weak connection).
+const CDN_TIMEOUT_MS = 4000;
+const CDN = { base: null, saveData: false, pauseUntil: 0, miss: new Map(), missRun: 0, fails: 0, off: false, n: 0, ms: 0, misses: 0 };
+async function fromCdn(cx, cy, q, ck) {
+  if (!CDN.base || CDN.off || !KEEP) return null;
+  const now = performance.now(), mk = `${q}/${cx}/${cy}`;
+  if (now < CDN.pauseUntil || (CDN.miss.get(mk) || 0) > now) return null;
+  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), CDN_TIMEOUT_MS) : 0;
+  try {
+    const res = await fetch(`${CDN.base}${KEEP.art}/${q}/${ART}/${cx}/${cy}`, ctl ? { signal: ctl.signal } : {});
+    if (res.status !== 200) {
+      CDN.misses++; CDN.miss.set(mk, now + 30000);
+      if (CDN.miss.size > 2000) CDN.miss.clear();
+      if (++CDN.missRun >= 6) { CDN.missRun = 0; CDN.pauseUntil = now + 15000; }
+      return null;
+    }
+    const f = parseChunkFile(await res.arrayBuffer());
+    const got = f ? await unpackChunk(f.meta, f.z) : null;
+    if (!got) return null;
+    CDN.missRun = 0; CDN.fails = 0;
+    const ms = performance.now() - now;
+    CDN.n++; CDN.ms += ms;
+    // (slower than a bake here, over a good few of each: the connection's the bottleneck - bake from now on)
+    if (CDN.n >= 8 && stats.chunks - (stats.kept || 0) >= 4 && CDN.ms / CDN.n > 2 * (stats.bakeOnlyMs || 0) / Math.max(1, stats.chunks - (stats.kept || 0))) CDN.off = true;
+    if (ck) KEEP.q = KEEP.q.then(() => putChunkZ(ck, f.meta, f.z)).then(() => { if (KEEP.tidy && ++KEEP.n % 12 === 0) return tidy(KEEP.art, KEEP.cap); return null; }).catch(() => {});
+    got.dlMs = ms; got.cdn = true;
+    return got;
+  } catch (e) {
+    CDN.err = String((e && e.message) || e).slice(0, 160);
+    CDN.pauseUntil = performance.now() + 20000;
+    if (++CDN.fails >= 4) CDN.off = true;
+    return null;
+  } finally { if (timer) clearTimeout(timer); }
+}
+
 // Props a player changed (broken, or a campfire lit or put out: index -> the prop) - those near a chunk are part of its
 // key in the store, so it is only served as baked with the same changes. (A campfire's lit0: how the map laid it out,
 // noted at the first change.)
@@ -141,13 +187,17 @@ async function handle(msg) {
     return;
   }
   if (!M && op !== 'stats') throw new Error('worker not initialised');
-  if (op === 'peekChunk') {   // (a quick look in the store: no baking)
+  if (op === 'peekChunk') {   // (a quick look in the store - or the server's: no baking)
     const { cx, cy, ck } = args;
     let got = null, exact = true;
     if (KEEP && ck) {
       const d = dirtySig(cx, cy), base = `${KEEP.art}|${ck}`;
       got = await getChunk(d ? `${base}|d${d}` : base);
       if (!got) { got = await getChunk(base, true); exact = false; }
+      // the server's, as the map laid it out (kept under the plain key): exactly this chunk when nothing a player changed
+      // is near it, else a stand-in that's right but for a few broken props until its own bake lands
+      stats.peekN = (stats.peekN || 0) + 1; if (got) stats.peekHit = (stats.peekHit || 0) + 1;
+      if (!got && !/\|c/.test(ck) && args.q !== undefined) { stats.peekCdn = (stats.peekCdn || 0) + 1; got = await fromCdn(cx, cy, args.q, base); exact = !d; }
     }
     if (!got) { self.postMessage({ id, ok: true, result: { none: true }, ms: performance.now() - t0 }); return; }
     const transfer = [got.g.p0.buffer, got.g.p1.buffer, got.g.p2.buffer];
@@ -162,6 +212,8 @@ async function handle(msg) {
     if (!KEEP || !args.ck) { self.postMessage({ id, ok: true, result: { kept: false }, ms: 0 }); return; }
     const d0 = dirtySig(cx, cy), ck = `${KEEP.art}|${args.ck}${d0 ? '|d' + d0 : ''}`;
     if (await hasChunk(ck)) { self.postMessage({ id, ok: true, result: { kept: true, had: true }, ms: performance.now() - t0 }); return; }
+    // (the server's, when it has it and the data saver is off: kept as it came)
+    if (!d0 && !CDN.saveData && (await fromCdn(cx, cy, opt.quality, ck))) { stats.prebaked = (stats.prebaked || 0) + 1; self.postMessage({ id, ok: true, result: { kept: true, cdn: true }, ms: performance.now() - t0 }); return; }
     const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART, scratch: ART > 1 }, statCache, chunkProviders);
     let step = it.next();
     while (!step.done) { await pause(); step = it.next(); }
@@ -191,7 +243,18 @@ async function handle(msg) {
         self.postMessage({ id, ok: true, result: { cx, cy, ...got, made: 0, bake: { kept: performance.now() - t0 }, errors: null, kept: true }, ms: performance.now() - t0 }, transfer);
         return;
       }
+      // the server's (as the map laid it out, not cut away)
+      const dl = !d0 && (opt.cutaway === undefined || opt.cutaway < 0) ? await fromCdn(cx, cy, opt.quality, ck) : null;
+      if (dl) {
+        const transfer = [dl.g.p0.buffer, dl.g.p1.buffer, dl.g.p2.buffer];
+        if (dl.under) transfer.push(dl.under.buffer);
+        if (dl.gh) transfer.push(dl.gh.buffer);
+        stats.chunks++; stats.kept = (stats.kept || 0) + 1; stats.chunkMs += performance.now() - t0;
+        self.postMessage({ id, ok: true, result: { cx, cy, ...dl, made: 0, bake: { cdn: dl.dlMs }, errors: null, kept: true, cdn: true }, ms: performance.now() - t0 }, transfer);
+        return;
+      }
     }
+    const tb = performance.now();
     const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART, scratch: ART > 1 }, statCache, chunkProviders);
     let step = it.next();
     while (!step.done) { await pause(); step = it.next(); }
@@ -200,7 +263,7 @@ async function handle(msg) {
     // (the under layer only matters where there are buildings to fade)
     const { o: g, u: under } = pack(r.g, transfer, r.under && r.blds && r.blds.length ? r.under : null, GB.CHUNK_RUN);
     transfer.push(r.gh.buffer);
-    stats.chunks++; stats.chunkMs += performance.now() - t0;
+    stats.chunks++; stats.chunkMs += performance.now() - t0; stats.bakeOnlyMs = (stats.bakeOnlyMs || 0) + performance.now() - tb;
     const result = { cx, cy, g, under, blds: r.blds || [], lights: r.lights, gh: r.gh, live: r.live, n: r.n, items: r.items, made: r.made, bake: r.ms, errors: r.errors };
     // (kept for next time: copied before the arrays go, compressed and stored after - one at a time)
     const keep = ck && !r.errors && dirtySig(cx, cy) === d0 ? packChunk(result) : null;   // (unless something changed there meanwhile)
@@ -222,7 +285,7 @@ async function handle(msg) {
   }
   if (op === 'stats') {
     const c = (k) => (k ? { bytes: k.bytes, n: k.m.size, max: k.max, hits: k.hits, misses: k.misses } : null);
-    self.postMessage({ id, ok: true, result: { ...stats, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
+    self.postMessage({ id, ok: true, result: { ...stats, cdn: { n: CDN.n, ms: Math.round(CDN.ms), misses: CDN.misses, fails: CDN.fails, off: CDN.off, on: !!CDN.base, err: CDN.err || '' }, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
     return;
   }
   throw new Error(`unknown op ${op}`);

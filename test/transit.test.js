@@ -87,3 +87,90 @@ test('no fare, no ride', () => {
   assert.equal(transit.boardBus(world, p, v), false);
   assert.equal(p.ped.vehId, 0);
 });
+
+// ---- taxis -----------------------------------------------------------------------------------------------------------
+import { TAXI_FLAG, TAXI_REFUSE_STARS } from '../shared/rules.js';
+import * as traffic from '../server/systems/traffic.js';
+import { spawnNpc } from '../server/systems/npc.js';
+
+function cabRide(world, p, dest) {
+  const v = world.get(p.taxi);
+  for (let t = 0; t < 400 && v.taxi && v.taxi.st === 'pickup'; t++) run(world, 0.5);
+  assert.equal(v.taxi.st, 'wait', 'the taxi pulled up');
+  assert.ok(Math.hypot(v.x - p.ped.x, v.y - p.ped.y) < 400, 'by the kerb near you');
+  teleport(world, p.ped, v.x - Math.sin(v.a) * 50, v.y + Math.cos(v.a) * 50);
+  const act = findInteraction(world, p);
+  assert.equal(act && act.label, 'Get in the taxi');
+  act.run();
+  assert.equal(p.ped.vehId, v.id);
+  assert.ok(p.ped.seat >= 2, 'in the back');
+  assert.equal(v.taxi.st, 'dest', 'asks where to');
+  transit.taxiPhone(world, p, { op: 'dest', ...dest });
+  run(world, 1.1);
+  assert.equal(v.taxi.st, 'ride');
+  return v;
+}
+
+test('taxi: call one, it pulls up at the kerb, get in, say where to, ride there, pay getting out', () => {
+  const world = makeWorld();
+  const { p } = joinPlayer(world, { cash: 300, bank: 0 });
+  teleport(world, p.ped, 21648, 18030);   // (Midtown, on the pavement)
+  run(world, 1);
+  transit.taxiPhone(world, p, { op: 'call' });
+  assert.ok(p.taxi, 'a taxi is coming');
+  assert.equal(transit.taxiInfo(world, p).st, 'pickup');
+  const v = cabRide(world, p, { x: 31792, y: 25700, label: 'Southside' });
+  for (let t = 0; t < 800 && v.taxi.st === 'ride'; t++) run(world, 0.5);
+  assert.equal(v.taxi.st, 'there');
+  assert.ok(Math.hypot(v.x - 31792, v.y - 25700) < 300, 'dropped off by the destination');
+  const fare = transit.taxiInfo(world, p).fare;
+  assert.ok(fare > TAXI_FLAG, `metered: $${fare}`);
+  vehicles.exitVehicle(world, p.ped);
+  run(world, 1.1);
+  assert.equal(p.profile.cash, 300 - fare, 'paid getting out');
+  assert.equal(p.taxi, 0);
+  assert.equal(v.taxi, undefined, 'the cab back on its rounds');
+});
+
+test('taxi: skip the ride - there at once, for the whole fare', () => {
+  const world = makeWorld();
+  const { p } = joinPlayer(world, { cash: 300, bank: 0 });
+  teleport(world, p.ped, 21648, 18030);
+  run(world, 1);
+  transit.taxiPhone(world, p, { op: 'call' });
+  const v = cabRide(world, p, { x: 31792, y: 25700, label: 'Southside' });
+  const est = transit.taxiInfo(world, p).est;
+  const act = findInteraction(world, p);
+  assert.match(act.label, /Skip the ride/);
+  act.run();
+  assert.equal(v.taxi.st, 'there');
+  assert.ok(Math.hypot(p.ped.x - 31792, p.ped.y - 25700) < 300, 'there');
+  run(world, 3);
+  assert.ok(Math.hypot(v.x - 31792, v.y - 25700) < 300, 'and it stays put');
+  vehicles.exitVehicle(world, p.ped);
+  run(world, 1.1);
+  assert.ok(Math.abs(p.profile.cash - (300 - est)) <= 2, `charged the whole way: ${300 - p.profile.cash} vs ~${est}`);
+});
+
+test('taxi: hail one going by; none for the wanted', () => {
+  const world = makeWorld();
+  const { p } = joinPlayer(world, { cash: 300 });
+  teleport(world, p.ped, 21648, 18030);
+  // a cab in traffic going past
+  const v = world.spawnVehicle('taxi', 21500, 17918, 0, {});
+  const drv = spawnNpc(world, 'casual', v.x, v.y, 'driver');
+  drv.vehId = v.id; drv.seat = 0; v.seats[0] = drv.id;
+  traffic.joinTraffic(world, v);
+  run(world, 0.2);
+  p.wanted = TAXI_REFUSE_STARS;
+  let act = findInteraction(world, p);
+  assert.equal(act && act.label, 'Hail the taxi');
+  act.run();
+  assert.equal(p.taxi || 0, 0, 'no taxi stops for the wanted');
+  p.wanted = 0;
+  act = findInteraction(world, p);
+  act.run();
+  assert.equal(p.taxi, v.id, 'pulling over');
+  for (let t = 0; t < 300 && v.taxi.st === 'pickup'; t++) run(world, 0.5);
+  assert.equal(v.taxi.st, 'wait');
+});

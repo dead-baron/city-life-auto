@@ -114,7 +114,19 @@ export class HUD {
       $('tb-where').textContent = b.line.toUpperCase();
       $('tb-next').textContent = b.at ? `At ${b.at} - ${keyName('vehicle')} to get off` : b.next ? `Next stop: ${b.next}` : 'On the bus';
       $('tb-crack').classList.add('hidden');
+    } else if (me.taxi && !me.dead) {
+      // a taxi: on its way to you, waiting at the kerb, where to, the meter, there
+      const t = me.taxi;
+      tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus'); tb.classList.add('taxi'); tb.style.borderColor = '';
+      $('tb-where').textContent = 'TAXI';
+      $('tb-next').textContent = t.st === 'pickup' ? `On its way · about ${Math.max(5, t.eta)}s (the yellow square on your map)`
+        : t.st === 'wait' ? `At the kerb · ${keyName('action')} by the cab to get in (${t.wait}s)`
+          : t.st === 'dest' ? 'Where to? Set a waypoint (the map or the phone)'
+            : t.st === 'ride' ? `To ${t.to} · ${t.m} m · $${t.fare} (~$${t.est}) · ${keyName('action')}: skip the ride`
+              : `${t.to} · $${t.fare} · ${keyName('vehicle')} to get out`;
+      $('tb-crack').classList.add('hidden');
     } else tb.classList.add('hidden');
+    if (!(me.taxi && !me.dead && !tr && !me.bus)) tb.classList.remove('taxi');
     // personal police cruiser
     const cr = me.cruiser, ch = $('cruiser-hint'), cb = $('b-cruiser');
     document.body.classList.toggle('can-call', !!(cr && cr.s === 'none' && !me.dead));
@@ -327,6 +339,13 @@ export class HUD {
         g.fillStyle = kind.color; g.strokeStyle = '#000'; g.lineWidth = 1.5;
         g.beginPath(); g.arc(x, y, big ? 6 : 4, 0, 6.28); g.fill(); g.stroke();
       }
+      if (me.taxi && (me.taxi.st === 'pickup' || me.taxi.st === 'wait')) {   // your taxi on its way: a yellow square
+        let [x, y] = toR(me.taxi.x, me.taxi.y);
+        const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 8;
+        if (d > lim && !big) { x = size / 2 + dx / d * lim; y = size / 2 + dy / d * lim; }
+        const q = big ? 7 : 4.5;
+        g.fillStyle = '#ffd21f'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.fillRect(x - q, y - q, q * 2, q * 2); g.strokeRect(x - q, y - q, q * 2, q * 2);
+      }
       if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') {
         let [x, y] = toR(me.cruiser.x, me.cruiser.y);
         const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 8;
@@ -510,6 +529,7 @@ export class HUD {
     if (me) {
       for (const hm of me.homes || []) { const [x, y] = P(hm.x, hm.y); g.fillStyle = '#000'; g.fillRect(x - ic / 2, y - ic / 2, ic, ic); g.fillStyle = '#3ddc84'; g.fillText('⌂', x, y + 1); }
       if (me.rumor) { const [x, y] = P(me.rumor.x, me.rumor.y); g.strokeStyle = '#ffd36b'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, me.rumor.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
+      if (me.taxi && (me.taxi.st === 'pickup' || me.taxi.st === 'wait')) { const [x, y] = P(me.taxi.x, me.taxi.y); g.fillStyle = '#ffd21f'; g.strokeStyle = '#000'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); label(g, x, y - 14, 'YOUR TAXI', '#ffd21f'); }
       if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') { const [x, y] = P(me.cruiser.x, me.cruiser.y); g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); }
       for (const ev of me.happen || []) { const kind = EVENT_KINDS[ev.k]; if (!kind) continue; const [x, y] = P(ev.x, ev.y); g.fillStyle = kind.color; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(kind.label, x, y - 12); }
       // places of the category picked in the waypoint panel: numbered pins

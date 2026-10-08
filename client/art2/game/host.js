@@ -296,6 +296,7 @@ export class World2 {
     this.S = o.S; this.map = o.map; this.gfx = o.gfx; this.lowMem = !!o.lowMem; this.api = o.api; this.onFail = o.onFail || (() => {});
     this.worldKey = o.worldKey || null;            // the city is in this browser's copy under this key: the workers read it
     this.artKey = o.artKey || null;                // baked chunks are kept in the browser under this build of the art (chunkstore.js)
+    this.cdn = o.artCdn || null;                   // the art from the server: where its baked chunks are (server/artcdn.js; worker.js)
     this.E = engine; this.L = L; this.q = q; this.tier = TIERS[q];
     this.W = 0; this.H = 0; this.dpr = 1;
     this.prov = { ground: false, statics: false, actors: false, peds: false };
@@ -348,7 +349,7 @@ export class World2 {
     this.t.clonePrep = performance.now() - t0;
     try {
       this.pool = takeWarmPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 });
-      const r = await this.pool.init(M, this.worldKey, { artKey: this.artKey });
+      const r = await this.pool.init(M, this.worldKey, { artKey: this.artKey, cdn: this.cdn });
       this.resync(false);   // (what players changed in the world so far: a city read from the browser's copy has none of it)
       this.t.post = r.ms.post; this.t.workerInit = r.ms.init;
       this._providers(r.providers);
@@ -390,7 +391,7 @@ export class World2 {
     console.warn('[art2] the bake workers were lost - starting new ones', old ? old.lastWhy : '');
     let p = null;
     try { p = new WorkerPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 }); } catch (e) { console.error('[art2] worker pool', e); this.reviving = false; return false; }
-    p.init(worldData(this.map), null, { artKey: this.artKey }).then((r) => {
+    p.init(worldData(this.map), null, { artKey: this.artKey, cdn: this.cdn }).then((r) => {
       this.reviving = false;
       if (this.failed) { p.dispose(); return; }
       if (p.dead) { this.pool = p; return; } // (the next frame tries again, or gives up)
@@ -544,9 +545,10 @@ export class World2 {
         const mode = modeOf(cx, cy), ver = this.ver.get(k) || 0, pk = `p${cx},${cy},${ver},${mode}`;
         if (peeks.has(pk)) continue;
         peeks.set(pk, 1);
-        this.pool.request(pk, 'peekChunk', { cx, cy, ck: `q${this.q}|a${this.E.ap || 1}|u1|${cx},${cy}${mode >= 0 ? `|c${mode}` : ''}` }, d - 1e6, (r, err) => {
+        this.pool.request(pk, 'peekChunk', { cx, cy, q: this.q, ck: `q${this.q}|a${this.E.ap || 1}|u1|${cx},${cy}${mode >= 0 ? `|c${mode}` : ''}` }, d - 1e6, (r, err) => {
           if (err || !r || r.none || !r.g || this.failed) { peeks.set(pk, 2); return; }
           peeks.set(pk, 2);
+          if (r.cdn) { this.n.cdn = (this.n.cdn || 0) + 1; this.t.cdnSum = (this.t.cdnSum || 0) + (r.dlMs || 0); }   // (the server's: worker.js)
           this.results.set(pk, { jk: pk, key: k, cx, cy, mode, r, prio: d - 1e6, ver, preview: !r.exact });
         });
       }
@@ -821,7 +823,8 @@ export class World2 {
     if (this.pre && mode < 0 && !r.errors) this.pre.kept.add(`${this.q}:${key}`);   // (the worker kept it: worker.js)
     if (r.errors && !this.loggedBakeErr) { this.loggedBakeErr = true; console.warn('[art2] chunk bake reported provider errors (fallbacks used)', JSON.stringify(r.errors).slice(0, 600)); }
     const ms = r.workerMs || 0;
-    this.t.bakeN++; this.t.bakeSum += ms; this.t.bakeMax = Math.max(this.t.bakeMax, ms);
+    if (r.cdn) { this.n.cdn = (this.n.cdn || 0) + 1; this.t.cdnSum = (this.t.cdnSum || 0) + ms; }   // (downloaded from the server: worker.js)
+    else { this.t.bakeN++; this.t.bakeSum += ms; this.t.bakeMax = Math.max(this.t.bakeMax, ms); }
     this.t.lastBake = r.bake;
     if (this.failed) return;
     this.results.set(jk, { jk, key, cx, cy, mode, r, prio, ver });

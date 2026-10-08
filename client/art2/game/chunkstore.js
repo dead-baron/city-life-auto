@@ -11,6 +11,8 @@
 //   packChunk(r)         a bake's result as { meta, bin } (bin: its typed arrays end to end), taken before they are
 //                        transferred away
 //   tidy(artKey, cap)    drop what other builds of the art baked, and the oldest beyond cap (one worker does it)
+//   unpackChunk(meta, z) / putChunkZ(key, meta, z) / parseChunkFile(ab)   a chunk downloaded from the server
+//                        (server/artcdn.js): its file read, kept as it came, unpacked like a kept one
 //
 // Keys (host.js): `${art}|q${quality}|a${artPx}|u${under}|${cx},${cy}` - art is version.json's hash of everything a
 // bake reads (tools/stamp-version.mjs: the bake worker's code and the world's), so a build that changes the art or
@@ -90,18 +92,50 @@ export async function getChunk(key, like = false) {
     const st = db.transaction(STORE, 'readonly').objectStore(STORE);
     const v = await timeout(req(st.get(like ? IDBKeyRange.bound(key, key + '\uffff') : key)), WAIT_MS, null);
     if (!v || !v.z || !v.meta) return null;
-    const bin = await gunzip(v.z), m = v.meta;
-    let o = 0;
-    const arrs = m.types.map((t, i) => {
-      if (!t) return null;
-      const T = TYPES[t], bytes = m.lens[i] * T.BYTES_PER_ELEMENT;
-      const a = new T(bin.buffer.slice(bin.byteOffset + o, bin.byteOffset + o + bytes));   // (each its own buffer: transferred one by one)
-      o += bytes;
-      return a;
-    });
-    if (o !== bin.byteLength) return null;
-    return { g: { ...m.g, p0: arrs[0], p1: arrs[1], p2: arrs[2] }, under: arrs[3], gh: arrs[4], blds: m.blds, lights: m.lights, live: m.live, n: m.n, items: m.items };
+    return await unpackChunk(v.meta, v.z);
   } catch { return null; }
+}
+
+// a kept chunk back from its meta and its compressed arrays (the store's, or a download's: server/artcdn.js) - the
+// result a bake posts, or null when the arrays don't add up
+export async function unpackChunk(m, z) {
+  const bin = await gunzip(z);
+  let o = 0;
+  const arrs = m.types.map((t, i) => {
+    if (!t) return null;
+    const T = TYPES[t], bytes = m.lens[i] * T.BYTES_PER_ELEMENT;
+    const a = new T(bin.buffer.slice(bin.byteOffset + o, bin.byteOffset + o + bytes));   // (each its own buffer: transferred one by one)
+    o += bytes;
+    return a;
+  });
+  if (o !== bin.byteLength) return null;
+  return { g: { ...m.g, p0: arrs[0], p1: arrs[1], p2: arrs[2] }, under: arrs[3], gh: arrs[4], blds: m.blds, lights: m.lights, live: m.live, n: m.n, items: m.items };
+}
+
+// keep a chunk that came compressed already (a download from the server): as putChunk, without compressing it again
+export async function putChunkZ(key, meta, z) {
+  if (!canKeep()) return false;
+  try {
+    const db = await openDb();
+    if (!db) return false;
+    return await timeout(new Promise((res) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put({ at: Date.now(), meta, z }, key);
+      tx.oncomplete = () => res(true); tx.onerror = () => res(false); tx.onabort = () => res(false);
+    }), 15000, false);
+  } catch { return false; }
+}
+
+// A chunk file from the server (server/artbake.js): 'CLA1', the meta's length (u32, little-endian), the meta (JSON), then
+// the arrays gzipped - { meta, z } or null
+export function parseChunkFile(ab) {
+  if (!ab || ab.byteLength < 8) return null;
+  const u8 = new Uint8Array(ab);
+  if (u8[0] !== 67 || u8[1] !== 76 || u8[2] !== 65 || u8[3] !== 49) return null;   // 'CLA1'
+  const n = new DataView(ab).getUint32(4, true);
+  if (8 + n > ab.byteLength) return null;
+  const meta = JSON.parse(new TextDecoder().decode(u8.subarray(8, 8 + n)));
+  return { meta, z: ab.slice(8 + n) };
 }
 
 // what other builds of the art baked goes; then the oldest, down to cap

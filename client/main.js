@@ -224,6 +224,7 @@ function onText(m) {
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
+      syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
       bag.refresh(); wheel.refresh();
       if (m.dead) { wheel.close(); if (topOverlay() === 'inv') closeOverlay('inv'); }
@@ -871,6 +872,12 @@ function v1Draws(F) {
 // frame just as well).
 const worldCv = $('world');
 let world2Shown = false;
+// The art from the server (server/artcdn.js): the game server bakes the world's chunks and the bake workers download them
+// (worker.js) - online only (the offline practice has no server), and not with ?artcdn=0
+function artCdnBase() {
+  if (S.practice || /[?&]artcdn=0\b/.test(location.search)) return null;
+  try { const u = new URL(serverUrl()); return `${u.protocol === 'wss:' ? 'https:' : 'http:'}//${u.host}/art/`; } catch { return null; }
+}
 function showWorld2(on) { if (on === world2Shown || !worldCv) return; world2Shown = on; worldCv.classList.toggle('hidden', !on); }
 function art2Draws(F) { const on = !!(S.art2 && S.art2.ready && !F.sub); showWorld2(on); return on; }
 async function startArt2(map) {
@@ -886,7 +893,7 @@ async function startArt2(map) {
   let w = null;
   // (a city read back from this browser's copy is read by the bake workers themselves: no copy sent from here)
   const worldKey = S.mapFrom === 'cache' && window.CLA_WORLD ? window.CLA_WORLD.key : null;
-  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed, worldKey, artKey: window.CLA_ART_KEY || null }); } catch (e) { console.error('[art2]', e); w = null; }
+  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed, worldKey, artKey: window.CLA_ART_KEY || null, artCdn: artCdnBase() }); } catch (e) { console.error('[art2]', e); w = null; }
   if (token !== S.art2Token || S.map !== map) { if (w) w.dispose(); return; }
   if (!w) { art2Failed(mod.World2.lastWhy || 'WebGL2 is not available'); return; }
   S.art2 = w; S.art2At = performance.now();
@@ -1119,6 +1126,14 @@ function renderPlayers() {
 }
 function requestPlayers() { if (S.welcomed) send({ t: 'plist' }); }
 function requestTransit() { if (S.welcomed) send({ t: 'phone', a: 'transit' }); }   // the bus lines and where their buses are
+// while you have a taxi, the server is told your waypoint (where the driver takes you; a new one re-routes the cab)
+function syncTaxiDest() {
+  if (!(S.me && S.me.taxi)) { S.taxiSent = null; return; }
+  const w = S.waypoint, k = w ? `${Math.round(w.x)},${Math.round(w.y)}` : '-';
+  if (k === S.taxiSent) return;
+  S.taxiSent = k;
+  send({ t: 'phone', a: 'taxi', op: 'dest', x: w ? w.x : null, y: w ? w.y : null, label: w ? w.label : '' });
+}
 // keep the lists fresh while one is on screen
 setInterval(() => {
   if (S.playing && overlays.some((o) => o === 'players' || o === 'bigmap' || o === 'dev' || o === 'pause')) requestPlayers();
@@ -2059,6 +2074,7 @@ function perfReport(nowMs) {
       bake: a2.t ? Math.round(a2.t.bakeAvg || 0) : 0, kept: a2.n ? a2.n.kept || 0 : 0, workers: a2.pool ? a2.pool.workers : 0,
       late: L.of ? +(100 * L.frames / L.of).toFixed(1) : 0, lateMove: L.moving ? +(100 * L.movingLate / L.moving).toFixed(1) : 0, lateMax: +(L.max || 0).toFixed(1), moving: L.of ? +(100 * L.moving / L.of).toFixed(0) : 0,
       ahead: a2.ahead ? a2.ahead.baked : 0,
+      cdn: a2.n ? a2.n.cdn || 0 : 0, cdnMs: a2.n && a2.n.cdn && a2.t ? Math.round((a2.t.cdnSum || 0) / a2.n.cdn) : 0,
     } });
     return;
   }
@@ -3923,6 +3939,7 @@ function drawSpanWire(sg, n) {
 // to see - the target too. A little pixel skull, made once and drawn crisp at any zoom, with a slow gold glow.
 const SKULL = ['...#####...', '.#########.', '###########', '###########', '##...#...##', '##...#...##', '###########', '.####.####.', '..#######..', '..#.#.#.#..', '..#######..'];
 let skullImg = null;
+const SKULL_HEAD = 46;   // world px from a standing person's feet to the top of their head (art v2 people)
 function skullSprite() {
   if (skullImg) return skullImg;
   const n = SKULL.length, c = document.createElement('canvas');
@@ -3955,7 +3972,8 @@ function drawWorldLabels(peds, vehs, now, z) {
   for (const p of peds) {
     if (p.flags & PF.INVEH && !p.d.pl) continue;
     const py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
-    if (p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - ((p.flags & PF.FLARE) ? 72 : 48) / z, z, now);
+    // (clear above the head at any zoom: the head's top is ~46 world px up; then a gap and half the skull, in screen px)
+    if (p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
     if (p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;

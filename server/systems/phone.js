@@ -161,7 +161,8 @@ export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
   if (a === 'feed') return events.feedFor(world);
-  if (a === 'transit') return transit.transitInfo(world);   // the Transit app and the lines on the map
+  if (a === 'transit') return transit.transitInfo(world, p);   // the Transit app and the lines on the map
+  if (a === 'taxi') return transit.taxiPhone(world, p, msg);    // call a taxi / cancel it / where you want to go
   if (a === 'cancel') {
     if (!p.job) return { ...boardFor(world, p), err: 'You have no job.' };
     jobs.failJob(world, p, 'Job cancelled.');
