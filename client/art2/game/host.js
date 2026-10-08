@@ -29,7 +29,7 @@
 //   w.ready, w.resize(W, H, dpr), w.frame(F), w.propChanged(i), w.resync(), w.diag(), w.stats(), w.dispose()
 // api: helpers lent by main.js (pedLook, vehLift, birds, umbrella colours, seats, scales).
 import { CHUNK, DECK_Z, groundZ } from './chunkbake.js';
-import { WorkerPool, takeWarmPool } from './pool.js';
+import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
@@ -53,11 +53,13 @@ const TAU = Math.PI * 2;
 const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK);
 // per quality tier (Low/Xbox, Medium, High, Ultra): chunk cache, lights, vehicle headings, uploads a frame
 // syncMs: how long a frame may spend making sprites on this thread (people and small things)
+// results: bakes back from the workers that may wait for an upload (2.3 MB each), so the road ahead keeps baking while
+// the slots fill
 const TIERS = [
-  { chunks: 12, lights: 16, N: 16, chunkUp: 1, sprUp: 8, convert: 3, sprJobs: 12, syncMs: 2.5 },
-  { chunks: 14, lights: 32, N: 32, chunkUp: 1, sprUp: 10, convert: 4, sprJobs: 16, syncMs: 3.5 },
-  { chunks: 18, lights: 64, N: 32, chunkUp: 2, sprUp: 12, convert: 5, sprJobs: 24, syncMs: 4.5 },
-  { chunks: 26, lights: 96, N: 64, chunkUp: 2, sprUp: 14, convert: 6, sprJobs: 32, syncMs: 6 },
+  { chunks: 16, lights: 16, N: 16, chunkUp: 1, sprUp: 8, convert: 3, sprJobs: 12, syncMs: 2.5, results: 6 },
+  { chunks: 20, lights: 32, N: 32, chunkUp: 1, sprUp: 10, convert: 4, sprJobs: 16, syncMs: 3.5, results: 8 },
+  { chunks: 24, lights: 64, N: 32, chunkUp: 2, sprUp: 12, convert: 5, sprJobs: 24, syncMs: 4.5, results: 10 },
+  { chunks: 32, lights: 96, N: 64, chunkUp: 2, sprUp: 14, convert: 6, sprJobs: 32, syncMs: 6, results: 12 },
 ];
 const LOWMEM_CHUNKS = 10;
 const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
@@ -94,14 +96,17 @@ const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
 // Which chunks to bake, and in what order (lower runs sooner).
 //   need  the view (x0..y1, world px) plus the scene's margins (the shadow reach on the sun's side, room for
-//         reflections on top): drawn this frame; priority = distance from the camera (0..~2000)
+//         reflections on top): drawn this frame; priority = distance from the camera (0..~2000). On the move the
+//         chunks only in the margins (they lend shadows at the edge; a stand-in does that well enough for a
+//         moment) wait until the next MARGIN_S s of the road ahead is under way: 2000 + MARGIN_S * 1000 + distance
 //   bake  need; then the sweep ahead when moving at (vx, vy) px/s: every chunk the view (grown by gx, gy: the
-//         zoom-out to come) passes over in the next T s (1 s plus 1 s per 320 px/s, at most 3.5 s), priority
+//         zoom-out to come) passes over in the next T s (1.5 s plus 1 s per 250 px/s, at most 6 s: a phone's
+//         bakes take a second or more each, so the road ahead has to be started well before it shows), priority
 //         2000 + the ms until it comes into view; then a ring of MARGIN round the view (6000 + distance) - not
 //         behind you when moving, not at all at speed (the view itself is wider then)
 // Returns the chunks coming into view within 1.5 s that aren't on screen yet, soonest first (their placeholders
 // are drawn ahead).
-const SWEEP_MAX = 3.5, SOON_S = 1.5;
+const SWEEP_MAX = 6, SOON_S = 1.5, MARGIN_S = 1.2;
 export function planBake(need, bake, view, vx, vy, reach, out = []) {
   out.length = 0;
   const camX = view.cx, camY = view.cy, gx = view.gx || 0, gy = view.gy || 0;
@@ -112,13 +117,14 @@ export function planBake(need, bake, view, vx, vy, reach, out = []) {
   const R0 = view.x0 - m[0], R1 = view.y0 - m[1], R2 = view.x1 + m[2], R3 = view.y1 + m[3];
   const range = (a, b, n) => [Math.max(0, Math.floor(a / CHUNK)), Math.min(n - 1, Math.floor(b / CHUNK))];
   let [cx0, cx1] = range(R0, R2, CX), [cy0, cy1] = range(R1, R3, CY);
+  const speed = Math.hypot(vx, vy), moving = speed > 300;
   for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
     const k = cy * 1000 + cx, d = Math.hypot((cx + 0.5) * CHUNK - camX, (cy + 0.5) * CHUNK - camY);
-    need.set(k, d); bake.set(k, d);
+    const seen = (cx + 1) * CHUNK > view.x0 && cx * CHUNK < view.x1 && (cy + 1) * CHUNK > view.y0 && cy * CHUNK < view.y1;
+    need.set(k, d); bake.set(k, moving && !seen ? 2000 + MARGIN_S * 1000 + d : d);
   }
-  const speed = Math.hypot(vx, vy);
   if (speed > 60) {
-    const T = Math.min(SWEEP_MAX, 1 + speed / 320), S0 = R0 - gx, S1 = R1 - gy, S2 = R2 + gx, S3 = R3 + gy;
+    const T = Math.min(SWEEP_MAX, 1.5 + speed / 250), S0 = R0 - gx, S1 = R1 - gy, S2 = R2 + gx, S3 = R3 + gy;
     [cx0, cx1] = range(Math.min(S0, S0 + vx * T), Math.max(S2, S2 + vx * T), CX);
     [cy0, cy1] = range(Math.min(S1, S1 + vy * T), Math.max(S3, S3 + vy * T), CY);
     const soon = [];
@@ -130,7 +136,9 @@ export function planBake(need, bake, view, vx, vy, reach, out = []) {
         if (!sx) continue;
         const lo = Math.max(0, sx[0], sy[0]), hi = Math.min(T, sx[1], sy[1]);
         if (lo > hi) continue;
-        const k = cy * 1000 + cx, p = 2000 + lo * 1000, cur = bake.get(k);
+        // (within a row coming into view at once, the middle first: the edges of the screen matter least)
+        const lat = Math.abs(((cx + 0.5) * CHUNK - camX) * vy - ((cy + 0.5) * CHUNK - camY) * vx) / speed;
+        const k = cy * 1000 + cx, p = 2000 + lo * 1000 + lat * 0.12, cur = bake.get(k);
         if (cur === undefined || p < cur) bake.set(k, p);
         if (!need.has(k) && lo < SOON_S) soon.push([lo, k]);
       }
@@ -438,6 +446,7 @@ export class World2 {
     const T = this.part, mk = (k) => { const n = performance.now(); T[k] = (T[k] || 0) * 0.9 + (n - this.pt) * 0.1; this.pt = n; };
     this.pt = t0;
     this._chunks(F); mk('chunks');
+    this._prebake(F); mk('prebake');
     const preset = this._preset(F);
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
@@ -514,7 +523,7 @@ export class World2 {
         if (fail && performance.now() < fail.t) continue;
         const jk = `c${cx},${cy},${mode},${ver}`;
         jobs.add(jk);
-        if (this.results.has(jk) || this.pool.has(jk) || this.results.size > 5) continue;
+        if (this.results.has(jk) || this.pool.has(jk) || this.results.size >= (tier.results || 6)) continue;
         const opt = { quality: this.q, seed: this.map.seed, lowMem: this.lowMem };
         if (mode >= 0) opt.cutaway = mode;
         // (it may come from - and go into - the browser's store of baked chunks: cut away round the building you're
@@ -542,13 +551,19 @@ export class World2 {
       for (const [pk, st] of peeks) { if (st === 1 || this.results.has(pk)) jobs.add(pk); }   // (waiting, or landed and not yet up)
       if (peeks.size > 400) for (const [pk, st] of peeks) if (st === 2 && !this.results.has(pk)) peeks.delete(pk);
     }
+    if (this.pre) for (const jk of this.pre.out) jobs.add(jk);   // (baking ahead into the store: _prebake)
     if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && !jobs.has(jk));
     for (const jk of this.results.keys()) if (!jobs.has(jk)) this.results.delete(jk); // landed too late to matter
-    // uploads, nearest first: what is needed now; the rest only into free slots
+    // the road ahead already resident (not on screen yet) is kept like what is drawn: the chunks left behind go first
+    if (E.keepChunk) for (const k of bake.keys()) if (!need.has(k)) E.keepChunk(k % 1000, Math.floor(k / 1000));
+    // uploads, nearest first: what is needed now; the rest into the slots not taken by what is wanted (a slot whose
+    // chunk was left behind is free for the road ahead)
     if (this.results.size) {
       const ready = [...this.results.values()].sort((a, b) => a.prio - b.prio);
       const cap = E.chunkCap ? E.chunkCap() : this.lowMem ? Math.min(LOWMEM_CHUNKS, tier.chunks) : tier.chunks;
-      let n = tier.chunkUp, free = Math.max(0, cap - (E.chunkKeys ? E.chunkKeys().length : 0));
+      let held = 0;
+      if (E.chunkKeys) for (const ck of E.chunkKeys()) { const [x, y] = typeof ck === 'string' ? ck.split(',') : ck; if (bake.has(+y * 1000 + +x)) held++; }
+      let n = tier.chunkUp, free = Math.max(0, cap - held);
       for (const res of ready) {
         if (n <= 0) break;
         if (!need.has(res.key)) { if (free <= 0) continue; free--; }
@@ -570,6 +585,19 @@ export class World2 {
         this._loadMark('art');
       }
     }
+    // how often a chunk on screen is still a stand-in once the game is under way (the perf report: main.js), and how
+    // long the longest such stretch lasted - on the move (over 300 px/s) and overall
+    if (baking && this.loadSeen && this.loadSeen.has('screen')) {
+      let miss = false;
+      for (const k of need.keys()) {
+        const cx = k % 1000, cy = Math.floor(k / 1000);
+        if ((cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1 && !E.hasChunk(cx, cy)) { miss = true; break; }
+      }
+      const L = this.late || (this.late = { frames: 0, of: 0, run: 0, max: 0, moving: 0, movingLate: 0 }), dt = Math.min(0.2, F.dt || 0.016), mv = Math.hypot(v.x, v.y) > 300;
+      L.of++; if (mv) L.moving++;
+      if (miss) { L.frames++; if (mv) L.movingLate++; L.run += dt; if (L.run > L.max) L.max = L.run; } else L.run = 0;
+      L.now = miss && mv;
+    }
     // (the load timeline: the first time nothing on screen is a stand-in any more)
     if (baking && !(this.loadSeen && this.loadSeen.has('screen'))) {
       let missing = 0;
@@ -588,6 +616,88 @@ export class World2 {
       }
       for (const k of this.fallbacks) if (!this._fallback(k % 1000, Math.floor(k / 1000))) this.fallbacks.delete(k);
     }
+  }
+  // ---- baking ahead into the browser's store --------------------------------------------------------------
+  // When nothing on screen or on the road ahead is waiting for a bake, the workers bake the chunks round you into the
+  // browser's store of baked chunks (chunkstore.js) without drawing them, nearest first: further along the way you are
+  // heading, along the roads you could take from here (by distance along them), then a ring round you. Coming to
+  // one later, its bake is a read from the store: tens of ms instead of a second or more on a phone. One worker is
+  // always left for what the screen needs, nothing is baked ahead while the page is hidden, and at most PRE_N[phone]
+  // chunks round you are kept (the store holds 90 on a phone, 180 elsewhere: pool.js keepCap).
+  _prebake(F) {
+    const P = this.pool;
+    if (!this.artKey || this.lowMem || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    const pre = this.pre || (this.pre = { list: [], at: -1e9, out: new Set(), kept: new Set(), cx: -99, cy: -99, n: 0, done: 0, had: 0 });
+    if (P.waiting && P.waiting((k) => k[0] === 'c' && k[1] !== 'B') > 0) return;   // a bake for the screen or the road ahead waits
+    for (const k of this.wantChunks.keys()) { const cx = k % 1000, cy = Math.floor(k / 1000); if (!this.E.hasChunk(cx, cy) && !this.results.has(`c${cx},${cy},-1,${this.ver.get(k) || 0}`)) return; }
+    const room = Math.max(1, (P.size || 1) - 1) - pre.out.size;
+    if (room <= 0) return;
+    const now = F.now, pcx = Math.floor(this.camX / CHUNK), pcy = Math.floor(this.camY / CHUNK);
+    if (now - pre.at > 1.5 || pcx !== pre.cx || pcy !== pre.cy) { pre.list = this._prebakeList(); pre.at = now; pre.cx = pcx; pre.cy = pcy; }
+    let n = room;
+    while (n > 0 && pre.list.length) {
+      const k = pre.list.shift(), cx = k % 1000, cy = Math.floor(k / 1000), kk = `${this.q}:${k}`;
+      if (pre.kept.has(kk) || this.E.hasChunk(cx, cy) || (this.ver.get(k) || 0)) continue;   // (kept, drawn, or changed by players)
+      const jk = `cB${cx},${cy},${this.q}`;
+      if (P.has(jk)) continue;
+      n--; pre.out.add(jk);
+      const q = this.q;
+      P.request(jk, 'prebakeChunk', { cx, cy, opt: { quality: q, seed: this.map.seed, lowMem: this.lowMem }, ck: `q${q}|a${this.E.ap || 1}|u1|${cx},${cy}` }, 50000 + pre.n++, (r, err) => {
+        pre.out.delete(jk);
+        if (err === 'no workers') return;
+        pre.kept.add(`${q}:${k}`);   // (kept now - or failed: not tried again this session)
+        if (r && r.kept) { if (r.had) pre.had++; else pre.done++; }
+      });
+    }
+  }
+  // the chunks to bake ahead, best first (see _prebake)
+  _prebakeList() {
+    const phone = isPhone(), RING = phone ? 3 : 4, ROAD = phone ? 4800 : 7500, AHEAD_S = 12, MAXN = phone ? 64 : 120;
+    const out = new Map(), add = (cx, cy, p) => {
+      if (cx < 0 || cy < 0 || cx >= CX || cy >= CY) return;
+      const k = cy * 1000 + cx, c = out.get(k);
+      if (c === undefined || p < c) out.set(k, p);
+    };
+    const x0 = this.camX, y0 = this.camY;
+    // 1. the way you're heading, past the stretch _chunks bakes: a band three chunks wide, up to AHEAD_S s on
+    const v = this.camV ? this.camV.out : null, sp = v ? Math.hypot(v.x, v.y) : 0;
+    if (sp > 120) {
+      const ux = v.x / sp, uy = v.y / sp, L = Math.min(sp * AHEAD_S, 14000);
+      for (let d = 0; d <= L; d += CHUNK / 2) for (let o = -1; o <= 1; o++) add(Math.floor((x0 + ux * d - uy * o * CHUNK) / CHUNK), Math.floor((y0 + uy * d + ux * o * CHUNK) / CHUNK), d * 0.5 + Math.abs(o) * 300);
+    }
+    // 2. along the roads from here, by the distance along them (the ground level: a deck's chunks are its ground's)
+    const net = this.map.net;
+    if (net && net.nodes && net.nodes.length) {
+      const dist = new Map(), open = [];
+      for (const nd of net.nodes) { const d = Math.hypot(nd.x - x0, nd.y - y0); if (d < 700) { dist.set(nd.id, d); open.push(nd.id); } }
+      while (open.length) {
+        let bi = 0;
+        for (let i = 1; i < open.length; i++) if (dist.get(open[i]) < dist.get(open[bi])) bi = i;
+        const id = open[bi]; open[bi] = open[open.length - 1]; open.pop();
+        const d0 = dist.get(id), nd = net.nodes[id];
+        if (!nd || d0 > ROAD) continue;
+        for (const eid of nd.edges) {
+          const e = net.edges[eid];
+          if (!e || !e.pts || e.dead) continue;
+          const other = e.a === id ? e.b : e.a, back = e.a !== id;
+          // its chunks, every 300 px along it from this end
+          let along = 0;
+          for (let i = 0; i < e.pts.length; i++) {
+            const pt = e.pts[back ? e.pts.length - 1 - i : i], nx = e.pts[back ? Math.max(0, e.pts.length - 2 - i) : Math.min(e.pts.length - 1, i + 1)];
+            const seg = Math.hypot(nx.x - pt.x, nx.y - pt.y), steps = Math.max(1, Math.ceil(seg / 300));
+            for (let t = 0; t < steps; t++) { const f = t / steps, px = pt.x + (nx.x - pt.x) * f, py = pt.y + (nx.y - pt.y) * f; if (d0 + along + seg * f <= ROAD) add(Math.floor(px / CHUNK), Math.floor(py / CHUNK), d0 + along + seg * f); }
+            along += seg;
+          }
+          const nd2 = d0 + (e.len || along);
+          if (nd2 < (dist.get(other) ?? Infinity)) { if (!dist.has(other)) open.push(other); dist.set(other, nd2); }
+        }
+      }
+    }
+    // 3. a ring round you
+    const pcx = Math.floor(x0 / CHUNK), pcy = Math.floor(y0 / CHUNK);
+    for (let dy = -RING; dy <= RING; dy++) for (let dx = -RING; dx <= RING; dx++) add(pcx + dx, pcy + dy, 2500 + Math.hypot(dx, dy) * CHUNK);
+    return [...out].sort((a, b) => a[1] - b[1]).slice(0, MAXN).map((e) => e[0]);
   }
   // Where the camera is heading (world px/s): the driven vehicle's own velocity (no lag), else the camera's
   // smoothed motion (riding a train, a bus or a taxi, spectating); a jump (teleport, respawn) resets it.
@@ -699,6 +809,7 @@ export class World2 {
       return;
     }
     this.chunkFails.delete(key);
+    if (this.pre && mode < 0 && !r.errors) this.pre.kept.add(`${this.q}:${key}`);   // (the worker kept it: worker.js)
     if (r.errors && !this.loggedBakeErr) { this.loggedBakeErr = true; console.warn('[art2] chunk bake reported provider errors (fallbacks used)', JSON.stringify(r.errors).slice(0, 600)); }
     const ms = r.workerMs || 0;
     this.t.bakeN++; this.t.bakeSum += ms; this.t.bakeMax = Math.max(this.t.bakeMax, ms);
@@ -1759,6 +1870,10 @@ export class World2 {
     if (rebake) for (const k of this.chunkState.keys()) this.ver.set(k, (this.ver.get(k) || 0) + 1);
   }
 
+  // whether a chunk on screen is a stand-in right now while moving fast (main.js eases the camera's pull-back at speed
+  // off while this keeps happening: a phone's bakes keep up with a smaller view)
+  lateNow() { return !!(this.late && this.late.now); }
+
   // ---- reporting ---------------------------------------------------------------------------------------------
   stats() {
     const es = this.E.stats ? this.E.stats() : {};
@@ -1766,11 +1881,12 @@ export class World2 {
       q: this.q, providers: this.prov, chunks: this.chunkState.size, placeholders: this.fallbacks.size, results: this.results.size,
       pool: this.pool ? this.pool.stats() : null, t: { ...this.t, bakeAvg: this.t.bakeN ? this.t.bakeSum / this.t.bakeN : 0 }, n: { ...this.n },
       upQ: this.upQ.size, sprOut: this.sprOut, warmQ: this.warmQ.length, fades: this.fades.size, badKeys: this.badKeys.size, lastErr: this.lastErr, engine: es, part: this.part,
+      ahead: this.pre ? { baked: this.pre.done, had: this.pre.had, out: this.pre.out.size, list: this.pre.list.length } : null, late: this.late || null,
     };
   }
   diag() {
     const p = this.pool ? this.pool.stats() : null, t = this.t;
-    return `q${this.q}${this.lowMem ? ' lowmem' : ''} chunks ${this.chunkState.size}+${this.fallbacks.size} placeholder (workers ${p ? p.workers + '/' + p.slots + (p.restarted ? ' restarted ' + p.restarted : '') : '-'}${this.n.revived ? ' new pool ' + this.n.revived : ''}, queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}, failing ${this.chunkFails.size}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms (kept ${this.n.kept || 0})  sprites req ${this.n.sprReq} up ${this.n.sprUp} now ${this.n.sync} gen ${this.n.gen} out ${this.sprOut}  fades ${this.fades.size}  lights ${this.n.lights}  lost ${this.lost}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
+    return `q${this.q}${this.lowMem ? ' lowmem' : ''} chunks ${this.chunkState.size}+${this.fallbacks.size} placeholder (workers ${p ? p.workers + '/' + p.slots + (p.restarted ? ' restarted ' + p.restarted : '') : '-'}${this.n.revived ? ' new pool ' + this.n.revived : ''}, queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}, failing ${this.chunkFails.size}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms (kept ${this.n.kept || 0}, ahead ${this.pre ? this.pre.done + '+' + this.pre.had : 0})${this.late ? ` late ${this.late.frames}/${this.late.of}` : ''}  sprites req ${this.n.sprReq} up ${this.n.sprUp} now ${this.n.sync} gen ${this.n.gen} out ${this.sprOut}  fades ${this.fades.size}  lights ${this.n.lights}  lost ${this.lost}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
   }
 }
 

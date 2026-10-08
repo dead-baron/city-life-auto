@@ -18,6 +18,9 @@
 //              hash of the art), at most keepCap of them; one worker (tidy) drops other builds' and the oldest
 //   bakeChunk  + ck: the chunk's key in that store - served from it when it's there, kept once baked; what players
 //              changed near it (props broken, campfires lit or put out: the patches below) is part of the key
+//   prebakeChunk { cx, cy, opt, ck } -> { kept }: baked into the store only (host.js _prebake: the chunks round you and on
+//              the roads ahead, while there is nothing more urgent) - nothing comes back but whether it is kept now;
+//              { kept: true, had: true } when it was there already
 //   peekChunk  { cx, cy, ck } -> the kept chunk as bakeChunk gives it, exact: true when it is just as the world is now
 //              (exact: false: kept with other props broken - a stand-in until the bake), or { none: true }
 //   init       { key } instead of M: the city this browser keeps (client/worldcache.js) - read here, in parallel with
@@ -31,7 +34,7 @@
 import { bakeSteps, loadProviders, SpriteCache, providers as chunkProviders } from './chunkbake.js';
 import * as GB from '../gbuf.js';
 import { readWorld } from '../../worldcache.js';
-import { getChunk, putChunk, packChunk, tidy, canKeep } from './chunkstore.js';
+import { getChunk, hasChunk, putChunk, packChunk, tidy, canKeep } from './chunkstore.js';
 
 // A pause that lets the messages already waiting for this worker run first (a message to ourselves goes to the
 // back of the queue): a bake pauses at each of its yields, so the sprite a thing on screen is waiting for is made
@@ -60,8 +63,11 @@ const SPRITE_FN = {
 // a G-buffer as a message: packed into the engine's three planes here (gbuf.js packGBuf: fresh arrays, so a
 // cached original stays whole) and turned into art pixels (gbuf.js downsample2: 1 art pixel = ART world px) unless
 // its provider drew it at that size already (g.ap: the voxel renders); a chunk's "under" layer goes with it
+const PK = { p0: null, p1: null, p2: null };   // (full-size planes on their way to art pixels: kept, not made afresh)
 function pack(g, transfer, under = null, run = 0) {
-  let pk = GB.packGBuf(g), u = null;
+  const down = ART > 1 && (g.ap || 1) < ART, n4 = g.w * g.h * 4;
+  if (down && (!PK.p0 || PK.p0.length < n4)) { PK.p0 = new Uint8Array(n4); PK.p1 = new Uint8Array(n4); PK.p2 = new Uint8Array(n4); }
+  let pk = down ? GB.packGBuf(g, PK.p0, PK.p1, PK.p2) : GB.packGBuf(g), u = null;
   if (ART > 1 && (g.ap || 1) < ART) {
     const d = GB.downsample2(pk, { run });
     if (under) u = GB.downsampleUnder(under, g.w, g.h, d.pick);
@@ -151,6 +157,25 @@ async function handle(msg) {
     self.postMessage({ id, ok: true, result: { cx, cy, ...got, exact, kept: true, errors: null }, ms: performance.now() - t0 }, transfer);
     return;
   }
+  if (op === 'prebakeChunk') {   // (into the store only: host.js _prebake)
+    const { cx, cy, opt } = args;
+    if (!KEEP || !args.ck) { self.postMessage({ id, ok: true, result: { kept: false }, ms: 0 }); return; }
+    const d0 = dirtySig(cx, cy), ck = `${KEEP.art}|${args.ck}${d0 ? '|d' + d0 : ''}`;
+    if (await hasChunk(ck)) { self.postMessage({ id, ok: true, result: { kept: true, had: true }, ms: performance.now() - t0 }); return; }
+    const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART, scratch: ART > 1 }, statCache, chunkProviders);
+    let step = it.next();
+    while (!step.done) { await pause(); step = it.next(); }
+    const r = step.value;
+    let kept = false;
+    if (!r.errors && dirtySig(cx, cy) === d0) {
+      const { o: g, u: under } = pack(r.g, [], r.under && r.blds && r.blds.length ? r.under : null, GB.CHUNK_RUN);
+      kept = await (KEEP.q = KEEP.q.then(() => putChunk(ck, packChunk({ cx, cy, g, under, blds: r.blds || [], lights: r.lights, gh: r.gh, live: r.live, n: r.n, items: r.items }))).catch(() => false));
+      if (KEEP.tidy && ++KEEP.n % 12 === 0) tidy(KEEP.art, KEEP.cap).catch(() => {});
+    }
+    stats.prebaked = (stats.prebaked || 0) + 1; stats.prebakeMs = (stats.prebakeMs || 0) + performance.now() - t0;
+    self.postMessage({ id, ok: true, result: { kept }, ms: performance.now() - t0 });
+    return;
+  }
   if (op === 'bakeChunk') {
     const { cx, cy, opt } = args;
     // (kept from an earlier bake of this build of the art: chunkstore.js)
@@ -167,7 +192,7 @@ async function handle(msg) {
         return;
       }
     }
-    const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART }, statCache, chunkProviders);
+    const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART, scratch: ART > 1 }, statCache, chunkProviders);
     let step = it.next();
     while (!step.done) { await pause(); step = it.next(); }
     const r = step.value;

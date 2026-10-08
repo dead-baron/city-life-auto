@@ -183,9 +183,16 @@ export function groundHeights(G, ox, oy) {
   return gh;
 }
 
+// a bake worker's working copies (opt.scratch): used up before its next bake, so kept rather than made afresh
+const SCR = {};
+function scratchCopy(k, src) { let a = SCR[k]; if (!a || a.length !== src.length) a = SCR[k] = new src.constructor(src.length); a.set(src); return a; }
+function scratchZero(k, n) { let a = SCR[k]; if (!a || a.length !== n) a = SCR[k] = new Uint8Array(n); else a.fill(0); return a; }
+
 // ---- the bake ---------------------------------------------------------------------------------------------
 // opt: { quality 0..3, seed, cutaway (building index), lowMem, groundCol (v1 ground pixels, RGBA), artPx (2: the
-// statics land on the art grid - the engine draws the chunk at 1 art pixel = 2 world px) }
+// statics land on the art grid - the engine draws the chunk at 1 art pixel = 2 world px), scratch (a bake worker:
+// the full-size G-buffer, its under layer and building numbers are this worker's working copies, overwritten by the
+// next bake - take what you need from them first) }
 // cache: SpriteCache for makeStatic results (one per worker); P: providers (default: the loaded ones)
 // (and what fades like one: the giant redwoods - statics.js marks them fade, with their own fade id in b)
 const isBuilding = (it) => (it.fade || (it.recipe && it.recipe.t === 'b' && !it.recipe.frame) ? 1 : 0);
@@ -231,7 +238,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
     yield 'items';
     for (const it of items) {
       if (now() - ts > SLICE_MS) { yield 'statics'; ts = now(); }
-      if (snap && isBuilding(it)) { under = G.col.slice(); snap = false; bid = new Uint8Array(CHUNK * CHUNK); }
+      if (snap && isBuilding(it)) { under = opt.scratch ? scratchCopy('under', G.col) : G.col.slice(); snap = false; bid = opt.scratch ? scratchZero('bid', CHUNK * CHUNK) : new Uint8Array(CHUNK * CHUNK); }
       // each building gets a local number (1..63) in this chunk: the engine fades a whole building by it
       let k = 0;
       if (bid && isBuilding(it) && it.b !== undefined) {
@@ -263,7 +270,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
     }
   }
   const t2 = now();
-  if (!under && opt.under !== false) under = G.col.slice();   // no buildings here: the whole chunk is "under"
+  if (!under && opt.under !== false) under = opt.scratch ? scratchCopy('under', G.col) : G.col.slice();   // no buildings here: the whole chunk is "under"
   // the under layer's alpha carries the local building number of the surface on top (0: no building)
   if (under) for (let i = 0, j = 3; i < CHUNK * CHUNK; i++, j += 4) under[j] = bid ? bid[i] : 0;
   return { g: G, under, blds, lights, gh, live, n, items: items.length, made, ms: { ground: t1 - t0, statics: t2 - t1 }, errors: groundErr || staticErr ? { ground: groundErr, statics: staticErr } : null };

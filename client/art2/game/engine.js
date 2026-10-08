@@ -91,11 +91,13 @@ export const ATLAS_PX = 1024;
 // cache budgets per quality (GAME-RENDERER.md "Quality tiers"); lighting settings live in LIGHT_TIERS
 // sway: how the vegetation moves with the wind (STATIC_FS uSway: 1 gust shading only, 3 leaning up to 2 texels,
 // 4 up to 3)
+// chunks: the chunk slots kept (2.25 MiB each at ap 2): the view's own plus room for the road ahead, baked before it
+// comes into view (2026-10-08: more room on every tier, so what is coming is ready and waiting)
 export const QUALITY = [
-  { name: 'Low', chunks: 12, pages: 4, sway: 1 },
-  { name: 'Medium', chunks: 14, pages: 6, sway: 3 },
-  { name: 'High', chunks: 18, pages: 8, sway: 4 },
-  { name: 'Ultra', chunks: 26, pages: 10, sway: 4 },
+  { name: 'Low', chunks: 16, pages: 4, sway: 1 },
+  { name: 'Medium', chunks: 20, pages: 6, sway: 3 },
+  { name: 'High', chunks: 24, pages: 8, sway: 4 },
+  { name: 'Ultra', chunks: 32, pages: 10, sway: 4 },
 ];
 const HMAX = 4096, GSINK = 4, DECAL_H = 3.5, FL = 16;
 const EMPTY = Object.freeze({});
@@ -509,6 +511,9 @@ export class Art2Engine {
 
   // ---- static chunks ----------------------------------------------------------------------------------------
   hasChunk(cx, cy) { const s = this.chunks.get(ckey(cx, cy)); return !!(s && s.real); }
+  // a resident chunk the host still wants (the road ahead, not on screen yet): kept as if it had been drawn this
+  // frame, so the least recently drawn - the chunks left behind - go first when a slot is needed
+  keepChunk(cx, cy) { const s = this.chunks.get(ckey(cx, cy)); if (s && s.used < this.frameNo) s.used = this.frameNo; }
   hasFallback(cx, cy) { const s = this.chunks.get(ckey(cx, cy)); return !!(s && !s.real); }
   chunkKeys() { const out = []; for (const s of this.chunks.values()) out.push(s.cx + ',' + s.cy); return out; }
   _slot(cx, cy) {

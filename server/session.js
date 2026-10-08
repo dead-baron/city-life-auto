@@ -59,7 +59,11 @@ export function createSession(world, conn, opts) {
       // a client noticing something wrong on its side (it built a different map from the same build): logged, once a connection
       if (msg.t === 'diag') { if (!conn.diagSaid && typeof msg.what === 'string') { conn.diagSaid = true; console.warn(`[diag] ${player.name}: ${msg.what.slice(0, 300)}`); } return; }
       // how this device loaded and runs the game (once a connection: server/perfreports.js, listed at /perf)
-      if (msg.t === 'perf') { if (!conn.perfSaid && !opts.practice) { conn.perfSaid = true; perf.addReport(world, msg.r); } return; }
+      if (msg.t === 'perf') {   // (one report a connection, and one more four minutes into play: main.js perfReport)
+        const play = !!(msg.r && msg.r.stage === 'play'), said = play ? 'perfPlaySaid' : 'perfSaid';
+        if (!conn[said] && !opts.practice) { conn[said] = true; perf.addReport(world, msg.r); }
+        return;
+      }
       if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
       if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
       // the bag: use an item, or put one in a quick-wheel slot (null clears it)

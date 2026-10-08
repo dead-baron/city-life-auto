@@ -144,6 +144,8 @@ export class WorkerPool {
     return true;
   }
   has(key) { return this.jobs.has(key); }
+  // how many jobs fn(key) picks are queued and not started yet (host.js: no baking ahead while a bake for the screen waits)
+  waiting(fn) { let n = 0; for (const j of this.queue) if (fn(j.key)) n++; return n; }
   // a message every worker gets, in order with the jobs sent to it after (no answer expected). World patches
   // ('patch': props [[index, broken | null]], reset: that list is everything broken) are also kept, compacted, for
   // a worker that starts later.

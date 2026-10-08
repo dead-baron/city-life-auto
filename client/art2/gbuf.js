@@ -237,36 +237,33 @@ export function packGBuf(g, p0 = null, p1 = null, p2 = null) {
 // p1, p2, ap: ART_PX, pick} - pick: the source texel of each art pixel (-1: empty).
 export const ART_PX = 2, CHUNK_RUN = 4;
 const EDGE_K = 1.5, EDGE_C = 12, GLOW_MIN = 24;
+const DS = { R: null, cnt: null, tex: null };
 export function downsample2(pk, opts = {}) {
   const W = pk.w | 0, H = pk.h | 0, ax0 = Math.round(pk.ax || 0), ay0 = Math.round(pk.ay || 0);
   const mx = ax0 & 1, my = ay0 & 1;                       // the margin that makes the anchor even
   const w = (W + mx + 1) >> 1, h = (H + my + 1) >> 1, n = w * h;
   const A = pk.p0, B = pk.p1 || null, C = pk.p2 || null, opaque = !!opts.opaque, run = opts.run | 0;
   const p0 = new Uint8Array(n * 4), p1 = B ? new Uint8Array(n * 4) : null, p2 = C ? new Uint8Array(n * 4) : null;
-  const pick = new Int32Array(n).fill(-1), R = new Uint8Array(n), T = new Int32Array(4), NB = new Uint8Array(8), dbg = opts.debug ? new Uint8Array(n) : null;
+  const pick = new Int32Array(n).fill(-1), T = new Int32Array(4), NB = new Uint8Array(8), dbg = opts.debug ? new Uint8Array(n) : null;
+  // (the working arrays are kept between calls: a chunk's are 0.15 M blocks, every bake)
+  if (!DS.R || DS.R.length < n) { DS.R = new Uint8Array(n); DS.cnt = new Uint8Array(n); DS.tex = new Int32Array(n * 4); }
+  const R = DS.R, cnt = DS.cnt, tex = DS.tex;
   // pass 1: each block's covered texels and colour range (L1 / 3 over r, g, b: hue edges count, not only brightness)
-  const cnt = new Uint8Array(n), tex = new Int32Array(n * 4);
-  for (let by = 0; by < h; by++) for (let bx = 0; bx < w; bx++) {
-    const o = by * w + bx;
-    let c = 0;
-    for (let dy = 0; dy < 2; dy++) {
-      const y = 2 * by - my + dy;
-      if (y < 0 || y >= H) continue;
-      for (let dx = 0; dx < 2; dx++) {
-        const x = 2 * bx - mx + dx;
-        if (x < 0 || x >= W) continue;
-        const i = y * W + x;
-        if (opaque || A[i * 4 + 3] >= 128) tex[o * 4 + c++] = i;
+  for (let by = 0; by < h; by++) {
+    const ya = Math.max(0, 2 * by - my), yb = Math.min(H - 1, 2 * by - my + 1);
+    for (let bx = 0; bx < w; bx++) {
+      const o = by * w + bx, xa = Math.max(0, 2 * bx - mx), xb = Math.min(W - 1, 2 * bx - mx + 1);
+      let c = 0;
+      for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) { const i = y * W + x; if (opaque || A[i * 4 + 3] >= 128) tex[o * 4 + c++] = i; }
+      cnt[o] = c;
+      let r = 0;
+      for (let a = 0; a < c; a++) for (let b = a + 1; b < c; b++) {
+        const ia = tex[o * 4 + a] * 4, ib = tex[o * 4 + b] * 4;
+        const d = (Math.abs(A[ia] - A[ib]) + Math.abs(A[ia + 1] - A[ib + 1]) + Math.abs(A[ia + 2] - A[ib + 2])) / 3;
+        if (d > r) r = d;
       }
+      R[o] = r;
     }
-    cnt[o] = c;
-    let r = 0;
-    for (let a = 0; a < c; a++) for (let b = a + 1; b < c; b++) {
-      const ia = tex[o * 4 + a] * 4, ib = tex[o * 4 + b] * 4;
-      const d = (Math.abs(A[ia] - A[ib]) + Math.abs(A[ia + 1] - A[ib + 1]) + Math.abs(A[ia + 2] - A[ib + 2])) / 3;
-      if (d > r) r = d;
-    }
-    R[o] = r;
   }
   // pass 2: pick
   for (let by = 0; by < h; by++) for (let bx = 0; bx < w; bx++) {
@@ -281,14 +278,13 @@ export function downsample2(pk, opts = {}) {
       if (ne === c) best = -1;                             // all glowing: an ordinary block of glow
       else if (dbg && best >= 0) dbg[o] = 2;
     }
-    if (best < 0) {
+    if (best < 0 && c > 1 && R[o] > EDGE_C) {
       // the neighbours' typical range (texture), against which an edge stands out: a low one of the eight (the
-      // third lowest), so the blocks a line runs on through don't hide it
+      // third lowest), so the blocks a line runs on through don't hide it. (A block whose own range is under
+      // EDGE_C can't be an edge whatever its neighbours: skipped, it goes on to the average below.)
       let sn = 0;
-      for (let yy = by - 1; yy <= by + 1; yy++) {
-        if (yy < 0 || yy >= h) continue;
-        for (let xx = bx - 1; xx <= bx + 1; xx++) { if (xx < 0 || xx >= w || (xx === bx && yy === by)) continue; NB[sn++] = R[yy * w + xx]; }
-      }
+      const ny0 = Math.max(0, by - 1), ny1 = Math.min(h - 1, by + 1), nx0 = Math.max(0, bx - 1), nx1 = Math.min(w - 1, bx + 1);
+      for (let yy = ny0; yy <= ny1; yy++) for (let xx = nx0; xx <= nx1; xx++) if (xx !== bx || yy !== by) NB[sn++] = R[yy * w + xx];
       let rn = 0;
       if (sn) {
         const kth = Math.max(0, ((sn * 3) >> 3) - 1);   // (8 neighbours: the 3rd lowest)
@@ -298,14 +294,10 @@ export function downsample2(pk, opts = {}) {
       if (c > 1 && R[o] > EDGE_K * rn + EDGE_C) {
         // an edge: the texel that differs most from the 4 x 4 window round the block (ties: the darker)
         let mr = 0, mg = 0, mb = 0, m = 0;
-        for (let y = 2 * by - my - 1; y <= 2 * by - my + 2; y++) {
-          if (y < 0 || y >= H) continue;
-          for (let x = 2 * bx - mx - 1; x <= 2 * bx - mx + 2; x++) {
-            if (x < 0 || x >= W) continue;
-            const j = (y * W + x) * 4;
-            if (!opaque && A[j + 3] < 128) continue;
-            mr += A[j]; mg += A[j + 1]; mb += A[j + 2]; m++;
-          }
+        const wy0 = Math.max(0, 2 * by - my - 1), wy1 = Math.min(H - 1, 2 * by - my + 2), wx0 = Math.max(0, 2 * bx - mx - 1), wx1 = Math.min(W - 1, 2 * bx - mx + 2);
+        for (let y = wy0; y <= wy1; y++) for (let x = wx0, j = (y * W + x) * 4; x <= wx1; x++, j += 4) {
+          if (!opaque && A[j + 3] < 128) continue;
+          mr += A[j]; mg += A[j + 1]; mb += A[j + 2]; m++;
         }
         mr /= m; mg /= m; mb /= m;
         let bs = -1e9, bd = 0;
@@ -320,27 +312,22 @@ export function downsample2(pk, opts = {}) {
         if (run > 1) {
           const j0 = best * 4;
           let sim = 0;
-          for (let y = 2 * by - my - 1; y <= 2 * by - my + 2; y++) {
-            if (y < 0 || y >= H) continue;
-            for (let x = 2 * bx - mx - 1; x <= 2 * bx - mx + 2; x++) {
-              if (x < 0 || x >= W) continue;
-              const j = (y * W + x) * 4;
-              if (!opaque && A[j + 3] < 128) continue;
-              // (on the feature's side: nearer the picked texel than the surroundings - worn or dithered paint counts)
-              if (Math.abs(A[j] - A[j0]) + Math.abs(A[j + 1] - A[j0 + 1]) + Math.abs(A[j + 2] - A[j0 + 2]) < Math.abs(A[j] - mr) + Math.abs(A[j + 1] - mg) + Math.abs(A[j + 2] - mb)) sim++;
-            }
+          for (let y = wy0; y <= wy1; y++) for (let x = wx0, j = (y * W + x) * 4; x <= wx1; x++, j += 4) {
+            if (!opaque && A[j + 3] < 128) continue;
+            // (on the feature's side: nearer the picked texel than the surroundings - worn or dithered paint counts)
+            if (Math.abs(A[j] - A[j0]) + Math.abs(A[j + 1] - A[j0 + 1]) + Math.abs(A[j + 2] - A[j0 + 2]) < Math.abs(A[j] - mr) + Math.abs(A[j + 1] - mg) + Math.abs(A[j + 2] - mb)) sim++;
           }
           if (sim < Math.max(2, Math.ceil(run * m / 16))) best = -1;   // (fewer at a border: the window is cut short)
         }
         if (dbg) dbg[o] = best >= 0 ? 1 : 3;
       }
-      if (best < 0) {
-        // texture or flat colour: the average, with the most typical texel's other maps
-        for (let k = 0; k < c; k++) { const j = T[k] * 4; ar += A[j]; ag += A[j + 1]; ab += A[j + 2]; }
-        ar /= c; ag /= c; ab /= c; avg = true;
-        let bd = 1e9;
-        for (let k = 0; k < c; k++) { const j = T[k] * 4, d = Math.abs(A[j] - ar) + Math.abs(A[j + 1] - ag) + Math.abs(A[j + 2] - ab); if (d < bd) { bd = d; best = T[k]; } }
-      }
+    }
+    if (best < 0) {
+      // texture or flat colour: the average, with the most typical texel's other maps
+      for (let k = 0; k < c; k++) { const j = T[k] * 4; ar += A[j]; ag += A[j + 1]; ab += A[j + 2]; }
+      ar /= c; ag /= c; ab /= c; avg = true;
+      let bd = 1e9;
+      for (let k = 0; k < c; k++) { const j = T[k] * 4, d = Math.abs(A[j] - ar) + Math.abs(A[j + 1] - ag) + Math.abs(A[j + 2] - ab); if (d < bd) { bd = d; best = T[k]; } }
     }
     pick[o] = best;
     const s = best * 4, d = o * 4;

@@ -22,6 +22,8 @@ export function cleanReport(r) {
     preset: str(r.preset, 10), w: num(r.w, 0, 10000) | 0, h: num(r.h, 0, 10000) | 0, dpr: +num(r.dpr, 0, 8).toFixed(2), scale: +num(r.scale, 0, 1).toFixed(2), steps: num(r.steps, 0, 99) | 0,
     at: times(r.at), ms: times(r.ms), city: str(r.city, 8), fps: num(r.fps, 0, 300) | 0, p50: +num(r.p50, 0, 1000).toFixed(1), p95: +num(r.p95, 0, 1000).toFixed(1),
     bake: num(r.bake, 0, 60000) | 0, kept: num(r.kept, 0, 99999) | 0, workers: num(r.workers, 0, 16) | 0,
+    // the second report, four minutes into play: how well the art kept up (main.js perfReport)
+    ...(r.stage === 'play' ? { stage: 'play', late: +num(r.late, 0, 100).toFixed(1), lateMove: +num(r.lateMove, 0, 100).toFixed(1), lateMax: +num(r.lateMax, 0, 3600).toFixed(1), moving: num(r.moving, 0, 100) | 0, ahead: num(r.ahead, 0, 99999) | 0 } : null),
   };
 }
 
@@ -41,6 +43,11 @@ export function deviceName(r) {
 const s1 = (ms) => (ms === undefined ? '-' : (ms / 1000).toFixed(1));
 export function reportLine(r) {
   const a = r.at || {};
+  if (r.stage === 'play') return [
+    `${deviceName(r)} · ${r.cores || '?'} cores${r.mem ? ` · ${r.mem} GB` : ''} · ${r.preset} · ${r.w}x${r.h}@${r.dpr}${r.gpu ? ` · ${r.gpu}` : ''} · four minutes in`,
+    `   art on screen not ready yet: ${r.late}% of frames (${r.lateMove}% on the move; moving ${r.moving}% of the time), longest ${r.lateMax} s`,
+    `   frames: ${r.fps} fps, ${r.p50} ms typical, ${r.p95} ms slow (95th) · sharpness ${Math.round(r.scale * 100)}% · bakes ${r.bake} ms avg on ${r.workers} worker${r.workers === 1 ? '' : 's'} · ${r.kept} chunks from the browser's store · ${r.ahead} baked ahead`,
+  ].join('\n');
   const city = r.city === 'cache' ? 'read back' : r.city === 'built' ? 'built in a worker' : r.city === 'page' ? 'built on the page' : '';
   return [
     `${deviceName(r)} · ${r.cores || '?'} cores${r.mem ? ` · ${r.mem} GB` : ''} · ${r.preset} · ${r.w}x${r.h}@${r.dpr}${r.gpu ? ` · ${r.gpu}` : ''}`,
@@ -55,7 +62,8 @@ export function addReport(world, r) {
   c.when = Date.now();
   (world.perfReports ||= []).unshift(c);
   if (world.perfReports.length > MAX) world.perfReports.length = MAX;
-  console.log(`[perf] ${deviceName(c)} · ${c.preset} · screen ${s1(c.at.screen)} s · city ${c.city} ${s1(c.ms.city)} s · ${c.fps} fps p95 ${c.p95} ms · sharpness ${Math.round(c.scale * 100)}%`);
+  if (c.stage === 'play') console.log(`[perf] ${deviceName(c)} · ${c.preset} · four minutes in: stand-ins on screen ${c.late}% of frames (${c.lateMove}% moving), longest ${c.lateMax} s · bakes ${c.bake} ms · ${c.ahead} baked ahead`);
+  else console.log(`[perf] ${deviceName(c)} · ${c.preset} · screen ${s1(c.at.screen)} s · city ${c.city} ${s1(c.ms.city)} s · ${c.fps} fps p95 ${c.p95} ms · sharpness ${Math.round(c.scale * 100)}%`);
   return c;
 }
 

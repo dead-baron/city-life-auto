@@ -6,6 +6,7 @@
 //   getChunk(key)        the result a bake posts (worker.js: { g, under, blds, lights, gh, live, n, items }) or null
 //   getChunk(key, true)  the same, or any kept chunk whose key starts with key (the same chunk as players had changed
 //                        it then - a stand-in that is right but for a few broken props, until its own bake lands)
+//   hasChunk(key)        whether one is kept under exactly that key (nothing read back)
 //   putChunk(key, blob)  keep one (blob: packChunk's) - the oldest go beyond the cap
 //   packChunk(r)         a bake's result as { meta, bin } (bin: its typed arrays end to end), taken before they are
 //                        transferred away
@@ -67,6 +68,17 @@ export async function putChunk(key, blob) {
       tx.objectStore(STORE).put({ at: Date.now(), meta: blob.meta, z }, key);
       tx.oncomplete = () => res(true); tx.onerror = () => res(false); tx.onabort = () => res(false);
     }), 15000, false);
+  } catch { return false; }
+}
+
+// whether a chunk is kept under exactly this key (a count, nothing read back)
+export async function hasChunk(key) {
+  if (!canKeep()) return false;
+  try {
+    const db = await openDb();
+    if (!db) return false;
+    const n = await timeout(req(db.transaction(STORE, 'readonly').objectStore(STORE).count(key)), WAIT_MS, 0);
+    return n > 0;
   } catch { return false; }
 }
 

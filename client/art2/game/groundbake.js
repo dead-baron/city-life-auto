@@ -114,6 +114,12 @@ function scratch() {
   };
   return B;
 }
+let SG = null;
+function scratchG() {
+  if (!SG) SG = new GBuf(CHUNK, CHUNK);
+  else { SG.col.fill(0); SG.nrm.fill(0); SG.z.fill(0); SG.emi.fill(0); SG.flag.fill(0); }
+  return SG;
+}
 // aux bits
 const A_FILLET = 1, A_BULB = 2, A_GORE = 4, A_CHEV = 8, A_RAIL = 16, A_UNDER = 32, A_XING = 64, A_PLAT = 128;
 
@@ -135,7 +141,9 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   // ap 2: the live game draws the chunk at 1 art pixel = 2 world px - the paint (lane lines, zebras, stop lines,
   // arrows, stalls, court lines, wear) is decided once per art pixel so it comes out in whole art pixels
   const C = { M, b, q, seed, X0, Y0, WX0, WY0, TX0, TY0, deckZ: opt.deckZ ?? 6, E: [], ap: opt.artPx === 2 ? 2 : 1 };
-  const G = new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
+  // (opt.scratch: a bake worker's - the G-buffer is used up before the next bake, so one is kept and cleared rather than
+  // a fresh 9 MB every chunk)
+  const G = opt.scratch ? scratchG() : new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
   const prof = opt.profile ? {} : null;
   C.prof = prof;
   for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['decor', decor], ['surf', surf]]) {

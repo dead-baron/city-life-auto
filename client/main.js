@@ -2042,6 +2042,20 @@ function govern(nowMs) {
 // frame rate, the sharpness it settled on, and what the device is - sent to the server, which keeps the latest and
 // lists them at /perf (server/perfreports.js), so how phones and tablets out there do can be read off one page.
 function perfReport(nowMs) {
+  if (LOAD.sent && !LOAD.sent2 && S.art2 && LOAD.at.screen !== undefined && nowMs - LOAD.at.screen > 240000) {
+    // four minutes into play, a second report: how well the art kept up as they went round (the share of frames
+    // with a stand-in on screen, overall and on the move, the longest such stretch) and what was baked ahead
+    LOAD.sent2 = true;
+    const a2 = S.art2.stats(), L = a2.late || {}, d = getDevice();
+    send({ t: 'perf', r: {
+      stage: 'play', kind: d.kind, gpu: (d.gpu || '').slice(0, 80), ua: navigator.userAgent.slice(0, 160), cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0,
+      preset: gfx.preset, w: W, h: H, dpr: +DPR.toFixed(2), scale: +GOV.scale.toFixed(2), steps: GOV.steps, fps: S.fps, p50: +framePct(0.5).toFixed(1), p95: +framePct(0.95).toFixed(1),
+      bake: a2.t ? Math.round(a2.t.bakeAvg || 0) : 0, kept: a2.n ? a2.n.kept || 0 : 0, workers: a2.pool ? a2.pool.workers : 0,
+      late: L.of ? +(100 * L.frames / L.of).toFixed(1) : 0, lateMove: L.moving ? +(100 * L.movingLate / L.moving).toFixed(1) : 0, lateMax: +(L.max || 0).toFixed(1), moving: L.of ? +(100 * L.moving / L.of).toFixed(0) : 0,
+      ahead: a2.ahead ? a2.ahead.baked : 0,
+    } });
+    return;
+  }
   if (LOAD.sent || !S.welcomed || S.practice) return;
   const at = LOAD.at.screen;
   if (at === undefined ? nowMs < 120000 : nowMs - at < 20000) return;
@@ -2352,7 +2366,11 @@ function prepFrame(dt) {
   // down: like a movie camera, it slowly pulls back from your body (never wider than the server sends)
   const downFor = S.me && S.me.dead ? (S.downFor = (S.downFor || 0) + dt) : (S.downFor = 0);
   const pull = downFor ? 1 + (DOWN_PULL - 1) * Math.min(1, downFor / 9) * (0.5 - 0.5 * Math.cos(Math.min(1, downFor / 9) * Math.PI)) : 1;
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, 1 + Math.min(0.5, speed / 1300));
+  // the pull-back at speed (up to 1.5x): while the art can't keep up with it (a chunk on screen still a stand-in at
+  // speed: a phone's bakes), it eases off - down to 1.25x - and comes back slowly once the art keeps up again
+  if (S.art2 && S.art2.lateNow && speed > 300 && S.art2.lateNow()) S.zoMax = Math.max(0.25, (S.zoMax ?? 0.5) - 0.12 * dt);
+  else if ((S.zoMax ?? 0.5) < 0.5) S.zoMax = Math.min(0.5, S.zoMax + 0.015 * dt);
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, 1 + Math.min(S.zoMax ?? 0.5, speed / 1300));
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
