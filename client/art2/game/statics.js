@@ -303,7 +303,7 @@ export function makeStatic(r) {
   switch (r.t) {
     case 'b': return makeBld(r);
     case 'cut': return makeCut(r);
-    case 'v': return voxSprite(voxModel(r.m, r.a || []), r.hd || 0, r.pv || null);
+    case 'v': { const m = voxModel(r.m, r.a || []); return m && typeof m.prepare !== 'function' && m.col ? m : voxSprite(m, r.hd || 0, r.pv || null); }   // (a few props come drawn already: the greenhouse's glass over its plants)
     case 'f': return makeFlora(r);
     case 'rw': return r.k === 'stump' ? RW.oldStump(11 + r.s * 7, 26) : RW.nurseLog(5 + r.s * 13, r.len || 200, 18, r.flip);   // (redwoods.js: an old stump, a fallen giant)
     case 'deck': return makeDeck(r);
