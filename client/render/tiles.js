@@ -29,6 +29,7 @@ const C = {
 };
 
 export class GroundCache {
+  get shores() { return this._shores || (this._shores = new Shores(this.map)); }
   // layers (spectator mode): { lots: painted lots and yards, props: street furniture and trees }
   constructor(map, maxChunks = 24, layers = null) {
     this.map = map;
@@ -62,7 +63,7 @@ export class GroundCache {
     this.gores = this.byChunk(map.gores || [], (gr) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of gr.pts) { x0 = Math.min(x0, p.x, p.qx); y0 = Math.min(y0, p.y, p.qy); x1 = Math.max(x1, p.x, p.qx); y1 = Math.max(y1, p.y, p.qy); } const pad = gr.hw + gr.rhw + 8; return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; });
     this.culdesacs = this.byChunk(map.nodes.filter((n) => n.culdesac), (n) => [n.x - 200, n.y - 200, n.x + 200, n.y + 200]);
     this.rail = railIndex(map, (cx, cy) => this.key(cx, cy));
-    this.shores = new Shores(map);
+    this._shores = null;   // (the coast traced once, when the classic renderer first draws: get shores)
   }
   key(cx, cy) { return cy * 1000 + cx; }
   get(cx, cy) {

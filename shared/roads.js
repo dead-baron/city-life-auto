@@ -126,6 +126,9 @@ export function buildNetwork(lines, seed = 1) {
     }
   }
   // 2. ends: snap onto a line of the same level they stop on (a T junction), else a dead end
+  // (a line whose box is further off than it could snap from is passed over without measuring)
+  const snapBox = new Map();
+  for (const o of L) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const q of o.pts) { if (q.x < x0) x0 = q.x; if (q.x > x1) x1 = q.x; if (q.y < y0) y0 = q.y; if (q.y > y1) y1 = q.y; } const r = Math.max(o.hw, 40) + 13; snapBox.set(o, [x0 - r, y0 - r, x1 + r, y1 + r]); }
   for (const l of L) {
     for (const end of [0, 1]) {
       const e = end ? l.pts[l.pts.length - 1] : l.pts[0];
@@ -133,6 +136,7 @@ export function buildNetwork(lines, seed = 1) {
       let best = null;
       for (const o of L) {
         if (o === l || midLvl(o) !== lv) continue;
+        const sb = snapBox.get(o); if (e.x < sb[0] || e.x > sb[2] || e.y < sb[1] || e.y > sb[3]) continue;
         if (Math.abs(o.pts[0].x - e.x) > o.len + o.hw + 64 && Math.abs(o.pts[o.pts.length - 1].x - e.x) > o.len + o.hw + 64) continue;
         const pr = project(o.pts, e);
         if (pr && pr.d <= Math.max(o.hw, 40) + 12 && (!best || pr.d < best.pr.d)) best = { o, pr };

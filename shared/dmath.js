@@ -345,7 +345,19 @@ export function datan2(y, x) {
 
 // ---- hypot (V8's: scaled to the largest, the squares summed with Kahan's compensation) -----------------------------
 const HYP = [];
-export function dhypot(...args) {
+// (two arguments - nearly every call - take a path with no array: the same steps, so the same bits. With two the
+// compensation is still 0 when the second square is added, and one of the two scaled values is exactly 1.)
+export function dhypot(x, y) {
+  if (arguments.length !== 2) return hypotN.apply(null, arguments);
+  const a = Math.abs(+x), b = Math.abs(+y);
+  if (a === Infinity || b === Infinity) return Infinity;
+  if (a !== a || b !== b) return NaN;
+  const max = a > b ? a : b;
+  if (max === 0) return 0;
+  const qa = a / max, qb = b / max;
+  return Math.sqrt(qa * qa + qb * qb) * max;
+}
+function hypotN(...args) {
   const n = args.length;
   if (n === 0) return 0;
   let max = 0, nan = false;

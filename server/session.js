@@ -2,6 +2,7 @@ import * as revive from './systems/revive.js';
 // One connected client: handshake, input decoding and message routing. Shared by the
 // Node WebSocket server and the in-browser offline practice worker.
 import { decodeInput, MSG_INPUT } from '../shared/protocol.js';
+import * as perf from './perfreports.js';
 import * as players from './systems/players.js';
 import { mapSignature } from '../shared/map.js';
 import * as unstuck from './systems/unstuck.js';
@@ -57,6 +58,8 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
       // a client noticing something wrong on its side (it built a different map from the same build): logged, once a connection
       if (msg.t === 'diag') { if (!conn.diagSaid && typeof msg.what === 'string') { conn.diagSaid = true; console.warn(`[diag] ${player.name}: ${msg.what.slice(0, 300)}`); } return; }
+      // how this device loaded and runs the game (once a connection: server/perfreports.js, listed at /perf)
+      if (msg.t === 'perf') { if (!conn.perfSaid && !opts.practice) { conn.perfSaid = true; perf.addReport(world, msg.r); } return; }
       if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
       if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
       // the bag: use an item, or put one in a quick-wheel slot (null clears it)

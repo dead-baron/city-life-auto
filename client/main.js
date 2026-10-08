@@ -2,7 +2,7 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS } from '../shared/constants.js';
-import { generateCity, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
+import { generateCity, cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
 import { signalFor } from '../shared/roads.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
@@ -70,6 +70,8 @@ const INTERP_TICKS = 2.2;     // render others ~110 ms in the past
 const S = {
   ws: null, token: null, pid: null, welcomed: false, playing: false, dev: false, reconnectIn: 1000,
   map: null, ground: null, hud: null, fx: new FX(),
+  // the classic renderer's highway deck (render/highway.js): made the first time something draws it, not for every city
+  _hw: null, get highway() { return this._hw || (this._hw = this.map ? new Highway(this.map) : null); },
   ents: new Map(), latestTick: 0, renderTick: 0, loopTime: 60, weather: 0,
   ctrlKind: 0, ctrlId: 0, me: null, seq: 0, pending: [], pred: null, acc: 0, lastAim: 0,
   cam: { x: 4400, y: 2200, zoom: 1, shake: 0 }, smooth: { x: 0, y: 0 }, geysers: [], flashes: [], camAlert: new Map(), spikes: new Map(),
@@ -83,6 +85,24 @@ const S = {
 };
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
+
+// ---- the load timeline -------------------------------------------------------------------------------------
+// How long each step of getting into the city took on this device, in ms since the page started loading: the
+// boot check (boot.js), the code, the server's welcome, the city built from the seed, the renderer and its bake
+// workers, the first art, and the whole screen drawn. The diagnostics overlay shows it, the server is told once
+// per page (the debug menu lists the latest devices), and tools/perf reads it from window.CLA.load.
+const LOAD = { at: {}, ms: {}, sent: false };
+function loadMark(k) { if (LOAD.at[k] === undefined) LOAD.at[k] = Math.round(performance.now()); }
+function loadSpan(k, ms) { LOAD.ms[k] = Math.round(ms); }
+// "boot 0.4 · code 1.2 · welcome 1.9 · city 11.0 (city 9.1) · ..." in seconds, in the order they happened
+function loadLine() {
+  const s = (ms) => (ms / 1000).toFixed(1);
+  const at = Object.entries(LOAD.at).sort((a, b) => a[1] - b[1]).map(([k, v]) => `${k} ${s(v)}`).join(' · ');
+  const ms = Object.entries(LOAD.ms).map(([k, v]) => `${k} ${s(v)}`).join(', ');
+  return `${at}${ms ? `  (took ${ms})` : ''} s${LOAD.city ? `  city ${LOAD.city === 'cache' ? 'read back' : LOAD.city === 'built' ? 'built in a worker' : 'built on the page'}` : ''}`;
+}
+{ const b = window.CLA_BOOT; if (b) { LOAD.at.boot = Math.round(b.done); if (b.fetched) LOAD.ms.update = Math.round(b.done - b.start); } }
+loadMark('code');
 
 try { S.token = localStorage.getItem(TOKEN_KEY); } catch { S.token = null; }
 
@@ -113,7 +133,7 @@ function startPractice() {
   const ws = new WorkerSocket();
   S.ws = ws;
   ws.onopen = () => ws.send(JSON.stringify({ t: 'hello', token: null }));
-  ws.onmessage = (ev) => { if (typeof ev.data !== 'string') onBinary(ev.data); else { let m; try { m = JSON.parse(ev.data); } catch { return; } onText(m); } };
+  ws.onmessage = (ev) => { if (holding(ws, ev.data)) return; if (typeof ev.data !== 'string') onBinary(ev.data); else { let m; try { m = JSON.parse(ev.data); } catch { return; } onText(m); } };
   S.playing = true; // jump straight in once the local city says welcome
 }
 
@@ -126,8 +146,9 @@ function connect() {
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
   S.ws = ws;
-  ws.onopen = () => { S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at })); }; // cb / cbt: this page's build (client/update.js)
+  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
+    if (holding(ws, ev.data)) return;
     if (typeof ev.data !== 'string') { onBinary(ev.data); return; }
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     onText(m);
@@ -157,12 +178,16 @@ function send(obj) { if (S.ws && S.ws.readyState === 1) S.ws.send(typeof obj ===
 function onText(m) {
   switch (m.t) {
     case 'welcome':
+      loadMark('welcome');
+      if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
+      try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
       S.welcomed = true; S.pid = m.pid; S.dev = !!m.dev;
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
       document.body.classList.toggle('practice', !!m.practice);
       if (S.spec && S.spec.on) { if (S.map.seed !== (m.seed >>> 0)) exitSpectate(); else send({ t: 'dev', c: 'spectate', on: true }); } // back in after a reconnect
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
+      if (m.sig && S.mapFrom === 'cache' && m.sig !== mapSignature(S.map)) { console.warn('[city] the kept city is not the server\'s: building it again'); forgetCity(); setupWorld(m.seed, true); }
       S.updating = noteServerBuild(m.build, m.built); // the server runs a newer build: this page reloads into it (client/update.js)
       if (m.sig && m.sig !== mapSignature(S.map)) {
         // the server runs a newer world than this page: reload into it (client/update.js does the rest) - unless both
@@ -748,15 +773,61 @@ function outdatedBuild(sig) {
   setTimeout(() => { try { sessionStorage.setItem('cla.reloadFor', sig); } catch { /* blocked */ } location.reload(); }, 30000);
 }
 
-function setupWorld(seed) {
-  S.map = generateCity(seed);
+// ---- the city from client/worldgen.js ------------------------------------------------------------------------
+// boot.js starts building the city in a worker while the page loads (or reads back the copy this browser kept: client/
+// worldcache.js). When the server's welcome comes first, it and every message after it wait here (holding) and run in
+// order once the city is in. A different seed, or no worker, and the page builds the city itself, as before.
+function holdForCity(m) {
+  const job = window.CLA_WORLD, seed = m.seed >>> 0;
+  if (!job || job.taken || job.failed || job.map || job.seed !== seed || (S.map && S.map.seed === seed)) return false;
+  if (!S.hold || S.holdWs !== S.ws) { S.hold = []; S.holdWs = S.ws; }
+  S.hold.push(m);
+  $('t-status').textContent = 'Building the city...';
+  $('play').disabled = true;
+  if (!job.waiting) {
+    job.waiting = true;
+    job.promise.then((data) => { job.map = cityFromData(data); }, (e) => { console.warn('[city] the worker could not build it - building it here', e); job.failed = true; })
+      .then(releaseHeld);
+  }
+  return true;
+}
+function holding(ws, d) {
+  if (!S.hold || S.holdWs !== ws) return false;
+  S.hold.push(d);
+  return true;
+}
+function releaseHeld() {
+  const q = S.hold, ws = S.holdWs;
+  S.hold = null; S.holdWs = null;
+  if (!q || ws !== S.ws) return;   // (the connection was lost meanwhile: the next welcome takes the city)
+  for (const d of q) {
+    if (typeof d === 'string') { let m; try { m = JSON.parse(d); } catch { continue; } onText(m); }
+    else if (d instanceof ArrayBuffer) onBinary(d);
+    else onText(d);
+  }
+}
+function forgetCity() { import('./worldcache.js').then((c) => c.dropWorld()).catch(() => {}); }
+
+function setupWorld(seed, here = false) {
+  let t = performance.now();
+  const job = window.CLA_WORLD;
+  if (!here && job && job.map && job.seed === (seed >>> 0)) {
+    // built (or read back from this browser's copy) by client/worldgen.js while the page loaded
+    S.map = job.map; job.map = null; job.taken = true; S.mapFrom = job.from;
+    if (S.mapFrom === 'cache') { delete S.map._sig; mapSignature(S.map); }   // (its fingerprint worked out from what was read)
+    loadSpan('city', job.ms);
+  } else {
+    S.map = generateCity(seed); S.mapFrom = 'page';
+    loadSpan('city', performance.now() - t);
+  }
+  loadMark('city'); LOAD.city = S.mapFrom; t = performance.now();
   S.flora = new Flora(S.map); S.flora.configure(gfx); if (atlas.ready) S.flora.registerAtlas(atlas); // procedural vegetation (render/flora): before the ground is baked
   S.ground = new GroundCache(S.map, LOW_MEM ? 12 : 24); // (consoles give the browser little graphics memory)
   S.wx = new Weather(S.map);
   S.poleAt = null;
   S.wx.onThunder = () => sfx('thunder', 1);
   S.light ||= new Lighting();
-  S.highway = new Highway(S.map);
+  S._hw = null;
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.spec = createSpectator({
     map: S.map,
@@ -765,6 +836,7 @@ function setupWorld(seed) {
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.hud.onDown = (a) => downAct(a);
+  loadSpan('setup', performance.now() - t);
   startArt2(S.map);
 }
 
@@ -810,10 +882,15 @@ async function startArt2(map) {
   // what the renderer borrows from here: how people look and pose, body heights, seats, the birds
   const api = { pedLook, pedPose, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, SEAT_JETSKI, RIDER_H, UMBRELLA_COLORS };
   let w = null;
-  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed }); } catch (e) { console.error('[art2]', e); w = null; }
+  // (a city read back from this browser's copy is read by the bake workers themselves: no copy sent from here)
+  const worldKey = S.mapFrom === 'cache' && window.CLA_WORLD ? window.CLA_WORLD.key : null;
+  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed, worldKey, artKey: window.CLA_ART_KEY || null }); } catch (e) { console.error('[art2]', e); w = null; }
   if (token !== S.art2Token || S.map !== map) { if (w) w.dispose(); return; }
   if (!w) { art2Failed(mod.World2.lastWhy || 'WebGL2 is not available'); return; }
   S.art2 = w; S.art2At = performance.now();
+  loadMark('renderer');
+  w.onLoad = (k, ms) => { loadMark(k); if (ms !== undefined) loadSpan(k, ms); };   // (workers, art, screen)
+  for (const [k, ms] of w.loadQ || []) w.onLoad(k, ms);
   const el = $('art2-err'); if (el) el.classList.add('hidden');
   w.resize(W, H, DPR);
 }
@@ -1727,6 +1804,7 @@ function syncSettings() {
   $('s-autofs').checked = settings.autoFullscreen !== false;
   syncGfxPanel();
   $('s-diag').checked = diag.on;
+  $('s-smooth').checked = settings.smooth !== false;
 }
 // Account transfer: the login token is the account. Copy it here, paste it on another device;
 // the one it replaces is kept so a wrong paste can be undone.
@@ -1793,6 +1871,7 @@ $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; sav
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
 $('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.target.checked; saveSettings(); if (!diag.on && diag.el) { diag.el.remove(); diag.el = null; } };
+$('s-smooth').onchange = (e) => { settings.smooth = e.target.checked; saveSettings(); if (!settings.smooth && GOV.scale !== 1) { GOV.scale = 1; onResize(); } };
 // graphics: high on desktops, medium on phones and tablets unless chosen
 function gfxQuality() { return gfx.lighting; }
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
@@ -1868,12 +1947,18 @@ $('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.pla
 // ---------------------------------------------------------------------------
 // Rendering
 let W = 0, H = 0, DPR = 1;
+// (the frame record and the sharpness governor: see "smooth first" below - declared here, onResize reads GOV)
+const FR = { t: new Float32Array(240), n: 0 };
+const GOV = { scale: 1, base: 1, next: 0, slow: 0, fast: 0, tried: null, rest: 0, steps: 0, fails: 0 };
+const GOV_STEP = 0.85, GOV_SLOW_MS = 22, GOV_FAST_MS = 17.5;
 function onResize() {
   // A 4K TV reports a pixel ratio of 2, which made a console draw every pass at 3840x2160 until
   // its graphics memory ran out. Lower settings and consoles draw at fewer pixels (the art is
   // pixel art: it barely shows), and nothing ever renders more than ~2.5 megapixels.
   const cap = IS_CONSOLE ? Math.min(1, gfx.resolution) : gfx.resolution;
-  DPR = Math.max(0.5, Math.min(cap, window.devicePixelRatio || 1, Math.sqrt(2.5e6 / Math.max(1, innerWidth * innerHeight))));
+  const base = Math.max(0.5, Math.min(cap, window.devicePixelRatio || 1, Math.sqrt(2.5e6 / Math.max(1, innerWidth * innerHeight))));
+  DPR = Math.max(0.5, base * GOV.scale);   // (eased off while the frame rate can't keep up: govern below)
+  GOV.base = base;
   const nw = innerWidth, nh = innerHeight;
   if (nw === W && nh === H && canvas.width === Math.round(W * DPR)) return;
   W = nw; H = nh;
@@ -1913,6 +1998,62 @@ try {
   if (was && Date.now() - was.at < 60000) { sessionStorage.removeItem('cla.gfxLost'); setTimeout(() => S.hud && S.hud.toast(`Graphics were lowered to ${PRESET_NAMES[gfx.preset]} after the screen lost its graphics memory (Settings to change).`, 'info'), 4000); }
 } catch { /* blocked */ }
 
+// ---- smooth first: adaptive sharpness ---------------------------------------------------------------------------
+// The frames of the last few seconds (always kept: this and the device report read them). When a device can't hold
+// the frame rate at the chosen sharpness (Ultra on a phone, mostly), the render size steps down 15% at a time, a few
+// seconds apart, until it does - never below 60% of the setting, or 0.75 - and back up when there is room again. The
+// art is pixel art, so a step or two barely shows; dropped frames do. A step that doesn't help (the frame rate held
+// back by something else: the CPU, a phone saving power at 30 fps) is undone, and it waits a minute before trying
+// again (two, four... up to ten). Settings → "Keep it smooth" turns it off.
+function frameRecord(dtMs) { FR.t[FR.n++ % 240] = dtMs; }
+function framePct(p, last = 240) {   // the p-th percentile of the last frames (ms)
+  const n = Math.min(FR.n, 240, last), a = [];
+  for (let i = 0; i < n; i++) a.push(FR.t[(FR.n - 1 - i) % 240]);
+  a.sort((x, y) => x - y);
+  return n ? a[Math.min(n - 1, Math.floor(n * p))] : 0;
+}
+function govern(nowMs) {
+  if (nowMs < GOV.next) return;
+  GOV.next = nowMs + 2000;
+  if (!S.playing || !S.art2 || !S.art2.ready || document.hidden || settings.smooth === false || LOAD.at.screen === undefined || nowMs - LOAD.at.screen < 6000) { GOV.slow = GOV.fast = 0; return; }
+  const p75 = framePct(0.75, 120);   // (the last two seconds or so)
+  // the step just taken: did it help? if not, the pixels weren't what held it back - undo it, and rest a minute
+  if (GOV.tried) {
+    const t = GOV.tried; GOV.tried = null;
+    if (p75 > t.before * 0.92) { GOV.scale = t.scale; GOV.fails++; GOV.rest = nowMs + Math.min(600000, 60000 * 2 ** (GOV.fails - 1)); onResize(); return; }
+  }
+  if (nowMs < GOV.rest) return;
+  GOV.slow = p75 > GOV_SLOW_MS ? GOV.slow + 1 : 0;
+  GOV.fast = p75 < GOV_FAST_MS ? GOV.fast + 1 : 0;
+  const floor = Math.max(0.6, 0.75 / Math.max(0.75, GOV.base));
+  if (GOV.slow >= 2 && GOV.scale > floor + 1e-3) {
+    GOV.tried = { scale: GOV.scale, before: p75 };
+    GOV.scale = Math.max(floor, GOV.scale * GOV_STEP); GOV.slow = 0; GOV.steps++;
+    onResize();
+  } else if (GOV.fast >= 6 && GOV.scale < 1) {
+    GOV.scale = Math.min(1, GOV.scale / GOV_STEP); GOV.fast = 0;
+    onResize();
+  }
+}
+
+// ---- how this device did: one report a page ----------------------------------------------------------------------
+// Twenty seconds after the screen was first fully drawn (or two minutes in, if it never was): the load timeline, the
+// frame rate, the sharpness it settled on, and what the device is - sent to the server, which keeps the latest and
+// lists them at /perf (server/perfreports.js), so how phones and tablets out there do can be read off one page.
+function perfReport(nowMs) {
+  if (LOAD.sent || !S.welcomed || S.practice) return;
+  const at = LOAD.at.screen;
+  if (at === undefined ? nowMs < 120000 : nowMs - at < 20000) return;
+  LOAD.sent = true;
+  const d = getDevice(), a2 = S.art2 ? S.art2.stats() : null;
+  send({ t: 'perf', r: {
+    kind: d.kind, gpu: (d.gpu || '').slice(0, 80), ua: navigator.userAgent.slice(0, 160), cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0,
+    preset: gfx.preset, w: W, h: H, dpr: +DPR.toFixed(2), scale: +GOV.scale.toFixed(2), steps: GOV.steps,
+    at: LOAD.at, ms: LOAD.ms, city: LOAD.city || '', fps: S.fps, p50: +framePct(0.5).toFixed(1), p95: +framePct(0.95).toFixed(1),
+    bake: a2 && a2.t ? Math.round(a2.t.bakeAvg || 0) : 0, kept: a2 && a2.n ? a2.n.kept || 0 : 0, workers: a2 && a2.pool ? a2.pool.workers : 0,
+  } });
+}
+
 // ---- diagnostics overlay (?diag, or Settings) -----------------------------------------------------
 // Everything worth knowing when it runs badly on some device: frame rate and where the frame
 // goes, the render size, memory, the controller, how often the input device flips. Made for
@@ -1937,9 +2078,10 @@ function diagFrame(dtMs) {
   diag.el.textContent = [
     `fps ${S.fps}  frame avg ${avg.toFixed(1)} ms  worst ${(f[f.length - 1] || 0).toFixed(0)} ms  >50ms: ${diag.long}`,
     `parts ${Object.entries(p).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`,
-    `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${gfx.preset} (light ${gfx.lighting}, flora ${gfx.flora})`,
+    `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}${GOV.scale < 1 ? `, eased to ${Math.round(GOV.scale * 100)}% to keep it smooth` : ''}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${gfx.preset} (light ${gfx.lighting}, flora ${gfx.flora})  frames p50 ${framePct(0.5).toFixed(1)} p95 ${framePct(0.95).toFixed(1)} ms`,
     `ground cache ${S.ground ? S.ground.cache.size : 0}/${S.ground ? S.ground.max : 0} chunks (${cacheMB.toFixed(0)} MB)  canvases ${cs.n} (${cs.mb.toFixed(0)} MB)  js heap ${mem}  gfx lost ${diag.lost}${LOW_MEM ? '  low-memory mode' : ''}`,
     ...(ART2_WANTED ? [S.art2 ? `art2 ${S.art2.diag()}` : `art2 off: ${S.art2Off || 'starting'}`] : []),
+    `load ${loadLine()}`,
     `input ${input.device}  flips/min ${swRate.toFixed(0)}  pad ${pads.length ? `${pads[0].id.slice(0, 40)} [${pads[0].mapping || 'no mapping'}]` : 'none'}  emulation ${navigator.gamepadInputEmulation ?? 'n/a'}`,
     `${IS_CONSOLE ? 'console · ' : ''}${navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110)}`,
   ].join('\n');
@@ -2093,6 +2235,8 @@ function pedPose(e) {
 let last = performance.now(), fpsAcc = 0, fpsN = 0, pingAt = 0;
 function frame(nowMs) {
   diagFrame(nowMs - last);
+  if (nowMs - last < 250) frameRecord(nowMs - last);   // (not the gap after the tab was hidden)
+  govern(nowMs); perfReport(nowMs);
   const dt = Math.min(0.1, (nowMs - last) / 1000);
   last = nowMs;
   fpsAcc += dt; fpsN++;
@@ -4157,8 +4301,10 @@ function drawRain(dt, sky) {
 // ---------------------------------------------------------------------------
 // The new renderer needs none of the classic art, so the game starts straight away; the classic
 // renderer waits for its art first.
+// (the bake workers are made now, so their code loads while the city is built: art2/game/pool.js warmPool)
+if (ART2_WANTED && worldCv) import('./art2/game/pool.js').then((P) => P.warmPool({ lowMem: LOW_MEM, artPx: /[?&]artpx=1\b/.test(location.search) ? 1 : 2 })).catch(() => {});
 if (ART2_WANTED) { connect(); requestAnimationFrame(frame); }
 else ensureV1Art().finally(() => { connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
-window.CLA = { S, send, WEAPONS, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };
+window.CLA = { S, send, WEAPONS, load: LOAD, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };

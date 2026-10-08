@@ -16,6 +16,7 @@
 
 import { T, TILE, MAP_W, MAP_H } from './constants.js';
 import { mulberry32, hash2 } from './rng.js';
+import { propGrid } from './propgrid.js';
 import { withDeterministicMath } from './dmath.js';
 import { PREFABS } from './prefab-data.js';
 import { LAND, TERRAIN, TERRAIN_CELL } from './worldmask.js';
@@ -472,6 +473,19 @@ export function waterKind(map, tx, ty) {
 export function generateCity(seed = 1337) {
   return withDeterministicMath(() => buildCity(seed));
 }
+// The world as plain data (what a worker sends or the browser's cache keeps: a structured clone keeps no methods
+// and no functions) - and back. client/worldgen.js builds the city off the page's thread and keeps it.
+export function cityData(m) {
+  const o = {};
+  for (const k of Object.keys(m)) if (typeof m[k] !== 'function') o[k] = m[k];
+  return o;
+}
+export function cityFromData(o) {
+  Object.setPrototypeOf(o, CityMap.prototype);
+  // (what the nature sites hang on it, which a clone drops: the wild biome at a tile)
+  if (o.terrainCls && !o.terrainCls.at) Object.defineProperty(o.terrainCls, 'at', { value: (tx, ty) => wildBiome(o.dist[ty * MAP_W + tx], terrainAt(o.terrainCls.cls, o.terrainCls.cw, tx, ty)), enumerable: false });
+  return o;
+}
 function buildCity(seed) {
   const m = new CityMap(seed);
   const rand = mulberry32(seed);
@@ -780,10 +794,10 @@ function terrain(m) {
   for (let i = 0; i < N; i++) {
     const x = i % W, y = (i / W) | 0;
     if (!land[i]) { m.tiles[i] = toLand[i] <= 12 || m.river[i] ? T.WATER : T.DEEP; continue; }
-    const c = terrainAt(cls, cw, x, y);
     const nearSea = m.distSea[i] <= 10;
     const z = m.zone[i];
     if (z === Z.CITY || z === Z.SOUTH) { m.tiles[i] = T.GRASS; continue; }
+    const c = terrainAt(cls, cw, x, y);   // (only where it counts: the city is all grass to start with)
     if (nearSea && (z !== Z.EAST || c !== 4)) { m.tiles[i] = T.SAND; continue; }
     m.tiles[i] = c === 3 ? (Math.sin(x * 0.045 + Math.cos(y * 0.06) * 2) + Math.sin(y * 0.05 - x * 0.02) + (hash2(x, y, 5) - 0.5) * 0.5 > 0.9 ? T.SAND : T.DIRT) : c === 4 ? T.DIRT : T.GRASS;
   }
@@ -807,16 +821,23 @@ function paintDistricts(m) {
   const W = MAP_W;
   const seeds = SEEDS.concat(ISLAND_SEEDS).map(([d, x, y]) => ({ d, x, y, z: m.zone[y * W + x] })).filter((s) => s.z);
   const seeded = new Set(seeds.map((s) => s.z));
+  // (each zone's seeds in their order; and the wobble's sines worked out once per row, column and diagonal - the same
+  // numbers from the same arguments, without four of them for every tile)
+  const byZone = new Map();
+  for (const s of seeds) { let l = byZone.get(s.z); if (!l) byZone.set(s.z, (l = [])); l.push(s); }
+  const sinY = new Float64Array(MAP_H), sinX = new Float64Array(W), sinS = new Float64Array(W + MAP_H), cosD = new Float64Array(W + MAP_H);
+  for (let y = 0; y < MAP_H; y++) sinY[y] = Math.sin(y / 17.3);
+  for (let x = 0; x < W; x++) sinX[x] = Math.sin(x / 15.7);
+  for (let k = 0; k < W + MAP_H; k++) { sinS[k] = Math.sin(k / 9.1); cosD[k] = Math.cos((k - MAP_H) / 8.3); }   // (x + y; x - y + MAP_H)
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
     const z = m.zone[i];
     if (!seeded.has(z)) continue;
     if (x >= PARK.x0 + 3 && x < PARK.x1 - 3 && y >= PARK.y0 + 3 && y < PARK.y1 - 3) { m.dist[i] = 12; continue; }
     if (z === Z.CITY && x >= ARTS.x0 && x < ARTS.x1 && y >= ARTS.y0 && y < ARTS.y1) { m.dist[i] = 46; continue; }
-    const wx = x + 7 * Math.sin(y / 17.3) + 4 * Math.sin((x + y) / 9.1), wy = y + 7 * Math.sin(x / 15.7) + 4 * Math.cos((x - y) / 8.3);
+    const wx = x + 7 * sinY[y] + 4 * sinS[x + y], wy = y + 7 * sinX[x] + 4 * cosD[x - y + MAP_H];
     let best = null, bd = Infinity;
-    for (const s of seeds) {
-      if (s.z !== z) continue;
+    for (const s of byZone.get(z)) {
       const d = (s.x - wx) ** 2 + (s.y - wy) ** 2;
       if (d < bd) { bd = d; best = s; }
     }
@@ -1456,28 +1477,34 @@ function findBlocks(m) {
       const j = st[--sp]; n++;
       const x = j % W, y = (j / W) | 0;
       if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-      for (const k of [j - 1, j + 1, j - W, j + W]) if (k >= 0 && k < W * MAP_H && free[k] && lab[k] < 0 && Math.abs((k % W) - x) <= 1) { lab[k] = nreg; st[sp++] = k; }
+      // (the four neighbours, in this order: left, right, up, down - unrolled, no array per tile)
+      for (let q = 0; q < 4; q++) {
+        const k = q === 0 ? j - 1 : q === 1 ? j + 1 : q === 2 ? j - W : j + W;
+        if (k >= 0 && k < W * MAP_H && free[k] && lab[k] < 0 && Math.abs((k % W) - x) <= 1) { lab[k] = nreg; st[sp++] = k; }
+      }
     }
     // biggest rectangles first (histogram method), down to a minimum lot
     const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
     const hgt = new Int32Array(bw);
+    const stK = new Int32Array(bw + 1), stH = new Int32Array(bw + 1);   // (the histogram's stack: start, height)
     for (let guard = 0; guard < 40; guard++) {
       let best = null;
       hgt.fill(0);
       for (let y = y0; y <= y1; y++) {
         for (let x = x0; x <= x1; x++) { const i = y * W + x; hgt[x - x0] = free[i] && lab[i] === nreg ? hgt[x - x0] + 1 : 0; }
-        const stack = [];
+        let sn = 0;
         for (let k = 0; k <= bw; k++) {
           const h = k < bw ? hgt[k] : 0;
           let start = k;
-          while (stack.length && stack[stack.length - 1][1] >= h) {
-            const [sk, sh] = stack.pop();
+          while (sn && stH[sn - 1] >= h) {
+            sn--;
+            const sk = stK[sn], sh = stH[sn];
             const w = k - sk;
             const area = sh * w;
             if (sh >= 5 && w >= 5 && (!best || area > best.area)) best = { x: x0 + sk, y: y - sh + 1, w, h: sh, area };
             start = sk;
           }
-          stack.push([start, h]);
+          stK[sn] = start; stH[sn] = h; sn++;
         }
       }
       if (!best || best.area < 36) break;
@@ -2184,10 +2211,13 @@ function atmSpot(m, b, x, loose = false) {
   for (const dx of [-18, 0, 18]) if (m.tileAtPx(x + dx, wy - 6) !== T.BUILDING || !F.has(m.tileAtPx(x + dx, wy + 8))) return false;
   if (!FOOT_LOOSE.has(m.tileAtPx(x, wy + 36))) return false; // room to stand at it
   for (const p of m.pois) if (Math.abs(p.x - x) < 52 && p.y > wy - 8 && p.y < wy + 60) return false; // a door (or another ATM) right there
-  for (const q of m.props) if (Math.abs(q.x - x) < 30 && Math.abs(q.y - wy) < 40) return false;
+  if (ATM_PG && ATM_PG.m === m) { if (ATM_PG.any(x - 31, wy - 41, x + 31, wy + 41, (q) => Math.abs(q.x - x) < 30 && Math.abs(q.y - wy) < 40)) return false; }
+  else for (const q of m.props) if (Math.abs(q.x - x) < 30 && Math.abs(q.y - wy) < 40) return false;
   for (const pu of m.pumps || []) if (Math.hypot(pu.x - x, pu.y - wy) < 60) return false;
   return true;
 }
+// (the props near a spot while the ATMs are placed: propgrid.js - that pass only adds props)
+let ATM_PG = null;
 function wallAtm(m, b, x, look, force = false, loose = false) {
   if (!force && !atmSpot(m, b, x, loose)) return null;
   const wy = (b.ty + b.th) * TILE;
@@ -2198,6 +2228,10 @@ function wallAtm(m, b, x, look, force = false, loose = false) {
 }
 
 function buildStreetAtms(m) {
+  ATM_PG = propGrid(m);
+  try { streetAtms(m); } finally { ATM_PG = null; ATM_BOX = null; }
+}
+function streetAtms(m) {
   const atms = m.pois.filter((p) => p.kind === 'atm');
   const distAt = (x, y) => m.dist[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)];
   // inside: every nightclub, and every other corner store ("ATM inside")
@@ -2259,7 +2293,10 @@ function buildStreetAtms(m) {
 // The wild places - woods, peaks, the islets - have none.
 function kioskAtm(m, di, atms, loose) {
   const F = loose ? FOOT_LOOSE : FOOT;
-  for (let ty = 2; ty < MAP_H - 2; ty++) for (let tx = 2; tx < MAP_W - 2; tx++) {
+  // (only the district's own box of tiles: the same scan, row by row, without the rest of the map)
+  const bb = distBoxes(m)[di];
+  if (!bb) return;
+  for (let ty = Math.max(2, bb[1]); ty < Math.min(MAP_H - 2, bb[3] + 1); ty++) for (let tx = Math.max(2, bb[0]); tx < Math.min(MAP_W - 2, bb[2] + 1); tx++) {
     const i = ty * MAP_W + tx;
     if (m.dist[i] !== di || !F.has(m.tiles[i]) || m.reserve[i] & 3 || m.deck[i] || hash2(tx, ty, 41) > 0.3) continue;
     // pavement with the road in front (south) and no pavement behind it: the back edge
@@ -2268,13 +2305,28 @@ function kioskAtm(m, di, atms, loose) {
     if ((!loose && FOOT.has(back)) || back === T.ROAD || back === T.WATER || back === T.DEEP) continue;
     if (m.tileAt(tx - 1, ty) === T.ROAD || m.tileAt(tx + 1, ty) === T.ROAD) continue;
     const x = (tx + 0.5) * TILE, y = ty * TILE + 4;
-    if (m.props.some((q) => Math.abs(q.x - x) < 40 && Math.abs(q.y - y) < 40)) continue;
+    if (ATM_PG && ATM_PG.m === m ? ATM_PG.any(x - 41, y - 41, x + 41, y + 41, (q) => Math.abs(q.x - x) < 40 && Math.abs(q.y - y) < 40) : m.props.some((q) => Math.abs(q.x - x) < 40 && Math.abs(q.y - y) < 40)) continue;
     addProp(m, 'atmw', x, y + 20, 11, { v: 'kiosk' });
     const poi = { id: m.pois.length, kind: 'atm', label: 'ATM', x, y: y + 42, r: 36 };
     m.pois.push(poi);
     atms.push(poi);
     return;
   }
+}
+
+// every district's box of tiles [x0, y0, x1, y1] (inclusive), while the ATMs are placed
+let ATM_BOX = null;
+function distBoxes(m) {
+  if (ATM_BOX && ATM_BOX.m === m) return ATM_BOX.out;
+  const out = [];
+  for (let ty = 0; ty < MAP_H; ty++) for (let tx = 0, i = ty * MAP_W; tx < MAP_W; tx++, i++) {
+    const d = m.dist[i];
+    const b = out[d];
+    if (!b) out[d] = [tx, ty, tx, ty];
+    else { if (tx < b[0]) b[0] = tx; if (tx > b[2]) b[2] = tx; if (ty > b[3]) b[3] = ty; }
+  }
+  ATM_BOX = { m, out };
+  return out;
 }
 
 // ---- estates: homes outside the city grid -----------------------------------------------------
@@ -2333,10 +2385,13 @@ function clearArea(m, x, y, w, h) {
   // homes are referenced by index: keep the list, but a gone home is never offered
   m.prefabs = m.prefabs.map((p) => (p.gone ? { ...p, tw: 0, th: 0 } : p));
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (m.tiles[ty * MAP_W + tx] !== T.BUILDING) m.set(tx, ty, T.GRASS);
+  // (most clearings take no props: then nothing below changes, and the lists aren't rebuilt for nothing)
+  let any = false;
+  for (const p of m.props) if (inside(Math.floor(p.x / TILE), Math.floor(p.y / TILE))) { any = true; break; }
   const keep = [];
   const remap = new Map();
-  m.props.forEach((p, i) => { if (inside(Math.floor(p.x / TILE), Math.floor(p.y / TILE))) return; remap.set(i, keep.length); keep.push(p); });
-  if (keep.length !== m.props.length) {
+  if (any) m.props.forEach((p, i) => { if (inside(Math.floor(p.x / TILE), Math.floor(p.y / TILE))) return; remap.set(i, keep.length); keep.push(p); });
+  if (any && keep.length !== m.props.length) {
     const gone = new Set(m.props.filter((p, i) => !remap.has(i)));
     m.props = keep;
     m.lamps = m.lamps.filter((l) => !gone.has(l));
@@ -2994,7 +3049,9 @@ function stationIndex(m, pts) {
 // Where the line meets a highway at ground level it dips under it in a short tunnel (no level
 // crossing on a highway) - unless that would put the tunnel under water or a station.
 function markUnderpasses(m, pts) {
-  const hwy = new Set();
+  // (the tiles near a highway: a mark per tile of the map, a set for any key outside it - the same answers as one set)
+  const N = MAP_W * MAP_H, marks = new Uint8Array(N), outside = new Set();
+  const hwy = { add: (k) => { if (k >= 0 && k < N) marks[k] = 1; else outside.add(k); }, has: (k) => (k >= 0 && k < N ? marks[k] === 1 : outside.has(k)) };
   for (const e of m.edges || []) {
     if ((e.kind !== 'hwy' && e.kind !== 'ramp') || e.lvl) continue;
     const r = (e.w || 128) / 2 + 20;
@@ -4262,9 +4319,12 @@ function clearHospitalFronts(m) {
   }
 }
 
+// a tile's key in the set of tiles with a door (or anything you use) on them: unique for any tile within 4000 of the map
+// (a POI out past its edge included), which the "x,y" strings it replaces were too
+const doorKey = (tx, ty) => (ty + 4096) * 16384 + tx + 4096;
 function buildStreetProps(m) {
   const doorsNear = new Set();
-  for (const p of m.pois) doorsNear.add(`${Math.floor(p.x / TILE)},${Math.floor(p.y / TILE)}`);
+  for (const p of m.pois) doorsNear.add(doorKey(Math.floor(p.x / TILE), Math.floor(p.y / TILE)));
   const W = MAP_W;
   for (let ty = 1; ty < MAP_H - 1; ty++) for (let tx = 1; tx < W - 1; tx++) {
     if (m.tiles[ty * W + tx] !== T.SIDEWALK) continue;
@@ -4274,7 +4334,7 @@ function buildStreetProps(m) {
     const d = DISTRICTS[m.dist[ty * W + tx]];
     const h = hash2(tx, ty, 77);
     let skip = false;
-    for (let dy = -1; dy <= 1 && !skip; dy++) for (let dx = -2; dx <= 2; dx++) if (doorsNear.has(`${tx + dx},${ty + dy}`)) skip = true;
+    for (let dy = -1; dy <= 1 && !skip; dy++) for (let dx = -2; dx <= 2; dx++) if (doorsNear.has(doorKey(tx + dx, ty + dy))) skip = true;
     if (skip) continue;
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
     if (nearRoad) {
@@ -4347,7 +4407,7 @@ function buildBusStops(m, doorsNear) {
       const tx = Math.floor(q.x / TILE), ty = Math.floor(y / TILE);
       let ok = true;
       for (let dx = -2; dx <= 2 && ok; dx++) { const t = m.tileAt(tx + dx, ty); if (t !== T.SIDEWALK || m.deck[ty * MAP_W + tx + dx]) ok = false; }
-      for (let dx = -3; dx <= 3 && ok; dx++) for (let dy = -1; dy <= 1; dy++) if (doorsNear.has(`${tx + dx},${ty + dy}`)) ok = false;
+      for (let dx = -3; dx <= 3 && ok; dx++) for (let dy = -1; dy <= 1; dy++) if (doorsNear.has(doorKey(tx + dx, ty + dy))) ok = false;
       if (!ok || near(q.x, y, 70) || onSubwayPlaza(m, q.x, y)) continue;
       addProp(m, 'busstop', (tx + 0.5) * TILE, y, 14, { face: side < 0 ? 'S' : 'N' });
     }

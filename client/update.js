@@ -100,8 +100,8 @@ async function waitForWeb(v) {
 async function hardRefresh(v) {
   const t = readTry();
   writeTry({ v, t: Date.now(), n: (t && t.v === v ? t.n : 0) + 1 });
-  try { if (self.caches) for (const k of await caches.keys()) if (k.startsWith('city-life-auto-')) await caches.delete(k); } catch { /* best effort */ }
-  try { localStorage.removeItem(KEY); } catch { /* blocked */ }
+  // (the offline copies stay - the service worker fetches fresh first and keeps what it gets - and so does the build
+  // stamp: boot.js fetches what changed since this build, and version.json serves the new one by now)
   // the page and its loader come with a 10-minute cache of their own
   await Promise.race([Promise.all(['./', 'index.html', 'client/boot.js', 'manifest.webmanifest'].map((f) => fetch(f, { cache: 'reload' }).catch(() => null))), wait(8000)]);
   try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) r.update().catch(() => {}); } catch { /* no worker */ }

@@ -3,7 +3,11 @@
 // job (see _next):
 //
 //   const pool = new WorkerPool({ lowMem });          size: poolSize (below)
-//   pool.init(worldData) -> Promise<{ providers, ms: { post, init } }>   every worker gets its own copy
+//   pool.init(worldData, key) -> Promise<{ providers, ms: { post, init } }>   every worker gets its own copy; with key
+//                            (the city is in this browser's copy: client/worldcache.js) each reads it itself, in
+//                            parallel and off the page's thread, and is sent it only if that fails
+//   warmPool(opts) / takeWarmPool(opts)   a pool made early (main.js, while the city is built) so the workers'
+//                            modules are loaded by the time the world is ready
 //   pool.request(key, op, args, prio, done)  queue a job (done(result, error) once, unless it is cancelled);
 //                                            a key already queued or running is not queued twice (its
 //                                            priority is raised instead) - returns whether it was queued
@@ -52,6 +56,12 @@ export function cacheBudget(lowMem, workers, nav = typeof navigator !== 'undefin
   return { stat: workers >= 4 ? 90 : 120, spr: 32, model: 48 };
 }
 
+// How many baked chunks the browser keeps (chunkstore.js: ~0.4 MB each, compressed): a phone fewer.
+export function keepCap(lowMem, nav = typeof navigator !== 'undefined' ? navigator : null) {
+  const dm = (nav && nav.deviceMemory) || 0;
+  return lowMem || (dm && dm <= 2) ? 40 : isPhone(nav) || (dm && dm <= 4) ? 90 : 180;
+}
+
 export class WorkerPool {
   // (timing: the waits, for the tests - { respawn: [ms...], stuck, initStuck, watch })
   constructor({ lowMem = false, artPx = 2, size = poolSize(lowMem), url = new URL('./worker.js', import.meta.url), budget = null, timing = null } = {}) {
@@ -85,13 +95,18 @@ export class WorkerPool {
   get size() { return this.workers.filter((w) => w.alive).length; }
   get idle() { return !this.queue.length && this.workers.every((w) => !w.busy); }
 
-  // Send the world to every worker. Resolves once all have answered (or failed).
-  init(M) {
-    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model };
+  // Send the world to every worker (or, with key, let each read it from the browser's copy). Resolves once all have
+  // answered (or failed).
+  init(M, key = null, keep = null) {
+    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model, artKey: (keep && keep.artKey) || null, keepCap: keepCap(this.lowMem) };
     let post = 0;
     const answers = this.workers.filter((w) => w.alive).map((w) => new Promise((res) => {
       const t = performance.now();
-      this._postInit(w, (r, err) => res(err ? null : r));
+      this._postInit(w, (r, err) => {
+        // (the copy wasn't there for it: the world follows, and the worker holds its jobs until it is in)
+        if (r && r.needWorld) { try { w.wk.postMessage({ id: 0, op: 'world', args: { M } }); } catch (e) { this._kill(w, `could not send the world: ${e.message || e}`); } }
+        res(err ? null : r);
+      }, key);
       post += performance.now() - t;
     }));
     const t0 = performance.now();
@@ -103,12 +118,14 @@ export class WorkerPool {
       return { providers: ok[0] || null, workers: ok.length, ms: { post, init: performance.now() - t0 } };
     });
   }
-  // the world to one worker (an init job: it counts against the worker's slots until it answers)
-  _postInit(w, done) {
+  // the world to one worker (an init job: it counts against the worker's slots until it answers); key: just where to
+  // read it (a replacement worker is always sent it)
+  _postInit(w, done, key = null) {
     const id = this.nextId++;
     const job = { key: `init:${w.i}:${id}`, op: 'init', id, w, t0: performance.now(), init: true, done };
     this.byId.set(id, job); w.busy++; w.running.add(job);
-    try { w.wk.postMessage({ id, op: 'init', args: this.initArgs }); } catch (e) {
+    const args = { ...this.initArgs, ...(key ? { M: null, key } : null), tidy: w.i === 0 };
+    try { w.wk.postMessage({ id, op: 'init', args }); } catch (e) {
       this.byId.delete(id); w.busy--; w.running.delete(job);
       this._kill(w, `could not send the world: ${e.message || e}`);
       done(null, 'could not send the world');
@@ -256,4 +273,20 @@ export class WorkerPool {
     this.queue.length = 0; this.jobs.clear(); this.byId.clear();
     this.dead = true; this.initArgs = null;
   }
+}
+
+// ---- a pool made early -----------------------------------------------------------------------------------------
+// main.js makes the pool as the page starts (before the city is in): the workers load their modules meanwhile. The
+// renderer takes it when it starts (or makes its own, if the settings it was made with no longer fit).
+let WARM = null;
+export function warmPool(opts) {
+  if (!WARM) { try { WARM = new WorkerPool(opts); } catch { WARM = null; } }
+  return WARM;
+}
+export function takeWarmPool(opts) {
+  const p = WARM;
+  WARM = null;
+  if (p && !p.dead && !p.disposed && !!p.lowMem === !!opts.lowMem && p.artPx === opts.artPx) return p;
+  if (p) p.dispose();
+  return new WorkerPool(opts);
 }

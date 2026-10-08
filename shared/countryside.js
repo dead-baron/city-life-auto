@@ -92,11 +92,22 @@ export function countrysideRoads(ctx) {
   };
   build();
   const satIn = (x, y, w, h) => (x < 0 || y < 0 || x + w > W || y + h > H ? 1 : sat[(y + h) * (W + 1) + x + w] - sat[y * (W + 1) + x + w] - sat[(y + h) * (W + 1) + x] + sat[y * (W + 1) + x]);
-  // what's been claimed since the table was built (the lots placed so far and their roads in)
-  const claimed = []; // tile rects [x0, y0, x1, y1), inclusive-exclusive
+  // what's been claimed since the table was built (the lots placed so far and their roads in): tile rects
+  // [x0, y0, x1, y1), inclusive-exclusive, filed by the 32-tile cells they cover (a rect that overlaps a lot
+  // shares a cell with it, so a look at the lot's cells finds it)
+  const CB = 32, cells = new Map();
+  const cellKey = (bx, by) => (by + 64) * 4096 + bx + 64;
+  const claim = (r) => {
+    for (let by = Math.floor(r[1] / CB); by <= Math.floor((r[3] - 1) / CB); by++) for (let bx = Math.floor(r[0] / CB); bx <= Math.floor((r[2] - 1) / CB); bx++) {
+      const k = cellKey(bx, by); let l = cells.get(k); if (!l) cells.set(k, (l = [])); l.push(r);
+    }
+  };
   const badIn = (x, y, w, h) => {
     if (satIn(x, y, w, h)) return 1;
-    for (const [a, b, c, d] of claimed) if (a < x + w && c > x && b < y + h && d > y) return 1;
+    for (let by = Math.floor(y / CB); by <= Math.floor((y + h - 1) / CB); by++) for (let bx = Math.floor(x / CB); bx <= Math.floor((x + w - 1) / CB); bx++) {
+      const l = cells.get(cellKey(bx, by));
+      if (l) for (const [a, b, c, d] of l) if (a < x + w && c > x && b < y + h && d > y) return 1;
+    }
     return 0;
   };
 
@@ -168,14 +179,14 @@ export function countrysideRoads(ctx) {
     const site = { ...S, x, y, d: m.dist[(y + (S.h >> 1)) * W + x + (S.w >> 1)] };
     m.countrySites.push(site);
     for (let ty = y - 1; ty < y + S.h + 1; ty++) for (let tx = x - 1; tx < x + S.w + 1; tx++) m.reserve[ty * W + tx] |= 32;
-    claimed.push([x - 1, y - 1, x + S.w + 1, y + S.h + 1]);
+    claim([x - 1, y - 1, x + S.w + 1, y + S.h + 1]);
     const pts = rounded(route(S, x, y, q), 4 * TILE, false, 8);
     measure(pts);
     lines.push({ pts, kind: S.road, lvl: 0, name: `${S.name} Road`.replace(' Road Road', ' Road'), culdesac: true });
     // the access road is now a road too (later lots keep off it)
     for (let k = 0; k + 1 < pts.length; k++) {
       const a = pts[k], b = pts[k + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 16));
-      for (let j = 0; j <= n; j++) { const tx = Math.floor((a.x + (b.x - a.x) * (j / n)) / TILE), ty = Math.floor((a.y + (b.y - a.y) * (j / n)) / TILE); claimed.push([tx - 3, ty - 3, tx + 4, ty + 4]); }
+      for (let j = 0; j <= n; j++) { const tx = Math.floor((a.x + (b.x - a.x) * (j / n)) / TILE), ty = Math.floor((a.y + (b.y - a.y) * (j / n)) / TILE); claim([tx - 3, ty - 3, tx + 4, ty + 4]); }
     }
   }
 }

@@ -2,6 +2,7 @@
 // Serves the static client, accepts WebSocket players, runs the 20 Hz world tick and
 // persists profiles. Zero third-party dependencies: `node server/index.js`.
 import { createServer } from 'node:http';
+import { reportsText } from './perfreports.js';
 import { readFile, stat } from 'node:fs/promises';
 import { readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { join, normalize, extname } from 'node:path';
@@ -52,6 +53,11 @@ const server = createServer(async (req, res) => {
     if (why) { res.writeHead(why === 'quota' ? 503 : 429, { 'content-type': 'text/plain', 'retry-after': '60' }); res.end(why === 'quota' ? QUOTA_MSG : 'Too many requests'); return; }
   }
   if (path === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok'); return; }
+  if (path === '/perf') {   // how players' devices loaded and ran the game (server/perfreports.js)
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
+    res.end(reportsText(world));
+    return;
+  }
   if (path === '/stats') {
     res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
     res.end(JSON.stringify(statsSnapshot()));

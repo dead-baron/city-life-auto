@@ -27,7 +27,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 |---|---|
 | `npm run dev` | Server with the dev/playtest panel (press `` ` `` in game) |
 | `npm start` | Production server (no cheats) |
-| `npm test` | Automated rule tests (100+) + a chaos simulation |
+| `npm test` | Automated rule tests (100+) + a chaos simulation + the performance budgets |
+| `node tools/perf.mjs` | The performance report: code each part of the page loads, building the city, baking chunks, against their budgets |
 | `npm run bots -- 50 60 ws://localhost:8080/ws --spread` | 50 simulated players for 60 s, prints tick time + bandwidth, writes `logs/bots-*.log` |
 
 ## Controls
@@ -125,4 +126,4 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
 | Pause menu (debug menu, map, players online, settings, controls) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
 
-Settings (⚙) include Graphics: a preset (Low / Medium / High / Ultra, picked for your device on first play - phones, tablets and consoles start on Medium, desktops on High or Ultra) plus a switch for each effect (lighting, vegetation off / still / live, vegetation density, wind sway, trampled grass and crops, golden-hour glow, shadows, puddle reflections, rain and fog detail, particles, render sharpness, tilt-shift blur), classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen, plus your account transfer code: copy it on one device and paste it on another to play the same character there.
+Settings (⚙) include Graphics: a preset (Low / Medium / High / Ultra, picked for your device on first play - phones, tablets and consoles start on Medium, desktops on High or Ultra) plus a switch for each effect (lighting, vegetation off / still / live, vegetation density, wind sway, trampled grass and crops, golden-hour glow, shadows, puddle reflections, rain and fog detail, particles, render sharpness, tilt-shift blur), "Keep it smooth" (on by default: the render size eases off a little while the frame rate can't keep up, and comes back when it can), a performance overlay (the load timeline, frame times and memory, for bug reports), classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen, plus your account transfer code: copy it on one device and paste it on another to play the same character there.

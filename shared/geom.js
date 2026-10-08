@@ -105,13 +105,17 @@ export function closestOnSeg(p, a, b) {
 
 // Nearest point on a measured polyline: { x, y, s (arc length), d (distance), i (segment) }.
 export function project(pts, p) {
-  let best = null;
+  // (closestOnSeg worked out in line, and one result at the end: the same numbers without an object per segment)
+  let bi = -1, bd = 0, bx = 0, by = 0, bt = 0;
   for (let i = 0; i + 1 < pts.length; i++) {
-    const q = closestOnSeg(p, pts[i], pts[i + 1]);
-    const d = Math.hypot(p.x - q.x, p.y - q.y);
-    if (!best || d < best.d) best = { x: q.x, y: q.y, d, i, s: pts[i].s + (pts[i + 1].s - pts[i].s) * q.t };
+    const a = pts[i], b = pts[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2)) : 0;
+    const qx = a.x + dx * t, qy = a.y + dy * t;
+    const d = Math.hypot(p.x - qx, p.y - qy);
+    if (bi < 0 || d < bd) { bi = i; bd = d; bx = qx; by = qy; bt = t; }
   }
-  return best;
+  return bi < 0 ? null : { x: bx, y: by, d: bd, i: bi, s: pts[bi].s + (pts[bi + 1].s - pts[bi].s) * bt };
 }
 
 // Segment intersection: returns {t, u, x, y} with t along ab and u along cd (both in 0..1) or null.

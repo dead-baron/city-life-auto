@@ -29,7 +29,7 @@
 //   w.ready, w.resize(W, H, dpr), w.frame(F), w.propChanged(i), w.resync(), w.diag(), w.stats(), w.dispose()
 // api: helpers lent by main.js (pedLook, vehLift, birds, umbrella colours, seats, scales).
 import { CHUNK, DECK_Z, groundZ } from './chunkbake.js';
-import { WorkerPool } from './pool.js';
+import { WorkerPool, takeWarmPool } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
@@ -225,7 +225,8 @@ const XING0 = { d: 0, b: [0, 0] };
 // ---- a 2D stand-in for the engine (?art2stub): the same API, painter's order, no lighting ---------------
 class StubEngine {
   constructor(canvas) { this.cv = canvas; this.g = canvas.getContext('2d'); this.chunks = new Map(); this.fb = new Map(); this.spr = new Map(); this.list = []; this.n = 0; }
-  static toCanvas(G) { const c = document.createElement('canvas'); c.width = G.w; c.height = G.h; const id = new ImageData(new Uint8ClampedArray(G.col), G.w, G.h); c.getContext('2d').putImageData(id, 0, 0); return c; }
+  // (a G-buffer, or the packed planes the workers send - p0 is the albedo - at G.ap world px per texel)
+  static toCanvas(G) { const c = document.createElement('canvas'); c.width = G.w; c.height = G.h; const src = G.col || G.p0, id = new ImageData(new Uint8ClampedArray(src.buffer, src.byteOffset, G.w * G.h * 4).slice(), G.w, G.h); c.getContext('2d').putImageData(id, 0, 0); c.ap = G.ap || 1; return c; }
   setQuality() {} onContextLost() {} dispose() { this.chunks.clear(); this.spr.clear(); }
   resize(w, h, dpr) { this.W = w; this.H = h; this.dpr = dpr; this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(h * dpr); }
   hasChunk(cx, cy) { return this.chunks.has(cy * 1000 + cx); }
@@ -246,13 +247,13 @@ class StubEngine {
     g.setTransform(z, 0, 0, z, Math.round(this.cv.width / 2 - f.camX * z), Math.round(this.cv.height / 2 - f.camY * z));
     g.imageSmoothingEnabled = false;
     for (const [k, c] of this.fb) if (!this.chunks.has(k)) g.drawImage(c, (k % 1000) * CHUNK, Math.floor(k / 1000) * CHUNK, CHUNK, CHUNK);
-    for (const [k, c] of this.chunks) g.drawImage(c, (k % 1000) * CHUNK, Math.floor(k / 1000) * CHUNK);
+    for (const [k, c] of this.chunks) g.drawImage(c, (k % 1000) * CHUNK, Math.floor(k / 1000) * CHUNK, c.width * c.ap, c.height * c.ap);
     this.list.sort((a, b) => a.y - b.y);
     for (const it of this.list) {
       const s = this.spr.get(it.key); if (!s) continue;
       g.globalAlpha = it.a;
       if (it.z0 < 0) { g.save(); g.translate(it.x, it.y); g.rotate(it.ang || 0); g.drawImage(s, -s.width / 2, -s.height / 2); g.restore(); }
-      else g.drawImage(s, Math.round(it.x - s.ax), Math.round(it.y - it.z0 - s.ay));
+      else { const ap = s.ap || 1; g.drawImage(s, Math.round(it.x - s.ax * ap), Math.round(it.y - it.z0 - s.ay * ap), s.width * ap, s.height * ap); }
       g.globalAlpha = 1;
     }
   }
@@ -282,6 +283,8 @@ export class World2 {
 
   constructor(o, engine, L, q) {
     this.S = o.S; this.map = o.map; this.gfx = o.gfx; this.lowMem = !!o.lowMem; this.api = o.api; this.onFail = o.onFail || (() => {});
+    this.worldKey = o.worldKey || null;            // the city is in this browser's copy under this key: the workers read it
+    this.artKey = o.artKey || null;                // baked chunks are kept in the browser under this build of the art (chunkstore.js)
     this.E = engine; this.L = L; this.q = q; this.tier = TIERS[q];
     this.W = 0; this.H = 0; this.dpr = 1;
     this.prov = { ground: false, statics: false, actors: false, peds: false };
@@ -323,22 +326,36 @@ export class World2 {
 
   async init() {
     try {
+      const t = performance.now();
       const [A, Pd] = await Promise.all([import('./actors.js').catch(() => null), import('./peds.js').catch(() => null)]);
       this.A = A; this.Pd = Pd;
+      this._loadMark('artmods', performance.now() - t);
     } catch { /* providers optional */ }
     if (this.failed) return;
     const t0 = performance.now();
     const M = worldData(this.map);
     this.t.clonePrep = performance.now() - t0;
     try {
-      this.pool = new WorkerPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 });
-      const r = await this.pool.init(M);
+      this.pool = takeWarmPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 });
+      const r = await this.pool.init(M, this.worldKey, { artKey: this.artKey });
+      this.resync(false);   // (what players changed in the world so far: a city read from the browser's copy has none of it)
       this.t.post = r.ms.post; this.t.workerInit = r.ms.init;
       this._providers(r.providers);
+      this._loadMark('workers', r.ms.init);
+      if (r.providers && r.providers.modsMs !== undefined) this._loadMark('workermods', r.providers.modsMs);
+      if (r.providers && r.providers.readMs) this._loadMark('workerread', r.providers.readMs);
+      this._loadMark('post', r.ms.post);
       console.info(`[art2] ${r.workers} bake worker(s) ready: send ${this.t.post.toFixed(0)} ms, init ${this.t.workerInit.toFixed(0)} ms; providers ${JSON.stringify(this.prov)}; caches ${JSON.stringify(this.pool.budget)} MB`);
     } catch (e) { console.error('[art2] worker pool', e); this.pool = null; }
     // without its workers nothing but people could be drawn: main.js starts the renderer again
     if (!this.failed && (!this.pool || this.pool.dead)) this._noWorkers();
+  }
+  // the load timeline (main.js): the workers ready, the first chunk of art, the whole screen drawn - each once
+  _loadMark(k, ms) {
+    const seen = this.loadSeen || (this.loadSeen = new Set());
+    if (seen.has(k)) return;
+    seen.add(k);
+    if (this.onLoad) this.onLoad(k, ms); else (this.loadQ || (this.loadQ = [])).push([k, ms]);
   }
   _providers(p) {
     p = p || {};
@@ -362,7 +379,7 @@ export class World2 {
     console.warn('[art2] the bake workers were lost - starting new ones', old ? old.lastWhy : '');
     let p = null;
     try { p = new WorkerPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 }); } catch (e) { console.error('[art2] worker pool', e); this.reviving = false; return false; }
-    p.init(worldData(this.map)).then((r) => {
+    p.init(worldData(this.map), null, { artKey: this.artKey }).then((r) => {
       this.reviving = false;
       if (this.failed) { p.dispose(); return; }
       if (p.dead) { this.pool = p; return; } // (the next frame tries again, or gives up)
@@ -491,7 +508,7 @@ export class World2 {
       for (const [k, prio] of bake) {
         const cx = k % 1000, cy = Math.floor(k / 1000), mode = modeOf(cx, cy);
         const st = this.chunkState.get(k), ver = this.ver.get(k) || 0;
-        if (st && st.mode === mode && st.ver === ver && E.hasChunk(cx, cy)) continue;
+        if (st && st.mode === mode && st.ver === ver && !st.preview && E.hasChunk(cx, cy)) continue;
         const fail = this.chunkFails.get(k);
         if (fail && performance.now() < fail.t) continue;
         const jk = `c${cx},${cy},${mode},${ver}`;
@@ -499,8 +516,30 @@ export class World2 {
         if (this.results.has(jk) || this.pool.has(jk) || this.results.size > 5) continue;
         const opt = { quality: this.q, seed: this.map.seed, lowMem: this.lowMem };
         if (mode >= 0) opt.cutaway = mode;
-        this.pool.request(jk, 'bakeChunk', { cx, cy, opt }, prio, (r, err) => this._baked(jk, k, cx, cy, mode, prio, r, err, ver));
+        // (it may come from - and go into - the browser's store of baked chunks: cut away round the building you're
+        // in, it's kept as that; the worker adds what players changed there to the key)
+        const ck = this.artKey ? `q${this.q}|a${this.E.ap || 1}|u1|${cx},${cy}${mode >= 0 ? `|c${mode}` : ''}` : null;
+        this.pool.request(jk, 'bakeChunk', { cx, cy, opt, ck }, prio, (r, err) => this._baked(jk, k, cx, cy, mode, prio, r, err, ver));
       }
+    }
+    // a look in the browser's store of baked chunks first, for what the view needs and doesn't have: drawn at once,
+    // and when it was kept with other props broken (exact: false) it stands in until its own bake lands
+    if (baking && this.artKey) {
+      const peeks = this.peeks || (this.peeks = new Map());
+      for (const [k, d] of need) {
+        const cx = k % 1000, cy = Math.floor(k / 1000);
+        if (E.hasChunk(cx, cy)) continue;
+        const mode = modeOf(cx, cy), ver = this.ver.get(k) || 0, pk = `p${cx},${cy},${ver},${mode}`;
+        if (peeks.has(pk)) continue;
+        peeks.set(pk, 1);
+        this.pool.request(pk, 'peekChunk', { cx, cy, ck: `q${this.q}|a${this.E.ap || 1}|u1|${cx},${cy}${mode >= 0 ? `|c${mode}` : ''}` }, d - 1e6, (r, err) => {
+          if (err || !r || r.none || !r.g || this.failed) { peeks.set(pk, 2); return; }
+          peeks.set(pk, 2);
+          this.results.set(pk, { jk: pk, key: k, cx, cy, mode, r, prio: d - 1e6, ver, preview: !r.exact });
+        });
+      }
+      for (const [pk, st] of peeks) { if (st === 1 || this.results.has(pk)) jobs.add(pk); }   // (waiting, or landed and not yet up)
+      if (peeks.size > 400) for (const [pk, st] of peeks) if (st === 2 && !this.results.has(pk)) peeks.delete(pk);
     }
     if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && !jobs.has(jk));
     for (const jk of this.results.keys()) if (!jobs.has(jk)) this.results.delete(jk); // landed too late to matter
@@ -512,6 +551,10 @@ export class World2 {
       for (const res of ready) {
         if (n <= 0) break;
         if (!need.has(res.key)) { if (free <= 0) continue; free--; }
+        if (res.preview || res.jk[0] === 'p') {   // (a look in the store: never over the real bake, or after it)
+          const st = this.chunkState.get(res.key);
+          if (st && !st.preview && st.ver === res.ver && E.hasChunk(res.cx, res.cy)) { this.results.delete(res.jk); continue; }
+        }
         n--;
         const t = performance.now();
         let ok = false;
@@ -519,14 +562,29 @@ export class World2 {
         this.results.delete(res.jk);
         if (!ok) continue;
         this.t.upChunkMs = performance.now() - t;
-        this.chunkState.set(res.key, { mode: res.mode, ver: res.ver, gh: res.r.gh, lights: this._prepLights(res.r.lights || []), live: res.r.live || null, blds: res.r.blds && res.r.blds.length ? res.r.blds : null });
+        this.chunkState.set(res.key, { mode: res.mode, ver: res.ver, preview: !!res.preview, gh: res.r.gh, lights: this._prepLights(res.r.lights || []), live: res.r.live || null, blds: res.r.blds && res.r.blds.length ? res.r.blds : null });
+        if (res.r.kept) this.n.kept = (this.n.kept || 0) + 1;
         this.fallbacks.delete(res.key);
         this.n.chunkUp++;
+        this._loadMark('art');
       }
+    }
+    // (the load timeline: the first time nothing on screen is a stand-in any more)
+    if (baking && !(this.loadSeen && this.loadSeen.has('screen'))) {
+      let missing = 0;
+      for (const k of need.keys()) {
+        const cx = k % 1000, cy = Math.floor(k / 1000);
+        if ((cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1 && !E.hasChunk(cx, cy)) missing++;
+      }
+      if (!missing && this.n.chunkUp) this._loadMark('screen');
     }
     // the engine keeps its chunk slots (least recently drawn goes first): forget what it let go
     if ((this.frameNo = (this.frameNo || 0) + 1) % 30 === 0) {
-      for (const k of this.chunkState.keys()) if (!E.hasChunk(k % 1000, Math.floor(k / 1000))) this.chunkState.delete(k);
+      for (const k of this.chunkState.keys()) {
+        if (E.hasChunk(k % 1000, Math.floor(k / 1000))) continue;
+        this.chunkState.delete(k);
+        if (this.peeks) for (const pk of this.peeks.keys()) if (pk.startsWith(`p${k % 1000},${Math.floor(k / 1000)},`)) this.peeks.delete(pk);   // (back in view: a look in the store again)
+      }
       for (const k of this.fallbacks) if (!this._fallback(k % 1000, Math.floor(k / 1000))) this.fallbacks.delete(k);
     }
   }
@@ -562,7 +620,7 @@ export class World2 {
       const jk = `o${cx},${cy}`;
       want.add(jk);
       if (!pool || pool.dead || !pool.ready || this.noBake || res.has(jk) || pool.has(jk)) continue;
-      pool.request(jk, 'bakeChunk', { cx, cy, opt: { quality: this.q, seed: this.map.seed, lowMem: this.lowMem, under: false } }, 1, (r, err) => { if (!err && r && r.g && !this.failed) res.set(jk, { cx, cy, g: r.g }); });
+      pool.request(jk, 'bakeChunk', { cx, cy, opt: { quality: this.q, seed: this.map.seed, lowMem: this.lowMem, under: false }, ck: this.artKey ? `q${this.q}|a${this.E.ap || 1}|u0|${cx},${cy}` : null }, 1, (r, err) => { if (!err && r && r.g && !this.failed) res.set(jk, { cx, cy, g: r.g }); });
     }
     if (n || this.seaActive) {   // (bakes for sea that has gone out of view are called off)
       if (pool && !pool.dead) pool.cancelWhere((jk) => jk[0] === 'o' && !want.has(jk));
@@ -1683,11 +1741,11 @@ export class World2 {
       for (let cx = Math.floor((p.x - 120) / CHUNK); cx <= Math.floor((p.x + 120) / CHUNK); cx++) { const k = cy * 1000 + cx; this.ver.set(k, (this.ver.get(k) || 0) + 1); }
   }
   // after a reconnect: the server's list of what is broken replaces the workers' and everything rebakes
-  resync() {
+  resync(rebake = true) {
     const list = [], lit = [], props = this.map.props || [];
     for (let i = 0; i < props.length; i++) { if (props[i].broken) list.push([i, { a: props[i].broken.a || 0 }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
     if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: list, lit, reset: true });
-    for (const k of this.chunkState.keys()) this.ver.set(k, (this.ver.get(k) || 0) + 1);
+    if (rebake) for (const k of this.chunkState.keys()) this.ver.set(k, (this.ver.get(k) || 0) + 1);
   }
 
   // ---- reporting ---------------------------------------------------------------------------------------------
@@ -1701,7 +1759,7 @@ export class World2 {
   }
   diag() {
     const p = this.pool ? this.pool.stats() : null, t = this.t;
-    return `q${this.q}${this.lowMem ? ' lowmem' : ''} chunks ${this.chunkState.size}+${this.fallbacks.size} placeholder (workers ${p ? p.workers + '/' + p.slots + (p.restarted ? ' restarted ' + p.restarted : '') : '-'}${this.n.revived ? ' new pool ' + this.n.revived : ''}, queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}, failing ${this.chunkFails.size}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms  sprites req ${this.n.sprReq} up ${this.n.sprUp} now ${this.n.sync} gen ${this.n.gen} out ${this.sprOut}  fades ${this.fades.size}  lights ${this.n.lights}  lost ${this.lost}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
+    return `q${this.q}${this.lowMem ? ' lowmem' : ''} chunks ${this.chunkState.size}+${this.fallbacks.size} placeholder (workers ${p ? p.workers + '/' + p.slots + (p.restarted ? ' restarted ' + p.restarted : '') : '-'}${this.n.revived ? ' new pool ' + this.n.revived : ''}, queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}, failing ${this.chunkFails.size}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms (kept ${this.n.kept || 0})  sprites req ${this.n.sprReq} up ${this.n.sprUp} now ${this.n.sync} gen ${this.n.gen} out ${this.sprOut}  fades ${this.fades.size}  lights ${this.n.lights}  lost ${this.lost}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
   }
 }
 

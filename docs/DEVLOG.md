@@ -3392,3 +3392,57 @@ From the design notes (playtest: "a high income NPC in a high-income part of the
   - A change of clothes throws the officer off. After 45 seconds of looking the car drives off, and the caller is told.
   - No abuse: only crimes you saw, one call every 90 seconds, and a car that looks for nobody else.
 - **Tests**: `test/witnesses.test.js` (rich and rough streets, the executive and the hustler, the police always reporting, fewer cars in the rough parts, security cameras only in the rich districts, calling it in and the match by clothes, a change of clothes, one call at a time, too late after a minute).
+
+## 2026-10-07 · Faster loading on phones, and checks that keep it fast
+
+The user's report: art loading slowly on a Pixel 7 Pro (and on an iPhone 14). I measured the whole way into the game on a 2-core test machine, with phone-sized screens. The loading timeline is now in the performance overlay, so real phones can be measured too.
+- **What it was:**
+  - Building the city from the seed took 8.5-10 s on the page's own thread. The title screen froze meanwhile, and nothing could be drawn until it finished.
+  - Every update re-downloaded all 216 files (6.6 MB) before the game started, then reloaded the page.
+  - Each chunk of art took 0.5-1.8 s to bake, and every one had to be baked again on every visit.
+- **The city is built twice as fast** (8.5-10 s → 4.5 s in node), and the world is the same bit for bit (every field hashed against the old build):
+  - V8's `hypot` (in `shared/dmath.js`) has a two-argument path with no array per call. There are millions of these calls.
+  - The "clear the props round here" passes look in a grid of props (`shared/propgrid.js`) instead of at all 30,000, for every point along a trail.
+  - The ATM spots and the street props do the same, with number keys instead of strings.
+  - The countryside lots file their claimed ground by cell.
+  - `findBlocks` makes no array per tile.
+  - The districts' wobble works out its sines once per row, column and diagonal.
+  - Road ends only measure lines whose box is within reach, and `project` makes no object per segment.
+  - The test suite is faster too: 443 s → 270 s.
+- **Off the page's thread, and kept** (`client/worldgen.js`, `client/worldcache.js`):
+  - `boot.js` starts building the city in a worker as the page loads, alongside the code loading and the connection. The title screen says "Building the city..." and the server's welcome waits for it.
+  - The browser keeps the city it built (IndexedDB) under a hash of the world itself (version.json `world`). The next visit reads it back in about 0.2 s, until a build changes the world. A kept city is checked against the server's fingerprint and rebuilt if it differs.
+  - The bake workers read the kept city themselves, in parallel, so the page no longer copies 37 MB to each one.
+  - The bake workers are started while the city is built, so their code is loaded by the time it's ready.
+- **Baked chunks are kept** (`client/art2/game/chunkstore.js`):
+  - Each chunk is gzipped (0.2-0.7 MB). Phones keep 90 and other devices 180; the oldest go first.
+  - They're keyed by a hash of everything a bake reads (version.json `art`), so a build that changes the art or the world bakes afresh.
+  - Props a player broke or campfires lit nearby are part of a chunk's key. A kept copy with other props broken stands in until the chunk's own bake lands.
+  - Chunks cut away round the building you stand in are kept as such.
+  - On the test machine, the second load had the whole screen drawn 3.0 s after opening the page, against 20.7 s the first time.
+- **Updates download only what changed:**
+  - version.json has every file's hash, and the browser remembers the last build's.
+  - The page reloads only when the page itself changed (index.html, the loader, the stylesheet).
+  - A first visit doesn't wait at all. The offline copy for practice mode is fetched 20 s later.
+  - When the server announces a new build, the offline copies and the build stamp are now kept.
+- **Less on the page's thread:** the classic renderer's coast tracing and highway deck are only made when the classic renderer draws (~0.5 s on the test machine).
+- **Keep it smooth (adaptive sharpness):**
+  - When a device can't hold about 45 fps at the chosen sharpness (Ultra on a phone, mostly), the render size steps down 15% at a time, a few seconds apart.
+  - It never goes below 60% of the setting (or 0.75 pixel ratio), and comes back up when there's room.
+  - A step that doesn't help (the CPU holding it back, or a phone capping power at 30 fps) is undone, and it waits a minute, then longer, before trying again.
+  - On by default: Settings → "Keep it smooth".
+- **Seeing how real devices do:**
+  - The performance overlay (Settings, or `?diag`) shows the load timeline: code, welcome, city (built or read back), renderer, workers, first art and the whole screen drawn, plus frame times and the sharpness.
+  - Each page sends one report 20 s after its screen is first drawn. The server keeps the latest 60 (no names) and lists them at **`/perf`** (play.deadbaron.com/perf). It also logs a `[perf]` line.
+- **Checks for every build** (`test/perf.test.js`; `node tools/perf.mjs` prints the report). Budgets:
+  - **Code each part loads (gzipped):** the page 620 KB in 76 files (budget 720), the city worker 277 KB, the renderer 302 KB, a bake worker 823 KB.
+  - **Title screen assets:** 247 KB.
+  - **Building the city:** 20-25 yardsticks (budget 40); the yardstick is a fixed CPU workload, so a slow machine doesn't fail.
+  - **Baking a sample of chunks** on Medium and Ultra: 45-57 yardsticks (budget 90).
+  - **The city's weight:** 37 MB (budget 46).
+  - **A kept chunk:** 722 KB at most (budget 1000).
+  - **Also checked:**
+    - the renderer stays out of the page's first load;
+    - a kept city is the city, value for value;
+    - version.json's `world` and `art` hashes are current (stamping now generates the city to hash it, about 5 s).
+- **Not measured here:** real phone GPUs (the test machine has none). The `/perf` page and the overlay are how we'll see the Pixel and the iPhone. Safari reports 4 cores on an iPhone, so it gets 3 bake workers.

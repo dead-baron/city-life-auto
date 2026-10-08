@@ -12,6 +12,7 @@
 // place with what the renderer draws on top (statics.js addNature): the bridge, the falls, the footbridge.
 // Reserve bit 32 keeps the wilds' random trees off it.
 import { T, TILE, MAP_W, MAP_H } from './constants.js';
+import { propGrid } from './propgrid.js';
 import { hash2 } from './rng.js';
 
 // the giant redwoods' trunks (solid radius, px) by size - Highland Woods' groves (map.js redwoodGroves) and the
@@ -98,7 +99,16 @@ function addCounter(m, kind, label, x, y, r = 44) {
 }
 
 // H: { addProp(m, t, x, y, solidR, extra) }
+// (the props near a spot, while the sites are built: propgrid.js. Here props are only added (H.addProp) or dropped
+// where they stand (dropProp), so the grid stays right for the whole pass.)
+let PG = null;
+const nearProps = (m, x0, y0, x1, y1, fn) => (PG && PG.m === m ? PG.each(x0, y0, x1, y1, fn) : m.props.forEach(fn));
+const anyProp = (m, x0, y0, x1, y1, pred) => (PG && PG.m === m ? PG.any(x0, y0, x1, y1, pred) : m.props.some((q) => q && pred(q)));
 export function buildNatureSites(m, H) {
+  PG = propGrid(m);
+  try { buildSites(m, H); } finally { PG = null; }
+}
+function buildSites(m, H) {
   m.natureSites = [];
   Object.defineProperty(m, '_distStyle', { value: H.distStyle || [], enumerable: false, configurable: true });
   if (H.terrainAt && m.terrainCls && !m.terrainCls.at) Object.defineProperty(m.terrainCls, 'at', { value: (tx, ty) => H.terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty), enumerable: false });
@@ -250,7 +260,7 @@ function driveTracks(m, H) {
     let ok = true;
     for (const [x, y] of pts) { const t = m.tiles[at(Math.floor(x / TILE), Math.floor(y / TILE))]; if (!openLand(t) && t !== T.ROAD && t !== T.SIDEWALK) { ok = false; break; } }
     if (!ok) continue;
-    for (const [x, y] of pts) m.props.forEach((p, i) => { if (p && p.t !== 'painted' && Math.hypot(p.x - x, p.y - y) < 36) dropProp(m, i); });
+    for (const [x, y] of pts) nearProps(m, x - 37, y - 37, x + 37, y + 37, (p, i) => { if (p && p.t !== 'painted' && Math.hypot(p.x - x, p.y - y) < 36) dropProp(m, i); });
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
     (m.tracks ||= []).push({ pts, hw: 26, bb: [x0 - 40, y0 - 40, x1 + 40, y1 + 40], home: h.id });
     for (const [x, y] of pts) reserveRound(m, x, y, 30);
@@ -276,7 +286,7 @@ function hilltopTrack(m, H) {
   const top = [gx, Math.floor(gy / TILE) * TILE + 8], dx = top[0] - end.x;
   const pts = spline([[end.x, end.y - 20], [end.x + 30, end.y - 70], [end.x + dx * 0.3, end.y - 60 + (top[1] - end.y) * 0.2], [end.x + dx * 0.65, top[1] - 70], [top[0] - 90, top[1] - 34], [top[0], top[1] - 6]], 12);
   for (const [x, y] of pts) { const i = at(x, y); if (m.tiles[i] !== T.DIRT && m.tiles[i] !== T.GRASS && m.tiles[i] !== T.SAND && m.tiles[i] !== T.LOT && m.tiles[i] !== T.ROAD) return; }
-  for (const [x, y] of pts) m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < 40) dropProp(m, i); });
+  for (const [x, y] of pts) nearProps(m, x - 41, y - 41, x + 41, y + 41, (q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < 40) dropProp(m, i); });
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
   (m.tracks ||= []).push({ pts, hw: 28, bb: [x0 - 40, y0 - 40, x1 + 40, y1 + 40] });
   for (const [x, y] of pts) reserveRound(m, x, y, 34);
@@ -423,14 +433,14 @@ function marketSquare(m, H) {
   while (pl(x0 - 1, 397)) x0--; while (pl(x1 + 1, 397)) x1++; while (pl(1033, y0 - 1)) y0--; while (pl(1033, y1 + 1)) y1++;
   if (x1 - x0 < 14 || y1 - y0 < 16) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
-  const busy = (tx, ty, r) => m.props.some((q) => q && q.t !== 'painted' && Math.hypot(q.x / TILE - tx, q.y / TILE - ty) < r);
+  const busy = (tx, ty, r) => anyProp(m, (tx - r) * TILE - 1, (ty - r) * TILE - 1, (tx + r) * TILE + 1, (ty + r) * TILE + 1, (q) => q.t !== 'painted' && Math.hypot(q.x / TILE - tx, q.y / TILE - ty) < r);
   const cxF = (x0 + x1 + 1) / 2, rows = [y0 + 3.4, y1 - 5.4];
   let n = 0, k = 0;
   // two rows of stalls across the square, facing south (the fountain between the rows), crates in front
   const MOVABLE = new Set(['bench_a', 'bench_b', 'bench_m', 'trashcan', 'planter_g', 'planter_sq', 'planter_fl', 'potted', 'news_a', 'news_b', 'news_c', 'bags', 'mosaic']);
   for (const ry of rows) for (const dx of [-5.9, -1.95, 1.95, 5.9]) {
     const tx = cxF + dx;
-    m.props.forEach((q, i) => { if (q && MOVABLE.has(q.t) && Math.abs(q.x / TILE - tx) < 1.3 && Math.abs(q.y / TILE - ry) < 1.2) dropProp(m, i); });   // (the square's loose benches and bins make way)
+    nearProps(m, (tx - 1.3) * TILE - 1, (ry - 1.2) * TILE - 1, (tx + 1.3) * TILE + 1, (ry + 1.2) * TILE + 1, (q, i) => { if (q && MOVABLE.has(q.t) && Math.abs(q.x / TILE - tx) < 1.3 && Math.abs(q.y / TILE - ry) < 1.2) dropProp(m, i); });   // (the square's loose benches and bins make way)
     if (busy(tx, ry, 1.15) || (m.pois || []).some((p) => Math.hypot(p.x / TILE - tx, p.y / TILE - ry) < 2.5)) continue;   // (round the square's trees and lamps, clear of anything you use)
     add('mstall', tx, ry, 14, { v: k, c: k + (ry > rows[0] ? 1 : 0), a: 0 }); n++; k++;
     if (k % 2) add('fruitcrate', tx + 1.2, ry + 1.4, 0);
@@ -543,7 +553,7 @@ function fernGorge(m, H) {
   add('creekrail', tx0, ty0 + 1.9, 0, { len: 150, a: 0 });
   // the trail: from the pull-off east through the ferns to the lily pool's west side, round to the falls
   const tr = trail(m, [[(tx0 + 3) * TILE, (ty0 + 1) * TILE], [299 * TILE, 172 * TILE], [302.5 * TILE, 177.5 * TILE], [303.6 * TILE, 182.5 * TILE]]);
-  for (const [x, y] of tr) m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < 30) dropProp(m, i); });
+  for (const [x, y] of tr) nearProps(m, x - 31, y - 31, x + 31, y + 31, (q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < 30) dropProp(m, i); });
   add('pbench', 303.2, 177.2, 8, { a: 0 });
   // firs and maples round the gorge, ferns thick on the banks
   for (const [dx, dy, sp] of [[-7, -5, 'mtnFir'], [7.5, -6, 'mapleAutumn'], [9, 2, 'mtnFir'], [-8, 6, 'maple'], [8, 9, 'mtnFir'], [-3, 13, 'maple'], [10, 14, 'mtnFir'], [-9, -12, 'mtnFir']]) { const x = LOW[0] + dx, y = LOW[1] + dy; if (!wet.has(at(x, y)) && m.tiles[at(x, y)] === T.GRASS) add('tree_a', x, y, 12, { sp, k: 1.35 }); }
@@ -797,7 +807,7 @@ function westportPier(m, H) {
     for (let tx = x0; tx < roadX; tx++) {
       const i = at(tx, ty);
       if (!land(i) || m.dist[i] !== D) continue;
-      m.props.forEach((q, j) => { if (q && q.t !== 'painted' && Math.floor(q.x / TILE) === tx && Math.floor(q.y / TILE) === ty) dropProp(m, j); });
+      nearProps(m, tx * TILE - 1, ty * TILE - 1, (tx + 1) * TILE + 1, (ty + 1) * TILE + 1, (q, j) => { if (q && q.t !== 'painted' && Math.floor(q.x / TILE) === tx && Math.floor(q.y / TILE) === ty) dropProp(m, j); });
       if (tx < x0 + 6) { m.tiles[i] = T.SAND; m.reserve[i] |= RES | 4; } else { m.tiles[i] = T.GRASS; m.reserve[i] |= RES; }
     }
   }
@@ -945,7 +955,7 @@ function pineLake(m, H) {
   const free = (tx, ty) => { const i = at(tx, ty); return land(i) && !m.reserve[i] && m.dist[i] === D; };
   for (let ty = LY - RY - 4; ty <= LY + RY + 4; ty++) for (let tx = LX - RX - 4; tx <= LX + RX + 4; tx++) if (!free(tx, ty)) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
-  const clearR = (tx, ty, r) => m.props.forEach((p, i) => { if (p && p.t !== 'painted' && Math.hypot(p.x / TILE - tx, p.y / TILE - ty) < r) dropProp(m, i); });
+  const clearR = (tx, ty, r) => nearProps(m, (tx - r) * TILE - 1, (ty - r) * TILE - 1, (tx + r) * TILE + 1, (ty + r) * TILE + 1, (p, i) => { if (p && p.t !== 'painted' && Math.hypot(p.x / TILE - tx, p.y / TILE - ty) < r) dropProp(m, i); });
   const way = (cp, r) => { const pts = spline(cp.map(([x, y]) => [x * TILE, y * TILE]), 16); for (const [x, y] of pts) { clearR(x / TILE, y / TILE, r / TILE + 1); paint(m, x, y, r, T.DIRT, (t) => t === T.GRASS || t === T.DIRT || t === T.SAND); } return pts; };
   clearR(LX, LY, RX + 6);
   // the lake: a wobbly oval, deep in the middle
@@ -1071,7 +1081,9 @@ function cedarCreek(m, H) {
   const cy = C.y / TILE;
   const pts = spline([[AX + 1, ay - 0.5], [AX + 0.5, ay + 3], [AX - 3, ay + 7], [AX + 1.5, cy - 7], [AX, cy - 2], [AX, cy + 2], [AX - 1.5, cy + 7], [AX + 3, cy + 13], [AX - 2.5, cy + 20], [BX + 1, by + 0.5]].map(([x, y]) => [x * TILE, y * TILE]), 12);
   // (nothing of the park's dressing may stand in it or on its banks)
-  m.props.forEach((q, i) => { if (!q || q.t === 'painted') return; const [d] = nearest(pts, q.x, q.y); if (d < 3 * TILE) dropProp(m, i); });
+  { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const r = 3 * TILE + 2;
+    nearProps(m, x0 - r, y0 - r, x1 + r, y1 + r, (q, i) => { if (!q || q.t === 'painted') return; const [d] = nearest(pts, q.x, q.y); if (d < 3 * TILE) dropProp(m, i); }); }
   const wet = carveWater(m, pts, (s) => 28 + 8 * Math.sin(s * 19) + (s < 0.06 ? 10 : 0));
   for (const i of wet) m.lake[i] = 0;
   const wetSet = new Set(wet);
@@ -1853,7 +1865,10 @@ function dropProp(m, i) {
   if (!p) return;
   const e = m.propSolid && m.propSolid.get(i);
   if (e) {
-    for (const arr of m.solidProps.values()) { const k = arr.indexOf(e); if (k >= 0) { arr.splice(k, 1); break; } }
+    // (the cell it was filed under - map.js addSolidProp - else a look through them all, as before)
+    const own = m.solidProps.get(Math.floor(e.y / TILE) * MAP_W + Math.floor(e.x / TILE)), k0 = own ? own.indexOf(e) : -1;
+    if (k0 >= 0) own.splice(k0, 1);
+    else for (const arr of m.solidProps.values()) { const k = arr.indexOf(e); if (k >= 0) { arr.splice(k, 1); break; } }
     m.propSolid.delete(i);
   }
   m.props[i] = { t: 'painted', x: p.x, y: p.y };   // (kept in place: other props keep their indices)
@@ -2449,7 +2464,7 @@ function canyonWash(m, H) {
   const at = (tx, ty) => Math.floor(ty) * MAP_W + Math.floor(tx);
   const T0 = (tx, ty) => [pt.x + tx * TILE, pt.y + ty * TILE];
   const add = (t, x, y, r = 0, extra = null) => H.addProp(m, t, Math.round(x), Math.round(y), r, extra);
-  const clearR = (x, y, r) => m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < r) dropProp(m, i); });
+  const clearR = (x, y, r) => nearProps(m, x - r - 1, y - r - 1, x + r + 1, y + r + 1, (q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < r) dropProp(m, i); });
   // the wash: from the pool's south side out across the floor, east to the sea
   const wash = spline([[o.x + 10, o.y + 60], T0(29, 14), T0(35, 18), T0(40, 23), T0(45, 27), T0(51, 31), T0(56, 35), T0(61, 38.5)], 14);
   for (const [x, y] of wash) {
@@ -2624,7 +2639,7 @@ function willowRiver(m, H) {
   const fresh = [];
   const water = (pts, hw, lake = false) => { const t = carveWater(m, pts, hw); for (const i of t) { if (lake) m.lake[i] = 1; fresh.push(i); } return t; };
   // anything the map had put where the water and the cliff go (the wilds' trees come later and keep off reserved ground)
-  const clearArea = (x, y, r) => m.props.forEach((p, i) => { if (p && p.t !== 'painted' && Math.hypot(p.x - x, p.y - y) < r) dropProp(m, i); });
+  const clearArea = (x, y, r) => nearProps(m, x - r - 1, y - r - 1, x + r + 1, y + r + 1, (p, i) => { if (p && p.t !== 'painted' && Math.hypot(p.x - x, p.y - y) < r) dropProp(m, i); });
   // the creek off the headland, down to the lip of the falls
   const F = P(150, -760);                                                     // the lip (centre)
   const creek = spline([P(900, -1940), P(700, -1700), P(480, -1400), P(300, -1100), P(190, -880), [F[0], F[1] - 30]]);
