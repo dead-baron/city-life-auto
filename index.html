@@ -59,7 +59,7 @@
       <button data-b="vehicle" class="car">CAR</button>
       <button data-b="dive" class="dive"><span class="foot">ROLL</span><span class="veh">BRAKE</span></button>
       <button data-b="throw" class="throw">THROW</button>
-      <button data-b="nextw" class="wpn">WPN</button>
+      <button data-b="nextw" class="wpn" id="b-wpn" title="Tap: next weapon · hold: pick one"><span class="wi"></span><span class="wl">WPN ⇄</span></button>
       <button data-b="reload" class="reload">RELOAD</button>
       <button data-b="use" class="heal">ITEMS</button>
       <button data-b="horn" class="horn">HORN</button>
@@ -73,6 +73,7 @@
   <div id="interior" class="hidden"><canvas id="int-cv"></canvas><button id="int-open">▲ Front desk</button></div>
   <div id="inv" class="hidden overlay"><div class="panel"><div class="mhead"><h2>BAG</h2><button class="x" data-close>✕</button></div><p class="msub inv-cash"></p><div class="inv-body"></div></div></div>
   <div id="wheel" class="hidden"></div>
+  <div id="wpick" class="hidden"></div>
   <div id="spec-pad" class="hidden"></div>
   <div id="spec" class="hidden"></div>
   <div id="menu" class="hidden"><div class="panel"><div class="mhead"><h2 id="m-title"></h2><button id="m-close">✕</button></div><p id="m-sub"></p><div id="m-money"></div><div id="m-opts"></div></div></div>

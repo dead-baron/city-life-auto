@@ -84,7 +84,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Finish off a downed player | hold F (or just hit them) | hold X | hold CAR |
 | Downed: Call for Help · ambulance ($200 from the bank) · cancel and wake up | H · J · C (or the buttons) | X · Y · B | the buttons |
 | Close a shop / desk / NPC menu or any panel | Esc, or click off it | B | tap anywhere off it |
-| Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN |
+| Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN by the FIRE button (or the weapon box, top right): tap for the next weapon, hold to pick any of them |
 | City map + waypoints (pick a category / place, or click the map) | M | Pause → Map (D-pad / stick, A pick, B back) | tap the radar or ▦, then tap |
 | Zoom the city map / look around / find yourself | mouse wheel or + / − · drag · C (or the + − ⌖ buttons) | RT / LT · right stick | pinch · drag · + − ⌖ buttons |
 | Dev teleport to any district, station or landmark | ` → 📍 Teleport (map or list) | Start → 🐞 Debug menu → 📍 Teleport | 🐞 → 📍 Teleport |
@@ -123,7 +123,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Sprint | Shift | Left stick all the way out | Left thumb all the way out |
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
-| Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | tap the weapon box · RELOAD · ITEMS · 🎒 |
+| Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | WPN (tap: next, hold: pick) · RELOAD · ITEMS · 🎒 |
 | Flashlight on / off (once you have one) | L | D-pad ↑ (on foot) | 🔦 |
 | World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
 | Pause menu (debug menu, map, players online, settings, controls) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |

@@ -121,6 +121,8 @@ function initTouch(hooks) {
   });
   for (const b of document.querySelectorAll('#tbtns [data-b]')) {
     const name = b.dataset.b;
+    // WPN: a tap switches to the next weapon, holding it opens the weapon picker (every weapon you carry)
+    if (name === 'nextw') { tapHold(b, () => { touch.tapped.add('nextw'); }, () => hooks.onWeaponPick?.()); continue; }
     const down = (e) => {
       e.preventDefault(); e.stopPropagation();
       if (name === 'dev') { hooks.onDev?.(); return; }
@@ -141,6 +143,34 @@ function initTouch(hooks) {
     b.addEventListener('mouseup', up);
     b.addEventListener('mouseleave', up);
   }
+}
+
+// A touch button with two uses: a tap (on release, held less than ms) and a hold (fires while still held). The
+// button shows pressed while down; sliding off it cancels the tap.
+export function tapHold(el, onTap, onHold, ms = 380) {
+  let timer = 0, down = false, held = false;
+  const buzz = (n) => { if (settings.vibrate && navigator.vibrate) navigator.vibrate(n); };
+  const press = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (down) return;
+    down = true; held = false; el.classList.add('on');
+    clearTimeout(timer);
+    timer = setTimeout(() => { timer = 0; if (!down) return; held = true; el.classList.remove('on'); buzz(15); onHold?.(); }, ms);
+  };
+  const release = (e) => {
+    if (e) e.preventDefault();
+    if (!down) return;
+    down = false; el.classList.remove('on'); clearTimeout(timer); timer = 0;
+    if (!held) { buzz(6); onTap?.(); }
+    held = false;
+  };
+  const cancel = () => { down = false; held = false; el.classList.remove('on'); clearTimeout(timer); timer = 0; };
+  el.addEventListener('touchstart', press, { passive: false });
+  el.addEventListener('touchend', release, { passive: false });
+  el.addEventListener('touchcancel', cancel, { passive: false });
+  el.addEventListener('mousedown', press);
+  el.addEventListener('mouseup', release);
+  el.addEventListener('mouseleave', cancel);
 }
 
 // Left stick appears wherever the thumb lands in the left zone (no hunting for a fixed pad).

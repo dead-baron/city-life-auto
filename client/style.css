@@ -222,7 +222,21 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 #tbtns .car { right: calc(max(22px, env(safe-area-inset-right)) + 74px); bottom: 186px; }
 #tbtns .throw { right: calc(max(22px, env(safe-area-inset-right)) + 140px); bottom: 176px; }
 #tbtns .horn, #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 74px; width: 58px; height: 46px; border-radius: 23px; font-size: 12px; }
-#tbtns .wpn { display: none; }
+/* WPN: next weapon (tap) or the weapon picker (hold), above RELOAD / HORN by the fire button, while you carry more
+   than fists */
+#tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 254px); bottom: 128px; width: 62px; height: 48px; border-radius: 16px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+#tbtns .wpn .wi canvas { width: 44px; height: 22px; image-rendering: pixelated; display: block; }
+#tbtns .wpn .wl { font-size: 10px; line-height: 1; letter-spacing: .5px; }
+body:not(.multi-wpn) #tbtns .wpn { display: none; }
+body.touch.multi-wpn #weapon::after { content: '⇄'; margin-left: 6px; font-size: 14px; opacity: .75; }
+#wpick { position: fixed; inset: 0; z-index: 31; background: rgba(0,0,0,.28); touch-action: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+#wpick .wp-box { width: min(780px, 96vw); max-height: 86vh; overflow-y: auto; background: rgba(10,12,16,.9); border: 2px solid rgba(255,255,255,.25); border-radius: 14px; padding: 6px 8px 8px; touch-action: pan-y; }
+#wpick .wp-h { font: 700 11px Rubik, sans-serif; letter-spacing: 2px; color: #aab; text-transform: uppercase; margin: 0 0 5px 2px; }
+#wpick .wp-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 5px; }
+#wpick .wp-w { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 3px; background: rgba(0,0,0,.55); border: 2px solid rgba(255,255,255,.2); color: #fff; border-radius: 10px; font: 600 11px/1.1 Rubik, sans-serif; text-align: center; cursor: pointer; touch-action: manipulation; }
+#wpick .wp-w.on { border-color: #f2c21b; background: rgba(242,194,27,.15); }
+#wpick .wp-w canvas { width: 44px; height: auto; image-rendering: pixelated; }
+#wpick .wp-w small { display: block; color: #aaa; font-size: 10px; }
 #tbtns .heal { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 10px; width: 52px; height: 30px; border-radius: 15px; font-size: 11px; }
 body.touch #weapon { pointer-events: auto; cursor: pointer; }
 .touch #helpbox, .touch #toasts { margin-left: 58px; }
@@ -285,6 +299,7 @@ body.portrait.touch #helpbox, body.portrait.touch #toasts { left: max(10px, env(
 body.portrait.touch #toasts { top: 250px; width: 80vw; }
 body.portrait.touch #job { top: auto; bottom: 300px; max-width: 86vw; }
 body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
+body.portrait.touch #tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 154px); bottom: 172px; }   /* (just above FIRE) */
 body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: 160px; }
 body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: 160px; }
 body.portrait.touch #helpbox, body.portrait.touch #toasts { margin-left: 0; }

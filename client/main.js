@@ -14,9 +14,9 @@ import { edgeInfo, EDGE_SLOW, EDGE_OUT } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { buildTeleport } from './devtp.js';
-import { createInventory, createWheel } from './inventory.js';
+import { createInventory, createWheel, createWeaponPicker } from './inventory.js';
 import { createSpectator, SPEC_LAYERS, SCHEMATIC_KEY } from './spectator.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
+import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -226,8 +226,8 @@ function onText(m) {
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
-      bag.refresh(); wheel.refresh();
-      if (m.dead) { wheel.close(); if (topOverlay() === 'inv') closeOverlay('inv'); }
+      bag.refresh(); wheel.refresh(); wpick.refresh();
+      if (m.dead) { wheel.close(); wpick.close(); if (topOverlay() === 'inv') closeOverlay('inv'); }
       if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); if (S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('dev'); } }
       { const g = document.getElementById('dev-god'); if (g) g.classList.toggle('on', !!m.god); }
       break;
@@ -379,7 +379,7 @@ function fixedStep() {
   if (wheel.open && S.padWheel && input.padAxes) wheel.point(input.padAxes.rx * 100, input.padAxes.ry * 100);
   if (!input.padView && S.padViewHeld && wheel.open && S.padWheel) { S.padWheel = false; wheel.release(performance.now() - (S.wheelAt || 0) < 250); }
   S.padViewHeld = input.padView;
-  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || spec;
+  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || wpick.open || spec;
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
   if (S.menuWasUp && !menuUp) S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
@@ -1202,6 +1202,7 @@ initInput(canvas, {
   },
   onKeyUp(k) { if (S.spec) S.spec.key(k, false); if (k === 'KeyX' && wheel.open) wheel.release(performance.now() - (S.wheelAt || 0) < 250); },
   onItems() { if (S.spec && S.spec.on) return; if (canWheel()) { if (wheel.open) wheel.close(); else wheel.show(true); } },
+  onWeaponPick() { openWeaponPick(); },
   onDev() { if (!S.playing) return; if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
@@ -1246,6 +1247,9 @@ function deathPad() {
 // ---- the bag + quick wheel ----------------------------------------------------------------------
 const bag = createInventory({ el: $('inv'), send: (o) => send(o), me: () => S.me });
 const wheel = createWheel({ el: $('wheel'), send: (o) => send(o), me: () => S.me });
+// the weapon picker (touch: hold WPN or the weapon box): every weapon you carry, tap one to take it out
+const wpick = createWeaponPicker({ el: $('wpick'), send: (o) => send(o), me: () => S.me });
+function openWeaponPick() { if (wpick.open) { wpick.close(); return; } if (canWheel() && S.me.weapons && S.me.weapons.length > 1) { if (wheel.open) wheel.close(); wpick.show(); } }
 function canWheel() { return S.playing && S.me && !S.me.dead && !(S.spec && S.spec.on) && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
 function toggleBag() {
   if (topOverlay() === 'inv') { closeOverlay('inv'); return; }
@@ -1973,7 +1977,8 @@ $('bigmap-c').onclick = (e) => {
   mapwp.refresh();
 };
 $('radar').onclick = () => { if (S.playing) toggleMap(true); };
-$('weapon').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) virtualTap('nextw'); }, { passive: false });
+// on touch the weapon box is a button too: a tap takes out the next weapon, holding it opens the picker
+{ const wb = $('weapon'); const tap = () => { if (S.playing) virtualTap('nextw'); }; tapHold(wb, tap, () => { if (S.playing) openWeaponPick(); }); }
 $('radar').addEventListener('touchstart', (e) => { e.preventDefault(); if (S.playing) toggleMap(true); }, { passive: false });
 
 // ---------------------------------------------------------------------------

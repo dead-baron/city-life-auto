@@ -175,3 +175,56 @@ export function createWheel({ el, send, me }) {
     refresh() { if (open) render(); },
   };
 }
+
+// ---- the weapon picker (touch: hold WPN or the weapon box) ----------------------------------------------
+// Every weapon you carry in a tray at the bottom of the screen, the one in your hands marked: tap one to take it
+// out. Tapping off the tray, or picking, closes it. (A tap on WPN or the weapon box just takes out the next one.)
+export function createWeaponPicker({ el, send, me }) {
+  let open = false, sig = '', press = null;
+  function render() {
+    const m = me();
+    if (!open || !m) return;
+    const ws = (m.weapons || []).slice().sort((a, b) => (WEAPONS[a.id]?.i ?? 99) - (WEAPONS[b.id]?.i ?? 99));
+    const s = m.weapon + '|' + ws.map((w) => `${w.id}:${w.mag}:${w.ammo}`).join(',');
+    if (s === sig) return;
+    sig = s;
+    el.innerHTML = '';
+    const box = document.createElement('div'); box.className = 'wp-box';
+    const h = document.createElement('div'); h.className = 'wp-h'; h.textContent = 'Take out a weapon'; box.appendChild(h);
+    const row = document.createElement('div'); row.className = 'wp-row';
+    for (const w of ws) {
+      const def = WEAPONS[w.id];
+      if (!def) continue;
+      const b = document.createElement('button');
+      b.className = 'wp-w' + (m.weapon === w.id ? ' on' : '');
+      b.appendChild(weaponIcon(def.i));
+      const t = document.createElement('span');
+      t.innerHTML = `${def.name}<small>${def.mag ? `${w.mag} | ${Math.max(0, w.ammo - w.mag)}` : m.weapon === w.id ? 'in your hands' : ''}</small>`;
+      b.appendChild(t);
+      // a touch picks only if it started on this button and didn't wander (the hold that opened the tray may end
+      // over it; a drag scrolls a long tray)
+      const pick = () => { const mm = me(); if (mm && mm.weapon !== w.id) send({ t: 'weapon', id: w.id }); close(); };
+      b.addEventListener('touchstart', (e) => { e.stopPropagation(); const t = e.changedTouches[0]; press = { b, x: t.clientX, y: t.clientY }; }, { passive: true });
+      b.addEventListener('touchmove', (e) => { const t = e.changedTouches[0]; if (press && Math.hypot(t.clientX - press.x, t.clientY - press.y) > 12) press = null; }, { passive: true });
+      b.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); const ok = press && press.b === b; press = null; if (ok) pick(); }, { passive: false });
+      b.addEventListener('click', (e) => { e.stopPropagation(); pick(); });
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+    el.appendChild(box);
+  }
+  function close() { open = false; sig = ''; press = null; el.classList.add('hidden'); }
+  // a tap off the tray closes it (the tray's own touches stop before here)
+  const off = (e) => { if (e.target === el) { e.preventDefault(); close(); } };
+  // (a touch that began before the tray opened - the hold on WPN - picks nothing when it lifts)
+  el.addEventListener('touchend', (e) => { if (!press) e.preventDefault(); }, { passive: false });
+  el.addEventListener('touchstart', off, { passive: false });
+  el.addEventListener('mousedown', off);
+  return {
+    get open() { return open; },
+    show() { open = true; sig = ''; el.classList.remove('hidden'); render(); },
+    toggle() { if (open) close(); else this.show(); },
+    close,
+    refresh() { if (open) render(); },
+  };
+}

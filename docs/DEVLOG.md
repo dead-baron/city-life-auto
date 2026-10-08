@@ -3710,27 +3710,12 @@ The user, on mobile: teleporting and driving still reached places where the art 
   - `test/pool.test.js`: downloads go out while the main lane is full.
   - `test/artcdn.test.js`: the ready time, look-aheads never queued, the previous build kept and used as stand-ins, player-centred baking.
 
-## 2026-10-08 · Art from the server, faster: downloads ahead, stand-ins after a new build, baking round the players
-The user, on mobile: teleporting and driving still reached places where the art was loading.
-- **Downloads ahead, in their own lane:**
-  - While the server has the art, the chunks round you and on the roads ahead are downloaded into the browser's store in parallel: up to 4 at a time on a phone, 6 elsewhere (`host.js` `_fetchAhead`, `worker.js` `fetchChunk`).
-  - Coming to one later is then a read from the store, tens of ms instead of a bake.
-  - The worker pool sends downloads out in a lane of their own, two per worker (`pool.js` `LIGHT_PER_WORKER`). In the queue with the sprites and bakes they never went out: on a phone moving through town those keep every slot busy.
-- **Waiting for the server when that's quicker:**
-  - A 404 now says when the chunk should be ready (`x-art-eta`).
-  - A page about to bake a chunk itself waits for the server's instead when it's due sooner than its own bake (about 1.6 s on a phone), so the same chunk isn't baked twice.
-- **After a new build: the previous art stands in:**
-  - The server keeps the build before's chunks. Pages still on that build get their own chunks from them.
-  - Everyone else gets them as stand-ins (`x-art-stale`): shown, never kept, and replaced the moment this build's chunk arrives. That beats the plain placeholder, and art changes are pushed often.
-- **The server bakes round the players first:**
-  - After the chunks pages ask for, the server bakes a 9 x 9 square of chunks round each player online, nearest first (`artcdn.js` `focus`, fed every 4 s by `server/index.js`).
-  - This covers the background qualities, plus any quality a page asked for in the last ten minutes, so a High-preset player's chunks get baked too.
-  - After a new build, the art where people are comes back first.
-- **Look-aheads aren't queued on the server** (`?pre=1`): only what pages are about to show is asked for, so many players' look-ahead can't crowd it out.
-- **A weak connection no longer switches the server's art off for the session:**
-  - A run of failures pauses downloads for two minutes; they switch off only after three such runs with no download in between.
-  - Downloads slower than local bakes pause for three minutes, then get another chance.
-- **Device reports** (`/perf`) now show the chunks fetched ahead, the misses, and whether the server's art was switched off.
-- **Tests:**
-  - `test/pool.test.js`: downloads go out while the main lane is full.
-  - `test/artcdn.test.js`: the ready time, look-aheads never queued, the previous build kept and used as stand-ins, player-centred baking.
+## 2026-10-08 · Switching weapons on a phone
+The user: there was no way to switch weapons on mobile. There was one (a tap on the weapon box, top right), but nothing showed it, and a phone held upright hides that box.
+- **WPN button** by the FIRE button, showing the weapon in your hands (`index.html` `#b-wpn`, `client/style.css`). It shows once you carry more than your fists; upright, it sits just above FIRE.
+  - A tap takes out the next weapon.
+  - Holding it opens the **weapon picker**: every weapon you carry in a tray at the bottom of the screen, with its ammo and the one in your hands marked. Tap one to take it out; tap off the tray to close it (`client/inventory.js` `createWeaponPicker`).
+  - The tray fits all 28 weapons on a phone held sideways. A pick needs a tap that starts on that weapon, so the hold that opened the tray can't pick one by accident when it lifts.
+- **The weapon box** works the same way (tap: next, hold: the picker) and now shows ⇄. Its hint reads "tap: next · hold: pick".
+- `input.js` `tapHold`: one touch button with a tap and a hold.
+- Checked on an emulated iPhone, sideways and upright: tap, tap, hold, release (the tray stays), pick (the weapon changes and the tray closes), tap off the tray.
