@@ -237,6 +237,7 @@ function onText(m) {
     case 'board': phone.onBoard(m); break;
     case 'feed': phone.onFeed(m); break;
     case 'bounties': phone.onBounties(m); break;
+    case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.onTransit(m); break;
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
@@ -1117,8 +1118,12 @@ function renderPlayers() {
   }
 }
 function requestPlayers() { if (S.welcomed) send({ t: 'plist' }); }
+function requestTransit() { if (S.welcomed) send({ t: 'phone', a: 'transit' }); }   // the bus lines and where their buses are
 // keep the lists fresh while one is on screen
-setInterval(() => { if (S.playing && overlays.some((o) => o === 'players' || o === 'bigmap' || o === 'dev' || o === 'pause')) requestPlayers(); }, 2500);
+setInterval(() => {
+  if (S.playing && overlays.some((o) => o === 'players' || o === 'bigmap' || o === 'dev' || o === 'pause')) requestPlayers();
+  if (S.playing && S.bigmap) requestTransit();
+}, 2500);
 function submitDevPw() {
   const pw = $('devpw-in').value;
   if (!pw) return;
@@ -1687,6 +1692,7 @@ function openOverlay(id) {
   if (id === 'settings') { syncSettings(); syncAccount(); }
   if (id === 'controls') $('c-body').innerHTML = $('help-tpl').innerHTML;
   if (id === 'players' || id === 'bigmap' || id === 'dev') requestPlayers();
+  if (id === 'bigmap') requestTransit();
   if (id === 'pause') {
     requestPlayers();
     document.querySelectorAll('#pause .online-only').forEach((b) => b.classList.toggle('hidden', !!S.practice));

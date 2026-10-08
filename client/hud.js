@@ -105,6 +105,15 @@ export class HUD {
           : tr.at ? `At ${tr.next} - F to get off` : `Next: ${tr.next} · ${tr.eta}s`;
       $('tb-crack').classList.toggle('hidden', tr.crack === null);
       if (tr.crack !== null) $('tb-fill').style.width = Math.round(tr.crack * 100) + '%';
+      tb.classList.remove('bus'); tb.style.borderColor = '';
+    } else if (me.bus && !me.dead) {
+      // riding a bus: the line, then the stop it's waiting at (get off now) or the next one
+      const b = me.bus;
+      tb.classList.remove('hidden', 'sub', 'warn', 'alarm'); tb.classList.add('bus');
+      tb.style.borderColor = b.col || '';
+      $('tb-where').textContent = b.line.toUpperCase();
+      $('tb-next').textContent = b.at ? `At ${b.at} - ${keyName('vehicle')} to get off` : b.next ? `Next stop: ${b.next}` : 'On the bus';
+      $('tb-crack').classList.add('hidden');
     } else tb.classList.add('hidden');
     // personal police cruiser
     const cr = me.cruiser, ch = $('cruiser-hint'), cb = $('b-cruiser');
@@ -462,6 +471,30 @@ export class HUD {
         g.stroke();
       }
       g.setLineDash([]);
+    }
+    // the bus lines (the Transit app's data, asked for while the map is open): each line's streets in its colour, its
+    // stops as white dots ringed in it (named when zoomed in), and where its buses are now
+    if (this.transit && this.transit.lines) {
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      const route = (L) => { g.beginPath(); L.path.forEach(([x0, y0], i) => { const [x, y] = P(x0, y0); if (i) g.lineTo(x, y); else g.moveTo(x, y); }); g.closePath(); };
+      for (const L of this.transit.lines) {
+        g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 4; route(L); g.stroke();
+        g.strokeStyle = L.col; g.lineWidth = 2; g.globalAlpha = 0.85; route(L); g.stroke(); g.globalAlpha = 1;
+      }
+      g.font = '600 10px Rubik, sans-serif'; g.textAlign = 'center';
+      for (const L of this.transit.lines) {
+        for (const s of L.stops) {
+          const [x, y] = P(s.x, s.y);
+          g.fillStyle = '#fff'; g.strokeStyle = L.col; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 3.6, 0, 6.28); g.fill(); g.stroke();
+          if (V.z >= 2.5) label(g, x, y - 10, s.n, '#ffffff');
+        }
+        for (const b of L.buses) {
+          const [x, y] = P(b.x, b.y);
+          g.save(); g.translate(x, y); g.rotate(b.a);
+          g.fillStyle = L.col; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.fillRect(-6, -3.5, 12, 7); g.strokeRect(-6, -3.5, 12, 7);
+          g.restore();
+        }
+      }
     }
     // places
     const ic = Math.max(11, Math.min(16, w / 60));

@@ -33,7 +33,7 @@ const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '�
 
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
-  let screen = 'home', group = null, board = null, feed = null, bty = null;
+  let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null;
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
 
@@ -53,6 +53,7 @@ export function createPhone(ctx) {
           <button class="ph-app atm" data-act="atm"><b>$</b>Nearest ATM</button>
           <button class="ph-app" data-go="feed"><b>📰</b>City feed</button>
           <button class="ph-app bty" data-go="bounties"><b>💀</b>Bounties</button>
+          <button class="ph-app" data-go="transit"><b>🚌</b>Transit</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
         </div>
         ${wp ? `<div class="ph-card">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</div>` : ''}
@@ -74,6 +75,8 @@ export function createPhone(ctx) {
           : '<p class="ph-empty">Quiet out there right now.</p>');
     } else if (screen === 'bounties') {
       el.innerHTML = bountiesHtml();
+    } else if (screen === 'transit') {
+      el.innerHTML = transitHtml();
     } else if (screen === 'jobs') {
       if (!board) { el.innerHTML = '<p class="ph-empty">Loading jobs…</p>'; return; }
       const job = board.job;
@@ -89,7 +92,22 @@ export function createPhone(ctx) {
   }
 
   function wire(el) {
-    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); render(); };
+    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); render(); };
+    for (const b of el.querySelectorAll('[data-stop]')) b.onclick = () => {
+      const [l, k] = b.dataset.stop.split(':').map(Number);
+      const L = transit && transit.lines.find((q) => q.id === l), st = L && L.stops[k];
+      if (!st) return;
+      ctx.setWaypoint({ x: st.x, y: st.y, label: `${L.name}: ${st.n}` });
+      ctx.toast(`Waypoint: the ${L.name} stop at ${st.n}`, 'info');
+      ctx.close();
+    };
+    for (const b of el.querySelectorAll('[data-rail]')) b.onclick = () => {
+      const st = ctx.map().rail && ctx.map().rail.stations[Number(b.dataset.rail)];
+      if (!st) return;
+      ctx.setWaypoint({ x: st.x, y: st.y, label: st.name });
+      ctx.toast(`Waypoint: ${st.name}`, 'info');
+      ctx.close();
+    };
     for (const b of el.querySelectorAll('[data-btake]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'btake', id: b.dataset.btake }); };
     for (const b of el.querySelectorAll('[data-bplace]')) b.onclick = () => { const [pid, amt] = b.dataset.bplace.split(':'); b.disabled = true; ctx.send({ t: 'phone', a: 'bplace', pid, amt: Number(amt) }); };
     for (const b of el.querySelectorAll('[data-bseen]')) b.onclick = () => {
@@ -137,6 +155,30 @@ export function createPhone(ctx) {
     for (const b of el.querySelectorAll('[data-act="clearwp"]')) b.onclick = () => { ctx.setWaypoint(null); render(); };
   }
 
+  // ---- the Transit app -----------------------------------------------------------------------------------------------
+  // The bus lines (server transit.js): each line's stops in the order its buses call at them, when the next bus comes to
+  // each (the nearest stop starred), and the railway's nearest stations. Tap a stop or a station for a waypoint.
+  const eta = (s) => (s === null || s === undefined ? 'no bus out' : s < 20 ? 'arriving' : s < 90 ? `${s}s` : `${Math.round(s / 60)} min`);
+  function transitHtml() {
+    let h = '<h3>Transit</h3>';
+    if (!transit) return h + '<p class="ph-empty">Loading…</p>';
+    h += `<p class="ph-hint">Wait at a stop and board the bus when it pulls up ($${transit.fare}, any distance). Get off at any stop with the vehicle key. Tap a stop for a waypoint.</p>`;
+    let near = null, nd = Infinity;
+    for (const L of transit.lines) L.stops.forEach((st, k) => { const d = dist(st); if (d < nd) { nd = d; near = `${L.id}:${k}`; } });
+    for (const L of transit.lines) {
+      h += `<h3><span class="ph-line" style="background:${esc(L.col)}"></span>${esc(L.name)} <small>${L.buses.length} bus${L.buses.length === 1 ? '' : 'es'} · ${L.stops.length} stops</small></h3>`;
+      h += L.stops.map((st, k) => `<button class="ph-row" data-stop="${L.id}:${k}"><span class="ic">${near === `${L.id}:${k}` ? '★' : '•'}</span><span class="nm">${esc(st.n)}<small>next bus: ${eta(st.eta)}</small></span><span class="d">${m(dist(st))}</span></button>`).join('');
+    }
+    if (!transit.lines.length) h += '<p class="ph-empty">No bus lines in this city.</p>';
+    const rail = ctx.map().rail;
+    if (rail) {
+      const sts = rail.stations.map((st, i) => ({ st, i, d: dist(st) })).sort((a, b) => a.d - b.d).slice(0, 3);
+      h += '<h3>🚆 Railway</h3><p class="ph-hint">Trains run the whole loop round the city; walk onto a stopped train at any station. Free.</p>'
+        + sts.map(({ st, i, d }) => `<button class="ph-row" data-rail="${i}"><span class="ic">≡</span><span class="nm">${esc(st.name)}<small>${st.under ? 'underground' : 'platform'}</small></span><span class="d">${m(d)}</span></button>`).join('');
+    }
+    return h;
+  }
+
   // ---- the Bounties app ----------------------------------------------------------------------------------------------
   const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
   const mins = (s) => (s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min` : `${Math.max(1, Math.round(s / 60))} min`);
@@ -172,6 +214,7 @@ export function createPhone(ctx) {
     open() { screen = 'home'; group = null; render(); ctx.send({ t: 'phone', a: 'board' }); },
     back() { if (screen === 'group') screen = 'places'; else screen = 'home'; render(); return true; },
     onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
+    onTransit(msg) { transit = msg; if (screen === 'transit') render(); },
     onBounties(msg) {
       bty = msg;
       if (msg.err) ctx.toast(msg.err, 'warn');

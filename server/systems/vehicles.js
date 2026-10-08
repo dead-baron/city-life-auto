@@ -426,7 +426,8 @@ export function exitVehicle(world, ped) {
   if (!v) { ped.vehId = 0; ped.seat = -1; return; }
   const spd = speedOf(v);
   if (v.def.kind === 'boat' && !findExitSpot(world, v, ped, 150) && ped.player) world.notify(ped.player, 'Over the side - swim for it!', 'info');
-  ejectPed(world, ped, false);
+  // off a bus: out of the doors on the kerb side (the right of the way it faces), onto the pavement by the stop
+  ejectPed(world, ped, false, v.bus && ped.seat > 0 ? { x: v.x - Math.sin(v.a) * 140, y: v.y + Math.cos(v.a) * 140 } : null);
   if (spd > BAIL_SPEED && v.def.kind !== 'boat') bail(world, ped, v, spd);
 }
 

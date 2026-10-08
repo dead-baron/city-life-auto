@@ -58,13 +58,14 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Speak to the hooded stranger (rare: at night, somewhere quiet in the wilds; he sells the plasma blade) | E | B | ACT |
 | Light a campfire / sit by a lit one to warm up and heal (any step gets you up) / sitting, put it out | E | B | ACT |
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
+| Bus: board at a stop while one waits there ($2; the prompt at the stop says when the next comes) · get off at a stop | E · F | B · X | ACT · CAR |
 | Stuck? Get unstuck (stand still 5 s, not wanted, not just after a fight) / Surrender (tap twice: respawn, or turn yourself in when wanted) | Esc → Stuck? / Surrender | Start → Stuck? / Surrender | ☰ → Stuck? / Surrender |
 | Players online (names, roles, districts) | Esc → Players online, or M → Players online | Start → Players online | ☰ → Players online |
 | Debug menu (online testing, no password: opening it switches Dev Debug Mode on; your progress carries on - whatever you get in it stays when you leave). Give weapons, teleport, spectate, then a section per feature (weather & time, me, blades and practice dummies, the law, vehicles, trains, jobs, crime, events, shops, hunting and wildlife, homes, nature) that spawns the thing or takes you to the nearest place it happens; everyone online on the right | ` or the pink 🐞 button (grey until dev mode is on); Esc → 🐞 Debug menu | Start → 🐞 Debug menu (the top option); ← → jumps between the commands and the players | the pink 🐞 button at the top |
 | Dev give: any weapon (with magazines), tool, item, drink, bait, fish or loot - or everything - to yourself or any player online | ` → 🎁 Give (category, thing, how many, who) | Start → 🐞 Debug menu → 🎁 Give (D-pad / stick, ← → to choose) | 🐞 → 🎁 Give |
 | Police HQ: walk in (front desk → armory → motor pool) | E at the door, E inside for the desk | B / A | ACT, or the ▲ Front desk button |
 | Navigate menus (pause, phone, shops, settings) | W/S or ↑/↓, Enter / Space / E to pick, Esc back | D-pad / stick, A pick, B back | tap |
-| Phone (places, jobs, waypoints; call in a crime you just saw, within a minute) | P | D-pad ← | 📱 |
+| Phone (places, jobs, waypoints, the Transit app with the bus lines and stations; call in a crime you just saw, within a minute) | P | D-pad ← | 📱 |
 | City tour / tutorial (title screen only, never mid-game) | Title → 📖 VIEW TUTORIAL | Title → VIEW TUTORIAL | title screen |
 | Call police cruiser (on duty) | V | D-pad down | COP CAR (shows when you have no cruiser) |
 | Tackle a suspect (on duty) | Space (dive) into them | A | ROLL |

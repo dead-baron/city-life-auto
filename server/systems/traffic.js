@@ -17,6 +17,7 @@ import { wildStyle } from './wildlife.js';
 import { crossingLimit } from './trains.js';
 import { inAnyView } from '../view.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
+import { busLines, routeStops, busCap, arriveAt as busArrive } from './transit.js';
 
 const rng = mulberry32(4242);
 
@@ -144,11 +145,34 @@ function crossJunction(world, v) {
   const nx = ai.next || chooseExit(world, net.nodes[to], ai.edge, v.def);
   if (!nx) { v.ai = null; v.despawnable = true; return; }
   const ne = net.edges[nx.edge];
-  const lane = v.def.pedal ? 0 : laneFor(ne, nx.turn, ai.lane);   // (a cyclist keeps to the kerb)
+  const lane = v.def.pedal || ai.route ? 0 : laneFor(ne, nx.turn, ai.lane);   // (a cyclist and a bus keep to the kerb)
   const a = lanePath(net, e, ai.from, ai.lane), b = lanePath(net, ne, to, lane);
   const turn = turnPath(a[a.length - 1], endDir(a), b[0], startDir(b), Math.abs(nx.turn) > 0.5 ? 6 : 3);
-  enterEdge(world, v, nx.edge, to, lane, 0);
+  if (ai.route) { const L = busLines(world)[ai.route.line]; ai.route.i = (ai.route.i + 1) % L.steps.length; enterRoute(world, v, ai.route.i, 0); }
+  else enterEdge(world, v, nx.edge, to, lane, 0);
   ai.pts.unshift(...turn.map((p) => ({ x: p.x, y: p.y })));
+}
+
+// A bus on its line (transit.js): onto step i of the loop from arc length s0, in the kerb lane, its stops on this
+// stretch as waypoints it pulls up at, and the line's next step as the way on at the far end.
+export function enterRoute(world, v, i, s0 = 0) {
+  const net = world.map.net, ai = v.ai, L = busLines(world)[ai.route.line];
+  const st = L.steps[i], nst = L.steps[(i + 1) % L.steps.length], e = net.edges[st.edge], to = e.a === st.from ? e.b : e.a;
+  ai.route.i = i;
+  enterEdge(world, v, st.edge, st.from, 0, s0);
+  // the way on is the line's next step (found among the junction's exits; the line was routed through them)
+  const ne = net.edges[nst.edge];
+  ai.next = exitsFrom(net, net.nodes[to], st.edge).find((o) => o.edge === nst.edge) || { edge: nst.edge, to: ne.a === to ? ne.b : ne.a, turn: 0 };
+  ai.turning = Math.abs(ai.next.turn) > 0.5;
+  // the stops along this stretch, in among the waypoints by how far along they are
+  const lp = lanePath(net, e, st.from, 0);
+  for (const q of routeStops(world, v, i)) {
+    if (q.s <= s0 + 10) continue;
+    const p = pointAt(lp, q.s);
+    let at = ai.pts.length - 1;   // (before the stop line at the far end)
+    for (let j = 0; j < ai.pts.length - 1; j++) { const w = ai.pts[j]; if ((w.x - p.x) * p.tx + (w.y - p.y) * p.ty > 0) { at = j; break; } }
+    ai.pts.splice(at, 0, { x: p.x, y: p.y, busStop: q.k });
+  }
 }
 
 // ---- shared driving controller ----------------------------------------------------
@@ -307,11 +331,13 @@ function steerTraffic(world, v, t) {
   if (d < 30 || passed(v, wp) || beside || ai.turned > Math.PI * 1.9) {
     ai.turned = 0;
     ai.pts.shift();
+    if (wp.busStop !== undefined && v.bus) busArrive(world, v, wp.busStop);   // (a bus at its stop: the doors open)
     if (wp.stop) { crossJunction(world, v); if (!v.ai) return; ai.replans = 0; }
     if (!ai.pts.length) { crossJunction(world, v); if (!v.ai) return; }
     wp = ai.pts[0];
   }
   let desired = panic ? 520 : Math.min(ai.kindSpeed || 250, v.model === 'bus' ? 220 : 999);
+  if (v.bus && !panic) desired = Math.min(desired, busCap(world, v));   // (a bus pulling up at its stop, or waiting there)
   if (v.def.pedal) desired = Math.min(desired, v.def.max * (panic ? 0.95 : 0.78));   // a cyclist pedals along at their own pace
   // slow for bends: how sharply the path ahead turns
   const ahead = ai.pts[Math.min(ai.pts.length - 1, 2)];
@@ -393,6 +419,14 @@ function replanFromHere(world, v) {
   let from = fwdOk ? e.a : e.b;
   if (e.oneway) from = e.a;
   const s = from === e.a ? ne.s : e.len - ne.s;
+  // a bus back on its line where the line runs this way down this street; anywhere else it leaves the line
+  if (ai.route) {
+    const L = busLines(world)[ai.route.line], n = L.steps.length;
+    let j = -1;
+    for (let k = 0; k < n && j < 0; k++) { const q = (ai.route.i + k) % n; if (L.steps[q].edge === e.id && L.steps[q].from === from) j = q; }
+    if (j >= 0) { enterRoute(world, v, j, s + 40); ai.replans = (ai.replans || 0) + 1; if (ai.replans > 4) { v.ai = null; v.despawnable = true; } return; }
+    delete ai.route; v.despawnable = true;
+  }
   enterEdge(world, v, e.id, from, Math.min(ai.lane || 0, e.nl - 1), s + 40);
   ai.replans = (ai.replans || 0) + 1;
   if (ai.replans > 4) { v.ai = null; v.despawnable = true; } // hopeless: park it and let the cleanup take it

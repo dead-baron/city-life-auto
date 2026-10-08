@@ -64,9 +64,10 @@ export const PAINTS = [
   '#e04a9a', '#25b8c0', '#b9b9b9', '#8a6a3a', '#1d2a5a', '#7a1d24',
 ];
 
+// (no buses: they run their lines - server/systems/transit.js)
 export const TRAFFIC_MIX = [
   ['sedan', 30], ['compact', 25], ['taxi', 10], ['pickup', 12], ['van', 8], ['sports', 4],
-  ['flatbed', 4], ['bike', 4], ['bus', 2], ['boxtruck', 3], ['dumptruck', 1.5], ['mixer', 1], ['tanker', 1.5], ['garbage', 1], ['towtruck', 1], ['firetruck', 0.4],
+  ['flatbed', 4], ['bike', 4], ['boxtruck', 3], ['dumptruck', 1.5], ['mixer', 1], ['tanker', 1.5], ['garbage', 1], ['towtruck', 1], ['firetruck', 0.4],
   // cyclists (kept off the highway and its ramps: server/systems/traffic.js)
   ['bicycle', 2.2], ['roadbike', 1.2], ['cruiser', 0.7], ['cargobike', 0.6], ['mtb', 0.5], ['bmx', 0.4],
 ];

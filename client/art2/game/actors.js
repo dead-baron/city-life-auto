@@ -183,6 +183,7 @@ function vehLook(d) {
   const t = vehType(d), tn = d.tn ?? -1, p = (((d.p ?? 0) % PAINTS.length) + PAINTS.length) % PAINTS.length;
   if (CIVIL.has(t)) return { t, paint: carPaint(PAINTS[tn >= 0 ? tn : p]) };
   if (WORK.has(t)) return { t, cab: tn >= 0 ? carPaint(PAINTS[tn]) : p % 5 < 2 ? undefined : CABS[p % CABS.length] };   // 2 in 5 keep the model's own cab
+  if (t === 'bus' && tn < 0) return { t, band: carPaint(PAINTS[p]) };   // a bus wears its line's colour in a band (server transit.js)
   return tn >= 0 ? { t, paint: carPaint(PAINTS[tn]) } : { t };
 }
 // WRECK + BURN: the fresh wreck still burning (charred, embers glowing; the host adds the fire); WRECK: the
@@ -190,11 +191,11 @@ function vehLook(d) {
 const modelState = (t, s) => (s.wreck ? (PEDAL.has(t) ? 'wrecked' : s.burn ? 'smoulder' : 'burnt') : s.burn ? 'burning' : s.dmg === 2 ? 'wrecked' : s.dmg ? 'dented' : 'clean');
 export function vehicleKey(d, st, hi = 0, N = 32) {
   const s = normSt(st), k = vehLook(d);
-  return `v|${k.t}|${k.paint || k.cab || 'L'}|${(((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS}|${stKey(s)}|${wrapHi(hi, N)}|${N}`;
+  return `v|${k.t}|${k.paint || k.cab || k.band || 'L'}|${(((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS}|${stKey(s)}|${wrapHi(hi, N)}|${N}`;
 }
 function vehModel(d, s) {
-  const k = vehLook(d), vr = (((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS, key = `${k.t}|${k.paint || k.cab || 'L'}|${vr}|${stKey(s)}`;
-  return MODELS.get(key, () => compactVox(vehicleModel(k.t, { paint: k.paint, cab: k.cab, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s) })));
+  const k = vehLook(d), vr = (((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS, key = `${k.t}|${k.paint || k.cab || k.band || 'L'}|${vr}|${stKey(s)}`;
+  return MODELS.get(key, () => compactVox(vehicleModel(k.t, { paint: k.paint, cab: k.cab, band: k.band, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s) })));
 }
 // the vehicle sprite at heading index hi of N (angle hi * 2pi / N, 0 east, + toward south); anchor = the
 // vehicle's centre on the ground

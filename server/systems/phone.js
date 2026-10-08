@@ -13,6 +13,7 @@ import { spawnNpc } from './npc.js';
 import * as law from './law.js';
 import * as police from './police.js';
 import * as bounties from './bounties.js';
+import * as transit from './transit.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -160,6 +161,7 @@ export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
   if (a === 'feed') return events.feedFor(world);
+  if (a === 'transit') return transit.transitInfo(world);   // the Transit app and the lines on the map
   if (a === 'cancel') {
     if (!p.job) return { ...boardFor(world, p), err: 'You have no job.' };
     jobs.failJob(world, p, 'Job cancelled.');

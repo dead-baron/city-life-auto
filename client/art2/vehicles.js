@@ -9,7 +9,8 @@
 //              ambulance armored bike policebike bicycle speedboat dinghy jetski policeboat boxtruck
 //              dumptruck mixer tanker garbage firetruck towtruck) or a scenery model (suv limo foodtruck
 //              tram tugboat ferry tractor combine plane excavator)
-//     o.paint  hex body colour (civilian bodies; on liveried models a respray); o.cab truck cab colour
+//     o.paint  hex body colour (civilian bodies; on liveried models a respray); o.cab truck cab colour; o.band a
+//              bus's band in its line's colour
 //     o.lights 0..1 headlights and tail lights      o.brake / o.reverse  brake and reversing lamps lit
 //     o.siren  false | true (all lamps lit) | 1 | 2 (the two flash phases: red side or blue side lit)
 //     o.state  'clean' | 'dented' | 'wrecked' | 'burning' | 'burnt' | 'smoulder' (burnt, embers glowing)
@@ -152,6 +153,7 @@ function mats(m, paint, o) {
     crate: [R('#b08048'), R('#8a949c'), R('#5e6e3e'), R('#2c2c34')].map((r, i) => m.mat({ ramp: r, k: 3, emi: i === 3 ? [255, 200, 90, 40] : null, shade: (x, y, z) => ((Math.round(z) % 4 === 0 || Math.round(x) % 6 === 0) ? -0.6 : 0) })),
   };
   M.paint = M.body; M.hub = M.rim; M.cab = M.body;
+  M.band = o.band ? m.mat({ ramp: R(o.band), k: 3, shade: paintShade }) : M.stripeTeal;   // a bus's line colour (o.band)
   return M;
 }
 
@@ -691,10 +693,11 @@ export function vehicleModel(type, o = {}) {
     case 'bus': {
       // a city bus: cream body, teal band, a deep window band with mullions, doors front and middle,
       // roof units, a lit destination sign
-      const cy = W / 2;
+      const cy = W / 2, banded = !!o.band;
       shell(m, { x0: 1, x1: L - 1, y0: 1.5, y1: W - 1.5, z0: 7, z1: 62, r: 5, rz: 4, fr: 3, mat: (x, y, z, s) => {
         if (z < 11) return M.lower;
-        if (z > 16 && z < 22 && s.side < 1.6) return M.stripeTeal;
+        if (z > 15 && z < 23 && s.side < 1.6) return M.band;
+        if (banded && z > 56 && (s.side < 3 || s.front < 16)) return M.band;   // a line's bus: its colour round the roof's edge and over the cab (seen from above)
         const win = z > 29 && z < 50;
         if (win && s.front < 2.4 && s.side > 2) return M.glass;
         if (win && s.side < 1.6 && Math.round(x) % 21 > 1 && x > 8 && x < L - 8) return M.glass;

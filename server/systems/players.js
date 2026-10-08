@@ -40,6 +40,7 @@ import * as events from './events.js';
 import * as phone from './phone.js';
 import * as props from './props.js';
 import * as trains from './trains.js';
+import * as transit from './transit.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED } from '../../shared/rules.js';
 import * as revive from './revive.js';
@@ -480,6 +481,8 @@ export function findInteraction(world, p) {
 
   const train = trains.interaction(world, p);
   if (train) return train;
+  const bus = transit.interaction(world, p);   // a bus waiting at the stop you're at: board it
+  if (bus) return bus;
 
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
@@ -515,7 +518,7 @@ export function findInteraction(world, p) {
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
   const v = vehicles.nearestVehicle(world, ped, 56);
   if (v) return { label: `Enter ${v.def.name}`, key: 'F', run: () => vehicles.tryEnter(world, ped) };
-  return null;
+  return transit.stopNote(world, p);   // at a bus stop with nothing else to do: the line and when its next bus comes
 }
 
 export function crateName(c) {
@@ -638,7 +641,7 @@ export function buildMe(world, p) {
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
-    ride: rides.meInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p),
+    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p),
     arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,
   };
 }

@@ -393,9 +393,10 @@ test('mail train job: board, crack the strongbox on the rural run, grab it, fenc
   const crack = players.findInteraction(w, p);
   assert.ok(crack && /strongbox/.test(crack.label), crack && crack.label);
   crack.run();
-  // (keep passing patrol cars out of sight: this checks that the countryside has no alarm bell)
+  // (keep passing patrol cars and anyone out in the fields out of sight: this checks that the countryside has no alarm
+  // bell, not who happens to be walking by)
   for (let i = 0; i < (STRONGBOX_CRACK_S + 0.3) * 20; i++) {
-    for (const q of w.query(p.ped.x, p.ped.y, 800, K.PED)) if (q.npc && q.npc.role === 'cop') { const v = w.get(q.vehId); if (v) w.remove(v); w.remove(q); }
+    for (const q of w.query(p.ped.x, p.ped.y, 800, K.PED)) if (q.npc && (q.npc.role === 'cop' || !q.onTrain)) { const v = w.get(q.vehId); if (v) w.remove(v); w.remove(q); }
     w.step();
   }
   const box = [...w.entities.values()].find((q) => q.kind === K.CRATE && q.strongbox);
