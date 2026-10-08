@@ -31,7 +31,7 @@ import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTAT
 import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
 import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
-import { buildNatureSites, REDWOOD_TRUNK, setFlow } from './naturesites.js';
+import { buildNatureSites, REDWOOD_TRUNK, setFlow, inBluffsGarden } from './naturesites.js';
 import { mushroomAtFoot } from './foraging.js';
 import { EDGE_OUT } from './border.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
@@ -300,7 +300,7 @@ export class CityMap {
     this.deck = new Uint8Array(N);        // 1 = under the elevated highway
     this.lvl0Block = new Uint8Array(N);   // 1 = solid at ground level (a ramp's embankment)
     this.roadAxis = new Uint8Array(N);    // bit1 vertical-ish road, bit2 horizontal-ish, 3 = junction box
-    this.roadRank = new Uint8Array(N);    // 1 = an alley's asphalt, 2 = any other road's (a street wins where they meet)
+    this.roadRank = new Uint8Array(N);    // 1 = an alley's asphalt, 2 = any other road's (a street wins where they meet), 3 = a highway's at grade (no lot fronts it)
     this.bld = new Int16Array(N).fill(-1);
     this.buildings = [];
     this.prefabs = [];
@@ -530,9 +530,12 @@ function buildCity(seed) {
     const minH = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].th));
     const minW = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].tw));
     const fS = facesStreet(m, b, 'S'), fN = facesStreet(m, b, 'N');
-    // land no street reaches (behind the ring roads, along wild coasts): left as greenery
+    // land no street reaches (behind the ring roads, along wild coasts): left as greenery - and in the districts on
+    // winding drives, every strip along a street running north-south and every scrap too small for a row, as lawn the
+    // houses along the drives are put on (driveHouses), never a plain block of a building
     const sideways = !fS && !fN && (facesStreet(m, b, 'E') || facesStreet(m, b, 'W'));
-    if ((!fS && !fN && !sideways) || (sideways && (b.w > 20 || b.h > 20) && ['houses', 'beach', 'luxury'].includes(DISTRICTS[b.d].style))) {
+    const drives = !!DRIVE_HOUSES[b.d];
+    if ((!fS && !fN && !sideways) || (drives && (sideways || b.h < minH || b.w < minW)) || (sideways && (b.w > 20 || b.h > 20) && ['houses', 'beach', 'luxury'].includes(DISTRICTS[b.d].style))) {
       filler(m, { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, b.x, b.w, STYLE.park, mulberry32(seed ^ (b.x * 29 + b.y * 3)));
       continue;
     }
@@ -558,16 +561,17 @@ function buildCity(seed) {
       const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'N' };
       const rr = mulberry32(seed ^ (b.x * 173 + b.y * 11));
       filler(m, row, b.x, b.w, { ...st, roof: 0 }, rr);
-      if (st.roof && b.w >= 6 && b.h >= 8 && rr() < Math.max(0.5, st.roof)) roofBuilding(m, row, b.x + 1, b.y + 3, b.w - 2, b.h - 4, st, rr);
+      if (st.roof && !drives && b.w >= 6 && b.h >= 8 && rr() < Math.max(0.5, st.roof)) roofBuilding(m, row, b.x + 1, b.y + 3, b.w - 2, b.h - 4, st, rr);
     }
   }
   claimEstates(m, rows, estateRows, rand); // beach houses first: the beach blocks are few
-  placeSpecials(m, rows, rand);
+  placeSpecials(m, rows, seed);
   for (const row of rows) (row.v2 ? fillRowV2 : fillRow)(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
   for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)), b.park);
   for (const [type, key, x, y, south, , dims] of estateRows) estateHouse(m, rand, type, key, x, y, south, dims);
   fillScraps(m, mulberry32(seed ^ 0x5c4a)); // the stepped edges along Broadway and the curving streets
   clearDoorways(m);
+  driveHouses(m, mulberry32(seed ^ 0x48d5)); // the winding drives of Pine Hills, the Lake District and The Bluffs
   m.garages ||= []; m.mansions ||= [];
   if (mlot) mansion(m, rand, mlot.x + Math.floor((mlot.w - MANSION_SIZE[0]) / 2), mlot.y);
 
@@ -1300,7 +1304,7 @@ function rasterRoads(m) {
       if (d > hwT && !isWet(t) && t !== T.BRIDGE) return;
       if (isWet(t) || t === T.BRIDGE) { m.tiles[i] = T.BRIDGE; e.bridge = true; } else m.tiles[i] = T.ROAD;
       m.roadAxis[i] |= horiz ? 2 : 1;
-      m.roadRank[i] = Math.max(m.roadRank[i], e.kind === 'alley' ? 1 : 2);
+      m.roadRank[i] = Math.max(m.roadRank[i], e.kind === 'alley' ? 1 : e.kind === 'hwy' ? 3 : 2);
       m.reserve[i] &= ~1;
     });
     if (e.kind === 'rural') stampEdge(e, e.hw + 20, (tx, ty, d) => { const i = at(tx, ty); if (i >= 0 && d > e.hw && m.tiles[i] === T.GRASS) m.tiles[i] = T.DIRT; });
@@ -1503,19 +1507,19 @@ function findBlocks(m) {
 let ALL_PARKS = [];
 
 // A block side "faces a street" when the tiles just outside it are mostly pavement or road.
+// (a highway at grade isn't a street: nothing has its front door or its drive on one)
 function facesStreet(m, b, face) {
+  const road = (tx, ty) => m.tileAt(tx, ty) === T.ROAD && m.roadRank[ty * MAP_W + tx] !== 3;
+  const front = (tx, ty, tx2, ty2) => { const t = m.tileAt(tx, ty); return t === T.SIDEWALK || t === T.PLAZA || road(tx, ty) || road(tx2, ty2); };
   if (face === 'E' || face === 'W') {
-    const x = face === 'E' ? b.x + b.w : b.x - 1;
+    const x = face === 'E' ? b.x + b.w : b.x - 1, x2 = face === 'E' ? x + 1 : x - 1;
     let ok = 0;
-    for (let y = b.y; y < b.y + b.h; y++) { const t = m.tileAt(x, y), t2 = m.tileAt(face === 'E' ? x + 1 : x - 1, y); if (t === T.SIDEWALK || t === T.ROAD || t === T.PLAZA || t2 === T.ROAD) ok++; }
+    for (let y = b.y; y < b.y + b.h; y++) if (front(x, y, x2, y)) ok++;
     return ok >= b.h * 0.35;
   }
-  const y = face === 'S' ? b.y + b.h : b.y - 1;
+  const y = face === 'S' ? b.y + b.h : b.y - 1, y2 = face === 'S' ? y + 1 : y - 1;
   let ok = 0;
-  for (let x = b.x; x < b.x + b.w; x++) {
-    const t = m.tileAt(x, y), t2 = m.tileAt(x, face === 'S' ? y + 1 : y - 1);
-    if (t === T.SIDEWALK || t === T.ROAD || t === T.PLAZA || t2 === T.ROAD) ok++;
-  }
+  for (let x = b.x; x < b.x + b.w; x++) if (front(x, y, x, y2)) ok++;
   return ok >= b.w * 0.35;
 }
 
@@ -1567,15 +1571,19 @@ function rowFits(row, pf, iv) {
   return iv[1] - iv[0] >= PREFABS[pf].tw;
 }
 
-function placeSpecials(m, rows, rand) {
+function placeSpecials(m, rows, seed) {
   const order = SPECIALS.map((s, i) => ({ ...s, i })).sort((a, b) => (b.at ? 1 : 0) - (a.at ? 1 : 0) || PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);   // (one planned for a spot goes first)
+  // each draws from a generator of its own, so reworking one district's streets doesn't send every business in the
+  // city somewhere new (one that picked differently used to change the numbers all the rest got)
+  const own = new Map(order.map((sp) => [sp, mulberry32(seed ^ Math.imul(sp.i + 1, 0x9e3779b1))]));
   // Two rounds: first every business looks for a lot in its own district (so a big one from elsewhere
   // can't take the only lot a district has for its own); then the rest look in the districts named as
   // their second home (alt), elsewhere on the same part of the world, then for a smaller lot there, and
   // only then anywhere at all (a World v2 row hosts a special on a real-sized lot: lotDims).
   const later = [];
-  for (const sp of order) if (!placeSpecial(m, rows, rand, sp, [0, 1])) later.push(sp);
+  for (const sp of order) if (!placeSpecial(m, rows, own.get(sp), sp, [0, 1])) later.push(sp);
   for (const sp of later) {
+    const rand = own.get(sp);
     if (placeSpecial(m, rows, rand, sp, [5]) || placeSpecial(m, rows, rand, sp, [5], 0.75) || placeSpecial(m, rows, rand, sp, [2]) || placeSpecial(m, rows, rand, sp, [0, 2], 0.75)
       || placeSpecial(m, rows, rand, sp, [3, 4]) || placeSpecial(m, rows, rand, sp, [0, 1, 2, 3, 4], 0.6)) continue;
     throw new Error(`city generator: no room for ${sp.prefab} (${sp.names[0]})`);
@@ -1898,7 +1906,7 @@ function frontage(m, b, face) {
     n++;
     const t = m.tileAt(tx, ty);
     if (t === T.SIDEWALK || t === T.PLAZA) street++;
-    else if (t === T.ROAD || t === T.BRIDGE) { if (m.roadRank[ty * MAP_W + tx] === 1) alley++; else street++; }
+    else if (t === T.ROAD || t === T.BRIDGE) { const r = m.roadRank[ty * MAP_W + tx]; if (r === 1) alley++; else if (r !== 3) street++; }
   };
   if (face === 'S' || face === 'N') { const y = face === 'S' ? b.y + b.h : b.y - 1; for (let x = b.x; x < b.x + b.w; x++) look(x, y); }
   else { const x = face === 'E' ? b.x + b.w : b.x - 1; for (let y = b.y; y < b.y + b.h; y++) look(x, y); }
@@ -2395,6 +2403,125 @@ function estateHouse(m, rand, type, key, x, y, south, dims = null) {
       addProp(m, yard[k], px, py, yard[k].startsWith('tree') || yard[k].startsWith('palm') ? 12 : 0);
       break;
     }
+  }
+}
+
+// ---- houses along the winding drives -------------------------------------------------------------------------------
+// Pine Hills, the Lake District and The Bluffs are laid out on curving drives and courts, and the block fill (rows of
+// lots along straight streets to their south) left them almost empty: lawns round winding asphalt. Walk each drive and
+// court and put houses along it. A painted house always faces south, so where the road runs east-west a house goes on
+// its north side, its front to the road and its walk straight down to it; where the road runs north-south a house
+// stands beside it, its walk turning out to the road along the front. A house without a painted drive gets a garage
+// beside it with its own drive down to the road. The lawns and trees round them stay.
+const DRIVE_HOUSES = { 0: ['house1', 'house2', 'house3', 'house4', 'house5', 'house8', 'house9'], 37: ['house4', 'house6', 'house7', 'house9', 'house3'], 34: ['house6', 'house7', 'house4', 'house6'] };
+function driveHouses(m, rand) {
+  m.garages ||= [];
+  const W = MAP_W, used = new Uint8Array(W * MAP_H), cleared = [], paved = new Set();
+  const at = (tx, ty) => (tx < 0 || ty < 0 || tx >= W || ty >= MAP_H ? -1 : ty * W + tx);
+  const lawn = (tx, ty, d) => { const i = at(tx, ty); return i >= 0 && !used[i] && m.dist[i] === d && !!m.land[i] && m.tiles[i] === T.GRASS && m.bld[i] < 0 && !m.reserve[i] && !m.deck[i] && (d !== 34 || !inBluffsGarden(tx, ty)); };
+  // a lot of lawn with a tile of lawn round it - though it may come right up to a pavement, and its back (the side away
+  // from the road it fronts, [dx, dy]) to a wall or open ground behind
+  const rectLawn = (x, y, w, h, d, back) => {
+    for (let ty = y - 1; ty <= y + h; ty++) for (let tx = x - 1; tx <= x + w; tx++) {
+      if (lawn(tx, ty, d)) continue;
+      const rim = (back[1] < 0 && ty === y - 1) || (back[0] < 0 && tx === x - 1) || (back[0] > 0 && tx === x + w);
+      const edge = ty === y - 1 || ty === y + h || tx === x - 1 || tx === x + w;
+      const i = at(tx, ty), t = m.tileAt(tx, ty);
+      if (edge && i >= 0 && !used[i] && m.bld[i] < 0 && (t === T.SIDEWALK || (rim && (t === T.WALL || t === T.GRASS || t === T.PLAZA || t === T.DIRT)))) continue;
+      return false;
+    }
+    return true;
+  };
+  // the walk from (tx, ty) stepping (dx, dy) to the road: its tiles, or null (water, a building, nothing within max)
+  const walk = (tx, ty, dx, dy, max) => {
+    const out = [];
+    for (let k = 0; k < max; k++, tx += dx, ty += dy) {
+      const i = at(tx, ty), t = m.tileAt(tx, ty);
+      if (t === T.ROAD || t === T.BRIDGE) return out;
+      if (i < 0 || used[i] || m.bld[i] >= 0 || (t !== T.GRASS && t !== T.SIDEWALK && t !== T.LOT && t !== T.PLAZA)) return null;
+      out.push(i);
+    }
+    return null;
+  };
+  const take = (x, y, w, h) => { for (let ty = y - 1; ty <= y + h; ty++) for (let tx = x - 1; tx <= x + w; tx++) { const i = at(tx, ty); if (i >= 0) used[i] = 1; } cleared.push([x, y, w, h]); };
+  const pave = (tiles) => { for (const i of tiles) { const tx = i % W, ty = (i - tx) / W; if (m.tiles[i] !== T.SIDEWALK) m.set(tx, ty, T.LOT); paved.add(i); used[i] = 1; } };
+  // the house for a spot (by the spot, so the choice doesn't hang on the order things were tried in): a kind for the
+  // district, sized like the city's lots (LOT), a little shallower - a curving block has less depth
+  const memo = new Map(), kinds = {};
+  for (const d in DRIVE_HOUSES) kinds[d] = [DRIVE_HOUSES[d], DRIVE_HOUSES[d].filter((k) => PREFABS[k].cars)];
+  const houseAt = (d, tx, ty, painted, th) => {
+    const ks = kinds[d][painted ? 1 : 0], key = ks[Math.floor(hash2(tx, ty, 71) * ks.length)], L = LOT[key];
+    const tw = L[0] - 1 + Math.floor(hash2(tx, ty, 73) * 3), mk = key + ':' + tw + ':' + th;   // (the narrower end of the city's lots)
+    let pf = memo.get(mk);
+    if (!pf) memo.set(mk, (pf = scaledPrefab(PREFABS[key], tw, th, key)));
+    return { key, dims: { tw, th }, pf };
+  };
+  const doorCol = (pf, x0) => x0 + Math.min(pf.tw - 1, Math.floor(pf.doors[0] * pf.tw));
+  // A lot whose bottom-left corner is (tx, ty): fronting a road just below it (its walk straight down, at most a few
+  // tiles - where the road runs east-west) or beside it (its walk out along the front to a road on its left or right -
+  // where it runs north-south). Returns the plan, or null.
+  const plan = (d, tx, ty) => {
+    for (const side of [0, -1, 1]) {
+      const H0 = houseAt(d, tx, ty, side !== 0, 12), gar = side === 0 && !H0.pf.cars ? 3 : 0, w = H0.pf.tw + gar, x0 = tx;
+      if (!lawn(x0 + w - 1, ty, d)) continue;
+      let walks, len;   // (the way out to the road doesn't hang on the lot's depth)
+      if (side === 0) {
+        const door = walk(doorCol(H0.pf, x0), ty + 1, 0, 1, 8), drive = door && gar ? walk(x0 + H0.pf.tw + 1, ty + 1, 0, 1, 8) : [];
+        if (!door || !drive) continue;
+        walks = [door, drive]; len = door.length;
+      } else {
+        const path = walk(doorCol(H0.pf, x0), ty + 1, side, 0, Math.ceil(w / 2) + 8);
+        if (!path) continue;
+        walks = [path]; len = path.length + 4;
+      }
+      for (const th of [12, 11, 10, 9, 8]) {   // (as deep a lot as the block has room for)
+        const H = th === 12 ? H0 : houseAt(d, tx, ty, side !== 0, th), y0 = ty - th + 1;
+        if (!lawn(x0, y0, d) || !rectLawn(x0, y0, w, side === 0 ? th : th + 1, d, side === 0 ? [0, -1] : [-side, 0])) continue;
+        return { H, x0, y0, walks, gar, len };
+      }
+    }
+    return null;
+  };
+  // every district on drives: every spot a house could go, the ones nearest their road first
+  const box = {};
+  for (let i = 0; i < W * MAP_H; i++) { const d = m.dist[i]; if (!DRIVE_HOUSES[d]) continue; const tx = i % W, ty = (i - tx) / W, b = box[d] || (box[d] = [tx, ty, tx, ty]); if (tx < b[0]) b[0] = tx; if (ty < b[1]) b[1] = ty; if (tx > b[2]) b[2] = tx; if (ty > b[3]) b[3] = ty; }
+  for (const d of Object.keys(box).map(Number).sort((a, b) => a - b)) {
+    const [bx0, by0, bx1, by1] = box[d], cands = [];
+    for (let ty = by0; ty <= by1; ty++) for (let tx = bx0; tx <= bx1; tx++) {
+      if (!lawn(tx, ty, d)) continue;
+      const p = plan(d, tx, ty);
+      if (p) cands.push(p);
+    }
+    cands.sort((a, b) => a.len - b.len || a.y0 - b.y0 || a.x0 - b.x0);
+    for (const c of cands) {
+      const p = plan(d, c.x0, c.y0 + c.H.pf.th - 1);   // (still room? what went before may have taken it)
+      if (!p || p.H.key !== c.H.key || p.y0 !== c.y0) continue;
+      const { H, x0, y0, walks, gar } = p, pf = H.pf, before = m.homes.length;
+      placePrefab(m, { d, y: y0, h: pf.th, face: 'S' }, H.key, x0, null, rand, H.dims);
+      take(x0, y0, pf.tw, pf.th);
+      const home = m.homes[before];
+      if (home && gar) { addGarage(m, home, x0 + pf.tw, y0 + pf.th - 3, true); take(x0 + pf.tw, y0 + pf.th - 3, 3, 3); }
+      for (const wk of walks) pave(wk);
+    }
+  }
+  clearPropsIn(m, cleared, paved);
+}
+// Props standing where the drive houses went (the lawns' trees and shrubs): taken away, the indices into the props
+// kept straight for everything that refers to them (clearArea's way).
+function clearPropsIn(m, rects, tiles = new Set()) {
+  if (!rects.length && !tiles.size) return;
+  const inside = (tx, ty) => tiles.has(ty * MAP_W + tx) || rects.some(([x, y, w, h]) => tx >= x - 1 && tx <= x + w && ty >= y - 1 && ty <= y + h);
+  const keep = [], remap = new Map();
+  m.props.forEach((p, i) => { if (inside(Math.floor(p.x / TILE), Math.floor(p.y / TILE))) return; remap.set(i, keep.length); keep.push(p); });
+  if (keep.length === m.props.length) return;
+  const gone = new Set(m.props.filter((p, i) => !remap.has(i)));
+  m.props = keep;
+  m.lamps = m.lamps.filter((l) => !gone.has(l));
+  m.propSolid = new Map();
+  for (const [k, arr] of m.solidProps) {
+    const kept = arr.filter((e) => (e.pi < 0 ? !inside(Math.floor(e.x / TILE), Math.floor(e.y / TILE)) : remap.has(e.pi)));
+    for (const e of kept) if (e.pi >= 0) { e.pi = remap.get(e.pi); m.propSolid.set(e.pi, e); }
+    if (kept.length) m.solidProps.set(k, kept); else m.solidProps.delete(k);
   }
 }
 
@@ -3420,7 +3547,8 @@ function walledGap(m, row, x, w, rand) {
 }
 function fillerInner(m, row, x, w, st, rand, backLot = false) {
   const x0 = x, y0 = row.y, h = row.h;
-  if (st.roof && w >= 4 && h >= 4 && rand() < (backLot ? Math.max(st.roof, 0.7) : st.roof)) { roofBuilding(m, row, x0, y0, w, h, st, rand); return; }
+  // (behind a house on the winding drives, its garden)
+  if (st.roof && w >= 4 && h >= 4 && !(backLot && DRIVE_HOUSES[row.d]) && rand() < (backLot ? Math.max(st.roof, 0.7) : st.roof)) { roofBuilding(m, row, x0, y0, w, h, st, rand); return; }
   let kind = w >= 5 && (st.filler === 'parking' || st.filler === 'yard' || (st.filler === 'plaza' && rand() < 0.4)) ? 'parking' : st.filler;
   if (backLot && kind === 'parking' && h < 4) kind = st.filler === 'parking' ? 'plaza' : st.filler;
   if (backLot && st.filler === 'yard' && rand() < 0.5 && h >= 4) kind = 'parking';

@@ -1153,9 +1153,17 @@ function wreckIsland(m, H) {
 // than a person, solid) with a white gazebo and a fountain at its heart, four gates; round it gravel walks between
 // rose parterres and topiary, avenues of cypress and flowering trees out to the streets, benches, lamps and urns.
 // The maze is made fresh from a fixed seed (a depth-first walk over its cells), so it's the same for everyone.
+const MAZE = { CX: 1128, CY: 146, N: 11 };                  // the maze: N x N cells, 2 tiles each, walls 1 tile
+// The garden's ground and the avenues from its gates out to the loop: the houses of The Bluffs keep off it (they're
+// put along the loop before the garden is laid out: map.js driveHouses).
+export function inBluffsGarden(tx, ty) {
+  const { CX, CY, N } = MAZE, S = 2 * N + 1, X0 = CX - (S >> 1), Y0 = CY - (S >> 1);
+  if (tx >= X0 - 22 && tx < X0 + S + 22 && ty >= Y0 - 26 && ty < Y0 + S + 22) return true;
+  return (tx >= CX - 3 && tx <= CX + 4 && ty >= Y0 - 70 && ty < Y0 + S + 70) || (ty >= CY - 3 && ty <= CY + 4 && tx >= X0 - 70 && tx < X0 + S + 70);
+}
 function bluffsMaze(m, H) {
   const D = 34, at = (tx, ty) => ty * MAP_W + tx;
-  const CX = 1128, CY = 146, N = 11;                        // the maze: N x N cells, 2 tiles each, walls 1 tile
+  const { CX, CY, N } = MAZE;
   const S = 2 * N + 1, X0 = CX - (S >> 1), Y0 = CY - (S >> 1);
   const grass = (tx, ty) => { const i = at(tx, ty); return m.tiles[i] === T.GRASS && m.dist[i] === D; };
   for (let ty = Y0 - 6; ty < Y0 + S + 6; ty++) for (let tx = X0 - 6; tx < X0 + S + 6; tx++) if (!grass(tx, ty) || m.reserve[at(tx, ty)]) return;

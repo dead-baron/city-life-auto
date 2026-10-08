@@ -435,14 +435,14 @@ function sideSpot(v, ped) {
   return { x: v.x + Math.cos(side) * (v.def.W / 2 + 14), y: v.y + Math.sin(side) * (v.def.W / 2 + 14) };
 }
 
-function findExitSpot(world, v, ped, maxR) {
+// toward: a place they're heading for (a crew going to someone hurt): out on the side nearest it, so the vehicle
+// isn't standing between them and it
+function findExitSpot(world, v, ped, maxR, toward = null) {
   const hw = v.def.W / 2 + 16, hl = v.def.L / 2 + 16;
   if ((v.lz || 0) > 0.3) return null; // up on the deck: step out beside it (the barriers keep you on)
-  const cands = [[0, -hw], [0, hw], [-hl, 0], [hl, 0], [-hl / 2, -hw], [-hl / 2, hw]];
-  for (const [lx, ly] of cands) {
-    const [x, y] = localToWorld(v.x, v.y, v.a, lx, ly);
-    if (!PED_BLOCK[world.map.tileAtPx(x, y)]) return { x, y };
-  }
+  const cands = [[0, -hw], [0, hw], [-hl, 0], [hl, 0], [-hl / 2, -hw], [-hl / 2, hw]].map(([lx, ly]) => localToWorld(v.x, v.y, v.a, lx, ly));
+  if (toward) cands.sort((a, b) => Math.hypot(a[0] - toward.x, a[1] - toward.y) - Math.hypot(b[0] - toward.x, b[1] - toward.y));
+  for (const [x, y] of cands) if (!PED_BLOCK[world.map.tileAtPx(x, y)]) return { x, y };
   for (let r = 48; r <= maxR; r += 16) {
     for (let k = 0; k < 16; k++) {
       const ang = (k / 16) * Math.PI * 2;
@@ -453,13 +453,13 @@ function findExitSpot(world, v, ped, maxR) {
   return null;
 }
 
-export function ejectPed(world, ped, force) {
+export function ejectPed(world, ped, force, toward = null) {
   const v = world.get(ped.vehId);
   if (v) {
     const i = v.seats.indexOf(ped.id);
     if (i >= 0) v.seats[i] = 0;
     // nowhere dry nearby (out on the water): over the side, into the water beside the vehicle
-    const spot = findExitSpot(world, v, ped, v.def.kind === 'boat' ? 150 : force ? 400 : 150) || sideSpot(v, ped);
+    const spot = findExitSpot(world, v, ped, v.def.kind === 'boat' ? 150 : force ? 400 : 150, toward) || sideSpot(v, ped);
     ped.x = spot.x; ped.y = spot.y; ped.lz = v.lz || 0;
     if (ped.lz > 0.3) levelStep(world.map, ped, 11);
     ped.a = v.a;

@@ -14,7 +14,10 @@ export const WORLD_H = MAP_H * TILE;
 //   2  World v2 stage 1: Metro City's core re-laid (real-sized blocks, pavements by district class)
 //   3  the hero corner: Holly Street x Madison Street laid out in Midtown (the art targets' crossroads)
 //   4  World v2 stage 1b: highways two lanes each way, diamond interchanges on the ring
-export const WORLD_VERSION = 4;
+//   5  roads that go somewhere: the Arts District, the Gull Isles' villages; houses along the winding drives of Pine
+//      Hills, the Lake District and The Bluffs, Cedar Isle's ring road only along Cedar Falls; every business
+//      places itself with its own numbers (so the next rework of one district doesn't move the rest)
+export const WORLD_VERSION = 5;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);

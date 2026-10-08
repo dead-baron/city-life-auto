@@ -123,7 +123,7 @@ function runAmbulance(world, v, dt, now) {
     if (d < 150) {
       ai.mode = 'treat';
       v.input = { throttle: 0, steer: 0, hb: true };
-      for (const c of crew) vehicles.ejectPed(world, c, true);
+      for (const c of crew) vehicles.ejectPed(world, c, true, body);   // (out on the patient's side of the van)
       return;
     }
     while (ai.route.length > 1 && Math.hypot(ai.route[0].x - v.x, ai.route[0].y - v.y) < 60) ai.route.shift();

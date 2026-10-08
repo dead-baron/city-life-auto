@@ -3333,3 +3333,23 @@ Concept prompts SU1-SU4, SK1-SK8, CR1-CR2 and BO1 are in the prompt pack.
   - The ambient boats keep to the city's waters.
 - **The look**: the art v2 renderer bakes the sea past the edge with the same water as the real thing, so there's no seam. A flat stand-in shows for the split second before each bake lands. The minimap shows open sea past the edge, and the camera follows you out instead of stopping at the map's edge.
 - **Tests**: `test/border.test.js` (the band of sea and the wall beyond it, a speedboat slowed and stopped then back at full speed, a swimmer crawling along the outer line, the radar, logging back in on land).
+
+## 2026-10-07 · Houses along the winding drives; Cedar Isle's ring road only along the town
+
+The second stage of reworking roads laid out by rule rather than for a place (playtest: "major streets in area without development around it we should rework those areas of the world").
+
+- **Houses along the drives** (`map.js` driveHouses): Pine Hills, the Lake District and The Bluffs are laid out on curving drives and courts. The block fill (rows of lots facing south along straight streets) had left them almost empty: one house in Pine Hills, five in the Lake District, none in The Bluffs.
+  - Now every drive and court gets houses along it. Where the road runs east-west a house stands on its north side, its walk straight down to it; where it runs north-south the house stands beside it and its walk turns out along the front. A house without a painted drive gets a garage with its own drive.
+  - There are now 24 houses in Pine Hills, 49 in the Lake District and 8 in The Bluffs (169 homes in the city, from 114).
+  - In those three districts the scraps and strips that used to get a plain block of a building are lawn for the houses, and the ground behind a house is its garden.
+- **Cedar Isle's ring road** ran nine tiles inside the ring highway all the way round the island. On three sides that made one band of asphalt eighteen tiles wide beside fields, lawns and hills. It now runs only along Cedar Falls (`islands.js` RINGS.isle `road`).
+  - The farm's section roads run out to junctions on the highway at both ends.
+  - Cedar Bridge lands at a crossroads on the highway, and **Bridge Road** carries on from it into the Lake District.
+  - **Lake Road** runs down the middle of the Lake District from Lake Drive to the highway in the south. The two Lake Drives cross the district from Cedar Falls (the first carries straight on from Street 905) to the farm road.
+  - Mirror Pond moved north: one of the drives used to run into it from both sides.
+  - The Lake Courts are a little longer, and each stops short of every other road and of the railway.
+- **The Bluffs**: the courts off the loop only ran into the Bluffs Maze Garden, so they're gone. The houses stand along the inside of the loop round the garden, kept off the garden and its avenues.
+- **No front doors on a highway**: a block that only meets a highway is no longer treated as facing a street (`facesStreet`, `frontage`: road rank 3 for a highway at grade), so it stays green instead of getting a row of building backs.
+- **Businesses keep their places**: each special business now draws from its own random numbers (`placeSpecials`). Before, one business that picked a different lot changed the numbers every later one got, so reworking one district's streets moved businesses all over the city. This version moves them once more; from now on a rework only moves the businesses of the district it touches. The Lake District's courts draw from their own numbers too.
+- **The ambulance crew gets out on the patient's side** (`vehicles.js` ejectPed `toward`): an ambulance parked across the pavement could leave both paramedics stuck behind it.
+- **World version 5** (`shared/constants.js`): homes bought before it are bought back at what was paid, and you start from a hospital, as with every rebuild.

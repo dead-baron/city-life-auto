@@ -10,6 +10,7 @@
 import { TILE } from './constants.js';
 import { rounded, measure, pointAt, cubic, quad, inPoly } from './geom.js';
 import { clipLine, offsetLoop, breakGrid } from './citylayout.js';
+import { mulberry32 } from './rng.js';
 
 export const P = (x, y) => ({ x: x * TILE, y: y * TILE });
 const pts = (list) => list.map(([x, y]) => P(x, y));
@@ -21,13 +22,15 @@ const path = (corners, r) => { const l = rounded(pts(corners), r * TILE, false, 
 export const RINGS = {
   west: { corners: [[140, 262], [330, 258], [430, 262], [448, 300], [448, 470], [400, 560], [330, 640], [200, 642], [150, 600], [122, 470], [122, 300]], r: 24, inset: 9, name: 'Westport Beltway', zone: 'WEST' },
   north: { corners: [[830, 100], [1035, 96], [1055, 130], [1052, 232], [1025, 252], [850, 252], [822, 225], [822, 130]], r: 20, inset: 9, name: 'Northshore Loop', zone: 'NORTH' },
-  isle: { corners: [[335, 890], [460, 858], [640, 852], [880, 862], [915, 920], [912, 1040], [870, 1085], [620, 1092], [420, 1082], [318, 1030]], r: 26, inset: 9, name: 'Cedar Isle Loop', zone: 'ISLE' },
+  // (Cedar Isle's ring road only runs along the town, Cedar Falls: past it a road beside the highway would front
+  // nothing but lawns, fields and hills - the Lake District's drives and the farm roads meet the highway themselves)
+  isle: { corners: [[335, 890], [460, 858], [640, 852], [880, 862], [915, 920], [912, 1040], [870, 1085], [620, 1092], [420, 1082], [318, 1030]], r: 26, inset: 9, name: 'Cedar Isle Loop', zone: 'ISLE', road: (x) => x < 518 },
 };
 
 // Inland lakes (painted as water after the land mask): [x, y, rx, ry, name]
 export const LAKES = [
   [262, 440, 21, 25, 'Lakeview Lake'],
-  [600, 950, 26, 19, 'Cedar Lake'], [660, 905, 16, 10, 'Mirror Pond'], [590, 1027, 14, 10, 'Reed Pond'], [684, 1000, 12, 16, 'Heron Lake'],
+  [600, 950, 26, 19, 'Cedar Lake'], [660, 880, 14, 8, 'Mirror Pond'], [590, 1027, 14, 10, 'Reed Pond'], [684, 1000, 12, 16, 'Heron Lake'],
   [1092, 782, 10, 16, 'Mirage Lake'],
   [575, 82, 12, 8, 'Summit Tarn'],
 ];
@@ -81,7 +84,7 @@ export function islandRoads(ctx) {
     out[key] = ring;
     for (const p of clipLine(ring, (x, y) => true, 10 * TILE, 12)) lines.push({ pts: p, kind: 'hwy', lvl: 0, name: R.name });
     const inner = offsetLoop(ring, R.inset * TILE);
-    for (const p of clipLine(inner, (x, y) => land(x, y) && zoneOf(x, y) === z && seaD(x, y) >= 3, 10 * TILE, 12)) lines.push({ pts: p, kind: 'art', lvl: 0, name: `${R.name} Road` });
+    for (const p of clipLine(inner, (x, y) => land(x, y) && zoneOf(x, y) === z && seaD(x, y) >= 3 && (!R.road || R.road(x, y)), 10 * TILE, 12)) lines.push({ pts: p, kind: 'art', lvl: 0, name: `${R.name} Road` });
     R.inner = inner;
     R.core = offsetLoop(ring, (R.inset + 4) * TILE); // the grid stays inside this
     R.outer = offsetLoop(ring, -1 * TILE);           // ...except the avenues, which run out to the highway
@@ -151,11 +154,11 @@ export function islandRoads(ctx) {
     lines.push({ pts: [{ x: end.x, y: end.y }, top], kind, lvl: 0, name });
   }
   grid(N, Z.NORTH, [838, 868, 898, 928, 988], [118, 146, 174, 202, 230], { x: pick([898], [928]), y: pick([174], []) }, 'Northshore');
-  // The Bluffs: a loop of big houses east of town, cul-de-sacs off it
+  // The Bluffs: a loop of big houses east of town, down to the beach at both ends (the lawn in the middle is the Bluffs
+  // Maze Garden: naturesites.js; the houses along the loop: map.js driveHouses)
   const bluffs = loop([[1070, 106], [1178, 100], [1188, 170], [1150, 194], [1074, 190]], 16);
   for (const p of clipLine(bluffs, (x, y) => land(x, y) && seaD(x, y) >= 4, 10 * TILE, 12)) lines.push({ pts: p, kind: 'art', lvl: 0, name: 'Bluffs Loop' });
   lines.push({ pts: [P(1050, 150), P(1072, 150)], kind: 'art', lvl: 0, name: 'Bluffs Loop' });
-  courts(ctx, bluffs, (x, y) => land(x, y) && seaD(x, y) >= 6 && inPoly(bluffs, x * TILE, y * TILE), 'Bluffs Court', 22, 9);
   // up into the Granite Peaks
   for (const p of clipLine(path([[700, 158], [690, 120], [700, 90], [730, 62]], 14), (x, y) => land(x, y) && seaD(x, y) >= 3, 10 * TILE, 12)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'Peak Road' });
   county(ctx, [[560, 154], [550, 126]], 'Tarn Road');
@@ -168,22 +171,30 @@ export function islandRoads(ctx) {
   const S = RINGS.isle;
   grid(S, Z.ISLE, [360, 386, 412, 438, 464, 490, 516, 542], [905, 931, 957, 983, 1009, 1035, 1061],
     { x: pick([438], [516]), y: pick([983], [931]) }, 'Cedar Falls', (x) => x < 556);
-  // Metro City's avenue 688 crosses the channel from The Yards
+  // Metro City's avenue 688 crosses the channel from The Yards to a junction on the highway
   const yEnd = ctx.metroSouthEnd(688);
-  if (yEnd) lines.push({ pts: [{ x: yEnd.x, y: yEnd.y }, P(688, 864)], kind: 'ave', lvl: 0, name: 'Cedar Bridge' });
-  // the Lake District: winding drives with courts off them
-  const lakeOk = (x, y) => land(x, y) && zoneOf(x, y) === Z.ISLE && seaD(x, y) >= 6 && inCore(S)(x, y) && x > 556 && x < 712;
-  const drives = [
-    cubic({ x: 560, y: 882 }, { x: 600, y: 876 }, { x: 640, y: 940 }, { x: 708, y: 888 }, 24),
-    cubic({ x: 560, y: 1062 }, { x: 610, y: 1068 }, { x: 640, y: 984 }, { x: 708, y: 1056 }, 24),
-    cubic({ x: 630, y: 880 }, { x: 640, y: 930 }, { x: 625, y: 1000 }, { x: 640, y: 1064 }, 20),
-  ].map((c) => c.map((q) => P(q.x, q.y)));
-  for (const c of drives) for (const p of clipLine(c, lakeOk, 10 * TILE, 12)) { lines.push({ pts: p, kind: 'drive', lvl: 0, name: 'Lake Drive' }); courts(ctx, p, lakeOk, 'Lake Court', 26, 7); }
+  if (yEnd) lines.push({ pts: [{ x: yEnd.x, y: yEnd.y }, P(688, 857)], kind: 'ave', lvl: 0, name: 'Cedar Bridge' });
+  // the Lake District: winding drives with courts off them. Two run across it from Cedar Falls to the farm road on
+  // its east side; Lake Road runs down the middle of it from the first to the highway in the south, and Bridge Road
+  // carries on from Cedar Bridge's junction on the highway down to the first (a highway only meets arterials)
+  const lakeIn = (x, y) => land(x, y) && zoneOf(x, y) === Z.ISLE && seaD(x, y) >= 6 && x > 555.5;
+  const lakeOk = (x, y) => lakeIn(x, y) && inCore(S)(x, y) && x < 712;
+  const driveOk = (x, y) => lakeIn(x, y) && inPoly(S.outer, x * TILE, y * TILE) && x < 717;
+  const lakeRand = mulberry32(0x1a4e);   // (see the end: its own numbers, so its layout doesn't move anything else)
+  const lakeRoads = [
+    [cubic({ x: 556, y: 905 }, { x: 596, y: 872 }, { x: 640, y: 940 }, { x: 708, y: 888 }, 24).concat([{ x: 716, y: 881.9 }]), 'drive', 'Lake Drive'],   // (on from Cedar Falls' Street 905)
+    [cubic({ x: 560, y: 1062 }, { x: 610, y: 1068 }, { x: 640, y: 984 }, { x: 708, y: 1056 }, 24).concat([{ x: 716, y: 1064.5 }]), 'drive', 'Lake Drive'],
+    [cubic({ x: 633, y: 904 }, { x: 640, y: 950 }, { x: 626, y: 1010 }, { x: 640, y: 1094 }, 20), 'art', 'Lake Road'],
+    [[{ x: 688, y: 857 }, { x: 687, y: 880 }, { x: 686, y: 901 }], 'art', 'Bridge Road'],
+  ].map(([c, kind, name]) => clipLine(c.map((q) => P(q.x, q.y)), driveOk, 10 * TILE, 12).map((p) => ({ pts: p, kind, lvl: 0, name })));
+  for (const ls of lakeRoads) lines.push(...ls);
+  // (all of them laid first: a court keeps clear of every one of them)
+  for (const ls of lakeRoads.slice(0, 3)) for (const l of ls) courts({ ...ctx, rand: lakeRand }, l.pts, lakeOk, 'Lake Court', 26, 9);
   for (const p of clipLine(path([[540, 983], [590, 988], [630, 990]], 12), (x, y) => land(x, y) && zoneOf(x, y) === Z.ISLE, 6 * TILE, 12)) lines.push({ pts: p, kind: 'art', lvl: 0, name: 'Falls Road' });
-  // Cedar Farms: section roads between the fields
-  const farmOk = (x, y) => land(x, y) && zoneOf(x, y) === Z.ISLE && seaD(x, y) >= 4 && inCore(S)(x, y);
-  for (const x of [716, 780, 842]) for (const p of clipLine([P(x, 860), P(x, 1080)], farmOk, 10 * TILE)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'Section Road' });
-  for (const y of [940, 1000]) for (const p of clipLine([P(716, y), P(902, y)], farmOk, 10 * TILE)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'Section Road' });
+  // Cedar Farms: section roads between the fields, each out to a junction on the highway at its ends
+  const farmOk = (x, y) => land(x, y) && zoneOf(x, y) === Z.ISLE && inPoly(S.outer, x * TILE, y * TILE);
+  for (const x of [716, 780, 842]) for (const p of clipLine([P(x, 840), P(x, 1100)], farmOk, 10 * TILE)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'Section Road' });
+  for (const y of [940, 1000]) for (const p of clipLine([P(716, y), P(930, y)], farmOk, 10 * TILE)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'Section Road' });
   county(ctx, [[842, 960], [870, 980], [900, 1004], [936, 990]], 'Hill Road');
   dirt(ctx, [[936, 990], [950, 960], [940, 930]], 'Hill Track');
   dirt(ctx, [[842, 1040], [866, 1054], [884, 1050]], 'Orchard Track');
@@ -226,7 +237,9 @@ export function islandRoads(ctx) {
   gull([[1078, 1094], [1100, 1096], [1124, 1096], [1150, 1094]], 'dirt', 'Cove Lane', 2);
   gull([[1110, 1096], [1112, 1078], [1116, 1058], [1120, 1044]], 'dirt', 'Jungle Track', 2);
   gull([[1080, 1095], [1069, 1080], [1061, 1064]], 'dirt', 'West Beach Track', 2);
-  void rand;
+  // The courts of the Lake District draw from their own generator, and The Bluffs no longer has any: the numbers they
+  // used to take from the city's are still taken, so nothing else in the city moves because their layouts changed.
+  for (let k = 0; k < 66; k++) rand();
   return out;
 }
 
@@ -245,10 +258,12 @@ function dirt(ctx, corners, name) {
   for (const p of clipLine(p0, (x, y) => isLand(x, y) && !lake(x, y) && seaD(x, y) >= 2, 6 * TILE, 12)) lines.push({ pts: p, kind: 'dirt', lvl: 0, name });
 }
 
-// Cul-de-sacs off a road every `every` tiles, alternating sides, `len` tiles long.
+// Cul-de-sacs off a road every `every` tiles, alternating sides, `len` tiles long - each stopping short of any other
+// road (it must stay a dead end) and of the railway.
 function courts(ctx, road, ok, name, every, len) {
   const { lines, rand } = ctx;
   const L = road[road.length - 1].s ?? measure(road);
+  const rail = railNear(ctx.m);
   let side = 1;
   for (let s = 10 * TILE; s < L - 8 * TILE; s += every * TILE) {
     const q = pointAt(road, s);
@@ -258,9 +273,39 @@ function courts(ctx, road, ok, name, every, len) {
     const bend = (rand() - 0.5) * 0.5;
     const c2 = { x: q.x + nx * l * 0.6 + q.tx * l * bend, y: q.y + ny * l * 0.6 + q.ty * l * bend };
     const sac = quad({ x: q.x, y: q.y }, c2, { x: q.x + nx * l, y: q.y + ny * l }, 10);
-    const piece = clipLine(sac, ok, 6 * TILE, 12)[0];
+    const clear = (x, y) => ok(x, y) && !rail.has((y >> 2) * 4096 + (x >> 2)) && (Math.hypot(x * TILE - q.x, y * TILE - q.y) < 4 * TILE || !nearRoad(lines, x * TILE, y * TILE, 7 * TILE, road));
+    const piece = clipLine(sac, clear, 6 * TILE, 12)[0];
     if (piece && Math.hypot(piece[0].x - q.x, piece[0].y - q.y) < 2 * TILE) lines.push({ pts: piece, kind: 'minor', lvl: 0, name, culdesac: true });
   }
+}
+// The 4-tile cells within about 6 tiles of the railway (map.js railLine, laid out before the roads).
+const railCells = new WeakMap();
+function railNear(m) {
+  let set = railCells.get(m);
+  if (set) return set;
+  set = new Set();
+  for (const p of m.railPts || []) {
+    if (p.under) continue;
+    const cx = Math.floor(p.x / TILE) >> 2, cy = Math.floor(p.y / TILE) >> 2;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set.add((cy + dy) * 4096 + cx + dx);
+  }
+  railCells.set(m, set);
+  return set;
+}
+// Whether a road at ground level (other than `except`) passes within r px of (x, y).
+function nearRoad(lines, x, y, r, except) {
+  for (const l of lines) {
+    if (l.pts === except || l.lvl !== 0) continue;
+    const b = l.bbox || (l.bbox = l.pts.reduce((a, q) => [Math.min(a[0], q.x), Math.min(a[1], q.y), Math.max(a[2], q.x), Math.max(a[3], q.y)], [Infinity, Infinity, -Infinity, -Infinity]));
+    if (x < b[0] - r || x > b[2] + r || y < b[1] - r || y > b[3] + r) continue;
+    for (let k = 0; k + 1 < l.pts.length; k++) {
+      const a = l.pts[k], c = l.pts[k + 1], dx = c.x - a.x, dy = c.y - a.y, l2 = dx * dx + dy * dy;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / l2)) : 0;
+      const ex = a.x + dx * t - x, ey = a.y + dy * t - y;
+      if (ex * ex + ey * ey < r * r) return true;
+    }
+  }
+  return false;
 }
 
 // District seeds outside Metro City: [district id, x, y]
