@@ -7,7 +7,6 @@ import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import * as ferries from '../server/systems/ferries.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import { findInteraction } from '../server/systems/players.js';
-import { FERRY_FARE, FERRY_CAR_FARE } from '../shared/rules.js';
 import { T } from '../shared/constants.js';
 
 const routeTo = (world, island) => ferries.ferryRoutes(world).find((R) => R.island === island);
@@ -88,7 +87,7 @@ test('a ferry keeps its timetable: in at the pier, out bow first, swung round, a
   assert.equal(vehicles.tryEnter(world, p.ped), false, 'not taken');
 });
 
-test('walk aboard for the fare, ride across, get off at the far pier', () => {
+test('walk aboard (free), ride across, get off at the far pier', () => {
   const world = makeWorld({ ferries: true });
   const R = ferries.ferryRoutes(world).find((q) => !q.car);
   const { F, v } = boatOf(world, R);
@@ -100,7 +99,7 @@ test('walk aboard for the fare, ride across, get off at the far pier', () => {
   act.run();
   assert.equal(p.ped.vehId, v.id);
   assert.ok(p.ped.seat > 0, 'a passenger seat');
-  assert.equal(p.profile.cash, 40 - FERRY_FARE);
+  assert.equal(p.profile.cash, 40, 'free');
   assert.equal(ferries.rideInfo(world, p).k, 'ferry');
   // across (a little of the crossing for real), in at the island
   skipTo(world, F, 'cross', 0);
@@ -119,19 +118,21 @@ test('walk aboard for the fare, ride across, get off at the far pier', () => {
   assert.ok(Math.hypot(p.ped.x - e1.sx, p.ped.y - e1.sy) < 120, 'at the island pier');
 });
 
-test('no fare, no ferry; and none once it has gone', () => {
+test('no money needed; and no boarding once it has gone', () => {
   const world = makeWorld({ ferries: true });
   const R = ferries.ferryRoutes(world).find((q) => !q.car);
-  const { F } = boatOf(world, R);
+  const { F, v } = boatOf(world, R);
   const { p } = joinPlayer(world, { cash: 0, bank: 0 });
   const e0 = R.ends[0];
   teleport(world, p.ped, e0.sx - e0.ox * 30, e0.sy - e0.oy * 30);
+  skip(world, F);   // (out it goes: too late)
+  assert.equal(ferries.interaction(world, p), null);
+  for (let k = 0; k < 12 && !(F.phase === 'dock' && F.end === 0); k++) skip(world, F);   // (round again, in at this pier)
+  teleport(world, p.ped, e0.sx - e0.ox * 30, e0.sy - e0.oy * 30);
   const act = ferries.interaction(world, p);
   assert.ok(act);
-  assert.equal(act.run(), false);
-  assert.equal(p.ped.vehId, 0);
-  skip(world, F);   // (out it goes)
-  assert.equal(ferries.interaction(world, p), null);
+  assert.equal(act.run(), true, 'aboard with empty pockets');
+  assert.equal(p.ped.vehId, v.id);
 });
 
 test('drive aboard the car ferry: the car rides on the deck and comes off on the landing at the far side', () => {
@@ -148,7 +149,7 @@ test('drive aboard the car ferry: the car rides on the deck and comes off on the
   const act = findInteraction(world, p);
   assert.match(act && act.label, /Drive aboard the Gull Harbor Ferry/);
   act.run();
-  assert.equal(p.profile.cash, 100 - FERRY_CAR_FARE);
+  assert.equal(p.profile.cash, 100, 'free');
   assert.ok(car.onDeck && car.onDeck.f === v.id, 'on the deck');
   world.step();
   // on the deck: inside the hull, up at the deck's height, going where the boat goes

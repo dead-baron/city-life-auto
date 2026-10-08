@@ -36,7 +36,7 @@ import { drawStandIn, STANDIN_PX } from './standin.js';
 import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/map.js';
 import { T as TT } from '../../../shared/constants.js';
-import { signalFor } from '../../../shared/roads.js';
+import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
 import { VEHICLE_BY_INDEX } from '../../../shared/vehicles.js';
 import { dir8 } from '../../render/chars.js';
 import { lampHead } from '../../render/tiles.js';

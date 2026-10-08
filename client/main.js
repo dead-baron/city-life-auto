@@ -3,7 +3,7 @@
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS } from '../shared/constants.js';
 import { generateCity, cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
-import { signalFor } from '../shared/roads.js';
+import { signalFor } from '../shared/signals.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';

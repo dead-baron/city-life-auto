@@ -6,7 +6,7 @@ import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import * as transit from '../server/systems/transit.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import { findInteraction } from '../server/systems/players.js';
-import { BUS_FARE, BUS_DWELL_S } from '../shared/rules.js';
+import { BUS_DWELL_S } from '../shared/rules.js';
 
 test('bus lines: loops through each town zone\'s shelters, joined end to end along the streets', () => {
   const world = makeWorld();
@@ -37,7 +37,8 @@ test('buses run their lines, calling at every stop in turn', () => {
   const L = lines.slice().sort((a, b) => a.len - b.len)[0];
   const v = world.get(world.buses.get(L.id)[0]);
   const calls = [];
-  for (let t = 0; t < 260 && calls.length < L.stops.length + 1; t++) {
+  // (it stops at every red light on the way, behind the line: a few minutes round)
+  for (let t = 0; t < 600 && calls.length < L.stops.length + 1; t++) {
     run(world, 0.5);
     if (v.bus.atStop >= 0 && calls[calls.length - 1] !== v.bus.atStop) calls.push(v.bus.atStop);
   }
@@ -45,7 +46,7 @@ test('buses run their lines, calling at every stop in turn', () => {
   for (let i = 1; i < calls.length; i++) assert.equal(calls[i], (calls[i - 1] + 1) % L.stops.length, `${L.name}: stops in order (${calls})`);
 });
 
-test('board a bus at its stop for the fare, ride it and get off at the next stop', () => {
+test('board a bus at its stop (free), ride it and get off at the next stop', () => {
   const world = makeWorld({ transit: true });
   const { p } = joinPlayer(world, { cash: 50 });
   const L = transit.busLines(world).slice().sort((a, b) => a.len - b.len)[0];
@@ -62,7 +63,7 @@ test('board a bus at its stop for the fare, ride it and get off at the next stop
   act.run();
   assert.equal(p.ped.vehId, bus.id);
   assert.ok(p.ped.seat > 0, 'a passenger seat');
-  assert.equal(p.profile.cash, 50 - BUS_FARE);
+  assert.equal(p.profile.cash, 50, 'free');
   assert.equal(transit.rideInfo(world, p).line, L.name);
   // off it goes; at the next stop, get off
   let at = -1;
@@ -76,7 +77,7 @@ test('board a bus at its stop for the fare, ride it and get off at the next stop
   void BUS_DWELL_S;
 });
 
-test('no fare, no ride', () => {
+test('no money needed: the buses are free', () => {
   const world = makeWorld({ transit: true });
   const { p } = joinPlayer(world, { cash: 0, bank: 0 });
   const L = transit.busLines(world)[0];
@@ -84,8 +85,8 @@ test('no fare, no ride', () => {
   const v = world.get(world.buses.get(L.id)[0]);
   v.bus.dwellUntil = world.time + 5;
   teleport(world, p.ped, v.x, v.y + 80);
-  assert.equal(transit.boardBus(world, p, v), false);
-  assert.equal(p.ped.vehId, 0);
+  assert.equal(transit.boardBus(world, p, v), true);
+  assert.equal(p.ped.vehId, v.id);
 });
 
 // ---- taxis -----------------------------------------------------------------------------------------------------------

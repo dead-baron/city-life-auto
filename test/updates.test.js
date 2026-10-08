@@ -182,3 +182,21 @@ test('the build travels in welcome and hello; version.json is read at boot and w
   clearInterval(h);
   assert.deepEqual(seen, ['bbb222'], 'the new build, once');
 });
+
+test('a new page back in its ghost (a reload, a phone that dropped the tab, an update): it can move straight away', () => {
+  const w = makeWorld();
+  const at = w.map.spawns.police;
+  const { p, prof } = login(w, { pos: { x: at.x, y: at.y } });
+  const walk = (pl, seq0, n, mx) => { for (let k = 0; k < n; k++) players.queueInput(pl, { seq: seq0 + k, bits: 0, mx, my: 0, aim: 0 }); };
+  // a long session on the first page: its inputs numbered into the thousands
+  for (let s = 1; s < 3000; s += 8) { walk(p, s, 8, 0); w.step(); }
+  const ped = p.ped;
+  players.leave(w, p);                       // the page goes (its ghost stays 30 s)
+  assert.ok(w.players.has(prof.pid) && w.entities.has(ped.id), 'a ghost');
+  // a new page (its inputs numbered from 1 again) back within the ghost's 30 s
+  const back = players.join(w, fakeConn(), prof);
+  assert.equal(back.ped, ped, 'back in its own body');
+  const x0 = ped.x;
+  for (let s = 1; s < 60; s += 1) { walk(back, s, 1, 1); w.step(); }
+  assert.ok(ped.x - x0 > 60, `it walks (${Math.round(ped.x - x0)} px)`);
+});

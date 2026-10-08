@@ -5,7 +5,7 @@
 import { K } from '../../shared/constants.js';
 import { PED_BLOCK, DISTRICTS } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, FERRY_FARE, FERRY_CAR_FARE } from '../../shared/rules.js';
+import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
 import * as events from './events.js';
@@ -179,7 +179,7 @@ export function handle(world, p, msg) {
   if (a === 'board') return boardFor(world, p);
   if (a === 'feed') return events.feedFor(world);
   if (a === 'out') { phoneOut(world, p, !!msg.on); return null; }   // the phone in your hand while its menu is open
-  if (a === 'transit') return { ...transit.transitInfo(world, p), ferries: ferries.ferryInfo(world), ferryFare: FERRY_FARE, ferryCar: FERRY_CAR_FARE };   // the Transit app and the lines on the map
+  if (a === 'transit') return { ...transit.transitInfo(world, p), ferries: ferries.ferryInfo(world) };   // the Transit app and the lines on the map
   if (a === 'taxi') return transit.taxiPhone(world, p, msg);    // call a taxi / cancel it / where you want to go
   if (a === 'cancel') {
     if (!p.job) return { ...boardFor(world, p), err: 'You have no job.' };

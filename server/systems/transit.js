@@ -13,13 +13,13 @@
 // end it is entered from) with its stops on them, at the kerb on the bus's side of the road. Each line runs a bus or
 // three, spread round it; a bus keeps to the kerb lane, pulls up at every stop for BUS_DWELL_S and goes on (the NPC
 // traffic driver, traffic.js, takes its turns from the line and its speed cap from here). Standing at a stop while a bus
-// waits there, interact boards it for BUS_FARE (a passenger seat; the camera rides along). Get off with the vehicle key
+// waits there, interact boards it, free (a passenger seat; the camera rides along). Get off with the vehicle key
 // while it waits at a stop (on the move you bail out, as from any vehicle). A bus that is taken or wrecked leaves its
 // line; a new one comes into service a minute later, out of sight.
 import { K } from '../../shared/constants.js';
 import { lanePath, exitsFrom, nearestEdge } from '../../shared/roads.js';
 import { project, pointAt } from '../../shared/geom.js';
-import { BUS_FARE, BUS_DWELL_S, TAXI_FLAG, TAXI_PER_KM, TAXI_WAIT_S, TAXI_REFUSE_STARS } from '../../shared/rules.js';
+import { BUS_DWELL_S, TAXI_FLAG, TAXI_PER_KM, TAXI_WAIT_S, TAXI_REFUSE_STARS } from '../../shared/rules.js';
 import { PAINTS } from '../../shared/vehicles.js';
 import { spawnNpc } from './npc.js';
 import { inAnyView } from '../view.js';
@@ -369,12 +369,11 @@ export function boardBus(world, p, v) {
   if (!ped || ped.vehId || ped.dead || !v || !v.bus || v.wreckAt) return false;
   const seat = v.seats.findIndex((s, i) => i > 0 && !s);
   if (seat < 0) { world.notify(p, 'The bus is full.', 'warn'); return false; }
-  if (!payFrom(p, BUS_FARE)) { world.notify(p, `The fare is $${BUS_FARE}.`, 'warn'); return false; }
   if (ped.carrying) { world.notify(p, 'Put the crate down first - no freight on the bus.', 'warn'); return false; }
   v.seats[seat] = ped.id; ped.vehId = v.id; ped.seat = seat; ped.vx = 0; ped.vy = 0; ped.rollT = 0;
   v.bus.dwellUntil = Math.max(v.bus.dwellUntil, world.time + 2);   // (the driver waits while you sit down)
   const L = busLines(world)[v.bus.line], nx = nextStopOf(world, v);
-  world.notify(p, `On the ${L.name} ($${BUS_FARE}).${nx ? ` Next stop: ${nx.name}.` : ''}`, 'good');
+  world.notify(p, `On the ${L.name}.${nx ? ` Next stop: ${nx.name}.` : ''}`, 'good');
   world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y });
   p.meDirty = true;
   return true;
@@ -396,7 +395,7 @@ export function interaction(world, p) {
   const v = busToBoard(world, ped);
   if (!v) return taxiInteraction(world, p);
   const L = busLines(world)[v.bus.line];
-  return { label: `Board the ${L.name} bus ($${BUS_FARE})`, run: () => boardBus(world, p, v) };
+  return { label: `Board the ${L.name} bus`, run: () => boardBus(world, p, v) };
 }
 // ...and when there's no bus: a note of the line and when the next one comes (a prompt with no button)
 export function stopNote(world, p) {
@@ -420,7 +419,7 @@ export function rideInfo(world, p) {
 // The Transit app and the map: the lines (their streets and stops), where their buses are, when each stop's next comes
 export function transitInfo(world, p = null) {
   return {
-    t: 'transit', fare: BUS_FARE, taxi: p ? taxiInfo(world, p) : null, taxiFlag: TAXI_FLAG, taxiKm: TAXI_PER_KM,
+    t: 'transit', taxi: p ? taxiInfo(world, p) : null, taxiFlag: TAXI_FLAG, taxiKm: TAXI_PER_KM,
     lines: busLines(world).map((L) => ({
       id: L.id, name: L.name, col: PAINTS[L.paint], len: L.len, path: linePath(world, L),
       stops: L.stops.map((s, k) => ({ x: s.x, y: s.y, n: s.name, eta: stopEta(world, L, k) })),

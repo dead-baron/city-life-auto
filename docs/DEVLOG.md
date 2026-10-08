@@ -3641,3 +3641,22 @@ While a player's phone menu is open their character holds the phone, head down, 
 - **Test:** the roadkill check in `test/wildlife.test.js` puts the rabbit right at the bumper; one a car's length off could dodge it, so the test failed now and then.
 - **The art from the server, switched off, no longer crashes the server:** with no bake threads (`CLA_ART_THREADS=0`, or a one-core machine) a request for a chunk of the current art took the server down. It's a 404 now (`test/artcdn.test.js`).
 
+## 2026-10-08 · Stuck after an update: fixed; transit is free; traffic lights with yellows, and traffic that stops behind the line
+- **Stuck on the spot after an update (or a reload):** a page that came back while its character was still standing in the world (within the 30 s ghost window) had every input thrown away. The server only takes an input numbered past the last one it took (`players.queueInput`), and kept the old page's count. A reloaded page numbers its inputs from 1 again, so it couldn't move or interact until it caught up with the old count, which after a long session was minutes away. That happened after an update's reload, when a phone dropped the tab and reloaded it, or on any quick reload. A rejoin now starts the count afresh (`players.join`). Covered by `test/updates.test.js`, and checked end to end: a page playing through a server restart onto a new build, its reload into the new build, and a reload straight back into its ghost all move at once.
+- **Free transit** (the user: no fees on buses, ferries, trains and subways): the bus and ferry fares are gone, with or without a car. The trains and subway were already free. There were never any bridge tolls: the gantries at the long bridges only tell the police when someone wanted crosses.
+- **Traffic lights** (`shared/signals.js`, the timing kept apart from `shared/roads.js` so the baked art stays as it is):
+  - A 24 s cycle with a 2.5 s yellow before every red and half a second of red all round before the cross street goes.
+  - The main road through a junction gets the longer green (10 s to the cross street's 8). A three-way junction gives each road 5 s green and 2.5 s yellow.
+- **Cars stop behind the line:**
+  - Drivers judged a red by the car's middle, 14 px from where the lane meets the junction, so a stopped car's nose stood over the crossing and into the junction. Worse, at that distance the junction's waypoint counted as reached, and the car crept on through the red.
+  - Now the nose stops behind the painted stop line at a signal (`traffic.js` `STOP_LINE`), or just short of the junction elsewhere.
+  - On a yellow a driver stops if they comfortably can (`BRAKE_EASY`), otherwise goes on through.
+- **Fewer jams:**
+  - **New rules at a junction** (`junctionClear`), with a car kept waiting long enough going anyway, so a turn is never shut out for good. A car doesn't go in:
+    - while the road it's taking is backed up just past the junction (it would stop in the middle and lock the cross traffic);
+    - while something crosses the junction on another heading;
+    - turning left, while traffic comes the other way.
+  - **Narrow streets:** through traffic no longer goes down alleys, where two cars meeting head-on were stuck for good. Oncoming cars in the other lane of a narrow street squeeze past each other instead of both stopping.
+  - **Clearing what doesn't move:** a traffic car that hasn't moved in 50 s (in a jam that won't clear), or a car left empty in the road for 90 s, is cleared away once nobody can see it, near a player or not. A car a player left somewhere stays.
+  - **Measured** (a simulation of 8 minutes with players in four town centres): cars standing still 30 s or more went from about 11% of the traffic to about 4-6%. Traffic moves slower on average, because it now actually waits at red lights.
+

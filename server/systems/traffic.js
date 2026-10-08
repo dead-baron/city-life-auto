@@ -4,7 +4,8 @@
 // bends, pull over for sirens and panic when attacked; parked cars and docked boats near players.
 // Also exports the shared driving controller + route planner used by police and EMS.
 import { K, T } from '../../shared/constants.js';
-import { lanePath, turnPath, exitsFrom, signalFor, edgeZ, nearestEdge } from '../../shared/roads.js';
+import { lanePath, turnPath, exitsFrom, edgeZ, nearestEdge } from '../../shared/roads.js';
+import { signalFor } from '../../shared/signals.js';
 import { pointAt, measure } from '../../shared/geom.js';
 import { angleDiff, clamp } from '../../shared/math.js';
 import { TRAFFIC_MIX, PARKED_MIX, RACK_MIX, TRUCK_MODELS, VEHICLES } from '../../shared/vehicles.js';
@@ -54,9 +55,10 @@ function chooseExit(world, n, inEdge, def = null) {
     if (def.rough > 1) { const paved = opts.filter((o) => net.edges[o.edge].kind !== 'dirt'); if (paved.length) opts = paved; }
   }
   if (!opts.length) return null;
-  // through traffic keeps to the streets: an alley only now and then (or when it's the only way on)
+  // through traffic keeps to the streets: an alley (one car wide: two meeting in it are stuck there) only when it's the
+  // only way on
   const streets = opts.filter((o) => net.edges[o.edge].kind !== 'alley');
-  if (streets.length && rng() < 0.92) opts = streets;
+  if (streets.length) opts = streets;
   const near = nearestAnchor(world, n.x, n.y);
   if (near && near.d > 900 && rng() < 0.7) {
     let best = null, bd = Infinity;
@@ -152,6 +154,7 @@ function crossJunction(world, v) {
   const turn = turnPath(a[a.length - 1], endDir(a), b[0], startDir(b), Math.abs(nx.turn) > 0.5 ? 6 : 3);
   if (ai.route) { ai.route.i = (ai.route.i + 1) % routeSteps(world, ai.route).length; enterRoute(world, v, ai.route.i, 0); }
   else enterEdge(world, v, nx.edge, to, lane, 0);
+  ai.cameBy = e.id;   // (the road it came into the junction by: junctionClear)
   ai.pts.unshift(...turn.map((p) => ({ x: p.x, y: p.y })));
 }
 
@@ -258,6 +261,8 @@ function obstacleSpeed(world, v, fwd) {
     const lx = dx * c + dy * s, ly = -dx * s + dy * c;
     const halfOther = e.kind === K.VEH ? e.def.W / 2 : 10;
     if (lx < 0 || lx > look + 40 || Math.abs(ly) > v.def.W / 2 + halfOther - 4) continue;
+    // a car coming the other way in the other lane (a narrow road: their sides all but touch) squeezes past
+    if (e.kind === K.VEH && ly < -(v.def.W / 2 + halfOther) * 0.45 && Math.abs(angleDiff(e.a, v.a)) > 2.6) continue;
     const gap = lx - v.def.L / 2 - (e.kind === K.VEH ? e.def.L / 2 : 10) - 10 - (e.kind === K.VEH ? standoff(v) : 0);
     limit = Math.min(limit, Math.max(0, gap * 1.8));
   }
@@ -355,9 +360,17 @@ function steerTraffic(world, v, t) {
   const stop = stopIdx >= 0 ? ai.pts[stopIdx] : null;
   if (stop && !panic) {
     const n = net.nodes[stop.node];
-    const st = signalFor(n, stop.edge, t);
     const ds = Math.hypot(stop.x - v.x, stop.y - v.y);
-    if (st === 'R' || (st === 'Y' && ds > 60)) desired = Math.min(desired, Math.max(0, (ds - 14) * 1.6));
+    // where it stops, nose first: behind the painted stop line at a signal (it's STOP_LINE px back from where the
+    // lane meets the junction: client/art2/game/groundbake.js stopLines), just short of the junction anywhere else
+    const gap = ds - v.def.L / 2 - (n.light ? (n.lvl === 0 ? STOP_LINE : 14) : 10);
+    const st = signalFor(n, stop.edge, t), fwd = Math.max(0, vehForwardSpeed(v));
+    // red: stop at the line (a car already well over it clears the junction); yellow: stop if it comfortably can,
+    // otherwise go on through; green or no lights: on into the junction only when it can get across (junctionClear)
+    let hold = st === 'R' ? gap > -30 : st === 'Y' ? gap > (fwd * fwd) / (2 * BRAKE_EASY) - 6 : false;
+    if (!hold && gap < 140) hold = !junctionClear(world, v, n, stop);
+    else if (gap >= 140) ai.waitNode = -1;
+    if (hold) desired = Math.min(desired, Math.max(0, gap * 1.6));
     else if (ai.turning && ds < 260) desired = Math.min(desired, 150 + ds * 0.4);
   }
   if (!panic && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
@@ -394,6 +407,59 @@ function steerTraffic(world, v, t) {
   }
   const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190));
   driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic });
+}
+
+// The painted stop line is this far back from where a lane meets a signalled junction (px)
+const STOP_LINE = 52;
+// how hard a driver brakes for a yellow without making a meal of it (px/s per s)
+const BRAKE_EASY = 480;
+// May a car waiting to go into junction n (on green, or where there are no lights) go now? Not while:
+// - the road it's taking is backed up just past the junction (it would stop in the box and lock the cross traffic);
+// - something is crossing the box on another heading (across its way: not the same way, nor straight the other way);
+// - it's turning left and traffic is coming the other way.
+// A car kept waiting goes anyway after a while (heavy traffic never shuts a turn out for good), and nothing keeps it
+// out of a road that's backed up for ever: after 20 s it creeps in regardless.
+function junctionClear(world, v, n, stop) {
+  const ai = v.ai, now = world.time;
+  if (n.lvl !== 0 || n.merge || n.edges.length < 3) return true;   // (the highway's own junctions, a bend, a dead end)
+  if (ai.waitNode !== n.id) { ai.waitNode = n.id; ai.waitAt = now; }
+  const waited = now - ai.waitAt, nx = ai.next;
+  // 1. room on the way out, on its side of the road
+  if (nx && waited < 20 && n.dirs[nx.edge] !== undefined) {
+    const out = n.dirs[nx.edge], ox = Math.cos(out), oy = Math.sin(out), d0 = (n.trim[nx.edge] || 0) + v.def.L / 2 + 18;
+    const px = n.x + ox * d0, py = n.y + oy * d0;
+    for (const e of world.query(px, py, v.def.L / 2 + 34, K.VEH)) {
+      if (e === v || !sameLevel(e.lz, v.lz) || Math.hypot(e.vx, e.vy) > 15) continue;   // (just pulling away is no queue)
+      if (Math.abs(angleDiff(e.a, out)) > 0.8) continue;   // (the other way on that road, or across it)
+      if (-(e.x - n.x) * oy + (e.y - n.y) * ox < -10) continue;   // (on the far side of the road)
+      return false;
+    }
+  }
+  if (waited > 6) return true;
+  // 2. something crossing the junction on another heading (not one ahead of it from the same road, turning)
+  const R = (n.half || 40) + 24;
+  for (const e of world.query(n.x, n.y, R, K.VEH)) {
+    if (e === v || !sameLevel(e.lz, v.lz)) continue;
+    if (e.ai && e.ai.from === n.id && e.ai.cameBy === stop.edge) continue;
+    // (moving through it; standing still only right in the middle of it - one waiting at its own line on a narrower
+    // road can be well inside the circle)
+    if (Math.hypot(e.vx, e.vy) < 20 && Math.hypot(e.x - n.x, e.y - n.y) > R * 0.55) continue;
+    const da = Math.abs(angleDiff(e.a, v.a));
+    if (da < 0.6 || da > 2.55) continue;
+    if (!e.ai && Math.hypot(e.vx, e.vy) < 5 && !e.seats.some((s) => s)) continue;   // (an empty car left there: drive round it)
+    return false;
+  }
+  // 3. turning left across the other way: what's coming through goes first
+  if (nx && nx.turn < -0.5) {
+    for (const e of world.query(n.x, n.y, (n.half || 40) + 220, K.VEH)) {
+      if (e === v || !sameLevel(e.lz, v.lz) || Math.abs(angleDiff(e.a, v.a)) < 2.5) continue;
+      const sp = Math.hypot(e.vx, e.vy);
+      if (sp < 40) continue;                                            // (waiting at its own line, or about to)
+      if ((e.x - n.x) * e.vx + (e.y - n.y) * e.vy > 0 && Math.hypot(e.x - n.x, e.y - n.y) > (n.half || 40)) continue;   // (gone past)
+      return false;
+    }
+  }
+  return true;
 }
 
 // Is a vehicle running its siren coming up behind us (or straight at us down the same road)?
@@ -457,12 +523,19 @@ function manage(world) {
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) anchors.push(p.ped);
   const near = (x, y, r) => { for (const a of anchors) if ((a.x - x) ** 2 + (a.y - y) ** 2 < r * r) return true; return false; };
   // despawn
+  const now = world.time, mine = new Set();
+  for (const p of world.players.values()) if (p.lastVehicle) mine.add(p.lastVehicle);   // (a car a player left somewhere stays)
   for (const v of world.entities.values()) {
     if (v.kind !== K.VEH) continue;
     if (v.seats.some((s) => s && world.get(s)?.player)) continue;
     if (v.owner && !v.wreckAt) continue;
     const isTraffic = v.ai && v.ai.kind === 'traffic';
     const range = isTraffic ? 1800 : 1900;
+    // a car that hasn't moved in a long while - in a jam that won't clear, or left in the road with nobody in it - is
+    // cleared away once nobody's looking, near a player or not (the road crew; the jam behind it moves again)
+    if (Math.hypot(v.vx, v.vy) < 8 && !v.parked && !mine.has(v.id) && (isTraffic || (!v.ai && v.despawnable && !v.seats.some((s) => s)))) v.stillSince ??= now;
+    else v.stillSince = undefined;
+    if (v.stillSince !== undefined && now - v.stillSince > (isTraffic ? 50 : 90) && !inAnyView(world, v.x, v.y, 96) && !(v.ai && v.ai.route)) { removeVehicle(world, v); continue; }
     if (!v.despawnable || near(v.x, v.y, range) || inAnyView(world, v.x, v.y, 64)) continue;
     if (v.ai && v.ai.kind !== 'traffic') continue; // police/ems manage their own
     removeVehicle(world, v);

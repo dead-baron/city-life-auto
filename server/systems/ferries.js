@@ -9,16 +9,15 @@
 // shore, then straightened). A boat at a pier lies with its stern to the dock and its bow to open water; it leaves bow
 // first, runs the way over, slows, turns round in open water and backs in to the pier on the far side.
 //
-// Boarding while it's in: on foot, interact by the boat (FERRY_FARE); in a car at a car ferry's stern, interact to drive
-// aboard (FERRY_CAR_FARE): the car rides on the deck (deck slots, held there: no physics, not sinking) with you in it.
+// Boarding while it's in (free): on foot, interact by the boat; in a car at a car ferry's stern, interact to drive
+// aboard: the car rides on the deck (deck slots, held there: no physics, not sinking) with you in it.
 // At the far side the cars are driven off onto the landing behind the pier; foot passengers get off with the vehicle key
 // (on the way over that's over the side, into the water). Getting out of a car on the deck puts you in a seat aboard.
 // The boats can't be taken, hurt or pushed about.
 import { K, T, TILE, MAP_W, MAP_H } from '../../shared/constants.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { nearestEdge } from '../../shared/roads.js';
-import { FERRY_FARE, FERRY_CAR_FARE, FERRY_DWELL_S } from '../../shared/rules.js';
-import { payFrom } from './economy.js';
+import { FERRY_DWELL_S } from '../../shared/rules.js';
 import { spawnNpc } from './npc.js';
 
 const ROUTES = [
@@ -417,7 +416,7 @@ export function interaction(world, p) {
     const to = F.end === 0 ? R.island : R.mainland;
     if (!ped.vehId) {
       if (hullDist(v, ped.x, ped.y) > BOARD_REACH) continue;
-      return { label: `Board the ${R.name} to ${to} ($${FERRY_FARE})`, run: () => boardFoot(world, p, v, R, to) };
+      return { label: `Board the ${R.name} to ${to}`, run: () => boardFoot(world, p, v, R, to) };
     }
     const car = world.get(ped.vehId);
     const e = R.ends[F.end];
@@ -427,7 +426,7 @@ export function interaction(world, p) {
     }
     if (!R.car || !car || ped.seat !== 0 || car.ferry || car.onDeck || car.def.kind === 'boat') continue;
     if (Math.hypot(car.x - e.sx, car.y - e.sy) > RAMP_REACH) continue;
-    return { label: car.def.L > DECK_MAX_L ? `The ${car.def.name} won't fit on the ferry` : `Drive aboard the ${R.name} to ${to} ($${FERRY_CAR_FARE})`, run: () => driveAboard(world, p, v, car, R, to) };
+    return { label: car.def.L > DECK_MAX_L ? `The ${car.def.name} won't fit on the ferry` : `Drive aboard the ${R.name} to ${to}`, run: () => driveAboard(world, p, v, car, R, to) };
   }
   return null;
 }
@@ -437,10 +436,9 @@ function boardFoot(world, p, v, R, to) {
   if (ped.carrying) { world.notify(p, 'Put the crate down first.', 'warn'); return false; }
   const seat = v.seats.findIndex((s, i) => i > 0 && !s);
   if (seat < 0) { world.notify(p, 'The ferry is full.', 'warn'); return false; }
-  if (!payFrom(p, FERRY_FARE)) { world.notify(p, `The fare is $${FERRY_FARE}.`, 'warn'); return false; }
   v.seats[seat] = ped.id; ped.vehId = v.id; ped.seat = seat; ped.vx = 0; ped.vy = 0; ped.rollT = 0;
   world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y });
-  world.notify(p, `Aboard the ${R.name} to ${to} ($${FERRY_FARE}).`, 'good');
+  world.notify(p, `Aboard the ${R.name} to ${to}.`, 'good');
   p.meDirty = true;
   return true;
 }
@@ -448,10 +446,9 @@ function driveAboard(world, p, v, car, R, to) {
   if (car.def.L > DECK_MAX_L) { world.notify(p, `The ${car.def.name} is too big for the ferry.`, 'warn'); return false; }
   const k = v.deck ? v.deck.findIndex((id) => !id) : -1;
   if (k < 0) { world.notify(p, 'The car deck is full - wait for the next one.', 'warn'); return false; }
-  if (!payFrom(p, FERRY_CAR_FARE)) { world.notify(p, `It's $${FERRY_CAR_FARE} for a car.`, 'warn'); return false; }
   v.deck[k] = car.id; car.onDeck = { f: v.id, k };
   car.vx = 0; car.vy = 0; car.av = 0; car.input = { throttle: 0, steer: 0, hb: false };
-  world.notify(p, `On the car deck of the ${R.name} to ${to} ($${FERRY_CAR_FARE}). You'll drive off at the far side.`, 'good');
+  world.notify(p, `On the car deck of the ${R.name} to ${to}. You'll drive off at the far side.`, 'good');
   p.meDirty = true;
   return true;
 }

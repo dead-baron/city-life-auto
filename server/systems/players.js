@@ -69,6 +69,11 @@ export function join(world, conn, profile, opts = {}) {
     p.ghostUntil = 0;
     p.known = new Map();
     p.inputQ = [];
+    // a new connection numbers its inputs afresh (a reloaded page from 1): an input is only taken when it's numbered
+    // past the last one taken (queueInput), so the old count would throw every one away until the new page caught up
+    // with it - stuck on the spot for minutes after a reload, a dropped tab or an update
+    p.ack = 0; p.prevBits = 0; p.starve = 0;
+    p.lastInput = { seq: 0, bits: 0, mx: 0, my: 0, aim: p.lastInput ? p.lastInput.aim : 0 };
     p.meDirty = true;
     noteClientBuild(world, p, opts);
     if (p.spectating) { p.spectating = false; p.invincible = p.specWasGod; } // a new page starts out of the free camera

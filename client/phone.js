@@ -179,7 +179,7 @@ export function createPhone(ctx) {
       ? `<div class="ph-card">${tx.st === 'pickup' ? `Your taxi is on its way (about ${Math.max(5, tx.eta)}s) - the yellow square on your map.` : tx.st === 'wait' ? 'Your taxi is waiting at the kerb - get in the back.' : tx.st === 'dest' ? 'Where to? Set a waypoint (Places, or tap the map).' : tx.st === 'ride' ? `On the way to ${esc(tx.to)}: ${tx.m} m, $${tx.fare} so far.` : `There: $${tx.fare}.`}${tx.st === 'pickup' || tx.st === 'wait' ? '<button data-act="taxicancel">Cancel the taxi</button>' : ''}</div>`
       : `<button class="ph-row" data-act="taxicall"><span class="ic">🚕</span><span class="nm">Call a taxi<small>$${transit.taxiFlag} + $${transit.taxiKm} a km, paid when you get out · or hail one going by</small></span></button>`)
       + '<p class="ph-hint">Your waypoint is where the driver takes you. Skip the ride on the way for the whole fare.</p>';
-    h += `<h3>🚌 Buses</h3><p class="ph-hint">Wait at a stop and board the bus when it pulls up ($${transit.fare}, any distance). Get off at any stop with the vehicle key. Tap a stop for a waypoint.</p>`;
+    h += `<h3>🚌 Buses</h3><p class="ph-hint">Wait at a stop and board the bus when it pulls up. Free, any distance. Get off at any stop with the vehicle key. Tap a stop for a waypoint.</p>`;
     let near = null, nd = Infinity;
     for (const L of transit.lines) L.stops.forEach((st, k) => { const d = dist(st); if (d < nd) { nd = d; near = `${L.id}:${k}`; } });
     for (const L of transit.lines) {
@@ -190,7 +190,7 @@ export function createPhone(ctx) {
     // the ferries to the islands: each route's two piers, when its boat next leaves each (tap one for a waypoint)
     const fr = transit.ferries || [];
     if (fr.length) {
-      h += `<h3>⛴ Ferries</h3><p class="ph-hint">Walk aboard at the pier while the boat is in ($${transit.ferryFare}). On the car ferry, drive up to its stern and interact to take your car across ($${transit.ferryCar}). Tap a pier for a waypoint.</p>`;
+      h += `<h3>⛴ Ferries</h3><p class="ph-hint">Walk aboard at the pier while the boat is in. On the car ferry, drive up to its stern and interact to take your car across. Free. Tap a pier for a waypoint.</p>`;
       const when = (s, inHere) => (inHere ? `in now · leaves in ${s}s` : s < 90 ? `next boat leaves in ${s}s` : `next boat leaves in ${Math.round(s / 60)} min`);
       for (const R of fr) {
         h += `<h3>${esc(R.name)} <small>${R.car ? 'cars and foot passengers' : 'foot passengers'} · ${m(R.len)}</small></h3>`;

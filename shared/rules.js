@@ -246,12 +246,10 @@ export const GUARD_DRAW_S = 1;           // a guard who turns on you (you shot a
 export const TRAIN_JOB_PAY = 3000;       // the mail-car strongbox, fenced
 export const STRONGBOX_CRACK_S = 5;      // stay on the mail car this long to crack it
 export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Dry Creek run) and the alarm bell puts you here
-// Buses (server/systems/transit.js)
-export const BUS_FARE = 2;                 // a ride, any distance round the line (cash first, then the bank)
+// Buses (server/systems/transit.js): free, like the trains and the ferries
 export const BUS_DWELL_S = 7;              // a bus waits at each stop this long with its doors open
-// Ferries (server/systems/ferries.js)
-export const FERRY_FARE = 5;               // on foot, either way
-export const FERRY_CAR_FARE = 15;          // a car on a car ferry's deck (its passengers ride free)
+// Ferries (server/systems/ferries.js): free, on foot or with a car (the user, 2026-10-08: no fares on the buses, the
+// ferries, the trains and the subway)
 export const FERRY_DWELL_S = 20;           // a ferry lies at each pier this long
 // Taxis (server/systems/transit.js)
 export const TAXI_FLAG = 5;                // the meter starts at this...
