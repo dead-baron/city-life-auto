@@ -226,6 +226,8 @@ const C = {
   rare: [0.35, 0.65, 1], epic: [0.78, 0.47, 1], gold: [1, 0.8, 0.38],   // the dropped backpacks' glows
 };
 const CUT_A = { cut: 'a' }, CUT_B = { cut: 'b' };   // (the plasma blade's two halves: peds.js pedSprite opt)
+// the depth a boat under a bridge is held to: over the water (ground, tested 4 px down) and a pier (4), under a deck (6)
+const UNDER_Z = 1.5;
 // signal lenses red, amber, green (v1's SIG_COL), and as light colours
 const SIG_RGB = [[255, 59, 59], [255, 194, 61], [61, 220, 132]], SIG_RGB01 = SIG_RGB.map((c) => c.map((v) => v / 255));
 const XARM_Z = 20, XPOST_H = 24;           // level crossing barrier: pivot height, post height
@@ -617,6 +619,13 @@ export class World2 {
       for (const k of this.fallbacks) if (!this._fallback(k % 1000, Math.floor(k / 1000))) this.fallbacks.delete(k);
     }
   }
+  // whether any of a hull's length (bow, middle, stern) lies under a bridge deck (bridge tiles over the water)
+  _underDeck(x, y, a, L) {
+    const M = this.map, c = Math.cos(a) * L * 0.5, s = Math.sin(a) * L * 0.5;
+    for (let k = -1; k <= 1; k++) if (M.tileAtPx(x + c * k, y + s * k) === TT.BRIDGE) return true;
+    return false;
+  }
+
   // ---- baking ahead into the browser's store --------------------------------------------------------------
   // When nothing on screen or on the road ahead is waiting for a bake, the workers bake the chunks round you into the
   // browser's store of baked chunks (chunkstore.js) without drawing them, nearest first: further along the way you are
@@ -997,7 +1006,9 @@ export class World2 {
     if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
     const z0 = this._z0(p, L.swimming) + lift + extraZ;
+    o.under = L.swimming && this.map.tileAtPx(p.rx, p.ry) === TT.BRIDGE ? UNDER_Z : 0;   // (swimming under a bridge)
     E.drawSprite(sk, p.rx + hx, p.ry + hy, z0, o);
+    o.under = 0;
     this.n.drawn++;
     if (f & PF.UMBRELLA) {
       const uk = this._genUmbrella(p.id % Math.max(1, (api.UMBRELLA_COLORS || []).length));
@@ -1127,7 +1138,11 @@ export class World2 {
         if (now - (v._wkT || 0) > 0.09) { v._wkT = now; this._wakeDrop(v.rx - Math.cos(v.ra) * def.L * 0.45, v.ry - Math.sin(v.ra) * def.L * 0.45, v.ra, now, def.W * 0.5, sp); }
       }
     }
+    // a boat (or a swimmer) part-way under a bridge: the deck over it hides it (o.under caps its depth below a deck's)
+    const under = def.kind === 'boat' && this._underDeck(v.rx, v.ry, v.ra, def.L);
+    o.under = under ? UNDER_Z : 0;
     E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
+    o.under = 0;
     this.n.drawn++;
     // riders on bikes and jet skis sit in the open
     const Pd = this.Pd;
@@ -1147,7 +1162,9 @@ export class World2 {
         if (!rk) continue;
         p._v2r = rk;
         o.xray = false; o.alpha = 1;   // (a rider sits in the open: no see-through outline through the bike)
+        o.under = under ? UNDER_Z : 0;   // (a jet ski under a bridge: its rider too)
         E.drawSprite(rk, x, y, Math.max(0, z0), o);
+        o.under = 0;
       }
     }
   }

@@ -3564,3 +3564,9 @@ The user's report (Pixel 7 Pro, Medium): travelling round, new places show their
   - **What they are:** retail fronts only (no diners, bars or arcades). Each is a walk-in with a counter and a clerk, its own name on the sign and over the counter, and the full gun shop stock.
 - **On the map and the phone** like the first one (the G icon; Phone → Shops).
 - **Tests:** `test/business.test.js`: spread apart (over 2,000 px between any two), each a walk-in, each menu titled with its own name.
+
+## 2026-10-08 · Highway ramps join the street; bridges with depth, and boats pass under them
+- **Ramps join the street they meet** (the user: "it goes over the existing streets instead of connecting to it"). The deck drawing (`statics.js` `makeDeck`) drew each ramp from its foot: asphalt and 8 px walls on both sides, so the walls ran right across the avenue at the ramp's foot like a road passing over it. A ramp still on the ground is now the street's own road (the ground bake draws it into the junction, crossings and all). The deck starts where the ramp leaves the ground, and its walls only once it is up past a kerb's height (10 px).
+- **Boats pass under bridges** (they were drawn over them): a boat with any of its length under a bridge deck (its bow, middle or stern over bridge tiles) is held below the deck in the depth test. The deck hides what is under it; the water round it never does, so the rest of the boat still shows. Its own heights still light it. The same goes for a jet ski's rider and someone swimming under a bridge (`engine.js` sprite option `under`, `host.js` `_underDeck`).
+- **Bridges have depth:** over the water a bridge shows the thickness of its deck, a concrete slab with a girder band under it (13 px), and the water in its lee is shaded.
+- **Dev:** the debug `car` command takes `x`, `y`, `a` to put a vehicle exactly somewhere (testing).

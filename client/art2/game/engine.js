@@ -18,6 +18,8 @@
 //     building index -> 0..1 fades those whole buildings (smoothly; past half way they stop hiding what is
 //     behind them).
 //   beginFrame(f) -> bool  drawSprite(key, x, y, z0, o) -> bool  drawDecal(key, x, y, angle, alpha, +z0)
+//   (drawSprite o.under: a height its depth test never goes past - a boat under a bridge, hidden by any deck over it
+//   while the water round it never covers it; its own heights still light it)
 //   addLight(L)  endFrame()
 //   - uploadChunk / uploadSprite also take pre-packed planes {w, h, ax, ay, p0, p1, p2} (gbuf.js packGBuf,
 //     e.g. packed in a worker); a plain GBuf is packed on the main thread (~10-15 ms per chunk).
@@ -249,6 +251,7 @@ void main(){
   if ((bits & 2) != 0) fl |= 4;
   if ((bits & 4) != 0) fl |= 128;   // up in the air (F_AIR): the wet-ground mirror skips it
   float hd = (fl & ${F_GROUND}) != 0 ? max(h - ${GSINK.toFixed(1)}, 0.0) : h;
+  if (vTint.w > 0.0) hd = min(hd, vTint.w);   // (o.under: a boat passing under a bridge - any deck over it hides it)
   gl_FragDepth = clamp(1.0 - hd * ${(1 / HMAX).toFixed(8)}, 0.0, 1.0);
   float H = clamp(floor(h + 0.5), 0.0, 65535.0), hi = floor(H / 256.0);
   float ox = (bits & 1) != 0 ? (254.0 - floor(b.a * 255.0 + 0.5)) / 255.0 : b.a;
@@ -753,7 +756,7 @@ export class Art2Engine {
     A[b] = dx; A[b + 1] = dy; A[b + 2] = W; A[b + 3] = H;
     A[b + 4] = r.x; A[b + 5] = r.y; A[b + 6] = r.layer; A[b + 7] = (o.flipX ? 1 : 0) | (o.shadow === false ? 2 : 0) | (o.air ? 4 : 0);
     A[b + 8] = z0; A[b + 9] = alpha; A[b + 10] = o.flash || 0; A[b + 11] = k;
-    A[b + 12] = t ? t[0] : 1; A[b + 13] = t ? t[1] : 1; A[b + 14] = t ? t[2] : 1; A[b + 15] = 0;
+    A[b + 12] = t ? t[0] : 1; A[b + 13] = t ? t[1] : 1; A[b + 14] = t ? t[2] : 1; A[b + 15] = o.under || 0;
     if (o.xray) {
       if (this.nXr * FL >= this.xr.length) this.xr = this._grow(this.xr, this.ibXr);
       const X = this.xr, xb = this.nXr++ * FL;

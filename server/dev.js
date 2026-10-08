@@ -206,6 +206,7 @@ export function command(world, p, c, msg) {
         sp = { x: ped.x, y: ped.y, a: ped.a };
         for (let k = 0; k < 16; k++) { const a = (k * Math.PI) / 8, x = ped.x + Math.cos(a) * 110, y = ped.y + Math.sin(a) * 110; if (surfaceZ(world.map, x, y, 1) !== null) { sp = { x, y, a: 0 }; break; } }
       }
+      if (Number.isFinite(msg.x) && Number.isFinite(msg.y)) sp = { x: msg.x, y: msg.y, a: Number(msg.a) || 0 };   // (testing: exactly there)
       const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
       v.issuedTo = p.pid;
       v.lz = ped.lz || 0; // up on the highway with you

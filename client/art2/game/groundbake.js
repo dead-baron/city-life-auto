@@ -53,6 +53,7 @@ import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roads.js';
 export const CHUNK = 768;
 const PAD = 48, WN = CHUNK + PAD * 2, WA = WN * WN, TP = 4, TN = WN / TILE + TP * 2 + 1;
 const DECK_LIFT = 88;                                  // shared/levels.js: px per deck level (ramp heights)
+const DECK_FACE = 13, DECK_SHADE = 9;                  // a bridge's face over the water (slab and girders), the shade under it
 const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 const TREES = new Set(['tree_a', 'tree_b']), PALMS = new Set(['palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s']);
 
@@ -1278,7 +1279,7 @@ function edges(C, G) {
     } else if (k === 3 || k === 2) {
       // the face of a raised edge just north of this pixel, facing the camera: kerbs over roads, quay walls, pier
       // and deck sides and earth banks over the water (scan up through this pixel's own kind of low ground)
-      for (let r = 1; r <= 12; r++) {
+      for (let r = 1; r <= DECK_FACE + DECK_SHADE; r++) {
         if (py - r < 0) break;
         const up = M[i - r * WN];
         if (k === 2 ? isWater(up) : roadLike(up)) continue;
@@ -1286,8 +1287,18 @@ function edges(C, G) {
         const bank = k === 2 && isSoft(up) && up !== M_.BEACH && up !== M_.DUNE && up !== M_.WETSAND;
         const quay = k === 2 && !isSoft(up) && !deck && !dock;
         if (!quay && !deck && !dock && !bank && KIND[up] !== 4 && up !== M_.PLATFORM) break;
-        const H = quay ? 12 : dock ? 6 : bank ? 3 : up === M_.PLATFORM ? 6 : Z[i - r * WN];
+        // a bridge over the water shows the thickness of its deck (the slab and the girders under it) and darkens the
+        // water in its lee: boats pass under it (host.js draws a boat part-way under a deck beneath it)
+        const span = deck && k === 2 && Z[i - r * WN] >= C.deckZ - 1;
+        const H = quay ? 12 : dock ? 6 : bank ? 3 : up === M_.PLATFORM ? 6 : span ? DECK_FACE : Z[i - r * WN];
+        if (span && r > H) { darken(G, gi, 0.62 + (r - H) / DECK_SHADE * 0.3); break; }
         if (r > H) break;
+        if (span) {
+          const girder = r > DECK_FACE - 5, rib = (X % 48) < 3;
+          setC(G, gi, girder ? sd(MAT.metalDark, rib ? 0.5 : 0.22 + (r - DECK_FACE + 5) * 0.03, X, Y, 0.3) : sd(MAT.concrete, r <= 2 ? 0.5 : 0.34 - r * 0.02, X, Y, 0.3));
+          putN(G, gi, 0, 2.2); G.z[gi] = Math.max(0, C.deckZ + DECK_FACE - 6 - r + 1); G.flag[gi] = F_GROUND | F_WET;
+          break;
+        }
         let c;
         if (dock) c = sd(MAT.woodDark, 0.38 - r * 0.05 + ((X % 24) < 3 ? -0.2 : 0), X, Y, 0.3);
         else if (bank) c = sd(MAT.soil, 0.28 - r * 0.06 + hh(X, r, seed) * 0.1, X, Y, 0.4);

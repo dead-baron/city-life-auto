@@ -2043,6 +2043,7 @@ function ptAt(pts, s) {
   const a = pts[i - 1], b = pts[i], L = (b.s - a.s) || 1, t = clamp((s - a.s) / L, 0, 1);
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x) };
 }
+const RAMP_GROUND = 3, RAMP_WALL = 10;   // (px: a ramp on the ground is the ground's road; its walls rise from here)
 function makeDeck(r) {
   const LIFT = DECK_LIFT, PAR = 8, PH = 8, { x0, y0, w, h } = r, TM = r.T, G = new GBuf(w, h + TM); G.ax = 0; G.ay = TM;
   const S = r.segs.map(([ax, ay, bx, by, hw, za, zb, ramp_, nl, med, s0, ow, edge]) => { const len = Math.hypot(bx - ax, by - ay) || 1; return { ax, ay, len, ux: (bx - ax) / len, uy: (by - ay) / len, hw, za, zb, ramp: ramp_, nl, med, s0, ow, edge }; });
@@ -2080,8 +2081,12 @@ function makeDeck(r) {
     cand = blocks[(yy >> 5) * BW + (xx >> 5)];
     if (!cand.length || !at(X + 0.5, Y + 0.5)) continue;
     const i = yy * W + xx, s = bs, au = Math.abs(bu);
+    // a ramp still on the ground is the street's own road (groundbake draws it, joined into the junction it meets):
+    // the deck starts where the ramp leaves the ground, and its walls only once it is up past a kerb's height (a low
+    // wall at the foot read as the ramp running over the street instead of joining it)
+    if (s.ramp && bz <= RAMP_GROUND) continue;
     let k = 1, zz = bz;
-    if (bd > s.hw - PAR && !open(X + 0.5, Y + 0.5, bz, s)) { k = 2; zz = bz + PH; }
+    if (bd > s.hw - PAR && !open(X + 0.5, Y + 0.5, bz, s) && !(s.ramp && bz < RAMP_WALL)) { k = 2; zz = bz + PH; }
     else if (s.med && au < s.med / 2) { k = 3; zz = bz + PH + 2; }
     top[i] = zz; surf[i] = bz; kind[i] = k; rampF[i] = s.ramp;
     if (yy >= h) continue;
