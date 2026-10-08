@@ -40,6 +40,7 @@ import * as barriers from './systems/barriers.js';
 import * as rides from './systems/rides.js';
 import * as foraging from './systems/foraging.js';
 import * as hunting from './systems/hunting.js';
+import * as wanderer from './systems/wanderer.js';
 import * as places from './systems/places.js';
 import * as golf from './systems/golf.js';
 import * as hoops from './systems/hoops.js';
@@ -87,6 +88,7 @@ const SYSTEMS = [
   ['jobs', jobs.update],            // contraband drops, fishing, jobs
   ['foraging', foraging.update],    // picked mushroom spots and tidepool stars growing back
   ['hunting', hunting.update],      // field-dressing game, cooking over the fire
+  ['wanderer', wanderer.update],    // the rare hooded stranger who sells the plasma blade
   ['economy', economy.update],      // auto-heal at ER reception
   ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground
   ['players', players.update],      // ghost timers, respawns, prompts, persistence

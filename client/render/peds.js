@@ -90,6 +90,14 @@ function weapon(P, w, hx, hy, ang) {
     case 23: L(5, '#d8dde2', 2); P.line(hx, hy, ang, 1, '#8a5a34', 2); P.p(hx + Math.cos(ang) * 1.5, hy + Math.sin(ang) * 1.5, '#c8962e'); break;   // hunting knife (broad blade, brass guard, leather grip)
     case 24: { const n = ang + 1.57; for (let k = -6; k <= 6; k++) { const bend = Math.abs(k) > 3 ? (Math.abs(k) - 3) * 0.5 : 0; P.p(hx + Math.cos(n) * k - Math.cos(ang) * bend, hy + Math.sin(n) * k - Math.sin(ang) * bend, '#5a3a26'); } P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 8, '#c8a46c'); P.p(hx + Math.cos(ang) * 5, hy + Math.sin(ang) * 5, '#d8dde2'); break; }   // hunting bow (limbs across, an arrow nocked)
     case 25: P.line(hx - Math.cos(ang) * 4, hy - Math.sin(ang) * 4, ang, 5, '#b8743c', 2); L(11, '#40444e'); P.p(hx + Math.cos(ang) * 3 + Math.cos(ang - 1.57), hy + Math.sin(ang) * 3 + Math.sin(ang - 1.57), '#2a2a34'); break;   // varmint rifle (wood stock, thin barrel, small scope)
+    case 26: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 3, '#5a3a22', 2); P.line(hx - Math.cos(ang + 1.57) * 2, hy - Math.sin(ang + 1.57) * 2, ang + 1.57, 4, '#c8962e'); L(12, '#c4ccd4', 2); P.p(hx + Math.cos(ang) * 12, hy + Math.sin(ang) * 12, '#f2f4f6'); break;   // sword (leather grip, brass crossguard, long straight blade)
+    case 27: {   // katana (black-and-red wrapped grip, round guard, a long blade curving gently up to the tip)
+      P.line(hx - Math.cos(ang) * 4, hy - Math.sin(ang) * 4, ang, 4, '#22222a', 2); P.p(hx - Math.cos(ang) * 2, hy - Math.sin(ang) * 2, '#b23a30');
+      P.p(hx + Math.sin(ang) * 1.5, hy - Math.cos(ang) * 1.5, '#c8962e'); P.p(hx - Math.sin(ang) * 1.5, hy + Math.cos(ang) * 1.5, '#c8962e');
+      for (let k = 1; k <= 13; k++) { const b = (k * k) / 110; P.p(hx + Math.cos(ang) * k + Math.sin(ang) * b, hy + Math.sin(ang) * k - Math.cos(ang) * b, k > 11 ? '#f2f4f6' : '#cfd5dc'); P.p(hx + Math.cos(ang) * k + Math.sin(ang) * (b - 1), hy + Math.sin(ang) * k - Math.cos(ang) * (b - 1), '#9aa2ac'); }
+      break;
+    }
+    case 28: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 4, '#9aa0aa', 2); P.p(hx, hy, '#2a2c32'); L(13, '#3c86ff', 2); P.line(hx + Math.cos(ang), hy + Math.sin(ang), ang, 11, '#d8ecff'); break;   // plasma blade (steel hilt, a blue blade with a white-hot core)
     default: break;
   }
 }

@@ -45,6 +45,8 @@ import { wind } from '../../render/flora/wind.js';
 import { F_GROUND, F_NOCAST } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
+import { WEAPONS } from '../../../shared/items.js';
+const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand, _lights)
 
 export { DECK_Z };
 const TAU = Math.PI * 2;
@@ -212,8 +214,9 @@ const SKY_KEYS = [[0, 'night'], [320, 'night'], [352, 'dawn'], [395, 'dawn'], [4
 const C = {
   head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], flash: [1, 0.9, 0.67],
   sodium: [1, 0.73, 0.43], window: [1, 0.77, 0.47], warm: [1, 0.8, 0.55], white: [0.92, 0.94, 1], moon: [0.6, 0.67, 1], cyan: [0.47, 0.9, 1],
-  legend: [0.82, 0.9, 1],
+  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1],
 };
+const CUT_A = { cut: 'a' }, CUT_B = { cut: 'b' };   // (the plasma blade's two halves: peds.js pedSprite opt)
 // signal lenses red, amber, green (v1's SIG_COL), and as light colours
 const SIG_RGB = [[255, 59, 59], [255, 194, 61], [61, 220, 132]], SIG_RGB01 = SIG_RGB.map((c) => c.map((v) => v / 255));
 const XARM_Z = 20, XPOST_H = 24;           // level crossing barrier: pivot height, post height
@@ -759,12 +762,13 @@ export class World2 {
     if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { this._pet(p, now); return; }
     if (p.blink === 3 || !Pd || !Pd.pedKey) return;
     const api = this.api, L = api.pedLook(p, now), f = p.flags, pose = L.pose;
-    const d8 = dir8(p.ra);
+    const d8 = dir8(p.ra + (L.turn || 0));   // (spun round as they go down)
     const lying = !L.upright && LYING.has(pose) && !L.flying && !L.swimming;
     const ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
     let lift = 0;
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
     const A2 = this._app(p.d.app || {}, p.d.ar), pf = Pd.pedFrame(ppose, L.fr);
+    if (lying && (f & PF.DEAD) && p.deadK === 'halved' && this._halves(p, A2, ppose, d8, pf)) return;   // (cut in two by the plasma blade)
     // unarmed with the flashlight on: it's in your hand; under an open umbrella (standing or walking): its shaft is
     const umb = !!(f & PF.UMBRELLA) && !(p.extra | 0) && !p.d.fl && (ppose === 'idle' || ppose.startsWith('walk')) && !!Pd.umbrellaTop;
     const wpn = (p.extra | 0) || (p.d.fl ? 'flashlight' : umb ? 'umbrella' : 0);
@@ -792,6 +796,21 @@ export class World2 {
         else E.drawSprite(uk, p.rx, p.ry, z0 + 44, o);
       }
     }
+  }
+  // Someone the plasma blade cut in two: the body as it lies, in two halves a little apart, the cut edges seared
+  // (peds.js pedSprite opt.cut; both halves keep the body's anchor). false while the halves are still being made (the
+  // whole body is drawn meanwhile).
+  _halves(p, A2, ppose, d8, pf) {
+    const Pd = this.Pd, E = this.E;
+    const ka = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, 0, CUT_A), [A2, ppose, d8, pf, 0, CUT_A]);
+    const kb = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, 0, CUT_B), [A2, ppose, d8, pf, 0, CUT_B]);
+    if (!ka || !kb) return false;
+    const o = this.opts;
+    o.alpha = 1; o.flash = 0; o.xray = false; o.flipX = false; o.shadow = true; o.tint = null;
+    const z0 = this._z0(p, false);
+    E.drawSprite(ka, p.rx, p.ry, z0, o); E.drawSprite(kb, p.rx, p.ry, z0, o);
+    this.n.drawn += 2;
+    return true;
   }
   // every frame of a looping pose (stride, idle, carry...) at this heading, asked for ahead
   _cycle(A2, ppose, d8, wpn, prio) {
@@ -837,6 +856,17 @@ export class World2 {
       : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still ? 'idle'
         : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
+    // cut in two by the plasma blade: the carcass in two halves, the cut edges seared (actors.js 'cutA' / 'cutB')
+    if ((p.flags & PF.DEAD) && p.deadK === 'halved' && A.ANIMAL_FRAMES && A.ANIMAL_FRAMES.cutA) {
+      const ka = this._spr('actors', 'animal', A.animalKey(kind, 'cutA', d8, 0), [kind, 'cutA', d8, 0]);
+      const kb = this._spr('actors', 'animal', A.animalKey(kind, 'cutB', d8, 0), [kind, 'cutB', d8, 0]);
+      if (ka && kb) {
+        const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false; o.air = false;
+        const z0 = this._z0(p, false);
+        E.drawSprite(ka, p.rx, p.ry, z0, o); E.drawSprite(kb, p.rx, p.ry, z0, o); this.n.drawn += 2;
+        return;
+      }
+    }
     const rate = pose === 'run' ? 14 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? 3 : pose === 'swim' ? 2.5 : 1.5;
     const fr = pose === 'dead' || (pose === 'lie' && p.flags & PF.DEAD) ? 0 : Math.floor(now * rate + p.id) % n;
     let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
@@ -1534,7 +1564,13 @@ export class World2 {
     for (const p of F.peds) if (p.d && p.d.ar && p.d.ar.endsWith(':L') && !(p.flags & PF.DEAD) && inV(p.rx, p.ry)) this._light(p.rx, p.ry, 14, 110, C.legend, 0.35 + 1.1 * nightK * (0.85 + 0.15 * Math.sin(now * 1.7 + p.id)));
     for (const f of S.flashes) {
       if (f.kind === 'boom') { const e = Math.min(1.6, f.t * 3.2); this._light(f.x, f.y, 30, f.r * 1.3, C.fire, 2.4 * e); }
+      else if (f.kind === 'plasma') this._light(f.x, f.y, 26, f.r, C.plasma, 2.6 * Math.min(1.4, f.t * 5));   // (the hooded stranger, gone in a flash)
       else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
+    }
+    // the plasma blade gives off its own blue light in the hand
+    for (const p of F.peds) {
+      if ((p.extra | 0) !== PLASMA_I || (p.flags & (PF.INVEH | PF.DEAD)) || p.blink === 3 || !inV(p.rx, p.ry)) continue;
+      this._light(p.rx + Math.cos(p.ra) * 10, p.ry + Math.sin(p.ra) * 10, 22 + this._z0(p, false), 96, C.plasma, 0.7 + 1.5 * nightK);
     }
     // the balloons' burners (the flame over the basket: shared/rides.js, client/art2/props-rural.js hotAirBalloon)
     const bl = this.balLit || [];

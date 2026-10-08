@@ -121,6 +121,98 @@ Guide" (https://claude.ai/code/artifact/d42f6d7b-a902-43e6-bc52-777b77f1ec47):
 - Build specific places to the concepts' standard; the user will help fill in around them.
 - More variety in the nature assets. More nature concepts are coming.
 
+## From the user's notes (2026-10-07, 16:47)
+**Triage:** nothing here is a bug or blocks current work, so the order holds: the blades pass (finishers, the
+plasma blade and its wanderer), the soft world border, then roads stage 2. Concepts for everything new are in the
+prompt pack: SU1-SU4 (the subway underground), SK1-SK8 (skating and bikes), CR1-CR2 (witnesses), BO1 (bounties).
+
+**Witnesses and reporting by district [next]**
+- Who notices a crime and calls it in depends on who they are and where they are. A high-income NPC in a
+  high-income district is far more likely to witness and report than a low-income NPC in a poor district, where
+  many look away. Crime is easier in the rough parts of town.
+- **Proposal:** each NPC type gets a witness profile (sight range, attention cone, chance to report, delay before
+  the call), scaled by the district's wealth and randomised a little per NPC. Today's `law.witnesses` (ranges,
+  facing, line of sight, night, cameras) becomes the base it scales.
+- **Police presence follows wealth:** fewer patrols and slower responses in poor districts, even once called in.
+  Rich districts also have a few clearly visible security cameras (and private security, concept CR2).
+- **Players witness too, but don't report automatically.** A toast says "You witnessed a crime". For about a
+  minute the phone offers to call it in.
+  - **The response:** one unit (a car, an officer on foot, a boat, whatever fits the place) reaches the caller's
+    area in about 20 s and looks for that suspect only.
+  - **The match:** if the suspect is still nearby in the same outfit (the description: top and bottom colours,
+    the vehicle), the officer connects them to the crime. They get stars by its severity, and the normal wanted
+    system starts.
+  - **Changing clothes** can throw the police off.
+  - **No abuse:** only crimes you actually saw can be called in; one unit per call, with a cooldown per caller,
+    so it can't summon a fleet that goes after someone else.
+
+**Bounties rework [next; cross-server boards later]**
+- **Already built:** the courthouse bounty office, bounties paid from the bank on a recent attacker, the hunter's
+  licence, radar pings, and the payout on a kill or an arrest.
+- **When:** the option to place one unlocks after the same player kills you 3 times within an hour on the same
+  server. It is a revenge measure.
+- **The money:** it is your own money, held in escrow. It is only paid out if a hunter accepts the contract and
+  kills, arrests or detains the target, and it comes back to you if the bounty runs out.
+- **Duration and visibility:** about 30-60 minutes. A global message announces it, and a golden skull floats over
+  the target for as long as it lasts.
+- **It sticks:** through deaths from anything else, switching servers, logging off and going into an owned
+  property. Proposal: the timer only runs while the target is online and outside a private interior, so hiding
+  can't run it out.
+- **Hunters:** they accept contracts on a Bounties phone app, which gives loose info (the name, a description,
+  the district last seen and when). Bounty boards list contracts on this server and on others. A party that
+  collects splits it evenly.
+- **Needs:** bounties stored on the profile so they survive logging off. Boards across servers wait for a second
+  server and a shared store.
+
+**More bicycles [next]**
+- **Types:** a one-gear beach cruiser (stable, slowest), a multi-gear mountain bike (the one that copes
+  off-road), a road bike (fastest on tarmac, poor off it), a BMX (tricks), a commuter bike and a cargo bike. All
+  faster than running.
+- **In the world:** NPC riders and bike racks around the world.
+- **Theft:** stealing a bike is still a crime (low heat) but less risky than a car. Witnesses notice it at a
+  shorter range and react less, randomised per NPC type and district.
+
+**The subway goes underground [W2 stage 6]**
+- **Below the main layer:** trains go down a portal (a ramp between retaining walls into a tunnel mouth) and run
+  under the main world layer.
+  - **Proposal:** while you are below, the street is drawn as a dim, see-through ghost over the lit tunnel.
+  - **The ride:** for a rider the light eases in and out: shade at the portal, then the train's windows and
+    headlights take over, then the station's fluorescent light.
+  - **Engine:** today's separate `sub` level already keeps collision and witnesses apart.
+- **Walk or drive in:** from the portals and the platform ends.
+  - **Walkways:** a narrow walkway runs along some stretches (urban ones, near stations), not all. Elsewhere,
+    walking the tracks is truly dangerous.
+  - **Warning:** an oncoming train's headlights light up the rails and walls ahead of it before it appears, with
+    the rumble and the horn.
+  - **Refuges:** long stretches get refuge alcoves to duck into, so wandering in isn't certain death.
+- **Concepts:** the station (T1) and tunnel (T2) exist. New: SU1 (the portal), SU2 (the ghosted street over the
+  tunnel), SU3 (walkways, refuges, an oncoming train) and SU4 (how the light changes going down).
+
+**Skating: skateboards, longboards, inline and quad skates, BMX [later, one feature]**
+- **Riding:** boards and skates are carried, and you hop on and off anywhere. They are fast and smooth on roads,
+  sidewalks and plazas, slow and wobbly on grass, dirt and sand (you get off), and slippery in the rain.
+- **Tricks, top-down, taken from Tony Hawk's Pro Skater:**
+  - **Moves:** a jump button and a trick button with a stick direction (ollie, kickflip and the rest, grabs
+    off ramps, manuals).
+  - **Grinds and slides:** they snap onto a rail, ledge, bench, kerb or planter edge in reach mid-jump.
+  - **Balance:** a meter for grinds and manuals.
+  - **Scoring:** combos chain with a multiplier, manuals link them, and a special meter fills to unlock bigger
+    tricks. Gaps (named jumps between spots) pay bonuses.
+  - **Bails:** they hurt a little; a helmet helps.
+- **Places:** several skate parks (bowls, half-pipes, quarter pipes, stairs and rails), at least one in a city
+  park, one by the beach and one under the highway. City plazas have spots tagged as rideable.
+- **Skate shops:** boards, longboards, skates, BMX bikes, helmets and pads, clothes.
+- **The riding skill:** one skill shared by boards, skates, BMX and bikes, levelled by riding and tricks (with
+  the daily cap like the other skills). Each level gives a little more hang time and stability and fewer bails.
+  At the top it is a slight edge (about 15%), never a hard advantage.
+- **Mini games and events:** 2-minute score sessions with goals (gaps, a long grind, tokens to collect),
+  trick-for-trick battles between players, best-trick contests at the parks, longboard downhill races on the
+  mountain roads, BMX jump contests.
+- **Concepts:** SK1-SK8.
+
+**Still queued from earlier notes:** two-sided stations; bank robberies and heists; helicopters (concept HE1); more
+waterfall and cliff art; the UI pass (U1-U12).
+
 ## Sharks [W2 stage 5]
 - Extremely rare anywhere in the sea; likeliest round the prison island (still rare).
 - Fins are seen now and then: sharks hunting near the surface.
@@ -270,6 +362,7 @@ combine well: interiors are private, yards are shared.
   about the same price); a standard tier (less patient, fender benders, gets there); and **Ultra Saver**: a beat-up
   car that races up, hard-brakes and drifts to you, peels out and drives recklessly, with about a 50% chance of
   wrecking (and maybe exploding) before you arrive.
+- The subway goes under the world layer, with walkable stretches and refuges: see the 2026-10-07 notes above.
 
 ## Server [next]
 - Idle kick to save server capacity. Proposal: after 10 minutes with no input, a "Still there?" notice; after 15,

@@ -106,6 +106,11 @@ export const HEARTY_HP = 25;
 export const HEARTY_S = 600;
 export const SCENT_S = 300;               // cover scent: no animal smells you this long
 
+// The wanderer (server/systems/wanderer.js): a rare hooded stranger out in the wilds at night who sells the plasma blade
+export const PLASMA_PRICE = 45000;
+export const WANDERER_CHANCE = 0.3;       // ...the chance, each night, that he's out somewhere
+export const WANDERER_GONE_S = 7200;      // hit him and he's gone in a flash for this long (game seconds)
+
 // Stripping the boneyard's stored airliners for parts (server/systems/places.js): stand by a fuselage and work at it
 // a few seconds for component scrap (the yard office buys it); then that plane is stripped bare a while
 export const SALVAGE_S = 4;             // standing still, working

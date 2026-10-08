@@ -17,6 +17,7 @@ import * as trains from './systems/trains.js';
 import * as devmode from './devmode.js';
 import * as pets from './systems/pets.js';
 import * as wildlife from './systems/wildlife.js';
+import * as wanderer from './systems/wanderer.js';
 import { SPECIES } from '../shared/fauna.js';
 
 // make a live animal the pure white legend of its kind (dev: see one up close)
@@ -29,7 +30,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -229,6 +230,29 @@ export function command(world, p, c, msg) {
         world.notify(p, `[dev] ${a.name} nearby.`, 'info');
       }
       if (msg.calm) for (const e of wildlife.animals(world)) if (Math.hypot(e.x - x, e.y - y) < 160) e.wild.calmUntil = world.time + (Number(msg.calm) > 1 ? Number(msg.calm) : 40);   // (calm a while: to look at)
+      break;
+    }
+    case 'dummy': { // a few people standing still just ahead of you, to try the blades (and anything else) on: msg.n of
+      // them (1-6, default 3), msg.hp to set their health (1: every blow is a killing blow, to see how they fall)
+      if (!ped || ped.vehId) break;
+      const n = Math.max(1, Math.min(6, Number(msg.n) || 3));
+      let made = 0;
+      for (let i = 0; i < n; i++) {
+        const a = (ped.a || 0) + (i - (n - 1) / 2) * 0.55, d = 44 + (i % 2) * 18, x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
+        if (PED_BLOCK[world.map.tileAtPx(x, y)]) continue;
+        const q = npc.spawnNpc(world, 'casual', x, y);
+        if (!q) continue;
+        q.npc.desk = { x, y, a: a + Math.PI }; q.npc.keep = true; q.a = a + Math.PI;
+        if (Number(msg.hp) > 0) q.hp = q.maxHp = Number(msg.hp);
+        made++;
+      }
+      world.notify(p, `[dev] ${made} practice ${made === 1 ? 'dummy' : 'dummies'} in front of you.`, 'info');
+      break;
+    }
+    case 'wanderer': { // the hooded stranger who sells the plasma blade, a few steps away
+      if (!ped) break;
+      const s = wanderer.appear(world, { x: ped.x + Math.cos(ped.a) * 90, y: ped.y + Math.sin(ped.a) * 90 });
+      world.notify(p, s ? '[dev] A hooded stranger stands nearby.' : '[dev] No room for him here.', 'info');
       break;
     }
     case 'wind': // where the wind blows from: msg.a (radians) - or back to the weather's own

@@ -44,6 +44,9 @@ export const ARCHETYPES = {
     look: (r) => ({ t: pickA(r, [2, 4]), tc: pickA(r, ['#3a5a3a', '#8a3a2a', '#2a3a5a', '#6a5a3a']), tc2: '#ddd', l: pickA(r, ['#2a4a8a', '#5a5a48']), sh: '#6b4a2a', ht: r() < 0.45 ? 4 : 0, htc: pickA(r, ['#c8262b', '#2a4a8a', '#3a3a3a']), b: 0 }) },
   farmer:       { reflex: 0.4, fight: 0.6, speed: 0.95, hp: 115, cash: [20, 90], item: ['wallet', 0.25], day: 0, night: 0,
     look: (r) => ({ t: 4, tc: pickA(r, ['#a82a2a', '#2a4a8a', '#3a6a3a', '#8a6a2a']), tc2: '#eee', l: '#2a4a8a', sh: '#6b4a2a', ht: r() < 0.8 ? pickA(r, [1, 3]) : 0, htc: pickA(r, ['#d8c088', '#c8262b', '#2a4a8a', '#e8e0c8']), b: 0 }) },
+  // the rare hooded stranger out in the wilds at night (wanderer.js): a long dark coat, the hood up
+  wanderer:     { reflex: 0.9, fight: 0, speed: 0.8, hp: 400, cash: [0, 0], item: null, day: 0, night: 0,
+    look: () => ({ t: 4, tc: '#3a3430', tc2: '#2a2622', l: '#2a2622', sh: '#3a2a1e', ht: 1, htc: '#3a3430', b: 0 }) },
   nomad:        { reflex: 0.55, fight: 0.6, speed: 1.0, hp: 105, cash: [5, 50], item: null, day: 0, night: 0,
     look: (r) => ({ t: 4, tc: pickA(r, ['#b89a6a', '#8a6a4a', '#6a5a48']), tc2: '#5a4a3a', l: pickA(r, ['#6a5a48', '#8a7a5a']), sh: '#6b4a2a', ht: 3, htc: pickA(r, ['#c8a878', '#8a6a4a']), b: 0, bandana: r() < 0.5 }) },
 };

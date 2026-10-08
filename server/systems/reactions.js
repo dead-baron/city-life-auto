@@ -18,6 +18,9 @@ import { isSwimming } from '../../shared/map.js';
 import * as vehicles from './vehicles.js';
 
 const LIE = { face: 'face', slide: 'back', roll: 'side' };   // how a body comes to rest after each kind of throw
+// how the cut down fall (the client plays each): sinking to the knees then over on the face, spun half round and down
+// on the side, slumping back to the knees then onto the back
+const BLADE_DEATHS = ['knees', 'spin', 'slump', 'knees', 'spin'];
 const speedOf = (p) => Math.hypot(p.vx, p.vy);
 // how easily someone goes over: police, guards and gang heavies are drilled and keep their feet more; brutes too
 const steady = (ped) => (ped.npc && (ped.npc.role === 'cop' || ped.npc.role === 'railguard' || ped.npc.role === 'gang') ? 0.55 : 1) / Math.sqrt(ped.build ? ped.build.poise : 1);
@@ -87,11 +90,15 @@ export function blasted(world, ped, a, f) {
 
 // The fall, from combat.kill: a body already thrown lands as it was thrown; one cut down on the run slides on
 // (on the face - or on the back, if it was going backwards) or rolls to a stop; one standing is knocked back
-// onto its back or crumples. Emits the death event with how it lies ('face' | 'back' | 'side').
+// onto its back or crumples. Emits the death event with how it lies ('face' | 'back' | 'side'); cut down by a blade:
+// 'knees' | 'spin' | 'slump', a finisher 'stab' | 'slash', the plasma blade 'halved'.
 export function died(world, ped, cause, dir) {
   const now = world.time, sp = speedOf(ped), mv = Math.atan2(ped.vy, ped.vx);
   let lie;
-  if (now < (ped.tumbleUntil || 0)) lie = LIE[ped.flungKind] || 'back';
+  if (ped.halved) { ped.vx *= 0.1; ped.vy *= 0.1; lie = 'halved'; }                 // the plasma blade: in two halves where it stood
+  else if (ped.finisher) { ped.vx *= 0.1; ped.vy *= 0.1; lie = ped.finisher; }      // a finishing stab or slash: down where they stand
+  else if (now < (ped.tumbleUntil || 0)) lie = LIE[ped.flungKind] || 'back';
+  else if (cause === 'melee' && ped.killBlade && world.rand() < 0.8) { ped.vx *= 0.25; ped.vy *= 0.25; lie = BLADE_DEATHS[Math.floor(world.rand() * BLADE_DEATHS.length)]; }   // cut down: to the knees, spun round, slumping back
   else if (sp > 100 && cause !== 'train' && cause !== 'bleed') {
     const r = world.rand(), backward = Math.cos((ped.a || 0) - mv) < -0.2;
     const kind = r < 0.25 ? 'roll' : backward ? 'slide' : 'face';

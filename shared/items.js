@@ -5,7 +5,7 @@ import { SPECIES } from './fauna.js';
 export const WEAPONS = {
   fists:    { i: 0,  name: 'Fists',            type: 'melee', dmg: 10, range: 28, arc: 1.4, cd: 0.42, push: 95 },
   bat:      { i: 1,  name: 'Baseball Bat',     type: 'melee', dmg: 22, range: 36, arc: 1.5, cd: 0.6 },
-  knife:    { i: 2,  name: 'Knife',            type: 'melee', dmg: 26, range: 26, arc: 1.1, cd: 0.4, bleed: true, quiet: true, backstab: true },
+  knife:    { i: 2,  name: 'Knife',            type: 'melee', dmg: 26, range: 26, arc: 1.1, cd: 0.4, bleed: true, quiet: true, backstab: true, blade: 0.35 },
   crowbar:  { i: 3,  name: 'Crowbar',          type: 'melee', dmg: 24, range: 32, arc: 1.3, cd: 0.55 },
   sledge:   { i: 4,  name: 'Sledgehammer',     type: 'melee', dmg: 42, range: 36, arc: 1.4, cd: 1.0, knock: true },
   baton:    { i: 5,  name: 'Nightstick Baton', type: 'melee', dmg: 14, range: 32, arc: 1.3, cd: 0.5, stunChance: 0.35, nonLethal: true },
@@ -28,9 +28,17 @@ export const WEAPONS = {
   huntrifle: { i: 22, name: 'Hunting Rifle',  type: 'gun', dmg: 75, range: 950, spread: 0.005, cd: 1.25, mag: 5, hunting: true, wild: 2.1 },   // bolt-action, scoped: one clean shot drops a deer
   // the rest of the hunter's kit (server/systems/hunting.js): the knife that skins a hide whole, a bow that kills
   // without a sound (an arrow in flight: combat.js), and a light rifle for small game and birds
-  huntknife: { i: 23, name: 'Hunting Knife',  type: 'melee', dmg: 30, range: 27, arc: 1.1, cd: 0.42, bleed: true, quiet: true, backstab: true, skins: true },
+  huntknife: { i: 23, name: 'Hunting Knife',  type: 'melee', dmg: 30, range: 27, arc: 1.1, cd: 0.42, bleed: true, quiet: true, backstab: true, skins: true, blade: 0.35 },
   bow:      { i: 24, name: 'Hunting Bow',     type: 'bow', dmg: 62, range: 560, speed: 860, spread: 0.01, cd: 0.3, mag: 1, reload: 0.75, quiet: true, hunting: true, wild: 1.5, ammoName: 'arrows', starter: 12 },
   varmint:  { i: 25, name: 'Varmint Rifle',   type: 'gun', dmg: 30, range: 820, spread: 0.006, cd: 0.6, mag: 10, hunting: true },
+  // blades (combat.js, reactions.js): a wide slashing arc, and they bleed. blade: the chance a killing blow is a
+  // finisher - a stab or a slash that drops them where they stand - and blades bring a variety of deaths (sinking
+  // to the knees, spun round, slumping back). The plasma blade, sold only by a rare wanderer (wanderer.js), cuts
+  // through anything in one stroke, sears the wound shut, turns bullets aside now and then (deflect), and what it
+  // kills falls in two halves.
+  sword:    { i: 26, name: 'Sword',           type: 'melee', dmg: 40, range: 36, arc: 1.7, cd: 0.6, bleed: true, blade: 0.5 },
+  katana:   { i: 27, name: 'Katana',          type: 'melee', dmg: 46, range: 38, arc: 1.6, cd: 0.46, bleed: true, quiet: true, blade: 0.6 },
+  plasma:   { i: 28, name: 'Plasma Blade',    type: 'melee', dmg: 160, range: 42, arc: 1.9, cd: 0.36, plasma: true, blade: 1, deflect: 0.35 },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -266,11 +274,13 @@ export const SHOPS = {
   vending: { title: 'Vending Machine', buy: [{ kind: 'item', id: 'energy', price: 8, qty: 1 }] },
   pawn: { title: 'Second Chance Pawn', buy: [
     { kind: 'weapon', id: 'pistol', price: 320 }, { kind: 'weapon', id: 'bat', price: 80 }, { kind: 'weapon', id: 'knife', price: 60 },
+    { kind: 'weapon', id: 'sword', price: 650 },
   ], sells: ['purse', 'bonds', 'jewelry', 'scrap', 'wallet', 'medkit', 'nugget', 'quartz', 'doubloon', 'goldStar', 'redcap'], sellsWeapons: true },
   fence: { title: 'Back-Alley Exchange (Black Market)', buy: [
     { kind: 'weapon', id: 'smg', price: 1300 }, { kind: 'ammo', id: 'smg', price: 50, qty: 30 },
     { kind: 'weapon', id: 'spistol', price: 950 }, { kind: 'ammo', id: 'spistol', price: 40, qty: 10 },
     { kind: 'weapon', id: 'rocket', price: 6000 }, { kind: 'ammo', id: 'rocket', price: 400, qty: 1 },
+    { kind: 'weapon', id: 'katana', price: 1500 },
   ], sells: ['purse', 'bonds', 'jewelry', 'ghostglass', 'goldStar'], sellPrice: { ghostglass: FORAGE_FENCE_GHOSTGLASS, goldStar: 175 } },
   tackle: { title: 'Hook & Line Bait and Tackle', buy: [
     { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'worms', price: 10, qty: 5 }, { kind: 'item', id: 'shrimp', price: 20, qty: 5 },

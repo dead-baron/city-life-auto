@@ -32,7 +32,7 @@
 //   SPRITES / KEYS   one table per kind for the workers: SPRITES[kind](...args), KEYS[kind](...args)
 //   clearActorCaches(), setActorBudget({ modelMB | lowMem })   the model caches (vehicles are kept packed,
 //       compactVox / renderCompact: 6 bytes a voxel; default 48 MB of vehicle models, 16 MB on lowMem)
-import { GBuf, F_NOCAST, F_GLASS, hash, bayer, norm } from '../gbuf.js';
+import { GBuf, F_NOCAST, F_GLASS, hash, bayer, norm, cutGBuf } from '../gbuf.js';
 import { Vox } from '../voxel.js';
 import { ramp, MAT } from '../palette.js';
 import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICLE_DIMS } from '../vehicles.js';
@@ -231,7 +231,7 @@ export function vehicleLights(d) {
 // otter on its back), climb 2 (a squirrel on a trunk), dead 1 (on its side); the game birds: peck 2, fly 4 (the
 // wingbeat), swim 2, alert 1, dead 1.
 const PET_ART = { dog_golden: 'golden', dog_retriever: 'golden', dog_black: 'lab', dog_spaniel: 'spaniel', dog_pup: 'puppy', cat_black: 'catBlack', cat_grey: 'catTabby', cat_ginger: 'catGinger' };
-export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4 };
+export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4, cutA: 1, cutB: 1 };
 export function animalKind(kind) {
   let k = String(kind ?? '');
   if (k.startsWith('pet:')) k = k.slice(4);
@@ -258,8 +258,13 @@ export function animalSprite(kind, pose = 'idle', dir8 = 0, frame = 0) {
     : p === 'lie' ? { pose: 'lie', wag: f * 0.2 } : p === 'graze' || p === 'peck' ? { pose: 'graze', wag: f * 0.25 } : p === 'stalk' ? { pose: 'stalk', phase: f / n }
       : p === 'alert' ? { pose: 'alert' } : p === 'rear' ? { pose: 'rear', wag: f * 0.3 } : p === 'swim' ? { pose: 'swim', phase: f / n } : p === 'float' ? { pose: 'float' }
         : p === 'climb' ? { pose: 'climb' } : p === 'dead' ? { pose: 'dead' } : p === 'fly' ? { gait: 'run', phase: f / n } : { wag: f * 0.22, pant: f >> 1 };
-  const m = ANIMAL_MODELS.get(`${k}|${p}|${f}`, () => { const mm = bird ? birdModel(k, o) : animalModel(k, o); mm.bytes = mm.w * mm.d * mm.h * 17; return mm; });
-  return trimSprite(renderUpright(m, Math.PI / 2 + wrap8(dir8) * Math.PI / 4, { px: ART_PX }));
+  // (cut in two by the plasma blade: the dead body's two halves, the edges seared)
+  const cut = p === 'cutA' || p === 'cutB';
+  if (cut) o = { pose: 'dead' };
+  const mk = cut ? 'dead' : p;
+  const m = ANIMAL_MODELS.get(`${k}|${mk}|${p === mk ? f : 0}`, () => { const mm = bird ? birdModel(k, o) : animalModel(k, o); mm.bytes = mm.w * mm.d * mm.h * 17; return mm; });
+  const G = trimSprite(renderUpright(m, Math.PI / 2 + wrap8(dir8) * Math.PI / 4, { px: ART_PX }));
+  return cut ? cutGBuf(G, p === 'cutA' ? 'a' : 'b', 6) : G;
 }
 
 // ---- small objects --------------------------------------------------------------------------------------

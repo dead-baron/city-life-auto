@@ -100,6 +100,14 @@ export function sfx(name, vol = 1) {
     case 'screech': if (throttle('screech', 800)) { tone(980, 0.55, 0.07 * vol, 'sawtooth', -560); noise(0.45, 2400, 2, 0.12 * vol, 'bandpass'); } break;
     case 'flutter': if (throttle('flutter', 250)) for (let k = 0; k < 6; k++) setTimeout(() => noise(0.05, 1700, 1.4, 0.14 * vol, 'bandpass'), k * 42); break;
     case 'honk': if (throttle('honk', 300)) { tone(330, 0.14, 0.08 * vol, 'square', -40); setTimeout(() => tone(310, 0.16, 0.08 * vol, 'square', -50), 180); } break;
+    // blades (main.js 'finisher', 'sizzle', 'deflect', a plasma swing): a finishing stab (a dull thrust and a wet
+    // thud), a finishing slash (a long whistle through the air, then the bite), the plasma blade's hum as it swings,
+    // its sear where it cuts, and the whine of a bullet it turned aside
+    case 'stab': if (throttle('stab', 120)) { noise(0.07, 700, 1.6, 0.55 * vol); setTimeout(() => { noise(0.16, 260, 1.2, 0.6 * vol); tone(95, 0.16, 0.22 * vol, 'sine', -40); }, 55); } break;
+    case 'slash': if (throttle('slash', 120)) { noise(0.2, 2600, 2.4, 0.3 * vol, 'bandpass'); setTimeout(() => noise(0.12, 900, 1, 0.5 * vol), 110); } break;
+    case 'hum': if (throttle('hum', 140)) { tone(92, 0.32, 0.16 * vol, 'sawtooth', 60); tone(184, 0.28, 0.07 * vol, 'sine', 140); } break;
+    case 'sear': if (throttle('sear', 90)) { noise(0.45, 4200, 0.7, 0.32 * vol, 'highpass'); tone(130, 0.22, 0.12 * vol, 'sawtooth', -50); } break;
+    case 'zing': if (throttle('zing', 70)) { tone(2400, 0.18, 0.09 * vol, 'sine', -1500); noise(0.05, 3600, 1, 0.2 * vol, 'highpass'); } break;
     default: break;
   }
 }

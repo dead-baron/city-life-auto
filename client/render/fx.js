@@ -57,6 +57,7 @@ export class FX {
     this.ci = 0;
     this.rings = [];
     this.texts = [];
+    this.arcs = [];
   }
   spawn(type, x, y, vx, vy, life, size, color, grow = 0, vz = 0) {
     // "fewer particles": every other burst particle is skipped (the scratch object soaks up callers' edits)
@@ -146,6 +147,23 @@ export class FX {
     for (let i = 0; i < n; i++) { const a = rand() * 6.283, d = Math.sqrt(rand()) * r; this.decal(6, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.7, rand() * 6.283, 1.5 + rand() * 2.5, colors[i % colors.length], now, 0.95); }
   }
   ring(x, y, r, color, max = 0.6) { this.rings.push({ x, y, t: 0, max, r, color }); }
+  // a blade's streak: an arc of radius r round (x, y), centred on heading a, sweeping across in the first third of
+  // its life and fading out; glow: drawn again over the darkened scene at night (the plasma blade)
+  slash(x, y, a, r, color = 'rgba(255,255,255,', max = 0.18, w = 3, glow = false) {
+    if (this.arcs.length > 24) this.arcs.shift();
+    this.arcs.push({ x, y, a, r, color, t: 0, max, w, glow });
+  }
+  drawArcs(g, glowOnly = false) {
+    for (const s of this.arcs) {
+      if (glowOnly && !s.glow) continue;
+      const k = Math.min(1, s.t / s.max), a0 = s.a - 1.05, a1 = a0 + 2.1 * Math.min(1, k * 3 + 0.15);
+      g.strokeStyle = s.color + (0.95 * (1 - k)).toFixed(2) + ')'; g.lineWidth = s.w * (1 - 0.5 * k); g.lineCap = 'round';
+      g.beginPath(); g.arc(s.x, s.y, s.r, a0, a1); g.stroke();
+      g.lineWidth = Math.max(1, s.w * 0.4); g.strokeStyle = s.color + (0.6 * (1 - k)).toFixed(2) + ')';
+      g.beginPath(); g.arc(s.x, s.y, s.r * 0.82, a0 + 0.25, a1 - 0.1); g.stroke();
+    }
+    g.lineCap = 'butt';
+  }
   floatText(x, y, text, color) { this.texts.push({ x, y, text, color, t: 0 }); }
   // A line said out loud: a speech bubble over the speaker (entity id) for `hold` seconds, following
   // them (aboard a moving train too) through this.resolve(id) -> { rx, ry }. A new line from the
@@ -190,7 +208,7 @@ export class FX {
       }
       if (c.life > c.rest + 1.5) c.on = false;
     }
-    for (const arr of [this.tracers, this.rings, this.texts]) {
+    for (const arr of [this.tracers, this.rings, this.texts, this.arcs]) {
       for (let i = arr.length - 1; i >= 0; i--) { arr[i].t += dt; if (arr[i].t > (arr[i].max || (arr === this.tracers ? 0.08 : 1.4))) arr.splice(i, 1); }
     }
   }
@@ -248,6 +266,7 @@ export class FX {
       g.strokeStyle = t.color + (0.9 * (1 - t.t / 0.08)).toFixed(2) + ')';
       g.beginPath(); g.moveTo(t.x1, t.y1); g.lineTo(t.x2, t.y2); g.stroke();
     }
+    this.drawArcs(g, true);
     g.restore();
   }
 
@@ -291,6 +310,7 @@ export class FX {
       g.strokeStyle = r.color + (1 - k).toFixed(2) + ')'; g.lineWidth = 3;
       g.beginPath(); g.arc(r.x, r.y, r.r * (0.3 + k), 0, 6.28); g.stroke();
     }
+    this.drawArcs(g);
     this.drawTexts(g);
   }
 

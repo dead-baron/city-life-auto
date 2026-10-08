@@ -14,6 +14,35 @@ export const F_GROUND = 1, F_WATER = 2, F_NOCAST = 4, F_WET = 8, F_CHAR = 16, F_
 // a post casts its own shape along the ground from its base.
 export const F_THIN = F_CHAR;
 
+// One half of a sprite cut through (the plasma blade's kill): the pixels on one side ('a' or 'b') of the line through
+// their middle across their long axis, moved gap/2 px away from the other half, the cut edge glowing (a seared
+// wound). The anchor stays on the same world point, so both halves draw at the body's own position.
+export function cutGBuf(G, which, gap = 5, glow = [255, 170, 90, 210]) {
+  const { w, h } = G;
+  let n = 0, sx = 0, sy = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (G.col[(y * w + x) * 4 + 3]) { n++; sx += x + 0.5; sy += y + 0.5; }
+  if (!n) return G;
+  const cx = sx / n, cy = sy / n;
+  let xx = 0, yy = 0, xy = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (G.col[(y * w + x) * 4 + 3]) { const dx = x + 0.5 - cx, dy = y + 0.5 - cy; xx += dx * dx; yy += dy * dy; xy += dx * dy; }
+  const th = 0.5 * Math.atan2(2 * xy, xx - yy), ux = Math.cos(th), uy = Math.sin(th), sgn = which === 'a' ? -1 : 1;
+  const gp = Math.ceil(gap / 2) + 1, ox = gp + Math.round(sgn * ux * gap / 2), oy = gp + Math.round(sgn * uy * gap / 2);
+  const O = new GBuf(w + gp * 2, h + gp * 2);
+  O.ax = (G.ax || 0) + gp; O.ay = (G.ay || 0) + gp;
+  if (G.ap) O.ap = G.ap;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x, j = i * 4;
+    if (!G.col[j + 3]) continue;
+    const s = (x + 0.5 - cx) * ux + (y + 0.5 - cy) * uy;
+    if ((s < 0) !== (which === 'a')) continue;
+    const X = x + ox, Y = y + oy, k = Y * O.w + X, q = k * 4;
+    for (let c = 0; c < 4; c++) { O.col[q + c] = G.col[j + c]; O.nrm[q + c] = G.nrm[j + c]; O.emi[q + c] = G.emi[j + c]; }
+    O.z[k] = G.z[i]; O.flag[k] = G.flag[i];
+    if (Math.abs(s) < 1.4) { O.emi[q] = glow[0]; O.emi[q + 1] = glow[1]; O.emi[q + 2] = glow[2]; O.emi[q + 3] = glow[3]; O.col[q] = Math.min(255, O.col[q] * 0.6 + 90); O.col[q + 1] *= 0.55; O.col[q + 2] *= 0.45; }
+  }
+  return O;
+}
+
 export class GBuf {
   constructor(w, h) {
     this.w = w | 0; this.h = h | 0;

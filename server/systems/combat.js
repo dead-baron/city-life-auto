@@ -17,6 +17,7 @@ import * as spikes from './spikes.js';
 import * as npc from './npc.js';
 import * as wildlife from './wildlife.js';
 import * as reactions from './reactions.js';
+import * as wanderer from './wanderer.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -120,13 +121,30 @@ function melee(world, ped, w, aim) {
   if (w.stunChance && world.rand() < w.stunChance) best.stunUntil = now + 2;
   if (w.bleed && world.rand() < 0.6) best.bleeding = true;
   world.emit(best.x, best.y, { e: 'hit', x: best.x, y: best.y, a: dir, id: best.id, w: w.i });
-  if (w.id !== 'fists' || world.rand() < 0.35) world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 2 : 6 });
+  if (w.plasma) world.emit(best.x, best.y, { e: 'sizzle', x: best.x, y: best.y, a: +dir.toFixed(2) });   // (the plasma blade sears: no blood)
+  else if (w.id !== 'fists' || world.rand() < 0.35) world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 2 : 6 });
   const floored = now < best.downUntil || now < best.stunUntil;
-  // a knife from behind (or into someone who never saw it coming) kills outright
-  if (w.backstab && !best.dead && backstabbable(world, ped, best)) { world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: 10 }); damage(world, best, 9999, ped, 'melee', dir); return true; }
+  const knife = w.id === 'knife' || w.id === 'huntknife';
+  // a knife from behind (or into someone who never saw it coming) kills outright: a finishing stab
+  if (w.backstab && !best.dead && backstabbable(world, ped, best)) {
+    world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: 10 });
+    if (hurtable(world, best)) { best.killBlade = w.id; best.finisher = 'stab'; world.emit(ped.x, ped.y, { e: 'finisher', id: ped.id, t: best.id, k: 'stab', a: +dir.toFixed(2), x: best.x, y: best.y }); }
+    damage(world, best, 9999, ped, 'melee', dir);
+    if (!best.dead) best.finisher = best.killBlade = null;
+    return true;
+  }
   const dmg = w.dmg * mult * (0.85 + world.rand() * 0.3);
+  // a blade's killing blow: now and then a finisher (a stab, a slash) that drops them where they stand; the plasma
+  // blade cuts clean through (reactions.died: how each of them falls)
+  const lethal = !best.dead && hurtable(world, best) && !w.nonLethal && best.hp - dmg <= 0;
+  if (w.blade && lethal) {
+    best.killBlade = w.id;
+    if (w.plasma) best.halved = true;
+    else if (world.rand() < w.blade) { best.finisher = knife ? 'stab' : 'slash'; world.emit(ped.x, ped.y, { e: 'finisher', id: ped.id, t: best.id, k: best.finisher, a: +dir.toFixed(2), x: best.x, y: best.y }); }
+  }
   if (!best.dead && hurtable(world, best) && (w.nonLethal || best.hp - dmg > 0)) reactions.blow(world, best, ped, w, dir, was); // a stagger, or off their feet
   damage(world, best, dmg, ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
+  if (!best.dead) { best.finisher = null; best.halved = false; best.killBlade = null; }   // (it lived after all)
   if (floored) law.subdue(world, ped, best);
   return true;
 }
@@ -257,6 +275,11 @@ function hurtable(world, ped) {
 // The bullets (or a blast's pellets) that hit one person, as one hit: a shotgun at close range hits harder
 // the closer it is; the body reacts (reactions.js) before the damage, so a fatal blast throws it too.
 function shotHits(world, t, shooter, w, h) {
+  // the plasma blade, held ready and facing the shots, now and then turns a bullet aside
+  if (t.weapon === 'plasma' && !t.vehId && !t.dead && world.time > (t.attackAnimUntil || 0) && Math.cos(h.a + Math.PI - (t.a || 0)) > 0.35 && world.rand() < WEAPONS.plasma.deflect) {
+    world.emit(t.x, t.y, { e: 'deflect', x: t.x, y: t.y, a: +(h.a + Math.PI).toFixed(2), id: t.id });
+    return;
+  }
   let dmg = h.dmg;
   if (h.n >= 3 && h.dist < SHOTGUN_CLOSE_PX) dmg *= 1 + (SHOTGUN_CLOSE_MULT - 1) * (1 - h.dist / SHOTGUN_CLOSE_PX);
   if (!t.dead && hurtable(world, t)) reactions.shot(world, t, shooter, w, { n: h.n, dist: h.dist, a: h.a, lethal: t.hp - dmg <= 0 });
@@ -297,6 +320,7 @@ function hitscan(world, ped, w, a, acc) {
 export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (ped && ped.dead && amount > 0 && attacker && cause !== 'fall' && revive.isDowned(ped)) return revive.finish(world, ped, attacker); // hitting a downed player finishes them
   if (!ped || ped.dead || amount <= 0) return false;
+  if (ped.npc && ped.npc.role === 'wanderer') { wanderer.struck(world, ped, attacker); return false; }   // (the stranger: gone in a flash)
   const now = world.time;
   if (ped.hidden || ped.pet || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet
   if (ped.player && ped.player.invincible) return false;          // dev: invincible

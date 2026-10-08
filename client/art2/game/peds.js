@@ -21,7 +21,7 @@
 //   weaponItem(w) -> items.js kind or null;  PED_POSES: frames per pose;  SEATS: seat heights of the seated poses
 import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN } from '../people.js';
 import { ITEMS } from '../items.js';
-import { hash } from '../gbuf.js';
+import { hash, cutGBuf } from '../gbuf.js';
 import { WEAPON_BY_INDEX } from '../../../shared/items.js';
 
 export const PED_POSES = { ...POSES, move0: 6, move1: 6, move2: 6, move3: 6 };
@@ -30,7 +30,7 @@ const WEAPON_ITEM = {
   fists: null, bat: 'bat', knife: 'knife', crowbar: 'crowbar', sledge: 'sledgehammer', baton: 'nightstick', taser: 'taser', pistol: 'pistol', revolver: 'revolver',
   shotgun: 'shotgun', rifle: 'rifle', smg: 'smg', rocket: 'rocketLauncher', rod: 'fishingRod', service: 'pistol', prifle: 'rifle', psniper: 'sniper', passault: 'rifle',
   pshotgun: 'shotgun', spistol: 'silencedPistol', pepper: 'pepperSpray', spikes: 'spikeStrip', huntrifle: 'sniper',
-  huntknife: 'huntKnife', bow: 'bow', varmint: 'varmintRifle',
+  huntknife: 'huntKnife', bow: 'bow', varmint: 'varmintRifle', sword: 'sword', katana: 'katana', plasma: 'energyBlade',
 };
 export function weaponItem(w) {
   if (w === null || w === undefined || w === '') return null;
@@ -151,6 +151,10 @@ export function adaptApp(app, ar = null, opt = {}) {
   if (ar === 'mugger' && !out.bandana && r(19) < 0.22) { out.mask = true; if (out.hat && out.hat.kind !== 'hood') out.hat = { kind: 'beanie', color: '#1a1a1e' }; }
   if (ar === 'syndicate' || ar === 'hustler' || (ar === 'player' && t === 7)) out.chain = true;
   if ((ar === 'syndicate' && r(20) < 0.6) || (ar === 'construction' && r(20) < 0.25) || ((ar === 'casual' || ar === 'player') && r(20) < 0.08)) out.tattoo = true;
+  if (ar === 'wanderer') {   // the hooded stranger (wanderer.js): a long weathered coat, the hood up, dark boots, nothing in his hands
+    out.top = { kind: 'coat', color: '#3a3430', color2: '#2a2622' }; out.hat = { kind: 'hood', color: '#3a3430' };
+    out.bottom = { kind: 'pants', color: '#2a2622' }; out.shoeKind = 'boot'; out.shoes = '#3a2a1e'; out.glasses = null; out.chain = false; out.tattoo = false;
+  }
   if (swat) { out.gloves = '#1a1a1e'; out.hat = { kind: 'helmet', color: '#1e2024' }; }
   else if (medic) out.gloves = '#5a8ad8';
   else if (ar === 'construction' && r(21) < 0.5) out.gloves = '#c8a050';
@@ -215,7 +219,7 @@ export function appKey(app, opt = {}) {
 const normPose = (p) => (p && p.startsWith('move') ? 'walk' + (p[4] || '0') : p || 'idle');
 export function pedKey(app, pose, dir8, frame, weapon, opt = {}) {
   const pn = normPose(pose), n = PED_POSES[pn] || 1;
-  return `${appKey(app, opt)}|${pn}|${((dir8 | 0) % 8 + 8) % 8}|${(((frame | 0) % n) + n) % n}|${weaponItem(weapon) || ''}`;
+  return `${appKey(app, opt)}|${pn}|${((dir8 | 0) % 8 + 8) % 8}|${(((frame | 0) % n) + n) % n}|${weaponItem(weapon) || ''}${opt.cut ? '|cut' + opt.cut : ''}`;
 }
 // Where the canopy goes over someone holding an open umbrella (people.js 'umbrella': the right hand in front of the
 // shoulder, the shaft straight up) at sprite heading dir8: out = [dx, dy, z], world px from the feet - draw the canopy
@@ -231,5 +235,6 @@ export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
   const A = isServer(app) ? adaptApp(app, opt.ar || app.ar, opt) : app || {};
   const d = ((8 - (dir8 | 0)) % 8 + 8) % 8;
   const k = weaponItem(weapon);
-  return person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true } : { tight: true });
+  const G = person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true } : { tight: true });
+  return opt.cut ? cutGBuf(G, opt.cut, 7) : G;   // (cut in two by the plasma blade: one half, a little apart from the other, the edge seared)
 }

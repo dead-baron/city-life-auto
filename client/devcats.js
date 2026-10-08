@@ -15,6 +15,11 @@ export const DEV_SECTIONS = [
     ['🛡 Invincible (toggle)', 'god'], ['❤ Heal', 'heal'], ['💵 +$25k', 'money'], ['😇 +50 Samaritan', 'samaritan'],
     ['📜 Wipe criminal record', 'record'], ['☠ Die (respawn test)', 'die'],
   ] },
+  { id: 'blades', title: '🗡 Blades & practice', items: [
+    ['🎯 3 practice dummies in front of you', 'dummy'], ['🎯 3 one-hit dummies (see how they fall)', 'dummy', { hp: 1 }],
+    ['🗡 The hooded stranger (sells the plasma blade)', 'wanderer'], ['⚔ Pawn shop (swords)', 'near', { k: 'pawn' }],
+    ['🗡 Fence (katanas)', 'near', { k: 'fence' }],
+  ] },
   { id: 'law', title: '🚨 Wanted & police', items: [
     ['★★ 2 stars', 'wanted', { n: 2 }], ['★★★★ 4 stars', 'wanted', { n: 4 }], ['🧽 Clear wanted', 'clean'],
     ['👮 Join the police', 'cop'], ['⬆ Promote police rank', 'promote'], ['🏛 Police station', 'near', { k: 'police' }],

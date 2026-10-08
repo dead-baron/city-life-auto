@@ -3293,3 +3293,29 @@ The roads laid out by rule rather than for a place are being reworked (playtest:
 - **Tests**:
   - `test/wildlife.test.js`: bolting, stalking from downwind, habitats and coveys.
   - `test/hunting.test.js`: grades, the knife, roadkill, the young, otters, legends, the bow, bleeding out, hearty meals, the camps, crafting, beaver ponds and the dev commands.
+
+## 2026-10-07 · Blades: finishers, how the cut down fall, the plasma blade and the hooded stranger
+
+- **Blades** (`shared/items.js`, `combat.js` `melee`; playtest: "knives slash, with a chance of a finishing stab on the killing blow and a variety of death animations; swords and katanas the same"):
+  - The knife and the Hunting Knife are joined by the Sword (pawn shops, $650) and the Katana (the fence, $1,500): longer reach, a wider swing, and the katana is quick and quiet.
+  - A blade's killing blow is now and then a finisher: a deep stab with a knife (as a backstab always is), a long slash with a sword or katana. It hits harder on screen: more blood, the camera's kick, its own sound, and the slash's white streak.
+  - **How the cut down fall** (`reactions.js` `died`, the client's `pedLook`): sinking to the knees then forward onto the face, spun round onto the side, or rocked back and slumping onto the back. A finishing stab doubles them over and they go down face first; a finishing slash turns them as they drop.
+- **The plasma blade** (playtest: "a rare, overpowered lightsaber-like weapon... the final blow cuts humans and animals in half"):
+  - It does 160 a stroke, enough for most people, and the stroke sears rather than bleeds: sparks and a hiss, no blood.
+  - The kill cuts the body in two. People and animals lie in two halves a little apart, the cut edges glowing, smoking for a few seconds over a scorch mark (`client/art2/gbuf.js` `cutGBuf` splits the dead sprite across its long axis).
+  - Held ready, it turns a bullet from the front aside now and then (a spark and a whine).
+  - It hums as it swings, leaves a blue arc and throws its own blue light round you at night.
+- **The hooded stranger** (`server/systems/wanderer.js`): on a rare night he stands somewhere quiet in the wilds (the mission ruins, the Sentinel Stones, Fern Gorge, the summit tarn, the oasis, Wreck Island, the hot springs, the Giants Loop, Redwood Cove, the desert camp). He has no blip on the map and is easy to walk past in the dark.
+  - Campers tell the feed someone saw him. He speaks when you come near and sells the plasma blade for $45,000 (cash, then bank) to anyone who can pay. He never uses it himself.
+  - Strike at him and he's gone in a flash of blue light, not to be seen again for a long while. He leaves at dawn, but never while someone's watching.
+- **Debug menu**: a new "Blades & practice" section with practice dummies (people who stand still in front of you; the one-hit kind shows how they fall), the hooded stranger, the pawn shop and the fence. "Give every weapon" includes the blades.
+- **Tests**: `test/blades.test.js` (finishers and the variety of deaths, the plasma blade's stroke, halving, sear and deflection, the stranger's sale and vanishing, the practice dummies).
+
+## 2026-10-07 · Design notes: the subway underground, skating, witnesses and bounties
+
+The user's notes from 16:47 are filed in `docs/DESIGN-NOTES.md`.
+- **Next:** witnesses by NPC type and district (and player witnesses who can call a crime in), the bounty rework, and more kinds of bicycle.
+- **With the transit stage:** the subway going under the world layer.
+- **Later, as one feature:** skating (skateboards, longboards, skates and BMX; tricks, parks, shops, the riding skill, contests).
+
+Concept prompts SU1-SU4, SK1-SK8, CR1-CR2 and BO1 are in the prompt pack.

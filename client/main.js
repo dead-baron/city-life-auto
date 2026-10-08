@@ -369,7 +369,7 @@ function fixedStep() {
       const e = S.ents.get(S.ctrlId);
       if (e) { e.swingAt = S.loopClock; e.swingSide = (e.swingSide || 0) ^ 1; e.localSwing = S.loopClock; }
       S.localSwingReady = S.loopClock + w.cd;
-      sfx('swing', 1);
+      if (w.plasma && e) plasmaSwing(e); else sfx('swing', 1);
     }
   }
   // menu navigation by gamepad / number keys
@@ -540,6 +540,12 @@ function smashFx(p, i, a) {
 }
 
 function distVol(x, y) { const d = Math.hypot(x - S.cam.x, y - S.cam.y); return Math.max(0, 1 - d / 1100); }
+// The plasma blade through the air: its hum, and a blue arc round the one swinging it, as far as it reaches
+const PLASMA_I = WEAPONS.plasma.i;
+function plasmaSwing(a) {
+  S.fx.slash(a.rx, a.ry, a.ra || 0, 34, 'rgba(120,190,255,', 0.2, 4, true);
+  sfx('hum', distVol(a.rx, a.ry));
+}
 
 function onEvent(ev) {
   const now = S.loopClock;
@@ -557,7 +563,33 @@ function onEvent(ev) {
     }
     case 'blood': if (ev.g) fx.bulletHit(ev.x, ev.y, ev.a, now); else fx.blood(ev.x, ev.y, ev.a, ev.n, now); sfx('hit', distVol(ev.x, ev.y)); break;
     case 'drip': fx.drip(ev.x, ev.y, now); break; // a bleeding person's trail
-    case 'death': { fx.decal(5, ev.x - Math.cos(ev.a) * 4, ev.y - Math.sin(ev.a) * 4, ev.a, 14, '#6a0a10', now, 0.9); const e = S.ents.get(ev.id); if (e && ev.k) e.deadK = ev.k; break; }
+    case 'death': {
+      const e = S.ents.get(ev.id);
+      if (e && ev.k) { e.deadK = ev.k; e.deathAt = S.loopClock; }   // (pedLook plays the fall: to the knees, spun round, slumping)
+      if (ev.k === 'halved') {   // the plasma blade: cut in two, the wound seared shut - a scorch, smoke and sparks, no pool of blood
+        fx.decal(3, ev.x, ev.y, Math.random() * 6.28, 9, '#111', now, 0.55);
+        fx.sparks(ev.x, ev.y, 10); for (let k = 0; k < 4; k++) fx.smoke(ev.x, ev.y, false);
+        fx.ring(ev.x, ev.y, 22, 'rgba(255,170,90,', 0.35);
+        if (e) e.smokeUntil = S.loopClock + 5;
+      } else fx.decal(5, ev.x - Math.cos(ev.a) * 4, ev.y - Math.sin(ev.a) * 4, ev.a, 14, '#6a0a10', now, 0.9);
+      break;
+    }
+    // blades (server combat.js melee): a killing blow that's a finisher - a stab (a deep thrust) or a slash (a long cut
+    // across) - with a heavier hit, more blood and the camera's kick; the plasma blade sears where it cuts (sparks and a
+    // hiss, no blood) and now and then turns a bullet aside
+    case 'finisher': {
+      const a = S.ents.get(ev.id), v = S.ents.get(ev.t), near = distVol(ev.x, ev.y);
+      if (v) { v.hitAt = S.loopClock; v.hitA = ev.a; }
+      fx.blood(ev.x, ev.y, ev.a, ev.k === 'stab' ? 10 : 14, now);
+      if (ev.k === 'slash') fx.slash(a ? a.rx : ev.x - Math.cos(ev.a) * 18, a ? a.ry : ev.y - Math.sin(ev.a) * 18, ev.a, 26, 'rgba(255,255,255,', 0.24, 3);
+      else fx.ring(ev.x, ev.y, 12, 'rgba(200,24,32,', 0.25);
+      sfx(ev.k === 'stab' ? 'stab' : 'slash', near * 1.3);
+      if (ev.id === S.myPedId || ev.t === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 6);
+      else if (near > 0.85) S.cam.shake = Math.max(S.cam.shake, 3);
+      break;
+    }
+    case 'sizzle': fx.sparks(ev.x, ev.y, 7); fx.smoke(ev.x, ev.y, false); fx.ring(ev.x, ev.y, 14, 'rgba(120,190,255,', 0.25); sfx('sear', distVol(ev.x, ev.y)); break;
+    case 'deflect': fx.sparks(ev.x, ev.y, 6); fx.slash(ev.x, ev.y, ev.a, 13, 'rgba(140,200,255,', 0.16, 2, true); sfx('zing', distVol(ev.x, ev.y)); break;
     case 'react': { // a hit: the stagger (and the hit flash) - a shove on the heels, or forward from behind
       const e = S.ents.get(ev.id);
       if (e) { e.reactAt = S.loopClock; e.reactD = ev.d; e.reactA = ev.a; e.hitAt = S.loopClock; e.hitA = ev.a; e.barUntil = S.loopClock + 4; }
@@ -575,9 +607,11 @@ function onEvent(ev) {
     case 'spikesgone': S.spikes.delete(ev.id); break;
     case 'pop': fx.sparks(ev.x, ev.y, 6); fx.smoke(ev.x, ev.y, false); sfx('pop', distVol(ev.x, ev.y)); break;
     case 'swing': {
-      if (ev.id !== S.myPedId) sfx('swing', distVol(ev.x, ev.y));
-      const a = S.ents.get(ev.id);
-      if (a && !(a.localSwing && S.loopClock - a.localSwing < 0.6)) { a.swingAt = S.loopClock; a.swingSide = ev.side || 0; }
+      const a = S.ents.get(ev.id), mine = !!(a && a.localSwing && S.loopClock - a.localSwing < 0.6);
+      if (a && !mine) { a.swingAt = S.loopClock; a.swingSide = ev.side || 0; }
+      if (mine) break;   // (your own swing played the moment you pressed)
+      if (a && a.extra === PLASMA_I) plasmaSwing(a);   // (the plasma blade hums through the air, a blue arc behind it)
+      else if (ev.id !== S.myPedId) sfx('swing', distVol(ev.x, ev.y));
       break;
     }
     case 'fling': { const e = S.ents.get(ev.id); if (e) { e.flingAt = S.loopClock; e.flingDur = ev.d; e.flingK = ev.k; e.flingLanded = false; } break; }
@@ -643,7 +677,13 @@ function onEvent(ev) {
     case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); if (ev.n) fx.floatText(ev.x, ev.y - 18, `+$${ev.n}`, '#7fe07f'); break;
     case 'camera': S.camAlert.set(ev.id, performance.now() + 2500); sfx('camera', distVol(S.map.cameras[ev.id].x, S.map.cameras[ev.id].y)); break;
     case 'revive': fx.ring(ev.x, ev.y, 30, 'rgba(120,255,160,', 3); fx.floatText(ev.x, ev.y - 20, '+', '#3ddc84'); break;
-    case 'poof': case 'fade': if (ev.x !== undefined) fx.ring(ev.x, ev.y, 24, 'rgba(255,255,255,'); break;
+    case 'poof': case 'fade':
+      if (ev.k === 'plasma') {   // the hooded stranger, gone in a flash of blue light (server wanderer.js)
+        fx.ring(ev.x, ev.y, 44, 'rgba(120,180,255,', 0.6); fx.ring(ev.x, ev.y, 20, 'rgba(230,245,255,', 0.3); fx.sparks(ev.x, ev.y, 12);
+        S.flashes.push({ x: ev.x, y: ev.y, t: 0.35, r: 260, kind: 'plasma' });
+        sfx('hum', distVol(ev.x, ev.y) * 1.5); sfx('zing', distVol(ev.x, ev.y));
+      } else if (ev.x !== undefined) fx.ring(ev.x, ev.y, 24, 'rgba(255,255,255,');
+      break;
     case 'scream': fx.floatText(ev.x, ev.y - 18, 'AAAAH!', '#fff'); break;
     case 'say': fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;
     case 'yelp': fx.floatText(ev.x, ev.y - 18, 'WHOA!', '#ffd36b'); break;
@@ -765,6 +805,7 @@ function drawArt2Marks(F) {
   g.lineWidth = 2;
   for (const t of fx.tracers) { g.strokeStyle = t.color + (1 - t.t / 0.08).toFixed(2) + ')'; g.beginPath(); g.moveTo(t.x1, t.y1); g.lineTo(t.x2, t.y2); g.stroke(); }
   for (const r of fx.rings) { const k = r.t / r.max; g.strokeStyle = r.color + (1 - k).toFixed(2) + ')'; g.lineWidth = 3; g.beginPath(); g.arc(r.x, r.y, r.r * (0.3 + k), 0, 6.28); g.stroke(); }
+  fx.drawArcs(g);   // (blade streaks)
   for (const c of fx.chunks) {
     if (!c.on || !c.img) continue;
     const fade = c.life > c.rest ? Math.max(0, 1 - (c.life - c.rest) / 1.5) : 1;
@@ -3263,10 +3304,18 @@ function pedLook(p, now) {
   // how they lie: the dead as they fell (the death event: face down, on the back, on the side - else as their last
   // throw landed); the knocked down on the face or the back after a faceplant or a slide, pushing up to get up
   const tL = flT - (p.flingDur || 0);
-  if (pose === 'dead') pose = DEAD_POSE[p.deadK || (flRecent && FLING_LIE[flK]) || DEAD_BY_ID[p.id % 3]] || 'dead';
-  else if (pose === 'down' && !flying && !(f & PF.STUN) && flRecent && (flK === 'face' || flK === 'slide')) pose = flK === 'face' ? 'downF' : 'downB';
+  // cut down by a blade (the death event's k): a beat or two standing or on the knees before they lie still, turning
+  // as they go if they were spun round (the turn stays with the body)
+  let seqFr = -1, turn = 0;
+  if (pose === 'dead') {
+    const k = p.deadK, seq = DEATH_SEQ[k], dT = p.deathAt !== undefined ? now - p.deathAt : 99;
+    if (DEATH_TURN[k]) { const sp = DEATH_TURN[k], u = Math.min(1, dT / sp[1]); turn = sp[0] * (p.id & 1 ? 1 : -1) * (1 - (1 - u) * (1 - u)); }
+    const step = seq && !flying ? seq.find((s) => dT < s[0]) : null;
+    if (step) { pose = step[1]; seqFr = step[2]; }
+    else pose = DEAD_POSE[k || (flRecent && FLING_LIE[flK]) || DEAD_BY_ID[p.id % 3]] || 'dead';
+  } else if (pose === 'down' && !flying && !(f & PF.STUN) && flRecent && (flK === 'face' || flK === 'slide')) pose = flK === 'face' ? 'downF' : 'downB';
   // a hit: a stagger back on the heels (or forward, hit from behind); hurt and walking: a limp
-  const rT = p.reactAt !== undefined ? now - p.reactAt : 99, stag = rT < (p.reactD || 0) && STAGGER_FROM.has(pose);
+  const rT = p.reactAt !== undefined ? now - p.reactAt : 99, stag = seqFr < 0 && rT < (p.reactD || 0) && STAGGER_FROM.has(pose);
   if (stag) pose = 'stagger';
   else if (pose === 'move' && (f & PF.BLEED) && !(f & PF.SPRINT) && (p.as || 0) < 175) pose = 'limp';
   else if (pose === 'aim' && (p.as || 0) > 14) pose = 'aimw';   // walking while aiming: the legs stride, the gun stays up
@@ -3274,8 +3323,9 @@ function pedLook(p, now) {
     : pose === 'stagger' ? (Math.cos((p.reactA || 0) - (p.ra || 0)) > 0.2 ? 2 : 0) + (rT > p.reactD * 0.45 ? 1 : 0)
       : pose === 'crawl' ? Math.floor(now * 3.2 + p.id) % 4 : (pose === 'downF' || pose === 'downB') && tL > 0.55 ? 1 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
+  if (seqFr >= 0) fr = seqFr;
   const L = p._look || (p._look = {});
-  L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent;
+  L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;
   L.lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
   L.hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
   L.swimming = !(f & PF.INVEH) && !!p.swim;
@@ -3288,6 +3338,7 @@ function pedLook(p, now) {
 function pedVisual(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
+  if (p.smokeUntil && now < p.smokeUntil && Math.random() < 0.05) S.fx.smoke(p.rx + (Math.random() - 0.5) * 12, p.ry + (Math.random() - 0.5) * 6, false);   // (cut in two by the plasma blade: the seared halves smoke a while)
   if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { if ((p.as || 0) > 12 || p.stillSince === undefined) p.stillSince = now; return; }
   if (p.blink === 3) return; // inside a home
   const L = pedLook(p, now);
@@ -3303,7 +3354,7 @@ function drawPed(p, now) {
   if (f & PF.INVEH) return;
   if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { drawAnimal(p, now); return; }
   if (p.blink === 3) return; // inside a home
-  const { pose: pose0, fr, lvl, hitK, flT, flying, flK, flRecent, swimming } = pedLook(p, now);
+  const { pose: pose0, fr, lvl, hitK, flT, flying, flK, flRecent, swimming, turn } = pedLook(p, now);
   const pose = V1_POSE[pose0] || pose0;
   if (swimming) drawSwimRipples(p, now);
   const team = S.pedTeam && S.pedTeam.get(p.id);
@@ -3316,8 +3367,8 @@ function drawPed(p, now) {
     const ly = lyingSprite(p.d.app, pose === 'dead' ? 1 : 0);
     if (ly) {
       g.save();
-      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 3, 24, 10, p.ra, 0, 6.28); g.fill();
-      g.translate(p.rx, p.ry); g.rotate(p.ra + Math.PI);
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 3, 24, 10, p.ra + turn, 0, 6.28); g.fill();
+      g.translate(p.rx, p.ry); g.rotate(p.ra + turn + Math.PI);
       const sc = 1.25;
       g.imageSmoothingEnabled = false;
       if (f & PF.GHOST) g.globalAlpha = 0.45;
@@ -3346,7 +3397,7 @@ function drawPed(p, now) {
   // a critically hurt NPC limps: the body lurches to one side on every other step
   const limp = p.d && !p.d.pl && p.hp < NPC_CRITICAL && pose === 'move' && !(f & PF.DEAD) ? Math.sin((p.phase || 0) * Math.PI / 4) : 0;
   g.translate(p.rx + (hitK ? Math.cos(p.hitA) * 5 * hitK : 0), p.ry - lift + (hitK ? Math.sin(p.hitA) * 5 * hitK : 0));
-  g.rotate(p.ra + spin + (hitK ? 0.25 * hitK : 0) + limp * 0.28);
+  g.rotate(p.ra + turn + spin + (hitK ? 0.25 * hitK : 0) + limp * 0.28);
   if (limp) g.translate(0, Math.max(0, limp) * 2.5);
   if (grow !== 1) g.scale(grow, grow);
   if (pose === 'punch' && (fr & 3) === 2) { g.translate(3, 0); }
@@ -3376,13 +3427,18 @@ function drawPed(p, now) {
 const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp']);
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
-const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
+const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
+// How the cut down go down (server reactions.js died): [until s after the death, pose, frame] - knocked back then
+// sinking to the knees and forward onto the face; doubled over a stab, to the knees, face down; rocked back, sagging
+// onto the back; spun round (DEATH_TURN: [radians, over s]) or turned by a slash, onto the side
+const DEATH_SEQ = { knees: [[0.22, 'stagger', 0], [0.95, 'kneel', 1]], stab: [[0.3, 'stagger', 2], [0.85, 'kneel', 1]], slump: [[0.35, 'stagger', 0], [0.6, 'stagger', 1]], spin: [[0.55, 'stagger', 0]], slash: [[0.4, 'stagger', 0]] };
+const DEATH_TURN = { spin: [4.4, 0.55], slash: [2.2, 0.4] };
 // the old renderer's sprites for the poses it doesn't have (the subway view)
 const V1_POSE = { stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;
-  const d8 = dir8(p.ra);
+  const d8 = dir8(p.ra + ((p._look && p._look.turn) || 0));   // (spun round as they go down: pedLook's turn)
   // concept-art body (all 8 directions drawn); the procedural painter until it has loaded
   const kneel = pose === 'kneel';
   if (kneel) { pose = 'carry'; fr = 0; } // reaching both hands down to the patient
@@ -3850,6 +3906,13 @@ function collectLights(sky, view, vehs, peds, dt) {
     if (night > 0.05) L.cone(x, y, a, torch ? 240 : 200, 62, LIGHT.white, 0.85 * night);
     L.beam(x, y, a, 170, 40, LIGHT.white, torch ? 0.16 * (1 - night) + 0.06 * haze * night : 0.045 * haze * night);
   }
+  // the plasma blade gives off its own blue light in the hand
+  for (const p of peds) {
+    if (p.extra !== PLASMA_I || (p.flags & (PF.INVEH | PF.DEAD)) || p.blink === 3) continue;
+    const x = p.rx + Math.cos(p.ra) * 10, y = p.ry - 12 + Math.sin(p.ra) * 10;
+    L.add(x, y, 90, LIGHT.blue, 0.3 + 0.6 * night);
+    L.glow(x, y, 20, LIGHT.cyan, 0.25 + 0.3 * night);
+  }
   if (night > 0.35) {
     const sp = selfPos();
     L.add(sp.x, sp.y - (sp.z ? liftOf(sp.z) : 0), 100, LIGHT.moon, 0.22 * night); // enough to see yourself by
@@ -3861,6 +3924,10 @@ function collectLights(sky, view, vehs, peds, dt) {
       L.add(f.x, f.y, f.r * 1.3, LIGHT.fire, e);
       L.glow(f.x, f.y, f.r * 0.55, LIGHT.fire, 0.45 * Math.min(1, e));
       L.glow(f.x, f.y, f.r * 0.22, LIGHT.flash, 0.7 * Math.min(1, e));
+    } else if (f.kind === 'plasma') {   // (a flash of blue light: the hooded stranger gone)
+      const e = Math.min(1.5, f.t * 5);
+      L.add(f.x, f.y, f.r, LIGHT.blue, e);
+      L.glow(f.x, f.y, f.r * 0.25, LIGHT.cyan, 0.7 * Math.min(1, e));
     } else {
       const e = Math.min(1.4, f.t * 22);
       L.add(f.x, f.y, f.r || 150, LIGHT.flash, e);
