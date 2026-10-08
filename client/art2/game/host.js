@@ -215,6 +215,7 @@ const C = {
   head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], flash: [1, 0.9, 0.67],
   sodium: [1, 0.73, 0.43], window: [1, 0.77, 0.47], warm: [1, 0.8, 0.55], white: [0.92, 0.94, 1], moon: [0.6, 0.67, 1], cyan: [0.47, 0.9, 1],
   legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1],
+  rare: [0.35, 0.65, 1], epic: [0.78, 0.47, 1], gold: [1, 0.8, 0.38],   // the dropped backpacks' glows
 };
 const CUT_A = { cut: 'a' }, CUT_B = { cut: 'b' };   // (the plasma blade's two halves: peds.js pedSprite opt)
 // signal lenses red, amber, green (v1's SIG_COL), and as light colours
@@ -1179,7 +1180,10 @@ export class World2 {
         const par = st === 2 ? S.ents.get(c.parent) : null;
         this._small('crate', A.crateKey(tier, label, hi, 16), [tier, label, hi, 16], c, c.rx, c.ry, this._z0(par || c, false) + lift * 0.6);
       }
-      for (const b of F.bags) { const hi = quant(b.ra || 0, 16); this._small('bag', A.bagKey(b.d.t, hi, 16), [b.d.t, hi, 16], b, b.rx, b.ry, this._z0(b, false)); }
+      for (const b of F.bags) {
+        if ((b.flags & 1) && Math.floor(now * 5) % 2) continue;   // about to vanish: it blinks
+        const hi = quant(b.ra || 0, 16); this._small('bag', A.bagKey(b.d.t, hi, 16), [b.d.t, hi, 16], b, b.rx, b.ry, this._z0(b, false));
+      }
       for (const b of F.balls) { const t = b.d.t | 0, spin = quant(b.ra || 0, 4); this._small('ball', A.ballKey(t, spin), [t, spin], b, b.rx, b.ry, (b.extra || 0) * 2 + this._z0(b, false)); }
       for (const pr of F.projs) {
         const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0;
@@ -1659,6 +1663,13 @@ export class World2 {
       this._light(p.rx + Math.cos(p.ra) * 8, p.ry + Math.sin(p.ra) * 8, 30 + this._z0(p, false), len, C.white, 1.6 * (torch ? Math.max(night, 0.3) : night), [p.ra, 0.32, len]);
     }
     if (night > 0.35) { const sp = F.sp; this._light(sp.x, sp.y, 40 + (sp.z ? DECK_Z * sp.z : 0), 100, C.moon, 0.5 * night); }
+    // dropped backpacks: the rare ones glow their rarity's colour (blue, purple; the legendary one gold and pulsing)
+    for (const b of F.bags) {
+      const t = (b.d.t | 0) - 4;
+      if (t < 3 || !inV(b.rx, b.ry) || ((b.flags & 1) && Math.floor(now * 5) % 2)) continue;
+      const pulse = t === 5 ? 0.8 + 0.2 * Math.sin(now * 2.6 + b.id) : 1;
+      this._light(b.rx, b.ry, 16, t === 5 ? 130 : t === 4 ? 90 : 60, t === 5 ? C.gold : t === 4 ? C.epic : C.rare, (t === 5 ? 1.1 : t === 4 ? 0.8 : 0.5) * (0.6 + 0.9 * nightK) * pulse);
+    }
     // the legends (the pure white animals, 'pet:<kind>:L'): a faint pale glow about them, plain at night
     for (const p of F.peds) if (p.d && p.d.ar && p.d.ar.endsWith(':L') && !(p.flags & PF.DEAD) && inV(p.rx, p.ry)) this._light(p.rx, p.ry, 14, 110, C.legend, 0.35 + 1.1 * nightK * (0.85 + 0.15 * Math.sin(now * 1.7 + p.id)));
     for (const f of S.flashes) {

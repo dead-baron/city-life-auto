@@ -12,6 +12,7 @@ import { store, defaultProfile } from '../store.js';
 import * as vehicles from './vehicles.js';
 import * as combat from './combat.js';
 import * as cargo from './cargo.js';
+const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); return out; };   // + the backpack you dropped when you died
 import * as law from './law.js';
 import * as bounties from './bounties.js';
 import * as economy from './economy.js';
@@ -466,7 +467,7 @@ export function findInteraction(world, p) {
   }
 
   const bag = cargo.nearestBag(world, ped, true);
-  if (bag) return { label: `Grab loot ($${bag.cash}${Object.keys(bag.items).length || Object.keys(bag.weapons).length ? ' + items' : ''})`, run: () => cargo.lootBag(world, p, bag) };
+  if (bag) return { label: cargo.bagLabel(bag, p), run: () => cargo.lootBag(world, p, bag) };
 
   const crate = cargo.nearestCrate(world, ped);
   if (crate) return { label: crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`, run: () => cargo.pickUp(world, ped, crate) };
@@ -624,7 +625,7 @@ export function buildMe(world, p) {
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, job: places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
-    radar: law.radarFor(world, p), bounty: p.bounty, btime: bounties.meInfo(p),
+    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: ped && ped.fishing ? { bite: !!(ped.fishing.biteAt && world.time >= ped.fishing.biteAt) } : null,

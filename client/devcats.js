@@ -13,7 +13,7 @@ export const DEV_SECTIONS = [
   ] },
   { id: 'me', title: '🧍 Me', items: [
     ['🛡 Invincible (toggle)', 'god'], ['❤ Heal', 'heal'], ['💵 +$25k', 'money'], ['😇 +50 Samaritan', 'samaritan'],
-    ['📜 Wipe criminal record', 'record'], ['☠ Die (respawn test)', 'die'],
+    ['📜 Wipe criminal record', 'record'], ['☠ Die (respawn test)', 'die'], ['🎒 Dropped backpacks, Common to Legendary', 'packs'],
   ] },
   { id: 'blades', title: '🗡 Blades & practice', items: [
     ['🎯 3 practice dummies in front of you', 'dummy'], ['🎯 3 one-hit dummies (see how they fall)', 'dummy', { hp: 1 }],

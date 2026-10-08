@@ -200,6 +200,23 @@ views.objects = () => {
   S.label('crates 1-4 x heading', 10, 210); S.label('bags 0-4', 200, 220); S.label('balls / rockets', 392, 220);
   return [{ S }];
 };
+// the dropped backpacks, Common to Legendary, at four headings, and the pile of notes, by day and by night (the rare
+// ones with the glow the game puts about them: host.js _lights)
+views.packs = () => {
+  const mk = (preset) => {
+    const S = new Stage(560, 250);
+    backdrop(S, [[0, 140, 'asphalt'], [140, 110, 'grass']]);
+    for (let r = 1; r <= 5; r++) for (let k = 0; k < 4; k++) {
+      const x = 40 + (r - 1) * 110 + (k % 2) * 40, y = 50 + Math.floor(k / 2) * 46 + (r % 2) * 120;
+      S.put(A.bagSprite(4 + r, k * 4 + 1, 16), x, y);
+      if (r >= 3) S.light(x, y, 16, r === 5 ? 130 : r === 4 ? 90 : 60, r === 5 ? [1, 0.8, 0.38] : r === 4 ? [0.78, 0.47, 1] : [0.35, 0.65, 1], (r === 5 ? 1.1 : r === 4 ? 0.8 : 0.5) * (preset === 'night' ? 1.5 : 0.6));
+    }
+    S.put(A.bagSprite(0, 3, 16), 520, 60);
+    ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].forEach((n, i) => S.label(n, 30 + i * 110, i % 2 ? 236 : 116));
+    return { S, preset };
+  };
+  return [mk('noon'), mk('night')];
+};
 // train cars: roof, lit roof (night), the cut-away interior (my train), the empty mail car
 views.trains = () => {
   const day = new Stage(760, 660), night = new Stage(760, 260);

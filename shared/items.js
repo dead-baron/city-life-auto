@@ -239,6 +239,25 @@ export function bagTier(value) {
 }
 export const BAG_NAMES = [null, 'Canvas Duffel', 'Tactical Backpack', 'Security Case', 'Gold Lockbox'];
 
+// The backpack you drop when you die (cargo.dropEverything): everything you carried but the cash, which falls
+// beside it as a pile of notes. Its look goes by what the gear in it is worth, from a plain canvas pack to a
+// glowing gold legendary one (col: the rarity's colour on the radar and the label). On the wire a pack's
+// tier is 4 + its rarity (5-9: client/art2/game/actors.js bagModel).
+export const PACK_TIERS = [
+  null,
+  { name: 'Backpack', rarity: 'Common', min: 0, col: '#cfcfcf' },
+  { name: 'Trail Pack', rarity: 'Uncommon', min: 200, col: '#62d46a' },
+  { name: 'Tactical Pack', rarity: 'Rare', min: 800, col: '#52a8ff' },
+  { name: 'Elite Pack', rarity: 'Epic', min: 2500, col: '#bb78ff' },
+  { name: 'Legendary Pack', rarity: 'Legendary', min: 8000, col: '#ffb83d' },
+];
+export function packTier(value) {
+  let t = 1;
+  for (let i = 2; i < PACK_TIERS.length; i++) if (value >= PACK_TIERS[i].min) t = i;
+  return t;
+}
+export const PACK_WIRE = 4;   // a pack's tier on the wire: PACK_WIRE + its rarity
+
 // What the hunting buyers take: every game item (meat, hides and pelts in every grade, the legends, the parts) and
 // the cooked game; payFor: what they pay - the usual price times k
 function GAME_GOODS() { return Object.keys(ITEMS).filter((id) => ITEMS[id].game || (ITEMS[id].food && COOKED.has(id))); }

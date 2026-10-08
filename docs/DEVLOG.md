@@ -3523,3 +3523,21 @@ From the design notes ("More bicycles"). The numbers are in `shared/vehicles.js`
   - an NPC cyclist riding a minute of traffic at the kerb, never up on the highway;
   - bike theft seen from less far than a car theft, and booked as one.
   - The wilds test now counts an ambulance crew as belonging out there. With the new traffic a grizzly got a hiker in Granite Peaks during the test, and the crew came for the body.
+
+## 2026-10-08 · The death drop: one backpack by rarity, the cash beside it
+- **When you die,** everything you were carrying goes into one backpack where you fell. The cash falls out on its own, a step away, as a pile of notes.
+- **The look goes by what the gear is worth** (cash not counted; `shared/items.js` `PACK_TIERS`):
+
+  | Rarity | Pack | Gear worth | Look |
+  | --- | --- | --- | --- |
+  | Common | Backpack | under $200 | faded khaki canvas |
+  | Uncommon | Trail Pack | $200+ | green, a bedroll and a bottle, green piping |
+  | Rare | Tactical Pack | $800+ | black, webbing, blue piping that glows faintly |
+  | Epic | Elite Pack | $2,500+ | armour plates, glowing purple seams, an antenna |
+  | Legendary | Legendary Pack | $8,000+ | black and gold, gold plates, glowing seams and core, a pulsing gold light |
+- **Anyone can take them.** The interact prompt names the pack, its owner, rarity and value ("Open Sam's Elite Pack (Epic, ~$3,100)"). The notes are scooped up by walking over them.
+- **They stay 10 minutes** (`PACK_LIFE_S`), blink for the last 30 seconds, then they're gone.
+- **You see your own pack** on the radar and the big map in its rarity's colour, with the time left, until someone takes it or it runs out. Dying tells you what you dropped and how long you have.
+- **Renderer:** the new packs' voxel models are `client/art2/game/actors.js` `packModel` (bag tiers 5-9 on the wire). The rare ones glow (emissive trim plus a light in `host.js`); the classic renderer draws them too. Preview them in `tools/art2/actors-preview.html?view=packs`.
+- **Dev:** debug menu → Me → "Dropped backpacks, Common to Legendary" puts all five and a pile of notes in front of you.
+- **Tests:** `test/deathpack.test.js` (the tiers, the split, looting, the radar ping, blinking and despawning); the ghost-state test now expects the pack and the cash pile.

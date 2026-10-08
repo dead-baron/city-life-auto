@@ -4,7 +4,8 @@
 //
 // A downed player is a player ped with ped.dead set while their respawn timer runs (p.respawnAt)
 // and nobody has finished them (p.finished). Their cash, items and weapons were already dropped
-// in a bag beside them when they went down (players.onPedDeath) - anyone can take it.
+// in a backpack beside them (and their cash in a pile of notes) when they went down (players.onPedDeath, cargo.js
+// dropEverything) - anyone can take them.
 import { K } from '../../shared/constants.js';
 import { ITEMS } from '../../shared/items.js';
 import {
@@ -147,9 +148,9 @@ export function revive(world, ped, opts = {}) {
   if (p.downWanted) { p.heat = p.downWanted.heat; p.wanted = p.downWanted.wanted; p.cityBounty = p.downWanted.city || 0; p.downWanted = null; syncBounty(world, p); }
   world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
   const by = opts.by && opts.by.player;
-  world.notify(p, opts.ambulance ? `Paramedics got you back on your feet. $${AMBULANCE_FEE} from your bank. Your things are in the bag beside you.`
-    : opts.kit ? `${by ? by.name : 'Someone'} revived you with a Revive Kit. Your things are in the bag beside you.`
-      : `${by ? by.name : 'Someone'} got you back on your feet - you're hurt and bleeding: take it slow for a few seconds. Your things are in the bag beside you.`, 'good');
+  world.notify(p, opts.ambulance ? `Paramedics got you back on your feet. $${AMBULANCE_FEE} from your bank. Your things are in your backpack beside you.`
+    : opts.kit ? `${by ? by.name : 'Someone'} revived you with a Revive Kit. Your things are in your backpack beside you.`
+      : `${by ? by.name : 'Someone'} got you back on your feet - you're hurt and bleeding: take it slow for a few seconds. Your things are in your backpack beside you.`, 'good');
   if (by) {
     by.profile.samaritan += 5;
     by.giveTo = { pid: p.pid, until: now + GIVE_AFTER_REVIVE_S };

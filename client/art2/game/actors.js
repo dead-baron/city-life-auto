@@ -269,7 +269,8 @@ export function animalSprite(kind, pose = 'idle', dir8 = 0, frame = 0) {
 
 // ---- small objects --------------------------------------------------------------------------------------
 // Crates (tier 1 wood, 2 steel, 3 iron vault, 4 carbon-gold, or the 'Produce Box'), bags (0 dropped cash,
-// 1 canvas duffel, 2 tactical backpack, 3 security case, 4 gold lockbox), balls, rockets: small voxel
+// 1 canvas duffel, 2 tactical backpack, 3 security case, 4 gold lockbox; 5-9 a dropped backpack, Common to
+// Legendary), balls, rockets: small voxel
 // models drawn in the world projection like the vehicles they ride on, at heading hi of N.
 const RP = (h, n = 6, k) => ramp(h, n, k);
 function objModel(w, d, h) { const m = new Vox(w, d, h); m.smooth = 1; return m; }
@@ -328,7 +329,78 @@ function crateModel(tier, label) {
   if (t === 2) m.fill((x, y, z) => ((Math.abs(x - 13) === 6.5 || Math.abs(y - 13) === 6.5) && Math.abs(x - 13) <= 6.5 && Math.abs(y - 13) <= 6.5 ? frame : -1), 0, 0, H - 1, 26, 26, H);
   return m;
 }
+// Dropped backpacks (bag tiers 5-9 = rarity 1 Common .. 5 Legendary: shared/items.js PACK_TIERS): one upright pack
+// that gets richer with the rarity - faded khaki canvas; a green trail pack with a bedroll and a bottle; a black
+// tactical pack with webbing and blue piping that glows faintly; an armoured purple pack with glowing seams; the
+// black-and-gold legendary pack with gold plates, glowing seams and a bright core. The glow of the rare ones is
+// their emissive material here plus a light about them (host.js _lights).
+const PACK_LOOK = [null,
+  { body: '#a89a74', trim: '#7c6c4a', strap: '#5a4a34', pocket: '#958a66' },
+  { body: '#3e6a3a', trim: '#86e070', strap: '#28361f', pocket: '#4b7b44', roll: '#c85a2c', bottle: '#5aa4cc' },
+  { body: '#2c3038', trim: '#4aa0ff', strap: '#1b1e25', pocket: '#363b45', web: true, glow: [90, 170, 255, 90] },
+  { body: '#2a2034', trim: '#c27aff', strap: '#19131f', pocket: '#3a2c48', plate: '#56446a', web: true, glow: [196, 120, 255, 170] },
+  { body: '#2a2219', trim: '#ffc848', strap: '#3a2e1c', pocket: '#33291c', plate: '#dcae3c', glow: [255, 204, 96, 230], core: [255, 244, 200, 255] },
+];
+function packModel(r) {
+  const L = PACK_LOOK[r], m = objModel(24, 20, 28);
+  const body = m.mat({ ramp: RP(L.body, 6, 3), k: 3, shade: (x, y, z) => (hash(x | 0, (y | 0) + (z | 0) * 7, 11) > 0.93 ? -0.45 : 0) });
+  const pocket = m.mat({ ramp: RP(L.pocket, 6, 3), k: 3 }), strap = m.mat({ ramp: RP(L.strap, 5, 2), k: 2 });
+  const trim = m.mat({ ramp: RP(L.trim, 5, 3), k: 3, ...(L.glow ? { emi: L.glow } : null) });
+  const metal = m.mat({ ramp: r === 5 ? RP('#f0c860', 6, 3) : MAT.metal, k: 3, ...(r === 5 ? { emi: [255, 214, 130, 70] } : null) });
+  const X0 = 5, X1 = 19, Y0 = 6, Y1 = 14, ZT = 21, CX = 12;   // the main bag: 14 wide, 8 deep, 21 high, a domed lid
+  const inBag = (x, y, z) => {
+    if (x < X0 || x > X1 || y < Y0 || y > Y1 || z > ZT) return false;
+    if (z > ZT - 6) { const u = (x - CX) / 7.2, w = (z - (ZT - 6)) / 6.2; if (u * u + w * w > 1) return false; }
+    return !(z < 1 && (Math.min(x - X0, X1 - x) < 1 || Math.min(y - Y0, Y1 - y) < 1));
+  };
+  m.fill((x, y, z) => {
+    if (!inBag(x, y, z)) return -1;
+    const ex = Math.min(x - X0, X1 - x), ey = Math.min(y - Y0, Y1 - y);
+    if (Math.abs(z - (ZT - 6.5)) < 0.6 && ey < 1) return trim;      // the lid's zip all round
+    if (ex < 0.8 && ey < 0.8) return trim;                            // piping down the corners
+    return body;
+  }, 0, 0, 0, 24, 20, 28);
+  // the front pocket (+y), its zip along the top; webbing rows on the tactical ones
+  m.fill((x, y, z) => {
+    const ex = Math.min(x - 7, 17 - x), ez = Math.min(z - 3, 12 - z);
+    if (ex < 0 || ez < 0 || (ex < 1 && ez < 1)) return -1;
+    if (Math.abs(z - 11.5) < 0.6) return trim;
+    if (L.web && (z | 0) % 2 === 0 && z < 10.5 && ex > 0.8) return strap;
+    return pocket;
+  }, 7, 14, 3, 17, 16, 12);
+  // side pockets, the shoulder straps and back panel (-y), a haul loop on top, a compression strap across the front
+  m.box(3, 8, 2, 5, 13, 9, pocket); m.box(19, 8, 2, 21, 13, 9, pocket);
+  m.box(4, 8, 8, 5, 13, 9, trim); m.box(19, 8, 8, 20, 13, 9, trim);
+  for (const sx of [7, 15]) { m.box(sx, 4, 4, sx + 2, 6, 18, strap); m.box(sx, 5, 3, sx + 2, 6, 4, metal); }
+  m.box(6, 5, 2, 18, 6, 19, strap);
+  m.box(10, 9, ZT - 1, 14, 11, ZT + 1, strap);
+  m.box(X0, 14, 13, X1 + 1, 15, 14, strap); m.box(11, 14, 12.5, 13, 16, 14.5, metal);
+  if (r === 2) {
+    // the trail pack: a bedroll strapped under the lid and a bottle in the side pocket
+    const roll = m.mat({ ramp: RP(L.roll, 6, 3), k: 3, shade: (x) => (Math.abs(x - 7.5) < 0.6 || Math.abs(x - 16.5) < 0.6 ? -0.9 : 0) });
+    m.cyl('x', 0, 10, ZT + 3.2, 3, 3, 21, roll);
+    const bottle = m.mat({ ramp: RP(L.bottle, 5, 3), k: 3, gloss: 0.5 });
+    m.cyl('z', 20.5, 10.5, 0, 1.6, 6, 13, bottle); m.cyl('z', 20.5, 10.5, 0, 1, 13, 14, metal);
+  }
+  if (r >= 4) {
+    // armour plates over the front pocket and the sides, edged with the glowing trim
+    const plate = m.mat({ ramp: RP(L.plate, 6, 3), k: 3, gloss: r === 5 ? 0.6 : 0.3, ...(r === 5 ? { shade: (x, y, z) => (((x + z) | 0) % 4 === 0 ? -0.6 : 0.15) } : null) });
+    m.fill((x, y, z) => { const ex = Math.min(x - 8, 16 - x), ez = Math.min(z - 4, 11 - z); if (ex < 0 || ez < 0) return -1; return ex < 0.9 || ez < 0.9 ? trim : plate; }, 8, 16, 4, 16, 17, 11);
+    m.box(2, 9, 3, 3, 12, 8, plate); m.box(21, 9, 3, 22, 12, 8, plate);
+    m.fill((x, y, z) => (inBag(x, y, z) && z > ZT - 6 && Math.min(y - Y0, Y1 - y) < 1.5 ? plate : -1), 0, 0, ZT - 6, 24, 20, ZT + 1);   // a plated lid
+    m.box(X0 + 1, 7, ZT - 2, X1 - 1, 13, ZT - 1, trim);
+    if (r === 4) { m.box(17, 6, ZT - 3, 18, 7, ZT + 5, metal); m.box(16.5, 5.5, ZT + 5, 18.5, 7.5, ZT + 6, trim); }   // a stubby antenna
+  }
+  if (r === 5) {
+    // the legendary core: a bright gem set in the front plate, in a gold ring
+    const core = m.mat({ ramp: RP('#fff4d0', 5, 3), k: 4, emi: L.core, flag: F_NOCAST });
+    m.cyl('y', 12, 0, 7.5, 2.6, 17, 18, metal); m.cyl('y', 12, 0, 7.5, 1.6, 17, 19, core);
+    for (const sx of [7, 15]) m.box(sx, 4, 10, sx + 2, 5, 12, metal);
+  }
+  return m;
+}
 function bagModel(tier) {
+  if ((tier | 0) > 4) return packModel(Math.min(5, (tier | 0) - 4));
   const t = Math.max(0, Math.min(4, tier | 0));
   if (t === 0) {
     // dropped cash: two banded bricks of notes and a loose note
@@ -383,8 +455,8 @@ const OBJ_MODELS = new LRU(16);
 const objRender = (key, make, hi, N) => { const m = OBJ_MODELS.get(key, () => { const mm = make(); patchHidden(mm); return mm; }); return trimSprite(m.render(wrapHi(hi, N) * TAU / N, { dither: 0.3, px: ART_PX })); };
 export const crateKey = (tier, label = '', hi = 0, N = 16) => `c|${label === 'Produce Box' ? 'P' : Math.max(1, Math.min(4, tier | 0))}|${wrapHi(hi, N)}|${N}`;
 export function crateSprite(tier, label = '', hi = 0, N = 16) { const k = label === 'Produce Box' ? 'P' : Math.max(1, Math.min(4, tier | 0)); return objRender('crate' + k, () => crateModel(tier, label), hi, N); }
-export const bagKey = (tier, hi = 0, N = 16) => `g|${Math.max(0, Math.min(4, tier | 0))}|${wrapHi(hi, N)}|${N}`;
-export function bagSprite(tier, hi = 0, N = 16) { const t = Math.max(0, Math.min(4, tier | 0)); return objRender('bag' + t, () => bagModel(t), hi, N); }
+export const bagKey = (tier, hi = 0, N = 16) => `g|${Math.max(0, Math.min(9, tier | 0))}|${wrapHi(hi, N)}|${N}`;
+export function bagSprite(tier, hi = 0, N = 16) { const t = Math.max(0, Math.min(9, tier | 0)); return objRender('bag' + t, () => bagModel(t), hi, N); }
 export const projKey = (w, hi = 0, N = 32) => `p|${w | 0}|${wrapHi(hi, N)}|${N}`;
 // a projectile flying at its launch height (z ~14): the rocket (weapon 12; any weapon but the bow gets the rocket),
 // its exhaust glowing; an arrow (the bow, weapon 24: a cedar shaft, a steel broadhead, red and white fletching).

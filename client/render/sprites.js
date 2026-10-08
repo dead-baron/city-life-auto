@@ -287,8 +287,19 @@ export function drawCrate(g, tier, label, t) {
   if (label === 'Produce Box' && !fr) { g.fillStyle = '#2f9a3a'; g.fillRect(-6, -6, 4, 4); g.fillStyle = '#c8262b'; g.fillRect(2, -2, 4, 4); }
 }
 
+// A dropped backpack (tiers 5-9, Common to Legendary): an upright pack in its rarity's colour, the rare ones ringed
+const PACK_COL = [null, ['#a89a74', '#5a4a34'], ['#3e6a3a', '#86e070'], ['#2c3038', '#4aa0ff'], ['#2a2034', '#c27aff'], ['#1e1a14', '#ffc848']];
+function drawPack(g, r, t) {
+  const [c1, c2] = PACK_COL[r];
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-8, -6, 18, 16);
+  g.fillStyle = c1; g.beginPath(); g.moveTo(-8, 8); g.lineTo(-8, -4); g.quadraticCurveTo(0, -12, 8, -4); g.lineTo(8, 8); g.closePath(); g.fill();
+  g.strokeStyle = c2; g.lineWidth = 1.5; g.stroke();
+  g.fillStyle = c2; g.fillRect(-5, 1, 10, 6); g.fillStyle = c1; g.fillRect(-4, 2, 8, 4);
+  if (r >= 3) { g.globalAlpha = 0.3 + 0.25 * Math.sin(t * (r === 5 ? 4 : 3)); g.strokeStyle = c2; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 13 + r, 0, 6.28); g.stroke(); g.globalAlpha = 1; }
+}
 export function drawBag(g, tier, t) {
   if (tier === 0) { drawCash(g, t); return; }
+  if (tier > 4) { drawPack(g, Math.min(5, tier - 4), t); return; }
   const fr = frame(`bag${tier}`);
   const s = 24;
   if (fr) g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, -s / 2, -s / 2 * (fr.h / fr.w), s, s * (fr.h / fr.w));

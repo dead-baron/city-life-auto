@@ -1,6 +1,6 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, fishing cue, shop menus, death screen, radar + big map.
-import { WEAPONS, ITEMS } from '../shared/items.js';
+import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER, WORLD_VERSION } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
 import { input } from './input.js';
@@ -288,6 +288,7 @@ export class HUD {
         if (r.k === 'search') { g.fillStyle = `rgba(255,60,60,${0.12 + 0.2 * r.f})`; g.strokeStyle = '#ff3b3b'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, Math.max(4, r.r * scale), 0, 6.28); g.fill(); g.stroke(); }
         else if (r.k === 'wanted') { g.fillStyle = (performance.now() / 200 | 0) % 2 ? '#ff3b3b' : '#3b6bff'; g.beginPath(); g.arc(x, y, big ? 7 : 4, 0, 6.28); g.fill(); }
         else if (r.k === 'bounty') { g.strokeStyle = '#ffc23d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(5, r.r * scale), 0, 6.28); g.stroke(); if (big) { g.fillStyle = '#ffc23d'; g.fillText(`${r.n} $${r.b}`, x, y - r.r * scale - 8); } }
+        else if (r.k === 'pack') packIcon(g, x, y, r, big ? 1.4 : 1);
       }
       // crimes reported near you (police): pulsing blips, fresher = brighter
       if (me.dispatch) {
@@ -512,6 +513,10 @@ export class HUD {
         } else if (r.k === 'bounty') {
           g.strokeStyle = '#ffc23d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(6, r.r * sc), 0, 6.28); g.stroke();
           label(g, x, y - Math.max(6, r.r * sc) - 8, `${r.n} $${r.b}`, '#ffc23d');
+        } else if (r.k === 'pack') {
+          const T = PACK_TIERS[r.t] || PACK_TIERS[1];
+          packIcon(g, x, y, r, 1.6);
+          label(g, x, y - 18, `YOUR ${T.name.toUpperCase()} · ${Math.floor(r.s / 60)}:${String(r.s % 60).padStart(2, '0')}`, T.col);
         }
       }
       if (police) for (const d of me.dispatch || []) {
@@ -557,6 +562,16 @@ export class HUD {
   }
 }
 
+// The backpack you dropped when you died, on the radar and the map: a little pack in its rarity's colour, blinking in
+// its last half minute
+function packIcon(g, x, y, r, k) {
+  const T = PACK_TIERS[r.t] || PACK_TIERS[1];
+  if (r.s < 30 && (performance.now() / 250 | 0) % 2) return;
+  const w = 5 * k, h = 6 * k;
+  g.fillStyle = '#000'; g.fillRect(x - w - 1.5, y - h - 1.5, w * 2 + 3, h * 2 + 3);
+  g.fillStyle = T.col; g.fillRect(x - w, y - h + 2 * k, w * 2, h * 2 - 2 * k); g.fillRect(x - w + 1.5 * k, y - h, w * 2 - 3 * k, 2 * k);
+  g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - w + 1.5 * k, y + 1 * k, w * 2 - 3 * k, 3 * k);
+}
 function label(g, x, y, text, color) {
   g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(text, x, y);

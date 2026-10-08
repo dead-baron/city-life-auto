@@ -58,9 +58,10 @@ test('guest tokens are signed and tamper-proof', () => {
   assert.equal(verifyToken('garbage'), null);
 });
 
-test('ghost state: disconnect keeps body 30s, then drops loot bag and despawns', () => {
+test('ghost state: disconnect keeps body 30s, then drops your backpack and cash and despawns', () => {
   const w = makeWorld();
   const { p, prof } = joinPlayer(w, { cash: 750 });
+  prof.weapons = { fists: 0, pistol: 12 };
   const ped = p.ped;
   players.leave(w, p);
   run(w, 10);
@@ -69,9 +70,10 @@ test('ghost state: disconnect keeps body 30s, then drops loot bag and despawns',
   assert.ok(!w.entities.has(ped.id), 'body despawned after 30s');
   assert.equal(prof.cash, 0);
   const bags = [...w.entities.values()].filter((e) => e.kind === K.BAG);
-  assert.equal(bags.length, 1);
-  assert.equal(bags[0].cash, 750);
-  assert.equal(bags[0].tier, 2);
+  assert.equal(bags.length, 2, 'the backpack and the cash');
+  assert.equal(bags.find((b) => b.cashOnly).cash, 750);
+  const pack = bags.find((b) => b.pack);
+  assert.ok(pack.weapons.pistol && pack.cash === 0);
 });
 
 test('ghost state: reconnecting inside the window resumes the same body', () => {

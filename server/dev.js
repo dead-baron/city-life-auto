@@ -4,7 +4,8 @@ import { surfaceZ } from '../shared/levels.js';
 import { PED_BLOCK } from '../shared/map.js';
 import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT, T, WEATHER } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
-import { WEAPONS, ITEMS } from '../shared/items.js';
+import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
+import { PACK_LIFE_S } from '../shared/rules.js';
 import { store } from './store.js';
 import * as env from './systems/environment.js';
 import * as jobs from './systems/jobs.js';
@@ -31,7 +32,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -161,6 +162,18 @@ export function command(world, p, c, msg) {
     }
     case 'clean': law.clearWanted(world, p); prof.peakWanted = 0; break;
     case 'bounty': bounties.devOnMe(world, p); break;                         // a test bounty on your own head
+    case 'packs': { // the dropped backpacks, Common to Legendary, in a row ahead of you, and a pile of notes
+      if (!ped) break;
+      const c = Math.cos(ped.a), s = Math.sin(ped.a);
+      for (let t = 1; t < PACK_TIERS.length; t++) {
+        const value = PACK_TIERS[t].min + 150, k = t - 3;
+        const b = world.spawnBag(ped.x + c * 90 - s * k * 46, ped.y + s * 90 + c * k * 46, { cash: 0, items: { bandage: 1 }, weapons: {}, itemValue: value }, 'Test Dummy');
+        b.pack = true; b.tier = t; b.value = value; b.expires = world.time + PACK_LIFE_S;
+      }
+      const pile = world.spawnBag(ped.x + c * 150, ped.y + s * 150, { cash: 250, items: {}, weapons: {}, itemValue: 0 }, 'Test Dummy');
+      pile.cashOnly = true; pile.expires = world.time + PACK_LIFE_S;
+      break;
+    }
     case 'hunter': law.clearWanted(world, p); if (p.badge) law.goOffDuty(world, p); p.hunter = true; p.faction = 'hunter'; p.meDirty = true; world.notify(p, '[dev] Licensed bounty hunter: take contracts in the Bounties app.', 'info'); break;
     case 'revenge': { const err = bounties.devUnlock(world, p); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }
     case 'record': // wipe the criminal record: no wanted level, no felonies, no peak-wanted memory

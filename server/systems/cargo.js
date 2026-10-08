@@ -1,7 +1,8 @@
 // Open-cargo system (GDD §8): physical crates that can be carried, thrown, loaded into
 // visible vehicle slots, knocked off in crashes — plus loot bags from the drop rule (§9).
 import { K, T } from '../../shared/constants.js';
-import { WEAPONS, ITEMS, SHOPS } from '../../shared/items.js';
+import { WEAPONS, ITEMS, SHOPS, PACK_TIERS, PACK_WIRE, packTier } from '../../shared/items.js';
+import { PACK_LIFE_S, PACK_BLINK_S } from '../../shared/rules.js';
 import { localToWorld, circleVsObb } from '../../shared/math.js';
 import { collideCircle } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
@@ -223,8 +224,38 @@ export function lootBag(world, p, bag) {
   }
   world.remove(bag);
   world.emit(bag.x, bag.y, { e: 'loot', x: bag.x, y: bag.y, n: bag.cash });
-  if (!bag.cashOnly) world.notify(p, `Looted $${bag.cash}${bag.ownerName ? ' from ' + bag.ownerName : ''}.`, 'good');
+  const mine = bag.ownerPid && bag.ownerPid === p.pid;
+  if (bag.pack) {
+    const T = PACK_TIERS[bag.tier], n = Object.keys(bag.items).length + Object.keys(bag.weapons).length;
+    world.notify(p, mine ? `You got your ${T.name} back: everything you were carrying.`
+      : `Looted ${bag.ownerName ? bag.ownerName + "'s " : 'a '}${T.rarity.toLowerCase()} ${T.name} - ${n} thing${n === 1 ? '' : 's'} worth about $${Math.round(bag.value).toLocaleString('en-US')}.`, 'good');
+  } else if (bag.cashOnly) { if (bag.ownerPid) world.notify(p, mine ? `You picked your $${bag.cash.toLocaleString('en-US')} back up.` : `Scooped up $${bag.cash.toLocaleString('en-US')}${bag.ownerName ? ' ' + bag.ownerName + ' dropped' : ''}.`, 'good'); }
+  else world.notify(p, `Looted $${bag.cash}${bag.ownerName ? ' from ' + bag.ownerName : ''}.`, 'good');
+  if (bag.ownerPid) { const o = world.players.get(bag.ownerPid); if (o && o.lostPack && o.lostPack.id === bag.id) { o.lostPack = null; o.meDirty = true; } }
   p.meDirty = true;
+}
+
+// What the interact prompt says over a bag (players.findInteraction)
+export function bagLabel(bag, p) {
+  if (bag.pack) {
+    const T = PACK_TIERS[bag.tier];
+    if (bag.ownerPid && p && bag.ownerPid === p.pid) return `Pick up your ${T.name}`;
+    return `Open ${bag.ownerName ? bag.ownerName.replace(/ \(disconnected\)$/, '') + "'s " : 'the '}${T.name} (${T.rarity}, ~$${Math.round(bag.value).toLocaleString('en-US')})`;
+  }
+  return `Grab loot ($${bag.cash}${Object.keys(bag.items).length || Object.keys(bag.weapons).length ? ' + items' : ''})`;
+}
+
+// The wire tier (net.js): 0 a pile of notes, 1-4 the old bags (an NPC's drop), 5-9 a dropped backpack by rarity
+export const bagWireTier = (bag) => (bag.cashOnly ? 0 : bag.pack ? PACK_WIRE + bag.tier : bag.tier);
+export const bagBlinks = (world, bag) => !!(bag.pack || bag.ownerPid) && bag.expires - world.time < PACK_BLINK_S;
+
+// Your dropped backpack on your radar and map until someone takes it or it's gone (players.buildMe)
+export function packRadar(world, p, out) {
+  const L = p.lostPack;
+  if (!L) return;
+  const bag = world.get(L.id);
+  if (!bag || bag.kind !== K.BAG) { p.lostPack = null; return; }
+  out.push({ k: 'pack', x: Math.round(bag.x), y: Math.round(bag.y), t: bag.tier, s: Math.max(0, Math.round(bag.expires - world.time)) });
 }
 
 function weaponValue(id) {
@@ -232,22 +263,41 @@ function weaponValue(id) {
   return 50;
 }
 
-// GDD §9 drop rule: everything carried is jettisoned into a single value-tiered loot bag.
+// GDD §9 drop rule, reworked (2026-10-08): everything you carried goes into one backpack whose look goes by what the gear
+// in it is worth (shared/items.js PACK_TIERS, Common to Legendary). The cash falls out on its own beside it as a pile
+// of notes anyone can scoop up by walking over it. Both stay PACK_LIFE_S, blinking at the end, then they're gone; the
+// owner sees their pack on the radar until then.
 export function dropEverything(world, ped, ownerName) {
   if (ped.carrying) dropCrate(world, ped);
   const p = ped.player;
   if (!p) return null;
   const prof = p.profile;
   const items = {}, weapons = {};
-  let itemValue = 0;
-  for (const [k, n] of Object.entries(prof.inventory)) if (n > 0) { items[k] = n; itemValue += (ITEMS[k]?.sell || 5) * n; }
-  for (const [k, n] of Object.entries(prof.weapons)) if (k !== 'fists') { weapons[k] = n; itemValue += weaponValue(k); }
+  let itemValue = 0, n = 0;
+  for (const [k, c] of Object.entries(prof.inventory)) if (c > 0) { items[k] = c; itemValue += (ITEMS[k]?.sell || 5) * c; n++; }
+  for (const [k, c] of Object.entries(prof.weapons)) if (k !== 'fists') { weapons[k] = c; itemValue += weaponValue(k); n++; }
   const cash = prof.cash;
   prof.cash = 0; prof.inventory = {}; prof.weapons = { fists: 0 };
   ped.weapon = 'fists'; ped.mag = {};
   p.meDirty = true;
-  if (cash <= 0 && itemValue <= 0) return null;
-  return world.spawnBag(ped.x, ped.y, { cash, items, weapons, itemValue }, ownerName);
+  const until = world.time + PACK_LIFE_S;
+  let pack = null;
+  if (n > 0) {
+    pack = world.spawnBag(ped.x, ped.y, { cash: 0, items, weapons, itemValue }, ownerName);
+    pack.pack = true; pack.tier = packTier(itemValue); pack.value = itemValue; pack.expires = until; pack.ownerPid = p.pid;
+    p.lostPack = { id: pack.id };
+  } else p.lostPack = null;
+  if (cash > 0) {
+    // the notes land a step away, on the side away from where they were facing
+    const a = ped.a + Math.PI + ((ped.id * 0.618) % 1 - 0.5);
+    const pile = world.spawnBag(ped.x + Math.cos(a) * 24, ped.y + Math.sin(a) * 24, { cash, items: {}, weapons: {}, itemValue: 0 }, ownerName);
+    pile.cashOnly = true; pile.expires = until; pile.ownerPid = p.pid;
+  }
+  if (pack) {
+    const T = PACK_TIERS[pack.tier];
+    world.notify(p, `You dropped your ${T.name} (${T.rarity}, ~$${Math.round(itemValue).toLocaleString('en-US')} of gear)${cash > 0 ? ` and $${cash.toLocaleString('en-US')} in cash` : ''} where you fell. Get back to it within ${Math.round(PACK_LIFE_S / 60)} minutes - anyone can take it.`, 'warn');
+  } else if (cash > 0) world.notify(p, `You dropped $${cash.toLocaleString('en-US')} where you fell.`, 'warn');
+  return pack;
 }
 
 export function npcDrop(world, ped, cash, item) {
