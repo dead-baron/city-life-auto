@@ -225,7 +225,7 @@ function gait(D, P, lvl, ph, arms = true) {
 const ICLS = {
   pistol: 'gun1', revolver: 'gun1', taser: 'gun1', silencedPistol: 'gun1', pepperSpray: 'gun1', shotgun: 'gun2', rifle: 'gun2', smg: 'gun2', sniper: 'gun2',
   rocketLauncher: 'rocket', bat: 'big', sledgehammer: 'big', crowbar: 'one', nightstick: 'one', knife: 'knife', sword: 'blade', katana: 'blade', energyBlade: 'blade',
-  chainsaw: 'saw', fishingRod: 'rod', medkit: 'bill', bandage: 'bill', cash: 'bill', keys: 'bill', phone: 'phone', bottle: 'bill', coffee: 'bill', spikeStrip: 'bill',
+  chainsaw: 'saw', fishingRod: 'rod', medkit: 'bill', bandage: 'bill', cash: 'bill', keys: 'bill', phone: 'phone', phoneUp: 'phoneup', bottle: 'bill', coffee: 'bill', spikeStrip: 'bill',
   huntKnife: 'knife', bow: 'gun1', varmintRifle: 'gun2',   // (the bow: held out and aimed like a pistol, its limbs up and down)
   flashlight: 'gun1', // held out like a pistol: low in front at rest, up and pointed when aiming
   umbrella: 'umb',     // held up in the right hand, the shaft straight up (the other arm swings free)
@@ -254,6 +254,8 @@ function restHold(D, P, S, kind) {
   else if (c === 'saw') { P.hR = vadd(S.pel, mv(S.PF, [3, 5.5, 3.4])); setItem(P, kind, [-0.1, 0.9, -0.3], [0, 0, -1], true); }
   else if (c === 'umb') { P.hR = [...UMBRELLA_HAND]; setItem(P, kind, [0, 0, 1], [0, 1, 0]); P.elR = [0.8, -0.3, -1]; }
   else if (c === 'phone') { P.hR = vadd(S.chest, mv(S.SP, [1.4, 6.6, -2.4])); P.hL = vadd(S.chest, mv(S.SP, [-0.6, 6.4, -3])); setItem(P, kind, [0, 1, 0], [0, 0, -1]); P.elR = [1, -0.5, -0.6]; P.elL = [-1, -0.5, -0.6]; }
+  // held up in both hands at eye height, arms out: filming or taking a photo of something (server npc.js spectacle)
+  else if (c === 'phoneup') { P.hR = vadd(S.chest, mv(S.SP, [1.2, 8.8, 7.8])); P.hL = vadd(S.chest, mv(S.SP, [-0.9, 8.6, 7.4])); setItem(P, kind, [0, 0, 1], [0, 1, 0]); P.elR = [1, -0.2, -0.4]; P.elL = [-1, -0.2, -0.4]; }
   else { P.hR = vadd(sR, [1.6, 2.4, -r * 0.92]); setItem(P, kind, [0, 1, 0], [0, 0, -1]); }
 }
 // arms and torso for a melee arc, frame k 0 wind-up, 1 strike, 2 follow-through; side -1 swings back the other way

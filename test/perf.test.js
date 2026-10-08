@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BUDGET, codeReport, assetReport, cpuReport, closure, overBudget } from '../tools/perf.mjs';
-import { worldHash, artHash, canonicalHash, codeHash, ART_SKIP } from '../tools/stamp-version.mjs';
+import { worldHash, artHash, canonicalHash, codeHash, ART_SKIP, ART_ROOTS } from '../tools/stamp-version.mjs';
 import { generateCity, cityData, cityFromData, CityMap, mapSignature } from '../shared/map.js';
 
 const say = (list) => list.map(([w, v, b, a]) => `${w}: ${v} (budget ${b}) - ${a}`).join('\n');
@@ -63,8 +63,14 @@ test('version.json knows the world and the art (run node tools/stamp-version.mjs
   assert.equal(v.hashes.length, v.files.length, 'a hash for every file (boot.js fetches only what changed)');
   // the gameplay numbers and the live actor sprites are left out of the art hash (a rule tweak or a new bike keeps every
   // browser's baked chunks): so the chunk baker mustn't read them
-  const art = codeHash('client/art2/game/worker.js', undefined, ART_SKIP).files;
+  const art = (await artHash(undefined, world)).files;
   for (const f of ART_SKIP) assert.ok(!art.includes(f), `${f} left out`);
+  // what makes a kept chunk is in it; the worker round the bake (asking, downloading, keeping) is not
+  for (const f of ART_ROOTS) assert.ok(art.includes(f), `${f} in the art hash`);
+  assert.ok(!art.includes('client/art2/game/worker.js'), 'the bake worker left out (a change to how chunks are fetched keeps every kept chunk)');
+  // the worker packs chunks with chunkpack.js only (its own packing would get past the art hash)
+  const wsrc = readFileSync(new URL('../client/art2/game/worker.js', import.meta.url), 'utf8');
+  assert.ok(/packPlanes\(/.test(wsrc) && !/downsample2\(/.test(wsrc), 'worker.js packs chunks with chunkpack.js packPlanes');
   const baker = codeHash('client/art2/game/chunkbake.js').files;
   for (const f of ['client/art2/game/actors.js', 'client/art2/game/peds.js', 'client/art2/vehicles.js']) assert.ok(!baker.includes(f), `the chunk baker reads ${f}: take it out of ART_SKIP (tools/stamp-version.mjs)`);
   for (const f of art.filter((q) => q.startsWith('client/art2/'))) assert.ok(!/from\s+['"][./]*(shared\/)?rules\.js['"]/.test(readFileSync(new URL('../' + f, import.meta.url), 'utf8')), `${f} reads shared/rules.js: the art hash wouldn't see a change to it (tools/stamp-version.mjs ART_SKIP)`);

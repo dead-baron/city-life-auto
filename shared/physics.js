@@ -7,6 +7,7 @@ import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
 import { edgeBrake } from './border.js';
+import { dropsOf, DROP_SPEED } from './ledges.js';
 
 // Ground tile under a moving thing - up on the highway deck it's always road.
 const up = (s) => (s.lz || 0) > GROUND_Z;
@@ -106,6 +107,13 @@ export function pedStep(s, inp, dt, map, mods) {
     }
   }
   if (s.stamina > smax) s.stamina = smax;
+  // a drop (a waterfall's lip, the cliff it goes over: ledges.js): you go down it, fast, whatever you're pressing
+  const drops = up(s) ? null : dropsOf(map);
+  if (drops && drops.size && drops.has(Math.floor(s.y / TILE) * map.w + Math.floor(s.x / TILE))) {
+    if (s.vy < DROP_SPEED) s.vy = DROP_SPEED;
+    s.vx *= Math.exp(-6 * dt); s.rollT = 0;
+    s.dropping = true;
+  } else if (s.dropping) s.dropping = false;
   s.x += s.vx * dt; s.y += s.vy * dt;
   edgeBrake(s);   // (out past the map's edge: slowed, and stopped at the world's end - border.js)
   collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK);
@@ -114,11 +122,14 @@ export function pedStep(s, inp, dt, map, mods) {
 
 export function collideCircle(s, r, map, block) {
   if (up(s)) return; // up on the deck: its barriers hold you (levels.js)
+  const drops = dropsOf(map), anyDrops = !!drops && drops.size > 0;
   for (let iter = 0; iter < 2; iter++) {
     const tx0 = Math.floor((s.x - r) / TILE), tx1 = Math.floor((s.x + r) / TILE);
     const ty0 = Math.floor((s.y - r) / TILE), ty1 = Math.floor((s.y + r) / TILE);
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-      if (blockedAt(map, tx, ty, block)) {
+      // a drop (ledges.js) is open from above and the side and solid from below: nobody climbs up a waterfall or its cliff
+      const drop = anyDrops && tx >= 0 && ty >= 0 && tx < map.w && drops.has(ty * map.w + tx);
+      if (drop ? s.y > ty * TILE + TILE - 1 : blockedAt(map, tx, ty, block)) {
         const qx = clamp(s.x, tx * TILE, tx * TILE + TILE), qy = clamp(s.y, ty * TILE, ty * TILE + TILE);
         let dx = s.x - qx, dy = s.y - qy;
         const d2 = dx * dx + dy * dy;

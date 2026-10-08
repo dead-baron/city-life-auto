@@ -63,6 +63,15 @@ export const SHOTGUN_CLOSE_PX = 130;     // a shotgun blast (3+ pellets in) clos
 export const SHOTGUN_CLOSE_MULT = 2.6;   // ...up to this many times its damage at point blank: almost always a kill, player or not
 export const HIT_LIMP_S = 25;            // knocked off their feet by a bullet, people get back up limping this long
 export const CRAWL_HP = 0.15;            // below this share of health the badly hurt may crawl off on their stomachs instead of limping
+// Players are tougher than they were (2026-10-08, the user: "a little bit stronger all around - survive a few more bullets
+// from the police or being hit by a car"): every hit a player takes is divided by PLAYER_GRIT (a police pistol now takes
+// seven hits, not five), a car's by PLAYER_GRIT_CAUSE.vehicle on top (a car at city speed leaves you hurt, not dead).
+export const PLAYER_GRIT = 1.4;
+export const PLAYER_GRIT_CAUSE = { vehicle: 1.25, crash: 1.15 };
+// A train still kills, mostly: now and then it throws you clear instead, alive but critically hurt (bleeding, this share of
+// your health left) - get to a hospital or a medkit fast.
+export const TRAIN_SURVIVE = 0.3;
+export const TRAIN_SURVIVE_HP = 0.07;
 // Vehicle toughness: crash, gunfire and blast damage is divided by this, by kind (heavy: trucks, vans, buses -
 // anything with mass 2.4 and up). Motorcycles are the most fragile but no longer take it all.
 export const VEHICLE_TOUGH = { car: 1.8, heavy: 2.1, boat: 1.6, bike: 1.25 };

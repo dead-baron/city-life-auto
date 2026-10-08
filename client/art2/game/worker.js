@@ -35,8 +35,10 @@
 // every cache and tries the job once more before answering with the error (oom: true).
 import { bakeSteps, loadProviders, SpriteCache, providers as chunkProviders } from './chunkbake.js';
 import * as GB from '../gbuf.js';
+import { packPlanes } from './chunkpack.js';
 import { readWorld } from '../../worldcache.js';
 import { getChunk, hasChunk, putChunk, putChunkZ, packChunk, unpackChunk, parseChunkFile, tidy, canKeep } from './chunkstore.js';
+import { BARRIER_PIECE } from '../../../shared/levels.js';
 
 // A pause that lets the messages already waiting for this worker run first (a message to ourselves goes to the
 // back of the queue): a bake pauses at each of its yields, so the sprite a thing on screen is waiting for is made
@@ -62,23 +64,15 @@ const SPRITE_FN = {
   ped: () => P.peds && P.peds.pedSprite,
 };
 
-// a G-buffer as a message: packed into the engine's three planes here (gbuf.js packGBuf: fresh arrays, so a
-// cached original stays whole) and turned into art pixels (gbuf.js downsample2: 1 art pixel = ART world px) unless
-// its provider drew it at that size already (g.ap: the voxel renders); a chunk's "under" layer goes with it
+// a G-buffer as a message: packed into the engine's three planes and turned into art pixels (chunkpack.js, the same
+// packing the server's bake threads use) unless its provider drew it at that size already (g.ap: the voxel renders);
+// a chunk's "under" layer goes with it
 const PK = { p0: null, p1: null, p2: null };   // (full-size planes on their way to art pixels: kept, not made afresh)
 function pack(g, transfer, under = null, run = 0) {
-  const down = ART > 1 && (g.ap || 1) < ART, n4 = g.w * g.h * 4;
-  if (down && (!PK.p0 || PK.p0.length < n4)) { PK.p0 = new Uint8Array(n4); PK.p1 = new Uint8Array(n4); PK.p2 = new Uint8Array(n4); }
-  let pk = down ? GB.packGBuf(g, PK.p0, PK.p1, PK.p2) : GB.packGBuf(g), u = null;
-  if (ART > 1 && (g.ap || 1) < ART) {
-    const d = GB.downsample2(pk, { run });
-    if (under) u = GB.downsampleUnder(under, g.w, g.h, d.pick);
-    pk = d;
-  } else u = under;
-  const o = { w: pk.w, h: pk.h, ax: pk.ax || 0, ay: pk.ay || 0, ap: pk.ap || g.ap || 1, p0: pk.p0, p1: pk.p1, p2: pk.p2 };
-  transfer.push(o.p0.buffer, o.p1.buffer, o.p2.buffer);
-  if (u) transfer.push(u.buffer);
-  return { o, u };
+  const r = packPlanes(g, ART, under, run, PK);
+  transfer.push(r.o.p0.buffer, r.o.p1.buffer, r.o.p2.buffer);
+  if (r.u) transfer.push(r.u.buffer);
+  return r;
 }
 
 // The modules start loading as soon as the worker does (the pool is made while the page builds the city), so they
@@ -157,7 +151,24 @@ function dirtySig(cx, cy) {
   // (what a prop changes reaches 320 px above it and a little round it: host.js propChanged - with room to spare)
   const X0 = cx * 768, Y0 = cy * 768, out = [];
   for (const [i, p] of dirty) if (p.x > X0 - 160 && p.x < X0 + 768 + 160 && p.y > Y0 - 80 && p.y < Y0 + 768 + 400) out.push(`${i}${p.broken ? 'b' + (p.broken.a || 0) : ''}${p.lit0 !== undefined ? 'l' + (p.lit ? 1 : 0) : ''}`);
+  // highway barrier pieces smashed through near it (the deck drawn open there: statics.js makeDeck)
+  const L = M && M.levels;
+  if (L && L.broken && L.broken.size) for (const k of L.broken.keys()) { const q = barrierPos(k); if (q && q[0] > X0 - 200 && q[0] < X0 + 968 && q[1] > Y0 - 160 && q[1] < Y0 + 1000) out.push('B' + k); }
   return out.sort().join(',');
+}
+// where a barrier piece ('<edge>:<side>:<piece>', shared/levels.js barrierKey) is along its edge
+const barrierAt = new Map();
+function barrierPos(k) {
+  let q = barrierAt.get(k);
+  if (q !== undefined) return q;
+  const [ei, , pc] = k.split(':').map(Number), e = M && M.edges && M.edges[ei], sAt = (pc + 0.5) * BARRIER_PIECE;
+  q = null;
+  if (e && e.pts && e.pts.length > 1) {
+    let acc = 0;
+    for (let i = 1; i < e.pts.length && !q; i++) { const a = e.pts[i - 1], b = e.pts[i], l = Math.hypot(b.x - a.x, b.y - a.y); if (acc + l >= sAt || i === e.pts.length - 1) { const t = Math.max(0, Math.min(1, (sAt - acc) / (l || 1))); q = [a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t]; } acc += l; }
+  }
+  barrierAt.set(k, q);
+  return q;
 }
 // the world as this worker's own CityMap (its methods back: shared/map.js cityFromData)
 function takeWorld(m, mapMod) {
@@ -184,6 +195,13 @@ async function handle(msg) {
     if (M && args.reset) { for (const pr of M.props || []) delete pr.broken; for (const [i, pr] of dirty) { if (!isDirty(pr)) dirty.delete(i); } }
     if (M) for (const [i, br] of args.props || []) { const pr = M.props[i]; if (!pr) continue; if (br) pr.broken = br; else delete pr.broken; markDirty(i); }
     if (M) for (const [i, lit] of args.lit || []) { const pr = M.props[i]; if (!pr) continue; if (pr.lit0 === undefined) pr.lit0 = !!pr.lit; pr.lit = lit; markDirty(i); }   // (a campfire lit or put out)
+    // highway barriers smashed through or put back ([key, on]; with reset, the whole list)
+    if (M && M.levels && (args.barriers || args.reset)) {
+      const L = M.levels;
+      if (!L.broken || typeof L.broken.set !== 'function') L.broken = new Map();
+      if (args.reset && args.barriers) L.broken.clear();
+      for (const [k, on] of args.barriers || []) { if (on) L.broken.set(k, true); else L.broken.delete(k); }
+    }
     return;
   }
   if (!M && op !== 'stats') throw new Error('worker not initialised');

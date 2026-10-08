@@ -194,6 +194,7 @@ export class FX {
         o.vz -= 400 * dt; o.z += o.vz * dt;
         if (o.z < 0) {
           o.z = 0; o.vz = 0;
+          if (o.type === 9) { o.vx *= 0.3; o.vy *= 0.3; o.life = Math.min(o.life, 0.25); }   // (a chunk of concrete hits the street)
           if (o.type === 1) { o.on = false; if (Math.random() < 0.3) this.decal(1, o.x, o.y, Math.random() * 6.28, 1.2 + o.size * 0.5, '#7a0d12', this.now || 0, 0.8); } // a droplet lands
         }
       }

@@ -362,8 +362,11 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   const tumbling = world.time < (ped.tumbleUntil || 0);
   const fr = world.time < (ped.airUntil || 0) ? AIR_FRICTION : TUMBLE_FRICTION;
   const v0 = tumbling ? Math.hypot(ped.vx, ped.vy) : 0;
+  const wasDropping = !!ped.dropping;
   pedStep(ped, inp, dt, world.map, { ...pedMods(world, ped), analog: true });
   if (ped.hardLanding) { ped.hardLanding = false; combat.damage(world, ped, 45, null, 'fall'); ped.tumbleUntil = world.time + 0.8; }
+  // down a waterfall or off its cliff (shared/ledges.js): a splash at the foot, or a thud on dry ground
+  if (wasDropping && !ped.dropping) world.emit(ped.x, ped.y, isSwimming(world.map, ped) ? { e: 'splash', x: ped.x, y: ped.y, n: 16 } : { e: 'thud', x: ped.x, y: ped.y });
   if (tumbling) tumbleImpact(world, ped, v0, dt, fr);
   if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
   const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt);   // (by your golf ball the attack button swings the club; on the court with a ball, it shoots)

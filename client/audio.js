@@ -75,6 +75,7 @@ export function sfx(name, vol = 1) {
     case 'alert': if (throttle('alert', 500)) { tone(660, 0.12, 0.15 * vol); setTimeout(() => tone(990, 0.15, 0.15 * vol), 120); } break;
     case 'bad': if (throttle('bad', 300)) tone(180, 0.25, 0.15 * vol, 'sawtooth', -60); break;
     case 'camera': if (throttle('camera', 400)) { tone(1500, 0.06, 0.08 * vol); setTimeout(() => tone(1500, 0.06, 0.08 * vol), 120); } break;
+    case 'shutter': if (throttle('shutter', 90)) { noise(0.03, 3800, 1.2, 0.3 * vol, 'highpass'); setTimeout(() => noise(0.04, 2600, 1.2, 0.22 * vol, 'highpass'), 55); } break;   // a phone camera's shutter
     case 'click': if (throttle('click', 40)) { tone(1050, 0.035, 0.14 * vol, 'square'); setTimeout(() => tone(1400, 0.03, 0.08 * vol, 'square'), 30); } break;
     case 'thunder': if (throttle('thunder', 3000)) { noise(2.6, 140, 0.6, 0.9 * vol); setTimeout(() => noise(1.8, 90, 0.8, 0.7 * vol), 260); tone(42, 1.6, 0.35 * vol, 'sine', -12); } break;
     case 'glass': if (throttle('glass', 90)) { noise(0.25, 4200, 0.6, 0.45 * vol, 'highpass'); tone(2600, 0.12, 0.06 * vol, 'triangle', 900); setTimeout(() => tone(3400, 0.1, 0.04 * vol, 'triangle'), 50); } break;

@@ -19,6 +19,7 @@ const { generateCity, cityData, cityFromData } = await imp('shared/map.js');
 const { bakeChunk, loadProviders, SpriteCache, providers } = await imp('client/art2/game/chunkbake.js');
 const GB = await imp('client/art2/gbuf.js');
 const { packChunk } = await imp('client/art2/game/chunkstore.js');
+const { packPlanes } = await imp('client/art2/game/chunkpack.js');
 await loadProviders();
 // the world as a bake worker has it: the city's data (a structured clone) with its methods back
 const map = generateCity(seed);
@@ -26,13 +27,8 @@ const M = structuredClone(cityData(map));
 if (cityFromData) cityFromData(M); else Object.setPrototypeOf(M, Object.getPrototypeOf(map));
 const cache = new SpriteCache(160e6);
 
-// a G-buffer to the engine's planes at art resolution, as worker.js pack() does it for a chunk
-function pack(g, ap, under) {
-  const down = ap > 1 && (g.ap || 1) < ap;
-  let pk = GB.packGBuf(g), u = null;
-  if (down) { const d = GB.downsample2(pk, { run: GB.CHUNK_RUN }); if (under) u = GB.downsampleUnder(under, g.w, g.h, d.pick); pk = d; } else u = under;
-  return { o: { w: pk.w, h: pk.h, ax: pk.ax || 0, ay: pk.ay || 0, ap: pk.ap || g.ap || 1, p0: pk.p0, p1: pk.p1, p2: pk.p2 }, u };
-}
+// a G-buffer to the engine's planes at art resolution: the page's own packing (client/art2/game/chunkpack.js)
+const pack = (g, ap, under) => packPlanes(g, ap, under, GB.CHUNK_RUN);
 
 export function chunkFile(r, ap, cx, cy) {
   const { o: g, u: under } = pack(r.g, ap, r.under && r.blds && r.blds.length ? r.under : null);

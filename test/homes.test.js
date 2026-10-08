@@ -1,4 +1,4 @@
-import { RESPAWN_SECONDS } from '../shared/rules.js';
+import { RESPAWN_SECONDS, PLAYER_GRIT } from '../shared/rules.js';
 // Homes & estates, hiding indoors, spawn protection / spread, paint shops, felony payoff, bait.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -145,8 +145,8 @@ test('going inside: blink in over a few seconds, hidden and untouchable, stash t
   assert.equal(combat.tryAttack(w, p.ped, 0), false, 'no shooting while protected');
   run(w, SPAWN_PROTECT_S + 0.1);
   assert.equal(homes.blinkState(w, p.ped), 0);
-  combat.damage(w, p.ped, 10, null, 'melee');
-  assert.equal(p.ped.hp, 90);
+  combat.damage(w, p.ped, 10 * PLAYER_GRIT, null, 'melee');   // (players take a hit divided by PLAYER_GRIT)
+  assert.ok(Math.abs(p.ped.hp - 90) < 1e-6);
 });
 
 test('hiding inside shakes the police: nobody sees you, heat fades', () => {

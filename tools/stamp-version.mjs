@@ -4,8 +4,9 @@
 // immediately instead of after the 10-minute HTTP cache expires (and only what changed is downloaded again).
 // `world` is a hash of the world itself (the city generated from the seed, every field of it): the browser keeps the
 // city it built under it (client/worldgen.js), so it only builds it again when the world changed - not for a change
-// of code that leaves it the same. `art` is a hash of everything a chunk bake reads (the bake worker's code and the
-// world): baked chunks are kept under it (client/art2/game/chunkstore.js). Run before committing:
+// of code that leaves it the same. `art` is a hash of everything a kept chunk is made by (the bake's code, its packing
+// and stored form - ART_ROOTS - and the world): baked chunks are kept under it (client/art2/game/chunkstore.js), in
+// the browser and on the server (server/artcdn.js). Run before committing:
 //   node tools/stamp-version.mjs
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from 'node:fs';
 import { join, relative, dirname, resolve } from 'node:path';
@@ -75,9 +76,15 @@ export async function worldHash(root = ROOT, map = null) {
 // - the actor sprites the same workers draw live (actors.js, peds.js and what only they use: the vehicles, animals and
 //   effects) - test/perf.test.js checks the chunk baker doesn't reach them.
 export const ART_SKIP = new Set(['shared/rules.js', 'client/art2/game/actors.js', 'client/art2/game/peds.js']);
+// What a kept chunk is made by (2026-10-08): the bake itself (chunkbake.js and all it reads), the packing into art pixels
+// (chunkpack.js) and the stored form (chunkstore.js). Not the bake worker round them (worker.js): how chunks are asked
+// for, downloaded from the server or kept doesn't change a chunk, and a change there shouldn't throw away every
+// browser's kept chunks and the server's baked ones.
+export const ART_ROOTS = ['client/art2/game/chunkbake.js', 'client/art2/game/chunkpack.js', 'client/art2/game/chunkstore.js'];
 export async function artHash(root = ROOT, world = null) {
-  const code = codeHash('client/art2/game/worker.js', root, ART_SKIP), w = world || (await worldHash(root)).hash;
-  return { hash: createHash('sha1').update(code.hash + w).digest('hex').slice(0, 12), files: code.files };
+  const codes = ART_ROOTS.map((f) => codeHash(f, root, ART_SKIP)), w = world || (await worldHash(root)).hash;
+  const files = [...new Set(codes.flatMap((c) => c.files))].sort();
+  return { hash: createHash('sha1').update(codes.map((c) => c.hash).join('') + w).digest('hex').slice(0, 12), files };
 }
 // the stamp (only when run as a script: tests import worldHash)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

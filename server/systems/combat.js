@@ -6,7 +6,7 @@ import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN } from '../../shared/rules.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -96,6 +96,7 @@ function melee(world, ped, w, aim) {
   world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
   if (!best) return true;
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
+  if (!best.wild && !ped.wild) npc.spectacle(world, best.x, best.y, { r: 300, near: 60, chance: 0.35, secs: 7 });   // (a fight: a few phones come out)
   const was = { speed: Math.hypot(best.vx, best.vy), heading: Math.atan2(best.vy, best.vx) }; // (for the reaction: running into it?)
   const poise = best.build ? best.build.poise : 1;
   const str = ped.build ? ped.build.str : 1;
@@ -281,8 +282,9 @@ function shotHits(world, t, shooter, w, h) {
     return;
   }
   let dmg = h.dmg;
-  if (h.n >= 3 && h.dist < SHOTGUN_CLOSE_PX) dmg *= 1 + (SHOTGUN_CLOSE_MULT - 1) * (1 - h.dist / SHOTGUN_CLOSE_PX);
-  if (!t.dead && hurtable(world, t)) reactions.shot(world, t, shooter, w, { n: h.n, dist: h.dist, a: h.a, lethal: t.hp - dmg <= 0 });
+  // (point blank stays almost always a kill, a player's grit or not)
+  if (h.n >= 3 && h.dist < SHOTGUN_CLOSE_PX) dmg *= (1 + (SHOTGUN_CLOSE_MULT - 1) * (1 - h.dist / SHOTGUN_CLOSE_PX)) * gritOf(t, 'gun');
+  if (!t.dead && hurtable(world, t)) reactions.shot(world, t, shooter, w, { n: h.n, dist: h.dist, a: h.a, lethal: t.hp - dmg / gritOf(t, 'gun') <= 0 });
   damage(world, t, dmg, shooter, 'gun', h.a);
 }
 
@@ -317,6 +319,9 @@ function hitscan(world, ped, w, a, acc) {
   return false;
 }
 
+// how much tougher a player is against a cause (rules.js PLAYER_GRIT): what scripted damage meant to leave a player on a
+// set health is multiplied by
+export const gritOf = (ped, cause) => (ped && ped.player && cause !== 'nonlethal' ? PLAYER_GRIT * (PLAYER_GRIT_CAUSE[cause] || 1) : 1);
 export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (ped && ped.dead && amount > 0 && attacker && cause !== 'fall' && revive.isDowned(ped)) return revive.finish(world, ped, attacker); // hitting a downed player finishes them
   if (!ped || ped.dead || amount <= 0) return false;
@@ -325,6 +330,16 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (ped.hidden || ped.pet || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet
   if (ped.player && ped.player.invincible) return false;          // dev: invincible
   if (ped.wild) wildlife.noteHit(world, ped, attacker, cause);   // (how it was taken: the grade of the hide)
+  if (ped.player && cause !== 'nonlethal') {
+    // players are tougher (rules.js PLAYER_GRIT); a train that would kill throws you clear now and then, critically hurt
+    amount /= gritOf(ped, cause);
+    if (cause === 'train' && amount >= ped.hp && world.rand() < TRAIN_SURVIVE) {
+      amount = Math.max(0, ped.hp - Math.max(1, ped.maxHp * TRAIN_SURVIVE_HP));
+      ped.bleeding = true;
+      ped.downUntil = Math.max(ped.downUntil || 0, now + 3);
+      world.notify(ped.player, 'The train threw you clear - you\'re critically hurt. Get help!', 'bad');
+    }
+  }
   ped.hp -= amount;
   ped.lastHitAt = now;
   ped.lastCombatAt = now;
@@ -350,6 +365,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   if (ped.vehId) { vehicles.ejectPed(world, ped, true); ped.vx *= 0.3; ped.vy *= 0.3; }
   if (ped.carrying) cargo.dropCrate(world, ped);
   reactions.died(world, ped, cause, dir); // the fall (a slide, a roll, knocked back, a crumple) and the death event: how they lie
+  if (!ped.wild) npc.spectacle(world, ped.x, ped.y, { r: 420, near: 110, chance: 0.8, secs: 10 });   // (somebody down in the street: phones out)
   if (ped.wild) { wildlife.onKilled(world, ped, attacker, cause); return; } // an animal: no crime, no tally, no ambulance - the carcass is cleared once nobody's looking (wildlife.js)
   if (attacker && attacker.wild) { if (ped.player) players.onPedDeath(world, ped, attacker, `Mauled by ${attacker.name || 'a wild animal'}.`); else { npc.onDeath(world, ped, null); world.bodies.add(ped); } return; }   // (killed by an animal: nobody's crime)
   law.onKill(world, attacker, ped, cause);
@@ -392,6 +408,8 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
       e.vx += Math.cos(a) * 200 * f; e.vy += Math.sin(a) * 200 * f; e.vz = 160 * f;
     }
   }
+  // people close by run; further out, some get their phones out and film it (npc.js spectacle)
+  if (z === null || z < 0.3) { npc.panic(world, x, y, r * 2.2); npc.spectacle(world, x, y, { r: r * 2.2 + 520, near: r * 2.2, chance: 1.3, secs: 12 }); }
 }
 
 export function reload(world, ped) {

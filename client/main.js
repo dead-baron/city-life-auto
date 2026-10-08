@@ -206,8 +206,8 @@ function onText(m) {
       S.map.props.forEach((p, i) => { if (p.lit0 !== undefined && !!p.lit !== p.lit0) setFire(i, p.lit0, false); });
       for (const [i, lit] of m.fires || []) setFire(i, lit, false);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
-      if (S.art2) S.art2.resync(); // (back in after a reconnect: the art v2 bakes follow the server's broken props)
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
+      if (S.art2) S.art2.resync(); // (back in after a reconnect: the art v2 bakes follow the server's broken props and barriers)
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
       S.tt = { l: m.tt || [], at: performance.now() / 1000 };
       S.rides = new Map(); for (const r of m.rides || []) rideOn(r);   // (the balloons already up, the riders on the wheel)
@@ -701,14 +701,21 @@ function onEvent(ev) {
     case 'teams': { S.venueTeams ??= {}; S.venueTeams[ev.v] = ev.t; S.pedTeam = new Map(); for (const t of Object.values(S.venueTeams)) t.forEach((ids, k) => { for (const id of ids) S.pedTeam.set(id, k); }); break; }
     case 'raceGo': S.fx.ring(ev.x, ev.y, 60, 'rgba(255,220,80,'); sfx('cash', 1); break;
     case 'checkpoint': S.fx.ring(ev.x, ev.y, 40, 'rgba(120,255,160,'); sfx('cash', 0.6); break;
-    case 'barrier': { // a highway barrier smashed through
+    case 'barrier': { // a highway barrier smashed through: the stretch opens up (the deck rebaked without it: art2
+      // barrierChanged) and its concrete goes flying out over the edge and down into the street below
       for (const k of ev.k) S.map.levels.broken.set(k, true);
-      fx.sparks(ev.x, ev.y, 10);
-      for (let k = 0; k < 16; k++) { const a = ev.a + (Math.random() - 0.5) * 1.6, sp = 80 + Math.random() * 200; fx.spawn(4, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 0.6 + Math.random() * 0.4, 3, k % 3 ? '#b4b6bb' : '#7d7f86'); }
-      sfx('crash', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 6 * distVol(ev.x, ev.y));
+      if (S.art2) S.art2.barrierChanged(ev.k, true);
+      fx.sparks(ev.x, ev.y, 14);
+      for (let k = 0; k < 28; k++) {
+        const a = ev.a + (Math.random() - 0.5) * 1.9, sp = 120 + Math.random() * 360;
+        const o = fx.spawn(9, ev.x + Math.cos(ev.a + 1.57) * (Math.random() - 0.5) * 70, ev.y + Math.sin(ev.a + 1.57) * (Math.random() - 0.5) * 70, Math.cos(a) * sp, Math.sin(a) * sp, 1.4 + Math.random() * 0.6, 3 + Math.random() * 3, k % 4 ? '#b4b0a6' : '#7d7a72', 0, 60 + Math.random() * 220);
+        o.z = 285;   // (from up on the deck: art2 draws v1 heights at 0.3 - DECK_LIFT 88 px)
+      }
+      for (let k = 0; k < 6; k++) fx.smoke(ev.x + (Math.random() - 0.5) * 40, ev.y + (Math.random() - 0.5) * 40, false);
+      sfx('crash', distVol(ev.x, ev.y)); sfx('glass', distVol(ev.x, ev.y) * 0.5); S.cam.shake = Math.max(S.cam.shake, 9 * distVol(ev.x, ev.y));
       break;
     }
-    case 'barrierfix': for (const k of ev.k) S.map.levels.broken.delete(k); break;
+    case 'barrierfix': for (const k of ev.k) S.map.levels.broken.delete(k); if (S.art2) S.art2.barrierChanged(ev.k, false); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
     case 'fire': setFire(ev.i, ev.lit, true); break;
     case 'propfix': {
@@ -724,6 +731,7 @@ function onEvent(ev) {
     case 'door': sfx('door', distVol(ev.x, ev.y)); break;
     case 'deposit': fx.ring(ev.x, ev.y - 20, 26, 'rgba(61,220,132,'); sfx('cash', distVol(ev.x, ev.y)); fx.floatText(ev.x, ev.y - 40, `Banked $${ev.n}`, '#3ddc84'); break;
     case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); if (ev.n) fx.floatText(ev.x, ev.y - 18, `+$${ev.n}`, '#7fe07f'); break;
+    case 'pflash': S.flashes.push({ x: ev.x + Math.cos(ev.a || 0) * 8, y: ev.y + Math.sin(ev.a || 0) * 8 - 4, t: 0.09, r: 80, kind: 'photo' }); sfx('shutter', distVol(ev.x, ev.y) * 0.6); break;   // (someone taking photos with their phone: server npc.js spectacle)
     case 'camera': S.camAlert.set(ev.id, performance.now() + 2500); sfx('camera', distVol(S.map.cameras[ev.id].x, S.map.cameras[ev.id].y)); break;
     case 'revive': fx.ring(ev.x, ev.y, 30, 'rgba(120,255,160,', 3); fx.floatText(ev.x, ev.y - 20, '+', '#3ddc84'); break;
     case 'poof': case 'fade':

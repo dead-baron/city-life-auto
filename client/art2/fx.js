@@ -939,6 +939,20 @@ export function dropFrames(blood = false) {
     return finish(G);
   });
 }
+// chunks of concrete knocked off a highway barrier (main.js 'barrier'): a jagged grey lump, 4 frames tumbling over
+export function rubbleFrames() {
+  const R = [[92, 90, 86], [128, 124, 116], [164, 160, 150], [196, 192, 182]], out = [];
+  for (let f = 0; f < 4; f++) {
+    const G = frame(9, 8, 4, 6), a = f * 0.8;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 9; x++) {
+      const dx = x + 0.5 - 4.5, dy = y + 0.5 - 4, lx = dx * Math.cos(a) + dy * Math.sin(a), ly = -dx * Math.sin(a) + dy * Math.cos(a);
+      const r = Math.max(Math.abs(lx) / 3.2, Math.abs(ly) / 2.3) + (vnoise(x + f * 3, y, 1.6, 41) - 0.5) * 0.5;
+      if (r < 1) dot(G, x, y, step(R, cl(0.7 - ly * 0.12 - (r > 0.8 ? 0.35 : 0)), x, y, 0.5), 0, 1);
+    }
+    out.push(finish(G));
+  }
+  return out;
+}
 // paper scraps and leaves fluttering: 4 frames turning edge-on and back (paper white, leaf green, leaf orange)
 export function flutterFrames(kind = 'paper') {
   const R = kind === 'paper' ? [[150, 146, 140], [196, 192, 184], [226, 222, 212], [246, 244, 236]] : kind === 'leaf' ? LEAF_G : LEAF_O, out = [];
@@ -1102,6 +1116,7 @@ export const FX = {
   pBlood: { make: M(dropFrames, true), frames: 3, particle: true },
   pWater: { make: M(dropFrames, false), frames: 3, particle: true },
   pPaper: { make: M(flutterFrames, 'paper'), frames: 4, particle: true },
+  pRubble: { make: M(rubbleFrames), frames: 4, particle: true },
   pLeaf: { make: M(flutterFrames, 'leaf'), frames: 4, particle: true },
   pLeafAutumn: { make: M(flutterFrames, 'autumn'), frames: 4, particle: true },
   dScorch: { make: M(scorchFrames), frames: 3, decal: true, hold: 240 },

@@ -147,8 +147,10 @@ export function update(world, dt) {
         inp = NO_INPUT;
         break;
       }
+      case 'film': inp = film(world, ped, now); break;
       default: n.state = 'wander';
     }
+    if (ped.filming && n.state !== 'film') stopFilming(ped);   // (they ran, fought, got hurt: the phone goes away)
     // commuters heading for a platform to wait for the train
     if (n.waitTrain !== undefined && (n.state === 'wander' || n.state === 'idle')) {
       const d = Math.hypot(n.waitX - ped.x, n.waitY - ped.y);
@@ -394,8 +396,58 @@ export function onGunfire(world, x, y, shooter, radius = 360) {
       continue;
     }
     if (n.role !== 'civ' || n.state === 'fight' || n.state === 'passed') continue;
+    // (far enough off, now and then someone films it instead of running)
+    if (radius >= 360 && n.state !== 'flee' && Math.hypot(e.x - x, e.y - y) > radius * 0.7 && rng() < filmChance(e) * 0.4) { startFilming(world, e, x, y, 6 + rng() * 6); continue; }
     flee(world, e, x, y, 5 + rng() * 3);
   }
+  if (radius >= 360) spectacle(world, x, y, { r: radius + 260, near: radius, chance: 0.6, secs: 9 });
+}
+
+// ---- Phones out (2026-10-08, the user: "NPCs will sometimes take pictures or record video with their phones, like if
+// something crazy goes down they might pull out their phone and record it instead of running away") ----------------
+// Something wild nearby - a crash, a blast, a body in the street, a car off the highway, gunfire further off: some of the
+// people round about stop where they are, turn to it and hold their phones up (the descriptor's ph: 2, drawn held up in
+// both hands: client art2 people.js 'phoneup'), filming, or taking photos (a flash now and then: the 'pflash' event).
+// Who: by temperament (FILM_CHANCE), not too close (those run), and not the same person again for a while. They stop
+// when it's over, or run like anyone else if trouble comes their way (a shot near them, a hit: the state changes and the
+// phone goes away).
+const FILM_CHANCE = { casual: 0.45, socialite: 0.55, athlete: 0.3, hustler: 0.4, executive: 0.22, construction: 0.32, sweeper: 0.2, senior: 0.1, drunk: 0.35 };
+const filmChance = (ped) => FILM_CHANCE[ped.npc.archetype] ?? 0.25;
+// a blast or the like: the people close by run (further out, some film it: spectacle)
+export function panic(world, x, y, radius) {
+  for (const e of world.query(x, y, radius, K.PED)) {
+    const n = e.npc;
+    if (!n || e.dead || e.vehId || n.desk || n.guard || n.role !== 'civ' || n.state === 'fight' || n.state === 'passed' || n.state === 'crawl') continue;
+    flee(world, e, x, y, 5 + rng() * 3);
+  }
+}
+export function spectacle(world, x, y, { r = 480, near = 120, chance = 1, secs = 9 } = {}) {
+  const now = world.time;
+  for (const e of world.query(x, y, r, K.PED)) {
+    const n = e.npc;
+    if (!n || e.dead || e.vehId || e.hidden || e.onTrain || n.desk || n.guard || n.role !== 'civ') continue;
+    if (n.state !== 'wander' && n.state !== 'idle') continue;
+    if (now - (n.filmedAt ?? -1e9) < 45 || Math.hypot(e.x - x, e.y - y) < near) continue;
+    if (rng() < filmChance(e) * chance) startFilming(world, e, x, y, secs * (0.7 + rng() * 0.6));
+  }
+}
+function startFilming(world, ped, x, y, secs) {
+  const n = ped.npc;
+  n.state = 'film'; n.fx = x; n.fy = y; n.until = world.time + secs; n.filmedAt = world.time;
+  n.photo = rng() < 0.35; n.nextFlash = world.time + 0.5 + rng() * 0.8;
+  ped.vx = 0; ped.vy = 0;
+  if (!ped.filming) { ped.phoneOut = world.time; ped.filming = 2; ped.appVer = (ped.appVer || 0) + 1; }
+}
+function stopFilming(ped) {
+  if (!ped.filming) return;
+  ped.filming = 0; ped.phoneOut = 0; ped.appVer = (ped.appVer || 0) + 1;
+}
+function film(world, ped, now) {
+  const n = ped.npc;
+  ped.a = Math.atan2(n.fy - ped.y, n.fx - ped.x);
+  if (n.photo && now >= n.nextFlash) { n.nextFlash = now + 1.1 + rng() * 1.9; world.emit(ped.x, ped.y, { e: 'pflash', x: Math.round(ped.x), y: Math.round(ped.y), a: +ped.a.toFixed(2) }); }
+  if (now > n.until) { n.state = 'wander'; stopFilming(ped); }
+  return NO_INPUT;
 }
 
 export function onDeath(world, ped, attacker) {
@@ -408,6 +460,7 @@ export function onDeath(world, ped, attacker) {
   let item = a.item && rng() < a.item[1] ? a.item[0] : null;
   if (n.hasPurse) { item = 'purse'; n.hasPurse = false; }
   cargo.npcDrop(world, ped, cash, item);
+  stopFilming(ped);
   n.state = 'dead';
   void attacker;
 }

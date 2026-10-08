@@ -37,6 +37,8 @@ import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/map.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
+import { BARRIER_PIECE } from '../../../shared/levels.js';
+import { pointAt } from '../../../shared/geom.js';
 import { VEHICLE_BY_INDEX } from '../../../shared/vehicles.js';
 import { dir8 } from '../../render/chars.js';
 import { lampHead } from '../../render/tiles.js';
@@ -994,9 +996,10 @@ export class World2 {
     if (lying && (f & PF.DEAD) && p.deadK === 'halved' && this._halves(p, A2, ppose, d8, pf)) return;   // (cut in two by the plasma blade)
     // unarmed with the flashlight on: it's in your hand; under an open umbrella (standing or walking): its shaft is
     const umb = !!(f & PF.UMBRELLA) && !(p.extra | 0) && !p.d.fl && (ppose === 'idle' || ppose.startsWith('walk')) && !!Pd.umbrellaTop;
-    // (a player with their phone menu open holds the phone: d.ph, server phone.js - in place of the weapon)
+    // (a player with their phone menu open holds the phone: d.ph 1, server phone.js - in place of the weapon; someone
+    // filming or taking photos holds it up in both hands: d.ph 2, server npc.js spectacle)
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
-    const wpn = phone ? 'phone' : (p.extra | 0) || (p.d.fl ? 'flashlight' : umb ? 'umbrella' : 0);
+    const wpn = phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : (p.extra | 0) || (p.d.fl ? 'flashlight' : umb ? 'umbrella' : 0);
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
@@ -1894,11 +1897,26 @@ export class World2 {
     for (let cy = Math.floor((p.y - 320) / CHUNK); cy <= Math.floor((p.y + 40) / CHUNK); cy++)
       for (let cx = Math.floor((p.x - 120) / CHUNK); cx <= Math.floor((p.x + 120) / CHUNK); cx++) { const k = cy * 1000 + cx; this.ver.set(k, (this.ver.get(k) || 0) + 1); }
   }
+  // A highway barrier smashed through or put back (main.js 'barrier' / 'barrierfix'): the workers learn it and the
+  // chunks the pieces show in are baked again - the deck drawn open there, with its broken stubs (statics.js makeDeck)
+  barrierChanged(keys, on) {
+    if (!keys || !keys.length) return;
+    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { barriers: keys.map((k) => [k, on ? 1 : 0]) });
+    for (const k of keys) {
+      const [ei, , pc] = String(k).split(':').map(Number), e = this.map.edges && this.map.edges[ei];
+      if (!e || !e.pts || e.pts.length < 2) continue;
+      const q = pointAt(e.pts, Math.max(0, Math.min(e.len || 0, (pc + 0.5) * BARRIER_PIECE)));
+      // (the deck stands DECK_Z above its ground point: up to ~130 px of screen above it)
+      for (let cy = Math.floor((q.y - 160) / CHUNK); cy <= Math.floor((q.y + 60) / CHUNK); cy++)
+        for (let cx = Math.floor((q.x - 120) / CHUNK); cx <= Math.floor((q.x + 120) / CHUNK); cx++) { const ck = cy * 1000 + cx; this.ver.set(ck, (this.ver.get(ck) || 0) + 1); }
+    }
+  }
   // after a reconnect: the server's list of what is broken replaces the workers' and everything rebakes
   resync(rebake = true) {
     const list = [], lit = [], props = this.map.props || [];
     for (let i = 0; i < props.length; i++) { if (props[i].broken) list.push([i, { a: props[i].broken.a || 0 }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
-    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: list, lit, reset: true });
+    const L = this.map.levels, barriers = L && L.broken ? [...L.broken.keys()].map((k) => [k, 1]) : [];
+    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: list, lit, barriers, reset: true });
     if (rebake) for (const k of this.chunkState.keys()) this.ver.set(k, (this.ver.get(k) || 0) + 1);
   }
 

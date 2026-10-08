@@ -732,7 +732,7 @@ export const SHOT_FX = { 6: [0, 'white'], 7: [0, 'orange'], 8: [1, 'orange'], 9:
 // is ordered by age, so frame = floor(age / life * frames) (v1ParticleFrame does that); v1ParticleFx picks the
 // exact set (dark smoke or light steam by the v1 colour, paper or leaves); .decal[type] and .event[name] map
 // decals and server events, and v1DecalFx / v1DecalFrame pick a decal's set and variant.
-const V1_PART = { 1: { name: 'pBlood', frames: 3 }, 2: { name: 'pSmoke', frames: 8 }, 3: { name: 'pFlame', frames: 8 }, 4: { name: 'pSpark', frames: 3 }, 5: { name: 'pWater', frames: 3 }, 6: { name: 'pWater', frames: 3 }, 8: { name: 'pPaper', frames: 4 } };
+const V1_PART = { 1: { name: 'pBlood', frames: 3 }, 2: { name: 'pSmoke', frames: 8 }, 3: { name: 'pFlame', frames: 8 }, 4: { name: 'pSpark', frames: 3 }, 5: { name: 'pWater', frames: 3 }, 6: { name: 'pWater', frames: 3 }, 8: { name: 'pPaper', frames: 4 }, 9: { name: 'pRubble', frames: 4 } };
 export const FX_FOR_V1 = {
   ...V1_PART,
   particle: V1_PART,

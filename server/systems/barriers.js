@@ -6,6 +6,7 @@
 import { BARRIER_REPAIR_S } from '../../shared/rules.js';
 import { BARRIER_PIECE } from '../../shared/levels.js';
 import { pointAt } from '../../shared/geom.js';
+import * as npc from './npc.js';
 
 export function init(world) {
   const L = world.map.levels;
@@ -16,6 +17,7 @@ export function init(world) {
     for (const k of keys) world.brokenBarriers.set(k, world.time);
     world.broadcast({ e: 'barrier', k: keys, x: Math.round(x), y: Math.round(y), a: +a.toFixed(2) });
     world.emit(x, y, { e: 'crash', x, y, p: 1 });
+    npc.spectacle(world, x, y, { r: 620, near: 90, chance: 1.3, secs: 12 });   // (a car off the highway: the street below gets its phones out)
   };
 }
 

@@ -157,6 +157,7 @@ function resolveVehicleHit(world, a, b, hit) {
     const attacker = aFaster ? da : db, victimV = aFaster ? b : a;
     if (attacker && impact > 180) law.vehicleRam(world, attacker, victimV, impact);
     if (impact > 330) { cargo.knockOff(world, a, impact); cargo.knockOff(world, b, impact); }
+    if (impact > 300 && !a.lz && !b.lz) npc.spectacle(world, (a.x + b.x) / 2, (a.y + b.y) / 2, { r: 440, near: 80, chance: impact > 450 ? 1 : 0.55, secs: 9 });   // (a smash: phones out)
     if (a.def.kind === 'bike' && impact > 250) bikeCrash(world, a, impact);
     if (b.def.kind === 'bike' && impact > 250) bikeCrash(world, b, impact);
     if (a.ai) npc.onVehicleHit(world, a, aFaster ? null : db);
@@ -176,6 +177,7 @@ function strikePed(world, v, ped, vn, h) {
   world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: Math.atan2(v.vy, v.vx), n: 10 });
   const killed = combat.damage(world, ped, dmg, driver, 'vehicle', Math.atan2(v.vy, v.vx));
   if (killed) v.bloody = true;
+  else if (!ped.wild && vn > 200) npc.spectacle(world, ped.x, ped.y, { r: 380, near: 70, chance: 0.7, secs: 8 });   // (knocked flying: phones out - a death does it in kill())
   if (driver && !ped.wild) law.hitAndRun(world, driver, ped, killed, v); // (an animal on the road: no crime)
   if (driver && !killed && !ped.wild) law.subdue(world, driver, ped);
   if (ped.npc) npc.onAttacked(world, ped, driver);
@@ -322,7 +324,7 @@ function blownOut(world, ped, v, attackerPed) {
   if (world.rand() < 0.5) { combat.damage(world, ped, 999, attackerPed, 'explosion', a); return; }
   ped.downUntil = Math.max(ped.downUntil, world.time + 3.5);
   const left = ped.maxHp * (0.06 + world.rand() * 0.1);
-  combat.damage(world, ped, Math.max(1, ped.hp - left), attackerPed, 'explosion', a);
+  combat.damage(world, ped, Math.max(1, ped.hp - left) * combat.gritOf(ped, 'explosion'), attackerPed, 'explosion', a);   // (left on that much: a player's grit undone)
   if (!ped.dead) { ped.bleeding = true; ped.burnUntil = world.time + 2; if (ped.player) world.notify(ped.player, 'Blown clear of the wreck - badly hurt. Heal up fast!', 'bad'); }
 }
 

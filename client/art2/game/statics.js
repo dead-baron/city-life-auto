@@ -58,7 +58,7 @@ import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { DISTRICTS, terrainAt, railAt, SEA_ISLES, wildBiome } from '../../../shared/map.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
-import { DECK_LIFT } from '../../../shared/levels.js';
+import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
 
 export const STATIC_CHUNK = 768;
 const CH = 768, PI = Math.PI, TAU = PI * 2;
@@ -283,6 +283,7 @@ export function staticItems(M, cx, cy, opt = {}) {
   for (const it of props ? list.concat(props) : list) {
     let o = it;
     if (it.pi !== undefined && M.props[it.pi] && M.props[it.pi].broken) o = brokenVariant(it, M.props[it.pi]);
+    else if (it.deck && M.levels && M.levels.broken && M.levels.broken.size) o = deckBroken(it, M.levels);
     else if (opt.cutaway !== undefined && opt.cutaway !== null && it.b === opt.cutaway && it.cut) o = it.cut();
     if (!o) continue;
     out.push(o);
@@ -290,6 +291,24 @@ export function staticItems(M, cx, cy, opt = {}) {
   if (!opt.noCover) for (const it of coverItems(I.c, I, cx, cy)) out.push(it);
   out.sort((a, b) => (a.y - b.y) || (a.x - b.x));
   return out;
+}
+// A piece of the elevated deck with the barrier pieces smashed through in it (shared/levels.js L.broken: the worker
+// learns them from the page, worker.js patch): the same deck, drawn with those stretches of parapet open and their
+// broken stubs, until the road crew puts them back (makeDeck r.brk)
+function deckBroken(it, L) {
+  const { X0, Y0, X1, Y1, segs } = it.deck;
+  let brk = null;
+  for (const k of L.broken.keys()) {
+    const [ed, , pc] = k.split(':').map(Number), sAt = (pc + 0.5) * BARRIER_PIECE;
+    let sg = null;
+    for (const i of segs) { const q = L.segs[i]; if (q && q.edge === ed && sAt >= (q.s0 || 0) - 1 && sAt <= (q.s0 || 0) + q.len + 1) { sg = q; break; } }
+    if (!sg) continue;
+    const px = sg.ax + sg.ux * (sAt - (sg.s0 || 0)), py = sg.ay + sg.uy * (sAt - (sg.s0 || 0));
+    if (px > X0 - 140 && px < X1 + 140 && py > Y0 - 140 && py < Y1 + 140) (brk ||= []).push(k);
+  }
+  if (!brk) return it;
+  brk.sort();
+  return { ...it, key: `${it.key}:${brk.join(',')}`, recipe: { ...it.recipe, brk } };
 }
 export function staticLights(M, cx, cy) {
   const I = staticIndex(M);
@@ -2022,7 +2041,8 @@ function addDecks(c, I) {
     const X0 = Math.max(e.cx * CH, Math.floor(e.bx0)), Y0 = Math.max(e.cy * CH, Math.floor(e.by0)), X1 = Math.min((e.cx + 1) * CH, Math.ceil(e.bx1)), Y1 = Math.min((e.cy + 1) * CH, Math.ceil(e.by1));
     if (X1 <= X0 || Y1 <= Y0) continue;
     const segs = e.list.map((i) => { const s = L.segs[i], ed = M.edges[s.edge] || {}; return [s.ax, s.ay, s.bx, s.by, s.hw, s.za, s.zb, s.ramp ? 1 : 0, ed.nl || 1, ed.median || 0, s.s0 || 0, ed.oneway ? 1 : 0, s.edge]; });
-    put(I, { key: `dk:${e.cx}:${e.cy}`, recipe: { t: 'deck', x0: X0, y0: Y0, w: X1 - X0, h: Y1 - Y0, T: TM, segs }, x: X0, y: Y0, z0: 0, ext: [0, TM, X1 - X0, Y1 - Y0] });
+    // (deck: what staticItems needs to draw the barrier pieces smashed through here open - deckBroken)
+    put(I, { key: `dk:${e.cx}:${e.cy}`, recipe: { t: 'deck', x0: X0, y0: Y0, w: X1 - X0, h: Y1 - Y0, T: TM, segs }, x: X0, y: Y0, z0: 0, ext: [0, TM, X1 - X0, Y1 - Y0], deck: { X0, Y0, X1, Y1, segs: e.list } });
   }
   // pillars: short piers under the deck's edges, turned with the deck
   const near = (x, y) => { let best = null, bd = 1e9; for (const s of L.segs) { if (s.ramp) continue; let t = (x - s.ax) * s.ux + (y - s.ay) * s.uy; t = clamp(t, 0, s.len); const d = Math.hypot(x - s.ax - s.ux * t, y - s.ay - s.uy * t); if (d < bd) { bd = d; best = s; } } return best; };
@@ -2046,6 +2066,7 @@ function ptAt(pts, s) {
 const RAMP_GROUND = 3, RAMP_WALL = 10;   // (px: a ramp on the ground is the ground's road; its walls rise from here)
 function makeDeck(r) {
   const LIFT = DECK_LIFT, PAR = 8, PH = 8, { x0, y0, w, h } = r, TM = r.T, G = new GBuf(w, h + TM); G.ax = 0; G.ay = TM;
+  const BRK = r.brk && r.brk.length ? new Set(r.brk) : null;   // (smashed barrier pieces: '<edge>:<side>:<piece>')
   const S = r.segs.map(([ax, ay, bx, by, hw, za, zb, ramp_, nl, med, s0, ow, edge]) => { const len = Math.hypot(bx - ax, by - ay) || 1; return { ax, ay, len, ux: (bx - ax) / len, uy: (by - ay) / len, hw, za, zb, ramp: ramp_, nl, med, s0, ow, edge }; });
   let bz = 0, bs = null, bd = 0, bu = 0, bt = 0, cand = S;
   // candidate segments per 32 px block (most blocks touch one or two)
@@ -2085,14 +2106,22 @@ function makeDeck(r) {
     // the deck starts where the ramp leaves the ground, and its walls only once it is up past a kerb's height (a low
     // wall at the foot read as the ramp running over the street instead of joining it)
     if (s.ramp && bz <= RAMP_GROUND) continue;
-    let k = 1, zz = bz;
-    if (bd > s.hw - PAR && !open(X + 0.5, Y + 0.5, bz, s) && !(s.ramp && bz < RAMP_WALL)) { k = 2; zz = bz + PH; }
+    let k = 1, zz = bz, smashed = false;
+    if (bd > s.hw - PAR && !open(X + 0.5, Y + 0.5, bz, s) && !(s.ramp && bz < RAMP_WALL)) {
+      // a smashed piece (levels.js barrierKey: side +1 right of the edge's direction): open, a few jagged stubs left
+      if (BRK && BRK.has(`${s.edge}:${bu > 0 ? 1 : -1}:${Math.floor((s.s0 + bt) / BARRIER_PIECE)}`)) {
+        smashed = true;
+        const st = hash(X >> 1, Y >> 1, 61);
+        if (bd > s.hw - 2.5 && st > 0.82) { k = 2; zz = bz + 1 + Math.floor(st * 40) % 4; }
+      } else { k = 2; zz = bz + PH; }
+    }
     else if (s.med && au < s.med / 2) { k = 3; zz = bz + PH + 2; }
     top[i] = zz; surf[i] = bz; kind[i] = k; rampF[i] = s.ramp;
     if (yy >= h) continue;
     let c, f = 0;
     const n = NUP;
-    if (k === 2) c = step2(CONC, bd > s.hw - 1.5 ? 0.35 : 0.68, X, Y);
+    if (k === 2) c = smashed ? step2(CONC, 0.3 + hash(X, Y, 62) * 0.25, X, Y) : step2(CONC, bd > s.hw - 1.5 ? 0.35 : 0.68, X, Y);
+    else if (smashed && hash(X >> 1, Y >> 1, 63) > 0.7) c = step2(CONC, 0.32 + hash(X, Y, 64) * 0.3, X, Y);   // (concrete grit where it stood)
     else if (k === 3) c = step2(CONC, au > s.med / 2 - 1.5 ? 0.4 : 0.74, X, Y);
     else {
       const ai = ((Y & 255) * 256 + (X & 255)) * 3; AC[0] = asph[ai]; AC[1] = asph[ai + 1]; AC[2] = asph[ai + 2]; c = AC; f = F_GROUND | F_WET;

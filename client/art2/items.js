@@ -230,6 +230,13 @@ export const ITEMS = {
     poly(box(-2.7, -5.4, 2.7, 5.2), M.screen, { e: [60, 130, 230, 150], pat: (u, v) => { const a = (u + 2.7) / 1.8, b = (v + 5.4) / 1.8; return a % 1 > 0.25 && b % 1 > 0.25 && b < 4 ? 0.35 : 0; } }),
     poly(box(-1, -6.2, 1, -5.8), M.dark),
   ] },
+  // a phone held up to film or take a photo (server npc.js spectacle): its back to us, the lens and the red light on
+  phoneUp: { ia: 0, hs: 0.7, is: 1.6, bill: true, parts: [
+    poly(rbox(-3.6, -6.8, 3.6, 6.8, 1.2), M.black, { k: 0.1 }),
+    ell([-1.5, -4.2], 1.2, 1.2, M.dark, { k: 0.3 }),
+    ell([-1.5, -4.2], 0.55, 0.55, M.screen, { e: [90, 140, 220, 90] }),
+    ell([1.6, -4.6], 0.65, 0.65, M.medRed, { e: [255, 40, 30, 230] }),
+  ] },
   cash: { ia: 0, hs: 0.7, is: 1.45, bill: true, off: [5.5, 0], parts: [
     poly(box(-5.4, -6, 8.6, 0), M.money, { k: -0.15, pat: (u, v) => (v < -4.6 ? 0.25 : 0) }),
     poly(box(-8, -3, 6, 4), M.money, { pat: (u, v) => (v < -1.6 ? 0.25 : v > 0 && Math.round(v * 2) % 2 ? -0.2 : 0) }),

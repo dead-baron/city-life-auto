@@ -3660,3 +3660,26 @@ While a player's phone menu is open their character holds the phone, head down, 
   - **Clearing what doesn't move:** a traffic car that hasn't moved in 50 s (in a jam that won't clear), or a car left empty in the road for 90 s, is cleared away once nobody can see it, near a player or not. A car a player left somewhere stays.
   - **Measured** (a simulation of 8 minutes with players in four town centres): cars standing still 30 s or more went from about 11% of the traffic to about 4-6%. Traffic moves slower on average, because it now actually waits at red lights.
 
+
+## 2026-10-08 · One-way waterfalls, barriers that break open, tougher players, people filming on their phones
+- **Down a waterfall, never up it** (the user: swim down a falls but not up it; drop off the cliff it goes over but don't climb back):
+  - `shared/ledges.js` works out a drop at every waterfall from the map's nature sites, server and client alike. It isn't stored in the map, so the world and art hashes stay as they are.
+  - At a falls over rock (Fern Gorge's granite ledge, the Willow River escarpment and its notch, the Driftwood Point basalt cliff), the rock band becomes a drop.
+  - Where the water just pours over a lip (Redwood Creek, Cedar Creek, Summit Tarn, Coral Cay), the drop spans the water and the ledge either side of it as it's drawn, out to the gorge walls.
+  - A drop is open from above and the sides and solid from below (`shared/physics.js` `collideCircle`). Once you're on it, you're carried down fast whatever you press (`pedStep`), with a splash at the foot or a thud on dry ground.
+  - The wooden steps beside the Driftwood Point cliff still go both ways.
+- **Highway barriers break open:**
+  - Smash through a parapet and that stretch of barrier is drawn gone, with broken stubs and grit where it stood, until the road crew puts it back. The deck is rebaked with the broken pieces (`statics.js` `deckBroken` / `makeDeck`), the bake workers learning them like broken props (`worker.js` patch, `host.js` `barrierChanged`).
+  - Chunks of concrete fly out over the edge and tumble down into the street below (a new `pRubble` particle), with smoke and a heavier crash.
+- **Tougher players** (`shared/rules.js`):
+  - Every hit a player takes is divided by `PLAYER_GRIT` 1.4 (a police service pistol takes seven hits, not five), and a car's by a further 1.25 (city-speed hits leave you hurt, not dead).
+  - A train still kills mostly, but 30% of the time it throws you clear instead: alive on 7% health, bleeding and knocked down.
+  - NPCs are as tough as before.
+- **People film it on their phones** (the user: NPCs pull out their phones and record something crazy instead of running):
+  - A crash, a blast, a body in the street, a fight, a car off the highway, or gunfire further off: some of the civilians round about stop, turn to it and hold their phones up in both hands, filming or taking photos.
+  - Photos flash with a shutter sound (the `pflash` event). The descriptor's `ph: 2` draws the raised phone (`people.js` `phoneup`, the `phoneUp` item: the lens and a red light).
+  - Who films is by temperament: socialites and casual types often, seniors seldom. Nobody films from right on top of it, and nobody films again for a while. They stop when it's over, or run like anyone else if trouble comes their way.
+  - Blasts now also send the people close by running (`npc.panic`).
+- **The art hash is rooted at what a kept chunk is made by** (`tools/stamp-version.mjs` `ART_ROOTS`: `chunkbake.js`, the new `chunkpack.js` with the packing the page and the server share, `chunkstore.js`). The bake worker round them is left out, so tuning how chunks are fetched and downloaded no longer throws away every kept chunk.
+  - This one change rebakes the art once: the server prewarms it again, and phones bake locally meanwhile.
+- **Tests:** `test/ledges.test.js` (every falls, down and not back up, the steps both ways), `test/phones.test.js` (filming, running instead, the descriptor, tougher players, trains), `test/barriers.test.js` (the deck drawn open at a smashed piece and only there).
