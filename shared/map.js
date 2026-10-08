@@ -609,6 +609,7 @@ function buildCity(seed) {
   buildBanking(m);
   buildGangHQs(m);
   buildTackleShops(m);
+  buildGunShops(m);
   buildPaintShops(m);
   buildMotorPools(m);
   buildCornerStores(m);
@@ -3519,6 +3520,46 @@ function buildTackleShops(m) {
     c.kind = 'tackle'; c.label = `Hook & Line Bait - ${DISTRICTS[distOf(c)].name}`;
     const b = m.buildings[c.b];
     if (b) for (const s of b.signs) if (s.text === old) s.text = 'Bait & Tackle';
+  }
+}
+
+// Gun shops (2026-10-08: one wasn't enough): storefronts spread round the world so one is never far - each picked
+// as far as it can be from every gun shop already there (farthest-point picking), at most one per district, none in
+// the rough of a gang's turf, a walk-in front with room for a counter. Up to GUN_SHOPS in all, none nearer than
+// GUN_GAP px to another.
+const GUN_SHOPS = 11, GUN_GAP = 2400;
+const GUN_NAMES = ['Lock & Load Arms', 'Bullseye Gun Supply', 'Steel Sight Firearms', 'Hollow Point Outfitters', 'Ranger Arms Depot', 'Copper Jacket Guns', 'Long Shot Firearms', 'Brass Casing Gun Shop', 'Six Shooter Supply', 'Iron Range Arms', 'Northwind Firearms', 'Canyon Creek Guns'];
+function buildGunShops(m) {
+  const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
+  const have = m.pois.filter((p) => p.kind === 'gunshop');
+  const cands = m.pois.filter((p) => {
+    if (p.kind !== 'delivery' || p.b === undefined || p.fixed) return false;
+    const b = m.buildings[p.b], d = DISTRICTS[distOf(p)];
+    if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || !d || d.turf) return false;
+    return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theatre|playhouse|station|club|bar|cannery|freight|salvage|pool|records/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar/.test(b.kind || '');
+  });
+  cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 41) - hash2(b.x | 0, b.y | 0, 41));
+  const used = new Set(have.map(distOf));
+  let n = 0;
+  while (have.length < GUN_SHOPS) {
+    let best = null, bd = GUN_GAP;
+    for (const c of cands) {
+      if (used.has(distOf(c)) || c.kind !== 'delivery') continue;
+      let d = Infinity;
+      for (const g of have) d = Math.min(d, Math.hypot(g.x - c.x, g.y - c.y));
+      if (d > bd) { bd = d; best = c; }
+    }
+    if (!best) break;
+    const old = best.label;
+    best.kind = 'gunshop'; best.label = GUN_NAMES[n++ % GUN_NAMES.length];
+    const b = m.buildings[best.b];
+    if (b) {
+      let signed = false;
+      for (const sg of b.signs) if (sg.text === old) { sg.text = best.label; signed = true; }
+      // (a front with no sign of its own gets one over the door, so it reads as a gun shop from the street)
+      if (!signed && b.prefab >= 0) { const south = m.prefabs[b.prefab].rot === 0; b.signs.push({ x: best.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: best.label }); }
+    }
+    used.add(distOf(best)); have.push(best);
   }
 }
 

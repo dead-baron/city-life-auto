@@ -139,7 +139,7 @@ export function buildMenu(world, p, poi) {
   const shopKey = kind === 'vending' ? 'vending' : kind;
   const shop = kind === 'smuggler' && !gang.isMember(p) ? null : SHOPS[shopKey];
   if (shop && kind !== 'dealer' && kind !== 'marina' && kind !== 'garage' && kind !== 'clothing') {
-    title = shop.title;
+    title = kind === 'gunshop' ? poi.label : shop.title;   // (the gun shops round the world: each its own name)
     for (const o of shop.buy) {
       if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));
       else if (o.kind === 'ammo') { const an = WEAPONS[o.id].ammoName; opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: an ? `${an[0].toUpperCase()}${an.slice(1)} x${o.qty}` : `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? `need the ${WEAPONS[o.id].name}` : `have ${prof.weapons[o.id]}` }); }

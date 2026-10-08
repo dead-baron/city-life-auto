@@ -417,3 +417,22 @@ test('a lap of the Stadium Lido against the clock: push off the wall, the rope a
   teleport(w, p.ped, pool.x + 120, pool.y - 40); run(w, 0.2);
   assert.equal(p.lap, null, 'climbed out: the lap is off');
 });
+
+test('gun shops: spread round the world, each a walk-in with its own name over the counter', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const shops = w.map.pois.filter((q) => q.kind === 'gunshop');
+  assert.ok(shops.length >= 9, `${shops.length} gun shops`);
+  for (let i = 0; i < shops.length; i++) for (let j = i + 1; j < shops.length; j++) {
+    const a = shops[i].outside || shops[i], b = shops[j].outside || shops[j];
+    assert.ok(Math.hypot(a.x - b.x, a.y - b.y) > 2000, `${shops[i].label} and ${shops[j].label} are spread apart`);
+  }
+  assert.equal(new Set(shops.map((q) => q.label)).size, shops.length, 'each its own name');
+  for (const s of shops) {
+    const b = w.map.buildings[s.b];
+    assert.ok(b.walkIn && b.walkIn.units.some((u) => u.poi === s.id), `${s.label} is a walk-in`);
+    const m = economy.buildMenu(w, p, s);
+    assert.equal(m.title, s.label);
+    assert.ok(m.opts.some((o) => o.id.startsWith('w:pistol')), 'sells pistols');
+  }
+});

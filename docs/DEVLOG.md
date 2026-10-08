@@ -3557,3 +3557,10 @@ The user's report (Pixel 7 Pro, Medium): travelling round, new places show their
 - **Ultra is untouched:** nothing here lowers the quality of any tier; it changes when and in what order chunks are baked.
 - **The simulation** (scratchpad policy sim, 4 workers at 1.4 s a bake, 790 px/s): east and west keep up; north and south still fall behind at a sports car's top speed until the pull-back eases off. A further bake-speed pass will follow the real devices' reports.
 - **Tests:** `test/art2.test.js` (the planner); the full suite. version.json's art hash changes with the bake code, so every browser bakes its chunks afresh once.
+
+## 2026-10-08 · Gun shops round the world
+- **Eleven gun shops** instead of one (`shared/map.js` `buildGunShops`). Each is picked as far as it can be from every gun shop already there, one per district at most, none on a gang's turf.
+  - **Where:** Stadium District, The Pink Mile (Iron Sights Arms), North Point, Northshore, Westport Center, Old Town, Old Quarter, Midtown, Falls Center on Cedar Isle, Highland Woods and the Dry Creek Desert.
+  - **What they are:** retail fronts only (no diners, bars or arcades). Each is a walk-in with a counter and a clerk, its own name on the sign and over the counter, and the full gun shop stock.
+- **On the map and the phone** like the first one (the G icon; Phone → Shops).
+- **Tests:** `test/business.test.js`: spread apart (over 2,000 px between any two), each a walk-in, each menu titled with its own name.
