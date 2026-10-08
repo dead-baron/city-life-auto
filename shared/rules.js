@@ -159,6 +159,31 @@ export const COVER_SIGHT = 0.45;     // ...and on foot in thick trees or rocks, 
 export const WILD_COOL = 1.8;        // out of sight in the wilds, heat cools this many times faster
 export const WILD_UNITS = 1;         // ...and once they've lost you, no more cars join the search beyond this many
 
+// Witnesses by who and where (server/systems/law.js witnesses; design notes 2026-10-07): how likely someone who saw a
+// crime is to call it in. Who they are: the executive, the senior and the socialite pick up the phone, a casual
+// passer-by half the time, the hustler almost never (drunks and gang members never do; the police always do).
+export const WITNESS_REPORT = {
+  executive: 0.9, socialite: 0.85, senior: 0.95, medic: 0.75, farmer: 0.7, hiker: 0.65, casual: 0.6, camper: 0.6,
+  athlete: 0.55, sweeper: 0.5, construction: 0.45, nomad: 0.2, hustler: 0.08,
+};
+// Where it happens (the district's wealth tier): in the rich parts of town people are watchful and quick to call; in
+// the rough parts most look away, see less (WITNESS_SIGHT) - and the police are fewer and further off (POLICE_UNITS,
+// POLICE_FAR: the units sent, and how far away they set out from)
+export const WITNESS_TIER = { lux: 1.35, suburb: 1.15, mid: 1, rural: 1, wild: 1, neon: 0.75, industrial: 0.7, low: 0.6, red: 0.5, rough: 0.4 };
+export const WITNESS_SIGHT = { lux: 1.15, suburb: 1.05, mid: 1, rural: 1, wild: 1, neon: 0.9, industrial: 0.85, low: 0.85, red: 0.8, rough: 0.75 };
+export const POLICE_UNITS = { lux: 1.25, suburb: 1.1, mid: 1, rural: 1, wild: 1, neon: 0.85, industrial: 0.8, low: 0.75, red: 0.65, rough: 0.5 };
+export const POLICE_FAR = { lux: 0.85, suburb: 0.95, mid: 1, rural: 1, wild: 1, neon: 1.1, industrial: 1.15, low: 1.2, red: 1.25, rough: 1.4 };
+// The victim calls it in at least this often, wherever they are; a person's own disposition shifts their odds this much
+// either way (npc.snitch, 1 - WITNESS_SPREAD .. 1 + WITNESS_SPREAD)
+export const VICTIM_REPORT = 0.55;
+export const WITNESS_SPREAD = 0.3;
+// Players who saw a crime aren't counted as witnesses: they're told, and can call it in from the phone for a while.
+// One squad car comes to where they are and looks for that suspect: still about in the same clothes, they're it.
+export const SAW_S = 60;                 // how long a crime you saw can be called in
+export const REPORT_COOLDOWN_S = 90;     // one call per player this often
+export const REPORT_SEARCH_S = 45;       // the unit looks round the caller this long
+export const REPORT_SPOT_PX = 360;       // ...and knows the suspect when it has them in sight this close
+
 // Spray & Go paint shops
 export const PAINT_PRICE = 150;      // a new colour (no repairs)
 export const PAINT_TIME_S = 3.5;     // shutter down this long while they spray

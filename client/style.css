@@ -354,6 +354,9 @@ body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
 .ph-row.pfocus, .ph-app.pfocus { border-color: #fff; outline: 2px solid #fff; }
 .ph-card { margin: 10px 0; padding: 10px; border-radius: 12px; background: #1f2636; border-left: 3px solid #4fd6ff; font-size: 13px; }
 .ph-card.job { border-left-color: #ffd400; }
+.ph-card.saw { border-left-color: #ff5a4a; }
+.ph-card.saw small { display: block; margin-top: 3px; opacity: .75; font-size: 12px; }
+.ph-card.saw em { display: block; margin-top: 6px; font-style: normal; color: #7fe07f; font-weight: 600; }
 .ph-card button { display: block; margin-top: 8px; width: 100%; padding: 7px; border-radius: 8px; border: 1px solid #ff5a4a; background: rgba(255,90,74,.15); color: #fff; font: 600 13px Rubik, sans-serif; cursor: pointer; }
 .ph-hint, .ph-empty { color: #8a90a2; font-size: 12.5px; margin: 6px 2px; }
 body.portrait #phone { justify-content: center; padding: 0; }

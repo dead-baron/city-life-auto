@@ -77,6 +77,7 @@ test('silenced pistol: a kill nobody watches goes unreported (a loud one is hear
     victim.grit = 1; victim.hp = victim.maxHp = 100; // an ordinary person, one shot (a survivor would report you)
     const bystander = spawnNpc(w, 'casual', p.ped.x - 150, p.ped.y, 'civ');
     bystander.a = Math.PI; bystander.npc.state = 'idle'; bystander.npc.until = w.time + 99; // looking the other way
+    bystander.npc.snitch = 9; // ...and the sort to call it in if they hear it (who does: test/witnesses.test.js)
     for (let i = 0; i < 6 && !victim.dead; i++) { p.ped.nextAttack = 0; combat.tryAttack(w, p.ped, 0); }
     assert.ok(victim.dead);
     restore();

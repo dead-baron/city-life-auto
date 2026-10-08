@@ -42,7 +42,10 @@ export function createPhone(ctx) {
     if (screen === 'home') {
       const wp = ctx.waypoint();
       const job = board && board.job;
+      // crimes you saw (server law.js sawCrime): a minute to call each one in
+      const saw = (board && board.saw) || [];
       el.innerHTML = `
+        ${saw.map((q) => `<div class="ph-card saw"><b>You saw: ${esc(q.label)}</b> by ${esc(q.name)}<small>${esc(q.desc)}</small>${q.done ? '<em>Called in</em>' : `<button data-report="${q.id}">📞 Call it in (${q.left}s)</button>`}</div>`).join('')}
         <div class="ph-apps">
           <button class="ph-app" data-go="places"><b>📍</b>Places</button>
           <button class="ph-app" data-go="jobs"><b>💼</b>Jobs${ctx.isCop() ? ' & patrols' : ''}</button>
@@ -108,6 +111,7 @@ export function createPhone(ctx) {
       ctx.close();
     };
     for (const b of el.querySelectorAll('[data-take]')) b.onclick = () => ctx.send({ t: 'phone', a: 'take', id: b.dataset.take });
+    for (const b of el.querySelectorAll('[data-report]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'report', id: b.dataset.report }); };
     for (const b of el.querySelectorAll('[data-act="cancel"]')) b.onclick = () => ctx.send({ t: 'phone', a: 'cancel' });
     for (const b of el.querySelectorAll('[data-act="clearwp"]')) b.onclick = () => { ctx.setWaypoint(null); render(); };
   }

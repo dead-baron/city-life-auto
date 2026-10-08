@@ -14,26 +14,30 @@ import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
+// sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT)
 export const CRIMES = {
-  assault:     { heat: 15, label: 'Assault' },
-  copAssault:  { heat: 40, label: 'Assaulting an officer', felony: true },
-  murder:      { heat: 45, label: 'Murder', felony: true },
-  copMurder:   { heat: 90, label: 'Killing an officer', felony: true },
-  vehKill:     { heat: 40, label: 'Vehicular homicide', felony: true },
-  hitrun:      { heat: 15, label: 'Hit and run' },
-  brandish:    { heat: 6,  label: 'Shots fired' },
-  theft:       { heat: 10, label: 'Vehicle theft' },
-  policeTheft: { heat: 25, label: 'Stealing a police vehicle', felony: true },
-  carjack:     { heat: 25, label: 'Carjacking', felony: true },
-  cargoTheft:  { heat: 15, label: 'Cargo theft' },
-  ram:         { heat: 8,  label: 'Reckless ramming' },
-  possession:  { heat: 20, label: 'Contraband possession' },
-  poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true },
-  robbery:     { heat: 30, label: 'Armed robbery', felony: true },
-  trainRobbery: { heat: 50, label: 'Train robbery', felony: true },
+  assault:     { heat: 15, label: 'Assault', sev: 1 },
+  copAssault:  { heat: 40, label: 'Assaulting an officer', felony: true, sev: 1.3 },
+  murder:      { heat: 45, label: 'Murder', felony: true, sev: 1.5 },
+  copMurder:   { heat: 90, label: 'Killing an officer', felony: true, sev: 2 },
+  vehKill:     { heat: 40, label: 'Vehicular homicide', felony: true, sev: 1.4 },
+  hitrun:      { heat: 15, label: 'Hit and run', sev: 1.1 },
+  brandish:    { heat: 6,  label: 'Shots fired', sev: 1.2 },
+  theft:       { heat: 10, label: 'Vehicle theft', sev: 0.85 },
+  policeTheft: { heat: 25, label: 'Stealing a police vehicle', felony: true, sev: 1.2 },
+  carjack:     { heat: 25, label: 'Carjacking', felony: true, sev: 1.3 },
+  cargoTheft:  { heat: 15, label: 'Cargo theft', sev: 0.85 },
+  ram:         { heat: 8,  label: 'Reckless ramming', sev: 0.7 },
+  possession:  { heat: 20, label: 'Contraband possession', sev: 1 },
+  poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true, sev: 1 },
+  robbery:     { heat: 30, label: 'Armed robbery', felony: true, sev: 1.5 },
+  trainRobbery: { heat: 50, label: 'Train robbery', felony: true, sev: 1.5 },
 };
 
-import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL } from '../../shared/rules.js';
+import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
+  WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, REPORT_COOLDOWN_S } from '../../shared/rules.js';
+import { hash2 } from '../../shared/rng.js';
+import { PAINTS } from '../../shared/vehicles.js';
 export { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, SERVICE_AMMO, SUBDUE_S, POLICE_RANKS };
 
 // How far the police can spot a wanted suspect at (x, y), as a share of their town range (420 px):
@@ -112,11 +116,19 @@ function isFlagged(world, ped) {
 }
 
 // ---------------------------------------------------------------------------
-export function witnesses(world, x, y, perp, victim, loud = false) {
+// Who saw it, and who calls it in. With a crime (its CRIMES key), not everyone who sees it reports it (design notes
+// 2026-10-07): the police always do; anyone else by who they are (WITNESS_REPORT), where it happened (the district's
+// wealth: WITNESS_TIER - in the rough parts most look away, and see less: WITNESS_SIGHT), how bad it was (sev) and
+// their own disposition (npc.snitch); the victim more likely than a bystander. Players who see it aren't counted:
+// they're told and can call it in from the phone (res.saw: sawCrime / reportSaw). Without a crime (a paint shop
+// asking if anyone's looking), everyone who sees counts. count: who reported it; seen: who saw it.
+export function witnesses(world, x, y, perp, victim, loud = false, crime = null) {
   const night = world.clock.isNight;
-  const pedRange = 300 * (night ? 0.55 : 1);   // GDD: night narrows witness cones
+  const tier = crime ? world.map.districtAt(x, y).tier || 'mid' : 'mid';
+  const pedRange = 300 * (night ? 0.55 : 1) * (WITNESS_SIGHT[tier] ?? 1);   // GDD: night narrows witness cones
   const camFactor = night ? 0.75 : 1;           // GDD: camera radii -25% at night
-  const res = { count: 0, cop: false, cam: false };
+  const res = { count: 0, seen: 0, cop: false, cam: false, saw: [] };
+  const seq = crime ? (world.crimeSeq = (world.crimeSeq || 0) + 1) : 0;
   for (const e of world.query(x, y, Math.max(pedRange, 420), K.PED)) {
     if (e === perp || e.dead || e.pet || e.wild || (e.npc && e.npc.blind)) continue; // blind: the clerk being robbed doesn't count as a witness (nor do animals)
     if (!!e.sub !== !!(perp && perp.sub)) continue; // nobody up on the street sees into the subway (or vice versa)
@@ -131,6 +143,9 @@ export function witnesses(world, x, y, perp, victim, loud = false) {
       if (!facing && !(loud && d < 220) && e !== victim) continue;
     }
     if (!sameTrain(e, perp) && !world.map.los(e.x, e.y, x, y)) continue;
+    res.seen++;
+    if (crime && e.player) { if (e.player !== (perp && perp.player)) res.saw.push(e.player); continue; }
+    if (crime && e.npc && !cop && !reports(e, e === victim, tier, CRIMES[crime] ? CRIMES[crime].sev : 1, seq)) continue;   // saw it, kept quiet
     res.count++;
     if (cop) res.cop = true;
   }
@@ -139,10 +154,86 @@ export function witnesses(world, x, y, perp, victim, loud = false) {
     const d = Math.hypot(c.x - x, c.y - y);
     if (d <= c.r * camFactor && world.map.los(c.x, c.y, x, y)) {
       res.cam = true; res.count++;
+      if (c.sec) res.secCam = true;
       world.emit(c.x, c.y, { e: 'camera', id: c.id });
     }
   }
   return res;
+}
+
+// Does this person call it in? (the same answer for the same person and crime, whatever else is going on)
+function reports(e, victim, tier, sev, seq) {
+  const n = e.npc, snitch = n.snitch ?? 1 + (hash2(e.id, 7, 4242) - 0.5) * 2 * WITNESS_SPREAD;
+  const base = (WITNESS_REPORT[n.archetype] ?? 0.5) * (WITNESS_TIER[tier] ?? 1) * sev;
+  const p = (victim ? Math.max(VICTIM_REPORT, base * 1.4) : base) * snitch;
+  return hash2(e.id, seq, 4091) < p;
+}
+
+// ---- players who see a crime ---------------------------------------------------------------------------------------
+// A player who sees one isn't counted as a witness: they're told, with a description of who did it (their clothes,
+// the car if they were in one), and for SAW_S they can call it in from the phone (reportSaw). The call sends one squad
+// car to where they are (police.js reportUnit), which looks for that suspect only: still about in the same clothes
+// (or the same car), the officer knows them - stars by what they did, and the chase is on. A change of clothes throws
+// it off; one call per REPORT_COOLDOWN_S per player.
+const COLOURS = [['black', [24, 24, 28]], ['white', [236, 236, 236]], ['grey', [128, 128, 132]], ['red', [200, 38, 43]], ['maroon', [122, 29, 36]], ['orange', [239, 122, 26]],
+  ['yellow', [242, 194, 27]], ['green', [47, 154, 58]], ['teal', [37, 184, 192]], ['blue', [35, 80, 200]], ['navy', [29, 42, 90]], ['purple', [122, 58, 200]],
+  ['pink', [224, 74, 154]], ['brown', [107, 74, 42]], ['beige', [216, 196, 152]]];
+export function colourName(hex) {
+  let s = String(hex || '#888').replace('#', ''); if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+  const n = parseInt(s, 16) || 0, r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  let best = 'grey', bd = Infinity;
+  for (const [name, [R, G, B]] of COLOURS) { const d = (r - R) ** 2 + (g - G) ** 2 + (b - B) ** 2; if (d < bd) { bd = d; best = name; } }
+  return best;
+}
+// what someone is wearing, as a witness would put it, and the key a match is made on
+export const outfitKey = (ped) => { const a = ped.app || {}; return [a.t, a.tc, a.l, a.ht || 0, a.ht ? a.htc : ''].join('|'); };
+function looks(world, ped) {
+  const a = ped.app || {}, v = ped.vehId ? world.get(ped.vehId) : null;
+  let d = `${colourName(a.tc)} top, ${colourName(a.l)} trousers${a.ht ? `, a ${colourName(a.htc)} hat` : ''}`;
+  if (v && v.def) d += ` - in a ${colourName(PAINTS[v.paint] || '#888')} ${String(v.def.name || 'car').toLowerCase()}`;
+  return { desc: d, key: outfitKey(ped), veh: v && v.def ? `${v.def.id}|${v.paint}` : null };
+}
+function sawCrime(world, q, perpP, type, x, y) {
+  if (!q.ped || q.ped.dead) return;
+  const now = world.time, L = looks(world, perpP.ped);
+  q.saw = (q.saw || []).filter((s) => now - s.at < SAW_S && s.suspect !== perpP.pid);   // (the latest of what one person did)
+  q.saw.push({ id: (world.sawSeq = (world.sawSeq || 0) + 1), type, label: CRIMES[type].label, suspect: perpP.pid, name: perpP.name, ...L, x: Math.round(x), y: Math.round(y), at: now });
+  if (q.saw.length > 3) q.saw.shift();
+  world.notify(q, `You saw it: ${CRIMES[type].label.toLowerCase()} by ${perpP.name} (${L.desc}). Call it in from your phone within a minute.`, 'warn');
+  q.meDirty = true;
+}
+// the crimes a player saw that they can still call in
+export function sawList(world, p) {
+  const now = world.time;
+  p.saw = (p.saw || []).filter((s) => now - s.at < SAW_S);
+  return p.saw.map((s) => ({ id: s.id, label: s.label, name: s.name, desc: s.desc, left: Math.max(1, Math.round(SAW_S - (now - s.at))), done: !!s.reported }));
+}
+// calling it in: null, or why not
+export function reportSaw(world, p, id, police) {
+  const now = world.time, s = (p.saw || []).find((q) => q.id === Number(id));
+  if (!s || now - s.at >= SAW_S) return 'Too late to call that in now.';
+  if (s.reported) return 'You already called that in.';
+  if (now - (p.lastReportAt || -1e9) < REPORT_COOLDOWN_S) return `You called the police a moment ago - give it ${Math.ceil(REPORT_COOLDOWN_S - (now - p.lastReportAt))} s.`;
+  if (!p.ped || p.ped.dead) return 'Not right now.';
+  const sp = world.players.get(s.suspect);
+  if (sp && sp.wanted > 0) { s.reported = true; return null; }   // (they're already wanted: the police are on it)
+  s.reported = true;
+  p.lastReportAt = now;
+  police.reportUnit(world, p, { ...s, x: p.ped.x, y: p.ped.y });
+  world.notify(p, `911: "A unit is on its way to you. Stay where you are if you can."`, 'info');
+  p.meDirty = true;
+  return null;
+}
+// a unit found the suspect a player called in: they're wanted for it now
+export function calledIn(world, sp, call, caller) {
+  const spec = CRIMES[call.type];
+  if (!spec || !sp.ped) return;
+  if (spec.felony) sp.profile.felonies++;
+  addHeat(world, sp, spec.heat, sp.ped.x, sp.ped.y);
+  logDispatch(world, call.type, sp.ped.x, sp.ped.y, sp, sp.wanted, 'witness');
+  world.notify(sp, `${spec.label}: a witness called you in, and the police know your description!`, 'bad');
+  if (caller) { caller.profile.samaritan += 2; world.notify(caller, 'The police found the suspect you reported. +2 Samaritan', 'good'); caller.meDirty = true; }
+  store.touch();
 }
 
 // Riders in the same train car see each other whatever the street around them is doing.
@@ -192,16 +283,17 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   if (victim && victim.player) victim.player.robbedBy.set(p.pid, now);
   store.touch();
   if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return; }
-  const w = witnesses(world, x, y, ped, victim, (type === 'brandish' || type === 'murder') && !opts.quiet);
+  const w = witnesses(world, x, y, ped, victim, (type === 'brandish' || type === 'murder') && !opts.quiet, type);
+  for (const q of w.saw) sawCrime(world, q, p, type, x, y);
   if (w.count === 0) {
-    if (now - (p.lastSilentMsg || 0) > 6) { p.lastSilentMsg = now; world.notify(p, `${spec.label} - nobody saw it.`, 'info'); }
+    if (now - (p.lastSilentMsg || 0) > 6) { p.lastSilentMsg = now; world.notify(p, `${spec.label} - ${w.seen ? 'people saw, but nobody is calling it in.' : 'nobody saw it.'}`, 'info'); }
     p.meDirty = true;
     return;
   }
   if (spec.felony) p.profile.felonies++; // only crimes someone saw go on your record
   addHeat(world, p, spec.heat, x, y);
   logDispatch(world, type, x, y, p, p.wanted, w.cam ? 'camera' : w.cop ? 'officer' : 'witness');
-  world.notify(p, `${spec.label} reported${w.cam ? ' by a traffic camera' : w.cop ? ' by police' : ''}!`, 'bad');
+  world.notify(p, `${spec.label} reported${w.cam ? (w.secCam ? ' by a security camera' : ' by a traffic camera') : w.cop ? ' by police' : ''}!`, 'bad');
 }
 
 export function addHeat(world, p, amount, x, y) {

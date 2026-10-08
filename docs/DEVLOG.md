@@ -3370,3 +3370,25 @@ The second stage of reworking roads laid out by rule rather than for a place (pl
   - Tonight's sight is the same for everyone each night: Saturn, Jupiter with its Great Red Spot and four moons, the Moon, the Orion Nebula, the Andromeda galaxy, or now and then a comet.
   - By day the telescopes are capped. Walking off ends the view.
 - **Tests**: `test/campfires.test.js` (lighting, sitting and healing, getting up, putting it out, everyone told, the fire coming back, cooking over a fire you lit, a hit getting you up, the observatory by day and by night).
+
+## 2026-10-07 · Witnesses by who and where; calling in a crime you saw
+
+From the design notes (playtest: "a high income NPC in a high-income part of the city is way more likely to witness and report a crime than a low-income NPC in a low-income part of the city... the bad parts of town have less cops... the high-income part of the city has a few clearly visible security cameras").
+
+- **Not everyone who sees a crime calls it in** (`law.js` `witnesses`, `reports`). The police always do. Anyone else calls it in by:
+  - **who they are** (`rules.js` `WITNESS_REPORT`): seniors, executives and socialites nearly always pick up the phone; a casual passer-by about half the time; construction workers and sweepers less; the hustler almost never; drunks and gang members never;
+  - **where it happens** (`WITNESS_TIER`, by the district's wealth): in the rich districts people are watchful (and see further: `WITNESS_SIGHT`); in the rough ones most look away and see less;
+  - **how bad it was** (`CRIMES` `sev`): a murder, a robbery or a carjacking gets called in more than a stolen car or a ram;
+  - **their own disposition** (a little different person to person), and the victim calls more often than a bystander.
+  - The same person makes the same choice about the same crime, whatever else is going on.
+  - When people saw it but nobody calls, you're told so: "people saw, but nobody is calling it in".
+- **The police follow the money** (`police.js` `dispatch`, `spawnPoint`): fewer squad cars set out from further off in the rough parts of town (half as many in the roughest), more and closer in the rich ones (`POLICE_UNITS`, `POLICE_FAR`).
+- **Security cameras in the rich districts** (`map.js` `buildCameras`): a few camera poles on the pavement outside banks, shops and cash machines in Downtown, Bayside Heights, Westport Center, Lakeview, The Bluffs and the Lake District (20 in all). They report what they see like the junction cameras ("reported by a security camera").
+- **Players who see a crime call it in themselves** (`law.js` `sawCrime`, `reportSaw`; `police.js` `reportUnit`):
+  - A player who sees a crime isn't an automatic report any more. They're told what they saw, who did it and what they look like ("red top, blue trousers - in a white sedan").
+  - For a minute the phone's home screen offers to call it in.
+  - The call sends one squad car, no siren, to where the caller is, about 15-20 seconds later. It cruises round looking for that suspect only.
+  - If the suspect is in sight and close, in the same clothes (or the same car they were seen in), the officer knows them: they get the stars for what they did, and the usual chase starts. The caller earns 2 Samaritan points.
+  - A change of clothes throws the officer off. After 45 seconds of looking the car drives off, and the caller is told.
+  - No abuse: only crimes you saw, one call every 90 seconds, and a car that looks for nobody else.
+- **Tests**: `test/witnesses.test.js` (rich and rough streets, the executive and the hustler, the police always reporting, fewer cars in the rough parts, security cameras only in the rich districts, calling it in and the match by clothes, a change of clothes, one call at a time, too late after a minute).

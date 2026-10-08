@@ -10,6 +10,8 @@ import { store } from '../store.js';
 import * as jobs from './jobs.js';
 import * as events from './events.js';
 import { spawnNpc } from './npc.js';
+import * as law from './law.js';
+import * as police from './police.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -150,7 +152,7 @@ export function boardFor(world, p) {
   const farm = p.ped ? nearestFarm(world, p) : world.map.pois.find((q) => q.kind === 'farm');
   const list = (world.jobBoard || []).filter((j) => j.kind === 'delivery' || (j.kind === 'patrol' && p.badge)).map((j) => describe(world, j));
   if (farm) list.push({ id: 'farm', kind: 'farm', pay: 4 * 140 + 200, title: 'Harvest contract at ' + farm.label, x: farm.x, y: farm.y });
-  return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null };
+  return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null, saw: law.sawList(world, p) };
 }
 
 export function handle(world, p, msg) {
@@ -165,6 +167,10 @@ export function handle(world, p, msg) {
   if (a === 'take') {
     const err = take(world, p, msg.id);
     return { ...boardFor(world, p), err: err || null, ok: !err };
+  }
+  if (a === 'report') {   // calling in a crime you saw (law.js reportSaw)
+    const err = law.reportSaw(world, p, msg.id, police);
+    return { ...boardFor(world, p), err: err || null };
   }
   return null;
 }

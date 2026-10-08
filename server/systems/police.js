@@ -14,7 +14,7 @@ import * as vehicles from './vehicles.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
-import { WILD_UNITS } from '../../shared/rules.js';
+import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX } from '../../shared/rules.js';
 
 const rng = mulberry32(911);
 
@@ -24,6 +24,7 @@ export function update(world, dt) {
   world.police ??= new Set();
   if (world.tick % 20 === 7) dispatch(world);
   if (world.npcCalls && world.npcCalls.length && world.tick % 10 === 3) npcCalls(world);
+  if (world.witnessCalls && world.witnessCalls.length && world.tick % 10 === 6) witnessCalls(world);
   for (const vid of [...world.police]) {
     const v = world.get(vid);
     if (!v) { world.police.delete(vid); continue; }
@@ -39,7 +40,9 @@ function dispatch(world) {
     const have = units.get(p.pid) || 0;
     // lying low out in the wilds: once they've lost you, the cars already out keep searching but no more are sent
     const lost = world.time - p.seenAt > 3 && !!wildStyle(world.map, p.ped.x, p.ped.y);
-    if (have >= (lost ? Math.min(WILD_UNITS, unitsWanted(p.wanted)) : unitsWanted(p.wanted))) continue;
+    // police presence follows wealth: fewer cars in the rough parts of town, more in the rich ones (rules.js POLICE_UNITS)
+    const want = Math.max(1, Math.round(unitsWanted(p.wanted) * (POLICE_UNITS[tierAt(world, p.ped.x, p.ped.y)] ?? 1)));
+    if (have >= (lost ? Math.min(WILD_UNITS, want) : want)) continue;
     spawnUnit(world, p);
   }
 }
@@ -56,10 +59,12 @@ export function respondTo(world, p, x, y, count = 3) {
 // widens; if still nothing, no unit this time (dispatch tries again in a second).
 const AHEAD_COS = 0.5;  // within 60 degrees of a fleeing suspect's heading counts as ahead
 const FLEE_SPEED = 150; // px/s: slower than this nobody is fleeing anywhere in particular
+const tierAt = (world, x, y) => world.map.districtAt(x, y).tier || 'mid';
 function spawnPoint(world, p, tx, ty, o) {
   const m = world.map;
   const wild = !o.at && !!wildStyle(m, p.ped.x, p.ped.y);
-  const minD = o.minD || (wild ? 1300 : 750), maxD = o.maxD || (wild ? 2600 : 1400), clear = o.clearPx || (wild ? 1100 : 650);
+  const far = o.minD ? 1 : POLICE_FAR[tierAt(world, tx, ty)] ?? 1;   // (help is further off in the rough parts of town)
+  const minD = o.minD || (wild ? 1300 : 750) * far, maxD = o.maxD || (wild ? 2600 : 1400) * far, clear = o.clearPx || (wild ? 1100 : 650);
   const f = p.ped.vehId ? world.get(p.ped.vehId) || p.ped : p.ped;
   const fvx = f.vx || 0, fvy = f.vy || 0, fsp = Math.hypot(fvx, fvy);
   for (const [lo, hi] of [[minD, maxD], [maxD, maxD * 1.6], [maxD * 1.6, maxD * 2.4]]) {
@@ -187,13 +192,80 @@ function runNpcUnit(world, v, crew, dt) {
   }
 }
 
+// ---- a crime a player saw and called in (law.js reportSaw) -----------------------------------------------------------
+// A few seconds after the call one squad car comes to where the caller was, no siren, and looks round for the suspect
+// they described: in sight and close enough, in the same clothes (or the same car they were seen in), and the officer
+// knows them (law.calledIn: stars by what they did) - from there it's the usual chase. Nobody matching about for
+// REPORT_SEARCH_S after it gets there, and it drives off. It never goes after anyone else.
+const CALL_DELAY_S = 8;
+export function reportUnit(world, caller, saw) {
+  (world.witnessCalls ||= []).push({ at: world.time + CALL_DELAY_S, caller: caller.pid, suspect: saw.suspect, type: saw.type, key: saw.key, veh: saw.veh, x: saw.x, y: saw.y });
+}
+function witnessCalls(world) {
+  const now = world.time, keep = [];
+  for (const c of world.witnessCalls) {
+    if (c.at > now) { keep.push(c); continue; }
+    const caller = world.players.get(c.caller);
+    const n = spawnPoint(world, { ped: caller && caller.ped ? caller.ped : { x: c.x, y: c.y } }, c.x, c.y, { at: { x: c.x, y: c.y }, minD: 600, maxD: 1200, clearPx: 420 });
+    if (!n) { if (now - c.at < 20) keep.push(c); continue; }   // (nowhere out of sight to come from yet: in a moment)
+    const v = world.spawnVehicle('police', n.x + 32, n.y + 32, Math.atan2(c.y - n.y, c.x - n.x), {});
+    v.despawnable = false;
+    for (let i = 0; i < 2; i++) {
+      const cop = spawnNpc(world, 'cop', v.x, v.y, 'cop');
+      cop.npc.unit = v.id; cop.vehId = v.id; cop.seat = i; v.seats[i] = cop.id;
+      armCop(cop, 1, false);
+    }
+    v.ai = { kind: 'police', target: null, call: { ...c, arrived: 0 }, mode: 'drive', route: null, routeAt: 0, swat: false, since: now };
+    world.police.add(v.id);
+  }
+  world.witnessCalls = keep;
+}
+// does this unit see the suspect it was called about?
+function spots(world, v, call, crew) {
+  const sp = world.players.get(call.suspect), t = sp && sp.ped;
+  if (!t || t.dead || t.hidden || !!t.sub) return null;
+  const car = t.vehId ? world.get(t.vehId) : null;
+  const match = car ? !!call.veh && `${car.def.id}|${car.paint}` === call.veh : law.outfitKey(t) === call.key;
+  if (!match) return null;
+  const eyes = [v, ...crew.filter((c) => !c.vehId)];
+  return eyes.some((e) => Math.hypot(t.x - e.x, t.y - e.y) < REPORT_SPOT_PX && world.map.los(e.x, e.y, t.x, t.y)) ? sp : null;
+}
+function runCallUnit(world, v, crew, dt) {
+  const ai = v.ai, call = ai.call, now = world.time;
+  v.sirenOn = false;
+  const caller = world.players.get(call.caller);
+  if (world.tick % 10 === v.id % 10) {
+    const sp = spots(world, v, call, crew);
+    if (sp) {
+      law.calledIn(world, sp, call, caller);
+      ai.call = null; ai.target = sp.pid; v.sirenOn = true;   // (the usual chase from here: runUnit)
+      return;
+    }
+  }
+  if (!call.arrived && Math.hypot(call.x - v.x, call.y - v.y) < 260) call.arrived = now;
+  if (v.wreckAt || (call.arrived && now - call.arrived > REPORT_SEARCH_S) || now - ai.since > REPORT_SEARCH_S + 60) {
+    if (caller && !call.told) { call.told = true; world.notify(caller, '911: "The officer took a look round but couldn\'t see anyone matching your description."', 'info'); }
+    standDown(world, v, crew, dt);
+    return;
+  }
+  // drive to the caller, then cruise slowly round the spot looking
+  const driver = v.seats[0] ? world.get(v.seats[0]) : null;
+  if (!driver) { standDown(world, v, crew, dt); return; }
+  const a = now * 0.35 + v.id, r = call.arrived ? 220 : 0;
+  const kx = call.x + Math.cos(a) * r, ky = call.y + Math.sin(a) * r;
+  if (!ai.route || now - ai.routeAt > 3) { ai.route = planRoute(world, v.x, v.y, kx, ky); ai.routeAt = now; }
+  while (ai.route.length > 1 && Math.hypot(ai.route[0].x - v.x, ai.route[0].y - v.y) < 60) ai.route.shift();
+  const wp = ai.route[0] || { x: kx, y: ky };
+  driveToward(world, v, wp.x, wp.y, call.arrived ? 160 : 420, {});
+}
+
 function runUnit(world, v, dt) {
   const ai = v.ai;
   if (!ai || ai.kind !== 'police') { world.police.delete(v.id); v.despawnable = true; return; }
-  if (ai.npcTarget) {
+  if (ai.npcTarget || ai.call) {
     const crew = [];
     for (const e of world.entities.values()) if (e.kind === K.PED && e.npc && e.npc.unit === v.id && !e.dead) crew.push(e);
-    runNpcUnit(world, v, crew, dt);
+    if (ai.call) runCallUnit(world, v, crew, dt); else runNpcUnit(world, v, crew, dt);
     return;
   }
   const now = world.time;

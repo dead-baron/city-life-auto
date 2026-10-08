@@ -4597,6 +4597,23 @@ function buildCameras(m, rand) {
     if ((d === 4 || d === 1) && inD.length > 2) picks.push(inD[Math.floor(rand() * inD.length)]);
   }
   for (const n of picks) m.cameras.push({ id: m.cameras.length, x: n.x + Math.min(n.half, 200) + 20, y: n.y - Math.min(n.half, 200) - 20, r: 300 });
+  // security cameras in the rich districts (design notes: "a few clearly visible security cameras"): a pole on the
+  // pavement before a bank, a shop or a cash machine, a few to a district and spread out, watching the street; they
+  // report what they see like the junction cameras (their own numbers: nothing else moves for them)
+  const sr = mulberry32(m.seed ^ 0x5ecc), SEC = new Set(['bank', 'coffee', 'clothing', 'convenience', 'pharmacy', 'atm', 'delivery']);
+  for (let d = 0; d < DISTRICTS.length; d++) {
+    if (!DISTRICTS[d] || DISTRICTS[d].tier !== 'lux') continue;
+    const cands = m.pois.filter((q) => SEC.has(q.kind) && m.districtAt(q.x, q.y).id === d && m.zoneAt(q.x, q.y) !== Z.GULL);
+    for (let k = cands.length - 1; k > 0; k--) { const j = Math.floor(sr() * (k + 1)); [cands[k], cands[j]] = [cands[j], cands[k]]; }
+    let n = 0;
+    for (const q of cands) {
+      if (n >= 4) break;
+      const x = q.x + 22, y = q.y + 44;
+      if (m.cameras.some((c) => Math.hypot(c.x - x, c.y - y) < 14 * TILE)) continue;
+      m.cameras.push({ id: m.cameras.length, x, y, r: 240, sec: true });
+      n++;
+    }
+  }
   // toll cameras: a gantry over the road at each end of every long road bridge
   for (const e of m.edges) {
     if (!e.bridge || e.lvl !== 0) continue;
