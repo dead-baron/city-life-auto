@@ -3771,3 +3771,11 @@ The rest of the user's morning list.
   - `test/happenings.test.js`: break up a fight; a fight left alone ends with nobody dead; help someone up; someone who collapsed comes round; hand a wallet back; variety, never the same twice running; lost pets rarer, owners far off.
   - `test/covers.test.js`: covers only in town; the ground draws a cover at every spot on the list and nowhere else.
 - Concept targets: the user's chosen character creator, wardrobe, NPC and shop sheets filed as `docs/art-v2/targets/` CC1–CC6, NP1–NP4 and ST1–ST4. The first set is kept in `targets/alt/` for variety.
+
+## 2026-10-08 · The minimap top-left everywhere; the menu buttons back at the top on phones; give one weapon from the debug menu
+From the user's UI notes (the rest waits for the UI overhaul) and a debug-menu note.
+- **The minimap is top-left on every device** (`client/style.css`). On a computer it was bottom-left: it now sits top-left with the health and stamina bars under it, and the help box and the toasts sit beside it.
+- **The round menu buttons are back at the top on a phone held upright:** a row across the top of the screen. The minimap, the cash column, ITEMS, the flashlight and the help lines move down under them. Held sideways, they were already at the top.
+- **The DEV pill is gone.** On phones it sat on top of the menu buttons. The 🐞 among the menu buttons opens the debug menu on every device.
+- **Debug menu: give one weapon or tool** (`client/devgive.js` `buildQuickGive`): a row right under "Give every weapon + tools". Pick any weapon (with two magazines) or tool, choose who gets it (you, or anyone online), then Give. The full Give panel (any item, any amount) is still under it.
+- Checked in a page on a computer, a phone held sideways and a phone held upright: giving a katana and a revive kit works.

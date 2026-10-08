@@ -69,3 +69,40 @@ export function buildGive(box, { send, press, players }) {
   refreshTargets();
   return { refreshTargets };
 }
+
+// The quick row under "Give every weapon + tools": one weapon or tool, to you or anyone online, in one press - the
+// same give as the full panel (two magazines with a gun). Returns { refreshTargets }.
+export function buildQuickGive(box, { send, press, players }) {
+  box.innerHTML = '';
+  const row = document.createElement('div'); row.className = 'dev-qg';
+  const what = document.createElement('select'); what.title = 'A weapon or a tool';
+  const weapons = Object.values(WEAPONS).filter((w) => w.id !== 'fists').sort((a, b) => a.i - b.i);
+  const og = document.createElement('optgroup'); og.label = 'Weapons';
+  for (const w of weapons) og.appendChild(new Option(w.name + (w.police ? ' (police)' : ''), `weapon:${w.id}`));
+  what.appendChild(og);
+  const ot = document.createElement('optgroup'); ot.label = 'Tools & equipment';
+  for (const id of Object.keys(ITEMS).filter((k) => itemCat(k) === 'tools')) ot.appendChild(new Option(ITEMS[id].name, `item:${id}`));
+  what.appendChild(ot);
+  const to = document.createElement('select'); to.title = 'Who gets it';
+  const go = document.createElement('button'); go.className = 'dev-qg-go'; go.textContent = '🔫 Give';
+  press(go, 'Give one', () => {
+    const [kind, id] = what.value.split(':');
+    if (id) send({ t: 'dev', c: 'give', kind, id, n: kind === 'weapon' ? 2 : 1, pid: to.value || undefined });
+  });
+  row.append(what, to, go);
+  box.appendChild(row);
+  let sig = null;
+  function refreshTargets() {
+    const others = players().filter((q) => !q.me && q.id);
+    const s = others.map((q) => q.id + ':' + q.n).join('|');
+    if (s === sig) return;
+    sig = s;
+    const keep = to.value;
+    to.innerHTML = '';
+    to.add(new Option('to me', ''));
+    for (const q of others) to.add(new Option('to ' + q.n, q.id));
+    to.value = [...to.options].some((o) => o.value === keep) ? keep : '';
+  }
+  refreshTargets();
+  return { refreshTargets };
+}

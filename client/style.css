@@ -57,9 +57,10 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 
 /* GTA help box (context prompt) */
-#helpbox { position: absolute; left: max(16px, env(safe-area-inset-left)); top: 14px; max-width: min(380px, 44vw); background: rgba(0,0,0,.8); border-radius: 3px; padding: 10px 14px; font-size: 18px; font-weight: 600; line-height: 1.35; display: flex; align-items: center; gap: 10px; animation: hin .18s ease-out; }
+/* (to the right of the minimap, which sits top-left on every device) */
+#helpbox { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 14px; max-width: min(380px, 44vw); background: rgba(0,0,0,.8); border-radius: 3px; padding: 10px 14px; font-size: 18px; font-weight: 600; line-height: 1.35; display: flex; align-items: center; gap: 10px; animation: hin .18s ease-out; }
 @keyframes hin { from { opacity: 0; transform: translateY(-6px); } }
-#toasts { position: absolute; left: max(16px, env(safe-area-inset-left)); top: 76px; width: min(380px, 44vw); display: flex; flex-direction: column; gap: 5px; }
+#toasts { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 76px; width: min(380px, 44vw); display: flex; flex-direction: column; gap: 5px; }
 .toast { background: rgba(0,0,0,.72); border-left: 4px solid #888; padding: 7px 11px; font-size: 15px; font-weight: 600; line-height: 1.25; animation: tin .2s ease-out; }
 .toast.good { border-color: var(--good); } .toast.bad { border-color: var(--bad); } .toast.warn { border-color: var(--warn); } .toast.info { border-color: #6aa6ff; }
 @keyframes tin { from { transform: translateX(-20px); opacity: 0; } }
@@ -71,8 +72,8 @@ body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 .touch #cruiser-hint { bottom: auto; top: 76px; font-size: 13px; max-width: 40vw; }
 body.portrait.touch #cruiser-hint { top: auto; bottom: 330px; max-width: 86vw; }
 
-/* radar + vitals (bottom left) */
-#radar-wrap { position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: 14px; width: 170px; pointer-events: auto; }
+/* radar + vitals (top left, on every device) */
+#radar-wrap { position: absolute; left: max(16px, env(safe-area-inset-left)); top: 14px; width: 170px; pointer-events: auto; }
 #radar { width: 170px; height: 170px; border-radius: 50%; border: 4px solid #000; box-shadow: 0 0 0 2px rgba(255,255,255,.25), 0 4px 14px rgba(0,0,0,.6); background: #111; display: block; cursor: pointer; }
 #vitals { display: flex; gap: 4px; margin-top: 6px; }
 .vbar { position: relative; height: 9px; flex: 1; background: rgba(0,0,0,.6); border: 2px solid #000; overflow: hidden; }
@@ -244,7 +245,7 @@ body.touch #weapon { pointer-events: auto; cursor: pointer; }
 #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 182px); top: 10px; width: 84px; height: 30px; border-radius: 15px; font-size: 11px; background: rgba(40,70,190,.75); }
 #tbtns .cruiser.cooling { background: rgba(0,0,0,.5); color: #aab; }
 body:not(.can-call) #tbtns .cruiser { display: none; }
-#dev-btn { top: 8px; left: calc(50% + 72px); width: 50px !important; height: 34px !important; border-radius: 8px !important; font-size: 11px !important; }
+#dev-btn { display: none !important; }   /* (the 🐞 in the round menu buttons opens the debug menu on every device) */
 #tbtns .veh { display: none; }
 body.in-veh #tbtns .dive .foot { display: none; } body.in-veh #tbtns .dive .veh { display: inline; }
 body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.armed) #tbtns .reload { display: none; }
@@ -295,17 +296,19 @@ body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.arm
 body.portrait.touch #hud-tr { max-width: 46vw; }
 body.portrait.touch #money { font-size: 24px; }
 body.portrait.touch #weapon { display: none; }
-body.portrait.touch #helpbox, body.portrait.touch #toasts { left: max(10px, env(safe-area-inset-left)); top: 200px; max-width: 80vw; width: auto; }
-body.portrait.touch #toasts { top: 250px; width: 80vw; }
+body.portrait.touch #helpbox, body.portrait.touch #toasts { left: max(10px, env(safe-area-inset-left)); top: 282px; max-width: 80vw; width: auto; }
+body.portrait.touch #toasts { top: 332px; width: 80vw; }
 body.portrait.touch #job { top: auto; bottom: 300px; max-width: 86vw; }
 body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
 body.portrait.touch #tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 154px); bottom: 172px; }   /* (just above FIRE) */
-body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: 160px; }
-body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: 160px; }
+body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: 206px; }
+body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: 206px; }
 body.portrait.touch #helpbox, body.portrait.touch #toasts { margin-left: 0; }
 /* the round buttons (menu, phone, bag...) can't sit between the radar and the cash on a phone held upright (an
    iPhone: 390 px wide): they go on the right, under the cash and the stars */
-body.portrait.touch #hud-btns { left: auto; right: max(8px, env(safe-area-inset-right)); top: 150px; transform: none; }
+body.portrait.touch #hud-btns { left: 50%; right: auto; top: 6px; transform: translateX(-50%); }
+body.portrait.touch #radar-wrap { top: 50px; }
+body.portrait.touch #hud-tr { top: 48px; }
 body.portrait.touch #zone-l { top: 50%; width: 50%; }
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: 64px; } #district { font-size: 34px; } }
 
@@ -590,11 +593,16 @@ body.portrait #spec { width: 210px; font-size: 14px; }
 #tbtns .light { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 46px; width: 52px; height: 30px; border-radius: 15px; font-size: 15px; }
 #tbtns .light.lit { background: rgba(255,228,140,.85); border-color: #fff; }
 body:not(.has-light) #tbtns .light, body.in-veh #tbtns .light { display: none; }
-body.portrait.touch #tbtns .light { left: max(10px, env(safe-area-inset-left)); top: 196px; }
+body.portrait.touch #tbtns .light { left: max(10px, env(safe-area-inset-left)); top: 242px; }
 #inv .inv-use.lit { background: #8a6a12; border-color: #ffd23e; }
 
 /* dev give menu (client/devgive.js) */
 #dev .dev-give-toggle { background: #3a2a5c !important; border-color: #9a7ae0 !important; margin: 2px 0 4px; }
+#dev #dev-qg .dev-qg { display: flex; gap: 6px; margin: 2px 0 6px; }
+#dev #dev-qg select { flex: 1; min-width: 0; background: #222; color: #fff; border: 1px solid #555; padding: 4px; font: 600 13px Rubik, sans-serif; }
+#dev #dev-qg select:last-of-type { flex: 0 0 34%; }
+#dev #dev-qg select.pfocus { outline: 2px solid #f2c21b; }
+#dev #dev-qg .dev-qg-go { flex: 0 0 auto; background: #1f5f3a; border-color: #3ddc84; }
 #dev #dev-give { padding: 4px 0 8px; border-bottom: 1px solid #333; margin-bottom: 6px; }
 #dev #dev-give label { display: flex; align-items: center; gap: 8px; margin-top: 4px; font: 600 12px Rubik, sans-serif; color: #ccc; }
 #dev #dev-give label span { flex: 0 0 70px; }

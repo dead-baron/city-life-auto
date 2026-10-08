@@ -31,7 +31,7 @@ import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev
 import { initAudio, sfx } from './audio.js';
 import { drawStarView } from './stargaze.js';
 import { noteServerBuild, myBuild } from './update.js';
-import { buildGive } from './devgive.js';
+import { buildGive, buildQuickGive } from './devgive.js';
 import { DEV_SECTIONS } from './devcats.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
@@ -1040,6 +1040,9 @@ function setupDev() {
   const add = (label, cls, run) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; if (run) devPress(b, label, run); cmds.appendChild(b); return b; };
   // 1. weapons and tools, one press; anything else to anyone from the give panel under it
   add('🔫 Give every weapon + tools', 'dev-top', () => send({ t: 'dev', c: 'guns' }));
+  // ...or just one: pick a weapon or tool and who gets it (you, or anyone online)
+  const qgBox = document.createElement('div'); qgBox.id = 'dev-qg'; cmds.appendChild(qgBox);
+  S.devQuickGive = buildQuickGive(qgBox, { send, press: devPress, players: () => (S.plist && S.plist.l) || [] });
   const giveBtn = add('🎁 Give anything to me or a player…', 'dev-give-toggle');
   const giveBox = document.createElement('div'); giveBox.id = 'dev-give'; giveBox.className = 'hidden'; cmds.appendChild(giveBox);
   S.devGive = buildGive(giveBox, { send, press: devPress, players: () => (S.plist && S.plist.l) || [] });
@@ -1094,6 +1097,7 @@ function setupDev() {
 }
 function renderDevPlayers() {
   if (S.devGive) S.devGive.refreshTargets(); // the give menu's "give to" list
+  if (S.devQuickGive) S.devQuickGive.refreshTargets();
   const el = $('dev-players');
   if (!el) return;
   const all = (S.plist && S.plist.l) || [];
