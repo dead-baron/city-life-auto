@@ -37,9 +37,10 @@ import { ITEMS, drawItem, itemSpan } from './items.js';
 const EL = 35 * Math.PI / 180, CA = Math.cos(EL), SA = Math.sin(EL), S0 = 400;
 const LT = (() => { const v = [-0.6, 0.38, 0.7], l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; })();
 export const PERSON_CAM = { elevation: 35, zScale: CA };          // world px of height per model unit = zScale
-// seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car
-export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9 };
-export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2,
+// seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car, the ground
+// (by a campfire, knees up)
+export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3 };
+export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2, sitlow: 2,
   // hit reactions: a stagger (0-1 knocked back, 2-3 shoved forward), a limp, crawling on the stomach, down on the face or the
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
   stagger: 4, limp: 6, crawl: 4, downF: 2, downB: 2, deadF: 1, deadS: 1 };
@@ -462,9 +463,9 @@ function rig(D, A, pose, f, kind, acc) {
       P.elR = [1, 0, -0.2]; P.elL = [-1, 0, -0.2]; P.openL = P.openR = 1;
     };
     P.root = rx(1.32);
-  } else if (pose === 'ride' || pose === 'pedal' || pose === 'sit' || pose === 'drive') {
+  } else if (pose === 'ride' || pose === 'pedal' || pose === 'sit' || pose === 'drive' || pose === 'sitlow') {
     const seat = SEATS[pose] / CA;
-    P.acc = false; P.pel = [0, pose === 'sit' ? -0.6 : -1.6, seat + 3.7];
+    P.acc = false; P.pel = [0, pose === 'sit' || pose === 'sitlow' ? -0.6 : -1.6, seat + 3.7];
     if (pose === 'ride') {
       P.lean = 0.42; P.headPitch = -0.12;
       P.fL = [-4.8, 3.2, seat - 10.5]; P.fR = [4.8, 3.2, seat - 10.5]; P.kneeL = [-0.5, 1, 0.6]; P.kneeR = [0.5, 1, 0.6];
@@ -475,6 +476,14 @@ function rig(D, A, pose, f, kind, acc) {
       P.fL = [-2.8, cy + 3.6 * Math.cos(a), cz + 3.6 * Math.sin(a) + D.ank]; P.fR = [2.8, cy - 3.6 * Math.cos(a), cz - 3.6 * Math.sin(a) + D.ank];
       P.kneeL = P.kneeR = [0, 1, 0.5];
       P.hands = (S) => { P.hL = [-4.6, 11.4, seat + 9]; P.hR = [4.6, 11.4, seat + 9]; P.elL = [-1, -0.3, -0.4]; P.elR = [1, -0.3, -0.4]; };
+    } else if (pose === 'sitlow') {
+      // on the ground by a fire, knees drawn up: arms resting on the knees (0), or leaning in, hands out to the warmth (1)
+      P.lean = f ? 0.34 : 0.1; P.headPitch = f ? 0.12 : 0.04;
+      P.fL = [-D.hipX - 0.8, 6.2, D.ank]; P.fR = [D.hipX + 0.8, 6.0, D.ank]; P.kneeL = [-0.2, 0.5, 1]; P.kneeR = [0.2, 0.5, 1];
+      P.hands = (S) => {
+        if (f) { P.hL = [-2.4, 12.4, seat + 9.6]; P.hR = [2.4, 12.4, seat + 9.9]; P.openL = P.openR = 1; } else { P.hL = [-3.4, 6.8, seat + 10.2]; P.hR = [3.4, 6.8, seat + 10.2]; }
+        P.elL = [-1, -0.3, -0.2]; P.elR = [1, -0.3, -0.2];
+      };
     } else if (pose === 'sit') {
       P.lean = f ? 0.48 : -0.04; P.headPitch = f ? 0.15 : 0;
       P.fL = [-D.hipX - 0.9, 7.8, D.ank]; P.fR = [D.hipX + 0.9, 7.6, D.ank]; P.kneeL = P.kneeR = [0, 1, 0.8];
@@ -1286,7 +1295,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS'].includes(pn)) kind = null;
+  if (['carry', 'handsup', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS'].includes(pn)) kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A), P = rig(D, A, pn, f, kind, acc);

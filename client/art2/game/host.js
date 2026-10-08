@@ -1672,21 +1672,21 @@ export class World2 {
   }
 
   // ---- the world changing under the bakes ---------------------------------------------------------------------
-  // A prop smashed or put back (main.js setPropBroken / propfix): every worker's copy of the world learns
-  // it and the chunks it shows in are baked again (the old bake stays up until the new one lands).
+  // A prop smashed or put back (main.js setPropBroken / propfix), a campfire lit or put out (setFire): every worker's
+  // copy of the world learns it and the chunks it shows in are baked again (the old bake stays up until the new one lands).
   propChanged(i) {
     const p = this.map.props[i];
     if (!p) return;
-    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: [[i, p.broken ? { a: p.broken.a || 0 } : null]] });
+    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: [[i, p.broken ? { a: p.broken.a || 0 } : null]], ...(p.t === 'campfire' ? { lit: [[i, p.lit ? 1 : 0]] } : null) });
     // its screen footprint: standing up to ~320 px above its ground point, debris round it
     for (let cy = Math.floor((p.y - 320) / CHUNK); cy <= Math.floor((p.y + 40) / CHUNK); cy++)
       for (let cx = Math.floor((p.x - 120) / CHUNK); cx <= Math.floor((p.x + 120) / CHUNK); cx++) { const k = cy * 1000 + cx; this.ver.set(k, (this.ver.get(k) || 0) + 1); }
   }
   // after a reconnect: the server's list of what is broken replaces the workers' and everything rebakes
   resync() {
-    const list = [], props = this.map.props || [];
-    for (let i = 0; i < props.length; i++) if (props[i].broken) list.push([i, { a: props[i].broken.a || 0 }]);
-    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: list, reset: true });
+    const list = [], lit = [], props = this.map.props || [];
+    for (let i = 0; i < props.length; i++) { if (props[i].broken) list.push([i, { a: props[i].broken.a || 0 }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
+    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: list, lit, reset: true });
     for (const k of this.chunkState.keys()) this.ver.set(k, (this.ver.get(k) || 0) + 1);
   }
 

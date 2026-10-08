@@ -3,6 +3,9 @@
 //     out over the desert for everyone near;
 //   - the coin telescope at the end of Westport Pier: a dollar, and your view swings out over the bay to the seals
 //     on their islets for a few seconds (the camera only: you stay where you are);
+//   - stargazing at the Granite Peak Observatory: after dark, two dollars at either telescope on its terrace and you see
+//     the night sky through the eyepiece a few seconds - tonight's sight (the same for everyone that night: a planet,
+//     the Moon, a nebula, a galaxy, now and then a comet). By day the telescopes are capped;
 //   - work spots: strip the Dry Creek Boneyard's stored airliners for parts (component scrap: the yard office by the
 //     gate buys it), chip at the Old Granite Mine's seams with the old pick (quartz, and now and then a gold nugget),
 //     search the shipwreck on Wreck Island (an old doubloon now and then). Stand there, press the action button and
@@ -17,7 +20,21 @@ import { isSwimming } from '../../shared/map.js';
 import { ITEMS } from '../../shared/items.js';
 import { SALVAGE_S, SALVAGE_REGROW_S, SALVAGE_REACH, PROSPECT_S, PROSPECT_REGROW_S, PROSPECT_GOLD, WRECK_S, WRECK_REGROW_S, WRECK_COIN, MAZE_PRIZE, LAP_PRIZE } from '../../shared/rules.js';
 import { store } from '../store.js';
+import { TILE, DAY_LOOP_S } from '../../shared/constants.js';
 const BELL_REACH = 48, BELL_RING_S = 6, SCOPE_REACH = 40, SCOPE_S = 7, SCOPE_PRICE = 1, WORK_MOVE_PX = 14;
+const STARS_S = 9, STARS_PRICE = 2;
+// what the observatory's telescopes are pointed at, night by night (client stargaze.js draws each; the comet is rare)
+export const SKY_SIGHTS = [
+  ['saturn', 'Saturn, its rings tipped toward you, and a moon or two beside it.'],
+  ['jupiter', 'Jupiter, banded cream and rust, the Great Red Spot, four little moons in a line.'],
+  ['moon', 'The Moon, so close you can see the craters along the shadow line.'],
+  ['nebula', 'The Orion Nebula: a cloud of glowing gas where new stars are being born.'],
+  ['galaxy', 'Andromeda: a whole other galaxy, a smudge of light two and a half million years old.'],
+  ['saturn', 'Saturn again tonight - the rings never get old.'],
+  ['moon', 'The Moon, bright enough to make your eye water.'],
+  ['comet', 'A comet! Its tail streams away from the Sun across half the eyepiece.'],
+];
+export const skySight = (world) => SKY_SIGHTS[Math.floor(world.time / DAY_LOOP_S) % SKY_SIGHTS.length];
 
 function site(map, key, find) {
   if (map[key] === undefined) Object.defineProperty(map, key, { value: (map.natureSites || []).find(find) || null, enumerable: false, configurable: true });
@@ -27,6 +44,14 @@ const mission = (map) => site(map, '_mission', (q) => q.kind === 'mission');
 const pier = (map) => site(map, '_pier', (q) => q.kind === 'pier' && q.scope);
 const boneyard = (map) => site(map, '_boneyard', (q) => q.kind === 'boneyard' && q.stored);
 const maze = (map) => site(map, '_maze', (q) => q.kind === 'maze' && q.rect);
+// the Granite Peak Observatory's telescopes (the scope props on its terrace)
+function obsScopes(map) {
+  if (map._obsScopes) return map._obsScopes;
+  const s = (map.countrySites || []).find((q) => q.type === 'observatory');
+  const out = s ? map.props.filter((p) => p && p.t === 'scope' && p.x >= s.x * TILE && p.x <= (s.x + s.w) * TILE && p.y >= s.y * TILE && p.y <= (s.y + s.h) * TILE) : [];
+  Object.defineProperty(map, '_obsScopes', { value: out, enumerable: false, configurable: true });
+  return out;
+}
 
 // ---- work spots: stand there, press the action button and work at it a few seconds (standing still); then it's
 // done for a while (shared by everyone). The boneyard's stored airliners (beside a fuselage), the Old Granite Mine's
@@ -74,6 +99,10 @@ export function interaction(world, p) {
   if (ms && Math.hypot(ped.x - ms.door.x, ped.y - ms.door.y) < BELL_REACH) return { label: 'Ring the mission bells', run: () => ringBells(world, p) };
   const pr = pier(world.map);
   if (pr && Math.hypot(ped.x - pr.scope.x, ped.y - pr.scope.y) < SCOPE_REACH) return { label: `Look through the telescope ($${SCOPE_PRICE})`, run: () => lookOut(world, p) };
+  if (obsScopes(world.map).some((q) => Math.hypot(ped.x - q.x, ped.y - q.y) < SCOPE_REACH)) {
+    if (!world.clock.isNight) return { label: 'The telescope is capped till dark', run: () => world.notify(p, 'The observatory\'s telescopes open after dark. Come back tonight.', 'info') };
+    return { label: `Look at the stars ($${STARS_PRICE})`, run: () => stargaze(world, p) };
+  }
   const i = spotNear(world, ped.x, ped.y);
   if (i >= 0) {
     const W = WORK[workSpots(world.map)[i].kind], bare = doneFor(world, i);
@@ -90,6 +119,17 @@ export function lookOut(world, p) {
   if (!payFrom(p, SCOPE_PRICE)) { world.notify(p, 'The telescope takes a dollar.', 'warn'); return false; }
   if (p.conn) p.conn.sendJSON({ t: 'look', x: pr.scope.look.x, y: pr.scope.look.y, s: SCOPE_S });
   world.notify(p, 'Clunk. Out on the islets the seals are hauled out in the sun.', 'good');
+  p.meDirty = true;
+  return true;
+}
+
+// the observatory: the night sky through the eyepiece for STARS_S seconds (moving cuts it short)
+export function stargaze(world, p) {
+  if (!world.clock.isNight) { world.notify(p, 'The telescopes are capped till dark.', 'info'); return false; }
+  if (!payFrom(p, STARS_PRICE)) { world.notify(p, `The observatory's telescopes take $${STARS_PRICE}.`, 'warn'); return false; }
+  const [what, text] = skySight(world);
+  if (p.conn) p.conn.sendJSON({ t: 'stars', what, s: STARS_S, seed: Math.floor(world.time / DAY_LOOP_S) });
+  world.notify(p, text, 'good');
   p.meDirty = true;
   return true;
 }

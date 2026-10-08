@@ -72,10 +72,10 @@ export const DEV_SECTIONS = [
   ] },
   { id: 'homes', title: '🏠 Homes', items: [['🏠 Nearest home', 'near', { k: 'home' }]] },
   { id: 'nature', title: '🌲 Nature & landmarks', items: [
-    ['🌿 Next nature place', 'near', { k: 'nature' }], ['⛺ Campground', 'near', { k: 'camp' }], ['💧 Waterfall', 'near', { k: 'falls' }],
+    ['🌿 Next nature place', 'near', { k: 'nature' }], ['⛺ Campground', 'near', { k: 'camp' }], ['🔥 Campfire (light it, sit by it)', 'near', { k: 'campfire' }], ['💧 Waterfall', 'near', { k: 'falls' }],
     ['🌴 Canyon oasis', 'near', { k: 'oasis' }], ['🦀 Tidepools', 'near', { k: 'tidepools' }], ['🔥 Bonfire beach', 'near', { k: 'bonfire' }],
     ['🔭 Fire lookout', 'near', { k: 'lookout' }], ['🦢 Heron Marsh', 'near', { k: 'marsh' }], ['🌸 Botanical gardens', 'near', { k: 'gardens' }],
-    ['⛏ Old mine', 'near', { k: 'mine' }], ['🔭 Observatory', 'near', { k: 'observatory' }], ['🪨 Quarry', 'near', { k: 'quarry' }],
+    ['⛏ Old mine', 'near', { k: 'mine' }], ['🔭 Observatory', 'near', { k: 'observatory' }], ['🔭 Stargazing telescope (after dark)', 'near', { k: 'stargaze' }], ['🪨 Quarry', 'near', { k: 'quarry' }],
     ['🌬 Wind farm', 'near', { k: 'wind' }], ['🛢 Oil field', 'near', { k: 'oil' }], ['☀ Solar farm', 'near', { k: 'solar' }],
     ['⛽ Roadside stop', 'near', { k: 'stop' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }], ['🌳 Lakeview Park', 'near', { k: 'park' }],
     ['🛶 Pine Lake camp', 'near', { k: 'lakecamp' }], ['🏊 Stadium Lido (pool)', 'near', { k: 'pool' }], ['🏞 Cedar Creek', 'near', { k: 'towncreek' }], ['⚓ Wreck Island', 'near', { k: 'wreck' }], ['🌿 Bluffs Maze Garden', 'near', { k: 'maze' }], ['♨ Granite Hot Springs', 'near', { k: 'springs' }], ['🌊 Splash Canyon Water Park', 'near', { k: 'waterpark' }], ['🪵 Driftwood Point', 'near', { k: 'coastfalls' }], ['🏀 North Point Courts', 'near', { k: 'courts' }], ['🎣 Westport Pier', 'near', { k: 'pier' }], ['🍇 Willow River Vineyard', 'near', { k: 'vineyard' }], ['⛳ Cedar Hills Golf Club', 'near', { k: 'golf' }], ['🍎 Willow River Orchard', 'near', { k: 'orchard' }], ['🦭 Seal Islets', 'near', { k: 'seals' }], ['🎈 Dry Creek Balloon Field', 'near', { k: 'balloons' }], ['⛪ Old Mission Ruins', 'near', { k: 'mission' }], ['🌿 Fern Gorge', 'near', { k: 'gorge' }], ['🗿 The Sentinel Stones', 'near', { k: 'stones' }], ['🧺 Old Town Market', 'near', { k: 'market' }], ['✈ Dry Creek Boneyard', 'near', { k: 'boneyard' }], ['💜 Cedar Point Lavender', 'near', { k: 'lavender' }],

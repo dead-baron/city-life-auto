@@ -36,7 +36,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 |---|---|---|---|
 | Move / steer | WASD | Left stick (RT gas, LT brake in cars) | Left stick |
 | Aim / attack | Mouse / left click | Right stick (full deflection auto-fires) / RT | Right stick (push far to fire) |
-| Interact (shops and the countryside counters, crates, loot, arrest, fishing, picking fruit at the orchard and the vineyard, cutting lavender, stripping the boneyard's planes for parts, chipping for gold at the old mine, searching the shipwreck, ringing the old mission's bells, the pier's coin telescope, the Ferris wheel, balloon flights and the Splash Canyon water slides, teeing off at the golf club) | E | B | E |
+| Interact (shops and the countryside counters, crates, loot, arrest, fishing, picking fruit at the orchard and the vineyard, cutting lavender, stripping the boneyard's planes for parts, chipping for gold at the old mine, searching the shipwreck, ringing the old mission's bells, the pier's coin telescope, stargazing at the observatory after dark, the Ferris wheel, balloon flights and the Splash Canyon water slides, teeing off at the golf club) | E | B | E |
 | Enter / exit vehicle | F | X | CAR |
 | Sprint | Shift | Push the left stick all the way | Push the left thumb all the way |
 | Dive roll / handbrake (in a car: e-brake skid turn / drift; held with gas = burnout, + steer = donuts) | Space | A | ROLL / BRAKE |
@@ -55,6 +55,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Field dress a carcass (a Hunting Knife takes the hide off whole) / cook raw meat at a lit campfire / sell game, make clothing at a trapper's bench | E | B | ACT |
 | Blades: slash with a knife, a sword (pawn shops) or a katana (the fence). A killing blow is now and then a finishing stab or slash; the plasma blade cuts clean through and now and then turns a bullet aside | Left click | RT | FIRE |
 | Speak to the hooded stranger (rare: at night, somewhere quiet in the wilds; he sells the plasma blade) | E | B | ACT |
+| Light a campfire / sit by a lit one to warm up and heal (any step gets you up) / sitting, put it out | E | B | ACT |
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
 | Stuck? Get unstuck (stand still 5 s, not wanted, not just after a fight) / Surrender (tap twice: respawn, or turn yourself in when wanted) | Esc → Stuck? / Surrender | Start → Stuck? / Surrender | ☰ → Stuck? / Surrender |
 | Players online (names, roles, districts) | Esc → Players online, or M → Players online | Start → Players online | ☰ → Players online |

@@ -29,6 +29,7 @@ import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx } from './audio.js';
+import { drawStarView } from './stargaze.js';
 import { noteServerBuild, myBuild } from './update.js';
 import { buildGive } from './devgive.js';
 import { DEV_SECTIONS } from './devcats.js';
@@ -177,6 +178,8 @@ function onText(m) {
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
       S.forageGone = new Set(m.forage || []);
+      S.map.props.forEach((p, i) => { if (p.lit0 !== undefined && !!p.lit !== p.lit0) setFire(i, p.lit0, false); });
+      for (const [i, lit] of m.fires || []) setFire(i, lit, false);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       if (S.art2) S.art2.resync(); // (back in after a reconnect: the art v2 bakes follow the server's broken props)
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
@@ -204,6 +207,7 @@ function onText(m) {
       break;
     case 'menu': S.hud.openMenu(m); break;
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
+    case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; break;   // (the observatory: the night sky through the eyepiece)
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'board': phone.onBoard(m); break;
     case 'feed': phone.onFeed(m); break;
@@ -388,6 +392,21 @@ function fixedStep() {
 
 // ---------------------------------------------------------------------------
 // Events from the server
+// A campfire lit or put out (server campfires.js): the prop and every renderer's copy of it follow; lit0 keeps how the map
+// laid it out, for a reconnect
+function setFire(i, lit, withFx) {
+  const p = S.map.props[i];
+  if (!p || p.t !== 'campfire') return;
+  if (p.lit0 === undefined) p.lit0 = !!p.lit;
+  if (!!p.lit === !!lit) return;
+  p.lit = lit ? 1 : 0;
+  S.ground.invalidateAt(p.x, p.y);
+  if (S.art2) S.art2.propChanged(i);
+  if (!withFx) return;
+  const fx = S.fx, v = distVol(p.x, p.y);
+  if (lit) { fx.sparks(p.x, p.y - 4, 8); fx.ring(p.x, p.y, 18, 'rgba(255,170,70,', 0.4); sfx('ignite', v); }
+  else { for (let k = 0; k < 6; k++) fx.smoke(p.x + (Math.random() - 0.5) * 16, p.y - 4 + (Math.random() - 0.5) * 8, false); sfx('douse', v); }
+}
 function setPropBroken(i, a, withFx) {
   const p = S.map.props[i];
   if (!p || p.broken) return;
@@ -663,6 +682,7 @@ function onEvent(ev) {
     }
     case 'barrierfix': for (const k of ev.k) S.map.levels.broken.delete(k); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
+    case 'fire': setFire(ev.i, ev.lit, true); break;
     case 'propfix': {
       const p = S.map.props[ev.i];
       S.confirmedBreaks.delete(ev.i); S.predBreaks.delete(ev.i);
@@ -2058,6 +2078,7 @@ function pedPose(e) {
   if (f & PF.ROLL) return 'roll';
   if (f & PF.FISHING) return e.d && e.d.ar === 'medic' ? 'kneel' : 'fish';
   if (f & PF.CARRY) return 'carry';
+  if (e.d && e.d.st && !(f & PF.MOVING)) return 'sitlow';   // sitting by a campfire (server campfires.js)
   const w = WEAPON_BY_INDEX[e.extra];
   const meleeW = w && w.type === 'melee';
   if (meleeW && e.swingAt !== undefined && S.loopClock - e.swingAt < SWING_TIME) return e.extra === 0 ? 'punch' : 'swing';
@@ -2583,6 +2604,12 @@ function drawOverlays(F, v2) {
   edgeWarn(edge && edge.d > 0 ? (edge.d > EDGE_SLOW ? 2 : 1) : 0);
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (S.stars) {   // at the observatory's eyepiece: the night sky a few seconds (walking off ends it)
+    const st = S.stars, t = (performance.now() - st.t0) / 1000;
+    if (st.px === null) { st.px = sp.x; st.py = sp.y; }
+    if (t > st.dur || Math.hypot(sp.x - st.px, sp.y - st.py) > 24) S.stars = null;
+    else drawStarView(g, canvas.width / DPR, canvas.height / DPR, st, t);
+  }
 
   // HUD bits
   const dist = S.map.districtAt(sp.x, sp.y);
@@ -3355,7 +3382,7 @@ function pedLook(p, now) {
   else if (pose === 'aim' && (p.as || 0) > 14) pose = 'aimw';   // walking while aiming: the legs stride, the gun stays up
   let fr = pose === 'move' || pose === 'carry' || pose === 'limp' || pose === 'aimw' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1
     : pose === 'stagger' ? (Math.cos((p.reactA || 0) - (p.ra || 0)) > 0.2 ? 2 : 0) + (rT > p.reactD * 0.45 ? 1 : 0)
-      : pose === 'crawl' ? Math.floor(now * 3.2 + p.id) % 4 : (pose === 'downF' || pose === 'downB') && tL > 0.55 ? 1 : 0;
+      : pose === 'crawl' ? Math.floor(now * 3.2 + p.id) % 4 : (pose === 'downF' || pose === 'downB') && tL > 0.55 ? 1 : pose === 'sitlow' ? Math.floor(now * 0.22 + p.id * 0.37) % 2 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   if (seqFr >= 0) fr = seqFr;
   const L = p._look || (p._look = {});
@@ -3458,7 +3485,7 @@ function drawPed(p, now) {
 }
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
-const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp']);
+const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow']);
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
 const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
@@ -3474,7 +3501,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;
   const d8 = dir8(p.ra + ((p._look && p._look.turn) || 0));   // (spun round as they go down: pedLook's turn)
   // concept-art body (all 8 directions drawn); the procedural painter until it has loaded
-  const kneel = pose === 'kneel';
+  const kneel = pose === 'kneel' || pose === 'sitlow';   // (sitting by a fire: drawn low like a kneel here)
   if (kneel) { pose = 'carry'; fr = 0; } // reaching both hands down to the patient
   const body = bodySprite(p.d.app, d8, pose, fr, p.extra);
   const [d, mirror0] = baseDir(d8);

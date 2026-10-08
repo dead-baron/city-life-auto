@@ -3353,3 +3353,20 @@ The second stage of reworking roads laid out by rule rather than for a place (pl
 - **Businesses keep their places**: each special business now draws from its own random numbers (`placeSpecials`). Before, one business that picked a different lot changed the numbers every later one got, so reworking one district's streets moved businesses all over the city. This version moves them once more; from now on a rework only moves the businesses of the district it touches. The Lake District's courts draw from their own numbers too.
 - **The ambulance crew gets out on the patient's side** (`vehicles.js` ejectPed `toward`): an ambulance parked across the pavement could leave both paramedics stuck behind it.
 - **World version 5** (`shared/constants.js`): homes bought before it are bought back at what was paid, and you start from a hospital, as with every rebuild.
+
+## 2026-10-07 · Campfires to sit by, and stargazing at the observatory
+
+- **Campfires** (`server/systems/campfires.js`; design notes: "light them or put them out. Sitting by one slowly heals you"):
+  - Every campfire on the map can be lit with the action button: at the campgrounds, the camps, the beach fires and the hunting camps.
+  - At a lit one, the action button sits you down on the ground facing it, knees up. Now and then you lean in with your hands out to the warmth (the new `sitlow` pose, `client/art2/people.js`).
+  - Sitting there heals 2 health a second, once you've been out of the fight for 5 seconds (`rules.js` `FIRE_HEAL`). Any step, a hit or getting into a car gets you up.
+  - Sitting there, the action button kicks dirt over it and the fire goes out.
+  - Everyone sees the same fires. A change goes out to all players as the `fire` event, and a joining player gets the list in the welcome. The art v2 workers rebake the chunk, and the fire's light follows.
+  - A fire someone lit burns down after 15 minutes, and a camp's fire that was put out is lit again by the campers after the same time.
+  - The meat cooks over any fire that is lit now, including one you lit yourself.
+  - Sounds: a match struck and the kindling catching, a hiss and the scuff of kicked dirt.
+- **Stargazing at the Granite Peak Observatory** (`places.js` `stargaze`, `client/stargaze.js`):
+  - After dark, $2 at either telescope on the terrace shows the night sky through the eyepiece for 9 seconds, in the game's pixel style: a field of twinkling stars, a band of the Milky Way, and tonight's sight in the middle.
+  - Tonight's sight is the same for everyone each night: Saturn, Jupiter with its Great Red Spot and four moons, the Moon, the Orion Nebula, the Andromeda galaxy, or now and then a comet.
+  - By day the telescopes are capped. Walking off ends the view.
+- **Tests**: `test/campfires.test.js` (lighting, sitting and healing, getting up, putting it out, everyone told, the fire coming back, cooking over a fire you lit, a hit getting you up, the observatory by day and by night).

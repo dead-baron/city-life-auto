@@ -79,6 +79,13 @@ export const ARMORED_VEHICLES = ['armored', 'swat'];
 export const SOAK_HEAL = 5;             // health per second while soaking
 export const SOAK_AFTER_HIT_S = 3;      // ...once you've been out of the fight this long
 
+// Campfires (server/systems/campfires.js): light one, sit by it and warm up; one someone lit or put out goes back the
+// way it was after a while (it burns down; the campers light theirs again)
+export const FIRE_REACH = 46;           // stand this close to light it or sit down by it
+export const FIRE_HEAL = 2;             // health per second while sitting by a lit fire...
+export const FIRE_AFTER_HIT_S = 5;      // ...once you've been out of the fight this long
+export const FIRE_BURN_S = 900;         // how long a change lasts
+
 // Wine (the winery, the golf club bar): health comes back this many times faster for WINE_S
 export const WINE_S = 120;
 export const WINE_REGEN = 2.5;

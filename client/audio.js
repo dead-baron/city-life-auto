@@ -107,6 +107,8 @@ export function sfx(name, vol = 1) {
     case 'slash': if (throttle('slash', 120)) { noise(0.2, 2600, 2.4, 0.3 * vol, 'bandpass'); setTimeout(() => noise(0.12, 900, 1, 0.5 * vol), 110); } break;
     case 'hum': if (throttle('hum', 140)) { tone(92, 0.32, 0.16 * vol, 'sawtooth', 60); tone(184, 0.28, 0.07 * vol, 'sine', 140); } break;
     case 'sear': if (throttle('sear', 90)) { noise(0.45, 4200, 0.7, 0.32 * vol, 'highpass'); tone(130, 0.22, 0.12 * vol, 'sawtooth', -50); } break;
+    case 'ignite': if (throttle('ignite', 300)) { noise(0.06, 3800, 1.2, 0.28 * vol, 'highpass'); setTimeout(() => { noise(0.7, 420, 0.7, 0.4 * vol, 'lowpass'); for (let k = 0; k < 5; k++) setTimeout(() => noise(0.03, 2600, 1.4, 0.12 * vol, 'bandpass'), 120 + k * 90); }, 90); } break;   // a match struck, the kindling catching, a crackle
+    case 'douse': if (throttle('douse', 300)) { noise(0.9, 3000, 0.5, 0.3 * vol, 'highpass'); setTimeout(() => { tone(90, 0.1, 0.18 * vol, 'sine', -30); setTimeout(() => tone(80, 0.1, 0.15 * vol, 'sine', -30), 160); }, 60); } break;   // dirt kicked over the embers: a hiss and two dull scuffs
     case 'zing': if (throttle('zing', 70)) { tone(2400, 0.18, 0.09 * vol, 'sine', -1500); noise(0.05, 3600, 1, 0.2 * vol, 'highpass'); } break;
     default: break;
   }

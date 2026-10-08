@@ -18,6 +18,7 @@ import * as jobs from './jobs.js';
 import * as picking from './picking.js';
 import * as foraging from './foraging.js';
 import * as hunting from './hunting.js';
+import * as campfires from './campfires.js';
 import * as wanderer from './wanderer.js';
 import * as places from './places.js';
 import * as rides from './rides.js';
@@ -487,6 +488,8 @@ export function findInteraction(world, p) {
   if (stranger) return stranger;
   const game = hunting.interaction(world, p);
   if (game) return game;
+  const fire = campfires.interaction(world, p);
+  if (fire) return fire;
   const place = places.interaction(world, p);
   if (place) return place;
   const ride = rides.interaction(world, p);

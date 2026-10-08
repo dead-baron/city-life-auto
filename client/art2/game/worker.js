@@ -89,6 +89,7 @@ async function handle(msg) {
   if (op === 'patch') { // the world changed (props smashed or put back): no answer
     if (M && args.reset) for (const pr of M.props || []) delete pr.broken;
     if (M) for (const [i, br] of args.props || []) { const pr = M.props[i]; if (!pr) continue; if (br) pr.broken = br; else delete pr.broken; }
+    if (M) for (const [i, lit] of args.lit || []) { const pr = M.props[i]; if (pr) pr.lit = lit; }   // (a campfire lit or put out)
     return;
   }
   if (!M && op !== 'stats') throw new Error('worker not initialised');

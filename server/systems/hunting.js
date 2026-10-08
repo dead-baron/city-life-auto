@@ -17,6 +17,7 @@ import { K } from '../../shared/constants.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as events from './events.js';
+import * as campfires from './campfires.js';
 
 const rng = mulberry32(7741);
 const MOVE_PX = 14;   // moving this far stops the work
@@ -43,13 +44,10 @@ function carcassNear(world, x, y) {
   }
   return best;
 }
-// a lit campfire within reach (the map's campfire props), or null
+// a lit campfire within reach (the map's campfire props, lit now: campfires.js), or null
 function fireNear(world, x, y) {
-  const m = world.map;
-  let fires = m._fires;
-  if (!fires) { fires = []; for (const p of m.props) if (p && p.t === 'campfire' && p.lit) fires.push(p); Object.defineProperty(m, '_fires', { value: fires, enumerable: false, configurable: true }); }
-  for (const f of fires) if (Math.abs(f.x - x) < HUNT_REACH + 20 && Math.abs(f.y - y) < HUNT_REACH + 20 && Math.hypot(f.x - x, f.y - y) < HUNT_REACH + 16) return f;
-  return null;
+  const f = campfires.fireNear(world, x, y, HUNT_REACH + 16, true);
+  return f ? f.p : null;
 }
 const rawIn = (p) => Object.keys(COOKS).filter((id) => (p.profile.inventory[id] || 0) > 0);
 
