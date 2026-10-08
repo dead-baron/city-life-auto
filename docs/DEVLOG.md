@@ -3719,3 +3719,21 @@ The user: there was no way to switch weapons on mobile. There was one (a tap on 
 - **The weapon box** works the same way (tap: next, hold: the picker) and now shows ⇄. Its hint reads "tap: next · hold: pick".
 - `input.js` `tapHold`: one touch button with a tap and a hold.
 - Checked on an emulated iPhone, sideways and upright: tap, tap, hold, release (the tray stays), pick (the weapon changes and the tray closes), tap off the tray.
+
+## 2026-10-08 · Darker nights, smooth sunrises and sunsets, god rays only when the sun is low
+The user: make the night darker and longer, lit only by the city's own lights; the changes from day to golden hour to sunset to night, and sunrise to day, pop (most of all the redwoods' god rays); god rays only when the sun hits the trees just right; dust in the air in nature areas.
+- **What popped:** the sun's place came from the clock only while v1's sun was above 0.05, and from the preset's own direction below that. Crossing that line swung the light up to 340° in one step and changed its strength by half (`sunKeep`). The god rays switched on and off at a sun height of 0.05. Rain switched from rain to storm at half dark, and the lamps' and police flashlights at fixed points.
+- **Now nothing switches at a threshold** (`client/art2/game/host.js` `_preset`):
+  - The light comes from the sun's own place from first light to blue hour, and from the night preset's moon at night. The change-over is eased (`sunUp`) over 32 game minutes before sunrise and after blue hour, while the direct light is faint, and `sunKeep` eases in with it.
+  - Rain blends toward a storm by how dark the hour is (`darkAt`). Fog blends toward a new dark night mist (`fogNight`), so a misty night stays dark.
+  - The cel-shading bands no longer slide as the light changes (the band count stays 5; only how much it shows fades).
+  - The police flashlights and your own pool of moonlight fade in with the dark.
+- **New day keys** (game minutes; v1's `render/atmos.js` keeps to the same times): night until 05:05; a new **predawn** (sky paling, lamps still on) at 05:38; **dawn** (the sun at the horizon) at 06:12; morning, noon and afternoon as before; golden hour 18:05–19:00; a new **sunset** (a deep orange-red sun on the horizon, the longest shadows) at 19:32; blue hour at 19:58; night from 20:26.
+- **A dark night:** the night's ambient and moonlight are about a third of what they were. In the open it's near-black blue; the lamps' pools, lit windows, neon and headlights light the streets, and a faint pool round your own figure lets you see where you are. The night storm is darker too.
+- **God rays only with a low, strong sun** (`lightgame.js` `godRays`): the canopy's beams, the low sun's rays and the new dust all ease in and out with the sun's height (a low sun only: from just after sunrise to mid-morning, and from late afternoon through golden hour) and its strength. Before, the redwoods' beams shone all day. Rain and fog thin them.
+- **Dust in the light:** where the view is mostly grass, fields or the woods' floor (parks in town count for less), a few one-pixel specks drift on the breeze over the sunlit ground in the low sun and glint now and then (`host.js` `_nature`, `lightgame.js` FINAL_FS). The beams' own dust no longer dims.
+- **Tests:** `test/daylight.test.js` runs a whole loop of the clock in clear weather, rain, storm and fog:
+  - Nothing changes faster than a third of its range in a second (before: six times in a step), and the light turns at most 15° a second.
+  - The night is dark from 21:00 to 04:30, for at least 85% of the night part.
+  - No god rays, beams or dust at noon or at night; all three at golden hour; beams after sunrise; no dust in the rain.
+- Checked in the redwoods and in town at a dozen times of day, against the old build.

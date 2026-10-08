@@ -218,8 +218,16 @@ function rgbOf(c) {
 }
 const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
 
-// the time-of-day keys of the presets (minutes after midnight), blended in between
-const SKY_KEYS = [[0, 'night'], [320, 'night'], [352, 'dawn'], [395, 'dawn'], [470, 'morning'], [600, 'noon'], [900, 'noon'], [1000, 'afternoon'], [1090, 'golden'], [1150, 'golden'], [1192, 'dusk'], [1240, 'night'], [1440, 'night']];
+// the time-of-day keys of the presets (minutes after midnight), blended in between: a long dark night (20:26-05:05,
+// lit by the lamps, windows and headlights), first light, sunrise, the day, golden hour, sunset and blue hour
+// (v1's sky, render/atmos.js KEYS, keeps to the same times; the night part of the loop runs at 0.6 s a minute)
+const SKY_KEYS = [[0, 'night'], [305, 'night'], [338, 'predawn'], [372, 'dawn'], [400, 'dawn'], [470, 'morning'], [600, 'noon'], [900, 'noon'], [1000, 'afternoon'],
+  [1085, 'golden'], [1140, 'golden'], [1172, 'sunset'], [1198, 'dusk'], [1226, 'night'], [1440, 'night']];
+// how far the light comes from the sun's own place (v1's sky) rather than the night preset's moon: eased over in
+// the faint light before sunrise (05:15-05:47) and after blue hour (20:00-20:32)
+const sunUp = (m) => smooth((m - 315) / 32) * (1 - smooth((m - 1200) / 32));
+// how dark the hour is (0 day .. 1 night, without the weather): rain turns to a storm and fog to a night mist by it
+const darkAt = (m) => (m < 720 ? 1 - smooth((m - 330) / 70) : smooth((m - 1180) / 45));
 // v1 light colours (0-255) in the Lighter's 0..1
 const C = {
   head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], flash: [1, 0.9, 0.67],
@@ -887,6 +895,10 @@ export class World2 {
   }
 
   // ---- the sky ---------------------------------------------------------------------------------------------
+  // SKY_KEYS blend the presets by the clock, then toward rain (a storm after dark) and fog (a misty night stays dark).
+  // The sun stands where v1's sky puts it (the shadows agree with the HUD clock and the v1 views) from first light to
+  // blue hour; at night the light comes from the night preset's moon. The change-over is eased (sunUp) while the
+  // direct light is faint, so neither the shadows nor the light jump - and nothing switches at a threshold.
   _preset(F) {
     const P = this.L && this.L.PRESETS_GAME, blend = this.L && this.L.blendPresets;
     const sky = F.sky, S = this.S;
@@ -896,22 +908,52 @@ export class World2 {
     while (i < SKY_KEYS.length - 2 && SKY_KEYS[i + 1][0] <= m) i++;
     const [ma, a] = SKY_KEYS[i], [mb, b] = SKY_KEYS[i + 1];
     let p = blend(P[a], P[b], smooth((m - ma) / Math.max(1, mb - ma)), this.presetA);
-    const rk = S.rainK || 0;
-    if (rk > 0.01) p = blend(p, sky.night > 0.5 ? P.storm : P.rain, Math.min(1, rk) * 0.92, this.presetB === p ? this.presetC : this.presetB);
+    const dark = darkAt(m), rk = S.rainK || 0;
+    if (rk > 0.01) {
+      const wetP = dark <= 0 ? P.rain : dark >= 1 ? P.storm : blend(P.rain, P.storm, dark, this.presetD || (this.presetD = {}));
+      p = blend(p, wetP, Math.min(1, rk) * 0.92, this.presetB);
+    }
     const fog = sky.fog ? sky.fog.k : 0;
-    if (fog > 0.02) p = blend(p, P.fog, Math.min(1, fog) * 0.75, p === this.presetB ? this.presetC : this.presetB);
-    // the sun where v1's sky puts it (the shadows agree with the HUD clock and the v1 views)
-    if (sky.sun > 0.05 && sky.sunDir) {
+    if (fog > 0.02) {
+      const fogP = !P.fogNight || dark <= 0 ? P.fog : dark >= 1 ? P.fogNight : blend(P.fog, P.fogNight, dark, this.presetE || (this.presetE = {}));
+      p = blend(p, fogP, Math.min(1, fog) * 0.75, p === this.presetB ? this.presetC : this.presetB);
+    }
+    const up = sunUp(m);
+    if (up > 0 && sky.sunDir) {
       const sx = sky.sunDir.x, sy = sky.sunDir.y, l = Math.hypot(sx, sy) || 1;
       const elev = Math.atan(0.62 / Math.max(0.3, sky.shadowLen));
       const c = Math.cos(elev), s = Math.sin(elev);
-      const d = p.sunDir || (p.sunDir = [0, 0, 1]), pz = d[2] / (Math.hypot(d[0], d[1], d[2]) || 1);
-      d[0] = -sx / l * c; d[1] = -sy / l * c; d[2] = s;
-      if (this.L.sunKeep) this.L.sunKeep(p, pz, s);
+      const d = p.sunDir || (p.sunDir = [0, 0, 1]), dl = Math.hypot(d[0], d[1], d[2]) || 1, pz = d[2] / dl;
+      const x = d[0] / dl + (-sx / l * c - d[0] / dl) * up, y = d[1] / dl + (-sy / l * c - d[1] / dl) * up, zz = pz + (s - pz) * up, n = Math.hypot(x, y, zz) || 1;
+      d[0] = x / n; d[1] = y / n; d[2] = zz / n;
+      if (this.L.sunKeep) this.L.sunKeep(p, pz, s, up);
     }
     p.lampsOn = Math.max(p.lampsOn || 0, sky.night);
     p.rain = Math.max(p.rain || 0, rk);
+    p.motes = this._nature(F);
     return p;
+  }
+  // how much of the view is growing ground (grass, fields, the woods' floor; parks in town count for less): the dust
+  // drifting in the low sun (lightgame.js). Sampled twice a second round the camera and eased.
+  _nature(F) {
+    const now = F.now, M = this.map;
+    if (!M || !M.tiles) return 0;
+    if (!(now - (this.natAt ?? -9) < 0.5)) {
+      this.natAt = now;
+      let n = 0, g = 0;
+      for (let j = -3; j <= 3; j++) for (let i = -4; i <= 4; i++) {
+        const tx = Math.floor((this.camX + i * 90) / TILE), ty = Math.floor((this.camY + j * 80) / TILE);
+        if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) continue;
+        n++;
+        const k = ty * MAP_W + tx, t = M.tiles[k];
+        if (t === TT.GRASS || t === TT.FIELD || t === TT.DIRT) g += TOWN.has((DISTRICTS[M.dist[k]] || {}).style) ? 0.35 : 1;
+      }
+      this.natT = n ? Math.min(1, (g / n) * 1.4) : 0;
+    }
+    const dt = Math.min(0.1, Math.max(0, now - (this.natPrev ?? now)));
+    this.natPrev = now;
+    this.natK = (this.natK ?? this.natT) + ((this.natT || 0) - (this.natK ?? this.natT)) * (1 - Math.exp(-dt * 0.8));
+    return this.natK;
   }
 
   // ---- sprites --------------------------------------------------------------------------------------------
@@ -1834,15 +1876,19 @@ export class World2 {
     for (let j = 0; j < hs.length; j += 2) { const h = hs[j], i = hs[j + 1], c = h.L[i]; this._light(c[0] + h.nx * 8, c[1] + h.ny * 8, c[2], 56, SIG_RGB01[i], sigK); }
     for (const h of S.sigHeads || []) if (!this._liveAt(h.x, h.y)) this._light(h.x, h.y, 44, 56, h.rgb01 || (h.rgb01 = rgbOf(h.c).map((v) => v / 255)), sigK);
     for (let j = 0; j < this.nfL; j++) { const L = this.fLights[j]; this._light(L.x, L.y, L.z, L.r, L.col, L.k); }
-    // flashlights: police on foot after dark; a player's whenever it's switched on (d.fl), brightest at night
+    // flashlights: police on foot after dark (switched on as it gets dark, eased); a player's whenever it's
+    // switched on (d.fl), brightest at night
+    const copK = smooth((night - 0.25) / 0.3);
     for (const p of F.peds) {
       if ((p.flags & (PF.INVEH | PF.DEAD | PF.DOWN)) || p.swim || p.blink === 3) continue;
-      const torch = !!(p.d && p.d.fl), cop = night > 0.35 && !!(p.flags & PF.BADGE);
+      const torch = !!(p.d && p.d.fl), cop = copK > 0.01 && !!(p.flags & PF.BADGE);
       if (!torch && !cop) continue;
       const len = torch ? 240 : 200;
-      this._light(p.rx + Math.cos(p.ra) * 8, p.ry + Math.sin(p.ra) * 8, 30 + this._z0(p, false), len, C.white, 1.6 * (torch ? Math.max(night, 0.3) : night), [p.ra, 0.32, len]);
+      this._light(p.rx + Math.cos(p.ra) * 8, p.ry + Math.sin(p.ra) * 8, 30 + this._z0(p, false), len, C.white, 1.6 * (torch ? Math.max(night, 0.3) : night * copK), [p.ra, 0.32, len]);
     }
-    if (night > 0.35) { const sp = F.sp; this._light(sp.x, sp.y, 40 + (sp.z ? DECK_Z * sp.z : 0), 100, C.moon, 0.5 * night); }
+    // the dark is dark: a faint pool of moonlight round your own figure so you can see where you are (eased in)
+    const selfK = smooth((night - 0.2) / 0.5);
+    if (selfK > 0.01) { const sp = F.sp; this._light(sp.x, sp.y, 40 + (sp.z ? DECK_Z * sp.z : 0), 115, C.moon, 0.55 * selfK); }
     // dropped backpacks: the rare ones glow their rarity's colour (blue, purple; the legendary one gold and pulsing)
     for (const b of F.bags) {
       const t = (b.d.t | 0) - 4;

@@ -41,14 +41,21 @@ const TILE = 64, TILE_K = 32;
 export const LIGHT_FLOATS = 12;     // one light in the uniform buffer: pos (x, y, z, r), col (r, g, b, k), cone
 
 // ---- presets -----------------------------------------------------------------------------------------
+// (bands: always 5, so blending a banded preset into one without bands only fades bandMix - a fractional band count
+// would slide the bands about as the light changes; motes: how much of the view is growing ground, set by the host
+// each frame - the dust in the low sun)
 export const PRESET_DEFAULTS = {
   sunDir: [-0.5, -0.3, 0.8], sunCol: [0, 0, 0], ambSky: [0.3, 0.3, 0.32], ambGround: [0.25, 0.24, 0.24], shadowTint: [1, 1, 1],
-  shadowLen: 0, bands: 0, bandMix: 0, wet: 0, emiK: 1, bloomThr: 0.7, leafGlow: 0, bloomK: 0.8,
+  shadowLen: 0, bands: 5, bandMix: 0, wet: 0, emiK: 1, bloomThr: 0.7, leafGlow: 0, bloomK: 0.8,
   haze: 0, hazeCol: [0.5, 0.5, 0.55], vign: 0.5, sat: 1, contrast: 1, lift: [0, 0, 0], gain: [1, 1, 1], reflK: 0, lampsOn: 0,
-  rain: 0, skyRefl: 0.35, fog: 0, fogCol: [0.7, 0.7, 0.75], fogH: 80, shafts: 0, flash: 0, flashCol: [0.75, 0.82, 1.0],
+  rain: 0, skyRefl: 0.35, fog: 0, fogCol: [0.7, 0.7, 0.75], fogH: 80, shafts: 0, flash: 0, flashCol: [0.75, 0.82, 1.0], motes: 0,
 };
 const mk = (o) => ({ ...PRESET_DEFAULTS, ...o });
 export const PRESETS_GAME = {
+  // before sunrise: the sky paling, no sun yet (a faint cold glow), the lamps still on, a breath of mist
+  predawn: mk({ sunDir: [0.8, -0.3, 0.3], sunCol: [0.08, 0.07, 0.12], ambSky: [0.1, 0.105, 0.2], ambGround: [0.075, 0.07, 0.11], shadowTint: [0.9, 0.9, 1.1],
+    emiK: 1.12, bloomThr: 0.56, bloomK: 1.15, haze: 0.06, hazeCol: [0.32, 0.26, 0.44], vign: 0.66, sat: 1.06, contrast: 1.08,
+    lift: [0.01, 0.004, 0.03], gain: [1.05, 0.99, 0.99], reflK: 0.5, lampsOn: 1, skyRefl: 0.25, fog: 0.06, fogCol: [0.62, 0.56, 0.72], fogH: 70 }),
   // first light: a low rose-gold sun from the east-north-east, violet shade, a little mist
   dawn: mk({ sunDir: [0.74, -0.34, 0.3], sunCol: [1.5, 1.08, 0.86], ambSky: [0.32, 0.33, 0.47], ambGround: [0.28, 0.24, 0.25], shadowTint: [0.84, 0.86, 1.12],
     shadowLen: 300, bands: 5, bandMix: 0.8, emiK: 0.8, bloomThr: 0.75, leafGlow: 0.45, bloomK: 0.8, haze: 0.06, hazeCol: [1.0, 0.76, 0.64], vign: 0.55,
@@ -67,25 +74,34 @@ export const PRESETS_GAME = {
   golden: mk({ sunDir: [-0.72, -0.24, 0.46], sunCol: [1.85, 1.3, 0.66], ambSky: [0.22, 0.22, 0.34], ambGround: [0.28, 0.22, 0.2], shadowTint: [0.92, 0.88, 1.05],
     shadowLen: 300, bands: 5, bandMix: 0.8, emiK: 1.0, bloomThr: 0.75, leafGlow: 0.6, bloomK: 0.85, haze: 0.06, hazeCol: [1.0, 0.62, 0.32], vign: 0.55,
     sat: 1.15, contrast: 1.12, lift: [0.02, 0.005, 0.025], gain: [1.04, 0.95, 0.84], lampsOn: 0.6, shafts: 0.35 }),
+  // the sun on the horizon: a deep orange-red key from the far west, the longest shadows, a violet-rose sky
+  sunset: mk({ sunDir: [-0.9, -0.2, 0.24], sunCol: [1.5, 0.74, 0.42], ambSky: [0.19, 0.16, 0.29], ambGround: [0.21, 0.15, 0.16], shadowTint: [0.95, 0.86, 1.08],
+    shadowLen: 300, bandMix: 0.75, emiK: 1.02, bloomThr: 0.7, leafGlow: 0.55, bloomK: 0.95, haze: 0.07, hazeCol: [0.95, 0.42, 0.38], vign: 0.58,
+    sat: 1.15, contrast: 1.1, lift: [0.02, 0, 0.03], gain: [1.05, 0.93, 0.88], wet: 0.1, reflK: 0.3, lampsOn: 0.85, skyRefl: 0.3, shafts: 0.3 }),
   // AT1-A blue hour: the sun just gone, a pink rim from the west, indigo shade, lamps and windows on
-  dusk: mk({ sunDir: [-0.88, -0.22, 0.14], sunCol: [0.7, 0.36, 0.42], ambSky: [0.16, 0.17, 0.32], ambGround: [0.14, 0.11, 0.17], shadowTint: [0.9, 0.9, 1.1],
-    shadowLen: 150, emiK: 1.05, bloomThr: 0.6, leafGlow: 0.3, bloomK: 1.0, haze: 0.04, hazeCol: [0.3, 0.22, 0.42], vign: 0.6,
-    sat: 1.12, contrast: 1.08, lift: [0.01, 0, 0.03], gain: [1.06, 0.96, 0.98], wet: 0.2, reflK: 0.5, lampsOn: 1, skyRefl: 0.3 }),
-  // AT2: deep indigo, sodium pools, neon bloom
-  night: mk({ sunDir: [-0.5, -0.3, 0.8], sunCol: [0.05, 0.06, 0.12], ambSky: [0.075, 0.08, 0.165], ambGround: [0.06, 0.055, 0.09], emiK: 1.15, bloomThr: 0.55,
-    bloomK: 1.25, haze: 0.05, hazeCol: [0.1, 0.09, 0.18], vign: 0.7, sat: 1.12, contrast: 1.12, lift: [0.005, 0, 0.02], gain: [1.06, 1.0, 0.96], reflK: 0.6, lampsOn: 1, skyRefl: 0.25 }),
+  dusk: mk({ sunDir: [-0.88, -0.22, 0.14], sunCol: [0.38, 0.2, 0.27], ambSky: [0.12, 0.125, 0.25], ambGround: [0.1, 0.08, 0.13], shadowTint: [0.9, 0.9, 1.1],
+    shadowLen: 150, emiK: 1.08, bloomThr: 0.58, leafGlow: 0.25, bloomK: 1.05, haze: 0.04, hazeCol: [0.26, 0.2, 0.38], vign: 0.62,
+    sat: 1.12, contrast: 1.08, lift: [0.008, 0, 0.026], gain: [1.06, 0.96, 0.98], wet: 0.2, reflK: 0.5, lampsOn: 1, skyRefl: 0.28 }),
+  // AT2: a dark night - only a faint blue moonlight; the lamps' sodium pools, lit windows, neon and headlights
+  // do the lighting (the host gives the player a faint pool of light to see by)
+  night: mk({ sunDir: [-0.45, -0.25, 0.86], sunCol: [0.022, 0.027, 0.056], ambSky: [0.023, 0.026, 0.055], ambGround: [0.017, 0.017, 0.029], emiK: 1.2, bloomThr: 0.52,
+    bloomK: 1.3, haze: 0.04, hazeCol: [0.05, 0.05, 0.11], vign: 0.72, sat: 1.1, contrast: 1.1, lift: [0.004, 0.002, 0.014], gain: [1.06, 1.0, 0.96], reflK: 0.65, lampsOn: 1, skyRefl: 0.2 }),
   // overcast daytime rain: flat grey-blue light, faint shadows, everything wet
   rain: mk({ sunDir: [-0.45, -0.3, 0.84], sunCol: [0.42, 0.44, 0.5], ambSky: [0.44, 0.48, 0.58], ambGround: [0.3, 0.31, 0.35], shadowTint: [0.95, 0.97, 1.05],
     shadowLen: 60, emiK: 0.8, bloomThr: 0.7, bloomK: 0.7, haze: 0.1, hazeCol: [0.5, 0.55, 0.64], vign: 0.5, sat: 0.92, contrast: 1.04,
     lift: [0, 0.005, 0.02], gain: [0.98, 1.0, 1.04], wet: 1, reflK: 1.0, rain: 1, lampsOn: 0.6, skyRefl: 0.45, fog: 0.06, fogCol: [0.55, 0.58, 0.65], fogH: 90 }),
   // AT1-B: night storm, soaked streets mirroring every light; set .flash for lightning
-  storm: mk({ sunDir: [-0.5, -0.3, 0.8], sunCol: [0.05, 0.06, 0.11], ambSky: [0.09, 0.11, 0.21], ambGround: [0.07, 0.08, 0.14], emiK: 1.1, bloomThr: 0.55,
+  storm: mk({ sunDir: [-0.45, -0.25, 0.86], sunCol: [0.03, 0.034, 0.064], ambSky: [0.042, 0.05, 0.1], ambGround: [0.034, 0.038, 0.068], emiK: 1.1, bloomThr: 0.55,
     bloomK: 1.2, haze: 0.08, hazeCol: [0.12, 0.15, 0.3], vign: 0.7, sat: 1.12, contrast: 1.12, lift: [0, 0.005, 0.03], gain: [1.06, 1.0, 0.98],
     wet: 1, reflK: 1.3, rain: 1, lampsOn: 1, skyRefl: 0.3, flashCol: [0.7, 0.8, 1.15] }),
   // AT1-C: a soft rose fog lying in the streets in drifting banks, lamps glowing through it
   fog: mk({ sunDir: [-0.62, -0.3, 0.5], sunCol: [0.5, 0.4, 0.38], ambSky: [0.36, 0.32, 0.42], ambGround: [0.3, 0.26, 0.3], shadowTint: [0.95, 0.92, 1.06],
     shadowLen: 80, emiK: 1.0, bloomThr: 0.6, bloomK: 1.1, haze: 0.06, hazeCol: [0.72, 0.6, 0.66], vign: 0.45, sat: 0.9, contrast: 0.95,
     lift: [0.03, 0.02, 0.035], gain: [1.02, 0.97, 0.98], wet: 0.3, reflK: 0.5, lampsOn: 1, fog: 0.6, fogCol: [0.78, 0.6, 0.62], fogH: 70, skyRefl: 0.3 }),
+  // ... after dark: the mist lies grey-blue and dim, the lamps glow in it (the host blends fog toward this by night)
+  fogNight: mk({ sunDir: [-0.45, -0.25, 0.86], sunCol: [0.04, 0.045, 0.07], ambSky: [0.07, 0.07, 0.11], ambGround: [0.055, 0.055, 0.075], shadowTint: [1, 1, 1.05],
+    emiK: 1.1, bloomThr: 0.52, bloomK: 1.3, haze: 0.06, hazeCol: [0.1, 0.1, 0.15], vign: 0.6, sat: 0.9, contrast: 1.0,
+    lift: [0.012, 0.012, 0.02], gain: [1.02, 1.0, 1.0], wet: 0.3, reflK: 0.5, lampsOn: 1, fog: 0.6, fogCol: [0.42, 0.42, 0.5], fogH: 70, skyRefl: 0.25 }),
   // indoors and underground: no sun, a warm fill, the room's own lamps do the rest
   indoor: mk({ sunDir: [-0.4, -0.3, 0.86], ambSky: [0.3, 0.28, 0.27], ambGround: [0.22, 0.2, 0.2], emiK: 1.0, bloomThr: 0.62,
     bloomK: 0.9, haze: 0.03, hazeCol: [0.3, 0.24, 0.18], vign: 0.55, sat: 1.15, contrast: 1.1, lift: [0.01, 0, 0.02], gain: [1.06, 1.0, 0.94], lampsOn: 1 }),
@@ -107,14 +123,31 @@ export function blendPresets(a, b, t, out = {}) {
 }
 const pv = (P, k) => P[k] ?? PRESET_DEFAULTS[k];
 const luma3 = (c) => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 // A sun lower in the sky than its preset's lights the flat ground less (lambert): the preset's brightness on the
 // ground is kept, up to half as much again, so golden hour stays golden with its long shadows instead of sinking
 // into dusk an hour early. p: a blended preset (its own arrays), pz: the sine of the preset's own sun elevation,
 // s: the sky's (the host moves the sun to where the clock puts it).
-export function sunKeep(p, pz, s) {
-  if (!(s < pz) || !p.sunCol) return;
-  const k = Math.min(1.5, pz / Math.max(0.05, s));
-  p.sunCol = p.sunCol.map((v) => v * k);
+// w (0..1): how far the sun's own place leads the light (the host eases it in from the night preset's moon), the
+// keeping eased in with it.
+export function sunKeep(p, pz, s, w = 1) {
+  if (!(s < pz) || !p.sunCol || !(w > 0)) return;
+  const k = 1 + (Math.min(1.5, pz / Math.max(0.05, s)) - 1) * Math.min(1, w), c = p.sunCol;
+  for (let i = 0; i < c.length; i++) c[i] *= k;
+}
+
+// How strong the god rays are for a preset P and the sun's height el (the sine of its elevation): shaftK the low
+// sun's rays over sunlit ground (tiers with shafts), beamK the beams down through the redwood canopy (can: the canopy
+// in view), moteK the dust drifting in the low sun over growing ground (P.motes: how much of the view is). Only for
+// a low sun that is really shining - from just after sunrise until it is well up, and from late afternoon through
+// golden hour - each eased in and out with the sun's height and strength, so nothing pops on or off as the light
+// changes; rain and fog thin them. out: reused.
+export function godRays(P, el, shafts, can, wet = 0, fog = 0, out = {}) {
+  const sh = pv(P, 'shafts'), sunL = luma3(pv(P, 'sunCol')), risen = sstep(0.09, 0.2, el), nat = pv(P, 'motes');
+  out.shaftK = shafts && sh > 0 ? sh * risen * (1 - sstep(0.4, 0.6, el)) * sstep(0.3, 1.1, sunL) : 0;
+  out.beamK = can ? Math.min(1.6, sunL) * (0.45 + 0.55 * (1 - el)) * risen * (1 - sstep(0.44, 0.64, el)) * sstep(0.25, 0.9, sunL) * (pv(P, 'beams') ?? 1) * BEAM_K : 0;
+  out.moteK = nat > 0 ? Math.min(1, nat) * risen * (1 - sstep(0.48, 0.7, el)) * sstep(0.35, 1.0, sunL) * (1 - Math.min(1, wet * 1.5)) * (1 - Math.min(1, fog * 1.2)) : 0;
+  return out;
 }
 
 // ---- GL helpers (shared with engine.js) ----------------------------------------------------------------
@@ -604,7 +637,7 @@ uniform sampler2D tLit, tB, tBH, tBQ, tSh;
 uniform vec2 halfTex, quarterTex, maxUVh, maxUVq;
 uniform ivec2 org;
 uniform vec4 view;
-uniform float wet, reflK, bloomK, haze, sat, contrast, time, fog, fogH, flash, shaftK, beamK, useBH, useBQ;
+uniform float wet, reflK, bloomK, haze, sat, contrast, time, fog, fogH, flash, shaftK, beamK, moteK, useBH, useBQ;
 uniform vec3 hazeCol, lift, gain, fogCol, flashCol, shaftCol;
 ${GLSL_COMMON}
 // value noise on a lattice of cell px that repeats every per cells (so it wraps seamlessly with org)
@@ -615,7 +648,8 @@ float vnoiseP(vec2 p, vec2 cell, ivec2 per){
 }
 void main(){
   ivec2 q = ivec2(gl_FragCoord.xy);
-  vec3 c = texelFetch(tLit, q, 0).rgb;
+  vec4 L0 = texelFetch(tLit, q, 0);
+  vec3 c = L0.rgb;
   vec4 b = texelFetch(tB, q, 0);
   int fl = flOf(b); float Z = zOf(b);
 #if REFL > 0
@@ -649,7 +683,23 @@ void main(){
       vec2 wp = vec2(q + org) + vec2(sin(time * 0.23) * 9.0 + time * 1.5, -time * 6.0);
       vec2 m = mod(wp, 12.0);
       float hh = hash2(ivec2(floor(wp / 12.0)) + ivec2(71, 13));
-      if (hh > 0.9 && m.x < 2.0 && m.y < 2.0) c += shaftCol * (sv.g * beamK * 5.0 * (0.4 + 0.6 * sin(time * (1.3 + hh * 4.0) + hh * 60.0)));
+      if (hh > 0.9 && m.x < 2.0 && m.y < 2.0) c += shaftCol * (sv.g * beamK * 5.0 * max(0.0, 0.4 + 0.6 * sin(time * (1.3 + hh * 4.0) + hh * 60.0)));
+    }
+  }
+  // dust on the air in the low sun over growing ground (woods, meadows, parks): a few one-pixel specks drifting on
+  // the breeze and glinting now and then, seen only where the sunlight reaches the ground (the lit alpha)
+  if (moteK > 0.0 && L0.a > 0.0) {
+    vec2 wp = vec2(q + org) / float(AP) + vec2(time * 2.2 + sin(time * 0.29) * 5.0, sin(time * 0.17) * 3.0 - time * 0.9);
+    vec2 cell = floor(wp / 9.0), m = wp - cell * 9.0;
+    ivec2 ci = ivec2(cell);
+    float hh = hash2(ci + ivec2(37, 11));
+    if (hh > 0.955) {
+      vec2 at = vec2(hash2(ci + ivec2(3, 59)), hash2(ci + ivec2(83, 7))) * 7.0;
+      float sz = hh > 0.99 ? 2.0 : 1.0;
+      if (m.x >= at.x && m.x < at.x + sz && m.y >= at.y && m.y < at.y + sz) {
+        float tw = 0.5 + 0.5 * sin(time * (0.7 + hh * 9.0) + hh * 80.0);
+        c += shaftCol * (moteK * L0.a * (0.18 + 0.5 * tw * tw));
+      }
     }
   }
   if (fog > 0.0) {
@@ -685,7 +735,7 @@ export class LightGame {
     this.gl = gl; this.tri = tri;
     this.progs = new Map(); this.ti = 2; this.T = LIGHT_TIERS[2]; this.ap = 1;   // (ap: set by the engine before the first program)
     this.cw = 0; this.ch = 0; this.texs = []; this.fbos = [];
-    this.sd = new Float32Array(3);
+    this.sd = new Float32Array(3); this.rays = {};
     // (a texel of nothing for the canopy's unit when there's no canopy in view: never a texture being drawn to)
     this.tNone = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.tNone);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 1, 1, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array(1));
@@ -834,12 +884,15 @@ export class LightGame {
       if (S.mark) S.mark('bloom');
     }
     // ---- god rays: the low sun's over sunlit ground (High, Ultra) and, on every tier, the beams coming down
-    // through the redwood canopy (brighter the lower and stronger the sun)
-    let shaftK = 0, beamK = 0;
-    const shafts = pv(P, 'shafts'), sc = pv(P, 'sunCol');
-    if (T.shafts && shafts > 0 && SD[2] > 0.05 && SD[2] < 0.75) shaftK = shafts * Math.min(1, (0.75 - SD[2]) * 3);
-    if (S.can && S.canTex && SD[2] > 0.05) beamK = Math.min(1.6, luma3(sc)) * (0.45 + 0.55 * (1 - SD[2])) * (pv(P, 'beams') ?? 1) * BEAM_K;
-    if (shaftK > 0 || beamK > 0.01) {
+    // through the redwood canopy. Only when the sun is low and really shining - from just after sunrise until it is
+    // well up, and again from late afternoon through golden hour - each eased in and out with the sun's height and
+    // strength, so they never pop on or off as the light changes. Dust drifts in the low sun over growing ground.
+    const R = godRays(P, SD[2], T.shafts, !!(S.can && S.canTex), wet, fog, this.rays);
+    let shaftK = R.shaftK, beamK = R.beamK;
+    const moteK = R.moteK, sc = pv(P, 'sunCol');
+    if (beamK <= 0.01) beamK = 0;
+    if (shaftK <= 0.002) shaftK = 0;
+    if (shaftK > 0 || beamK > 0) {
       const ux = SD[0], uy = SD[1] - SD[2], ul = Math.hypot(ux, uy) || 1;
       p = this.prog('shaft'); u = p.u;
       gl.useProgram(p.p);
@@ -852,7 +905,7 @@ export class LightGame {
       if (u.time) gl.uniform1f(u.time, S.time % 4096);
       if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
       if (u.wind4) { const W = S.wind; gl.uniform4f(u.wind4, W ? W[0] : 0.1, W ? W[1] : 0.3, W ? W[2] : 1, W ? W[3] : 0); }
-      this.canUniforms(u, beamK > 0.01 ? S.can : null);
+      this.canUniforms(u, beamK > 0 ? S.can : null);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       this.blur(this.tSA, this.qw, this.qh, qw, qh, this.fSB, qw, qh, 1, 0, 1);
       this.blur(this.tSB, this.qw, this.qh, qw, qh, this.fSA, qw, qh, 0, 1, 1);
@@ -868,7 +921,7 @@ export class LightGame {
     gl.uniform2i(u.org, S.org[0], S.org[1]); gl.uniform4f(u.view, S.view[0], S.view[1], S.view[2], S.view[3]);
     gl.uniform1f(u.wet, wet); gl.uniform1f(u.reflK, pv(P, 'reflK')); gl.uniform1f(u.bloomK, bloomK); gl.uniform1f(u.haze, pv(P, 'haze'));
     gl.uniform1f(u.sat, pv(P, 'sat')); gl.uniform1f(u.contrast, pv(P, 'contrast')); gl.uniform1f(u.time, S.time % 4096);
-    gl.uniform1f(u.fog, fog); gl.uniform1f(u.fogH, pv(P, 'fogH')); gl.uniform1f(u.flash, flash); gl.uniform1f(u.shaftK, shaftK); gl.uniform1f(u.beamK, beamK);
+    gl.uniform1f(u.fog, fog); gl.uniform1f(u.fogH, pv(P, 'fogH')); gl.uniform1f(u.flash, flash); gl.uniform1f(u.shaftK, shaftK); gl.uniform1f(u.beamK, beamK); gl.uniform1f(u.moteK, moteK);
     gl.uniform1f(u.useBH, useBH); gl.uniform1f(u.useBQ, useBQ);
     gl.uniform3fv(u.hazeCol, pv(P, 'hazeCol')); gl.uniform3fv(u.lift, pv(P, 'lift')); gl.uniform3fv(u.gain, pv(P, 'gain'));
     // the fog is lit by the sky: by day the preset's colour, after dark a dim haze (the lamps' glow in it comes

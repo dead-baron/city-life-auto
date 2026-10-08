@@ -8,22 +8,24 @@ import { DAY_LOOP_S } from '../../shared/constants.js';
 // Key frames over the 24 h clock (minutes). amb: the multiply colour the world is lit by (1 = full
 // daylight); grade: an additive tint over the screen [r,g,b,a]; sky: what water reflects; sun: how
 // strong the sun's shadows are; night: how much artificial lights count (0 day .. 1 night).
+// The night is dark and long (from ~20:30 to ~05:00 only the lamps, windows and headlights light the streets):
+// art v2 (client/art2/game/host.js SKY_KEYS) keeps to the same times.
 const KEYS = [
-  { m: 0, amb: [0.2, 0.24, 0.46], grade: [40, 60, 140, 0.05], sky: [30, 44, 92], sun: 0, night: 1 },
-  { m: 300, amb: [0.22, 0.25, 0.48], grade: [50, 60, 140, 0.05], sky: [34, 46, 96], sun: 0, night: 1 },
-  { m: 345, amb: [0.38, 0.36, 0.58], grade: [150, 90, 170, 0.08], sky: [96, 80, 140], sun: 0, night: 0.85 },   // first light
-  { m: 375, amb: [0.8, 0.66, 0.7], grade: [255, 140, 130, 0.08], sky: [232, 140, 150], sun: 0.25, night: 0.4 }, // sunrise: rose
-  { m: 405, amb: [0.98, 0.86, 0.76], grade: [255, 180, 110, 0.07], sky: [250, 190, 140], sun: 0.6, night: 0.06 },  // the sun clears the horizon
+  { m: 0, amb: [0.15, 0.18, 0.37], grade: [40, 60, 140, 0.05], sky: [30, 44, 92], sun: 0, night: 1 },
+  { m: 305, amb: [0.16, 0.19, 0.38], grade: [50, 60, 140, 0.05], sky: [34, 46, 96], sun: 0, night: 1 },
+  { m: 338, amb: [0.3, 0.3, 0.52], grade: [150, 90, 170, 0.08], sky: [96, 80, 140], sun: 0, night: 0.88 },   // first light
+  { m: 372, amb: [0.78, 0.64, 0.7], grade: [255, 140, 130, 0.08], sky: [232, 140, 150], sun: 0.22, night: 0.42 }, // sunrise: rose
+  { m: 402, amb: [0.98, 0.86, 0.76], grade: [255, 180, 110, 0.07], sky: [250, 190, 140], sun: 0.6, night: 0.06 },  // the sun clears the horizon
   { m: 480, amb: [1, 0.95, 0.88], grade: [255, 220, 170, 0.04], sky: [170, 205, 240], sun: 0.9, night: 0 },
   { m: 600, amb: [1, 1, 0.98], grade: [255, 255, 255, 0], sky: [150, 200, 245], sun: 1, night: 0 },
   { m: 900, amb: [1, 1, 1], grade: [255, 255, 255, 0], sky: [150, 200, 245], sun: 1, night: 0 },
   { m: 1020, amb: [1, 0.96, 0.88], grade: [255, 200, 120, 0.05], sky: [180, 200, 230], sun: 0.95, night: 0 },     // golden hour begins
   { m: 1110, amb: [1, 0.9, 0.74], grade: [255, 180, 90, 0.08], sky: [255, 196, 120], sun: 0.85, night: 0 },     // golden hour
-  { m: 1155, amb: [1, 0.8, 0.64], grade: [255, 140, 80, 0.09], sky: [255, 140, 90], sun: 0.6, night: 0.1 },    // sunset
+  { m: 1158, amb: [1, 0.8, 0.64], grade: [255, 140, 80, 0.09], sky: [255, 140, 90], sun: 0.6, night: 0.1 },    // sunset
   { m: 1185, amb: [0.78, 0.6, 0.64], grade: [230, 100, 130, 0.08], sky: [200, 90, 130], sun: 0.25, night: 0.4 },   // the sun goes down
-  { m: 1215, amb: [0.42, 0.38, 0.62], grade: [110, 80, 200, 0.1], sky: [90, 80, 160], sun: 0, night: 0.8 },        // blue hour
-  { m: 1260, amb: [0.24, 0.27, 0.5], grade: [50, 60, 150, 0.06], sky: [40, 52, 104], sun: 0, night: 1 },
-  { m: 1440, amb: [0.2, 0.24, 0.46], grade: [40, 60, 140, 0.05], sky: [30, 44, 92], sun: 0, night: 1 },
+  { m: 1205, amb: [0.38, 0.35, 0.6], grade: [110, 80, 200, 0.1], sky: [90, 80, 160], sun: 0, night: 0.8 },        // blue hour
+  { m: 1228, amb: [0.17, 0.2, 0.4], grade: [50, 60, 150, 0.06], sky: [40, 52, 104], sun: 0, night: 1 },
+  { m: 1440, amb: [0.15, 0.18, 0.37], grade: [40, 60, 140, 0.05], sky: [30, 44, 92], sun: 0, night: 1 },
 ];
 const mix = (a, b, t) => a + (b - a) * t;
 const mixA = (a, b, t) => a.map((v, i) => mix(v, b[i], t));
