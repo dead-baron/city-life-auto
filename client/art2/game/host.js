@@ -218,6 +218,17 @@ function rgbOf(c) {
 }
 const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
 
+// The giant redwoods' fade ids (statics.js TREE_FADE + the prop's index) and their outlines: the half width (px) a
+// tree covers in each 40 px of its height, from its foot up - the flared foot, the trunk, then the crown from about
+// half way up - measured from the art (redwoods.js giantRedwood: where a third or more of nine trees is covered).
+// The host fades one only when it's in front of you (_treeCovers).
+const TREE_FADE = 1e6;
+const RW_OUTLINE = {
+  giantL: [112, 80, 72, 64, 64, 64, 64, 64, 64, 104, 136, 144, 144, 136, 104, 88, 88, 80],
+  giant: [80, 56, 56, 56, 48, 48, 48, 48, 104, 128, 128, 112, 88, 80, 72, 16],
+  giantS: [64, 40, 40, 40, 40, 40, 40, 88, 104, 96, 80, 72, 56],
+  redwood2: [24, 16, 80, 80, 72, 64, 56, 48, 16],
+};
 // the time-of-day keys of the presets (minutes after midnight), blended in between: a long dark night (20:26-05:05,
 // lit by the lamps, windows and headlights), first light, sunrise, the day, golden hour, sunset and blue hour
 // (v1's sky, render/atmos.js KEYS, keeps to the same times; the night part of the loop runs at 0.6 s a minute)
@@ -838,8 +849,11 @@ export class World2 {
     if (!F.sub && !F.spec && !riding) for (const st of this.chunkState.values()) { // (none while spectating)
       if (!st.blds) continue;
       for (const r of st.blds) {
-        const b = r[0], m = (this.fades.get(b) || 0) > 0.05 ? 24 : 0;
-        if (r[5] <= py + 2 || r[3] < px - rx - m || r[1] > px + rx + m || r[4] < sy - up - m || r[2] > sy + down + m) continue;
+        const b = r[0], fading = (this.fades.get(b) || 0) > 0.05, m = fading ? 24 : 0;
+        if (r[5] <= py + 2) continue;   // (its foot north of yours: it stands behind you)
+        // a giant redwood only when it's really in front of you (not every tree whose box you're near)
+        if (b >= TREE_FADE) { if (!onTrain && this._treeCovers(b - TREE_FADE, px, sy, inVeh, fading ? 10 : 0)) want.add(b); continue; }
+        if (r[3] < px - rx - m || r[1] > px + rx + m || r[4] < sy - up - m || r[2] > sy + down + m) continue;
         want.add(b);
       }
     }
@@ -849,6 +863,21 @@ export class World2 {
       const on = want.has(b), nf = f + ((on ? 0.88 : 0) - f) * k; // (a faint ghost of it stays: you still see its shape)
       if (!on && nf < 0.01) this.fades.delete(b); else this.fades.set(b, nf);
     }
+  }
+  // does the redwood (its prop index) stand in front of you? Your figure on screen - 12 px either side of you
+  // (30 in a car), from your feet to 46 px up (40) - against the tree's outline at those heights on it (RW_OUTLINE).
+  // pad: a little more once it's fading, so it doesn't flicker at the edge.
+  _treeCovers(pi, px, sy, inVeh, pad) {
+    const p = this.map.props && this.map.props[pi];
+    if (!p) return false;
+    const W = RW_OUTLINE[p.sp] || RW_OUTLINE.giant, dx = Math.abs(px - p.x) - (inVeh ? 30 : 12) - pad, fh = inVeh ? 40 : 46;
+    if (dx >= 150) return false;
+    for (let z = Math.max(0, p.y - sy), z1 = p.y - sy + fh; z <= z1; z += 10) {
+      const i = Math.floor(z / 40);
+      if (i >= W.length) break;
+      if (dx < W[i]) return true;
+    }
+    return false;
   }
   _baked(jk, key, cx, cy, mode, prio, r, err, ver = 0) {
     if (err || !r) {
@@ -1676,7 +1705,7 @@ export class World2 {
       const k = p.life / p.max, name = A.v1ParticleFx(p), frm = A.v1ParticleFrame(p);
       const key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]);
       if (!key) continue;
-      o.alpha = p.type === 2 ? Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1 : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2);
+      o.alpha = (p.type === 2 ? Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1 : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2)) * (p.veil ?? 1);
       E.drawSprite(key, p.x, p.y, Math.max(0, p.z * (p.type === 8 ? 0.5 : 0.3)), o); // (v1's heights)
     }
     this._blown(F, o);

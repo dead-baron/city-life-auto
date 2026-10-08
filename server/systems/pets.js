@@ -1,10 +1,10 @@
-// Lost pets: every so often a dog or a cat slips its lead somewhere near a player. Its owner is
-// out looking for it a few blocks away. Find the pet, take its collar (it trots along at your heel)
+// Lost pets: now and then (every eight minutes or so) a dog or a cat slips its lead somewhere near a player. Its owner is
+// out looking for it well across town. Find the pet, take its collar (it trots along at your heel)
 // and walk it back to the owner for a reward. Pets can't be hurt and aren't witnesses.
 import { K, T } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { pedStep } from '../../shared/physics.js';
-import { PET_EVERY_S, PET_REWARD, PET_SAMARITAN } from '../../shared/rules.js';
+import { PET_EVERY_S, PET_OWNER_PX, PET_REWARD, PET_SAMARITAN } from '../../shared/rules.js';
 import { store } from '../store.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, seek } from './npc.js';
@@ -51,7 +51,8 @@ export function spawnLost(world, p) {
   const here = { x: ped.x, y: ped.y, zone: world.map.zoneAt(ped.x, ped.y) };
   const at = spot(world, here, 450, 900);
   if (!at) return null;
-  const home = spot(world, { ...at, zone: here.zone }, 650, 1100);
+  // its owner is out looking a good walk away (PET_OWNER_PX), the guide arrow shows you where once you have it
+  const home = spot(world, { ...at, zone: here.zone }, PET_OWNER_PX[0], PET_OWNER_PX[1]) || spot(world, { ...at, zone: here.zone }, 900, PET_OWNER_PX[0]);
   if (!home) return null;
   const pet = world.spawnPed(at.x, at.y, { hp: 40, archetype: `pet:${k.art}`, name, a: rng() * 6.28, app: { bd: 1 } });
   pet.pet = { kind: k.what, art: k.art, name, follow: 0, wx: at.x, wy: at.y, until: 0, owner: 0, born: world.time };

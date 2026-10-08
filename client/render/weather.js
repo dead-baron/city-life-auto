@@ -9,6 +9,7 @@ import { wind } from './flora/wind.js';
 import { T, TILE, MAP_W, MAP_H, CHUNK_PX } from '../../shared/constants.js';
 import { hash } from './atmos.js';
 import { freeCanvas } from '../platform.js';
+import { coversIn, coverSeed } from './covers.js';   // (the street's manhole covers: the ones the ground draws)
 
 const N = CHUNK_PX / TILE;
 const SHAPES = 8;
@@ -147,13 +148,9 @@ export class Weather {
       const h2 = hash(tx, ty, 92), h3 = hash(tx, ty, 93);
       s.push({ x: (tx + h2) * TILE, y: (ty + h3) * TILE, r: 14 + h2 * 26 + (t === T.LOT || t === T.DIRT ? 10 : 0), t0: h * 9 / d * 0.06, k: Math.floor(h3 * SHAPES), a: (h2 - 0.5) * 0.6 });
     }
-    // steam vents (manholes / potholes) on the roads of this chunk
-    const v = [];
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-      const tx = cx * N + i, ty = cy * N + j;
-      if (tx >= MAP_W || ty >= MAP_H || m.tiles[ty * MAP_W + tx] !== T.ROAD || m.deck[ty * MAP_W + tx]) continue;
-      if (hash(tx, ty, 57) < 0.0035) v.push({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, id: tx * 7919 + ty });
-    }
+    // steam vents: the manhole covers on the town's streets in this chunk (covers.js - the very covers the
+    // ground draws), so steam only ever comes up out of a cover, and only in town
+    const v = coversIn(m, cx * CHUNK_PX, cy * CHUNK_PX, (cx + 1) * CHUNK_PX, (cy + 1) * CHUNK_PX, coverSeed(m)).map((c) => ({ x: c.x, y: c.y, id: Math.round(c.x) * 7919 + Math.round(c.y) }));
     this.vents.set(key, v);
     this.sites.set(key, s);
     return s;
@@ -288,16 +285,18 @@ export class Weather {
     g.restore();
   }
 
-  // Steam: some manholes breathe steam for a while, then stop (more of them on cold, wet nights).
+  // Steam: some manholes breathe a thin wisp of steam for a while, then stop (more of them on cold, wet nights) - faint
+  // and see-through (veil: the art's dithered alpha), out of the cover itself.
   steam(view, fx, dt, t, sky) {
     const boost = 1 + sky.rain * 0.8 + sky.night * 0.4;
     this._each(view, (v) => {
       if (v.x < view.x0 - 40 || v.x > view.x1 + 40 || v.y < view.y0 - 60 || v.y > view.y1 + 40) return;
-      if (hash(v.id, Math.floor(t / 45), 61) > 0.32 * boost) return;
-      if (Math.random() > dt * 6) return;
+      if (hash(v.id, Math.floor(t / 45), 61) > 0.25 * boost) return;
+      if (Math.random() > dt * 3.5) return;
       // (the wind bends the plume over and tears it away sooner)
-      const wx = wind.dx * wind.strength * 90, life = (2.6 + Math.random() * 1.6) * (1 - 0.4 * wind.strength);
-      fx.spawn(2, v.x + (Math.random() - 0.5) * 12, v.y + (Math.random() - 0.5) * 6, 8 + wx + (Math.random() - 0.5) * 14, -16 - Math.random() * 12 + wind.dy * wind.strength * 30, life, 3 + Math.random() * 3, 'rgba(232,236,242,', 7);
+      const wx = wind.dx * wind.strength * 90, life = (2.2 + Math.random() * 1.4) * (1 - 0.4 * wind.strength);
+      const p = fx.spawn(2, v.x + (Math.random() - 0.5) * 7, v.y + (Math.random() - 0.5) * 4, 6 + wx + (Math.random() - 0.5) * 10, -14 - Math.random() * 10 + wind.dy * wind.strength * 30, life, 2.5 + Math.random() * 2.5, 'rgba(232,236,242,', 6);
+      p.veil = 0.4;
     }, true);
   }
   // the vent itself (a manhole cover) drawn by the ground; this marks which ones are live

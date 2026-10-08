@@ -29,9 +29,9 @@ export const TICK_MS = 1000 / TICK_HZ;
 
 export const PED_RADIUS = 11;
 
-// Chrono loop (GDD §3): 20-minute cycle, 15 min day + 5 min night.
+// Chrono loop (GDD §3): 20-minute cycle, 14 min day + 6 min night (the night was 5 min: longer and darker now).
 export const DAY_LOOP_S = 1200;
-export const DAY_PART_S = 900;
+export const DAY_PART_S = 840;
 
 // Tile types
 export const T = {
@@ -80,7 +80,7 @@ export function gameClock(loopSeconds) {
   if (t < DAY_PART_S) minutes = 6 * 60 + (t / DAY_PART_S) * 14 * 60;          // 06:00 -> 20:00
   else minutes = 20 * 60 + ((t - DAY_PART_S) / (DAY_LOOP_S - DAY_PART_S)) * 10 * 60; // 20:00 -> 06:00
   minutes = minutes % 1440;
-  // darkness ramps over 60s at dusk (t 840..900) and dawn (t 0..60 wraps from night)
+  // darkness ramps over the last 60 s of the day part (dusk) and the first 60 s of the next (dawn)
   let dark;
   if (t >= DAY_PART_S) dark = 1;
   else if (t > DAY_PART_S - 60) dark = (t - (DAY_PART_S - 60)) / 60;

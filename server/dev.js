@@ -18,6 +18,7 @@ import * as cruiser from './systems/cruiser.js';
 import * as trains from './systems/trains.js';
 import * as devmode from './devmode.js';
 import * as pets from './systems/pets.js';
+import * as happenings from './systems/happenings.js';
 import * as wildlife from './systems/wildlife.js';
 import * as wanderer from './systems/wanderer.js';
 import { SPECIES } from '../shared/fauna.js';
@@ -196,6 +197,7 @@ export function command(world, p, c, msg) {
     case 'shootout': world.notify(p, gangwar.startShootout(world, p) ? '[dev] Shootout started nearby.' : '[dev] No gang turf near you - go toward The Yards or Southside.', 'info'); break;
     case 'die': if (ped && !ped.dead) combat.damage(world, ped, 99999, null, 'crash', 0); break;
     case 'snatch': npc.snatchEvent(world, p); world.notify(p, '[dev] A mugger is on the way to a nearby pedestrian.', 'info'); break;
+    case 'happen': world.notify(p, happenings.startNow(world, String(msg.k || 'fight'), p) ? `[dev] Started: ${msg.k}.` : '[dev] Nobody about to start it with - try a busier street.', 'info'); break;
     case 'pet': pets.spawnLost(world, p); world.notify(p, '[dev] A pet ran off nearby.', 'info'); break;
     case 'samaritan': prof.samaritan += 50; world.notify(p, '[dev] +50 Samaritan', 'info'); break;
     case 'car': {

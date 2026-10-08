@@ -7,6 +7,8 @@ import { EVENT_RANGE, EVENT_KINDS, FEED_MAX, FEED_KEEP_S } from '../../shared/wo
 
 let petTarget = () => null; // set by pets.js (it imports this module)
 export function setPetTarget(fn) { petTarget = fn; }
+let walletTarget = () => null; // set by happenings.js: the owner of a dropped wallet you're carrying
+export function setWalletTarget(fn) { walletTarget = fn; }
 
 // Event text for the city feed when the caller doesn't give one.
 const FEED_TEXT = { snatch: 'Purse snatched', drop: 'Contraband crate spotted', shootout: 'Gang shootout with the police', robbery: 'Store robbery - alarm tripped' };
@@ -72,6 +74,8 @@ export function forPlayer(world, p) {
   if (amb) out.push({ id: 'amb', k: 'amb', x: Math.round(amb.x), y: Math.round(amb.y) });
   const home = petTarget(world, p);
   if (home) out.push(home);
+  const owner = walletTarget(world, p);
+  if (owner) out.push(owner);
   if ((p.profile.inventory.purse || 0) > 0) {
     let best = null, bd = EVENT_RANGE * 1.5;
     for (const e of world.query(ped.x, ped.y, bd, K.PED)) {

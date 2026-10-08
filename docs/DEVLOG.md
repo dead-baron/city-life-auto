@@ -3737,3 +3737,37 @@ The user: make the night darker and longer, lit only by the city's own lights; t
   - The night is dark from 21:00 to 04:30, for at least 85% of the night part.
   - No god rays, beams or dust at noon or at night; all three at golden hour; beams after sunrise; no dust in the rain.
 - Checked in the redwoods and in town at a dozen times of day, against the old build.
+
+## 2026-10-08 · Longer nights; redwoods fade only in front of you; wildlife that bolts, breaks out and can be crept up on; rarer lost pets; street happenings; manhole steam only from covers in town
+The rest of the user's morning list.
+- **Longer nights** (`shared/constants.js` `DAY_PART_S` 900 → 840): the 20-minute loop is now 14 minutes of day and 6 of night (was 15 and 5). With the darker night from the lighting update, it's dark for about 5½ minutes of every loop. Police at night, the clubs, the observatory and night fishing all go by the clock and get the extra minute.
+- **Redwoods fade only when they're in front of you** (`client/art2/game/host.js` `_treeCovers`):
+  - Before, a giant redwood faded whenever you were anywhere in a box 200 px either side of its trunk, all the way up its height, so walking through the grove faded every tree round you.
+  - Now a redwood fades only when its outline covers your figure on screen: behind the trunk low down, or under the crown higher up (a bit wider in a car).
+  - The outline (`RW_OUTLINE`) is measured from the art: the half width a tree covers in each 40 px of its height, by species (the flared foot, the trunk, the crown from about halfway up).
+  - Buildings fade as before.
+- **Wildlife** (`server/systems/wildlife.js`):
+  - **The bolt builds up.** A startled animal starts first (head up, a look, 0.1–0.3 s; not for a gunshot, a car or a hit), then spins round and gathers speed. Every animal now moves this way (`moveLike`): it turns at its own rate (quick for the small, slow for the big), speeds up and slows down instead of going flat out in a step, and slows into sharp turns. Livestock too.
+  - **Flight:** a flushed bird beats up to speed, and glides in to land.
+  - **Not stuck in corners** (`fleeAngle`, `unstick`):
+    - A fleeing animal picks its way four times a second: open ground (tiles, and the trunks and rocks along the way) mostly away from you, holding its line.
+    - Cornered (a pocket of rocks, a fence corner, the shore), it takes the way out, past you at an angle if it must, keeps to it until it's out, and doesn't run back in.
+    - An animal going nowhere for half a second (pressed against a trunk) gives that way up and takes another; a walk somewhere is given up for somewhere else.
+  - **Sneaking up works** (`eyeCatch`): how far away an animal picks you out depends on how you move. Standing still or creeping, you're very hard to see; walking, a fair way; running, as far as it can see. Creep while its head is down, freeze when it comes up, and you can get within bow range.
+  - **Farms keep their livestock:** a herd or two always comes in round a farm near you, before the wild animals fill the count.
+- **Lost pets** (`server/systems/pets.js`, `shared/rules.js`): about every 8 minutes instead of every 2½, and the owner is 1,600–2,800 px away (was 650–1,100), a real walk home. The thank-you is $220 (was $150).
+- **Street happenings** (new: `server/systems/happenings.js`): every few minutes something small happens near a player on foot in town, never the same thing twice running. Each shows on the radar and the phone's city feed.
+  - **A street fight:** two passers-by come to blows, and a crowd stops to watch and film it. Press ACT near them to break it up (+4 Samaritan). Otherwise it ends when one of them goes down. They pull their punches (`combat.js`), so nobody dies.
+  - **Someone collapses** on the pavement. Help them up (ACT: +$40, +6 Samaritan), or after a minute they come round and limp off.
+  - **A dropped wallet:** someone walking along drops it, then stops a few strides on, patting their pockets. Pick it up and hand it back for a tip (+8 Samaritan; the guide arrow shows you the owner), or keep it and sell it at a pawn shop.
+  - Debug menu → crime: start any of them near you.
+- **Manhole steam** (`client/render/covers.js`, `client/render/weather.js`):
+  - The steam used to rise from any road tile anywhere, out of nothing. Now it comes only out of a manhole cover you can see, and only in town.
+  - The covers come from one list, shared by the ground bake (`groundbake.js` draws them from it) and the steam. Covers are now only on the town's streets: none on country roads.
+  - The wisps are fewer, smaller and see-through (`veil`).
+- **Tests:**
+  - `test/redwood-fade.test.js`: behind the trunk or under the crown it fades; beside the trunk, or in front of it, it doesn't.
+  - `test/wildmoves.test.js`: the bolt builds up, a bird climbs to speed, a deer breaks out of a pocket of boulders (it pressed into the back of it before), a creeping hunter gets within 140 px.
+  - `test/happenings.test.js`: break up a fight; a fight left alone ends with nobody dead; help someone up; someone who collapsed comes round; hand a wallet back; variety, never the same twice running; lost pets rarer, owners far off.
+  - `test/covers.test.js`: covers only in town; the ground draws a cover at every spot on the list and nowhere else.
+- Concept targets: the user's chosen character creator, wardrobe, NPC and shop sheets filed as `docs/art-v2/targets/` CC1–CC6, NP1–NP4 and ST1–ST4. The first set is kept in `targets/alt/` for variety.

@@ -29,6 +29,7 @@ import * as hoops from './hoops.js';
 import * as homes from './homes.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
+import * as happenings from './happenings.js';
 import * as unstuck from './unstuck.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
@@ -481,6 +482,9 @@ export function findInteraction(world, p) {
 
   const crate = cargo.nearestCrate(world, ped);
   if (crate) return { label: crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`, run: () => cargo.pickUp(world, ped, crate) };
+
+  const hap = happenings.interaction(world, p);   // a street fight to break up, someone to help up, a wallet to give back
+  if (hap) return hap;
 
   const pet = pets.interaction(world, p);
   if (pet) return pet;

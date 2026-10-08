@@ -44,6 +44,7 @@
 import { GBuf, F_GROUND, F_WATER, F_WET, F_LEAF } from '../gbuf.js';
 import { MAT, ramp } from '../palette.js';
 import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, vnc, worley, shadeStep as sd } from '../ground.js';
+import { edgeCovers } from '../../render/covers.js';
 import { seaPx, stillPx, WP, WATER } from '../water.js';
 import { T, TILE, MAP_W, MAP_H } from '../../../shared/constants.js';
 import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/map.js';
@@ -1104,15 +1105,15 @@ function arrows(C, G) {
     }
   }
 }
-// manholes on the road, drains at the kerb near each end of a block
+// manholes on the town's streets (covers.js: the same list the steam rises from), drains at the kerb near each end of a
+// block
 function covers(C, G) {
-  const { b, seed } = C;
+  const { M, b, seed } = C;
   for (const e of C.E) {
     if (e.lvl !== 0 || e.kind === 'dirt' || e.kind === 'rural' || e.kind === 'hwy') continue;
     const I = e._gb;
-    for (let s = I.t0 + 60 + hh(e.id, 1, seed) * 120; s < I.t1 - 30; s += 300 + hh(e.id, Math.floor(s), seed) * 200) {
-      const p = pointOn(e.pts, s), o = (hh(e.id, Math.floor(s) + 3, seed) - 0.5) * e.hw;
-      rect(C, p.x - p.ty * o, p.y + p.tx * o, 1, 0, 7, 7, (gi, x, y, gx, gy, i) => {
+    for (const cv of edgeCovers(M, e, seed)) {
+      rect(C, cv.x, cv.y, 1, 0, 7, 7, (gi, x, y, gx, gy, i) => {
         const d = Math.hypot(x, y);
         if (d > 6.8 || !roadLike(b.mat[i])) return;
         let t = d > 5.6 ? 0.08 : ((Math.round(x) + Math.round(y)) & 3) === 0 ? 0.55 : 0.32;

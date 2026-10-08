@@ -64,7 +64,7 @@ export class FX {
     if (this.thin && type !== 6 && (this.skip = !this.skip)) return this.scratch || (this.scratch = {});
     const o = this.p[this.pi];
     this.pi = (this.pi + 1) % MAX_P;
-    o.on = true; o.type = type; o.x = x; o.y = y; o.vx = vx; o.vy = vy; o.life = life; o.max = life; o.size = size; o.color = color; o.grow = grow; o.z = 0; o.vz = vz;
+    o.on = true; o.type = type; o.x = x; o.y = y; o.vx = vx; o.vy = vy; o.life = life; o.max = life; o.size = size; o.color = color; o.grow = grow; o.z = 0; o.vz = vz; o.veil = 1;   // (veil: drawn this much less solid - a manhole's thin steam)
     return o;
   }
   decal(type, x, y, a, size, color, now, alpha = 1) {
@@ -277,7 +277,7 @@ export class FX {
       if (!o.on) continue;
       const k = o.life / o.max;
       if (o.type === 2) { // a soft puff that fades in, then thins out as it spreads
-        g.globalAlpha = Math.min(1, (1 - k) * 6) * k * (o.color.charCodeAt(5) === 50 ? 0.22 : 0.55); // steam (rgba(2..) is thinner than smoke
+        g.globalAlpha = Math.min(1, (1 - k) * 6) * k * (o.color.charCodeAt(5) === 50 ? 0.22 : 0.55) * (o.veil ?? 1); // steam (rgba(2..) is thinner than smoke
         const r = o.size * 1.6;
         g.drawImage(puff(o.color), o.x - r, o.y - r - o.z * 0.3, r * 2, r * 2);
         g.globalAlpha = 1;

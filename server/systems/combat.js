@@ -330,6 +330,8 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (ped.hidden || ped.pet || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet
   if (ped.player && ped.player.invincible) return false;          // dev: invincible
   if (ped.wild) wildlife.noteHit(world, ped, attacker, cause);   // (how it was taken: the grade of the hide)
+  // a street fight (happenings.js): a scuffle - they hit to hurt, not to maim, so it goes on a while and nobody dies
+  if (ped.npc && attacker && attacker.npc && ped.npc.happening && ped.npc.happening === attacker.npc.happening) amount *= 0.3;
   if (ped.player && cause !== 'nonlethal') {
     // players are tougher (rules.js PLAYER_GRIT); a train that would kill throws you clear now and then, critically hurt
     amount /= gritOf(ped, cause);

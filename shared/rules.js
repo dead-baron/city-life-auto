@@ -284,9 +284,18 @@ export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with 
 export const FLASHLIGHT_PRICE = 35;        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
 
 // Lost pets
-export const PET_EVERY_S = 150;            // roughly how often a pet goes missing somewhere near a player
-export const PET_REWARD = 150;             // the owner's thank-you (cash) for bringing it home...
+export const PET_EVERY_S = 480;            // roughly how often a pet goes missing somewhere near a player (was 150: too often)
+export const PET_OWNER_PX = [1600, 2800];  // how far from the pet its owner is out looking (a real walk home, not round the corner)
+export const PET_REWARD = 220;             // the owner's thank-you (cash) for bringing it home...
 export const PET_SAMARITAN = 8;            // ...and the Samaritan points
+
+// Little happenings round the players (server/systems/happenings.js): a street fight, someone collapsing, a dropped wallet
+export const HAPPEN_EVERY_S = 150;         // roughly how often one happens somewhere near someone in town
+export const FIGHT_BREAKUP_SAMARITAN = 4;  // breaking up a street fight
+export const FAINT_HELP_REWARD = 40;       // helping someone who collapsed back on their feet (cash, from them)...
+export const FAINT_HELP_SAMARITAN = 6;     // ...and the Samaritan points
+export const WALLET_TIP = [40, 90];        // handing a dropped wallet back: their thank-you
+export const WALLET_SAMARITAN = 8;
 
 // Getting unstuck
 export const UNSTUCK_S = 5;                // stand still this long and you're moved to the nearest open ground
