@@ -11,6 +11,8 @@ import * as npc from './npc.js';
 import * as phone from './phone.js';
 import * as events from './events.js';
 import { wildStyle } from './wildlife.js';
+import { edgeInfo } from '../../shared/border.js';
+const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
 export const CRIMES = {
   assault:     { heat: 15, label: 'Assault' },
@@ -307,6 +309,11 @@ export function update(world, dt) {
             if (now - (p.lastCamPing || -99) > 8) { p.lastCamPing = now; world.notify(p, c.toll ? 'A bridge toll camera logged you crossing - the police know where you are!' : 'Traffic camera pinged your position to the Police Network!', 'bad'); }
           }
         }
+      }
+      // out past the map's edge there's nowhere to hide: the harbour patrol has you on radar (border.js)
+      if (!seen && !ped.hidden && edgeInfo(ped.x, ped.y, EDGE_I).d > 0) {
+        seen = true;
+        if (now - (p.lastEdgePing || -99) > 15) { p.lastEdgePing = now; world.notify(p, 'The harbour patrol has you on radar out here - the police know where you are.', 'bad'); }
       }
       if (seen) { p.seenAt = now; p.lastSeenX = ped.x; p.lastSeenY = ped.y; p.searchR = 60; }
       const unseen = now - p.seenAt;

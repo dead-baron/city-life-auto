@@ -33,7 +33,9 @@ import { ROAD_RANK } from './roads.js';
 import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
 import { buildNatureSites, REDWOOD_TRUNK, setFlow } from './naturesites.js';
 import { mushroomAtFoot } from './foraging.js';
+import { EDGE_OUT } from './border.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
+const EDGE_T = Math.ceil(EDGE_OUT / TILE) + 2;   // tiles of open sea past the map's edge (border.js), then the wall
 
 export { Z };
 
@@ -327,8 +329,10 @@ export class CityMap {
     this.pillars = [];
   }
   idx(tx, ty) { return ty * MAP_W + tx; }
+  // Past the map's edge: open sea for a way (softEdge, set once the world is built: border.js slows you there and
+  // stops you at its end), then a wall. While the world is being built, a wall right at the edge, as it always was.
   tileAt(tx, ty) {
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return T.WALL;
+    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return this.softEdge && tx >= -EDGE_T && ty >= -EDGE_T && tx < MAP_W + EDGE_T && ty < MAP_H + EDGE_T ? T.DEEP : T.WALL;
     return this.tiles[ty * MAP_W + tx];
   }
   tileAtPx(x, y) { return this.tileAt(Math.floor(x / TILE), Math.floor(y / TILE)); }
@@ -454,6 +458,7 @@ export function isTurf(x, y) {
 
 // Fishing water: 'river', 'deep' sea or 'shore' shallows.
 export function waterKind(map, tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return 'deep';   // (out past the map's edge)
   const i = ty * MAP_W + tx;
   if (map.river[i]) return 'river';
   return map.tiles[i] === T.DEEP ? 'deep' : 'shore';
@@ -610,6 +615,7 @@ function buildCity(seed) {
   m.spawns.police = { x: pd.x, y: pd.y + 44 };
   m.spawns.default = m.spawns.hospital;
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
+  m.softEdge = true; // (from here on the sea runs on past the edge: tileAt)
   return m;
 }
 

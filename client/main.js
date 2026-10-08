@@ -10,6 +10,7 @@ import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/proto
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
+import { edgeInfo, EDGE_SLOW, EDGE_OUT } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { buildTeleport } from './devtp.js';
@@ -796,6 +797,32 @@ async function startArt2(map) {
   const el = $('art2-err'); if (el) el.classList.add('hidden');
   w.resize(W, H, DPR);
 }
+// Out past the map's edge (shared/border.js): a pulsing arrow at your feet pointing the shortest way back - amber
+// while you're only warned, red once the sea is holding you back - and the banner over the screen.
+const EDGE_I = { d: 0, nx: 0, ny: 0 };
+function drawEdgeArrow(sp, e, now) {
+  const a = Math.atan2(e.ny, e.nx), pulse = 0.5 + 0.5 * Math.sin(now * 6), r = 44 + pulse * 7, hold = e.d > EDGE_SLOW;
+  g.save();
+  g.translate(sp.x + e.nx * r, sp.y + e.ny * r - 8); g.rotate(a);
+  g.globalAlpha = 0.7 + 0.3 * pulse;
+  g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.65)'; g.fillStyle = hold ? '#ff5a4a' : '#ffd36b';
+  for (const off of [0, -13]) {
+    g.beginPath(); g.moveTo(16 + off, 0); g.lineTo(-6 + off, -13); g.lineTo(-1 + off, 0); g.lineTo(-6 + off, 13); g.closePath();
+    g.stroke(); g.fill();
+    g.globalAlpha *= 0.6;
+  }
+  g.restore();
+}
+let edgeWarnState = -1;
+function edgeWarn(k) {
+  if (k === edgeWarnState) return;
+  edgeWarnState = k;
+  const el = $('edgewarn');
+  if (!el) return;
+  el.classList.toggle('hidden', !k); el.classList.toggle('hold', k === 2);
+  el.innerHTML = k === 2 ? 'TURN BACK<small>The open sea won\'t let you go any further</small>' : k === 1 ? 'LEAVING THE CITY\'S WATERS<small>Turn back - follow the arrow</small>' : '';
+}
+
 // With the art v2 world the overlay canvas also carries what v1 draws as marks inside its world pass:
 // tracers, rings and floating text, flying debris, price tags, team rings, the glow round valuable
 // crates (world transform set).
@@ -2191,10 +2218,11 @@ function prepFrame(dt) {
     if (mine) { const t = nowS - mine.at; if (t > (mine.burn ?? 9) && t < mine.d - 14) { sfx('burner', 0.6); mine.burn = t + 11 + Math.random() * 8; } }
   }
   {
-    // keep the camera inside the world (no black void past the map edge)
-    const hw = W / 2 / S.cam.zoom, hh = H / 2 / S.cam.zoom, WW = MAP_W * TILE, WH = MAP_H * TILE;
-    S.cam.x = hw * 2 >= WW ? WW / 2 : Math.max(hw, Math.min(WW - hw, S.cam.x));
-    S.cam.y = hh * 2 >= WH ? WH / 2 : Math.max(hh, Math.min(WH - hh, S.cam.y));
+    // keep the camera over the world: the sea runs on past the map's edge as far as you can go (shared/border.js),
+    // so it follows you out there; never past where nothing can go
+    const WW = MAP_W * TILE, WH = MAP_H * TILE;
+    S.cam.x = Math.max(-EDGE_OUT, Math.min(WW + EDGE_OUT, S.cam.x));
+    S.cam.y = Math.max(-EDGE_OUT, Math.min(WH + EDGE_OUT, S.cam.y));
   }
   if (S.specArt) { const st = S.spec.state; S.cam.x = st.x; S.cam.y = st.y; S.cam.zoom = st.z; S.cam.shake = 0; } // (the spectator's camera)
   S.cam.shake *= Math.exp(-6 * dt);
@@ -2328,6 +2356,8 @@ function drawWorldV1(F) {
   g.imageSmoothingEnabled = z < 0.92;
   g.setTransform(...S.worldTf);
 
+  // past the map's edge: open sea (shared/border.js)
+  if (!sub && (view.x0 < 0 || view.y0 < 0 || view.x1 > MAP_W * TILE || view.y1 > MAP_H * TILE)) { g.fillStyle = '#1d5a86'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
   // ground chunks
   for (let cy = Math.max(0, cy0); cy <= Math.min(Math.ceil(MAP_H * TILE / CHUNK_PX) - 1, cy1); cy++)
     for (let cx = Math.max(0, cx0); cx <= Math.min(Math.ceil(MAP_W * TILE / CHUNK_PX) - 1, cx1); cx++)
@@ -2547,6 +2577,10 @@ function drawOverlays(F, v2) {
 
   // name tags + public flares + rumor marker
   drawWorldLabels(F.peds, F.vehs, now, z);
+  // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
+  const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I) : null;
+  if (edge && edge.d > 0) drawEdgeArrow(sp, edge, now);
+  edgeWarn(edge && edge.d > 0 ? (edge.d > EDGE_SLOW ? 2 : 1) : 0);
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
 

@@ -42,7 +42,7 @@ import { dir8 } from '../../render/chars.js';
 import { lampHead } from '../../render/tiles.js';
 import { countryLightY } from '../../render/country.js';
 import { wind } from '../../render/flora/wind.js';
-import { F_GROUND, F_NOCAST } from '../gbuf.js';
+import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
 import { WEAPONS } from '../../../shared/items.js';
@@ -473,7 +473,8 @@ export class World2 {
     let cutBox = null;
     if (cut >= 0) { const b = F.insideB; cutBox = [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
     const modeOf = (cx, cy) => (cutBox && (cx + 1) * CHUNK > cutBox[0] && cx * CHUNK < cutBox[2] && (cy + 1) * CHUNK > cutBox[1] && cy * CHUNK < cutBox[3] ? cut : -1);
-    if (E.reserveChunks) E.reserveChunks(need.size + 1);
+    const offSea = this._offSea();   // (past the map's edge: open sea)
+    if (E.reserveChunks) E.reserveChunks(need.size + offSea + 1);
     // the placeholder where nothing baked is resident: at once for what is on screen, one a frame for the
     // margins
     let fbBudget = 1;
@@ -541,6 +542,46 @@ export class World2 {
     return o;
   }
   _fallback(cx, cy) { return this.E.hasFallback ? this.E.hasFallback(cx, cy) : this.fallbacks.has(cy * 1000 + cx); }
+  // Past the map's edge the sea runs on (shared/border.js). Those chunks are baked like any other - groundbake.js
+  // makes open sea of everything past the edge - but kept apart from the map's own: the bookkeeping above keys
+  // chunks by cy * 1000 + cx, which only holds inside the map, and they have no lights, heights or buildings.
+  // Until a bake lands, a flat stand-in of the deep sea's colour that the light pass rolls with waves. Returns how
+  // many such chunks the view takes (the engine keeps that many slots more).
+  _offSea() {
+    const E = this.E, pool = this.pool;
+    if (!E.hasFallback) return 0;   // (the 2D stub engine keys chunks the map's way: no sea past the edge there)
+    const x0 = Math.floor((this.vx0 - 64) / CHUNK), x1 = Math.floor((this.vx1 + 64) / CHUNK), y0 = Math.floor((this.vy0 - 64) / CHUNK), y1 = Math.floor((this.vy1 + 128) / CHUNK);
+    const want = this.seaWant || (this.seaWant = new Set()), res = this.seaRes || (this.seaRes = new Map());
+    want.clear();
+    let n = 0;
+    for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+      if (cx >= 0 && cy >= 0 && cx < CX && cy < CY) continue;
+      n++;
+      if (E.hasChunk(cx, cy)) continue;
+      if (!E.hasFallback(cx, cy)) E.setChunkFallback(cx, cy, this._seaStandIn(), F_GROUND | F_WATER);
+      const jk = `o${cx},${cy}`;
+      want.add(jk);
+      if (!pool || pool.dead || !pool.ready || this.noBake || res.has(jk) || pool.has(jk)) continue;
+      pool.request(jk, 'bakeChunk', { cx, cy, opt: { quality: this.q, seed: this.map.seed, lowMem: this.lowMem, under: false } }, 1, (r, err) => { if (!err && r && r.g && !this.failed) res.set(jk, { cx, cy, g: r.g }); });
+    }
+    if (n || this.seaActive) {   // (bakes for sea that has gone out of view are called off)
+      if (pool && !pool.dead) pool.cancelWhere((jk) => jk[0] === 'o' && !want.has(jk));
+      this.seaActive = n > 0;
+    }
+    for (const [jk, r] of res) {   // (one landed bake a frame)
+      res.delete(jk);
+      if (!want.has(jk)) continue;
+      try { E.uploadChunk(r.cx, r.cy, r.g); } catch (e) { console.error('[art2] uploadChunk (sea)', e); }
+      break;
+    }
+    return n;
+  }
+  _seaStandIn() {
+    if (this.seaCv) return this.seaCv;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 16;
+    const g = cv.getContext('2d'); g.fillStyle = 'rgb(23,96,150)'; g.fillRect(0, 0, 16, 16);   // (the baked deep sea's average)
+    return (this.seaCv = cv);
+  }
   // A chunk's stand-in until its bake lands: the map drawn simply in the new ground's colours - roads with
   // their lines, building blocks, trees (standin.js, a millisecond or two). Never the old art.
   _placeholder(cx, cy) {

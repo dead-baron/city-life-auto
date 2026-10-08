@@ -568,7 +568,9 @@ export class Art2Engine {
     s.real = true; s.src = null;
     return true;
   }
-  setChunkFallback(cx, cy, source) {
+  // flags: what the flat stand-in is (F_GROUND; F_GROUND | F_WATER for open sea, which the light pass then rolls
+  // with waves like the baked sea)
+  setChunkFallback(cx, cy, source, flags = F_GROUND) {
     if (this.lost || !source) return false;
     const ex = this.chunks.get(ckey(cx, cy));
     if (ex && (ex.real || ex.src === source)) return true;
@@ -583,8 +585,8 @@ export class Art2Engine {
     }
     gl.bindTexture(gl.TEXTURE_2D, s.t[0]);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, src);
-    // flat ground: z 0, F_GROUND, the up normal, no glow
-    this._clearTex(s.t[1], 0, 0, F_GROUND / 255, OCT_MID / 255); this._clearTex(s.t[2], 0, 0, 0, OCT_MID / 255);
+    // flat ground: z 0, its flags (F_GROUND), the up normal, no glow
+    this._clearTex(s.t[1], 0, 0, flags / 255, OCT_MID / 255); this._clearTex(s.t[2], 0, 0, 0, OCT_MID / 255);
     s.real = false; s.src = source; s.under = false; s.bids = null;
     return true;
   }

@@ -6,6 +6,7 @@ import { PED_BLOCK, SWIM_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from '
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
+import { edgeBrake } from './border.js';
 
 // Ground tile under a moving thing - up on the highway deck it's always road.
 const up = (s) => (s.lz || 0) > GROUND_Z;
@@ -106,6 +107,7 @@ export function pedStep(s, inp, dt, map, mods) {
   }
   if (s.stamina > smax) s.stamina = smax;
   s.x += s.vx * dt; s.y += s.vy * dt;
+  edgeBrake(s);   // (out past the map's edge: slowed, and stopped at the world's end - border.js)
   collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK);
   if (map.levels && levelStep(map, s, PED_RADIUS) >= LAND_IMPACT) s.hardLanding = true; // dropped off the deck
 }
@@ -286,6 +288,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   s.vx = c * fwd - sn * lat;
   s.vy = sn * fwd + c * lat;
   s.x += s.vx * dt; s.y += s.vy * dt;
+  edgeBrake(s);   // (out past the map's edge: slowed, and stopped at the world's end - border.js)
   const hit = collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);
   if (!map.levels || isBoat) return hit;
   return Math.max(hit, levelStep(map, s, def.W / 2, true));

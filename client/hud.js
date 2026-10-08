@@ -257,7 +257,7 @@ export class HUD {
     g.save();
     g.clearRect(0, 0, size, size);
     if (!big) { g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, 6.28); g.clip(); }
-    g.fillStyle = '#0d1a10'; g.fillRect(0, 0, size, size);
+    g.fillStyle = 'rgb(25,60,130)'; g.fillRect(0, 0, size, size);   // (past the map's edge: the open sea, the minimap's deep water)
     const mx = cx / TILE, my = cy / TILE, tr = range / TILE;
     g.imageSmoothingEnabled = false;
     g.drawImage(this.mini, mx - tr, my - tr, tr * 2, tr * 2, 0, 0, size, size);

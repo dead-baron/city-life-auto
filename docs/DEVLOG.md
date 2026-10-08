@@ -3319,3 +3319,17 @@ The user's notes from 16:47 are filed in `docs/DESIGN-NOTES.md`.
 - **Later, as one feature:** skating (skateboards, longboards, skates and BMX; tricks, parks, shops, the riding skill, contests).
 
 Concept prompts SU1-SU4, SK1-SK8, CR1-CR2 and BO1 are in the prompt pack.
+
+## 2026-10-07 · A softer edge of the world
+
+- **The sea runs on past the map's edge** (`shared/border.js`; playtest: "make the border of the world go off map a bit... you don't just ram into a wall, it slows you down and points an arrow the shortest way back... It will eventually stop you entirely... This shouldn't become a thing players can exploit"):
+  - The map itself is unchanged (its tiles and signature). Past its edge, where there was an invisible wall, there are now 1,280 px of open sea (`map.js` `tileAt` with `softEdge`, set once the world is built), then the old wall as a backstop.
+  - Cross the edge and a banner says you're leaving the city's waters. An arrow at your feet points the shortest way back.
+  - After 480 px the sea starts holding you back: anything heading further out slows more and more, and anything going along the edge slows too. Heading back toward the city is never slowed. At 1,280 px nothing goes further, and the banner turns red: "Turn back".
+  - It works the same for boats, swimmers and anything else that moves (`edgeBrake` in `shared/physics.js` `pedStep` and `vehStep`). Your own client predicts it with the same code.
+- **No exploits**:
+  - A wanted player out past the edge stays on the police radar (the harbour patrol), so the heat never cools out there.
+  - Logging out out there brings you back on land.
+  - The ambient boats keep to the city's waters.
+- **The look**: the art v2 renderer bakes the sea past the edge with the same water as the real thing, so there's no seam. A flat stand-in shows for the split second before each bake lands. The minimap shows open sea past the edge, and the camera follows you out instead of stopping at the map's edge.
+- **Tests**: `test/border.test.js` (the band of sea and the wall beyond it, a speedboat slowed and stopped then back at full speed, a swimmer crawling along the outer line, the radar, logging back in on land).

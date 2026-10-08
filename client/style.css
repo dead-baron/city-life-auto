@@ -94,6 +94,14 @@ body.kbm #b-fs { display: none; }
   text-shadow: var(--outline), 0 0 24px rgba(0,0,0,.6); pointer-events: none; opacity: 0; white-space: nowrap; z-index: 6; text-align: center; }
 #district small { display: block; font-family: var(--ui); font-weight: 700; font-size: 17px; letter-spacing: 7px; color: var(--warn); margin-top: 2px; }
 #district.show { animation: district 3.4s ease-out; }
+/* out past the map's edge (shared/border.js): the warning to turn back, pulsing; red once the sea holds you back */
+#edgewarn { position: absolute; left: 50%; top: 13%; transform: translateX(-50%); font-family: var(--display); font-size: 34px; letter-spacing: 2px; color: #ffd36b;
+  text-shadow: var(--outline), 0 0 18px rgba(0,0,0,.6); pointer-events: none; white-space: nowrap; z-index: 6; text-align: center; animation: edgewarn 1.1s ease-in-out infinite alternate; }
+#edgewarn small { display: block; font-family: var(--ui); font-weight: 700; font-size: 15px; letter-spacing: 3px; color: #fff; margin-top: 2px; }
+#edgewarn.hold { color: #ff5a4a; }
+@keyframes edgewarn { from { opacity: 0.65; } to { opacity: 1; } }
+.touch #edgewarn { font-size: 24px; top: 16%; }
+.touch #edgewarn small { font-size: 12px; letter-spacing: 2px; }
 @keyframes district { 0% { opacity: 0; transform: translateX(-50%) scale(1.25); } 10% { opacity: 1; transform: translateX(-50%) scale(1); } 78% { opacity: 1; } 100% { opacity: 0; } }
 
 /* ---- interaction menu (GTA style, left side) ---- */
