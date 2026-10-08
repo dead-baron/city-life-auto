@@ -3383,7 +3383,7 @@ function vehVisual(v, now, dt) {
     if (sp > 2 && Math.random() < 0.8) S.fx.spawn(5, v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, 0.7, 3, '#e8f6ff');
   }
   if (f & VF.SIREN) sfx('siren', distVol(v.rx, v.ry) * 0.7);
-  if (f & VF.HORN) sfx('horn', distVol(v.rx, v.ry));
+  if (f & VF.HORN) sfx(def.pedal ? 'bell' : 'horn', distVol(v.rx, v.ry));   // (a bicycle rings its bell)
   void now;
 }
 function drawVehicleEnt(v, now, dt) {
@@ -3445,7 +3445,7 @@ function drawVehicleEnt(v, now, dt) {
   // riders on bikes and jet skis sit in the open: driver up front, a passenger behind
   if (def.kind === 'bike' || def.id === 'jetski') {
     const seats = def.kind === 'bike' ? SEAT_BIKE : SEAT_JETSKI;
-    for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) drawRider(p, v, def, seats[(p.flags & PF.PASSENGER) ? 1 : 0]);
+    for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) { const pass = (p.flags & PF.PASSENGER) !== 0; drawRider(p, v, def, !pass && def.seat !== undefined ? [def.seat, 0] : seats[pass ? 1 : 0]); }
   }
   void dt;
 }

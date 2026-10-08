@@ -387,7 +387,7 @@ export function tryEnter(world, ped) {
     const already = v.stolenBy && v.stolenBy.has(p.pid);
     if (!mine && !already && !v.carjacked) {
       if (v.def.police && !p.badge) law.crime(world, ped, 'policeTheft', null, v.x, v.y);
-      else if (v.npcOwned || v.owner) law.crime(world, ped, 'theft', v.owner ? world.players.get(v.owner)?.ped || null : null, v.x, v.y);
+      else if (v.npcOwned || v.owner) law.crime(world, ped, v.def.pedal ? 'bikeTheft' : 'theft', v.owner ? world.players.get(v.owner)?.ped || null : null, v.x, v.y);
     }
     (v.stolenBy ||= new Set()).add(p.pid);
   }
@@ -416,7 +416,7 @@ function carjack(world, ped, v, driver) {
     if (q && q.npc) { ejectPed(world, q, true); if (spd > BAIL_SPEED) bail(world, q, v, spd, i); }
   }
   v.carjacked = true;
-  law.crime(world, ped, 'carjack', driver, v.x, v.y);
+  law.crime(world, ped, v.def.pedal ? 'bikejack' : 'carjack', driver, v.x, v.y);
   if (driver.npc) npc.onCarjacked(world, driver, ped);
   if (driver.player) world.notify(driver.player, `You were carjacked by ${ped.name || 'someone'}!`, 'bad');
 }

@@ -3489,3 +3489,37 @@ From the design notes ("Bounties rework"): a bounty is a revenge measure for bei
   - the clock through hiding, deaths, logging off and coming back;
   - refunds, and the lapse after days away;
   - the courthouse desk.
+
+## 2026-10-07 · More bicycles: six kinds, cyclists in traffic, bikes at the racks
+
+From the design notes ("More bicycles"). The numbers are in `shared/vehicles.js`; each bike's `rough` says how much rough ground slows it.
+- **Six kinds**, all faster than running on a road; each feels different:
+  - **Beach Cruiser** ($220): steady, the slowest, fat tyres that take sand and grass well, a basket on some.
+  - **Commuter Bike** ($250; the old City Bicycle, so players who own one keep it): a step-through with mudguards and a rack, quick in town.
+  - **BMX** ($300): small, quick off the mark, the tightest turn, pegs.
+  - **Mountain Bike** ($480): knobby tyres and a suspension fork. On grass, dirt and sand it hardly slows.
+  - **Road Bike** ($650): the fastest on tarmac (as quick as town traffic), but poor off it: on grass it's down to a jog.
+  - **Cargo Bike** ($900): slow, with a wooden box up front. It carries two crates (the box and the rack).
+- **The physics** (`shared/physics.js` `vehStep`): a bike's `rough` scales how much the ground's drag and lost grip apply. In the water every bike is as stuck as a car.
+- **Where you get them:** all six at the dealership's menu, and now and then one on the lot.
+- **In the world:**
+  - **Cyclists in traffic:** NPC riders on road bikes, commuters, cruisers, cargo bikes, mountain bikes and BMXs, and road and mountain bikers on the country roads.
+  - They ride at their own pace, a little slower than the cars, keep to the kerb lane, and never take the highway or a ramp up to it.
+  - Road bikes and cargo bikes keep off the dirt tracks when there's another way. A road bike's rider is out training (sportswear).
+  - **Bikes at the racks:** the 51 street bike racks have a bike or two locked up at about half of them, on the pavement side, front wheel to the rack.
+- **Stealing one:** riding off on someone's bike is **Bike theft**: half the heat of a car theft, called in less often, and noticed from only 60% as far away. Pulling someone off their bike is a lesser crime than a carjacking, and not a felony.
+- **A bell:** the horn button rings a bicycle's bell (ding-ding).
+- **The art:**
+  - All six are built by one voxel builder (`client/art2/vehicles.js` `pedalBike`): spoked wheels, frames drawn as tubes, forks, bars (upright, swept, flat, drop and BMX risers) and saddles, plus each kind's own kit.
+  - Every bike rider pedals, and sits where that bike's saddle is (`seat`, so the cargo bike's rider sits behind the box).
+  - The classic renderer draws them too.
+  - Preview them in `tools/art2/actors-preview.html?view=bikes&riders=0`.
+- **Kept chunks survive new actor art:** the art hash no longer covers the live actor sprites (vehicles, people on the move, animals, effects). The same workers draw those, but they never go into a kept chunk. A new bike or a new animal no longer throws away every browser's baked chunks; `test/perf.test.js` checks that the chunk baker doesn't read them. This build still bakes afresh once.
+- **Dev:** debug menu → Bicycles: each kind, and the nearest bike rack.
+- **Later:** BMX tricks come with the skating feature (its trick system covers the BMX).
+- **Tests:** `test/bikes.test.js`:
+  - top speeds on road, grass, sand and water;
+  - the dealer's six, and bikes at the racks;
+  - an NPC cyclist riding a minute of traffic at the kerb, never up on the highway;
+  - bike theft seen from less far than a car theft, and booked as one.
+  - The wilds test now counts an ambulance crew as belonging out there. With the new traffic a grizzly got a hiker in Granite Peaks during the test, and the crew came for the body.

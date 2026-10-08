@@ -15,7 +15,8 @@ import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
-// sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT)
+// sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT); sight: how far
+// people notice it, as a share of the usual (a bike lifted off a rack is easy to miss)
 export const CRIMES = {
   assault:     { heat: 15, label: 'Assault', sev: 1 },
   copAssault:  { heat: 40, label: 'Assaulting an officer', felony: true, sev: 1.3 },
@@ -25,6 +26,8 @@ export const CRIMES = {
   hitrun:      { heat: 15, label: 'Hit and run', sev: 1.1 },
   brandish:    { heat: 6,  label: 'Shots fired', sev: 1.2 },
   theft:       { heat: 10, label: 'Vehicle theft', sev: 0.85 },
+  bikeTheft:   { heat: 5,  label: 'Bike theft', sev: 0.55, sight: 0.6 },
+  bikejack:    { heat: 15, label: 'Pulling someone off their bike', sev: 1, sight: 0.8 },
   policeTheft: { heat: 25, label: 'Stealing a police vehicle', felony: true, sev: 1.2 },
   carjack:     { heat: 25, label: 'Carjacking', felony: true, sev: 1.3 },
   cargoTheft:  { heat: 15, label: 'Cargo theft', sev: 0.85 },
@@ -126,7 +129,8 @@ function isFlagged(world, ped) {
 export function witnesses(world, x, y, perp, victim, loud = false, crime = null) {
   const night = world.clock.isNight;
   const tier = crime ? world.map.districtAt(x, y).tier || 'mid' : 'mid';
-  const pedRange = 300 * (night ? 0.55 : 1) * (WITNESS_SIGHT[tier] ?? 1);   // GDD: night narrows witness cones
+  const sight = (crime && CRIMES[crime] && CRIMES[crime].sight) || 1;
+  const pedRange = 300 * (night ? 0.55 : 1) * (WITNESS_SIGHT[tier] ?? 1) * sight;   // GDD: night narrows witness cones
   const camFactor = night ? 0.75 : 1;           // GDD: camera radii -25% at night
   const res = { count: 0, seen: 0, cop: false, cam: false, saw: [] };
   const seq = crime ? (world.crimeSeq = (world.crimeSeq || 0) + 1) : 0;
@@ -136,7 +140,7 @@ export function witnesses(world, x, y, perp, victim, loud = false, crime = null)
     if (world.time < e.downUntil && e !== victim) continue;
     const d = Math.hypot(e.x - x, e.y - y);
     const cop = isCop(e);
-    const range = cop ? 420 * (night ? 0.75 : 1) : pedRange;
+    const range = cop ? 420 * (night ? 0.75 : 1) * sight : pedRange;
     if (d > range) continue;
     if (e.npc) {
       if (e.npc.role === 'gang' || e.npc.archetype === 'drunk') continue;

@@ -32,6 +32,11 @@ export const DEV_SECTIONS = [
     ['🎨 Paint shop', 'near', { k: 'paint' }], ['🚘 Car dealer', 'near', { k: 'dealer' }], ['🔑 Rentals', 'near', { k: 'rental' }],
     ['⛽ Filling station', 'near', { k: 'gasstation' }], ['⚓ Marina', 'near', { k: 'marina' }],
   ] },
+  { id: 'bikes', title: '🚲 Bicycles', items: [
+    ['🚲 Commuter bike', 'car', { m: 'bicycle' }], ['🏖 Beach cruiser', 'car', { m: 'cruiser' }], ['🚵 Mountain bike', 'car', { m: 'mtb' }],
+    ['🚴 Road bike', 'car', { m: 'roadbike' }], ['🛞 BMX', 'car', { m: 'bmx' }], ['📦 Cargo bike (two crates)', 'car', { m: 'cargobike' }],
+    ['🔒 Nearest bike rack', 'near', { k: 'bikerack' }],
+  ] },
   { id: 'rail', title: '🚆 Trains', items: [
     ['🚉 Call a train to this station', 'calltrain'], ['🚆 Hop on the nearest train', 'train'],
     ['🚏 Nearest platform', 'near', { k: 'platform' }], ['🚇 Nearest subway entrance', 'near', { k: 'subway' }],

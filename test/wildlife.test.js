@@ -35,7 +35,8 @@ function clear(w) { for (const e of [...w.entities.values()]) if ((e.kind === K.
 test('out in the wilds: animals round you, a few people who belong there, quiet roads; in town: no animals', () => {
   const w = makeWorld({ npcBudget: 200 });
   const { p } = joinPlayer(w);
-  const COUNTRY_FOLK = new Set(['hiker', 'camper', 'farmer', 'nomad', 'casual', 'construction', 'senior']);
+  // (and the ambulance crew, when a bear or a lion got one of them: EMS comes for the body out here too)
+  const COUNTRY_FOLK = new Set(['hiker', 'camper', 'farmer', 'nomad', 'casual', 'construction', 'senior', 'medic']);
   for (const name of ['Highland Woods', 'Granite Peaks', 'Cedar Farms']) {
     clear(w);
     const at = middleOf(w, name);

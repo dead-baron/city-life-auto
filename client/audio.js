@@ -68,6 +68,7 @@ export function sfx(name, vol = 1) {
     case 'cash': if (throttle('cash', 100)) { tone(1320, 0.08, 0.2 * vol); setTimeout(() => tone(1760, 0.12, 0.2 * vol), 70); } break;
     case 'door': if (throttle('door', 150)) noise(0.08, 300, 1, 0.4 * vol); break;
     case 'horn': if (throttle('horn', 220)) { tone(392, 0.22, 0.12 * vol, 'square'); tone(494, 0.22, 0.1 * vol, 'square'); } break;
+    case 'bell': if (throttle('bell', 380)) { tone(2350, 0.3, 0.07 * vol, 'sine'); tone(3520, 0.18, 0.025 * vol, 'sine'); setTimeout(() => { tone(2350, 0.4, 0.06 * vol, 'sine'); tone(3520, 0.22, 0.02 * vol, 'sine'); }, 150); } break;   // a bicycle bell: ding-ding
     case 'siren': if (throttle('siren', 700)) { tone(700, 0.35, 0.06 * vol, 'sine', 400); setTimeout(() => tone(1100, 0.35, 0.06 * vol, 'sine', -400), 350); } break;
     case 'splash': if (throttle('splash', 100)) noise(0.4, 1400, 0.5, 0.35 * vol, 'highpass'); break;
     case 'bite': tone(880, 0.1, 0.2); setTimeout(() => tone(880, 0.1, 0.2), 140); break;

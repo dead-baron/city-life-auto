@@ -35,7 +35,7 @@
 import { GBuf, F_NOCAST, F_GLASS, hash, bayer, norm, cutGBuf } from '../gbuf.js';
 import { Vox } from '../voxel.js';
 import { ramp, MAT } from '../palette.js';
-import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICLE_DIMS } from '../vehicles.js';
+import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICLE_DIMS, PEDAL } from '../vehicles.js';
 import { animalModel, renderUpright, ANIMALS } from '../animals.js';
 import { birdModel, BIRDS } from '../birds.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
@@ -161,7 +161,7 @@ const wrapHi = (hi, N) => ((Math.round(hi) % N) + N) % N;
 export const VARIANTS = 8;
 // civilian bodies take the spawn paint; liveried models keep their livery unless resprayed (tn >= 0);
 // work trucks take a cab colour from a short fleet list
-const CIVIL = new Set(['compact', 'sedan', 'sports', 'pickup', 'van', 'bike', 'bicycle', 'speedboat', 'dinghy', 'jetski']);
+const CIVIL = new Set(['compact', 'sedan', 'sports', 'pickup', 'van', 'bike', 'speedboat', 'dinghy', 'jetski', ...PEDAL]);
 const WORK = new Set(['flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'towtruck']);
 const CABS = ['#e6e2d8', '#e6e2d8', '#c0402c', '#2f5a9a', '#e0b030', '#3f7a46', '#e6e2d8', '#8a8e96', '#e6e2d8', '#2c2e36'];
 export const vehDef = (d) => VEHICLE_BY_INDEX[d && d.m] || VEHICLE_BY_INDEX[1];
@@ -187,7 +187,7 @@ function vehLook(d) {
 }
 // WRECK + BURN: the fresh wreck still burning (charred, embers glowing; the host adds the fire); WRECK: the
 // burnt-out shell (a bicycle just buckles); BURN alone: on fire before it blows (hp < 15%)
-const modelState = (t, s) => (s.wreck ? (t === 'bicycle' ? 'wrecked' : s.burn ? 'smoulder' : 'burnt') : s.burn ? 'burning' : s.dmg === 2 ? 'wrecked' : s.dmg ? 'dented' : 'clean');
+const modelState = (t, s) => (s.wreck ? (PEDAL.has(t) ? 'wrecked' : s.burn ? 'smoulder' : 'burnt') : s.burn ? 'burning' : s.dmg === 2 ? 'wrecked' : s.dmg ? 'dented' : 'clean');
 export function vehicleKey(d, st, hi = 0, N = 32) {
   const s = normSt(st), k = vehLook(d);
   return `v|${k.t}|${k.paint || k.cab || 'L'}|${(((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS}|${stKey(s)}|${wrapHi(hi, N)}|${N}`;

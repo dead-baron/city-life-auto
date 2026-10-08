@@ -45,7 +45,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Power slide: floor it through a tight turn (hold the gas + counter-steer to keep it sideways, lift to grip) | W + A/D at speed | RT + stick | push far to one side at speed |
 | Board a train (anywhere on the platform while it's in; the edge glows green) | E | B | ACT |
 | Throw / drop crate | Q | Y | THROW |
-| Reload / horn & siren (siren on: traffic pulls over) | R / H | — / D-pad up | — / HORN |
+| Reload / horn & siren (siren on: traffic pulls over; on a bicycle, the bell) | R / H | — / D-pad up | — / HORN |
 | Rob a store (gun on the clerk; lower it to stop) | Hold right mouse / aim at the clerk | LT aimed at the clerk | aim stick at the clerk |
 | Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
 | Golf: aim, then hold and let go at the top of the meter (by your ball; each shot starts aimed at the flag) | Mouse · hold left click | Right stick · hold RT | Aim stick · hold FIRE |

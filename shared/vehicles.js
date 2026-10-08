@@ -32,9 +32,18 @@ export const VEHICLES = {
   garbage:   { i: 22, name: 'Garbage Truck',    kind: 'car',  L: 140, W: 60, max: 380, accel: 170, brake: 500, rev: 120, turn: 1.8, grip: 7.2, drift: 2.4, mass: 3.4, hp: 520, seats: 2, slots: [[-50, 0]] },
   firetruck: { i: 23, name: 'Fire Engine',      kind: 'car',  L: 176, W: 64, max: 470, accel: 200, brake: 520, rev: 120, turn: 1.7, grip: 7.2, drift: 2.4, mass: 4.0, hp: 700, seats: 4, slots: [[-30, -15], [-30, 15], [-60, -15], [-60, 15]] },
   towtruck:  { i: 24, name: 'Tow Truck',        kind: 'car',  L: 134, W: 58, max: 480, accel: 220, brake: 560, rev: 140, turn: 2.0, grip: 7.6, drift: 2.4, mass: 2.6, hp: 400, seats: 2, slots: [[-34, -13], [-34, 13]], price: 9500 },
-  // pedal power: quiet, slow, nimble; it buckles instead of blowing up
-  bicycle:   { i: 25, name: 'City Bicycle',     kind: 'bike', L: 40,  W: 14, max: 330, accel: 260, brake: 620, rev: 50,  turn: 3.9, grip: 10,  drift: 3.0, mass: 0.25, hp: 50, seats: 1, slots: [[-14, 0]], price: 250, pedal: true },
+  // pedal power: quiet, nimble, all faster than running on a road; a bike buckles instead of blowing up (pedal).
+  // rough: how much grass, dirt and sand slow it and loosen its grip (1: as a car; the mountain bike shrugs them off,
+  // the road bike hates them). seat: where the rider sits, px forward of the middle (the renderers).
+  // (the commuter keeps the id 'bicycle': it's the one players already own)
+  bicycle:   { i: 25, name: 'Commuter Bike',    kind: 'bike', L: 40,  W: 14, max: 330, accel: 260, brake: 620, rev: 50,  turn: 3.9, grip: 10,  drift: 3.0, mass: 0.25, hp: 50, seats: 1, slots: [[-14, 0]], price: 250, pedal: true, rough: 1, seat: 2, blurb: 'everyday, quick in town' },
+  cruiser:   { i: 26, name: 'Beach Cruiser',    kind: 'bike', L: 42,  W: 16, max: 290, accel: 220, brake: 560, rev: 50,  turn: 3.4, grip: 11.5, drift: 3.4, mass: 0.3, hp: 55, seats: 1, slots: [[-15, 0]], price: 220, pedal: true, rough: 0.5, seat: 0, blurb: 'steady, fat tyres for the beach' },
+  mtb:       { i: 27, name: 'Mountain Bike',    kind: 'bike', L: 42,  W: 16, max: 340, accel: 290, brake: 700, rev: 50,  turn: 3.9, grip: 10.5, drift: 3.0, mass: 0.28, hp: 65, seats: 1, slots: [[-15, 0]], price: 480, pedal: true, rough: 0.25, seat: 2, blurb: 'rides rough ground' },
+  roadbike:  { i: 28, name: 'Road Bike',        kind: 'bike', L: 42,  W: 12, max: 430, accel: 300, brake: 600, rev: 50,  turn: 3.6, grip: 9.5, drift: 2.8, mass: 0.2, hp: 40, seats: 1, slots: [[-15, 0]], price: 650, pedal: true, rough: 1.5, seat: 3, blurb: 'fastest on the road, poor off it' },
+  bmx:       { i: 29, name: 'BMX',              kind: 'bike', L: 34,  W: 14, max: 310, accel: 330, brake: 720, rev: 50,  turn: 4.5, grip: 10.5, drift: 3.2, mass: 0.2, hp: 55, seats: 1, slots: [[-11, 0]], price: 300, pedal: true, rough: 0.6, seat: 1, blurb: 'small and nimble' },
+  cargobike: { i: 30, name: 'Cargo Bike',       kind: 'bike', L: 58,  W: 18, max: 280, accel: 190, brake: 520, rev: 50,  turn: 3.0, grip: 10,  drift: 2.8, mass: 0.45, hp: 75, seats: 1, slots: [[15, 0], [-19, 0]], price: 900, pedal: true, rough: 1.1, seat: -11, blurb: 'slow, carries two crates' },
 };
+export const PEDAL_BIKES = Object.keys(VEHICLES).filter((id) => VEHICLES[id].pedal);
 
 export const VEHICLE_BY_INDEX = [];
 for (const [id, v] of Object.entries(VEHICLES)) {
@@ -58,7 +67,11 @@ export const PAINTS = [
 export const TRAFFIC_MIX = [
   ['sedan', 30], ['compact', 25], ['taxi', 10], ['pickup', 12], ['van', 8], ['sports', 4],
   ['flatbed', 4], ['bike', 4], ['bus', 2], ['boxtruck', 3], ['dumptruck', 1.5], ['mixer', 1], ['tanker', 1.5], ['garbage', 1], ['towtruck', 1], ['firetruck', 0.4],
+  // cyclists (kept off the highway and its ramps: server/systems/traffic.js)
+  ['bicycle', 2.2], ['roadbike', 1.2], ['cruiser', 0.7], ['cargobike', 0.6], ['mtb', 0.5], ['bmx', 0.4],
 ];
+// what's locked up at the street bike racks (server/systems/traffic.js)
+export const RACK_MIX = [['bicycle', 4], ['cruiser', 2], ['roadbike', 1.5], ['mtb', 1.5], ['bmx', 1], ['cargobike', 0.6]];
 // heavier on the highways and in the docks, yards and industrial districts
 export const TRUCK_MODELS = new Set(['flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'towtruck']);
 export const PARKED_MIX = [['sedan', 30], ['compact', 30], ['pickup', 15], ['van', 8], ['sports', 6], ['bike', 6], ['flatbed', 5]];

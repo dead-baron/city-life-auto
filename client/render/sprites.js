@@ -123,6 +123,12 @@ function tinted(fr, p) {
 
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
+// the pedal bikes, seen from above: wheel length, tyre width, a smaller front wheel, where the saddle and bars are, the
+// cargo bike's box
+const PEDAL_LOOK = {
+  bicycle: { wheel: 12, tyre: 4, seat: 11, bars: 29 }, cruiser: { wheel: 13, tyre: 5, seat: 12, bars: 29 }, mtb: { wheel: 13, tyre: 5, seat: 12, bars: 30 },
+  roadbike: { wheel: 14, tyre: 3, seat: 12, bars: 31 }, bmx: { wheel: 10, tyre: 4, seat: 9, bars: 22 }, cargobike: { wheel: 12, front: 9, tyre: 4, seat: 10, bars: 24, box: [28, 48] },
+};
 function procVehicle(def, paint) {
   const S = 2, L = def.L, W = def.W;
   const cv = document.createElement('canvas');
@@ -132,15 +138,16 @@ function procVehicle(def, paint) {
   g.fillStyle = '#111'; rr(g, 0, 0, L, W, 6); g.fill();
   if (def.id === 'bus') paint = '#f2c21b';
   if (def.id === 'armored') paint = '#d8dbe0';
-  if (def.id === 'bicycle') { // two thin wheels, the frame between, handlebars across the front
+  if (def.pedal) { // two wheels (fat, knobby or thin), the frame between, handlebars across the front; the cargo bike's box
     g.clearRect(-2, -2, L + 4, W + 4);
-    const cy = W / 2;
-    g.fillStyle = '#16171b'; rr(g, 0, cy - 2, 12, 4, 2); g.fill(); rr(g, L - 12, cy - 2, 12, 4, 2); g.fill(); // tyres
-    g.fillStyle = '#8a8f99'; g.fillRect(2, cy - 0.5, 8, 1); g.fillRect(L - 10, cy - 0.5, 8, 1);             // rims
-    g.fillStyle = paint; g.fillRect(8, cy - 1.5, L - 18, 3);                                                  // frame
-    g.fillStyle = '#1b1d22'; rr(g, 11, cy - 2.5, 7, 5, 2); g.fill();                                          // saddle
-    g.fillStyle = '#2a2d35'; g.fillRect(L - 11, 1, 2, W - 2);                                                 // bars
-    g.fillStyle = '#c9c5bb'; g.fillRect(L - 11, 0, 2, 2); g.fillRect(L - 11, W - 2, 2, 2);                    // grips
+    const cy = W / 2, P = PEDAL_LOOK[def.id] || PEDAL_LOOK.bicycle, t = P.tyre, d = P.wheel;
+    g.fillStyle = '#16171b'; rr(g, 0, cy - t / 2, d, t, t / 2); g.fill(); rr(g, L - (P.front || d), cy - t / 2, P.front || d, t, t / 2); g.fill(); // tyres
+    g.fillStyle = '#8a8f99'; g.fillRect(2, cy - 0.5, d - 4, 1); g.fillRect(L - (P.front || d) + 2, cy - 0.5, (P.front || d) - 4, 1);       // rims
+    g.fillStyle = paint; g.fillRect(d - 4, cy - 1.5, L - d - (P.front || d) + 6, 3);                                                   // frame
+    if (P.box) { g.fillStyle = '#8a6a3a'; rr(g, P.box[0], 1, P.box[1] - P.box[0], W - 2, 2); g.fill(); g.fillStyle = '#5a4428'; g.fillRect(P.box[0] + 2, 3, P.box[1] - P.box[0] - 4, W - 6); }
+    g.fillStyle = '#1b1d22'; rr(g, P.seat, cy - 2.5, 7, 5, 2); g.fill();                                                               // saddle
+    g.fillStyle = '#2a2d35'; g.fillRect(P.bars, 1, 2, W - 2);                                                                          // bars
+    g.fillStyle = '#c9c5bb'; g.fillRect(P.bars, 0, 2, 2); g.fillRect(P.bars, W - 2, 2, 2);                                             // grips
     return cv;
   }
   if (def.id === 'jetski') { // stubby hull, seat, handlebars

@@ -7,7 +7,8 @@ import { K, T } from '../../shared/constants.js';
 import { lanePath, turnPath, exitsFrom, signalFor, edgeZ, nearestEdge } from '../../shared/roads.js';
 import { pointAt, measure } from '../../shared/geom.js';
 import { angleDiff, clamp } from '../../shared/math.js';
-import { TRAFFIC_MIX, PARKED_MIX, TRUCK_MODELS } from '../../shared/vehicles.js';
+import { TRAFFIC_MIX, PARKED_MIX, RACK_MIX, TRUCK_MODELS, VEHICLES } from '../../shared/vehicles.js';
+import { PED_BLOCK } from '../../shared/map.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
@@ -41,10 +42,16 @@ function nearestAnchor(world, x, y) {
 }
 
 // Pick the next road at a junction: mostly straight on, sometimes a turn; drivers that have
-// wandered far from every player drift back toward the action.
-function chooseExit(world, n, inEdge) {
+// wandered far from every player drift back toward the action. A cyclist never takes the highway or a ramp up, and a road
+// bike keeps off the dirt tracks when there's another way.
+const NO_BIKES = new Set(['hwy', 'ramp']);
+function chooseExit(world, n, inEdge, def = null) {
   const net = world.map.net;
   let opts = exitsFrom(net, n, inEdge);
+  if (def && def.pedal) {
+    opts = opts.filter((o) => !NO_BIKES.has(net.edges[o.edge].kind) && net.edges[o.edge].lvl === 0);
+    if (def.rough > 1) { const paved = opts.filter((o) => net.edges[o.edge].kind !== 'dirt'); if (paved.length) opts = paved; }
+  }
   if (!opts.length) return null;
   // through traffic keeps to the streets: an alley only now and then (or when it's the only way on)
   const streets = opts.filter((o) => net.edges[o.edge].kind !== 'alley');
@@ -95,7 +102,7 @@ function enterEdge(world, v, edgeId, from, lane, s0 = 0) {
   const e = net.edges[edgeId];
   const to = e.a === from ? e.b : e.a;
   ai.edge = edgeId; ai.from = from;
-  ai.next = chooseExit(world, net.nodes[to], edgeId);
+  ai.next = chooseExit(world, net.nodes[to], edgeId, v.def);
   // heading up the deck for an off-ramp from the inside lane: over to the outer lane on the way (the ramp's
   // deceleration lane peels off it)
   let lp;
@@ -134,10 +141,10 @@ function crossJunction(world, v) {
   const ai = v.ai;
   const e = net.edges[ai.edge];
   const to = e.a === ai.from ? e.b : e.a;
-  const nx = ai.next || chooseExit(world, net.nodes[to], ai.edge);
+  const nx = ai.next || chooseExit(world, net.nodes[to], ai.edge, v.def);
   if (!nx) { v.ai = null; v.despawnable = true; return; }
   const ne = net.edges[nx.edge];
-  const lane = laneFor(ne, nx.turn, ai.lane);
+  const lane = v.def.pedal ? 0 : laneFor(ne, nx.turn, ai.lane);   // (a cyclist keeps to the kerb)
   const a = lanePath(net, e, ai.from, ai.lane), b = lanePath(net, ne, to, lane);
   const turn = turnPath(a[a.length - 1], endDir(a), b[0], startDir(b), Math.abs(nx.turn) > 0.5 ? 6 : 3);
   enterEdge(world, v, nx.edge, to, lane, 0);
@@ -261,9 +268,11 @@ const DRIVEWAY_CARS = ['sedan', 'compact', 'pickup', 'sports', 'sedan', 'compact
 // Out in the open country the roads are quiet, and what's on them belongs there: farmers' pickups and
 // flatbeds, campers' vans, off-roaders on motorbikes, the odd tanker for the oil field or a dump truck
 // for the quarry - no taxis, buses or bin lorries.
-const COUNTRY_MIX = [['pickup', 40], ['van', 12], ['sedan', 12], ['compact', 8], ['bike', 10], ['flatbed', 8], ['tanker', 2], ['dumptruck', 2], ['boxtruck', 2]];
+const COUNTRY_MIX = [['pickup', 40], ['van', 12], ['sedan', 12], ['compact', 8], ['bike', 10], ['flatbed', 8], ['tanker', 2], ['dumptruck', 2], ['boxtruck', 2], ['roadbike', 3], ['mtb', 3]];
 const COUNTRY_TARGET_DAY = 2, COUNTRY_TARGET_NIGHT = 1;
-const countryDriver = (model, style) => (model === 'van' ? (rng() < 0.6 ? 'camper' : 'casual') : model === 'pickup' || model === 'flatbed' ? (style === 'rural' || rng() < 0.4 ? 'farmer' : style === 'desert' ? 'nomad' : 'camper') : model === 'bike' ? (rng() < 0.5 ? 'hiker' : 'casual') : 'casual');
+const countryDriver = (model, style) => (model === 'van' ? (rng() < 0.6 ? 'camper' : 'casual') : model === 'pickup' || model === 'flatbed' ? (style === 'rural' || rng() < 0.4 ? 'farmer' : style === 'desert' ? 'nomad' : 'camper') : model === 'bike' || model === 'mtb' ? (rng() < 0.5 ? 'hiker' : 'casual') : model === 'roadbike' ? 'athlete' : 'casual');
+// who rides what in town: a road bike's rider is out training, the rest are anyone
+const townDriver = (model) => (model === 'roadbike' ? 'athlete' : VEHICLES[model].pedal ? (rng() < 0.2 ? 'athlete' : 'casual') : rng() < 0.15 ? 'executive' : 'casual');
 
 export function update(world, dt) {
   if (world.tick % 15 === 3) manage(world);
@@ -303,6 +312,7 @@ function steerTraffic(world, v, t) {
     wp = ai.pts[0];
   }
   let desired = panic ? 520 : Math.min(ai.kindSpeed || 250, v.model === 'bus' ? 220 : 999);
+  if (v.def.pedal) desired = Math.min(desired, v.def.max * (panic ? 0.95 : 0.78));   // a cyclist pedals along at their own pace
   // slow for bends: how sharply the path ahead turns
   const ahead = ai.pts[Math.min(ai.pts.length - 1, 2)];
   if (ahead) {
@@ -445,6 +455,22 @@ function manage(world) {
       const v = world.spawnVehicle(sp.kind || (i % 3 === 0 ? 'speedboat' : i % 3 === 1 ? 'jetski' : 'dinghy'), sp.x, sp.y, sp.a, { parked: true });
       world.marinaParked.set(i, v.id);
     });
+    // bikes locked up at the street bike racks: one or two at most of them (anyone's to take - it's theft)
+    world.rackParked ??= new Map();
+    const racks = rackSpots(world.map);
+    for (let i = 0; i < racks.length; i++) {
+      const sp = racks[i];
+      if (world.rackParked.has(i) && world.get(world.rackParked.get(i))) continue;
+      if (hash2(i, 11, world.map.seed) > 0.55 || (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2 > 1100 * 1100) continue;
+      const rk = world.map.propSolid && world.map.propSolid.get(sp.pi);
+      if (rk && rk.off) continue;   // (the rack was knocked over)
+      const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
+      if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue;
+      if (world.npcCount + world.trafficCount > world.npcBudget) break;
+      if (world.query(sp.x, sp.y, 16, K.VEH).length) continue;
+      const v = world.spawnVehicle(weighted(RACK_MIX), sp.x, sp.y, sp.a, { parked: true });
+      world.rackParked.set(i, v.id);
+    }
   }
   // moving traffic: placed on a lane somewhere off screen, already rolling
   const net = world.map.net;
@@ -463,12 +489,12 @@ function manage(world) {
     for (let tries = 0; tries < 10; tries++) {
       const e = cands[Math.floor(rng() * cands.length)];
       const from = e.oneway || rng() < 0.5 ? e.a : e.b;
-      const lane = Math.floor(rng() * e.nl);
-      const lp = lanePath(net, e, from, lane);
+      let lane = Math.floor(rng() * e.nl);
+      let lp = lanePath(net, e, from, lane);
       const L = lp[lp.length - 1].s;
       if (L < 80) continue;
       const s = 20 + rng() * (L - 40);
-      const p = pointAt(lp, s);
+      let p = pointAt(lp, s);
       if (Math.hypot(p.x - a.x, p.y - a.y) > 1500) continue;
       if (near(p.x, p.y, 300) || inAnyView(world, p.x, p.y, 140)) continue; // spawn off every screen and drive in
       const z = edgeZ(e, from, from === e.a ? s : e.len - s);
@@ -476,12 +502,14 @@ function manage(world) {
       if (world.query(p.x, p.y, 90, K.VEH).some((q) => sameLevel(q.lz, z))) continue;
       const st = world.map.districtAt(p.x, p.y).style, country = e.kind !== 'hwy' ? wildStyle(world.map, p.x, p.y) : null;
       const heavy = e.kind === 'hwy' || st === 'harbor' || st === 'industrial' || st === 'factory' || st === 'airport';
-      const model = weighted((country ? COUNTRY_MIX : TRAFFIC_MIX).filter(([id]) => !(id === 'bike' && e.kind === 'hwy') && !(e.kind === 'dirt' && TRUCK_MODELS.has(id))).map(([id, wt]) => [id, heavy && TRUCK_MODELS.has(id) ? wt * 3 : wt]));
+      const model = weighted((country ? COUNTRY_MIX : TRAFFIC_MIX).filter(([id]) => !(id === 'bike' && e.kind === 'hwy') && !(e.kind === 'dirt' && (TRUCK_MODELS.has(id) || id === 'roadbike'))
+        && !(VEHICLES[id].pedal && (NO_BIKES.has(e.kind) || e.lvl !== 0 || z > 0.05))).map(([id, wt]) => [id, heavy && TRUCK_MODELS.has(id) ? wt * 3 : wt]));
+      if (VEHICLES[model].pedal && lane > 0) { lane = 0; lp = lanePath(net, e, from, 0); p = pointAt(lp, Math.min(s, lp[lp.length - 1].s - 20)); }   // (cyclists keep to the kerb lane)
       const v = world.spawnVehicle(model, p.x, p.y, Math.atan2(p.ty, p.tx), {});
       v.lz = z;
-      const sp0 = Math.min(CRUISE[e.kind] || 250, 300) * 0.6;
+      const sp0 = Math.min(CRUISE[e.kind] || 250, 300, v.def.max * 0.7) * 0.6;
       v.vx = p.tx * sp0; v.vy = p.ty * sp0;
-      const driver = spawnNpc(world, country ? countryDriver(model, country) : rng() < 0.15 ? 'executive' : 'casual', p.x, p.y, 'driver');
+      const driver = spawnNpc(world, country ? countryDriver(model, country) : townDriver(model), p.x, p.y, 'driver');
       if (country) driver.npc.country = true;
       driver.vehId = v.id; driver.seat = 0; v.seats[0] = driver.id; driver.lz = z;
       v.ai = { kind: 'traffic' };
@@ -491,6 +519,22 @@ function manage(world) {
     }
   }
 }
+// Where bikes stand at the street racks (map props 'bikerack': three hoops in a row east-west): beside the hoops at
+// either end, front wheel to the rack, on whichever side of it is pavement. Worked out once per map.
+function rackSpots(m) {
+  if (m._rackSpots) return m._rackSpots;
+  const out = [];
+  const ok = (x, y) => { const t = m.tileAtPx(x, y); return !PED_BLOCK[t] && t !== T.ROAD && t !== T.BRIDGE && !m.isWater(x, y); };
+  m.props.forEach((q, pi) => {
+    if (q.t !== 'bikerack') return;
+    for (const dx of [-12, 12]) {
+      const side = ok(q.x + dx, q.y + 16) && ok(q.x + dx, q.y + 30) ? 1 : ok(q.x + dx, q.y - 16) && ok(q.x + dx, q.y - 30) ? -1 : 0;
+      if (side) out.push({ x: q.x + dx, y: q.y + side * 21, a: side > 0 ? -Math.PI / 2 : Math.PI / 2, pi });
+    }
+  });
+  return (m._rackSpots = out);
+}
+
 function bboxOf(pts) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of pts) { if (p.x < x0) x0 = p.x; if (p.y < y0) y0 = p.y; if (p.x > x1) x1 = p.x; if (p.y > y1) y1 = p.y; }

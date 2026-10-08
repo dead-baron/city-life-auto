@@ -235,7 +235,7 @@ export function buildMenu(world, p, poi) {
       title = SHOPS[kind].title;
       for (const o of SHOPS[kind].buy) {
         const d = VEHICLES[o.id];
-        opts.push({ id: `vb:${o.id}`, label: `${d.name}${d.slots.length ? ` (${d.slots.length} cargo slot${d.slots.length > 1 ? 's' : ''})` : ''}`, price: d.price });
+        opts.push({ id: `vb:${o.id}`, label: `${d.name}${d.slots.length ? ` (${d.slots.length} cargo slot${d.slots.length > 1 ? 's' : ''})` : ''}`, price: d.price, note: d.blurb || '' });
       }
       ownedVehicleOpts(prof, opts, kind === 'marina');
       break;

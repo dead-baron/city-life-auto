@@ -182,7 +182,11 @@ export function vehStep(s, inp, dt, map, def, env) {
   const isBoat = def.kind === 'boat';
   const tile = up(s) ? T.ROAD : map.tileAtPx(s.x, s.y);
   const surf = isBoat ? [1, 1, 0] : (SURFACE[tile] || SURFACE[1]);
-  let gripMul = surf[1], brakeMul = 1;
+  // a bicycle's tyres take rough ground their own way (def.rough: the share of the surface's drag and lost grip it
+  // feels - a mountain bike hardly any, a road bike more than a car)
+  const rough = def.rough === undefined || isBoat || WATER_T[tile] ? 1 : def.rough;   // (in the water it's all the same)
+  const surfSpeed = rough === 1 ? surf[0] : clamp(1 - (1 - surf[0]) * rough, 0.25, 1);
+  let gripMul = rough === 1 ? surf[1] : clamp(1 - (1 - surf[1]) * rough, 0.3, 1), brakeMul = 1;
   if (s.flat) gripMul *= 0.55; // tyres shredded by a spike strip
   if (env.rain) {
     if (isBoat) gripMul *= 0.8;
@@ -245,7 +249,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   lat = -s.vx * sn + s.vy * c;
 
   // -- longitudinal: engine, brakes, burnouts --
-  const maxEff = def.max * surf[0] * (s.flat ? 0.45 : 1);
+  const maxEff = def.max * surfSpeed * (s.flat ? 0.45 : 1);
   // analog throttle also sets a cruising speed: a light push drives slowly, full stick flat out
   const cap = maxEff * Math.min(1, 0.18 + 0.82 * Math.abs(t));
   let launch = s.launch || 0, spin = s.spin || 0;

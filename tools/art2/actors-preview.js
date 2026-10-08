@@ -47,11 +47,11 @@ class Stage {
     this.put(spr, x, y, z0);
     this.vehLights(d, st, x, y, ang);
     const L = A.vehicleLights(d), def = VEHICLE_BY_INDEX[d.m];
-    if (PEDS && PEDS.pedSprite && L.seat && (def.kind === 'bike' || t === 'jetski') && !st.wreck) {
+    if (PEDS && PEDS.pedSprite && L.seat && (def.kind === 'bike' || t === 'jetski') && !st.wreck && q.get('riders') !== '0') {   // (&riders=0: the bare vehicles)
       try {
         // dir8 from the heading (0 S, 1 SW, 2 W ... 6 E, 7 SE); the seated pose has its hips at SEATS[pose], so
         // lift it by the model's own seat height minus that
-        const d8 = (((Math.round(ang / (Math.PI / 4)) - 2) % 8) + 8) % 8, pose = t === 'bicycle' ? 'pedal' : 'ride';
+        const d8 = (((Math.round(ang / (Math.PI / 4)) - 2) % 8) + 8) % 8, pose = def.pedal ? 'pedal' : 'ride';
         let R; try { R = PEDS.pedSprite(RIDER_APP, pose, d8, 0, 0); } catch (e) { R = PEDS.pedSprite(PEDS.adaptApp(RIDER_APP), pose, d8, 0, 0); }
         const c = Math.cos(ang), s = Math.sin(ang), hip = (PEDS.SEATS && PEDS.SEATS[pose]) ?? 20;
         this.put(R, x + L.seat[0] * c - L.seat[1] * s, y + L.seat[0] * s + L.seat[1] * c, z0 + L.seat[2] - hip);
@@ -108,6 +108,20 @@ views.grid = () => {
     for (let k = 0; k < 8; k++) S.veh(d, {}, 10 + CW * k + CW / 2, ri * RH + RH * 0.64, k * 4, 32);
     S.label(t, 4, ri * RH + 12);
   });
+  return [{ S }];
+};
+// the pedal bikes: side-on with a rider, then each at 8 headings (riders on the first two rows' bikes), a wreck
+views.bikes = () => {
+  const list = ['bicycle', 'cruiser', 'mtb', 'roadbike', 'bmx', 'cargobike'], CW = 92, RH = 86;
+  const S = new Stage(CW * 8 + 20, list.length * RH + 120);
+  backdrop(S, [[0, S.G.h, 'asphalt']]);
+  list.forEach((t, ri) => {
+    const d = dOf(t, [6, 9, 5, 0, 1, 12][ri], ri, -1);
+    for (let k = 0; k < 8; k++) S.veh(d, {}, 10 + CW * k + CW / 2, ri * RH + RH * 0.62, k * 4, 32);
+    S.label(t, 4, ri * RH + 12);
+  });
+  const y = list.length * RH + 70;
+  list.forEach((t, i) => { const d = dOf(t, [6, 9, 5, 0, 1, 12][i], 1, -1); S.veh(d, i === 5 ? { wreck: true } : {}, 60 + i * 120, y, 0); S.label(i === 5 ? 'cargobike wreck' : t, 20 + i * 120, y + 34); });
   return [{ S }];
 };
 // the sedan at 16 headings, like V3

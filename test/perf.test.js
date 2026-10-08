@@ -61,10 +61,12 @@ test('version.json knows the world and the art (run node tools/stamp-version.mjs
   assert.equal(v.world, world, 'the world changed since version.json was stamped: browsers would keep using the city they built before');
   assert.equal(v.art, (await artHash(undefined, world)).hash, 'the art changed since version.json was stamped: browsers would keep showing chunks baked by the old art');
   assert.equal(v.hashes.length, v.files.length, 'a hash for every file (boot.js fetches only what changed)');
-  // the gameplay numbers are left out of the art hash (a rule tweak keeps every browser's baked chunks): so the art
-  // itself mustn't read them
+  // the gameplay numbers and the live actor sprites are left out of the art hash (a rule tweak or a new bike keeps every
+  // browser's baked chunks): so the chunk baker mustn't read them
   const art = codeHash('client/art2/game/worker.js', undefined, ART_SKIP).files;
-  assert.ok(!art.includes('shared/rules.js'));
+  for (const f of ART_SKIP) assert.ok(!art.includes(f), `${f} left out`);
+  const baker = codeHash('client/art2/game/chunkbake.js').files;
+  for (const f of ['client/art2/game/actors.js', 'client/art2/game/peds.js', 'client/art2/vehicles.js']) assert.ok(!baker.includes(f), `the chunk baker reads ${f}: take it out of ART_SKIP (tools/stamp-version.mjs)`);
   for (const f of art.filter((q) => q.startsWith('client/art2/'))) assert.ok(!/from\s+['"][./]*(shared\/)?rules\.js['"]/.test(readFileSync(new URL('../' + f, import.meta.url), 'utf8')), `${f} reads shared/rules.js: the art hash wouldn't see a change to it (tools/stamp-version.mjs ART_SKIP)`);
 });
 

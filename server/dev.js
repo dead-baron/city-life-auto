@@ -37,6 +37,7 @@ export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die',
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
 // closest one to the player and puts them on open ground beside it (inside, at the desk, for walk-ins).
 export const NEAR_KINDS = {
+  bikerack: (m) => m.props.filter((q) => q.t === 'bikerack').map((q) => ({ x: q.x, y: q.y + 40, name: 'a bike rack' })),
   subway: (m) => m.rail.stations.filter((s) => s.under && s.kiosk).map((s) => ({ x: s.kiosk.out.x, y: s.kiosk.out.y, name: s.name })),
   platform: (m) => m.rail.stations.filter((s) => !s.under).map((s) => ({ x: s.platform.x, y: s.platform.y, name: s.name })),
   race: (m) => (m.races || []).filter((r) => r.start).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: r.kind === 'jetski' ? 'jetski' : r.kind === 'boat' ? 'speedboat' : null })),

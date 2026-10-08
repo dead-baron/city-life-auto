@@ -28,6 +28,7 @@ export const VEHICLE_DIMS = {
   compact: [80, 48], sedan: [94, 52], taxi: [100, 48], sports: [96, 48], pickup: [110, 50], flatbed: [150, 56],
   van: [112, 54], bus: [186, 62], police: [100, 48], swat: [120, 58], ambulance: [112, 56], armored: [122, 54],
   bike: [48, 20], policebike: [50, 20], bicycle: [40, 14], speedboat: [104, 48], dinghy: [80, 40], jetski: [46, 22],
+  cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18],
   policeboat: [104, 48], boxtruck: [150, 58], dumptruck: [140, 60], mixer: [146, 60], tanker: [160, 58],
   garbage: [140, 60], firetruck: [172, 66], towtruck: [134, 58],
   // scenery-only variants (parked and NPC traffic; they share the sedan / van footprints in play)
@@ -42,6 +43,7 @@ export const VEHICLE_TALL = {
   compact: 31, sedan: 33, taxi: 33, police: 33, sports: 27, pickup: 36, van: 46, suv: 42, limo: 32, ambulance: 54, armored: 50,
   swat: 52, bus: 62, flatbed: 46, boxtruck: 62, dumptruck: 46, mixer: 62, tanker: 54, garbage: 60, firetruck: 56, towtruck: 50,
   bike: 24, policebike: 26, bicycle: 20, speedboat: 22, dinghy: 14, jetski: 16, policeboat: 34,
+  cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20,
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, foodtruck: 60,
 };
 const DEFAULT_PAINT = {
@@ -49,6 +51,7 @@ const DEFAULT_PAINT = {
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
+  cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a',
   jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
 };
 const DEFAULT_CAB = { flatbed: '#e6e2d8', boxtruck: '#e6e2d8', dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', towtruck: '#e6e2d8' };
@@ -424,6 +427,119 @@ function roofKit(m, M, x0, x1, z, o = {}) {
   }
 }
 
+// ---- bicycles --------------------------------------------------------------------------------------------
+// The pedal bikes (shared/vehicles.js pedal), all from one builder: the wheels (spoked; balloon, knobby or skinny
+// tyres), the frame drawn as tubes in the bike's middle plane, the fork, bars, saddle and each type's own kit.
+// Coordinates: x from the rear (0) to the front, z up; the frame sits at y = cy.
+export const PEDAL = new Set(['bicycle', 'cruiser', 'mtb', 'roadbike', 'bmx', 'cargobike']);
+const BIKES = {
+  // r: wheel radius; tw: tyre thickness across (voxels); xr / xf: the axles (rf: a smaller front wheel); bb: the bottom
+  // bracket; st: the top of the seat tube; ht / hb: the head tube's top and bottom; seat: the saddle [x0, x1, z, half-width];
+  // bars: [x, z, half-width, kind]
+  bicycle: { r: 7, tw: 1, xr: 7, xf: 33, bb: [17.5, 6], st: [15.5, 16.5], ht: [30, 16.5], hb: [31, 12.5], seat: [13, 18, 18, 1.5], bars: [29, 19, 4, 'up'], step: true, fenders: 'body', rack: true },
+  cruiser: { r: 7.5, tw: 2, xr: 8, xf: 34, bb: [19, 6], st: [17, 16], ht: [31, 16], hb: [32, 11.5], seat: [13, 19, 18, 2.5], bars: [30, 19.5, 6, 'swept'], cantilever: true, fenders: 'chrome', springs: true },
+  mtb: { r: 7.5, tw: 2, knobby: true, xr: 8, xf: 34, bb: [19, 6.5], st: [16, 16.5], ht: [30.5, 17], hb: [31.5, 13], seat: [13, 17.5, 19.5, 1.5], bars: [29.5, 18.5, 6, 'flat'], slope: 14, suspension: true, thick: 2 },
+  roadbike: { r: 8, tw: 1, xr: 8, xf: 34, bb: [19.5, 6.5], st: [16.5, 18], ht: [30.5, 18], hb: [31.5, 13.5], seat: [13, 17.5, 20.5, 1], bars: [31.5, 18.5, 3, 'drop'] },
+  bmx: { r: 5.5, tw: 2, xr: 6, xf: 28, bb: [14.5, 5], st: [13, 12], ht: [23, 12.5], hb: [24, 9.5], seat: [10, 14.5, 13, 1.5], bars: [22.5, 17, 5, 'riser'], pegs: true, thick: 2 },
+  cargobike: { r: 7, rf: 5, tw: 1, xr: 8, xf: 52, bb: [17, 6], st: [14.5, 17], ht: [25.5, 18], hb: [27, 6.5], seat: [11, 16, 18, 1.5], bars: [24.5, 19, 4, 'up'], box: [29, 48], rack: true, beam: true },
+};
+function pedalBike(m, M, V, type, A) {
+  const L = m.w, W = m.d, cy = W / 2, B = BIKES[type];
+  const fy = Math.floor(cy - 0.5);   // the frame's plane: one voxel across (wider tubes fill the triangles in, seen from above)
+  // m.fill only draws on whole-voxel bounds
+  const fillI = (fn, x0, y0, z0, x1, y1, z1) => m.fill(fn, Math.floor(x0), Math.floor(y0), Math.floor(z0), Math.ceil(x1), Math.ceil(y1), Math.ceil(z1));
+  // a tube from (x0, z0) to (x1, z1) in the frame's plane, d voxels thick (and across: from y0 to y1)
+  const tube = (x0, z0, x1, z1, mat, d = 1.2, y0 = fy, y1 = fy + 1) => {
+    const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) * 2) + 1;
+    for (let i = 0; i <= n; i++) { const k = i / n, x = x0 + (x1 - x0) * k, z = z0 + (z1 - z0) * k; m.box(x - d / 2, y0, z - d / 2, x + d / 2, y1, z + d / 2, mat); }
+  };
+  // a curve through a control point (quadratic)
+  const bend = (x0, z0, cx, cz, x1, z1, mat, d = 1.2, y0 = fy, y1 = fy + 1) => {
+    const n = Math.ceil((Math.hypot(cx - x0, cz - z0) + Math.hypot(x1 - cx, z1 - cz)) * 2) + 1;
+    for (let i = 0; i <= n; i++) { const k = i / n, a = (1 - k) * (1 - k), b = 2 * k * (1 - k), c = k * k; const x = a * x0 + b * cx + c * x1, z = a * z0 + b * cz + c * z1; m.box(x - d / 2, y0, z - d / 2, x + d / 2, y1, z + d / 2, mat); }
+  };
+  // the wheels: a tyre ring, spokes and a hub; balloon / knobby tyres two voxels across, skinny ones one
+  const ty1 = fy + B.tw;
+  const knob = B.knobby ? m.mat({ ramp: R('#2a2a30', 5, 2), k: 1.2, shade: (x, y, z) => ((Math.round(Math.atan2(z - B.r, x - (x < L / 2 ? B.xr : B.xf)) * 5) & 1) ? -0.9 : 0.5) }) : M.tyre;
+  const wheel = (x, r) => {
+    m.cyl('y', x, 0, r, r, fy, ty1, knob, r - (B.tw === 1 ? 1 : 1.5), 0);
+    fillI((xx, y, z) => { const dx = xx - x, dz = z - r, d = Math.hypot(dx, dz); return d < r - 1 && (Math.abs(dx) < 0.5 || Math.abs(dz) < 0.5 || Math.abs(dx - dz) < 0.6 || Math.abs(dx + dz) < 0.6) ? M.rim : -1; }, x - r, fy, 0, x + r, fy + 1, 2 * r);
+    m.box(x - 0.5, fy - 1, r - 0.5, x + 0.5, ty1 + 1, r + 0.5, M.chrome);   // hub
+  };
+  const rf = B.rf || B.r;
+  wheel(B.xr, B.r); wheel(B.xf, rf);
+  m.look = { ...m.look, belt: 14, z0: B.r, roof: B.seat[2] + 2, wheels: [B.xr, B.xf], wr: B.r };
+  const F = M.body, [bx, bz] = B.bb, [sx, sz] = B.st, [hx, hz] = B.ht, [hbx, hbz] = B.hb;
+  const dt = B.thick ? 1.7 : 1.3;   // (the down tube: fatter on the mountain bike and the BMX)
+  // the frame
+  if (B.step) bend(hbx, hbz, (hbx + bx) / 2, bz + 0.5, bx, bz, F, 1.5);                         // a step-through: one low sweep
+  else if (B.cantilever) {
+    bend(hx, hz - 0.5, (hx + sx) / 2 + 1, sz - 7, sx, sz - 3, F, 1.2);                            // the swooping top tube
+    bend(hbx, hbz, (hbx + bx) / 2 + 3, bz - 1.5, B.xr + 3, B.r + 1.5, F, 1.2);                     // ...and the long low one to the back
+    tube(hbx, hbz, bx, bz, F, 1.3);
+  } else {
+    tube(hx, hz - 0.5, sx + 0.5, B.slope || sz - 0.5, F, 1.2);                                     // top tube (sloping on the mountain bike)
+    tube(hbx, hbz, bx, bz, F, dt);                                                                 // down tube
+  }
+  if (B.beam) { m.box(bx, fy - 1, 3, B.xf - 3, fy + 2, 4.5, F); tube(B.xf - 3.5, 4, B.xf - 1, rf + 6, F, 1.3); }   // the cargo bike's long low beam under the box
+  tube(bx, bz, sx, sz, F, 1.2);                                                                     // seat tube
+  tube(bx, bz, B.xr, B.r, F, 1);                                                                    // chain stays
+  tube(sx + 0.3, sz - 1.2, B.xr, B.r, F, 1);                                                        // seat stays
+  tube(hx, hz, hbx, hbz, F, 1.4);                                                                   // head tube (the cargo bike's: its steering column)
+  m.cyl('y', bx, 0, bz, 2.2, fy + 1, fy + 2, M.chrome);                                             // chainring
+  m.box(bx - 1.5, fy - 1, bz - 0.5, bx + 1.5, fy + 2, bz + 0.5, M.trim);                            // cranks
+  // the fork: legs either side of the front wheel (a suspension fork: chrome stanchions in fat dark lowers)
+  const fx = B.beam ? B.xf - 1 : hbx, fz = B.beam ? rf + 6 : hbz;
+  for (const y of [fy - 1, ty1]) {
+    if (B.suspension) { const mx = fx + (B.xf - fx) * 0.4, mz = fz - (fz - rf) * 0.4; tube(fx, fz, mx, mz, M.chrome, 1, y, y + 1); tube(mx, mz, B.xf, rf, M.dark, 1.6, y, y + 1); }
+    else tube(fx, fz, B.xf, rf, M.chrome, 1, y, y + 1);
+  }
+  m.box(fx - 0.5, fy - 1, fz - 0.5, fx + 0.5, ty1 + 1, fz + 0.5, M.chrome);                         // the fork crown
+  // seat post and saddle
+  const [s0, s1, sh, sw] = B.seat;
+  tube(sx, sz, (s0 + s1) / 2 + 0.5, sh, M.chrome, 1);
+  m.box(s0, cy - sw, sh, s1, cy + sw, sh + 1.2, M.seat);
+  m.box(s1 - 1, cy - 0.5, sh, s1 + 1, cy + 0.5, sh + 1, M.seat);                                     // the nose
+  if (B.springs) for (const y of [cy - sw + 0.5, cy + sw - 1]) m.box(s0 + 0.5, y, sh - 1.5, s0 + 1.5, y + 1, sh, M.chrome);
+  // stem and bars
+  const [ax, az, aw, kind] = B.bars;
+  tube(hx, hz, ax, az - 0.5, M.trim, 1);
+  const grips = (gx0, gx1) => { for (const y of [cy - aw, cy + aw - 1]) m.box(gx0, y, az, gx1, y + 1, az + 1, M.seat); };
+  if (kind === 'drop') {
+    m.box(ax - 0.5, cy - aw, az, ax + 0.5, cy + aw, az + 1, M.trim);
+    for (const y of [cy - aw, cy + aw - 1]) { tube(ax, az + 0.5, ax + 2, az - 0.5, M.trim, 1, y, y + 1); tube(ax + 2, az - 0.5, ax + 1, az - 3, M.trim, 1, y, y + 1); tube(ax + 1, az - 3, ax - 0.5, az - 3, M.dark, 1, y, y + 1); }
+  } else if (kind === 'swept') {
+    m.box(ax - 0.5, cy - aw, az, ax + 0.5, cy + aw, az + 1, M.chrome);
+    for (const y of [cy - aw, cy + aw - 1]) m.box(ax - 4, y, az + 0.5, ax, y + 1, az + 1.5, M.chrome);   // swept back to the rider
+    for (const y of [cy - aw, cy + aw - 1]) m.box(ax - 5.5, y, az + 0.5, ax - 3.5, y + 1, az + 1.5, M.seat);
+  } else if (kind === 'riser') {
+    for (const y of [cy - aw * 0.6, cy + aw * 0.6 - 1]) tube(ax, az - 3.5, ax - 0.5, az, M.trim, 1, y, y + 1);
+    m.box(ax - 1, cy - aw * 0.6, az - 2, ax, cy + aw * 0.6, az - 1, M.trim);                        // the crossbar
+    m.box(ax - 1, cy - aw, az, ax, cy + aw, az + 1, M.trim);
+    grips(ax - 1, ax);
+  } else {
+    m.box(ax - 0.5, cy - aw, az, ax + 0.5, cy + aw, az + 1, kind === 'flat' ? M.dark : M.trim);
+    grips(ax - 0.5, ax + 0.5);
+  }
+  // each type's own kit
+  const arc = (x, r, a0, a1, mat, y0, y1) => fillI((xx, y, z) => { const d = Math.hypot(xx - x, z - r), a = Math.atan2(z - r, xx - x); return Math.abs(d - (r + 1)) < 0.55 && a > a0 && a < a1 ? mat : -1; }, x - r - 2, y0, 0, x + r + 2, y1, 2 * r + 2);
+  if (B.fenders) { const fm = B.fenders === 'chrome' ? M.chrome : M.trim; arc(B.xr, B.r, 0.5, 3.0, fm, fy, ty1); arc(B.xf, rf, 0.15, 2.5, fm, fy, ty1); }   // mudguards: over and behind the back wheel, over and ahead of the front
+  if (B.rack) { m.box(B.xr - 4.5, fy - 1, B.r * 2 + 1, B.xr + 4, fy + 2, B.r * 2 + 2, M.trim); tube(B.xr - 4, B.r * 2 + 1, B.xr, B.r, M.trim, 0.8); }   // a rear rack
+  if (B.pegs) for (const x of [B.xr, B.xf]) m.box(x - 0.5, fy - 3, B.r - 0.5, x + 0.5, ty1 + 3, B.r + 0.5, M.chrome);
+  if (B.box) {   // the cargo box: wooden walls, an open top, a painted rim
+    const [x0, x1] = B.box, z0 = 5, z1 = 15;
+    m.box(x0, 1, z0, x1, W - 1, z0 + 1, M.wood);
+    fillI((x, y, z) => (x < x0 + 1 || x > x1 - 1 || y < 2 || y > W - 2 ? M.wood : -1), x0, 1, z0, x1, W - 1, z1);
+    m.box(x0, 1, z1 - 1, x1, W - 1, z1, F); fillI(() => 0, x0 + 1, 2, z1 - 1, x1 - 1, W - 2, z1);
+  }
+  // a basket on the front: wicker on some commuters and cruisers
+  if ((type === 'bicycle' || type === 'cruiser') && V.rack) { const bx0 = B.xf - 1, bz0 = rf * 2 - 2; m.box(bx0, cy - 3, bz0, bx0 + 6, cy + 3, bz0 + 5, M.wood); fillI(() => 0, bx0 + 1, cy - 2, bz0 + 1, bx0 + 5, cy + 2, bz0 + 5); }
+  const front = B.box ? B.box[1] : B.xf + 1, lamp = B.box ? 12 : Math.min(B.bars[1] - 3, 15);
+  m.box(front - 1, fy, lamp - 1, front + 0.5, fy + 1, lamp + 1, M.head);
+  A.head.push([front, cy, lamp]); A.tail.push([Math.max(1, B.xr - B.r + 1), cy, B.r + 2]); A.rev.push([Math.max(1, B.xr - B.r + 1), cy, B.r + 2]);
+  A.seat = [(s0 + s1) / 2, cy, sh + 1];
+}
+
 // ---- the models ---------------------------------------------------------------------------------------
 const CAR = {
   compact: { belt: 17, nose: 12, tail: 15.5, hood: 0.74, boot: 0.05, cab: [0.05, 0.73], roof: 31, fr: 11, br: 3.5, ci0: 3, ci1: 6, wheels: [0.17, 0.81], wr: 7, rf: 9, rr: 6, lampW: 8, seams: [0.5], pillars: [0.48], tailUp: 3 },
@@ -724,18 +840,7 @@ export function vehicleModel(type, o = {}) {
       A.head.push([L - 9, cy, 16.5]); A.tail.push([4, cy, 18]); A.rev.push([4, cy, 18]); A.seat = [17, cy, 21]; A.exhaust = [6, W - 2, 8]; A.fire.push([22, cy, 14]);
       break;
     }
-    case 'bicycle': {
-      const cy = W / 2;
-      for (const x of [7, L - 7]) { m.cyl('y', x, 0, 7, 7, cy - 0.5, cy + 0.5, M.tyre, 6, 0); m.fill((xx, y, z) => ((Math.abs(xx - x) < 0.6 || Math.abs(z - 7) < 0.6 || Math.abs((xx - x) - (z - 7)) < 0.6) && Math.hypot(xx - x, z - 7) < 6 ? M.rim : -1), x - 6, cy - 0.5, 1, x + 6, cy + 0.5, 13); }
-      m.look = { ...m.look, belt: 14, z0: 7, roof: 20, wheels: [7, L - 7], wr: 7 };
-      for (let s = 0; s <= 24; s++) { const t = s / 24; m.box(7 + t * 13, cy - 0.5, 7 + t * 10, 9 + t * 13, cy + 0.5, 9 + t * 10, M.body); m.box(20 + t * 12, cy - 0.5, 17 - t * 0.5, 22 + t * 12, cy + 0.5, 18.5 - t * 0.5, M.body); m.box(20 - t * 1.5, cy - 0.5, 7 + t * 10, 22 - t * 1.5, cy + 0.5, 9 + t * 10, M.body); m.box(20 + t * 13, cy - 0.5, 7 + t * 0, 21 + t * 13, cy + 0.5, 8, M.body); }
-      for (let k = 0; k < 11; k++) m.box(L - 8 + k * 0.1, cy - 0.5, 7 + k, L - 7 + k * 0.1, cy + 0.5, 8 + k, M.chrome);                       // fork
-      m.box(15, cy - 1.5, 18, 21, cy + 1.5, 20, M.seat);                                                                                    // saddle
-      m.box(L - 9, cy - 4, 19, L - 7, cy + 4, 20, M.trim);                                                                                  // bars
-      if (V.rack) { m.box(L - 7, cy - 3, 13, L - 1, cy + 3, 18, M.wood); m.fill(() => 0, L - 6, cy - 2, 15, L - 2, cy + 2, 18); }            // basket
-      A.head.push([L - 3, cy, 15]); A.tail.push([3, cy, 14]); A.rev.push([3, cy, 14]); A.seat = [18, cy, 19];
-      break;
-    }
+    case 'bicycle': case 'cruiser': case 'mtb': case 'roadbike': case 'bmx': case 'cargobike': pedalBike(m, M, V, type, A); break;
     case 'speedboat': case 'policeboat': case 'dinghy': case 'jetski': {
       const pol = type === 'policeboat', jet = type === 'jetski', din = type === 'dinghy';
       const hz = jet ? 8 : din ? 9 : 12, cy = W / 2;
@@ -950,7 +1055,7 @@ function applyState(m, M, state, type) {
   const crack = m.mat({ ramp: R('#c8d8e4', 5, 3), k: 3, flag: F_GLASS });
   const scuffs = new Map();
   const scuffOf = (v) => { if (!scuffs.has(v)) { const Mv = m.mats[v]; scuffs.set(v, m.mat({ ...Mv, k: Math.max(0, Mv.k - 1.2), shade: null, emi: null })); } return scuffs.get(v); };
-  const small = type === 'bicycle' || type === 'bike' || type === 'policebike' || type === 'jetski';
+  const small = PEDAL.has(type) || type === 'bike' || type === 'policebike' || type === 'jetski';
   const crushD = state === 'wrecked' ? (small ? 4 : 9) : burntish ? (small ? 2 : 5) : state === 'dented' ? 3 : 0;
   const isLamp = (v) => v === M.head || v === M.tail || v === M.rev || v === M.brakeL || v === M.red || v === M.blue || v === M.amber;
   for (let z = 0; z < m.h; z++) for (let y = 0; y < W; y++) for (let x = 0; x < L; x++) {

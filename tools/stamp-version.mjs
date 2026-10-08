@@ -69,10 +69,12 @@ export async function worldHash(root = ROOT, map = null) {
   const { generateCity, cityData } = await import(pathToFileURL(join(root, 'shared/map.js')).href);
   return { hash: canonicalHash(cityData(map || generateCity(1337))).slice(0, 12) };
 }
-// everything a chunk bake reads: the bake worker's code (the world generator's included), and the world itself. Not the
-// gameplay numbers (shared/rules.js: prices, timings, odds - nothing a bake draws): they change often, and each change
-// would throw away every browser's baked chunks.
-export const ART_SKIP = new Set(['shared/rules.js']);
+// everything a chunk bake reads: the bake worker's code (the world generator's included), and the world itself. Not
+// what never goes into a kept chunk, and changes often - each change would throw away every browser's baked chunks:
+// - the gameplay numbers (shared/rules.js: prices, timings, odds);
+// - the actor sprites the same workers draw live (actors.js, peds.js and what only they use: the vehicles, animals and
+//   effects) - test/perf.test.js checks the chunk baker doesn't reach them.
+export const ART_SKIP = new Set(['shared/rules.js', 'client/art2/game/actors.js', 'client/art2/game/peds.js']);
 export async function artHash(root = ROOT, world = null) {
   const code = codeHash('client/art2/game/worker.js', root, ART_SKIP), w = world || (await worldHash(root)).hash;
   return { hash: createHash('sha1').update(code.hash + w).digest('hex').slice(0, 12), files: code.files };

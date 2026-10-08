@@ -169,7 +169,7 @@ prompt pack: SU1-SU4 (the subway underground), SK1-SK8 (skating and bikes), CR1-
 - **Needs:** bounties stored on the profile so they survive logging off. Boards across servers wait for a second
   server and a shared store.
 
-**More bicycles [next]**
+**More bicycles [done 2026-10-07; BMX tricks come with skating]**
 - **Types:** a one-gear beach cruiser (stable, slowest), a multi-gear mountain bike (the one that copes
   off-road), a road bike (fastest on tarmac, poor off it), a BMX (tricks), a commuter bike and a cargo bike. All
   faster than running.
