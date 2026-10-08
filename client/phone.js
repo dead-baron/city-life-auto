@@ -101,6 +101,15 @@ export function createPhone(ctx) {
       ctx.toast(`Waypoint: the ${L.name} stop at ${st.n}`, 'info');
       ctx.close();
     };
+    for (const b of el.querySelectorAll('[data-pier]')) b.onclick = () => {
+      const [r, k] = b.dataset.pier.split(':').map(Number);
+      const R = transit && (transit.ferries || []).find((q) => q.id === r), pr = R && R.piers[k];
+      if (!pr) return;
+      const name = `${k ? R.island : R.mainland} pier`;
+      ctx.setWaypoint({ x: pr.x, y: pr.y, label: `${R.name}: ${name}` });
+      ctx.toast(`Waypoint: the ${R.name} at ${name}`, 'info');
+      ctx.close();
+    };
     for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call' }); };
     for (const b of el.querySelectorAll('[data-act="taxicancel"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'cancel' }); };
     for (const b of el.querySelectorAll('[data-rail]')) b.onclick = () => {
@@ -178,6 +187,16 @@ export function createPhone(ctx) {
       h += L.stops.map((st, k) => `<button class="ph-row" data-stop="${L.id}:${k}"><span class="ic">${near === `${L.id}:${k}` ? '★' : '•'}</span><span class="nm">${esc(st.n)}<small>next bus: ${eta(st.eta)}</small></span><span class="d">${m(dist(st))}</span></button>`).join('');
     }
     if (!transit.lines.length) h += '<p class="ph-empty">No bus lines in this city.</p>';
+    // the ferries to the islands: each route's two piers, when its boat next leaves each (tap one for a waypoint)
+    const fr = transit.ferries || [];
+    if (fr.length) {
+      h += `<h3>⛴ Ferries</h3><p class="ph-hint">Walk aboard at the pier while the boat is in ($${transit.ferryFare}). On the car ferry, drive up to its stern and interact to take your car across ($${transit.ferryCar}). Tap a pier for a waypoint.</p>`;
+      const when = (s, inHere) => (inHere ? `in now · leaves in ${s}s` : s < 90 ? `next boat leaves in ${s}s` : `next boat leaves in ${Math.round(s / 60)} min`);
+      for (const R of fr) {
+        h += `<h3>${esc(R.name)} <small>${R.car ? 'cars and foot passengers' : 'foot passengers'} · ${m(R.len)}</small></h3>`;
+        h += R.piers.map((pr, k) => `<button class="ph-row" data-pier="${R.id}:${k}"><span class="ic">⚓</span><span class="nm">${esc(k ? R.island : R.mainland)} pier<small>${R.leaves ? when(R.leaves[k], R.boat && R.boat.in === k) : 'no boat running'}</small></span><span class="d">${m(dist(pr))}</span></button>`).join('');
+      }
+    }
     const rail = ctx.map().rail;
     if (rail) {
       const sts = rail.stations.map((st, i) => ({ st, i, d: dist(st) })).sort((a, b) => a.d - b.d).slice(0, 3);

@@ -10,6 +10,7 @@ import * as bounties from './systems/bounties.js';
 import * as npc from './systems/npc.js';
 import * as traffic from './systems/traffic.js';
 import * as transit from './systems/transit.js';
+import * as ferries from './systems/ferries.js';
 import * as police from './systems/police.js';
 import * as cruiser from './systems/cruiser.js';
 import * as events from './systems/events.js';
@@ -65,6 +66,7 @@ const SYSTEMS = [
   ['wildlife', wildlife.update],    // animals out in the wilds: deer, coyotes, rabbits, the farms' herds
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['transit', transit.update],      // the bus lines: buses into service round their loops, the doors closing
+  ['ferries', ferries.update],      // the island ferries to their timetable, the cars on their decks
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
   ['trains', trains.update],        // the rail loop: trains, riders, crossings, the mail-car strongbox

@@ -3606,3 +3606,38 @@ The user's Pixel 7 Pro on Medium still showed stand-ins on the move: a little wa
 
 ## 2026-10-08 · The bounty skull floats above the head
 The golden skull over a player with a bounty sat on top of their head at the usual zoom: it was a fixed 48 screen px above their feet, while a person is about 46 world px tall. Now it hangs above the top of the head at any zoom, with a small gap (`main.js` `SKULL_HEAD`).
+
+## 2026-10-08 · Ferries to the islands: a car ferry to Gull Harbor, water buses to the small islands
+The user's ask: "a ferry system that goes to the islands - some walk on, some you can drive on for the bigger islands".
+- **The routes are worked out from the map** (`server/systems/ferries.js` `ferryRoutes`, once per map, ~0.4 s at server start):
+  - For each island, every pier on its shore and on the mainland where a boat can lie stern to the dock with open water ahead of it. A car ferry can also put in at a street or a lot at the water's edge (a slipway), and needs a landing for the cars behind it by a street.
+  - The whole track out of the pier must be water with room either side. The turning point is the first place out that way with room to turn round, so out of a narrow inlet the boat backs in the whole way.
+  - Of those piers, the pair with the shortest way between them by water. The way is found with A* over the water, kept a hull's width clear of every shore, then straightened.
+  - On the current map:
+    - **Gull Harbor Ferry**: a car ferry from the end of a street in Westport International, 270 m.
+    - **Coral Cay Water Bus**: from Cedar Hills, 260 m.
+    - **Lighthouse Rock Water Bus**: from Highland Woods, 340 m.
+    - **Paradise Cay Water Bus**: from The Yards, 90 m.
+- **The boats keep a timetable:** 20 s in at the pier (`FERRY_DWELL_S`), out bow first, swing round onto the way, across at a steady speed (easing up and down), turn round off the far pier and back in. A round trip is 1.5 to 2.5 minutes. They can't be taken, hurt or pushed about, and other boats are shoved out of their way.
+- **Walk-on** (any ferry): interact by the boat while it's in: $5 (`FERRY_FARE`), a seat aboard. The HUD bar shows the route, how long until it's in, then when it leaves and that the vehicle key gets you off onto the pier.
+- **Drive-on** (the car ferry): drive up to its stern and interact: $15 a car (`FERRY_CAR_FARE`; its passengers ride free). The car rides on the deck with you in it, two lanes of two. At the far side the cars come off onto the landing behind the pier, in the first clear spots, facing inland. Interact again before it leaves to drive off. Getting out of the car on the way puts you up on the passenger deck; the car comes off at the far side by itself. A bus, a truck or anything longer than a van won't fit.
+- **The look:** the car ferry is the harbour scenery's ferry (white hull, car deck aft, two-deck cabin with funnels). The water bus is new (`client/art2/vehicles.js` `waterbus`): a white hull with a teal band, a glazed cabin, an open top deck with benches and the wheelhouse forward.
+- **Drawn light on a phone:** the car ferry is a big model (470 x 150 x 123 voxels). At full size it packs to 52 MB, while a phone's bake worker keeps 20 MB of vehicle models, and takes ~150 MB while built. The live game draws vehicles at 2 world px an art pixel anyway, so both ferries are kept at half resolution, 2 px a voxel (`actors.js` `halveVox`: each 2 x 2 x 2 block takes the material most of its surface voxels have). That makes the car ferry 6.6 MB and the water bus 1.1 MB, builds them in about half the time and draws a heading 3-4x faster. Up close they look the same.
+  - The ferries swing through every heading on each trip, so once one is near, all its headings are asked for, a few a frame (`host.js`). A turn doesn't show an old heading while the new one is drawn.
+  - Their lamp anchors come without building the model. The page asks for them on its own thread while lighting the scene, and for the car ferry that was a second's hitch on a phone.
+- **Transit app** (Phone → Transit → ⛴ Ferries): each route, its two piers, when its boat next leaves each ("in now · leaves in 12s"), how far; tap a pier for a waypoint. **The big map** shows the routes dashed in sea blue, an anchor at each pier (named when zoomed in) and where each boat is.
+- **Tests:** `test/ferries.test.js`:
+  - The routes: a car ferry to Gull Harbor and water buses; every way across on open water a hull's width from shore; room to turn; no shared piers.
+  - The timetable in order, with no jumps or sudden swings.
+  - Walk aboard, ride, get off at the far pier; no fare, no ferry.
+  - Drive aboard, ride the deck dry, drive off at the far landing; change your mind and drive off; out of the car on the deck, up into a seat; a bus won't fit.
+  - The Transit app's departure times.
+
+## 2026-10-08 · Your phone in your hand
+While a player's phone menu is open their character holds the phone, head down, and everyone sees it (descriptor flag `ph`, `server/systems/phone.js` `phoneOut`). It's put away on closing the phone, getting in a vehicle, going down or after five minutes.
+
+## 2026-10-08 · Small fixes
+- **Quiet country roads stay quiet:** out in the country, the traffic count round a player now takes in every car within the despawn range. A car that drove off a way turns back toward the nearest player, so counting only the nearer ones kept adding new cars until four or five were about instead of two.
+- **Test:** the roadkill check in `test/wildlife.test.js` puts the rabbit right at the bumper; one a car's length off could dodge it, so the test failed now and then.
+- **The art from the server, switched off, no longer crashes the server:** with no bake threads (`CLA_ART_THREADS=0`, or a one-core machine) a request for a chunk of the current art took the server down. It's a 404 now (`test/artcdn.test.js`).
+

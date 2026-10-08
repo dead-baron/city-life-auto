@@ -117,11 +117,11 @@ test('animals bolt from you (the herd runs together); hitting one with a car or 
   assert.equal(p.wanted, 0, 'no crime');
   assert.equal(p.heat || 0, 0);
   assert.ok(!w.bodies.has(c), 'no ambulance for a coyote');
-  // run one over
-  const r = wildlife.spawnAnimal(w, 'rabbit', p.ped.x + 200, p.ped.y);
+  // run one over (right in front of the bumper: one a car's length off can still dodge it)
   // (a clear run for the car: no tree or rock in the lane)
   for (const arr of w.map.solidProps.values()) for (const e of arr) if (Math.abs(e.y - p.ped.y) < 70 && e.x > p.ped.x - 20 && e.x < p.ped.x + 700) e.off = true;
   const car = w.spawnVehicle('sedan', p.ped.x + 120, p.ped.y, 0, { npcOwned: false });
+  const r = wildlife.spawnAnimal(w, 'rabbit', car.x + car.def.L / 2 + 12, p.ped.y);
   p.ped.vehId = car.id; p.ped.seat = 0; car.seats[0] = p.ped.id;
   car.vx = 400;
   for (let i = 0; i < 20 && !r.dead && r.hp === r.maxHp; i++) w.step();

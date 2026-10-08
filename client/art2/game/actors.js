@@ -89,6 +89,7 @@ const clampi = (v, a, b) => (v < a ? a : v > b ? b : v);
 export function compactVox(m) {
   m.prepare(m.smooth ?? 1);
   const { w, d, h } = m, n = w * d * h, wd = w * d, v = m.v.slice(), N = new Int8Array(n * 3), AO = new Uint8Array(n), SH = new Int8Array(n);
+  const vs = m.vs || 1;   // (world px a voxel: 2 for a model kept at half resolution, halveVox; its materials shade by world px)
   for (let i = 0; i < n; i++) {
     const mt = v[i];
     if (!mt) continue;
@@ -97,18 +98,50 @@ export function compactVox(m) {
     N[i * 3] = Math.round(nx * 127); N[i * 3 + 1] = Math.round(ny * 127); N[i * 3 + 2] = Math.round(nz * 127);
     AO[i] = Math.round(m.ao[i] * 255);
     const M = m.mats[mt], fn = M.shade && (M.shade.base || M.shade);
-    if (fn) SH[i] = clampi(Math.round(fn((i % w) + 0.5, (((i / w) | 0) % d) + 0.5, (i / wd) | 0, i) * 16), -127, 127);
+    if (fn) SH[i] = clampi(Math.round(fn(((i % w) + 0.5) * vs, ((((i / w) | 0) % d) + 0.5) * vs, ((i / wd) | 0) * vs, i) * 16), -127, 127);
   }
   const mats = m.mats.map((M) => M && { ramp: M.ramp, k: M.k, emi: M.emi, flag: M.flag, paint: !!(M.shade && M.shade.base) });
-  return { w, d, h, v, N, AO, SH, mats, sheen: (m.look && m.look.sheen) ?? 1, bytes: n * 6 + 256 };
+  return { w, d, h, vs, v, N, AO, SH, mats, sheen: (m.look && m.look.sheen) ?? 1, bytes: n * 6 + 256 };
+}
+// A model at half resolution: each k x k x k block of m one voxel, k world px a voxel (out.vs). A block is solid when
+// at least two of its voxels are (thin rails and masts stay, a stray voxel goes) and takes the material most of its
+// voxels on the surface have (the inside never shows). m is built without its normals (vehicleModel dry); the result
+// is prepared here.
+export function halveVox(m, k = 2) {
+  const W = Math.ceil(m.w / k), D = Math.ceil(m.d / k), H = Math.ceil(m.h / k), out = new Vox(W, D, H);
+  out.mats = m.mats; out.look = m.look; out.anchors = m.anchors; out.vs = k; out.smooth = 2;
+  const { w, d, h, v } = m, wd = w * d, cnt = new Uint16Array(m.mats.length), seen = [];
+  const solid = (x, y, z) => x >= 0 && y >= 0 && z >= 0 && x < w && y < d && z < h && v[z * wd + y * w + x] !== 0;
+  for (let Z = 0; Z < H; Z++) for (let Y = 0; Y < D; Y++) for (let X = 0; X < W; X++) {
+    let n = 0;
+    seen.length = 0;
+    for (let dz = 0; dz < k; dz++) for (let dy = 0; dy < k; dy++) for (let dx = 0; dx < k; dx++) {
+      const x = X * k + dx, y = Y * k + dy, z = Z * k + dz;
+      if (x >= w || y >= d || z >= h) continue;
+      const mt = v[z * wd + y * w + x];
+      if (!mt) continue;
+      n++;
+      const surf = !solid(x + 1, y, z) || !solid(x - 1, y, z) || !solid(x, y + 1, z) || !solid(x, y - 1, z) || !solid(x, y, z + 1) || !solid(x, y, z - 1);
+      if (!cnt[mt]) seen.push(mt);
+      cnt[mt] += surf ? 8 : 1;
+    }
+    if (n >= 2) { let best = 0, bn = 0; for (const mt of seen) if (cnt[mt] > bn) { bn = cnt[mt]; best = mt; } out.v[(Z * D + Y) * W + X] = best; }
+    for (const mt of seen) cnt[mt] = 0;
+  }
+  out.prepare(2);
+  patchHidden(out);
+  // (the paint's shader reads its model's normals by voxel index: the full-size model's, which it was made for - so
+  // that model takes these; its own coordinates are world px, which is what compactVox gives it)
+  m.nx = out.nx; m.ny = out.ny; m.nz = out.nz; m.ao = out.ao;
+  return out;
 }
 const NBUF = [0, 0, 0];
 // opt.px: world px per art pixel (1, or the live game's 2): one ray per art pixel, so the model is drawn straight
 // at the art pixel - its shading, dither and outline on the art grid (crisper than shrinking a full-size render);
 // the anchor lands on an art pixel corner and G.ap says the size
 export function renderCompact(C, heading = 0, opt = {}) {
-  const { w, d, h, v, N, AO, SH, mats, sheen } = C, wd = w * d, S = opt.px || 1;
-  const R = Math.ceil(Math.hypot(w, d) / 2) + 2, ax = Math.ceil(R / S), ay = Math.ceil((R + h) / S);
+  const { w, d, h, v, N, AO, SH, mats, sheen } = C, wd = w * d, S = opt.px || 1, vs = C.vs || 1, iv = 1 / vs;
+  const R = Math.ceil(Math.hypot(w * vs, d * vs) / 2) + 2, ax = Math.ceil(R / S), ay = Math.ceil((R + h * vs) / S);
   const G = new GBuf(2 * ax, ay + Math.ceil((R + 2) / S));
   G.ax = ax; G.ay = ay; if (S > 1) G.ap = S;
   const c = Math.cos(heading), s = Math.sin(heading), dither = opt.dither ?? 0.5, fo = opt.flag || 0, brk = 5 + (S - 1) * 2;
@@ -116,7 +149,8 @@ export function renderCompact(C, heading = 0, opt = {}) {
   for (let py = 0; py < G.h; py++) for (let px = 0; px < G.w; px++) {
     const X = (px - ax) * S + 0.5, sy = (py - ay) * S + 0.5;
     for (let Z = h - 1; Z >= 0; Z--) {
-      const Y = sy + Z + 0.5, mx = c * X + s * Y + w / 2, my = -s * X + c * Y + d / 2;
+      // (a model at half resolution, vs 2: its layers and cells 2 world px apart - the ray in model voxels)
+      const zw = (Z + 0.5) * vs, Y = sy + zw, mx = (c * X + s * Y) * iv + w / 2, my = (-s * X + c * Y) * iv + d / 2;
       if (mx < 0 || my < 0 || mx >= w || my >= d) continue;
       const vi = Z * wd + (my | 0) * w + (mx | 0), mt = v[vi];
       if (!mt) continue;
@@ -130,8 +164,8 @@ export function renderCompact(C, heading = 0, opt = {}) {
       t += bayer(px, py) * dither;
       const RM = M.ramp;
       NBUF[0] = c * nx - s * ny; NBUF[1] = s * nx + c * ny; NBUF[2] = nz;
-      G.put(px, py, RM[clampi(Math.round(t), 0, RM.length - 1)], NBUF, Z, M.emi, M.flag | fo);
-      depth[py * G.w + px] = Y + Z;
+      G.put(px, py, RM[clampi(Math.round(t), 0, RM.length - 1)], NBUF, vs > 1 ? zw - 0.5 : Z, M.emi, M.flag | fo);
+      depth[py * G.w + px] = Y + (vs > 1 ? zw - 0.5 : Z);
       break;
     }
   }
@@ -193,9 +227,17 @@ export function vehicleKey(d, st, hi = 0, N = 32) {
   const s = normSt(st), k = vehLook(d);
   return `v|${k.t}|${k.paint || k.cab || k.band || 'L'}|${(((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS}|${stKey(s)}|${wrapHi(hi, N)}|${N}`;
 }
+// The biggest models are kept at half resolution in the live game, 2 world px a voxel - what it draws them at anyway
+// (ART_PX 2). The car ferry at full size is 470 x 150 x 123 voxels: 52 MB packed (a phone worker keeps 20 MB of models)
+// and ~150 MB while its normals are worked out, a second to build; halved, 6.5 MB.
+const COARSE = { ferry: 2, waterbus: 2 };
 function vehModel(d, s) {
   const k = vehLook(d), vr = (((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS, key = `${k.t}|${k.paint || k.cab || k.band || 'L'}|${vr}|${stKey(s)}`;
-  return MODELS.get(key, () => compactVox(vehicleModel(k.t, { paint: k.paint, cab: k.cab, band: k.band, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s) })));
+  return MODELS.get(key, () => {
+    const o = { paint: k.paint, cab: k.cab, band: k.band, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s) };
+    const q = ART_PX > 1 ? COARSE[k.t] : 0;
+    return compactVox(q ? halveVox(vehicleModel(k.t, { ...o, dry: true }), q) : vehicleModel(k.t, o));
+  });
 }
 // the vehicle sprite at heading index hi of N (angle hi * 2pi / N, 0 east, + toward south); anchor = the
 // vehicle's centre on the ground

@@ -1721,6 +1721,7 @@ function openOverlay(id) {
   if (id === 'inv') bag.show();
   if (id === 'dev') $('dev').classList.add('as-overlay');
   if (id === 'bigmap') S.bigmap = true;
+  if (id === 'phone' && S.welcomed) send({ t: 'phone', a: 'out', on: true });   // (your phone in your hand for everyone: server phone.js)
   ovFocus = 0; focusOverlay();
 }
 function closeOverlay(id = topOverlay()) {
@@ -1733,6 +1734,7 @@ function closeOverlay(id = topOverlay()) {
   if (id === 'tutorial') stopTutorial();
   if (id === 'settings' && S.afterSettings) { const g2 = S.afterSettings; S.afterSettings = null; settings.gfxPreset ||= gfx.preset; setTimeout(g2, 0); }
   if (id === 'bigmap') { S.bigmap = false; if (S.hud) S.hud.mapFilter = null; }
+  if (id === 'phone' && S.welcomed) send({ t: 'phone', a: 'out', on: false });
   S.inputMuteUntil = performance.now() + 300; // the A press that closed the menu shouldn't roll you
   ovFocus = 0; focusOverlay();
 }

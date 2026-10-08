@@ -110,7 +110,8 @@ export function createArtCdn({ map, root, dataDir, seed, threads = defaultThread
     if (!path.startsWith('/art/')) return false;
     const m = /^\/art\/([0-9a-f]{6,40})\/([0-3])\/([12])\/(\d{1,3})\/(\d{1,3})$/.exec(path);
     const head = { 'access-control-allow-origin': '*', 'cache-control': 'no-store' };
-    if (!m || !S.art || m[1] !== S.art) { res.writeHead(404, head); res.end(); S.stats.missed++; return true; }
+    // (not serving: another build's art, or no bake threads - CLA_ART_THREADS=0 - so no files either)
+    if (!m || !S.art || !S.dir || m[1] !== S.art) { res.writeHead(404, head); res.end(); S.stats.missed++; return true; }
     const q = +m[2], ap = +m[3], cx = +m[4], cy = +m[5];
     if (cx >= CX || cy >= CY) { res.writeHead(404, head); res.end(); return true; }
     const file = fileOf(q, ap, cx, cy);

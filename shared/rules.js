@@ -249,6 +249,10 @@ export const TRAIN_ALARM_STARS = 3;      // crack it in town (off the Dry Creek 
 // Buses (server/systems/transit.js)
 export const BUS_FARE = 2;                 // a ride, any distance round the line (cash first, then the bank)
 export const BUS_DWELL_S = 7;              // a bus waits at each stop this long with its doors open
+// Ferries (server/systems/ferries.js)
+export const FERRY_FARE = 5;               // on foot, either way
+export const FERRY_CAR_FARE = 15;          // a car on a car ferry's deck (its passengers ride free)
+export const FERRY_DWELL_S = 20;           // a ferry lies at each pier this long
 // Taxis (server/systems/transit.js)
 export const TAXI_FLAG = 5;                // the meter starts at this...
 export const TAXI_PER_KM = 30;             // ...and runs this much a kilometre driven (1 m = a tile); paid getting out

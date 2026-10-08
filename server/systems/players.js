@@ -41,6 +41,7 @@ import * as phone from './phone.js';
 import * as props from './props.js';
 import * as trains from './trains.js';
 import * as transit from './transit.js';
+import * as ferries from './ferries.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED } from '../../shared/rules.js';
 import * as revive from './revive.js';
@@ -298,7 +299,7 @@ export function processInputs(world, dt) {
     const n = p.inputQ.length > 3 ? 2 : 1;
     const ped = p.ped;
     const drivingV = ped && ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
-    if (drivingV && !drivingV.wreckAt && !drivingV.scripted) drivingV.ownStepTick = world.tick;
+    if (drivingV && !drivingV.wreckAt && !drivingV.scripted && !drivingV.onDeck) drivingV.ownStepTick = world.tick;
     for (let k = 0; k < n; k++) {
       let inp;
       if (p.inputQ.length) { inp = p.inputQ.shift(); p.ack = inp.seq; p.lastInput = inp; p.starve = 0; }
@@ -309,7 +310,7 @@ export function processInputs(world, dt) {
       p.prevBits = inp.bits;
       applyInput(world, p, ped, inp, pressed, dt);
       const v = ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
-      if (v && !v.wreckAt && !v.scripted) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); props.smashFor(world, v); }
+      if (v && !v.wreckAt && !v.scripted && !v.onDeck && !v.ferry) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); props.smashFor(world, v); }   // (a car on a ferry's deck is held there)
     }
   }
 }
@@ -439,7 +440,7 @@ export function findInteraction(world, p) {
       const spot = jobs.boatFishingSpot(world, ped);
       if (spot) return { label: 'Fish offshore (deep-sea)', run: () => jobs.castLine(world, p, spot) };
     }
-    return transit.rideInteraction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p);
+    return transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p);
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
@@ -483,6 +484,8 @@ export function findInteraction(world, p) {
   if (train) return train;
   const bus = transit.interaction(world, p);   // a bus waiting at the stop you're at: board it
   if (bus) return bus;
+  const ferry = ferries.interaction(world, p);   // a ferry in at the pier: board it
+  if (ferry) return ferry;
 
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
@@ -641,7 +644,7 @@ export function buildMe(world, p) {
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
-    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p),
+    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p),
     arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,
   };
 }

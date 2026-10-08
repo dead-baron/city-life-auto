@@ -24,9 +24,9 @@ let recDv = new DataView(recBuf.buffer);
 function descriptor(e) {
   switch (e.kind) {
     // fl: a player's flashlight is switched on; st: sitting by a campfire; bt: a bounty on their head (the golden skull:
-    // bounties.js). The flags and extra bytes are full; turning any of these on or off bumps appVer, so the descriptor
+    // bounties.js); ph: their phone out (its menu open: phone.js phoneOut). The flags and extra bytes are full; turning any of these on or off bumps appVer, so the descriptor
     // is sent again.
-    case K.PED: return { id: e.id, k: K.PED, app: e.app, n: e.player ? e.player.name : '', pl: !!e.player, ar: e.archetype, v: e.appVer || 0, ...(e.flashOn ? { fl: 1 } : null), ...(e.sit ? { st: 1 } : null), ...(e.player && e.player.skull ? { bt: 1 } : null) };
+    case K.PED: return { id: e.id, k: K.PED, app: e.app, n: e.player ? e.player.name : '', pl: !!e.player, ar: e.archetype, v: e.appVer || 0, ...(e.flashOn ? { fl: 1 } : null), ...(e.sit ? { st: 1 } : null), ...(e.player && e.player.skull ? { bt: 1 } : null), ...(e.phoneOut ? { ph: 1 } : null) };
     case K.VEH: return { id: e.id, k: K.VEH, m: e.def.i, p: e.paint, vr: e.variant, tn: e.tint ?? -1, o: e.ownerName || '', v: e.descVer || 0, fs: e.forSale ? e.forSale.price : 0 };
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: bagWireTier(e), val: e.value };
@@ -107,7 +107,7 @@ export function send(world) {
     let ctrl = CTRL.NONE, ctrlId = 0, self = null, sflags = 0;
     if (ped && !ped.dead && ped.onTrain) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: 0 }; }
     else if (ped && !ped.dead) {
-      if (veh) { ctrl = ped.seat === 0 && !veh.scripted ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = { x: veh.x, y: veh.y, a: veh.a, vx: veh.vx, vy: veh.vy, av: veh.av, stamina: veh.slip || 0, rollT: veh.spin || 0, rdx: veh.launch || 0, lz: veh.lz || 0 }; sflags = veh.rev ? 32 : 0; } // (a vehicle's slide / burnout / launch state rides in the ped-only slots) // reverse-gear state keeps point-to-drive prediction exact
+      if (veh) { ctrl = ped.seat === 0 && !veh.scripted && !veh.onDeck ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = { x: veh.x, y: veh.y, a: veh.a, vx: veh.vx, vy: veh.vy, av: veh.av, stamina: veh.slip || 0, rollT: veh.spin || 0, rdx: veh.launch || 0, lz: veh.lz || 0 }; sflags = veh.rev ? 32 : 0; } // (a vehicle's slide / burnout / launch state rides in the ped-only slots) // reverse-gear state keeps point-to-drive prediction exact
       else {
         ctrl = CTRL.PED; ctrlId = ped.id;
         const mods = players.pedMods(world, ped);

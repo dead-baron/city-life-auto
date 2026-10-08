@@ -63,8 +63,8 @@ export function update(world, dt) {
       if (v.ai && v.ai.ctl && driver && driver.npc) { stepVehicle(world, v, dt / 2, env); traffic.trim(v); stepVehicle(world, v, dt / 2, env); }
       else stepVehicle(world, v, dt, env);
     }
-    // land vehicles that end up in the water sink
-    if (v.def.kind !== 'boat') {
+    // land vehicles that end up in the water sink (not a car on a ferry's deck)
+    if (v.def.kind !== 'boat' && !v.onDeck) {
       if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
       if (v.sinkAt) {
         v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);
@@ -90,12 +90,12 @@ export function update(world, dt) {
 
   // vehicle vs vehicle
   for (const a of vehs) {
-    if (a.removed) continue;
+    if (a.removed || a.onDeck) continue;   // (the cars on a ferry's deck are held in their places: ferries.js)
     const sa = Math.abs(a.vx) + Math.abs(a.vy);
     if (sa < 2) continue;
     const near = world.query(a.x, a.y, a.def.L / 2 + 110, K.VEH);
     for (const b of near) {
-      if (b === a || b.removed) continue;
+      if (b === a || b.removed || b.onDeck) continue;
       if ((a.def.kind === 'boat') !== (b.def.kind === 'boat') || !sameLevel(a.lz, b.lz)) continue;
       const sb = Math.abs(b.vx) + Math.abs(b.vy);
       if (sb >= 2 && b.id < a.id) continue; // pair handled once when both move
@@ -202,7 +202,7 @@ export function toughOf(def) { return def.kind === 'bike' ? VEHICLE_TOUGH.bike :
 // spot (a rocket, a blast, a crash hard enough); otherwise running out of health kills the engine (killEngine).
 // A vehicle already dying: a blast or a rocket sets it off at once, gunfire brings the end sooner.
 export function damageVehicle(world, v, amount, attackerPed, raw = false, boom = false) {
-  if (v.wreckAt || amount <= 0) return;
+  if (v.wreckAt || amount <= 0 || v.ferry) return;   // (the ferries can't be hurt: ferries.js)
   const dmg = raw ? amount : amount / toughOf(v.def);
   if (attackerPed) v.lastAttacker = attackerPed.id;
   if (v.dead) {
@@ -266,6 +266,7 @@ export function explode(world, v, attackerPed) {
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
 import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S } from '../../shared/rules.js';
+import * as ferries from './ferries.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
@@ -367,6 +368,7 @@ export function tryEnter(world, ped) {
   const v = nearestVehicle(world, ped, 56);
   if (!v) return false;
   const p = ped.player;
+  if (v.ferry) { if (p) world.notify(p, 'Board the ferry with interact while it\'s in at the pier.', 'info'); return false; }   // (ferries.js: never taken)
   if (v.wreckAt) { if (p) world.notify(p, 'That vehicle is wrecked.', 'bad'); return false; }
   if (v.sinkAt) return false;
   if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
@@ -424,6 +426,8 @@ function carjack(world, ped, v, driver) {
 export function exitVehicle(world, ped) {
   const v = world.get(ped.vehId);
   if (!v) { ped.vehId = 0; ped.seat = -1; return; }
+  if (v.onDeck && ferries.leaveDeckCar(world, ped, v)) return;   // (out of a car on a ferry's deck: up to a seat aboard)
+  if (v.ferry) { const to = ferries.exitToward(world, v); if (to) { ejectPed(world, ped, false, to); return; } }   // (off at the pier)
   const spd = speedOf(v);
   if (v.def.kind === 'boat' && !findExitSpot(world, v, ped, 150) && ped.player) world.notify(ped.player, 'Over the side - swim for it!', 'info');
   // off a bus: out of the doors on the kerb side (the right of the way it faces), onto the pavement by the stop

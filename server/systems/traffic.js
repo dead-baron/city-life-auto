@@ -515,9 +515,11 @@ function manage(world) {
   if (!net) return;
   const night = world.clock.isNight;
   for (const a of anchors) {
-    const target = wildStyle(world.map, a.x, a.y) ? (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : night ? 10 : 16;
+    const wild = !!wildStyle(world.map, a.x, a.y), target = wild ? (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : night ? 10 : 16;
+    // (out in the country, every car still on the roads round you counts - one that drove off a way comes back toward
+    // you, so a new one each time would fill the quiet roads up)
     let count = 0;
-    for (const v of world.query(a.x, a.y, 1400, K.VEH)) if (v.ai && v.ai.kind === 'traffic') count++;
+    for (const v of world.query(a.x, a.y, wild ? 1800 : 1400, K.VEH)) if (v.ai && v.ai.kind === 'traffic') count++;
     if (count >= target || world.npcCount + world.trafficCount > world.npcBudget) continue;
     const cands = net.edges.filter((e) => {
       const bb = e.bb || (e.bb = bboxOf(e.pts));

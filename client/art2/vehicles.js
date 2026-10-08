@@ -36,6 +36,8 @@ export const VEHICLE_DIMS = {
   suv: [104, 50], limo: [150, 50], foodtruck: [124, 58],
   // transit and harbour scenery (World v2): a two-section tram, a harbour tug, a car and passenger ferry
   tram: [300, 56], tugboat: [150, 64], ferry: [470, 150],
+  // the island ferries' water bus (server/systems/ferries.js; the car ferry is the 'ferry' above)
+  waterbus: [240, 76],
   // country and works scenery
   tractor: [84, 54], combine: [150, 120], plane: [104, 130], excavator: [130, 60],
 };
@@ -45,7 +47,7 @@ export const VEHICLE_TALL = {
   swat: 52, bus: 62, flatbed: 46, boxtruck: 62, dumptruck: 46, mixer: 62, tanker: 54, garbage: 60, firetruck: 56, towtruck: 50,
   bike: 24, policebike: 26, bicycle: 20, speedboat: 22, dinghy: 14, jetski: 16, policeboat: 34,
   cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20,
-  tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, foodtruck: 60,
+  tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
 };
 const DEFAULT_PAINT = {
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
@@ -53,7 +55,7 @@ const DEFAULT_PAINT = {
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
   cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a',
-  jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
+  jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
 };
 const DEFAULT_CAB = { flatbed: '#e6e2d8', boxtruck: '#e6e2d8', dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', towtruck: '#e6e2d8' };
 
@@ -1020,8 +1022,40 @@ export function vehicleModel(type, o = {}) {
         for (const fy of [cy - 22, cy + 22]) { m.cyl('z', c0 + 40, fy, 0, 9, hz + 51, hz + 78, M.white); m.box(c0 + 31, fy - 9, hz + 66, c0 + 49, fy + 9, hz + 70, red); m.box(c0 + 31, fy - 9, hz + 70, c0 + 49, fy + 9, hz + 73, navy); m.cyl('z', c0 + 40, fy, 0, 6, hz + 78, hz + 81, M.dark); }
         m.box(c1 - 30, cy - 2, hz + 51, c1 - 26, cy + 2, hz + 92, M.white);
         for (const y of [6, W - 7]) m.box(4, y, hz, c0, y + 1, hz + 8, M.chrome);
-        for (let k = 0; k < 8; k++) m.box(L * 0.18 + k * 4, 14, hz, L * 0.18 + k * 4 + 2, W - 14, hz + 1, M.paintLine);
+        // (the stripes 2 px wide on a 4 px step from a multiple of 4: the game keeps this model at 2 px a voxel, where
+        // stripes off that grid run together into one band)
+        const zx = Math.round((L * 0.18) / 4) * 4;
+        for (let k = 0; k < 8; k++) m.box(zx + k * 4, 14, hz, zx + k * 4 + 2, W - 14, hz + 1, M.paintLine);
       }
+      break;
+    }
+    case 'waterbus': {
+      // the island water bus: a white hull with a navy boot-top and a teal band, a long glazed cabin below and an open
+      // top deck aft with benches and a rail, the wheelhouse forward on top, a mast with a light
+      const hz = 20, cy = W / 2, teal = m.mat({ ramp: R('#2f8a86'), k: 3 }), navy = m.mat({ ramp: R('#22305a'), k: 3 });
+      const topDeck = m.mat({ ramp: R('#8a6a48'), k: 3, shade: (x, y) => (Math.round(y) % 6 === 0 ? -0.6 : 0) });
+      m.fill((x, y, z) => {
+        const t = x / L, bow = t > 0.78 ? (t - 0.78) / 0.22 : 0;
+        const halfW = (W / 2 - 1.5) * (1 - bow * bow * 0.92) * (0.82 + 0.18 * (z / hz)), stern = t < 0.03 ? t / 0.03 : 1;
+        if (Math.abs(y - cy) > halfW * (0.7 + 0.3 * stern)) return -1;
+        if (z > hz - 2) return Math.abs(y - cy) > halfW - 3 ? M.white : topDeck;
+        if (z < 5) return navy;
+        if (z > hz - 9 && z < hz - 5) return teal;
+        return M.white;
+      }, 0, 0, 0, L, W, hz);
+      const c0 = L * 0.12, c1 = L * 0.8;
+      shell(m, { x0: c0, x1: c1, y0: 6, y1: W - 6, z0: hz, z1: hz + 22, fr: 6, r: 3, rz: 2, mat: (x, y, z, s) => {
+        if (z > hz + 6 && z < hz + 16 && (s.side < 1.6 || s.front < 2.4) && Math.round(x) % 16 > 2) return M.glass;
+        if (z > hz + 18) return teal;
+        return M.white;
+      } });
+      m.box(c0 + 2, 8, hz + 22, c1 - 2, W - 8, hz + 23, topDeck);
+      for (let x = c0 + 8; x < L * 0.56; x += 14) for (const yy of [cy - 20, cy + 14]) m.box(x, yy, hz + 23, x + 9, yy + 6, hz + 27, M.wood);   // benches
+      for (const yy of [8, W - 9]) m.box(c0 + 2, yy, hz + 23, c1 - 2, yy + 1, hz + 29, M.chrome);                                           // the rail
+      shell(m, { x0: L * 0.6, x1: c1 - 2, y0: cy - 16, y1: cy + 16, z0: hz + 23, z1: hz + 40, r: 2, mat: glassy(M.white, M.glass, { band: [hz + 29, hz + 37], pillars: [L * 0.66, L * 0.72] }) });
+      m.box(L * 0.66, cy - 1, hz + 40, L * 0.66 + 2, cy + 1, hz + 58, M.trim);                                                               // the mast
+      deco(m, m.mat({ ramp: R('#f4f0d8', 5, 3), k: 3, emi: [255, 244, 210, 120 + (o.lights ? 135 : 0)] }), L * 0.66, cy - 1, hz + 56, L * 0.66 + 2, cy + 1, hz + 58, () => true);
+      for (const yy of [4, W - 6]) m.box(L * 0.02, yy, hz, c0, yy + 1, hz + 6, M.chrome);
       break;
     }
     default: return vehicleModel('sedan', o);
@@ -1137,8 +1171,12 @@ function vnoiseLite(x, y, z) { const s = 6, ix = Math.floor(x / s), iy = Math.fl
 
 // lamp / siren / seat / exhaust / fire points of a model (model coordinates), measured once per type
 const ANCHORS = new Map();
+// (the island ferries have no lamps, seats or wake anchors: theirs come without building the model - the page asks for
+// them to light the scene, and the car ferry is a second's work on a phone)
+const BARE = new Set(['ferry', 'waterbus']);
 export function vehicleAnchors(type) {
   let a = ANCHORS.get(type);
+  if (!a && BARE.has(type)) { const [L, W] = VEHICLE_DIMS[type]; a = { head: [], tail: [], rev: [], brake: [], siren: [], fire: [], seat: null, exhaust: null, wake: null, bed: null, L, W, H: VEHICLE_TALL[type] || 36 }; ANCHORS.set(type, a); }
   if (!a) { const m = vehicleModel(type, { dry: true }); a = { ...m.anchors, L: m.w, W: m.d, H: VEHICLE_TALL[type] || 36 }; ANCHORS.set(type, a); }
   return a;
 }

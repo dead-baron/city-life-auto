@@ -174,3 +174,22 @@ test('taxi: hail one going by; none for the wanted', () => {
   for (let t = 0; t < 300 && v.taxi.st === 'pickup'; t++) run(world, 0.5);
   assert.equal(v.taxi.st, 'wait');
 });
+
+// ---- the phone in your hand ----------------------------------------------------------------------------------------
+import * as phoneSys from '../server/systems/phone.js';
+test('phone menu open: the phone in your hand for everyone (the descriptor), put away on closing or in a vehicle', () => {
+  const world = makeWorld();
+  const { p } = joinPlayer(world);
+  const v0 = p.ped.appVer || 0;
+  phoneSys.handle(world, p, { a: 'out', on: true });
+  assert.ok(p.ped.phoneOut, 'out');
+  assert.ok((p.ped.appVer || 0) > v0, 'the descriptor goes again');
+  phoneSys.handle(world, p, { a: 'out', on: false });
+  assert.equal(p.ped.phoneOut, 0);
+  phoneSys.handle(world, p, { a: 'out', on: true });
+  const car = world.spawnVehicle('sedan', p.ped.x + 30, p.ped.y, 0, { npcOwned: false });
+  assert.ok(vehicles.tryEnter(world, p.ped), 'in the car');   // (in a vehicle: put away)
+  run(world, 1.1);
+  assert.equal(p.ped.phoneOut, 0);
+  void car;
+});

@@ -41,6 +41,9 @@ export const VEHICLES = {
   mtb:       { i: 27, name: 'Mountain Bike',    kind: 'bike', L: 42,  W: 16, max: 340, accel: 290, brake: 700, rev: 50,  turn: 3.9, grip: 10.5, drift: 3.0, mass: 0.28, hp: 65, seats: 1, slots: [[-15, 0]], price: 480, pedal: true, rough: 0.25, seat: 2, blurb: 'rides rough ground' },
   roadbike:  { i: 28, name: 'Road Bike',        kind: 'bike', L: 42,  W: 12, max: 430, accel: 300, brake: 600, rev: 50,  turn: 3.6, grip: 9.5, drift: 2.8, mass: 0.2, hp: 40, seats: 1, slots: [[-15, 0]], price: 650, pedal: true, rough: 1.5, seat: 3, blurb: 'fastest on the road, poor off it' },
   bmx:       { i: 29, name: 'BMX',              kind: 'bike', L: 34,  W: 14, max: 310, accel: 330, brake: 720, rev: 50,  turn: 4.5, grip: 10.5, drift: 3.2, mass: 0.2, hp: 55, seats: 1, slots: [[-11, 0]], price: 300, pedal: true, rough: 0.6, seat: 1, blurb: 'small and nimble' },
+  // the ferries to the islands (server/systems/ferries.js): run to a timetable, never driven, never hurt
+  ferry:     { i: 31, name: 'Car Ferry',        kind: 'boat', L: 470, W: 150, max: 320, accel: 60, brake: 80, rev: 60, turn: 0.4, grip: 2, drift: 1, mass: 60, hp: 99999, seats: 24, slots: [[-140, -40], [-140, 40]], ferry: true },
+  waterbus:  { i: 32, name: 'Water Bus',        kind: 'boat', L: 240, W: 76,  max: 320, accel: 60, brake: 80, rev: 60, turn: 0.5, grip: 2, drift: 1, mass: 30, hp: 99999, seats: 16, slots: [[-80, 0]], ferry: true },
   cargobike: { i: 30, name: 'Cargo Bike',       kind: 'bike', L: 58,  W: 18, max: 280, accel: 190, brake: 520, rev: 50,  turn: 3.0, grip: 10,  drift: 2.8, mass: 0.45, hp: 75, seats: 1, slots: [[15, 0], [-19, 0]], price: 900, pedal: true, rough: 1.1, seat: -11, blurb: 'slow, carries two crates' },
 };
 export const PEDAL_BIKES = Object.keys(VEHICLES).filter((id) => VEHICLES[id].pedal);

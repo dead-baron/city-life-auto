@@ -994,7 +994,9 @@ export class World2 {
     if (lying && (f & PF.DEAD) && p.deadK === 'halved' && this._halves(p, A2, ppose, d8, pf)) return;   // (cut in two by the plasma blade)
     // unarmed with the flashlight on: it's in your hand; under an open umbrella (standing or walking): its shaft is
     const umb = !!(f & PF.UMBRELLA) && !(p.extra | 0) && !p.d.fl && (ppose === 'idle' || ppose.startsWith('walk')) && !!Pd.umbrellaTop;
-    const wpn = (p.extra | 0) || (p.d.fl ? 'flashlight' : umb ? 'umbrella' : 0);
+    // (a player with their phone menu open holds the phone: d.ph, server phone.js - in place of the weapon)
+    const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
+    const wpn = phone ? 'phone' : (p.extra | 0) || (p.d.fl ? 'flashlight' : umb ? 'umbrella' : 0);
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
@@ -1123,6 +1125,16 @@ export class World2 {
       v._hi = hi; v._hn = N; v._hf = f;
       for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; this._ask('actors', 'vehicle', A.vehicleKey(v.d, st, h, N), [v.d, st, h, N], me ? -2 : 1); }
       if (f & VF.SIREN) { const s2 = A.vehState(f, 3 - phase); this._ask('actors', 'vehicle', A.vehicleKey(v.d, s2, hi, N), [v.d, s2, hi, N], me ? -2 : 0); }
+    }
+    // A ferry swings through heading after heading on every trip, and the car ferry's take a while to draw: once one is
+    // near, all its headings are asked for, a few a frame and the nearest first, so a turn doesn't show an old heading
+    if (def.ferry && v._allF !== (f & 1) + N * 2) { v._allF = (f & 1) + N * 2; v._allN = 0; }   // (its lights on at night: another set)
+    if (def.ferry && (v._allN | 0) < N) {
+      for (let n = 0; n < 3 && (v._allN | 0) < N && this.sprOut < this.tier.sprJobs >> 1; n++) {
+        const k = v._allN | 0, h = (hi + ((k + 1) >> 1) * (k & 1 ? 1 : -1) + 2 * N) % N;
+        this._ask('actors', 'vehicle', A.vehicleKey(v.d, st, h, N), [v.d, st, h, N], 3);
+        v._allN = k + 1;
+      }
     }
     if (!use) return;
     v._v2k = use;

@@ -65,3 +65,16 @@ test('art from the server: asked for, baked, served - the same chunk the page ba
     rmSync(dataDir, { recursive: true, force: true });
   }
 });
+
+test('art from the server switched off (no bake threads): a 404 for everything, never a crash', () => {
+  const map = generateCity(1337);
+  const dataDir = mkdtempSync(join(tmpdir(), 'cla-art-'));
+  const art = JSON.parse(readFileSync(join(ROOT, 'version.json'), 'utf8')).art;
+  const cdn = createArtCdn({ map, root: ROOT, dataDir, seed: 1337, threads: 0, prewarm: [1], log: () => {} });
+  try {
+    const res = fakeRes();
+    assert.equal(cdn.handle(`/art/${art}/1/2/28/23`, {}, res), true);
+    assert.equal(res.status, 404);
+    assert.equal(cdn.summary().threads, 0);
+  } finally { cdn.stop(); rmSync(dataDir, { recursive: true, force: true }); }
+});

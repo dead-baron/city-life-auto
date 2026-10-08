@@ -5,7 +5,7 @@
 import { K } from '../../shared/constants.js';
 import { PED_BLOCK, DISTRICTS } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S } from '../../shared/rules.js';
+import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, FERRY_FARE, FERRY_CAR_FARE } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
 import * as events from './events.js';
@@ -14,6 +14,7 @@ import * as law from './law.js';
 import * as police from './police.js';
 import * as bounties from './bounties.js';
 import * as transit from './transit.js';
+import * as ferries from './ferries.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -78,6 +79,11 @@ export function update(world) {
   let pat = world.jobBoard.filter((j) => j.kind === 'patrol').length;
   for (let k = 0; pat < PATROLS && k < 10; k++) { const j = newPatrol(world); if (j) { world.jobBoard.push(j); pat++; } }
   for (const p of world.players.values()) if (p.job && p.job.type === 'patrol') stepPatrol(world, p);
+  // phones put away: in a vehicle, down, gone, or out for five minutes (a page that never said it closed)
+  for (const p of world.players.values()) {
+    const ped = p.ped;
+    if (ped && ped.phoneOut && (!p.conn || ped.dead || ped.vehId || ped.hidden || now - ped.phoneOut > 300)) phoneOut(world, p, false);
+  }
 }
 
 // ---- patrols ------------------------------------------------------------------------------
@@ -157,11 +163,23 @@ export function boardFor(world, p) {
   return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null, saw: law.sawList(world, p) };
 }
 
+// Your phone in your hand while its menu is open, for everyone to see (the descriptor's ph: net.js; drawn held,
+// head down, in place of the weapon). Put away on closing it, getting in a vehicle, going down or after five minutes.
+export function phoneOut(world, p, on) {
+  const ped = p.ped;
+  if (!ped) return;
+  if (on && (ped.dead || ped.vehId || ped.hidden)) on = false;
+  const was = !!ped.phoneOut;
+  ped.phoneOut = on ? world.time : 0;
+  if (was !== on) ped.appVer = (ped.appVer || 0) + 1;
+}
+
 export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
   if (a === 'feed') return events.feedFor(world);
-  if (a === 'transit') return transit.transitInfo(world, p);   // the Transit app and the lines on the map
+  if (a === 'out') { phoneOut(world, p, !!msg.on); return null; }   // the phone in your hand while its menu is open
+  if (a === 'transit') return { ...transit.transitInfo(world, p), ferries: ferries.ferryInfo(world), ferryFare: FERRY_FARE, ferryCar: FERRY_CAR_FARE };   // the Transit app and the lines on the map
   if (a === 'taxi') return transit.taxiPhone(world, p, msg);    // call a taxi / cancel it / where you want to go
   if (a === 'cancel') {
     if (!p.job) return { ...boardFor(world, p), err: 'You have no job.' };
