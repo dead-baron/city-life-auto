@@ -100,6 +100,10 @@ function clubPatch(ci, u, z, D) {
 }
 // ---- end biker club patches
 export const HAIR_STYLES = ['spiky', 'short', 'buzz', 'bald', 'afro', 'long', 'wavy', 'pony', 'bun', 'braids', 'dreads', 'mohawk', 'slick', 'curly', 'bob'];
+// the look system's variants (shared/look.js HAIR_STYLES), each drawn from a base style with its own touch (hairPrims):
+// short back and sides (a faded crew cut), a side part, a quiff, a man bun, shoulder length, box braids with cuffs, big
+// curls, a shaved side
+const BASE_HAIR = { sides: 'fade', sidepart: 'slick', quiff: 'short', manbun: 'slick', shoulder: 'long', boxbraids: 'dreads', bigcurls: 'curlylong', shavedside: 'undercut' };
 export const TOP_KINDS = ['tee', 'tank', 'polo', 'shirt', 'hoodie', 'jacket', 'suit', 'leather', 'puffer', 'flannel', 'hawaiian', 'vest', 'hivis', 'uniform', 'tactical', 'scrubs', 'apron', 'overalls', 'tracksuit', 'jersey', 'coat', 'cardigan', 'dress', 'fur', 'none', 'bikini', 'swimsuit', 'towel'];
 
 // ---- colour -----------------------------------------------------------------------------------------------------
@@ -170,6 +174,17 @@ function hairRamp(c) {
   return R;
 }
 const lum = (c) => (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11) / 255;
+// close up (render opt.res > 1): a ramp with a step between each two of its own, so light turns round a form in finer
+// steps (kept per ramp)
+const FINE = new WeakMap();
+function fine(R) {
+  let F = FINE.get(R);
+  if (F) return F;
+  F = [];
+  for (let i = 0; i < R.length; i++) { F.push(R[i]); if (i < R.length - 1) F.push([0, 1, 2].map((j) => Math.round((R[i][j] + R[i + 1][j]) / 2))); }
+  FINE.set(R, F);
+  return F;
+}
 const mixHex = (a, b, k) => { const A = hexRgb(NAMED[a] || a), B = hexRgb(NAMED[b] || b); return '#' + A.map((v, i) => clamp(Math.round(v + (B[i] - v) * k), 0, 255).toString(16).padStart(2, '0')).join(''); };
 
 // ---- vectors and frames (3x3 row-major; the columns are a frame's right, forward and up axes) ------------------
@@ -941,18 +956,32 @@ function wardrobe(A, D, TF, seed) {
   const stubble = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.62 + skin[i][j] * 0.38)));
   W.hairM = (Q) => {
     // clumps: darker grooves radiating from the crown, a sheen band
-    const az = Math.atan2(Q.l0, Q.l1), st = A.hair?.style;
+    const az = Math.atan2(Q.l0, Q.l1), ex = A.hair?.style, st = BASE_HAIR[ex] || ex;
+    if (ex === 'sidepart' && Q.part === 'hair' && Math.abs(Q.l0 + 0.36) < 0.045 && Q.l1 > -0.2 && Q.l2 > 0.45) { Q.k -= 0.4; return hairR; }
     if (st === 'buzz' || st === 'mohawk' && Q.part === 'hair') { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return stubble; }
     if (st === 'cornrows') { if (Math.round(Q.l0 * 8) & 1) Q.k -= 0.3; return hairR; }
     if ((st === 'undercut' || st === 'fade') && Q.l2 < 0.45) { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return stubble; }
     if (st === 'slick') { Q.gloss = 0.8; if ((Math.round(Q.l0 * 7) & 1) && Q.l2 > 0) Q.k -= 0.15; return hairR; }
     Q.k -= 0.1;
-    if (Q.l2 < 0.78) { const st = Math.floor(az * 5.2 + Q.l2 * 1.3 + 20), n = hash(st, Math.floor(Q.l2 * 2.2 + 3), seed); Q.k += n > 0.62 ? -0.2 : n < 0.3 ? 0.12 : 0; }
+    if (Q.res > 1) {
+      // close up (the creator): locks running down from the crown, a dark line between them, each lock a little lighter
+      // or darker than the next, and a sheen where the light catches the top
+      const g = az * 8.5 + Q.l2 * (st === 'curly' || st === 'afro' ? 3.2 : 0.9) + 40, lock = Math.floor(g), fr = g - lock, n = hash(lock, Math.floor(Q.l2 * 3 + 5), seed);
+      Q.k += fr < 0.16 ? -0.24 : n > 0.66 ? -0.1 : n < 0.3 ? 0.1 : 0;
+      if (Q.l2 > 0.86) Q.k += hash(Math.round(Q.l0 * 7), Math.round(Q.l1 * 7), seed) > 0.62 ? -0.12 : 0.03;
+      Q.gloss = Math.max(Q.gloss, st === 'afro' || st === 'curly' ? 0.25 : 0.6);
+    } else if (Q.l2 < 0.78) { const sl = Math.floor(az * 5.2 + Q.l2 * 1.3 + 20), n = hash(sl, Math.floor(Q.l2 * 2.2 + 3), seed); Q.k += n > 0.62 ? -0.2 : n < 0.3 ? 0.12 : 0; }
     else Q.k += hash(Math.round(Q.l0 * 3), Math.round(Q.l1 * 3), seed) > 0.6 ? -0.12 : 0.04;
     if (st === 'wavy' || st === 'long' || st === 'braids' || st === 'dreads') Q.k += Math.sin(Q.Z * 1.3 + az * 3) * 0.12;
     return hairR;
   };
-  W.hairLock = (Q) => { Q.k += Math.sin(Q.l0 * 9 + Q.l1 * 2) * 0.14 - 0.04; if ((A.hair?.style === 'braids' || A.hair?.style === 'braid') && ((Math.floor(Q.l0 * 10) + (Q.l1 > 0 ? 1 : 0)) & 1)) Q.k -= 0.22; return hairR; };
+  W.cuff = (Q) => { Q.gloss = 1; return gold; };
+  W.hairLock = (Q) => {
+    Q.k += Math.sin(Q.l0 * 9 + Q.l1 * 2) * 0.14 - 0.04;
+    if ((A.hair?.style === 'braids' || A.hair?.style === 'braid' || A.hair?.style === 'boxbraids') && ((Math.floor(Q.l0 * 10) + (Q.l1 > 0 ? 1 : 0)) & 1)) Q.k -= 0.22;
+    if (Q.res > 1) { const g = Math.atan2(Q.l0, Q.l1 || 1e-6) * 7 + 30, fr = g - Math.floor(g); if (fr < 0.18) Q.k -= 0.2; Q.gloss = Math.max(Q.gloss, 0.5); }
+    return hairR;
+  };
   // hats
   const hatR = cloth(A.hat?.color || 'navy'), hk = A.hat?.kind;
   W.hat = (Q) => {
@@ -1071,13 +1100,16 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   return { prims: out, head: out.indexOf(headP), W, TF };
 }
 function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
-  let st = A.hair?.style || 'short';
+  // the look system's variants of a style (shared/look.js HAIR_STYLES: no two styles drawn alike) start from their base
+  // style and add their own touch below
+  const ex = A.hair?.style || 'short';
+  let st = BASE_HAIR[ex] || ex;
   if (A.mask) return;                                               // a balaclava or a ski mask hides the hair completely
   const hatOn = hat && hat !== 'bandana' && hat !== 'headband' && hat !== 'visor';
   if (hatOn) { if (st === 'afro' || st === 'spiky' || st === 'curly' || st === 'mohawk' || st === 'topknot' || st === 'twinbuns' || st === 'curtains' || st === 'shag') st = 'short'; if (hat === 'hood' || hat === 'helmet') return; }
   if (st === 'bald') return;
   const hr = D.head, HD = S.HD;
-  const vol = { buzz: 0.25, slick: 0.55, short: 0.9, spiky: 1.5, curly: 1.4, afro: 1.0, long: 0.9, wavy: 1.1, pony: 0.75, bun: 0.75, braids: 0.7, dreads: 0.9, mohawk: 0.25, bob: 1.0,
+  const vol = { sides: 0.75, quiff: 0.7, sidepart: 0.7, bigcurls: 1.7 }[ex] ?? { buzz: 0.25, slick: 0.55, short: 0.9, spiky: 1.5, curly: 1.4, afro: 1.0, long: 0.9, wavy: 1.1, pony: 0.75, bun: 0.75, braids: 0.7, dreads: 0.9, mohawk: 0.25, bob: 1.0,
     undercut: 0.8, fade: 0.6, mullet: 0.9, topknot: 0.6, pixie: 0.8, twinbuns: 0.7, pigtails: 0.75, braid: 0.7, curlylong: 1.4, shag: 1.2, cornrows: 0.3, curtains: 1.0, halfup: 0.9 }[st] ?? 0.9;
   // the hairline in the cap's own unit coords, by the angle round the head from the face: [forehead, temple, sideburn,
   // above the ear, nape]; the face, temples and ears stay clear so a profile still shows the eye, nose and ear
@@ -1126,12 +1158,26 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
   else if (st === 'curlylong') for (let i = 0; i < 12; i++) { const az = i * 2.4 + rnd(i, 4), el = 0.2 + rnd(i, 5) * 1.0; if (Math.cos(az) > 0.5 && el < 0.7) continue; E(vadd(capC, mv(HD, [Math.sin(az) * Math.cos(el) * (hr[0] + 0.8), Math.cos(az) * Math.cos(el) * (hr[1] + 0.8), Math.sin(el) * (hr[2] + 0.4)])), HD, [1.6, 1.6, 1.5], GR.HAIR, 'curl', W.hairM); }
   else if (st === 'mullet') C(at([0, -0.7, -0.1]), vadd(S.neck, mv(S.SP, [0, -3.3, -3.4])), 4.2, 3.2, GR.HAIR, 'curtain', W.hairLock);
   else if (st === 'mohawk') E(at([0, -0.08, 0.94]), HD, [1.15, hr[1] * 0.95, hr[2] * 0.55], GR.HAIR, 'crest', (Q) => { Q.k += (Math.round(Q.l1 * 6) & 1) * -0.18; return W.hairR; }, (a, b, c) => c > -0.25);
+  if (!hatOn) {
+    if (ex === 'quiff') { E(at([0.04, 0.46, 1.0]), mmul(HD, rx(-0.45)), [hr[0] * 0.72, 3.0, 2.5], GR.HAIR, 'quiff', W.hairM); E(at([0.02, 0.05, 1.02]), HD, [hr[0] * 0.66, 3.6, 1.6], GR.HAIR, 'quiff', W.hairM); }
+    else if (ex === 'sidepart') E(at([0.28, 0.32, 0.9]), mmul(HD, ry(0.25)), [hr[0] * 0.62, hr[1] * 0.62, 1.7], GR.HAIR, 'sweep', W.hairM);
+    else if (ex === 'manbun') E(at([0, -0.6, 0.82]), HD, [2.4, 2.3, 2.3], GR.HAIR, 'bun', W.hairM);
+    else if (ex === 'bigcurls') for (let i = 0; i < 14; i++) { const az = i * 2.4 + rnd(i, 6), el = -0.2 + rnd(i, 7) * 1.1; if (Math.cos(az) > 0.45 && el < 0.75) continue; E(vadd(capC, mv(HD, [Math.sin(az) * Math.cos(el) * (hr[0] + 1.9), Math.cos(az) * Math.cos(el) * (hr[1] + 1.6) - 0.6, Math.sin(el) * (hr[2] + 0.8) - 1.2])), HD, [2.1, 2.1, 2.0], GR.HAIR, 'curl', W.hairM); }
+    else if (ex === 'shavedside') { C(at([-0.35, 0.25, 1.02]), at([0.98, 0.3, 0.05]), 2.6, 1.7, GR.HAIR, 'lock', W.hairLock); C(at([0.2, -0.3, 0.98]), at([1.05, -0.4, -0.3]), 2.4, 1.6, GR.HAIR, 'lock', W.hairLock); }
+  }
   if (st === 'long' || st === 'wavy' || st === 'braids' || st === 'dreads' || st === 'bob' || st === 'curlylong' || st === 'halfup' || st === 'shag') {
     if (st === 'curlylong' || st === 'halfup') st = 'wavy'; else if (st === 'shag') st = 'bob';
-    const nape = vadd(S.neck, mv(S.SP, [0, -3.2, st === 'bob' ? -1 : -6.2]));
-    if (st === 'dreads') for (let i = 0; i < 9; i++) { const a = -1.9 + i * 0.475, d = [Math.sin(a), Math.cos(a) * 0.9 - 0.25, 0]; C(at([d[0] * 0.95, d[1] * 0.95, 0.05]), vadd(at([d[0] * 1.15, d[1] * 1.1 - 0.15, -1.3]), [0, 0, -3]), 0.95, 0.75, GR.HAIR, 'lock', W.hairLock); }
+    const nape = vadd(S.neck, mv(S.SP, [0, -3.2, st === 'bob' ? -1 : ex === 'shoulder' ? -3.4 : -6.2]));
+    if (st === 'dreads') {
+      const bx = ex === 'boxbraids', nL = bx ? 13 : 9;
+      for (let i = 0; i < nL; i++) {
+        const a = -1.9 + i * (3.8 / (nL - 1)), d = [Math.sin(a), Math.cos(a) * 0.9 - 0.25, 0], e = vadd(at([d[0] * 1.15, d[1] * 1.1 - 0.15, -1.3]), [0, 0, bx ? -4.2 : -3]);
+        C(at([d[0] * 0.95, d[1] * 0.95, 0.05]), e, bx ? 0.72 : 0.95, bx ? 0.6 : 0.75, GR.HAIR, 'lock', W.hairLock);
+        if (bx && i % 2 === 0) E(vadd(e, [0, 0, 0.6]), HD, [0.8, 0.8, 0.7], GR.HAIR, 'cuff', W.cuff);
+      }
+    }
     else C(at([0, -0.55, 0.0]), nape, st === 'bob' ? 5.8 : 5.0, st === 'bob' ? 5.4 : 4.2, GR.HAIR, 'curtain', W.hairLock);
-    if (st !== 'dreads' && st !== 'bob' && D.fem) for (const [k, s] of [['L', -1], ['R', 1]]) C(at([s * 0.86, 0.2, -0.05]), vadd(S['sh' + k], mv(S.SP, [-s * 1.6, 2.2, st === 'braids' ? -6 : -3])), st === 'braids' ? 1.3 : 1.9, st === 'braids' ? 1.0 : 1.3, GR.HAIR, 'lock', W.hairLock);
+    if (st !== 'dreads' && st !== 'bob' && (D.fem || ex === 'shoulder')) for (const [k, s] of [['L', -1], ['R', 1]]) C(at([s * 0.86, 0.2, -0.05]), vadd(S['sh' + k], mv(S.SP, [-s * 1.6, 2.2, st === 'braids' ? -6 : ex === 'shoulder' ? 0.5 : -3])), st === 'braids' ? 1.3 : 1.9, st === 'braids' ? 1.0 : 1.3, GR.HAIR, 'lock', W.hairLock);
   }
 }
 // ---- lights to carry (#359): a lamp on the forehead - the headlamp on its strap (hat kind 'headband'), or on the
@@ -1229,9 +1275,19 @@ function render(fig, P, S, X, D, A, opt) {
     }
   }
   if (P.water) grow(0, 0, 16);
-  if (!opt.tight) { x0 = Math.min(x0, -18); x1 = Math.max(x1, 18); y0 = Math.min(y0, -47); y1 = Math.max(y1, 3); }
+  if (!opt.tight && !opt.region) { x0 = Math.min(x0, -18); x1 = Math.max(x1, 18); y0 = Math.min(y0, -47); y1 = Math.max(y1, 3); }
+  // the creator's close-ups (opt.region 'head': the head and shoulders only - a thumbnail costs a fraction of a figure)
+  // ('face': just the face, for the feature thumbnails; or a box [x0, y0, x1, y1] in world px round the head's centre)
+  const RB = opt.region === 'head' ? [-13, -17, 13, 13] : opt.region === 'face' ? [-8, -1.5, 8, 9.5] : Array.isArray(opt.region) ? opt.region : null;
+  if (RB && fig.head >= 0) {
+    const hc = prims[fig.head].c, hx = hc[0], hy = hc[1] * SA - hc[2] * CA;
+    x0 = Math.max(x0, hx + RB[0]); x1 = Math.min(x1, hx + RB[2]); y0 = Math.max(y0, hy + RB[1]); y1 = Math.min(y1, hy + RB[3]);
+  }
   x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
-  const w = Math.min(200, x1 - x0), h = Math.min(200, y1 - y0), AX = -x0, AY = -y0, n = w * h;
+  // R: pixels per world px. 1 in the game; the creator's preview and thumbnails cast R x R rays per world px (the same
+  // shapes, light and materials, finer), and draw the face with real eyes, brows, a nose and lips (faceHi)
+  const R = opt.res > 1 ? Math.min(8, opt.res | 0) : 1, iR = 1 / R;
+  const w = Math.min(200 * R, (x1 - x0) * R), h = Math.min(200 * R, (y1 - y0) * R), AX = -x0 * R, AY = -y0 * R, n = w * h;
   scratch(n);
   NEAR.fill(-1e9, 0, n); PID.fill(-1, 0, n); NOO.fill(0, 0, n); LN.fill(0, 0, n); AO.fill(0, 0, n); FL.fill(0, 0, n); EM.fill(null, 0, n);
   // 1. ray-cast every primitive into the depth buffer
@@ -1244,14 +1300,37 @@ function render(fig, P, S, X, D, A, opt) {
       const ay = p.a[1] * SA - p.a[2] * CA, by = p.b[1] * SA - p.b[2] * CA;
       xa = Math.min(p.a[0] - p.ra, p.b[0] - p.rb); xb = Math.max(p.a[0] + p.ra, p.b[0] + p.rb); ya = Math.min(ay - p.ra, by - p.rb); yb = Math.max(ay + p.ra, by + p.rb);
     } else { const cy = p.bc[1] * SA - p.bc[2] * CA, r = p.br; xa = p.bc[0] - r; xb = p.bc[0] + r; ya = cy - r; yb = cy + r; }
-    xa = Math.max(0, Math.floor(xa + AX - 1)); xb = Math.min(w - 1, Math.ceil(xb + AX + 1)); ya = Math.max(0, Math.floor(ya + AY - 1)); yb = Math.min(h - 1, Math.ceil(yb + AY + 1));
+    xa = Math.max(0, Math.floor(xa * R + AX - R)); xb = Math.min(w - 1, Math.ceil(xb * R + AX + R)); ya = Math.max(0, Math.floor(ya * R + AY - R)); yb = Math.min(h - 1, Math.ceil(yb * R + AY + R));
     for (let y = ya; y <= yb; y++) {
-      const sy = y + 0.5 - AY, oy = sy * SA + S0 * CA, oz = -sy * CA + S0 * SA;
+      const sy = (y + 0.5 - AY) * iR, oy = sy * SA + S0 * CA, oz = -sy * CA + S0 * SA;
       for (let x = xa; x <= xb; x++) {
-        if (NEAR[y * w + x] >= smax || !hitP(p, x + 0.5 - AX, oy, oz, 0, -CA, -SA)) continue;
+        if (NEAR[y * w + x] >= smax || !hitP(p, (x + 0.5 - AX) * iR, oy, oz, 0, -CA, -SA)) continue;
         const s = S0 - HT, i = y * w + x;
         if (s <= NEAR[i]) continue;
         NEAR[i] = s; PID[i] = k; NX[i] = HN0; NY[i] = HN1; NZ[i] = HN2; L0[i] = HL0; L1[i] = HL1; L2[i] = HL2;
+      }
+    }
+  }
+  // 1b. close up, the head and the jaw are one smooth surface: their normals are blurred together (a box R px wide,
+  // across then down) so the jaw's edge doesn't show as a ring round the face
+  if (R > 1 && fig.head >= 0) {
+    const K = fig.head, isF = (i) => PID[i] === K || PID[i] === K + 1, rad = R;
+    const TX = new Float32Array(n), TY = new Float32Array(n), TZ = new Float32Array(n);
+    for (let pass = 0; pass < 2; pass++) {
+      const SX = pass ? TX : NX, SY = pass ? TY : NY, SZ = pass ? TZ : NZ, DX = pass ? NX : TX, DY = pass ? NY : TY, DZ = pass ? NZ : TZ;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (!isF(i)) { if (!pass) { TX[i] = NX[i]; TY[i] = NY[i]; TZ[i] = NZ[i]; } continue; }
+        let sx = 0, sy = 0, sz = 0;
+        for (let d = -rad; d <= rad; d++) {
+          const xx = pass ? x : x + d, yy = pass ? y + d : y;
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+          const j = yy * w + xx;
+          if (!isF(j)) continue;
+          sx += SX[j]; sy += SY[j]; sz += SZ[j];
+        }
+        const l = Math.hypot(sx, sy, sz) || 1;
+        DX[i] = sx / l; DY[i] = sy / l; DZ[i] = sz / l;
       }
     }
   }
@@ -1263,33 +1342,41 @@ function render(fig, P, S, X, D, A, opt) {
     AO[i] = c > 4 ? 0.3 : c * 0.07;
   }
   // 3. shade
+  const OCW = Math.ceil(w / R) + 1, OCK = R > 1 ? new Int16Array(OCW * (Math.ceil(h / R) + 1)) : null, OCV = R > 1 ? new Uint8Array(OCK.length) : null;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x, k = PID[i];
     if (k < 0) continue;
-    const p = prims[k], s = NEAR[i], sy = y + 0.5 - AY;
-    Q.X = x + 0.5 - AX; Q.Y = sy * SA + s * CA; Q.Z = -sy * CA + s * SA;
-    Q.nx = NX[i]; Q.ny = NY[i]; Q.nz = NZ[i]; Q.l0 = L0[i]; Q.l1 = L1[i]; Q.l2 = L2[i]; Q.x = x - AX; Q.y = y - AY; Q.k = 0; Q.e = null; Q.gloss = 0; Q.part = p.part; Q.side = p.side || 0;
-    const R = p.m(Q);
+    const p = prims[k], s = NEAR[i], sy = (y + 0.5 - AY) * iR;
+    Q.X = (x + 0.5 - AX) * iR; Q.Y = sy * SA + s * CA; Q.Z = -sy * CA + s * SA;
+    Q.nx = NX[i]; Q.ny = NY[i]; Q.nz = NZ[i]; Q.l0 = L0[i]; Q.l1 = L1[i]; Q.l2 = L2[i]; Q.x = x - AX; Q.y = y - AY; Q.k = 0; Q.e = null; Q.gloss = 0; Q.part = p.part; Q.side = p.side || 0; Q.res = R;
+    const RM = p.m(Q);
     let c;
-    if (R.length === 3 && !Array.isArray(R[0])) c = R;
+    if (RM.length === 3 && !Array.isArray(RM[0])) c = RM;
     else {
       const ndl = Q.nx * LT[0] + Q.ny * LT[1] + Q.nz * LT[2];
       let v = 0.45 + 0.62 * ndl + Q.k - AO[i];
-      if (ndl > 0.05 && occluded(prims, k, Q.X + Q.nx * 0.45, Q.Y + Q.ny * 0.45, Q.Z + Q.nz * 0.45)) v -= 0.32 * Math.min(1, ndl * 2.4);
-      if (Q.gloss && ndl > 0.72) v += 0.3 * Q.gloss;
-      c = R[clamp(Math.round(v * (R.length - 1) + bayer(x - AX, y - AY) * 0.42), 0, R.length - 1)];
+      if (ndl > 0.05) {   // (close up: one shadow test per world px and part, shared by its R x R pixels)
+        let sh;
+        if (R === 1) sh = occluded(prims, k, Q.X + Q.nx * 0.45, Q.Y + Q.ny * 0.45, Q.Z + Q.nz * 0.45);
+        else { const cell = ((y * iR) | 0) * OCW + ((x * iR) | 0); if (OCK[cell] === k + 1) sh = OCV[cell] === 1; else { sh = occluded(prims, k, Q.X + Q.nx * 0.45, Q.Y + Q.ny * 0.45, Q.Z + Q.nz * 0.45); OCK[cell] = k + 1; OCV[cell] = sh ? 1 : 0; } }
+        if (sh) v -= 0.32 * Math.min(1, ndl * 2.4);
+      }
+      if (Q.gloss && R > 1) v += 0.3 * Q.gloss * sm(clamp((ndl - 0.5) / 0.4, 0, 1));   // (close up: the sheen fades in)
+      else if (Q.gloss && ndl > 0.72) v += 0.3 * Q.gloss;
+      if (R > 1) { const F2 = fine(RM); c = F2[clamp(Math.round(v * (F2.length - 1) + bayer(x - AX, y - AY) * 0.9), 0, F2.length - 1)]; }   // (close up: twice the steps, dithered)
+      else c = RM[clamp(Math.round(v * (RM.length - 1) + bayer(x - AX, y - AY) * 0.42), 0, RM.length - 1)];
     }
     CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2]; ZW[i] = Q.Z; EM[i] = Q.e;
     if (opt.debug) { const hh = hash(k, 1, 77), part = p.part; CR[i] = 60 + hash(k, 2, 5) * 195; CG[i] = 60 + hh * 195; CB[i] = part === 'head' ? 255 : 60 + hash(k, 3, 9) * 120; }
   }
   // 4. the held item, depth-tested against the body
-  if (IT) heldItem(IT, P, w, h, AX, AY, opt);
+  if (IT && R === 1) heldItem(IT, P, w, h, AX, AY, opt);   // (the creator's close renders show no held item)
   // 5. the face, stamped through the head's frame
-  if (fig.head >= 0) face(fig, P, A, D, w, h, AX, AY);
+  if (fig.head >= 0) { if (R > 1) faceHi(fig, P, A, D, w, h, AX, AY, R); else face(fig, P, A, D, w, h, AX, AY); }
   // 6. water: the body under the surface fades out, foam where it breaks the surface
-  if (P.water) water(w, h, AX, AY, X, S, P);
+  if (P.water) water(w, h, AX, AY, X, S, P, R);
   // 7. censor blocks over private areas on an undressed body
-  if (fig.W.bare) censor(fig, S, X, D, w, h, AX, AY);
+  if (fig.W.bare) censor(fig, S, X, D, w, h, AX, AY, R);
   // 8. lines between overlapping parts (on the farther pixel), then the outline round the figure
   const grp = (k) => (k === ITEMID ? GR.ITEM : prims[k].g);
   const step = (i, j, g) => {   // is neighbour j a separate part standing clearly in front of pixel i?
@@ -1460,7 +1547,182 @@ function face(fig, P, A, D, w, h, AX, AY) {
     }
   }
 }
-function water(w, h, AX, AY, X, S, P) {
+// the face at the creator's close scale (R px per world px; CC2, CB2): almond eyes with a lid line, the white, a
+// coloured iris, a pupil and a catchlight; brows by shape; nostrils and the shadow under the nose; lips parted by a
+// dark line; age lines from the 40s (crow's feet, the folds by the mouth, the forehead) and grey brows; freckles, a
+// beauty mark, dimples, blush and makeup; glasses, goggles, a patch or a party mask; piercings, a scar, a face tattoo.
+// Each feature is drawn in its own patch of the head's surface (u across, v up, in world px), so it turns and
+// foreshortens with the head.
+const LASH = [34, 22, 26];
+function faceHi(fig, P, A, D, w, h, AX, AY, R) {
+  const hp = fig.prims[fig.head], c = hp.c, M = hp.M, r = hp.r, K = fig.head, W = fig.W, F = A.face || {}, mk = A.makeup || null;
+  const proj = (l0, l1, l2) => {
+    const lx = l0 * r[0], ly = l1 * r[1], lz = l2 * r[2];
+    const X = c[0] + M[0] * lx + M[1] * ly + M[2] * lz, Y = c[1] + M[3] * lx + M[4] * ly + M[5] * lz, Z = c[2] + M[6] * lx + M[7] * ly + M[8] * lz;
+    const nx = M[0] * l0 / r[0] + M[1] * l1 / r[1] + M[2] * l2 / r[2], ny = M[3] * l0 / r[0] + M[4] * l1 / r[1] + M[5] * l2 / r[2], nz = M[6] * l0 / r[0] + M[7] * l1 / r[1] + M[8] * l2 / r[2];
+    return [AX + X * R, AY + (Y * SA - Z * CA) * R, (ny * CA + nz * SA) / (Math.hypot(nx, ny, nz) || 1)];
+  };
+  const onHead = (i) => PID[i] === K || PID[i] === K + 1 || PID[i] === K + 2;   // (the head, the jaw, the nose)
+  const skin = W.skin, hairR = W.hairR, age = D.age | 0, fem = D.fem;
+  const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+  const put = (x, y, col, k = 1) => {
+    x = Math.floor(x); y = Math.floor(y);
+    if (x < 0 || y < 0 || x >= w || y >= h) return;
+    const i = y * w + x;
+    if (!onHead(i)) return;
+    if (k >= 1) { CR[i] = col[0]; CG[i] = col[1]; CB[i] = col[2]; } else { CR[i] += (col[0] - CR[i]) * k; CG[i] += (col[1] - CG[i]) * k; CB[i] += (col[2] - CB[i]) * k; }
+  };
+  // a patch of the surface round the unit point at azimuth az (0 = the nose's line, + = the head's right), height l2:
+  // calls fn(u, v, x, y) for every pixel near it (u, v in world px from the centre); null when it faces away
+  const patch = (az, l2, ext, fn, minFc = 0.18) => {
+    const pt = (a, z) => { const cz = Math.sqrt(Math.max(0.05, 1 - z * z)); return proj(Math.sin(a) * cz, Math.cos(a) * cz, z); };
+    const p0 = pt(az, l2);
+    if (p0[2] < minFc) return null;
+    const ce = Math.sqrt(Math.max(0.05, 1 - l2 * l2)), pu = pt(az + 0.05, l2), pv = pt(az, l2 + 0.05), su = 0.05 * r[0] * ce, sv = 0.05 * r[2];
+    const ux = (pu[0] - p0[0]) / su, uy = (pu[1] - p0[1]) / su;   // screen px per world px across the surface
+    const vx = (pv[0] - p0[0]) / sv, vy = (pv[1] - p0[1]) / sv;   // ... and up it
+    const det = ux * vy - uy * vx;
+    if (Math.abs(det) < 0.05 * R * R) return null;
+    const ex = Math.ceil(ext * R * 1.3) + 1;
+    for (let y = Math.floor(p0[1] - ex); y <= p0[1] + ex; y++) for (let x = Math.floor(p0[0] - ex); x <= p0[0] + ex; x++) {
+      const dx = x + 0.5 - p0[0], dy = y + 0.5 - p0[1];
+      fn((dx * vy - dy * vx) / det, (ux * dy - uy * dx) / det, x, y);
+    }
+    return p0;
+  };
+  // the eyes sit 21 deg either side of the nose; as the head turns the near one slides back round (as face() does)
+  const fh = Math.hypot(M[1], M[4]), turn = fh > 0.2 ? Math.abs(M[1]) / fh : 0, near = M[3] >= 0 ? 1 : -1;
+  const azE = (s) => s * (21 + (s === near ? 12 * turn : 0)) * Math.PI / 180;
+  const covered = A.mask || A.bandana || A.medmask, glasses = A.glasses;
+  const ET = [[1.5, 0.82, 0.6, 0.7], [1.4, 0.95, 0.75, 0.55], [1.5, 0.56, 0.42, 0.8], [1.45, 0.72, 0.56, 0.7], [1.65, 1.02, 0.78, 0.6], [1.45, 0.7, 0.56, 0.7]][F.eyes | 0] || [1.5, 0.82, 0.6, 0.7];
+  const [ew, eTop, eBot, ePow] = ET;
+  const irisC = F.eyeColor ? hexRgb(F.eyeColor) : [70, 44, 26], irisD = mix(irisC, [10, 8, 12], 0.45), irisL = mix(irisC, [255, 250, 230], 0.22);
+  const shadowC = mk && (mk.kind === 'smoky eyes' || mk.kind === 'goth') ? [42, 30, 46] : mk && mk.kind === 'glam' ? hexRgb(mk.color || '#7a3ac8') : null;
+  const browC = age >= 4 ? mix(lum(hairR[1]) > 0.5 ? hairR[0] : hairR[1], [168, 166, 170], age >= 5 ? 0.6 : 0.35) : lum(hairR[2]) > 0.55 ? hairR[0] : hairR[1];
+  const eyesAt = [];
+  for (const s of [-1, 1]) {
+    const az = azE(s), out = s;   // u grows toward the head's right; the outer corner is on the eye's own side
+    // the eye
+    const p0 = patch(az, 0.14, ew + 0.6, (u, v, x, y) => {
+      const uo = u * out, un = u / ew;
+      if (Math.abs(un) > 1.08) return;
+      const q = Math.max(0, 1 - un * un), top = eTop * Math.pow(q, ePow) - (F.eyes === 5 ? 0.18 : 0), bot = -eBot * Math.pow(q, 0.9);
+      if (!P.eyes) { if (Math.abs(v - bot * 0.3) < 0.2 && Math.abs(un) < 1) put(x, y, LASH); return; }
+      const lid = F.eyes === 3 || F.eyes === 5 ? 0.42 : 0.3;
+      if (v <= top + (fem ? 0.2 : 0.12) && v >= top - lid && Math.abs(un) <= 1.02) { put(x, y, LASH); return; }
+      if (fem && uo > ew * 0.75 && uo < ew + 0.45 && v > top - 0.15 && v < top + 0.35 + (uo - ew * 0.75) * 0.5) { put(x, y, LASH); return; }   // the lashes' flick
+      if (v < top - lid && v > bot) {
+        // the iris looks a little toward the camera; the upper lid shades it
+        const iu = u - out * 0.05, iv = v + 0.02, ir = eTop * 0.95 + 0.06, d = Math.hypot(iu, iv * 1.08);
+        if (d < ir) {
+          if (d < ir * 0.42) { put(x, y, [16, 12, 16]); return; }
+          put(x, y, iv > ir * 0.25 ? irisD : iv < -ir * 0.45 ? irisL : irisC);
+          if (Math.abs(iu + 0.2) < 0.5 / R && Math.abs(iv - 0.14) < 0.5 / R) put(x, y, [252, 252, 248]);
+          return;
+        }
+        put(x, y, mix(WHITE, skin[2], 0.12 + Math.abs(un) * 0.3 + (v > top - lid - 0.25 ? 0.18 : 0)));
+        return;
+      }
+      if (v <= bot && v > bot - 0.28 && uo > -ew * 0.2 && Math.abs(un) < 0.95) put(x, y, skin[1], 0.5);   // the lower lid
+      if (shadowC && !glasses && v > top + 0.1 && v < top + 0.75 && Math.abs(un) < 1.05) put(x, y, shadowC, 0.55);
+      if (F.eyes === 3 && v > top + 0.3 && v < top + 0.55 && Math.abs(un) < 0.9) put(x, y, skin[1], 0.6);   // the hooded fold
+      if (age >= 3 && uo > ew + 0.15 && uo < ew + 0.7 && (Math.abs(v - (uo - ew) * 0.5) < 0.12 || Math.abs(v + (uo - ew) * 0.6) < 0.12) && (x + y) % 2 === 0) put(x, y, skin[1], 0.7);   // crow's feet
+      if (age >= 3 && v < bot - 0.35 && v > bot - 0.6 && Math.abs(un) < 0.75) put(x, y, skin[1], 0.35 + age * 0.06);   // bags under the eyes
+    }, 0.12);
+    if (p0) eyesAt.push({ s, p: p0 });
+    // the brow
+    if (!A.mask) patch(az + s * 0.02, 0.38, ew + 0.9, (u, v, x, y) => {
+      if (glasses === 'sun' || glasses === 'goggles' || glasses === 'domino') return;
+      const uo = u * out, un = uo / (ew + 0.55);
+      if (un < -0.95 || un > 1.05) return;
+      const arch = F.brows === 3 ? 0.42 : F.brows === 4 ? 0.05 : 0.22;
+      const mid = arch * (1 - un * un) - (un < -0.6 ? 0.1 : 0) - (un > 0.7 ? (un - 0.7) * 0.9 : 0);
+      const th = [0.32, 0.46, 0.2, 0.3, 0.34, 0.5][F.brows | 0] ?? 0.32, taper = th * (un > 0.5 ? 1 - (un - 0.5) * 0.9 : 1) + (fem ? -0.04 : 0.04);
+      const jag = F.brows === 5 ? (hash(Math.floor(u * 3), 1, 9) - 0.5) * 0.3 : 0;
+      if (Math.abs(v - mid) < taper + jag) put(x, y, Math.abs(v - mid) > taper * 0.55 && v < mid ? mix(browC, skin[2], 0.3) : browC);
+    }, 0.12);
+  }
+  // the nose: two nostrils, the shadow under the tip, a soft line down the side away from the light
+  const nz = NOSE[F.nose | 0] || NOSE[0];
+  if (!covered) patch(0, -0.24, 2.4, (u, v, x, y) => {
+    const nw = 0.75 * nz[0];
+    if (v < -0.1 * nz[1] - 0.3 && v > -0.1 * nz[1] - 0.55 && Math.abs(Math.abs(u) - nw * 0.55) < 0.17) put(x, y, skin[0], 0.55);
+    else if (Math.abs(u + 0.12) < 0.13 && v > 0.2 && v < 1.2 * nz[1]) put(x, y, skin[4], 0.35);   // the light down the bridge
+    else if (v < -0.1 * nz[1] - 0.6 && v > -0.1 * nz[1] - 0.95 && Math.abs(u) < nw * 0.9) put(x, y, skin[1], 0.4);
+    else if (u > nw * 0.55 && u < nw * 0.55 + 0.32 && v > -0.4 && v < 1.6 * nz[1]) put(x, y, skin[1], 0.35);
+    if (age >= 2 && Math.abs(u) > nw + 0.5 && Math.abs(u) < nw + 1.6 && v < -0.35 && v > -2.4) {   // the folds from the nose to the mouth
+      const t = (-v - 0.35) / 2.05, cu = nw + 0.65 + t * 0.55;
+      if (Math.abs(Math.abs(u) - cu) < 0.16 + age * 0.015) put(x, y, skin[1], 0.25 + age * 0.08);
+    }
+  }, 0.2);
+  // the mouth
+  if (!covered) {
+    const am = near * turn * 0.12, LIPS = [[1.05, 0.26, 0.36], [1.0, 0.14, 0.22], [1.08, 0.36, 0.5], [1.35, 0.26, 0.36], [0.95, 0.34, 0.38], [0.78, 0.24, 0.32]][F.lips | 0] || [1.05, 0.26, 0.36];
+    const [mw, upT, loT] = LIPS;
+    const lipC = mk && mk.color && (mk.kind === 'lipstick' || mk.kind === 'glam') ? hexRgb(mk.color) : mk && mk.kind === 'goth' ? [40, 24, 40] : fem || (mk && mk.kind === 'natural') ? mix(skin[2], [196, 70, 78], 0.4) : mix(skin[2], [170, 80, 74], 0.18);
+    const lipD = mix(lipC, [20, 10, 14], 0.3), lipL = mix(lipC, [255, 236, 226], 0.22), line = mix(skin[0], [30, 12, 14], 0.4);
+    patch(am, -0.45, mw + 1.2, (u, v, x, y) => {
+      const un = u / mw;
+      if (Math.abs(un) <= 1) {
+        const bow = F.lips === 4 ? Math.abs(Math.abs(un) - 0.35) * -0.25 + 0.08 : 0, corner = (1 - un * un);
+        if (Math.abs(v) < 0.13 + 0.05 * corner) { put(x, y, line); return; }
+        if (v > 0 && v < upT * corner + 0.12 + bow) { put(x, y, lipD, fem || mk ? 1 : 0.7); return; }
+        if (v < 0 && v > -(loT * Math.pow(corner, 0.7) + 0.12)) { put(x, y, v < -loT * 0.5 && Math.abs(un) < 0.4 ? lipL : lipC, fem || mk ? 1 : 0.65); return; }
+      }
+      if (F.dimples && Math.abs(Math.abs(un) - 1.32) < 0.12 && v > -0.35 && v < 0.25) put(x, y, skin[1], 0.8);
+      if (age >= 4 && Math.abs(Math.abs(un) - 1.2) < 0.1 && v < -0.2 && v > -0.9) put(x, y, skin[1], 0.4);   // the marionette lines
+      if ((A.piercings | 0) & 8 && Math.abs(u - mw * 0.45) < 0.3 && Math.abs(v + loT + 0.2) < 0.3) put(x, y, [214, 218, 226]);
+    }, 0.15);
+  }
+  // the forehead's lines (the 60s on)
+  if (age >= 4 && !A.mask) patch(0, 0.62, 3, (u, v, x, y) => { if (Math.abs(u) < 2.4 && (Math.abs(v) < 0.1 || (age >= 5 && Math.abs(v - 0.55) < 0.1))) put(x, y, skin[1], 0.35); }, 0.3);
+  // marks: freckles, a beauty mark, blush, a scar, a face tattoo, the nose and brow piercings
+  const mark = (az, l2, ext, fn, minFc) => patch(az, l2, ext, fn, minFc);
+  if (!A.mask) {
+    if (F.freckles) for (let i = 0; i < 14; i++) {
+      const az = (hash(i, 3, 17) - 0.5) * 1.3, z = -0.14 + hash(i, 5, 17) * 0.24;
+      if (Math.abs(az) < 0.1 && z < -0.05) continue;
+      mark(az, z, 0.3, (u, v, x, y) => { if (u * u + v * v < 0.07 + 0.05 * (i & 1)) put(x, y, skin[1], 0.8); }, 0.3);
+    }
+    if (mk && (mk.kind === 'blush' || mk.kind === 'glam')) for (const s of [-1, 1]) mark(s * 0.62, -0.2, 1.6, (u, v, x, y) => { const d = (u * u) / 1.6 + (v * v) / 0.6; if (d < 1 && bayer(x, y) + 0.5 > d * 0.8) put(x, y, [228, 120, 128], 0.35); }, 0.25);
+    if ((A.tattoo | 0) & 16) mark(0.55, -0.02, 0.8, (u, v, x, y) => { if ((Math.abs(u) < 0.14 && Math.abs(v) < 0.55) || (Math.abs(v - 0.15) < 0.14 && Math.abs(u) < 0.4)) put(x, y, [40, 46, 80]); }, 0.3);
+    if ((A.piercings | 0) & 4) mark(0.42, 0.42, 0.4, (u, v, x, y) => { if (u * u + v * v < 0.08) put(x, y, [214, 218, 226]); }, 0.3);
+    if (!covered) {
+      if (F.mole) mark(0.32, -0.36, 0.4, (u, v, x, y) => { if (u * u + v * v < 0.1) put(x, y, [66, 36, 28]); }, 0.35);
+      if ((A.piercings | 0) & 2) mark(0.12, -0.27, 0.4, (u, v, x, y) => { if (u * u + v * v < 0.07) put(x, y, [214, 218, 226]); }, 0.4);
+      if (A.scar) {
+        const SC = [null, [0.5, -0.1, 0.62, -0.3], [0.38, 0.5, 0.38, -0.02], [0.14, -0.38, 0.17, -0.55], [0.03, -0.75, 0.15, -0.77], [0.36, 0.48, 0.5, 0.4]][A.scar | 0];
+        if (SC) { const sc = mix(skin[4], [250, 214, 200], 0.3); for (let t = 0; t <= 1; t += 0.1) mark(SC[0] + (SC[2] - SC[0]) * t, SC[1] + (SC[3] - SC[1]) * t, 0.3, (u, v, x, y) => { if (u * u + v * v < 0.06) put(x, y, sc); }, 0.3); }
+      }
+    }
+  }
+  // glasses and the like, over the eyes
+  if (glasses && eyesAt.length) {
+    const gc = hexRgb(A.glassColor || '#1a1a1e'), lens = A.lens ? hexRgb(A.lens) : glasses === 'domino' ? gc : [26, 28, 38], lensD = mix(lens, [0, 0, 0], 0.35);
+    for (const s of [-1, 1]) {
+      const e = eyesAt.find((q) => q.s === s);
+      if (glasses === 'patch' && s === 1) { patch(azE(s), 0.14, 1.6, (u, v, x, y) => { if (Math.abs(u) < 1.2 && v > -0.95 && v < 0.85 - Math.abs(u) * 0.25) put(x, y, Math.abs(v) > 0.7 ? mix(gc, [255, 255, 255], 0.15) : gc); }, 0.1); continue; }
+      if (glasses === 'patch') continue;
+      if (!e) continue;
+      patch(azE(s), 0.12, ew + 1.4, (u, v, x, y) => {
+        const uo = u * s, hw = ew + (glasses === 'goggles' ? 0.95 : 0.6), top = glasses === 'goggles' ? 1.0 : 0.72, bot = glasses === 'goggles' ? -0.95 : -0.75;
+        const inL = Math.abs(u) <= hw && v <= top && v >= bot, rim = inL && (Math.abs(u) > hw - 0.32 || v > top - 0.3 || v < bot + 0.3);
+        if (glasses === 'sun' || glasses === 'domino' || glasses === 'goggles') {
+          if (!inL && !(glasses === 'domino' && Math.abs(u) <= hw + 0.5 && v <= top + 0.2 && v >= bot - 0.1)) { if (uo < -hw && uo > -hw - 1.2 && Math.abs(v - top + 0.2) < 0.2) put(x, y, gc); return; }   // the bridge
+          if (glasses === 'goggles' && rim) { put(x, y, gc); return; }
+          const shine = (u * s + v * 0.8 > 0.3 && u * s + v * 0.8 < 0.65) || (uo < -0.2 && v > top - 0.55 && v < top - 0.3);
+          put(x, y, glasses === 'goggles' ? (shine ? mix(hexRgb(A.glassTrim || '#ef7a1a'), [255, 255, 255], 0.4) : hexRgb(A.glassTrim || '#ef7a1a')) : shine && glasses === 'sun' ? mix(lens, [200, 220, 240], 0.5) : v > 0.1 ? lensD : lens);
+          return;
+        }
+        // round glasses: a thin rim round each eye and the bridge
+        const ru = Math.abs(u) / hw, rv = (v - (top + bot) / 2) / ((top - bot) / 2), d = ru * ru + rv * rv;
+        if (d < 1 && d > 0.62) put(x, y, gc);
+        else if (uo < -hw * 0.85 && uo > -hw - 1.2 && Math.abs(v - 0.15) < 0.16) put(x, y, gc);
+      }, 0.08);
+    }
+  }
+}
+function water(w, h, AX, AY, X, S, P, R = 1) {
   const WATERC = [36, 116, 140];
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x;
@@ -1471,34 +1733,34 @@ function water(w, h, AX, AY, X, S, P) {
     else if (z < 0.7 && hash(x - AX, y - AY, 5) > 0.25) { CR[i] = 226; CG[i] = 244; CB[i] = 246; NOO[i] = 1; FL[i] = F_NOCAST; }
   }
   // a broken ring of ripples round the swimmer
-  const c = X.pt(vlerp(S.shL, S.shR, 0.5)), cx = AX + c[0], cy = AY + c[1] * SA + 1;
-  for (let a = 0; a < 6.283; a += 0.1) {
-    const x = Math.round(cx + Math.cos(a) * 11), y = Math.round(cy + Math.sin(a) * 4.2);
+  const c = X.pt(vlerp(S.shL, S.shR, 0.5)), cx = AX + c[0] * R, cy = AY + (c[1] * SA + 1) * R;
+  for (let a = 0; a < 6.283; a += 0.1 / R) {
+    const x = Math.round(cx + Math.cos(a) * 11 * R), y = Math.round(cy + Math.sin(a) * 4.2 * R);
     if (x < 0 || y < 0 || x >= w || y >= h || hash(x - AX, y - AY, 9) < 0.35) continue;
     const i = y * w + x;
     if (PID[i] >= 0) continue;
     PID[i] = FOAMID; NOO[i] = 1; FL[i] = F_NOCAST; CR[i] = 214; CG[i] = 238; CB[i] = 242; ZW[i] = 0; NEAR[i] = -1e8; EM[i] = null;
   }
 }
-function censor(fig, S, X, D, w, h, AX, AY) {
+function censor(fig, S, X, D, w, h, AX, AY, R = 1) {
   const W = fig.W, spots = [];
   if (W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, D.pelR[1] * 0.95, -D.pelR[2] * 0.36])), 6, 6]);
   if (W.tk === 'none' && D.fem) spots.push([vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.2, 1.0])), 10, 4]);
   const soft = W.skin[4];
   for (const [p, bw, bh] of spots) {
-    const q = X.pt(p), s = q[1] * CA + q[2] * SA, cx = Math.round(AX + q[0]), cy = Math.round(AY + q[1] * SA - q[2] * CA);
+    const q = X.pt(p), s = q[1] * CA + q[2] * SA, cx = Math.round(AX + q[0] * R), cy = Math.round(AY + (q[1] * SA - q[2] * CA) * R), B3 = 3 * R;
     let seen = false;                                                // facing us (a body pixel close by is not much nearer)
-    for (let dy = -1; dy <= 1 && !seen; dy++) for (let dx = -1; dx <= 1; dx++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < w && y < h && PID[y * w + x] >= 0 && NEAR[y * w + x] - s < 4) { seen = true; break; } }
+    for (let dy = -R; dy <= R && !seen; dy++) for (let dx = -R; dx <= R; dx++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < w && y < h && PID[y * w + x] >= 0 && NEAR[y * w + x] - s < 4) { seen = true; break; } }
     if (!seen) continue;
-    const xa = cx - (bw >> 1), ya = cy - (bh >> 1);
-    for (let by = ya; by < ya + bh; by += 3) for (let bx = xa; bx < xa + bw; bx += 3) {
+    const xa = cx - ((bw * R) >> 1), ya = cy - ((bh * R) >> 1);
+    for (let by = ya; by < ya + bh * R; by += B3) for (let bx = xa; bx < xa + bw * R; bx += B3) {
       let r = 0, g = 0, b = 0, m = 0;
-      for (let y = by; y < by + 3; y++) for (let x = bx; x < bx + 3; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; r += CR[i]; g += CG[i]; b += CB[i]; m++; }
+      for (let y = by; y < by + B3; y++) for (let x = bx; x < bx + B3; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; r += CR[i]; g += CG[i]; b += CB[i]; m++; }
       if (!m) continue;
       // a visible mosaic: 3 px blocks of soft skin tone, alternately lighter and darker, which no crease line crosses
-      const j = (((bx - xa) / 3 + (by - ya) / 3) & 1 ? 1.1 : 0.86) + hash(bx - AX, by - AY, 41) * 0.06;
+      const j = (((bx - xa) / B3 + (by - ya) / B3) & 1 ? 1.1 : 0.86) + hash(bx - AX, by - AY, 41) * 0.06;
       r = (r / m * 0.35 + soft[0] * 0.65) * j; g = (g / m * 0.35 + soft[1] * 0.65) * j; b = (b / m * 0.35 + soft[2] * 0.65) * j;
-      for (let y = by; y < by + 3; y++) for (let x = bx; x < bx + 3; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; CR[i] = r; CG[i] = g; CB[i] = b; AO[i] = -1; }
+      for (let y = by; y < by + B3; y++) for (let x = bx; x < bx + B3; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; CR[i] = r; CG[i] = g; CB[i] = b; AO[i] = -1; }
     }
   }
 }

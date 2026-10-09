@@ -73,12 +73,12 @@ export const FACE_OPTS = {
 };
 // hairstyles (CB3-F / CB3-M): name, bases, how the renderer draws it (an art2 people.js style, plus length / volume)
 export const HAIR_STYLES = [
-  ['Bald', 'mf', 'bald'], ['Buzz cut', 'mf', 'buzz'], ['Crew cut', 'mf', 'short'], ['Short back & sides', 'm', 'short'], ['Side part', 'mf', 'slick'], ['Slicked back', 'mf', 'slick'],
-  ['Spiky', 'mf', 'spiky'], ['Quiff', 'm', 'spiky'], ['Curly crop', 'mf', 'curly'], ['Afro', 'mf', 'afro'], ['Mohawk', 'mf', 'mohawk'], ['Dreadlocks', 'mf', 'dreads'],
-  ['Undercut', 'mf', 'undercut'], ['Mullet', 'mf', 'mullet'], ['Man bun', 'm', 'topknot'], ['Shoulder length', 'mf', 'bob'], ['Long straight', 'mf', 'long'], ['Long waves', 'mf', 'wavy'],
+  ['Bald', 'mf', 'bald'], ['Buzz cut', 'mf', 'buzz'], ['Crew cut', 'mf', 'short'], ['Short back & sides', 'm', 'sides'], ['Side part', 'mf', 'sidepart'], ['Slicked back', 'mf', 'slick'],
+  ['Spiky', 'mf', 'spiky'], ['Quiff', 'm', 'quiff'], ['Curly crop', 'mf', 'curly'], ['Afro', 'mf', 'afro'], ['Mohawk', 'mf', 'mohawk'], ['Dreadlocks', 'mf', 'dreads'],
+  ['Undercut', 'mf', 'undercut'], ['Mullet', 'mf', 'mullet'], ['Man bun', 'm', 'manbun'], ['Shoulder length', 'mf', 'shoulder'], ['Long straight', 'mf', 'long'], ['Long waves', 'mf', 'wavy'],
   ['Pixie', 'f', 'pixie'], ['Bob', 'f', 'bob'], ['Ponytail', 'mf', 'pony'], ['High bun', 'f', 'bun'], ['Top knot', 'mf', 'topknot'], ['Braids', 'f', 'braids'],
-  ['Box braids', 'f', 'dreads'], ['Space buns', 'f', 'twinbuns'], ['Pigtails', 'f', 'pigtails'], ['Single braid', 'f', 'braid'], ['Curly long', 'f', 'curlylong'], ['Shag', 'mf', 'shag'],
-  ['Cornrows', 'mf', 'cornrows'], ['Fade', 'm', 'fade'], ['Curtains', 'm', 'curtains'], ['Big curls', 'f', 'afro'], ['Half up', 'f', 'halfup'], ['Shaved side', 'f', 'undercut'],
+  ['Box braids', 'f', 'boxbraids'], ['Space buns', 'f', 'twinbuns'], ['Pigtails', 'f', 'pigtails'], ['Single braid', 'f', 'braid'], ['Curly long', 'f', 'curlylong'], ['Shag', 'mf', 'shag'],
+  ['Cornrows', 'mf', 'cornrows'], ['Fade', 'm', 'fade'], ['Curtains', 'm', 'curtains'], ['Big curls', 'f', 'bigcurls'], ['Half up', 'f', 'halfup'], ['Shaved side', 'f', 'shavedside'],
 ];
 // facial hair (CB4)
 export const FACIAL_HAIR = [['None', null], ['Stubble', 'stubble'], ['Short beard', 'short'], ['Full beard', 'full'], ['Long beard', 'long'], ['Goatee', 'goatee'],
@@ -455,8 +455,8 @@ export function lookToApp(L, code = null) {
   const O = L.outfit, P = (s) => (O[s] ? PIECES[O[s].id] : null), fem = L.body.base === 'f';
   const set = P('set'), top = P('top'), jk = P('jacket'), hat = P('hat'), bag = P('bag'), gl = P('glasses');
   const hs = HAIR_STYLES[L.hair.style] ? HAIR_STYLES[L.hair.style][2] : 'short';
-  const h = fem ? (['long', 'wavy', 'curlylong', 'braids', 'dreads', 'halfup'].includes(hs) ? 2 : ['bun', 'topknot', 'twinbuns', 'pony', 'pigtails', 'braid'].includes(hs) ? 5 : 2)
-    : hs === 'bald' ? 3 : hs === 'slick' || hs === 'mohawk' ? 4 : ['spiky', 'curly', 'afro', 'dreads', 'long', 'wavy', 'curlylong'].includes(hs) ? 1 : 0;   // (2 and 5 read as a woman's)
+  const h = fem ? (['long', 'wavy', 'curlylong', 'braids', 'dreads', 'halfup', 'boxbraids', 'bigcurls', 'shoulder'].includes(hs) ? 2 : ['bun', 'topknot', 'manbun', 'twinbuns', 'pony', 'pigtails', 'braid'].includes(hs) ? 5 : 2)
+    : hs === 'bald' ? 3 : hs === 'slick' || hs === 'sidepart' || hs === 'mohawk' ? 4 : ['spiky', 'quiff', 'curly', 'afro', 'dreads', 'long', 'wavy', 'curlylong', 'shoulder'].includes(hs) ? 1 : 0;   // (2 and 5 read as a woman's)
   let t = 0;
   const tk = (set || top || {}).d?.k;
   if (set && set.d.k === 'suit') t = 1;

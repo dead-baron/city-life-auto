@@ -870,7 +870,7 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-turn { display: flex; align-items: center; gap: 10px; font: 13px var(--pixel); color: var(--cream); }
 #creator .cc-turn button { width: 38px; height: 38px; border-radius: 50%; background: #0b1226; border: 2px solid rgba(226,189,87,.7); color: var(--cream); font-size: 18px; cursor: pointer; }
 #creator .cc-pname { min-width: 120px; text-align: center; }
-#creator .cc-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#creator .cc-right { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 #creator .cc-tabs, #creator .cc-slots { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; background: rgba(7,11,22,.55); border-bottom: 1px solid rgba(226,189,87,.25); flex: none; }
 #creator .cc-slots { background: transparent; border: none; padding: 4px 0 8px; }
 #creator .cc-tabs:empty { display: none; }
@@ -892,10 +892,21 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-grid.big { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
 #creator .cc-card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 3px 5px; background: #0f1830; border: 2px solid rgba(226,189,87,.2); border-radius: 6px; cursor: pointer; color: #e9edf8; font: 11px var(--pixel); line-height: 1.15; text-align: center; touch-action: manipulation; min-height: 60px; }
 #creator .cc-card span { overflow-wrap: anywhere; }
-#creator .cc-card.on { border-color: var(--rim); background: linear-gradient(180deg, rgba(226,189,87,.3), rgba(226,189,87,.08)); color: #fff; }
-#creator .cc-th { width: 48px; height: 90px; image-rendering: pixelated; image-rendering: crisp-edges; }
-#creator .cc-th.head { width: 56px; height: 56px; }
+#creator .cc-card.on { border-color: var(--rim); background: linear-gradient(180deg, rgba(226,189,87,.3), rgba(226,189,87,.08)); color: #fff; box-shadow: 0 0 0 2px var(--ink), 0 0 12px rgba(255,207,64,.45); }
+/* thumbnails are cast at the size they're shown (creator.js SIZES): a figure 64 x 120, a head 60 x 64, a face 64 x 48;
+   a soft glow holds the place until each one is drawn */
+#creator .cc-th { width: 64px; height: 120px; image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 4px; }
+#creator .cc-th:not(.ok) { background: radial-gradient(ellipse at 50% 45%, rgba(226,189,87,.16), transparent 62%); animation: ccPulse 1.1s ease-in-out infinite alternate; }
+@keyframes ccPulse { from { opacity: .45; } to { opacity: 1; } }
+#creator .cc-th.head { width: 60px; height: 66px; background: radial-gradient(ellipse at 50% 60%, #22335f, #101a35 70%); }
+#creator .cc-th.face { width: 64px; height: 44px; background: #18254a; }
 #creator .cc-grid.big .cc-th { width: 64px; height: 120px; }
+#creator .cc-grid.fc { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+#creator .cc-card.fc { min-height: 0; padding: 3px 2px 4px; }
+#creator .cc-page.tabin > * { animation: ccIn .22s ease-out both; }
+@keyframes ccIn { from { opacity: 0; transform: translateY(6px); } }
+#creator .cc-prev { background: radial-gradient(ellipse at 50% 96%, rgba(10,16,34,.9) 0 18%, rgba(226,189,87,.18) 19% 21%, transparent 22%); }
+#creator .cc-prev.close { background: radial-gradient(ellipse at 50% 55%, rgba(60,84,150,.55), transparent 70%); }
 #creator .cc-q { font: 700 52px var(--pixel); color: var(--rim); line-height: 120px; height: 120px; }
 #creator .cc-note { font: 13px var(--pixel); color: #b8c0d8; margin: 0 0 8px; }
 #creator .cc-foot { flex: none; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: #0a1124; border-top: 2px solid rgba(226,189,87,.45); }
@@ -922,13 +933,27 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-rc { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 8px; font: 700 14px var(--pixel); color: var(--cream); }
 #creator .cc-rc .cc-btn { padding: 4px 10px; }
 #creator .cc-info { text-align: center; border: 2px solid rgba(226,189,87,.4); border-radius: 6px; padding: 8px; background: rgba(7,11,22,.6); }
-/* phones upright: the preview on top, smaller; the controls below */
+/* phones upright: the whole screen; the preview on top, the tabs in one row that scrolls sideways, the options
+   scrolling below, the buttons along the bottom (clear of the camera and the home bar: the safe-area padding above) */
 @media (orientation: portrait), (max-width: 640px) {
+  #creator { padding: max(6px, var(--cam-top)) max(4px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left)); }
+  #creator .cc-panel { width: 100%; height: 100%; }
+  #creator .mhead { padding: 6px 10px; }
+  #creator .mhead h2 { font-size: 17px; line-height: 1.15; }
   #creator .cc-body { flex-direction: column; }
-  #creator .cc-left { flex: 0 0 auto; flex-direction: row; border-right: none; border-bottom: 2px solid rgba(226,189,87,.35); padding: 6px; }
-  #creator .cc-prev { width: auto; height: min(26vh, 200px); }
-  #creator .cc-turn { flex-direction: column; }
-  #creator .cc-foot .cc-btn { flex: 1; padding: 8px 6px; font-size: 13px; }
+  #creator .cc-left { flex: 0 0 auto; flex-direction: row; gap: 4px; border-right: none; border-bottom: 2px solid rgba(226,189,87,.35); padding: 4px 6px; }
+  #creator .cc-prev { width: auto; height: min(30vh, 236px); max-width: 70vw; }
+  #creator .cc-turn { flex-direction: column; gap: 6px; }
+  #creator .cc-pname { min-width: 0; max-width: 90px; font-size: 12px; }
+  #creator .cc-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x; padding: 5px 6px; }
+  #creator .cc-tabs::-webkit-scrollbar { display: none; }
+  #creator .cc-tab { flex: none; padding: 6px 9px; font-size: 13px; }
+  #creator .cc-page { padding: 8px 8px 16px; }
+  #creator .cc-grid { grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 5px; }
+  #creator .cc-foot { padding: 6px 6px; gap: 5px; flex-wrap: nowrap; }
+  #creator .cc-foot .cc-btn { flex: 1; min-width: 0; padding: 9px 4px; font-size: 13px; letter-spacing: 0; }
+  #creator .cc-money { flex: 1 1 100%; font-size: 12px; }
+  #creator .cc-foot:has(.cc-money) { flex-wrap: wrap; }
 }
 /* phones on their side: everything a touch smaller */
 @media (max-height: 480px) and (orientation: landscape) {

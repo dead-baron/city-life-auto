@@ -147,7 +147,13 @@ function art(L) {
   if (!A) { A = LK.lookArt(L, { code: k }); ART.set(k, A); if (ART.size > 200) ART.delete(ART.keys().next().value); }
   return A;
 }
-function blit(cv, G, scale, crop) {
+// The figures are cast at the size they're shown (people.js opt.res: R pixels per world px), so the faces get real
+// eyes, brows, noses and lips (people.js faceHi) and the hair its locks and sheen: the big preview at 4 px per world px
+// (the head and shoulders at 8 on the Face and Hair tabs, as CC8 shows them), a figure's thumbnail at 2, a head's at 3,
+// a face feature's at 4. The game itself draws them at 1.
+const SIZES = { full: [64, 120, 2, null], head: [60, 66, 3, [-10, -13, 10, 9]], face: [64, 44, 4, [-8, -1.5, 8, 9.5]] };   // canvas w, h, res, region
+const BUST = [-10.5, -15, 10.5, 12];   // the preview's close-up: 21 x 27 world px at 8 = the canvas
+function blit(cv, G, crop) {
   const c2 = cv.getContext('2d');
   c2.clearRect(0, 0, cv.width, cv.height);
   if (!G || !G.w) return;
@@ -157,66 +163,99 @@ function blit(cv, G, scale, crop) {
   id.data.set(G.col);
   tmp.getContext('2d').putImageData(id, 0, 0);
   c2.imageSmoothingEnabled = false;
-  // a head crop: the top 22 rows round the anchor's column; the whole figure stands on a shadow
-  let sx = 0, sw = G.w, sh = G.h;
-  if (crop === 'head') { sw = Math.min(G.w, 22); sx = Math.max(0, Math.min(G.w - sw, Math.round(G.ax - sw / 2))); sh = Math.min(G.h, 22); }
-  const avail = crop === 'head' ? cv.height : cv.height - 6;
-  // (the height decides the scale: a wide brim or a held bag may run off the sides)
-  const s = Math.max(1, Math.min(scale, Math.floor(crop === 'head' ? Math.min(cv.width / sw, avail / sh) : Math.min(cv.width / Math.min(sw, 30), avail / sh))));
-  const x = crop === 'head' ? Math.round((cv.width - sw * s) / 2) : Math.round(cv.width / 2 - (G.ax - sx) * s);
-  const y = crop === 'head' ? Math.round((cv.height - sh * s) / 2) : Math.round(cv.height - 6 - G.ay * s);
-  if (crop !== 'head') { c2.fillStyle = 'rgba(0,0,0,.35)'; c2.beginPath(); c2.ellipse(cv.width / 2, cv.height - 6, 7 * s, 2.2 * s, 0, 0, 6.283); c2.fill(); }
-  c2.drawImage(tmp, sx, 0, sw, sh, x, y, sw * s, sh * s);
+  const close = crop === 'head' || crop === 'face', foot = Math.round(cv.height * 0.035) + 2;
+  // (a wide brim or a held bag may not fit: shrink to fit rather than cut it off)
+  const s = Math.min(1, cv.width / G.w, (cv.height - (close ? 0 : foot)) / G.h);
+  const x = close ? Math.round((cv.width - G.w * s) / 2) : Math.round(cv.width / 2 - G.ax * s);
+  const y = close ? Math.round(cv.height - G.h * s) : Math.round(cv.height - foot - G.ay * s);
+  if (!close) {   // the pedestal's shadow (CC1)
+    const rx = Math.min(cv.width * 0.42, G.w * 0.36), ry = Math.max(2, rx * 0.3);
+    c2.fillStyle = 'rgba(0,0,0,.38)'; c2.beginPath(); c2.ellipse(cv.width / 2, cv.height - foot, rx, ry, 0, 0, 6.283); c2.fill();
+  }
+  c2.drawImage(tmp, 0, 0, G.w, G.h, x, y, Math.round(G.w * s), Math.round(G.h * s));
 }
+// the preview: each pose cast once and kept (a turn or the idle's two frames are a blit after the first time)
+const PREV = new Map();
+function previewCanvas(L, d, f, close) {
+  const k = code(L) + d + f + (close ? 'c' : 'f');
+  let cv = PREV.get(k);
+  if (cv) return cv;
+  cv = document.createElement('canvas');
+  cv.width = 168; cv.height = 216;
+  let G = null;
+  try { G = person(art(L), d, 'idle', f, close ? { tight: true, res: 8, region: BUST } : { tight: true, res: 4 }); } catch (e) { console.warn('[creator] preview', e); }
+  blit(cv, G, close ? 'head' : 'full');
+  PREV.set(k, cv);
+  if (PREV.size > 48) PREV.delete(PREV.keys().next().value);
+  return cv;
+}
+const closeUp = () => (mode === 'edit' && (tab === 'face' || tab === 'hair')) || mode === 'barber';
 function drawPreview() {
   if (!root) return;
   const cv = root.querySelector('.cc-prev');
-  let G = null;
-  // (in the barber's chair the hat comes off, so the cut shows)
-  const L = mode === 'barber' && look.outfit.hat ? (() => { const V = clone(look); V.outfit.hat = null; return V; })() : look;
-  try { G = person(art(L), dir, 'idle', fr, { tight: true }); } catch (e) { console.warn('[creator] preview', e); }
-  blit(cv, G, 4);
+  // (in the barber's chair, and on the Face and Hair tabs' close-up, the hat comes off, so the face and the cut show)
+  const L = closeUp() && look.outfit.hat ? (() => { const V = clone(look); V.outfit.hat = null; return V; })() : look;
+  const src = previewCanvas(L, dir, fr, closeUp()), c2 = cv.getContext('2d');
+  c2.clearRect(0, 0, cv.width, cv.height);
+  c2.drawImage(src, 0, 0);
+  cv.classList.toggle('close', closeUp());
   const pn = root.querySelector('.cc-pname');
   if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : mode === 'wheel' ? ((state.saved || [])[wheelSel] || {}).n || '' : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir];
 }
+// the idle: breathing (two frames), and now and then a look round (a turn to one side and back) while nothing changes
+let lastTouch = 0, glance = 0;
 function loop() {
   cancelAnimationFrame(raf);
   const step = (t) => {
     if (!isOpen()) { raf = 0; return; }
-    if (t - animT > 520) { animT = t; fr = (fr + 1) & 1; drawPreview(); }
+    if (t - animT > 520) {
+      animT = t; fr = (fr + 1) & 1;
+      if (t - lastTouch > 6000 && mode !== 'wheel') { glance = (glance + 1) % 12; if (glance === 8) dir = (dir + 1) % 8; else if (glance === 10) dir = (dir + 7) % 8; }
+      drawPreview();
+    }
     pumpThumbs();
     raf = requestAnimationFrame(step);
   };
   raf = requestAnimationFrame(step);
 }
-// thumbnails: drawn a few a frame, cached (bounded)
+// thumbnails: cast a few each frame (about 6 ms' worth, the ones on screen first), cached (bounded); until then the
+// card shows a soft placeholder
 const THUMB = new Map(), want = [];
 function thumbFor(L, crop) {
   const k = code(L) + crop;
   let cv = THUMB.get(k);
   if (cv) { THUMB.delete(k); THUMB.set(k, cv); return cv; }
+  const [tw, tht, res, region] = SIZES[crop] || SIZES.full;
   cv = document.createElement('canvas');
-  cv.width = crop === 'head' ? 56 : 64; cv.height = crop === 'head' ? 56 : 120;
-  try { blit(cv, person(art(L), 0, 'idle', 0, { tight: true }), crop === 'head' ? 3 : 2, crop); } catch (e) { console.warn('[creator] thumb', e); }
+  cv.width = tw; cv.height = tht;
+  try { blit(cv, person(art(L), 0, 'idle', 0, region ? { tight: true, res, region } : { tight: true, res }), crop); } catch (e) { console.warn('[creator] thumb', e); }
   THUMB.set(k, cv);
-  if (THUMB.size > 260) THUMB.delete(THUMB.keys().next().value);
+  if (THUMB.size > 320) THUMB.delete(THUMB.keys().next().value);
   return cv;
 }
 function pumpThumbs() {
-  const t0 = performance.now();
-  while (want.length && performance.now() - t0 < 8) {
+  const t0 = performance.now(), page = root && root.querySelector('.cc-page'), pr = page && page.getBoundingClientRect();
+  // the thumbnails in view (or nearly) first, in page order
+  if (pr && want.length > 1) {
+    const vis = (el) => { const r = el.getBoundingClientRect(); return r.bottom > pr.top - 60 && r.top < pr.bottom + 60; };
+    const a = [], b = [];
+    for (const q of want) (vis(q[0]) ? a : b).push(q);
+    if (a.length && a.length < want.length) { want.length = 0; want.push(...a, ...b); }
+  }
+  while (want.length && performance.now() - t0 < 6) {
     const [el, L, crop] = want.shift();
     if (!el.isConnected) continue;
     const cv = thumbFor(L, crop), c2 = el.getContext('2d');
     el.width = cv.width; el.height = cv.height;
     c2.drawImage(cv, 0, 0);
+    el.classList.add('ok');
   }
 }
 const TH = [];   // looks for the thumbnails on this page: <canvas data-th="i">
-const th = (L, crop = 'full') => { TH.push([L, crop]); return `<canvas class="cc-th ${crop === 'head' ? 'head' : ''}" data-th="${TH.length - 1}"></canvas>`; };
+const th = (L, crop = 'full') => { TH.push([L, crop]); return `<canvas class="cc-th ${crop === 'full' ? '' : crop}" data-th="${TH.length - 1}"></canvas>`; };
 
 // ---- the screens ----------------------------------------------------------------------------------------------------------
-const TABS = [['body', 'Body'], ['face', 'Face'], ['hair', 'Hair'], ['outfit', 'Outfit'], ['extras', 'Extras'], ['saved', 'Saved looks']];
+const TABS = [['body', 'Body'], ['face', 'Face'], ['hair', 'Hair'], ['outfit', 'Outfit'], ['extras', 'Extras'], ['saved', 'Saved']];
 function render() {
   root.querySelector('.cc-title').textContent = mode === 'start' ? 'CHOOSE YOUR STARTING LOOK' : mode === 'wheel' ? 'QUICK CHANGE' : (mode === 'shop' || mode === 'barber') && shop ? shop.name.toUpperCase() : 'CHARACTER CREATOR';
   root.classList.toggle('cc-start', mode === 'start');
@@ -240,9 +279,11 @@ function renderFoot() {
   } else if (mode === 'barber') {
     const cost = hairBill();
     h = `${money()}${cost && cost.total ? ` · <b>Total $${cost.total}</b>` : ''}</span><button class="cc-btn" data-act="close">Back</button><button class="cc-btn gold" data-act="hb-ok" ${cost && cost.total ? '' : 'disabled'}>Confirm</button>`;
-  } else h = `<button class="cc-btn" data-act="random">Randomise</button><button class="cc-btn" data-act="undo" ${hist.length ? '' : 'disabled'}>Undo</button><button class="cc-btn" data-act="save">Save look</button><button class="cc-btn gold" data-act="done">Done</button>`;
+  } else h = `<button class="cc-btn" data-act="random">🎲 ${RANDOM_LABEL[tab] || 'Random'}</button><button class="cc-btn" data-act="undo" ${hist.length ? '' : 'disabled'}>Undo</button><button class="cc-btn" data-act="save">Save look</button><button class="cc-btn gold" data-act="done">Done</button>`;
   root.querySelector('.cc-foot').innerHTML = h;
 }
+
+const RANDOM_LABEL = { body: 'Random body', face: 'Random face', hair: 'Random hair', outfit: 'Random outfit', extras: 'Random extras', saved: 'Random look' };
 
 // ---- the fitting room (ST4) and the barber's chair (ST3) ---------------------------------------------------------------------
 const SHOP_TABS = [['outfits', 'Outfits'], ['top', 'Tops'], ['jacket', 'Jackets'], ['bottoms', 'Bottoms'], ['set', 'Dresses & sets'], ['shoes', 'Shoes'], ['hat', 'Hats'], ['acc', 'Accessories']];
@@ -337,13 +378,13 @@ function renderPage() {
       + row('Age', LK.AGES.map((a, i) => chip('age', i, a, B.age === i)).join(''));
   } else if (tab === 'face') {
     const F = L.face, o = LK.FACE_OPTS;
-    const fr2 = (k, label) => row(label, o[k].map((n, i) => chip('face', `${k}:${i}`, n, F[k] === i)).join(''));
-    h = `<div class="cc-row"><div class="cc-opts">${chip('rface', 0, '🎲 Random face', false)}</div></div>`
-      + row('Face shape', `<div class="cc-grid">${o.shape.map((n, i) => `<button class="cc-card hd ${F.shape === i ? 'on' : ''}" data-act="face" data-v="shape:${i}">${th(variant((V) => { V.face.shape = i; }), 'head')}<span>${n}</span></button>`).join('')}</div>`)
+    // each option a close-up of your own face wearing it (CC8)
+    const fr2 = (k, label) => row(label, `<div class="cc-grid fc">${o[k].map((n, i) => `<button class="cc-card fc ${F[k] === i ? 'on' : ''}" data-act="face" data-v="${k}:${i}">${th(variant((V) => { V.face[k] = i; V.outfit.glasses = null; V.outfit.hat = null; }), 'face')}<span>${n}</span></button>`).join('')}</div>`);
+    h = row('Face shape', `<div class="cc-grid">${o.shape.map((n, i) => `<button class="cc-card hd ${F.shape === i ? 'on' : ''}" data-act="face" data-v="shape:${i}">${th(variant((V) => { V.face.shape = i; V.outfit.hat = null; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`)
       + fr2('eyes', 'Eyes')
       + row('Eye colour', LK.EYE_COLORS.map(([hx, n], i) => sw('face', `eyeColor:${i}`, hx, F.eyeColor === i, n)).join(''))
       + fr2('brows', 'Brows') + fr2('nose', 'Nose') + fr2('lips', 'Lips')
-      + row('Marks', chip('ftog', 'freckles', 'Freckles', !!F.freckles) + chip('ftog', 'mole', 'Beauty mark', !!F.mole) + chip('ftog', 'dimples', 'Dimples', !!F.dimples));
+      + row('Marks', `<div class="cc-grid fc">${[['freckles', 'Freckles'], ['mole', 'Beauty mark'], ['dimples', 'Dimples']].map(([k, n]) => `<button class="cc-card fc ${F[k] ? 'on' : ''}" data-act="ftog" data-v="${k}">${th(variant((V) => { V.face[k] = 1; V.outfit.glasses = null; V.outfit.hat = null; }), 'face')}<span>${F[k] ? '✓ ' : ''}${n}</span></button>`).join('')}</div>`);
   } else if (tab === 'hair') {
     const LEN = { bald: 's', buzz: 's', short: 's', slick: 's', spiky: 's', curly: 's', undercut: 's', fade: 's', cornrows: 's', pixie: 's', curtains: 's', mohawk: 's' };
     const lenOf = (st) => LEN[st] ? 'short' : ['long', 'wavy', 'braids', 'dreads', 'curlylong', 'braid', 'halfup'].includes(st) ? 'long' : 'medium';
@@ -394,7 +435,7 @@ function renderPage() {
   if (lockedHere) h = here(tab === 'hair' ? '✂ Try any style here: cuts, colour and beards are done at a barbershop or a hair salon.' : '🪞 Try anything here: these change at the mirror at home.') + h;
   pg.innerHTML = h;
   want.length = 0;
-  for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)]; el.width = crop === 'head' ? 56 : 64; el.height = crop === 'head' ? 56 : 120; want.push([el, TL, crop]); }
+  for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)], Z = SIZES[crop] || SIZES.full; el.width = Z[0]; el.height = Z[1]; want.push([el, TL, crop]); }
   pumpThumbs();
   if (renaming >= 0) { const inp = pg.querySelector('.cc-sv input'); if (inp) inp.focus(); }
   refocus();
@@ -412,8 +453,9 @@ function completeLooks() {
 // ---- actions ----------------------------------------------------------------------------------------------------------------
 function act(a, v, el) {
   if (C.sfx) C.sfx('click', 0.5);
+  lastTouch = performance.now();
   switch (a) {
-    case 'tab': tab = v; renaming = -1; render(); return;
+    case 'tab': { tab = v; renaming = -1; render(); const pg = root.querySelector('.cc-page'); pg.classList.remove('tabin'); void pg.offsetWidth; pg.classList.add('tabin'); pg.scrollTop = 0; return; }
     case 'turn': dir = (dir + Number(v) + 8) % 8; drawPreview(); return;
     case 'done': close(true); return;
     case 'close': close(false); return;
@@ -436,9 +478,13 @@ function act(a, v, el) {
       drawPreview(); renderPage(); return;
     }
     case 'undo': if (hist.length) { look = LK.decodeLook(hist.pop()); drawPreview(); render(); } return;
-    case 'random': {
+    case 'random': {   // (each tab randomises its own part: the body, the face, the hair, the outfit, the extras)
       const s = newSeed();
       if (tab === 'outfit') { const R = LK.randomLook(s, look.body.base, outStyle || null); setL((L) => { L.outfit = R.outfit; }); }
+      else if (tab === 'body') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.body = { ...R.body, base: L.body.base }; }); }
+      else if (tab === 'face') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.face = R.face; }); }
+      else if (tab === 'hair') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.hair = R.hair; if (L.body.base === 'f') L.hair.facial = 0; }); }
+      else if (tab === 'extras') { const R = LK.randomLook(s, look.body.base); setL((L) => { L.extras = R.extras; }); }
       else { const R = LK.randomLook(s, look.body.base); setL((L) => { Object.assign(L, R); }); }
       render(); return;
     }
