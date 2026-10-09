@@ -129,3 +129,17 @@ test('voxel things are drawn straight at the art pixel; letters land on whole ar
   assert.ok(body.every(([x, y]) => x >= 4 && y >= 6) && Math.min(...body.map((p) => p[0])) % 2 === 0 && Math.min(...body.map((p) => p[1])) % 2 === 0, 'letters on even px');
   assert.equal(Math.min(...shade.map((p) => p[0])) - Math.min(...body.map((p) => p[0])), 2, 'the shadow is a whole letter pixel off');
 });
+
+// The rides' and the tidepools' star's art (props-park, props-rural, props-wild) is handed to actors.js by the bake
+// workers, which draw those sprites; the page's renderer loads actors.js only for its keys and never that art.
+import { closure } from '../tools/perf.mjs';
+import { readFileSync } from 'node:fs';
+test('the ride and star sprites draw with the art the workers hand in; the page\'s renderer never loads that art', async () => {
+  const [pk, ru, wl] = await Promise.all([import('../client/art2/props-park.js'), import('../client/art2/props-rural.js'), import('../client/art2/props-wild.js')]);
+  actors.useArt({ ferrisCab: pk.ferrisCab, hotAirBalloon: ru.hotAirBalloon, starfish: wl.starfish });
+  for (const [g, what] of [[actors.rideSprite('cab', 1), 'a Ferris wheel gondola'], [actors.forageSprite('star', 2), 'a golden sea star']]) assert.ok(g && g.w > 4 && g.h > 4, what);
+  const renderer = closure(['client/art2/game/host.js', 'client/art2/game/actors.js', 'client/art2/game/peds.js']);
+  for (const f of ['client/art2/props-park.js', 'client/art2/props-rural.js', 'client/art2/props-wild.js']) assert.ok(!renderer.includes(f), `${f} stays out of the page's renderer`);
+  const worker = readFileSync(new URL('../client/art2/game/worker.js', import.meta.url), 'utf8');
+  assert.match(worker, /useArt\(\{ ferrisCab: [^}]*hotAirBalloon: [^}]*starfish: /, 'the workers hand the art in');
+});
