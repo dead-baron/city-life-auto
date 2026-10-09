@@ -3930,11 +3930,12 @@ From the owner's notes on sound design (#351): no soundtrack over the game, musi
   - Buses for effects, ambience and music, into a master with a gentle compressor.
   - Settings → Sound: sound on/off, music on/off, and sliders for master, effects, ambience and music. Saved with the other settings (`cla.settings`, under `sound`).
   - Sound off puts the audio to sleep (no work for a phone).
+  - On a pad or the keyboard, left / right moves a slider (`menuKey`). README updated.
 - **Placed in the world:** every world sound is panned and faded by its distance and direction from the camera's centre. Far sounds lose their highs. Indoors, the outside is heard through the walls.
 - **A voice pool:** 14 voices on a phone, 26 on a computer. A sound asks with a priority. When all are busy it takes the weakest one's voice, never a stronger one's: a footstep never cuts off an explosion.
 - **Vehicles** (`client/sound/vehicles.js`):
   - A running engine for the nearest vehicles (3 on a phone, 6 on a computer; yours first and loudest).
-  - Pitch and tone follow speed and throttle, through the gears.
+  - Pitch and tone follow speed and throttle, through the gears. Each vehicle is tuned a little its own.
   - Each class its own: small car, sedan, sports car, a V8 pickup, police, van, truck, bus, motorbike, outboard boats, the jet ski, the ferries, and bicycles (a chain ticking).
   - Horns by class. Bicycles ring a bell.
   - Sirens: the police wail and yelp, the ambulance's hi-lo, the fire engine's slow wail. They bend in pitch as they pass (Doppler).
@@ -3959,7 +3960,7 @@ From the owner's notes on sound design (#351): no soundtrack over the game, musi
   - The title screen: a short SNES-ish tune, a soft lead over bass, arpeggio and light drums.
   - Nightclubs, open after dark: four on the floor, muffled to the bass outside, clear inside.
   - Some shops play light bossa; the bank, the hospital and the courthouse an elevator tune.
-  - The ma-and-pa shops (bait and tackle, hardware, pawn, fish market) play nothing, but a little bell over the door rings when anyone goes in or out. Other shops' doors sigh open.
+  - The ma-and-pa shops (bait and tackle, hardware, pawn, fish market) play nothing, but a little bell over the door rings when anyone goes in or out (once in a while at most: a busy shop doesn't jangle). Other shops' doors sigh open.
 - **Hooks in main.js:** `soundEvent` at the top of the events switch, `soundFrame` at the end of the visuals, the Sound section in Settings. The sirens and horns moved out of `vehVisual`.
   - A sound fault is reported once and never stops the game.
 - **Every server event has its sound** (`client/sound/events.js`). A few are data only and silent (team lists, the station clocks).
