@@ -67,7 +67,14 @@ export function open(m = 'edit', st = null) {
 }
 export function onState(st) {
   state = st;
-  if (C.topOverlay() === 'creator' && ((mode === 'edit' && tab === 'saved') || mode === 'wheel')) renderPage();
+  if (C.topOverlay() !== 'creator') return;
+  if (mode === 'wheel') {   // (the list may have changed under the wheel: keep the pick in range and on show)
+    const sv = state.saved || [];
+    wheelSel = Math.min(wheelSel, Math.max(0, sv.length - 1));
+    const L = sv[wheelSel] && LK.decodeLook(sv[wheelSel].c);
+    if (L) look = L;
+    render();
+  } else if (mode === 'edit' && tab === 'saved') renderPage();
 }
 function close(apply) {
   if (mode === 'wheel') apply = false;   // (the wheel puts a look on with Apply)
@@ -149,7 +156,7 @@ function thumbFor(L, crop) {
   let cv = THUMB.get(k);
   if (cv) { THUMB.delete(k); THUMB.set(k, cv); return cv; }
   cv = document.createElement('canvas');
-  cv.width = crop === 'head' ? 56 : 64; cv.height = crop === 'head' ? 56 : 104;
+  cv.width = crop === 'head' ? 56 : 64; cv.height = crop === 'head' ? 56 : 120;
   try { blit(cv, person(art(L), 0, 'idle', 0, { tight: true }), crop === 'head' ? 3 : 2, crop); } catch (e) { console.warn('[creator] thumb', e); }
   THUMB.set(k, cv);
   if (THUMB.size > 260) THUMB.delete(THUMB.keys().next().value);
@@ -268,7 +275,7 @@ function renderPage() {
   }
   pg.innerHTML = h;
   want.length = 0;
-  for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)]; el.width = crop === 'head' ? 56 : 64; el.height = crop === 'head' ? 56 : 104; want.push([el, TL, crop]); }
+  for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)]; el.width = crop === 'head' ? 56 : 64; el.height = crop === 'head' ? 56 : 120; want.push([el, TL, crop]); }
   pumpThumbs();
   if (renaming >= 0) { const inp = pg.querySelector('.cc-sv input'); if (inp) inp.focus(); }
   refocus();

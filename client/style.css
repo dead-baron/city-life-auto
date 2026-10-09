@@ -839,7 +839,7 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 @keyframes brk-pulse { 50% { box-shadow: 0 0 14px rgba(255,211,107,.55); } }
 
 /* ---- the character creator (client/creator.js; concepts CC1, CC7-CC10): gold-rimmed navy, the pixel face ---- */
-#creator { position: absolute; inset: 0; z-index: 45; background: rgba(4,7,16,.62); display: flex; align-items: center; justify-content: center; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+#creator { position: absolute; inset: 0; z-index: 70; background: rgba(4,7,16,.62); display: flex; align-items: center; justify-content: center; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
 #creator.hidden { display: none; }
 #creator .cc-panel { width: min(1080px, 100%); height: min(760px, 100%); display: flex; flex-direction: column; overflow: hidden; background: var(--panel-bg); border: 2px solid var(--rim); border-radius: 8px; box-shadow: 0 0 0 2px var(--ink), 0 14px 40px rgba(0,0,0,.6); }
 #creator .mhead { padding: 8px 12px; flex: none; }
@@ -873,10 +873,10 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 3px 5px; background: #0f1830; border: 2px solid rgba(226,189,87,.2); border-radius: 6px; cursor: pointer; color: #e9edf8; font: 11px var(--pixel); line-height: 1.15; text-align: center; touch-action: manipulation; min-height: 60px; }
 #creator .cc-card span { overflow-wrap: anywhere; }
 #creator .cc-card.on { border-color: var(--rim); background: linear-gradient(180deg, rgba(226,189,87,.3), rgba(226,189,87,.08)); color: #fff; }
-#creator .cc-th { width: 48px; height: 78px; image-rendering: pixelated; image-rendering: crisp-edges; }
+#creator .cc-th { width: 48px; height: 90px; image-rendering: pixelated; image-rendering: crisp-edges; }
 #creator .cc-th.head { width: 56px; height: 56px; }
-#creator .cc-grid.big .cc-th { width: 64px; height: 104px; }
-#creator .cc-q { font: 700 52px var(--pixel); color: var(--rim); line-height: 104px; height: 104px; }
+#creator .cc-grid.big .cc-th { width: 64px; height: 120px; }
+#creator .cc-q { font: 700 52px var(--pixel); color: var(--rim); line-height: 120px; height: 120px; }
 #creator .cc-note { font: 13px var(--pixel); color: #b8c0d8; margin: 0 0 8px; }
 #creator .cc-foot { flex: none; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: #0a1124; border-top: 2px solid rgba(226,189,87,.45); }
 #creator .cc-btn { font: 700 15px var(--pixel); letter-spacing: 1px; color: var(--cream); background: linear-gradient(180deg, #24305a, #182344); border: 2px solid rgba(226,189,87,.6); border-radius: 6px; padding: 8px 16px; cursor: pointer; touch-action: manipulation; }
@@ -885,7 +885,7 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-name { font: 15px var(--pixel); color: var(--cream); background: #0b1226; border: 2px solid rgba(226,189,87,.6); border-radius: 6px; padding: 7px 10px; width: min(220px, 60vw); user-select: text; -webkit-user-select: text; }
 #creator .cc-saved { display: flex; flex-direction: column; gap: 6px; }
 #creator .cc-sv { display: flex; align-items: center; gap: 10px; padding: 4px 8px; background: #0f1830; border: 2px solid rgba(226,189,87,.2); border-radius: 6px; }
-#creator .cc-sv .cc-th { width: 40px; height: 65px; }
+#creator .cc-sv .cc-th { width: 40px; height: 75px; }
 #creator .cc-svn { flex: 1; font: 15px var(--pixel); color: var(--cream); }
 #creator .cc-svb { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
 #creator .cc-svb .cc-btn { font-size: 12px; padding: 5px 9px; }
