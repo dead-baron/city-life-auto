@@ -50,6 +50,7 @@ import * as wanderer from './systems/wanderer.js';
 import * as places from './systems/places.js';
 import * as golf from './systems/golf.js';
 import * as hoops from './systems/hoops.js';
+import * as bikers from './systems/bikers.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -78,6 +79,7 @@ const SYSTEMS = [
   ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
   ['gang', gang.update],            // Syndicate membership: Smuggler's Rock guards
   ['gangwar', gangwar.update],      // gangs vs police: provocation + shootouts near turf
+  ['bikers', bikers.update],        // the biker clubs at the Rusty Spur: hanging out, riding two by two, chasing (task #366)
   ['paint', paint.update],          // Spray & Go paint shop bays
   ['races', races.update],
   ['minigames', minigames.update],  // soccer pitch, beach volleyball          // jetski / boat races

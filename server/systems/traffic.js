@@ -193,7 +193,7 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
   const diff = angleDiff(v.a, want);
   let speed = desired;
   if (Math.abs(diff) > 0.9) speed = Math.min(speed, 140);
-  if (!opts.ignoreObstacles) speed = Math.min(speed, obstacleSpeed(world, v, fwd));
+  if (!opts.ignoreObstacles) speed = Math.min(speed, obstacleSpeed(world, v, fwd, opts.ignore));   // (opts.ignore: ids not to brake for - a club riding in formation)
   if (!opts.ignoreCrossings && (v.lz || 0) < 0.3) speed = Math.min(speed, crossingLimit(world, v, fwd)); // level-crossing gates down: stop (or gamble)
   // reverse out when wedged
   const ai = v.ai;
@@ -248,12 +248,12 @@ function lookAhead(v, pts, look) {
 // How much room a driver leaves to the car in front when stopped (px, 0.6-2.4 m): some creep right up, others hang
 // back - fixed per vehicle, so a queue at the lights looks like people driving, not a train of bumpers.
 const standoff = (v) => v.standoff ?? (v.standoff = 14 + (Math.imul(v.id | 0, 2654435761) >>> 0) % 44);
-function obstacleSpeed(world, v, fwd) {
+function obstacleSpeed(world, v, fwd, ignore = null) {
   const c = Math.cos(v.a), s = Math.sin(v.a);
   const look = v.def.L / 2 + 50 + standoff(v) + Math.max(0, fwd) * 0.7;
   let limit = Infinity;
   for (const e of world.query(v.x + c * look / 2, v.y + s * look / 2, look / 2 + 40)) {
-    if (e === v) continue;
+    if (e === v || (ignore && ignore.has(e.id))) continue;
     if (e.kind === K.PED) { if (e.vehId || e.dead) continue; }
     else if (e.kind !== K.VEH) continue;
     if (!sameLevel(e.lz, v.lz)) continue; // traffic up on the deck doesn't brake for the street below

@@ -45,6 +45,7 @@ import * as X from '../props-transit.js';
 import * as WL from '../props-wild.js';
 import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
+import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
@@ -1174,6 +1175,7 @@ function voxModel(m, a) {
     case 'pallets': return pallets(a[0] || 1, a[1] || 1); case 'oilDrum': return D.oilDrum(a[0], a[1]); case 'cableSpool': return K.cableSpool(); case 'bikeRack': return X.bikeRack(a[0] || 3);
     case 'cone': return X.cone(); case 'planterBox': return D.planterBox(a[0], a[1], a[2] ?? true); case 'fountain': return D.fountain(a[0], a[1]); case 'flowerBed': return P.flowerBed(a[0]);
     case 'powerPole': return D.powerPole(a[0], a[1]); case 'tent': return U.tent(a[0]); case 'domeTent': return K.domeTent(a[0], a[1]); case 'campfire': return U.campfire(a[0]);
+    case 'burnBarrel': return BK.burnBarrel(a[0] ?? 1); case 'skullSign': return BK.skullSign(a[0] ?? 1);
     case 'picnic': return U.picnicTable(); case 'pumpJack': return U.pumpJack(a[0]); case 'turbine': return U.windTurbine(a[0], a[1], a[2]); case 'flare': return U.flareStack(a[0]);
     case 'tank': return X.storageTank(a[0], a[1], a[2]); case 'cellTower': return K.cellTower(a[0]); case 'screen': return K.outdoorScreen(a[0], a[1]); case 'solar': return TW.solarPanel(a[0], a[1]);
     case 'runwayLight': return RD.runwayLight(a[0]); case 'viewer': return D.viewer(); case 'wheelbarrow': return U.wheelbarrow(); case 'airliner': return RD.airliner(a[0], a[1], a[2], a[3] || 0);
@@ -1230,6 +1232,7 @@ function vdim(m, a) {
     case 'tires': return [18, 18, 16]; case 'trashBags': return [30, 24, 16]; case 'pallets': return [28, 24, 6 + 6 * (a[1] || 1)]; case 'oilDrum': return [12, 12, 18]; case 'cableSpool': return [24, 18, 26];
     case 'bikeRack': return [40, 10, 14]; case 'cone': return [10, 10, 16]; case 'planterBox': return [a[0] || 34, a[1] || 34, 26]; case 'fountain': return [(a[0] || 30) * 2 + 2, (a[0] || 30) * 2 + 2, 56];
     case 'flowerBed': return [a[0] || 30, 12, 10]; case 'powerPole': return [(a[1] || 16) * 2 + 4, 10, (a[0] || 120) + 4]; case 'tent': return [40, 34, 28]; case 'domeTent': return [36, 30, 22];
+    case 'burnBarrel': return [16, 16, 34]; case 'skullSign': return [36, 8, 86];
     case 'campfire': return [28, 28, 26]; case 'picnic': return [44, 36, 18]; case 'pumpJack': return [70, 20, 60]; case 'turbine': return [((a[1] || 80) * 2) + 8, 24, (a[0] || 260) + (a[1] || 80) + 6];
     case 'flare': return [14, 14, 90]; case 'tank': return [(a[0] || 44) * 2 + 4, (a[0] || 44) * 2 + 4, (a[1] || 120) + 26]; case 'cellTower': return [30, 30, (a[0] || 150) + 6]; case 'screen': return [(a[0] || 120) + 16, 12, (a[1] || 56) + 26];
     case 'solar': return [a[0] || 30, a[1] || 20, 8]; case 'runwayLight': return [4, 4, 6]; case 'viewer': return [14, 10, 40]; case 'wheelbarrow': return [30, 14, 14]; case 'airliner': return [a[0] || 460, a[1] || 420, 140];
@@ -1688,6 +1691,9 @@ function propItems(c, p, pi, I) {
     case 'tent': { const col = ['#e07b20', '#3f8a3a', '#2f6fc8', '#c8b88a'][p.v || 0]; V(`tent:${p.v || 0}`, 'tent', [col]); return; }   // (v 3: a hunting camp's canvas wall tent)
     case 'campfire': V(`cf:${p.lit ? 1 : 0}`, 'campfire', [p.lit ? 1 : 0]); if (p.lit) lightAt(I, x, y, 14, p.big ? 220 : 150, LIGHT.fire, p.big ? 3 : 2.2, 'fire', 0); return;
     case 'picnic': V('pic', 'picnic', [], qa(u * PI, 2)); return;
+    // the Rusty Spur (task #366): the burn barrel always burning, the bull skull sign lit up after dark
+    case 'burnbarrel': V('bbl:1', 'burnBarrel', [1]); lightAt(I, x, y, 30, 170, LIGHT.fire, 2.4, 'fire', 0); return;
+    case 'skullsign': V('sks:1', 'skullSign', [1]); lightAt(I, x, y + 6, 66, 150, [1, 0.36, 0.2], 1.6, 'neon'); return;
     case 'billboard': put(I, { key: `bb:${(p.ad || 0) % ADS.length}`, recipe: { t: 'grp', parts: [[{ t: 'v', m: 'bbframe', a: [] }, 0, 0, 0], [{ t: 'sign', k: 'ad', ad: (p.ad || 0) % ADS.length, w: 132, h: 54, z: 36 }, 0, 2, 0]] }, x, y, ext: [82, 170, 82, 76], pi }); lightAt(I, x, y + 8, 110, 140, [1, 0.96, 0.85], 1.2, 'sign'); return;
     case 'pipes': V(`pip:${seed % 2}`, 'pipes', [seed % 2], qa(u * PI, 2)); return;
     case 'lumber': case 'planks': V(`lum:${t}:${seed % 3}`, 'lumber', [seed % 3, t === 'planks' ? 1 : 0], qa(u * PI, 2)); return;

@@ -159,6 +159,9 @@ export const ITEMS = {
   bearRug: { name: 'Grizzly Rug', crafted: true, sell: 560 },
   lemonade: { name: 'Lemonade',         stamina: true, buff: 'coffee', sell: 0 },
   cider:   { name: 'Apple Cider',       stamina: true, buff: 'coffee', sell: 0 },
+  // the Rusty Spur's bar (task #366)
+  beer:    { name: 'Cold Beer',         buff: 'wine', sell: 0 },
+  whiskey: { name: 'Shot of Rye',       stamina: true, buff: 'energy', sell: 0 },
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
   whitewine: { name: 'Willow River White', buff: 'wine', sell: 12 },
 };
@@ -320,6 +323,7 @@ export const SHOPS = {
   fruitstand: { title: 'Willow River Orchard Stand', buy: [{ kind: 'item', id: 'cider', price: 6, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }], sells: ['apple', 'orange'], sellPrice: { apple: 5, orange: 6 } },
   market: { title: 'Old Town Market', buy: [{ kind: 'item', id: 'bread', price: 7, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }, { kind: 'item', id: 'grapes', price: 8, qty: 2 }, { kind: 'item', id: 'honey', price: 14, qty: 1 }], sells: ['apple', 'orange', 'grapes', 'honey', 'lavender', 'goldTrumpet', 'bunCap', 'shelfOyster'], sellPrice: { goldTrumpet: 18, bunCap: 15, shelfOyster: 11 } },
   snack: { title: 'Snack Cart', buy: [{ kind: 'item', id: 'hotdog', price: 6, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }, { kind: 'item', id: 'energy', price: 9, qty: 1 }] },
+  roadhouse: { title: 'The Rusty Spur - the bar', buy: [{ kind: 'item', id: 'beer', price: 6, qty: 1 }, { kind: 'item', id: 'whiskey', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 4, qty: 1 }, { kind: 'item', id: 'hotdog', price: 7, qty: 1 }] },
   clubhouse: { title: 'Cedar Hills Golf Club - The Nineteenth', buy: [{ kind: 'item', id: 'cocktail', price: 20, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'redwine', price: 34, qty: 1 }, { kind: 'item', id: 'hotdog', price: 8, qty: 1 }] },
   farmstand: { title: 'Cedar Point Lavender - Farm Stand', buy: [{ kind: 'item', id: 'honey', price: 12, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }], sells: ['honey', 'lavender'], sellPrice: { lavender: 6 } },
   salvage: { title: 'Dry Creek Aircraft Salvage', buy: [], sells: ['scrap'], sellPrice: { scrap: 45 } },

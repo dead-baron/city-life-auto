@@ -35,6 +35,9 @@ export const SITES = [
   { type: 'wind', name: 'Cedar Point Wind Farm', near: [900, 1112], w: 36, h: 22, road: 'rural' },
   // the open ground past Westport International
   { type: 'raceway', name: 'Westport Raceway', near: [284, 812], w: 62, h: 34, road: 'rural' },
+  // the Rusty Spur, the biker roadhouse on the Desert Highway (MC3, task #366): well out of town, between the wind farm
+  // and Route 9
+  { type: 'roadhouse', name: 'The Rusty Spur', near: [1206, 668], w: 34, h: 24, road: 'rural' },
 ];
 
 // what each kind of access road may join (the road hierarchy: a dirt track never meets a highway)
@@ -266,6 +269,46 @@ const BUILD = {
     H.addProp(m, 'billboard', (s.x + s.w * 0.5) * TILE, (s.y + 1.4) * TILE, 10, { ad: Math.floor(hs(s, 1, 20) * 6) });
     treesRound(m, s, H, (tx, ty) => ty >= s.y + 2);
   },
+
+  // ---- the Rusty Spur (MC3/MC4, task #366) ----
+  // A biker roadhouse out on the desert highway: a long low bar facing the road (a walk-in: the bar, booths, the jukebox,
+  // the pool table, the arm-wrestling table, the card room - map.js buildInteriors and art2 statics.js dress it), a porch
+  // along its front, the neon bull skull on a pole by the road, a burn barrel, picnic tables, and a gravel lot where the
+  // club bikes line up backed in to the porch (m.roadhouse.slots: server/systems/bikers.js parks them there).
+  roadhouse(m, s, H) {
+    fill(m, s.x, s.y, s.w, s.h, T.DIRT);
+    const bx = s.x + 6, bw = 22, bh = 11, by = s.y + 1;
+    const row = { d: s.d, x: s.x, y: by, w: s.w, h: bh, face: 'S' };
+    const bid = m.buildings.length;
+    H.placePrefab(m, row, 'diner', bx, { biz: ['roadhouse'], names: [s.name] }, () => 0.5, { tw: bw, th: bh });
+    const b = m.buildings[bid];
+    // its look (art2 statics.js specOf): weathered board walls, the bull skull in red neon over the door, the name lit
+    b.art = { spec: { floors: 1, style: 'siding', wallColor: '#7a5434', trim: [255, 80, 50], neon: { icon: 'skull', col: [255, 70, 40], x: Math.round(bw * TILE * 0.5) - 14, y: -6 }, parapet: 12, roofMat: 'tar', lip: 8, rimW: 4 },
+      shop: { kind: 'diner', door: 'right', open: true, people: 4, awning: null, band: null, sign: { text: 'RUSTY SPUR', bg: '#2a1a14', fg: '#ff6a3a', lit: true } },
+      kit: [['ac', 60, 40], ['vent', 200, 50], ['acs', 400, 60], ['vent', 520, 90]] };
+    const porchY = by + bh;
+    fill(m, bx - 1, porchY, bw + 2, 2, T.PLAZA);                                       // the porch boards
+    fill(m, s.x + 2, porchY + 2, s.w - 4, s.h - (porchY + 2 - s.y), T.LOT);           // the gravel lot
+    gateway(m, s, T.LOT, 4);
+    for (const fx of [0.5, 6.5, bw - 6.5, bw + 0.5]) H.addProp(m, 'post', (bx + fx) * TILE, (porchY + 1.7) * TILE, 4);   // the porch posts
+    for (const fx of [3, bw - 5]) H.addProp(m, 'bench_m', (bx + fx) * TILE, (porchY + 0.8) * TILE, 0);
+    // the bikes' row along the porch, backed in; the burn barrel, the picnic tables, the pole sign, lamps; parking
+    const slots = [];
+    for (let k = 0; k < 15; k++) slots.push({ x: (bx + 1.2 + k * 1.4) * TILE, y: (porchY + 3.4) * TILE, a: Math.PI / 2 });   // (backed in to the porch, ready to ride)
+    const barrel = { x: (s.x + 3) * TILE, y: (porchY + 4) * TILE };
+    H.addProp(m, 'burnbarrel', barrel.x, barrel.y, 7);
+    H.addProp(m, 'picnic', (s.x + 2.4) * TILE, (by + 3) * TILE, 8);
+    H.addProp(m, 'picnic', (s.x + 2.4) * TILE, (by + 7) * TILE, 8);
+    H.addProp(m, 'drum', (bx + bw + 2) * TILE, (by + 2) * TILE, 6);
+    H.addProp(m, 'tires', (bx + bw + 3) * TILE, (by + 4) * TILE, 8);
+    const sign = { x: (s.x + (s.w >> 1) + 4.5) * TILE, y: (s.y + s.h - 1.6) * TILE };
+    H.addProp(m, 'skullsign', sign.x, sign.y, 6);
+    for (const fx of [0.08, 0.92]) H.addProp(m, 'lamp', (s.x + s.w * fx) * TILE, (porchY + 2.6) * TILE);
+    for (let k = 0; k < 4; k++) m.parking.push({ x: (s.x + 7 + k * 5.5) * TILE, y: (s.y + s.h - 3.4) * TILE, a: -Math.PI / 2, drive: true });
+    m.roadhouse = { name: s.name, b: bid, x: (bx + bw / 2) * TILE, y: (porchY + 1) * TILE, slots, barrel, sign,
+      lot: { x0: (s.x + 2) * TILE, y0: (porchY + 2) * TILE, x1: (s.x + s.w - 2) * TILE, y1: (s.y + s.h) * TILE } };
+  },
+  // ---- end the Rusty Spur
 
   // a lattice mast on a fenced pad, a hut for the transmitter
   mast(m, s, H) {

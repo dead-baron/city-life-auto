@@ -39,6 +39,8 @@
 // cloth(colour) -> 5-step ramp, ARCHETYPES (named looks, C2/C3) and randomPerson(seed, archetype) -> app.
 import { GBuf, F_CHAR, F_NOCAST, hash, bayer } from './gbuf.js';
 import { ITEMS, drawItem, itemSpan } from './items.js';
+import { CLUBS } from '../../shared/clubs.js';   // (the biker clubs' patches: task #366)
+
 
 // ---- camera, light, poses -------------------------------------------------------------------------------------
 const EL = 35 * Math.PI / 180, CA = Math.cos(EL), SA = Math.sin(EL), S0 = 400;
@@ -71,6 +73,23 @@ function rigMoto(P, pose) {
   return P;
 }
 // ---- end motorcycle riders
+// ---- biker club patches (NP4, task #366): what colour, if any, the back of a club vest is at (u across, z up)
+function clubPatch(ci, u, z, D) {
+  const C = CLUBS[ci];
+  if (!C) return null;
+  const [field, mark] = C.patch, au = Math.abs(u), mid = (D.waistUp + D.chestUp) / 2 + 0.4;
+  const top = D.chestUp + 1.4 - u * u * 1.6;                         // the top rocker, arched
+  if (au < 0.62 && z > top - 0.9 && z < top + 0.9) return Math.abs(z - top) < 0.32 && (Math.round(u * 14) & 1) ? mark : field;
+  const bot = D.waistUp - 0.2 + u * u * 1.4;                         // the bottom rocker
+  if (au < 0.5 && z > bot - 0.7 && z < bot + 0.7) return field;
+  const dx = u / 0.3, dz = (z - mid) / 2.1, r = Math.hypot(dx, dz);  // the centre patch: a round field, the emblem on it
+  if (r > 1) return null;
+  if (r > 0.82) return mark;
+  if (C.emblem === 'wheel') return Math.abs(r - 0.45) < 0.12 || (r < 0.45 && (Math.abs(dx) < 0.08 || Math.abs(dz) < 0.1)) || (Math.abs(dz) < 0.12 && r > 0.5) ? mark : field;
+  if (C.emblem === 'crow') return (dz > -0.15 && dz < 0.35 && Math.abs(dx) < 0.75 - Math.abs(dz)) || (Math.abs(dx) < 0.2 && dz > -0.6 && dz < 0.6) ? mark : field;
+  return (dz > -0.5 && Math.abs(dx) < 0.32 - dz * 0.2) || (dz > 0.3 && Math.abs(Math.abs(dx) - 0.35) < 0.12) ? mark : field;   // the jackal: a long head, two tall ears
+}
+// ---- end biker club patches
 export const HAIR_STYLES = ['spiky', 'short', 'buzz', 'bald', 'afro', 'long', 'wavy', 'pony', 'bun', 'braids', 'dreads', 'mohawk', 'slick', 'curly', 'bob'];
 export const TOP_KINDS = ['tee', 'tank', 'polo', 'shirt', 'hoodie', 'jacket', 'suit', 'leather', 'puffer', 'flannel', 'hawaiian', 'vest', 'hivis', 'uniform', 'tactical', 'scrubs', 'apron', 'overalls', 'tracksuit', 'jersey', 'coat', 'cardigan', 'dress', 'fur', 'none', 'bikini', 'swimsuit', 'towel'];
 
@@ -748,6 +767,10 @@ function wardrobe(A, D, TF, seed) {
     if (T.tank && front && z > D.chestUp + 2.9 - (0.33 - au) * 3 && au < 0.33) return skin;                       // scoop neckline
     if (T.vneck && front && z > D.chestUp + 3.4 - (0.32 - au) * 8 && au < 0.32) return skin;
     let R = top;
+    // ---- a biker club's back patch (NP4, task #366): the top rocker (the club's name, a curved band), the emblem in a round
+    // field in the middle, the bottom rocker - in the club's colours (shared/clubs.js)
+    if (T.vest && back && A.top?.patch !== undefined) { const pc = clubPatch(A.top.patch, u, z, D); if (pc) return cloth(pc); }
+    // ---- end club patch
     // straps of a backpack or a bag across the chest
     if (A.back === 'backpack' && Math.abs(au - 0.5) < 0.09 && z > D.waistUp && (front || back)) return black;
     if (bag && front && Math.abs(-u * 0.9 + (z - D.chestUp) / 6 - 0.15) < 0.11) return cloth('leather');

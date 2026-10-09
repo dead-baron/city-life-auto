@@ -12,6 +12,7 @@ import * as combat from './combat.js';
 import * as law from './law.js';
 import * as events from './events.js';
 import * as gangwar from './gangwar.js';
+import * as bikers from './bikers.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 import * as trains from './trains.js';
@@ -135,7 +136,7 @@ export function update(world, dt) {
     const n = ped.npc;
     if (n.guard && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch
       const dd = Math.hypot(ped.x - n.guard.x, ped.y - n.guard.y);
-      if (dd > 10) pedStep(ped, seek(ped, n.guard.x, n.guard.y, false), dt, world.map, walkMods(world, ped, 0.6));
+      if (dd > 10) pedStep(ped, seek(ped, n.guard.x, n.guard.y, !!n.guard.run), dt, world.map, walkMods(world, ped, n.guard.run ? 1 : 0.6));   // (guard.run: a biker running for his bike - bikers.js)
       else { ped.vx = 0; ped.vy = 0; if (now >= (n.lookAt || 0)) { n.guard.a += (rng() - 0.5) * 2.4; n.lookAt = now + 1.5 + rng() * 2; } ped.a = n.guard.a; }
       continue;
     }
@@ -406,6 +407,7 @@ export function onAttacked(world, ped, attacker) {
   if (!ped.npc || ped.dead || !attacker || attacker === ped) return;
   const n = ped.npc;
   if (n.state === 'crawl') { n.fx = attacker.x; n.fy = attacker.y; return; } // still dragging themselves away - from you, now
+  if (n.club) { bikers.clubAttacked(world, ped, attacker); return; }   // (a biker club member: the whole club fights back - bikers.js, task #366)
   if (n.desk) { // staff behind a counter: a desk cop fights back, everyone else runs
     n.desk = null; n.keep = false;
     if (n.role === 'cop') { ped.weapon = 'pistol'; startFight(world, ped, attacker, 30); } else flee(world, ped, attacker.x, attacker.y, 10);

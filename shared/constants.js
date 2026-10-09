@@ -19,7 +19,7 @@ export const WORLD_H = MAP_H * TILE;
 //      places itself with its own numbers (so the next rework of one district doesn't move the rest)
 //   6  nothing stands on a road: the farmhouses, cottages, the Dry Creek Farm Co-op, the mansion, the outposts and a
 //      hangar that World v2's roads ran through moved to open ground nearby (map.js offTheRoad)
-export const WORLD_VERSION = 6;
+export const WORLD_VERSION = 7;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);
