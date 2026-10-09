@@ -8,6 +8,7 @@ import { VEHICLE_BY_INDEX } from '../../shared/vehicles.js';
 import { VF } from '../../shared/constants.js';
 import { spatial } from './pool.js';
 import { engineOn } from './events.js';
+import { setp } from './engine.js';
 
 // The engine classes: f0..f1 the engine note from idle to the red line (Hz), gears, the wave, the sub-octave's level,
 // the rasp (noise level and band), the timbre's low-pass from idle to full throttle, the firing wobble (am: depth,
@@ -89,7 +90,7 @@ export class VehicleSounds {
     v.cls = cls;
     if (!p.pedal) { if (E.waves[p.wave]) v.a.setPeriodicWave(E.waves[p.wave]); v.gb.gain.setValueAtTime(p.sub * 0.6, t); v.ga.gain.setValueAtTime(0.6, t); }
     else { v.ga.gain.setValueAtTime(0, t); v.gb.gain.setValueAtTime(0, t); }
-    v.nf.frequency.setValueAtTime(p.nf || 1000, t); v.nf.Q.value = p.pedal ? 1.2 : 0.9;
+    v.nf.frequency.setValueAtTime(p.nf || 1000, t); v.nf.frequency._to = p.nf || 1000; v.nf.Q.value = p.pedal ? 1.2 : 0.9;
     v.filt.Q.value = p.q || 1;
     const hn = p.horn || [440, 554];
     for (let i = 0; i < 3; i++) { const o = v.h[i]; if (E.waves[p.hw]) o.setPeriodicWave(E.waves[p.hw]); else o.type = p.hw || 'square'; o.frequency.setValueAtTime(hn[i] || hn[0] * 1.5, t); }
@@ -102,6 +103,7 @@ export class VehicleSounds {
     const E = this.E, L = E.listener, t = this.ctx.currentTime;
     // ---- each vehicle in earshot: its speed, throttle and engine state ----
     const mine = S.pred && S.pred.kind === 'veh' ? S.ctrlId : 0;
+    if (mine !== this.mine) { const was = this.states.get(this.mine); if (was) was.mine = false; this.mine = mine; }   // (out of your car: it's just a car)
     for (const v of F.vehs) {
       const def = VEHICLE_BY_INDEX[v.d && v.d.m];
       if (!def) continue;
@@ -173,7 +175,7 @@ export class VehicleSounds {
       if (!v) break;
       v.veh = id; st.voice = v;
       this.dress(v, st.cls, st.sir, t);
-      v.out.gain.setValueAtTime(0, t);
+      v.out.gain.setValueAtTime(0, t); v.out.gain._to = 0;
       this.wake(v);
     }
   }
@@ -181,7 +183,7 @@ export class VehicleSounds {
     const E = this.E, L = E.listener, sp = this.sp, tc = 0.04;
     for (const v of this.voices) {
       if (!v.veh) {
-        v.out.gain.setTargetAtTime(0, t, 0.05); v.sg.gain.setTargetAtTime(0, t, 0.05); v.hg.gain.setTargetAtTime(0, t, 0.02); v.qg.gain.setTargetAtTime(0, t, 0.05);
+        setp(v.out.gain, 0, t, 0.05); setp(v.sg.gain, 0, t, 0.05); setp(v.hg.gain, 0, t, 0.02); setp(v.qg.gain, 0, t, 0.05);
         if (!v.sleeping && t - v.quietAt > 0.5) this.sleep(v);
         continue;
       }
@@ -192,30 +194,30 @@ export class VehicleSounds {
       let lp = sp.lp, g = sp.gain;
       if (st.mine) { g = Math.max(g, 0.9); lp = 18000; }
       if (L.inside && !st.mine) { lp = Math.min(lp, 800); g *= 0.45; }
-      v.out.gain.setTargetAtTime(g * (st.mine ? 1 : 0.8), t, tc);
-      v.lp.frequency.setTargetAtTime(lp, t, tc);
-      if (v.pan) v.pan.pan.setTargetAtTime(st.mine ? sp.pan * 0.3 : sp.pan, t, tc);
+      setp(v.out.gain, g * (st.mine ? 1 : 0.8), t, tc);
+      setp(v.lp.frequency, lp, t, tc);
+      if (v.pan) setp(v.pan.pan, st.mine ? sp.pan * 0.3 : sp.pan, t, tc);
       const cents = 1200 * Math.log2(st.dop);
       // the engine
       if (p.pedal) {   // a bicycle: the chain ticking as it's pedalled, the freewheel's faster, softer tick coasting
         const moving = st.spd > 20, coast = st.thr < 0.2;
-        v.lfo.frequency.setTargetAtTime(coast ? 16 : Math.max(2, st.spd / 22), t, 0.1);
-        v.amd.gain.setTargetAtTime(0.5, t, 0.1); v.amp.gain.setTargetAtTime(0.5, t, 0.1);
-        v.ng.gain.setTargetAtTime(moving ? (coast ? 0.05 : 0.1) : 0, t, 0.08);
-        v.filt.frequency.setTargetAtTime(9000, t, 0.1);
-        v.eng.gain.setTargetAtTime(p.vol, t, 0.1);
+        setp(v.lfo.frequency, coast ? 16 : Math.max(2, st.spd / 22), t, 0.1);
+        setp(v.amd.gain, 0.5, t, 0.1); setp(v.amp.gain, 0.5, t, 0.1);
+        setp(v.ng.gain, moving ? (coast ? 0.05 : 0.1) : 0, t, 0.08);
+        setp(v.filt.frequency, 9000, t, 0.1);
+        setp(v.eng.gain, p.vol, t, 0.1);
       } else if (st.on) {
         const f = p.f0 + (p.f1 - p.f0) * st.rpm;
-        v.a.frequency.setTargetAtTime(f, t, tc); v.b.frequency.setTargetAtTime(f / 2, t, tc);
-        v.a.detune.setTargetAtTime(cents * 0.5, t, tc); v.b.detune.setTargetAtTime(cents * 0.5, t, tc);
-        v.filt.frequency.setTargetAtTime(p.lp0 + (p.lp1 - p.lp0) * (0.35 * st.rpm + 0.65 * st.thr), t, tc);
-        v.lfo.frequency.setTargetAtTime(f * p.amr, t, tc);
+        setp(v.a.frequency, f, t, tc); setp(v.b.frequency, f / 2, t, tc);
+        setp(v.a.detune, cents * 0.5, t, tc); setp(v.b.detune, cents * 0.5, t, tc);
+        setp(v.filt.frequency, p.lp0 + (p.lp1 - p.lp0) * (0.35 * st.rpm + 0.65 * st.thr), t, tc);
+        setp(v.lfo.frequency, f * p.amr, t, tc);
         const am = p.am * (p.boat ? 1 - 0.5 * st.rpm : 1);
-        v.amd.gain.setTargetAtTime(am * 0.5, t, tc); v.amp.gain.setTargetAtTime(1 - am * 0.5, t, tc);
-        v.ng.gain.setTargetAtTime(p.noise * (0.5 + st.thr) + (p.boat ? Math.min(0.5, st.spd / 900) : 0), t, tc);   // (a boat's wash rises with its speed)
-        v.nf.frequency.setTargetAtTime(p.nf * (p.boat ? 0.8 + st.rpm : 1), t, tc);
-        v.eng.gain.setTargetAtTime(p.vol * (0.5 + 0.5 * st.thr) * (st.mine ? 1 : 0.85), t, 0.06);
-      } else v.eng.gain.setTargetAtTime(0, t, 0.08);
+        setp(v.amd.gain, am * 0.5, t, tc); setp(v.amp.gain, 1 - am * 0.5, t, tc);
+        setp(v.ng.gain, p.noise * (0.5 + st.thr) + (p.boat ? Math.min(0.5, st.spd / 900) : 0), t, tc);   // (a boat's wash rises with its speed)
+        setp(v.nf.frequency, p.nf * (p.boat ? 0.8 + st.rpm : 1), t, tc);
+        setp(v.eng.gain, p.vol * (0.5 + 0.5 * st.thr) * (st.mine ? 1 : 0.85), t, 0.06);
+      } else setp(v.eng.gain, 0, t, 0.08);
       // the siren
       if (st.sir) {
         const ph = (t + v.veh * 1.7) % 11;
@@ -223,21 +225,21 @@ export class VehicleSounds {
         if (st.sir === 'police' && ph > 8) { base = 1080; rate = 5.5; depth = 330; }                // the yelp, now and then
         else if (st.sir === 'ambulance') { base = 850; rate = 0.9; depth = 110; }                   // hi-lo
         else if (st.sir === 'fire') { base = 640; rate = 0.11; depth = 330; }                       // the slow mechanical wail
-        v.s.frequency.setTargetAtTime(base, t, 0.08); v.sl.frequency.setTargetAtTime(rate, t, 0.08); v.sld.gain.setTargetAtTime(depth, t, 0.08);
-        v.s.detune.setTargetAtTime(cents, t, tc);
-        v.sg.gain.setTargetAtTime(st.sir === 'fire' ? 0.07 : 0.06, t, 0.05);
+        setp(v.s.frequency, base, t, 0.08); setp(v.sl.frequency, rate, t, 0.08); setp(v.sld.gain, depth, t, 0.08);
+        setp(v.s.detune, cents, t, tc);
+        setp(v.sg.gain, st.sir === 'fire' ? 0.07 : 0.06, t, 0.05);
         if (v.sir !== st.sir) { v.sir = st.sir; v.s.setPeriodicWave(this.E.waves[st.sir === 'fire' ? 'organ' : st.sir === 'ambulance' ? 'pulse12' : 'soft']); }
-      } else v.sg.gain.setTargetAtTime(0, t, 0.08);
+      } else setp(v.sg.gain, 0, t, 0.08);
       // the horn
-      v.hg.gain.setTargetAtTime(st.horn && !p.pedal ? v.hscale : 0, t, st.horn ? 0.01 : 0.03);
-      for (const o of v.h) o.detune.setTargetAtTime(cents, t, tc);
+      setp(v.hg.gain, st.horn && !p.pedal ? v.hscale : 0, t, st.horn ? 0.01 : 0.03);
+      for (const o of v.h) setp(o.detune, cents, t, tc);
       // the tyres
       const drift = (st.flags & VF.DRIFT) && st.spd > 60;
       if (drift) {
         const q = p.boat ? [2600, 0.6] : p.pedal ? [800, 1] : [1700 + 500 * Math.sin(t * 6.3 + v.veh), 7];
-        v.qf.frequency.setTargetAtTime(q[0], t, 0.03); v.qf.Q.value = q[1];
-        v.qg.gain.setTargetAtTime((p.boat ? 0.25 : p.pedal ? 0.2 : 0.5) * Math.min(1, st.spd / 260), t, 0.04);
-      } else v.qg.gain.setTargetAtTime(0, t, 0.06);
+        setp(v.qf.frequency, q[0], t, 0.03); v.qf.Q.value = q[1];
+        setp(v.qg.gain, (p.boat ? 0.25 : p.pedal ? 0.2 : 0.5) * Math.min(1, st.spd / 260), t, 0.04);
+      } else setp(v.qg.gain, 0, t, 0.06);
     }
   }
 
@@ -293,8 +295,9 @@ export class VehicleSounds {
   }
   silence() {
     const t = this.ctx.currentTime;
-    for (const v of this.voices) { if (v.veh) { const st = this.states.get(v.veh); if (st) st.voice = null; } v.veh = 0; v.out.gain.setTargetAtTime(0, t, 0.05); v.quietAt = t; }
+    for (const v of this.voices) { if (v.veh) { const st = this.states.get(v.veh); if (st) st.voice = null; v.quietAt = t; } v.veh = 0; setp(v.out.gain, 0, t, 0.05); }
     if (this.train.on) this.train.g.gain.setTargetAtTime(0, t, 0.2);
+    this.idle(t);
   }
   idle(t) { for (const v of this.voices) if (!v.veh && !v.sleeping && t - v.quietAt > 0.5) this.sleep(v); }
 }

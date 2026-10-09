@@ -6,6 +6,7 @@
 // creature or the town: birds by day, crickets and an owl at night, gulls by the sea, a dog, a far siren, a horn;
 // rain pattering; a fire's crackle near a lit campfire or a burning car. Never on a fixed loop: every gap is random.
 import { T, TILE, VF } from '../../shared/constants.js';
+import { setp } from './engine.js';
 
 const R = Math.random, rr = (a, b) => a + R() * (b - a);
 const URBAN = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT, T.BUILDING, T.WALL, T.BRIDGE]);
@@ -136,7 +137,7 @@ export class Ambience {
       const b = B[name], w = want[name];
       if (w > 0.002 && !b.on) { b.g.connect(name === 'sea' || name === 'surf' ? this.pan || this.out : this.out); b.on = true; }
       if (b.on) {
-        b.g.gain.setTargetAtTime(w, t, name === 'fire' ? 0.4 : 1.2);
+        setp(b.g.gain, w, t, name === 'fire' ? 0.4 : 1.2);
         if (w <= 0.002) { if (!b.quietAt) b.quietAt = t; else if (t - b.quietAt > 6) { try { b.g.disconnect(); } catch { /* gone */ } b.on = false; b.quietAt = 0; } } else b.quietAt = 0;
       }
     }
@@ -153,6 +154,11 @@ export class Ambience {
   }
   silence() {
     const t = this.ctx.currentTime;
-    for (const name in this.beds) { const b = this.beds[name]; if (b.on) b.g.gain.setTargetAtTime(0, t, 0.5); }
+    for (const name in this.beds) {
+      const b = this.beds[name];
+      if (!b.on) continue;
+      setp(b.g.gain, 0, t, 0.5);
+      if (!b.quietAt) b.quietAt = t; else if (t - b.quietAt > 6) { try { b.g.disconnect(); } catch { /* gone */ } b.on = false; b.quietAt = 0; }
+    }
   }
 }

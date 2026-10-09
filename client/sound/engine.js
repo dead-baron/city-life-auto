@@ -10,6 +10,15 @@ import { INSTR } from './instruments.js';
 
 const TINY = 0.0001;
 
+// Ease a parameter towards v (time constant tc) - unless that's where it's already going: the continuous voices
+// update many parameters many times a second, and an unchanged value shouldn't add to the param's timeline.
+export function setp(param, v, t, tc) {
+  const last = param._to;
+  if (last !== undefined && Math.abs(v - last) <= Math.max(1e-4, Math.abs(last) * 0.004)) return;
+  param._to = v;
+  param.setTargetAtTime(v, t, tc);
+}
+
 export class SoundEngine {
   constructor(ctx, mixer, { voices = 24 } = {}) {
     this.ctx = ctx; this.mix = mixer;

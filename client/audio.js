@@ -20,7 +20,7 @@ export function initAudio() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
   const mobile = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   loading = import('./sound/index.js')
-    .then((m) => { sys = m.createSound(ctx, settings.sound, { mobile }); applyOff(sys.mix.prefs); })
+    .then((m) => { sys = m.createSound(ctx, settings.sound, { mobile }); applyOff(sys.mix.prefs); if (/[?&]debug\b/.test(location.search)) window.__snd = sys; })
     .catch((e) => console.warn('[sound] could not load', e));
 }
 // the first tap, click or key anywhere (the title screen's music starts with it)
@@ -28,9 +28,12 @@ const first = () => { for (const ev of FIRST) window.removeEventListener(ev, fir
 const FIRST = ['pointerdown', 'touchend', 'keydown', 'click'];
 if (typeof window !== 'undefined') for (const ev of FIRST) window.addEventListener(ev, first, { passive: true, capture: true });
 
-export function sfx(name, vol = 1) { if (sys && vol > 0.02) sys.legacy(name, vol); }
-export function soundEvent(ev, S) { return sys ? sys.event(ev, S) : false; }
-export function soundFrame(F, S) { if (sys) sys.frame(F, S); }
+// (a fault in the sound is reported, once per kind, and never stops the game)
+const seen = new Set();
+function fault(where, e) { const k = where + (e && e.message); if (seen.size < 50 && !seen.has(k)) { seen.add(k); console.warn('[sound] ' + where, e); } }
+export function sfx(name, vol = 1) { if (sys && vol > 0.02) { try { sys.legacy(name, vol); } catch (e) { fault('sfx ' + name, e); } } }
+export function soundEvent(ev, S) { if (!sys) return false; try { return sys.event(ev, S); } catch (e) { fault('event ' + (ev && ev.e), e); return false; } }
+export function soundFrame(F, S) { if (sys) { try { sys.frame(F, S); } catch (e) { fault('frame', e); } } }
 
 // sound switched off: the audio sleeps (no work for a phone), and wakes when it's back on
 function applyOff(p) {

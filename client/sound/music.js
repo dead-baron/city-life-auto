@@ -6,6 +6,8 @@
 // an echo. Each song plays through its own chain (level, low-pass, pan) so the club can be muffled through its
 // walls and placed where it is. All melodies here are original.
 
+import { setp } from './engine.js';
+
 const R = Math.random;
 const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const _ = -1;   // (a held note)
@@ -101,9 +103,9 @@ export class Music {
     p.want = level;
     if (level > 0.001 && !p.on) { p.lvl.connect(this.E.mix.mus); p.on = true; p.step = 0; p.nextT = t + 0.1; p.quietAt = 0; }
     if (!p.on) return;
-    p.lvl.gain.setTargetAtTime(level, t, level > p.lvl.gain.value ? 0.6 : 0.9);
-    p.lp.frequency.setTargetAtTime(lp, t, 0.3);
-    if (p.pan) p.pan.pan.setTargetAtTime(pan, t, 0.3);
+    setp(p.lvl.gain, level, t, level > p.lvl.gain.value ? 0.6 : 0.9);
+    setp(p.lp.frequency, lp, t, 0.3);
+    if (p.pan) setp(p.pan.pan, pan, t, 0.3);
   }
   // schedule the notes due in the next ~0.3 s (from the frame and from a timer, whichever comes first)
   tick() {

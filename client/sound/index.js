@@ -21,7 +21,7 @@ export function createSound(ctx, prefs, { mobile = false } = {}) {
   const music = new Music(E);
   const places = new Places(E, music);
   const people = new People(E);
-  const titleEl = document.getElementById('title');
+  const titleEl = document.getElementById('title'), tutEl = document.getElementById('tutorial');
   let S = null, quiet = false, scene = 'title', lastFrame = 0, inside = false, lastT = ctx.currentTime;
   const unquiet = () => { quiet = false; };
   const A = {
@@ -66,13 +66,13 @@ export function createSound(ctx, prefs, { mobile = false } = {}) {
     },
     // a few times a second whatever the frame does: the scene (the title screen has its music), the music's notes
     pulse() {
-      const title = !!(titleEl && !titleEl.classList.contains('hidden'));
+      const title = !!(titleEl && !titleEl.classList.contains('hidden')) || !!(tutEl && !tutEl.classList.contains('hidden'));   // (the title screen, the city tour)
       const was = scene;
       scene = title ? 'title' : 'game';
       music.set('title', title && !document.hidden ? 0.55 : 0);
       if (scene !== was && scene === 'game') music.set('title', 0);
       if (document.hidden) music.silence();
-      if (performance.now() - lastFrame > 600) { veh.silence(); amb.silence(); places.music.set('club', 0); places.music.set('shop', 0); places.music.set('lobby', 0); }
+      if (performance.now() - lastFrame > 2000) { veh.silence(); amb.silence(); places.music.set('club', 0); places.music.set('shop', 0); places.music.set('lobby', 0); }
       music.tick();
       E.update(null, inside);
     },
