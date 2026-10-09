@@ -13,6 +13,7 @@ export * from './lookcore.js';
 const rint = (r, n) => Math.floor(r() * n) % n;
 const rpick = (r, a) => a[rint(r, a.length)];
 const pieceList = (slot, base, style) => PIECES.filter((p) => p && p.slot === slot && fits(p, base) && !p.d.issued && (!style || p.tags.includes(style)));   // (never an issued uniform)
+const EVERYDAY_GLASSES = ['sun', 'round', 'frames', 'browline', 'rimless', 'roundsun'];   // (the glasses anyone might have on; the rest by style)
 const NEUTRAL = ['white', 'black', 'charcoal', 'grey', 'navy', 'denim', 'cream', 'khaki', 'brown', 'tan', 'olive'].map(col);
 // A whole random look from a seed. base: 'm' | 'f' | null (either); style: a STYLES id to dress in (null: any).
 export function randomLook(seed, base = null, style = null) {
@@ -47,7 +48,7 @@ export function randomLook(seed, base = null, style = null) {
   L.outfit.jacket = pickPiece('jacket', 0.4);
   L.outfit.shoes = pickPiece('shoes');
   L.outfit.hat = pickPiece('hat', 0.3);
-  L.outfit.glasses = st === 'disguise' ? pickPiece('glasses', 0.6) : r() < 0.25 ? (() => { const l = pieceList('glasses', base, null).filter((p) => p.d.k === 'sun' || p.d.k === 'round'); const P = rpick(r, l); return { id: P.i, c: P.c, t: P.t, p: 0 }; })() : null;
+  L.outfit.glasses = st === 'disguise' ? pickPiece('glasses', 0.6) : r() < 0.25 ? (() => { const l = pieceList('glasses', base, null).filter((p) => EVERYDAY_GLASSES.includes(p.d.k) && !p.d.nostreet); const P = rpick(r, l); return { id: P.i, c: P.c, t: P.t, p: 0 }; })() : null;
   L.outfit.jewel = pickPiece('jewel', 0.25);
   L.outfit.bag = pickPiece('bag', 0.2);
   return validLook(L);

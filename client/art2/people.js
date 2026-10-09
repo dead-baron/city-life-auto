@@ -36,7 +36,8 @@
 // private areas only; app.censored dresses them in swimwear instead. Adults only.
 // Dither and texture patterns are anchored to the feet, so they hold still from frame to frame.
 // Also exported: POSES (frames per pose), SEATS (seat heights), PERSON_CAM, HAIR_STYLES, TOP_KINDS, SKIN_TONES,
-// cloth(colour) -> 5-step ramp, ARCHETYPES (named looks, C2/C3) and randomPerson(seed, archetype) -> app.
+// cloth(colour) -> 5-step ramp. (Named looks for scenes, ARCHETYPES and randomPerson: client/art2/peoplepresets.js; the face
+// close up: client/art2/peopleclose.js.)
 import { GBuf, F_CHAR, F_NOCAST, hash, bayer } from './gbuf.js';
 import { ITEMS, drawItem, itemSpan } from './items.js';
 import { CLUBS } from '../../shared/clubs.js';   // (the biker clubs' patches: task #366)
@@ -769,6 +770,7 @@ function wardrobe(A, D, TF, seed) {
   const hairR = hairRamp(A.hair?.color ?? 0), inner = cloth(A.top?.inner || T.inner || A.top?.color2 || 'white'), tie = cloth(A.top?.tie || A.top?.color2 || 'navy');
   const hasInner = !!A.top && 'inner' in A.top, trim = cloth(A.top?.trim || 'white'), chainR = typeof A.chain === 'string' ? cloth(A.chain) : null;
   const tat = A.tattoo === true ? 3 : A.tattoo | 0, jw = A.jewel || null, jwR = jw ? cloth(jw.color || 'gold') : null;
+  const fm = A.fmask ? A.fmask.k : null, fmC = fm ? cloth(A.fmask.c) : null, fmHead = fm === 'pig' || fm === 'alien';   // (CP2's masks)
   const W = { T, tk, bk, skin, top, top2, bot, shoe, sk, hairR, seed, bare: bk === 'none' || (tk === 'none' && D.fem) };
   const dark = (R) => R[Math.max(0, R.length - 4)], gold0 = cloth('gold'), white = cloth('white'), black = cloth('black'), silver = cloth('#c8ccd4');
   const gold = gold0, chainC = chainR || gold0;
@@ -811,14 +813,19 @@ function wardrobe(A, D, TF, seed) {
     if ((T.tank || T.swimsuit) && z > D.shUp - 1.7 && au > 0.33) return au < 0.5 ? (T.dress ? top : top) : skin;   // bare shoulders, straps
     if (T.tank && front && z > D.chestUp + 2.9 - (0.33 - au) * 3 && au < 0.33) return skin;                       // scoop neckline
     if (T.vneck && front && z > D.chestUp + 3.4 - (0.32 - au) * 8 && au < 0.32) return skin;
+    if (A.chain && front && !T.open && au < 0.36) {   // (from the neck's sides down to a U on the chest: a V of three art pixels at the game's size)
+      const cz = D.shUp - 0.6 - (1 - (u / 0.36) * (u / 0.36)) * 3;
+      if (Math.abs(z - cz) < (jw && jw.chain === 2 ? 0.8 : 0.5) || (jw && jw.pendant && au < 0.07 && z < cz && z > cz - 1.6)) { Q.gloss = 1; return chainC; }
+    }
     let R = top;
     // ---- a biker club's back patch (NP4, task #366): the top rocker (the club's name, a curved band), the emblem in a round
     // field in the middle, the bottom rocker - in the club's colours (shared/clubs.js)
     if (T.vest && back && A.top?.patch !== undefined) { const pc = clubPatch(A.top.patch, u, z, D); if (pc) return cloth(pc); }
     // ---- end club patch
     // straps of a backpack or a bag across the chest
-    if (A.back === 'backpack' && Math.abs(au - 0.5) < 0.09 && z > D.waistUp && (front || back)) return black;
-    if (bag && front && Math.abs(-u * 0.9 + (z - D.chestUp) / 6 - 0.15) < 0.11) return cloth('leather');
+    if ((A.back === 'backpack' || A.back === 'guitarcase') && Math.abs(au - 0.5) < 0.09 && z > D.waistUp && (front || back)) return black;
+    if (A.rig && Math.abs(au - 0.42) < 0.08 && z > D.chestUp && (front || back)) return cloth(A.rig);
+    if (bag && front && Math.abs(-u * 0.9 + (z - D.chestUp) / 6 - 0.15) < 0.11) return cloth(A.bagBig && A.bagColor ? A.bagColor : 'leather');   // (a tote's or a messenger's strap its own)
     if (T.vest || T.bib || T.apron) {
       // a panel over a shirt: the shirt shows round the arms and the collar
       const panel = T.bib ? (front && au < 0.55 && z < D.chestUp + 2.6) || (au > 0.25 && au < 0.42 && z > D.chestUp) || z < D.waistUp - 1 : T.apron ? front && au < 0.62 && z < D.chestUp + 2.2 : !(Q.part === 'shb' && au > 0.62) && !(front && au < 0.14 && z > D.chestUp);
@@ -899,12 +906,15 @@ function wardrobe(A, D, TF, seed) {
   };
   W.neck = (Q) => {
     if (T.turtle) return top;
+    if (fm === 'gaiter' || fm === 'gas' || fmHead) return fmC;
     if (jw && jw.choker && Q.l0 > 0.3 && Q.l0 < 0.62) { if (jw.studs && (Math.round(Q.l1 * 8 + Q.l2 * 8) & 1)) { Q.gloss = 1; return cloth(jw.trim || 'silver'); } return jwR; }
     if ((tat & 4) && hash(Math.floor(Q.l0 * 6), Math.floor((Q.l1 + 2) * 3), seed + 4) > 0.55) return ink;
     return skin;
   };
   W.ear = (Q) => {
-    if (Q.l2 < -0.5 && ((jw && jw.ear) || ((A.piercings | 0) & 1))) { Q.gloss = 1; return jw && jw.ear ? jwR : silver; }   // earrings
+    if (fmHead) return fmC;
+    if (Q.l2 < (jw && jw.ear === 2 ? -0.22 : -0.5) && ((jw && jw.ear) || ((A.piercings | 0) & 1))) { Q.gloss = 1; return jw && jw.ear ? jwR : silver; }   // earrings (pearl drops longer)
+    if (jw && jw.cuff && Q.l2 > 0.3) { Q.gloss = 1; return jwR; }   // ear cuffs, up the rim
     if (Math.abs(Q.l0) > 0.45 && Math.abs(Q.l1) < 0.5 && Math.abs(Q.l2) < 0.55) Q.k -= 0.3; return skin;
   };
   W.skinM = () => skin;
@@ -928,6 +938,7 @@ function wardrobe(A, D, TF, seed) {
     }
     if (slv > 0 && slv < 1 && along < slv + 0.03) Q.k -= 0.18;           // the sleeve's shadow on the arm
     if (gl && along > 0.88) return gl;
+    if (jw && jw.cuffband && Q.part === 'fa' && along > 0.78 && along < 0.9) return jwR;
     if (jw && Q.part === 'fa' && ((jw.watch && along > 0.82 && along < 0.88) || (jw.bangles && ((along > 0.8 && along < 0.83) || (along > 0.85 && along < 0.88))))) { Q.gloss = 1; return jwR; }
     if ((tat & 1) && along > 0.25 && along < 0.85 && hash(Math.floor(along * 14), Math.floor((Q.l1 + 2) * 2.4), seed) > 0.55) return ink;
     return skin;
@@ -958,22 +969,39 @@ function wardrobe(A, D, TF, seed) {
     if (A.bottom?.pattern === 'camo') return camo(Q) || bot;
     return bot;
   };
-  // shoes: sneakers (white rubber sole, laces), leather shoes, boots, heels, sandals, bare feet
-  const sole = sk === 'sneaker' ? cloth(A.shoeTrim && A.shoeTrim !== A.shoes ? A.shoeTrim : lum(shoe[3]) > 0.7 ? '#b8b4ae' : '#ece8e0') : sk === 'sandal' || sk === 'barefoot' ? skin : cloth('#2a2228');
+  // shoes: sneakers (white rubber sole, laces), leather shoes, boots, heels, sandals, bare feet; CP4's: a sandal's straps
+  // in its own colour (two, a flip-flop's thong, a slide's wide band), socks, a fur cuff, a buckled strap, gloss, a sole in
+  // the trim colour (espadrilles, chunky soles), a check
+  const sole = A.shoe_sole || A.shoe_chunky ? cloth(A.shoeTrim || '#c8a070') : sk === 'sneaker' ? cloth(A.shoeTrim && A.shoeTrim !== A.shoes ? A.shoeTrim : lum(shoe[3]) > 0.7 ? '#b8b4ae' : '#ece8e0') : sk === 'sandal' || sk === 'barefoot' ? skin : cloth('#2a2228');
+  const socks = A.shoe_socks ? cloth('#ece8e0') : null, furC = A.shoe_fur ? cloth('#ece2cc') : null, shoePat = A.shoePat ? patFn({ pattern: A.shoePat, color: A.shoes, trim: A.shoeTrim }) : null;
   W.shoeKind = sk;
   W.shoe = (Q) => {
-    if (sk === 'barefoot') return skin;
-    if (sk === 'sandal') { if (Q.l2 < -0.3) return cloth('#6a4a32'); return Math.abs(Q.l1 - 0.25) < 0.12 || Math.abs(Q.l1 + 0.3) < 0.1 ? cloth('#6a4a32') : skin; }
+    if (sk === 'barefoot') return socks || skin;
+    if (sk === 'sandal') {
+      if (Q.l2 < -0.3) return shoe;
+      const st = A.shoe_strap | 0;
+      return (st === 1 ? Math.abs(Q.l1 - 0.3) < 0.1 && Q.l2 > -0.1 : st === 2 ? Math.abs(Q.l1 - 0.05) < 0.32 && Q.l2 > -0.2 : Math.abs(Q.l1 - 0.25) < 0.12 || Math.abs(Q.l1 + 0.3) < 0.1) ? shoe : socks || skin;
+    }
     if (Q.l2 < -0.32) return sole;
+    if (furC && (Q.part === 'boot' ? Q.l0 > 0.7 : Q.l2 > 0.3 && Q.l1 < 0.2)) { Q.k += hash(Q.x, Q.y, 5) * 0.2 - 0.1; return furC; }
+    if (A.shoe_buckle && Q.part === 'boot' && Math.abs(Q.l0 - 0.45) < 0.11) { if (Math.abs(Q.l1) > 0.55) { Q.gloss = 1; return silver; } Q.k -= 0.28; }
     if (sk === 'sneaker' && Q.l1 > 0.05 && Q.l1 < 0.6 && Math.abs(Q.l0) < 0.3 && Q.l2 > 0.25 && ((Math.round(Q.l1 * 8)) & 1)) return white;
-    if (sk === 'shoe' || sk === 'heel' || sk === 'boot') Q.gloss = 0.6;
-    return shoe;
+    if (A.shoe_gloss) Q.gloss = 1;
+    else if (sk === 'shoe' || sk === 'heel' || sk === 'boot') Q.gloss = 0.6;
+    return (shoePat && shoePat(Q)) || shoe;
   };
   W.sole = () => sole;
-  // head: skin, beard / stubble / moustache, a face bandana, a balaclava
+  // head: skin, beard / stubble / moustache, a face bandana, a balaclava; CP2's masks (A.fmask): a pig's or an alien's
+  // whole head, a clown's or a skull's face (the nose red, or a hole), a gas mask's rubber, a neck gaiter to the nose
   const bandana = A.bandana ? cloth(typeof A.bandana === 'string' ? A.bandana : 'red') : null, maskR = cloth(typeof A.mask === 'string' ? A.mask : '#24242a');
   W.head = (Q) => {
     const a = Q.l0, b = Q.l1, c = Q.l2;
+    if (fm) {
+      if (fmHead) return fmC;
+      if (fm === 'clown' || fm === 'skull') { if (Q.part === 'nose') return fm === 'clown' ? cloth(A.fmask.t) : dark(fmC); if (b > 0.2 && c < 0.62) return fmC; }
+      else if (fm === 'gas') { if (Q.part !== 'head' || (b > 0.25 && c < 0.35) || Math.abs(c - 0.32) < 0.09) return fmC; }   // (the jaw and the nose under it: the jaw's and the nose's own coordinates)
+      else if (fm === 'gaiter' && (Q.part !== 'head' || c < 0.02 + Math.abs(a) * 0.04)) return fmC;
+    }
     if (A.mask) { if (b > 0.5 && c > -0.02 && c < 0.3 && Math.abs(a) < 0.62) return skin; if (A.maskTrim && c > 0.42 && c < 0.6) return cloth(A.maskTrim); return maskR; }
     if (A.medmask && b > 0.15 && c < -0.06 && c > -0.88 && Math.abs(a) < 0.9) { if (Math.abs(c + 0.4) < 0.04) Q.k -= 0.15; return cloth(A.medmask); }
     if (bandana && b > 0.05 && c < 0.0 + Math.abs(a) * 0.08 && c > -0.95) { if (b > 0.6 && Math.abs(a) < 0.08) Q.k -= 0.2; return bandana; }
@@ -1057,7 +1085,7 @@ function wardrobe(A, D, TF, seed) {
   W.case = (Q) => { Q.gloss = 0.6; if (Math.abs(Q.l2 - 0.55) < 0.08 || Math.abs(Q.l0) > 0.94) Q.k -= 0.2; return cloth(A.bagColor || '#4a2e1e'); };
   W.tool = (Q) => (Q.l2 > 0.85 && (Math.round(Q.l0 * 4) & 1) ? cloth(A.bagColor ? '#c8ccd4' : '#c8302c') : cloth(A.bagColor || '#3a3632'));
   W.beltbag = (Q) => { if (Math.abs(Q.l2) < 0.12) Q.k -= 0.2; return cloth(A.beltBag || 'black'); };
-  W.paper = (Q) => (Q.l2 > 0.86 ? cloth('cream') : cloth(Q.part === 'bagL' ? '#d84a6a' : '#e8dcc8'));
+  W.paper = (Q) => (Q.l2 > 0.86 ? cloth('cream') : cloth(Q.part === 'bagL' ? (A.bagColor ? '#c8262b' : '#d84a6a') : A.bagColor || '#e8dcc8'));
   W.cup = (Q) => (Q.l0 > 0.3 && Q.l0 < 0.75 ? cloth('#8a5a36') : cloth('#f0ece4'));
   W.wood = (Q) => { if (Q.l0 > 0.94) Q.k += 0.2; return cloth('#6a4428'); };
   W.board = (Q) => (Math.abs(Q.l0) < 0.12 ? cloth('teal') : cloth('#f0ece4'));
@@ -1093,11 +1121,12 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   E(at([0, 0.42, -0.5]), HD, [hr[0] * (D.jawW || 0.74), hr[1] * 0.6, hr[2] * 0.5], GR.HEAD, 'jaw', W.head);
   const nz = NOSE[A.face?.nose | 0] || NOSE[0];
   E(at([0, 0.97, -0.24]), HD, [0.9 * nz[0], 1.1 * nz[1], 1.15 * nz[2]], GR.HEAD, 'nose', W.head);
-  if (A.beard === 'long' && !A.mask) E(at([0, 0.5, -1.02]), HD, [hr[0] * 0.48, hr[1] * 0.34, hr[2] * 0.42], GR.HAIR, 'beard', W.hairLock);
+  if (A.beard === 'long' && !A.mask && !A.fmask) E(at([0, 0.5, -1.02]), HD, [hr[0] * 0.48, hr[1] * 0.34, hr[2] * 0.42], GR.HAIR, 'beard', W.hairLock);
   for (const s of [-1, 1]) E(at([s * 0.97, -0.1, 0.04]), HD, [1.1, 1.3, 1.75], GR.HEAD, 'ear', W.ear);
   hairPrims(E, C, A, D, P, S, W, at, hat, seed);
   if (hat) hatPrims(E, C, A, D, S, W, at, hat);
   if (hat && A.hat.lamp) lampPrims(E, S, at, hat);   // (a lamp on the forehead: lights to carry, below)
+  if (A.fmask || A.masq) maskPrims(E, C, B, A, at, HD, hr);
   // arms
   for (const [k, s, g] of [['L', -1, GR.ARML], ['R', 1, GR.ARMR]]) {
     const sh = S['sh' + k], el = S['el' + k], ha = S['ha' + k], fd = vnorm(vsub(ha, el)), wr = vsub(ha, vmul(fd, 1.25));
@@ -1115,7 +1144,8 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     const FF = mmul(rz(P.pelYaw + s * P.splay), rx(P['toe' + k])), fr = W.shoeKind === 'barefoot' || W.shoeKind === 'sandal' ? [D.foot[0] * 0.8, D.foot[1] * 0.9, D.foot[2] * 0.75] : W.shoeKind === 'heel' ? [D.foot[0] * 0.85, D.foot[1] * 0.92, D.foot[2] * 0.9] : D.foot;
     const fc = vadd(an, mv(FF, [0, 1.5, -1.62]));
     E(fc, FF, fr, g, 'shoe', W.shoe, (a, b, c) => c > -0.62);
-    if (W.shoeKind !== 'barefoot' && W.shoeKind !== 'sandal') E(vadd(fc, mv(FF, [0, 0.1, -fr[2] * 0.6])), FF, [fr[0] + 0.12, fr[1] + 0.2, 0.55], g, 'sole', W.sole);
+    const th = A.shoe_platform || A.shoe_chunky ? 1.05 : 0.55;   // (a platform or a chunky sole: taller, from the same ground)
+    if (W.shoeKind !== 'barefoot' && W.shoeKind !== 'sandal') E(vadd(fc, mv(FF, [0, 0.1, -fr[2] * 0.6 + th - 0.55])), FF, [fr[0] + (A.shoe_chunky ? 0.4 : 0.12), fr[1] + 0.2, th], g, 'sole', W.sole);
     if (W.shoeKind === 'boot' || (A.hiTop && W.shoeKind === 'sneaker')) { const bt = A.bootTall === 2 ? 8.5 : A.bootTall ? 5 : A.hiTop ? 2.2 : 2.6; C(vadd(an, [0, 0, -0.6]), vadd(an, mv(S.PF, [0, -0.2, bt])), D.shinR[1] + 0.55, D.shinR[1] + (bt > 3 ? 0.65 : 0.45), g, 'boot', W.shoe); }
   }
   // skirts, dresses, coat tails
@@ -1139,9 +1169,11 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   }
   // things carried on the body
   if (A.back === 'backpack') B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 1.3), -0.6])), S.SP, [4.4, 1.7, 5.0], GR.ACC, 'pack', W.pack);
+  if (A.back === 'guitarcase') E(vadd(S.chest, mv(S.SP, [1.0, -(D.chestR[1] + 1.7), -1.6])), mmul(S.SP, ry(0.38)), [3.3, 1.5, 11.5], GR.ACC, 'gcase', (Q) => { Q.gloss = 0.4; if (Math.abs(Q.l2 + 0.25) < 0.05) Q.k -= 0.25; return cloth(A.backColor || 'black'); });
+  if (A.rig) B(vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.8, -0.6])), S.SP, [3.8, 1.0, 2.3], GR.ACC, 'rig', (Q) => { if (Math.abs(Q.l0) < 0.05 || Math.abs(Q.l2 - 0.2) < 0.08) Q.k -= 0.25; return cloth(A.rig); });
   // a robbery's takings (server hotmoney.js; game/host.js puts back 'moneybag' on while the descriptor's mb): a canvas sack, tied off
   if (A.back === 'moneybag') { const sack = (Q) => { if (Q.l2 > 0.6) Q.k -= 0.14; return cloth('#9a8a5c'); }; E(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.3), -1.4])), S.SP, [3.5, 2.4, 3.7], GR.ACC, 'sack', sack); E(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.1), 2.5])), S.SP, [1.2, 1.0, 1.1], GR.ACC, 'sack', (Q) => { Q.k -= 0.22; return cloth('#7a6a44'); }); }
-  if (acc === 'bag') B(vadd(S.pel, mv(S.PF, [-D.pelR[0] - 1.4, 0.6, 1.0])), S.PF, [1.4, 3.6, 2.8], GR.ACC, 'bag', W.leather);
+  if (acc === 'bag') B(vadd(S.pel, mv(S.PF, [-D.pelR[0] - (A.bagBig ? 1.9 : 1.4), 0.6, A.bagBig ? -0.4 : 1.0])), S.PF, A.bagBig ? [1.7, 4.6, 4.4] : [1.4, 3.6, 2.8], GR.ACC, 'bag', W.leather);
   if (acc === 'toolbag') B(vadd(S.pel, mv(S.PF, [D.pelR[0] + 1.2, 0.8, -0.4])), S.PF, [1.4, 2.3, 2.4], GR.ACC, 'tool', W.tool);
   if (A.beltBag) B(vadd(S.pel, mv(S.PF, [0.6, D.pelR[1] + 0.8, 1.1])), S.PF, [2.6, 1.0, 1.2], GR.ACC, 'beltbag', W.beltbag);
   if (P.acc && acc && P.item === null) {
@@ -1165,7 +1197,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
   // style and add their own touch below
   const ex = A.hair?.style || 'short';
   let st = BASE_HAIR[ex] || ex;
-  if (A.mask) return;                                               // a balaclava or a ski mask hides the hair completely
+  if (A.mask || (A.fmask && (A.fmask.k === 'pig' || A.fmask.k === 'alien'))) return;   // a balaclava, a ski mask or a costume head hides the hair completely
   const hatOn = hat && !['bandana', 'headband', 'visor', 'flowers', 'tiara', 'earmuffs', 'catears'].includes(hat);   // (a crown of flowers, a tiara, earmuffs or cat ears sit on the hair as it is)
   if (hatOn) { if (st === 'afro' || st === 'spiky' || st === 'curly' || st === 'mohawk' || st === 'topknot' || st === 'twinbuns' || st === 'curtains' || st === 'shag') st = 'short'; if (['hood', 'helmet', 'hijab', 'turban', 'durag', 'wrap', 'moto', 'skatehelmet'].includes(hat)) return; }   // (all the hair under a hood, a helmet, a hijab, a turban, a durag or a wrap)
   if (st === 'bald') return;
@@ -1324,6 +1356,26 @@ function lampPrims(E, S, at, k) {
   E(at([0, y + 0.1, z]), S.HD, [0.85, 0.55, 0.7], GR.HAT, 'lens', () => LAMP_LENS);
 }
 // ---- end ----
+// CP2's masks that stand off the face: a pig's ears and snout, a gas mask's filters, a welding mask's shield with its
+// dark window, a masquerade mask's feathers
+function maskPrims(E, C, B, A, at, HD, hr) {
+  const k = A.fmask && A.fmask.k, mc = A.fmask ? cloth(A.fmask.c) : null;
+  if (k === 'pig') {
+    for (const s of [-1, 1]) E(at([s * 0.6, -0.05, 0.84]), HD, [1.25, 0.55, 1.5], GR.HAT, 'pigear', () => mc);
+    const sn = cloth(mixHex(A.fmask.c, '#ffffff', 0.2)), hole = cloth('#8a4a58');
+    C(at([0, 0.86, -0.3]), at([0, 1.2, -0.32]), 1.5, 1.4, GR.HAT, 'snout', (Q) => (Q.l0 > 0.97 && Math.abs(Q.l1) > 0.2 && Math.abs(Q.l1) < 0.65 && Math.abs(Q.l2) < 0.4 ? hole : sn));
+  } else if (k === 'gas') {
+    const fc = cloth(A.fmask.t);
+    for (const s of [-1, 1]) C(at([s * 0.38, 0.9, -0.58]), at([s * 0.72, 1.28, -0.72]), 1.25, 1.2, GR.HAT, 'filter', (Q) => { if (Q.l0 > 0.8) Q.k -= 0.25; return fc; });
+  } else if (k === 'welding') {
+    const win = cloth('#141618');
+    B(at([0, 1.0, -0.12]), HD, [hr[0] * 0.9, 1.3, hr[2] * 0.88], GR.HAT, 'weld', (Q) => (Math.abs(Q.l2 - 0.3) < 0.16 && Math.abs(Q.l0) < 0.62 ? win : mc));   // (deep enough that the nose stays behind it)
+  }
+  if (A.masq) {
+    const F = [cloth(A.masq), cloth('#c8262b'), cloth('#7a3ac8')];
+    for (let i = 0; i < 3; i++) C(at([0.55, 0.62, 0.42]), at([0.75 + i * 0.16, 0.5 - i * 0.18, 1.45 + (i === 1 ? 0.15 : 0)]), 0.62, 0.2, GR.HAT, 'feather', () => F[i]);
+  }
+}
 function hatPrims(E, C, A, D, S, W, at, k) {
   // peaks turn up a little and stay short: from the game's high camera a long flat peak would hide the eyes
   const hr = D.head, HD = S.HD, HDb = mmul(HD, rx(-0.24));
@@ -1696,15 +1748,27 @@ function face(fig, P, A, D, w, h, AX, AY) {
   const azE = (s) => (24 + (s === near ? 16 * turn : 0)) * Math.PI / 180;
   let eyes = [-1, 1].map((s) => { const a = azE(s); return { s, p: at(s * Math.sin(a), Math.cos(a) * 0.99, 0.12) }; }).filter((e) => e.p.fc > 0.28 && onHead(e.p.x, e.p.y));
   if (eyes.length === 2 && eyes[0].p.bx === eyes[1].p.bx) eyes = [eyes[0].p.fc > eyes[1].p.fc ? eyes[0] : eyes[1]];   // (one pixel wide: the nearer eye)
-  const glasses = A.glasses, F = A.face || {}, mk = A.makeup || null;
+  const glasses = A.glasses, F = A.face || {}, mk = A.makeup || null, fm = A.fmask ? A.fmask.k : null;
   const iris = F.eyeColor ? hexRgb(F.eyeColor) : null;
   const eyeC = iris ? iris.map((v, i) => Math.round(v * 0.42 + EYE[i] * 0.58)) : EYE;
   const lit = (cc, k) => cc.map((v) => Math.min(255, Math.round(v + (255 - v) * k)));
+  const cx0 = at(0, 1, 0).x, outOf = (e) => (e.p.x < cx0 ? -1 : 1);   // (the side of the face an eye is on)
   if (glasses && eyes.length) {
     const xs = eyes.map((e) => e.p.bx), xa = Math.min(...xs), xb = Math.max(...xs), row = eyes[0].p;
     const span = (col, ext = 0) => { for (let x = xa - ext * 2; x <= xb + ext * 2; x += 2) put({ bx: x, by: row.by }, col); };
-    if (glasses === 'sun' || glasses === 'domino') { const lc = A.lens ? hexRgb(A.lens).map((v) => Math.round(v * 0.6)) : glasses === 'domino' ? hexRgb(A.glassColor || '#1a1a1e') : [26, 28, 38]; span(lc, glasses === 'domino' ? 1 : 0); if (glasses === 'sun') put({ bx: xa, by: row.by }, lit(lc, 0.35)); }
-    else if (glasses === 'goggles') { span(hexRgb(A.glassTrim || '#ef7a1a'), 0); span(hexRgb(A.glassColor || '#1a1a1e'), 0); for (const e of eyes) put(e.p, hexRgb(A.glassTrim || '#ef7a1a')); }
+    const fcol = hexRgb(A.glassColor || '#1a1a1e'), tcol = hexRgb(A.glassTrim || '#d9a21b'), behind = eyeC.map((v) => Math.round(v * 0.5 + 60));   // (an eye behind clear glass)
+    const bridge = (col) => { if (eyes.length === 2 && xb - xa > 2) put({ bx: (xa + xb) / 2 - ((xa + xb) / 2 - AX) % 2, by: row.by }, col); else put(eyes[0].p, col, eyes[0].p.x > cx0 ? 1 : -1); };
+    const strap = (col) => { for (const s of [-1, 1]) for (let t = 0; t <= 1; t += 0.25) { const az = (50 + t * 100) * Math.PI / 180, q = at(s * Math.sin(az), Math.cos(az), 0.14); if (q.fc > 0) put(q, col); } };   // (round the head at the eyes)
+    if (glasses === 'sun' || glasses === 'domino') {
+      const lc = A.lens ? hexRgb(A.lens).map((v) => Math.round(v * 0.6)) : glasses === 'domino' ? fcol : [26, 28, 38];
+      span(lc, glasses === 'domino' || A.glassBig ? 1 : 0); if (glasses === 'sun') put({ bx: xa, by: row.by }, lit(lc, 0.35));
+      if (A.glassCat) for (const e of eyes) put(e.p, fcol, outOf(e), -1);   // (the cat-eye's wings)
+    }
+    else if (glasses === 'goggles') { span(hexRgb(A.glassTrim || '#ef7a1a'), 0); span(fcol, 0); for (const e of eyes) put(e.p, hexRgb(A.glassTrim || '#ef7a1a')); }
+    else if (glasses === 'visor') { const RB = [[214, 64, 58], [240, 168, 40], [60, 128, 222], [150, 72, 204]]; let i = 0; for (let x = xa - 2; x <= xb + 2; x += 2) put({ bx: x, by: row.by }, RB[i++ % 4]); }   // (a shield, mirrored in a rainbow)
+    else if (glasses === 'roundsun' || glasses === 'swim') { const lc = A.lens ? hexRgb(A.lens) : fcol; for (const e of eyes) put(e.p, lc); put(eyes[0].p, lit(lc, 0.45)); if (glasses === 'swim') strap(fcol); else bridge(fcol); }
+    else if (glasses === 'safety') { span([196, 210, 216], 0); for (const e of eyes) put(e.p, lit(behind, 0.25)); strap(tcol); }
+    else if (glasses === 'monocle') { const e = eyes.reduce((a, b) => (b.s > a.s ? b : a)); put(e.p, lit(eyeC, 0.35)); put(e.p, fcol, outOf(e), 0); put(e.p, fcol, outOf(e), 1); for (const o of eyes) if (o !== e) put(o.p, eyeC); }
     else if (glasses === 'patch') {
       // one eye covered, ONE strap round the head (up over the other side)
       const e = eyes.reduce((a, b) => (b.s > a.s ? b : a)), pc = hexRgb(A.glassColor || '#1a1a1e');
@@ -1712,7 +1776,13 @@ function face(fig, P, A, D, w, h, AX, AY) {
       for (const o of eyes) if (o !== e) put(o.p, eyeC);
       for (let t = 0.2; t <= 1; t += 0.2) { const q = at(e.s * (0.45 - t * 1.3), Math.cos(t * 1.4) * 0.9, 0.2 + t * 0.62); if (q.fc > 0) put(q, pc); }
     }
-    else { for (const e of eyes) put(e.p, eyeC.map((v) => Math.round(v * 0.5 + 60))); if (eyes.length === 2 && xb - xa > 2) put({ bx: (xa + xb) / 2 - ((xa + xb) / 2 - AX) % 2, by: row.by }, [74, 56, 50]); else put(eyes[0].p, [74, 56, 50], eyes[0].p.x > at(0, 1, 0).x ? 1 : -1); }
+    else {   // clear glasses: round (a bridge), square frames (the rims beside the eyes; big ones over them too), a browline (a line over them), rimless
+      for (const e of eyes) put(e.p, glasses === 'rimless' ? lit(eyeC, 0.3) : behind);
+      if (glasses === 'frames') for (const e of eyes) { put(e.p, fcol, outOf(e), 0); if (A.glassBig) put(e.p, fcol, 0, -1); }
+      if (glasses === 'browline') for (const e of eyes) put(e.p, fcol, 0, -1);
+      bridge(glasses === 'browline' ? tcol : glasses === 'rimless' ? lit(fcol, 0.2) : fcol);
+      if (A.glassChain) for (const e of eyes) { put(e.p, tcol, outOf(e), 1); put(e.p, tcol, outOf(e), 2); }   // (the chain down from the temples)
+    }
   } else {
     // the look's eyes and brows at the game's size (CC8's options, a pixel each): narrow a squint, sleepy half-lidded,
     // big with the white showing beside, round with lashes over it, hooded with the lid's shadow; thick and bushy brows
@@ -1729,11 +1799,18 @@ function face(fig, P, A, D, w, h, AX, AY) {
       if (B5 === 1 || B5 === 5) { put(e.p, hairC, 0, -1 - up); if (B5 === 5) put(e.p, hairC, out, -1 - up); }
     }
   }
+  // CP2's masks: an alien's big black eyes, a skull's sockets, a gas mask's round lenses, a clown's painted diamonds
+  if (fm) for (const e of eyes) {
+    if (fm === 'alien') { put(e.p, [14, 16, 14]); put(e.p, [14, 16, 14], outOf(e), 0); }
+    else if (fm === 'skull') { put(e.p, [24, 20, 22]); put(e.p, [24, 20, 22], 0, -1); }
+    else if (fm === 'gas') put(e.p, [150, 172, 182]);
+    else if (fm === 'clown') put(e.p, [52, 104, 214], 0, -1);
+  }
   // marks a pixel across can carry: blush, a face tattoo, a scar
-  const covered = A.mask || A.bandana || A.medmask, dot = (l0, l1, l2, col, min = 0.35) => { const q = at(l0, l1, l2); if (q.fc > min) put(q, col); };
+  const covered = A.mask || A.bandana || A.medmask || (fm && fm !== 'clown' && fm !== 'skull'), dot = (l0, l1, l2, col, min = 0.35) => { const q = at(l0, l1, l2); if (q.fc > min) put(q, col); };
   if (!covered && F.freckles) for (const sx of [-1, 1]) dot(sx * 0.5, 0.86, -0.28, [Math.round(skin[1][0] * 0.82), Math.round(skin[1][1] * 0.7), Math.round(skin[1][2] * 0.66)], 0.45);
   if (!covered && F.mole) dot(0.38, 0.9, -0.5, [70, 44, 36], 0.45);
-  if (!A.mask) {
+  if (!A.mask && !fm) {
     if (mk && (mk.kind === 'blush' || mk.kind === 'glam')) for (const s of [-1, 1]) dot(s * 0.55, 0.82, -0.26, [Math.min(255, skin[3][0] + 14), Math.round(skin[3][1] * 0.84), Math.round(skin[3][2] * 0.86)], 0.5);
     if ((A.tattoo | 0) & 16) dot(0.42, 0.88, -0.06, [52, 58, 84], 0.4);
     if (!covered && A.scar) { const S = [null, [0.48, 0.84, -0.12], [0.36, 0.92, 0.32], [0.16, 0.95, -0.5], [0.06, 0.88, -0.76], [0.4, 0.9, 0.46]][A.scar | 0]; if (S) dot(S[0], S[1], S[2], [Math.min(255, skin[3][0] + 34), Math.min(255, skin[3][1] + 14), Math.min(255, skin[3][2] + 14)], 0.4); }
@@ -1742,14 +1819,16 @@ function face(fig, P, A, D, w, h, AX, AY) {
   if (!covered) {
     const am = near * turn * 0.25, m = at(Math.sin(am), Math.cos(am) * 0.9, -0.58);
     if (m.fc > 0.3 && onHead(m.x, m.y)) {
-      const mc = mk && mk.color && (mk.kind === 'lipstick' || mk.kind === 'glam') ? hexRgb(mk.color) : mk && mk.kind === 'goth' ? [34, 22, 34] : null;
+      const mc = fm === 'clown' ? hexRgb(A.fmask.t) : mk && mk.color && (mk.kind === 'lipstick' || mk.kind === 'glam') ? hexRgb(mk.color) : mk && mk.kind === 'goth' ? [34, 22, 34] : null;
       const lip = mc || (D.fem ? [Math.round(skin[1][0] * 0.9 + 26), Math.round(skin[1][1] * 0.72), Math.round(skin[1][2] * 0.78)] : skin[1]);
       // (on the eyes' row or right under it - a very short face - it moves down one)
       const e0 = eyes[0] && eyes[0].p;
-      const L5 = A.face?.lips | 0, my = e0 && m.by - e0.by < 4 ? 1 : 0;
-      // (the lips at the game's size: thin a dark line, full and wide two pixels, small too small to show)
-      if (L5 !== 5) put(m, L5 === 1 && !mc ? skin[0] : lip, 0, my);
-      if ((L5 === 2 || L5 === 3) && !(near * turn > 0.5)) put(m, lip, 1, my);
+      const L5 = fm === 'clown' ? 3 : A.face?.lips | 0, my = e0 && m.by - e0.by < 4 ? 1 : 0;
+      if (fm === 'skull') { put(m, [40, 34, 30], -1, my); put(m, [40, 34, 30], 1, my); }   // (the teeth between two gaps)
+      else {   // (the lips at the game's size: thin a dark line, full and wide two pixels, small too small to show)
+        if (L5 !== 5) put(m, L5 === 1 && !mc ? skin[0] : lip, 0, my);
+        if ((L5 === 2 || L5 === 3) && !(near * turn > 0.5)) put(m, lip, 1, my);
+      }
     }
   }
 }
@@ -1842,85 +1921,6 @@ function lowest(p) {
 function shift(p, dz) {
   if (p.t === 1) { p.a = [p.a[0], p.a[1], p.a[2] + dz]; p.b = [p.b[0], p.b[1], p.b[2] + dz]; p.bc = vlerp(p.a, p.b, 0.5); }
   else { p.c = [p.c[0], p.c[1], p.c[2] + dz]; p.bc = p.c; }
-}
-
-// ---- archetypes for scenes (the first version's sheet, extended) --------------------------------------------------------------------
-const PALET = ['white', 'black', 'denim', 'navy', 'red', 'orange', 'yellow', 'green', 'teal', 'purple', 'pink', 'khaki', 'grey', 'brown'];
-export const ARCHETYPES = {
-  banker: { top: { kind: 'suit', color: 'black', color2: 'white', tie: 'navy' }, bottom: { kind: 'pants', color: 'black' }, shoes: 'brown', carry: 'briefcase', glasses: 'sun' },
-  socialite: { fem: true, hair: { style: 'wavy', color: 3 }, top: { kind: 'tank', color: 'white' }, bottom: { kind: 'pants', color: 'khaki' }, shoes: 'brown', shoeKind: 'sandal', carry: 'shopping', glasses: 'sun' },
-  yachtie: { hair: { style: 'short', color: 4 }, top: { kind: 'polo', color: 'teal' }, bottom: { kind: 'shorts', color: 'white' }, shoes: 'brown', glasses: 'sun' },
-  athleisure: { fem: true, hair: { style: 'bun', color: 1 }, top: { kind: 'tank', color: 'pink' }, bottom: { kind: 'leggings', color: 'pink' }, shoes: 'white', carry: 'phone' },
-  valet: { top: { kind: 'vest', color: 'black', color2: 'white' }, bottom: { kind: 'pants', color: 'black' }, shoes: 'black' },
-  office: { top: { kind: 'shirt', color: 'white' }, bottom: { kind: 'pants', color: 'black' }, shoes: 'brown', carry: 'bag', glasses: 'round' },
-  nurse: { fem: true, hair: { style: 'bun', color: 0 }, top: { kind: 'scrubs', color: 'denim' }, bottom: { kind: 'pants', color: 'denim' }, shoes: 'white', carry: 'coffee' },
-  dad: { hair: { style: 'short', color: 1 }, beard: 'short', top: { kind: 'jacket', color: 'green', color2: 'white' }, bottom: { kind: 'pants', color: 'khaki' }, shoes: 'brown', glasses: 'round' },
-  student: { hair: { style: 'short', color: 0 }, top: { kind: 'hoodie', color: 'grey' }, bottom: { kind: 'jeans', color: 'black' }, shoes: 'black', hat: { kind: 'cap', color: 'red' }, back: 'backpack' },
-  barista: { fem: true, hair: { style: 'bun', color: 2 }, top: { kind: 'apron', color: 'green', color2: 'black' }, bottom: { kind: 'jeans', color: 'denim' }, shoes: 'white', carry: 'coffee' },
-  mechanic: { build: 2, beard: 'full', top: { kind: 'overalls', color: 'navy', color2: 'navy' }, bottom: { kind: 'pants', color: 'navy' }, shoes: 'brown', hat: { kind: 'cap', color: 'navy' } },
-  nightshift: { top: { kind: 'hivis', color: 'yellow', color2: 'black' }, bottom: { kind: 'pants', color: 'black' }, shoes: 'brown', hat: { kind: 'beanie', color: 'black' }, carry: 'coffee' },
-  punk: { hair: { style: 'mohawk', color: 5 }, top: { kind: 'leather', color: 'black', color2: 'grey' }, bottom: { kind: 'jeans', color: 'denim', pattern: 'ripped' }, shoes: 'black', shoeKind: 'boot', tattoo: true },
-  tracksuit: { build: 2, top: { kind: 'tracksuit', color: 'navy', color2: 'white' }, bottom: { kind: 'track', color: 'navy' }, shoes: 'white', hat: { kind: 'cap', color: 'white' }, chain: true },
-  surfer: { hair: { style: 'wavy', color: 3 }, top: { kind: 'none' }, bottom: { kind: 'trunks', color: 'teal' }, shoes: 'brown', shoeKind: 'barefoot', carry: 'board' },
-  tourist: { build: 2, top: { kind: 'hawaiian', color: 'teal', color2: 'orange', pattern: 'floral' }, bottom: { kind: 'shorts', color: 'khaki' }, shoes: 'brown', shoeKind: 'sandal', hat: { kind: 'bucket', color: 'khaki' }, glasses: 'sun' },
-  farmer: { beard: 'full', hair: { style: 'short', color: 4 }, top: { kind: 'overalls', color: 'denim', color2: 'red' }, bottom: { kind: 'pants', color: 'denim' }, shoes: 'brown', shoeKind: 'boot', hat: { kind: 'cowboy', color: 'khaki' } },
-  trucker: { build: 2, beard: 'full', top: { kind: 'flannel', color: 'brown', color2: 'white' }, bottom: { kind: 'jeans', color: 'denim' }, shoes: 'brown', shoeKind: 'boot', hat: { kind: 'trucker', color: 'red' } },
-  granny: { fem: true, build: 0, hair: { style: 'bun', color: 4 }, top: { kind: 'cardigan', color: 'purple', color2: 'pink' }, bottom: { kind: 'skirt', color: 'brown' }, shoes: 'brown', carry: 'cane', glasses: 'round' },
-  cop: { top: { kind: 'uniform', color: 'navy', color2: 'gold' }, bottom: { kind: 'pants', color: 'navy' }, shoes: 'black', hat: { kind: 'police', color: 'navy' }, glasses: 'sun' },
-  swat: { build: 2, top: { kind: 'tactical', color: 'black' }, bottom: { kind: 'cargo', color: 'black' }, shoes: 'black', hat: { kind: 'helmet', color: 'black' }, gloves: 'black' },
-  medic: { fem: true, hair: { style: 'pony', color: 1 }, top: { kind: 'uniform', color: 'green' }, bottom: { kind: 'pants', color: 'green' }, shoes: 'black', gloves: '#5a8ad8' },
-  firefighter: { build: 2, top: { kind: 'coat', color: 'khaki', color2: 'yellow' }, bottom: { kind: 'pants', color: 'khaki' }, shoes: 'black', shoeKind: 'boot', hat: { kind: 'hard', color: 'red' }, gloves: 'black' },
-  syndicate: { top: { kind: 'vest', color: 'black', color2: 'white', pattern: 'quilt' }, bottom: { kind: 'track', color: 'black' }, shoes: 'purple', hat: { kind: 'cap', color: 'black' }, chain: true, bandana: 'purple', tattoo: true },
-  enforcer: { build: 2, hair: { style: 'bald' }, top: { kind: 'puffer', color: 'purple', color2: 'white' }, bottom: { kind: 'track', color: 'black' }, shoes: 'purple', chain: true, glasses: 'sun' },
-  robber: { top: { kind: 'hoodie', color: 'black' }, bottom: { kind: 'cargo', color: 'grey' }, shoes: 'black', hat: { kind: 'beanie', color: 'black' }, mask: true },
-  driver: { top: { kind: 'leather', color: 'black', color2: 'red' }, bottom: { kind: 'pants', color: 'black' }, shoes: 'black', hat: { kind: 'cap', color: 'red' } },
-  bounty: { beard: 'short', top: { kind: 'coat', color: 'brown', color2: 'black' }, bottom: { kind: 'jeans', color: 'denim' }, shoes: 'brown', shoeKind: 'boot', hat: { kind: 'fedora', color: 'brown' }, chain: true },
-  clerk: { top: { kind: 'polo', color: 'green' }, bottom: { kind: 'pants', color: 'black' }, hat: { kind: 'cap', color: 'green' } },
-  guard: { build: 2, top: { kind: 'tactical', color: 'grey' }, bottom: { kind: 'pants', color: 'navy' }, shoes: 'black', hat: { kind: 'cap', color: 'grey' } },
-  inmate: { hair: { style: 'buzz', color: 0 }, top: { kind: 'scrubs', color: 'orange' }, bottom: { kind: 'pants', color: 'orange' }, shoes: 'white' },
-  warden: { build: 2, top: { kind: 'uniform', color: 'grey', color2: 'gold' }, bottom: { kind: 'pants', color: 'navy' }, shoes: 'black', hat: { kind: 'police', color: 'navy' } },
-  cook: { top: { kind: 'apron', color: 'white', color2: 'white' }, bottom: { kind: 'pants', color: 'black' }, shoes: 'black', hat: { kind: 'beanie', color: 'white' } },
-  janitor: { top: { kind: 'overalls', color: 'navy', color2: 'grey' }, bottom: { kind: 'pants', color: 'navy' }, shoes: 'brown', hat: { kind: 'cap', color: 'grey' } },
-  lifter: { build: 2, body: { h: 1, w: 1.12, limb: 1.2, muscle: 1 }, hair: { style: 'buzz', color: 0 }, top: { kind: 'tank', color: 'grey' }, bottom: { kind: 'shorts', color: 'black' }, shoes: 'white' },
-  boxer: { build: 0, hair: { style: 'short', color: 0 }, top: { kind: 'tank', color: 'white' }, bottom: { kind: 'shorts', color: 'red' }, shoes: 'black', hat: { kind: 'helmet', color: 'red' } },
-  yogi: { fem: true, hair: { style: 'bun', color: 0 }, top: { kind: 'tank', color: 'black' }, bottom: { kind: 'leggings', color: 'black' }, shoes: 'white' },
-  busker: { beard: 'short', top: { kind: 'jacket', color: 'brown', color2: 'khaki' }, bottom: { kind: 'jeans', color: 'denim' }, shoes: 'brown', hat: { kind: 'fedora', color: 'brown' } },
-  commuter: { top: { kind: 'hoodie', color: 'green' }, bottom: { kind: 'jeans', color: 'denim' }, shoes: 'white', back: 'backpack', backColor: 'brown' },
-  courier: { fem: true, top: { kind: 'polo', color: 'pink' }, bottom: { kind: 'shorts', color: 'black' }, shoes: 'black', hat: { kind: 'cap', color: 'pink' }, back: 'backpack', backColor: 'pink', glasses: 'sun' },
-  dockhand: { top: { kind: 'hivis', color: 'orange', color2: 'denim' }, bottom: { kind: 'jeans', color: 'denim' }, shoes: 'brown', hat: { kind: 'hard', color: 'yellow' }, gloves: '#c8a050' },
-  lifeguard: { hair: { style: 'short', color: 3 }, top: { kind: 'none' }, bottom: { kind: 'trunks', color: 'red' }, shoes: 'brown', shoeKind: 'sandal', glasses: 'sun' },
-  swimmer: { fem: true, hair: { style: 'pony', color: 1 }, top: { kind: 'swimsuit', color: 'navy' }, bottom: { kind: 'bikini', color: 'navy' }, shoeKind: 'barefoot' },
-  sunbather: { fem: true, hair: { style: 'long', color: 3 }, top: { kind: 'bikini', color: 'coral' }, bottom: { kind: 'bikini', color: 'coral' }, shoeKind: 'sandal', glasses: 'sun' },
-  bather: { hair: { style: 'short', color: 0 }, top: { kind: 'none' }, bottom: { kind: 'towel', color: 'white' }, shoeKind: 'sandal' },
-  spa: { fem: true, hair: { style: 'bun', color: 1 }, top: { kind: 'towel', color: 'cream' }, bottom: { kind: 'towel', color: 'cream' }, shoeKind: 'sandal' },
-};
-export function randomPerson(seed, kind = null) {
-  const r = (k) => hash(seed, k, 97);
-  const pick = (arr, k) => arr[Math.floor(r(k) * arr.length) % arr.length];
-  const fem = r(1) < 0.5;
-  const app = {
-    fem, seed: seed & 0xffff, skin: Math.floor(r(2) * 6), build: r(3) < 0.18 ? 2 : r(3) < 0.4 ? 0 : r(3) > 0.9 ? 3 : 1,
-    hair: { style: fem ? pick(['long', 'wavy', 'pony', 'bun', 'braids', 'curly', 'short', 'bob'], 5) : pick(['spiky', 'short', 'buzz', 'afro', 'bald', 'curly', 'dreads', 'slick'], 5), color: Math.floor(r(6) * 6) },
-    beard: !fem && r(18) < 0.25 ? pick(['short', 'full', 'stubble'], 19) : null,
-    top: { kind: pick(['tee', 'tee', 'hoodie', 'polo', 'shirt', 'jacket', 'tank', 'flannel', 'leather'], 7), color: pick(PALET, 8), color2: pick(PALET, 9) },
-    bottom: { kind: fem && r(10) < 0.25 ? 'skirt' : pick(['jeans', 'jeans', 'pants', 'cargo', 'shorts'], 10), color: pick(['denim', 'denim', 'black', 'khaki', 'navy', 'grey', 'brown'], 11) },
-    shoes: pick(['white', 'white', 'black', 'brown', 'red'], 12),
-    hat: r(13) < 0.2 ? { kind: pick(['cap', 'beanie', 'bucket'], 14), color: pick(PALET, 15) } : null,
-    glasses: r(16) < 0.12 ? pick(['sun', 'round'], 17) : null,
-    carry: r(20) < 0.15 ? pick(['bag', 'coffee', 'phone', 'shopping'], 21) : null,
-  };
-  if (kind === 'business') return randomPerson(seed, 'banker');
-  if (kind === 'beach') return randomPerson(seed, r(30) < 0.5 ? 'surfer' : 'lifeguard');
-  if (kind === 'thug') return randomPerson(seed, 'syndicate');
-  if (kind && ARCHETYPES[kind]) {
-    const a = ARCHETYPES[kind];
-    Object.assign(app, { hat: null, glasses: null, carry: null }, a);
-    if (a.fem === undefined && a.top && a.top.kind === 'none') app.fem = false;
-    if (a.fem !== undefined && !a.hair) app.hair = { style: a.fem ? 'pony' : 'short', color: app.hair.color };
-    if (!app.fem && !a.hair && ['long', 'wavy', 'pony', 'bun', 'braids', 'bob'].includes(app.hair.style)) app.hair = { style: 'short', color: app.hair.color };
-    if (app.fem) app.beard = null;
-  }
-  return app;
 }
 
 // ==== The city's people (task #365, server/systems/personas.js): personality walks and props ========================

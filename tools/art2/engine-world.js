@@ -11,7 +11,8 @@
 import { GBuf, hash, vnoise } from '../../client/art2/gbuf.js';
 import { ROAD_SCENES } from '../../client/art2/roadscenes.js';
 import { CITY_DISTRICTS } from '../../client/art2/districts4.js';
-import { person, randomPerson, ARCHETYPES } from '../../client/art2/people.js';
+import { person } from '../../client/art2/people.js';
+import { randomPerson, ARCHETYPES } from '../../client/art2/peoplepresets.js';
 import { vehicleModel } from '../../client/art2/vehicles.js';
 import { fxFrames } from '../../client/art2/fx.js';
 

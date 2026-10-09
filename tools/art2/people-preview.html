@@ -11,7 +11,8 @@
      &bake draws the game's bake (one art pixel = 2 x 2 world px, gbuf.js downsample2), as the live game shows them. -->
 <div class="wrap"><canvas id="c"></canvas><canvas id="lab"></canvas></div>
 <script type="module">
-import { person, randomPerson, ARCHETYPES, POSES } from '../../client/art2/people.js';
+import { person, POSES } from '../../client/art2/people.js';
+import { randomPerson, ARCHETYPES } from '../../client/art2/peoplepresets.js';
 import { icon, ITEM_KINDS } from '../../client/art2/items.js';
 import { adaptApp, pedSprite } from '../../client/art2/game/peds.js';
 import { GBuf, F_GROUND, F_WET, packGBuf, downsample2 } from '../../client/art2/gbuf.js';

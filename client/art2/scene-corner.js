@@ -11,7 +11,8 @@ import { paintGround, laneLine, zebra, kerbs, manhole, drain, wear, weeds, leafL
 import { makeBuilding } from './buildings.js';
 import * as P from './props.js';
 import { vehicleModel } from './vehicles.js';
-import { person, randomPerson } from './people.js';
+import { person } from './people.js';
+import { randomPerson } from './peoplepresets.js';
 import { palm, leafyTree, bush } from './trees.js';
 import { MAT, LIGHT } from './palette.js';
 

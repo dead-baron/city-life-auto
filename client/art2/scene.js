@@ -12,7 +12,8 @@
 import { GBuf, hash } from './gbuf.js';
 import { paintGround, kerbs } from './ground.js';
 import { makeBuilding, buildingH } from './buildings.js';
-import { person, randomPerson } from './people.js';
+import { person } from './people.js';
+import { randomPerson } from './peoplepresets.js';
 import { LIGHT } from './palette.js';
 import { W, setWarp } from './warp.js';
 import { chalkboard } from './props.js';

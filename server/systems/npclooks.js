@@ -142,7 +142,7 @@ export function recipeLook(arche, seed, dstyle = 'commercial', night = false, re
   if (L.body.age >= 3 && L.hair.color >= 14 && r() < 0.8) L.hair.color = pick(r, [12, 13, 2, 3]);
   if (L.body.age >= 4 && L.hair.color < 12 && r() < 0.75) L.hair.color = pick(r, [12, 13, 13]);
   if (base === 'm' && L.body.age >= 3 && r() < 0.25 && L.hair.style !== HS.Bald) L.hair.style = r() < 0.5 ? HS.Bald : HS['Short back & sides'];
-  if (L.outfit.glasses && ['Balaclava', 'Ski mask', 'Eye patch', 'Party mask', 'Medical mask'].includes(slotOf(L, 'glasses').name)) L.outfit.glasses = null;   // (no masks out walking)
+  if (L.outfit.glasses && slotOf(L, 'glasses').d.nostreet) L.outfit.glasses = null;   // (no masks, goggles or eye patches out walking: the catalogue's nostreet)
   if (recipe.fix) recipe.fix(L, r);
   if (!L.outfit.set) { if (!L.outfit.top) L.outfit.top = item(L.body.base === 'f' ? 'Tank top' : 'Plain tee', pick(r, ['white', 'black', 'grey', 'navy'])); if (!L.outfit.bottoms) L.outfit.bottoms = item(r() < 0.5 ? 'Jeans' : 'Cargo pants'); }
   if (!L.outfit.shoes) L.outfit.shoes = item('Sneakers', pick(r, ['white', 'black']));

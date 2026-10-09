@@ -202,8 +202,8 @@ add('shoes', 'Hiking boots', 'mf', 'outdoors winter', 130, 'outdoor', { k: 'boot
 add('shoes', 'Knee boots', 'f', 'hifashion nightclub winter', 190, 'shoes', { k: 'boot', tall: 2 }, 'black');
 add('shoes', 'Rain boots', 'mf', 'outdoors winter festival', 50, 'outdoor', { k: 'boot', tall: 1, gloss: 1 }, 'yellow');
 add('shoes', 'Sandals', 'mf', 'beach casual festival', 40, 'shoes', { k: 'sandal' }, 'brown');
-add('shoes', 'Flip-flops', 'mf', 'beach lounge', 12, 'beach', { k: 'sandal' }, 'black');
-add('shoes', 'Slides', 'mf', 'lounge athletic streetwear', 30, 'sports', { k: 'sandal' }, 'black');
+add('shoes', 'Flip-flops', 'mf', 'beach lounge', 12, 'beach', { k: 'sandal', strap: 1 }, 'black');
+add('shoes', 'Slides', 'mf', 'lounge athletic streetwear', 30, 'sports', { k: 'sandal', strap: 2 }, 'black');
 add('shoes', 'Slippers', 'mf', 'lounge', 20, 'clothing', { k: 'shoe', flat: 1 }, 'grey');
 add('shoes', 'Platform boots', 'mf', 'punk alt nightclub', 170, 'shoes', { k: 'boot', tall: 1, platform: 1 }, 'black');
 add('shoes', 'Barefoot', 'mf', 'beach', 0, 'shoes', { k: 'barefoot' }, 'white');
@@ -233,12 +233,12 @@ add('glasses', 'Sport shades', 'mf', 'athletic outdoors', 50, 'sports', { k: 'su
 add('glasses', 'Round glasses', 'mf', 'smart preppy alt retro', 45, 'boutique', { k: 'round' }, 'brown');
 add('glasses', 'Reading glasses', 'mf', 'business smart', 25, 'boutique', { k: 'round' }, 'black');
 add('glasses', 'Ski goggles', 'mf', 'winter outdoors', 60, 'outdoor', { k: 'goggles' }, 'black', 'orange');
-add('glasses', 'Eye patch', 'mf', 'punk disguise', 15, 'costume', { k: 'patch' }, 'black');
-add('glasses', 'Balaclava', 'mf', 'disguise winter', 25, 'costume', { k: 'balaclava' }, 'black');
-add('glasses', 'Ski mask', 'mf', 'disguise winter', 30, 'outdoor', { k: 'skimask' }, 'charcoal', 'red');
+add('glasses', 'Eye patch', 'mf', 'punk disguise', 15, 'costume', { k: 'patch', nostreet: 1 }, 'black');
+add('glasses', 'Balaclava', 'mf', 'disguise winter', 25, 'costume', { k: 'balaclava', nostreet: 1 }, 'black');
+add('glasses', 'Ski mask', 'mf', 'disguise winter', 30, 'outdoor', { k: 'skimask', nostreet: 1 }, 'charcoal', 'red');
 add('glasses', 'Face bandana', 'mf', 'western disguise street', 12, 'clothing', { k: 'bandana' }, 'red');
-add('glasses', 'Medical mask', 'mf', 'disguise work', 5, 'workwear', { k: 'medmask' }, 'sky');
-add('glasses', 'Party mask', 'mf', 'nightclub disguise festival', 20, 'costume', { k: 'domino' }, 'black', 'gold');
+add('glasses', 'Medical mask', 'mf', 'disguise work', 5, 'workwear', { k: 'medmask', nostreet: 1 }, 'sky');
+add('glasses', 'Party mask', 'mf', 'nightclub disguise festival', 20, 'costume', { k: 'domino', nostreet: 1 }, 'black', 'gold');
 // jewellery and watches (CP3)
 add('jewel', 'Gold chain', 'mf', 'streetwear nightclub street', 250, 'jeweller', { chain: 1 }, 'gold');
 add('jewel', 'Silver chain', 'mf', 'streetwear punk alt', 120, 'jeweller', { chain: 1 }, 'silver');
@@ -297,6 +297,57 @@ add('hat', 'Police cap', 'mf', 'work', 0, 'police', { k: 'police', issued: 1 }, 
 add('hat', "Officer's cap", 'mf', 'work', 0, 'police', { k: 'police', braid: 1, issued: 1 }, 'navy', 'gold');
 add('jacket', 'Tactical vest', 'mf', 'work', 0, 'police', { k: 'kevlar', issued: 1 }, 'black', 'charcoal');
 add('jewel', 'Dress gloves', 'mf', 'work formal', 0, 'police', { gloves: 1, issued: 1 }, 'white');
+// the rest of CP2, CP3 and CP4 (2026-10-09). Glasses that read at the game's size by their colours: square frames a dark
+// band with the eyes behind it, browlines a line over them, mirrored and tinted lenses, a shield, goggles on a strap, a
+// monocle, a chain. Masks: a neck gaiter, a gas mask with its filters, the costume heads - a pig, a clown, a skull, an
+// alien - a masquerade mask with feathers, a welding mask. (nostreet: nobody walks about in it - npclooks.js)
+add('glasses', 'Square glasses', 'mf', 'smart business alt preppy', 45, 'boutique', { k: 'frames' }, 'black');
+add('glasses', 'Browline glasses', 'mf', 'retro smart business', 55, 'boutique', { k: 'browline' }, 'black', 'gold');
+add('glasses', 'Rimless glasses', 'mf', 'business smart formal', 60, 'boutique', { k: 'rimless' }, 'silver');
+add('glasses', 'Big frames', 'mf', 'hifashion retro', 70, 'boutique', { k: 'frames', big: 1 }, 'gold');
+add('glasses', 'Shield shades', 'mf', 'athletic festival nightclub', 55, 'sports', { k: 'visor' }, 'black');
+add('glasses', 'Round shades', 'mf', 'retro festival alt', 45, 'boutique', { k: 'roundsun', lens: 'royal blue' }, 'black');
+add('glasses', 'Tinted rounds', 'mf', 'festival retro nightclub', 50, 'boutique', { k: 'roundsun', lens: 'red' }, 'gold');
+add('glasses', 'Oversized shades', 'f', 'hifashion beach', 90, 'boutique', { k: 'sun', big: 1 }, 'chocolate');
+add('glasses', 'Swim goggles', 'mf', 'beach athletic', 15, 'beach', { k: 'swim', nostreet: 1 }, 'royal blue');
+add('glasses', 'Safety goggles', 'mf', 'work', 12, 'workwear', { k: 'safety', nostreet: 1 }, 'white', 'black');
+add('glasses', 'Monocle', 'mf', 'formal retro', 80, 'jeweller', { k: 'monocle' }, 'gold');
+add('glasses', 'Glasses on a chain', 'mf', 'smart retro', 45, 'boutique', { k: 'round', chain: 1 }, 'black', 'gold');
+add('glasses', 'Neck gaiter', 'mf', 'outdoors winter disguise athletic', 18, 'outdoor', { k: 'gaiter' }, 'black');
+add('glasses', 'Gas mask', 'mf', 'disguise punk', 60, 'costume', { k: 'gas', nostreet: 1 }, 'black', 'olive');
+add('glasses', 'Pig mask', 'mf', 'disguise festival', 25, 'costume', { k: 'pig', nostreet: 1 }, 'blush');
+add('glasses', 'Clown mask', 'mf', 'disguise festival', 25, 'costume', { k: 'clown', nostreet: 1 }, 'white', 'red');
+add('glasses', 'Skull mask', 'mf', 'disguise festival punk', 25, 'costume', { k: 'skull', nostreet: 1 }, 'cream', 'black');
+add('glasses', 'Alien mask', 'mf', 'disguise festival', 25, 'costume', { k: 'alien', nostreet: 1 }, 'lime', 'black');
+add('glasses', 'Masquerade mask', 'mf', 'formal nightclub festival', 45, 'boutique', { k: 'masq', nostreet: 1 }, 'gold', 'royal blue');
+add('glasses', 'Welding mask', 'mf', 'work disguise', 40, 'workwear', { k: 'welding', nostreet: 1 }, 'charcoal');
+// shoes (CP4): chunky soles, a check, socks under slides, fur cuffs, a platform, a buckle, gloss
+add('shoes', 'Dad sneakers', 'mf', 'streetwear casual retro', 85, 'shoes', { k: 'sneaker', chunky: 1 }, 'white', 'light grey');
+add('shoes', 'Slip-ons', 'mf', 'skater streetwear casual', 50, 'shoes', { k: 'sneaker', p: 2 }, 'black', 'white');
+add('shoes', 'Brogues', 'mf', 'smart business preppy retro', 150, 'shoes', { k: 'shoe' }, 'brown');
+add('shoes', 'Pumps', 'f', 'business smart formal', 110, 'shoes', { k: 'heel' }, 'black');
+add('shoes', 'Mary Janes', 'f', 'alt punk nightclub retro', 130, 'shoes', { k: 'heel', platform: 1 }, 'black');
+add('shoes', 'Espadrilles', 'mf', 'beach casual smart', 45, 'beach', { k: 'shoe', flat: 1, sole: 1 }, 'cream', 'tan');
+add('shoes', 'Fur slippers', 'mf', 'lounge winter', 30, 'clothing', { k: 'shoe', flat: 1, fur: 1, p: 2 }, 'charcoal', 'grey');
+add('shoes', 'Winter boots', 'mf', 'winter outdoors', 140, 'outdoor', { k: 'boot', fur: 1 }, 'black');
+add('shoes', 'Wellies', 'mf', 'outdoors work western', 45, 'outdoor', { k: 'boot', tall: 1, gloss: 1 }, 'forest');
+add('shoes', 'Biker boots', 'mf', 'punk street western', 160, 'shoes', { k: 'boot', tall: 1, buckle: 1 }, 'black', 'silver');
+add('shoes', 'Clogs', 'mf', 'casual work lounge', 60, 'shoes', { k: 'shoe', platform: 1 }, 'tan');
+add('shoes', 'Slides and socks', 'mf', 'lounge streetwear athletic', 35, 'sports', { k: 'sandal', strap: 2, socks: 1 }, 'black', 'white');
+// jewellery, watches and bags (CP3): a chunky chain, a pendant, pearl drops, ear cuffs, a smartwatch, beads, a leather
+// cuff; a tote, a messenger bag, shopping bags, a chest rig, a guitar case on the back
+add('jewel', 'Cuban chain', 'mf', 'streetwear nightclub street', 450, 'jeweller', { chain: 2 }, 'gold');
+add('jewel', 'Pendant chain', 'mf', 'streetwear street western', 180, 'jeweller', { chain: 1, pendant: 1 }, 'gold');
+add('jewel', 'Pearl drops', 'f', 'formal preppy hifashion', 140, 'jeweller', { ear: 2 }, 'white');
+add('jewel', 'Ear cuffs', 'mf', 'alt punk hifashion', 45, 'jeweller', { ear: 1, cuff: 1 }, 'gold');
+add('jewel', 'Smartwatch', 'mf', 'athletic casual business', 220, 'sports', { watch: 1 }, 'black');
+add('jewel', 'Beaded bracelet', 'mf', 'festival casual alt', 15, 'clothing', { bangles: 1 }, 'black');
+add('jewel', 'Leather cuff', 'mf', 'western punk alt', 30, 'boutique', { cuffband: 1 }, 'brown');
+add('bag', 'Tote bag', 'mf', 'casual beach festival smart', 35, 'clothing', { carry: 'bag', big: 1 }, 'cream');
+add('bag', 'Messenger bag', 'mf', 'smart casual streetwear retro', 60, 'boutique', { carry: 'bag', big: 1 }, 'brown');
+add('bag', 'Shopping bags', 'mf', 'hifashion smart casual', 10, 'clothing', { carry: 'shopping' }, 'cream', 'red');
+add('bag', 'Chest rig', 'mf', 'outdoors work disguise', 55, 'outdoor', { rig: 1 }, 'olive');
+add('bag', 'Guitar case', 'mf', 'alt punk retro festival', 80, 'clothing', { back: 2 }, 'black');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -386,6 +437,7 @@ export const hexRgb = (h) => { let s = String(h || '#888').replace('#', ''); if 
 
 // ---- the old renderer's appearance (client/render/, server law.js descriptions) ------------------------------------------------
 const HEX = (i) => CLOTH[i] ? CLOTH[i][0] : '#888888';
+const FMASKS = ['gaiter', 'gas', 'pig', 'clown', 'skull', 'alien', 'welding'];   // (masks drawn as their own: people.js A.fmask)
 const OLD_SKIN = [0, 1, 2, 3, 4, 5, 0, 0, 1, 1, 2, 2, 3, 4, 4, 5];
 export function lookToApp(L, code = null) {
   L = L || emptyLook('m');
@@ -462,7 +514,12 @@ export function lookArt(L, opt = {}) {
     if (set && (set.d.k === 'dress' || set.d.k === 'gown')) A.top.dressUnder = set.d.k === 'gown' ? -1 : set.d.len || 0;
   }
   const sh = P('shoes');
-  if (sh) { A.shoes = HEX(O.shoes.c); A.shoeKind = sh.d.k; A.shoeTrim = HEX(O.shoes.t); if (sh.d.tall) A.bootTall = sh.d.tall; if (sh.d.hi) A.hiTop = 1; }
+  if (sh) {
+    A.shoes = HEX(O.shoes.c); A.shoeKind = sh.d.k; A.shoeTrim = HEX(O.shoes.t); if (sh.d.tall) A.bootTall = sh.d.tall; if (sh.d.hi) A.hiTop = 1;
+    // (CP4: a sandal's straps, socks, a fur cuff, a platform or chunky sole, gloss, a buckle, a sole in the trim colour, a check)
+    for (const f of ['strap', 'socks', 'fur', 'platform', 'chunky', 'gloss', 'buckle', 'sole']) if (sh.d[f]) A['shoe_' + f] = sh.d[f];
+    if (O.shoes.p) A.shoePat = PATTERNS[O.shoes.p];
+  }
   else { A.shoes = '#d8c8b0'; A.shoeKind = 'barefoot'; }
   const hat = P('hat');
   if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat) };
@@ -473,7 +530,14 @@ export function lookArt(L, opt = {}) {
     if (k === 'balaclava' || k === 'skimask') { A.mask = HEX(O.glasses.c); A.maskTrim = k === 'skimask' ? HEX(O.glasses.t) : null; }
     else if (k === 'bandana') A.bandana = HEX(O.glasses.c);
     else if (k === 'medmask') A.medmask = HEX(O.glasses.c);
-    else A.glasses = k, A.glassColor = HEX(O.glasses.c), A.lens = gl.d.lens ? HEX(col(gl.d.lens)) : null, A.glassTrim = HEX(O.glasses.t);
+    else if (FMASKS.includes(k)) A.fmask = { k, c: HEX(O.glasses.c), t: HEX(O.glasses.t) };   // (the rest of CP2's masks)
+    else {
+      A.glasses = k === 'masq' ? 'domino' : k; A.glassColor = HEX(O.glasses.c); A.lens = gl.d.lens ? HEX(col(gl.d.lens)) : null; A.glassTrim = HEX(O.glasses.t);
+      if (gl.d.big) A.glassBig = 1;
+      if (gl.d.cat) A.glassCat = 1;
+      if (gl.d.chain) A.glassChain = 1;
+      if (k === 'masq') A.masq = HEX(O.glasses.t);   // (its feathers)
+    }
   }
   const jw = P('jewel');
   if (jw) A.jewel = { ...jw.d, color: HEX(O.jewel.c), trim: HEX(O.jewel.t) };
@@ -481,9 +545,10 @@ export function lookArt(L, opt = {}) {
   if (jw && jw.d.gloves) A.gloves = HEX(O.jewel.c);
   const bg = P('bag');
   if (bg) {
-    if (bg.d.back) { A.back = 'backpack'; A.backColor = HEX(O.bag.c); }
+    if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : 'backpack'; A.backColor = HEX(O.bag.c); }
     else if (bg.d.belt) A.beltBag = HEX(O.bag.c);
-    else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.small) A.bagSmall = 1; }
+    else if (bg.d.rig) A.rig = HEX(O.bag.c);
+    else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.small) A.bagSmall = 1; if (bg.d.big) A.bagBig = 1; }
   }
   return A;
 }
