@@ -44,6 +44,8 @@ export class HUD {
     $('hp-fill').classList.toggle('low', hpPct < 30);
     $('cash').textContent = '$' + me.cash.toLocaleString();
     $('bank').textContent = `BANK $${me.bank.toLocaleString()}`;
+    // an open shop menu's wallet line follows what you spend in it (the fitting room, the barber's chair)
+    if (this.menu && (!prev || prev.cash !== me.cash || prev.bank !== me.bank)) $('m-money').textContent = `Wallet $${me.cash.toLocaleString()} · Bank $${me.bank.toLocaleString()}`;
     // hot money: a robbery's takings in the bag, under the cash (server hotmoney.js)
     const hot = $('hot');
     hot.classList.toggle('hidden', !(me.hot > 0));

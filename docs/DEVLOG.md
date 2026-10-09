@@ -4624,3 +4624,32 @@ From the owner's note at 05:01, after trying the creator: "the face and hair are
   - The size check allows for the game figure's 1 px outline (10 px at 4, was 8).
   - Everything else passes as before: every hairstyle, face option and piece draws, the time per look, no two hairstyles alike.
 - **Not yet:** police uniforms by rank and the K9 handler from catalogue pieces (cops keep their old outfits); a texture per fabric (denim, knit, leather).
+
+## 2026-10-09 · Morning playtest: what worked, what broke, what's fixed
+From the lead's brief for the morning: play everything built last night in a real browser, as a player would, and fix what's broken before the owner finds it.
+- **How:** headless Chromium (SwiftShader, graphics on low) against a dev server, as a computer (1280x720) and a phone held upright (412x892, touch). A new player each time, through the starting-look screen. The console, the page's errors and failed loads watched throughout; screenshots read by eye. The machine was shared and busy: the game ran at about 10 frames a second, so timing-sensitive things (mashing, a running shot) could only be checked roughly.
+- **No errors from the game anywhere:** not one page error or exception in about two hours of play, on either device, and nothing in the server's log but its stats. The only console errors were the dev server's: it refuses `manifest.webmanifest`, `server/auth.js` and `server/config.js`, which the update check fetches from version.json's file list. GitHub Pages serves them, so players never see this.
+- **Works:**
+  - **The character creator:** the starting-look screen (it comes up a few seconds after you're in the city, once its code has loaded), Make it yours, every tab, Owned / All with the padlocks and the stores, saving a look, Done, Appearance in the pause menu. On a phone held upright it fills the screen and scrolls. At home: Go inside, then Quick change (the wheel) and The mirror (a body change was saved: "Looking sharp.").
+  - **Clothing stores:** the fitting room on both devices (Try on, Buy, Wear / Buy and wear, the total), the salon's chair (cut, priced, paid).
+  - **The city's people:** the personalities spawn and walk (cane, trolley, dog walker, jogger, skater, busker). The busker came up out of reach (the prompt offered the pickup beside me), so E took the pickup, and its driver dragged me out and beat me down: the carjacking temperament at work. The tip wasn't tried again (`test/npcpeople.test.js`).
+  - **Motorcycles and the Rusty Spur:** a trike and the bikes at a rack ridden at night with the headlight; the Spur's bar, pool table, drinks menu and the bikes lined up out front.
+  - **Robberies:** a pistol on the Quick Mart's clerk: the hands go up, the bar shows "HOT $231 · till $11", the bag on the HUD. Deposited at a bank far away ("Banked $1231").
+  - **Arrests:** 2 stars outside a police station: held, walked in, a cell at the Northshore Sheriff with the bail button; bail paid from the bank, out of the front door.
+  - **Explosions:** dev boom launch, pieces, plain and a tanker: the shockwave rings, the fireball, debris.
+  - **Night:** neon (Club Nova, Neon Nights, Ink Tattoo), lit windows, rain.
+  - **Lights:** a headlamp and a lantern in the sewers and at night; a flare (red) and a glow stick (green) dropped and glowing.
+  - **Underground:** down a manhole into the sewers (the headlamp's cone), the cave (dark, glowing mushrooms), mining copper at a vein with a pickaxe.
+  - **The phone's HUD:** the minimap with the clock, money top right, the round buttons down the right edge, the touch controls.
+  - **Sound:** the debug menu says "Sound: on · voices 0/22 · engines 3/4 · beds city wind sea rain · 2635 played, 1584 dropped, 126 cut off". No errors from `client/sound`.
+- **Fixed:**
+  - **The district's title card covered the notes** (`client/style.css`): its big letters ran through the notes beside the minimap. Stepping into the cave you couldn't read "You don't have a light - a flashlight ($35) at..." under GRANITE PEAKS. The notes now sit over the title card (z 7 over its 6), and under the robbery and train bars (now 8) and every panel. The notes never take a tap.
+  - **A shop's wallet line went stale** (`client/hud.js`): after buying in the fitting room or the barber's chair you're back at the store's menu, which still showed the money from before ("Wallet $5,168" with $5,138 left). It now follows your money while a menu is open.
+- **Not fixed, noted:**
+  - **Cuffed, then killed:** once, cuffed in the road outside a station, the death screen said "Taken out by a local" before the escort started. Not seen again in the browser, nor in six simulated arrests in busy roads with traffic. Worth watching.
+  - **Dev "wanted"** gives the stars just over their threshold. Unseen by the police, they cool at once: 1 star is gone in about 4 seconds, 2 stars drop to 1 in about 4. To test an arrest, do it where the police can see you.
+  - **The fight-back meter** never showed in the browser: the page's timers ran too slowly here to catch it or to mash (three clicks got through in six seconds). A simulated arrest in a busy road shows it working: a struggle of 1.5 s without mashing, then the cuffs. In one of those runs the officer walking the suspect to the car was lost on the way (the suspect was free again) and they were tackled again. `test/struggle.test.js` covers the meter.
+  - **Not checked in a browser:** watching a club ride, the bike thief, the ambulance's stretcher and the tow truck, lightning (none struck while I watched), felling a tree, "make a break for it", the muzzle flash while running (the frame rate was too low to see it). Their tests pass.
+  - **For the characters' art:** in the fitting room, a skate shop's ten complete outfits all show the same grey hoodie (only the legs and shoes change), which reads as a fault. The rain falls inside the Rusty Spur's bar when the roof is off.
+- **The busy server:** 8 bots spread round the city for 4 minutes, plus two browser players: no errors, no disconnects. The tick averaged 50-150 ms with spikes to 1.2 s, but the bots, two SwiftShader browsers and another agent shared two cores and the server ran at nice 10, so this says nothing about the live server. With two players and nothing else it was 22-26 ms.
+- **Tests:** `test/hudlayers.test.js` (2): the notes over the district title and under the bars and panels, from `client/style.css`; the wallet line in `setMe`. The first fails without the fix.
