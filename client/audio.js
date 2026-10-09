@@ -65,7 +65,7 @@ if (typeof window !== 'undefined') for (const ev of GESTURES) window.addEventLis
 // (a fault in the sound is reported, once per kind, and never stops the game)
 const seen = new Set();
 function fault(where, e) { const k = where + (e && e.message); if (seen.size < 50 && !seen.has(k)) { seen.add(k); console.warn('[sound] ' + where, e); } }
-export function sfx(name, vol = 1) { if (sys && vol > 0.02) { try { sys.legacy(name, vol); } catch (e) { fault('sfx ' + name, e); } } }
+export function sfx(name, vol = 1, p = null) { if (sys && vol > 0.02) { try { sys.legacy(name, vol, p); } catch (e) { fault('sfx ' + name, e); } } }   // (p: the recipe's parameters - the thunder's distance)
 export function soundEvent(ev, S) { if (!sys) return false; try { return sys.event(ev, S); } catch (e) { fault('event ' + (ev && ev.e), e); return false; } }
 export function soundFrame(F, S) { if (sys) { try { sys.frame(F, S); } catch (e) { fault('frame', e); } } }
 

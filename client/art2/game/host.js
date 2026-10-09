@@ -33,7 +33,7 @@ import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
-import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
+import { MAP_W, MAP_H, TILE, K, PF, VF, DAY_LOOP_S } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/map.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -44,6 +44,7 @@ import { dir8 } from '../../render/chars.js';
 import { lampHead } from '../../render/tiles.js';
 import { countryLightY } from '../../render/country.js';
 import { wind } from '../../render/flora/wind.js';
+import { bioAt } from '../../render/atmos.js';
 import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
@@ -220,12 +221,13 @@ const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
 
 // The giant redwoods' fade ids (statics.js TREE_FADE + the prop's index) and their outlines: the half width (px) a
 // tree covers in each 40 px of its height, from its foot up - the flared foot, the trunk, then the crown from about
-// half way up - measured from the art (redwoods.js giantRedwood: where a third or more of nine trees is covered).
-// The host fades one only when it's in front of you (_treeCovers).
+// half way up - measured from the art (redwoods.js giantRedwood: where a third or more of nine trees is covered;
+// the giant's top band again when its dead tops went, task #399). The host fades one only when it's in front of you
+// (_treeCovers).
 const TREE_FADE = 1e6;
 const RW_OUTLINE = {
   giantL: [112, 80, 72, 64, 64, 64, 64, 64, 64, 104, 136, 144, 144, 136, 104, 88, 88, 80],
-  giant: [80, 56, 56, 56, 48, 48, 48, 48, 104, 128, 128, 112, 88, 80, 72, 16],
+  giant: [80, 56, 56, 56, 48, 48, 48, 48, 104, 128, 128, 112, 88, 80, 72, 64],
   giantS: [64, 40, 40, 40, 40, 40, 40, 88, 104, 96, 80, 72, 56],
   redwood2: [24, 16, 80, 80, 72, 64, 56, 48, 16],
 };
@@ -243,7 +245,7 @@ const darkAt = (m) => (m < 720 ? 1 - smooth((m - 330) / 70) : smooth((m - 1180) 
 const C = {
   head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], flash: [1, 0.9, 0.67],
   sodium: [1, 0.73, 0.43], window: [1, 0.77, 0.47], warm: [1, 0.8, 0.55], white: [0.92, 0.94, 1], moon: [0.6, 0.67, 1], cyan: [0.47, 0.9, 1],
-  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1],
+  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1], bolt: [0.74, 0.82, 1],
   rare: [0.35, 0.65, 1], epic: [0.78, 0.47, 1], gold: [1, 0.8, 0.38],   // the dropped backpacks' glows
 };
 const CUT_A = { cut: 'a' }, CUT_B = { cut: 'b' };   // (the plasma blade's two halves: peds.js pedSprite opt)
@@ -481,7 +483,9 @@ export class World2 {
     E.swayOn = this.gfx.wind !== false;
     const Wd = this.windArr || (this.windArr = [0, 0, 1, 0]);
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, windT: S.loopTime || F.now }) === false) return;
+    // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
+    const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
@@ -1983,6 +1987,10 @@ export class World2 {
       else if (f.kind === 'plasma') this._light(f.x, f.y, 26, f.r, C.plasma, 2.6 * Math.min(1.4, f.t * 5));   // (the hooded stranger, gone in a flash)
       else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
     }
+    // lightning coming down near you (render/weather.js strikeLight): the ground lit blue-white where it strikes, as
+    // its flash flickers
+    const SL = S.wx && S.wx.strikeLight;
+    if (SL && SL.k > 0.02) this._light(SL.x, SL.y, 60, 620, C.bolt, 3.6 * SL.k);
     // the plasma blade gives off its own blue light in the hand
     for (const p of F.peds) {
       if ((p.extra | 0) !== PLASMA_I || (p.flags & (PF.INVEH | PF.DEAD)) || p.blink === 3 || !inV(p.rx, p.ry)) continue;

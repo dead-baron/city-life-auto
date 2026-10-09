@@ -29,6 +29,10 @@
 //   rideKey / rideSprite(kind, v)   the rides (shared/rides.js): 'cab' a Ferris wheel gondola (colour v 0-3; anchor
 //       the ground point under its floor), 'balloon' a balloon on a flight (palette v 0-3, burner lit; anchor under
 //       the basket)
+//   useArt({ ferrisCab, hotAirBalloon, starfish })   the art the rides and the tidepools' star are drawn with
+//       (props-park.js, props-rural.js, props-wild.js), handed in by whoever draws them - the bake workers
+//       (worker.js), which have those modules loaded for the statics anyway. The page's renderer loads this module
+//       only for the sprite keys: it never draws these, so it doesn't load their 40 KB of art before it can draw.
 //   SPRITES / KEYS   one table per kind for the workers: SPRITES[kind](...args), KEYS[kind](...args)
 //   clearActorCaches(), setActorBudget({ modelMB | lowMem })   the model caches (vehicles are kept packed,
 //       compactVox / renderCompact: 6 bytes a voxel; default 48 MB of vehicle models, 16 MB on lowMem)
@@ -40,11 +44,10 @@ import { animalModel, renderUpright, ANIMALS } from '../animals.js';
 import { birdModel, BIRDS } from '../birds.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
 import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
-import { ferrisCab } from '../props-park.js';
-import { hotAirBalloon } from '../props-rural.js';
 import { groundSprite as forageGround } from '../forage.js';
-import { starfish } from '../props-wild.js';
 import { VEHICLE_BY_INDEX, PAINTS } from '../../../shared/vehicles.js';
+const ART = {};   // (useArt: ferrisCab, hotAirBalloon, starfish)
+export function useArt(o) { Object.assign(ART, o); }
 
 const TAU = Math.PI * 2;
 
@@ -789,8 +792,8 @@ export function critterShadow(r = 3) { return copySprite(shadowBlob(r)); }
 export const rideKey = (kind, v = 0) => `R|${kind === 'balloon' ? 'b' : 'c'}|${(v | 0) & 3}`;
 export function rideSprite(kind, v = 0) {
   const c = (v | 0) & 3;
-  if (kind === 'balloon') return trimSprite(hotAirBalloon(c, 1).render(0, { dither: 0.3, px: ART_PX }));
-  return objRender('cab' + c, () => ferrisCab(c), 0, 1);
+  if (kind === 'balloon') return trimSprite(ART.hotAirBalloon(c, 1).render(0, { dither: 0.3, px: ART_PX }));
+  return objRender('cab' + c, () => ART.ferrisCab(c), 0, 1);
 }
 
 // ---- foraging (shared/foraging.js) ----------------------------------------------------------------------------------
@@ -798,7 +801,7 @@ export function rideSprite(kind, v = 0) {
 // art draws them on the forest floor, on a log or at a stump (client/art2/forage.js groundSprite), and the tidepools'
 // golden sea star, lit from within. v: one of four looks.
 export const forageKey = (art, v = 0) => `F|${art}|${(v | 0) & 3}`;
-export function forageSprite(art, v = 0) { return art === 'star' ? starfish('#f0c040', 6, 1 + ((v | 0) & 3), 1) : forageGround(art, (v | 0) & 3); }
+export function forageSprite(art, v = 0) { return art === 'star' ? ART.starfish('#f0c040', 6, 1 + ((v | 0) & 3), 1) : forageGround(art, (v | 0) & 3); }
 
 export function clearActorCaches() { for (const c of [MODELS, ANIMAL_MODELS, OBJ_MODELS, TRAIN_MODELS]) c.clear(); LIGHTS.clear(); }
 

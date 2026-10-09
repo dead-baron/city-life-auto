@@ -11,7 +11,7 @@ import { hash } from './atmos.js';
 import { freeCanvas } from '../platform.js';
 import { coversIn, coverSeed } from '../../shared/covers.js';   // (the street's manhole covers: the ones the ground draws)
 import { alleyVentsIn } from '../../shared/alleys.js';   // (the vents on the alleys' back walls)
-import { boltPath, drawBolt } from './lightning.js';    // (the bolt you see in a storm)
+import { boltPath, drawBolt, lightningIn, strikePoint, flashAt, PX_PER_M, SOUND_MPS } from './lightning.js';    // (the storm's lightning: when, what, the bolt you see)
 
 const N = CHUNK_PX / TILE;
 const SHAPES = 8;
@@ -104,31 +104,79 @@ export class Weather {
     this.bi = 0;
     this.fogCv = document.createElement('canvas'); this.fg = this.fogCv.getContext('2d');
     this.fogMask = null;
-    this.flash = 0; this.nextBolt = 20;
+    // lightning (lightning.js): how bright its flash is now (0..1: the screen, the scene's light), the flashes still
+    // lit, the bolt you see (one of them), the thunder on its way, a strike's light on the ground
+    this.flash = 0; this.live = []; this.bolt = null; this.boltK = 0; this.thunders = []; this.evs = [];
+    this.ltSeen = undefined; this.lt = 0; this.cam = null; this.strikeLight = null; this.stormForce = null;
     this.lastSplash = new Map();
     this.visPuddles = [];
   }
 
   // ---- state ---------------------------------------------------------------------------------
-  update(dt, raining, t) {
+  // st: { lt: the shared clock counting the days (s), x, y: your view's centre, w, h: its size (world px) } - for the
+  // storm's lightning
+  update(dt, raining, t, st = null) {
     // puddles take ~2 minutes of rain to fill, ~5 to dry up
     this.wet = Math.max(0, Math.min(1, this.wet + (raining ? dt / 110 : -dt / 300)));
     for (let i = this.pools.length - 1; i >= 0; i--) { const p = this.pools[i]; if (t - p.born > p.life) this.pools.splice(i, 1); }
     for (const r of this.ripples) if (r.on && (r.t += dt) > r.max) r.on = false;
     for (const b of this.burst) if (b.on && (b.t += dt) > 0.22) b.on = false;
-    // lightning: now and then in a rain storm (brighter at night); a near strike's flash lasts longer
-    this.flash = Math.max(0, this.flash - dt * (this.boltNear ? 2.4 : 3.5));
-    if (raining && this.wet > 0.3) {
-      this.nextBolt -= dt;
-      if (this.nextBolt <= 0) { this.strike(Math.random() < 0.25); this.nextBolt = 25 + Math.random() * 60; }
-    }
-    if (this.thunderIn !== undefined) { this.thunderIn -= dt; if (this.thunderIn <= 0) { this.thunderIn = undefined; this.onThunder?.(); } }
+    if (st) this.storm(st, raining);
   }
-  // a lightning strike: the flash, a bolt you can see (lightning.js; near: down into the street in view), the thunder
-  // after it (sooner for a near one)
-  strike(near = false) {
-    this.flash = 1; this.boltNear = !!near; this.boltSeed = (Math.random() * 4294967296) >>> 0; this.boltOf = null; this.boltSet = true;
-    this.thunderIn = near ? 0.15 + Math.random() * 0.35 : 0.7 + Math.random() * 1.8;
+  // Lightning (lightning.js): the storm's events as their time comes while it rains - from the shared clock, so the
+  // same for everyone (a backlog after a jump - the tab away, the clock set - is let go). Each one flickers as it does,
+  // one is the bolt you see (a strike near you lands on a spot in the world, and stays there as the view moves), and
+  // its thunder comes when the sound gets to you: d / 340 m/s - a strike beside you cracks at once, a bolt 5 km off
+  // rumbles 15 s later.
+  storm(st, raining) {
+    const lt = st.lt;
+    this.cam = st; this.lt = lt;
+    if (this.ltSeen === undefined || lt < this.ltSeen - 30 || lt - this.ltSeen > 3) this.ltSeen = lt;
+    if (lt > this.ltSeen) {
+      if (raining) for (const e of lightningIn(this.ltSeen, lt, this.evs, this.stormForce)) this.fire(e);
+      this.ltSeen = lt;
+    }
+    let f = 0, sl = null;
+    for (let i = this.live.length - 1; i >= 0; i--) {
+      const L = this.live[i], s = lt - L.at;
+      if (s > 1.6 || s < -1) { this.live.splice(i, 1); if (this.bolt === L) this.bolt = null; continue; }
+      const k = flashAt(L.e, s, L.d);
+      f = Math.max(f, k);
+      if (L === this.bolt) this.boltK = k;
+      if (L.e.kind === 'strike' && k > 0.02 && (!sl || k > sl.k)) { sl = this.strikeLight || (this.strikeLight = {}); sl.x = L.x; sl.y = L.y; sl.k = k; }
+    }
+    this.flash = f;
+    if (!sl) this.strikeLight = null;
+    if (this.bolt && this.live.indexOf(this.bolt) < 0) this.bolt = null;
+    for (let i = this.thunders.length - 1; i >= 0; i--) {
+      const T = this.thunders[i];
+      if (lt < T.at) continue;
+      this.thunders.splice(i, 1);
+      if (lt - T.at < 3) this.onThunder?.(T.d, T.k);
+    }
+  }
+  // one of the storm's events: its flash, the bolt you see (a bolt in the distance; a strike when it lands on your
+  // screen), its thunder on its way. A strike comes down at strikePoint near you (dbg: anywhere on your screen).
+  fire(e, dbg = false) {
+    const C = this.cam, L = { e, at: e.t, d: e.d, x: 0, y: 0, on: false };
+    if (e.kind === 'strike') {
+      if (C) {
+        const P = dbg ? { x: C.x + (Math.random() - 0.5) * C.w * 0.7, y: C.y + (Math.random() * 0.55 - 0.1) * C.h } : strikePoint(e.seed, C.x, C.y);
+        L.x = P.x; L.y = P.y; L.d = Math.hypot(P.x - C.x, P.y - C.y) / PX_PER_M;
+        L.on = Math.abs(P.x - C.x) < C.w * 0.44 && P.y > C.y - C.h * 0.22 && P.y < C.y + C.h * 0.46;   // (on your screen, below its top)
+      } else L.on = true;   // (no view: down into the street in view, wherever its seed puts it)
+    }
+    this.live.push(L);
+    if (e.kind === 'bolt' || L.on) { this.bolt = L; this.boltOf = null; this.boltK = flashAt(e, 0, L.d); }
+    this.thunders.push({ at: e.t + L.d / SOUND_MPS, d: L.d, k: e.k });
+    if (!C) this.flash = Math.max(this.flash, flashAt(e, 0, L.d));
+  }
+  // a flash now, for the debug menu and tools/art2/hero-corner.html: kind 'strike' (near you, on your screen), 'bolt'
+  // (off in the distance), 'sky' (in the clouds); true / false as it was called before (a near strike / a far bolt)
+  strike(kind = 'bolt') {
+    if (kind === true) kind = 'strike'; else if (kind === false) kind = 'bolt';
+    const d = kind === 'strike' ? 0 : kind === 'bolt' ? 900 + Math.random() * 3000 : 3000 + Math.random() * 8000;
+    this.fire({ t: this.lt, kind, d, k: 0.6 + 0.4 * Math.random(), seed: (Math.random() * 4294967296) >>> 0, cloud: kind === 'bolt' && Math.random() < 0.35, bearing: Math.random() * 6.283 }, true);
   }
   ripple(x, y, r, max = 0.9, k = 1) {
     const o = this.ripples[this.ri]; this.ri = (this.ri + 1) % this.ripples.length;
@@ -447,24 +495,29 @@ export class Weather {
       g.moveTo(b.x + r, b.y); g.ellipse(b.x, b.y, r, r * 0.45, 0, 0, 6.283);
     }
     g.stroke();
-    // lightning: the flash, and the bolt itself while it's bright (a flash set from outside - the debug menu's strike -
-    // gets a bolt of its own)
-    if (this.flash > 0) {
-      if (this.flash > (this._lastFlash || 0) + 0.5) {
-        if (!this.boltSet) { this.boltSeed = (Math.random() * 4294967296) >>> 0; this.boltNear = false; }
-        this.boltSet = false; this.boltOf = null;
-      }
+    // lightning (storm): the flash over the screen (brighter at night), flickering as it does, and the bolt you see
+    // while it's bright (with no storm clock - a tool setting the flash - at that much of the flash)
+    if (this.flash > 0.004) {
       g.globalCompositeOperation = 'lighter';
-      const flick = Math.random() < 0.2 ? 0.4 : 1, f = this.flash * (0.35 + 0.5 * night) * flick * (this.boltNear ? 1.25 : 1);
-      g.fillStyle = `rgba(200,215,255,${Math.min(0.9, f).toFixed(3)})`;
+      g.fillStyle = `rgba(200,215,255,${Math.min(0.9, this.flash * (0.35 + 0.5 * night)).toFixed(3)})`;
       g.fillRect(0, 0, W, H);
-      if (this.flash > 0.15 && this.boltSeed !== undefined) {
-        const key = `${this.boltSeed}:${W}:${H}`;
-        if (!this.boltOf || this.boltOf.key !== key) this.boltOf = { key, B: boltPath(this.boltSeed, W, H, this.boltNear) };
-        drawBolt(g, this.boltOf.B, Math.min(1, this.flash * 1.3) * flick, night);
+    }
+    const L = this.bolt, C = this.cam, bk = C ? this.boltK : this.flash;
+    if (L && bk > 0.1) {
+      const e = L.e, anchored = !!(C && e.kind === 'strike');
+      // a strike comes down on a spot in the world: where that is on the screen now
+      const sx = anchored ? (L.x - C.x) / C.w * W + W / 2 : 0, sy = anchored ? (L.y - C.y) / C.h * H + H / 2 : 0, key = `${e.seed}:${W}:${H}`;
+      if (!this.boltOf || this.boltOf.key !== key) {
+        const at = Math.max(0.1, Math.min(0.9, 0.5 + 0.38 * Math.cos(e.bearing || 0)));   // (a far bolt: on the storm's side of the screen)
+        const B = e.kind === 'strike' ? boltPath(e.seed, W, H, true, anchored ? { end: { x: sx, y: sy } } : null)
+          : boltPath(e.seed, W, H, false, e.cloud ? { cloud: true, at, w: 1.8 } : { at, w: L.d > 2500 ? 1.8 : 3 });
+        this.boltOf = { key, B, x: sx, y: sy };
       }
-    } else this.boltOf = null;
-    this._lastFlash = this.flash;
+      g.save();
+      if (anchored) g.translate(sx - this.boltOf.x, sy - this.boltOf.y);
+      drawBolt(g, this.boltOf.B, Math.min(1, bk * 1.3), night);
+      g.restore();
+    } else if (!L) this.boltOf = null;
     g.restore();
   }
 

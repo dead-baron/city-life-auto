@@ -147,6 +147,7 @@ export function give(world, p, msg) {
 export function command(world, p, c, msg) {
   const ped = p.ped;
   const prof = p.profile;
+  const lt0 = world.loopTime;
   switch (c) {
     case 'rain': env.startRain(world, Math.max(30, Math.min(3600, Number(msg.s) || 300))); if (world.weatherHold) world.weatherHold.w = WEATHER.RAIN; break;   // (msg.s: for how long)
     case 'clear': env.stopRain(world); if (world.weatherHold) world.weatherHold.w = WEATHER.CLEAR; break;
@@ -375,6 +376,7 @@ export function command(world, p, c, msg) {
     default: world.notify(p, `[dev] unknown command ${c}. Try: ${DEV_COMMANDS.join(', ')}`, 'warn'); return;
   }
   world.loopTime %= DAY_LOOP_S;
+  if (world.loopTime < lt0 - DAY_LOOP_S / 2) world.day = (world.day || 0) + 1;   // (the clock set back past 06:00: a new day, as the clients count it)
   p.meDirty = true;
   store.touch();
 }

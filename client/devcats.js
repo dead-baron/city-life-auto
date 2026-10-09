@@ -5,8 +5,11 @@
 export const DEV_SECTIONS = [
   { id: 'wx', title: '🌦 Weather & time', items: [
     ['🌧 Rain (10 min)', 'rain', { s: 600 }], ['☀ Clear skies', 'clear'], ['🔒 Hold the weather (toggle)', 'wxhold'],
-    ['⚡ Lightning strike (your screen)', '@bolt'], ['🌫 Thick fog (your screen)', '@fog', { k: 0.9, spread: 1 }],
+    ['⚡ Lightning: a strike near you (your screen)', '@bolt', { kind: 'strike' }], ['🌩 Lightning: a bolt in the distance (your screen)', '@bolt', { kind: 'bolt' }],
+    ['☁ Lightning: a flash in the clouds (your screen)', '@bolt', { kind: 'sky' }], ['⛈ A thunderstorm while it rains (your screen)', '@storm', { mood: 3 }],
+    ['⛈ Storms back to the clock', '@storm', null], ['🌫 Thick fog (your screen)', '@fog', { k: 0.9, spread: 1 }],
     ['🌁 Light mist (your screen)', '@fog', { k: 0.45, spread: 0.4 }], ['🌤 Fog back to the clock', '@fog', null],
+    ['🌊 The sea sparkling tonight (your screen)', '@bio', { k: 1 }], ['🌊 Sea sparkle back to the nights', '@bio', null],
     ['🌅 06:00 dawn', 'time', { m: 360 }], ['🌞 09:00 morning', 'time', { m: 540 }], ['☀ 12:00 noon', 'time', { m: 720 }],
     ['🌇 15:00 afternoon', 'time', { m: 900 }], ['🌆 18:30 golden hour', 'time', { m: 1110 }], ['🌃 20:15 dusk', 'time', { m: 1215 }],
     ['🌙 23:00 night', 'time', { m: 1380 }], ['🌌 03:00 small hours', 'time', { m: 180 }], ['⏸ Freeze the clock (toggle)', 'clockhold'],

@@ -42,8 +42,12 @@ export const dayIndex = (loopTime) => Math.floor((loopTime + DAY_LOOP_S * 0.25) 
 
 // Fog for this time of day: some mornings have fog rolling off the water (sometimes far into
 // town), some nights a light mist. { k: 0..1 how thick, spread: how far inland it reaches }
-export function fogAt(loopTime, minutes) {
-  const day = dayIndex(loopTime);
+// lt: the shared clock counting the days (main.js: the server's day x DAY_LOOP_S + loopTime). A morning's fog is the
+// morning's (dayIndex: the day turns at 21:40), a night's mist the night's (one loop of the clock: 20:00-06:00 is
+// inside it), each eased in and out. (Until 2026-10-09 it was given the clock as it wraps every loop, so every day was
+// the same day: no foggy morning ever, a misty night every night - task #387.)
+export function fogAt(lt, minutes) {
+  const day = dayIndex(lt);
   let k = 0, spread = 0;
   if (hash(day, 3) < 0.38 && minutes > 300 && minutes < 600) {           // a foggy morning
     const t = minutes < 390 ? (minutes - 300) / 90 : 1 - (minutes - 390) / 210;
@@ -51,12 +55,25 @@ export function fogAt(loopTime, minutes) {
     spread = Math.max(spread, hash(day, 5));                               // some days it reaches well into the city
   }
   const night = minutes >= 1230 || minutes < 300;
-  if (night && hash(day, 7) < 0.22) {                                      // a misty night
-    const t = minutes >= 1230 ? (minutes - 1230) / 60 : 1;
-    k = Math.max(k, 0.45 * Math.min(1, t));
+  if (night && hash(Math.floor(lt / DAY_LOOP_S), 7) < 0.22) {              // a misty night: in from 20:30, gone by 05:00
+    const t = minutes >= 1230 ? (minutes - 1230) / 60 : (300 - minutes) / 60;
+    k = Math.max(k, 0.45 * smooth(Math.min(1, t)));
     spread = Math.max(spread, 0.35);
   }
   return { k, spread };
+}
+
+// The sea sparkling at night (art v2 lightgame.js waterSurf: plankton lit blue by the churn of the breaking waves and
+// the swash, the odd speck twinkling as it drifts in): only some nights - one in four, hashed from the night (lt: the
+// clock counting the days, as fogAt), so everyone has the same nights - and along some stretches of shore (the
+// shader's noise over the world, shifted by the night's seed), in from 20:30, gone by 05:30. (Task #392, the owner:
+// "might be too much since it's everywhere and during every night".) -> out [strength 0..1, the night's seed 0..1]
+export const BIO_NIGHTS = 0.25;
+export function bioAt(lt, minutes, out = [0, 0]) {
+  const n = Math.floor(lt / DAY_LOOP_S), t = minutes >= 1230 ? (minutes - 1230) / 60 : minutes < 330 ? (330 - minutes) / 60 : 0;
+  out[0] = hash(n, 911) < BIO_NIGHTS ? smooth(Math.max(0, Math.min(1, t))) * (0.65 + 0.35 * hash(n, 912)) : 0;
+  out[1] = hash(n, 913);
+  return out;
 }
 
 // The whole sky at (loopTime, minutes) with rain 0..1 (how wet it's been raining).

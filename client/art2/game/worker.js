@@ -56,6 +56,12 @@ async function loadActors() {
     try { return await import(file); } catch (e) { P.errors[name] = String((e && e.message) || e); return null; }
   };
   [P.actors, P.peds] = await Promise.all([load('actors', './actors.js'), load('peds', './peds.js')]);
+  // the art the rides and the tidepools' star are drawn with (the statics have these modules loaded anyway; the
+  // page's renderer, which loads actors.js only for the sprite keys, never draws them: actors.js useArt)
+  if (P.actors && P.actors.useArt) {
+    const [pk, ru, wl] = await Promise.all([load('ferris', '../props-park.js'), load('balloon', '../props-rural.js'), load('star', '../props-wild.js')]);
+    P.actors.useArt({ ferrisCab: pk && pk.ferrisCab, hotAirBalloon: ru && ru.hotAirBalloon, starfish: wl && wl.starfish });
+  }
 }
 const SPRITE_FN = {
   vehicle: () => P.actors && P.actors.vehicleSprite, animal: () => P.actors && P.actors.animalSprite,

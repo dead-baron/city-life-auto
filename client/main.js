@@ -1,7 +1,7 @@
 // City Life Auto browser client: a "dumb window" that sends input vectors, predicts only
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
-import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS } from '../shared/constants.js';
+import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS, DAY_LOOP_S } from '../shared/constants.js';
 import { generateCity, cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
 import { signalFor } from '../shared/signals.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
@@ -51,6 +51,7 @@ import { underDeck } from '../shared/levels.js';
 import { skyAt, lampLevel, neonLevel, hash as hashAt } from './render/atmos.js';
 import { Lighting, LIGHT } from './render/lighting.js';
 import { Weather } from './render/weather.js';
+import { thunderVol } from './render/lightning.js';
 import { drawBuildingShadows, drawPropShadows, drawContactShade, drawSpriteShadows } from './render/shadows.js';
 import { registerNewProps } from './render/newprops.js';
 import { LOW_MEM, canvasStats, setDeviceKind } from './platform.js';
@@ -202,6 +203,7 @@ function onText(m) {
       if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
       S.welcomed = true; S.pid = m.pid; S.dev = !!m.dev;
+      S.day = Number(m.day) || 0; S.snapLoop = undefined;   // (the day: the server's count of the loop's turns; onBinary counts on)
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
       document.body.classList.toggle('practice', !!m.practice);
@@ -286,6 +288,9 @@ function onBinary(buf) {
   if (s.tick <= S.latestTick && S.latestTick - s.tick < 1000) return;
   S.latestTick = s.tick;
   if (Math.abs(S.renderTick - (s.tick - INTERP_TICKS)) > 8) S.renderTick = s.tick - INTERP_TICKS;
+  // the clock turning past 06:00 (or set back past it): a new day, as the server counts them (world.js day)
+  if (S.snapLoop !== undefined && s.loopTime < S.snapLoop - DAY_LOOP_S / 2) S.day = (S.day || 0) + 1;
+  S.snapLoop = s.loopTime;
   S.loopTime = s.loopTime;
   if (s.weather !== S.weather) { S.weather = s.weather; }
   for (const it of s.ents) {
@@ -915,7 +920,7 @@ function setupWorld(seed, here = false) {
   S.ground = new GroundCache(S.map, LOW_MEM ? 12 : 24); // (consoles give the browser little graphics memory)
   S.wx = new Weather(S.map);
   S.poleAt = null;
-  S.wx.onThunder = () => sfx('thunder', 1);
+  S.wx.onThunder = (d, k) => sfx('thunder', thunderVol(d, k), { d, k });   // (d m off, k how strong: render/lightning.js)
   S.light ||= new Lighting();
   S._hw = null;
   S.buildings = new BuildingLayer(S.map, S.ground);
@@ -1097,8 +1102,10 @@ function devPress(b, label, run) {
 }
 // commands that only change your own screen
 function devLocal(c, extra) {
-  if (c === '@bolt') { if (S.wx) S.wx.strike(Math.random() < 0.5); }   // (a bolt you can see: a near strike half the time)
+  if (c === '@bolt') { if (S.wx) S.wx.strike((extra && extra.kind) || 'strike'); }   // (a strike near you, a bolt in the distance, a flash in the clouds)
+  else if (c === '@storm') { if (S.wx) S.wx.stormForce = extra ? extra.mood : null; }   // (while it rains: render/lightning.js stormSpell's moods)
   else if (c === '@fog') S.fogForce = extra ? { k: extra.k, spread: extra.spread } : null;
+  else if (c === '@bio') S.bioForce = extra ? [extra.k, 0.5] : null;   // (the sea's sparkle whatever the night: art2 host.js)
 }
 // Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team
 // and friends are testing; if the server asks for one after all, its prompt opens).
@@ -2696,9 +2703,12 @@ function prepFrame(dt) {
   const rain = S.weather === WEATHER.RAIN;
   // the sky: time of day, how long it's been raining, fog, lightning (render/atmos.js)
   S.rainK = (S.rainK || 0) + ((rain ? 1 : 0) - (S.rainK || 0)) * (1 - Math.exp(-dt / 8));
-  S.wx.update(dt, rain, now);
-  wind.update(S.loopTime, S.rainK || 0);
-  const sky = skyAt(S.loopTime, clock.minutes, S.rainK);
+  // (the storm's lightning: the shared clock counting the days and your view - render/lightning.js)
+  const wst = S.wxSt || (S.wxSt = {});
+  wst.lt = (S.day || 0) * DAY_LOOP_S + S.loopTime; wst.x = S.cam.x; wst.y = S.cam.y; wst.w = W / z; wst.h = H / z;
+  S.wx.update(dt, rain, now, wst);
+  wind.update((S.day || 0) * DAY_LOOP_S + S.loopTime, S.rainK || 0, dt);   // (the clock counting the days; dt: the air moves on - the canopy's drift, the gusts)
+  const sky = skyAt((S.day || 0) * DAY_LOOP_S + S.loopTime, clock.minutes, S.rainK);   // (the clock counting the days: some mornings and nights are foggy)
   if (S.wx.flash > 0) { const f = S.wx.flash * (0.5 + 0.4 * sky.night); sky.amb = sky.amb.map((v) => v + (1 - v) * f); }
   const quality = gfxQuality();
   S.fx.thin = !gfx.particles;

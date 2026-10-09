@@ -30,7 +30,9 @@
 //     cannot blend), in whole art pixels.
 //   - o.shadow === false stops the sprite casting a shadow; o.flash whitens it and adds glow; o.air marks it as
 //     up in the air (birds: no mirror image in wet ground or water).
-//   - f.wet / f.flash / f.fog (optional) raise the preset's wet, lightning flash and fog.
+//   - f.wet / f.flash / f.fog (optional) raise the preset's wet, lightning flash and fog; f.air (render/flora/wind.js
+//     air: how far the air has carried things - the canopy's leaf clumps, the fog), f.bio (the sea's sparkle tonight:
+//     render/atmos.js bioAt).
 //   - onContextLost(cb): cb('lost') on loss, cb('restored') once rebuilt (every chunk and sprite must be
 //     uploaded again: has* return false), cb('failed') if the rebuild fails.
 //   - The WebGL2 context also asks for depth: false, stencil: false (the engine owns its depth buffer).
@@ -80,6 +82,7 @@
 //   Decals on decks need z0. Lights are world px; static lights from chunks must be added each frame.
 import { F_GROUND, F_LEAF, packGBuf, octEncode, OCT_MID, downsample2, downsampleUnder, ART_PX, CHUNK_RUN } from '../gbuf.js';
 import { LightGame, LIGHT_TIERS, MAX_LIGHTS, LIGHT_FLOATS, PRESETS_GAME, PRESET_DEFAULTS, blendPresets, glProgram, glTex, glFbo, TRI_VS, GLSL_COMMON } from './lightgame.js';
+import { canopyReach } from './canopy.js';
 export { PRESETS_GAME, PRESET_DEFAULTS, blendPresets, LIGHT_TIERS, ART_PX };
 
 export const CHUNK_PX = 768;
@@ -126,26 +129,70 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // past half way the texel also takes the ground's height and normal, so people and cars behind it draw over it
 // (the host eases each building in and out round the player).
 // Swaying vegetation: leaf texels (F_LEAF: foliage, grass tufts, crops) lean with the wind (uWind: strength,
-// gustiness, direction; uWindT the shared wind clock) by whole texels, more the higher they stand above their
-// ground - so a tree's crown sways over its trunk and grass tips nod - plus a slow idle sway even in calm air.
+// gustiness, direction) by whole texels, more the higher they stand above their ground - so a tree's crown sways over
+// its trunk and grass tips nod. Not as one wave over the screen (task #385, the owner: "all the trees kind of move in
+// a big wave ... Can we make it so leaves move in smaller groups and bundles and by themselves on branches"):
+//   - gusts come in patches (gustAt: two layers of noise travelling with the wind at different speeds and a little
+//     apart - render/flora/wind.js gd, uGust - so a patch gathers, sweeps over a field or a stand and fades), pushing
+//     what they cross, and brightening the leaves they bend;
+//   - each stand of trees (a few hundred px) sways in its own time and by its own amount, each cluster of leaves
+//     (26 px) a little in its own, with a flutter over that, on the flutter clock (wind.js ft, uFlut; the
+//     frequencies are whole turns over its 256 s, so its wrap never shows).
 // A texel looks for the leaf that leans onto it among its neighbours (up to uSway - 1 texels either side; the
 // tallest wins, as in the depth rule); where a leaf leans away and nothing takes its place, the texel beside it
-// shows through. Gusts also brighten the leaves they bend (bands of wind sweeping over a wheat field).
+// shows through. The wind is only worked out where there's a leaf (most of a town has none).
 // uSway: 0 off, 1 gust shading only (Low), 2-4 leaning up to 1-3 world px (whole art pixels: 1 or 2 at ap 2).
 // A chunk texel is an art pixel (AP world px a side, CTX texels a chunk): every world px of it fetches the same
 // texel and computes the same lean, fade and dither, so it moves and fades as one pixel.
+// The noise all that is drawn from is a small texture (tN, windNoise: 128 x 128 lattice values; smooth value noise
+// in one fetch each, the smoothstep folded into where it samples - far cheaper on a phone than hashing the lattice
+// for every pixel): r repeats over 16 texels and g over 32, so the gust layers (512 and 256 px cells) repeat over
+// the 8192 px gd wraps at and its wrap never shows; b and a for what stays put (a stand's phase and rhythm, 230 px
+// cells; a cluster's phase, 26 px).
+const FLUT = (k) => (2 * Math.PI * k / 256).toFixed(6);   // (whole turns over wind.js FLUT_P)
+const WN = 128;
+const hash2 = (x, y) => { let h = (Math.imul(x >>> 0, 374761393) + Math.imul(y >>> 0, 668265263)) >>> 0; h = Math.imul((h ^ (h >>> 13)) >>> 0, 1274126177) >>> 0; return ((h ^ (h >>> 16)) & 16777215) / 16777216; };
+let windNoiseData = null;
+export function windNoise() {
+  if (windNoiseData) return windNoiseData;
+  const d = new Uint8Array(WN * WN * 4);
+  for (let y = 0; y < WN; y++) for (let x = 0; x < WN; x++) {
+    const o = (y * WN + x) * 4;
+    d[o] = hash2(x & 15, (y & 15) + 1000) * 256; d[o + 1] = hash2((x & 31) + 2000, y & 31) * 256;
+    d[o + 2] = hash2(x + 3000, y + 5000) * 256; d[o + 3] = hash2(x + 7000, y + 9000) * 256;
+  }
+  return (windNoiseData = d);
+}
+// (STATIC_FS wn in JS: channel c at lattice point (gx, gy))
+function wn(gx, gy, c) {
+  const d = windNoise(), ix = Math.floor(gx), iy = Math.floor(gy);
+  let fx = gx - ix, fy = gy - iy; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+  const v = (x, y) => d[((y & (WN - 1)) * WN + (x & (WN - 1))) * 4 + c] / 255;
+  const a = v(ix, iy), b = v(ix + 1, iy), e = v(ix, iy + 1), f = v(ix + 1, iy + 1);
+  return a + (b - a) * fx + (e + (f - e) * fx - a - (b - a) * fx) * fy;
+}
+const sst = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+// swayAt: the same wind in JS (the tests): at world point (x, y), with the wind W [strength, gustiness, dx, dy], the
+// gust patches' travel G (wind.js gd) and the flutter clock ft -> { g: the gust there 0..1, pw: the wind's push, pi:
+// the idle sway } (STATIC_FS leans a leaf by (pw + pi) x how high it stands)
+export function swayAt(x, y, W, G, ft) {
+  const s = W[0], g = sst(0.42, 0.78, wn((x - G[0]) / 512, (y - G[1]) / 512, 0)) * sst(0.3, 0.72, wn((x - G[2]) / 256, (y - G[3]) / 256, 1));
+  const tp = wn(x / 230, y / 230, 2), tq = sst(0.2, 0.8, wn(x / 230, y / 230, 3)), cp = wn(x / 26 + 61.5, y / 26 + 61.5, 2), am = 0.4 + 1.2 * tq, f = (k) => 2 * Math.PI * k / 256;
+  const pw = s * ((1 - W[1]) * 0.6 + W[1] * g * 1.4) * W[2] * (0.7 + 0.45 * am);
+  const pi = ((Math.sin(ft * f(37) + tp * 12.6) * (1 - tq) + Math.sin(ft * f(59) + tp * 8.4 + 1.7) * tq) * 0.3 * am + Math.sin(ft * f(29) + tp * 6.3 + cp * 6.28) * 0.12 + Math.sin(ft * f(131) + cp * 25.1) * 0.06) * (0.6 + s);
+  return { g, pw, pi };
+}
 const STATIC_FS = (AP) => HDR + `
 #define AP ${AP}
 #define CTX ${CHUNK_PX / AP}
-uniform sampler2D t0, t1, t2, t3; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64]; uniform vec4 uFoot[64];
-uniform vec4 uWind; uniform float uWindT; uniform int uSway; uniform vec2 uChunk;
+uniform sampler2D t0, t1, t2, t3, tN; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64]; uniform vec4 uFoot[64];
+uniform vec4 uWind, uGust; uniform float uFlut; uniform int uSway; uniform vec2 uChunk;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
+// smooth value noise at lattice point g in one fetch of the wind's noise (windNoise)
+vec4 wn(vec2 g){ vec2 i = floor(g), f = g - i; return textureLod(tN, (i + 0.5 + f * f * (3.0 - 2.0 * f)) / ${WN}.0, 0.0); }
 float gustAt(vec2 w){
-  float s = uWind.x, t = uWindT, along = dot(w, uWind.zw);
-  float w1 = sin(along * 0.006 - t * (1.1 + s * 1.6));
-  float w2 = sin(along * 0.009 + (w.x * uWind.w - w.y * uWind.z) * 0.003 - t * (2.3 + s * 2.0) + 1.3);
-  return 0.5 + 0.5 * (0.65 * w1 + 0.35 * w2);
+  return smoothstep(0.42, 0.78, wn((w - uGust.xy) / 512.0).r) * smoothstep(0.3, 0.72, wn((w - uGust.zw) / 256.0).g);
 }
 // how far a leaf texel at height h leans for a push of 1 (texels): grass and crops at their tips, foliage
 // more the higher it stands
@@ -160,33 +207,41 @@ void main(){
   float gb = 0.0;
   if (uSway > 0) {
     vec2 w = uChunk + vec2(t * AP) + 0.5 * float(AP);
-    float g = gustAt(w), s = uWind.x;
-    gb = s * (0.35 + 0.65 * g) * smoothstep(0.15, 0.5, s);
-    if (uSway > 1) {
-      int R = (uSway - 1 + AP - 1) / AP;
-      float pw = s * ((1.0 - uWind.y) * 0.6 + uWind.y * g * 1.3) * uWind.z;
-      // (the fields change slowly across the ground, so a whole plant leans as one)
-      float pi = sin(uWindT * 1.25 + w.x * 0.0045 + w.y * 0.006) * 0.3 + sin(uWindT * 0.7 + w.x * 0.0021 - w.y * 0.003) * 0.15;
-      int fl0 = flOf(b);
-      float h0 = zOf(b);
-      int own = (fl0 & ${F_LEAF}) != 0 ? leanOf(pw, pi, h0, fl0, R) : 0;
-      float bestH = own == 0 ? h0 : -1.0;
-      int bestK = own == 0 ? 0 : 99;
-      for (int k = -3; k <= 3; k++) {
-        if (k == 0 || abs(k) > R) continue;
-        int sx = t.x - k;
-        if (sx < 0 || sx > CTX - 1) continue;
-        vec4 sb = texelFetch(t1, ivec2(sx, t.y), 0);
-        int sf = flOf(sb);
-        if ((sf & ${F_LEAF}) == 0) continue;
-        float sh = zOf(sb);
-        if (sh > bestH && leanOf(pw, pi, sh, sf, R) == k) { bestH = sh; bestK = k; }
+    int fl0 = flOf(b), R = (uSway - 1 + AP - 1) / AP;
+    bool any = (fl0 & ${F_LEAF}) != 0;
+    for (int k = -3; k <= 3; k++) {
+      if (any || k == 0 || abs(k) > R || t.x - k < 0 || t.x - k > CTX - 1) continue;
+      any = (flOf(texelFetch(t1, ivec2(t.x - k, t.y), 0)) & ${F_LEAF}) != 0;
+    }
+    if (any) {
+      float g = gustAt(w), s = uWind.x;
+      gb = s * (0.3 + 0.7 * g) * smoothstep(0.15, 0.5, s);
+      if (uSway > 1) {
+        // a stand's phase, its rhythm (slow or quick) and how much it moves (230 px cells); a cluster's phase (26 px)
+        vec4 st = wn(w / 230.0);
+        float tp = st.b, tq = smoothstep(0.2, 0.8, st.a), cp = wn(w / 26.0 + 61.5).b, am = 0.4 + 1.2 * tq;
+        float pw = s * ((1.0 - uWind.y) * 0.6 + uWind.y * g * 1.4) * uWind.z * (0.7 + 0.45 * am);
+        float pi = ((sin(uFlut * ${FLUT(37)} + tp * 12.6) * (1.0 - tq) + sin(uFlut * ${FLUT(59)} + tp * 8.4 + 1.7) * tq) * 0.3 * am + sin(uFlut * ${FLUT(29)} + tp * 6.3 + cp * 6.28) * 0.12 + sin(uFlut * ${FLUT(131)} + cp * 25.1) * 0.06) * (0.6 + s);
+        float h0 = zOf(b);
+        int own = (fl0 & ${F_LEAF}) != 0 ? leanOf(pw, pi, h0, fl0, R) : 0;
+        float bestH = own == 0 ? h0 : -1.0;
+        int bestK = own == 0 ? 0 : 99;
+        for (int k = -3; k <= 3; k++) {
+          if (k == 0 || abs(k) > R) continue;
+          int sx = t.x - k;
+          if (sx < 0 || sx > CTX - 1) continue;
+          vec4 sb = texelFetch(t1, ivec2(sx, t.y), 0);
+          int sf = flOf(sb);
+          if ((sf & ${F_LEAF}) == 0) continue;
+          float sh = zOf(sb);
+          if (sh > bestH && leanOf(pw, pi, sh, sf, R) == k) { bestH = sh; bestK = k; }
+        }
+        if (bestK == 99) {
+          ivec2 s2 = ivec2(clamp(t.x - own, 0, CTX - 1), t.y);
+          vec4 b2 = texelFetch(t1, s2, 0);
+          if ((flOf(b2) & ${F_LEAF}) == 0) { src = s2; b = b2; }
+        } else if (bestK != 0) { src = ivec2(t.x - bestK, t.y); b = texelFetch(t1, src, 0); }
       }
-      if (bestK == 99) {
-        ivec2 s2 = ivec2(clamp(t.x - own, 0, CTX - 1), t.y);
-        vec4 b2 = texelFetch(t1, s2, 0);
-        if ((flOf(b2) & ${F_LEAF}) == 0) { src = s2; b = b2; }
-      } else if (bestK != 0) { src = ivec2(t.x - bestK, t.y); b = texelFetch(t1, src, 0); }
     }
   }
   vec4 a = texelFetch(t0, src, 0);
@@ -302,7 +357,19 @@ void main(){
   vec2 sv = pix / uCanvas - 0.5;
   o = vec4(c * (1.0 - uVign * dot(sv, sv) * 1.6), 1.0);
 }`;
-// x-ray: the parts of a sprite hidden by something taller, drawn unlit over the presented frame
+// x-ray: the parts of a sprite hidden by something taller, drawn unlit over the presented frame - but never through
+// vegetation (task #400, the owner: "going behind bushes will show your character outline ... Let's not do that for
+// vegetation or grass or plants when you walk behind them, I think it takes away from the immersion"): leaves, grass,
+// crops, ferns and flowers (F_LEAF) hide you, and so does a twig, a stem or a berry among them (a texel with leaves
+// taller than you VEG_D px out on two of its four sides). Buildings, walls, cars, trunks, rocks and posts still show
+// you through them. vegHides is the same rule in JS (the tests).
+export const VEG_D = 2;
+export function vegHides(at, x, y, h0) {
+  if (at(x, y)[0] & F_LEAF) return true;
+  let n = 0;
+  for (const [dx, dy] of [[VEG_D, 0], [-VEG_D, 0], [0, VEG_D], [0, -VEG_D]]) { const s = at(x + dx, y + dy); if ((s[0] & F_LEAF) && s[1] > h0 + 0.5) n++; }
+  return n >= 2;
+}
 const XRAY_VS = `#version 300 es
 in vec2 c; in vec4 iDst; in vec4 iSrc; in vec4 iPar; in vec4 iTint;
 uniform vec2 uCanvas, uOff; uniform float uS;
@@ -320,6 +387,15 @@ layout(location=0) out vec4 o;
 ${GLSL_COMMON}
 ivec3 at(ivec2 l, int w, int bits){ if ((bits & 1) != 0) l.x = w - 1 - l.x; return ivec3(int(vSrc.x + 0.5) + l.x, int(vSrc.y + 0.5) + l.y, int(vSrc.z + 0.5)); }
 float cov(ivec2 l, int w, int h, int bits){ return (l.x < 0 || l.y < 0 || l.x >= w || l.y >= h) ? 0.0 : texelFetch(tA, at(l, w, bits), 0).a; }
+bool veg(ivec2 q, int f, float h0){
+  if ((f & ${F_LEAF}) != 0) return true;
+  int n = 0;
+  for (int k = 0; k < 4; k++) {
+    vec4 s = texelFetch(tS, clamp(q + ivec2(k < 2 ? ${VEG_D} - 2 * ${VEG_D} * k : 0, k < 2 ? 0 : ${VEG_D} - 2 * ${VEG_D} * (k - 2)), ivec2(0), ivec2(uMax) - 1), 0);
+    if ((flOf(s) & ${F_LEAF}) != 0 && zOf(s) > h0 + 0.5) n++;
+  }
+  return n >= 2;
+}
 void main(){
   vec2 t = vec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y) * uInvS + uOff;
   ivec2 tq = ivec2(floor(t));
@@ -330,8 +406,9 @@ void main(){
   l /= k;                                          // (the sprite's art texel)
   int w = int(vDst.z + 0.5) / k, h = int(vDst.w + 0.5) / k, bits = int(vSrc.w + 0.5);
   if (cov(l, w, h, bits) < 0.5) discard;
-  float hs = zOf(texelFetch(tS, tq, 0)), h0 = zOf(texelFetch(tB, at(l, w, bits), 0)) + vPar.x;
-  if (hs <= h0 + 0.5) discard;
+  vec4 sb = texelFetch(tS, tq, 0);
+  float hs = zOf(sb), h0 = zOf(texelFetch(tB, at(l, w, bits), 0)) + vPar.x;
+  if (hs <= h0 + 0.5 || veg(tq, flOf(sb), h0)) discard;
   float rim = (cov(l + ivec2(1, 0), w, h, bits) < 0.5 || cov(l - ivec2(1, 0), w, h, bits) < 0.5 || cov(l + ivec2(0, 1), w, h, bits) < 0.5 || cov(l - ivec2(0, 1), w, h, bits) < 0.5) ? 1.0 : 0.0;
   o = vec4(mix(uCol.rgb, vec3(1.0), rim * 0.45), min(1.0, uCol.a + rim * 0.35));
 }`;
@@ -392,7 +469,12 @@ export class Art2Engine {
     this.vaoSpr = this._instVao(this.ibSpr); this.vaoDec = this._instVao(this.ibDec); this.vaoXr = this._instVao(this.ibXr);
     this.uboBuf = gl.createBuffer(); gl.bindBuffer(gl.UNIFORM_BUFFER, this.uboBuf); gl.bufferData(gl.UNIFORM_BUFFER, this.ubo.byteLength, gl.DYNAMIC_DRAW); gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     const IA = ['c', 'iDst', 'iSrc', 'iPar', 'iTint'];
-    this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS(this.ap), ['c'], { t0: 0, t1: 1, t2: 2, t3: 7 });
+    this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS(this.ap), ['c'], { t0: 0, t1: 1, t2: 2, t3: 7, tN: 8 });
+    // (the wind's noise for the swaying vegetation: unit 8, which nothing else uses)
+    this.tWN = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.tWN);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, WN, WN, 0, gl.RGBA, gl.UNSIGNED_BYTE, windNoise());
+    for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.REPEAT], [gl.TEXTURE_WRAP_T, gl.REPEAT]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+    gl.bindTexture(gl.TEXTURE_2D, null);
     this.pSprite = glProgram(gl, SPRITE_VS, SPRITE_FS, IA, { tA: 3, tB: 4, tC: 5 });
     this.pDecal = glProgram(gl, DECAL_VS, DECAL_FS, ['c', 'iA', 'iSrc', 'iSz', 'iPar'], { tA: 3 });
     this.pPresent = glProgram(gl, TRI_VS, PRESENT_FS, ['p'], { tF: 0 });
@@ -458,12 +540,13 @@ export class Art2Engine {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this.tCan = t;
   }
-  // is any of the canopy over the view (with the reach of its shade)? the light skips it when not
+  // does any of the canopy's light fall on the view (canopy.js canopyReach: its shade, flecks and beams, swept away
+  // from the sun)? the light skips it when not
   _canopyInView() {
     const c = this.canopy;
     if (!this.tCan || !c) return false;
-    const m = 900;
-    return this.ox + this.SW > c.x0 - m && this.ox < c.x0 + c.w * c.cell + m && this.oy + this.SH > c.y0 - m && this.oy < c.y0 + c.h * c.cell + m;
+    const r = canopyReach(c, this.P.sunDir || PRESET_DEFAULTS.sunDir, this._reach || (this._reach = [0, 0, 0, 0]));
+    return this.ox + this.SW > r[0] && this.ox < r[2] && this.oy + this.SH > r[1] && this.oy < r[3];
   }
 
   // ---- quality, size, lifecycle -----------------------------------------------------------------------------
@@ -503,6 +586,7 @@ export class Art2Engine {
       for (const s of this.slots) for (const t of s.t) gl.deleteTexture(t);
       for (const t of this.atlas) gl.deleteTexture(t);
       if (this.tCan) gl.deleteTexture(this.tCan);
+      if (this.tWN) gl.deleteTexture(this.tWN);
       for (const p of [this.pStatic, this.pSprite, this.pDecal, this.pPresent, this.pXray]) gl.deleteProgram(p.p);
       for (const b of [this.vbTri, this.vbQuad, this.ibSpr, this.ibDec, this.ibXr, this.uboBuf]) gl.deleteBuffer(b);
       for (const v of [this.vaoTri, this.vaoQuad, this.vaoSpr, this.vaoDec, this.vaoXr]) gl.deleteVertexArray(v);
@@ -719,7 +803,10 @@ export class Art2Engine {
     const P = f.preset || PRESETS_GAME.noon, T = LIGHT_TIERS[this.q];
     this.P = P; this.time = f.time || 0; this.wet = f.wet || 0; this.flash = f.flash || 0; this.fog = f.fog || 0;
     if (f.fades !== undefined) this.fades = f.fades;
-    this.wind = f.wind || null; this.windT = f.windT ?? this.time; // [strength, gustiness, dir x, dir y], the wind clock (s)
+    this.wind = f.wind || null;                                    // [strength, gustiness, dir x, dir y]
+    this.gd = f.gd || null; this.ft = f.ft || 0;                   // the gust patches' travel, the flutter clock (wind.js)
+    this.air = f.air || null;                                      // how far the air has carried things (wind.js air)
+    this.bio = f.bio || null;                                      // the sea's sparkle tonight: [strength, seed] (atmos.js bioAt)
     this.zoom = f.zoom > 0 ? f.zoom : 1; this.camX = +f.camX || 0; this.camY = +f.camY || 0;
     // margins: the shadow reach on the side the sun is, room above for wet reflections, a little slack
     const sd = P.sunDir || PRESET_DEFAULTS.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]) || 1, sz = sd[2] / sl;
@@ -811,7 +898,7 @@ export class Art2Engine {
     const LS = this.LS;
     LS.A = this.tA; LS.B = this.tB; LS.C = this.tC; LS.w = this.SW; LS.h = this.SH; LS.preset = this.P;
     LS.wet = this.wet; LS.time = this.time; LS.flash = this.flash; LS.fog = this.fog;
-    const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind;
+    const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind; LS.air = this.air; LS.bio = this.bio;
     LS.can = this._canopyInView() ? this.canopy : null; LS.canTex = this.tCan;
     LS.nL = this._packLights(); LS.ubo = this.uboBuf; LS.out = this.fbOut; LS.mark = this.profile ? this._mark : null;
     this.light.bin(this.ubo, LS.nL, this.SW, this.SH, Math.max(this.P.wet ?? 0, this.wet) > 0);
@@ -885,7 +972,8 @@ export class Art2Engine {
     gl.uniform2f(u.uScene, this.SW, this.SH);
     const W = this.wind, sway = W && this.swayOn !== false ? QUALITY[this.q].sway : 0; // (swayOn: Settings' "Wind sway")
     gl.uniform1i(u.uSway, sway);
-    if (sway) { gl.uniform4f(u.uWind, W[0], W[1], W[2], W[3]); gl.uniform1f(u.uWindT, this.windT % 4096); }
+    gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, this.tWN);
+    if (sway) { const G = this.gd; gl.uniform4f(u.uWind, W[0], W[1], W[2], W[3]); gl.uniform4f(u.uGust, G ? G[0] : 0, G ? G[1] : 0, G ? G[2] : 0, G ? G[3] : 0); gl.uniform1f(u.uFlut, this.ft); }
     const fades = this.fades && this.fades.size ? this.fades : null, FA = this._fadeArr || (this._fadeArr = new Float32Array(64));
     const c0 = Math.floor(this.ox / CHUNK_PX), c1 = Math.floor((this.ox + this.SW - 1) / CHUNK_PX), r0 = Math.floor(this.oy / CHUNK_PX), r1 = Math.floor((this.oy + this.SH - 1) / CHUNK_PX);
     let n = 0;

@@ -17,7 +17,7 @@ export const TRIM_DB = Object.freeze({
   reloadin: 0.9, reloadout: 3.5, revive: 9.3, ricochet: 3.7, ridebell: -5.6, rockfall: 6.1, roll: 7.1, rollerdoor: 8.2,
   rubble: 1.9, scrape: 4.6, scream: 1.4, screech: 2, sear: 4.5, shutter: 12.2, slash: 5.4, slidingdoor: 6.2,
   spikes: 7.6, splash: -4, spray: 4.3, squeak: 4.3, stab: 8.3, stardown: 5.8, starup: 0, step: 5.9,
-  stroke: -5.4, swish: 3.4, taser: 4.4, thud: 8.6, thunder: 7.2, thwack: 8.1, trainhorn: -7.8, trainhornshort: -6.9,
+  stroke: -5.4, swish: 3.4, taser: 4.4, thud: 8.6, thunder: 8.7, thwack: 8.1, trainhorn: -7.8, trainhornshort: -6.9,
   treecrack: -0.2, treefall: 7.4, trickle: 7.3, twang: 7.6, twig: -2.9, tyrepop: -0.5, whoosh: 8.1, whoosh_blade: 5.3,
   whoosh_heavy: 7.7, woodcrunch: 5.1, yelp: 10, zing: 2,
 });

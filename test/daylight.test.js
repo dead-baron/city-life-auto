@@ -71,3 +71,40 @@ test('god rays and dust only with a low, strong sun: in the morning and at golde
   const wet = sweep(0.8).filter((r) => r.m >= 1100 && r.m <= 1140);
   for (const r of wet) assert.ok(r.moteK < 0.1, `no dust in the rain (${r.moteK.toFixed(2)})`);
 });
+
+// God rays ease in and out over a few seconds (lightgame.js easeRays, task #393): whatever their targets do - the canopy
+// coming into view, the sun clearing the trees, arriving somewhere - nothing pops; and the canopy's light is drawn
+// wherever it falls (canopy.js canopyReach), so walking out of its reach doesn't cut it off.
+import { canopyReach } from '../client/art2/game/canopy.js';
+test('god rays fade in and out over a few seconds, at any frame rate, after a hitch or the tab away', () => {
+  for (const fps of [20, 60, 144]) {
+    const cur = { shaftK: 0, beamK: 0, moteK: 0 }, on = { shaftK: 0.4, beamK: 1, moteK: 0.8 }, off = { shaftK: 0, beamK: 0, moteK: 0 };
+    let worst = 0, t = 0;
+    const run = (tgt, secs) => { for (let i = 0; i < secs * fps; i++, t += 1 / fps) { const b = cur.beamK; L.easeRays(cur, tgt, 1 / fps); worst = Math.max(worst, Math.abs(cur.beamK - b)); } };
+    run(on, 1 / fps);
+    assert.ok(cur.beamK <= 1 / fps / L.RAY_TAU, `${fps} fps: the first frame shows next to nothing (${cur.beamK.toFixed(3)})`);
+    run(on, L.RAY_TAU - 1 / fps);
+    assert.ok(cur.beamK > 0.55 && cur.beamK < 0.7, `${fps} fps: ${L.RAY_TAU} s in, about two thirds (${cur.beamK.toFixed(2)})`);
+    run(on, 6);
+    assert.ok(cur.beamK > 0.95 && cur.shaftK > 0.38 && cur.moteK > 0.76, `${fps} fps: in full after ~8 s`);
+    run(off, 1);
+    assert.ok(cur.beamK > 0.6, `${fps} fps: a second after they go, still most of the way (${cur.beamK.toFixed(2)})`);
+    assert.ok(worst <= 1 / fps / L.RAY_TAU + 1e-9, `${fps} fps: at most ${(worst * 100).toFixed(2)}% of the range a frame`);
+  }
+  // a hitch or a tab back from the background counts a quarter of a second
+  const cur = { shaftK: 0, beamK: 0, moteK: 0 };
+  L.easeRays(cur, { shaftK: 1, beamK: 1, moteK: 1 }, 30);
+  assert.ok(cur.beamK < 0.1, `a 30 s gap: ${cur.beamK.toFixed(3)}`);
+});
+
+test('the canopy\'s light is drawn as far as it falls: a low sun throws it well past the old 900 px round the trees', () => {
+  const c = { x0: 1000, y0: 2000, w: 100, h: 50, cell: 32, hc: 400 };   // (a box 3200 x 1600 px)
+  // the sun low in the west at sunset (lightgame.js PRESETS_GAME.sunset): the flecks and beams fall far to the east
+  const r = canopyReach(c, [-0.9, -0.2, 0.24]);
+  assert.ok(r[2] > c.x0 + 3200 + 1400, `east of the trees: ${r[2] - c.x0 - 3200} px (the old reach: 900)`);
+  assert.ok(r[0] >= c.x0 - 64 - 1e-9, 'not toward the sun');
+  assert.ok(r[1] <= c.y0 - 400 - 64, 'up the screen by the layer\'s height (the beams in the air)');
+  // the sun high at noon: hardly past the trees
+  const n = canopyReach(c, [-0.42, -0.3, 0.86]);
+  assert.ok(n[2] - (c.x0 + 3200) < 300 && n[0] > c.x0 - 400, 'at noon it stays close');
+});

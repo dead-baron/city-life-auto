@@ -65,11 +65,14 @@ function clump(G, cx, cy, rx, ry, seed, zAt, sun = 0.5, n = 0) {
 }
 
 // ---- the giant ---------------------------------------------------------------------------------------------
-// o: flare (how far the foot spreads), lean (px the top drifts), crown (0..1 how full), scar (fire hollow), burls
+// o: flare (how far the foot spreads), lean (px the top drifts), crown (0..1 how full), scar (fire hollow), snag (a
+// dead top), burls. The giants in the game have neither a scar nor a snag (task #399, the owner: the fire hollow read
+// as "the grey triangle at the bottom of all the redwood trees", the dead top as "a small grey cone"): a flared,
+// rooted, mossy foot, and a trunk that rises into its crown, the sprays closing over its tip.
 export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
   const rnd = mulberry32(seed * 977 + 3), flare = o.flare ?? 0.6, bulge = 0.5, cone = !!o.cone;
-  // an old giant now and then has a dead top: a silver spike standing out of its crown
-  const snag = o.snag ?? (!cone && hash(seed, 33, 4) < 0.2), Ht = snag ? H * 1.06 : H;
+  // (a dead top, only when asked for: a silver spike standing out of the crown)
+  const snag = !!o.snag && !cone, Ht = snag ? H * 1.06 : H;
   const lean = o.lean ?? (hash(seed, 7, 2) - 0.5) * hw * 0.7, crownW = hw * 2.6 + 30;
   const Wd = Math.ceil(Math.max(hw * 2 * (1 + flare), crownW * 2) + 40 + Math.abs(lean) * 2), Hh = Math.ceil(Ht + hw * (1 + flare) * bulge + 40);
   const G = new GBuf(Wd, Hh);
@@ -80,7 +83,7 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
   const rad = (z) => hw * (1 + flare * Math.max(0, 1 - z / (hw * 1.7)) ** 2) * (1 + 0.03 * Math.sin(z * 0.04 + seed)) * (1 - Math.min(1, z / Ht) * 0.42) * (1 - clamp((z - Ht * 0.68) / (Ht * 0.32)) ** 1.6 * 0.86);
   const xAt = (z) => cx + lean * (z / H) ** 1.6;
   const SNAG = ramp('#8c8274', 6, 3, { dark: 0.62, light: 0.38 });
-  const scar = o.scar ?? (hash(seed, 9, 4) < 0.28), scarH = hw * (1.1 + hash(seed, 10, 4) * 0.9), scarW = 0.38 + hash(seed, 11, 4) * 0.2;
+  const scar = !!o.scar, scarH = hw * (1.1 + hash(seed, 10, 4) * 0.9), scarW = 0.38 + hash(seed, 11, 4) * 0.2;
   const burls = [];
   for (let i = 0; i < (o.burls ?? (1 + Math.floor(hash(seed, 12, 4) * 3))); i++) burls.push([(hash(seed, 13 + i, 4) - 0.5) * 1.4, hw * 0.8 + hash(seed, 20 + i, 4) * H * 0.35, hw * (0.18 + hash(seed, 27 + i, 4) * 0.16)]);
   // roots spreading over the floor (the back ones first, the front ones after the trunk)
@@ -101,9 +104,11 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
     }
   };
   root(false);
+  // (the trunk ends a little under the top of the crown, so the sprays close over its tip)
+  const top = snag ? Ht : H - 7;
   for (let y = 0; y < G.h; y++) {
     const zEst = foot - y;
-    if (zEst > Ht) continue;
+    if (zEst > top) continue;
     const zc = Math.max(0, zEst), mx = xAt(zc);
     // (the dead top: broken and splintered, narrowing in jerks)
     const r = rad(zc) * (snag && zEst > H * 0.92 ? 0.7 + hash(Math.round(zEst / 3), 0, seed) * 0.5 : 1);
