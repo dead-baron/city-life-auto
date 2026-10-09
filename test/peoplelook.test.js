@@ -65,7 +65,8 @@ test('every hairstyle, face option, mark, makeup, facial hair, build and piece d
 test('the close renders are the game\'s figure, finer: the same shape, R times the size', () => {
   for (let i = 0; i < 12; i++) {
     const A = LK.lookArt(LK.STARTERS[i].look), g = person(A, 1, 'idle', 0, { tight: true }), c = person(A, 1, 'idle', 0, { tight: true, res: 4 });
-    assert.ok(Math.abs(c.h - g.h * 4) <= 8 && Math.abs(c.w - g.w * 4) <= 8, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
+    // (the game's figure has its 1 px outline and samples whole px: up to 2.5 world px more, 10 px at 4)
+    assert.ok(Math.abs(c.h - g.h * 4) <= 10 && Math.abs(c.w - g.w * 4) <= 10, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
     assert.ok(Math.abs(c.ay - g.ay * 4) <= 6, 'the feet stay the anchor');
   }
 });
