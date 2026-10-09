@@ -422,7 +422,7 @@ function fixedStep() {
   if (S.pending.length > 60) S.pending.shift();
   if (S.pred) { S.pred.prev = { ...S.pred.s }; stepPred(dq); }
   // predict our own melee swing so punches animate the instant you click
-  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near) && !S.me.hoops) {   // (by your golf ball it's a swing of the club)
+  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near) && !S.me.hoops && !S.me.fight) {   // (by your golf ball it's a swing of the club; held down by an officer, the struggle's grunts instead)
     const w = WEAPONS[S.me.weapon];
     if (w && w.type === 'melee' && S.loopClock >= (S.localSwingReady || 0)) {
       const e = S.ents.get(S.ctrlId);

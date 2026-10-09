@@ -4446,3 +4446,42 @@ From the owner's notes at 03:55, 04:38 and 04:39.
   - The shot now carries the shooter's id. The flash and the tracer start at the gun as it's drawn, and the flash stays on the gun for its few frames.
 - **The character creator for everyone** (`server/systems/looks.js`): players from before the creator never saw it, because their old outfit had simply become a look. Everyone now gets the starting-look screen once, as a free session, keeping what they own. A progress wipe keeps the flag, so it's only once. It's also always on the pause menu: Appearance.
 - **Lights underground** (`client/main.js` carriedLights): each carried light now has its own beam in the shared light path that the sewers and the cave use: a headlamp's narrower cone, the heavy flashlight's long one, a lantern's warm round glow.
+
+## 2026-10-09 · Fight back: a struggle when the police take you down, and a real chance to break free at low stars
+From the owner's note at 05:01: "when you get tackled or pinned by an officer you can fight back with punches ... and might be able to break free ... I just want to make it a little easier to get away or break free especially at lower 1-3 stars wanted level."
+- **The struggle** (new: `server/systems/struggle.js`):
+  - An officer who reaches you while you're down no longer cuffs you on the spot. That's after a tackle, a grab, a taser, or being dragged out of a car. They get on top of you, kneeling, and go for the cuffs.
+  - Mash the attack button to fill the struggle meter: left click, RT on a pad, or FIRE on a phone. Swinging the move stick from side to side (a wriggle) fills it a little.
+  - The officer pushes the meter back down all the time, harder the longer they've held you. After 4 s (`STRUGGLE_CUFF_S`) the cuffs go on, whatever the meter says.
+  - **Fill it:** you throw the officer off. They're down for a moment: 3.2 s at 1 star, 2.8 s at 2, less higher up (`STRUGGLE_KNOCK_S`), so at low stars running really works. You're on your feet, and no tackle or grab lands for 2.5 s (`STRUGGLE_GRACE_S`). Run, or keep fighting: punching the officer is assaulting an officer, as before (+40 heat).
+  - **Let it run out:** you're cuffed, as before, and custody.js takes it from there.
+  - **Once cuffed, there's no struggle.** Only the old ways out.
+  - **The other officers** hold their fire while one is wrestling you, and come to help. A second one joins in; a third stands by.
+  - Only NPC officers start a struggle. A player officer still cuffs a downed suspect with E.
+- **The odds** (all in `shared/rules.js`, `STRUGGLE_*`):
+  - **Stars:** fair at 1-3, much harder at 4, very hard at 5.
+  - **Health is your strength:** there's no strength stat. At half health it's much harder. A hearty meal's extra health helps, and so does an energy drink. A taser's twitch makes you weaker.
+  - **Who's on you:** SWAT and soldiers hold hardest, then the FBI's agents, then a cop. Their build matters (a brute holds harder), and so does how well they got hold of you this time (a roll).
+  - **A second officer** adds 30% of their own hold (`STRUGGLE_SECOND`). Counted in full ("double"), it made a 1-star chase nearly hopeless: both of a car's officers usually reach you together, and only about 1 in 5 struggles were won. Now a second officer about halves your odds.
+  - **Simulated** (mashing about 7 times a second, full health, one cop): free 78% of the time at 1 star, 58% at 2, 49% at 3, 8% at 4, never at 5. At 1 star: half health 25%, a third of it 5%, two cops 39%. At 3 stars: an agent 19%, SWAT 4%. Not mashing: always cuffed.
+  - **In full chases** at 1 star (standing still, then mashing): free about 2 times in 5, since a car's two officers usually both get to you. Before tonight it was never.
+- **NPC crooks:** a mugger the police tase and reach shakes them off 30% of the time (more if they're strong), and runs. It's a dice roll, once per takedown.
+- **What you see and hear** (client):
+  - **A FIGHT BACK! bar** where the IN CUSTODY banner goes. It shows what to mash and wriggle with on your device. It adds "two of them on you!" or "the cuffs are coming out!" when that matters. The touch FIRE button pulses.
+  - **You thrash under the officer:** face down, arms and knees going (the crawl pose, fast), heaving up on your hands at each press (the downF pose). There's no new pose: the renderer's code is at its budget. The officer kneels on you, as they do once you're cuffed.
+  - **Sounds** (`client/sound/events.js`): grunts and a scuffle as you heave (`struggle`), a shove and a whoosh as you throw them off (`breakfree`), the cuffs clicking shut (`cuffs`). Your own punch's whoosh isn't played meanwhile.
+  - **On the wire:** `me.fight { m, n, left }` (the meter, how many officers are on you, seconds to the cuffs) and the ped descriptor's `sg`.
+- **The view test's flake** (`test/view.test.js`, "nothing spawned on screen", 1 !== 0):
+  - A passer-by with a character of their own (`server/systems/personas.js`) is spawned just off screen. But one who sits on a bench, sleeps by one or leans on a wall was moved there, up to 520 px away, and now and then that was on screen: 64 of 1,667 spawned by the benches.
+  - Now, if that spot is in someone's view, an ordinary passer-by comes instead (`spawnPersona`'s `offView`). A new test checks it, and fails without the fix.
+  - Noticed, not changed: a street happening's newcomer (`happenings.js`) is spawned 260-820 px from you with no view check. It can't have caused this flake (the test ends before the first happening).
+- **Tests:** `test/struggle.test.js` (9):
+  - a tackle starts a struggle, not an instant pin;
+  - mashing breaks free: the officer down, you up, the grace;
+  - not fighting back gets you cuffed;
+  - the odds by stars, health and officer kind (simulated struggles; `DBG=1` prints the shares);
+  - two officers are harder: a second joins, a third stands by;
+  - once cuffed there's no struggle;
+  - punching the officer after breaking free adds heat;
+  - the HUD state and the descriptor reach the client;
+  - NPC crooks' dice roll.
