@@ -41,6 +41,32 @@ test('traffic and pedestrians spawn off screen; everything on screen was sent be
   assert.equal(unsentInView, 0, 'everything on screen had been sent');
 });
 
+// (the flake of 2026-10-09: now and then a passer-by spawned just off screen was a personality who sits on a bench, sleeps
+// in front of one or leans on a wall - and was moved to the bench or wall, on screen: personas.js spawnPersona offView)
+test('a passer-by with a character of their own is never moved onto a bench or a wall in view', async () => {
+  const personas = await import('../server/systems/personas.js');
+  const { spawnNpc } = await import('../server/systems/npc.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  setView(p, 900, 500);
+  const benches = w.map.props.filter((q) => /bench/.test(q.t || ''));
+  let spawned = 0, onScreen = 0;
+  for (const b of benches.slice(0, 120)) {
+    teleport(w, p.ped, b.x - 300, b.y);   // (the bench on screen, near its right edge)
+    const r = viewRect(w, p, {});
+    for (let k = 0; k < 4; k++) {
+      const x = r.x1 + 100 + k * 50, y = b.y + (k - 2) * 40;   // (where the density manager spawns: just off screen)
+      const q = personas.spawnHere(w, spawnNpc, x, y, false);
+      if (!q) continue;
+      spawned++;
+      if (inside(r, q)) onScreen++;
+      for (const e of [q, q.npc.with2 && w.get(q.npc.with2)]) if (e) w.remove(e);
+    }
+  }
+  assert.ok(spawned > 100, `personalities spawned by the benches (${spawned})`);
+  assert.equal(onScreen, 0, 'none of them put on screen');
+});
+
 test('the send window reaches further ahead of a fast car than behind it', () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
