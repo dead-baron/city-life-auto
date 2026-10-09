@@ -131,6 +131,11 @@ export class World {
     this.time = 1;                  // seconds since server start (never 0: timestamps double as flags)
     this.tick = 0;
     this.loopTime = opts.loopStart ?? 60; // seconds into the 20-minute chrono loop
+    // which turn of the loop it is: the day (06:00 to 06:00). The clients hash the weather that only comes some
+    // mornings or nights from it (a misty night, a foggy morning, the sea glowing: client/render/atmos.js), so everyone
+    // has the same; they learn it in the welcome and count the turns of the clock themselves. From the wall clock at
+    // start, so a restart doesn't begin at day 0 again.
+    this.day = opts.day ?? Math.floor(Date.now() / 1000 / DAY_LOOP_S);
     this.weather = 0;
     this.events = [];               // {x, y, ev} positional events this tick
     this.globalEvents = [];         // broadcast to everyone
@@ -258,7 +263,10 @@ export class World {
     const t0 = performance.now();
     this.tick++;
     this.time += DT;
-    if (!this.clockHold) this.loopTime = (this.loopTime + DT) % DAY_LOOP_S; // (dev: the clock can be frozen)
+    if (!this.clockHold) { // (dev: the clock can be frozen)
+      this.loopTime += DT;
+      if (this.loopTime >= DAY_LOOP_S) { this.loopTime %= DAY_LOOP_S; this.day++; }
+    }
 
     const systems = SYSTEMS;
     for (let i = 0; i < systems.length; i++) {

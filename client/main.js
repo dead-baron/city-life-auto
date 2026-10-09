@@ -1,7 +1,7 @@
 // City Life Auto browser client: a "dumb window" that sends input vectors, predicts only
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
-import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS } from '../shared/constants.js';
+import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS, DAY_LOOP_S } from '../shared/constants.js';
 import { generateCity, cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
 import { signalFor } from '../shared/signals.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
@@ -202,6 +202,7 @@ function onText(m) {
       if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
       S.welcomed = true; S.pid = m.pid; S.dev = !!m.dev;
+      S.day = Number(m.day) || 0; S.snapLoop = undefined;   // (the day: the server's count of the loop's turns; onBinary counts on)
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
       document.body.classList.toggle('practice', !!m.practice);
@@ -286,6 +287,9 @@ function onBinary(buf) {
   if (s.tick <= S.latestTick && S.latestTick - s.tick < 1000) return;
   S.latestTick = s.tick;
   if (Math.abs(S.renderTick - (s.tick - INTERP_TICKS)) > 8) S.renderTick = s.tick - INTERP_TICKS;
+  // the clock turning past 06:00 (or set back past it): a new day, as the server counts them (world.js day)
+  if (S.snapLoop !== undefined && s.loopTime < S.snapLoop - DAY_LOOP_S / 2) S.day = (S.day || 0) + 1;
+  S.snapLoop = s.loopTime;
   S.loopTime = s.loopTime;
   if (s.weather !== S.weather) { S.weather = s.weather; }
   for (const it of s.ents) {
@@ -2698,7 +2702,7 @@ function prepFrame(dt) {
   S.rainK = (S.rainK || 0) + ((rain ? 1 : 0) - (S.rainK || 0)) * (1 - Math.exp(-dt / 8));
   S.wx.update(dt, rain, now);
   wind.update(S.loopTime, S.rainK || 0, dt);   // (dt: the air moves on - the canopy's drift)
-  const sky = skyAt(S.loopTime, clock.minutes, S.rainK);
+  const sky = skyAt((S.day || 0) * DAY_LOOP_S + S.loopTime, clock.minutes, S.rainK);   // (the clock counting the days: some mornings and nights are foggy)
   if (S.wx.flash > 0) { const f = S.wx.flash * (0.5 + 0.4 * sky.night); sky.amb = sky.amb.map((v) => v + (1 - v) * f); }
   const quality = gfxQuality();
   S.fx.thin = !gfx.particles;

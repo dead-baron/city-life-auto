@@ -42,8 +42,12 @@ export const dayIndex = (loopTime) => Math.floor((loopTime + DAY_LOOP_S * 0.25) 
 
 // Fog for this time of day: some mornings have fog rolling off the water (sometimes far into
 // town), some nights a light mist. { k: 0..1 how thick, spread: how far inland it reaches }
-export function fogAt(loopTime, minutes) {
-  const day = dayIndex(loopTime);
+// lt: the shared clock counting the days (main.js: the server's day x DAY_LOOP_S + loopTime). A morning's fog is the
+// morning's (dayIndex: the day turns at 21:40), a night's mist the night's (one loop of the clock: 20:00-06:00 is
+// inside it), each eased in and out. (Until 2026-10-09 it was given the clock as it wraps every loop, so every day was
+// the same day: no foggy morning ever, a misty night every night - task #387.)
+export function fogAt(lt, minutes) {
+  const day = dayIndex(lt);
   let k = 0, spread = 0;
   if (hash(day, 3) < 0.38 && minutes > 300 && minutes < 600) {           // a foggy morning
     const t = minutes < 390 ? (minutes - 300) / 90 : 1 - (minutes - 390) / 210;
@@ -51,9 +55,9 @@ export function fogAt(loopTime, minutes) {
     spread = Math.max(spread, hash(day, 5));                               // some days it reaches well into the city
   }
   const night = minutes >= 1230 || minutes < 300;
-  if (night && hash(day, 7) < 0.22) {                                      // a misty night
-    const t = minutes >= 1230 ? (minutes - 1230) / 60 : 1;
-    k = Math.max(k, 0.45 * Math.min(1, t));
+  if (night && hash(Math.floor(lt / DAY_LOOP_S), 7) < 0.22) {              // a misty night: in from 20:30, gone by 05:00
+    const t = minutes >= 1230 ? (minutes - 1230) / 60 : (300 - minutes) / 60;
+    k = Math.max(k, 0.45 * smooth(Math.min(1, t)));
     spread = Math.max(spread, 0.35);
   }
   return { k, spread };

@@ -14,8 +14,9 @@
 //   - wet ground: darkening, a wobbling streak under every light, and a mirror: the reflected view ray
 //     marched through the height map (a lamp's image hangs below its foot), sky sheen, rain speckles;
 //     open water (F_WATER) mirrors what stands in and beside it in any weather;
-//   - low-lying fog in drifting banks (thick at the foot of tall things, thin on the roofs) that the
-//     wide bloom lights up around lamps, a lightning flash, haze toward the top of the view, colour grade
+//   - fog in layers drifting with the wind - low banks with clear ground between them and wisps aloft, worked
+//     out at a quarter of the size (SHAFT_FS) - thick at the foot of tall things, clear on the roofs, that the
+//     wide bloom lights up around lamps; a lightning flash, haze toward the top of the view, colour grade
 //     (the vignette is applied by the engine's present);
 //   - god rays at a low sun (High/Ultra): sunlit ground smeared toward the sun over the shade.
 //
@@ -598,19 +599,31 @@ void main(){
   o = s;
 }`;
 
-// god rays at quarter size. r: sunlit ground smeared toward the sun, kept over shade (High and Ultra, a low sun).
-// g: under the redwood canopy (every tier), the beams themselves - the sunlit air in front of what is drawn at
-// this pixel: up the column of air over it (from the surface's height to the canopy: what is behind the
+// god rays and the fog at quarter size. r: sunlit ground smeared toward the sun, kept over shade (High and Ultra, a
+// low sun). g: under the redwood canopy (every tier), the beams themselves - the sunlit air in front of what is drawn
+// at this pixel: up the column of air over it (from the surface's height to the canopy: what is behind the
 // surface is hidden), the share of points whose way to the sun goes out through a gap in the crowns.
+// b, a: the fog's two layers (task #387, the owner: "wisps and puffs of foggy clouds ... not take over the entire area
+// so much but have layers of procedurally generated fog"), on the world and drifting with the air (fogD: wind.js air,
+// and twice that). b the low fog, about 24 px up: banks with clear ground between them, billowing at their edges (a
+// finer layer moving at half the air's speed, so their shapes change as they go), thicker over water and in the woods.
+// a the wisps aloft, about 72 px up: long thin streaks in patches, drifting twice as fast. FINAL_FS lays them over what
+// stands under them. The noise repeats over 8192 px (as the scene's origin and the air do), so nothing ever jumps.
 const SHAFT_FS = (T) => `#version 300 es
 precision highp float; precision highp int; precision highp sampler2D;
 #define SMEAR ${T.shafts}
 #define BEAMN ${T.rays > 1 ? 14 : T.rays > 0 ? 11 : 8}
+#define FOGQ ${T.half ? 1 : 2}
 layout(location=0) out vec4 o;
-uniform sampler2D tLit, tB; uniform vec2 fullTex, maxUV, sdir; uniform float slen, smear; uniform ivec2 org;
-uniform vec3 sunDir; uniform vec2 worg;
+uniform sampler2D tLit, tB; uniform vec2 fullTex, maxUV, sdir; uniform float slen, smear, fogOn; uniform ivec2 org;
+uniform vec3 sunDir; uniform vec2 worg; uniform vec4 fogD;
 ${GLSL_COMMON}
 ${CANOPY_GLSL}
+// value noise repeating over P px, per cells across it (whole numbers, x and y)
+float pnz(vec2 w, vec2 per, float P){
+  vec2 g = w * per / P, i = floor(g), f = g - i, a = mod(i, per), b = mod(i + 1.0, per); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash2(ivec2(a)), hash2(ivec2(b.x, a.y)), f.x), mix(hash2(ivec2(a.x, b.y)), hash2(ivec2(b)), f.x), f.y);
+}
 void main(){
   vec2 p = gl_FragCoord.xy * 4.0;
   float j = hash2(ivec2(gl_FragCoord.xy) + org / 4), acc = 0.0, beam = 0.0;
@@ -638,7 +651,22 @@ void main(){
       beam *= (z1 - z0) / (float(BEAMN) * canH);
     }
   }
-  o = vec4(acc, beam, 0.0, 1.0);
+  float lo = 0.0, hi = 0.0;
+  if (fogOn > 0.0) {
+    vec2 w = p + vec2(org), d = w + vec2(0.0, 24.0) - fogD.xy, h = w + vec2(0.0, 72.0) - fogD.zw;
+    float puff = pnz(w + vec2(0.0, 24.0) - mod(fogD.xy * 0.5, 4096.0), vec2(32.0, 40.0), 4096.0);   // (cells 128 x 102 px)
+#if FOGQ > 1
+    puff = puff * 0.72 + pnz(d + vec2(311.0, 97.0), vec2(128.0, 160.0), 8192.0) * 0.28;              // (64 x 51)
+#endif
+    // (the banks' edges pushed about by the puffs: billows, not round blobs)
+    lo = smoothstep(0.42, 0.74, pnz(d + (puff - 0.5) * vec2(200.0, 110.0), vec2(16.0, 24.0), 8192.0) * 0.66 + puff * 0.34);   // (banks 512 x 341)
+    int f = flOf(texelFetch(tB, ivec2(min(p, fullTex * maxUV)), 0));
+    lo = min(1.0, lo * ((f & ${F_WATER}) != 0 ? 1.4 : (f & ${F_LEAF}) != 0 ? 1.2 : 1.0));
+    // the wisps: thin streaks along the ridges of a stretched noise, bent by a slow one, only in patches
+    float m = pnz(h + vec2(4096.0, 2048.0), vec2(8.0, 16.0), 8192.0), s = pnz(h + vec2(0.0, (m - 0.5) * 150.0), vec2(32.0, 192.0), 8192.0);   // (patches 1024 x 512, streaks 256 x 43)
+    hi = smoothstep(0.66, 0.95, 1.0 - abs(s * 2.0 - 1.0)) * smoothstep(0.38, 0.7, m);
+  }
+  o = vec4(acc, beam, lo, hi);
 }`;
 
 // final: wet reflections, god rays, fog, bloom, lightning, haze, grade
@@ -651,12 +679,6 @@ uniform vec4 view;
 uniform float wet, reflK, bloomK, haze, sat, contrast, time, fog, fogH, flash, shaftK, beamK, moteK, useBH, useBQ;
 uniform vec3 hazeCol, lift, gain, fogCol, flashCol, shaftCol;
 ${GLSL_COMMON}
-// value noise on a lattice of cell px that repeats every per cells (so it wraps seamlessly with org)
-float vnoiseP(vec2 p, vec2 cell, ivec2 per){
-  vec2 g = p / cell, i = floor(g), f = g - i; f = f * f * (3.0 - 2.0 * f);
-  ivec2 a = ivec2(i) % per, b = (ivec2(i) + 1) % per;
-  return mix(mix(hash2(a), hash2(ivec2(b.x, a.y)), f.x), mix(hash2(ivec2(a.x, b.y)), hash2(b), f.x), f.y);
-}
 void main(){
   ivec2 q = ivec2(gl_FragCoord.xy);
   vec4 L0 = texelFetch(tLit, q, 0);
@@ -714,14 +736,12 @@ void main(){
     }
   }
   if (fog > 0.0) {
-    vec2 w = vec2(float(q.x + org.x), float(q.y + org.y) + Z);
-    // banks stretched east-west (cells 341 x 256), finer wisps (64, 32), all drifting
-    float nz = vnoiseP(w + vec2(mod(time * 8.0, 8192.0), mod(time * 2.0, 8192.0)), vec2(341.3333, 256.0), ivec2(24, 32)) * 0.55
-             + vnoiseP(w + vec2(8192.0) - vec2(mod(time * 12.0, 8192.0), mod(time * 4.0, 8192.0)), vec2(64.0), ivec2(128)) * 0.3
-             + vnoiseP(w + vec2(mod(time * 16.0, 8192.0), 0.0), vec2(32.0), ivec2(256)) * 0.15;
-    // a veil everywhere, thicker in the drifting banks than in the clearer gaps between them (never so clear that
-    // the gaps read as holes); lights glow in it (wide bloom)
-    float f = clamp(fog * exp(-Z / fogH) * (0.5 + 0.55 * smoothstep(0.15, 0.85, nz)), 0.0, 0.86);
+    // the fog's layers (SHAFT_FS b, a: soft at a quarter of the size) over what stands here: the low fog hugs the
+    // ground and thins up to fogH, the wisps float at about 72 px - a roof or a treetop above them stands clear -
+    // over the faintest veil; clear ground between the banks. Lights glow in it (wide bloom).
+    vec2 fv = texture(tSh, min(gl_FragCoord.xy * 0.25 / quarterTex, maxUVq)).ba;
+    float low = exp(-Z / fogH);
+    float f = clamp(fog * (low * (0.1 + fv.x * 0.62) + fv.y * 0.3 * smoothstep(110.0, 50.0, Z)), 0.0, 0.8);
     vec3 lit = useBQ > 0.5 ? texture(tBQ, min(gl_FragCoord.xy * 0.25 / quarterTex, maxUVq)).rgb * 1.1 : vec3(0.0);
     c = mix(c, fogCol + lit, f);
   }
@@ -904,7 +924,9 @@ export class LightGame {
     this.raysT = S.time;
     // (what is too faint to see isn't drawn: under 1/255 at full sun)
     const shaftK = T.shafts && R.shaftK > 0.002 ? R.shaftK : 0, beamK = can && R.beamK > 0.002 ? R.beamK : 0, moteK = R.moteK > 0.002 ? R.moteK : 0, sc = pv(P, 'sunCol');
-    if (shaftK > 0 || beamK > 0) {
+    // the fog's layers come from the same pass (SHAFT_FS b, a), drifting with the air (wind.js air) and twice that
+    const fogK = fog > 0.004 ? fog : 0;
+    if (shaftK > 0 || beamK > 0 || fogK > 0) {
       const ux = SD[0], uy = SD[1] - SD[2], ul = Math.hypot(ux, uy) || 1;
       p = this.prog('shaft'); u = p.u;
       gl.useProgram(p.p);
@@ -916,6 +938,8 @@ export class LightGame {
       if (u.sunDir) gl.uniform3fv(u.sunDir, SD);
       if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
       this.canUniforms(u, beamK > 0 ? S.can : null, S.air);
+      const A = S.air, ax = A ? A[0] : 0, ay = A ? A[1] : 0;
+      gl.uniform1f(u.fogOn, fogK > 0 ? 1 : 0); gl.uniform4f(u.fogD, ax, ay, (ax * 2) % 8192, (ay * 2) % 8192);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       this.blur(this.tSA, this.qw, this.qh, qw, qh, this.fSB, qw, qh, 1, 0, 1);
       this.blur(this.tSB, this.qw, this.qh, qw, qh, this.fSA, qw, qh, 0, 1, 1);
@@ -931,7 +955,7 @@ export class LightGame {
     gl.uniform2i(u.org, S.org[0], S.org[1]); gl.uniform4f(u.view, S.view[0], S.view[1], S.view[2], S.view[3]);
     gl.uniform1f(u.wet, wet); gl.uniform1f(u.reflK, pv(P, 'reflK')); gl.uniform1f(u.bloomK, bloomK); gl.uniform1f(u.haze, pv(P, 'haze'));
     gl.uniform1f(u.sat, pv(P, 'sat')); gl.uniform1f(u.contrast, pv(P, 'contrast')); gl.uniform1f(u.time, S.time % 4096);
-    gl.uniform1f(u.fog, fog); gl.uniform1f(u.fogH, pv(P, 'fogH')); gl.uniform1f(u.flash, flash); gl.uniform1f(u.shaftK, shaftK); gl.uniform1f(u.beamK, beamK); gl.uniform1f(u.moteK, moteK);
+    gl.uniform1f(u.fog, fogK); gl.uniform1f(u.fogH, pv(P, 'fogH')); gl.uniform1f(u.flash, flash); gl.uniform1f(u.shaftK, shaftK); gl.uniform1f(u.beamK, beamK); gl.uniform1f(u.moteK, moteK);
     gl.uniform1f(u.useBH, useBH); gl.uniform1f(u.useBQ, useBQ);
     gl.uniform3fv(u.hazeCol, pv(P, 'hazeCol')); gl.uniform3fv(u.lift, pv(P, 'lift')); gl.uniform3fv(u.gain, pv(P, 'gain'));
     // the fog is lit by the sky: by day the preset's colour, after dark a dim haze (the lamps' glow in it comes
