@@ -86,7 +86,15 @@ export const EVENT_SOUNDS = {
     if (p < 0.18) { A.at('scrape', ev.x, ev.y, 0.6 + p * 2); return; }
     A.at('crash', ev.x, ev.y, 1, { p }); if (p > 0.45) A.at('glass', ev.x, ev.y, 0.5 + 0.5 * p);
   },
-  explode: (ev, A) => A.at('explosion', ev.x, ev.y, 1, { r: ev.r || 100 }),
+  explode: (ev, A) => {   // bigger vehicles, bigger blasts (task #363): a truck adds the rubble, a car blown apart its metal and glass
+    A.at('explosion', ev.x, ev.y, 1, { r: ev.r || 100 });
+    if ((ev.r || 0) >= 160) { A.at('explosion', ev.x, ev.y, 0.7, { r: ev.r * 1.3 }); A.at('rubble', ev.x, ev.y, 1); }
+    if (ev.k === 'pieces' || ev.k === 'launch') { A.at('clang', ev.x, ev.y, 0.9); A.at('glass', ev.x, ev.y, 0.8); }
+  },
+  wreckland: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: 1 }); A.at('rubble', ev.x, ev.y, 0.8); A.at('clang', ev.x, ev.y, 0.7); },   // a wreck blown up into the air slams down
+  runover: (ev, A) => { A.at('bonk', ev.x, ev.y, 1); A.at('bodyfall', ev.x, ev.y, 0.9); A.at('crash', ev.x, ev.y, 0.5, { p: 0.2 }); },   // a body under a car (task #361)
+  hood: (ev, A) => { A.at('thud', ev.x, ev.y, 1); A.at('bonk', ev.x, ev.y, 0.8); A.at('clank', ev.x, ev.y, 0.6); },   // a thud up onto the hood
+  hoodoff: (ev, A) => A.at('bodyfall', ev.x, ev.y, 0.9),
   sinkboom: (ev, A) => { A.at('explosion', ev.x, ev.y, 0.5, { r: 60, wet: 1 }); A.at('splash', ev.x, ev.y, 1, { n: 40 }); },
   pop: at('tyrepop'),
   spikes: at('spikes'),

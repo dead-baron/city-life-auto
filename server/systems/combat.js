@@ -510,7 +510,7 @@ export function update(world, dt) {
     }
     e.lastStepX = e.x; e.lastStepY = e.y;
     // knockback friction for peds not driven by pedStep this tick
-    if (!e.player && (now < e.downUntil || now < e.stunUntil)) {
+    if (!e.player && !e.hoodOf && (now < e.downUntil || now < e.stunUntil)) {   // (on a car's hood: carhits.js carries them)
       // NPCs thrown from a car fly and slide like players do (and walls / cars hurt)
       const air = now < (e.airUntil || 0), tum = now < (e.tumbleUntil || 0);
       if (air || tum) {
@@ -544,7 +544,7 @@ function stepProjectile(world, p, dt) {
     const t = hit.hitT < 1 ? hit.hitT : 1;
     const ex = p.x + (nx - p.x) * t, ey = p.y + (ny - p.y) * t;
     const w = WEAPONS[p.weapon];
-    world.emit(ex, ey, { e: 'explode', x: ex, y: ey, r: w.radius });
+    world.emit(ex, ey, { e: 'explode', x: ex, y: ey, r: w.radius, s: 1 + Math.floor(world.rand() * 2147483646) });   // (s: the seed every client plays the same blast from)
     blast(world, ex, ey, w.radius, w.dmg, owner, 0, true, p.lz || 0);
     world.remove(p);
     return;
