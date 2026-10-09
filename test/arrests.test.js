@@ -7,7 +7,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
 import { STAR_HEAT, K } from '../shared/constants.js';
-import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS } from '../shared/rules.js';
+import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS, ESCORT_WALK_PX } from '../shared/rules.js';
+import { PED_BLOCK } from '../shared/map.js';
 import * as players from '../server/systems/players.js';
 import * as law from '../server/systems/law.js';
 import * as custody from '../server/systems/custody.js';
@@ -91,20 +92,20 @@ test('cuffed on the ground a way from the car the officers left (task #378): one
   const { p } = joinPlayer(w);
   teleport(w, p.ped, road.x + 300, road.y);
   wanted(w, p, 1);
-  // the officers chased them on foot: the car empty 600 px back along the road
-  const { v, crew } = footUnit(w, p, road.x + 900, road.y);
+  // the officers chased them on foot: the car empty back along the road, too far to walk them to (task #376)
+  const { v, crew } = footUnit(w, p, road.x + 300 + ESCORT_WALK_PX + 250, road.y);
   p.ped.downUntil = w.time + 3;
   law.arrest(w, crew[0], p.ped);
   assert.ok(p.custody && p.custody.stage === 'held');
-  let came = Infinity;
+  let came = null;
   const done = until(w, () => {
-    if (p.custody && p.custody.car === v.id) came = Math.min(came, Math.hypot(v.x - p.ped.x, v.y - p.ped.y));
+    if (p.custody && p.custody.stage === 'escort' && came === null) came = Math.hypot(v.x - p.ped.x, v.y - p.ped.y);
     return p.custody && p.custody.stage === 'ride';
   }, HOLD_S + 30);
   assert.ok(done, `in the back of a car within half a minute (stage ${p.custody && p.custody.stage}, the car ${Math.round(Math.hypot(v.x - p.ped.x, v.y - p.ped.y))} px off)`);
   assert.equal(p.ped.vehId, v.id, 'the unit\'s own car');
   assert.ok(p.ped.seat > 0, 'in the back');
-  assert.ok(came < 300, `it was driven over to them (${Math.round(came)} px)`);
+  assert.ok(came !== null && came < 300, `it was driven over to them (${Math.round(came)} px off when they were walked to it)`);
   const drv = w.get(v.seats[0]);
   assert.ok(drv && drv.npc && drv.npc.role === 'cop', 'an officer at the wheel');
   assert.ok(!told(p, /isn't coming/), 'no waiting for a car that never comes');
@@ -122,6 +123,85 @@ test('cuffed on the ground a way from the car the officers left (task #378): one
   assert.ok(until(w2, () => q.custody && q.custody.stage === 'ride', 50), 'in the back of the car sent');
   assert.ok(w2.get(q.ped.vehId).def.police && q.ped.seat > 0);
 });
+
+test('the officer who cuffed you walks you to their own car close by, you cuffed at their side, and puts you in the back (task #376)', () => {
+  const w = makeWorld(), told = listen(w);
+  const road = straightRoad(w.map, 1400);
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, road.x + 300, road.y);
+  wanted(w, p, 1);
+  // their car 420 px back along the road, empty (both officers chased on foot)
+  const { v, crew } = footUnit(w, p, road.x + 720, road.y);
+  const parked = { x: v.x, y: v.y };
+  p.ped.downUntil = w.time + 3;
+  law.arrest(w, crew[0], p.ped);
+  run(w, HOLD_S + 0.1);
+  assert.equal(p.custody.stage, 'escort', 'straight to the walk: no waiting for a car');
+  assert.equal(p.custody.car, v.id, 'to their own car');
+  assert.equal(p.custody.holder, crew[0].id, 'the officer who cuffed them walks them');
+  assert.ok(told(p, /walks you to their car/), 'told');
+  let beside = 0, n = 0, far = 0;
+  const done = until(w, () => {
+    if (p.custody.stage === 'escort' && p.custody.picked) {
+      const e = crew[0], d = Math.hypot(e.x - p.ped.x, e.y - p.ped.y);
+      assert.ok(p.ped.cuffed && w.time >= p.ped.downUntil, 'up on their feet, cuffed');
+      assert.ok(_descriptor(e).es, 'everyone sees the officer\'s hand on their arm');
+      if (Math.hypot(e.vx, e.vy) > 30) {
+        n++;
+        const ux = Math.cos(e.a), uy = Math.sin(e.a), dx = p.ped.x - e.x, dy = p.ped.y - e.y;
+        if (Math.abs(dx * -uy + dy * ux) > 8 && Math.abs(dx * ux + dy * uy) < 12) beside++;
+      }
+      far = Math.max(far, d);
+    }
+    return p.custody.stage === 'ride';
+  }, 20);
+  assert.ok(done, `in the back of the car within 20 s of the walk (stage ${p.custody.stage})`);
+  assert.equal(p.ped.vehId, v.id);
+  assert.ok(p.ped.seat > 0, 'in the back');
+  assert.ok(n > 20 && beside / n > 0.7, `walked at the officer's side (${beside} of ${n} steps)`);
+  assert.ok(far < 40, `never more than a step from the officer (${Math.round(far)} px)`);
+  assert.ok(Math.hypot(parked.x - v.x, parked.y - v.y) < 30, 'the car waited where it was parked');
+  assert.equal(_descriptor(crew[0]).es, undefined, 'and let go once they\'re in');
+  // their car too far to walk to: it's brought over (task #378's test drives it)
+  const w2 = makeWorld();
+  const { p: q } = joinPlayer(w2);
+  teleport(w2, q.ped, road.x + 300, road.y);
+  wanted(w2, q, 1);
+  const far2 = footUnit(w2, q, road.x + 300 + ESCORT_WALK_PX + 300, road.y);
+  q.ped.downUntil = w2.time + 3;
+  law.arrest(w2, far2.crew[0], q.ped);
+  run(w2, HOLD_S + 0.1);
+  assert.equal(q.custody.stage, 'fetch', 'too far to walk: the car comes');
+  assert.equal(q.custody.car, far2.v.id, 'their own car, brought over');
+  // a building between them and the car: no walking through it - the car comes
+  const w3 = makeWorld();
+  const { p: r } = joinPlayer(w3);
+  const pair = blockedPair(w3);
+  assert.ok(pair, 'a spot with a building between it and a road close by');
+  teleport(w3, r.ped, pair.a.x, pair.a.y);
+  wanted(w3, r, 1);
+  const behind = footUnit(w3, r, pair.b.x, pair.b.y);
+  r.ped.downUntil = w3.time + 3;
+  law.arrest(w3, behind.crew[0], r.ped);
+  run(w3, HOLD_S + 0.1);
+  assert.equal(r.custody.stage, 'fetch', 'no clear way on foot: the car comes round');
+});
+// a street corner, and a spot in walking range of it with a building (or water) in between
+function blockedPair(w) {
+  const m = w.map, nodes = m.nodes.filter((q) => q.lvl === 0 && Math.hypot(q.x - 26000, q.y - 17000) < 3000);
+  for (const n of nodes) {
+    const a = { x: n.x + 32, y: n.y + 32 };
+    if (PED_BLOCK[m.tileAtPx(a.x, a.y)] || walkInAt(m, a.x, a.y)) continue;
+    for (let k = 0; k < 16; k++) for (let d = 300; d <= ESCORT_WALK_PX - 150; d += 50) {
+      const b = { x: a.x + Math.cos(k * Math.PI / 8) * d, y: a.y + Math.sin(k * Math.PI / 8) * d };
+      if (PED_BLOCK[m.tileAtPx(b.x, b.y)] || walkInAt(m, b.x, b.y)) continue;
+      let blocked = 0;
+      for (let i = 1; i < 40; i++) if (PED_BLOCK[m.tileAtPx(a.x + (b.x - a.x) * i / 40, a.y + (b.y - a.y) * i / 40)]) blocked++;
+      if (blocked >= 4) return { a, b };
+    }
+  }
+  return null;
+}
 
 test('the cell: wait it out, no bail money, no walking out; surrendering goes straight there', async () => {
   const unstuck = await import('../server/systems/unstuck.js');

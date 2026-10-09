@@ -1,7 +1,9 @@
 // Arrests (design notes 2026-10-08). Cuffed (law.js arrest), a wanted player isn't busted on the spot any more: they're
-// held face down on the ground for HOLD_S, then a police car takes them in - the arresting unit's own if it has a seat to
-// spare, any other police car close by, or one sent for them from out of sight (police.js sendTransport) - and an officer
-// walks them over to it, puts them in the back and they're driven to the nearest station. Only there, booked into a cell,
+// held face down on the ground for HOLD_S, then a police car takes them in. The officer who cuffed them came in a car
+// close by: they get them up and walk them to it, the prisoner cuffed at their side (task #376, ESCORT_WALK_PX).
+// Otherwise a car comes for them - the arresting unit's own if it has a seat to spare (driven over: task #378), any other
+// police car close by, or one sent for them from out of sight (police.js sendTransport) - and an officer walks them over
+// to it. In the back, they're driven to the nearest station. Only there, booked into a cell,
 // are they fined and stripped of contraband and illegal guns, and their stars wiped. Then: pay the bail (BAIL_PER_STAR a
 // star) to walk out of the station now, or wait JAIL_S.
 //
@@ -14,19 +16,19 @@
 //   p.custody: { stage, since, until, holder (ped id), car (veh id), driver (pid: a player officer taking them in),
 //                by (pid of the arresting player), stars, station (poi id), picked, blastSeen / hitSeen (the car's last
 //                blast and crash already looked at), cell: { b, c } (cells.js: the cell block and the cell) }
-//     'held' face down -> 'fetch' (a car on its way) -> 'escort' (walked to it) -> 'ride' -> 'walkin' (two officers
+//     'held' face down -> ('fetch': a car on its way) -> 'escort' (walked to it) -> 'ride' -> 'walkin' (two officers
 //     walk them from the car through the station's door to a cell) -> 'cell' (bail / JAIL_S)
 //   ped.cuffed: short of the cell - can't move or do anything; the server moves them (net.js: no prediction)
 // In the cell they're a real person in the world (cells.js: walk round it, sit, the toilet, hold the bars), not hidden;
 // out by time or bail, the cell door opens and they're put outside the station's front door.
-import { K } from '../../shared/constants.js';
-import { pedStep } from '../../shared/physics.js';
+import { K, TILE } from '../../shared/constants.js';
+import { pedStep, PED } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { localToWorld } from '../../shared/math.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
 import { IN } from '../../shared/input.js';
 import {
-  HOLD_S, ESCORT_PX, TRANSPORT_WAIT_S, RIDE_MAX_S, JAIL_S, BAIL_PER_STAR, GUARD_PX, BREAKOUT_IMPACT, DELIVER_BONUS,
+  HOLD_S, ESCORT_WALK_PX, ESCORT_PX, TRANSPORT_WAIT_S, RIDE_MAX_S, JAIL_S, BAIL_PER_STAR, GUARD_PX, BREAKOUT_IMPACT, DELIVER_BONUS,
   BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, SPAWN_PROTECT_S, CUSTODY_STUCK_S, CUSTODY_WAIT_BREAK_S, CUSTODY_SKIP_S,
   CELL_WALK_S,
 } from '../../shared/rules.js';
@@ -147,7 +149,7 @@ function step(world, p, dt) {
     const h = live(world, c.holder);
     if (!holding(world, h, ped)) { escape(world, p, h && !h.dead ? 'You wriggled free - run!' : 'The officer holding you is down - you\'re free! Run!'); return; }
     pin(world, ped, h, dt);
-    if (c.stage === 'held') { if (now >= c.until) fetch(world, p); return; }
+    if (c.stage === 'held') { if (now >= c.until && !walkToCar(world, p)) fetch(world, p); return; }
     if (c.car && wrecked(live(world, c.car))) { c.car = 0; fetch(world, p, true); return; }   // (the car coming was wrecked: another)
     if (now >= c.until) { book(world, p); return; }   // (nothing got there in time: taken in anyway)
     // the car isn't coming (stuck, or going round in circles), or is taking too long: they can make a break for it
@@ -182,6 +184,32 @@ function walk(world, e, x, y, dt, speed = 1) {
   const inp = seek(e, wp.x, wp.y, false);
   if (Math.hypot(x - e.x, y - e.y) < 8) { inp.mx = 0; inp.my = 0; }
   pedStep(e, sidestep(world, e, inp, dt), dt, world.map, { ...players.pedMods(world, e), speedMul: speed });
+}
+
+// The hold is over, and the officer who cuffed them came in a car close by, with room in the back and a clear way to it on
+// foot: they get them up and walk them to it themselves (task #376) - no waiting for a car to come.
+function walkToCar(world, p) {
+  const c = p.custody, ped = p.ped, now = world.time, h = live(world, c.holder);
+  if (!h || !h.npc || !h.npc.unit || h.vehId || ped.sub || floored(world, h)) return false;
+  const v = live(world, h.npc.unit);
+  if (wrecked(v) || !v.ai || v.ai.prisoner || v.def.kind !== 'car' || (v.lz || 0) > 0.3 || v.ferry) return false;
+  if (police.crewOf(world, v).length >= v.seats.length || backSeat(v) < 0) return false;   // (no room in the back)
+  const door = doorSpot(world, v, ped);
+  if (Math.hypot(door.x - ped.x, door.y - ped.y) > ESCORT_WALK_PX || !clearWalk(world, ped.x, ped.y, door.x, door.y)) return false;
+  c.car = v.id; v.ai.prisoner = p.pid; v.ai.fetcher = 0;
+  Object.assign(c, { stage: 'escort', since: now, picked: false, best: undefined, brk: false });
+  world.notify(p, 'The officer gets you up and walks you to their car.', 'bad');
+  p.meDirty = true;
+  return true;
+}
+// A clear way on foot from (x0, y0) to (x1, y1): no wall, building, counter or water on the straight line between - from
+// a walk-in's door if it starts inside one (they're led out through it).
+function clearWalk(world, x0, y0, x1, y1) {
+  const m = world.map, wi = walkInAt(m, x0, y0);
+  if (wi) { x0 = wi.x; y0 = wi.outY; }
+  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 12);
+  for (let i = 1; i < n; i++) if (PED_BLOCK[m.tileAtPx(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n)]) return false;
+  return true;
 }
 
 // The hold is over: a car to take them in - one close by, or one sent.
@@ -232,13 +260,15 @@ function fetcherOf(world, v, crew, holder) {
   return best;
 }
 
-// The officer gets them up and walks them to the back door, a step behind; in they go.
+// The officer gets them up and walks them to the back door, the prisoner cuffed at their side (the officer waits for them
+// if they fall behind); in they go.
 function escortStep(world, p, dt) {
   const c = p.custody, ped = p.ped, now = world.time;
   const esc = live(world, c.holder), v = live(world, c.car);
   if (!esc || esc.dead || floored(world, esc)) { escape(world, p, 'The officer walking you is down - you\'re free! Run!'); return; }
   if (wrecked(v)) {   // the car's gone: back on the ground, and another one's found
     if (v && v.ai) v.ai.prisoner = null;
+    lead(esc, 0);
     Object.assign(c, { car: 0, stage: 'held', until: now + 1, picked: false });
     pin(world, ped, esc, dt);
     return;
@@ -246,18 +276,42 @@ function escortStep(world, p, dt) {
   if (!c.picked) {
     // over to them, and up on their feet
     pin(world, ped, null, dt);
-    if (Math.hypot(ped.x - esc.x, ped.y - esc.y) < 30) { c.picked = true; ped.downUntil = 0; }
+    if (Math.hypot(ped.x - esc.x, ped.y - esc.y) < 30) { c.picked = true; ped.downUntil = 0; c.side = ped.id & 1 ? 1 : -1; lead(esc, c.side); }
     else walk(world, esc, ped.x, ped.y, dt, 1);
     if (now - c.since > ESCORT_S) seat(world, p, v, esc);
     return;
   }
-  const door = doorSpot(world, v, esc);
-  walk(world, esc, door.x, door.y, dt, 0.85);
-  const bx = esc.x - Math.cos(esc.a) * 18, by = esc.y - Math.sin(esc.a) * 18;
-  const inp = seek(ped, bx, by, false);
-  if (Math.hypot(bx - ped.x, by - ped.y) < 6) { inp.mx = 0; inp.my = 0; }
-  pedStep(ped, inp, dt, world.map, WALK);
+  const door = doorSpot(world, v, esc), at = besideOf(world, esc, c), lag = Math.hypot(at.x - ped.x, at.y - ped.y);
+  walk(world, esc, door.x, door.y, dt, lag > 34 ? 0.25 : 0.85);
+  // the prisoner keeps to it: the officer's pace, and closing on the spot
+  const k = PED.walk * WALK.speedMul;
+  let mx = (esc.vx + (at.x - ped.x) * 5) / k, my = (esc.vy + (at.y - ped.y) * 5) / k;
+  if (Math.hypot(mx, my) < 0.08) { mx = 0; my = 0; }
+  pedStep(ped, { bits: 0, mx, my, aim: ped.a }, dt, world.map, WALK);
   if (Math.hypot(door.x - ped.x, door.y - ped.y) < 40 || Math.hypot(v.x - ped.x, v.y - ped.y) < v.def.L / 2 + 20 || now - c.since > ESCORT_S) seat(world, p, v, esc);
+}
+// Where the prisoner walks: at the officer's side, a little behind their shoulder - or in their wake, a step behind, where
+// that's in a wall or up against a post, a bin or the like
+function besideOf(world, esc, c) {
+  const cs = Math.cos(esc.a), sn = Math.sin(esc.a), s = c.side || 1;
+  const x = esc.x - sn * 15 * s - cs * 3, y = esc.y + cs * 15 * s - sn * 3;
+  if (!PED_BLOCK[world.map.tileAtPx(x, y)] && !propNear(world.map, x, y, 12)) return { x, y };
+  return { x: esc.x - cs * 18, y: esc.y - sn * 18 };
+}
+// The officer walking them: a hand on their arm, on the side they walk (net.js es; the client draws it). 0: let go.
+function lead(e, side) {
+  if (!e || (e.escort || 0) === side) return;
+  e.escort = side;
+  e.appVer = (e.appVer || 0) + 1;
+}
+function propNear(m, x, y, r) {
+  if (!m.solidProps) return false;
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const a = m.solidProps.get((ty + j) * m.w + tx + i);
+    if (a) for (const e of a) if (!e.off && Math.hypot(e.x - x, e.y - y) < e.r + r) return true;
+  }
+  return false;
 }
 // the back door on the side the officer's on (the other side if that one's against a wall)
 function doorSpot(world, v, near) {
@@ -275,6 +329,7 @@ function backSeat(v) { for (let i = v.seats.length - 1; i >= 1; i--) if (!v.seat
 // In the back of the car (the officer who walked them takes the wheel if it's free) and off to the nearest station.
 function seat(world, p, v, esc) {
   const c = p.custody, ped = p.ped, now = world.time;
+  lead(esc, 0);
   const s = backSeat(v);
   if (s < 0) { book(world, p); return; }   // (no room after all: taken in anyway)
   v.seats[s] = ped.id; ped.vehId = v.id; ped.seat = s;
@@ -375,6 +430,7 @@ function releaseCar(world, c) {
 function escape(world, p, msg) {
   const c = p.custody, ped = p.ped;
   releaseCar(world, c);
+  if (c) lead(live(world, c.holder), 0);
   p.custody = null;
   cuff(ped, false);
   if (ped && !ped.dead) {
@@ -391,6 +447,7 @@ export function onDeath(world, p) {
   if (!p.custody || p.custody.stage === 'cell') return;
   if (p.custody.stage === 'walkin') endWalk(world, p.custody);
   releaseCar(world, p.custody);
+  lead(live(world, p.custody.holder), 0);
   p.custody = null;
   cuff(p.ped, false);
 }
@@ -402,6 +459,7 @@ export function onDeath(world, p) {
 function book(world, p, car = null) {
   const c = p.custody, ped = p.ped;
   releaseCar(world, c);
+  lead(live(world, c.holder), 0);
   const st = (world.map.pois[c.station] && world.map.pois[c.station].kind === 'police' ? world.map.pois[c.station] : null) || nearestStation(world, ped.x, ped.y);
   const taken = confiscate(world, p, c.stars);
   law.clearWanted(world, p);
@@ -714,7 +772,8 @@ function guard(world, q, ped, dt) {
 }
 function board(world, q, v, dt) {
   if (floored(world, q)) return;
-  pedStep(q, seek(q, v.x, v.y, true), dt, world.map, players.pedMods(world, q));
+  const wp = footWay(world, q, v.x, v.y);   // (out of a shop by its door, round whatever's in the way)
+  pedStep(q, sidestep(world, q, seek(q, wp.x, wp.y, true), dt), dt, world.map, players.pedMods(world, q));
   if (Math.hypot(v.x - q.x, v.y - q.y) < v.def.L / 2 + 26) {
     const s = !v.seats[0] ? 0 : v.seats.findIndex((e) => !e);
     if (s >= 0) { v.seats[s] = q.id; q.vehId = v.id; q.seat = s; q.vx = 0; q.vy = 0; }

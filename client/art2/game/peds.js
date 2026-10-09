@@ -46,7 +46,7 @@ export function weaponItem(w) {
 export function pedFrame(pose, fr = 0) {
   fr |= 0;
   if (pose === 'idle') return (fr >> 2) & 1;
-  if (pose.startsWith('move') || pose.startsWith('walk') || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'cuffed') return Math.floor(((fr % 8) + 8) % 8 * 6 / 8);
+  if (pose.startsWith('move') || pose.startsWith('walk') || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'cuffed' || pose.startsWith('escort')) return Math.floor(((fr % 8) + 8) % 8 * 6 / 8);
   if (STRIDES.has(pose)) return Math.floor(((fr % 8) + 8) % 8 * PED_POSES[pose] / 8);
   if (pose === 'punch' || pose === 'swing') return (fr >= 4 ? 3 : 0) + Math.min(2, Math.floor((fr & 3) * 3 / 4));
   const n = PED_POSES[pose] || 1;

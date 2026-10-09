@@ -28,6 +28,8 @@ export const ARREST_REWARD_PER_STAR = 150;
 // walk out now, or wait it out. Killing the officer holding them, or the car being blown up, wrecked in a bad crash or
 // taken off the police, sets them free - still wanted, and wanted more for escaping.
 export const HOLD_S = 4;               // held face down this long before they're walked to a car
+export const ESCORT_WALK_PX = 700;     // the officer who cuffed them walks them to their own car if it's this close and the way
+                                       //   there is clear on foot (task #376); further, a car is brought over or sent
 export const ESCORT_PX = 650;          // a police car this close with a seat free takes them in; else one is sent
 export const TRANSPORT_WAIT_S = 45;    // ...and if none has them in the back in this long, they're taken in anyway
 export const RIDE_MAX_S = 150;         // a ride to the station that takes longer than this (stuck, lost) gets there anyway

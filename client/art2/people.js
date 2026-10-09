@@ -2073,3 +2073,16 @@ function stretcherFigure(B, C, E, acc) {
   E([0, STR_Y1 - 3.4, STR_Z + 4.0], I, [2.5, 1.7, 2.0], GR.ACC, 'hair', MST.hair);
 }
 // ==== end of the paramedics' stretcher ================================================================================
+
+// ==== The arrest (task #376, server/systems/custody.js) ================================================================
+// escortR / escortL: an officer walking a cuffed prisoner to the police car, a hand on their arm (the prisoner at their right
+// / left: the descriptor's es), the other arm swinging with the walk
+Object.assign(POSES, { escortR: 6, escortL: 6 });
+function escortPose(D, P, f, s) {
+  gait(D, P, 0, f / 6, true); P.acc = false; P.headYaw = s * 0.12;
+  const k = s > 0 ? 'R' : 'L', sw = P.hands;
+  P.hands = (S) => { sw(S); P['h' + k] = vadd(S['sh' + k], mv(S.SP, [s * 3.4, 2.2, -D.reach * 0.84])); P['el' + k] = [s * 0.7, -1, -0.2]; P['open' + k] = 0; };
+}
+GAITS2.escortR = (D, P, f) => escortPose(D, P, f, 1);
+GAITS2.escortL = (D, P, f) => escortPose(D, P, f, -1);
+// ==== end of the arrest =================================================================================================
