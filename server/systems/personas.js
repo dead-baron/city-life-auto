@@ -296,6 +296,7 @@ export function apply(world, ped, key, night = false, partner = null) {
   if (P.tough) { n.tough = true; n.fight = 1; n.reflex = Math.max(n.reflex, 0.5); }
   if (P.poor) n.poor = true;   // (no cash, nothing to drop: npc.js onDeath)
   if (P.camp) n.camp = { x: ped.x, y: ped.y };
+  if (P.camp || P.dance) n.sway = false;   // (their stats are a drunk's, but they walk straight)
   if (P.jog) { n.laps = lapRoute(world, ped.x, ped.y); n.lap = 0; }
   if (P.dance) n.spot = { x: ped.x, y: ped.y };
   if (P.busk) { n.spot = { x: ped.x, y: ped.y }; n.tips = new Map(); }
