@@ -529,6 +529,7 @@ function manage(world) {
     if (v.kind !== K.VEH) continue;
     if (v.seats.some((s) => s && world.get(s)?.player)) continue;
     if (v.owner && !v.wreckAt) continue;
+    if (v.towedBy) continue;   // (on a tow truck's hook: tow.js takes it away)
     const isTraffic = v.ai && v.ai.kind === 'traffic';
     const range = isTraffic ? 1800 : 1900;
     // a car that hasn't moved in a long while - in a jam that won't clear, or left in the road with nobody in it - is

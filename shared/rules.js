@@ -391,3 +391,9 @@ export const RUNOVER_LIE_S = 3.5;          // run over: lying there about this l
 export const RUNOVER_LEFT = 0.14;          // ...on about this much of your health, slow - fast, or under a truck, it can kill
 export const HOOD_RIDE_S = [0.5, 2];       // onto the hood: riding it this long at most, unless it brakes or turns hard (or you roll off: move)
 export const HOOD_MAX_SPEED = 380;         // ...only below this closing speed (px/s); faster, you go flying
+
+// The tow service (server/systems/tow.js, task #314)
+export const TOW_WRECK_S = 25;            // a burnt-out wreck is towed away after this long (s)
+export const TOW_STUCK_S = 60;            // an NPC car broken down or jammed in a lane this long gets the tow truck
+export const TOW_IDLE_S = 300;            // a car a player drove: only once left in a lane, untouched by any player this long
+export const TOW_FEE = 150;               // your own car towed back to your garage: from your bank

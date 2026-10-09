@@ -54,7 +54,7 @@ export function update(world, dt) {
     const driver = driverOf(world, v);
     if (v.wreckAt) {
       v.input.throttle = 0; v.input.steer = 0; v.input.hb = true;
-      if (now - v.wreckAt > 45 && !v.seats.some((s) => s)) { cargo.spillCargo(world, v); world.remove(v); continue; }
+      if (now - v.wreckAt > 45 && !v.seats.some((s) => s) && !v.towedBy && !(v.towCall && world.get(v.towCall))) { cargo.spillCargo(world, v); world.remove(v); continue; }   // (not while a tow truck's coming for it: tow.js)
     } else if (!driver || driver.dead) {
       if (driver && driver.dead) ejectPed(world, driver, true);
       v.input.throttle = 0; v.input.steer = 0; v.input.hb = false;
