@@ -3903,3 +3903,19 @@ From the user's 19:52 and 20:00 notes (#362, the first two parts; the cells insi
     - logging out in custody books you into a cell you're still in when you come back;
     - a stuck car offers the break, and gets you there in the end.
   - `test/homes.test.js`: the Spray & Go test clears the police while it resprays.
+
+## 2026-10-08 · A phone held upright: the minimap and the clock top-left, the money top-right, nothing under the camera
+From the user's 18:41 note (#356).
+- **The minimap top-left** (`client/style.css`, `client/hud.js`, `index.html`):
+  - It sits right at the top.
+  - A small plate on the bottom of its ring shows the time, with a sun or moon, and a rain cloud when it rains.
+  - The sun, moon and rain are new pixel icons (`client/pixicons.js`).
+  - The clock is no longer in the top-right column on a phone held upright.
+  - The clock is now written only when the minute or the weather changes, not every frame.
+- **Top-right:** cash, bank, the stars and the faction badge, anchored at the top.
+- **The round buttons** (menu, phone, bag, map, settings, full screen, debug) run down the right edge, under the stars.
+- **Nothing at the top centre,** where phones like the Pixel 7 Pro have the camera in the screen:
+  - The pause screen's tab buttons and the big map's top bar move down by the screen's top safe area (`--cam-top`, from `env(safe-area-inset-top)`). The update note does too.
+  - The corners stay at the top. The exception is an installed app on an iPhone (`display-mode: standalone`), where the clock and battery show over the page; there the corners move down by the safe area too (`--corner-top`).
+- **The banners** (a ride, custody, a robbery) sit just under the HUD, narrow enough to clear the left-hand buttons and the column on the right. The prompt and the notes stay below them.
+- Landscape and desktop are unchanged.

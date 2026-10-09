@@ -8,6 +8,7 @@ import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/map.js';
 import { weaponIcon } from './render/peds.js';
 import { DEATH_REVEAL_S } from '../shared/rules.js';
+import { iconURL } from './pixicons.js';
 
 const $ = (id) => document.getElementById(id);
 const thumbs = new Map();
@@ -248,10 +249,23 @@ export class HUD {
     void prev;
   }
 
+  // the clock in the HUD's top-right column, and on the minimap's plate (a phone held upright: the sun or the moon, the
+  // time, a rain cloud when it rains) - written only when the minute or the weather changes
   setClock(loopTime, weather) {
     const c = gameClock(loopTime);
     const h = Math.floor(c.minutes / 60), m = Math.floor(c.minutes % 60);
-    $('clock').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${c.isNight ? '☾' : '☀'}${weather === WEATHER.RAIN ? ' ☂ RAIN' : ''}`;
+    const hm = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`, rain = weather === WEATHER.RAIN;
+    const sig = hm + (c.isNight ? 'n' : 'd') + (rain ? 'r' : '');
+    if (sig === this.clockSig) return;
+    this.clockSig = sig;
+    $('clock').textContent = `${hm} ${c.isNight ? '☾' : '☀'}${rain ? ' ☂ RAIN' : ''}`;
+    const tod = c.isNight ? 'moon' : 'sun';
+    if (this.rcTod !== tod) { this.rcTod = tod; $('rc-tod').src = iconURL(tod); }
+    $('rc-time').textContent = hm;
+    const wx = $('rc-wx');
+    if (rain && !wx.getAttribute('src')) wx.src = iconURL('rain');
+    wx.classList.toggle('hidden', !rain);
+    $('rclock').title = `${c.isNight ? 'Night' : 'Day'} · ${rain ? 'rain' : 'clear'}`;
   }
 
   toast(text, tone = 'info') {

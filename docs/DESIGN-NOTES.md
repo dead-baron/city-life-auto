@@ -334,7 +334,7 @@ CF2 and FX2 are in the prompt pack):**
   - **The cells, next:** part of the police station's inside. You see the other prisoners, and several can share a cell.
     You can walk round it, sit, use the toilet or hold the bars.
   - **Arriving:** the car pulls up at the station and the officers walk you in.
-  - **Fighting in a cell:** the note reads "You can hurt each other or anything", probably meaning can't. To confirm.
+  - **No fighting in a cell:** cellmates can't hurt each other (confirmed 20:47).
 - **Explosions (19:54, #363):** bigger, more dramatic and beautiful. A vehicle sometimes blows apart into pieces or is
   thrown into the air.
 - **Masks and the eye patch (20:45, on CP2):**

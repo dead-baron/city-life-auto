@@ -56,6 +56,10 @@ const ICONS = {
   tent: ['.....k.....', '....kGk....', '...kGGnk...', '..kGGGnnk..', '.kGGGknnnk.', 'kGGGkTknnnk', 'kkkkkTkkkkk'],
   menu: ['kkkkkkkkk', 'kwwwwwwwk', 'kkkkkkkkk', '.........', 'kkkkkkkkk', 'kwwwwwwwk', 'kkkkkkkkk', '.........', 'kkkkkkkkk', 'kwwwwwwwk', 'kkkkkkkkk'],
   star: ['....k....', '...kyk...', 'kkkkykkkk', 'kyyyyyyyk', '.kyyyyyk.', '.kyykyyk.', 'kyk...kyk', 'kk.....kk'],
+  // the time of day and the weather on the minimap's clock plate (a phone held upright)
+  sun: ['.....o.....', '.o...o...o.', '..o.kkk.o..', '...kywyk...', '..kywyyyk..', 'ookyyyyykoo', '..kyyyyyk..', '...kyyyk...', '..o.kkk.o..', '.o...o...o.', '.....o.....'],
+  moon: ['....k......', '..kkyk.....', '.kyyyk.....', '.kyyk......', 'kyyyk......', 'kyyyyk.....', 'kyyyyykkk..', '.kyyyyyyyk.', '.kyyyyyyyk.', '..kkyyykk..', '....kkk....'],
+  rain: ['...kkk.....', '..kwwwkkk..', '.kkwwwwwwk.', 'kwwwwwwwwwk', 'kgggggggggk', '.kkkkkkkkk.', '...........', '..c..c..c..', '.b..b..b...', '...........', '.c..c..c...', 'b..b..b....'],
 };
 
 const cache = new Map();

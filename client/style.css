@@ -11,7 +11,12 @@
   --ui: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
   --outline: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 3px 0 #000;
   --outline-s: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  /* the top of the screen on a phone: --cam-top keeps things at the top centre clear of a camera in the screen (the
+     Pixel 7 Pro's, a notch); the corners stay at the top (--corner-top), unless an installed app on an iPhone shows the
+     clock and the battery there over the page */
+  --cam-top: env(safe-area-inset-top, 0px); --corner-top: 0px;
 }
+@media (display-mode: standalone) { :root { --corner-top: env(safe-area-inset-top, 0px); } }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--ui); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 #game { position: fixed; inset: 0; }
@@ -76,6 +81,9 @@ body.portrait.touch #cruiser-hint { top: auto; bottom: 330px; max-width: 86vw; }
 #radar-wrap { position: absolute; left: max(16px, env(safe-area-inset-left)); top: 14px; width: 170px; pointer-events: auto; }
 #radar { width: 170px; height: 170px; border-radius: 50%; border: 4px solid #000; box-shadow: 0 0 0 2px rgba(255,255,255,.25), 0 4px 14px rgba(0,0,0,.6); background: #111; display: block; cursor: pointer; }
 #vitals { display: flex; gap: 4px; margin-top: 6px; }
+#rclock { display: none; position: absolute; left: 50%; top: 170px; transform: translate(-50%, -50%); z-index: 1; align-items: center; gap: 4px; height: 20px; padding: 0 7px; white-space: nowrap; pointer-events: none;
+  background: linear-gradient(180deg, #15223f, #0d162d); border: 1px solid var(--rim); border-radius: 5px; box-shadow: 0 0 0 2px #070b16, 0 3px 8px rgba(0,0,0,.45); font: 700 12px var(--pixel); color: var(--cream); text-shadow: 0 1px 0 #070b16; }
+#rclock img.pi { height: 11px; width: auto; image-rendering: pixelated; }
 .vbar { position: relative; height: 9px; flex: 1; background: rgba(0,0,0,.6); border: 2px solid #000; overflow: hidden; }
 .vbar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; transition: width .15s; }
 .fill.hp { background: linear-gradient(#7fe07f, #3c9a3c); } .fill.hp.low { background: linear-gradient(#ff6b6b, #b8222a); animation: hplow .6s steps(2) infinite; }
@@ -287,19 +295,26 @@ body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.arm
 body.portrait.touch #hud-tr { max-width: 46vw; }
 body.portrait.touch #money { font-size: 24px; }
 body.portrait.touch #weapon { display: none; }
-body.portrait.touch #helpbox, body.portrait.touch #toasts { left: max(10px, env(safe-area-inset-left)); top: 282px; max-width: 80vw; width: auto; }
-body.portrait.touch #toasts { top: 332px; width: 80vw; }
+body.portrait.touch #helpbox, body.portrait.touch #toasts { left: max(10px, env(safe-area-inset-left)); top: calc(282px + var(--corner-top)); max-width: 80vw; width: auto; }
+body.portrait.touch #toasts { top: calc(332px + var(--corner-top)); width: 80vw; }
 body.portrait.touch #job { top: auto; bottom: 300px; max-width: 86vw; }
 body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
 body.portrait.touch #tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 154px); bottom: 172px; }   /* (just above FIRE) */
-body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: 206px; }
-body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: 206px; }
+body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: calc(206px + var(--corner-top)); }
+body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: calc(206px + var(--corner-top)); }
 body.portrait.touch #helpbox, body.portrait.touch #toasts { margin-left: 0; }
-/* the round buttons (menu, phone, bag...) can't sit between the radar and the cash on a phone held upright (an
-   iPhone: 390 px wide): they go on the right, under the cash and the stars */
-body.portrait.touch #hud-btns { left: 50%; right: auto; top: 6px; transform: translateX(-50%); }
-body.portrait.touch #radar-wrap { top: 50px; }
-body.portrait.touch #hud-tr { top: 48px; }
+/* a phone held upright (the user, 2026-10-08): the minimap top-left with the time and the weather on its plate; the cash,
+   the bank and the stars top-right; the round buttons (menu, phone, bag...) down the right edge under them. Nothing at
+   the top centre, where phones like the Pixel 7 Pro have the camera in the screen. */
+body.portrait.touch #radar-wrap { top: calc(8px + var(--corner-top)); }
+body.portrait.touch #hud-tr { top: calc(4px + var(--corner-top)); }
+body.portrait.touch #hud-tr #clock { display: none; }
+body.portrait.touch #rclock { display: flex; top: 112px; }   /* (straddling the bottom of the minimap's ring) */
+body.portrait.touch #vitals { margin-top: 13px; }
+body.portrait.touch #status { width: max-content; max-width: calc(100vw - 76px); }   /* (one line where it fits, clear of the buttons on the right) */
+body.portrait.touch #hud-btns { left: auto; right: max(10px, env(safe-area-inset-right)); top: calc(112px + var(--corner-top)); transform: none; flex-direction: column; gap: 8px; }
+/* the banners in the middle keep clear of the HUD at the top and of that column of buttons */
+body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(186px + var(--corner-top)); max-width: calc(100vw - 140px); }
 body.portrait.touch #zone-l { top: 50%; width: 50%; }
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: 64px; } #district { font-size: 34px; } }
 
@@ -563,7 +578,7 @@ body.portrait #spec { width: 210px; font-size: 14px; }
 #gfx-ask .opt.rec { border-color: #ffd23e; }
 
 /* rolling out an update (client/update.js): a small notice at the top while the page waits to reload */
-#upd-note { position: fixed; left: 50%; top: 50px; transform: translateX(-50%); z-index: 60; padding: 6px 14px; border-radius: 16px; background: rgba(10,14,30,.88); border: 2px solid var(--warn); color: #fff; font: 600 14px Rubik, sans-serif; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,.5); }
+#upd-note { position: fixed; left: 50%; top: max(50px, calc(var(--cam-top) + 8px)); transform: translateX(-50%); z-index: 60; padding: 6px 14px; border-radius: 16px; background: rgba(10,14,30,.88); border: 2px solid var(--warn); color: #fff; font: 600 14px Rubik, sans-serif; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,.5); }
 #upd-note.busy::before { content: '⟳'; display: inline-block; margin-right: 7px; color: var(--warn); animation: updspin 1.2s linear infinite; }
 @keyframes updspin { to { transform: rotate(360deg); } }
 
@@ -571,7 +586,7 @@ body.portrait #spec { width: 210px; font-size: 14px; }
 #tbtns .light { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 46px; width: 52px; height: 30px; border-radius: 15px; font-size: 15px; }
 #tbtns .light.lit { background: rgba(255,228,140,.85); border-color: #fff; }
 body:not(.has-light) #tbtns .light, body.in-veh #tbtns .light { display: none; }
-body.portrait.touch #tbtns .light { left: max(10px, env(safe-area-inset-left)); top: 242px; }
+body.portrait.touch #tbtns .light { left: max(10px, env(safe-area-inset-left)); top: calc(242px + var(--corner-top)); }
 #inv .inv-use.lit { background: #8a6a12; border-color: #ffd23e; }
 
 /* dev give menu (client/devgive.js) */
@@ -658,10 +673,10 @@ img.pi { image-rendering: pixelated; image-rendering: crisp-edges; vertical-alig
 .hub button.pfocus { background: none !important; box-shadow: none; }
 .hub button.on .ring { border-color: var(--rim); box-shadow: 0 0 0 2px var(--ink), 0 0 14px rgba(226,189,87,.55); }
 .hub button.on .lbl { color: var(--rim); box-shadow: inset 0 0 0 1px var(--rim); background: rgba(7,11,22,.7); }
-.hub-float { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2; }
+.hub-float { position: absolute; top: max(10px, calc(var(--cam-top) + 4px)); left: 50%; transform: translateX(-50%); z-index: 2; }
 
 /* the top bar, the footer of hints (map and pause) */
-.ui-top { display: flex; align-items: center; gap: 14px; padding: 6px max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)); background: linear-gradient(180deg, #111a33, #0a1124); border-bottom: 2px solid var(--rim); flex: none; }
+.ui-top { display: flex; align-items: center; gap: 14px; padding: max(6px, var(--cam-top)) max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)); background: linear-gradient(180deg, #111a33, #0a1124); border-bottom: 2px solid var(--rim); flex: none; }
 .ui-logo { height: 54px; width: auto; filter: drop-shadow(0 2px 0 var(--ink)); }
 .ui-top .hub { flex: 1; }
 .ui-stat { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
@@ -731,7 +746,7 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 @media (max-height: 520px) { .ui-logo { height: 40px; } .hub .ring { width: 38px; height: 38px; } .ui-top { padding-top: 3px; padding-bottom: 3px; } .ui-foot { padding-top: 3px; padding-bottom: 3px; } #bm-panel { width: 220px; } .bm-catname { padding: 5px 6px; font-size: 14px; } .bm-title { font-size: 20px; margin-bottom: 6px; } }
 
 /* the pause menu (U1): the logo over PAUSED, an icon by every line */
-#pause { background: linear-gradient(90deg, rgba(4,7,16,.78), rgba(4,7,16,.35) 55%, rgba(4,7,16,.2)); padding-top: 74px; }
+#pause { background: linear-gradient(90deg, rgba(4,7,16,.78), rgba(4,7,16,.35) 55%, rgba(4,7,16,.2)); padding-top: calc(74px + var(--cam-top)); }
 #pause .panel.pz { width: min(400px, 92vw); max-height: calc(100vh - 90px); display: flex; flex-direction: column; overflow: hidden; }
 .pz-head { position: relative; display: flex; flex-direction: column; align-items: center; padding: 10px 14px 8px; background: radial-gradient(ellipse at 50% 100%, rgba(255,120,80,.35), transparent 70%), linear-gradient(180deg, #2a1d4a, #121c38); border-bottom: 2px solid var(--rim); }
 .pz-head img { height: 92px; width: auto; filter: drop-shadow(0 3px 0 var(--ink)); }
@@ -799,7 +814,7 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 
 /* arrested (server custody.js): the custody banner and the jail screen over the cell */
 #trainbar.custody { border-color: #ff6a6a; color: #ff9a9a; top: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 58px); } #trainbar.custody span { color: #ffd6d6; }
-body.portrait.touch #trainbar.custody { bottom: auto; top: 236px; max-width: 90vw; }   /* (low down, clear of the toasts at the top) */
+body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--corner-top)); max-width: calc(100vw - 140px); }   /* (under the HUD, above the prompt and the notes) */   /* (low down, clear of the toasts at the top) */
 /* (interiors.js drawInterior puts the room on the right of wide screens and low down on tall ones: the panel takes the
    free side, the left of a wide screen, the top of a tall one) */
 #jail { position: absolute; left: 50%; top: max(24px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 3; width: min(360px, 88vw); box-sizing: border-box;
