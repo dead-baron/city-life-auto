@@ -133,10 +133,12 @@ function runTruck(world, t, dt, now) {
     if ((v.byPlayer || v.owner) && now - (v.touchAt || 0) < TOW_IDLE_S) { ai.mode = 'leave'; v.towCall = 0; return; }   // (its driver came back to it)
     const k = ai.kerb, dk = Math.hypot(k.x - t.x, k.y - t.y), dv = Math.hypot(v.x - t.x, v.y - t.y);
     const stalled = sinceProgress(world, t, k.x, k.y);
-    let there = dk < 40 || (stalled > 5 && dv < 260);
+    // (come up behind it: round it to pull up in front - only hooked from where it is if it can't get round)
+    const behind = (v.x - t.x) * Math.cos(t.a) + (v.y - t.y) * Math.sin(t.a) > 0;
+    let there = dk < 40 || (stalled > (behind ? 12 : 5) && dv < 260);
     if (!there && stalled > 9) { if (ai.replans < 2) { ai.replans++; ai.route = planTo(world, t, k); t.ai.bestD = undefined; } else there = dv < 400; }
     if (there) { halt(t); ai.mode = 'hook'; ai.at = now; world.emit(t.x, t.y, { e: 'tow', x: t.x, y: t.y, id: t.id }); return; }
-    follow(world, t, dk < 500 ? 220 : 420);
+    follow(world, t, dk < 500 ? 220 : 420, 34, true);
     if (now - ai.since > 150) { ai.mode = 'leave'; v.towCall = 0; }
     return;
   }
@@ -149,9 +151,10 @@ function runTruck(world, t, dt, now) {
     v.seats.fill(0);
     if (v.ai) v.ai = null;
     v.towedBy = t.id; v.despawnable = false; v.parked = false;
+    v.towFrom = { x: v.x, y: v.y, a: v.a, at: now };   // (winched round onto the hook over a second, not jumped there)
     ai.towing = v.id; ai.mode = 'leave'; t.beaconOn = false;
     world.emit(t.x, t.y, { e: 'tow', x: t.x, y: t.y, id: t.id, hooked: 1 });
-    carry(t, v);
+    carry(t, v, now);
     return;
   }
   // leave: off to a junction away from everyone, gone (with what it's towing) once nobody can see it
@@ -167,9 +170,17 @@ function runTruck(world, t, dt, now) {
 }
 
 // the towed vehicle hangs behind the truck's boom, the same way round (its front wheels up on the lift)
-function carry(t, v) {
+const WINCH_S = 1.2;
+function carry(t, v, now = 0) {
   const c = Math.cos(t.a), s = Math.sin(t.a), off = t.def.L / 2 + v.def.L / 2 + 4;
-  v.x = t.x - c * off; v.y = t.y - s * off; v.a = t.a; v.vx = 0; v.vy = 0; v.av = 0; v.lz = t.lz || 0;
+  let x = t.x - c * off, y = t.y - s * off, a = t.a;
+  const f = v.towFrom, k = f ? Math.min(1, (now - f.at) / WINCH_S) : 1;
+  if (k < 1) {   // still being winched onto the hook: from where it stood
+    const u = k * k * (3 - 2 * k);
+    let da = a - f.a; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    x = f.x + (x - f.x) * u; y = f.y + (y - f.y) * u; a = f.a + da * u;
+  } else if (f) v.towFrom = null;
+  v.x = x; v.y = y; v.a = a; v.vx = 0; v.vy = 0; v.av = 0; v.lz = t.lz || 0;
   v.input = { throttle: 0, steer: 0, hb: false };
 }
 // after the physics (tow runs after vehicles): every towed vehicle back on its hook
@@ -177,7 +188,7 @@ export function after(world) {
   if (!world.tows) return;
   for (const id of world.tows) {
     const t = world.get(id), v = t && t.ai && t.ai.towing && world.get(t.ai.towing);
-    if (v) { carry(t, v); world.place(v); }
+    if (v) { carry(t, v, world.time); world.place(v); }
   }
 }
 

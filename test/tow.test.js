@@ -38,7 +38,8 @@ test('a burnt-out wreck: after a while a tow truck comes from out of sight, hook
     if (!w.get(truck.id)) break;
     const m = truck.ai && truck.ai.mode;
     if (m && steps[steps.length - 1] !== m) steps.push(m);
-    if (v.towedBy === truck.id && hookedAt < 0) { hookedAt = w.time; gap = Math.hypot(v.x - truck.x, v.y - truck.y); }
+    if (v.towedBy === truck.id && hookedAt < 0) hookedAt = w.time;
+    if (hookedAt > 0 && !gap && w.time - hookedAt > 1.5 && w.get(v.id)) gap = Math.hypot(v.x - truck.x, v.y - truck.y);   // (winched onto the hook by then)
     if (m === 'leave' && hookedAt > 0 && w.time - hookedAt > 6) teleport(w, a.p.ped, x + 9000, y);   // (walk off: it goes once out of sight)
   }
   assert.ok(truck, 'a tow truck was sent');

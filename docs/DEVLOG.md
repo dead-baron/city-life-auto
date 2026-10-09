@@ -4355,7 +4355,7 @@ From the user's notes (13:33, tasks #313, #314, #315): ambulances that get there
     - burnt-out wrecks after 25 s (`TOW_WRECK_S`);
     - NPC cars broken down or jammed in a lane for a minute (`TOW_STUCK_S`);
     - a car a player drove, only when all of the rule holds: left in a lane of the street (not on the pavement, a lot or a parking bay), nobody in it, untouched by any player for 5 minutes (`TOW_IDLE_S`). Getting in it or standing beside it counts as touching it.
-  - A truck comes from a junction out of sight and pulls up just ahead of the vehicle, facing the same way. It works the winch for 3 s, then the vehicle hangs behind the boom, the same way round (kept there after the physics every tick).
+  - A truck comes from a junction out of sight and pulls up just ahead of the vehicle, facing the same way (coming up behind it, it goes round it on the other side of the road when that's clear). It works the winch for 3 s, the vehicle is pulled round onto the hook over a second, and then it hangs behind the boom, the same way round (kept there after the physics every tick).
   - It tows it off to a junction away from everyone. Out of sight, both are gone.
   - Two trucks at a time at most. A wreck isn't cleared at 45 s while a truck is coming for it.
   - A player's own car (out of their garage) goes back to their garage for $150 from the bank (`TOW_FEE`), with a phone message saying where it was towed from. A car they took is just gone, and they're told.

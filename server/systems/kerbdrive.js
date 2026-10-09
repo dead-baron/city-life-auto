@@ -75,7 +75,7 @@ export function planTo(world, v, k) {
 }
 
 // Drive v.ai.route at up to `speed` (slowing to a crawl for the last stretch to its end). True when it's there.
-export function follow(world, v, speed, arriveAt = 34) {
+export function follow(world, v, speed, arriveAt = 34, round = undefined) {
   const ai = v.ai, r = ai.route;
   if (!r || !r.length) { halt(v); return true; }
   const reach = Math.max(60, Math.min(110, Math.hypot(v.vx, v.vy) * 0.25));
@@ -87,7 +87,7 @@ export function follow(world, v, speed, arriveAt = 34) {
   const end = r[r.length - 1], left = r.length === 1 ? Math.hypot(end.x - v.x, end.y - v.y) : Infinity;
   if (left < arriveAt) { halt(v); return true; }
   const wp = r[0];
-  driveToward(world, v, wp.x, wp.y, Math.min(cornerSpeed(v, r, speed), left < 320 ? 50 + left * 0.75 : Infinity), { round: left < 260 ? false : undefined });   // (nearly there: pull up behind whatever's stopped, no going round it)
+  driveToward(world, v, wp.x, wp.y, Math.min(cornerSpeed(v, r, speed), left < 320 ? 50 + left * 0.75 : Infinity), { round: left < 260 ? false : round });   // (nearly there: pull up behind whatever's stopped, no going round it; round: true - round what's stopped, siren or not)
   waterGuard(world, v);
   return false;
 }
