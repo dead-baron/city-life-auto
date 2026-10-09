@@ -113,7 +113,6 @@ function spawnAll(world, st, R) {
       m.name = `${C.short} ${k === 0 ? 'president' : 'member'}`;
       m.npc.club = C.id; m.npc.keep = true; m.npc.fight = 1; m.npc.guard = { x: h.x, y: h.y, a: h.a };
       m.weapon = WEAPONS_BY_RANK[k];
-      if (m.weapon === 'pistol') m.ammo = { pistol: 60 };
       m.bike = v.id; m.a = h.a;
       c.members.push(m.id);
     }
@@ -124,7 +123,7 @@ function spawnAll(world, st, R) {
 function despawnAll(world, st) {
   for (const c of st.clubs) {
     for (const id of c.members) { const m = world.get(id); if (m && !m.removed) { if (m.vehId) vehicles.ejectPed(world, m, false); despawnNpc(world, m); } }
-    for (const id of c.bikes) { const v = world.get(id); if (v && !v.removed && !v.seats.some((s) => s && world.get(s)?.player)) world.remove(v); }
+    for (const id of c.bikes) { const v = world.get(id); if (!v || v.removed) continue; if (v.seats.some((q) => q && world.get(q)?.player)) { v.despawnable = true; v.club = null; } else world.remove(v); }
   }
   if (st.thief) { const t = world.get(st.thief.ped); if (t && !t.removed) despawnNpc(world, t); }
   st.clubs = []; st.up = false; st.thief = null;
@@ -199,9 +198,9 @@ function drive(world, st, R, c, dt) {
     return;
   }
   // riding out or home in formation, or chasing: anyone who came off picks himself up and gets back on
-  if (world.tick % 10 === 2) c.members.forEach((id, k) => {
+  if (c.mode !== 'park' && world.tick % 10 === 2) c.members.forEach((id, k) => {
     const m = world.get(id), v = world.get(c.bikes[k]);
-    if (!alive(m) || m.vehId || !v || v.removed || v.wreckAt || v.seats[0] || m.npc.state === 'fight' || now < m.downUntil) return;
+    if (!alive(m) || m.vehId || !v || v.removed || v.wreckAt || v.seats[0] || v.parked || m.npc.state === 'fight' || now < m.downUntil) return;
     const d = Math.hypot(m.x - v.x, m.y - v.y);
     if (d < v.def.L / 2 + 26 || (!inAnyView(world, m.x, m.y, 30) && !inAnyView(world, v.x, v.y, 30))) mount(world, m, v);
     else if (d < 400 && (!m.npc.guard || Math.hypot(m.npc.guard.x - v.x, m.npc.guard.y - v.y) > 40)) { m.npc.path = []; m.npc.guard = { x: v.x, y: v.y, a: v.a, run: true }; }
@@ -376,6 +375,8 @@ function rideHome(world, R, c) {
 
 // ---- club bikes taken ---------------------------------------------------------------------------------------------------
 function watchBikes(world, st, R) {
+  // (a member carjacked off his bike is still a member: npc.onCarjacked made him a civilian)
+  for (const c of st.clubs) for (const id of c.members) { const m = world.get(id); if (m && m.npc && m.npc.role !== 'gang') m.npc.role = 'gang'; }
   for (const c of st.clubs) c.bikes.forEach((bid) => {
     const v = world.get(bid);
     if (!v || v.removed) return;
@@ -412,7 +413,8 @@ function thiefStep(world, st, R) {
   if (!c) { st.thief = null; return; }
   if (T.stage === 'walk') {
     if (!alive(t) || !v || v.removed || v.seats[0]) { endThief(world, st, R, t, false); return; }
-    if (Math.hypot(t.x - v.x, t.y - v.y) < 30 || now - T.at > 25) {
+    if (now - T.at > 30) { endThief(world, st, R, t, false); return; }   // (scared off before he got to it)
+    if (Math.hypot(t.x - v.x, t.y - v.y) < 30) {
       if (t.npc) t.npc.guard = null;
       if (mount(world, t, v)) {
         T.stage = 'ride'; T.rideAt = now;
