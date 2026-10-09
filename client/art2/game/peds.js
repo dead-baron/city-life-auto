@@ -259,7 +259,7 @@ export function personaPose(d, pose) {
   if (d.sb && pose === 'idle') return 'sit';
   const g = d.gt;
   if (!g) return pose;
-  if (g === 'dance') return pose === 'idle' ? 'dance' : pose;
+  if (g === 'dance' || g === 'lean') return pose === 'idle' ? g : pose;
   if (pose === 'walk0' || pose === 'walk1' || ((g === 'skate' || g === 'blade') && pose.startsWith('walk'))) return g;
   return pose;
 }

@@ -202,7 +202,12 @@ test('street life: the busker plays for coins, people sit on benches, someone sl
   assert.ok(Math.cos(sf.a - Math.atan2(sf.y - f.y, sf.x - f.x)) > 0.9, 'the fountain behind them');
   const v0 = sf.appVer;
   run(w, 2);
-  assert.equal(sf.filming, 2); assert.equal(sf.appVer, v0, 'sent once');
+  assert.equal(sf.filming, 2); assert.equal(sf.appVer, v0, 'sent once');  // leaning on a wall, a foot up behind
+  let ln = null;
+  for (let k = 0; k < 20 && !ln; k++) { const sp = spotIn('commercial', k); ln = sp && spawnPersona(w, spawnNpc, 'leaner', sp.x, sp.y); }
+  assert.ok(ln && ln.gt === 'lean', 'someone leaning on a wall');
+  const bx = ln.x - Math.cos(ln.a) * 20, by = ln.y - Math.sin(ln.a) * 20;
+  assert.ok(m.buildingAtPx(bx, by), 'the wall behind them');
 });
 
 test('the walks and props are drawn: the client turns gt / pp / sb into the people renderer\'s poses and props', async () => {
@@ -213,7 +218,7 @@ test('the walks and props are drawn: the client turns gt / pp / sb into the peop
   assert.notEqual(Pd.pedKey(A, 'idle', 0, 0, 0), Pd.pedKey(Ap, 'idle', 0, 0, 0), 'a prop is a sprite of its own');
   const plain = Pd.pedSprite(A, 'idle', 1, 0, 0), cart = Pd.pedSprite(Ap, 'push', 1, 0, 0);
   assert.ok(cart.w * cart.h > plain.w * plain.h * 1.3, 'the cart out in front');
-  for (const [gt, pose] of [['hunch', 'walk0'], ['strut', 'walk1'], ['skate', 'walk2'], ['blade', 'walk1'], ['dance', 'idle'], ['push', 'walk0']]) {
+  for (const [gt, pose] of [['hunch', 'walk0'], ['strut', 'walk1'], ['skate', 'walk2'], ['blade', 'walk1'], ['dance', 'idle'], ['push', 'walk0'], ['lean', 'idle']]) {
     const q = Pd.personaPose({ gt }, pose);
     assert.equal(q, gt);
     for (let f = 0; f < Pd.PED_POSES[q]; f++) { const G = Pd.pedSprite(Pd.withProp(A, gt === 'hunch' ? 'cane' : 'phone'), q, f % 8, f, 0); assert.ok(G.w > 10 && G.h > 30, `${q} ${f}`); }

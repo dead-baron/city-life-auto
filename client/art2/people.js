@@ -1564,10 +1564,11 @@ export function randomPerson(seed, kind = null) {
 
 // ==== The city's people (task #365, server/systems/personas.js): personality walks and props ========================
 // walks (POSES): hunch (a senior's slow stoop on a cane), strut (hips swaying, the feet on one line), skate (riding a board,
-// pushing off), blade (rollerblades: the long side-pushed glide), dance (four frames of letting go), push (pushing a cart)
+// pushing off), blade (rollerblades: the long side-pushed glide), dance (four frames of letting go), push (pushing a cart),
+// lean (back to a wall, a foot up on it)
 // props (app.carry): trolley (a senior's two-wheeled shopping trolley, pulled along), cart (a shopping cart with a blanket
 // in it, pushed), leads (three dog leads out in front, to where the dogs trot), guitar (a busker's), call (the phone at an ear)
-Object.assign(POSES, { hunch: 6, strut: 6, skate: 4, blade: 6, dance: 4, push: 6 });
+Object.assign(POSES, { hunch: 6, strut: 6, skate: 4, blade: 6, dance: 4, push: 6, lean: 2 });
 CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
@@ -1612,6 +1613,11 @@ const GAITS2 = {
       else { P.hL = vadd(S.shL, [-11.6, 2.4, 1.8]); P.hR = vadd(S.shR, [11.6, 2.4, 3.2]); P.openL = P.openR = 1; }
       P.elL = [-1, -0.2, -0.3]; P.elR = [1, -0.2, -0.3];
     };
+  },
+  lean(D, P, f, kind, acc) {   // back to a wall, a foot up on it behind, arms folded (1: a glance along the street)
+    P.lean = -0.14; P.pel = [0.6, -1.2, D.pelZ - 0.4]; P.headYaw = f ? 0.55 : -0.1; P.headPitch = -0.05;
+    P.fL = [-D.hipX - 0.8, 1.6, D.ank]; P.fR = [D.hipX - 0.2, -4.6, D.ank + 6.2]; P.kneeR = [0.2, 1, 0];
+    P.hands = acc ? (S) => accHands(D, P, S, acc) : (S) => { P.hL = vadd(S.chest, mv(S.SP, [3.0, 6.4, -2.4])); P.hR = vadd(S.chest, mv(S.SP, [-3.0, 6.8, -1.4])); P.elL = [-1, 0.2, -0.6]; P.elR = [1, 0.2, -0.6]; };
   },
   push(D, P, f, kind, acc) {
     gait(D, P, 0, f / 6, false);

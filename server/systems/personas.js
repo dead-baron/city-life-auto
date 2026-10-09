@@ -16,7 +16,7 @@
 // in the park (sleeper), a busker playing for coins (busker: drop a coin - ACT - for a little Samaritan credit), and,
 // rarely, a selfie at a landmark (selfie: the owner asked for fewer phones out); and a few more of the city's characters:
 // a tourist couple with a map and a phone for photos (tourists), a hot-dog seller at a food cart (vendor), a fisherman at
-// a pier's rail (fisher).
+// a pier's rail (fisher), someone leaning on a wall, a foot up behind them (leaner).
 // Clients get a persona's walk and prop in the ped descriptor (net.js: gt, pp; a seat on a bench: sb), drawn by
 // client/art2/people.js (the hunch, strut, skate, blade, dance and push poses; the cane, trolley, cart, leads, guitar).
 import { K, T, TILE } from '../../shared/constants.js';
@@ -179,6 +179,7 @@ export const PERSONAS = {
   tourists: { arche: 'casual', look: 'tourist', pp: 'map', speed: 0.8, where: 'civic:2 beach:2 oldtown:2 towers:1 park:1 commercial:1', day: 1.5, night: 0.3, pair: true, cap: 1 },
   vendor:   { arche: 'casual', look: 'vendor', where: 'commercial:2 civic:2 park:2 beach:2 towers:1', day: 2, night: 0.6, cap: 1, cart: true },
   fisher:   { arche: 'casual', look: 'fisher', where: 'beach:2 harbor:3 park:1', day: 2, night: 0.7, fish: true },
+  leaner:   { arche: 'casual', look: 'casual', gt: 'lean', where: 'commercial:2 apartments:2 southside:2 nightlife:2 towers:1 oldtown:1 redlight:1', day: 1, night: 1.4, lean: true },
 };
 for (const P of Object.values(PERSONAS)) P.w = Wt(P.where);
 
@@ -232,6 +233,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     at = { x: b.x + Math.cos(fa) * k, y: b.y + Math.sin(fa) * k, a: fa };
   }
   if (P.selfie) { const m = propsNear(world.map, x, y, 600, MARK)[0]; if (!m) return null; at = spotNear(world, m.x, m.y, 40, 80) || null; if (!at) return null; at.mark = m; }
+  if (P.lean) { at = wallSpot(world, x, y); if (!at) return null; }
   if (P.cart) { const c = propsNear(world.map, x, y, 700, CART).find((q) => !world.query(q.x, q.y + 18, 24, K.PED).some((e) => e.npc && e.npc.persona === key)); if (!c || !walkable(world.map, c.x, c.y + 18)) return null; at = { x: c.x, y: c.y + 18 }; }
   if (P.fish) {   // at a pier's rail, facing the water
     const rails = propsNear(world.map, x, y, 800, PIER);
@@ -253,6 +255,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   }
   if (P.sleep) { n.state = 'passed'; ped.passedOut = true; ped.downUntil = 0; ped.sleeping = true; }
   if (P.cart) { n.spot = { x: at.x, y: at.y }; ped.a = Math.PI / 2; }
+  if (P.lean) { n.spot = { x: at.x, y: at.y, a: at.a }; ped.a = at.a; n.until = world.time + 30 + rng() * 60; }
   if (P.fish) { n.spot = { x: at.x, y: at.y, a: at.water }; ped.a = at.water; ped.fishing = { npc: true }; }
   if (P.pair) {   // the other half: the same tracksuit (the tourists: snapping photos), a step to the side
     const p2 = spawnNpc(world, P.arche, at.x + 14, at.y + 4, 'civ');
@@ -270,6 +273,21 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     }
   }
   return ped;
+}
+// a spot with its back to a building's wall, near (x, y): { x, y, a: facing away from the wall } or null
+function wallSpot(world, x, y) {
+  const m = world.map, tx0 = Math.floor(x / TILE), ty0 = Math.floor(y / TILE);
+  for (let k = 0; k < 40; k++) {
+    const tx = tx0 + Math.floor((rng() - 0.5) * 18), ty = ty0 + Math.floor((rng() - 0.5) * 18), t = m.tileAt(tx, ty);
+    if (t !== T.SIDEWALK && t !== T.PLAZA) continue;
+    for (const [dx, dy] of [[0, -1], [1, 0], [-1, 0], [0, 1]]) {
+      if (!PED_BLOCK[m.tileAt(tx + dx, ty + dy)] || !m.buildingAtPx((tx + dx + 0.5) * TILE, (ty + dy + 0.5) * TILE)) continue;
+      const px = (tx + 0.5) * TILE + dx * (TILE / 2 - 12), py = (ty + 0.5) * TILE + dy * (TILE / 2 - 12);
+      if (world.query(px, py, 40, K.PED).some((e) => e.npc && e.npc.persona === 'leaner')) continue;
+      return { x: px, y: py, a: Math.atan2(-dy, -dx) };
+    }
+  }
+  return null;
 }
 // which way the water is from a spot on the pier (radians), or null when there's none in reach
 function waterward(map, x, y) {
@@ -369,6 +387,12 @@ export function steer(world, ped, now) {
     if (now >= (n.moveAt || 0)) { n.moveAt = now + 6 + rng() * 10; const s = spotNear(world, n.spot.x, n.spot.y, 0, 50); if (s) { n.wx = s.x; n.wy = s.y; } }
     if (Math.hypot(n.wx - ped.x, n.wy - ped.y) > 8) return { inp: seekTo(ped, n.wx, n.wy, 0.6), factor: 0.4 };
     ped.a += Math.sin(now * 1.7 + ped.id) * 0.02;
+    return { inp: NO_INPUT, factor: 0.55 };
+  }
+  if (P.lean && n.spot) {   // leaning on the wall a while, then off like anyone
+    if (now > n.until) { n.spot = null; ped.gt = null; ped.appVer = (ped.appVer || 0) + 1; return null; }
+    if (Math.hypot(n.spot.x - ped.x, n.spot.y - ped.y) > 6) return { inp: seekTo(ped, n.spot.x, n.spot.y), factor: 0.5 };
+    ped.vx = ped.vy = 0; ped.a = n.spot.a;
     return { inp: NO_INPUT, factor: 0.55 };
   }
   if ((P.busk || P.cart || P.fish) && n.spot) {   // the busker, the hot-dog seller and the fisherman keep their spot
