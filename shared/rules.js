@@ -413,3 +413,22 @@ export const TREE_REGROW_NEAR = 900;       // ...when no player is within this m
 export const LOG_BUNDLE_PRICE = 45;        // what the hardware store and the lumber buyers pay for a bundle of logs
 export const LOGS_LIFE_S = 1800;           // log bundles nobody touches are cleared away after this long
 export const FELL_HEAT = 6;                // felling a tree in town or a park: vandalism (a little heat); in the wilds it's free
+
+// ---- underground: the sewers, the cave, mining (server/systems/underground.js, shared/underground.js) ----------------
+export const MANHOLE_REACH = 30;           // px: stand on a cover (over a sewer route) to climb down
+export const LADDER_REACH = 34;            // px: at the foot of a ladder underground, to climb up
+export const POLICE_FOLLOW_R = 520;        // px: officers on foot this close who saw you go down a manhole come down after you...
+export const POLICE_FOLLOW_S = 2.5;        // ...this long after you (the next a little later)
+export const POLICE_GIVE_UP_S = 40;        // down there, an officer who hasn't seen you this long climbs back up
+export const ROCKFALL_WARN_S = 1.6;        // a cracked roof: a trickle of dust this long before the rock comes down...
+export const ROCKFALL_DMG = 34;            // ...hurting anyone under it this much
+export const ROCKFALL_R = 34;              // px
+export const ROCKFALL_EVERY_S = [22, 50];  // s between falls at one spot (only while someone is near)
+export const BATS_REST_S = 45;             // a roost that burst out settles again after this long
+export const BEAR_WAKE_R = 260;            // px: the den bear wakes when you come this close
+export const BEAR_BITE = 18;               // its bite...
+export const BEAR_BITE_S = 1.3;            // ...this often while you stay
+export const MINE_REACH = 44;              // px: face a vein this close to work it
+export const VEIN_REGROW_S = 300;          // a worked-out vein grows back (somewhere near) after this long
+export const PICK_PRICES = { pickStone: 30, pickIron: 95, pickSteel: 280, pickDiamond: 1250 };
+export const ASSAY_PAYS = 1.3;             // the quarry's assay office pays this much over what a pawn shop does

@@ -338,6 +338,7 @@ const BUILD = {
     }
     for (const [fx, t] of [[0.62, 'cone'], [0.66, 'cone'], [0.7, 'cone'], [0.4, 'drum'], [0.43, 'tires']]) H.addProp(m, t, (s.x + s.w * fx) * TILE, (s.y + s.h - 6.5) * TILE, t === 'cone' ? 0 : 9);
     H.addProp(m, 'lamp', (s.x + 10) * TILE, (s.y + s.h - 1) * TILE);
+    quarryOre(m, s, H, pit);
   },
 
   // the domed observatory on the summit (one big prop on a solid footprint), a car park, viewers
@@ -538,4 +539,19 @@ export function runwayLights(m, H) {
     for (let x = r.x + 10; x < r.x + r.w - 6; x += 22) { H.addProp(m, 'rwlight', x, r.y + 6, 0, { c: 'g' }); H.addProp(m, 'rwlight', x, r.y + r.h - 6, 0, { c: 'r' }); }
     for (let y = t.y + 40; y < t.y + t.h - 30; y += 7 * TILE) for (const x of [t.x + 3, t.x + t.w - 3]) H.addProp(m, 'rwlight', x, y, 0, { c: 'b' });
   }
+}
+
+// Mining at the quarry (server/systems/underground.js; the veins round the pit's faces are shared/underground.js's): the
+// assay office - a small hut by the site office with a window that buys ore and sells pickaxes - and the loading track
+// along the pit's east rim, an ore cart on it, heaps of crushed rock at its end (the crusher's yard: the crusher itself
+// waits for the mining sheets, MI1-MI7).
+function quarryOre(m, s, H, pit) {
+  H.simpleBuilding(m, s.x + 10, s.y + s.h - 5, 4, 3, 'Assay Office', 'hut', s.d, 'metal');
+  m.pois.push({ id: m.pois.length, kind: 'assay', label: `${s.name} Assay Office`, x: (s.x + 12) * TILE, y: (s.y + s.h - 1.4) * TILE, r: 40, counter: true, b: m.buildings.length - 1 });
+  const x = pit.x + pit.w + 1.6 * TILE, y0 = pit.y + pit.h * 0.3;
+  H.addProp(m, 'rails', x, y0 + 3 * TILE, 0, { len: 6 * TILE });
+  H.addProp(m, 'minecart', x, y0 + 1.6 * TILE, 12);
+  H.addProp(m, 'gravel', x, y0 + 6.6 * TILE, 0);
+  H.addProp(m, 'gravel', x - 1.2 * TILE, y0 + 7.4 * TILE, 0);
+  H.addProp(m, 'lantern', x + 1.1 * TILE, y0, 4);
 }

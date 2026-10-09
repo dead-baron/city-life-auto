@@ -1,5 +1,6 @@
 // Vehicle physics, seats (multi-passenger binding), collisions, ped strikes, wrecks.
 import { K, VF, WEATHER } from '../../shared/constants.js';
+import { ugMapOf } from '../../shared/underground.js';
 import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
 import { PED_BLOCK, WATER_T } from '../../shared/map.js';
@@ -467,13 +468,14 @@ function findExitSpot(world, v, ped, maxR, toward = null) {
   const hw = v.def.W / 2 + 16, hl = v.def.L / 2 + 16;
   if ((v.lz || 0) > 0.3) return null; // up on the deck: step out beside it (the barriers keep you on)
   const cands = [[0, -hw], [0, hw], [-hl, 0], [hl, 0], [-hl / 2, -hw], [-hl / 2, hw]].map(([lx, ly]) => localToWorld(v.x, v.y, v.a, lx, ly));
+  const M = v.ug ? ugMapOf(world.map) || world.map : world.map;   // (the cave's boat: its own rock and banks - shared/underground.js)
   if (toward) cands.sort((a, b) => Math.hypot(a[0] - toward.x, a[1] - toward.y) - Math.hypot(b[0] - toward.x, b[1] - toward.y));
-  for (const [x, y] of cands) if (!PED_BLOCK[world.map.tileAtPx(x, y)]) return { x, y };
+  for (const [x, y] of cands) if (!PED_BLOCK[M.tileAtPx(x, y)]) return { x, y };
   for (let r = 48; r <= maxR; r += 16) {
     for (let k = 0; k < 16; k++) {
       const ang = (k / 16) * Math.PI * 2;
       const x = v.x + Math.cos(ang) * r, y = v.y + Math.sin(ang) * r;
-      if (!PED_BLOCK[world.map.tileAtPx(x, y)]) return { x, y };
+      if (!PED_BLOCK[M.tileAtPx(x, y)]) return { x, y };
     }
   }
   return null;

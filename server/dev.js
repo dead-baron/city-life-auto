@@ -25,6 +25,8 @@ import * as wildlife from './systems/wildlife.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
 import { SPECIES } from '../shared/fauna.js';
+import { undergroundOf } from '../shared/underground.js';
+import * as underground from './systems/underground.js';
 
 // make a live animal the pure white legend of its kind (dev: see one up close)
 function w2legend(world, e) {
@@ -50,6 +52,11 @@ export const NEAR_KINDS = {
   nature: (m) => (m.natureSites || []).map((q) => ({ x: q.x, y: q.y, name: q.name || q.kind })),
   beaver: (m) => (m.beaverPonds || []).map((b) => ({ x: b.x + 160, y: b.y + 140, name: `${b.name || 'Heron Marsh'} beaver pond` })),
   campfire: (m) => m.props.filter((q) => q && q.t === 'campfire').map((q) => ({ x: q.x, y: q.y + 30, name: 'a campfire' })),
+  // under the ground (shared/underground.js): a manhole over the sewers, the cave's mouth (the Old Granite Mine's adit), an
+  // ore vein above ground (the quarry's, the mine's outcrops)
+  manhole: (m) => { const L = undergroundOf(m); return L ? L.routes.flatMap((r) => r.manholes).map((q) => ({ x: q.x, y: q.y, name: 'a manhole over the sewers' })) : []; },
+  cave: (m) => { const L = undergroundOf(m); return L && L.cave ? [{ x: L.cave.mouth.x, y: L.cave.mouth.y + 4, name: 'the cave\'s mouth' }] : []; },
+  vein: (m) => { const L = undergroundOf(m); return L ? L.veins.filter((v) => !v.ug).map((v) => ({ x: v.x, y: v.y, name: `a vein of ${v.ore} (${v.where})` })) : []; },
   stargaze: (m) => { const s = (m.countrySites || []).find((q) => q.type === 'observatory'); return s ? m.props.filter((q) => q && q.t === 'scope' && q.x >= s.x * 32 && q.x <= (s.x + s.w) * 32 && q.y >= s.y * 32 && q.y <= (s.y + s.h) * 32).map((q) => ({ x: q.x + 14, y: q.y + 24, name: 'the observatory telescope' })) : []; },
 };
 export function nearTargets(m, k) {
@@ -80,7 +87,7 @@ export function near(world, p, k) {
   if (!at) return `[dev] Couldn't find open ground by ${best.name}.`;
   if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
   if (ped.vehId) return '[dev] Get out of the vehicle first.';
-  ped.sub = false; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
+  ped.sub = false; ped.ug = 0; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
   if (best.craft) { // and the right craft in the water beside you
     const wat = standAt(world, at.x + Math.sign(best.x - at.x) * 40, at.y + Math.sign(best.y - at.y) * 40, 400, true);
     if (wat) { const v = world.spawnVehicle(best.craft, wat.x, wat.y, Math.atan2(best.y - wat.y, best.x - wat.x), { npcOwned: false }); v.issuedTo = p.pid; }
@@ -149,6 +156,16 @@ export function command(world, p, c, msg) {
       world.notify(p, world.weatherHold ? '[dev] Weather held: no change until you let it go.' : '[dev] Weather back to normal.', 'info'); break;
     case 'clockhold': world.clockHold = !world.clockHold; world.notify(p, world.clockHold ? '[dev] Clock frozen at this time of day.' : '[dev] Clock running again.', 'info'); break;
     case 'near': { const err = near(world, p, msg.k); if (err) world.notify(p, err, 'warn'); break; }
+    case 'ug': {   // straight down: the nearest manhole into the sewers, or (k: 'cave') in through the mine's adit
+      if (!ped || ped.dead || ped.vehId) break;
+      const L = undergroundOf(world.map);
+      if (ped.ug) break;
+      if (msg.k === 'cave') { if (L.cave) { ped.x = L.cave.mouth.x; ped.y = L.cave.mouth.y; underground.enterCave(world, p); const c = L.cave.ch[msg.at]; if (c) { ped.x = c.x; ped.y = c.y; } } break; }   // (at: a chamber - grotto, river, worms, pool, crystal, den)
+      let best = null, bd = Infinity;
+      for (const r of L.routes) for (const m of r.manholes) { const d = Math.hypot(m.x - ped.x, m.y - ped.y); if (d < bd) { bd = d; best = m; } }
+      if (best) { ped.x = best.x; ped.y = best.y; underground.goDown(world, p, best); }
+      break;
+    }
     case 'night': world.loopTime = DAY_PART_S + 5; break;
     case 'day': world.loopTime = 90; break;
     case 'time': { // jump the clock to a time of day: msg.m minutes after midnight
@@ -335,7 +352,7 @@ export function command(world, p, c, msg) {
       if (r) world.notify(p, `[dev] A train is waiting at ${r.st.name}.`, 'info');
       break;
     }
-    case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y); if (ped) ped.sub = false;
+    case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y); if (ped) { ped.sub = false; ped.ug = 0; }
       if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; ped.lz = msg.lz === 1 && surfaceZ(world.map, msg.x, msg.y, 1) !== null ? 1 : 0; p.teleportAt = world.time; } break; // lz: 1 = up on the highway deck
     case 'god': devmode.setInvincible(world, p, null); break;              // invincible (toggle)
     case 'spectate':                                                        // free camera: your character stays put, safe

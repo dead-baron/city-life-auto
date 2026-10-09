@@ -23,7 +23,9 @@ export const WORLD_H = MAP_H * TILE;
 //      (map.js buildClothesShops); the Rusty Spur, a biker roadhouse on the Desert Highway (countryside.js)
 //   8  real cells: a cell block at the back of every police station, barred cells and a corridor, the front desk's
 //      counter moved forward for it (shared/cells.js)
-export const WORLD_VERSION = 8;
+//   9  mining: the Granite Quarry's assay office (buys ore, sells pickaxes) and its loading track (countryside.js
+//      quarryOre); the sewers and the cave lie under the world (shared/underground.js)
+export const WORLD_VERSION = 9;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);

@@ -2,10 +2,11 @@
 // steam comes up from (weather.js) - one list, so steam only ever rises out of a cover you can see. Only in
 // town (the city's districts: not the villages, the farms or the open country), on its streets (not the highways,
 // the country roads, arterials out of town or dirt tracks) and never on a deck.
-// Tiny on purpose (no art imports): the page's main code reads it for the steam (so it lives here, not with the art v2
-// renderer, which main.js only loads once the city is in).
-import { DISTRICTS } from '../../shared/map.js';
-import { TILE, MAP_W, MAP_H } from '../../shared/constants.js';
+// Tiny on purpose (no art imports): the page's main code reads it for the steam (not with the art v2 renderer, which
+// main.js only loads once the city is in), and the sewers under the city come up through some of these covers
+// (shared/underground.js, on the server too). It lived in client/render/ until the sewers.
+import { DISTRICTS } from './map.js';
+import { TILE, MAP_W, MAP_H } from './constants.js';
 
 export const URBAN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown', 'arts']);
 const NO_COVERS = new Set(['dirt', 'rural', 'hwy']);

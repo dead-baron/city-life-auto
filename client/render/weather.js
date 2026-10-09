@@ -9,7 +9,7 @@ import { wind } from './flora/wind.js';
 import { T, TILE, MAP_W, MAP_H, CHUNK_PX } from '../../shared/constants.js';
 import { hash } from './atmos.js';
 import { freeCanvas } from '../platform.js';
-import { coversIn, coverSeed } from './covers.js';   // (the street's manhole covers: the ones the ground draws)
+import { coversIn, coverSeed } from '../../shared/covers.js';   // (the street's manhole covers: the ones the ground draws)
 import { alleyVentsIn } from '../../shared/alleys.js';   // (the vents on the alleys' back walls)
 import { boltPath, drawBolt } from './lightning.js';    // (the bolt you see in a storm)
 

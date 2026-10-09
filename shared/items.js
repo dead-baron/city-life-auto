@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES } from './rules.js';
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS } from './rules.js';
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -395,3 +395,28 @@ export const FISH_TABLE = {
   offshore: [50, 32, 18], // out at sea from a boat: [grouper, swordfish, marlin]
 };
 export const OFFSHORE_FISH = ['grouper', 'swordfish', 'marlin'];
+
+// ---- underground: mining (server/systems/underground.js, shared/underground.js ORES and PICKS) -----------------------
+// The pickaxes: tools (never used up; the best one you carry is the one you swing). Their tiers gate the ores: coal and
+// copper take any pick, iron and silver an iron one, gold and gems steel, a diamond only the diamond-tipped one.
+Object.assign(ITEMS, {
+  pickStone: { name: 'Stone Pickaxe',          tool: true, sell: 8 },
+  pickIron: { name: 'Iron Pickaxe',            tool: true, sell: 30 },
+  pickSteel: { name: 'Steel Pickaxe',          tool: true, sell: 90 },
+  pickDiamond: { name: 'Diamond-Tipped Pickaxe', tool: true, sell: 400 },
+  coal: { name: 'Coal',                        loot: true, sell: 5 },
+  copperOre: { name: 'Copper Ore',             loot: true, sell: 12 },
+  ironOre: { name: 'Iron Ore',                 loot: true, sell: 16 },
+  silverOre: { name: 'Silver Ore',             loot: true, sell: 34 },
+  goldOre: { name: 'Gold Ore',                 loot: true, sell: 70 },
+  gem: { name: 'Rough Gemstone',               loot: true, sell: 110 },
+  diamond: { name: 'Rough Diamond',            loot: true, sell: 320 },
+});
+export const ORE_ITEMS = ['coal', 'copperOre', 'ironOre', 'silverOre', 'goldOre', 'gem', 'diamond'];
+const PICK_OFFERS = (ids) => ids.map((id) => ({ kind: 'item', id, price: PICK_PRICES[id], qty: 1 }));
+SHOPS.hardware.buy.push(...PICK_OFFERS(['pickStone', 'pickIron', 'pickSteel']));
+SHOPS.huntcamp.buy.push(...PICK_OFFERS(['pickStone', 'pickIron', 'pickSteel', 'pickDiamond']));
+SHOPS.pawn.sells.push(...ORE_ITEMS);
+// the assay office at the Granite Quarry (shared/countryside.js): it buys ore best, and sells the pickaxes
+SHOPS.assay = { title: 'Granite Quarry Assay Office', buy: PICK_OFFERS(['pickStone', 'pickIron', 'pickSteel', 'pickDiamond']), sells: ORE_ITEMS.concat(['nugget', 'quartz']),
+  sellPrice: Object.fromEntries(ORE_ITEMS.concat(['nugget', 'quartz']).map((id) => [id, Math.round(ITEMS[id].sell * ASSAY_PAYS)])) };
