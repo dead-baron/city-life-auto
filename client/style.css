@@ -938,3 +938,12 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
   #creator .cc-btn { padding: 5px 10px; font-size: 13px; }
   #creator .cc-tab { padding: 4px 7px; font-size: 12px; }
 }
+
+/* ---- clothes to buy (task #364; client/creator.js): the Outfit tab's padlocks (CC7), the fitting room (ST4), the barber's chair (ST3) ---- */
+#creator .cc-card.locked canvas { opacity: .6; }
+#creator .cc-lock { display: block; font-size: 10px; color: #f0c060; line-height: 1.1; }
+#creator .cc-price { display: block; font: 700 12px var(--pixel); color: #ffd36b; }
+#creator .cc-card.owned .cc-price { color: #7de07a; }
+#creator .cc-money { margin-right: auto; align-self: center; font: 13px var(--pixel); color: var(--cream); }
+#creator .cc-money b { color: #ffd36b; }
+#creator .cc-btn.green { color: #fff; background: linear-gradient(180deg, #3a9a4a, #22703a); border-color: #9ae0a8; }

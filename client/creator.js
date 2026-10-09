@@ -6,9 +6,15 @@
 //             piece grid, main and trim colours, patterns, complete looks for the style), Extras (makeup, tattoos,
 //             piercings, scars) and Saved looks (CC10: save under a name, apply, rename, delete); Randomise, Undo,
 //             Save look, Done. A large preview turns through the eight directions with the idle animation.
+//   'shop'  - a store's fitting room (ST4, task #364): the store's stock by slot and its complete outfits, tried on the
+//             big preview; colours and patterns; Try on, Buy, Buy and wear (shared/wardrobe.js: stock and prices)
+//   'barber'- the barbershop's or the salon's chair (ST3): Cut, Colour, Beard, Moustache, priced, then Confirm
 // Mouse, touch and the pad: the d-pad / stick moves the focus to the nearest control that way, A presses it, left /
-// right moves a slider, B is Done. The server checks every look (server/systems/looks.js); free for now.
+// right moves a slider, B is Done. The server checks every look (server/systems/looks.js): you wear what you own (the
+// Outfit tab's Owned / All: CC1, CC7's padlocks), the body and face change at the mirror at home, the hair at a
+// barber; a new player's first session is free.
 import * as LK from '../shared/look.js';
+import * as WD from '../shared/wardrobe.js';
 import { person } from './art2/people.js';
 
 let C = null;            // main.js's hooks { send, openOverlay, closeOverlay, topOverlay, sfx, toast }
@@ -18,6 +24,7 @@ let dir = 0, fr = 0, animT = 0, raf = 0;
 let state = { cur: null, picked: true, saved: [] };
 let outStyle = '', outSlot = 'top', outBase = null, ctarget = 'c', hairLen = 'all';
 let startPick = 0, startRandomSeed = 1, renaming = -1, focusEl = null, seedN = 1, wheelSel = 0;
+let outView = 'owned', shop = null, shopTab = 'outfits', shopSel = 0, hairTab = 'cut', doneWarnAt = 0;
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const code = (L = look) => LK.encodeLook(L);
@@ -66,7 +73,12 @@ export function open(m = 'edit', st = null) {
   hist = []; renaming = -1;
   if (mode === 'start') { startPick = 0; look = clone(LK.STARTERS[0].look); }
   if (mode === 'wheel') { wheelSel = Math.max(0, (state.saved || []).findIndex((s) => s.c === state.cur)); const s = (state.saved || [])[wheelSel]; if (s) look = LK.decodeLook(s.c) || look; }
-  tab = 'body'; outBase = null;
+  tab = 'body'; outBase = null; doneWarnAt = 0;
+  outView = state.free ? 'all' : 'owned';
+  if (mode === 'shop' || mode === 'barber') { shop = state.shop || shop; if (!shop) { mode = 'edit'; } }
+  if (mode === 'shop') { shopSel = 0; const t = shopTabs(); shopTab = t.length ? t[0][0] : 'outfits'; }
+  if (mode === 'barber') hairTab = 'cut';
+  if (mode === 'edit') C.send({ t: 'look', a: 'get' });   // (fresh: what you own, and whether you're at home)
   if (C.topOverlay() !== 'creator') C.openOverlay('creator');
   render();
   setFocus(null);
@@ -81,14 +93,33 @@ export function onState(st) {
     const L = sv[wheelSel] && LK.decodeLook(sv[wheelSel].c);
     if (L) look = L;
     render();
-  } else if (mode === 'edit' && tab === 'saved') renderPage();
+  } else if (mode === 'shop' || mode === 'barber') render();
+  else if (mode === 'edit' && (tab === 'saved' || tab === 'outfit')) renderPage();
 }
 function close(apply) {
-  if (mode === 'wheel') apply = false;   // (the wheel puts a look on with Apply)
-  if (apply && look) C.send({ t: 'look', a: 'set', c: code() });
+  if (mode === 'wheel' || mode === 'shop' || mode === 'barber') apply = false;   // (the wheel puts a look on with Apply; a store sells it)
+  if (apply && look) {
+    const why = problem(look);
+    if (!why) C.send({ t: 'look', a: 'set', c: code() });
+    else if (performance.now() - doneWarnAt > 4000) { doneWarnAt = performance.now(); if (C.toast) C.toast(`${why} (Done again: leave as you were.)`, 'warn'); return; }
+  }
   cancelAnimationFrame(raf); raf = 0;
   if (C.topOverlay() === 'creator') C.closeOverlay('creator');
 }
+// why the look being edited can't be worn now (the server says the same: looks.js refusal); null: it can
+const owned = (id) => !!state.free || WD.owns(state.own || [], id);
+function problem(L) {
+  const cur = !state.free && state.cur && LK.decodeLook(state.cur);
+  if (!cur) return null;
+  const c = WD.changes(cur, L);
+  if (c.body && !state.home) return 'Your body, face, makeup and tattoos change at the mirror at home.';
+  if (c.hair && !(state.home && cur.body.base !== L.body.base)) return 'Hair and facial hair change at a barbershop or a hair salon.';
+  const no = WD.unowned(state.own || [], L);
+  if (!no.length) return null;
+  const S = WD.STORES[WD.sellerOf(no[0])];
+  return `You don't own the ${LK.PIECES[no[0]].name} yet${S ? ` - ${S.name} sells it` : ''}.`;
+}
+const lockTag = (id) => { const S = WD.STORES[WD.sellerOf(id)]; return `<span class="cc-lock">🔒 ${S ? `${S.icon} ${esc(S.name)}` : ''}</span>`; };
 export const isOpen = () => !!root && !root.classList.contains('hidden');
 
 // ---- the look being edited ----------------------------------------------------------------------------------------------
@@ -185,17 +216,59 @@ const th = (L, crop = 'full') => { TH.push([L, crop]); return `<canvas class="cc
 // ---- the screens ----------------------------------------------------------------------------------------------------------
 const TABS = [['body', 'Body'], ['face', 'Face'], ['hair', 'Hair'], ['outfit', 'Outfit'], ['extras', 'Extras'], ['saved', 'Saved looks']];
 function render() {
-  root.querySelector('.cc-title').textContent = mode === 'start' ? 'CHOOSE YOUR STARTING LOOK' : mode === 'wheel' ? 'QUICK CHANGE' : 'CHARACTER CREATOR';
+  root.querySelector('.cc-title').textContent = mode === 'start' ? 'CHOOSE YOUR STARTING LOOK' : mode === 'wheel' ? 'QUICK CHANGE' : (mode === 'shop' || mode === 'barber') && shop ? shop.name.toUpperCase() : 'CHARACTER CREATOR';
   root.classList.toggle('cc-start', mode === 'start');
   root.classList.toggle('cc-wheelmode', mode === 'wheel');
-  root.querySelector('.cc-tabs').innerHTML = mode !== 'edit' ? '' : TABS.map(([k, n]) => `<button class="cc-tab ${k === tab ? 'on' : ''}" data-act="tab" data-v="${k}">${n}</button>`).join('');
-  root.querySelector('.cc-foot').innerHTML = mode === 'start'
-    ? `<button class="cc-btn" data-act="make-yours">Make it yours</button><button class="cc-btn gold" data-act="play-as">Play as they are</button>`
-    : mode === 'wheel' ? `<button class="cc-btn" data-act="close">Close</button><button class="cc-btn" data-act="mirror">The mirror</button><button class="cc-btn gold" data-act="wh-apply" ${(state.saved || []).length ? '' : 'disabled'}>Apply</button>`
-    : `<button class="cc-btn" data-act="random">Randomise</button><button class="cc-btn" data-act="undo" ${hist.length ? '' : 'disabled'}>Undo</button><button class="cc-btn" data-act="save">Save look</button><button class="cc-btn gold" data-act="done">Done</button>`;
+  root.querySelector('.cc-tabs').innerHTML = mode === 'shop' ? shopTabs().map(([k, n]) => `<button class="cc-tab ${k === shopTab ? 'on' : ''}" data-act="sh-tab" data-v="${k}">${n}</button>`).join('')
+    : mode === 'barber' ? hairTabs().map(([k, n]) => `<button class="cc-tab ${k === hairTab ? 'on' : ''}" data-act="hb-tab" data-v="${k}">${n}</button>`).join('')
+    : mode !== 'edit' ? '' : TABS.map(([k, n]) => `<button class="cc-tab ${k === tab ? 'on' : ''}" data-act="tab" data-v="${k}">${n}</button>`).join('');
+  renderFoot();
   drawPreview();
   renderPage();
 }
+function renderFoot() {
+  const money = () => `<span class="cc-money">Cash $${(state.cash || 0).toLocaleString()} · Bank $${(state.bank || 0).toLocaleString()}`;
+  let h;
+  if (mode === 'start') h = `<button class="cc-btn" data-act="make-yours">Make it yours</button><button class="cc-btn gold" data-act="play-as">Play as they are</button>`;
+  else if (mode === 'wheel') h = `<button class="cc-btn" data-act="close">Close</button><button class="cc-btn" data-act="mirror">The mirror</button><button class="cc-btn gold" data-act="wh-apply" ${(state.saved || []).length ? '' : 'disabled'}>Apply</button>`;
+  else if (mode === 'shop') {
+    const total = basket().reduce((t, id) => t + WD.priceAt(shop.store, id), 0), changed = code() !== state.cur;
+    h = `${money()}${total ? ` · <b>Total $${total.toLocaleString()}</b>` : ''}</span><button class="cc-btn" data-act="close">Close</button><button class="cc-btn" data-act="sh-reset" ${changed ? '' : 'disabled'}>Start over</button><button class="cc-btn" data-act="sh-try" ${shopSel ? '' : 'disabled'}>Try on</button>`
+      + `<button class="cc-btn green" data-act="sh-buy" ${total ? '' : 'disabled'}>Buy</button><button class="cc-btn gold" data-act="sh-wear" ${changed ? '' : 'disabled'}>${total ? 'Buy and wear' : 'Wear'}</button>`;
+  } else if (mode === 'barber') {
+    const cost = hairBill();
+    h = `${money()}${cost && cost.total ? ` · <b>Total $${cost.total}</b>` : ''}</span><button class="cc-btn" data-act="close">Back</button><button class="cc-btn gold" data-act="hb-ok" ${cost && cost.total ? '' : 'disabled'}>Confirm</button>`;
+  } else h = `<button class="cc-btn" data-act="random">Randomise</button><button class="cc-btn" data-act="undo" ${hist.length ? '' : 'disabled'}>Undo</button><button class="cc-btn" data-act="save">Save look</button><button class="cc-btn gold" data-act="done">Done</button>`;
+  root.querySelector('.cc-foot').innerHTML = h;
+}
+
+// ---- the fitting room (ST4) and the barber's chair (ST3) ---------------------------------------------------------------------
+const SHOP_TABS = [['outfits', 'Outfits'], ['top', 'Tops'], ['jacket', 'Jackets'], ['bottoms', 'Bottoms'], ['set', 'Dresses & sets'], ['shoes', 'Shoes'], ['hat', 'Hats'], ['acc', 'Accessories']];
+const ACC = ['glasses', 'jewel', 'bag'], PATTERNED = new Set(['top', 'jacket', 'bottoms', 'set']);
+const inTab = (id, k) => (k === 'acc' ? ACC.includes(LK.PIECES[id].slot) : LK.PIECES[id].slot === k);
+function shopTabs() { const ids = shop ? WD.stock(shop.store) : []; return SHOP_TABS.filter(([k]) => (k === 'outfits' ? outfitsHere().length > 0 : ids.some((id) => inTab(id, k)))); }
+let outfitMemo = null;
+function outfitsHere() {
+  if (!shop || !look) return [];
+  const k = shop.store + look.body.base;
+  if (!outfitMemo || outfitMemo.k !== k) outfitMemo = { k, l: WD.storeOutfits(shop.store, look.body.base, 10) };
+  return outfitMemo.l;
+}
+// what Buy pays for: the pieces tried on that aren't yours yet (all of them from this store)
+const basket = (L = look) => (shop ? WD.lookPieces(L).filter((id) => !WD.owns(state.own || [], id) && WD.stocks(shop.store, id)) : []);
+// a piece on, in the store's colours (a dress or set instead of the top and bottoms; a top or bottoms instead of it)
+function shopDress(V, id) {
+  const P = LK.PIECES[id];
+  V.outfit[P.slot] = { id, c: P.c, t: P.t, p: P.d.p || 0 };
+  if (P.slot === 'set') { V.outfit.top = null; V.outfit.bottoms = null; }
+  if ((P.slot === 'top' || P.slot === 'bottoms') && V.outfit.set) {
+    V.outfit.set = null;
+    if (!V.outfit.top) V.outfit.top = LK.item('Plain tee');
+    if (!V.outfit.bottoms) V.outfit.bottoms = LK.item('Jeans');
+  }
+}
+const hairTabs = () => (shop ? WD.HAIR_TABS[shop.kind] || WD.HAIR_TABS.barber : []).filter(([k]) => look.body.base === 'm' || (k !== 'beard' && k !== 'moustache'));
+const hairBill = () => { const cur = state.cur && LK.decodeLook(state.cur); return cur && shop ? WD.hairCost(shop.kind, cur, look) : null; };
 const chip = (actn, v, label, on, extra = '') => `<button class="cc-chip ${on ? 'on' : ''}" data-act="${actn}" data-v="${v}" ${extra}>${label}</button>`;
 const sw = (actn, v, hex, on, title) => `<button class="cc-sw ${on ? 'on' : ''}" data-act="${actn}" data-v="${v}" style="background:${hex}" title="${esc(title)}" aria-label="${esc(title)}"></button>`;
 const row = (label, inner) => `<div class="cc-row"><div class="cc-lab">${label}</div><div class="cc-opts">${inner}</div></div>`;
@@ -207,9 +280,42 @@ function renderPage() {
   const pg = root.querySelector('.cc-page');
   const ub = root.querySelector('[data-act="undo"]');
   if (ub) ub.disabled = !hist.length;
+  if (mode === 'shop' || mode === 'barber') renderFoot();   // (the total follows what's tried on)
   let h = '';
   const L = look, B = L.body;
-  if (mode === 'start') {
+  // (outside the first session: the body, face and extras change at the mirror at home, the hair at a barber)
+  const here = (what) => `<p class="cc-note cc-info">${what}</p>`;
+  const lockedHere = mode === 'edit' && !state.free && ((tab === 'hair') || (!state.home && (tab === 'body' || tab === 'face' || tab === 'extras')));
+  if (mode === 'shop') {
+    const S = WD.STORES[shop.store] || {}, own = state.own || [];
+    h = `<p class="cc-note">${esc(S.line || '')}. Everything you buy goes to your wardrobe.</p>`;
+    if (shopTab === 'outfits') {
+      h += `<div class="cc-grid">` + outfitsHere().map((o, i) => {
+        const price = Object.values(o).reduce((t, it) => t + (it && !WD.owns(own, it.id) ? WD.priceAt(shop.store, it.id) : 0), 0);
+        return `<button class="cc-card sm" data-act="sh-outfit" data-v="${i}">${th(WD.dressIn(look, o))}<span class="cc-price">${price ? '$' + price : '✓ yours'}</span></button>`;
+      }).join('') + '</div>';
+    } else {
+      const ids = WD.stock(shop.store).filter((id) => inTab(id, shopTab));
+      h += `<div class="cc-grid">` + ids.map((id) => {
+        const P = LK.PIECES[id], cur = look.outfit[P.slot], on = !!cur && cur.id === id, mine = WD.owns(own, id), crop = P.slot === 'hat' || P.slot === 'glasses' ? 'head' : 'full';
+        const V = variant((X) => { shopDress(X, id); if (P.slot === 'top' || P.slot === 'set') X.outfit.jacket = null; });
+        return `<button class="cc-card sm ${on ? 'on' : ''} ${mine ? 'owned' : ''}" data-act="sh-piece" data-v="${id}">${th(V, crop)}<span>${esc(P.name)}</span><span class="cc-price">${mine ? '✓ yours' : '$' + WD.priceAt(shop.store, id)}</span></button>`;
+      }).join('') + '</div>';
+      const P = LK.PIECES[shopSel], it = P && look.outfit[P.slot];
+      if (it && it.id === shopSel) {
+        h += row(`Colour: ${esc(P.name)}`, chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't')) + `<div class="cc-opts sw">${LK.CLOTH.map(([hx, n], i) => sw('sh-colour', i, hx, it[ctarget] === i, n)).join('')}</div>`;
+        if (PATTERNED.has(P.slot)) h += row('Pattern', LK.PATTERNS.map((pp, i) => chip('sh-pattern', i, pp === 'tiedye' ? 'Tie-dye' : pp[0].toUpperCase() + pp.slice(1), it.p === i)).join(''));
+      }
+    }
+  } else if (mode === 'barber') {
+    const cur = LK.decodeLook(state.cur) || look, k = shop.kind;
+    const price = (what, same) => `<span class="cc-price">${same ? 'yours' : '$' + WD.hairPrice(k, what)}</span>`;
+    const heads = (list, what) => `<div class="cc-grid">${list.map(([n, i, fn, on, same]) => `<button class="cc-card hd ${on ? 'on' : ''}" data-act="${what}" data-v="${i}">${th(variant(fn), 'head')}<span>${esc(n)}</span>${price(hairTab, same)}</button>`).join('')}</div>`;
+    if (hairTab === 'cut') h = heads(LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base)).map(([s, i]) => [s[0], i, (V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }, L.hair.style === i, cur.hair.style === i]), 'hb-style');
+    else if (hairTab === 'colour') h = row(`Colour <b>${WD.hairPrice(k, 'colour') ? '$' + WD.hairPrice(k, 'colour') : ''}</b>`, LK.HAIR_COLORS.map(([hx, n], i) => sw('hb-col', i, hx, L.hair.color === i, n)).join(''));
+    else h = heads((hairTab === 'beard' ? WD.BEARDS : WD.MOUSTACHES).map((i) => [i ? LK.FACIAL_HAIR[i][0] : 'Clean shaven', i, (V) => { V.hair.facial = i; V.outfit.glasses = null; }, L.hair.facial === i, cur.hair.facial === i]), 'hb-fac');
+    h = `<p class="cc-note">${k === 'salon' ? 'Cuts and colour' : 'Cuts, colour, beards and moustaches'}: see it on you, then Confirm to pay.</p>` + h;
+  } else if (mode === 'start') {
     h = `<p class="cc-note">Pick who you'll be. You can change everything later from the pause menu (Appearance).</p><div class="cc-grid big">`
       + LK.STARTERS.map((s, i) => `<button class="cc-card ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look)}<span>${esc(s.name)}</span></button>`).join('')
       + `<button class="cc-card ${startPick === LK.STARTERS.length ? 'on' : ''}" data-act="start" data-v="random"><span class="cc-q">?</span><span>Random</span></button></div>`;
@@ -247,14 +353,17 @@ function renderPage() {
   } else if (tab === 'outfit') {
     const base = outBase || B.base;
     const slotItem = L.outfit[outSlot];
-    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)));
+    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
     // each tile: you wearing it (a top or a set without the jacket over it; hats, glasses and masks as a close-up)
     const crop = outSlot === 'hat' || outSlot === 'glasses' ? 'head' : 'full';
     const dress = (V, id) => { V.outfit[outSlot] = id; if (outSlot === 'set' && id) { V.outfit.top = null; V.outfit.bottoms = null; } if ((outSlot === 'top' || outSlot === 'set') && id) V.outfit.jacket = null; if (outSlot === 'hair' || crop === 'head') V.outfit.glasses = outSlot === 'glasses' ? id : V.outfit.glasses; };
     const none = outSlot !== 'shoes' ? `<button class="cc-card sm ${!slotItem ? 'on' : ''}" data-act="piece" data-v="0">${th(variant((V) => dress(V, null)), crop)}<span>None</span></button>` : '';
-    const tiles = pieces.map((p) => { const mine = slotItem && slotItem.id === p.i; return `<button class="cc-card sm ${mine ? 'on' : ''}" data-act="piece" data-v="${p.i}">${th(variant((V) => dress(V, { id: p.i, c: mine ? slotItem.c : p.c, t: mine ? slotItem.t : p.t, p: mine ? slotItem.p : p.d.p || 0 })), crop)}<span>${esc(p.name)}</span></button>`; }).join('');
+    const tiles = pieces.map((p) => { const mine = slotItem && slotItem.id === p.i, lk = owned(p.i) ? '' : lockTag(p.i); return `<button class="cc-card sm ${mine ? 'on' : ''} ${lk ? 'locked' : ''}" data-act="piece" data-v="${p.i}">${th(variant((V) => dress(V, { id: p.i, c: mine ? slotItem.c : p.c, t: mine ? slotItem.t : p.t, p: mine ? slotItem.p : p.d.p || 0 })), crop)}<span>${esc(p.name)}</span>${lk}</button>`; }).join('');
     const strip = completeLooks().map((V, i) => `<button class="cc-card sm" data-act="complete" data-v="${i}">${th(V)}</button>`).join('');
-    h = row('Style', chip('style', '', 'All', !outStyle) + LK.STYLES.map(([k, n]) => chip('style', k, n, outStyle === k)).join(''))
+    // Owned / All (CC1): what's in your wardrobe, or the whole catalogue - the rest padlocked, with the store that sells it
+    h = (state.free ? `<p class="cc-note cc-info">Your first look is on the house: whatever you leave wearing is yours to keep.</p>`
+      : row('Wardrobe', chip('oview', 'owned', 'Owned', outView === 'owned') + chip('oview', 'all', 'All', outView === 'all')) + (outView === 'all' ? `<p class="cc-note cc-info">🔒 Try anything on; what isn't yours yet is sold at the store shown.</p>` : ''))
+      + row('Style', chip('style', '', 'All', !outStyle) + LK.STYLES.map(([k, n]) => chip('style', k, n, outStyle === k)).join(''))
       + row('Show', chip('obase', 'f', "Women's", base === 'f') + chip('obase', 'm', "Men's", base === 'm') + chip('obase', 'all', 'All', base === 'all'))
       + `<div class="cc-slots">${LK.SLOTS.map((s) => `<button class="cc-tab sm ${s === outSlot ? 'on' : ''}" data-act="slot" data-v="${s}">${LK.SLOT_NAMES[s]}</button>`).join('')}</div>`
       + `<div class="cc-grid">${none}${tiles || '<p class="cc-note">Nothing in this style for this slot.</p>'}</div>`
@@ -280,6 +389,7 @@ function renderPage() {
           <div class="cc-svb">${renaming === i ? `<button class="cc-btn" data-act="sv-ok" data-v="${i}">OK</button>` : `<button class="cc-btn gold" data-act="sv-apply" data-v="${i}">Apply</button><button class="cc-btn" data-act="sv-ren" data-v="${i}">Rename</button><button class="cc-btn" data-act="sv-del" data-v="${i}">Delete</button>`}</div></div>`;
       }).join('') + '</div>';
   }
+  if (lockedHere) h = here(tab === 'hair' ? '✂ Try any style here: cuts, colour and beards are done at a barbershop or a hair salon.' : '🪞 Try anything here: these change at the mirror at home.') + h;
   pg.innerHTML = h;
   want.length = 0;
   for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)]; el.width = crop === 'head' ? 56 : 64; el.height = crop === 'head' ? 56 : 120; want.push([el, TL, crop]); }
@@ -347,6 +457,22 @@ function act(a, v, el) {
     case 'tat': setL((L) => { L.extras.tattoos ^= 1 << Number(v); }); return;
     case 'pierce': setL((L) => { L.extras.piercings ^= 1 << Number(v); }); return;
     case 'scar': setL((L) => { L.extras.scar = Number(v); }); return;
+    case 'oview': outView = v; renderPage(); return;
+    // the fitting room
+    case 'sh-tab': shopTab = v; render(); return;
+    case 'sh-piece': { shopSel = Number(v); const P = LK.PIECES[shopSel], cur = P && look.outfit[P.slot]; if (P && !(cur && cur.id === shopSel)) setL((L2) => shopDress(L2, shopSel)); else renderPage(); return; }
+    case 'sh-outfit': { const o = outfitsHere()[Number(v)]; if (o) setL((L2) => { L2.outfit = WD.dressIn(L2, o).outfit; }); return; }
+    case 'sh-colour': case 'sh-pattern': setL((L2) => { const P = LK.PIECES[shopSel], it = P && L2.outfit[P.slot]; if (it && it.id === shopSel) { if (a === 'sh-colour') it[ctarget] = Number(v); else it.p = Number(v); } }); return;
+    case 'sh-try': if (shopSel) setL((L2) => shopDress(L2, shopSel)); return;
+    case 'sh-reset': { const L2 = state.cur && LK.decodeLook(state.cur); if (L2) { hist.push(code()); look = L2; drawPreview(); renderPage(); } return; }
+    case 'sh-buy': { const ids = basket(); if (ids.length) C.send({ t: 'look', a: 'buy', poi: shop.poi, ids }); return; }
+    case 'sh-wear': C.send({ t: 'look', a: 'buy', poi: shop.poi, ids: basket(), wear: code() }); return;
+    // the barber's chair
+    case 'hb-tab': hairTab = v; render(); return;
+    case 'hb-style': setL((L2) => { L2.hair.style = Number(v); }); return;
+    case 'hb-col': setL((L2) => { L2.hair.color = Number(v); }); return;
+    case 'hb-fac': setL((L2) => { L2.hair.facial = Number(v); }); return;
+    case 'hb-ok': C.send({ t: 'look', a: 'cut', poi: shop.poi, c: code() }); close(false); return;
     case 'style': outStyle = v; renderPage(); return;
     case 'obase': outBase = v; renderPage(); return;
     case 'slot': outSlot = v; renderPage(); return;
@@ -370,6 +496,8 @@ function act(a, v, el) {
     case 'sv-save': {
       const i = root.querySelector('.cc-name'), n = i ? i.value.trim() : '';
       if (!n) { if (i) i.focus(); if (C.toast) C.toast('Give the look a name first.', 'warn'); return; }
+      const no = state.free ? [] : WD.unowned(state.own || [], look);   // (try on anything; keep only what you own)
+      if (no.length) { const S = WD.STORES[WD.sellerOf(no[0])]; if (C.toast) C.toast(`You don't own the ${LK.PIECES[no[0]].name} yet${S ? ` - ${S.name} sells it` : ''}.`, 'warn'); return; }
       C.send({ t: 'look', a: 'save', n, c: code() });
       if (i) i.value = '';
       return;

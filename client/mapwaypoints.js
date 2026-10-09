@@ -10,7 +10,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 // the categories: [id, icon, title, place kinds] (a kind goes in the first that lists it)
 export const MAP_CATS = [
-  { id: 'shops', icon: 'shop', title: 'Shops', kinds: ['convenience', 'gasstation', 'gunshop', 'sports', 'hardware', 'pharmacy', 'grocery', 'clothing', 'tackle', 'pawn', 'fishmarket', 'butcher', 'lodge'] },
+  { id: 'shops', icon: 'shop', title: 'Shops', kinds: ['convenience', 'gasstation', 'gunshop', 'sports', 'hardware', 'pharmacy', 'grocery', 'clothing', 'tackle', 'pawn', 'fishmarket', 'butcher', 'lodge', 'barber'] },
   { id: 'jobs', icon: 'jobs', title: 'Jobs', kinds: ['warehouse', 'farm', 'courthouse', 'salvage', 'huntcamp', 'trapper'] },
   { id: 'services', icon: 'services', title: 'Services', kinds: ['hospital', 'police', 'bank', 'atm', 'garage', 'paint', 'dealer'] },
   { id: 'transit', icon: 'transit', title: 'Transit', kinds: ['station', 'airport', 'marina', 'rental', 'charter'] },
@@ -21,7 +21,7 @@ export const MAP_CATS = [
 // each kind's icon (client/pixicons.js)
 export const KIND_ICON = {
   convenience: 'shop', gasstation: 'fuel', gunshop: 'gun', sports: 'activity', hardware: 'services', pharmacy: 'pharmacy', grocery: 'shop',
-  clothing: 'shirt', tackle: 'fish', pawn: 'shop', fishmarket: 'fish', butcher: 'shop', lodge: 'tent',
+  clothing: 'shirt', tackle: 'fish', pawn: 'shop', fishmarket: 'fish', butcher: 'shop', lodge: 'tent', barber: 'shirt',
   warehouse: 'jobs', farm: 'farm', courthouse: 'jobs', salvage: 'services', huntcamp: 'tent', trapper: 'tent',
   hospital: 'hospital', police: 'police', bank: 'bank', atm: 'bank', garage: 'car', paint: 'car', dealer: 'car',
   station: 'transit', airport: 'plane', marina: 'anchor', rental: 'anchor', charter: 'anchor',

@@ -440,7 +440,7 @@ const SHOPNAMES = {
   surf: ['SURF', 'SURF SHOP', 'BEACH GEAR', 'COCO BITES', 'ICE CREAM', 'SUNSET SNACKS'],
 };
 // the shop a strip unit (or a generic ground floor) holds: storefront interior kind and invented name pool
-const UNIT = { convenience: ['mart', 'mart'], coffee: ['cafe', 'cafe'], clothing: ['lobby', 'shop'], pharmacy: ['mart', 'shop'], pawn: ['pawn', 'pawn'], gunshop: ['pawn', 'shop'],
+const UNIT = { convenience: ['mart', 'mart'], coffee: ['cafe', 'cafe'], clothing: ['lobby', 'shop'], barber: ['lobby', 'shop'], pharmacy: ['mart', 'shop'], pawn: ['pawn', 'pawn'], gunshop: ['pawn', 'shop'],
   sports: ['mart', 'shop'], hardware: ['mart', 'shop'], grocery: ['mart', 'mart'], fence: ['bar', 'bar'], club: ['bar', 'bar'], delivery: ['mart', 'shop'], fishmarket: ['mart', 'mart'], marina: ['mart', 'shop'], tackle: ['mart', 'shop'] };
 const shopKindOf = (name) => { const n = (name || '').toUpperCase(); return /PIZZA|BURGER|WOK|TACO|DINER|FORK|FOOD|GRILL|NOODLE/.test(n) ? 'diner' : /COFFEE|CAFE|BEAN|BREW|BISTRO|BAKERY/.test(n) ? 'cafe' : /BAR|LOUNGE|PUB/.test(n) ? 'bar' : /PAWN/.test(n) ? 'pawn' : /LIQUOR|SPIRITS/.test(n) ? 'liquor' : /ARCADE/.test(n) ? 'arcade' : /BOUTIQUE|FASHION|THREAD|WEAR|COUTURE|BOOKS|TECH|FLORIST/.test(n) ? 'lobby' : 'mart'; };
 
@@ -2768,7 +2768,7 @@ function coverItems(c, I, cx, cy) {
 // ================================================================================================
 // walk-in interiors, cut away: no roof, walls cut low (the back wall stays), the shop floor, counters, shelves
 // ================================================================================================
-const FLOORK = { convenience: 'tileWhite', pharmacy: 'tileWhite', grocery: 'tileWhite', coffee: 'woodFloor', clothing: 'woodFloor', sports: 'rubber', hardware: 'platform', gunshop: 'platform',
+const FLOORK = { convenience: 'tileWhite', pharmacy: 'tileWhite', grocery: 'tileWhite', coffee: 'woodFloor', clothing: 'woodFloor', barber: 'checker', sports: 'rubber', hardware: 'platform', gunshop: 'platform',
   pawn: 'woodFloor', club: 'checker', fence: 'checker', hospital: 'tileWhite', reception: 'tileWhite', bank: 'stoneTile', courthouse: 'stoneTile', fishmarket: 'tileGreen', tackle: 'woodFloor', police: 'platform' };
 function cutRecipe(c, b, s, spec) {
   const W = s.tw * TILE, Dd = s.th * TILE, wi = b.walkIn, units = [];

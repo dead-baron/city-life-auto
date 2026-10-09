@@ -7,6 +7,7 @@ import { WEAPONS, ITEMS, SHOPS, CRAFTS, MATERIAL_NAME, materialIds } from '../..
 import { VEHICLES, PAINTS, respray } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
 import * as looks from './looks.js';
+import { STORES, storeOf } from '../../shared/wardrobe.js';
 import { store } from '../store.js';
 import * as law from './law.js';
 import * as bounties from './bounties.js';
@@ -217,9 +218,9 @@ export function buildMenu(world, p, poi) {
       break;
     }
     case 'clothing':
-      title = SHOPS.clothing.title;
-      sub = 'A fresh outfit drops your public wanted level to 0 (if no cop is watching). Your peak record is remembered. They buy handmade furs and buckskin.';
-      opts.push({ id: 'outfit', label: 'Buy a new outfit', price: 120, dis: p.badge, note: p.badge ? 'off duty only' : '' });
+      title = poi.label;
+      sub = `${(STORES[storeOf(poi)] || {}).line || 'Clothes'}. Try things on in the fitting room. A fresh outfit drops your public wanted level to 0 (if no cop is watching); your peak record is remembered. They buy handmade furs and buckskin.`;
+      opts.push({ id: 'outfit', label: 'Buy a new outfit (whatever fits)', price: 120, dis: p.badge, note: p.badge ? 'off duty only' : '' });
       for (const id of SHOPS.clothing.sells) { const n = prof.inventory[id] || 0; if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(SHOPS.clothing, id), note: n > 1 ? 'sells all' : '' }); }
       break;
     case 'garage': {
@@ -332,8 +333,15 @@ export function buildMenu(world, p, poi) {
       sub += ` Deep water starts well away from land: sit still in a boat out there and fish over the side. Squid brings in the marlin.`;
       opts.unshift({ id: 'deepsea', label: `Deep-sea charter: land ${DEEPSEA_CATCH} offshore fish`, price: -DEEPSEA_PAY, dis: !!p.job, note: p.job ? 'busy' : 'bonus' });
       break;
+    case 'barber':   // (the barbershops and the hair salons: map.js buildClothesShops, looks.js cut)
+      title = poi.label;
+      sub = poi.salon ? 'Cuts and colour, previewed on you before you pay.' : 'Cut, colour, beard and moustache, previewed on you before you pay.';
+      opts.push({ id: 'chair', label: poi.salon ? 'Take a seat: cut or colour' : 'Take a seat: cut, colour, beard, moustache' });
+      break;
     default: break;
   }
+  // clothes to buy (task #364): every store that sells clothes has a fitting room (looks.js openShop)
+  if (storeOf(poi) && kind !== 'barber') opts.unshift({ id: 'fit', label: 'The fitting room: try on and buy clothes' });
   hotmoney.menuOpts(world, p, poi, opts);   // the robbery bag: banked far from the robbery, stashed at home, fenced
   if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
   return { t: 'menu', poi: poi.id, title, sub, opts, cash: prof.cash, bank: prof.bank, interior };
@@ -513,7 +521,7 @@ function execute(world, p, poi, opt) {
       const blocked = disguiseBlocked(world, p);
       if (blocked) return blocked;
       if (!pay(p, 120)) return 'Not enough money.';
-      looks.wear(world, p, looks.freshOutfit(prof, rng() * 4294967296));   // (a new outfit; body, face and hair kept)
+      looks.wear(world, p, looks.freshOutfit(prof, rng() * 4294967296), true);   // (a new outfit, yours to keep; body, face and hair kept)
       applyDisguise(world, p);
       return null;
     }
@@ -607,6 +615,7 @@ function execute(world, p, poi, opt) {
       if (!ped.hidden || !h.garage) return 'Not right now.';
       return homes.driveOut(world, p, h, idx);
     }
+    case 'fit': case 'chair': return looks.openShop(world, p, poi);   // the fitting room, the barber's chair
     case 'hlooks': case 'hmirror': {   // the quick-change wheel or the whole creator, at home: changing here counts as unseen
       p.lookHomeAt = world.time;
       if (p.conn) p.conn.sendJSON({ ...looks.stateMsg(p), open: parts[0] === 'hlooks' ? 'wheel' : 'edit' });
@@ -614,7 +623,7 @@ function execute(world, p, poi, opt) {
     }
     case 'houtfit': {
       if (p.badge) return 'Hand in the uniform (go off duty) first.';
-      looks.wear(world, p, looks.freshOutfit(prof, rng() * 4294967296));
+      looks.wear(world, p, looks.freshOutfit(prof, rng() * 4294967296, true));   // (from your own wardrobe)
       if (ped.hidden) applyDisguise(world, p); // nobody saw you change
       world.notify(p, 'New outfit on.', 'good');
       return null;

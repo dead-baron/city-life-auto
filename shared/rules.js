@@ -357,3 +357,12 @@ export const WALLET_SAMARITAN = 8;
 // Getting unstuck
 export const UNSTUCK_S = 5;                // stand still this long and you're moved to the nearest open ground
 export const UNSTUCK_CALM_S = 20;          // ...only when you haven't fought, shot or been hurt for this long, and aren't wanted
+
+// Clothes to buy (task #364: shared/wardrobe.js, server/systems/looks.js): the stores sell the catalogue's pieces
+// (shared/look.js PIECES) at its prices times this, times the store's own markup (the uptown boutique asks more,
+// thrift and vintage less, the fence a lot more)
+export const CLOTHES_PRICE_K = 1;
+export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];   // what every player owns from the start (with the starting look's pieces)
+// the barbershop and the hair salon (ST3): what each change costs; the salon charges SALON_K times as much
+export const BARBER_PRICES = { cut: 15, colour: 25, beard: 12, moustache: 8 };
+export const SALON_K = 2;
