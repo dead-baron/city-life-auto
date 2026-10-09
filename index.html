@@ -14,6 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="City Life Auto">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="assets/fonts/Anton-Regular.woff" as="font" type="font/woff" crossorigin>
+<link rel="preload" href="assets/fonts/CLAPixel-Bold.woff" as="font" type="font/woff" crossorigin>
 <link rel="stylesheet" href="client/style.css">
 </head>
 <body>
@@ -81,7 +82,19 @@
   <div id="death" class="hidden"><div><h1 id="d-title">WASTED</h1><p id="d-cause"></p><p id="d-timer"></p><div id="d-help"></div><div id="d-spawn"></div></div></div>
   <div id="district"></div>
 
-  <div id="bigmap" class="hidden"><div id="bm-panel"><div id="bm-list"></div></div><div id="bm-mapwrap"><div id="bm-zoom"><button id="bm-zin" title="Zoom in">+</button><button id="bm-zout" title="Zoom out">−</button><button id="bm-me" title="Find me">⌖</button></div><canvas id="bigmap-c"></canvas><p id="bigmap-hint">M / ESC to close</p></div></div>
+  <div id="bigmap" class="hidden">
+    <div id="bm-top" class="ui-top">
+      <img class="ui-logo" src="assets/logo.png" alt="City Life Auto">
+      <nav class="hub"></nav>
+      <div class="ui-stat"><div class="ui-clock"></div><div class="ui-bars"><div class="ui-bar hp"><i></i><b></b></div><div class="ui-bar st"><i></i><b></b></div></div></div>
+      <div class="ui-wpn"></div>
+    </div>
+    <div id="bm-body">
+      <div id="bm-panel"><div id="bm-list"></div></div>
+      <div id="bm-mapwrap"><canvas id="bigmap-c"></canvas><div class="ui-money"></div><button id="bm-close" class="ui-x" title="Close the map">✕</button></div>
+    </div>
+    <div id="bm-foot" class="ui-foot"><span id="bigmap-hint"></span><span class="ui-city">METRO CITY<small>EST. 1992</small></span></div>
+  </div>
 
   <div id="dev" class="hidden"></div>
   <!-- the controls (the pause menu's Controls page shows them; the title screen no longer does) -->
@@ -168,24 +181,27 @@
     <div class="ph-top"><button id="ph-back" class="hidden">◀</button><span id="ph-clock">CityPhone</span><button class="x" data-close>✕</button></div>
     <div id="ph-screen"></div>
   </div></div>
-  <div id="pause" class="hidden overlay"><div class="panel">
-    <div class="mhead"><h2>PAUSED</h2><button class="x" data-close>✕</button></div>
+  <div id="pause" class="hidden overlay">
+    <nav class="hub hub-float"></nav>
+    <div class="panel pz">
+    <div class="pz-head"><img src="assets/logo.png" alt="City Life Auto"><div class="pz-paused">PAUSED</div><button class="x" data-close>✕</button></div>
     <p class="msub" id="p-sub">Game menu</p>
     <div class="m-opts">
-      <button class="opt" data-p="dev">🐞 Debug menu</button>
-      <button class="opt" data-p="resume">Resume</button>
-      <button class="opt" data-p="phone">Phone (places, jobs, waypoints)</button>
-      <button class="opt" data-p="map">Map</button>
-      <button class="opt" data-p="players" id="p-players">Players online</button>
-      <button class="opt cop-only" data-p="cruiser">Call police cruiser</button>
-      <button class="opt" data-p="settings">Settings</button>
-      <button class="opt" data-p="controls">Controls</button>
-      <button class="opt" data-p="unstuck">Stuck? Get unstuck</button>
-      <button class="opt" data-p="surrender" id="p-surrender">Surrender (respawn)</button>
-      <button class="opt" data-p="fullscreen">Toggle fullscreen</button>
-      <button class="opt online-only hidden" data-p="devmode" id="p-devmode">⏏ Leave Dev Debug Mode (keep my progress)</button>
-      <button class="opt" data-p="title">Back to title screen</button>
+      <button class="opt" data-p="dev" data-icon="bug">Debug menu</button>
+      <button class="opt" data-p="resume" data-icon="play">Resume</button>
+      <button class="opt" data-p="map" data-icon="map">Map</button>
+      <button class="opt" data-p="phone" data-icon="phone">Phone<span class="note">places, jobs, waypoints</span></button>
+      <button class="opt" data-p="players" id="p-players" data-icon="people">Players online</button>
+      <button class="opt cop-only" data-p="cruiser" data-icon="car">Call police cruiser</button>
+      <button class="opt" data-p="settings" data-icon="sys">Options</button>
+      <button class="opt" data-p="controls" data-icon="pad">Controls</button>
+      <button class="opt" data-p="unstuck" data-icon="ring">Stuck? Get unstuck</button>
+      <button class="opt" data-p="surrender" id="p-surrender" data-icon="flag">Surrender<span class="note">respawn</span></button>
+      <button class="opt" data-p="fullscreen" data-icon="full">Fullscreen</button>
+      <button class="opt online-only hidden" data-p="devmode" id="p-devmode" data-icon="exit">Leave Dev Debug Mode (keep my progress)</button>
+      <button class="opt" data-p="title" data-icon="exit">Exit to title</button>
     </div>
+    <div class="ui-foot pz-foot"></div>
   </div></div>
   <div id="players" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>PLAYERS ONLINE</h2><button class="x" data-close>✕</button></div>

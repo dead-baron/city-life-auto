@@ -158,3 +158,28 @@ test('intersections: zebra crossings never overlap; span wires only at small wal
   assert.ok(w.brokenProps.has(sg.pi), 'signal pole knocked over');
   assert.ok(props.brokenList(w).includes(sg.pi));
 });
+
+test('no building stands on a road: nothing a road runs through (houses, farms, the mansion, hangars)', () => {
+  // (the 2026-10-08 report: a whole house in the street round Dry Creek and the farms - the houses and set pieces laid
+  // out at fixed spots for the first world, and World v2's roads ran through ten of them: the Desert Highway through the
+  // Dry Creek Farm Co-op. map.js offTheRoad moves a crossed piece to open ground nearby.)
+  const m = makeWorld().map;
+  const bad = [];
+  for (const b of m.buildings) {
+    if (b.gone) continue;
+    const X0 = b.tx * 32 + 8, Y0 = b.ty * 32 + 8, X1 = (b.tx + b.tw) * 32 - 8, Y1 = (b.ty + b.th) * 32 - 8;
+    for (const e of m.edges) {
+      if (e.lvl !== 0) continue;
+      let hit = false;
+      for (let i = 1; i < e.pts.length && !hit; i++) {
+        const a = e.pts[i - 1], c = e.pts[i], n = Math.max(1, Math.ceil(Math.hypot(c.x - a.x, c.y - a.y) / 8));
+        for (let k = 0; k <= n && !hit; k++) { const x = a.x + ((c.x - a.x) * k) / n, y = a.y + ((c.y - a.y) * k) / n; hit = x > X0 && x < X1 && y > Y0 && y < Y1; }
+      }
+      if (hit) { bad.push(`${b.name} (${b.kind}) at ${b.tx},${b.ty}: ${e.name || e.kind}`); break; }
+    }
+  }
+  assert.deepEqual(bad, [], bad.join('; '));
+  // and the farm co-op and the mansion still stand, with their places on the map
+  assert.ok(m.pois.some((p) => p.kind === 'farm' && p.label === 'Dry Creek Farm Co-op'), 'the co-op');
+  assert.ok((m.mansions || []).length >= 1, 'the mansion');
+});

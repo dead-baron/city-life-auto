@@ -85,8 +85,10 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Downed: Call for Help · ambulance ($200 from the bank) · cancel and wake up | H · J · C (or the buttons) | X · Y · B | the buttons |
 | Close a shop / desk / NPC menu or any panel | Esc, or click off it | B | tap anywhere off it |
 | Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN by the FIRE button (or the weapon box, top right): tap for the next weapon, hold to pick any of them |
-| City map + waypoints (pick a category / place, or click the map) | M | Pause → Map (D-pad / stick, A pick, B back) | tap the radar or ▦, then tap |
-| Zoom the city map / look around / find yourself | mouse wheel or + / − · drag · C (or the + − ⌖ buttons) | RT / LT · right stick | pinch · drag · + − ⌖ buttons |
+| City map + waypoints (click a place's icon or anywhere on the map; or pick a category's name for its places, nearest first) - a yellow GPS line on the map and the radar follows the roads to it | M | Pause → Map (D-pad / stick, A pick, B back; Y sets a waypoint at the cross in the middle) | tap the radar or the map button, then tap |
+| Show or hide a kind of place on the city map (Shops, Jobs, Services, Transit, Safehouses, Activities, Gangs) | click its box | ← / → on its line | tap its box |
+| Zoom the city map / look around / find yourself | mouse wheel or + / − · drag · C (or the − + and find-me buttons in the panel) | RT / LT · right stick | pinch · drag · − + and find-me buttons |
+| The hub tabs along the top of the map and the pause menu: MAP, JOBS (the job board), PEOPLE (who's online), GEAR (your bag), SYS (the pause menu) | click | D-pad / stick to them, A | tap |
 | Dev teleport to any district, station or landmark | ` → 📍 Teleport (map or list) | Start → 🐞 Debug menu → 📍 Teleport | 🐞 → 📍 Teleport |
 | Dev spectator: free camera over the whole world, art layers, schematic view, PNG / hi-res PNG screenshots | ` → 🎥 Spectator; WASD / arrows fly (Shift faster), E / Q or wheel zoom, drag pans, C find me, P save PNG, H hide panel, Esc exit | Start → 🐞 Debug menu → 🎥 Spectator; left stick flies, RT / LT zoom, X save PNG, Y hide panel, B exit | 🐞 → 🎥 Spectator; drag to fly, pinch to zoom |
 
@@ -125,7 +127,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
 | Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | WPN (tap: next, hold: pick) · RELOAD · ITEMS · 🎒 |
 | Flashlight on / off (once you have one) | L | D-pad ↑ (on foot) | 🔦 |
-| World map + waypoints (police: dispatch map) | M or ▦ | Pause menu → Map | tap the radar or ▦ |
+| World map + waypoints (police: dispatch map) | M or the map button | Pause menu → Map (Y: a waypoint at the cross) | tap the radar or the map button |
 | Pause menu (debug menu, map, players online, settings, controls) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
 
 Settings (⚙) include Graphics: a preset (Low / Medium / High / Ultra, picked for your device on first play - phones, tablets and consoles start on Medium, desktops on High or Ultra) plus a switch for each effect (lighting, vegetation off / still / live, vegetation density, wind sway, trampled grass and crops, golden-hour glow, shadows, puddle reflections, rain and fog detail, particles, render sharpness, tilt-shift blur), "Keep it smooth" (on by default: the render size eases off a little while the frame rate can't keep up, and comes back when it can), a performance overlay (the load timeline, frame times and memory, for bug reports), classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen, plus your account transfer code: copy it on one device and paste it on another to play the same character there.

@@ -24,6 +24,8 @@ import { FX } from './render/fx.js';
 import { HUD } from './hud.js';
 import { createPhone } from './phone.js';
 import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
+import { createRouter } from './route.js';
+import { iconImg } from './pixicons.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
@@ -238,7 +240,7 @@ function onText(m) {
     case 'board': phone.onBoard(m); break;
     case 'feed': phone.onFeed(m); break;
     case 'bounties': phone.onBounties(m); break;
-    case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.onTransit(m); break;
+    case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.onTransit(m); if (S.bigmap) mapwp.refreshLegend(); break;
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
@@ -846,6 +848,7 @@ function setupWorld(seed, here = false) {
   });
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
+  S.router = createRouter(S.map);   // the GPS route to your waypoint (client/route.js)
   S.hud.onDown = (a) => downAct(a);
   loadSpan('setup', performance.now() - t);
   startArt2(S.map);
@@ -1121,7 +1124,7 @@ function renderPlayers() {
   const el = $('pl-list');
   if (!el) return;
   const ps = (S.plist && S.plist.l) || [];
-  $('p-players').textContent = `Players online${ps.length ? ` (${ps.length})` : ''}`;
+  optText($('p-players'), `Players online${ps.length ? ` (${ps.length})` : ''}`);
   if (topOverlay() !== 'players') return;
   $('pl-sub').textContent = S.practice ? 'Offline practice - just you in this city.' : `${ps.length} in the city right now.`;
   el.innerHTML = '';
@@ -1451,10 +1454,16 @@ const mapwp = createMapWaypoints({
   map: () => S.map, pos: () => selfPos(),
   setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; if (w) S.hud.toast(`Waypoint set: ${w.label}`, 'info'); },
   waypoint: () => S.waypoint,
-  refocus: () => { ovFocus = 0; focusOverlay(); },
+  refocus: () => { ovFocus = startFocus(); focusOverlay(); },
   setFilter: (list) => { if (S.hud) S.hud.mapFilter = list; },
   myHomes: () => (S.me && S.me.homes) || [],
   players: () => (S.plist && S.plist.l) || [],
+  transit: () => S.transit,
+  police: () => !!(S.me && S.me.faction === 'enforcer'),
+  zoom: (k) => S.hud && S.hud.zoomMap(k),
+  findMe: () => mapFindMe(),
+  markHere: () => mapMarkCentre(),
+  device: () => input.device,
 });
 function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
 // arrive at a phone waypoint -> it clears itself
@@ -1728,9 +1737,9 @@ function openOverlay(id) {
     requestPlayers();
     document.querySelectorAll('#pause .online-only').forEach((b) => b.classList.toggle('hidden', !!S.practice));
     // the debug menu is the top option (it switches Dev Debug Mode on if needed); leaving dev mode lower down
-    $('p-devmode').textContent = '⏏ Leave Dev Debug Mode (keep my progress)';
     $('p-devmode').classList.toggle('hidden', !S.devMode || !!S.practice);
   }
+  if (id === 'pause') { buildHubs('sys'); S.uiTopKey = ''; }
   if (id === 'pause') { document.querySelectorAll('#pause .cop-only').forEach((b) => b.classList.toggle('hidden', !(S.me && S.me.cruiser))); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
   overlays.push(id);
   $(id).classList.remove('hidden');
@@ -1738,8 +1747,10 @@ function openOverlay(id) {
   if (id === 'dev') $('dev').classList.add('as-overlay');
   if (id === 'bigmap') S.bigmap = true;
   if (id === 'phone' && S.welcomed) send({ t: 'phone', a: 'out', on: true });   // (your phone in your hand for everyone: server phone.js)
-  ovFocus = 0; focusOverlay();
+  ovFocus = startFocus(); focusOverlay();
 }
+// where a pad's focus starts in a screen: its first menu line or panel button, not the hub's tabs along the top
+function startFocus() { const i = focusables().findIndex((el) => !el.closest('.hub')); return i >= 0 ? i : 0; }
 function closeOverlay(id = topOverlay()) {
   if (!id) return;
   const i = overlays.lastIndexOf(id);
@@ -1794,6 +1805,8 @@ function overlayPad() {
   const el = f[ovFocus];
   if (topOverlay() === 'phone' && input.menuBack && phone.screen !== 'home') { phone.back(); return true; }
   if (topOverlay() === 'bigmap' && input.menuBack && mapwp.inGroup) { mapwp.back(); return true; }
+  if (topOverlay() === 'bigmap' && input.padY) { mapMarkCentre(); return true; }
+  if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-check'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
   if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
   if (topOverlay() === 'dev' && el && el.tagName === 'BUTTON' && input.menuLR) { // the debug menu: across to the players and back
@@ -1880,6 +1893,71 @@ $('s-code-back').onclick = () => {
 };
 
 function openSettings(on) { if (on) openOverlay('settings'); else closeOverlay('settings'); }
+
+// ---- UI v2 (the concepts U1 / U7): the hub's round tabs, icons by the menu lines, the top bar, the hints ------------
+// an icon (client/pixicons.js) in front of every [data-icon] menu line; the line's words in a span of their own
+function decorate(root = document) {
+  for (const el of root.querySelectorAll('[data-icon]')) {
+    if (el.querySelector(':scope > img.pi')) continue;
+    const t = document.createElement('span'); t.className = 't';
+    while (el.firstChild && !(el.firstChild.nodeType === 1 && el.firstChild.classList.contains('note'))) t.appendChild(el.firstChild);
+    el.prepend(t);
+    t.insertAdjacentHTML('beforebegin', iconImg(el.dataset.icon, Number(el.dataset.iconSize) || 22));
+  }
+}
+function optText(el, text) { const t = el && el.querySelector('.t'); if (t) t.textContent = text; else if (el) el.textContent = text; }
+decorate();
+// the HUD's round buttons: pixel icons (the debug one keeps its bug)
+for (const [id, ic] of [['b-menu', 'menu'], ['b-phone', 'phone'], ['b-bag', 'bag'], ['b-map', 'map'], ['b-settings', 'sys'], ['b-fs', 'full']]) if ($(id)) $(id).innerHTML = iconImg(ic, 18);
+// the hub: MAP, JOBS (the phone's job board), PEOPLE (who's online), GEAR (your bag), SYS (the pause menu)
+const HUB = [['map', 'map', 'MAP'], ['jobs', 'jobs', 'JOBS'], ['people', 'people', 'PEOPLE'], ['gear', 'bag', 'GEAR'], ['sys', 'sys', 'SYS']];
+function buildHubs(active) {
+  for (const nav of document.querySelectorAll('.hub')) {
+    if (!nav.childElementCount) {
+      nav.innerHTML = HUB.map(([id, ic, lbl]) => `<button data-hub="${id}" title="${lbl}"><span class="ring">${iconImg(ic, 26)}</span><span class="lbl">${lbl}</span></button>`).join('');
+      for (const b of nav.querySelectorAll('[data-hub]')) b.onclick = (e) => { e.stopPropagation(); hubGo(b.dataset.hub); };
+    }
+    for (const b of nav.querySelectorAll('[data-hub]')) b.classList.toggle('on', b.dataset.hub === active);
+  }
+}
+function hubGo(id) {
+  if (!S.playing) return;
+  sfx('click', 0.6);
+  // leave whatever is open, then open the tab's screen
+  for (const ov of [...overlays].reverse()) if (ov !== 'settings') closeOverlay(ov);
+  if (S.bigmap) toggleMap(false);
+  if (id === 'map') toggleMap(true);
+  else if (id === 'jobs') { if (topOverlay() !== 'phone') openOverlay('phone'); phone.openApp('jobs'); }
+  else if (id === 'people') { openOverlay('players'); renderPlayers(); }
+  else if (id === 'gear') toggleBag();
+  else if (id === 'sys') openOverlay('pause');
+}
+// the hints along the bottom: [glyph, what it does] - 'pad:A' a pad button, 'key:M' a key, else a word
+function footHints(list) {
+  return list.map(([k, what]) => {
+    const g = k.startsWith('pad:') ? `<span class="g-pad pad-${k.slice(4).toLowerCase()}">${k.slice(4)}</span>` : k.startsWith('key:') ? `<span class="g-key">${k.slice(4)}</span>` : `<b>${k}</b>`;
+    return `<span class="hint">${g} ${what}</span>`;
+  }).join('');
+}
+// the top bar (clock, health and stamina, the weapon) and the money corner, while the map or the pause menu is up
+function uiTop() {
+  const me = S.me;
+  if (!me) return;
+  const c = gameClock(S.loopTime), hh = Math.floor(c.minutes / 60), mm = Math.floor(c.minutes % 60);
+  const st = S.uiSt ?? 100, key = `${hh}:${mm}|${me.hp}|${st}|${me.cash}|${me.bank}|${me.wanted}|${$('w-name').textContent}|${$('w-ammo').textContent}`;
+  if (key === S.uiTopKey) return;
+  S.uiTopKey = key;
+  const time = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  for (const el of document.querySelectorAll('.ui-clock')) el.innerHTML = `<span style="color:${c.isNight ? '#9fbaff' : '#ffd34a'}">${c.isNight ? '☾' : '☀'}</span>${time}`;
+  const hp = Math.max(0, Math.round((me.hp / me.maxHp) * 100));
+  for (const el of document.querySelectorAll('.ui-bar.hp')) { el.firstChild.style.width = hp + '%'; el.lastChild.textContent = Math.round(me.hp); }
+  for (const el of document.querySelectorAll('.ui-bar.st')) { el.firstChild.style.width = Math.min(100, st) + '%'; el.lastChild.textContent = Math.round(st); }
+  for (const el of document.querySelectorAll('.ui-wpn')) el.innerHTML = `${$('w-icon').innerHTML}<span>${$('w-ammo').textContent || $('w-name').textContent}</span>`;
+  let stars = '';
+  for (let i = 1; i <= 5; i++) stars += i <= (me.wanted || 0) ? '★' : '<i>★</i>';
+  for (const el of document.querySelectorAll('.ui-money')) el.innerHTML = `<span class="c">$${me.cash.toLocaleString('en-US')}</span><span class="b">🏦 $${me.bank.toLocaleString('en-US')}</span><span class="st">${stars}</span>`;
+  for (const el of document.querySelectorAll('.pz-foot')) el.innerHTML = footHints(input.device === 'gamepad' ? [['pad:A', 'Select'], ['pad:B', 'Back']] : input.device === 'touch' ? [['Tap', 'select'], ['Tap outside', 'close']] : [['key:Enter', 'Select'], ['key:Esc', 'Back']]);
+}
 for (const b of document.querySelectorAll('#pause [data-p]')) {
   b.onclick = () => {
     const a = b.dataset.p;
@@ -1892,8 +1970,8 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'unstuck') { closeOverlay('pause'); send({ t: 'unstuck' }); }
     else if (a === 'surrender') {
       // press twice: dying (or, when wanted, turning yourself in) isn't something to do by accident
-      if (b.dataset.armed && performance.now() - Number(b.dataset.armed) < 4000) { delete b.dataset.armed; b.textContent = 'Surrender (respawn)'; closeOverlay('pause'); send({ t: 'surrender' }); }
-      else { b.dataset.armed = String(performance.now()); b.textContent = S.me && S.me.wanted > 0 ? 'Tap again: turn yourself in (fine)' : 'Tap again: give up and respawn'; }
+      if (b.dataset.armed && performance.now() - Number(b.dataset.armed) < 4000) { delete b.dataset.armed; optText(b, 'Surrender'); closeOverlay('pause'); send({ t: 'surrender' }); }
+      else { b.dataset.armed = String(performance.now()); optText(b, S.me && S.me.wanted > 0 ? 'Tap again: turn yourself in (fine)' : 'Tap again: give up and respawn'); }
     }
     else if (a === 'fullscreen') toggleFullscreen();
     else if (a === 'dev') { closeOverlay('pause'); sfx('click', 0.8); openDebug(); }
@@ -1919,13 +1997,36 @@ for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSetting
 function toggleMap(on) {
   if (on) {
     if (topOverlay() !== 'bigmap') openOverlay('bigmap');
-    $('bigmap-hint').textContent = input.device === 'touch' ? 'Pinch to zoom, drag to look around · tap to drop a marker · tap outside to close' : input.device === 'gamepad' ? 'RT / LT zoom · right stick looks around · pick a place on the left · B to close' : 'Wheel or + / - to zoom, drag to look around, C finds you · click to drop a marker · M / Esc to close';
+    $('bigmap-hint').innerHTML = footHints(input.device === 'touch' ? [['Pinch', 'zoom'], ['Drag', 'look around'], ['Tap', 'set a waypoint']]
+      : input.device === 'gamepad' ? [['pad:A', 'Select'], ['pad:B', 'Back'], ['pad:Y', 'Set waypoint'], ['RT / LT', 'Zoom'], ['R stick', 'Look around']]
+        : [['Click', 'set a waypoint'], ['Wheel', 'zoom'], ['Drag', 'look around'], ['key:C', 'find me'], ['key:M', 'close']]);
+    buildHubs('map');
+    // the map's own module, the first time (client/worldmap.js: kept out of the page's first load)
+    if (S.hud && !S.hud.worldmap) {
+      import('./worldmap.js').then((M) => { if (S.hud && !S.hud.worldmap) { S.hud.worldmap = M.createWorldMap(S.map); const me = selfPos(); S.hud.centerMap(me.x, me.y); } }).catch((e) => console.warn('[map]', e));
+    }
     if (S.hud && S.hud.mapView) { S.hud.resetMap(); const me = selfPos(); S.hud.centerMap(me.x, me.y); }
     mapwp.open();
+    S.uiTopKey = '';
   } else if (overlays.includes('bigmap')) closeOverlay('bigmap');
 }
-// clicking the dark backdrop closes; clicking the map itself drops a waypoint there
-$('bigmap').onclick = (e) => { if (e.target === $('bigmap')) toggleMap(false); };
+$('bm-close').onclick = () => toggleMap(false);
+function mapFindMe() { if (!S.hud || !S.hud.mapView) return; const me = selfPos(); if (S.hud.mapView.z < 2.5) S.hud.zoomMap(3 / S.hud.mapView.z); S.hud.centerMap(me.x, me.y); }
+// a waypoint where the cross in the middle of the map is (a pad's Y, the panel's Set Waypoint): snapped to a place there
+function mapMarkCentre() {
+  const wm = S.hud && S.hud.worldmap, c = $('bigmap-c');
+  if (!wm) return;
+  markAt(c.clientWidth / 2, c.clientHeight / 2);
+}
+function markAt(sx, sy) {
+  const wm = S.hud.worldmap;
+  const hit = wm.hitAt(sx, sy), [x, y] = wm.toWorld(sx, sy);
+  const label = hit ? hit.label || 'Marked spot' : 'Marked spot';
+  S.waypoint = { x: hit ? hit.x : x, y: hit ? hit.y : y, label }; S.hud.waypoint = S.waypoint;
+  S.hud.toast(`Waypoint set: ${label}`, 'info');
+  sfx('click', 0.6);
+  mapwp.refresh();
+}
 // Zoom and look around the map: mouse wheel / pinch zooms about the pointer, dragging pans, the
 // + / - / ⌖ buttons (and + - C keys, LT / RT and the right stick on a pad) do the same.
 const mapPtrs = new Map();
@@ -1956,9 +2057,6 @@ $('bigmap-c').addEventListener('pointermove', (e) => {
 const mapUp = (e) => { mapPtrs.delete(e.pointerId); if (!mapPtrs.size) mapDrag = null; };
 $('bigmap-c').addEventListener('pointerup', mapUp);
 $('bigmap-c').addEventListener('pointercancel', mapUp);
-$('bm-zin').onclick = () => S.hud && S.hud.zoomMap(1.6);
-$('bm-zout').onclick = () => S.hud && S.hud.zoomMap(1 / 1.6);
-$('bm-me').onclick = () => { if (!S.hud) return; const me = selfPos(); if (S.hud.mapView.z < 2.5) S.hud.zoomMap(3 / S.hud.mapView.z); S.hud.centerMap(me.x, me.y); };
 // on a pad: RT zooms in, LT out, the right stick looks around
 function padMapLook(dt) {
   const a = input.padAxes;
@@ -1968,17 +2066,9 @@ function padMapLook(dt) {
 }
 $('bigmap-c').onclick = (e) => {
   if (mapDragged) { mapDragged = false; return; } // that was a drag or a pinch, not a tap
-  const sc = S.hud && S.hud.bigmapScale;
-  if (!sc) return;
+  if (!S.hud || !S.hud.worldmap) return;
   const r = $('bigmap-c').getBoundingClientRect();
-  const [ox, oy] = S.hud.bigmapOrigin || [0, 0];
-  const x = ox + (e.clientX - r.left) / sc, y = oy + (e.clientY - r.top) / sc;
-  // snap to a highlighted place if the click is close to one
-  let label = 'Marked spot', bx = x, by = y, bd = 24 / sc;
-  for (const p of (S.hud.mapFilter || [])) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; bx = p.x; by = p.y; label = p.label; } }
-  S.waypoint = { x: bx, y: by, label }; S.hud.waypoint = S.waypoint;
-  S.hud.toast(`Waypoint set: ${label}`, 'info');
-  mapwp.refresh();
+  markAt(e.clientX - r.left, e.clientY - r.top);   // (on a place's icon: that place, by name)
 };
 $('radar').onclick = () => { if (S.playing) toggleMap(true); };
 // on touch the weapon box is a button too: a tap takes out the next weapon, holding it opens the picker
@@ -2823,6 +2913,9 @@ function drawOverlays(F, v2) {
     else { S.distCand = dist.name; S.distCandAt = performance.now(); }
   }
   S.hud.setClock(S.loopTime, S.weather);
+  // the GPS route to your waypoint along the roads, on the radar and the map (client/route.js; worked out again only
+  // when you stray from it or the waypoint changes)
+  if (S.router) S.hud.route = S.waypoint && S.playing && S.me && !S.me.dead ? S.router.update(sp, S.waypoint, S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) : null;
   S.hud.drawRadar(sp.x, sp.y, sp.a);
   {
     const showTouch = input.device === 'touch' && S.playing;
@@ -2833,7 +2926,8 @@ function drawOverlays(F, v2) {
     if (dead !== S.uiDead) { S.uiDead = dead; document.body.classList.toggle('dead', dead); }
     if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
   }
-  if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a); }
+  if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a, { cats: mapwp.cats, route: S.hud.route, cross: input.device === 'gamepad' }); uiTop(); }
+  else if (topOverlay() === 'pause') uiTop();
   if ((F.nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
 }
 

@@ -553,7 +553,8 @@ test('every home out in the wilds whose drive stops short of a road has a dirt t
     const near = (m.tracks || []).some((r) => r.pts.some(([x, y]) => [...drive].some((i) => Math.hypot((i % m.w + 0.5) * TILE - x, (Math.floor(i / m.w) + 0.5) * TILE - y) < 3 * TILE)));
     assert.ok(near, `${h.name}: a track to its drive`);
   }
-  assert.ok(checked >= 4, `the wilds' drives were checked (${checked})`);
+  // (fewer since World 6: a house moved off a road turns its drive to the road beside it - map.js driveTo)
+  assert.ok(checked >= 2, `the wilds' drives were checked (${checked})`);
 });
 
 test('Willow River Orchard: rows of fruit trees on watered grass below the vineyard, ladders and crates, a fruit stand at the head of the Farm Road', () => {

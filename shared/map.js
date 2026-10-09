@@ -2330,6 +2330,134 @@ function distBoxes(m) {
   return out;
 }
 
+// ---- keeping set pieces off the roads ---------------------------------------------------------
+// The farmhouses, cottages, the co-op, the mansion on the hill and the airports' hangars go down at fixed spots, laid
+// out for the first world. World v2's roads run where they like, and a few ran straight through them (the Desert
+// Highway through the Dry Creek Farm Co-op): the house painted over the road's tiles, but the road itself - what the art
+// draws and the traffic drives - went on through it. Before such a piece goes down, its rectangle is checked against
+// every ground-level road (its centreline, half its width and a margin), and a crossed piece moves to the nearest
+// open spot round it.
+const ROAD_CELL = 512;   // px: the grid the roads' segments are bucketed into
+function roadGrid(m) {
+  if (m._roadGrid && m._roadGrid.n === m.edges.length) return m._roadGrid;
+  const cols = Math.ceil((MAP_W * TILE) / ROAD_CELL), rows = Math.ceil((MAP_H * TILE) / ROAD_CELL);
+  const cells = new Map();
+  for (const e of m.edges) {
+    if (e.lvl !== 0) continue;
+    const hw = e.hw || 64;
+    for (let i = 1; i < e.pts.length; i++) {
+      const a = e.pts[i - 1], b = e.pts[i];
+      const c0 = Math.max(0, Math.floor((Math.min(a.x, b.x) - hw) / ROAD_CELL)), c1 = Math.min(cols - 1, Math.floor((Math.max(a.x, b.x) + hw) / ROAD_CELL));
+      const r0 = Math.max(0, Math.floor((Math.min(a.y, b.y) - hw) / ROAD_CELL)), r1 = Math.min(rows - 1, Math.floor((Math.max(a.y, b.y) + hw) / ROAD_CELL));
+      const seg = [a.x, a.y, b.x, b.y, hw, e.id];
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const k = r * cols + c; let l = cells.get(k); if (!l) cells.set(k, (l = [])); l.push(seg); }
+    }
+  }
+  const g = { n: m.edges.length, cols, rows, cells };
+  Object.defineProperty(m, '_roadGrid', { value: g, enumerable: false, configurable: true, writable: true });
+  return g;
+}
+// does the segment a-b pass through the box [x0, x1] x [y0, y1]? (Liang-Barsky clipping)
+function segInBox(ax, ay, bx, by, x0, y0, x1, y1) {
+  let t0 = 0, t1 = 1;
+  const dx = bx - ax, dy = by - ay;
+  const P = [-dx, dx, -dy, dy], Q = [ax - x0, x1 - ax, ay - y0, y1 - ay];
+  for (let k = 0; k < 4; k++) {
+    if (P[k] === 0) { if (Q[k] < 0) return false; continue; }
+    const r = Q[k] / P[k];
+    if (P[k] < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; }
+  }
+  return true;
+}
+// does a ground-level road's pavement (half its width + pad px) reach into the tile rectangle? skip: an edge id to leave
+// out (the track an outpost sits at the end of)
+export function roadCrosses(m, x, y, w, h, pad = 8, skip = -1) {
+  const G = roadGrid(m);
+  const X0 = x * TILE, Y0 = y * TILE, X1 = (x + w) * TILE, Y1 = (y + h) * TILE;
+  const c0 = Math.max(0, Math.floor(X0 / ROAD_CELL)), c1 = Math.min(G.cols - 1, Math.floor(X1 / ROAD_CELL));
+  const r0 = Math.max(0, Math.floor(Y0 / ROAD_CELL)), r1 = Math.min(G.rows - 1, Math.floor(Y1 / ROAD_CELL));
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    const l = G.cells.get(r * G.cols + c);
+    if (!l) continue;
+    for (const s of l) {
+      if (s[5] === skip) continue;
+      const e = s[4] + pad;
+      if (segInBox(s[0], s[1], s[2], s[3], X0 - e, Y0 - e, X1 + e, Y1 + e)) return true;
+    }
+  }
+  return false;
+}
+// open land for a piece: on the map, dry land (no lake), no road, building, field or lot under it, nothing reserved -
+// and no other building within gap tiles of it (the houses' roofs stand up to the north in the art)
+function openLand(m, x, y, w, h, gap = 4) {
+  if (x - gap < 2 || y - gap < 2 || x + w + gap > MAP_W - 2 || y + h + gap > MAP_H - 2) return false;
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) {
+    const i = ty * MAP_W + tx, t = m.tiles[i];
+    if (!m.land[i] || m.lake[i] || m.reserve[i] || m.deck[i] || m.bld[i] >= 0) return false;
+    if (t === T.ROAD || t === T.BRIDGE || t === T.WATER || t === T.DEEP || t === T.BUILDING || t === T.FIELD || t === T.LOT || t === T.DOCK || t === T.SIDEWALK) return false;
+  }
+  for (let ty = y - gap; ty < y + h + gap; ty++) for (let tx = x - gap; tx < x + w + gap; tx++) {
+    const i = ty * MAP_W + tx;
+    if (m.bld[i] >= 0 || m.tiles[i] === T.BUILDING) return false;
+  }
+  return true;
+}
+// a road within max tiles of a driveway leaving the row y0 of columns [x0, x0 + w) in direction dir (+1 south, -1 north)
+function roadAhead(m, x0, w, y0, dir, max = 14) {
+  for (let k = 0; k < max; k++) for (let i = 0; i < w; i++) { const t = m.tileAt(x0 + i, y0 + k * dir); if (t === T.ROAD || t === T.BRIDGE) return true; if (t === T.WATER || t === T.DEEP) return false; }
+  return false;
+}
+// a road within d tiles beside the front of a w x h piece (west or east of its front row, or the row in front of it):
+// a house moved off a road may have its road alongside rather than ahead (its drive turns to it: sideDrive)
+function roadBeside(m, x, y, w, h, south, d = 6) {
+  for (const row of south ? [y + h - 1, y + h, y + h + 1] : [y, y - 1, y - 2]) {
+    for (let k = 1; k <= d; k++) for (const tx of [x - k, x + w - 1 + k]) { const t = m.tileAt(tx, row); if (t === T.ROAD || t === T.BRIDGE) return true; }
+  }
+  return false;
+}
+// The drive from a moved house's door (x0, y0: the first tile in front of it, dir its way out): straight ahead when a
+// road is there, else along the row in front of the door to the nearer road beside it (open ground all the way), else
+// straight ahead as far as the drive goes (driveTracks gives a drive that stops short of a road a dirt track).
+function driveTo(m, x0, y0, dir, w = 1) {
+  if (roadAhead(m, x0, w, y0, dir, 24)) return driveway(m, x0, w, y0, dir);
+  const open = (t) => t === T.GRASS || t === T.DIRT || t === T.SAND || t === T.LOT;
+  for (const row of [y0, y0 + dir]) {
+    let best = null;
+    for (const sx of [-1, 1]) {
+      for (let k = 1; k <= 24; k++) {
+        const t = m.tileAt(x0 + sx * k, row);
+        if (t === T.ROAD || t === T.BRIDGE) { if (!best || k < best[1]) best = [sx, k]; break; }
+        if (!open(t)) break;
+      }
+    }
+    if (!best) continue;
+    for (let k = 0; k < best[1]; k++) for (let i = 0; i < w; i++) { const x = x0 + best[0] * k + (best[0] < 0 ? 0 : i); for (const y of [y0, row]) if (open(m.tileAt(x, y))) m.set(x, y, T.LOT); }
+    return true;
+  }
+  return driveway(m, x0, w, y0, dir);
+}
+// Where a w x h piece meant for (x, y) goes: there if no road's pavement reaches into it, else the nearest spot round
+// it (rings out to r tiles, nearest first) that is open land, clear of the roads, passes must(x, y) and want(x, y) -
+// or, when no spot passes want, the nearest that passes the rest. null: nowhere near. (Only a piece a road crosses
+// moves: one that fronts a road, right up to its kerb, stays where it was laid out.)
+function offTheRoad(m, x, y, w, h, want = null, r = 40, must = null) {
+  if (!roadCrosses(m, x, y, w, h, 0)) return [x, y];
+  let fallback = null;
+  for (let d = 1; d <= r; d++) {
+    const ring = [];
+    for (let k = -d; k <= d; k++) ring.push([k, -d], [k, d]);
+    for (let k = -d + 1; k < d; k++) ring.push([-d, k], [d, k]);
+    ring.sort((a, b) => a[0] * a[0] + a[1] * a[1] - (b[0] * b[0] + b[1] * b[1]) || a[1] - b[1] || a[0] - b[0]);
+    for (const [dx, dy] of ring) {
+      const X = x + dx, Y = y + dy;
+      if (!openLand(m, X, Y, w, h) || roadCrosses(m, X, Y, w, h, 8) || (must && !must(X, Y))) continue;
+      if (!want || want(X, Y)) return [X, Y];
+      fallback ||= [X, Y];
+    }
+  }
+  return fallback;
+}
+
 // ---- estates: homes outside the city grid -----------------------------------------------------
 // Farmhouses and cottages out in Dry Creek, the mansion up in Bayside Heights, beach houses on
 // Sunset Beach. Each has a detached garage (a door that opens for its owner) and a driveway.
@@ -2340,31 +2468,48 @@ export const ESTATE_TYPES = {
   mansion: { name: 'Hilltop Mansion', price: 150000, slots: 6 },
 };
 const MANSION_SIZE = [26, 24];
+// Dry Creek's farmhouses and cottages, either side of the county road: [type, prefab, x, y, fronts south]
+const DRY_CREEK_ESTATES = [
+  ['farmhouse', 'house2', 1112, 512, true], ['cottage', 'house1', 1124, 512, true], ['farmhouse', 'house3', 1172, 498, true],
+  ['cottage', 'house3', 1146, 534, false], ['farmhouse', 'house1', 1182, 532, false],
+];
+// does a w x h rectangle come within g tiles of a Dry Creek farmhouse's lot (house and garage) - one moved off the
+// roads must not land where another is still to go (skip: its own entry)
+function nearDryCreek(X, Y, w, h, g, skip = -1) {
+  return DRY_CREEK_ESTATES.some(([, key, x, y], i) => i !== skip && X < x + PREFABS[key].tw + 3 + g && X + w + g > x && Y < y + PREFABS[key].th + g && Y + h + g > y);
+}
 
 function buildEstates(m, rand) {
   m.garages ||= [];
   m.mansions ||= [];
   // Dry Creek: either side of the county road
-  const plan = [
-    ['farmhouse', 'house2', 1112, 512, true], ['cottage', 'house1', 1124, 512, true], ['farmhouse', 'house3', 1172, 498, true],
-    ['cottage', 'house3', 1146, 534, false], ['farmhouse', 'house1', 1182, 532, false],
-  ];
-  for (const [type, key, x, y, south] of plan) {
-    const pf = PREFABS[key];
+  const plan = DRY_CREEK_ESTATES;
+  // (a house and the garage beside it, off the roads, with a road ahead of its front for the driveway)
+  const spot = (key, x, y, south, i = -1) => {
+    const pf = PREFABS[key], s = pf.rot ? south : true;
+    return offTheRoad(m, x, y, pf.tw + 3, pf.th, (X, Y) => roadAhead(m, X, pf.tw, s ? Y + pf.th : Y - 1, s ? 1 : -1) || roadBeside(m, X, Y, pf.tw + 3, pf.th, s), 40, (X, Y) => i < 0 || !nearDryCreek(X, Y, pf.tw + 3, pf.th, 4, i));
+  };
+  for (const [i, [type, key, x0, y0, south]] of plan.entries()) {
+    const pf = PREFABS[key], p = spot(key, x0, y0, south, i);
+    if (!p) continue;
+    const [x, y] = p;
     m.fill(x - 1, y - 1, pf.tw + 6, pf.th + 2, T.GRASS);
-    estateHouse(m, rand, type, key, x, y, south);
+    estateHouse(m, rand, type, key, x, y, south, null, x !== x0 || y !== y0);
   }
   // cabins, lodges and farmhouses out on the other islands
-  for (const [type, key, x, y, south] of ISLAND_ESTATES) {
-    const pf = PREFABS[key];
+  for (const [type, key, x0, y0, south] of ISLAND_ESTATES) {
+    const pf = PREFABS[key], p = spot(key, x0, y0, south);
+    if (!p) continue;
+    const [x, y] = p;
     clearArea(m, x - 2, y - 2, pf.tw + 8, pf.th + 4);
     m.fill(x - 1, y - 1, pf.tw + 6, pf.th + 2, T.GRASS);
-    estateHouse(m, rand, type, key, x, y, south);
+    estateHouse(m, rand, type, key, x, y, south, null, x !== x0 || y !== y0);
   }
-  // no lot for it in town: the mansion goes up on the hill above Dry Creek
+  // no lot for it in town: the mansion goes up on the hill above Dry Creek (its gate to the north, onto a road)
   if (!m.mansions.length) {
-    m.fill(1196, 480, MANSION_SIZE[0], MANSION_SIZE[1], T.GRASS);
-    mansion(m, rand, 1196, 480);
+    const [x, y] = offTheRoad(m, 1196, 480, MANSION_SIZE[0], MANSION_SIZE[1], (X, Y) => roadAhead(m, X + 11, 4, Y - 1, -1)) || [1196, 480];
+    m.fill(x, y, MANSION_SIZE[0], MANSION_SIZE[1], T.GRASS);
+    mansion(m, rand, x, y);
   }
 }
 
@@ -2419,17 +2564,18 @@ function driveway(m, x0, w, y, dir) {
   return false;
 }
 
-function addGarage(m, home, tx, ty, south, w = 3) {
+function addGarage(m, home, tx, ty, south, w = 3, moved = false) {
   for (let y = ty; y < ty + 3; y++) for (let x = tx; x < tx + w; x++) m.set(x, y, T.BUILDING);
   const g = { tx, ty, tw: w, th: 3, south, home: home.id };
   m.garages.push(g);
   // pull up in front of the door
   home.garage = { x: (tx + w / 2) * TILE, y: (south ? ty + 4.2 : ty - 1.2) * TILE, a: south ? Math.PI / 2 : -Math.PI / 2 };
   home.garageDoor = { x: (tx + w / 2) * TILE, y: (south ? ty + 3 : ty) * TILE, w: w * TILE };
-  driveway(m, tx, w, south ? ty + 3 : ty - 1, south ? 1 : -1);
+  if (moved) driveTo(m, tx, south ? ty + 3 : ty - 1, south ? 1 : -1, w); else driveway(m, tx, w, south ? ty + 3 : ty - 1, south ? 1 : -1);
 }
 
-function estateHouse(m, rand, type, key, x, y, south, dims = null) {
+// moved: the house was moved off a road (offTheRoad) - its drives turn to the road beside it when none is ahead
+function estateHouse(m, rand, type, key, x, y, south, dims = null, moved = false) {
   m.garages ||= [];
   m.mansions ||= [];
   const pf = dims ? scaledPrefab(PREFABS[key], dims.tw, dims.th, key) : PREFABS[key];
@@ -2445,8 +2591,9 @@ function estateHouse(m, rand, type, key, x, y, south, dims = null) {
   const poi = m.pois.find((q) => q.kind === 'home' && q.home === home.id);
   if (poi) poi.label = home.name;
   // the house's own walk to its door connects to the road too
-  driveway(m, Math.floor(home.x / TILE), 1, Math.floor(home.y / TILE) + (south ? 1 : -1), south ? 1 : -1);
-  if (!pf.cars) addGarage(m, home, x + pf.tw, south ? y + pf.th - 3 : y, south); // (a painted house has its own garage and driveway)
+  if (moved) driveTo(m, Math.floor(home.x / TILE), Math.floor(home.y / TILE) + (south ? 1 : -1), south ? 1 : -1);
+  else driveway(m, Math.floor(home.x / TILE), 1, Math.floor(home.y / TILE) + (south ? 1 : -1), south ? 1 : -1);
+  if (!pf.cars) addGarage(m, home, x + pf.tw, south ? y + pf.th - 3 : y, south, 3, moved); // (a painted house has its own garage and driveway)
   // yard dressing
   const yard = type === 'beach' ? ['palm_a', 'palm_b', 'umbrella_r', 'umbrella_y'] : type === 'farmhouse' ? ['tree_a', 'pallet', 'drum', 'wheelbarrow'] : ['tree_b', 'shrub_a', 'flowers_a', 'bush_c'];
   for (let k = 0; k < 4; k++) {
@@ -3857,7 +4004,9 @@ function buildFarm(m, rand) {
     if (n > 200) m.fields.push({ x: fx * TILE, y: fy * TILE, w: fw * TILE, h: fh * TILE });
   }
   const pf = PREFABS.house2;
-  const fx = 1160, fy = 534;
+  // beside the Desert Highway, its yard to the west and its drive north to a road (off the highway itself: offTheRoad)
+  // (and clear of the Dry Creek farmhouses still to come: buildEstates)
+  const [fx, fy] = (offTheRoad(m, 1157, 534, pf.tw + 4, pf.th, (X, Y) => roadAhead(m, X + 6, 2, Y - 2, -1), 40, (X, Y) => !nearDryCreek(X, Y, pf.tw + 4, pf.th, 4)) || [1157, 534]).map((v, k) => v + (k ? 0 : 3));
   m.fill(fx - 4, fy - 1, pf.tw + 8, pf.th + 2, T.DIRT);
   const row = { d: 9, x: fx, y: fy, w: pf.tw, h: pf.th, face: 'N' };
   placePrefab(m, row, 'house2', fx, { biz: ['farm'], names: ['Dry Creek Farm Co-op'] }, rand);
@@ -3912,7 +4061,24 @@ function buildOutposts(m, rand) {
     if (!pf) continue;
     // the lot beside the end of the track, its front facing it
     const spots = [[tx - (pf.tw >> 1), ty - pf.th - 1, true], [tx - (pf.tw >> 1), ty + 2, false], [tx + 2, ty - (pf.th >> 1), true], [tx - pf.tw - 2, ty - (pf.th >> 1), true]];
-    const spot = spots.find(([x, y]) => free(x - 1, y - 1, pf.tw + (desert ? 2 : 6), pf.th + 2));
+    // (and not on the side the track comes in from: its own pavement may only reach the lot right by its end)
+    const ownClear = (x, y, w, h) => {
+      const X0 = x * TILE - 8, Y0 = y * TILE - 8, X1 = (x + w) * TILE + 8, Y1 = (y + h) * TILE + 8;
+      for (let i = 1; i < e.pts.length; i++) {
+        const a = e.pts[i - 1], b = e.pts[i], k = Math.max(1, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 8));
+        for (let j = 0; j <= k; j++) {
+          const px = a.x + ((b.x - a.x) * j) / k, py = a.y + ((b.y - a.y) * j) / k;
+          if ((px - n.x) * (px - n.x) + (py - n.y) * (py - n.y) < 80 * 80) continue;
+          if (px > X0 && px < X1 && py > Y0 && py < Y1) return false;
+        }
+      }
+      return true;
+    };
+    // (a little further out too, where the nearest lots are crossed)
+    for (const k of [2, 4]) spots.push([tx - (pf.tw >> 1), ty - pf.th - 1 - k, true], [tx - (pf.tw >> 1), ty + 2 + k, false], [tx + 2 + k, ty - (pf.th >> 1), true], [tx - pf.tw - 2 - k, ty - (pf.th >> 1), true]);
+    // (and clear of what the country sites build round themselves later: their keep boxes, countryside.js)
+    const kept = (x, y, w, h) => (m.countrySites || []).some((q) => q.keep && x < q.x + q.keep[2] && x + w > q.x + q.keep[0] && y < q.y + q.keep[3] && y + h > q.y + q.keep[1]);
+    const spot = spots.find(([x, y]) => free(x - 1, y - 1, pf.tw + (desert ? 2 : 6), pf.th + 2) && !roadCrosses(m, x, y, pf.tw + (desert ? 0 : 3), pf.th, 0, e.id) && ownClear(x, y, pf.tw, pf.th) && !kept(x - 1, y - 1, pf.tw + 2, pf.th + 2));
     if (!spot) continue;
     const [x, y, south] = spot;
     m.fill(x - 1, y - 1, pf.tw + (desert ? 2 : 6), pf.th + 2, desert ? T.DIRT : T.GRASS);
@@ -4147,7 +4313,7 @@ function buildAirports(m) {
     // links from the taxiway to the apron every so often
     for (let y = tax[1] + 10; y < tax[1] + tax[3] - 6; y += 40) paint(Math.min(tax[0], ax), y, Math.abs(ax - tax[0]) + 2, 4, T.LOT);
     const term = simpleBuilding(m, tx2, ty2, tw, th, A.name, 'terminal', m.dist[ty2 * MAP_W + tx2], 'glass', { x: (tx2 + tw / 2) * TILE, y: (ty2 + th) * TILE, text: A.name });
-    for (const [hx, hy, hw, hh] of A.hangars) simpleBuilding(m, hx, hy, hw, hh, 'Hangar', 'hangar', m.dist[hy * MAP_W + hx], 'metal');
+    for (const [hx, hy, hw, hh] of A.hangars) if (!roadCrosses(m, hx, hy, hw, hh)) simpleBuilding(m, hx, hy, hw, hh, 'Hangar', 'hangar', m.dist[hy * MAP_W + hx], 'metal');   // (the access road round to the cargo hangars may take one's place)
     const [px, py] = A.poiAt;
     m.pois.push({ id: m.pois.length, kind: 'airport', label: A.name, x: px * TILE, y: py * TILE, r: 56, b: term.id });
     const planes = [];

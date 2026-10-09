@@ -1,7 +1,7 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, fishing cue, shop menus, death screen, radar + big map.
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
-import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER, WORLD_VERSION } from '../shared/constants.js';
+import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
 import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
@@ -299,6 +299,13 @@ export class HUD {
     g.drawImage(this.mini, mx - tr, my - tr, tr * 2, tr * 2, 0, 0, size, size);
     const toR = (x, y) => [(x - cx) * scale + size / 2, (y - cy) * scale + size / 2];
     const me = this.me;
+    // the route to your waypoint along the roads (client/route.js): the GPS line
+    if (this.route && this.route.pts.length > 1) {
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath(); this.route.pts.forEach((p, i) => { const [x, y] = toR(p.x, p.y); if (i) g.lineTo(x, y); else g.moveTo(x, y); });
+      g.strokeStyle = 'rgba(10,15,29,.7)'; g.lineWidth = big ? 7 : 5; g.stroke();
+      g.strokeStyle = '#ffd34a'; g.lineWidth = big ? 4 : 2.6; g.stroke();
+    }
     // POIs
     g.font = `bold ${big ? 14 : 9}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const skipIc = iconSkip(this.map);
@@ -391,256 +398,13 @@ export class HUD {
     g.restore();
   }
 
-  // ---- world map (full city) ------------------------------------------------------------
-  // The baked city image (assets/worldmap.webp, rendered by the game's own chunk baker) with
-  // district names, places, your homes and job on top. On duty, it becomes the police dispatch
-  // map: reported crimes, live suspects you can currently see, and last-known search areas.
-  // Map zoom: factor k about a point on the canvas (CSS px; default its middle), clamped 1x-8x.
-  zoomMap(k, sx, sy) {
-    const V = this.mapView, sc = this.bigmapScale;
-    if (!V || !sc) return;
-    const c = $('bigmap-c'), cw = c.clientWidth, ch = c.clientHeight;
-    if (sx === undefined) { sx = cw / 2; sy = ch / 2; }
-    const [ox, oy] = this.bigmapOrigin;
-    const wx = ox + sx / sc, wy = oy + sy / sc; // the world point under the finger stays put
-    const z = Math.max(1, Math.min(8, V.z * k));
-    const ns = this.bigmapFit * z;
-    V.z = z; V.cx = wx - sx / ns + cw / ns / 2; V.cy = wy - sy / ns + ch / ns / 2;
-  }
-  panMap(dx, dy) { const V = this.mapView, sc = this.bigmapScale; if (!V || !sc) return; V.cx -= dx / sc; V.cy -= dy / sc; }
-  centerMap(x, y) { if (this.mapView) { this.mapView.cx = x; this.mapView.cy = y; } }
-  resetMap() { if (this.mapView) this.mapView.z = 1; }
-
-  drawBigMap(cx, cy, heading) {
-    const c = $('bigmap-c');
-    const me = this.me;
-    const police = !!(me && me.faction === 'enforcer');
-    const [fx0, fy0, fx1, fy1] = MAP_FRAME;
-    const WW = fx1 - fx0, WH = fy1 - fy0;
-    const panel = $('bm-panel'), portrait = innerHeight > innerWidth;
-    const maxW = (innerWidth - (portrait ? 0 : (panel ? panel.offsetWidth + 24 : 0))) * 0.96, maxH = (innerHeight - (portrait && panel ? panel.offsetHeight + 16 : 0)) * 0.86;
-    const fit = Math.min(maxW / WW, maxH / WH);
-    const w = Math.round(WW * fit), h = Math.round(WH * fit);
-    // zoomed in, the canvas shows a window of the frame round the view centre (clamped to it)
-    const V = this.mapView || (this.mapView = { z: 1, cx: (fx0 + fx1) / 2, cy: (fy0 + fy1) / 2 });
-    const vw = WW / V.z, vh = WH / V.z;
-    V.cx = Math.max(fx0 + vw / 2, Math.min(fx1 - vw / 2, V.cx)); V.cy = Math.max(fy0 + vh / 2, Math.min(fy1 - vh / 2, V.cy));
-    const ox = V.cx - vw / 2, oy = V.cy - vh / 2;
-    const sc = fit * V.z;
-    this.bigmapScale = sc; this.bigmapOrigin = [ox, oy]; this.bigmapFit = fit;
-    const dpr = Math.min(2, devicePixelRatio || 1);
-    if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px'; }
-    const g = c.getContext('2d');
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const img = worldMapImage(this.map);
-    // the framed part of the world (the outer wild islands lie beyond it)
-    g.clearRect(0, 0, w, h);
-    const crop = (im) => { const kx = im.width / (MAP_W * TILE), ky = im.height / (MAP_H * TILE); g.drawImage(im, ox * kx, oy * ky, vw * kx, vh * ky, 0, 0, w, h); };
-    if (img) { g.imageSmoothingEnabled = true; crop(img); }
-    else { g.imageSmoothingEnabled = false; crop(this.mini); }
-    if (police) { g.fillStyle = 'rgba(8,16,40,.35)'; g.fillRect(0, 0, w, h); }
-    const P = (x, y) => [(x - ox) * sc, (y - oy) * sc];
-    const now = performance.now();
-    // district names
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    const fs = Math.max(9, Math.min(15, w / 70));
-    g.font = `${fs}px Anton, Impact, sans-serif`;
-    const taken = [];   // the labels drawn so far (screen boxes): a place's name only goes where it doesn't cover another
-    const free = (x, y, tw, th) => { const b = [x - tw / 2 - 2, y - th / 2 - 1, x + tw / 2 + 2, y + th / 2 + 1]; if (taken.some((q) => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1])) return false; taken.push(b); return true; };
-    for (const d of districtCentroids(this.map)) {
-      const [x, y] = P(d.x, d.y);
-      taken.push([x - g.measureText(d.name.toUpperCase()).width / 2 - 2, y - fs / 2 - 1, x + g.measureText(d.name.toUpperCase()).width / 2 + 2, y + fs / 2 + 1]);
-      g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(d.name.toUpperCase(), x, y);
-      g.fillStyle = d.turf ? '#ff8a7a' : '#fff4c8'; g.fillText(d.name.toUpperCase(), x, y);
-    }
-    // the places (landmarks, and the painted ones): zoom in and the crowded ones show too
-    const lfs = Math.max(8, fs - 3);
-    g.font = `${lfs}px Anton, Impact, sans-serif`;
-    const named = new Set();
-    for (const pt of (this.map.paintings || []).concat(this.map.landmarks || [])) {
-      if (!pt.name || named.has(pt.name)) continue;   // (a painted place laid out again as a designed one: its name once)
-      const [x, y] = P(pt.x + pt.w / 2, pt.y + pt.h + 40), label = pt.name.toUpperCase();
-      if (x < -200 || y < -50 || x > w + 200 || y > h + 50 || !free(x, y, g.measureText(label).width, lfs)) continue;
-      named.add(pt.name);
-      g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(label, x, y);
-      g.fillStyle = '#bfe9ff'; g.fillText(label, x, y);
-    }
-    // the railway: a dark line with white ties, round the whole loop (drawn under the district names' level of detail)
-    if (this.map.rail) {
-      const rp = this.map.rail.pts;
-      g.lineCap = 'round'; g.lineJoin = 'round';
-      for (const [lw, col, dash] of [[3.6, 'rgba(20,16,12,.9)', []], [1.4, '#e8e0cc', [2, 4]]]) {
-        g.lineWidth = lw; g.strokeStyle = col; g.setLineDash(dash);
-        g.beginPath();
-        for (let i = 0; i < rp.length; i += 4) { const [x, y] = P(rp[i].x, rp[i].y); if (i) g.lineTo(x, y); else g.moveTo(x, y); }
-        g.closePath(); g.stroke();
-      }
-      g.setLineDash([]);
-    }
-    // the elevated ring highway and its ramps
-    g.lineCap = 'round'; g.lineJoin = 'round';
-    for (const [wd, colr] of [[2.5, 'rgba(0,0,0,.6)'], [0, '#f0c050']]) {
-      for (const e of this.map.edges || []) {
-        if (e.lvl === 0) continue;
-        g.lineWidth = Math.min(7, Math.max(1.5, e.w * sc * (e.lvl === 1 ? 0.8 : 0.9))) + wd; // thin when zoomed in: the baked map shows the deck itself
-        g.strokeStyle = colr;
-        g.beginPath();
-        e.pts.forEach((p, i) => { const [x, y] = P(p.x, p.y); if (i) g.lineTo(x, y); else g.moveTo(x, y); });
-        g.stroke();
-      }
-    }
-    // the railway loop (dashed where it runs underground) - every station is a stop
-    if (this.map.rail) {
-      const pts = this.map.rail.pts;
-      for (const [under, col, wd] of [[false, 'rgba(0,0,0,.55)', 4], [false, '#e0b070', 2], [true, '#e0b070', 2]]) {
-        g.strokeStyle = col; g.lineWidth = wd; g.setLineDash(under ? [4, 4] : []);
-        g.beginPath();
-        for (let i = 0; i <= pts.length; i++) {
-          const a = pts[i % pts.length], b = pts[(i + 1) % pts.length];
-          if (!!a.under !== under || i === pts.length) continue;
-          const [x1, y1] = P(a.x, a.y), [x2, y2] = P(b.x, b.y);
-          g.moveTo(x1, y1); g.lineTo(x2, y2);
-        }
-        g.stroke();
-      }
-      g.setLineDash([]);
-    }
-    // the bus lines (the Transit app's data, asked for while the map is open): each line's streets in its colour, its
-    // stops as white dots ringed in it (named when zoomed in), and where its buses are now
-    if (this.transit && this.transit.lines) {
-      g.lineCap = 'round'; g.lineJoin = 'round';
-      const route = (L) => { g.beginPath(); L.path.forEach(([x0, y0], i) => { const [x, y] = P(x0, y0); if (i) g.lineTo(x, y); else g.moveTo(x, y); }); g.closePath(); };
-      for (const L of this.transit.lines) {
-        g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 4; route(L); g.stroke();
-        g.strokeStyle = L.col; g.lineWidth = 2; g.globalAlpha = 0.85; route(L); g.stroke(); g.globalAlpha = 1;
-      }
-      g.font = '600 10px Rubik, sans-serif'; g.textAlign = 'center';
-      for (const L of this.transit.lines) {
-        for (const s of L.stops) {
-          const [x, y] = P(s.x, s.y);
-          g.fillStyle = '#fff'; g.strokeStyle = L.col; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 3.6, 0, 6.28); g.fill(); g.stroke();
-          if (V.z >= 2.5) label(g, x, y - 10, s.n, '#ffffff');
-        }
-        for (const b of L.buses) {
-          const [x, y] = P(b.x, b.y);
-          g.save(); g.translate(x, y); g.rotate(b.a);
-          g.fillStyle = L.col; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.fillRect(-6, -3.5, 12, 7); g.strokeRect(-6, -3.5, 12, 7);
-          g.restore();
-        }
-      }
-    }
-    // the ferries (server ferries.js): each route's way across dashed in sea blue, an anchor at each pier (named when
-    // zoomed in), and where its boat is
-    if (this.transit && this.transit.ferries) {
-      g.lineCap = 'round'; g.lineJoin = 'round';
-      for (const R of this.transit.ferries) {
-        for (const [col, wd] of [['rgba(0,0,0,.4)', 4], [R.car ? '#5ec8ff' : '#9fe0ff', 2]]) {
-          g.strokeStyle = col; g.lineWidth = wd; g.setLineDash([7, 5]);
-          g.beginPath(); R.path.forEach(([x0, y0], i) => { const [x, y] = P(x0, y0); if (i) g.lineTo(x, y); else g.moveTo(x, y); }); g.stroke();
-        }
-        g.setLineDash([]);
-        g.font = '600 10px Rubik, sans-serif'; g.textAlign = 'center';
-        R.piers.forEach((pr, k) => {
-          const [x, y] = P(pr.x, pr.y);
-          g.fillStyle = '#0c2a40'; g.strokeStyle = '#5ec8ff'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6, 0, 6.28); g.fill(); g.stroke();
-          g.fillStyle = '#d8f2ff'; g.fillText('⚓', x, y + 3.5);
-          if (V.z >= 2) label(g, x, y - 12, `${k ? R.island : R.mainland} ferry`, '#9fe0ff');
-        });
-        if (R.boat) {
-          const [x, y] = P(R.boat.x, R.boat.y), l = R.car ? 9 : 6;
-          g.save(); g.translate(x, y); g.rotate(R.boat.a);
-          g.fillStyle = '#f0eee6'; g.strokeStyle = '#0c2a40'; g.lineWidth = 1.5;
-          g.beginPath(); g.moveTo(-l, -l / 2.4); g.lineTo(l * 0.6, -l / 2.4); g.lineTo(l, 0); g.lineTo(l * 0.6, l / 2.4); g.lineTo(-l, l / 2.4); g.closePath(); g.fill(); g.stroke();
-          g.restore();
-        }
-      }
-    }
-    // places
-    const ic = Math.max(11, Math.min(16, w / 60));
-    g.font = `bold ${ic - 3}px monospace`;
-    const skipIc = iconSkip(this.map);
-    for (const p of this.map.pois) {
-      const icon = POI_ICON[p.kind];
-      if (!icon || skipIc.has(p.id)) continue;
-      const [x, y] = P(p.x, p.y);
-      g.fillStyle = '#000'; g.fillRect(x - ic / 2, y - ic / 2, ic, ic);
-      g.fillStyle = icon[1]; g.fillText(icon[0], x, y + 1);
-    }
-    if (me) {
-      for (const hm of me.homes || []) { const [x, y] = P(hm.x, hm.y); g.fillStyle = '#000'; g.fillRect(x - ic / 2, y - ic / 2, ic, ic); g.fillStyle = '#3ddc84'; g.fillText('⌂', x, y + 1); }
-      if (me.rumor) { const [x, y] = P(me.rumor.x, me.rumor.y); g.strokeStyle = '#ffd36b'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, me.rumor.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
-      if (me.taxi && (me.taxi.st === 'pickup' || me.taxi.st === 'wait')) { const [x, y] = P(me.taxi.x, me.taxi.y); g.fillStyle = '#ffd21f'; g.strokeStyle = '#000'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); label(g, x, y - 14, 'YOUR TAXI', '#ffd21f'); }
-      if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') { const [x, y] = P(me.cruiser.x, me.cruiser.y); g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); }
-      for (const ev of me.happen || []) { const kind = EVENT_KINDS[ev.k]; if (!kind) continue; const [x, y] = P(ev.x, ev.y); g.fillStyle = kind.color; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(kind.label, x, y - 12); }
-      // places of the category picked in the waypoint panel: numbered pins
-      if (this.mapFilter) {
-        g.font = '700 10px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        this.mapFilter.forEach((p, i) => {
-          const [x, y] = P(p.x, p.y);
-          g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2;
-          g.beginPath(); g.arc(x, y, 8, 0, 6.28); g.fill(); g.stroke();
-          g.fillStyle = '#111'; g.fillText(String(i + 1), x, y + 0.5);
-        });
-      }
-      if (this.waypoint) { const [x, y] = P(this.waypoint.x, this.waypoint.y); g.fillStyle = '#4fd6ff'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 7, y); g.lineTo(x, y + 9); g.lineTo(x - 7, y); g.closePath(); g.fill(); g.stroke(); g.font = '600 12px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(this.waypoint.label, x, y - 14); }
-      // other players (positions only reach devs; everyone else gets the list with districts)
-      for (const q of this.plist || []) {
-        if (q.me || q.x === undefined) continue;
-        const [x, y] = P(q.x, q.y);
-        g.fillStyle = q.dead ? '#888' : '#5dff9a'; g.strokeStyle = '#000'; g.lineWidth = 2;
-        g.beginPath(); g.arc(x, y, 5, 0, 6.28); g.fill(); g.stroke();
-        g.font = '600 11px Rubik, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#c8ffd8'; g.fillText(q.n, x, y - 11);
-      }
-      if (me.job) { const [x, y] = P(me.job.x, me.job.y); g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); }
-      // police / bounty intel (server already applies the visibility rules)
-      for (const r of me.radar || []) {
-        const [x, y] = P(r.x, r.y);
-        if (r.k === 'search') {
-          g.fillStyle = 'rgba(255,60,60,.16)'; g.strokeStyle = '#ff5a5a'; g.lineWidth = 1.5; g.setLineDash([4, 3]);
-          g.beginPath(); g.arc(x, y, Math.max(6, r.r * sc), 0, 6.28); g.fill(); g.stroke(); g.setLineDash([]);
-          label(g, x, y - Math.max(6, r.r * sc) - 8, `LAST SEEN ${'★'.repeat(r.s)}`, '#ff9a9a');
-        } else if (r.k === 'wanted') {
-          g.fillStyle = (now / 200 | 0) % 2 ? '#ff3b3b' : '#3b6bff'; g.beginPath(); g.arc(x, y, 6, 0, 6.28); g.fill();
-          g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke();
-          label(g, x, y - 13, `SUSPECT ${'★'.repeat(r.s)}`, '#ffffff');
-        } else if (r.k === 'bounty') {
-          g.strokeStyle = '#ffc23d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(6, r.r * sc), 0, 6.28); g.stroke();
-          label(g, x, y - Math.max(6, r.r * sc) - 8, `${r.n} $${r.b}`, '#ffc23d');
-        } else if (r.k === 'pack') {
-          const T = PACK_TIERS[r.t] || PACK_TIERS[1];
-          packIcon(g, x, y, r, 1.6);
-          label(g, x, y - 18, `YOUR ${T.name.toUpperCase()} · ${Math.floor(r.s / 60)}:${String(r.s % 60).padStart(2, '0')}`, T.col);
-        }
-      }
-      if (police) for (const d of me.dispatch || []) {
-        const [x, y] = P(d.x, d.y);
-        const fresh = d.age < 30;
-        const pulse = fresh ? 4 + 4 * ((now / 600) % 1) : 0;
-        g.globalAlpha = Math.max(0.35, 1 - d.age / 400);
-        g.fillStyle = '#ff9a2a'; g.strokeStyle = '#000'; g.lineWidth = 1.5;
-        g.beginPath(); g.moveTo(x, y - 7); g.lineTo(x + 6, y + 5); g.lineTo(x - 6, y + 5); g.closePath(); g.fill(); g.stroke();
-        if (pulse) { g.strokeStyle = '#ff9a2a'; g.beginPath(); g.arc(x, y, 8 + pulse, 0, 6.28); g.stroke(); }
-        label(g, x, y + 14, `${d.l} · ${d.age < 60 ? d.age + 's' : Math.round(d.age / 60) + 'm'} ago`, '#ffd0a0');
-        g.globalAlpha = 1;
-      }
-    }
-    // you
-    const [px, py] = P(cx, cy);
-    g.save(); g.translate(px, py); g.rotate(heading);
-    g.fillStyle = '#ff3e8a'; g.strokeStyle = '#fff'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(11, 0); g.lineTo(-7, -7); g.lineTo(-3, 0); g.lineTo(-7, 7); g.closePath(); g.fill(); g.stroke();
-    g.restore();
-    // header
-    const title = (police ? `POLICE DISPATCH · ${(me.rank || 'Officer').toUpperCase()}` : 'CITY MAP') + (V.z > 1.01 ? `  ·  ${V.z.toFixed(1)}x` : '');
-    g.font = `${Math.max(14, w / 38)}px Anton, Impact, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'top';
-    g.lineWidth = 4; g.strokeStyle = '#000'; g.strokeText(title, 10, 8);
-    g.fillStyle = police ? '#7ab0ff' : '#ffffff'; g.fillText(title, 10, 8);
-    if (police) {
-      const n = (me.dispatch || []).length, sus = (me.radar || []).filter((r) => r.k === 'wanted' || r.k === 'search').length;
-      g.font = 'bold 12px monospace'; g.fillStyle = '#ffd0a0';
-      g.fillText(`${n} report${n === 1 ? '' : 's'} · ${sus} active suspect${sus === 1 ? '' : 's'} (only what witnesses, cameras and officers can see)`, 10, 8 + Math.max(14, w / 38) + 6);
-    }
-  }
+  // ---- world map (full city): client/worldmap.js draws it (loaded the first time the map opens: main.js) ----------
+  zoomMap(k, sx, sy) { const c = $('bigmap-c'); if (this.worldmap) this.worldmap.zoom(k, sx, sy, c.clientWidth, c.clientHeight); }
+  panMap(dx, dy) { if (this.worldmap) this.worldmap.pan(dx, dy); }
+  centerMap(x, y) { if (this.worldmap) this.worldmap.center(x, y); }
+  resetMap() { if (this.worldmap) this.worldmap.reset(); }
+  get mapView() { return this.worldmap ? this.worldmap.view : null; }
+  drawBigMap(cx, cy, heading, opts = {}) { if (this.worldmap) this.worldmap.draw($('bigmap-c'), this, cx, cy, heading, opts); }
 
   setNet(text) { $('net').textContent = text; }
 
@@ -657,7 +421,7 @@ export class HUD {
 
 // The backpack you dropped when you died, on the radar and the map: a little pack in its rarity's colour, blinking in
 // its last half minute
-function packIcon(g, x, y, r, k) {
+export function packIcon(g, x, y, r, k) {
   const T = PACK_TIERS[r.t] || PACK_TIERS[1];
   if (r.s < 30 && (performance.now() / 250 | 0) % 2) return;
   const w = 5 * k, h = 6 * k;
@@ -665,26 +429,11 @@ function packIcon(g, x, y, r, k) {
   g.fillStyle = T.col; g.fillRect(x - w, y - h + 2 * k, w * 2, h * 2 - 2 * k); g.fillRect(x - w + 1.5 * k, y - h, w * 2 - 3 * k, 2 * k);
   g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - w + 1.5 * k, y + 1 * k, w * 2 - 3 * k, 3 * k);
 }
-function label(g, x, y, text, color) {
-  g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(text, x, y);
-  g.fillStyle = color; g.fillText(text, x, y);
-}
-
 // The part of the world the city map shows (px): every island, trimmed of open sea at the edges.
 export const MAP_FRAME = [24 * TILE, 10 * TILE, 1304 * TILE, 1170 * TILE];
 
-// baked city image (only valid for the world it was rendered from: assets/worldmap.webp is the old world,
-// so World v2 draws the map from its data until a new image is baked)
-let wmImg = null, wmState = 0;
-const WORLDMAP_FOR = 1; // the world version assets/worldmap.webp shows
-function worldMapImage(map) {
-  if (map.seed !== 1337 || WORLD_VERSION !== WORLDMAP_FOR) return null;
-  if (wmState === 0) { wmState = 1; wmImg = new Image(); wmImg.onload = () => { wmState = 2; }; wmImg.onerror = () => { wmState = 3; }; wmImg.src = 'assets/worldmap.webp'; }
-  return wmState === 2 && Math.abs(wmImg.width / wmImg.height - MAP_W / MAP_H) < 0.02 ? wmImg : null; // a stale bake (old map size) falls back to the minimap
-}
 let centroids = null;
-function districtCentroids(map) {
+export function districtCentroids(map) {
   if (centroids) return centroids;
   const acc = new Map();
   for (let ty = 0; ty < MAP_H; ty += 3) for (let tx = 0; tx < MAP_W; tx += 3) {
@@ -711,11 +460,11 @@ const POI_ICON = {
 // one icon for a place with more than one counter (the market's rows of stalls): the same kind within this of
 // another is left off the maps
 const ICON_MERGE = 640;
-function iconSkip(map) {
+export function iconSkip(map) {
   if (map._iconSkip) return map._iconSkip;
   const skip = new Set(), kept = [];
   for (const p of map.pois) {
-    if (!POI_ICON[p.kind]) continue;
+    if (p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
     if (kept.some((q) => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE)) skip.add(p.id); else kept.push(p);
   }
   Object.defineProperty(map, '_iconSkip', { value: skip, enumerable: false, configurable: true });

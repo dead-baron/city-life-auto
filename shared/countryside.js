@@ -27,7 +27,7 @@ export const SITES = [
   { type: 'oil', name: 'Dry Creek Oil Field', near: [1124, 336], w: 56, h: 46, road: 'rural' },
   { type: 'solar', name: 'Sunfield Solar Farm', near: [1214, 330], w: 34, h: 36, road: 'dirt' },
   { type: 'drivein', name: 'Starlite Drive-In', near: [1140, 896], w: 40, h: 30, road: 'rural' },
-  { type: 'stop', name: 'Route 9', near: [1190, 764], w: 46, h: 18, road: 'rural' },
+  { type: 'stop', name: 'Route 9', near: [1190, 764], w: 46, h: 18, road: 'rural', keep: [-2, -18, 90, 14] },   // (keep: the oil lease behind it and the airstrip to the east, naturesites.js route9 - nothing else is built there)
   { type: 'mast', name: 'Mesa Radio Mast', near: [1206, 284], w: 10, h: 10, road: 'dirt' },
   { type: 'wind', name: 'Dry Creek Wind Farm', near: [1252, 600], w: 22, h: 52, road: 'dirt' },
   // Cedar Hills (Cedar Isle)

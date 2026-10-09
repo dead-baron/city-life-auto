@@ -239,6 +239,8 @@ export function createPhone(ctx) {
 
   return {
     open() { screen = 'home'; group = null; render(); ctx.send({ t: 'phone', a: 'board' }); },
+    // straight to one app (the hub's JOBS tab: 'jobs')
+    openApp(s) { screen = s || 'home'; group = null; render(); if (s === 'jobs' || !s) ctx.send({ t: 'phone', a: 'board' }); },
     back() { if (screen === 'group') screen = 'places'; else screen = 'home'; render(); return true; },
     onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
     onTransit(msg) { transit = msg; if (screen === 'transit') render(); },
