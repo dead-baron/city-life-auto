@@ -15,7 +15,8 @@ import * as custody from '../server/systems/custody.js';
 import * as combat from '../server/systems/combat.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as homes from '../server/systems/homes.js';
-import { spawnNpc, footWay, walkInAt } from '../server/systems/npc.js';
+import { spawnNpc, footWay, walkInAt, startFight } from '../server/systems/npc.js';
+import * as struggle from '../server/systems/struggle.js';
 import { _descriptor } from '../server/net.js';
 import { cellBlockAt } from '../shared/cells.js';
 
@@ -202,6 +203,40 @@ function blockedPair(w) {
   }
   return null;
 }
+
+test('NPCs fighting you back off while the police have you pinned or cuffed, and none starts on you (task #428)', () => {
+  const w = makeWorld();
+  const road = straightRoad(w.map, 1400);
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, road.x + 400, road.y);
+  wanted(w, p, 1);
+  // a brawler with their fists and a gang member with a pistol, both after them
+  const brawler = spawnNpc(w, 'thug', p.ped.x - 70, p.ped.y, 'civ');
+  const shooter = spawnNpc(w, 'syndicate', p.ped.x + 170, p.ped.y + 30, 'gang');
+  shooter.weapon = 'pistol';
+  startFight(w, brawler, p.ped, 60); startFight(w, shooter, p.ped, 60);
+  assert.equal(brawler.npc.state, 'fight');
+  // an officer takes them down and gets on them, going for the cuffs
+  const { crew } = footUnit(w, p, road.x + 1100, road.y, 1);
+  teleport(w, crew[0], p.ped.x + 16, p.ped.y);
+  p.ped.downUntil = w.time + 2.5;
+  assert.ok(struggle.grab(w, crew[0], p.ped), 'pinned: a struggle');
+  const hp = p.ped.hp;
+  run(w, 0.2);
+  assert.ok(brawler.npc.state !== 'fight' && shooter.npc.state !== 'fight', `they let it go (${brawler.npc.state}, ${shooter.npc.state})`);
+  const d0 = Math.hypot(brawler.x - p.ped.x, brawler.y - p.ped.y);
+  assert.ok(until(w, () => !!p.custody, 6), 'cuffed (not fighting back)');
+  run(w, 3);
+  assert.equal(p.ped.hp, hp, 'nobody beat them while they were held, nor once they were cuffed');
+  assert.ok(Math.hypot(brawler.x - p.ped.x, brawler.y - p.ped.y) > Math.min(d0, 40) - 8, 'the brawler stood back');
+  // a fight doesn't start on someone cuffed
+  startFight(w, brawler, p.ped, 30);
+  assert.notEqual(brawler.npc.state, 'fight', 'no new fight with someone in cuffs');
+  // free again (the officer down), they're fair game: nothing holds anyone back
+  p.custody = null; p.ped.cuffed = false;
+  startFight(w, brawler, p.ped, 30);
+  assert.equal(brawler.npc.state, 'fight');
+});
 
 test('the cell: wait it out, no bail money, no walking out; surrendering goes straight there', async () => {
   const unstuck = await import('../server/systems/unstuck.js');
