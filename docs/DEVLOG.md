@@ -4097,3 +4097,53 @@ From the user's 21:18 note: the notes that pop up cover too much of the screen, 
 - **Seeing a crime** (`server/systems/law.js`):
   - One note, "You saw a crime. You can call it in from your phone for a minute", then nothing for 10 minutes (`SAW_NOTE_S`), however many crimes you see.
   - Each crime still waits on the phone's home screen to be called in, as before.
+
+## 2026-10-08 · Clothes to buy: stores by style and district, the fitting room, the barber and the salon
+From the user's concept sheets ST1-ST4 (the clothing stores, the stores of the trades, the barbershop and the salon, the fitting room), CC1's Owned / All, CC7's padlocks and the prompt pack's table of where each style sells. Part 2 of the look system (task #364).
+- **Owning clothes** (`server/systems/looks.js`, `shared/wardrobe.js`):
+  - The profile has a wardrobe: the pieces you own.
+  - A new player owns a plain tee, jeans and trainers (`STARTER_BASICS` in `shared/rules.js`).
+  - Their first creator session (the starting look, "Make it yours") is free. Whatever they leave it wearing is theirs.
+  - Players from before the shops own what they're wearing and every piece in their saved looks (those were free).
+  - Pieces that cost nothing (bare chest, barefoot, hood up) are anyone's.
+  - After that, you wear only what you own: the server refuses anything else and says which store sells it. Saving a look with something you don't own is refused too.
+  - The body, face and extras change at the mirror at home; the hair and facial hair at a barber or a salon. Clothes you own change anywhere, as before.
+  - The home's "Change outfit" now picks from your own wardrobe.
+  - A progress wipe keeps the wardrobe, like the look.
+- **The creator's Outfit tab:** Owned / All.
+  - Owned: your wardrobe.
+  - All: the whole catalogue. What isn't yours has a padlock and the icon and name of a store that sells it. You can try it on, not keep it.
+  - Done with something you can't wear says why; Done again leaves as you were.
+  - The Body, Face, Extras and Hair tabs say where those changes are made (the preview still works).
+- **The stores** (`shared/wardrobe.js` STORES): each sells the catalogue pieces of its store kinds and styles, at the catalogue's prices times its markup (`CLOTHES_PRICE_K`).
+  - Threads Outfitters, Thread & Co. and Urban Wear: everyday clothes. The old "new outfit" service stays (the pieces are now yours).
+  - Velvet & Vine, the luxury boutique (Westport Center, Lakeview): high fashion, business, formal. 20% dearer.
+  - Marlow & Finch, the department store (Downtown, Westport Center): smart casual, everyday, lounge, winter.
+  - Afterglow, by the Neon Strip: nightclub.
+  - Corner Kicks (Midtown, the Stadium District): sneakers and streetwear.
+  - Kickflip Skate Co. (Arts District): skater.
+  - Salt & Swell Surf Shop (Sunset Beach): beach.
+  - Second Skin Vintage (Old Town, Old Quarter): punk, alt and retro. 20% cheaper.
+  - Cedar Feed & Western Wear (Cedar Isle): western.
+  - Trail & Field Outfitters (the old Trail & Field lots): outdoors.
+  - Hardline Workwear (The Yards): work.
+  - Ironside Army Surplus (Southside): disguises, balaclavas, combat boots.
+  - Home Run Sports (gym), Second Chance Pawn (jewellery, 10% off), the Back-Alley Exchange (disguises, 50% dearer) and the hunting lodge and camps (outdoor clothes) sell clothes too.
+  - Every piece is sold somewhere, and every store kind at a walk-in.
+- **In the world** (`shared/map.js` buildClothesShops, `WORLD_VERSION` 7):
+  - Storefronts become the stores, in the first of their districts with a free walk-in front, and get the store's sign.
+  - Where no front was free (the Neon Strip, Sunset Beach, Downtown, the industrial districts), the store is placed like the other businesses.
+  - Barbershops: Cut & Fade (Southside), Old Town Barbers, Northshore Barber Co. Salons: Silk & Shears (Downtown), Golden Locks (Westport Center).
+  - They're walk-ins with a counter. Their icons are on the map and in the phone's Shops.
+- **The fitting room** (ST4; `client/creator.js` mode 'shop', on the creator's preview and grids):
+  - The counter's menu has "The fitting room".
+  - Tabs: Outfits (complete outfits in the store's styles, of its own pieces), Tops, Jackets, Bottoms, Dresses & sets, Shoes, Hats, Accessories.
+  - Each piece shows its price, or ✓ yours. Pick one to try it on; then its colours and pattern.
+  - Try on, Start over, Buy (it goes to your wardrobe), Buy and wear. The total and your cash and bank are shown. You pay from cash, then the bank.
+  - Buy and wear while wanted works like the clothes shop's new outfit: not with a cop watching; out of sight, it drops your public wanted level (the peak stays on file).
+- **The barbershop and the salon** (ST3; mode 'barber'):
+  - Cut, Colour, Beard, Moustache, each priced (`BARBER_PRICES`), seen on you first (the hat comes off). The salon does cuts and colour, at twice the price (`SALON_K`).
+  - Confirm pays. The chair changes only the hair.
+- **On the wire:** `{ t: 'look', a: 'buy', poi, ids, wear }` and `{ a: 'cut', poi, c }`. The looks message adds `own` (the wardrobe) and `free` (the first session), and `home`, `cash`, `bank` and `shop` from a store.
+- **Tests:** `test/wardrobe.test.js` (7 tests): every piece sold and every store kind at a walk-in; owning (the starting look, the first session, refusals, the mirror at home, saved looks); a player from before the shops; Buy and Buy and wear, priced, cash then bank; the fitting room while wanted; the barber's cut, colour and moustache and the salon; the old new-outfit service. `test/look.test.js` follows the new rules (the looks message's new fields; a change of clothes made of owned pieces).
+- **Not yet:** staff behind the counters dressed in the store's style; a motorcycle shop (the biker branch has the bikes); the golf club's pro shop and the market stalls for preppy and festival.

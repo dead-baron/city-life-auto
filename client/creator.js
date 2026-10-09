@@ -172,7 +172,9 @@ function drawPreview() {
   if (!root) return;
   const cv = root.querySelector('.cc-prev');
   let G = null;
-  try { G = person(art(look), dir, 'idle', fr, { tight: true }); } catch (e) { console.warn('[creator] preview', e); }
+  // (in the barber's chair the hat comes off, so the cut shows)
+  const L = mode === 'barber' && look.outfit.hat ? (() => { const V = clone(look); V.outfit.hat = null; return V; })() : look;
+  try { G = person(art(L), dir, 'idle', fr, { tight: true }); } catch (e) { console.warn('[creator] preview', e); }
   blit(cv, G, 4);
   const pn = root.querySelector('.cc-pname');
   if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : mode === 'wheel' ? ((state.saved || [])[wheelSel] || {}).n || '' : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir];
