@@ -193,7 +193,7 @@ export class SoundEngine {
     }
     const v = this.voice(pos, this.sp.f, this.sp.p, g * gv, send, dur > 0.8);
     out.connect(v.out); v.nodes = s.nodes; v.nodes.push(out);
-    v.x = x; v.y = y; v.vol = vol; v.range = range;
+    v.x = x; v.y = y; v.vol = vol * gv; v.range = range;
     this.slots[i] = v;
     this.pool.end[i] = t0 + dur + 0.05;
     st.played++;
