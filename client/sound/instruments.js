@@ -210,7 +210,7 @@ export const INSTR = {
   bite: { pri: UI, gap: 0.3, play(E, o, t, v) { for (const d of [0, 0.15]) { E.tone(o, t + d, vary(520, 0.04), 0.07, v * 0.18, { type: 'sine', f2: 260 }); E.noise(o, t + d, 0.05, v * 0.12, { ft: 'bandpass', f: 1500, q: 1 }); } return 0.3; } },
 
   // ======== voices and animals ========
-  babble: { pri: MINOR, range: 650, gap: 0.08, play(E, o, t, v, p) {   // a speech bubble: an RPG's text blips, never words
+  babble: { pri: MINOR, range: 650, gap: 0.25, play(E, o, t, v, p) {   // a speech bubble: an RPG's text blips, never words
     const n = 3 + Math.floor(R() * 4), base = p.mood === 'happy' ? rr(330, 420) : rr(200, 330);
     let d = 0;
     for (let k = 0; k < n; k++) { E.tone(o, t + d, base * pick([1, 1.12, 1.26, 0.9, 1.5]), 0.055, v * 0.05, { wave: 'pulse25', lp: 2200 }); d += rr(0.065, 0.1); }
@@ -276,8 +276,8 @@ export const INSTR = {
     for (let k = 0; k < n; k++) { const tt = t + k * rr(0.25, 0.4); E.tone(o, tt, f, 0.11, v * 0.05, { wave: 'reed', f2: f * 0.7, lp: 1500 }); E.noise(o, tt, 0.08, v * 0.06, { ft: 'bandpass', f: 900, q: 1.2 }); }
     return n * 0.4 + 0.1;
   } },
-  farsiren: { pri: AMBIENT, range: 99999, play(E, o, t, v) { const os = E.tone(o, t, 700, 4, v * 0.03, { type: 'triangle', a: 1, lp: 1400 }); os.frequency.linearRampToValueAtTime(1150, t + 1); os.frequency.linearRampToValueAtTime(700, t + 2); os.frequency.linearRampToValueAtTime(1150, t + 3); os.frequency.linearRampToValueAtTime(800, t + 4); return 4.1; } },
-  farhorn: { pri: AMBIENT, range: 99999, play(E, o, t, v) { const d = rr(0.15, 0.35); E.tone(o, t, vary(392, 0.1), d, v * 0.03, { type: 'square', lp: 1000 }); E.tone(o, t, vary(494, 0.1), d, v * 0.025, { type: 'square', lp: 1000 }); return d + 0.05; } },
+  farsiren: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const os = E.tone(o, t, 700, 4, v * 0.03, { type: 'triangle', a: 1, lp: 1400 }); os.frequency.linearRampToValueAtTime(1150, t + 1); os.frequency.linearRampToValueAtTime(700, t + 2); os.frequency.linearRampToValueAtTime(1150, t + 3); os.frequency.linearRampToValueAtTime(800, t + 4); return 4.1; } },
+  farhorn: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const d = rr(0.15, 0.35); E.tone(o, t, vary(392, 0.1), d, v * 0.03, { type: 'square', lp: 1000 }); E.tone(o, t, vary(494, 0.1), d, v * 0.025, { type: 'square', lp: 1000 }); return d + 0.05; } },
   drop: { pri: AMBIENT, range: 400, play(E, o, t, v) { E.tone(o, t, rr(1600, 3400), 0.025, v * 0.03, { type: 'sine', f2: 1000 }); return 0.04; } },
   thunder: { pri: MAJOR, gap: 3, play(E, o, t, v) { E.noise(o, t, 0.25, v * 0.3, { ft: 'highpass', f: 1500 }); E.noise(o, t, 3, v * 0.7, { color: 'brown', ft: 'lowpass', f: 400, f2: 70, a: 0.05 }); E.noise(o, t + 0.3, 2.2, v * 0.5, { color: 'brown', ft: 'lowpass', f: 160, a: 0.4 }); return 3.1; } },
 };

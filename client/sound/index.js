@@ -5,7 +5,8 @@
 import { createMixer } from './mixer.js';
 import { SoundEngine } from './engine.js';
 import { INSTR, LEGACY } from './instruments.js';
-import { EVENT_SOUNDS } from './events.js';
+import { EVENT_SOUNDS, meleeSwing } from './events.js';
+import { WEAPONS } from '../../shared/items.js';
 import { VehicleSounds } from './vehicles.js';
 import { Ambience } from './ambience.js';
 import { Music } from './music.js';
@@ -37,7 +38,8 @@ export function createSound(ctx, prefs, { mobile = false } = {}) {
     // main.js's own sfx(name, vol) calls: their old names, no place (vol already has the distance in it)
     legacy(name, vol) {
       if (quiet || E.isMuted(name)) return;
-      const n = name in LEGACY ? LEGACY[name] : name;
+      let n = name in LEGACY ? LEGACY[name] : name;
+      if (name === 'swing' && S && S.me) n = meleeSwing(WEAPONS[S.me.weapon]);   // (your own swing, the moment you press: by what's in your hand)
       if (n && INSTR[n]) E.play(n, undefined, undefined, vol);
     },
     // a server event: its sound, placed where it happened; main.js's own sfx calls while it handles the event stay

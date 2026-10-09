@@ -30,7 +30,7 @@ export function unitAt(map, x, y) {
 export class Places {
   constructor(E, music) {
     this.E = E; this.music = music;
-    this.map = null; this.clubs = []; this.peds = new Map(); this.nextPeds = 0; this.nextGc = 0;
+    this.map = null; this.clubs = []; this.peds = new Map(); this.rang = new Map(); this.nextPeds = 0; this.nextGc = 0;
     this.here = null;   // the unit you're in
   }
   index(map) {
@@ -74,7 +74,7 @@ export class Places {
     } else M.set('club', 0);
     // ---- the shop doors: a bell over the old shops' doors, the others' sliding doors ----
     if (t >= this.nextPeds) { this.nextPeds = t + 0.1; this.doors(F, S, L); }
-    if (t >= this.nextGc) { this.nextGc = t + 3; for (const [id, st] of this.peds) if (t - st.seen > 3) this.peds.delete(id); }
+    if (t >= this.nextGc) { this.nextGc = t + 3; for (const [id, st] of this.peds) if (t - st.seen > 3) this.peds.delete(id); for (const [k, at2] of this.rang) if (t - at2 > 5) this.rang.delete(k); }
     return !!at;
   }
   doors(F, S, L) {
@@ -92,6 +92,9 @@ export class Places {
       const u = at ? at.u : this.unitByKey(S.map, was);
       if (!u) continue;
       const dx = (u.door.tx + u.door.w / 2) * TILE, dy = (u.door.ty + 0.5) * TILE;
+      const dk = u.door.tx * 4096 + u.door.ty;   // (a door rings again only after a moment: a busy shop doesn't jangle)
+      if (t - (this.rang.get(dk) ?? -9) < 2.5) continue;
+      this.rang.set(dk, t);
       if (BELL_SHOPS.has(u.kind)) this.E.play('doorbell', dx, dy, 0.9, { f: 1500 + 500 * hash(u.poi) });
       else if (u.kind !== 'club' && Math.hypot(dx - L.x, dy - L.y) < 420) this.E.play('slidingdoor', dx, dy, 0.7);
     }

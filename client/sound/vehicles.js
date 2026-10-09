@@ -110,7 +110,7 @@ export class VehicleSounds {
       const dx = v.rx - L.x, dy = v.ry - L.y, d2 = dx * dx + dy * dy;
       let st = this.states.get(v.id);
       if (d2 > EAR && v.id !== mine) { if (st) st.seen = 0; continue; }
-      if (!st) { st = { x: v.rx, y: v.ry, spd: 0, prev: 0, thr: 0, rpm: 0, d: Math.sqrt(d2), dop: 1, on: v.id === mine || engineOn(v), horn: false, bellAt: 0, fastAt: -9, seen: t, voice: null, cls: ENGINE_CLASS[def.id] || 'sedan', def }; this.states.set(v.id, st); }
+      if (!st) { st = { x: v.rx, y: v.ry, spd: 0, prev: 0, thr: 0, rpm: 0, d: Math.sqrt(d2), dop: 1, on: v.id === mine || engineOn(v), horn: false, bellAt: 0, fastAt: -9, seen: t, voice: null, cls: ENGINE_CLASS[def.id] || 'sedan', def, tune: 0.95 + 0.1 * ((Math.imul(v.id, 2654435761) >>> 0) / 4294967296) }; this.states.set(v.id, st); }   // (tune: each one a little its own)
       let mv = Math.hypot(v.rx - st.x, v.ry - st.y);
       if (mv > 300) mv = 0;   // (a teleport)
       st.x = v.rx; st.y = v.ry;
@@ -118,7 +118,7 @@ export class VehicleSounds {
       st.prev = st.spd;
       st.spd += (mv / Math.max(dt, 1e-3) - st.spd) * k;
       const acc = (st.spd - st.prev) / Math.max(dt, 1e-3);
-      const on = v.id === mine || engineOn(v);
+      const on = v.id === mine || engineOn(v) || (!!def.ferry && !(v.flags & (VF.WRECK | VF.DEAD)));   // (the ferries run their timetable with nobody at the wheel)
       if (on && !st.on && Math.sqrt(d2) < 700 && st.cls !== 'pedal' && !P[st.cls].boat && st.spd < 30) E.play('enginestart', v.rx, v.ry, 0.7);
       st.on = on;
       const thrT = !on ? 0 : (v.flags & VF.BRAKE) ? 0.08 : Math.max(0.12, Math.min(1, 0.3 + acc / Math.max(60, def.accel) * 1.4 + (st.spd > 40 ? 0.15 : 0)));
@@ -207,7 +207,7 @@ export class VehicleSounds {
         setp(v.filt.frequency, 9000, t, 0.1);
         setp(v.eng.gain, p.vol, t, 0.1);
       } else if (st.on) {
-        const f = p.f0 + (p.f1 - p.f0) * st.rpm;
+        const f = (p.f0 + (p.f1 - p.f0) * st.rpm) * st.tune;
         setp(v.a.frequency, f, t, tc); setp(v.b.frequency, f / 2, t, tc);
         setp(v.a.detune, cents * 0.5, t, tc); setp(v.b.detune, cents * 0.5, t, tc);
         setp(v.filt.frequency, p.lp0 + (p.lp1 - p.lp0) * (0.35 * st.rpm + 0.65 * st.thr), t, tc);

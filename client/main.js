@@ -1797,6 +1797,7 @@ function menuKey(k) {
     const d = k === 'ArrowLeft' || k === 'KeyA' ? -1 : 1;
     if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + d + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); return true; }
     if (el.type === 'checkbox') { el.checked = d > 0; el.dispatchEvent(new Event('change')); return true; }
+    if (el.type === 'range') { el.value = String(Number(el.value) + d * (Number(el.step) || 5)); el.dispatchEvent(new Event('input')); return true; }   // (the volume sliders)
     return false;
   }
   if (k === 'Enter' || k === 'Space' || k === 'KeyE') {
