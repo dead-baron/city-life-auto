@@ -4336,7 +4336,7 @@ From the user's notes (13:33, tasks #313, #314, #315): ambulances that get there
 - **The ambulance bugs** (`server/systems/ems.js`, new `server/systems/kerbdrive.js`):
   - It drove the last stretch in a straight line from the junction nearest the patient. A wall, a fence or a bench in the way stopped it 160-280 px short, and it had to be within 150 px to start. Inside a bank it never got there at all.
   - On the coast that straight line ran off the beach into the sea: it sank and was gone ("The ambulance didn't make it").
-  - Now it drives to the kerb: the nearest point of a street to the patient, over on their side of the road. For someone in a shop it's the street outside its door. Never a street across the water from them, never a bridge unless they're on one.
+  - Now it drives to the kerb: the nearest point of a street to the patient, over on their side of the road. For someone in a shop it's the street outside its door. Never a street across the water from them or on another island while there's one on theirs (a lodge in Northshore had only the highway bridge within 1,200 px), never a bridge unless they're on one.
   - The route runs along the roads to the nearer end of that street, then along the street to the spot.
   - It pulls up there, or as near as it can get (no nearer for 5 s within 300 px of it; after two new plans from further out, where it is). The paramedics walk the rest.
   - It never drives into the water: when the road ahead (or behind, reversing) is water, it brakes (`waterGuard`).

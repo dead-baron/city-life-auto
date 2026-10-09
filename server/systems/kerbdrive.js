@@ -26,9 +26,9 @@ function wetBetween(m, x0, y0, x1, y1) {
 
 export function kerbFor(world, x, y) {
   const m = world.map;
+  const onBridge = m.tileAtPx(x, y) === T.BRIDGE, zone = m.zoneAt(x, y);
   const wi = walkInAt(m, x, y);
-  if (wi) { const k = doorKerb(world, wi); x = k.x; y = k.y; }
-  const onBridge = m.tileAtPx(x, y) === T.BRIDGE;
+  if (wi) { const k = doorKerb(world, wi); if (m.zoneAt(k.x, k.y) === zone) { x = k.x; y = k.y; } }   // (the street outside its door - on its own island)
   let best = null;
   for (const e of m.edges || []) {
     if (e.lvl !== 0 || (e.bridge && !onBridge)) continue;
@@ -40,7 +40,7 @@ export function kerbFor(world, x, y) {
       const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / (L * L)));
       const px = a.x + dx * t, py = a.y + dy * t, d = Math.hypot(px - x, py - y);
       if (!best || d < best.score) {
-        const score = d + (wetBetween(m, x, y, px, py) ? 900 : 0);   // (across the water from it: only if there's nothing else)
+        const score = d + (wetBetween(m, x, y, px, py) ? 900 : 0) + (m.zoneAt(px, py) !== zone ? 900 : 0);   // (across the water, or on another island: only if there's nothing else)
         if (!best || score < best.score) best = { score, e, x: px, y: py, tx: dx / L, ty: dy / L, s: s0 + L * t, d };
       }
       s0 += L;
