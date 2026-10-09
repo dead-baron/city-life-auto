@@ -978,13 +978,17 @@ function wardrobe(A, D, TF, seed) {
     return skin;
   };
   const stubble = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.62 + skin[i][j] * 0.38)));
+  // (at the game's size a buzz cut must still read as hair - a dark cap - and a fade's or an undercut's shaved sides as
+  // skin under the hair on top: the plain stubble mix read as the same brown for all three)
+  const buzzR = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.84 + skin[i][j] * 0.16))), shavedR = hairR.map((c, i) => c.map((v, j) => Math.round(v * 0.36 + skin[i][j] * 0.64)));
   W.hairM = (Q) => {
     // clumps: darker grooves radiating from the crown, a sheen band
     const az = Math.atan2(Q.l0, Q.l1), ex = A.hair?.style, st = BASE_HAIR[ex] || ex;
-    if (ex === 'sidepart' && Q.part === 'hair' && Math.abs(Q.l0 + 0.36) < 0.045 && Q.l1 > -0.2 && Q.l2 > 0.45) { Q.k -= 0.4; return hairR; }
-    if (st === 'buzz' || st === 'mohawk' && Q.part === 'hair') { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return stubble; }
-    if (st === 'cornrows') { if (Math.round(Q.l0 * 8) & 1) Q.k -= 0.3; return hairR; }
-    if ((st === 'undercut' || st === 'fade') && Q.l2 < 0.45) { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return stubble; }
+    if (ex === 'sidepart' && Q.part === 'hair' && Math.abs(Q.l0 + 0.36) < (Q.res > 1 ? 0.045 : 0.13) && Q.l1 > -0.2 && Q.l2 > 0.45) { if (Q.res > 1) { Q.k -= 0.4; return hairR; } return skin; }   // (the parting: a line of scalp, wide enough to be a whole art pixel)
+    if (st === 'buzz' && Q.part === 'hair') { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return Q.res > 1 ? stubble : buzzR; }
+    if (st === 'mohawk' && Q.part === 'hair') return Q.res > 1 ? stubble : shavedR;
+    if (st === 'cornrows') { if (Math.round(Q.l0 * (Q.res > 1 ? 8 : 4.5)) & 1) Q.k -= 0.34; return hairR; }   // (rows two art pixels wide at the game's size)
+    if ((st === 'undercut' || st === 'fade') && Q.l2 < 0.45) { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return Q.res > 1 ? stubble : shavedR; }
     if (st === 'slick') { Q.gloss = 0.8; if ((Math.round(Q.l0 * 7) & 1) && Q.l2 > 0) Q.k -= 0.15; return hairR; }
     Q.k -= Q.res > 1 ? 0.1 : 0.04;
     if (Q.res > 1) {
@@ -1015,6 +1019,7 @@ function wardrobe(A, D, TF, seed) {
     if (hk === 'hard' && Math.abs(Q.l0) < 0.12 && Q.part === 'crown') Q.k += 0.18;
     if (hk === 'beanie' && Q.part === 'crown') { if (Q.l2 < 0.42) Q.k -= 0.18; if ((Math.round(Math.atan2(Q.l0, Q.l1) * 6) & 1)) Q.k -= 0.08; }
     if ((hk === 'fedora' || hk === 'cowboy' || hk === 'sunhat') && Q.part === 'crown' && Q.l2 < 0.12) return dark(hatR);
+    if ((hk === 'fedora' || hk === 'cowboy') && Q.part === 'crown' && Q.l2 > 0.5 && Math.abs(Q.l0) < 0.15) Q.k -= 0.4;   // (the dent along the top)
     if (hk === 'helmet' && Q.part === 'crown' && Math.abs(Q.l2 - 0.1) < 0.07) Q.k -= 0.25;
     if (hk === 'hard' || hk === 'helmet' || hk === 'police') Q.gloss = 0.7;
     return hatR;
@@ -1213,9 +1218,11 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
   }
   else if (st === 'bun') { E(at([0, -0.3, 1.12]), HD, [3.1, 3.0, 2.7], GR.HAIR, 'bun', W.hairM); E(at([0, -0.3, 0.9]), HD, [2.1, 2.0, 0.9], GR.HAIR, 'tie', () => cloth('#3a2a30')); }
   else if (st === 'pony') {
-    const r0 = at([0, -0.95, 0.48]), m = sw(nk(0, -5.3, 2.6), 0.45), e = sw(nk(0, backY - 0.8, -5.4), 1);
-    E(r0, HD, [1.5, 1.3, 1.4], GR.HAIR, 'tie', () => cloth('#c8302c'));
-    lock(r0, m, 2.2, 2.0, 'tail'); lock(m, e, 2.0, 0.7, 'tail');
+    // tied high at the back of the crown, the tail rising before it falls (CB3-F, CC9): from the game's camera it shows
+    // over the head even from the front
+    const r0 = at([0, -0.72, 0.86]), up = sw(at([0, -1.3, 1.22]), 0.2), m = sw(nk(0, -5.8, 3.6), 0.45), e = sw(nk(0, backY - 0.8, -3.8), 1);
+    E(r0, HD, [1.6, 1.4, 1.5], GR.HAIR, 'tie', () => cloth('#c8302c'));
+    lock(r0, up, 2.5, 2.4, 'tail'); lock(up, m, 2.4, 2.0, 'tail'); lock(m, e, 2.0, 0.8, 'tail');
   }
   else if (st === 'topknot') { E(at([0, -0.05, 1.18]), HD, [2.3, 2.2, 2.3], GR.HAIR, 'bun', W.hairM); E(at([0, -0.05, 1.0]), HD, [1.5, 1.4, 0.7], GR.HAIR, 'tie', () => cloth('#2a2226')); }
   else if (st === 'twinbuns') for (const s of [-1, 1]) E(at([s * 0.62, -0.18, 0.95]), HD, [2.5, 2.4, 2.3], GR.HAIR, 'bun', W.hairM);
@@ -1245,7 +1252,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
   }
   else if (st === 'undercut') { const F = mmul(HD, ry(ex === 'shavedside' ? 0.5 : 0.3)); E(at([0.1, 0.1, 0.74]), F, [hr[0] * 0.86, hr[1] * 0.96, 2.6], GR.HAIR, 'top', W.hairM, (a, b, c) => c > -0.6); }
   else if (st === 'pixie') E(at([0.3, 0.62, 0.62]), mmul(HD, ry(0.5)), [hr[0] * 0.55, 2.4, 1.7], GR.HAIR, 'sweep', W.hairM);
-  else if (st === 'curtains') for (const s of [-1, 1]) E(at([s * 0.42, 0.66, 0.5]), mmul(HD, ry(-s * 0.55)), [hr[0] * 0.42, 2.0, 1.5], GR.HAIR, 'sweep', W.hairM);
+  else if (st === 'curtains') for (const s of [-1, 1]) E(at([s * 0.46, 0.7, 0.38]), mmul(HD, ry(-s * 0.55)), [hr[0] * 0.5, 2.3, 2.3], GR.HAIR, 'sweep', W.hairM);   // (parted in the middle, falling to the brows at the sides)
   else if (st === 'cornrows') for (let i = -2; i <= 2; i++) lock(at([i * 0.22, -0.9, -0.35]), sw(nk(i * 0.9, backY + 1.4, -3.2), 0.6), 0.75, 0.55);
   else if (st === 'shag') for (let i = 0; i < 12; i++) {                // layers: jagged ends round the sides and the back
     const az = 0.9 + (i / 11) * (2 * Math.PI - 1.8) + rnd(i, 6) * 0.2, el = -0.45 + rnd(i, 7) * 0.4;
@@ -1274,6 +1281,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
       }
     } else if (st === 'bob') {
       lock(at([0, -0.5, 0.05]), nk(0, -3.3, 0.2), hr[0] * 0.84, hr[0] * 0.76, 'curtain');
+      for (const s of [-1, 1]) lock(at([s * 0.9, 0.22, 0.25]), at([s * 0.97, 0.36, -0.88]), 2.7, 2.3, 'curtain');   // (framing the face to the jaw, CB3-F)
     } else {
       // long hair: a sheet down the back to the shoulder blades (or the shoulders), wider than the neck
       const top = at([0, -0.62, 0.2]), hem = sw(nk(0, backY - 0.4, ex === 'shoulder' ? -4.2 : -10.2), 1), mid = vlerp(top, hem, 0.5), up = vsub(top, hem);
@@ -1285,7 +1293,8 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
       }
     }
     // in front of the shoulders: locks over the collarbones (CB3-F)
-    if (st !== 'dreads' && st !== 'bob' && (D.fem || ex === 'shoulder')) for (const [k, s] of [['L', -1], ['R', 1]]) lock(at([s * 0.86, 0.2, -0.05]), vadd(S['sh' + k], mv(S.SP, [-s * 1.8, 2.3, st === 'braids' ? -6.5 : ex === 'shoulder' ? 0.5 : -3.8])), st === 'braids' ? 1.3 : 2.0, st === 'braids' ? 1.0 : 1.35);
+    // (fuller and from the temples at the game's size, so long hair frames the face from the front as CB3-F draws it)
+    if (st !== 'dreads' && st !== 'bob' && (D.fem || ex === 'shoulder')) for (const [k, s] of [['L', -1], ['R', 1]]) lock(at([s * 0.88, 0.24, 0.22]), vadd(S['sh' + k], mv(S.SP, [-s * 1.8, 2.3, st === 'braids' ? -6.5 : ex === 'shoulder' ? 0.5 : -3.8])), st === 'braids' ? 1.4 : 2.8, st === 'braids' ? 1.1 : 2.0);
   }
 }
 // ---- lights to carry (#359): a lamp on the forehead - the headlamp on its strap (hat kind 'headband'), or on the
@@ -1316,12 +1325,16 @@ function hatPrims(E, C, A, D, S, W, at, k) {
   } else if (k === 'beanie') {
     E(at([0, -0.15, 0.2]), HD, [hr[0] + 1.15, hr[1] + 1.1, hr[2] * 1.0], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b > 0.2 ? 0.12 : -0.36));
   } else if (k === 'bucket' || k === 'sunhat' || k === 'cowboy' || k === 'fedora') {
-    // (CP1: the crown sits on top of the head and the brim at the hairline, its front turned up, so the high camera still
-    // sees the eyes under it; a cowboy hat's sides curl up, a fedora's crown is pinched)
-    const big = k === 'sunhat' ? 3.3 : k === 'cowboy' ? 3.1 : k === 'fedora' ? 2.1 : 1.8, HDw = mmul(HD, rx(k === 'bucket' ? -0.3 : -0.42));
-    E(at([0, -0.08, k === 'bucket' ? 0.56 : 0.72]), HD, [hr[0] + 0.5, hr[1] + 0.45, hr[2] * (k === 'cowboy' || k === 'fedora' ? 0.98 : 0.78)], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.1 && !(k !== 'bucket' && k !== 'sunhat' && c > 0.82 && Math.abs(a) < 0.28));
-    E(vadd(S.head, mv(HDw, [0, -0.5, hr[2] * 0.52])), HDw, [hr[0] + big, hr[1] + big * 0.9, 0.6], GR.HAT, 'brim', W.brim);
-    if (k === 'cowboy') for (const s of [-1, 1]) E(vadd(S.head, mv(HDw, [s * (hr[0] + big - 0.8), -0.5, hr[2] * 0.72])), HDw, [1.1, hr[1] + 1.2, 1.2], GR.HAT, 'brim', W.brim);
+    // (CP1: the crown sits on top of the head and the brim at the hairline, its front turned up a little, so the high camera
+    // still sees the eyes under it; a cowboy hat's sides curl up. At the game's size the brim has to read as a ring round
+    // the crown - so it's thick and only a little tilted - and the dent along a cowboy hat's or a fedora's top is a darker
+    // crease (W.hat), not a cut: cut, it read as two ears)
+    const big = k === 'sunhat' ? 3.9 : k === 'cowboy' ? 3.9 : k === 'fedora' ? 2.6 : 1.8, HDw = mmul(HD, rx(k === 'bucket' ? -0.3 : -0.3)), tall = k === 'cowboy' || k === 'fedora';
+    // the crown: narrower than the head and set high for a cowboy hat or a fedora (the brim stands out round it), a dome for
+    // a bucket or a sun hat
+    E(at([0, -0.1, k === 'bucket' ? 0.56 : tall ? 0.86 : 0.68]), HD, tall ? [hr[0] * 0.84, hr[1] * 0.8, hr[2] * 0.72] : [hr[0] + 0.5, hr[1] + 0.45, hr[2] * 0.78], GR.HAT, 'crown', W.hat, (a, b, c) => c > (tall ? -0.6 : -0.1));
+    E(vadd(S.head, mv(HDw, [0, -0.4, hr[2] * 0.5])), HDw, [hr[0] + big, hr[1] + big * 0.85, 1.05], GR.HAT, 'brim', W.brim);
+    if (k === 'cowboy') for (const s of [-1, 1]) E(vadd(S.head, mv(HDw, [s * (hr[0] + big - 1.0), -0.4, hr[2] * 0.66])), HDw, [1.3, hr[1] + 1.8, 1.3], GR.HAT, 'brim', W.brim);
   } else if (k === 'helmet') {
     E(at([0, -0.2, 0.15]), HD, [hr[0] + 1.9, hr[1] + 2.0, hr[2] + 1.0], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b > 0.4 ? -0.08 : -0.42));
     if (!A.hat.plain) E(at([0, 1.0, 0.16]), HD, [hr[0] * 0.78, 1.3, 1.6], GR.HAT, 'goggles', W.glass);
