@@ -837,3 +837,9 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #death.reveal #d-timer, #death.reveal #d-help, #death.reveal #d-spawn { opacity: 1; transform: none; pointer-events: auto; }
 #trainbar.custody.brk { border-color: #ffd36b; color: #ffd36b; animation: brk-pulse 1.2s ease-in-out infinite; }
 @keyframes brk-pulse { 50% { box-shadow: 0 0 14px rgba(255,211,107,.55); } }
+
+/* sound (client/sound/ui.js): the Sound section of the Settings screen - two switches and four volume sliders */
+.soundbox .snd-h { padding: 14px 16px 4px; font: 700 14px var(--pixel, monospace); letter-spacing: 2px; color: var(--rim, #e2bd57); }
+.soundbox .snd-vol input[type=range] { width: min(46vw, 200px); height: 22px; margin-left: auto; accent-color: var(--accent); }
+.soundbox .snd-vol input[type=range]:disabled { opacity: .4; }
+.soundbox .snd-vol b { min-width: 2.4em; text-align: right; font-weight: 600; opacity: .85; }

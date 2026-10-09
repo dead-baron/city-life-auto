@@ -1,0 +1,144 @@
+// What every server event sounds like (the server's world.emit / broadcast { e: '<kind>', ... }; main.js onEvent
+// hands each to soundEvent first). A kind maps to a function (ev, A) that plays its sound through A:
+//   A.at(name, x, y, vol, p)  a sound placed in the world (instruments.js name; p: its parameters)
+//   A.ui(name, vol, p)        a sound with no place (yours, the menus)
+//   A.S                       the client state (the map, the entities, me)
+//   A.surf(x, y)              what's on the ground there (surface.js)
+//   A.mute(name, s)           silence main.js's old sfx(name) calls for s seconds (ones it makes later on a timer)
+// or to null: the kind is data the client keeps (who's on which team, the station clocks), and nothing is heard.
+// test/sound.test.js checks every kind the server emits is here - a new kind needs its sound.
+import { WEAPON_BY_INDEX } from '../../shared/items.js';
+import { VF, K } from '../../shared/constants.js';
+
+const GUN = {
+  pistol: 'gun_pistol', service: 'gun_pistol', revolver: 'gun_revolver', spistol: 'gun_silenced',
+  shotgun: 'gun_shotgun', pshotgun: 'gun_shotgun', rifle: 'gun_rifle', prifle: 'gun_rifle', passault: 'gun_rifle',
+  varmint: 'gun_rifle', smg: 'gun_smg', psniper: 'gun_sniper', huntrifle: 'gun_sniper', rocket: 'gun_rocket',
+};
+export const gunSound = (w) => (w && GUN[w.id]) || (w && w.silenced ? 'gun_silenced' : 'gun_pistol');
+const HEAVY = new Set(['bat', 'crowbar', 'sledge']), BLADE = new Set(['knife', 'huntknife', 'sword', 'katana']);
+export function meleeHit(w) {
+  if (!w || w.id === 'fists') return 'punch';
+  if (w.id === 'baton') return 'baton';
+  if (w.plasma) return 'sear';
+  if (BLADE.has(w.id)) return 'cut';
+  return HEAVY.has(w.id) ? 'bonk' : 'punch';
+}
+export function meleeSwing(w) {
+  if (!w || w.id === 'fists') return 'whoosh';
+  if (w.plasma) return 'hum';
+  if (BLADE.has(w.id)) return 'whoosh_blade';
+  return HEAVY.has(w.id) ? 'whoosh_heavy' : 'whoosh';
+}
+// a smashed prop, by what it's made of
+export function propSound(t) {
+  t = t || '';
+  if (t === 'hydrant') return ['clang', 'gush'];
+  if (t.startsWith('vend') || t === 'atm' || t.includes('glass') || t.includes('booth') || t.includes('shelter') || t.includes('window')) return ['glass', 'clang'];
+  if (t.startsWith('tree') || t.startsWith('palm')) return ['woodcrunch', 'foliage'];
+  if (t.startsWith('shrub') || t.startsWith('bush') || t.startsWith('flower') || t.startsWith('planter') || t === 'potted' || t.startsWith('hedge')) return ['foliage'];
+  if (t === 'cone' || t === 'barrier' || t === 'tires' || t === 'spool') return ['thud'];
+  if (t.includes('bench') || t.includes('fence') || t.includes('crate') || t.includes('pallet') || t.includes('table') || t.includes('chair') || t.includes('kiosk') || t.includes('stall')) return ['woodcrunch'];
+  if (t.includes('trash') || t.includes('bin') || t.includes('news') || t.includes('paper')) return ['clang', 'paper'];
+  if (t.includes('lamp') || t.includes('light') || t.includes('sign') || t.includes('pole') || t.includes('meter') || t.includes('mail') || t === 'drum' || t.includes('rail')) return ['clang'];
+  if (t.startsWith('umbrella')) return ['thud', 'foliage'];
+  return ['bonk'];
+}
+const near = (S, x, y, kind, r) => { for (const e of S.ents.values()) if (e.kind === kind && Math.abs(e.rx - x) < r && Math.abs(e.ry - y) < r) return e; return null; };
+const at = (name, vol = 1) => (ev, A) => A.at(name, ev.x, ev.y, vol);
+const speech = (mood) => (ev, A) => A.at('babble', ev.x, ev.y, 0.8, { mood });
+
+export const EVENT_SOUNDS = {
+  // ---- guns, blades, fists ----
+  shot: (ev, A) => {
+    const w = WEAPON_BY_INDEX[ev.w], me = A.S.ents.get(A.S.myPedId);
+    A.at(gunSound(w), ev.x1, ev.y1, 1, { mine: !!(me && Math.abs(me.rx - ev.x1) < 40 && Math.abs(me.ry - ev.y1) < 40) });
+    A.at('impact', ev.x2, ev.y2, 0.5, { s: A.surf(ev.x2, ev.y2) });   // (where it struck: by what's there)
+  },
+  taser: (ev, A) => A.at('taser', ev.x1, ev.y1),
+  spray: at('spray'),
+  loose: at('twang'),
+  arrowhit: at('thwack'),
+  arrowstick: (ev, A) => A.at(ev.wall ? 'impact_wood' : 'thwack', ev.x, ev.y, 0.7),
+  swing: (ev, A) => {
+    const a = A.S.ents.get(ev.id);
+    if (a && a.localSwing && A.S.loopClock - a.localSwing < 0.6) return;   // (your own swing played the moment you pressed)
+    A.at(meleeSwing(a ? WEAPON_BY_INDEX[a.extra] : null), ev.x, ev.y, 0.9);
+  },
+  hit: (ev, A) => A.at(meleeHit(WEAPON_BY_INDEX[ev.w]), ev.x, ev.y),
+  blood: (ev, A) => A.at(ev.g ? 'impact_flesh' : 'hit', ev.x, ev.y, 0.8),
+  finisher: (ev, A) => A.at(ev.k === 'stab' ? 'stab' : 'slash', ev.x, ev.y, 1.2),
+  sizzle: at('sear'),
+  deflect: at('zing'),
+  spark: (ev, A) => A.at('ricochet', ev.x, ev.y, 0.6),
+  knockdown: at('knockdown', 1.1),
+  react: null,                                   // (the stagger: the 'hit' or 'blood' with it is heard)
+  fling: at('whoosh_heavy', 0.7),
+  death: at('bodyfall'),
+  drip: (ev, A) => A.at('drip', ev.x, ev.y, 0.35),
+  foot: null,                                    // (bloody prints: the footsteps themselves come from the frame)
+  maul: (ev, A) => { A.at('growl', ev.x, ev.y, 0.7); A.at('bonk', ev.x, ev.y, 0.9); },
+  roar: (ev, A) => A.at(ev.k === 'cougar' || ev.k === 'bobcat' ? 'screech' : ev.k === 'goose' ? 'honk' : ev.k === 'moose' || ev.k === 'elk' || ev.k === 'deer' ? 'bellow' : 'growl', ev.x, ev.y),
+  flush: at('flutter'),
+  // ---- vehicles, explosions, fire, things breaking ----
+  crash: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: ev.p || 0.5 }); if ((ev.p || 0) > 0.45) A.at('glass', ev.x, ev.y, 0.5 + 0.5 * ev.p); },
+  explode: (ev, A) => A.at('explosion', ev.x, ev.y, 1, { r: ev.r || 100 }),
+  sinkboom: (ev, A) => { A.at('explosion', ev.x, ev.y, 0.5, { r: 60, wet: 1 }); A.at('splash', ev.x, ev.y, 1, { n: 40 }); },
+  pop: at('tyrepop'),
+  spikes: at('spikes'),
+  spikesgone: null,                              // (the strip picked up: the deploy was heard)
+  barrier: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: 1 }); A.at('rubble', ev.x, ev.y); },
+  barrierfix: null,                              // (repaired off-screen, by the road crews)
+  gatebreak: (ev, A) => { A.at('crash', ev.x, ev.y, 0.7, { p: 0.6 }); A.at('woodcrunch', ev.x, ev.y, 0.8); },
+  propbreak: (ev, A) => { const p = A.S.map && A.S.map.props[ev.i]; if (p) for (const n of propSound(p.t)) A.at(n, p.x, p.y); },
+  propfix: null,                                 // (put back by the crews)
+  fire: (ev, A) => { const p = A.S.map && A.S.map.props[ev.i]; if (p) A.at(ev.lit ? 'ignite' : 'douse', p.x, p.y); },
+  geyser: (ev, A) => A.at('gush', ev.x, ev.y),
+  trainhorn: (ev, A) => A.at(ev.s === 2 ? 'trainhorn' : 'trainhornshort', ev.x, ev.y),
+  xing: (ev, A) => { const c = A.S.map && A.S.map.rail && A.S.map.rail.crossings && A.S.map.rail.crossings[ev.i]; if (c) A.at('gatearm', c.x, c.y, 0.6); },
+  tt: null,                                      // (the station clocks' timetable)
+  // ---- doors and gates ----
+  door: (ev, A) => A.at(near(A.S, ev.x, ev.y, K.VEH, 70) ? 'cardoor' : 'housedoor', ev.x, ev.y),
+  garagedoor: (ev, A) => { const h = A.S.map && A.S.map.homes && A.S.map.homes[ev.home]; const d = h && (h.garageDoor || h.garage); if (d) A.at('rollerdoor', d.x, d.y); },
+  baydoor: (ev, A) => { const b = A.S.map && A.S.map.bays && A.S.map.bays[ev.i]; if (b) A.at('rollerdoor', (b.tx + b.tw / 2) * 32, (b.ty + b.th / 2) * 32); },
+  gate: (ev, A) => { const g = A.S.map && A.S.map.gates && A.S.map.gates[ev.i]; if (g) A.at(g.club ? 'rollerdoor' : 'gate', g.x, g.y, 0.8); },
+  // ---- people ----
+  say: speech('talk'),
+  thanks: speech('happy'),
+  scream: (ev, A) => A.at('scream', ev.x, ev.y),
+  yelp: (ev, A) => A.at('yelp', ev.x, ev.y),
+  thud: at('thud'),
+  kick: at('kick', 0.8),
+  poof: (ev, A) => { if (ev.k === 'plasma') { A.at('hum', ev.x, ev.y, 1.4); A.at('zing', ev.x, ev.y); } else A.at('poof', ev.x, ev.y, 0.6); },
+  fade: (ev, A) => { if (ev.x !== undefined) A.at('poof', ev.x, ev.y, 0.5); },
+  heal: at('heal', 0.7),
+  revive: at('revive'),
+  splash: (ev, A) => A.at('splash', ev.x, ev.y, 1, { n: ev.n || 10 }),
+  // ---- money and things ----
+  cash: at('cashtoss'),
+  loot: at('pickup'),
+  deposit: at('deposit'),
+  forage: (ev, A) => { if (ev.up) return; const f = A.S.map && A.S.map.forage && A.S.map.forage[ev.i]; if (f) A.at('pluck', f.x, f.y); },
+  alarm: (ev, A) => A.at('alarmbell', ev.x, ev.y),
+  camera: (ev, A) => { const c = A.S.map && A.S.map.cameras && A.S.map.cameras[ev.id]; if (c) A.at('camera', c.x, c.y); },
+  pflash: (ev, A) => A.at('shutter', ev.x, ev.y, 0.6),
+  toast: (ev, A) => A.ui(ev.tone === 'bad' ? 'bad' : ev.tone === 'good' ? 'good' : ev.tone === 'warn' ? 'alert' : 'notify', ev.tone === 'info' ? 0.5 : 0.8),
+  // ---- fishing, games, rides, the town ----
+  cast: at('cast'),
+  bite: at('bite'),
+  catch: (ev, A) => { A.at('splash', ev.x, ev.y, 0.8, { n: 12 }); A.ui('good', 0.7); },
+  golfhit: (ev, A) => A.at(ev.k ? 'golfhit' : 'putt', ev.x, ev.y),
+  golfcup: at('golfcup'),
+  golfsplash: (ev, A) => A.at('splash', ev.x, ev.y, 0.7, { n: 6 }),
+  hoop: (ev, A) => A.at(ev.in ? (ev.sw ? 'swish' : 'hoopin') : 'clank', ev.x, ev.y),
+  goal: (ev, A) => A.ui('goal'),
+  teams: null,                                   // (who's on which team at a venue)
+  raceGo: (ev, A) => A.ui('racego'),
+  checkpoint: (ev, A) => A.ui('checkpoint', 0.8),
+  ride: (ev, A) => { if (ev.k === 'balloon') A.ui('burner', 0.6); else A.ui('ridebell', 0.6); },
+  rideend: null,                                 // (the ride's over: its cab just stops)
+  bells: (ev, A) => { A.mute('churchbell', (ev.n || 3) * 1.2 + 1); A.at('churchbells', ev.x, ev.y, 1, { n: ev.n || 3 }); },
+};
+
+// For the frame: true for a vehicle whose engine is running (someone at the wheel, not wrecked or dead)
+export const engineOn = (v) => !!(v.flags & VF.DRIVER) && !(v.flags & (VF.WRECK | VF.DEAD));
