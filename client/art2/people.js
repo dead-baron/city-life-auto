@@ -697,7 +697,7 @@ function wardrobe(A, D, TF, seed) {
   // trim colour; null where the base colour shows
   const patFn = (spec) => {
     const p = spec && spec.pattern;
-    if (!p || p === 'ripped' || p === 'quilt' || (p === 'camo' && !spec.trim)) return null;
+    if (!p || !spec.trim || p === 'ripped' || p === 'quilt') return null;   // (the look system's always have a trim; the NPCs' old camo and florals keep their own)
     const a = cloth(spec.color || 'grey'), b = cloth(spec.trim || spec.color2 || 'white'), m = cloth(mixHex(spec.color || '#888888', spec.trim || '#ffffff', 0.5));
     if (p === 'stripes') return (Q) => ((Math.floor((Q.Z + 64) / 1.6) & 1) ? b : null);
     if (p === 'check') return (Q) => { const i = Math.floor((Q.X + Q.Y + 128) / 2.1), j = Math.floor((Q.Z + 64) / 2.1); if ((i & 1) && (j & 1)) return b; if ((i + j) & 1) return m; return null; };

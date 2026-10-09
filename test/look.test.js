@@ -188,6 +188,9 @@ test('server: setting a look - checked, applied to the ped, seen again by everyo
   assert.equal(a.prof.look, want, 'blocked while wanted');
   a.p.wanted = 0;
   looks.handle(w, a.p, { t: 'look', a: 'set', c: other });
+  assert.equal(a.prof.look, want, 'one change a second (each goes out to everyone near)');
+  run(w, 1.1);
+  looks.handle(w, a.p, { t: 'look', a: 'set', c: other });
   assert.equal(a.prof.look, other);
   // the old-style appearance the police describe follows the look
   assert.equal(a.p.ped.app.tc, LK.lookToApp(LK.decodeLook(other)).tc);

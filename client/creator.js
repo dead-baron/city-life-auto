@@ -45,8 +45,15 @@ export function init(hooks) {
     if (!b || !root.contains(b)) return;
     act(b.dataset.act, b.dataset.v, b);
   });
-  root.addEventListener('input', (e) => { if (e.target.dataset.act === 'height') { setL((L) => { L.body.height = Number(e.target.value); }, false); } });
-  root.addEventListener('change', (e) => { if (e.target.dataset.act === 'height') commitHeight(); });
+  // the height slider: the preview follows the drag (the page isn't rebuilt under the finger); one undo step a drag
+  root.addEventListener('input', (e) => {
+    if (e.target.dataset.act !== 'height') return;
+    if (heightFrom === null) heightFrom = code();
+    const L = clone(look); L.body.height = Number(e.target.value); look = LK.validLook(L) || look;
+    drawPreview();
+    const lab = e.target.closest('.cc-row')?.querySelector('.cc-lab b'); if (lab) lab.textContent = LK.HEIGHT_NAMES[look.body.height];
+  });
+  root.addEventListener('change', (e) => { if (e.target.dataset.act === 'height') { commitHeight(); renderPage(); } });
   root.addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT' && e.target.type === 'text' && e.key === 'Enter') { e.preventDefault(); act(e.target.dataset.enter || 'sv-save'); } });
 }
 

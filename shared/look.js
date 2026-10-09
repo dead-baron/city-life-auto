@@ -456,7 +456,7 @@ export function lookToApp(L, code = null) {
   const set = P('set'), top = P('top'), jk = P('jacket'), hat = P('hat'), bag = P('bag'), gl = P('glasses');
   const hs = HAIR_STYLES[L.hair.style] ? HAIR_STYLES[L.hair.style][2] : 'short';
   const h = fem ? (['long', 'wavy', 'curlylong', 'braids', 'dreads', 'halfup'].includes(hs) ? 2 : ['bun', 'topknot', 'twinbuns', 'pony', 'pigtails', 'braid'].includes(hs) ? 5 : 2)
-    : hs === 'bald' ? 3 : hs === 'slick' || hs === 'mohawk' ? 4 : ['long', 'wavy', 'curlylong', 'dreads'].includes(hs) ? 2 : ['spiky', 'curly', 'afro', 'dreads'].includes(hs) ? 1 : 0;
+    : hs === 'bald' ? 3 : hs === 'slick' || hs === 'mohawk' ? 4 : ['spiky', 'curly', 'afro', 'dreads', 'long', 'wavy', 'curlylong'].includes(hs) ? 1 : 0;   // (2 and 5 read as a woman's)
   let t = 0;
   const tk = (set || top || {}).d?.k;
   if (set && set.d.k === 'suit') t = 1;
@@ -508,10 +508,10 @@ export function lookArt(L, opt = {}) {
   const pat = (o) => PATTERNS[o.p] && o.p ? PATTERNS[o.p] : undefined;
   if (set) {
     A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0 };
-    A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined };
+    A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined };
   } else {
     A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0 } : { kind: fem ? 'tank' : 'none', color: '#e8e4dc' };
-    A.bottom = bot ? { kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
+    A.bottom = bot ? { kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), trim: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;

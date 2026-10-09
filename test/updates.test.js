@@ -11,6 +11,7 @@ import { makeWorld, run, store, players, fakeConn } from './helpers.js';
 import { K } from '../shared/constants.js';
 import { createSession } from '../server/session.js';
 import { readBuild, watchBuild } from '../server/build.js';
+import { encodeLook, lookFromOutfit } from '../shared/look.js';
 
 let n = 0;
 // log in with a profile set up beforehand (before(prof) runs before the join: e.g. owning a home)
@@ -78,7 +79,7 @@ test('CLA_FRESH_ON_UPDATE=all wipes progress (homes go back on the market); =off
   assert.deepEqual(prof.weapons, { fists: 0 }); assert.equal(prof.inventory.flashlight, undefined); assert.equal(prof.inventory.medkit, undefined);
   assert.deepEqual(prof.vehicles, []); assert.deepEqual(prof.homes, []); assert.equal(prof.spawnHome, null); assert.equal(prof.stash, undefined);
   assert.ok(!w.homeOwner.has(h.id), 'their home is for sale again');
-  assert.equal(prof.name, 'Wiped', 'name kept'); assert.deepEqual(prof.outfit, outfit, 'look kept'); assert.equal(prof.pid, p.pid);
+  assert.equal(prof.name, 'Wiped', 'name kept'); assert.equal(prof.look, encodeLook(lookFromOutfit(outfit)), 'look kept (the old outfit, now a look)'); assert.equal(prof.lookPicked, true); assert.equal(prof.pid, p.pid);
   assert.equal(prof.build, 'b2');
   // off: carry on where you left off, with everything
   const w2 = makeWorld({ build: 'b2', freshOnUpdate: 'off' });

@@ -83,10 +83,10 @@ export function join(world, conn, profile, opts = {}) {
     return p;
   }
   homes.checkWorld(world, profile); // saved in an older world: homes bought back, wake at a hospital
+  looks.ensureLook(profile); // (an old random outfit becomes a look - before a wipe, which keeps it; a new player wears a starter until they pick)
   const fresh = freshStart(world, profile);
   if (fresh === 'all') wipeProgress(world, profile);
   if (world.build) profile.build = world.build; // the build this character's state now belongs to (saved with the profile)
-  looks.ensureLook(profile); // (an old random outfit becomes a look; a new player wears a starter until they pick)
   p = {
     pid: profile.pid, profile, conn, name: profile.name,
     ped: null, inputQ: [], lastInput: { seq: 0, bits: 0, mx: 0, my: 0, aim: 0 }, ack: 0, prevBits: 0,

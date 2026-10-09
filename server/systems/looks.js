@@ -73,6 +73,8 @@ export function handle(world, p, msg) {
     if (code === prof.look) { if (prof.lookPicked === false) { prof.lookPicked = true; store.touch(); } return stateMsg(p); }
     const why = changeBlocked(world, p);
     if (why) { world.notify(p, why, 'warn'); return stateMsg(p); }
+    if (p.lookSetAt !== undefined && world.time - p.lookSetAt < 1) return stateMsg(p);   // (one change a second: each one goes out to everyone near)
+    p.lookSetAt = world.time;
     wear(world, p, code);
     if (atHome(world, p)) applyDisguise(world, p);
     return stateMsg(p);
