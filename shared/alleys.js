@@ -128,8 +128,9 @@ function buildBacks(m, X) {
     let n = 0;
     for (let tx = b.tx; tx < b.tx + b.tw; tx++) if (isAlley(tx, ty)) n++;
     if (n < b.tw * 0.6) return;
-    const x0 = b.tx * TILE, x1 = (b.tx + b.tw) * TILE, y = ty * TILE, w = x1 - x0;
-    const g = gritOf(distAt((x0 + x1) / 2, y - 16)), h = (s) => hash2(b.tx, b.ty, 7100 + s);
+    const x0 = b.tx * TILE, x1 = (b.tx + b.tw) * TILE, y = ty * TILE, w = x1 - x0, D = distAt((x0 + x1) / 2, y - 16);
+    if (!D || D.style === 'houses' || D.style === 'luxury') return;   // (homes under pitched roofs: no back doors drawn there)
+    const g = gritOf(D), h = (s) => hash2(b.tx, b.ty, 7100 + s);
     // the back door: somewhere along the wall, clear of its ends, on alley asphalt and off any POI
     let door = null;
     if (w >= 96 && h(1) < 0.85) {

@@ -1062,7 +1062,7 @@ function alleyWall(spec, bk, x0, w, lights) {
   if (bk.fire && (spec.floors || 1) >= 3 && w >= 140 && !spec.fireEscape && !spec.balconies) spec.fireEscape = [door !== null && door < w / 2 ? w - 66 : 12, 50];
 }
 // what stands and lies along the alleys (all of it decoration: nothing solid, nothing in map.props); the steam from
-// the vents rises in the weather layer (client/render/weather.js alleyVents)
+// the vents rises in the weather layer (client/render/weather.js, shared/alleys.js alleyVentsIn)
 const ALLEY_BINS = ['#3a6a3a', '#2f4a7a', '#4a4e56', '#2a2c30', '#6a4a2a', '#3a6a3a'];
 function addAlleys(c, I) {
   const D = alleyDressing(c.M);
