@@ -98,6 +98,7 @@ function weapon(P, w, hx, hy, ang) {
       break;
     }
     case 28: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 4, '#9aa0aa', 2); P.p(hx, hy, '#2a2c32'); L(13, '#3c86ff', 2); P.line(hx + Math.cos(ang), hy + Math.sin(ang), ang, 11, '#d8ecff'); break;   // plasma blade (steel hilt, a blue blade with a white-hot core)
+    case 31: L(8, '#24242a', 2); P.line(hx + Math.cos(ang) * 6, hy + Math.sin(ang) * 6, ang, 2, '#9aa0aa', 3); P.p(hx + Math.cos(ang) * 8, hy + Math.sin(ang) * 8, '#fff2c0'); break;   // the heavy flashlight (lights to carry #359)
     default: break;
   }
 }
