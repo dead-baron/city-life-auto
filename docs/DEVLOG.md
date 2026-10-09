@@ -4588,3 +4588,36 @@ From the owner's note at 05:01: "when you get tackled or pinned by an officer yo
   - punching the officer after breaking free adds heat;
   - the HUD state and the descriptor reach the client;
   - NPC crooks' dice roll.
+
+## 2026-10-09 · Characters, second pass: proportions, hair silhouettes and clothes closer to C2, CB3 and the style sheets
+From the owner's note at 05:01, after trying the creator: "the face and hair aren't very good looking and it all seems unfinished and unpolished. It would be great to spend more time getting the characters to look better closer to the concepts." The first pass did the faces close up. This one starts at the game's scale, which is what everyone sees all the time, then the creator. Compared side by side with C1, C2, CB3, CP1, CP4 and the SF/SM sheets, on a line-up of 24: the twelve starting looks, eight NPC personalities and four styles.
+- **Proportions** (C1, C2; `client/art2/people.js` dims):
+  - About 3.7 heads, hair included. The first pass drew 2.6: the head was a third of the figure.
+  - The head is a quarter smaller. The torso, legs and arms are longer, so an adult is as tall as before (38-42 px) and the hands hang at mid-thigh.
+  - Shoulders, waist and hips by base: a man's taper from the shoulders, a woman's narrower waist and wider hips. The builds and the stoop with age stay.
+- **Hair silhouettes** (CB3; `hairPrims`): each style its own outline from the front, behind and above (the camera mostly sees the top and back of a head):
+  - spiky: a dozen long spikes standing out of the outline;
+  - curly crop, afro and big curls: a bumpy mass of curls, not a smooth dome;
+  - the mohawk: a crest of spikes from the forehead to the nape, over shaved sides;
+  - the fade: short sides under a block of curls on top;
+  - long hair: a sheet down the back to the shoulder blades, wider than the neck, and locks in front of the shoulders. Waves and curls break its edges and hem;
+  - dreadlocks, braids and box braids: strands hanging all round the back, the braids with gold cuffs. A single braid is beads down the back. Cornrows end in short braids at the nape;
+  - the ponytail, pigtails, braids and long hair swing with the stride: side to side, lifted back on a run;
+  - the high bun, top knot, man bun and space buns sit on top, with a tie;
+  - the shag has jagged layers; the pixie, curtains, undercut and shaved side each have their own sweep.
+- **The face at the game's scale** (`face`): drawn on the art grid, each feature one whole art pixel: an eye (tinted by its colour), the mouth a row below, glasses a bar across. One-pixel stamps were merged by the bake: the eyes, brows and lashes into a dark smear, the mouth into the cheek.
+- **Clothes** (SF/SM, CP1, CP4):
+  - **Patterns** on the art grid: stripes, checks, flowers, camo and tie-dye are whole pixels after the bake (they were a blur), and so are the flannel's check and the Hawaiian flowers. Close up they still follow the body.
+  - **Folds:** a crease behind the knee and a lit fold over it, the hip crease, the stack at the ankle; the fold under the arm, the shirt bunched over the belt, the elbow's crease.
+  - **Layers:** a jacket, blazer, leather jacket or coat worn open has a collar standing round the neck.
+  - **Hems:** a skirt's or a dress's hem swings with the stride and flares as the legs part.
+  - **Shoes** a size bigger, so trainers, boots and heels read.
+  - **Hats** (CP1): the crown sits on top of the head and a brim's front turns up. The high camera now sees the eyes under a cowboy hat, a fedora, a sun hat or a bucket hat; they were hidden.
+- **The look at the game's scale** (`render`):
+  - The dither is on the art grid (it was a blur after the bake).
+  - A line between overlapping parts is a step darker, as SPEC asks, not the outline's near-black: each one is a whole art pixel after the bake, and every overlap made the figure busy.
+  - The light catches the top of the hair.
+- **The creator** (`client/creator.js`): a face feature's thumbnail is cast at 5 over a smaller box, so the smaller face still fills it.
+- **Cost:** a figure costs about the same to make (before and after side by side in one process: within 5%). The renderer's code went from 359 to 362 KB, inside its 363 KB budget.
+- **Tests:** `test/peoplelook.test.js`'s size check now allows for the game figure's 1 px outline (10 px at 4, was 8). Everything else passes as before: every hairstyle, face option and piece draws, the time per look, no two hairstyles alike.
+- **Not yet:** police uniforms by rank and the K9 handler from catalogue pieces (cops keep their old outfits); a texture per fabric (denim, knit, leather).
