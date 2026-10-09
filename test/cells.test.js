@@ -7,7 +7,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { STAR_HEAT, PED_RADIUS } from '../shared/constants.js';
-import { JAIL_S, BAIL_PER_STAR, HOLD_S, GHOST_SECONDS, CELL_WALK_S, CELL_CAP } from '../shared/rules.js';
+import { JAIL_S, BAIL_PER_STAR, HOLD_S, GHOST_SECONDS, CELL_WALK_S, CELL_CAP, CELL_SHARE, CELL_REGULARS, INMATE_S } from '../shared/rules.js';
+import { mulberry32 } from '../shared/rng.js';
+import { K } from '../shared/constants.js';
 import { cellBlockAt, inCellRect } from '../shared/cells.js';
 import { pedStep } from '../shared/physics.js';
 import * as players from '../server/systems/players.js';
@@ -33,6 +35,7 @@ function jailed(w, stars = 1, cash = 0) {
   return { p, prof, conn };
 }
 const push = (p, mx, my, bits = 0) => p.inputQ.push({ seq: p.ack + 1 + p.inputQ.length, bits, mx, my, aim: Math.atan2(my, mx) });
+function until(w, cond, seconds) { for (let i = 0; i < seconds * 20; i++) { w.step(); if (cond()) return true; } return false; }
 function walkFor(w, p, mx, my, seconds) { for (let i = 0; i < seconds * 20; i++) { push(p, mx, my); w.step(); } }
 
 test('every police station has a cell block: two to four barred cells, a corridor; bars you can\'t walk or shoot through but can see through', () => {
@@ -160,7 +163,8 @@ test('cellmates share a cell and can\'t hurt each other; weapons are put away in
   const k = cells.blocks(w)[first.custody.cell.b];
   const list = [first];
   for (let i = 0; i < k.cells.length; i++) list.push(jailed(w).p);
-  // the fewest first: every cell has one before any has two, then they share
+  // players spread over the cells (one in each before any has two - an NPC doing time may be in with them: task #380),
+  // then they share
   const per = new Map();
   for (const q of list) { assert.equal(q.custody.cell.b, first.custody.cell.b, 'the same station'); per.set(q.custody.cell.c, (per.get(q.custody.cell.c) || 0) + 1); }
   assert.equal(per.size, k.cells.length, 'spread over the cells');
@@ -190,6 +194,113 @@ test('cellmates share a cell and can\'t hurt each other; weapons are put away in
   teleport(w, visitor.ped, k.gap.x, k.gap.lobbyY + 30);
   run(w, 0.3);
   assert.equal(visitor.ped.weapon, 'pistol', 'back in hand out in the lobby');
+});
+
+// ---- several to a cell, each on a spot of their own (task #380) --------------------------------------------------------
+// everyone standing, sitting or holding the bars in cell c of block b
+const inCell = (w, b, c) => w.query((cells.blocks(w)[b].x0 + cells.blocks(w)[b].x1) / 2, (cells.blocks(w)[b].y0 + cells.blocks(w)[b].y1) / 2, 600, K.PED)
+  .filter((e) => !e.dead && !e.removed && !e.vehId && inCellRect(cells.blocks(w)[b].cells[c], e.x, e.y, 3));
+function apart(people) {
+  let min = Infinity;
+  for (let i = 0; i < people.length; i++) for (let j = i + 1; j < people.length; j++) min = Math.min(min, Math.hypot(people[i].x - people[j].x, people[i].y - people[j].y));
+  return min;
+}
+
+test('several to a cell, each on a spot of their own - the bench, the bars, standing about - nobody on top of anyone (task #380)', () => {
+  const w = makeWorld({ rand: mulberry32(380) });
+  const { p: visitor } = joinPlayer(w);
+  const st = custody.nearestStation(w, corner(w).x, corner(w).y), b = cells.blockOf(w, st.id), k = cells.blocks(w)[b];
+  // two NPCs doing time in every cell, one sitting and one at the bars
+  w.inmates = [];
+  for (let c = 0; c < k.cells.length; c++) for (const pose of [0, 1]) w.inmates.push({ b, c, app: null, ar: 'drunk', until: w.time + INMATE_S, ped: 0, pose });
+  teleport(w, visitor.ped, k.gap.x, k.gap.lobbyY);
+  run(w, 1.5);
+  assert.equal([...w.entities.values()].filter((e) => e.npc && e.npc.inmate).length, 2 * k.cells.length, 'made flesh while someone is near');
+  // four prisoners put in, and one more walked in from the kerb
+  const pris = [];
+  for (let i = 0; i < 4; i++) pris.push(jailed(w).p);
+  const officer = joinPlayer(w, { samaritan: 100 }).p, { p: walked } = joinPlayer(w);
+  assert.equal(law.goOnDuty(w, officer), null);
+  teleport(w, walked.ped, corner(w).x + 32, corner(w).y + 32);
+  wanted(w, walked, 1);
+  teleport(w, officer.ped, walked.ped.x + 24, walked.ped.y);
+  walked.ped.downUntil = w.time + 3;
+  law.arrest(w, officer.ped, walked.ped);
+  run(w, HOLD_S + 1);
+  const v = w.spawnVehicle('police', walked.ped.x + 60, walked.ped.y + 70, 0, { npcOwned: false });
+  custody.interaction(w, officer).run();
+  teleport(w, officer.ped, v.x, v.y - 40);
+  vehicles.tryEnter(w, officer.ped);
+  const job = custody.deliveryFor(w, officer);
+  v.x = job.x; v.y = job.y; v.vx = 0; v.vy = 0; w.place(v);
+  w.step();
+  assert.equal(walked.custody.stage, 'walkin');
+  assert.ok(until(w, () => walked.custody.stage === 'cell', CELL_WALK_S + 5), 'walked in to a cell');
+  run(w, 1);
+  pris.push(walked);
+  // everyone in their cell, sharing - and nobody closer to anybody than a body's width
+  let most = 0;
+  for (let c = 0; c < k.cells.length; c++) {
+    const here = inCell(w, b, c);
+    most = Math.max(most, here.length);
+    assert.ok(here.length <= CELL_CAP + 2, `cell ${c}: ${here.length}`);
+    assert.ok(here.length < 2 || apart(here) >= 13.9, `cell ${c}: ${here.length} people, two of them ${apart(here).toFixed(1)} px apart`);
+  }
+  assert.ok(most >= 3, `several to a cell (${most})`);
+  for (const q of pris) assert.ok(q.custody.stage === 'cell' && inCell(w, b, q.custody.cell.c).includes(q.ped), 'each in their own cell, in plain sight');
+  // the NPCs on the bench sit at its places, the ones at the bars stand at them
+  for (const e of [...w.entities.values()].filter((q) => q.npc && q.npc.inmate)) {
+    const cl = k.cells[cellBlockAt(w.map, e.x, e.y).c], S = cells.spots(cl);
+    assert.ok([...S.bench, ...S.bars, ...S.floor].some((s) => Math.hypot(s.x - e.x, s.y - e.y) < 1), 'an inmate on a spot');
+    if (e.sitBench) assert.ok(S.bench.some((s) => Math.hypot(s.x - e.x, s.y - e.y) < 1), 'sitting on the bench');
+    if (e.holdBars) assert.ok(Math.abs(e.y - cl.front) < 1, 'at the bars');
+  }
+});
+
+test('beside a cellmate: the next place on the bench, the next free place at the bars, and walking into them you\'re held off (task #380)', () => {
+  const w = makeWorld({ rand: mulberry32(381) });
+  const { p } = jailed(w);
+  const c = cellOf(w, p), ped = p.ped, S = cells.spots(c);
+  for (const e of [...w.entities.values()].filter((q) => q.npc && q.npc.inmate)) w.remove(e);   // (the regulars: elsewhere for this)
+  w.inmates = [];
+  const mate = (s) => { const e = spawnNpc(w, 'drunk', s.x, s.y, 'civ'); e.npc.desk = { x: s.x, y: s.y, a: c.a }; e.npc.inmate = true; return e; };
+  // someone sitting in the middle of the bench: you sit beside them
+  const sitter = mate(S.bench[0]); sitter.sitBench = true;
+  teleport(w, ped, S.bench[0].x + 2, S.bench[0].y + 8);
+  players.findInteraction(w, p).run();
+  assert.ok(ped.sitBench && Math.abs(Math.abs(ped.x - sitter.x) - 20) < 1 && Math.abs(ped.y - sitter.y) < 1, `beside them on the bench (${(ped.x - sitter.x).toFixed(1)} px)`);
+  players.findInteraction(w, p).run();
+  // someone at the bars right where you are: you take hold of them a little along
+  const holder = mate(S.bars[0]); holder.holdBars = true;
+  teleport(w, ped, S.bars[0].x, c.front - 4);
+  const act = players.findInteraction(w, p);
+  assert.match(act.label, /bars/i);
+  act.run();
+  assert.ok(ped.holdBars && Math.abs(ped.y - c.front) < 1 && Math.abs(ped.x - holder.x) >= 18, `at the bars beside them (${(ped.x - holder.x).toFixed(1)} px)`);
+  walkFor(w, p, 0, -1, 0.2);
+  // walking straight into someone standing there: held off them
+  const stander = mate(S.floor[0]);
+  teleport(w, ped, S.floor[0].x - 40, S.floor[0].y);
+  let closest = Infinity;
+  for (let i = 0; i < 40; i++) { push(p, 1, 0); w.step(); closest = Math.min(closest, Math.hypot(ped.x - stander.x, ped.y - stander.y)); }
+  assert.ok(closest >= 13.9, `never walked into them (${closest.toFixed(1)} px)`);
+  assert.ok(inCellRect(c, ped.x, ped.y, 2), 'still in the cell');
+});
+
+test('booked into a block, a couple of others are doing time there - and you are often put in with one of them (task #380)', () => {
+  const w = makeWorld({ rand: mulberry32(382) });
+  let shared = 0, n = 0;
+  for (let i = 0; i < 60; i++) {
+    w.inmates = [];
+    for (const e of [...w.entities.values()].filter((q) => q.npc && q.npc.inmate)) w.remove(e);
+    const { p } = jailed(w, 1, 1000);
+    const { b, c } = p.custody.cell;
+    assert.ok(w.inmates.filter((m) => m.b === b).length >= CELL_REGULARS, 'a couple doing time there');
+    n++;
+    if (w.inmates.some((m) => m.b === b && m.c === c)) shared++;
+    assert.equal(custody.payBail(w, p), null);
+  }
+  assert.ok(Math.abs(shared / n - CELL_SHARE) < 0.17, `put in with someone ${shared} times in ${n} (about ${CELL_SHARE * 100}%)`);
 });
 
 test('out by time or bail: at the station\'s front door, outside, free; NPC crooks do time there too', () => {

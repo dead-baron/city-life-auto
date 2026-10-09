@@ -543,8 +543,10 @@ function jail(world, p, st, secs, bail, stars, by, cell = null) {
     ped.hidden = true; ped.inside = null; ped.interior = { kind: 'jail', poi: st.id };
     ped.x = st.x; ped.y = st.y;
   } else {
-    const c = cell ? cell.c : cells.freeCell(world, b), cl = cells.blocks(world)[b].cells[c];
-    if (!inCellRect(cl, ped.x, ped.y)) { const s = cells.spotIn(world, b, c, ped); ped.x = s.x; ped.y = s.y; }
+    if (!cell) cells.regulars(world, b);   // (a couple of others doing time there: task #380)
+    const c = cell ? cell.c : cells.cellFor(world, b), cl = cells.blocks(world)[b].cells[c];
+    // (a spot of their own: not on top of a cellmate)
+    if (!inCellRect(cl, ped.x, ped.y) || cells.crowded(world, ped)) { const s = cells.spotIn(world, b, c, ped); ped.x = s.x; ped.y = s.y; }
     ped.hidden = false; ped.inside = null; ped.interior = null; ped.a = cl.a;
     cell = { b, c };
   }
@@ -557,11 +559,15 @@ function jail(world, p, st, secs, bail, stars, by, cell = null) {
 
 // ---- walked in: out of the back of the car, through the station's door, down the corridor and into a cell ---------------
 function walkIn(world, p, st, b, car, secs, bail, stars, by) {
-  const ped = p.ped, now = world.time, k = cells.blocks(world)[b], ci = cells.freeCell(world, b), cell = k.cells[ci];
+  cells.regulars(world, b);   // (a couple of others doing time there: task #380)
+  const ped = p.ped, now = world.time, k = cells.blocks(world)[b], ci = cells.cellFor(world, b), cell = k.cells[ci];
   vehicles.ejectPed(world, ped, true, { x: k.door.x, y: k.door.outY });
   ped.vx = 0; ped.vy = 0; ped.downUntil = 0; ped.rollT = 0;
+  // in through the door to a spot of their own in the cell (kept for them on the way: cells.isFree)
+  const spot = cells.spotIn(world, b, ci, ped), inside = { x: cell.door.x, y: (cell.y0 + cell.y1) / 2 };
   const route = [{ x: k.door.x, y: k.door.outY }, { x: k.door.x, y: k.door.inY }, { x: k.gap.x, y: k.gap.lobbyY }, { x: k.gap.x, y: k.corridorY },
-    { x: cell.door.x, y: k.corridorY }, { x: cell.door.x, y: (cell.y0 + cell.y1) / 2 }];
+    { x: cell.door.x, y: k.corridorY }, inside];
+  if (Math.hypot(spot.x - inside.x, spot.y - inside.y) > NEAR_WP) route.push({ x: spot.x, y: spot.y });
   // two officers from the station take them out of the back
   const esc = [0, 1].map((i) => {
     const e = spawnNpc(world, 'cop', ped.x + (i ? -1 : 1) * 22, ped.y + (i ? 10 : -6), 'cop');
@@ -569,22 +575,22 @@ function walkIn(world, p, st, b, car, secs, bail, stars, by) {
     e.npc.jailer = true; e.despawnable = false;
     return e;
   });
-  p.custody = { stage: 'walkin', since: now, until: now + CELL_WALK_S, station: st.id, bail, stars, by, secs, cell: { b, c: ci }, route, i: 0,
-    lead: esc[0].id, rear: esc[1].id, best: undefined, bestAt: now, bestI: 0, car: 0, brk: false };
+  p.custody = { stage: 'walkin', since: now, until: now + CELL_WALK_S, station: st.id, bail, stars, by, secs, cell: { b, c: ci }, route, i: 0, at: 4,
+    spot: { x: spot.x, y: spot.y }, lead: esc[0].id, rear: esc[1].id, best: undefined, bestAt: now, bestI: 0, car: 0, brk: false };
   p.meDirty = true;
   store.touch();
 }
 const NEAR_WP = 7;
 function walkStep(world, p, dt) {
-  const c = p.custody, ped = p.ped, now = world.time, R = c.route, last = R.length - 1;
+  const c = p.custody, ped = p.ped, now = world.time, R = c.route, last = R.length - 1, at = c.at ?? last - 1;   // (at: in front of the cell's door)
   const lead = live(world, c.lead), rear = live(world, c.rear);
   // anything wrong on the way (an officer down, stuck, too long): they're put in the cell anyway
   if (!lead || lead.dead || !rear || rear.dead || now >= c.until) { lockIn(world, p); return; }
-  if (c.i >= last - 1 && Math.hypot(R[last - 1].x - ped.x, R[last - 1].y - ped.y) < 60) cells.setDoor(world, c.cell.b, c.cell.c, true);
+  if (c.i >= at && Math.hypot(R[at].x - ped.x, R[at].y - ped.y) < 60) cells.setDoor(world, c.cell.b, c.cell.c, true);
   // the prisoner, cuffed, at a walk along the way in (slower while the officer in front gets back in front)
   const wp = R[c.i], inp = seek(ped, wp.x, wp.y, false);
   const ahead = (lead.x - ped.x) * inp.mx + (lead.y - ped.y) * inp.my;
-  pedStep(ped, inp, dt, world.map, ahead < 16 && c.i < last - 1 ? { ...WALK, speedMul: 0.5 } : WALK);
+  pedStep(ped, inp, dt, world.map, ahead < 16 && c.i < at ? { ...WALK, speedMul: 0.5 } : WALK);
   if (Math.hypot(wp.x - ped.x, wp.y - ped.y) < NEAR_WP) {
     if (c.i === last) { lockIn(world, p); return; }
     c.i++;
@@ -597,9 +603,9 @@ function walkStep(world, p, dt) {
   const cell = cells.blocks(world)[c.cell.b].cells[c.cell.c];
   const to = R[c.i], dd = Math.hypot(to.x - ped.x, to.y - ped.y);
   const ux = dd > 1 ? (to.x - ped.x) / dd : Math.cos(ped.a), uy = dd > 1 ? (to.y - ped.y) / dd : Math.sin(ped.a);
-  const lt = c.i >= last - 1 ? { x: cell.door.x + 30, y: R[last - 1].y } : { x: ped.x + ux * Math.min(36, dd + 14), y: ped.y + uy * Math.min(36, dd + 14) };
+  const lt = c.i >= at ? { x: cell.door.x + 30, y: R[at].y } : { x: ped.x + ux * Math.min(36, dd + 14), y: ped.y + uy * Math.min(36, dd + 14) };
   escortMove(world, lead, lt.x, lt.y, dt, ped);
-  if (c.i < last) escortMove(world, rear, ped.x - ux * 30, ped.y - uy * 30, dt, ped); else hold(rear, ped);
+  if (c.i <= at) escortMove(world, rear, ped.x - ux * 30, ped.y - uy * 30, dt, ped); else escortMove(world, rear, cell.door.x - 30, R[at].y, dt, ped);   // (the other side of the door)
 }
 function escortMove(world, e, x, y, dt, face) {
   if (floored(world, e)) return;

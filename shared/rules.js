@@ -42,6 +42,9 @@ export const BAIL_PER_STAR = 100;      // ...or out now for this much a star (fr
 export const CELL_CAP = 4;             // people a cell takes (a prisoner goes to the cell with the fewest in it - shared/cells.js)
 export const CELL_WALK_S = 45;         // the walk from the police car to the cell: stuck longer than this, they're put in it
 export const INMATE_S = 240;           // an NPC crook the police arrest sits this long in the nearest station's cells
+export const CELL_SHARE = 0.6;         // booked into a cell block where someone's doing time (an NPC, a cell with room), you're put
+                                       //   in with them this often (task #380) - else the cell with the fewest in it
+export const CELL_REGULARS = 2;        // ...and a block you're booked into has at least this many NPCs doing time (sleeping it off)
 export const GUARD_PX = 420;           // a player officer who leaves their prisoner further away than this loses them
 export const BREAKOUT_IMPACT = 380;    // a crash at least this hard (closing speed, px/s) can throw the prisoner out
 export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in themselves earns this much more again
