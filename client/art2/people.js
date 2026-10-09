@@ -243,7 +243,7 @@ function dims(A) {
     shX: 8.3 * w * (1 + mu * 0.1), shUp: 12.9 * h, shBar: 3.6 * w * (1 + mu * 0.08), neckUp: 15.0 * h, neckR: 2.4 * w * (1 + mu * 0.25),
     head: (fem ? [7.2, 7.2, 7.6] : [7.5, 7.4, 7.9]).map((v, i) => v * (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[i]), headUp: 7.5,
     jawW: (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[3], age: A.age | 0,
-    upper: 8.3 * h, fore: 7.0 * h, armR: [2.95 * lm * (1 + mu * 0.2), 2.55 * lm * (1 + mu * 0.12)], foreR: [2.5 * lm * (1 + mu * 0.15), 2.0 * lm], fist: 3.0 * lm * (fem ? 0.95 : 1),
+    upper: 8.3 * h, fore: 7.0 * h, armR: [2.95 * lm * (1 + mu * 0.2), 2.55 * lm * (1 + mu * 0.12)], foreR: [2.5 * lm * (1 + mu * 0.15), 2.0 * lm], fist: 2.6 * lm * (fem ? 0.93 : 1),
     thighR: [3.7 * lm * (fem ? 1.06 : 1), 3.0 * lm], shinR: [2.85 * lm, 2.3 * lm], foot: fem ? [2.35, 4.0, 2.1] : [2.75, 4.6, 2.45],
   };
   D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;

@@ -250,6 +250,16 @@ function pumpThumbs() {
     c2.drawImage(cv, 0, 0);
     el.classList.add('ok');
   }
+  if (want.length) soon();
+}
+// ...and between frames too (a message comes back before the next frame), so a slow frame behind the overlay doesn't
+// hold them up
+let soonCh = null, soonOn = false;
+function soon() {
+  if (soonOn || typeof MessageChannel === 'undefined') return;
+  if (!soonCh) { soonCh = new MessageChannel(); soonCh.port1.onmessage = () => { soonOn = false; if (isOpen()) pumpThumbs(); }; }
+  soonOn = true;
+  soonCh.port2.postMessage(0);
 }
 const TH = [];   // looks for the thumbnails on this page: <canvas data-th="i">
 const th = (L, crop = 'full') => { TH.push([L, crop]); return `<canvas class="cc-th ${crop === 'full' ? '' : crop}" data-th="${TH.length - 1}"></canvas>`; };

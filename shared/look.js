@@ -57,11 +57,12 @@ export const MAKEUP_COLORS = [['#b8202a', 'Red'], ['#e04a7a', 'Rose'], ['#c87a6a
 
 // ---- body, face, hair, extras --------------------------------------------------------------------------------------
 export const BASES = [['m', 'Men'], ['f', 'Women']];
+// (CB1: the builds and the heights well apart, so a street of people reads as different bodies)
 export const BUILDS = [
-  { name: 'Slim', h: 0.98, w: 0.86, limb: 0.84 }, { name: 'Average', h: 1, w: 1, limb: 1 }, { name: 'Athletic', h: 1, w: 1.08, limb: 1.12, muscle: 0.7 },
-  { name: 'Curvy', h: 0.99, w: 1.14, limb: 1.14, belly: 0.5 }, { name: 'Big', h: 1, w: 1.24, limb: 1.24, belly: 1.2, muscle: 0.3 },
+  { name: 'Slim', h: 0.98, w: 0.8, limb: 0.78 }, { name: 'Average', h: 1, w: 1, limb: 1 }, { name: 'Athletic', h: 1, w: 1.1, limb: 1.16, muscle: 1 },
+  { name: 'Curvy', h: 0.99, w: 1.16, limb: 1.16, belly: 0.6 }, { name: 'Big', h: 1, w: 1.3, limb: 1.3, belly: 1.5, muscle: 0.3 },
 ];
-export const HEIGHTS = [0.92, 0.96, 1, 1.04, 1.08];
+export const HEIGHTS = [0.88, 0.94, 1, 1.06, 1.12];
 export const HEIGHT_NAMES = ['Short', 'Below average', 'Average', 'Tall', 'Very tall'];
 export const AGES = ['20s', '30s', '40s', '50s', '60s', '70s'];
 export const FACE_OPTS = {

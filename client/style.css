@@ -962,6 +962,10 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
   #creator .cc-foot { padding: 4px 10px; }
   #creator .cc-btn { padding: 5px 10px; font-size: 13px; }
   #creator .cc-tab { padding: 4px 7px; font-size: 12px; }
+  /* the preview and its turn buttons both fit the short left column */
+  #creator .cc-left { gap: 4px; padding: 4px; }
+  #creator .cc-prev { width: auto; height: min(56vh, 240px); max-width: 100%; }
+  #creator .cc-turn button { width: 32px; height: 32px; font-size: 15px; }
 }
 
 /* ---- clothes to buy (task #364; client/creator.js): the Outfit tab's padlocks (CC7), the fitting room (ST4), the barber's chair (ST3) ---- */
