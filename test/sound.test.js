@@ -6,9 +6,12 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { T } from '../shared/constants.js';
-import { SOUND_DEFAULTS, soundPrefs, setSoundPref, busGains } from '../client/sound/mixer.js';
+import { SOUND_DEFAULTS, soundPrefs, setSoundPref, busGains, COMP } from '../client/sound/mixer.js';
 import { SURFACES, STEP, surfaceOf, surfaceAt, woodsOf, woodsAt } from '../client/sound/surface.js';
-import { VoicePool, spatial, RateLimit, PRI } from '../client/sound/pool.js';
+import { VoicePool, spatial, RateLimit, PRI, Budget, BUDGET } from '../client/sound/pool.js';
+import { TRIM_DB } from '../client/sound/levels.js';
+import { loopSeam } from '../client/sound/engine.js';
+import { eventHeard, VOICES } from '../client/sound/index.js';
 import { EVENT_SOUNDS, gunSound, meleeHit, propSound } from '../client/sound/events.js';
 import { INSTR, LEGACY } from '../client/sound/instruments.js';
 import { SONGS } from '../client/sound/music.js';
@@ -166,4 +169,113 @@ test('every vehicle has an engine class, every song is whole, and the sound stay
   const page = closure(['client/main.js']);
   assert.ok(page.includes('client/audio.js'), 'the front is in the page');
   assert.ok(!page.some((f) => f.startsWith('client/sound/')), 'client/sound/ loads later (a dynamic import)');
+});
+
+test('the voice pool: yours is never cut off, the background never cuts anything off and keeps to its share', () => {
+  // yours: a sound that matters can't take your voice, even when yours is the quietest
+  const p = new VoicePool(3);
+  const mine = p.acquire(PRI.MINOR, 0.05, 0, 1, true);
+  p.acquire(PRI.NORMAL, 0.5, 0, 1); p.acquire(PRI.NORMAL, 0.6, 0, 1);
+  const i = p.acquire(PRI.MAJOR, 1, 0.1, 1);
+  assert.ok(i >= 0 && i !== mine, 'it takes someone else\'s voice');
+  assert.equal(p.stolen, true);
+  assert.equal(p.mine[mine], 1, 'yours plays on');
+  // all voices yours: nothing is cut off for someone else's sound
+  const q = new VoicePool(2);
+  q.acquire(PRI.AMBIENT, 0.2, 0, 1, true); q.acquire(PRI.AMBIENT, 0.2, 0, 1, true);
+  assert.equal(q.acquire(PRI.MAJOR, 1, 0.1, 1), -1);
+  // and yours gets a voice even from a stronger sound that isn't yours
+  const r = new VoicePool(2);
+  r.acquire(PRI.MAJOR, 1, 0, 1); r.acquire(PRI.MAJOR, 0.9, 0, 1);
+  assert.ok(r.acquire(PRI.AMBIENT, 0.3, 0.1, 1, true) >= 0, 'your footstep');
+  // the background: only free voices, only up to its share (half), never a cut
+  const b = new VoicePool(6);
+  assert.equal(b.bgMax, 3);
+  for (let k = 0; k < 3; k++) assert.ok(b.acquire(PRI.AMBIENT, 1, 0, 1) >= 0);
+  assert.equal(b.acquire(PRI.AMBIENT, 1, 0, 1), -1, 'the background\'s share is full');
+  assert.equal(b.why, 'bg');
+  assert.ok(b.acquire(PRI.MINOR, 0.2, 0, 1) >= 0, 'a voice left for what matters');
+  for (let k = 0; k < 2; k++) b.acquire(PRI.NORMAL, 0.5, 0, 1);
+  assert.equal(b.active(0), 6);
+  assert.equal(b.acquire(PRI.AMBIENT, 1, 0.1, 1), -1, 'a full pool drops a new background sound');
+  assert.equal(b.stolen, false, 'without cutting anything off');
+  const j = b.acquire(PRI.NORMAL, 0.8, 0.1, 1);
+  assert.ok(j >= 0 && b.stolen, 'something that matters takes the weakest voice');
+  assert.equal(j, 0, 'the weakest: a background sound');
+  // the counts the game uses: room for a phone
+  assert.ok(VOICES.phone <= 12 && VOICES.computer <= 24 && VOICES.enginesPhone <= 2 && VOICES.enginesComputer <= 4);
+});
+
+test('the background\'s budgets: so many a second of each, a short burst then the rate', () => {
+  const b = new Budget({ drop: 6, step: 12 });
+  let n = 0;
+  for (let k = 0; k < 100; k++) if (b.ok('drop', 0)) n++;
+  assert.equal(n, 6, 'a burst of six at once');
+  n = 0;
+  for (let t = 0.01; t <= 10; t += 0.01) if (b.ok('drop', t)) n++;
+  assert.ok(n >= 58 && n <= 61, `six a second over ten seconds (${n})`);
+  assert.equal(b.ok('gun_pistol', 0), true, 'no budget: no limit');
+  for (const k of ['step', 'drop', 'cricket', 'crackle', 'leaves']) assert.ok(BUDGET[k] > 0 && BUDGET[k] <= 12, k);
+  for (const k of Object.keys(BUDGET)) assert.ok(INSTR[k], `${k} is a recipe`);
+  // the rate limit is per place: two shooters across the street are both heard
+  const r = new RateLimit();
+  assert.equal(r.ok('gun_pistol', 0.03, 0, 100, 100), true);
+  assert.equal(r.ok('gun_pistol', 0.03, 0.01, 105, 100), false, 'the same gun again too soon');
+  assert.equal(r.ok('gun_pistol', 0.03, 0.02, 600, 100), true, 'another gun over there');
+});
+
+test('every instrument\'s loudness, measured (tools/sound/bench.py --levels), is trimmed into its category\'s range', () => {
+  const fx = JSON.parse(readFileSync(join(ROOT, 'test/fixtures/sound-levels.json'), 'utf8'));
+  const C = fx.categories, I = fx.instruments;
+  // the order of things: explosions loudest, then guns, the usual, the menus, footsteps, the world around
+  const order = ['boom', 'gun', 'fx', 'ui', 'step', 'amb'];
+  for (let k = 1; k < order.length; k++) assert.ok(C[order[k - 1]].target > C[order[k]].target, `${order[k - 1]} over ${order[k]}`);
+  for (const name of Object.keys(INSTR)) {
+    const m = I[name];
+    assert.ok(m, `${name} was measured (run tools/sound/bench.py --levels)`);
+    const c = C[m.cat];
+    assert.ok(c, `${name}: a category`);
+    assert.equal(TRIM_DB[name], m.trim, `${name}: client/sound/levels.js has the measured trim`);
+    assert.ok(m.trim >= fx.trimLimits[0] && m.trim <= fx.trimLimits[1], `${name}: trim ${m.trim} within its limits`);
+    assert.ok(Math.abs(m.loud + m.trim - m.after) < 0.11, `${name}: after = measured + trim`);
+    assert.ok(m.after >= c.low && m.after <= c.high, `${name}: ${m.after} dBA within ${m.cat}'s ${c.low}..${c.high}`);
+    assert.ok(m.peak + m.trim <= fx.peakMax + 0.05, `${name}: its peak ${m.peak + m.trim} dBFS no higher than ${fx.peakMax}`);
+  }
+  for (const name of Object.keys(TRIM_DB)) assert.ok(INSTR[name], `${name}: a trim for a recipe that exists`);
+});
+
+test('the buses leave headroom and the master\'s compressor is gentle', () => {
+  const g = busGains(SOUND_DEFAULTS), db = (x) => 20 * Math.log10(x);
+  assert.ok(db(g.master) <= -1 && db(g.master) >= -9, `master ${db(g.master).toFixed(1)} dB`);
+  assert.ok(db(g.master * g.sfx) <= -5, 'the effects at least 5 dB under full scale before the compressor');
+  assert.ok(g.amb < g.sfx && g.mus < g.sfx * 1.01, 'the ambience and the music under the effects');
+  assert.ok(COMP.threshold >= -12 && COMP.threshold <= -8, `threshold ${COMP.threshold}`);
+  assert.ok(COMP.ratio >= 2 && COMP.ratio <= 3, `ratio ${COMP.ratio}`);
+  assert.ok(COMP.attack >= 0.005 && COMP.attack <= 0.02, `attack ${COMP.attack}`);
+  assert.ok(COMP.release >= 0.15 && COMP.release <= 0.4, `release ${COMP.release}`);
+  assert.ok(COMP.knee >= 0 && COMP.knee <= 12);
+  assert.ok(COMP.makeupDb >= 0 && COMP.makeupDb <= 6, 'the compressor\'s own make-up gain, taken back off after it');
+});
+
+test('an event\'s sound that was dropped lets the old sound play instead; one that started (or was out of earshot) keeps it quiet', () => {
+  assert.equal(eventHeard(null, 0, 0, 0), true, 'data only: nothing to hear');
+  assert.equal(eventHeard(() => {}, 1, 0, 0), true, 'it started');
+  assert.equal(eventHeard(() => {}, 1, 0, 2), true, 'one of its sounds started');
+  assert.equal(eventHeard(() => {}, 0, 0, 1), false, 'dropped (no voice, a rate limit): the old sfx plays');
+  assert.equal(eventHeard(() => {}, 0, 1, 1), false, 'dropped, the rest too far: the old sfx plays');
+  assert.equal(eventHeard(() => {}, 0, 2, 0), true, 'simply too far off to hear');
+  assert.equal(eventHeard(() => {}, 0, 0, 0), true, 'nothing to play (your own swing, played as you pressed)');
+});
+
+test('the noise loops have no seam: the sample after the last is the one that would have come next', () => {
+  // a brown-ish random walk: a jump at the seam would be a click every loop
+  const n = 20000, X = 1024, d = new Float32Array(n + X);
+  let b = 0, seed = 7;
+  const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  for (let i = 0; i < d.length; i++) { b = (b + 0.02 * (rnd() * 2 - 1)) / 1.02; d[i] = b * 3.2; }
+  let step = 0;
+  for (let i = 1; i < d.length; i++) step = Math.max(step, Math.abs(d[i] - d[i - 1]));
+  const s = loopSeam(d, X);
+  assert.equal(s.length, n);
+  assert.ok(Math.abs(s[0] - s[n - 1]) <= step * 1.01, `the seam ${Math.abs(s[0] - s[n - 1]).toFixed(4)} is no bigger than a step (${step.toFixed(4)})`);
 });

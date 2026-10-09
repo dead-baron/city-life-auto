@@ -32,7 +32,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
-import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi } from './audio.js';
+import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 import { drawStarView } from './stargaze.js';
 import { noteServerBuild, myBuild } from './update.js';
 import { buildGive, buildQuickGive } from './devgive.js';
@@ -1104,13 +1104,15 @@ function openDebug() {
   send({ t: 'devmode', pw: '' });
   setTimeout(() => { if (!S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('devpw'); } }, 2000);
 }
+// the debug menu's sound line (client/audio.js soundStatus): on, off, loading, asleep or unavailable, and why
+setInterval(() => { const el = document.getElementById('dev-sound'); if (el && el.offsetParent) el.textContent = soundStatus(); }, 1000);
 function setupDev() {
   const box = $('dev');
   const on = S.dev || S.devMode;
   $('b-dev').classList.toggle('on', !!on);
   $('b-dev').title = on ? 'Debug menu' : 'Debug menu (switches Dev Debug Mode on)';
   if (!on) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  box.innerHTML = `<div class="dev-head"><b>🐞 ${S.devMode ? 'DEBUG · your progress is kept' : 'DEBUG · PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
+  box.innerHTML = `<div class="dev-head"><b>🐞 ${S.devMode ? 'DEBUG · your progress is kept' : 'DEBUG · PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><div id="dev-sound" class="dev-sound">${soundStatus()}</div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
   box.querySelector('.dev-x').onclick = () => closeOverlay('dev');
   const cmds = box.querySelector('.dev-cmds');
   const add = (label, cls, run) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; if (run) devPress(b, label, run); cmds.appendChild(b); return b; };

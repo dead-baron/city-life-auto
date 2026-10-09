@@ -434,6 +434,7 @@ body.portrait #phone { justify-content: center; padding: 0; }
 .devpw-row { display: flex; gap: 8px; padding: 10px 14px; }
 #devpw-in { flex: 1; font-size: 18px; padding: 8px 10px; background: #111; color: #fff; border: 1px solid #555; border-radius: 6px; letter-spacing: 2px; text-transform: uppercase; min-width: 0; }
 .devpw-row .opt { width: auto; border: 1px solid #555; border-radius: 6px; }
+#dev .dev-sound { font-size: 12px; color: #9fd8a8; margin: 4px 0 2px; line-height: 1.3; }
 #dev .dev-leave { background: #5a1a1a !important; border-color: var(--warn) !important; color: #fff !important; }
 #dev .dev-pl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #333; }
 #dev .dev-pl span { flex: 1 0 100%; font-size: 13px; font-weight: 600; }

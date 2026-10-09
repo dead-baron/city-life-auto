@@ -6,27 +6,61 @@
 //   soundEvent(ev, S)      a server event's sound, placed where it happened (client/sound/events.js)
 //   soundFrame(F, S)       each frame the world is drawn: engines, footsteps, ambience, the places' music
 //   soundSettingsUi(el)    the Sound section of the Settings screen
+//   soundStatus()          one line for the debug menu: on, off, loading, asleep, or unavailable (and why)
+//
+// It always starts (the owner, 2026-10-09: "doesn't seem to load all the time"): every touch, click and key wakes the
+// audio until it's running - not just the first one - so a context that a phone started suspended, or that iOS
+// "interrupted" (a call, Siri, the page in the background), comes back on the next tap; and the sound modules, if
+// they failed to load (a flaky connection on the first tap), are fetched again on a later one.
 import { settings, saveSettings } from './input.js';
 
-let ctx = null, sys = null, loading = null, off = false;
+let ctx = null, sys = null, loading = null, off = false, failed = 0, nextTry = 0, lastErr = '', noAudio = false;
+const GESTURES = ['touchstart', 'touchend', 'pointerdown', 'keydown', 'click'];
 
-// Safari (an iPhone above all) starts the sound suspended unless it's made in a tap, and suspends it when the page
-// goes to the background or a call comes in: it's woken on the next touch, click or key, and on coming back.
-function wake() { if (ctx && !off && ctx.state !== 'running') { try { const r = ctx.resume(); if (r && r.catch) r.catch(() => {}); } catch { /* not now */ } } }
+// a one-sample silent sound, played in a tap: older iPhones only unlock the audio for a sound started in a gesture
+function unlock() {
+  try { const b = ctx.createBuffer(1, 1, ctx.sampleRate), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); } catch { /* not now */ }
+}
+// Wake the audio: resume it if it isn't running (suspended, or iOS's "interrupted"), and load the sound if it isn't
+// loaded. In a tap or a key this always works; outside one (the tab coming back) it may not, and the next tap does.
+function wake() {
+  if (!ctx) return;
+  if (!off && ctx.state !== 'running' && ctx.state !== 'closed') {
+    try { const r = ctx.resume(); if (r && r.catch) r.catch(() => {}); } catch { /* not now */ }
+    unlock();
+  }
+  if (!sys && !loading) load();
+}
+function load() {
+  if (sys || loading || !ctx || performance.now() < nextTry) return;
+  const mobile = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  // (a failed module stays failed for the page's life under its own address: a retry asks under a new one)
+  loading = import(failed ? `./sound/index.js?retry=${failed}` : './sound/index.js')
+    .then((m) => {
+      sys = m.createSound(ctx, settings.sound, { mobile }); loading = null;
+      applyOff(sys.mix.prefs);
+      if (/[?&]debug\b/.test(location.search)) window.__snd = sys;
+    })
+    .catch((e) => {
+      failed++; lastErr = String((e && e.message) || e).slice(0, 80); loading = null;
+      nextTry = performance.now() + Math.min(30000, 1500 * failed);   // (again on a tap after this)
+      console.warn('[sound] could not load - will try again on a tap', e);
+    });
+}
 export function initAudio() {
   if (ctx) { wake(); return; }
-  try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { ctx = null; return; }
-  for (const ev of ['touchend', 'pointerdown', 'keydown']) window.addEventListener(ev, wake, { passive: true, capture: true });
+  if (noAudio) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) { noAudio = true; return; }
+  try { ctx = new AC(); } catch (e) { ctx = null; lastErr = String((e && e.message) || e).slice(0, 80); failed++; return; }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
-  const mobile = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-  loading = import('./sound/index.js')
-    .then((m) => { sys = m.createSound(ctx, settings.sound, { mobile }); applyOff(sys.mix.prefs); if (/[?&]debug\b/.test(location.search)) window.__snd = sys; })
-    .catch((e) => console.warn('[sound] could not load', e));
+  window.addEventListener('pageshow', wake);
+  window.addEventListener('focus', wake);
+  wake();
 }
-// the first tap, click or key anywhere (the title screen's music starts with it)
-const first = () => { for (const ev of FIRST) window.removeEventListener(ev, first, true); initAudio(); };
-const FIRST = ['pointerdown', 'touchend', 'keydown', 'click'];
-if (typeof window !== 'undefined') for (const ev of FIRST) window.addEventListener(ev, first, { passive: true, capture: true });
+// every tap, click or key: start the audio, or wake it (cheap when it's already running)
+function gesture() { if (ctx) { if (ctx.state !== 'running' || !sys) wake(); } else initAudio(); }
+if (typeof window !== 'undefined') for (const ev of GESTURES) window.addEventListener(ev, gesture, { passive: true, capture: true });
 
 // (a fault in the sound is reported, once per kind, and never stops the game)
 const seen = new Set();
@@ -48,3 +82,16 @@ export function soundSettingsUi(el) {
     .catch((e) => console.warn('[sound] settings', e));
 }
 export const audioReady = () => (loading || Promise.resolve()).then(() => !!sys);
+
+// The debug menu's line: is the sound on, and if not, why not.
+export function soundStatus() {
+  if (noAudio) return 'Sound: unavailable (this browser has no Web Audio)';
+  if (!ctx) return failed ? `Sound: unavailable (${lastErr})` : 'Sound: waiting for a tap or a key';
+  if (settings.sound && settings.sound.on === false) return 'Sound: off (Settings → Sound)';
+  if (!sys) return loading ? 'Sound: loading…' : failed ? `Sound: unavailable (${lastErr}) - trying again on a tap` : 'Sound: loading…';
+  if (ctx.state !== 'running') return `Sound: ${ctx.state} - tap to wake it`;
+  let s = null;
+  try { s = sys.status(); } catch { /* old */ }
+  if (!s) return 'Sound: on';
+  return `Sound: on · voices ${s.voices} · engines ${s.engines} · beds ${s.beds.length ? s.beds.join(' ') : 'none'} · ${s.played} played, ${s.pool + s.gap + s.budget} dropped, ${s.cut} cut off`;
+}

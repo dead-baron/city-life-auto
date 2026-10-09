@@ -6,7 +6,7 @@
 // an echo. Each song plays through its own chain (level, low-pass, pan) so the club can be muffled through its
 // walls and placed where it is. All melodies here are original.
 
-import { setp } from './engine.js';
+import { setp, krate } from './engine.js';
 
 const R = Math.random;
 const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
@@ -85,11 +85,11 @@ export class Music {
   player(name) {
     if (this.players[name]) return this.players[name];
     const c = this.ctx, S = SONGS[name];
-    const inp = c.createGain(), lp = c.createBiquadFilter(), pan = c.createStereoPanner ? c.createStereoPanner() : null, lvl = c.createGain();
+    const inp = c.createGain(), lp = krate(c.createBiquadFilter()), pan = c.createStereoPanner ? krate(c.createStereoPanner()) : null, lvl = c.createGain();
     lp.type = 'lowpass'; lp.frequency.value = 16000; lvl.gain.value = 0;
     inp.gain.value = 4;   // (the notes are written quiet: the songs' make-up gain)
     inp.connect(lp); if (pan) { lp.connect(pan); pan.connect(lvl); } else lp.connect(lvl);
-    const d = c.createDelay(1), fb = c.createGain(), dk = c.createBiquadFilter(), send = c.createGain();
+    const d = c.createDelay(1), fb = c.createGain(), dk = krate(c.createBiquadFilter()), send = c.createGain();
     d.delayTime.value = (60 / S.bpm) * 0.75; fb.gain.value = 0.3; dk.type = 'lowpass'; dk.frequency.value = 2200; send.gain.value = S.echo || 0;
     inp.connect(send); send.connect(d); d.connect(dk); dk.connect(fb); fb.connect(d); dk.connect(lp);
     const p = { name, S, inp, lp, pan, lvl, on: false, step: 0, nextT: 0, want: 0, quietAt: 0 };

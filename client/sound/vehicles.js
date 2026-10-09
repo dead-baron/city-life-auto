@@ -1,14 +1,16 @@
 // Vehicles (the owner's notes: "every vehicle its own engine"; sirens, horns, tyres). A few engine voices - each a
-// small synth made once and kept running: an oscillator pair for the engine's note, a band of the shared noise for
-// its rasp, a low-pass for its timbre, an amplitude wobble at the firing rate (the putter of an outboard, the lope
-// of a V8), plus a siren, a horn and a tyre squeal on the same strip. The nearest, loudest vehicles (yours first)
-// get the voices; a voice follows its vehicle's speed and throttle, the siren bends as it passes (Doppler).
+// small synth: an oscillator pair for the engine's note, a band of the shared noise for its rasp, a low-pass for its
+// timbre, an amplitude wobble at the firing rate (the putter of an outboard, the lope of a V8). A voice's nodes are
+// made when it takes a vehicle and let go when it gives it up; a siren, a horn and a tyre squeal are added to it only
+// while they sound (measured: the old always-running voices, eight oscillators each, were over half the sound's
+// work on a phone - tools/sound/bench.py). The nearest, loudest vehicles (yours first) get the voices; a voice
+// follows its vehicle's speed and throttle, the siren bends as it passes (Doppler, straight into the frequencies).
 // Trains rumble and clack; level crossings ring.
 import { VEHICLE_BY_INDEX } from '../../shared/vehicles.js';
 import { VF } from '../../shared/constants.js';
 import { spatial } from './pool.js';
 import { engineOn } from './events.js';
-import { setp } from './engine.js';
+import { setp, krate } from './engine.js';
 
 // The engine classes: f0..f1 the engine note from idle to the red line (Hz), gears, the wave, the sub-octave's level,
 // the rasp (noise level and band), the timbre's low-pass from idle to full throttle, the firing wobble (am: depth,
@@ -51,62 +53,89 @@ const AIR_BRAKES = new Set(['truck', 'bus']);
 const RANGE = 1000, EAR = RANGE * RANGE;
 
 export class VehicleSounds {
-  constructor(E, { voices = 5 } = {}) {
+  constructor(E, { voices = 4, level = 1 } = {}) {
     this.E = E; this.ctx = E.ctx;
+    this.level = level;   // (the engines' and the trains' level against the effects: tools/sound/bench.py)
     this.states = new Map();
     this.sp = { d: 0, gain: 0, pan: 0, lp: 0 };
-    const c = this.ctx;
-    this.noise = c.createBufferSource(); this.noise.buffer = E.buf.white; this.noise.loop = true; this.noise.start();
+    this.noise = null;   // the tyres' and the rasp's noise, shared (made with the first voice)
     this.voices = [];
-    for (let i = 0; i < voices; i++) this.voices.push(this.makeVoice());
+    for (let i = 0; i < voices; i++) this.voices.push({ veh: 0, n: null, cls: null, quietAt: 0, sirN: null, hornN: null, tyreN: null });
     this.nextAssign = 0; this.nextParam = 0; this.nextXing = 0; this.nextGc = 0;
-    this.train = this.makeTrain();
+    this.train = null;
   }
-  makeVoice() {
-    const c = this.ctx, E = this.E;
-    const g = (v = 0) => { const n = c.createGain(); n.gain.value = v; return n; };
-    const osc = (type) => { const o = c.createOscillator(); if (E.waves[type]) o.setPeriodicWave(E.waves[type]); else o.type = type; o.start(); return o; };
-    const v = { veh: 0, cls: null, sleeping: true, quietAt: 0 };
-    v.a = osc('saw8'); v.b = osc('triangle'); v.ga = g(0.6); v.gb = g(0.4);
-    v.nf = c.createBiquadFilter(); v.nf.type = 'bandpass'; v.nf.Q.value = 0.9; v.ng = g(0);
-    v.filt = c.createBiquadFilter(); v.filt.type = 'lowpass'; v.filt.frequency.value = 600;
-    v.amp = g(0.7); v.lfo = osc('sine'); v.amd = g(0);
-    v.eng = g(0);   // the engine's level
-    v.a.connect(v.ga); v.b.connect(v.gb); v.ga.connect(v.filt); v.gb.connect(v.filt);
-    this.noise.connect(v.nf); v.nf.connect(v.ng); v.ng.connect(v.filt);
-    v.filt.connect(v.amp); v.lfo.connect(v.amd); v.amd.connect(v.amp.gain); v.amp.connect(v.eng);
-    // the strip: distance low-pass -> pan -> level
-    v.lp = c.createBiquadFilter(); v.lp.type = 'lowpass'; v.lp.frequency.value = 8000;
-    v.pan = c.createStereoPanner ? c.createStereoPanner() : null; v.out = g(0);
-    v.eng.connect(v.lp);
-    if (v.pan) { v.lp.connect(v.pan); v.pan.connect(v.out); } else v.lp.connect(v.out);
-    // the siren: an oscillator swept by its own LFO
-    v.s = osc('soft'); v.sl = osc('sine'); v.sld = g(0); v.sg = g(0);
-    v.s.frequency.value = 900; v.sl.connect(v.sld); v.sld.connect(v.s.frequency); v.s.connect(v.sg); v.sg.connect(v.lp);
-    // the horn: up to three notes
-    v.h = [osc('square'), osc('square'), osc('square')]; v.hg = g(0); v.hf = c.createBiquadFilter(); v.hf.type = 'lowpass'; v.hf.frequency.value = 2200;
-    for (const o of v.h) o.connect(v.hf);
-    v.hf.connect(v.hg); v.hg.connect(v.lp);
-    // the tyres: a squeal (or a boat's spray, a bike's gravel)
-    v.qf = c.createBiquadFilter(); v.qf.type = 'bandpass'; v.qf.Q.value = 7; v.qg = g(0);
-    this.noise.connect(v.qf); v.qf.connect(v.qg); v.qg.connect(v.lp);
-    return v;
+  noiseSrc() {
+    if (!this.noise) { const s = krate(this.ctx.createBufferSource()); s.buffer = this.E.buf.white; s.loop = true; s.start(); this.noise = s; }
+    return this.noise;
   }
-  wake(v) { if (v.sleeping) { v.out.connect(this.E.mix.sfx); v.sleeping = false; } }
-  sleep(v) { if (!v.sleeping) { try { v.out.disconnect(); } catch { /* not connected */ } v.sleeping = true; } }
-  // a voice takes on a vehicle's class
-  dress(v, cls, sir, t) {
-    const p = P[cls] || P.sedan, E = this.E;
-    v.cls = cls;
-    if (!p.pedal) { if (E.waves[p.wave]) v.a.setPeriodicWave(E.waves[p.wave]); v.gb.gain.setValueAtTime(p.sub * 0.6, t); v.ga.gain.setValueAtTime(0.6, t); }
-    else { v.ga.gain.setValueAtTime(0, t); v.gb.gain.setValueAtTime(0, t); }
-    v.nf.frequency.setValueAtTime(p.nf || 1000, t); v.nf.frequency._to = p.nf || 1000; v.nf.Q.value = p.pedal ? 1.2 : 0.9;
-    v.filt.Q.value = p.q || 1;
-    const hn = p.horn || [440, 554];
-    for (let i = 0; i < 3; i++) { const o = v.h[i]; if (E.waves[p.hw]) o.setPeriodicWave(E.waves[p.hw]); else o.type = p.hw || 'square'; o.frequency.setValueAtTime(hn[i] || hn[0] * 1.5, t); }
-    v.hscale = hn.length > 2 ? 0.05 : 0.07;
-    if (sir) { const w = sir === 'fire' ? 'organ' : sir === 'ambulance' ? 'pulse12' : 'soft'; v.s.setPeriodicWave(E.waves[w]); }
-    v.sir = sir;
+  // ---- a voice's nodes: made when it takes a vehicle, let go when it gives it up ----
+  g(v = 0) { const n = this.ctx.createGain(); n.gain.value = v; return n; }
+  osc(w) { const o = krate(this.ctx.createOscillator()), W = this.E.waves[w]; if (W) o.setPeriodicWave(W); else o.type = w; return o; }
+  bq(type, f, q) { const n = krate(this.ctx.createBiquadFilter()); n.type = type; n.frequency.value = f; n.Q.value = q; return n; }
+  // the engine: its note (an oscillator and a sub-octave, unless it's pedalled), a band of noise for its rasp, a low-pass
+  // for its timbre, a wobble at the firing rate -> the strip: a low-pass for distance -> pan -> level -> effects
+  build(v, cls, t) {
+    const c = this.ctx, p = P[cls] || P.sedan, n = { src: [], all: [] };
+    const keep = (...a) => { for (const x of a) if (x) n.all.push(x); };
+    n.lp = this.bq('lowpass', 8000, 0.7); n.out = this.g(0); n.pan = c.createStereoPanner ? krate(c.createStereoPanner()) : null;
+    if (n.pan) { n.lp.connect(n.pan); n.pan.connect(n.out); } else n.lp.connect(n.out);
+    n.out.connect(this.E.mix.sfx);
+    n.filt = this.bq('lowpass', p.lp0 || 600, p.q || 1);
+    n.amp = this.g(0.7); n.lfo = this.osc('sine'); n.amd = this.g(0); n.eng = this.g(0);
+    n.lfo.connect(n.amd); n.amd.connect(n.amp.gain);
+    n.filt.connect(n.amp); n.amp.connect(n.eng); n.eng.connect(n.lp);
+    n.nf = this.bq('bandpass', p.nf || 1000, p.pedal ? 1.2 : 0.9); n.ng = this.g(0);
+    this.noiseSrc().connect(n.nf); n.nf.connect(n.ng); n.ng.connect(n.filt);
+    n.lfo.start(t); n.src.push(n.lfo);
+    if (!p.pedal) {
+      n.a = this.osc(p.wave); n.b = this.osc('triangle'); n.ga = this.g(0.6); n.gb = this.g(p.sub * 0.6);
+      n.a.connect(n.ga); n.b.connect(n.gb); n.ga.connect(n.filt); n.gb.connect(n.filt);
+      n.a.start(t); n.b.start(t); n.src.push(n.a, n.b);
+    }
+    keep(n.lp, n.out, n.pan, n.filt, n.amp, n.lfo, n.amd, n.eng, n.nf, n.ng, n.a, n.b, n.ga, n.gb);
+    v.n = n; v.cls = cls; v.sirN = null; v.hornN = null; v.tyreN = null;
+  }
+  // let a part's nodes go: sources stopped at `when`, everything disconnected just after
+  letGo(part, when) {
+    if (!part) return;
+    const E = this.E;
+    for (const s of part.src) { try { s.stop(when); } catch { /* stopped */ } }
+    for (const x of part.all) E.trash.push(x, when + 0.05);
+    if (part.nf && this.noise) { try { this.noise.disconnect(part.nf); } catch { /* gone */ } }
+  }
+  release(v, t) {   // the voice fades out and its nodes go
+    if (!v.n) return;
+    setp(v.n.out.gain, 0, t, 0.04);
+    for (const part of [v.sirN, v.hornN, v.tyreN]) this.letGo(part, t + 0.25);
+    this.letGo(v.n, t + 0.25);
+    v.n = null; v.sirN = null; v.hornN = null; v.tyreN = null; v.cls = null;
+  }
+  // the siren: an oscillator swept by its own slow LFO (made while it wails)
+  siren(v, kind, t) {
+    if (v.sirN && v.sirN.kind === kind) return v.sirN;
+    if (v.sirN) { this.letGo(v.sirN, t + 0.1); v.sirN.g.gain.setTargetAtTime(0, t, 0.03); }
+    const s = this.osc(kind === 'fire' ? 'organ' : kind === 'ambulance' ? 'pulse12' : 'soft'), sl = this.osc('sine'), sld = this.g(0), g = this.g(0);
+    s.frequency.value = 900; sl.connect(sld); sld.connect(s.frequency); s.connect(g); g.connect(v.n.lp);
+    s.start(t); sl.start(t);
+    v.sirN = { kind, s, sl, sld, g, src: [s, sl], all: [s, sl, sld, g] };
+    return v.sirN;
+  }
+  // the horn: its two or three notes (made while it sounds)
+  horn(v, p, dop, t) {
+    if (v.hornN) return v.hornN;
+    const hn = p.horn || [440, 554], hf = this.bq('lowpass', 2200, 0.7), g = this.g(0), src = [];
+    for (const f of hn) { const o = this.osc(p.hw === 'saw8' ? 'saw8' : 'sq9'); o.frequency.value = f * dop; o.connect(hf); o.start(t); src.push(o); }
+    hf.connect(g); g.connect(v.n.lp);
+    v.hornN = { g, scale: hn.length > 2 ? 0.05 : 0.07, src, all: [...src, hf, g] };
+    return v.hornN;
+  }
+  // the tyres: a squeal (or a boat's spray, a bike's gravel) from the shared noise (made while it drifts)
+  tyres(v) {
+    if (v.tyreN) return v.tyreN;
+    const nf = this.bq('bandpass', 1700, 7), g = this.g(0);
+    this.noiseSrc().connect(nf); nf.connect(g); g.connect(v.n.lp);
+    v.tyreN = { nf, g, src: [], all: [nf, g], at: 0 };
+    return v.tyreN;
   }
 
   update(F, S, dt) {
@@ -129,7 +158,7 @@ export class VehicleSounds {
       st.spd += (mv / Math.max(dt, 1e-3) - st.spd) * k;
       const acc = (st.spd - st.prev) / Math.max(dt, 1e-3);
       const on = v.id === mine || engineOn(v) || (!!def.ferry && !(v.flags & (VF.WRECK | VF.DEAD)));   // (the ferries run their timetable with nobody at the wheel)
-      if (on && !st.on && Math.sqrt(d2) < 700 && st.cls !== 'pedal' && !P[st.cls].boat && st.spd < 30) E.play('enginestart', v.rx, v.ry, 0.7);
+      if (on && !st.on && Math.sqrt(d2) < 700 && st.cls !== 'pedal' && !P[st.cls].boat && st.spd < 30) E.play('enginestart', v.rx, v.ry, 0.7, v.id === mine ? MINE : null);
       st.on = on;
       const thrT = !on ? 0 : (v.flags & VF.BRAKE) ? 0.08 : Math.max(0.12, Math.min(1, 0.3 + acc / Math.max(60, def.accel) * 1.4 + (st.spd > 40 ? 0.15 : 0)));
       st.thr += (thrT - st.thr) * (1 - Math.exp(-5 * dt));
@@ -177,97 +206,99 @@ export class VehicleSounds {
     want.sort((a, b) => b[0] - a[0]);
     const n = this.voices.length, keep = new Set();
     for (let i = 0; i < Math.min(n, want.length); i++) keep.add(want[i][1]);
-    for (const v of this.voices) if (v.veh && !keep.has(v.veh)) { const st = this.states.get(v.veh); if (st) st.voice = null; v.veh = 0; v.quietAt = t; }
+    for (const v of this.voices) if (v.veh && !keep.has(v.veh)) { const st = this.states.get(v.veh); if (st) st.voice = null; v.veh = 0; v.quietAt = t; this.release(v, t); }
     for (let i = 0; i < Math.min(n, want.length); i++) {
       const [, id, st] = want[i];
       if (st.voice) continue;
       const v = this.voices.find((q) => !q.veh);
       if (!v) break;
+      if (v.n) this.release(v, t);
       v.veh = id; st.voice = v;
-      this.dress(v, st.cls, st.sir, t);
-      v.out.gain.setValueAtTime(0, t); v.out.gain._to = 0;
-      this.wake(v);
+      this.build(v, st.cls, t);
     }
   }
   params(t) {
     const E = this.E, L = E.listener, sp = this.sp, tc = 0.04;
     for (const v of this.voices) {
-      if (!v.veh) {
-        setp(v.out.gain, 0, t, 0.05); setp(v.sg.gain, 0, t, 0.05); setp(v.hg.gain, 0, t, 0.02); setp(v.qg.gain, 0, t, 0.05);
-        if (!v.sleeping && t - v.quietAt > 0.5) this.sleep(v);
-        continue;
-      }
+      if (!v.veh || !v.n) continue;
       const st = this.states.get(v.veh);
-      if (!st) { v.veh = 0; v.quietAt = t; continue; }
-      const p = P[st.cls] || P.sedan;
+      if (!st) { v.veh = 0; v.quietAt = t; this.release(v, t); continue; }
+      const p = P[st.cls] || P.sedan, n = v.n;
       spatial(st.x - L.x, st.y - L.y, RANGE, sp);
       let lp = sp.lp, g = sp.gain;
       if (st.mine) { g = Math.max(g, 0.9); lp = 18000; }
       if (L.inside && !st.mine) { lp = Math.min(lp, 800); g *= 0.45; }
-      setp(v.out.gain, g * (st.mine ? 1 : 0.8), t, tc);
-      setp(v.lp.frequency, lp, t, tc);
-      if (v.pan) setp(v.pan.pan, st.mine ? sp.pan * 0.3 : sp.pan, t, tc);
-      const cents = 1200 * Math.log2(st.dop);
+      setp(n.out.gain, g * (st.mine ? 1 : 0.8) * this.level, t, tc);
+      setp(n.lp.frequency, lp, t, tc);
+      if (n.pan) setp(n.pan.pan, st.mine ? sp.pan * 0.3 : sp.pan, t, tc);
+      const dop = st.dop;
       // the engine
       if (p.pedal) {   // a bicycle: the chain ticking as it's pedalled, the freewheel's faster, softer tick coasting
         const moving = st.spd > 20, coast = st.thr < 0.2;
-        setp(v.lfo.frequency, coast ? 16 : Math.max(2, st.spd / 22), t, 0.1);
-        setp(v.amd.gain, 0.5, t, 0.1); setp(v.amp.gain, 0.5, t, 0.1);
-        setp(v.ng.gain, moving ? (coast ? 0.05 : 0.1) : 0, t, 0.08);
-        setp(v.filt.frequency, 9000, t, 0.1);
-        setp(v.eng.gain, p.vol, t, 0.1);
+        setp(n.lfo.frequency, coast ? 16 : Math.max(2, st.spd / 22), t, 0.1);
+        setp(n.amd.gain, 0.5, t, 0.1); setp(n.amp.gain, 0.5, t, 0.1);
+        setp(n.ng.gain, moving ? (coast ? 0.05 : 0.1) : 0, t, 0.08);
+        setp(n.filt.frequency, 9000, t, 0.1);
+        setp(n.eng.gain, p.vol, t, 0.1);
       } else if (st.on) {
         const f = (p.f0 + (p.f1 - p.f0) * st.rpm) * st.tune;
-        setp(v.a.frequency, f, t, tc); setp(v.b.frequency, f / 2, t, tc);
-        setp(v.a.detune, cents * 0.5, t, tc); setp(v.b.detune, cents * 0.5, t, tc);
-        setp(v.filt.frequency, p.lp0 + (p.lp1 - p.lp0) * (0.35 * st.rpm + 0.65 * st.thr), t, tc);
-        setp(v.lfo.frequency, f * p.amr, t, tc);
+        setp(n.a.frequency, f * dop, t, tc); setp(n.b.frequency, f * dop / 2, t, tc);
+        setp(n.filt.frequency, p.lp0 + (p.lp1 - p.lp0) * (0.35 * st.rpm + 0.65 * st.thr), t, tc);
+        setp(n.lfo.frequency, f * p.amr, t, tc);
         const am = p.am * (p.boat ? 1 - 0.5 * st.rpm : 1);
-        setp(v.amd.gain, am * 0.5, t, tc); setp(v.amp.gain, 1 - am * 0.5, t, tc);
-        setp(v.ng.gain, p.noise * (0.5 + st.thr) + (p.boat ? Math.min(0.5, st.spd / 900) : 0), t, tc);   // (a boat's wash rises with its speed)
-        setp(v.nf.frequency, p.nf * (p.boat ? 0.8 + st.rpm : 1), t, tc);
-        setp(v.eng.gain, p.vol * (0.5 + 0.5 * st.thr) * (st.mine ? 1 : 0.85), t, 0.06);
-      } else setp(v.eng.gain, 0, t, 0.08);
+        setp(n.amd.gain, am * 0.5, t, tc); setp(n.amp.gain, 1 - am * 0.5, t, tc);
+        setp(n.ng.gain, p.noise * (0.5 + st.thr) + (p.boat ? Math.min(0.5, st.spd / 900) : 0), t, tc);   // (a boat's wash rises with its speed)
+        setp(n.nf.frequency, p.nf * (p.boat ? 0.8 + st.rpm : 1), t, tc);
+        setp(n.eng.gain, p.vol * (0.5 + 0.5 * st.thr) * (st.mine ? 1 : 0.85), t, 0.06);
+      } else setp(n.eng.gain, 0, t, 0.08);
       // the siren
       if (st.sir) {
+        const S = this.siren(v, st.sir, t);
         const ph = (t + v.veh * 1.7) % 11;
         let base = 1000, rate = 0.18, depth = 420;
         if (st.sir === 'police' && ph > 8) { base = 1080; rate = 5.5; depth = 330; }                // the yelp, now and then
         else if (st.sir === 'ambulance') { base = 850; rate = 0.9; depth = 110; }                   // hi-lo
         else if (st.sir === 'fire') { base = 640; rate = 0.11; depth = 330; }                       // the slow mechanical wail
-        setp(v.s.frequency, base, t, 0.08); setp(v.sl.frequency, rate, t, 0.08); setp(v.sld.gain, depth, t, 0.08);
-        setp(v.s.detune, cents, t, tc);
-        setp(v.sg.gain, st.sir === 'fire' ? 0.07 : 0.06, t, 0.05);
-        if (v.sir !== st.sir) { v.sir = st.sir; v.s.setPeriodicWave(this.E.waves[st.sir === 'fire' ? 'organ' : st.sir === 'ambulance' ? 'pulse12' : 'soft']); }
-      } else setp(v.sg.gain, 0, t, 0.08);
+        setp(S.s.frequency, base * dop, t, 0.08); setp(S.sl.frequency, rate, t, 0.08); setp(S.sld.gain, depth * dop, t, 0.08);
+        setp(S.g.gain, st.sir === 'fire' ? 0.07 : 0.06, t, 0.05);
+      } else if (v.sirN) { v.sirN.g.gain.setTargetAtTime(0, t, 0.05); this.letGo(v.sirN, t + 0.3); v.sirN = null; }
       // the horn
-      setp(v.hg.gain, st.horn && !p.pedal ? v.hscale : 0, t, st.horn ? 0.01 : 0.03);
-      for (const o of v.h) setp(o.detune, cents, t, tc);
+      if (st.horn && !p.pedal) { const H = this.horn(v, p, dop, t); setp(H.g.gain, H.scale, t, 0.01); H.off = 0; }
+      else if (v.hornN) {
+        const H = v.hornN;
+        if (!H.off) { H.off = t; setp(H.g.gain, 0, t, 0.03); } else if (t - H.off > 0.3) { this.letGo(H, t); v.hornN = null; }
+      }
       // the tyres
       const drift = (st.flags & VF.DRIFT) && st.spd > 60;
       if (drift) {
-        const q = p.boat ? [2600, 0.6] : p.pedal ? [800, 1] : [1700 + 500 * Math.sin(t * 6.3 + v.veh), 7];
-        setp(v.qf.frequency, q[0], t, 0.03); v.qf.Q.value = q[1];
-        setp(v.qg.gain, (p.boat ? 0.25 : p.pedal ? 0.2 : 0.5) * Math.min(1, st.spd / 260), t, 0.04);
-      } else setp(v.qg.gain, 0, t, 0.06);
+        const Ty = this.tyres(v), q = p.boat ? [2600, 0.6] : p.pedal ? [800, 1] : [1700 + 500 * Math.sin(t * 6.3 + v.veh), 7];
+        setp(Ty.nf.frequency, q[0], t, 0.03); setp(Ty.nf.Q, q[1], t, 0.05);
+        setp(Ty.g.gain, (p.boat ? 0.25 : p.pedal ? 0.2 : 0.5) * Math.min(1, st.spd / 260), t, 0.04);
+        Ty.at = t;
+      } else if (v.tyreN) {
+        setp(v.tyreN.g.gain, 0, t, 0.06);
+        if (t - v.tyreN.at > 1) { this.letGo(v.tyreN, t); v.tyreN = null; }
+      }
     }
   }
 
   // ---- trains: the rumble of the nearest moving train, its wheels clacking over the joints ----
   makeTrain() {
     const c = this.ctx, E = this.E;
-    const src = c.createBufferSource(); src.buffer = E.buf.brown; src.loop = true; src.start();
-    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 150;
-    const motor = c.createOscillator(); motor.setPeriodicWave(E.waves.saw8); motor.frequency.value = 38; motor.start();
-    const mf = c.createBiquadFilter(); mf.type = 'lowpass'; mf.frequency.value = 180; const mg = c.createGain(); mg.gain.value = 0.3;
-    const g = c.createGain(); g.gain.value = 0;
-    const pan = c.createStereoPanner ? c.createStereoPanner() : null;
+    const src = krate(c.createBufferSource()); src.buffer = E.buf.brown; src.loop = true; src.start();
+    const f = this.bq('lowpass', 150, 0.7);
+    const motor = this.osc('saw8'); motor.frequency.value = 38; motor.start();
+    const mf = this.bq('lowpass', 180, 0.7), mg = this.g(0.3);
+    const g = this.g(0);
+    const pan = c.createStereoPanner ? krate(c.createStereoPanner()) : null;
     src.connect(f); f.connect(g); motor.connect(mf); mf.connect(mg); mg.connect(g);
-    if (pan) { g.connect(pan); }
-    return { src, f, motor, g, pan, out: pan || g, on: false, clackAt: 0, quietAt: 0 };
+    if (pan) g.connect(pan);
+    const out = pan || g;
+    out.connect(E.mix.sfx);
+    return { src, f, motor, g, pan, out, clackAt: 0, quietAt: 0, part: { src: [src, motor], all: [src, f, motor, mf, mg, g, pan].filter(Boolean) } };
   }
   trains(F, S, dt, t) {
-    const T = this.train, L = this.E.listener;
+    const L = this.E.listener;
     let best = null, bd = 1400, spd = 0;
     for (const c of F.cars) {
       const d = Math.hypot(c.rx - L.x, c.ry - L.y);
@@ -276,17 +307,19 @@ export class VehicleSounds {
     if (best) spd = Math.hypot(best.fdx || 0, best.fdy || 0) / Math.max(dt, 1e-3);
     const sub = !!F.sub, heard = best && spd > 15;
     const lvl = sub ? 0.5 + Math.min(0.4, spd / 900) : heard ? Math.pow(Math.max(0, 1 - bd / 1400), 1.6) * Math.min(0.55, 0.15 + spd / 900) : 0;
-    if (lvl > 0.005 && !T.on) { T.out.connect(this.E.mix.sfx); T.on = true; }
-    if (T.on) {
-      T.g.gain.setTargetAtTime(lvl, t, 0.3);
-      T.f.frequency.setTargetAtTime(sub ? 260 : 110 + Math.min(200, spd / 4), t, 0.3);
-      T.motor.frequency.setTargetAtTime(32 + Math.min(30, spd / 25), t, 0.3);
-      if (T.pan && best && !sub) T.pan.pan.setTargetAtTime(Math.max(-0.8, Math.min(0.8, (best.rx - L.x) / 600)), t, 0.2);
-      if (lvl <= 0.005) { if (!T.quietAt) T.quietAt = t; else if (t - T.quietAt > 2) { try { T.out.disconnect(); } catch { /* gone */ } T.on = false; T.quietAt = 0; } } else T.quietAt = 0;
+    if (lvl > 0.005 && !this.train) this.train = this.makeTrain();   // (made while a train is heard, let go after)
+    const T = this.train;
+    if (T) {
+      setp(T.g.gain, lvl * this.level, t, 0.3);
+      setp(T.f.frequency, sub ? 260 : 110 + Math.min(200, spd / 4), t, 0.3);
+      setp(T.motor.frequency, 32 + Math.min(30, spd / 25), t, 0.3);
+      if (T.pan && best && !sub) setp(T.pan.pan, Math.max(-0.8, Math.min(0.8, (best.rx - L.x) / 600)), t, 0.2);
+      if (lvl <= 0.005) { if (!T.quietAt) T.quietAt = t; else if (t - T.quietAt > 2) { this.letGo(T.part, t); this.train = null; } } else T.quietAt = 0;
     }
     // the wheels: a clack-clack per rail joint, quicker the faster it goes
-    if ((heard || (sub && spd > 15)) && t > T.clackAt) {
-      T.clackAt = t + Math.max(0.22, Math.min(1.4, 260 / Math.max(1, spd)));
+    this.clackAt = this.clackAt || 0;
+    if ((heard || (sub && spd > 15)) && t > this.clackAt) {
+      this.clackAt = t + Math.max(0.22, Math.min(1.4, 260 / Math.max(1, spd)));
       if (sub) this.E.play('clack', undefined, undefined, 0.5, { n: 2 });
       else this.E.play('clack', best.rx, best.ry, 0.9, { n: 2 });
     }
@@ -305,9 +338,11 @@ export class VehicleSounds {
   }
   silence() {
     const t = this.ctx.currentTime;
-    for (const v of this.voices) { if (v.veh) { const st = this.states.get(v.veh); if (st) st.voice = null; v.quietAt = t; } v.veh = 0; setp(v.out.gain, 0, t, 0.05); }
-    if (this.train.on) this.train.g.gain.setTargetAtTime(0, t, 0.2);
-    this.idle(t);
+    for (const v of this.voices) { if (v.veh) { const st = this.states.get(v.veh); if (st) st.voice = null; v.quietAt = t; } v.veh = 0; this.release(v, t); }
+    if (this.train) { setp(this.train.g.gain, 0, t, 0.2); this.letGo(this.train.part, t + 0.5); this.train = null; }
   }
-  idle(t) { for (const v of this.voices) if (!v.veh && !v.sleeping && t - v.quietAt > 0.5) this.sleep(v); }
+  idle() { /* (the voices let their nodes go as they give up their vehicles) */ }
+  // how many nodes the vehicles hold right now (the bench, the debug line)
+  nodes() { let n = 0; for (const v of this.voices) for (const p of [v.n, v.sirN, v.hornN, v.tyreN]) if (p) n += p.all.length; return n + (this.train ? this.train.part.all.length : 0); }
 }
+const MINE = Object.freeze({ mine: true });
