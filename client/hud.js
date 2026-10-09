@@ -106,7 +106,7 @@ export class HUD {
     const tb = $('trainbar'), tr = me.train, cu = me.custody, fg = me.fight && !me.dead ? me.fight : null;
     tb.classList.toggle('custody', !!((cu && cu.s !== 'cell') || fg) && !me.dead);
     tb.classList.toggle('fight', !!fg);
-    document.querySelector('#tbtns [data-b="fire"]')?.classList.toggle('pulse', !!fg);
+    if (!!fg !== !!this.fightOn) { this.fightOn = !!fg; document.querySelector('#tbtns [data-b="fire"]')?.classList.toggle('pulse', !!fg); }   // (the touch FIRE button pulses)
     if (fg) {
       // an officer on you, going for the cuffs (server struggle.js): fight back - the meter, and what to mash (and wriggle)
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry', 'brk'); tb.style.borderColor = '';
