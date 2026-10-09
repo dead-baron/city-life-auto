@@ -85,7 +85,9 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Hire a boat / hand it back (at a rental dock) | E at the kiosk · E in the boat by the pier | B | ACT |
 | Moor a boat in your boathouse (waterfront homes) / take one out | E in the boat by your slip · E at your door → Take out | B | ACT |
 | Bag (inventory: equip weapons, use items, pin them to the quick wheel) | I | D-pad → | 🎒 |
-| Flashlight on / off (buy one at a hardware store, corner store or gas station; it takes no hand - you keep your weapon) | L, or the bag / quick wheel | D-pad ↑ on foot | 🔦 (shows once you have one), or the bag |
+| Your light on / off: the flashlight, the headlamp or the hard hat's lamp (hands free), the lantern, or the heavy flashlight in your hand (hardware stores, corner stores, gas stations, the outfitters; a light in your hand goes dark while both hands are busy; batteries run down) | L, or the bag / quick wheel (picking a light there makes it the one L switches) | D-pad ↑ on foot | 🔦 (shows once you have one), or the bag |
+| Strike and throw a flare · snap and drop a glow stick · set a lit lantern down (it stays lit; E picks it up again) | the bag / quick wheel · E | the bag / quick wheel · B | the bag / ITEMS · ACT |
+| Fell a tree (a hatchet, an axe, a felling axe or a chainsaw in your bag; the tree falls away from you - stand clear; in town it's vandalism) · pick up a bundle of logs, load it onto a pickup or a flatbed, sell it at the hardware store | hold E facing the tree · E | hold B · B | hold ACT · ACT |
 | Quick wheel (med kits, bandages, drinks) | hold X, point, let go (tap: last used) | hold View, right stick, let go | ITEMS, then tap a slot |
 | Revive a downed player (kit: full health, bare-handed: low) / hand them a bandage or med kit after | hold E | hold B | hold ACT |
 | Finish off a downed player | hold F (or just hit them) | hold X | hold CAR |
@@ -133,7 +135,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
 | Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | WPN (tap: next, hold: pick) · RELOAD · ITEMS · 🎒 |
-| Flashlight on / off (once you have one) | L | D-pad ↑ (on foot) | 🔦 |
+| Light on / off (once you have one) · fell a tree (with an axe or a chainsaw) | L · hold E | D-pad ↑ (on foot) · hold B | 🔦 · hold ACT |
 | World map + waypoints (police: dispatch map) | M or the map button | Pause menu → Map (Y: a waypoint at the cross) | tap the radar or the map button |
 | Pause menu (debug menu, map, players online, settings, controls) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
 

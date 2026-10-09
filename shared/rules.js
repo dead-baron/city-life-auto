@@ -397,3 +397,19 @@ export const TOW_WRECK_S = 25;            // a burnt-out wreck is towed away aft
 export const TOW_STUCK_S = 60;            // an NPC car broken down or jammed in a lane this long gets the tow truck
 export const TOW_IDLE_S = 300;            // a car a player drove: only once left in a lane, untouched by any player this long
 export const TOW_FEE = 150;               // your own car towed back to your garage: from your bank
+
+// ---- Lights to carry (task #359: shared/lights.js, server/systems/lights.js) ----------------------------------------
+export const LIGHT_PRICES = { headlamp: 45, hardhat: 75, lantern: 55, heavyflash: 95, flare: 12, glowstick: 5, batteries: 8 };
+export const BATTERY_S = 1800;             // a set of batteries: half an hour switched on (a light lasts a little more or less by its kind)
+export const FLARE_S = 60;                 // a road flare burns about a minute
+export const GLOWSTICK_S = 240;            // a glow stick glows a few minutes
+export const GROUND_LIGHTS_MAX = 10;       // lights one player has set down at once (the oldest goes out)
+export const HARDHAT_GUARD = 0.4;          // a hard hat takes this share off the hurt of a falling tree or rock
+// ---- Felling trees (task #358: shared/felling.js, server/systems/felling.js) ----------------------------------------
+export const FELL_TOOL_PRICES = { hatchet: 40, axe: 120, fellaxe: 260, chainsaw: 650, sawfuel: 15 };
+export const CHAINSAW_FUEL_S = 240;        // a tank of fuel: four minutes of cutting (a can of fuel fills it again)
+export const TREE_REGROW_S = 1500;         // a felled tree grows back after about 25 minutes...
+export const TREE_REGROW_NEAR = 900;       // ...when no player is within this many px of it
+export const LOG_BUNDLE_PRICE = 45;        // what the hardware store and the lumber buyers pay for a bundle of logs
+export const LOGS_LIFE_S = 1800;           // log bundles nobody touches are cleared away after this long
+export const FELL_HEAT = 6;                // felling a tree in town or a park: vandalism (a little heat); in the wilds it's free

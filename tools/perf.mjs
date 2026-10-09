@@ -25,9 +25,9 @@ const ROOT = resolve(new URL('..', import.meta.url).pathname);
 // times at about 1.6x, as multiples of the yardstick: room for the city to grow, not for an accident)
 export const BUDGET = {
   code: {
-    page: { files: 88, kb: 720 },        // client/boot.js + main.js and everything they import at once (76 files, 620 KB)
+    page: { files: 89, kb: 720 },        // client/boot.js + main.js and everything they import at once (76 files, 620 KB; 88 -> 89 files for shared/lights.js, task #359)
     city: { files: 26, kb: 320 },        // client/worldgen.js: the city built off the page's thread (22, 277)
-    renderer: { files: 28, kb: 354 },    // art2/game/host.js and what it loads before drawing, beyond the page's (23, 302; 350 -> 352 for the hood pose, task #361; 352 -> 354 for the paramedics' stretcher, task #313)
+    renderer: { files: 28, kb: 355 },    // art2/game/host.js and what it loads before drawing, beyond the page's (23, 302; 350 -> 352 for the hood pose, task #361; 352 -> 354 for the paramedics' stretcher, task #313; 354 -> 355 for the carried lights, the lamps on the head, the axe and the lantern, task #359)
     bake: { files: 74, kb: 950 },        // a bake worker, its providers included (63, 823)
   },
   assetsKb: 290,                         // the title screen: stylesheet, fonts, logo, icons (247)

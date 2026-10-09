@@ -181,7 +181,7 @@ function markDirty(i) { const pr = M && M.props[i]; if (isDirty(pr)) dirty.set(i
 function dirtySig(cx, cy) {
   // (what a prop changes reaches 320 px above it and a little round it: host.js propChanged - with room to spare)
   const X0 = cx * 768, Y0 = cy * 768, out = [];
-  for (const [i, p] of dirty) if (p.x > X0 - 160 && p.x < X0 + 768 + 160 && p.y > Y0 - 80 && p.y < Y0 + 768 + 400) out.push(`${i}${p.broken ? 'b' + (p.broken.a || 0) : ''}${p.lit0 !== undefined ? 'l' + (p.lit ? 1 : 0) : ''}`);
+  for (const [i, p] of dirty) if (p.x > X0 - 160 && p.x < X0 + 768 + 160 && p.y > Y0 - 80 && p.y < Y0 + 768 + 400) out.push(`${i}${p.broken ? 'b' + (p.broken.a || 0) + (p.broken.f ? 'f' : '') : ''}${p.lit0 !== undefined ? 'l' + (p.lit ? 1 : 0) : ''}`);
   // highway barrier pieces smashed through near it (the deck drawn open there: statics.js makeDeck)
   const L = M && M.levels;
   if (L && L.broken && L.broken.size) for (const k of L.broken.keys()) { const q = barrierPos(k); if (q && q[0] > X0 - 200 && q[0] < X0 + 968 && q[1] > Y0 - 160 && q[1] < Y0 + 1000) out.push('B' + k); }

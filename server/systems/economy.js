@@ -2,6 +2,7 @@
 // pharmacy/coffee/vending buffs, weapon/pawn/black-market shops, dealership + owned
 // vehicles, Fresh Coat garage (respray / wash / repair / disguise), clothing disguises,
 // police HQ badge desk and the courthouse bounty office.
+import * as lights from './lights.js';
 import { K } from '../../shared/constants.js';
 import { WEAPONS, ITEMS, SHOPS, CRAFTS, MATERIAL_NAME, materialIds } from '../../shared/items.js';
 import { VEHICLES, PAINTS, respray } from '../../shared/vehicles.js';
@@ -749,29 +750,12 @@ export function setQuick(p, i, id) {
   store.touch();
 }
 
-// The flashlight: in the bag (never used up, no hand slot - you keep your weapon), switched on and off with
-// L / D-pad up / 🔦, from the bag or the quick wheel. profile.light is the switch; the light shines while it's
-// on and you still have one (syncLight). Other players see it through the spawn descriptor (net.js: fl).
-export function toggleLight(world, p, on) {
-  const prof = p.profile;
-  if ((prof.inventory.flashlight || 0) <= 0) {
-    if (world.time - (p.noLightAt ?? -99) > 6) { p.noLightAt = world.time; world.notify(p, `You don't have a flashlight - hardware stores, corner stores and gas stations sell them ($${FLASHLIGHT_PRICE}).`, 'warn'); }
-    return false;
-  }
-  prof.light = on === undefined ? !prof.light : !!on;
-  syncLight(world, p);
-  p.meDirty = true;
-  store.touch();
-  return true;
-}
-// Keeps the ped's light in step with the switch (every tick, players.update): off when you go down or lose the
-// flashlight (dropped when you went down, sold, stashed) - and a new one starts off.
-export function syncLight(world, p) {
-  const prof = p.profile, ped = p.ped;
-  if (prof.light && !((prof.inventory.flashlight || 0) > 0)) { prof.light = false; p.meDirty = true; }
-  const on = !!(prof.light && ped && !ped.dead);
-  if (ped && !!ped.flashOn !== on) { ped.flashOn = on; ped.appVer = (ped.appVer || 0) + 1; p.meDirty = true; }
-}
+// The lights (server/systems/lights.js, task #359): the flashlight, the headlamp, the hard hat's lamp, the lantern and
+// the heavy flashlight are switched on and off with L / D-pad up / the touch button, from the bag or the quick wheel.
+// profile.light is the switch; the light shines while it's on and you still have one (syncLight, every tick). Other
+// players see it through the spawn descriptor (net.js: fl, the light's code).
+export function toggleLight(world, p, on) { return lights.toggle(world, p, on); }
+export function syncLight(world, p) { lights.sync(world, p); }
 
 // Use one of an item from the bag: med kits and bandages heal, drinks give their boost; the flashlight
 // switches on or off.
@@ -779,7 +763,7 @@ export function useItem(world, p, id) {
   const ped = p.ped, inv = p.profile.inventory, it = ITEMS[id];
   if (!ped || ped.dead || !it) return;
   if ((inv[id] || 0) <= 0) { world.notify(p, `No ${it.name} left.`, 'warn'); return; }
-  if (it.light) { toggleLight(world, p); return; }
+  if (it.light) { lights.use(world, p, id); return; }   // (a light: chosen and switched on; a flare or a glow stick lit and dropped)
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {
     if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding) && !(it.hearty && !(ped.buffs.hearty > world.time + HEARTY_S * 0.5))) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }

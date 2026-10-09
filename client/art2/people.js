@@ -289,6 +289,9 @@ const ICLS = {
   flashlight: 'gun1', // held out like a pistol: low in front at rest, up and pointed when aiming
   umbrella: 'umb',     // held up in the right hand, the shaft straight up (the other arm swings free)
 };
+// ---- lights to carry and felling trees (#358, #359): the axe swung like a sledge, the lantern carried by its bail ----
+Object.assign(ICLS, { axe: 'big', lantern: 'bill' });
+// ---- end ----
 // The umbrella's hold, in body space (x right, y forward, z up): the right hand in front of the right shoulder at a
 // set height whatever the build, the shaft UMBRELLA_LEN long straight up, so its top - where the renderer puts the
 // canopy (game/peds.js umbrellaTop) - is the same for everyone.
@@ -1015,6 +1018,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
   for (const s of [-1, 1]) E(at([s * 0.97, -0.1, 0.04]), HD, [1.1, 1.3, 1.75], GR.HEAD, 'ear', W.ear);
   hairPrims(E, C, A, D, P, S, W, at, hat, seed);
   if (hat) hatPrims(E, C, A, D, S, W, at, hat);
+  if (hat && A.hat.lamp) lampPrims(E, S, at, hat);   // (a lamp on the forehead: lights to carry, below)
   // arms
   for (const [k, s, g] of [['L', -1, GR.ARML], ['R', 1, GR.ARMR]]) {
     const sh = S['sh' + k], el = S['el' + k], ha = S['ha' + k], fd = vnorm(vsub(ha, el)), wr = vsub(ha, vmul(fd, 1.25));
@@ -1130,6 +1134,16 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
     if (st !== 'dreads' && st !== 'bob' && D.fem) for (const [k, s] of [['L', -1], ['R', 1]]) C(at([s * 0.86, 0.2, -0.05]), vadd(S['sh' + k], mv(S.SP, [-s * 1.6, 2.2, st === 'braids' ? -6 : -3])), st === 'braids' ? 1.3 : 1.9, st === 'braids' ? 1.0 : 1.3, GR.HAIR, 'lock', W.hairLock);
   }
 }
+// ---- lights to carry (#359): a lamp on the forehead - the headlamp on its strap (hat kind 'headband'), or on the
+// front of the hard hat (A.hat.lamp; game/host.js puts them on from the descriptor's fl / hh). Small: a dark housing,
+// a pale lens (its beam is the renderer's light).
+const LAMP_BODY = cloth('#2a2a32'), LAMP_LENS = cloth('#fff4c8');
+function lampPrims(E, S, at, k) {
+  const y = k === 'hard' ? 1.45 : 1.12, z = k === 'hard' ? 0.5 : 0.4;
+  E(at([0, y, z]), S.HD, [1.45, 0.95, 1.1], GR.HAT, 'lamp', () => LAMP_BODY);
+  E(at([0, y + 0.1, z]), S.HD, [0.85, 0.55, 0.7], GR.HAT, 'lens', () => LAMP_LENS);
+}
+// ---- end ----
 function hatPrims(E, C, A, D, S, W, at, k) {
   // peaks turn up a little and stay short: from the game's high camera a long flat peak would hide the eyes
   const hr = D.head, HD = S.HD, HDb = mmul(HD, rx(-0.24));

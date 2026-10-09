@@ -170,7 +170,7 @@ export class HUD {
     cb.textContent = cr && cr.cd > 0 ? `COP CAR ${cr.cd}` : 'COP CAR';
     cb.classList.toggle('cooling', !!(cr && cr.cd > 0));
     // the flashlight's touch button: there while you own one, lit while it's on
-    document.body.classList.toggle('has-light', !!(me.inv && me.inv.flashlight > 0 && !me.dead));
+    document.body.classList.toggle('has-light', !!(me.inv && (me.inv.flashlight > 0 || me.inv.headlamp > 0 || me.inv.hardhat > 0 || me.inv.lantern > 0) && !me.dead));
     $('b-light')?.classList.toggle('lit', !!me.light);
     // weapon
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;

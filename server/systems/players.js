@@ -47,6 +47,8 @@ import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED } from '../../shared/rules.js';
+import * as felling from './felling.js';
+import * as lights from './lights.js';
 import * as revive from './revive.js';
 import * as custody from './custody.js';
 import * as cells from './cells.js';
@@ -479,6 +481,8 @@ export function findInteraction(world, p) {
 
   if (ped.carrying) {
     const crate = world.get(ped.carrying);
+    const logs = felling.sellZone(world, p, crate);   // a bundle of logs at the hardware store (felling.js)
+    if (logs) return logs;
     const dz = jobs.deliveryZoneFor(world, p, crate);
     if (dz) return { label: dz.label, run: () => dz.run() };
     const slot = cargo.findFreeSlot(world, ped);
@@ -502,8 +506,13 @@ export function findInteraction(world, p) {
   const bag = cargo.nearestBag(world, ped, true);
   if (bag) return { label: cargo.bagLabel(bag, p), run: () => cargo.lootBag(world, p, bag) };
 
+  const fellAct = felling.interaction(world, p);   // at a tree with a cutting tool: hold to fell it (felling.js)
+  if (fellAct && ped.chop) return fellAct;
   const crate = cargo.nearestCrate(world, ped);
   if (crate) return { label: crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`, run: () => cargo.pickUp(world, ped, crate) };
+  const lantern = lights.interaction(world, p);   // a lantern someone set down (lights.js)
+  if (lantern) return lantern;
+  if (fellAct) return fellAct;
 
   const hap = happenings.interaction(world, p);   // a street fight to break up, someone to help up, a wallet to give back
   if (hap) return hap;

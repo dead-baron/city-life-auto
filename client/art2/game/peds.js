@@ -33,6 +33,7 @@ const WEAPON_ITEM = {
   shotgun: 'shotgun', rifle: 'rifle', smg: 'smg', rocket: 'rocketLauncher', rod: 'fishingRod', service: 'pistol', prifle: 'rifle', psniper: 'sniper', passault: 'rifle',
   pshotgun: 'shotgun', spistol: 'silencedPistol', pepper: 'pepperSpray', spikes: 'spikeStrip', huntrifle: 'sniper',
   huntknife: 'huntKnife', bow: 'bow', varmint: 'varmintRifle', sword: 'sword', katana: 'katana', plasma: 'energyBlade',
+  heavyflash: 'flashlight',   // (lights to carry #359: drawn as the flashlight until it has a model of its own)
 };
 export function weaponItem(w) {
   if (w === null || w === undefined || w === '') return null;
