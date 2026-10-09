@@ -199,6 +199,12 @@ export class Booms {
       if (!r.on) continue;
       const e = S.ents.get(r.id);
       if (!e || !e.hoodV || now - r.t0 > 3) { r.on = false; if (e) e.hoodV = 0; continue; }
+      // on the car as it's drawn (yours is drawn ahead of the server, predicted): a third of the way to its nose
+      const v = S.ents.get(e.hoodV), def = v && v.d ? VEHICLE_BY_INDEX[v.d.m] : null;
+      if (def) {
+        const c = Math.cos(v.ra), s = Math.sin(v.ra), ly = Math.max(-def.W / 4, Math.min(def.W / 4, -(e.rx - v.rx) * s + (e.ry - v.ry) * c));
+        e.rx = v.rx + c * def.L * 0.28 - s * ly; e.ry = v.ry + s * def.L * 0.28 + c * ly; e.ra = v.ra + Math.PI; e.rz = v.rz || 0;
+      }
       e.rz = (e.rz || 0) + 12 / DECK_LIFT;
     }
     for (const c of this.cols) {
@@ -258,8 +264,8 @@ export class Booms {
     for (const r of this.rings) {
       if (!r.on) continue;
       const k = r.t / r.life, rad = r.r * ease(k);
-      g.globalAlpha = (1 - k) * 0.7;
-      g.strokeStyle = '#fff4e0'; g.lineWidth = 2 + 9 * (1 - k);
+      g.globalAlpha = (1 - k) * (1 - k) * 0.6;
+      g.strokeStyle = '#ffeacc'; g.lineWidth = 2 + 9 * (1 - k);
       g.beginPath(); g.ellipse(r.x, r.y, rad, rad * 0.86, 0, 0, TAU); g.stroke();
       g.globalAlpha = (1 - k) * 0.35; g.lineWidth = 2;
       g.beginPath(); g.ellipse(r.x, r.y, rad * 0.8, rad * 0.69, 0, 0, TAU); g.stroke();
