@@ -186,6 +186,11 @@ export class FX {
         if (o.z <= 0) { o.on = false; this.decal(6, o.x, o.y, o.ph, o.size * 0.9, o.color, this.now || 0, 0.95); }
         continue;
       }
+      if (o.type === 10) { // an ember (a campfire's, an explosion's): floats up on the heat, swaying, and fades
+        o.ph = (o.ph || 0) + dt * 3; o.vx = o.vx * 0.96 + Math.cos(o.ph) * 5; o.vy *= 0.96;
+        o.x += o.vx * dt; o.y += o.vy * dt; o.vz = o.vz * 0.97 + 10 * dt; o.z += o.vz * dt;
+        continue;
+      }
       o.x += o.vx * dt; o.y += o.vy * dt;
       const f = o.type === 2 ? 0.98 : 0.92;
       o.vx *= f; o.vy *= f;
@@ -254,7 +259,7 @@ export class FX {
     g.globalCompositeOperation = 'lighter';
     for (let i = 0; i < MAX_P; i++) {
       const o = this.p[i];
-      if (!o.on || (o.type !== 3 && o.type !== 4)) continue;
+      if (!o.on || (o.type !== 3 && o.type !== 4 && o.type !== 10)) continue;
       const k = o.life / o.max;
       g.globalAlpha = Math.min(1, k * 1.5) * (o.type === 3 ? 0.7 : 0.8);
       g.fillStyle = o.color;

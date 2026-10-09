@@ -15,12 +15,14 @@ export function newSeed(world) { return 1 + Math.floor(world.rand() * 2147483646
 
 // The explosion's event (and the wreck's flight when the plan launches it); the blast itself is vehicles.explode's.
 export function vehicleBoom(world, v, attackerPed) {
-  const seed = newSeed(world), size = blastSize(v.def), plan = boomPlan(seed, v.def);
+  let seed = newSeed(world);
+  if (v.boomKind !== undefined) for (let i = 0; i < 300 && boomPlan(seed, v.def).k !== v.boomKind; i++) seed = newSeed(world);   // (dev.js 'boom': a chosen kind)
+  const size = blastSize(v.def), plan = boomPlan(seed, v.def);
   const ev = { e: 'explode', x: Math.round(v.x), y: Math.round(v.y), r: size.r, s: seed, id: v.id, m: v.def.i, a: +v.a.toFixed(2), k: plan.k, pc: pieceCodes(plan) };
-  if (plan.launch && !v.onDeck && !(v.lz > 0.3)) {
+  if (plan.launch && v.def.kind !== 'boat' && !v.onDeck && !(v.lz > 0.3)) {
     const land = launch(world, v, plan.launch, attackerPed);
     ev.lx = land.x; ev.ly = land.y;
-  } else if (plan.k === 'launch') ev.k = 'pieces';   // (up on a deck or a ferry: it blows apart where it is instead)
+  } else if (plan.k === 'launch') ev.k = 'pieces';   // (a boat, or up on a deck or a ferry: it blows apart where it is instead)
   world.emit(v.x, v.y, ev);
   return { ev, size, plan };
 }

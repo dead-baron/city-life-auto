@@ -101,7 +101,11 @@ export class Ambience {
       if (k.water > 0.2 && night < 0.4 && rain < 0.5 && t >= nx.gull) { nx.gull = t + rr(8, 30); const [x, y] = this.around(L, 300, 900); E.play('gull', x, y, 0.7); }
       if (rain > 0.2 && t >= nx.drop) { nx.drop = t + rr(0.04, 0.2) / rain; const [x, y] = this.around(L, 20, 300); E.play('drop', x, y, rain); }
     }
-    if (this.fire && t >= nx.crackle) { nx.crackle = t + rr(0.05, 0.3); E.play('crackle', this.fire.x, this.fire.y, rr(0.5, 1)); }
+    if (this.fire && t >= nx.crackle) {
+      const v = rr(0.5, 1);
+      nx.crackle = t + rr(0.05, 0.3); E.play('crackle', this.fire.x, this.fire.y, v);
+      if (S.onCrackle) S.onCrackle(this.fire.x, this.fire.y, v);   // (a loud one: the campfire flares - render/campfx.js)
+    }
   }
   findFire(F, S, L) {
     let best = null, bd = 520;

@@ -4234,3 +4234,36 @@ From the user's concept sheets ST1-ST4 (the clothing stores, the stores of the t
 - **Tests:** `test/wardrobe.test.js` (7 tests): every piece sold and every store kind at a walk-in; owning (the starting look, the first session, refusals, the mirror at home, saved looks); a player from before the shops; Buy and Buy and wear, priced, cash then bank; the fitting room while wanted; the barber's cut, colour and moustache and the salon; the old new-outfit service. `test/look.test.js` follows the new rules (the looks message's new fields; a change of clothes made of owned pieces). `test/water.test.js`'s patrol boat now starts where there's open water (the new world moved the offshore point it used next to the shore).
 - **The world map picture** (`assets/map`) is baked again for the new world.
 - **Not yet:** staff behind the counters dressed in the store's style; a motorcycle shop (the biker branch has the bikes); the golf club's pro shop and the market stalls for preppy and festival.
+
+## 2026-10-09 · Explosions that make you go whoa, run over or onto the hood, and campfire embers
+From the owner's notes (tasks #363, #361, #360): "the explosions should be awesome and epic and make people go whoooooaaaaaa and be beautiful"; "sometimes you just get run over entirely ... sometimes you're thrown onto the car itself and you ride on the hood for a bit"; "when it crackles, embers rise into the air and the fire flares; a soft volumetric glow round it".
+- **One seed per explosion** (`shared/explosions.js`): the server's `explode` event carries a seed (`s`), the vehicle (`id`, `m`, its heading `a`) and what it does (`k`, the pieces `pc`). `boomPlan(seed, def)` turns the seed into the plan, the same on the server and every client.
+  - `k: 'pieces'`: it blows apart. Doors, the hood, wheels, panels, the boot lid and a bumper fly off.
+  - `k: 'launch'`: the wreck is blown up into the air. It rises, spins or rolls over, and slams down.
+  - `k: ''`: it burns where it stands.
+  - A car: about a third each. A truck or a bus: rarely up in the air. A motorbike: blown apart or not. A fuel tanker: always blown apart.
+- **Bigger vehicles, bigger blasts** (`blastSize`): a motorbike 72 px, a car 120, a truck or a bus 165, the fuel tanker 270. People near are thrown as before (`reactions.blasted`), further out from the big ones.
+- **Up in the air** (`server/systems/explosions.js`): the server carries the wreck along the ground to where it lands (never through a wall: the path is checked for `CAR_BLOCK`). Nothing hits it in the air. The event says where it lands (`lx`, `ly`); the clients lift and spin it over that path from the seed. It comes down with a small blast of its own (`wreckland`): people close by are thrown, and a car it lands on goes up too - a chain reaction.
+- **The layered explosion** (`client/render/boom.js`), from the seed, so everyone sees the same:
+  - a white-hot flash that lights everything round it (the renderer's lights, strongest at night; a flash over the screen when it's close);
+  - the fireball: a white-yellow core swells, then lobes roll out and up, cooling to orange and red, and break up into flames;
+  - a shockwave ring racing over the ground, with a skirt of dust;
+  - sparks that arc and fall, and embers that float up and drift;
+  - a thick smoke column that rises and drifts on the wind for 12-30 s;
+  - debris, and the pieces it blew apart into, in its own paint, scorched. They tumble, bounce and burn out;
+  - a scorch on the ground (blotches round it from the big ones);
+  - a shake that falls off with distance, more from the big ones.
+  - Everything is pooled (the particles of `render/fx.js`, fixed arrays of glow blobs, rings, smoke columns and flights). On Low ("Fewer particles") about half as much.
+- **Hit by a car** (`server/systems/carhits.js`): besides being knocked flying, two new outcomes. The speed, where the car caught you, its shape and a roll of the dice decide.
+  - **Run over:** a truck or a bus often goes right over you, any car sometimes at low speed, and always if you're already lying in the road. The car jolts. You're left critically hurt (about 14% health, `RUNOVER_LEFT`) and bleeding, face down or on your back for about 3.5 s (`RUNOVER_LIE_S`). Fast, or under something heavy, it can kill.
+  - **Onto the hood:** a low car (hatchback, sedan, taxi, sports car, police car) hitting you with its nose below `HOOD_MAX_SPEED`, about half the time. You ride the hood for 0.5-2 s (`HOOD_RIDE_S`). You're thrown off forwards when it brakes, to the outside when it turns hard, or when the time is up. Move (any direction) to roll off sooner.
+  - Pinned rolling against a car's front: move another way and you roll off to that side.
+  - NPCs get all of it too.
+  - The poses (`client/art2/people.js`, a marked block): `hood`, clinging face down on the hood with the arms spread up to the windscreen. Run over, you lie in `downF` or `downB`.
+- **The campfire** (`client/render/campfx.js`): every lit fire in view sends embers up on its heat (a pooled ember particle, type 10 in `render/fx.js`). A loud crackle of the fire you hear (`client/sound/ambience.js` calls `S.onCrackle`) makes it flare: a burst of embers and flame, its light jumping up. The other fires flare now and then on their own. After dark a soft warm haze hangs round each fire, breathing with it.
+- **Sounds** (`client/sound/events.js`): a truck's blast adds a second boom and the rubble; a car blown apart, its metal and glass; `wreckland` a slam; `runover` a body under a car; `hood` a thud on the hood; `hoodoff` a fall.
+- **Dev:** `{ t: 'dev', c: 'boom', m: 'tanker', k: 'launch' | 'pieces' | 'plain' }` blows a vehicle up beside you.
+- **On the wire:** `explode` adds `s`, `id`, `m`, `a`, `k`, `pc` (and `lx`, `ly` when launched); rockets add `s`. New: `wreckland { id, x, y, big }`, `runover { id, v, x, y, k: 'F' | 'B', d }`, `hood { id, v, x, y }`, `hoodoff { id, x, y, k }`. A player on a hood is sent as a rider (no prediction).
+- **The renderer's code budget** (`tools/perf.mjs`): 350 -> 352 KB. It sat at its budget to the byte, and the hood pose in `people.js` needs a few hundred bytes. The rest of this is in the page's code, loaded with it (two small modules).
+- **Blood:** the run-over's pool of blood follows a `settings.gore` switch when there is one (none yet: the planned "Blood and gore" toggle).
+- **Tests:** `test/explosions.test.js` (6 tests): the plan from the seed (the same seed, the same plan; launched, blown apart and plain all happen; bigger vehicles, bigger blasts); the event carries the seed and the pieces; a launched wreck lands where the server says; the chain reaction; the car-hit outcomes; a slow run-over leaves you critically hurt, not dead; the hood ride ends with a throw, braking throws you off at once, moving rolls you off.
