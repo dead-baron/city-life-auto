@@ -140,7 +140,7 @@ export function freshStart(world, prof) {
 // the market.
 function wipeProgress(world, prof) {
   for (const [id, pid] of [...world.homeOwner]) if (pid === prof.pid) world.homeOwner.delete(id);
-  const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, looks: prof.looks, wardrobe: prof.wardrobe };   // (and the clothes they own: looks.js)
+  const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, lookIntro: prof.lookIntro, looks: prof.looks, wardrobe: prof.wardrobe };   // (and the clothes they own: looks.js)
   for (const k of Object.keys(prof)) delete prof[k];
   Object.assign(prof, defaultProfile(keep.pid), keep);
   store.touch();

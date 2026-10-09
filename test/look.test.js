@@ -163,7 +163,8 @@ test('server: a new player wears a starter until they pick; an old profile migra
   const b = joinPlayer(w, { outfit: old });
   assert.equal(b.prof.outfit, undefined, 'the outfit is gone');
   assert.equal(b.prof.look, LK.encodeLook(LK.lookFromOutfit(old)));
-  assert.equal(b.prof.lookPicked, true, 'existing players are not sent through the starting screen');
+  assert.equal(b.prof.lookPicked, false, 'existing players get the starting screen once (a free session; they keep their look and what they own)');
+  assert.equal(b.prof.lookIntro, 1);
   assert.equal(b.p.ped.app.tc, LK.lookToApp(LK.lookFromOutfit(old)).tc);
 });
 

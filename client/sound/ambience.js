@@ -36,7 +36,9 @@ export class Ambience {
       leaves: bed(this.pink, [flt('highpass', 1500), flt('bandpass', 3200, 0.4)]),
       sea: bed(this.brown, [flt('lowpass', 520, 0.5)]),
       surf: bed(this.white, [flt('bandpass', 900, 0.3), gain(0.2)]),
-      rain: bed(this.white, [flt('highpass', 900), flt('lowpass', 6500)]),
+      // (rain: soft pink noise, not a white hiss - the white one was some 20 dB louder than the city round it: the owner
+      // found it overpowering, 2026-10-09)
+      rain: bed(this.pink, [flt('highpass', 450), flt('lowpass', 4200)]),
       sub: bed(this.brown, [flt('lowpass', 190, 0.8)]),
       fire: bed(this.brown, [flt('lowpass', 330, 0.6)]),
       // under the ground (F.ug: server/systems/underground.js): the sewer's stream running past, the cave's hollow hush
@@ -102,7 +104,7 @@ export class Ambience {
       if (k.urban > 0.4 && t >= nx.siren) { nx.siren = t + rr(70, 220); const [x, y] = this.around(L, 2000, 2400); E.play('farsiren', x, y, 0.6); }
       if (k.urban > 0.35 && night < 0.5 && t >= nx.horn) { nx.horn = t + rr(14, 55); const [x, y] = this.around(L, 2000, 2400); E.play('farhorn', x, y, 0.7); }
       if (k.water > 0.2 && night < 0.4 && rain < 0.5 && t >= nx.gull) { nx.gull = t + rr(8, 30); const [x, y] = this.around(L, 300, 900); E.play('gull', x, y, 0.7); }
-      if (rain > 0.2 && t >= nx.drop) { nx.drop = t + rr(0.04, 0.2) / rain; const [x, y] = this.around(L, 20, 300); E.play('drop', x, y, rain); }
+      if (rain > 0.2 && t >= nx.drop) { nx.drop = t + rr(0.12, 0.4) / rain; const [x, y] = this.around(L, 20, 260); E.play('drop', x, y, rr(0.4, 1) * rain); }   // (a few drops close by, not a constant ticking)
     }
     if (this.fire && t >= nx.crackle) {
       const v = rr(0.5, 1);
@@ -139,11 +141,11 @@ export class Ambience {
     const roof = inside ? 0.35 : 1, open = sub ? 0 : 1;
     const want = {
       city: open * roof * Math.min(1, k.urban * 1.4) * (1 - k.wild * 0.7) * (night > 0.5 ? 0.6 : 1) * 0.42,
-      wind: open * roof * (0.06 + 0.4 * k.wild * (1 - k.urban) + 0.25 * rain + 0.2 * Math.max(0, k.water - 0.6)) * this.gust,
+      wind: open * roof * (0.05 + 0.26 * k.wild * (1 - k.urban) + 0.1 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust,
       leaves: open * roof * k.green * Math.min(1, k.wild * 1.6) * 0.35 * this.gust * this.gust,
       sea: open * roof * Math.pow(k.water, 0.8) * 0.5 * swell,
       surf: open * roof * k.shore * 0.8,
-      rain: (sub ? 0 : rain * (inside ? 0.35 : 0.5)),
+      rain: (sub ? 0 : rain * (inside ? 0.09 : 0.22) * (0.85 + 0.15 * this.gust)),   // (heard through the roof indoors; it swells a little with the gusts)
       sub: sub && !F.ug ? 0.6 : 0,
       flow: F.ug === 1 ? 0.3 : 0,
       cave: F.ug === 2 ? 0.28 : 0,

@@ -647,10 +647,17 @@ function onEvent(ev) {
     case 'toast': S.hud.toast(ev.text, ev.tone); if (ev.tone === 'bad') sfx('bad'); else if (ev.tone === 'good') sfx('cash', 0.6); else if (ev.tone === 'warn') sfx('alert', 0.7); break;
     case 'shot': {
       const w = WEAPON_BY_INDEX[ev.w];
-      fx.tracer(ev.x1, ev.y1, ev.x2, ev.y2);
+      // the flash and the tracer start at the gun as it's drawn: your own character runs ahead of where the server had
+      // it (prediction) and everyone else a little behind (interpolation), so the server's muzzle point trailed behind a
+      // running shooter (the owner, 2026-10-09). The flash stays on the gun for its few frames (collectLights).
+      const sh = ev.id ? S.ents.get(ev.id) : null, still = ev.x2 === ev.x1 && ev.y2 === ev.y1;
+      const a = still ? (sh && sh.ra !== undefined ? sh.ra : 0) : Math.atan2(ev.y2 - ev.y1, ev.x2 - ev.x1);
+      const off = w && w.type === 'rocket' ? 20 : 14, follow = !!(sh && sh.rx !== undefined && Math.hypot(sh.rx - ev.x1, sh.ry - ev.y1) < 260);
+      const x1 = follow ? sh.rx + Math.cos(a) * off : ev.x1, y1 = follow ? sh.ry + Math.sin(a) * off : ev.y1;
+      fx.tracer(x1, y1, ev.x2, ev.y2);
       if (w && w.silenced) { sfx('swing', distVol(ev.x1, ev.y1) * 0.5); break; } // a suppressed cough, no muzzle flash
-      S.flashes.push({ x: ev.x1, y: ev.y1, t: 0.065, a: Math.atan2(ev.y2 - ev.y1, ev.x2 - ev.x1), r: 170 });
-      fx.spawn(4, ev.x1, ev.y1, 0, 0, 0.05, 6, '#fff3b0');
+      S.flashes.push({ x: x1, y: y1, t: 0.065, a, r: 170, id: follow ? ev.id : 0, off });
+      fx.spawn(4, x1, y1, 0, 0, 0.05, 6, '#fff3b0');
       sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun' || w.id === 'huntrifle') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
     }
@@ -4293,14 +4300,24 @@ const TALL_SHADOW = { lamp: { h: 34, r: 3 }, turbine: { h: 120, r: 7 }, radiotow
 // in the spawn descriptor - they buy one and switch it on): a soft beam by day, the full cone at night. L: the light
 // records (cone, beam, add, glow). Down the sewers and in the cave the underground view calls this with its own records
 // (night 1): every carried light that goes through here lights the dark down there too.
+// (the kind of light, shared/lights.js: a headlamp's or a flashlight's cone, a lantern's round glow - its reach and colour)
+const lightRGB = new Map();
+const rgbOf = (LD) => { let c = lightRGB.get(LD); if (!c) { c = LD.col.map((v) => Math.round(v * 255)); lightRGB.set(LD, c); } return c; };
 function carriedLights(L, peds, night, haze) {
   for (const p of peds) {
     if ((p.flags & (PF.INVEH | PF.DEAD | PF.DOWN)) || p.swim || p.blink === 3) continue;
-    const torch = !!(p.d && p.d.fl), cop = night > 0.35 && !!(p.flags & PF.BADGE);
-    if (!torch && !cop) continue;
+    const LD = p.d && p.d.fl ? lightOf(p.d.fl) : null, cop = night > 0.35 && !!(p.flags & PF.BADGE);
+    if (!LD && !cop) continue;
+    if (LD && LD.beam === 'glow') {   // a lantern held up: warm and round
+      const c = rgbOf(LD);
+      if (night > 0.05) L.add(p.rx, p.ry - 8, LD.range, c, Math.min(1.1, 0.6 * LD.k) * night);
+      L.glow(p.rx, p.ry - 12, 12, c, 0.5 * Math.max(night, 0.2));
+      continue;
+    }
     const a = p.ra, x = p.rx + Math.cos(a) * 8, y = p.ry - 10 + Math.sin(a) * 8;
-    if (night > 0.05) L.cone(x, y, a, torch ? 240 : 200, 62, LIGHT.white, 0.85 * night);
-    L.beam(x, y, a, 170, 40, LIGHT.white, torch ? 0.16 * (1 - night) + 0.06 * haze * night : 0.045 * haze * night);
+    const len = LD ? LD.range : 200, wide = LD ? Math.round(62 * (LD.spread || 0.32) / 0.32) : 62, c = LD ? rgbOf(LD) : LIGHT.white;
+    if (night > 0.05) L.cone(x, y, a, len, wide, c, 0.85 * night);
+    L.beam(x, y, a, len * 0.7, 40, c, LD ? 0.16 * (1 - night) + 0.06 * haze * night : 0.045 * haze * night);
   }
 }
 function collectLights(sky, view, vehs, peds, dt) {
@@ -4310,6 +4327,7 @@ function collectLights(sky, view, vehs, peds, dt) {
   const haze = 1 + sky.fog.k * 1.4 + S.rainK * 0.7;
   reflSrc.length = 0;
   S.flashes = S.flashes.filter((f) => (f.t -= dt) > 0);
+  for (const f of S.flashes) if (f.id) { const e = S.ents.get(f.id); if (e && e.rx !== undefined) { f.x = e.rx + Math.cos(f.a) * f.off; f.y = e.ry + Math.sin(f.a) * f.off; } }   // (on the gun as it moves)
   const inV = (x, y, m) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
   // street lamps: they come on one by one at dusk, a few flicker or are out (render/atmos.js)
   const lamps = S.map.lamps;

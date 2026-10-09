@@ -22,8 +22,14 @@ export const SAVED_LOOKS = 12;
 const NAME_MAX = 20;
 
 export function ensureLook(prof) {
+  lookOf(prof);
+  // everyone from before the creator gets its starting-look screen once, as a free session, keeping what they own (the
+  // owner, 2026-10-09: a player from before it never saw the creator - their old outfit had simply become a look)
+  if (prof.lookIntro !== 1) { prof.lookIntro = 1; prof.lookPicked = false; }
+}
+function lookOf(prof) {
   if (typeof prof.look === 'string' && decodeLook(prof.look)) { if (!Array.isArray(prof.looks)) prof.looks = []; ensureWardrobe(prof); return; }
-  if (prof.outfit) { prof.look = encodeLook(lookFromOutfit(prof.outfit)); prof.lookPicked = true; }
+  if (prof.outfit) { prof.look = encodeLook(lookFromOutfit(prof.outfit)); if (prof.lookPicked === undefined) prof.lookPicked = true; }
   else { prof.look = encodeLook(starterFor(parseInt(String(prof.pid || '0').slice(0, 8), 16) || 0)); prof.lookPicked = false; }
   delete prof.outfit;
   if (!Array.isArray(prof.looks)) prof.looks = [];

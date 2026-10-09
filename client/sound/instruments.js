@@ -290,7 +290,7 @@ export const INSTR = {
   } },
   farsiren: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const os = E.tone(o, t, 700, 4, v * 0.03, { type: 'triangle', a: 1, lp: 1400 }); os.frequency.linearRampToValueAtTime(1150, t + 1); os.frequency.linearRampToValueAtTime(700, t + 2); os.frequency.linearRampToValueAtTime(1150, t + 3); os.frequency.linearRampToValueAtTime(800, t + 4); return 4.1; } },
   farhorn: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const d = rr(0.15, 0.35); E.tone(o, t, vary(392, 0.1), d, v * 0.03, { type: 'square', lp: 1000 }); E.tone(o, t, vary(494, 0.1), d, v * 0.025, { type: 'square', lp: 1000 }); return d + 0.05; } },
-  drop: { pri: AMBIENT, range: 400, play(E, o, t, v) { E.tone(o, t, rr(1600, 3400), 0.025, v * 0.03, { type: 'sine', f2: 1000 }); return 0.04; } },
+  drop: { pri: AMBIENT, range: 320, play(E, o, t, v) { E.noise(o, t, rr(0.008, 0.016), v * 0.07, { color: 'pink', ft: 'bandpass', f: rr(2400, 5200), q: 1.1 }); return 0.03; } },   // (a raindrop: a soft tick, not a chirp)
   thunder: { pri: MAJOR, gap: 3, play(E, o, t, v) { E.noise(o, t, 0.25, v * 0.3, { ft: 'highpass', f: 1500 }); E.noise(o, t, 3, v * 0.7, { color: 'brown', ft: 'lowpass', f: 400, f2: 70, a: 0.05 }); E.noise(o, t + 0.3, 2.2, v * 0.5, { color: 'brown', ft: 'lowpass', f: 160, a: 0.4 }); return 3.1; } },
   // ======== under the ground (server/systems/underground.js): the sewers, the cave, mining ========
   // a drip into a pool, ringing off the rock (send: the echo carries it)

@@ -4434,3 +4434,15 @@ From the user's notes (2026-10-08, 19:28; tasks #357 and #279): "a few manholes 
 - **Tests:** `test/underground.test.js` (5): the routes and their manholes joined underground, down one manhole, the physics in the tunnels, up another, the station door; a suspect who goes down unseen is lost (an officer right over the cover can't see them, the stars go), one who saw it climbs down after them and sees them along the tunnel; the cave's chambers joined from the way in, dark but for lights and glowing things; bats at a light, the den bear, dust then the rock; the boat on the river. `test/mining.test.js` (5): the tiers gate the ores, a vein yields and is used up and grows back elsewhere near, better ore deeper and further out, selling (the assayer pays more), the quarry's veins.
 - **Performance:** the page's code 88 of 88 files (the covers' list is read straight from `shared/`: one module fewer), 695 KB; the renderer's 351 of 352 KB, untouched; the bake worker's 912 of 950 KB (the physics now carries `shared/underground.js`). The underground's layout is worked out lazily, the first time anyone goes near it (about 30 ms), not while the city is built.
 - **Not yet:** sinkholes, snakes and spiders, more caves and rivers joining them, and the mining pose of its own (the swing uses the melee swing for now).
+
+## 2026-10-09 · Quick fixes from the owner's tries: the rain, the muzzle flash, the creator for everyone
+From the owner's notes at 03:55, 04:38 and 04:39.
+- **The rain was overpowering** (`client/sound/ambience.js`, `instruments.js`):
+  - The rain's bed was white noise, about 20 dB louder than the city round it (measured A-weighted, against the other beds). It's now soft pink noise at a level just over the city's hum, swelling a little with the gusts. Indoors you hear it through the roof.
+  - The raindrops were sine chirps, up to 25 a second. Now there are a few soft ticks a second close by.
+  - The wind in the rain and out in the wilds is quieter.
+- **The muzzle flash trailed behind a running shooter** (`client/main.js`, `server/systems/combat.js`):
+  - The flash was drawn where the server had the shooter. Your own character runs ahead of that and everyone else a little behind.
+  - The shot now carries the shooter's id. The flash and the tracer start at the gun as it's drawn, and the flash stays on the gun for its few frames.
+- **The character creator for everyone** (`server/systems/looks.js`): players from before the creator never saw it, because their old outfit had simply become a look. Everyone now gets the starting-look screen once, as a free session, keeping what they own. A progress wipe keeps the flag, so it's only once. It's also always on the pause menu: Appearance.
+- **Lights underground** (`client/main.js` carriedLights): each carried light now has its own beam in the shared light path that the sewers and the cave use: a headlamp's narrower cone, the heavy flashlight's long one, a lantern's warm round glow.

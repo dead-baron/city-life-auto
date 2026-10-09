@@ -57,7 +57,7 @@ export function tryAttack(world, ped, aim) {
     const sx = ped.x + Math.cos(aim) * 20, sy = ped.y + Math.sin(aim) * 20;
     const proj = world.spawnProjectile(ped.id, sx, sy, aim, 560, w.range, w.id);
     if (proj) proj.lz = ped.lz || 0;
-    world.emit(sx, sy, { e: 'shot', x1: sx, y1: sy, x2: sx, y2: sy, w: w.i });
+    world.emit(sx, sy, { e: 'shot', x1: sx, y1: sy, x2: sx, y2: sy, w: w.i, id: ped.id });
     law.gunfire(world, ped);
     npc.onGunfire(world, ped.x, ped.y, ped);
     return true;
@@ -295,7 +295,7 @@ function hitscan(world, ped, w, a, acc) {
   const hit = traceTarget(world, ped, x1, y1, x2, y2, true);
   const t = hit.hitT;
   const hx = x1 + (x2 - x1) * t, hy = y1 + (y2 - y1) * t;
-  world.emit(x1, y1, { e: 'shot', x1, y1, x2: hx, y2: hy, w: w.i, h: hit.kind || 0 });
+  world.emit(x1, y1, { e: 'shot', x1, y1, x2: hx, y2: hy, w: w.i, h: hit.kind || 0, id: ped.id });   // (id: the client puts the flash on the gun it draws)
   if (hit.kind === K.PED) {
     world.emit(hx, hy, { e: 'blood', x: hx, y: hy, a, n: 9, g: 1 }); // g: a bullet - spray out the far side, splats on the ground
     if (world.rand() < 0.35) hit.bleeding = true;
