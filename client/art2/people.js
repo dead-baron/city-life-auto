@@ -1588,7 +1588,12 @@ function face(fig, P, A, D, w, h, AX, AY) {
     let n = 0;
     for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) if (onHead(x0 + i, y0 + j)) n++;
     if (n < 2) return false;
-    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const x = x0 + i, y = y0 + j; if (x >= 0 && y >= 0 && x < w && y < h && (onHead(x, y) || PID[y * w + x] >= 0 && fig.prims[PID[y * w + x]].g === GR.HAIR)) { const k = y * w + x; CR[k] = col[0]; CG[k] = col[1]; CB[k] = col[2]; } }
+    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
+      const x = x0 + i, y = y0 + j;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      const k = y * w + x, pk = PID[k];   // (on the face, or a fringe over it; never a held item: its PID is ITEMID)
+      if (onHead(x, y) || (pk >= 0 && pk < fig.prims.length && fig.prims[pk].g === GR.HAIR)) { CR[k] = col[0]; CG[k] = col[1]; CB[k] = col[2]; }
+    }
     return true;
   };
   const skin = W.skin;

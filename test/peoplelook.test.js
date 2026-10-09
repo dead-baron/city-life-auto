@@ -71,6 +71,17 @@ test('the close renders are the game\'s figure, finer: the same shape, R times t
   }
 });
 
+test('a held item beside the face (a rifle\'s stock at the cheek, a phone at the ear) never breaks the face', () => {
+  // (the game-scale face is stamped a whole art pixel at a time: a block may hold a held item's pixels, which have no
+  // primitive behind them)
+  for (let i = 0; i < LK.STARTERS.length; i++) {
+    const A = LK.lookArt(LK.STARTERS[i].look);
+    for (const d of [0, 1, 3, 5, 7]) for (const [pose, held, nf] of [['aim', 'sniper', 2], ['aim', 'rifle', 2], ['aimw', 'shotgun', 6], ['fish', 'fishingRod', 4], ['swing', 'bat', 6], ['idle', 'phone', 1]]) {
+      for (let f = 0; f < nf; f++) assert.doesNotThrow(() => person(A, d, pose, f, { held }), `${LK.STARTERS[i].name} ${pose} ${held} ${d} ${f}`);
+    }
+  }
+});
+
 test('no two hairstyles are drawn alike (CB3: each its own shape)', () => {
   for (const b of ['m', 'f']) {
     const base = variant(LK.starterFor(b === 'm' ? 0 : 1), (V) => { V.body.base = b; V.outfit.hat = null; V.outfit.glasses = null; V.hair.facial = 0; });
