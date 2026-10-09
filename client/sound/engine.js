@@ -159,7 +159,7 @@ export class SoundEngine {
     st.asked++;
     const pos = x !== undefined && x !== null && Number.isFinite(x);
     const range = I.range || 1000;
-    const mine = !pos || !!(p && p.mine) || this.mineAt(x, y);
+    const mine = !pos || (p && p.mine !== undefined ? !!p.mine : this.mineAt(x, y));   // (said outright, or right where you are)
     vol *= this.trims[name] ?? 1;
     // the loudness where you are, before it costs anything
     let loud = vol;
