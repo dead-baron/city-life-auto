@@ -4085,3 +4085,15 @@ From the user's concept sheets CC1 and CC7-CC10 (the creator, its tabs, the star
   - an old outfit migrates;
   - the art app;
   - on the server: a new player's starter and an old profile's migration, the compact descriptor, setting a look (refused while wanted), saved looks, the shop's new outfit, and changing at home.
+
+## 2026-10-08 · Fewer, smaller notes on phones; "you saw a crime" once in a while
+From the user's 21:18 note: the notes that pop up cover too much of the screen, on phones above all, and seeing someone commit crime after crime brought a note for every one.
+- **On a phone held upright** (`client/style.css`): one note at a time, tucked in at the top beside the minimap and clear of the buttons on the right. Notes were in the middle of the screen before.
+- **On every phone:** smaller notes, at most three lines each.
+- **Everywhere** (`client/hud.js`):
+  - A note stays up only as long as it takes to read: short ones go sooner, and none lasts more than 6.5 s.
+  - The same note again while it's still up isn't stacked: it moves to the front with a count (×2, ×3).
+  - At most four are kept.
+- **Seeing a crime** (`server/systems/law.js`):
+  - One note, "You saw a crime. You can call it in from your phone for a minute", then nothing for 10 minutes (`SAW_NOTE_S`), however many crimes you see.
+  - Each crime still waits on the phone's home screen to be called in, as before.

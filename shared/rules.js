@@ -221,6 +221,7 @@ export const WITNESS_SPREAD = 0.3;
 // One squad car comes to where they are and looks for that suspect: still about in the same clothes, they're it.
 export const SAW_S = 60;                 // how long a crime you saw can be called in
 export const REPORT_COOLDOWN_S = 90;     // one call per player this often
+export const SAW_NOTE_S = 600;           // "you saw a crime" pops up at most this often (each one is still on the phone to call in)
 export const REPORT_SEARCH_S = 45;       // the unit looks round the caller this long
 export const REPORT_SPOT_PX = 360;       // ...and knows the suspect when it has them in sight this close
 

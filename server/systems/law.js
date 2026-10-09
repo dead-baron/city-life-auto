@@ -42,7 +42,7 @@ export const CRIMES = {
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
-  WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, REPORT_COOLDOWN_S } from '../../shared/rules.js';
+  WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, SAW_NOTE_S, REPORT_COOLDOWN_S } from '../../shared/rules.js';
 import { hash2 } from '../../shared/rng.js';
 import { PAINTS } from '../../shared/vehicles.js';
 export { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, SERVICE_AMMO, SUBDUE_S, POLICE_RANKS };
@@ -208,7 +208,8 @@ function sawCrime(world, q, perpP, type, x, y) {
   q.saw = (q.saw || []).filter((s) => now - s.at < SAW_S && s.suspect !== perpP.pid);   // (the latest of what one person did)
   q.saw.push({ id: (world.sawSeq = (world.sawSeq || 0) + 1), type, label: CRIMES[type].label, suspect: perpP.pid, name: perpP.name, ...L, x: Math.round(x), y: Math.round(y), at: now });
   if (q.saw.length > 3) q.saw.shift();
-  world.notify(q, `You saw it: ${CRIMES[type].label.toLowerCase()} by ${perpP.name} (${L.desc}). Call it in from your phone within a minute.`, 'warn');
+  // one note now and then, not one a crime (the user, 2026-10-08): what you saw waits on the phone's home screen
+  if (now - (q.sawNoteAt ?? -1e9) >= SAW_NOTE_S) { q.sawNoteAt = now; world.notify(q, 'You saw a crime. You can call it in from your phone for a minute.', 'warn'); }
   q.meDirty = true;
 }
 // the crimes a player saw that they can still call in

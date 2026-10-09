@@ -296,7 +296,10 @@ body.portrait.touch #hud-tr { max-width: 46vw; }
 body.portrait.touch #money { font-size: 24px; }
 body.portrait.touch #weapon { display: none; }
 body.portrait.touch #helpbox, body.portrait.touch #toasts { left: max(10px, env(safe-area-inset-left)); top: calc(282px + var(--corner-top)); max-width: 80vw; width: auto; }
-body.portrait.touch #toasts { top: calc(332px + var(--corner-top)); width: 80vw; }
+/* the notes on a phone held upright: one at a time, tucked in at the top beside the minimap, clear of the buttons on the
+   right (the user, 2026-10-08: they covered too much of the screen) */
+body.portrait.touch #toasts { top: calc(104px + var(--corner-top)); left: calc(max(10px, env(safe-area-inset-left)) + 120px); right: 54px; width: auto; max-width: none; }
+body.portrait.touch #toasts .toast:nth-last-child(n+2) { display: none; }
 body.portrait.touch #job { top: auto; bottom: 300px; max-width: 86vw; }
 body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
 body.portrait.touch #tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 154px); bottom: 172px; }   /* (just above FIRE) */
@@ -799,6 +802,9 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 .touch #money { font-size: 22px; }
 .touch #helpbox { font-size: 14px; }
 .touch .toast { font-size: 12px; }
+/* phones: smaller notes, three lines at most */
+.touch .toast { font-size: 11px; line-height: 1.25; padding: 4px 7px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.touch #toasts { gap: 3px; }
 
 /* down / wasted (the concepts' plates) */
 #death h1 { font-family: var(--pixel); font-weight: 700; font-size: 96px; letter-spacing: 8px; color: #e8202a; text-shadow: 0 6px 0 #070b16, 4px 0 0 #070b16, -4px 0 0 #070b16, 0 -4px 0 #070b16, 0 0 30px rgba(0,0,0,.8); }

@@ -283,13 +283,27 @@ export class HUD {
       if (this.held.length > 4) this.held.shift();
       return;
     }
-    const el = document.createElement('div');
-    el.className = 'toast ' + tone;
-    el.textContent = localizeText(text);
+    const msg = localizeText(text);
+    // up for as long as it takes to read (a short note goes sooner); the same note again while it's still up isn't
+    // stacked: it moves to the front with its time restarted and a count (the user, 2026-10-08: fewer, smaller notes)
+    const life = Math.min(6500, 2400 + msg.length * 45);
+    let el = this.toastEls.find((x) => x.dataset.msg === msg);
+    if (el) {
+      clearTimeout(el._t);
+      const n = (+el.dataset.n || 1) + 1;
+      el.dataset.n = String(n);
+      el.textContent = `${msg} ×${n}`;
+      this.toastEls = this.toastEls.filter((x) => x !== el);
+    } else {
+      el = document.createElement('div');
+      el.className = 'toast ' + tone;
+      el.dataset.msg = msg;
+      el.textContent = msg;
+    }
     $('toasts').appendChild(el);
     this.toastEls.push(el);
-    while (this.toastEls.length > 5) this.toastEls.shift().remove();
-    setTimeout(() => { el.remove(); this.toastEls = this.toastEls.filter((x) => x !== el); }, 6500);
+    while (this.toastEls.length > 4) { const old = this.toastEls.shift(); clearTimeout(old._t); old.remove(); }
+    el._t = setTimeout(() => { el.remove(); this.toastEls = this.toastEls.filter((x) => x !== el); }, life);
   }
 
   // ---- menu ----
