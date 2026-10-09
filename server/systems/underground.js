@@ -113,6 +113,7 @@ export function goDown(world, p, mh) {
       if (!isCop(e) || e.dead || e.sub || e.vehId || seen >= 3) continue;
       if (!world.map.los(e.x, e.y, ped.x, ped.y)) continue;
       e.ugFollow = { at: world.time + POLICE_FOLLOW_S + seen * 0.8, x: mh.x, y: mh.y, ug: UG.SEWER, who: p.pid };
+      (world.ugCops ||= new Set()).add(e.id);   // (copsStep: only these, not every entity every tick)
       seen++;
     }
   }
@@ -213,11 +214,13 @@ export function finishVein(world, v, st = veinState(world, v.i)) {
 
 // ---- the police who followed you down ----------------------------------------------------------------------------------
 function copsStep(world, dt) {
-  const L = layoutOf(world);
-  for (const e of world.entities.values()) {
-    if (e.kind !== K.PED || !e.npc) continue;
+  const L = layoutOf(world), cops = world.ugCops;
+  if (!cops || !cops.size) return;
+  for (const id of cops) {
+    const e = world.get(id);
+    if (!e || e.removed || e.dead || (!e.ug && !e.ugFollow)) { cops.delete(id); if (e && !e.dead && e.ug) { e.ug = 0; e.sub = false; } continue; }
     if (e.ugFollow && !e.ug) {
-      if (e.dead || e.vehId) { e.ugFollow = null; continue; }
+      if (e.vehId) { e.ugFollow = null; cops.delete(id); continue; }
       if (world.time < e.ugFollow.at) continue;
       const f = e.ugFollow;
       e.ugFollow = null;
@@ -238,6 +241,7 @@ function copsStep(world, dt) {
     if (world.time - (e.ugSeen || 0) > POLICE_GIVE_UP_S) {   // lost them: back up the nearest ladder
       const mh = manholeNear(L, e.x, e.y, 99999) || e.ugHome;
       e.sub = false; e.ug = 0; e.x = mh.x; e.y = mh.y; e.vx = 0; e.vy = 0;
+      cops.delete(id);
       continue;
     }
     const goal = t || e.ugLast;
