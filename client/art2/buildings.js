@@ -502,7 +502,7 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     setC(G, x, y, c);
     // lit from inside: the glow carries the room's own colours (warmed), so after dark the interior reads through the
     // glass - shelves, the counter, the booths - rather than one flat bright pane (2026-10-09, R1-C/E)
-    glow(G, x, y, [Math.min(255, c[0] * 0.62 + 96), Math.min(255, c[1] * 0.58 + 74), Math.min(255, c[2] * 0.5 + 44), 40 + night * 120]);
+    glow(G, x, y, [Math.min(255, c[0] * 0.75 + 50), Math.min(255, c[1] * 0.7 + 36), Math.min(255, c[2] * 0.6 + 18), 22 + night * 74]);
     G.flag[y * G.w + x] |= F_GLASS;
   }
   // security grille over the glass (bars), and a neon OPEN sign in the window

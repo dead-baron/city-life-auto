@@ -91,29 +91,30 @@ function paintSign(G, sg) {
   const S = [0, 1, 0], { x, v, w, h, col, col2, sx } = sg;
   const X0 = G.ax + x, Y1 = G.ay - v, Y0 = Y1 - h;   // the panel's screen box
   const put = (X, Y, c, e) => { if (G.inside(X, Y) && G.alpha(X, Y)) G.put(X, Y, c, S, G.ay - Y, e, 0); };
-  const hot = (c) => c.map((q) => Math.min(255, q * 0.45 + 150));
-  // the halo on the wall round it: the sign lights its own facade
-  const R = 18;
+  const hot = (c) => c.map((q) => Math.min(255, q * 0.62 + 92));
+  // the halo on the wall round it: the sign lights its own facade (faint: the bloom does the rest)
+  const R = 14;
   for (let Y = Y0 - R; Y < Y1 + R; Y++) for (let X = X0 - R; X < X0 + w + R; X++) {
     if (!G.inside(X, Y) || !G.alpha(X, Y)) continue;
     const dx = X < X0 ? X0 - X : X >= X0 + w ? X - X0 - w + 1 : 0, dy = Y < Y0 ? Y0 - Y : Y >= Y1 ? Y - Y1 + 1 : 0, d = Math.hypot(dx, dy);
     if (d <= 0 || d >= R) continue;
     const k = 1 - d / R;
-    G.glow(X, Y, [col[0], col[1], col[2], Math.round(20 + 110 * k * k)]);
+    G.glow(X, Y, [col[0], col[1], col[2], Math.round(10 + 60 * k * k)]);
   }
   // the panel: a dark backing with a tube round its edge
   for (let Y = Y0; Y < Y1; Y++) for (let X = X0; X < X0 + w; X++) {
     const e = Y === Y0 || Y === Y1 - 1 || X === X0 || X === X0 + w - 1, e2 = Y === Y0 + 2 || Y === Y1 - 3 || X === X0 + 2 || X === X0 + w - 3;
     if (e) put(X, Y, [26, 20, 34], null);
-    else if (e2) put(X, Y, hot(col2), [col2[0], col2[1], col2[2], 235]);
-    else put(X, Y, [22, 16, 30], [col[0], col[1], col[2], 26]);
+    else if (e2) put(X, Y, hot(col2), [col2[0], col2[1], col2[2], 170]);
+    else put(X, Y, [18, 14, 26], null);
   }
-  // the icon (2 px strokes), then the words: a white-hot core in each tube, the colour round it
+  // the icon (2 px strokes), then the words: a hot core in each tube, the colour round it, the dark panel between
+  // the letters (so they read through the bloom)
   const IX = X0 + 7, IY = Y0 + Math.round((h - 24) / 2);
-  for (const [px, py] of ICONS[sg.icon] || ICONS.star) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) put(IX + px * 2 + i, IY + py * 2 + j + 1, (i + j) % 2 ? col2 : hot(col2), [col2[0], col2[1], col2[2], 255]);
+  for (const [px, py] of ICONS[sg.icon] || ICONS.star) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) put(IX + px * 2 + i, IY + py * 2 + j + 1, (i + j) % 2 ? col2 : hot(col2), [col2[0], col2[1], col2[2], 190]);
   const TX = X0 + 7 + 26, TY = Y0 + 6;
   drawText((px, py) => {
     const core = sx >= 4 ? ((px - TX) % sx === 1 || (px - TX) % sx === 2) && ((py - TY) % sx === 1 || (py - TY) % sx === 2) : true;
-    put(px, py, core ? hot(col) : col, [col[0], col[1], col[2], core ? 255 : 210]);
+    put(px, py, core ? hot(col) : col.map((q) => q * 0.85), [col[0], col[1], col[2], core ? 200 : 120]);
   }, sg.text, TX, TY, { sx, sy: sx, gap: 1 });
 }
