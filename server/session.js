@@ -23,6 +23,7 @@ import { brokenList } from './systems/props.js';
 import { brokenBarrierList } from './systems/barriers.js';
 import { setView } from './view.js';
 import * as devmode from './devmode.js';
+import * as looks from './systems/looks.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
 export function createSession(world, conn, opts) {
@@ -52,6 +53,7 @@ export function createSession(world, conn, opts) {
         // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
         conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, sig: mapSignature(world.map), tick: world.tick, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), forage: foraging.goneList(world), fires: campfires.fireList(world), xing: trains.crossingStates(world), tt: trains.timetable(world), rides: rides.active(world) });
         player = players.join(world, conn, profile, { clientBuild: typeof msg.cb === 'string' ? msg.cb.slice(0, 40) : null, clientBuiltAt: Number(msg.cbt) || 0 });
+        conn.sendJSON(looks.stateMsg(player));   // your look, whether you've picked one yet, your saved looks (client/creator.js)
         return;
       }
       if (!player) return;
@@ -85,6 +87,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'unstuck') { unstuck.request(world, player); return; }
       if (msg.t === 'surrender') { const err = unstuck.surrender(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }
+      if (msg.t === 'look') { const r = looks.handle(world, player, msg); if (r) conn.sendJSON(r); return; } // the character creator
       if (msg.t === 'plist') { conn.sendJSON(devmode.playerList(world, player)); return; } // who's online (options / map)
       if (msg.t === 'devmode') { if (msg.leave) devmode.exit(world, player); else if (!player.devMode) devmode.tryPassword(world, player, msg.pw); return; }
       if (msg.t === 'dev' && (opts.dev || player.devMode)) { dev.command(world, player, String(msg.c || ''), msg); }

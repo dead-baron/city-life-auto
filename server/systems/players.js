@@ -7,7 +7,7 @@ import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared
 import { PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { surfaceZ } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { playerOutfit } from '../entities.js';
+import * as looks from './looks.js';
 import { store, defaultProfile } from '../store.js';
 import * as vehicles from './vehicles.js';
 import * as combat from './combat.js';
@@ -83,10 +83,10 @@ export function join(world, conn, profile, opts = {}) {
     return p;
   }
   homes.checkWorld(world, profile); // saved in an older world: homes bought back, wake at a hospital
+  looks.ensureLook(profile); // (an old random outfit becomes a look - before a wipe, which keeps it; a new player wears a starter until they pick)
   const fresh = freshStart(world, profile);
   if (fresh === 'all') wipeProgress(world, profile);
   if (world.build) profile.build = world.build; // the build this character's state now belongs to (saved with the profile)
-  if (!profile.outfit) profile.outfit = playerOutfit(mulberry32(parseInt(profile.pid.slice(0, 8), 16)));
   p = {
     pid: profile.pid, profile, conn, name: profile.name,
     ped: null, inputQ: [], lastInput: { seq: 0, bits: 0, mx: 0, my: 0, aim: 0 }, ack: 0, prevBits: 0,
@@ -134,7 +134,7 @@ export function freshStart(world, prof) {
 // the market.
 function wipeProgress(world, prof) {
   for (const [id, pid] of [...world.homeOwner]) if (pid === prof.pid) world.homeOwner.delete(id);
-  const keep = { pid: prof.pid, name: prof.name, created: prof.created, outfit: prof.outfit };
+  const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, looks: prof.looks };
   for (const k of Object.keys(prof)) delete prof[k];
   Object.assign(prof, defaultProfile(keep.pid), keep);
   store.touch();
@@ -214,7 +214,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
   }
   const at = useSaved && pos === prof.pos ? { x: pos.x, y: pos.y } : homes.spawnSpot(world, pos.x, pos.y);
   const ped = world.spawnPed(at.x, at.y, {
-    hp: 100, app: { ...prof.outfit }, archetype: 'player', name: p.name,
+    hp: 100, app: looks.appOf(prof), archetype: 'player', name: p.name,
   });
   if (lz && pos === prof.pos) ped.lz = lz;
   ped.player = p;

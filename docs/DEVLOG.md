@@ -4021,3 +4021,67 @@ From the owner's notes on sound design (#351): no soundtrack over the game, musi
   - every event kind the server emits has its sound, and every sound it plays exists;
   - main.js's own sound names all still sound;
   - every vehicle has an engine class, every song is whole, and `client/sound/` isn't in the page's first load.
+
+## 2026-10-08 · The character creator: bodies, faces, hair, outfits by slot with colours and patterns, starting looks and saved looks
+From the user's concept sheets CC1 and CC7-CC10 (the creator, its tabs, the starting looks, saved looks and the quick change), with the option sets CB1-CB5, CC2, CP1-CP4 and SF/SM1-23. Part 1 of the look system; part 2 brings the shops and dresses the NPCs.
+- **A look** (`shared/look.js`, version 1): what a person looks like, as data.
+  - Body: men's or women's base, five builds, five heights, 16 skin tones, ages from the 20s to the 70s.
+  - Face: shape, eyes, eye colour, brows, nose, lips; freckles, a beauty mark, dimples.
+  - Hair: 36 styles (each marked for the men's list, the women's or both), 19 colours; 12 kinds of facial hair.
+  - Extras: makeup and its colour, tattoos (arms, legs, neck, chest and back, face), piercings, scars.
+  - The outfit: nine slots - top, jacket, bottoms, a dress or set (worn instead of a top and bottoms), shoes, hat, glasses or mask, jewellery, bag. Each holds a piece, a main colour, a trim colour (40 cloth colours) and a pattern: plain, stripes, check, camo, floral, tie-dye.
+- **The catalogue:** 156 pieces from the concept sheets.
+  - Each piece has its slot, the bases it's listed for, its style tags (the 22 chips of CC7, from High fashion to Disguise), a price and the kind of shop that will sell it (for part 2), and what the renderer needs to draw it.
+  - Anyone can wear anything. The bases only sort the lists and dress random looks.
+  - The catalogue only grows: a piece's number is its id in saves and on the wire.
+- **The code:** a look packs into 66 characters (one per field, two per piece). It is how a look is saved and sent.
+  - `decodeLook` refuses anything that isn't a look, and `validLook` clamps every field into range.
+  - `randomLook(seed, base, style)` gives a whole look from a seed (Randomise; the NPCs in part 2). It uses the seeded generator, never `Math.random`.
+  - The twelve starting looks of CC9 are presets.
+- **The server** (`server/systems/looks.js`):
+  - The profile keeps the look's code; it replaces the old random outfit.
+  - Existing players get a look built from their old outfit (its colours, hat, bag and build).
+  - A new player wears a starting look until they pick one.
+  - `{ t: 'look', a: 'set' | 'save' | 'ren' | 'del' }` sets your look (checked; free for now), and saves up to 12 named looks, renames them or deletes them. The server answers with `{ t: 'looks', cur, picked, saved }`, which is also sent when you join.
+  - No free change while you're wanted (it would be a free disguise). The clothes shop's new outfit still works, and now keeps your body, face and hair.
+  - One change a second at most: each one goes out to everyone near.
+  - A progress wipe (`CLA_FRESH_ON_UPDATE=all`) keeps your look and your saved looks.
+  - At home, two new lines: **Quick change** and **The mirror**. A change made inside your home is unseen, so it is allowed while wanted and drops your public wanted level, like the home's "Change outfit".
+- **On the wire:** a player's descriptor carries the look as `{ lk: code }` alone. It is sent when the player is first seen or when the look changes, as before.
+  - The page turns the code into the old-style appearance (`lookToApp`), so the classic renderer, the interiors and the police descriptions keep working.
+  - The art v2 renderer draws straight from the code (`lookArt`).
+  - `shared/look.js` loads lazily, off the page's first load.
+  - NPCs keep their looks for now. Dressing one from the catalogue is one line: `ped.app = lookToApp(look)`.
+- **The people renderer** (`client/art2/people.js`) draws every option at the game's scale:
+  - builds and heights; 16 skin tones; older people stoop a little, and their hair greys (dyed colours stay);
+  - new hair: undercut, fade, mullet, top knot, pixie, space buns, pigtails, a single braid, long curls, shag, cornrows, curtains, half up;
+  - beards: long, goatee, moustache, handlebar, chin strap, mutton chops, soul patch, Van Dyke;
+  - face shapes and noses change the head; eye colour, brows, lips, freckles, a beauty mark, dimples, makeup, piercings, scars and a face tattoo are drawn as pixels;
+  - new tops (long sleeves, blouse, sweater, turtleneck, crop, tube, corset, gown and more); a jacket worn open over the top shows the top down the front, and a waistcoat shows its sleeves;
+  - mini and maxi skirts and dresses, a full-length gown;
+  - the five patterns on any top, jacket, bottoms or dress, in the main and trim colours;
+  - tall and knee boots, high-tops, coloured soles;
+  - a beret, a top hat, a visor;
+  - aviators, cat-eye and sport shades, ski goggles, a party mask, a medical mask;
+  - the eye patch has one strap round the head;
+  - a balaclava or a ski mask hides the hair completely;
+  - chains in their own colour, a choker or spiked collar, earrings, a watch, bangles; bags in their own colour, a clutch, a belt bag.
+  - Sprites are cached per look in the renderer's sprite atlas, which drops the least used when it fills, so a street of different people stays bounded. Each figure takes about 1.3 ms to make.
+- **The creator** (`client/creator.js`, loaded the first time it opens; its CSS is one block at the end of `client/style.css`):
+  - Tabs: Body (base, build silhouettes, a height slider, skin tones, age), Face (Random face), Hair (with a length filter and facial hair), Outfit, Extras, Saved looks.
+  - The Outfit tab: style chips, a Women's / Men's / All filter, the nine slot tabs, a grid of pieces drawn on you, main and trim colours, patterns, and a strip of complete looks for the style.
+  - Buttons: Randomise (on the Outfit tab, the outfit only), Undo, Save look, Done.
+  - A large preview, four times the game's scale, turns through the eight directions with the idle animation.
+  - A new player sees the twelve starting looks and Random first, then "Play as they are" or "Make it yours".
+  - It also opens from the pause menu (**Appearance**) and from the home's mirror.
+  - The quick-change wheel puts your saved looks round a ring: left and right pick one, A applies it.
+  - It works with the mouse, touch (a phone held upright puts the preview on top) and the pad: the d-pad moves to the nearest control in that direction, A presses it, left and right move the slider, and B is Done.
+- **Tests:** `test/look.test.js` (12 tests):
+  - the code round trip, for random looks and for every piece;
+  - the catalogue is complete;
+  - validation clamps or refuses bad data;
+  - random looks are deterministic and varied;
+  - the starting looks are valid;
+  - an old outfit migrates;
+  - the art app;
+  - on the server: a new player's starter and an old profile's migration, the compact descriptor, setting a look (refused while wanted), saved looks, the shop's new outfit, and changing at home.

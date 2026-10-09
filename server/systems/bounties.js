@@ -18,6 +18,7 @@ import { K } from '../../shared/constants.js';
 import { BOUNTY_KILLS, BOUNTY_KILLS_S, BOUNTY_UNLOCK_S, BOUNTY_AMOUNTS, BOUNTY_RUN_S, BOUNTY_LAPSE_DAYS, BOUNTY_SEEN_S, BOUNTY_ALIVE_SAM, HUNTER_MIN_SAMARITAN } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as law from './law.js';
+import * as looks from './looks.js';
 import * as events from './events.js';
 import * as homes from './homes.js';
 
@@ -291,7 +292,7 @@ export function boardFor(world, p) {
     const cs = prof.bounties;
     if (!cs || !cs.length) continue;
     const t = world.players.get(prof.pid), seen = prof.bountySeen;
-    const desc = law.outfitText(t && t.ped ? t.ped.app : prof.outfit);
+    const desc = law.outfitText(t && t.ped ? t.ped.app : looks.appOf(prof));
     for (const c of cs) list.push({
       id: c.id, name: prof.name, amount: c.amount, left: Math.max(0, Math.round(c.left)), on: !!(t && running(t)), by: c.byName, desc,
       seen: seen ? { d: seen.d, ago: Math.max(0, Math.round((now - seen.at) / 1000)), x: seen.x, y: seen.y } : null,

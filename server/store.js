@@ -21,7 +21,8 @@ export function defaultProfile(pid) {
     firedUntil: 0,
     weapons: { fists: 0 },
     inventory: { bandage: 1 },
-    outfit: null,
+    look: null,      // the look's code (shared/look.js; server/systems/looks.js)
+    looks: [],       // saved looks [{ n, c }]
     vehicles: [],
     homes: [],
     deeds: {},       // home id -> what was paid for it (bought back at that when the world changes)

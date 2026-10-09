@@ -23,6 +23,7 @@ import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN } from '../people.js'
 import { ITEMS } from '../items.js';
 import { hash, cutGBuf } from '../gbuf.js';
 import { WEAPON_BY_INDEX } from '../../../shared/items.js';
+import { decodeLook, lookArt } from '../../../shared/look.js';
 
 export const PED_POSES = { ...POSES, move0: 6, move1: 6, move2: 6, move3: 6 };
 export { SEATS };
@@ -50,7 +51,7 @@ export function pedFrame(pose, fr = 0) {
 }
 
 // ---- appearance ---------------------------------------------------------------------------------------------------
-const isServer = (a) => a && typeof a === 'object' && a.top === undefined && (a.s !== undefined || a.t !== undefined || a.h !== undefined || a.tc !== undefined);
+const isServer = (a) => a && typeof a === 'object' && a.top === undefined && (a.lk !== undefined || a.s !== undefined || a.t !== undefined || a.h !== undefined || a.tc !== undefined);
 const rgbOf = (c) => { let s = String(c || '#888').replace('#', ''); if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2]; const n = parseInt(s, 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const lumOf = (c) => { const [r, g, b] = rgbOf(c); return (r * 0.3 + g * 0.59 + b * 0.11) / 255; };
 const blueish = (c) => { const [r, g, b] = rgbOf(c); return b > r + 25 && b > g; };
@@ -65,6 +66,8 @@ export function adaptApp(app, ar = null, opt = {}) {
   const a = app || {};
   ar = ar || a.ar || 'casual';
   if (typeof ar === 'string' && ar.startsWith('pet:')) return { pet: ar.slice(4), seed: 1 };
+  // a player's look (shared/look.js): its code says it all
+  if (a.lk) { const L = decodeLook(a.lk); if (L) return lookArt(L, { code: a.lk, censored: !!opt.censored }); }
   const H = seedOf(a, ar), r = (k) => hash(H & 0xfffff, k, 131), pick = (arr, k) => arr[Math.floor(r(k) * arr.length) % arr.length];
   const t = a.t ?? 0, tc = a.tc || '#888888', tc2 = a.tc2 || '#dddddd', l = a.l || '#334455', sh = a.sh || '#222222';
   const fem = a.h === 2 || a.h === 5 || t === 5;
@@ -206,6 +209,7 @@ const KEYS = new WeakMap();
 function art2Key(A) {
   let k = KEYS.get(A);
   if (k) return k;
+  if (A.lk) { k = 'L' + A.lk + (A.censored ? 'c' : ''); KEYS.set(A, k); return k; }
   const parts = [];
   for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'censored', 'pet']) {
     const v = A[f];
@@ -217,6 +221,7 @@ function art2Key(A) {
   return k;
 }
 export function appKey(app, opt = {}) {
+  if (app && app.lk && app.top === undefined) return 'L' + app.lk + (opt.censored ? 'c' : '');
   if (isServer(app)) return 'S' + [app.s, app.h, app.hc, app.t, app.tc, app.tc2, app.l, app.sh, app.ht, app.htc, app.b, app.bd, app.bandana ? 1 : 0, opt.ar || app.ar || '', opt.censored ? 1 : 0].join(',');
   return art2Key(app || {});
 }
