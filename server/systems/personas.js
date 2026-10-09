@@ -19,7 +19,7 @@
 // a pier's rail (fisher).
 // Clients get a persona's walk and prop in the ped descriptor (net.js: gt, pp; a seat on a bench: sb), drawn by
 // client/art2/people.js (the hunch, strut, skate, blade, dance and push poses; the cane, trolley, cart, leads, guitar).
-import { K, T } from '../../shared/constants.js';
+import { K, T, TILE } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { pedStep } from '../../shared/physics.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -226,7 +226,11 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   const P = PERSONAS[key];
   if (!P) return null;
   let at = { x, y };
-  if (P.bench || P.sleep) { const b = propsNear(world.map, x, y, 520, BENCH).find((q) => !benchTaken(world, q)); if (!b) return null; at = { x: b.x, y: b.y + 10 }; if (P.sleep) at.y += 14; }
+  if (P.bench || P.sleep) {   // on the bench's seat, facing the way it faces (asleep: on the grass in front of it)
+    const b = propsNear(world.map, x, y, 520, BENCH).find((q) => !benchTaken(world, q)); if (!b) return null;
+    const fa = benchFacing(world.map, b), k = P.sleep ? 18 : 0;
+    at = { x: b.x + Math.cos(fa) * k, y: b.y + Math.sin(fa) * k, a: fa };
+  }
   if (P.selfie) { const m = propsNear(world.map, x, y, 600, MARK)[0]; if (!m) return null; at = spotNear(world, m.x, m.y, 40, 80) || null; if (!at) return null; at.mark = m; }
   if (P.cart) { const c = propsNear(world.map, x, y, 700, CART).find((q) => !world.query(q.x, q.y + 18, 24, K.PED).some((e) => e.npc && e.npc.persona === key)); if (!c || !walkable(world.map, c.x, c.y + 18)) return null; at = { x: c.x, y: c.y + 18 }; }
   if (P.fish) {   // at a pier's rail, facing the water
@@ -240,7 +244,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   const ped = spawnNpc(world, P.arche, at.x, at.y, 'civ');
   apply(world, ped, key, night);
   const n = ped.npc;
-  if (P.bench || P.sleep) n.bench = { x: at.x, y: at.y };
+  if (P.bench || P.sleep) n.bench = { x: at.x, y: at.y, a: at.a };
   if (at.mark) {   // a photo of themselves with the fountain (the statue, the big wheel) behind them - npc.js's filming, the phone held
     // up, facing away from it, a flash now and then - then on they go like anyone
     const now = world.time;
@@ -272,7 +276,22 @@ function waterward(map, x, y) {
   for (const r of [24, 40, 60]) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, t = map.tileAtPx(x + Math.cos(a) * r, y + Math.sin(a) * r); if (t === T.WATER || t === T.DEEP) return a; }
   return null;
 }
-const benchTaken = (world, b) => world.query(b.x, b.y + 10, 30, K.PED).some((e) => e.npc && (e.npc.bench || e.sitBench));
+const benchTaken = (world, b) => world.query(b.x, b.y, 30, K.PED).some((e) => e.npc && (e.npc.bench || e.sitBench));
+// the way a bench faces, as the art draws it (client/art2/game/statics.js 'bench', props.js bench(): the seat's front at +y,
+// turned by its heading): as its place set it, else toward the road beside it, else one of four ways by its position
+const ahash = (x, y, s = 0) => { let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const TAU = Math.PI * 2, qa4 = (a) => (((Math.round((((a % TAU) + TAU) % TAU) / TAU * 4) % 4) + 4) % 4) * TAU / 4;
+export function benchFacing(map, b) {
+  let hd;
+  if (b.a !== undefined) hd = qa4(b.a);
+  else {
+    const tx = Math.floor(b.x / TILE), ty = Math.floor(b.y / TILE);
+    let rd = null;
+    for (let k = 1; k <= 3 && rd === null; k++) for (const [dx, dy, a] of [[0, 1, Math.PI / 2], [0, -1, -Math.PI / 2], [1, 0, 0], [-1, 0, Math.PI]]) { const t = map.tileAt(tx + dx * k, ty + dy * k); if (t === T.ROAD || t === T.BRIDGE) { rd = a; break; } }
+    hd = rd !== null ? qa4(rd - Math.PI / 2) : qa4(Math.floor(ahash(Math.floor(b.x), Math.floor(b.y), 7) * 4) * Math.PI / 2);
+  }
+  return hd + Math.PI / 2;
+}
 function spotNear(world, x, y, r0, r1) {
   for (let k = 0; k < 16; k++) { const a = rng() * Math.PI * 2, d = r0 + rng() * (r1 - r0), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (walkable(world.map, px, py)) return { x: px, y: py }; }
   return null;
@@ -361,9 +380,9 @@ export function steer(world, ped, now) {
   if (P.bench && n.bench) {   // to the bench, sit a while, then off they go like anyone
     if (!ped.sitBench) {
       if (Math.hypot(n.bench.x - ped.x, n.bench.y - ped.y) > 6) return { inp: seekTo(ped, n.bench.x, n.bench.y, 0.8), factor: 0.5 };
-      ped.sitBench = true; ped.a = Math.PI / 2; n.upAt = now + 25 + rng() * 50; ped.appVer = (ped.appVer || 0) + 1;
+      ped.sitBench = true; ped.x = n.bench.x; ped.y = n.bench.y; ped.a = n.bench.a; n.upAt = now + 25 + rng() * 50; ped.appVer = (ped.appVer || 0) + 1;
     }
-    if (now < n.upAt) { ped.vx = ped.vy = 0; ped.a = Math.PI / 2; return { inp: NO_INPUT, factor: 0.55 }; }
+    if (now < n.upAt) { ped.vx = ped.vy = 0; ped.a = n.bench.a; return { inp: NO_INPUT, factor: 0.55 }; }
     ped.sitBench = false; ped.appVer = (ped.appVer || 0) + 1; n.bench = null; n.persona = 'texter'; ped.pp = rng() < 0.5 ? 'phone' : null; if (!ped.pp) n.persona = null;
     return null;
   }
