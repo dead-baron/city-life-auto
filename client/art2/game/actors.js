@@ -205,7 +205,7 @@ export const vehType = (d) => { const id = vehDef(d).id; return VEHICLE_DIMS[id]
 // dmg: 0 clean, 1 dented (scuffs, a cracked windscreen), 2 smashed (the front crushed in, glass broken: the
 // SMOKE flag, hp < 35%); hp (0..1, the snapshot's hp byte) adds the dented level below 70%
 export function vehState(flags, sirenPhase = 1, hp = 1) {
-  return { lights: !!(flags & 1), siren: flags & 2 ? sirenPhase : 0, brake: !!(flags & 4), rev: !!(flags & 8), wreck: !!(flags & 16), burn: !!(flags & 32), dmg: flags & 64 ? 2 : hp < 0.7 ? 1 : 0, bloody: !!(flags & 512) };
+  return { lights: !!(flags & 1), siren: flags & (2 | 16384) ? sirenPhase : 0, brake: !!(flags & 4), rev: !!(flags & 8), wreck: !!(flags & 16), burn: !!(flags & 32), dmg: flags & 64 ? 2 : hp < 0.7 ? 1 : 0, bloody: !!(flags & 512) };
 }
 function normSt(st = {}) {
   const s = { wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 2 : Math.max(0, Math.min(2, st.dmg | 0)) };

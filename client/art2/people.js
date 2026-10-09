@@ -1683,6 +1683,7 @@ function wrapAcc(D, P, acc) { if (!acc) return; const sw = P.hands; P.hands = (S
 // the hands on a prop (accHands)
 const CART_Z = 25, CART_Y = 11.6;
 function accHands2(D, P, S, acc) {
+  if (STRETCHERS.has(acc)) return stretcherHands(P);   // (the paramedics' stretcher, at the end)
   const r = D.reach;
   if (acc === 'trolley') { P.hR = vadd(S.shR, [2.2, -3.6, -r * 0.86]); P.elR = [1, 0.3, -0.5]; return true; }
   if (acc === 'cart') { P.hR = [4.4, CART_Y, CART_Z]; P.hL = [-4.4, CART_Y, CART_Z]; P.elR = [1, -0.6, -0.4]; P.elL = [-1, -0.6, -0.4]; return true; }
@@ -1705,6 +1706,7 @@ function figure365(B, C, E, D, P, S, acc) {
     for (const y of [-1.4, 1.4, 4.2]) E(vadd(a, [0, y, -4.7]), I, [0.6, 0.8, 0.8], GR.ACC, 'wheel', M365.wheel);
   }
   if (!P.acc || !acc || P.item !== null) return;
+  if (STRETCHERS.has(acc)) { stretcherFigure(B, C, E, acc); return; }   // (the paramedics' stretcher, at the end)
   const hR = S.haR;
   if (acc === 'trolley') {   // pulled along behind: a tartan bag on two wheels, the handle up to the hand
     const at = [hR[0] + 1.2, hR[1] - 6.4, 7.4];
@@ -1728,3 +1730,39 @@ function figure365(B, C, E, D, P, S, acc) {
   else if (acc === 'map') B(vmul(vadd(hR, S.haL), 0.5), mmul(S.SP, rx(-0.5)), [5.0, 0.25, 3.4], GR.ACC, 'map', MAT('#e8e0c0'));   // a tourist's map, open in both hands
 }
 // ==== end of the city's people ========================================================================================
+
+// ==== The paramedics' stretcher (task #313, server/systems/ems.js): pushed in front like the cart ===================
+// props (app.carry): stretcher (wheeled out empty: a wheeled trolley stretcher, its pad, a sheet and a pillow),
+// stretcherPt (the patient lying on it: on their back under a blanket, the head on the pillow)
+const STRETCHERS = new Set(['stretcher', 'stretcherPt']);
+CARRY.push('stretcher', 'stretcherPt');
+Object.assign(ACC_HANDS, { stretcher: 2, stretcherPt: 2 });
+const MST = { frame: MAT('#c8ccd4', 0.55), pad: MAT('#e2662c', 0.2), sheet: MAT('#eef0f2'), blanket: MAT('#3a6ab0'), skin: MAT('#c48a64'), hair: MAT('#2e241c'), rubber: MAT('#26262a') };
+const STR_Z = 22, STR_Y0 = 13, STR_Y1 = 47, STR_X = 5.6;
+function stretcherHands(P) { P.hR = [4.2, CART_Y, STR_Z + 2]; P.hL = [-4.2, CART_Y, STR_Z + 2]; P.elR = [1, -0.6, -0.4]; P.elL = [-1, -0.6, -0.4]; return true; }
+function stretcherFigure(B, C, E, acc) {
+  const I = I3, my = (STR_Y0 + STR_Y1) / 2, hy = (STR_Y1 - STR_Y0) / 2;
+  C([-STR_X, CART_Y, STR_Z + 2], [STR_X, CART_Y, STR_Z + 2], 0.6, 0.6, GR.ACC, 'strbar', MST.frame);                 // the push bar
+  for (const s of [-1, 1]) {
+    C([s * STR_X, CART_Y, STR_Z + 2], [s * STR_X, STR_Y0, STR_Z], 0.5, 0.5, GR.ACC, 'strrail', MST.frame);
+    C([s * STR_X, STR_Y0, STR_Z], [s * STR_X, STR_Y1, STR_Z], 0.55, 0.55, GR.ACC, 'strrail', MST.frame);            // the side rails
+    for (const y of [STR_Y0 + 3, STR_Y1 - 3]) {                                                                       // legs and castors
+      C([s * (STR_X - 1), y, STR_Z - 0.5], [s * (STR_X - 1), y, 2.6], 0.45, 0.45, GR.ACC, 'strleg', MST.frame);
+      E([s * (STR_X - 1), y, 1.3], I, [0.6, 1.3, 1.3], GR.ACC, 'wheel', MST.rubber);
+    }
+  }
+  C([-STR_X + 1, my, 9], [STR_X - 1, my, 9], 0.4, 0.4, GR.ACC, 'strbrace', MST.frame);
+  C([0, STR_Y0 + 3, 9], [0, STR_Y1 - 3, 9], 0.4, 0.4, GR.ACC, 'strbrace', MST.frame);
+  B([0, my, STR_Z + 0.4], I, [STR_X - 0.4, hy, 1.0], GR.ACC, 'strpad', MST.pad);                                      // the pad
+  B([0, my, STR_Z + 1.5], I, [STR_X - 1.0, hy - 0.8, 0.3], GR.ACC, 'strsheet', MST.sheet);                             // its sheet
+  E([0, STR_Y1 - 3.4, STR_Z + 2.4], I, [3.6, 2.4, 1.2], GR.ACC, 'pillow', MST.sheet);
+  if (acc !== 'stretcherPt') return;
+  // the patient: lying on their back, the blanket up to the shoulders, the head on the pillow
+  B([0, my - 2.4, STR_Z + 3.2], I, [STR_X - 1.4, hy - 5.4, 1.6], GR.ACC, 'blanket', MST.blanket);
+  E([0, STR_Y0 + 3.6, STR_Z + 3.6], I, [3.4, 2.2, 1.9], GR.ACC, 'feet', MST.blanket);                                // the feet under it
+  E([0, STR_Y1 - 10.4, STR_Z + 4.0], I, [4.6, 3.0, 2.2], GR.ACC, 'chest', MST.blanket);
+  for (const s of [-1, 1]) E([s * 3.2, STR_Y1 - 13, STR_Z + 4.6], I, [1.1, 3.2, 0.9], GR.ACC, 'arm', MST.skin);      // the arms on top of it
+  E([0, STR_Y1 - 4.6, STR_Z + 4.4], I, [2.3, 2.5, 2.3], GR.ACC, 'head', MST.skin);
+  E([0, STR_Y1 - 3.4, STR_Z + 4.0], I, [2.5, 1.7, 2.0], GR.ACC, 'hair', MST.hair);
+}
+// ==== end of the paramedics' stretcher ================================================================================

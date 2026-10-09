@@ -265,7 +265,7 @@ export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
 
 // ---- the city's people (server personas.js): a persona's walk (the descriptor's gt) and prop (pp), a seat on a bench (sb)
 const STRIDES = new Set(['hunch', 'strut', 'skate', 'blade', 'push']);
-const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', map: 'map' };
+const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', map: 'map', stretcher: 'stretcher', stretcherPt: 'stretcherPt' };   // (stretcher: the paramedics', ems.js)
 // the same look with the prop in hand (keyed apart: art2Key)
 export function withProp(A, pp) { return PROP_CARRY[pp] ? { ...A, pp, carry: PROP_CARRY[pp] } : A; }
 // the pose a persona walks or stands in, for the pose the game picked (running for their life: the plain run)

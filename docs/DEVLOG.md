@@ -4330,3 +4330,46 @@ From the user's notes ("all the concepts ... new environment assets, new distric
   - Street grit: twice as much per metre in Southside as in Westport Center, all of it on the street.
   - Lightning: the same bolt for the same seed, forked, inside the screen at three screen sizes, one unbroken channel from the top; near strikes end low in the street, far ones high.
 - **Performance:** the bake worker's code 906 KB of 950; the renderer's 350 of 350 (two comments taken out of `lightgame.js` to stay under). The new art is in its own modules.
+
+## 2026-10-09 · Ambulances that get there, with a stretcher; tow trucks; drivers who find another way round
+From the user's notes (13:33, tasks #313, #314, #315): ambulances that get there and paramedics with stretchers; "Tow trucks clear broken-down vehicles and break up jams. Never tow a vehicle a player was driving unless it's left in the street, untouched by a player for 5 minutes and blocking traffic."; "NPC drivers find another way round a backup, especially police, taxis, buses, rideshare and ambulances, so they don't get stuck in traffic."
+- **The ambulance bugs** (`server/systems/ems.js`, new `server/systems/kerbdrive.js`):
+  - It drove the last stretch in a straight line from the junction nearest the patient. A wall, a fence or a bench in the way stopped it 160-280 px short, and it had to be within 150 px to start. Inside a bank it never got there at all.
+  - On the coast that straight line ran off the beach into the sea: it sank and was gone ("The ambulance didn't make it").
+  - Now it drives to the kerb: the nearest point of a street to the patient, over on their side of the road. For someone in a shop it's the street outside its door. Never a street across the water from them or on another island while there's one on theirs (a lodge in Northshore had only the highway bridge within 1,200 px), never a bridge unless they're on one.
+  - The route runs along the roads to the nearer end of that street, then along the street to the spot.
+  - It pulls up there, or as near as it can get (no nearer for 5 s within 300 px of it; after two new plans from further out, where it is). The paramedics walk the rest.
+  - It never drives into the water: when the road ahead (or behind, reversing) is water, it brakes (`waterGuard`).
+  - It leaves for a junction on the same island, away from everyone, and is only cleared away out of everyone's view.
+  - A body isn't dissolved after 45 s while an ambulance is coming for it or the crew are at work.
+  - Ambulances and fire engines now really sound their sirens (`siren: true`, `shared/vehicles.js`). Only police cars did, so traffic never pulled over for an ambulance.
+- **The scene:**
+  - The ambulance pulls up with its lights flashing and the siren off (new `VF.BEACON`: the light bar without the siren, in both renderers).
+  - Two paramedics get out. One runs to the patient and kneels to treat them; the other wheels the stretcher out of the back and up beside them.
+  - A player who called them is revived on the spot as before (half health, $200 from the bank). The stretcher goes back empty.
+  - Anyone else is lifted onto the stretcher, wheeled round to the back doors, loaded and driven off. (They used to stand up and walk away.)
+  - The crew get back in and drive off. In a shop they go in and out through the door (`footWay`) and step round what's in the way (`sidestep`).
+  - **The stretcher** (`client/art2/people.js`, a marked block at the end): a wheeled trolley stretcher with an orange pad, a sheet and a pillow, pushed in front like the shopping cart (the descriptor's `pp: 'stretcher'`, with the push walk). With the patient on it (`stretcherPt`): on their back under a blue blanket, the head on the pillow.
+- **Tow trucks** (new `server/systems/tow.js`; the `towtruck` model, with its boom, hook and wheel lift, was already in the game):
+  - The city's tow service, near players, spots:
+    - burnt-out wrecks after 25 s (`TOW_WRECK_S`);
+    - NPC cars broken down or jammed in a lane for a minute (`TOW_STUCK_S`);
+    - a car a player drove, only when all of the rule holds: left in a lane of the street (not on the pavement, a lot or a parking bay), nobody in it, untouched by any player for 5 minutes (`TOW_IDLE_S`). Getting in it or standing beside it counts as touching it.
+  - A truck comes from a junction out of sight and pulls up just ahead of the vehicle, facing the same way (coming up behind it, it goes round it on the other side of the road when that's clear). It works the winch for 3 s, the vehicle is pulled round onto the hook over a second, and then it hangs behind the boom, the same way round (kept there after the physics every tick).
+  - It tows it off to a junction away from everyone. Out of sight, both are gone.
+  - Two trucks at a time at most. A wreck isn't cleared at 45 s while a truck is coming for it.
+  - A player's own car (out of their garage) goes back to their garage for $150 from the bank (`TOW_FEE`), with a phone message saying where it was towed from. A car they took is just gone, and they're told.
+  - A tow truck can be stolen like any vehicle: take the driver's seat and the hook lets go.
+  - Sound: the tow truck is a diesel (`truck`, as before); the winch whines and the hook clanks (the `tow` event). The older renderer draws it with its boom and hook when the vehicle atlas isn't there (`client/render/sprites.js`).
+- **Drivers who find another way round** (new `server/systems/reroute.js`, hooks in `traffic.js`):
+  - A driver stopped behind a backup looks for another way after 5 s (in a bus or a taxi, 3 s). A backup is a wreck, a car nobody's driving, one broken down, a police car or an ambulance at a scene, a player's car standing in the road for 8 s, or a queue behind one of those - never a queue at the lights.
+    - A free lane alongside, going the same way (on an avenue): it backs off a little and pulls over into it.
+    - Otherwise the road is remembered as blocked for 45 s, and the driver turns round and goes another way. Traffic (`chooseExit`), the police and ambulance planner (`planRoute`) and the taxis' routes keep off it.
+    - A bus goes round on the other side of the road when that's clear. On a one-way street everyone waits.
+  - Emergency vehicles with the siren on (police, ambulances, fire engines) go round anything stopped in their way after 1 s, on the other side of the road or up on the pavement, whichever is clear of cars, people, posts and walls.
+  - Kept cheap: a driver re-plans at most once in 6 s, no more than 3 drivers in one tick, and the memory keeps the 24 latest roads.
+- **Tests:**
+  - `test/ems.test.js`: a paid ambulance reaches a downed player outside a cafe, inside a bank, in the middle of Greenfield Park, on a beach by the water, at a home on Cedar Isle and off the road in the wilds, and never vanishes or drives into the water. The stretcher scene for someone in the street runs in order (out, treat, lift, back, load, board, leave), with the stretcher, the patient on it, a paramedic kneeling and the lights on.
+  - `test/tow.test.js`: a wreck towed after a while (the truck from out of sight, drive, hook, leave, both gone). A player's car is towed only when left in a lane untouched for 5 minutes; never one on the pavement, one with someone in it or one its driver comes back to. The owner's garage, the fee and the message. A stolen tow truck lets go.
+  - `test/reroute.test.js`: a driver behind a wreck on an avenue changes lane and gets past; on a street it turns round and the street is remembered as blocked; an ambulance gets round a jam; re-plans are rate-limited and the memory stays small.
+- **Performance:** the renderer's code budget 352 -> 354 KB (`tools/perf.mjs`): the stretcher is drawn with the person who pushes it (`people.js`, which the renderer loads before drawing anyone), and it took the renderer from 351 to 352 KB, right at the limit. The server's new work is cheap: the kerb for a body or a stopped car is worked out once, the tow service looks round each player once a second, and re-plans are rate-limited.

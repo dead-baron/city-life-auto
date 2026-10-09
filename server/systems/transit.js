@@ -26,6 +26,7 @@ import { inAnyView } from '../view.js';
 import { payFrom } from './economy.js';
 import { ejectPed } from './vehicles.js';
 import * as traffic from './traffic.js';
+import { isBlocked } from './reroute.js';
 
 export const BUS_ROADS = new Set(['ave', 'art', 'blvd', 'st', 'front', 'minor', 'drive']);
 // line names and liveries (PAINTS index) by the zone they serve (shared/citylayout.js Z)
@@ -476,7 +477,7 @@ function whereOn(world, v) {
 function taxiRoute(world, v, K, at = null) {
   const net = world.map.net, here = at || whereOn(world, v);
   if (!here || !K) return false;
-  const steps = route(net, here, K, TAXI_OK);
+  const steps = route(net, here, K, (q) => TAXI_OK(q) && !isBlocked(world, q.id)) || route(net, here, K, TAXI_OK);   // (round a road remembered as blocked: reroute.js)
   if (!steps) return false;
   let len = Math.max(0, net.edges[steps[0].edge].len - here.s);
   for (let i = 1; i < steps.length - 1; i++) len += net.edges[steps[i].edge].len;

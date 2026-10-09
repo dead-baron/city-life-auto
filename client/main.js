@@ -3635,7 +3635,7 @@ function drawVehicleEnt(v, now, dt) {
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }
   if (f & VF.BRAKE) { g.fillStyle = 'rgba(255,40,40,.9)'; g.fillRect(-L / 2 - 1, -Wd / 2 + 4, 3, 6); g.fillRect(-L / 2 - 1, Wd / 2 - 10, 3, 6); }
   if (f & VF.REVERSE) { g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(-L / 2 - 1, -Wd / 2 + 10, 2, 4); g.fillRect(-L / 2 - 1, Wd / 2 - 14, 2, 4); }
-  if (f & VF.SIREN) {
+  if (f & (VF.SIREN | VF.BEACON)) {
     const ph = Math.floor(now * 6) % 2;
     const bike = def.kind === 'bike', bx = bike ? -L / 2 + 8 : -2, by = bike ? 4 : 6, br = bike ? 3.5 : 6;
     g.globalAlpha = 0.9;
@@ -4332,7 +4332,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     } else if (v.flags & VF.BRAKE) {
       for (const sd of [-1, 1]) { const tx = v.rx - c * hl - sn * hw * 0.62 * sd, ty = vy - sn * hl + c * hw * 0.62 * sd; L.glow(tx, ty, 8, LIGHT.red, 0.5); }
     }
-    if (v.flags & VF.SIREN) {
+    if (v.flags & (VF.SIREN | VF.BEACON)) {
       const ph = Math.floor(S.loopClock * 6) % 2, col = ph ? LIGHT.red : LIGHT.blue;
       L.add(v.rx, vy, 260, col, 0.9);
       L.glow(v.rx, vy, 70, col, 0.35 + 0.15 * night);
@@ -4476,7 +4476,7 @@ function drawWetReflections(view, vehs, dark, now, dt) {
       if (lit) reflect(hx, hy + 4, 70, 9, '255,226,150', 0.42 * k);
       reflect(tx, ty + 4, brake ? 60 : 38, 7, '255,40,40', (brake ? 0.55 : 0.3) * k);
     }
-    if (v.flags & VF.SIREN) reflect(v.rx, v.ry + 8, 60, 14, Math.floor(S.loopClock * 6) % 2 ? '255,40,40' : '60,110,255', 0.45 * k);
+    if (v.flags & (VF.SIREN | VF.BEACON)) reflect(v.rx, v.ry + 8, 60, 14, Math.floor(S.loopClock * 6) % 2 ? '255,40,40' : '60,110,255', 0.45 * k);
   }
   if (dark > 0.05) {
     for (const l of S.map.lamps) if (!l.broken && (l._lv || 0) > 0.05 && l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) { const h = lampHead(l); reflect(h.x, h.y + 10, 60, 11, '255,200,110', 0.4 * dark * l._lv); }
