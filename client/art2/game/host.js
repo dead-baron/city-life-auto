@@ -1096,6 +1096,13 @@ export class World2 {
     if (!v) { v = this.Pd.adaptApp(a, ar || null); this.adapted.set(a, v); }
     return v;
   }
+  // ...with a street personality's prop (the descriptor's pp: a cane, a trolley, a cart, dog leads, a guitar: peds.js withProp)
+  _propped(A, pp) {
+    const m = (this.propped ||= new WeakMap()).get(A) || new Map();
+    let v = m.get(pp);
+    if (!v) { v = this.Pd.withProp(A, pp); m.set(pp, v); this.propped.set(A, m); }
+    return v;
+  }
   // ...carrying a robbery's takings (the descriptor's mb: server hotmoney.js): the same look with the money sack on the back
   _bagged(A) {
     let v = (this.bagged ||= new WeakMap()).get(A);
@@ -1115,10 +1122,11 @@ export class World2 {
     const api = this.api, L = api.pedLook(p, now), f = p.flags, pose = L.pose;
     const d8 = dir8(p.ra + (L.turn || 0));   // (spun round as they go down)
     const lying = !L.upright && LYING.has(pose) && !L.flying && !L.swimming;
-    const ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
+    let ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
     let lift = 0;
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
-    const A1 = this._app(p.d.app || {}, p.d.ar), A2 = p.d.mb && A1 ? this._bagged(A1) : A1, pf = Pd.pedFrame(ppose, L.fr);
+    const A1 = this._app(p.d.app || {}, p.d.ar), A0 = p.d.mb && A1 ? this._bagged(A1) : A1, A2 = p.d.pp && A0 && Pd.withProp ? this._propped(A0, p.d.pp) : A0;
+    let pf = Pd.pedFrame(ppose, L.fr);
     if (lying && (f & PF.DEAD) && p.deadK === 'halved' && this._halves(p, A2, ppose, d8, pf)) return;   // (cut in two by the plasma blade)
     // unarmed with the flashlight on: it's in your hand; under an open umbrella (standing or walking): its shaft is
     const umb = !!(f & PF.UMBRELLA) && !(p.extra | 0) && !p.d.fl && (ppose === 'idle' || ppose.startsWith('walk')) && !!Pd.umbrellaTop;
@@ -1126,6 +1134,8 @@ export class World2 {
     // filming or taking photos holds it up in both hands: d.ph 2, server npc.js spectacle)
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
     const wpn = phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : (p.extra | 0) || (p.d.fl ? 'flashlight' : umb ? 'umbrella' : 0);
+    // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
+    if ((p.d.gt || p.d.sb) && !wpn && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : Pd.pedFrame(q, L.fr); } }
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {

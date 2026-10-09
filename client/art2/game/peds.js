@@ -45,6 +45,7 @@ export function pedFrame(pose, fr = 0) {
   fr |= 0;
   if (pose === 'idle') return (fr >> 2) & 1;
   if (pose.startsWith('move') || pose.startsWith('walk') || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'cuffed') return Math.floor(((fr % 8) + 8) % 8 * 6 / 8);
+  if (STRIDES.has(pose)) return Math.floor(((fr % 8) + 8) % 8 * PED_POSES[pose] / 8);
   if (pose === 'punch' || pose === 'swing') return (fr >= 4 ? 3 : 0) + Math.min(2, Math.floor((fr & 3) * 3 / 4));
   const n = PED_POSES[pose] || 1;
   return ((fr % n) + n) % n;
@@ -209,7 +210,7 @@ const KEYS = new WeakMap();
 function art2Key(A) {
   let k = KEYS.get(A);
   if (k) return k;
-  if (A.lk) { k = 'L' + A.lk + (A.censored ? 'c' : ''); KEYS.set(A, k); return k; }
+  if (A.lk) { k = 'L' + A.lk + (A.censored ? 'c' : '') + (A.pp ? '+' + A.pp : '') + (A.back === 'moneybag' ? '$' : ''); KEYS.set(A, k); return k; }
   const parts = [];
   for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'censored', 'pet']) {
     const v = A[f];
@@ -246,4 +247,19 @@ export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
   const k = weaponItem(weapon);
   const G = person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true } : { tight: true });
   return opt.cut ? cutGBuf(G, opt.cut, 7) : G;   // (cut in two by the plasma blade: one half, a little apart from the other, the edge seared)
+}
+
+// ---- the city's people (server personas.js): a persona's walk (the descriptor's gt) and prop (pp), a seat on a bench (sb)
+const STRIDES = new Set(['hunch', 'strut', 'skate', 'blade', 'push']);
+const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board' };
+// the same look with the prop in hand (keyed apart: art2Key)
+export function withProp(A, pp) { return PROP_CARRY[pp] ? { ...A, pp, carry: PROP_CARRY[pp] } : A; }
+// the pose a persona walks or stands in, for the pose the game picked (running for their life: the plain run)
+export function personaPose(d, pose) {
+  if (d.sb && pose === 'idle') return 'sit';
+  const g = d.gt;
+  if (!g) return pose;
+  if (g === 'dance') return pose === 'idle' ? 'dance' : pose;
+  if (pose === 'walk0' || pose === 'walk1' || ((g === 'skate' || g === 'blade') && pose.startsWith('walk'))) return g;
+  return pose;
 }

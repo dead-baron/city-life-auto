@@ -184,3 +184,22 @@ test('street life: the busker plays for coins, people sit on benches, someone sl
   for (let k = 0; k < 30 && !z; k++) { const sp = spotIn('park', k); z = sp && spawnPersona(w, spawnNpc, 'sleeper', sp.x, sp.y); }
   assert.ok(z && z.passedOut && z.npc.state === 'passed', 'asleep in the park');
 });
+
+test('the walks and props are drawn: the client turns gt / pp / sb into the people renderer\'s poses and props', async () => {
+  const Pd = await import('../client/art2/game/peds.js');
+  const g = recipeLook('p:homeless', 3, 'park', false, LOOKS.homeless), code = encodeLook(g.look);
+  const A = Pd.adaptApp({ lk: code }), Ap = Pd.withProp(A, 'cart');
+  assert.equal(Ap.carry, 'cart');
+  assert.notEqual(Pd.pedKey(A, 'idle', 0, 0, 0), Pd.pedKey(Ap, 'idle', 0, 0, 0), 'a prop is a sprite of its own');
+  const plain = Pd.pedSprite(A, 'idle', 1, 0, 0), cart = Pd.pedSprite(Ap, 'push', 1, 0, 0);
+  assert.ok(cart.w * cart.h > plain.w * plain.h * 1.3, 'the cart out in front');
+  for (const [gt, pose] of [['hunch', 'walk0'], ['strut', 'walk1'], ['skate', 'walk2'], ['blade', 'walk1'], ['dance', 'idle'], ['push', 'walk0']]) {
+    const q = Pd.personaPose({ gt }, pose);
+    assert.equal(q, gt);
+    for (let f = 0; f < Pd.PED_POSES[q]; f++) { const G = Pd.pedSprite(Pd.withProp(A, gt === 'hunch' ? 'cane' : 'phone'), q, f % 8, f, 0); assert.ok(G.w > 10 && G.h > 30, `${q} ${f}`); }
+  }
+  assert.equal(Pd.personaPose({ gt: 'hunch' }, 'walk3'), 'walk3', 'running for their life: the plain run');
+  assert.equal(Pd.personaPose({ sb: 1 }, 'idle'), 'sit', 'a seat on the bench');
+  for (const pp of ['trolley', 'leads', 'guitar', 'call', 'cane', 'board']) assert.ok(Pd.pedSprite(Pd.withProp(A, pp), 'walk0', 2, 1, 0).w > 10, pp);
+  assert.equal(Pd.pedFrame('hunch', 7), 5);
+});
