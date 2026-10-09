@@ -22,6 +22,7 @@ import * as pets from './systems/pets.js';
 import * as happenings from './systems/happenings.js';
 import * as wildlife from './systems/wildlife.js';
 import * as wanderer from './systems/wanderer.js';
+import * as personas from './systems/personas.js';
 import { SPECIES } from '../shared/fauna.js';
 
 // make a live animal the pure white legend of its kind (dev: see one up close)
@@ -272,6 +273,15 @@ export function command(world, p, c, msg) {
         made++;
       }
       world.notify(p, `[dev] ${made} practice ${made === 1 ? 'dummy' : 'dummies'} in front of you.`, 'info');
+      break;
+    }
+    case 'persona': { // a street personality a few steps ahead (personas.js PERSONAS, msg.k: cane, trolley, couple, tough, gym,
+      // glam, streetw, jogger, skater, blader, punk, homeless, phone, dogs, dancer, swim, texter, caller, bench, sleeper, busker, selfie)
+      if (!ped) break;
+      const k = String(msg.k || 'cane'), x = ped.x + Math.cos(ped.a || 0) * 70, y = ped.y + Math.sin(ped.a || 0) * 70;
+      const q = personas.PERSONAS[k] ? personas.spawnPersona(world, npc.spawnNpc, k, x, y) : null;
+      if (q) q.npc.keep = true;
+      world.notify(p, q ? `[dev] ${k} nearby.` : `[dev] No ${k} here (${Object.keys(personas.PERSONAS).join(', ')}).`, q ? 'info' : 'warn');
       break;
     }
     case 'wanderer': { // the hooded stranger who sells the plasma blade, a few steps away

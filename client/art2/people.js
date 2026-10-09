@@ -1568,8 +1568,8 @@ export function randomPerson(seed, kind = null) {
 // props (app.carry): trolley (a senior's two-wheeled shopping trolley, pulled along), cart (a shopping cart with a blanket
 // in it, pushed), leads (three dog leads out in front, to where the dogs trot), guitar (a busker's), call (the phone at an ear)
 Object.assign(POSES, { hunch: 6, strut: 6, skate: 4, blade: 6, dance: 4, push: 6 });
-CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call');
-Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1 });
+CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
+Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
 const M365 = { metal: MAT('#a4a8b0', 0.5), rubber: MAT('#26262a'), blanket: MAT('#6a7a9a'), tartan: MAT('#8a2a34'), wood: MAT('#d0903e', 0.4), deck: MAT('#2a9aa8', 0.3), lead: MAT('#c8262b'), dark: MAT('#1c1c22', 0.4), wheel: MAT('#f2c21b'), bag: MAT('#3a5a3a') };
 const GAITS2 = {
@@ -1629,6 +1629,7 @@ function accHands2(D, P, S, acc) {
   if (acc === 'leads') { P.hR = vadd(S.shR, [0.4, 7.2, -r * 0.62]); P.elR = [1, -0.5, -0.5]; return true; }
   if (acc === 'guitar') { P.hL = vadd(S.chest, mv(S.SP, [-8.6, 6.4, -2.2])); P.hR = vadd(S.chest, mv(S.SP, [2.2, 7.0, -6.6 + P.breath * 2])); P.elL = [-1, -0.4, -0.5]; P.elR = [1, -0.6, -0.4]; return true; }
   if (acc === 'call') { P.hR = vadd(S.neck, mv(S.SP, [4.4, 1.6, 5.6])); P.elR = [1, -0.2, -1]; P.headYaw += 0.15; return true; }
+  if (acc === 'map') { P.hR = vadd(S.chest, mv(S.SP, [4.4, 7.4, -1.6])); P.hL = vadd(S.chest, mv(S.SP, [-4.4, 7.4, -1.6])); P.elR = [1, -0.5, -0.5]; P.elL = [-1, -0.5, -0.5]; P.headPitch += 0.3; return true; }
   return false;
 }
 // what the props and walks add to the figure (buildFigure)
@@ -1664,5 +1665,6 @@ function figure365(B, C, E, D, P, S, acc) {
     E(vadd(c, mv(S.SP, [0.4, 1.9, 0.4])), S.SP, [1.3, 0.3, 1.3], GR.ACC, 'hole', M365.dark);
     C(vadd(c, mv(S.SP, [-4.0, 0.6, 1.6])), vadd(S.haL, mv(S.SP, [-1.6, 0, 0.8])), 0.8, 0.65, GR.ACC, 'neck', MAT('#6a4428'));
   } else if (acc === 'call') B(vadd(hR, [-0.6, 0.4, 1.4]), S.SP, [0.5, 1.0, 1.9], GR.ACC, 'phone', M365.dark);
+  else if (acc === 'map') B(vmul(vadd(hR, S.haL), 0.5), mmul(S.SP, rx(-0.5)), [5.0, 0.25, 3.4], GR.ACC, 'map', MAT('#e8e0c0'));   // a tourist's map, open in both hands
 }
 // ==== end of the city's people ========================================================================================

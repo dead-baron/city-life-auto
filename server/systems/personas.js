@@ -14,7 +14,9 @@
 //   swim      the eccentric middle-aged man dancing in a tiny purple swimsuit, flip-flops, a sweatband and a bum bag
 // and the street life (NP3, CC6): texting while walking (texter), on a call (caller), sitting on a bench (bench), asleep
 // in the park (sleeper), a busker playing for coins (busker: drop a coin - ACT - for a little Samaritan credit), and,
-// rarely, a selfie at a landmark (selfie: the owner asked for fewer phones out).
+// rarely, a selfie at a landmark (selfie: the owner asked for fewer phones out); and a few more of the city's characters:
+// a tourist couple with a map and a phone for photos (tourists), a hot-dog seller at a food cart (vendor), a fisherman at
+// a pier's rail (fisher).
 // Clients get a persona's walk and prop in the ped descriptor (net.js: gt, pp; a seat on a bench: sb), drawn by
 // client/art2/people.js (the hunch, strut, skate, blade, dance and push poses; the cane, trolley, cart, leads, guitar).
 import { K, T } from '../../shared/constants.js';
@@ -127,6 +129,18 @@ export const LOOKS = {
       L.outfit.hat = item('Headband', pick(r, ['white', 'purple', 'lime'])); L.outfit.bag = item('Belt bag', pick(r, ['black', 'neon green', 'hot pink']));
       L.outfit.glasses = r() < 0.5 ? item('Sunglasses') : null; L.outfit.jewel = null; L.hair.style = pick(r, [HS['Short back & sides'], HS.Bald, HS.Mullet, HS['Curly crop']]); L.hair.facial = pick(r, [0, 6, 6, 1]);
     } },
+  tourist: { styles: Wt('beach:2 casual:2 retro:1'), fem: 0.5, age: [1, 2, 2, 3, 2, 1], shade: 0, builds: 'casual', pool: 10,
+    fix(L, r) {
+      const f = L.body.base === 'f'; L.outfit.set = null; L.outfit.jacket = null;
+      L.outfit.top = item(pick(r, ['Hawaiian shirt', 'Polo shirt', 'Plain tee', 'Hawaiian shirt']), pick(r, ['teal', 'coral', 'white', 'yellow', 'sky', 'red']));
+      L.outfit.bottoms = item(f && r() < 0.3 ? 'Denim shorts' : r() < 0.7 ? 'Shorts' : 'Chinos', pick(r, ['khaki', 'sand', 'white', 'navy']));
+      L.outfit.shoes = item(r() < 0.5 ? 'Sandals' : 'Sneakers', pick(r, ['white', 'brown'])); L.outfit.hat = item(f ? pick(r, ['Sun hat', 'Bucket hat', 'Visor']) : pick(r, ['Bucket hat', 'Panama hat', 'Baseball cap']), pick(r, ['khaki', 'cream', 'white', 'navy']));
+      L.outfit.glasses = r() < 0.6 ? item('Sunglasses') : null; L.outfit.bag = item(r() < 0.5 ? 'Crossbody bag' : 'Backpack', pick(r, ['brown', 'navy', 'black'])); L.outfit.jewel = null;
+    } },
+  vendor: { styles: Wt('casual:1'), fem: 0.35, age: [1, 2, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 6,
+    fix(L, r) { L.outfit.set = null; L.outfit.jacket = null; L.outfit.top = item(r() < 0.5 ? 'Polo shirt' : 'Plain tee', pick(r, ['white', 'red', 'yellow'])); L.outfit.bottoms = item(r() < 0.5 ? 'Chinos' : 'Jeans', pick(r, ['black', 'khaki', 'denim'])); L.outfit.shoes = item('Sneakers', pick(r, ['white', 'black'])); L.outfit.hat = r() < 0.7 ? item('Baseball cap', pick(r, ['red', 'white', 'yellow'])) : null; L.outfit.glasses = null; L.outfit.bag = null; L.outfit.jewel = null; } },
+  fisher: { styles: Wt('outdoors:3 casual:1'), fem: 0.15, age: [0.5, 1, 2, 3, 3, 2], shade: 0, builds: 'casual', pool: 6,
+    fix(L, r) { L.outfit.set = null; L.outfit.top = item(r() < 0.5 ? 'Flannel shirt' : 'Thermal top', pick(r, ['red', 'forest', 'navy', 'cream'])); L.outfit.jacket = r() < 0.5 ? item(r() < 0.5 ? 'Puffer vest' : 'Rain jacket', pick(r, ['olive', 'navy', 'yellow', 'khaki'])) : null; L.outfit.bottoms = item('Cargo pants', pick(r, ['olive', 'khaki', 'charcoal'])); L.outfit.shoes = item(r() < 0.5 ? 'Rain boots' : 'Work boots', pick(r, ['yellow', 'olive', 'brown'])); L.outfit.hat = r() < 0.8 ? item(pick(r, ['Bucket hat', 'Trucker cap', 'Beanie']), pick(r, ['khaki', 'olive', 'red', 'navy'])) : null; L.outfit.glasses = r() < 0.3 ? item('Sport shades') : null; L.outfit.bag = null; L.outfit.jewel = null; } },
   busker: { styles: Wt('retro:2 alt:2 casual:1 western:1'), fem: 0.35, age: [2, 3, 2, 1, 1, 0], shade: 0, builds: 'casual', pool: 6,
     fix(L, r) { L.outfit.hat = r() < 0.6 ? item(r() < 0.5 ? 'Fedora' : 'Beanie', pick(r, ['brown', 'charcoal', 'black', 'mustard'])) : null; if (r() < 0.5) L.outfit.jacket = item(r() < 0.5 ? 'Denim jacket' : 'Leather jacket'); L.outfit.bag = null; if (L.body.base === 'm' && r() < 0.6) L.hair.facial = pick(r, [1, 2, 3, 5]); } },
 };
@@ -160,19 +174,24 @@ export const PERSONAS = {
   sleeper:  { arche: 'drunk', look: 'homeless', where: 'park:2 southside:1 civic:1', day: 0.6, night: 0.6, cap: 1, sleep: true, poor: true },
   busker:   { arche: 'casual', look: 'busker', pp: 'guitar', where: 'commercial:2 civic:2 oldtown:2 towers:1 nightlife:1 beach:1', day: 1.5, night: 1, cap: 1, busk: true },
   selfie:   { arche: 'casual', look: 'casual', where: 'civic:2 park:1 beach:1 towers:1', day: 0.4, night: 0.1, cap: 1, selfie: true },
+  // more of the city's characters
+  tourists: { arche: 'casual', look: 'tourist', pp: 'map', speed: 0.8, where: 'civic:2 beach:2 oldtown:2 towers:1 park:1 commercial:1', day: 1.5, night: 0.3, pair: true, cap: 1 },
+  vendor:   { arche: 'casual', look: 'vendor', where: 'commercial:2 civic:2 park:2 beach:2 towers:1', day: 2, night: 0.6, cap: 1, cart: true },
+  fisher:   { arche: 'casual', look: 'fisher', where: 'beach:2 harbor:3 park:1', day: 2, night: 0.7, fish: true },
 };
 for (const P of Object.values(PERSONAS)) P.w = Wt(P.where);
 
-export const PERSONA_SHARE = { day: 0.4, night: 0.3 };   // of the townsfolk who come walking along
+export const PERSONA_SHARE = { day: 0.3, night: 0.22 };   // of the townsfolk who come walking along
 const CAP_R = 1400;
 
 // ---- benches and landmarks (the map's props), by 512 px cell ---------------------------------------------------------------
-const BENCH = new Set(['bench_m', 'bench_a', 'bench_b', 'pbench']), MARK = new Set(['fountain', 'statue', 'mapboard', 'gazebo', 'ferris']);
+const CAT = { bench_m: 'b', bench_a: 'b', bench_b: 'b', pbench: 'b', fountain: 'm', statue: 'm', mapboard: 'm', gazebo: 'm', ferris: 'm', foodcart: 'c', pierrail: 'p', pier: 'p', fishtable: 'p', rods: 'p' };
+const BENCH = 'b', MARK = 'm', CART = 'c', PIER = 'p';
 const IDX = new WeakMap();
-function propsNear(map, x, y, r, set) {
+function propsNear(map, x, y, r, cat) {
   let ix = IDX.get(map);
-  if (!ix) { ix = { b: new Map(), m: new Map() }; for (const q of map.props || []) { const g = BENCH.has(q.t) ? ix.b : MARK.has(q.t) ? ix.m : null; if (!g) continue; const k = (Math.floor(q.x / 512) << 16) | Math.floor(q.y / 512); if (!g.has(k)) g.set(k, []); g.get(k).push(q); } IDX.set(map, ix); }
-  const g = set === BENCH ? ix.b : ix.m, out = [];
+  if (!ix) { ix = {}; for (const q of map.props || []) { const c = CAT[q.t]; if (!c) continue; const g = ix[c] ||= new Map(), k = (Math.floor(q.x / 512) << 16) | Math.floor(q.y / 512); if (!g.has(k)) g.set(k, []); g.get(k).push(q); } IDX.set(map, ix); }
+  const g = ix[cat] || new Map(), out = [];
   for (let cx = Math.floor((x - r) / 512); cx <= Math.floor((x + r) / 512); cx++) for (let cy = Math.floor((y - r) / 512); cy <= Math.floor((y + r) / 512); cy++) for (const q of g.get((cx << 16) | cy) || []) if (Math.hypot(q.x - x, q.y - y) < r) out.push(q);
   return out;
 }
@@ -208,16 +227,28 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   let at = { x, y };
   if (P.bench || P.sleep) { const b = propsNear(world.map, x, y, 520, BENCH).find((q) => !benchTaken(world, q)); if (!b) return null; at = { x: b.x, y: b.y + 10 }; if (P.sleep) at.y += 14; }
   if (P.selfie) { const m = propsNear(world.map, x, y, 600, MARK)[0]; if (!m) return null; at = spotNear(world, m.x, m.y, 40, 80) || null; if (!at) return null; at.mark = m; }
+  if (P.cart) { const c = propsNear(world.map, x, y, 700, CART).find((q) => !world.query(q.x, q.y + 18, 24, K.PED).some((e) => e.npc && e.npc.persona === key)); if (!c || !walkable(world.map, c.x, c.y + 18)) return null; at = { x: c.x, y: c.y + 18 }; }
+  if (P.fish) {   // at a pier's rail, facing the water
+    const rails = propsNear(world.map, x, y, 800, PIER);
+    let spot = null;
+    for (let k = 0; k < rails.length && !spot; k++) { const q = rails[(k + Math.floor(rng() * rails.length)) % rails.length], s2 = spotNear(world, q.x, q.y, 6, 26); if (s2 && !world.query(s2.x, s2.y, 30, K.PED).some((e) => e.npc && e.npc.persona === key)) spot = s2; }
+    if (!spot) return null;
+    at = spot; at.water = waterward(world.map, spot.x, spot.y);
+    if (at.water === null) return null;
+  }
   const ped = spawnNpc(world, P.arche, at.x, at.y, 'civ');
   apply(world, ped, key, night);
   const n = ped.npc;
   if (P.bench || P.sleep) n.bench = { x: at.x, y: at.y };
   if (at.mark) n.mark = { x: at.mark.x, y: at.mark.y };
   if (P.sleep) { n.state = 'passed'; ped.passedOut = true; ped.downUntil = 0; ped.sleeping = true; }
-  if (P.pair) {   // the other half: the same tracksuit, a step to the side
+  if (P.cart) { n.spot = { x: at.x, y: at.y }; ped.a = Math.PI / 2; }
+  if (P.fish) { n.spot = { x: at.x, y: at.y, a: at.water }; ped.a = at.water; ped.fishing = { npc: true }; }
+  if (P.pair) {   // the other half: the same tracksuit (the tourists: snapping photos), a step to the side
     const p2 = spawnNpc(world, P.arche, at.x + 14, at.y + 4, 'civ');
     apply(world, p2, key, night, ped);
     p2.npc.with = ped.id; ped.npc.with2 = p2.id;
+    if (P.look !== 'couple') p2.pp = 'phone';
   }
   if (P.dogs) {
     ped.dogs = [];
@@ -229,6 +260,11 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     }
   }
   return ped;
+}
+// which way the water is from a spot on the pier (radians), or null when there's none in reach
+function waterward(map, x, y) {
+  for (const r of [24, 40, 60]) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, t = map.tileAtPx(x + Math.cos(a) * r, y + Math.sin(a) * r); if (t === T.WATER || t === T.DEEP) return a; }
+  return null;
 }
 const benchTaken = (world, b) => world.query(b.x, b.y + 10, 30, K.PED).some((e) => e.npc && (e.npc.bench || e.sitBench));
 function spotNear(world, x, y, r0, r1) {
@@ -306,7 +342,12 @@ export function steer(world, ped, now) {
     ped.a += Math.sin(now * 1.7 + ped.id) * 0.02;
     return { inp: NO_INPUT, factor: 0.55 };
   }
-  if (P.busk) { if (Math.hypot(n.spot.x - ped.x, n.spot.y - ped.y) > 10) return { inp: seekTo(ped, n.spot.x, n.spot.y), factor: 0.5 }; ped.vx = ped.vy = 0; return { inp: NO_INPUT, factor: 0.55 }; }
+  if ((P.busk || P.cart || P.fish) && n.spot) {   // the busker, the hot-dog seller and the fisherman keep their spot
+    if (P.fish) { ped.a = n.spot.a; if (!ped.fishing) ped.fishing = { npc: true }; return { inp: NO_INPUT, factor: 0.55 }; }
+    if (Math.hypot(n.spot.x - ped.x, n.spot.y - ped.y) > 10) return { inp: seekTo(ped, n.spot.x, n.spot.y), factor: 0.5 };
+    ped.vx = ped.vy = 0; if (P.cart) ped.a = Math.PI / 2;
+    return { inp: NO_INPUT, factor: 0.55 };
+  }
   if (P.bench && n.bench) {   // to the bench, sit a while, then off they go like anyone
     if (!ped.sitBench) {
       if (Math.hypot(n.bench.x - ped.x, n.bench.y - ped.y) > 6) return { inp: seekTo(ped, n.bench.x, n.bench.y, 0.8), factor: 0.5 };
@@ -349,6 +390,7 @@ const LEAD = [[24, -8], [27, 0], [24, 8]];   // where each dog trots, in front o
                                              // the walker's sprite (people.js 'leads') end here
 export function update(world, dt) {
   for (const dog of world.entities.values()) {
+    if (dog.kind === K.PED && dog.fishing && dog.fishing.npc && dog.npc && (dog.dead || (dog.npc.state !== 'wander' && dog.npc.state !== 'idle'))) dog.fishing = null;   // (trouble: the rod goes down)
     if (dog.kind !== K.PED || !dog.pet || !dog.pet.walked) continue;
     const w = world.get(dog.pet.walked);
     if (!w || w.removed || w.dead || w.vehId) {

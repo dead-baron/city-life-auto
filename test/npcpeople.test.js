@@ -154,6 +154,17 @@ test('the personalities: where they turn up, their walks and props, their ways',
   const before = [...w.entities.values()].filter((e) => e.kind === K.BAG).length;
   onDeath(w, h, null);
   assert.equal([...w.entities.values()].filter((e) => e.kind === K.BAG).length, before, 'no cash, no loot');
+  // a hot-dog seller at a food cart, a fisherman at a pier's rail with a line in the water, tourists with a map and a phone
+  const cart = m.props.find((q) => q.t === 'foodcart' && m.districtAt(q.x, q.y).style !== 'water');
+  const vd = spawnPersona(w, spawnNpc, 'vendor', cart.x, cart.y + 40);
+  assert.ok(vd && Math.hypot(vd.x - cart.x, vd.y - cart.y - 18) < 3, 'the seller by the cart');
+  let fsh = null;
+  for (const q of m.props.filter((q) => q.t === 'pierrail')) { fsh = spawnPersona(w, spawnNpc, 'fisher', q.x, q.y); if (fsh) break; }
+  assert.ok(fsh && fsh.fishing, 'fishing off the pier');
+  run(w, 1);
+  assert.ok(fsh.fishing && Math.hypot(fsh.vx, fsh.vy) < 1, 'still fishing');
+  const tz = spawnPersona(w, spawnNpc, 'tourists', at.x, at.y);
+  assert.equal(tz.pp, 'map'); assert.equal(w.get(tz.npc.with2).pp, 'phone');
 });
 
 test('street life: the busker plays for coins, people sit on benches, someone sleeps in the park', () => {
@@ -200,6 +211,6 @@ test('the walks and props are drawn: the client turns gt / pp / sb into the peop
   }
   assert.equal(Pd.personaPose({ gt: 'hunch' }, 'walk3'), 'walk3', 'running for their life: the plain run');
   assert.equal(Pd.personaPose({ sb: 1 }, 'idle'), 'sit', 'a seat on the bench');
-  for (const pp of ['trolley', 'leads', 'guitar', 'call', 'cane', 'board']) assert.ok(Pd.pedSprite(Pd.withProp(A, pp), 'walk0', 2, 1, 0).w > 10, pp);
+  for (const pp of ['trolley', 'leads', 'guitar', 'call', 'cane', 'board', 'map']) assert.ok(Pd.pedSprite(Pd.withProp(A, pp), 'walk0', 2, 1, 0).w > 10, pp);
   assert.equal(Pd.pedFrame('hunch', 7), 5);
 });
