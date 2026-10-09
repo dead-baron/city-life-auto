@@ -89,6 +89,15 @@ if (view === 'turn') {
     const ar = SV[i % SV.length], A = adaptApp(serverApp(ar, i + 1), ar), d = (i * 3) % 8, lvl = i % 7 === 0 ? 2 : i % 5 === 0 ? 1 : 0;
     add(pedSprite(A, i % 9 === 4 ? 'idle' : 'move' + lvl, d, i % 6, ar === 'cop' ? 14 : ar === 'swat' || ar === 'soldier' ? 10 : ar === 'agent' ? 11 : null), 26 + (i % cols) * 44 + (Math.floor(i / cols) & 1) * 20, 54 + Math.floor(i / cols) * 58);
   }
+} else if (view === 'bikers') {
+  // the three biker clubs (task #366): each club's cut from the back (the patch), the front and three-quarters, then the
+  // motorcycle riders' poses (ride, leaned back on a chopper, tucked on a sport bike)
+  [0, 1, 2].forEach((club, r) => {
+    label(['Ashcrows', 'Drifters', 'Jackals'][r], 2, 12 + r * 60);
+    for (let s = 0; s < 2; s++) { const A = adaptApp({ s: s + r, h: s, hc: '#3a2a1a', t: 3, tc: '#1c1a1e', tc2: '#5a5a60', l: '#2a3a5a', sh: '#6b4a2a', ht: 0, b: 0, bd: 2, club }, 'biker'); [4, 3, 0, 7].forEach((d, i) => add(pedSprite(A, 'idle', d, 0, null), 90 + (s * 4 + i) * 40, 54 + r * 60)); }
+  });
+  const A = adaptApp({ s: 2, h: 0, hc: '#3a2a1a', t: 3, tc: '#1c1a1e', tc2: '#5a5a60', l: '#2a3a5a', sh: '#6b4a2a', ht: 0, b: 0, bd: 2, club: 0 }, 'biker');
+  ['ride', 'chop', 'tuck'].forEach((p, i) => { label(p, 2, 200 + i * 56); [6, 7, 4].forEach((d, j) => add(pedSprite(A, p, d, 0, null), 90 + j * 44, 236 + i * 56)); });
 } else if (view === 'lineup') {
   const seeds = Number(q.get('n') || 6);
   SV.forEach((ar, r) => { label(ar, 2, 12 + r * 56); for (let s = 0; s < seeds; s++) add(pedSprite(adaptApp(serverApp(ar, s + 1), ar), 'idle', 7, 0, null), 110 + s * 40, 50 + r * 56); });

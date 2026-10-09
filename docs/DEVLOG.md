@@ -4097,3 +4097,49 @@ From the user's 21:18 note: the notes that pop up cover too much of the screen, 
 - **Seeing a crime** (`server/systems/law.js`):
   - One note, "You saw a crime. You can call it in from your phone for a minute", then nothing for 10 minutes (`SAW_NOTE_S`), however many crimes you see.
   - Each crime still waits on the phone's home screen to be called in, as before.
+
+## 2026-10-08 · Motorcycles from MC1, three biker clubs riding two by two, and the Rusty Spur
+From the user's concept sheets MC1-MC5 and NP4 (task #366): new vehicle types from the concepts, and the world built out for them.
+- **The MC1 bikes** (`shared/vehicles.js`, `client/art2/vehicles.js` motoBike): ten new motorcycles, each its own voxel model, colours and feel. The sport bike and the police tourer were already in the game; the police motorcycle now has the MC1 tourer's shape.
+  - The Dustwing 1200 cruiser and the Saddlebag King bagger: heavy and steady, a lower top speed. The bagger has a batwing fairing and hard bags.
+  - The Longhaul GT tourer: a fairing and screen, panniers, a top box and a seat for two.
+  - The Hellfork Chopper: a long raked fork, ape hangers, a sissy bar and flames on the tank. It turns wide.
+  - The Stubtail Bobber and the Ton-Up Racer (a café racer with clip-ons and a hump seat).
+  - The Clodhopper 250 dirt bike: knobbly tyres, high fenders, number boards. It keeps its grip on dirt and grass (`rough`, as on the bicycles) and tops out lower on tarmac.
+  - The Zuzu 50 scooter: slow, nimble and cheap. It keeps off the highway.
+  - The Tribuck Trike: three wheels, so a crash never throws its rider (`stable`).
+  - The Rustbucket rat bike: rust, leather satchels and a bedroll. It copes with rough ground.
+  - The sport bike is now the fastest bike off the line, and it hates the dirt.
+- **Riders:** leaned back on the chopper, tucked down on the sport bike and the racer (`client/art2/people.js`, the motorcycle riders block; `def.ride`).
+- **Engine sounds** (`client/sound/vehicles.js`): a V-twin's slow lumpy burble, the sport bike's scream, the scooter's buzz, the dirt bike's two-stroke ring, the racer's single-cylinder thump.
+- **Where they appear** (`MOTO_MIX`, `server/systems/traffic.js`):
+  - Sport bikes downtown and on the highways. Bikes ride the highways now.
+  - Scooters by the beach and in the busy centre.
+  - Cruisers and baggers on the rural and desert roads, dirt bikes on the country tracks.
+  - Parked bikes follow the same mix. The dealership sells all ten. Each carries one crate on its rack.
+- **The Rusty Spur** (MC3/MC4; `shared/countryside.js` roadhouse): a biker roadhouse on the Desert Highway, well out of town. `WORLD_VERSION` is now 7.
+  - Outside: the neon bull skull on a pole by the road and over the door, lit at night (`client/art2/props-biker.js`). A porch with posts and benches, a burn barrel always alight, picnic tables, and a gravel lot where the club bikes stand backed in along the porch.
+  - Inside, a walk-in: the bartender sells Cold Beer and a Shot of Rye. The room has booths, a jukebox, a pool table, an arm-wrestling table and a card room behind a partition (`client/art2/game/statics.js` roadhouseRoom).
+- **The clubs** (NP4; `shared/clubs.js`, `server/systems/bikers.js`): three original clubs of five, with their colours, their bikes and a patch on the back of their vests (`client/art2/people.js`, the club patch block).
+  - The Ashcrow MC: red and black, a crow on the patch, choppers and bobbers.
+  - The Dust Drifters MC: denim, a winged wheel, baggers, a tourer and a trike.
+  - The Velvet Jackals MC: purple and gold, a jackal's head.
+  - They are there while a player is near the Spur: round the bikes, at the barrel, on the porch and inside at the bar.
+- **Riding two by two** (MC2): now and then a club mounts up and rides to a filling station or a store in town and back.
+  - The leader follows the traffic system's route (`planRoute`, `driveToward`). The rest ride in pairs on the leader's line, a bike's length apart, and pull out one after another.
+  - Back at the Spur each bike rolls to its own place and the riders go back to hanging out.
+- **Tough** (the gang role, as in `gang.js` / `gangwar.js`): hurt one member and every member near fights you together (`npc.onAttacked` hands it to `bikers.clubAttacked`).
+  - The club holds a grudge for 3 minutes. Get away on wheels and they mount up and ride you down.
+  - They drag you off a bike when you stop.
+- **The bike thief** (MC5): now and then someone walks up to a club bike and rides off on it. It shows on the radar as a "Bike thief" happening, and the club pours out and chases him.
+  - Riding a club bike off yourself gets you the same.
+  - Knock the thief off it and the club pays you $150 and 6 Samaritan points.
+  - The numbers are in `shared/rules.js` (`CLUB_*`, `BIKE_THIEF_*`).
+- **Tests:** `test/motorbikes.test.js` (9 tests). `test/bikes.test.js` was already the bicycles' file.
+  - Every new bike is a valid vehicle, and each drives: it accelerates, turns and brakes.
+  - The sport bike is the fastest and the scooter the slowest; the dirt bike beats the sport bike off road; the trike never throws its rider.
+  - The dealer sells the bikes, and the mix picks the right bikes for each place.
+  - The Spur: its walk-in, its bartender and drinks, and its props.
+  - The clubs: their colours, and riding two by two there and back.
+  - A club fights back together, the thief is chased, and a player who takes a club bike is chased.
+- **Dev menu:** a Motorcycles page spawns each bike. `tools/art2/vehicle-preview.html?view=moto` shows the line-up, and `tools/art2/people-preview.html?view=bikers` shows the clubs and the riders' poses.
