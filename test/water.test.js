@@ -112,7 +112,11 @@ test('deep-sea charter: fish over the side far from land, land the catch for the
 test('boats on the bay: NPC boaters cruise, a police patrol boat chases a wanted swimmer', () => {
   const w = makeWorld({ npcBudget: 60 });
   const { p } = joinPlayer(w);
-  const sp = w.map.offshore[Math.floor(w.map.offshore.length / 2)];
+  // (a point out at sea with open water all the way to where the patrol boat starts, 700 px east: the middle of the
+  // offshore list or the next one along that has it - the list moves whenever the world changes)
+  const open = (q) => { for (let dx = 0; dx <= 800; dx += 40) if (w.map.tileAtPx(q.x + dx, q.y) !== T.DEEP) return false; return true; };
+  const mid = Math.floor(w.map.offshore.length / 2);
+  const sp = w.map.offshore.slice(mid).find(open) || w.map.offshore[mid];
   teleport(w, p.ped, sp.x, sp.y);
   run(w, 3);
   const all = [...w.entities.values()].filter((e) => e.kind === K.VEH && e.ai);

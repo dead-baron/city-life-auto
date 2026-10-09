@@ -153,7 +153,7 @@ test('server: a new player wears a starter until they pick; an old profile migra
   assert.ok(LK.STARTERS.some((s) => LK.encodeLook(s.look) === a.prof.look), 'wearing a starter');
   assert.equal(a.p.ped.app.lk, a.prof.look);
   const st = looks.stateMsg(a.p);
-  assert.deepEqual(st, { t: 'looks', cur: a.prof.look, picked: false, saved: [] });
+  assert.deepEqual(st, { t: 'looks', cur: a.prof.look, picked: false, saved: [], own: a.prof.wardrobe, free: true });   // (own, free: the wardrobe, test/wardrobe.test.js)
   // the descriptor carries the code alone
   const d = _descriptor(a.p.ped);
   assert.deepEqual(d.app, { lk: a.prof.look });
@@ -183,7 +183,10 @@ test('server: setting a look - checked, applied to the ped, seen again by everyo
   assert.equal(a.prof.look, want);
   // not while the police are after you (a free change would be a free disguise)
   a.p.wanted = 2;
-  const other = LK.encodeLook(LK.randomLook(778));
+  // (another outfit of things they own: the first session made the nightclub look theirs, and the basics are)
+  const O = LK.decodeLook(want); O.outfit.shoes = LK.item('Sneakers', 'red'); O.outfit.hat = null;
+  const other = LK.encodeLook(O);
+  assert.notEqual(other, want);
   looks.handle(w, a.p, { t: 'look', a: 'set', c: other });
   assert.equal(a.prof.look, want, 'blocked while wanted');
   a.p.wanted = 0;

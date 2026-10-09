@@ -372,3 +372,12 @@ export const CLUB_GRUDGE_S = 180;          // ...and the club stays after you th
 export const BIKE_THIEF_EVERY_S = [240, 420]; // how often someone tries to ride off on a club bike outside the Spur (a player near)
 export const BIKE_THIEF_REWARD = 150;      // stop the thief and the club pays you this (cash)...
 export const BIKE_THIEF_RESPECT = 6;       // ...and the Samaritan points
+
+// Clothes to buy (task #364: shared/wardrobe.js, server/systems/looks.js): the stores sell the catalogue's pieces
+// (shared/look.js PIECES) at its prices times this, times the store's own markup (the uptown boutique asks more,
+// thrift and vintage less, the fence a lot more)
+export const CLOTHES_PRICE_K = 1;
+export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];   // what every player owns from the start (with the starting look's pieces)
+// the barbershop and the hair salon (ST3): what each change costs; the salon charges SALON_K times as much
+export const BARBER_PRICES = { cut: 15, colour: 25, beard: 12, moustache: 8 };
+export const SALON_K = 2;

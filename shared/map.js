@@ -263,6 +263,14 @@ const SPECIALS = [
   { d: 31, prefab: 'shops1', biz: ['delivery', 'delivery', 'delivery', 'clothing', 'coffee'], names: ["Joe's Burgers North", 'Northshore Books', 'Pixel Tech Northshore', 'Thread & Co. North', 'Brew Haven North'] },
   { d: 36, prefab: 'shops2', biz: ['delivery', 'convenience', 'coffee', 'clothing', 'pharmacy'], names: ['Falls Pizza', '24/7 Mart', 'Bean There Coffee', 'Urban Wear', 'Falls Pharmacy'] },
   { d: 30, prefab: 'shops2', biz: ['delivery', 'convenience', 'coffee', 'clothing', 'pharmacy'], names: ['Old Quarter Pizza', '24/7 Mart Old Quarter', 'Bean There Old Quarter', 'Urban Wear Old Quarter', 'Old Quarter Pharmacy'] },
+  // clothes to buy (task #364): the clothing stores and the salon where no storefront was free (buildClothesShops
+  // gives each its store by name)
+  { d: 7, alt: [17, 1], prefab: 'boutique', biz: ['clothing'], names: ['Afterglow'] },
+  { d: 10, alt: [14, 43, 44], prefab: 'rest2', biz: ['clothing'], names: ['Salt & Swell Surf Shop'] },
+  { d: 4, alt: [5, 1, 46], prefab: 'boutique', biz: ['clothing'], names: ['Marlow & Finch'] },
+  { d: 4, alt: [5, 46, 1], prefab: 'boutique', biz: ['barber'], names: ['Silk & Shears Salon'] },
+  { d: 11, alt: [3, 8, 26, 39], prefab: 'trail', biz: ['clothing'], names: ['Hardline Workwear'] },
+  { d: 8, alt: [6, 3, 26], prefab: 'trail', biz: ['clothing'], names: ['Ironside Army Surplus'] },
 ];
 
 const GENERIC_NAMES = {
@@ -613,6 +621,7 @@ function buildCity(seed) {
   buildPaintShops(m);
   buildMotorPools(m);
   buildCornerStores(m);
+  buildClothesShops(m);   // (task #364: the clothing stores by style and district, the barbers and salons)
   buildInteriors(m);
   buildDealerLots(m);
   clearHospitalFronts(m);
@@ -2957,7 +2966,7 @@ function buildCornerStores(m) {
 // units of a strip mall, and a counter with a clerk behind it. The roof art fades out while you
 // are inside (client). The place's interaction point moves in front of its counter.
 export const WALK_IN = new Set(['club', 'convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle',
-  'roadhouse']);   // (roadhouse: the Rusty Spur, countryside.js - task #366)
+  'barber', 'roadhouse']);   // (roadhouse: the Rusty Spur, countryside.js - task #366)
 const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
 function buildInteriors(m) {
   m.walkIns = [];
@@ -3708,6 +3717,74 @@ function buildGunShops(m) {
       if (!signed && b.prefab >= 0) { const south = m.prefabs[b.prefab].rot === 0; b.signs.push({ x: best.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: best.label }); }
     }
     used.add(distOf(best)); have.push(best);
+  }
+}
+
+// ---- clothes to buy (task #364) -------------------------------------------------------------------------------------
+// Storefronts become the city's clothing stores, by style and district (shared/wardrobe.js STORES: what each sells),
+// and its barbershops and hair salons. Each takes a walk-in storefront - a 'delivery' door in a building with room for
+// a counter - in the first of its districts that has one. The old clothes shops (Threads Outfitters, Thread & Co.,
+// Urban Wear) stay the high-street stores; the Trail & Field lots become the outdoor outfitters and Southside's
+// Cut & Fade a barbershop. [kind, store ('salon' for a barber), name, districts in order of preference]
+const CLOTHES_SHOPS = [
+  ['clothing', 'velvet', 'Velvet & Vine', [16, 4, 23]],
+  ['clothing', 'velvet', 'Velvet & Vine Lakeview', [24, 23, 34]],
+  ['clothing', 'dept', 'Marlow & Finch', [4, 1, 5]],
+  ['clothing', 'dept', 'Marlow & Finch Westport', [23, 25, 31]],
+  ['clothing', 'afterglow', 'Afterglow', [7, 17]],
+  ['clothing', 'kicks', 'Corner Kicks', [1, 6, 2]],
+  ['clothing', 'kicks', 'Corner Kicks Stadium', [25, 30, 31]],
+  ['clothing', 'kickflip', 'Kickflip Skate Co.', [46, 2, 10]],
+  ['clothing', 'surf', 'Salt & Swell Surf Shop', [10, 14, 43]],
+  ['clothing', 'surf', 'Salt & Swell Pelican Key', [14, 43, 44]],
+  ['clothing', 'thrift', 'Second Skin Vintage', [18, 6, 46]],
+  ['clothing', 'thrift', 'Second Skin Old Quarter', [30, 18]],
+  ['clothing', 'feed', 'Cedar Feed & Western Wear', [36, 35, 31]],
+  ['clothing', 'workwear', 'Hardline Workwear', [11, 3, 8]],
+  ['clothing', 'surplus', 'Ironside Army Surplus', [8, 6, 3]],
+  ['clothing', 'outfitter', 'Trail & Field Outfitters', [25, 31, 1]],
+  ['barber', null, 'Old Town Barbers', [18, 30]],
+  ['barber', null, 'Northshore Barber Co.', [31, 32, 36]],
+  ['barber', 'salon', 'Silk & Shears Salon', [4, 46, 5]],
+  ['barber', 'salon', 'Golden Locks Hair Salon', [23, 36, 31]],
+];
+function buildClothesShops(m) {
+  const distOf = (p) => m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
+  const bays = new Set((m.bays || []).map((bay) => m.bld[bay.ty * MAP_W + bay.tx]));
+  const ok = (p) => {
+    if (p.kind !== 'delivery' || p.b === undefined || p.fixed) return false;
+    const b = m.buildings[p.b];
+    if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(b.id) || CLUB_LOTS.has(b.kind)) return false;
+    if (m.pois.some((q) => q.b === p.b && q !== p && !WALK_IN.has(q.kind) && !HELPER_POIS.has(q.kind) && q.kind !== 'delivery')) return false;   // (buildInteriors: every door in it a shop)
+    return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theatre|playhouse|station|club|bar|cannery|freight|salvage|pool|records|gallery/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar|motors|dealer/.test(b.kind || '');
+  };
+  const take = (p, kind, store, name) => {
+    const old = p.label;
+    p.kind = kind; p.label = name;
+    if (kind === 'clothing') p.store = store; else if (store === 'salon') p.salon = true;
+    const b = m.buildings[p.b];
+    if (!b) return;
+    let signed = false;
+    for (const sg of b.signs) if (sg.text === old) { sg.text = name; signed = true; }
+    if (!signed && b.prefab >= 0) { const south = m.prefabs[b.prefab].rot === 0; b.signs.push({ x: p.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: name }); }
+  };
+  // the ones placed as SPECIALS take their store by name; the Trail & Field lots sell outdoor clothes; Cut & Fade
+  // cuts hair
+  const byName = new Map(CLOTHES_SHOPS.map((e) => [e[2], e]));
+  for (const p of m.pois) {
+    const e = (p.kind === 'clothing' || p.kind === 'barber') && byName.get(p.label);
+    if (e && e[0] === p.kind) { if (p.kind === 'clothing') p.store = e[1]; else if (e[1] === 'salon') p.salon = true; continue; }
+    if (!ok(p)) continue;
+    if (/^Trail & Field/.test(p.label || '')) take(p, 'clothing', 'outfitter', p.label);
+    else if (p.label === 'Cut & Fade') take(p, 'barber', null, p.label);
+  }
+  const cands = m.pois.filter(ok).sort((a, b) => hash2(a.x | 0, a.y | 0, 364) - hash2(b.x | 0, b.y | 0, 364));
+  for (const [kind, store, name, ds] of CLOTHES_SHOPS) {
+    if (m.pois.some((q) => q.kind === kind && q.label === name)) continue;   // (placed already)
+    if (kind === 'clothing' && store === 'outfitter' && m.pois.some((q) => q.store === 'outfitter')) continue;
+    let best = null;
+    for (const d of ds) { best = cands.find((c) => c.kind === 'delivery' && distOf(c) === d); if (best) break; }
+    if (best) take(best, kind, store, name);
   }
 }
 

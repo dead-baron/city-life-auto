@@ -519,7 +519,7 @@ const POI_ICON = {
   fishmarket: ['≈', '#25b8c0'], marina: ['B', '#7de0ff'], rental: ['⛵', '#7de0ff'], farm: ['¥', '#b8e02a'], courthouse: ['J', '#e8d8a8'],
   charter: ['≈', '#7de0ff'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'], station: ['≡', '#f0f0f0'],
   airport: ['✈', '#9fd0ff'], tackle: ['🎣', '#25b8c0'], winery: ['🍷', '#c04a7a'], clubhouse: ['⛳', '#7de07a'], roadhouse: ['🍺', '#ff7a3a'], market: ['🧺', '#e8b060'],
-  fruitstand: ['🍎', '#ff6a5a'], farmstand: ['🍯', '#e0b040'], snack: ['🌭', '#ffb060'], salvage: ['⚙', '#c0c8d0'], ride: ['🎡', '#ff9ad0'], race: ['🏁', '#f0f0f0'],
+  fruitstand: ['🍎', '#ff6a5a'], farmstand: ['🍯', '#e0b040'], snack: ['🌭', '#ffb060'], salvage: ['⚙', '#c0c8d0'], barber: ['✂', '#f0b0d8'], ride: ['🎡', '#ff9ad0'], race: ['🏁', '#f0f0f0'],
 };
 // one icon for a place with more than one counter (the market's rows of stalls): the same kind within this of
 // another is left off the maps
