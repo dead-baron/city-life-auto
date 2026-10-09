@@ -225,6 +225,7 @@ export async function runScene({ mobile = true, seconds = 30, silent = false, kr
   // events whose sound didn't play at all (the table's sound dropped, the old sfx muted)
   const evStat = { n: 0, heard: 0, silent: 0, silentKinds: {} };
   let ei = 0, jsMs = 0, frames = 0, pulses = 0;
+  const seen = { horn: false, tyres: false, siren: false };   // (the engines' parts built while they sounded)
   const FRAME = Q * 13;
   if (sys) sys.pulse();   // (the scene: the game, not the title screen)
   const frame = (t) => {
@@ -238,6 +239,10 @@ export async function runScene({ mobile = true, seconds = 30, silent = false, kr
     }
     // the traffic up and down the road; the police car through from 6 s to 16 s
     for (const c of cars) { c.ry += c.vy * dt; if (c.ry > CY + 1100) c.ry -= 2200; if (c.ry < CY - 1100) c.ry += 2200; }
+    // a horn from 20 to 21.5 s, a drift (the tyres) from 22 to 24 s, on whichever car is nearest
+    const near = cars.reduce((a, c) => (Math.abs(c.ry - CY) < Math.abs(a.ry - CY) ? c : a), cars[0]);
+    for (const c of cars) c.flags = VF.DRIVER | (c === near && t >= 20 && t < 21.5 ? VF.HORN : 0) | (c === near && t >= 22 && t < 24 ? VF.DRIFT : 0);
+    if (sys && sys.veh.voices) { for (const v of sys.veh.voices) { if (v.hornN) seen.horn = true; if (v.tyreN) seen.tyres = true; if (v.sirN) seen.siren = true; } }
     if (t >= 6 && t < 16.5) { if (!vehs.includes(cop)) vehs.push(cop); cop.ry = CY - 2200 + (t - 6) * 420; } else if (vehs.includes(cop)) vehs.splice(vehs.indexOf(cop), 1);
     // the rain: heavy, then easing off from 18 s (the crickets come back under 0.3)
     S.rainK = t < 18 ? 1 : Math.max(0.25, 1 - (t - 18) / 4 * 0.75);
@@ -262,7 +267,7 @@ export async function runScene({ mobile = true, seconds = 30, silent = false, kr
   const buf = await ctx.startRendering();
   const wallMs = performance.now() - t0;
   const ch = (i) => buf.getChannelData(i);
-  const out = { mobile, seconds, wallMs: Math.round(wallMs), jsMs: Math.round(jsMs), frames, pulses, made };
+  const out = { mobile, seconds, wallMs: Math.round(wallMs), jsMs: Math.round(jsMs), frames, pulses, made, seen, vehNodesAtEnd: sys && sys.veh.nodes ? sys.veh.nodes() : null };
   if (sys) {
     out.whole = measure([ch(0), ch(1)]);
     out.preComp = measure([ch(2), ch(3)]);

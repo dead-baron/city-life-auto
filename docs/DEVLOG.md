@@ -4495,16 +4495,17 @@ From the user's notes at 03:55 and 04:38: "the rain sounds seemed really overpow
   - An event's old sfx stays quiet only if its new sound started, or was simply out of earshot. If it was dropped, the old sound plays instead (`index.js eventHeard`).
   - The debug menu has a line: "Sound: on · voices · engines · beds · played, dropped, cut off", or off, loading, asleep ("tap to wake it"), or unavailable and why.
 - **Before and after** (the busy scene; the best of three runs by yardstick; phone settings unless said):
-  - **Render CPU:** before 3.6 s per 30 s, 12% of real time (6.2 yardsticks; 11.1 on computer settings). After 1.6-2.4 s under heavier load, 5.5-8% (1.3-2.7 yardsticks; 1.6-4.3 on computer settings). About 3-5 times less work.
-  - **Peak (the whole mix):** -5.0 dBFS before, -5.8 after.
+  - **Render CPU:** before, 6.2 yardsticks on phone settings (3.6 s per 30 s, 12% of real time here) and 11.1 on computer settings. After, 1.2 on phone settings (runs of 1.2-2.4) and 2.0 on computer settings (2.0-2.8): 1.5 s per 30 s, 4.9%, with the machine twice as busy - about 2% on a quiet one. About five times less work.
+  - **Nodes made in the 30 s:** 8,922 before; 5,977 after (oscillators 1,149 -> 402, filters 2,284 -> 1,278). And none of them idle: before, the 14 voice strips and the engines' 24 oscillators ran all the time.
+  - **Peak (the whole mix):** -5.0 dBFS before, -5.1 after.
   - **Loudness (rms over the scene / loudest 400 ms, dBA):**
-    - the whole: -36.0 / -25.7 before; -37.0 / -29.9 after;
-    - effects bus: -36.6 / -23.2 before; -35.6 / -26.4 after;
-    - ambience bus: -37.1 / -34.1 before; -36.9 / -33.5 after;
+    - the whole: -36.0 / -25.7 before; -36.2 / -30.1 after;
+    - effects bus: -36.6 / -23.2 before; -35.5 / -26.9 after;
+    - ambience bus: -37.1 / -34.1 before; -35.4 / -33.3 after (the rain's gusts vary from run to run);
     - music bus (the club over the road): -49.8 before; -49.0 after.
-  - **The compressor:** before, +4 dB of make-up on everything and at most 2 dB of reduction. After, no net make-up and at most 3.7 dB of reduction, more than 3 dB in 0.1% of the time.
-  - **Cut off:** 71 before (2 of yours); 31 after (none of yours), mostly others' footsteps and raindrops, faded.
-  - **Dropped:** before, 8 for want of a voice and 5 by a rate limit. After, 7 for want of a voice, 2 by a rate limit, and 243 others' footsteps over the crowd's budget of 12 a second (ten walkers make about 20).
+  - **The compressor:** before, +4 dB of make-up on everything and at most 2 dB of reduction. After, no net make-up and at most 3.8 dB of reduction, more than 3 dB in 0.1% of the time.
+  - **Cut off:** 71 before (2 of yours); 21 after (none of yours), mostly others' footsteps and raindrops, faded.
+  - **Dropped:** before, 8 for want of a voice and 5 by a rate limit. After, 8 for want of a voice (others' footsteps and bullet strikes), 2 by a rate limit, and 243 others' footsteps over the crowd's budget of 12 a second (ten walkers make about 20).
   - **Events heard:** 70 of 70 before and after.
   - **The instruments alone:** -18 to -68 dBA before; -20 to -46 after, each within its category's range.
   - **Each part of the scene alone, after** (loudest 400 ms at the speakers): the gunfight and the explosion -30.9 dBA; the ambience in heavy rain -37.4; the traffic and the siren -43.8; ten people's footsteps -50.1; the club over the road, through its walls, -50.0.
@@ -4519,6 +4520,6 @@ From the user's notes at 03:55 and 04:38: "the rain sounds seemed really overpow
 - **Not yet:**
   - Not listened to on a real phone: everything here is measured, not heard.
   - The bench's CPU numbers are from a busy shared machine; a quiet run would give cleaner ones.
-  - Before the samples, footsteps were the biggest part of what was left (about a third of the scene's work), then the engines (about a fifth). The samples should take most of the footsteps' share away; the timings were too noisy to show it cleanly. A cheaper engine (one oscillator and a band of noise) is the next step for phones.
+  - Before the samples, footsteps were the biggest part of what was left (about a third of the scene's work), then the engines (about a fifth). The samples cut the nodes the scene makes by 38% (9,624 -> 5,977; filters 2,360 -> 1,278, oscillators 907 -> 402); the timings moved from 1.3-2.7 yardsticks to 1.2-2.4, too noisy here to say more. A cheaper engine (one oscillator for the note and its sub-octave) is the next step for phones.
   - The traffic sits well under heavy rain (-44 against -37 dBA). That's natural in a downpour, but worth a listen in the dry.
   - The level targets are by category and measurement. They may want tuning by ear.
