@@ -94,7 +94,7 @@ export function onState(st) {
     if (L) look = L;
     render();
   } else if (mode === 'shop' || mode === 'barber') render();
-  else if (mode === 'edit' && (tab === 'saved' || tab === 'outfit')) renderPage();
+  else if (mode === 'edit' && !(document.activeElement && document.activeElement.tagName === 'INPUT' && root.contains(document.activeElement))) renderPage();   // (what you own, whether you're at home)
 }
 function close(apply) {
   if (mode === 'wheel' || mode === 'shop' || mode === 'barber') apply = false;   // (the wheel puts a look on with Apply; a store sells it)

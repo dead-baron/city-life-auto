@@ -618,7 +618,7 @@ function execute(world, p, poi, opt) {
     case 'fit': case 'chair': return looks.openShop(world, p, poi);   // the fitting room, the barber's chair
     case 'hlooks': case 'hmirror': {   // the quick-change wheel or the whole creator, at home: changing here counts as unseen
       p.lookHomeAt = world.time;
-      if (p.conn) p.conn.sendJSON({ ...looks.stateMsg(p), open: parts[0] === 'hlooks' ? 'wheel' : 'edit' });
+      if (p.conn) p.conn.sendJSON({ ...looks.stateMsg(p, world), open: parts[0] === 'hlooks' ? 'wheel' : 'edit' });
       return null;
     }
     case 'houtfit': {
