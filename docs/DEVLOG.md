@@ -3942,6 +3942,8 @@ From the user's concept sheets CC1 and CC7-CC10 (the creator, its tabs, the star
   - A new player wears a starting look until they pick one.
   - `{ t: 'look', a: 'set' | 'save' | 'ren' | 'del' }` sets your look (checked; free for now), and saves up to 12 named looks, renames them or deletes them. The server answers with `{ t: 'looks', cur, picked, saved }`, which is also sent when you join.
   - No free change while you're wanted (it would be a free disguise). The clothes shop's new outfit still works, and now keeps your body, face and hair.
+  - One change a second at most: each one goes out to everyone near.
+  - A progress wipe (`CLA_FRESH_ON_UPDATE=all`) keeps your look and your saved looks.
   - At home, two new lines: **Quick change** and **The mirror**. A change made inside your home is unseen, so it is allowed while wanted and drops your public wanted level, like the home's "Change outfit".
 - **On the wire:** a player's descriptor carries the look as `{ lk: code }` alone. It is sent when the player is first seen or when the look changes, as before.
   - The page turns the code into the old-style appearance (`lookToApp`), so the classic renderer, the interiors and the police descriptions keep working.
