@@ -79,7 +79,8 @@ if (q.get('slide')) {
 const P = { ...(PRESETS_GAME[PN] || PRESETS_GAME.noon) };
 const wind = [ws, wg, wdx, wdy];
 window.render = (t, windT = t) => {
-  eng.beginFrame({ camX, camY, zoom, viewW: W / zoom, viewH: H / zoom, time: t, preset: P, wet, quality: Q, wind, windT, fades });
+  // (the wind's clocks as render/flora/wind.js keeps them: the gust patches' travel and the flutter clock)
+  eng.beginFrame({ camX, camY, zoom, viewW: W / zoom, viewH: H / zoom, time: t, preset: P, wet, quality: Q, wind, gd: [windT * 150 % 8192, 0, windT * 74 % 8192, windT * 36 % 8192], ft: windT * 0.74 % 256, fades });
   for (const [key, x, y, z, air] of sprites) eng.drawSprite(key, x, y, z, { alpha: 1, shadow: true, air, flash: 0, xray: false, flipX: false, tint: null });
   for (const L of lights) eng.addLight({ x: L.x, y: L.y, z: L.z || 0, r: L.r, col: L.col, k: L.k * lightK });
   eng.endFrame();

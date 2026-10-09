@@ -2702,7 +2702,7 @@ function prepFrame(dt) {
   // the sky: time of day, how long it's been raining, fog, lightning (render/atmos.js)
   S.rainK = (S.rainK || 0) + ((rain ? 1 : 0) - (S.rainK || 0)) * (1 - Math.exp(-dt / 8));
   S.wx.update(dt, rain, now);
-  wind.update(S.loopTime, S.rainK || 0, dt);   // (dt: the air moves on - the canopy's drift)
+  wind.update((S.day || 0) * DAY_LOOP_S + S.loopTime, S.rainK || 0, dt);   // (the clock counting the days; dt: the air moves on - the canopy's drift, the gusts)
   const sky = skyAt((S.day || 0) * DAY_LOOP_S + S.loopTime, clock.minutes, S.rainK);   // (the clock counting the days: some mornings and nights are foggy)
   if (S.wx.flash > 0) { const f = S.wx.flash * (0.5 + 0.4 * sky.night); sky.amb = sky.amb.map((v) => v + (1 - v) * f); }
   const quality = gfxQuality();

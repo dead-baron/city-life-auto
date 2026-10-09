@@ -199,7 +199,7 @@ for (const ch of chunks) for (const L of ch.lights) {
 }
 function frame(t) {
   const o = { alpha: 1, flipX: false, flash: 0, xray: false, shadow: true, tint: null };
-  eng.beginFrame({ camX, camY, zoom, viewW: vw, viewH: vh, time: t, preset, wet: Math.max(rainK, preset.wet || 0), quality: Q, flash: Math.min(1, wx.flash), fog: fogK, wind: [0.15, 0.3, 1, 0], windT: t });
+  eng.beginFrame({ camX, camY, zoom, viewW: vw, viewH: vh, time: t, preset, wet: Math.max(rainK, preset.wet || 0), quality: Q, flash: Math.min(1, wx.flash), fog: fogK, wind: [0.15, 0.3, 1, 0], gd: [t * 150 % 8192, 0, t * 74 % 8192, t * 36 % 8192], ft: t * 0.74 % 256 });
   const lights = [];
   const light = (x, y, z, r, col, k, cone = null) => { if (k > 0.02) lights.push({ x, y, z, r, col, k, cone: cone ? { a: cone[0], spread: cone[1], len: cone[2] } : null, s: k * Math.sqrt(r) / (1 + (Math.hypot(x - camX, y - camY) / 700) ** 2) }); };
   // the chunks' static lights: lamps by the game's lamp clock, windows and neon with the dark
