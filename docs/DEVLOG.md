@@ -4234,3 +4234,35 @@ From the user's concept sheets ST1-ST4 (the clothing stores, the stores of the t
 - **Tests:** `test/wardrobe.test.js` (7 tests): every piece sold and every store kind at a walk-in; owning (the starting look, the first session, refusals, the mirror at home, saved looks); a player from before the shops; Buy and Buy and wear, priced, cash then bank; the fitting room while wanted; the barber's cut, colour and moustache and the salon; the old new-outfit service. `test/look.test.js` follows the new rules (the looks message's new fields; a change of clothes made of owned pieces). `test/water.test.js`'s patrol boat now starts where there's open water (the new world moved the offshore point it used next to the shore).
 - **The world map picture** (`assets/map`) is baked again for the new world.
 - **Not yet:** staff behind the counters dressed in the store's style; a motorcycle shop (the biker branch has the bikes); the golf club's pro shop and the market stalls for preppy and festival.
+
+## 2026-10-09 · Real cells: walked into the station, a cell block you can walk round, sit, use the toilet and hold the bars, no fighting
+From the owner's note (task #362 part 3, 19:52): "let you walk around the jail cell ... part of the internal part of the police station so you can see other people in the jail cells and multiple people can be placed in the same jail cell ... sit or sit on the toilet or hold onto the bars. The police car should actually pull up to the police station and walk you into the station." Cellmates can't hurt each other (confirmed later).
+- **A cell block in every police station** (new: `shared/cells.js`, built after `buildInteriors`).
+  - Two to four cells along the back of the walk-in, four or five tiles wide: a barred front with a locked barred door, partitions of bars between them, a steel bench along the back wall and a steel toilet in the corner.
+  - A corridor in front of them for the officers. The front desk's counter moved forward to make room; its gap at the east end is the way round it.
+  - The bars are rows of small solid props: nobody walks through them, and a bullet stops on them (`CityMap.rayTiles`). Sight goes through them (`los`).
+  - All five stations have cells: the HQ four, the others three. Southbank Precinct is the smallest (a one-row corridor and a one-row lobby).
+  - **WORLD_VERSION 8**, and the world map's picture is baked again.
+- **Walked in** (`server/systems/custody.js`, stage `walkin`).
+  - The police car pulls up at the kerb outside. You're booked there (fined, the contraband taken, the stars wiped), still cuffed.
+  - Two officers from the station take you out of the back. One walks a step ahead, one a step behind, with the cuffed walk: through the front door, round the counter, down the corridor to the cell with the fewest in it (up to 4 a cell, `CELL_CAP`).
+  - The door opens as you get there, the cuffs come off, the door locks behind you. The officers go back to the front office.
+  - Stuck on the way for 6 s, or 45 s in all (`CELL_WALK_S`), or an officer down: you're put in the cell anyway.
+  - A player officer delivering a prisoner to the kerb gets the same walk-in by NPC officers.
+  - Turning yourself in, logging out in custody, or a car that never got there: straight into a cell, as before.
+- **In the cell you're a real person in the world** (new: `server/systems/cells.js`).
+  - Not hidden: other players and visitors see you, and you see the other cells through the bars. Several prisoners share a cell.
+  - Walk round the cell. The action button: sit on the bench, sit on the toilet, hold the bars (standing at the bars facing out, hands on them), or get up. Moving gets you up too.
+  - A prisoner found outside their cell is put back in it (nobody leaves but through the door).
+  - **Nobody in a cell can hurt anyone or be hurt** (`ped.cellSafe`, read by `combat.js`): no damage, knockdowns, stuns or tackles, by or to them. The same for a prisoner being walked in and the officers walking them.
+  - **Weapons are put away** in the cell block (cells and corridor), and back in your hand when you walk out. The corridor is no sanctuary for someone on the run.
+  - **NPC crooks the police arrest** do 4 minutes (`INMATE_S`) in the nearest station's cells, sitting, at the bars or standing about. They're only made flesh while a player is near.
+- **Out:** time served or bail paid, the cell door clanks open and you're outside the station's front door, free. Logging out and back in still puts you back in your cell with the time you had left. A fresh start clears it.
+- **Client:**
+  - The cell screen is now a small panel at the top (IN A CELL, the time left, Pay bail, the note) that leaves the cell in view. The same keys: B or Enter, Y on a pad, the button on touch.
+  - Holding the bars is the hands-up pose facing out (`hb` on the wire); the bench and the toilet use the sitting pose (`sb`).
+  - The station's roof fades while you're inside, as for any walk-in.
+  - Drawn in the art v2 cut-away (`statics.js` `cellRoom`: concrete floors, bars with rails, door frames and lock boxes, benches, toilets) and simply in the older renderer (`render/tiles.js` `cellsArt`).
+  - A new sound event, `celldoor` (the gate clank).
+- **Tests:** `test/cells.test.js` (6 tests): every station has cells you can't walk or shoot out of but can see into; booked at the kerb, two officers walk you in through the station and the corridor into a cell; walking round the cell but not out, the bench, the toilet and the bars; cellmates share a cell and can't hurt each other, weapons away; out by bail and by time at the front door, NPC crooks in the cells; logging out and back in. `test/arrests.test.js` follows the new cells (in plain sight, out of the front door).
+- **Not yet:** the cell door doesn't swing open on screen (it's drawn shut; the clank is heard); the old renderer has no sitting pose.

@@ -12,6 +12,7 @@ import * as phone from './phone.js';
 import * as events from './events.js';
 import * as bounties from './bounties.js';
 import * as custody from './custody.js';
+import * as cells from './cells.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { ROB_CALLED_HEAT } from '../../shared/rules.js';
@@ -593,6 +594,7 @@ export function arrest(world, cop, target) {
     if (target.npc && target.npc.hasPurse) npc.onMuggerDowned(world, target);
     phone.onCriminalStopped(world, cop, target);
     world.emit(target.x, target.y, { e: 'poof', x: target.x, y: target.y });
+    cells.lockUp(world, target);   // (they do their time in the nearest station's cells: cells.js)
     world.remove(target);
     if (cop && cop.player) {
       cop.player.profile.cash += 60; cop.player.profile.samaritan += 4;

@@ -947,3 +947,15 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-money { margin-right: auto; align-self: center; font: 13px var(--pixel); color: var(--cream); }
 #creator .cc-money b { color: #ffd36b; }
 #creator .cc-btn.green { color: #fff; background: linear-gradient(180deg, #3a9a4a, #22703a); border-color: #9ae0a8; }
+
+/* ---- real cells (task #362 part 3; server cells.js): in a cell you're in the world, so the jail screen shrinks to a
+   small panel at the top that leaves the cell in view - the time left, the bail button (B / Enter, pad Y), the note ---- */
+#jail { top: calc(max(8px, env(safe-area-inset-top)) + 52px); left: 50%; transform: translateX(-50%); width: auto; max-width: min(340px, 92vw);
+  padding: 5px 10px 5px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 10px; row-gap: 2px; border-width: 2px; }
+#jail h2 { margin: 0; font-size: 13px; letter-spacing: 2px; }
+#jail #j-at { display: none; }
+#jail #j-time { margin: 0; font-size: 15px; }
+#jail button { margin: 0; padding: 3px 10px; font-size: 13px; }
+#jail small { flex-basis: 100%; font-size: 11px; }
+@media (min-aspect-ratio: 6/5) { #jail { left: 50%; top: calc(max(8px, env(safe-area-inset-top)) + 52px); transform: translateX(-50%); width: auto; } }
+@media (max-height: 480px) and (orientation: landscape) { #jail small { display: none; } }

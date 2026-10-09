@@ -873,6 +873,24 @@ function paintedInterior(g, b, u, ox, oy) {
   return true;
 }
 
+// A police station's cells (task #362; shared/cells.js), simply: concrete floors, a steel bench and toilet in each, the
+// bars along the front and between them, a door frame and lock in each front
+function cellsArt(g, k, ox, oy) {
+  const back = (k.south ? k.y0 : k.y1) - oy, d = k.south ? 1 : -1;
+  for (const q of k.bars) if (q[1] === q[3]) { g.fillStyle = '#8a867f'; g.fillRect(q[0] - ox, Math.min(back, q[1] - oy), q[2] - q[0], Math.abs(q[1] - oy - back)); }
+  for (const c of k.cells) {
+    g.fillStyle = '#9a9ea6'; g.fillRect(c.bench.x - 30 - ox, Math.min(back + d * 3, back + d * 15), 60, 12);
+    g.fillStyle = '#d8dce2'; g.fillRect(c.toilet.x - 6 - ox, Math.min(back + d * 2, back + d * 16), 12, 14);
+    g.fillStyle = '#5a6a74'; g.fillRect(c.toilet.x - 3 - ox, c.toilet.y - oy - 2, 6, 6);
+  }
+  g.fillStyle = '#2e3036';
+  for (const q of k.bars) {
+    if (q[1] === q[3]) { for (let x = q[0]; x <= q[2]; x += 5) g.fillRect(x - ox, q[1] - oy - 2, 2, 4); g.fillRect(q[0] - ox, q[1] - oy - 1, q[2] - q[0], 1); }
+    else { for (let y = q[1]; y <= q[3]; y += 5) g.fillRect(q[0] - ox - 2, y - oy, 4, 2); g.fillRect(q[0] - ox, q[1] - oy, 1, q[3] - q[1]); }
+  }
+  for (const c of k.cells) { g.fillStyle = '#1e2026'; g.fillRect(c.door.x - 18 - ox, c.door.y - oy - 3, 3, 6); g.fillRect(c.door.x + 15 - ox, c.door.y - oy - 3, 3, 6); g.fillStyle = '#b8a860'; g.fillRect(c.door.x + 9 - ox, c.door.y - oy - 3, 5, 6); }
+}
+
 export function interiorArt(m, b) {
   let cv = artCache.get(b.id);
   const ver = atlas.interiors ? 2 : 1; // rebuilt once the interior paintings arrive
@@ -923,6 +941,7 @@ export function interiorArt(m, b) {
       g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(x0, cy + TILE - 6, x1 - x0, 4);
     }
   }
+  for (const u of b.walkIn.units) if (u.cells !== undefined && m.cellBlocks && m.cellBlocks[u.cells]) cellsArt(g, m.cellBlocks[u.cells], ox, oy);
   cv.ver = ver;
   if (artCache.has(b.id)) { freeCanvas(artCache.get(b.id)); artCache.delete(b.id); }
   capSet(artCache, b.id, cv, LOW_MEM ? 4 : 16);

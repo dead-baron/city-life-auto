@@ -16,6 +16,7 @@ import * as vehicles from '../server/systems/vehicles.js';
 import * as homes from '../server/systems/homes.js';
 import { spawnNpc, footWay, walkInAt } from '../server/systems/npc.js';
 import { _descriptor } from '../server/net.js';
+import { cellBlockAt } from '../shared/cells.js';
 
 // a street corner in town near the police HQ (a road node, so the police drive straight in)
 function corner(w) { return w.map.nodes.find((q) => q.lvl === 0 && Math.hypot(q.x - 26000, q.y - 17000) < 2500); }
@@ -58,22 +59,22 @@ test('arrested by the police: held down, walked to the car, driven to the statio
   assert.ok(until(w, () => p.custody && p.custody.stage === 'cell', 160), 'booked at the station');
   const st = w.map.pois[p.custody.station];
   assert.equal(st.kind, 'police');
-  assert.ok(p.ped.hidden && p.ped.interior.kind === 'jail' && !p.ped.cuffed, 'in a cell');
+  assert.ok(!p.ped.hidden && !p.ped.interior && !p.ped.cuffed && cellBlockAt(w.map, p.ped.x, p.ped.y)?.c >= 0, 'in a cell - in plain sight, walked in');
   const stars = Math.max(1, p.custody.stars);
   assert.equal(prof.cash, 900 - Math.min(900, BUST_FINE_PER_STAR * stars), 'fined in the cell');
   assert.equal(prof.weapons.smg, undefined, 'the illegal gun taken');
   assert.ok(!prof.inventory.ghostglass, 'the contraband taken');
   assert.equal(p.wanted, 0, 'the stars wiped');
   assert.equal(p.custody.bail, BAIL_PER_STAR * stars);
-  // bail: out into the station's lobby
+  // bail: out of the station's front door
   const bank = prof.bank;
   assert.equal(custody.payBail(w, p), null);
   assert.equal(prof.bank, bank - BAIL_PER_STAR * stars, 'from the bank');
   assert.ok(!p.custody && !p.ped.hidden, 'free');
-  assert.ok(Math.hypot(p.ped.x - st.x, p.ped.y - st.y) < 40, 'in the station lobby');
+  assert.ok(!walkInAt(w.map, p.ped.x, p.ped.y) && Math.hypot(p.ped.x - st.outside.x, p.ped.y - st.outside.y) < 120, 'outside the station\'s front door');
 });
 
-test('the cell: wait it out, no bail money, no moving; surrendering goes straight there', async () => {
+test('the cell: wait it out, no bail money, no walking out; surrendering goes straight there', async () => {
   const unstuck = await import('../server/systems/unstuck.js');
   const w = makeWorld();
   const { p, prof } = joinPlayer(w);
@@ -83,10 +84,10 @@ test('the cell: wait it out, no bail money, no moving; surrendering goes straigh
   assert.equal(unstuck.surrender(w, p), null);
   assert.ok(p.custody && p.custody.stage === 'cell' && p.wanted === 0, 'turned yourself in: a cell');
   assert.match(custody.payBail(w, p), /don't have it/, 'no money, no bail');
-  const x = p.ped.x;
-  p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 1, my: 0, aim: 0 });
-  run(w, 1);
-  assert.equal(p.ped.x, x, 'nobody walks out of a cell');
+  const at = cellBlockAt(w.map, p.ped.x, p.ped.y);
+  assert.ok(at && at.c >= 0 && !p.ped.hidden, 'in a cell, in plain sight');
+  for (let i = 0; i < 60; i++) { p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 0, my: 1, aim: 0 }); w.step(); }
+  assert.equal(cellBlockAt(w.map, p.ped.x, p.ped.y)?.c, at.c, 'nobody walks out of a cell');
   run(w, JAIL_S);
   assert.ok(!p.custody && !p.ped.hidden, 'out when the time is up');
 });
@@ -183,7 +184,7 @@ test('a player officer drives their prisoner in: any station, booked, paid extra
   // drive there (the car put by the kerb)
   v.x = job.x; v.y = job.y; v.vx = 0; v.vy = 0; w.place(v);
   w.step();
-  assert.ok(p.custody && p.custody.stage === 'cell', 'booked');
+  assert.ok(p.custody && p.custody.stage === 'walkin' && p.wanted === 0, 'booked - and walked in from the car (cells.test.js)');
   assert.equal(officer.profile.cash, cash0 + ARREST_REWARD_PER_STAR * 2 + Math.round(ARREST_REWARD_PER_STAR * 2 * DELIVER_BONUS), 'and paid extra for bringing them in');
   assert.ok(prof.cash < 600, 'fined');
 });
@@ -212,7 +213,7 @@ test('logging out in custody books you into a cell - and you are still in it whe
   run(w, 20);   // (time offline doesn't count)
   // ...and the next login starts in the cell with that time
   const back = players.join(w, conn, prof);
-  assert.ok(custody.inCell(back) && back.ped.hidden, 'back in the cell');
+  assert.ok(custody.inCell(back) && !back.ped.hidden && cellBlockAt(w.map, back.ped.x, back.ped.y)?.c >= 0, 'back in the cell');
   assert.ok(Math.abs(back.custody.until - w.time - left) < 1, 'with the time it had left');
   assert.ok(!prof.jail, 'the saved sentence is used up');
 });

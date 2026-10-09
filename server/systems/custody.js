@@ -13,9 +13,12 @@
 //
 //   p.custody: { stage, since, until, holder (ped id), car (veh id), driver (pid: a player officer taking them in),
 //                by (pid of the arresting player), stars, station (poi id), picked, blastSeen / hitSeen (the car's last
-//                blast and crash already looked at) }
-//     'held' face down -> 'fetch' (a car on its way) -> 'escort' (walked to it) -> 'ride' -> 'cell' (bail / JAIL_S)
+//                blast and crash already looked at), cell: { b, c } (cells.js: the cell block and the cell) }
+//     'held' face down -> 'fetch' (a car on its way) -> 'escort' (walked to it) -> 'ride' -> 'walkin' (two officers
+//     walk them from the car through the station's door to a cell) -> 'cell' (bail / JAIL_S)
 //   ped.cuffed: short of the cell - can't move or do anything; the server moves them (net.js: no prediction)
+// In the cell they're a real person in the world (cells.js: walk round it, sit, the toilet, hold the bars), not hidden;
+// out by time or bail, the cell door opens and they're put outside the station's front door.
 import { K } from '../../shared/constants.js';
 import { pedStep } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
@@ -25,7 +28,10 @@ import { IN } from '../../shared/input.js';
 import {
   HOLD_S, ESCORT_PX, TRANSPORT_WAIT_S, RIDE_MAX_S, JAIL_S, BAIL_PER_STAR, GUARD_PX, BREAKOUT_IMPACT, DELIVER_BONUS,
   BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, SPAWN_PROTECT_S, CUSTODY_STUCK_S, CUSTODY_WAIT_BREAK_S, CUSTODY_SKIP_S,
+  CELL_WALK_S,
 } from '../../shared/rules.js';
+import { inCellRect } from '../../shared/cells.js';
+import * as cells from './cells.js';
 import { store } from '../store.js';
 import * as law from './law.js';
 import * as vehicles from './vehicles.js';
@@ -35,7 +41,7 @@ import * as police from './police.js';
 import * as players from './players.js';
 import * as homes from './homes.js';
 import * as hotmoney from './hotmoney.js';
-import { seek, footWay, walkInAt, sidestep } from './npc.js';
+import { seek, footWay, walkInAt, sidestep, spawnNpc } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 
 const PICKUP_PX = 200;   // a car this close to the prisoner is walked to (further off, it drives over first)
@@ -133,6 +139,7 @@ function step(world, p, dt) {
   if (!ped || ped.removed) { p.custody = null; return; }
   if (c.stage === 'cell') { if (now >= c.until) release(world, p, 'Your time\'s up - you\'re free to go.'); else if (world.tick % 10 === 0) p.meDirty = true; return; }
   if (ped.dead) { onDeath(world, p); return; }   // (killed in custody: the usual death - the stars went with it)
+  if (c.stage === 'walkin') { walkStep(world, p, dt); return; }
   p.seenAt = now; p.lastSeenX = ped.x; p.lastSeenY = ped.y;   // (the police have them)
   if (c.stage === 'held' || c.stage === 'fetch') {
     const h = live(world, c.holder);
@@ -285,7 +292,7 @@ function rideStep(world, p) {
     if (drv === op && Math.hypot(v.vx, v.vy) < 140) {
       for (const st of stations(world)) {
         const k = kerbOf(world, st.id);
-        if (k && Math.hypot(v.x - k.x, v.y - k.y) < DROP_PX + 120) { c.station = st.id; delivered(world, p, o); book(world, p); return; }
+        if (k && Math.hypot(v.x - k.x, v.y - k.y) < DROP_PX + 120) { c.station = st.id; delivered(world, p, o); book(world, p, v); return; }
       }
     }
     if (now >= c.until) book(world, p);
@@ -295,7 +302,8 @@ function rideStep(world, p) {
   if (!drv && !police.crewOf(world, v).length) { vehicles.ejectPed(world, ped, true); escape(world, p, 'Nobody\'s left to take you in - you slip out of the car. Run!'); return; }
   const k = kerbOf(world, c.station);
   const d = k ? Math.hypot(v.x - k.x, v.y - k.y) : 0;
-  if ((k && d < DROP_PX) || now >= c.until) { book(world, p); return; }
+  if (k && d < DROP_PX) { book(world, p, v); return; }   // (pulled up outside: walked in)
+  if (now >= c.until) { book(world, p); return; }
   // stuck, or going round in circles: after a while they can make a break for it, and in the end the police get them
   // there anyway (the user's 2026-10-08 notes: never stuck for ever in the back of a police car)
   const stuck = progress(c, d, now);
@@ -361,38 +369,127 @@ function escape(world, p, msg) {
 // Killed in custody (players.onPedDeath): the cuffs come off the body; the usual death.
 export function onDeath(world, p) {
   if (!p.custody || p.custody.stage === 'cell') return;
+  if (p.custody.stage === 'walkin') endWalk(world, p.custody);
   releaseCar(world, p.custody);
   p.custody = null;
   cuff(p.ped, false);
 }
 
 // ---- the cell -------------------------------------------------------------------------------------------------------------
-// Booked: fined, the contraband and illegal guns taken, the stars wiped - and JAIL_S in a cell, or the bail.
-function book(world, p) {
+// Booked: fined, the contraband and illegal guns taken, the stars wiped - and JAIL_S in a cell, or the bail. Brought to
+// the kerb outside (car): two officers walk them in from the back of it; otherwise (turned themself in, logged out, the
+// car never got there) they're put straight in a cell.
+function book(world, p, car = null) {
   const c = p.custody, ped = p.ped;
   releaseCar(world, c);
-  if (ped.vehId) vehicles.ejectPed(world, ped, true);
-  cuff(ped, false);
   const st = (world.map.pois[c.station] && world.map.pois[c.station].kind === 'police' ? world.map.pois[c.station] : null) || nearestStation(world, ped.x, ped.y);
   const taken = confiscate(world, p, c.stars);
   law.clearWanted(world, p);
   p.profile.peakWanted = 0; p.disguised = false;
-  const bail = BAIL_PER_STAR * c.stars;
+  const bail = BAIL_PER_STAR * c.stars, b = cells.blockOf(world, st.id);
+  if (car && b >= 0 && ped.vehId === car.id && !ped.dead) {
+    walkIn(world, p, st, b, car, JAIL_S, bail, c.stars, c.by);
+    world.notify(p, `Booked at ${st.label}: ${taken}. Walked in to the cells - ${JAIL_S}s, or pay the $${bail} bail.`, 'bad');
+    return;
+  }
+  if (ped.vehId) vehicles.ejectPed(world, ped, true);
+  cuff(ped, false);
   jail(world, p, st, JAIL_S, bail, c.stars, c.by);
   world.notify(p, `Booked into a cell at ${st.label}: ${taken}. Out in ${JAIL_S}s - or pay the $${bail} bail.`, 'bad');
 }
-// into a cell at station st for `secs`
-function jail(world, p, st, secs, bail, stars, by) {
+// into a cell at station st for `secs` (cell: the one they were walked to, else the one with the fewest in it)
+function jail(world, p, st, secs, bail, stars, by, cell = null) {
   const ped = p.ped, now = world.time;
   if (ped.vehId) vehicles.ejectPed(world, ped, true);
   cuff(ped, false);
-  ped.hidden = true; ped.inside = null; ped.interior = { kind: 'jail', poi: st.id };
-  ped.x = st.x; ped.y = st.y; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.downUntil = 0; ped.stunUntil = 0; ped.lz = 0; ped.sub = false;
+  cells.clearPose(ped);
+  ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.downUntil = 0; ped.stunUntil = 0; ped.lz = 0; ped.sub = false; ped.fishing = null;
+  const b = cell ? cell.b : cells.blockOf(world, st.id);
+  if (b < 0) {   // (a station with no cells - none now: the old holding cell, out of sight)
+    ped.hidden = true; ped.inside = null; ped.interior = { kind: 'jail', poi: st.id };
+    ped.x = st.x; ped.y = st.y;
+  } else {
+    const c = cell ? cell.c : cells.freeCell(world, b), cl = cells.blocks(world)[b].cells[c];
+    if (!inCellRect(cl, ped.x, ped.y)) { const s = cells.spotIn(world, b, c, ped); ped.x = s.x; ped.y = s.y; }
+    ped.hidden = false; ped.inside = null; ped.interior = null; ped.a = cl.a;
+    cell = { b, c };
+  }
   world.place(ped);
   p.teleportAt = now;
-  p.custody = { stage: 'cell', since: now, until: now + secs, station: st.id, bail, stars, by };
+  p.custody = { stage: 'cell', since: now, until: now + secs, station: st.id, bail, stars, by, cell: b >= 0 ? cell : null };
   p.meDirty = true;
   store.touch();
+}
+
+// ---- walked in: out of the back of the car, through the station's door, down the corridor and into a cell ---------------
+function walkIn(world, p, st, b, car, secs, bail, stars, by) {
+  const ped = p.ped, now = world.time, k = cells.blocks(world)[b], ci = cells.freeCell(world, b), cell = k.cells[ci];
+  vehicles.ejectPed(world, ped, true, { x: k.door.x, y: k.door.outY });
+  ped.vx = 0; ped.vy = 0; ped.downUntil = 0; ped.rollT = 0;
+  const route = [{ x: k.door.x, y: k.door.outY }, { x: k.door.x, y: k.door.inY }, { x: k.gap.x, y: k.gap.lobbyY }, { x: k.gap.x, y: k.corridorY },
+    { x: cell.door.x, y: k.corridorY }, { x: cell.door.x, y: (cell.y0 + cell.y1) / 2 }];
+  // two officers from the station take them out of the back
+  const esc = [0, 1].map((i) => {
+    const e = spawnNpc(world, 'cop', ped.x + (i ? -1 : 1) * 22, ped.y + (i ? 10 : -6), 'cop');
+    e.npc.desk = { x: e.x, y: e.y, a: e.a };   // (npc.js leaves them be: walkStep walks them)
+    e.npc.jailer = true; e.despawnable = false;
+    return e;
+  });
+  p.custody = { stage: 'walkin', since: now, until: now + CELL_WALK_S, station: st.id, bail, stars, by, secs, cell: { b, c: ci }, route, i: 0,
+    lead: esc[0].id, rear: esc[1].id, best: undefined, bestAt: now, bestI: 0, car: 0, brk: false };
+  p.meDirty = true;
+  store.touch();
+}
+const NEAR_WP = 7;
+function walkStep(world, p, dt) {
+  const c = p.custody, ped = p.ped, now = world.time, R = c.route, last = R.length - 1;
+  const lead = live(world, c.lead), rear = live(world, c.rear);
+  // anything wrong on the way (an officer down, stuck, too long): they're put in the cell anyway
+  if (!lead || lead.dead || !rear || rear.dead || now >= c.until) { lockIn(world, p); return; }
+  if (c.i >= last - 1 && Math.hypot(R[last - 1].x - ped.x, R[last - 1].y - ped.y) < 60) cells.setDoor(world, c.cell.b, c.cell.c, true);
+  // the prisoner, cuffed, at a walk along the way in (slower while the officer in front gets back in front)
+  const wp = R[c.i], inp = seek(ped, wp.x, wp.y, false);
+  const ahead = (lead.x - ped.x) * inp.mx + (lead.y - ped.y) * inp.my;
+  pedStep(ped, inp, dt, world.map, ahead < 16 && c.i < last - 1 ? { ...WALK, speedMul: 0.5 } : WALK);
+  if (Math.hypot(wp.x - ped.x, wp.y - ped.y) < NEAR_WP) {
+    if (c.i === last) { lockIn(world, p); return; }
+    c.i++;
+  }
+  const d = Math.hypot(R[c.i].x - ped.x, R[c.i].y - ped.y);
+  if (c.best === undefined || c.bestI !== c.i || d < c.best - 10) { c.best = d; c.bestAt = now; c.bestI = c.i; }
+  if (now - c.bestAt > 6) { lockIn(world, p); return; }   // (stuck)
+  // an officer a step ahead of them and one a step behind, on the line they're walking; at the cell the one in front
+  // stands aside by the door
+  const cell = cells.blocks(world)[c.cell.b].cells[c.cell.c];
+  const to = R[c.i], dd = Math.hypot(to.x - ped.x, to.y - ped.y);
+  const ux = dd > 1 ? (to.x - ped.x) / dd : Math.cos(ped.a), uy = dd > 1 ? (to.y - ped.y) / dd : Math.sin(ped.a);
+  const lt = c.i >= last - 1 ? { x: cell.door.x + 30, y: R[last - 1].y } : { x: ped.x + ux * Math.min(36, dd + 14), y: ped.y + uy * Math.min(36, dd + 14) };
+  escortMove(world, lead, lt.x, lt.y, dt, ped);
+  if (c.i < last) escortMove(world, rear, ped.x - ux * 30, ped.y - uy * 30, dt, ped); else hold(rear, ped);
+}
+function escortMove(world, e, x, y, dt, face) {
+  if (floored(world, e)) return;
+  const d = Math.hypot(x - e.x, y - e.y);
+  if (d < NEAR_WP) hold(e, face);
+  else pedStep(e, sidestep(world, e, seek(e, x, y, d > 50), dt), dt, world.map, { ...players.pedMods(world, e), speedMul: d > 20 ? 1.3 : 0.95 });
+  e.npc.desk = { x: e.x, y: e.y, a: e.a };
+}
+function hold(e, face) { e.vx = 0; e.vy = 0; if (face) e.a = Math.atan2(face.y - e.y, face.x - e.x); e.npc.desk = { x: e.x, y: e.y, a: e.a }; }
+// In the cell: the cuffs off, the door locked behind them; the officers go back to the front.
+function lockIn(world, p) {
+  const c = p.custody, st = world.map.pois[c.station];
+  endWalk(world, c);
+  jail(world, p, st, c.secs, c.bail, c.stars, c.by, c.cell);
+  cells.setDoor(world, c.cell.b, c.cell.c, false);
+  world.notify(p, 'The cuffs come off and the door locks behind you. Walk round, sit, use the toilet or hold the bars.', 'info');
+}
+function endWalk(world, c) {
+  const k = c.cell ? cells.blocks(world)[c.cell.b] : null;
+  for (const id of [c.lead, c.rear]) {
+    const e = live(world, id);
+    if (e && e.npc) cells.dismiss(world, e, k ? { x: k.gap.x, y: k.corridorY } : null);
+  }
+  c.lead = 0; c.rear = 0;
 }
 // what the cells take: the fine out of your pocket, illegal guns (and the rocket launcher), contraband
 function confiscate(world, p, stars) {
@@ -415,14 +512,18 @@ function confiscate(world, p, stars) {
   if (hot) bits.push(`the robbery bag ($${hot.toLocaleString('en-US')} hot money) confiscated`);
   return bits.join(', ');
 }
-// Out into the station's lobby
+// Free: the cell door opens and they're out of the station's front door (the lobby, if it had no cells)
 function release(world, p, msg) {
   const c = p.custody, ped = p.ped;
   p.custody = null;
   if (!ped || ped.dead) return;
   const st = world.map.pois[c.station] || nearestStation(world, ped.x, ped.y);
+  const k = c.cell ? cells.blocks(world)[c.cell.b] : null;
+  cells.clearPose(ped);
   ped.hidden = false; ped.interior = null; ped.inside = null;
-  ped.x = st.x + (world.rand() - 0.5) * 16; ped.y = st.y; ped.vx = 0; ped.vy = 0;
+  if (k) { cells.setDoor(world, c.cell.b, c.cell.c, true); ped.x = k.door.x + (world.rand() - 0.5) * 20; ped.y = k.door.outY; ped.a = k.south ? Math.PI / 2 : -Math.PI / 2; }
+  else { ped.x = st.x + (world.rand() - 0.5) * 16; ped.y = st.y; }
+  ped.vx = 0; ped.vy = 0;
   world.place(ped);
   homes.protect(world, ped, SPAWN_PROTECT_S);
   world.emit(ped.x, ped.y, { e: 'door', x: ped.x, y: ped.y });
@@ -447,7 +548,8 @@ export function payBail(world, p) {
 // in the cell when they next play (onJoin). Time offline doesn't count: no serving it by logging off.
 export function onLeave(world, p) {
   if (!p.custody) return;
-  if (inCustody(p)) book(world, p);
+  if (p.custody.stage === 'walkin') lockIn(world, p);
+  else if (inCustody(p)) book(world, p);
 }
 export function saveJail(world, p) {
   const c = p.custody;
@@ -636,6 +738,7 @@ export function meInfo(world, p) {
   if (!c) return null;
   const st = c.station >= 0 ? world.map.pois[c.station] : null;
   if (c.stage === 'cell') return { s: 'cell', at: st ? st.label : '', left: Math.max(0, Math.ceil(c.until - world.time)), bail: c.bail, can: p.profile.bank + p.profile.cash >= c.bail };
+  if (c.stage === 'walkin') return { s: 'walkin', at: st ? st.label : '', brk: 0 };
   const o = c.driver ? world.players.get(c.driver) : null;
   return { s: c.stage, at: st ? st.label : '', by: o ? o.name : null, brk: canBreak(p) ? 1 : 0 };
 }
