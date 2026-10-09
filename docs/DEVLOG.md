@@ -4120,10 +4120,10 @@ From the owner's notes (task #365): "create a ton more NPC characters out in the
   - the office worker staring at his phone: he walks slower and bumps into people;
   - the dog walker with three dogs on leads (the game's dogs; they can't be hurt);
   - the wild dancer, and the middle-aged man dancing at the beach in a tiny purple swimsuit, flip-flops, a sweatband and a bum bag.
-- **Street life** (NP3, CC6): people texting as they walk, on a call, sitting on park benches, asleep in the park, and, rarely, a selfie at a fountain or a statue (the owner asked for fewer phones out).
+- **Street life** (NP3, CC6): people texting as they walk, on a call, leaning on a wall with a foot up behind them, sitting on park benches (on the seat, facing the way the bench faces), asleep in the park, and, rarely, a selfie at a fountain or a statue (the owner asked for fewer phones out).
   - **The busker** plays his guitar on a corner. Stand by him and press ACT to drop a coin: $2 and +1 Samaritan, once every 90 s (`BUSKER_*` in `shared/rules.js`).
 - **More characters:** a tourist couple (a map in his hands, a phone for photos in hers), a hot-dog seller at a food cart, a fisherman at a pier's rail.
-- **The walks and props** (`client/art2/people.js`, one marked block at the end): the hunch, the strut (hips swaying, the feet on one line), skating, rollerblading, four frames of dancing, pushing a cart; the cane, the trolley, the cart, three dog leads, the guitar, a phone at the ear, a tourist's map.
+- **The walks and props** (`client/art2/people.js`, one marked block at the end): the hunch, the strut (hips swaying, the feet on one line), skating, rollerblading, four frames of dancing, pushing a cart, leaning on a wall; the cane, the trolley, the cart, three dog leads, the guitar, a phone at the ear, a tourist's map.
   - The ped descriptor carries the walk (`gt`), the prop (`pp`) and a seat on a bench (`sb`) (`server/net.js`). `client/art2/game/peds.js` picks the pose; anyone running for their life runs plainly.
   - A prop is a sprite set of its own: the look's key carries it. It now carries a robbery's money bag too, which had shared the plain sprites.
 - **Dev:** `{t:'dev', c:'persona', k:'swim'}` spawns a personality a few steps ahead.
@@ -4135,5 +4135,5 @@ From the owner's notes (task #365): "create a ton more NPC characters out in the
   - people side by side differ, and the pool bounds the looks;
   - an NPC's look data is its code alone;
   - the personalities turn up where they belong, with their walks, props and ways (the dogs at heel, the matching tracksuits, laps, a tough guy standing his ground, nothing to rob from the homeless man, the seller at the cart, the fisherman's line in the water);
-  - the busker's coin, a bench, a sleeper;
+  - the busker's coin, a bench, a sleeper, a selfie (its descriptor sent once), someone leaning on a wall;
   - every walk and prop renders.
