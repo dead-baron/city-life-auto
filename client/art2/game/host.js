@@ -1096,6 +1096,12 @@ export class World2 {
     if (!v) { v = this.Pd.adaptApp(a, ar || null); this.adapted.set(a, v); }
     return v;
   }
+  // ...carrying a robbery's takings (the descriptor's mb: server hotmoney.js): the same look with the money sack on the back
+  _bagged(A) {
+    let v = (this.bagged ||= new WeakMap()).get(A);
+    if (!v) { v = { ...A, back: 'moneybag' }; this.bagged.set(A, v); }
+    return v;
+  }
 
   // ---- people ---------------------------------------------------------------------------------------------
   // A person: the peds provider's figure (people.js) for their pose, heading and stride, the weapon in hand -
@@ -1112,7 +1118,7 @@ export class World2 {
     const ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
     let lift = 0;
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
-    const A2 = this._app(p.d.app || {}, p.d.ar), pf = Pd.pedFrame(ppose, L.fr);
+    const A1 = this._app(p.d.app || {}, p.d.ar), A2 = p.d.mb && A1 ? this._bagged(A1) : A1, pf = Pd.pedFrame(ppose, L.fr);
     if (lying && (f & PF.DEAD) && p.deadK === 'halved' && this._halves(p, A2, ppose, d8, pf)) return;   // (cut in two by the plasma blade)
     // unarmed with the flashlight on: it's in your hand; under an open umbrella (standing or walking): its shaft is
     const umb = !!(f & PF.UMBRELLA) && !(p.extra | 0) && !p.d.fl && (ppose === 'idle' || ppose.startsWith('walk')) && !!Pd.umbrellaTop;

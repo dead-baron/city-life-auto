@@ -267,7 +267,35 @@ export const ROB_TOSS_S = 0.8;            // the clerk throws another wad of cas
 export const ROB_TAKE = { convenience: 25, gasstation: 25, bank: 120, default: 35 }; // per toss (it creeps up the longer you stay)
 export const ROB_ALARM_S = [10, 15, 20];  // the silent alarm trips after one of these (you never know which)
 export const ROB_RESPONSE_S = [10, 15];   // squad cars arrive this long after the alarm
-export const ROB_ALARM_STARS = 3;         // wanted level the alarm puts you on
+export const ROB_ALARM_STARS = 1;         // wanted level the alarm puts you on (then it grows: Robberies v2 below)
+
+// Robberies v2 (server/systems/robbery.js, hotmoney.js, standoff.js; the owner's notes, task #323)
+// Hot money: what a robbery takes goes into a bag you carry, apart from your cash - no good in the shops. Clean it by
+// banking it at an ATM or a bank once you're HOT_FAR_PX from where you stole it (and not wanted), by stashing it at any
+// home you own, or by selling it to a fence for clean cash less a cut (a pawn shop takes a bigger one).
+export const HOT_FAR_PX = 2400;
+export const HOT_FENCE_CUT = 0.25;
+export const HOT_PAWN_CUT = 0.4;
+// Limited tills: what a business has in the register ($), by kind, times the district's wealth (ROB_TILL_TIER, which
+// also scales each wad the clerk throws). An emptied till fills back up over ROB_REFILL_S.
+export const ROB_TILL = { convenience: 400, gasstation: 450, coffee: 300, tackle: 500, fishmarket: 500, grocery: 600, pharmacy: 800, hardware: 800, clothing: 900, sports: 900, pawn: 1200, club: 1200, gunshop: 1500, fence: 2000, bank: 5000, default: 600 };
+export const ROB_TILL_TIER = { lux: 1.6, suburb: 1.2, mid: 1, rural: 0.9, wild: 0.8, neon: 1.1, industrial: 0.8, low: 0.7, red: 0.8, rough: 0.6 };
+export const ROB_REFILL_S = 900;
+// Heat that grows: once the police are called (a witness or a camera saw it, or the silent alarm) you're on 1 star
+// (ROB_CALLED_HEAT; stars: shared/constants.js STAR_HEAT) - then for as long as it goes on, heat rises ROB_HEAT_S a second
+// and ROB_HEAT_PER_100 for every $100 taken, times the kind of place and the district's wealth. A corner store in a rough
+// part of town stays minor if you're quick; a bank in a rich one is a huge crime in seconds.
+export const ROB_CALLED_HEAT = 12;
+export const ROB_HEAT_S = 2;
+export const ROB_HEAT_PER_100 = 1.5;
+export const ROB_HEAT_KIND = { convenience: 0.6, gasstation: 0.6, coffee: 0.6, tackle: 0.7, fishmarket: 0.7, bank: 2, default: 1 };
+export const ROB_HEAT_TIER = { lux: 1.5, suburb: 1.2, mid: 1, rural: 0.8, wild: 0.8, neon: 0.9, industrial: 0.8, low: 0.7, red: 0.7, rough: 0.6 };
+// The police standoff (server/systems/standoff.js): a suspect holed up in the place they robbed. The cars park round the
+// building, the crews take cover behind them and round the walls; after STANDOFF_S (or once STANDOFF_READY officers are
+// in position) some go in, one a car staying in cover. Out of sight STANDOFF_LOST_S and it's over.
+export const STANDOFF_S = 20;
+export const STANDOFF_READY = 3;
+export const STANDOFF_LOST_S = 25;
 
 // Trains
 export const TRAIN_HEADWAY_S = 60;       // a train pulls into each station about this often (the fleet size follows from the loop's run time)

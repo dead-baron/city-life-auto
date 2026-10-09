@@ -654,7 +654,7 @@ export function buildMe(world, p) {
     t: 'me',
     name: p.name, hp: ped ? Math.round(ped.hp) : 0, maxHp: ped ? ped.maxHp : 100,
     rob: robbery.hudFor(world, p), train: trains.meInfo(world, p), pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
-    cash: prof.cash, bank: prof.bank, cexp: prof.criminalExp, sam: prof.samaritan,
+    cash: prof.cash, bank: prof.bank, hot: prof.hot || 0, cexp: prof.criminalExp, sam: prof.samaritan,
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),

@@ -14,6 +14,7 @@ import * as bounties from './bounties.js';
 import * as custody from './custody.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
+import { ROB_CALLED_HEAT } from '../../shared/rules.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
 // sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT); sight: how far
@@ -35,7 +36,7 @@ export const CRIMES = {
   ram:         { heat: 8,  label: 'Reckless ramming', sev: 0.7 },
   possession:  { heat: 20, label: 'Contraband possession', sev: 1 },
   poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true, sev: 1 },
-  robbery:     { heat: 30, label: 'Armed robbery', felony: true, sev: 1.5 },
+  robbery:     { heat: ROB_CALLED_HEAT, label: 'Armed robbery', felony: true, sev: 1.5 },   // (1 star; it grows from there: robbery.js)
   trainRobbery: { heat: 50, label: 'Train robbery', felony: true, sev: 1.5 },
   escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
 };
@@ -289,7 +290,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
 
   p.profile.criminalExp += Math.round(spec.heat / 2);
   store.touch();
-  if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return; }
+  if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return true; }
   const w = witnesses(world, x, y, ped, victim, (type === 'brandish' || type === 'murder') && !opts.quiet, type);
   for (const q of w.saw) sawCrime(world, q, p, type, x, y);
   if (w.count === 0) {
@@ -301,6 +302,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   addHeat(world, p, spec.heat, x, y);
   logDispatch(world, type, x, y, p, p.wanted, w.cam ? 'camera' : w.cop ? 'officer' : 'witness');
   world.notify(p, `${spec.label} reported${w.cam ? (w.secCam ? ' by a security camera' : ' by a traffic camera') : w.cop ? ' by police' : ''}!`, 'bad');
+  return true;   // (called in: robbery.js starts the heat growing)
 }
 
 export function addHeat(world, p, amount, x, y) {

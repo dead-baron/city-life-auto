@@ -837,3 +837,11 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #death.reveal #d-timer, #death.reveal #d-help, #death.reveal #d-spawn { opacity: 1; transform: none; pointer-events: auto; }
 #trainbar.custody.brk { border-color: #ffd36b; color: #ffd36b; animation: brk-pulse 1.2s ease-in-out infinite; }
 @keyframes brk-pulse { 50% { box-shadow: 0 0 14px rgba(255,211,107,.55); } }
+
+/* Robberies v2 (server robbery.js, hotmoney.js): HOT $X under the cash - a robbery's takings in the bag, not spendable
+   till they're cleaned; the robbery bar shows the hands going up, then what's left in the till */
+#hot { display: block; font-family: var(--pixel); font-weight: 700; font-size: 13px; line-height: 1.15; letter-spacing: 1px; color: #ff8a3a;
+  text-shadow: 0 2px 0 #070b16, 1px 0 0 #070b16, -1px 0 0 #070b16; animation: hot-pulse 1.6s ease-in-out infinite; }
+@keyframes hot-pulse { 50% { color: #ffc070; } }
+.touch #hot { font-size: 11px; }
+#rob.till #rob-fill { background: #7fe07f; }

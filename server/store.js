@@ -11,6 +11,8 @@ export function defaultProfile(pid) {
     lastSeen: Date.now(),
     cash: 200,
     bank: 500,
+    hot: 0,          // hot money: a robbery's takings in the bag, apart from the cash (server/systems/hotmoney.js)...
+    hotAt: null,     // ...and where it was stolen ({ x, y })
     criminalExp: 0,
     samaritan: 0,
     felonies: 0,

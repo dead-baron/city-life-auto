@@ -198,8 +198,10 @@ export function update(world, dt) {
         break;
       }
       case 'film': inp = film(world, ped, now); break;
+      case 'holdup': inp = holdup(world, ped, now); factor = 1; break;
       default: n.state = 'wander';
     }
+    if (n.holdup && n.state !== 'holdup') { ped.handsUp = false; n.holdup = null; n.keep = false; }   // (scared off some other way: the hands come down)
     if (ped.filming && n.state !== 'film') stopFilming(ped);   // (they ran, fought, got hurt: the phone goes away)
     // commuters heading for a platform to wait for the train
     if (n.waitTrain !== undefined && (n.state === 'wander' || n.state === 'idle')) {
@@ -522,6 +524,30 @@ export function startFight(world, ped, target, secs) {
 function flee(world, ped, fx, fy, secs) {
   const n = ped.npc;
   n.state = 'flee'; n.fx = fx; n.fy = fy; n.until = world.time + secs;
+}
+
+// Caught in a hold-up (robbery.js customers): hands up, not moving, facing the robber - then, after a few seconds and
+// once the robber isn't pointing their way (or isn't there any more), they slip out of the door and run
+function holdup(world, ped, now) {
+  const n = ped.npc, h = n.holdup;
+  if (!h) { n.state = 'wander'; return NO_INPUT; }
+  const by = world.get(h.by);
+  if (!h.go) {
+    const da = by ? Math.atan2(ped.y - by.y, ped.x - by.x) - (by.aimAngle ?? by.a) : 0;
+    const watched = !!by && !by.dead && now < (by.aimUntil || 0) && Math.abs(Math.atan2(Math.sin(da), Math.cos(da))) < 0.6;
+    if (now - h.at < h.wait || (watched && now - h.at < h.wait + 12)) {
+      ped.handsUp = true; ped.vx = 0; ped.vy = 0;
+      if (by) ped.a = Math.atan2(by.y - ped.y, by.x - ped.x);
+      return NO_INPUT;
+    }
+    h.go = true; ped.handsUp = false;
+  }
+  const wi = walkInAt(world.map, ped.x, ped.y);
+  if (wi && now - h.at < h.wait + 40) { const wp = footWay(world, ped, wi.x, wi.outY + (wi.outY - wi.inY)); return seek(ped, wp.x, wp.y, true); }
+  // out of the door (or stuck in there long enough): away from the shop, running
+  n.holdup = null; ped.handsUp = false; n.keep = false;
+  flee(world, ped, by ? by.x : ped.x, by ? by.y : ped.y - 1, 8 + rng() * 4);
+  return NO_INPUT;
 }
 
 function aligned(p) { return p.profile.gang === 'syndicate' || (p.profile.criminalExp >= 200 && !p.badge); }

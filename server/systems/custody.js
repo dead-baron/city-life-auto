@@ -34,6 +34,7 @@ import * as events from './events.js';
 import * as police from './police.js';
 import * as players from './players.js';
 import * as homes from './homes.js';
+import * as hotmoney from './hotmoney.js';
 import { seek, footWay, walkInAt, sidestep } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 
@@ -410,6 +411,8 @@ function confiscate(world, p, stars) {
   const bits = [`fined $${fine}`];
   if (guns.length) bits.push(`${guns.join(', ')} taken`);
   if (n) bits.push('contraband taken');
+  const hot = hotmoney.confiscate(world, p);   // (the robbery bag)
+  if (hot) bits.push(`the robbery bag ($${hot.toLocaleString('en-US')} hot money) confiscated`);
   return bits.join(', ');
 }
 // Out into the station's lobby

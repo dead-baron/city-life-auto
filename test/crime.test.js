@@ -44,10 +44,11 @@ test('robbery: hands up, the cash comes, the alarm trips, squad cars come runnin
   assert.equal(p.wanted, 0, 'no witness, no report (the clerk doesn\'t count)');
   p.robbery.alarmAt = w.time + 3;
   aimAt(w, p.ped, clerk, 2.5);
-  assert.ok(prof.cash > 0, 'cash thrown');
-  const before = prof.cash;
+  assert.ok(prof.hot > 0, 'cash thrown - into the robbery bag (hot money: test/robbery.test.js)');
+  assert.equal(prof.cash, 0, 'not into your cash');
+  const before = prof.hot;
   aimAt(w, p.ped, clerk, 1);
-  assert.ok(prof.cash > before, 'keeps coming');
+  assert.ok(prof.hot > before, 'keeps coming');
   assert.ok(p.wanted >= ROB_ALARM_STARS, 'alarm: wanted');
   assert.ok((w.happenings || []).some((e) => e.kind === 'robbery'), 'robbery on the radar');
   p.ped.protectUntil = 1e9; // the cops will be shooting - stay alive long enough to count them
