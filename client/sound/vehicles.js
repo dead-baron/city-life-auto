@@ -28,13 +28,23 @@ const P = {
   jetski: { f0: 46, f1: 205, gears: 0, wave: 'buzz', sub: 0.2, noise: 0.3, nf: 2200, lp0: 700, lp1: 3500, q: 2.5, am: 0.4, amr: 1, vol: 0.34, boat: 1, horn: [622, 784], hw: 'square' },
   ship: { f0: 9, f1: 22, gears: 0, wave: 'saw8', sub: 1, noise: 0.22, nf: 320, lp0: 150, lp1: 380, q: 1, am: 0.6, amr: 1, vol: 0.5, boat: 1, horn: [73, 92], hw: 'saw8' },
   pedal: { pedal: 1, vol: 0.14, nf: 5200 },
+  // the motorcycles (task #366): a V-twin's slow lumpy burble (a deep note, a big wobble at half the firing rate), a sport
+  // bike's four-cylinder scream (high and smooth to a high red line), a scooter's thin buzz, a dirt bike's two-stroke
+  // ring (a nasal, wobbling ring-ding with lots of rasp), a café racer's single thump
+  vtwin: { f0: 22, f1: 120, gears: 5, wave: 'saw8', sub: 0.8, noise: 0.18, nf: 700, lp0: 280, lp1: 1700, q: 2.2, am: 0.7, amr: 0.5, vol: 0.4, horn: [392, 466], hw: 'square' },
+  sportbike: { f0: 52, f1: 310, gears: 6, wave: 'buzz', sub: 0.15, noise: 0.18, nf: 3200, lp0: 900, lp1: 5200, q: 3.5, am: 0.12, amr: 1, vol: 0.38, horn: [659, 831], hw: 'square' },
+  scooter: { f0: 60, f1: 190, gears: 1, wave: 'buzz', sub: 0.1, noise: 0.24, nf: 3600, lp0: 900, lp1: 3000, q: 2, am: 0.3, amr: 1, vol: 0.26, horn: [784, 988], hw: 'square' },
+  twostroke: { f0: 48, f1: 260, gears: 4, wave: 'buzz', sub: 0.12, noise: 0.34, nf: 3000, lp0: 1000, lp1: 4600, q: 5, am: 0.5, amr: 1, vol: 0.34, horn: [698, 880], hw: 'square' },
+  thumper: { f0: 30, f1: 150, gears: 5, wave: 'saw8', sub: 0.5, noise: 0.2, nf: 1400, lp0: 450, lp1: 2600, q: 2.5, am: 0.55, amr: 1, vol: 0.36, horn: [587, 740], hw: 'square' },
 };
 export const ENGINE_CLASS = {
   compact: 'small', sedan: 'sedan', taxi: 'sedan', sports: 'sports', pickup: 'muscle', flatbed: 'truck', van: 'van', bus: 'bus',
-  police: 'police', swat: 'truck', ambulance: 'van', armored: 'truck', bike: 'moto', policebike: 'moto', fbi: 'police', army: 'truck',
+  police: 'police', swat: 'truck', ambulance: 'van', armored: 'truck', bike: 'sportbike', policebike: 'moto', fbi: 'police', army: 'truck',
   speedboat: 'outboard', policeboat: 'outboard', dinghy: 'dinghy', jetski: 'jetski', ferry: 'ship', waterbus: 'ship',
   boxtruck: 'truck', dumptruck: 'truck', mixer: 'truck', tanker: 'truck', garbage: 'truck', firetruck: 'truck', towtruck: 'truck',
   bicycle: 'pedal', cruiser: 'pedal', mtb: 'pedal', roadbike: 'pedal', bmx: 'pedal', cargobike: 'pedal',
+  vtwin: 'vtwin', tourer: 'vtwin', chopper: 'vtwin', bobber: 'vtwin', bagger: 'vtwin', trike: 'vtwin', ratbike: 'vtwin',
+  caferacer: 'thumper', dirtbike: 'twostroke', scooter: 'scooter',
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);

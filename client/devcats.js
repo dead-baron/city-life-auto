@@ -37,6 +37,12 @@ export const DEV_SECTIONS = [
     ['🚴 Road bike', 'car', { m: 'roadbike' }], ['🛞 BMX', 'car', { m: 'bmx' }], ['📦 Cargo bike (two crates)', 'car', { m: 'cargobike' }],
     ['🔒 Nearest bike rack', 'near', { k: 'bikerack' }],
   ] },
+  { id: 'motos', title: '🏍 Motorcycles', items: [
+    ['🏍 Dustwing cruiser', 'car', { m: 'vtwin' }], ['🧳 Longhaul tourer', 'car', { m: 'tourer' }], ['🔱 Hellfork chopper', 'car', { m: 'chopper' }],
+    ['🏍 Stubtail bobber', 'car', { m: 'bobber' }], ['☕ Ton-Up racer', 'car', { m: 'caferacer' }], ['🏁 Sport bike', 'car', { m: 'bike' }],
+    ['🌄 Clodhopper dirt bike', 'car', { m: 'dirtbike' }], ['🛵 Zuzu scooter', 'car', { m: 'scooter' }], ['🔺 Tribuck trike', 'car', { m: 'trike' }],
+    ['🚓 Police tourer', 'car', { m: 'policebike' }], ['🦴 Rustbucket rat bike', 'car', { m: 'ratbike' }], ['💼 Saddlebag bagger', 'car', { m: 'bagger' }],
+  ] },
   { id: 'rail', title: '🚆 Trains', items: [
     ['🚉 Call a train to this station', 'calltrain'], ['🚆 Hop on the nearest train', 'train'],
     ['🚏 Nearest platform', 'near', { k: 'platform' }], ['🚇 Nearest subway entrance', 'near', { k: 'subway' }],

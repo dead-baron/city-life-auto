@@ -32,6 +32,8 @@ export const VEHICLE_DIMS = {
   cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18],
   policeboat: [104, 48], boxtruck: [150, 58], dumptruck: [140, 60], mixer: [146, 60], tanker: [160, 58],
   garbage: [140, 60], firetruck: [172, 66], towtruck: [134, 58],
+  // the MC1 motorcycles (task #366)
+  vtwin: [54, 20], tourer: [58, 26], chopper: [66, 20], bobber: [50, 20], caferacer: [50, 18], dirtbike: [48, 18], scooter: [40, 18], trike: [60, 38], ratbike: [54, 22], bagger: [58, 26],
   // scenery-only variants (parked and NPC traffic; they share the sedan / van footprints in play)
   suv: [104, 50], limo: [150, 50], foodtruck: [124, 58],
   // transit and harbour scenery (World v2): a two-section tram, a harbour tug, a car and passenger ferry
@@ -47,10 +49,11 @@ export const VEHICLE_DIMS = {
 export const VEHICLE_TALL = {
   compact: 31, sedan: 33, taxi: 33, police: 33, sports: 27, pickup: 36, van: 46, suv: 42, limo: 32, ambulance: 54, armored: 50,
   swat: 52, bus: 62, flatbed: 46, boxtruck: 62, dumptruck: 46, mixer: 62, tanker: 54, garbage: 60, firetruck: 56, towtruck: 50,
-  bike: 24, policebike: 26, bicycle: 20, speedboat: 22, dinghy: 14, jetski: 16, policeboat: 34,
+  bike: 24, policebike: 31, bicycle: 20, speedboat: 22, dinghy: 14, jetski: 16, policeboat: 34,
   cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20,
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
   fbi: 42, army: 52,
+  vtwin: 25, tourer: 31, chopper: 35, bobber: 24, caferacer: 25, dirtbike: 28, scooter: 25, trike: 28, ratbike: 26, bagger: 29,
 };
 const DEFAULT_PAINT = {
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
@@ -58,6 +61,7 @@ const DEFAULT_PAINT = {
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
   cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a',
+  vtwin: '#26282e', tourer: '#b8302a', chopper: '#2a2a2e', bobber: '#26282e', caferacer: '#e6e2d8', dirtbike: '#2f56b0', scooter: '#7ac0a0', trike: '#22357a', ratbike: '#4e5a34', bagger: '#22357a',
   jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', fbi: '#17181d', army: '#4f5a36', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
 };
 const DEFAULT_CAB = { flatbed: '#e6e2d8', boxtruck: '#e6e2d8', dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', towtruck: '#e6e2d8' };
@@ -547,6 +551,173 @@ function pedalBike(m, M, V, type, A) {
   A.seat = [(s0 + s1) / 2, cy, sh + 1];
 }
 
+// ---- motorcycles (MC1, task #366) -----------------------------------------------------------------------------------
+// One builder for the MC1 line-up: the wheels (spoked or cast; fat, knobbly or small), a V-twin or a single (a scooter's
+// hidden under its body), the frame, the tank, the seat, the fork (raked out long on the chopper), the bars (pull-backs,
+// ape hangers, clip-ons, wide motocross bars) and each type's kit: a fairing and screen, hard bags and a top box, a sissy
+// bar, number boards, a scooter's apron and floorboard, the trike's axle and rear body, the rat bike's rust and leather
+// satchels, the chopper's flames, the police tourer's lights.
+export const MOTO = new Set(['vtwin', 'tourer', 'chopper', 'bobber', 'caferacer', 'dirtbike', 'scooter', 'trike', 'ratbike', 'bagger', 'policebike']);
+// r / rf: rear / front wheel radius; tw: tyre width across; xr / xf: the axles; eng: 'vtwin' | 'single' | 'scoot';
+// tank: [x0, x1, z0, z1, half-width]; seat: [x0, x1, z, half-width, kind]; head: the top of the steering head [x, z]
+// (the fork runs from it to the front axle); bars: [x, z, half-width, kind]; fender: 'full' | 'bob' | 'high'
+const MOTOS = {
+  vtwin:     { r: 7, rf: 7, tw: 4, xr: 9, xf: 45, eng: 'vtwin', tank: [25, 37, 15, 21, 3.5], seat: [11, 26, 18, 3.5, 'step'], head: [40, 22], bars: [36, 25, 8, 'pull'], fender: 'full', pipes: 2 },
+  tourer:    { r: 7, rf: 7, tw: 4, xr: 10, xf: 49, eng: 'vtwin', tank: [28, 39, 16, 22, 4.5], seat: [9, 28, 18, 4, 'two'], head: [43, 22], bars: [39, 25.5, 8, 'pull'], fender: 'full', fairing: 'shell', screen: 7, bags: [3, 19], topbox: true, cast: true },
+  chopper:   { r: 7.5, rf: 6.5, tw: 4, xr: 9, xf: 58, eng: 'vtwin', tank: [27, 36, 17, 22, 3], seat: [12, 25, 17, 3, 'king'], head: [38, 25], bars: [36, 34, 7, 'ape'], fender: 'bob', sissy: true, pipes: 2, flames: true },
+  bobber:    { r: 7.5, rf: 7.5, tw: 5, xr: 9, xf: 41, eng: 'vtwin', tank: [23, 33, 15, 20, 3.5], seat: [14, 22, 18, 3, 'solo'], head: [36, 21], bars: [32, 24, 7, 'pull'], fender: 'bob', pipes: 1 },
+  caferacer: { r: 7, rf: 7, tw: 3, xr: 9, xf: 41, eng: 'single', tank: [22, 33, 16, 21, 3.5], seat: [8, 22, 18, 2.5, 'hump'], head: [36, 21], bars: [33, 19.5, 6, 'clip'], fender: 'bob', pipes: 1 },
+  dirtbike:  { r: 7, rf: 8, tw: 3, xr: 8, xf: 40, eng: 'single', tank: [21, 30, 17, 22, 3.5], seat: [8, 28, 20, 2.5, 'long'], head: [33, 24], bars: [31, 27, 8, 'mx'], fender: 'high', knobby: true, plate: true, pipes: 1 },
+  scooter:   { r: 5, rf: 5, tw: 4, xr: 8, xf: 34, eng: 'scoot', seat: [6, 22, 17, 4, 'scoot'], head: [31, 20], bars: [30, 23, 7, 'scoot'], fender: null, cast: true },
+  trike:     { r: 8, rf: 7, tw: 7, xr: 10, xf: 51, eng: 'vtwin', tank: [29, 40, 16, 22, 4], seat: [17, 31, 18, 4, 'two'], head: [44, 22], bars: [40, 25.5, 8, 'pull'], fender: 'full', trike: true, cast: true },
+  ratbike:   { r: 7.5, rf: 7.5, tw: 5, xr: 9, xf: 45, eng: 'vtwin', tank: [25, 36, 15, 21, 3.5], seat: [12, 25, 18, 3.5, 'solo'], head: [40, 22], bars: [36, 25, 8, 'pull'], fender: 'bob', rat: true, pipes: 2, knobby: true },
+  bagger:    { r: 7, rf: 7, tw: 4, xr: 10, xf: 49, eng: 'vtwin', tank: [28, 39, 15, 21, 4.5], seat: [10, 28, 17, 4, 'two'], head: [43, 22], bars: [39, 24.5, 8, 'pull'], fender: 'full', fairing: 'bat', screen: 4, bags: [3, 19], cast: true },
+  policebike: { r: 7, rf: 7, tw: 4, xr: 8, xf: 42, eng: 'vtwin', tank: [23, 33, 16, 21, 4], seat: [10, 24, 18, 3.5, 'solo'], head: [36, 22], bars: [33, 25, 7, 'pull'], fender: 'full', fairing: 'shell', screen: 6, bags: [2, 14], cast: true, police: true },
+};
+function motoBike(m, M, V, type, A) {
+  const L = m.w, W = m.d, cy = W / 2, B = MOTOS[type];
+  const fy = Math.floor(cy - 0.5);
+  const fillI = (fn, x0, y0, z0, x1, y1, z1) => m.fill(fn, Math.floor(x0), Math.floor(y0), Math.floor(z0), Math.ceil(x1), Math.ceil(y1), Math.ceil(z1));
+  // a round bar from (x0, z0) to (x1, z1), d thick, y0..y1 across
+  const tube = (x0, z0, x1, z1, mat, d = 1.4, y0 = fy, y1 = fy + 1) => {
+    const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) * 2) + 1;
+    for (let i = 0; i <= n; i++) { const k = i / n, x = x0 + (x1 - x0) * k, z = z0 + (z1 - z0) * k; m.box(x - d / 2, y0, z - d / 2, x + d / 2, y1, z + d / 2, mat); }
+  };
+  const police = !!B.police, body = police ? M.white : M.body;
+  const leather = m.mat({ ramp: R('#6a4228', 6, 2), k: 2.2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 0.9 });
+  const seatM = m.mat({ ramp: R(type === 'caferacer' || type === 'bobber' || type === 'scooter' ? '#7a4a2a' : '#2e2a2c', 6, 2), k: 2.4, shade: (x) => ((Math.round(x) % 3 === 0 && type === 'caferacer') ? -0.8 : 0) });
+  // ---- wheels: a tyre ring and a cast or spoked rim; knobbly tyres on the dirt bike and the rat bike
+  const knob = B.knobby ? m.mat({ ramp: R('#2a2a30', 5, 2), k: 1.2, shade: (x, y, z) => ((Math.round(Math.atan2(z - 7, x - (x < L / 2 ? B.xr : B.xf)) * 6) & 1) ? -0.9 : 0.5) }) : M.tyre;
+  const wheel = (x, r, y0, y1) => {
+    m.cyl('y', x, 0, r, r, y0, y1, knob, r - (B.knobby ? 2 : 1.8), 0);
+    if (B.cast) m.cyl('y', x, 0, r, r - 1.8, y0 + 0.5, y1 - 0.5, M.rim);
+    else fillI((xx, y, z) => { const dx = xx - x, dz = z - r, d = Math.hypot(dx, dz); return d < r - 1.5 && (d < 1.4 || Math.abs(dx) < 0.5 || Math.abs(dz) < 0.5 || Math.abs(dx - dz) < 0.6 || Math.abs(dx + dz) < 0.6) ? M.chrome : -1; }, x - r, fy, 0, x + r, fy + 1, 2 * r);
+    m.box(x - 1, y0 - 0.5, r - 1, x + 1, y1 + 0.5, r + 1, M.chrome);   // the hub
+  };
+  const twA = Math.floor(cy - B.tw / 2), twB = twA + B.tw;
+  wheel(B.xf, B.rf, twA, twB);
+  if (B.trike) for (const y0 of [1, W - 1 - B.tw]) wheel(B.xr, B.r, y0, y0 + B.tw);   // the trike: two wheels at the back
+  else wheel(B.xr, B.r, twA, twB);
+  m.look = { ...m.look, belt: 18, z0: B.r, roof: B.seat[2] + 2, wheels: [B.xr, B.xf], wr: B.r };
+  const [hx, hz] = B.head, [t0, t1, tz0, tz1, thw] = B.tank || [0, 0, 0, 0, 0], [s0, s1, sz, shw, sk] = B.seat;
+  // ---- the frame and the engine
+  const ex = B.eng === 'scoot' ? B.xr + 6 : (B.tank ? t0 - 2 : 20), ez0 = Math.max(4, B.r - 2);
+  if (B.eng !== 'scoot') {
+    tube(hx - 1, hz - 3, ex + 6, ez0, M.dark, 1.6);                 // the down tube
+    tube(hx - 1, hz - 1, s1 - 2, sz - 1, M.dark, 1.4);               // the backbone under the tank to the seat
+    tube(ex - 4, ez0 + 1, s0 + 2, sz - 1, M.dark, 1.2);              // the seat rail
+    for (const y of [twA - 1, twB]) tube(ex - 2, ez0 + 2, B.xr, B.r, M.dark, 1.4, y, y + 1);   // the swingarm, both sides
+    for (const y of [twA - 1, twB]) tube(s0 + 3, sz - 1, B.xr + 1, B.r + 2, B.rat ? M.rust : M.chrome, 1, y, y + 1);   // the shocks
+  }
+  if (B.eng === 'vtwin') {
+    m.box(ex - 5, cy - 3, ez0, ex + 6, cy + 3, ez0 + 5, M.dark);                                    // the crankcase
+    m.cyl('y', ex, 0, ez0 + 3, 3, cy + 3, cy + 4, M.chrome); m.cyl('y', ex, 0, ez0 + 3, 3, cy - 4, cy - 3, M.chrome);   // the covers
+    for (const [dx, lean] of [[-2.5, -0.5], [2.5, 0.5]]) for (let z = ez0 + 5; z < Math.min(tz0 + 1, ez0 + 12); z++) {   // two cylinders in a V, finned
+      const x = ex + dx + (z - ez0 - 5) * lean;
+      m.box(x - 1.8, cy - 2.5, z, x + 1.8, cy + 2.5, z + 1, (z & 1) ? M.chrome : M.steel);
+    }
+  } else if (B.eng === 'single') {
+    m.box(ex - 4, cy - 3, ez0, ex + 5, cy + 3, ez0 + 5, M.dark);
+    m.cyl('y', ex, 0, ez0 + 3, 2.5, cy + 3, cy + 4, M.chrome);
+    for (let z = ez0 + 5; z < Math.min(tz0, ez0 + 11); z++) m.box(ex - 2.2, cy - 2.5, z, ex + 2.2, cy + 2.5, z + 1, (z & 1) ? M.steel : M.trim);
+  }
+  // ---- the tank (a teardrop: rounded, leaning in at the front and the back)
+  if (B.tank) shell(m, { x0: t0, x1: t1, y0: cy - thw, y1: cy + thw, z0: tz0, z1: tz1, fr: 2, br: 2.5, r: 2, rz: 2, mat: body });
+  if (B.flames) deco(m, (x, y, z) => (x + Math.sin(z * 1.3) * 1.6 > t0 + 4 ? M.stripeYellow : M.stripeRed), t0, 0, tz0, t1 - 2, W, tz1, (x, y, z, vv, side) => vv === body && side === 'y' && x + Math.sin(z * 1.3) * 1.6 > t0 + 1.5);
+  if (police) deco(m, M.stripeBlue, t0, 0, tz0 + 2, t1, W, tz0 + 3.5, (x, y, z, vv, side) => side === 'y');
+  // ---- the seat
+  const seatBox = (x0, x1, z0, z1, hw) => shell(m, { x0, x1, y0: cy - hw, y1: cy + hw, z0, z1, r: Math.min(1.5, hw - 0.5), rz: 1, mat: seatM });
+  if (sk === 'step') { seatBox(s0 + 6, s1, sz, sz + 2, shw); seatBox(s0, s0 + 7, sz + 1, sz + 3, shw - 0.5); }
+  else if (sk === 'two') { seatBox(s0, s1, sz, sz + 2.2, shw); seatBox(s0, s0 + 3, sz + 2, sz + 7, shw - 0.5); }                       // a dual seat with a backrest
+  else if (sk === 'king') { seatBox(s0 + 4, s1, sz - 1, sz + 1.5, shw); seatBox(s0, s0 + 5, sz + 1, sz + 3, shw - 0.5); }
+  else if (sk === 'solo') { seatBox(s0, s1, sz, sz + 2, shw); for (const y of [cy - shw + 1, cy + shw - 2]) m.box(s0 + 1, y, sz - 3, s0 + 2, y + 1, sz, M.chrome); }   // sprung
+  else if (sk === 'hump') { seatBox(s0 + 5, s1, sz, sz + 1.6, shw); shell(m, { x0: s0, x1: s0 + 6, y0: cy - shw, y1: cy + shw, z0: sz, z1: sz + 4, br: 2, r: 1.5, rz: 1.5, mat: body }); }
+  else if (sk === 'long') { seatBox(s0, s1, sz, sz + 1.6, shw); }
+  else if (sk === 'scoot') { seatBox(s0 + 2, s1, sz, sz + 2.5, shw); }
+  // ---- the scooter's body: the rear cowl over the engine, the floorboard, the apron and the headset
+  if (B.eng === 'scoot') {
+    shell(m, { x0: 2, x1: s1 + 1, y0: cy - shw - 1, y1: cy + shw + 1, z0: 4, z1: sz, br: 4, fr: 2, r: 3, rz: 3, mat: body });         // the rear cowl
+    m.box(s1 - 1, cy - 4, 4, hx - 1, cy + 4, 6, M.dark);                                                                       // the floorboard
+    shell(m, { x0: hx - 4, x1: hx + 1, y0: cy - 5, y1: cy + 5, z0: 5, z1: hz, fr: -1, r: 2, rz: 1, mat: body });                     // the apron (leg shield)
+    shell(m, { x0: B.xf - 4, x1: B.xf + 4, y0: cy - 3, y1: cy + 3, z0: B.rf + 2, z1: B.rf * 2 + 2, r: 2, rz: 2, mat: body });       // the front mudguard
+    tube(hx - 1, hz, B.xf, B.rf, M.trim, 1.6);
+  } else {
+    // ---- the fork: two legs to the front axle (raked out long on the chopper), the triple clamp, the headlamp
+    for (const y of [twA - 1, twB]) tube(hx, hz, B.xf, B.rf, B.rat ? M.trim : M.chrome, 1.2, y, y + 1);
+    m.box(hx - 1.5, twA - 1, hz - 1, hx + 1.5, twB + 1, hz + 1, M.trim);
+  }
+  // ---- the bars
+  const [ax, az, aw, bk] = B.bars, grips = (x0, x1, z) => { for (const y of [cy - aw, cy + aw - 1]) m.box(x0, y, z, x1, y + 1, z + 1, M.dark); };
+  if (bk === 'ape') {
+    for (const y of [cy - aw + 1, cy + aw - 2]) tube(hx, hz, ax, az, M.chrome, 1, y, y + 1);   // tall ape hangers
+    m.box(ax - 0.5, cy - aw + 1, az - 1, ax + 0.5, cy + aw - 1, az, M.chrome);
+    grips(ax - 3, ax, az - 1);
+  } else if (bk === 'clip') { for (const y of [cy - aw, cy + aw - 1]) tube(hx, hz - 1, ax, az, M.trim, 1, y, y + 1); grips(ax - 2, ax, az); }
+  else if (bk === 'mx') { m.box(ax - 0.5, cy - aw, az, ax + 0.5, cy + aw, az + 1, M.trim); m.box(ax - 0.5, cy - aw * 0.5, az - 1.5, ax + 0.5, cy + aw * 0.5, az - 0.5, M.trim); tube(hx, hz, ax, az, M.trim, 1.2); grips(ax - 0.5, ax + 0.5, az); }
+  else if (bk === 'scoot') { shell(m, { x0: ax - 3, x1: ax + 2, y0: cy - 3, y1: cy + 3, z0: hz, z1: az + 1, r: 1.5, rz: 1, mat: body }); m.box(ax - 1, cy - aw, az - 0.5, ax + 1, cy + aw, az + 0.5, M.trim); grips(ax - 1, ax + 1, az - 0.5); }
+  else { tube(hx, hz, ax + 1, az, M.chrome, 1.2); m.box(ax - 0.5, cy - aw, az, ax + 1, cy + aw, az + 1, M.chrome); grips(ax - 3, ax - 0.5, az); }   // pull-backs
+  // ---- mudguards: an arc over each wheel (full: wrapping the back of the rear wheel; bobbed: short; high: motocross)
+  const arc = (x, r, a0, a1, mat, y0, y1, gap = 1) => fillI((xx, y, z) => { const d = Math.hypot(xx - x, z - r), a = Math.atan2(z - r, xx - x); return Math.abs(d - (r + gap)) < 0.7 && a > a0 && a < a1 ? mat : -1; }, x - r - 3, y0, 0, x + r + 3, y1, 2 * r + 3);
+  const fm = B.rat ? M.rust : body;
+  if (B.fender === 'full') { if (!B.trike) arc(B.xr, B.r, 0.4, 3.0, fm, twA - 0.5, twB + 0.5); arc(B.xf, B.rf, 0.3, 2.2, fm, twA - 0.5, twB + 0.5); }
+  else if (B.fender === 'bob') { if (!B.trike) arc(B.xr, B.r, 0.9, 2.4, fm, twA, twB); }
+  else if (B.fender === 'high') {
+    m.box(B.xf - 5, cy - 2.5, B.rf * 2 + 3, B.xf + 6, cy + 2.5, B.rf * 2 + 4, body);   // the front fender high over the wheel
+    shell(m, { x0: 1, x1: s0 + 4, y0: cy - 2.5, y1: cy + 2.5, z0: sz - 2, z1: sz, br: -2, r: 1, mat: body });              // the rear fender, a long plastic tail
+  }
+  // ---- the exhaust: chrome pipes along the right side (two stacked on the V-twins), a black can on the dirt bike
+  if (B.eng !== 'scoot') {
+    const n = B.pipes || 1;
+    for (let k = 0; k < n; k++) { const z0 = ez0 + 1 + k * 3; tube(ex + 3, z0 + 3, ex - 3, z0, M.chrome, 1.6, W - 3 - k, W - 1 - k); tube(ex - 3, z0, Math.max(2, B.xr - 6), z0 + (B.fender === 'high' ? 8 : 2), B.fender === 'high' ? M.dark : M.chrome, 2, W - 3, W - 1); }
+  } else tube(8, 5, 2, 6, M.chrome, 2, W - 4, W - 2);
+  // ---- each type's kit
+  if (B.fairing === 'shell') {
+    // a touring fairing: a rounded nose round the head, the screen rising out of it
+    shell(m, { x0: hx - 2, x1: hx + 7, y0: cy - 6, y1: cy + 6, z0: hz - 6, z1: hz + 2, fr: 4, r: 3, rz: 2, mat: body });
+    shell(m, { x0: hx - 1, x1: hx + 3, y0: cy - 5, y1: cy + 5, z0: hz + 2, z1: hz + 2 + B.screen, fr: 3, r: 2, rz: 1, mat: M.glass });
+  } else if (B.fairing === 'bat') {
+    // a batwing: wide and low on the fork, a short screen
+    shell(m, { x0: hx - 1, x1: hx + 6, y0: 1, y1: W - 1, z0: hz - 5, z1: hz + 1, fr: 3, r: 4, rz: 2, mat: body });
+    shell(m, { x0: hx, x1: hx + 3, y0: cy - 6, y1: cy + 6, z0: hz + 1, z1: hz + 1 + B.screen, fr: 2, r: 2, rz: 1, mat: M.glass });
+  }
+  if (B.bags) {   // hard bags either side of the rear wheel
+    const [b0, b1] = B.bags;
+    for (const [y0, y1] of [[0, Math.min(4.5, twA - 0.5)], [Math.max(W - 4.5, twB + 0.5), W]]) shell(m, { x0: b0, x1: b1, y0, y1, z0: 6, z1: 15, r: 1.5, rz: 2, mat: body });
+    if (police) deco(m, M.stripeBlue, b0, 0, 10, b1, W, 11.5, (x, y, z, vv, side) => side === 'y');
+  }
+  if (B.topbox) { shell(m, { x0: 1, x1: 9, y0: cy - 5, y1: cy + 5, z0: 17, z1: 25, r: 2, rz: 2, mat: body }); m.box(2, cy - 4, 21, 3, cy + 4, 22, M.trim); }
+  if (B.sissy) { for (const y of [cy - 3, cy + 2]) tube(s0 + 1, sz + 1, s0 - 1, sz + 12, M.chrome, 1, y, y + 1); m.box(s0 - 2, cy - 3, sz + 11, s0, cy + 3, sz + 12.5, M.chrome); }
+  if (B.plate) { m.box(B.xf - 3, twA - 2, hz - 4, B.xf - 1, twB + 2, hz, M.white); m.box(s0 + 6, 0, sz - 5, s0 + 14, W, sz - 1, M.white); deco(m, M.dark, s0 + 9, 0, sz - 4, s0 + 11, W, sz - 2, (x, y, z, vv, side) => side === 'y'); }
+  if (B.trike) {
+    // the rear body: a wide boot between the back wheels, the seat on top, arches over the wheels, a bumper
+    shell(m, { x0: 1, x1: B.xr + B.r + 3, y0: 1 + B.tw, y1: W - 1 - B.tw, z0: 6, z1: sz - 1, br: 3, r: 4, rz: 3, mat: body });
+    for (const y0 of [0, W - 2 - B.tw]) shell(m, { x0: B.xr - B.r - 1, x1: B.xr + B.r + 2, y0, y1: y0 + B.tw + 2, z0: B.r * 2 - 1, z1: B.r * 2 + 1.5, r: 2, rz: 1, mat: body });
+    m.box(B.xr - 1, 2, B.r - 1, B.xr + 1, W - 2, B.r + 1, M.trim);   // the axle
+    m.box(0, 6, 7, 2, W - 6, 10, M.chrome);
+  }
+  if (B.rat) {
+    deco(m, M.rust, 0, 0, 0, L, W, m.h, (x, y, z, vv) => (vv === body || vv === M.chrome) && vnoiseLite(x * 1.4, y * 1.4, z * 1.4) > 0.62);
+    for (const y0 of [0, W - 4]) shell(m, { x0: s0 - 4, x1: s0 + 5, y0, y1: y0 + 4, z0: 9, z1: 17, r: 1.5, rz: 1.5, mat: leather });   // leather satchels
+    m.cyl('y', s0 - 2, 0, sz + 2.5, 2.5, cy - 5, cy + 5, m.mat({ ramp: R('#5a6a3a'), k: 2.2 }));   // the bedroll
+  }
+  if (police) {
+    // red and blue on the front either side of the lamp, a light pole behind the seat
+    m.box(hx + 3, cy - 5, hz - 4, hx + 5, cy - 3, hz - 2, M.red); m.box(hx + 3, cy + 3, hz - 4, hx + 5, cy + 5, hz - 2, M.blue);
+    m.box(s0 - 1, cy - 0.5, sz + 2, s0, cy + 0.5, sz + 10, M.trim); m.box(s0 - 2, cy - 1, sz + 10, s0 + 1, cy + 1, sz + 12, M.blue);
+    A.siren.push([s0 - 0.5, cy, sz + 11, 1], [hx + 4.5, cy - 4, hz - 3, 0], [hx + 4.5, cy + 4, hz - 3, 1]);
+  }
+  // ---- lamps and anchors
+  const lampX = B.fairing ? hx + 6 : B.eng === 'scoot' ? ax + 2 : hx + 2.5, lampZ = B.fairing ? hz - 2 : B.eng === 'scoot' ? az - 1 : hz - 2.5;
+  m.box(lampX - 1.5, cy - 1.5, lampZ - 1.5, lampX + 1, cy + 1.5, lampZ + 1.5, M.head);
+  if (B.eng !== 'scoot' && !B.fairing) m.box(lampX - 2.5, cy - 2, lampZ - 2, lampX - 1.5, cy + 2, lampZ + 2, M.chrome);   // the lamp's chrome bucket
+  const tailX = B.trike || B.topbox ? 1 : Math.max(1, B.xr - B.r), tailZ = B.trike ? 12 : B.topbox ? 19 : B.fender === 'high' ? sz - 1 : B.r * 2 + 1;
+  m.box(tailX - 1, cy - 1.5, tailZ - 1, tailX + 1, cy + 1.5, tailZ + 1, M.tail);
+  A.head.push([lampX + 0.5, cy, lampZ]); A.tail.push([tailX, cy, tailZ]); A.rev.push([tailX, cy, tailZ]);
+  A.seat = [(s0 + s1) / 2 + (sk === 'two' || sk === 'step' ? 3 : 0), cy, sz + 2];
+  A.exhaust = [Math.max(2, B.xr - 6), W - 2, ez0 + 2]; A.fire.push([ex, cy, ez0 + 6]);
+  void V;
+}
+
 // ---- the models ---------------------------------------------------------------------------------------
 const CAR = {
   compact: { belt: 17, nose: 12, tail: 15.5, hood: 0.74, boot: 0.05, cab: [0.05, 0.73], roof: 31, fr: 11, br: 3.5, ci0: 3, ci1: 6, wheels: [0.17, 0.81], wr: 7, rf: 9, rr: 6, lampW: 8, seams: [0.5], pillars: [0.48], tailUp: 3 },
@@ -832,9 +1003,11 @@ export function vehicleModel(type, o = {}) {
       A.head.push([L - 1, 6, 15.5], [L - 1, W - 6, 15.5]); A.exhaust = [0, W - 8, 8]; A.fire.push([L * 0.5, cy, 40], [L - 20, cy, 40]); A.seat = [L - 18, 14, 30];
       break;
     }
-    case 'bike': case 'policebike': {
+    case 'vtwin': case 'tourer': case 'chopper': case 'bobber': case 'caferacer': case 'dirtbike': case 'scooter': case 'trike': case 'ratbike': case 'bagger': case 'policebike':
+      motoBike(m, M, V, type, A); break;
+    case 'bike': {
       // a sport bike: two spoked wheels, a fairing and tank, the seat and tail, forks, bars, a chrome pipe
-      const cy = W / 2, pol = type === 'policebike', bodyM = pol ? M.white : M.body;
+      const cy = W / 2, pol = false, bodyM = M.body;
       for (const x of [8, L - 8]) { m.cyl('y', x, 0, 7, 7, cy - 2, cy + 2, M.tyre, 4.6, 0); m.cyl('y', x, 0, 7, 4.8, cy - 1, cy + 1, M.rim); }
       m.look = { ...m.look, belt: 18, z0: 8, roof: 24, wheels: [8, L - 8], wr: 7 };
       m.box(14, cy - 3, 6, 30, cy + 3, 13, M.dark);                                                                                          // engine
@@ -1106,7 +1279,7 @@ function applyState(m, M, state, type) {
   const crack = m.mat({ ramp: R('#c8d8e4', 5, 3), k: 3, flag: F_GLASS });
   const scuffs = new Map();
   const scuffOf = (v) => { if (!scuffs.has(v)) { const Mv = m.mats[v]; scuffs.set(v, m.mat({ ...Mv, k: Math.max(0, Mv.k - 1.2), shade: null, emi: null })); } return scuffs.get(v); };
-  const small = PEDAL.has(type) || type === 'bike' || type === 'policebike' || type === 'jetski';
+  const small = PEDAL.has(type) || MOTO.has(type) || type === 'bike' || type === 'jetski';
   const crushD = state === 'wrecked' ? (small ? 4 : 9) : burntish ? (small ? 2 : 5) : state === 'dented' ? 3 : 0;
   const isLamp = (v) => v === M.head || v === M.tail || v === M.rev || v === M.brakeL || v === M.red || v === M.blue || v === M.amber;
   for (let z = 0; z < m.h; z++) for (let y = 0; y < W; y++) for (let x = 0; x < L; x++) {

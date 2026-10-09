@@ -52,6 +52,25 @@ export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
   stagger: 4, limp: 6, crawl: 4, downF: 2, downB: 2, deadF: 1, deadS: 1 };
 const ALIAS = { move0: 'walk0', move1: 'walk1', move2: 'walk2', move3: 'walk3', jog: 'walk1', run: 'walk2', sprint: 'walk3', held: 'idle', stand: 'idle' };
+// ---- motorcycle riders (task #366, MC1): leaned back on a chopper ('chop': feet forward on the pegs, hands up on the ape
+// hangers), tucked down on a sport bike ('tuck': chest to the tank, hands low on the clip-ons). Built on the 'ride' pose
+// (rigMoto, below). shared/vehicles.js ride picks one per bike.
+POSES.chop = 1; POSES.tuck = 1;
+const MOTO_POSES = new Set(['chop', 'tuck']);
+function rigMoto(P, pose) {
+  const seat = SEATS.ride / CA, hands = P.hands;
+  if (pose === 'chop') {
+    P.lean = -0.16; P.headPitch = 0.05; P.pel = [P.pel[0], P.pel[1] - 1.2, P.pel[2] - 1.2];
+    P.fL = [-4.6, 9.5, seat - 9]; P.fR = [4.6, 9.5, seat - 9]; P.kneeL = [-0.5, 0.7, 1]; P.kneeR = [0.5, 0.7, 1];
+    P.hands = (S) => { hands(S); P.hL = [-6.4, 10.5, seat + 15.5]; P.hR = [6.4, 10.5, seat + 15.5]; P.elL = [-1, 0, -0.6]; P.elR = [1, 0, -0.6]; };
+  } else {
+    P.lean = 0.95; P.headPitch = -0.5;
+    P.fL = [-4.4, -1, seat - 8.5]; P.fR = [4.4, -1, seat - 8.5]; P.kneeL = [-0.6, 1, 0.3]; P.kneeR = [0.6, 1, 0.3];
+    P.hands = (S) => { hands(S); P.hL = [-5, 13.5, seat + 5.5]; P.hR = [5, 13.5, seat + 5.5]; P.elL = [-1, -0.2, -0.2]; P.elR = [1, -0.2, -0.2]; };
+  }
+  return P;
+}
+// ---- end motorcycle riders
 export const HAIR_STYLES = ['spiky', 'short', 'buzz', 'bald', 'afro', 'long', 'wavy', 'pony', 'bun', 'braids', 'dreads', 'mohawk', 'slick', 'curly', 'bob'];
 export const TOP_KINDS = ['tee', 'tank', 'polo', 'shirt', 'hoodie', 'jacket', 'suit', 'leather', 'puffer', 'flannel', 'hawaiian', 'vest', 'hivis', 'uniform', 'tactical', 'scrubs', 'apron', 'overalls', 'tracksuit', 'jersey', 'coat', 'cardigan', 'dress', 'fur', 'none', 'bikini', 'swimsuit', 'towel'];
 
@@ -322,6 +341,7 @@ function aimPose(D, P, kind, rec) {
 }
 function restHoldItem(P, kind) { if (ICLS[kind] === 'one' || ICLS[kind] === 'big' || ICLS[kind] === 'knife') setItem(P, kind, [0.1, 0.3, 0.95], [0, 1, 0]); }
 function rig(D, A, pose, f, kind, acc) {
+  if (MOTO_POSES.has(pose)) return rigMoto(rig(D, A, 'ride', f, null, null), pose);   // (motorcycle riders, task #366)
   const P = base(D), c = kind ? ICLS[kind] : null;
   if (pose === 'idle') {
     P.breath = f ? 0.4 : 0;
@@ -1449,7 +1469,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS'].includes(pn)) kind = null;
+  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck'].includes(pn)) kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A), P = rig(D, A, pn, f, kind, acc);

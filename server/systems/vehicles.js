@@ -185,8 +185,9 @@ function strikePed(world, v, ped, vn, h) {
   if (ped.npc) npc.onAttacked(world, ped, driver);
 }
 
-function bikeCrash(world, v, impact) {
-  // GDD: crashing a sport bike at high speed triggers an immediate ragdoll ejection
+export function bikeCrash(world, v, impact) {
+  // GDD: crashing a sport bike at high speed triggers an immediate ragdoll ejection (not off a trike: three wheels)
+  if (v.def.stable) return;
   for (const sid of [...v.seats]) {
     if (!sid) continue;
     const ped = world.get(sid);

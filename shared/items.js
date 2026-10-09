@@ -344,7 +344,9 @@ export const SHOPS = {
   butcher: { title: 'Butcher', buy: [{ kind: 'item', id: 'venisonSteak', price: 28, qty: 1 }, { kind: 'item', id: 'bearStew', price: 34, qty: 1 }, { kind: 'item', id: 'roastTurkey', price: 22, qty: 1 }],
     sells: GAME_GOODS().filter(COOKED_OR_RAW), sellPrice: payFor(GAME_GOODS().filter(COOKED_OR_RAW), 1.8) },
   garage: { title: 'Fresh Coat Garage', buy: [{ kind: 'service', id: 'respray', price: 250 }, { kind: 'service', id: 'wash', price: 20 }, { kind: 'service', id: 'repair', price: 300 }, { kind: 'service', id: 'garage', price: 0 }] },
-  dealer: { title: 'Motor Row Dealership', buy: ['cruiser', 'bicycle', 'bmx', 'mtb', 'roadbike', 'cargobike', 'compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports'].map((id) => ({ kind: 'vehicle', id })) },
+  dealer: { title: 'Motor Row Dealership', buy: ['cruiser', 'bicycle', 'bmx', 'mtb', 'roadbike', 'cargobike', 'compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports',
+    // the motorcycles (MC1, task #366)
+    'scooter', 'dirtbike', 'caferacer', 'bobber', 'vtwin', 'ratbike', 'chopper', 'tourer', 'bagger', 'trike'].map((id) => ({ kind: 'vehicle', id })) },
   marina: { title: 'Harbor Marina', buy: ['jetski', 'dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },
 };
 
