@@ -5,7 +5,7 @@
 // a shop's door after you and out through it to the car.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
 import { STAR_HEAT, K } from '../shared/constants.js';
 import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS } from '../shared/rules.js';
 import * as players from '../server/systems/players.js';
@@ -72,6 +72,55 @@ test('arrested by the police: held down, walked to the car, driven to the statio
   assert.equal(prof.bank, bank - BAIL_PER_STAR * stars, 'from the bank');
   assert.ok(!p.custody && !p.ped.hidden, 'free');
   assert.ok(!walkInAt(w.map, p.ped.x, p.ped.y) && Math.hypot(p.ped.x - st.outside.x, p.ped.y - st.outside.y) < 120, 'outside the station\'s front door');
+});
+
+// A police unit whose officers got out and ran after the suspect on foot: the car left empty back along the road.
+function footUnit(w, p, carX, carY, crewN = 2) {
+  const v = w.spawnVehicle('police', carX, carY, Math.atan2(p.ped.y - carY, p.ped.x - carX), {});
+  v.despawnable = false;
+  const crew = [];
+  for (let i = 0; i < crewN; i++) { const c = spawnNpc(w, 'cop', p.ped.x + 18 + i * 40, p.ped.y + (i ? 24 : 0), 'cop'); c.npc.unit = v.id; c.weapon = 'baton'; c.npc.tactic = 'tackle'; crew.push(c); }
+  v.ai = { kind: 'police', target: p.pid, mode: 'foot', route: null, routeAt: 0, force: 'police', footAt: w.time };
+  (w.police ??= new Set()).add(v.id);
+  return { v, crew };
+}
+
+test('cuffed on the ground a way from the car the officers left (task #378): one of them runs back for it, it comes, and in you go', () => {
+  const w = makeWorld(), told = listen(w);
+  const road = straightRoad(w.map, 1400);
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, road.x + 300, road.y);
+  wanted(w, p, 1);
+  // the officers chased them on foot: the car empty 600 px back along the road
+  const { v, crew } = footUnit(w, p, road.x + 900, road.y);
+  p.ped.downUntil = w.time + 3;
+  law.arrest(w, crew[0], p.ped);
+  assert.ok(p.custody && p.custody.stage === 'held');
+  let came = Infinity;
+  const done = until(w, () => {
+    if (p.custody && p.custody.car === v.id) came = Math.min(came, Math.hypot(v.x - p.ped.x, v.y - p.ped.y));
+    return p.custody && p.custody.stage === 'ride';
+  }, HOLD_S + 30);
+  assert.ok(done, `in the back of a car within half a minute (stage ${p.custody && p.custody.stage}, the car ${Math.round(Math.hypot(v.x - p.ped.x, v.y - p.ped.y))} px off)`);
+  assert.equal(p.ped.vehId, v.id, 'the unit\'s own car');
+  assert.ok(p.ped.seat > 0, 'in the back');
+  assert.ok(came < 300, `it was driven over to them (${Math.round(came)} px)`);
+  const drv = w.get(v.seats[0]);
+  assert.ok(drv && drv.npc && drv.npc.role === 'cop', 'an officer at the wheel');
+  assert.ok(!told(p, /isn't coming/), 'no waiting for a car that never comes');
+  // nobody to bring it (the officer holding them is the only one left): another car is sent, and takes them in
+  const w2 = makeWorld();
+  const { p: q } = joinPlayer(w2);
+  teleport(w2, q.ped, road.x + 300, road.y);
+  wanted(w2, q, 2);
+  const lone = footUnit(w2, q, road.x + 1000, road.y, 1);
+  q.ped.downUntil = w2.time + 3;
+  law.arrest(w2, lone.crew[0], q.ped);
+  run(w2, HOLD_S + 0.2);
+  assert.equal(q.custody.stage, 'fetch');
+  assert.ok(q.custody.car && q.custody.car !== lone.v.id, 'not the empty car: another one sent');
+  assert.ok(until(w2, () => q.custody && q.custody.stage === 'ride', 50), 'in the back of the car sent');
+  assert.ok(w2.get(q.ped.vehId).def.police && q.ped.seat > 0);
 });
 
 test('the cell: wait it out, no bail money, no walking out; surrendering goes straight there', async () => {

@@ -198,7 +198,9 @@ function fetch(world, p, again = false) {
 }
 
 // A police car to take them in: the holder's own unit's if it has a seat to spare, else the nearest other one within
-// ESCORT_PX that isn't busy (NPC units only: a player officer's car is theirs to use - interaction()).
+// ESCORT_PX that isn't busy (NPC units only: a player officer's car is theirs to use - interaction()). One left empty
+// further off than a walk to it (its crew all got out after the suspect on foot) only if one of them can go back for it
+// (task #378: nobody did, and it never came).
 function pickCar(world, p, h) {
   const ped = p.ped;
   let best = null, bd = ESCORT_PX;
@@ -208,8 +210,24 @@ function pickCar(world, p, h) {
     const crew = police.crewOf(world, v);
     if (!crew.length || crew.length >= v.seats.length) continue;   // (no room in the back)
     let d = Math.hypot(v.x - ped.x, v.y - ped.y);
+    if (d > PICKUP_PX + 60 && !atWheel(world, v) && !fetcherOf(world, v, crew, h ? h.id : 0)) continue;   // (nobody to bring it)
     if (h && h.npc && h.npc.unit === v.id) d *= 0.3;   // (their own car first)
     if (d < bd) { bd = d; best = v; }
+  }
+  return best;
+}
+// an officer at the wheel of a police car
+const atWheel = (world, v) => { const d = live(world, v.seats[0]); return !!(d && d.npc && !d.dead); };
+// Who goes back for a police car left empty: the one of its crew on foot and on their feet nearest to it, not the one
+// holding the prisoner - the one already on their way first.
+function fetcherOf(world, v, crew, holder) {
+  const was = v.ai && v.ai.fetcher ? live(world, v.ai.fetcher) : null;
+  if (was && !was.dead && !was.vehId && was.id !== holder && was.npc && was.npc.unit === v.id && !floored(world, was)) return was;
+  let best = null, bd = Infinity;
+  for (const q of crew) {
+    if (q.vehId || q.id === holder || floored(world, q)) continue;
+    const d = Math.hypot(q.x - v.x, q.y - v.y);
+    if (d < bd) { bd = d; best = q; }
   }
   return best;
 }
@@ -584,9 +602,20 @@ export function runCar(world, v, crew, dt) {
     const wi = walkInAt(world.map, ped.x, ped.y), kb = wi ? doorKerb(world, wi) : null, gx = kb ? kb.x : ped.x, gy = kb ? kb.y : ped.y;
     const d = Math.hypot(v.x - gx, v.y - gy);
     v.sirenOn = d > 600;
+    let fx = null;
     if (d > PICKUP_PX && drv && drv.npc) route(world, v, gx, gy, d < 450 ? 170 : 460);
-    else halt(v);
-    for (const q of crew) if (!q.vehId && q.id !== c.holder) guard(world, q, ped, dt);
+    else {
+      halt(v);
+      if (d > PICKUP_PX) {
+        // nobody at the wheel - they all got out after the suspect on foot: one of them runs back for it and drives it over
+        // (task #378: the car sat there empty and never came); nobody left who can, and another car is sent
+        fx = fetcherOf(world, v, crew, c.holder);
+        if (!fx) { v.ai.prisoner = null; v.ai.fetcher = 0; c.car = 0; fetch(world, p, true); return; }
+        v.ai.fetcher = fx.id;
+        toWheel(world, fx, v, dt);
+      }
+    }
+    for (const q of crew) if (!q.vehId && q.id !== c.holder && q !== fx) guard(world, q, ped, dt);
     if (c.stage === 'fetch' && d <= PICKUP_PX + 60 && Math.hypot(v.vx, v.vy) < 40) {
       // an officer to walk them over: the one holding them if they're this car's, else one of its crew
       const h = live(world, c.holder);
@@ -690,6 +719,18 @@ function board(world, q, v, dt) {
     const s = !v.seats[0] ? 0 : v.seats.findIndex((e) => !e);
     if (s >= 0) { v.seats[s] = q.id; q.vehId = v.id; q.seat = s; q.vx = 0; q.vy = 0; }
   }
+}
+// An officer going back for the police car to bring it over: at a run (out of a shop by its door, round whatever's in the
+// way), and in behind the wheel.
+function toWheel(world, q, v, dt) {
+  if (floored(world, q)) return;
+  if (Math.hypot(v.x - q.x, v.y - q.y) < v.def.L / 2 + 26) {
+    const s = !v.seats[0] ? 0 : v.seats.findIndex((e) => !e);
+    if (s >= 0) { v.seats[s] = q.id; q.vehId = v.id; q.seat = s; q.vx = 0; q.vy = 0; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }
+    return;
+  }
+  const wp = footWay(world, q, v.x, v.y);
+  pedStep(q, sidestep(world, q, seek(q, wp.x, wp.y, true), dt), dt, world.map, players.pedMods(world, q));
 }
 
 // ---- a player officer's own car ------------------------------------------------------------------------------------------
