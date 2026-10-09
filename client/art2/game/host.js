@@ -1540,7 +1540,9 @@ export class World2 {
         }
         const L = this.api.pedLook(e, now), pose = L.pose;
         if (!L.upright && !L.swimming) continue;
-        const ppose = L.swimming ? 'swim' : pose === 'move' ? 'walk' + L.lvl : pose, d8 = dir8(e.ra), A2 = this._app(e.d.app || {}, e.d.ar);
+        let ppose = L.swimming ? 'swim' : pose === 'move' ? 'walk' + L.lvl : pose, d8 = dir8(e.ra), A2 = this._app(e.d.app || {}, e.d.ar);
+        if (e.d.pp && A2 && Pd.withProp) A2 = this._propped(A2, e.d.pp);   // (a street personality: their prop and walk, as _ped draws them)
+        if ((e.d.gt || e.d.sb) && Pd.personaPose) ppose = Pd.personaPose(e.d, ppose);
         const wpn = (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = Pd.pedFrame(ppose, L.fr);
         if (this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn], prio)) budget--;
       } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState) {
