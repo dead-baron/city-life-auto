@@ -297,6 +297,53 @@ export async function runBeds({ seconds = 4 } = {}) {
   }
   return res;
 }
+// any noise colour through a chain of filters ([type, frequency, Q]...) at gain 1: e.g. the old rain bed, white noise
+// through a high-pass at 900 and a low-pass at 6500, to check a measurement made elsewhere
+export async function runChain(color, filters, { seconds = 4 } = {}) {
+  const ctx = new OfflineAudioContext(2, SR * seconds, SR);
+  const E = new SoundEngine(ctx, fakeMix(ctx), { voices: 1 });
+  const s = ctx.createBufferSource(); s.buffer = E.buf[color]; s.loop = true;
+  let last = s;
+  for (const [type, f, q] of filters) { const n = ctx.createBiquadFilter(); n.type = type; n.frequency.value = f; n.Q.value = q ?? 0.7; last.connect(n); last = n; }
+  last.connect(ctx.destination); s.start();
+  const buf = await ctx.startRendering();
+  return measure([buf.getChannelData(0).subarray(SR), buf.getChannelData(1).subarray(SR)]);
+}
+// ---- the live path, as the game uses it: client/audio.js on a real AudioContext ----
+// liveImport() before a real click (audio.js listens for the first gesture); then runLive() drives a few seconds of the
+// scene through soundFrame / soundEvent / sfx on the real clock and returns what the debug menu would say.
+let AUDIO = null;
+export async function liveImport() { AUDIO = await import('../../client/audio.js'); return AUDIO.soundStatus(); }
+export async function runLive({ seconds = 4 } = {}) {
+  const A = AUDIO, said = [A.soundStatus()];
+  for (let k = 0; k < 50 && !(await A.audioReady()); k++) await new Promise((r) => setTimeout(r, 100));
+  said.push(A.soundStatus());
+  const map = sceneMap();
+  const me = { id: 1, kind: 1, rx: CX, ry: CY, phase: 0, as: 110, flags: 0, d: {} };
+  const peds = [me];
+  for (let i = 0; i < 6; i++) peds.push({ id: 100 + i, kind: 1, rx: CX + i * 40, ry: CY + 60, phase: i, as: 100, flags: PF.MOVING, d: {} });
+  const S = { map, ents: new Map(peds.map((p) => [p.id, p])), myPedId: 1, me: { cash: 1, wanted: 0, dead: false, reloading: false, weapon: 0 }, rainK: 1, cam: { x: CX, y: CY }, pred: null, ctrlId: 1, gateOpen: {}, xing: null, loopClock: 0 };
+  const F = { vehs: [{ id: 200, rx: CX + 300, ry: CY, d: { m: VEHICLES.sedan.i }, flags: VF.DRIVER }], peds, cars: [], clock: { dark: 1, isNight: true }, sub: 0, ug: 0 };
+  const t0 = performance.now();
+  let frames = 0, shots = 0;
+  await new Promise((done) => {
+    const tick = () => {
+      const t = (performance.now() - t0) / 1000;
+      for (const p of peds) { p.phase = (p.phase + 0.016 * 8) % 8; p.rx += 0.5; }
+      F.vehs[0].ry = CY - 600 + t * 300;
+      S.loopClock = t;
+      A.soundFrame(F, S);
+      if (frames % 20 === 0) { const ev = { e: 'shot', w: WEAPONS.pistol.i, x1: CX - 200, y1: CY, x2: CX + 100, y2: CY }; A.soundEvent(ev, S); A.sfx('shot', 0.8); shots++; }
+      if (frames === 60) { A.soundEvent({ e: 'explode', x: CX + 200, y: CY, r: 120 }, S); A.sfx('explode', 0.8); }
+      if (frames % 30 === 0) A.sfx('click', 0.8);
+      frames++;
+      if (t < seconds) setTimeout(tick, 16); else done();
+    };
+    tick();
+  });
+  said.push(A.soundStatus());
+  return { said, frames, shots, samples: window.__snd ? [...window.__snd.E.samples.keys()] : 'no window.__snd (needs ?debug)' };
+}
 // a stand-in mixer for a lone engine: the effects bus straight to the speakers, the echo nowhere
 function fakeMix(ctx) {
   const g = () => ctx.createGain();
@@ -350,4 +397,4 @@ export async function runInstruments({ names = Object.keys(INSTR), raw = false }
   }
   return res;
 }
-window.bench = { runScene, runBeds, runSongs, runInstruments, runYardstick };
+window.bench = { runScene, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive };

@@ -4446,3 +4446,72 @@ From the owner's notes at 03:55, 04:38 and 04:39.
   - The shot now carries the shooter's id. The flash and the tracer start at the gun as it's drawn, and the flash stays on the gun for its few frames.
 - **The character creator for everyone** (`server/systems/looks.js`): players from before the creator never saw it, because their old outfit had simply become a look. Everyone now gets the starting-look screen once, as a free session, keeping what they own. A progress wipe keeps the flag, so it's only once. It's also always on the pause menu: Appearance.
 - **Lights underground** (`client/main.js` carriedLights): each carried light now has its own beam in the shared light path that the sewers and the cave use: a headlamp's narrower cone, the heavy flashlight's long one, a lantern's warm round glow.
+
+## 2026-10-09 · Sound that works: it always starts, it doesn't stutter, and nothing is blown out (measured)
+From the user's notes at 03:55 and 04:38: "the rain sounds seemed really overpowered and broken"; "Sound design in general seems broken it is really choppy and sounds blown out for some things like rain, and doesn't seem to load all the time for different sound effects."
+- **Measured first** (new: `tools/sound/bench.html`, `bench.js`, `bench.py`, `levels.py`): the real `client/sound/` modules rendered on an OfflineAudioContext in headless Chromium.
+  - A busy 30 s scene: five cars and a police car with its siren passing, ten people walking round you, heavy rain at night in a park (then easing off: crickets), a gunfight (pistol, SMG, your shotgun), a car blown up, a crash, a nightclub over the road.
+  - Also each ambience bed alone, each song as heard in the game, and every instrument alone.
+  - Loudness is A-weighted RMS in dB below full scale (dBA). CPU is the render's time against its 30 s, and in "yardsticks": a fixed graph of 16 oscillators and 16 filters rendered just before. The machine is shared by three agents, so raw timings swing by 2x from minute to minute; the yardstick evens that out.
+  - `python3 tools/sound/bench.py` prints the report; `--levels` measures every instrument and writes the trims.
+- **What was wrong:**
+  - **The audio thread was overloaded.** On phone settings the scene took 12-21% of real time on this machine (6.2 yardsticks; 11 on computer settings). A phone is several times slower, so this alone explains crackling and dropouts. Switching parts off showed where it went:
+    - the engines: over half (2.4 of 4 s), with only three voices. Each voice ran eight oscillators all the time (siren, horn, tyres included) and changed their detune every frame, which costs a power function per sample;
+    - footsteps: about 1 s; the ambience: about 0.9 s; the 14 always-connected voice strips, the echo and the compressor: about 0.5 s.
+    - Every filter sweep and every eased parameter ran at a-rate, so the browser recomputed filter coefficients 48,000 times a second per filter.
+  - **The compressor added about 4 dB to everything.** A WebAudio compressor adds its own make-up gain by the spec (threshold -16, ratio 4 gave about +4 dB). It hardly compressed this scene (about 2 dB at most), but it lifted the quiet beds and the hiss with everything else.
+  - **Levels all over the place:** alone at full volume, the instruments ran from -18 dBA (the explosion) to -68 (a raindrop). Peaks went up to +3 dBFS (the explosion, the sniper rifle).
+  - **The rain, checked in a real render:** the old rain bed (white noise, 900-6500 Hz) was -8.1 dBA at gain 1, so -14.1 at its level in heavy rain (0.5): 23 dB over the city's hum at night (-37.3). (The lead's numpy estimate: -16.6 and -37.4.) This morning's pink rain is -15.1 at gain 1, -28.3 at its level (0.22): 9 dB over the city's hum. It stays as it is.
+  - **Clicks at the loop seams:** the pink (rain, wind, leaves) and brown (city, sea) noise loops jumped at the seam, once every 2 to 3 seconds.
+  - **Sounds cut off hard:** 71 cuts in 30 s on phone settings (two of them your own footsteps), each faded over only 12 ms.
+  - **Not always loading:** the audio woke on the first tap only. A context that a phone started suspended, or that iOS "interrupted" (a call, Siri, the background), waited for a key or a touch that was no longer listened for. And a failed load of the sound modules was never tried again.
+  - Any event sound dropped for want of a voice also silenced the old sfx for that event, so nothing played. (None was dropped in the bench scene; the rule is fixed anyway.)
+- **Light enough for a phone** (`engine.js`, `vehicles.js`, `ambience.js`):
+  - A voice's few nodes are made when its sound starts and let go when it ends. An idle voice costs nothing.
+  - Every filter and oscillator parameter runs at k-rate: worked out once per 128 samples, which is still smooth to the ear.
+  - An engine voice is built when it takes a vehicle. The siren, the horn and the tyre squeal are added only while they sound. Doppler goes straight into the frequencies (no detune automation). Two engine voices on a phone, four on a computer (were three and six).
+  - A bed's noise source runs only while the bed is heard.
+  - Cheaper recipes: debris, crackle, rattles and wings play one stretch of a pre-made crackle buffer instead of a dozen bursts. The alarm bell is one bell struck forty times (was forty bells). Fewer pings in glass and coins. Footsteps hold their voice only as long as they sound.
+- **No choppiness** (`pool.js`):
+  - Your own sounds (your steps, shots, car) are never cut off.
+  - The background (footsteps, critters, drops) only takes a free voice, and only up to half the voices. When the pool is full it's dropped rather than cutting anything off.
+  - A sound that must make room fades over about 40 ms.
+  - Per-second budgets for the background: others' footsteps 12, drops 6, crickets 5, crackle 6 (a token bucket: a short burst, then the rate).
+  - Seamless noise loops: the samples past the end are crossfaded over the start.
+  - The rate limits apply per place: two shooters across the street are both heard.
+- **Balanced, never blown out** (`levels.js`, `mixer.js`):
+  - Every instrument has a level trim from its measured loudness. Each category has a target: explosions loudest (-20 dBA), then guns (-25), the usual effects (-32), the menus (-35), footsteps (-38), the world around (-40). The targets sit near where most of each category already was, so the trims even out the stragglers rather than turn everything up. No trim lifts a peak past +3 dBFS before the buses (about -7 at the master).
+  - The compressor is gentle: threshold -10 dB, knee 8, ratio 2.5, attack 10 ms, release 250 ms. A fixed gain after it takes its own make-up gain (+2.2 dB, measured) back off.
+  - The default master volume is 0.8 (was 0.7), to make up for the make-up gain that's gone.
+  - Softer recipes: every square wave plays a band-limited table (9 harmonics); a high band of noise is pink rather than white; gunshots' cracks have a 3 ms front and half the snap; the bats' squeaks and the glass pings an octave lower.
+- **It always starts** (`client/audio.js`):
+  - Every touch, click and key (touchstart, touchend, pointerdown, keydown, click) wakes the audio until it's running, so suspended and iOS's "interrupted" both come back on the next tap. Coming back to the tab tries too.
+  - A one-sample silent sound is played in the tap, which older iPhones need to unlock the audio.
+  - If the sound modules fail to load, they're fetched again on a later tap, under a new address (a failed module stays failed for the page's life).
+  - An event's old sfx stays quiet only if its new sound started, or was simply out of earshot. If it was dropped, the old sound plays instead (`index.js eventHeard`).
+  - The debug menu has a line: "Sound: on · voices · engines · beds · played, dropped, cut off", or off, loading, asleep ("tap to wake it"), or unavailable and why.
+- **Before and after** (the busy scene; the best of three runs by yardstick; phone settings unless said):
+  - **Render CPU:** before 3.6 s per 30 s, 12% of real time (6.2 yardsticks; 11.1 on computer settings). After 1.6-2.4 s under heavier load, 5.5-8% (1.3-2.7 yardsticks; 1.6-4.3 on computer settings). About 3-5 times less work.
+  - **Peak (the whole mix):** -5.0 dBFS before, -5.8 after.
+  - **Loudness (rms over the scene / loudest 400 ms, dBA):**
+    - the whole: -36.0 / -25.7 before; -37.0 / -29.9 after;
+    - effects bus: -36.6 / -23.2 before; -35.6 / -26.4 after;
+    - ambience bus: -37.1 / -34.1 before; -36.9 / -33.5 after;
+    - music bus (the club over the road): -49.8 before; -49.0 after.
+  - **The compressor:** before, +4 dB of make-up on everything and at most 2 dB of reduction. After, no net make-up and at most 3.7 dB of reduction, more than 3 dB in 0.1% of the time.
+  - **Cut off:** 71 before (2 of yours); 31 after (none of yours), mostly others' footsteps and raindrops, faded.
+  - **Dropped:** before, 8 for want of a voice and 5 by a rate limit. After, 7 for want of a voice, 2 by a rate limit, and 243 others' footsteps over the crowd's budget of 12 a second (ten walkers make about 20).
+  - **Events heard:** 70 of 70 before and after.
+  - **The instruments alone:** -18 to -68 dBA before; -20 to -46 after, each within its category's range.
+- **Tests** (`test/sound.test.js`, 6 new):
+  - the pool's rules: yours is never cut off, the background never cuts anything off and keeps to its share, and the voice counts;
+  - the per-second budgets and the per-place rate limit;
+  - the measured loudness table (`test/fixtures/sound-levels.json`, written by the bench): every instrument measured, its trim in `levels.js`, inside its category's range, its peak capped;
+  - the buses' headroom and the compressor's bounds;
+  - the event fallback;
+  - the seamless loop.
+- **Not yet:**
+  - Not listened to on a real phone: everything here is measured, not heard.
+  - The bench's CPU numbers are from a busy shared machine; a quiet run would give cleaner ones.
+  - Of what's left, footsteps cost the most (about a third of the scene's work, switched off one part at a time), then the engines (about a fifth). A lower budget for the crowd's steps, or footsteps pre-rendered into a few short samples, would help phones more.
+  - The level targets are by category and measurement. They may want tuning by ear.

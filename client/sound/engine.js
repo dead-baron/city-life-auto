@@ -57,6 +57,8 @@ export class SoundEngine {
     this.nextReap = 0; this.nextPos = 0;
     this.trims = {};
     for (const n in TRIM_DB) this.trims[n] = Math.pow(10, TRIM_DB[n] / 20);
+    this.samples = new Map();   // name|key -> [AudioBuffer...] (null while rendering): the busiest little sounds, pre-rendered
+    this.samplesOk = !shared && typeof window !== 'undefined' && !!(window.OfflineAudioContext || window.webkitOfflineAudioContext);
     // what became of every sound asked for (the debug menu, the bench)
     this.stats = { asked: 0, played: 0, far: 0, gap: 0, budget: 0, pool: 0, cut: 0 };
   }
@@ -172,20 +174,68 @@ export class SoundEngine {
     const t0 = t + 0.015 + (I.delay || 0);
     const g = this.place(pos ? x : undefined, y, range, vol);
     const send = (this.listener.inside ? 0.3 : 1) * (I.send || 0);
-    // the recipe plays into the voice's level; the rest of the voice is made once we know how long it lasts
+    // the recipe plays into the voice's level (or one of its pre-rendered variants does); the rest of the voice is made
+    // once we know how long it lasts
     const c = this.ctx, out = c.createGain();
     const s = { out, nodes: [] };
-    this.cur = s;
-    let dur = 0.5;
-    try { dur = I.play(this, out, t0, 1, p || NOP, pos ? this.sp.d : 0) || 0.5; } catch (e) { console.warn('[sound]', name, e); }
-    this.cur = null;
-    const v = this.voice(pos, this.sp.f, this.sp.p, g, send, dur > 0.8);
+    let dur = 0, gv = 1;
+    const list = I.cache && this.samplesOk ? this.sample(name, I, p || NOP) : null;
+    if (list) {
+      const b = list[Math.floor(Math.random() * list.length)], src = c.createBufferSource(), rate = 1 + (Math.random() * 2 - 1) * 0.05;
+      src.buffer = b; src.playbackRate.value = rate; src.connect(out); src.start(t0);
+      s.nodes.push(src);
+      dur = b.duration / rate;
+      gv = I.cacheVol ? I.cacheVol(p || NOP) : 1;
+    } else {
+      this.cur = s;
+      try { dur = I.play(this, out, t0, 1, p || NOP, pos ? this.sp.d : 0) || 0.5; } catch (e) { console.warn('[sound]', name, e); dur = 0.5; }
+      this.cur = null;
+    }
+    const v = this.voice(pos, this.sp.f, this.sp.p, g * gv, send, dur > 0.8);
     out.connect(v.out); v.nodes = s.nodes; v.nodes.push(out);
     v.x = x; v.y = y; v.vol = vol; v.range = range;
     this.slots[i] = v;
     this.pool.end[i] = t0 + dur + 0.05;
     st.played++;
     return true;
+  }
+  // ---- pre-rendered samples for the busiest little sounds (footsteps, raindrops, crickets, crackle, bullets striking) ----
+  // A recipe with `cache: n` is synthesised live the first time it plays (for its key: a footstep's surface), while n
+  // variants of it are rendered in the background on an OfflineAudioContext; from then on each play is one buffer
+  // source, a little faster or slower each time - no filters, no oscillators. (cacheP: the parameters to render with;
+  // cacheVol: the part of the volume that depends on the parameters, applied as it plays; cacheLen: a variant's length.)
+  sample(name, I, p) {
+    const id = name + '|' + (I.cacheKey ? I.cacheKey(p) : '');
+    const got = this.samples.get(id);
+    if (got !== undefined) return got;
+    this.samples.set(id, null);
+    this.renderSamples(id, I, I.cacheP ? I.cacheP(p) : p);
+    return null;
+  }
+  renderSamples(id, I, p) {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext, sr = this.ctx.sampleRate;
+    const n = I.cache, len = Math.ceil(sr * (I.cacheLen || 0.25)), at = Math.ceil(sr * 0.003);
+    let oc;
+    try { oc = new OAC(1, len * n, sr); } catch { this.samples.set(id, false); return; }
+    const E = new SoundEngine(oc, { sfx: oc.destination, echo: oc.destination }, { voices: 1, shared: this });
+    for (let k = 0; k < n; k++) { const g = oc.createGain(); g.connect(oc.destination); try { I.play(E, g, (k * len + at) / sr, 1, p, 0); } catch { /* a variant short */ } }
+    let fin = false;
+    const done = (buf) => {
+      if (fin || !buf) return;
+      fin = true;
+      const d = buf.getChannelData(0), list = [];
+      for (let k = 0; k < n; k++) {
+        const v = d.subarray(k * len, (k + 1) * len);
+        let end = v.length;
+        while (end > 64 && Math.abs(v[end - 1]) < 1e-4) end--;   // (trimmed to where it falls silent)
+        const b = this.ctx.createBuffer(1, Math.min(v.length, end + 64), sr);
+        b.getChannelData(0).set(v.subarray(0, b.length));
+        list.push(b);
+      }
+      this.samples.set(id, list);
+    };
+    oc.oncomplete = (e) => done(e.renderedBuffer);
+    try { const r = oc.startRendering(); if (r && r.then) r.then(done, () => this.samples.set(id, false)); } catch { this.samples.set(id, false); }
   }
   mute(name, sec) { this.muted.set(name, this.ctx.currentTime + sec); }
   isMuted(name) { const u = this.muted.get(name); return u !== undefined && u > this.ctx.currentTime; }

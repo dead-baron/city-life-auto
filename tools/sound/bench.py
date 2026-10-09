@@ -4,6 +4,7 @@ the real client/sound/ modules on an OfflineAudioContext (tools/sound/bench.js).
 JSON.
 
   python3 tools/sound/bench.py [--out report.json] [--only scene,beds,songs,instruments] [--runs 2]
+  python3 tools/sound/bench.py --live       the live path: client/audio.js started by a click, a few seconds of play
   python3 tools/sound/bench.py --levels     measure every instrument's own loudness (before its trim) and write
                                             client/sound/levels.js and test/fixtures/sound-levels.json
 
@@ -39,6 +40,7 @@ def main():
     ap.add_argument('--runs', type=int, default=2)
     ap.add_argument('--port', type=int, default=8113)
     ap.add_argument('--levels', action='store_true')
+    ap.add_argument('--live', action='store_true', help='the live path: client/audio.js on a real AudioContext, started by a real click')
     ap.add_argument('--retrim', action='store_true', help='recompute the trims from the measurements already in test/fixtures/sound-levels.json')
     a = ap.parse_args()
     if a.retrim:
@@ -55,9 +57,18 @@ def main():
             pg = b.new_page()
             pg.on('console', lambda m: print('[page]', m.text) if m.type in ('error', 'warning') else None)
             pg.on('pageerror', lambda e: print('[page error]', e))
-            pg.goto(f'http://127.0.0.1:{a.port}/tools/sound/bench.html')
+            pg.goto(f'http://127.0.0.1:{a.port}/tools/sound/bench.html?debug')
             pg.wait_for_function('window.bench !== undefined', timeout=30000)
             only = set(a.only.split(','))
+            if a.live:
+                print('before a tap:', pg.evaluate('window.bench.liveImport()'))
+                pg.mouse.click(40, 40)
+                live = pg.evaluate('window.bench.runLive()')
+                for line in live['said']:
+                    print('  ', line)
+                print('   frames', live['frames'], 'shots', live['shots'], 'samples rendered:', live['samples'])
+                rep['live'] = live
+                only = set()
             if a.levels:
                 raw = pg.evaluate('window.bench.runInstruments({ raw: true })', )
                 LV.write(raw, ROOT)
