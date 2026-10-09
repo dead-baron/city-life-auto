@@ -51,6 +51,32 @@ export const TACKLE_DOWN_S = 2.5;      // ...and a tackle that lands puts you do
 export const PISTOL_SHARE_3 = 0.25;    // at 3 stars this share of officers carry a pistol instead of a taser
 export const FBI_SHARE_5 = 0.4;        // at 5 stars this share of the units sent are the FBI...
 export const ARMY_SHARE_5 = 0.2;       // ...and this share the army (one truck at a time)
+// Fighting back (server/systems/struggle.js; the owner's note 2026-10-09 05:01): tackled, grabbed or dragged down by an
+// officer, you aren't pinned and cuffed on the spot. The officer gets on top of you and goes for the cuffs while you
+// struggle: each press of the attack button fills the struggle meter (a wriggle of the move stick a little), and the
+// officer pushes it back down, harder the longer they hold you. Fill it and you throw them off; let it run out, or still
+// be held when the cuffs come out, and you're cuffed (custody.js). Once cuffed there's no struggle. Tuned with
+// test/struggle.test.js's simulated struggles (mashing well, ~7 presses a second, one cop, full health): free about 4 in 5
+// times at 1 star, half the time at 3, rarely at 4 and 5; half your health, about 1 in 4 at 1 star; two cops, about half.
+export const STRUGGLE_START = 0.3;     // the meter starts here (0-1; full: you're free)
+export const STRUGGLE_PRESS = 0.075;   // each press of the attack button (at full health)...
+export const STRUGGLE_WRIGGLE = 0.025; // ...and each wriggle (the move stick swung round to a new direction)
+export const STRUGGLE_HOLD = 0.22;     // an ordinary cop pushes it back down this much a second...
+export const STRUGGLE_STARS = [1, 1, 1.12, 1.3, 1.85, 2.4];   // ...times this by your stars (1-3 fair, 4 much harder, 5 very hard)
+export const STRUGGLE_KIND = { cop: 1, agent: 1.2, swat: 1.45, soldier: 1.55 };   // ...and by who's on you
+export const STRUGGLE_BUILD = 0.35;    // ...and their build (a brute's grip: 1 + 0.35 x 0.6 stronger than an average officer's)
+export const STRUGGLE_GRIP_VAR = 0.4;  // ...and how well they got hold of you this time (rolled: +-40%)
+export const STRUGGLE_SECOND = 0.3;    // a second officer on you adds this much of their own hold: about half your odds at 1-2 stars
+                                       //   (counted in full, a car's two officers reaching you together left a 1-star chase ~1 in 5)
+export const STRUGGLE_RAMP = 0.3;      // the hold grows this much (x its start) for every second you've been held...
+export const STRUGGLE_CUFF_S = 4;      // ...and this long after they got you, the cuffs are on, whatever the meter says
+export const STRUGGLE_HP_FLOOR = 0.55; // your strength is your health (there's no strength stat): floor + (1 - floor) x health/100
+export const STRUGGLE_HP_CAP = 1.3;    //   (a hearty meal's extra health counts, to this much health/100); worn down, much weaker
+export const STRUGGLE_ENERGY = 1.15;   // an energy drink in you: this much stronger
+export const STRUGGLE_STUNNED = 0.7;   // still twitching from a taser or the pepper spray: this much weaker
+export const STRUGGLE_GRACE_S = 2.5;   // broke free: no tackle or grab lands on you for this long
+export const STRUGGLE_KNOCK_S = [0, 3.2, 2.8, 1.8, 1.2, 1];   // the officer you threw off is down this long, by your stars (a second one 60%)
+export const STRUGGLE_NPC_FREE = 0.3;  // an NPC crook the police take down shakes them off this often (x their build's strength)
 export const RESPAWN_SECONDS = 18;           // down: you wake up this long after going down, whatever you press (unless help or an ambulance is on the way)
 export const DEATH_REVEAL_S = 3;             // down: the camera pulls back over where it happened for this long before the choices come up
 // Downed, revives and the paid ambulance

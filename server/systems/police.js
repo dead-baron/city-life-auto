@@ -16,6 +16,7 @@ import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import * as custody from './custody.js';
 import * as standoff from './standoff.js';
+import * as struggle from './struggle.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
@@ -187,9 +188,10 @@ function grab(world, c, t, now) {
   tackleHit(world, c, t);
   return { bits: 0, mx: 0, my: 0, aim: Math.atan2(t.y - c.y, t.x - c.x) };
 }
-// Mid-dive and on them: down they go, long enough to be cuffed. Someone diving out of the way themselves isn't caught.
+// Mid-dive and on them: down they go, long enough to be cuffed. Someone diving out of the way themselves isn't caught,
+// nor someone who just broke free of an officer (struggle.js: a moment's grace).
 function tackleHit(world, c, t) {
-  if (t.dead || t.vehId || t.cuffed || t.rollT > 0 || world.time < t.downUntil || world.time < (t.protectUntil || 0) || Math.hypot(t.x - c.x, t.y - c.y) > 28) return false;
+  if (t.dead || t.vehId || t.cuffed || t.rollT > 0 || world.time < t.downUntil || world.time < (t.protectUntil || 0) || world.time < (t.graceUntil || 0) || Math.hypot(t.x - c.x, t.y - c.y) > 28) return false;
   const a = Math.atan2(t.y - c.y, t.x - c.x);
   t.vx = Math.cos(a) * 170; t.vy = Math.sin(a) * 170; t.rollT = 0;
   t.downUntil = world.time + TACKLE_DOWN_S;
@@ -285,7 +287,7 @@ function runNpcUnit(world, v, crew, dt) {
     if (c.vehId) continue;
     const d = Math.hypot(t.x - c.x, t.y - c.y), stunned = now < t.stunUntil || now < t.downUntil;
     let inp;
-    if (stunned && d < 30) { law.arrest(world, c, t); inp = { bits: 0, mx: 0, my: 0, aim: 0 }; }
+    if (stunned && d < 30) { if (!struggle.npcBreaksFree(world, c, t)) law.arrest(world, c, t); inp = { bits: 0, mx: 0, my: 0, aim: 0 }; }   // (now and then the crook shakes them off)
     else if (!seen && d > 250) inp = seek(c, kx, ky, true);
     else {
       inp = seek(c, t.x, t.y, true);
@@ -396,6 +398,7 @@ function runUnit(world, v, dt) {
     return;
   }
   const t = p.ped;
+  const held = !!struggle.of(p);   // (an officer on them, going for the cuffs while they fight back: struggle.js)
   // the suspect's been hitting the police: at 3 stars the tasers go away and the pistols come out
   const hot = crew.some((c) => now - (c.aggressors.get(t.id) ?? -99) < 15);
   for (const c of crew) armCop(c, p.wanted, ai.force, hot);
@@ -446,6 +449,7 @@ function runUnit(world, v, dt) {
   const farOK = now - (ai.footAt || 0) > 8 && !walkInAt(world.map, t.x, t.y);
   for (const c of crew) {
     if (c.vehId || c.npc.war || c.ug) continue; // busy in a gang fight (gangwar.js drives them); gone down a manhole after a suspect (underground.js)
+    if (struggle.pinning(world, c)) continue;   // on top of the suspect, going for the cuffs (struggle.js moves them)
     if (so && standoff.hold(world, c, v, so, p, hot, dt)) continue;   // in cover or at a post round the building (the rest go in)
     const d = Math.hypot(t.x - c.x, t.y - c.y), n = c.npc;
     let inp;
@@ -465,7 +469,9 @@ function runUnit(world, v, dt) {
       const aimAt = (q) => { q.aim = Math.atan2(t.y - c.y, t.x - c.x); q.bits |= IN.AIMING; return q; };
       const shoot = (q) => { aimAt(q); if (now > (n.nextShot || 0)) { q.bits |= IN.FIRE; n.nextShot = now + 0.25 + rng() * 0.6; } return q; };
       const after = (x, y) => { const wp = footWay(world, c, x, y); return seek(c, wp.x, wp.y, true); };   // (in through a door)
-      if (down && d < 30 && !t.vehId) { law.arrest(world, c, t); inp = { bits: 0, mx: 0, my: 0, aim: 0 }; }
+      // on them while they're down: they go for the cuffs - and a wanted player fights back (struggle.js; a second officer
+      // joins in, a third stands by)
+      if (down && d < 30 && !t.vehId) { if (!struggle.grab(world, c, t)) law.arrest(world, c, t); inp = { bits: 0, mx: 0, my: 0, aim: 0 }; }
       else if (!seen && d > 250) inp = after(kx, ky);
       else if (car) {
         // in a car: stopped, walk up to the door and drag them out; moving, the shooters shoot
@@ -475,8 +481,9 @@ function runUnit(world, v, dt) {
           if (Math.hypot(door.x - c.x, door.y - c.y) < 30) { pullOut(world, c, t, car); inp = { bits: 0, mx: 0, my: 0, aim: 0 }; }
         } else if (n.tactic === 'fire' && d < 340 && los) inp = shoot(d > 180 ? seek(c, t.x, t.y, true) : { bits: 0, mx: 0, my: 0, aim: 0 });
         else inp = seek(c, t.x, t.y, true);
-      } else if (n.tactic === 'fire' && d < 340 && los) {
-        // open fire - up close (not at 5 stars), still a dive to bring them down
+      } else if (n.tactic === 'fire' && d < 340 && los && !held) {
+        // open fire - up close (not at 5 stars), still a dive to bring them down (not while a colleague's wrestling them:
+        // then over to help)
         if (p.wanted <= 4 && !down && d <= 22 && now > (n.nextDive || 0)) inp = grab(world, c, t, now);
         else if (p.wanted <= 4 && !down && d < TACKLE_PX && d > 22 && now > (n.nextDive || 0)) inp = dive(c, t, now);
         else inp = shoot(d > 180 ? seek(c, t.x, t.y, true) : { bits: 0, mx: 0, my: 0, aim: 0 });

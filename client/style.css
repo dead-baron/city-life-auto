@@ -842,6 +842,8 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #death #d-timer, #death #d-help, #death #d-spawn { opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .6s ease, transform .6s ease; }
 #death.reveal #d-timer, #death.reveal #d-help, #death.reveal #d-spawn { opacity: 1; transform: none; pointer-events: auto; }
 #trainbar.custody.brk { border-color: #ffd36b; color: #ffd36b; animation: brk-pulse 1.2s ease-in-out infinite; }
+/* fighting an officer off (server struggle.js): the meter fills orange to white as you mash */
+#trainbar.custody.fight { border-color: #ff8a3b; color: #ffb36b; animation: brk-pulse .6s ease-in-out infinite; } #trainbar.fight #tb-fill { background: linear-gradient(90deg, #ff5a2b, #ffd36b 70%, #fff); transition: width .1s; } #trainbar.fight .rob-bar { width: 140px; height: 10px; }
 @keyframes brk-pulse { 50% { box-shadow: 0 0 14px rgba(255,211,107,.55); } }
 
 /* Robberies v2 (server robbery.js, hotmoney.js): HOT $X under the cash - a robbery's takings in the bag, not spendable
