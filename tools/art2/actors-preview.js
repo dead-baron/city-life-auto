@@ -77,7 +77,7 @@ const dOf = (t, p = 0, vr = 0, tn = -1) => ({ m: VEHICLES[t].i, p, vr, tn });
 const views = {};
 // every model at heading 0 (seen side-on from the south), like V1 / V2 / V4
 views.line = () => {
-  const rows = [['compact', 'sedan', 'taxi', 'sports', 'pickup', 'van'], ['police', 'ambulance', 'armored', 'swat', 'bike', 'policebike', 'bicycle'],
+  const rows = [['compact', 'sedan', 'taxi', 'sports', 'pickup', 'van'], ['police', 'ambulance', 'armored', 'swat', 'bike', 'policebike', 'bicycle'], ['fbi', 'army'],
     ['bus', 'flatbed', 'boxtruck'], ['dumptruck', 'mixer', 'tanker'], ['garbage', 'firetruck', 'towtruck'], ['jetski', 'speedboat', 'dinghy', 'policeboat']];
   const paints = { compact: 6, sedan: 12, sports: 0, pickup: 13, van: 2, bike: 0, bicycle: 6, jetski: 0, speedboat: 1, dinghy: 11 };
   const W = 860, RH = 120, S = new Stage(W, rows.length * RH + 20);
@@ -94,9 +94,9 @@ views.line = () => {
   });
   return [{ S }];
 };
-// all 26 models at 8 headings (set=cars|trucks|small)
+// every road and water model at 8 headings (set=cars|trucks|small)
 views.grid = () => {
-  const sets = { cars: ['compact', 'sedan', 'taxi', 'sports', 'pickup', 'van', 'police', 'ambulance', 'swat', 'armored'],
+  const sets = { cars: ['compact', 'sedan', 'taxi', 'sports', 'pickup', 'van', 'police', 'ambulance', 'swat', 'armored', 'fbi', 'army'],
     trucks: ['bus', 'flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'firetruck', 'towtruck'],
     small: ['bike', 'policebike', 'bicycle', 'jetski', 'speedboat', 'dinghy', 'policeboat'] };
   const set = q.get('set') || 'cars', list = sets[set], big = set === 'trucks';
@@ -134,7 +134,7 @@ views.rot = () => {
 };
 // V6: clean, damaged, wrecked (burnt out), burning, smouldering, bloody; at night: headlights, brakes, siren
 views.states = () => {
-  const day = new Stage(4 * 150, 2 * 120), night = new Stage(4 * 150, 120);
+  const day = new Stage(4 * 150, 2 * 120), night = new Stage(4 * 150, 240);
   backdrop(day, [[0, day.G.h, 'asphalt']]); backdrop(night, [[0, night.G.h, 'asphalt']]);
   const d = dOf('sedan', 9, 0);
   [[{}, 'clean'], [{ dmg: 1 }, 'dented'], [{ dmg: 2 }, 'smashed (smoke)'], [{ burn: true }, 'burning'], [{ wreck: true, burn: true }, 'burning wreck'], [{ wreck: true }, 'burnt out']].forEach(([st, name], i) => {
@@ -146,6 +146,10 @@ views.states = () => {
   night.veh(d, { lights: true, brake: true }, 225, 70, 0); night.label('brake', 158, 112);
   night.veh(dOf('police'), { lights: true, siren: 1 }, 375, 70, 0); night.label('siren', 308, 112);
   night.veh(d, { bloody: true, dmg: 1, rev: true }, 525, 70, 16); night.label('bloody / reverse', 458, 112);
+  // the five-star response: the FBI's strobes behind the grille, the army truck (no siren)
+  night.veh(dOf('fbi'), { lights: true, siren: 1 }, 75, 190, 0); night.label('fbi siren 1', 8, 232);
+  night.veh(dOf('fbi'), { lights: true, siren: 2 }, 225, 190, 0); night.label('fbi siren 2', 158, 232);
+  night.veh(dOf('army'), { lights: true }, 400, 190, 0); night.label('army', 330, 232);
   return [{ S: day, preset: 'golden' }, { S: night, preset: 'night' }];
 };
 // V5: crates, bags and vehicles carrying crates at their cargo slots

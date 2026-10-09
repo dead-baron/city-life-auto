@@ -413,6 +413,7 @@ function fixedStep() {
     if (input.menuSelect) S.hud.choose(S.hud.menuFocus);
     if (input.menuBack) S.hud.closeMenu();
   } else if (S.me && S.me.dead && !spec) deathPad();
+  else if (inCell() && !spec && (input.padY || input.menuSelect)) payBail();
   const n = takeNumberPick();
   if (n !== null && !spec) {
     if (S.hud.menuOpen) S.hud.choose(n);
@@ -1172,6 +1173,7 @@ initInput(canvas, {
   onKey(k) {
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
+    if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
     if (S.playing && S.me && S.me.dead && !topOverlay() && S.me.down && !S.me.down.finished) {
       if (k === 'KeyH') { downAct('help'); return; }
       if (k === 'KeyJ' && S.me.down.help) { downAct(S.me.down.amb ? 'ambx' : 'amb'); return; }
@@ -1228,6 +1230,16 @@ function downAct(a) {
   sfx('click', 0.8);
   send({ t: 'down', a });
 }
+
+// In a cell (server custody.js): pay the bail and walk out now (or wait it out)
+const inCell = () => !!(S.playing && S.me && S.me.custody && S.me.custody.s === 'cell' && !S.me.dead);
+function payBail() {
+  if (!inCell()) return;
+  if (!S.me.custody.can) { S.hud.toast(`The bail is $${S.me.custody.bail} - you don't have it. Wait it out.`, 'warn'); return; }
+  sfx('click', 0.8);
+  send({ t: 'bail' });
+}
+$('j-bail').onclick = () => payBail();
 
 function cycleDeathChoice(step) {
   const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];
@@ -2359,13 +2371,16 @@ function interp(e, rt) {
 }
 
 const SWING_TIME = 0.3;
+// the FISHING bit on these means kneeling (a medic at someone hurt, an officer holding someone down), not fishing
+const KNEELERS = new Set(['medic', 'cop', 'swat', 'agent', 'soldier']);
 function pedPose(e) {
   const f = e.flags;
   if (f & PF.DEAD) return 'dead';
   if ((f & PF.DOWN) && (f & PF.ROLL)) return 'crawl'; // (down + rolling: dragging themselves along on the stomach)
   if (f & (PF.DOWN | PF.STUN)) return 'down';
   if (f & PF.ROLL) return 'roll';
-  if (f & PF.FISHING) return e.d && e.d.ar === 'medic' ? 'kneel' : 'fish';
+  if (f & PF.FISHING) return e.d && KNEELERS.has(e.d.ar) ? 'kneel' : 'fish';
+  if (e.d && e.d.cf) return 'cuffed';   // (hands cuffed behind the back: server custody.js)
   if (f & PF.CARRY) return 'carry';
   if (e.d && e.d.st && !(f & PF.MOVING)) return 'sitlow';   // sitting by a campfire (server campfires.js)
   const w = WEAPON_BY_INDEX[e.extra];
@@ -3169,7 +3184,9 @@ function walkInAt(x, y) {
 // The walk-in you're standing in (riding the subway under a shop doesn't open it), easing every
 // walk-in's roof fade; `art` gets the ones whose floor plan shows this frame.
 function interiorTick(sp, art) {
-  const b = S.playing && S.ctrlKind !== CTRL.RIDER && !(S.me && S.me.ride) ? walkInAt(sp.x, sp.y) : null;   // (a balloon over a shop doesn't open it)
+  // (a balloon over a shop doesn't open it, nor a train under it; cuffed - custody.js walks you - it does)
+  const cuffed = S.ctrlKind === CTRL.RIDER && !!S.ents.get(S.myPedId)?.d?.cf;
+  const b = S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) ? walkInAt(sp.x, sp.y) : null;
   S.roofFade ??= {};
   for (const id of S.map.walkIns || []) {
     const want = b && b.id === id ? 1 : 0;
@@ -3216,6 +3233,7 @@ function tickInterior() {
     el.classList.toggle('hidden', !kind);
     intDrawnAt = 0;
     if (kind) { $('int-open').textContent = kind === 'armory' ? '▲ Armory' : '▲ Front desk'; loadInteriorArt('assets/'); }
+    $('int-open').style.display = kind === 'jail' ? 'none' : '';   // (a cell: the jail panel instead - hud.js)
   }
   if (!kind) return;
   const now = performance.now();
@@ -3674,16 +3692,18 @@ function pedLook(p, now) {
     if (step) { pose = step[1]; seqFr = step[2]; }
     else pose = DEAD_POSE[k || (flRecent && FLING_LIE[flK]) || DEAD_BY_ID[p.id % 3]] || 'dead';
   } else if (pose === 'down' && !flying && !(f & PF.STUN) && flRecent && (flK === 'face' || flK === 'slide')) pose = flK === 'face' ? 'downF' : 'downB';
+  else if (pose === 'down' && p.d && p.d.cf) pose = 'downF';   // (cuffed and held face down)
   // a hit: a stagger back on the heels (or forward, hit from behind); hurt and walking: a limp
   const rT = p.reactAt !== undefined ? now - p.reactAt : 99, stag = seqFr < 0 && rT < (p.reactD || 0) && STAGGER_FROM.has(pose);
   if (stag) pose = 'stagger';
   else if (pose === 'move' && (f & PF.BLEED) && !(f & PF.SPRINT) && (p.as || 0) < 175) pose = 'limp';
   else if (pose === 'aim' && (p.as || 0) > 14) pose = 'aimw';   // walking while aiming: the legs stride, the gun stays up
-  let fr = pose === 'move' || pose === 'carry' || pose === 'limp' || pose === 'aimw' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1
+  let fr = pose === 'move' || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'cuffed' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1
     : pose === 'stagger' ? (Math.cos((p.reactA || 0) - (p.ra || 0)) > 0.2 ? 2 : 0) + (rT > p.reactD * 0.45 ? 1 : 0)
       : pose === 'crawl' ? Math.floor(now * 3.2 + p.id) % 4 : (pose === 'downF' || pose === 'downB') && tL > 0.55 ? 1 : pose === 'sitlow' ? Math.floor(now * 0.22 + p.id * 0.37) % 2 : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   if (seqFr >= 0) fr = seqFr;
+  if (pose === 'downF' && p.d && p.d.cf) fr = 0;   // (held flat, not pushing up)
   const L = p._look || (p._look = {});
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;
   L.lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
@@ -3784,7 +3804,7 @@ function drawPed(p, now) {
 }
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
-const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow']);
+const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed']);
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
 const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
@@ -3794,7 +3814,7 @@ const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', 
 const DEATH_SEQ = { knees: [[0.22, 'stagger', 0], [0.95, 'kneel', 1]], stab: [[0.3, 'stagger', 2], [0.85, 'kneel', 1]], slump: [[0.35, 'stagger', 0], [0.6, 'stagger', 1]], spin: [[0.55, 'stagger', 0]], slash: [[0.4, 'stagger', 0]] };
 const DEATH_TURN = { spin: [4.4, 0.55], slash: [2.2, 0.4] };
 // the old renderer's sprites for the poses it doesn't have (the subway view)
-const V1_POSE = { stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead' };
+const V1_POSE = { stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;

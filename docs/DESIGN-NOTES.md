@@ -218,6 +218,77 @@ prompt pack: SU1-SU4 (the subway underground), SK1-SK8 (skating and bikes), CR1-
 **Still queued from earlier notes:** two-sided stations; bank robberies and heists; helicopters (concept HE1); more
 waterfall and cliff art; the UI pass (U1-U12).
 
+## From the user's notes (2026-10-08)
+**13:33 and 16:02 (tasks #298-#329, in this order of work):** arrests and the jail (#298) and police escalation by
+stars (#299), then the robbery system (#323: hot money, a police standoff outside, limited tills, wanted level growing
+with time, takings and the kind of place, people raising their hands and throwing cash), then ambulances with stretchers
+(#313), tow trucks (#314) and traffic rerouting (#315), then the rest: drivers reacting to attacks on their car (#300),
+the gamepad's right stick aiming and the trigger firing (#301), melee blocking and sword fights (#302), grenades and more
+gun shops (#303), the interiors overhaul (#305), heists (#306), pets (#307), pool (#308), casinos and card games (#309),
+horse racing (#310), back-alley dice and cockfights (#311), surfing (#312), fully automatic guns (#318), flying (#319),
+drive-in theatres (#322), K9 units (#324), horses (#325), the desert train robbery (#326), a bigger world (#327), the
+forest wilderness (#328) and the shopping cart (#329).
+
+**18:05: feedback and design notes (the new tasks #334 on; concepts AC1-AC7, IC1-IC5, CW1-CW2, SI1, U13-U16, GO1-GO3,
+CF2 and FX2 are in the prompt pack):**
+- **Nothing gets lost:** every note goes into this file and the task list; the feature audit (#95) checks the build
+  against them.
+- **The big map at every zoom:** zoomed out, the sea fills the whole frame (or the frame fits the world): no hard edge
+  where the map's water stops.
+- **The phone and the debug menu** get the new UI too.
+- **The debug menu, organised:** tabs (me, spawn, wardrobe, world, events, travel, players), kept up to date with every
+  new feature: ride the subway, a ferry, a bus or a rideshare; spawn any vehicle (helicopters, planes, skateboards
+  when they come) and start any event. **The debug wardrobe:** every outfit and piece in the game with a live preview;
+  applying one makes it yours (progress is wiped before launch anyway).
+- **Menus on a controller:** left and right on the stick or d-pad move left and right in a menu; inside a menu the
+  d-pad never opens other things (the phone, the bag).
+- **The phone in hand:** your character holds the phone out while its menu is open.
+- **Inventory:** see and equip everything: clothes, tools and equipment, use items, and set the quick bar and the
+  radial wheel (concept U14).
+- **UX across the board:** every menu and system gets a pass for flow and layout on desktop and on phones held either
+  way (#248).
+- **The character preview** (creator and shops): turn the character round, preview animation loops, idles, sitting and
+  actions, and one button back to the default view (U15).
+- **Campsites:** no "hunting camp" signs. **Rest spots** far out in the wilds, away from anything built: a campfire
+  ring off a trail, sometimes by a view and sometimes in the middle of nowhere, beautiful and quiet (CF2).
+- **Fireflies:** rare, at night in natural areas and parks, now and then at the campfire spots (FX2).
+- **Crafting:** at a crafting table, work table or workshop (an upgrade for any owned property, and at fitting places
+  such as a lean-to by the hunting lodge or a shed), not just a menu at an NPC; it previews what you'll make, an outfit
+  on your own character (CW1, CW2).
+- **Icons** for every material, object and item you can collect (IC1-IC5).
+- **The arcade:** walk in and play simple 8-bit and Atari-style games of our own in the spirit of the classics (a rock
+  shooter for two, a maze chase, paddle tennis, descending aliens, a platformer, a side-scrolling brawler, a flappy
+  bird, a road-and-river crosser, a brick breaker, a multiplayer racer), multiplayer where possible, plus air hockey,
+  skee-ball and pinball. The machine's screen opens in front of you while your character stays standing at it.
+  Tickets buy prizes: clothes, sunglasses, a water gun, a foam blaster, a foam sword, and a remote-control car or
+  monster truck you drive like a real car while your character stands holding the remote (AC1-AC7).
+- **Fewer phones out:** NPCs filming or photographing things is a rare detail, not a crowd.
+- **Golf:** a big course where you hit the ball far and think through each hole, and golf carts to drive while you play
+  (or steal and take anywhere) (GO1-GO3).
+- **Taxis:** hail one with the action button and it pulls up to you; the action button again gets you in (not the
+  vehicle button, which throws the driver out).
+- **Police patrols:** now and then an officer on foot or a patrol car in town and the suburbs (rare, almost never in the
+  wilds), casual until they see a crime; they keep away from gang turf, and gangs don't attack cops who are just driving
+  by.
+- **Shop symbols:** a small symbol floats over each shop's entrance when you're close, saying what kind of place it is,
+  gone once you're inside (and for a moment over the person to talk to); subtle, on by default, can be turned off (SI1).
+- **Sound:** a full sound design inspired by SNES-era games that never gets repetitive or annoying: varied engines,
+  boats and weapons, ambience in nature, rain and the sea.
+- **Tabbing out on a phone** doesn't disconnect you straight away: the session waits in the background, and the idle
+  rule (about 10 minutes) still applies.
+- **Friends and crews:** add friends; form a crew before joining so you land on the same server; crew chat; crew
+  events and missions such as heists. Crews of up to 4 for now (the user, 18:20).
+- **Tabbing out (decided 18:20):** the session stays connected for 5 minutes in the background; the idle kick at 10
+  minutes applies to everyone.
+- **No skipping a taxi or rideshare ride** (18:20; done the same day).
+- **The death screen (18:38):** calling for help and then cancelling must not respawn you sooner than the normal
+  countdown, which keeps running whatever you press. On death the menu doesn't pop straight up: you see where it
+  happened while the camera slowly zooms out, then the choices come up (Call for help, Call an ambulance, Select spawn
+  point). The spawn point defaults to the last place you spawned; press nothing and the countdown respawns you there.
+- **The top of a phone held upright (18:41):** the minimap top-left with the time of day and the weather on it; cash,
+  bank and the stars anchored top-right; nothing at the very top centre, where phones like the Pixel 7 Pro have the
+  camera in the screen (the top row of buttons moves down, or out of the middle).
+
 ## Sharks [W2 stage 5]
 - Extremely rare anywhere in the sea; likeliest round the prison island (still rare).
 - Fins are seen now and then: sharks hunting near the surface.

@@ -54,7 +54,7 @@ export function setMenuBuilder(fn) { menuBuilder = fn; }
 
 export function openInterior(world, p) {
   const poi = stationPoi(world, p);
-  if (!poi || !p.conn) return;
+  if (!poi || !p.conn || p.ped.interior.kind === 'jail') return;   // (a cell: the jail screen - custody.js)
   p.menu = { poi: poi.id };
   p.conn.sendJSON(menuBuilder(world, p, poi));
 }

@@ -133,24 +133,19 @@ test('taxi: call one, it pulls up at the kerb, get in, say where to, ride there,
   assert.equal(v.taxi, undefined, 'the cab back on its rounds');
 });
 
-test('taxi: skip the ride - there at once, for the whole fare', () => {
+test('taxi: no skipping the ride (nothing to press on the way)', () => {
   const world = makeWorld();
   const { p } = joinPlayer(world, { cash: 300, bank: 0 });
   teleport(world, p.ped, 21648, 18030);
   run(world, 1);
   transit.taxiPhone(world, p, { op: 'call' });
   const v = cabRide(world, p, { x: 31792, y: 25700, label: 'Southside' });
-  const est = transit.taxiInfo(world, p).est;
   const act = findInteraction(world, p);
-  assert.match(act.label, /Skip the ride/);
+  assert.ok(act && act.passive && !/Skip/.test(act.label), `just where you're going (${act && act.label})`);
+  const at = { x: v.x, y: v.y };
   act.run();
-  assert.equal(v.taxi.st, 'there');
-  assert.ok(Math.hypot(p.ped.x - 31792, p.ped.y - 25700) < 300, 'there');
-  run(world, 3);
-  assert.ok(Math.hypot(v.x - 31792, v.y - 25700) < 300, 'and it stays put');
-  vehicles.exitVehicle(world, p.ped);
-  run(world, 1.1);
-  assert.ok(Math.abs(p.profile.cash - (300 - est)) <= 2, `charged the whole way: ${300 - p.profile.cash} vs ~${est}`);
+  assert.equal(v.taxi.st, 'ride', 'still riding');
+  assert.ok(Math.hypot(v.x - at.x, v.y - at.y) < 60, 'no jump to the end');
 });
 
 test('taxi: hail one going by; none for the wanted', () => {

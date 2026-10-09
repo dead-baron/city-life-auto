@@ -38,6 +38,8 @@ export const VEHICLE_DIMS = {
   tram: [300, 56], tugboat: [150, 64], ferry: [470, 150],
   // the island ferries' water bus (server/systems/ferries.js; the car ferry is the 'ferry' above)
   waterbus: [240, 76],
+  // the five-star response (server/systems/police.js): the FBI's black SUV, the army's olive truck
+  fbi: [104, 50], army: [120, 58],
   // country and works scenery
   tractor: [84, 54], combine: [150, 120], plane: [104, 130], excavator: [130, 60],
 };
@@ -48,6 +50,7 @@ export const VEHICLE_TALL = {
   bike: 24, policebike: 26, bicycle: 20, speedboat: 22, dinghy: 14, jetski: 16, policeboat: 34,
   cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20,
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
+  fbi: 42, army: 52,
 };
 const DEFAULT_PAINT = {
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
@@ -55,7 +58,7 @@ const DEFAULT_PAINT = {
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
   cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a',
-  jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
+  jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', fbi: '#17181d', army: '#4f5a36', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
 };
 const DEFAULT_CAB = { flatbed: '#e6e2d8', boxtruck: '#e6e2d8', dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', towtruck: '#e6e2d8' };
 
@@ -554,6 +557,7 @@ const CAR = {
   suv: { belt: 22, nose: 18, tail: 21, hood: 0.8, boot: 0.04, cab: [0.05, 0.79], roof: 42, fr: 12, br: 2.5, ci0: 2.5, ci1: 5, wheels: [0.19, 0.8], wr: 8.5, seams: [0.37, 0.6], pillars: [0.37, 0.6], z0: 5, tailUp: 6 },
   limo: { belt: 18, nose: 13, tail: 16, hood: 0.8, boot: 0.15, cab: [0.17, 0.82], roof: 32, fr: 14, br: 10, wheels: [0.13, 0.86], wr: 7.5, seams: [0.38, 0.55, 0.7], pillars: [0.4, 0.55, 0.68] },
 };
+CAR.fbi = CAR.suv;   // (the FBI's SUV: the same body, unmarked)
 // soften the game's paint list for car bodies: saturated but not neon, no paper white
 export function carPaint(hex) {
   const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(...c), mn = Math.min(...c), l = (mx + mn) / 2, dl = mx - mn;
@@ -577,14 +581,14 @@ export function vehicleModel(type, o = {}) {
   // variant bits: rack (roof rails / ladder rack / basket), box (roof box on a rack), rusty, twoTone, sunroof
   const v = (o.variant | 0) & 7, V = { rack: !!(v & 1), box: (v & 3) === 3, rusty: v >= 6, twoTone: v === 4 || v === 5, sunroof: v === 2 };
   // how strongly horizontal paint picks up the sky sheen: full on cars, faint on big flat roofs
-  const sheen = { van: 0.45, ambulance: 0.4, armored: 0.4, swat: 0.4, bus: 0.3, firetruck: 0.3, foodtruck: 0.3, tram: 0.3, ferry: 0.2, tugboat: 0.4 }[type] ?? (VEHICLE_TALL[type] > 44 ? 0.35 : 1);
+  const sheen = { van: 0.45, ambulance: 0.4, armored: 0.4, swat: 0.4, army: 0.4, bus: 0.3, firetruck: 0.3, foodtruck: 0.3, tram: 0.3, ferry: 0.2, tugboat: 0.4 }[type] ?? (VEHICLE_TALL[type] > 44 ? 0.35 : 1);
   m.look = { seed: 1 + v * 7 + (type.length * 13), sheen };
   const M = mats(m, o.paint || DEFAULT_PAINT[type] || '#808080', o);
   if (o.cab || DEFAULT_CAB[type]) { const C = paintSet(m, o.cab || DEFAULT_CAB[type]); M.cab = C.body; M.cabLower = C.lower; }
   const lit = o.lights || 0;
   const A = m.anchors;
   switch (type) {
-    case 'compact': case 'sedan': case 'taxi': case 'police': case 'sports': case 'suv': case 'limo': {
+    case 'compact': case 'sedan': case 'taxi': case 'police': case 'sports': case 'suv': case 'limo': case 'fbi': {
       const s = { ...CAR[type] };
       if (type === 'police') { s.roofMat = M.white; s.bumper = M.trim; }
       if (type === 'compact' && V.twoTone) s.roofMat = M.white;                     // two-tone roof
@@ -619,6 +623,14 @@ export function vehicleModel(type, o = {}) {
       }
       if (type === 'sedan' && V.sunroof) deco(m, M.glass, L * 0.42, b.cy - 6, s.roof - 1, L * 0.56, b.cy + 6, s.roof + 1, (x, y, z, vv, side) => side === 'z');   // sunroof
       if (type === 'limo') { deco(m, M.chrome, 0, 0, b.belt - 1, L, W, b.belt + 0.5, (x, y, z, vv, side) => side === 'y'); }
+      if (type === 'fbi') {
+        // unmarked: no light bar, the strobes hidden in the grille and at the top of the tailgate
+        for (const [x0, x1, z0, s2] of [[L - 2, L, 9, 0], [0, 2, s.tail + 3, 1]]) {
+          m.box(x0, b.cy - 7, z0, x1, b.cy - 4, z0 + 2, M.red); m.box(x0, b.cy + 4, z0, x1, b.cy + 7, z0 + 2, M.blue);
+          const xa = s2 ? x0 + 0.5 : x1 - 0.5;
+          A.siren.push([xa, b.cy - 5.5, z0 + 1, 0], [xa, b.cy + 5.5, z0 + 1, 1]);
+        }
+      }
       if (type === 'police' || type === 'taxi') A.seat = [L * 0.56, b.cy - W * 0.18, b.belt + 2];
       break;
     }
@@ -647,8 +659,8 @@ export function vehicleModel(type, o = {}) {
       A.seat = [L * 0.76, b.cy - W * 0.2, 28];
       break;
     }
-    case 'ambulance': case 'armored': case 'swat': {
-      const amb = type === 'ambulance', boxH = amb ? 54 : type === 'swat' ? 52 : 50, cabH = amb ? 44 : 42;
+    case 'ambulance': case 'armored': case 'swat': case 'army': {
+      const amb = type === 'ambulance', boxH = amb ? 54 : type === 'swat' || type === 'army' ? 52 : 50, cabH = amb ? 44 : 42;
       // the cab: a van nose; the box behind it is taller and squarer
       const s = { belt: amb ? 24 : 23, nose: amb ? 20 : 19, tail: 22, hood: 0.84, boot: 0.0, cab: [0.66, 0.89], roof: cabH, fr: 8, br: 0, ci0: 1.5, ci1: 3, wheels: [0.18, 0.8], wr: 8.5, z0: 5, seams: [0.76], pillars: [], lampW: 8, lampZ: 16, rr: 3, rf: 7, mirrors: true,
         win: (x, y, z, face) => face === 'front' || (face === 'side' && x > L * 0.74 && z > cabH - 13) };
@@ -679,11 +691,13 @@ export function vehicleModel(type, o = {}) {
         // armored and SWAT: small barred windows, riveted plates, an emblem; beacons and roof rails
         for (const wx0 of [L * 0.12, L * 0.3, L * 0.48]) deco(m, M.glass, wx0, 0, 32, wx0 + 7, W, 38, (x, y, z, vv, side) => side === 'y');
         const em = L * 0.36, ez = 22;
-        deco(m, type === 'swat' ? M.gold : M.white, em - 5, 0, ez - 5, em + 5, W, ez + 5, (x, y, z, vv, side) => side === 'y' && Math.abs(x - em) + Math.max(0, z - ez) * 0.6 + Math.max(0, ez - z) * 1.2 < 5);
+        if (type === 'army') {   // a white five-pointed star on the doors
+          deco(m, M.white, em - 6, 0, ez - 6, em + 6, W, ez + 6, (x, y, z, vv, side) => { if (side !== 'y') return false; const dx = x - em, dz = z - ez, r = Math.hypot(dx, dz), a = Math.atan2(dz, dx); return r < 5.6 * (0.52 + 0.48 * Math.pow(Math.abs(Math.cos(2.5 * (a - Math.PI / 2))), 3)); });
+        } else deco(m, type === 'swat' ? M.gold : M.white, em - 5, 0, ez - 5, em + 5, W, ez + 5, (x, y, z, vv, side) => side === 'y' && Math.abs(x - em) + Math.max(0, z - ez) * 0.6 + Math.max(0, ez - z) * 1.2 < 5);
         deco(m, M.chrome, 0, 0, 0, bx1, W, boxH, (x, y, z, vv, side) => side === 'y' && (Math.round(x) % 14 === 7 && Math.round(z) % 8 === 4));    // rivets
         if (type === 'armored') { for (const y of [2, W - 5]) { m.box(bx1 - 6, y, boxH, bx1 - 2, y + 3, boxH + 3, M.amber); A.siren.push([bx1 - 4, y + 1.5, boxH + 2, 2]); } }
         else {
-          lightbar(m, M, L * 0.75, L * 0.8, cabH, { wide: true });
+          if (type !== 'army') lightbar(m, M, L * 0.75, L * 0.8, cabH, { wide: true });   // (the army has no siren)
           for (const y of [3, W - 4]) m.box(4, y, boxH, bx1 - 4, y + 1, boxH + 3, M.trim);                                               // roof rails
           for (let x = 8; x < bx1 - 4; x += 16) m.box(x, 3, boxH + 2, x + 1, W - 3, boxH + 3, M.trim);
           m.box(L - 2, 6, 6, L, W - 6, 20, M.trim);                                                                                       // push bar

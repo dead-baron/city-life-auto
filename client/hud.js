@@ -94,8 +94,16 @@ export class HUD {
       $('rob-take').textContent = me.rob.alarm ? `ALARM! $${me.rob.take} - get out!` : me.rob.warm < 1 ? 'Hands up...' : `$${me.rob.take}`;
     } else rb.classList.add('hidden');
     // riding a train: next stop, the tunnel, the strongbox
-    const tb = $('trainbar'), tr = me.train;
-    if (tr && !me.dead) {
+    const tb = $('trainbar'), tr = me.train, cu = me.custody;
+    tb.classList.toggle('custody', !!(cu && cu.s !== 'cell' && !me.dead));
+    if (cu && cu.s !== 'cell' && !me.dead) {
+      // arrested (server custody.js): held on the ground, a car coming, walked to it, the ride to the station
+      tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry'); tb.style.borderColor = '';
+      $('tb-where').textContent = 'IN CUSTODY';
+      $('tb-next').textContent = cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? 'Cuffed · a police car is coming to take you in'
+        : cu.s === 'escort' ? 'Being walked to the police car' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`;
+      $('tb-crack').classList.add('hidden');
+    } else if (tr && !me.dead) {
       // the mail guards' warning: at the door ('door'), then the seconds left to get out (0: they're shooting)
       const warn = tr.warn ?? null;
       tb.classList.remove('hidden'); tb.classList.toggle('sub', !!tr.sub); tb.classList.toggle('warn', warn === 'door'); tb.classList.toggle('alarm', warn !== null && warn !== 'door');
@@ -131,7 +139,7 @@ export class HUD {
       $('tb-next').textContent = t.st === 'pickup' ? `On its way · about ${Math.max(5, t.eta)}s (the yellow square on your map)`
         : t.st === 'wait' ? `At the kerb · ${keyName('action')} by the cab to get in (${t.wait}s)`
           : t.st === 'dest' ? 'Where to? Set a waypoint (the map or the phone)'
-            : t.st === 'ride' ? `To ${t.to} · ${t.m} m · $${t.fare} (~$${t.est}) · ${keyName('action')}: skip the ride`
+            : t.st === 'ride' ? `To ${t.to} · ${t.m} m · $${t.fare} (~$${t.est})`
               : `${t.to} · $${t.fare} · ${keyName('vehicle')} to get out`;
       $('tb-crack').classList.add('hidden');
     } else tb.classList.add('hidden');
@@ -168,6 +176,18 @@ export class HUD {
     // fishing
     const fb = $('fishbar');
     if (me.fishing) { fb.classList.remove('hidden'); fb.classList.toggle('bite', me.fishing.bite); fb.innerHTML = me.fishing.bite ? `BITE! ${glyph('action')}` : 'Waiting for a bite...'; } else fb.classList.add('hidden');
+    // in a cell (server custody.js): the time left and the bail
+    const jl = $('jail');
+    if (cu && cu.s === 'cell' && !me.dead) {
+      jl.classList.remove('hidden');
+      const left = Math.max(0, cu.left | 0), pad = input.device === 'gamepad', kb = input.device === 'keyboard';
+      $('j-at').textContent = cu.at || '';
+      $('j-time').textContent = `Out in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      const bl = `Pay the $${cu.bail} bail${kb ? ' [B]' : pad ? ' (Y)' : ''}`;
+      if ($('j-bail').textContent !== bl) $('j-bail').textContent = bl;
+      $('j-bail').disabled = !cu.can;
+      $('j-note').textContent = cu.can ? 'From your bank, then your cash.' : `You don't have $${cu.bail} - wait it out.`;
+    } else jl.classList.add('hidden');
     // death
     const d = $('death');
     if (me.dead) {

@@ -43,7 +43,7 @@ export function weaponItem(w) {
 export function pedFrame(pose, fr = 0) {
   fr |= 0;
   if (pose === 'idle') return (fr >> 2) & 1;
-  if (pose.startsWith('move') || pose.startsWith('walk') || pose === 'carry' || pose === 'limp' || pose === 'aimw') return Math.floor(((fr % 8) + 8) % 8 * 6 / 8);
+  if (pose.startsWith('move') || pose.startsWith('walk') || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'cuffed') return Math.floor(((fr % 8) + 8) % 8 * 6 / 8);
   if (pose === 'punch' || pose === 'swing') return (fr >= 4 ? 3 : 0) + Math.min(2, Math.floor((fr & 3) * 3 / 4));
   const n = PED_POSES[pose] || 1;
   return ((fr % n) + n) % n;
@@ -69,7 +69,7 @@ export function adaptApp(app, ar = null, opt = {}) {
   const t = a.t ?? 0, tc = a.tc || '#888888', tc2 = a.tc2 || '#dddddd', l = a.l || '#334455', sh = a.sh || '#222222';
   const fem = a.h === 2 || a.h === 5 || t === 5;
   const police = t === 6 && blueish(tc) && lumOf(tc) < 0.3, medic = ar === 'medic' || (t === 6 && lumOf(tc) > 0.8), sweeper = t === 6 && !police && !medic;
-  const swat = ar === 'swat' || (t === 3 && lumOf(tc) < 0.1 && a.ht === 5);
+  const swat = ar === 'swat' || (t === 3 && lumOf(tc) < 0.1 && a.ht === 5), soldier = ar === 'soldier', agent = ar === 'agent';
   const out = { seed: H & 0xffff, skin: Math.max(0, Math.min(5, a.s ?? 1)), fem, ar, censored: !!opt.censored };
   // ---- body: the server's build (frail .. brute), a gut on some brutes and seniors
   const bd = Math.max(0, Math.min(3, a.bd ?? 1));
@@ -81,7 +81,7 @@ export function adaptApp(app, ar = null, opt = {}) {
   const hc = ar === 'senior' ? pick(['#cfcfcf', '#e8e8e8', '#a8a8a8'], 3) : a.hc || '#2a1a10';
   let style;
   if (a.h === 3) style = fem ? 'bun' : 'bald';
-  else if (a.h === 4) style = ar === 'executive' || ar === 'cop' || ar === 'senior' || ar === 'medic' || police ? 'slick' : 'mohawk';
+  else if (a.h === 4) style = ar === 'executive' || ar === 'cop' || ar === 'senior' || ar === 'medic' || agent || police ? 'slick' : 'mohawk';
   else if (a.h === 2) style = pick(['long', 'wavy', 'long', 'braids'], 4);
   else if (a.h === 5) style = pick(['bun', 'pony', 'bun'], 4);
   else if (fem) style = a.h === 1 ? 'pony' : 'bob';
@@ -99,6 +99,7 @@ export function adaptApp(app, ar = null, opt = {}) {
   else if (t === 2) top.kind = 'hoodie';
   else if (t === 3) {
     if (swat) Object.assign(top, { kind: 'tactical', color: '#2a2c32' });
+    else if (soldier) Object.assign(top, { kind: 'tactical', color: tc, color2: tc2, pattern: 'camo' });
     else if (ar === 'construction' || lumOf(tc) > 0.45) Object.assign(top, { kind: 'hivis', color2: pick(['charcoal', '#2a4a8a', '#4a4a52', 'navy'], 8) });
     else Object.assign(top, { kind: 'vest', color2: ar === 'syndicate' ? 'white' : pick(['white', 'charcoal', '#c8c0b0'], 8), pattern: 'quilt' });
   } else if (t === 4) top.kind = ar === 'drunk' ? pick(['coat', 'cardigan', 'flannel'], 9) : ar === 'casual' || ar === 'player' ? pick(['cardigan', 'jacket', 'flannel', 'cardigan'], 9) : 'cardigan';
@@ -124,14 +125,15 @@ export function adaptApp(app, ar = null, opt = {}) {
   else if (ar === 'casual' || ar === 'player') { const q = r(12); if (q < 0.14) bk = 'shorts'; else if (q < 0.28 && !jeansy) bk = 'cargo'; else if (q < 0.36 && fem) bk = 'skirt'; }
   else if (ar === 'syndicate' || ar === 'mugger') bk = 'track';
   else if (ar === 'construction') bk = jeansy ? 'jeans' : 'cargo';
-  else if (swat) bk = 'cargo';
+  else if (swat || soldier) bk = 'cargo';
   out.bottom = { kind: bk, color: l };
+  if (soldier) out.bottom.pattern = 'camo';
   if (bk === 'track') out.bottom.stripe = ar === 'syndicate' ? (a.htc && lumOf(a.htc) > 0.2 ? a.htc : '#c8262b') : pick(['white', '#c8262b', '#e8e8e8'], 13);
   if (bk === 'jeans' && (ar === 'drunk' || (ar === 'player' && r(14) < 0.2))) out.bottom.pattern = 'ripped';
   // ---- shoes
   const sl = lumOf(sh);
   out.shoes = sh;
-  out.shoeKind = t === 5 ? 'heel' : swat || ar === 'construction' || sh === '#6b4a2a' ? 'boot' : sl > 0.6 || /^#c8262b/i.test(sh) ? 'sneaker' : ar === 'drunk' || (ar === 'mugger' && r(15) < 0.5) ? 'boot' : 'shoe';
+  out.shoeKind = t === 5 ? 'heel' : swat || soldier || ar === 'construction' || sh === '#6b4a2a' ? 'boot' : sl > 0.6 || /^#c8262b/i.test(sh) ? 'sneaker' : ar === 'drunk' || (ar === 'mugger' && r(15) < 0.5) ? 'boot' : 'shoe';
   if (ar === 'athlete' || ar === 'syndicate') out.shoeKind = 'sneaker';
   // ---- headwear
   const ht = a.ht || 0, htc = a.htc || '#222222';
@@ -156,9 +158,11 @@ export function adaptApp(app, ar = null, opt = {}) {
     out.bottom = { kind: 'pants', color: '#2a2622' }; out.shoeKind = 'boot'; out.shoes = '#3a2a1e'; out.glasses = null; out.chain = false; out.tattoo = false;
   }
   if (swat) { out.gloves = '#1a1a1e'; out.hat = { kind: 'helmet', color: '#1e2024' }; }
+  else if (soldier) { out.gloves = '#3a3a2a'; out.hat = { kind: 'helmet', color: a.htc || '#4f5a36' }; out.beard = undefined; }
+  else if (agent) { out.glasses = 'sun'; out.carry = undefined; out.beard = undefined; }
   else if (medic) out.gloves = '#5a8ad8';
   else if (ar === 'construction' && r(21) < 0.5) out.gloves = '#c8a050';
-  if (!out.carry && !swat && !police) {
+  if (!out.carry && !swat && !police && !soldier && !agent) {
     const q = r(22);
     if (ar === 'casual' || ar === 'player') { if (q < 0.16 && ar === 'casual') out.carry = pick(['coffee', 'phone', 'shopping', 'bag', 'phone'], 23); else if (q < 0.34) out.back = 'backpack'; }
     else if (ar === 'athlete' && q < 0.3) out.carry = 'phone';

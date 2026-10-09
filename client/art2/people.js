@@ -40,7 +40,7 @@ export const PERSON_CAM = { elevation: 35, zScale: CA };          // world px of
 // seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car, the ground
 // (by a campfire, knees up)
 export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3 };
-export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2, sitlow: 2,
+export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2, sitlow: 2, cuffed: 6,
   // hit reactions: a stagger (0-1 knocked back, 2-3 shoved forward), a limp, crawling on the stomach, down on the face or the
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
   stagger: 4, limp: 6, crawl: 4, downF: 2, downB: 2, deadF: 1, deadS: 1 };
@@ -340,6 +340,10 @@ function rig(D, A, pose, f, kind, acc) {
   else if (pose === 'carry') {
     gait(D, P, 0, f / 6, false); P.lean = -0.05; P.acc = false;
     P.hands = (S) => { for (const [k, s] of [['L', -1], ['R', 1]]) { P['h' + k] = vadd(S.chest, mv(S.SP, [s * 6.6, 7.0, -3.8])); P['el' + k] = [s, -0.4, -0.6]; P['open' + k] = 1; } };
+  } else if (pose === 'cuffed') {
+    // hands cuffed behind the back (server custody.js): a walk with no arm swing, the head bowed a little
+    gait(D, P, 0, f / 6, false); P.acc = false; P.lean = 0.1; P.headPitch = 0.16;
+    P.hands = (S) => { for (const [k, s] of [['L', -1], ['R', 1]]) { P['h' + k] = vadd(S.pel, mv(S.PF, [s * 1.1, -4.4, 2.6])); P['el' + k] = [s, -0.8, 0.1]; } };
   } else if (pose === 'handsup') {
     P.acc = false; P.breath = 0.3;
     P.hands = (S) => { for (const [k, s] of [['L', -1], ['R', 1]]) { P['h' + k] = vadd(S['sh' + k], [s * 4.2, 1.6, 15.6 + (f ? 0.6 : 0)]); P['el' + k] = [s, 0, -0.3]; P['open' + k] = 1; } };
@@ -662,6 +666,9 @@ function wardrobe(A, D, TF, seed) {
   const hiv = cloth('#e8ecea');
   const bag = A.carry === 'bag' || A.carry === 'purse';
   const sleeve = T.vest ? (T.hivis ? cloth(A.top?.color2 || 'charcoal') : top2) : T.bib || T.apron ? top2 : top;
+  // woodland camouflage (the army: game/peds.js): blotches in model space, so they run on across the seams
+  const CAMO = A.top?.pattern === 'camo' || A.bottom?.pattern === 'camo' ? [cloth('#39432a'), cloth('#76704c'), cloth('#25261e')] : null;
+  const camo = (Q) => { const n = hash(Math.floor(Q.X / 2.6), Math.floor(Q.Y / 2.6) + Math.floor(Q.Z / 2.2) * 7, seed + 31); return n < 0.22 ? CAMO[0] : n < 0.36 ? CAMO[1] : n > 0.86 ? CAMO[2] : null; };
   // ---- torso (chest, waist, shoulder bar, belly, bust, the shirt part of the pelvis)
   W.torso = (Q) => {
     tco(TF, Q);
@@ -718,6 +725,7 @@ function wardrobe(A, D, TF, seed) {
     if (T.hem && z < D.waistUp - 2.6 + (tk === 'jacket' ? 0 : 0.4)) Q.k -= 0.15;
     if (T.gloss) Q.gloss = T.gloss;
     if (T.swimsuit && z < D.waistUp - 1) R = top;
+    if (R === top && A.top?.pattern === 'camo') return camo(Q) || R;
     return R;
   };
   // the pelvis: the shirt's hem, a belt, then the trousers (or the dress, a coat's tails, swimwear)
@@ -749,6 +757,7 @@ function wardrobe(A, D, TF, seed) {
       if (T.fur && along > 0.86) { Q.k += 0.15; return cloth('#efe6d4'); }
       if (T.hivis && Math.abs(along - 0.3) < 0.04) return hiv;
       if (T.check) { const a = Math.floor(along * 9), b = Math.floor((Q.l2 + 1) * 1.6); if ((a + b) & 1) Q.k -= 0.22; }
+      if (sleeve === top && A.top?.pattern === 'camo') return camo(Q) || sleeve;
       return sleeve;
     }
     if (slv > 0 && slv < 1 && along < slv + 0.03) Q.k -= 0.18;           // the sleeve's shadow on the arm
@@ -774,6 +783,7 @@ function wardrobe(A, D, TF, seed) {
     if (along > 0.93) Q.k -= 0.12;                                       // the trouser cuff
     if (tk === 'tactical' && Math.abs(along - 0.5) < 0.08 && Q.l2 > 0.3) return cloth('#30343a');   // knee pads
     if (tk === 'uniform' && side > 0.85) Q.k -= 0.18;
+    if (A.bottom?.pattern === 'camo') return camo(Q) || bot;
     return bot;
   };
   // shoes: sneakers (white rubber sole, laces), leather shoes, boots, heels, sandals, bare feet
@@ -1297,7 +1307,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS'].includes(pn)) kind = null;
+  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS'].includes(pn)) kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A), P = rig(D, A, pn, f, kind, acc);

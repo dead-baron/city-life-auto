@@ -1,8 +1,8 @@
 // Two ways out when a character is wedged somewhere it can't walk out of:
 //  * Unstuck: stand still for UNSTUCK_S and you're nudged to the nearest open ground (a few metres,
 //    never far). Not while wanted, not in or just after a fight - it's no escape hatch.
-//  * Surrender: give up on the spot. A wanted player turns themself in (busted: fined, contraband
-//    taken, back out at the police station); anyone else collapses and wakes up like any death.
+//  * Surrender: give up on the spot. A wanted player turns themself in (straight to the cells at the nearest station:
+//    fined, contraband taken, bail or wait - custody.js); anyone else collapses and wakes up like any death.
 // Either way nothing is gained over playing it out.
 import { K, T, MAP_W, MAP_H } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
@@ -24,6 +24,7 @@ function calmFor(world, p) {
 export function canUnstick(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not right now.';
+  if (p.custody) return 'Not in custody.';
   if (ped.ride) return 'Not during a ride.';
   if (ped.vehId || ped.onTrain || ped.hidden) return 'Only on foot.';
   if (p.wanted > 0) return 'Not while you\'re wanted - lose the cops first, or surrender.';
@@ -131,6 +132,7 @@ export function safeSpot(map, x, y) {
 export function surrender(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not right now.';
+  if (p.custody) return p.custody.stage === 'cell' ? 'You\'re in a cell - wait it out, or pay the bail.' : 'The police already have you.';
   if (ped.ride) return 'Not during a ride.';
   if (ped.hidden) return 'Step outside first.';
   if (ped.onTrain) return 'Get off the train first.';

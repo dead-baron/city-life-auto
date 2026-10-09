@@ -46,6 +46,7 @@ import * as ferries from './ferries.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED } from '../../shared/rules.js';
 import * as revive from './revive.js';
+import * as custody from './custody.js';
 import * as devmode from '../devmode.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
@@ -226,7 +227,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
   homes.protect(world, ped); // ~2 s of blinking: move freely, can't shoot or be hurt
   p.faction = FACTION.CITIZEN; p.badge = false; p.hunter = false;
   p.heat = 0; p.wanted = 0; p.flareUntil = 0; p.disguised = false;
-  p.respawnAt = 0;
+  p.respawnAt = 0; p.policeKill = false; p.custody = null;
   p.meDirty = true;
   p.known = new Map();
   return ped;
@@ -235,6 +236,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
 export function leave(world, p) {
   if (!p) return;
   if (p.devMode) devmode.exit(world, p, true); // dev mode ends with the session (progress made in it is kept)
+  custody.onLeave(world, p);   // (logging out in custody: booked on the spot)
   p.conn = null;
   p.inputQ = [];
   p.lastInput = { seq: p.lastInput.seq, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
@@ -280,7 +282,7 @@ export function queueInput(p, inp) {
 
 export function pedMods(world, ped) {
   const now = world.time;
-  const canMove = !ped.dead && now >= ped.downUntil && now >= ped.stunUntil && !ped.vehId && !ped.hidden && !ped.onTrain;
+  const canMove = !ped.dead && now >= ped.downUntil && now >= ped.stunUntil && !ped.vehId && !ped.hidden && !ped.onTrain && !ped.cuffed;
   let speedMul = 1;
   if (ped.carrying) speedMul *= 0.6; // GDD: carrying scales walking speed down by 40%
   if (ped.buffs.energy > now) speedMul *= 1.15;
@@ -322,6 +324,7 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
+  if (ped.cuffed || custody.inCell(p)) return;   // (in custody: custody.js moves them; the jail screen has the bail)
   if (pressed & IN.LIGHT) economy.toggleLight(world, p); // the flashlight (in the bag, no hand slot)
   if (ped.hidden) { // inside your home: E brings up the home menu (Leave is on it); on a ride: nothing to do but look
     if ((pressed & (IN.ACTION | IN.VEHICLE)) && !ped.ride) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
@@ -431,7 +434,7 @@ function tackle(world, ped) {
 // Context-sensitive interaction (GDD §13: E key manages context interactions)
 export function findInteraction(world, p) {
   const ped = p.ped;
-  if (!ped || ped.dead) return null;
+  if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
@@ -468,6 +471,10 @@ export function findInteraction(world, p) {
     return { label: 'Set crate down', run: () => cargo.dropCrate(world, ped) };
   }
 
+  {   // a prisoner you took, a police car of yours by them: in the back with them
+    const load = custody.interaction(world, p);
+    if (load) return load;
+  }
   if (p.badge) {
     const target = law.arrestTarget(world, p);
     if (target) return { label: target.dead ? 'Book the suspect\'s body' : `Cuff ${target.name || 'suspect'}`, run: () => law.arrest(world, ped, target) };
@@ -544,10 +551,13 @@ export function crateName(c) {
 export function onPedDeath(world, ped, killer, cause) {
   const p = ped.player;
   if (!p) return;
+  custody.onDeath(world, p);
   revive.clearDown(world, p);
   p.channel = null; p.giveTo = null;
   p.downWanted = p.wanted > 0 ? { wanted: p.wanted, heat: p.heat, city: p.cityBounty || 0 } : null; // restored if someone revives you
   p.respawnAt = world.time + RESPAWN_SECONDS;
+  // killed by the police (an officer, SWAT, the FBI, the army, an officer on duty): you wake up in the nearest hospital
+  p.policeKill = !!killer && !!((killer.npc && killer.npc.role === 'cop') || (killer.player && killer.player.badge));
   p.respawnChoice = homes.defaultChoice(world, p, { x: ped.x, y: ped.y }); // pre-selected; change it on the death screen
   p.deathCause = cause || 'You flatlined.';
   p.profile.stats.deaths++;
@@ -642,7 +652,7 @@ export function buildMe(world, p) {
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, job: places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
+    prompt: p.prompt, custody: custody.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

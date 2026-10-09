@@ -11,6 +11,7 @@ import * as npc from './npc.js';
 import * as phone from './phone.js';
 import * as events from './events.js';
 import * as bounties from './bounties.js';
+import * as custody from './custody.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
@@ -36,9 +37,10 @@ export const CRIMES = {
   poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true, sev: 1 },
   robbery:     { heat: 30, label: 'Armed robbery', felony: true, sev: 1.5 },
   trainRobbery: { heat: 50, label: 'Train robbery', felony: true, sev: 1.5 },
+  escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
 };
 
-import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
+import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
   WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, REPORT_COOLDOWN_S } from '../../shared/rules.js';
 import { hash2 } from '../../shared/rng.js';
 import { PAINTS } from '../../shared/vehicles.js';
@@ -396,7 +398,7 @@ export function update(world, dt) {
   for (const p of world.players.values()) {
     const ped = p.ped;
     if (!ped || ped.dead) continue;
-    if (p.wanted > 0) {
+    if (p.wanted > 0 && !p.custody) {   // (cuffed: the police have them - custody.js)
       let seen = false;
       const sight = sightFactor(world.map, ped.x, ped.y, !ped.vehId);
       if (!ped.hidden) for (const e of world.query(ped.x, ped.y, SIGHT_PX * sight, K.PED)) {
@@ -487,7 +489,7 @@ export function radarFor(world, p) {
 // The officer still has to walk up and cuff them (or book the body).
 export function arrestable(world, e) {
   const now = world.time;
-  if (e.vehId) return false;
+  if (e.vehId || e.cuffed || (e.player && e.player.custody)) return false;
   if (e.dead) return !!(e.bookable || (e.npc && e.npc.flagged && e.npc.role !== 'gang'));
   if (!isFlagged(world, e) || (e.npc && e.npc.role === 'gang')) return false;
   return now < e.downUntil || now < e.stunUntil || !!e.passedOut;
@@ -512,7 +514,7 @@ export function subdue(world, by, target) {
   target.downUntil = Math.max(target.downUntil || 0, world.time + SUBDUE_S);
   target.subduedBy = by.id;
 }
-export function isSuspectFor(world, p, e) { return isFlagged(world, e) && !(e.npc && e.npc.role === 'gang') && e !== p.ped; }
+export function isSuspectFor(world, p, e) { return isFlagged(world, e) && !(e.npc && e.npc.role === 'gang') && e !== p.ped && !e.cuffed; }
 
 // Criminals an officer can see right now (ids for the subtle overhead marker).
 export function suspectsFor(world, p) {
@@ -560,37 +562,28 @@ function bookBody(world, cop, body) {
   store.touch();
 }
 
+// Cuffing someone. A wanted player is taken into custody (custody.js: held, walked to a car, driven to the station and
+// booked - the fine and the confiscations come in the cell); someone with a price on their head but nothing on their
+// record is taken in for questioning and let go. The arresting player is paid on the cuffs. No cop: turning yourself in
+// (unstuck.js surrender) - straight to the cells.
 export function arrest(world, cop, target) {
-  const now = world.time;
   if (target.dead) { bookBody(world, cop, target); return; }
   if (target.player) {
     const t = target.player;
+    if (t.custody) return;
+    if (t.wanted <= 0) { questioned(world, cop, target); return; }
     const stars = Math.max(1, t.wanted);
-    const fine = Math.min(t.profile.cash, BUST_FINE_PER_STAR * stars);
-    t.profile.cash -= fine;
-    for (const id of ['smg', 'rocket']) if (t.profile.weapons[id] !== undefined) delete t.profile.weapons[id];
-    for (const id of Object.keys(t.profile.inventory || {})) if (ITEMS[id] && ITEMS[id].illegal) delete t.profile.inventory[id];   // (ghostglass caps)
-    if (target.carrying) { const c = world.get(target.carrying); target.carrying = 0; if (c) world.remove(c); }
-    if (target.weapon === 'smg' || target.weapon === 'rocket') target.weapon = 'fists';
-    const reward = ARREST_REWARD_PER_STAR * stars;
     if (cop && cop.player) {
+      const reward = ARREST_REWARD_PER_STAR * stars;
       bounties.collect(world, cop.player, t, 'arrest');
-      cop.player.profile.cash += reward + fine;
+      cop.player.profile.cash += reward;
       cop.player.profile.samaritan += 5 * stars;
       cop.player.profile.stats.arrests++;
       if (cop.player.badge) addPolicePts(world, cop.player, 10 * stars);
-      world.notify(cop.player, `Arrested ${t.name}! +$${reward + fine}, +${5 * stars} Samaritan`, 'good');
+      world.notify(cop.player, `Arrested ${t.name}! +$${reward}, +${5 * stars} Samaritan`, 'good');
       cop.player.meDirty = true;
     }
-    clearWanted(world, t);
-    t.profile.peakWanted = 0;
-    t.disguised = false;
-    const s = world.map.spawns.police;
-    events.feed(world, { kind: 'arrest', text: `${t.name} was busted${cop?.player ? ' by ' + cop.player.name : ''}`, x: target.x, y: target.y });
-    target.x = s.x; target.y = s.y; target.vx = 0; target.vy = 0;
-    target.stunUntil = now + 1; target.downUntil = 0;
-    world.notify(t, `BUSTED${cop?.player ? ' by ' + cop.player.name : ''}. Fined $${fine}; contraband and illegal weapons confiscated.`, 'bad');
-    t.meDirty = true;
+    if (cop) custody.start(world, t, cop); else custody.surrender(world, t);
     store.touch();
   } else {
     // NPC suspect taken into custody (a mugger still holding the purse drops it first)
@@ -605,6 +598,18 @@ export function arrest(world, cop, target) {
       cop.player.meDirty = true;
     }
   }
+}
+// Not wanted, only a price on their head: questioned at the nearest station and let go (the officer collects any contract
+// they took on them).
+function questioned(world, cop, target) {
+  const t = target.player, now = world.time;
+  if (cop && cop.player) { bounties.collect(world, cop.player, t, 'arrest'); cop.player.meDirty = true; }
+  const st = custody.nearestStation(world, target.x, target.y);
+  if (target.vehId) target.vehId = 0;
+  if (st) { target.x = st.x; target.y = st.y; target.vx = 0; target.vy = 0; world.place(target); t.teleportAt = now; }
+  target.stunUntil = now + 1; target.downUntil = 0;
+  world.notify(t, `Taken in for questioning${cop && cop.player ? ' by ' + cop.player.name : ''} and let go.`, 'info');
+  t.meDirty = true;
 }
 
 export function goOnDuty(world, p) {

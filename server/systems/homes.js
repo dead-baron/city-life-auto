@@ -101,14 +101,22 @@ export function sell(world, p, home) {
 // ---- respawn ------------------------------------------------------------------
 export function spawnOptions(world, p) {
   const opts = world.map.hospitals.map((h, i) => ({ id: `h:${i}`, label: h.name, kind: 'hospital' }));
+  if (p.policeKill) return opts;   // (killed by the police: a hospital - custody.js / players.onPedDeath)
   for (const h of ownedHomes(world, p.profile)) opts.unshift({ id: `home:${h.id}`, label: h.name, kind: 'home' });
   return opts;
+}
+// the hospital nearest a spot ('h:<i>')
+function nearestHospital(world, pos) {
+  let best = 0, bd = Infinity;
+  world.map.hospitals.forEach((h, i) => { const d = Math.hypot(h.x - pos.x, h.y - pos.y); if (d < bd) { bd = d; best = i; } });
+  return `h:${best}`;
 }
 
 // The pre-selected wake-up spot shown on the death screen: your chosen home, else a random
 // hospital away from where you died (same rule resolveSpawn uses).
 export function defaultChoice(world, p, deathPos) {
   const prof = p.profile;
+  if (p.policeKill && deathPos) return nearestHospital(world, deathPos);   // killed by the police: the nearest hospital
   if (prof.spawnHome != null && world.homeOwner.get(prof.spawnHome) === prof.pid) return `home:${prof.spawnHome}`;
   const hs = world.map.hospitals;
   let cands = hs.map((h, i) => ({ h, i })).filter(({ h }) => h.name !== p.lastSpawnName);
@@ -121,6 +129,7 @@ export function defaultChoice(world, p, deathPos) {
 export function resolveSpawn(world, p, choice, deathPos) {
   const prof = p.profile;
   const hs = world.map.hospitals;
+  if (p.policeKill && !(choice && choice.startsWith('h:'))) choice = deathPos ? nearestHospital(world, deathPos) : null;   // (no waking at home)
   if (choice && choice.startsWith('home:')) {
     const h = world.map.homes[Number(choice.slice(5))];
     if (h && world.homeOwner.get(h.id) === prof.pid) return { x: h.x, y: h.y + 8, name: h.name };
@@ -129,7 +138,7 @@ export function resolveSpawn(world, p, choice, deathPos) {
     const h = hs[Number(choice.slice(2))];
     if (h) return h;
   }
-  if (prof.spawnHome != null && world.homeOwner.get(prof.spawnHome) === prof.pid) {
+  if (prof.spawnHome != null && world.homeOwner.get(prof.spawnHome) === prof.pid && !p.policeKill) {
     const h = world.map.homes[prof.spawnHome];
     return { x: h.x, y: h.y + 8, name: h.name };
   }

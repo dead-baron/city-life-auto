@@ -1,7 +1,7 @@
 // Pedestrian AI (GDD §10): demographic spawning around players, sidewalk wandering,
 // reflex dive-roll evasion, fight-or-flight temperaments, syndicate gangs in turf,
 // passed-out boozers, rain umbrellas, and the Snatch-and-Grab street event (§12).
-import { K, T, WEATHER } from '../../shared/constants.js';
+import { K, T, WEATHER, TILE, MAP_W, MAP_H } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { pedStep } from '../../shared/physics.js';
 import { isTurf, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js';
@@ -67,6 +67,56 @@ export function seek(ped, tx, ty, run = false, speedScale = 1) {
   const d = Math.hypot(dx, dy) || 1;
   const s = Math.min(1, d / 24) * speedScale;
   return { bits: run ? IN.SPRINT : 0, mx: (dx / d) * s, my: (dy / d) * s, aim: Math.atan2(dy, dx) };
+}
+
+// The walk-in (map.js buildInteriors: shops, banks, police stations...) a point is in, with its unit's door: x, the point
+// just inside the doorway (inY) and the point just outside it (outY). Null outside every walk-in.
+const DOOR_OFF = 1.6 * TILE;
+export function walkInAt(m, x, y) {
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H || !m.bld) return null;
+  const b = m.buildings[m.bld[ty * MAP_W + tx]], wi = b && b.walkIn;
+  if (!wi || tx < wi.x0 || tx > wi.x1 || ty < wi.y0 - 1 || ty > wi.y1 + 1) return null;   // (the floor, and the doorway)
+  let u = null, bd = Infinity;
+  for (const q of wi.units) { const d = tx < q.x0 ? q.x0 - tx : tx > q.x1 ? tx - q.x1 : 0; if (d < bd) { bd = d; u = q; } }
+  if (!u) return null;
+  const wy = (u.door.ty + 0.5) * TILE, s = wi.south ? 1 : -1;
+  return { u, x: (u.door.tx + u.door.w / 2) * TILE, inY: wy - s * DOOR_OFF, outY: wy + s * DOOR_OFF };
+}
+// Where to head on foot for (x, y): straight there when the way is open; when walls are in the way and a walk-in's door
+// is the way through (out of the one you're in, into the one they're in), the door first. There's no path finding on
+// foot - this is for the police going in after someone, and walking a prisoner out to the car.
+// Someone on foot pressing into something they can't get past (a parked car or bike, a corner) steps aside for a moment,
+// one way and then, if that didn't do it, the other: there's no path finding on foot, so this is how they get round
+// things. Called with the walk input just before pedStep; returns the input (changed while stepping aside).
+const STUCK_S = 0.6, SIDE_S = 0.7;
+export function sidestep(world, ped, inp, dt) {
+  const n = ped.npc;
+  if (!n) return inp;
+  const now = world.time, moved = Math.hypot(ped.x - (n.lastX ?? ped.x), ped.y - (n.lastY ?? ped.y));
+  n.lastX = ped.x; n.lastY = ped.y;
+  const want = Math.hypot(inp.mx, inp.my);
+  if ((n.sideUntil || 0) > now && want > 0.1) { inp.mx = n.sideX; inp.my = n.sideY; return inp; }
+  n.stuckT = want > 0.3 && moved < 40 * dt ? (n.stuckT || 0) + dt : 0;
+  if (n.stuckT > STUCK_S) {
+    n.stuckT = 0; n.sideSign = -(n.sideSign || -1);
+    const fx = inp.mx / want, fy = inp.my / want, s = n.sideSign;
+    n.sideX = -fy * s * 0.95 + fx * 0.3; n.sideY = fx * s * 0.95 + fy * 0.3; n.sideUntil = now + SIDE_S;
+    inp.mx = n.sideX; inp.my = n.sideY;
+  }
+  return inp;
+}
+
+const DOOR_ALIGN = 10;   // px off the door's middle that still goes through square (a body is wider than a ray)
+export function footWay(world, e, x, y) {
+  const m = world.map;
+  if (m.los(e.x, e.y, x, y)) return { x, y };
+  const from = walkInAt(m, e.x, e.y), to = walkInAt(m, x, y);
+  // out: square up to the door on the inside, then straight out
+  if (from && (!to || to.u !== from.u)) return { x: from.x, y: Math.abs(e.x - from.x) < DOOR_ALIGN ? from.outY : from.inY };
+  // in: square up to the door on the outside, then straight in
+  if (to && (!from || from.u !== to.u)) return { x: to.x, y: Math.abs(e.x - to.x) < DOOR_ALIGN && Math.abs(e.y - to.outY) < DOOR_OFF ? to.inY : to.outY };
+  return { x, y };
 }
 
 function walkMods(world, ped, factor) {

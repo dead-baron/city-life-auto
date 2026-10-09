@@ -37,7 +37,8 @@ export function newPedState(x, y) {
   return { x, y, a: 0, vx: 0, vy: 0, stamina: PED.staminaMax, rollT: 0, rdx: 0, rdy: 0, prevBits: 0 };
 }
 
-// mods: { speedMul, canMove, canSprint, regenMul, staminaMax }
+// mods: { speedMul, canMove, canSprint, regenMul, staminaMax, drainMul (sprinting wears them out this much: officers on a
+// chase last longer) }
 export const TUMBLE_FRICTION = 2.2;
 export const AIR_FRICTION = 0.35;   // flung out of a car: barely slows until you hit the ground
 export const SWIM_SPEED = 0.42;     // swimming speed vs walking
@@ -84,7 +85,7 @@ export function pedStep(s, inp, dt, map, mods) {
         s.vx += (tvx - s.vx) * k;
         s.vy += (tvy - s.vy) * k;
         if (Math.hypot(s.vx, s.vy) < 3 && ml < 0.02) { s.vx = 0; s.vy = 0; }
-        if (sprint && ml > 0.1) s.stamina = Math.max(0, s.stamina - PED.sprintDrain * dt);
+        if (sprint && ml > 0.1) s.stamina = Math.max(0, s.stamina - PED.sprintDrain * (mods.drainMul ?? 1) * dt);
         else s.stamina = Math.min(smax, s.stamina + PED.regen * (mods.regenMul || 1) * dt);
         if (bits & IN.AIMING) s.a = inp.aim;
         else {
@@ -99,7 +100,7 @@ export function pedStep(s, inp, dt, map, mods) {
         const k = 1 - Math.exp(-PED.accel * dt);
         s.vx += (mx * spd - s.vx) * k;
         s.vy += (my * spd - s.vy) * k;
-        if (sprint) s.stamina = Math.max(0, s.stamina - PED.sprintDrain * dt);
+        if (sprint) s.stamina = Math.max(0, s.stamina - PED.sprintDrain * (mods.drainMul ?? 1) * dt);
         else s.stamina = Math.min(smax, s.stamina + PED.regen * (mods.regenMul || 1) * dt);
         if (bits & IN.AIMING) s.a = inp.aim;
         else if (ml > 0.15) s.a = Math.atan2(my, mx);

@@ -635,8 +635,12 @@ test('arrests: suspect must be knocked out, officer walks up to cuff; bodies are
   teleport(w, cop.ped, crook.ped.x + 30, crook.ped.y);
   const act = players.findInteraction(w, cop);
   assert.match(act.label, /Cuff/);
+  const paid = cop.profile.cash;
   act.run();
-  assert.equal(crook.wanted, 0, 'busted');
+  assert.ok(crook.custody && crook.custody.stage === 'held' && crook.ped.cuffed, 'cuffed: in custody (custody.js takes it from here)');
+  assert.ok(cop.profile.cash > paid, 'the officer is paid on the cuffs');
+  assert.ok(crook.wanted >= 2, 'still wanted until they are booked');
+  assert.equal(law.arrestTarget(w, cop), null, 'nobody to cuff twice');
   // a dead wanted suspect's body still needs booking
   const crook2 = joinPlayer(w).p;
   teleport(w, crook2.ped, cop.ped.x + 30, cop.ped.y);
@@ -989,7 +993,7 @@ test('gangs vs police: left alone unless provoked; speeding cop or cop gunfire s
 
 test('unstuck: hold still and you are nudged to open ground; refused while wanted or fighting; surrender', async () => {
   const unstuck = await import('../server/systems/unstuck.js');
-  const { UNSTUCK_S, UNSTUCK_CALM_S } = await import('../shared/rules.js');
+  const { UNSTUCK_S, UNSTUCK_CALM_S, JAIL_S } = await import('../shared/rules.js');
   const w = makeWorld();
   const { p, prof } = joinPlayer(w, { cash: 300 });
   // wedged inside a building
@@ -1010,12 +1014,17 @@ test('unstuck: hold still and you are nudged to open ground; refused while wante
   p.ped.lastHitAt = w.time - UNSTUCK_CALM_S - 1;
   p.wanted = 2; p.heat = 40;
   assert.ok(unstuck.request(w, p), 'refused while wanted');
-  // surrender while wanted = turn yourself in (fined, wanted cleared, alive)
+  // surrender while wanted = turn yourself in: straight to a cell (fined, wanted cleared, alive), out when the time's up
   unstuck.surrender(w, p);
   assert.equal(p.wanted, 0);
   assert.ok(!p.ped.dead);
   assert.ok(prof.cash < 300, 'fined');
+  assert.ok(p.custody && p.custody.stage === 'cell' && p.ped.hidden, 'in a cell');
+  assert.match(unstuck.surrender(w, p), /cell/, 'no surrendering from a cell');
+  run(w, JAIL_S + 1);
+  assert.ok(!p.custody && !p.ped.hidden, 'let out');
   // surrender otherwise = a death like any other
+  p.ped.protectUntil = 0;
   unstuck.surrender(w, p);
   assert.ok(p.ped.dead);
 });

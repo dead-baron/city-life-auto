@@ -22,6 +22,28 @@ export const POLICE_RANKS = [
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;
 export const ARREST_REWARD_PER_STAR = 150;
+// Arrests (server/systems/custody.js; design notes 2026-10-08): cuffed, a wanted player is held face down on the ground
+// a few seconds, walked to a police car that's close by (or one is sent for them), driven to the nearest station and
+// booked into a cell - only then fined and stripped of their contraband and illegal guns. In the cell: pay the bail to
+// walk out now, or wait it out. Killing the officer holding them, or the car being blown up, wrecked in a bad crash or
+// taken off the police, sets them free - still wanted, and wanted more for escaping.
+export const HOLD_S = 4;               // held face down this long before they're walked to a car
+export const ESCORT_PX = 650;          // a police car this close with a seat free takes them in; else one is sent
+export const TRANSPORT_WAIT_S = 45;    // ...and if none has them in the back in this long, they're taken in anyway
+export const RIDE_MAX_S = 150;         // a ride to the station that takes longer than this (stuck, lost) gets there anyway
+export const JAIL_S = 60;              // in the cell this long...
+export const BAIL_PER_STAR = 100;      // ...or out now for this much a star (from the bank, then cash)
+export const GUARD_PX = 420;           // a player officer who leaves their prisoner further away than this loses them
+export const BREAKOUT_IMPACT = 380;    // a crash at least this hard (closing speed, px/s) can throw the prisoner out
+export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in themselves earns this much more again
+// How hard the police come at you, by stars (server/systems/police.js; design notes 2026-10-08): 1-2 they chase you
+// down and tackle you; 3 tasers, a few officers with pistols (and all of them once you shoot at the police); 4 they open
+// fire, still diving at you up close; 5 the FBI, SWAT and now and then the army.
+export const TACKLE_PX = 95;           // an officer this close on foot dives at you...
+export const TACKLE_DOWN_S = 2.5;      // ...and a tackle that lands puts you down this long
+export const PISTOL_SHARE_3 = 0.25;    // at 3 stars this share of officers carry a pistol instead of a taser
+export const FBI_SHARE_5 = 0.4;        // at 5 stars this share of the units sent are the FBI...
+export const ARMY_SHARE_5 = 0.2;       // ...and this share the army (one truck at a time)
 export const RESPAWN_SECONDS = 15;           // down: this long to pick where to wake up (unless you call for help)
 // Downed, revives and the paid ambulance
 export const HELP_S = 120;                    // Call for Help: you stay down (revivable) this long instead
@@ -85,7 +107,7 @@ export const CRASH_BOOM_HP = 0.35;
 export const DEAD_FIRE_S = 3;
 export const DEAD_BOOM_S = 9;
 export const ARMORED_ROCKETS = 2;       // rockets to destroy an armored van / SWAT truck (everything else: one)
-export const ARMORED_VEHICLES = ['armored', 'swat'];
+export const ARMORED_VEHICLES = ['armored', 'swat', 'army'];
 
 // Hot springs (Granite Hot Springs): a soak in the hot water stops bleeding and brings health back quickly, even
 // when badly hurt (out of the water, health only creeps back above the critical line).

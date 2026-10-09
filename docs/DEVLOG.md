@@ -3791,3 +3791,55 @@ The user: on to the world map and UI update (the UI concepts U1, U2, U7, U12); a
 - **Nothing stands on a road (the user's 13:53 report):** ten buildings had a road through them - the Desert Highway through the Dry Creek Farm Co-op, rural roads and dirt tracks through farmhouses, cottages, the mansion on the hill, three desert and woodland outposts and a Westport hangar. They were laid out at fixed spots for the first world, and World v2's roads ran under them: the house painted over the road's tiles, but the road itself (what the art draws and the traffic drives) went on through. Now each piece placed at a fixed spot is checked against every ground-level road's pavement (`shared/map.js` `roadCrosses`, a grid of road segments) and a crossed one moves to the nearest open spot round it (`offTheRoad`: open land, clear of the roads and four tiles from any other building, with a road ahead of its front or beside it; Dry Creek's houses keep clear of each other's lots). A moved house's drive turns to the road beside it when none is ahead (`driveTo`). An outpost at the end of a track keeps off the track's own approach and off Route 9's oil lease and airstrip (a country site's `keep` box). The hangar the airport's access road runs through is left out. **WORLD_VERSION 6** (players start fresh in the rebuilt streets: homes bought back as before).
 - **Tests:** `test/roads.test.js` "no building stands on a road" (every building's footprint against every ground road's centreline; the co-op and the mansion still there). The wild-homes drive-track test checks two dangling drives now (moved houses join their road).
 - **Performance:** the map's code (`client/worldmap.js`) loads the first time the map opens; the page gains `route.js` and `pixicons.js` (81 files, 649 KB of the 720 KB budget); the title screen's assets 258 KB (budget 290) with the two font files.
+
+## 2026-10-08 · Arrests: cuffed, walked to a police car, driven in, a cell and bail; the police come harder with every star
+From the user's notes (13:33 and 16:02: #298 arrests, #299 escalation) and the 18:20 note (no skipping taxi or rideshare rides).
+- **Arrests** (new: `server/systems/custody.js`). Nobody is busted on the spot any more.
+  - **Cuffed:** an officer who brings you down cuffs you. You're held face down for 4 s (`HOLD_S`), the officer kneeling on you.
+  - **The car:** one comes for you. It's the officer's own unit if it has a free seat, else the nearest free unit within 650 px. Otherwise a car is sent, with no siren.
+  - **The walk:** an officer walks you to its back door, hands behind your back. You go in the back and it drives to the nearest police station.
+  - **Booked:** only at the station are you fined (the old bust fine). Illegal weapons and contraband are taken, and the stars and the peak-wanted memory are cleared.
+  - **The cell:** wait 60 s (`JAIL_S`) or pay $100 a star in bail (`BAIL_PER_STAR`), from the bank first, then cash: B or Enter on a keyboard, Y on a pad, or the button.
+  - **Ways out:**
+    - the officer holding or walking you is killed or knocked down;
+    - the car is blown open, wrecked, sinks, has its engine shot dead, or is carjacked;
+    - a hard crash (impact 380 and up, `BREAKOUT_IMPACT`) can throw you clear;
+    - a player officer walks more than 420 px away from you;
+    - there's nobody left to drive.
+    Escaping is a felony (+25 heat).
+  - **Logging out and surrendering:** logging out in custody books you on the spot. Surrendering while wanted goes straight to a cell.
+  - **Killed by the police:** you wake at the nearest hospital; home isn't offered (`homes.js`).
+  - **Player officers:** "Put X in the back" of their own police car, then drive to any station's kerb to book them. On delivery they're paid the arrest reward plus 50% (`DELIVER_BONUS`).
+  - **Walk-ins:** hiding in a shop is no escape.
+    - The police pull up at its door, go in after you, and walk you out through it.
+    - New in `server/systems/npc.js`: `footWay` (there's no path finding on foot; walkers square up to a walk-in's door, then go through) and `sidestep` (someone pressing into a parked bike or a corner steps aside).
+    - An officer thrown off a bike far from the suspect gets back on instead of walking at a wall.
+- **Escalation by stars** (`server/systems/police.js`):
+  - **1-2 stars:** batons. They run you down and dive at you; a tackle puts you down for 2.5 s, and a roll dodges it. Motorcycle cops come too.
+  - **3 stars:** tasers. A quarter of them draw pistols, and all of them do if you've hit one in the last 15 s.
+  - **4 stars:** SWAT trucks join in; SMGs and pistols, and they shoot.
+  - **5 stars:**
+    - the FBI's black SUVs: agents in suits and shades, with SMGs or rifles;
+    - SWAT;
+    - one army truck at a time: four soldiers in camo with rifles, no siren.
+  - **In a stopped car:** up to 4 stars they walk up to the door and drag you out.
+  - Cops sprint longer, and their cars brake before the crew jumps out.
+- **No skipping a taxi or rideshare ride** (`server/systems/transit.js`): the Skip is gone. The ride reads "On the way to X (~$fare)".
+- **Client:**
+  - **Art:** the cuffed walk (`client/art2/people.js`, six frames) and officers kneeling on a suspect. The agents' and soldiers' looks, with a camo pattern on tops, sleeves and trousers. The FBI SUV, with strobes in the grille and tailgate, and the army truck (olive, a white star, no siren).
+  - **Screens:** an IN CUSTODY banner at the bottom (clear of the toasts) and the cell screen: a holding cell from above, with the time left and the bail button. A walk-in's roof opens while you're cuffed inside it.
+  - **Preview pages:** `tools/art2/people-preview.html?view=custody` (the cuffed walk, the crews) and the FBI / army rows in `tools/art2/actors-preview.html`.
+- **The sea far out** (`client/art2/game/host.js`, for the user's report of ocean chunks "not loading" near the islands): a chunk of open sea waits as the rolling sea stand-in, not a flat patch, while the bakes get to it.
+- **Concept targets:** SF1-SF23 (women's styles) and MC1-MC5 (motorcycles and the biker bar), filed in `docs/art-v2/targets/`.
+- **Tests:** `test/arrests.test.js` (9 tests):
+  - the whole arrest, fined only in the cell, and bail;
+  - the cell;
+  - the ways out (the officer killed, a blast, a carjack, left alone);
+  - a player officer's delivery;
+  - logging out;
+  - killed by the police: a hospital;
+  - escalation by stars;
+  - dragged out of a stopped car;
+  - in through a shop's door and out to the car.
+
+  `test/core.test.js` and `test/transit.test.js` are updated for custody and no skipping.

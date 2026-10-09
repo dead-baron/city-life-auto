@@ -13,6 +13,7 @@ import * as cruiser from './systems/cruiser.js';
 import * as phone from './systems/phone.js';
 import * as paint from './systems/paint.js';
 import * as station from './systems/station.js';
+import * as custody from './systems/custody.js';
 import * as gates from './systems/gates.js';
 import * as foraging from './systems/foraging.js';
 import * as campfires from './systems/campfires.js';
@@ -80,6 +81,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'respawn' && typeof msg.choice === 'string' && msg.choice.length < 20) { player.respawnChoice = msg.choice; player.meDirty = true; return; } // just picks; the normal wake-up timer runs
       if (msg.t === 'phone') { const r = phone.handle(world, player, msg); if (r) conn.sendJSON(r); return; }
       if (msg.t === 'interior' && player.ped && player.ped.interior) { station.openInterior(world, player); return; }
+      if (msg.t === 'bail') { const err = custody.payBail(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'unstuck') { unstuck.request(world, player); return; }
       if (msg.t === 'surrender') { const err = unstuck.surrender(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }

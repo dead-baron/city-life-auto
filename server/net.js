@@ -24,9 +24,10 @@ let recDv = new DataView(recBuf.buffer);
 function descriptor(e) {
   switch (e.kind) {
     // fl: a player's flashlight is switched on; st: sitting by a campfire; bt: a bounty on their head (the golden skull:
-    // bounties.js); ph: their phone out (1: its menu open: phone.js phoneOut; 2: held up, filming: npc.js spectacle). The flags and extra bytes are full; turning any of these on or off bumps appVer, so the descriptor
+    // bounties.js); ph: their phone out (1: its menu open: phone.js phoneOut; 2: held up, filming: npc.js spectacle); cf:
+    // cuffed (custody.js: hands behind the back). The flags and extra bytes are full; turning any of these on or off bumps appVer, so the descriptor
     // is sent again.
-    case K.PED: return { id: e.id, k: K.PED, app: e.app, n: e.player ? e.player.name : '', pl: !!e.player, ar: e.archetype, v: e.appVer || 0, ...(e.flashOn ? { fl: 1 } : null), ...(e.sit ? { st: 1 } : null), ...(e.player && e.player.skull ? { bt: 1 } : null), ...(e.phoneOut ? { ph: e.filming || 1 } : null) };
+    case K.PED: return { id: e.id, k: K.PED, app: e.app, n: e.player ? e.player.name : '', pl: !!e.player, ar: e.archetype, v: e.appVer || 0, ...(e.flashOn ? { fl: 1 } : null), ...(e.sit ? { st: 1 } : null), ...(e.player && e.player.skull ? { bt: 1 } : null), ...(e.phoneOut ? { ph: e.filming || 1 } : null), ...(e.cuffed ? { cf: 1 } : null) };
     case K.VEH: return { id: e.id, k: K.VEH, m: e.def.i, p: e.paint, vr: e.variant, tn: e.tint ?? -1, o: e.ownerName || '', v: e.descVer || 0, fs: e.forSale ? e.forSale.price : 0 };
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: bagWireTier(e), val: e.value };
@@ -45,7 +46,7 @@ function fields(world, e) {
     // parent: the vehicle you're in, or the train car you're riding
     // (an animal: extra bits 0-4 what it's doing - fauna.js APOSE - and bit 7 in the water)
     case K.PED: if (e.wild) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, (wildlife.poseOf(e) & 31) | (WATER_T[world.map.tileAtPx(e.x, e.y)] === 1 ? 128 : 0)];
-      return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0), (WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(world.map, e) ? 128 : 0)];
+      return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0), (e.cuffed ? 0 : WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(world.map, e) ? 128 : 0)];
     case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), 0, 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [bagBlinks(world, e) ? 1 : 0, 1, 0, bagWireTier(e)];   // flags 1: about to vanish (it blinks)
@@ -107,6 +108,7 @@ export function send(world) {
     const spawns = [];
     let ctrl = CTRL.NONE, ctrlId = 0, self = null, sflags = 0;
     if (ped && !ped.dead && ped.onTrain) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: 0 }; }
+    else if (ped && !ped.dead && ped.cuffed && !veh) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: ped.lz || 0 }; }   // (cuffed: custody.js walks them - no prediction)
     else if (ped && !ped.dead) {
       if (veh) { ctrl = ped.seat === 0 && !veh.scripted && !veh.onDeck ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = { x: veh.x, y: veh.y, a: veh.a, vx: veh.vx, vy: veh.vy, av: veh.av, stamina: veh.slip || 0, rollT: veh.spin || 0, rdx: veh.launch || 0, lz: veh.lz || 0 }; sflags = veh.rev ? 32 : 0; } // (a vehicle's slide / burnout / launch state rides in the ped-only slots) // reverse-gear state keeps point-to-drive prediction exact
       else {

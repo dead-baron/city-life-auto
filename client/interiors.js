@@ -1,6 +1,7 @@
 // Building interiors drawn top-down in the game's pixel style, shown behind the menu while you
-// are inside: the police station lobby (front desk) and the locked armory. Pure client art -
-// what you can do in there comes from the server's menu.
+// are inside: the police station lobby (front desk), the locked armory, and a cell when you've been booked
+// (server custody.js; the bail and the time left are on the jail panel over it). Pure client art -
+// what you can do in there comes from the server.
 import { pedSprite, PED_BOX } from './render/sprites.js';
 import { weaponIcon } from './render/peds.js';
 import { POLICE_ARMORY } from '../shared/rules.js';
@@ -96,6 +97,42 @@ function armory(g, x, y, w, h, me, t) {
   person(g, me, x + w / 2 + 40, y + h * 0.5, -Math.PI / 2);
 }
 
+// A holding cell seen from above: concrete, a steel bench with you sitting on it, a steel toilet and basin, a high
+// barred window throwing a patch of light, the bars and the door along the front, and the corridor beyond with a
+// guard's desk under a flickering strip light.
+function cell(g, x, y, w, h, me, t) {
+  const cw = w * 0.62, ch = h * 0.72, cx = x + (w - cw) / 2, cy = y + 6;
+  floor(g, x, y, w, h, '#3d4048', '#383b43', 28);                       // the corridor
+  floor(g, cx, cy, cw, ch, '#6c6a64', '#66645e', 20);                   // the cell's concrete
+  walls(g, cx, cy, cw, ch, '#24262c');
+  // the light from the window, drifting a little through the day
+  g.fillStyle = 'rgba(255,240,190,.13)';
+  g.beginPath(); const lx = cx + cw * 0.62 + Math.sin(t * 0.05) * 6;
+  g.moveTo(lx - 16, cy); g.lineTo(lx + 16, cy); g.lineTo(lx + 44, cy + ch * 0.55); g.lineTo(lx - 2, cy + ch * 0.55); g.closePath(); g.fill();
+  g.fillStyle = '#9fb3c8'; g.fillRect(lx - 16, cy - 10, 32, 6);
+  g.fillStyle = '#24262c'; for (let k = 0; k < 4; k++) g.fillRect(lx - 14 + k * 9, cy - 10, 2, 6);
+  // the bench along the left wall, you on it
+  g.fillStyle = '#8e939c'; g.fillRect(cx + 6, cy + ch * 0.2, 34, ch * 0.62);
+  g.fillStyle = '#6e737c'; g.fillRect(cx + 6, cy + ch * 0.2 + ch * 0.62 - 5, 34, 5);
+  person(g, me, cx + 26, cy + ch * 0.48, 0);
+  // the steel toilet and basin in the far corner
+  g.fillStyle = '#b8bec8'; g.fillRect(cx + cw - 40, cy + 8, 30, 22); g.fillStyle = '#d8dde4'; g.beginPath(); g.ellipse(cx + cw - 25, cy + 40, 12, 10, 0, 0, 6.28); g.fill();
+  g.fillStyle = '#4a4e58'; g.beginPath(); g.ellipse(cx + cw - 25, cy + 40, 6, 5, 0, 0, 6.28); g.fill();
+  // the bars along the front, the door in them
+  const by = cy + ch;
+  g.fillStyle = '#1c1e24'; g.fillRect(cx - 10, by, cw + 20, 6);
+  for (let bx = cx + 4; bx < cx + cw; bx += 12) { g.fillStyle = '#a8adb6'; g.fillRect(bx, by - 2, 4, 10); g.fillStyle = '#5a5e68'; g.fillRect(bx + 3, by - 2, 1, 10); }
+  g.strokeStyle = '#d0b050'; g.lineWidth = 2; g.strokeRect(cx + cw * 0.7, by - 3, cw * 0.22, 12);   // the door's frame
+  g.fillStyle = '#d0b050'; g.fillRect(cx + cw * 0.7 + 3, by + 2, 5, 4);                              // its lock
+  // the corridor: a guard's desk and the strip light (flickering now and then)
+  const fl = Math.sin(t * 13) > 0.97 ? 0.4 : 1;
+  g.fillStyle = `rgba(220,235,255,${0.1 * fl})`; g.fillRect(x, by + 14, w, h - (by + 14 - y));
+  const dy = y + h - 66;   // the desk (the guard sits on its far side, facing the cells)
+  g.fillStyle = '#5a4128'; g.fillRect(x + w - 150, dy, 120, 26); g.fillStyle = '#7a5a38'; g.fillRect(x + w - 150, dy, 120, 5);
+  g.fillStyle = '#20232b'; g.fillRect(x + w - 120, dy + 4, 24, 12); g.fillStyle = '#7fd0ff'; g.fillRect(x + w - 117, dy + 6, 18, 8);
+  person(g, { ...me, ...UNIFORM, h: '#2a1a10' }, x + w - 90, dy + 44, -Math.PI / 2);
+}
+
 export function drawInterior(cv, kind, me, t) {
   const g = cv.getContext('2d');
   const W = cv.width, H = cv.height;
@@ -106,6 +143,7 @@ export function drawInterior(cv, kind, me, t) {
   const rw = Math.min(wide ? W * 0.52 : W * 0.9, 720), rh = Math.min(H * 0.78, rw * 0.72);
   const x = wide ? W - rw - Math.max(30, W * 0.06) : (W - rw) / 2;
   const y = wide ? (H - rh) / 2 : H - rh - 20;
+  if (kind === 'jail') { cell(g, x, y, rw, rh, me, t); return; }
   // the concept painting of the station's front desk / armory cage when it has loaded
   const art = atlas.interiors && INTERIOR_RECTS[kind === 'armory' ? 'armory' : 'policedesk'];
   if (art) { painted(g, art, x, y, rw, rh, kind, t); return; }

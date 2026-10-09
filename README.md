@@ -71,6 +71,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Call police cruiser (on duty) | V | D-pad down | COP CAR (shows when you have no cruiser) |
 | Tackle a suspect (on duty) | Space (dive) into them | A | ROLL |
 | Cuff / book a downed suspect | E | B | ACT |
+| Put a cuffed player in the back of your police car (then drive to any station's kerb to book them, for a bonus) | E by them, next to your car | B | ACT |
+| Arrested: cuffed, held, walked to a police car and driven to the station (nothing to press; get away if the officer is downed or the car is wrecked or hijacked) · in the cell, pay the bail (from the bank, then cash) or wait it out | B or Enter in the cell | Y in the cell | the bail button |
 | Lay a spike strip (on duty: select it with the weapon key, then fire toward the road ahead) | Tab, then click | RB, then RT | WPN, then FIRE |
 | Bank your cash (walk up to any ATM - automatic) / find the nearest ATM | walk into it · P → Nearest ATM | walk into it · D-pad ← → Nearest ATM | walk into it · 📱 → Nearest ATM |
 | Take a lost pet's collar / hand it back to its owner | E | B | ACT |

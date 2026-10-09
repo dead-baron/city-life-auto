@@ -5,7 +5,7 @@
      facings, &pose=walk), ?view=poses (one character, every pose x 8 facings x frames; &pose=walk2 for one pose, &dirs=...),
      ?view=crowd (40 server-like appearances through peds.js adaptApp, walking), ?view=weapons (every game weapon: rest,
      aim / swing frames), ?view=lineup (every server archetype x 6 seeds, adapted, facing SE), ?view=leisure (swimwear,
-     towels, undressed + censored). &lit=golden|noon|night lights the sheet with the Lighter on paving; &z= zoom. -->
+     towels, undressed + censored), ?view=custody (the cuffed walk, face down, officers kneeling, the five-star crews). &lit=golden|noon|night lights the sheet with the Lighter on paving; &z= zoom. -->
 <div class="wrap"><canvas id="c"></canvas><canvas id="lab"></canvas></div>
 <script type="module">
 import { person, randomPerson, ARCHETYPES, POSES } from '../../client/art2/people.js';
@@ -36,6 +36,8 @@ const SERVER = {   // appearances as the server makes them (server/entities.js A
   mugger: () => ({ t: 2, tc: '#2a2a2e', tc2: '#555', l: '#222', sh: '#eee', ht: 1, htc: '#111', b: 0 }),
   cop: () => ({ t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', sh: '#111', ht: 1, htc: '#1d2a5a', b: 0 }),
   swat: () => ({ t: 3, tc: '#151517', tc2: '#333', l: '#151517', sh: '#111', ht: 5, htc: '#151517', b: 0 }),
+  agent: () => ({ t: 1, tc: '#18191e', tc2: '#18191e', l: '#18191e', sh: '#111', ht: 0, b: 4, h: 4 }),
+  soldier: () => ({ t: 3, tc: '#4f5a36', tc2: '#3c4529', l: '#4f5a36', sh: '#2a2418', ht: 5, htc: '#4f5a36', b: 0 }),
   medic: () => ({ t: 6, tc: '#e8e8e8', tc2: '#2350c8', l: '#1d2a5a', sh: '#111', ht: 1, htc: '#2350c8', b: 0 }),
   player: (r) => ({ t: pk(r, [0, 2, 4, 7, 3]), tc: pk(r, ['#c8262b', '#2350c8', '#2f9a3a', '#f2c21b', '#7a3ac8', '#e8e8e8', '#25b8c0', '#ef7a1a', '#2a2a2e']), tc2: pk(r, ['#fff', '#111', '#f2c21b']), l: pk(r, ['#2a4a8a', '#222', '#6b5a3a', '#4a4a52']), sh: pk(r, ['#eee', '#222', '#c8262b']), ht: r() < 0.4 ? 1 : 0, htc: pk(r, ['#c8262b', '#111', '#2350c8', '#f2c21b']), b: 0 }),
 };
@@ -46,7 +48,8 @@ function serverApp(ar, seed) {
   const r = rng(seed * 7919 + 13); r(); r();
   const look = SERVER[ar](r);
   const base = { s: Math.floor(r() * 6), h: Math.floor(r() * 6), hc: pk(r, HAIRC) };
-  const w = { senior: [8, 2, 0, 0], drunk: [5, 4, 1, 0], socialite: [5, 4, 1, 0], executive: [4, 5, 1, 0], athlete: [0, 4, 5, 1], construction: [0, 3, 5, 2], hustler: [1, 4, 4, 1], mugger: [1, 5, 3, 1], syndicate: [0, 3, 5, 3], cop: [0, 4, 5, 1], swat: [0, 2, 5, 3], medic: [1, 6, 2, 0] }[ar] || [2, 6, 2, 0.5];
+  if (look.h !== undefined) base.h = look.h;
+  const w = { senior: [8, 2, 0, 0], drunk: [5, 4, 1, 0], socialite: [5, 4, 1, 0], executive: [4, 5, 1, 0], athlete: [0, 4, 5, 1], construction: [0, 3, 5, 2], hustler: [1, 4, 4, 1], mugger: [1, 5, 3, 1], syndicate: [0, 3, 5, 3], cop: [0, 4, 5, 1], swat: [0, 2, 5, 3], agent: [0, 5, 4, 1], soldier: [0, 2, 5, 3], medic: [1, 6, 2, 0] }[ar] || [2, 6, 2, 0.5];
   let t = w.reduce((a, b) => a + b, 0) * r(), bd = 1; for (let i = 0; i < 4; i++) { t -= w[i]; if (t <= 0) { bd = i; break; } }
   const o = { ...base, ...look, bd };
   if (look.hc) o.hc = look.hc;
@@ -84,7 +87,7 @@ if (view === 'turn') {
   const n = 40, cols = 10;
   for (let i = 0; i < n; i++) {
     const ar = SV[i % SV.length], A = adaptApp(serverApp(ar, i + 1), ar), d = (i * 3) % 8, lvl = i % 7 === 0 ? 2 : i % 5 === 0 ? 1 : 0;
-    add(pedSprite(A, i % 9 === 4 ? 'idle' : 'move' + lvl, d, i % 6, ar === 'cop' ? 14 : ar === 'swat' ? 15 : null), 26 + (i % cols) * 44 + (Math.floor(i / cols) & 1) * 20, 54 + Math.floor(i / cols) * 58);
+    add(pedSprite(A, i % 9 === 4 ? 'idle' : 'move' + lvl, d, i % 6, ar === 'cop' ? 14 : ar === 'swat' || ar === 'soldier' ? 10 : ar === 'agent' ? 11 : null), 26 + (i % cols) * 44 + (Math.floor(i / cols) & 1) * 20, 54 + Math.floor(i / cols) * 58);
   }
 } else if (view === 'lineup') {
   const seeds = Number(q.get('n') || 6);
@@ -98,6 +101,17 @@ if (view === 'turn') {
     let c = 0;
     for (const d of dirs) for (const [p, f] of frames) add(pedSprite(A, p, d, f, w), 96 + (c++) * 46 + Math.floor((c - 1) / frames.length) * 16, 52 + r * 60);
   });
+} else if (view === 'custody') {
+  // the arrest (server/systems/custody.js): the cuffed walk at 8 facings, face down on the ground, the officers
+  // kneeling on a suspect, and the five-star crews (police.js armCop) holding their guns
+  const A = adaptApp(serverApp('casual', 3), 'casual');
+  label('cuffed', 2, 10);
+  for (let d = 0; d < 8; d++) for (let f = 0; f < 6; f++) add(pedSprite(A, 'cuffed', d, f, 0), 24 + f * 40 + (d % 2) * 250, 50 + Math.floor(d / 2) * 56);
+  label('down / kneel', 2, 284);
+  add(pedSprite(A, 'downF', 6, 0, 0), 30, 330);
+  ['cop', 'swat', 'agent', 'soldier'].forEach((ar, i) => add(pedSprite(adaptApp(serverApp(ar, 2), ar), 'kneel', 2, 0, 0), 100 + i * 46, 330));
+  label('the crews', 300, 284);
+  [['cop', 5], ['cop', 6], ['cop', 7], ['swat', 10], ['agent', 11], ['agent', 10], ['soldier', 10]].forEach(([ar, w], i) => add(pedSprite(adaptApp(serverApp(ar, i + 1), ar), i < 3 ? 'idle' : 'aim', 7, 0, w), 310 + i * 42, 330));
 } else if (view === 'leisure') {
   const L = [
     { fem: true, skin: 1, hair: { style: 'pony', color: 3 }, top: { kind: 'bikini', color: 'coral' }, bottom: { kind: 'bikini', color: 'coral' }, shoeKind: 'barefoot' },

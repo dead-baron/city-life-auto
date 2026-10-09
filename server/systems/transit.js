@@ -434,8 +434,8 @@ export function transitInfo(world, p = null) {
 // kerb nearest you and waits TAXI_WAIT_S; interact gets you in the back. Where to: your waypoint (the client sends it
 // while you have a taxi; set one on the map or the phone, and a new one on the way re-routes the cab). The meter runs
 // from the flag fall by the distance driven with you aboard; at the kerb by the destination it pulls up, and getting
-// out (the vehicle key, anywhere) pays the fare - cash, then the bank, as far as it goes. Interact on the way skips the
-// ride: you're there at once, for what the whole way would have cost. Not for anyone the police are after.
+// out (the vehicle key, anywhere) pays the fare - cash, then the bank, as far as it goes. No skipping the ride (design
+// notes 2026-10-08): you sit back and watch the city go by. Not for anyone the police are after.
 const TAXI_HAIL_PX = 260, TAXI_CALL_PX = 3200;
 const TAXI_STILL = new Set(['wait', 'dest', 'there']);
 const fareOf = (px) => Math.round(TAXI_FLAG + (px / 32 / 1000) * TAXI_PER_KM);   // (1 m = a tile = 32 px)
@@ -610,22 +610,6 @@ function boardTaxi(world, p, v) {
   p.meDirty = true;
   return true;
 }
-// skip the ride: there at once, for what the whole way would have cost
-function skipRide(world, p, v) {
-  const T = v.taxi, K = T.halt;
-  if (!T || T.st !== 'ride' || !K) return;
-  T.meter += T.left;
-  v.x = K.x; v.y = K.y; v.a = K.a; v.vx = 0; v.vy = 0; v.av = 0; v.lz = 0;
-  world.place(v);
-  for (const sid of v.seats) { const q = sid ? world.get(sid) : null; if (q) { q.x = v.x; q.y = v.y; q.vx = 0; q.vy = 0; q.lz = 0; world.place(q); } }
-  const r = v.ai && v.ai.route;
-  if (r) { r.i = r.steps.length - 1; traffic.enterRoute(world, v, r.i, K.s + 2); }
-  T.st = 'there'; T.idle = world.time + 90; T.lx = v.x; T.ly = v.y;
-  p.teleportAt = world.time;
-  world.notify(p, `${T.dest && T.dest.label ? T.dest.label : 'There'} - skipped the ride. $${fareOf(T.meter)}: get out with the vehicle key.`, 'good');
-  p.meDirty = true;
-}
-
 // the meter, the clocks, passengers getting out (transit.update, once a second)
 function updateTaxis(world) {
   if (!world.taxis || !world.taxis.size) return;
@@ -693,12 +677,12 @@ export function taxiInteraction(world, p) {
   }
   return null;
 }
-// interact riding in your taxi: skip the ride
+// riding in your taxi: nothing to press (no skipping the ride), just where you're going and the meter
 export function rideInteraction(world, p) {
   const ped = p.ped, v = ped && ped.vehId ? world.get(ped.vehId) : null;
   if (!v || !v.taxi || v.taxi.pid !== p.pid || ped.seat <= 0) return null;
   const T = v.taxi;
-  if (T.st === 'ride') return { label: `Skip the ride (~$${fareOf(T.meter + T.left)})`, run: () => skipRide(world, p, v) };
+  if (T.st === 'ride') return { label: `On the way${T.dest && T.dest.label ? ` to ${T.dest.label}` : ''} (~$${fareOf(T.meter + T.left)})`, passive: true, run: () => {} };
   return null;
 }
 const sideDist = (v, ped) => {

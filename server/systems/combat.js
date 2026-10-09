@@ -373,7 +373,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   law.onKill(world, attacker, ped, cause);
   if (attacker && attacker.player) attacker.player.profile.stats.kills++;
   if (ped.player) {
-    const by = attacker ? (attacker.player ? attacker.player.name : (attacker.name || 'a local')) : null;
+    const by = attacker ? (attacker.player ? attacker.player.name : attacker.npc && attacker.npc.role === 'cop' ? (FORCE_NAME[attacker.archetype] || 'the police') : (attacker.name || 'a local')) : null;
     players.onPedDeath(world, ped, attacker, by ? `Taken out by ${by}.` : causeText(cause));
   } else {
     npc.onDeath(world, ped, attacker);
@@ -381,6 +381,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   }
 }
 
+const FORCE_NAME = { swat: 'SWAT', agent: 'the FBI', soldier: 'the army' };
 function causeText(cause) {
   return ({ train: 'Hit by a train.', vehicle: 'Flattened by traffic.', crash: 'Wiped out at speed.', explosion: 'Caught in an explosion.', bail: 'Bailed out too fast.' })[cause] || 'You flatlined.';
 }
@@ -399,6 +400,7 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
       if (!e.dead) damage(world, e, dmg * f + 10, attacker, 'explosion', a);
     } else if (e.kind === K.VEH && e.id !== excludeVehId && !e.wreckAt) {
       const a = Math.atan2(e.y - y, e.x - x);
+      e.blastAt = world.time;   // (custody.js: a blast bursts a police car's doors open)
       e.vx += Math.cos(a) * 220 * f / e.def.mass; e.vy += Math.sin(a) * 220 * f / e.def.mass;
       // a rocket landing on / next to a vehicle destroys it outright (armored ones take two)
       if (rocket && f > 0.25) {

@@ -534,7 +534,11 @@ export class World2 {
       if (E.hasChunk(cx, cy) || this._fallback(cx, cy)) continue;
       const onScreen = (cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1;
       if (!onScreen && fbBudget-- <= 0) continue;
-      E.setChunkFallback(cx, cy, this._placeholder(cx, cy)); this.fallbacks.add(k); this.n.fbSet++;
+      // (a chunk of open sea - the bakes get to these last - waits as the sea's own stand-in, rolling with waves like
+      // the sea past the map's edge, not a flat patch of blue: the user's 2026-10-08 report of the ocean "not loading")
+      if (this._openSea(cx, cy)) E.setChunkFallback(cx, cy, this._seaStandIn(), F_GROUND | F_WATER);
+      else E.setChunkFallback(cx, cy, this._placeholder(cx, cy));
+      this.fallbacks.add(k); this.n.fbSet++;
     }
     const jobs = this.wantJobs; jobs.clear();
     const baking = !this.noBake && this.pool && !this.pool.dead && this.pool.ready && (this.prov.ground || this.prov.statics);
@@ -810,6 +814,17 @@ export class World2 {
       break;
     }
     return n;
+  }
+  // is the chunk open sea (deep water all over, and nothing standing in it)? kept per chunk
+  _openSea(cx, cy) {
+    const k = cy * 1000 + cx, M = this.map, seaK = this.seaK || (this.seaK = new Map());
+    let v = seaK.get(k);
+    if (v === undefined) {
+      v = true;
+      for (let ty = cy * 24 - 1; ty < cy * 24 + 26 && v; ty += 2) for (let tx = cx * 24 - 1; tx < cx * 24 + 26; tx += 2) if (M.tileAt(tx, ty) !== TT.DEEP) { v = false; break; }
+      seaK.set(k, v);
+    }
+    return v;
   }
   _seaStandIn() {
     if (this.seaCv) return this.seaCv;

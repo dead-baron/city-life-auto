@@ -796,3 +796,18 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 .spawn-opt { font: 15px var(--pixel); color: var(--cream); background: linear-gradient(180deg, rgba(21,34,63,.95), rgba(13,22,45,.95)); border: 2px solid rgba(226,189,87,.45); border-radius: 6px; box-shadow: 0 0 0 2px #070b16; }
 .spawn-opt:hover { border-color: var(--rim); }
 .spawn-opt.on { background: linear-gradient(90deg, rgba(226,189,87,.35), rgba(226,189,87,.12)); color: #fff; border-color: var(--rim); }
+
+/* arrested (server custody.js): the custody banner and the jail screen over the cell */
+#trainbar.custody { border-color: #ff6a6a; color: #ff9a9a; top: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 58px); } #trainbar.custody span { color: #ffd6d6; }
+body.portrait.touch #trainbar.custody { bottom: auto; top: 236px; max-width: 90vw; }   /* (low down, clear of the toasts at the top) */
+/* (interiors.js drawInterior puts the room on the right of wide screens and low down on tall ones: the panel takes the
+   free side, the left of a wide screen, the top of a tall one) */
+#jail { position: absolute; left: 50%; top: max(24px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 3; width: min(360px, 88vw); box-sizing: border-box;
+  background: var(--panel-bg, rgba(14,18,32,.92)); border: 3px solid var(--rim, #e2bd57); box-shadow: 0 0 0 3px #0b0e18, 0 10px 30px rgba(0,0,0,.5);
+  padding: 14px 18px 12px; text-align: center; color: var(--cream, #f4ead2); font-family: var(--pixel, monospace); }
+#jail h2 { margin: 0 0 4px; font-size: 22px; letter-spacing: 3px; color: #ff9a9a; }
+#jail p { margin: 2px 0; } #j-time { font-size: 26px; color: #fff; }
+#jail button { margin: 10px auto 4px; display: block; font-family: inherit; font-size: 16px; }
+#jail button:disabled { opacity: .45; }
+#jail small { display: block; opacity: .75; font-size: 12px; }
+@media (min-aspect-ratio: 6/5) { #jail { left: max(16px, 3vw, env(safe-area-inset-left)); top: 50%; transform: translateY(-50%); width: min(360px, 38vw); } }

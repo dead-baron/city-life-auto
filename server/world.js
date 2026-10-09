@@ -12,6 +12,7 @@ import * as traffic from './systems/traffic.js';
 import * as transit from './systems/transit.js';
 import * as ferries from './systems/ferries.js';
 import * as police from './systems/police.js';
+import * as custody from './systems/custody.js';
 import * as cruiser from './systems/cruiser.js';
 import * as events from './systems/events.js';
 import * as gangwar from './systems/gangwar.js';
@@ -73,6 +74,7 @@ const SYSTEMS = [
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
   ['trains', trains.update],        // the rail loop: trains, riders, crossings, the mail-car strongbox
   ['police', police.update],        // NPC police dispatch / pursuit
+  ['custody', custody.update],      // the arrested: held, walked to a car, driven to the station, the cells
   ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
   ['gang', gang.update],            // Syndicate membership: Smuggler's Rock guards
   ['gangwar', gangwar.update],      // gangs vs police: provocation + shootouts near turf

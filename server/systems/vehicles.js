@@ -222,6 +222,7 @@ export function damageVehicle(world, v, amount, attackerPed, raw = false, boom =
 // that was already badly damaged (or that it finishes off); the rest is ordinary damage.
 function crashDamage(world, v, dmg, attackerPed, impact) {
   if (v.wreckAt) return;
+  if (v.hardHitAt !== world.time || impact > v.hardHit) { v.hardHit = impact; v.hardHitAt = world.time; }   // (custody.js: a bad crash can throw a prisoner out)
   const hard = impact > CRASH_BOOM_IMPACT && !v.def.pedal && v.def.kind !== 'boat';
   if (hard && (v.def.kind === 'bike' || v.dead || v.hp < v.def.hp * CRASH_BOOM_HP)) { explode(world, v, attackerPed); return; }
   damageVehicle(world, v, dmg, attackerPed, false, hard);
