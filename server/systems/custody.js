@@ -641,7 +641,7 @@ function route(world, v, x, y, speed) {
   driveToward(world, v, wp.x, wp.y, cornerSpeed(v, ai.route, speed), {});
 }
 // slow down for a sharp corner coming up (taken flat out, the car swings wide - off a bridge's end, into the water)
-function cornerSpeed(v, r, speed) {
+export function cornerSpeed(v, r, speed) {
   let sp = speed, px = v.x, py = v.y, h1 = null;
   for (let i = 0; i < Math.min(4, r.length - 1); i++) {
     const a = r[i], b = r[i + 1], dA = Math.hypot(a.x - v.x, a.y - v.y);
@@ -655,7 +655,7 @@ function cornerSpeed(v, r, speed) {
   return sp;
 }
 // distance from (x, y) to the segment a-b
-function segDist(x, y, a, b) {
+export function segDist(x, y, a, b) {
   const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
   const t = L2 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / L2)) : 0;
   return Math.hypot(a.x + dx * t - x, a.y + dy * t - y);
@@ -663,7 +663,7 @@ function segDist(x, y, a, b) {
 // A route starts at the road node nearest the car, which can be just behind it: turning back for it, then planning again
 // from the next nearest, is how a car ends up going round in circles. Start from the first point ahead of the car instead
 // (only the near ones are skipped: a car facing the wrong way still turns round for a route that goes back past it).
-function trimBehind(route, v) {
+export function trimBehind(route, v) {
   const c = Math.cos(v.a), s = Math.sin(v.a);
   let i = 0;
   while (i < route.length - 1 && Math.hypot(route[i].x - v.x, route[i].y - v.y) < 200 && (route[i].x - v.x) * c + (route[i].y - v.y) * s < 20) i++;
@@ -671,7 +671,7 @@ function trimBehind(route, v) {
   return route;
 }
 // brake to a stop (the handbrake on once it's slow)
-function halt(v) {
+export function halt(v) {
   const fwd = v.vx * Math.cos(v.a) + v.vy * Math.sin(v.a);
   v.input = { throttle: fwd > 8 ? -1 : fwd < -8 ? 1 : 0, steer: 0, hb: Math.abs(fwd) < 40 };
 }

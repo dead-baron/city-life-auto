@@ -82,8 +82,9 @@ export function update(world, dt) {
     v.reverse = fwd < -10;
     // tyre smoke + skid marks: sliding, e-braking, donuts, or a full-throttle launch (burnout)
     v.drift = Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player);
-    v.lights = (night && !!driver) || (v.def.police && v.sirenOn);
-    v.siren = !!(v.def.police && v.sirenOn && driver);
+    v.lights = (night && !!driver) || ((v.def.police || v.def.siren) && v.sirenOn);   // (def.siren: an ambulance, a fire engine)
+    v.siren = !!((v.def.police || v.def.siren) && v.sirenOn && driver);
+    v.beacon = !v.siren && !!((v.def.police || v.def.siren) && v.beaconOn);   // (the lights flashing with nobody at the wheel: an ambulance at a scene, a tow truck at work - no siren)
     // out of health: rolling to a stop, smoking, then on fire, then up it goes (killEngine)
     if (v.dead && !v.wreckAt) {
       if (now >= v.deadFireAt) v.burnUntil = now + 1;
@@ -499,6 +500,7 @@ export function vehFlags(world, v) {
   let f = 0;
   if (v.lights) f |= VF.LIGHTS;
   if (v.siren) f |= VF.SIREN;
+  if (v.beacon) f |= VF.BEACON;
   if (v.brake) f |= VF.BRAKE;
   if (v.reverse) f |= VF.REVERSE;
   if (v.wreckAt) f |= VF.WRECK;

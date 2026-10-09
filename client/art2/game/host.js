@@ -1263,7 +1263,7 @@ export class World2 {
     if (v._hi !== hi || v._hn !== N || v._hf !== f) {
       v._hi = hi; v._hn = N; v._hf = f;
       for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; this._ask('actors', 'vehicle', A.vehicleKey(v.d, st, h, N), [v.d, st, h, N], me ? -2 : 1); }
-      if (f & VF.SIREN) { const s2 = A.vehState(f, 3 - phase); this._ask('actors', 'vehicle', A.vehicleKey(v.d, s2, hi, N), [v.d, s2, hi, N], me ? -2 : 0); }
+      if (f & (VF.SIREN | VF.BEACON)) { const s2 = A.vehState(f, 3 - phase); this._ask('actors', 'vehicle', A.vehicleKey(v.d, s2, hi, N), [v.d, s2, hi, N], me ? -2 : 0); }
     }
     // A ferry swings through heading after heading on every trip, and the car ferry's take a while to draw: once one is
     // near, all its headings are asked for, a few a frame and the nearest first, so a turn doesn't show an old heading
@@ -1924,7 +1924,7 @@ export class World2 {
         this._light(fx, fy, zb + 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), [v.ra, 0.42, 340]);
         for (const sd of [-1, 1]) this._light(v.rx - c * hl - s * def.W * 0.31 * sd, v.ry - s * hl + c * def.W * 0.31 * sd, zb + 8, f & VF.BRAKE ? 60 : 36, C.tail, f & VF.BRAKE ? 1.4 : 0.7);
       } else if (f & VF.BRAKE) this._light(v.rx - c * hl, v.ry - s * hl, zb + 8, 40, C.tail, 0.9);
-      if (f & VF.SIREN) this._light(v.rx, v.ry, zb + 24, 240, Math.floor(now * 6) % 2 ? C.red : C.blue, 2.2);
+      if (f & (VF.SIREN | VF.BEACON)) this._light(v.rx, v.ry, zb + 24, 240, Math.floor(now * 6) % 2 ? C.red : C.blue, 2.2);
       if (f & VF.BURN) this._light(v.rx, v.ry, zb + 20, 200, C.fire, 2.2 * (0.75 + 0.25 * Math.sin(now * 23 + v.id)));
     }
     for (const c of F.cars) {
