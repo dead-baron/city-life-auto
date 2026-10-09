@@ -36,6 +36,7 @@ import { buildNatureSites, REDWOOD_TRUNK, setFlow, inBluffsGarden } from './natu
 import { mushroomAtFoot } from './foraging.js';
 import { EDGE_OUT } from './border.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
+import { buildCellBlocks, barsRay } from './cells.js';
 const EDGE_T = Math.ceil(EDGE_OUT / TILE) + 2;   // tiles of open sea past the map's edge (border.js), then the wall
 
 export { Z };
@@ -381,19 +382,21 @@ export class CityMap {
     arr.push(e);
     return e;
   }
-  // Line of sight across tiles (buildings block sight).
-  los(x1, y1, x2, y2) { return this.rayTiles(x1, y1, x2, y2) >= 1; }
-  // Ray to first blocking tile; returns distance fraction t in [0,1] (1 = no hit).
-  rayTiles(x1, y1, x2, y2) {
+  // Line of sight across tiles (buildings block sight; a cell's bars don't).
+  los(x1, y1, x2, y2) { return this.rayTiles(x1, y1, x2, y2, true) >= 1; }
+  // Ray to first blocking tile; returns distance fraction t in [0,1] (1 = no hit). A bullet (not sight) stops on the
+  // bars of a police station's cells too (shared/cells.js).
+  rayTiles(x1, y1, x2, y2, sight = false) {
     const d = Math.hypot(x2 - x1, y2 - y1);
     if (d < 1) return 1;
+    const tb = !sight && this.cellBlocks ? barsRay(this, x1, y1, x2, y2) : 1;
     const steps = Math.ceil(d / 8);
-    for (let i = 1; i <= steps; i++) {
+    for (let i = 1; i <= steps && i / steps <= tb; i++) {
       const t = i / steps;
       const tt = this.tileAtPx(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t);
       if (tt === T.BUILDING || tt === T.WALL) return Math.max(0, (i - 1) / steps);
     }
-    return 1;
+    return tb;
   }
   isWater(x, y) { const t = this.tileAtPx(x, y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; }
   isWalkable(x, y) { return !PED_BLOCK[this.tileAtPx(x, y)]; }
@@ -623,6 +626,7 @@ function buildCity(seed) {
   buildCornerStores(m);
   buildClothesShops(m);   // (task #364: the clothing stores by style and district, the barbers and salons)
   buildInteriors(m);
+  buildCellBlocks(m);   // (task #362: the cells at the back of every police station - shared/cells.js)
   buildDealerLots(m);
   clearHospitalFronts(m);
   buildRailway(m, railPts);

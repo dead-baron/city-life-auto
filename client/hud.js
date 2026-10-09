@@ -112,7 +112,8 @@ export class HUD {
       // (the car stuck or not coming: the action button makes a break for it - custody.js offerBreak)
       const brk = cu.brk ? ` · make a break for it [${input.device === 'gamepad' ? 'B' : input.device === 'touch' ? 'ACT' : 'E'}]` : '';
       $('tb-next').textContent = (cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.brk ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
-        : cu.s === 'escort' ? 'Being walked to the police car' : cu.brk ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
+        : cu.s === 'escort' ? 'Being walked to the police car' : cu.s === 'walkin' ? `Walked into ${cu.at || 'the station'} - to the cells`
+          : cu.brk ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
       tb.classList.toggle('brk', !!cu.brk);
       $('tb-crack').classList.add('hidden');
     } else if (tr && !me.dead) {

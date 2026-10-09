@@ -2782,7 +2782,9 @@ function cutRecipe(c, b, s, spec) {
   for (const u of wi.units) {
     const ux0 = Math.max(u.x0, s.tx), ux1 = Math.min(u.x1, s.tx + s.tw - 1);
     if (ux1 < ux0) continue;
-    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE });
+    const blk = u.cells !== undefined && c.M.cellBlocks ? c.M.cellBlocks[u.cells] : null, ox = s.tx * TILE, oy = s.ty * TILE;   // (a police station's cells: shared/cells.js)
+    const cells = blk ? { bars: blk.bars.map((q) => [q[0] - ox, q[1] - oy, q[2] - ox, q[3] - oy]), cells: blk.cells.map((q) => ({ door: [q.door.x - ox, q.door.y - oy], bench: [q.bench.x - ox, q.bench.y - oy], toilet: [q.toilet.x - ox, q.toilet.y - oy] })), dir: blk.south ? 1 : -1, back: (blk.south ? blk.y0 : blk.y1) - oy } : null;
+    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells });
   }
   // a wing with no room you walk into (a hospital's wards): its floor all across, walls cut low round it
   const inY0 = Math.max(32, Math.min(Dd - 64, (wi.y0 - s.ty) * TILE)), inY1 = Math.max(inY0 + 32, Math.min(Dd - 32, (wi.y1 - s.ty + 1) * TILE));
@@ -2820,12 +2822,53 @@ function makeCut(r) {
     const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' || u.kind === 'roadhouse' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : u.kind === 'roadhouse' ? ramp('#4a3020', 5, 2) : ramp('#a8aab0', 5, 2);
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = u.x0 + 6; x < u.x1 - (u.x1 - u.x0 > 128 ? 34 : 6); x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
     for (let x = u.x0 + 6; x < u.x1 - (u.x1 - u.x0 > 128 ? 34 : 6); x++) for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, CT[v > 18 ? 4 : 2 + ((x >> 3) & 1)], [0, 1, 0]);
+    if (u.cells) { cellRoom(u.cells, px); continue; }   // (the cells along the back: no shelves)
     const goods = [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [226, 224, 214], [170, 100, 200]];
     for (let x = u.x0 + 4; x < u.x1 - 4; x++) for (let v = 0; v < 52; v++) { const sh = v % 13; px(x, r.inY0 + 10, v, sh < 2 ? MAT.metalDark[2] : goods[Math.floor(hash(x >> 1, v / 13 | 0, r.seed + u.x0) * goods.length)], [0, 1, 0]); }
     for (let Y = r.inY0; Y < r.inY0 + 10; Y++) for (let x = u.x0 + 4; x < u.x1 - 4; x++) px(x, Y, 52, MAT.metalDark[3], [0, 0, 1]);
     if (u.kind === 'roadhouse') roadhouseRoom(u, r, px);
   }
   return G;
+}
+// ---- a police station's cells (task #362; shared/cells.js lays them out): bare concrete floors, steel bars along the front
+// and between the cells (rails top and middle), a door frame with its lock box in each front, a steel bench along the back
+// wall and a steel toilet in the corner
+function cellRoom(k, px0_) {
+  const px = (x, Y, z, c, n) => px0_(Math.round(x), Math.round(Y), z, c, n);
+  const BAR = ramp('#3a3c44', 5, 2), STEEL = ramp('#8a8e96', 5, 2), BOWL = ramp('#c8ccd2', 5, 3), CON = ramp('#86827c', 5, 2), H = 36;
+  const slab = (x0, x1, Ya, Yb, z, top, side) => {
+    const Y0 = Math.min(Ya, Yb), Y1 = Math.max(Ya, Yb);
+    for (let Y = Y0; Y < Y1; Y++) for (let x = x0; x < x1; x++) px(x, Y, z, top[Y === Y0 || x === x0 || x === x1 - 1 ? 4 : 2], [0, 0, 1]);
+    for (let x = x0; x < x1; x++) for (let v = 0; v < z; v++) px(x, Y1, v, side[v > z - 3 ? 3 : 1], [0, 1, 0]);
+  };
+  // the floors: concrete, a drain in the middle
+  for (const q of k.bars) if (q[1] === q[3]) {
+    const Y0 = Math.min(k.back, q[1]), Y1 = Math.max(k.back, q[1]);
+    for (let Y = Y0; Y < Y1; Y++) for (let x = q[0]; x < q[2]; x++) { const h = hash(x >> 3, Y >> 3, 911); px(x, Y, 0, CON[(x - q[0]) % 32 === 0 || (Y - Y0) % 32 === 0 ? 1 : h < 0.12 ? 1 : h > 0.9 ? 3 : 2], [0, 0, 1]); }
+  }
+  for (const c of k.cells) {
+    const [bx, by] = c.bench, [tx, ty] = c.toilet, d = k.dir;
+    slab(bx - 30, bx + 30, k.back + d * 3, k.back + d * 15, 9, STEEL, STEEL);              // the bench
+    slab(tx - 7, tx + 7, k.back + d * 1, k.back + d * 5, 17, BOWL, BOWL);                  // the toilet's tank
+    slab(tx - 6, tx + 6, k.back + d * 5, k.back + d * 17, 9, BOWL, BOWL);                  // its bowl
+    for (let Y = Math.min(ty - 2, ty + 4); Y < Math.max(ty - 2, ty + 4); Y++) for (let x = tx - 3; x < tx + 3; x++) px(x, Y, 10, [70, 90, 104], [0, 0, 1]);
+    for (let x = c.door[0] - 2; x < c.door[0] + 2; x++) for (let Y = by + d * 26; Y !== by + d * 30; Y += d) px(x, Y, 0, CON[0], [0, 0, 1]);   // (the drain)
+  }
+  // the bars: a post every 5 px, rails at the top and the middle
+  for (const q of k.bars) {
+    const horiz = q[1] === q[3], n = horiz ? q[2] - q[0] : q[3] - q[1];
+    for (let i = 0; i <= n; i++) {
+      const x = horiz ? q[0] + i : q[0], Y = horiz ? q[1] : q[1] + i;
+      if (i % 5 === 0) for (let v = 0; v < H; v++) px(x, Y, v, BAR[v > H - 4 ? 4 : (i / 5) & 1 ? 2 : 3], horiz ? [0, 1, 0] : [1, 0, 0]);
+      for (const v of [H - 2, H - 1, 18]) px(x, Y, v, BAR[v === 18 ? 2 : 3], [0, 0, 1]);
+    }
+  }
+  // the doors: a heavier frame either side, the lock box
+  for (const c of k.cells) {
+    const [dx, dy] = c.door;
+    for (const s of [-17, -16, 16, 17]) for (let v = 0; v < H + 2; v++) px(dx + s, dy, v, BAR[s < 0 ? 1 : 3], [0, 1, 0]);
+    for (let x = dx + 10; x < dx + 15; x++) for (let v = 14; v < 22; v++) px(x, dy, v, v === 14 || v === 21 ? [60, 58, 50] : [150, 140, 96], [0, 1, 0]);
+  }
 }
 // ---- the Rusty Spur's bar room (MC4, task #366): along the floor in front of the bar, left to right - the booths by the
 // wall, the jukebox, the pool table, the arm-wrestling table with its two stools, and the card room behind a low partition

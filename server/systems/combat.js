@@ -30,7 +30,7 @@ function ammoOf(ped, id) {
 export function tryAttack(world, ped, aim) {
   const now = world.time;
   if (ped.dead || now < ped.nextAttack || now < ped.reloadUntil || now < ped.stunUntil || now < ped.downUntil) return false;
-  if (ped.hidden || now < (ped.protectUntil || 0)) return false; // spawn / step-out protection: no shooting
+  if (ped.hidden || now < (ped.protectUntil || 0) || ped.cellSafe) return false; // spawn / step-out protection, a police station's cell block (cells.js): no fighting
   if (ped.rollT > 0) return false;
   if (!ped.vehId && isSwimming(world.map, ped)) return false; // can't fight while swimming
   const w = WEAPONS[ped.weapon] || WEAPONS.fists;
@@ -271,7 +271,7 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true) {
 
 // Whether damage() would hurt this person at all (indoors, spawn protection, a lost pet, dev invincibility).
 function hurtable(world, ped) {
-  return !(ped.hidden || ped.pet || world.time < (ped.protectUntil || 0) || (ped.player && ped.player.invincible));
+  return !(ped.hidden || ped.pet || ped.cellSafe || world.time < (ped.protectUntil || 0) || (ped.player && ped.player.invincible));
 }
 
 // The bullets (or a blast's pellets) that hit one person, as one hit: a shotgun at close range hits harder
@@ -328,7 +328,7 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (!ped || ped.dead || amount <= 0) return false;
   if (ped.npc && ped.npc.role === 'wanderer') { wanderer.struck(world, ped, attacker); return false; }   // (the stranger: gone in a flash)
   const now = world.time;
-  if (ped.hidden || ped.pet || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet
+  if (ped.hidden || ped.pet || ped.cellSafe || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet / the cells (cells.js)
   if (ped.player && ped.player.invincible) return false;          // dev: invincible
   if (ped.wild) wildlife.noteHit(world, ped, attacker, cause);   // (how it was taken: the grade of the hide)
   // a street fight (happenings.js): a scuffle - they hit to hurt, not to maim, so it goes on a while and nobody dies

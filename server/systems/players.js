@@ -48,6 +48,7 @@ import * as ferries from './ferries.js';
 import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED } from '../../shared/rules.js';
 import * as revive from './revive.js';
 import * as custody from './custody.js';
+import * as cells from './cells.js';
 import * as devmode from '../devmode.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
@@ -327,8 +328,12 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
-  if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail screen has the bail)
+  if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail panel has the bail)
     if ((pressed & IN.ACTION) && custody.canBreak(p)) custody.breakOut(world, p);   // (the car stuck: make a break for it)
+    if (!ped.cuffed) {   // in a cell: walk round it; the action button sits, holds the bars (cells.js)
+      cells.input(world, p, ped, inp, dt);
+      if (pressed & IN.ACTION) { const act = findInteraction(world, p); if (act) act.run(); }
+    }
     return;
   }
   if (pressed & IN.LIGHT) economy.toggleLight(world, p); // the flashlight (in the bag, no hand slot)
@@ -423,7 +428,7 @@ export function tumbleImpact(world, ped, v0, dt, friction = TUMBLE_FRICTION) {
 // Diving into a wanted suspect tackles them to the ground (officers and bounty hunters).
 function tackle(world, ped) {
   for (const e of world.query(ped.x, ped.y, 26, 1)) {
-    if (e === ped || e.dead || e.vehId || world.time < e.downUntil) continue;
+    if (e === ped || e.dead || e.vehId || world.time < e.downUntil || e.cellSafe) continue;   // (nobody in a cell: cells.js)
     if (!law.isSuspectFor(world, ped.player, e)) continue;
     const a = Math.atan2(e.y - ped.y, e.x - ped.x);
     e.vx = Math.cos(a) * 180; e.vy = Math.sin(a) * 180;
@@ -441,6 +446,7 @@ function tackle(world, ped) {
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (ped && ped.cuffed && !ped.dead && custody.canBreak(p)) return { label: 'Make a break for it!', run: () => custody.breakOut(world, p) };
+  if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };

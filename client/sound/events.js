@@ -106,6 +106,7 @@ export const EVENT_SOUNDS = {
   garagedoor: (ev, A) => { const h = A.S.map && A.S.map.homes && A.S.map.homes[ev.home]; const d = h && (h.garageDoor || h.garage); if (d) A.at('rollerdoor', d.x, d.y); },
   baydoor: (ev, A) => { const b = A.S.map && A.S.map.bays && A.S.map.bays[ev.i]; if (b) A.at('rollerdoor', (b.tx + b.tw / 2) * 32, (b.ty + b.th / 2) * 32); },
   gate: (ev, A) => { const g = A.S.map && A.S.map.gates && A.S.map.gates[ev.i]; if (g) A.at(g.club ? 'rollerdoor' : 'gate', g.x, g.y, 0.8); },
+  celldoor: (ev, A) => A.at('gate', ev.x, ev.y, 0.55),   // a cell door clanking open or shut (server cells.js)
   // ---- people ----
   say: speech('talk'),
   thanks: speech('happy'),

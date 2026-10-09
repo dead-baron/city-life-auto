@@ -21,7 +21,9 @@ export const WORLD_H = MAP_H * TILE;
 //      hangar that World v2's roads ran through moved to open ground nearby (map.js offTheRoad)
 //   7  clothes to buy: storefronts become clothing stores by style and district, barbershops and hair salons
 //      (map.js buildClothesShops); the Rusty Spur, a biker roadhouse on the Desert Highway (countryside.js)
-export const WORLD_VERSION = 7;
+//   8  real cells: a cell block at the back of every police station, barred cells and a corridor, the front desk's
+//      counter moved forward for it (shared/cells.js)
+export const WORLD_VERSION = 8;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);
