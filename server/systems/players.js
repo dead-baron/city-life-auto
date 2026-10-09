@@ -338,7 +338,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   // down from a tackle (police.js): moving gets you up sooner - if nobody pins you first
   if (ped.scrambleUntil > world.time && world.time < ped.downUntil && !ped.cuffed && Math.hypot(inp.mx || 0, inp.my || 0) > 0.3) ped.downUntil = Math.max(world.time, ped.downUntil - dt * TACKLE_SCRAMBLE);
   if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail panel has the bail)
-    if ((pressed & IN.ACTION) && custody.canBreak(p)) custody.breakOut(world, p);   // (the car stuck: make a break for it)
+    if ((pressed & IN.ACTION) && custody.canBreak(p, world)) custody.breakOut(world, p);   // (make a break for it: on the ground, walked to the car, the car stuck)
     if (!ped.cuffed) {   // in a cell: walk round it; the action button sits, holds the bars (cells.js)
       cells.input(world, p, ped, inp, dt);
       if (pressed & IN.ACTION) { const act = findInteraction(world, p); if (act) act.run(); }
@@ -456,7 +456,7 @@ function tackle(world, ped) {
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (p.struggle) return null;   // (fighting an officer off: the struggle bar says what to press - client/hud.js)
-  if (ped && ped.cuffed && !ped.dead && custody.canBreak(p)) return { label: 'Make a break for it!', run: () => custody.breakOut(world, p) };
+  if (ped && ped.cuffed && !ped.dead && custody.canBreak(p, world)) return { label: 'Make a break for it!', run: () => custody.breakOut(world, p) };
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };

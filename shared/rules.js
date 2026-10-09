@@ -94,6 +94,19 @@ export const STRUGGLE_STUNNED = 0.7;   // still twitching from a taser or the pe
 export const STRUGGLE_GRACE_S = 2.5;   // broke free: no tackle or grab lands on you for this long
 export const STRUGGLE_KNOCK_S = [0, 3.2, 2.8, 1.8, 1.2, 1];   // the officer you threw off is down this long, by your stars (a second one 60%)
 export const STRUGGLE_NPC_FREE = 0.3;  // an NPC crook the police take down shakes them off this often (x their build's strength)
+// Making a break for it from the cuffs (server/systems/custody.js breakAway; the owner's note, task #377): cuffed and held on
+// the ground, or walked to the police car, the action button tries to get away - no fighting. A try works this often by your
+// stars, times your strength (health, as in the struggle), less against SWAT, agents and soldiers (STRUGGLE_KIND), and less
+// each time it fails (they're ready for it), a try every BREAK_RETRY_S. Away, the officer stumbles back, or goes over
+// backwards or rolls, down BREAK_KNOCK_S by your stars; those who come after you can trip, on the face or in a roll, dazed
+// a moment. Simulated (test/arrests.test.js: four tries, full health, a cop): away 85% of the time at 1 star, 78% at 2,
+// 45% at 3, 9% at 4, 5% at 5 (with the struggle before it, 4-5 stars stay nearly hopeless).
+export const BREAK_CHANCE = [0, 0.6, 0.45, 0.18, 0.04, 0.015];   // by stars: a try works this often...
+export const BREAK_FAIL_K = 0.7;                                   // ...this much less for every try that failed
+export const BREAK_RETRY_S = 2.5;                                  // a try at most this often
+export const BREAK_KNOCK_S = [0, 1.8, 1.5, 1.1, 0.8, 0.6];        // the officer you broke away from: down (or staggered) this long
+export const BREAK_TRIP_SHARE = [0, 0.5, 0.4, 0.25, 0.1, 0.05];   // the share of the officers coming after you who trip...
+export const BREAK_DAZE_S = 1;                                     // ...on their face or in a roll, down and dazed this long
 export const RESPAWN_SECONDS = 18;           // down: you wake up this long after going down, whatever you press (unless help or an ambulance is on the way)
 export const DEATH_REVEAL_S = 3;             // down: the camera pulls back over where it happened for this long before the choices come up
 // Downed, revives and the paid ambulance

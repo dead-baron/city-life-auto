@@ -20,7 +20,7 @@ import * as struggle from './struggle.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
-import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_RECOVER_S, TACKLE_APPROACH, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5 } from '../../shared/rules.js';
+import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_RECOVER_S, TACKLE_APPROACH, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5, BREAK_DAZE_S } from '../../shared/rules.js';
 
 const rng = mulberry32(911);
 
@@ -214,6 +214,19 @@ function tackleHit(world, c, t) {
   return true;
 }
 export const _tackleHit = tackleHit;   // (for the tests)
+// After a prisoner breaks away (custody.js breakAway, the owner's note, task #377), an officer running after them can trip:
+// on the face or in a roll, down and dazed a moment (the knockdown event's k; the stun's sparks round the head)
+function trips(world, c, now) {
+  const n = c.npc;
+  if (now > (n.tripBy || 0)) { n.tripAt = 0; return false; }
+  if (now < n.tripAt || now < c.downUntil || Math.hypot(c.vx, c.vy) < 110) return false;
+  n.tripAt = 0;
+  const k = world.rand() < 0.55 ? 'F' : 'R';
+  c.downUntil = Math.max(c.downUntil || 0, now + BREAK_DAZE_S); c.stunUntil = Math.max(c.stunUntil || 0, now + BREAK_DAZE_S);
+  c.rollT = 0; c.vx *= 0.4; c.vy *= 0.4;
+  world.emit(c.x, c.y, { e: 'knockdown', x: c.x, y: c.y, id: c.id, k, d: BREAK_DAZE_S });
+  return true;
+}
 // How long a car has been at a standstill (s)
 function stillFor(world, car) {
   if (Math.hypot(car.vx, car.vy) > 45) { car.stillSince = 0; return 0; }
@@ -464,6 +477,9 @@ function runUnit(world, v, dt) {
   for (const c of crew) {
     if (c.vehId || c.npc.war || c.ug) continue; // busy in a gang fight (gangwar.js drives them); gone down a manhole after a suspect (underground.js)
     if (struggle.pinning(world, c)) continue;   // on top of the suspect, going for the cuffs (struggle.js moves them)
+    // stumbling back from a prisoner who broke away (custody.js), or tripped running after them
+    if (now < (c.staggerUntil || 0)) { pedStep(c, { bits: 0, mx: 0, my: 0, aim: c.a }, dt, world.map, copMods(world, c)); continue; }
+    if (c.npc.tripAt && trips(world, c, now)) continue;
     if (so && standoff.hold(world, c, v, so, p, hot, dt)) continue;   // in cover or at a post round the building (the rest go in)
     const d = Math.hypot(t.x - c.x, t.y - c.y), n = c.npc;
     let inp;
