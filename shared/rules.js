@@ -384,3 +384,10 @@ export const STARTER_BASICS = ['Plain tee', 'Jeans', 'Sneakers'];   // what ever
 // the barbershop and the hair salon (ST3): what each change costs; the salon charges SALON_K times as much
 export const BARBER_PRICES = { cut: 15, colour: 25, beard: 12, moustache: 8 };
 export const SALON_K = 2;
+
+// Hit by a car (task #361: server/systems/carhits.js): besides being knocked flying, a car can go right over you
+// (run over: under it, left lying face down or on your back) or scoop you up onto its hood for a ride
+export const RUNOVER_LIE_S = 3.5;          // run over: lying there about this long (critically hurt)...
+export const RUNOVER_LEFT = 0.14;          // ...on about this much of your health, slow - fast, or under a truck, it can kill
+export const HOOD_RIDE_S = [0.5, 2];       // onto the hood: riding it this long at most, unless it brakes or turns hard (or you roll off: move)
+export const HOOD_MAX_SPEED = 380;         // ...only below this closing speed (px/s); faster, you go flying

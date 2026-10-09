@@ -109,6 +109,7 @@ export function send(world) {
     const spawns = [];
     let ctrl = CTRL.NONE, ctrlId = 0, self = null, sflags = 0;
     if (ped && !ped.dead && ped.onTrain) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: 0 }; }
+    else if (ped && !ped.dead && ped.hoodOf && !veh) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: ped.lz || 0 }; }   // (on a car's hood: carried - carhits.js)
     else if (ped && !ped.dead && ped.cuffed && !veh) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: ped.lz || 0 }; }   // (cuffed: custody.js walks them - no prediction)
     else if (ped && !ped.dead) {
       if (veh) { ctrl = ped.seat === 0 && !veh.scripted && !veh.onDeck ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = { x: veh.x, y: veh.y, a: veh.a, vx: veh.vx, vy: veh.vy, av: veh.av, stamina: veh.slip || 0, rollT: veh.spin || 0, rdx: veh.launch || 0, lz: veh.lz || 0 }; sflags = veh.rev ? 32 : 0; } // (a vehicle's slide / burnout / launch state rides in the ped-only slots) // reverse-gear state keeps point-to-drive prediction exact

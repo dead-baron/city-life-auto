@@ -21,6 +21,8 @@ import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, dra
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
 import { FX } from './render/fx.js';
+import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
+import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
 import { HUD } from './hud.js';
 import { createPhone } from './phone.js';
 import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
@@ -85,6 +87,7 @@ const S = {
   forageGone: new Set(),      // foraging spots picked bare (map.forage indices; server/systems/foraging.js)
   xing: [], xingAnim: [], // level crossings: { d: gates down, b: [arm broken, arm broken] }
 };
+S.boom = new Booms(S); S.camp = new Campfires(S); S.onCrackle = (x, y, v) => S.camp.crackle(x, y, v);
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 
@@ -660,7 +663,18 @@ function onEvent(ev) {
       break;
     }
     case 'crash': fx.sparks(ev.x, ev.y, 4 + Math.round(ev.p * 8)); sfx('crash', distVol(ev.x, ev.y) * (0.4 + ev.p)); if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, ev.p * 6); break;
-    case 'explode': fx.explosion(ev.x, ev.y, ev.r, now); sfx('explode', distVol(ev.x, ev.y)); S.cam.shake = Math.max(S.cam.shake, 14 * distVol(ev.x, ev.y)); S.flashes.push({ x: ev.x, y: ev.y, t: 0.55, r: ev.r * 4, kind: 'boom' }); break;
+    case 'explode': S.boom.explode(ev, now, distVol(ev.x, ev.y)); sfx('explode', distVol(ev.x, ev.y)); break;   // (render/boom.js: the layered blast from its seed)
+    case 'wreckland': S.boom.land(ev, now); break;   // a wreck blown up into the air comes down
+    case 'runover': {   // under a car (server carhits.js): lying face down or on the back a few seconds; the car jolts
+      const e = S.ents.get(ev.id);
+      if (e) { e.runAt = now; e.runK = ev.k; e.runD = ev.d; }
+      S.boom.bump(ev.v, now);
+      if (settings.gore !== false) fx.decal(5, ev.x, ev.y, Math.random() * 6.28, 9, '#6a0a10', now, 0.85);
+      if (ev.id === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 8);
+      break;
+    }
+    case 'hood': S.boom.hood(ev, now); if (ev.id === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 6); break;   // up onto a car's hood
+    case 'hoodoff': S.boom.hoodOff(ev); break;
     case 'spark': fx.sparks(ev.x, ev.y, 3); break;
     case 'taser': fx.tracer(ev.x1, ev.y1, ev.x2, ev.y2, 'rgba(120,200,255,'); fx.sparks(ev.x2, ev.y2, 4); sfx('taser', distVol(ev.x1, ev.y1)); break;
     case 'spray': // pepper spray: an orange mist cone
@@ -2640,6 +2654,7 @@ function prepFrame(dt) {
 // The visual simulation of the frame (see render): everything here runs whichever renderer draws.
 function tickVisuals(F) {
   const { dt, now, view, sky, sub, fx } = F;
+  S.boom.tick(F); if (!sub) S.camp.tick(F);   // (explosions' layers, wrecks in the air, hood riders; campfire embers)
   // walk-in shops: inside one, its roof fades away and the floor plan shows
   if (!sub && !F.spec) F.insideB = interiorTick(F.sp, F.roofArt);
   // grass, crops and bushes: trampled underfoot and flattened by wheels; trees shaken by cars (render/flora)
@@ -2914,6 +2929,7 @@ function drawOverlays(F, v2) {
     drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
     drawBuoys(F.view, now);
     drawArt2Marks(F);
+    S.camp.draw(g, F); S.boom.draw(g, F, W, H, DPR);   // (the campfires' haze; the fireballs, plumes, shockwaves, the flash)
   }
   g.setTransform(...S.worldTf);
   // aim sight for sticks / touch (the mouse has its own cursor)
@@ -3716,6 +3732,9 @@ function pedLook(p, now) {
     else pose = DEAD_POSE[k || (flRecent && FLING_LIE[flK]) || DEAD_BY_ID[p.id % 3]] || 'dead';
   } else if (pose === 'down' && !flying && !(f & PF.STUN) && flRecent && (flK === 'face' || flK === 'slide')) pose = flK === 'face' ? 'downF' : 'downB';
   else if (pose === 'down' && p.d && p.d.cf) pose = 'downF';   // (cuffed and held face down)
+  const run = p.runAt !== undefined && now - p.runAt < p.runD && !flying && !(f & PF.DEAD);   // run over (task #361): lying there
+  if (run && pose === 'down') pose = p.runK === 'F' ? 'downF' : 'downB';
+  if (p.hoodV && !(f & PF.DEAD)) pose = 'hood';   // up on a car's hood, clinging on (render/boom.js)
   // a hit: a stagger back on the heels (or forward, hit from behind); hurt and walking: a limp
   const rT = p.reactAt !== undefined ? now - p.reactAt : 99, stag = seqFr < 0 && rT < (p.reactD || 0) && STAGGER_FROM.has(pose);
   if (stag) pose = 'stagger';
@@ -3727,6 +3746,7 @@ function pedLook(p, now) {
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   if (seqFr >= 0) fr = seqFr;
   if (pose === 'downF' && p.d && p.d.cf) fr = 0;   // (held flat, not pushing up)
+  if (run && (pose === 'downF' || pose === 'downB')) fr = now - p.runAt > p.runD - 0.8 ? 1 : 0;   // (flat, then pushing up)
   const L = p._look || (p._look = {});
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;
   L.lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
@@ -3828,7 +3848,7 @@ function drawPed(p, now) {
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
 const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup']);
-const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // flat on the ground (art2 people.js poses)
+const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
 const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
 // How the cut down go down (server reactions.js died): [until s after the death, pose, frame] - knocked back then
@@ -3837,7 +3857,7 @@ const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', 
 const DEATH_SEQ = { knees: [[0.22, 'stagger', 0], [0.95, 'kneel', 1]], stab: [[0.3, 'stagger', 2], [0.85, 'kneel', 1]], slump: [[0.35, 'stagger', 0], [0.6, 'stagger', 1]], spin: [[0.55, 'stagger', 0]], slash: [[0.4, 'stagger', 0]] };
 const DEATH_TURN = { spin: [4.4, 0.55], slash: [2.2, 0.4] };
 // the old renderer's sprites for the poses it doesn't have (the subway view)
-const V1_POSE = { stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry' };
+const V1_POSE = { stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;

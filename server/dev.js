@@ -12,6 +12,7 @@ import * as jobs from './systems/jobs.js';
 import * as law from './systems/law.js';
 import * as bounties from './systems/bounties.js';
 import * as combat from './systems/combat.js';
+import * as vehicles from './systems/vehicles.js';
 import * as npc from './systems/npc.js';
 import * as gangwar from './systems/gangwar.js';
 import * as cruiser from './systems/cruiser.js';
@@ -215,6 +216,14 @@ export function command(world, p, c, msg) {
       const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
       v.issuedTo = p.pid;
       v.lz = ped.lz || 0; // up on the highway with you
+      break;
+    }
+    case 'boom': { // a vehicle (msg.m, a sedan) blown up a little way off: msg.k 'launch' | 'pieces' | 'plain' picks how (task #363)
+      if (!ped) break;
+      const model = VEHICLES[msg.m] ? msg.m : 'sedan', sp = clearSpot(world, ped, VEHICLES[model]);
+      const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
+      if (msg.k) v.boomKind = msg.k === 'plain' ? '' : String(msg.k);
+      vehicles.explode(world, v, null);
       break;
     }
     case 'guns': // every weapon in the game with ammo (the police's and the hunters' too), med kits, and every tool / bit of equipment

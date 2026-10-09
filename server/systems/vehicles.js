@@ -12,6 +12,8 @@ import * as law from './law.js';
 import * as npc from './npc.js';
 import * as cruiser from './cruiser.js';
 import * as traffic from './traffic.js';
+import * as explosions from './explosions.js';   // (task #363: the blast by the vehicle, the wreck blown into the air)
+import * as carhits from './carhits.js';         // (task #361: run over, onto the hood)
 
 
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
@@ -48,6 +50,7 @@ export function update(world, dt) {
   for (const e of world.entities.values()) if (e.kind === K.VEH) vehs.push(e);
 
   for (const v of vehs) {
+    if (v.fly && explosions.flyStep(world, v)) continue;   // (blown up into the air: carried to where it lands)
     const driver = driverOf(world, v);
     if (v.wreckAt) {
       v.input.throttle = 0; v.input.steer = 0; v.input.hb = true;
@@ -92,12 +95,12 @@ export function update(world, dt) {
 
   // vehicle vs vehicle
   for (const a of vehs) {
-    if (a.removed || a.onDeck) continue;   // (the cars on a ferry's deck are held in their places: ferries.js)
+    if (a.removed || a.onDeck || a.fly) continue;   // (the cars on a ferry's deck are held in their places: ferries.js)
     const sa = Math.abs(a.vx) + Math.abs(a.vy);
     if (sa < 2) continue;
     const near = world.query(a.x, a.y, a.def.L / 2 + 110, K.VEH);
     for (const b of near) {
-      if (b === a || b.removed || b.onDeck) continue;
+      if (b === a || b.removed || b.onDeck || b.fly) continue;
       if ((a.def.kind === 'boat') !== (b.def.kind === 'boat') || !sameLevel(a.lz, b.lz)) continue;
       const sb = Math.abs(b.vx) + Math.abs(b.vy);
       if (sb >= 2 && b.id < a.id) continue; // pair handled once when both move
@@ -109,11 +112,11 @@ export function update(world, dt) {
 
   // vehicle vs pedestrians
   for (const v of vehs) {
-    if (v.removed) continue;
+    if (v.removed || v.fly) continue;
     const spd = speedOf(v);
     const near = world.query(v.x, v.y, v.def.L / 2 + 16, K.PED);
     for (const ped of near) {
-      if (ped.vehId || ped.dead || ped.onTrain || !sameLevel(ped.lz, v.lz)) continue;
+      if (ped.vehId || ped.dead || ped.onTrain || ped.hoodOf || !sameLevel(ped.lz, v.lz)) continue;
       const h = circleVsObb(ped.x, ped.y, ped.r, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
       if (!h) continue;
       const vn = (v.vx - ped.vx) * h.nx + (v.vy - ped.vy) * h.ny;
@@ -121,11 +124,13 @@ export function update(world, dt) {
         strikePed(world, v, ped, vn, h);
       } else {
         ped.x += h.nx * h.depth; ped.y += h.ny * h.depth;
+        if (spd > 40) carhits.pinned(world, v, ped, dt);   // (pinned rolling against its front: move another way to get off)
         if ((ped.lz || 0) > 0.3) levelStep(world.map, ped, 11);
         else if (PED_BLOCK[world.map.tileAtPx(ped.x, ped.y)]) { ped.x -= h.nx * h.depth; ped.y -= h.ny * h.depth; }
       }
     }
   }
+  carhits.update(world, dt);   // (riding a hood: carried along, then thrown off)
 }
 
 function resolveVehicleHit(world, a, b, hit) {
@@ -169,15 +174,21 @@ function resolveVehicleHit(world, a, b, hit) {
 
 function strikePed(world, v, ped, vn, h) {
   const driver = driverOf(world, v);
-  const dmg = (vn - 100) * 0.17 * Math.sqrt(v.def.mass);
-  ped.hitImmuneUntil = world.time + 0.4;
-  ped.vx = v.vx * 0.55 + h.nx * 160;
-  ped.vy = v.vy * 0.55 + h.ny * 160;
-  ped.x += h.nx * h.depth; ped.y += h.ny * h.depth;
-  ped.downUntil = world.time + 1.6;
-  v.vx *= 0.92; v.vy *= 0.92;
-  world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: Math.atan2(v.vy, v.vx), n: 10 });
-  const killed = combat.damage(world, ped, dmg, driver, 'vehicle', Math.atan2(v.vy, v.vx));
+  // run over or up onto the hood (carhits.js), or knocked flying
+  const how = carhits.outcome(world, v, ped, vn);
+  let killed;
+  if (how !== 'fling') killed = carhits.apply(world, v, ped, vn, how, driver);
+  else {
+    const dmg = (vn - 100) * 0.17 * Math.sqrt(v.def.mass);
+    ped.hitImmuneUntil = world.time + 0.4;
+    ped.vx = v.vx * 0.55 + h.nx * 160;
+    ped.vy = v.vy * 0.55 + h.ny * 160;
+    ped.x += h.nx * h.depth; ped.y += h.ny * h.depth;
+    ped.downUntil = world.time + 1.6;
+    v.vx *= 0.92; v.vy *= 0.92;
+    world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: Math.atan2(v.vy, v.vx), n: 10 });
+    killed = combat.damage(world, ped, dmg, driver, 'vehicle', Math.atan2(v.vy, v.vx));
+  }
   if (killed) v.bloody = true;
   else if (!ped.wild && vn > 200) npc.spectacle(world, ped.x, ped.y, { r: 380, near: 70, chance: 0.7, secs: 8 });   // (knocked flying: phones out - a death does it in kill())
   if (driver && !ped.wild) law.hitAndRun(world, driver, ped, killed, v); // (an animal on the road: no crime)
@@ -258,7 +269,8 @@ export function explode(world, v, attackerPed) {
     world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: 0.4 });
     return;
   }
-  world.emit(v.x, v.y, { e: 'explode', x: v.x, y: v.y, r: v.def.kind === 'bike' ? 60 : 110 });
+  // the event (the seed, the pieces, the wreck's flight: explosions.js) before anyone is thrown out of it
+  const { size } = explosions.vehicleBoom(world, v, attackerPed);
   for (const sid of [...v.seats]) {
     if (!sid) continue;
     const ped = world.get(sid);
@@ -266,7 +278,8 @@ export function explode(world, v, attackerPed) {
     blownOut(world, ped, v, attackerPed);
   }
   cargo.spillCargo(world, v);
-  combat.blast(world, v.x, v.y, v.def.kind === 'bike' ? 60 : 110, 70, attackerPed, v.id, false, v.lz || 0);
+  // the blast: bigger vehicles, bigger blasts (a fuel tanker huge); people near are thrown (reactions.blasted)
+  combat.blast(world, v.x, v.y, size.r, size.dmg, attackerPed, v.id, false, v.lz || 0);
 }
 
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the

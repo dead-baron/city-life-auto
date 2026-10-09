@@ -59,6 +59,15 @@ const ALIAS = { move0: 'walk0', move1: 'walk1', move2: 'walk2', move3: 'walk3', 
 // (rigMoto, below). shared/vehicles.js ride picks one per bike.
 POSES.chop = 1; POSES.tuck = 1;
 const MOTO_POSES = new Set(['chop', 'tuck']);
+// ---- hit by a car (task #361): 'hood', clinging face down on a car's hood, arms spread up to the windscreen (on downF)
+POSES.hood = 1;
+function rigHood(D, P) {
+  const top = D.pelZ + D.neckUp + D.headUp;
+  P.root = rx(Math.PI / 2 - 0.12); P.headPitch = -0.6; P.headYaw = 0;
+  P.fL = [-D.hipX - 3.4, 1.4, D.ank]; P.fR = [D.hipX + 3.4, 1.4, D.ank]; P.kneeL = [-1, 0.3, 0]; P.kneeR = [1, 0.3, 0];
+  P.hands = () => { P.hL = [-9.5, 2.4, top + 7]; P.hR = [9.5, 2.4, top + 7]; P.elL = [-1, 0, 0.4]; P.elR = [1, 0, 0.4]; };
+  return P;
+}
 function rigMoto(P, pose) {
   const seat = SEATS.ride / CA, hands = P.hands;
   if (pose === 'chop') {
@@ -361,6 +370,7 @@ function aimPose(D, P, kind, rec) {
 function restHoldItem(P, kind) { if (ICLS[kind] === 'one' || ICLS[kind] === 'big' || ICLS[kind] === 'knife') setItem(P, kind, [0.1, 0.3, 0.95], [0, 1, 0]); }
 function rig(D, A, pose, f, kind, acc) {
   if (MOTO_POSES.has(pose)) return rigMoto(rig(D, A, 'ride', f, null, null), pose);   // (motorcycle riders, task #366)
+  if (pose === 'hood') return rigHood(D, rig(D, A, 'downF', 0, null, null));
   const P = base(D), c = kind ? ICLS[kind] : null;
   if (GAITS2[pose]) { GAITS2[pose](D, P, f, kind, acc); return P; }   // (the city's people, at the end)
   if (pose === 'idle') {
@@ -1496,6 +1506,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
   if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck'].includes(pn)) kind = null;
+  if (pn === 'hood') kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A), P = rig(D, A, pn, f, kind, acc);

@@ -68,7 +68,7 @@ const MARGIN = 420;        // world px baked round the view (shadows fall in fro
 const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown', 'arts']);
 const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
-const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl']); // people flat on the ground (main.js pedLook)
+const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // people flat on the ground (main.js pedLook)
 const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
 // A wild animal's pose (actors.js ANIMAL_FRAMES) from what the server says it's doing (shared/fauna.js APOSE, the
 // snapshot's extra byte) and how fast it's going: flying, swimming (a sea otter floats on its back), up a trunk,
@@ -1278,7 +1278,7 @@ export class World2 {
     if (!use) return;
     v._v2k = use;
     const o = this.opts;
-    o.alpha = sinking ? 1 - 0.75 * sk : 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = !sinking; o.tint = null;
+    o.alpha = sinking ? 1 - 0.75 * sk : 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = !sinking; o.tint = v.tint || null;   // (render/boom.js)
     if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
     const lean = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.kind === 'bike' ? 2.5 : 1.6);
     const z0 = this._z0(v, def.kind === 'boat') - (sinking ? sk * 8 : 0);

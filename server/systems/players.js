@@ -10,6 +10,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import * as looks from './looks.js';
 import { store, defaultProfile } from '../store.js';
 import * as vehicles from './vehicles.js';
+import * as carhits from './carhits.js';
 import * as combat from './combat.js';
 import * as cargo from './cargo.js';
 const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); return out; };   // + the backpack you dropped when you died
@@ -349,6 +350,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (pressed & IN.USE) economy.useHealItem(world, p);
 
   if (ped.onTrain) { trains.riderInput(world, p, ped, inp, pressed, dt); return; }
+  if (ped.hoodOf) { carhits.hoodInput(world, ped, inp); return; }   // (riding a car's hood: move to roll off - carhits.js)
 
   if (ped.vehId) {
     const v = world.get(ped.vehId);
