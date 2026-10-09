@@ -24,7 +24,7 @@ import { angleDiff } from '../../shared/math.js';
 import {
   STRUGGLE_START, STRUGGLE_PRESS, STRUGGLE_WRIGGLE, STRUGGLE_HOLD, STRUGGLE_STARS, STRUGGLE_KIND, STRUGGLE_BUILD, STRUGGLE_GRIP_VAR,
   STRUGGLE_RAMP, STRUGGLE_CUFF_S, STRUGGLE_HP_FLOOR, STRUGGLE_HP_CAP, STRUGGLE_ENERGY, STRUGGLE_STUNNED, STRUGGLE_GRACE_S,
-  STRUGGLE_KNOCK_S, STRUGGLE_NPC_FREE, STRUGGLE_SECOND,
+  STRUGGLE_KNOCK_S, STRUGGLE_NPC_FREE, STRUGGLE_SECOND, STRUGGLE_PUSH, STRUGGLE_MOVE_K,
 } from '../../shared/rules.js';
 import * as law from './law.js';
 
@@ -84,7 +84,7 @@ export function pinning(world, c) {
 }
 
 // The player's input while it lasts (players.js applyInput: nothing else happens meanwhile).
-export function input(world, p, ped, inp, pressed) {
+export function input(world, p, ped, inp, pressed, dt = 0.05) {
   const s = p.struggle, now = world.time;
   if (!s) return;
   const k = power(ped, now);
@@ -97,9 +97,11 @@ export function input(world, p, ped, inp, pressed) {
   }
   // a wriggle: the move stick swung round to a new direction (left-right, round and round)
   if (Math.hypot(inp.mx || 0, inp.my || 0) > 0.5) {
+    const mk = STRUGGLE_MOVE_K[stars(p)];
+    s.m += STRUGGLE_PUSH * k * mk * dt;   // (pushing against them: moving counts too - the owner, 2026-10-09 07:06)
     const a = Math.atan2(inp.my, inp.mx);
     if (s.wa === null) s.wa = a;
-    else if (Math.abs(angleDiff(s.wa, a)) > WRIGGLE_RAD && now - s.wAt >= WRIGGLE_GAP) { s.wa = a; s.wAt = now; s.m += STRUGGLE_WRIGGLE * k; p.meDirty = true; }
+    else if (Math.abs(angleDiff(s.wa, a)) > WRIGGLE_RAD && now - s.wAt >= WRIGGLE_GAP) { s.wa = a; s.wAt = now; s.m += STRUGGLE_WRIGGLE * k * mk; p.meDirty = true; }
   }
 }
 

@@ -20,7 +20,7 @@ import * as struggle from './struggle.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
-import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5 } from '../../shared/rules.js';
+import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_RECOVER_S, TACKLE_APPROACH, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5 } from '../../shared/rules.js';
 
 const rng = mulberry32(911);
 
@@ -192,14 +192,28 @@ function grab(world, c, t, now) {
 // nor someone who just broke free of an officer (struggle.js: a moment's grace).
 function tackleHit(world, c, t) {
   if (t.dead || t.vehId || t.cuffed || t.rollT > 0 || world.time < t.downUntil || world.time < (t.protectUntil || 0) || world.time < (t.graceUntil || 0) || Math.hypot(t.x - c.x, t.y - c.y) > 28) return false;
-  const a = Math.atan2(t.y - c.y, t.x - c.x);
+  const a = Math.atan2(t.y - c.y, t.x - c.x), now = world.time;
   t.vx = Math.cos(a) * 170; t.vy = Math.sin(a) * 170; t.rollT = 0;
-  t.downUntil = world.time + TACKLE_DOWN_S;
   c.rollT = 0; c.vx *= 0.2; c.vy *= 0.2;
-  world.emit(t.x, t.y, { e: 'knockdown', x: t.x, y: t.y, id: t.id });
-  if (t.player) world.notify(t.player, 'Tackled to the ground!', 'bad');
+  // a wanted player at low stars often only stumbles, or is down for less, and gets up sooner by moving; the officer who
+  // dove is down a moment too, and pins you only if someone reaches you while you're still down (rules.js TACKLE_*; the
+  // owner's note, 2026-10-09 07:06). How they land (the knockdown event's k, for the client): R a tumble (only tripped),
+  // F on the face (taken from behind), B on the back (head on); from the side, either.
+  const st = t.player ? Math.max(0, Math.min(5, t.player.wanted | 0)) : 5;
+  const facing = Math.cos(a - (t.a || 0)), trip = !!t.player && world.rand() < TACKLE_TRIP_SHARE[st];
+  const k = trip ? 'R' : facing > 0.35 ? 'F' : facing < -0.35 ? 'B' : (world.rand() < 0.5 ? 'F' : 'B');
+  if (trip) {
+    t.downUntil = now + TACKLE_TRIP_S;
+    world.notify(t.player, 'Tripped up - keep going!', 'warn');
+  } else {
+    t.downUntil = now + (t.player ? TACKLE_DOWN_BY_STARS[st] : TACKLE_DOWN_S);
+    if (t.player) { t.scrambleUntil = t.downUntil; world.notify(t.player, st <= 2 ? 'Tackled! Move to scramble up - or fight them off if they pin you.' : 'Tackled to the ground!', 'bad'); }
+  }
+  world.emit(t.x, t.y, { e: 'knockdown', x: t.x, y: t.y, id: t.id, k, d: Math.round((t.downUntil - now) * 10) / 10 });
+  if (t.player && TACKLE_RECOVER_S[st] > 0) c.downUntil = Math.max(c.downUntil || 0, now + TACKLE_RECOVER_S[st]);
   return true;
 }
+export const _tackleHit = tackleHit;   // (for the tests)
 // How long a car has been at a standstill (s)
 function stillFor(world, car) {
   if (Math.hypot(car.vx, car.vy) > 45) { car.stillSince = 0; return 0; }
@@ -471,7 +485,8 @@ function runUnit(world, v, dt) {
       const after = (x, y) => { const wp = footWay(world, c, x, y); return seek(c, wp.x, wp.y, true); };   // (in through a door)
       // on them while they're down: they go for the cuffs - and a wanted player fights back (struggle.js; a second officer
       // joins in, a third stands by)
-      if (down && d < 30 && !t.vehId) { if (!struggle.grab(world, c, t)) law.arrest(world, c, t); inp = { bits: 0, mx: 0, my: 0, aim: 0 }; }
+      // (not while they're down themselves: the officer who dove picks themselves up first)
+      if (down && d < 30 && !t.vehId && now >= c.downUntil && now >= c.stunUntil) { if (!struggle.grab(world, c, t)) law.arrest(world, c, t); inp = { bits: 0, mx: 0, my: 0, aim: 0 }; }
       else if (!seen && d > 250) inp = after(kx, ky);
       else if (car) {
         // in a car: stopped, walk up to the door and drag them out; moving, the shooters shoot
@@ -497,7 +512,8 @@ function runUnit(world, v, dt) {
         if (!down && d <= 22 && now > (n.nextDive || 0)) inp = grab(world, c, t, now);   // (right on them: no room to dive - wrestled down)
         else if (!down && d < TACKLE_PX && d > 22 && los && now > (n.nextDive || 0)) inp = dive(c, t, now);
         else {
-          inp = after(t.x, t.y);
+          // (at 1-2 stars they come on at a walk to someone on the ground: a moment to get up and run - the owner's note)
+          if (down && p.wanted <= 2) { const wp = footWay(world, c, t.x, t.y); inp = seek(c, wp.x, wp.y, false, TACKLE_APPROACH); } else inp = after(t.x, t.y);
           if (d < 28 && !down) { c.weapon = 'baton'; aimAt(inp); inp.bits |= IN.FIRE; }
           if (d < 24) { inp.mx *= 0.2; inp.my *= 0.2; }
         }

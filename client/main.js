@@ -735,7 +735,12 @@ function onEvent(ev) {
     case 'fling': { const e = S.ents.get(ev.id); if (e) { e.flingAt = S.loopClock; e.flingDur = ev.d; e.flingK = ev.k; e.flingLanded = false; } break; }
     case 'knockdown': {
       fx.ring(ev.x, ev.y, 30, 'rgba(255,230,120,', 0.4);
-      fx.floatText(ev.x, ev.y - 26, 'KNOCKDOWN!', '#ffd36b');
+      fx.floatText(ev.x, ev.y - 26, ev.k === 'R' ? 'TRIPPED!' : 'KNOCKDOWN!', '#ffd36b');
+      // a tackle (server police.js): flat on the face (taken from behind) or on the back, pushing up at the end - the
+      // run-over poses; a trip is the tumble (down and still sliding: pedLook's roll)
+      const ke = ev.k ? S.ents.get(ev.id) : null;
+      if (ke && (ev.k === 'F' || ev.k === 'B')) { ke.runAt = now; ke.runK = ev.k; ke.runD = ev.d || 1.5; }
+      else if (ke && ev.k === 'R') ke.tripUntil = now + (ev.d || 0.5);
       sfx('hit', distVol(ev.x, ev.y) * 1.5);
       if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, 6);
       break;
@@ -3830,6 +3835,7 @@ function pedLook(p, now) {
   if (fight) pose = (f & PF.ATTACK) ? 'downF' : 'crawl';
   const run = p.runAt !== undefined && now - p.runAt < p.runD && !flying && !(f & PF.DEAD);   // run over (task #361): lying there
   if (run && pose === 'down') pose = p.runK === 'F' ? 'downF' : 'downB';
+  else if (pose === 'down' && p.tripUntil > now && !(f & PF.DEAD)) pose = 'roll';   // tripped by an officer's tackle: a tumble, and up
   if (p.hoodV && !(f & PF.DEAD)) pose = 'hood';   // up on a car's hood, clinging on (render/boom.js)
   // a hit: a stagger back on the heels (or forward, hit from behind); hurt and walking: a limp
   const rT = p.reactAt !== undefined ? now - p.reactAt : 99, stag = seqFr < 0 && rT < (p.reactD || 0) && STAGGER_FROM.has(pose);

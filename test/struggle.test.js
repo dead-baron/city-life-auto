@@ -2,17 +2,22 @@
 // player struggles instead of being pinned and cuffed on the spot. Mashing the attack button fills the meter and throws
 // the officer off (down a moment, you up with a grace from the next tackle); not fighting gets you cuffed; the odds by
 // stars, health and who's on you (simulated struggles); two officers are harder; once cuffed there's no struggle;
-// punching the officer afterwards is assaulting an officer; the HUD and the descriptor carry it to the client.
+// punching the officer afterwards is assaulting an officer; the HUD and the descriptor carry it to the client. And the
+// tackle before it (the owner's note 07:06, "1 or 2 stars should give you a good chance of getting away"): at low stars
+// often only a trip, a shorter knockdown on the face or the back, moving gets you up sooner, the officer who dove is down a
+// moment too, and the others walk up to you on the ground.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport } from './helpers.js';
 import { STAR_HEAT, K, PF } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
 import { mulberry32 } from '../shared/rng.js';
-import { STRUGGLE_CUFF_S, STRUGGLE_GRACE_S, STRUGGLE_KNOCK_S } from '../shared/rules.js';
+import { STRUGGLE_CUFF_S, STRUGGLE_GRACE_S, STRUGGLE_KNOCK_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_DOWN_S, TACKLE_RECOVER_S, TACKLE_APPROACH } from '../shared/rules.js';
+import { PED } from '../shared/physics.js';
 import * as players from '../server/systems/players.js';
 import * as law from '../server/systems/law.js';
 import * as struggle from '../server/systems/struggle.js';
+import * as police from '../server/systems/police.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import { _descriptor } from '../server/net.js';
 
@@ -139,7 +144,7 @@ function odds(w, p, { stars = 1, hp = 100, who = ['cop'], gap = [2, 4], n = 160,
   return free / n;
 }
 
-test('the odds: by stars, by health, by who is on you - mashing well (about 7 presses a second)', () => {
+test('the odds: by stars, by health, by who is on you - punching well (about 7 a second) and working the stick', () => {
   const w = makeWorld({ rand: mulberry32(11) });
   const { p } = joinPlayer(w);
   teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
@@ -148,25 +153,30 @@ test('the odds: by stars, by health, by who is on you - mashing well (about 7 pr
   const pc = (x) => `${Math.round(x * 100)}%`;
   const said = `by stars: ${[1, 2, 3, 4, 5].map((s) => `${s}: ${pc(share[s])}`).join(', ')}`;
   if (process.env.DBG) console.log(said);
-  assert.ok(share[1] >= 0.65, `1 star: free most of the time (${said})`);
-  assert.ok(share[2] >= 0.5 && share[2] <= share[1], `2 stars (${said})`);
-  assert.ok(share[3] >= 0.3 && share[3] <= 0.62, `3 stars: about half the time (${said})`);
+  // 1-2 stars a good chance (the owner, 07:06), 3 about half, 4 rarely, 5 hardly ever
+  assert.ok(share[1] >= 0.9, `1 star: nearly always free (${said})`);
+  assert.ok(share[2] >= 0.8 && share[2] <= share[1], `2 stars: a good chance (${said})`);
+  assert.ok(share[3] >= 0.3 && share[3] <= 0.65, `3 stars: about half the time (${said})`);
   assert.ok(share[4] <= 0.2, `4 stars: rarely (${said})`);
   assert.ok(share[5] <= 0.08, `5 stars: hardly ever (${said})`);
-  // worn down: much harder
+  // punching only half as fast: still a good chance at 1 star, less of one
+  const lazy = odds(w, p, { stars: 1, gap: [4, 7], seed: 24 });
+  if (process.env.DBG) console.log(`1 star, punching half as fast: ${pc(lazy)}`);
+  assert.ok(lazy >= 0.5 && lazy < share[1], `1 star, punching half as fast: ${pc(lazy)} (full speed ${pc(share[1])})`);
+  // worn down: harder
   const half = odds(w, p, { stars: 1, hp: 50, seed: 21 }), low = odds(w, p, { stars: 1, hp: 30, seed: 22 });
   if (process.env.DBG) console.log(`1 star: half health ${pc(half)}, a third ${pc(low)}`);
-  assert.ok(half <= share[1] - 0.25 && low <= 0.3 && low <= half, `half health ${pc(half)}, a third ${pc(low)} (full ${pc(share[1])})`);
+  assert.ok(half <= share[1] - 0.12 && low <= 0.6 && low < half, `half health ${pc(half)}, a third ${pc(low)} (full ${pc(share[1])})`);
   // a hearty meal's extra health: a little stronger
   assert.ok(odds(w, p, { stars: 3, hp: 130, seed: 23 }) > share[3], 'more health, stronger');
   // who's on you: SWAT and soldiers hold harder than a cop, an agent a little
   const swat = odds(w, p, { stars: 3, who: ['swat'], seed: 31 }), agent = odds(w, p, { stars: 3, who: ['agent'], seed: 32 });
   if (process.env.DBG) console.log(`3 stars: an agent ${pc(agent)}, SWAT ${pc(swat)}`);
   assert.ok(swat < share[3] - 0.2 && agent < share[3] && swat < agent, `3 stars: a cop ${pc(share[3])}, an agent ${pc(agent)}, SWAT ${pc(swat)}`);
-  // and not fighting at all is never enough
-  assert.equal(odds(w, p, { stars: 1, gap: null, n: 20, seed: 41 }), 0, 'no presses: always cuffed');
-  // mashing harder pays
-  assert.ok(odds(w, p, { stars: 3, gap: [2, 3], seed: 42 }) > share[3], 'mashing harder: better odds');
+  // the stick alone is never enough: you have to fight
+  assert.equal(odds(w, p, { stars: 1, gap: null, n: 20, seed: 41 }), 0, 'no punches, only the stick: always cuffed');
+  // punching harder pays
+  assert.ok(odds(w, p, { stars: 3, gap: [2, 3], seed: 42 }) > share[3], 'punching harder: better odds');
 });
 
 test('two officers on you are harder: a second one joins in and pushes too', () => {
@@ -175,7 +185,10 @@ test('two officers on you are harder: a second one joins in and pushes too', () 
   teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
   const one = odds(w, p, { stars: 1, seed: 51 }), two = odds(w, p, { stars: 1, who: ['cop', 'cop'], seed: 52 });
   if (process.env.DBG) console.log(`1 star: one cop ${Math.round(one * 100)}%, two ${Math.round(two * 100)}%`);
-  assert.ok(two <= one * 0.7 && two >= 0.15, `one cop ${Math.round(one * 100)}%, two ${Math.round(two * 100)}%: harder, still a chance`);
+  // (a patrol car brings two: at 1 star still a good chance)
+  assert.ok(two <= one - 0.08 && two >= 0.5, `one cop ${Math.round(one * 100)}%, two ${Math.round(two * 100)}%: harder, still a good chance`);
+  const three = odds(w, p, { stars: 3, who: ['cop', 'cop'], seed: 53 });
+  assert.ok(three <= 0.25, `3 stars, two on you: ${Math.round(three * 100)}% - rarely`);
   // in the world: the second officer to reach them joins the struggle; a third stands by
   wanted(w, p, 1);
   const a = officer(w, p), b = officer(w, p, 'cop', -16, 4), c3 = officer(w, p, 'cop', 4, -18);
@@ -263,4 +276,118 @@ test('NPC crooks the police take down get a dice roll: now and then they shake t
   }
   assert.ok(free > 30 && free < 110, `${free} of 200 shook them off`);
   void K;
+});
+
+// ---- the tackle at low stars (the owner's note 2026-10-09 07:06) ---------------------------------------------------
+// the knockdown events a tackle emits
+function knocks(w) {
+  const log = [], emit = w.emit.bind(w);
+  w.emit = (x, y, ev) => { if (ev.e === 'knockdown') log.push(ev); return emit(x, y, ev); };
+  return log;
+}
+// set up a fresh tackle: the player right in front of the officer, nobody down
+function lineUp(w, p, c, facing) {
+  p.ped.downUntil = 0; p.ped.rollT = 0; p.ped.graceUntil = 0; p.ped.protectUntil = 0; p.ped.scrambleUntil = 0; p.ped.vx = 0; p.ped.vy = 0;
+  c.downUntil = 0; c.rollT = 0;
+  p.ped.x = c.x + 18; p.ped.y = c.y; p.ped.a = facing;
+}
+
+test('a tackle at 1-2 stars: often only a trip, a shorter knockdown on the face or the back, the officer who dove down too', () => {
+  const w = makeWorld({ rand: mulberry32(13) }), log = knocks(w);
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
+  wanted(w, p, 1);
+  const cop = officer(w, p);
+  const near = (a, b) => Math.abs(a - b) < 0.01;
+  let trips = 0;
+  const ks = { R: 0, F: 0, B: 0 };
+  for (let i = 0; i < 200; i++) {
+    lineUp(w, p, cop, i % 2 ? 0 : Math.PI);   // (running away from the officer, or facing them)
+    assert.ok(police._tackleHit(w, cop, p.ped), 'the tackle lands');
+    const left = p.ped.downUntil - w.time, ev = log[log.length - 1];
+    ks[ev.k]++;
+    if (near(left, TACKLE_TRIP_S)) { trips++; assert.equal(ev.k, 'R', 'a trip: a tumble'); }
+    else {
+      assert.ok(near(left, TACKLE_DOWN_BY_STARS[1]), `down ${left.toFixed(2)} s`);
+      assert.equal(ev.k, i % 2 ? 'F' : 'B', 'taken from behind: on the face; head on: on the back');
+      assert.ok(near(ev.d, TACKLE_DOWN_BY_STARS[1]), 'the event says how long (the client: pushing up at the end)');
+    }
+    assert.ok(near(cop.downUntil - w.time, TACKLE_RECOVER_S[1]), 'the officer who dove is down a moment too');
+  }
+  const share = trips / 200;
+  assert.ok(Math.abs(share - TACKLE_TRIP_SHARE[1]) < 0.1, `trips: ${Math.round(share * 100)}% (about ${TACKLE_TRIP_SHARE[1] * 100}%)`);
+  assert.ok(ks.F > 30 && ks.B > 30, `on the face ${ks.F}, on the back ${ks.B}`);
+  // at 4 stars no trips, the full knockdown, and the officer straight on them
+  wanted(w, p, 4);
+  for (let i = 0; i < 40; i++) {
+    lineUp(w, p, cop, 0);
+    police._tackleHit(w, cop, p.ped);
+    assert.ok(near(p.ped.downUntil - w.time, TACKLE_DOWN_BY_STARS[4]) && log[log.length - 1].k !== 'R', '4 stars: no trip');
+    assert.ok(w.time >= cop.downUntil, '4 stars: the officer isn\'t down');
+  }
+  // an NPC crook: as before
+  const crook = spawnNpc(w, 'mugger', cop.x + 18, cop.y, 'mugger');
+  crook.npc.state = 'idle';
+  assert.ok(police._tackleHit(w, cop, crook));
+  assert.ok(near(crook.downUntil - w.time, TACKLE_DOWN_S), 'an NPC: down the usual time');
+});
+
+test('down from a tackle: moving gets you up sooner - before the officer who dove - lying still, the full time', () => {
+  const w = makeWorld({ rand: mulberry32(14) });
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
+  wanted(w, p, 1);
+  const cop = officer(w, p);
+  const r0 = w.rand;
+  const upAfter = (move) => {
+    lineUp(w, p, cop, 0);
+    w.rand = () => 0.99;   // (a real tackle, not a trip)
+    police._tackleHit(w, cop, p.ped);
+    w.rand = r0;
+    const t0 = w.time;
+    for (let i = 0; i < 80 && w.time < p.ped.downUntil; i++) {
+      p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: move ? (i % 8 < 4 ? 1 : -1) : 0, my: move ? 0.4 : 0, aim: 0 });
+      w.time += DT; w.tick++;
+      players.processInputs(w, DT);
+    }
+    return w.time - t0;
+  };
+  const still = upAfter(false), moving = upAfter(true);
+  assert.ok(Math.abs(still - TACKLE_DOWN_BY_STARS[1]) <= DT + 1e-6, `lying still: down ${still.toFixed(2)} s`);
+  assert.ok(moving < still * 0.6, `moving: up after ${moving.toFixed(2)} s (still: ${still.toFixed(2)} s)`);
+  assert.ok(moving < TACKLE_RECOVER_S[1], 'up before the officer who dove is');
+  // moving doesn't help once an officer has you (that's the struggle: struggle.input)
+  lineUp(w, p, cop, 0);
+  p.ped.downUntil = w.time + 2.5;
+  struggle.grab(w, cop, p.ped);
+  const until0 = p.ped.downUntil;
+  p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 1, my: 0, aim: 0 });
+  players.processInputs(w, DT);
+  assert.equal(p.ped.downUntil, until0, 'held down: no scrambling up');
+});
+
+test('at 1-2 stars the others walk up to you on the ground, the one who dove gets up first: lie there and they pin you', () => {
+  const w = makeWorld({ rand: mulberry32(15) });
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
+  wanted(w, p, 1);
+  const diver = officer(w, p, 'cop', 18, 0), partner = officer(w, p, 'cop', -130, 0);
+  for (const c of [diver, partner]) { c.npc.tactic = 'tackle'; c.weapon = 'baton'; c.npc.nextDive = w.time + 9; }
+  lineUp(w, p, diver, 0);
+  const r0 = w.rand;
+  w.rand = () => 0.99;   // (a real tackle)
+  police._tackleHit(w, diver, p.ped);
+  w.rand = r0;
+  const t0 = w.time;
+  let fastest = 0, pinnedAt = -1, by = 0;
+  for (let i = 0; i < 60 && pinnedAt < 0; i++) {
+    p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 0, my: 0, aim: 0 });
+    w.step();
+    if (w.time < p.ped.downUntil || p.struggle) fastest = Math.max(fastest, Math.hypot(partner.vx, partner.vy));
+    if (p.struggle) { pinnedAt = w.time - t0; by = p.struggle.by[0]; }
+  }
+  assert.ok(fastest <= PED.walk * TACKLE_APPROACH * 1.1, `the partner came on at a walk (${Math.round(fastest)} px/s; a sprint is ${PED.sprint})`);
+  assert.ok(pinnedAt >= TACKLE_RECOVER_S[1] - DT, `nobody on them while the officer who dove was down (pinned after ${pinnedAt.toFixed(2)} s)`);
+  assert.ok(pinnedAt > 0 && pinnedAt <= TACKLE_DOWN_BY_STARS[1], 'lying there: pinned before they were up');
+  assert.equal(by, diver.id, 'the officer who dove, once up, right there');
 });

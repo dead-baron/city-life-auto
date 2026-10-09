@@ -46,7 +46,7 @@ import * as trains from './trains.js';
 import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 
-import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED } from '../../shared/rules.js';
+import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE } from '../../shared/rules.js';
 import * as felling from './felling.js';
 import * as lights from './lights.js';
 import * as revive from './revive.js';
@@ -334,7 +334,9 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
-  if (p.struggle) { struggle.input(world, p, ped, inp, pressed); return; }   // (an officer on you, going for the cuffs: fight back)
+  if (p.struggle) { struggle.input(world, p, ped, inp, pressed, dt); return; }   // (an officer on you, going for the cuffs: fight back)
+  // down from a tackle (police.js): moving gets you up sooner - if nobody pins you first
+  if (ped.scrambleUntil > world.time && world.time < ped.downUntil && !ped.cuffed && Math.hypot(inp.mx || 0, inp.my || 0) > 0.3) ped.downUntil = Math.max(world.time, ped.downUntil - dt * TACKLE_SCRAMBLE);
   if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail panel has the bail)
     if ((pressed & IN.ACTION) && custody.canBreak(p)) custody.breakOut(world, p);   // (the car stuck: make a break for it)
     if (!ped.cuffed) {   // in a cell: walk round it; the action button sits, holds the bars (cells.js)

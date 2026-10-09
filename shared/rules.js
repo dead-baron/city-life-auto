@@ -47,30 +47,45 @@ export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in 
 // down and tackle you; 3 tasers, a few officers with pistols (and all of them once you shoot at the police); 4 they open
 // fire, still diving at you up close; 5 the FBI, SWAT and now and then the army.
 export const TACKLE_PX = 95;           // an officer this close on foot dives at you...
-export const TACKLE_DOWN_S = 2.5;      // ...and a tackle that lands puts you down this long
+export const TACKLE_DOWN_S = 2.5;      // ...and a tackle that lands puts you down this long (dragged out of a car too)
+// at low stars a tackle is often less (the owner, 2026-10-09 07:06: "1 or 2 stars should give you a good chance of getting
+// away"): by your stars, the share of tackles that only trip you (a tumble, and you're up), how long a real one puts you
+// down, and how long the officer who dove is down too - then they come on at a walk; moving while you're down from a
+// tackle gets you up sooner (the time runs this much faster). Only an officer who reaches you while you're down pins you.
+export const TACKLE_TRIP_SHARE = [0, 0.4, 0.3, 0.12, 0, 0];      // by stars: this share of tackles only trip you (a tumble)...
+export const TACKLE_TRIP_S = 0.5;                                  // ...down this long, and you're up
+export const TACKLE_DOWN_BY_STARS = [2.5, 1.5, 1.8, 2.3, 2.5, 2.5]; // a real one: on your face or your back this long (a player)
+export const TACKLE_RECOVER_S = [0, 1, 0.8, 0.4, 0, 0];           // the officer who dove is down this long too
+export const TACKLE_SCRAMBLE = 1.2;                                // moving while you're down: the time runs this much faster again
+export const TACKLE_APPROACH = 0.5;                                // at 1-2 stars an officer walks up to you on the ground (x walking pace)
 export const PISTOL_SHARE_3 = 0.25;    // at 3 stars this share of officers carry a pistol instead of a taser
 export const FBI_SHARE_5 = 0.4;        // at 5 stars this share of the units sent are the FBI...
 export const ARMY_SHARE_5 = 0.2;       // ...and this share the army (one truck at a time)
 // Fighting back (server/systems/struggle.js; the owner's note 2026-10-09 05:01): tackled, grabbed or dragged down by an
 // officer, you aren't pinned and cuffed on the spot. The officer gets on top of you and goes for the cuffs while you
-// struggle: each press of the attack button fills the struggle meter (a wriggle of the move stick a little), and the
-// officer pushes it back down, harder the longer they hold you. Fill it and you throw them off; let it run out, or still
-// be held when the cuffs come out, and you're cuffed (custody.js). Once cuffed there's no struggle. Tuned with
-// test/struggle.test.js's simulated struggles (mashing well, ~7 presses a second, one cop, full health): free about 4 in 5
-// times at 1 star, half the time at 3, rarely at 4 and 5; half your health, about 1 in 4 at 1 star; two cops, about half.
+// struggle: each press of the attack button fills the struggle meter, and so does working the move stick (each wriggle
+// round to a new direction, and pushing against them while it's held), and the officer pushes it back down, harder the
+// longer they hold you. Fill it and you throw them off; let it run out, or still be held when the cuffs come out, and
+// you're cuffed (custody.js). Once cuffed there's no struggle. Tuned with test/struggle.test.js's simulated struggles
+// (punching ~7 times a second and working the stick, full health; the owner, 07:06: "1 or 2 stars should give you a good
+// chance of getting away"): one cop - nearly always free at 1-2 stars, about half the time at 3, rarely at 4, hardly ever
+// at 5; a car's two officers both on you at 1 star, about 4 in 5; half your health, about 3 in 4; a third, under half;
+// punching only half as fast, about 3 in 4 at 1 star. The stick alone never frees you: you have to fight.
 export const STRUGGLE_START = 0.3;     // the meter starts here (0-1; full: you're free)
 export const STRUGGLE_PRESS = 0.075;   // each press of the attack button (at full health)...
-export const STRUGGLE_WRIGGLE = 0.025; // ...and each wriggle (the move stick swung round to a new direction)
+export const STRUGGLE_WRIGGLE = 0.045; // ...each wriggle (the move stick swung round to a new direction)...
+export const STRUGGLE_PUSH = 0.08;     // ...and pushing against them: this much a second while the move stick is held (2026-10-09 07:06)
+export const STRUGGLE_MOVE_K = [1, 1, 1, 0.5, 0.2, 0.1];   // the wriggling and pushing count this much by your stars (in full at 1-2, little at 4-5)
 export const STRUGGLE_HOLD = 0.22;     // an ordinary cop pushes it back down this much a second...
-export const STRUGGLE_STARS = [1, 1, 1.12, 1.3, 1.85, 2.4];   // ...times this by your stars (1-3 fair, 4 much harder, 5 very hard)
+export const STRUGGLE_STARS = [1, 0.9, 1, 1.3, 1.7, 2];   // ...times this by your stars (1-2 a good chance, 3 fair, 4 much harder, 5 very hard)
 export const STRUGGLE_KIND = { cop: 1, agent: 1.2, swat: 1.45, soldier: 1.55 };   // ...and by who's on you
 export const STRUGGLE_BUILD = 0.35;    // ...and their build (a brute's grip: 1 + 0.35 x 0.6 stronger than an average officer's)
 export const STRUGGLE_GRIP_VAR = 0.4;  // ...and how well they got hold of you this time (rolled: +-40%)
-export const STRUGGLE_SECOND = 0.3;    // a second officer on you adds this much of their own hold: about half your odds at 1-2 stars
-                                       //   (counted in full, a car's two officers reaching you together left a 1-star chase ~1 in 5)
+export const STRUGGLE_SECOND = 0.6;    // a second officer on you adds this much of their own hold (a patrol car brings two: at
+                                       //   1 star they cut your odds by about a fifth; at 3, two on you is nearly always the cuffs)
 export const STRUGGLE_RAMP = 0.3;      // the hold grows this much (x its start) for every second you've been held...
 export const STRUGGLE_CUFF_S = 4;      // ...and this long after they got you, the cuffs are on, whatever the meter says
-export const STRUGGLE_HP_FLOOR = 0.55; // your strength is your health (there's no strength stat): floor + (1 - floor) x health/100
+export const STRUGGLE_HP_FLOOR = 0.45; // your strength is your health (there's no strength stat): floor + (1 - floor) x health/100
 export const STRUGGLE_HP_CAP = 1.3;    //   (a hearty meal's extra health counts, to this much health/100); worn down, much weaker
 export const STRUGGLE_ENERGY = 1.15;   // an energy drink in you: this much stronger
 export const STRUGGLE_STUNNED = 0.7;   // still twitching from a taser or the pepper spray: this much weaker
