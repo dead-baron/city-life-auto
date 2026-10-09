@@ -302,7 +302,19 @@ void main(){
   vec2 sv = pix / uCanvas - 0.5;
   o = vec4(c * (1.0 - uVign * dot(sv, sv) * 1.6), 1.0);
 }`;
-// x-ray: the parts of a sprite hidden by something taller, drawn unlit over the presented frame
+// x-ray: the parts of a sprite hidden by something taller, drawn unlit over the presented frame - but never through
+// vegetation (task #400, the owner: "going behind bushes will show your character outline ... Let's not do that for
+// vegetation or grass or plants when you walk behind them, I think it takes away from the immersion"): leaves, grass,
+// crops, ferns and flowers (F_LEAF) hide you, and so does a twig, a stem or a berry among them (a texel with leaves
+// taller than you VEG_D px out on two of its four sides). Buildings, walls, cars, trunks, rocks and posts still show
+// you through them. vegHides is the same rule in JS (the tests).
+export const VEG_D = 2;
+export function vegHides(at, x, y, h0) {
+  if (at(x, y)[0] & F_LEAF) return true;
+  let n = 0;
+  for (const [dx, dy] of [[VEG_D, 0], [-VEG_D, 0], [0, VEG_D], [0, -VEG_D]]) { const s = at(x + dx, y + dy); if ((s[0] & F_LEAF) && s[1] > h0 + 0.5) n++; }
+  return n >= 2;
+}
 const XRAY_VS = `#version 300 es
 in vec2 c; in vec4 iDst; in vec4 iSrc; in vec4 iPar; in vec4 iTint;
 uniform vec2 uCanvas, uOff; uniform float uS;
@@ -320,6 +332,15 @@ layout(location=0) out vec4 o;
 ${GLSL_COMMON}
 ivec3 at(ivec2 l, int w, int bits){ if ((bits & 1) != 0) l.x = w - 1 - l.x; return ivec3(int(vSrc.x + 0.5) + l.x, int(vSrc.y + 0.5) + l.y, int(vSrc.z + 0.5)); }
 float cov(ivec2 l, int w, int h, int bits){ return (l.x < 0 || l.y < 0 || l.x >= w || l.y >= h) ? 0.0 : texelFetch(tA, at(l, w, bits), 0).a; }
+bool veg(ivec2 q, int f, float h0){
+  if ((f & ${F_LEAF}) != 0) return true;
+  int n = 0;
+  for (int k = 0; k < 4; k++) {
+    vec4 s = texelFetch(tS, clamp(q + ivec2(k < 2 ? ${VEG_D} - 2 * ${VEG_D} * k : 0, k < 2 ? 0 : ${VEG_D} - 2 * ${VEG_D} * (k - 2)), ivec2(0), ivec2(uMax) - 1), 0);
+    if ((flOf(s) & ${F_LEAF}) != 0 && zOf(s) > h0 + 0.5) n++;
+  }
+  return n >= 2;
+}
 void main(){
   vec2 t = vec2(gl_FragCoord.x, uCanvas.y - gl_FragCoord.y) * uInvS + uOff;
   ivec2 tq = ivec2(floor(t));
@@ -330,8 +351,9 @@ void main(){
   l /= k;                                          // (the sprite's art texel)
   int w = int(vDst.z + 0.5) / k, h = int(vDst.w + 0.5) / k, bits = int(vSrc.w + 0.5);
   if (cov(l, w, h, bits) < 0.5) discard;
-  float hs = zOf(texelFetch(tS, tq, 0)), h0 = zOf(texelFetch(tB, at(l, w, bits), 0)) + vPar.x;
-  if (hs <= h0 + 0.5) discard;
+  vec4 sb = texelFetch(tS, tq, 0);
+  float hs = zOf(sb), h0 = zOf(texelFetch(tB, at(l, w, bits), 0)) + vPar.x;
+  if (hs <= h0 + 0.5 || veg(tq, flOf(sb), h0)) discard;
   float rim = (cov(l + ivec2(1, 0), w, h, bits) < 0.5 || cov(l - ivec2(1, 0), w, h, bits) < 0.5 || cov(l + ivec2(0, 1), w, h, bits) < 0.5 || cov(l - ivec2(0, 1), w, h, bits) < 0.5) ? 1.0 : 0.0;
   o = vec4(mix(uCol.rgb, vec3(1.0), rim * 0.45), min(1.0, uCol.a + rim * 0.35));
 }`;
