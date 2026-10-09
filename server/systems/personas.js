@@ -29,6 +29,7 @@ import { RECIPES, dress } from './npclooks.js';
 import { inAnyView } from '../view.js';
 import { store } from '../store.js';
 import * as players from './players.js';
+import { BUILDS } from '../entities.js';
 
 let rng = mulberry32(36500);
 export function setRng(r) { rng = r; }
@@ -240,7 +241,12 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   apply(world, ped, key, night);
   const n = ped.npc;
   if (P.bench || P.sleep) n.bench = { x: at.x, y: at.y };
-  if (at.mark) n.mark = { x: at.mark.x, y: at.mark.y };
+  if (at.mark) {   // a photo of themselves with the fountain (the statue, the big wheel) behind them - npc.js's filming, the phone held
+    // up, facing away from it, a flash now and then - then on they go like anyone
+    const now = world.time;
+    n.state = 'film'; n.fx = 2 * at.x - at.mark.x; n.fy = 2 * at.y - at.mark.y; n.until = now + 20 + rng() * 20; n.filmedAt = now; n.photo = true; n.nextFlash = now + 1;
+    ped.filming = 2; ped.phoneOut = now; ped.appVer = (ped.appVer || 0) + 1; ped.a = Math.atan2(n.fy - at.y, n.fx - at.x);
+  }
   if (P.sleep) { n.state = 'passed'; ped.passedOut = true; ped.downUntil = 0; ped.sleeping = true; }
   if (P.cart) { n.spot = { x: at.x, y: at.y }; ped.a = Math.PI / 2; }
   if (P.fish) { n.spot = { x: at.x, y: at.y, a: at.water }; ped.a = at.water; ped.fishing = { npc: true }; }
@@ -278,18 +284,21 @@ export function apply(world, ped, key, night = false, partner = null) {
   let g;
   if (P.look === 'couple') g = coupleLook(world, ped, partner);
   else g = lookFor(world, P, key, ped.x, ped.y, night);
-  if (g) { const bd = ped.app && ped.app.bd; ped.app = g.app; ped.app.bd = bd ?? g.bi; ped.appVer = (ped.appVer || 0) + 1; }
+  if (g) {   // (the body comes with its build: the hit points and the fight follow the new one)
+    const old = ped.build, nb = BUILDS[g.bi] || old;
+    ped.app = g.app; ped.app.bd = g.bi; ped.appVer = (ped.appVer || 0) + 1;
+    if (old && nb && nb !== old) { ped.maxHp = ped.hp = Math.max(20, Math.round(ped.maxHp / old.hp * nb.hp)); n.fight = Math.max(0, Math.min(1, n.fight - old.fight + nb.fight)); ped.build = nb; }
+  }
   n.persona = key;
   if (P.gt) ped.gt = P.gt;
   if (P.pp) ped.pp = P.pp;
   if (P.speed) n.speed *= P.speed;
   if (P.tough) { n.tough = true; n.fight = 1; n.reflex = Math.max(n.reflex, 0.5); }
-  if (P.poor) { n.poor = true; n.noSnatch = true; }
+  if (P.poor) n.poor = true;   // (no cash, nothing to drop: npc.js onDeath)
   if (P.camp) n.camp = { x: ped.x, y: ped.y };
   if (P.jog) { n.laps = lapRoute(world, ped.x, ped.y); n.lap = 0; }
   if (P.dance) n.spot = { x: ped.x, y: ped.y };
   if (P.busk) { n.spot = { x: ped.x, y: ped.y }; n.tips = new Map(); }
-  if (P.selfie) n.until = world.time + 25 + rng() * 20;
   n.umbrellaType = false;
   return ped;
 }
@@ -334,7 +343,7 @@ export function steer(world, ped, now) {
   if (P.jog && n.laps) {
     const p = n.laps[n.lap % n.laps.length];
     if (Math.hypot(p.x - ped.x, p.y - ped.y) < 18) n.lap++;
-    return { inp: seekTo(ped, p.x, p.y), factor: 0.95 };
+    return { inp: seekTo(ped, p.x, p.y), factor: 0.7 };   // (a jog, ~90 px/s: the client's jogging stride)
   }
   if (P.dance) {   // dancing on the spot, now and then a shuffle along
     if (now >= (n.moveAt || 0)) { n.moveAt = now + 6 + rng() * 10; const s = spotNear(world, n.spot.x, n.spot.y, 0, 50); if (s) { n.wx = s.x; n.wy = s.y; } }
@@ -356,13 +365,6 @@ export function steer(world, ped, now) {
     if (now < n.upAt) { ped.vx = ped.vy = 0; ped.a = Math.PI / 2; return { inp: NO_INPUT, factor: 0.55 }; }
     ped.sitBench = false; ped.appVer = (ped.appVer || 0) + 1; n.bench = null; n.persona = 'texter'; ped.pp = rng() < 0.5 ? 'phone' : null; if (!ped.pp) n.persona = null;
     return null;
-  }
-  if (P.selfie && n.mark) {   // a photo of themselves with the fountain (the statue, the big wheel) behind them, then on
-    ped.a = Math.atan2(ped.y - n.mark.y, ped.x - n.mark.x);
-    if (!ped.filming) { ped.filming = 2; ped.phoneOut = now; ped.appVer = (ped.appVer || 0) + 1; }
-    if (now >= (n.flashAt || 0)) { n.flashAt = now + 2 + rng() * 3; world.emit(ped.x, ped.y, { e: 'pflash', x: Math.round(ped.x), y: Math.round(ped.y), a: +ped.a.toFixed(2) }); }
-    if (now > n.until) { ped.filming = 0; ped.phoneOut = 0; ped.appVer = (ped.appVer || 0) + 1; n.mark = null; n.persona = null; return null; }
-    return { inp: NO_INPUT, factor: 0.55 };
   }
   if (P.camp && n.camp) {   // round his camp: pushing the cart a little way, then sitting by it a good while
     if (ped.sit) { if (now < n.upAt) { ped.vx = ped.vy = 0; return { inp: NO_INPUT, factor: 0.55 }; } ped.sit = false; ped.appVer = (ped.appVer || 0) + 1; }

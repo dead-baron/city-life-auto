@@ -194,6 +194,15 @@ test('street life: the busker plays for coins, people sit on benches, someone sl
   let z = null;
   for (let k = 0; k < 30 && !z; k++) { const sp = spotIn('park', k); z = sp && spawnPersona(w, spawnNpc, 'sleeper', sp.x, sp.y); }
   assert.ok(z && z.passedOut && z.npc.state === 'passed', 'asleep in the park');
+  // a selfie at the fountain: the phone held up, facing away from it, for a while (and the descriptor not sent again and again)
+  const f = m.props.find((q) => q.t === 'fountain');
+  teleport(w, q.ped, f.x + 200, f.y);
+  const sf = spawnPersona(w, spawnNpc, 'selfie', f.x + 40, f.y);
+  assert.ok(sf && sf.filming === 2 && sf.npc.state === 'film', 'phone up');
+  assert.ok(Math.cos(sf.a - Math.atan2(sf.y - f.y, sf.x - f.x)) > 0.9, 'the fountain behind them');
+  const v0 = sf.appVer;
+  run(w, 2);
+  assert.equal(sf.filming, 2); assert.equal(sf.appVer, v0, 'sent once');
 });
 
 test('the walks and props are drawn: the client turns gt / pp / sb into the people renderer\'s poses and props', async () => {
