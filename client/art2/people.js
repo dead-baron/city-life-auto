@@ -64,8 +64,8 @@ POSES.hood = 1;
 function rigHood(D, P) {
   const top = D.pelZ + D.neckUp + D.headUp;
   P.root = rx(Math.PI / 2 - 0.12); P.headPitch = -0.6; P.headYaw = 0;
-  P.fL = [-D.hipX - 2.6, 1.4, D.ank]; P.fR = [D.hipX + 2.6, 1.4, D.ank]; P.kneeL = [-1, 0.3, 0]; P.kneeR = [1, 0.3, 0];
-  P.hands = () => { P.hL = [-7.2, 3.4, top + 2.6]; P.hR = [7.2, 3.4, top + 2.6]; P.elL = [-1, 0.4, 0]; P.elR = [1, 0.4, 0]; };
+  P.fL = [-D.hipX - 3.4, 1.4, D.ank]; P.fR = [D.hipX + 3.4, 1.4, D.ank]; P.kneeL = [-1, 0.3, 0]; P.kneeR = [1, 0.3, 0];
+  P.hands = () => { P.hL = [-9.5, 2.4, top + 7]; P.hR = [9.5, 2.4, top + 7]; P.elL = [-1, 0, 0.4]; P.elR = [1, 0, 0.4]; };
   return P;
 }
 function rigMoto(P, pose) {

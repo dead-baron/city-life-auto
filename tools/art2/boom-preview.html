@@ -1,0 +1,68 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Explosions preview</title>
+<style>body{margin:0;background:#111;color:#ccc;font:12px monospace}canvas{display:block}#nav{position:absolute;left:8px;top:8px}button{margin-right:6px}</style></head><body>
+<!-- The layered explosion (client/render/boom.js), a campfire's embers, flares and haze (client/render/campfx.js) and
+     the pooled particles they spawn (client/render/fx.js), over a plain street - the effects as the game plays them
+     from an 'explode' event's seed (the particles drawn the classic way; in the game the renderer draws them as its own
+     sprites). ?night=1 for night, ?k=pieces|launch|plain, ?m=sedan|tanker|bike, ?auto=1 blows one up every 4 s.
+     Serve the repo root (the dev server does). -->
+<div id="nav"><button data-k="pieces">blown apart</button><button data-k="launch">up in the air</button><button data-k="">plain</button><button data-m="tanker">tanker</button><button data-m="bike">motorbike</button><button id="night">night</button></div>
+<canvas id="c"></canvas>
+<script type="module">
+import { FX } from '../../client/render/fx.js';
+import { Booms } from '../../client/render/boom.js';
+import { Campfires } from '../../client/render/campfx.js';
+import { boomPlan } from '../../shared/explosions.js';
+import { VEHICLES } from '../../shared/vehicles.js';
+const q = new URLSearchParams(location.search);
+const cv = document.getElementById('c'), g = cv.getContext('2d'), W = cv.width = 960, H = cv.height = 540;
+const fx = new FX();
+const car = { id: 7, rx: 480, ry: 300, ra: 0.4, rz: 0, d: { m: 1, p: 0 }, tint: null };
+const S = { fx, flashes: [], cam: { x: 480, y: 270, shake: 0 }, ents: new Map([[7, car]]), loopClock: 0, map: { props: [{ t: 'campfire', x: 170, y: 420, lit: 1 }] } };
+S.boom = new Booms(S); S.camp = new Campfires(S);
+let night = q.get('night') === '1', now = 0, seedN = 1;
+function boom(k = q.get('k') ?? 'pieces', model = q.get('m') || 'sedan') {
+  const def = VEHICLES[model]; let s = seedN;
+  while (boomPlan(s, def).k !== (k === 'plain' ? '' : k) && s < seedN + 400) s++;
+  seedN = s + 1;
+  car.d.m = def.i; car.d.p = s % 14;
+  const plan = boomPlan(s, def);
+  S.boom.explode({ e: 'explode', x: car.rx, y: car.ry, r: { bike: 72, tanker: 270 }[model] || (def.mass >= 2.4 ? 165 : 120), s, id: 7, m: def.i, a: car.ra, k: plan.k, pc: '' }, now, 1);
+  if (plan.k === 'launch') setTimeout(() => S.boom.land({ x: car.rx, y: car.ry, big: 1 }, now), plan.launch.t * 1000);
+}
+for (const b of document.querySelectorAll('[data-k]')) b.onclick = () => boom(b.dataset.k || 'plain');
+for (const b of document.querySelectorAll('[data-m]')) b.onclick = () => boom(q.get('k') ?? 'pieces', b.dataset.m);
+document.getElementById('night').onclick = () => { night = !night; };
+if (q.get('auto') === '1') setInterval(() => boom(['pieces', 'launch', 'plain'][Math.floor(Math.random() * 3)]), 4000);
+setTimeout(() => boom(), 300);
+let last = performance.now();
+function frame(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t; now += dt; S.loopClock = now;
+  car.rz = 0; car.ra = 0.4; car.tint = null;
+  const F = { now, dt, view: { x0: 0, x1: W, y0: 0, y1: H }, sky: { night: night ? 1 : 0 } };
+  S.boom.tick(F); S.camp.tick(F); fx.update(dt);
+  S.flashes = S.flashes.filter((f) => (f.t -= dt) > 0);
+  S.cam.shake *= Math.exp(-6 * dt);
+  const shx = (Math.random() - 0.5) * S.cam.shake, shy = (Math.random() - 0.5) * S.cam.shake;
+  g.setTransform(1, 0, 0, 1, shx, shy);
+  g.fillStyle = night ? '#1b1d24' : '#5c5e63'; g.fillRect(-20, -20, W + 40, H + 40);   // the street
+  g.fillStyle = night ? '#23252c' : '#76787c'; g.fillRect(-20, 120, W + 40, 8); g.fillRect(-20, 470, W + 40, 8);
+  g.fillStyle = night ? '#6b6232' : '#d8c64a'; for (let x = 0; x < W; x += 60) g.fillRect(x, 296, 30, 4);
+  fx.drawDecals(g, { x0: -50, x1: W + 50, y0: -50, y1: H + 50 }, now, false);
+  // the car (a box: lifted, spun and darkened as it rolls over in the air)
+  const lift = car.rz * 88;
+  g.save(); g.fillStyle = 'rgba(0,0,0,.35)'; g.translate(car.rx + lift * 0.3, car.ry + lift * 0.2); g.rotate(car.ra); g.fillRect(-50, -24, 100, 48); g.restore();
+  g.save(); g.translate(car.rx, car.ry - lift); g.rotate(car.ra); const u = car.tint ? car.tint[0] : 1;
+  g.fillStyle = `rgb(${30 * u | 0},${28 * u | 0},${26 * u | 0})`; g.fillRect(-50, -24, 100, 48); g.fillStyle = '#111'; g.fillRect(-14, -20, 30, 40); g.restore();
+  // the campfire
+  g.fillStyle = '#3a2a1a'; g.beginPath(); g.arc(170, 420, 12, 0, 6.28); g.fill();
+  for (let i = 0; i < 3; i++) fx.fire(170, 416);
+  fx.drawParticles(g);
+  if (night) { g.fillStyle = 'rgba(0,0,20,.45)'; g.fillRect(-20, -20, W + 40, H + 40); fx.drawEmissive(g); }
+  g.setTransform(1, 0, 0, 1, shx, shy);
+  S.camp.draw(g, F); S.boom.draw(g, F, W, H, 1);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.S = S; window.boom = boom;
+</script>
+</body></html>
