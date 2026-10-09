@@ -323,6 +323,24 @@ CF2 and FX2 are in the prompt pack):**
   - **The wood:** carry a bundle by hand, or load the logs into a vehicle like crates. It upgrades homes, feeds civilian
     missions and gang-hideout upgrades, or sells.
   - **Regrowth:** trees grow back fairly quickly when nobody is around (WD1-WD3).
+- **Hit by a car (19:47, #361):** you aren't always knocked flying or rolling.
+  - Sometimes you're run over and left face down or on your back: critically hurt, not necessarily dead.
+  - Sometimes you're thrown onto the car and ride the hood for a moment before you're thrown off.
+  - Stuck rolling on a car's front, steering the other way helps you roll off or fly clear.
+- **Arrests (19:52 and 20:00, #362):**
+  - **A stuck police car:** one that's stuck, slow to come or going round in circles offers "Make a break for it" after
+    10-15 s. Done the same day.
+  - **Logging off in custody:** cuffed, on the way in or in jail, you're back in jail when you return. Done the same day.
+  - **The cells, next:** part of the police station's inside. You see the other prisoners, and several can share a cell.
+    You can walk round it, sit, use the toilet or hold the bars.
+  - **Arriving:** the car pulls up at the station and the officers walk you in.
+  - **Fighting in a cell:** the note reads "You can hurt each other or anything", probably meaning can't. To confirm.
+- **Explosions (19:54, #363):** bigger, more dramatic and beautiful. A vehicle sometimes blows apart into pieces or is
+  thrown into the air.
+- **Masks and the eye patch (20:45, on CP2):**
+  - A ski mask or balaclava hides the hair: none sticks out.
+  - The eye patch has one strap that goes round the head and ties to the patch, like a real one. Not two straps off one
+    side.
 
 ## Sharks [W2 stage 5]
 - Extremely rare anywhere in the sea; likeliest round the prison island (still rare).
