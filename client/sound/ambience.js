@@ -39,11 +39,14 @@ export class Ambience {
       rain: bed(this.white, [flt('highpass', 900), flt('lowpass', 6500)]),
       sub: bed(this.brown, [flt('lowpass', 190, 0.8)]),
       fire: bed(this.brown, [flt('lowpass', 330, 0.6)]),
+      // under the ground (F.ug: server/systems/underground.js): the sewer's stream running past, the cave's hollow hush
+      flow: bed(this.pink, [flt('bandpass', 720, 0.7), flt('lowpass', 2400)]),
+      cave: bed(this.brown, [flt('lowpass', 130, 0.9)]),
     };
     this.surfEnv = this.beds.surf.chain[1];   // (the wave crashes: its own envelope, under the shore's level)
     this.windF = this.beds.wind.chain[0];
     this.gust = 0.7; this.swellPh = R() * 6.28;
-    this.next = { scan: 0, bird: 0, cricket: 0, owl: rr(20, 60), dog: rr(20, 60), siren: rr(40, 120), horn: rr(8, 30), gull: rr(5, 15), drop: 0, crackle: 0, surf: 0 };
+    this.next = { ugdrip: 0, rat: 0, flap: 0, scan: 0, bird: 0, cricket: 0, owl: rr(20, 60), dog: rr(20, 60), siren: rr(40, 120), horn: rr(8, 30), gull: rr(5, 15), drop: 0, crackle: 0, surf: 0 };
     this.crickets = [[0, 0], [0, 0], [0, 0]];
     this.k = { water: 0, sand: 0, green: 0, urban: 0, shore: 0, wx: 0, wild: 0, style: '' };
     this.fires = null;
@@ -82,7 +85,7 @@ export class Ambience {
   update(F, S, dt, inside) {
     const E = this.E, L = E.listener, t = this.ctx.currentTime, k = this.k, nx = this.next;
     if (t >= nx.scan && S.map) { nx.scan = t + 0.25; this.scan(S.map, L); this.findFire(F, S, L); this.levels(F, S, t, inside); }
-    if (F.sub) return;
+    if (F.sub) { if (F.ug) this.under(F, t); return; }
     const night = F.clock ? F.clock.dark : 0, rain = S.rainK || 0;
     const greenish = k.green > 0.25 || k.wild >= 0.5;
     // ---- the creatures and the town, now and then ----
@@ -106,6 +109,13 @@ export class Ambience {
       nx.crackle = t + rr(0.05, 0.3); E.play('crackle', this.fire.x, this.fire.y, v);
       if (S.onCrackle) S.onCrackle(this.fire.x, this.fire.y, v);   // (a loud one: the campfire flares - render/campfx.js)
     }
+  }
+  // down the sewers: drips, now and then a rat; in the cave: drips ringing off the rock, the odd flap of a bat
+  under(F, t) {
+    const E = this.E, L = E.listener, nx = this.next, cave = F.ug === 2;
+    if (t >= nx.ugdrip) { nx.ugdrip = t + rr(cave ? 0.35 : 0.6, cave ? 1.8 : 2.6); const [x, y] = this.around(L, 60, 500); E.play('cavedrip', x, y, rr(0.5, 1)); }
+    if (!cave && t >= nx.rat) { nx.rat = t + rr(4, 14); const [x, y] = this.around(L, 80, 400); E.play('squeak', x, y, rr(0.6, 1)); }
+    if (cave && t >= nx.flap) { nx.flap = t + rr(9, 26); const [x, y] = this.around(L, 200, 700); E.play('flutter', x, y, rr(0.4, 0.8)); }
   }
   findFire(F, S, L) {
     let best = null, bd = 520;
@@ -134,7 +144,9 @@ export class Ambience {
       sea: open * roof * Math.pow(k.water, 0.8) * 0.5 * swell,
       surf: open * roof * k.shore * 0.8,
       rain: (sub ? 0 : rain * (inside ? 0.35 : 0.5)),
-      sub: sub ? 0.6 : 0,
+      sub: sub && !F.ug ? 0.6 : 0,
+      flow: F.ug === 1 ? 0.3 : 0,
+      cave: F.ug === 2 ? 0.28 : 0,
       fire: this.fire && !sub ? Math.pow(Math.max(0, 1 - this.fire.d / 520), 2) * 0.35 : 0,
     };
     for (const name in want) {
@@ -154,7 +166,7 @@ export class Ambience {
       e.cancelScheduledValues(t); e.setTargetAtTime(rr(0.7, 1), t, 0.35); e.setTargetAtTime(0.15, t + rr(1, 1.6), 1.4);
     }
     // indoors the ambience is heard through the walls
-    this.E.mix.ambLp.frequency.setTargetAtTime(inside ? 700 : sub ? 1500 : 18000, t, 0.4);
+    this.E.mix.ambLp.frequency.setTargetAtTime(inside ? 700 : F.ug ? 3200 : sub ? 1500 : 18000, t, 0.4);
   }
   silence() {
     const t = this.ctx.currentTime;

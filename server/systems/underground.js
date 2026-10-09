@@ -312,7 +312,7 @@ function bearStep(world, b, inCave, dt) {
     if (d < td && (d < BEAR_WAKE_R || (W.state === 'chase' && d < BEAR_WAKE_R * 2.2)) && ugLos(L, b.x, b.y, q.x, q.y)) { td = d; t = q; }
   }
   if (t) {
-    if (W.state !== 'chase') { W.state = 'chase'; world.emit(b.x, b.y, { e: 'growl', x: b.x, y: b.y, k: 'bear' }); }
+    if (W.state !== 'chase') { W.state = 'chase'; world.emit(b.x, b.y, { e: 'roar', x: b.x, y: b.y, k: 'bear', id: b.id }); }
     const dx = t.x - b.x, dy = t.y - b.y, d = Math.hypot(dx, dy) || 1;
     W.pose = d < 46 ? 11 : 4;
     if (d < 46 && world.time >= (W.nextBite || 0)) {

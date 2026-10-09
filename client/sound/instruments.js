@@ -280,6 +280,23 @@ export const INSTR = {
   farhorn: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const d = rr(0.15, 0.35); E.tone(o, t, vary(392, 0.1), d, v * 0.03, { type: 'square', lp: 1000 }); E.tone(o, t, vary(494, 0.1), d, v * 0.025, { type: 'square', lp: 1000 }); return d + 0.05; } },
   drop: { pri: AMBIENT, range: 400, play(E, o, t, v) { E.tone(o, t, rr(1600, 3400), 0.025, v * 0.03, { type: 'sine', f2: 1000 }); return 0.04; } },
   thunder: { pri: MAJOR, gap: 3, play(E, o, t, v) { E.noise(o, t, 0.25, v * 0.3, { ft: 'highpass', f: 1500 }); E.noise(o, t, 3, v * 0.7, { color: 'brown', ft: 'lowpass', f: 400, f2: 70, a: 0.05 }); E.noise(o, t + 0.3, 2.2, v * 0.5, { color: 'brown', ft: 'lowpass', f: 160, a: 0.4 }); return 3.1; } },
+  // ======== under the ground (server/systems/underground.js): the sewers, the cave, mining ========
+  // a drip into a pool, ringing off the rock (send: the echo carries it)
+  cavedrip: { pri: AMBIENT, range: 900, send: 0.8, play(E, o, t, v) { const f = rr(900, 2200); E.tone(o, t, f, 0.06, v * 0.07, { type: 'sine', f2: f * 1.9 }); E.tone(o, t + 0.01, f * 0.5, 0.12, v * 0.03, { type: 'sine' }); return 0.15; } },
+  // the pickaxe on rock: a hard clink and a spatter of chips (p.t: the pick's tier - the better, the brighter)
+  pickaxe: { pri: NORMAL, range: 900, gap: 0.12, send: 0.5, play(E, o, t, v, p) { const k = 1 + ((p && p.t) || 1) * 0.08; E.noise(o, t, 0.03, v * 0.6, { ft: 'bandpass', f: vary(2600 * k), q: 3 }); E.fm(o, t, vary(1450 * k, 0.08), 0.18, v * 0.08, 2.76, 1.8); clicks(E, o, t + 0.02, 5, 0.18, v * 0.18, 2000, 5000); return 0.25; } },
+  // ore comes free: a crunch and the lump dropping
+  orefree: { pri: NORMAL, range: 900, gap: 0.3, send: 0.5, play(E, o, t, v) { E.noise(o, t, 0.12, v * 0.5, { ft: 'lowpass', f: 1400 }); E.tone(o, t + 0.1, vary(180), 0.12, v * 0.3, { type: 'sine', f2: 90 }); clicks(E, o, t + 0.05, 8, 0.3, v * 0.2, 800, 3000); return 0.45; } },
+  // a rock down from the roof: the crack, the thump, the rubble settling
+  rockfall: { pri: MAJOR, range: 1600, gap: 0.3, send: 0.9, play(E, o, t, v) { E.noise(o, t, 0.05, v * 0.5, { ft: 'highpass', f: 2200 }); E.tone(o, t + 0.04, vary(70), 0.5, v * 0.6, { type: 'sine', f2: 35 }); E.noise(o, t + 0.04, 0.9, v * 0.5, { color: 'brown', ft: 'lowpass', f: 700, f2: 200 }); clicks(E, o, t + 0.2, 14, 0.8, v * 0.25, 600, 2600, 0.02); return 1.2; } },
+  // grit trickling down before it goes
+  trickle: { pri: MINOR, range: 700, gap: 0.5, play(E, o, t, v) { clicks(E, o, t, 18, 1.4, v * 0.08, 2500, 6000, 0.008); E.noise(o, t, 1.4, v * 0.04, { ft: 'highpass', f: 4000, a: 0.3 }); return 1.5; } },
+  // a cave full of bats bursting out: wings and squeaks
+  bats: { pri: NORMAL, range: 1300, gap: 1, send: 0.7, play(E, o, t, v) { for (let k = 0; k < 26; k++) E.noise(o, t + R() * 1.6, 0.04, v * 0.12, { ft: 'bandpass', f: vary(1500, 0.3), q: 1.3 }); for (let k = 0; k < 8; k++) { const tt = t + R() * 1.5, f = rr(5200, 8200); E.tone(o, tt, f, 0.03, v * 0.03, { type: 'sine', f2: f * 0.8 }); } return 1.8; } },
+  // a manhole cover dragged aside, the ladder rungs
+  manhole: { pri: NORMAL, range: 900, gap: 0.4, play(E, o, t, v) { E.noise(o, t, 0.35, v * 0.35, { ft: 'bandpass', f: vary(900), q: 0.9 }); E.fm(o, t + 0.3, vary(240), 0.5, v * 0.12, 1.41, 2.5); for (let k = 0; k < 3; k++) E.fm(o, t + 0.55 + k * 0.22, vary(700, 0.1), 0.12, v * 0.05, 2.1, 1.2); return 1.3; } },
+  // a rat's squeak (the sewers)
+  squeak: { pri: AMBIENT, range: 600, gap: 0.4, play(E, o, t, v) { const f = rr(3200, 4800); E.tone(o, t, f, 0.05, v * 0.04, { type: 'sine', f2: f * 1.25 }); E.tone(o, t + 0.07, f * 1.1, 0.04, v * 0.03, { type: 'sine', f2: f }); return 0.14; } },
 };
 function horn(E, o, t, v, d) { for (const [f, w, k] of [[277, 'saw8', 0.1], [349, 'saw8', 0.08], [415, 'reed', 0.06]]) E.tone(o, t, f, d, v * k, { wave: w, lp: 1800, a: 0.04, hold: d - 0.15 }); return d + 0.05; }
 

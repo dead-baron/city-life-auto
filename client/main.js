@@ -240,6 +240,7 @@ function onText(m) {
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
+      S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
       bag.refresh(); wheel.refresh(); wpick.refresh();
@@ -250,6 +251,8 @@ function onText(m) {
     case 'menu': S.hud.openMenu(m); break;
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; break;   // (the observatory: the night sky through the eyepiece)
+    case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
+    case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'board': phone.onBoard(m); break;
     case 'feed': phone.onFeed(m); break;
@@ -316,13 +319,13 @@ function reconcile(s) {
   const old = S.pred && !switched ? drawn(S.pred) : null;
   let st;
   if (kind === 'ped') {
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits, under: !!(S.ents.get(s.ctrlId) || {}).swim, lz: s.self.lz };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits, under: !!(S.ents.get(s.ctrlId) || {}).swim, lz: s.self.lz, ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, mods: pedModsFrom(s.selfFlags, s.self.speedMul), prev: null };
   } else {
     const e = S.ents.get(s.ctrlId);
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD) };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, def, prev: null };
   }
   // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
@@ -628,6 +631,13 @@ function onEvent(ev) {
       break;
     }
     case 'blood': if (ev.g) fx.bulletHit(ev.x, ev.y, ev.a, now); else fx.blood(ev.x, ev.y, ev.a, ev.n, now); sfx('hit', distVol(ev.x, ev.y)); break;
+    case 'pick': {   // a pickaxe on rock (server/systems/underground.js): the swing, sparks and chips (the underground view draws its own)
+      const e = S.ents.get(ev.id); if (e) e.pickAt = S.loopClock;   // (pedPose: the swing)
+      if (S.ugView) S.ugView.onEvent(ev);
+      if (!S.ugLayer) for (let k = 0; k < (ev.done ? 10 : 5); k++) { const a = Math.random() * 6.283, sp = 40 + Math.random() * 90; fx.spawn(4, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 0.3, 3, k % 2 ? '#ffe9a0' : '#9a9080'); }
+      break;
+    }
+    case 'bats': case 'dust': case 'rockfall': if (S.ugView) S.ugView.onEvent(ev); break;   // (the cave: the underground view)
     case 'drip': fx.drip(ev.x, ev.y, now); break; // a bleeding person's trail
     case 'death': {
       const e = S.ents.get(ev.id);
@@ -2420,6 +2430,7 @@ function pedPose(e) {
   if (f & PF.CARRY) return 'carry';
   if (e.d && e.d.st && !(f & PF.MOVING)) return 'sitlow';   // sitting by a campfire (server campfires.js)
   if (e.d && e.d.hb && !(f & PF.MOVING)) return 'handsup';  // in a cell, hands on the bars (server cells.js)
+  if (e.pickAt !== undefined && S.loopClock - e.pickAt < 0.42) return 'swing';   // mining: the pickaxe coming down on the rock (server underground.js 'pick')
   const w = WEAPON_BY_INDEX[e.extra];
   const meleeW = w && w.type === 'melee';
   if (meleeW && e.swingAt !== undefined && S.loopClock - e.swingAt < SWING_TIME) return e.extra === 0 ? 'punch' : 'swing';
@@ -2481,8 +2492,9 @@ function render(dt) {
   if (!F) return;
   tickVisuals(F);
   F.mark('visuals');
-  const v2 = art2Draws(F);
-  if (v2) S.art2.frame(F);
+  const v2 = !F.ug && art2Draws(F);
+  if (F.ug) drawUnderground(F);
+  else if (v2) S.art2.frame(F);
   else if (v1Draws(F)) drawWorldV1(F);
   else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }
   if (F.spec) { // spectating close in: the new renderer's picture, the spectator's names / grid / players on top
@@ -2497,6 +2509,45 @@ function render(dt) {
     return;
   }
   drawOverlays(F, v2);
+}
+
+// ---- under the ground: the sewers and the cave (client/underground/view.js, loaded the first time you go down) ------------
+function drawUnderground(F) {
+  showWorld2(false);
+  if (S.ugView && S.ugView.map === S.map) { S.ugView.draw(g, F, W, H, DPR); return; }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#030304'; g.fillRect(0, 0, canvas.width, canvas.height);
+  if (S.ugViewP) return;
+  S.ugViewP = import('./underground/view.js').then((mod) => { S.ugView = mod.createUgView(S, { carriedLights }); S.ugMod = mod; }).catch((e) => console.warn('[underground]', e)).finally(() => { S.ugViewP = null; });
+}
+// the ore veins up at the quarry and the mine's outcrops (their state: S.ugVeins), and the ring round you while you mine
+function drawVeinsTop(F) {
+  if (!S.ugMod || F.ug) return;
+  const view = F.view, L = S.ugMod.layout(S.map), now = F.now, st = new Map((S.ugVeins || []).map((q) => [q[0], q]));
+  for (const v of L.veins) {
+    if (v.ug) continue;
+    const q = st.get(v.i), at = v.alts[q ? q[1] : 0] || v.alts[0];
+    if (at.x < view.x0 - 40 || at.x > view.x1 + 40 || at.y < view.y0 - 40 || at.y > view.y1 + 40) continue;
+    if (q && q[2] > 0 && (performance.now() - (S.ugVeinsAt || 0)) / 1000 < q[2]) continue;
+    S.ugMod.drawVein(g, v.ore, at.x, at.y, now, v.i);
+  }
+}
+function drawMineRing(F) {
+  const R = S.mineRing;
+  if (!R) return;
+  const k = (performance.now() - R.t0) / R.dur;
+  if (k > 1.2) { S.mineRing = null; return; }
+  const sp = F.sp;
+  g.save();
+  g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.5)'; g.beginPath(); g.arc(sp.x, sp.y - 34, 13, 0, 6.283); g.stroke();
+  g.lineWidth = 3; g.strokeStyle = '#ffd36b'; g.beginPath(); g.arc(sp.x, sp.y - 34, 13, -Math.PI / 2, -Math.PI / 2 + Math.min(1, k) * 6.283); g.stroke();
+  g.restore();
+}
+// (the quarry's veins: the module that draws them loads once you're near one - the view's little sibling)
+function nearVeins(sp) {
+  if (S.ugMod || S.ugViewP || !S.map || !S.map.quarries || !S.map.quarries[0]) return;
+  const q = S.map.quarries[0], mine = (S.map.natureSites || []).find((n) => n.kind === 'mine');
+  const near = (x, y) => Math.abs(sp.x - x) < 2500 && Math.abs(sp.y - y) < 2500;
+  if (near(q.x + q.w / 2, q.y + q.h / 2) || (mine && near(mine.x, mine.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
 }
 
 function prepFrame(dt) {
@@ -2625,7 +2676,8 @@ function prepFrame(dt) {
   const meEnt = S.ents.get(S.myPedId);
   const myCar = S.ctrlKind === CTRL.RIDER && meEnt && meEnt.parent ? S.ents.get(meEnt.parent) : null;
   const myTrain = myCar && myCar.kind === K.TRAIN && myCar.d ? myCar.d.tr : -1;
-  const sub = !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
+  const ug = S.ugLayer || 0;   // down the sewers or in the cave (shared/underground.js): the underground view draws the frame
+  const sub = !!ug || !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
   // who is on screen, by kind
   const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
@@ -2645,7 +2697,7 @@ function prepFrame(dt) {
   const boats = vehs.filter((v) => VEHICLE_BY_INDEX[v.d.m] && VEHICLE_BY_INDEX[v.d.m].kind === 'boat');
   return {
     dt, now, nowMs: performance.now(), fx, sp: S.specArt ? { x: S.cam.x, y: S.cam.y, a: 0, z: 0 } : sp, z, shx, shy, view, clock, rain, sky, quality, mark, spec: S.specArt,
-    chunkView: S.chunkView, meEnt, myCar, myTrain, sub,
+    chunkView: S.chunkView, meEnt, myCar, myTrain, sub, ug,
     peds, vehs, crates, bags, projs, balls, cars, riders, swimmers, boats,
     insideB: null, roofArt: [], bl: [], bA: [], refl: [],
   };
@@ -2946,6 +2998,8 @@ function drawOverlays(F, v2) {
     g.restore();
   }
 
+  // the ore veins at the quarry and the mine (once you're near: client/underground/view.js), the ring while you mine
+  nearVeins(sp); drawVeinsTop(F); drawMineRing(F);
   // name tags + public flares + rumor marker
   drawWorldLabels(F.peds, F.vehs, now, z);
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
@@ -4206,6 +4260,20 @@ const NO_CAST = new Set(['gravel', 'rubble', 'flowerbed', 'mosaic', 'rwlight', '
 const castList = [];
 const RW_COL = { w: LIGHT.head, g: LIGHT.green, r: LIGHT.red, b: LIGHT.blue };
 const TALL_SHADOW = { lamp: { h: 34, r: 3 }, turbine: { h: 120, r: 7 }, radiotower: { h: 110, r: 9 }, upole: { h: 36, r: 3 }, flare: { h: 50, r: 4 }, dome: { h: 60, r: 60 }, dscreen: { h: 50, r: 70 }, marquee: { h: 30, r: 26 }, pumpjack: { h: 30, r: 40 }, otank: { h: 60, r: 46 } };
+// The lights people carry: police on foot carry flashlights after dark; a player's shines whenever it's switched on (d.fl
+// in the spawn descriptor - they buy one and switch it on): a soft beam by day, the full cone at night. L: the light
+// records (cone, beam, add, glow). Down the sewers and in the cave the underground view calls this with its own records
+// (night 1): every carried light that goes through here lights the dark down there too.
+function carriedLights(L, peds, night, haze) {
+  for (const p of peds) {
+    if ((p.flags & (PF.INVEH | PF.DEAD | PF.DOWN)) || p.swim || p.blink === 3) continue;
+    const torch = !!(p.d && p.d.fl), cop = night > 0.35 && !!(p.flags & PF.BADGE);
+    if (!torch && !cop) continue;
+    const a = p.ra, x = p.rx + Math.cos(a) * 8, y = p.ry - 10 + Math.sin(a) * 8;
+    if (night > 0.05) L.cone(x, y, a, torch ? 240 : 200, 62, LIGHT.white, 0.85 * night);
+    L.beam(x, y, a, 170, 40, LIGHT.white, torch ? 0.16 * (1 - night) + 0.06 * haze * night : 0.045 * haze * night);
+  }
+}
 function collectLights(sky, view, vehs, peds, dt) {
   selfLit.length = 0; countryLit.length = 0;
   const L = S.light;
@@ -4351,16 +4419,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     L.add(c.rx, c.ry, def.L * 0.75, LIGHT.window, 0.6);
     if (c.d.c === 0) { const x = c.rx + Math.cos(c.ra) * def.L / 2, y = c.ry + Math.sin(c.ra) * def.L / 2; L.cone(x, y, c.ra, 460, 100, LIGHT.head, 1); L.beam(x, y, c.ra, 380, 70, LIGHT.head, 0.08 * haze); }
   }
-  // flashlights: police on foot carry theirs after dark; a player's shines whenever it's switched on (d.fl in
-  // the spawn descriptor - they buy one and switch it on): a soft beam by day, the full cone at night
-  for (const p of peds) {
-    if ((p.flags & (PF.INVEH | PF.DEAD | PF.DOWN)) || p.swim || p.blink === 3) continue;
-    const torch = !!(p.d && p.d.fl), cop = night > 0.35 && !!(p.flags & PF.BADGE);
-    if (!torch && !cop) continue;
-    const a = p.ra, x = p.rx + Math.cos(a) * 8, y = p.ry - 10 + Math.sin(a) * 8;
-    if (night > 0.05) L.cone(x, y, a, torch ? 240 : 200, 62, LIGHT.white, 0.85 * night);
-    L.beam(x, y, a, 170, 40, LIGHT.white, torch ? 0.16 * (1 - night) + 0.06 * haze * night : 0.045 * haze * night);
-  }
+  carriedLights(L, peds, night, haze);
   // the plasma blade gives off its own blue light in the hand
   for (const p of peds) {
     if (p.extra !== PLASMA_I || (p.flags & (PF.INVEH | PF.DEAD)) || p.blink === 3) continue;

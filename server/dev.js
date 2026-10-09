@@ -26,6 +26,7 @@ import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
 import { SPECIES } from '../shared/fauna.js';
 import { undergroundOf } from '../shared/underground.js';
+import * as underground from './systems/underground.js';
 
 // make a live animal the pure white legend of its kind (dev: see one up close)
 function w2legend(world, e) {
@@ -155,6 +156,16 @@ export function command(world, p, c, msg) {
       world.notify(p, world.weatherHold ? '[dev] Weather held: no change until you let it go.' : '[dev] Weather back to normal.', 'info'); break;
     case 'clockhold': world.clockHold = !world.clockHold; world.notify(p, world.clockHold ? '[dev] Clock frozen at this time of day.' : '[dev] Clock running again.', 'info'); break;
     case 'near': { const err = near(world, p, msg.k); if (err) world.notify(p, err, 'warn'); break; }
+    case 'ug': {   // straight down: the nearest manhole into the sewers, or (k: 'cave') in through the mine's adit
+      if (!ped || ped.dead || ped.vehId) break;
+      const L = undergroundOf(world.map);
+      if (ped.ug) break;
+      if (msg.k === 'cave') { if (L.cave) { ped.x = L.cave.mouth.x; ped.y = L.cave.mouth.y; underground.enterCave(world, p); const c = L.cave.ch[msg.at]; if (c) { ped.x = c.x; ped.y = c.y; } } break; }   // (at: a chamber - grotto, river, worms, pool, crystal, den)
+      let best = null, bd = Infinity;
+      for (const r of L.routes) for (const m of r.manholes) { const d = Math.hypot(m.x - ped.x, m.y - ped.y); if (d < bd) { bd = d; best = m; } }
+      if (best) { ped.x = best.x; ped.y = best.y; underground.goDown(world, p, best); }
+      break;
+    }
     case 'night': world.loopTime = DAY_PART_S + 5; break;
     case 'day': world.loopTime = 90; break;
     case 'time': { // jump the clock to a time of day: msg.m minutes after midnight
