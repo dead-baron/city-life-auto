@@ -65,7 +65,7 @@ body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 /* (to the right of the minimap, which sits top-left on every device) */
 #helpbox { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 14px; max-width: min(380px, 44vw); background: rgba(0,0,0,.8); border-radius: 3px; padding: 10px 14px; font-size: 18px; font-weight: 600; line-height: 1.35; display: flex; align-items: center; gap: 10px; animation: hin .18s ease-out; }
 @keyframes hin { from { opacity: 0; transform: translateY(-6px); } }
-#toasts { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 76px; width: min(380px, 44vw); display: flex; flex-direction: column; gap: 5px; }
+#toasts { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 76px; width: min(380px, 44vw); display: flex; flex-direction: column; gap: 5px; z-index: 7; }   /* (over the district's title card, z 6: its letters ran through the notes; under the robbery and train bars) */
 .toast { background: rgba(0,0,0,.72); border-left: 4px solid #888; padding: 7px 11px; font-size: 15px; font-weight: 600; line-height: 1.25; animation: tin .2s ease-out; }
 .toast.good { border-color: var(--good); } .toast.bad { border-color: var(--bad); } .toast.warn { border-color: var(--warn); } .toast.info { border-color: #6aa6ff; }
 @keyframes tin { from { transform: translateX(-20px); opacity: 0; } }
@@ -414,10 +414,10 @@ body.portrait #phone { justify-content: center; padding: 0; }
 #int-open { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: linear-gradient(120deg, var(--accent), var(--accent2)); color: #fff; border: none; font-family: var(--display); font-size: 22px; padding: 10px 26px; cursor: pointer; letter-spacing: 1px; }
 
 /* store robbery bar */
-#rob { position: absolute; left: 50%; top: 118px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.78); padding: 8px 14px; border: 2px solid #ffd400; font-family: var(--display); color: #ffd400; letter-spacing: 1px; pointer-events: none; }
+#rob { position: absolute; left: 50%; top: 118px; transform: translateX(-50%); z-index: 8; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.78); padding: 8px 14px; border: 2px solid #ffd400; font-family: var(--display); color: #ffd400; letter-spacing: 1px; pointer-events: none; }
 #rob .rob-bar { width: 140px; height: 10px; background: #333; } #rob-fill { display: block; height: 100%; width: 0; background: #ffd400; transition: width .2s; }
 #rob span { font-family: var(--ui, sans-serif); font-weight: 800; color: #7fe07f; min-width: 90px; }
-#trainbar { position: absolute; left: 50%; top: 118px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.72); padding: 6px 12px; border: 2px solid #9ad0ff; font-family: var(--display); color: #9ad0ff; letter-spacing: 1px; pointer-events: none; font-size: 13px; }
+#trainbar { position: absolute; left: 50%; top: 118px; transform: translateX(-50%); z-index: 8; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.72); padding: 6px 12px; border: 2px solid #9ad0ff; font-family: var(--display); color: #9ad0ff; letter-spacing: 1px; pointer-events: none; font-size: 13px; }
 #trainbar span { font-family: var(--ui, sans-serif); font-weight: 700; color: #fff; }
 #trainbar .rob-bar { width: 110px; height: 8px; background: #333; } #tb-fill { display: block; height: 100%; width: 0; background: #ffd36b; transition: width .2s; }
 #rob.alarm { border-color: #ff3b3b; color: #ff3b3b; animation: robflash .5s steps(2) infinite; } #rob.alarm span { color: #ff7070; }
