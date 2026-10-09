@@ -720,6 +720,7 @@ export class Art2Engine {
     this.P = P; this.time = f.time || 0; this.wet = f.wet || 0; this.flash = f.flash || 0; this.fog = f.fog || 0;
     if (f.fades !== undefined) this.fades = f.fades;
     this.wind = f.wind || null; this.windT = f.windT ?? this.time; // [strength, gustiness, dir x, dir y], the wind clock (s)
+    this.air = f.air || null;                                      // how far the air has carried things (wind.js air)
     this.zoom = f.zoom > 0 ? f.zoom : 1; this.camX = +f.camX || 0; this.camY = +f.camY || 0;
     // margins: the shadow reach on the side the sun is, room above for wet reflections, a little slack
     const sd = P.sunDir || PRESET_DEFAULTS.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]) || 1, sz = sd[2] / sl;
@@ -811,7 +812,7 @@ export class Art2Engine {
     const LS = this.LS;
     LS.A = this.tA; LS.B = this.tB; LS.C = this.tC; LS.w = this.SW; LS.h = this.SH; LS.preset = this.P;
     LS.wet = this.wet; LS.time = this.time; LS.flash = this.flash; LS.fog = this.fog;
-    const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind;
+    const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind; LS.air = this.air;
     LS.can = this._canopyInView() ? this.canopy : null; LS.canTex = this.tCan;
     LS.nL = this._packLights(); LS.ubo = this.uboBuf; LS.out = this.fbOut; LS.mark = this.profile ? this._mark : null;
     this.light.bin(this.ubo, LS.nL, this.SW, this.SH, Math.max(this.P.wet ?? 0, this.wet) > 0);

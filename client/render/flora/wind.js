@@ -7,8 +7,18 @@
 // Spells blend into each other over the last fifth. Over the base strength, gusts roll across the
 // ground as travelling waves, so a wheat field shows bands of wind sweeping over it. (User, 2026-10-06:
 // wind should be a rarer event, with a subtle idle sway on the vegetation the rest of the time.)
+//
+// air: how far the air has carried things (world px, x and y), for what drifts with it - the redwood canopy's leaf
+// clumps (art v2 lightgame.js: the sunflecks and the beams through the gaps). It is the wind's velocity summed frame
+// by frame, never the clock times the wind's speed now: that moved the whole pattern by the session's age times any
+// change in the wind, so after a while every breeze picking up, every turn of the wind, sent the dappled light
+// racing over the forest floor (task #388). The velocity eases toward the wind's over a few seconds (a gust or the
+// turn of the loop swings it round, never jumps it), a step is at most a tenth of a second (a tab back from the
+// background, a hitch), and the sums wrap at AIR_P - the noise they move repeats over it, so the wrap never shows and
+// the numbers stay small (precise) however long the session.
 import { hash } from '../atmos.js';
 
+export const AIR_P = 8192;
 const SPELL_S = 90;
 const MOODS = [
   // [chance, strength, gustiness, name]
@@ -33,9 +43,11 @@ export class Wind {
     this.name = 'calm';
     this.force = null;      // dev override: a strength 0..1 (window.CLA.wind)
     this.t = 0;
+    this.air = [0, 0];      // how far the air has carried things (px, wrapped at AIR_P)
+    this.vx = 0; this.vy = 0; this.vOn = false;   // (its velocity, eased)
   }
-  // loopTime: the shared world clock (s); rain 0..1
-  update(loopTime, rain) {
+  // loopTime: the shared world clock (s); rain 0..1; dt: the frame's seconds (moves air)
+  update(loopTime, rain, dt = 0) {
     this.t = loopTime;
     const spell = Math.floor(loopTime / SPELL_S), ph = loopTime / SPELL_S - spell;
     const a = mood(spell), b = mood(spell + 1);
@@ -53,6 +65,16 @@ export class Wind {
     const base = hash(day, 3, 812) < 0.5 ? 0 : Math.PI;
     this.dir = base + Math.sin(loopTime * 0.004 + day) * 0.45 + (hash(day, 5, 813) - 0.5) * 0.5;
     this.dx = Math.cos(this.dir); this.dy = Math.sin(this.dir);
+    this.carry(dt);
+  }
+  // the air moving on: its velocity (3 px/s in calm air, 15 in a gale) eased toward the wind's, summed into air
+  carry(dt) {
+    const d = Math.min(0.1, Math.max(0, +dt || 0)), sp = 3 + this.strength * 12, tx = this.dx * sp, ty = this.dy * sp;
+    if (!this.vOn) { this.vx = tx; this.vy = ty; this.vOn = true; }
+    const k = 1 - Math.exp(-d / 3);
+    this.vx += (tx - this.vx) * k; this.vy += (ty - this.vy) * k;
+    const A = this.air;
+    A[0] = ((A[0] + this.vx * d) % AIR_P + AIR_P) % AIR_P; A[1] = ((A[1] + this.vy * d) % AIR_P + AIR_P) % AIR_P;
   }
   // The wind on a plant at (x, y) world px, time t (s): a signed push across the screen, roughly
   // -1..1 (positive leans right). phase: the plant's own jitter (0..1) so neighbours don't move as one.

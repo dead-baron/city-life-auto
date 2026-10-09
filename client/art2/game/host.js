@@ -481,7 +481,7 @@ export class World2 {
     E.swayOn = this.gfx.wind !== false;
     const Wd = this.windArr || (this.windArr = [0, 0, 1, 0]);
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, windT: S.loopTime || F.now }) === false) return;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, windT: S.loopTime || F.now, air: wind.air }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');

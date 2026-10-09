@@ -211,18 +211,20 @@ float bayer4(ivec2 q){ int i = (q.y & 3) * 4 + (q.x & 3);
 float hash2(ivec2 p){ uint h = uint(p.x) * 374761393u + uint(p.y) * 668265263u; h = (h ^ (h >> 13u)) * 1274126177u; return float((h ^ (h >> 16u)) & 16777215u) / 16777216.0; }
 `;
 
+export const CAN_N = [180, 246];   // (the canopy's noise: lattice cells over 8192 and 4096 px, CANOPY_GLSL)
 // The redwood canopy (canopy.js), shared by the light (LIT_DECL canopyVis: the sunflecks) and the god rays
 // (SHAFT_FS: the beams), so the beams come down through the very gaps the flecks shine through. tCan: how thick
 // the crowns are per cell of its box; canO: the box's world origin (px) and 1 / its size (px); canH: the layer's
 // height (px), 0 when none is in view. canopyCover(c, d): at world point c of the layer, how much of the sun the
-// leaf clumps there take (0..1: noise anchored to the world, stirring with the wind; 0 outside the crowns), d the
-// crowns' thickness. Needs time and wind4.
+// leaf clumps there take (0..1: noise anchored to the world, drifting with the wind; 0 outside the crowns), d the
+// crowns' thickness. canD: how far the air has carried the clumps (wind.js air, wrapped at its AIR_P, 8192 px) - the
+// clumps' noise repeats over 8192 px (180 cells) and the finer octave, drifting back at half speed, over 4096 (246
+// cells), so the wrap never shows. (It was the clock times the wind's speed now: task #388, the light racing.)
 const CANOPY_GLSL = `
-uniform sampler2D tCan; uniform vec4 canO; uniform float canH;
-float cnoise(vec2 p){
-  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-  ivec2 c = ivec2(i);
-  return mix(mix(hash2(c), hash2(c + ivec2(1, 0)), f.x), mix(hash2(c + ivec2(0, 1)), hash2(c + ivec2(1, 1)), f.x), f.y);
+uniform sampler2D tCan; uniform vec4 canO; uniform float canH; uniform vec2 canD;
+float cnoise(vec2 p, float per){
+  vec2 i = floor(p), f = p - i, a = mod(i, per), b = mod(i + 1.0, per); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash2(ivec2(a)), hash2(ivec2(b.x, a.y)), f.x), mix(hash2(ivec2(a.x, b.y)), hash2(ivec2(b)), f.x), f.y);
 }
 float canopyCover(vec2 c, out float d){
   vec2 uv = (c - canO.xy) * canO.zw;
@@ -230,8 +232,7 @@ float canopyCover(vec2 c, out float d){
   if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) return 0.0;
   d = texture(tCan, uv).r;
   if (d < 0.01) return 0.0;
-  vec2 dr = wind4.zw * (time * (3.0 + wind4.x * 12.0));
-  float n = cnoise((c + dr) * 0.022) * 0.62 + cnoise((c - dr * 0.5) * 0.06) * 0.38;
+  float n = cnoise((c + canD) * ${CAN_N[0] / 8192}, ${CAN_N[0]}.0) * 0.62 + cnoise((c - canD * 0.5) * ${CAN_N[1] / 4096}, ${CAN_N[1]}.0) * 0.38;
   return smoothstep(n - 0.05, n + 0.05, d * 0.7 + 0.1);
 }
 `;
@@ -597,7 +598,7 @@ precision highp float; precision highp int; precision highp sampler2D;
 #define BEAMN ${T.rays > 1 ? 14 : T.rays > 0 ? 11 : 8}
 layout(location=0) out vec4 o;
 uniform sampler2D tLit, tB; uniform vec2 fullTex, maxUV, sdir; uniform float slen, smear; uniform ivec2 org;
-uniform vec3 sunDir; uniform vec2 worg; uniform vec4 wind4; uniform float time;
+uniform vec3 sunDir; uniform vec2 worg;
 ${GLSL_COMMON}
 ${CANOPY_GLSL}
 void main(){
@@ -826,12 +827,13 @@ export class LightGame {
     gl.uniform1i(u.nL, S.nL);
     if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
     if (u.wind4) { const W = S.wind; gl.uniform4f(u.wind4, W ? W[0] : 0.1, W ? W[1] : 0.3, W ? W[2] : 1, W ? W[3] : 0); }
-    this.canUniforms(u, S.can);
+    this.canUniforms(u, S.can, S.air);
   }
-  canUniforms(u, c) {
+  canUniforms(u, c, air) {
     const gl = this.gl;
     if (u.canH) gl.uniform1f(u.canH, c ? c.hc : 0);
     if (u.canO && c) gl.uniform4f(u.canO, c.x0, c.y0, 1 / (c.w * c.cell), 1 / (c.h * c.cell));
+    if (u.canD) gl.uniform2f(u.canD, air ? air[0] : 0, air ? air[1] : 0);
   }
   // S: { A, B, C: scene textures; w, h: used size; preset; wet; time; flash; nL; ubo; org: [x, y] (origin
   //      mod 8192); view: [x, y, w, h] (the visible rectangle in scene texels); out: framebuffer for the
@@ -902,10 +904,8 @@ export class LightGame {
       gl.uniform2f(u.sdir, -ux / ul, -uy / ul); gl.uniform1f(u.slen, Math.min(480, 200 / SD[2] * ul)); gl.uniform2i(u.org, S.org[0], S.org[1]);
       if (u.smear) gl.uniform1f(u.smear, shaftK > 0 ? 1 : 0);
       if (u.sunDir) gl.uniform3fv(u.sunDir, SD);
-      if (u.time) gl.uniform1f(u.time, S.time % 4096);
       if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
-      if (u.wind4) { const W = S.wind; gl.uniform4f(u.wind4, W ? W[0] : 0.1, W ? W[1] : 0.3, W ? W[2] : 1, W ? W[3] : 0); }
-      this.canUniforms(u, beamK > 0 ? S.can : null);
+      this.canUniforms(u, beamK > 0 ? S.can : null, S.air);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       this.blur(this.tSA, this.qw, this.qh, qw, qh, this.fSB, qw, qh, 1, 0, 1);
       this.blur(this.tSB, this.qw, this.qh, qw, qh, this.fSA, qw, qh, 0, 1, 1);
