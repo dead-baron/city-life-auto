@@ -60,7 +60,9 @@ export function update(world, dt) {
     // AI drivers get two physics sub-steps a tick with their wheel and pedals re-trimmed in
     // between, so they correct twice as often - smoother lines, steadier speeds
     if (v.ownStepTick !== world.tick) {
-      if (v.ai && v.ai.ctl && driver && driver.npc) { stepVehicle(world, v, dt / 2, env); traffic.trim(v); stepVehicle(world, v, dt / 2, env); }
+      // (only when driveToward steered it this tick: a car braked by hand - police pulling up, the custody car halting -
+      // was being steered back at its last target between the sub-steps, so it went round and round instead of stopping)
+      if (v.ai && v.ai.ctl && v.ai.ctl.t === world.tick && driver && driver.npc) { stepVehicle(world, v, dt / 2, env); traffic.trim(v); stepVehicle(world, v, dt / 2, env); }
       else stepVehicle(world, v, dt, env);
     }
     // land vehicles that end up in the water sink (not a car on a ferry's deck)

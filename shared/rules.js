@@ -31,6 +31,10 @@ export const HOLD_S = 4;               // held face down this long before they'r
 export const ESCORT_PX = 650;          // a police car this close with a seat free takes them in; else one is sent
 export const TRANSPORT_WAIT_S = 45;    // ...and if none has them in the back in this long, they're taken in anyway
 export const RIDE_MAX_S = 150;         // a ride to the station that takes longer than this (stuck, lost) gets there anyway
+export const CUSTODY_STUCK_S = 12;     // the car coming for you, or the one you're in, getting no nearer this long (stuck, or going
+                                       //   round in circles): "Make a break for it" comes up (an escape: wanted again)
+export const CUSTODY_WAIT_BREAK_S = 20; // ...and the same once you've waited this long for the car to come at all
+export const CUSTODY_SKIP_S = 30;      // the ride getting no nearer this long: they get you to the station anyway (booked)
 export const JAIL_S = 60;              // in the cell this long...
 export const BAIL_PER_STAR = 100;      // ...or out now for this much a star (from the bank, then cash)
 export const GUARD_PX = 420;           // a player officer who leaves their prisoner further away than this loses them
@@ -44,7 +48,8 @@ export const TACKLE_DOWN_S = 2.5;      // ...and a tackle that lands puts you do
 export const PISTOL_SHARE_3 = 0.25;    // at 3 stars this share of officers carry a pistol instead of a taser
 export const FBI_SHARE_5 = 0.4;        // at 5 stars this share of the units sent are the FBI...
 export const ARMY_SHARE_5 = 0.2;       // ...and this share the army (one truck at a time)
-export const RESPAWN_SECONDS = 15;           // down: this long to pick where to wake up (unless you call for help)
+export const RESPAWN_SECONDS = 18;           // down: you wake up this long after going down, whatever you press (unless help or an ambulance is on the way)
+export const DEATH_REVEAL_S = 3;             // down: the camera pulls back over where it happened for this long before the choices come up
 // Downed, revives and the paid ambulance
 export const HELP_S = 120;                    // Call for Help: you stay down (revivable) this long instead
 export const HELP_PING_S = 10;                // pressing it again re-alerts nearby players at most this often

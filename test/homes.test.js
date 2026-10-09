@@ -213,7 +213,9 @@ test('Spray & Go: an unseen respray clears your wanted level; with a witness the
   w.remove(cop);
   p.heat = 40; p.wanted = 2; p.seenAt = -99;
   v.vx = 0; v.vy = 0;
-  run(w, PAINT_TIME_S + 1);
+  // (no police turning up meanwhile: they'd drag them out of the car - a respray in time is the point here)
+  const noUnits = () => { for (const id of [...(w.police || [])]) { const u = w.get(id); if (u) { for (const e of [...w.entities.values()]) if (e.npc && e.npc.unit === u.id) w.remove(e); w.remove(u); } } w.police && w.police.clear(); };
+  for (let s = 0; s < PAINT_TIME_S + 1; s++) { noUnits(); run(w, 1); }
   assert.notEqual(v.paint, paint0, 'new colour');
   assert.equal(prof.bank, 1000 - PAINT_PRICE);
   assert.equal(p.wanted, 0, 'wanted level cleared');

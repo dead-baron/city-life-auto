@@ -24,7 +24,7 @@ import { WEAPONS, ITEMS } from '../../shared/items.js';
 import { IN } from '../../shared/input.js';
 import {
   HOLD_S, ESCORT_PX, TRANSPORT_WAIT_S, RIDE_MAX_S, JAIL_S, BAIL_PER_STAR, GUARD_PX, BREAKOUT_IMPACT, DELIVER_BONUS,
-  BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, SPAWN_PROTECT_S,
+  BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, SPAWN_PROTECT_S, CUSTODY_STUCK_S, CUSTODY_WAIT_BREAK_S, CUSTODY_SKIP_S,
 } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as law from './law.js';
@@ -62,22 +62,31 @@ export function kerbOf(world, id) {
   if (!st) return null;
   let cache = KERBS.get(world.map);
   if (!cache) KERBS.set(world.map, (cache = new Map()));
-  if (cache.has(id)) return cache.get(id);
-  const door = st.outside || st;
+  if (!cache.has(id)) { const door = st.outside || st; cache.set(id, nearestKerb(world.map, door.x, door.y)); }
+  return cache.get(id);
+}
+// the nearest point of a street (ground level) to (x, y)
+export function nearestKerb(m, x, y) {
   let best = null, bd = Infinity;
-  for (const e of world.map.edges || []) {
+  for (const e of m.edges || []) {
     if (e.lvl !== 0) continue;
     for (let i = 1; i < e.pts.length; i++) {
       const a = e.pts[i - 1], b = e.pts[i], dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1;
-      if (Math.min(a.x, b.x) - door.x > bd || door.x - Math.max(a.x, b.x) > bd || Math.min(a.y, b.y) - door.y > bd || door.y - Math.max(a.y, b.y) > bd) continue;
-      const t = Math.max(0, Math.min(1, ((door.x - a.x) * dx + (door.y - a.y) * dy) / L2));
-      const x = a.x + dx * t, y = a.y + dy * t, d = Math.hypot(x - door.x, y - door.y);
-      if (d < bd) { bd = d; best = { x, y }; }
+      if (Math.min(a.x, b.x) - x > bd || x - Math.max(a.x, b.x) > bd || Math.min(a.y, b.y) - y > bd || y - Math.max(a.y, b.y) > bd) continue;
+      const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / L2));
+      const px = a.x + dx * t, py = a.y + dy * t, d = Math.hypot(px - x, py - y);
+      if (d < bd) { bd = d; best = { x: px, y: py }; }
     }
   }
-  const out = best || { x: door.x, y: door.y };
-  cache.set(id, out);
-  return out;
+  return best || { x, y };
+}
+// Where a car pulls up for someone inside a walk-in: the street nearest its door (not on the door itself, where it
+// would block the way in and out). Cached per door.
+const DOOR_KERBS = new WeakMap();
+export function doorKerb(world, wi) {
+  let k = DOOR_KERBS.get(wi.u);
+  if (!k) { k = nearestKerb(world.map, wi.x, wi.outY); DOOR_KERBS.set(wi.u, k); }
+  return k;
 }
 
 // ---- cuffed ----------------------------------------------------------------------------------------------------------------
@@ -130,7 +139,11 @@ function step(world, p, dt) {
     pin(world, ped, h, dt);
     if (c.stage === 'held') { if (now >= c.until) fetch(world, p); return; }
     if (c.car && wrecked(live(world, c.car))) { c.car = 0; fetch(world, p, true); return; }   // (the car coming was wrecked: another)
-    if (now >= c.until) book(world, p);   // (nothing got there in time: taken in anyway)
+    if (now >= c.until) { book(world, p); return; }   // (nothing got there in time: taken in anyway)
+    // the car isn't coming (stuck, or going round in circles), or is taking too long: they can make a break for it
+    const v = live(world, c.car);
+    const stuck = v ? progress(c, Math.hypot(v.x - ped.x, v.y - ped.y), now) : 0;
+    if (stuck > CUSTODY_STUCK_S || now - c.since > CUSTODY_WAIT_BREAK_S) offerBreak(world, p);
     return;
   }
   if (c.stage === 'escort') escortStep(world, p, dt);
@@ -164,7 +177,7 @@ function walk(world, e, x, y, dt, speed = 1) {
 // The hold is over: a car to take them in - one close by, or one sent.
 function fetch(world, p, again = false) {
   const c = p.custody, ped = p.ped, now = world.time;
-  c.stage = 'fetch'; c.since = now;
+  c.stage = 'fetch'; c.since = now; c.best = undefined; c.brk = false;
   const h = live(world, c.holder);
   let v = pickCar(world, p, h);
   if (!v && !ped.sub) v = police.sendTransport(world, p);
@@ -244,7 +257,7 @@ function seat(world, p, v, esc) {
     if (fs >= 0) { v.seats[fs] = esc.id; esc.vehId = v.id; esc.seat = fs; esc.vx = 0; esc.vy = 0; }
   }
   const st = nearestStation(world, v.x, v.y);
-  Object.assign(c, { stage: 'ride', since: now, until: now + RIDE_MAX_S, holder: 0, station: st ? st.id : -1, blastSeen: v.blastAt || 0, hitSeen: v.hardHitAt || 0 });
+  Object.assign(c, { stage: 'ride', since: now, until: now + RIDE_MAX_S, holder: 0, station: st ? st.id : -1, blastSeen: v.blastAt || 0, hitSeen: v.hardHitAt || 0, best: undefined, brk: false });
   world.notify(p, `In the back of the police car - on the way to ${st ? st.label : 'the station'}.`, 'bad');
   p.meDirty = true;
 }
@@ -280,7 +293,33 @@ function rideStep(world, p) {
   if (drv && !(drv.npc && drv.npc.role === 'cop')) { escape(world, p, 'Someone\'s taken the police car - the cuffs come off!'); return; }
   if (!drv && !police.crewOf(world, v).length) { vehicles.ejectPed(world, ped, true); escape(world, p, 'Nobody\'s left to take you in - you slip out of the car. Run!'); return; }
   const k = kerbOf(world, c.station);
-  if ((k && Math.hypot(v.x - k.x, v.y - k.y) < DROP_PX) || now >= c.until) book(world, p);
+  const d = k ? Math.hypot(v.x - k.x, v.y - k.y) : 0;
+  if ((k && d < DROP_PX) || now >= c.until) { book(world, p); return; }
+  // stuck, or going round in circles: after a while they can make a break for it, and in the end the police get them
+  // there anyway (the user's 2026-10-08 notes: never stuck for ever in the back of a police car)
+  const stuck = progress(c, d, now);
+  if (stuck > CUSTODY_SKIP_S) { book(world, p); return; }
+  if (stuck > CUSTODY_STUCK_S) offerBreak(world, p);
+}
+// how long the car has got no nearer (by 40 px) to where it's going
+function progress(c, d, now) {
+  if (c.best === undefined || d < c.best - 40) { c.best = d; c.bestAt = now; }
+  return now - c.bestAt;
+}
+function offerBreak(world, p) {
+  const c = p.custody;
+  if (c.brk) return;
+  c.brk = true;
+  world.notify(p, c.stage === 'ride' ? 'The car\'s going nowhere - make a break for it?' : 'The car isn\'t coming - make a break for it?', 'info');
+  p.meDirty = true;
+}
+// Make a break for it (the action button, once offered): up and out and away - an escape, wanted again.
+export const canBreak = (p) => !!(p.custody && p.custody.brk && p.custody.stage !== 'cell');
+export function breakOut(world, p) {
+  if (!canBreak(p)) return;
+  const ped = p.ped;
+  if (ped.vehId) { const v = world.get(ped.vehId); if (v) throwOut(world, ped, v, 60); else vehicles.ejectPed(world, ped, true); }
+  escape(world, p, 'You made a break for it - run!');
 }
 function throwOut(world, ped, v, sp) {
   const side = v.a + (ped.seat % 2 ? 1 : -1) * Math.PI / 2;
@@ -329,7 +368,7 @@ export function onDeath(world, p) {
 // ---- the cell -------------------------------------------------------------------------------------------------------------
 // Booked: fined, the contraband and illegal guns taken, the stars wiped - and JAIL_S in a cell, or the bail.
 function book(world, p) {
-  const c = p.custody, ped = p.ped, now = world.time;
+  const c = p.custody, ped = p.ped;
   releaseCar(world, c);
   if (ped.vehId) vehicles.ejectPed(world, ped, true);
   cuff(ped, false);
@@ -337,13 +376,20 @@ function book(world, p) {
   const taken = confiscate(world, p, c.stars);
   law.clearWanted(world, p);
   p.profile.peakWanted = 0; p.disguised = false;
+  const bail = BAIL_PER_STAR * c.stars;
+  jail(world, p, st, JAIL_S, bail, c.stars, c.by);
+  world.notify(p, `Booked into a cell at ${st.label}: ${taken}. Out in ${JAIL_S}s - or pay the $${bail} bail.`, 'bad');
+}
+// into a cell at station st for `secs`
+function jail(world, p, st, secs, bail, stars, by) {
+  const ped = p.ped, now = world.time;
+  if (ped.vehId) vehicles.ejectPed(world, ped, true);
+  cuff(ped, false);
   ped.hidden = true; ped.inside = null; ped.interior = { kind: 'jail', poi: st.id };
   ped.x = st.x; ped.y = st.y; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.downUntil = 0; ped.stunUntil = 0; ped.lz = 0; ped.sub = false;
   world.place(ped);
   p.teleportAt = now;
-  const bail = BAIL_PER_STAR * c.stars;
-  p.custody = { stage: 'cell', since: now, until: now + JAIL_S, station: st.id, bail, stars: c.stars, by: c.by };
-  world.notify(p, `Booked into a cell at ${st.label}: ${taken}. Out in ${JAIL_S}s - or pay the $${bail} bail.`, 'bad');
+  p.custody = { stage: 'cell', since: now, until: now + secs, station: st.id, bail, stars, by };
   p.meDirty = true;
   store.touch();
 }
@@ -393,11 +439,31 @@ export function payBail(world, p) {
   return null;
 }
 
-// Logging out in custody: booked on the spot (no escaping by quitting), and out in the lobby for the ghost's last seconds.
+// Logging out in custody: booked on the spot (no escaping by quitting) and kept in the cell. Back within the ghost
+// window, they're still there; later, the time they had left is saved with the character (saveJail) and they wake up
+// in the cell when they next play (onJoin). Time offline doesn't count: no serving it by logging off.
 export function onLeave(world, p) {
   if (!p.custody) return;
   if (inCustody(p)) book(world, p);
-  release(world, p, '');
+}
+export function saveJail(world, p) {
+  const c = p.custody;
+  if (c && c.stage === 'cell') {
+    p.profile.jail = { left: Math.max(1, Math.ceil(c.until - world.time)), station: c.station, bail: c.bail, stars: c.stars };
+    p.custody = null;
+    store.touch();
+  }
+}
+export function onJoin(world, p) {
+  const j = p.profile.jail, ped = p.ped;
+  if (!j) return;
+  delete p.profile.jail;
+  store.touch();
+  if (!ped || ped.dead || !(j.left > 0)) return;
+  const st = (world.map.pois[j.station] && world.map.pois[j.station].kind === 'police' ? world.map.pois[j.station] : null) || nearestStation(world, ped.x, ped.y);
+  if (!st) return;
+  jail(world, p, st, j.left, j.bail || BAIL_PER_STAR * (j.stars || 1), j.stars || 1, null);
+  world.notify(p, `Still in your cell at ${st.label}: ${j.left}s left - or pay the $${p.custody.bail} bail.`, 'warn');
 }
 
 // ---- the car taking them in (police.js runUnit, while v.ai.prisoner) ----------------------------------------------------
@@ -408,7 +474,7 @@ export function runCar(world, v, crew, dt) {
   let drv = live(world, v.seats[0]);
   if (c.stage === 'held' || c.stage === 'fetch') {
     // come and get them (to the door, when they're in a shop), and stand round them meanwhile
-    const wi = walkInAt(world.map, ped.x, ped.y), gx = wi ? wi.x : ped.x, gy = wi ? wi.outY : ped.y;
+    const wi = walkInAt(world.map, ped.x, ped.y), kb = wi ? doorKerb(world, wi) : null, gx = kb ? kb.x : ped.x, gy = kb ? kb.y : ped.y;
     const d = Math.hypot(v.x - gx, v.y - gy);
     v.sirenOn = d > 600;
     if (d > PICKUP_PX && drv && drv.npc) route(world, v, gx, gy, d < 450 ? 170 : 460);
@@ -451,10 +517,53 @@ export function standBy(world, v, crew, p, dt) {
 }
 function route(world, v, x, y, speed) {
   const ai = v.ai, now = world.time, key = `${Math.round(x)},${Math.round(y)}`;
-  if (!ai.route || !ai.route.length || now - ai.routeAt > 3 || ai.routeKey !== key) { ai.route = planRoute(world, v.x, v.y, x, y); ai.routeAt = now; ai.routeKey = key; }
-  while (ai.route.length > 1 && Math.hypot(ai.route[0].x - v.x, ai.route[0].y - v.y) < 60) ai.route.shift();
+  // keep to one plan: planning again every few seconds from whichever road node is nearest can send the car back the
+  // way it came, then forward again (round and round) - only a new destination, or the car well off its route, replans
+  // (well off it: further than 300 px from the stretch of route between the last waypoint and the next)
+  const lost = ai.route && ai.route.length && segDist(v.x, v.y, ai.routePrev || ai.route[0], ai.route[0]) > 300;
+  if (!ai.route || !ai.route.length || ai.routeKey !== key || lost || now - ai.routeAt > 25) {
+    ai.route = trimBehind(planRoute(world, v.x, v.y, x, y), v); ai.routeAt = now; ai.routeKey = key; ai.routePrev = { x: v.x, y: v.y };
+  }
+  // on to the next waypoint once this one's reached (the faster, the sooner), or driven past while still on the line
+  // of the route (never cutting a corner across: onto a bridge it'd be straight into the water beside it)
+  const reach = Math.max(60, Math.min(110, Math.hypot(v.vx, v.vy) * 0.25));
+  while (ai.route.length > 1) {
+    const a = ai.route[0], b = ai.route[1], d = Math.hypot(a.x - v.x, a.y - v.y);
+    const past = (v.x - a.x) * (b.x - a.x) + (v.y - a.y) * (b.y - a.y) > 0 && segDist(v.x, v.y, a, b) < 48;
+    if (d < reach || past) ai.routePrev = ai.route.shift(); else break;
+  }
   const wp = ai.route[0] || { x, y };
-  driveToward(world, v, wp.x, wp.y, speed, {});
+  driveToward(world, v, wp.x, wp.y, cornerSpeed(v, ai.route, speed), {});
+}
+// slow down for a sharp corner coming up (taken flat out, the car swings wide - off a bridge's end, into the water)
+function cornerSpeed(v, r, speed) {
+  let sp = speed, px = v.x, py = v.y, h1 = null;
+  for (let i = 0; i < Math.min(4, r.length - 1); i++) {
+    const a = r[i], b = r[i + 1], dA = Math.hypot(a.x - v.x, a.y - v.y);
+    if (dA > 300) break;
+    h1 = Math.atan2(a.y - py, a.x - px);
+    let turn = Math.abs(Math.atan2(b.y - a.y, b.x - a.x) - h1);
+    if (turn > Math.PI) turn = 2 * Math.PI - turn;
+    if (turn > 0.45) sp = Math.min(sp, 140 + dA * 0.5);
+    px = a.x; py = a.y;
+  }
+  return sp;
+}
+// distance from (x, y) to the segment a-b
+function segDist(x, y, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  const t = L2 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / L2)) : 0;
+  return Math.hypot(a.x + dx * t - x, a.y + dy * t - y);
+}
+// A route starts at the road node nearest the car, which can be just behind it: turning back for it, then planning again
+// from the next nearest, is how a car ends up going round in circles. Start from the first point ahead of the car instead
+// (only the near ones are skipped: a car facing the wrong way still turns round for a route that goes back past it).
+function trimBehind(route, v) {
+  const c = Math.cos(v.a), s = Math.sin(v.a);
+  let i = 0;
+  while (i < route.length - 1 && Math.hypot(route[i].x - v.x, route[i].y - v.y) < 200 && (route[i].x - v.x) * c + (route[i].y - v.y) * s < 20) i++;
+  if (i) route.splice(0, i);
+  return route;
 }
 // brake to a stop (the handbrake on once it's slow)
 function halt(v) {
@@ -525,7 +634,7 @@ export function meInfo(world, p) {
   const st = c.station >= 0 ? world.map.pois[c.station] : null;
   if (c.stage === 'cell') return { s: 'cell', at: st ? st.label : '', left: Math.max(0, Math.ceil(c.until - world.time)), bail: c.bail, can: p.profile.bank + p.profile.cash >= c.bail };
   const o = c.driver ? world.players.get(c.driver) : null;
-  return { s: c.stage, at: st ? st.label : '', by: o ? o.name : null };
+  return { s: c.stage, at: st ? st.label : '', by: o ? o.name : null, brk: canBreak(p) ? 1 : 0 };
 }
 // The prisoners a player officer is taking in themselves: where they're going (a waypoint on their HUD)
 export function deliveryFor(world, p) {

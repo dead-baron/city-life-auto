@@ -3843,3 +3843,63 @@ From the user's notes (13:33 and 16:02: #298 arrests, #299 escalation) and the 1
   - in through a shop's door and out to the car.
 
   `test/core.test.js` and `test/transit.test.js` are updated for custody and no skipping.
+
+## 2026-10-08 · The death screen: the scene first, then the choices; no waking up early
+From the user's 18:38 note.
+- **No waking up early** (`server/systems/revive.js`, `players.js`):
+  - Calling for help and then cancelling used to wake you at once, sooner than the countdown.
+  - Now cancelling goes back to the countdown you went down with (`p.downMinAt`), never sooner.
+  - The countdown is 18 s (`RESPAWN_SECONDS`, was 15), so the choices are on screen about as long as before.
+- **The scene first** (`client/hud.js`, `client/style.css`):
+  - For the first 3 s down (`DEATH_REVEAL_S`), you see where it happened under the DOWN / WASTED title while the camera slowly pulls back.
+  - Then the band darkens and the choices fade in: Call for help, Call an ambulance, and where to wake up.
+  - Keys and pad buttons for them only work once they're showing.
+- **The ambulance straight away:** no need to call for help first. Calling it sends the call for help too, so a player nearby can still get to you first.
+- **Where you last woke up is the default** (`server/systems/homes.js`, the profile's `lastSpawn`):
+  - The death screen pre-selects the spot you last woke at. Pick another and that one is remembered instead.
+  - Making a home your respawn point (buying your first home, or its menu) sets it.
+  - Killed by the police, it's still the nearest hospital.
+- **Tests** (`test/revive.test.js`):
+  - Cancelling a call for help no longer wakes you before the countdown.
+  - The ambulance can be called straight away.
+  - The spot you picked is next time's default.
+  - The Revive Kit test now lets go of the button between two revives: it had been passing only because the player woke up on their own.
+
+## 2026-10-08 · Arrests, part 2: make a break for it, the cell survives a logout, police cars that get there
+From the user's 19:52 and 20:00 notes (#362, the first two parts; the cells inside the station come next).
+- **Make a break for it** (`server/systems/custody.js`):
+  - "Make a break for it!" comes up in three cases:
+    - the car coming for you makes no progress for 12 s (`CUSTODY_STUCK_S`);
+    - it still hasn't reached you after 20 s (`CUSTODY_WAIT_BREAK_S`);
+    - the car taking you in stops getting closer to the station for 12 s.
+  - Press E / B / ACT and you jump out (or shake loose) and run. Escaping makes you wanted again.
+  - The IN CUSTODY banner says so and pulses.
+  - If the ride gets no closer for 30 s (`CUSTODY_SKIP_S`), you're booked anyway. Nobody is stuck in a police car for good.
+- **The cell survives a logout:**
+  - Logging out while cuffed, on the way in or in a cell books you into the cell, and you stay there.
+  - Come back and you're in the cell with the time you had left; time offline doesn't count. It's kept on the profile (`profile.jail`).
+  - A fresh start clears it.
+- **Police cars that get there** (the custody car's route):
+  - It keeps one route. It used to re-plan from the nearest road node every 3 s, and that sent it round in circles. Now it re-plans only when:
+    - it has somewhere new to go;
+    - it's lost (300 px off the route);
+    - or every 25 s.
+  - It skips waypoints behind it. It moves on to the next waypoint only when it reaches or passes the current one along the line, so it no longer cuts a corner off a bridge into the water.
+  - It slows for sharp turns.
+- **Cars and bikes going round in circles when braked** (`server/systems/vehicles.js`, `traffic.js`):
+  - Between physics sub-steps, the traffic steering trim was turning cars back towards their last target.
+  - So a police car pulling up, or a bike braking, kept circling. The trim now only runs on the tick the car was steered.
+- **The police in shops and other walk-ins:**
+  - Their cars park at the kerb nearest the door (`doorKerb`), not on it.
+  - If you were last seen inside a walk-in, they go in after you even without seeing you.
+  - An officer right on top of you grabs you.
+  - Officers no longer hop back on their bike and straight off again. That can't happen for 8 s after getting off, nor while you're in a walk-in.
+- **A crash fixed** (on the live server): `runNpcUnit` reassigned a constant when an NPC unit chased someone into a walk-in.
+- **Protection:** players with spawn protection, indoors or invincible can't be:
+  - tackled, tased or pepper-sprayed;
+  - floored, stunned or made to bleed by fists and melee.
+- **Tests:**
+  - `test/arrests.test.js` (now 10 tests):
+    - logging out in custody books you into a cell you're still in when you come back;
+    - a stuck car offers the break, and gets you there in the end.
+  - `test/homes.test.js`: the Spray & Go test clears the police while it resprays.

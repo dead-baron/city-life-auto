@@ -43,11 +43,38 @@ test('downed: your things drop in a bag; Call for Help keeps you down for minute
   assert.ok(a.p.respawnAt - w.time > HELP_S - 1, 'stays down while help comes');
   assert.ok(heard.some((t) => /calling for help/.test(t)), 'the player nearby hears it');
   assert.ok(w.happenings.some((e) => e.kind === 'revive'), 'a "player down" blip on the map');
-  // cancelling the request wakes you at your spawn now
+  // cancelling the request goes back to the countdown you went down with - never sooner (the user, 2026-10-08)
+  const downAt = a.p.downMinAt - RESPAWN_SECONDS;
   revive.cancelHelp(w, a.p);
   w.step();
-  assert.ok(!a.p.ped.dead, 'woke up');
+  assert.ok(a.p.ped.dead, 'still down: no waking up early by calling and cancelling');
+  assert.ok(Math.abs(a.p.respawnAt - a.p.downMinAt) < 0.01, 'the countdown it went down with');
   assert.ok(!w.happenings.some((e) => e.kind === 'revive'), 'blip gone');
+  run(w, downAt + RESPAWN_SECONDS + 0.5 - w.time);
+  assert.ok(!a.p.ped.dead, 'woke up when the countdown ran out');
+});
+
+test('the death screen: the ambulance without calling for help first; you wake where you last woke up unless you pick another spot', () => {
+  const w = makeWorld({ npcBudget: 40 });
+  const { a } = pair(w);
+  const s = w.map.pois.find((q) => q.kind === 'coffee');
+  teleport(w, a.p.ped, s.x, s.y + 40);
+  combat.kill(w, a.p.ped, null, 'melee', 0);
+  assert.ok(revive.downState(w, a.p).canAmb, 'the ambulance is on offer straight away');
+  revive.callAmbulance(w, a.p);
+  assert.ok(a.p.amb && a.p.downHelp, 'on its way, and a call for help went out with it');
+  revive.cancelAmbulance(w, a.p);
+  revive.cancelHelp(w, a.p);
+  // pick a hospital other than the pre-selected one, and wake there
+  const pick = a.p.respawnChoice === 'h:0' ? 'h:1' : 'h:0';
+  a.p.respawnChoice = pick;
+  run(w, RESPAWN_SECONDS + 1);
+  assert.ok(!a.p.ped.dead, 'woke up');
+  assert.equal(a.p.lastSpawnName, w.map.hospitals[Number(pick.slice(2))].name, 'at the spot picked');
+  // next time down, that spot is the default
+  a.p.ped.protectUntil = 0;
+  combat.kill(w, a.p.ped, null, 'melee', 0);
+  assert.equal(a.p.respawnChoice, pick, 'pre-selected: where you last woke up');
 });
 
 test('revive bare-handed: hold the action button; they come round on low health, limping and bleeding, then heal to half; hand them a bandage', () => {
@@ -88,11 +115,13 @@ test('revive with a Revive Kit: faster, full health, the kit is kept; the limp h
   hold(w, b.p, IN.ACTION, REVIVE_KIT_S + 0.3);
   assert.ok(!a.p.ped.dead && a.p.ped.hp === a.p.ped.maxHp, 'full health');
   assert.equal(b.p.profile.inventory.revivekit, 1, 'kit kept');
-  // bare-handed limp heals itself to half
+  // bare-handed limp heals itself to half (let go of the button first: the next hold is a new press)
+  hold(w, b.p, 0, 0.2);
   combat.kill(w, a.p.ped, null, 'melee', 0);
   w.step();
   b.p.profile.inventory = {};
   hold(w, b.p, IN.ACTION, REVIVE_HAND_S + 0.3);
+  assert.ok(!a.p.ped.dead && a.p.ped.limpUntil > w.time, 'revived bare-handed, limping');
   run(w, REVIVE_LIMP_S + 1);
   assert.ok(a.p.ped.hp >= a.p.ped.maxHp * 0.49 && !a.p.ped.limpUntil, 'healed to half, limp over');
   assert.ok(players.pedMods(w, a.p.ped).speedMul === 1, 'full speed again');

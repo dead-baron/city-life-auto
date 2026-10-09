@@ -7,7 +7,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { STAR_HEAT, K } from '../shared/constants.js';
-import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS } from '../shared/rules.js';
+import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS } from '../shared/rules.js';
+import * as players from '../server/systems/players.js';
 import * as law from '../server/systems/law.js';
 import * as custody from '../server/systems/custody.js';
 import * as combat from '../server/systems/combat.js';
@@ -187,20 +188,73 @@ test('a player officer drives their prisoner in: any station, booked, paid extra
   assert.ok(prof.cash < 600, 'fined');
 });
 
-test('logging out in custody books you on the spot', () => {
+test('logging out in custody books you into a cell - and you are still in it when you come back', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w);
+  const { p, prof, conn } = joinPlayer(w);
   teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
   prof.cash = 500;
   wanted(w, p, 2);
   const cop = spawnNpc(w, 'cop', p.ped.x + 20, p.ped.y, 'cop');
   p.ped.downUntil = w.time + 3;
   law.arrest(w, cop, p.ped);
-  const players = w.players.get(p.pid);
-  assert.ok(players.custody);
-  // (players.leave)
-  custody.onLeave(w, p);
-  assert.ok(!p.custody && p.wanted === 0 && prof.cash < 500, 'booked (fined, the stars gone) and let out');
+  assert.ok(p.custody);
+  players.leave(w, p);
+  assert.ok(p.custody && p.custody.stage === 'cell' && p.wanted === 0 && prof.cash < 500, 'booked (fined, the stars gone) and kept in the cell');
+  // back within the ghost window: still in the cell
+  const again = players.join(w, conn, prof);
+  assert.ok(again === p && custody.inCell(p), 'reconnected: still in the cell');
+  // gone for good (past the ghost window): the time left goes with the character...
+  run(w, 5);
+  players.leave(w, p);
+  run(w, GHOST_SECONDS + 1);
+  assert.ok(!w.players.has(p.pid) && prof.jail && prof.jail.left > 0 && prof.jail.left <= JAIL_S, `saved: ${prof.jail && prof.jail.left}s left`);
+  const left = prof.jail.left;
+  run(w, 20);   // (time offline doesn't count)
+  // ...and the next login starts in the cell with that time
+  const back = players.join(w, conn, prof);
+  assert.ok(custody.inCell(back) && back.ped.hidden, 'back in the cell');
+  assert.ok(Math.abs(back.custody.until - w.time - left) < 1, 'with the time it had left');
+  assert.ok(!prof.jail, 'the saved sentence is used up');
+});
+
+test('the car stuck or going round in circles: make a break for it, or they get you there in the end', () => {
+  const w = makeWorld(), told = listen(w);
+  const { p } = joinPlayer(w);
+  const n = corner(w);
+  teleport(w, p.ped, n.x + 32, n.y + 32);
+  wanted(w, p, 1);
+  const cop = spawnNpc(w, 'cop', p.ped.x + 20, p.ped.y, 'cop');
+  p.ped.downUntil = w.time + 3;
+  law.arrest(w, cop, p.ped);
+  assert.equal(p.custody.stage, 'held');
+  // a car that never comes (nothing to send): no break while it's on the way, then the offer
+  run(w, HOLD_S + 0.5);
+  assert.equal(p.custody.stage, 'fetch');
+  const v = w.get(p.custody.car);
+  if (v) { v.ai.prisoner = null; v.ai = null; w.police.delete(v.id); v.x += 3000; }   // (gone off somewhere, stuck)
+  assert.ok(!custody.canBreak(p), 'not straight away');
+  assert.ok(until(w, () => custody.canBreak(p), CUSTODY_WAIT_BREAK_S + 2), 'offered after a while');
+  assert.ok(told(p, /make a break for it/i));
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /break for it/i.test(act.label), 'on the action button');
+  act.run();
+  assert.ok(!p.custody && !p.ped.cuffed && p.wanted >= 1, 'away - and wanted for it');
+  // in the back of a car that's going nowhere: the offer, then booked anyway
+  const w2 = makeWorld();
+  const { p: q } = joinPlayer(w2);
+  teleport(w2, q.ped, n.x + 32, n.y + 32);
+  wanted(w2, q, 1);
+  const cop2 = spawnNpc(w2, 'cop', q.ped.x + 20, q.ped.y, 'cop');
+  q.ped.downUntil = w2.time + 3;
+  law.arrest(w2, cop2, q.ped);
+  assert.ok(until(w2, () => q.custody && q.custody.stage === 'ride', 80), 'in the back of a car');
+  const car = w2.get(q.ped.vehId);
+  // the car's wheels lose all grip (a stand-in for stuck): it gets no nearer
+  const freeze = () => { car.vx = 0; car.vy = 0; car.x = car.fx ?? (car.fx = car.x); car.y = car.fy ?? (car.fy = car.y); };
+  for (let i = 0; i < (CUSTODY_STUCK_S + 1) * 20; i++) { w2.step(); freeze(); }
+  assert.ok(custody.canBreak(q), 'offered');
+  for (let i = 0; i < (CUSTODY_SKIP_S - CUSTODY_STUCK_S + 1) * 20 && q.custody.stage !== 'cell'; i++) { w2.step(); if (q.custody.stage === 'ride') freeze(); }
+  assert.equal(q.custody.stage, 'cell', 'got there in the end');
 });
 
 test('killed by the police you wake up in a hospital, never at home', () => {

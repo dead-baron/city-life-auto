@@ -111,16 +111,17 @@ function melee(world, ped, w, aim) {
   const onGround = now < best.downUntil;
   const needed = poise >= 1.7 || best.player ? 4 : 3; // players get a little more poise
   let mult = str * (onGround ? 1.5 : 1);
-  if (ped.combo >= needed && !onGround) {
+  const soft = !hurtable(world, best);   // (spawn protection, indoors, dev invincibility: shoved, never floored or stunned)
+  if (ped.combo >= needed && !onGround && !soft) {
     best.downUntil = now + 1.6 / Math.sqrt(poise);
     best.rollT = 0;
     mult *= 1.3;
     ped.combo = 0;
     world.emit(best.x, best.y, { e: 'knockdown', x: best.x, y: best.y, id: best.id });
   }
-  if (w.knock) best.downUntil = now + 1.3;
-  if (w.stunChance && world.rand() < w.stunChance) best.stunUntil = now + 2;
-  if (w.bleed && world.rand() < 0.6) best.bleeding = true;
+  if (w.knock && !soft) best.downUntil = now + 1.3;
+  if (w.stunChance && world.rand() < w.stunChance && !soft) best.stunUntil = now + 2;
+  if (w.bleed && world.rand() < 0.6 && !soft) best.bleeding = true;
   world.emit(best.x, best.y, { e: 'hit', x: best.x, y: best.y, a: dir, id: best.id, w: w.i });
   if (w.plasma) world.emit(best.x, best.y, { e: 'sizzle', x: best.x, y: best.y, a: +dir.toFixed(2) });   // (the plasma blade sears: no blood)
   else if (w.id !== 'fists' || world.rand() < 0.35) world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 2 : 6 });
@@ -215,7 +216,7 @@ function taser(world, ped, w, aim) {
   const target = traceTarget(world, ped, ped.x, ped.y, x2, y2, false);
   const ex = target ? target.x : x2, ey = target ? target.y : y2;
   world.emit(ped.x, ped.y, { e: 'taser', x1: ped.x, y1: ped.y, x2: ex, y2: ey });
-  if (target && target.kind === K.PED) {
+  if (target && target.kind === K.PED && hurtable(world, target)) {   // (spawn protection, indoors, dev invincibility: no zap)
     target.stunUntil = world.time + w.stun;
     target.downUntil = world.time + w.stun;
     target.rollT = 0;
@@ -234,7 +235,7 @@ function spray(world, ped, w, aim) {
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 6) continue;
-    if (!world.map.los(ped.x, ped.y, o.x, o.y)) continue;
+    if (!world.map.los(ped.x, ped.y, o.x, o.y) || !hurtable(world, o)) continue;
     o.stunUntil = Math.max(o.stunUntil || 0, now + w.stun);
     o.rollT = 0;
     o.vx *= 0.2; o.vy *= 0.2;

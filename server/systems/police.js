@@ -180,9 +180,15 @@ function dive(c, t, now) {
   c.prevBits &= ~IN.DIVE;
   return { bits: IN.DIVE | IN.SPRINT, mx: Math.cos(a), my: Math.sin(a), aim: a };
 }
+// Right on top of them (no room to dive - after them into a shop, round a corner): wrestled to the ground.
+function grab(world, c, t, now) {
+  c.npc.nextDive = now + 2.2 + rng() * 0.8;
+  tackleHit(world, c, t);
+  return { bits: 0, mx: 0, my: 0, aim: Math.atan2(t.y - c.y, t.x - c.x) };
+}
 // Mid-dive and on them: down they go, long enough to be cuffed. Someone diving out of the way themselves isn't caught.
 function tackleHit(world, c, t) {
-  if (t.dead || t.vehId || t.cuffed || t.rollT > 0 || world.time < t.downUntil || Math.hypot(t.x - c.x, t.y - c.y) > 28) return false;
+  if (t.dead || t.vehId || t.cuffed || t.rollT > 0 || world.time < t.downUntil || world.time < (t.protectUntil || 0) || Math.hypot(t.x - c.x, t.y - c.y) > 28) return false;
   const a = Math.atan2(t.y - c.y, t.x - c.x);
   t.vx = Math.cos(a) * 170; t.vy = Math.sin(a) * 170; t.rollT = 0;
   t.downUntil = world.time + TACKLE_DOWN_S;
@@ -255,13 +261,14 @@ function runNpcUnit(world, v, crew, dt) {
     if (near(v.x, v.y, 700) || crew.some((c) => !c.vehId && near(c.x, c.y, 520))) { ai.seenAt = now; ai.lx = t.x; ai.ly = t.y; }
   }
   if (gone || v.wreckAt || now - ai.since > NPC_CHASE_S || now - ai.seenAt > 25) { if (t && t.npc) t.npc.keep = false; standDown(world, v, crew, dt); return; }
-  const seen = now - ai.seenAt < 2, kx = seen ? t.x : ai.lx, ky = seen ? t.y : ai.ly;
+  const seen = now - ai.seenAt < 2;
+  let kx = seen ? t.x : ai.lx, ky = seen ? t.y : ai.ly;
   const driver = v.seats[0] ? world.get(v.seats[0]) : null;
   if (ai.mode === 'drive') {
     if (!driver || driver.dead) { ai.mode = 'foot'; for (const c of crew) if (c.vehId) vehicles.ejectPed(world, c, true); return; }
     // in a shop (or any walk-in): pull up at its door, and in on foot
     const wi = seen && !t.vehId ? walkInAt(world.map, t.x, t.y) : null;
-    if (wi) { kx = wi.x; ky = wi.outY; }
+    if (wi) { const kb = custody.doorKerb(world, wi); kx = kb.x; ky = kb.y; }   // (the street by its door: not on the door)
     const dist = Math.hypot(kx - v.x, ky - v.y);
     if (dist < 190) { ai.mode = 'foot'; v.input = { throttle: 0, steer: 0, hb: true }; for (const c of crew) { vehicles.ejectPed(world, c, true); c.npc.state = 'chase'; } return; }
     if (seen && dist < 520) driveToward(world, v, kx, ky, 300, {});
@@ -392,8 +399,10 @@ function runUnit(world, v, dt) {
   const hot = crew.some((c) => now - (c.aggressors.get(t.id) ?? -99) < 15);
   for (const c of crew) armCop(c, p.wanted, ai.force, hot);
   const seen = now - p.seenAt < 3;
-  let kx = seen ? t.x : p.lastSeenX + Math.cos(now * 0.3 + v.id) * Math.min(p.searchR, 300) * 0.6;
-  let ky = seen ? t.y : p.lastSeenY + Math.sin(now * 0.3 + v.id) * Math.min(p.searchR, 300) * 0.6;
+  // last seen going into a shop (or any walk-in): they go in after them, not round and round the block outside
+  const hid = !seen && !!walkInAt(world.map, p.lastSeenX, p.lastSeenY);
+  let kx = seen ? t.x : hid ? p.lastSeenX : p.lastSeenX + Math.cos(now * 0.3 + v.id) * Math.min(p.searchR, 300) * 0.6;
+  let ky = seen ? t.y : hid ? p.lastSeenY : p.lastSeenY + Math.sin(now * 0.3 + v.id) * Math.min(p.searchR, 300) * 0.6;
   const driver = v.seats[0] ? world.get(v.seats[0]) : null;
   // the suspect's car at a standstill (not out on the water, not up on the deck): up to 4 stars they're dragged out of it
   const car = t.vehId ? world.get(t.vehId) : null;
@@ -402,14 +411,14 @@ function runUnit(world, v, dt) {
   if (ai.mode === 'drive') {
     if (!driver || driver.dead) { ai.mode = 'foot'; for (const c of crew) if (c.vehId) vehicles.ejectPed(world, c, true); return; }
     // in a shop (or any walk-in): pull up at its door, and in on foot
-    const wi = seen && !t.vehId ? walkInAt(world.map, t.x, t.y) : null;
-    if (wi) { kx = wi.x; ky = wi.outY; }
+    const wi = (seen || hid) && !t.vehId ? walkInAt(world.map, kx, ky) : null;
+    if (wi) { const kb = custody.doorKerb(world, wi); kx = kb.x; ky = kb.y; }   // (the street by its door: not on the door)
     const dist = Math.hypot(kx - v.x, ky - v.y);
-    if (seen && dist < (parked ? 260 : 190) && (!t.vehId || parked)) {
+    if ((seen || wi) && dist < (parked ? 260 : 190) && (!t.vehId || parked)) {
       // pull up first, then out (a car left rolling shoves whoever's in its way)
       const fwd = v.vx * Math.cos(v.a) + v.vy * Math.sin(v.a);
       if (Math.abs(fwd) > 70) { v.input = { throttle: fwd > 0 ? -1 : 1, steer: 0, hb: false }; return; }
-      ai.mode = 'foot';
+      ai.mode = 'foot'; ai.footAt = now;
       v.input = { throttle: 0, steer: 0, hb: true };
       for (const c of crew) { vehicles.ejectPed(world, c, true); c.npc.state = 'chase'; }
       return;
@@ -428,6 +437,9 @@ function runUnit(world, v, dt) {
   // on foot
   const down = now < t.stunUntil || now < t.downUntil;
   const usable = !v.sinkAt && !v.dead && !v.wreckAt;
+  // (back on board for a suspect a long way off on foot - not straight after getting out, and not for one in a shop:
+  // they parked at the street by its door, a long walk from the counter, on purpose)
+  const farOK = now - (ai.footAt || 0) > 8 && !walkInAt(world.map, t.x, t.y);
   for (const c of crew) {
     if (c.vehId || c.npc.war) continue; // busy in a gang fight (gangwar.js drives them)
     const d = Math.hypot(t.x - c.x, t.y - c.y), n = c.npc;
@@ -435,7 +447,7 @@ function runUnit(world, v, dt) {
     // back to the car (or bike) and after them: the suspect drove off, or they're a long way off on foot and the car is
     // nearer than they are (a rider thrown off the bike far from the suspect gets back on rather than walking it -
     // there's no path finding on foot, only on the roads)
-    if (usable && ((car && !parked && Math.hypot(t.x - v.x, t.y - v.y) > 260) || (!car && d > 450 && Math.hypot(v.x - c.x, v.y - c.y) < d))) {
+    if (usable && ((car && !parked && Math.hypot(t.x - v.x, t.y - v.y) > 260) || (!car && farOK && d > 450 && Math.hypot(v.x - c.x, v.y - c.y) < d))) {
       const wp = footWay(world, c, v.x, v.y);
       inp = seek(c, wp.x, wp.y, true);
       if (Math.hypot(v.x - c.x, v.y - c.y) < v.def.L / 2 + 24) {
@@ -460,7 +472,8 @@ function runUnit(world, v, dt) {
         else inp = seek(c, t.x, t.y, true);
       } else if (n.tactic === 'fire' && d < 340 && los) {
         // open fire - up close (not at 5 stars), still a dive to bring them down
-        if (p.wanted <= 4 && !down && d < TACKLE_PX && d > 22 && now > (n.nextDive || 0)) inp = dive(c, t, now);
+        if (p.wanted <= 4 && !down && d <= 22 && now > (n.nextDive || 0)) inp = grab(world, c, t, now);
+        else if (p.wanted <= 4 && !down && d < TACKLE_PX && d > 22 && now > (n.nextDive || 0)) inp = dive(c, t, now);
         else inp = shoot(d > 180 ? seek(c, t.x, t.y, true) : { bits: 0, mx: 0, my: 0, aim: 0 });
       } else if (n.tactic === 'taser') {
         inp = aimAt(after(t.x, t.y));
@@ -469,7 +482,8 @@ function runUnit(world, v, dt) {
         if (d < 24) { inp.mx *= 0.2; inp.my *= 0.2; }
       } else if (n.tactic === 'tackle') {
         // run them down and dive at them; a shove with the baton if they're right there on their feet
-        if (!down && d < TACKLE_PX && d > 22 && los && now > (n.nextDive || 0)) inp = dive(c, t, now);
+        if (!down && d <= 22 && now > (n.nextDive || 0)) inp = grab(world, c, t, now);   // (right on them: no room to dive - wrestled down)
+        else if (!down && d < TACKLE_PX && d > 22 && los && now > (n.nextDive || 0)) inp = dive(c, t, now);
         else {
           inp = after(t.x, t.y);
           if (d < 28 && !down) { c.weapon = 'baton'; aimAt(inp); inp.bits |= IN.FIRE; }

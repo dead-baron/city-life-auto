@@ -558,7 +558,7 @@ function execute(world, p, poi, opt) {
     }
     case 'hbuy': return homes.buy(world, p, world.map.homes[poi.home], pay);
     case 'hsell': return homes.sell(world, p, world.map.homes[poi.home]);
-    case 'hspawn': { prof.spawnHome = poi.home; store.touch(); world.notify(p, 'You will wake up here after you die.', 'good'); return null; }
+    case 'hspawn': { prof.spawnHome = poi.home; prof.lastSpawn = `home:${poi.home}`; store.touch(); world.notify(p, 'You will wake up here after you die.', 'good'); return null; }
     case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = 100; world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
     case 'hhide': return homes.beginEnter(world, p, world.map.homes[poi.home]);
     case 'hleave': homes.leaveHome(world, p); return null;

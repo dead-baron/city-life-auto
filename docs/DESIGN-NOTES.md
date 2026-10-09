@@ -274,6 +274,20 @@ CF2 and FX2 are in the prompt pack):**
   gone once you're inside (and for a moment over the person to talk to); subtle, on by default, can be turned off (SI1).
 - **Sound:** a full sound design inspired by SNES-era games that never gets repetitive or annoying: varied engines,
   boats and weapons, ambience in nature, rain and the sea.
+  - **The bar (19:43):** Stardew Valley's quality of sound and music, but SNES-flavoured and themed for a GTA-style
+    game.
+  - **Music lives in the world:** no soundtrack playing over the game. Music plays on the title screen (and the
+    tutorial); otherwise it comes from places: a nightclub's bass, muffled from outside and loud and clear inside;
+    shops with their own fitting music (light, elevator-style), or none at all.
+  - **Shop doors:** a bell over the door at the old ma-and-pa shops (bait and tackle, hardware).
+  - **Everything has a sound:** every action and vehicle, each vehicle its own engine.
+  - **Peaceful moments:** a campfire's gentle crackle; now and then an owl or crickets at night; subtle, never
+    repetitive.
+  - **Footsteps by surface and speed:** branches snap under anyone (an animal, an NPC, a player) moving fast through
+    the woods, and it's quiet when they sneak.
+  - **Options:** sound and music on or off, and the volumes.
+- **Campfire effects (19:43):** when it crackles, embers rise into the air and the fire flares; a soft volumetric glow
+  round it.
 - **Tabbing out on a phone** doesn't disconnect you straight away: the session waits in the background, and the idle
   rule (about 10 minutes) still applies.
 - **Friends and crews:** add friends; form a crew before joining so you land on the same server; crew chat; crew

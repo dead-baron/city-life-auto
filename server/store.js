@@ -24,6 +24,7 @@ export function defaultProfile(pid) {
     homes: [],
     deeds: {},       // home id -> what was paid for it (bought back at that when the world changes)
     spawnHome: null,
+    lastSpawn: null, // the death screen's wake-up spot you last woke at ('h:<i>' | 'home:<id>'): the next one's default
     pos: null,
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },
   };

@@ -117,6 +117,7 @@ export function join(world, conn, profile, opts = {}) {
     : `The game was updated: fresh start at ${p.lastSpawnName || 'the hospital'}. Your money, things and homes are all still yours.`, 'warn');
   else world.notify(p, `Welcome to City Life Auto, ${p.name}. You are a clean Citizen.`, 'info');
   bounties.onJoin(world, p);   // bounties still on their head from before they logged off
+  if (fresh) delete profile.jail; else custody.onJoin(world, p);   // (logged off in custody: back in the cell)
   return p;
 }
 
@@ -252,6 +253,7 @@ export function leave(world, p) {
 // Called when the ghost timer expires (drop rule) or when leaving while dead.
 function finalizeLogout(world, p, dropLoot) {
   const ped = p.ped;
+  custody.saveJail(world, p);   // (in a cell: the time left goes with the character - back in it next time)
   if (ped && !ped.removed) {
     if (dropLoot) {
       cargo.dropEverything(world, ped, `${p.name} (disconnected)`);
@@ -324,7 +326,10 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
-  if (ped.cuffed || custody.inCell(p)) return;   // (in custody: custody.js moves them; the jail screen has the bail)
+  if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail screen has the bail)
+    if ((pressed & IN.ACTION) && custody.canBreak(p)) custody.breakOut(world, p);   // (the car stuck: make a break for it)
+    return;
+  }
   if (pressed & IN.LIGHT) economy.toggleLight(world, p); // the flashlight (in the bag, no hand slot)
   if (ped.hidden) { // inside your home: E brings up the home menu (Leave is on it); on a ride: nothing to do but look
     if ((pressed & (IN.ACTION | IN.VEHICLE)) && !ped.ride) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
@@ -434,6 +439,7 @@ function tackle(world, ped) {
 // Context-sensitive interaction (GDD §13: E key manages context interactions)
 export function findInteraction(world, p) {
   const ped = p.ped;
+  if (ped && ped.cuffed && !ped.dead && custody.canBreak(p)) return { label: 'Make a break for it!', run: () => custody.breakOut(world, p) };
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
@@ -556,6 +562,7 @@ export function onPedDeath(world, ped, killer, cause) {
   p.channel = null; p.giveTo = null;
   p.downWanted = p.wanted > 0 ? { wanted: p.wanted, heat: p.heat, city: p.cityBounty || 0 } : null; // restored if someone revives you
   p.respawnAt = world.time + RESPAWN_SECONDS;
+  p.downMinAt = p.respawnAt;   // (the soonest you can wake up: calling for help and cancelling doesn't cut it short)
   // killed by the police (an officer, SWAT, the FBI, the army, an officer on duty): you wake up in the nearest hospital
   p.policeKill = !!killer && !!((killer.npc && killer.npc.role === 'cop') || (killer.player && killer.player.badge));
   p.respawnChoice = homes.defaultChoice(world, p, { x: ped.x, y: ped.y }); // pre-selected; change it on the death screen

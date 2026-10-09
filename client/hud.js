@@ -7,6 +7,7 @@ import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/map.js';
 import { weaponIcon } from './render/peds.js';
+import { DEATH_REVEAL_S } from '../shared/rules.js';
 
 const $ = (id) => document.getElementById(id);
 const thumbs = new Map();
@@ -100,8 +101,11 @@ export class HUD {
       // arrested (server custody.js): held on the ground, a car coming, walked to it, the ride to the station
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry'); tb.style.borderColor = '';
       $('tb-where').textContent = 'IN CUSTODY';
-      $('tb-next').textContent = cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? 'Cuffed · a police car is coming to take you in'
-        : cu.s === 'escort' ? 'Being walked to the police car' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`;
+      // (the car stuck or not coming: the action button makes a break for it - custody.js offerBreak)
+      const brk = cu.brk ? ` · make a break for it [${input.device === 'gamepad' ? 'B' : input.device === 'touch' ? 'ACT' : 'E'}]` : '';
+      $('tb-next').textContent = (cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.brk ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
+        : cu.s === 'escort' ? 'Being walked to the police car' : cu.brk ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
+      tb.classList.toggle('brk', !!cu.brk);
       $('tb-crack').classList.add('hidden');
     } else if (tr && !me.dead) {
       // the mail guards' warning: at the door ('door'), then the seconds left to get out (0: they're shooting)
@@ -192,6 +196,11 @@ export class HUD {
     const d = $('death');
     if (me.dead) {
       d.classList.remove('hidden');
+      // first the scene where it happened, the camera pulling back (main.js), then the choices (the user, 2026-10-08)
+      const nowMs = performance.now();
+      this.deadSince ||= nowMs;
+      this.deathRevealed = nowMs - this.deadSince >= DEATH_REVEAL_S * 1000;
+      d.classList.toggle('reveal', this.deathRevealed);
       $('d-cause').textContent = me.deathCause || '';
       const opts = me.spawnOpts || [];
       const chosen = opts.find((o) => o.id === me.spawnChoice);
@@ -205,11 +214,11 @@ export class HUD {
       const hb = $('d-help');
       const pad = input.device === 'gamepad', kb = input.device === 'keyboard';
       const k = (key, padBtn) => (kb ? ` <i>${key}</i>` : pad ? ` <i>${padBtn}</i>` : '');
+      const amb = dn && dn.amb ? ['ambx', `🚑 Cancel ambulance${k('J', 'Y')}`, 'amb on'] : ['amb', `🚑 Call an ambulance $${dn ? dn.fee : ''}${dn && dn.ambUsed ? ' (used)' : ''}${k('J', 'Y')}`, dn && dn.canAmb ? 'amb' : 'amb off'];
       const btns = !dn || dn.finished ? [] : !dn.help
-        ? [['help', `<b class="medic">✚</b> Call for Help${k('H', 'X')}`, 'help']]
-        : [['help', `<b class="medic">✚</b> Call again${k('H', 'X')}`, 'help'],
-          dn.amb ? ['ambx', `🚑 Cancel ambulance${k('J', 'Y')}`, 'amb on'] : ['amb', `🚑 Ambulance $${dn.fee}${dn.ambUsed ? ' (used)' : ''}${k('J', 'Y')}`, dn.canAmb ? 'amb' : 'amb off'],
-          ['cancel', `✕ Cancel request & wake up${k('C', 'B')}`, 'cancel']];
+        ? [['help', `<b class="medic">✚</b> Call for help${k('H', 'X')}`, 'help'], amb]
+        : [['help', `<b class="medic">✚</b> Call again${k('H', 'X')}`, 'help'], amb,
+          ['cancel', `✕ Cancel request${k('C', 'B')}`, 'cancel']];
       const hsig = btns.map((b) => b[1] + b[2]).join('|');
       if (hb.dataset.sig !== hsig) {
         hb.dataset.sig = hsig; hb.innerHTML = '';
@@ -220,7 +229,7 @@ export class HUD {
           b.onclick = () => this.onDown?.(a);
           hb.appendChild(b);
         }
-        if (dn && dn.help && !dn.canAmb && !dn.amb && !dn.ambUsed) { const n = document.createElement('small'); n.textContent = `(ambulance needs $${dn.fee} in the bank)`; hb.appendChild(n); }
+        if (dn && !dn.finished && !dn.canAmb && !dn.amb && !dn.ambUsed) { const n = document.createElement('small'); n.textContent = `(an ambulance needs $${dn.fee} in the bank)`; hb.appendChild(n); }
       }
       const box = $('d-spawn');
       const sig = opts.map((o) => o.id).join() + '|' + me.spawnChoice + '|' + input.device;
@@ -235,7 +244,7 @@ export class HUD {
           box.appendChild(b);
         }
       }
-    } else d.classList.add('hidden');
+    } else { d.classList.add('hidden'); d.classList.remove('reveal'); this.deadSince = 0; this.deathRevealed = false; }
     void prev;
   }
 

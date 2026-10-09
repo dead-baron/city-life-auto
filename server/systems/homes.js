@@ -77,7 +77,7 @@ export function buy(world, p, home, pay) {
   (prof.homes ||= []).push(home.id);
   (prof.deeds ||= {})[home.id] = home.price; // what it cost: bought back at that if the world is ever rebuilt under it
   world.homeOwner.set(home.id, prof.pid);
-  if (prof.spawnHome == null) prof.spawnHome = home.id;
+  if (prof.spawnHome == null) { prof.spawnHome = home.id; prof.lastSpawn = `home:${home.id}`; }   // (your first home: where you wake up from now on)
   store.touch();
   world.notify(p, prof.spawnHome === home.id ? `You bought ${home.name}! It's your respawn point now, and its garage holds ${home.slots} more vehicles.` : `You bought ${home.name}! +${home.slots} garage spaces - your cars can be taken out at any home you own.`, 'good');
   return null;
@@ -112,11 +112,20 @@ function nearestHospital(world, pos) {
   return `h:${best}`;
 }
 
-// The pre-selected wake-up spot shown on the death screen: your chosen home, else a random
-// hospital away from where you died (same rule resolveSpawn uses).
+// a wake-up spot that's still on offer: a hospital, or a home you still own
+function offered(world, p, id) {
+  if (typeof id !== 'string') return false;
+  if (id.startsWith('h:')) return !!world.map.hospitals[Number(id.slice(2))];
+  if (id.startsWith('home:')) return !p.policeKill && world.homeOwner.get(Number(id.slice(5))) === p.profile.pid;
+  return false;
+}
+// The pre-selected wake-up spot shown on the death screen: where you last woke up (the user, 2026-10-08: it stays
+// your spot until you pick another), else your chosen home, else a random hospital away from where you died (same rule
+// resolveSpawn uses).
 export function defaultChoice(world, p, deathPos) {
   const prof = p.profile;
   if (p.policeKill && deathPos) return nearestHospital(world, deathPos);   // killed by the police: the nearest hospital
+  if (offered(world, p, prof.lastSpawn)) return prof.lastSpawn;
   if (prof.spawnHome != null && world.homeOwner.get(prof.spawnHome) === prof.pid) return `home:${prof.spawnHome}`;
   const hs = world.map.hospitals;
   let cands = hs.map((h, i) => ({ h, i })).filter(({ h }) => h.name !== p.lastSpawnName);
@@ -130,23 +139,27 @@ export function resolveSpawn(world, p, choice, deathPos) {
   const prof = p.profile;
   const hs = world.map.hospitals;
   if (p.policeKill && !(choice && choice.startsWith('h:'))) choice = deathPos ? nearestHospital(world, deathPos) : null;   // (no waking at home)
+  // (where you wake is remembered: the next death screen offers it first - defaultChoice)
   if (choice && choice.startsWith('home:')) {
     const h = world.map.homes[Number(choice.slice(5))];
-    if (h && world.homeOwner.get(h.id) === prof.pid) return { x: h.x, y: h.y + 8, name: h.name };
+    if (h && world.homeOwner.get(h.id) === prof.pid) { prof.lastSpawn = `home:${h.id}`; return { x: h.x, y: h.y + 8, name: h.name }; }
   }
   if (choice && choice.startsWith('h:')) {
     const h = hs[Number(choice.slice(2))];
-    if (h) return h;
+    if (h) { prof.lastSpawn = choice; return h; }
   }
   if (prof.spawnHome != null && world.homeOwner.get(prof.spawnHome) === prof.pid && !p.policeKill) {
     const h = world.map.homes[prof.spawnHome];
+    prof.lastSpawn = `home:${h.id}`;
     return { x: h.x, y: h.y + 8, name: h.name };
   }
   // default: a hospital other than the one you just woke at, preferring one away from where you died
   let cands = hs.filter((h) => h.name !== p.lastSpawnName);
   if (!cands.length) cands = hs;
   if (deathPos) cands = [...cands].sort((a, b) => Math.hypot(b.x - deathPos.x, b.y - deathPos.y) - Math.hypot(a.x - deathPos.x, a.y - deathPos.y)).slice(0, 2);
-  return cands[Math.floor(world.rand() * cands.length)];
+  const h = cands[Math.floor(world.rand() * cands.length)];
+  prof.lastSpawn = `h:${hs.indexOf(h)}`;
+  return h;
 }
 
 // ---- garage -----------------------------------------------------------------------

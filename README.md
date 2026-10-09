@@ -72,7 +72,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Tackle a suspect (on duty) | Space (dive) into them | A | ROLL |
 | Cuff / book a downed suspect | E | B | ACT |
 | Put a cuffed player in the back of your police car (then drive to any station's kerb to book them, for a bonus) | E by them, next to your car | B | ACT |
-| Arrested: cuffed, held, walked to a police car and driven to the station (nothing to press; get away if the officer is downed or the car is wrecked or hijacked) · in the cell, pay the bail (from the bank, then cash) or wait it out | B or Enter in the cell | Y in the cell | the bail button |
+| Arrested: cuffed, held, walked to a police car and driven to the station (get away if the officer is downed or the car is wrecked or hijacked) · if the car is stuck or doesn't come, make a break for it · in the cell (still there if you log out), pay the bail (from the bank, then cash) or wait it out | E to break for it · B or Enter in the cell | B to break for it · Y in the cell | ACT to break for it · the bail button |
 | Lay a spike strip (on duty: select it with the weapon key, then fire toward the road ahead) | Tab, then click | RB, then RT | WPN, then FIRE |
 | Bank your cash (walk up to any ATM - automatic) / find the nearest ATM | walk into it · P → Nearest ATM | walk into it · D-pad ← → Nearest ATM | walk into it · 📱 → Nearest ATM |
 | Take a lost pet's collar / hand it back to its owner | E | B | ACT |
@@ -84,7 +84,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Quick wheel (med kits, bandages, drinks) | hold X, point, let go (tap: last used) | hold View, right stick, let go | ITEMS, then tap a slot |
 | Revive a downed player (kit: full health, bare-handed: low) / hand them a bandage or med kit after | hold E | hold B | hold ACT |
 | Finish off a downed player | hold F (or just hit them) | hold X | hold CAR |
-| Downed: Call for Help · ambulance ($200 from the bank) · cancel and wake up | H · J · C (or the buttons) | X · Y · B | the buttons |
+| Downed (the choices come up a few seconds after you go down): Call for help · call an ambulance ($200 from the bank, only if they revive you) · cancel the request (back to the countdown) · where to wake up (where you last woke, unless you pick another) | H · J · C · arrows (or the buttons) | X · Y · B · D-pad | the buttons |
 | Close a shop / desk / NPC menu or any panel | Esc, or click off it | B | tap anywhere off it |
 | Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN by the FIRE button (or the weapon box, top right): tap for the next weapon, hold to pick any of them |
 | City map + waypoints (click a place's icon or anywhere on the map; or pick a category's name for its places, nearest first) - a yellow GPS line on the map and the radar follows the roads to it | M | Pause → Map (D-pad / stick, A pick, B back; Y sets a waypoint at the cross in the middle) | tap the radar or the map button, then tap |

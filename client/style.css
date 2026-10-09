@@ -811,3 +811,14 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: 236px; max-width: 90v
 #jail button:disabled { opacity: .45; }
 #jail small { display: block; opacity: .75; font-size: 12px; }
 @media (min-aspect-ratio: 6/5) { #jail { left: max(16px, 3vw, env(safe-area-inset-left)); top: 50%; transform: translateY(-50%); width: min(360px, 38vw); } }
+
+/* the death screen (2026-10-08): first the scene where it happened, the camera pulling back, just the title over it;
+   after DEATH_REVEAL_S the band darkens and the choices fade in (hud.js adds .reveal) */
+#death { background: none; }
+#death::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .7s ease;
+  background: linear-gradient(transparent 26%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.55) 66%, transparent 80%); }
+#death.reveal::before { opacity: 1; }
+#death #d-timer, #death #d-help, #death #d-spawn { opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .6s ease, transform .6s ease; }
+#death.reveal #d-timer, #death.reveal #d-help, #death.reveal #d-spawn { opacity: 1; transform: none; pointer-events: auto; }
+#trainbar.custody.brk { border-color: #ffd36b; color: #ffd36b; animation: brk-pulse 1.2s ease-in-out infinite; }
+@keyframes brk-pulse { 50% { box-shadow: 0 0 14px rgba(255,211,107,.55); } }

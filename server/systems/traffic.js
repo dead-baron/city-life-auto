@@ -202,7 +202,7 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
     if (Math.abs(fwd) < 12 && desired > 60 && speed > 40) ai.stuck = (ai.stuck || 0) + 0.05; else ai.stuck = Math.max(0, (ai.stuck || 0) - 0.1);
     if (ai.stuck > 2.5) { ai.reverseUntil = world.time + 1.3; ai.stuck = 0; }
     reversing = !!(ai.reverseUntil && world.time < ai.reverseUntil);
-    ai.ctl = { wx, wy, speed, reversing };
+    ai.ctl = { wx, wy, speed, reversing, t: world.tick };   // (vehicles.js re-trims to it between sub-steps - this tick only)
   }
   pedals(v, wx, wy, speed, reversing);
 }

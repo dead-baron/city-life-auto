@@ -1174,12 +1174,14 @@ initInput(canvas, {
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
-    if (S.playing && S.me && S.me.dead && !topOverlay() && S.me.down && !S.me.down.finished) {
+    const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
+    if (deathUp && !(S.hud && S.hud.deathRevealed)) { if (['KeyH', 'KeyJ', 'KeyC', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) return; }
+    else if (deathUp && S.me.down && !S.me.down.finished) {
       if (k === 'KeyH') { downAct('help'); return; }
-      if (k === 'KeyJ' && S.me.down.help) { downAct(S.me.down.amb ? 'ambx' : 'amb'); return; }
+      if (k === 'KeyJ') { downAct(S.me.down.amb ? 'ambx' : 'amb'); return; }
       if (k === 'KeyC' && S.me.down.help) { downAct('cancel'); return; }
     }
-    if (S.playing && S.me && S.me.dead && !topOverlay() && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { cycleDeathChoice(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
+    if (deathUp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { cycleDeathChoice(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
     if (k === 'Escape' && topOverlay() === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
     if (topOverlay() === 'bigmap' && S.hud) { // zoom the city map: + / - (and C to find yourself)
@@ -1250,11 +1252,13 @@ function cycleDeathChoice(step) {
 }
 // Death screen with a controller: D-pad / stick picks where to wake up, A confirms.
 function deathPad() {
-  // downed: X calls for help (again), Y the ambulance (or cancels it), B gives up and wakes up now
+  // downed: X calls for help (again), Y the ambulance (or cancels it), B cancels the request (back to the countdown) -
+  // once the choices are showing
+  if (!(S.hud && S.hud.deathRevealed)) return;
   const dn = S.me && S.me.down;
   if (dn && !dn.finished) {
     if (input.padX) downAct('help');
-    if (input.padY && dn.help) downAct(dn.amb ? 'ambx' : 'amb');
+    if (input.padY) downAct(dn.amb ? 'ambx' : 'amb');
     if (input.menuBack && dn.help) downAct('cancel');
   }
   const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];

@@ -64,24 +64,24 @@ export function callHelp(world, p) {
   p.meDirty = true;
 }
 
-// Give up waiting: back to the spawn choice and wake up there now.
+// Give up waiting: back to the countdown you went down with (never sooner - p.downMinAt), then wake at your choice.
 export function cancelHelp(world, p) {
   if (!isDowned(p.ped)) return;
   cancelAmbulance(world, p, true);
   endRequest(world, p);
-  p.respawnAt = world.time;
+  p.respawnAt = Math.max(world.time, p.downMinAt || 0);
   p.meDirty = true;
 }
 
 export function callAmbulance(world, p) {
   const ped = p.ped, now = world.time;
   if (!isDowned(ped)) return;
-  if (!p.downHelp) { world.notify(p, 'Call for help first.', 'warn'); return; }
   if (p.amb) { world.notify(p, 'An ambulance is already on its way.', 'info'); return; }
   if (p.ambUsed) { world.notify(p, 'You can only call one ambulance each time you go down.', 'warn'); return; }
   if (p.profile.bank < AMBULANCE_FEE) { world.notify(p, `An ambulance costs $${AMBULANCE_FEE} from your bank - you only have $${p.profile.bank} banked.`, 'bad'); return; }
   const v = ems.dispatchPaid(world, ped, p.pid);
   if (!v) { world.notify(p, 'No ambulance can reach you from here right now.', 'bad'); return; }
+  if (!p.downHelp) callHelp(world, p);   // (an ambulance on its way is a call for help too: anyone near can still get to you first)
   p.amb = { vehId: v.id };
   p.ambUsed = true;
   p.respawnAt = now + HELP_S; // the clock starts again while it drives over
@@ -262,6 +262,6 @@ export function downState(world, p) {
   const v = p.amb && world.get(p.amb.vehId);
   return {
     help: !!p.downHelp, finished: !!p.finished, amb: v ? { x: Math.round(v.x), y: Math.round(v.y) } : null, ambUsed: !!p.ambUsed,
-    canAmb: !!p.downHelp && !p.amb && !p.ambUsed && p.profile.bank >= AMBULANCE_FEE, fee: AMBULANCE_FEE,
+    canAmb: !p.amb && !p.ambUsed && p.profile.bank >= AMBULANCE_FEE, fee: AMBULANCE_FEE,
   };
 }
