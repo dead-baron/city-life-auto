@@ -4619,5 +4619,8 @@ From the owner's note at 05:01, after trying the creator: "the face and hair are
   - The light catches the top of the hair.
 - **The creator** (`client/creator.js`): a face feature's thumbnail is cast at 5 over a smaller box, so the smaller face still fills it.
 - **Cost:** a figure costs about the same to make (before and after side by side in one process: within 5%). The renderer's code went from 359 to 362 KB, inside its 363 KB budget.
-- **Tests:** `test/peoplelook.test.js`'s size check now allows for the game figure's 1 px outline (10 px at 4, was 8). Everything else passes as before: every hairstyle, face option and piece draws, the time per look, no two hairstyles alike.
+- **Tests** (`test/peoplelook.test.js`):
+  - New: a held item beside the face never breaks it. Aiming a rifle or a shotgun, fishing, or swinging a bat close to the face threw in this pass's first version (the face's art pixel took the item's pixels for a part of the body). The test fails without the fix.
+  - The size check allows for the game figure's 1 px outline (10 px at 4, was 8).
+  - Everything else passes as before: every hairstyle, face option and piece draws, the time per look, no two hairstyles alike.
 - **Not yet:** police uniforms by rank and the K9 handler from catalogue pieces (cops keep their old outfits); a texture per fabric (denim, knit, leather).
