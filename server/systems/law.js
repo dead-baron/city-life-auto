@@ -623,7 +623,7 @@ export function goOnDuty(world, p) {
   p.badge = true; p.hunter = false;
   p.faction = FACTION.ENFORCER;
   p.civvies = p.ped.app;
-  p.ped.app = { ...p.ped.app, t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', ht: 1, htc: '#1d2a5a' };
+  p.ped.app = { ...p.ped.app, lk: undefined, t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', ht: 1, htc: '#1d2a5a' };
   p.ped.appVer = (p.ped.appVer || 0) + 1;
   prof.weapons.taser = prof.weapons.taser ?? 0;
   prof.weapons.baton = prof.weapons.baton ?? 0;

@@ -6,7 +6,7 @@ import { K } from '../../shared/constants.js';
 import { WEAPONS, ITEMS, SHOPS, CRAFTS, MATERIAL_NAME, materialIds } from '../../shared/items.js';
 import { VEHICLES, PAINTS, respray } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { playerOutfit } from '../entities.js';
+import * as looks from './looks.js';
 import { store } from '../store.js';
 import * as law from './law.js';
 import * as bounties from './bounties.js';
@@ -508,11 +508,7 @@ function execute(world, p, poi, opt) {
       const blocked = disguiseBlocked(world, p);
       if (blocked) return blocked;
       if (!pay(p, 120)) return 'Not enough money.';
-      const fresh = playerOutfit(rng);
-      fresh.s = prof.outfit ? prof.outfit.s : fresh.s;
-      prof.outfit = fresh;
-      ped.app = { ...fresh };
-      ped.appVer = (ped.appVer || 0) + 1;
+      looks.wear(world, p, looks.freshOutfit(prof, rng() * 4294967296));   // (a new outfit; body, face and hair kept)
       applyDisguise(world, p);
       return null;
     }
@@ -608,13 +604,8 @@ function execute(world, p, poi, opt) {
     }
     case 'houtfit': {
       if (p.badge) return 'Hand in the uniform (go off duty) first.';
-      const fresh = playerOutfit(rng);
-      fresh.s = prof.outfit ? prof.outfit.s : fresh.s;
-      prof.outfit = fresh;
-      ped.app = { ...fresh };
-      ped.appVer = (ped.appVer || 0) + 1;
+      looks.wear(world, p, looks.freshOutfit(prof, rng() * 4294967296));
       if (ped.hidden) applyDisguise(world, p); // nobody saw you change
-      store.touch();
       world.notify(p, 'New outfit on.', 'good');
       return null;
     }

@@ -176,6 +176,16 @@ function scheduleReconnect(why) {
 }
 
 function send(obj) { if (S.ws && S.ws.readyState === 1) S.ws.send(typeof obj === 'string' || obj instanceof ArrayBuffer ? obj : JSON.stringify(obj)); }
+// ---- looks (shared/look.js, loaded lazily): a player's look travels as its code alone ({ lk }) and becomes the
+// old-style appearance here; the character creator (client/creator.js) loads the first time it opens
+let LOOKS = null, creatorP = null;
+const lookWait = [];
+import('../shared/look.js').then((m) => { LOOKS = m; for (const d of lookWait.splice(0)) lookApp(d); }).catch((e) => console.warn('[looks]', e));
+function lookApp(d) { if (!LOOKS) { lookWait.push(d); return; } const L = LOOKS.decodeLook(d.app.lk); if (L) d.app = LOOKS.lookToApp(L, d.app.lk); }
+function openCreator(mode) {
+  creatorP ||= import('./creator.js').then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k) }); S.creator = m; return m; });
+  creatorP.then((m) => m.open(mode, S.looks)).catch((e) => console.warn('[creator]', e));
+}
 
 function onText(m) {
   switch (m.t) {
@@ -221,7 +231,8 @@ function onText(m) {
       setupDev();
       sendView();
       break;
-    case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); e.d = d; } break;
+    case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); if (d.app && d.app.lk && d.app.t === undefined) lookApp(d); e.d = d; } break;
+    case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first)
     case 'ds': for (const id of m.ids) S.ents.delete(id); break;
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'me':
@@ -1001,6 +1012,7 @@ function startPlaying() {
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (S.me) S.hud.setMe(S.me);
+  if (S.looks && !S.looks.picked && topOverlay() !== 'creator') openCreator('start');
 }
 
 // The debug menu: give weapons first, teleport anywhere second, the free camera third, then a section per
@@ -1173,6 +1185,7 @@ initInput(canvas, {
   onKey(k) {
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
+    if (topOverlay() === 'creator' && S.creator && S.creator.key(k)) return;
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
     const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
     if (deathUp && !(S.hud && S.hud.deathRevealed)) { if (['KeyH', 'KeyJ', 'KeyC', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) return; }
@@ -1817,6 +1830,7 @@ function focusOverlay() {
 }
 function overlayPad() {
   if (!topOverlay()) return false;
+  if (topOverlay() === 'creator' && S.creator) return S.creator.pad(input);
   const f = focusables();
   const el = f[ovFocus];
   if (topOverlay() === 'phone' && input.menuBack && phone.screen !== 'home') { phone.back(); return true; }
@@ -1983,6 +1997,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'cruiser') { closeOverlay('pause'); callCruiser(); }
     else if (a === 'settings') openOverlay('settings');
     else if (a === 'controls') openOverlay('controls');
+    else if (a === 'look') { closeOverlay('pause'); openCreator('edit'); }
     else if (a === 'unstuck') { closeOverlay('pause'); send({ t: 'unstuck' }); }
     else if (a === 'surrender') {
       // press twice: dying (or, when wanted, turning yourself in) isn't something to do by accident
