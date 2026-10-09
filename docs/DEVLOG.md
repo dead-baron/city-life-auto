@@ -4523,3 +4523,29 @@ From the user's notes at 03:55 and 04:38: "the rain sounds seemed really overpow
   - Before the samples, footsteps were the biggest part of what was left (about a third of the scene's work), then the engines (about a fifth). The samples cut the nodes the scene makes by 38% (9,624 -> 5,977; filters 2,360 -> 1,278, oscillators 907 -> 402); the timings moved from 1.3-2.7 yardsticks to 1.2-2.4, too noisy here to say more. A cheaper engine (one oscillator for the note and its sub-octave) is the next step for phones.
   - The traffic sits well under heavy rain (-44 against -37 dBA). That's natural in a downpour, but worth a listen in the dry.
   - The level targets are by category and measurement. They may want tuning by ear.
+
+## 2026-10-09 · Characters closer to the concepts: faces, hair and clothes redrawn; the creator on a phone
+From the owner's note at 05:01 after trying the live game: "The character creator doesn't seem to load everything or display well on mobile in portrait. The customizations are a little underwhelming too, the face and hair aren't very good looking and it all seems unfinished and unpolished." Compared against CC1, CC2, CC8, CB1-CB4 and C2.
+- **The creator on a phone held upright** (`client/style.css`):
+  - The options never scrolled: the page was as tall as its content and the buttons covered the rest. On the Outfit tab you couldn't reach the pieces at all. Fixed (the right-hand column could not shrink).
+  - It takes the whole screen, clear of the camera (`--cam-top`) and the home bar. The preview sits on top, the tabs in one row that scrolls sideways, the options below, the buttons along the bottom.
+  - On a phone held sideways the preview and its turn buttons both fit.
+- **People drawn close up** (`client/art2/people.js`): the creator now casts a person at the size it shows them (`opt.res`: R pixels per world px, the same shapes, light and materials, finer), instead of blowing up the game's sprite 4 times.
+  - **The face** (`faceHi`), drawn on the head's own surface, so it turns and foreshortens with it:
+    - eyes with a lid line, the white, a coloured iris, a pupil and a catchlight; the six eye shapes, lashes for women;
+    - the six brow shapes; nostrils, the shadow under the nose and the light down its bridge;
+    - lips parted by a dark line, the six lip shapes, lipstick and the other makeup;
+    - from the 40s the folds by the mouth, from the 50s crow's feet and bags, from the 60s forehead lines and greying brows;
+    - freckles, the beauty mark, dimples, blush, scars, the face tattoo and piercings; sunglasses, round glasses, goggles, the patch and the party mask.
+  - **Skin and hair** close up: the ramps get a step between each two of their own, dithered, so the light turns round a face. The head and the jaw are one smooth surface. Hair gets locks with a dark line between them and a sheen where the light catches it.
+  - At the game's scale nothing changes but the new hairstyles, the hands and the builds below. A figure still costs the same to make.
+- **Eight hairstyles of their own** (`shared/look.js` HAIR_STYLES, `people.js` hairPrims): eight of the 36 were drawn exactly like another. Now short back and sides is a faded crew cut, the side part has its parting and sweep, the quiff a raised front, the man bun its bun, shoulder length reaches the shoulders, box braids are thinner with gold cuffs, big curls are big, and the shaved side sweeps over. A test checks no two are alike.
+- **Bodies** (CB1, C2): the builds and heights are further apart (slim slimmer, athletic broader, big bigger; heights from 0.88 to 1.12), and hands are smaller (they read as mittens).
+- **The creator** (`client/creator.js`):
+  - The big preview at 4 px per world px. On the Face and Hair tabs it shows the head and shoulders at 8, hat off, as CC8 does.
+  - Thumbnails at 2 (a figure), 3 (a head) and 4 (a face). Eyes, brows, nose, lips and the marks are close-ups of your own face, as in CC8.
+  - Thumbnails draw a few at a time, the ones in view first, between frames as well as in them; a soft glow holds each place until it's drawn.
+  - The selected option has a gold ring. A tab fades in. A Random button for each tab (body, face, hair, outfit, extras). While you leave it alone, the preview breathes and now and then looks round.
+- **Tests:** `test/peoplelook.test.js` (4 tests): every hairstyle, face option, eye colour, age, mark, makeup, scar, facial hair, build and catalogue piece draws at the game's scale and at the creator's scales; the close renders are the game's figure R times the size, with the feet as the anchor; no two hairstyles alike; the time per look (the game's figure, a thumbnail, the preview's close-up) in CPU yardsticks.
+- **Budget:** the renderer's code 355 -> 363 KB (`tools/perf.mjs`). The close renders (the face, the finer ramps, the new hairstyles) are in `people.js`, which the game loads with the renderer. Splitting the close-up code into its own module would need the renderer's internals exported; it is a few KB, so it stays.
+- **Not yet:** the hair is still a cap with pieces on it (CB3's jagged silhouettes would need new shapes); the bodies keep their chunky proportions (C2 draws smaller heads); the clothes' folds are as before.
