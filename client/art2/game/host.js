@@ -1306,7 +1306,7 @@ export class World2 {
         if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
         const pass = (p.flags & PF.PASSENGER) !== 0, seat = !pass && def.seat !== undefined ? [def.seat, 0] : seats[pass ? 1 : 0];   // (a bicycle: where its saddle is)
         const c = Math.cos(v.ra), s = Math.sin(v.ra), x = v.rx + c * seat[0] - s * seat[1], y = v.ry + s * seat[0] + c * seat[1];
-        const d8 = dir8(v.ra), pose = def.pedal ? 'pedal' : 'ride', A2 = this._app(p.d.app || {}, p.d.ar);
+        const d8 = dir8(v.ra), pose = def.pedal ? 'pedal' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
         const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : 0, wpn = p.extra | 0;
         const was = this.sprPrio;
         if (p.id === myPed) this.sprPrio = -3;

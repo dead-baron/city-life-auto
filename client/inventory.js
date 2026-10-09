@@ -17,7 +17,7 @@ export const ITEM_ICON = {
   lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
   purse: '👜', bonds: '📜', jewelry: '💎', scrap: '⚙', wallet: '👛',
-  apple: '🍎', orange: '🍊', grapes: '🍇', hotdog: '🌭', bread: '🍞', honey: '🍯', lemonade: '🍋', cider: '🧃', redwine: '🍷', whitewine: '🥂', lavender: '💜', nugget: '🟡', quartz: '🔷', doubloon: '🪙',
+  apple: '🍎', orange: '🍊', grapes: '🍇', hotdog: '🌭', bread: '🍞', honey: '🍯', lemonade: '🍋', cider: '🧃', redwine: '🍷', whitewine: '🥂', beer: '🍺', whiskey: '🥃', lavender: '💜', nugget: '🟡', quartz: '🔷', doubloon: '🪙',
   goldTrumpet: '🍄', bunCap: '🍄', shelfOyster: '🍄', redcap: '🍄', ghostglass: '🔮', goldStar: '⭐',
   venison: '🥩', rabbitMeat: '🥩', venisonSteak: '🍖', rabbitRoast: '🍗', deerHide: '🟫', antlers: '🦌', rabbitPelt: '🐇', coyotePelt: '🐺', raccoonPelt: '🦝',
 };

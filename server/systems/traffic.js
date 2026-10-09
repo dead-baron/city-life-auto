@@ -8,7 +8,7 @@ import { lanePath, turnPath, exitsFrom, edgeZ, nearestEdge } from '../../shared/
 import { signalFor } from '../../shared/signals.js';
 import { pointAt, measure } from '../../shared/geom.js';
 import { angleDiff, clamp } from '../../shared/math.js';
-import { TRAFFIC_MIX, PARKED_MIX, RACK_MIX, TRUCK_MODELS, VEHICLES } from '../../shared/vehicles.js';
+import { TRAFFIC_MIX, PARKED_MIX, RACK_MIX, TRUCK_MODELS, VEHICLES, motoMix } from '../../shared/vehicles.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
@@ -50,7 +50,7 @@ const NO_BIKES = new Set(['hwy', 'ramp']);
 function chooseExit(world, n, inEdge, def = null) {
   const net = world.map.net;
   let opts = exitsFrom(net, n, inEdge);
-  if (def && def.pedal) {
+  if (def && (def.pedal || def.moto === 'scooter')) {   // (nor a 50cc scooter)
     opts = opts.filter((o) => !NO_BIKES.has(net.edges[o.edge].kind) && net.edges[o.edge].lvl === 0);
     if (def.rough > 1) { const paved = opts.filter((o) => net.edges[o.edge].kind !== 'dirt'); if (paved.length) opts = paved; }
   }
@@ -193,7 +193,7 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
   const diff = angleDiff(v.a, want);
   let speed = desired;
   if (Math.abs(diff) > 0.9) speed = Math.min(speed, 140);
-  if (!opts.ignoreObstacles) speed = Math.min(speed, obstacleSpeed(world, v, fwd));
+  if (!opts.ignoreObstacles) speed = Math.min(speed, obstacleSpeed(world, v, fwd, opts.ignore));   // (opts.ignore: ids not to brake for - a club riding in formation)
   if (!opts.ignoreCrossings && (v.lz || 0) < 0.3) speed = Math.min(speed, crossingLimit(world, v, fwd)); // level-crossing gates down: stop (or gamble)
   // reverse out when wedged
   const ai = v.ai;
@@ -248,12 +248,12 @@ function lookAhead(v, pts, look) {
 // How much room a driver leaves to the car in front when stopped (px, 0.6-2.4 m): some creep right up, others hang
 // back - fixed per vehicle, so a queue at the lights looks like people driving, not a train of bumpers.
 const standoff = (v) => v.standoff ?? (v.standoff = 14 + (Math.imul(v.id | 0, 2654435761) >>> 0) % 44);
-function obstacleSpeed(world, v, fwd) {
+function obstacleSpeed(world, v, fwd, ignore = null) {
   const c = Math.cos(v.a), s = Math.sin(v.a);
   const look = v.def.L / 2 + 50 + standoff(v) + Math.max(0, fwd) * 0.7;
   let limit = Infinity;
   for (const e of world.query(v.x + c * look / 2, v.y + s * look / 2, look / 2 + 40)) {
-    if (e === v) continue;
+    if (e === v || (ignore && ignore.has(e.id))) continue;
     if (e.kind === K.PED) { if (e.vehId || e.dead) continue; }
     else if (e.kind !== K.VEH) continue;
     if (!sameLevel(e.lz, v.lz)) continue; // traffic up on the deck doesn't brake for the street below
@@ -554,7 +554,9 @@ function manage(world) {
       const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
       if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue; // never pops in on someone's screen
       if (world.npcCount + world.trafficCount > world.npcBudget) break;
-      const v = world.spawnVehicle(sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(PARKED_MIX), sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
+      let pm = sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(PARKED_MIX);
+      if (pm === 'bike') pm = weighted(motoMix('', world.map.districtAt(sp.x, sp.y).style));   // (which motorcycle: by district - task #366)
+      const v = world.spawnVehicle(pm, sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
       world.parked.set(i, v.id);
     }
     world.marinaParked ??= new Map();
@@ -615,14 +617,16 @@ function manage(world) {
       if (world.query(p.x, p.y, 90, K.VEH).some((q) => sameLevel(q.lz, z))) continue;
       const st = world.map.districtAt(p.x, p.y).style, country = e.kind !== 'hwy' ? wildStyle(world.map, p.x, p.y) : null;
       const heavy = e.kind === 'hwy' || st === 'harbor' || st === 'industrial' || st === 'factory' || st === 'airport';
-      const model = weighted((country ? COUNTRY_MIX : TRAFFIC_MIX).filter(([id]) => !(id === 'bike' && e.kind === 'hwy') && !(e.kind === 'dirt' && (TRUCK_MODELS.has(id) || id === 'roadbike'))
+      let model = weighted((country ? COUNTRY_MIX : TRAFFIC_MIX).filter(([id]) => !(e.kind === 'dirt' && (TRUCK_MODELS.has(id) || id === 'roadbike'))
         && !(VEHICLES[id].pedal && (NO_BIKES.has(e.kind) || e.lvl !== 0 || z > 0.05))).map(([id, wt]) => [id, heavy && TRUCK_MODELS.has(id) ? wt * 3 : wt]));
+      const moto = model === 'bike';
+      if (moto) model = weighted(motoMix(e.kind, country || st));   // which motorcycle: by road and district (task #366)
       if (VEHICLES[model].pedal && lane > 0) { lane = 0; lp = lanePath(net, e, from, 0); p = pointAt(lp, Math.min(s, lp[lp.length - 1].s - 20)); }   // (cyclists keep to the kerb lane)
       const v = world.spawnVehicle(model, p.x, p.y, Math.atan2(p.ty, p.tx), {});
       v.lz = z;
       const sp0 = Math.min(CRUISE[e.kind] || 250, 300, v.def.max * 0.7) * 0.6;
       v.vx = p.tx * sp0; v.vy = p.ty * sp0;
-      const driver = spawnNpc(world, country ? countryDriver(model, country) : townDriver(model), p.x, p.y, 'driver');
+      const driver = spawnNpc(world, country ? countryDriver(moto ? 'bike' : model, country) : townDriver(model), p.x, p.y, 'driver');
       if (country) driver.npc.country = true;
       driver.vehId = v.id; driver.seat = 0; v.seats[0] = driver.id; driver.lz = z;
       v.ai = { kind: 'traffic' };

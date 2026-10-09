@@ -2956,7 +2956,8 @@ function buildCornerStores(m) {
 // interior behind their front door - a one-tile wall ring, a floor, partition walls between the
 // units of a strip mall, and a counter with a clerk behind it. The roof art fades out while you
 // are inside (client). The place's interaction point moves in front of its counter.
-export const WALK_IN = new Set(['club', 'convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle']);
+export const WALK_IN = new Set(['club', 'convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle',
+  'roadhouse']);   // (roadhouse: the Rusty Spur, countryside.js - task #366)
 const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
 function buildInteriors(m) {
   m.walkIns = [];

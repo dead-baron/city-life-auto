@@ -9,6 +9,7 @@ const NEAR_PX = 1100, FAR_PX = 1500, REPLACE_S = 60;
 const STAFF = {
   police: ['cop', 'cop'], hospital: ['medic', 'civ'], bank: ['executive', 'civ'], courthouse: ['executive', 'civ'],
   fence: ['hustler', 'civ'], pawn: ['hustler', 'civ'], gunshop: ['construction', 'civ'], club: ['hustler', 'civ'],
+  roadhouse: ['biker', 'civ'],   // (the Rusty Spur's bartender: bikers.js adds the archetype)
 };
 const DANCERS = 5; // clubbers on the floor of an open club (only while a player is near)
 const TILE = 32;

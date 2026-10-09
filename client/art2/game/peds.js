@@ -24,6 +24,7 @@ import { ITEMS } from '../items.js';
 import { hash, cutGBuf } from '../gbuf.js';
 import { WEAPON_BY_INDEX } from '../../../shared/items.js';
 import { decodeLook, lookArt } from '../../../shared/look.js';
+import { CLUBS } from '../../../shared/clubs.js';
 
 export const PED_POSES = { ...POSES, move0: 6, move1: 6, move2: 6, move3: 6 };
 export { SEATS };
@@ -201,6 +202,19 @@ export function adaptApp(app, ar = null, opt = {}) {
     if (!out.bandana && r(34) < 0.6) out.bandana = '#8a3a2e';
     if (out.hat) out.hat.kind = fem ? 'sunhat' : pick(['cowboy', 'bucket'], 32);
   }
+  // ---- a biker club's cut (NP4, task #366: server bikers.js sends app.club): the club's vest over its shirt, the patch on
+  // the back (people.js, the club patch block), jeans and boots, ink, beards, shades, a bandana in the club colour
+  if (a.club !== undefined && CLUBS[a.club]) {
+    const C = CLUBS[a.club];
+    out.top = { kind: 'vest', color: C.vest, color2: C.shirt, patch: a.club };
+    out.bottom = { kind: 'jeans', color: a.club === 1 ? '#2e4a72' : '#23262e' };
+    out.shoeKind = 'boot'; out.shoes = '#2a2018'; out.carry = undefined; out.back = undefined;
+    out.tattoo = r(40) < 0.7; out.chain = r(41) < 0.45; out.glasses = r(42) < 0.5 ? 'sun' : null;
+    if (!fem && r(43) < 0.65) out.beard = pick(['full', 'short', 'stubble', 'full'], 44);
+    out.hat = r(45) < 0.3 ? { kind: 'beanie', color: '#1a1a1e' } : undefined;
+    out.bandana = !out.hat && r(46) < 0.45 ? C.patch[0] : undefined;
+  }
+  // ---- end biker club cut
   if (out.back) out.backColor = pick(['navy', 'charcoal', '#8a3a2e', '#2e5a38', 'brown', 'black'], 24);
   return out;
 }

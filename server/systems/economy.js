@@ -39,6 +39,7 @@ export function poiLabel(world, p, poi) {
     }
     case 'atm': return 'Use ATM';
     case 'club': return `Bar - ${poi.label}`;
+    case 'roadhouse': return `Bar - ${poi.label} (beer, rye)`;
     case 'vending': return 'Buy an Energy Drink';
     case 'police': return p.badge ? 'Front desk (armory, motor pool, off duty)' : 'Front desk (join the police)';
     case 'courthouse': return 'Courthouse desk (bounties, fines)';
@@ -153,6 +154,7 @@ export function buildMenu(world, p, poi) {
       title = COUNTER[kind].title(poi.label);
       if (COUNTER[kind].sub) sub = COUNTER[kind].sub;
     }
+    if (kind === 'roadhouse') sub = 'A biker roadhouse: cold beer, rye, coffee and a hot dog. Mind the club patches - hurt one of them and you answer to all of them.';
     if (kind === 'club') {
       title = poi.label;
       sub = 'The bar. A cocktail fills your stamina past full for a minute. Open from dusk till dawn.';

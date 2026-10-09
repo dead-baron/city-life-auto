@@ -567,6 +567,13 @@ function neonIcon(G, x0, y0, icon, col, night) {
     for (let a = -1.5; a <= 1.5; a += 0.3) pts.push([21 + Math.round(Math.cos(a) * 3), 16 + Math.round(Math.sin(a) * 3)]);
     for (let x = 0; x <= 24; x++) pts.push([x, 25]);
     for (const sx of [9, 15]) for (let y = 2; y < 10; y++) pts.push([sx + Math.round(Math.sin(y * 0.9) * 1.5), y]);
+  } else if (icon === 'skull') {   // a bull skull (the Rusty Spur, task #366): horns sweeping up and out, the long face, two eyes
+    for (let t = 0; t <= 1.0001; t += 0.08) { const hx = Math.round(9 * t), hy = Math.round(9 - 7 * t + 5 * t * t * -1 + 3 * t); pts.push([8 - hx, hy], [16 + hx, hy]); }
+    for (let y = 8; y <= 24; y++) { const hw = Math.round(5 - (y - 8) * 0.19); pts.push([12 - hw, y], [12 + hw, y]); }
+    for (let x = 7; x <= 17; x++) pts.push([x, 8]);
+    for (let x = 10; x <= 14; x++) pts.push([x, 24]);
+    for (const ex of [9, 15]) for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) pts.push([ex - 1 + dx, 13 + dy]);
+    pts.push([11, 21], [13, 21]);
   } else {
     for (let k = 0; k < 18; k++) pts.push([12 + Math.round(Math.sin(k / 6)), 22 - k]);
     for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 0.3], [1, 0.3], [0, -1.2]]) for (let k = 1; k < 9; k++) pts.push([12 + Math.round(dx * k), 4 + Math.round(dy * k * 0.6 + k * k * 0.06)]);

@@ -362,3 +362,13 @@ export const UNSTUCK_CALM_S = 20;          // ...only when you haven't fought, s
 export const BUSKER_TIP = 2;               // $ a coin in the guitar case
 export const BUSKER_SAMARITAN = 1;         // ...and the Samaritan credit for it
 export const BUSKER_EVERY_S = 90;          // once per busker in this long
+
+// Biker clubs (server/systems/bikers.js, task #366): three clubs of five at the Rusty Spur roadhouse
+export const CLUB_SIZE = 5;                // members in each club
+export const CLUB_RIDE_EVERY_S = [150, 300]; // how often a club rides out from the Rusty Spur (two by two, there and back)
+export const CLUB_RIDE_MAX_S = 240;        // ...and turns for home after this long out
+export const CLUB_FIGHT_PX = 900;          // hurt one member and every member this close comes for you
+export const CLUB_GRUDGE_S = 180;          // ...and the club stays after you this long
+export const BIKE_THIEF_EVERY_S = [240, 420]; // how often someone tries to ride off on a club bike outside the Spur (a player near)
+export const BIKE_THIEF_REWARD = 150;      // stop the thief and the club pays you this (cash)...
+export const BIKE_THIEF_RESPECT = 6;       // ...and the Samaritan points

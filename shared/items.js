@@ -159,6 +159,9 @@ export const ITEMS = {
   bearRug: { name: 'Grizzly Rug', crafted: true, sell: 560 },
   lemonade: { name: 'Lemonade',         stamina: true, buff: 'coffee', sell: 0 },
   cider:   { name: 'Apple Cider',       stamina: true, buff: 'coffee', sell: 0 },
+  // the Rusty Spur's bar (task #366)
+  beer:    { name: 'Cold Beer',         buff: 'wine', sell: 0 },
+  whiskey: { name: 'Shot of Rye',       stamina: true, buff: 'energy', sell: 0 },
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
   whitewine: { name: 'Willow River White', buff: 'wine', sell: 12 },
 };
@@ -320,6 +323,7 @@ export const SHOPS = {
   fruitstand: { title: 'Willow River Orchard Stand', buy: [{ kind: 'item', id: 'cider', price: 6, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }], sells: ['apple', 'orange'], sellPrice: { apple: 5, orange: 6 } },
   market: { title: 'Old Town Market', buy: [{ kind: 'item', id: 'bread', price: 7, qty: 1 }, { kind: 'item', id: 'apple', price: 4, qty: 3 }, { kind: 'item', id: 'orange', price: 5, qty: 3 }, { kind: 'item', id: 'grapes', price: 8, qty: 2 }, { kind: 'item', id: 'honey', price: 14, qty: 1 }], sells: ['apple', 'orange', 'grapes', 'honey', 'lavender', 'goldTrumpet', 'bunCap', 'shelfOyster'], sellPrice: { goldTrumpet: 18, bunCap: 15, shelfOyster: 11 } },
   snack: { title: 'Snack Cart', buy: [{ kind: 'item', id: 'hotdog', price: 6, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }, { kind: 'item', id: 'energy', price: 9, qty: 1 }] },
+  roadhouse: { title: 'The Rusty Spur - the bar', buy: [{ kind: 'item', id: 'beer', price: 6, qty: 1 }, { kind: 'item', id: 'whiskey', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 4, qty: 1 }, { kind: 'item', id: 'hotdog', price: 7, qty: 1 }] },
   clubhouse: { title: 'Cedar Hills Golf Club - The Nineteenth', buy: [{ kind: 'item', id: 'cocktail', price: 20, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'redwine', price: 34, qty: 1 }, { kind: 'item', id: 'hotdog', price: 8, qty: 1 }] },
   farmstand: { title: 'Cedar Point Lavender - Farm Stand', buy: [{ kind: 'item', id: 'honey', price: 12, qty: 1 }, { kind: 'item', id: 'lemonade', price: 4, qty: 1 }], sells: ['honey', 'lavender'], sellPrice: { lavender: 6 } },
   salvage: { title: 'Dry Creek Aircraft Salvage', buy: [], sells: ['scrap'], sellPrice: { scrap: 45 } },
@@ -344,7 +348,9 @@ export const SHOPS = {
   butcher: { title: 'Butcher', buy: [{ kind: 'item', id: 'venisonSteak', price: 28, qty: 1 }, { kind: 'item', id: 'bearStew', price: 34, qty: 1 }, { kind: 'item', id: 'roastTurkey', price: 22, qty: 1 }],
     sells: GAME_GOODS().filter(COOKED_OR_RAW), sellPrice: payFor(GAME_GOODS().filter(COOKED_OR_RAW), 1.8) },
   garage: { title: 'Fresh Coat Garage', buy: [{ kind: 'service', id: 'respray', price: 250 }, { kind: 'service', id: 'wash', price: 20 }, { kind: 'service', id: 'repair', price: 300 }, { kind: 'service', id: 'garage', price: 0 }] },
-  dealer: { title: 'Motor Row Dealership', buy: ['cruiser', 'bicycle', 'bmx', 'mtb', 'roadbike', 'cargobike', 'compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports'].map((id) => ({ kind: 'vehicle', id })) },
+  dealer: { title: 'Motor Row Dealership', buy: ['cruiser', 'bicycle', 'bmx', 'mtb', 'roadbike', 'cargobike', 'compact', 'sedan', 'bike', 'pickup', 'van', 'flatbed', 'sports',
+    // the motorcycles (MC1, task #366)
+    'scooter', 'dirtbike', 'caferacer', 'bobber', 'vtwin', 'ratbike', 'chopper', 'tourer', 'bagger', 'trike'].map((id) => ({ kind: 'vehicle', id })) },
   marina: { title: 'Harbor Marina', buy: ['jetski', 'dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },
 };
 

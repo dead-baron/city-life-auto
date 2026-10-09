@@ -39,6 +39,8 @@
 // cloth(colour) -> 5-step ramp, ARCHETYPES (named looks, C2/C3) and randomPerson(seed, archetype) -> app.
 import { GBuf, F_CHAR, F_NOCAST, hash, bayer } from './gbuf.js';
 import { ITEMS, drawItem, itemSpan } from './items.js';
+import { CLUBS } from '../../shared/clubs.js';   // (the biker clubs' patches: task #366)
+
 
 // ---- camera, light, poses -------------------------------------------------------------------------------------
 const EL = 35 * Math.PI / 180, CA = Math.cos(EL), SA = Math.sin(EL), S0 = 400;
@@ -52,6 +54,42 @@ export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
   stagger: 4, limp: 6, crawl: 4, downF: 2, downB: 2, deadF: 1, deadS: 1 };
 const ALIAS = { move0: 'walk0', move1: 'walk1', move2: 'walk2', move3: 'walk3', jog: 'walk1', run: 'walk2', sprint: 'walk3', held: 'idle', stand: 'idle' };
+// ---- motorcycle riders (task #366, MC1): leaned back on a chopper ('chop': feet forward on the pegs, hands up on the ape
+// hangers), tucked down on a sport bike ('tuck': chest to the tank, hands low on the clip-ons). Built on the 'ride' pose
+// (rigMoto, below). shared/vehicles.js ride picks one per bike.
+POSES.chop = 1; POSES.tuck = 1;
+const MOTO_POSES = new Set(['chop', 'tuck']);
+function rigMoto(P, pose) {
+  const seat = SEATS.ride / CA, hands = P.hands;
+  if (pose === 'chop') {
+    P.lean = -0.16; P.headPitch = 0.05; P.pel = [P.pel[0], P.pel[1] - 1.2, P.pel[2] - 1.2];
+    P.fL = [-4.6, 9.5, seat - 9]; P.fR = [4.6, 9.5, seat - 9]; P.kneeL = [-0.5, 0.7, 1]; P.kneeR = [0.5, 0.7, 1];
+    P.hands = (S) => { hands(S); P.hL = [-6.4, 10.5, seat + 15.5]; P.hR = [6.4, 10.5, seat + 15.5]; P.elL = [-1, 0, -0.6]; P.elR = [1, 0, -0.6]; };
+  } else {
+    P.lean = 0.95; P.headPitch = -0.5;
+    P.fL = [-4.4, -1, seat - 8.5]; P.fR = [4.4, -1, seat - 8.5]; P.kneeL = [-0.6, 1, 0.3]; P.kneeR = [0.6, 1, 0.3];
+    P.hands = (S) => { hands(S); P.hL = [-5, 13.5, seat + 5.5]; P.hR = [5, 13.5, seat + 5.5]; P.elL = [-1, -0.2, -0.2]; P.elR = [1, -0.2, -0.2]; };
+  }
+  return P;
+}
+// ---- end motorcycle riders
+// ---- biker club patches (NP4, task #366): what colour, if any, the back of a club vest is at (u across, z up)
+function clubPatch(ci, u, z, D) {
+  const C = CLUBS[ci];
+  if (!C) return null;
+  const [field, mark] = C.patch, au = Math.abs(u), mid = (D.waistUp + D.chestUp) / 2 + 0.4;
+  const top = D.chestUp + 1.4 - u * u * 1.6;                         // the top rocker, arched
+  if (au < 0.62 && z > top - 0.9 && z < top + 0.9) return Math.abs(z - top) < 0.32 && (Math.round(u * 14) & 1) ? mark : field;
+  const bot = D.waistUp - 0.2 + u * u * 1.4;                         // the bottom rocker
+  if (au < 0.5 && z > bot - 0.7 && z < bot + 0.7) return field;
+  const dx = u / 0.3, dz = (z - mid) / 2.1, r = Math.hypot(dx, dz);  // the centre patch: a round field, the emblem on it
+  if (r > 1) return null;
+  if (r > 0.82) return mark;
+  if (C.emblem === 'wheel') return Math.abs(r - 0.45) < 0.12 || (r < 0.45 && (Math.abs(dx) < 0.08 || Math.abs(dz) < 0.1)) || (Math.abs(dz) < 0.12 && r > 0.5) ? mark : field;
+  if (C.emblem === 'crow') return (dz > -0.15 && dz < 0.35 && Math.abs(dx) < 0.75 - Math.abs(dz)) || (Math.abs(dx) < 0.2 && dz > -0.6 && dz < 0.6) ? mark : field;
+  return (dz > -0.5 && Math.abs(dx) < 0.32 - dz * 0.2) || (dz > 0.3 && Math.abs(Math.abs(dx) - 0.35) < 0.12) ? mark : field;   // the jackal: a long head, two tall ears
+}
+// ---- end biker club patches
 export const HAIR_STYLES = ['spiky', 'short', 'buzz', 'bald', 'afro', 'long', 'wavy', 'pony', 'bun', 'braids', 'dreads', 'mohawk', 'slick', 'curly', 'bob'];
 export const TOP_KINDS = ['tee', 'tank', 'polo', 'shirt', 'hoodie', 'jacket', 'suit', 'leather', 'puffer', 'flannel', 'hawaiian', 'vest', 'hivis', 'uniform', 'tactical', 'scrubs', 'apron', 'overalls', 'tracksuit', 'jersey', 'coat', 'cardigan', 'dress', 'fur', 'none', 'bikini', 'swimsuit', 'towel'];
 
@@ -322,6 +360,7 @@ function aimPose(D, P, kind, rec) {
 }
 function restHoldItem(P, kind) { if (ICLS[kind] === 'one' || ICLS[kind] === 'big' || ICLS[kind] === 'knife') setItem(P, kind, [0.1, 0.3, 0.95], [0, 1, 0]); }
 function rig(D, A, pose, f, kind, acc) {
+  if (MOTO_POSES.has(pose)) return rigMoto(rig(D, A, 'ride', f, null, null), pose);   // (motorcycle riders, task #366)
   const P = base(D), c = kind ? ICLS[kind] : null;
   if (GAITS2[pose]) { GAITS2[pose](D, P, f, kind, acc); return P; }   // (the city's people, at the end)
   if (pose === 'idle') {
@@ -730,6 +769,10 @@ function wardrobe(A, D, TF, seed) {
     if (T.tank && front && z > D.chestUp + 2.9 - (0.33 - au) * 3 && au < 0.33) return skin;                       // scoop neckline
     if (T.vneck && front && z > D.chestUp + 3.4 - (0.32 - au) * 8 && au < 0.32) return skin;
     let R = top;
+    // ---- a biker club's back patch (NP4, task #366): the top rocker (the club's name, a curved band), the emblem in a round
+    // field in the middle, the bottom rocker - in the club's colours (shared/clubs.js)
+    if (T.vest && back && A.top?.patch !== undefined) { const pc = clubPatch(A.top.patch, u, z, D); if (pc) return cloth(pc); }
+    // ---- end club patch
     // straps of a backpack or a bag across the chest
     if (A.back === 'backpack' && Math.abs(au - 0.5) < 0.09 && z > D.waistUp && (front || back)) return black;
     if (bag && front && Math.abs(-u * 0.9 + (z - D.chestUp) / 6 - 0.15) < 0.11) return cloth('leather');
@@ -1452,7 +1495,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS'].includes(pn)) kind = null;
+  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck'].includes(pn)) kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
   const D = dims(A), P = rig(D, A, pn, f, kind, acc);

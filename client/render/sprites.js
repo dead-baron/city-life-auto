@@ -75,7 +75,7 @@ function policeBike(fr, L, W) {
 }
 
 export function drawVehicle(g, desc, def, f) {
-  const artId = def.art || def.id;
+  const artId = def.art || (atlas.variants[def.id] ? def.id : def.sprite || def.id);   // (def.sprite: a stand-in, e.g. the MC1 motorcycles drawn as the sport bike)
   const n = atlas.variants[artId] || 0;
   const fr = n ? frame(`veh_${artId}_${(desc.vr || 0) % n}`) : null;
   const L = def.L, W = def.W;
@@ -193,7 +193,7 @@ function procVehicle(def, paint) {
 // time under the top view, reads as the body's side walls (any angle, no pre-drawn views).
 const sideCache = new Map();
 export function vehicleSide(desc, def, wreck) {
-  const artId = def.art || def.id;
+  const artId = def.art || (atlas.variants[def.id] ? def.id : def.sprite || def.id);   // (def.sprite: a stand-in, e.g. the MC1 motorcycles drawn as the sport bike)
   const n = atlas.variants[artId] || 0;
   const key = `${n ? `${artId}_${(desc.vr || 0) % n}` : `${def.id}|${desc.p}`}|${wreck ? 1 : 0}|${atlas.ready ? 1 : 0}`;
   let cv = sideCache.get(key);
@@ -222,7 +222,7 @@ const shadowCache = new Map();
 // Burnt-out wreck: the car's own sprite charred dark (pixels only - no box around it).
 const wreckCache = new Map();
 export function drawVehicleWreck(g, desc, def) {
-  const artId = def.art || def.id;
+  const artId = def.art || (atlas.variants[def.id] ? def.id : def.sprite || def.id);   // (def.sprite: a stand-in, e.g. the MC1 motorcycles drawn as the sport bike)
   const n = atlas.variants[artId] || 0;
   const name = n ? `veh_${def.id}_${(desc.vr || 0) % n}` : `${def.id}|${desc.p}`;
   let wc = wreckCache.get(name);
@@ -245,7 +245,7 @@ export function drawVehicleWreck(g, desc, def) {
   g.drawImage(wc, -wc.width / 2, -wc.height / 2);
 }
 export function drawVehicleShadow(g, desc, def, placed = false) {
-  const artId = def.art || def.id;
+  const artId = def.art || (atlas.variants[def.id] ? def.id : def.sprite || def.id);   // (def.sprite: a stand-in, e.g. the MC1 motorcycles drawn as the sport bike)
   const n = atlas.variants[artId] || 0;
   const name = n ? `veh_${artId}_${(desc.vr || 0) % n}` : null;
   const fr = name ? frame(name) : null;

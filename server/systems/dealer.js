@@ -9,7 +9,9 @@ import * as homes from './homes.js';
 
 const rng = mulberry32(9090);
 // what turns up on the lot (weights) - mostly everyday cars, the odd sports car, motorbike or bicycle
-const STOCK = [['compact', 5], ['sedan', 5], ['pickup', 3], ['van', 2], ['flatbed', 1], ['bike', 2], ['sports', 1.2], ['mtb', 0.5], ['roadbike', 0.4], ['cruiser', 0.4], ['cargobike', 0.3]];
+const STOCK = [['compact', 5], ['sedan', 5], ['pickup', 3], ['van', 2], ['flatbed', 1], ['bike', 2], ['sports', 1.2], ['mtb', 0.5], ['roadbike', 0.4], ['cruiser', 0.4], ['cargobike', 0.3],
+  // the motorcycles (task #366)
+  ['scooter', 0.6], ['vtwin', 0.6], ['dirtbike', 0.4], ['caferacer', 0.3], ['bobber', 0.3], ['chopper', 0.25], ['tourer', 0.25], ['bagger', 0.25], ['trike', 0.15], ['ratbike', 0.15]];
 const RESTOCK_S = 60;
 
 function pickModel() {

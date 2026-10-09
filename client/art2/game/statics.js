@@ -45,6 +45,7 @@ import * as X from '../props-transit.js';
 import * as WL from '../props-wild.js';
 import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
+import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
@@ -1174,6 +1175,7 @@ function voxModel(m, a) {
     case 'pallets': return pallets(a[0] || 1, a[1] || 1); case 'oilDrum': return D.oilDrum(a[0], a[1]); case 'cableSpool': return K.cableSpool(); case 'bikeRack': return X.bikeRack(a[0] || 3);
     case 'cone': return X.cone(); case 'planterBox': return D.planterBox(a[0], a[1], a[2] ?? true); case 'fountain': return D.fountain(a[0], a[1]); case 'flowerBed': return P.flowerBed(a[0]);
     case 'powerPole': return D.powerPole(a[0], a[1]); case 'tent': return U.tent(a[0]); case 'domeTent': return K.domeTent(a[0], a[1]); case 'campfire': return U.campfire(a[0]);
+    case 'burnBarrel': return BK.burnBarrel(a[0] ?? 1); case 'skullSign': return BK.skullSign(a[0] ?? 1);
     case 'picnic': return U.picnicTable(); case 'pumpJack': return U.pumpJack(a[0]); case 'turbine': return U.windTurbine(a[0], a[1], a[2]); case 'flare': return U.flareStack(a[0]);
     case 'tank': return X.storageTank(a[0], a[1], a[2]); case 'cellTower': return K.cellTower(a[0]); case 'screen': return K.outdoorScreen(a[0], a[1]); case 'solar': return TW.solarPanel(a[0], a[1]);
     case 'runwayLight': return RD.runwayLight(a[0]); case 'viewer': return D.viewer(); case 'wheelbarrow': return U.wheelbarrow(); case 'airliner': return RD.airliner(a[0], a[1], a[2], a[3] || 0);
@@ -1230,6 +1232,7 @@ function vdim(m, a) {
     case 'tires': return [18, 18, 16]; case 'trashBags': return [30, 24, 16]; case 'pallets': return [28, 24, 6 + 6 * (a[1] || 1)]; case 'oilDrum': return [12, 12, 18]; case 'cableSpool': return [24, 18, 26];
     case 'bikeRack': return [40, 10, 14]; case 'cone': return [10, 10, 16]; case 'planterBox': return [a[0] || 34, a[1] || 34, 26]; case 'fountain': return [(a[0] || 30) * 2 + 2, (a[0] || 30) * 2 + 2, 56];
     case 'flowerBed': return [a[0] || 30, 12, 10]; case 'powerPole': return [(a[1] || 16) * 2 + 4, 10, (a[0] || 120) + 4]; case 'tent': return [40, 34, 28]; case 'domeTent': return [36, 30, 22];
+    case 'burnBarrel': return [16, 16, 34]; case 'skullSign': return [36, 8, 86];
     case 'campfire': return [28, 28, 26]; case 'picnic': return [44, 36, 18]; case 'pumpJack': return [70, 20, 60]; case 'turbine': return [((a[1] || 80) * 2) + 8, 24, (a[0] || 260) + (a[1] || 80) + 6];
     case 'flare': return [14, 14, 90]; case 'tank': return [(a[0] || 44) * 2 + 4, (a[0] || 44) * 2 + 4, (a[1] || 120) + 26]; case 'cellTower': return [30, 30, (a[0] || 150) + 6]; case 'screen': return [(a[0] || 120) + 16, 12, (a[1] || 56) + 26];
     case 'solar': return [a[0] || 30, a[1] || 20, 8]; case 'runwayLight': return [4, 4, 6]; case 'viewer': return [14, 10, 40]; case 'wheelbarrow': return [30, 14, 14]; case 'airliner': return [a[0] || 460, a[1] || 420, 140];
@@ -1688,6 +1691,9 @@ function propItems(c, p, pi, I) {
     case 'tent': { const col = ['#e07b20', '#3f8a3a', '#2f6fc8', '#c8b88a'][p.v || 0]; V(`tent:${p.v || 0}`, 'tent', [col]); return; }   // (v 3: a hunting camp's canvas wall tent)
     case 'campfire': V(`cf:${p.lit ? 1 : 0}`, 'campfire', [p.lit ? 1 : 0]); if (p.lit) lightAt(I, x, y, 14, p.big ? 220 : 150, LIGHT.fire, p.big ? 3 : 2.2, 'fire', 0); return;
     case 'picnic': V('pic', 'picnic', [], qa(u * PI, 2)); return;
+    // the Rusty Spur (task #366): the burn barrel always burning, the bull skull sign lit up after dark
+    case 'burnbarrel': V('bbl:1', 'burnBarrel', [1]); lightAt(I, x, y, 30, 170, LIGHT.fire, 2.4, 'fire', 0); return;
+    case 'skullsign': V('sks:1', 'skullSign', [1]); lightAt(I, x, y + 6, 66, 150, [1, 0.36, 0.2], 1.6, 'neon'); return;
     case 'billboard': put(I, { key: `bb:${(p.ad || 0) % ADS.length}`, recipe: { t: 'grp', parts: [[{ t: 'v', m: 'bbframe', a: [] }, 0, 0, 0], [{ t: 'sign', k: 'ad', ad: (p.ad || 0) % ADS.length, w: 132, h: 54, z: 36 }, 0, 2, 0]] }, x, y, ext: [82, 170, 82, 76], pi }); lightAt(I, x, y + 8, 110, 140, [1, 0.96, 0.85], 1.2, 'sign'); return;
     case 'pipes': V(`pip:${seed % 2}`, 'pipes', [seed % 2], qa(u * PI, 2)); return;
     case 'lumber': case 'planks': V(`lum:${t}:${seed % 3}`, 'lumber', [seed % 3, t === 'planks' ? 1 : 0], qa(u * PI, 2)); return;
@@ -2769,7 +2775,8 @@ function coverItems(c, I, cx, cy) {
 // walk-in interiors, cut away: no roof, walls cut low (the back wall stays), the shop floor, counters, shelves
 // ================================================================================================
 const FLOORK = { convenience: 'tileWhite', pharmacy: 'tileWhite', grocery: 'tileWhite', coffee: 'woodFloor', clothing: 'woodFloor', sports: 'rubber', hardware: 'platform', gunshop: 'platform',
-  pawn: 'woodFloor', club: 'checker', fence: 'checker', hospital: 'tileWhite', reception: 'tileWhite', bank: 'stoneTile', courthouse: 'stoneTile', fishmarket: 'tileGreen', tackle: 'woodFloor', police: 'platform' };
+  pawn: 'woodFloor', club: 'checker', fence: 'checker', hospital: 'tileWhite', reception: 'tileWhite', bank: 'stoneTile', courthouse: 'stoneTile', fishmarket: 'tileGreen', tackle: 'woodFloor', police: 'platform',
+  roadhouse: 'woodFloor' };
 function cutRecipe(c, b, s, spec) {
   const W = s.tw * TILE, Dd = s.th * TILE, wi = b.walkIn, units = [];
   for (const u of wi.units) {
@@ -2810,12 +2817,49 @@ function makeCut(r) {
   }
   // counters, back shelves with goods, a clerk's till
   for (const u of r.units) {
-    const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : ramp('#a8aab0', 5, 2);
+    const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' || u.kind === 'roadhouse' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : u.kind === 'roadhouse' ? ramp('#4a3020', 5, 2) : ramp('#a8aab0', 5, 2);
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = u.x0 + 6; x < u.x1 - (u.x1 - u.x0 > 128 ? 34 : 6); x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
     for (let x = u.x0 + 6; x < u.x1 - (u.x1 - u.x0 > 128 ? 34 : 6); x++) for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, CT[v > 18 ? 4 : 2 + ((x >> 3) & 1)], [0, 1, 0]);
     const goods = [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [226, 224, 214], [170, 100, 200]];
     for (let x = u.x0 + 4; x < u.x1 - 4; x++) for (let v = 0; v < 52; v++) { const sh = v % 13; px(x, r.inY0 + 10, v, sh < 2 ? MAT.metalDark[2] : goods[Math.floor(hash(x >> 1, v / 13 | 0, r.seed + u.x0) * goods.length)], [0, 1, 0]); }
     for (let Y = r.inY0; Y < r.inY0 + 10; Y++) for (let x = u.x0 + 4; x < u.x1 - 4; x++) px(x, Y, 52, MAT.metalDark[3], [0, 0, 1]);
+    if (u.kind === 'roadhouse') roadhouseRoom(u, r, px);
   }
   return G;
+}
+// ---- the Rusty Spur's bar room (MC4, task #366): along the floor in front of the bar, left to right - the booths by the
+// wall, the jukebox, the pool table, the arm-wrestling table with its two stools, and the card room behind a low partition
+function roadhouseRoom(u, r, px0_) {
+  const px = (x, Y, z, c, n) => px0_(Math.round(x), Math.round(Y), z, c, n);   // (whole pixels)
+  const slab = (x0, x1, Y0, Y1, z, top, side) => {
+    x0 = Math.round(x0); x1 = Math.round(x1); Y0 = Math.round(Y0); Y1 = Math.round(Y1);   // a block: its top at height z, its front face down to the floor
+    for (let Y = Y0; Y < Y1; Y++) for (let x = x0; x < x1; x++) px(x, Y, z, top[Y === Y0 || x === x0 || x === x1 - 1 ? 4 : 2], [0, 0, 1]);
+    for (let x = x0; x < x1; x++) for (let v = 0; v < z; v++) px(x, Y1, v, side[v > z - 3 ? 3 : 1], [0, 1, 0]);
+  };
+  const wood = ramp('#5a3a24', 6, 3), felt = ramp('#2f7a4a', 5, 2), leather = ramp('#7a2a26', 5, 2), baize = ramp('#2a5a3a', 5, 2), chrome = ramp('#c8c8cc', 5, 3);
+  const Ya = u.cy + 44, Yb = r.inY1 - 6, mid = (Ya + Yb) / 2, x0 = u.x0 + 36, W = u.x1 - u.x0 - 72;
+  if (Yb - Ya < 60 || W < 300) return;
+  // booths: a table between two high-backed red benches
+  for (const by of [Ya, mid + 6]) { slab(x0, x0 + 30, by, by + 8, 14, leather, leather); slab(x0, x0 + 30, by + 10, by + 26, 18, wood, wood); slab(x0, x0 + 30, by + 28, by + 36, 14, leather, leather); }
+  // the jukebox: a rounded cabinet, its window lit in bands
+  const jx = x0 + 52;
+  slab(jx, jx + 22, Ya, Ya + 14, 34, wood, wood);
+  for (let x = jx + 3; x < jx + 19; x++) for (let v = 10; v < 30; v++) px(x, Ya + 14, v, [[255, 120, 60], [255, 210, 80], [90, 200, 255], [255, 90, 200]][((v >> 2) + (x >> 3)) & 3], [0, 1, 0]);
+  // the pool table: green felt in a wooden rim on legs, a cue across it
+  const px0 = x0 + W * 0.3, py0 = mid - 22;
+  slab(px0, px0 + 100, py0, py0 + 52, 20, wood, wood);
+  for (let Y = py0 + 5; Y < py0 + 47; Y++) for (let x = px0 + 5; x < px0 + 95; x++) px(x, Y, 21, felt[(x + Y) % 9 === 0 ? 1 : 2], [0, 0, 1]);
+  for (let k = 0; k < 60; k++) px(px0 + 20 + k, py0 + 16 + k * 0.25, 22, wood[4], [0, 0, 1]);
+  for (const [bx, by, c] of [[px0 + 70, py0 + 20, [236, 230, 220]], [px0 + 60, py0 + 30, [220, 60, 50]], [px0 + 64, py0 + 34, [240, 200, 60]], [px0 + 56, py0 + 26, [40, 40, 50]]]) for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) px(bx + dx, by + dy, 22, c, [0, 0, 1]);
+  // the arm-wrestling table: a small stout table, a stool either side
+  const ax = x0 + W * 0.62;
+  slab(ax, ax + 26, mid - 12, mid + 12, 22, wood, wood);
+  for (const sx of [ax - 14, ax + 32]) slab(sx, sx + 10, mid - 4, mid + 6, 13, chrome, wood);
+  // the card room: a low partition, a round baize table, chairs round it
+  const cx0 = x0 + W * 0.8;
+  for (let Y = Ya - 8; Y < Yb; Y++) px(cx0 - 6, Y, 30, wood[3], [0, 0, 1]);
+  for (let v = 0; v < 30; v++) px(cx0 - 6, Yb, v, wood[1], [0, 1, 0]);
+  slab(cx0 + 10, cx0 + 62, mid - 18, mid + 18, 18, baize, wood);
+  for (let k = 0; k < 6; k++) px(cx0 + 22 + k * 5, mid - 4 + (k & 1) * 4, 19, [236, 232, 220], [0, 0, 1]);   // the cards
+  for (const [sx, sy] of [[cx0 + 2, mid - 6], [cx0 + 66, mid - 6], [cx0 + 30, mid - 32], [cx0 + 30, mid + 22]]) slab(sx, sx + 10, sy, sy + 10, 12, wood, wood);
 }
