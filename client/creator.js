@@ -162,7 +162,9 @@ function art(L) {
 // eyes, brows, noses and lips (people.js faceHi) and the hair its locks and sheen: the big preview at 4 px per world px
 // (the head and shoulders at 8 on the Face and Hair tabs, as CC8 shows them), a figure's thumbnail at 2, a head's at 3,
 // a face feature's at 4. The game itself draws them at 1.
-const SIZES = { full: [64, 120, 2, null], head: [60, 66, 3, [-10, -13, 10, 9]], face: [64, 44, 4, [-8, -1.5, 8, 9.5]] };   // canvas w, h, res, region
+// (the second pass drew smaller heads, C2's 3.7 heads: a face's close-up is cast at 5 over a smaller box, so it still
+// fills its thumbnail)
+const SIZES = { full: [64, 120, 2, null], head: [60, 66, 3, [-10, -13, 10, 9]], face: [64, 44, 5, [-6.4, -1.2, 6.4, 7.6]] };   // canvas w, h, res, region
 const BUST = [-10.5, -15, 10.5, 12];   // the preview's close-up: 21 x 27 world px at 8 = the canvas
 function blit(cv, G, crop) {
   const c2 = cv.getContext('2d');

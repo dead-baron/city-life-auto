@@ -65,8 +65,20 @@ test('every hairstyle, face option, mark, makeup, facial hair, build and piece d
 test('the close renders are the game\'s figure, finer: the same shape, R times the size', () => {
   for (let i = 0; i < 12; i++) {
     const A = LK.lookArt(LK.STARTERS[i].look), g = person(A, 1, 'idle', 0, { tight: true }), c = person(A, 1, 'idle', 0, { tight: true, res: 4 });
-    assert.ok(Math.abs(c.h - g.h * 4) <= 8 && Math.abs(c.w - g.w * 4) <= 8, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
+    // (the game's figure has its 1 px outline and samples whole px: up to 2.5 world px more, 10 px at 4)
+    assert.ok(Math.abs(c.h - g.h * 4) <= 10 && Math.abs(c.w - g.w * 4) <= 10, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
     assert.ok(Math.abs(c.ay - g.ay * 4) <= 6, 'the feet stay the anchor');
+  }
+});
+
+test('a held item beside the face (a rifle\'s stock at the cheek, a phone at the ear) never breaks the face', () => {
+  // (the game-scale face is stamped a whole art pixel at a time: a block may hold a held item's pixels, which have no
+  // primitive behind them)
+  for (let i = 0; i < LK.STARTERS.length; i++) {
+    const A = LK.lookArt(LK.STARTERS[i].look);
+    for (const d of [0, 1, 3, 5, 7]) for (const [pose, held, nf] of [['aim', 'sniper', 2], ['aim', 'rifle', 2], ['aimw', 'shotgun', 6], ['fish', 'fishingRod', 4], ['swing', 'bat', 6], ['idle', 'phone', 1]]) {
+      for (let f = 0; f < nf; f++) assert.doesNotThrow(() => person(A, d, pose, f, { held }), `${LK.STARTERS[i].name} ${pose} ${held} ${d} ${f}`);
+    }
   }
 });
 

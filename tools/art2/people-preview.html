@@ -5,13 +5,17 @@
      facings, &pose=walk), ?view=poses (one character, every pose x 8 facings x frames; &pose=walk2 for one pose, &dirs=...),
      ?view=crowd (40 server-like appearances through peds.js adaptApp, walking), ?view=weapons (every game weapon: rest,
      aim / swing frames), ?view=lineup (every server archetype x 6 seeds, adapted, facing SE), ?view=leisure (swimwear,
-     towels, undressed + censored), ?view=custody (the cuffed walk, face down, officers kneeling, the five-star crews). &lit=golden|noon|night lights the sheet with the Lighter on paving; &z= zoom. -->
+     towels, undressed + censored), ?view=custody (the cuffed walk, face down, officers kneeling, the five-star crews),
+     ?view=looks (the look system: the twelve starting looks, then a random look in each style, facing SW, then from
+     behind; &hair=1 every hairstyle instead, SW, N and NE). &lit=golden|noon|night lights the sheet with the Lighter on paving; &z= zoom;
+     &bake draws the game's bake (one art pixel = 2 x 2 world px, gbuf.js downsample2), as the live game shows them. -->
 <div class="wrap"><canvas id="c"></canvas><canvas id="lab"></canvas></div>
 <script type="module">
 import { person, randomPerson, ARCHETYPES, POSES } from '../../client/art2/people.js';
 import { icon, ITEM_KINDS } from '../../client/art2/items.js';
 import { adaptApp, pedSprite } from '../../client/art2/game/peds.js';
-import { GBuf, F_GROUND, F_WET } from '../../client/art2/gbuf.js';
+import { GBuf, F_GROUND, F_WET, packGBuf, downsample2 } from '../../client/art2/gbuf.js';
+import * as LK from '../../shared/look.js';
 import { groundPixel } from '../../client/art2/ground.js';
 import { Lighter, PRESETS } from '../../client/art2/light.js';
 const q = new URLSearchParams(location.search), view = q.get('view') || 'turn', lit = q.get('lit'), Z = Number(q.get('z') || (lit ? 3 : 4));
@@ -121,6 +125,15 @@ if (view === 'turn') {
   ['cop', 'swat', 'agent', 'soldier'].forEach((ar, i) => add(pedSprite(adaptApp(serverApp(ar, 2), ar), 'kneel', 2, 0, 0), 100 + i * 46, 330));
   label('the crews', 300, 284);
   [['cop', 5], ['cop', 6], ['cop', 7], ['swat', 10], ['agent', 11], ['agent', 10], ['soldier', 10]].forEach(([ar, w], i) => add(pedSprite(adaptApp(serverApp(ar, i + 1), ar), i < 3 ? 'idle' : 'aim', 7, 0, w), 310 + i * 42, 330));
+} else if (view === 'looks') {
+  // the look system (shared/look.js lookArt), as the creator and the NPCs dress people
+  if (q.get('hair')) {
+    const base = LK.decodeLook(LK.encodeLook(LK.starterFor(1))); base.outfit.hat = null; base.outfit.glasses = null; base.hair.color = 9;
+    LK.HAIR_STYLES.forEach((h, i) => { const V = LK.decodeLook(LK.encodeLook(base)); V.hair.style = i; V.body.base = h[1].includes('f') ? 'f' : 'm'; if (V.body.base === 'm') V.hair.facial = 0; const A = LK.lookArt(LK.validLook(V)); label(h[0], 4 + (i % 6) * 128, 12 + Math.floor(i / 6) * 60); [7, 4, 3].forEach((d, j) => add(person(A, d), 22 + (i % 6) * 128 + j * 38, 58 + Math.floor(i / 6) * 60)); });
+  } else {
+    const L = [...LK.STARTERS.map((s) => s.look), ...LK.STYLES.map(([k], i) => LK.validLook(LK.randomLook(7 + i * 13, i & 1 ? 'f' : 'm', k)))];
+    L.forEach((look, i) => { const A = LK.lookArt(look); add(person(A, 7), 22 + (i % 17) * 40, 50 + Math.floor(i / 17) * 112); add(person(A, 4), 22 + (i % 17) * 40, 106 + Math.floor(i / 17) * 112); });
+  }
 } else if (view === 'leisure') {
   const L = [
     { fem: true, skin: 1, hair: { style: 'pony', color: 3 }, top: { kind: 'bikini', color: 'coral' }, bottom: { kind: 'bikini', color: 'coral' }, shoeKind: 'barefoot' },
@@ -140,7 +153,14 @@ SW = Math.ceil(SW); SH = Math.ceil(SH);
 if (!lit) {
   cv.width = SW * Z; cv.height = SH * Z;
   const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.fillStyle = '#6b6f78'; g.fillRect(0, 0, cv.width, cv.height);
-  for (const c of cells) g.drawImage(c.G.toCanvas('col'), Math.round(c.x - c.G.ax) * Z, Math.round(c.y - c.G.ay) * Z, c.G.w * Z, c.G.h * Z);
+  if (q.has('bake')) {
+    // the game's bake: each sprite to art pixels (2 x 2 world px), as engine.js uploads it
+    for (const c of cells) {
+      const d = downsample2(packGBuf(c.G)), cv2 = document.createElement('canvas'); cv2.width = d.w; cv2.height = d.h;
+      const id = cv2.getContext('2d').createImageData(d.w, d.h); id.data.set(d.p0); cv2.getContext('2d').putImageData(id, 0, 0);
+      g.drawImage(cv2, Math.round(c.x - d.ax * 2) * Z, Math.round(c.y - d.ay * 2) * Z, d.w * 2 * Z, d.h * 2 * Z);
+    }
+  } else for (const c of cells) g.drawImage(c.G.toCanvas('col'), Math.round(c.x - c.G.ax) * Z, Math.round(c.y - c.G.ay) * Z, c.G.w * Z, c.G.h * Z);
 } else {
   const G = new GBuf(SW, SH);
   for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) G.put(x, y, groundPixel('paver', x, y, 3).c, [0, 0, 1], 0, null, F_GROUND | F_WET);
