@@ -3919,3 +3919,54 @@ From the user's 18:41 note (#356).
   - The corners stay at the top. The exception is an installed app on an iPhone (`display-mode: standalone`), where the clock and battery show over the page; there the corners move down by the safe area too (`--corner-top`).
 - **The banners** (a ride, custody, a robbery) sit just under the HUD, narrow enough to clear the left-hand buttons and the column on the right. The prompt and the notes stay below them.
 - Landscape and desktop are unchanged.
+
+## 2026-10-08 · Sound: SNES-style synthesised sound for everything, music only from places, and volume options
+From the owner's notes on sound design (#351): no soundtrack over the game, music that lives in the world, a bell over the old shops' doors, every action and vehicle heard, quiet peaceful moments, footsteps by surface, and options.
+- **All synthesised** (`client/sound/`): oscillators, filtered noise, FM bells and a few wavetables made once at start. No audio files, no libraries.
+  - SNES flavour: soft pulse waves, a darkened echo, gentle filtering.
+  - Nothing repeats exactly: every sound varies its pitch, timing and partials, and has a rate limit.
+- **Loaded later:** `client/audio.js` stays a small front. The sound modules load on the first tap, click or key (when the browser lets audio start). The page's first load is unchanged.
+- **Mixer and options:**
+  - Buses for effects, ambience and music, into a master with a gentle compressor.
+  - Settings → Sound: sound on/off, music on/off, and sliders for master, effects, ambience and music. Saved with the other settings (`cla.settings`, under `sound`).
+  - Sound off puts the audio to sleep (no work for a phone).
+- **Placed in the world:** every world sound is panned and faded by its distance and direction from the camera's centre. Far sounds lose their highs. Indoors, the outside is heard through the walls.
+- **A voice pool:** 14 voices on a phone, 26 on a computer. A sound asks with a priority. When all are busy it takes the weakest one's voice, never a stronger one's: a footstep never cuts off an explosion.
+- **Vehicles** (`client/sound/vehicles.js`):
+  - A running engine for the nearest vehicles (3 on a phone, 6 on a computer; yours first and loudest).
+  - Pitch and tone follow speed and throttle, through the gears.
+  - Each class its own: small car, sedan, sports car, a V8 pickup, police, van, truck, bus, motorbike, outboard boats, the jet ski, the ferries, and bicycles (a chain ticking).
+  - Horns by class. Bicycles ring a bell.
+  - Sirens: the police wail and yelp, the ambulance's hi-lo, the fire engine's slow wail. They bend in pitch as they pass (Doppler).
+  - Tyre squeal when drifting. Crashes by how hard: a scrape, a crunch, a smash with glass.
+  - An engine starting when someone gets in. Air brakes as a truck or bus stops.
+  - Trains rumble and clack over the joints; the subway roars. Level crossings ring.
+- **People and combat:**
+  - Footsteps by surface: asphalt, pavement, grass, dirt, sand, wood, metal, shallow water, indoor floors. Faster and harder running, soft sneaking. Swimming strokes.
+  - Moving fast through the woods (anyone: players, people, animals), leaves crunch and twigs snap.
+  - Every gun its own (pistol, revolver, silenced, SMG, rifle, shotgun with its pump, sniper with its bolt, the rocket's launch), the taser's crackle, the bow's twang. Bullets strike by what they hit.
+  - Punches, the baton, blades, clubs. Knockdowns, bodies falling, the dive-roll.
+  - Big layered explosions with a long tail and debris.
+- **Your own:** money in and out, the stars going up and down, a reload, the phone, the death screen's low chord.
+- **Ambience by place and time** (`client/sound/ambience.js`): crossfading slowly as you move.
+  - The city's hum, and now and then a far siren, a dog or a horn.
+  - Nature: wind in the trees, birds by day, crickets at night, now and then an owl.
+  - The sea's swell, the surf breaking at the waterline, gulls.
+  - Rain by intensity, with drops. Wind out in the wilds.
+  - A campfire's crackle (and a burning car's).
+  - The subway's rumble.
+- **Music only from places** (`client/sound/music.js`, `places.js`), all original:
+  - The title screen: a short SNES-ish tune, a soft lead over bass, arpeggio and light drums.
+  - Nightclubs, open after dark: four on the floor, muffled to the bass outside, clear inside.
+  - Some shops play light bossa; the bank, the hospital and the courthouse an elevator tune.
+  - The ma-and-pa shops (bait and tackle, hardware, pawn, fish market) play nothing, but a little bell over the door rings when anyone goes in or out. Other shops' doors sigh open.
+- **Hooks in main.js:** `soundEvent` at the top of the events switch, `soundFrame` at the end of the visuals, the Sound section in Settings. The sirens and horns moved out of `vehVisual`.
+  - A sound fault is reported once and never stops the game.
+- **Every server event has its sound** (`client/sound/events.js`). A few are data only and silent (team lists, the station clocks).
+- **Tests** (`test/sound.test.js`, 7 tests):
+  - the settings' defaults, bad values, and how they're saved;
+  - the footstep surface from map tiles, and the woods;
+  - the voice pool's limits and priorities; where a sound sits; rate limits;
+  - every event kind the server emits has its sound, and every sound it plays exists;
+  - main.js's own sound names all still sound;
+  - every vehicle has an engine class, every song is whole, and `client/sound/` isn't in the page's first load.

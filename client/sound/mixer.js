@@ -7,7 +7,7 @@
 // into the speakers. Effects also feed an echo (the SNES's famous echo buffer, short and darkened), which
 // sounds in the open send a little of themselves into.
 
-export const SOUND_DEFAULTS = Object.freeze({ on: true, music: true, master: 0.8, sfx: 0.85, amb: 0.7, mus: 0.6 });
+export const SOUND_DEFAULTS = Object.freeze({ on: true, music: true, master: 0.7, sfx: 0.8, amb: 0.6, mus: 0.7 });
 const KEYS = Object.keys(SOUND_DEFAULTS);
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 

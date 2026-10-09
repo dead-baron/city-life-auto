@@ -87,6 +87,7 @@ export class Music {
     const c = this.ctx, S = SONGS[name];
     const inp = c.createGain(), lp = c.createBiquadFilter(), pan = c.createStereoPanner ? c.createStereoPanner() : null, lvl = c.createGain();
     lp.type = 'lowpass'; lp.frequency.value = 16000; lvl.gain.value = 0;
+    inp.gain.value = 4;   // (the notes are written quiet: the songs' make-up gain)
     inp.connect(lp); if (pan) { lp.connect(pan); pan.connect(lvl); } else lp.connect(lvl);
     const d = c.createDelay(1), fb = c.createGain(), dk = c.createBiquadFilter(), send = c.createGain();
     d.delayTime.value = (60 / S.bpm) * 0.75; fb.gain.value = 0.3; dk.type = 'lowpass'; dk.frequency.value = 2200; send.gain.value = S.echo || 0;

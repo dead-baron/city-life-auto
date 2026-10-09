@@ -57,8 +57,8 @@ export class Places {
     // ---- the song for the room you're in ----
     let song = null;
     if (kind && SONG_FOR[kind] && !(QUIET_SOME.has(kind) && hash(at.u.poi + 7) < 0.35)) song = SONG_FOR[kind];
-    M.set('shop', song === 'shop' && scene === 'game' ? 0.45 : 0, 5200);
-    M.set('lobby', song === 'lobby' && scene === 'game' ? 0.45 : 0, 6000);
+    M.set('shop', song === 'shop' && scene === 'game' ? 0.5 : 0, 5200);
+    M.set('lobby', song === 'lobby' && scene === 'game' ? 0.5 : 0, 6000);
     // ---- the nearest open club ----
     let club = null, cd = CLUB_HEAR;
     for (const c of this.clubs) {

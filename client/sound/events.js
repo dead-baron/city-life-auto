@@ -81,7 +81,11 @@ export const EVENT_SOUNDS = {
   roar: (ev, A) => A.at(ev.k === 'cougar' || ev.k === 'bobcat' ? 'screech' : ev.k === 'goose' ? 'honk' : ev.k === 'moose' || ev.k === 'elk' || ev.k === 'deer' ? 'bellow' : 'growl', ev.x, ev.y),
   flush: at('flutter'),
   // ---- vehicles, explosions, fire, things breaking ----
-  crash: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: ev.p || 0.5 }); if ((ev.p || 0) > 0.45) A.at('glass', ev.x, ev.y, 0.5 + 0.5 * ev.p); },
+  crash: (ev, A) => {   // by how hard: a grinding scrape along a wall, a crunch, a smash with the glass going
+    const p = ev.p ?? 0.5;
+    if (p < 0.18) { A.at('scrape', ev.x, ev.y, 0.6 + p * 2); return; }
+    A.at('crash', ev.x, ev.y, 1, { p }); if (p > 0.45) A.at('glass', ev.x, ev.y, 0.5 + 0.5 * p);
+  },
   explode: (ev, A) => A.at('explosion', ev.x, ev.y, 1, { r: ev.r || 100 }),
   sinkboom: (ev, A) => { A.at('explosion', ev.x, ev.y, 0.5, { r: 60, wet: 1 }); A.at('splash', ev.x, ev.y, 1, { n: 40 }); },
   pop: at('tyrepop'),

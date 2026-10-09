@@ -69,7 +69,7 @@ export function createSound(ctx, prefs, { mobile = false } = {}) {
       const title = !!(titleEl && !titleEl.classList.contains('hidden')) || !!(tutEl && !tutEl.classList.contains('hidden'));   // (the title screen, the city tour)
       const was = scene;
       scene = title ? 'title' : 'game';
-      music.set('title', title && !document.hidden ? 0.55 : 0);
+      music.set('title', title && !document.hidden ? 0.7 : 0);
       if (scene !== was && scene === 'game') music.set('title', 0);
       if (document.hidden) music.silence();
       if (performance.now() - lastFrame > 2000) { veh.silence(); amb.silence(); places.music.set('club', 0); places.music.set('shop', 0); places.music.set('lobby', 0); }
