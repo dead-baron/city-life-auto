@@ -149,6 +149,16 @@ export function godRays(P, el, shafts, can, wet = 0, fog = 0, out = {}) {
   out.moteK = nat > 0 ? Math.min(1, nat) * risen * (1 - sstep(0.48, 0.7, el)) * sstep(0.35, 1.0, sunL) * (1 - Math.min(1, wet * 1.5)) * (1 - Math.min(1, fog * 1.2)) : 0;
   return out;
 }
+// What is drawn eases toward those over a few seconds (task #393, the owner: "when God rays happen they don't just pop
+// on the screen they gradually ease in"): whatever the targets do - the canopy coming into view as you walk, the sun
+// clearing the trees, rain or fog rolling in, arriving somewhere - the rays fade in and out with a time constant of
+// RAY_TAU s (95% in about three times that). A step counts at most a quarter of a second (a hitch, a tab back).
+export const RAY_TAU = 2.5;
+export function easeRays(cur, tgt, dt) {
+  const k = 1 - Math.exp(-Math.min(0.25, Math.max(0, dt || 0)) / RAY_TAU);
+  cur.shaftK += (tgt.shaftK - cur.shaftK) * k; cur.beamK += (tgt.beamK - cur.beamK) * k; cur.moteK += (tgt.moteK - cur.moteK) * k;
+  return cur;
+}
 
 // ---- GL helpers (shared with engine.js) ----------------------------------------------------------------
 export function glProgram(gl, vs, fs, attribs = ['p'], samplers = null, blocks = null) {
@@ -888,12 +898,12 @@ export class LightGame {
     // ---- god rays: the low sun's over sunlit ground (High, Ultra) and, on every tier, the beams coming down
     // through the redwood canopy. Only when the sun is low and really shining - from just after sunrise until it is
     // well up, and again from late afternoon through golden hour - each eased in and out with the sun's height and
-    // strength, so they never pop on or off as the light changes. Dust drifts in the low sun over growing ground.
-    const R = godRays(P, SD[2], T.shafts, !!(S.can && S.canTex), wet, fog, this.rays);
-    let shaftK = R.shaftK, beamK = R.beamK;
-    const moteK = R.moteK, sc = pv(P, 'sunCol');
-    if (beamK <= 0.01) beamK = 0;
-    if (shaftK <= 0.002) shaftK = 0;
+    // strength, and over a few seconds (easeRays), so they never pop on or off. They come from where the sun is now
+    // (SD: its place moves with the clock). Dust drifts in the low sun over growing ground.
+    const can = !!(S.can && S.canTex), R = easeRays(this.raysE || (this.raysE = { shaftK: 0, beamK: 0, moteK: 0 }), godRays(P, SD[2], T.shafts, can, wet, fog, this.rays), this.raysT === undefined ? 0 : S.time - this.raysT);
+    this.raysT = S.time;
+    // (what is too faint to see isn't drawn: under 1/255 at full sun)
+    const shaftK = T.shafts && R.shaftK > 0.002 ? R.shaftK : 0, beamK = can && R.beamK > 0.002 ? R.beamK : 0, moteK = R.moteK > 0.002 ? R.moteK : 0, sc = pv(P, 'sunCol');
     if (shaftK > 0 || beamK > 0) {
       const ux = SD[0], uy = SD[1] - SD[2], ul = Math.hypot(ux, uy) || 1;
       p = this.prog('shaft'); u = p.u;

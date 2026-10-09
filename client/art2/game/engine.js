@@ -80,6 +80,7 @@
 //   Decals on decks need z0. Lights are world px; static lights from chunks must be added each frame.
 import { F_GROUND, F_LEAF, packGBuf, octEncode, OCT_MID, downsample2, downsampleUnder, ART_PX, CHUNK_RUN } from '../gbuf.js';
 import { LightGame, LIGHT_TIERS, MAX_LIGHTS, LIGHT_FLOATS, PRESETS_GAME, PRESET_DEFAULTS, blendPresets, glProgram, glTex, glFbo, TRI_VS, GLSL_COMMON } from './lightgame.js';
+import { canopyReach } from './canopy.js';
 export { PRESETS_GAME, PRESET_DEFAULTS, blendPresets, LIGHT_TIERS, ART_PX };
 
 export const CHUNK_PX = 768;
@@ -480,12 +481,13 @@ export class Art2Engine {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this.tCan = t;
   }
-  // is any of the canopy over the view (with the reach of its shade)? the light skips it when not
+  // does any of the canopy's light fall on the view (canopy.js canopyReach: its shade, flecks and beams, swept away
+  // from the sun)? the light skips it when not
   _canopyInView() {
     const c = this.canopy;
     if (!this.tCan || !c) return false;
-    const m = 900;
-    return this.ox + this.SW > c.x0 - m && this.ox < c.x0 + c.w * c.cell + m && this.oy + this.SH > c.y0 - m && this.oy < c.y0 + c.h * c.cell + m;
+    const r = canopyReach(c, this.P.sunDir || PRESET_DEFAULTS.sunDir, this._reach || (this._reach = [0, 0, 0, 0]));
+    return this.ox + this.SW > r[0] && this.ox < r[2] && this.oy + this.SH > r[1] && this.oy < r[3];
   }
 
   // ---- quality, size, lifecycle -----------------------------------------------------------------------------
