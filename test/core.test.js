@@ -1019,7 +1019,7 @@ test('unstuck: hold still and you are nudged to open ground; refused while wante
   assert.equal(p.wanted, 0);
   assert.ok(!p.ped.dead);
   assert.ok(prof.cash < 300, 'fined');
-  assert.ok(p.custody && p.custody.stage === 'cell' && p.ped.hidden, 'in a cell');
+  assert.ok(p.custody && p.custody.stage === 'cell' && !p.ped.hidden && p.custody.cell, 'in a cell (a real one, in plain sight: cells.test.js)');
   assert.match(unstuck.surrender(w, p), /cell/, 'no surrendering from a cell');
   run(w, JAIL_S + 1);
   assert.ok(!p.custody && !p.ped.hidden, 'let out');
