@@ -220,12 +220,13 @@ const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
 
 // The giant redwoods' fade ids (statics.js TREE_FADE + the prop's index) and their outlines: the half width (px) a
 // tree covers in each 40 px of its height, from its foot up - the flared foot, the trunk, then the crown from about
-// half way up - measured from the art (redwoods.js giantRedwood: where a third or more of nine trees is covered).
-// The host fades one only when it's in front of you (_treeCovers).
+// half way up - measured from the art (redwoods.js giantRedwood: where a third or more of nine trees is covered;
+// the giant's top band again when its dead tops went, task #399). The host fades one only when it's in front of you
+// (_treeCovers).
 const TREE_FADE = 1e6;
 const RW_OUTLINE = {
   giantL: [112, 80, 72, 64, 64, 64, 64, 64, 64, 104, 136, 144, 144, 136, 104, 88, 88, 80],
-  giant: [80, 56, 56, 56, 48, 48, 48, 48, 104, 128, 128, 112, 88, 80, 72, 16],
+  giant: [80, 56, 56, 56, 48, 48, 48, 48, 104, 128, 128, 112, 88, 80, 72, 64],
   giantS: [64, 40, 40, 40, 40, 40, 40, 88, 104, 96, 80, 72, 56],
   redwood2: [24, 16, 80, 80, 72, 64, 56, 48, 16],
 };
