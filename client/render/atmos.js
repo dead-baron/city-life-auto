@@ -63,6 +63,19 @@ export function fogAt(lt, minutes) {
   return { k, spread };
 }
 
+// The sea sparkling at night (art v2 lightgame.js waterSurf: plankton lit blue by the churn of the breaking waves and
+// the swash, the odd speck twinkling as it drifts in): only some nights - one in four, hashed from the night (lt: the
+// clock counting the days, as fogAt), so everyone has the same nights - and along some stretches of shore (the
+// shader's noise over the world, shifted by the night's seed), in from 20:30, gone by 05:30. (Task #392, the owner:
+// "might be too much since it's everywhere and during every night".) -> out [strength 0..1, the night's seed 0..1]
+export const BIO_NIGHTS = 0.25;
+export function bioAt(lt, minutes, out = [0, 0]) {
+  const n = Math.floor(lt / DAY_LOOP_S), t = minutes >= 1230 ? (minutes - 1230) / 60 : minutes < 330 ? (330 - minutes) / 60 : 0;
+  out[0] = hash(n, 911) < BIO_NIGHTS ? smooth(Math.max(0, Math.min(1, t))) * (0.65 + 0.35 * hash(n, 912)) : 0;
+  out[1] = hash(n, 913);
+  return out;
+}
+
 // The whole sky at (loopTime, minutes) with rain 0..1 (how wet it's been raining).
 export function skyAt(loopTime, minutes, rain = 0) {
   let i = 0;

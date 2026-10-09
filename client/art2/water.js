@@ -759,6 +759,9 @@ export { detectFeatures };
 // One pixel of water in world coordinates; the result lands in WP (c: a colour - shared, copy it; nx, ny: the
 // normal's tilt; e: a glint 0..255 for the emissive map). d: px from the waterline (0 at the edge; pass 99
 // when far), dd: depth 0 (shallow) .. 1 (deep), shore: 1 a sandy beach nearby, 2 a quay or seawall, 0 other.
+// The sea and the lakes have no glints of their own any more (one crest pixel in 40 used to glow): baked into the
+// map, they shone on all the water every night like a bioluminescence nobody asked for (task #392). The sun glints
+// off the waves in the light itself (lightgame.js waterSurf), and so does the sea's sparkle on the nights it comes.
 export const WP = { c: null, nx: 0, ny: 0, e: 0 };
 const WMIX = [0, 0, 0];
 const mixInto = (a, b, k) => { WMIX[0] = a[0] + (b[0] - a[0]) * k; WMIX[1] = a[1] + (b[1] - a[1]) * k; WMIX[2] = a[2] + (b[2] - a[2]) * k; return WMIX; };
@@ -783,7 +786,6 @@ export function seaPx(X, Y, d, dd, shore = 0, seed = 13) {
   const net = edge < (dd < 0.35 ? 1.05 : 0.75 * (0.4 + swell));
   if (net) {
     c = d < 30 ? sd(WATER.foam, 0.28 + (1 - edge) * 0.35 + (d < 14 ? 0.15 : 0), X, Y, 0.4) : sd(pal, Math.min(1, t + (dd < 0.35 ? 0.32 : 0.2)), X, Y, 0.5);
-    if (hh(X, Y, seed) > 0.975) WP.e = 120;
   } else if (shore === 1 && d < 16) c = mixInto(c, sd(SEABED, 0.55 + fine * 0.3, X, Y, 0.6), (1 - d / 16) * 0.55);     // clear water over sand
   if (shore === 2) { if (d < 1.6) c = sd(WATER.foam, 0.45, X, Y, 0.4); else if (d < 6 && !net) c = sd(pal, t - 0.18, X, Y, 0.6); }   // calm at a quay wall
   else if (d < 18) {                                  // the wash: foam at the waterline, a broken scalloped band beyond
@@ -815,7 +817,6 @@ export function stillPx(X, Y, d, dd, kind = 0, bottom = 0, seed = 17) {
     c = mixInto(bed, c, Math.min(1, 0.35 + d / 12 * 0.65));
   }
   if (d < 1.4) c = mixInto(c, [200, 226, 220], 0.35);
-  if (lat && hh(X, Y, seed) > 0.985) WP.e = 90;
   WP.c = c; WP.nx = (fine - 0.5) * 0.08; WP.ny = (big - 0.5) * 0.1;
   return WP;
 }

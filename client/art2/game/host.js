@@ -33,7 +33,7 @@ import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
-import { MAP_W, MAP_H, TILE, K, PF, VF } from '../../../shared/constants.js';
+import { MAP_W, MAP_H, TILE, K, PF, VF, DAY_LOOP_S } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/map.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -44,6 +44,7 @@ import { dir8 } from '../../render/chars.js';
 import { lampHead } from '../../render/tiles.js';
 import { countryLightY } from '../../render/country.js';
 import { wind } from '../../render/flora/wind.js';
+import { bioAt } from '../../render/atmos.js';
 import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
@@ -482,7 +483,9 @@ export class World2 {
     E.swayOn = this.gfx.wind !== false;
     const Wd = this.windArr || (this.windArr = [0, 0, 1, 0]);
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, windT: S.loopTime || F.now, air: wind.air }) === false) return;
+    // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
+    const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, windT: S.loopTime || F.now, air: wind.air, bio }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');

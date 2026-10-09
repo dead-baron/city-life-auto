@@ -1103,6 +1103,7 @@ function devPress(b, label, run) {
 function devLocal(c, extra) {
   if (c === '@bolt') { if (S.wx) S.wx.strike(Math.random() < 0.5); }   // (a bolt you can see: a near strike half the time)
   else if (c === '@fog') S.fogForce = extra ? { k: extra.k, spread: extra.spread } : null;
+  else if (c === '@bio') S.bioForce = extra ? [extra.k, 0.5] : null;   // (the sea's sparkle whatever the night: art2 host.js)
 }
 // Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team
 // and friends are testing; if the server asks for one after all, its prompt opens).

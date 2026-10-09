@@ -276,6 +276,8 @@ uniform int nL;
 uniform highp usampler2D tTiles;   // per ${TILE} px tile: count, then up to ${TILE_K - 1} light indices
 uniform vec2 worg;                 // the world px of scene texel (0, 0): water and rain are anchored to the world
 uniform vec4 wind4;                // the wind: strength, gustiness, direction x, y (render/flora/wind.js)
+uniform vec2 bio;                  // the sea's sparkle tonight: strength (0 most nights), the night's seed (atmos.js bioAt)
+vec3 bioGlow = vec3(0.0);          // (waterSurf: the sparkle here, light of its own - added after the light)
 struct Light { vec4 pos; vec4 col; vec4 cone; };
 layout(std140) uniform Lights { Light L[MAXL]; };
 ${GLSL_COMMON}
@@ -350,6 +352,18 @@ float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 
       else if (ds < reach) alb *= 0.88;                            // still wet from the last wave
     }
     if (foam > bayer4(wq) + 0.5) alb = mix(alb, vec3(0.86, 0.9, 0.93), 0.85);
+    // the sea's sparkle, the nights it comes (task #392): on tonight's stretches of shore (a noise over the world,
+    // shifted by the night) the breaking wave, the swash's front and - fainter - the lapping edge glow blue, plankton
+    // lit by the churn, and the odd speck twinkles as it drifts and bobs in the water near the shore
+    if (bio.x > 0.0) {
+      float pk = smoothstep(0.56, 0.72, wnoise(w * vec2(0.0019, 0.0026) + bio.y * vec2(97.0, 61.0)));
+      if (pk > 0.0) {
+        vec2 sq = w * 0.25 + vec2(sin(t * 0.6 + w.y * 0.02) * 1.5, t * 0.9);
+        float h = hash2(ivec2(floor(sq)) + ivec2(73, 19)), tw = 0.5 + 0.5 * sin(t * (1.5 + h * 4.0) + h * 50.0);
+        float spk = sd > 0.0 ? step(0.95, h) * tw * tw * (1.0 - sd / 47.0) : 0.0;
+        bioGlow = vec3(0.12, 0.62, 1.0) * (max(foam * (sd >= 0.0 && foam <= 0.7 ? 0.65 : 1.0), spk) * bio.x * pk);
+      }
+    }
   }
   return glint;
 }
@@ -515,7 +529,7 @@ void main(){
   if ((fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0) fallingWater(alb, w);
   o0 = shade(alb, n, fl, sh, plight, refl, C.rgb, wq);
   float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * sh + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
-  if (add > 0.0) o0.rgb = min(o0.rgb + vec3(add), vec3(1.0));
+  if (add > 0.0 || bioGlow.b > 0.0) o0.rgb = min(o0.rgb + vec3(add) + bioGlow, vec3(1.0));
 }`;
 
 // Low: the lights at half resolution. lighth lights the top-left texel of each 2 x 2 block: rgb = point
@@ -571,7 +585,7 @@ void main(){
   if ((fl & ${F_WATER}) != 0 && (fl & ${F_GROUND}) == 0) fallingWater(alb, w);
   o0 = shade(alb, n, fl, LH.a, LH.rgb * LH.rgb * 8.0, R.rgb * R.rgb * 4.0, C.rgb, wq);
   float add = gl * clamp(max(sunCol.r, sunCol.g) * 0.8, 0.0, 1.0) * LH.a + rainMarks(w, (fl & ${F_WATER}) != 0, n.z);
-  if (add > 0.0) o0.rgb = min(o0.rgb + vec3(add), vec3(1.0));
+  if (add > 0.0 || bioGlow.b > 0.0) o0.rgb = min(o0.rgb + vec3(add) + bioGlow, vec3(1.0));
 }`;
 
 // bloom source at half size: glow + whatever is brighter than the threshold
@@ -857,6 +871,7 @@ export class LightGame {
     gl.uniform1i(u.nL, S.nL);
     if (u.worg) gl.uniform2f(u.worg, S.worg ? S.worg[0] : 0, S.worg ? S.worg[1] : 0);
     if (u.wind4) { const W = S.wind; gl.uniform4f(u.wind4, W ? W[0] : 0.1, W ? W[1] : 0.3, W ? W[2] : 1, W ? W[3] : 0); }
+    if (u.bio) gl.uniform2f(u.bio, S.bio ? S.bio[0] : 0, S.bio ? S.bio[1] : 0);
     this.canUniforms(u, S.can, S.air);
   }
   canUniforms(u, c, air) {

@@ -30,7 +30,9 @@
 //     cannot blend), in whole art pixels.
 //   - o.shadow === false stops the sprite casting a shadow; o.flash whitens it and adds glow; o.air marks it as
 //     up in the air (birds: no mirror image in wet ground or water).
-//   - f.wet / f.flash / f.fog (optional) raise the preset's wet, lightning flash and fog.
+//   - f.wet / f.flash / f.fog (optional) raise the preset's wet, lightning flash and fog; f.air (render/flora/wind.js
+//     air: how far the air has carried things - the canopy's leaf clumps, the fog), f.bio (the sea's sparkle tonight:
+//     render/atmos.js bioAt).
 //   - onContextLost(cb): cb('lost') on loss, cb('restored') once rebuilt (every chunk and sprite must be
 //     uploaded again: has* return false), cb('failed') if the rebuild fails.
 //   - The WebGL2 context also asks for depth: false, stencil: false (the engine owns its depth buffer).
@@ -745,6 +747,7 @@ export class Art2Engine {
     if (f.fades !== undefined) this.fades = f.fades;
     this.wind = f.wind || null; this.windT = f.windT ?? this.time; // [strength, gustiness, dir x, dir y], the wind clock (s)
     this.air = f.air || null;                                      // how far the air has carried things (wind.js air)
+    this.bio = f.bio || null;                                      // the sea's sparkle tonight: [strength, seed] (atmos.js bioAt)
     this.zoom = f.zoom > 0 ? f.zoom : 1; this.camX = +f.camX || 0; this.camY = +f.camY || 0;
     // margins: the shadow reach on the side the sun is, room above for wet reflections, a little slack
     const sd = P.sunDir || PRESET_DEFAULTS.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]) || 1, sz = sd[2] / sl;
@@ -836,7 +839,7 @@ export class Art2Engine {
     const LS = this.LS;
     LS.A = this.tA; LS.B = this.tB; LS.C = this.tC; LS.w = this.SW; LS.h = this.SH; LS.preset = this.P;
     LS.wet = this.wet; LS.time = this.time; LS.flash = this.flash; LS.fog = this.fog;
-    const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind; LS.air = this.air;
+    const WO = LS.worg || (LS.worg = [0, 0]); WO[0] = this.ox; WO[1] = this.oy; LS.wind = this.wind; LS.air = this.air; LS.bio = this.bio;
     LS.can = this._canopyInView() ? this.canopy : null; LS.canTex = this.tCan;
     LS.nL = this._packLights(); LS.ubo = this.uboBuf; LS.out = this.fbOut; LS.mark = this.profile ? this._mark : null;
     this.light.bin(this.ubo, LS.nL, this.SW, this.SH, Math.max(this.P.wet ?? 0, this.wet) > 0);
