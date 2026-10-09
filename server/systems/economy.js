@@ -18,6 +18,7 @@ import * as gang from './gang.js';
 import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
+import * as hotmoney from './hotmoney.js';
 
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
@@ -331,6 +332,7 @@ export function buildMenu(world, p, poi) {
       break;
     default: break;
   }
+  hotmoney.menuOpts(world, p, poi, opts);   // the robbery bag: banked far from the robbery, stashed at home, fenced
   if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
   return { t: 'menu', poi: poi.id, title, sub, opts, cash: prof.cash, bank: prof.bank, interior };
 }
@@ -385,6 +387,7 @@ function execute(world, p, poi, opt) {
   if (valid.dis) return 'Not available.';
   switch (parts[0]) {
     case 'close': return null;
+    case 'hot': return hotmoney.execute(world, p, poi, parts[1]);
     case 'trainjob': return trains.startTrainJob(world, p);
     case 'w': {
       const id = parts[1], price = Number(parts[2]);

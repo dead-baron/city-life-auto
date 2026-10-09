@@ -44,6 +44,10 @@ export class HUD {
     $('hp-fill').classList.toggle('low', hpPct < 30);
     $('cash').textContent = '$' + me.cash.toLocaleString();
     $('bank').textContent = `BANK $${me.bank.toLocaleString()}`;
+    // hot money: a robbery's takings in the bag, under the cash (server hotmoney.js)
+    const hot = $('hot');
+    hot.classList.toggle('hidden', !(me.hot > 0));
+    if (me.hot > 0) hot.textContent = `HOT $${me.hot.toLocaleString()}`;
     const st = [];
     if (me.bleeding) st.push('<span class="bad">BLEEDING</span>');
     if (me.peak > 0) st.push(`RECORD ${'★'.repeat(me.peak)}${me.disguised ? ' (DISGUISED)' : ''}`);
@@ -91,9 +95,12 @@ export class HUD {
     if (me.job) { jb.textContent = '▶ ' + me.job.text; jb.classList.remove('hidden'); } else jb.classList.add('hidden');
     const rb = $('rob');
     if (me.rob) {
-      rb.classList.remove('hidden'); rb.classList.toggle('alarm', !!me.rob.alarm);
-      $('rob-fill').style.width = Math.round(me.rob.warm * 100) + '%';
-      $('rob-take').textContent = me.rob.alarm ? `ALARM! $${me.rob.take} - get out!` : me.rob.warm < 1 ? 'Hands up...' : `$${me.rob.take}`;
+      // (the bar: the hands going up, then what's left in the till - server robbery.js hudFor)
+      const r = me.rob, left = r.full ? Math.max(0, r.left / r.full) : 1;
+      rb.classList.remove('hidden'); rb.classList.toggle('alarm', !!r.alarm); rb.classList.toggle('till', r.warm >= 1);
+      $('rob-fill').style.width = Math.round((r.warm < 1 ? r.warm : left) * 100) + '%';
+      $('rob-take').textContent = r.duck ? `HOT $${r.take} - police outside!` : r.alarm ? `ALARM! HOT $${r.take} - get out!` : r.warm < 1 ? 'Hands up...'
+        : r.empty ? `HOT $${r.take} - the till's empty` : `HOT $${r.take} · till $${r.left ?? 0}`;
     } else rb.classList.add('hidden');
     // riding a train: next stop, the tunnel, the strongbox
     const tb = $('trainbar'), tr = me.train, cu = me.custody;

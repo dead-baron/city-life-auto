@@ -7,6 +7,7 @@ import { localToWorld, circleVsObb } from '../../shared/math.js';
 import { collideCircle } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import * as law from './law.js';
+import * as hotmoney from './hotmoney.js';
 
 const GRAV = 620;
 
@@ -214,6 +215,7 @@ export function nearestBag(world, ped, skipCash = false) {
 }
 
 export function lootBag(world, p, bag) {
+  if (bag.hot) { hotmoney.pickUp(world, p, bag); return; }   // a robbery bag: still hot money
   const prof = p.profile;
   prof.cash += bag.cash;
   for (const [k, n] of Object.entries(bag.items)) prof.inventory[k] = (prof.inventory[k] || 0) + n;
@@ -237,6 +239,7 @@ export function lootBag(world, p, bag) {
 
 // What the interact prompt says over a bag (players.findInteraction)
 export function bagLabel(bag, p) {
+  if (bag.hot) return hotmoney.bagLabel(bag, p);
   if (bag.pack) {
     const T = PACK_TIERS[bag.tier];
     if (bag.ownerPid && p && bag.ownerPid === p.pid) return `Pick up your ${T.name}`;
@@ -271,6 +274,7 @@ export function dropEverything(world, ped, ownerName) {
   if (ped.carrying) dropCrate(world, ped);
   const p = ped.player;
   if (!p) return null;
+  hotmoney.drop(world, ped, ownerName);   // the robbery bag, still hot (hotmoney.js)
   const prof = p.profile;
   const items = {}, weapons = {};
   let itemValue = 0, n = 0;

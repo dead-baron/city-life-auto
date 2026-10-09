@@ -15,6 +15,7 @@ import * as combat from './combat.js';
 import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import * as custody from './custody.js';
+import * as standoff from './standoff.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
@@ -407,6 +408,9 @@ function runUnit(world, v, dt) {
   // the suspect's car at a standstill (not out on the water, not up on the deck): up to 4 stars they're dragged out of it
   const car = t.vehId ? world.get(t.vehId) : null;
   const parked = !!car && p.wanted <= 4 && car.def.kind !== 'boat' && !(car.lz > 0.3) && !car.ferry && stillFor(world, car) > 1.2;
+  // holed up in the place they robbed: a standoff (standoff.js) - the cars to spots round the building, never at it
+  const so = standoff.of(world, p);
+  if (so && ai.mode === 'drive') { standoff.drive(world, v, crew, so, dt); return; }
 
   if (ai.mode === 'drive') {
     if (!driver || driver.dead) { ai.mode = 'foot'; for (const c of crew) if (c.vehId) vehicles.ejectPed(world, c, true); return; }
@@ -442,6 +446,7 @@ function runUnit(world, v, dt) {
   const farOK = now - (ai.footAt || 0) > 8 && !walkInAt(world.map, t.x, t.y);
   for (const c of crew) {
     if (c.vehId || c.npc.war) continue; // busy in a gang fight (gangwar.js drives them)
+    if (so && standoff.hold(world, c, v, so, p, hot, dt)) continue;   // in cover or at a post round the building (the rest go in)
     const d = Math.hypot(t.x - c.x, t.y - c.y), n = c.npc;
     let inp;
     // back to the car (or bike) and after them: the suspect drove off, or they're a long way off on foot and the car is
