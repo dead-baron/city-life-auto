@@ -61,6 +61,17 @@ export function init(hooks) {
     const lab = e.target.closest('.cc-row')?.querySelector('.cc-lab b'); if (lab) lab.textContent = LK.HEIGHT_NAMES[look.body.height];
   });
   root.addEventListener('change', (e) => { if (e.target.dataset.act === 'height') { commitHeight(); renderPage(); } });
+  // a drag across the preview turns it (a direction each 28 px)
+  const pv = root.querySelector('.cc-prev');
+  let dragX = null;
+  pv.style.touchAction = 'pan-y';
+  pv.addEventListener('pointerdown', (e) => { dragX = e.clientX; lastTouch = performance.now(); });
+  pv.addEventListener('pointermove', (e) => {
+    if (dragX === null) return;
+    const d = e.clientX - dragX;
+    if (Math.abs(d) >= 28) { dir = (dir + (d > 0 ? 1 : -1) + 8) % 8; dragX = e.clientX; lastTouch = performance.now(); drawPreview(); }
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) pv.addEventListener(ev, () => { dragX = null; });
   root.addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT' && e.target.type === 'text' && e.key === 'Enter') { e.preventDefault(); act(e.target.dataset.enter || 'sv-save'); } });
 }
 
@@ -396,8 +407,8 @@ function renderPage() {
       + fr2('brows', 'Brows') + fr2('nose', 'Nose') + fr2('lips', 'Lips')
       + row('Marks', `<div class="cc-grid fc">${[['freckles', 'Freckles'], ['mole', 'Beauty mark'], ['dimples', 'Dimples']].map(([k, n]) => `<button class="cc-card fc ${F[k] ? 'on' : ''}" data-act="ftog" data-v="${k}">${th(variant((V) => { V.face[k] = 1; V.outfit.glasses = null; V.outfit.hat = null; }), 'face')}<span>${F[k] ? '✓ ' : ''}${n}</span></button>`).join('')}</div>`);
   } else if (tab === 'hair') {
-    const LEN = { bald: 's', buzz: 's', short: 's', slick: 's', spiky: 's', curly: 's', undercut: 's', fade: 's', cornrows: 's', pixie: 's', curtains: 's', mohawk: 's' };
-    const lenOf = (st) => LEN[st] ? 'short' : ['long', 'wavy', 'braids', 'dreads', 'curlylong', 'braid', 'halfup'].includes(st) ? 'long' : 'medium';
+    const LEN = { bald: 's', buzz: 's', short: 's', slick: 's', spiky: 's', curly: 's', undercut: 's', fade: 's', cornrows: 's', pixie: 's', curtains: 's', mohawk: 's', sides: 's', sidepart: 's', quiff: 's' };
+    const lenOf = (st) => LEN[st] ? 'short' : ['long', 'wavy', 'braids', 'dreads', 'boxbraids', 'curlylong', 'braid', 'halfup'].includes(st) ? 'long' : 'medium';
     const styles = LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && (hairLen === 'all' || lenOf(s[2]) === hairLen));
     h = row('Hair length', ['all', 'short', 'medium', 'long'].map((k) => chip('hlen', k, k[0].toUpperCase() + k.slice(1), hairLen === k)).join(''))
       + row('Hairstyle', `<div class="cc-grid">${styles.map(([s, i]) => `<button class="cc-card hd ${L.hair.style === i ? 'on' : ''}" data-act="hair" data-v="${i}">${th(variant((V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }), 'head')}<span>${esc(s[0])}</span></button>`).join('')}</div>`)
