@@ -868,12 +868,13 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-sw { width: 26px; height: 26px; border-radius: 5px; border: 2px solid rgba(7,11,22,.9); box-shadow: 0 0 0 1px rgba(226,189,87,.25); cursor: pointer; padding: 0; touch-action: manipulation; }
 #creator .cc-sw.on { box-shadow: 0 0 0 2px var(--rim), 0 0 0 4px var(--ink); transform: scale(1.12); }
 #creator .cc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 6px; }
+#creator .cc-opts > .cc-grid { flex: 1 1 100%; width: 100%; }
 #creator .cc-grid.big { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
 #creator .cc-card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 3px 5px; background: #0f1830; border: 2px solid rgba(226,189,87,.2); border-radius: 6px; cursor: pointer; color: #e9edf8; font: 11px var(--pixel); line-height: 1.15; text-align: center; touch-action: manipulation; min-height: 60px; }
 #creator .cc-card span { overflow-wrap: anywhere; }
 #creator .cc-card.on { border-color: var(--rim); background: linear-gradient(180deg, rgba(226,189,87,.3), rgba(226,189,87,.08)); color: #fff; }
 #creator .cc-th { width: 48px; height: 78px; image-rendering: pixelated; image-rendering: crisp-edges; }
-#creator .cc-th.head { width: 48px; height: 48px; }
+#creator .cc-th.head { width: 56px; height: 56px; }
 #creator .cc-grid.big .cc-th { width: 64px; height: 104px; }
 #creator .cc-q { font: 700 52px var(--pixel); color: var(--rim); line-height: 104px; height: 104px; }
 #creator .cc-note { font: 13px var(--pixel); color: #b8c0d8; margin: 0 0 8px; }
@@ -891,6 +892,16 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-range { width: min(320px, 100%); accent-color: var(--rim); }
 #creator .pfocus { outline: 3px solid #fff; outline-offset: 1px; box-shadow: 0 0 0 5px var(--rim) !important; }
 #creator.cc-start .cc-left { flex-basis: 30%; }
+/* the quick-change wheel (CC10): the saved looks round a ring, the one picked large on the left */
+#creator .cc-ring { position: relative; width: min(100%, 440px); aspect-ratio: 1; margin: 4px auto 8px; border-radius: 50%; background: radial-gradient(circle, rgba(34,50,94,.9) 0 30%, rgba(15,24,48,.6) 31% 62%, transparent 63%); box-shadow: inset 0 0 0 2px rgba(226,189,87,.25); }
+#creator .cc-rb { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; padding: 0; color: var(--cream); font: 12px var(--pixel); touch-action: manipulation; }
+#creator .cc-rb .cc-th { width: 62px; height: 62px; border-radius: 50%; background: #0f1830; border: 3px solid rgba(226,189,87,.45); }
+#creator .cc-rb span { background: #0b1226; border: 2px solid rgba(226,189,87,.5); border-radius: 5px; padding: 2px 7px; white-space: nowrap; }
+#creator .cc-rb.on .cc-th { border-color: var(--rim); box-shadow: 0 0 0 3px var(--ink), 0 0 14px rgba(255,207,64,.6); }
+#creator .cc-rb.on span { background: linear-gradient(180deg, #ffe08a, #e2bd57); color: #1a1206; }
+#creator .cc-rc { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 8px; font: 700 14px var(--pixel); color: var(--cream); }
+#creator .cc-rc .cc-btn { padding: 4px 10px; }
+#creator .cc-info { text-align: center; border: 2px solid rgba(226,189,87,.4); border-radius: 6px; padding: 8px; background: rgba(7,11,22,.6); }
 /* phones upright: the preview on top, smaller; the controls below */
 @media (orientation: portrait), (max-width: 640px) {
   #creator .cc-body { flex-direction: column; }

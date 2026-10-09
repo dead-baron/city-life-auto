@@ -17,7 +17,7 @@ let look = null, hist = [], mode = 'edit', tab = 'body';
 let dir = 0, fr = 0, animT = 0, raf = 0;
 let state = { cur: null, picked: true, saved: [] };
 let outStyle = '', outSlot = 'top', outBase = null, ctarget = 'c', hairLen = 'all';
-let startPick = 0, startRandomSeed = 1, renaming = -1, focusEl = null, seedN = 1;
+let startPick = 0, startRandomSeed = 1, renaming = -1, focusEl = null, seedN = 1, wheelSel = 0;
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const code = (L = look) => LK.encodeLook(L);
@@ -58,16 +58,19 @@ export function open(m = 'edit', st = null) {
   look = cur || LK.starterFor(0);
   hist = []; renaming = -1;
   if (mode === 'start') { startPick = 0; look = clone(LK.STARTERS[0].look); }
+  if (mode === 'wheel') { wheelSel = Math.max(0, (state.saved || []).findIndex((s) => s.c === state.cur)); const s = (state.saved || [])[wheelSel]; if (s) look = LK.decodeLook(s.c) || look; }
   tab = 'body'; outBase = null;
   if (C.topOverlay() !== 'creator') C.openOverlay('creator');
   render();
+  setFocus(null);
   loop();
 }
 export function onState(st) {
   state = st;
-  if (C.topOverlay() === 'creator' && mode === 'edit' && tab === 'saved') renderPage();
+  if (C.topOverlay() === 'creator' && ((mode === 'edit' && tab === 'saved') || mode === 'wheel')) renderPage();
 }
 function close(apply) {
+  if (mode === 'wheel') apply = false;   // (the wheel puts a look on with Apply)
   if (apply && look) C.send({ t: 'look', a: 'set', c: code() });
   cancelAnimationFrame(raf); raf = 0;
   if (C.topOverlay() === 'creator') C.closeOverlay('creator');
@@ -113,7 +116,8 @@ function blit(cv, G, scale, crop) {
   let sx = 0, sw = G.w, sh = G.h;
   if (crop === 'head') { sw = Math.min(G.w, 22); sx = Math.max(0, Math.min(G.w - sw, Math.round(G.ax - sw / 2))); sh = Math.min(G.h, 22); }
   const avail = crop === 'head' ? cv.height : cv.height - 6;
-  const s = Math.max(1, Math.min(scale, Math.floor(Math.min(cv.width / sw, avail / sh))));
+  // (the height decides the scale: a wide brim or a held bag may run off the sides)
+  const s = Math.max(1, Math.min(scale, Math.floor(crop === 'head' ? Math.min(cv.width / sw, avail / sh) : Math.min(cv.width / Math.min(sw, 30), avail / sh))));
   const x = crop === 'head' ? Math.round((cv.width - sw * s) / 2) : Math.round(cv.width / 2 - (G.ax - sx) * s);
   const y = crop === 'head' ? Math.round((cv.height - sh * s) / 2) : Math.round(cv.height - 6 - G.ay * s);
   if (crop !== 'head') { c2.fillStyle = 'rgba(0,0,0,.35)'; c2.beginPath(); c2.ellipse(cv.width / 2, cv.height - 6, 7 * s, 2.2 * s, 0, 0, 6.283); c2.fill(); }
@@ -126,7 +130,7 @@ function drawPreview() {
   try { G = person(art(look), dir, 'idle', fr, { tight: true }); } catch (e) { console.warn('[creator] preview', e); }
   blit(cv, G, 4);
   const pn = root.querySelector('.cc-pname');
-  if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir];
+  if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : mode === 'wheel' ? ((state.saved || [])[wheelSel] || {}).n || '' : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir];
 }
 function loop() {
   cancelAnimationFrame(raf);
@@ -167,11 +171,13 @@ const th = (L, crop = 'full') => { TH.push([L, crop]); return `<canvas class="cc
 // ---- the screens ----------------------------------------------------------------------------------------------------------
 const TABS = [['body', 'Body'], ['face', 'Face'], ['hair', 'Hair'], ['outfit', 'Outfit'], ['extras', 'Extras'], ['saved', 'Saved looks']];
 function render() {
-  root.querySelector('.cc-title').textContent = mode === 'start' ? 'CHOOSE YOUR STARTING LOOK' : 'CHARACTER CREATOR';
+  root.querySelector('.cc-title').textContent = mode === 'start' ? 'CHOOSE YOUR STARTING LOOK' : mode === 'wheel' ? 'QUICK CHANGE' : 'CHARACTER CREATOR';
   root.classList.toggle('cc-start', mode === 'start');
-  root.querySelector('.cc-tabs').innerHTML = mode === 'start' ? '' : TABS.map(([k, n]) => `<button class="cc-tab ${k === tab ? 'on' : ''}" data-act="tab" data-v="${k}">${n}</button>`).join('');
+  root.classList.toggle('cc-wheelmode', mode === 'wheel');
+  root.querySelector('.cc-tabs').innerHTML = mode !== 'edit' ? '' : TABS.map(([k, n]) => `<button class="cc-tab ${k === tab ? 'on' : ''}" data-act="tab" data-v="${k}">${n}</button>`).join('');
   root.querySelector('.cc-foot').innerHTML = mode === 'start'
     ? `<button class="cc-btn" data-act="make-yours">Make it yours</button><button class="cc-btn gold" data-act="play-as">Play as they are</button>`
+    : mode === 'wheel' ? `<button class="cc-btn" data-act="close">Close</button><button class="cc-btn" data-act="mirror">The mirror</button><button class="cc-btn gold" data-act="wh-apply" ${(state.saved || []).length ? '' : 'disabled'}>Apply</button>`
     : `<button class="cc-btn" data-act="random">Randomise</button><button class="cc-btn" data-act="undo" ${hist.length ? '' : 'disabled'}>Undo</button><button class="cc-btn" data-act="save">Save look</button><button class="cc-btn gold" data-act="done">Done</button>`;
   drawPreview();
   renderPage();
@@ -193,6 +199,14 @@ function renderPage() {
     h = `<p class="cc-note">Pick who you'll be. You can change everything later from the pause menu (Appearance).</p><div class="cc-grid big">`
       + LK.STARTERS.map((s, i) => `<button class="cc-card ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look)}<span>${esc(s.name)}</span></button>`).join('')
       + `<button class="cc-card ${startPick === LK.STARTERS.length ? 'on' : ''}" data-act="start" data-v="random"><span class="cc-q">?</span><span>Random</span></button></div>`;
+  } else if (mode === 'wheel') {
+    const sv = state.saved || [], n = sv.length;
+    h = n ? `<div class="cc-ring">` + sv.map((s, i) => {
+      const a = -Math.PI / 2 + (i / n) * Math.PI * 2, SL = LK.decodeLook(s.c);
+      return `<button class="cc-rb ${i === wheelSel ? 'on' : ''}" data-act="wh-pick" data-v="${i}" style="left:${(50 + Math.cos(a) * 39).toFixed(1)}%;top:${(50 + Math.sin(a) * 39).toFixed(1)}%">${SL ? th(SL, 'head') : ''}<span>${esc(s.n)}</span></button>`;
+    }).join('') + `<div class="cc-rc"><button class="cc-btn" data-act="wh-step" data-v="-1" aria-label="Previous">◀</button><span>${esc(sv[wheelSel] ? sv[wheelSel].n : '')}</span><button class="cc-btn" data-act="wh-step" data-v="1" aria-label="Next">▶</button></div></div>`
+      : `<p class="cc-note">No saved looks yet. Open the mirror, dress up, and save the look under a name (Work, Night out, Beach...).</p>`;
+    h += `<p class="cc-note cc-info">A fresh look at home lowers your public wanted level.</p>`;
   } else if (tab === 'body') {
     h = row('Base', chip('base', 'm', 'Men', B.base === 'm') + chip('base', 'f', 'Women', B.base === 'f'))
       + row('Build', `<div class="cc-grid">${LK.BUILDS.map((b, i) => `<button class="cc-card sm ${B.build === i ? 'on' : ''}" data-act="build" data-v="${i}">${th(variant((V) => { V.body.build = i; }))}<span>${b.name}</span></button>`).join('')}</div>`)
@@ -220,8 +234,11 @@ function renderPage() {
     const base = outBase || B.base;
     const slotItem = L.outfit[outSlot];
     const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)));
-    const none = outSlot !== 'shoes' ? `<button class="cc-card sm ${!slotItem ? 'on' : ''}" data-act="piece" data-v="0">${th(variant((V) => { V.outfit[outSlot] = null; }))}<span>None</span></button>` : '';
-    const tiles = pieces.map((p) => `<button class="cc-card sm ${slotItem && slotItem.id === p.i ? 'on' : ''}" data-act="piece" data-v="${p.i}">${th(variant((V) => { V.outfit[outSlot] = { id: p.i, c: slotItem && slotItem.id === p.i ? slotItem.c : p.c, t: slotItem && slotItem.id === p.i ? slotItem.t : p.t, p: slotItem && slotItem.id === p.i ? slotItem.p : p.d.p || 0 }; if (outSlot === 'set') { V.outfit.top = null; V.outfit.bottoms = null; } }))}<span>${esc(p.name)}</span></button>`).join('');
+    // each tile: you wearing it (a top or a set without the jacket over it; hats, glasses and masks as a close-up)
+    const crop = outSlot === 'hat' || outSlot === 'glasses' ? 'head' : 'full';
+    const dress = (V, id) => { V.outfit[outSlot] = id; if (outSlot === 'set' && id) { V.outfit.top = null; V.outfit.bottoms = null; } if ((outSlot === 'top' || outSlot === 'set') && id) V.outfit.jacket = null; if (outSlot === 'hair' || crop === 'head') V.outfit.glasses = outSlot === 'glasses' ? id : V.outfit.glasses; };
+    const none = outSlot !== 'shoes' ? `<button class="cc-card sm ${!slotItem ? 'on' : ''}" data-act="piece" data-v="0">${th(variant((V) => dress(V, null)), crop)}<span>None</span></button>` : '';
+    const tiles = pieces.map((p) => { const mine = slotItem && slotItem.id === p.i; return `<button class="cc-card sm ${mine ? 'on' : ''}" data-act="piece" data-v="${p.i}">${th(variant((V) => dress(V, { id: p.i, c: mine ? slotItem.c : p.c, t: mine ? slotItem.t : p.t, p: mine ? slotItem.p : p.d.p || 0 })), crop)}<span>${esc(p.name)}</span></button>`; }).join('');
     const strip = completeLooks().map((V, i) => `<button class="cc-card sm" data-act="complete" data-v="${i}">${th(V)}</button>`).join('');
     h = row('Style', chip('style', '', 'All', !outStyle) + LK.STYLES.map(([k, n]) => chip('style', k, n, outStyle === k)).join(''))
       + row('Show', chip('obase', 'f', "Women's", base === 'f') + chip('obase', 'm', "Men's", base === 'm') + chip('obase', 'all', 'All', base === 'all'))
@@ -273,6 +290,18 @@ function act(a, v, el) {
     case 'tab': tab = v; renaming = -1; render(); return;
     case 'turn': dir = (dir + Number(v) + 8) % 8; drawPreview(); return;
     case 'done': close(true); return;
+    case 'close': close(false); return;
+    case 'mirror': mode = 'edit'; tab = 'body'; render(); return;
+    case 'wh-pick': if (wheelSel === Number(v)) { act('wh-apply'); return; } wheelSel = Number(v); wheelShow(); return;
+    case 'wh-step': { const n = (state.saved || []).length; if (n) { wheelSel = (wheelSel + Number(v) + n) % n; wheelShow(); } return; }
+    case 'wh-apply': {
+      const s = (state.saved || [])[wheelSel];
+      if (!s) return;
+      C.send({ t: 'look', a: 'set', c: s.c });
+      if (C.toast) C.toast(`Wearing: ${s.n}`, 'good');
+      close(false);
+      return;
+    }
     case 'play-as': close(true); return;
     case 'make-yours': mode = 'edit'; tab = 'body'; render(); return;
     case 'start': {
@@ -354,6 +383,13 @@ function act(a, v, el) {
   }
 }
 
+function wheelShow() {
+  const s = (state.saved || [])[wheelSel], L = s && LK.decodeLook(s.c);
+  if (L) look = L;
+  drawPreview();
+  renderPage();
+}
+
 // ---- the pad and the keyboard: spatial focus -------------------------------------------------------------------------------
 function focusables() { return [...root.querySelectorAll('button, input')].filter((b) => !b.disabled && b.offsetParent !== null); }
 function setFocus(el) {
@@ -403,6 +439,13 @@ function slide(d) {
 // a pad frame (main.js overlayPad): true when it was ours
 export function pad(input) {
   if (!isOpen()) return false;
+  if (mode === 'wheel') {
+    const d = input.menuLR || input.menuNav;
+    if (d) act('wh-step', String(d));
+    if (input.menuSelect) act('wh-apply');
+    if (input.menuBack || input.padStart) close(false);
+    return true;
+  }
   if (input.menuNav) move(0, input.menuNav);
   if (input.menuLR && !slide(input.menuLR)) move(input.menuLR, 0);
   if (input.menuSelect) press();
@@ -413,6 +456,13 @@ export function pad(input) {
 // a key (main.js onKey): true when it was ours
 export function key(k) {
   if (!isOpen()) return false;
+  if (mode === 'wheel') {
+    if (k === 'ArrowLeft' || k === 'KeyA' || k === 'ArrowUp' || k === 'KeyW') act('wh-step', '-1');
+    else if (k === 'ArrowRight' || k === 'KeyD' || k === 'ArrowDown' || k === 'KeyS') act('wh-step', '1');
+    else if (k === 'Enter' || k === 'Space' || k === 'KeyE') act('wh-apply');
+    else if (k === 'Escape') close(false);
+    return true;
+  }
   if (k === 'ArrowUp' || k === 'KeyW') { move(0, -1); return true; }
   if (k === 'ArrowDown' || k === 'KeyS') { move(0, 1); return true; }
   if (k === 'ArrowLeft' || k === 'KeyA') { if (!slide(-1)) move(-1, 0); return true; }

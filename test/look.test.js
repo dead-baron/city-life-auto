@@ -244,3 +244,21 @@ test('server: the clothes shop\'s new outfit keeps the body, face and hair', () 
   assert.deepEqual(after.body, before.body); assert.deepEqual(after.face, before.face); assert.deepEqual(after.hair, before.hair);
   assert.notDeepEqual(after.outfit, before.outfit);
 });
+
+test('server: at home (the quick change or the mirror) a new look is unseen - allowed while wanted, and a disguise', () => {
+  const w = makeWorld();
+  const a = joinPlayer(w);
+  a.p.wanted = 2;
+  const c1 = LK.encodeLook(LK.randomLook(4242));
+  looks.handle(w, a.p, { t: 'look', a: 'set', c: c1 });
+  assert.notEqual(a.prof.look, c1, 'out in the street: blocked');
+  a.p.ped.hidden = true; a.p.lookHomeAt = w.time;   // (economy.js 'hlooks' / 'hmirror' inside your home)
+  looks.handle(w, a.p, { t: 'look', a: 'set', c: c1 });
+  assert.equal(a.prof.look, c1, 'inside your home: allowed');
+  assert.equal(a.p.wanted, 0, 'and it drops your public wanted level');
+  assert.ok(a.prof.peakWanted >= 2, 'the peak stays on file');
+  // the wardrobe's visit runs out
+  a.p.wanted = 1; a.p.lookHomeAt = w.time - 601;
+  looks.handle(w, a.p, { t: 'look', a: 'set', c: LK.encodeLook(LK.randomLook(4243)) });
+  assert.equal(a.prof.look, c1);
+});

@@ -4,9 +4,12 @@
 //   ensureLook(prof)        an old profile's random outfit becomes a look; a new player gets a starter until they pick
 //   appOf(prof)             the appearance their ped wears
 //   handle(world, p, msg)   the client's { t: 'look', a: 'set' | 'save' | 'del' | 'ren' | 'get', ... } -> reply or null
-//   stateMsg(p)             { t: 'looks', cur, picked, saved: [{ n, c }] }
+//   stateMsg(p)             { t: 'looks', cur, picked, saved: [{ n, c }] } (+ open: 'wheel' | 'edit' from the home's wardrobe)
+// Free changes are blocked while you're wanted (a free disguise) - except inside your own home, where changing is
+// unseen and drops your public wanted level like the home's "Change outfit".
 import { decodeLook, encodeLook, validLook, lookToApp, lookFromOutfit, starterFor, randomLook, SLOTS } from '../../shared/look.js';
 import { store } from '../store.js';
+import { applyDisguise } from './economy.js';
 
 export const SAVED_LOOKS = 12;
 const NAME_MAX = 20;
@@ -36,9 +39,12 @@ export function changeBlocked(world, p) {
   if (ped.dead) return 'Not while you\'re down.';
   if (ped.cuffed || p.custody) return 'Not in cuffs.';
   if (p.badge) return 'Hand in the uniform (go off duty) first.';
-  if (p.wanted > 0) return 'Not while the police are after you - lose them first (or buy a new outfit at a clothes shop).';
+  if (p.wanted > 0 && !atHome(world, p)) return 'Not while the police are after you - lose them first, change at home, or buy a new outfit at a clothes shop.';
   return null;
 }
+// inside your own home, having opened the wardrobe there (economy.js 'hlooks' / 'hmirror') in the last ten minutes:
+// nobody sees you change, so the new look is a disguise (like the home's "Change outfit")
+export const atHome = (world, p) => !!(p.ped && p.ped.hidden && p.lookHomeAt !== undefined && world.time - p.lookHomeAt < 600);
 // put a look on (code already checked): the profile, the ped, everyone's view of them
 export function wear(world, p, code) {
   const prof = p.profile;
@@ -68,6 +74,7 @@ export function handle(world, p, msg) {
     const why = changeBlocked(world, p);
     if (why) { world.notify(p, why, 'warn'); return stateMsg(p); }
     wear(world, p, code);
+    if (atHome(world, p)) applyDisguise(world, p);
     return stateMsg(p);
   }
   if (a === 'save') {

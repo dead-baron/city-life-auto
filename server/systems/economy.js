@@ -268,6 +268,8 @@ export function buildMenu(world, p, poi) {
             opts.unshift({ id: `hcargo:${p.pendingCar}`, label: `Ready? Head out in the ${d.name} ▶`, note: 'garage door opens' });
           }
           opts.push({ id: 'houtfit', label: 'Change outfit', note: p.badge ? 'off duty only' : 'free', dis: p.badge });
+          opts.push({ id: 'hlooks', label: 'Quick change', note: p.badge ? 'off duty only' : 'your saved looks', dis: p.badge });   // (server/systems/looks.js)
+          opts.push({ id: 'hmirror', label: 'The mirror', note: p.badge ? 'off duty only' : 'change anything about your look', dis: p.badge });
           for (const [id, n] of Object.entries(prof.inventory)) if (n > 0 && ITEMS[id]) opts.push({ id: `hst:${id}`, label: `Stash ${ITEMS[id].name} x${n}` });
           for (const id of Object.keys(prof.weapons)) if (!NO_STASH.has(id) && WEAPONS[id]) opts.push({ id: `hsw:${id}`, label: `Stash ${WEAPONS[id].name}`, note: WEAPONS[id].mag ? `${prof.weapons[id]} rds` : '', wpn: WEAPONS[id].i });
           for (const [id, n] of Object.entries(st.items || {})) if (n > 0 && ITEMS[id]) opts.push({ id: `htk:${id}`, label: `Take ${ITEMS[id].name} x${n}`, note: 'stash' });
@@ -602,6 +604,11 @@ function execute(world, p, poi, opt) {
       if (!ped.hidden || !h.garage) return 'Not right now.';
       return homes.driveOut(world, p, h, idx);
     }
+    case 'hlooks': case 'hmirror': {   // the quick-change wheel or the whole creator, at home: changing here counts as unseen
+      p.lookHomeAt = world.time;
+      if (p.conn) p.conn.sendJSON({ ...looks.stateMsg(p), open: parts[0] === 'hlooks' ? 'wheel' : 'edit' });
+      return null;
+    }
     case 'houtfit': {
       if (p.badge) return 'Hand in the uniform (go off duty) first.';
       looks.wear(world, p, looks.freshOutfit(prof, rng() * 4294967296));
@@ -643,7 +650,7 @@ function disguiseBlocked(world, p) {
   return null;
 }
 
-function applyDisguise(world, p) {
+export function applyDisguise(world, p) {
   const prof = p.profile;
   if (p.wanted > 0) {
     prof.peakWanted = Math.max(prof.peakWanted, p.wanted);

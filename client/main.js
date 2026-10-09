@@ -232,7 +232,7 @@ function onText(m) {
       sendView();
       break;
     case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); if (d.app && d.app.lk && d.app.t === undefined) lookApp(d); e.d = d; } break;
-    case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first)
+    case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); if (m.open) openCreator(m.open); else if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first; the home's wardrobe opens the wheel or the mirror)
     case 'ds': for (const id of m.ids) S.ents.delete(id); break;
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'me':
