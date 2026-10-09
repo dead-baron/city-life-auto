@@ -46,6 +46,10 @@ import * as WL from '../props-wild.js';
 import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
 import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
+import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
+import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
+import { nightFront, paintSigns } from '../neonsigns.js';   // (the night's big neon signs)
+import { streetGrit } from '../streetgrit.js';              // (grit on the town's streets)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
@@ -241,6 +245,7 @@ export function staticIndex(M) {
     addBuildings(c, I);
     addLots(c, I);
     addProps(c, I);
+    addAlleys(c, I);
     addSignals(c, I);
     addDecks(c, I);
     addRail(c, I);
@@ -380,6 +385,7 @@ export function makeStatic(r) {
     case 'sealrock': return outcrop(r.s || 3, r.w || 120, r.d || 70, r.h || 26, 'basalt', { barnacles: 0.8, wet: 12, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, (r.h || 26) * 0.7], [8, r.h || 26]] });
     case 'crit': return r.k === 'starfish' ? WL.starfish(r.col || '#d8583a', r.glow ? 6 : 5, r.s || 1, r.glow || 0) : r.k === 'urchin' ? WL.urchin(4, r.s || 1, r.col || '#3a2448') : WL.anemone(4, r.s || 1);
     case 'mesas': return makeMesas(r);
+    case 'adecal': return AL.decal(r.k, r.v || 0);   // (the back alleys: puddles, oil, leaves, litter, cracks, weeds, drains)
     default: return EMPTY;
   }
 }
@@ -993,6 +999,15 @@ function specOf(c, b, A, s, D) {
     Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', x: Math.max(4, Math.round(w / 2 - 26)), v: 66, sx: 2, bg: '#2a3a6a', fg: [250, 236, 200], lit: true }] });
     lights.push([w / 2, 6, 40, 110, [1, 0.88, 0.7], 1.1, 'window']);
   }
+  // ---- the back alleys (shared/alleys.js; concepts AL1-A..H): a plain back wall fronting an alley gets a back door
+  // with a bare bulb over it, grime and tags by the district's grit, a drainpipe, a vent, AC and meter boxes, a fire escape
+  if (s.south && !front && spec.blank && !b.art && !pitched && !s.frame && !s.vox) {
+    const ax0 = s.tx * TILE, bk = alleyBackOf(c.M, b.id, ax0, ax0 + w);
+    if (bk) alleyWall(spec, bk, ax0, w, lights);
+  }
+  // ---- the night's neon (neonsigns.js; R1-C/E, D8, B7): big signs on the nightlife strips' fronts and on clubs, bars
+  // and arcades anywhere, a tube along the cornice, their colour on the pavement
+  if (front && spec.shop && !b.art && !pitched && !s.frame && !s.vox) nightFront(spec, { w, st, A, kind: spec.shop.kind, name: named, lights, rnd: rndOf(b.id * 31 + s.k, 977) });
   // a building whose look the map sets (the hero corner, map.js buildHeroCorner): its spec, shopfront and roof kit
   const ART = b.art || null;
   if (ART) {
@@ -1022,6 +1037,52 @@ function specOf(c, b, A, s, D) {
     if (up) kl(up.kit, up.x, up.y, zD + roofDeckZ(up.spec));
   }
   return { spec, kit: kit || [], lights, pitched, up };
+}
+
+// ================================================================================================
+// the back alleys (shared/alleys.js says what goes where; alleyart.js draws it; concepts AL1-A..H)
+// ================================================================================================
+// a back wall on an alley (bk: the building's back, x0 / w: this section's): the back door and its bulb, grime, tags,
+// the wall's pipe and boxes (spec.alley, painted by alleyart.js dressWall), a fire escape up a tall one
+function alleyWall(spec, bk, x0, w, lights) {
+  const inX = (x) => (x !== null && x !== undefined && x >= x0 + 6 && x < x0 + w - 6 ? Math.round(x - x0) : null);
+  const door = inX(bk.door);
+  if (door !== null) {
+    const dx = clamp(door - 10, 4, Math.max(4, w - 24));
+    spec.blank = false;
+    spec.doors = [{ x: dx, w: 20, kind: 'door', open: false }];
+    spec.windows = bk.g < 0.7 && w >= 150 ? winXs(w, [[dx - 30, dx + 50]], 70).slice(0, 2) : [];
+    spec.porchLight = false;   // (the bare bulb over the door instead: alleyart.js dressWall)
+    lights.push([dx + 10, 12, 50, 150, [1, 0.56, 0.22], 2, 'window']);   // the bare bulb's amber pool on the asphalt
+  }
+  spec.grime = Math.max(spec.grime || 0, 0.12 + 0.6 * bk.g);
+  if (bk.tags) { spec.graffiti = Math.max(spec.graffiti || 0, bk.tags); spec.tagText = spec.tagText || bk.tag; }
+  const al = { pipe: inX(bk.pipe), vent: inX(bk.vent), ac: (bk.ac || []).map(inX).filter((x) => x !== null), meter: inX(bk.meter), rust: bk.g > 0.75, bulb: door !== null ? clamp(door - 10, 4, Math.max(4, w - 24)) + 9 : null };
+  if (al.pipe !== null || al.vent !== null || al.ac.length || al.meter !== null || al.bulb !== null) spec.alley = al;
+  if (bk.fire && (spec.floors || 1) >= 3 && w >= 140 && !spec.fireEscape && !spec.balconies) spec.fireEscape = [door !== null && door < w / 2 ? w - 66 : 12, 50];
+}
+// what stands and lies along the alleys (all of it decoration: nothing solid, nothing in map.props); the steam from
+// the vents rises in the weather layer (client/render/weather.js, shared/alleys.js alleyVentsIn)
+const ALLEY_BINS = ['#3a6a3a', '#2f4a7a', '#4a4e56', '#2a2c30', '#6a4a2a', '#3a6a3a'];
+function addAlleys(c, I) {
+  const D = alleyDressing(c.M);
+  for (const it of D.items) {
+    const { k, x, y } = it, v = it.v || 0;
+    if (ALLEY_DECALS.has(k)) { const [w, h] = AL.decalSize(k); put(I, { key: `ad:${k}:${v}`, recipe: { t: 'adecal', k, v }, x, y, ext: [w / 2 + 2, h / 2 + 16, w / 2 + 2, h / 2 + 2] }); continue; }
+    const hd = qa(Math.atan2(it.nx, -it.ny), 4);
+    let m = 'alley', a = [k, v];
+    if (k === 'bin') { m = 'wheelieBin'; a = [ALLEY_BINS[v % ALLEY_BINS.length]]; }
+    else if (k === 'bags') { m = 'trashBags'; a = [2 + (v % 3), v + 1]; }
+    else if (k === 'pallet') { m = 'pallets'; a = [v + 1, 1 + (v % 3)]; }
+    else if (k === 'crates') { m = 'crates'; a = [v % 2]; }
+    else if (k === 'tires') { m = 'tires'; a = [2 + (v % 3)]; }
+    else if (k === 'drum') { m = 'oilDrum'; a = [pick(['#3a5a8a', '#4a6a3a', '#8a3a2a'], v / 6), v % 2]; }
+    else if (k === 'burn') { m = 'burnBarrel'; a = [1]; lightAt(I, x, y, 30, 170, LIGHT.fire, 2.4, 'fire', 0); }
+    put(I, vitem(`al:${m}:${a.join(',')}:${hd.toFixed(2)}`, m, a, x, y, hd));
+  }
+  for (const f of D.fences) fenceLine(I, 'chain', f.x0, f.y0, f.x1, f.y1);
+  // and grit on the town's streets: drains, leaves and litter in the gutters, oil, cracks and patches, weeds (streetgrit.js)
+  for (const it of streetGrit(c.M)) { const [w, h] = AL.decalSize(it.k); put(I, { key: `ad:${it.k}:${it.v}`, recipe: { t: 'adecal', k: it.k, v: it.v }, x: it.x, y: it.y, ext: [w / 2 + 2, h / 2 + 16, w / 2 + 2, h / 2 + 2] }); }
 }
 
 function addBuildings(c, I) {
@@ -1069,6 +1130,8 @@ function addBuildings(c, I) {
 function makeBld(r) {
   if (r.frame) return makeFrame(r);
   let G = makeBuilding(r.spec);
+  if (r.spec.alley) AL.dressWall(G, r.spec);   // (a back wall on an alley: its pipe, vent, AC and meter boxes)
+  if (r.spec.neonSigns) paintSigns(G, r.spec);   // (the big neon signs: neonsigns.js)
   if (r.stands) standsOn(G, r.spec);
   // what stands on the roof: [sprite, x, y (its ground point from the section's north-west corner), z, kind]
   const d = r.spec.d, zD = roofDeckZ(r.spec), layers = [];
@@ -1216,6 +1279,7 @@ function voxModel(m, a) {
     case 'fallenLog': return GD.fallenLog(a[0] || 110, a[1] || 11, a[2] || 1, a[3] ? { moss: 0.45, mossCol: '#4a7028', stubs: 2 } : { moss: 0.1, stubs: 2, bark: '#8a5a3a' });
     case 'cabbages': return K.cabbages(a[0] || 3, a[1] || 3); case 'cornRow': return U.cornField(120, 60, (a[0] || 0) + 1); case 'wheatRow': return K.wheatPatch(120, 50, (a[0] || 0) + 1); case 'ropeLine': return TW.ropeLine(a[0] || 60);
     case 'gnawStump': return GD.gnawedStump(a[0] || 0, a[1] || 1); case 'gnawLog': return GD.gnawedLog(a[0] || 90, a[1] || 2); case 'hideRack': return GD.hideRack(a[0] || 0);
+    case 'alley': return AL.model(a[0], a[1] || 0);
     default: return EMPTY_VOX();
   }
 }
@@ -1224,6 +1288,7 @@ const EMPTY_VOX = () => new Vox(1, 1, 1);
 function vdim(m, a) {
   switch (m) {
     case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
+    case 'alley': return AL.dim(a[0]);
     case 'hydrant': return [10, 10, 16]; case 'bin': case 'wireBin': case 'wheelieBin': return [12, 12, 20]; case 'newsBox': return [10, 9, 18]; case 'bench': return [32, 10, 14];
     case 'bollard': return [6, 6, a[0] || 12]; case 'acUnit': return [18, 14, 12]; case 'planter': return [24, 14, 22]; case 'pottedPalm': return [22, 22, 40]; case 'umbrella': return [30, 30, 30];
     case 'dumpster': return [32, 18, 20]; case 'crate': return [14, 14, 13]; case 'hotdogCart': return [40, 24, 56]; case 'armLamp': return [a[0] + 12, 10, 102]; case 'streetLamp': return [14, 14, 94];
@@ -1611,11 +1676,14 @@ const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'ro
 // props
 // ================================================================================================
 // a lit shopfront's light on the pavement: from the door, and on a wide front from along its windows too
+// (out on the pavement, so it lights the street in front more than its own glass: the interior shows through it -
+// buildings.js storefront lights the interior itself)
 function shopSpill(lights, w, dx) {
-  if (w < 200) { lights.push([dx, 16, 26, 150, [1, 0.8, 0.52], 1.5, 'window']); return; }
-  for (const x of [w * 0.28, w * 0.72]) lights.push([x, 18, 26, 160, [1, 0.8, 0.52], 1.4, 'window']);
+  if (w < 200) { lights.push([dx, 34, 22, 150, [1, 0.76, 0.46], 1.3, 'window']); return; }
+  for (const x of [w * 0.28, w * 0.72]) lights.push([x, 36, 22, 160, [1, 0.76, 0.46], 1.2, 'window']);
 }
-const LAMP_LIGHT = { cobra: [1, 0.93, 0.8], green: [1, 0.86, 0.62], sodium: [1, 0.7, 0.38], cast: [1, 0.8, 0.52], iron: [1, 0.62, 0.3], banner: [1, 0.84, 0.58], twin: [1, 0.9, 0.72] };
+// (2026-10-09: the amber of the R1 night concepts, more saturated against the deeper blue night)
+const LAMP_LIGHT = { cobra: [1, 0.86, 0.64], green: [1, 0.78, 0.5], sodium: [1, 0.6, 0.26], cast: [1, 0.72, 0.4], iron: [1, 0.56, 0.22], banner: [1, 0.76, 0.46], twin: [1, 0.82, 0.6] };
 function lampStyle(c, p) {
   if (p.style) return p.style;   // (set by the map: the hero corner's black iron lamps)
   const st = c.dist(p.x, p.y).style;
