@@ -12,6 +12,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc, seek, footWay, sidestep } from './npc.js';
 import { inAnyView } from '../view.js';
 import { kerbFor, planTo, follow, halt, exitNode, sinceProgress, waterGuard } from './kerbdrive.js';
+import { trimBehind } from './custody.js';
 import { planRoute } from './traffic.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -185,12 +186,13 @@ function runAmbulance(world, v, dt, now) {
   if (!visible) for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - v.x, p.ped.y - v.y) < 900) { visible = true; break; }
   if (!visible || (now - ai.since > 240 && !inAnyView(world, v.x, v.y, 40))) { cleanup(world, v); return; }
   if (!ai.exit) {
-    const n = exitNode(world, v);
-    ai.exit = n ? { x: n.x, y: n.y } : { x: v.x + Math.cos(v.a) * 1500, y: v.y + Math.sin(v.a) * 1500 };
-    ai.route = planRoute(world, v.x, v.y, ai.exit.x, ai.exit.y); ai.bestD = undefined;
+    const n = exitNode(world, v, ai.badExit);
+    ai.exit = n ? { x: n.x, y: n.y, id: n.id } : { x: v.x + Math.cos(v.a) * 1500, y: v.y + Math.sin(v.a) * 1500, id: -1 };
+    ai.route = trimBehind(planRoute(world, v.x, v.y, ai.exit.x, ai.exit.y), v); ai.bestD = undefined;
   }
   if (!v.seats[0]) { halt(v); return; }
-  if (follow(world, v, 300) || sinceProgress(world, v, ai.exit.x, ai.exit.y) > 12) ai.exit = null;   // (there, or stuck: somewhere else)
+  if (follow(world, v, 300)) ai.exit = null;   // (there: somewhere else)
+  else if (sinceProgress(world, v, ai.exit.x, ai.exit.y) > 8) { ai.badExit = ai.exit.id; ai.exit = null; }   // (stuck: another way out)
 }
 
 // To the kerb nearest the patient, siren on; it pulls up there, or as near as it can get.

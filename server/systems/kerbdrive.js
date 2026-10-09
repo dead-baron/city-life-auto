@@ -106,17 +106,19 @@ export function waterGuard(world, v) {
   return false;
 }
 
-// A junction to drive off to: on the vehicle's island, 1000-2600 px away, the one furthest from every player.
-export function exitNode(world, v) {
-  const m = world.map, zone = m.zoneAt(v.x, v.y);
-  let best = null, bs = -1;
+// A junction to drive off to: on the vehicle's island, 1000-2600 px away, far from every player - ahead of it rather than
+// behind (no turning round in the street), and not the one it just failed to get to (`not`).
+export function exitNode(world, v, not = -1) {
+  const m = world.map, zone = m.zoneAt(v.x, v.y), c = Math.cos(v.a), s = Math.sin(v.a);
+  let best = null, bs = -Infinity;
   for (const n of m.nodes) {
-    if (n.lvl !== 0 || m.zoneAt(n.x, n.y) !== zone) continue;
+    if (n.lvl !== 0 || n.id === not || m.zoneAt(n.x, n.y) !== zone) continue;
     const d = Math.hypot(n.x - v.x, n.y - v.y);
     if (d < 1000 || d > 2600) continue;
     let near = Infinity;
     for (const p of world.players.values()) if (p.ped) near = Math.min(near, Math.hypot(p.ped.x - n.x, p.ped.y - n.y));
-    if (near > bs) { bs = near; best = n; }
+    const score = Math.min(near, 2000) + ((n.x - v.x) * c + (n.y - v.y) * s) / d * 700;
+    if (score > bs) { bs = score; best = n; }
   }
   return best;
 }

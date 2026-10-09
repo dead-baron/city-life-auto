@@ -13,6 +13,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { inAnyView } from '../view.js';
 import { kerbFor, planTo, follow, halt, exitNode, sinceProgress } from './kerbdrive.js';
+import { trimBehind } from './custody.js';
 import { planRoute } from './traffic.js';
 import { store } from '../store.js';
 
@@ -162,11 +163,12 @@ function runTruck(world, t, dt, now) {
   if (!seen) for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - t.x, p.ped.y - t.y) < 900) { seen = true; break; }
   if (!seen) { finish(world, t); return; }
   if (!ai.exit) {
-    const n = exitNode(world, t);
-    ai.exit = n ? { x: n.x, y: n.y } : { x: t.x + Math.cos(t.a) * 1500, y: t.y + Math.sin(t.a) * 1500 };
-    ai.route = planRoute(world, t.x, t.y, ai.exit.x, ai.exit.y); ai.bestD = undefined;
+    const n = exitNode(world, t, ai.badExit);
+    ai.exit = n ? { x: n.x, y: n.y, id: n.id } : { x: t.x + Math.cos(t.a) * 1500, y: t.y + Math.sin(t.a) * 1500, id: -1 };
+    ai.route = trimBehind(planRoute(world, t.x, t.y, ai.exit.x, ai.exit.y), t); ai.bestD = undefined;
   }
-  if (follow(world, t, ai.towing ? 260 : 360) || sinceProgress(world, t, ai.exit.x, ai.exit.y) > 12) ai.exit = null;
+  if (follow(world, t, ai.towing ? 260 : 360, 34, true)) ai.exit = null;
+  else if (sinceProgress(world, t, ai.exit.x, ai.exit.y) > 8) { ai.badExit = ai.exit.id; ai.exit = null; }   // (stuck: another way out)
 }
 
 // the towed vehicle hangs behind the truck's boom, the same way round (its front wheels up on the lift)
