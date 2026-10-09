@@ -104,6 +104,16 @@ export const EVENT_SOUNDS = {
   gatebreak: (ev, A) => { A.at('crash', ev.x, ev.y, 0.7, { p: 0.6 }); A.at('woodcrunch', ev.x, ev.y, 0.8); },
   propbreak: (ev, A) => { const p = A.S.map && A.S.map.props[ev.i]; if (p) for (const n of propSound(p.t)) A.at(n, p.x, p.y); },
   propfix: null,                                 // (put back by the crews)
+  // lights to carry and felling trees (#358, #359): the click of a switch, a flare struck, the axe, the saw, the crack
+  // and the crash; the lights on the ground and the stumps growing back are data (client/carrylights.js)
+  lightclick: (ev, A) => A.at('lightclick', ev.x, ev.y, ev.snap ? 0.8 : 0.6),
+  flarestrike: at('flarestrike'),
+  glight: null,
+  chop: at('chop'),
+  saw: at('chainsaw', 0.9),
+  treefall: (ev, A) => A.at('treecrack', ev.x, ev.y, 0.55 + 0.12 * (ev.s || 2)),
+  treecrash: (ev, A) => { A.at('treefall', ev.x, ev.y, 0.55 + 0.15 * (ev.s || 2), { s: ev.s }); A.at('foliage', ev.x, ev.y, 0.8); },
+  treeup: null,
   fire: (ev, A) => { const p = A.S.map && A.S.map.props[ev.i]; if (p) A.at(ev.lit ? 'ignite' : 'douse', p.x, p.y); },
   geyser: (ev, A) => A.at('gush', ev.x, ev.y),
   trainhorn: (ev, A) => A.at(ev.s === 2 ? 'trainhorn' : 'trainhornshort', ev.x, ev.y),

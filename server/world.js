@@ -48,6 +48,8 @@ import * as rides from './systems/rides.js';
 import * as foraging from './systems/foraging.js';
 import * as hunting from './systems/hunting.js';
 import * as campfires from './systems/campfires.js';
+import * as lights from './systems/lights.js';
+import * as felling from './systems/felling.js';
 import * as wanderer from './systems/wanderer.js';
 import * as places from './systems/places.js';
 import * as golf from './systems/golf.js';
@@ -106,6 +108,8 @@ const SYSTEMS = [
   ['foraging', foraging.update],    // picked mushroom spots and tidepool stars growing back
   ['hunting', hunting.update],      // field-dressing game, cooking over the fire
   ['campfires', campfires.update],  // fires lit and put out, warming up by one
+  ['lights', lights.update],        // lights to carry: batteries running down, flares and glow sticks burning out
+  ['felling', felling.update],      // cutting trees, the falls, the logs, the stumps growing back
   ['wanderer', wanderer.update],    // the rare hooded stranger who sells the plasma blade
   ['economy', economy.update],      // auto-heal at ER reception
   ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground

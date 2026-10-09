@@ -13,6 +13,7 @@ import * as vehicles from './systems/vehicles.js';
 import { blinkState } from './systems/homes.js';
 import { bagWireTier, bagBlinks } from './systems/cargo.js';
 import { netRect, NET_KEEP } from './view.js';
+const CHOP_CODE = { hatchet: 1, axe: 2, fellaxe: 3, chainsaw: 4 };   // ch: a ped felling a tree, with what (felling.js)
 
 const writer = new SnapshotWriter(1500);
 const MAX_BUFFERED = 512 * 1024;
@@ -28,7 +29,7 @@ function descriptor(e) {
     // cuffed (custody.js: hands behind the back); mb: carrying a robbery's takings, the money bag on the back (hotmoney.js). The flags and extra
     // bytes are full; turning any of these on or off bumps appVer, so the descriptor is sent again. A player's look travels as its code alone
     // (app.lk: shared/look.js).
-    case K.PED: return { id: e.id, k: K.PED, app: e.app && e.app.lk ? { lk: e.app.lk } : e.app, n: e.player ? e.player.name : '', pl: !!e.player, ar: e.archetype, v: e.appVer || 0, ...(e.flashOn ? { fl: 1 } : null), ...(e.sit ? { st: 1 } : null), ...(e.player && e.player.skull ? { bt: 1 } : null), ...(e.phoneOut ? { ph: e.filming || 1 } : null), ...(e.cuffed ? { cf: 1 } : null), ...(e.moneyBag ? { mb: 1 } : null), ...(e.gt ? { gt: e.gt } : null), ...(e.pp ? { pp: e.pp } : null), ...(e.sitBench ? { sb: 1 } : null), ...(e.holdBars ? { hb: 1 } : null) };
+    case K.PED: return { id: e.id, k: K.PED, app: e.app && e.app.lk ? { lk: e.app.lk } : e.app, n: e.player ? e.player.name : '', pl: !!e.player, ar: e.archetype, v: e.appVer || 0, ...(e.flashOn ? { fl: e.lightCode || 1 } : null), ...(e.hardhat ? { hh: 1 } : null), ...(e.chop ? { ch: CHOP_CODE[e.chop.tool] || 1 } : null), ...(e.sit ? { st: 1 } : null), ...(e.player && e.player.skull ? { bt: 1 } : null), ...(e.phoneOut ? { ph: e.filming || 1 } : null), ...(e.cuffed ? { cf: 1 } : null), ...(e.moneyBag ? { mb: 1 } : null), ...(e.gt ? { gt: e.gt } : null), ...(e.pp ? { pp: e.pp } : null), ...(e.sitBench ? { sb: 1 } : null), ...(e.holdBars ? { hb: 1 } : null) };
     case K.VEH: return { id: e.id, k: K.VEH, m: e.def.i, p: e.paint, vr: e.variant, tn: e.tint ?? -1, o: e.ownerName || '', v: e.descVer || 0, fs: e.forSale ? e.forSale.price : 0 };
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: bagWireTier(e), val: e.value };

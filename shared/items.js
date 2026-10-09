@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS } from './rules.js';
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES } from './rules.js';
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -39,6 +39,10 @@ export const WEAPONS = {
   sword:    { i: 26, name: 'Sword',           type: 'melee', dmg: 40, range: 36, arc: 1.7, cd: 0.6, bleed: true, blade: 0.5 },
   katana:   { i: 27, name: 'Katana',          type: 'melee', dmg: 46, range: 38, arc: 1.6, cd: 0.46, bleed: true, quiet: true, blade: 0.6 },
   plasma:   { i: 28, name: 'Plasma Blade',    type: 'melee', dmg: 160, range: 42, arc: 1.9, cd: 0.36, plasma: true, blade: 1, deflect: 0.35 },
+  // ---- lights to carry (task #359): the heavy flashlight - a strong beam (shared/lights.js) and a solid club with a
+  // chance to stun. (Index 31, the top of the wire's five bits: net.js extra.)
+  heavyflash: { i: 31, name: 'Heavy Flashlight', type: 'melee', dmg: 21, range: 32, arc: 1.3, cd: 0.55, stunChance: 0.3, light: true },
+  // ---- end lights to carry ----
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -218,6 +222,33 @@ export const ITEM_CATS = [
   { id: 'bait', name: 'Fishing bait' }, { id: 'fish', name: 'Fish' }, { id: 'food', name: 'Food' }, { id: 'game', name: 'Game & hides' },
   { id: 'crafted', name: 'Crafted goods' }, { id: 'loot', name: 'Loot & valuables' },
 ];
+// ---- Lights to carry (task #359) and felling trees (task #358): their items ---------------------------------------
+// The lights (shared/lights.js): switched on and off like the flashlight, run on batteries (one set goes in when the
+// last runs flat); flares and glow sticks are lit once and burn out. The cutting tools (shared/felling.js): in the bag,
+// the best one you carry does the cutting (hold the action button facing a tree); the chainsaw runs on its fuel cans.
+Object.assign(ITEMS, {
+  headlamp:  { name: 'Headlamp', tool: true, light: true, sell: 14 },
+  hardhat:   { name: 'Hard Hat with Lamp', tool: true, light: true, sell: 22 },
+  lantern:   { name: 'Lantern', tool: true, light: true, sell: 16 },
+  flare:     { name: 'Road Flare', light: true, burn: true, sell: 3 },
+  glowstick: { name: 'Glow Stick', light: true, burn: true, sell: 1 },
+  batteries: { name: 'Batteries', sell: 2 },
+  hatchet:   { name: 'Hatchet', tool: true, fell: true, sell: 12 },
+  axe:       { name: 'Axe', tool: true, fell: true, sell: 36 },
+  fellaxe:   { name: 'Felling Axe', tool: true, fell: true, sell: 80 },
+  chainsaw:  { name: 'Chainsaw', tool: true, fell: true, sell: 200 },
+  sawfuel:   { name: 'Chainsaw Fuel', sell: 4 },
+});
+const LIGHT_KIT = [
+  { kind: 'item', id: 'headlamp', price: LIGHT_PRICES.headlamp, qty: 1 }, { kind: 'item', id: 'lantern', price: LIGHT_PRICES.lantern, qty: 1 },
+  { kind: 'item', id: 'batteries', price: LIGHT_PRICES.batteries, qty: 2 }, { kind: 'item', id: 'glowstick', price: LIGHT_PRICES.glowstick, qty: 3 },
+];
+const FELL_KIT = [
+  { kind: 'item', id: 'hatchet', price: FELL_TOOL_PRICES.hatchet, qty: 1 }, { kind: 'item', id: 'axe', price: FELL_TOOL_PRICES.axe, qty: 1 },
+  { kind: 'item', id: 'fellaxe', price: FELL_TOOL_PRICES.fellaxe, qty: 1 }, { kind: 'item', id: 'chainsaw', price: FELL_TOOL_PRICES.chainsaw, qty: 1 },
+  { kind: 'item', id: 'sawfuel', price: FELL_TOOL_PRICES.sawfuel, qty: 1 },
+];
+// ---- end lights and felling items ----
 export function itemCat(id) {
   const it = ITEMS[id];
   if (!it) return null;
@@ -285,13 +316,15 @@ export const SHOPS = {
   hardware: { title: 'Nail & Gear Hardware', buy: [
     { kind: 'weapon', id: 'knife', price: 90 }, { kind: 'weapon', id: 'crowbar', price: 110 },
     { kind: 'weapon', id: 'sledge', price: 260 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 },
+    ...LIGHT_KIT, { kind: 'item', id: 'hardhat', price: LIGHT_PRICES.hardhat, qty: 1 }, { kind: 'weapon', id: 'heavyflash', price: LIGHT_PRICES.heavyflash }, ...FELL_KIT,   // (lights and felling: #358, #359)
   ] },
   pharmacy: { title: 'MediMart Pharmacy', buy: [
     { kind: 'item', id: 'medkit', price: 80, qty: 1 }, { kind: 'item', id: 'bandage', price: 25, qty: 1 }, { kind: 'item', id: 'revivekit', price: REVIVE_KIT_PRICE, qty: 1 },
   ] },
   coffee: { title: 'Bean Machine Coffee', buy: [{ kind: 'item', id: 'coffee', price: 6, qty: 1 }] },
   convenience: { title: 'Corner Store', buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }], sells: ['apple', 'orange', 'grapes'] },
-  gasstation: { title: "Gas 'n Go", buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }], sells: ['apple', 'orange', 'grapes'] },
+  gasstation: { title: "Gas 'n Go", buy: [{ kind: 'item', id: 'energy', price: 9, qty: 1 }, { kind: 'item', id: 'coffee', price: 7, qty: 1 }, { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 },
+    { kind: 'item', id: 'flare', price: LIGHT_PRICES.flare, qty: 2 }, { kind: 'item', id: 'glowstick', price: LIGHT_PRICES.glowstick, qty: 3 }, { kind: 'item', id: 'batteries', price: LIGHT_PRICES.batteries + 2, qty: 2 }, { kind: 'item', id: 'sawfuel', price: FELL_TOOL_PRICES.sawfuel, qty: 1 }], sells: ['apple', 'orange', 'grapes'] },
   club: { title: 'The Club', buy: [{ kind: 'item', id: 'cocktail', price: 18, qty: 1 }, { kind: 'item', id: 'energy', price: 12, qty: 1 }] },
   vending: { title: 'Vending Machine', buy: [{ kind: 'item', id: 'energy', price: 8, qty: 1 }] },
   pawn: { title: 'Second Chance Pawn', buy: [
@@ -335,10 +368,10 @@ export const SHOPS = {
     { kind: 'weapon', id: 'huntrifle', price: 900 }, { kind: 'ammo', id: 'huntrifle', price: 35, qty: 10 },
     { kind: 'weapon', id: 'bow', price: 420 }, { kind: 'ammo', id: 'bow', price: 30, qty: 12 },
     { kind: 'weapon', id: 'varmint', price: 520 }, { kind: 'ammo', id: 'varmint', price: 20, qty: 20 },
-    { kind: 'weapon', id: 'huntknife', price: 120 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 },
+    { kind: 'weapon', id: 'huntknife', price: 120 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }, ...LIGHT_KIT, { kind: 'item', id: 'flare', price: LIGHT_PRICES.flare, qty: 2 }, ...FELL_KIT.slice(0, 3),
     { kind: 'item', id: 'camoCloak', price: 380, qty: 1 }, { kind: 'item', id: 'coverScent', price: 15, qty: 2 }, { kind: 'item', id: 'venisonSteak', price: 30, qty: 1 }],
     sells: [...GAME_GOODS(), ...CRAFTED], sellPrice: payFor(GAME_GOODS(), 1.4), crafts: true },
-  huntcamp: { title: 'Hunting Camp Outfitter', buy: [
+  huntcamp: { title: 'Hunting Camp Outfitter', buy: [...LIGHT_KIT.slice(0, 3), { kind: 'item', id: 'flare', price: LIGHT_PRICES.flare, qty: 2 }, { kind: 'item', id: 'hatchet', price: FELL_TOOL_PRICES.hatchet, qty: 1 },
     { kind: 'ammo', id: 'huntrifle', price: 40, qty: 10 }, { kind: 'ammo', id: 'bow', price: 34, qty: 12 }, { kind: 'ammo', id: 'varmint', price: 24, qty: 20 },
     { kind: 'weapon', id: 'huntknife', price: 140 }, { kind: 'weapon', id: 'bow', price: 480 }, { kind: 'item', id: 'coverScent', price: 18, qty: 2 },
     { kind: 'item', id: 'bandage', price: 30, qty: 1 }, { kind: 'item', id: 'coffee', price: 8, qty: 1 }],

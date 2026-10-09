@@ -40,10 +40,11 @@ export const CRIMES = {
   robbery:     { heat: ROB_CALLED_HEAT, label: 'Armed robbery', felony: true, sev: 1.5 },   // (1 star; it grows from there: robbery.js)
   trainRobbery: { heat: 50, label: 'Train robbery', felony: true, sev: 1.5 },
   escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
+  treeFelling: { heat: FELL_HEAT, label: 'Vandalism: felling a tree', sev: 0.6 },   // (in town or a park: felling.js)
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
-  WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, SAW_NOTE_S, REPORT_COOLDOWN_S } from '../../shared/rules.js';
+  WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, SAW_NOTE_S, REPORT_COOLDOWN_S, FELL_HEAT } from '../../shared/rules.js';
 import { hash2 } from '../../shared/rng.js';
 import { PAINTS } from '../../shared/vehicles.js';
 export { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, SERVICE_AMMO, SUBDUE_S, POLICE_RANKS };

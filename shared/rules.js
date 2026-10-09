@@ -391,3 +391,19 @@ export const RUNOVER_LIE_S = 3.5;          // run over: lying there about this l
 export const RUNOVER_LEFT = 0.14;          // ...on about this much of your health, slow - fast, or under a truck, it can kill
 export const HOOD_RIDE_S = [0.5, 2];       // onto the hood: riding it this long at most, unless it brakes or turns hard (or you roll off: move)
 export const HOOD_MAX_SPEED = 380;         // ...only below this closing speed (px/s); faster, you go flying
+
+// ---- Lights to carry (task #359: shared/lights.js, server/systems/lights.js) ----------------------------------------
+export const LIGHT_PRICES = { headlamp: 45, hardhat: 75, lantern: 55, heavyflash: 95, flare: 12, glowstick: 5, batteries: 8 };
+export const BATTERY_S = 1800;             // a set of batteries: half an hour switched on (a light lasts a little more or less by its kind)
+export const FLARE_S = 60;                 // a road flare burns about a minute
+export const GLOWSTICK_S = 240;            // a glow stick glows a few minutes
+export const GROUND_LIGHTS_MAX = 10;       // lights one player has set down at once (the oldest goes out)
+export const HARDHAT_GUARD = 0.4;          // a hard hat takes this share off the hurt of a falling tree or rock
+// ---- Felling trees (task #358: shared/felling.js, server/systems/felling.js) ----------------------------------------
+export const FELL_TOOL_PRICES = { hatchet: 40, axe: 120, fellaxe: 260, chainsaw: 650, sawfuel: 15 };
+export const CHAINSAW_FUEL_S = 240;        // a tank of fuel: four minutes of cutting (a can of fuel fills it again)
+export const TREE_REGROW_S = 1500;         // a felled tree grows back after about 25 minutes...
+export const TREE_REGROW_NEAR = 900;       // ...when no player is within this many px of it
+export const LOG_BUNDLE_PRICE = 45;        // what the hardware store and the lumber buyers pay for a bundle of logs
+export const LOGS_LIFE_S = 1800;           // log bundles nobody touches are cleared away after this long
+export const FELL_HEAT = 6;                // felling a tree in town or a park: vandalism (a little heat); in the wilds it's free

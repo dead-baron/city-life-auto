@@ -195,6 +195,18 @@ export const INSTR = {
   } },
   trainhorn: { pri: MAJOR, range: 2800, gap: 0.6, send: 0.3, play(E, o, t, v) { return horn(E, o, t, v, 1.1); } },
   trainhornshort: { pri: MAJOR, range: 2800, gap: 0.6, send: 0.3, play(E, o, t, v) { return horn(E, o, t, v, 0.5); } },
+  // ---- lights to carry and felling trees (#358, #359) ----
+  lightclick: { pri: MINOR, range: 420, gap: 0.08, play(E, o, t, v) { E.noise(o, t, 0.012, v * 0.35, { ft: 'bandpass', f: vary(3200), q: 2.5 }); E.tone(o, t, vary(1900, 0.05), 0.02, v * 0.08, { wave: 'pulse25' }); return 0.05; } },
+  flarestrike: { pri: NORMAL, range: 700, gap: 0.3, play(E, o, t, v) { E.noise(o, t, 0.09, v * 0.45, { ft: 'bandpass', f: vary(2600), q: 1.1 }); E.noise(o, t + 0.08, 1.1, v * 0.3, { ft: 'highpass', f: 2800, a: 0.05 }); clicks(E, o, t + 0.1, 10, 1, v * 0.25, 2500, 5500, 0.008); return 1.2; } },
+  chop: { pri: NORMAL, range: 1100, gap: 0.12, play(E, o, t, v) { E.tone(o, t, vary(150, 0.1), 0.09, v * 0.5, { type: 'triangle', f2: 85 }); E.noise(o, t, 0.06, v * 0.55, { ft: 'bandpass', f: vary(1150), q: 1.5 }); clicks(E, o, t + 0.01, 3, 0.06, v * 0.25, 1500, 3500, 0.01); return 0.14; } },
+  chainsaw: { pri: NORMAL, range: 1800, gap: 0.3, play(E, o, t, v) { const f = vary(92, 0.08); E.tone(o, t, f, 0.6, v * 0.2, { wave: 'saw8', f2: f * vary(1.15, 0.05), lp: 2600, vib: 24, a: 0.02 }); E.tone(o, t, f * 2.02, 0.6, v * 0.07, { type: 'square', lp: 3200, a: 0.02 }); E.noise(o, t, 0.6, v * 0.14, { ft: 'bandpass', f: vary(2400), q: 0.9, a: 0.02 }); clicks(E, o, t, 6, 0.55, v * 0.15, 1800, 4200, 0.01); return 0.62; } },
+  treecrack: { pri: MAJOR, range: 1800, gap: 0.4, send: 0.3, play(E, o, t, v) { clicks(E, o, t, 22, 0.7, v * 0.45, 700, 3200, 0.02); E.tone(o, t + 0.1, vary(210), 0.9, v * 0.18, { wave: 'saw8', f2: 70, lp: 700, vib: 12 }); E.noise(o, t + 0.5, 0.6, v * 0.3, { color: 'pink', ft: 'bandpass', f: 2600, q: 0.5, a: 0.1 }); return 1.2; } },
+  treefall: { pri: MAJOR, range: 2400, gap: 0.3, send: 0.5, play(E, o, t, v, p) {
+    const k = Math.min(1.5, 0.5 + (p.s || 2) * 0.25);
+    E.tone(o, t, vary(70), 0.5 * k, v * 0.6 * k, { type: 'sine', f2: 32 }); E.noise(o, t, 0.35 * k, v * 0.55, { color: 'brown', ft: 'lowpass', f: 420 });
+    E.noise(o, t + 0.02, 0.9 * k, v * 0.35, { color: 'pink', ft: 'bandpass', f: 2600, q: 0.5, a: 0.03 }); clicks(E, o, t + 0.05, 16, 0.6 * k, v * 0.35, 800, 3600, 0.02);
+    return 1 * k + 0.1;
+  } },
   burner: { pri: NORMAL, range: 900, gap: 0.9, play(E, o, t, v) { E.noise(o, t, 1.5, v * 0.42, { ft: 'lowpass', f: 380, a: 0.08 }); E.noise(o, t, 1.2, v * 0.08, { ft: 'bandpass', f: 1900, q: 0.5, a: 0.08 }); return 1.55; } },
 
   // ======== water ========
