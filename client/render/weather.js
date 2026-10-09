@@ -10,6 +10,7 @@ import { T, TILE, MAP_W, MAP_H, CHUNK_PX } from '../../shared/constants.js';
 import { hash } from './atmos.js';
 import { freeCanvas } from '../platform.js';
 import { coversIn, coverSeed } from './covers.js';   // (the street's manhole covers: the ones the ground draws)
+import { alleyVentsIn } from '../../shared/alleys.js';   // (the vents on the alleys' back walls)
 
 const N = CHUNK_PX / TILE;
 const SHAPES = 8;
@@ -151,6 +152,8 @@ export class Weather {
     // steam vents: the manhole covers on the town's streets in this chunk (covers.js - the very covers the
     // ground draws), so steam only ever comes up out of a cover, and only in town
     const v = coversIn(m, cx * CHUNK_PX, cy * CHUNK_PX, (cx + 1) * CHUNK_PX, (cy + 1) * CHUNK_PX, coverSeed(m)).map((c) => ({ x: c.x, y: c.y, id: Math.round(c.x) * 7919 + Math.round(c.y) }));
+    // and the vent boxes on the back walls along the alleys (shared/alleys.js; the art draws them 8-22 px up the wall)
+    for (const a of alleyVentsIn(m, cx * CHUNK_PX, cy * CHUNK_PX, (cx + 1) * CHUNK_PX, (cy + 1) * CHUNK_PX)) v.push({ x: a.x, y: a.y + 2 - 15, id: a.id });
     this.vents.set(key, v);
     this.sites.set(key, s);
     return s;
