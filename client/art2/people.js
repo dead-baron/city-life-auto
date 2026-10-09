@@ -323,6 +323,7 @@ function aimPose(D, P, kind, rec) {
 function restHoldItem(P, kind) { if (ICLS[kind] === 'one' || ICLS[kind] === 'big' || ICLS[kind] === 'knife') setItem(P, kind, [0.1, 0.3, 0.95], [0, 1, 0]); }
 function rig(D, A, pose, f, kind, acc) {
   const P = base(D), c = kind ? ICLS[kind] : null;
+  if (GAITS2[pose]) { GAITS2[pose](D, P, f, kind, acc); return P; }   // (the city's people, at the end)
   if (pose === 'idle') {
     P.breath = f ? 0.4 : 0;
     if (kind) P.hands = (S) => restHold(D, P, S, kind); else if (acc) P.hands = (S) => accHands(D, P, S, acc);
@@ -517,6 +518,7 @@ function rig(D, A, pose, f, kind, acc) {
 // what the hands do with an accessory while standing or walking (the arm on the item side stops swinging)
 const ACC_HANDS = { briefcase: 1, purse: 1, shopping: 2, coffee: 1, phone: 2, cane: 1, board: 1 };
 function accHands(D, P, S, acc) {
+  if (accHands2(D, P, S, acc)) return;   // (the city's people, at the end)
   const r = D.reach;
   if (acc === 'coffee') { P.hR = vadd(S.shR, [0.8, 5.4, -r * 0.7]); P.elR = [0.6, -1, -0.4]; }
   else if (acc === 'phone') { P.hR = vadd(S.chest, mv(S.SP, [1.4, 6.6, -2.4])); P.hL = vadd(S.chest, mv(S.SP, [-0.6, 6.4, -3])); P.elR = [1, -0.5, -0.6]; P.elL = [-1, -0.5, -0.6]; P.headPitch += 0.35; setItem(P, 'phone', [0, 1, 0], [0, 0, -1]); }
@@ -1008,6 +1010,7 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     if (acc === 'cane') C(vadd(hR, [0, 0.6, 0.6]), [hR[0] + 0.6, hR[1] + 3.4, 0.4], 0.62, 0.55, GR.ACC, 'cane', W.wood);
     if (acc === 'board') E(vadd(hR, [1.9, -0.8, 6.4]), frameUp([0.08, 0.15, 1], [0, 1, 0]), [1.0, 4.4, 14], GR.ACC, 'board', W.board);
   }
+  figure365(B, C, E, D, P, S, acc);   // (the city's people, at the end)
   return { prims: out, head: out.indexOf(headP), W, TF };
 }
 function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
@@ -1558,3 +1561,116 @@ export function randomPerson(seed, kind = null) {
   }
   return app;
 }
+
+// ==== The city's people (task #365, server/systems/personas.js): personality walks and props ========================
+// walks (POSES): hunch (a senior's slow stoop on a cane), strut (hips swaying, the feet on one line), skate (riding a board,
+// pushing off), blade (rollerblades: the long side-pushed glide), dance (four frames of letting go), push (pushing a cart),
+// lean (back to a wall, a foot up on it)
+// props (app.carry): trolley (a senior's two-wheeled shopping trolley, pulled along), cart (a shopping cart with a blanket
+// in it, pushed), leads (three dog leads out in front, to where the dogs trot), guitar (a busker's), call (the phone at an ear)
+Object.assign(POSES, { hunch: 6, strut: 6, skate: 4, blade: 6, dance: 4, push: 6, lean: 2 });
+CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
+Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
+const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
+const M365 = { metal: MAT('#a4a8b0', 0.5), rubber: MAT('#26262a'), blanket: MAT('#6a7a9a'), tartan: MAT('#8a2a34'), wood: MAT('#d0903e', 0.4), deck: MAT('#2a9aa8', 0.3), lead: MAT('#c8262b'), dark: MAT('#1c1c22', 0.4), wheel: MAT('#f2c21b'), bag: MAT('#3a5a3a') };
+const GAITS2 = {
+  hunch(D, P, f, kind, acc) {
+    gait(D, P, 0, f / 6, !kind && !(acc && ACC_HANDS[acc] === 2));
+    for (const k of ['fL', 'fR']) P[k] = [P[k][0], P[k][1] * 0.55, D.ank + (P[k][2] - D.ank) * 0.5];
+    P.pel = [P.pel[0] * 0.6, P.pel[1] - 0.6, P.pel[2] - 1.3]; P.lean = 0.42; P.headPitch = -0.32; P.splay = 0.25;
+    wrapAcc(D, P, acc);
+  },
+  strut(D, P, f, kind, acc) {
+    gait(D, P, 0, f / 6, !kind && !(acc && ACC_HANDS[acc] === 2));
+    for (const [k, s] of [['fL', -1], ['fR', 1]]) P[k] = [s * 0.5, P[k][1] * 1.1, P[k][2]];
+    P.pel = [P.pel[0] * 3.2, P.pel[1], P.pel[2] + 0.2]; P.tilt = -P.pel[0] * 0.07; P.pelYaw *= 1.8; P.twist *= 1.6; P.lean = -0.02; P.headPitch = -0.14; P.splay = 0.34;
+    wrapAcc(D, P, acc);
+  },
+  skate(D, P, f) {   // the front (left) foot on the board, the right pushing off the ground beside it
+    const k = f & 3;
+    P.acc = false; P.board = true; P.lean = 0.16; P.twist = -0.1; P.headPitch = -0.1;
+    P.pel = [-0.6, 0.4, D.pelZ - 1.6];
+    P.fL = [-1.5, 3.2, D.ank + 2.3]; P.kneeL = [-0.2, 1, 0.3];
+    P.fR = [D.hipX + 1.2, [1.6, -7.4, -6.2, -1.2][k], D.ank + [0, 0, 3.2, 2.6][k]]; P.kneeR = [0.2, 1, 0];
+    P.hands = (S) => { P.hL = vadd(S.shL, [-4.6, 1.6 - k * 0.3, -9.2]); P.hR = vadd(S.shR, [4.2, -1.4 + k * 0.4, -9.6]); P.openL = P.openR = 1; };
+  },
+  blade(D, P, f) {   // each stride pushed out to the side, a long glide, low and leaning
+    gait(D, P, 1, f / 6, true);
+    const s = Math.sin(2 * Math.PI * f / 6);
+    P.fL = [P.fL[0] - 1.6 - 2.4 * Math.max(0, s), P.fL[1] * 0.75, D.ank + 1.4 + (P.fL[2] - D.ank) * 0.4];
+    P.fR = [P.fR[0] + 1.6 + 2.4 * Math.max(0, -s), P.fR[1] * 0.75, D.ank + 1.4 + (P.fR[2] - D.ank) * 0.4];
+    P.pel = [P.pel[0] * 1.5, P.pel[1], P.pel[2] - 0.4]; P.lean = 0.32; P.blades = true; P.acc = false;
+  },
+  dance(D, P, f) {   // up, down, point, wiggle: hips side to side, knees bouncing, arms everywhere
+    const s = f & 1 ? 1 : -1, low = f & 1;
+    P.acc = false;
+    P.pel = [s * 1.5, 0, D.pelZ - (low ? 2.2 : 0.5)]; P.tilt = s * 0.14; P.twist = s * 0.28; P.lean = -0.04; P.headPitch = low ? 0.08 : -0.2; P.headYaw = -s * 0.25;
+    P.fL = [-D.hipX - 2.2, 0.6, D.ank + (f === 2 ? 2.6 : 0)]; P.fR = [D.hipX + 2.2, -0.4, D.ank + (f === 0 ? 2.4 : 0)]; P.kneeL = [-0.4, 1, 0]; P.kneeR = [0.4, 1, 0];
+    P.hands = (S) => {
+      if (f === 0) { P.hL = vadd(S.shL, [-4.6, 2, 13.4]); P.hR = vadd(S.shR, [4.6, 2, 13.4]); P.openL = P.openR = 1; }
+      else if (f === 1) { P.hL = vadd(S.chest, mv(S.SP, [-3.6, 7.6, 1.6])); P.hR = vadd(S.chest, mv(S.SP, [3.4, 7.8, 3.6])); }
+      else if (f === 2) { P.hR = vadd(S.shR, [5.2, 3.4, 12.6]); P.hL = vadd(S.pel, [-D.pelR[0] - 1.2, 0.8, 2.6]); P.openR = 1; }
+      else { P.hL = vadd(S.shL, [-11.6, 2.4, 1.8]); P.hR = vadd(S.shR, [11.6, 2.4, 3.2]); P.openL = P.openR = 1; }
+      P.elL = [-1, -0.2, -0.3]; P.elR = [1, -0.2, -0.3];
+    };
+  },
+  lean(D, P, f, kind, acc) {   // back to a wall, a foot up on it behind, arms folded (1: a glance along the street)
+    P.lean = -0.14; P.pel = [0.6, -1.2, D.pelZ - 0.4]; P.headYaw = f ? 0.55 : -0.1; P.headPitch = -0.05;
+    P.fL = [-D.hipX - 0.8, 1.6, D.ank]; P.fR = [D.hipX - 0.2, -4.6, D.ank + 6.2]; P.kneeR = [0.2, 1, 0];
+    P.hands = acc ? (S) => accHands(D, P, S, acc) : (S) => { P.hL = vadd(S.chest, mv(S.SP, [3.0, 6.4, -2.4])); P.hR = vadd(S.chest, mv(S.SP, [-3.0, 6.8, -1.4])); P.elL = [-1, 0.2, -0.6]; P.elR = [1, 0.2, -0.6]; };
+  },
+  push(D, P, f, kind, acc) {
+    gait(D, P, 0, f / 6, false);
+    P.lean = 0.2; P.headPitch = -0.12;
+    wrapAcc(D, P, acc || 'cart');
+  },
+};
+function wrapAcc(D, P, acc) { if (!acc) return; const sw = P.hands; P.hands = (S) => { if (sw) sw(S); accHands(D, P, S, acc); }; }
+// the hands on a prop (accHands)
+const CART_Z = 25, CART_Y = 11.6;
+function accHands2(D, P, S, acc) {
+  const r = D.reach;
+  if (acc === 'trolley') { P.hR = vadd(S.shR, [2.2, -3.6, -r * 0.86]); P.elR = [1, 0.3, -0.5]; return true; }
+  if (acc === 'cart') { P.hR = [4.4, CART_Y, CART_Z]; P.hL = [-4.4, CART_Y, CART_Z]; P.elR = [1, -0.6, -0.4]; P.elL = [-1, -0.6, -0.4]; return true; }
+  if (acc === 'leads') { P.hR = vadd(S.shR, [0.4, 7.2, -r * 0.62]); P.elR = [1, -0.5, -0.5]; return true; }
+  if (acc === 'guitar') { P.hL = vadd(S.chest, mv(S.SP, [-8.6, 6.4, -2.2])); P.hR = vadd(S.chest, mv(S.SP, [2.2, 7.0, -6.6 + P.breath * 2])); P.elL = [-1, -0.4, -0.5]; P.elR = [1, -0.6, -0.4]; return true; }
+  if (acc === 'call') { P.hR = vadd(S.neck, mv(S.SP, [4.4, 1.6, 5.6])); P.elR = [1, -0.2, -1]; P.headYaw += 0.15; return true; }
+  if (acc === 'map') { P.hR = vadd(S.chest, mv(S.SP, [4.4, 7.4, -1.6])); P.hL = vadd(S.chest, mv(S.SP, [-4.4, 7.4, -1.6])); P.elR = [1, -0.5, -0.5]; P.elL = [-1, -0.5, -0.5]; P.headPitch += 0.3; return true; }
+  return false;
+}
+// what the props and walks add to the figure (buildFigure)
+function figure365(B, C, E, D, P, S, acc) {
+  const I = I3;
+  if (P.board) {   // the deck under the front foot, its four wheels
+    E([-1.5, 3.6, 1.7], I, [2.7, 8.6, 0.7], GR.ACC, 'deck', M365.deck);
+    for (const [x, y] of [[-3.1, -2.4], [0.1, -2.4], [-3.1, 9.6], [0.1, 9.6]]) E([x, y, 0.8], I, [0.7, 0.8, 0.8], GR.ACC, 'wheel', M365.wheel);
+  }
+  if (P.blades) for (const k of ['L', 'R']) {   // a wheel bar under each boot
+    const a = S['an' + k];
+    B(vadd(a, [0, 1.4, -3.9]), S.PF, [0.75, 3.6, 0.6], GR.ACC, 'blade', M365.dark);
+    for (const y of [-1.4, 1.4, 4.2]) E(vadd(a, [0, y, -4.7]), I, [0.6, 0.8, 0.8], GR.ACC, 'wheel', M365.wheel);
+  }
+  if (!P.acc || !acc || P.item !== null) return;
+  const hR = S.haR;
+  if (acc === 'trolley') {   // pulled along behind: a tartan bag on two wheels, the handle up to the hand
+    const at = [hR[0] + 1.2, hR[1] - 6.4, 7.4];
+    B(at, I, [2.4, 2.0, 4.4], GR.ACC, 'trolley', M365.tartan);
+    for (const s of [-1, 1]) E([at[0] + s * 2.6, at[1] - 0.6, 1.5], I, [0.7, 1.5, 1.5], GR.ACC, 'wheel', M365.rubber);
+    C(vadd(at, [0, -1.6, 4.2]), hR, 0.45, 0.45, GR.ACC, 'handle', M365.metal);
+  } else if (acc === 'cart') {   // pushed in front: the basket on its frame and wheels, a blanket and a bag in it
+    B([0, CART_Y + 9.6, 19], I, [5.6, 8.4, 5.0], GR.ACC, 'cart', M365.metal);
+    C([-5.6, CART_Y, CART_Z], [5.6, CART_Y, CART_Z], 0.6, 0.6, GR.ACC, 'cartbar', M365.metal);
+    for (const s of [-1, 1]) for (const y of [CART_Y + 2.4, CART_Y + 16.6]) { C([s * 4.6, y, 14], [s * 4.6, y, 2], 0.45, 0.45, GR.ACC, 'cartleg', M365.metal); E([s * 4.6, y, 1.3], I, [0.6, 1.3, 1.3], GR.ACC, 'wheel', M365.rubber); }
+    B([0, CART_Y + 9.0, 24.8], I, [5.4, 7.0, 1.4], GR.ACC, 'blanket', M365.blanket);
+    E([2.4, CART_Y + 13, 26.2], I, [2.4, 2.2, 2.4], GR.ACC, 'bag', M365.bag);
+  } else if (acc === 'leads') {   // three leads from the hand down to the dogs' collars, out in front
+    for (const [x, y] of [[-8, 21], [0, 24], [8, 21]]) C(hR, [x, y, 5.4], 0.42, 0.42, GR.ACC, 'lead', M365.lead);
+  } else if (acc === 'guitar') {   // held across the body: the body low at the right, the neck up to the left hand
+    const c = vadd(S.chest, mv(S.SP, [1.4, D.chestR[1] + 3.0, -6.0]));
+    E(c, S.SP, [5.2, 2.0, 4.3], GR.ACC, 'guitar', M365.wood);
+    E(vadd(c, mv(S.SP, [0.4, 1.9, 0.4])), S.SP, [1.3, 0.3, 1.3], GR.ACC, 'hole', M365.dark);
+    C(vadd(c, mv(S.SP, [-4.0, 0.6, 1.6])), vadd(S.haL, mv(S.SP, [-1.6, 0, 0.8])), 0.8, 0.65, GR.ACC, 'neck', MAT('#6a4428'));
+  } else if (acc === 'call') B(vadd(hR, [-0.6, 0.4, 1.4]), S.SP, [0.5, 1.0, 1.9], GR.ACC, 'phone', M365.dark);
+  else if (acc === 'map') B(vmul(vadd(hR, S.haL), 0.5), mmul(S.SP, rx(-0.5)), [5.0, 0.25, 3.4], GR.ACC, 'map', MAT('#e8e0c0'));   // a tourist's map, open in both hands
+}
+// ==== end of the city's people ========================================================================================

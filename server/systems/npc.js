@@ -17,6 +17,8 @@ import * as vehicles from './vehicles.js';
 import * as trains from './trains.js';
 import * as wildlife from './wildlife.js';
 import { inAnyView } from '../view.js';
+import * as npclooks from './npclooks.js';
+import * as personas from './personas.js';
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
@@ -30,9 +32,12 @@ let rng = mulberry32(99);
 
 export function spawnNpc(world, archetype, x, y, role = 'civ') {
   const a = ARCHETYPES[archetype] || ARCHETYPES.casual;
-  const bi = rollBuild(rng, archetype);
+  // dressed from the wardrobe (npclooks.js: a look for this kind of person in this district, its code on the wire); the
+  // uniforms (police, SWAT, agents, soldiers, medics) keep the old appearance
+  const dressed = npclooks.dress(world, archetype, x, y, undefined, rng);
+  const bi = dressed ? dressed.bi : rollBuild(rng, archetype);
   const b = BUILDS[bi];
-  const app = makeAppearance(rng, archetype);
+  const app = dressed ? dressed.app : makeAppearance(rng, archetype);
   app.bd = bi;
   const hp = Math.round(a.hp * b.hp * (0.9 + rng() * 0.2));
   const ped = world.spawnPed(x, y, { hp, app, archetype, a: rng() * Math.PI * 2 });
@@ -169,7 +174,8 @@ export function update(world, dt) {
     }
     if ((n.role === 'civ' || n.role === 'mugger') && n.state !== 'crawl') checkDive(world, ped, now);
     let inp = NO_INPUT, factor = 0.55;
-    switch (n.state) {
+    const pin = n.persona && (n.state === 'wander' || n.state === 'idle') ? personas.steer(world, ped, now) : null;   // (personas.js)
+    if (pin) { inp = pin.inp; factor = pin.factor; } else switch (n.state) {
       case 'wander': inp = wander(world, ped, now); factor = rain && !ped.umbrella ? 0.85 : 0.55; break;
       case 'idle': inp = idle(world, ped, now); break;
       case 'flee': {
@@ -448,6 +454,7 @@ export function onGunfire(world, x, y, shooter, radius = 360) {
       continue;
     }
     if (n.role !== 'civ' || n.state === 'fight' || n.state === 'passed') continue;
+    if (n.tough && Math.hypot(e.x - x, e.y - y) > 90) { e.a = Math.atan2(y - e.y, x - e.x); continue; }   // tough guys don't back off
     // (far enough off, now and then someone films it instead of running)
     if (radius >= 360 && n.state !== 'flee' && Math.hypot(e.x - x, e.y - y) > radius * 0.7 && rng() < filmChance(e) * 0.4) { startFilming(world, e, x, y, 6 + rng() * 6); continue; }
     flee(world, e, x, y, 5 + rng() * 3);
@@ -508,8 +515,8 @@ export function onDeath(world, ped, attacker) {
   const a = ARCHETYPES[n.archetype] || ARCHETYPES.casual;
   // not everyone carries cash: well-off types usually do, seniors and drunks often don't
   const carries = { executive: 0.9, socialite: 0.85, hustler: 0.8, syndicate: 0.75, casual: 0.55, construction: 0.5, athlete: 0.35, sweeper: 0.4, senior: 0.45, drunk: 0.3, mugger: 0.7 }[n.archetype] ?? 0.5;
-  const cash = a.cash && rng() < carries ? Math.max(1, Math.round(a.cash[0] + rng() * (a.cash[1] - a.cash[0]))) : 0;
-  let item = a.item && rng() < a.item[1] ? a.item[0] : null;
+  const cash = a.cash && !n.poor && rng() < carries ? Math.max(1, Math.round(a.cash[0] + rng() * (a.cash[1] - a.cash[0]))) : 0;
+  let item = a.item && !n.poor && rng() < a.item[1] ? a.item[0] : null;
   if (n.hasPurse) { item = 'purse'; n.hasPurse = false; }
   cargo.npcDrop(world, ped, cash, item);
   stopFilming(ped);
@@ -636,6 +643,8 @@ function spawnByDemographic(world, x, y, night) {
     const g = spawnNpc(world, 'syndicate', x, y, 'gang');
     return g;
   }
+  // now and then someone with a character of their own (personas.js)
+  if (rng() < (night ? personas.PERSONA_SHARE.night : personas.PERSONA_SHARE.day)) { const p = personas.spawnHere(world, spawnNpc, x, y, night); if (p) return p; }
   const entries = Object.entries(ARCHETYPES).filter(([, a]) => (night ? a.night : a.day) > 0);
   let total = 0;
   // GDD: night shifts spawning toward shady criminal profiles (+300%)

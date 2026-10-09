@@ -357,3 +357,8 @@ export const WALLET_SAMARITAN = 8;
 // Getting unstuck
 export const UNSTUCK_S = 5;                // stand still this long and you're moved to the nearest open ground
 export const UNSTUCK_CALM_S = 20;          // ...only when you haven't fought, shot or been hurt for this long, and aren't wanted
+
+// The city's people (server/systems/personas.js): a coin for the busker
+export const BUSKER_TIP = 2;               // $ a coin in the guitar case
+export const BUSKER_SAMARITAN = 1;         // ...and the Samaritan credit for it
+export const BUSKER_EVERY_S = 90;          // once per busker in this long

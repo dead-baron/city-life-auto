@@ -78,6 +78,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Lay a spike strip (on duty: select it with the weapon key, then fire toward the road ahead) | Tab, then click | RB, then RT | WPN, then FIRE |
 | Bank your cash (walk up to any ATM - automatic) / find the nearest ATM | walk into it · P → Nearest ATM | walk into it · D-pad ← → Nearest ATM | walk into it · 📱 → Nearest ATM |
 | Take a lost pet's collar / hand it back to its owner | E | B | ACT |
+| Drop a coin for a busker ($2, +1 Samaritan) | E beside them | B | ACT |
 | City feed (what's happening anywhere) | P → City feed | D-pad ← → City feed | 📱 → City feed |
 | Hire a boat / hand it back (at a rental dock) | E at the kiosk · E in the boat by the pier | B | ACT |
 | Moor a boat in your boathouse (waterfront homes) / take one out | E in the boat by your slip · E at your door → Take out | B | ACT |

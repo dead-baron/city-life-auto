@@ -4097,3 +4097,43 @@ From the user's 21:18 note: the notes that pop up cover too much of the screen, 
 - **Seeing a crime** (`server/systems/law.js`):
   - One note, "You saw a crime. You can call it in from your phone for a minute", then nothing for 10 minutes (`SAW_NOTE_S`), however many crimes you see.
   - Each crime still waits on the phone's home screen to be called in, as before.
+
+## 2026-10-08 · The city's people: everyone dressed from the new wardrobe, and twenty street personalities with their own walks
+From the owner's notes (task #365): "create a ton more NPC characters out in the world with all the customization assets I've provided ... find even more NPC character styles or personality types". The concepts: NP1 (twenty street personalities), NP2 (their walk cycles), NP3 (street life on a Midtown block), CC6 (phones out and small gestures).
+- **Everyone dressed from the wardrobe** (`server/systems/npclooks.js`):
+  - Every civilian NPC wears a whole look from the catalogue (`shared/look.js`): body, face, hair and outfit. It travels as its code (`app.lk`), once, like a player's, and its sprites are cached the same way.
+  - Each kind of person is a recipe: likely styles, the share of women, an age spread, and pieces they always wear. Executives wear Business and Formal; socialites High fashion and Nightclub; construction workers Work, with a hard hat and hi-vis; seniors are in their sixties and seventies, in cardigans, coats and flat caps; athletes Athletic; hustlers Street and Streetwear; hikers Outdoors with a pack; farmers Western and work, in overalls and cowboy hats.
+  - The district shades it: the rich districts lean Preppy, High fashion and Business; the beach Beach; the Neon Strip at night Nightclub; the rough districts Street, Punk and Alt; downtown by day Business; the suburbs Casual. Work clothes don't change with the district.
+  - The Syndicate wear their colours from the catalogue: black with red, vests and track pants, bandanas and gold chains. Muggers wear dark hoodies.
+  - The police, SWAT, agents, soldiers, medics and train guards keep their uniforms: the catalogue has no uniforms yet.
+  - The variety is bounded: each kind of person in each district (and at night, where that matters) draws from a pool of 20 looks. Nobody within 420 px of a new person wears their look, so a crowd of sixteen is sixteen different people, and a street reuses its sprites.
+  - The combat build comes with the body: a big man is drawn big and fights like it.
+- **Twenty street personalities** (`server/systems/personas.js`), each with a look recipe, a walk, props and a way of going about. About three in ten of the people who come walking along are one (fewer at night), at most two of a kind round one place (one dog walker, one dancer, one busker):
+  - seniors with a cane, in a slow hunched walk; seniors pulling a tartan shopping trolley;
+  - the tracksuit couple, in the same tracksuit, walking side by side;
+  - tough guys in vests and gold chains: they don't back off from gunfire, and always fight back;
+  - the gym regular with a duffel bag; the glamorous walker and the confident streetwear woman, both strutting;
+  - joggers running laps of a park or along the beach;
+  - skaters pushing along on a board, rollerbladers gliding;
+  - the punk with a mohawk;
+  - the homeless man pushing a cart with a blanket in it, round his camp in the park or an underpass, sitting by it a while. He carries no cash and drops no loot;
+  - the office worker staring at his phone: he walks slower and bumps into people;
+  - the dog walker with three dogs on leads (the game's dogs; they can't be hurt);
+  - the wild dancer, and the middle-aged man dancing at the beach in a tiny purple swimsuit, flip-flops, a sweatband and a bum bag.
+- **Street life** (NP3, CC6): people texting as they walk, on a call, leaning on a wall with a foot up behind them, sitting on park benches (on the seat, facing the way the bench faces), asleep in the park, and, rarely, a selfie at a fountain or a statue (the owner asked for fewer phones out).
+  - **The busker** plays his guitar on a corner. Stand by him and press ACT to drop a coin: $2 and +1 Samaritan, once every 90 s (`BUSKER_*` in `shared/rules.js`).
+- **More characters:** a tourist couple (a map in his hands, a phone for photos in hers), a hot-dog seller at a food cart, a fisherman at a pier's rail.
+- **The walks and props** (`client/art2/people.js`, one marked block at the end): the hunch, the strut (hips swaying, the feet on one line), skating, rollerblading, four frames of dancing, pushing a cart, leaning on a wall; the cane, the trolley, the cart, three dog leads, the guitar, a phone at the ear, a tourist's map.
+  - The ped descriptor carries the walk (`gt`), the prop (`pp`) and a seat on a bench (`sb`) (`server/net.js`). `client/art2/game/peds.js` picks the pose; anyone running for their life runs plainly.
+  - A prop is a sprite set of its own: the look's key carries it. It now carries a robbery's money bag too, which had shared the plain sprites.
+- **Dev:** `{t:'dev', c:'persona', k:'swim'}` spawns a personality a few steps ahead.
+- **Performance:** the renderer's code went from 340 to 343 KB (budget 350): the new walks and props. The server keeps the recipes and pools, so they cost the page nothing.
+- **Not yet:** cyclists on the game's bicycles (the motorcycle work is changing the vehicles tonight), an old man feeding pigeons (no pigeons on the server yet), a street preacher, a delivery rider.
+- **Tests:** `test/npcpeople.test.js` (7 tests):
+  - every recipe gives valid looks that travel as their code;
+  - district shading: beach clothes at the beach, business downtown, club clothes on the Strip at night;
+  - people side by side differ, and the pool bounds the looks;
+  - an NPC's look data is its code alone;
+  - the personalities turn up where they belong, with their walks, props and ways (the dogs at heel, the matching tracksuits, laps, a tough guy standing his ground, nothing to rob from the homeless man, the seller at the cart, the fisherman's line in the water);
+  - the busker's coin, a bench, a sleeper, a selfie (its descriptor sent once), someone leaning on a wall;
+  - every walk and prop renders.

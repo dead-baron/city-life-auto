@@ -77,7 +77,7 @@ function remove(world, pet) {
 
 export function lostPets(world) {
   const out = [];
-  for (const e of world.entities.values()) if (e.kind === K.PED && e.pet && !e.removed) out.push(e);
+  for (const e of world.entities.values()) if (e.kind === K.PED && e.pet && !e.pet.walked && !e.removed) out.push(e);   // (walked: a dog walker's, personas.js)
   return out;
 }
 
