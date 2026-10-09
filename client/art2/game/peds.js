@@ -264,6 +264,17 @@ export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
   return opt.cut ? cutGBuf(G, opt.cut, 7) : G;   // (cut in two by the plasma blade: one half, a little apart from the other, the edge seared)
 }
 
+// Sitting a while (a park bench; a cell's bench or toilet, sb 2: people.js 'sitx'): one way of sitting held 9-16 s, then
+// another; now and then a breath or a glance - never the 2-frame sit's quick look up and down (the owner, 09:17: "just
+// have you idling ... head in your hands or slouched or hunched over or looking up or looking bored"). A park bench
+// leaves out the hunched-over and the head-in-the-hands ways.
+const SIT_WAYS = [[0, 1, 4, 5], [0, 1, 2, 3, 4, 5]];
+export function sitFrame(d, id, now) {
+  const ways = SIT_WAYS[d && d.sb === 2 ? 1 : 0], span = 9 + (id % 8);
+  const s = Math.floor((now + id * 3.7) / span), t = Math.floor((now + id * 1.3) / 2.2);
+  return ways[((Math.imul(s + 1, 0x9e3779b1) >>> 7) + id) % ways.length] * 2 + ((Math.imul(t + 7, 0x85ebca6b) >>> 13) & 1);
+}
+
 // ---- the city's people (server personas.js): a persona's walk (the descriptor's gt) and prop (pp), a seat on a bench (sb)
 const STRIDES = new Set(['hunch', 'strut', 'skate', 'blade', 'push']);
 const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', map: 'map', stretcher: 'stretcher', stretcherPt: 'stretcherPt' };   // (stretcher: the paramedics', ems.js)
@@ -271,7 +282,7 @@ const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'lea
 export function withProp(A, pp) { return PROP_CARRY[pp] ? { ...A, pp, carry: PROP_CARRY[pp] } : A; }
 // the pose a persona walks or stands in, for the pose the game picked (running for their life: the plain run)
 export function personaPose(d, pose) {
-  if (d.sb && pose === 'idle') return 'sit';
+  if (d.sb && pose === 'idle') return 'sitx';
   const g = d.gt;
   if (!g) return pose;
   if (g === 'dance' || g === 'lean') return pose === 'idle' ? g : pose;

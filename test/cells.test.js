@@ -132,7 +132,7 @@ test('in the cell: walk round it but not out; sit on the bench, the toilet, hold
   assert.match(act.label, /bench/i);
   act.run();
   assert.ok(ped.sitBench && ped.seat2 === 'bench', 'sitting');
-  assert.equal(_descriptor(ped).sb, 1, 'everyone sees them sitting');
+  assert.equal(_descriptor(ped).sb, 2, 'everyone sees them sitting (sb 2: a seat in a cell - all six ways of sitting a while, client/art2/game/peds.js sitFrame)');
   walkFor(w, p, 0, 0, 1);   // (standing still: no input moving)
   assert.ok(ped.sitBench, 'stays sat');
   walkFor(w, p, 0, 1, 0.3);
@@ -155,6 +155,47 @@ test('in the cell: walk round it but not out; sit on the bench, the toilet, hold
   assert.equal(_descriptor(ped).hb, 1, 'hands on the bars, for all to see');
   walkFor(w, p, 0, 0, 1);
   assert.ok(ped.holdBars && inCellRect(c, ped.x, ped.y, 2));
+});
+
+test('the fight button in a cell: at the bars they rattle, by a wall a fist on it, turned to face it - nobody hurt (task #379)', () => {
+  const w = makeWorld();
+  const { p } = jailed(w);
+  const c = cellOf(w, p), ped = p.ped, IN_FIRE = 1;
+  const heard = [];
+  const emit = w.emit.bind(w);
+  w.emit = (x, y, ev) => { if (ev.e === 'bang') heard.push(ev); return emit(x, y, ev); };
+  const fire = () => { push(p, 0, 0, IN_FIRE); w.step(); push(p, 0, 0, 0); w.step(); };
+  // holding the bars: they rattle (k 1), facing out
+  teleport(w, ped, (c.x0 + c.x1) / 2, c.front - 4);
+  players.findInteraction(w, p).run();
+  fire();
+  assert.equal(heard.length, 1, 'one bang a press');
+  assert.equal(heard[0].k, 1, 'the bars rattled');
+  assert.ok(ped.holdBars, 'still holding them');
+  // held down, no more than one a press; and a moment between presses
+  for (let i = 0; i < 10; i++) { push(p, 0, 0, IN_FIRE); w.step(); }
+  assert.equal(heard.length, 1, 'holding the button bangs once');
+  push(p, 0, 0, 0); w.step();
+  // by the side wall: a fist on it, turned to face it (k 2)
+  players.findInteraction(w, p).run();   // (let go of the bars)
+  const back = Math.abs(c.front - c.y0) < Math.abs(c.front - c.y1) ? c.y1 : c.y0, my = (c.front + back) / 2;
+  teleport(w, ped, c.x0 + 6, my);
+  run(w, 0.5);
+  fire();
+  const last = heard[heard.length - 1];
+  assert.equal(last.k, 2, 'a fist on the wall');
+  assert.ok(Math.abs(Math.cos(ped.a) + 1) < 0.01, 'facing the wall (west)');
+  // in the middle of the floor, nothing to hit; sitting, neither
+  const n = heard.length;
+  teleport(w, ped, (c.x0 + c.x1) / 2, my);
+  run(w, 0.5);
+  if (Math.min(Math.abs(ped.y - back), ped.x - c.x0, c.x1 - ped.x, Math.abs(ped.y - c.front)) > 26) { fire(); assert.equal(heard.length, n, 'nothing within reach: nothing happens'); }
+  teleport(w, ped, c.bench.x, c.bench.y + 8);
+  players.findInteraction(w, p).run();
+  run(w, 0.5);
+  fire();
+  assert.equal(heard.length, n, 'sitting: no banging');
+  assert.ok(ped.hp > 0 && !ped.dead, 'and nobody hurt');
 });
 
 test('cellmates share a cell and can\'t hurt each other; weapons are put away in the cell block', () => {

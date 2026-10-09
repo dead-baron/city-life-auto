@@ -342,6 +342,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     if (!ped.cuffed) {   // in a cell: walk round it; the action button sits, holds the bars (cells.js)
       cells.input(world, p, ped, inp, dt);
       if (pressed & IN.ACTION) { const act = findInteraction(world, p); if (act) act.run(); }
+      if (pressed & IN.FIRE) cells.bang(world, p, ped);   // (the fight button: rattle the bars, or a fist on the wall)
     }
     return;
   }

@@ -13,6 +13,8 @@
 //
 //   p.custody.cell: { b, c } the block (map.cellBlocks index) and the cell a prisoner is in
 //   ped.sitBench / ped.holdBars: sitting (the bench or the toilet: ped.seat2 'bench' | 'toilet') / at the bars
+//   bang(world, p, ped): the fight button in a cell (task #379) - at the bars, they're rattled; by a wall, a fist on it
+//     ('bang' event k 1 | 2: the client's 'bang' and 'thump' poses, a clang or a thud for anyone near)
 import { K } from '../../shared/constants.js';
 import { pedStep } from '../../shared/physics.js';
 import { cellBlockAt, inCellRect, CELL_CAP } from '../../shared/cells.js';
@@ -242,6 +244,28 @@ export function holdBars(world, p, cell) {
   p.teleportAt = world.time;
 }
 export function clearPose(ped) { if (ped) standUp(ped); }
+
+// The fight button in a cell (task #379; the owner, 09:17: "if you tap fight you will bang on the bars or hit the wall"):
+// at the bars (holding them, or standing right at them) they're rattled; by a wall, a fist on it, turned to face it.
+// Nobody is hurt in a cell (cellSafe), so there's nothing else a punch could do there.
+const BANG_GAP_S = 0.3, WALL_PX = 24;
+export function bang(world, p, ped) {
+  const c = p.custody && p.custody.cell, cell = c ? blocks(world)[c.b]?.cells[c.c] : null;
+  if (!cell || ped.sitBench || world.time - (ped.bangAt ?? -9) < BANG_GAP_S) return 0;
+  let k = 0, a = ped.a;
+  if (ped.holdBars || Math.abs(ped.y - cell.front) < 16) { k = 1; a = cell.a; }
+  else {
+    // the nearest wall but the bars: the back, or a side
+    const back = Math.abs(cell.front - cell.y0) < Math.abs(cell.front - cell.y1) ? cell.y1 : cell.y0;
+    const walls = [[Math.abs(ped.y - back), back > ped.y ? Math.PI / 2 : -Math.PI / 2], [ped.x - cell.x0, Math.PI], [cell.x1 - ped.x, 0]];
+    const [d, wa] = walls.reduce((m, w) => (w[0] < m[0] ? w : m));
+    if (d < WALL_PX) { k = 2; a = wa; }
+  }
+  if (!k) return 0;
+  ped.bangAt = world.time; ped.a = a;
+  world.emit(ped.x, ped.y, { e: 'bang', id: ped.id, k, x: Math.round(ped.x), y: Math.round(ped.y) });
+  return k;
+}
 
 // ---- NPC crooks doing time (law.js arrest) -------------------------------------------------------------------------
 // The arrested NPC serves INMATE_S in the nearest station's cells: kept as a record, made flesh only while a player is

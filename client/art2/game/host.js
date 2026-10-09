@@ -1148,7 +1148,7 @@ export class World2 {
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
     const wpn = phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
-    if ((p.d.gt || p.d.sb) && !wpn && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : Pd.pedFrame(q, L.fr); } }
+    if ((p.d.gt || p.d.sb) && !wpn && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : Pd.pedFrame(q, L.fr); } }
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
@@ -1556,7 +1556,7 @@ export class World2 {
         let ppose = L.swimming ? 'swim' : pose === 'move' ? 'walk' + L.lvl : pose, d8 = dir8(e.ra), A2 = this._app(e.d.app || {}, e.d.ar);
         if (e.d.pp && A2 && Pd.withProp) A2 = this._propped(A2, e.d.pp);   // (a street personality: their prop and walk, as _ped draws them)
         if ((e.d.gt || e.d.sb) && Pd.personaPose) ppose = Pd.personaPose(e.d, ppose);
-        const wpn = (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = Pd.pedFrame(ppose, L.fr);
+        const wpn = (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = ppose === 'sitx' && Pd.sitFrame ? Pd.sitFrame(e.d, e.id, now) : Pd.pedFrame(ppose, L.fr);
         if (this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn], prio)) budget--;
       } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState) {
         const N = this.tier.N, hi = quant(e.ra || 0, N), st = A.vehState(e.flags, 1);
