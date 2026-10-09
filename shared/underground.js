@@ -49,12 +49,15 @@ export function oreFor(dist, depth, r) {
 }
 
 // ---- small helpers --------------------------------------------------------------------------------------------------
+// (lengths by Math.sqrt of the squares: sqrt is exact to the last bit in every engine, Math.hypot isn't - the layout
+// must come out the same in the browser as on the server)
+const len = (x, y) => Math.sqrt(x * x + y * y);
 const hash = (x, y, s) => { let h = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(y | 0, 0x165667b1) ^ Math.imul(s | 0, 0x9e3779b9); h = Math.imul(h ^ (h >>> 15), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 function segDist(px, py, ax, ay, bx, by) {
   const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
   const t = l2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
   const qx = ax + dx * t, qy = ay + dy * t;
-  return { d: Math.hypot(px - qx, py - qy), x: qx, y: qy, t };
+  return { d: len(px - qx, py - qy), x: qx, y: qy, t };
 }
 function nearestOn(P, x, y) {
   let best = null;
@@ -106,7 +109,7 @@ function straightOn(map, n, dx, dy, used, seed) {
   let best = null;
   for (const e of edgesAt(map, n)) {
     if (used.has(e.id) || !townEdge(map, e, seed)) continue;
-    const P = fromNode(e, n), q = P[Math.min(P.length - 1, 3)], l = Math.hypot(q.x - P[0].x, q.y - P[0].y) || 1;
+    const P = fromNode(e, n), q = P[Math.min(P.length - 1, 3)], l = len(q.x - P[0].x, q.y - P[0].y) || 1;
     const dot = ((q.x - P[0].x) * dx + (q.y - P[0].y) * dy) / l;
     if (dot > 0.8 && (!best || dot > best.dot)) best = { e, dot };
   }
@@ -122,7 +125,7 @@ function sewerRoutes(map) {
     // on through the junction at each end, where the street carries straight on (a route under a few blocks)
     for (const end of ['b', 'a']) {
       const n = e[end], Q = end === 'b' ? P : [...P].reverse();
-      const k = Q.length - 1, dx = Q[k].x - Q[Math.max(0, k - 3)].x, dy = Q[k].y - Q[Math.max(0, k - 3)].y, l = Math.hypot(dx, dy) || 1;
+      const k = Q.length - 1, dx = Q[k].x - Q[Math.max(0, k - 3)].x, dy = Q[k].y - Q[Math.max(0, k - 3)].y, l = len(dx, dy) || 1;
       const nx = straightOn(map, n, dx / l, dy / l, used, seed);
       if (!nx) continue;
       used.add(nx.id); edges.push(nx);
@@ -326,7 +329,7 @@ function dressCave(L) {
   // the den: against the back wall of the last chamber, the furthest floor from the way in
   const d = K.ch.den;
   let den = null;
-  for (const s of wallSpots(R, d.x, d.y, d.r + 30)) { const far = Math.hypot(s.x - K.ch.river.x, s.y - K.ch.river.y); if (!den || far > den.far) den = { x: Math.round(s.x - s.nx * 20), y: Math.round(s.y - s.ny * 20), far }; }
+  for (const s of wallSpots(R, d.x, d.y, d.r + 30)) { const far = len(s.x - K.ch.river.x, s.y - K.ch.river.y); if (!den || far > den.far) den = { x: Math.round(s.x - s.nx * 20), y: Math.round(s.y - s.ny * 20), far }; }
   K.den = den ? { x: den.x, y: den.y } : { x: d.x, y: d.y };
   // the boat: moored at the river's west end, facing downstream
   const rv = K.river;
@@ -342,7 +345,7 @@ function dressSewers(L) {
   for (const r of L.routes) {
     let s = 0;
     for (let i = 1; i < r.pts.length; i++) {
-      const a = r.pts[i - 1], b = r.pts[i], l = Math.hypot(b.x - a.x, b.y - a.y);
+      const a = r.pts[i - 1], b = r.pts[i], l = len(b.x - a.x, b.y - a.y);
       for (; s < l; s += 230) {
         const t = s / l, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t, nx = -(b.y - a.y) / (l || 1), ny = (b.x - a.x) / (l || 1);
         const side = rnd() < 0.5 ? -1 : 1;
@@ -363,7 +366,7 @@ function veins(map, L) {
   const add = (spots, ug, depth, n, where) => {
     const chosen = pickN(rnd, spots, n * 3);
     for (let k = 0; k + 2 < chosen.length && out.length < 200; k += 3) {
-      const q = chosen[k], dist = Math.hypot(q.x - CITY.x, q.y - CITY.y);
+      const q = chosen[k], dist = len(q.x - CITY.x, q.y - CITY.y);
       const ore = oreFor(dist, depth, rnd());
       out.push({ i: out.length, x: Math.round(q.x), y: Math.round(q.y), ug, ore, need: ORE_BY_ID[ore].tier, where, alts: [q, chosen[k + 1], chosen[k + 2]].map((s) => ({ x: Math.round(s.x), y: Math.round(s.y) })) });
     }
@@ -413,7 +416,7 @@ export function cellAtPx(L, x, y) {
 export const openAt = (L, x, y) => cellAtPx(L, x, y) !== C.ROCK;
 // a clear line underground (nothing but open cells between): police sight down there (law.js), the bear's
 export function ugLos(L, x0, y0, x1, y1) {
-  const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / 12));
+  const d = len(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / 12));
   for (let k = 1; k < n; k++) { const t = k / n; if (!openAt(L, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false; }
   return true;
 }
@@ -432,7 +435,7 @@ export const UG_AMBIENT = { [UG.SEWER]: 0.06, [UG.CAVE]: 0 };
 export function lightAt(L, x, y, lights = [], day = 0) {
   const ug = ugAt(L, x, y);
   let v = UG_AMBIENT[ug] || 0;
-  const add = (sx, sy, r, k) => { const d = Math.hypot(x - sx, y - sy); if (d < r) v += k * (1 - d / r); };
+  const add = (sx, sy, r, k) => { const d = len(x - sx, y - sy); if (d < r) v += k * (1 - d / r); };
   for (const l of lights) add(l.x, l.y, l.r, l.k ?? 1);
   if (ug === UG.CAVE && L.cave) for (const g of L.cave.glow) add(g.x, g.y, g.r, g.k * 0.6);
   if (ug === UG.SEWER) for (const g of L.grates || []) add(g.x, g.y, 90, 0.5 * day + 0.12);
