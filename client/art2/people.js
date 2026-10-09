@@ -235,17 +235,18 @@ const BUILDS = [{ h: 0.98, w: 0.88, limb: 0.86 }, { h: 1, w: 1, limb: 1 }, { h: 
 function dims(A) {
   const fem = !!A.fem, b = { h: 1, w: 1, limb: 1, belly: 0, muscle: 0, ...(BUILDS[A.build ?? 1] || BUILDS[1]), ...(A.body || {}) };
   const h = b.h * (fem ? 0.97 : 1), w = b.w * (fem ? 0.9 : 1), lm = b.limb * (fem ? 0.86 : 1), mu = b.muscle || 0, bel = b.belly || 0;
-  // (C1, C2: about 3.6 heads - a smaller head than the first pass's 3, longer legs, the same height; shoulders and
-  // hips by base and build: a man's taper from the shoulders, a woman's waist and hips)
+  // (C1, C2: about 3.7 heads, hair included - the first pass drew 2.6: a smaller head, a longer torso and legs, longer
+  // arms (the hands at mid-thigh), the same height; shoulders and hips by base and build: a man's taper from the
+  // shoulders, a woman's waist and hips)
   const D = {
     fem, h, w, lm, mu, belly: bel,
-    ank: 3.1, shin: 7.9 * h, thigh: 7.9 * h, hipX: 3.4 * w * (fem ? 1.12 : 1),
-    pelR: [6.4 * w * (fem ? 1.12 : 1), 4.6 * w, 4.6], waistR: [6.7 * w * (fem ? 0.8 : 0.97) + bel * 1.4, 4.7 * w + bel * 1.2, 4.9], waistUp: 4.3 * h,
-    chestR: [8.4 * w * (1 + mu * 0.1) * (fem ? 0.94 : 1.02), 5.3 * w * (1 + mu * 0.08), 6.3 * h], chestUp: 8.9 * h,
-    shX: 8.3 * w * (1 + mu * 0.1) * (fem ? 0.95 : 1.03), shUp: 12.8 * h, shBar: 3.5 * w * (1 + mu * 0.08), neckUp: 15.0 * h, neckR: 2.15 * w * (1 + mu * 0.25),
-    head: (fem ? [6.25, 6.25, 6.6] : [6.5, 6.45, 6.85]).map((v, i) => v * (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[i]), headUp: 6.6,
+    ank: 3.1, shin: 8.2 * h, thigh: 8.2 * h, hipX: 3.4 * w * (fem ? 1.12 : 1),
+    pelR: [6.4 * w * (fem ? 1.12 : 1), 4.6 * w, 4.6], waistR: [6.7 * w * (fem ? 0.8 : 0.97) + bel * 1.4, 4.7 * w + bel * 1.2, 5.1], waistUp: 4.5 * h,
+    chestR: [8.4 * w * (1 + mu * 0.1) * (fem ? 0.94 : 1.02), 5.3 * w * (1 + mu * 0.08), 6.6 * h], chestUp: 9.4 * h,
+    shX: 8.3 * w * (1 + mu * 0.1) * (fem ? 0.95 : 1.03), shUp: 13.6 * h, shBar: 3.5 * w * (1 + mu * 0.08), neckUp: 15.8 * h, neckR: 2.0 * w * (1 + mu * 0.25),
+    head: (fem ? [5.5, 5.5, 5.8] : [5.72, 5.68, 6.03]).map((v, i) => v * (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[i]), headUp: 5.8,
     jawW: (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[3], age: A.age | 0,
-    upper: 8.3 * h, fore: 7.0 * h, armR: [2.95 * lm * (1 + mu * 0.2), 2.55 * lm * (1 + mu * 0.12)], foreR: [2.5 * lm * (1 + mu * 0.15), 2.0 * lm], fist: 2.6 * lm * (fem ? 0.93 : 1),
+    upper: 8.8 * h, fore: 7.4 * h, armR: [2.95 * lm * (1 + mu * 0.2), 2.55 * lm * (1 + mu * 0.12)], foreR: [2.5 * lm * (1 + mu * 0.15), 2.0 * lm], fist: 2.6 * lm * (fem ? 0.93 : 1),
     thighR: [3.7 * lm * (fem ? 1.06 : 1), 3.0 * lm], shinR: [2.85 * lm, 2.3 * lm], foot: fem ? [2.45, 4.3, 2.15] : [2.9, 4.95, 2.5],
   };
   D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;
@@ -976,7 +977,7 @@ function wardrobe(A, D, TF, seed) {
     if (st === 'cornrows') { if (Math.round(Q.l0 * 8) & 1) Q.k -= 0.3; return hairR; }
     if ((st === 'undercut' || st === 'fade') && Q.l2 < 0.45) { Q.k += hash(Q.x, Q.y, seed) > 0.7 ? -0.12 : 0; return stubble; }
     if (st === 'slick') { Q.gloss = 0.8; if ((Math.round(Q.l0 * 7) & 1) && Q.l2 > 0) Q.k -= 0.15; return hairR; }
-    Q.k -= 0.1;
+    Q.k -= Q.res > 1 ? 0.1 : 0.04;
     if (Q.res > 1) {
       // close up (the creator): locks running down from the crown, a dark line between them, each lock a little lighter
       // or darker than the next, and a sheen where the light catches the top
@@ -986,6 +987,7 @@ function wardrobe(A, D, TF, seed) {
       Q.gloss = Math.max(Q.gloss, st === 'afro' || st === 'curly' ? 0.25 : 0.6);
     } else if (Q.l2 < 0.78) { const sl = Math.floor(az * 5.2 + Q.l2 * 1.3 + 20), n = hash(sl, Math.floor(Q.l2 * 2.2 + 3), seed); Q.k += n > 0.62 ? -0.2 : n < 0.3 ? 0.12 : 0; }
     else Q.k += hash(Math.round(Q.l0 * 3), Math.round(Q.l1 * 3), seed) > 0.6 ? -0.12 : 0.04;
+    if (Q.res === 1 && Q.nz > 0.55 && Q.ny > -0.2) Q.k += 0.1;              // (C2: the light catches the top of the hair, seen from the high camera)
     if (st === 'wavy' || st === 'long' || st === 'braids' || st === 'dreads') Q.k += Math.sin(Q.Z * 1.3 + az * 3) * 0.12;
     return hairR;
   };
@@ -1457,7 +1459,7 @@ function render(fig, P, S, X, D, A, opt) {
       if (Q.gloss && R > 1) v += 0.3 * Q.gloss * sm(clamp((ndl - 0.5) / 0.4, 0, 1));   // (close up: the sheen fades in)
       else if (Q.gloss && ndl > 0.72) v += 0.3 * Q.gloss;
       if (R > 1) { const F2 = fine(RM); c = F2[clamp(Math.round(v * (F2.length - 1) + bayer(x - AX, y - AY) * 0.9), 0, F2.length - 1)]; }   // (close up: twice the steps, dithered)
-      else c = RM[clamp(Math.round(v * (RM.length - 1) + bayer(x - AX, y - AY) * 0.42), 0, RM.length - 1)];
+      else c = RM[clamp(Math.round(v * (RM.length - 1) + bayer(Math.floor((x - AX) / 2), Math.floor((y - AY) / 2)) * 0.42), 0, RM.length - 1)];   // (the dither on the art grid: whole art pixels after the bake, not a blur)
     }
     CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2]; ZW[i] = Q.Z; EM[i] = Q.e;
     if (opt.debug) { const hh = hash(k, 1, 77), part = p.part; CR[i] = 60 + hash(k, 2, 5) * 195; CG[i] = 60 + hh * 195; CB[i] = part === 'head' ? 255 : 60 + hash(k, 3, 9) * 120; }
@@ -1484,7 +1486,10 @@ function render(fig, P, S, X, D, A, opt) {
     const g = grp(k);
     if ((x > 0 && step(i, i - 1, g)) || (x < w - 1 && step(i, i + 1, g)) || (y > 0 && step(i, i - w, g)) || (y < h - 1 && step(i, i + w, g))) LN[i] = 1;
   }
-  for (let i = 0; i < n; i++) if (LN[i]) { CR[i] = CR[i] * 0.3 + 12; CG[i] = CG[i] * 0.26 + 8; CB[i] = CB[i] * 0.34 + 18; }
+  // (at the game's scale an inner line is a whole art pixel after the bake: a step darker, as SPEC asks, not the
+  // outline's near-black, which made a busy figure of every overlap)
+  if (R === 1) { for (let i = 0; i < n; i++) if (LN[i]) { CR[i] = CR[i] * 0.52 + 8; CG[i] = CG[i] * 0.48 + 6; CB[i] = CB[i] * 0.56 + 14; } }
+  else for (let i = 0; i < n; i++) if (LN[i]) { CR[i] = CR[i] * 0.3 + 12; CG[i] = CG[i] * 0.26 + 8; CB[i] = CB[i] * 0.34 + 18; }
   // pack: colour, a soft normal (half the shape's own, half facing the camera and up), height, glow, flags; then the
   // outline into the empty pixels round the figure
   const G = new GBuf(w, h), gc = G.col, gn = G.nrm, gz = G.z, ge = G.emi, gf = G.flag;
