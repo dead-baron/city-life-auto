@@ -30,7 +30,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
-import { initAudio, sfx } from './audio.js';
+import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi } from './audio.js';
 import { drawStarView } from './stargaze.js';
 import { noteServerBuild, myBuild } from './update.js';
 import { buildGive, buildQuickGive } from './devgive.js';
@@ -599,6 +599,7 @@ function plasmaSwing(a) {
 }
 
 function onEvent(ev) {
+  soundEvent(ev, S);   // its sound, placed where it happened (client/sound/events.js): the sfx calls below then stay quiet
   const now = S.loopClock;
   const fx = S.fx;
   switch (ev.e) {
@@ -1796,6 +1797,7 @@ function menuKey(k) {
     const d = k === 'ArrowLeft' || k === 'KeyA' ? -1 : 1;
     if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + d + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); return true; }
     if (el.type === 'checkbox') { el.checked = d > 0; el.dispatchEvent(new Event('change')); return true; }
+    if (el.type === 'range') { el.value = String(Number(el.value) + d * (Number(el.step) || 5)); el.dispatchEvent(new Event('input')); return true; }   // (the volume sliders)
     return false;
   }
   if (k === 'Enter' || k === 'Space' || k === 'KeyE') {
@@ -1874,6 +1876,7 @@ function syncSettings() {
   syncGfxPanel();
   $('s-diag').checked = diag.on;
   $('s-smooth').checked = settings.smooth !== false;
+  soundSettingsUi($('s-soundbox'));
 }
 // Account transfer: the login token is the account. Copy it here, paste it on another device;
 // the one it replaces is kept so a wrong paste can be undone.
@@ -2661,6 +2664,7 @@ function tickVisuals(F) {
   for (const v of F.vehs) { const d = VEHICLE_BY_INDEX[v.d.m]; if (d) { v._L = d.L; v._W = d.W; } }
   S.trainCars = F.cars;
   fx.update(dt);
+  soundFrame(F, S);   // engines, footsteps, the ambience, the places' music (client/sound/)
 }
 
 // The buildings in view this frame, with how see-through each is drawn: x-rayed while it hides you,
@@ -3558,8 +3562,7 @@ function vehVisual(v, now, dt) {
     const b = v.buf; const sp = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y);
     if (sp > 2 && Math.random() < 0.8) S.fx.spawn(5, v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, 0.7, 3, '#e8f6ff');
   }
-  if (f & VF.SIREN) sfx('siren', distVol(v.rx, v.ry) * 0.7);
-  if (f & VF.HORN) sfx(def.pedal ? 'bell' : 'horn', distVol(v.rx, v.ry));   // (a bicycle rings its bell)
+  // (the engines, sirens, horns and tyres: client/sound/vehicles.js, from soundFrame)
   void now;
 }
 function drawVehicleEnt(v, now, dt) {
