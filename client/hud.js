@@ -99,8 +99,8 @@ export class HUD {
       const r = me.rob, left = r.full ? Math.max(0, r.left / r.full) : 1;
       rb.classList.remove('hidden'); rb.classList.toggle('alarm', !!r.alarm); rb.classList.toggle('till', r.warm >= 1);
       $('rob-fill').style.width = Math.round((r.warm < 1 ? r.warm : left) * 100) + '%';
-      $('rob-take').textContent = r.duck ? `$${r.take} - police outside!` : r.alarm ? `ALARM! $${r.take} - get out!` : r.warm < 1 ? 'Hands up...'
-        : r.empty ? `$${r.take} - the till's empty` : `$${r.take} · till $${r.left ?? 0}`;
+      $('rob-take').textContent = r.duck ? `HOT $${r.take} - police outside!` : r.alarm ? `ALARM! HOT $${r.take} - get out!` : r.warm < 1 ? 'Hands up...'
+        : r.empty ? `HOT $${r.take} - the till's empty` : `HOT $${r.take} · till $${r.left ?? 0}`;
     } else rb.classList.add('hidden');
     // riding a train: next stop, the tunnel, the strongbox
     const tb = $('trainbar'), tr = me.train, cu = me.custody;

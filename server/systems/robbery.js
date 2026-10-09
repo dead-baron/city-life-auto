@@ -11,7 +11,7 @@
 // Customers in the shop put their hands up too, then slip out of the door and run when they can (npc.js holdup).
 import { K } from '../../shared/constants.js';
 import { WEAPONS } from '../../shared/items.js';
-import { ROB_WARMUP_S, ROB_TOSS_S, ROB_TAKE, ROB_ALARM_S, ROB_RESPONSE_S, ROB_TILL, ROB_TILL_TIER, ROB_REFILL_S, ROB_CALLED_HEAT, ROB_HEAT_S, ROB_HEAT_PER_100, ROB_HEAT_KIND, ROB_HEAT_TIER } from '../../shared/rules.js';
+import { ROB_WARMUP_S, ROB_TOSS_S, ROB_TAKE, ROB_ALARM_S, ROB_RESPONSE_S, ROB_TILL, ROB_TILL_TIER, ROB_REFILL_S, ROB_CALLED_HEAT, ROB_HEAT_S, ROB_HEAT_PER_100, ROB_HEAT_KIND, ROB_HEAT_TIER, ROB_SCENE_S } from '../../shared/rules.js';
 import { angleDiff } from '../../shared/math.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
@@ -24,7 +24,6 @@ import { walkInAt } from './npc.js';
 
 const rng = mulberry32(1919);
 const REACH = 300, AIM_CONE = 0.35, LET_GO_S = 1.6, CLERK_COOLDOWN_S = 120;
-const SCENE_S = 180;   // the police treat the place as the scene of the robbery this long after it (the standoff)
 
 function clerkUnit(world, clerk) {
   const key = clerk.npc && clerk.npc.clerkOf;
@@ -68,16 +67,16 @@ function targetClerk(world, ped) {
 function start(world, p, clerk) {
   const info = clerkUnit(world, clerk);
   if (!info) return;
-  const now = world.time, key = clerk.npc.clerkOf;
+  const now = world.time, key = clerk.npc.clerkOf, tier = tierAt(world, clerk.x, clerk.y);
+  const { left } = till(world, key, info.u.kind, tier);
   const r = {
-    clerk: clerk.id, key, kind: info.u.kind, tier: tierAt(world, clerk.x, clerk.y), u: info.u, label: info.poi.label, x: clerk.x, y: clerk.y,
+    clerk: clerk.id, key, kind: info.u.kind, tier, u: info.u, label: info.poi.label, x: clerk.x, y: clerk.y,
     t0: now, nextToss: now + ROB_WARMUP_S, alarmAt: now + ROB_ALARM_S[Math.floor(rng() * ROB_ALARM_S.length)], alarmed: false,
-    called: false, heatAt: now, heatAcc: 0, take: 0, tosses: 0, lastAim: now, empty: false, ducked: false,
+    called: false, heatAt: now, heatAcc: 0, take: 0, tosses: 0, lastAim: now, empty: left < 1, ducked: false,
   };
   p.robbery = r;
-  p.robbedAt = { u: info.u, bid: Math.floor(key / 16), until: now + SCENE_S };   // (the scene: standoff.js)
+  p.robbedAt = { u: info.u, bid: Math.floor(key / 16), until: now + ROB_SCENE_S };   // (the scene: standoff.js)
   clerk.handsUp = true; clerk.npc.blind = true;
-  const { left } = till(world, key, r.kind, r.tier);
   world.notify(p, left < 1 ? `Robbing ${info.poi.label} - but the till's empty: it was cleaned out not long ago.`
     : `Robbing ${info.poi.label}! Keep your gun on the clerk. The takings go in a bag - hot money: you can't spend it, or bank it anywhere near here.`, 'warn');
   // the clerk isn't a witness, but anyone else in the shop (or a camera outside) is: called in, that's 1 star
@@ -179,7 +178,7 @@ export function update(world) {
     if (Math.hypot(ped.x - clerk.x, ped.y - clerk.y) > REACH + 60) { end(world, p, 'You walked out.'); continue; }
     if (targetClerk(world, ped) === clerk || (world.time < (ped.aimUntil || 0) && Math.abs(angleDiff(ped.aimAngle ?? ped.a, Math.atan2(clerk.y - ped.y, clerk.x - ped.x))) < AIM_CONE * 1.6)) r.lastAim = now;
     if (now - r.lastAim > LET_GO_S) { end(world, p, 'You lowered the gun.'); continue; }
-    if (p.robbedAt) p.robbedAt.until = now + SCENE_S;
+    if (p.robbedAt) p.robbedAt.until = now + ROB_SCENE_S;
     // the police outside: the clerk ducks down behind the counter - and that's the end of the money
     const so = standoff.of(world, p);
     if (so && so.outAt) {

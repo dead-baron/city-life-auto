@@ -296,6 +296,7 @@ export const ROB_HEAT_TIER = { lux: 1.5, suburb: 1.2, mid: 1, rural: 0.8, wild: 
 export const STANDOFF_S = 20;
 export const STANDOFF_READY = 3;
 export const STANDOFF_LOST_S = 25;
+export const ROB_SCENE_S = 180;          // the police treat the place as the scene of the robbery this long after it
 
 // Trains
 export const TRAIN_HEADWAY_S = 60;       // a train pulls into each station about this often (the fleet size follows from the loop's run time)
