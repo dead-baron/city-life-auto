@@ -41,6 +41,7 @@ import * as police from './police.js';
 import * as players from './players.js';
 import * as homes from './homes.js';
 import * as hotmoney from './hotmoney.js';
+import * as struggle from './struggle.js';
 import { seek, footWay, walkInAt, sidestep, spawnNpc } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 
@@ -131,6 +132,7 @@ export function surrender(world, p) {
 }
 
 export function update(world, dt) {
+  struggle.update(world, dt);   // (before the cuffs: fighting back - the cuffs going on starts the custody below)
   for (const p of world.players.values()) if (p.custody) step(world, p, dt);
 }
 

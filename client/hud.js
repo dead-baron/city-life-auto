@@ -103,9 +103,18 @@ export class HUD {
         : r.empty ? `HOT $${r.take} - the till's empty` : `HOT $${r.take} · till $${r.left ?? 0}`;
     } else rb.classList.add('hidden');
     // riding a train: next stop, the tunnel, the strongbox
-    const tb = $('trainbar'), tr = me.train, cu = me.custody;
-    tb.classList.toggle('custody', !!(cu && cu.s !== 'cell' && !me.dead));
-    if (cu && cu.s !== 'cell' && !me.dead) {
+    const tb = $('trainbar'), tr = me.train, cu = me.custody, fg = me.fight && !me.dead ? me.fight : null;
+    tb.classList.toggle('custody', !!((cu && cu.s !== 'cell') || fg) && !me.dead);
+    tb.classList.toggle('fight', !!fg);
+    if (!!fg !== !!this.fightOn) { this.fightOn = !!fg; document.querySelector('#tbtns [data-b="fire"]')?.classList.toggle('pulse', !!fg); }   // (the touch FIRE button pulses)
+    if (fg) {
+      // an officer on you, going for the cuffs (server struggle.js): fight back - the meter, and what to mash (and wriggle)
+      tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry', 'brk'); tb.style.borderColor = '';
+      $('tb-where').textContent = 'FIGHT BACK!';
+      $('tb-crack').classList.remove('hidden');
+      $('tb-fill').style.width = Math.round(Math.max(0, Math.min(1, fg.m)) * 100) + '%';
+      $('tb-next').innerHTML = `Mash ${glyph('fire')} · wriggle ${glyph('move')}${fg.n > 1 ? ' · two of them on you!' : fg.left < 1.5 ? ' · the cuffs are coming out!' : ''}`;
+    } else if (cu && cu.s !== 'cell' && !me.dead) {
       // arrested (server custody.js): held on the ground, a car coming, walked to it, the ride to the station
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry'); tb.style.borderColor = '';
       $('tb-where').textContent = 'IN CUSTODY';

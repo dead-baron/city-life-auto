@@ -422,7 +422,7 @@ function fixedStep() {
   if (S.pending.length > 60) S.pending.shift();
   if (S.pred) { S.pred.prev = { ...S.pred.s }; stepPred(dq); }
   // predict our own melee swing so punches animate the instant you click
-  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near) && !S.me.hoops) {   // (by your golf ball it's a swing of the club)
+  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near) && !S.me.hoops && !S.me.fight) {   // (by your golf ball it's a swing of the club; held down by an officer, the struggle's grunts instead)
     const w = WEAPONS[S.me.weapon];
     if (w && w.type === 'melee' && S.loopClock >= (S.localSwingReady || 0)) {
       const e = S.ents.get(S.ctrlId);
@@ -3824,6 +3824,10 @@ function pedLook(p, now) {
     else pose = DEAD_POSE[k || (flRecent && FLING_LIE[flK]) || DEAD_BY_ID[p.id % 3]] || 'dead';
   } else if (pose === 'down' && !flying && !(f & PF.STUN) && flRecent && (flK === 'face' || flK === 'slide')) pose = flK === 'face' ? 'downF' : 'downB';
   else if (pose === 'down' && p.d && p.d.cf) pose = 'downF';   // (cuffed and held face down)
+  // fighting off an officer who's on them (server struggle.js): face down, thrashing - arms and knees going (the crawl,
+  // fast), heaving up on the hands at each punch they throw (the attack flag)
+  const fight = !!(p.d && p.d.sg) && (f & PF.DOWN) && !(f & PF.DEAD) && !flying;
+  if (fight) pose = (f & PF.ATTACK) ? 'downF' : 'crawl';
   const run = p.runAt !== undefined && now - p.runAt < p.runD && !flying && !(f & PF.DEAD);   // run over (task #361): lying there
   if (run && pose === 'down') pose = p.runK === 'F' ? 'downF' : 'downB';
   if (p.hoodV && !(f & PF.DEAD)) pose = 'hood';   // up on a car's hood, clinging on (render/boom.js)
@@ -3838,6 +3842,7 @@ function pedLook(p, now) {
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   if (seqFr >= 0) fr = seqFr;
   if (pose === 'downF' && p.d && p.d.cf) fr = 0;   // (held flat, not pushing up)
+  if (fight) fr = pose === 'crawl' ? Math.floor(now * 9 + p.id) % 4 : 1;
   if (run && (pose === 'downF' || pose === 'downB')) fr = now - p.runAt > p.runD - 0.8 ? 1 : 0;   // (flat, then pushing up)
   const L = p._look || (p._look = {});
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;

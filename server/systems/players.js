@@ -51,6 +51,7 @@ import * as felling from './felling.js';
 import * as lights from './lights.js';
 import * as revive from './revive.js';
 import * as custody from './custody.js';
+import * as struggle from './struggle.js';
 import * as cells from './cells.js';
 import * as devmode from '../devmode.js';
 import * as underground from './underground.js';
@@ -243,6 +244,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
 export function leave(world, p) {
   if (!p) return;
   if (p.devMode) devmode.exit(world, p, true); // dev mode ends with the session (progress made in it is kept)
+  struggle.onLeave(world, p);  // (logging out mid-struggle: the cuffs go on...)
   custody.onLeave(world, p);   // (logging out in custody: booked on the spot)
   p.conn = null;
   p.inputQ = [];
@@ -332,6 +334,7 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
+  if (p.struggle) { struggle.input(world, p, ped, inp, pressed); return; }   // (an officer on you, going for the cuffs: fight back)
   if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail panel has the bail)
     if ((pressed & IN.ACTION) && custody.canBreak(p)) custody.breakOut(world, p);   // (the car stuck: make a break for it)
     if (!ped.cuffed) {   // in a cell: walk round it; the action button sits, holds the bars (cells.js)
@@ -433,7 +436,7 @@ export function tumbleImpact(world, ped, v0, dt, friction = TUMBLE_FRICTION) {
 // Diving into a wanted suspect tackles them to the ground (officers and bounty hunters).
 function tackle(world, ped) {
   for (const e of world.query(ped.x, ped.y, 26, 1)) {
-    if (e === ped || e.dead || e.vehId || world.time < e.downUntil || e.cellSafe) continue;   // (nobody in a cell: cells.js)
+    if (e === ped || e.dead || e.vehId || world.time < e.downUntil || e.cellSafe || world.time < (e.graceUntil || 0)) continue;   // (nobody in a cell: cells.js; nor someone who just broke free: struggle.js)
     if (!law.isSuspectFor(world, ped.player, e)) continue;
     const a = Math.atan2(e.y - ped.y, e.x - ped.x);
     e.vx = Math.cos(a) * 180; e.vy = Math.sin(a) * 180;
@@ -450,6 +453,7 @@ function tackle(world, ped) {
 // Context-sensitive interaction (GDD §13: E key manages context interactions)
 export function findInteraction(world, p) {
   const ped = p.ped;
+  if (p.struggle) return null;   // (fighting an officer off: the struggle bar says what to press - client/hud.js)
   if (ped && ped.cuffed && !ped.dead && custody.canBreak(p)) return { label: 'Make a break for it!', run: () => custody.breakOut(world, p) };
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
@@ -685,7 +689,7 @@ export function buildMe(world, p) {
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, custody: custody.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
+    prompt: p.prompt, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

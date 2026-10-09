@@ -72,6 +72,11 @@ export const EVENT_SOUNDS = {
   deflect: at('zing'),
   spark: (ev, A) => A.at('ricochet', ev.x, ev.y, 0.6),
   knockdown: at('knockdown', 1.1),
+  // fighting off an officer (server struggle.js): grunts and a scuffle on the ground as you heave, a shove and a whoosh as
+  // you throw them off, the cuffs clicking shut if you don't
+  struggle: (ev, A) => { A.at('hit', ev.x, ev.y, 0.55); A.at('roll', ev.x, ev.y, 0.45); },
+  breakfree: (ev, A) => { A.at('whoosh_heavy', ev.x, ev.y, 1); A.at('punch', ev.x, ev.y, 0.8); },
+  cuffs: (ev, A) => { A.at('lightclick', ev.x, ev.y, 1); A.at('clank', ev.x, ev.y, 0.4); },
   react: null,                                   // (the stagger: the 'hit' or 'blood' with it is heard)
   fling: at('whoosh_heavy', 0.7),
   death: at('bodyfall'),

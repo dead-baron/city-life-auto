@@ -219,9 +219,12 @@ export function spawnHere(world, spawnNpc, x, y, night) {
   if (!tot) return null;
   let r = rng() * tot, key = list[0][0];
   for (const [k, w] of list) { r -= w; if (r <= 0) { key = k; break; } }
-  return spawnPersona(world, spawnNpc, key, x, y, night);
+  return spawnPersona(world, spawnNpc, key, x, y, night, true);
 }
-export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock && world.clock.isNight)) {
+// offView: a passer-by from the density manager (spawnHere), whose spot (x, y) was picked off everyone's screen - one
+// who'd sit on a bench, lean on a wall, push a cart or fish from a rail near it isn't put there if that's in someone's
+// view (they'd pop up on screen: test/view.test.js)
+export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock && world.clock.isNight), offView = false) {
   const P = PERSONAS[key];
   if (!P) return null;
   let at = { x, y };
@@ -241,6 +244,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     at = spot; at.water = waterward(world.map, spot.x, spot.y);
     if (at.water === null) return null;
   }
+  if (offView && (at.x !== x || at.y !== y) && inAnyView(world, at.x, at.y, 64)) return null;
   const ped = spawnNpc(world, P.arche, at.x, at.y, 'civ');
   apply(world, ped, key, night);
   const n = ped.npc;
