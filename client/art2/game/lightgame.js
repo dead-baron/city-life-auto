@@ -84,8 +84,9 @@ export const PRESETS_GAME = {
     sat: 1.12, contrast: 1.08, lift: [0.008, 0, 0.026], gain: [1.06, 0.96, 0.98], wet: 0.2, reflK: 0.5, lampsOn: 1, skyRefl: 0.28 }),
   // AT2: a dark night - only a faint blue moonlight; the lamps' sodium pools, lit windows, neon and headlights
   // do the lighting (the host gives the player a faint pool of light to see by)
-  night: mk({ sunDir: [-0.45, -0.25, 0.86], sunCol: [0.022, 0.027, 0.056], ambSky: [0.023, 0.026, 0.055], ambGround: [0.017, 0.017, 0.029], emiK: 1.2, bloomThr: 0.52,
-    bloomK: 1.3, haze: 0.04, hazeCol: [0.05, 0.05, 0.11], vign: 0.72, sat: 1.1, contrast: 1.1, lift: [0.004, 0.002, 0.014], gain: [1.06, 1.0, 0.96], reflK: 0.65, lampsOn: 1, skyRefl: 0.2 }),
+  // (2026-10-09, R1-C/E, AT1-A: the dark a deeper blue, the lamps' amber more saturated against it - same darkness)
+  night: mk({ sunDir: [-0.45, -0.25, 0.86], sunCol: [0.019, 0.026, 0.072], ambSky: [0.018, 0.024, 0.076], ambGround: [0.012, 0.014, 0.04], emiK: 1.25, bloomThr: 0.5,
+    bloomK: 1.35, haze: 0.04, hazeCol: [0.04, 0.05, 0.14], vign: 0.72, sat: 1.24, contrast: 1.12, lift: [0.002, 0.003, 0.022], gain: [1.08, 0.99, 0.95], reflK: 0.7, lampsOn: 1, skyRefl: 0.2 }),
   // overcast daytime rain: flat grey-blue light, faint shadows, everything wet
   rain: mk({ sunDir: [-0.45, -0.3, 0.84], sunCol: [0.42, 0.44, 0.5], ambSky: [0.44, 0.48, 0.58], ambGround: [0.3, 0.31, 0.35], shadowTint: [0.95, 0.97, 1.05],
     shadowLen: 60, emiK: 0.8, bloomThr: 0.7, bloomK: 0.7, haze: 0.1, hazeCol: [0.5, 0.55, 0.64], vign: 0.5, sat: 0.92, contrast: 1.04,
@@ -463,7 +464,8 @@ vec4 shade(vec3 alb, vec3 n, int fl, float sh, vec3 plight, vec3 refl, vec3 emi,
 #endif
   vec3 amb = mix(ambGround, ambSky, n.z * 0.5 + 0.5);
   amb = mix(amb, amb * shadowTint, (1.0 - sh) * step(0.01, lam));
-  vec3 light = amb + sunCol * direct + plight;
+  // (shop glass takes little of the street's lamps: its own lit interior shows through it - 2026-10-09, R1-C/E)
+  vec3 light = amb + sunCol * direct + plight * ((fl & ${F_GLASS}) != 0 ? 0.35 : 1.0);
   if ((fl & ${F_LEAF}) != 0) light += sunCol * leafGlow * pow(max(dot(n.xy, sunDir.xy), 0.0), 2.0) * sh;
   if (flash > 0.0) light += flashCol * (flash * (0.35 + 0.65 * max(n.z, 0.0)));
   vec3 col = alb;

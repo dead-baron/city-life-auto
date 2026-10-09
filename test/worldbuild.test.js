@@ -97,3 +97,71 @@ test('the back walls on an alley: a back door with a bare bulb, tags and grime b
   const vents = alleyVentsIn(m, 0, 0, 1e9, 1e9);
   assert.ok(vents.length > 10 && vents.every((v) => [...B.values()].some((bk) => bk.vent === v.x && bk.y === v.y && bk.door !== null)), 'steam rises only from the vents the walls have');
 });
+
+test('the art: back doors and bulbs on the alley walls, big neon on the nightlife fronts, lit shop windows', async () => {
+  const m = city();
+  const { staticIndex, staticLights } = await import('../client/art2/game/statics.js');
+  const { signKind, NEON_COLS } = await import('../client/art2/neonsigns.js');
+  const I = staticIndex(m), B = alleyBacks(m);
+  let walls = 0, doors = 0, signs = 0, nightSigns = 0, fronts = 0;
+  const signed = new Set();
+  for (const [bi, items] of I.byB) {
+    const b = m.buildings[bi];
+    if (!b) continue;
+    const st = m.districtAt((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE).style;
+    for (const it of items) {
+      const sp = it.recipe && it.recipe.spec;
+      if (!sp) continue;
+      if (sp.alley) {
+        walls++;
+        assert.ok(B.has(bi), `${b.kind} ${bi}: wall kit only on a wall that fronts an alley`);
+        assert.ok(!sp.shop, 'a back wall, not a shopfront');
+        if (sp.alley.bulb !== null) { doors++; assert.ok(sp.doors && sp.doors.length === 1 && sp.doors[0].kind === 'door', 'a back door under the bulb'); }
+      }
+      if (sp.shop) fronts++;
+      if (sp.neonSigns) {
+        signs++; signed.add(bi);
+        assert.ok(sp.shop, `${b.kind} ${b.name}: neon only on a front with a shop`);
+        for (const sg of sp.neonSigns) {
+          assert.ok(signKind(st, '', sp.shop.kind) || /club|arcade|tattoo/.test(b.kind) || st === 'nightlife' || st === 'redlight', `${b.kind} in ${st}: a sign where the night is`);
+          assert.ok(sg.x >= 0 && sg.x + sg.w <= sp.w && sg.v >= 60 && sg.text.length >= 2 && NEON_COLS.includes(sg.col), `${b.name}: the sign fits its facade (${sg.text})`);
+          assert.ok(!/[a-z]/.test(sg.text), 'neon letters');
+        }
+        if (st === 'nightlife' || st === 'redlight') nightSigns++;
+      }
+    }
+  }
+  assert.ok(walls > 30 && doors > 20, `alley walls dressed (${walls}), back doors with a bulb (${doors})`);
+  assert.ok(signs > 12 && nightSigns >= 6, `neon signs (${signs}; ${nightSigns} on the nightlife strips)`);
+  // every club on the map (outside the hand-set hero corner) has its sign
+  for (const b of m.buildings) if (b && !b.gone && /^club/.test(b.kind) && !b.art) assert.ok(signed.has(b.id), `${b.name} has its neon`);
+  // nobody's house or a plain back gets a sign
+  for (const bi of signed) assert.ok(!/^house|^shanty|^shack|^farmstead/.test(m.buildings[bi].kind) && !m.buildings[bi].back, `${m.buildings[bi].kind}: no neon on homes or backs`);
+  // the lights: a neon sign lights the pavement in its colour; a back door's bulb an amber pool; shopfronts spill light
+  let neon = 0, bulbs = 0, windows = 0;
+  for (const l of [...I.lights.values()].flat()) { if (l.kind === 'neon' && l.r >= 240) neon++; else if (l.kind === 'window' && l.r === 150 && l.col[2] < 0.3) bulbs++; else if (l.kind === 'window') windows++; }
+  assert.ok(neon >= signs, `a big pool of colour for every big sign (${neon})`);
+  assert.ok(bulbs >= doors, `a pool of amber under every back-door bulb (${bulbs})`);
+  assert.ok(windows > fronts * 0.8, `light from the shop windows (${windows} for ${fronts} fronts)`);
+  assert.ok(Array.isArray(staticLights(m, 30, 20)));
+});
+
+test('lightning you can see: a forked bolt, the same for the same seed, inside the screen; near strikes come down into the street', async () => {
+  const { boltPath } = await import('../client/render/lightning.js');
+  for (const [W, H] of [[1280, 720], [390, 844], [2560, 1440]]) {
+    for (let seed = 1; seed <= 40; seed++) for (const near of [false, true]) {
+      const a = boltPath(seed, W, H, near), b = boltPath(seed, W, H, near);
+      assert.deepEqual(a, b, 'deterministic by seed');
+      assert.ok(a.segs.length > a.trunk && a.trunk >= 8, `forked (${a.segs.length} segments, ${a.trunk} in the main channel)`);
+      for (const s of a.segs) {
+        for (const [x, y] of [[s[0], s[1]], [s[2], s[3]]]) assert.ok(x >= 0 && x <= W && y >= 0 && y <= H, `in the screen: ${x},${y} of ${W}x${H}`);
+        assert.ok(s[4] >= 1 && s[4] <= 3 && s[5] > 0 && s[5] <= 1);
+      }
+      assert.equal(a.segs[0][1], 0, 'the channel comes down from the top of the screen');
+      for (let i = 1; i < a.trunk; i++) assert.ok(a.segs[i][0] === a.segs[i - 1][2] && a.segs[i][1] === a.segs[i - 1][3], 'one unbroken channel');
+      assert.deepEqual([a.end.x, a.end.y], [a.segs[a.trunk - 1][2], a.segs[a.trunk - 1][3]]);
+      if (near) assert.ok(a.end.y >= H * 0.55 && a.near, 'a near strike hits the street in view'); else assert.ok(a.end.y <= H * 0.5, 'a far one ends up in the distance');
+    }
+    assert.notDeepEqual(boltPath(1, W, H), boltPath(2, W, H), 'every bolt its own');
+  }
+});

@@ -48,6 +48,7 @@ import * as GD from '../props-garden.js';
 import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
+import { nightFront, paintSigns } from '../neonsigns.js';   // (the night's big neon signs)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
@@ -1003,6 +1004,9 @@ function specOf(c, b, A, s, D) {
     const ax0 = s.tx * TILE, bk = alleyBackOf(c.M, b.id, ax0, ax0 + w);
     if (bk) alleyWall(spec, bk, ax0, w, lights);
   }
+  // ---- the night's neon (neonsigns.js; R1-C/E, D8, B7): big signs on the nightlife strips' fronts and on clubs, bars
+  // and arcades anywhere, a tube along the cornice, their colour on the pavement
+  if (front && spec.shop && !b.art && !pitched && !s.frame && !s.vox) nightFront(spec, { w, st, A, kind: spec.shop.kind, name: named, lights, rnd: rndOf(b.id * 31 + s.k, 977) });
   // a building whose look the map sets (the hero corner, map.js buildHeroCorner): its spec, shopfront and roof kit
   const ART = b.art || null;
   if (ART) {
@@ -1124,6 +1128,7 @@ function makeBld(r) {
   if (r.frame) return makeFrame(r);
   let G = makeBuilding(r.spec);
   if (r.spec.alley) AL.dressWall(G, r.spec);   // (a back wall on an alley: its pipe, vent, AC and meter boxes)
+  if (r.spec.neonSigns) paintSigns(G, r.spec);   // (the big neon signs: neonsigns.js)
   if (r.stands) standsOn(G, r.spec);
   // what stands on the roof: [sprite, x, y (its ground point from the section's north-west corner), z, kind]
   const d = r.spec.d, zD = roofDeckZ(r.spec), layers = [];
@@ -1668,11 +1673,14 @@ const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'ro
 // props
 // ================================================================================================
 // a lit shopfront's light on the pavement: from the door, and on a wide front from along its windows too
+// (out on the pavement, so it lights the street in front more than its own glass: the interior shows through it -
+// buildings.js storefront lights the interior itself)
 function shopSpill(lights, w, dx) {
-  if (w < 200) { lights.push([dx, 16, 26, 150, [1, 0.8, 0.52], 1.5, 'window']); return; }
-  for (const x of [w * 0.28, w * 0.72]) lights.push([x, 18, 26, 160, [1, 0.8, 0.52], 1.4, 'window']);
+  if (w < 200) { lights.push([dx, 34, 22, 150, [1, 0.76, 0.46], 1.3, 'window']); return; }
+  for (const x of [w * 0.28, w * 0.72]) lights.push([x, 36, 22, 160, [1, 0.76, 0.46], 1.2, 'window']);
 }
-const LAMP_LIGHT = { cobra: [1, 0.93, 0.8], green: [1, 0.86, 0.62], sodium: [1, 0.7, 0.38], cast: [1, 0.8, 0.52], iron: [1, 0.62, 0.3], banner: [1, 0.84, 0.58], twin: [1, 0.9, 0.72] };
+// (2026-10-09: the amber of the R1 night concepts, more saturated against the deeper blue night)
+const LAMP_LIGHT = { cobra: [1, 0.86, 0.64], green: [1, 0.78, 0.5], sodium: [1, 0.6, 0.26], cast: [1, 0.72, 0.4], iron: [1, 0.56, 0.22], banner: [1, 0.76, 0.46], twin: [1, 0.82, 0.6] };
 function lampStyle(c, p) {
   if (p.style) return p.style;   // (set by the map: the hero corner's black iron lamps)
   const st = c.dist(p.x, p.y).style;

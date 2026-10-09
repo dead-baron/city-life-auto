@@ -1033,7 +1033,7 @@ function devPress(b, label, run) {
 }
 // commands that only change your own screen
 function devLocal(c, extra) {
-  if (c === '@bolt') { if (S.wx) { S.wx.flash = 1; S.wx.thunderIn = 0.5 + Math.random(); } }
+  if (c === '@bolt') { if (S.wx) S.wx.strike(Math.random() < 0.5); }   // (a bolt you can see: a near strike half the time)
   else if (c === '@fog') S.fogForce = extra ? { k: extra.k, spread: extra.spread } : null;
 }
 // Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team

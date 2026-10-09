@@ -11,6 +11,7 @@ import { hash } from './atmos.js';
 import { freeCanvas } from '../platform.js';
 import { coversIn, coverSeed } from './covers.js';   // (the street's manhole covers: the ones the ground draws)
 import { alleyVentsIn } from '../../shared/alleys.js';   // (the vents on the alleys' back walls)
+import { boltPath, drawBolt } from './lightning.js';    // (the bolt you see in a storm)
 
 const N = CHUNK_PX / TILE;
 const SHAPES = 8;
@@ -115,13 +116,19 @@ export class Weather {
     for (let i = this.pools.length - 1; i >= 0; i--) { const p = this.pools[i]; if (t - p.born > p.life) this.pools.splice(i, 1); }
     for (const r of this.ripples) if (r.on && (r.t += dt) > r.max) r.on = false;
     for (const b of this.burst) if (b.on && (b.t += dt) > 0.22) b.on = false;
-    // lightning: now and then in a rain storm (brighter at night)
-    this.flash = Math.max(0, this.flash - dt * 3.5);
+    // lightning: now and then in a rain storm (brighter at night); a near strike's flash lasts longer
+    this.flash = Math.max(0, this.flash - dt * (this.boltNear ? 2.4 : 3.5));
     if (raining && this.wet > 0.3) {
       this.nextBolt -= dt;
-      if (this.nextBolt <= 0) { this.flash = 1; this.nextBolt = 25 + Math.random() * 60; this.thunderIn = 0.6 + Math.random() * 1.8; }
+      if (this.nextBolt <= 0) { this.strike(Math.random() < 0.25); this.nextBolt = 25 + Math.random() * 60; }
     }
     if (this.thunderIn !== undefined) { this.thunderIn -= dt; if (this.thunderIn <= 0) { this.thunderIn = undefined; this.onThunder?.(); } }
+  }
+  // a lightning strike: the flash, a bolt you can see (lightning.js; near: down into the street in view), the thunder
+  // after it (sooner for a near one)
+  strike(near = false) {
+    this.flash = 1; this.boltNear = !!near; this.boltSeed = (Math.random() * 4294967296) >>> 0; this.boltOf = null; this.boltSet = true;
+    this.thunderIn = near ? 0.15 + Math.random() * 0.35 : 0.7 + Math.random() * 1.8;
   }
   ripple(x, y, r, max = 0.9, k = 1) {
     const o = this.ripples[this.ri]; this.ri = (this.ri + 1) % this.ripples.length;
@@ -440,13 +447,24 @@ export class Weather {
       g.moveTo(b.x + r, b.y); g.ellipse(b.x, b.y, r, r * 0.45, 0, 0, 6.283);
     }
     g.stroke();
-    // lightning
+    // lightning: the flash, and the bolt itself while it's bright (a flash set from outside - the debug menu's strike -
+    // gets a bolt of its own)
     if (this.flash > 0) {
+      if (this.flash > (this._lastFlash || 0) + 0.5) {
+        if (!this.boltSet) { this.boltSeed = (Math.random() * 4294967296) >>> 0; this.boltNear = false; }
+        this.boltSet = false; this.boltOf = null;
+      }
       g.globalCompositeOperation = 'lighter';
-      const f = this.flash * (0.35 + 0.5 * night) * (Math.random() < 0.2 ? 0.4 : 1);
-      g.fillStyle = `rgba(200,215,255,${f.toFixed(3)})`;
+      const flick = Math.random() < 0.2 ? 0.4 : 1, f = this.flash * (0.35 + 0.5 * night) * flick * (this.boltNear ? 1.25 : 1);
+      g.fillStyle = `rgba(200,215,255,${Math.min(0.9, f).toFixed(3)})`;
       g.fillRect(0, 0, W, H);
-    }
+      if (this.flash > 0.15 && this.boltSeed !== undefined) {
+        const key = `${this.boltSeed}:${W}:${H}`;
+        if (!this.boltOf || this.boltOf.key !== key) this.boltOf = { key, B: boltPath(this.boltSeed, W, H, this.boltNear) };
+        drawBolt(g, this.boltOf.B, Math.min(1, this.flash * 1.3) * flick, night);
+      }
+    } else this.boltOf = null;
+    this._lastFlash = this.flash;
     g.restore();
   }
 
