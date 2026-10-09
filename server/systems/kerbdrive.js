@@ -87,7 +87,7 @@ export function follow(world, v, speed, arriveAt = 34) {
   const end = r[r.length - 1], left = r.length === 1 ? Math.hypot(end.x - v.x, end.y - v.y) : Infinity;
   if (left < arriveAt) { halt(v); return true; }
   const wp = r[0];
-  driveToward(world, v, wp.x, wp.y, Math.min(cornerSpeed(v, r, speed), left < 320 ? 50 + left * 0.75 : Infinity), {});
+  driveToward(world, v, wp.x, wp.y, Math.min(cornerSpeed(v, r, speed), left < 320 ? 50 + left * 0.75 : Infinity), { round: left < 260 ? false : undefined });   // (nearly there: pull up behind whatever's stopped, no going round it)
   waterGuard(world, v);
   return false;
 }

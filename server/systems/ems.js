@@ -71,7 +71,7 @@ function dispatch(world, now) {
     let watched = false;
     for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - b.x, p.ped.y - b.y) < 1400) { watched = true; break; }
     if (!watched) continue;
-    const k = kerbFor(world, b.x, b.y);
+    const k = b.emsKerb && Math.abs(b.emsKerb.bx - b.x) < 8 && Math.abs(b.emsKerb.by - b.y) < 8 ? b.emsKerb : (b.emsKerb = { ...kerbFor(world, b.x, b.y), bx: b.x, by: b.y });   // (once per body)
     const cands = starts(world, k, 650, 1300, 620);
     if (!cands.length) continue;
     launch(world, b, cands[Math.floor(rng() * Math.min(6, cands.length))], k, now);

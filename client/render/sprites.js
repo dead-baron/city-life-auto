@@ -168,6 +168,18 @@ function procVehicle(def, paint) {
     g.fillStyle = '#c8262b'; g.fillRect(1, 4, 2, 6); g.fillRect(1, W - 10, 2, 6);
     return cv;
   }
+  if (def.id === 'towtruck') {   // the cab at the front, the boom down the middle of the bed, the wheel lift and its hook at the back (tow.js)
+    g.fillStyle = paint; rr(g, L - 40, 2, 38, W - 4, 5); g.fill();
+    g.fillStyle = '#1b2333'; g.fillRect(L - 16, 6, 8, W - 12);
+    g.fillStyle = '#e8b923'; g.fillRect(L - 32, 5, 4, W - 10);                                            // the amber light bar
+    g.fillStyle = '#2f4a8a'; g.fillRect(6, 4, L - 48, W - 8);
+    g.fillStyle = '#e8b923'; for (let k = 6; k < L - 48; k += 10) { g.fillRect(k, 4, 5, 2); g.fillRect(k, W - 6, 5, 2); }
+    g.fillStyle = '#9aa0a8'; g.fillRect(8, W / 2 - 3, L - 54, 6);                                          // the boom
+    g.fillStyle = '#2a2d35'; g.fillRect(0, 7, 7, W - 14);                                                  // the wheel lift
+    g.fillStyle = '#c9c5bb'; g.fillRect(2, W / 2 - 2, 4, 4);                                               // the hook
+    g.fillStyle = '#ffe9a0'; g.fillRect(L - 3, 5, 2, 6); g.fillRect(L - 3, W - 11, 2, 6);
+    return cv;
+  }
   g.fillStyle = paint; rr(g, 1.5, 1.5, L - 3, W - 3, 6); g.fill();
   g.fillStyle = shade(paint.startsWith('#') ? paint : '#888888', -30); g.fillRect(3, W / 2 - 1, L - 6, 2);
   if (def.id === 'bus') {

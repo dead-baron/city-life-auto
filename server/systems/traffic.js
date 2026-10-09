@@ -19,6 +19,7 @@ import { crossingLimit } from './trains.js';
 import { inAnyView } from '../view.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
 import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
+import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find another way round a backup: task #315)
 
 const rng = mulberry32(4242);
 
@@ -59,6 +60,8 @@ function chooseExit(world, n, inEdge, def = null) {
   // only way on
   const streets = opts.filter((o) => net.edges[o.edge].kind !== 'alley');
   if (streets.length) opts = streets;
+  const open = opts.filter((o) => !isBlocked(world, o.edge));   // (not down a road remembered as blocked: reroute.js)
+  if (open.length) opts = open;
   const near = nearestAnchor(world, n.x, n.y);
   if (near && near.d > 900 && rng() < 0.7) {
     let best = null, bd = Infinity;
@@ -99,7 +102,7 @@ const startDir = (pts) => { const a = pts[0], b = pts[Math.min(pts.length - 1, 1
 
 // Queue the waypoints for the current edge from arc length s on, ending at its stop line, and
 // decide which way to go at its far end.
-function enterEdge(world, v, edgeId, from, lane, s0 = 0) {
+export function enterEdge(world, v, edgeId, from, lane, s0 = 0) {
   const net = world.map.net;
   const ai = v.ai;
   const e = net.edges[edgeId];
@@ -194,6 +197,11 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
   let speed = desired;
   if (Math.abs(diff) > 0.9) speed = Math.min(speed, 140);
   if (!opts.ignoreObstacles) speed = Math.min(speed, obstacleSpeed(world, v, fwd, opts.ignore));   // (opts.ignore: ids not to brake for - a club riding in formation)
+  // a siren (or a bus that chose to) stopped behind something that won't move: round it where it's clear (reroute.js)
+  if (v.ai && (v.siren || opts.round) && opts.round !== false && !opts.ignoreObstacles) {   // (round: false - not now, nearly there)
+    const r = goRound(world, v, v.ai, speed, desired);
+    if (r) { wx = r.x; wy = r.y; speed = Math.min(r.speed, obstacleSpeed(world, v, fwd, new Set([r.ignore, ...(opts.ignore || [])]))); }
+  }
   if (!opts.ignoreCrossings && (v.lz || 0) < 0.3) speed = Math.min(speed, crossingLimit(world, v, fwd)); // level-crossing gates down: stop (or gamble)
   // reverse out when wedged
   const ai = v.ai;
@@ -251,7 +259,7 @@ const standoff = (v) => v.standoff ?? (v.standoff = 14 + (Math.imul(v.id | 0, 26
 function obstacleSpeed(world, v, fwd, ignore = null) {
   const c = Math.cos(v.a), s = Math.sin(v.a);
   const look = v.def.L / 2 + 50 + standoff(v) + Math.max(0, fwd) * 0.7;
-  let limit = Infinity;
+  let limit = Infinity, blk = 0, bl = Infinity;
   for (const e of world.query(v.x + c * look / 2, v.y + s * look / 2, look / 2 + 40)) {
     if (e === v || (ignore && ignore.has(e.id))) continue;
     if (e.kind === K.PED) { if (e.vehId || e.dead) continue; }
@@ -265,7 +273,9 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
     if (e.kind === K.VEH && ly < -(v.def.W / 2 + halfOther) * 0.45 && Math.abs(angleDiff(e.a, v.a)) > 2.6) continue;
     const gap = lx - v.def.L / 2 - (e.kind === K.VEH ? e.def.L / 2 : 10) - 10 - (e.kind === K.VEH ? standoff(v) : 0);
     limit = Math.min(limit, Math.max(0, gap * 1.8));
+    if (e.kind === K.VEH && gap < bl) { bl = gap; blk = e.id; }
   }
+  v._blk = blk;   // (the vehicle in the way, if any: reroute.js)
   return limit;
 }
 
@@ -275,12 +285,16 @@ export function planRoute(world, fromX, fromY, toX, toY) {
   const m = world.map, net = m.net;
   const start = m.nearestNode(fromX, fromY), goal = m.nearestNode(toX, toY);
   if (!start || !goal || !net) return [{ x: toX, y: toY, final: true }];
-  const prev = new Map([[start.id, null]]);
-  const q = [start.id];
-  for (let qi = 0; qi < q.length; qi++) {
-    const id = q[qi];
-    if (id === goal.id) break;
-    for (const [eid, nid] of Object.entries(net.nodes[id].links)) if (!prev.has(nid)) { prev.set(nid, { id, e: +eid }); q.push(nid); }
+  let prev;
+  for (const avoid of world.blockedEdges && world.blockedEdges.size ? [true, false] : [false]) {   // (roads remembered as blocked: reroute.js)
+    prev = new Map([[start.id, null]]);
+    const q = [start.id];
+    for (let qi = 0; qi < q.length; qi++) {
+      const id = q[qi];
+      if (id === goal.id) break;
+      for (const [eid, nid] of Object.entries(net.nodes[id].links)) if (!prev.has(nid) && !(avoid && isBlocked(world, +eid))) { prev.set(nid, { id, e: +eid }); q.push(nid); }
+    }
+    if (prev.has(goal.id)) break;
   }
   const chain = [];
   let cur = goal.id;
@@ -358,6 +372,7 @@ function steerTraffic(world, v, t) {
   }
   const stopIdx = ai.pts.findIndex((p) => p.stop);
   const stop = stopIdx >= 0 ? ai.pts[stopIdx] : null;
+  let holding = false;
   if (stop && !panic) {
     const n = net.nodes[stop.node];
     const ds = Math.hypot(stop.x - v.x, stop.y - v.y);
@@ -372,6 +387,7 @@ function steerTraffic(world, v, t) {
     else if (gap >= 140) ai.waitNode = -1;
     if (hold) desired = Math.min(desired, Math.max(0, gap * 1.6));
     else if (ai.turning && ds < 260) desired = Math.min(desired, 150 + ds * 0.4);
+    holding = hold && gap < 220;
   }
   if (!panic && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
   if (!panic && ai.yieldUntil && now < ai.yieldUntil) {
@@ -405,8 +421,10 @@ function steerTraffic(world, v, t) {
     driveToward(world, v, room && !busy ? tx : wp.x, room && !busy ? ty : wp.y, Math.min(desired, 40), {});
     return;
   }
+  // stopped behind a backup: another lane, or another way (reroute.js)
+  if (!panic && unjam(world, v, holding)) { if (!v.ai || !ai.pts || !ai.pts.length) return; }
   const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190));
-  driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic });
+  driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic, ignore: ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null, round: !!v.bus && ai.howOut === 'round' });
 }
 
 // The painted stop line is this far back from where a lane meets a signalled junction (px)

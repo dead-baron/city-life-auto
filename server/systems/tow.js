@@ -25,9 +25,12 @@ export function blocking(world, v) {
   if ((v.lz || 0) > 0.3) return false;
   const m = world.map, t = m.tileAtPx(v.x, v.y);
   if (t !== T.ROAD && t !== T.BRIDGE) return false;
+  const c = v._blocking;
+  if (c && Math.abs(c.x - v.x) < 4 && Math.abs(c.y - v.y) < 4) return c.r;   // (worked out once while it stands there)
   const k = kerbFor(world, v.x, v.y);
-  if (!k.e) return false;
-  return Math.hypot(k.x - v.x, k.y - v.y) < 6 || distToLine(k.e, v.x, v.y) < (k.e.hw || 24) - 10;
+  const r = !!k.e && (Math.hypot(k.x - v.x, k.y - v.y) < 6 || distToLine(k.e, v.x, v.y) < (k.e.hw || 24) - 10);
+  v._blocking = { x: v.x, y: v.y, r };
+  return r;
 }
 function distToLine(e, x, y) {
   let bd = Infinity;
@@ -47,6 +50,7 @@ export function towReason(world, v, now = world.time) {
   if (playerIn(world, v) || (v.ai && v.ai.kind !== 'traffic')) return null;   // (someone in it; police, ambulances, scripted)
   if (v.wreckAt) return now - v.wreckAt > TOW_WRECK_S && !v.seats.some((s) => s) ? 'wreck' : null;
   if (v.byPlayer || v.owner) return now - (v.touchAt || 0) >= TOW_IDLE_S && Math.hypot(v.vx, v.vy) < 5 && blocking(world, v) ? 'left' : null;
+  // (an NPC car stopped in the road: traffic.js manage keeps the clock - v.stillSince - for its own clean-up out of sight)
   if (v.stillSince === undefined || now - v.stillSince < TOW_STUCK_S || v.seats.some((s) => s && !world.get(s)?.npc)) return null;
   return blocking(world, v) ? 'stuck' : null;
 }
@@ -61,13 +65,6 @@ export function update(world, dt) {
     if (!ped || ped.dead) continue;
     if (ped.vehId) { const v = world.get(ped.vehId); if (v) { v.touchAt = now; v.byPlayer = true; } continue; }
     if (near) for (const v of world.query(ped.x, ped.y, 70, K.VEH)) if (v.byPlayer || v.owner) v.touchAt = now;
-  }
-  if (near) {
-    // (an NPC car stopped in the road: since when - traffic.js keeps the same clock for its own clean-up)
-    for (const v of world.entities.values()) {
-      if (v.kind !== K.VEH || v.byPlayer || v.parked || v.wreckAt) continue;
-      if (Math.hypot(v.vx, v.vy) < 8) v.stillSince ??= now; else if (!(v.ai && v.ai.kind === 'traffic')) v.stillSince = undefined;
-    }
   }
   if (world.tick % 20 === 7 && world.tows.size < MAX_TRUCKS) dispatch(world, now);
   for (const id of [...world.tows]) {
