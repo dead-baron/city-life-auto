@@ -159,6 +159,7 @@ function buy(world, p, msg) {
     if (encodeLook(next) === prof.look) next = null;
   }
   if (!ids.length && !next) return shopState(world, p);
+  if (!ids.length && p.lookSetAt !== undefined && world.time - p.lookSetAt < 1) return shopState(world, p);   // (one change a second, as anywhere)
   const total = ids.reduce((t, id) => t + W.priceAt(sid, id), 0);
   if (total > 0 && !payFrom(p, total)) { world.notify(p, 'Not enough money (cash and bank).', 'bad'); return shopState(world, p); }
   for (const id of ids) prof.wardrobe.push(id);
