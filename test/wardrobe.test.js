@@ -50,7 +50,7 @@ test('owning: a new player owns the starting look they pick and the basics; afte
   assert.deepEqual(a.prof.wardrobe, W.BASICS, 'the basics: a plain tee, jeans, trainers');
   assert.equal(looks.stateMsg(a.p).free, true, 'the first session is free');
   // the first session: anything goes ("Make it yours"), and what it ends in is theirs
-  const mine = LK.decodeLook(LK.encodeLook(LK.STARTERS[6].look));   // The Executive: a suit, oxfords, a gold watch...
+  const mine = LK.decodeLook(LK.encodeLook(LK.STARTERS[4].look));   // The Executive: a suit, oxfords, a watch, a briefcase...
   mine.outfit.hat = LK.item('Top hat');
   set(a, mine);
   assert.equal(a.prof.look, LK.encodeLook(mine));

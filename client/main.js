@@ -191,7 +191,7 @@ const lookWait = [];
 import('../shared/look.js').then((m) => { LOOKS = m; for (const d of lookWait.splice(0)) lookApp(d); }).catch((e) => console.warn('[looks]', e));
 function lookApp(d) { if (!LOOKS) { lookWait.push(d); return; } const L = LOOKS.decodeLook(d.app.lk); if (L) d.app = LOOKS.lookToApp(L, d.app.lk); }
 function openCreator(mode) {
-  creatorP ||= import('./creator.js').then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k) }); S.creator = m; return m; });
+  creatorP ||= import('./creator.js').then((m) => { m.init({ send, openOverlay, closeOverlay, topOverlay, sfx, toast: (t, k) => S.hud && S.hud.toast(t, k), zoom: () => baseZoom() }); S.creator = m; return m; });   // (zoom: the game's CSS px per world px - the creator draws you a little bigger than that)
   creatorP.then((m) => m.open(mode, S.looks)).catch((e) => console.warn('[creator]', e));
 }
 

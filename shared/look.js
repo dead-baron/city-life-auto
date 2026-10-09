@@ -261,6 +261,13 @@ add('bag', 'Clutch', 'f', 'nightclub formal', 90, 'boutique', { carry: 'purse', 
 add('bag', 'Briefcase', 'mf', 'business', 120, 'boutique', { carry: 'briefcase' }, 'brown');
 add('bag', 'Duffel bag', 'mf', 'athletic disguise', 50, 'sports', { carry: 'toolbag' }, 'black');
 add('bag', 'Belt bag', 'mf', 'streetwear festival athletic', 30, 'clothing', { belt: 1 }, 'black');
+// the starting looks' own (CC9, 2026-10-09): a sarong; an apron and bib overalls, worn over a top like a jacket (the
+// top's sleeves and collar show round them); a coffee to go; a tool bag
+add('bottoms', 'Sarong', 'f', 'beach festival', 35, 'beach', { k: 'skirt', p: 4 }, 'teal', 'lime');
+add('jacket', 'Apron', 'mf', 'work casual', 25, 'workwear', { k: 'apron' }, 'forest', 'cream');
+add('jacket', 'Bib overalls', 'mf', 'work western outdoors retro', 65, 'workwear', { k: 'overalls' }, 'denim', 'gold');
+add('bag', 'Coffee to go', 'mf', 'casual business smart', 5, 'clothing', { carry: 'coffee' }, 'white');
+add('bag', 'Tool bag', 'mf', 'work', 45, 'workwear', { carry: 'toolbag' }, 'red');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 const byName = (n) => PIECE_IDS[n] || 0;
@@ -389,25 +396,28 @@ export function randomLook(seed, base = null, style = null) {
 }
 
 // ---- the twelve starting looks (CC9) ---------------------------------------------------------------------------------------
-const mk = (name, base, body, face, hair, extras, outfit) => {
+// CC9's own twelve, by name and line (2026-10-09; the first set only shared its idea): the skater, the beachgoer, the
+// rancher, the club-goer, the executive, the barista, the punk, the jogger, the outdoorsy, the local, the blue-collar, the
+// trendsetter - five women and seven men, as drawn
+const mk = (name, sub, base, body, face, hair, extras, outfit) => {
   const L = emptyLook(base);
   Object.assign(L.body, body); Object.assign(L.face, face); Object.assign(L.hair, hair); Object.assign(L.extras, extras);
   for (const [k, v] of Object.entries(outfit)) L.outfit[k] = v;
-  return { name, look: validLook(L) };
+  return { name, sub, look: validLook(L) };
 };
 export const STARTERS = [
-  mk('The Hustler', 'm', { build: 2, skin: 4, age: 1 }, { shape: 2, brows: 1 }, { style: 31, color: 0, facial: 2 }, {}, { top: item('Plain tee', 'white'), jacket: item('Bomber jacket', 'black', 'gold'), bottoms: item('Joggers', 'black'), shoes: item('High-tops', 'white', 'red'), hat: item('Snapback', 'black'), jewel: item('Gold chain') }),
-  mk('The Professional', 'f', { build: 0, skin: 7, age: 1, height: 3 }, { shape: 0, eyeColor: 5 }, { style: 19, color: 1 }, { makeup: 2, makeupColor: 0 }, { top: item('Blouse', 'white'), jacket: item('Blazer', 'black'), bottoms: item('Skirt', 'black'), shoes: item('Heels', 'black'), bag: item('Handbag', 'black'), jewel: item('Stud earrings') }),
-  mk('The Skater', 'm', { build: 0, skin: 6, height: 2 }, { freckles: 1, eyeColor: 4 }, { style: 32, color: 9 }, { piercings: 1 }, { top: item('Graphic tee', 'teal', 'yellow'), bottoms: item('Cargo pants', 'khaki'), shoes: item('Skate shoes'), hat: item('Beanie', 'red'), bag: item('Backpack', 'black') }),
-  mk('The Night Owl', 'f', { build: 3, skin: 2, age: 0 }, { lips: 2, eyes: 4 }, { style: 17, color: 0 }, { makeup: 5, makeupColor: 0 }, { set: item('Mini dress', 'wine'), jacket: item('Leather jacket'), shoes: item('Heels', 'black'), jewel: item('Hoop earrings'), bag: item('Clutch', 'gold') }),
-  mk('The Rancher', 'm', { build: 4, skin: 3, age: 3 }, { shape: 2, brows: 5 }, { style: 2, color: 3, facial: 3 }, {}, { top: item('Flannel shirt', 'red', 'black'), bottoms: item('Jeans'), shoes: item('Cowboy boots'), hat: item('Cowboy hat', 'tan'), jewel: item('Watch', 'silver') }),
-  mk('The Athlete', 'f', { build: 2, skin: 5, height: 3 }, { shape: 4 }, { style: 23, color: 0 }, {}, { top: item('Sports bra', 'teal'), bottoms: item('Leggings', 'black'), shoes: item('Running shoes', 'white', 'teal'), hat: item('Headband', 'white'), bag: item('Belt bag') }),
-  mk('The Executive', 'm', { build: 1, skin: 0, age: 3, height: 3 }, { shape: 3, eyeColor: 6 }, { style: 5, color: 12 }, {}, { set: item('Business suit', 'navy', 'burgundy'), shoes: item('Oxfords'), jewel: item('Gold watch'), bag: item('Briefcase'), glasses: item('Reading glasses') }),
-  mk('The Punk', 'f', { build: 0, skin: 0, age: 0 }, { brows: 2 }, { style: 10, color: 15 }, { makeup: 6, makeupColor: 4, tattoos: 0b00101, piercings: 0b0111 }, { top: item('Mesh top'), jacket: item('Studded vest'), bottoms: item('Plaid skirt', 'red', 'black'), shoes: item('Combat boots'), jewel: item('Spiked collar') }),
-  mk('The Beach Bum', 'm', { build: 1, skin: 9, age: 0 }, { freckles: 1 }, { style: 17, color: 10, facial: 1 }, { tattoos: 1 }, { top: item('Hawaiian shirt', 'coral', 'cream'), bottoms: item('Shorts', 'sand'), shoes: item('Flip-flops'), glasses: item('Sunglasses'), hat: item('Bucket hat', 'cream') }),
-  mk('The Bohemian', 'f', { build: 1, skin: 11, age: 1 }, { eyeColor: 2, mole: 1 }, { style: 28, color: 5 }, { makeup: 1, makeupColor: 2, piercings: 3 }, { set: item('Sundress', 'cream', 'coral'), jacket: item('Fringe jacket'), shoes: item('Sandals'), hat: item('Sun hat'), jewel: item('Bangles') }),
-  mk('The Mechanic', 'm', { build: 2, skin: 12, age: 2 }, { scar: 1 }, { style: 1, color: 0, facial: 1 }, { tattoos: 1, scar: 1 }, { set: item('Coveralls', 'navy', 'orange'), shoes: item('Work boots'), hat: item('Trucker cap', 'navy') }),
-  mk('The Silver Fox', 'f', { build: 1, skin: 1, age: 5 }, { shape: 0, eyeColor: 5 }, { style: 19, color: 13 }, { makeup: 2, makeupColor: 1 }, { top: item('Turtleneck', 'cream'), jacket: item('Wool coat', 'burgundy'), bottoms: item('Chinos', 'charcoal'), shoes: item('Ankle boots', 'black'), jewel: item('Pearl necklace'), glasses: item('Round glasses', 'gold') }),
+  mk('The Skater', 'Street kid', 'm', { build: 1, skin: 1 }, { eyeColor: 1 }, { style: 6, color: 3 }, {}, { top: item('Plain tee', 'white'), jacket: item('Puffer jacket', 'red', 'black'), bottoms: item('Black jeans', 'black'), shoes: item('High-tops', 'white', 'white'), glasses: item('Sunglasses') }),
+  mk('The Beachgoer', 'Sun chaser', 'f', { build: 3, skin: 11 }, { eyeColor: 1, lips: 2 }, { style: 20, color: 2 }, {}, { top: item('Tank top', 'black'), bottoms: item('Sarong', 'teal', 'lime', 4), shoes: item('Flip-flops', 'black'), glasses: item('Sunglasses'), jewel: item('Hoop earrings', 'gold') }),
+  mk('The Rancher', 'Country roots', 'm', { build: 4, skin: 7, age: 4 }, { shape: 2, brows: 5 }, { style: 3, color: 3, facial: 3 }, {}, { top: item('Flannel shirt', 'red', 'black'), jacket: item('Bib overalls', 'denim', 'gold'), bottoms: item('Jeans'), shoes: item('Work boots', 'brown'), hat: item('Cowboy hat', 'tan') }),
+  mk('The Club-goer', 'Night owl', 'f', { build: 0, skin: 9 }, { eyes: 4, lips: 2 }, { style: 26, color: 15 }, { makeup: 2, makeupColor: 1 }, { top: item('Crop top', 'black'), bottoms: item('Denim shorts', 'denim'), shoes: item('Skate shoes', 'black', 'white'), hat: item('Baseball cap', 'black'), jewel: item('Bangles', 'silver') }),
+  mk('The Executive', 'Big ambitions', 'm', { build: 1, skin: 1, age: 1 }, { shape: 3 }, { style: 7, color: 3, facial: 1 }, {}, { set: item('Business suit', 'black', 'navy'), shoes: item('Oxfords', 'black'), glasses: item('Sunglasses'), bag: item('Briefcase', 'brown'), jewel: item('Watch', 'silver') }),
+  mk('The Barista', 'Local favourite', 'f', { build: 1, skin: 8 }, { eyeColor: 4, freckles: 1 }, { style: 21, color: 9 }, {}, { top: item('Plain tee', 'black'), jacket: item('Apron', 'forest', 'cream'), bottoms: item('Chinos', 'black'), shoes: item('High-tops', 'black', 'white'), bag: item('Coffee to go') }),
+  mk('The Punk', 'Outsider', 'm', { build: 2, skin: 1 }, { brows: 2 }, { style: 10, color: 14, facial: 1 }, { tattoos: 0b00101, piercings: 0b0001 }, { top: item('Tank top', 'black'), jacket: item('Studded vest', 'black', 'silver'), bottoms: item('Ripped jeans', 'black'), shoes: item('Combat boots', 'black'), jewel: item('Watch', 'black') }),
+  mk('The Jogger', 'Disciplined', 'f', { build: 2, skin: 10 }, { shape: 4 }, { style: 20, color: 1 }, {}, { top: item('Sports bra', 'hot pink'), bottoms: item('Leggings', 'plum'), shoes: item('Running shoes', 'white', 'white'), jewel: item('Hoop earrings', 'gold') }),
+  mk('The Outdoorsy', 'Hard worker', 'm', { build: 2, skin: 13 }, { shape: 2 }, { style: 1, color: 0, facial: 2 }, {}, { top: item('Hi-vis vest', 'hi-vis', 'black'), bottoms: item('Cargo pants', 'black'), shoes: item('Work boots', 'brown'), hat: item('Beanie', 'black') }),
+  mk('The Local', 'Good vibes', 'm', { build: 4, skin: 0, age: 4 }, { shape: 1 }, { style: 8, color: 13, facial: 3 }, {}, { top: item('Hawaiian shirt', 'royal blue', 'orange'), bottoms: item('Shorts', 'khaki'), shoes: item('Flip-flops', 'navy'), glasses: item('Sunglasses') }),
+  mk('The Blue-collar', 'Keeps it real', 'm', { build: 2, skin: 2, age: 1 }, { shape: 2 }, { style: 2, color: 1, facial: 2 }, {}, { top: item('Work shirt', 'royal blue', 'navy'), bottoms: item('Work trousers', 'royal blue'), shoes: item('Work boots', 'brown'), hat: item('Baseball cap', 'navy', 'orange'), bag: item('Tool bag', 'red') }),
+  mk('The Trendsetter', 'Ahead of the curve', 'f', { build: 0, skin: 15 }, { eyes: 1, lips: 4 }, { style: 24, color: 0 }, {}, { top: item('Crop top', 'black'), bottoms: item('Cargo pants', 'tan'), shoes: item('Sneakers', 'white'), jewel: item('Bangles', 'gold') }),
 ];
 
 // ---- the old random outfit (server entities.js playerOutfit) -> a look -----------------------------------------------------
@@ -518,6 +528,10 @@ export function lookArt(L, opt = {}) {
     const under = A.top;
     A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind };
     if (jk.d.k === 'vest') A.top.sleeve = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'crop' || under.kind === 'bikini' ? 'skin' : under.color;
+    if (jk.d.k === 'apron' || jk.d.k === 'overalls') {   // (worn over the top: the shirt round them is the top - its colour, its sleeves, a flannel's check - or bare skin)
+      const bare = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'bikini';
+      A.top.color2 = bare ? null : under.color; A.top.bareUnder = bare ? 1 : 0; A.top.sleeve = bare ? 'skin' : under.color;
+    }
     if (set && (set.d.k === 'dress' || set.d.k === 'gown')) A.top.dressUnder = set.d.k === 'gown' ? -1 : set.d.len || 0;
   }
   const sh = P('shoes');

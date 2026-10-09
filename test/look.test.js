@@ -104,7 +104,9 @@ test('the twelve starting looks (CC9) are valid, distinct and named', () => {
     codes.add(LK.encodeLook(s.look));
   }
   assert.equal(codes.size, 12);
-  assert.equal(LK.STARTERS.filter((s) => s.look.body.base === 'f').length, 6, 'six of each');
+  assert.equal(LK.STARTERS.filter((s) => s.look.body.base === 'f').length, 5, 'CC9: five women, seven men');
+  assert.deepEqual(LK.STARTERS.map((s) => s.name.replace('The ', '')), ['Skater', 'Beachgoer', 'Rancher', 'Club-goer', 'Executive', 'Barista', 'Punk', 'Jogger', 'Outdoorsy', 'Local', 'Blue-collar', 'Trendsetter'], 'CC9\'s twelve, in its order');
+  for (const s of LK.STARTERS) assert.ok(s.sub && s.sub.length < 24, `${s.name}: a line under the name`);
   assert.deepEqual(LK.starterFor(13), LK.STARTERS[1].look);
 });
 

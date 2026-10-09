@@ -235,19 +235,23 @@ const BUILDS = [{ h: 0.98, w: 0.88, limb: 0.86 }, { h: 1, w: 1, limb: 1 }, { h: 
 function dims(A) {
   const fem = !!A.fem, b = { h: 1, w: 1, limb: 1, belly: 0, muscle: 0, ...(BUILDS[A.build ?? 1] || BUILDS[1]), ...(A.body || {}) };
   const h = b.h * (fem ? 0.97 : 1), w = b.w * (fem ? 0.9 : 1), lm = b.limb * (fem ? 0.86 : 1), mu = b.muscle || 0, bel = b.belly || 0;
-  // (C1, C2: about 3.7 heads, hair included - the first pass drew 2.6: a smaller head, a longer torso and legs, longer
-  // arms (the hands at mid-thigh), the same height; shoulders and hips by base and build: a man's taper from the
-  // shoulders, a woman's waist and hips)
+  // Proportions, third pass (the owner, 2026-10-09 07:10: "make it match ... the concepts"): C1 and CC9 shrunk to the
+  // game's size (about 24 art pixels tall) read as about 3 heads with the hair - a big head and big hair, a chunky body,
+  // short sturdy legs, thick arms and big hands - the SNES way of keeping a face and a haircut readable at that size. The
+  // second pass's 3.7 heads (a small head on long legs) shrank the face and the hair to a few pixels. So: the head 1.36x,
+  // the legs 0.88x, the arms a little shorter with them, the limbs 1.2x as thick, the body 1.08x as wide. Shoulders and
+  // hips by base and build as before: a man's taper from the shoulders, a woman's waist and hips.
+  const HK = 1.36, LK = 0.88, AK = 0.94, TK = 1.2, WK = 1.08;
   const D = {
     fem, h, w, lm, mu, belly: bel,
-    ank: 3.1, shin: 8.2 * h, thigh: 8.2 * h, hipX: 3.4 * w * (fem ? 1.12 : 1),
-    pelR: [6.4 * w * (fem ? 1.12 : 1), 4.6 * w, 4.6], waistR: [6.7 * w * (fem ? 0.8 : 0.97) + bel * 1.4, 4.7 * w + bel * 1.2, 5.1], waistUp: 4.5 * h,
-    chestR: [8.4 * w * (1 + mu * 0.1) * (fem ? 0.94 : 1.02), 5.3 * w * (1 + mu * 0.08), 6.6 * h], chestUp: 9.4 * h,
-    shX: 8.3 * w * (1 + mu * 0.1) * (fem ? 0.95 : 1.03), shUp: 13.6 * h, shBar: 3.5 * w * (1 + mu * 0.08), neckUp: 15.8 * h, neckR: 2.0 * w * (1 + mu * 0.25),
-    head: (fem ? [5.5, 5.5, 5.8] : [5.72, 5.68, 6.03]).map((v, i) => v * (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[i]), headUp: 5.8,
+    ank: 3.1, shin: 8.2 * h * LK, thigh: 8.2 * h * LK, hipX: 3.4 * w * (fem ? 1.12 : 1),
+    pelR: [6.4 * w * (fem ? 1.12 : 1) * WK, 4.6 * w, 4.6], waistR: [(6.7 * w * (fem ? 0.8 : 0.97) + bel * 1.4) * WK, 4.7 * w + bel * 1.2, 5.1], waistUp: 4.5 * h,
+    chestR: [8.4 * w * (1 + mu * 0.1) * (fem ? 0.94 : 1.02) * WK, 5.3 * w * (1 + mu * 0.08), 6.6 * h], chestUp: 9.4 * h,
+    shX: 8.3 * w * (1 + mu * 0.1) * (fem ? 0.95 : 1.03) * WK, shUp: 13.6 * h, shBar: 3.5 * w * (1 + mu * 0.08), neckUp: 15.8 * h, neckR: 2.0 * w * (1 + mu * 0.25),
+    head: (fem ? [5.5, 5.5, 5.8] : [5.72, 5.68, 6.03]).map((v, i) => v * HK * (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[i]), headUp: 5.8 * HK,
     jawW: (FACE_SHAPE[A.face?.shape | 0] || FACE_SHAPE[0])[3], age: A.age | 0,
-    upper: 8.8 * h, fore: 7.4 * h, armR: [2.95 * lm * (1 + mu * 0.2), 2.55 * lm * (1 + mu * 0.12)], foreR: [2.5 * lm * (1 + mu * 0.15), 2.0 * lm], fist: 2.6 * lm * (fem ? 0.93 : 1),
-    thighR: [3.7 * lm * (fem ? 1.06 : 1), 3.0 * lm], shinR: [2.85 * lm, 2.3 * lm], foot: fem ? [2.45, 4.3, 2.15] : [2.9, 4.95, 2.5],
+    upper: 8.8 * h * AK, fore: 7.4 * h * AK, armR: [2.95 * lm * (1 + mu * 0.2) * TK, 2.55 * lm * (1 + mu * 0.12) * TK], foreR: [2.5 * lm * (1 + mu * 0.15) * TK, 2.0 * lm * TK], fist: 2.6 * lm * (fem ? 0.93 : 1) * TK,
+    thighR: [3.7 * lm * (fem ? 1.06 : 1) * TK, 3.0 * lm * TK], shinR: [2.85 * lm * TK, 2.3 * lm * TK], foot: fem ? [2.45, 4.3, 2.15] : [2.9, 4.95, 2.5],
   };
   D.pelZ = D.ank + (D.shin + D.thigh) * 0.985 + 1.0;
   D.reach = D.upper + D.fore + 1.2;
@@ -815,7 +819,12 @@ function wardrobe(A, D, TF, seed) {
     if (T.vest || T.bib || T.apron) {
       // a panel over a shirt: the shirt shows round the arms and the collar
       const panel = T.bib ? (front && au < 0.55 && z < D.chestUp + 2.6) || (au > 0.25 && au < 0.42 && z > D.chestUp) || z < D.waistUp - 1 : T.apron ? front && au < 0.62 && z < D.chestUp + 2.2 : !(Q.part === 'shb' && au > 0.62) && !(front && au < 0.14 && z > D.chestUp);
-      if (!panel) return T.apron && au < 0.4 && z > D.chestUp + 2.2 && front && Math.abs(au - 0.3) < 0.06 ? dark(top) : top2;
+      if (!panel) {
+        if (T.apron && au < 0.4 && z > D.chestUp + 2.2 && front && Math.abs(au - 0.3) < 0.06) return dark(top);   // (the neck strap)
+        if (A.top?.bareUnder) return skin;                                   // (worn over nothing much: bare shoulders)
+        if (A.top?.innerKind === 'flannel') { const g = gridCheck(Q, top2); if (g) return g; }   // (a flannel shirt under it)
+        return top2;
+      }
       if (T.hivis && (Math.abs(z - (D.chestUp - 1.2)) < 0.6 || Math.abs(z - (D.waistUp + 0.4)) < 0.6 || (au > 0.3 && au < 0.44 && z > D.chestUp))) { Q.k += 0.1; return hiv; }
       if (A.top?.pattern === 'quilt' && Math.round(z * 0.55) % 2 === 0 && Math.abs(z * 0.55 - Math.round(z * 0.55)) < 0.12) Q.k -= 0.3;
       if (T.vest && !T.hivis && front && au < 0.1 && z > D.waistUp - 1 && Math.round(z) % 2 === 0) return gold;     // waistcoat buttons
@@ -893,7 +902,7 @@ function wardrobe(A, D, TF, seed) {
   };
   W.skinM = () => skin;
   // arms: sleeves to `sl` of the arm's length, then skin; cuffs; gloves; tattoos on bare skin
-  const slv = T.sl, gl = A.gloves ? cloth(A.gloves) : null;
+  const slv = (T.bib || T.apron) && A.top?.innerKind && TOP[A.top.innerKind] ? (A.top.bareUnder ? 0 : TOP[A.top.innerKind].sl) : T.sl, gl = A.gloves ? cloth(A.gloves) : null;   // (an apron or bib overalls worn over a top: the top's sleeves)
   W.arm = (Q) => {
     const along = Q.part === 'ua' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5;
     if (along < slv - (slv >= 1 ? 0.06 : 0)) {
@@ -902,7 +911,7 @@ function wardrobe(A, D, TF, seed) {
       if (T.stripe && Q.l1 > 0.55) return white;
       if (T.fur && along > 0.86) { Q.k += 0.15; return cloth('#efe6d4'); }
       if (T.hivis && Math.abs(along - 0.3) < 0.04) return hiv;
-      if (T.check) { if (Q.res > 1) { const a = Math.floor(along * 9), b = Math.floor((Q.l2 + 1) * 1.6); if ((a + b) & 1) Q.k -= 0.22; } else { const g = gridCheck(Q, sleeve); if (g) return g; } }
+      if (T.check || ((T.bib || T.apron) && A.top?.innerKind === 'flannel')) { if (Q.res > 1) { const a = Math.floor(along * 9), b = Math.floor((Q.l2 + 1) * 1.6); if ((a + b) & 1) Q.k -= 0.22; } else { const g = gridCheck(Q, sleeve); if (g) return g; } }
       if (A.top?.varsity && sleeve === top) return trim;
       if (sleeve === top && topPat) return topPat(Q) || sleeve;
       if (sleeve === top && A.top?.pattern === 'camo') return camo(Q) || sleeve;
@@ -1017,6 +1026,7 @@ function wardrobe(A, D, TF, seed) {
     if ((T.towel || bk === 'towel') && Math.abs(Q.l1 - 0.6) < 0.12 && Q.l2 > 0.2) Q.k -= 0.22;                      // the tucked-in corner
     if ((T.towel || bk === 'towel') && Math.abs(Q.l0 - 0.82) < 0.05) return cloth(A.bottom?.color2 || 'sky'); if (T.long && Math.abs(Q.l1) < 0.12 && Q.l2 > 0.8) Q.k -= 0.2; if (T.check) { const a = Math.floor((Math.atan2(Q.l1, Q.l2) + 4) * 3), b = Math.floor(Q.l0 * 6); if ((a + b) & 1) Q.k -= 0.22; } return R; };
   W.lining = () => dark(T.long ? top : bot);
+  W.apron = (Q) => { if (Math.abs(Q.l2 - 0.15) < 0.08 && Math.abs(Q.l0) < 0.8) Q.k -= 0.25; if (Q.l2 < -0.88) Q.k -= 0.12; return top; };   // (a pocket across it, the hem)
   W.fur = (Q) => { Q.k += hash(Math.round(Q.X * 2), Math.round(Q.Z * 2), 3) * 0.4 - 0.12; return cloth('#efe6d4'); };
   W.hood = (Q) => { if (Q.l1 > 0.2) Q.k -= 0.2; return top; };
   W.collar = (Q) => { Q.k += Q.l2 > 0.3 ? 0.1 : -0.12; if (T.gloss) Q.gloss = T.gloss; return tk === 'fur' ? cloth('#efe6d4') : top; };
@@ -1099,6 +1109,11 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     const open = long ? (h, c1, c2) => h > 0.002 && h < 0.998 && !(c2 > 0.55 && Math.abs(c1) < 0.5 && h > 0.15) : (h) => h > 0.002 && h < 0.998;
     C(top, hem, r0, r1, GR.SKIRT, 'skirt', W.skirt, open, mv(S.PF, [1, 0, 0]), mv(S.PF, [0, 1, 0]));
     if (long) C(top, hem, r0 - 0.7, r1 - 0.7, GR.SKIRT, 'lining', W.lining, (h) => h > 0.002 && h < 0.998);
+  }
+  // an apron hangs on to the knees in front (CC9's barista; CC4's work aprons): a flat panel before the thighs
+  if (T.apron) {
+    const kn = vmul(vadd(S.knL, S.knR), 0.5), lo = Math.max(kn[2] + 1.2, 3), hi = S.pel[2] + 2.4, cz = (lo + hi) / 2;
+    B(vadd(S.pel, mv(S.PF, [0, D.pelR[1] + 0.9, cz - S.pel[2]])), S.PF, [D.pelR[0] * 0.92, 0.5, (hi - lo) / 2], GR.SKIRT, 'apron', W.apron);
   }
   // things carried on the body
   if (A.back === 'backpack') B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 1.3), -0.6])), S.SP, [4.4, 1.7, 5.0], GR.ACC, 'pack', W.pack);
@@ -1373,7 +1388,7 @@ function render(fig, P, S, X, D, A, opt) {
   if (!opt.tight && !opt.region) { x0 = Math.min(x0, -18); x1 = Math.max(x1, 18); y0 = Math.min(y0, -47); y1 = Math.max(y1, 3); }
   // the creator's close-ups (opt.region 'head': the head and shoulders only - a thumbnail costs a fraction of a figure)
   // ('face': just the face, for the feature thumbnails; or a box [x0, y0, x1, y1] in world px round the head's centre)
-  const RB = opt.region === 'head' ? [-13, -17, 13, 13] : opt.region === 'face' ? [-8, -1.5, 8, 9.5] : Array.isArray(opt.region) ? opt.region : null;
+  const RB = opt.region === 'head' ? [-17, -23, 17, 17] : opt.region === 'face' ? [-11, -2, 11, 13] : Array.isArray(opt.region) ? opt.region : null;   // (the third pass's bigger heads: 1.36x)
   if (RB && fig.head >= 0) {
     const hc = prims[fig.head].c, hx = hc[0], hy = hc[1] * SA - hc[2] * CA;
     x0 = Math.max(x0, hx + RB[0]); x1 = Math.min(x1, hx + RB[2]); y0 = Math.max(y0, hy + RB[1]); y1 = Math.min(y1, hy + RB[3]);
@@ -1459,7 +1474,7 @@ function render(fig, P, S, X, D, A, opt) {
       if (Q.gloss && R > 1) v += 0.3 * Q.gloss * sm(clamp((ndl - 0.5) / 0.4, 0, 1));   // (close up: the sheen fades in)
       else if (Q.gloss && ndl > 0.72) v += 0.3 * Q.gloss;
       if (R > 1) { const F2 = fine(RM); c = F2[clamp(Math.round(v * (F2.length - 1) + bayer(x - AX, y - AY) * 0.9), 0, F2.length - 1)]; }   // (close up: twice the steps, dithered)
-      else c = RM[clamp(Math.round(v * (RM.length - 1) + bayer(Math.floor((x - AX) / 2), Math.floor((y - AY) / 2)) * 0.42), 0, RM.length - 1)];   // (the dither on the art grid: whole art pixels after the bake, not a blur)
+      else c = RM[clamp(Math.round(v * (RM.length - 1) + bayer(Math.floor((x - AX) / 2), Math.floor((y - AY) / 2)) * 0.18), 0, RM.length - 1)];   // (the dither on the art grid: whole art pixels after the bake, not a blur; light - at 24 art pixels tall C1 shows two or three clean tones a cloth, not a checker)
     }
     CR[i] = c[0]; CG[i] = c[1]; CB[i] = c[2]; ZW[i] = Q.Z; EM[i] = Q.e;
     if (opt.debug) { const hh = hash(k, 1, 77), part = p.part; CR[i] = 60 + hash(k, 2, 5) * 195; CG[i] = 60 + hh * 195; CB[i] = part === 'head' ? 255 : 60 + hash(k, 3, 9) * 120; }

@@ -16,6 +16,7 @@
 import * as LK from '../shared/look.js';
 import * as WD from '../shared/wardrobe.js';
 import { person } from './art2/people.js';
+import { packGBuf, downsample2 } from './art2/gbuf.js';
 
 let C = null;            // main.js's hooks { send, openOverlay, closeOverlay, topOverlay, sfx, toast }
 let root = null;
@@ -40,7 +41,7 @@ export function init(hooks) {
     <div class="mhead"><h2 class="cc-title">CHARACTER</h2><button class="x" data-act="done" aria-label="Done">✕</button></div>
     <div class="cc-body">
       <div class="cc-left"><canvas class="cc-prev" width="168" height="216"></canvas>
-        <div class="cc-turn"><button data-act="turn" data-v="1" aria-label="Turn left">⟲</button><span class="cc-pname"></span><button data-act="turn" data-v="-1" aria-label="Turn right">⟳</button></div></div>
+        <div class="cc-turn"><button data-act="turn" data-v="1" aria-label="Turn left">⟲</button><button class="cc-zoom" data-act="zoom" aria-label="Zoom">🔍</button><button data-act="turn" data-v="-1" aria-label="Turn right">⟳</button></div><span class="cc-pname"></span></div>
       <div class="cc-right"><div class="cc-tabs"></div><div class="cc-page"></div></div>
     </div>
     <div class="cc-foot"></div>
@@ -78,7 +79,7 @@ export function init(hooks) {
 // ---- opening and closing -------------------------------------------------------------------------------------------
 export function open(m = 'edit', st = null) {
   if (st) state = st;
-  mode = m;
+  mode = m; zoomSet = null;
   const cur = state.cur && LK.decodeLook(state.cur);
   look = cur || LK.starterFor(0);
   hist = []; renaming = -1;
@@ -150,7 +151,13 @@ function setL(fn, record = true) {
 let heightFrom = null;
 function commitHeight() { if (heightFrom !== null && heightFrom !== code()) { hist.push(heightFrom); } heightFrom = null; }
 
-// ---- figures: the big preview and the thumbnails --------------------------------------------------------------------------
+// ---- figures: the preview and the thumbnails, in the game's own pixels -----------------------------------------------------
+// The owner, 2026-10-09: "let's have you editing the player with what you look like in the actual game" (06:52); "it
+// should be zoomed out to about that size you would see in game maybe a little closer" (07:10). So every figure here is
+// the game's own sprite: the figure cast at 1 px per world px (people.js, as art2/game/peds.js asks for it), turned into
+// art pixels (2 x 2 world px) by the downsample the game's bake uses (gbuf.js downsample2), and drawn at a whole number
+// of screen pixels per art pixel: the preview two and a half times as big as in the game (the magnifier doubles it), a
+// figure's thumbnail at 3 CSS px per art pixel, a head's at up to 5. Nothing is drawn finer than the game draws it.
 const ART = new Map();      // code -> art app (a few dozen at most)
 function art(L) {
   const k = code(L);
@@ -158,60 +165,79 @@ function art(L) {
   if (!A) { A = LK.lookArt(L, { code: k }); ART.set(k, A); if (ART.size > 200) ART.delete(ART.keys().next().value); }
   return A;
 }
-// The figures are cast at the size they're shown (people.js opt.res: R pixels per world px), so the faces get real
-// eyes, brows, noses and lips (people.js faceHi) and the hair its locks and sheen: the big preview at 4 px per world px
-// (the head and shoulders at 8 on the Face and Hair tabs, as CC8 shows them), a figure's thumbnail at 2, a head's at 3,
-// a face feature's at 4. The game itself draws them at 1.
-// (the second pass drew smaller heads, C2's 3.7 heads: a face's close-up is cast at 5 over a smaller box, so it still
-// fills its thumbnail)
-const SIZES = { full: [64, 120, 2, null], head: [60, 66, 3, [-10, -13, 10, 9]], face: [64, 44, 5, [-6.4, -1.2, 6.4, 7.6]] };   // canvas w, h, res, region
-const BUST = [-10.5, -15, 10.5, 12];   // the preview's close-up: 21 x 27 world px at 8 = the canvas
-function blit(cv, G, crop) {
-  const c2 = cv.getContext('2d');
-  c2.clearRect(0, 0, cv.width, cv.height);
-  if (!G || !G.w) return;
-  const tmp = document.createElement('canvas');
-  tmp.width = G.w; tmp.height = G.h;
-  const id = tmp.getContext('2d').createImageData(G.w, G.h);
-  id.data.set(G.col);
-  tmp.getContext('2d').putImageData(id, 0, 0);
-  c2.imageSmoothingEnabled = false;
-  const close = crop === 'head' || crop === 'face', foot = Math.round(cv.height * 0.035) + 2;
-  // (a wide brim or a held bag may not fit: shrink to fit rather than cut it off)
-  const s = Math.min(1, cv.width / G.w, (cv.height - (close ? 0 : foot)) / G.h);
-  const x = close ? Math.round((cv.width - G.w * s) / 2) : Math.round(cv.width / 2 - G.ax * s);
-  const y = close ? Math.round(cv.height - G.h * s) : Math.round(cv.height - foot - G.ay * s);
-  if (!close) {   // the pedestal's shadow (CC1)
-    const rx = Math.min(cv.width * 0.42, G.w * 0.36), ry = Math.max(2, rx * 0.3);
-    c2.fillStyle = 'rgba(0,0,0,.38)'; c2.beginPath(); c2.ellipse(cv.width / 2, cv.height - foot, rx, ry, 0, 0, 6.283); c2.fill();
+const dpr = () => Math.max(1, Math.min(4, (typeof window !== 'undefined' && window.devicePixelRatio) || 1));
+// a look's sprite as the game draws it (region 'head': the head and shoulders only), on a canvas one pixel an art pixel;
+// each kept (bounded), so a turn or the idle's second frame is a blit after the first time
+const SPR = new Map();
+function sprite(L, d = 0, f = 0, region = null) {
+  const k = code(L) + '|' + d + '|' + f + '|' + (region || '');
+  let S = SPR.get(k);
+  if (S) { SPR.delete(k); SPR.set(k, S); return S; }
+  let D = null;
+  try { D = downsample2(packGBuf(person(art(L), d, 'idle', f, region ? { tight: true, region } : { tight: true }))); } catch (e) { console.warn('[creator] figure', e); }
+  const cv = document.createElement('canvas');
+  cv.width = D && D.w ? D.w : 1; cv.height = D && D.h ? D.h : 1;
+  if (D && D.w && D.h) { const c2 = cv.getContext('2d'), id = c2.createImageData(D.w, D.h); id.data.set(D.p0.subarray(0, D.w * D.h * 4)); c2.putImageData(id, 0, 0); }
+  S = { cv, w: cv.width, h: cv.height, ax: D ? D.ax : 0, ay: D ? D.ay : 0 };
+  SPR.set(k, S);
+  if (SPR.size > 400) SPR.delete(SPR.keys().next().value);
+  return S;
+}
+// CC1's plinth under the figure, in art pixels (s screen px each) round (cx, top): a round stone top lit from the front
+// left, its rim a step darker, a dark outline; the figure's shadow on it
+const STONE = { top: '#5d6272', lit: '#737889', rim: '#41444f', rimDk: '#33353e', line: '#1d1f27', shade: 'rgba(12,14,24,.45)' };
+function plinth(c2, cx, top, s, wArt) {
+  const rx = wArt / 2, ry = Math.max(3, Math.round(wArt * 0.24)), rim = Math.max(2, Math.round(wArt * 0.12)), n = Math.ceil(rx) + 1;
+  const at = (i, j, col) => { c2.fillStyle = col; c2.fillRect(cx + i * s, top + j * s, s, s); };
+  const inTop = (i, j) => { const u = (i + 0.5) / rx, v = (j + 0.5) / ry; return u * u + v * v <= 1; };
+  const inAll = (i, j) => inTop(i, j) || (Math.abs(i + 0.5) <= rx && j >= 0 && inTop(i, Math.max(-ry, j - rim)));
+  for (let j = -ry - 1; j <= ry + rim + 1; j++) for (let i = -n; i < n; i++) {
+    if (inAll(i, j)) {
+      if (inTop(i, j)) at(i, j, !inTop(i, j - 1) || (!inTop(i - 1, j) && i < 0) ? STONE.lit : STONE.top);
+      else at(i, j, i > rx * 0.35 || j >= ry + rim - 1 ? STONE.rimDk : STONE.rim);
+    } else if (inAll(i - 1, j) || inAll(i + 1, j) || inAll(i, j - 1) || inAll(i, j + 1)) at(i, j, STONE.line);
   }
-  c2.drawImage(tmp, 0, 0, G.w, G.h, x, y, Math.round(G.w * s), Math.round(G.h * s));
+  // the shadow under the feet (the sun's from the front left, as in the game)
+  const sx = Math.max(3, Math.round(wArt * 0.2)), sy = Math.max(1, Math.round(ry * 0.4));
+  c2.fillStyle = STONE.shade;
+  for (let j = -sy; j <= sy; j++) for (let i = -sx; i < sx + 2; i++) { const u = (i - 1 + 0.5) / sx, v = (j + 0.5) / sy; if (u * u + v * v <= 1) c2.fillRect(cx + i * s, top + j * s, s, s); }
 }
-// the preview: each pose cast once and kept (a turn or the idle's two frames are a blit after the first time)
-const PREV = new Map();
-function previewCanvas(L, d, f, close) {
-  const k = code(L) + d + f + (close ? 'c' : 'f');
-  let cv = PREV.get(k);
-  if (cv) return cv;
-  cv = document.createElement('canvas');
-  cv.width = 168; cv.height = 216;
-  let G = null;
-  try { G = person(art(L), d, 'idle', f, close ? { tight: true, res: 8, region: BUST } : { tight: true, res: 4 }); } catch (e) { console.warn('[creator] preview', e); }
-  blit(cv, G, close ? 'head' : 'full');
-  PREV.set(k, cv);
-  if (PREV.size > 48) PREV.delete(PREV.keys().next().value);
-  return cv;
+// a canvas's backing store sized to its box on screen, in device pixels (returns the device pixel ratio)
+function fitCanvas(cv, cssW, cssH) {
+  const r = dpr(), w = Math.max(1, Math.round((cv.clientWidth || cssW || 1) * r)), h = Math.max(1, Math.round((cv.clientHeight || cssH || 1) * r));
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  return r;
 }
-const closeUp = () => (mode === 'edit' && (tab === 'face' || tab === 'hair')) || mode === 'barber';
+// the magnifier (CC1's button between the arrows): the figure as in the game, a little closer (0), or twice that on the
+// head and shoulders (1). The Face and Hair tabs and the barber's chair open on it.
+let zoomSet = null;
+const zoomed = () => (zoomSet !== null ? zoomSet : (mode === 'edit' && (tab === 'face' || tab === 'hair')) || mode === 'barber');
 function drawPreview() {
   if (!root) return;
-  const cv = root.querySelector('.cc-prev');
-  // (in the barber's chair, and on the Face and Hair tabs' close-up, the hat comes off, so the face and the cut show)
-  const L = closeUp() && look.outfit.hat ? (() => { const V = clone(look); V.outfit.hat = null; return V; })() : look;
-  const src = previewCanvas(L, dir, fr, closeUp()), c2 = cv.getContext('2d');
-  c2.clearRect(0, 0, cv.width, cv.height);
-  c2.drawImage(src, 0, 0);
-  cv.classList.toggle('close', closeUp());
+  const cv = root.querySelector('.cc-prev'), z = zoomed();
+  // (zoomed in on the Face and Hair tabs and in the barber's chair, the hat comes off, so the face and the cut show)
+  const L = z && look.outfit.hat && (tab === 'face' || tab === 'hair' || mode === 'barber') ? (() => { const V = clone(look); V.outfit.hat = null; return V; })() : look;
+  const S = sprite(L, dir, fr), r = fitCanvas(cv, 168, 216), W = cv.width, H = cv.height, c2 = cv.getContext('2d');
+  c2.imageSmoothingEnabled = false;
+  c2.clearRect(0, 0, W, H);
+  // the spotlight from above (CC1)
+  const g = c2.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(255,236,180,0)'); g.addColorStop(0.55, 'rgba(255,236,180,.07)'); g.addColorStop(1, 'rgba(255,236,180,.13)');
+  c2.fillStyle = g; c2.beginPath(); c2.moveTo(W * 0.42, 0); c2.lineTo(W * 0.58, 0); c2.lineTo(W * 0.88, H * 0.86); c2.lineTo(W * 0.12, H * 0.86); c2.closePath(); c2.fill();
+  // the size of an art pixel: the game's (2 world px at its zoom) x 2.5, x 2 under the magnifier, in whole device px,
+  // and never so big that the figure doesn't fit
+  const game = Math.max(0.4, C && C.zoom ? C.zoom() : 1) * 2;
+  let s = Math.max(1, Math.round(game * 2.5 * r * (z ? 2 : 1)));
+  const room = z ? H * 1.25 : H * 0.66;
+  while (s > 1 && (S.h * s > room || S.w * s > W * 0.92)) s--;
+  const cx = Math.round(W / 2);
+  if (!z) {
+    const feet = Math.round(H * 0.8);
+    plinth(c2, cx, feet, s, Math.max(16, Math.round(S.w * 1.45)));
+    c2.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, feet - S.ay * s, S.w * s, S.h * s);
+  } else c2.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, Math.round(H * 0.1), S.w * s, S.h * s);   // (the head near the top; the legs run off below)
+  cv.classList.toggle('close', z);
+  const zb = root.querySelector('[data-act="zoom"]'); if (zb) zb.classList.toggle('on', z);
   const pn = root.querySelector('.cc-pname');
   if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : mode === 'wheel' ? ((state.saved || [])[wheelSel] || {}).n || '' : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir];
 }
@@ -232,16 +258,31 @@ function loop() {
   raf = requestAnimationFrame(step);
 }
 // thumbnails: cast a few each frame (about 6 ms' worth, the ones on screen first), cached (bounded); until then the
-// card shows a soft placeholder
+// card shows a soft placeholder. In the game's pixels too: a figure at 3 CSS px per art pixel on its shadow, a head (the
+// hair, hats, glasses, facial hair) and a face at the most that fits, up to 6 and 8.
+const SIZES = { full: [80, 110, 3, null], mini: [40, 75, 2, null], head: [60, 66, 6, 'head'], face: [64, 44, 8, 'face'] };   // CSS w, h, art px (CSS px, at most), region
+// (a figure keeps its 3 px however tall its hair or wide its hat: one a little too big for its tile is cut at the edge, never
+// shrunk, so every tile shows the figures at the same size)
 const THUMB = new Map(), want = [];
 function thumbFor(L, crop) {
-  const k = code(L) + crop;
+  const r = dpr(), k = code(L) + crop + r;
   let cv = THUMB.get(k);
   if (cv) { THUMB.delete(k); THUMB.set(k, cv); return cv; }
-  const [tw, tht, res, region] = SIZES[crop] || SIZES.full;
+  const [tw, tht, px, region] = SIZES[crop] || SIZES.full;
   cv = document.createElement('canvas');
-  cv.width = tw; cv.height = tht;
-  try { blit(cv, person(art(L), 0, 'idle', 0, region ? { tight: true, res, region } : { tight: true, res }), crop); } catch (e) { console.warn('[creator] thumb', e); }
+  cv.width = Math.round(tw * r); cv.height = Math.round(tht * r);
+  const S = sprite(L, 0, 0, region), c2 = cv.getContext('2d'), W = cv.width, H = cv.height;
+  c2.imageSmoothingEnabled = false;
+  const foot = region ? 0 : Math.round(H * 0.1);
+  let s = Math.max(1, Math.round(px * r));
+  while (s > 1 && (S.w * s > W * (region ? 1 : 1.25) || S.h * s > (H - foot) * (region ? 1 : 1.12))) s--;
+  if (!region) {
+    // the figure's shadow, in art pixels
+    const fy = H - foot, sx = Math.max(3, Math.round(S.w * 0.38)), cx = Math.round(W / 2);
+    c2.fillStyle = 'rgba(0,0,0,.34)';
+    for (let j = -1; j <= 1; j++) for (let i = -sx; i < sx; i++) { const u = (i + 0.5) / sx, v = j / 1.5; if (u * u + v * v <= 1) c2.fillRect(cx + i * s, fy + j * s, s, s); }
+    c2.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, fy - S.ay * s, S.w * s, S.h * s);
+  } else c2.drawImage(S.cv, 0, 0, S.w, S.h, Math.round((W - S.w * s) / 2), region === 'head' ? H - S.h * s : Math.round((H - S.h * s) / 2), S.w * s, S.h * s);
   THUMB.set(k, cv);
   if (THUMB.size > 320) THUMB.delete(THUMB.keys().next().value);
   return cv;
@@ -383,8 +424,8 @@ function renderPage() {
     h = `<p class="cc-note">${k === 'salon' ? 'Cuts and colour' : 'Cuts, colour, beards and moustaches'}: see it on you, then Confirm to pay.</p>` + h;
   } else if (mode === 'start') {
     h = `<p class="cc-note">Pick who you'll be. You can change everything later from the pause menu (Appearance).</p><div class="cc-grid big">`
-      + LK.STARTERS.map((s, i) => `<button class="cc-card ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look)}<span>${esc(s.name)}</span></button>`).join('')
-      + `<button class="cc-card ${startPick === LK.STARTERS.length ? 'on' : ''}" data-act="start" data-v="random"><span class="cc-q">?</span><span>Random</span></button></div>`;
+      + LK.STARTERS.map((s, i) => `<button class="cc-card ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look)}<span>${esc(s.name)}</span><small class="cc-sub">${esc(s.sub || '')}</small></button>`).join('')
+      + `<button class="cc-card ${startPick === LK.STARTERS.length ? 'on' : ''}" data-act="start" data-v="random"><span class="cc-q">?</span><span>Random</span><small class="cc-sub">Surprise me</small></button></div>`;
   } else if (mode === 'wheel') {
     const sv = state.saved || [], n = sv.length;
     h = n ? `<div class="cc-ring">` + sv.map((s, i) => {
@@ -451,14 +492,14 @@ function renderPage() {
       + `<p class="cc-note">${sv.length} of 12 saved.</p><div class="cc-saved">`
       + sv.map((s, i) => {
         const SL = LK.decodeLook(s.c);
-        return `<div class="cc-sv">${SL ? th(SL) : ''}<div class="cc-svn">${renaming === i ? `<input class="cc-name" type="text" maxlength="20" value="${esc(s.n)}" data-enter="sv-ok" autocomplete="off">` : esc(s.n)}</div>
+        return `<div class="cc-sv">${SL ? th(SL, 'mini') : ''}<div class="cc-svn">${renaming === i ? `<input class="cc-name" type="text" maxlength="20" value="${esc(s.n)}" data-enter="sv-ok" autocomplete="off">` : esc(s.n)}</div>
           <div class="cc-svb">${renaming === i ? `<button class="cc-btn" data-act="sv-ok" data-v="${i}">OK</button>` : `<button class="cc-btn gold" data-act="sv-apply" data-v="${i}">Apply</button><button class="cc-btn" data-act="sv-ren" data-v="${i}">Rename</button><button class="cc-btn" data-act="sv-del" data-v="${i}">Delete</button>`}</div></div>`;
       }).join('') + '</div>';
   }
   if (lockedHere) h = here(tab === 'hair' ? '✂ Try any style here: cuts, colour and beards are done at a barbershop or a hair salon.' : '🪞 Try anything here: these change at the mirror at home.') + h;
   pg.innerHTML = h;
   want.length = 0;
-  for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)], Z = SIZES[crop] || SIZES.full; el.width = Z[0]; el.height = Z[1]; want.push([el, TL, crop]); }
+  for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)], Z = SIZES[crop] || SIZES.full; el.width = Math.round(Z[0] * dpr()); el.height = Math.round(Z[1] * dpr()); want.push([el, TL, crop]); }
   pumpThumbs();
   if (renaming >= 0) { const inp = pg.querySelector('.cc-sv input'); if (inp) inp.focus(); }
   refocus();
@@ -478,8 +519,9 @@ function act(a, v, el) {
   if (C.sfx) C.sfx('click', 0.5);
   lastTouch = performance.now();
   switch (a) {
-    case 'tab': { tab = v; renaming = -1; render(); const pg = root.querySelector('.cc-page'); pg.classList.remove('tabin'); void pg.offsetWidth; pg.classList.add('tabin'); pg.scrollTop = 0; return; }
+    case 'tab': { tab = v; renaming = -1; zoomSet = null; render(); const pg = root.querySelector('.cc-page'); pg.classList.remove('tabin'); void pg.offsetWidth; pg.classList.add('tabin'); pg.scrollTop = 0; return; }
     case 'turn': dir = (dir + Number(v) + 8) % 8; drawPreview(); return;
+    case 'zoom': zoomSet = !zoomed(); drawPreview(); return;
     case 'done': close(true); return;
     case 'close': close(false); return;
     case 'mirror': mode = 'edit'; tab = 'body'; render(); return;
