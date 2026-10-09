@@ -288,6 +288,27 @@ CF2 and FX2 are in the prompt pack):**
 - **The top of a phone held upright (18:41):** the minimap top-left with the time of day and the weather on it; cash,
   bank and the stars anchored top-right; nothing at the very top centre, where phones like the Pixel 7 Pro have the
   camera in the screen (the top row of buttons moves down, or out of the middle).
+- **Interiors (19:28):** interesting, working interiors for hospitals, police stations, banks, stores and shops, coffee
+  shops, bars and taverns (concepts IN1-IN7: the big public places room by room, and how doors read inside and out).
+- **The subway (19:28):** underground still shows the old graphics; the change going down and coming up should be smooth;
+  you physically walk down the stairs to see the station below; you can still walk or drive on the tracks (SU1-SU6).
+- **Sewers (19:28):** nothing elaborate - a few manholes you can drop into, tunnels under the city that give a few ways
+  round and meet the subway here and there (SW1-SW2).
+- **Caves and mining (19:28):** cave systems deep in the wilds, and mining above ground at a quarry and on mountainsides.
+  Pickaxe tiers: the best ore needs the best pickaxe; ore spawns at random points, the best far out in the wilds.
+  Dangers: bats, bears, cougars, spiders, snakes. One cave has an underground river that forks and joins other caves,
+  with a rowing boat or small motorboats there. Beautiful and very dark: you need a light, except where glowing
+  mushrooms, plants or glow worms are (MI1-MI7).
+- **Lights to carry (19:28):** a headlamp, a hard hat with a lamp, a lantern, a heavy flashlight you can hit with, and
+  any other light worth carrying (flares, glow sticks).
+- **Felling trees (19:28):**
+  - **The cutting:** small trees are quick and give little wood; big ones are slow and give more; a giant redwood takes
+    a long time and gives a lot. Axes come in tiers, and a chainsaw is best.
+  - **The fall:** the tree falls away from the side you cut it from (a short falling animation) and breaks into stacks
+    of logs when it lands. A tree falling on someone hurts or kills them, by its size and how it lands.
+  - **The wood:** carry a bundle by hand, or load the logs into a vehicle like crates. It upgrades homes, feeds civilian
+    missions and gang-hideout upgrades, or sells.
+  - **Regrowth:** trees grow back fairly quickly when nobody is around (WD1-WD3).
 
 ## Sharks [W2 stage 5]
 - Extremely rare anywhere in the sea; likeliest round the prison island (still rare).
