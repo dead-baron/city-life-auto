@@ -100,6 +100,7 @@ export function dispatchPaid(world, ped, pid) {
   world.ambulances ??= new Set();
   const now = world.time;
   const k = kerbFor(world, ped.x, ped.y);
+  if (world.map.zoneAt(k.x, k.y) !== world.map.zoneAt(ped.x, ped.y)) return null;   // (no road on their island: no ambulance can get there)
   for (const [lo, hi] of [[650, 1400], [500, 2200], [400, 3200]]) {
     const cands = starts(world, k, lo, hi);
     if (cands.length) return launch(world, ped, cands[Math.floor(rng() * Math.min(4, cands.length))], k, now, pid);
