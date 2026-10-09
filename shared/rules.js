@@ -391,3 +391,22 @@ export const RUNOVER_LIE_S = 3.5;          // run over: lying there about this l
 export const RUNOVER_LEFT = 0.14;          // ...on about this much of your health, slow - fast, or under a truck, it can kill
 export const HOOD_RIDE_S = [0.5, 2];       // onto the hood: riding it this long at most, unless it brakes or turns hard (or you roll off: move)
 export const HOOD_MAX_SPEED = 380;         // ...only below this closing speed (px/s); faster, you go flying
+
+// ---- underground: the sewers, the cave, mining (server/systems/underground.js, shared/underground.js) ----------------
+export const MANHOLE_REACH = 30;           // px: stand on a cover (over a sewer route) to climb down
+export const LADDER_REACH = 34;            // px: at the foot of a ladder underground, to climb up
+export const POLICE_FOLLOW_R = 520;        // px: officers on foot this close who saw you go down a manhole come down after you...
+export const POLICE_FOLLOW_S = 2.5;        // ...this long after you (the next a little later)
+export const POLICE_GIVE_UP_S = 40;        // down there, an officer who hasn't seen you this long climbs back up
+export const ROCKFALL_WARN_S = 1.6;        // a cracked roof: a trickle of dust this long before the rock comes down...
+export const ROCKFALL_DMG = 34;            // ...hurting anyone under it this much
+export const ROCKFALL_R = 34;              // px
+export const ROCKFALL_EVERY_S = [22, 50];  // s between falls at one spot (only while someone is near)
+export const BATS_REST_S = 45;             // a roost that burst out settles again after this long
+export const BEAR_WAKE_R = 260;            // px: the den bear wakes when you come this close
+export const BEAR_BITE = 18;               // its bite...
+export const BEAR_BITE_S = 1.3;            // ...this often while you stay
+export const MINE_REACH = 44;              // px: face a vein this close to work it
+export const VEIN_REGROW_S = 300;          // a worked-out vein grows back (somewhere near) after this long
+export const PICK_PRICES = { pickStone: 30, pickIron: 95, pickSteel: 280, pickDiamond: 1250 };
+export const ASSAY_PAYS = 1.3;             // the quarry's assay office pays this much over what a pawn shop does

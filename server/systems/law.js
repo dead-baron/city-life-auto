@@ -15,6 +15,7 @@ import * as custody from './custody.js';
 import * as cells from './cells.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
+import { undergroundOf, ugLos } from '../../shared/underground.js';
 import { ROB_CALLED_HEAT } from '../../shared/rules.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
@@ -249,7 +250,7 @@ export function calledIn(world, sp, call, caller) {
 
 // Riders in the same train car see each other whatever the street around them is doing.
 function sameTrain(a, b) { return !!(a && b && a.onTrain && b.onTrain && a.onTrain.t === b.onTrain.t && a.onTrain.c === b.onTrain.c); }
-function canSee(world, e, ped) { return !!e.sub === !!ped.sub && (sameTrain(e, ped) || world.map.los(e.x, e.y, ped.x, ped.y)); }
+function canSee(world, e, ped) { return !!e.sub === !!ped.sub && (sameTrain(e, ped) || (ped.ug ? !!e.ug && ugLos(undergroundOf(world.map), e.x, e.y, ped.x, ped.y) : world.map.los(e.x, e.y, ped.x, ped.y))); }   // (underground: the tunnels' own walls - shared/underground.js)
 
 function immune(world, perp, victim) {
   if (!victim) return false;

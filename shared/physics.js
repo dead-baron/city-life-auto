@@ -8,6 +8,9 @@ import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
 import { edgeBrake } from './border.js';
 import { dropsOf, DROP_SPEED } from './ledges.js';
+import { ugMapOf } from './underground.js';
+// Down the sewers or in the cave (e.ug: shared/underground.js) people and boats move through the underground's own map.
+const mapOf = (s, map) => (s.ug && !map.ug ? ugMapOf(map) || map : map);
 
 // Ground tile under a moving thing - up on the highway deck it's always road.
 const up = (s) => (s.lz || 0) > GROUND_Z;
@@ -43,6 +46,7 @@ export const TUMBLE_FRICTION = 2.2;
 export const AIR_FRICTION = 0.35;   // flung out of a car: barely slows until you hit the ground
 export const SWIM_SPEED = 0.42;     // swimming speed vs walking
 export function pedStep(s, inp, dt, map, mods) {
+  map = mapOf(s, map);
   const bits = inp.bits;
   const pressed = bits & ~s.prevBits;
   s.prevBits = bits;
@@ -191,6 +195,7 @@ export function newVehState(x, y, a) { return { x, y, a, vx: 0, vy: 0, av: 0, sl
 //    swinging round the front wheels.
 // AI drivers never set slide or drv, so traffic stays planted.
 export function vehStep(s, inp, dt, map, def, env) {
+  map = mapOf(s, map);
   const isBoat = def.kind === 'boat';
   const tile = up(s) ? T.ROAD : map.tileAtPx(s.x, s.y);
   const surf = isBoat ? [1, 1, 0] : (SURFACE[tile] || SURFACE[1]);

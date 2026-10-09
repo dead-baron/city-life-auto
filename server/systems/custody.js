@@ -403,7 +403,7 @@ function jail(world, p, st, secs, bail, stars, by, cell = null) {
   if (ped.vehId) vehicles.ejectPed(world, ped, true);
   cuff(ped, false);
   cells.clearPose(ped);
-  ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.downUntil = 0; ped.stunUntil = 0; ped.lz = 0; ped.sub = false; ped.fishing = null;
+  ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.downUntil = 0; ped.stunUntil = 0; ped.lz = 0; ped.sub = false; ped.ug = 0; ped.fishing = null;
   const b = cell ? cell.b : cells.blockOf(world, st.id);
   if (b < 0) {   // (a station with no cells - none now: the old holding cell, out of sight)
     ped.hidden = true; ped.inside = null; ped.interior = { kind: 'jail', poi: st.id };

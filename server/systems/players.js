@@ -51,6 +51,7 @@ import * as revive from './revive.js';
 import * as custody from './custody.js';
 import * as cells from './cells.js';
 import * as devmode from '../devmode.js';
+import * as underground from './underground.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -455,6 +456,7 @@ export function findInteraction(world, p) {
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
   if (ped.onTrain) return trains.interaction(world, p);
+  if (ped.ug && !ped.vehId) return underground.interaction(world, p);   // (down the sewers or in the cave: only what's down there)
   if (!ped.vehId) { const rv = revive.interaction(world, p); if (rv) return rv; }
   if (ped.vehId) {
     const hop = trains.interaction(world, p);
@@ -522,6 +524,9 @@ export function findInteraction(world, p) {
   if (bus) return bus;
   const ferry = ferries.interaction(world, p);   // a ferry in at the pier: board it
   if (ferry) return ferry;
+
+  const below = underground.interaction(world, p);   // a manhole over the sewers, the cave's mouth, an ore vein
+  if (below) return below;
 
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
@@ -669,6 +674,7 @@ export function buildMe(world, p) {
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
+    ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, custody: custody.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),

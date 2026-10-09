@@ -50,6 +50,7 @@ import * as hunting from './systems/hunting.js';
 import * as campfires from './systems/campfires.js';
 import * as wanderer from './systems/wanderer.js';
 import * as places from './systems/places.js';
+import * as underground from './systems/underground.js';
 import * as golf from './systems/golf.js';
 import * as hoops from './systems/hoops.js';
 import * as bikers from './systems/bikers.js';
@@ -62,6 +63,7 @@ const SYSTEMS = [
   ['homes', homes.update],          // going inside your home (hide), step-out protection
   ['rides', rides.update],          // the Ferris wheel, balloon flights: carrying the riders, setting them down
   ['places', places.update],        // things to do at the places: stripping the boneyard's planes for parts
+  ['underground', underground.update], // the sewers and the cave: police who followed you down, bats, the den bear, falling rocks, mining
   ['gates', gates.update],          // sliding gates (motor pools, Syndicate compound)
   ['station', station.update],
   ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking

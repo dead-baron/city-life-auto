@@ -65,7 +65,7 @@ function arriveNear(world, ped, to) {
   const v = to.vehId ? world.get(to.vehId) : null;
   const r = v ? Math.max(v.def.W, v.def.L) / 2 + 20 : 30;
   const base = v || to;
-  ped.x = base.x + r; ped.y = base.y; ped.vx = 0; ped.vy = 0; ped.sub = false; ped.hidden = false; ped.interior = null;
+  ped.x = base.x + r; ped.y = base.y; ped.vx = 0; ped.vy = 0; ped.sub = false; ped.ug = 0; ped.hidden = false; ped.interior = null;
   ped.downUntil = 0; ped.tumbleUntil = 0; ped.airUntil = 0;
   world.place(ped);
   if (ped.player) ped.player.teleportAt = world.time;

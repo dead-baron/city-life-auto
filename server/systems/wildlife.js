@@ -284,7 +284,7 @@ function populate(world) {
   const anchors = [];
   for (const p of world.players.values()) { const q = p.ped; if (q && !q.dead && !q.hidden && !q.sub && !q.interior) anchors.push(q); }
   for (const e of world.entities.values()) {
-    if (!isAnimal(e)) continue;
+    if (!isAnimal(e) || e.ug) continue;   // (the cave's den bear comes and goes with the cave: underground.js)
     let near = false;
     for (const q of anchors) if ((q.x - e.x) ** 2 + (q.y - e.y) ** 2 < DESPAWN_R * DESPAWN_R) { near = true; break; }
     const gone = !near || (e.dead && now - e.deadAt > CARCASS_S) || e.wild.flewOff;
@@ -1034,7 +1034,7 @@ export function update(world, dt) {
   if (world.tick % 40 === 3) world.wind = world.windHold || windOf(world);   // (windHold: a test, or the dev panel)
   const now = world.time, ph = phaseOf(world);
   for (const e of world.entities.values()) {
-    if (!isAnimal(e) || e.dead) continue;
+    if (!isAnimal(e) || e.dead || e.ug) continue;   // (the cave's den bear: server/systems/underground.js drives it)
     step(world, e, dt, now, ph);
   }
 }

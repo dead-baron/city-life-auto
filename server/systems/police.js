@@ -445,7 +445,7 @@ function runUnit(world, v, dt) {
   // they parked at the street by its door, a long walk from the counter, on purpose)
   const farOK = now - (ai.footAt || 0) > 8 && !walkInAt(world.map, t.x, t.y);
   for (const c of crew) {
-    if (c.vehId || c.npc.war) continue; // busy in a gang fight (gangwar.js drives them)
+    if (c.vehId || c.npc.war || c.ug) continue; // busy in a gang fight (gangwar.js drives them); gone down a manhole after a suspect (underground.js)
     if (so && standoff.hold(world, c, v, so, p, hot, dt)) continue;   // in cover or at a post round the building (the rest go in)
     const d = Math.hypot(t.x - c.x, t.y - c.y), n = c.npc;
     let inp;
