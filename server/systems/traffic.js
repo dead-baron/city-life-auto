@@ -424,7 +424,7 @@ function steerTraffic(world, v, t) {
   // stopped behind a backup: another lane, or another way (reroute.js)
   if (!panic && unjam(world, v, holding)) { if (!v.ai || !ai.pts || !ai.pts.length) return; }
   const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190));
-  driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic, ignore: ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null, round: !!v.bus && ai.howOut === 'round' });
+  driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic, ignore: ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null, round: !!v.bus && ai.roundUntil > now });
 }
 
 // The painted stop line is this far back from where a lane meets a signalled junction (px)

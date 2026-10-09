@@ -105,7 +105,7 @@ function findWay(world, v) {
   }
   // 2. this road's blocked: remembered for a while
   markBlocked(world, e.id);
-  if (v.bus) { ai.howOut = 'round'; return false; }        // (round it on the other side when that's clear: goRound)
+  if (v.bus) { ai.howOut = 'round'; ai.roundUntil = now + 20; return false; }   // (round it on the other side when that's clear: goRound)
   if (e.oneway || (v.lz || 0) > 0.3) { ai.howOut = 'wait'; return false; }   // (no turning round on a one-way street or the highway)
   // 3. turn round and take another way (a taxi plans a new way to where it's going)
   const other = e.a === ai.from ? e.b : e.a, s2 = Math.max(0, e.len - s);
