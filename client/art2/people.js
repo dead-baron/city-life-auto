@@ -1657,9 +1657,26 @@ function face(fig, P, A, D, w, h, AX, AY) {
       for (let t = 0.2; t <= 1; t += 0.2) { const q = at(e.s * (0.45 - t * 1.3), Math.cos(t * 1.4) * 0.9, 0.2 + t * 0.62); if (q.fc > 0) put(q, pc); }
     }
     else { for (const e of eyes) put(e.p, eyeC.map((v) => Math.round(v * 0.5 + 60))); if (eyes.length === 2 && xb - xa > 2) put({ bx: (xa + xb) / 2 - ((xa + xb) / 2 - AX) % 2, by: row.by }, [74, 56, 50]); else put(eyes[0].p, [74, 56, 50], eyes[0].p.x > at(0, 1, 0).x ? 1 : -1); }
-  } else for (const e of eyes) put(e.p, P.eyes ? eyeC : skin[0]);
+  } else {
+    // the look's eyes and brows at the game's size (CC8's options, a pixel each): narrow a squint, sleepy half-lidded,
+    // big with the white showing beside, round with lashes over it, hooded with the lid's shadow; thick and bushy brows
+    // in the hair's colour above (the others too fine to show)
+    const E5 = F.eyes | 0, B5 = F.brows | 0, hairC = W.hairR ? W.hairR[1] : EYE, cx = at(0, 1, 0).x;
+    const mixC = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+    for (const e of eyes) {
+      if (!P.eyes) { put(e.p, skin[0]); continue; }
+      put(e.p, E5 === 2 ? mixC(eyeC, skin[0], 0.45) : E5 === 5 ? mixC(eyeC, skin[1], 0.35) : eyeC);
+      const out = eyes.length > 1 ? (e.p.x < cx ? -1 : 1) : (e.p.x < cx ? -1 : 1), up = E5 === 1 || E5 === 3 ? 1 : 0;
+      if (E5 === 4) put(e.p, WHITE, out, 0);
+      else if (E5 === 1) put(e.p, LASH, 0, -1);
+      else if (E5 === 3) put(e.p, skin[1], 0, -1);
+      if (B5 === 1 || B5 === 5) { put(e.p, hairC, 0, -1 - up); if (B5 === 5) put(e.p, hairC, out, -1 - up); }
+    }
+  }
   // marks a pixel across can carry: blush, a face tattoo, a scar
   const covered = A.mask || A.bandana || A.medmask, dot = (l0, l1, l2, col, min = 0.35) => { const q = at(l0, l1, l2); if (q.fc > min) put(q, col); };
+  if (!covered && F.freckles) for (const sx of [-1, 1]) dot(sx * 0.5, 0.86, -0.28, [Math.round(skin[1][0] * 0.82), Math.round(skin[1][1] * 0.7), Math.round(skin[1][2] * 0.66)], 0.45);
+  if (!covered && F.mole) dot(0.38, 0.9, -0.5, [70, 44, 36], 0.45);
   if (!A.mask) {
     if (mk && (mk.kind === 'blush' || mk.kind === 'glam')) for (const s of [-1, 1]) dot(s * 0.55, 0.82, -0.26, [Math.min(255, skin[3][0] + 14), Math.round(skin[3][1] * 0.84), Math.round(skin[3][2] * 0.86)], 0.5);
     if ((A.tattoo | 0) & 16) dot(0.42, 0.88, -0.06, [52, 58, 84], 0.4);
@@ -1673,7 +1690,10 @@ function face(fig, P, A, D, w, h, AX, AY) {
       const lip = mc || (D.fem ? [Math.round(skin[1][0] * 0.9 + 26), Math.round(skin[1][1] * 0.72), Math.round(skin[1][2] * 0.78)] : skin[1]);
       // (on the eyes' row or right under it - a very short face - it moves down one)
       const e0 = eyes[0] && eyes[0].p;
-      put(m, lip, 0, e0 && m.by - e0.by < 4 ? 1 : 0);
+      const L5 = A.face?.lips | 0, my = e0 && m.by - e0.by < 4 ? 1 : 0;
+      // (the lips at the game's size: thin a dark line, full and wide two pixels, small too small to show)
+      if (L5 !== 5) put(m, L5 === 1 && !mc ? skin[0] : lip, 0, my);
+      if ((L5 === 2 || L5 === 3) && !(near * turn > 0.5)) put(m, lip, 1, my);
     }
   }
 }
