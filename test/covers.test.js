@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bakeChunk, loadProviders, CHUNK } from '../client/art2/game/chunkbake.js';
 import { generateCity, cityData, cityFromData } from '../shared/map.js';
-import { coversIn, edgeCovers, urbanAt, coverSeed } from '../client/render/covers.js';
+import { coversIn, edgeCovers, urbanAt, coverSeed } from '../shared/covers.js';
 
 test('covers only in town, on its streets - none on highways, country roads or tracks', () => {
   const M = generateCity(1337);

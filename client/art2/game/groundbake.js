@@ -44,7 +44,7 @@
 import { GBuf, F_GROUND, F_WATER, F_WET, F_LEAF } from '../gbuf.js';
 import { MAT, ramp } from '../palette.js';
 import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, vnc, worley, shadeStep as sd } from '../ground.js';
-import { edgeCovers } from '../../render/covers.js';
+import { edgeCovers } from '../../../shared/covers.js';
 import { seaPx, stillPx, WP, WATER } from '../water.js';
 import { T, TILE, MAP_W, MAP_H } from '../../../shared/constants.js';
 import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/map.js';

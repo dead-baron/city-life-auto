@@ -51,6 +51,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Golf: aim, then hold and let go at the top of the meter (by your ball; each shot starts aimed at the flag) | Mouse · hold left click | Right stick · hold RT | Aim stick · hold FIRE |
 | Shoot hoops (North Point Courts: E for a ball, then hold and let go in the meter's green band) | E · hold left click | B · hold RT | ACT · hold FIRE |
 | Fish over the side (still boat, far out at sea) | E | B | ACT |
+| Under the ground: climb down a manhole over the sewers (stand on the cover) or go into the cave through the Old Granite Mine's adit · climb a ladder up / through the service door into a subway station / walk out of the cave · switch on a flashlight (it's dark down there) | E · E · L | B · B · D-pad up | ACT · ACT · 🔦 |
+| Mine an ore vein (face it with a pickaxe good enough for its ore, stand still while the ring fills; the quarry's assay office buys ore best) | E | B | ACT |
 | Stalk game: creep (slow is quiet; keep downwind and behind trees and rocks; move while it grazes, freeze when it looks up) | C or Ctrl + move | push the stick gently | push the thumb gently |
 | Hunting bow: draw and loose (silent; the next arrow nocks itself; arrows come back when you dress the carcass, and you pick up a miss by walking over it) | hold right mouse, click | LT, RT | aim stick, FIRE |
 | Field dress a carcass (a Hunting Knife takes the hide off whole) / cook raw meat at a lit campfire / sell game, make clothing at a trapper's bench | E | B | ACT |
