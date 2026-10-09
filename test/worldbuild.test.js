@@ -146,6 +146,22 @@ test('the art: back doors and bulbs on the alley walls, big neon on the nightlif
   assert.ok(Array.isArray(staticLights(m, 30, 20)));
 });
 
+test('grit on the town\'s streets: drains at the kerb, leaves and litter, oil, cracks and weeds - rougher where the district is', async () => {
+  const m = city();
+  const { streetGrit } = await import('../client/art2/streetgrit.js');
+  const G = streetGrit(m);
+  assert.equal(streetGrit(m), G);
+  assert.ok(G.length > 3000, `grit (${G.length})`);
+  const count = (name, ks) => G.filter((it) => ks.includes(it.k) && m.districtAt(it.x, it.y).name === name).length;
+  const roads = (name) => m.edges.filter((e) => e.lvl === 0 && e.kind !== 'alley' && m.districtAt(e.pts[0].x, e.pts[0].y).name === name).reduce((s, e) => s + e.len, 0) || 1;
+  const rough = count('Southside', ['litter', 'weeds', 'crack', 'patch']) / roads('Southside'), tidy = count('Westport Center', ['litter', 'weeds', 'crack', 'patch']) / roads('Westport Center');
+  assert.ok(rough > tidy * 2, `Southside's streets are rougher (${(rough * 1000).toFixed(2)} per 1000 px against ${(tidy * 1000).toFixed(2)})`);
+  for (const it of G) {
+    const t = m.tiles[Math.floor(it.y / TILE) * MAP_W + Math.floor(it.x / TILE)];
+    assert.ok(t === T.ROAD || t === T.SIDEWALK || t === T.BRIDGE || t === T.PLAZA, `${it.k} at ${it.x},${it.y} is on the street (tile ${t})`);
+  }
+});
+
 test('lightning you can see: a forked bolt, the same for the same seed, inside the screen; near strikes come down into the street', async () => {
   const { boltPath } = await import('../client/render/lightning.js');
   for (const [W, H] of [[1280, 720], [390, 844], [2560, 1440]]) {

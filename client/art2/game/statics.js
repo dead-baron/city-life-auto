@@ -49,6 +49,7 @@ import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and 
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
 import { nightFront, paintSigns } from '../neonsigns.js';   // (the night's big neon signs)
+import { streetGrit } from '../streetgrit.js';              // (grit on the town's streets)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
@@ -1080,6 +1081,8 @@ function addAlleys(c, I) {
     put(I, vitem(`al:${m}:${a.join(',')}:${hd.toFixed(2)}`, m, a, x, y, hd));
   }
   for (const f of D.fences) fenceLine(I, 'chain', f.x0, f.y0, f.x1, f.y1);
+  // and grit on the town's streets: drains, leaves and litter in the gutters, oil, cracks and patches, weeds (streetgrit.js)
+  for (const it of streetGrit(c.M)) { const [w, h] = AL.decalSize(it.k); put(I, { key: `ad:${it.k}:${it.v}`, recipe: { t: 'adecal', k: it.k, v: it.v }, x: it.x, y: it.y, ext: [w / 2 + 2, h / 2 + 16, w / 2 + 2, h / 2 + 2] }); }
 }
 
 function addBuildings(c, I) {

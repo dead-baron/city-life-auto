@@ -10,6 +10,7 @@
        ?s=golden|noon|rain|night|blue|storm|fog|incident   the scenario (and its concept)
        &min=minutes  override the clock (minutes after midnight)   &q=0..3 quality (default 3)   &hud=0 hides the line
        &z=zoom &dx=&dy= camera offset from the scenario's framing (world px)   &empty=1 no actors   &nolights=1 ambient only
+       &bolt=near|far[,flash]  a lightning bolt (render/lightning.js) at that much of its flash (default 0.6)
      window.done once drawn. -->
 <canvas id="cv"></canvas><canvas id="fx"></canvas><div id="hud"></div>
 <script type="module">
@@ -187,6 +188,8 @@ const umbrella = (ci) => up(`gumb|${ci}`, () => {
 const C = { head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], white: [0.92, 0.94, 1] };
 const wx = new Weather(M);
 wx.flash = SC.flash || 0;
+// &bolt=near|far[,flash]: a lightning strike you can see (render/lightning.js), caught at that much of its flash
+if (q.get('bolt')) { const [bk, bf] = q.get('bolt').split(','); wx.strike(bk === 'near'); wx.flash = +bf || 0.6; wx._lastFlash = 0; }
 const lampAt = new Map(); // static lamp light -> its map lamp (index), as host.js _prepLights matches them
 for (const ch of chunks) for (const L of ch.lights) {
   if (L.kind !== 'lamp') continue;

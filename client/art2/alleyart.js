@@ -122,7 +122,7 @@ function rat() {
 }
 
 // ---- flat on the asphalt ---------------------------------------------------------------------------------------
-const DECAL_SIZE = { puddle: [64, 30], oil: [36, 20], leaves: [40, 24], litter: [36, 22], crack: [52, 26], weeds: [34, 12], drain: [30, 18], manhole: [34, 24] };
+const DECAL_SIZE = { puddle: [64, 30], oil: [36, 20], leaves: [40, 24], litter: [36, 22], crack: [52, 26], weeds: [34, 12], drain: [30, 18], drainv: [18, 30], manhole: [34, 24], patch: [48, 28] };
 export function decalSize(k) { return DECAL_SIZE[k] || [32, 20]; }
 export function decal(k, v = 0) {
   const [w, h] = decalSize(k), G = new GBuf(w, h); G.ax = w >> 1; G.ay = h >> 1;
@@ -169,10 +169,16 @@ export function decal(k, v = 0) {
       for (let z = 0; z < tall; z++) for (let i = 0; i < 2; i++) G.put(x + i, base - z, (z + x) % 4 < 2 ? G1[3 + (z > tall / 2 ? 1 : 0)] : G2[3], [0, 0.6, 0.8], z, null, 0);
       if (hash(x, v, 23) > 0.85) for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) G.put(x + i, base - tall - j, [236, 214, 80], up, tall + 1, null, 0);   // a dandelion
     }
-  } else if (k === 'drain') {
+  } else if (k === 'drain' || k === 'drainv') {
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const e = x < 2 || y < 2 || x >= w - 2 || y >= h - 2, slot = !e && (x >> 1) % 2 === 1;
+      const e = x < 2 || y < 2 || x >= w - 2 || y >= h - 2, slot = !e && ((k === 'drain' ? x : y) >> 1) % 2 === 1;
       G.put(x, y, e ? MAT.metal[2] : slot ? [18, 18, 22] : MAT.metalDark[3], up, 0, null, F_GROUND | F_WET);
+    }
+  } else if (k === 'patch') {   // a patch of newer, darker asphalt, its sealed seam round it
+    const x0 = 2 + (v % 3) * 2, y0 = 2 + (v % 2) * 2, x1 = w - 2 - ((v + 1) % 3) * 2, y1 = h - 2 - (v % 2) * 2;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const seam = x < x0 + 2 || y < y0 + 2 || x >= x1 - 2 || y >= y1 - 2, n = hash(x >> 1, y >> 1, v + 51);
+      G.put(x, y, seam ? [30, 30, 36] : n > 0.85 ? [62, 64, 72] : [46, 48, 56], up, 0, null, F_GROUND | F_WET);
     }
   } else if (k === 'manhole') {
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
