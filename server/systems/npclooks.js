@@ -7,12 +7,12 @@
 //   SHADE[district style] what the district adds (the rich districts Preppy / High fashion / Business, the beach Beach,
 //                        nightlife at night Nightclub, the rough districts Street / Punk / Alt, the suburbs Casual...)
 //   dress(world, arche, x, y, night) -> { app, look, code, bi } | null    a look from the pool for that kind of person in
-//                        that district at that hour (null: no recipe - police, SWAT, agents, soldiers, medics and the
-//                        hooded stranger keep their uniforms: the catalogue has no uniforms yet). bi: the combat build
+//                        that district at that hour (null: no recipe - SWAT, agents, soldiers, medics and the hooded
+//                        stranger keep their old outfits; the police wear the catalogue's issued uniforms). bi: the combat build
 //                        (entities.js BUILDS) the body was drawn for, so a big man fights like one.
 // The variety is bounded for the renderer (each distinct look is a sprite set to bake): a pool of POOL_N seeded looks per
 // kind of person and district (and day / night where that matters), drawn so that nobody near wears the same look.
-import { randomLook, validLook, encodeLook, lookToApp, item, PIECES, HAIR_STYLES } from '../../shared/look.js';
+import { randomLook, validLook, encodeLook, lookToApp, item, PIECES, HAIR_STYLES, policeLook } from '../../shared/look.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { K } from '../../shared/constants.js';
 import { rollBuild } from '../entities.js';
@@ -31,6 +31,10 @@ const slotOf = (L, s) => (L.outfit[s] ? PIECES[L.outfit[s].id] : null);
 // styles: weighted STYLES ids; fem: the share of women; age: weights for 20s .. 70s; shade: how much the district counts
 // (0: not at all - a uniform of sorts; 1: the district decides)
 export const RECIPES = {
+  // the police on the street (CC5): patrol officers in the navy shirt and the police cap, now and then a sergeant with
+  // chevrons or a rookie in light blue under a ball cap; about a third in sunglasses (shared/look.js policeLook)
+  cop: { styles: W('work:1'), fem: 0.3, age: [2, 3, 3, 2, 1, 0], shade: 0, pool: 24,
+    fix(L, r) { const k = r(); L.outfit = policeLook(L, k < 0.14 ? 2 : 0, k > 0.84 ? 'rookie' : null, r() < 0.35).outfit; L.extras.piercings &= 1; L.extras.makeup = L.extras.makeup && r() < 0.5 ? 1 : 0; } },
   executive: { styles: W('business:6 formal:2 smart:2'), fem: 0.42, age: [1, 3, 3, 2, 1, 0], shade: 0.15,
     fix(L, r) { if (!L.outfit.shoes || !/Oxfords|Loafers|Heels|Ankle|Chelsea|Ballet/.test(slotOf(L, 'shoes').name)) L.outfit.shoes = item(L.body.base === 'f' && r() < 0.6 ? 'Heels' : 'Oxfords'); if (r() < 0.5) L.outfit.bag = item('Briefcase'); L.outfit.hat = null; } },
   socialite: { styles: W('hifashion:5 nightclub:2 smart:2 preppy:1'), fem: 0.75, age: [3, 3, 2, 1, 0, 0], shade: 0.3,

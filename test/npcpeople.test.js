@@ -83,10 +83,10 @@ test('looks vary: people side by side never match, but a district\'s crowd reuse
   for (let i = 0; i < 120; i++) { const e = spawnNpc(w, 'casual', at.x, at.y, 'civ'); codes.add(e.app.lk); w.remove(e); }
   assert.ok(codes.size <= POOL_N, `${codes.size} distinct looks for 120 people (pool ${POOL_N})`);
   assert.ok(codes.size >= POOL_N * 0.7, 'and the pool is used');
-  // the uniforms keep their appearance
-  const cop = spawnNpc(w, 'cop', at.x, at.y, 'cop');
-  assert.equal(cop.app.lk, undefined, 'police keep the uniform');
-  assert.equal(cop.app.t, 6);
+  // the police in the issued uniform (CC5: the patrol shirt, now and then a sergeant's or a rookie's), as a look
+  const cop = spawnNpc(w, 'cop', at.x, at.y, 'cop'), CL = decodeLook(cop.app.lk);
+  assert.ok(CL && CL.outfit.top && /^(Uniform shirt|Sergeant's shirt)$/.test(PIECES[CL.outfit.top.id].name), 'police in the uniform');
+  assert.equal(cop.app.t, 6, 'a uniform to the old renderer too');
 });
 
 test('NPC look data is compact: the code alone, sent once', () => {

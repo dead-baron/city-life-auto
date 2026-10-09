@@ -26,6 +26,7 @@ let state = { cur: null, picked: true, saved: [] };
 let outStyle = '', outSlot = 'top', outBase = null, ctarget = 'c', hairLen = 'all';
 let startPick = 0, startRandomSeed = 1, renaming = -1, focusEl = null, seedN = 1, wheelSel = 0;
 let outView = 'owned', shop = null, shopTab = 'outfits', shopSel = 0, hairTab = 'cut', doneWarnAt = 0;
+let jacketOff = null;   // the jacket taken off to see the top under it (the fitting room, the Outfit tab): the toggle puts it back
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const code = (L = look) => LK.encodeLook(L);
@@ -79,7 +80,7 @@ export function init(hooks) {
 // ---- opening and closing -------------------------------------------------------------------------------------------
 export function open(m = 'edit', st = null) {
   if (st) state = st;
-  mode = m; zoomSet = null;
+  mode = m; zoomSet = null; jacketOff = null;
   const cur = state.cur && LK.decodeLook(state.cur);
   look = cur || LK.starterFor(0);
   hist = []; renaming = -1;
@@ -144,6 +145,7 @@ function setL(fn, record = true) {
   if (code(v) === before) return;
   if (record) { hist.push(before); if (hist.length > 60) hist.shift(); }
   look = v;
+  if (look.outfit.jacket) jacketOff = null;   // (a jacket on again - this one or another: nothing left to put back)
   if (mode === 'start') { mode = 'edit'; }
   drawPreview();
   renderPage();
@@ -380,6 +382,9 @@ const chip = (actn, v, label, on, extra = '') => `<button class="cc-chip ${on ? 
 const sw = (actn, v, hex, on, title) => `<button class="cc-sw ${on ? 'on' : ''}" data-act="${actn}" data-v="${v}" style="background:${hex}" title="${esc(title)}" aria-label="${esc(title)}"></button>`;
 const row = (label, inner) => `<div class="cc-row"><div class="cc-lab">${label}</div><div class="cc-opts">${inner}</div></div>`;
 const variant = (fn) => { const L = clone(look); fn(L); return LK.validLook(L); };
+// the outer layer on or off (the owner, 2026-10-09: "you should be able to enable or disable the outer layer like a jacket so
+// you can see the top you're buying and walk out of the shop without your jacket")
+const layerRow = () => (look.outfit.jacket || jacketOff ? row('Layers', chip('jacket', look.outfit.jacket ? 'off' : 'on', look.outfit.jacket ? `🧥 Take off the ${esc(LK.PIECES[look.outfit.jacket.id].name.toLowerCase())}` : `🧥 Put the ${esc(LK.PIECES[jacketOff.id].name.toLowerCase())} back on`, !look.outfit.jacket)) : '');
 
 function renderPage() {
   if (!root) return;
@@ -395,7 +400,7 @@ function renderPage() {
   const lockedHere = mode === 'edit' && !state.free && ((tab === 'hair') || (!state.home && (tab === 'body' || tab === 'face' || tab === 'extras')));
   if (mode === 'shop') {
     const S = WD.STORES[shop.store] || {}, own = state.own || [];
-    h = `<p class="cc-note">${esc(S.line || '')}. Everything you buy goes to your wardrobe.</p>`;
+    h = `<p class="cc-note">${esc(S.line || '')}. Everything you buy goes to your wardrobe.</p>` + layerRow();
     if (shopTab === 'outfits') {
       h += `<div class="cc-grid">` + outfitsHere().map((o, i) => {
         const price = Object.values(o).reduce((t, it) => t + (it && !WD.owns(own, it.id) ? WD.priceAt(shop.store, it.id) : 0), 0);
@@ -460,7 +465,7 @@ function renderPage() {
   } else if (tab === 'outfit') {
     const base = outBase || B.base;
     const slotItem = L.outfit[outSlot];
-    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
+    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && !p.d.issued && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
     // each tile: you wearing it (a top or a set without the jacket over it; hats, glasses and masks as a close-up)
     const crop = outSlot === 'hat' || outSlot === 'glasses' ? 'head' : 'full';
     const dress = (V, id) => { V.outfit[outSlot] = id; if (outSlot === 'set' && id) { V.outfit.top = null; V.outfit.bottoms = null; } if ((outSlot === 'top' || outSlot === 'set') && id) V.outfit.jacket = null; if (outSlot === 'hair' || crop === 'head') V.outfit.glasses = outSlot === 'glasses' ? id : V.outfit.glasses; };
@@ -470,6 +475,7 @@ function renderPage() {
     // Owned / All (CC1): what's in your wardrobe, or the whole catalogue - the rest padlocked, with the store that sells it
     h = (state.free ? `<p class="cc-note cc-info">Your first look is on the house: whatever you leave wearing is yours to keep.</p>`
       : row('Wardrobe', chip('oview', 'owned', 'Owned', outView === 'owned') + chip('oview', 'all', 'All', outView === 'all')) + (outView === 'all' ? `<p class="cc-note cc-info">🔒 Try anything on; what isn't yours yet is sold at the store shown.</p>` : ''))
+      + layerRow()
       + row('Style', chip('style', '', 'All', !outStyle) + LK.STYLES.map(([k, n]) => chip('style', k, n, outStyle === k)).join(''))
       + row('Show', chip('obase', 'f', "Women's", base === 'f') + chip('obase', 'm', "Men's", base === 'm') + chip('obase', 'all', 'All', base === 'all'))
       + `<div class="cc-slots">${LK.SLOTS.map((s) => `<button class="cc-tab sm ${s === outSlot ? 'on' : ''}" data-act="slot" data-v="${s}">${LK.SLOT_NAMES[s]}</button>`).join('')}</div>`
@@ -522,6 +528,10 @@ function act(a, v, el) {
     case 'tab': { tab = v; renaming = -1; zoomSet = null; render(); const pg = root.querySelector('.cc-page'); pg.classList.remove('tabin'); void pg.offsetWidth; pg.classList.add('tabin'); pg.scrollTop = 0; return; }
     case 'turn': dir = (dir + Number(v) + 8) % 8; drawPreview(); return;
     case 'zoom': zoomSet = !zoomed(); drawPreview(); return;
+    case 'jacket':
+      if (look.outfit.jacket) { jacketOff = look.outfit.jacket; setL((L) => { L.outfit.jacket = null; }); }
+      else if (jacketOff) { const j = jacketOff; jacketOff = null; setL((L) => { L.outfit.jacket = j; }); }
+      renderPage(); return;
     case 'done': close(true); return;
     case 'close': close(false); return;
     case 'mirror': mode = 'edit'; tab = 'body'; render(); return;

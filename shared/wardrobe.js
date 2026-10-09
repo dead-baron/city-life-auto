@@ -64,7 +64,7 @@ export function sellerOf(pid) {
 }
 
 // ---- owning ----------------------------------------------------------------------------------------------------
-export const free = (pid) => !!PIECES[pid] && PIECES[pid].price === 0;
+export const free = (pid) => !!PIECES[pid] && PIECES[pid].price === 0 && !PIECES[pid].d.issued;   // (an issued uniform is nobody's to wear off duty)
 export const owns = (own, pid) => free(pid) || (!!own && own.includes(pid));
 export function lookPieces(L) {
   const out = [];
@@ -86,32 +86,47 @@ export function changes(cur, next) {
 
 // ---- the fitting room's complete outfits --------------------------------------------------------------------------
 // up to n outfits in the store's styles, each only of pieces it sells: { slot: item } for the slots it fills
+// The fitting room's complete outfits: whole outfits (a top and bottoms, or a dress or a set) in the store's styles, of
+// its own pieces, each in its own colours - its main piece in a colour no earlier outfit's has (the morning playtest:
+// a skate shop's ten outfits came out in the same grey hoodie)
+const OUTFIT_COLOURS = [19, 6, 10, 22, 5, 0, 11, 27, 21, 8, 29, 13, 18, 9, 25, 14, 37, 34];   // (shared/look.js CLOTH: red, navy, teal, mustard...)
 export function storeOutfits(id, base, n = 10) {
   const S = STORES[id];
   if (!S) return [];
-  const have = new Set(stock(id));
+  const have = stock(id), haveSet = new Set(have);
   let styles = [];
   for (const r of S.rules) for (const s of r.styles || []) if (!styles.includes(s)) styles.push(s);
   if (!styles.length) styles = STYLES.map((s) => s[0]);
   let h = 17; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const out = [], seen = new Set();
-  for (let i = 0; out.length < n && i < n * 6; i++) {
-    const L = randomLook((h + i * 7919) >>> 0, base, styles[i % styles.length]);
+  const own = (slot) => have.filter((pid) => PIECES[pid].slot === slot && PIECES[pid].b.includes(base));
+  const tops = own('top'), bots = own('bottoms');
+  const out = [], seen = new Set(), used = new Set();
+  for (let i = 0; out.length < n && i < n * 8; i++) {
+    const seed = (h + i * 7919) >>> 0, L = randomLook(seed, base, styles[i % styles.length]);
     const o = {};
-    let k = 0;
-    for (const s of SLOTS) { const it = L.outfit[s]; if (it && have.has(it.id)) { o[s] = it; k++; } }
-    if (k < 2) continue;
+    for (const s of SLOTS) { const it = L.outfit[s]; if (it && haveSet.has(it.id)) o[s] = { ...it }; }
+    // whole: a top and bottoms of the store's own where the random look's aren't stocked here
+    if (!o.set) {
+      if (!o.top && tops.length) { const P = PIECES[tops[seed % tops.length]]; o.top = { id: P.i, c: P.c, t: P.t, p: P.d.p || 0 }; }
+      if (!o.bottoms && bots.length) { const P = PIECES[bots[(seed >>> 4) % bots.length]]; o.bottoms = { id: P.i, c: P.c, t: P.t, p: P.d.p || 0 }; }
+    }
+    if (!o.set && !(o.top && o.bottoms)) continue;
     const key = SLOTS.map((s) => (o[s] ? o[s].id : 0)).join('.');
     if (seen.has(key)) continue;
+    // the main piece (a jacket over the top, else the dress, set or top) in a colour of its own
+    const main = o.jacket || o.set || o.top;
+    if (used.has(main.c)) { const c = OUTFIT_COLOURS.find((k) => !used.has(k) && k !== (o.bottoms && o.bottoms.c)); if (c !== undefined) main.c = c; }
+    used.add(main.c);
     seen.add(key);
     out.push(o);
   }
   return out;
 }
-// an outfit put on over a look: the slots it fills replace what's worn (a dress or set replaces the top and bottoms,
-// and a top or bottoms the set)
+// a complete outfit on a look: its clothes replace the clothes worn (a jacket worn before doesn't stay over its top), its
+// shoes, hat, glasses, jewellery and bag where it has them
 export function dressIn(L, o) {
   const V = validLook(L);
+  if (o.set || o.top) { V.outfit.top = null; V.outfit.bottoms = null; V.outfit.set = null; V.outfit.jacket = null; }
   for (const s of SLOTS) if (o[s]) V.outfit[s] = { ...o[s] };
   if (o.set) { V.outfit.top = null; V.outfit.bottoms = null; }
   else if ((o.top || o.bottoms) && V.outfit.set) V.outfit.set = null;

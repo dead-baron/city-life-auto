@@ -225,3 +225,21 @@ test('the clothes shop\'s new outfit still works, and its pieces are yours', () 
   assert.equal(a.prof.cash, 380);
   assert.deepEqual(W.unowned(a.prof.wardrobe, LK.decodeLook(a.prof.look)), [], 'the new outfit is theirs');
 });
+
+test('the fitting room\'s complete outfits: whole, each in its own colours, and none keeps the jacket you came in with', () => {
+  for (const id of Object.keys(W.STORES)) for (const base of ['m', 'f']) {
+    const list = W.storeOutfits(id, base, 10);
+    for (const o of list) assert.ok(o.set || (o.top && o.bottoms), `${id} ${base}: a whole outfit`);
+    if (list.length >= 6) {
+      const mains = list.map((o) => (o.jacket || o.set || o.top).c);
+      assert.ok(new Set(mains).size >= Math.min(list.length, 8), `${id} ${base}: the outfits in their own colours (${mains.join(' ')})`);
+    }
+  }
+  // (the playtest: a skate shop's outfits all showed the grey zip hoodie the player had on)
+  const me = LK.STARTERS[0].look;   // The Skater: a puffer jacket over a tee
+  assert.ok(me.outfit.jacket);
+  for (const o of W.storeOutfits('kickflip', 'm', 10)) {
+    const V = W.dressIn(me, o);
+    assert.equal(V.outfit.jacket ? V.outfit.jacket.id : 0, o.jacket ? o.jacket.id : 0, 'the outfit\'s own jacket, or none');
+  }
+});

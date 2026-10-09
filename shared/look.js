@@ -268,6 +268,18 @@ add('jacket', 'Apron', 'mf', 'work casual', 25, 'workwear', { k: 'apron' }, 'for
 add('jacket', 'Bib overalls', 'mf', 'work western outdoors retro', 65, 'workwear', { k: 'overalls' }, 'denim', 'gold');
 add('bag', 'Coffee to go', 'mf', 'casual business smart', 5, 'clothing', { carry: 'coffee' }, 'white');
 add('bag', 'Tool bag', 'mf', 'work', 45, 'workwear', { carry: 'toolbag' }, 'red');
+// issued, never sold or owned (d.issued: shared/wardrobe.js owns, randomLook and the creator leave them out): the police's
+// uniforms by rank (CC5) - the patrol shirt, a sergeant's with chevrons, the dress uniform with a braided cap and white
+// gloves for the top ranks, a tactical vest over the shirt (the K9 handler's) - worn on duty (server law.js) and by the
+// city's officers (server npclooks.js)
+add('top', 'Uniform shirt', 'mf', 'work', 0, 'police', { k: 'uniform', issued: 1 }, 'navy', 'gold');
+add('top', "Sergeant's shirt", 'mf', 'work', 0, 'police', { k: 'uniform', chevrons: 1, issued: 1 }, 'navy', 'gold');
+add('bottoms', 'Uniform trousers', 'mf', 'work', 0, 'police', { k: 'pants', issued: 1 }, 'navy');
+add('set', 'Dress uniform', 'mf', 'work formal', 0, 'police', { k: 'dressuni', bk: 'pants', issued: 1 }, 'navy', 'gold');
+add('hat', 'Police cap', 'mf', 'work', 0, 'police', { k: 'police', issued: 1 }, 'navy', 'gold');
+add('hat', "Officer's cap", 'mf', 'work', 0, 'police', { k: 'police', braid: 1, issued: 1 }, 'navy', 'gold');
+add('jacket', 'Tactical vest', 'mf', 'work', 0, 'police', { k: 'kevlar', issued: 1 }, 'black', 'charcoal');
+add('jewel', 'Dress gloves', 'mf', 'work formal', 0, 'police', { gloves: 1, issued: 1 }, 'white');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 const byName = (n) => PIECE_IDS[n] || 0;
@@ -354,7 +366,7 @@ export function decodeLook(s) {
 // ---- random looks -------------------------------------------------------------------------------------------------------
 const rint = (r, n) => Math.floor(r() * n) % n;
 const rpick = (r, a) => a[rint(r, a.length)];
-const pieceList = (slot, base, style) => PIECES.filter((p) => p && p.slot === slot && fits(p, base) && (!style || p.tags.includes(style)));
+const pieceList = (slot, base, style) => PIECES.filter((p) => p && p.slot === slot && fits(p, base) && !p.d.issued && (!style || p.tags.includes(style)));   // (never an issued uniform)
 const NEUTRAL = ['white', 'black', 'charcoal', 'grey', 'navy', 'denim', 'cream', 'khaki', 'brown', 'tan', 'olive'].map(col);
 // A whole random look from a seed. base: 'm' | 'f' | null (either); style: a STYLES id to dress in (null: any).
 export function randomLook(seed, base = null, style = null) {
@@ -419,6 +431,28 @@ export const STARTERS = [
   mk('The Blue-collar', 'Keeps it real', 'm', { build: 2, skin: 2, age: 1 }, { shape: 2 }, { style: 2, color: 1, facial: 2 }, {}, { top: item('Work shirt', 'royal blue', 'navy'), bottoms: item('Work trousers', 'royal blue'), shoes: item('Work boots', 'brown'), hat: item('Baseball cap', 'navy', 'orange'), bag: item('Tool bag', 'red') }),
   mk('The Trendsetter', 'Ahead of the curve', 'f', { build: 0, skin: 15 }, { eyes: 1, lips: 4 }, { style: 24, color: 0 }, {}, { top: item('Crop top', 'black'), bottoms: item('Cargo pants', 'tan'), shoes: item('Sneakers', 'white'), jewel: item('Bangles', 'gold') }),
 ];
+
+// ---- the police's uniform (CC5) --------------------------------------------------------------------------------------------
+// A look in the uniform by rank (shared/rules.js POLICE_RANKS: 0 Officer .. 5 Chief of Police), keeping the body, face and
+// hair: the patrol shirt and the police cap; a sergeant's chevrons; from lieutenant the dress uniform and the braided cap;
+// the chief's white gloves. kind 'rookie': a light blue shirt and a ball cap; 'k9': a tactical vest over the shirt and a
+// ball cap. shades: sunglasses (half the street's officers wear them).
+export function policeLook(L, rank = 0, kind = null, shades = false) {
+  const V = validLook(L) || emptyLook('m'), O = V.outfit;
+  for (const s of SLOTS) O[s] = null;
+  if (rank >= 3) {
+    O.set = item('Dress uniform'); O.hat = item("Officer's cap"); O.shoes = item('Oxfords', 'black');
+    if (rank >= 5) O.jewel = item('Dress gloves');
+  } else {
+    O.top = item(rank >= 2 ? "Sergeant's shirt" : 'Uniform shirt', kind === 'rookie' ? 'sky' : 'navy', 'gold');
+    O.bottoms = item('Uniform trousers', 'navy');
+    O.shoes = item('Work boots', 'black');
+    O.hat = kind === 'rookie' || kind === 'k9' ? item('Baseball cap', 'navy', 'gold') : item('Police cap');
+    if (kind === 'k9') O.jacket = item('Tactical vest', 'black');
+  }
+  if (shades) O.glasses = item('Sunglasses');
+  return validLook(V);
+}
 
 // ---- the old random outfit (server entities.js playerOutfit) -> a look -----------------------------------------------------
 const hexRgb = (h) => { let s = String(h || '#888').replace('#', ''); if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2]; const n = parseInt(s, 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -521,13 +555,14 @@ export function lookArt(L, opt = {}) {
     A.top = { kind: set.d.k, color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), len: set.d.len || 0, bow: set.d.bow ? 1 : 0, zip: set.d.zip ? 1 : 0 };
     A.bottom = { kind: set.d.bk || 'pants', color: HEX(O.set.c), color2: HEX(O.set.t), trim: HEX(O.set.t), pattern: pat(O.set), stripe: set.d.bk === 'track' ? HEX(O.set.t) : undefined };
   } else {
-    A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0 } : { kind: fem ? 'tank' : 'none', color: '#e8e4dc' };
+    A.top = top ? { kind: top.d.k, color: HEX(O.top.c), color2: HEX(O.top.t), trim: HEX(O.top.t), pattern: pat(O.top), print: top.d.print ? 1 : 0, mesh: top.d.mesh ? 1 : 0, plain: top.d.plain ? 1 : 0, chevrons: top.d.chevrons ? 1 : 0 } : { kind: fem ? 'tank' : 'none', color: '#e8e4dc' };
     A.bottom = bot ? { kind: bot.d.k, color: HEX(O.bottoms.c), color2: HEX(O.bottoms.t), trim: HEX(O.bottoms.t), pattern: pat(O.bottoms) || (bot.d.ripped ? 'ripped' : undefined), len: bot.d.len || 0, gloss: bot.d.gloss ? 1 : 0, stripe: bot.d.k === 'track' ? HEX(O.bottoms.t) : undefined } : { kind: fem ? 'bikini' : 'trunks', color: '#e8e4dc' };
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;
     A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind };
     if (jk.d.k === 'vest') A.top.sleeve = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'crop' || under.kind === 'bikini' ? 'skin' : under.color;
+    if (jk.d.k === 'kevlar') { A.top.kind = 'kevlar'; A.top.color = under.color || A.top.color; A.top.color2 = HEX(O.jacket.c); A.top.sleeve = under.kind === 'none' || under.kind === 'tank' ? 'skin' : under.color; A.top.chevrons = under.chevrons || 0; }   // (the plates over the shirt, the shirt's sleeves)
     if (jk.d.k === 'apron' || jk.d.k === 'overalls') {   // (worn over the top: the shirt round them is the top - its colour, its sleeves, a flannel's check - or bare skin)
       const bare = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'bikini';
       A.top.color2 = bare ? null : under.color; A.top.bareUnder = bare ? 1 : 0; A.top.sleeve = bare ? 'skin' : under.color;
@@ -538,7 +573,7 @@ export function lookArt(L, opt = {}) {
   if (sh) { A.shoes = HEX(O.shoes.c); A.shoeKind = sh.d.k; A.shoeTrim = HEX(O.shoes.t); if (sh.d.tall) A.bootTall = sh.d.tall; if (sh.d.hi) A.hiTop = 1; }
   else { A.shoes = '#d8c8b0'; A.shoeKind = 'barefoot'; }
   const hat = P('hat');
-  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t) };
+  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0 };
   if (hat && hat.d.k === 'hood') A.hat.color = A.top.color;
   const gl = P('glasses');
   if (gl) {
@@ -551,6 +586,7 @@ export function lookArt(L, opt = {}) {
   const jw = P('jewel');
   if (jw) A.jewel = { ...jw.d, color: HEX(O.jewel.c), trim: HEX(O.jewel.t) };
   if (jw && jw.d.chain) A.chain = HEX(O.jewel.c);
+  if (jw && jw.d.gloves) A.gloves = HEX(O.jewel.c);
   const bg = P('bag');
   if (bg) {
     if (bg.d.back) { A.back = 'backpack'; A.backColor = HEX(O.bag.c); }

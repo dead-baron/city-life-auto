@@ -726,6 +726,9 @@ const TOP = {   // sl sleeve length (0 none, 0.45 short, 1 long), open: front op
   longsleeve: { sl: 1, cuff: 1 }, blouse: { sl: 1, collar: 1, placket: 1, cuff: 1 }, sweater: { sl: 1, cuff: 1, hem: 1, knit: 1 }, turtleneck: { sl: 1, cuff: 1, turtle: 1, knit: 1 },
   crop: { sl: 0.45, crop: 1 }, tube: { sl: 0, tank: 1, tube: 1 }, corset: { sl: 0, tank: 1, lace: 1 }, bra: { sl: 0, bikini: 1 }, under: { sl: 0.45 },
   blazer: { sl: 1, open: 0.22, lapel: 1, cuff: 1 }, ziphoodie: { sl: 1, hood: 1, open: 0.09, zip: 1, cuff: 1, strings: 1 }, gown: { sl: 0, tank: 1, dress: 1, gown: 1 },
+  // the police's (CC5): the dress uniform (gold buttons, shoulder boards and cuffs; the shirt and tie at the collar), a
+  // tactical vest worn over the uniform shirt (the K9 handler's)
+  dressuni: { sl: 1, open: 0.16, tie: 1, collar: 1, tuck: 1, cuff: 1, badge: 1, dressuni: 1, inner: 'white' }, kevlar: { sl: 0.5, plates: 1, tuck: 1, duty: 1, badge: 1 },
 };
 const SHOE_OF = (c, A) => {
   if (A.shoeKind) return A.shoeKind;
@@ -830,7 +833,11 @@ function wardrobe(A, D, TF, seed) {
       if (T.vest && !T.hivis && front && au < 0.1 && z > D.waistUp - 1 && Math.round(z) % 2 === 0) return gold;     // waistcoat buttons
       R = top;
     }
-    if (T.open && front && au < T.open + (T.lapel && z > D.chestUp ? (z - D.chestUp) * 0.06 : 0)) {
+    if (T.dressuni) {
+      if (Q.part === 'shb' && au > 0.62) { Q.gloss = 1; return gold; }                       // (shoulder boards)
+      if (front && au < 0.05 && z > D.waistUp - 2.4 && z < D.chestUp + 1.6 && (Math.round(z * 0.8) & 1)) { Q.gloss = 1; return gold; }   // (buttons)
+    }
+    if (T.open && front && au < T.open + (T.lapel && z > D.chestUp ? (z - D.chestUp) * 0.06 : 0) && (!T.dressuni || z > D.chestUp + 1.4)) {
       // an open front: the shirt beneath, a tie on a suit
       if (T.tie && au < 0.075 && z > D.waistUp - 0.5) return tie;
       if (T.zip && au < 0.04) return silver;
@@ -902,7 +909,7 @@ function wardrobe(A, D, TF, seed) {
   };
   W.skinM = () => skin;
   // arms: sleeves to `sl` of the arm's length, then skin; cuffs; gloves; tattoos on bare skin
-  const slv = (T.bib || T.apron) && A.top?.innerKind && TOP[A.top.innerKind] ? (A.top.bareUnder ? 0 : TOP[A.top.innerKind].sl) : T.sl, gl = A.gloves ? cloth(A.gloves) : null;   // (an apron or bib overalls worn over a top: the top's sleeves)
+  const slv = (T.bib || T.apron || tk === 'kevlar') && A.top?.innerKind && TOP[A.top.innerKind] ? (A.top.bareUnder ? 0 : TOP[A.top.innerKind].sl) : T.sl, gl = A.gloves ? cloth(A.gloves) : null;   // (an apron or bib overalls worn over a top: the top's sleeves)
   W.arm = (Q) => {
     const along = Q.part === 'ua' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5;
     if (along < slv - (slv >= 1 ? 0.06 : 0)) {
@@ -911,6 +918,8 @@ function wardrobe(A, D, TF, seed) {
       if (T.stripe && Q.l1 > 0.55) return white;
       if (T.fur && along > 0.86) { Q.k += 0.15; return cloth('#efe6d4'); }
       if (T.hivis && Math.abs(along - 0.3) < 0.04) return hiv;
+      if (A.top?.chevrons && Q.part === 'ua' && Q.l1 > 0.1 && ((along > 0.14 && along < 0.2) || (along > 0.24 && along < 0.3))) { Q.gloss = 0.6; return gold; }   // (a sergeant's chevrons: two gold bars at the game's size)
+      if (T.dressuni && along > slv - 0.1) { Q.gloss = 0.8; return gold; }                  // (gold cuffs)
       if (T.check || ((T.bib || T.apron) && A.top?.innerKind === 'flannel')) { if (Q.res > 1) { const a = Math.floor(along * 9), b = Math.floor((Q.l2 + 1) * 1.6); if ((a + b) & 1) Q.k -= 0.22; } else { const g = gridCheck(Q, sleeve); if (g) return g; } }
       if (A.top?.varsity && sleeve === top) return trim;
       if (sleeve === top && topPat) return topPat(Q) || sleeve;
@@ -1024,7 +1033,7 @@ function wardrobe(A, D, TF, seed) {
     if (hk === 'hard' || hk === 'helmet' || hk === 'police') Q.gloss = 0.7;
     return hatR;
   };
-  W.band = () => (hk === 'police' ? black : hk === 'tophat' ? cloth(A.hat?.trim && A.hat.trim !== A.hat.color ? A.hat.trim : '#2a1a1e') : dark(hatR));
+  W.band = () => (hk === 'police' ? (A.hat?.braid ? gold : black) : hk === 'tophat' ? cloth(A.hat?.trim && A.hat.trim !== A.hat.color ? A.hat.trim : '#2a1a1e') : dark(hatR));
   W.brim = (Q) => { if (hk === 'police') { Q.gloss = 1; return black; } return hatR; };
   W.glass = (Q) => { Q.gloss = 1; Q.k -= 0.1; return cloth('#2a3442'); };
   W.skirt = (Q) => { const R = T.dress ? top : T.long ? top : bot, pf = R === top ? topPat : botPat; if (Q.l0 > 0.92) Q.k -= 0.16; if (pf) { const pr = pf(Q); if (pr) return pr; }

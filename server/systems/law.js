@@ -47,6 +47,7 @@ export const CRIMES = {
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
   WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, SAW_NOTE_S, REPORT_COOLDOWN_S, FELL_HEAT } from '../../shared/rules.js';
 import { hash2 } from '../../shared/rng.js';
+import { decodeLook, lookToApp, policeLook } from '../../shared/look.js';
 import { PAINTS } from '../../shared/vehicles.js';
 export { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, SERVICE_AMMO, SUBDUE_S, POLICE_RANKS };
 
@@ -630,7 +631,9 @@ export function goOnDuty(world, p) {
   p.badge = true; p.hunter = false;
   p.faction = FACTION.ENFORCER;
   p.civvies = p.ped.app;
-  p.ped.app = { ...p.ped.app, lk: undefined, t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', ht: 1, htc: '#1d2a5a' };
+  // the uniform by rank (CC5), on their own body, face and hair (shared/look.js policeLook)
+  const mine = prof.look ? decodeLook(prof.look) : null;
+  p.ped.app = mine ? lookToApp(policeLook(mine, policeRank(prof))) : { ...p.ped.app, lk: undefined, t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', ht: 1, htc: '#1d2a5a' };
   p.ped.appVer = (p.ped.appVer || 0) + 1;
   prof.weapons.taser = prof.weapons.taser ?? 0;
   prof.weapons.baton = prof.weapons.baton ?? 0;

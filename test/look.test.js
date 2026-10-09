@@ -9,6 +9,8 @@ import { _descriptor } from '../server/net.js';
 import * as looks from '../server/systems/looks.js';
 import { mulberry32 } from '../shared/rng.js';
 import { playerOutfit } from '../server/entities.js';
+import * as W from '../shared/wardrobe.js';
+import * as law from '../server/systems/law.js';
 
 test('a look encodes to a short code and decodes to the same look', () => {
   const all = [...LK.STARTERS.map((s) => s.look)];
@@ -271,3 +273,33 @@ test('server: at home (the quick change or the mirror) a new look is unseen - al
   looks.handle(w, a.p, { t: 'look', a: 'set', c: LK.encodeLook(LK.randomLook(4243)) });
   assert.equal(a.prof.look, c1);
 });
+
+test('the police uniform by rank (CC5): issued - never owned, sold or random - on the officer\'s own body, face and hair', () => {
+  const me = LK.STARTERS[0].look;
+  const names = (L) => Object.values(L.outfit).filter(Boolean).map((o) => LK.PIECES[o.id].name).sort();
+  assert.deepEqual(names(LK.policeLook(me, 0)), ['Police cap', 'Uniform shirt', 'Uniform trousers', 'Work boots']);
+  assert.ok(names(LK.policeLook(me, 2)).includes("Sergeant's shirt"), 'a sergeant\'s chevrons');
+  assert.ok(names(LK.policeLook(me, 3)).includes('Dress uniform') && names(LK.policeLook(me, 3)).includes("Officer's cap"), 'from lieutenant, the dress uniform');
+  assert.ok(names(LK.policeLook(me, 5)).includes('Dress gloves'), 'the chief\'s white gloves');
+  assert.ok(names(LK.policeLook(me, 0, 'k9')).includes('Tactical vest') && names(LK.policeLook(me, 0, 'rookie')).includes('Baseball cap'));
+  const P = LK.policeLook(me, 1);
+  assert.deepEqual([P.body, P.face, P.hair, P.extras], [me.body, me.face, me.hair, me.extras], 'their own body, face and hair');
+  for (const p of LK.PIECES) if (p && p.d.issued) { assert.equal(W.free(p.i), false, `${p.name}: not free`); assert.equal(W.sellerOf(p.i), null, `${p.name}: not sold`); }
+  for (let s = 1; s < 300; s++) for (const o of Object.values(LK.randomLook(s * 7).outfit)) if (o) assert.ok(!LK.PIECES[o.id].d.issued, 'never in a random look');
+  // the details reach the renderer
+  assert.equal(LK.lookArt(LK.policeLook(me, 2)).top.chevrons, 1);
+  assert.equal(LK.lookArt(LK.policeLook(me, 4)).hat.braid, 1);
+  assert.ok(LK.lookArt(LK.policeLook(me, 5)).gloves);
+  assert.equal(LK.lookArt(LK.policeLook(me, 0, 'k9')).top.kind, 'kevlar');
+  // on duty: the uniform for their rank over their own look; off duty, their own clothes again
+  const w = makeWorld(), { p } = joinPlayer(w);
+  p.profile.samaritan = 1000; p.profile.policePts = 130;
+  const before = p.ped.app.lk;
+  assert.equal(law.goOnDuty(w, p), null);
+  const D = LK.decodeLook(p.ped.app.lk);
+  assert.ok(D && names(D).includes("Sergeant's shirt"), 'a sergeant\'s uniform');
+  assert.deepEqual(D.hair, LK.decodeLook(before).hair, 'their own hair');
+  law.goOffDuty(w, p);
+  assert.equal(p.ped.app.lk, before, 'their own clothes again');
+});
+
