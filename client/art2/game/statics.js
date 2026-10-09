@@ -1974,7 +1974,7 @@ function propItemsIn(c, I, k) {
 }
 // what a smashed prop leaves: a fallen post, a stump, glass and bits (it.pi's prop has .broken)
 function brokenVariant(it, p) {
-  const a = p.broken && p.broken.a !== undefined ? p.broken.a : 0, kind = p.t === 'lamp' || p.t === 'plamp' ? 'pole' : p.t === 'sigpole' ? 'sigpole' : PLANTS.has(p.t) ? 'tree' : 'bits';
+  const a = p.broken && p.broken.a !== undefined ? p.broken.a : 0, kind = p.broken && p.broken.f ? 'stump' : p.t === 'lamp' || p.t === 'plamp' ? 'pole' : p.t === 'sigpole' ? 'sigpole' : PLANTS.has(p.t) ? 'tree' : 'bits';
   const q = qa(a, 16);
   return { key: `deb:${kind}:${q.toFixed(2)}:${p.t}`, recipe: { t: 'debris', kind, a: q, prop: p.t }, x: it.x, y: it.y, z0: 0, ext: [68, 58, 68, 58], pi: it.pi };
 }
@@ -1987,6 +1987,10 @@ function makeDebris(r) {
     for (let k = 0; k < 12; k++) for (let w = -5; w <= 5; w++) put1(c * (50 + k) - s * w, s * (50 + k) + c * w, r.kind === 'sigpole' ? [20, 22, 26] : DK[1], 4, 0);
     for (let i = 0; i < 26; i++) put1(c * 56 + (hash(i, 1, 7) - 0.5) * 30, s * 56 + (hash(i, 2, 7) - 0.5) * 24, GL[hash(i, 3, 7) * 4 | 0], 1);
     for (let w = -4; w <= 4; w++) for (let v = -4; v <= 4; v++) if (w * w + v * v < 18) put1(w, v, DK[1], 3, 0);
+  } else if (r.kind === 'stump') {   // felled (lights and felling #358: server felling.js): a sawn stump, chips and sawdust towards the fall
+    const R = r.prop === 'redwood' ? 15 : 7, TOP = ramp('#c89a64', 5, 2), BK = r.prop === 'redwood' ? ramp('#7a3a24', 5, 2) : WD;
+    for (let w = -R - 1; w <= R + 1; w++) for (let v = -R - 1; v <= R + 1; v++) { const d = Math.hypot(w, v * 1.25); if (d > R + 0.6) continue; const rim = d > R - 1.6; put1(w, v, rim ? BK[w < 0 ? 3 : 1] : TOP[(Math.round(d * 0.9) & 1) ? 2 : 3], rim ? 5 : 6, 0); }
+    for (let i = 0; i < 70; i++) { const d = R + 2 + hash(i, 1, 13) * 22, e = (hash(i, 2, 13) - 0.5) * 2.2; put1(Math.cos(r.a + e) * d, Math.sin(r.a + e) * d * 0.8, TOP[1 + (hash(i, 3, 13) * 3 | 0)], 1, 0); }
   } else if (r.kind === 'tree') {
     for (let w = -5; w <= 5; w++) for (let v = -4; v <= 4; v++) if (w * w + v * v * 1.4 < 26) put1(w, v, WD[w * w + v * v < 8 ? 3 : 1], 5, 0);
     for (let k = 6; k < 60; k++) for (let w = -3; w <= 3; w++) put1(c * k - s * w, s * k + c * w, WD[w < 0 ? 3 : 1], 3, 0);

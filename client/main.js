@@ -58,6 +58,7 @@ import { Flora, FLORA_PROPS, wind } from './render/flora/index.js';
 import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS, worldArtWanted } from './gfx.js';
 initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
+import { lightOf, GLOW_COLS } from '../shared/lights.js';   // lights to carry (#359): each light's beam, reach and colour
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -88,6 +89,10 @@ const S = {
   xing: [], xingAnim: [], // level crossings: { d: gates down, b: [arm broken, arm broken] }
 };
 S.boom = new Booms(S); S.camp = new Campfires(S); S.onCrackle = (x, y, v) => S.camp.crackle(x, y, v);
+// lights to carry and felling trees (#358, #359): the lights on the ground (S.glights: 'glight'), each light's kind for the
+// renderer (S.lightOf), and the toppling trees and the lights' little sprites (render/carryfx.js, loaded when the page is up)
+S.lightOf = lightOf; S.glights = new Map(); S.carry = null;
+import('./render/carryfx.js').then((m) => { S.carry = new m.CarryFx(S); }).catch((e) => console.warn('[carryfx]', e));
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 
@@ -221,6 +226,8 @@ function onText(m) {
       S.map.props.forEach((p, i) => { if (p.lit0 !== undefined && !!p.lit !== p.lit0) setFire(i, p.lit0, false); });
       for (const [i, lit] of m.fires || []) setFire(i, lit, false);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
+      for (let k = 0; k + 1 < (m.felled || []).length; k += 2) setFelled(m.felled[k], m.felled[k + 1], true);   // ([index, angle code, ...])
+      S.glights.clear(); for (const r of m.glights || []) setGlight({ id: r[0], k: r[1], x: r[2], y: r[3], c: r[4], s: r[5], dark: r[6] });
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
       if (S.art2) S.art2.resync(); // (back in after a reconnect: the art v2 bakes follow the server's broken props and barriers)
       S.xing = m.xing || []; S.xingAnim = S.xing.map((x) => (x.d ? 1 : 0));
@@ -451,6 +458,23 @@ function setFire(i, lit, withFx) {
   const fx = S.fx, v = distVol(p.x, p.y);
   if (lit) { fx.sparks(p.x, p.y - 4, 8); fx.ring(p.x, p.y, 18, 'rgba(255,170,70,', 0.4); sfx('ignite', v); }
   else { for (let k = 0; k < 6; k++) fx.smoke(p.x + (Math.random() - 0.5) * 16, p.y - 4 + (Math.random() - 0.5) * 8, false); sfx('douse', v); }
+}
+// Felling trees (#358: server felling.js): a felled tree is a broken prop with .f - its stump is baked where it stood
+// (art2 statics.js 'stump'), its trunk no longer in the way; 'treeup' puts it back
+function setFelled(i, q, on) {
+  const p = S.map.props[i];
+  if (!p) return;
+  if (on) { if (p.broken && p.broken.f) return; p.broken = { a: +((q / 64) * 6.2832).toFixed(2), f: 1 }; }
+  else { if (!p.broken || !p.broken.f) return; delete p.broken; }
+  const se = S.map.propSolid.get(i);
+  if (se) se.off = !!on;
+  S.ground.invalidateAt(p.x, p.y);
+  if (S.art2) S.art2.propChanged(i);
+}
+// Lights on the ground (#359: server lights.js 'glight'): a flare, a glow stick (its colour), a lantern (dark when flat)
+function setGlight(ev) {
+  if (ev.off) { S.glights.delete(ev.id); return; }
+  S.glights.set(ev.id, { id: ev.id, k: ev.k, x: ev.x, y: ev.y, dark: !!ev.dark, col: ev.k === 7 ? GLOW_COLS[ev.c | 0] || GLOW_COLS[0] : null });
 }
 function setPropBroken(i, a, withFx) {
   const p = S.map.props[i];
@@ -745,6 +769,10 @@ function onEvent(ev) {
       break;
     }
     case 'barrierfix': for (const k of ev.k) S.map.levels.broken.delete(k); if (S.art2) S.art2.barrierChanged(ev.k, false); break;
+    case 'glight': setGlight(ev); break;
+    case 'treefall': { setFelled(ev.i, ev.q, true); const p = S.map.props[ev.i]; if (S.carry && p) S.carry.fall(ev.x, ev.y, ev.q / 64 * 6.2832, ev.s, p.t.startsWith('palm')); break; }
+    case 'treecrash': { const p = S.map.props[ev.i]; if (S.carry && p && p.broken) S.carry.crash(ev.x, ev.y, p.broken.a, ev.s); break; }
+    case 'treeup': setFelled(ev.i, 0, false); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
     case 'fire': setFire(ev.i, ev.lit, true); break;
     case 'propfix': {
@@ -2930,6 +2958,7 @@ function drawOverlays(F, v2) {
     drawBuoys(F.view, now);
     drawArt2Marks(F);
     S.camp.draw(g, F); S.boom.draw(g, F, W, H, DPR);   // (the campfires' haze; the fireballs, plumes, shockwaves, the flash)
+    if (S.carry) S.carry.draw(g, F);   // (a felled tree toppling; flares, glow sticks and lanterns on the ground)
   }
   g.setTransform(...S.worldTf);
   // aim sight for sticks / touch (the mouse has its own cursor)

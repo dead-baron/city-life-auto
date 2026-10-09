@@ -303,16 +303,33 @@ export const ITEMS = {
     ell([10.25, 0], 0.5, 2.3, M.lens, { e: [255, 244, 205, 240], k: 0.3 }),
   ] },
 };
+// ---- lights to carry and felling trees (#358, #359): placeholder models until the concept sheets come (WD1-WD3) ----
+// the axe (every tier drawn alike: a hickory handle, a steel head) and the lantern (a hooped frame round a warm glass,
+// carried by its bail - held upright like a bill)
+ITEMS.axe = { ia: -55, hs: 0.85, off: [-3, 0], parts: [
+  cap([-4, 0], [17, 0], 1.15, M.wood, { pat: grain }),
+  cap([-4.4, 0], [-1.6, 0], 1.35, M.woodDark),
+  poly([[14.2, -1.6], [18.4, -1.8], [19.6, -6.4], [17.6, -7.6], [15.6, -4.6], [14.2, -3.4]], M.steel, { k: 0.08, pat: (u, v) => (v < -6.6 ? 0.25 : 0) }),
+  poly(box(14.2, -1.6, 18.4, 1.9), M.dark, { k: 0.05 }),
+] };
+ITEMS.lantern = { ia: 0, hs: 0.9, is: 1.2, bill: true, parts: [
+  ring([0, -7.2], 2.1, 0.45, M.dark),
+  poly(rbox(-3.4, -5.2, 3.4, -4.2, 0.4), M.dark),
+  ell([0, -1.2], 2.6, 3.2, M.lens, { e: [255, 196, 110, 230], k: 0.3 }),
+  cap([-3, -4.6], [-3, 2.2], 0.45, M.dark), cap([3, -4.6], [3, 2.2], 0.45, M.dark),
+  poly(rbox(-3.8, 2.0, 3.8, 3.4, 0.5), M.dark),
+] };
+// ---- end lights and felling models ----
 ITEMS.silencedPistol.parts = [...ITEMS.pistol.parts, cap([11.6, -4.6], [20, -4.6], 1.4, M.dark, { flat: true, k: 0.05 }), ell([20, -4.6], 0.45, 1.35, M.black, { k: -0.3 })];
 function grain(u, v) { return hash(Math.round(u * 0.6), Math.round(v * 1.6), 5) > 0.82 ? -0.14 : 0; }
 
-export const ITEM_KINDS = ['bat', 'knife', 'crowbar', 'sledgehammer', 'chainsaw', 'sword', 'katana', 'energyBlade', 'nightstick', 'taser', 'pistol', 'revolver', 'shotgun', 'rifle', 'smg', 'rocketLauncher', 'fishingRod', 'medkit', 'bandage', 'phone', 'cash', 'keys', 'silencedPistol', 'sniper', 'pepperSpray', 'bottle', 'coffee', 'spikeStrip', 'flashlight', 'huntKnife', 'bow', 'varmintRifle'];
+export const ITEM_KINDS = ['bat', 'knife', 'crowbar', 'sledgehammer', 'chainsaw', 'sword', 'katana', 'energyBlade', 'nightstick', 'taser', 'pistol', 'revolver', 'shotgun', 'rifle', 'smg', 'rocketLauncher', 'fishingRod', 'medkit', 'bandage', 'phone', 'cash', 'keys', 'silencedPistol', 'sniper', 'pepperSpray', 'bottle', 'coffee', 'spikeStrip', 'flashlight', 'huntKnife', 'bow', 'varmintRifle', 'axe', 'lantern'];
 export const ITEM_NAMES = {
   bat: 'Baseball bat', knife: 'Knife', crowbar: 'Crowbar', sledgehammer: 'Sledgehammer', chainsaw: 'Chainsaw', sword: 'Sword', katana: 'Katana',
   energyBlade: 'Energy blade', nightstick: 'Nightstick', taser: 'Taser', pistol: 'Pistol', revolver: 'Revolver', shotgun: 'Pump shotgun', rifle: 'Rifle',
   smg: 'SMG', rocketLauncher: 'Rocket launcher', fishingRod: 'Fishing rod', medkit: 'Medical kit', bandage: 'Bandage', phone: 'Phone', cash: 'Cash', keys: 'Keys',
   silencedPistol: 'Silenced pistol', sniper: 'Marksman rifle', pepperSpray: 'Pepper spray', bottle: 'Bottle in a bag', coffee: 'Coffee', spikeStrip: 'Spike strip',
-  flashlight: 'Flashlight', huntKnife: 'Hunting knife', bow: 'Hunting bow', varmintRifle: 'Varmint rifle',
+  flashlight: 'Flashlight', huntKnife: 'Hunting knife', bow: 'Hunting bow', varmintRifle: 'Varmint rifle', axe: 'Axe', lantern: 'Lantern',
 };
 
 // ---- rasterising ----------------------------------------------------------------------------------

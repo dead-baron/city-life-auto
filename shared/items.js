@@ -230,14 +230,14 @@ Object.assign(ITEMS, {
   headlamp:  { name: 'Headlamp', tool: true, light: true, sell: 14 },
   hardhat:   { name: 'Hard Hat with Lamp', tool: true, light: true, sell: 22 },
   lantern:   { name: 'Lantern', tool: true, light: true, sell: 16 },
-  flare:     { name: 'Road Flare', light: true, burn: true, sell: 3 },
-  glowstick: { name: 'Glow Stick', light: true, burn: true, sell: 1 },
-  batteries: { name: 'Batteries', sell: 2 },
+  flare:     { name: 'Road Flare', light: true, burn: true, gear: true, sell: 3 },
+  glowstick: { name: 'Glow Stick', light: true, burn: true, gear: true, sell: 1 },
+  batteries: { name: 'Batteries', gear: true, sell: 2 },
   hatchet:   { name: 'Hatchet', tool: true, fell: true, sell: 12 },
   axe:       { name: 'Axe', tool: true, fell: true, sell: 36 },
   fellaxe:   { name: 'Felling Axe', tool: true, fell: true, sell: 80 },
   chainsaw:  { name: 'Chainsaw', tool: true, fell: true, sell: 200 },
-  sawfuel:   { name: 'Chainsaw Fuel', sell: 4 },
+  sawfuel:   { name: 'Chainsaw Fuel', gear: true, sell: 4 },
 });
 const LIGHT_KIT = [
   { kind: 'item', id: 'headlamp', price: LIGHT_PRICES.headlamp, qty: 1 }, { kind: 'item', id: 'lantern', price: LIGHT_PRICES.lantern, qty: 1 },
@@ -252,7 +252,7 @@ const FELL_KIT = [
 export function itemCat(id) {
   const it = ITEMS[id];
   if (!it) return null;
-  return it.tool ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : it.game ? 'game' : it.crafted ? 'crafted' : 'loot';
+  return it.tool || it.gear ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : it.game ? 'game' : it.crafted ? 'crafted' : 'loot';
 }
 
 // GDD §8 crate rarity tiers

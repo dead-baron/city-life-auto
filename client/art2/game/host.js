@@ -1103,6 +1103,12 @@ export class World2 {
     if (!v) { v = this.Pd.withProp(A, pp); m.set(pp, v); this.propped.set(A, m); }
     return v;
   }
+  // ...with a lamp on the forehead (lights to carry: the descriptor's hh - the hard hat, its lamp - or fl 2, the headlamp)
+  _lamped(A, hard) {
+    const m = (this.lamped ||= new WeakMap()).get(A) || [];
+    if (!m[hard]) { m[hard] = { ...A, hat: hard ? { kind: 'hard', color: 'yellow', lamp: 1 } : { kind: 'headband', color: '#2a2a30', lamp: 1 } }; this.lamped.set(A, m); }
+    return m[hard];
+  }
   // ...carrying a robbery's takings (the descriptor's mb: server hotmoney.js): the same look with the money sack on the back
   _bagged(A) {
     let v = (this.bagged ||= new WeakMap()).get(A);
@@ -1125,7 +1131,8 @@ export class World2 {
     let ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
     let lift = 0;
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
-    const A1 = this._app(p.d.app || {}, p.d.ar), A0 = p.d.mb && A1 ? this._bagged(A1) : A1, A2 = p.d.pp && A0 && Pd.withProp ? this._propped(A0, p.d.pp) : A0;
+    const A1 = this._app(p.d.app || {}, p.d.ar), A0 = p.d.mb && A1 ? this._bagged(A1) : A1, A3 = p.d.pp && A0 && Pd.withProp ? this._propped(A0, p.d.pp) : A0;
+    const A2 = (p.d.hh || p.d.fl === 2) && A3 ? this._lamped(A3, p.d.hh ? 1 : 0) : A3;   // (a hard hat, a headlamp: lights to carry)
     let pf = Pd.pedFrame(ppose, L.fr);
     if (lying && (f & PF.DEAD) && p.deadK === 'halved' && this._halves(p, A2, ppose, d8, pf)) return;   // (cut in two by the plasma blade)
     // unarmed with the flashlight on: it's in your hand; under an open umbrella (standing or walking): its shaft is
@@ -1133,7 +1140,9 @@ export class World2 {
     // (a player with their phone menu open holds the phone: d.ph 1, server phone.js - in place of the weapon; someone
     // filming or taking photos holds it up in both hands: d.ph 2, server npc.js spectacle)
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
-    const wpn = phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : (p.extra | 0) || (p.d.fl ? 'flashlight' : umb ? 'umbrella' : 0);
+    // felling a tree (d.ch: server felling.js): the axe swung, the chainsaw held out; the lantern carried by its bail
+    if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
+    const wpn = phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && !wpn && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : Pd.pedFrame(q, L.fr); } }
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn), [A2, ppose, d8, pf, wpn]);
@@ -1945,8 +1954,17 @@ export class World2 {
       if ((p.flags & (PF.INVEH | PF.DEAD | PF.DOWN)) || p.swim || p.blink === 3) continue;
       const torch = !!(p.d && p.d.fl), cop = copK > 0.01 && !!(p.flags & PF.BADGE);
       if (!torch && !cop) continue;
-      const len = torch ? 240 : 200;
-      this._light(p.rx + Math.cos(p.ra) * 8, p.ry + Math.sin(p.ra) * 8, 30 + this._z0(p, false), len, C.white, 1.6 * (torch ? Math.max(night, 0.3) : night * copK), [p.ra, 0.32, len]);
+      // (the kind of light: S.lightOf - shared/lights.js - a cone where they face or a round glow, its reach and colour)
+      const LD = torch && S.lightOf ? S.lightOf(p.d.fl) : null, len = LD ? LD.range : torch ? 240 : 200, z0 = this._z0(p, false);
+      if (LD && LD.beam === 'glow') { this._light(p.rx + Math.cos(p.ra) * 6, p.ry + Math.sin(p.ra) * 6, 22 + z0, len, LD.col, LD.k * Math.max(night, 0.3)); continue; }
+      this._light(p.rx + Math.cos(p.ra) * 8, p.ry + Math.sin(p.ra) * 8, (LD && !LD.hand ? 40 : 30) + z0, len, LD ? LD.col : C.white, (LD ? LD.k : 1.6) * (torch ? Math.max(night, 0.3) : night * copK), [p.ra, LD ? LD.spread : 0.32, len]);
+    }
+    // lights set down or thrown (lights to carry: main.js keeps S.glights from the server's 'glight'): flares sputter red,
+    // glow sticks hold their colour, lanterns burn warm
+    if (S.glights && S.glights.size && S.lightOf) for (const g of S.glights.values()) {
+      if (g.dark || !inV(g.x, g.y)) continue;
+      const LD = S.lightOf(g.k), fl = g.k === 6 ? 0.75 + 0.25 * Math.sin(now * 31 + g.id) * Math.sin(now * 13.7 + g.id * 3) : 1;
+      this._light(g.x, g.y, g.k === 4 ? 16 : 6, LD.range, g.col || LD.col, LD.k * fl * Math.max(night, 0.35));
     }
     // the dark is dark: a faint pool of moonlight round your own figure so you can see where you are (eased in)
     const selfK = smooth((night - 0.2) / 0.5);
@@ -2034,7 +2052,7 @@ export class World2 {
   propChanged(i) {
     const p = this.map.props[i];
     if (!p) return;
-    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: [[i, p.broken ? { a: p.broken.a || 0 } : null]], ...(p.t === 'campfire' ? { lit: [[i, p.lit ? 1 : 0]] } : null) });
+    if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: [[i, p.broken ? { a: p.broken.a || 0, ...(p.broken.f ? { f: 1 } : null) } : null]], ...(p.t === 'campfire' ? { lit: [[i, p.lit ? 1 : 0]] } : null) });
     // its screen footprint: standing up to ~320 px above its ground point, debris round it
     for (let cy = Math.floor((p.y - 320) / CHUNK); cy <= Math.floor((p.y + 40) / CHUNK); cy++)
       for (let cx = Math.floor((p.x - 120) / CHUNK); cx <= Math.floor((p.x + 120) / CHUNK); cx++) { const k = cy * 1000 + cx; this.ver.set(k, (this.ver.get(k) || 0) + 1); }
@@ -2056,7 +2074,7 @@ export class World2 {
   // after a reconnect: the server's list of what is broken replaces the workers' and everything rebakes
   resync(rebake = true) {
     const list = [], lit = [], props = this.map.props || [];
-    for (let i = 0; i < props.length; i++) { if (props[i].broken) list.push([i, { a: props[i].broken.a || 0 }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
+    for (let i = 0; i < props.length; i++) { if (props[i].broken) list.push([i, { a: props[i].broken.a || 0, ...(props[i].broken.f ? { f: 1 } : null) }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
     const L = this.map.levels, barriers = L && L.broken ? [...L.broken.keys()].map((k) => [k, 1]) : [];
     if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: list, lit, barriers, reset: true });
     if (rebake) for (const k of this.chunkState.keys()) this.ver.set(k, (this.ver.get(k) || 0) + 1);

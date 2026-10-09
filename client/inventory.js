@@ -19,6 +19,7 @@ export const ITEM_ICON = {
   purse: '👜', bonds: '📜', jewelry: '💎', scrap: '⚙', wallet: '👛',
   apple: '🍎', orange: '🍊', grapes: '🍇', hotdog: '🌭', bread: '🍞', honey: '🍯', lemonade: '🍋', cider: '🧃', redwine: '🍷', whitewine: '🥂', beer: '🍺', whiskey: '🥃', lavender: '💜', nugget: '🟡', quartz: '🔷', doubloon: '🪙',
   goldTrumpet: '🍄', bunCap: '🍄', shelfOyster: '🍄', redcap: '🍄', ghostglass: '🔮', goldStar: '⭐',
+  headlamp: '🔦', hardhat: '⛑', lantern: '🏮', flare: '🧨', glowstick: '🟢', batteries: '🔋', hatchet: '🪓', axe: '🪓', fellaxe: '🪓', chainsaw: '🪚', sawfuel: '⛽',   // (lights and felling: #358, #359)
   venison: '🥩', rabbitMeat: '🥩', venisonSteak: '🍖', rabbitRoast: '🍗', deerHide: '🟫', antlers: '🦌', rabbitPelt: '🐇', coyotePelt: '🐺', raccoonPelt: '🦝',
 };
 const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
@@ -118,7 +119,14 @@ function section(body, title) {
 function describe(id) {
   const it = ITEMS[id];
   if (id === 'revivekit') return 'revive a downed player to full health - never used up';
-  if (id === 'flashlight') return `${keyName('light')} switches it on and off - no hand slot (you keep your weapon); everyone sees the beam`;
+  if (id === 'flashlight') return `${keyName('light')} switches it on and off - held in your free hand (dark while both are busy); everyone sees the beam`;
+  if (id === 'headlamp' || id === 'hardhat') return `${keyName('light')} switches it on and off - hands free${id === 'hardhat' ? '; the hat takes some of a falling tree or rock' : ''}; runs on batteries`;
+  if (id === 'lantern') return 'a warm glow all round you, in one hand - use it again while it\'s lit to set it down (it stays lit)';
+  if (id === 'flare') return 'strike it and throw it: a red light for about a minute';
+  if (id === 'glowstick') return 'snap it and drop it: a little green, blue or pink glow for a few minutes';
+  if (id === 'batteries') return 'a fresh set goes into a light by itself when its batteries run flat';
+  if (it.fell) return `hold the action button at a tree to fell it${id === 'hatchet' ? ' (small trees only)' : id === 'axe' ? ' (not the giant redwoods)' : id === 'chainsaw' ? ' - the fastest, loud, runs on fuel cans' : ' - anything, even a giant redwood'}`;
+  if (id === 'sawfuel') return 'fills the chainsaw when it runs dry';
   if (id === 'medkit') return `+${it.heal} health, stops bleeding`;
   if (id === 'bandage') return `+${it.heal} health, stops bleeding`;
   if (it.food) return `+${it.heal} health (doesn't stop bleeding)${it.sell ? ` - or sell it for about $${it.sell}` : ''}`;
