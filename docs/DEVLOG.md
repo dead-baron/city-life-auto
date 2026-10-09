@@ -3919,3 +3919,53 @@ From the user's 18:41 note (#356).
   - The corners stay at the top. The exception is an installed app on an iPhone (`display-mode: standalone`), where the clock and battery show over the page; there the corners move down by the safe area too (`--corner-top`).
 - **The banners** (a ride, custody, a robbery) sit just under the HUD, narrow enough to clear the left-hand buttons and the column on the right. The prompt and the notes stay below them.
 - Landscape and desktop are unchanged.
+
+## 2026-10-08 · Robberies: hot money in a bag, limited tills, heat that grows with the job, and a police standoff out front
+From the owner's notes (task #323, robberies v2).
+- **Hot money** (`server/systems/hotmoney.js`):
+  - A robbery's takings go into a bag you carry, not your cash: `profile.hot`, with where it was stolen (`profile.hotAt`). You can't spend it in shops.
+  - The HUD shows HOT $X under the cash (`client/hud.js`, `index.html`, `client/style.css`).
+  - Your character carries a canvas sack on the back while you have it. It's a flag in the ped's descriptor (`mb`); `client/art2/game/host.js` puts `back: 'moneybag'` on the look and `client/art2/people.js` draws the sack.
+  - Three ways to clean it:
+    - Bank it at an ATM (walk up, or its menu) or a bank teller once you're 2,400 px from where you stole it (`HOT_FAR_PX`). It goes in like any deposit. Nearer, they say "Too hot - get it well away from the robbery first"; while you're wanted, "Lose the police first".
+    - Stash it at any home you own, at any distance: "Stash the hot money" on the home's menu, and it's clean cash.
+    - Sell it to the fence (the Back-Alley Exchange) for cash less a 25% cut (`HOT_FENCE_CUT`), or a pawn shop less 40% (`HOT_PAWN_CUT`).
+  - Die and the bag drops where you fell (`cargo.js` `dropEverything`): a duffel anyone can pick up, still hot, still remembering where it was stolen.
+  - Booked into a cell, it's confiscated (`custody.js`).
+  - It's kept in the profile, so it survives a logout like your cash.
+  - A second robbery adds to the bag and moves its "stolen at" spot to the new one.
+- **Limited tills** (`server/systems/robbery.js`):
+  - Each business holds only so much (`ROB_TILL`): a corner store $400, a gas station $450, a pharmacy, hardware or clothing shop $800-900, a bank $5,000.
+  - Times the district's wealth (`ROB_TILL_TIER`): 0.6 in the rough parts, 1.6 in the rich ones. Each wad the clerk throws scales the same way.
+  - Empty, the clerk says so and the money stops. The till fills back up over 15 minutes (`ROB_REFILL_S`).
+  - The robbery bar shows the hands going up, then the till draining: "$take · till $left".
+- **Heat that grows:**
+  - The police are called when a witness or a camera sees it, or when the silent alarm trips. Either way you're on 1 star (`ROB_CALLED_HEAT`; `law.js` `CRIMES.robbery` was 2 stars, the alarm 3).
+  - From then on the heat rises for as long as the robbery goes on: 2 a second and 1.5 for every $100 taken (`ROB_HEAT_S`, `ROB_HEAT_PER_100`), counting what was taken before the call.
+  - Times the kind of place (`ROB_HEAT_KIND`: a corner store 0.6, a bank 2) and the district (`ROB_HEAT_TIER`: rough 0.6, rich 1.5).
+  - A corner store in a rough part of town stays at 1-2 stars if you're quick. A bank in a rich one reaches 4-5 stars in about 8 seconds.
+  - `law.crime` now returns true when a crime is called in.
+- **The police standoff** (`server/systems/standoff.js`, hooked into `police.js` `runUnit`):
+  - A wanted suspect inside the walk-in they robbed is no longer driven at.
+  - Each car drives to its own spot round the building: the first to the street by the door, the next to the nearest free spot along the street out front, then the sides and the back where there's road.
+  - It stops there at an angle and the crew gets out. A car that can't reach its spot parks where it got to; none drives into the building.
+  - One officer a car takes cover behind it, on the side away from the door, weapon drawn (a pistol at least) and aimed at the door.
+  - The others take posts round the building's walls (only where they can stand: no posts inside the shop next door).
+  - After 20 s (`STANDOFF_S`), or once 3 officers are in position (`STANDOFF_READY`), the ones at the walls go in through the door after you (the walk-in pursuit). They first walk back round the outside to the front. One a car stays in cover.
+  - Nobody in cover or at a post fires unless you've been shooting at the police or you're on 4+ stars.
+  - It ends when you're cuffed, dead, no longer wanted, come out (the usual chase from there) or slip away unseen for 25 s (`STANDOFF_LOST_S`).
+  - While the police are out there they know you're still inside, so the heat doesn't fade.
+- **Staff and customers:**
+  - Customers in the shop put their hands up, then slip out of the door and run once the robber isn't pointing their way (`npc.js` `holdup`).
+  - The clerk ducks down behind the counter once the police are outside, and the money stops.
+- **Dev menu:** Crime → "+$1,000 hot money (stolen here)" (`hot`).
+- **Tests:**
+  - `test/robbery.test.js` (new, 8 tests):
+    - the till runs dry and refills;
+    - 1 star when called (alarm or witness), and a rich bank heats up far faster than a rough corner store;
+    - no deposit near the robbery or while wanted, and a deposit far away;
+    - the home stash, the fence and the pawn shop;
+    - the bag dropped on death, picked up by someone else and confiscated at booking;
+    - customers' hands up and out of the door;
+    - the standoff: parked at spots, nobody in the building, cover behind the cars, the clerk ducking, then in after the suspect.
+  - `test/crime.test.js`: the robbery's cash now lands in the bag, not the wallet.

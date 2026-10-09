@@ -48,7 +48,7 @@ export const DEV_SECTIONS = [
   ] },
   { id: 'crime', title: '💰 Crime', items: [
     ['🏪 Rob a store', 'near', { k: 'convenience' }], ['🏦 Rob a bank', 'near', { k: 'bank' }], ['🏧 ATM', 'near', { k: 'atm' }],
-    ['🔫 Gun shop', 'near', { k: 'gunshop' }], ['💍 Pawn shop', 'near', { k: 'pawn' }], ['🕶 Fence', 'near', { k: 'fence' }],
+    ['🔫 Gun shop', 'near', { k: 'gunshop' }], ['💍 Pawn shop', 'near', { k: 'pawn' }], ['🕶 Fence', 'near', { k: 'fence' }], ['💰 +$1,000 hot money (stolen here)', 'hot'],
     ['🏴 Gang HQ', 'near', { k: 'gang' }], ['🏝 Smuggler\'s Den', 'near', { k: 'smuggler' }],
     ['🎁 Contraband drop', 'drop', { n: 4 }], ['👜 Snatch-and-grab nearby', 'snatch'], ['👊 A street fight nearby', 'happen', { k: 'fight' }], ['🚑 Someone collapses nearby', 'happen', { k: 'faint' }], ['👛 Someone drops a wallet nearby', 'happen', { k: 'wallet' }],
   ] },

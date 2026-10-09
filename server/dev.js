@@ -16,6 +16,7 @@ import * as npc from './systems/npc.js';
 import * as gangwar from './systems/gangwar.js';
 import * as cruiser from './systems/cruiser.js';
 import * as trains from './systems/trains.js';
+import * as hotmoney from './systems/hotmoney.js';
 import * as devmode from './devmode.js';
 import * as pets from './systems/pets.js';
 import * as happenings from './systems/happenings.js';
@@ -33,7 +34,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -155,6 +156,7 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'money': prof.cash += 5000; prof.bank += 20000; world.notify(p, '[dev] +$5,000 cash, +$20,000 bank', 'info'); break;
+    case 'hot': if (ped) { hotmoney.add(world, p, 1000, ped.x, ped.y); world.notify(p, '[dev] +$1,000 hot money in the robbery bag, stolen right here', 'info'); } break;
     case 'wanted': {
       if (!ped) break;
       const s = Math.max(1, Math.min(5, Number(msg.n) || 2));
