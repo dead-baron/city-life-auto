@@ -207,14 +207,12 @@ function lookFor(world, P, key, x, y, night) {
 // Someone with a character of their own, for a new passer-by at (x, y) - or null (nobody fits here now; an ordinary
 // passer-by comes instead). spawnNpc: npc.js's (passed in: this module doesn't import npc.js).
 export function spawnHere(world, spawnNpc, x, y, night) {
-  const d = world.map.districtAt(x, y), list = [];
+  const d = world.map.districtAt(x, y), list = [], have = new Map();
   let tot = 0;
+  for (const e of world.query(x, y, CAP_R, K.PED)) if (e.npc && e.npc.persona && !e.dead) have.set(e.npc.persona, (have.get(e.npc.persona) || 0) + 1);
   for (const [k, P] of Object.entries(PERSONAS)) {
     const dw = P.w.find(([s]) => s === d.style), tw = night ? P.night : P.day;
-    if (!dw || !tw) continue;
-    let n = 0;
-    for (const e of world.query(x, y, CAP_R, K.PED)) if (e.npc && e.npc.persona === k && !e.dead) n++;
-    if (n >= (P.cap || 2)) continue;
+    if (!dw || !tw || (have.get(k) || 0) >= (P.cap || 2)) continue;
     const w = dw[1] * tw;
     list.push([k, w]); tot += w;
   }
