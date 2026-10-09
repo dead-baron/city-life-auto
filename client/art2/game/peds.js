@@ -23,7 +23,7 @@ import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN } from '../people.js'
 import { ITEMS } from '../items.js';
 import { hash, cutGBuf } from '../gbuf.js';
 import { WEAPON_BY_INDEX } from '../../../shared/items.js';
-import { decodeLook, lookArt } from '../../../shared/look.js';
+import { decodeLook, lookArt } from '../../../shared/lookcore.js';   // (the core alone: shared/look.js adds what only the creator and the server use)
 import { CLUBS } from '../../../shared/clubs.js';
 
 export const PED_POSES = { ...POSES, move0: 6, move1: 6, move2: 6, move3: 6 };
