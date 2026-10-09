@@ -263,11 +263,29 @@ add('bag', 'Duffel bag', 'mf', 'athletic disguise', 50, 'sports', { carry: 'tool
 add('bag', 'Belt bag', 'mf', 'streetwear festival athletic', 30, 'clothing', { belt: 1 }, 'black');
 // the starting looks' own (CC9, 2026-10-09): a sarong; an apron and bib overalls, worn over a top like a jacket (the
 // top's sleeves and collar show round them); a coffee to go; a tool bag
-add('bottoms', 'Sarong', 'f', 'beach festival', 35, 'beach', { k: 'skirt', p: 4 }, 'teal', 'lime');
+add('bottoms', 'Sarong', 'f', 'beach', 35, 'beach', { k: 'skirt', p: 4 }, 'teal', 'lime');
 add('jacket', 'Apron', 'mf', 'work casual', 25, 'workwear', { k: 'apron' }, 'forest', 'cream');
 add('jacket', 'Bib overalls', 'mf', 'work western outdoors retro', 65, 'workwear', { k: 'overalls' }, 'denim', 'gold');
 add('bag', 'Coffee to go', 'mf', 'casual business smart', 5, 'clothing', { carry: 'coffee' }, 'white');
 add('bag', 'Tool bag', 'mf', 'work', 45, 'workwear', { carry: 'toolbag' }, 'red');
+// more hats and headwear (CP1, 2026-10-09)
+add('hat', 'Cap backwards', 'mf', 'streetwear skater street', 30, 'clothing', { k: 'cap', back: 1 }, 'red', 'white');
+add('hat', 'Pom-pom beanie', 'mf', 'winter casual outdoors', 25, 'outdoor', { k: 'beanie', pom: 1 }, 'navy', 'cream');
+add('hat', 'Slouchy beanie', 'mf', 'skater alt streetwear', 22, 'clothing', { k: 'beanie', slouch: 1 }, 'burgundy');
+add('hat', 'Flat cap', 'mf', 'retro smart preppy', 35, 'boutique', { k: 'flatcap', p: 2 }, 'brown', 'tan');
+add('hat', 'Bowler hat', 'mf', 'formal retro', 60, 'boutique', { k: 'bowler' }, 'black');
+add('hat', "Chef's hat", 'mf', 'work', 15, 'workwear', { k: 'toque' }, 'white');
+add('hat', 'Sailor cap', 'mf', 'beach', 20, 'beach', { k: 'sailor' }, 'white', 'navy');
+add('hat', 'Durag', 'mf', 'street streetwear', 15, 'clothing', { k: 'durag' }, 'black');
+add('hat', 'Head wrap', 'f', 'festival casual', 25, 'boutique', { k: 'wrap', p: 4 }, 'teal', 'orange');
+add('hat', 'Hijab', 'f', 'casual smart business', 30, 'boutique', { k: 'hijab' }, 'charcoal');
+add('hat', 'Turban', 'mf', 'formal casual', 30, 'boutique', { k: 'turban' }, 'cream');
+add('hat', 'Flower crown', 'f', 'festival', 20, 'clothing', { k: 'flowers' }, 'pink', 'lime');
+add('hat', 'Tiara', 'f', 'formal hifashion nightclub', 120, 'jeweller', { k: 'tiara' }, 'silver', 'royal blue');
+add('hat', 'Earmuffs', 'mf', 'winter', 20, 'outdoor', { k: 'earmuffs' }, 'cream', 'black');
+add('hat', 'Cat ears', 'mf', 'festival nightclub', 12, 'boutique', { k: 'catears' }, 'black', 'pink');
+add('hat', 'Moto helmet', 'mf', 'street retro', 90, 'outdoor', { k: 'moto' }, 'white', 'black');
+add('hat', 'Skate helmet', 'mf', 'skater athletic', 45, 'sports', { k: 'skatehelmet' }, 'black');
 // issued, never sold or owned (d.issued: shared/wardrobe.js owns, randomLook and the creator leave them out): the police's
 // uniforms by rank (CC5) - the patrol shirt, a sergeant's with chevrons, the dress uniform with a braided cap and white
 // gloves for the top ranks, a tactical vest over the shirt (the K9 handler's) - worn on duty (server law.js) and by the
@@ -517,7 +535,7 @@ export function lookToApp(L, code = null) {
     s: OLD_SKIN[L.body.skin] ?? 1, h, hc: HAIR_COLORS[L.hair.color]?.[0] || '#3b2414',
     t, tc: main ? HEX(main.c) : '#d0c8c0', tc2: main ? HEX(main.t) : '#ffffff',
     l: set ? HEX(O.set.c) : O.bottoms ? HEX(O.bottoms.c) : '#334455', sh: O.shoes ? HEX(O.shoes.c) : '#222222',
-    ht: hat ? ({ cap: 1, trucker: 1, visor: 1, hood: 1, hard: 2, sunhat: 3, cowboy: 3, fedora: 3, tophat: 3, bucket: 3, beanie: 4, beret: 4, bandana: 4, headband: 0, helmet: 5 }[hat.d.k] ?? 1) : 0,
+    ht: hat ? ({ cap: 1, trucker: 1, visor: 1, hood: 1, hard: 2, sunhat: 3, cowboy: 3, fedora: 3, tophat: 3, bucket: 3, beanie: 4, beret: 4, bandana: 4, headband: 0, helmet: 5, flatcap: 4, bowler: 3, toque: 4, sailor: 1, durag: 4, wrap: 4, hijab: 4, turban: 4, flowers: 0, tiara: 0, earmuffs: 0, catears: 0, moto: 5, skatehelmet: 5 }[hat.d.k] ?? 1) : 0,
     htc: hat ? HEX(O.hat.c) : '#222222',
     b: bag && bag.d.carry === 'briefcase' ? 1 : bag && bag.d.carry === 'purse' ? 2 : bag && bag.d.carry === 'toolbag' ? 3 : gl && gl.d.k === 'sun' ? 4 : 0,
     bd: [0, 1, 2, 2, 3][L.body.build] ?? 1,
@@ -573,7 +591,7 @@ export function lookArt(L, opt = {}) {
   if (sh) { A.shoes = HEX(O.shoes.c); A.shoeKind = sh.d.k; A.shoeTrim = HEX(O.shoes.t); if (sh.d.tall) A.bootTall = sh.d.tall; if (sh.d.hi) A.hiTop = 1; }
   else { A.shoes = '#d8c8b0'; A.shoeKind = 'barefoot'; }
   const hat = P('hat');
-  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0 };
+  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat) };
   if (hat && hat.d.k === 'hood') A.hat.color = A.top.color;
   const gl = P('glasses');
   if (gl) {

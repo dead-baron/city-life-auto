@@ -116,6 +116,7 @@ test('a robbery seen by a witness: called in at 1 star (no longer 2), and the he
   const wi = walkInAt(w.map, shop.x, shop.y);
   const cust = spawnNpc(w, 'senior', wi.x, (wi.inY + shop.y) / 2, 'civ');
   cust.a = Math.atan2(clerk.y - cust.y, clerk.x - cust.x); cust.npc.snitch = 9; cust.npc.state = 'idle'; cust.npc.until = w.time + 99;
+  cust.npc.lookAt = w.time + 99;   // (and staying that way: an idle NPC otherwise glances about at once, half the time away)
   aimAt(w, p.ped, clerk, 0.3);
   assert.ok(p.robbery && p.robbery.called, 'reported');
   assert.equal(p.wanted, 1, '1 star');

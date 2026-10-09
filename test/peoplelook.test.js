@@ -1,18 +1,19 @@
 // The people renderer and every option of the look system (client/art2/people.js, shared/look.js): each hairstyle,
-// face option, facial hair, age, mark, makeup and catalogue piece draws without an error, at the game's scale and at
-// the creator's close scales (opt.res: the thumbnails, the big preview's head and shoulders), within a time budget per
+// face option, facial hair, age, mark, makeup and catalogue piece draws without an error, at the game's scale and close
+// up (opt.res, with client/art2/peopleclose.js's face: the tools' and a future portrait's scales), within a time budget per
 // look measured against tools/perf.mjs's CPU yardstick (so a slow or busy machine doesn't fail it and a real slowdown
 // does); no two hairstyles are drawn alike.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { person } from '../client/art2/people.js';
+import { closeFace } from '../client/art2/peopleclose.js';
 import * as LK from '../shared/look.js';
 import { yardstick } from '../tools/perf.mjs';
 
 const clone = (L) => LK.decodeLook(LK.encodeLook(L));
 const variant = (L, fn) => { const V = clone(L); fn(V); return LK.validLook(V); };
-const HEAD = { tight: true, res: 3, region: [-10, -13, 10, 9] }, FACE = { tight: true, res: 4, region: [-8, -1.5, 8, 9.5] };
-const BUST = { tight: true, res: 8, region: [-10.5, -15, 10.5, 12] };
+const HEAD = { tight: true, res: 3, region: [-10, -13, 10, 9], closeFace }, FACE = { tight: true, res: 4, region: [-8, -1.5, 8, 9.5], closeFace };
+const BUST = { tight: true, res: 8, region: [-10.5, -15, 10.5, 12], closeFace };
 const filled = (G) => { let n = 0; for (let i = 3; i < G.col.length; i += 4) if (G.col[i]) n++; return n; };
 const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
 
@@ -50,7 +51,7 @@ test('every hairstyle, face option, mark, makeup, facial hair, build and piece d
   assert.ok(all.length > 300, `${all.length} looks`);
   for (const [name, L] of all) {
     const A = LK.lookArt(L);
-    for (const [k, opt] of [['game', {}], ['thumb', { tight: true, res: 2 }], ['head', HEAD], ['face', FACE]]) {
+    for (const [k, opt] of [['game', {}], ['thumb', { tight: true, res: 2, closeFace }], ['head', HEAD], ['face', FACE]]) {
       let G;
       assert.doesNotThrow(() => { G = person(A, 0, 'idle', 0, opt); }, `${name} (${k})`);
       assert.ok(G && G.w > 0 && G.h > 0 && filled(G) > 20, `${name} (${k}): an empty sprite`);
@@ -59,7 +60,7 @@ test('every hairstyle, face option, mark, makeup, facial hair, build and piece d
   // the close renders turn and breathe like the game's (every direction, both idle frames, a walk)
   const A = LK.lookArt(LK.STARTERS[3].look);
   for (let d = 0; d < 8; d++) for (const f of [0, 1]) assert.ok(filled(person(A, d, 'idle', f, BUST)) > 2000, `the bust, direction ${d}`);
-  assert.ok(filled(person(A, 2, 'walk1', 3, { tight: true, res: 4 })) > 2000);
+  assert.ok(filled(person(A, 2, 'walk1', 3, { tight: true, res: 4, closeFace })) > 2000);
 });
 
 test('the close renders are the game\'s figure, finer: the same shape, R times the size', () => {
@@ -69,6 +70,9 @@ test('the close renders are the game\'s figure, finer: the same shape, R times t
     assert.ok(Math.abs(c.h - g.h * 4) <= 10 && Math.abs(c.w - g.w * 4) <= 10, `${LK.STARTERS[i].name}: ${g.w}x${g.h} at 1, ${c.w}x${c.h} at 4`);
     assert.ok(Math.abs(c.ay - g.ay * 4) <= 6, 'the feet stay the anchor');
   }
+  // the face close up is client/art2/peopleclose.js's (the game never loads it): given it, eyes, brows and a mouth
+  const A = LK.lookArt(LK.STARTERS[0].look), key = (G) => Buffer.from(G.col).toString('base64');
+  assert.notEqual(key(person(A, 2, 'idle', 0, FACE)), key(person(A, 2, 'idle', 0, { ...FACE, closeFace: null })), 'the close face draws');
 });
 
 test('a held item beside the face (a rifle\'s stock at the cheek, a phone at the ear) never breaks the face', () => {

@@ -52,7 +52,7 @@ test('something wild: some of the people round about get their phones out and fi
   if (filming.some((c) => c.npc.photo)) assert.ok(events.some((e) => e.e === 'pflash'), 'a photo flash');
   // the same people aren't asked again straight away
   npc.spectacle(world, at.x, at.y, { r: 520, near: 120, chance: 2, secs: 8 });
-  run(world, 10);
+  run(world, 11);   // (anyone it does start filming does so for 8 s x 0.7-1.3: up to 10.4 s)
   for (const c of civs) if (!c.dead) { assert.notEqual(c.npc.state, 'film', 'done filming'); assert.ok(!c.filming && !c.phoneOut, 'the phone put away'); }
 });
 

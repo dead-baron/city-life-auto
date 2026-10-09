@@ -56,7 +56,8 @@ test('every recipe gives whole, valid looks that travel as their code', () => {
 });
 
 test('district shading: the beach dresses for the beach, downtown for business, the Strip at night for the club', () => {
-  const casual = (st, night = false) => poolFor('casual', st, night).map((P) => P.look);
+  // (many looks, not one district's pool of POOL_N: a pool is a small sample, and how it falls moves with every piece added)
+  const casual = (st, night = false) => Array.from({ length: 300 }, (_, i) => recipeLook('casual', 1000 + i * 31, st, night).look);
   assert.ok(share(casual('beach'), 'beach') > share(casual('towers'), 'beach') + 0.25, 'beach styles at the beach');
   assert.ok(share(casual('towers'), 'business') > share(casual('beach'), 'business') + 0.15, 'business downtown by day');
   assert.ok(share(casual('nightlife', true), 'nightclub') > share(casual('nightlife', false), 'nightclub') + 0.15, 'nightclub clothes on the Strip at night');
