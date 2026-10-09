@@ -5,8 +5,10 @@
 // much water, sand, green, street) with the district, the time of day and the rain. Over them, now and then, a
 // creature or the town: birds by day, crickets and an owl at night, gulls by the sea, a dog, a far siren, a horn;
 // rain pattering; a fire's crackle near a lit campfire or a burning car. Never on a fixed loop: every gap is random.
+// Only the beds you can hear run: a bed's noise source is connected while it's heard (and a source nobody hears is
+// stopped), its filters at k-rate - a bed that's off costs the audio thread nothing.
 import { T, TILE, VF } from '../../shared/constants.js';
-import { setp } from './engine.js';
+import { setp, krate } from './engine.js';
 
 const R = Math.random, rr = (a, b) => a + R() * (b - a);
 const URBAN = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT, T.BUILDING, T.WALL, T.BRIDGE]);
@@ -16,34 +18,32 @@ const WILD = { wild: 1, rural: 0.7, desert: 0.9, rocky: 0.8, park: 0.5, water: 0
 export class Ambience {
   constructor(E) {
     this.E = E; const c = E.ctx; this.ctx = c;
-    const src = (b) => { const s = c.createBufferSource(); s.buffer = b; s.loop = true; s.start(0, R() * (b.duration - 0.1)); return s; };
-    const flt = (type, f, q = 0.7) => { const n = c.createBiquadFilter(); n.type = type; n.frequency.value = f; n.Q.value = q; return n; };
+    this.level = 1;   // (the beds' level against the effects: tools/sound/bench.py)
+    const flt = (type, f, q = 0.7) => { const n = krate(c.createBiquadFilter()); n.type = type; n.frequency.value = f; n.Q.value = q; return n; };
     const gain = (v = 0) => { const n = c.createGain(); n.gain.value = v; return n; };
-    this.white = src(E.buf.white); this.pink = src(E.buf.pink); this.brown = src(E.buf.brown);
+    this.srcs = { white: null, pink: null, brown: null };   // (a looping noise source per colour, while a bed of it is heard)
     this.out = E.mix.ambIn;
-    const bed = (from, chain, connectNow = false) => {
-      const g = gain(0); let last = from;
-      for (const n of chain) { last.connect(n); last = n; }
+    const bed = (color, chain) => {
+      const g = gain(0); let last = chain[0];
+      for (let i = 1; i < chain.length; i++) { last.connect(chain[i]); last = chain[i]; }
       last.connect(g);
-      const b = { g, chain, on: false, quietAt: 0, w: 0 };
-      if (connectNow) { g.connect(this.out); b.on = true; }
-      return b;
+      return { g, chain, color, on: false, quietAt: 0, w: 0 };
     };
-    this.pan = c.createStereoPanner ? c.createStereoPanner() : null; if (this.pan) this.pan.connect(this.out);
+    this.pan = c.createStereoPanner ? krate(c.createStereoPanner()) : null; if (this.pan) this.pan.connect(this.out);
     this.beds = {
-      city: bed(this.brown, [flt('lowpass', 420, 0.5)]),
-      wind: bed(this.pink, [flt('bandpass', 600, 0.8)]),
-      leaves: bed(this.pink, [flt('highpass', 1500), flt('bandpass', 3200, 0.4)]),
-      sea: bed(this.brown, [flt('lowpass', 520, 0.5)]),
-      surf: bed(this.white, [flt('bandpass', 900, 0.3), gain(0.2)]),
+      city: bed('brown', [flt('lowpass', 420, 0.5)]),
+      wind: bed('pink', [flt('bandpass', 600, 0.8)]),
+      leaves: bed('pink', [flt('highpass', 1500), flt('bandpass', 3200, 0.4)]),
+      sea: bed('brown', [flt('lowpass', 520, 0.5)]),
+      surf: bed('white', [flt('bandpass', 900, 0.3), gain(0.2)]),
       // (rain: soft pink noise, not a white hiss - the white one was some 20 dB louder than the city round it: the owner
       // found it overpowering, 2026-10-09)
-      rain: bed(this.pink, [flt('highpass', 450), flt('lowpass', 4200)]),
-      sub: bed(this.brown, [flt('lowpass', 190, 0.8)]),
-      fire: bed(this.brown, [flt('lowpass', 330, 0.6)]),
+      rain: bed('pink', [flt('highpass', 450), flt('lowpass', 4200)]),
+      sub: bed('brown', [flt('lowpass', 190, 0.8)]),
+      fire: bed('brown', [flt('lowpass', 330, 0.6)]),
       // under the ground (F.ug: server/systems/underground.js): the sewer's stream running past, the cave's hollow hush
-      flow: bed(this.pink, [flt('bandpass', 720, 0.7), flt('lowpass', 2400)]),
-      cave: bed(this.brown, [flt('lowpass', 130, 0.9)]),
+      flow: bed('pink', [flt('bandpass', 720, 0.7), flt('lowpass', 2400)]),
+      cave: bed('brown', [flt('lowpass', 130, 0.9)]),
     };
     this.surfEnv = this.beds.surf.chain[1];   // (the wave crashes: its own envelope, under the shore's level)
     this.windF = this.beds.wind.chain[0];
@@ -152,15 +152,15 @@ export class Ambience {
       fire: this.fire && !sub ? Math.pow(Math.max(0, 1 - this.fire.d / 520), 2) * 0.35 : 0,
     };
     for (const name in want) {
-      const b = B[name], w = want[name];
-      if (w > 0.002 && !b.on) { b.g.connect(name === 'sea' || name === 'surf' ? this.pan || this.out : this.out); b.on = true; }
+      const b = B[name], w = want[name] * this.level;
+      if (w > 0.002 && !b.on) this.bedOn(name, b);
       if (b.on) {
         setp(b.g.gain, w, t, name === 'fire' ? 0.4 : 1.2);
-        if (w <= 0.002) { if (!b.quietAt) b.quietAt = t; else if (t - b.quietAt > 6) { try { b.g.disconnect(); } catch { /* gone */ } b.on = false; b.quietAt = 0; } } else b.quietAt = 0;
+        if (w <= 0.002) { if (!b.quietAt) b.quietAt = t; else if (t - b.quietAt > 4) this.bedOff(b); } else b.quietAt = 0;
       }
     }
-    this.windF.frequency.setTargetAtTime(320 + 650 * this.gust, t, 0.6);
-    if (this.pan) this.pan.pan.setTargetAtTime(Math.max(-0.7, Math.min(0.7, k.wx)), t, 1);
+    setp(this.windF.frequency, 320 + 650 * this.gust, t, 0.6);
+    if (this.pan) setp(this.pan.pan, Math.max(-0.7, Math.min(0.7, k.wx)), t, 1);
     // the surf: a wave breaks every several seconds along the shore
     if (k.shore > 0.1 && t >= this.next.surf) {
       this.next.surf = t + rr(4.5, 9);
@@ -168,7 +168,28 @@ export class Ambience {
       e.cancelScheduledValues(t); e.setTargetAtTime(rr(0.7, 1), t, 0.35); e.setTargetAtTime(0.15, t + rr(1, 1.6), 1.4);
     }
     // indoors the ambience is heard through the walls
-    this.E.mix.ambLp.frequency.setTargetAtTime(inside ? 700 : F.ug ? 3200 : sub ? 1500 : 18000, t, 0.4);
+    setp(this.E.mix.ambLp.frequency, inside ? 700 : F.ug ? 3200 : sub ? 1500 : 18000, t, 0.4);
+  }
+  // a bed heard: its noise (made if none of that colour is running) into its filters, its level to the bus
+  bedOn(name, b) {
+    const c = this.ctx;
+    let s = this.srcs[b.color];
+    if (!s) {
+      const buf = this.E.buf[b.color];
+      s = krate(c.createBufferSource()); s.buffer = buf; s.loop = true; s.start(0, R() * (buf.duration - 0.1));
+      this.srcs[b.color] = s;
+    }
+    s.connect(b.chain[0]);
+    b.g.connect(name === 'sea' || name === 'surf' ? this.pan || this.out : this.out);
+    b.on = true; b.quietAt = 0;
+  }
+  // a bed gone quiet: unplugged, and its noise stopped when no other bed needs it
+  bedOff(b) {
+    const s = this.srcs[b.color];
+    try { b.g.disconnect(); } catch { /* gone */ }
+    if (s) { try { s.disconnect(b.chain[0]); } catch { /* gone */ } }
+    b.on = false; b.quietAt = 0;
+    if (s && !Object.values(this.beds).some((o) => o.on && o.color === b.color)) { try { s.stop(); } catch { /* stopped */ } try { s.disconnect(); } catch { /* gone */ } this.srcs[b.color] = null; }
   }
   silence() {
     const t = this.ctx.currentTime;
@@ -176,7 +197,9 @@ export class Ambience {
       const b = this.beds[name];
       if (!b.on) continue;
       setp(b.g.gain, 0, t, 0.5);
-      if (!b.quietAt) b.quietAt = t; else if (t - b.quietAt > 6) { try { b.g.disconnect(); } catch { /* gone */ } b.on = false; b.quietAt = 0; }
+      if (!b.quietAt) b.quietAt = t; else if (t - b.quietAt > 4) this.bedOff(b);
     }
   }
+  // the beds heard right now (the bench, the debug line)
+  heard() { return Object.keys(this.beds).filter((n) => this.beds[n].on); }
 }

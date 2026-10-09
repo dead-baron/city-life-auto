@@ -1,5 +1,7 @@
 // Every one-shot sound, synthesised (engine.js play): no files. Each recipe is
 //   name: { pri, range, gap, send, play(E, out, t, v, p) -> seconds }
+// and the busiest little ones (footsteps, raindrops, crickets, crackle, bullets striking) also cache: n - rendered once
+// into n variants and played as samples from then on (engine.js sample)
 // pri: pool.js priority; range: how far off it's heard (world px); gap: its rate limit (s); send: how much goes into
 // the echo. play schedules E.tone / E.noise / E.fm into `out` from time t and returns how long it lasts. Every recipe
 // varies itself a little each time (pitch, timing, which partials) so nothing repeats exactly.
@@ -12,14 +14,18 @@ const vary = (x, k = 0.06) => x * (1 + (R() * 2 - 1) * k);
 const pick = (a) => a[Math.floor(R() * a.length)];
 const { AMBIENT, MINOR, NORMAL, MAJOR, UI } = PRI;
 
-// a few small clicks scattered over a span (debris, crackle, rattles)
+// a few small clicks scattered over a span (debris, crackle, rattles): one stretch of the crackle buffer (engine.js:
+// sparse clicks, 16 a second), played faster or slower so about n fall in the span, through a band round f0..f1 -
+// three nodes, where a click each was three nodes a click
 function clicks(E, out, t, n, span, v, f0, f1, dur = 0.012) {
-  for (let k = 0; k < n; k++) E.noise(out, t + R() * span, dur * rr(0.6, 1.4), v * rr(0.4, 1), { ft: 'bandpass', f: rr(f0, f1), q: 1.6 });
+  const rate = Math.max(0.25, Math.min(4, n / Math.max(0.05, span) / 16));
+  E.noise(out, t, span + dur, v * 0.8, { color: 'crackle', ft: 'bandpass', f: Math.sqrt(f0 * f1), q: 0.8, rate, a: 0.002, hold: Math.max(0, span - 0.02) });
 }
-// a gunshot: the crack, the body's thump, the tail rolling off the buildings
+// a gunshot: the crack, the body's thump, the tail rolling off the buildings (the crack's front softened a little: a
+// raw 2 ms burst is all peak and no body, and it's what clipped a phone's speaker)
 function gun(E, out, t, v, c) {
-  E.noise(out, t, c.crackDur, v * c.crack, { ft: 'bandpass', f: vary(c.crackF), f2: c.crackF * 0.35, q: 0.8 });
-  if (c.snap) E.noise(out, t, 0.02, v * c.snap, { ft: 'highpass', f: 3500 });
+  E.noise(out, t, c.crackDur, v * c.crack, { ft: 'bandpass', f: vary(c.crackF), f2: c.crackF * 0.35, q: 0.8, a: 0.003 });
+  if (c.snap) E.noise(out, t, 0.02, v * c.snap * 0.5, { ft: 'highpass', f: 3500, a: 0.002 });
   E.tone(out, t, vary(c.bodyF, 0.08), c.bodyDur, v * c.body, { type: 'sine', f2: c.bodyF * 0.3 });
   E.noise(out, t + 0.01, c.tail, v * c.tailV, { color: 'pink', ft: 'lowpass', f: c.tailF, f2: 160, a: 0.01 });
   return c.tail + 0.05;
@@ -63,20 +69,20 @@ export const INSTR = {
   ridebell: { pri: UI, gap: 1, play(E, o, t, v) { bell(E, o, t, 1047, 0.6, v * 0.08); bell(E, o, t + 0.2, 1319, 0.8, v * 0.08); return 1; } },
 
   // ======== footsteps and the body ========
-  step: { pri: AMBIENT, range: 520, play(E, o, t, v, p) {
+  step: { pri: AMBIENT, range: 520, cache: 6, cacheLen: 0.5, cacheKey: (p) => p.s || 'pavement', cacheP: (p) => ({ s: p.s || 'pavement', k: 1 }), cacheVol: (p) => (0.35 + 0.65 * Math.min(1.4, p.k ?? 1)) * (p.soft ? 0.4 : 1), play(E, o, t, v, p) {
     const s = STEP[p.s] || STEP.pavement, k = p.k ?? 1, vv = v * s.v * (0.35 + 0.65 * Math.min(1.4, k)) * (p.soft ? 0.4 : 1) * rr(0.8, 1.1);
-    if (s.splash) { E.noise(o, t, s.dur * (s.splash === 2 ? 1.6 : 1), vv * 0.6, { ft: 'bandpass', f: vary(s.f, 0.2), f2: s.f * 2, q: 0.8, a: 0.02 }); E.tone(o, t + 0.02, vary(420, 0.2), 0.06, vv * 0.12, { type: 'sine', f2: 900 }); return 0.4; }
+    if (s.splash) { E.noise(o, t, s.dur * (s.splash === 2 ? 1.6 : 1), vv * 0.6, { ft: 'bandpass', f: vary(s.f, 0.2), f2: s.f * 2, q: 0.8, a: 0.02 }); E.tone(o, t + 0.02, vary(420, 0.2), 0.06, vv * 0.12, { type: 'sine', f2: 900 }); return s.dur * (s.splash === 2 ? 1.6 : 1) + 0.04; }
     E.noise(o, t, vary(s.dur, 0.15), vv * 0.55, { ft: 'bandpass', f: vary(s.f, 0.12), q: s.q });
     if (s.thump) E.tone(o, t, vary(s.thump, 0.1), 0.05, vv * 0.35, { type: 'sine', f2: s.thump * 0.6 });
-    if (s.grit) E.noise(o, t + 0.012, 0.03, vv * 0.3 * s.grit, { ft: 'highpass', f: vary(4200, 0.15) });
+    if (s.grit > 0.5) E.noise(o, t + 0.012, 0.03, vv * 0.3 * s.grit, { ft: 'highpass', f: vary(4200, 0.15) });   // (the grit of sand and dirt; the street's is in its scuff)
     if (s.swish) E.noise(o, t + 0.01, 0.12, vv * 0.25, { color: 'pink', ft: 'highpass', f: 2600, a: 0.03 });
     if (s.hollow) E.tone(o, t, vary(s.hollow, 0.08), 0.08, vv * 0.22, { type: 'triangle', f2: s.hollow * 0.8 });
     if (s.ring) E.fm(o, t, vary(s.ring, 0.1), 0.18, vv * 0.06, 2.76, 1.2);
     if (s.squeak && R() < 0.12) E.tone(o, t + 0.03, vary(2400, 0.2), 0.05, vv * 0.05, { type: 'sine', f2: 2900 });
-    return 0.3;
+    return Math.max(s.dur * 1.2, s.ring ? 0.2 : s.swish ? 0.14 : 0.09);   // (how long it really sounds: the voice is free right after)
   } },
-  twig: { pri: MINOR, range: 600, gap: 0.08, play(E, o, t, v) { E.noise(o, t, 0.012, v * 0.6, { ft: 'highpass', f: vary(2500) }); E.noise(o, t + rr(0.01, 0.03), 0.02, v * 0.45, { ft: 'bandpass', f: vary(1300), q: 2 }); E.tone(o, t, vary(700, 0.2), 0.02, v * 0.08, { type: 'square', f2: 300 }); return 0.1; } },
-  leaves: { pri: AMBIENT, range: 520, play(E, o, t, v) { E.noise(o, t, rr(0.12, 0.22), v * 0.3, { color: 'pink', ft: 'bandpass', f: vary(3000, 0.2), q: 0.6, a: 0.02 }); clicks(E, o, t, 4, 0.12, v * 0.2, 2500, 5000, 0.008); return 0.3; } },
+  twig: { pri: MINOR, range: 600, gap: 0.08, cache: 4, cacheLen: 0.12, play(E, o, t, v) { E.noise(o, t, 0.012, v * 0.6, { ft: 'highpass', f: vary(2500) }); E.noise(o, t + rr(0.01, 0.03), 0.02, v * 0.45, { ft: 'bandpass', f: vary(1300), q: 2 }); E.tone(o, t, vary(700, 0.2), 0.02, v * 0.08, { type: 'square', f2: 300 }); return 0.1; } },
+  leaves: { pri: AMBIENT, range: 520, cache: 4, cacheLen: 0.3, play(E, o, t, v) { E.noise(o, t, rr(0.12, 0.22), v * 0.3, { color: 'pink', ft: 'bandpass', f: vary(3000, 0.2), q: 0.6, a: 0.02 }); clicks(E, o, t, 4, 0.12, v * 0.2, 2500, 5000, 0.008); return 0.3; } },
   roll: { pri: NORMAL, range: 700, gap: 0.2, play(E, o, t, v) { E.noise(o, t, 0.22, v * 0.25, { color: 'pink', ft: 'bandpass', f: 900, f2: 500, q: 0.7, a: 0.05 }); E.tone(o, t + 0.2, 90, 0.12, v * 0.35, { type: 'sine', f2: 50 }); E.noise(o, t + 0.2, 0.08, v * 0.3, { ft: 'lowpass', f: 600 }); return 0.4; } },
   knockdown: { pri: NORMAL, range: 900, play(E, o, t, v) { E.tone(o, t, vary(85), 0.22, v * 0.6, { type: 'sine', f2: 38 }); E.noise(o, t, 0.12, v * 0.5, { ft: 'lowpass', f: 700 }); E.noise(o, t + 0.05, 0.25, v * 0.15, { color: 'pink', ft: 'bandpass', f: 1200, q: 0.6 }); return 0.4; } },
   bodyfall: { pri: NORMAL, range: 800, gap: 0.05, play(E, o, t, v) { E.tone(o, t + 0.25, vary(75), 0.2, v * 0.45, { type: 'sine', f2: 40 }); E.noise(o, t + 0.25, 0.14, v * 0.35, { ft: 'lowpass', f: 600 }); E.noise(o, t + 0.36, 0.1, v * 0.2, { ft: 'lowpass', f: 450 }); return 0.6; } },
@@ -122,7 +128,7 @@ export const INSTR = {
   taser: { pri: NORMAL, range: 700, gap: 0.08, play(E, o, t, v) { E.tone(o, t, vary(2400), 0.3, v * 0.06, { wave: 'buzz', f2: 1700, lp: 5000 }); clicks(E, o, t, 14, 0.3, v * 0.5, 2500, 6000, 0.006); return 0.35; } },
   twang: { pri: NORMAL, range: 700, gap: 0.08, play(E, o, t, v) { E.tone(o, t, vary(150), 0.2, v * 0.3, { type: 'triangle', f2: 118 }); E.tone(o, t, vary(300), 0.1, v * 0.08, { type: 'sine', f2: 240 }); E.noise(o, t, 0.08, v * 0.12, { ft: 'highpass', f: 3200 }); return 0.22; } },
   thwack: { pri: NORMAL, range: 700, gap: 0.05, play(E, o, t, v) { E.noise(o, t, 0.05, v * 0.5, { ft: 'lowpass', f: 900 }); E.tone(o, t, vary(170), 0.07, v * 0.22, { type: 'sine', f2: 80 }); return 0.1; } },
-  impact: { pri: MINOR, range: 900, gap: 0.02, play(E, o, t, v, p) {
+  impact: { pri: MINOR, range: 900, gap: 0.02, cache: 4, cacheLen: 0.3, cacheKey: (p) => p.s || 'pavement', cacheP: (p) => ({ s: p.s || 'pavement' }), play(E, o, t, v, p) {
     switch (p.s) {
       case 'grass': case 'dirt': case 'sand': E.noise(o, t, 0.06, v * 0.5, { ft: 'lowpass', f: vary(600) }); E.noise(o, t + 0.02, 0.1, v * 0.15, { color: 'pink', ft: 'highpass', f: 2500 }); return 0.15;
       case 'water': case 'deep': E.tone(o, t, vary(700, 0.2), 0.06, v * 0.2, { type: 'sine', f2: 220 }); E.noise(o, t, 0.1, v * 0.3, { ft: 'bandpass', f: 1500, q: 0.8 }); return 0.15;
@@ -137,7 +143,7 @@ export const INSTR = {
   impact_flesh: { pri: NORMAL, range: 800, gap: 0.03, play(E, o, t, v) { E.noise(o, t, 0.05, v * 0.5, { ft: 'lowpass', f: vary(800), f2: 300 }); E.tone(o, t, vary(110), 0.06, v * 0.3, { type: 'sine', f2: 60 }); return 0.1; } },
   impact_wood: { pri: MINOR, range: 800, gap: 0.03, play(E, o, t, v) { E.tone(o, t, vary(320), 0.05, v * 0.35, { type: 'triangle', f2: 200 }); E.noise(o, t, 0.04, v * 0.4, { ft: 'bandpass', f: vary(900), q: 1.6 }); return 0.1; } },
   ricochet: { pri: MINOR, range: 900, gap: 0.05, play(E, o, t, v) { E.noise(o, t, 0.02, v * 0.5, { ft: 'highpass', f: 3000 }); E.tone(o, t + 0.01, vary(3000, 0.25), rr(0.12, 0.22), v * 0.07, { type: 'sine', f2: vary(1100) }); return 0.25; } },
-  hit: { pri: MINOR, range: 800, gap: 0.04, play(E, o, t, v) { E.noise(o, t, 0.06, v * 0.4, { ft: 'lowpass', f: vary(600) }); E.tone(o, t, vary(120), 0.06, v * 0.2, { type: 'sine', f2: 70 }); return 0.1; } },
+  hit: { pri: MINOR, range: 800, gap: 0.04, cache: 4, cacheLen: 0.12, play(E, o, t, v) { E.noise(o, t, 0.06, v * 0.4, { ft: 'lowpass', f: vary(600) }); E.tone(o, t, vary(120), 0.06, v * 0.2, { type: 'sine', f2: 70 }); return 0.1; } },
 
   // ======== explosions, fire, crashes, breaking things ========
   explosion: { pri: MAJOR, range: 3200, gap: 0.05, send: 0.6, play(E, o, t, v, p) {
@@ -161,7 +167,7 @@ export const INSTR = {
   scrape: { pri: MINOR, range: 900, gap: 0.15, play(E, o, t, v) { E.noise(o, t, 0.35, v * 0.3, { ft: 'bandpass', f: vary(2400), q: 4, a: 0.03 }); E.tone(o, t, vary(1700), 0.3, v * 0.03, { type: 'sawtooth', f2: 1500 }); return 0.36; } },
   glass: { pri: NORMAL, range: 1100, gap: 0.08, play(E, o, t, v) {
     E.noise(o, t, 0.3, v * 0.45, { ft: 'highpass', f: 4200 });
-    for (let k = 0; k < 7; k++) E.fm(o, t + R() * 0.4, rr(2400, 6000), rr(0.05, 0.16), v * rr(0.03, 0.07), 1.41, 1);
+    for (let k = 0; k < 4; k++) E.fm(o, t + R() * 0.4, rr(1800, 4500), rr(0.05, 0.16), v * rr(0.04, 0.08), 1.41, 1);
     return 0.6;
   } },
   rubble: { pri: NORMAL, range: 1400, gap: 0.2, play(E, o, t, v) { E.noise(o, t, 1.2, v * 0.45, { color: 'brown', ft: 'lowpass', f: 800, f2: 150, a: 0.03 }); clicks(E, o, t + 0.1, 12, 1.1, v * 0.3, 700, 2500, 0.025); return 1.25; } },
@@ -174,7 +180,7 @@ export const INSTR = {
   spikes: { pri: NORMAL, range: 900, gap: 0.5, play(E, o, t, v) { clicks(E, o, t, 14, 0.5, v * 0.5, 1800, 4500, 0.02); E.noise(o, t, 0.45, v * 0.2, { ft: 'bandpass', f: 2500, q: 1.5 }); return 0.55; } },
   ignite: { pri: NORMAL, range: 700, gap: 0.3, play(E, o, t, v) { E.noise(o, t, 0.06, v * 0.3, { ft: 'highpass', f: 3800 }); E.noise(o, t + 0.09, 0.7, v * 0.4, { color: 'brown', ft: 'lowpass', f: 500, a: 0.1 }); clicks(E, o, t + 0.2, 6, 0.6, v * 0.3, 2000, 4000, 0.01); return 0.85; } },
   douse: { pri: NORMAL, range: 700, gap: 0.3, play(E, o, t, v) { E.noise(o, t, 0.9, v * 0.3, { ft: 'highpass', f: 3000, a: 0.03 }); E.tone(o, t + 0.06, 90, 0.1, v * 0.18, { type: 'sine', f2: 60 }); E.tone(o, t + 0.22, 80, 0.1, v * 0.15, { type: 'sine', f2: 55 }); return 0.95; } },
-  crackle: { pri: AMBIENT, range: 700, play(E, o, t, v) { clicks(E, o, t, 1 + Math.floor(R() * 3), 0.12, v * 0.5, 1800, 5000, 0.008); if (R() < 0.15) E.noise(o, t + 0.05, 0.04, v * 0.4, { ft: 'bandpass', f: vary(1100), q: 1.2 }); return 0.2; } },
+  crackle: { pri: AMBIENT, range: 700, cache: 6, cacheLen: 0.25, play(E, o, t, v) { clicks(E, o, t, 1 + Math.floor(R() * 3), 0.12, v * 0.5, 1800, 5000, 0.008); if (R() < 0.15) E.noise(o, t + 0.05, 0.04, v * 0.4, { ft: 'bandpass', f: vary(1100), q: 1.2 }); return 0.2; } },
 
   // ======== vehicles ========
   cardoor: { pri: MINOR, range: 800, gap: 0.12, play(E, o, t, v) { E.noise(o, t, 0.012, v * 0.4, { ft: 'highpass', f: 3000 }); E.tone(o, t + 0.01, vary(115), 0.12, v * 0.45, { type: 'sine', f2: 65 }); E.noise(o, t + 0.01, 0.09, v * 0.4, { ft: 'lowpass', f: 700 }); return 0.16; } },
@@ -217,7 +223,7 @@ export const INSTR = {
     for (let i = 0; i < 3; i++) E.tone(o, t + R() * 0.25, rr(500, 1100), 0.05, v * 0.06, { type: 'sine', f2: rr(1200, 2000) });
     return 0.75;
   } },
-  stroke: { pri: AMBIENT, range: 500, play(E, o, t, v) { E.noise(o, t, 0.28, v * 0.3, { ft: 'bandpass', f: vary(1000), f2: 1800, q: 0.7, a: 0.05 }); E.tone(o, t + 0.1, vary(500, 0.2), 0.06, v * 0.05, { type: 'sine', f2: 900 }); return 0.35; } },
+  stroke: { pri: AMBIENT, range: 500, cache: 4, cacheLen: 0.4, play(E, o, t, v) { E.noise(o, t, 0.28, v * 0.3, { ft: 'bandpass', f: vary(1000), f2: 1800, q: 0.7, a: 0.05 }); E.tone(o, t + 0.1, vary(500, 0.2), 0.06, v * 0.05, { type: 'sine', f2: 900 }); return 0.35; } },
   cast: { pri: MINOR, range: 600, gap: 0.5, play(E, o, t, v) { E.noise(o, t, 0.2, v * 0.25, { ft: 'bandpass', f: 1500, f2: 3500, q: 2, a: 0.05 }); clicks(E, o, t + 0.05, 10, 0.4, v * 0.12, 3000, 5000, 0.006); E.tone(o, t + 0.55, 600, 0.06, v * 0.1, { type: 'sine', f2: 250 }); return 0.65; } },
   bite: { pri: UI, gap: 0.3, play(E, o, t, v) { for (const d of [0, 0.15]) { E.tone(o, t + d, vary(520, 0.04), 0.07, v * 0.18, { type: 'sine', f2: 260 }); E.noise(o, t + d, 0.05, v * 0.12, { ft: 'bandpass', f: 1500, q: 1 }); } return 0.3; } },
 
@@ -240,12 +246,14 @@ export const INSTR = {
   revive: { pri: NORMAL, range: 800, gap: 0.5, play(E, o, t, v) { E.tone(o, t, 70, 0.15, v * 0.4, { type: 'sine', f2: 40 }); E.noise(o, t, 0.06, v * 0.4, { ft: 'lowpass', f: 900 }); E.tone(o, t + 0.2, 523, 0.5, v * 0.06, { wave: 'pulse12', f2: 1047, glide: 0.3 }); return 0.75; } },
 
   // ======== money, finds, the town's alarms ========
-  cashtoss: { pri: NORMAL, range: 800, gap: 0.1, play(E, o, t, v) { for (let k = 0; k < 5; k++) bell(E, o, t + R() * 0.25, rr(2200, 3600), 0.12, v * 0.04, 3.01, 0.6); E.noise(o, t, 0.35, v * 0.15, { ft: 'highpass', f: 2800, a: 0.03 }); return 0.5; } },
+  cashtoss: { pri: NORMAL, range: 800, gap: 0.1, play(E, o, t, v) { for (let k = 0; k < 3; k++) bell(E, o, t + R() * 0.25, rr(2200, 3600), 0.12, v * 0.05, 3.01, 0.6); E.noise(o, t, 0.35, v * 0.15, { ft: 'highpass', f: 2800, a: 0.03 }); return 0.5; } },
   pickup: { pri: NORMAL, range: 700, gap: 0.1, play(E, o, t, v) { E.noise(o, t, 0.1, v * 0.15, { ft: 'bandpass', f: 2000, q: 0.7 }); E.tone(o, t + 0.05, 880, 0.08, v * 0.07, { wave: 'pulse25' }); E.tone(o, t + 0.12, 1320, 0.12, v * 0.07, { wave: 'pulse25' }); return 0.26; } },
   deposit: { pri: NORMAL, range: 700, gap: 0.3, play(E, o, t, v) { E.noise(o, t, 0.14, v * 0.2, { ft: 'bandpass', f: 2600, q: 0.8 }); bell(E, o, t + 0.12, 2093, 0.6, v * 0.08, 2.4, 1.2); return 0.75; } },
   pluck: { pri: MINOR, range: 500, gap: 0.15, play(E, o, t, v) { E.noise(o, t, 0.12, v * 0.25, { color: 'pink', ft: 'bandpass', f: 2600, q: 0.6 }); E.tone(o, t + 0.08, vary(600), 0.04, v * 0.1, { type: 'sine', f2: 300 }); return 0.16; } },
-  alarmbell: { pri: MAJOR, range: 1500, gap: 1, send: 0.2, play(E, o, t, v) {   // an electric alarm bell, ringing out (and slowly fading)
-    for (let k = 0; k < 40; k++) { const tt = t + k * 0.055; E.fm(o, tt, 1180, 0.05, v * 0.08 * (1 - k / 48), 2.71, 1.4, { a: 0.001 }); }
+  alarmbell: { pri: MAJOR, range: 1500, gap: 1, send: 0.2, play(E, o, t, v) {   // an electric alarm bell, ringing out (and slowly fading): one bell struck forty times
+    const g = E.fm(o, t, 1180, 2.3, 1, 2.71, 1.4, { env: false, mdecay: 2.3 }).gain;
+    g.setValueAtTime(0.0001, t);
+    for (let k = 0; k < 40; k++) { const tt = t + k * 0.055; g.setValueAtTime(v * 0.08 * (1 - k / 48), tt + 0.001); g.exponentialRampToValueAtTime(0.0001, tt + 0.05); }
     return 2.3;
   } },
   camera: { pri: MINOR, range: 700, gap: 0.4, play(E, o, t, v) { E.tone(o, t, 1500, 0.06, v * 0.08, { type: 'square' }); E.tone(o, t + 0.12, 1500, 0.06, v * 0.08, { type: 'square' }); return 0.2; } },
@@ -270,7 +278,7 @@ export const INSTR = {
   hoopin: { pri: NORMAL, range: 700, gap: 0.3, play(E, o, t, v) { E.tone(o, t, 420, 0.06, v * 0.12, { type: 'triangle', f2: 340 }); E.noise(o, t, 0.2, v * 0.16, { ft: 'bandpass', f: 2200, q: 0.6 }); return 0.22; } },
 
   // ======== the world around you (ambience.js schedules these) ========
-  cricket: { pri: AMBIENT, range: 900, play(E, o, t, v) { const f = vary(4300, 0.08), n = 2 + Math.floor(R() * 3); for (let k = 0; k < n; k++) E.tone(o, t + k * 0.032, f, 0.022, v * 0.03, { type: 'sine' }); return n * 0.032 + 0.05; } },
+  cricket: { pri: AMBIENT, range: 900, cache: 6, cacheLen: 0.25, play(E, o, t, v) { const f = vary(4300, 0.08), n = 2 + Math.floor(R() * 3); for (let k = 0; k < n; k++) E.tone(o, t + k * 0.032, f, 0.022, v * 0.03, { type: 'sine' }); return n * 0.032 + 0.05; } },
   owl: { pri: AMBIENT, range: 1400, send: 0.3, play(E, o, t, v) {   // hoo... hoo-hoo
     const f = rr(330, 380), seq = R() < 0.5 ? [[0, 0.35], [0.6, 0.18], [0.85, 0.42]] : [[0, 0.3], [0.45, 0.5]];
     for (const [d, l] of seq) E.tone(o, t + d, f, l, v * 0.07, { wave: 'soft', a: 0.07, f2: f * 0.93 });
@@ -290,7 +298,7 @@ export const INSTR = {
   } },
   farsiren: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const os = E.tone(o, t, 700, 4, v * 0.03, { type: 'triangle', a: 1, lp: 1400 }); os.frequency.linearRampToValueAtTime(1150, t + 1); os.frequency.linearRampToValueAtTime(700, t + 2); os.frequency.linearRampToValueAtTime(1150, t + 3); os.frequency.linearRampToValueAtTime(800, t + 4); return 4.1; } },
   farhorn: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const d = rr(0.15, 0.35); E.tone(o, t, vary(392, 0.1), d, v * 0.03, { type: 'square', lp: 1000 }); E.tone(o, t, vary(494, 0.1), d, v * 0.025, { type: 'square', lp: 1000 }); return d + 0.05; } },
-  drop: { pri: AMBIENT, range: 320, play(E, o, t, v) { E.noise(o, t, rr(0.008, 0.016), v * 0.07, { color: 'pink', ft: 'bandpass', f: rr(2400, 5200), q: 1.1 }); return 0.03; } },   // (a raindrop: a soft tick, not a chirp)
+  drop: { pri: AMBIENT, range: 320, cache: 6, cacheLen: 0.05, play(E, o, t, v) { E.noise(o, t, rr(0.008, 0.016), v * 0.07, { color: 'pink', ft: 'bandpass', f: rr(2400, 5200), q: 1.1 }); return 0.03; } },   // (a raindrop: a soft tick, not a chirp)
   thunder: { pri: MAJOR, gap: 3, play(E, o, t, v) { E.noise(o, t, 0.25, v * 0.3, { ft: 'highpass', f: 1500 }); E.noise(o, t, 3, v * 0.7, { color: 'brown', ft: 'lowpass', f: 400, f2: 70, a: 0.05 }); E.noise(o, t + 0.3, 2.2, v * 0.5, { color: 'brown', ft: 'lowpass', f: 160, a: 0.4 }); return 3.1; } },
   // ======== under the ground (server/systems/underground.js): the sewers, the cave, mining ========
   // a drip into a pool, ringing off the rock (send: the echo carries it)
@@ -304,7 +312,7 @@ export const INSTR = {
   // grit trickling down before it goes
   trickle: { pri: MINOR, range: 700, gap: 0.5, play(E, o, t, v) { clicks(E, o, t, 18, 1.4, v * 0.08, 2500, 6000, 0.008); E.noise(o, t, 1.4, v * 0.04, { ft: 'highpass', f: 4000, a: 0.3 }); return 1.5; } },
   // a cave full of bats bursting out: wings and squeaks
-  bats: { pri: NORMAL, range: 1300, gap: 1, send: 0.7, play(E, o, t, v) { for (let k = 0; k < 26; k++) E.noise(o, t + R() * 1.6, 0.04, v * 0.12, { ft: 'bandpass', f: vary(1500, 0.3), q: 1.3 }); for (let k = 0; k < 8; k++) { const tt = t + R() * 1.5, f = rr(5200, 8200); E.tone(o, tt, f, 0.03, v * 0.03, { type: 'sine', f2: f * 0.8 }); } return 1.8; } },
+  bats: { pri: NORMAL, range: 1300, gap: 1, send: 0.7, play(E, o, t, v) { E.noise(o, t, 1.6, v * 0.3, { color: 'crackle', ft: 'bandpass', f: 1500, q: 0.9, a: 0.05, hold: 1.2 }); for (let k = 0; k < 3; k++) { const tt = t + R() * 1.5, f = rr(2600, 4100); E.tone(o, tt, f, 0.03, v * 0.03, { type: 'sine', f2: f * 0.8 }); } return 1.8; } },
   // a manhole cover dragged aside, the ladder rungs
   manhole: { pri: NORMAL, range: 900, gap: 0.4, play(E, o, t, v) { E.noise(o, t, 0.35, v * 0.35, { ft: 'bandpass', f: vary(900), q: 0.9 }); E.fm(o, t + 0.3, vary(240), 0.5, v * 0.12, 1.41, 2.5); for (let k = 0; k < 3; k++) E.fm(o, t + 0.55 + k * 0.22, vary(700, 0.1), 0.12, v * 0.05, 2.1, 1.2); return 1.3; } },
   // a rat's squeak (the sewers)

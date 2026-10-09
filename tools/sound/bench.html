@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound bench</title>
+<style>
+  :root { --bg: #111418; --fg: #d8dee6; --dim: #8a96a3; }
+  body { background: var(--bg); color: var(--fg); font: 14px/1.4 ui-monospace, monospace; margin: 16px; }
+  pre { white-space: pre-wrap; color: var(--dim); }
+  button { font: inherit; padding: 6px 12px; }
+</style>
+</head>
+<body>
+<h1>Sound bench</h1>
+<p>The real <code>client/sound/</code> modules rendered on an OfflineAudioContext: a busy 30 s scene (traffic, ten walkers, heavy rain at night
+in a park, a gunfight, an explosion, a siren passing, a nightclub over the road), the ambience beds, and every instrument alone.
+Driven by <code>tools/sound/bench.py</code>; the button runs it here and prints the numbers.</p>
+<p><button id="go">Run</button> <label><input type="checkbox" id="mobile" checked> phone settings</label></p>
+<pre id="out"></pre>
+<script type="module">
+import { runScene, runInstruments, runBeds, runSongs } from './bench.js';
+const out = document.getElementById('out');
+document.getElementById('go').onclick = async () => {
+  out.textContent = 'rendering...';
+  const r = { scene: await runScene({ mobile: document.getElementById('mobile').checked }), beds: await runBeds(), songs: await runSongs(), instruments: await runInstruments() };
+  out.textContent = JSON.stringify(r, null, 1);
+};
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@ const NEAR = 520, MAX_STEPS = 8;
 export class People {
   constructor(E) {
     this.E = E;
-    this.pp = { s: 'pavement', k: 1, soft: false };   // (the step's parameters: one object, reused)
+    this.pp = { s: 'pavement', k: 1, soft: false, mine: false };   // (the step's parameters: one object, reused)
     this.me = null; this.nextMe = 0; this.phoneEl = null;
   }
   update(F, S, dt) {
@@ -36,6 +36,7 @@ export class People {
       const pp = this.pp;
       pp.k = Math.min(1.5, spd / 150);
       pp.soft = spd < 60 || animal;   // (sneaking, strolling: soft; paws and hooves soft too)
+      pp.mine = mine;                 // (your own steps are never cut off, and don't count against the crowd's budget)
       if (p.swim) { if (ph < prev) E.play('stroke', p.rx, p.ry, mine ? 0.9 : 0.6); continue; }
       pp.s = surfaceAt(map, p.rx, p.ry, p.rz || 0);
       E.play('step', p.rx, p.ry, (mine ? 0.95 : 0.6) * (animal ? 0.6 : 1), pp);

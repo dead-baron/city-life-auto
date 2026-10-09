@@ -14,10 +14,13 @@ import { Places } from './places.js';
 import { People } from './people.js';
 import { surfaceAt } from './surface.js';
 
-export function createSound(ctx, prefs, { mobile = false } = {}) {
+// How many one-shot voices and engine voices: few enough for a phone's audio thread (tools/sound/bench.py).
+export const VOICES = Object.freeze({ phone: 12, computer: 22, enginesPhone: 2, enginesComputer: 4 });
+
+export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
   const mix = createMixer(ctx, prefs);
-  const E = new SoundEngine(ctx, mix, { voices: mobile ? 14 : 26 });
-  const veh = new VehicleSounds(E, { voices: mobile ? 3 : 6 });
+  const E = new SoundEngine(ctx, mix, { voices: mobile ? VOICES.phone : VOICES.computer });
+  const veh = new VehicleSounds(E, { voices: mobile ? VOICES.enginesPhone : VOICES.enginesComputer });
   const amb = new Ambience(E);
   const music = new Music(E);
   const places = new Places(E, music);
@@ -42,14 +45,18 @@ export function createSound(ctx, prefs, { mobile = false } = {}) {
       if (name === 'swing' && S && S.me) n = meleeSwing(WEAPONS[S.me.weapon]);   // (your own swing, the moment you press: by what's in your hand)
       if (n && INSTR[n]) E.play(n, undefined, undefined, vol);
     },
-    // a server event: its sound, placed where it happened; main.js's own sfx calls while it handles the event stay
-    // quiet (they'd be the same sound again, with no place). False for a kind the table doesn't know (those play).
+    // a server event: its sound, placed where it happened. main.js's own sfx calls while it handles the event stay
+    // quiet (they'd be the same sound again, with no place) - but only if the event's sound really started (or was
+    // too far off to hear): one dropped for want of a voice or by a rate limit lets the old sound play instead, so
+    // nothing is ever simply lost. False for a kind the table doesn't know (those play).
     event(ev, state) {
       S = state; A.S = state;
+      quiet = false;
       if (!ev || !Object.prototype.hasOwnProperty.call(EVENT_SOUNDS, ev.e)) return false;
       const fn = EVENT_SOUNDS[ev.e];
+      const st = E.stats, p0 = st.played, f0 = st.far, d0 = st.pool + st.gap + st.budget;
       if (fn && state && state.map) { try { fn(ev, A); } catch (e) { console.warn('[sound] event', ev.e, e); } }
-      if (!quiet) { quiet = true; queueMicrotask(unquiet); }
+      if (eventHeard(fn, st.played - p0, st.far - f0, st.pool + st.gap + st.budget - d0)) { quiet = true; queueMicrotask(unquiet); }
       return true;
     },
     // each frame the world is drawn (main.js tickVisuals): the listener, the vehicles, the ambience, people, places
@@ -59,6 +66,8 @@ export function createSound(ctx, prefs, { mobile = false } = {}) {
       lastT = t; lastFrame = performance.now();
       if (!F || !state.map) return;
       E.update(F.sp && F.spec ? F.sp : state.cam, inside);
+      const me = state.ents && state.ents.get(state.myPedId);   // (where you are: your own sounds are never cut off)
+      if (me && me.rx !== undefined) { E.me.x = me.rx; E.me.y = me.ry; E.me.live = true; } else E.me.live = false;
       if (scene === 'title') { veh.silence(); amb.silence(); return; }
       inside = places.update(F, state, t, scene);
       veh.update(F, state, dt);
@@ -79,7 +88,22 @@ export function createSound(ctx, prefs, { mobile = false } = {}) {
       E.update(null, inside);
     },
     setPrefs(p) { mix.apply(p); },
+    // for the debug menu: the voices in use, the engines, the beds, and what became of the sounds asked for
+    status() {
+      const t = ctx.currentTime;
+      return { state: ctx.state, voices: E.pool.active(t) + '/' + E.pool.max, engines: veh.voices.filter((v) => v.veh).length + '/' + veh.voices.length, beds: amb.heard(), ...E.stats };
+    },
   };
-  setInterval(() => { try { sys.pulse(); } catch (e) { console.warn('[sound]', e); } }, 90);
+  if (timer) setInterval(() => { try { sys.pulse(); } catch (e) { console.warn('[sound]', e); } }, 90);
   return sys;
+}
+
+// Was an event heard (pure: test/sound.test.js)? fn: its table entry (null: nothing to hear, its data only); played:
+// how many of its sounds started; far: how many were too far off to hear; dropped: how many found no voice or were
+// rate-limited. Heard (so main.js's old sfx for it stays quiet) if anything started, if there was nothing to play, or
+// if it was simply out of earshot; not heard if something was dropped and nothing played - then the old sound plays
+// in its place.
+export function eventHeard(fn, played, far, dropped) {
+  if (!fn || played > 0) return true;
+  return dropped === 0;
 }

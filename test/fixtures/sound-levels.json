@@ -1,0 +1,1022 @@
+{
+ "categories": {
+  "boom": {
+   "target": -20,
+   "low": -25,
+   "high": -17
+  },
+  "gun": {
+   "target": -25,
+   "low": -28,
+   "high": -22
+  },
+  "fx": {
+   "target": -32,
+   "low": -36,
+   "high": -28
+  },
+  "ui": {
+   "target": -35,
+   "low": -39,
+   "high": -31
+  },
+  "step": {
+   "target": -38,
+   "low": -42,
+   "high": -34
+  },
+  "amb": {
+   "target": -40,
+   "low": -45,
+   "high": -35
+  }
+ },
+ "trimLimits": [
+  -20.0,
+  20.0
+ ],
+ "peakMax": 3.0,
+ "measure": "loudest 200 ms, A-weighted RMS, dB below full scale; unplaced, vol 1, dry, 48 kHz (tools/sound/bench.js)",
+ "instruments": {
+  "airbrake": {
+   "cat": "fx",
+   "loud": -23.6,
+   "peak": -6.7,
+   "trim": -8.4,
+   "after": -32.0
+  },
+  "alarmbell": {
+   "cat": "fx",
+   "loud": -36.1,
+   "peak": -22.3,
+   "trim": 4.1,
+   "after": -32.0
+  },
+  "alert": {
+   "cat": "ui",
+   "loud": -37.4,
+   "peak": -18.8,
+   "trim": 2.4,
+   "after": -35.0
+  },
+  "babble": {
+   "cat": "fx",
+   "loud": -49.7,
+   "peak": -26.7,
+   "trim": 17.7,
+   "after": -32.0
+  },
+  "bad": {
+   "cat": "ui",
+   "loud": -39.2,
+   "peak": -18.5,
+   "trim": 4.2,
+   "after": -35.0
+  },
+  "baton": {
+   "cat": "fx",
+   "loud": -38.7,
+   "peak": -10.7,
+   "trim": 6.7,
+   "after": -32.0
+  },
+  "bats": {
+   "cat": "fx",
+   "loud": -42.1,
+   "peak": -18.5,
+   "trim": 10.1,
+   "after": -32.0
+  },
+  "bell": {
+   "cat": "fx",
+   "loud": -32,
+   "peak": -18.4,
+   "trim": 0,
+   "after": -32
+  },
+  "bellow": {
+   "cat": "fx",
+   "loud": -34.2,
+   "peak": -17.1,
+   "trim": 2.2,
+   "after": -32.0
+  },
+  "bikebell": {
+   "cat": "fx",
+   "loud": -29,
+   "peak": -19.4,
+   "trim": -3,
+   "after": -32
+  },
+  "bird": {
+   "cat": "amb",
+   "loud": -40.7,
+   "peak": -29.2,
+   "trim": 0.7,
+   "after": -40.0
+  },
+  "bite": {
+   "cat": "ui",
+   "loud": -33.3,
+   "peak": -14.6,
+   "trim": -1.7,
+   "after": -35.0
+  },
+  "bodyfall": {
+   "cat": "fx",
+   "loud": -41.1,
+   "peak": -7.7,
+   "trim": 9.1,
+   "after": -32.0
+  },
+  "bonk": {
+   "cat": "fx",
+   "loud": -36,
+   "peak": -5.3,
+   "trim": 4,
+   "after": -32
+  },
+  "burner": {
+   "cat": "fx",
+   "loud": -34.5,
+   "peak": -18.7,
+   "trim": 2.5,
+   "after": -32.0
+  },
+  "camera": {
+   "cat": "fx",
+   "loud": -35.4,
+   "peak": -22.2,
+   "trim": 3.4,
+   "after": -32.0
+  },
+  "cardoor": {
+   "cat": "fx",
+   "loud": -38.4,
+   "peak": -7.6,
+   "trim": 6.4,
+   "after": -32.0
+  },
+  "cashin": {
+   "cat": "ui",
+   "loud": -29.5,
+   "peak": -19.2,
+   "trim": -5.5,
+   "after": -35.0
+  },
+  "cashout": {
+   "cat": "ui",
+   "loud": -41.6,
+   "peak": -24.4,
+   "trim": 6.6,
+   "after": -35.0
+  },
+  "cashtoss": {
+   "cat": "fx",
+   "loud": -35.2,
+   "peak": -23.9,
+   "trim": 3.2,
+   "after": -32.0
+  },
+  "cast": {
+   "cat": "fx",
+   "loud": -37.2,
+   "peak": -20.3,
+   "trim": 5.2,
+   "after": -32.0
+  },
+  "cavedrip": {
+   "cat": "amb",
+   "loud": -39.4,
+   "peak": -23.1,
+   "trim": -0.6,
+   "after": -40.0
+  },
+  "chainsaw": {
+   "cat": "fx",
+   "loud": -34.5,
+   "peak": -12.5,
+   "trim": 2.5,
+   "after": -32.0
+  },
+  "checkpoint": {
+   "cat": "ui",
+   "loud": -40.9,
+   "peak": -22.4,
+   "trim": 5.9,
+   "after": -35.0
+  },
+  "chop": {
+   "cat": "fx",
+   "loud": -36.5,
+   "peak": -6.1,
+   "trim": 4.5,
+   "after": -32.0
+  },
+  "churchbell": {
+   "cat": "fx",
+   "loud": -25.8,
+   "peak": -10.3,
+   "trim": -6.2,
+   "after": -32.0
+  },
+  "churchbells": {
+   "cat": "fx",
+   "loud": -25.6,
+   "peak": -10.3,
+   "trim": -6.4,
+   "after": -32.0
+  },
+  "clack": {
+   "cat": "amb",
+   "loud": -37.5,
+   "peak": -12.1,
+   "trim": -2.5,
+   "after": -40.0
+  },
+  "clang": {
+   "cat": "fx",
+   "loud": -29.6,
+   "peak": -12.2,
+   "trim": -2.4,
+   "after": -32.0
+  },
+  "clank": {
+   "cat": "fx",
+   "loud": -33.7,
+   "peak": -14.1,
+   "trim": 1.7,
+   "after": -32.0
+  },
+  "click": {
+   "cat": "ui",
+   "loud": -43.9,
+   "peak": -19.6,
+   "trim": 8.9,
+   "after": -35.0
+  },
+  "coin": {
+   "cat": "ui",
+   "loud": -29.2,
+   "peak": -18,
+   "trim": -5.8,
+   "after": -35.0
+  },
+  "crackle": {
+   "cat": "amb",
+   "loud": -52.1,
+   "peak": -21.2,
+   "trim": 12.1,
+   "after": -40.0
+  },
+  "crash": {
+   "cat": "fx",
+   "loud": -26,
+   "peak": -1.2,
+   "trim": -6,
+   "after": -32
+  },
+  "cricket": {
+   "cat": "amb",
+   "loud": -48,
+   "peak": -30.6,
+   "trim": 8,
+   "after": -40
+  },
+  "cut": {
+   "cat": "fx",
+   "loud": -37,
+   "peak": -14.4,
+   "trim": 5,
+   "after": -32
+  },
+  "death": {
+   "cat": "ui",
+   "loud": -30.9,
+   "peak": -13.6,
+   "trim": -4.1,
+   "after": -35.0
+  },
+  "deposit": {
+   "cat": "fx",
+   "loud": -30.1,
+   "peak": -20.4,
+   "trim": -1.9,
+   "after": -32.0
+  },
+  "dog": {
+   "cat": "amb",
+   "loud": -44.5,
+   "peak": -24.7,
+   "trim": 4.5,
+   "after": -40.0
+  },
+  "doorbell": {
+   "cat": "fx",
+   "loud": -25.6,
+   "peak": -18.3,
+   "trim": -6.4,
+   "after": -32.0
+  },
+  "douse": {
+   "cat": "fx",
+   "loud": -32.5,
+   "peak": -12.9,
+   "trim": 0.5,
+   "after": -32.0
+  },
+  "drip": {
+   "cat": "amb",
+   "loud": -35.6,
+   "peak": -16.7,
+   "trim": -4.4,
+   "after": -40.0
+  },
+  "drop": {
+   "cat": "amb",
+   "loud": -64.7,
+   "peak": -36.4,
+   "trim": 20.0,
+   "after": -44.7
+  },
+  "enginestart": {
+   "cat": "fx",
+   "loud": -35.5,
+   "peak": -9.5,
+   "trim": 3.5,
+   "after": -32.0
+  },
+  "explosion": {
+   "cat": "boom",
+   "loud": -18.7,
+   "peak": 5.7,
+   "trim": -2.7,
+   "after": -21.4
+  },
+  "farhorn": {
+   "cat": "amb",
+   "loud": -42.1,
+   "peak": -25,
+   "trim": 2.1,
+   "after": -40.0
+  },
+  "farsiren": {
+   "cat": "amb",
+   "loud": -33.8,
+   "peak": -30.5,
+   "trim": -6.2,
+   "after": -40.0
+  },
+  "flarestrike": {
+   "cat": "fx",
+   "loud": -31.6,
+   "peak": -17.8,
+   "trim": -0.4,
+   "after": -32.0
+  },
+  "flutter": {
+   "cat": "amb",
+   "loud": -43.1,
+   "peak": -25.9,
+   "trim": 3.1,
+   "after": -40.0
+  },
+  "foliage": {
+   "cat": "fx",
+   "loud": -33.8,
+   "peak": -18.8,
+   "trim": 1.8,
+   "after": -32.0
+  },
+  "gate": {
+   "cat": "fx",
+   "loud": -33,
+   "peak": -18.5,
+   "trim": 1,
+   "after": -32
+  },
+  "gatearm": {
+   "cat": "fx",
+   "loud": -41,
+   "peak": -21,
+   "trim": 9,
+   "after": -32
+  },
+  "glass": {
+   "cat": "fx",
+   "loud": -32.3,
+   "peak": -15.9,
+   "trim": 0.3,
+   "after": -32.0
+  },
+  "goal": {
+   "cat": "ui",
+   "loud": -36.1,
+   "peak": -20.9,
+   "trim": 1.1,
+   "after": -35.0
+  },
+  "golfcup": {
+   "cat": "fx",
+   "loud": -32.8,
+   "peak": -17.6,
+   "trim": 0.8,
+   "after": -32.0
+  },
+  "golfhit": {
+   "cat": "fx",
+   "loud": -36.1,
+   "peak": -15.5,
+   "trim": 4.1,
+   "after": -32.0
+  },
+  "good": {
+   "cat": "ui",
+   "loud": -26.3,
+   "peak": -16.7,
+   "trim": -8.7,
+   "after": -35.0
+  },
+  "growl": {
+   "cat": "fx",
+   "loud": -37.3,
+   "peak": -11.9,
+   "trim": 5.3,
+   "after": -32.0
+  },
+  "gull": {
+   "cat": "amb",
+   "loud": -44.2,
+   "peak": -28.1,
+   "trim": 4.2,
+   "after": -40.0
+  },
+  "gun_pistol": {
+   "cat": "gun",
+   "loud": -27.8,
+   "peak": -2.6,
+   "trim": 2.8,
+   "after": -25.0
+  },
+  "gun_revolver": {
+   "cat": "gun",
+   "loud": -27.5,
+   "peak": -3.1,
+   "trim": 2.5,
+   "after": -25.0
+  },
+  "gun_rifle": {
+   "cat": "gun",
+   "loud": -28.4,
+   "peak": -2.5,
+   "trim": 3.4,
+   "after": -25.0
+  },
+  "gun_rocket": {
+   "cat": "gun",
+   "loud": -29.9,
+   "peak": -4.1,
+   "trim": 4.9,
+   "after": -25.0
+  },
+  "gun_shotgun": {
+   "cat": "gun",
+   "loud": -26.9,
+   "peak": -0.8,
+   "trim": 1.9,
+   "after": -25.0
+  },
+  "gun_silenced": {
+   "cat": "fx",
+   "loud": -37.7,
+   "peak": -13.7,
+   "trim": 5.7,
+   "after": -32.0
+  },
+  "gun_smg": {
+   "cat": "gun",
+   "loud": -36,
+   "peak": -8.1,
+   "trim": 11,
+   "after": -25
+  },
+  "gun_sniper": {
+   "cat": "gun",
+   "loud": -27.2,
+   "peak": -0.6,
+   "trim": 2.2,
+   "after": -25.0
+  },
+  "gush": {
+   "cat": "fx",
+   "loud": -24,
+   "peak": -11.4,
+   "trim": -8,
+   "after": -32
+  },
+  "heal": {
+   "cat": "fx",
+   "loud": -33.1,
+   "peak": -24.9,
+   "trim": 1.1,
+   "after": -32.0
+  },
+  "hit": {
+   "cat": "fx",
+   "loud": -46,
+   "peak": -14.3,
+   "trim": 14,
+   "after": -32
+  },
+  "honk": {
+   "cat": "fx",
+   "loud": -39.7,
+   "peak": -22.4,
+   "trim": 7.7,
+   "after": -32.0
+  },
+  "hoopin": {
+   "cat": "fx",
+   "loud": -37.7,
+   "peak": -15.3,
+   "trim": 5.7,
+   "after": -32.0
+  },
+  "housedoor": {
+   "cat": "fx",
+   "loud": -39.7,
+   "peak": -9.9,
+   "trim": 7.7,
+   "after": -32.0
+  },
+  "hum": {
+   "cat": "fx",
+   "loud": -40.3,
+   "peak": -16.3,
+   "trim": 8.3,
+   "after": -32.0
+  },
+  "ignite": {
+   "cat": "fx",
+   "loud": -36,
+   "peak": -15,
+   "trim": 4,
+   "after": -32
+  },
+  "impact": {
+   "cat": "fx",
+   "loud": -37,
+   "peak": -16.2,
+   "trim": 5,
+   "after": -32
+  },
+  "impact_flesh": {
+   "cat": "fx",
+   "loud": -41.1,
+   "peak": -9.3,
+   "trim": 9.1,
+   "after": -32.0
+  },
+  "impact_wood": {
+   "cat": "fx",
+   "loud": -36.7,
+   "peak": -8.3,
+   "trim": 4.7,
+   "after": -32.0
+  },
+  "kick": {
+   "cat": "fx",
+   "loud": -37.7,
+   "peak": -8.7,
+   "trim": 5.7,
+   "after": -32.0
+  },
+  "knockdown": {
+   "cat": "fx",
+   "loud": -37.6,
+   "peak": -5.1,
+   "trim": 5.6,
+   "after": -32.0
+  },
+  "leaves": {
+   "cat": "step",
+   "loud": -38.9,
+   "peak": -21,
+   "trim": 0.9,
+   "after": -38.0
+  },
+  "lightclick": {
+   "cat": "fx",
+   "loud": -48.6,
+   "peak": -22.5,
+   "trim": 16.6,
+   "after": -32.0
+  },
+  "manhole": {
+   "cat": "fx",
+   "loud": -34.9,
+   "peak": -15.6,
+   "trim": 2.9,
+   "after": -32.0
+  },
+  "notify": {
+   "cat": "ui",
+   "loud": -34.7,
+   "peak": -22,
+   "trim": -0.3,
+   "after": -35.0
+  },
+  "orefree": {
+   "cat": "fx",
+   "loud": -35.2,
+   "peak": -11,
+   "trim": 3.2,
+   "after": -32.0
+  },
+  "owl": {
+   "cat": "amb",
+   "loud": -38.1,
+   "peak": -23.1,
+   "trim": -1.9,
+   "after": -40.0
+  },
+  "paper": {
+   "cat": "fx",
+   "loud": -36.6,
+   "peak": -16.5,
+   "trim": 4.6,
+   "after": -32.0
+  },
+  "phoneclose": {
+   "cat": "ui",
+   "loud": -37.9,
+   "peak": -23.2,
+   "trim": 2.9,
+   "after": -35.0
+  },
+  "phoneopen": {
+   "cat": "ui",
+   "loud": -36,
+   "peak": -21.4,
+   "trim": 1,
+   "after": -35
+  },
+  "pickaxe": {
+   "cat": "fx",
+   "loud": -35.2,
+   "peak": -17.5,
+   "trim": 3.2,
+   "after": -32.0
+  },
+  "pickup": {
+   "cat": "fx",
+   "loud": -39.7,
+   "peak": -21.9,
+   "trim": 7.7,
+   "after": -32.0
+  },
+  "pluck": {
+   "cat": "fx",
+   "loud": -41,
+   "peak": -20.1,
+   "trim": 9,
+   "after": -32
+  },
+  "poof": {
+   "cat": "fx",
+   "loud": -41.2,
+   "peak": -21.4,
+   "trim": 9.2,
+   "after": -32.0
+  },
+  "punch": {
+   "cat": "fx",
+   "loud": -36.9,
+   "peak": -5.8,
+   "trim": 4.9,
+   "after": -32.0
+  },
+  "putt": {
+   "cat": "fx",
+   "loud": -41.5,
+   "peak": -20.4,
+   "trim": 9.5,
+   "after": -32.0
+  },
+  "racego": {
+   "cat": "ui",
+   "loud": -28.5,
+   "peak": -21.1,
+   "trim": -6.5,
+   "after": -35.0
+  },
+  "reloadin": {
+   "cat": "ui",
+   "loud": -35.9,
+   "peak": -16,
+   "trim": 0.9,
+   "after": -35.0
+  },
+  "reloadout": {
+   "cat": "ui",
+   "loud": -38.5,
+   "peak": -15.6,
+   "trim": 3.5,
+   "after": -35.0
+  },
+  "revive": {
+   "cat": "fx",
+   "loud": -41.3,
+   "peak": -7.5,
+   "trim": 9.3,
+   "after": -32.0
+  },
+  "ricochet": {
+   "cat": "fx",
+   "loud": -35.7,
+   "peak": -16.7,
+   "trim": 3.7,
+   "after": -32.0
+  },
+  "ridebell": {
+   "cat": "ui",
+   "loud": -29.4,
+   "peak": -20,
+   "trim": -5.6,
+   "after": -35.0
+  },
+  "rockfall": {
+   "cat": "boom",
+   "loud": -29.8,
+   "peak": -3.1,
+   "trim": 6.1,
+   "after": -23.7
+  },
+  "roll": {
+   "cat": "fx",
+   "loud": -39.1,
+   "peak": -7.6,
+   "trim": 7.1,
+   "after": -32.0
+  },
+  "rollerdoor": {
+   "cat": "fx",
+   "loud": -40.2,
+   "peak": -16.8,
+   "trim": 8.2,
+   "after": -32.0
+  },
+  "rubble": {
+   "cat": "fx",
+   "loud": -33.9,
+   "peak": -15,
+   "trim": 1.9,
+   "after": -32.0
+  },
+  "scrape": {
+   "cat": "fx",
+   "loud": -36.6,
+   "peak": -21.9,
+   "trim": 4.6,
+   "after": -32.0
+  },
+  "scream": {
+   "cat": "fx",
+   "loud": -33.4,
+   "peak": -19.1,
+   "trim": 1.4,
+   "after": -32.0
+  },
+  "screech": {
+   "cat": "fx",
+   "loud": -34,
+   "peak": -19.2,
+   "trim": 2,
+   "after": -32
+  },
+  "sear": {
+   "cat": "fx",
+   "loud": -36.5,
+   "peak": -14.8,
+   "trim": 4.5,
+   "after": -32.0
+  },
+  "shutter": {
+   "cat": "fx",
+   "loud": -44.2,
+   "peak": -16.9,
+   "trim": 12.2,
+   "after": -32.0
+  },
+  "slash": {
+   "cat": "fx",
+   "loud": -37.4,
+   "peak": -17.5,
+   "trim": 5.4,
+   "after": -32.0
+  },
+  "slidingdoor": {
+   "cat": "amb",
+   "loud": -46.2,
+   "peak": -29.2,
+   "trim": 6.2,
+   "after": -40.0
+  },
+  "spikes": {
+   "cat": "fx",
+   "loud": -39.6,
+   "peak": -18.9,
+   "trim": 7.6,
+   "after": -32.0
+  },
+  "splash": {
+   "cat": "fx",
+   "loud": -28,
+   "peak": -10.4,
+   "trim": -4,
+   "after": -32
+  },
+  "spray": {
+   "cat": "fx",
+   "loud": -36.3,
+   "peak": -18.9,
+   "trim": 4.3,
+   "after": -32.0
+  },
+  "squeak": {
+   "cat": "amb",
+   "loud": -44.3,
+   "peak": -28,
+   "trim": 4.3,
+   "after": -40.0
+  },
+  "stab": {
+   "cat": "fx",
+   "loud": -40.3,
+   "peak": -12.7,
+   "trim": 8.3,
+   "after": -32.0
+  },
+  "stardown": {
+   "cat": "ui",
+   "loud": -40.8,
+   "peak": -23.2,
+   "trim": 5.8,
+   "after": -35.0
+  },
+  "starup": {
+   "cat": "ui",
+   "loud": -35,
+   "peak": -17.1,
+   "trim": 0,
+   "after": -35
+  },
+  "step": {
+   "cat": "step",
+   "loud": -43.9,
+   "peak": -13.7,
+   "trim": 5.9,
+   "after": -38.0
+  },
+  "stroke": {
+   "cat": "step",
+   "loud": -32.6,
+   "peak": -16.7,
+   "trim": -5.4,
+   "after": -38.0
+  },
+  "swish": {
+   "cat": "fx",
+   "loud": -35.4,
+   "peak": -18.5,
+   "trim": 3.4,
+   "after": -32.0
+  },
+  "taser": {
+   "cat": "fx",
+   "loud": -36.4,
+   "peak": -15.1,
+   "trim": 4.4,
+   "after": -32.0
+  },
+  "thud": {
+   "cat": "fx",
+   "loud": -40.6,
+   "peak": -7.2,
+   "trim": 8.6,
+   "after": -32.0
+  },
+  "thunder": {
+   "cat": "boom",
+   "loud": -27.2,
+   "peak": -8.1,
+   "trim": 7.2,
+   "after": -20.0
+  },
+  "thwack": {
+   "cat": "fx",
+   "loud": -40.1,
+   "peak": -12.6,
+   "trim": 8.1,
+   "after": -32.0
+  },
+  "trainhorn": {
+   "cat": "fx",
+   "loud": -24.2,
+   "peak": -11,
+   "trim": -7.8,
+   "after": -32.0
+  },
+  "trainhornshort": {
+   "cat": "fx",
+   "loud": -25.1,
+   "peak": -12.7,
+   "trim": -6.9,
+   "after": -32.0
+  },
+  "treecrack": {
+   "cat": "fx",
+   "loud": -31.8,
+   "peak": -14.6,
+   "trim": -0.2,
+   "after": -32.0
+  },
+  "treefall": {
+   "cat": "boom",
+   "loud": -30.6,
+   "peak": -4.4,
+   "trim": 7.4,
+   "after": -23.2
+  },
+  "trickle": {
+   "cat": "amb",
+   "loud": -47.3,
+   "peak": -29.2,
+   "trim": 7.3,
+   "after": -40.0
+  },
+  "twang": {
+   "cat": "fx",
+   "loud": -39.6,
+   "peak": -10.1,
+   "trim": 7.6,
+   "after": -32.0
+  },
+  "twig": {
+   "cat": "step",
+   "loud": -35.1,
+   "peak": -3.2,
+   "trim": -2.9,
+   "after": -38.0
+  },
+  "tyrepop": {
+   "cat": "fx",
+   "loud": -31.5,
+   "peak": -7.8,
+   "trim": -0.5,
+   "after": -32.0
+  },
+  "whoosh": {
+   "cat": "fx",
+   "loud": -40.1,
+   "peak": -21.6,
+   "trim": 8.1,
+   "after": -32.0
+  },
+  "whoosh_blade": {
+   "cat": "fx",
+   "loud": -37.3,
+   "peak": -19.6,
+   "trim": 5.3,
+   "after": -32.0
+  },
+  "whoosh_heavy": {
+   "cat": "fx",
+   "loud": -39.7,
+   "peak": -23.2,
+   "trim": 7.7,
+   "after": -32.0
+  },
+  "woodcrunch": {
+   "cat": "fx",
+   "loud": -37.1,
+   "peak": -12.8,
+   "trim": 5.1,
+   "after": -32.0
+  },
+  "yelp": {
+   "cat": "fx",
+   "loud": -42,
+   "peak": -21,
+   "trim": 10,
+   "after": -32
+  },
+  "zing": {
+   "cat": "fx",
+   "loud": -34,
+   "peak": -17.4,
+   "trim": 2,
+   "after": -32
+  }
+ }
+}
