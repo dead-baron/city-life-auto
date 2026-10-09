@@ -245,7 +245,7 @@ const darkAt = (m) => (m < 720 ? 1 - smooth((m - 330) / 70) : smooth((m - 1180) 
 const C = {
   head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], flash: [1, 0.9, 0.67],
   sodium: [1, 0.73, 0.43], window: [1, 0.77, 0.47], warm: [1, 0.8, 0.55], white: [0.92, 0.94, 1], moon: [0.6, 0.67, 1], cyan: [0.47, 0.9, 1],
-  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1],
+  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1], bolt: [0.74, 0.82, 1],
   rare: [0.35, 0.65, 1], epic: [0.78, 0.47, 1], gold: [1, 0.8, 0.38],   // the dropped backpacks' glows
 };
 const CUT_A = { cut: 'a' }, CUT_B = { cut: 'b' };   // (the plasma blade's two halves: peds.js pedSprite opt)
@@ -1987,6 +1987,10 @@ export class World2 {
       else if (f.kind === 'plasma') this._light(f.x, f.y, 26, f.r, C.plasma, 2.6 * Math.min(1.4, f.t * 5));   // (the hooded stranger, gone in a flash)
       else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
     }
+    // lightning coming down near you (render/weather.js strikeLight): the ground lit blue-white where it strikes, as
+    // its flash flickers
+    const SL = S.wx && S.wx.strikeLight;
+    if (SL && SL.k > 0.02) this._light(SL.x, SL.y, 60, 620, C.bolt, 3.6 * SL.k);
     // the plasma blade gives off its own blue light in the hand
     for (const p of F.peds) {
       if ((p.extra | 0) !== PLASMA_I || (p.flags & (PF.INVEH | PF.DEAD)) || p.blink === 3 || !inV(p.rx, p.ry)) continue;

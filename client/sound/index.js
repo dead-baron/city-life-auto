@@ -38,12 +38,13 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
   const sys = {
     E, mix, veh, amb, music, places, people,
     get scene() { return scene; },
-    // main.js's own sfx(name, vol) calls: their old names, no place (vol already has the distance in it)
-    legacy(name, vol) {
+    // main.js's own sfx(name, vol, p) calls: their old names, no place (vol already has the distance in it; p: the
+    // recipe's parameters - the thunder's distance and strength)
+    legacy(name, vol, p = null) {
       if (quiet || E.isMuted(name)) return;
       let n = name in LEGACY ? LEGACY[name] : name;
       if (name === 'swing' && S && S.me) n = meleeSwing(WEAPONS[S.me.weapon]);   // (your own swing, the moment you press: by what's in your hand)
-      if (n && INSTR[n]) E.play(n, undefined, undefined, vol);
+      if (n && INSTR[n]) E.play(n, undefined, undefined, vol, p);
     },
     // a server event: its sound, placed where it happened. main.js's own sfx calls while it handles the event stay
     // quiet (they'd be the same sound again, with no place) - but only if the event's sound really started (or was

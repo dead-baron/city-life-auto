@@ -4753,3 +4753,39 @@ The owner: "all the trees kind of move in a big wave ... Can we make it so leave
 - The classic renderer's plants (`wind.sway`) ride the same gust patches.
 - **Checked in the browser** (the wind forced to 0.35, a dense wood): the change from one frame to the next, before, was broad diagonal bands sweeping across the whole screen. Now it is scattered crowns and clusters, a few here and a few there.
 - **Tests:** `test/wind.test.js` (3 new). Over a screen of trees, a tree's best time-shifted match with its neighbour is 0.59-0.64 (it was 0.87-0.90), plain correlation is under 0.1, and the size of their swings varies by 0.3-0.36 (it was 0.03). Clusters a branch apart move more alike than stands apart. A gust passes over a spot, and gusts cover 4-50% of a screen on average. The gusts travel at most 400 px/s and the flutter clock runs at most twice real time, whatever the clock does. The gust fields, in art v2 and in the classic renderer, repeat over the ring gd wraps at.
+
+## 2026-10-09 · Lightning of three kinds, storms of their own, thunder when its sound gets to you (task #389)
+The owner asked for lightning that varies: sometimes a flash in the sky only, sometimes a bolt in the sky, sometimes a strike on a spot on the screen with the ground lit. Bolts should branch differently and come in different places. Storms should vary in strength: rare bursts, usually one or two flashes, sometimes only distant ones. The thunder should come later the further off the lightning is.
+- **What it was** (client only, `Math.random`): once the streets were wet, a flash and a bolt every 25-85 s of rain, a near strike one time in four. It was different on every screen. The thunder came 0.15-2.5 s later whatever the distance, and it was the same sound every time.
+- **The storm now comes from the shared clock** (`client/render/lightning.js` stormSpell: spells of 150 s on the clock counting the days, from the fog's work). Each spell is hashed to a mood:
+  - 45%: no lightning.
+  - 24%: only distant flashes, one to three, 5-14 km off.
+  - 21%: a burst, one flash or two within 11 s, 0.8-5 km off.
+  - 10%: a storm, two or three bursts of one to three, 0.3-3 km off, with strikes among them.
+  Everyone sees the same flashes at the same moment, but only while it rains (the server still decides that). That is about 30 an hour of rain, half what it was, and in bursts.
+- **Three kinds:**
+  - **A flash in the clouds:** no bolt, a dim glow over the scene.
+  - **A bolt off in the distance:** down out of the clouds on the storm's side of the screen (each spell has a bearing), thinner the further off. A third of them run across the clouds instead, sideways and branching in the top of the sky.
+  - **A strike near you:** down to a spot on the ground. That spot is the nearest to you of the points it hits in the cells round you, so whoever is near you sees it land in the same place. It lands on your screen two times in three. In art v2 the ground round it is lit blue-white (`host.js`, a light that flickers with the flash), over the overlay's glow.
+  Every bolt branches its own way from its seed (`boltPath` takes where a strike lands, where across the screen a far bolt is, its width, or across the clouds).
+- **The flash flickers** (`flashAt`, from its seed): two to four strokes 60-160 ms apart for a strike, the channel going nearly dark between them, the last one lingering. It is as bright as its kind and distance make it.
+- **Thunder comes when its sound gets to you:** distance / 340 m/s, at 32 px = 1 m (1 tile = 1 m, as the tutorial counts km/h). A strike beside you cracks at once, a bolt 2 km off rumbles 6 s later, and a distant flash's rumble comes half a minute later.
+  - Its loudness falls with distance (`thunderVol`): full within about 300 m, 0.45 at 3 km, 0.2 at 9 km.
+  - Its sound changes too (`client/sound/instruments.js` thunder, from p.d and p.k). Close by: the crack and a hard boom. Further off, the crack dulls and goes, the boom is lower, and the rumble rolls on longer in one or two waves. Far off: a low rumble swelling slowly.
+  - Measured again for its level at 900 m (`tools/sound/bench.js` PARAMS): the trim went from 7.2 to 8.7 dB, and its category's target is unchanged. A strike beside you peaks about as an explosion does.
+  - `sfx()` now passes on the recipe's parameters (`client/audio.js`, `sound/index.js` legacy).
+- **Debug menu** (Weather), your screen only: a strike near you, a bolt in the distance, a flash in the clouds, a thunderstorm while it rains, and storms back to the clock.
+- **Checked in the browser** (rain at 23:00 and at 10:00 in Westport, each flash held at its brightest for the shot):
+  - A strike coming down onto the street, the ground lit round where it hits.
+  - A bolt in the top corner on the storm's side, and a thinner one 5 km off on the other side.
+  - A branching bolt across the clouds.
+  - A flash in the clouds lighting the street a little.
+  - By day the same, fainter.
+- **Tests:** `test/lightning.test.js` (new, 6):
+  - Over 6000 spells: the moods 45/24/21/10%, each kind at its distances, bursts of one or two within 11 s, 20-40 flashes an hour of rain, and a spell worked out again comes out the same.
+  - Two players, at 60 and 23 fps, one joining 100 s later, see the same flashes at the same moments, each once. There are none while it's dry, and no backlog after a jump.
+  - Strikes land within 30 m of you, on your screen more than 55% of the time, and on the same spot for someone a few steps away more than 65% of the time.
+  - A strike re-strikes, every flash is gone within 1.6 s, and a near one is the brightest.
+  - Thunder is heard distance / 340 s after its flash (within a frame), under 0.1 s for a strike beside you, and quieter the further off.
+  - A bolt across the clouds stays in the top half, a far bolt is on the storm's side and ends high, and a strike lands where it is told.
+- **Page code:** `lightning.js` and `weather.js` add 4.6 KB gzipped (706 -> 711 KB of 720).

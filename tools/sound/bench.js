@@ -380,7 +380,7 @@ export async function runSongs({ seconds = 10 } = {}) {
 }
 
 // ---- every instrument alone: unplaced, vol 1, dry (no echo), through its strip at unity ----
-const PARAMS = { step: { s: 'pavement', k: 1 }, impact: { s: 'pavement' }, explosion: { r: 110 }, crash: { p: 0.6 }, splash: { n: 10 }, churchbells: { n: 3 }, clack: { n: 2 }, pickaxe: { t: 2 }, treefall: { s: 2 }, babble: { mood: 'talk' } };
+const PARAMS = { step: { s: 'pavement', k: 1 }, impact: { s: 'pavement' }, explosion: { r: 110 }, crash: { p: 0.6 }, splash: { n: 10 }, churchbells: { n: 3 }, clack: { n: 2 }, pickaxe: { t: 2 }, treefall: { s: 2 }, babble: { mood: 'talk' }, thunder: { d: 900, k: 1 } };
 export async function runInstruments({ names = Object.keys(INSTR), raw = false } = {}) {
   const res = {};
   for (const name of names) {

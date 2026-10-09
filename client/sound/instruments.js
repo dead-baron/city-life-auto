@@ -299,7 +299,25 @@ export const INSTR = {
   farsiren: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const os = E.tone(o, t, 700, 4, v * 0.03, { type: 'triangle', a: 1, lp: 1400 }); os.frequency.linearRampToValueAtTime(1150, t + 1); os.frequency.linearRampToValueAtTime(700, t + 2); os.frequency.linearRampToValueAtTime(1150, t + 3); os.frequency.linearRampToValueAtTime(800, t + 4); return 4.1; } },
   farhorn: { pri: AMBIENT, range: 6000, play(E, o, t, v) { const d = rr(0.15, 0.35); E.tone(o, t, vary(392, 0.1), d, v * 0.03, { type: 'square', lp: 1000 }); E.tone(o, t, vary(494, 0.1), d, v * 0.025, { type: 'square', lp: 1000 }); return d + 0.05; } },
   drop: { pri: AMBIENT, range: 320, cache: 6, cacheLen: 0.05, play(E, o, t, v) { E.noise(o, t, rr(0.008, 0.016), v * 0.07, { color: 'pink', ft: 'bandpass', f: rr(2400, 5200), q: 1.1 }); return 0.03; } },   // (a raindrop: a soft tick, not a chirp)
-  thunder: { pri: MAJOR, gap: 3, play(E, o, t, v) { E.noise(o, t, 0.25, v * 0.3, { ft: 'highpass', f: 1500 }); E.noise(o, t, 3, v * 0.7, { color: 'brown', ft: 'lowpass', f: 400, f2: 70, a: 0.05 }); E.noise(o, t + 0.3, 2.2, v * 0.5, { color: 'brown', ft: 'lowpass', f: 160, a: 0.4 }); return 3.1; } },
+  // thunder (render/weather.js, when the sound of the storm's lightning gets to you): p.d how far off it was (m), p.k
+  // how strong (0..1); its loudness comes with its vol (render/lightning.js thunderVol). Close by, the channel's sharp
+  // crack and a hard boom; further off the crack dulls to a clap and goes (the air takes the highs), the boom is lower
+  // and softer and the rumble rolls on longer, in waves (the bolt's length reaching you bit by bit); far off, only a
+  // low rumble swelling slowly. (Measured for its level at 900 m, full strength: tools/sound/bench.js.)
+  thunder: { pri: MAJOR, gap: 0.7, play(E, o, t, v, p) {
+    const d = p.d ?? 900, k = p.k ?? 1;
+    const nr = Math.max(0, 1 - d / 450), fr = Math.min(1, Math.max(0, (d - 700) / 7000));   // how near (under 450 m), how far (past 700 m)
+    const f = vary(430 - 220 * fr, 0.1), len = 2.4 + 3 * fr + 0.6 * k;
+    if (fr < 0.6) E.noise(o, t, 0.12 + 0.2 * (1 - nr), v * (0.16 + 0.24 * nr) * (1 - fr / 0.6), { ft: 'highpass', f: vary(900 + 1200 * nr, 0.12), a: 0.002 + 0.03 * (1 - nr) });
+    E.noise(o, t + 0.02, len, v * (0.7 - 0.25 * fr - 0.15 * nr), { color: 'brown', ft: 'lowpass', f: f * (1 + 1.4 * nr), f2: 60, a: 0.04 + 0.7 * fr });
+    let end = len + 0.02;
+    for (let i = 0, n = R() < 0.4 + 0.4 * fr ? 2 : 1; i < n; i++) {
+      const at = (0.3 + rr(0, 0.5) + 0.9 * i) * (1 + 1.2 * fr), dur = len * rr(0.6, 0.85);
+      E.noise(o, t + at, dur, v * (0.5 - 0.1 * i) * (0.65 + 0.35 * k), { color: 'brown', ft: 'lowpass', f: f * rr(0.5, 0.75), a: 0.3 + 0.5 * fr });
+      end = Math.max(end, at + dur);
+    }
+    return end + 0.1;
+  } },
   // ======== under the ground (server/systems/underground.js): the sewers, the cave, mining ========
   // a drip into a pool, ringing off the rock (send: the echo carries it)
   cavedrip: { pri: AMBIENT, range: 900, send: 0.8, play(E, o, t, v) { const f = rr(900, 2200); E.tone(o, t, f, 0.06, v * 0.07, { type: 'sine', f2: f * 1.9 }); E.tone(o, t + 0.01, f * 0.5, 0.12, v * 0.03, { type: 'sine' }); return 0.15; } },
