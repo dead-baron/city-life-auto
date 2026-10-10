@@ -27,7 +27,7 @@ const WHEEL_CHANCE = { pieces: 0.42, launch: 0.3, '': 0.18 };
 // and vz (px/s up) the throw; drag (px/s/s) how it slows rolling; curl (rad/s) how it turns, more as it slows (and the
 // way it falls); burn (s from the blast) how long it burns.
 export function wheelPlan(seed, def, plan = boomPlan(seed, def)) {
-  const { k, pieces } = plan, { big } = blastSize(def);
+  const { k, pieces } = plan, big = plan.big ?? blastSize(def).big;   // (the plan's: explosives aboard make it a huge one)
   let thrown = 0;
   for (const p of pieces) if (p.c === 'w') thrown++;
   if (wheelCount(def) - thrown <= 0) return null;   // (none left on it: a boat, a motorbike that threw both)

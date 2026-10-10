@@ -81,11 +81,13 @@ export function blow(world, ped, attacker, w, dir, was) {
   else stagger(world, ped, dir, 0, 0.3);
 }
 
-// An explosion at f (0..1 how close) of its radius, heading a away from it: thrown through the air.
-export function blasted(world, ped, a, f) {
+// An explosion at f (0..1 how close) of its radius, heading a away from it: thrown through the air. k: how much harder
+// than an ordinary blast (a huge one - a fuel tanker, explosives: BLAST_FLING): faster (up to 950 px/s at the heart of
+// the biggest), higher and longer in the air, further along the ground after.
+export function blasted(world, ped, a, f, k = 1) {
   if (ped.vehId || ped.onTrain || isSwimming(world.map, ped)) return;
   const kinds = ['roll', 'face', 'slide'];
-  knock(world, ped, a + (world.rand() - 0.5) * 0.4, 240 + 480 * f, kinds[Math.floor(world.rand() * 3)], 0.3 + 0.5 * f, 0.5 + 0.5 * f, 1.3);
+  knock(world, ped, a + (world.rand() - 0.5) * 0.4, Math.min(950, (240 + 480 * f) * k), kinds[Math.floor(world.rand() * 3)], (0.3 + 0.5 * f) * Math.sqrt(k), (0.5 + 0.5 * f) * Math.sqrt(k), 1.3);
 }
 
 // The fall, from combat.kill: a body already thrown lands as it was thrown; one cut down on the run slides on

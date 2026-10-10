@@ -8,8 +8,11 @@ import { collideCircle } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import * as law from './law.js';
 import * as hotmoney from './hotmoney.js';
+import * as explosions from './explosions.js';
 
 const GRAV = 620;
+// the crates cleared away when left lying a while: a job's, contraband, explosives (off a traffic truck, task #398)
+const fades = (c) => c.job || c.contraband || c.label === explosions.EXPLOSIVES;
 
 export function slotWorld(v, i) {
   const [lx, ly] = v.def.slots[i];
@@ -20,6 +23,7 @@ export function update(world, dt) {
   const now = world.time;
   for (const e of world.entities.values()) {
     if (e.kind === K.CRATE) {
+      if (e.boomAt && now >= e.boomAt) { explosions.crateBoom(world, e); continue; }   // (explosives set off by a blast: task #398)
       if (e.state === 'carried') {
         const ped = world.get(e.parent);
         if (!ped || ped.dead || ped.carrying !== e.id) { e.state = 'ground'; e.parent = 0; continue; }
@@ -164,7 +168,7 @@ export function dropCrate(world, ped) {
   c.state = 'ground'; c.parent = 0; c.z = 6; c.vz = 0;
   c.x = ped.x + Math.cos(ped.a) * 18; c.y = ped.y + Math.sin(ped.a) * 18;
   c.vx = ped.vx * 0.5; c.vy = ped.vy * 0.5;
-  if (c.job || c.contraband) c.expires = world.time + 600;
+  if (fades(c)) c.expires = world.time + 600;
 }
 
 export function throwCrate(world, ped, aim) {
@@ -177,8 +181,24 @@ export function throwCrate(world, ped, aim) {
   c.vx = Math.cos(aim) * 250 + ped.vx * 0.5; c.vy = Math.sin(aim) * 250 + ped.vy * 0.5;
   ped.a = aim;
   ped.attackAnimUntil = world.time + 0.3;
-  if (c.job || c.contraband) c.expires = world.time + 600;
+  if (fades(c)) c.expires = world.time + 600;
   if (ped.player) ped.player.meDirty = true;
+}
+
+// A load of explosives in a vehicle's free cargo slots (task #398: a traffic flatbed now and then, the debug menu's
+// truck): marked crates (the clients draw them red, hazard-striped) that make its blast a huge one - bigger the more
+// there are (shared/explosions.js blastSize). Anyone can take them off it; nobody buys them. Returns how many went on.
+export function loadExplosives(world, v, n) {
+  let put = 0;
+  for (let i = 0; i < v.def.slots.length && put < n; i++) {
+    if (v.cargo[i]) continue;
+    const [x, y] = slotWorld(v, i);
+    const c = world.spawnCrate(2, x, y, { label: explosions.EXPLOSIVES, value: 0, contraband: false });
+    c.state = 'loaded'; c.parent = v.id; c.slot = i; c.a = v.a;
+    v.cargo[i] = c.id;
+    put++;
+  }
+  return put;
 }
 
 export function knockOff(world, v, impact) {
@@ -199,7 +219,7 @@ function fallOff(world, v, i) {
   const ang = world.rand() * Math.PI * 2;
   c.vx = v.vx * 0.6 + Math.cos(ang) * 90; c.vy = v.vy * 0.6 + Math.sin(ang) * 90;
   c.z = 12; c.vz = 200;
-  if (c.job || c.contraband) c.expires = world.time + 600;
+  if (fades(c)) c.expires = world.time + 600;
   world.emit(c.x, c.y, { e: 'thud', x: c.x, y: c.y });
 }
 

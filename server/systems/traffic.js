@@ -21,8 +21,12 @@ import { HIGHWAY_SPEED } from '../../shared/rules.js';
 import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
 import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find another way round a backup: task #315)
 import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384)
+import { loadExplosives } from './cargo.js';
 
 const rng = mulberry32(4242);
+// a flatbed out of the yards, the docks, off the highway or on the country roads (to the quarry, the mine) carries a
+// load of explosives this often: 2-4 marked crates, a huge blast if it goes up (task #398)
+const EXPLOSIVE_LOADS = 0.25;
 
 function weighted(mix) {
   let total = 0;
@@ -717,6 +721,7 @@ function manage(world) {
       if (VEHICLES[model].pedal && lane > 0) { lane = 0; lp = lanePath(net, e, from, 0); p = pointAt(lp, Math.min(s, lp[lp.length - 1].s - 20)); }   // (cyclists keep to the kerb lane)
       const v = world.spawnVehicle(model, p.x, p.y, Math.atan2(p.ty, p.tx), {});
       v.lz = z;
+      if (model === 'flatbed' && (heavy || country) && hash2(v.id, 398, 7) < EXPLOSIVE_LOADS) loadExplosives(world, v, 2 + Math.floor(hash2(v.id, 398, 8) * 3));
       const sp0 = Math.min(CRUISE[e.kind] || 250, 300, v.def.max * 0.7) * 0.6;
       v.vx = p.tx * sp0; v.vy = p.ty * sp0;
       const driver = spawnNpc(world, country ? countryDriver(moto ? 'bike' : model, country) : townDriver(model), p.x, p.y, 'driver');

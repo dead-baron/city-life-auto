@@ -15,7 +15,7 @@
 //   wakeKey / wakeSprite(d, hi, N, frame)   a boat's foam (4 looping frames), drawn under the hull
 //   animalKey / animalSprite(kind, pose, dir8, frame)   kind 'pet:<art>' or any animals.js kind; poses and
 //       frame counts in ANIMAL_FRAMES (idle 4, walk 4, run 4, sit 2, lie 2, graze 2)
-//   crateKey / crateSprite(tier 1-4, label, hi = 0, N = 16)   ('Produce Box' label = the produce crate)
+//   crateKey / crateSprite(tier 1-4, label, hi = 0, N = 16)   ('Produce Box' label = the produce crate, 'Explosives' the red one)
 //   bagKey / bagSprite(tier 0-4, hi, N)   ballKey / ballSprite(t 0 soccer | 1 volleyball, spin 0-3)
 //   projKey / projSprite(w, hi, N)   the rocket in flight (body at z ~14, exhaust glowing)
 //   trainKey / trainCarSprite(c, mode, hi, N)   c = TRAIN_CARS index (or {kind, L, W}); mode 'roof' | 'in'
@@ -329,7 +329,7 @@ export function animalSprite(kind, pose = 'idle', dir8 = 0, frame = 0) {
 }
 
 // ---- small objects --------------------------------------------------------------------------------------
-// Crates (tier 1 wood, 2 steel, 3 iron vault, 4 carbon-gold, or the 'Produce Box'), bags (0 dropped cash,
+// Crates (tier 1 wood, 2 steel, 3 iron vault, 4 carbon-gold, or the 'Produce Box', 'Explosives'), bags (0 dropped cash,
 // 1 canvas duffel, 2 tactical backpack, 3 security case, 4 gold lockbox; 5-9 a dropped backpack, Common to
 // Legendary), balls, rockets: small voxel
 // models drawn in the world projection like the vehicles they ride on, at heading hi of N.
@@ -342,6 +342,24 @@ function crateModel(tier, label) {
     m.fill((x, y, z) => { const e = Math.min(x - 2, 22 - x, y - 2, 18 - y); if (e < 0) return -1; if (e < 1.5) return z % 4 === 3 && x > 4 && x < 20 && y > 4 && y < 16 ? dark : wood; return z < 2 ? dark : -1; }, 0, 0, 0, 24, 20, 10);
     for (let i = 0; i < 26; i++) { const x = 5 + hash(i, 1, 7) * 14, y = 5 + hash(i, 2, 7) * 10, z = 6 + hash(i, 3, 7) * 3, r = 2 + hash(i, 4, 7) * 1.3; m.ell(x, y, z, r, r, r * 0.9, fruit[Math.floor(hash(i, 5, 7) * fruit.length)]); }
     m.fill(() => 0, 0, 0, 12, 24, 20, 14);
+    return m;
+  }
+  if (label === 'Explosives') {
+    // a crate of explosives (task #398): red-painted planks on dark battens, a black-and-yellow hazard band round the
+    // top, an orange diamond with a black burst on the lid and on each long side
+    const m = objModel(24, 20, 16), x0 = 2, x1 = 22, y0 = 2, y1 = 18, H = 13;
+    const red = m.mat({ ramp: RP('#b8341e'), k: 3, shade: (x, y, z) => ((z | 0) % 4 === 0 ? -0.6 : (hash(x >> 2, y >> 2, 3) - 0.5) * 0.5) });
+    const dark = m.mat({ ramp: RP('#5a1c12'), k: 2 }), yel = m.mat({ ramp: RP('#e8c020', 5, 3), k: 3 }), blk = m.mat({ ramp: RP('#1c1a18'), k: 1.5 }), org = m.mat({ ramp: RP('#f07818', 5, 3), k: 3 });
+    m.fill((x, y, z) => {
+      const ex = Math.min(x - x0, x1 - x), ey = Math.min(y - y0, y1 - y), ez = Math.min(z, H - z);
+      if (ex < 0 || ey < 0 || ez < 0) return -1;
+      if ((ex < 1.6) + (ey < 1.6) + (ez < 1.6) >= 2) return dark;
+      const dl = Math.abs(x - 12) + Math.abs(y - 10), ds = Math.abs(x - 12) + Math.abs(z - 6.5);
+      if (ez < 1 && z > H / 2 && dl < 6) return dl < 2.2 ? blk : org;
+      if (ey < 1 && ds < 4.6) return ds < 1.7 ? blk : org;
+      if (z > H - 4 && (ex < 1 || ey < 1)) return ((x + y + z) | 0) % 4 < 2 ? yel : blk;
+      return red;
+    });
     return m;
   }
   const t = Math.max(1, Math.min(4, tier | 0));
@@ -514,8 +532,9 @@ function rocketModel() {
 }
 const OBJ_MODELS = new LRU(16);
 const objRender = (key, make, hi, N) => { const m = OBJ_MODELS.get(key, () => { const mm = make(); patchHidden(mm); return mm; }); return trimSprite(m.render(wrapHi(hi, N) * TAU / N, { dither: 0.3, px: ART_PX })); };
-export const crateKey = (tier, label = '', hi = 0, N = 16) => `c|${label === 'Produce Box' ? 'P' : Math.max(1, Math.min(4, tier | 0))}|${wrapHi(hi, N)}|${N}`;
-export function crateSprite(tier, label = '', hi = 0, N = 16) { const k = label === 'Produce Box' ? 'P' : Math.max(1, Math.min(4, tier | 0)); return objRender('crate' + k, () => crateModel(tier, label), hi, N); }
+const crateK = (tier, label) => (label === 'Produce Box' ? 'P' : label === 'Explosives' ? 'X' : Math.max(1, Math.min(4, tier | 0)));
+export const crateKey = (tier, label = '', hi = 0, N = 16) => `c|${crateK(tier, label)}|${wrapHi(hi, N)}|${N}`;
+export function crateSprite(tier, label = '', hi = 0, N = 16) { return objRender('crate' + crateK(tier, label), () => crateModel(tier, label), hi, N); }
 export const bagKey = (tier, hi = 0, N = 16) => `g|${Math.max(0, Math.min(9, tier | 0))}|${wrapHi(hi, N)}|${N}`;
 export function bagSprite(tier, hi = 0, N = 16) { const t = Math.max(0, Math.min(9, tier | 0)); return objRender('bag' + t, () => bagModel(t), hi, N); }
 export const projKey = (w, hi = 0, N = 32) => `p|${w | 0}|${wrapHi(hi, N)}|${N}`;

@@ -5278,3 +5278,43 @@ The owner, after hearing the re-mastered round 2: "I don't think the music is ri
   - hospital and home music (#404);
   - the menus' music (#372);
   - Ride of the Valkyries (the owner's MIDI is kept outside the repo).
+
+## 2026-10-10 · Tankers and explosives go up huge, set off the vehicles round them and throw people (task #398)
+The owner: "Vehicles carrying oil or explosives make HUGE explosions; vehicles nearby likely blow up too; NPCs in range are sent flying."
+
+**For the player.**
+- **A fuel tanker** goes up much bigger: its blast reaches 330 px (a car's 120, a truck's 165) and does 160 damage at its heart (a car's 72).
+- **Explosives.** A flatbed out of the yards, the docks, off the highway or on the country roads now and then (one in four) carries 2-4 red, hazard-striped crates of explosives. Anything carrying them goes up huge: one crate's blast reaches 200 px, each more adds 30, up to 410 for a full flatbed (bigger than a tanker's: the biggest of all). Anyone can take the crates off; nobody buys them. A crate lying in the road, or in someone's arms, goes up when a blast reaches it.
+- **Chain reactions.** Most of the vehicles round a huge blast go up too: one after another, the nearest first, a beat apart (0.3-0.8 s after the blast, never two within 0.2 s), each its own explosion with its own pieces, wheels, fire and blast. What they set off goes up in turn, so a row of parked cars goes off down the street. A tanker beside any explosion goes up huge itself. Armored vans and trucks only take the damage.
+- **People thrown.** Everyone in a huge blast is thrown 1.5 times as hard as by an ordinary one: further, higher and longer in the air the closer they stood, and hurt by how close. Players too.
+- **On screen** the huge ones add, on top of the ordinary explosion: more fireballs bursting round the first, a column of fire into a dark cap of smoke, a second shockwave with a wall of dust, burning debris flung far, pools of burning fuel that burn on and light the street, a wider scorch with soot thrown round it, a longer glow, and near you a rumble that keeps the screen shaking.
+
+**How it works.**
+- **Sizes.** `shared/explosions.js` `blastSize(def, n)`, where n is the crates of explosives aboard; the numbers are in `shared/rules.js` (`TANKER_BLAST`, `EXPLOSIVES_BLAST`, `BLAST_FLING`, `CHAIN_*`). The `explode` event now says how big (`b`: 3 huge, 4 bigger than a tanker), and every client makes the same plan from the seed and `b`. The explosives go up with their vehicle; the rest of its load is thrown off as before.
+- **Chains** (`server/systems/explosions.js`). Every blast carries a link of its chain; what it sets off joins as the next link, its engine dead and on fire at once, and explodes when its turn comes through the ordinary `vehicles.explode`. A vehicle goes when it was dying already or the blast finishes it, when it's a tanker or carries explosives in the near half of any blast, or, in a huge blast (or a chain one has heated), by chance: closeness x 2, certain in the near half. Closeness is measured to the vehicle's nearest end, so a car parked nose to tail with one going up is right beside it (damage and shove still fall off from its middle, as before; the blast now finds long vehicles whose centre is just outside it).
+- **Caps.** At most 4 links deep and 10 set off per chain. Past them a blast only does damage, and never finishes a vehicle off: it's left on a fifth of its health, so the next bump can't start a chain of its own. A vehicle waiting its turn isn't hurried by bumps or gunfire, so the beat between explosions holds. A wreck landing on a car now sets it off as the chain's next link, a beat later, instead of at once.
+- **Cheap on the tick.** Each explosion is one query of the area round it; a chain's explosions are spread over a few seconds and nothing runs while they wait. A tanker going up in a packed car park took about 1 ms of server CPU, and a tick with a chain explosion about 1.4 ms against 1.2 for a quiet one.
+- **The clients.** `render/boom.js` sizes the explosion by `b`; the huge layers are `render/bigboom.js`, which loads with `render/wheels.js` on the first explosion, not with the page. Booms' pools grew a little for chains (128 glow blobs, 12 rings and smoke columns). On Low it draws every other glow blob, piece of debris and soot mark, from the same seeded draws, so the pools and scorch land where everyone else sees them. The page's own code grew by 0.55 KB.
+
+**Tests:** `test/explosions.test.js`:
+- a tanker's blast is far bigger than a car's and bigger than a truck's; explosives get bigger with each crate, to the most for a full load; the event says how big; the crates go up with the truck and its other load is thrown off;
+- people in a huge blast are thrown faster, longer in the air, further, and hurt more, the closer they stood; 1.5 times as hard as by an ordinary blast; a player in it is thrown too;
+- the vehicles round a tanker are set off at once, go up the nearest first, a beat apart and never in the same tick, each its own explosion from its own seed;
+- a tanker beside an ordinary car going up makes its own huge blast; a crate of explosives in the road goes up a beat after a blast reaches it;
+- a packed car park stops at 10 set off; a line of cars nose to tail stops 4 links deep with its far end standing; past the caps nothing is finished off;
+- a wreck landing on a car sets it off as the chain's next link (the earlier test, now a beat later).
+
+## 2026-10-10 · The debug menu's Explosions tests (task #382)
+The owner: "A debug test that spawns vehicles or other things that explode. Either one explosion type at a time, or a small / medium / big / ultra test."
+
+A new **Explosions** section in the debug menu (`client/devcats.js`; `server/dev.js` `blastTest`, the `blast` dev command). Like every dev command, it works only in dev mode.
+- **Small, medium, big, ultra:** a blast that size a little ahead of you, at the game's own sizes (`shared/explosions.js` `blastSize`): a car's, a truck's, a fuel tanker's, and a flatbed loaded full of explosives. It's placed so its edge reaches back about to you.
+- **A car, a tanker, an explosives truck:** one a few steps away, its engine dead and on fire. It goes up 4 s later (`BLAST_FUSE_S`), with its own pieces, wheels and fires.
+- **A tanker by a row of cars:** a burning tanker in the middle of a row of parked cars, to watch the chain reaction run along the row.
+- **A crowd round a tanker:** a burning tanker with people standing in rings round it, near and far, watching it burn. They don't run, so you can see who's thrown how far.
+- Vehicles are only placed where they fit: clear of buildings, walls, water, other vehicles and you. Above ground only, never up on the highway.
+- Nobody's crime: there's no attacker.
+
+**Tests:** `test/explosions.test.js`:
+- only in dev mode; small, medium, big and ultra go off ahead of you at the game's own sizes;
+- the car, the tanker and the explosives truck burn a few steps away and then go up; the row of cars and the crowd are placed round the tanker.

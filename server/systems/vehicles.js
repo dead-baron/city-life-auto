@@ -228,7 +228,7 @@ export function damageVehicle(world, v, amount, attackerPed, raw = false, boom =
   if (attackerPed) v.lastAttacker = attackerPed.id;
   if (v.dead) {
     if (boom) explode(world, v, attackerPed);
-    else v.deadBoomAt = Math.max(world.time + 0.5, v.deadBoomAt - dmg / 25);
+    else if (!v.chain) v.deadBoomAt = Math.max(world.time + 0.5, v.deadBoomAt - dmg / 25);   // (set off in a chain reaction: it goes up in its turn - explosions.js)
     return;
   }
   v.hp -= dmg;
@@ -282,8 +282,10 @@ export function explode(world, v, attackerPed) {
     blownOut(world, ped, v, attackerPed);
   }
   cargo.spillCargo(world, v);
-  // the blast: bigger vehicles, bigger blasts (a fuel tanker huge); people near are thrown (reactions.blasted)
-  combat.blast(world, v.x, v.y, size.r, size.dmg, attackerPed, v.id, false, v.lz || 0);
+  // the blast: bigger vehicles, bigger blasts (a fuel tanker or a load of explosives huge); people near are thrown
+  // (reactions.blasted); vehicles near set off too, a beat apart: the next links of its chain (explosions.js, task #398)
+  v.chain ||= explosions.newLink();
+  combat.blast(world, v.x, v.y, size.r, size.dmg, attackerPed, v.id, false, v.lz || 0, v.chain, size.big);
 }
 
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the

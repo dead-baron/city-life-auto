@@ -175,6 +175,15 @@ export const DEAD_FIRE_S = 3;
 export const DEAD_BOOM_S = 9;
 export const ARMORED_ROCKETS = 2;       // rockets to destroy an armored van / SWAT truck (everything else: one)
 export const ARMORED_VEHICLES = ['armored', 'swat', 'army'];
+// huge blasts, chain reactions (task #398: server/systems/explosions.js)
+export const TANKER_BLAST = { r: 330, dmg: 160 };
+export const EXPLOSIVES_BLAST = { r: 200, dmg: 110, per: 30, max: 410 };   // a crate, + per crate
+export const BLAST_FLING = 1.5;
+export const CHAIN_K = 2;                 // chance f x this (f 1 at the heart)
+export const CHAIN_DELAY_S = [0.3, 0.8];
+export const CHAIN_GAP_S = 0.2;
+export const CHAIN_GENS = 4;
+export const CHAIN_MAX = 10;
 
 // Hot springs (Granite Hot Springs): a soak in the hot water stops bleeding and brings health back quickly, even
 // when badly hurt (out of the water, health only creeps back above the critical line).

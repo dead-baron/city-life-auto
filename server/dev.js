@@ -1,9 +1,11 @@
 // Playtest/debug commands: accepted when the server runs with CLA_DEV=1 (offline practice), or
 // online from a player in Dev Debug Mode (devmode.js - nothing they do there is saved).
 import { surfaceZ } from '../shared/levels.js';
-import { PED_BLOCK } from '../shared/map.js';
-import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT, T, WEATHER } from '../shared/constants.js';
+import { PED_BLOCK, CAR_SPAWN_BLOCK } from '../shared/map.js';
+import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT, T, K, WEATHER } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
+import { blastSize } from '../shared/explosions.js';
+import { collideVehicleTiles } from '../shared/physics.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { PACK_LIFE_S } from '../shared/rules.js';
 import { store } from './store.js';
@@ -13,6 +15,8 @@ import * as law from './systems/law.js';
 import * as bounties from './systems/bounties.js';
 import * as combat from './systems/combat.js';
 import * as vehicles from './systems/vehicles.js';
+import * as explosions from './systems/explosions.js';
+import * as cargo from './systems/cargo.js';
 import * as npc from './systems/npc.js';
 import * as gangwar from './systems/gangwar.js';
 import * as cruiser from './systems/cruiser.js';
@@ -38,7 +42,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -140,6 +144,101 @@ export function give(world, p, msg) {
   if (q !== p) world.notify(q, `${p.name} (dev) gave you: ${what}.`, 'good');
   world.notify(p, q === p ? `[dev] Given to you: ${what}.` : `[dev] Gave ${q.name}: ${what}.`, 'info');
   return null;
+}
+
+// ---- the Explosions test (task #382) ---------------------------------------------------------------------------
+// The owner: "A debug test that spawns vehicles or other things that explode. Either one explosion type at a time, or
+// a small / medium / big / ultra test." The debug menu's Explosions section (client/devcats.js) sends 'blast', msg.k:
+//   small, medium, big, ultra   a blast that size a little ahead of you - the game's own sizes (shared/explosions.js
+//                               blastSize): a car's, a truck's, a fuel tanker's, a flatbed loaded full of explosives;
+//   car, tanker, truck          one a few steps away (the truck: a flatbed with a load of explosives aboard), its engine
+//                               dead and on fire, going up BLAST_FUSE_S later;
+//   row                         a burning tanker in the middle of a row of parked cars: the chain reaction;
+//   crowd                       a burning tanker with people standing round it, near and far: who's thrown how far.
+// Nobody's crime (there's no attacker). Accepted in dev mode only, like every dev command (session.js).
+export const BLAST_SIZES = {
+  small: () => blastSize(VEHICLES.sedan), medium: () => blastSize(VEHICLES.boxtruck),
+  big: () => blastSize(VEHICLES.tanker), ultra: () => blastSize(null, VEHICLES.flatbed.slots.length),
+};
+export const BLAST_FUSE_S = 4;
+const BLAST_ROW = ['sedan', 'compact', 'taxi', 'pickup', 'sedan', 'van'];   // parked either side of the tanker, out from it
+const BLAST_CROWD = [[100, 5], [180, 6], [260, 7], [370, 6]];               // rings of people round the tanker: [px, how many]
+// a vehicle fits there: clear of buildings, walls and water (as cruiser.js clearSpot places dev cars), of other
+// vehicles, and of you
+function fits(world, ped, x, y, a, def) {
+  const s = { x, y, a, vx: 0, vy: 0, av: 0 };
+  collideVehicleTiles(s, def, world.map, CAR_SPAWN_BLOCK);
+  return Math.hypot(s.x - x, s.y - y) < 0.5 && !world.query(x, y, def.L, K.VEH).length && Math.hypot(x - ped.x, y - ped.y) > def.L / 2 + 40;
+}
+// A row of vehicles (models: the first in the middle, the rest out to either side of it in turn, 14 px between bumpers)
+// about d px ahead of the ped: across its view if it fits there; otherwise turned, or further off - wherever the first
+// and the most of the rest fit. [{ x, y, a, m }] (the first one's spot first; none: no room for the first).
+function rowSpots(world, ped, models, d) {
+  let best = [];
+  for (const dd of [d, d + 120, d + 240]) {
+    for (const turn of [Math.PI / 2, 0, Math.PI / 4, -Math.PI / 4]) {
+      const a = ped.a + turn, ux = Math.cos(a), uy = Math.sin(a), cx = ped.x + Math.cos(ped.a) * dd, cy = ped.y + Math.sin(ped.a) * dd;
+      const reach = [VEHICLES[models[0]].L / 2, VEHICLES[models[0]].L / 2], out = [];
+      for (let i = 0; i < models.length; i++) {
+        const def = VEHICLES[models[i]], side = i % 2;
+        let off = 0;
+        if (i) { off = (reach[side] + 14 + def.L / 2) * (side ? 1 : -1); reach[side] += 14 + def.L; }
+        const x = cx + ux * off, y = cy + uy * off;
+        if (fits(world, ped, x, y, a, def)) out.push({ x, y, a, m: models[i] });
+        else if (!i) break;   // (no room for the first one here)
+      }
+      if (out.length > best.length) best = out;
+      if (best.length === models.length) return best;
+    }
+  }
+  return best;
+}
+export function blastTest(world, p, k) {
+  const ped = p.ped;
+  if (!ped || ped.dead) return '[dev] Not while you\'re down.';
+  if (ped.hidden || ped.interior || ped.ug || ped.sub || ped.onTrain) return '[dev] Go outside, above ground, first.';
+  const veh = ped.vehId ? world.get(ped.vehId) : null, a = veh ? veh.a : ped.a || 0, z = ped.lz || 0;
+  if (own(BLAST_SIZES, k)) {   // a blast that size, its edge reaching back about to you
+    const size = BLAST_SIZES[k](), d = Math.min(300, size.r * 0.8);
+    explosions.blastAt(world, ped.x + Math.cos(a) * d, ped.y + Math.sin(a) * d, size, null, undefined, z);
+    world.notify(p, `[dev] A ${k} blast (reaching ${size.r} px) ${Math.round(d)} px ahead.`, 'info');
+    return null;
+  }
+  if (z > 0.3) return '[dev] Come down off the highway first (there\'s no room up there).';
+  const at = { x: ped.x, y: ped.y, a };   // (the spots are found from where you face)
+  // (set to go up s seconds from now: the engine dead, on fire at once - vehicles.update sets it off)
+  const fire = (v, s) => { v.lz = 0; vehicles.killEngine(world, v, null); v.deadFireAt = world.time; v.deadBoomAt = world.time + s; return v; };
+  if (k === 'car' || k === 'tanker' || k === 'truck') {
+    const model = k === 'car' ? 'sedan' : k === 'tanker' ? 'tanker' : 'flatbed', sp = clearSpot(world, at, VEHICLES[model]);
+    const v = fire(world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false }), BLAST_FUSE_S);
+    const n = k === 'truck' ? cargo.loadExplosives(world, v, 4) : 0;
+    world.notify(p, `[dev] ${k === 'car' ? 'A car' : k === 'tanker' ? 'A fuel tanker' : `A flatbed with ${n} crates of explosives`} on fire nearby: it goes up in ${BLAST_FUSE_S} s.`, 'info');
+    return null;
+  }
+  if (k === 'row') {
+    const spots = rowSpots(world, at, ['tanker', ...BLAST_ROW], 270);
+    if (!spots.length) return '[dev] No room for a row of cars here: try an open street or a car park.';
+    spots.forEach((s, i) => { const v = world.spawnVehicle(s.m, s.x, s.y, s.a, { npcOwned: false }); if (!i) fire(v, BLAST_FUSE_S); });
+    world.notify(p, `[dev] A fuel tanker on fire in a row of ${spots.length - 1} parked cars: it goes up in ${BLAST_FUSE_S} s.`, 'info');
+    return null;
+  }
+  if (k === 'crowd') {
+    const sp = clearSpot(world, at, VEHICLES.tanker), v = fire(world.spawnVehicle('tanker', sp.x, sp.y, sp.a, { npcOwned: false }), BLAST_FUSE_S + 1);
+    let n = 0;
+    for (const [r, m] of BLAST_CROWD) {
+      for (let i = 0; i < m; i++) {
+        const t = ((i + (r % 3) / 3) / m) * Math.PI * 2, x = v.x + Math.cos(t) * r, y = v.y + Math.sin(t) * r;
+        if (PED_BLOCK[world.map.tileAtPx(x, y)] || world.map.isWater(x, y) || explosions.bodyDist(v, x, y) < 14 || Math.hypot(x - ped.x, y - ped.y) < 24) continue;
+        const q = npc.spawnNpc(world, 'casual', x, y);
+        if (!q) continue;
+        q.npc.desk = { x, y, a: t + Math.PI }; q.a = t + Math.PI;   // (standing there watching it burn: they don't run)
+        n++;
+      }
+    }
+    world.notify(p, `[dev] A fuel tanker on fire with ${n} people round it, near and far: it goes up in ${BLAST_FUSE_S + 1} s.`, 'info');
+    return null;
+  }
+  return `[dev] Blast what? (${[...Object.keys(BLAST_SIZES), 'car', 'tanker', 'truck', 'row', 'crowd'].join(', ')})`;
 }
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
@@ -245,6 +344,7 @@ export function command(world, p, c, msg) {
       vehicles.explode(world, v, null);
       break;
     }
+    case 'blast': { const err = blastTest(world, p, String(msg.k || '').slice(0, 12)); if (err) world.notify(p, err, 'warn'); break; }   // the Explosions test (task #382, above)
     case 'guns': // every weapon in the game with ammo (the police's and the hunters' too), med kits, and every tool / bit of equipment
       for (const [id, w] of Object.entries(WEAPONS)) {
         if (id === 'fists' || w.type === 'deploy') continue;

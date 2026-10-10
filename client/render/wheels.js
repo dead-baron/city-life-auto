@@ -9,21 +9,26 @@
 // Pooled (four wheels, each with a frame buffer kept for good; the fire is render/fx.js's particles and decals), thinned
 // on Low (fx.thin).
 import { wheelPlan, wheelPath, wheelSize, WHEEL_DT, WHEEL_F, WHEEL_MAX, WF } from '../../shared/wheelpath.js';
+import { boomPlan } from '../../shared/explosions.js';
 import { hazeSprite } from './boom.js';
+import { Huge } from './bigboom.js';
 
 const TAU = Math.PI * 2;
 const H = 0.7;   // px up the screen for every px of height (as it's drawn)
 
 export class Wheels {
-  constructor(S) {
+  // B: render/boom.js's Booms. The huge blasts' extra layers (task #398, render/bigboom.js) come in with this module
+  // and tick and draw with it.
+  constructor(S, B) {
     this.S = S;
     this.list = Array.from({ length: 4 }, () => ({ on: false, f: new Float32Array(WHEEL_MAX * WHEEL_F), n: 0, sunk: false, t0: 0, end: 0, out: 0, life: 0, r: 7, w: 5, last: 0, acc: 0, sacc: 0, dacc: 0, mx: 0, my: 0, x: 0, y: 0, z: 0, h: 0, lean: 0, spin: 0, burn: 0 }));
+    this.huge = new Huge(B || S.boom);
   }
 
   // A vehicle blew up and the server says a wheel came off (ev.wh): its roll from the seed, worked out now - in a free
   // slot, or the one that's been going longest. now: when it went up (the module may have come in a moment after).
   spawn(ev, def, now) {
-    const roll = wheelPlan(ev.s, def);
+    const roll = wheelPlan(ev.s, def, boomPlan(ev.s, def, ev.b));   // (ev.b: the blast's size - a load of explosives aboard makes it a huge one)
     if (!roll || !this.S.map) return;
     let w = this.list[0];
     for (const o of this.list) { if (!o.on) { w = o; break; } if (o.t0 < w.t0) w = o; }
@@ -60,6 +65,7 @@ export class Wheels {
   // while it rolls; lo: half the particles on Low.
   tick(now, dt, lo) {
     for (const w of this.list) if (w.on) this._tick(w, now, dt, lo);
+    this.huge.tick(now, dt, lo);
   }
   _tick(w, now, dt, lo) {
     const fx = this.S.fx, t = now - w.t0;
@@ -98,6 +104,7 @@ export class Wheels {
   // the axle, both ends - edge on, all there is to see), the near face (the one facing the viewer, who looks from the
   // south and above) with its rim, hub and lugs; on fire, a glow round it and the tread's edge glowing.
   draw(g, F) {
+    this.huge.draw(g, F);   // (the burning pools' glow under the wheels)
     const now = F.now, night = F.sky ? F.sky.night || 0 : 0;
     let any = false;
     for (const w of this.list) if (w.on && !(w.sunk && now - w.t0 >= w.end)) { any = true; break; }
