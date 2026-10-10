@@ -812,7 +812,7 @@ their chunks again once.
   them on the island's own land, and places the island in the frame (+1591, +1729: tiles 2133..2636 x 2030..2676, the
   four regions r4-4, r5-4, r4-5, r5-5).
 
-**What it measured** (node 22 on the 2-core machine, under `flock`; today's whole build took 4.5-5.4 s in the same runs,
+**What it measured** (node 22 on the shared 2-core machine; today's whole build took 4.5-5.4 s in the same runs,
 less loaded than 4.2's 10.1 s; Metro City's land is 187,926 tiles, about a fifth of the world's):
 
 | | Metro City alone, cut at x = 1045 | Metro City with Dry Creek still joined on |
