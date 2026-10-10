@@ -5548,3 +5548,34 @@ page's code to 721 KB of its 720 KB budget. The city tour is paused (TUTORIAL_ON
 back on (fetched at startup then, ready by the time Play is pressed); until then its calls do nothing and the tour
 counts as seen. The page is 715 KB again, with room for the next merges. `shared/tutorial.js` stays in the page: the
 phone and the map waypoints use its `districtAt`. Tests: the full suite.
+
+## 2026-10-10 · The hospital, the police station and the subway entrance, built to the B takes (IN1-B, IN2-B, SU5-B)
+The owner: "Here is SU5-B, IN2-B, and IN1-B - I think all three of these look way better for the interior for the subway, the police station, and the hospital so lets use these as the reference you use. You can still pull inspiration from the older versions on these though."
+Art only: the server's layouts (the doorways, the counter rows, the cells, the walkable floor) are as they were.
+- **Walking into a hospital** (art v2, `client/art2/game/statics.js` `makeCut` + `lobbyRoom`): white floor tile with a soft sheen;
+  the back wall in white tile with a blue band, and on it the vending machine and the water cooler, the red double doors to
+  the back under a green exit sign, the pharmacy window with its shelves under a green cross, and the lifts; a long white
+  desk over a wood front with a blue stripe, curving out in the middle, with its screens and papers; rows of blue waiting
+  chairs either side of the aisle from the doors; potted plants; a mat inside the doors and one at the desk.
+- **The police station** (`lobbyRoom`): pale stone tile in the lobby and grey block walls round the cells; the notice board,
+  the clock and the shield on the wall above the cells; a wood front desk with the officer's computer and a flag beside it;
+  blue chairs either side of the doors, the water cooler and plants; and in the officers' corner east of the cells, the
+  armory cage - a mesh front with its door, rifles racked on the back wall, vests, green ammo cases.
+- **A big walk-in drawn in sections** (the art splits a long building) used to show a wall down the middle and a break in
+  its counter at each seam: each section now knows which of the building's walls it has (`ew`, `ee`) and the full extent of
+  its unit (`fx0`, `fx1`), so the room is one open space with one counter (every walk-in kind, not just these two).
+- **The hospital's ambulance bay** (`client/art2/props-road.js` `erCanopy`, in place of a fuel-station canopy): a white
+  canopy on four posts with hazard-striped feet, a red fascia with the red cross on a white panel, a red cross on its roof,
+  lights under it, hazard-striped kerbs and yellow bollards.
+- **The subway's street entrance** (`subwayKiosk`, on the kiosk's real footprint from `shared/map.js` SUBWAY_ART, mirrored for
+  the mirrored kiosks; it replaces a 70 x 44 box that didn't cover the stairwell): dark green iron railings round the
+  stairwell with ball-topped newels at the mouth, the steps going down into the dark with a lit nosing on each, the white
+  tiled wall with its green band, the warm-lit landing at the foot (the platform below), and along the back a green frame
+  with two globe lamps and the lit sign with the train symbol. Lights at the globes, the sign and the stair foot.
+- **The classic renderer**: the HQ armory screen's painting is now the B take's armory cage (`assets/interiors.webp`, its
+  rect unchanged). The hospital's and the police lobby's floor paintings are left as they were: the B takes have people
+  painted into them, who would stand about as statues under the live staff.
+- Note: the two B files are named the other way round - `IN1-B_hospital.png` shows the police station and
+  `IN2-B_police-station.png` the hospital.
+- **Tests:** `test/art2.test.js`, `test/cells.test.js`, `test/flags.test.js`, `test/artcdn.test.js`, `test/perf.test.js`;
+  every static piece round all seven hospitals, five police stations and three subway kiosks builds (cut away and not).

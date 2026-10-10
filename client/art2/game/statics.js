@@ -1245,6 +1245,8 @@ function voxModel(m, a) {
     case 'runwayLight': return RD.runwayLight(a[0]); case 'viewer': return D.viewer(); case 'wheelbarrow': return U.wheelbarrow(); case 'airliner': return RD.airliner(a[0], a[1], a[2], a[3] || 0);
     case 'lighthouse': return WL.lighthouse(a[0], a[1]); case 'pillar': return RD.pillar(a[0], a[1], a[2]); case 'canopy': return U.fuelCanopy(a[0], a[1], a[2], a[3]); case 'fuelPump': return U.fuelPump(a[0], a[1]);
     case 'platformCanopy': return RD.platformCanopy(a[0], a[1], a[2]); case 'stationEntrance': return RD.stationEntrance(a[0], a[1]); case 'crossingSignal': return RD.crossingSignal(a[0], a[1]);
+    case 'subwayKiosk': return RD.subwayKiosk(a[0], a[1]);   // (SU5-B: a subway stop's street entrance on its kiosk's footprint)
+    case 'erCanopy': return RD.erCanopy(a[0]);   // (IN1-B: the hospital's ambulance bay)
     case 'controlTower': return RD.controlTower(a[0], a[1]); case 'fence': return D.fence(a[0], a[1], a[2] || {}); case 'fenceKind': return K.fenceKind(a[0], a[1]); case 'gatePillar': return D.gatePillar(a[0], a[1]);
     case 'compoundWall': return TW.compoundWall(a[0], a[1], a[2]); case 'guardTower': return TW.guardTower(a[0], a[1]); case 'hedge': return P.hedge(a[0], a[1]); case 'volleyNet': return P.volleyNet(a[0]);
     case 'soccerGoal': return PK.soccerGoal(a[0], a[1], a[2]); case 'terrace': return U.terrace(a[0], a[1], a[2], a[3]); case 'hayBale': return U.hayBale(a[0]); case 'scarecrow': return U.scarecrow();
@@ -1304,6 +1306,7 @@ function vdim(m, a) {
     case 'solar': return [a[0] || 30, a[1] || 20, 8]; case 'runwayLight': return [4, 4, 6]; case 'viewer': return [14, 10, 40]; case 'wheelbarrow': return [30, 14, 14]; case 'airliner': return [a[0] || 460, a[1] || 420, 140];
     case 'lighthouse': return [48, 48, (a[0] || 140) + 36]; case 'pillar': return [(a[1] || 30) + 4, a[2] || 90, a[0] || 90]; case 'canopy': return [a[0] || 150, a[1] || 80, (a[2] || 52) + 10]; case 'fuelPump': return [12, 10, 34];
     case 'platformCanopy': return [a[0] || 200, a[1] || 40, 62]; case 'stationEntrance': return [70, 44, 54]; case 'crossingSignal': return [24, 8, 70]; case 'controlTower': return [70, 70, (a[0] || 220) + 50];
+    case 'subwayKiosk': return [128, 96, 64]; case 'erCanopy': return [120, 62, 60];
     case 'fence': return [a[1] || 60, 6, ({ picket: 16, wood: 30, chain: 32, iron: 28, stone: 12 }[a[0]] || 20) + 6]; case 'fenceKind': return [a[1] || 60, 6, 26]; case 'gatePillar': return [14, 14, (a[1] || 36) + 16];
     case 'compoundWall': return [a[0] || 80, 10, (a[1] || 40) + 8]; case 'guardTower': return [40, 40, (a[0] || 70) + 40]; case 'hedge': return [a[0] || 40, 10, (a[1] || 12) + 3]; case 'volleyNet': return [a[0] || 70, 4, 26];
     case 'soccerGoal': return [a[2] || 18, a[0] || 60, a[1] || 32]; case 'terrace': return [a[0] || 300, a[1] || 60, a[2] || 40]; case 'hayBale': return [24, 16, 16]; case 'scarecrow': return [30, 8, 56];
@@ -2297,7 +2300,16 @@ function addRail(c, I) {
   if (!R || !R.pts) return;
   for (const st of R.stations || []) {
     if (st.under) {
-      const p = st.kiosk ? { x: st.kiosk.x0 + st.kiosk.w / 2, y: st.kiosk.y0 + st.kiosk.h - 6 } : st.platform;
+      const k = st.kiosk;
+      if (k) {   // (SU5-B: the stairs down inside green iron railings, globe lamps and the lit train sign along the back)
+        const lx = (x) => (k.flip ? k.x0 + k.w - x : k.x0 + x);
+        put(I, vitem('sk:' + (k.flip ? 1 : 0), 'subwayKiosk', [1, k.flip ? 1 : 0], k.x0 + 64, k.y0 + 48, 0));
+        for (const x of [8, 120]) lightAt(I, lx(x), k.y0 + 16, 54, 110, [1, 0.86, 0.6], 1.6, 'lamp');
+        lightAt(I, lx(64), k.y0 + 20, 34, 70, [0.7, 0.85, 1], 1.1, 'sign');
+        lightAt(I, lx(104), k.y0 + 62, 6, 60, [1, 0.85, 0.6], 1.2, 'sign');
+        continue;
+      }
+      const p = st.platform;
       if (!p) continue;
       put(I, vitem('ent', 'stationEntrance', [1, '#f28c28'], p.x, p.y, 0));
       lightAt(I, p.x, p.y + 10, 50, 120, [1, 0.85, 0.6], 1.4, 'sign');
@@ -2627,7 +2639,7 @@ function addLots(c, I) {
       return;
     }
     if (key === 'church') { for (const dx of [24, w - 24]) put(I, fitem(`f:cypress:${dx > w / 2 ? 1 : 0}:1.2`, 'cypress', 1000 + (dx > w / 2 ? 1 : 0) * 37 + 49, x0 + dx, y0 + h - 30, 1.2)); fenceLine(I, 'iron', x0 + 8, y0 + h - 6, x0 + w / 2 - 30, y0 + h - 6); fenceLine(I, 'iron', x0 + w / 2 + 30, y0 + h - 6, x0 + w - 8, y0 + h - 6); return; }
-    if (key === 'hospital') { put(I, vitem('hcan', 'canopy', [110, 50, 50, 1], x0 + w / 2, by1 + 30, 0)); return; }
+    if (key === 'hospital') { put(I, vitem('hcan:er', 'erCanopy', [1], x0 + w / 2, by1 + 30, 0)); lightAt(I, x0 + w / 2, by1 + 34, 46, 130, [1, 0.92, 0.82], 1.4, 'lamp'); return; }   // (IN1-B: the ambulance bay's canopy)
     if (key === 'pool') {
       const pw = w - 5 * TILE - 40, ph = h - 70;
       if (pw > 60) { put(I, { key: `pool:${pw}:${ph}:0`, recipe: { t: 'flat', k: 'pool', w: pw, h: ph, s: 0 }, x: x0 + 5 * TILE + 20 + pw / 2, y: y0 + 30 + ph / 2, ext: [pw / 2 + 2, ph / 2 + 4, pw / 2 + 2, ph / 2 + 2] }); for (let k = 0; k < 4; k++) put(I, vitem('loung', 'lounger', ['#f0eee8'], x0 + 5 * TILE + 40 + k * 44, y0 + h - 18, 0)); }
@@ -2887,12 +2899,13 @@ function cutRecipe(c, b, s, spec) {
     if (ux1 < ux0) continue;
     const blk = u.cells !== undefined && c.M.cellBlocks ? c.M.cellBlocks[u.cells] : null, ox = s.tx * TILE, oy = s.ty * TILE;   // (a police station's cells: shared/cells.js)
     const cells = blk ? { bars: blk.bars.map((q) => [q[0] - ox, q[1] - oy, q[2] - ox, q[3] - oy]), cells: blk.cells.map((q) => ({ door: [q.door.x - ox, q.door.y - oy], bench: [q.bench.x - ox, q.bench.y - oy], toilet: [q.toilet.x - ox, q.toilet.y - oy] })), dir: blk.south ? 1 : -1, back: (blk.south ? blk.y0 : blk.y1) - oy } : null;
-    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells });
+    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells });
   }
   // a wing with no room you walk into (a hospital's wards): its floor all across, walls cut low round it
   const inY0 = Math.max(32, Math.min(Dd - 64, (wi.y0 - s.ty) * TILE)), inY1 = Math.max(inY0 + 32, Math.min(Dd - 32, (wi.y1 - s.ty + 1) * TILE));
   const wing = units.length ? null : FLOORK[(wi.units[0] || {}).kind] || 'tileWhite';
-  return { t: 'cut', w: W, d: Dd, H: Math.min(buildingH(spec), 120), wall: spec.style || 'stucco', wallColor: spec.wallColor || null, seed: spec.seed, units, inY0: wing ? inY0 : (wi.y0 - s.ty) * TILE, inY1: wing ? inY1 : (wi.y1 - s.ty + 1) * TILE, wing };
+  // (ew / ee: the section has the building's west / east wall - a big walk-in is drawn in sections, open to each other)
+  return { t: 'cut', w: W, d: Dd, H: Math.min(buildingH(spec), 120), wall: spec.style || 'stucco', wallColor: spec.wallColor || null, seed: spec.seed, units, inY0: wing ? inY0 : (wi.y0 - s.ty) * TILE, inY1: wing ? inY1 : (wi.y1 - s.ty + 1) * TILE, wing, ew: s.tx <= b.tx, ee: s.tx + s.tw >= b.tx + b.tw };
 }
 function makeCut(r) {
   const { w, d, H } = r, CUT = 18, G = new GBuf(w, d + H + 8); G.ax = 0; G.ay = d + H + 8;
@@ -2902,29 +2915,33 @@ function makeCut(r) {
   const px = (x, Y, z, c, n, f = 0) => zw(G, x, gy(Y, z), c, n, z, f);
   // floor (a wing's all across it)
   for (const u of r.units) {
-    const fk = FLOORK[u.kind] || 'woodFloor';
-    for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
+    const fk = FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind];
+    for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
   if (r.wing) for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = 0; x < w; x++) px(x, Y, 0, groundPixel(r.wing, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   // the back wall: full height, its face toward the camera, its top a cap
   for (let x = 0; x < w; x++) {
-    for (let v = 0; v < H; v++) px(x, r.inY0, v, wallAt(x, v), [0, 1, 0]);
+    const lu = r.units.find((u) => LOBBY[u.kind] && x >= u.x0 && x < u.x1);   // (IN1-B / IN2-B: the lobby's own wall)
+    for (let v = 0; v < H; v++) px(x, r.inY0, v, lu ? LOBBY[lu.kind].wall(x, v) : wallAt(x, v), [0, 1, 0]);
     for (let Y = 0; Y < r.inY0; Y++) px(x, Y, H, CAP[Y === 0 ? 4 : 2], [0, 0, 1]);
   }
   // side walls and unit dividers cut low (caps), the front wall cut low with the doorways open
   const capRun = (xa, xb, Ya, Yb) => { for (let Y = Ya; Y < Yb; Y++) for (let x = xa; x < xb; x++) px(x, Y, CUT, CAP[x === xa || x === xb - 1 ? 3 : 2], [0, 0, 1]); for (let x = xa; x < xb; x++) for (let v = 0; v < CUT; v++) px(x, Yb, v, wallAt(x + 400, v), [0, 1, 0]); };
-  capRun(0, 32, r.inY0, d); capRun(w - 32, w, r.inY0, d);
+  if (r.ew !== false) capRun(0, 32, r.inY0, d);
+  if (r.ee !== false) capRun(w - 32, w, r.inY0, d);
   for (let i = 1; i < r.units.length; i++) { const x = r.units[i].x0 - 4; capRun(x, x + 8, r.inY0, r.inY1); }
-  for (let x = 32; x < w - 32; x++) {
+  for (let x = r.ew === false ? 0 : 32; x < (r.ee === false ? w : w - 32); x++) {
     if (r.units.some((u) => x >= u.dx && x < u.dx + u.dw)) continue;
     for (let Y = r.inY1; Y < d; Y++) px(x, Y, CUT, CAP[2], [0, 0, 1]);
     for (let v = 0; v < CUT; v++) px(x, d, v, wallAt(x + 800, v), [0, 1, 0]);
   }
   // counters, back shelves with goods, a clerk's till
   for (const u of r.units) {
+    if (LOBBY[u.kind]) { lobbyRoom(u, r, px); if (u.cells) cellRoom(u.cells, px); continue; }   // (IN1-B hospital / IN2-B police: their own desk and dressing)
     const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' || u.kind === 'roadhouse' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : u.kind === 'roadhouse' ? ramp('#4a3020', 5, 2) : ramp('#a8aab0', 5, 2);
-    for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = u.x0 + 6; x < u.x1 - (u.x1 - u.x0 > 128 ? 34 : 6); x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
-    for (let x = u.x0 + 6; x < u.x1 - (u.x1 - u.x0 > 128 ? 34 : 6); x++) for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, CT[v > 18 ? 4 : 2 + ((x >> 3) & 1)], [0, 1, 0]);
+    const ca = u.x0 > u.fx0 ? u.x0 : u.x0 + 6, cb = u.x1 < u.fx1 ? u.x1 : u.x1 - (u.fx1 - u.fx0 > 128 ? 34 : 6);   // (the counter runs on across a section's open side)
+    for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = ca; x < cb; x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
+    for (let x = ca; x < cb; x++) for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, CT[v > 18 ? 4 : 2 + ((x >> 3) & 1)], [0, 1, 0]);
     if (u.cells) { cellRoom(u.cells, px); continue; }   // (the cells along the back: no shelves)
     const goods = [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [226, 224, 214], [170, 100, 200]];
     for (let x = u.x0 + 4; x < u.x1 - 4; x++) for (let v = 0; v < 52; v++) { const sh = v % 13; px(x, r.inY0 + 10, v, sh < 2 ? MAT.metalDark[2] : goods[Math.floor(hash(x >> 1, v / 13 | 0, r.seed + u.x0) * goods.length)], [0, 1, 0]); }
@@ -2972,6 +2989,136 @@ function cellRoom(k, px0_) {
     for (const s of [-17, -16, 16, 17]) for (let v = 0; v < H + 2; v++) px(dx + s, dy, v, BAR[s < 0 ? 1 : 3], [0, 1, 0]);
     for (let x = dx + 10; x < dx + 15; x++) for (let v = 14; v < 22; v++) px(x, dy, v, v === 14 || v === 21 ? [60, 58, 50] : [150, 140, 96], [0, 1, 0]);
   }
+}
+// ---- the hospital's and the police station's lobbies, built to IN1-B and IN2-B (the owner's picks, 2026-10-10): the
+// floor and the back wall in their own materials, the desk, and the fittings - all art over the server's layout (the
+// counter row, the doorway, the cells stay where shared/map.js and shared/cells.js put them)
+const LOBBY = {
+  hospital: {   // white tile with a soft sheen; white wall tile with a blue band and a dark skirting
+    floor: (x, Y) => {
+      if ((x & 15) === 0 || (Y & 15) === 0) return [198, 202, 206];
+      const b = 226 + ((hash(x >> 4, Y >> 4, 77) * 7) | 0), s = Math.max(0, Math.cos((x * 0.7 + Y) / 38) - 0.55) * 22;
+      return [Math.min(255, b + s), Math.min(255, b + 2 + s), Math.min(255, b + 3 + s)];
+    },
+    wall: (x, v) => (v < 3 ? [92, 106, 128] : v >= 18 && v < 23 ? [58, 106, 168] : v === 17 || v === 23 ? [206, 214, 222] : (x % 8 === 0 || v % 8 === 0) ? [204, 208, 210] : [234 + ((hash(x >> 3, v >> 3, 78) * 5) | 0), 236, 234]),
+  },
+  police: {     // pale stone tile in the lobby; grey block walls round the cells
+    floor: (x, Y) => {
+      if ((x & 15) === 0 || (Y & 15) === 0) return [164, 156, 140];
+      const b = (hash(x >> 4, Y >> 4, 79) * 12) | 0;
+      return [192 + b, 184 + b, 166 + b];
+    },
+    wall: (x, v) => (v < 3 ? [70, 72, 78] : (v % 8 === 0 || (x + ((v >> 3) & 1) * 8) % 16 === 0) ? [116, 116, 114] : [150 + ((hash(x >> 4, v >> 3, 80) * 8) | 0), 150, 146]),
+  },
+};
+function lobbyRoom(u, r, px0_) {
+  const px = (x, Y, z, c, n) => px0_(Math.round(x), Math.round(Y), z, c, n);
+  const slab = (x0, x1, Y0, Y1, z, top, side, z0 = 0) => {
+    x0 = Math.round(x0); x1 = Math.round(x1); Y0 = Math.round(Y0); Y1 = Math.round(Y1);
+    for (let Y = Y0; Y < Y1; Y++) for (let x = x0; x < x1; x++) px(x, Y, z, top[Y === Y0 || x === x0 || x === x1 - 1 ? 4 : 2], [0, 0, 1]);
+    for (let x = x0; x < x1; x++) for (let v = z0; v < z; v++) px(x, Y1, v, side[v > z - 3 ? 3 : 1 + ((x - x0) % 6 === 0 ? 0 : 1)], [0, 1, 0]);
+  };
+  const onWall = (x0, x1, v0, v1, f) => { for (let x = Math.round(x0); x < Math.round(x1); x++) for (let v = v0; v < v1; v++) { const c = f(x - Math.round(x0), v - v0, x1 - x0, v1 - v0); if (c) px(x, r.inY0, v, c, [0, 1, 0]); } };
+  const plant = (x, Y, big = 1) => {   // a terracotta pot, a leafy top
+    slab(x - 5 * big, x + 5 * big, Y - 4, Y + 4, 9, ramp('#b0603c', 5, 2), ramp('#9a5030', 5, 2));
+    for (let k = 0; k < 140 * big; k++) { const a = hash(k, x, 81) * 6.283, d = Math.sqrt(hash(k, Y, 82)) * 8 * big, z = 9 + hash(k, 3, 83) * 15 * big * (1 - d / (10 * big)); px(x + Math.cos(a) * d, Y - 2 + Math.sin(a) * d * 0.6, Math.round(z), [[52, 120, 58], [78, 156, 70], [40, 96, 48], [100, 176, 84]][k & 3], [Math.cos(a) * 0.5, -0.4, 0.75]); }
+  };
+  const chairs = (x0, n, Y, col = '#3a62a8') => {   // a row of linked waiting chairs facing the desk (backs to the door)
+    const seat = ramp(col, 5, 2), back = ramp(col, 5, 1), leg = ramp('#7a7e86', 5, 2);
+    for (let i = 0; i < n; i++) { const x = x0 + i * 13; slab(x, x + 11, Y, Y + 10, 9, seat, leg); slab(x, x + 11, Y + 10, Y + 13, 19, back, back, 9); }
+    slab(x0 - 2, x0 + n * 13, Y + 4, Y + 6, 5, leg, leg);
+  };
+  const cooler = (x, Y) => { slab(x, x + 10, Y, Y + 8, 22, ramp('#e2e4e6', 5, 3), ramp('#c8ccd2', 5, 3)); for (let v = 22; v < 31; v++) for (let xx = x + 2; xx < x + 8; xx++) px(xx, Y + 4, v, v > 28 ? [60, 110, 190] : [110, 170, 230], [0, 1, 0]); };
+  const mat = (cx, Y, w = 40, h = 14) => { for (let yy = Y; yy < Y + h; yy++) for (let x = cx - w / 2; x < cx + w / 2; x++) px(x, yy, 1, (x + yy) % 3 ? [58, 66, 80] : [70, 78, 92], [0, 0, 1]); };
+  // laid out over the whole unit (a big one is drawn in sections: each draws its share, the rest falls off its edges)
+  const X0 = u.fx0, X1u = u.fx1, W = X1u - X0, dc = u.dx + u.dw / 2, gapR = X1u - (W > 128 ? 34 : 6), fy = r.inY1;
+  const lo = X0 + 6;
+  if (u.kind === 'hospital') {
+    // the back wall: the vending machine and the water cooler, the red double doors to the back, the pharmacy window
+    // with its shelves under a green cross, the lifts
+    const at = (f) => X0 + Math.round(W * f);
+    onWall(at(0.47) - 24, at(0.47) + 24, 0, 58, (x, v, w) => (x < 2 || x >= w - 2 || v >= 54 ? [118, 122, 130] : Math.abs(x - w / 2) < 1 ? [90, 30, 30] : v > 36 && v < 46 && (x % 23 > 6 && x % 23 < 17) ? [160, 196, 214] : v > 22 && v < 25 ? [214, 214, 218] : [196 - (v & 1) * 6, 52, 48]));
+    onWall(at(0.47) - 8, at(0.47) + 8, 60, 66, (x, v) => (v === 0 || v === 5 ? [40, 44, 40] : [64, 200, 110]));
+    onWall(at(0.68) - 30, at(0.68) + 30, 14, 50, (x, v, w, h) => (x < 2 || x >= w - 2 || v < 2 || v >= h - 2 ? [120, 128, 136] : v % 11 < 2 ? [150, 156, 162] : [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [236, 234, 228], [170, 120, 200]][(hash(x >> 1, v / 11 | 0, 84) * 6) | 0]));
+    onWall(at(0.68) - 5, at(0.68) + 5, 54, 64, (x, v) => ((x > 2 && x < 7) || (v > 2 && v < 7) ? [50, 170, 90] : [236, 240, 236]));
+    slab(at(0.68) - 32, at(0.68) + 32, r.inY0, r.inY0 + 8, 14, ramp('#e8e6e0', 5, 3), ramp('#b8bcc4', 5, 2));
+    for (const f of [0.86, 0.94]) if (at(f) + 18 < X1u - 8) {
+      onWall(at(f) - 15, at(f) + 15, 0, 56, (x, v, w) => (x < 2 || x >= w - 2 || v >= 52 ? [104, 110, 118] : Math.abs(x - w / 2) < 1 ? [120, 124, 132] : [176 + (x % 5 === 0 ? 8 : 0), 182, 190]));
+      onWall(at(f) - 3, at(f) + 3, 58, 61, () => [255, 190, 90]);
+    }
+    const vx = at(0.12), cx2 = at(0.2);
+    slab(vx, vx + 20, r.inY0, r.inY0 + 12, 46, ramp('#2a2e38', 5, 2), ramp('#3a3e4a', 5, 2));
+    for (let x = vx + 3; x < vx + 15; x++) for (let v = 16; v < 42; v++) px(x, r.inY0 + 12, v, v % 7 < 1 ? [40, 44, 52] : [[230, 80, 70], [240, 200, 80], [90, 170, 230], [120, 200, 110]][((x >> 2) + (v / 7 | 0)) & 3], [0, 1, 0]);
+    cooler(cx2, r.inY0 + 2);
+    plant(X0 + 16, r.inY0 + 14, 1.3); plant(at(0.36), r.inY0 + 12, 1.1); plant(X1u - 16, r.inY0 + 14, 1.3);
+    // the desk: a long white top over a wood front with a blue stripe, its middle curving out toward the lobby
+    const mid = (lo + gapR) / 2, half = (gapR - lo) / 2, bulge = (x) => Math.round(Math.max(0, Math.cos(Math.min(1, Math.abs(x - mid) / (half * 0.55)) * Math.PI / 2)) * 7);
+    const TOP = ramp('#ecebe6', 5, 3), WOOD = ramp('#a07650', 6, 3);
+    for (let x = lo; x < gapR; x++) {
+      const yf = u.cy + 26 + bulge(x);
+      for (let Y = u.cy + 6; Y < yf; Y++) px(x, Y, 22, TOP[Y === u.cy + 6 || Y === yf - 1 ? 4 : 2], [0, 0, 1]);
+      for (let v = 0; v < 22; v++) px(x, yf, v, v > 19 ? TOP[3] : v > 13 && v < 16 ? [58, 106, 168] : v < 2 ? [70, 52, 40] : (x - lo) % 32 === 0 ? WOOD[1] : WOOD[v > 8 ? 3 : 2], [0, 1, 0]);
+    }
+    for (const f of [0.38, 0.6]) { const x = lo + (gapR - lo) * f; slab(x, x + 9, u.cy + 9, u.cy + 12, 32, ramp('#2a2e36', 5, 2), ramp('#3a4a62', 5, 2), 22); }
+    for (let k = 0; k < 6; k++) px(lo + 20 + k * 3, u.cy + 14, 23, [244, 244, 240], [0, 0, 1]);
+    plant(lo + (gapR - lo) * 0.22, u.cy + 14, 0.7);
+    // the waiting area: rows of blue chairs either side of the aisle from the doors, plants, mats at the door and the desk
+    const Ya = u.cy + 70, Yb = fy - 44;
+    for (let Y = Yb - 13, row = 0; Y >= Ya && row < 3; Y -= 46, row++) for (const side of [-1, 1]) {
+      const room = side < 0 ? dc - 48 - (X0 + 40) : X1u - 40 - (dc + 48), n = Math.max(0, Math.min(5, Math.floor(room / 13)));
+      if (n >= 2) for (let g = 0; g < (room > 190 ? 2 : 1); g++) chairs(side < 0 ? dc - 48 - n * 13 - g * (n * 13 + 30) : dc + 48 + g * (n * 13 + 30), n, Y);
+    }
+    plant(dc - 36, fy - 30, 1.1); plant(dc + 36, fy - 30, 1.1); plant(X1u - 22, fy - 32, 1.3); plant(X0 + 22, fy - 32, 1.3);
+    mat(dc, fy - 44, 44, 16); mat(mid, u.cy + 44, 50, 12);
+    return;
+  }
+  // police: the front desk in wood with the officer's computer, the flag beside it; the clock, the notice board and the
+  // shield on the wall above the cells; blue chairs either side of the doors, a water cooler, plants; the armory cage
+  // in the officers' corner at the east end of the cells, rifles racked on its back wall, vests and ammo cases
+  const TOP = ramp('#8a6040', 5, 3), FRONT = ramp('#6a4a32', 6, 3);
+  for (let x = lo; x < gapR; x++) {
+    for (let Y = u.cy + 6; Y < u.cy + 26; Y++) px(x, Y, 22, TOP[Y === u.cy + 6 || Y === u.cy + 25 ? 4 : 2], [0, 0, 1]);
+    for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, v > 19 ? TOP[4] : v < 2 ? [40, 30, 24] : (x - lo) % 24 === 0 ? FRONT[1] : FRONT[2 + (v > 10 ? 1 : 0)], [0, 1, 0]);
+  }
+  const mx = (lo + gapR) / 2;
+  slab(mx - 4, mx + 6, u.cy + 9, u.cy + 12, 32, ramp('#22262e', 5, 2), ramp('#3a4a66', 5, 2), 22);
+  slab(mx + 12, mx + 22, u.cy + 12, u.cy + 18, 25, ramp('#d8d6d0', 5, 3), ramp('#b8b6b0', 5, 2), 22);
+  for (let k = 0; k < 5; k++) px(mx - 20 + k * 3, u.cy + 15, 23, [240, 238, 230], [0, 0, 1]);
+  plant(lo + 18, u.cy + 14, 0.6);
+  // the flag on its stand, past the desk's west end
+  const fx = Math.max(X0 + 14, lo - 2), fY = u.cy + 40;
+  for (let v = 0; v < 52; v++) px(fx, fY, v, v > 49 ? [230, 200, 90] : [200, 176, 96], [1, 0, 0]);
+  slab(fx - 3, fx + 4, fY - 2, fY + 2, 2, ramp('#c8a860', 5, 3), ramp('#a88840', 5, 2));
+  for (let x = fx + 1; x < fx + 17; x++) for (let v = 30; v < 48; v++) px(x, fY, v, x < fx + 8 && v > 39 ? ((x + v) % 3 ? [40, 60, 140] : [230, 230, 236]) : ((v >> 1) & 1) ? [200, 40, 44] : [236, 234, 228], [0, 1, 0]);
+  // the wall above the cells: the notice board, the clock, the shield
+  const k = u.cells, wx = (f) => X0 + Math.round(W * f);
+  if (!k || k.dir > 0) {
+    onWall(wx(0.3) - 26, wx(0.3) + 26, 42, 62, (x, v, w, h) => (x < 2 || x >= w - 2 || v < 2 || v >= h - 2 ? [96, 70, 44] : (hash(x >> 3, v >> 2, 85) > 0.55 ? [[240, 238, 228], [250, 236, 160], [200, 222, 240]][(x >> 3) % 3] : [176, 130, 86])));
+    onWall(wx(0.52) - 7, wx(0.52) + 7, 46, 60, (x, v) => { const d = Math.hypot(x - 6.5, v - 6.5); return d > 7 ? null : d > 5.6 ? [40, 40, 44] : (Math.abs(x - 6.5) < 0.8 && v >= 6 && v < 11) || (Math.abs(v - 6.5) < 0.8 && x >= 6 && x < 10) ? [30, 30, 34] : [240, 240, 232]; });
+    onWall(wx(0.7) - 7, wx(0.7) + 7, 44, 62, (x, v) => { const e = Math.abs(x - 6.5), top = v > 9 ? e < 6.5 : e < 6.5 - (9 - v) * 0.7; return !top ? null : e > 5 || v > 15 || v < 3 ? [214, 176, 70] : [40, 66, 140]; });
+  }
+  // the armory: the officers' corner east of the last cell - a mesh cage along the cells' bar line, a rack of rifles,
+  // vests and green ammo cases inside
+  if (k && k.dir > 0 && k.bars.length) {
+    const ex = Math.max(...k.bars.map((q) => Math.max(q[0], q[2]))), X1 = X1u - 8, yb = (k.bars.find((q) => q[1] === q[3]) || k.bars[0])[1];
+    if (X1 - ex > 40) {
+      onWall(ex + 6, X1 - 4, 8, 46, (x, v, w) => (v === 0 || v === 37 || v === 18 ? [70, 62, 52] : x % 7 === 3 && v > 2 && v < 17 ? [40, 40, 44] : x % 7 === 3 && v > 19 && v < 36 ? [44, 44, 48] : x % 7 === 4 && (v < 8 || (v > 20 && v < 26)) ? [110, 76, 44] : null));
+      for (let x = ex + 8; x < X1 - 12; x += 16) slab(x, x + 12, r.inY0 + 2, r.inY0 + 10, 9, ramp('#5a6a44', 5, 2), ramp('#4a5a38', 5, 2));
+      for (let x = ex + 10; x < X1 - 10; x += 22) onWall(x, x + 10, 24, 40, (xx, v) => (v > 12 && (xx < 3 || xx > 6) ? null : [30, 40, 62]));
+      for (let x = ex + 2; x < X1; x++) {
+        const post = (x - ex) % 24 === 2, door = x > X1 - 30 && x < X1 - 8;
+        for (let v = 0; v < 40; v++) if (post || v === 39 || v === 38 || (!door && (x + v) % 4 === 0) || (door && (x === X1 - 29 || x === X1 - 9 || v === 20))) px(x, yb, v, post || v > 37 ? [90, 94, 100] : [140, 146, 152], [0, 1, 0]);
+      }
+    }
+  }
+  // the lobby: chairs either side of the doors along the front wall, the water cooler, plants, the mat
+  const Ya = u.cy + 76, Yb = fy - 44;
+  for (let Y = Yb - 13, row = 0; Y >= Ya && row < 2; Y -= 50, row++) for (const side of [-1, 1]) {
+    const room = side < 0 ? dc - 44 - (X0 + 44) : X1u - 44 - (dc + 44), n = Math.max(0, Math.min(4, Math.floor(room / 13)));
+    if (n >= 2) for (let g = 0; g < Math.min(3, Math.floor((room + 30) / (n * 13 + 30))); g++) chairs(side < 0 ? dc - 44 - n * 13 - g * (n * 13 + 30) : dc + 44 + g * (n * 13 + 30), n, Y);
+  }
+  cooler(X0 + 12, fy - 80); plant(X0 + 22, fy - 32, 1.3); plant(X1u - 22, fy - 32, 1.3); plant(dc - 34, fy - 30, 1); plant(dc + 34, fy - 30, 1);
+  mat(dc, fy - 44, 44, 16);
 }
 // ---- the Rusty Spur's bar room (MC4, task #366): along the floor in front of the bar, left to right - the booths by the
 // wall, the jukebox, the pool table, the arm-wrestling table with its two stools, and the card room behind a low partition
