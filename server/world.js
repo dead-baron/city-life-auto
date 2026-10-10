@@ -60,6 +60,7 @@ import * as hoops from './systems/hoops.js';
 import * as bikers from './systems/bikers.js';
 import * as streetlife from './systems/streetlife.js';
 import * as bowling from './systems/bowling.js';
+import * as cinema from './systems/cinema.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -124,6 +125,7 @@ const SYSTEMS = [
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
+  ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
 ];
 
 export class World {

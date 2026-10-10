@@ -108,5 +108,5 @@ export const DEV_SECTIONS = [
     ['🛥 Boats with people aboard (riders in open boats)', 'rescue', { at: 'crew' }], ['🚤 Rescue boat', 'car', { m: 'rescueboat' }],
   ] },
   // a night out (IN14: server/systems/bowling.js)
-  { id: 'nightout', title: '🎳 Bowling & cinema', items: [['🎳 Pinwheel Lanes (bowling alley, at the shoe counter)', 'near', { k: 'bowling' }]] },
+  { id: 'nightout', title: '🎳 Bowling & cinema', items: [['🎳 Pinwheel Lanes (bowling alley, at the shoe counter)', 'near', { k: 'bowling' }], ['🎬 The Grand Theatre (cinema, at the ticket counter)', 'near', { k: 'cinema' }]] },
 ];

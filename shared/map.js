@@ -38,6 +38,7 @@ import { EDGE_OUT } from './border.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 import { buildCellBlocks, barsRay } from './cells.js';
 import { buildBowlingAlley } from './bowling.js';
+import { buildCinema } from './cinema.js';
 const EDGE_T = Math.ceil(EDGE_OUT / TILE) + 2;   // tiles of open sea past the map's edge (border.js), then the wall
 
 export { Z };
@@ -633,6 +634,7 @@ function buildCity(seed, opts = null) {
   buildClothesShops(m);   // (task #364: the clothing stores by style and district, the barbers and salons)
   buildInteriors(m);
   buildBowlingAlley(m, { T, DISTRICTS });   // (Pinwheel Lanes: eight lanes in the biggest plain warehouse - shared/bowling.js)
+  buildCinema(m, { T, DISTRICTS });   // (The Grand Theatre becomes a cinema: the lobby, two screens - shared/cinema.js)
   buildCellBlocks(m);   // (task #362: the cells at the back of every police station - shared/cells.js)
   buildDealerLots(m);
   clearHospitalFronts(m);

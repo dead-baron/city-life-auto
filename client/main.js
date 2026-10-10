@@ -3113,6 +3113,7 @@ function drawOverlays(F, v2) {
   }
   g.setTransform(...S.worldTf);
   drawBowling(F);
+  drawCinema(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
     const ta = touchAimState();
@@ -3650,6 +3651,13 @@ function drawBowling(F) {
   if (!A || !F.sp) return;
   if (S.bowlView) { S.bowlView.draw(g, F, { walkInAt, DPR, W, H }); g.setTransform(...S.worldTf); }
   else if (!S.bowlAsk && Math.hypot(F.sp.x - A.counter.x, F.sp.y - A.counter.y) < 1600) { S.bowlAsk = 1; import('./bowling.js').then((m) => { S.bowlView = new m.BowlingView(S); }).catch((e) => console.warn('[bowling]', e)); }
+}
+// The Grand Theatre (client/cinema.js, loaded near it): the screen rooms dark, the film on the screen and its light
+function drawCinema(F) {
+  const C = S.map && S.map.cinema;
+  if (!C || !F.sp) return;
+  if (S.cineView) { S.cineView.draw(g, F, { walkInAt }); g.setTransform(...S.worldTf); }
+  else if (!S.cineAsk && Math.hypot(F.sp.x - C.counter.x, F.sp.y - C.counter.y) < 1600) { S.cineAsk = 1; import('./cinema.js').then((m) => { S.cineView = new m.CinemaView(S); }).catch((e) => console.warn('[cinema]', e)); }
 }
 // shooting hoops: the meter beside you, with the band that drops it in from where you stand
 function drawHoops(g, z) {
