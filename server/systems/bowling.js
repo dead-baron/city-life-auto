@@ -26,6 +26,8 @@ const st = (world) => (world.bowl ||= { lanes: (alley(world) ? alley(world).lane
 
 // whose turn it is on a lane
 const upNext = (G) => G.bowlers[G.turn] || null;
+// the lane's players see the change on their card straight away
+function dirty(world, G) { for (const b of G.bowlers) { const q = b.pid && world.players.get(b.pid); if (q) q.meDirty = true; } }
 function newGame(npc) { return { bowlers: [], turn: 0, up: ALL_PINS, ball: 0, roll: null, settleAt: 0, npc: !!npc }; }
 
 export function interaction(world, p) {
@@ -139,6 +141,7 @@ export function roll(world, li, ped, power, hook) {
   const b = world.add({ id: world.newId(), kind: K.BALL, x: at.x, y: at.y, a: 0, z: 0, vx: 0, vy: 0, vz: 0, ballKind: 'bowl', cx: -1, cy: -1 });
   G.ball = b.id;
   G.roll = { pts: r.pts, speed: r.speed, t0: world.time, gutter: r.gutter, down: k.down & G.up, flights: k.flights, bowler: G.turn };
+  dirty(world, G);
   ped.attackAnimUntil = world.time + 0.3;
   return G.roll;
 }
@@ -165,6 +168,7 @@ function settle(world, li, G, R) {
   if (!bw) { G.settleAt = world.time + SETTLE_S; return; }
   const before = nextBall(bw.rolls);
   bw.rolls.push(n);
+  dirty(world, G);
   const after = nextBall(bw.rolls);
   const strike = n === 10 && before.up === 10, spare = !strike && n === before.up && before.ball > 0;
   const q = bw.pid && world.players.get(bw.pid);
@@ -180,6 +184,7 @@ function settle(world, li, G, R) {
 function afterSettle(world, li, G) {
   const nx = G.next || { frameDone: true, reset: true };
   G.settleAt = 0; G.next = null;
+  dirty(world, G);
   if (nx.reset || nx.frameDone) {
     G.up = ALL_PINS;
     const L = alley(world).lanes[li], head = lanePt(L, 0, L.len);
