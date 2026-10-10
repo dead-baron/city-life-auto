@@ -4,10 +4,11 @@
 // (about 2 MB gzipped for today's world), building only when it can't get them. The route World v3 needs: a phone never
 // builds a 5 x 4 km world.
 //
-//   GET /world/<world>/<seed>/index.bin       -> 200 the index (gzipped; immutable: the URL has the world's hash)
-//   GET /world/<world>/<seed>/r<x>-<y>.bin    -> 200 a region file (gzipped)
-//                                             -> 404 + x-world-miss: hash (another build's world) | seed | packing (not
-//                                                written yet) | file (no such file)
+//   GET /world/<world>/<seed>/index.bin?v=<format>     -> 200 the index (gzipped; immutable: the URL has the world's
+//                                                         hash and the files' format, shared/regionpack.js PACK_VERSION)
+//   GET /world/<world>/<seed>/r<x>-<y>.bin?v=<format>  -> 200 a region file (gzipped)
+//                                             -> 404 + x-world-miss: hash (another build's world) | seed | version (a page
+//                                                reading another format) | packing (not written yet) | file (no such file)
 //
 // world is version.json's world hash (tools/stamp-version.mjs: the generator's code), the key browsers keep the city
 // under (client/worldcache.js). The cut is taken from the city as generated, before the World runs (the running world
@@ -16,7 +17,7 @@
 import { mkdirSync, readdirSync, rmSync, createReadStream, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzip } from 'node:zlib';
-import { packRegions } from '../shared/regionpack.js';
+import { packRegions, PACK_VERSION } from '../shared/regionpack.js';
 
 const FILE = /^(index|r\d{1,2}-\d{1,2})\.bin$/;
 
@@ -61,13 +62,14 @@ export function createWorldCdn({ cut, root, dataDir, seed, world = null, delayMs
   // true when it was ours to answer
   function handle(path, req, res) {
     if (!path.startsWith('/world/')) return false;
-    const qi = path.indexOf('?');
+    const qi = path.indexOf('?'), v = qi >= 0 ? /[?&]v=([^&]*)/.exec(path.slice(qi)) : null;
     if (qi >= 0) path = path.slice(0, qi);
     const m = /^\/world\/([0-9a-f]{6,40})\/(\d{1,10})\/([^/]+)$/.exec(path);
     const miss = (why) => { S.missed++; res.writeHead(404, { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-world-miss', 'cache-control': 'no-store', 'x-world-miss': why }); res.end(); return true; };
     if (!m || !FILE.test(m[3])) return miss('file');
     if (m[1] !== S.world) return miss('hash');
     if ((+m[2] >>> 0) !== S.seed || String(+m[2]) !== m[2]) return miss('seed');
+    if (v && v[1] !== String(PACK_VERSION)) return miss('version');
     if (S.state !== 'ready') return miss('packing');
     const f = S.files.get(m[3]);
     if (!f) return miss('file');

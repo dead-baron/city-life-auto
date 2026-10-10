@@ -66,7 +66,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
   // (baked chunks: many small requests a second while moving - counted in the monthly data, not the per-address rate)
-  if (worldCdn && path.startsWith('/world/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (worldCdn.handle(path, req, res)) return; }
+  if (worldCdn && path.startsWith('/world/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (worldCdn.handle(path + (url.search || ''), req, res)) return; }
   if (artCdn && path.startsWith('/art/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (artCdn.handle(path + (url.search || ''), req, res)) return; }
   if (limits && path !== '/health') {
     const why = limits.checkHttp(clientIp(req, config.trustProxy));

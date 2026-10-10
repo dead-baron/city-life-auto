@@ -11,7 +11,7 @@
 //      cityData); then { stored: true | false } once a city got here is kept (or couldn't be)
 //      { ok: false, error }
 import { readWorld, writeWorld } from './worldcache.js';
-import { assembleCity, regionKeys } from '../shared/regionpack.js';
+import { assembleCity, regionKeys, PACK_VERSION } from '../shared/regionpack.js';
 import { MAP_W, MAP_H } from '../shared/constants.js';
 
 const FETCH_MS = 15000;   // the index and every region, all of it, or the city is built here
@@ -22,7 +22,7 @@ export async function fetchCity(base, key, seed, { fetchFn = globalThis.fetch, m
   if (!base || !/^[0-9a-f]{6,40}$/.test(world) || typeof fetchFn !== 'function' || typeof DecompressionStream === 'undefined') return null;
   const url = `${base}${world}/${seed >>> 0}/`, ctl = typeof AbortController === 'function' ? new AbortController() : null;
   const get = async (name) => {
-    const r = await fetchFn(url + name, ctl ? { signal: ctl.signal } : undefined);
+    const r = await fetchFn(`${url}${name}?v=${PACK_VERSION}`, ctl ? { signal: ctl.signal } : undefined);   // (the format in the URL: a new one isn't read from the HTTP cache)
     if (!r.ok || !r.body) throw new Error(`${name}: ${r.status}`);
     return new Uint8Array(await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
   };

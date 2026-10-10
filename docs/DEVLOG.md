@@ -6314,9 +6314,9 @@ changes; a browser's first load after a world change gets its city from the serv
   city is built, before the World runs (the running world changes the map: smashed props, gates and cell doors toggle
   solid entries, smash.js adds a grid) - 350 ms here; 3 s after start it gzips the files in the background (770 ms, on
   libuv's threads) and writes them to `<dataDir>/world/<world hash>-<seed>/` (older builds' folders deleted). It serves
-  `GET /world/<world>/<seed>/index.bin` and `r<x>-<y>.bin` cached for good (the URL has the world's hash), with CORS, the
-  bytes counted towards the monthly limit and a 503 over it; a 404 says why in `x-world-miss` (hash, seed, packing,
-  file). `/stats` has a `world` line.
+  `GET /world/<world>/<seed>/index.bin?v=1` and `r<x>-<y>.bin?v=1` cached for good (the URL has the world's hash and
+  the files' format), with CORS, the bytes counted towards the monthly limit and a 503 over it; a 404 says why in
+  `x-world-miss` (hash, seed, version, packing, file). `/stats` has a `world` line.
 - **The browser:** `client/boot.js` tells the city worker the game server's address (`client/config.js serverUrl`, as
   main.js connects; not offline, not with `?worldcdn=0`). `client/worldgen.js`: the kept city if there is one, else the
   index and the nine regions fetched in parallel (15 s for all of it), unzipped with DecompressionStream and assembled

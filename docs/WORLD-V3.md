@@ -1348,8 +1348,8 @@ What was built (docs/DEVLOG.md has the details):
   index: the frame, every scalar, the lists that stay whole, propSolid's keys, and the paths of what JSON can't hold
   (objects reached from two places, Maps and Sets, undefined / NaN / -0, typed arrays inside lists).
 - **Serving** (`server/worldcdn.js`): cut as the city is built (before the World runs and changes it), gzipped and
-  written in the background, `GET /world/<world hash>/<seed>/index.bin | r<x>-<y>.bin`, immutable caching, a 404 that
-  says why (`x-world-miss`).
+  written in the background, `GET /world/<world hash>/<seed>/index.bin | r<x>-<y>.bin` (`?v=` the files' format),
+  immutable caching, a 404 that says why (`x-world-miss`).
 - **The client** (`client/worldgen.js`): kept city -> served (index and regions in parallel, 15 s) -> built (the
   generator imported only then); the signature checked against the server's as for a kept city.
 

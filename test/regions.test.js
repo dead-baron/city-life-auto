@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { generateCity, cityFromData, CityMap, mapSignature } from '../shared/map.js';
-import { packRegions, assembleCity, readPack, regionGrid, regionKeys, regionKey, regionOf, itemTile, REGIONAL, OMIT } from '../shared/regionpack.js';
+import { packRegions, assembleCity, readPack, regionGrid, regionKeys, regionKey, regionOf, itemTile, REGIONAL, OMIT, PACK_VERSION } from '../shared/regionpack.js';
 import { REGION_TILES, REGIONS_X, REGIONS_Y, FRAME_W, FRAME_H } from '../shared/world3.js';
 import { MAP_W, MAP_H, TILE } from '../shared/constants.js';
 import { cutWorld, createWorldCdn } from '../server/worldcdn.js';
@@ -126,7 +126,7 @@ test('the server serves the region files: the index and a region, cached for goo
     assert.deepEqual(readdirSync(join(dataDir, 'world')), [`${world}-1337`], "older builds' folders deleted");
     const files = [];
     for (const name of ['index.bin', ...regionKeys(MAP_W, MAP_H).map((k) => `${k}.bin`)]) {
-      res = await get(`/world/${world}/1337/${name}`);
+      res = await get(`/world/${world}/1337/${name}?v=${PACK_VERSION}`);
       assert.equal(res.status, 200, name);
       assert.equal(res.headers['cache-control'], 'public, max-age=31536000, immutable');
       assert.equal(res.headers['access-control-allow-origin'], '*');
@@ -137,7 +137,7 @@ test('the server serves the region files: the index and a region, cached for goo
     const back = cityFromData(assembleCity(files[0], files.slice(1)));
     delete back._sig;
     assert.equal(mapSignature(back), CITY()._sig, 'the files are the city');
-    for (const [path, why] of [[`/world/0123456789ab/1337/index.bin`, 'hash'], [`/world/${world}/42/index.bin`, 'seed'], [`/world/${world}/01337/index.bin`, 'seed'], [`/world/${world}/1337/r9-9.bin`, 'file'], [`/world/${world}/1337/x.json`, 'file'], ['/world/../version.json', 'file']]) {
+    for (const [path, why] of [[`/world/0123456789ab/1337/index.bin`, 'hash'], [`/world/${world}/42/index.bin`, 'seed'], [`/world/${world}/01337/index.bin`, 'seed'], [`/world/${world}/1337/r9-9.bin`, 'file'], [`/world/${world}/1337/index.bin?v=0`, 'version'], [`/world/${world}/1337/x.json`, 'file'], ['/world/../version.json', 'file']]) {
       res = await get(path);
       assert.equal(res.status, 404, path); assert.equal(res.headers['x-world-miss'], why, path);
     }
@@ -153,7 +153,8 @@ test("the city worker: the kept city, else the server's region files, else built
   for (const [name, bytes] of [['index.bin', pack.index], ...pack.regions.map((r) => [`${r.key}.bin`, r.bytes])]) files[name] = gzipSync(bytes, { level: 1 });
   const serve = (over = {}) => async (url) => {
     assert.ok(url.startsWith(`${base}${world}/1337/`), url);
-    const name = url.slice(`${base}${world}/1337/`.length), z = name in over ? over[name] : files[name];
+    assert.ok(url.endsWith(`?v=${PACK_VERSION}`), 'the format in the URL');
+    const name = url.slice(`${base}${world}/1337/`.length, url.indexOf('?')), z = name in over ? over[name] : files[name];
     if (z instanceof Error) throw z;
     return z ? new Response(z) : new Response(null, { status: 404 });
   };
