@@ -157,6 +157,7 @@ function buildSites(m, H) {
   coralRainforest(m, H);
   beaverPonds(m, H);
   huntingCamps(m, H);
+  restSpots(m, H);   // (the campfire rest spots out in the wilds: below)
 }
 
 // ---- Cedar Hills Golf Club (Cedar Hills, on the south island's west shore; original) ---------------------------
@@ -3018,8 +3019,9 @@ function gnawedTrees(m, H, px, py, n) {
 // a road or a track - a canvas wall tent or a log cabin, a fire, hides stretched on racks, a woodpile, a sign, the
 // counter, a pickup or two parked up.
 const HUNT_PLACES = [
-  { kind: 'huntcamp', name: 'Ridge Trail Hunting Camp', road: 'Ridge Trail', sign: 'HUNTING CAMP', tents: 2 },          // goats on the cliffs, lions, grizzlies
-  { kind: 'huntcamp', name: 'Canyon Track Hunting Camp', road: 'Canyon Track', sign: 'HUNTING CAMP', tents: 2 },        // coyotes, bobcats, quail
+  { kind: 'huntcamp', name: 'Ridge Trail Hunting Camp', road: 'Ridge Trail', tents: 2 },          // goats on the cliffs, lions, grizzlies
+  { kind: 'huntcamp', name: 'Canyon Track Hunting Camp', road: 'Canyon Track', tents: 2 },        // coyotes, bobcats, quail
+  // (the camps have no sign: the owner, "remove the hunting camp signs at campsites")
   { kind: 'trapper', name: "Heron Marsh Trapper's Cabin", near: 'Heron Marsh', sign: 'TRAPPER', cabin: true },         // beaver, otter, ducks and geese, moose
   { kind: 'trapper', name: "Redwood Creek Trapper's Cabin", pond: 'Redwood Creek', sign: 'TRAPPER', cabin: true },     // the redwoods' beaver pond
   { kind: 'butcher', name: 'Cedar Farms Game Butcher', road: 'Section Road', sign: 'GAME BUTCHER', cabin: true },      // pheasant, turkey, boar
@@ -3068,10 +3070,125 @@ function huntingCamps(m, H) {
     for (let k = 0; k < (P.kind === 'butcher' ? 1 : 2); k++) H.addProp(m, 'hiderack', X - 110 + k * 46, Y + 40, 6, { v: (k + P.name.length) % 3 });
     H.addProp(m, 'lantern', X - 20, Y + 30, 0);
     if (P.kind === 'butcher') H.addProp(m, 'cooler', X + 80, Y + 20, 0, { v: 1 });
-    H.addProp(m, 'textsign', X + 120, Y + 60, 0, { text: P.sign, bg: '#4a3020', fg: [244, 226, 180], z: 30 });
+    if (P.sign) H.addProp(m, 'textsign', X + 120, Y + 60, 0, { text: P.sign, bg: '#4a3020', fg: [244, 226, 180], z: 30 });
     addCounter(m, P.kind, P.name, X, Y + 30);
     for (const o of [-1, 1]) m.parking.push({ x: X + 150, y: Y - 10 + o * 46, a: Math.PI / 2, drive: true });
     (m.landmarks ||= []).push({ name: P.name, type: P.kind, x: X - 170, y: Y - 130, w: 340, h: 260 });
     m.natureSites.push({ kind: P.kind, name: P.name, x: X, y: Y });
   }
+}
+
+// ---- rest spots in the wilds (tasks #341, #396; concepts CF2-A, CF2-B) ---------------------------------------------
+// "Little campfire spots far out in the wilderness away from all development, usually off a trail, sometimes by a
+// view, sometimes in the middle of nowhere." By rules, not coordinates: a jittered grid of candidates in the wild
+// districts, far from anything built, on open ground with room; each one off a trail (a hiking trail, a dirt road or
+// a track, 3-8 strides away: a footpath leads in), by a view (water below; a lake or a river counts double) or in the
+// middle of nowhere. The best of each kind, spaced apart: a dirt clearing, a campfire (some still burning), a seat
+// log or two, rocks and flowers. Ordinary campfires (server/systems/campfires.js). m.restSpots lists them.
+export const REST = { step: 7, dev: 850, view: 1000, wild: 1750, gap: 1500, fire: 1000, built: 800, perDist: 5, caps: { view: 7, trail: 12, wild: 5 } };
+const REST_STYLE = new Set(['wild', 'rocky', 'desert', 'rural']);
+function stampLine(mask, pts, r) {
+  for (let k = 1; k < pts.length; k++) {
+    const a = pts[k - 1], b = pts[k], ax = a.x ?? a[0], ay = a.y ?? a[1], bx = b.x ?? b[0], by = b.y ?? b[1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 16));
+    for (let s = 0; s <= n; s++) {
+      const x = ax + (bx - ax) * s / n, y = ay + (by - ay) * s / n;
+      for (let ty = Math.max(0, Math.floor((y - r) / TILE)); ty <= Math.min(MAP_H - 1, Math.floor((y + r) / TILE)); ty++) for (let tx = Math.max(0, Math.floor((x - r) / TILE)); tx <= Math.min(MAP_W - 1, Math.floor((x + r) / TILE)); tx++) mask[ty * MAP_W + tx] = 1;
+    }
+  }
+}
+function restSpots(m, H) {
+  const W = MAP_W, C = 8, GW = Math.ceil(W / C), GH = Math.ceil(MAP_H / C), CP = C * TILE, styles = m._distStyle || [];
+  // the trails; what counts as built (paved ground, buildings, lots, fields, docks; the designed places, the camps,
+  // the counters, the parking)
+  const trail = new Uint8Array(W * MAP_H), dev = new Uint8Array(GW * GH), B = new Uint8Array(32);
+  for (const t of [T.ROAD, T.SIDEWALK, T.PLAZA, T.BUILDING, T.DOCK, T.FIELD, T.BRIDGE, T.LOT, T.FLOOR, T.COUNTER, T.WALL]) B[t] = 1;
+  for (let i = 0; i < trail.length; i++) if (m.tiles[i] === T.DIRT && (m.reserve[i] & RES)) trail[i] = 1;
+  for (const e of m.edges || []) if (e.kind === 'dirt') stampLine(trail, e.pts, (e.hw || 64) + 8);
+  for (const r of m.tracks || []) stampLine(trail, r.pts, (r.hw || 26) + 8);
+  for (let i = 0; i < trail.length; i++) if (B[m.tiles[i]] && !trail[i]) dev[Math.floor(i / W / C) * GW + Math.floor((i % W) / C)] = 1;
+  const mark = (x, y) => { const cx = Math.floor(x / CP), cy = Math.floor(y / CP); if (cx >= 0 && cy >= 0 && cx < GW && cy < GH) dev[cy * GW + cx] = 1; };
+  const fires = m.props.filter((p) => p && p.t === 'campfire');
+  for (const b of m.buildings) mark((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE);
+  for (const s of [...m.natureSites, ...m.pois, ...(m.parking || []), ...m.props.filter((p) => p && p.t === 'tent'), ...fires]) mark(s.x, s.y);
+  const devAt = (x, y) => {
+    const cx = Math.floor(x / CP), cy = Math.floor(y / CP), R = Math.ceil(REST.wild / CP) + 1;
+    let d = 1e9;
+    for (let oy = -R; oy <= R; oy++) for (let ox = -R; ox <= R; ox++) { const X = cx + ox, Y = cy + oy; if (X >= 0 && Y >= 0 && X < GW && Y < GH && dev[Y * GW + X]) d = Math.min(d, Math.hypot(ox, oy) * CP); }
+    return d;
+  };
+  const cands = [], S = REST.step;
+  for (let gy = 6; gy < MAP_H - 12; gy += S) for (let gx = 6; gx < W - 12; gx += S) {
+    const tx = gx + Math.floor(hash2(gx, gy, 411) * S), ty = gy + Math.floor(hash2(gx, gy, 412) * S), i = ty * W + tx, style = styles[m.dist[i]];
+    if (!REST_STYLE.has(style) || !m.land[i]) continue;
+    const desert = style === 'desert';
+    let ok = true;   // room for the clearing: open ground, nothing reserved, no water
+    for (let dy = -4; dy <= 4 && ok; dy++) for (let dx = -4; dx <= 4 && ok; dx++) {
+      const j = i + dy * W + dx, t = m.tiles[j];
+      if (!(t === T.GRASS || t === T.DIRT || (desert && t === T.SAND)) || m.reserve[j] || trail[j] || m.lake[j] || m.river[j]) ok = false;
+    }
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, dd = ok ? devAt(x, y) : 0;
+    if (dd < REST.dev || (style === 'rural' && dd < REST.wild)) continue;
+    // the nearest trail and the water in view (none closer than 3 tiles)
+    let tr = 99, water = 0;
+    for (let dy = -11; dy <= 11; dy++) for (let dx = -11; dx <= 11; dx++) {
+      const d = Math.hypot(dx, dy), j = i + dy * W + dx, t = m.tiles[j];
+      if (d > 11) continue;
+      if (trail[j] && d < tr) tr = d;
+      if (t === T.WATER || t === T.DEEP) water += d < 3 ? 999 : m.lake[j] || m.river[j] ? 2 : 1;
+    }
+    const kind = water >= 999 ? null : water >= 50 && dd >= REST.view ? 'view' : tr >= 3 && tr <= 8 ? 'trail' : tr > 11 && dd >= REST.wild ? 'wild' : null;
+    if (kind) cands.push({ x, y, tx, ty, kind, desert, score: (kind === 'view' ? Math.min(water, 200) : kind === 'trail' ? 60 - tr * 3 : 0) + dd / 100 + hash2(tx, ty, 413) * 8 });
+  }
+  // the best of each kind, spaced apart, away from the buildings' walls, a few to a district
+  const spots = [], perD = new Map();
+  const bc = m.buildings.map((b) => [(b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE, Math.max(b.tw, b.th) * TILE / 2]);
+  for (const kind of ['view', 'trail', 'wild']) {
+    let n = 0;
+    for (const c of cands.filter((q) => q.kind === kind).sort((a, b) => b.score - a.score || a.ty - b.ty || a.tx - b.tx)) {
+      if (n >= REST.caps[kind]) break;
+      const di = m.dist[c.ty * W + c.tx];
+      if ((perD.get(di) || 0) >= REST.perDist || spots.some((s) => Math.hypot(s.x - c.x, s.y - c.y) < REST.gap) || fires.some((f) => Math.hypot(f.x - c.x, f.y - c.y) < REST.fire)
+        || bc.some(([x, y, r]) => Math.hypot(x - c.x, y - c.y) - r < REST.built)) continue;
+      spots.push(c); n++; perD.set(di, (perD.get(di) || 0) + 1);
+    }
+  }
+  m.restSpots = spots.map((c) => { const lit = restSpot(m, H, c, trail); return Object.defineProperty({ x: c.x, y: c.y, kind: c.kind, lit }, '_items', { value: c.items, enumerable: false }); });
+}
+// one rest spot: the clearing, the footpath in from the trail, the fire, the seats, rocks and flowers round the edge
+function restSpot(m, H, c, trail) {
+  const { x: X, y: Y, tx, ty } = c, h = (k) => hash2(tx, ty, 420 + k), ground = (t) => t === T.GRASS || t === T.DIRT || t === T.SAND;
+  const items = c.items = [], add = (...a) => items.push(H.addProp(m, ...a));
+  paint(m, X, Y, 74, T.DIRT, ground);
+  reserveRound(m, X, Y, 150);
+  if (c.kind === 'trail') {
+    let best = null, bd = 1e9;
+    for (let dy = -9; dy <= 9; dy++) for (let dx = -9; dx <= 9; dx++) if (trail[(ty + dy) * MAP_W + tx + dx] && Math.hypot(dx, dy) < bd) { bd = Math.hypot(dx, dy); best = [(tx + dx + 0.5) * TILE, (ty + dy + 0.5) * TILE]; }
+    if (best) { const L = Math.hypot(best[0] - X, best[1] - Y); for (let s = 60; s <= L; s += 12) { const k = s / L; paint(m, X + (best[0] - X) * k + Math.sin(k * 6 + h(9) * 6) * 10, Y + (best[1] - Y) * k, 18, T.DIRT, ground); } }
+  }
+  const lit = h(0) < 0.35;   // (about one in three still burning, as if someone had just moved on)
+  add('campfire', X, Y, 0, { lit, rest: 1 });
+  const a0 = h(1) * Math.PI * 2;
+  for (let k = 0; k < (h(2) < 0.7 ? 2 : 1); k++) {
+    const a = a0 + k * Math.PI * (0.8 + h(3) * 0.4), r = 50 + h(4 + k) * 8;
+    add('log', Math.round(X + Math.cos(a) * r), Math.round(Y + Math.sin(a) * r * 0.85), 8, { len: 80 + Math.floor(h(6 + k) * 2) * 20, a: Math.round(((a + Math.PI / 2) % Math.PI) * 100) / 100, seat: 1 });
+  }
+  const nR = 2 + Math.floor(h(10) * 3), nF = 3 + Math.floor(h(26) * 3);
+  for (let k = 0; k < nR; k++) {
+    const a = a0 + Math.PI * 0.35 + k * (Math.PI * 2 / nR) + h(11 + k) * 0.6, r = 92 + h(16 + k) * 26, s = 22 + Math.floor(h(21 + k) * 3) * 6;
+    add('boulder', Math.round(X + Math.cos(a) * r), Math.round(Y + Math.sin(a) * r * 0.85), Math.round(s * 0.45), { s });
+  }
+  for (let k = 0; k < nF; k++) {
+    const a = h(27 + k) * Math.PI * 2, r = 106 + h(33 + k) * 34;   // (past the seat logs' ends)
+    add(c.desert ? (k % 2 ? 'bush_a' : 'shrub_b') : k % 3 === 2 ? 'shrub_a' : 'flowers_a', Math.round(X + Math.cos(a) * r), Math.round(Y + Math.sin(a) * r * 0.85), 0);
+  }
+  return lit;
+}
+// Once the whole world is built (map.js, at the end): a rest spot something was built near afterwards (a den on a
+// rocky islet) goes again - its props painted placeholders, every other prop keeping its index.
+export function pruneRestSpots(m) {
+  m.restSpots = (m.restSpots || []).filter((s) => {
+    if (m.buildings.every((b) => Math.hypot((b.tx + b.tw / 2) * TILE - s.x, (b.ty + b.th / 2) * TILE - s.y) - Math.max(b.tw, b.th) * TILE / 2 >= REST.built) && m.pois.every((q) => Math.hypot(q.x - s.x, q.y - s.y) >= REST.built)) return true;
+    for (const p of s._items || []) { const i = m.props.indexOf(p); if (i >= 0) dropProp(m, i); }
+    return false;
+  });
 }

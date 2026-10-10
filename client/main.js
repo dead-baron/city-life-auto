@@ -3107,6 +3107,8 @@ function drawOverlays(F, v2) {
     drawArt2Marks(F);
     S.camp.draw(g, F); S.boom.draw(g, F, W, H, DPR);   // (the campfires' haze; the fireballs, plumes, shockwaves, the flash)
     if (S.carry) S.carry.draw(g, F);   // (a felled tree toppling; flares, glow sticks and lanterns on the ground)
+    if (S.flies) S.flies.draw(g, F, gfx);   // (the fireflies after dark: render/fireflies.js, loaded the first night - never on Low)
+    else if (gfx.particles && F.sky && F.sky.night > 0.3 && !S.fliesAsk) { S.fliesAsk = 1; import('./render/fireflies.js').then((m) => { S.flies = new m.Fireflies(S); }).catch((e) => console.warn('[fireflies]', e)); }
   }
   g.setTransform(...S.worldTf);
   // aim sight for sticks / touch (the mouse has its own cursor)
