@@ -36,7 +36,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | | Keyboard / mouse | Xbox gamepad | Touch |
 |---|---|---|---|
 | Move / steer | WASD | Left stick (RT gas, LT brake in cars) | Left stick |
-| Aim / attack | Mouse / left click | Right stick (full deflection auto-fires) / RT | Right stick (push far to fire) |
+| Aim / attack | Mouse / left click | Right stick aims, RT fires (at the wheel RT is the gas: click R3 for a drive-by). Settings → "pushing the right stick all the way also fires" puts the stick-ring fire back (off by default) | Right stick (push far to fire) |
 | Interact (shops and the countryside counters, crates, loot, arrest, fishing, picking fruit at the orchard and the vineyard, cutting lavender, stripping the boneyard's planes for parts, chipping for gold at the old mine, searching the shipwreck, ringing the old mission's bells, the pier's coin telescope, stargazing at the observatory after dark, the Ferris wheel, balloon flights and the Splash Canyon water slides, teeing off at the golf club) | E | B | E |
 | Enter / exit vehicle | F | X | CAR |
 | Sprint | Shift | Push the left stick all the way | Push the left thumb all the way |
@@ -57,6 +57,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Hunting bow: draw and loose (silent; the next arrow nocks itself; arrows come back when you dress the carcass, and you pick up a miss by walking over it) | hold right mouse, click | LT, RT | aim stick, FIRE |
 | Field dress a carcass (a Hunting Knife takes the hide off whole) / cook raw meat at a lit campfire / sell game, make clothing at a trapper's bench | E | B | ACT |
 | Blades: slash with a knife, a sword (pawn shops) or a katana (the fence). A killing blow is now and then a finishing stab or slash; the plasma blade cuts clean through and now and then turns a bullet aside | Left click | RT | FIRE |
+| Plasma blade colour: blue to start, or red, green, purple, yellow, orange, cyan, pink or white - kept with your character, everyone sees it (the blade, its light and its arcs) | Esc → Settings → Plasma blade colour, or the swatches under the blade in the bag (I) | Start → Settings → Plasma blade colour, or the bag (D-pad →) | ⚙ → Plasma blade colour, or 🎒 |
 | Speak to the hooded stranger (rare: at night, somewhere quiet in the wilds; he sells the plasma blade) | E | B | ACT |
 | Light a campfire / sit by a lit one to warm up and heal (any step gets you up) / sitting, put it out | E | B | ACT |
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
@@ -97,7 +98,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Finish off a downed player | hold F (or just hit them) | hold X | hold CAR |
 | Downed (the choices come up a few seconds after you go down): Call for help · call an ambulance ($200 from the bank, only if they revive you) · cancel the request (back to the countdown) · where to wake up (where you last woke, unless you pick another) | H · J · C · arrows (or the buttons) | X · Y · B · D-pad | the buttons |
 | Close a shop / desk / NPC menu or any panel | Esc, or click off it | B | tap anywhere off it |
-| Weapons | Tab, mouse wheel, 1–9 | LB / RB | WPN by the FIRE button (or the weapon box, top right): tap for the next weapon, hold to pick any of them |
+| Weapons | Tab, mouse wheel, 1–9 | Tap RB / LB: the next / previous weapon (LB from your fists: the plasma blade, if you have it) · hold either (0.3 s): the weapon wheel - point either stick at one, let go of the bumper to take it out | WPN by the FIRE button (or the weapon box, top right): tap for the next weapon, hold to pick any of them |
 | City map + waypoints (click a place's icon or anywhere on the map; or pick a category's name for its places, nearest first) - a yellow GPS line on the map and the radar follows the roads to it | M | Pause → Map (D-pad / stick, A pick, B back; Y sets a waypoint at the cross in the middle) | tap the radar or the map button, then tap |
 | Show or hide a kind of place on the city map (Shops, Jobs, Services, Transit, Safehouses, Activities, Gangs) | click its box | ← / → on its line | tap its box |
 | Zoom the city map / look around / find yourself | mouse wheel or + / − · drag · C (or the − + and find-me buttons in the panel) | RT / LT · right stick | pinch · drag · − + and find-me buttons |
@@ -132,15 +133,15 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 |---|---|---|---|
 | Move (further = faster) | WASD / arrows (C or Ctrl = walk) | Left stick | Left thumb anywhere on the left half |
 | Drive | WASD: point where to go (or classic tank in Settings) | RT gas · LT brake/reverse · left stick steer · A handbrake (GTA-style; stick-pointing option in Settings) | Left thumb: point where to go |
-| Drive-by | Mouse aim + click | Right stick aim, push all the way to fire | Aim stick / FIRE |
+| Drive-by | Mouse aim + click | Right stick aim, R3 (click the stick) to fire - RT is the gas (a passenger fires with RT) | Aim stick / FIRE |
 | Aim | Mouse cursor | Right stick | Right stick |
 | Fire / punch (on foot) | Click | RT | FIRE button, or push the aim stick into its red ring |
 | Sprint | Shift | Left stick all the way out | Left thumb all the way out |
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
-| Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | LB/RB · R3 · hold View · D-pad → | WPN (tap: next, hold: pick) · RELOAD · ITEMS · 🎒 |
+| Weapons · reload · quick wheel · bag | Tab, wheel, 1-9 · R · hold X · I | RB/LB (tap: next / previous, hold: the weapon wheel) · R3 · hold View · D-pad → | WPN (tap: next, hold: pick) · RELOAD · ITEMS · 🎒 |
 | Light on / off (once you have one) · fell a tree (with an axe or a chainsaw) | L · hold E | D-pad ↑ (on foot) · hold B | 🔦 · hold ACT |
 | World map + waypoints (police: dispatch map) | M or the map button | Pause menu → Map (Y: a waypoint at the cross) | tap the radar or the map button |
 | Pause menu (debug menu, map, players online, settings, controls) | Esc | Start / Menu (D-pad or left stick to move, A select, B back) | ☰ |
 
-Settings (⚙) include Graphics: a preset (Low / Medium / High / Ultra, picked for your device on first play - phones, tablets and consoles start on Medium, desktops on High or Ultra) plus a switch for each effect (lighting, vegetation off / still / live, vegetation density, wind sway, trampled grass and crops, golden-hour glow, shadows, puddle reflections, rain and fog detail, particles, render sharpness, tilt-shift blur), "Keep it smooth" (on by default: the render size eases off a little while the frame rate can't keep up, and comes back when it can), a performance overlay (the load timeline, frame times and memory, for bug reports), classic tank driving for keyboards, the touch fire ring, gamepad stick-fire, vibration and auto-fullscreen, Sound (sound and music on or off, and the master, effects, ambience and music volumes), plus your account transfer code: copy it on one device and paste it on another to play the same character there.
+Settings (⚙) include Graphics: a preset (Low / Medium / High / Ultra, picked for your device on first play - phones, tablets and consoles start on Medium, desktops on High or Ultra) plus a switch for each effect (lighting, vegetation off / still / live, vegetation density, wind sway, trampled grass and crops, golden-hour glow, shadows, puddle reflections, rain and fog detail, particles, render sharpness, tilt-shift blur), "Keep it smooth" (on by default: the render size eases off a little while the frame rate can't keep up, and comes back when it can), a performance overlay (the load timeline, frame times and memory, for bug reports), classic tank driving for keyboards, the touch fire ring, gamepad stick-fire (off by default: RT fires), the plasma blade's colour, vibration and auto-fullscreen, Sound (sound and music on or off, and the master, effects, ambience and music volumes), plus your account transfer code: copy it on one device and paste it on another to play the same character there.

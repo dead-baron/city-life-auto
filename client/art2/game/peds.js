@@ -18,11 +18,12 @@
 //     dir8: v1 order 0 S, 1 SW, 2 W, 3 NW, 4 N, 5 NE, 6 E, 7 SE (art2's own order is (8 - dir8) % 8)
 //     frame: 0 .. PED_POSES[pose] - 1 (wraps); pedFrame(pose, v1Frame) converts the v1 frame counters
 //     weapon: WEAPON_BY_INDEX index (drawn held: rest, aimed or swung per pose), or an items.js kind ('phone', 'medkit')
+//     opt.bc: the plasma blade's colour (shared/items.js BLADE_COLORS; 0 / none: its own blue), opt.cut: a half of the body
 //   weaponItem(w) -> items.js kind or null;  PED_POSES: frames per pose;  SEATS: seat heights of the seated poses
 import { person, POSES, SEATS, UMBRELLA_HAND, UMBRELLA_LEN } from '../people.js';
 import { ITEMS } from '../items.js';
 import { hash, cutGBuf } from '../gbuf.js';
-import { WEAPON_BY_INDEX } from '../../../shared/items.js';
+import { WEAPON_BY_INDEX, bladeColor, hexRgb } from '../../../shared/items.js';
 import { decodeLook, lookArt } from '../../../shared/lookcore.js';   // (the core alone: shared/look.js adds what only the creator and the server use)
 import { CLUBS } from '../../../shared/clubs.js';
 
@@ -243,8 +244,26 @@ export function appKey(app, opt = {}) {
 }
 const normPose = (p) => (p && p.startsWith('move') ? 'walk' + (p[4] || '0') : p || 'idle');
 export function pedKey(app, pose, dir8, frame, weapon, opt = {}) {
-  const pn = normPose(pose), n = PED_POSES[pn] || 1;
-  return `${appKey(app, opt)}|${pn}|${((dir8 | 0) % 8 + 8) % 8}|${(((frame | 0) % n) + n) % n}|${weaponItem(weapon) || ''}${opt.cut ? '|cut' + opt.cut : ''}`;
+  const pn = normPose(pose), n = PED_POSES[pn] || 1, k = weaponItem(weapon);
+  return `${appKey(app, opt)}|${pn}|${((dir8 | 0) % 8 + 8) % 8}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}`;
+}
+// The plasma blade in another colour (the descriptor's bc): items.js draws it blue and glowing - the blade's pixels carry
+// its glow [70, 150, 255], the white-hot core's [210, 235, 255] (people.js keeps an item pixel's glow as it is, and gives
+// the outline round it the same glow, fainter) - so those pixels take the new colour, each as bright as it was. (Here, not
+// in items.js: a change there would throw away every browser's baked chunks - tools/stamp-version.mjs ART_SKIP.)
+const BLADE_E = 70 << 16 | 150 << 8 | 255, CORE_E = 210 << 16 | 235 << 8 | 255;
+const lum = (r, g, b) => r * 0.3 + g * 0.59 + b * 0.11, BLADE_L = lum(60, 134, 255), CORE_L = lum(216, 236, 255);
+function recolorBlade(G, bc) {
+  const B = bladeColor(bc), cols = [hexRgb(B.c), hexRgb(B.core)], col = G.col, emi = G.emi;
+  const glows = [cols[0].map((v) => v + (255 - v) * 0.12), cols[1]];
+  for (let o = 0; o < col.length; o += 4) {
+    if (!emi[o + 3]) continue;
+    const e = emi[o] << 16 | emi[o + 1] << 8 | emi[o + 2], core = e === CORE_E ? 1 : 0;
+    if (!core && e !== BLADE_E) continue;
+    const T = cols[core], E = glows[core], t = lum(col[o], col[o + 1], col[o + 2]) / (core ? CORE_L : BLADE_L), w = Math.min(1, Math.max(0, t - 1));
+    for (let c = 0; c < 3; c++) { col[o + c] = T[c] * Math.min(t, 1) + (255 - T[c]) * w; emi[o + c] = E[c]; }
+  }
+  return G;
 }
 // Where the canopy goes over someone holding an open umbrella (people.js 'umbrella': the right hand in front of the
 // shoulder, the shaft straight up) at sprite heading dir8: out = [dx, dy, z], world px from the feet - draw the canopy
@@ -261,6 +280,7 @@ export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
   const d = ((8 - (dir8 | 0)) % 8 + 8) % 8;
   const k = weaponItem(weapon);
   const G = person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true } : { tight: true });
+  if (opt.bc && k === 'energyBlade') recolorBlade(G, opt.bc);
   return opt.cut ? cutGBuf(G, opt.cut, 7) : G;   // (cut in two by the plasma blade: one half, a little apart from the other, the edge seared)
 }
 

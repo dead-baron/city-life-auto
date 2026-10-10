@@ -77,6 +77,7 @@
   <div id="inv" class="hidden overlay"><div class="panel"><div class="mhead"><h2>BAG</h2><button class="x" data-close>✕</button></div><p class="msub inv-cash"></p><div class="inv-body"></div></div></div>
   <div id="wheel" class="hidden"></div>
   <div id="wpick" class="hidden"></div>
+  <div id="wwheel" class="hidden"></div>
   <div id="spec-pad" class="hidden"></div>
   <div id="spec" class="hidden"></div>
   <div id="menu" class="hidden"><div class="panel"><div class="mhead"><h2 id="m-title"></h2><button id="m-close">✕</button></div><p id="m-sub"></p><div id="m-money"></div><div id="m-opts"></div></div></div>
@@ -102,7 +103,7 @@
   <!-- the controls (the pause menu's Controls page shows them; the title screen no longer does) -->
   <template id="help-tpl">
       <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move &amp; drive (point where you want to go) · Mouse aim · Click shoot / punch · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · L flashlight (once you have one) · H horn / siren · V call cruiser (police) · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
-      <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster, all the way out to sprint) · right stick aim · RT fire · A roll · B interact · X get in/out · Y throw · LB/RB weapons · R3 reload · View heal · D-pad up flashlight<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, push it all the way to fire drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
+      <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster, all the way out to sprint) · right stick aim · RT fire · A roll · B interact · X get in/out · Y throw · RB / LB tap: next / previous weapon (LB from fists: the plasma blade) · hold RB or LB: weapon wheel (point a stick, let go) · R3 reload · View heal · D-pad up flashlight<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, R3 (click it) fires a drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
       <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire · ACT interact · CAR get in/out · 🔦 flashlight (once you have one)</div>
   </template>
 
@@ -124,7 +125,8 @@
     <label class="srow"><span>Keyboard driving</span><select id="s-kbdrive"><option value="direction">Direction (point where to go)</option><option value="tank">Classic tank (W gas, A/D steer)</option></select></label>
     <label class="srow"><span>Gamepad driving</span><select id="s-paddrive"><option value="triggers">Classic: RT gas, LT brake, stick steers</option><option value="stick">Point the left stick where to go</option></select></label>
     <label class="srow"><span>Touch: aim stick outer ring fires</span><input type="checkbox" id="s-edgefire"></label>
-    <label class="srow"><span>Gamepad: right stick full push fires</span><input type="checkbox" id="s-padfire"></label>
+    <label class="srow"><span>Gamepad: pushing the right stick all the way also fires (RT always does; R3 at the wheel)</span><input type="checkbox" id="s-padfire"></label>
+    <label class="srow"><span>Plasma blade colour</span><select id="s-blade"></select></label>
     <label class="srow"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>
     <div id="s-soundbox"></div>
     <div id="s-gfxbox" class="gfxbox"></div>

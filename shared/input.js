@@ -17,6 +17,51 @@ export const IN = {
   LIGHT: 8192,   // L / D-pad up on foot / 🔦 - flashlight on / off (if you have one)
 };
 
+// ---- the gamepad (client/input.js; tasks #301, #411) ----------------------------------------------------------------
+// Firing on a pad: RT on foot and from a passenger seat. At the wheel (the classic trigger driving) RT is the gas, so a
+// drive-by is R3 - click the stick you're aiming with. The right stick only aims; pushing it into its outer ring fires
+// only with Settings' "right stick full push fires" (ring: off by default). p: { rt, r3 (held), rx, ry }.
+export function padFires(p, driving, ring) {
+  return !!((driving ? p.r3 : p.rt > 0.35) || (ring && Math.hypot(p.rx || 0, p.ry || 0) > 0.9));
+}
+
+// A bumper tapped or held (LB -1, RB 1): let go within WHEEL_HOLD_MS it's a tap (the previous / next weapon); held past
+// it, the weapon wheel opens (hold), and letting go picks (release). One bumper at a time: the other is ignored while
+// one is down. step(lb, rb, nowMs) -> { tap, hold, release }, each -1, 1 or 0.
+export const WHEEL_HOLD_MS = 300;
+export function createTapHold(holdMs = WHEEL_HOLD_MS) {
+  let side = 0, at = 0, held = false;
+  return {
+    step(lb, rb, now) {
+      const out = { tap: 0, hold: 0, release: 0 };
+      if (!side) { if (lb || rb) { side = lb ? -1 : 1; at = now; held = false; } return out; }
+      if (side < 0 ? lb : rb) { if (!held && now - at >= holdMs) { held = true; out.hold = side; } return out; }
+      if (held) out.release = side; else out.tap = side;
+      side = 0; held = false;
+      return out;
+    },
+    get held() { return held ? side : 0; },
+  };
+}
+
+// The weapon wheel's slots: n round a circle, slot 0 at the top, clockwise (screen y down). slotAt: the slot a direction
+// points at. wheelPicker(n, start): the right stick picks straight away; the left one only once it has been back in the
+// middle since the wheel opened (it may still be walking you along); the one pushed further wins, and the last slot
+// pointed at stays picked when the sticks go back to the middle - so letting go of the bumper takes it out.
+export function slotAt(dx, dy, n) {
+  return Math.round((Math.atan2(dx, -dy) / (2 * Math.PI)) * n + n) % n;
+}
+export function wheelPicker(n, start = -1) {
+  let sel = start, armL = false;
+  return (lx, ly, rx, ry) => {
+    const ml = Math.hypot(lx, ly), mr = Math.hypot(rx, ry);
+    if (ml < 0.3) armL = true;
+    const r = mr >= 0.5 && !(armL && ml > mr), l = !r && armL && ml >= 0.5;
+    if (r || l) sel = slotAt(r ? rx : lx, r ? ry : ly, n);
+    return sel;
+  };
+}
+
 export function quantizeAngle(a) {
   const t = ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   return Math.round((t / (Math.PI * 2)) * 65535) & 0xffff;

@@ -5,7 +5,7 @@ import * as revive from './revive.js';
 import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
-import { WEAPONS } from '../../shared/items.js';
+import { WEAPONS, stepWeapon } from '../../shared/items.js';
 import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
@@ -123,7 +123,7 @@ function melee(world, ped, w, aim) {
   if (w.stunChance && world.rand() < w.stunChance && !soft) best.stunUntil = now + 2;
   if (w.bleed && world.rand() < 0.6 && !soft) best.bleeding = true;
   world.emit(best.x, best.y, { e: 'hit', x: best.x, y: best.y, a: dir, id: best.id, w: w.i });
-  if (w.plasma) world.emit(best.x, best.y, { e: 'sizzle', x: best.x, y: best.y, a: +dir.toFixed(2) });   // (the plasma blade sears: no blood)
+  if (w.plasma) world.emit(best.x, best.y, { e: 'sizzle', x: best.x, y: best.y, a: +dir.toFixed(2), id: ped.id });   // (the plasma blade sears: no blood; id: whose blade - the client colours the sear by it)
   else if (w.id !== 'fists' || world.rand() < 0.35) world.emit(best.x, best.y, { e: 'blood', x: best.x, y: best.y, a: dir, n: w.id === 'fists' ? 2 : 6 });
   const floored = now < best.downUntil || now < best.stunUntil;
   const knife = w.id === 'knife' || w.id === 'huntknife';
@@ -427,13 +427,12 @@ export function reload(world, ped) {
   ped.player.meDirty = true;
 }
 
+// the next (dir 1) or previous (-1) weapon you carry, in shared/items.js weaponOrder: by the table's index with the
+// plasma blade last, so one step back from your fists (a tap of LB, the mouse wheel back) is the blade, if you have it
 export function cycleWeapon(world, ped, dir) {
   if (!ped.player) return;
-  const owned = Object.keys(ped.player.profile.weapons).filter((id) => WEAPONS[id]).sort((a, b) => WEAPONS[a].i - WEAPONS[b].i);
-  if (!owned.length) return;
-  let i = owned.indexOf(ped.weapon);
-  i = (i + dir + owned.length) % owned.length;
-  selectWeapon(world, ped, owned[i]);
+  const id = stepWeapon(Object.keys(ped.player.profile.weapons), ped.weapon, dir);
+  if (id) selectWeapon(world, ped, id);
 }
 
 export function selectWeapon(world, ped, id) {

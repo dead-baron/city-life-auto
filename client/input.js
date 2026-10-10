@@ -3,10 +3,12 @@
 //
 //   move  : WASD / arrows · left stick · floating left thumb-stick   (analog: how far = how fast)
 //   aim   : mouse cursor  · right stick · right thumb-stick          (independent of movement)
-//   fire  : left click    · RT          · FIRE button, or push the aim stick into its outer ring
+//   fire  : left click    · RT (R3 at the wheel: RT is the gas) · FIRE button, or push the aim stick into its outer ring
+//           (on a pad the stick-ring fire is a Settings option, off by default: shared/input.js padFires)
+//   weapon: Tab / wheel   · tap RB / LB, hold either for the weapon wheel · WPN (tap: next, hold: pick)
 //
 // Driving uses the same move vector: point where you want to go (shared/physics.js driveInput).
-import { IN } from '../shared/input.js';
+import { IN, padFires, createTapHold } from '../shared/input.js';
 
 const keys = new Set();
 const mouse = { x: 0, y: 0, down: false, rdown: false, clicked: false, movedAt: -1e9, wheel: 0 };
@@ -30,6 +32,9 @@ export const input = {
 export const settings = { kbDrive: 'direction', padDrive: 'triggers', touchEdgeFire: true, padStickFire: false, vibrate: true };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('cla.settings') || '{}')); } catch { /* private mode */ }
 export function saveSettings() { try { localStorage.setItem('cla.settings', JSON.stringify(settings)); } catch { /* ignore */ } }
+// (task #301: the pad's stick-ring fire is off by default and now covers drive-bys too - and moving down Settings with a
+// pad could switch it on unseen: everyone starts this build with it off, once; switched on again, it stays on)
+if (settings.padFireV !== 2) { settings.padStickFire = false; settings.padFireV = 2; saveSettings(); }
 
 // Edge on Xbox drives a mouse cursor with the controller unless the page asks for the raw pad:
 // both at once made the game flip between pad and mouse every frame (the top buttons blinked
@@ -251,6 +256,7 @@ function radial(x, y, d) {
 }
 let padPrev = [];
 let padAimUntil = 0, padAim = 0, stickNavY = 0, stickNavX = 0;
+const bumpers = createTapHold(); // LB / RB: a tap steps through the weapons, a hold opens the weapon wheel
 
 function readPad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -274,7 +280,7 @@ function readPad() {
   const [rx, ry] = radial(rxRaw, ryRaw, 0.22);
   const out = {
     lx, ly, rx, ry,
-    a: b(0), bb: b(1), x: b(2), y: b(3), lb: edge(4), rb: edge(5), lt: lt > 0.06 ? lt : 0, rt: rt > 0.06 ? rt : 0, back: b(8), start: edge(9), l3: b(10), r3: edge(11),
+    a: b(0), bb: b(1), x: b(2), y: b(3), lb: b(4), rb: b(5), lt: lt > 0.06 ? lt : 0, rt: rt > 0.06 ? rt : 0, back: b(8), start: edge(9), l3: b(10), r3: b(11), r3Edge: edge(11),
     up: b(12), dUpEdge: edge(12), dDownEdge: edge(13), dLeftEdge: edge(14), dRightEdge: edge(15), aEdge: edge(0), bEdge: edge(1), xEdge: edge(2), yEdge: edge(3), viewEdge: edge(8),
   };
   // left stick also navigates menus (edge-triggered when it crosses 0.6)
@@ -329,6 +335,10 @@ export function sample(view) {
 
   const p = readPad();
   input.menuNav = 0; input.menuLR = 0; input.menuSelect = false; input.menuBack = false; input.padStart = false; input.padCall = false; input.padPhone = false;
+  // the bumpers' weapon wheel (client/main.js): wheelHold when a hold opens it, wheelHeld while it's held, wheelRelease
+  // when that bumper is let go (each -1 LB, 1 RB or 0)
+  const bump = p ? bumpers.step(p.lb, p.rb, performance.now()) : { tap: 0, hold: 0, release: 0 };
+  input.wheelHold = bump.hold; input.wheelRelease = bump.release; input.wheelHeld = p ? bumpers.held : 0;
   input.padAxes = p ? { lx: p.lx, ly: p.ly, rx: p.rx, ry: p.ry, lt: p.lt, rt: p.rt } : null; // the raw sticks and triggers (the city map zooms and pans with them)
   input.padX = !!(p && p.xEdge); input.padY = !!(p && p.yEdge); input.padRight = !!(p && p.dRightEdge); input.padView = !!(p && p.back); input.padViewEdge = !!(p && p.viewEdge);
   if (p) {
@@ -346,7 +356,7 @@ export function sample(view) {
     const driving = view.driver && settings.padDrive !== 'stick';
     if (driving) {
       // GTA1/2-style car controls: RT gas, LT brake / reverse, left stick steers, A handbrake.
-      // The right stick aims drive-by fire; pushing it all the way out shoots.
+      // The right stick aims drive-by fire and R3 (clicking it) shoots (padFires below).
       bits |= IN.TANK;
       mx = p.lx; my = -(p.rt - p.lt);
     } else if (Math.abs(p.lx) + Math.abs(p.ly) > 0) { mx = p.lx; my = p.ly; }
@@ -354,17 +364,17 @@ export function sample(view) {
     if (p.bb) bits |= IN.ACTION;
     if (p.x) bits |= IN.VEHICLE;
     if (p.y) bits |= IN.THROW;
-    if (p.lb) bits |= IN.PREVW;
-    if (p.rb) bits |= IN.NEXTW;
-    if (p.r3) bits |= IN.RELOAD;
+    if (bump.tap < 0) bits |= IN.PREVW;
+    if (bump.tap > 0) bits |= IN.NEXTW;
+    if (p.r3Edge && !driving) bits |= IN.RELOAD; // (at the wheel R3 is the drive-by's trigger; an empty gun reloads itself)
     if (p.up) bits |= view.inVehicle ? IN.HORN : IN.LIGHT; // D-pad up: horn / siren in a vehicle, the flashlight on foot
     if (view.inVehicle) { if (!driving && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
     else if (Math.hypot(p.lx, p.ly) > FULL_STICK) bits |= IN.SPRINT;  // no run button on a pad: the stick all the way out sprints
     const rmag = Math.hypot(p.rx, p.ry);
     if (rmag > 0.15) { padAim = Math.atan2(p.ry, p.rx); padAimUntil = performance.now() + 450; }
     if (performance.now() < padAimUntil) { aim = padAim; bits |= IN.AIMING; }
-    if (!driving && p.rt > 0.35) { bits |= IN.FIRE; if (!(bits & IN.AIMING) && view.armed) { bits |= IN.AIMING; aim = view.lastAim || 0; } }
-    if ((driving || settings.padStickFire) && rmag > 0.9) bits |= IN.FIRE;
+    // the right stick only aims: RT fires (R3 at the wheel), the stick's outer ring only with Settings' option
+    if (padFires(p, driving, settings.padStickFire)) { bits |= IN.FIRE; if (!(bits & IN.AIMING) && view.armed) { bits |= IN.AIMING; aim = view.lastAim || 0; } }
   }
 
   if (input.device === 'touch') {

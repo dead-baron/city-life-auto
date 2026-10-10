@@ -47,6 +47,32 @@ export const WEAPONS = {
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
 
+// The order the weapon keys step through what you carry (RB / Tab / the mouse wheel forward, LB / the wheel back; the
+// pad's weapon wheel goes round in it): by the table's index, the plasma blade last - so from your fists one step back
+// (a tap of LB) is the blade, if you have it (task #411: "it should be easy to get to").
+const cycleKey = (id) => (id === 'plasma' ? 1e3 : WEAPONS[id].i);
+export function weaponOrder(ids) { return ids.filter((id) => WEAPONS[id]).sort((a, b) => cycleKey(a) - cycleKey(b)); }
+// the weapon dir (1 next, -1 back) steps from cur to, among ids (null if none)
+export function stepWeapon(ids, cur, dir) {
+  const o = weaponOrder(ids), n = o.length, i = o.indexOf(cur);
+  if (!n) return null;
+  return o[i < 0 ? (dir > 0 ? 0 : n - 1) : (i + (dir > 0 ? 1 : -1) + n) % n];
+}
+
+// The plasma blade's colours (task #411): blue unless the player picks another (Settings, or the bag) - kept with the
+// character (server looks.js setBlade) and shown to everyone (the ped's descriptor bc: its index here, 0 left out).
+// c: the blade, core: its white-hot middle; both renderers, the light it gives off and its arcs and sparks follow them.
+export const BLADE_COLORS = [
+  { id: 'blue', name: 'Blue', c: '#3c86ff', core: '#d8ecff' }, { id: 'red', name: 'Red', c: '#ff3a36', core: '#ffd9d2' },
+  { id: 'green', name: 'Green', c: '#36e04e', core: '#dcffd8' }, { id: 'purple', name: 'Purple', c: '#a44cff', core: '#efdcff' },
+  { id: 'yellow', name: 'Yellow', c: '#ffd22e', core: '#fff7d6' }, { id: 'orange', name: 'Orange', c: '#ff8424', core: '#ffe8d0' },
+  { id: 'cyan', name: 'Cyan', c: '#22e4f0', core: '#dcffff' }, { id: 'pink', name: 'Pink', c: '#ff4cc4', core: '#ffdcf3' },
+  { id: 'white', name: 'White', c: '#e4ecf8', core: '#ffffff' },
+];
+export const bladeColor = (i) => BLADE_COLORS[i | 0] || BLADE_COLORS[0];
+// '#rrggbb' -> [r, g, b]
+export const hexRgb = (h) => { const n = parseInt(String(h).slice(1), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+
 export const ITEMS = {
   medkit:  { name: 'Medical Kit',   heal: 60, stopBleed: true, sell: 30 },
   revivekit: { name: 'Revive Kit', tool: true, sell: 20 },   // defib paddles: revive a downed player to full health (never used up; not on yourself)

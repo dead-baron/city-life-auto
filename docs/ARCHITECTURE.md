@@ -60,11 +60,12 @@ JSON text frames:
 |---|---|---|
 | `hello` / `welcome` | c→s / s→c | guest token handshake (`{token, cb, cbt}` → `{token,pid,name,seed,dev,build,built,...}`; `cb`/`cbt` the page's build, `build`/`built` the server's) |
 | `build` | s→c | a new build went live (`{v, at}`): pages on an older one reload into it (`client/update.js`) |
-| `sp` / `ds` | s→c | spawn descriptors (appearance, model, paint, tier; `fl: 1` on a player whose flashlight is on) / despawns for culling |
+| `sp` / `ds` | s→c | spawn descriptors (appearance, model, paint, tier; `fl: 1` on a player whose flashlight is on; `bc` a player's plasma blade colour, an index into `shared/items.js` `BLADE_COLORS`, left out for the blue) / despawns for culling |
 | `ev` | s→c | positional events (shots, blood, crashes, explosions, cameras, toasts) |
 | `me` | s→c | personal HUD state (money, stars, weapons, inventory, prompt, radar, job) |
 | `menu` | both | storefront menu payload / option chosen |
 | `weapon`, `ping`, `dev` | c→s | weapon select, latency probe, playtest commands (dev servers only) |
+| `look` | both | the character creator and the wardrobe; `{a: 'blade', c}` picks the plasma blade's colour (kept on the profile, `me.blade`) |
 
 ## Accounts and saving
 
