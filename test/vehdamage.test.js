@@ -142,6 +142,19 @@ test('as it gets worse parts come off: the bumper on the end that took the hits,
   assert.equal(d.zones, VZ.B | VZ.L);
 });
 
+test('a ram dents the rammer\'s front and the side it hit on the other car', () => {
+  const { w, road } = scene();
+  const a = w.spawnVehicle('sedan', road.x + 300, road.y, 0, { npcOwned: false });
+  // b broadside across a's path, 10 px clear of a's nose (b's half width: 24)
+  const b = w.spawnVehicle('sedan', road.x + 300 + a.def.L / 2 + 24 + 10, road.y, Math.PI / 2, { npcOwned: false });
+  a.vx = 520;
+  for (let t = 0; t < 1 && !(b.dz); t += 0.05) w.step(0.05);
+  assert.ok(a.hp < a.def.hp && b.hp < b.def.hp, 'both hurt');
+  assert.equal(a.dz & VZ.F, VZ.F, 'the rammer: its front');
+  // b faces south (heading PI/2): its right side faces west - where a came from
+  assert.equal(b.dz & (VZ.L | VZ.R), VZ.R, 't-boned on its right side');
+});
+
 test('a rocket by the tail of a bus destroys it: the blast is measured to its body, not its middle', () => {
   const { w, p, road } = scene();
   const bus = w.spawnVehicle('bus', road.x + 500, road.y, 0, { npcOwned: false });

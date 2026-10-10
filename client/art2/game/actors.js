@@ -7,8 +7,9 @@
 // 3 NW, 4 N, 5 NE, 6 E, 7 SE.
 //
 //   vehicleKey(d, st, hi, N) / vehicleSprite(d, st, hi, N)   d = spawn descriptor {m, p, vr, tn}; st = {wreck,
-//       burn, lights, siren (0 | 1 red phase | 2 blue phase | true both), brake, rev, bloody, dmg};
-//       vehState(flags, phase) builds st from the wire VF bits. Anchor = the vehicle's centre on the ground.
+//       burn, lights, siren (0 | 1 red phase | 2 blue phase | true both), brake, rev, bloody, dmg (stage 0-4), zones,
+//       holes, off, cut, half ('a' | 'b': one half of a car cut in two)}; vehState(flags, phase, hp, dw) builds st from
+//       the wire VF bits and the damage word (task #402). Anchor = the vehicle's centre on the ground.
 //   vehicleLights(d) -> { L, W, H, kind, head, tail, brake, rev: [[x,y,z]], siren: [[x,y,z,c]] (c 0 red,
 //       1 blue, 2 amber), seat, exhaust: [x,y,z], fire: [[x,y,z]], wake: [x,y], bed (cargo floor z) }, local
 //       coordinates at heading 0 (+x forward, +y right, z up, origin the centre on the ground)
