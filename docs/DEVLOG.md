@@ -6200,7 +6200,8 @@ and today's world has a real one.
   wall tiles across the bore, so no car gets past - what the highways running off the map in v3 end in.
 - **Sight:** `CityMap.los` doesn't cross a tunnel's roof, so the police, witnesses and the traffic cameras (everything
   that asks the map) can't see into a tunnel from outside, nor out of it from inside; two people in the same tunnel
-  see each other. Vehicles drive through as on any road.
+  see each other. Vehicles drive through as on any road - a dry one in the rain (shared/physics.js: no wet-road grip
+  or braking under cover).
 - **Drawing** (both renderers: the overlay, in world space): from outside, the hill over the bore - a granite ridge
   with scrub and boulders - and the portals at both mouths (a concrete headwall, the dark opening, a lit lamp either
   side; the red-and-white barrier and its sign at a closed one). Anything under the hill is left out of the frame for
@@ -6216,9 +6217,11 @@ and today's world has a real one.
 - **For World v3:** `generateCity(seed, opts)` takes `opts.tunnels(m)` - the v3 build hands in its dotted stretches
   as specs (`{ edge, s0, s1, closed }`, `edge: 'rail'` for the main line); the v3 spike gets no Granite Peaks one.
 
-`shared/tunnels.js` (new), `shared/map.js` (the build, `los`), `client/tunnels.js` (new), `client/main.js`.
+`shared/tunnels.js` (new), `shared/map.js` (the build, `los`), `shared/physics.js`, `client/tunnels.js` (new),
+`client/main.js`.
 Tests: `test/tunnels.test.js` - the cover layer and the list for today's tunnel, rock beside the bore and road
 through it; sight blocked between inside and outside (both ways, and across the hill) and not between two inside; a
 car driving in at one mouth and out of the other; a closed mouth stopping a car on a small synthetic map; a rail
-tunnel's cover and mouths; what's hidden from a viewer outside and inside, which tunnel's hill fades and how fast.
+tunnel's cover and mouths; the same stopping distance in the tunnel rain or shine; what's hidden from a viewer
+outside and inside, which tunnel's hill fades and how fast.
 Played in both renderers (noon outside, noon and night inside).

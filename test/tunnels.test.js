@@ -142,3 +142,14 @@ test('the railway can go under the ground too: a rail tunnel\'s cover and mouths
   assert.ok(Math.abs(t.mouths[0].x - 24 * TILE) < 1 && t.mouths[0].ox === -1 && Math.abs(t.mouths[1].x - 64 * TILE) < 1 && t.mouths[1].ox === 1, "the mouths 20 and 60 tiles along the line");
   assert.ok(!m.los(40 * TILE, 25 * TILE, 40 * TILE, 33 * TILE), 'a train in it is out of sight of the hillside');
 });
+
+test('in the rain a tunnel\'s road is dry: a car brakes there as on a dry day', () => {
+  const m = makeWorld().map, t = m.tunnels[0], def = VEHICLES.sedan, mid = linePt(t, 16), a = Math.atan2(-t.mouths[0].oy, -t.mouths[0].ox);
+  const stop = (x, y, rain) => {
+    const s = { x, y, a, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, av: 0, slip: 0, spin: 0, launch: 0, lz: 0 };
+    let d = 0;
+    for (let i = 0; i < 200 && Math.hypot(s.vx, s.vy) > 5; i++) { const x0 = s.x, y0 = s.y; vehStep(s, { throttle: -1, steer: 0, hb: false }, DT, m, def, { rain }); d += Math.hypot(s.x - x0, s.y - y0); }
+    return d;
+  };
+  assert.ok(Math.abs(stop(mid.x, mid.y, true) - stop(mid.x, mid.y, false)) < 1, 'the same stopping distance in the tunnel, rain or shine');
+});
