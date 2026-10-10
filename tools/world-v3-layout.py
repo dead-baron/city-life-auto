@@ -283,7 +283,6 @@ ARTERIALS = {
     'Mine Road': [(3820, 1180), (4100, 1200), (4400, 1230), (4690, 1180)],
     'Canyon Road': [(4000, 820), (4100, 650), (4150, 560)],
     'Sandpiper Drive': [(3950, 2250), (4200, 2500), (4450, 2620), (4750, 2480), (5000, 2340)],
-    'Airport Causeway': [(2180, 2600), (2170, 2700), (2170, 2810)],
     'Old Town Bridge': [(2560, 2010), (2600, 1930), (2640, 1860)],
 }
 for k, pts in ARTERIALS.items():
@@ -306,7 +305,7 @@ BRIDGES = [
     ('Strait Bridge', (1650, 1790), (1680, 2060), 'hwy'),         # the mainland -> Westport (the West Causeway)
     ('Harbor Bridge', (1890, 2300), (2160, 2290), 'hwy'),          # Westport -> Metro City
     ('Pelican Way', (2190, 2120), (2250, 2140), 'art'),
-    ('Airport Causeway', (2170, 2640), (2175, 2800), 'art'),
+    ('Airport Causeway', (2330, 2470), (2200, 2790), 'art'),
     ('Cedar Bridge', (2600, 2600), (2930, 2910), 'hwy'),           # Southbank -> Cedar Isle (the red suspension bridge)
     ('East Toll Bridge', (3500, 2990), (3990, 2600), 'hwy'),       # Cedar Isle -> the Sandpiper Coast (toll plaza and marina, I4)
     ('River Lift Bridge', (3330, 1795), (3430, 1800), 'hwy'),      # the Coast Highway over the channel mouth (lifts for boats)
@@ -400,11 +399,12 @@ for x, y, name, size in [
     label(x, y, name, size, True)
 # the islands' names (where they went)
 for name, (x0, y0, x1, y1) in placed.items():
-    label((x0 + x1) / 2, y1 + 40, name, 16, True, fill=(255, 245, 200))
+    lx, ly = ((2870, 2520) if name.startswith('Metro City') else ((x0 + x1) / 2, y1 + 40))
+    label(lx, ly, name, 16, True, fill=(255, 245, 200))
 label(2175, 2990, 'Airport island', 14, True, fill=(255, 245, 200)) if 'Westport International' not in placed else None
 label(4330, 3090, 'Prison Island (new)', 16, True, fill=(255, 245, 200))
 label(2190, 2005, 'Pelican Key', 13, True, fill=(255, 245, 200))
-label(3050, 2440, 'THE BAY', 30, True, fill=(200, 230, 255))
+label(3250, 2280, 'THE BAY', 30, True, fill=(200, 230, 255))
 
 # skeleton names (small, along the lines)
 for x, y, name in [
