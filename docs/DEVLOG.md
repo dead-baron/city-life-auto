@@ -5872,7 +5872,9 @@ and I think thats a great idea." Bowling first; the cinema is still to come.
   - a navy carpet with coloured flecks.
   The classic renderer draws it plainly (`client/render/tiles.js` `bowlingArt`).
 - **Sound:** the pins' clatter (louder the more go down), a gutter ball's thump, a strike's chime
-  (`client/sound/events.js`).
+  (`client/sound/events.js`); light music inside (`client/sound/places.js`).
+- **Finding it:** 🎳 on the radar (`client/hud.js`), in the phone's place finder under days out (`client/phone.js`)
+  and in the map's waypoints under activities (`client/mapwaypoints.js`).
 - **Debug menu:** a new last category, 🎳 Bowling & cinema: Pinwheel Lanes (to the shoe counter, the dev `near`
   command with `bowling`).
 - **README:** the controls table has a row for bowling (E, hold attack).
