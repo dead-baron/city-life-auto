@@ -1409,7 +1409,7 @@ capsules of their width.
 | `water` | `WATER3`: 0 land, 1 sea (shallow), 2 deep sea, 3 lake, 4 river (the Long Reach, 70 m), 5 canal (55 m, boatable), 6 stream (Kestrel Creek 26 m, Silver Thread Creek 18 m). The sea is shallow within 3 m of land and deep beyond: today's rule (`map.js`: chamfer `toLand <= 12` quarter tiles). |
 | `biome` | 1-8: `BIOMES` in paint order (a later one wins), on the mainland only; 0 on the islands and the water. |
 | `terrain` | `TERRAIN3`: today's wild classes (0 water, 1 grass, 2 forest, 3 desert, 4 rock, 5 sand) and three new ones (6 farm, 7 marsh, 8 scrub). Each biome has its ground (`BIOME3`), and beaches (sand) along the sea as wide as its `beach`: Sandpiper Coast 40 m, Northshore 30 m, Egret Coast 24 m (dunes), Highland Woods 10 m, none elsewhere. Today's places take their class from today's tile (sand, dirt, else grass). |
-| `dist` | The district. On a gulf island or piece: today's district at the point the picture's transform takes the tile back to (`from + (tile - at) / scale`), only the picture's ids and only on land there. On an island, tiles the picture leaves empty (today's coast differs from the new one; Metro City's new east shore) take the nearest that has one (a flood). Today's small islands and islets: today's tiles, moved. Port Westport: 26. Elsewhere the biome's district (below). The sea: 13 (Liberty Bay, today's). |
+| `dist` | The district. On a gulf island or piece: today's district at the point the picture's transform takes the tile back to (`from + (tile - at) / scale`), only the picture's ids and only on land there. On an island, tiles the picture leaves empty (today's coast differs from the new one; Metro City's new east shore) take the nearest that has one (a flood). Today's small islands and islets: today's tiles, moved. Port Westport: 26. Elsewhere the biome's district (below). The sea: 13 (Liberty Bay, today's). Today's lakes and ponds inside its places are land here (grass, in their district): the generator makes them as it builds the places (`map.js` `LAKES`, the parks' ponds). |
 | `zone` | Today's zone where today's places are (Metro City 1, Southbank 2, Pelican Key 5, Westport and the airport 7, Northshore 8, Cedar Isle 9, Gull Harbor and Coral Cay 10, ...); new zones 11-18 for the mainland regions and Prison Island; Northshore's beach towns stay in 8. |
 
 **The new districts** (`DISTRICTS3`, shaped as `shared/map.js` `DISTRICTS` entries, ids after today's 0-46) and zones
@@ -1429,18 +1429,19 @@ capsules of their width.
 | 56 | Egret Rocks | rocky | wild | 17 | rock | 0.03 |
 
 **The numbers** (this machine, node 22, two shared cores):
-- `buildLand3` takes **0.93-0.97 s** (scanline fills, two chamfer passes, the islands' floods); the layers are 122 MB
+- `buildLand3` takes **0.92-0.97 s** (scanline fills, two chamfer passes, the islands' floods); the layers are 122 MB
   (6 x 20.3 MB), the process grows by 115-130 MB. Today's world, built first, takes 4.2-4.7 s.
 - The frame is 20.32 km²: **11.47 km² land**; deep sea 8.50, shallows 0.06, lakes 0.13, the Long Reach 0.10, the canal
   0.02, streams 0.04.
 - Biomes (land): Highland Woods 3.37 km² (Westport's districts on it), Red Rock Desert 2.72, Willow Valley 2.10, Granite
   Peaks 1.40, Sandpiper Coast 0.52, Northshore 0.40, Egret Coast 0.33, North Ridge 0.19.
-- Ground: forest 3.06, desert 2.73, farm 1.89, grass 1.68, rock 1.43, marsh 0.30, scrub 0.19, sand 0.18 km².
+- Ground: forest 3.06, desert 2.73, farm 1.89, grass 1.69, rock 1.43, marsh 0.30, scrub 0.19, sand 0.18 km².
 - Today's places at their gulf size: Metro City + Southbank 0.28 km² (15 districts), Cedar Isle 0.24, Westport 0.18
   and Port Westport 0.03, the airport 0.02, Northshore 0.07 in today's three districts plus 0.33 of beach towns.
 
 **Checks** (`test/world3land.test.js`, about 8 s: today's world is built once, the land twice):
-- built twice it is the same (a hash of every layer); the new districts and zones are numbered after today's;
+- built twice it is the same (a hash of every layer); the new districts and zones are numbered after today's; every
+  tile of land has a district that exists, a zone and a ground, and every tile of sea is the sea's (district 13, zone 0);
 - the canal splits Metro City + Southbank into two landmasses (a flood from Downtown doesn't reach Southbank, neither
   reaches the mainland, Cedar Isle, Pelican Key or Westport, the two hold over 99% of the island's land), and it is
   canal all along its line inside the island;

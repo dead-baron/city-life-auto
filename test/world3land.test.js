@@ -26,6 +26,15 @@ test('the v3 land: the frame, its layers, deterministic (built twice, the same)'
   DISTRICTS3.forEach((d, k) => { assert.equal(d.id, 47 + k); for (const f of ['name', 'isl', 'style', 'tier', 'walk', 'plaza', 'road', 'ground']) assert.ok(d[f] !== undefined, `${d.name}.${f}`); });
   ZONES3.forEach((z, k) => assert.equal(z.id, 11 + k));
   for (const B of BIOMES) assert.ok(BIOME3[B.key], `biome ${B.key} has its ground`);
+  // every tile of land has a district that exists (today's but the sea's, or a new one) and a zone; the sea is the sea
+  const { zone, terrain } = L.layers, badD = new Map();
+  for (let i = 0; i < W * H; i++) {
+    if (land[i]) {
+      const d = dist[i];
+      if (!(d < 47 ? d !== 13 && d !== 255 : d <= 46 + DISTRICTS3.length) || !zone[i] || !terrain[i]) badD.set(`${d}/${zone[i]}/${terrain[i]}`, (badD.get(`${d}/${zone[i]}/${terrain[i]}`) || 0) + 1);
+    } else if ((water[i] === WATER3.SEA || water[i] === WATER3.DEEP) && (dist[i] !== 13 || zone[i] !== 0)) badD.set('sea', (badD.get('sea') || 0) + 1);
+  }
+  assert.deepEqual([...badD], [], 'district/zone/terrain on land, or the sea\'s');
 });
 
 // 4-connected flood over land from a tile: the set of tiles reached (as a byte grid) and how many.

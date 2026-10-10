@@ -185,7 +185,7 @@ function chamfer(d, W, H, cap) {
 }
 
 // Today's tile as a terrain class (the town ground: sand stays sand, dirt reads as desert, the rest grass).
-const clsOfTile = (t) => (t === T.SAND ? TERRAIN3.SAND : t === T.DIRT ? TERRAIN3.DESERT : t === T.WATER || t === T.DEEP ? TERRAIN3.WATER : TERRAIN3.GRASS);
+const clsOfTile = (t) => (t === T.SAND ? TERRAIN3.SAND : t === T.DIRT ? TERRAIN3.DESERT : TERRAIN3.GRASS);
 
 export function buildLand3(today) {
   const W = FRAME_W, H = FRAME_H, N = W * H;
@@ -195,6 +195,9 @@ export function buildLand3(today) {
   const dist = new Uint8Array(N).fill(WATER_D), zone = new Uint8Array(N);
   const ox0 = today.x0 || 0, oy0 = today.y0 || 0;   // (a window of today's map: its origin)
   const tIdx = (x, y) => (y - oy0) * W0 + (x - ox0);
+  // a frame tile takes today's tile si: its district and zone, its ground. Today's lakes and ponds inside its places
+  // are land here (grass): the generator makes them (map.js LAKES, the parks' ponds) as it builds the places.
+  const take = (i, si) => { land[i] = 1; dist[i] = tDist[si]; zone[i] = tZone[si]; terrain[i] = clsOfTile(tTiles[si]); };
 
   // 1. The mainland and its biomes (painted in order, a later one winning), each biome's district, zone and ground.
   const main = new Uint8Array(N);
@@ -226,7 +229,7 @@ export function buildLand3(today) {
       if (!main[i]) continue;
       const si = picture(pic, x, y);
       if (si < 0) continue;
-      dist[i] = tDist[si]; zone[i] = tZone[si]; terrain[i] = clsOfTile(tTiles[si]);
+      take(i, si);
     }
   }
   // the gulf's islands: their polygon is the land; where the picture has none of its districts (today's coast differs
@@ -247,13 +250,13 @@ export function buildLand3(today) {
         const i = y * W + x, si = picture(pic, x, y);
         land[i] = 1; biome[i] = 0;
         if (si < 0) { dist[i] = PEND; continue; }
-        dist[i] = tDist[si]; zone[i] = tZone[si]; terrain[i] = clsOfTile(tTiles[si]);
+        take(i, si);
         queue.push(i);
       }
     });
     for (let q = 0; q < queue.length; q++) {
       const i = queue[q], x = i % W;
-      const go = (k) => { if (dist[k] === PEND && land[k]) { dist[k] = dist[i]; zone[k] = zone[i]; terrain[k] = terrain[i]; queue.push(k); } };
+      const go = (k) => { if (dist[k] === PEND && land[k]) { dist[k] = dist[i]; zone[k] = zone[i]; terrain[k] = terrain[i] || TERRAIN3.GRASS; queue.push(k); } };
       if (x > 0) go(i - 1);
       if (x < W - 1) go(i + 1);
       if (i >= W) go(i - W);
@@ -267,7 +270,8 @@ export function buildLand3(today) {
   const copy = (si, fx, fy) => {
     if (fx < 0 || fy < 0 || fx >= W || fy >= H) return;
     const i = fy * W + fx;
-    land[i] = 1; biome[i] = 0; dist[i] = tDist[si]; zone[i] = tZone[si]; terrain[i] = clsOfTile(tTiles[si]);
+    biome[i] = 0;
+    take(i, si);
   };
   const whole = (ox0 === 0 && oy0 === 0 && W0 === MAP_W && H0 === MAP_H) ? tLand : null;
   for (const I of ISLANDS) {
