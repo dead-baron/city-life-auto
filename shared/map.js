@@ -303,8 +303,7 @@ export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse']);
 export class CityMap {
   constructor(seed, w = MAP_W, h = MAP_H) {
     this.seed = seed >>> 0;
-    // its extent in world tiles: x0, y0 (0: on the prototype), w, h - the frame it's built in (today's: MAP_W x MAP_H;
-    // World v3's server builds a bigger one: generateCity's opts.frame); a window: shared/mapwindow.js
+    // its extent in world tiles: x0, y0 (0: on the prototype), w, h - the frame it's built in; a window: shared/mapwindow.js
     this.w = w; this.h = h;
     const N = this.w * this.h;
     this.tiles = new Uint8Array(N);
@@ -504,9 +503,7 @@ let islandBuilds = null;
 export function setIslandBuilds(f) { islandBuilds = f; }
 export function generateCity(seed = 1337, opts = null) {
   if (opts && opts.island && !islandBuilds) throw new Error('island builds: import shared/world3-islands.js first');
-  // (opts.frame: { w, h } the frame to build in, today's land in its top-left and sea beyond - World v3's server builds
-  // its bigger frame; without it, today's MAP_W x MAP_H. The frame alone is not an island build: the rest of opts is)
-  const frame = opts && opts.frame ? opts.frame : null;
+  const frame = opts && opts.frame;   // (World v3's server: { w, h }, today's land in its top-left; not an island build)
   if (frame) { const { frame: _f, ...rest } = opts; opts = Object.keys(rest).length ? rest : null; }
   return withDeterministicMath(() => buildCity(seed, opts && opts.island ? islandBuilds(opts.island, opts) : opts, frame));
 }
@@ -524,9 +521,8 @@ export function cityFromData(o) {
   return o;
 }
 // ---------------------------------------------------------------------------
-// The generator (from here to mapSignature) builds the map's whole frame, m.w x m.h with its origin at 0, 0 (today's
-// MAP_W x MAP_H unless generateCity is given opts.frame): a tile's index is `ty * m.w + tx` (= m.idx), never the
-// world's constants. Code that reads a built map goes through its idx / inside.
+// The generator (from here to mapSignature) builds the map's frame, m.w x m.h from 0, 0: a tile's index is
+// `y * m.w + x`. Code that reads a built map goes through its idx / inside.
 let OPTS = null;   // (World v3's spike: what generateCity was asked to build; null for the live world)
 function buildCity(seed, opts = null, frame = null) {
   OPTS = opts;
@@ -692,7 +688,6 @@ function buildCity(seed, opts = null, frame = null) {
 // Terrain: land and sea from the world map, shallows, beaches, wild ground; distances to the
 // sea and to the river; which part of the world each tile belongs to.
 function decodeLand(m) {
-  // (the concept picture is today's frame by nature, MAP_W x MAP_H: it lands in the top-left of the build's frame, sea beyond)
   const W = m.w, pw = Math.min(MAP_W, W), ph = Math.min(MAP_H, m.h);
   const land = new Uint8Array(W * m.h);
   LAND.split('|').forEach((row, y) => {

@@ -22,7 +22,7 @@ export const REDWOOD_TRUNK = { giantL: 62, giant: 48, giantS: 36, redwood2: 14 }
 const DISTRICT_NAMES = { beaches: [43, 44, 14, 10] };   // Gull Harbor, Coral Cay, Pelican Key, Sunset Beach
 
 const RES = 32;
-const at = (m, x, y) => Math.floor(y / TILE) * m.w + Math.floor(x / TILE);   // (a point in px: its tile index in the map being built)
+const at = (m, x, y) => Math.floor(y / TILE) * m.w + Math.floor(x / TILE);
 // distance from (x, y) to a polyline, and the parameter (0..1 along it) of the nearest point
 function nearest(pts, x, y) {
   let best = 1e18, bs = 0, acc = 0, tot = 0, bk = 1;
