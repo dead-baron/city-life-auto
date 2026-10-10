@@ -6712,6 +6712,9 @@ is unchanged (its hash too) - browsers re-bake the art chunks once (the art hash
   computer, the flag, chairs either side of the doors, the notice board, clock and shield, and the armory cage with its
   rifles and ammo cases east of the cells. Drawn, not painted, so no people stand about painted under the live staff.
   (The pharmacy keeps its painting.)
+- **Playtest** (headless, `tools/playtest.py`): walked into the hero corner's diner, the Garden Bistro and a cafe's
+  fast-food counter and stood at a hospital's front; with the debug menu's diners filled, the one at the booth and the
+  cook beside the clerk show once the slow headless page has made their sprites (about 20 s there).
 - **Pictures**: `docs/art-v2/compare/IN8_food-places.png` (art v2 before / after and the classic, for the diner, a fast-food
   cafe, the Garden Bistro and a strip-mall unit), `IN1-B_hospital-front-fixes.png`, `IN1-B_IN2-B_classic-lobbies.png`.
 - **Tests:** `test/foodrooms.test.js` (new: every food place laid out on the shop floor, in front of the counter, the
