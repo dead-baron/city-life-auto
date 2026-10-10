@@ -110,7 +110,11 @@ export function update(world) {
   }
   if (world.tick % 20 !== 11) return;
   // the NPC audience: hurt or gone, they're dropped; nobody near, they leave
-  for (const R of S.rooms) R.npcs = R.npcs.filter((n) => { const c = world.get(n.id); return c && !c.dead && !c.removed && !(c.npc && c.npc.state === 'flee'); });
+  for (const R of S.rooms) R.npcs = R.npcs.filter((n) => {
+    const c = world.get(n.id), ok = c && !c.dead && !c.removed && c.npc && c.npc.desk;   // (hurt or scared off: no longer at their seat)
+    if (c && !ok && c.sitBench) { c.sitBench = false; c.appVer = (c.appVer || 0) + 1; }
+    return ok;
+  });
   let near = Infinity;
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) near = Math.min(near, Math.hypot(p.ped.x - C.counter.x, p.ped.y - C.counter.y));
   if (near > CINE.FAR_PX) { S.rooms.forEach((R, ri) => { if (R.npcs.length) emptyRoom(world, ri); }); return; }

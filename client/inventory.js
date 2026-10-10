@@ -24,6 +24,7 @@ export const ITEM_ICON = {
   goldTrumpet: '🍄', bunCap: '🍄', shelfOyster: '🍄', redcap: '🍄', ghostglass: '🔮', goldStar: '⭐',
   headlamp: '🔦', hardhat: '⛑', lantern: '🏮', flare: '🧨', glowstick: '🟢', batteries: '🔋', hatchet: '🪓', axe: '🪓', fellaxe: '🪓', chainsaw: '🪚', sawfuel: '⛽',   // (lights and felling: #358, #359)
   venison: '🥩', rabbitMeat: '🥩', venisonSteak: '🍖', rabbitRoast: '🍗', deerHide: '🟫', antlers: '🦌', rabbitPelt: '🐇', coyotePelt: '🐺', raccoonPelt: '🦝',
+  filmTicket: '🎟', popcorn: '🍿',   // (The Grand Theatre's counter)
 };
 const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
 const SLOTS = 4;

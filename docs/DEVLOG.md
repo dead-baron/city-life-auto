@@ -6002,9 +6002,9 @@ and the poster wall, a corridor to two screens, the screen rooms with rows of re
 - **Going to the pictures** (`server/systems/cinema.js`):
   - **The counter** is a shop (`shared/items.js` `SHOPS.cinema`): a Film Ticket ($12) and Popcorn ($5; eaten like any
     food, for a little health).
-  - **Sit down** by a seat in a screen with the action button (with a ticket - it's torn): the film starts, or you join
-    the one that's on. You sit (the bench pose), facing the screen; the HUD tracker shows the screen, the film and the
-    time left.
+  - **Sit down** by a seat in a screen with the action button (with a ticket - it's torn): the first player in the room
+    gets the film from the start; a friend who sits down after joins the one that's on. You sit (the bench pose),
+    facing the screen; the HUD tracker shows the screen, the film and the time left.
   - **The films** are invented (`FILMS` in `shared/cinema.js`): Neon Harbor, The Last Lighthouse, Gravity Rodeo,
     Moonlight Diner, 75 seconds each; each screen runs its own in turn.
   - **It ends** when the film does (the lights come up), when you press the action button again ("Get up"), walk off
@@ -6021,6 +6021,7 @@ and the poster wall, a corridor to two screens, the screen rooms with rows of re
   between red curtains, the red seats on their risers, the walls, the poster wall (invented films as plain shapes in
   gold frames), the counter with the popcorn machine glowing gold and the till. The classic renderer draws it plainly
   (`client/render/tiles.js` `cinemaArt`).
+- **The bag:** 🎟 the ticket and 🍿 the popcorn (`client/inventory.js`).
 - **Finding it:** 🎬 on the radar (`client/hud.js`), in the phone's place finder under days out (`client/phone.js`) and in
   the map's waypoints under activities (`client/mapwaypoints.js`). Lobby music inside (`client/sound/places.js`).
 - **Debug menu:** 🎳 Bowling & cinema has The Grand Theatre (to the ticket counter: the dev `near` command with `cinema`,
@@ -6028,9 +6029,16 @@ and the poster wall, a corridor to two screens, the screen rooms with rows of re
 - **README:** the controls table has a row for the pictures (E).
 - **The world changed** (the theatre's inside): `node tools/stamp-version.mjs`, and the world map's picture rebaked
   (`tools/build-worldmap2.mjs`).
+- **Budgets** (`node tools/perf.mjs`): all within. The page 711 KB of 720 (main.js only has the hook); the bake workers
+  78 files of 80 (`shared/cinema.js` is built with the world).
 - **Tests:** `test/cinema.test.js` (3 new):
   - the cinema on the map: a walk-in where The Grand Theatre was, two screens with their seats inside the building,
     every seat reachable from the counter through the corridor and the room's door, the walls between;
   - buying a ticket and popcorn, sitting down (the ticket torn, sitting, the film on, the HUD tracker), eating the
     popcorn, no seat without a ticket, the film running to its end;
   - getting up, walking out, the NPC audience while you're near and gone when nobody is.
+  - These pass as before: `test/bowling.test.js`, `test/business.test.js`, `test/world.test.js`,
+    `test/worldbuild.test.js`, `test/dmath.test.js`, `test/art2.test.js`, `test/sound.test.js`.
+- **A fix on the way:** `client/art2/game/host.js` did not parse on main (a dancer's pose code had ended up inside the
+  comment on its line, so the art v2 renderer couldn't load and `test/art2.test.js` failed): the comment is at the end
+  of the line now.

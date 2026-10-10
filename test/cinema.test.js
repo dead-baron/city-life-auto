@@ -7,6 +7,7 @@ import { T, TILE } from '../shared/constants.js';
 import { CINE, FILMS, roomAt } from '../shared/cinema.js';
 import * as economy from '../server/systems/economy.js';
 import * as cinema from '../server/systems/cinema.js';
+import { nearTargets } from '../server/dev.js';
 
 let W = null;
 const world = () => (W ||= makeWorld());
@@ -20,6 +21,8 @@ test('The Grand Theatre on the map: a walk-in cinema - the counter in the lobby,
   assert.ok(b.walkIn && m.walkIns.includes(b.id) && b.walkIn.units[0].kind === 'cinema', 'a walk-in');
   assert.ok(C.district, `in a district (${C.district})`);
   assert.equal(m.tileAtPx(C.counter.x, C.counter.y), T.FLOOR, 'in front of the counter');
+  const nt = nearTargets(m, 'cinema');
+  assert.ok(nt.length === 1 && Math.hypot(nt[0].x - C.counter.x, nt[0].y - C.counter.y) < 1, 'the dev `near` command takes you to the counter');
   assert.equal(C.rooms.length, 2, 'two screens');
   // every seat can be walked to from the counter (through the corridor and the room's door), and walls part the rooms
   const key = (tx, ty) => ty * 100000 + tx, seen = new Set(), q = [[Math.floor(C.counter.x / TILE), Math.floor(C.counter.y / TILE)]];
@@ -64,6 +67,7 @@ test('buying a ticket and popcorn at the counter, sitting down in a screen, watc
   assert.ok(act && /Sit down and watch/.test(act.label), `a seat (${act && act.label})`);
   act.run();
   assert.ok(p.cine, 'watching');
+  assert.equal(cinema.meInfo(w, p).room, 0, 'in screen 1');
   assert.ok(p.ped.sitBench, 'sitting');
   assert.equal(p.profile.inventory.filmTicket || 0, 0, 'the ticket torn');
   run(w, 2);
