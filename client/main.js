@@ -4066,6 +4066,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   // concept-art body (all 8 directions drawn); the procedural painter until it has loaded
   const kneel = pose === 'kneel' || pose === 'sitlow';   // (sitting by a fire: drawn low like a kneel here)
   if (kneel) { pose = 'carry'; fr = 0; } // reaching both hands down to the patient
+  if (pose === 'idle' && p.d.gt === 'dance') { const k = Math.floor(now * 3.4 + p.id * 0.37) & 3; pose = k & 1 ? 'carry' : 'idle'; fr = k * 2; }   // (dancing, task #394: here the arms out on the beat)
   const body = bodySprite(p.d.app, d8, pose, fr, p.extra);
   const [d, mirror0] = baseDir(d8);
   const mirror = body ? false : mirror0;

@@ -20,6 +20,10 @@
 // BOUNCER_CHASE_PX from their door, then back to their posts. Not for the police at work, nor for someone only hitting
 // back at whoever hit them first, nor for a traffic accident.
 // Everything here but the clubs' state exists only while a player is near, as the shop staff do (interiors.js).
+// Dancing (task #394, "nightclubs full of dancing NPCs instead of idling; lines out the door at the most popular
+// nightclubs"): each dancer has a move (shared/dance.js, the descriptor's dm) and changes it now and then; two pair up
+// for a slow dance or the salsa now and then; at the peak the floor jumps at the drop. The floor fills through the night,
+// the most at the popular clubs (floorCap); the hot clubs (the top third) keep a line out the door at the peak (lineWant).
 import { K, T, TILE } from '../../shared/constants.js';
 import { mulberry32 } from '../../shared/rng.js';
 import {
