@@ -7,8 +7,9 @@
 //           (on a pad the stick-ring fire is a Settings option, off by default: shared/input.js padFires)
 //   weapon: Tab / wheel   · tap RB / LB, hold either for the weapon wheel · WPN (tap: next, hold: pick)
 //
-// Driving uses the same move vector: point where you want to go (shared/physics.js driveInput).
-import { IN, padFires, createTapHold } from '../shared/input.js';
+// Driving: on a keyboard W gas, S brake / reverse, A/D steer (Settings: or WASD points the way, the move vector as on
+// foot); a pad's triggers and stick; the touch thumb points the way (shared/physics.js driveInput).
+import { IN, padFires, createTapHold, easeSteer, touchStick } from '../shared/input.js';
 
 const keys = new Set();
 const mouse = { x: 0, y: 0, down: false, rdown: false, clicked: false, movedAt: -1e9, wheel: 0 };
@@ -21,6 +22,7 @@ const tappedKeys = new Set(); // keys pressed since the last sample (so quick ta
 let pad = null;
 let numberPick = null;
 let walkToggle = false;
+let kbSteer = 0, kbSteerAt = 0;   // the wheel, eased over on a keyboard (shared/input.js easeSteer)
 
 export const input = {
   device: 'keyboard', // 'keyboard' | 'gamepad' | 'touch' - drives button glyphs and help text
@@ -30,12 +32,16 @@ export const input = {
 };
 
 // ---- player settings (per browser) ----------------------------------------------------------
-export const settings = { kbDrive: 'direction', padDrive: 'triggers', touchEdgeFire: true, padStickFire: false, vibrate: true };
+export const settings = { kbDrive: 'car', padDrive: 'triggers', touchEdgeFire: true, padStickFire: false, vibrate: true };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('cla.settings') || '{}')); } catch { /* private mode */ }
 export function saveSettings() { try { localStorage.setItem('cla.settings', JSON.stringify(settings)); } catch { /* ignore */ } }
 // (task #301: the pad's stick-ring fire is off by default and now covers drive-bys too - and moving down Settings with a
 // pad could switch it on unseen: everyone starts this build with it off, once; switched on again, it stays on)
 if (settings.padFireV !== 2) { settings.padStickFire = false; settings.padFireV = 2; saveSettings(); }
+// (the owner's notes, 2026-10-10: car-style keyboard driving is the default now - everyone starts this build on it, once;
+// the old point-the-way scheme stays in Settings, and picked again it stays picked. 'tank' was the car scheme's old name.)
+if (settings.kbDriveV !== 2) { settings.kbDrive = 'car'; settings.kbDriveV = 2; saveSettings(); }
+if (settings.kbDrive === 'tank') settings.kbDrive = 'car';
 
 // Edge on Xbox drives a mouse cursor with the controller unless the page asks for the raw pad:
 // both at once made the game flip between pad and mouse every frame (the top buttons blinked
@@ -121,11 +127,21 @@ function initTouch(hooks) {
     const m = Math.hypot(x, y);
     if (on && m > 0.2) { touch.aim = Math.atan2(y, x); touch.aimAt = performance.now(); }
     const was = touch.firing;
-    touch.firing = on && settings.touchEdgeFire && (touch.firing ? m > 0.8 : m > 0.92);
+    const st = touchStick(on ? m : 0, touch.firing, settings.touchEdgeFire);   // (the FIRE toggle off: the stick only aims - or guards)
+    touch.firing = st.firing; touch.guard = st.guard;
     if (touch.firing && !was && settings.vibrate && navigator.vibrate) navigator.vibrate(12);
     stickR.classList.toggle('firing', touch.firing);
     stickR.classList.toggle('aiming', on && m > 0.2);
   });
+  // the FIRE toggle by the aim stick (on by default, remembered: settings.touchEdgeFire): off, the stick only aims
+  const ft = document.getElementById('firetog');
+  if (ft) {
+    input.showFireToggle = () => { ft.classList.toggle('on', !!settings.touchEdgeFire); ft.innerHTML = `FIRE<br>${settings.touchEdgeFire ? 'ON' : 'OFF'}`; };
+    input.showFireToggle();
+    const flip = (e) => { e.preventDefault(); e.stopPropagation(); settings.touchEdgeFire = !settings.touchEdgeFire; saveSettings(); input.showFireToggle(); if (settings.vibrate && navigator.vibrate) navigator.vibrate(10); };
+    ft.addEventListener('touchstart', flip, { passive: false });
+    ft.addEventListener('mousedown', flip);
+  }
   for (const b of document.querySelectorAll('#tbtns [data-b]')) {
     const name = b.dataset.b;
     // WPN: a tap switches to the next weapon, holding it opens the weapon picker (every weapon you carry)
@@ -303,12 +319,16 @@ export function sample(view) {
   if (k('KeyS') || k('ArrowDown')) my += 1;
   if (k('KeyA') || k('ArrowLeft')) mx -= 1;
   if (k('KeyD') || k('ArrowRight')) mx += 1;
-  if (mx || my) {
+  // car-style keyboard driving: gas and wheel are separate axes (W + D is full gas and full lock), the wheel eased over
+  const kbCar = view.inVehicle && settings.kbDrive !== 'direction' && input.device === 'keyboard';
+  const tNow = performance.now(), sdt = Math.min(0.1, Math.max(0, (tNow - kbSteerAt) / 1000));
+  kbSteerAt = tNow;
+  kbSteer = kbCar ? easeSteer(kbSteer, mx, sdt) : 0;
+  if (kbCar) { bits |= IN.TANK; mx = kbSteer; } else if (mx || my) {
     const l = Math.hypot(mx, my);
     const mag = (walkToggle || k('ControlLeft') || k('AltLeft')) && !view.inVehicle ? 0.55 : 1;
     mx = (mx / l) * mag; my = (my / l) * mag;
   }
-  if (view.inVehicle && settings.kbDrive === 'tank' && input.device === 'keyboard') bits |= IN.TANK;
   if (k('ShiftLeft') || k('ShiftRight')) bits |= IN.SPRINT;
   if (k('Space')) bits |= IN.DIVE;
   if (k('KeyE')) bits |= IN.ACTION;
@@ -332,6 +352,7 @@ export function sample(view) {
     const cursorAim = Math.atan2(mouse.y - view.selfScreen.y, mouse.x - view.selfScreen.x);
     if ((view.armed && mouseRecent) || mouse.down || mouse.clicked || mouse.rdown) { aim = cursorAim; bits |= IN.AIMING; }
     if (mouse.down || mouse.clicked) bits |= IN.FIRE;
+    if (mouse.rdown && !view.inVehicle) bits |= IN.BLOCK;   // the right button held: guard (with fists or a blade; a gun just aims)
   }
   mouse.clicked = false;
 
@@ -372,6 +393,7 @@ export function sample(view) {
     if (p.r3Edge && !driving) bits |= IN.RELOAD; // (at the wheel R3 is the drive-by's trigger; an empty gun reloads itself)
     if (p.up) bits |= view.inVehicle ? IN.HORN : IN.LIGHT; // D-pad up: horn / siren in a vehicle, the flashlight on foot
     if (view.inVehicle) { if (!driving && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
+    else if (p.lt > 0.4) bits |= IN.BLOCK;   // on foot LT guards (fists, a bat, a blade)
     else if (Math.hypot(p.lx, p.ly) > FULL_STICK) bits |= IN.SPRINT;  // no run button on a pad: the stick all the way out sprints
     const rmag = Math.hypot(p.rx, p.ry);
     if (rmag > 0.15) { padAim = Math.atan2(p.ry, p.rx); padAimUntil = performance.now() + 450; }
@@ -386,6 +408,7 @@ export function sample(view) {
     const recent = performance.now() - touch.aimAt < 1200; // aim lingers so the FIRE button uses it
     if (held || (recent && (view.armed || touch.btn.has('fire')))) { aim = touch.aim; bits |= IN.AIMING; }
     if (touch.firing || touch.btn.has('fire') || touch.tapped.has('fire')) bits |= IN.FIRE;
+    else if (held && touch.guard && !view.inVehicle) bits |= IN.BLOCK;   // the aim stick short of firing: guard (fists, a blade)
     const tb = touch.btn, tt = touch.tapped;
     if (!view.inVehicle && Math.hypot(touch.lx, touch.ly) > FULL_STICK) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out)
     if (tb.has('dive') || tt.has('dive')) bits |= IN.DIVE;

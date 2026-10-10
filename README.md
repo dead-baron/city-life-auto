@@ -35,13 +35,13 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 
 | | Keyboard / mouse | Xbox gamepad | Touch |
 |---|---|---|---|
-| Move / steer | WASD | Left stick (RT gas, LT brake in cars) | Left stick |
-| Aim / attack | Mouse / left click | Right stick aims, RT fires (at the wheel RT is the gas: click R3 for a drive-by). Settings → "pushing the right stick all the way also fires" puts the stick-ring fire back (off by default) | Right stick (push far to fire) |
+| Move / steer | WASD (on foot: up, down, left, right on the screen; at the wheel: W gas, S brake / reverse, A/D steer - Settings → Keyboard driving → Controls 2 makes WASD point the way instead) | Left stick (RT gas, LT brake in cars) | Left stick |
+| Aim / attack | Mouse / left click | Right stick aims, RT fires (at the wheel RT is the gas: click R3 for a drive-by). Settings → "pushing the right stick all the way also fires" puts the stick-ring fire back (off by default) | Right stick (push far to fire - with the FIRE toggle by the stick on; off, it only aims) |
 | Interact (shops and the countryside counters, crates, loot, arrest, fishing, picking fruit at the orchard and the vineyard, cutting lavender, stripping the boneyard's planes for parts, chipping for gold at the old mine, searching the shipwreck, ringing the old mission's bells, the pier's coin telescope, stargazing at the observatory after dark, the Ferris wheel, balloon flights and the Splash Canyon water slides, teeing off at the golf club) | E | B | E |
 | Enter / exit vehicle | F | X | CAR |
 | Sprint | Shift | Push the left stick all the way | Push the left thumb all the way |
 | Dive roll / handbrake (in a car: e-brake skid turn / drift; held with gas = burnout, + steer = donuts) | Space | A | ROLL / BRAKE |
-| Drift: brake while steering at speed | S + A/D (tank) · pull back to one side (point) | LT + stick | pull back to one side |
+| Drift: brake while steering at speed | S + A/D (car) · pull back to one side (Controls 2) | LT + stick | pull back to one side |
 | Power slide: floor it through a tight turn (hold the gas + counter-steer to keep it sideways, lift to grip) | W + A/D at speed | RT + stick | push far to one side at speed |
 | Board a train (anywhere on the platform while it's in; the edge glows green) | E | B | ACT |
 | Throw / drop crate | Q | Y | THROW |
@@ -55,6 +55,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Mine an ore vein (face it with a pickaxe good enough for its ore, stand still while the ring fills; the quarry's assay office buys ore best) | E | B | ACT |
 | Stalk game: creep (slow is quiet; keep downwind and behind trees and rocks; move while it grazes, freeze when it looks up) | C or Ctrl + move | push the stick gently | push the thumb gently |
 | Hunting bow: draw and loose (silent; the next arrow nocks itself; arrows come back when you dress the carcass, and you pick up a miss by walking over it) | hold right mouse, click | LT, RT | aim stick, FIRE |
+| Emberfang Bow (the fire bow - rare: the Highland Hunting Lodge): flaming arrows that hurt more, set a car burning and light a campfire they land by; they burn away | hold right mouse, click | LT, RT | aim stick, FIRE |
 | Field dress a carcass (a Hunting Knife takes the hide off whole) / cook raw meat at a lit campfire / sell game, make clothing at a trapper's bench | E | B | ACT |
 | Blades: slash with a knife, a sword (pawn shops) or a katana (the fence). A killing blow is now and then a finishing stab or slash; the plasma blade cuts clean through and now and then turns a bullet aside | Left click | RT | FIRE |
 | Plasma blade colour: blue to start, or red, green, purple, yellow, orange, cyan, pink or white - kept with your character, everyone sees it (the blade, its light and its arcs) | Esc → Settings → Plasma blade colour, or the swatches under the blade in the bag (I) | Start → Settings → Plasma blade colour, or the bag (D-pad →) | ⚙ → Plasma blade colour, or 🎒 |
@@ -134,10 +135,11 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | | Keyboard + mouse | Gamepad | Touch |
 |---|---|---|---|
 | Move (further = faster) | WASD / arrows (C or Ctrl = walk) | Left stick | Left thumb anywhere on the left half |
-| Drive | WASD: point where to go (or classic tank in Settings) | RT gas · LT brake/reverse · left stick steer · A handbrake (GTA-style; stick-pointing option in Settings) | Left thumb: point where to go |
+| Drive | W gas · S brake, then reverse · A/D steer (the wheel eases over; steering in reverse swings the car like a real one) - Settings → Keyboard driving → Controls 2: WASD points where to go | RT gas · LT brake/reverse · left stick steer · A handbrake (GTA-style; stick-pointing option in Settings) | Left thumb: point where to go |
 | Drive-by | Mouse aim + click | Right stick aim, R3 (click the stick) to fire - RT is the gas (a passenger fires with RT) | Aim stick / FIRE |
 | Aim | Mouse cursor | Right stick | Right stick |
-| Fire / punch (on foot) | Click | RT | FIRE button, or push the aim stick into its red ring |
+| Fire / punch (on foot) | Click | RT | FIRE button, or push the aim stick into its red ring (the FIRE toggle by the stick: on by default; tap it off and the stick only aims) |
+| Block / guard (fists, bat, sword, katana, plasma blade: a blow from in front does little or nothing; guarding you walk slowly and can't strike. The plasma blade turns most bullets and arrows aside facing the shooter - fewer from the side, none from behind) | Hold right mouse | Hold LT (on foot) | Hold the aim stick short of its red ring (anywhere, with the FIRE toggle off) |
 | Sprint | Shift | Left stick all the way out | Left thumb all the way out |
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |

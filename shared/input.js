@@ -15,6 +15,7 @@ export const IN = {
   PREVW: 2048,   // previous weapon
   TANK: 4096,    // classic tank-style driving (optional keyboard setting)
   LIGHT: 8192,   // L / D-pad up on foot / 🔦 - flashlight on / off (if you have one)
+  BLOCK: 16384,  // guard: right mouse button held · LT on foot · the touch aim stick short of firing (combat.js guarding)
 };
 
 // ---- the gamepad (client/input.js; tasks #301, #411) ----------------------------------------------------------------
@@ -69,3 +70,25 @@ export function quantizeAngle(a) {
 export function dequantizeAngle(q) { return (q / 65535) * Math.PI * 2; }
 export function quantizeAxis(v) { return Math.max(-127, Math.min(127, Math.round(v * 127))); }
 export function dequantizeAxis(q) { return q / 127; }
+
+// ---- car-style keyboard driving (the owner's notes, 2026-10-10) -----------------------------------------------------
+// The default for a keyboard at the wheel (Settings: Keyboard driving "car"; "direction" is the old point-the-way scheme):
+// W gas, S brake then reverse, A / D steer (sent as IN.TANK: physics.js driveInput). A key is all or nothing, so the
+// wheel eases over - full lock in KB_STEER.in s - and comes back to straight twice as fast; turning the other way
+// swings back through the middle at that faster rate too. easeSteer(cur, target -1..1, dt) -> the wheel this tick.
+export const KB_STEER = { in: 0.22, out: 0.11 };
+export function easeSteer(cur, target, dt) {
+  const back = target * cur < 0 || Math.abs(target) < Math.abs(cur);
+  const step = dt / (back ? KB_STEER.out : KB_STEER.in), d = target - cur;
+  return Math.abs(d) <= step ? target : cur + Math.sign(d) * step;
+}
+
+// ---- the touch aim stick (the owner's notes, 2026-10-10) ------------------------------------------------------------
+// Pushed into its outer ring it fires - only with the HUD's FIRE toggle on (Settings' "aim stick outer ring fires", on
+// by default; a little hysteresis so it doesn't flicker on the edge). Otherwise - and anywhere short of the ring - it
+// aims, and with something to block with in hand (fists, a bat, a sword, the katana, the plasma blade) it guards.
+// touchStick(m 0..1, wasFiring, fireOn) -> { firing, aiming, guard }
+export function touchStick(m, wasFiring, fireOn) {
+  const firing = !!fireOn && (wasFiring ? m > 0.8 : m > 0.92);
+  return { firing, aiming: m > 0.2, guard: m > 0.2 && !firing };
+}

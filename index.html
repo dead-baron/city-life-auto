@@ -55,6 +55,7 @@
     <div id="zone-l"></div>
     <div id="stick-l" class="stick"><div class="knob"></div></div>
     <div id="stick-r" class="stick"><div class="ring"></div><div class="knob"></div><span class="lbl">AIM</span></div>
+    <button id="firetog" class="on" title="Aim stick fires when pushed all the way">FIRE<br>ON</button>
     <div id="tbtns">
       <button data-b="fire" class="big fire">FIRE</button>
       <button data-b="action" class="act">ACT</button>
@@ -123,9 +124,9 @@
   </div>
   <div id="settings" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>SETTINGS</h2><button id="s-close" class="x" data-close>✕</button></div>
-    <label class="srow"><span>Keyboard driving</span><select id="s-kbdrive"><option value="direction">Direction (point where to go)</option><option value="tank">Classic tank (W gas, A/D steer)</option></select></label>
+    <label class="srow"><span>Keyboard driving</span><select id="s-kbdrive"><option value="car">Car: W gas, S brake/reverse, A/D steer</option><option value="direction">Controls 2: WASD points the way (W up, S down)</option></select></label>
     <label class="srow"><span>Gamepad driving</span><select id="s-paddrive"><option value="triggers">Classic: RT gas, LT brake, stick steers</option><option value="stick">Point the left stick where to go</option></select></label>
-    <label class="srow"><span>Touch: aim stick outer ring fires</span><input type="checkbox" id="s-edgefire"></label>
+    <label class="srow"><span>Touch: aim stick outer ring fires (the FIRE toggle by the stick)</span><input type="checkbox" id="s-edgefire"></label>
     <label class="srow"><span>Gamepad: pushing the right stick all the way also fires (RT always does; R3 at the wheel)</span><input type="checkbox" id="s-padfire"></label>
     <label class="srow"><span>Plasma blade colour</span><select id="s-blade"></select></label>
     <label class="srow"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>

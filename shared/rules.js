@@ -532,3 +532,17 @@ export const MINE_REACH = 44;              // px: face a vein this close to work
 export const VEIN_REGROW_S = 300;          // a worked-out vein grows back (somewhere near) after this long
 export const PICK_PRICES = { pickStone: 30, pickIron: 95, pickSteel: 280, pickDiamond: 1250 };
 export const ASSAY_PAYS = 1.3;             // the quarry's assay office pays this much over what a pawn shop does
+
+// ---- guarding and the plasma blade's deflection (the owner's notes, 2026-10-10; tasks #302, #410) --------------------
+// Hold the guard (right mouse button · LT on foot · the touch aim stick short of firing) with your fists, a bat, a sword,
+// the katana or the plasma blade (WEAPONS[id].guard: the share of a melee blow it stops): blows from in front - within
+// GUARD.arc rad either side of where you face - are blocked (no stagger, no combo, no bleeding; what gets through is
+// (1 - guard) of the blow). Guarding you walk at GUARD.speed and can't strike. The plasma blade held in guard turns most
+// bullets and arrows aside: PLASMA_DEFLECT.front of them coming at you within .frontArc rad of where you face, falling
+// to .side at .sideArc and none from further round (behind you); not guarding, it still turns WEAPONS.plasma.deflect of
+// those from in front (within .idleArc) now and then, between swings.
+export const GUARD = { speed: 0.55, arc: 1.31 };
+export const PLASMA_DEFLECT = { front: 0.9, frontArc: Math.PI / 3, side: 0.3, sideArc: 1.92, idleArc: 1.21 };
+// the fire bow's arrows (shared/items.js firebow): FIRE_ARROW.burn more damage to whoever they hit, .veh to a vehicle
+// (set burning for .vehBurnS s), and one that comes down within .lightPx of a campfire lights it
+export const FIRE_ARROW = { burn: 18, veh: 14, vehBurnS: 3, lightPx: 48 };

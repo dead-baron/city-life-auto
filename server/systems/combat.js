@@ -5,8 +5,8 @@ import * as revive from './revive.js';
 import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
-import { WEAPONS, stepWeapon } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING } from '../../shared/rules.js';
+import { WEAPONS, stepWeapon, deflectChance } from '../../shared/items.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -20,6 +20,7 @@ import * as reactions from './reactions.js';
 import * as wanderer from './wanderer.js';
 import * as nightclubs from './nightclubs.js';
 import * as explosions from './explosions.js';   // (chain reactions: task #398)
+import * as campfires from './campfires.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -102,6 +103,7 @@ function melee(world, ped, w, aim) {
   world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
   if (!best) return true;
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
+  if (blocked(world, best, ped, w, dir)) return true;
   if (!best.wild && !ped.wild) npc.spectacle(world, best.x, best.y, { r: 300, near: 60, chance: 0.35, secs: 7 });   // (a fight: a few phones come out)
   const was = { speed: Math.hypot(best.vx, best.vy), heading: Math.atan2(best.vy, best.vx) }; // (for the reaction: running into it?)
   const poise = best.build ? best.build.poise : 1;
@@ -157,6 +159,37 @@ function melee(world, ped, w, aim) {
   return true;
 }
 
+// Guarding (players.js: the guard held with fists, a bat, a sword, the katana or the plasma blade; rules.js GUARD).
+export const guarding = (world, t) => world.time < (t.guardUntil || 0) && !t.dead && !t.vehId;
+// A blow at someone guarding, from in front of them: blocked - a clash (the 'block' event), the attacker's blow bounces
+// off and their combo is broken, the guard rocks back a step, and only what the guard doesn't stop gets through (no
+// stagger, no bleeding, no knockdown). From behind or the side the guard is no help.
+function blocked(world, t, ped, w, dir) {
+  if (!guarding(world, t) || Math.abs(angleDiff(t.a || 0, dir + Math.PI)) > GUARD.arc) return false;
+  const gw = WEAPONS[t.weapon] || WEAPONS.fists;
+  world.emit(t.x, t.y, { e: 'block', x: t.x, y: t.y, a: +(dir + Math.PI).toFixed(2), id: t.id, w: gw.i });
+  t.vx += Math.cos(dir) * 45; t.vy += Math.sin(dir) * 45;
+  ped.vx -= Math.cos(dir) * 70; ped.vy -= Math.sin(dir) * 70;
+  ped.combo = 0;
+  const left = w.dmg * (ped.build ? ped.build.str : 1) * (1 - (gw.guard || 0));
+  if (left > 0.5) damage(world, t, left, ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
+  return true;
+}
+// The plasma blade meeting a bullet or an arrow flying along a (rules.js PLASMA_DEFLECT): whether it's turned aside -
+// the blade whirls round to it (the swing pose), sparks, and it glances off (the 'deflect' event; g: the way it goes).
+function deflects(world, t, a) {
+  if (t.weapon !== 'plasma' || t.vehId || t.dead) return false;
+  const g = guarding(world, t);
+  if (!g && world.time <= (t.attackAnimUntil || 0)) return false;   // (mid-swing and not guarding: no)
+  const c = deflectChance(angleDiff(t.a || 0, a + Math.PI), g);
+  if (!(c > 0) || world.rand() >= c) return false;
+  const back = a + Math.PI, glance = back + (world.rand() - 0.5) * 2.4;
+  world.emit(t.x, t.y, { e: 'deflect', x: t.x, y: t.y, a: +back.toFixed(2), g: +glance.toFixed(2), id: t.id });
+  t.attackAnimUntil = Math.max(t.attackAnimUntil || 0, world.time + 0.16);
+  t.swingSide = (t.swingSide || 0) ^ 1;
+  return true;
+}
+
 // A bow: the arrow flies (stepArrow), the string twangs - nobody but someone right beside you hears it, and the
 // animals don't take it for a gunshot - and the next arrow is nocked if there is one.
 function loose(world, ped, w, aim) {
@@ -179,12 +212,13 @@ function stepArrow(world, p, dt, owner) {
   const w = WEAPONS[p.weapon], a = Math.atan2(p.vy, p.vx);
   if (hit.kind === K.PED && hit.id !== p.owner) {
     const t = hit;
+    if (deflects(world, t, a)) { world.remove(p); return; }   // (the plasma blade: turned aside, it falls away)
     world.emit(t.x, t.y, { e: 'blood', x: t.x, y: t.y, a, n: 7, g: 1 });
-    world.emit(t.x, t.y, { e: 'arrowhit', x: t.x, y: t.y, a: +a.toFixed(2), id: t.id });
+    world.emit(t.x, t.y, { e: 'arrowhit', x: t.x, y: t.y, a: +a.toFixed(2), id: t.id, f: w.fire ? 1 : 0 });
     const mult = t.wild ? (w.wild || 1) : t.player || !(owner && owner.player) ? 1 : NPC_GUN_MULT / (t.grit || 1);
-    const dmg = w.dmg * mult * (0.9 + world.rand() * 0.2);
+    const dmg = w.dmg * mult * (0.9 + world.rand() * 0.2) + (w.fire ? FIRE_ARROW.burn : 0);   // (a fire arrow burns too)
     if (world.rand() < 0.7) t.bleeding = true;   // an arrow cuts: it bleeds (a trail to follow)
-    if (t.wild) t.arrows = (t.arrows || 0) + 1;
+    if (t.wild && !w.fire) t.arrows = (t.arrows || 0) + 1;   // (a fire arrow burns away: none to get back)
     if (!t.dead && hurtable(world, t)) reactions.shot(world, t, owner || t, w, { n: 1, dist: p.dist, a, lethal: t.hp - dmg <= 0 });
     damage(world, t, dmg, owner, 'arrow', a);
     world.remove(p);
@@ -192,16 +226,19 @@ function stepArrow(world, p, dt, owner) {
   }
   if (hit.kind === K.VEH && hit.id !== p.owner) {
     world.emit(nx, ny, { e: 'spark', x: nx, y: ny });
-    vehicles.damageVehicle(world, hit, 4, owner);
+    if (w.fire) { hit.burnUntil = Math.max(hit.burnUntil || 0, world.time + FIRE_ARROW.vehBurnS); world.emit(nx, ny, { e: 'arrowstick', x: Math.round(nx), y: Math.round(ny), a: +a.toFixed(2), wall: 1, f: 1 }); }   // (it catches: flames on it a while)
+    vehicles.damageVehicle(world, hit, w.fire ? FIRE_ARROW.veh : 4, owner);
     world.remove(p);
     return;
   }
   p.dist += step;
   if (hit.hitT < 1 || p.dist > p.maxDist) {
     const t = hit.hitT < 1 ? hit.hitT : 1, ex = p.x + (nx - p.x) * t, ey = p.y + (ny - p.y) * t;
-    world.emit(ex, ey, { e: 'arrowstick', x: Math.round(ex), y: Math.round(ey), a: +a.toFixed(2), wall: hit.hitT < 1 ? 1 : 0 });
+    world.emit(ex, ey, { e: 'arrowstick', x: Math.round(ex), y: Math.round(ey), a: +a.toFixed(2), wall: hit.hitT < 1 ? 1 : 0, f: w.fire ? 1 : 0 });
+    // a fire arrow burns where it lands - and lights a campfire it comes down by
+    if (w.fire) { const cf = campfires.fireNear(world, ex, ey, FIRE_ARROW.lightPx); if (cf) campfires.setLit(world, cf.i, true); }
     // (one that came down in the open can be picked up again)
-    if (hit.hitT >= 1 && owner && owner.player) { (world.arrows ||= []).push({ x: ex, y: ey, a, owner: owner.id, t: world.time }); if (world.arrows.length > 80) world.arrows.shift(); owner.player.meDirty = true; }
+    else if (hit.hitT >= 1 && owner && owner.player) { (world.arrows ||= []).push({ x: ex, y: ey, a, owner: owner.id, t: world.time }); if (world.arrows.length > 80) world.arrows.shift(); owner.player.meDirty = true; }
     world.remove(p);
     return;
   }
@@ -283,11 +320,8 @@ function hurtable(world, ped) {
 // The bullets (or a blast's pellets) that hit one person, as one hit: a shotgun at close range hits harder
 // the closer it is; the body reacts (reactions.js) before the damage, so a fatal blast throws it too.
 function shotHits(world, t, shooter, w, h) {
-  // the plasma blade, held ready and facing the shots, now and then turns a bullet aside
-  if (t.weapon === 'plasma' && !t.vehId && !t.dead && world.time > (t.attackAnimUntil || 0) && Math.cos(h.a + Math.PI - (t.a || 0)) > 0.35 && world.rand() < WEAPONS.plasma.deflect) {
-    world.emit(t.x, t.y, { e: 'deflect', x: t.x, y: t.y, a: +(h.a + Math.PI).toFixed(2), id: t.id });
-    return;
-  }
+  // the plasma blade, held ready and facing the shots, now and then turns a bullet aside - guarding with it, most of them
+  if (deflects(world, t, h.a)) return;
   let dmg = h.dmg;
   // (point blank stays almost always a kill, a player's grit or not)
   if (h.n >= 3 && h.dist < SHOTGUN_CLOSE_PX) dmg *= (1 + (SHOTGUN_CLOSE_MULT - 1) * (1 - h.dist / SHOTGUN_CLOSE_PX)) * gritOf(t, 'gun');
@@ -555,7 +589,7 @@ function slideBody(world, e, dt, now) {
 
 function stepProjectile(world, p, dt) {
   const owner = world.get(p.owner);
-  if (p.weapon === 'bow') return stepArrow(world, p, dt, owner);
+  if (WEAPONS[p.weapon] && WEAPONS[p.weapon].type === 'bow') return stepArrow(world, p, dt, owner);   // (the hunting bow, the fire bow)
   const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
   const hit = traceTarget(world, owner ? { ...owner, lz: p.lz || 0, id: owner.id, vehId: owner.vehId, npc: owner.npc, sub: owner.sub } : { id: -1, vehId: 0, lz: p.lz || 0 }, p.x, p.y, nx, ny, true);
   p.dist += Math.hypot(nx - p.x, ny - p.y);

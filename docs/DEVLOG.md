@@ -5425,3 +5425,49 @@ The owner made the title music themselves (a YuE2 instrumental workflow in Comfy
   In the game page (headless), the track loads as Opus and plays on the title screen.
 - **What the owner sends from now on:** the FLAC master is all that's needed. The Opus, MP3 and ABC exports aren't: the game's files are cut and encoded from the master, and the ABC is the generator's planning sketch, not a transcription.
 - **Parked:** the engine rebuild of the owner's earlier track (branch `title-track`).
+
+## 2026-10-10 · Car-style keyboard driving, the touch FIRE toggle, blocking and the plasma blade's deflection, two bows
+The owner's notes:
+- "For playing with mouse and keyboard lets have the current keyboard keys work as version 2 of the controls and lets make the default controls for keyboard go like this: have W = GAS, S = Reverse/Brakes, A = steer left, and D = steer right."
+- "For mobile lets have a Fire toggle you can press on and off so when you have the right joystick pulled all the way it will only fire if you have that fire option toggled on, otherwise it will just aim in that direction. ... It will still block if you're unarmed or holding a sword or lightsaber or something that can be used to block with even if the fire toggle is off."
+- "Blocking should work with the bat and sword and katana. The plasmablade also blocks but it will deflect most bullets that come at you ... especially if you're facing the direction the bullets are coming" (tasks #302, #410).
+- "For some reason the hunting bow fires a flaming arrow ... I'd like to keep the Flaming Arrow Bow weapon (call it something cool) but lets make the hunting bow [not] shoot flaming arrow."
+
+What changed:
+- **Keyboard driving** (`client/input.js`, `shared/input.js`, `index.html`):
+  - At the wheel the default is now car-style: W gas, S brake and then reverse, A/D steer. It covers every vehicle driven with WASD (cars, trucks, bikes, bicycles, boats).
+  - On foot WASD is unchanged. The gamepad and touch are unchanged.
+  - The wire already carried this form (`IN.TANK`: throttle and steer instead of a direction, `shared/physics.js driveInput`), so older clients keep working.
+  - Two fixes to the old "classic tank" option it grew from. W + D was a diagonal shrunk to 71% gas and 71% lock; gas and wheel are now separate axes. The wheel also snapped; now it eases over (full lock in 0.22 s, back to straight in 0.11 s: `easeSteer`, `KB_STEER`).
+  - Reversing: S from a stop backs up, and S while rolling brakes to a stop first. Steering in reverse swings the car the other way, as in a real car (the physics' `dirSign`).
+  - Settings → Keyboard driving: "Car" (the default) or "Controls 2: WASD points the way" (the old scheme). Everyone starts this build on Car, once (`kbDriveV`). Picking Controls 2 again sticks, and the old 'tank' value reads as Car.
+- **The touch FIRE toggle** (`index.html`, `client/style.css`, `client/input.js`):
+  - A small round FIRE ON / OFF button sits on the aim stick's top-right edge. It's on by default and remembered: it's Settings' "aim stick outer ring fires", and the two stay in step.
+  - Off: the stick never fires, it only aims. The FIRE button still fires.
+  - The stick's logic is `shared/input.js touchStick`.
+- **Blocking** (`server/systems/players.js`, `server/systems/combat.js`, `shared/rules.js GUARD`, `shared/items.js` `guard`):
+  - The guard is a new input bit, `IN.BLOCK` (16384): hold the right mouse button, hold LT on foot, or hold the touch aim stick short of its fire ring (anywhere with the FIRE toggle off).
+  - It works with fists (0.7), a bat (0.85), a sword (0.9), the katana (0.9) or the plasma blade (1). The number is the share of a blow from in front (within 75 degrees) that the guard stops.
+  - A blocked blow is a clash: the `block` event, sparks and an arc, with a sound by what blocked it. The attacker bounces off and their combo breaks. No stagger, bleeding or knockdown, and only the rest of the blow gets through.
+  - From behind the guard is no help, and a knife in the back still kills.
+  - Guarding you move at 55% and can't strike. You're shown with your weapon held up (the aim pose: every ped flag bit is taken).
+  - Guns, tools and the bows ignore the guard bit, so the right button still just aims a gun.
+- **The plasma blade's deflection** (`combat.js deflects`, `shared/items.js deflectChance`, `rules.js PLASMA_DEFLECT`):
+  - Guarding with it turns aside 90% of bullets and arrows coming from within 60 degrees of where you face. That falls to 30% at 110 degrees, and none are turned from further round (behind you).
+  - Not guarding, it still turns 35% of those from in front between swings, as before.
+  - A deflection whirls the blade round: the swing pose and three arcs in the blade's colour, with sparks. The bullet glances off: the `deflect` event's `g` is the angle the client draws its tracer away along.
+- **Two bows:**
+  - The flame on the Hunting Bow's arrow came from the client: every projectile got the rocket's fire-and-smoke trail (`client/main.js`). Hunting arrows now fly plain.
+  - The fire bow is the **Emberfang Bow** (`firebow`, weapon index 30). It's a black recurve with red-lacquered tips and its own models in both renderers, and its fire arrow has a burning head and a flame trail.
+  - Its arrows burn: they do 18 more damage, a burst of flame where they strike, and 14 to a vehicle, which they set burning for 3 s. One that comes down by a campfire lights it (`rules.js FIRE_ARROW`).
+  - They burn away: none are left lying, and none come back from a carcass.
+  - The Highland Hunting Lodge keeps one ($2,600, fire arrows $70 for 6). It's in the dev give list like every weapon.
+- **Tests:**
+  - `test/kbdrive.test.js` (4): the default and Settings, the wheel easing, driving off, braking and reversing (cars, a pickup, a motorbike, a bicycle), steering in reverse, Controls 2, the touch stick and the toggle.
+  - `test/blocking.test.js` (4): each guard weapon blocking from in front, nothing from behind, the guard from input (slower, no striking, not with a gun), and the deflection odds by angle, with 120 shots.
+  - `test/firebow.test.js` (3): the two bows, the shop and the client's trail, fire arrows hurting and burning away, and a car set burning and a campfire lit.
+  - The existing blade, hunting, gamepad, sound and lights tests still pass.
+- **Not done yet:**
+  - NPCs don't guard.
+  - The guard has no pose of its own: it borrows the aim pose, as every ped flag bit is taken.
+  - The block on touch is the aim stick (no separate button).

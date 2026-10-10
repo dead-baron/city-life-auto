@@ -1,10 +1,10 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS } from './rules.js';
+import { PLASMA_DEFLECT, REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS } from './rules.js';
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
 export const WEAPONS = {
-  fists:    { i: 0,  name: 'Fists',            type: 'melee', dmg: 10, range: 28, arc: 1.4, cd: 0.42, push: 95 },
-  bat:      { i: 1,  name: 'Baseball Bat',     type: 'melee', dmg: 22, range: 36, arc: 1.5, cd: 0.6 },
+  fists:    { i: 0,  name: 'Fists',            type: 'melee', dmg: 10, range: 28, arc: 1.4, cd: 0.42, push: 95, guard: 0.7 },
+  bat:      { i: 1,  name: 'Baseball Bat',     type: 'melee', dmg: 22, range: 36, arc: 1.5, cd: 0.6, guard: 0.85 },
   knife:    { i: 2,  name: 'Knife',            type: 'melee', dmg: 26, range: 26, arc: 1.1, cd: 0.4, bleed: true, quiet: true, backstab: true, blade: 0.35 },
   crowbar:  { i: 3,  name: 'Crowbar',          type: 'melee', dmg: 24, range: 32, arc: 1.3, cd: 0.55 },
   sledge:   { i: 4,  name: 'Sledgehammer',     type: 'melee', dmg: 42, range: 36, arc: 1.4, cd: 1.0, knock: true },
@@ -36,13 +36,17 @@ export const WEAPONS = {
   // to the knees, spun round, slumping back). The plasma blade, sold only by a rare wanderer (wanderer.js), cuts
   // through anything in one stroke, sears the wound shut, turns bullets aside now and then (deflect), and what it
   // kills falls in two halves.
-  sword:    { i: 26, name: 'Sword',           type: 'melee', dmg: 40, range: 36, arc: 1.7, cd: 0.6, bleed: true, blade: 0.5 },
-  katana:   { i: 27, name: 'Katana',          type: 'melee', dmg: 46, range: 38, arc: 1.6, cd: 0.46, bleed: true, quiet: true, blade: 0.6 },
-  plasma:   { i: 28, name: 'Plasma Blade',    type: 'melee', dmg: 160, range: 42, arc: 1.9, cd: 0.36, plasma: true, blade: 1, deflect: 0.35 },
+  sword:    { i: 26, name: 'Sword',           type: 'melee', dmg: 40, range: 36, arc: 1.7, cd: 0.6, bleed: true, blade: 0.5, guard: 0.9 },
+  katana:   { i: 27, name: 'Katana',          type: 'melee', dmg: 46, range: 38, arc: 1.6, cd: 0.46, bleed: true, quiet: true, blade: 0.6, guard: 0.9 },
+  plasma:   { i: 28, name: 'Plasma Blade',    type: 'melee', dmg: 160, range: 42, arc: 1.9, cd: 0.36, plasma: true, blade: 1, deflect: 0.35, guard: 1 },
   // ---- lights to carry (task #359): the heavy flashlight - a strong beam (shared/lights.js) and a solid club with a
   // chance to stun. (Index 31, the top of the wire's five bits: net.js extra.)
   heavyflash: { i: 31, name: 'Heavy Flashlight', type: 'melee', dmg: 21, range: 32, arc: 1.3, cd: 0.55, stunChance: 0.3, light: true },
   // ---- end lights to carry ----
+  // the fire bow (the owner's notes, 2026-10-10: the Hunting Bow shoots plain arrows; the flaming ones are this bow's):
+  // a black recurve whose arrows burn - they hurt more, set a vehicle burning and light a campfire they land by
+  // (combat.js stepArrow, rules.js FIRE_ARROW). They burn up: none are left lying to pick up. The lodge keeps one.
+  firebow:  { i: 30, name: 'Emberfang Bow',   type: 'bow', dmg: 62, range: 560, speed: 900, spread: 0.012, cd: 0.3, mag: 1, reload: 0.85, quiet: true, fire: true, ammoName: 'fire arrows', starter: 8 },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -53,6 +57,14 @@ for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i]
 const cycleKey = (id) => (id === 'plasma' ? 1e3 : WEAPONS[id].i);
 export function weaponOrder(ids) { return ids.filter((id) => WEAPONS[id]).sort((a, b) => cycleKey(a) - cycleKey(b)); }
 // the weapon dir (1 next, -1 back) steps from cur to, among ids (null if none)
+// The plasma blade turning a bullet or an arrow aside (combat.js): the chance, for one coming at you off degrees round
+// from where you face (0 head on, PI from behind), guarding or just holding it (rules.js PLASMA_DEFLECT).
+export function deflectChance(off, guarding) {
+  const o = Math.abs(off), D = PLASMA_DEFLECT;
+  if (!guarding) return o <= D.idleArc ? WEAPONS.plasma.deflect : 0;
+  if (o <= D.frontArc) return D.front;
+  return o >= D.sideArc ? 0 : D.front + (D.side - D.front) * (o - D.frontArc) / (D.sideArc - D.frontArc);
+}
 export function stepWeapon(ids, cur, dir) {
   const o = weaponOrder(ids), n = o.length, i = o.indexOf(cur);
   if (!n) return null;
@@ -395,7 +407,8 @@ export const SHOPS = {
     { kind: 'weapon', id: 'bow', price: 420 }, { kind: 'ammo', id: 'bow', price: 30, qty: 12 },
     { kind: 'weapon', id: 'varmint', price: 520 }, { kind: 'ammo', id: 'varmint', price: 20, qty: 20 },
     { kind: 'weapon', id: 'huntknife', price: 120 }, { kind: 'item', id: 'flashlight', price: FLASHLIGHT_PRICE, qty: 1 }, ...LIGHT_KIT, { kind: 'item', id: 'flare', price: LIGHT_PRICES.flare, qty: 2 }, ...FELL_KIT.slice(0, 3),
-    { kind: 'item', id: 'camoCloak', price: 380, qty: 1 }, { kind: 'item', id: 'coverScent', price: 15, qty: 2 }, { kind: 'item', id: 'venisonSteak', price: 30, qty: 1 }],
+    { kind: 'item', id: 'camoCloak', price: 380, qty: 1 }, { kind: 'item', id: 'coverScent', price: 15, qty: 2 }, { kind: 'item', id: 'venisonSteak', price: 30, qty: 1 },
+    { kind: 'weapon', id: 'firebow', price: 2600 }, { kind: 'ammo', id: 'firebow', price: 70, qty: 6 }],
     sells: [...GAME_GOODS(), ...CRAFTED], sellPrice: payFor(GAME_GOODS(), 1.4), crafts: true },
   huntcamp: { title: 'Hunting Camp Outfitter', buy: [...LIGHT_KIT.slice(0, 3), { kind: 'item', id: 'flare', price: LIGHT_PRICES.flare, qty: 2 }, { kind: 'item', id: 'hatchet', price: FELL_TOOL_PRICES.hatchet, qty: 1 },
     { kind: 'ammo', id: 'huntrifle', price: 40, qty: 10 }, { kind: 'ammo', id: 'bow', price: 34, qty: 12 }, { kind: 'ammo', id: 'varmint', price: 24, qty: 20 },

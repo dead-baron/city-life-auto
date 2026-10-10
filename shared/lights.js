@@ -33,7 +33,7 @@ export const GLOW_NAMES = ['green', 'blue', 'pink'];
 // the lights you switch on and wear or hold, in the order the light button picks one when you haven't chosen
 export const CARRIED = ['headlamp', 'hardhat', 'flashlight', 'lantern'];
 // what takes both hands: a hand light goes dark while you hold one of these (the bag keeps it switched on for later)
-export const TWO_HANDED = new Set(['sledge', 'shotgun', 'rifle', 'rocket', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'bow']);
+export const TWO_HANDED = new Set(['sledge', 'shotgun', 'rifle', 'rocket', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'bow', 'firebow']);
 export const twoHanded = (weaponId, W) => TWO_HANDED.has(weaponId) || !!(W && W[weaponId] && W[weaponId].twoHand);
 // the light a ped shows, from its descriptor's code (fl): the definition, or null
 export const lightOf = (code) => (code ? LIGHT_BY_CODE[code | 0] || LIGHT_BY_CODE[1] : null);

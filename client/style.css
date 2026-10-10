@@ -207,6 +207,8 @@ body.kbm #t-fs { display: none; }
 #stick-r.firing .ring { border-color: rgba(255,60,60,.75); }
 #stick-r.firing .knob { background: #e8323a; }
 #stick-r .lbl { position: absolute; left: 0; right: 0; top: -22px; text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: rgba(255,255,255,.6); }
+#firetog { position: absolute; right: calc(max(22px, env(safe-area-inset-right)) - 12px); bottom: 124px; width: 42px; height: 42px; border-radius: 50%; pointer-events: auto; touch-action: none; border: 2px solid rgba(255,255,255,.35); background: rgba(0,0,0,.55); color: rgba(255,255,255,.7); font-size: 9px; font-weight: 700; line-height: 1.1; padding: 0; }
+#firetog.on { background: rgba(200,22,30,.8); border-color: #fff; color: #fff; }
 body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 .stick .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255,255,255,.4); border: 2px solid rgba(0,0,0,.45); box-shadow: 0 3px 8px rgba(0,0,0,.4); }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }

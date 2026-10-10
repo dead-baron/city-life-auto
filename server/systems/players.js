@@ -46,7 +46,7 @@ import * as trains from './trains.js';
 import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 
-import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE } from '../../shared/rules.js';
+import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD } from '../../shared/rules.js';
 import * as felling from './felling.js';
 import * as lights from './lights.js';
 import * as revive from './revive.js';
@@ -322,6 +322,7 @@ export function pedMods(world, ped) {
   if (ped.buffs.energy > now) speedMul *= 1.15;
   if (ped.fishing) speedMul *= 0;
   if (ped.limpUntil > now) speedMul *= REVIVE_LIMP_SPEED; // just revived bare-handed: limping
+  if (now < (ped.guardUntil || 0)) speedMul *= GUARD.speed;   // guarding: a careful step (rules.js GUARD)
   return {
     canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),
     canSwim: !!ped.player || isSwimming(world.map, ped), // players swim anywhere; NPCs only get out of water
@@ -413,6 +414,12 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   const fr = world.time < (ped.airUntil || 0) ? AIR_FRICTION : TUMBLE_FRICTION;
   const v0 = tumbling ? Math.hypot(ped.vx, ped.vy) : 0;
   const wasDropping = !!ped.dropping;
+  // the guard (rules.js GUARD; combat.js blocked, deflects): held with something to block with, on your feet, not busy
+  const gw = WEAPONS[ped.weapon] || WEAPONS.fists;
+  const guard = !!(inp.bits & IN.BLOCK) && !!gw.guard && !ped.carrying && !ped.fishing && !(ped.rollT > 0) && !tumbling
+    && world.time >= ped.downUntil && world.time >= ped.stunUntil && !isSwimming(world.map, ped);
+  ped.guardUntil = guard ? world.time + 0.12 : 0;
+  if (guard) ped.aimUntil = world.time + 0.3;   // (shown held up and ready: the aim pose)
   pedStep(ped, inp, dt, world.map, { ...pedMods(world, ped), analog: true });
   if (ped.hardLanding) { ped.hardLanding = false; combat.damage(world, ped, 45, null, 'fall'); ped.tumbleUntil = world.time + 0.8; }
   // down a waterfall or off its cliff (shared/ledges.js): a splash at the foot, or a thud on dry ground
@@ -421,7 +428,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
   const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt);   // (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
-  if ((inp.bits & IN.FIRE) && !kicked && !swung) {
+  if ((inp.bits & IN.FIRE) && !kicked && !swung && !guard) {   // (guarding: no striking)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   }

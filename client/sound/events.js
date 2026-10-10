@@ -70,6 +70,7 @@ export const EVENT_SOUNDS = {
   finisher: (ev, A) => A.at(ev.k === 'stab' ? 'stab' : 'slash', ev.x, ev.y, 1.2),
   sizzle: at('sear'),
   deflect: at('zing'),
+  block: (ev, A) => A.at(ev.w === 28 ? 'zing' : ev.w ? 'clank' : 'punch', ev.x, ev.y, 0.8),   // (a guard taking a blow: combat.js blocked)
   spark: (ev, A) => A.at('ricochet', ev.x, ev.y, 0.6),
   knockdown: at('knockdown', 1.1),
   // fighting off an officer (server struggle.js): grunts and a scuffle on the ground as you heave, a shove and a whoosh as

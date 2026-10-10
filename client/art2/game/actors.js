@@ -541,7 +541,18 @@ export const projKey = (w, hi = 0, N = 32) => `p|${w | 0}|${wrapHi(hi, N)}|${N}`
 // a projectile flying at its launch height (z ~14): the rocket (weapon 12; any weapon but the bow gets the rocket),
 // its exhaust glowing; an arrow (the bow, weapon 24: a cedar shaft, a steel broadhead, red and white fletching).
 // Anchor = the ground point under it.
-export function projSprite(w, hi = 0, N = 32) { return (w | 0) === 24 ? objRender('arrow', arrowModel, hi, N) : objRender('rocket', rocketModel, hi, N); }
+// (weapon 30, the fire bow: a fire arrow - a black shaft and fletching, its head wrapped and burning)
+export function projSprite(w, hi = 0, N = 32) { return (w | 0) === 24 ? objRender('arrow', arrowModel, hi, N) : (w | 0) === 30 ? objRender('firearrow', fireArrowModel, hi, N) : objRender('rocket', rocketModel, hi, N); }
+function fireArrowModel() {
+  const m = objModel(30, 9, 20), cy = 4.5, cz = 14;
+  const shaft = m.mat({ ramp: RP('#3a2a22'), k: 3 }), black = m.mat({ ramp: RP('#1e1c22'), k: 3 }), wrap = m.mat({ ramp: RP('#6a4a2a'), k: 3 });
+  const flame = m.mat({ ramp: RP('#ffb040', 5, 3), k: 4, emi: [255, 160, 50, 255], flag: F_NOCAST });
+  m.box(3, cy - 0.5, cz - 0.5, 24, cy + 0.5, cz + 0.5, shaft);
+  m.box(22, cy - 1.1, cz - 1.1, 25, cy + 1.1, cz + 1.1, wrap);
+  m.fill((x, y, z) => { const t = (x - 21) / 9, r = Math.hypot(y - cy, z - cz - t * 1.2); return t >= 0 && t <= 1 && r < 2.6 * (1 - t) + 0.4 ? flame : -1; }, 21, 0, 0, 30, 9, 20);
+  for (const o of [1.8, -1.8]) m.fill((x, y, z) => { const t = (x - 3) / 5; if (t < 0 || t > 1) return -1; const r = 0.4 + 1.6 * Math.sin(t * Math.PI * 0.9); return Math.abs(z - cz) < 0.5 && (o > 0 ? y - cy : cy - y) > 0.4 && Math.abs(y - cy) < r ? black : -1; }, 3, 0, 0, 9, 9, 20);
+  return m;
+}
 function arrowModel() {
   const m = objModel(30, 7, 18), cy = 3.5, cz = 14;
   const shaft = m.mat({ ramp: RP('#c8a46c'), k: 3 }), head = m.mat({ ramp: MAT.chrome, k: 3 }), red = m.mat({ ramp: RP('#c84a32'), k: 3 }), white = m.mat({ ramp: RP('#ece8e0', 5, 2), k: 3 });
