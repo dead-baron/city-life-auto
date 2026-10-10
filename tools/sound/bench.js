@@ -13,7 +13,7 @@
 import { createSound } from '../../client/sound/index.js';
 import { SoundEngine } from '../../client/sound/engine.js';
 import { Ambience } from '../../client/sound/ambience.js';
-import { Music } from '../../client/sound/music.js';
+import { Music, SONGS } from '../../client/sound/music.js';
 import { INSTR } from '../../client/sound/instruments.js';
 import { SOUND_DEFAULTS, createMixer } from '../../client/sound/mixer.js';
 import { TRACKS } from '../../client/sound/tracks.js';
@@ -452,10 +452,12 @@ export async function runTyres() {
 
 // ---- a song as the game plays it, for listening (bench.py --render): through the real mixer at the default settings,
 // as 16-bit stereo PCM in base64 ----
-export async function renderSong({ song = 'title', seconds = 60, level = 0.7 } = {}) {
+export async function renderSong({ song = 'title', seconds = 60, level = 0.7, only = null } = {}) {
   const ctx = new OfflineAudioContext(2, SR * seconds, SR);
   const E = new SoundEngine(ctx, createMixer(ctx, SOUND_DEFAULTS), { voices: 1 });
-  const M = new Music(E);
+  const M = new Music(E), bank = SONGS[song].bank;
+  if (bank) await M.load(bank);   // (its one-shots first, so the render starts on the downbeat)
+  if (only) M.solo(song, only);   // (some parts on their own: the beat, the beat and the bass...)
   M.set(song, level);
   const step = 0.1;
   for (let t = step; t < seconds - 0.05; t += step) ctx.suspend(Math.round(t / Q) * Q).then(() => { M.set(song, level); M.tick(); E.reap(ctx.currentTime); ctx.resume(); });

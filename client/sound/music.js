@@ -9,6 +9,22 @@
 import { setp, krate } from './engine.js';
 
 const R = Math.random;
+// sample banks (banks/*.js): one-shots cut from the owner's own tracks, fetched the first time a song that plays them
+// starts - never part of the page's code
+const BANKS = { menu: () => import('./banks/menu.js') };
+// a bank's one-shots as AudioBuffers: 16-bit PCM in base64, each at its own rate, brought back to the level the score's
+// gains are on (norm)
+export function decodeBank(ctx, bank) {
+  const out = {};
+  for (const k in bank) {
+    const o = bank[k], bin = atob(o.pcm), n = bin.length >> 1, buf = ctx.createBuffer(1, n, o.rate), d = buf.getChannelData(0), g = (o.norm || 1) / 32767;
+    for (let i = 0; i < n; i++) { const v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8); d[i] = (v > 32767 ? v - 65536 : v) * g; }
+    out[k] = buf;
+  }
+  return out;
+}
+// a step's length in s (a song with a tempo for each bar follows it)
+export function stepLen(S, i) { return 60 / (S.tempo ? S.tempo[Math.floor(i / S.steps) % S.tempo.length] : S.bpm) / (S.steps / 4); }
 const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const _ = -1;   // (a held note)
 
@@ -65,30 +81,27 @@ export function titleScore(form = TITLE_FORM) {
   return sc;
 }
 // ---- the menu, take two: the owner's second main-screen track ("CLA Main Screen", 2026-10-10, made with their YuE2
-// instrumental workflow), rebuilt in the engine ----
-// D minor, a two-bar loop - D minor, then A7 - eight times round (16 bars), at 86.5 BPM. The owner's ABC plan gave the
-// chords and the motif (F on 1 and 3, then E); the FLAC gave the rest: the keys stab the chord (D minor on 1 and 3;
-// A7 on 1 and the and of 2, its G on the and of 3), a nasal lead sings the top note, a rubbery bass slides into D,
-// then A and down to its G, over a dusty boom-bap kit (kick on 1 and the ands of 3 and 4, snare on 2 and 4, a few
-// hats). The recording sits about a fifth of a semitone sharp: so does this.
+// instrumental workflow), rebuilt in the engine a layer at a time (the owner: "build the beat first to match it, then
+// layer on the other instruments") ----
+// D minor, a two-bar loop - D minor (bar A), then A7 (bar B) - eight times round, 16 bars, the tempo creeping from 86.1
+// to 87 BPM as the recording's does. The beat is the recording's own: its drum stem cut into four one-shots (the
+// kick, the snare, a ghost note, the hat: banks/menu.js) and transcribed bar by bar (each one-shot's place and gain
+// fitted to the stem's band picture), the typical A and B bars kept, then each hit's level checked against the stem
+// in its own band and evened up: [step, one-shot, gain on the full-scale sound in the recording's units, how late in
+// 16ths]. Kick on 1, the and of 3 and the and of 4 (and the and of 2 in B), snare
+// on 2 and 4, hats on the eighths, ghost notes dragged a little late after 2 and 3, a pickup into the next bar.
+export const MENU_BEAT = {
+  A: [[0, 'kick', 1.05, 0], [0, 'hat', 0.02, 0], [2, 'hat', 0.08, 0], [4, 'snare', 0.76, -0.02], [6, 'hat', 0.08, 0], [7, 'ghost', 0.27, 0.12],
+    [8, 'hat', 0.1, 0.03], [9, 'ghost', 0.25, 0.14], [10, 'kick', 1.02, 0.01], [10, 'hat', 0.04, 0], [12, 'snare', 0.68, -0.01], [14, 'kick', 0.93, 0.03],
+    [14, 'hat', 0.06, 0.02]],
+  B: [[0, 'kick', 1.23, 0], [0, 'hat', 0.03, -0.01], [2, 'hat', 0.1, 0], [4, 'snare', 0.9, -0.03], [6, 'kick', 0.66, -0.02], [6, 'hat', 0.08, -0.01],
+    [7, 'ghost', 0.28, 0.09], [8, 'hat', 0.1, 0], [9, 'ghost', 0.25, 0.1], [10, 'kick', 0.92, 0], [10, 'hat', 0.045, 0], [12, 'snare', 0.75, -0.01],
+    [13, 'ghost', 0.14, 0.14], [14, 'kick', 0.79, 0.03], [14, 'hat', 0.06, 0.02], [15, 'ghost', 0.08, 0.09], [15, 'ghost', 0.18, 0.57], [15, 'hat', 0.02, 0.58]],
+};
+export const MENU_TEMPO = [86.1, 86.16, 86.22, 86.28, 86.35, 86.41, 86.47, 86.53, 86.6, 86.66, 86.72, 86.78, 86.85, 86.91, 86.97, 87.04];
 export function menuScore(bars = 16) {
   const S = 16, sc = Array.from({ length: bars * S }, () => []);
-  const at = (b, s, ev) => sc[b * S + s].push(ev);
-  const D2 = 38, G2 = 43, A2 = 45;
-  const DM = [62, 65, 69, 74, 77], A7 = [57, 61, 64, 73, 76];   // (D4 F4 A4 D5 F5 / A3 C#4 E4 C#5 E5)
-  for (let b = 0; b < bars; b++) {
-    if (b % 2 === 0) {
-      at(b, 0, { p: 'keys', n: DM, len: 6, v: 1 }); at(b, 8, { p: 'keys', n: DM, len: 6, v: 0.85 });
-      at(b, 0, { p: 'lead', n: [77], len: 4, v: 1 }); at(b, 8, { p: 'lead', n: [77], len: 4, v: 0.9 });
-      at(b, 0, { p: 'rbass', n: [D2], len: 7, v: 1 }); at(b, 10, { p: 'rbass', n: [D2], len: 3, v: 0.85 }); at(b, 14, { p: 'rbass', n: [D2], len: 2, v: 0.7 });
-      for (const [s, k, v] of [[0, 'kick', 1], [2, 'hat', 0.9], [4, 'snare', 1], [4, 'kick', 0.55], [6, 'hat', 0.8], [8, 'hat', 1], [10, 'kick', 0.95], [12, 'snare', 0.95], [14, 'kick', 0.7]]) at(b, s, { p: k, v });
-    } else {
-      at(b, 0, { p: 'keys', n: A7, len: 5, v: 1 }); at(b, 6, { p: 'keys', n: A7, len: 5, v: 0.8 }); at(b, 10, { p: 'keys', n: [67, 79], len: 4, v: 0.6 });
-      at(b, 0, { p: 'lead', n: [76], len: 2, v: 1 });
-      at(b, 0, { p: 'rbass', n: [A2], len: 5, v: 1 }); at(b, 6, { p: 'rbass', n: [G2], len: 8, v: 0.9 });
-      for (const [s, k, v] of [[0, 'kick', 1], [2, 'hat', 1], [4, 'snare', 1], [6, 'kick', 1], [8, 'hat', 0.9], [10, 'kick', 0.85], [12, 'snare', 0.95], [14, 'kick', 0.65]]) at(b, s, { p: k, v });
-    }
-  }
+  for (let b = 0; b < bars; b++) for (const [s, k, v, late] of MENU_BEAT[b % 2 ? 'B' : 'A']) sc[b * S + s].push({ p: 'hit', s: k, v, late });
   return sc;
 }
 // the riff's three formants for each note (by pitch class): the synth "says" something a little different on each
@@ -111,9 +124,10 @@ export const SONGS = {
   // hard the drums are pushed into the saturation, and the share of them crunched
   title: { bpm: 92, steps: 16, bars: TITLE_FORM.length, echo: 0.14, gain: 2.4, drumVol: 0.8, score: titleScore(),
     fx: { hiss: 0.01, wow: [[0.55, 0.0022], [0.21, 0.0016], [6.5, 0.00007]], top: 9500, drive: 5, crunch: 0.65, grit: 0.35 } },
-  // the menu's second track (above): its tuning (cents sharp, as the recording is), its echo and a gentler tape
-  menu: { bpm: 86.5, steps: 16, bars: 16, tune: 22, echo: 0.25, gain: 2.4, drumVol: 0.7, kick: 66, hats: 0.35, score: menuScore(),
-    fx: { hiss: 0.004, wow: [[0.5, 0.0012], [0.19, 0.0009], [6, 0.00005]], top: 7500, drive: 3, crunch: 0.2, grit: 0.12, glue: [-14, 2] } },
+  // the menu's second track (above): its tempo bar by bar, its tuning (cents sharp, as the recording is), its one-shots,
+  // and a light tape - the recording's own sounds already carry its grit, so nothing is squashed or crunched again
+  menu: { bpm: 86.57, tempo: MENU_TEMPO, steps: 16, bars: 16, tune: 22, bank: 'menu', echo: 0, gain: 1.6, score: menuScore(),
+    fx: { hiss: 0.0015, wow: [[0.5, 0.0004], [0.19, 0.0003]], top: 16000, drive: 0, crunch: 0, grit: 0, glue: false, vox: false } },
   // the club: A minor, four on the floor, an off-beat bass, open hats, a stab now and then
   club: { bpm: 124, steps: 16, bars: 8, echo: 0.15,
     chords: ['Am', 'Am', 'F', 'G', 'Am', 'Am', 'F', 'Em'], bassPat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 2], bassInst: 'clubbass',
@@ -192,7 +206,20 @@ function dusty(E, out, kind, t, v, low = 45, hats = 1) {
 }
 
 export class Music {
-  constructor(E) { this.E = E; this.ctx = E.ctx; this.players = {}; }
+  constructor(E) { this.E = E; this.ctx = E.ctx; this.players = {}; this.banks = {}; this.loads = {}; }
+  // a song's sample bank, fetched the first time it's wanted: its buffers, null while on its way, false if it failed
+  // (the song then plays without it)
+  bank(name) { if (!(name in this.banks)) this.load(name); return this.banks[name]; }
+  load(name) {
+    if (this.loads[name]) return this.loads[name];
+    this.banks[name] = null;
+    const get = BANKS[name];
+    this.loads[name] = (get ? get() : Promise.reject(new Error('no bank ' + name))).then((m) => { this.banks[name] = decodeBank(this.ctx, m.BANK); },
+      (e) => { this.banks[name] = false; console.warn('[sound] bank', name, e); });
+    return this.loads[name];
+  }
+  // play only some of a song's parts (the bench and the debug menu: hear the beat on its own); null for all
+  solo(name, parts) { const p = this.player(name); p.only = parts && parts.length ? new Set(parts) : null; }
   // a song's player and its chain: level -> low-pass -> pan -> the music bus, with a small echo of its own
   player(name) {
     if (this.players[name]) return this.players[name];
@@ -221,25 +248,33 @@ export class Music {
     wow.delayTime.value = 0.012; top.type = 'lowpass'; top.frequency.value = X.top; top.Q.value = 0.5;
     // (heavier, grittier: the whole song squeezed by a compressor that lets the drums pump it, and a share of it through
     // the five-bit crunch - as the owner put it, "crunchy" and "heavy")
-    const glue = c.createDynamicsCompressor(), grit = shaper(CRUSH);
-    glue.threshold.value = X.glue ? X.glue[0] : -20; glue.knee.value = 6; glue.ratio.value = X.glue ? X.glue[1] : 3.5; glue.attack.value = 0.004; glue.release.value = 0.15;
-    p.inp.connect(gain(1 - X.grit, glue)); p.inp.connect(gain(2, grit)); grit.connect(gain(X.grit / 2, glue));
+    // (a stage set to 0 or false is left out: a song made of the recording's own sounds needs no more grit)
+    let glue = gain(1);
+    if (X.glue !== false) {
+      glue = c.createDynamicsCompressor();
+      glue.threshold.value = X.glue ? X.glue[0] : -20; glue.knee.value = 6; glue.ratio.value = X.glue ? X.glue[1] : 3.5; glue.attack.value = 0.004; glue.release.value = 0.15;
+    }
+    if (X.grit) { const grit = shaper(CRUSH); p.inp.connect(gain(1 - X.grit, glue)); p.inp.connect(gain(2, grit)); grit.connect(gain(X.grit / 2, glue)); } else p.inp.connect(glue);
     glue.connect(gain(0.6, wow)); wow.connect(top); top.connect(p.lp);
-    const vox = gain(1), fA = bp(700, 3.5), fB = bp(1150, 5), fC = bp(2600, 5), gA = gain(0.25), gB = gain(0.5), gC = gain(0.4), drive = gain(7), fuzz = shaper(FUZZ);
-    const low = krate(c.createBiquadFilter()), body = gain(0.6, drive);
-    low.type = 'lowpass'; low.frequency.value = 900; low.Q.value = 0.7;   // (the note's body: its fundamental and first few harmonics)
-    vox.connect(low); low.connect(body);
-    for (const [f, g] of [[fA, gA], [fB, gB], [fC, gC]]) { vox.connect(f); f.connect(g); g.connect(drive); }
-    drive.connect(fuzz); fuzz.connect(gain(0.34, p.inp));
+    const F = p.fx = { wow, top, vox: null, drums: gain(1), src: [] };
+    if (X.vox !== false) {
+      const vox = gain(1), fA = bp(700, 3.5), fB = bp(1150, 5), fC = bp(2600, 5), gA = gain(0.25), gB = gain(0.5), gC = gain(0.4), drive = gain(7), fuzz = shaper(FUZZ);
+      const low = krate(c.createBiquadFilter()), body = gain(0.6, drive);
+      low.type = 'lowpass'; low.frequency.value = 900; low.Q.value = 0.7;   // (the note's body: its fundamental and first few harmonics)
+      vox.connect(low); low.connect(body);
+      for (const [f, g] of [[fA, gA], [fB, gB], [fC, gC]]) { vox.connect(f); f.connect(g); g.connect(drive); }
+      drive.connect(fuzz); fuzz.connect(gain(0.34, p.inp));
+      Object.assign(F, { vox, body, fA, fB, fC, gA, gB, gC });
+    }
     // (the drums squashed a little first - a saturation that rounds off the hits' peaks, as a tape pushed hard does)
-    const drums = gain(1), sat = shaper(FUZZ), crush = shaper(CRUSH4), mix = gain(1);
-    drums.connect(gain(X.drive, sat)); sat.connect(gain(1 / X.drive, mix));
-    mix.connect(gain(1 - X.crunch, p.inp)); mix.connect(gain(2.5, crush)); crush.connect(gain(X.crunch / 2.5, p.inp));
-    p.fx = { wow, top, vox, body, fA, fB, fC, gA, gB, gC, drums, src: [] };
+    const mix = gain(1);
+    if (X.drive) { const sat = shaper(FUZZ); F.drums.connect(gain(X.drive, sat)); sat.connect(gain(1 / X.drive, mix)); } else F.drums.connect(mix);
+    if (X.crunch) { const crush = shaper(CRUSH4); mix.connect(gain(1 - X.crunch, p.inp)); mix.connect(gain(2.5, crush)); crush.connect(gain(X.crunch / 2.5, p.inp)); } else mix.connect(p.inp);
   }
   tapeOn(p, t) {
     const c = this.ctx, X = p.S.fx, F = p.fx;
     for (const [f, depth] of X.wow) { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = f; g.gain.value = depth; o.connect(g); g.connect(F.wow.delayTime); o.start(t); F.src.push(o, g); }
+    if (!X.hiss) return;
     const n = c.createBufferSource(), hp = krate(c.createBiquadFilter()), g = c.createGain();
     n.buffer = this.E.buf.pink; n.loop = true; hp.type = 'highpass'; hp.frequency.value = 2500; g.gain.value = X.hiss;
     n.connect(hp); hp.connect(g); g.connect(F.top); n.start(t, R() * 1.5);
@@ -272,15 +307,16 @@ export class Music {
         if (!p.quietAt) p.quietAt = t;
         else if (t - p.quietAt > 4) { try { p.lvl.disconnect(); } catch { /* gone */ } p.on = false; if (p.fx) this.tapeOff(p); continue; }
       } else p.quietAt = 0;
+      if (p.S.bank && this.bank(p.S.bank) === null) { p.nextT = t + 0.1; continue; }   // (its one-shots are on their way: it starts when they're here)
       if (p.nextT < t - 0.5) p.nextT = t + 0.05;   // (the tab was asleep: start again from now, not catch up)
       // (a note that's already late - the page stalled longer than the look-ahead - is skipped, not started in the past:
       // its envelope would jump instead of ramping, and that jump is a click)
-      while (p.nextT < t + 0.3) { if (p.nextT > t + 0.012) this.step(p, p.step, p.nextT); p.step = (p.step + 1) % (p.S.steps * p.S.bars); p.nextT += 60 / p.S.bpm / (p.S.steps / 4); }
+      while (p.nextT < t + 0.3) { const i = p.step; if (p.nextT > t + 0.012) this.step(p, i, p.nextT); p.step = (i + 1) % (p.S.steps * p.S.bars); p.nextT += stepLen(p.S, i); }
     }
   }
   step(p, i, t0) {
-    const S = p.S, E = this.E, out = p.inp, sd = 60 / S.bpm / (S.steps / 4), bar = Math.floor(i / S.steps), s = i % S.steps;
-    if (S.score) { for (const ev of S.score[i % S.score.length]) this.event(p, ev, t0 + (ev.late || 0) * sd + (R() - 0.5) * 0.005, sd); return; }
+    const S = p.S, E = this.E, out = p.inp, sd = stepLen(S, i), bar = Math.floor(i / S.steps), s = i % S.steps;
+    if (S.score) { for (const ev of S.score[i % S.score.length]) if (!p.only || p.only.has(ev.p)) this.event(p, ev, t0 + (ev.late || 0) * sd + (R() - 0.5) * 0.005, sd); return; }
     const t = t0 + (S.swing && s % 2 ? sd * S.swing * 4 : 0) + (R() - 0.5) * 0.006;   // (a little swing, a human wobble)
     const hum = () => 0.85 + R() * 0.3;
     const chord = S.chords ? CH[S.chords[bar % S.chords.length]] : null;
@@ -303,11 +339,11 @@ export class Music {
   event(p, ev, t, sd) {
     const E = this.E, F = p.fx, hum = 0.88 + R() * 0.24, tn = (p.S.tune || 0) / 100;
     switch (ev.p) {
-      case 'open': p.open = ev.o; if (F) { setp(F.body.gain, ev.o ? 0.22 : 0.6, t, 0.25); setp(F.gA.gain, ev.o ? 1.5 : 0.25, t, 0.25); setp(F.gB.gain, ev.o ? 1.6 : 0.5, t, 0.25); setp(F.gC.gain, ev.o ? 1.1 : 0.4, t, 0.25); } break;
+      case 'open': p.open = ev.o; if (F && F.vox) { setp(F.body.gain, ev.o ? 0.22 : 0.6, t, 0.25); setp(F.gA.gain, ev.o ? 1.5 : 0.25, t, 0.25); setp(F.gB.gain, ev.o ? 1.6 : 0.5, t, 0.25); setp(F.gC.gain, ev.o ? 1.1 : 0.4, t, 0.25); } break;
       case 'vox': {
         const at = t + 0.016, fm = FORMANT[ev.n[0] % 12] || FORMANT[5];   // (the riff a hair behind the beat: lazy)
         if (F) { F.fA.frequency.setTargetAtTime(fm[0], at, 0.03); F.fB.frequency.setTargetAtTime(fm[1], at, 0.03); F.fC.frequency.setTargetAtTime(fm[2], at, 0.03); }
-        ev.n.forEach((m, k) => voxNote(E, F ? F.vox : p.inp, at, hz(m), ev.len * sd * 0.94, 0.05 * ev.v * hum * (k ? 0.5 : 1), p.open));
+        ev.n.forEach((m, k) => voxNote(E, F && F.vox ? F.vox : p.inp, at, hz(m), ev.len * sd * 0.94, 0.05 * ev.v * hum * (k ? 0.5 : 1), p.open));
         if (p.open) E.noise(p.inp, at, 0.035, 0.025 * ev.v * hum, { ft: 'bandpass', f: 4500, q: 0.9 });   // (a hiss of a consonant on each note, as a vocoder's voice has, once it's talking)
         break;
       }
@@ -317,6 +353,16 @@ export class Music {
       case 'keys': for (const m of ev.n) for (const d of [-9, 9]) E.tone(p.inp, t, hz(m + tn), ev.len * sd, 0.1 * ev.v * hum, { wave: 'saw8', det: d, lp: 1000, q: 1.2, a: 0.004 }); break;
       case 'lead': E.tone(p.inp, t + 0.01, hz(ev.n[0] + tn), ev.len * sd * 0.95, 0.16 * ev.v * hum, { wave: 'pulse12', lp: 1000, q: 3, a: 0.012, hold: ev.len * sd * 0.5, vib: ev.len > 2 ? 12 : 0 }); break;
       case 'rbass': { const f = hz(ev.n[0] + tn); E.tone(p.inp, t, f * 0.94, ev.len * sd * 0.95, 0.13 * ev.v * hum, { wave: 'soft', f2: f, glide: 0.06, a: 0.006, hold: ev.len * sd * 0.4 }); break; }
+      // (a one-shot from the song's bank, at its gain - give or take the drummer's few per cent)
+      case 'hit': {
+        const B = this.banks[p.S.bank], buf = B && B[ev.s];
+        if (!buf) break;
+        const c = this.ctx, src = c.createBufferSource(), g = c.createGain(), end = t + buf.duration + 0.1;
+        src.buffer = buf; g.gain.value = ev.v * (p.S.drumVol || 1) * (0.94 + R() * 0.12);
+        src.connect(g); g.connect(F ? F.drums : p.inp); src.start(t);
+        E.note(src, end); E.note(g, end);
+        break;
+      }
       default: dusty(E, F ? F.drums : p.inp, ev.p, t, ev.v * hum * (p.S.drumVol || 1), p.S.kick || 45, p.S.hats ?? 1); break;
     }
   }
