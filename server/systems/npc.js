@@ -13,6 +13,7 @@ import * as law from './law.js';
 import * as events from './events.js';
 import * as gangwar from './gangwar.js';
 import * as bikers from './bikers.js';
+import * as nightclubs from './nightclubs.js';
 import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 import * as trains from './trains.js';
@@ -141,13 +142,17 @@ export function update(world, dt) {
     const n = ped.npc;
     if (n.guard && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch
       const dd = Math.hypot(ped.x - n.guard.x, ped.y - n.guard.y);
-      if (dd > 10) pedStep(ped, seek(ped, n.guard.x, n.guard.y, !!n.guard.run), dt, world.map, walkMods(world, ped, n.guard.run ? 1 : 0.6));   // (guard.run: a biker running for his bike - bikers.js)
+      if (dd > 10) {   // (guard.run: a biker running for his bike - bikers.js; a bouncer back to his door steps round what's in the way)
+        const inp = seek(ped, n.guard.x, n.guard.y, !!n.guard.run);
+        pedStep(ped, n.guard.fixed ? sidestep(world, ped, inp, dt) : inp, dt, world.map, walkMods(world, ped, n.guard.run ? 1 : 0.6));
+      }
+      else if (n.guard.fixed) { ped.vx = 0; ped.vy = 0; ped.a = n.guard.a + Math.sin(now * 0.5 + ped.id) * 0.45; }   // (a club's bouncer, someone in its line: facing their way, a glance either side - nightclubs.js)
       else { ped.vx = 0; ped.vy = 0; if (now >= (n.lookAt || 0)) { n.guard.a += (rng() - 0.5) * 2.4; n.lookAt = now + 1.5 + rng() * 2; } ped.a = n.guard.a; }
       continue;
     }
-    if (n.desk) { // shop / desk staff stay behind their counter
+    if (n.desk) { // shop / desk staff stay behind their counter (one walking to it from outside - a club's dancer from the line - goes in by the door)
       const dd = Math.hypot(ped.x - n.desk.x, ped.y - n.desk.y);
-      if (dd > 6) pedStep(ped, seek(ped, n.desk.x, n.desk.y, false), dt, world.map, walkMods(world, ped, 0.5));
+      if (dd > 6) { const wp = footWay(world, ped, n.desk.x, n.desk.y); pedStep(ped, seek(ped, wp.x, wp.y, false), dt, world.map, walkMods(world, ped, 0.5)); }
       else { ped.vx = 0; ped.vy = 0; ped.a = n.dancer ? n.desk.a + Math.sin(now * 3 + ped.id) * 1.3 : n.desk.a + Math.sin(now * 0.4 + ped.id) * 0.25; }
       continue;
     }
@@ -207,6 +212,7 @@ export function update(world, dt) {
       }
       case 'film': inp = film(world, ped, now); break;
       case 'holdup': inp = holdup(world, ped, now); factor = 1; break;
+      case 'leave': inp = leaveStep(world, ped, now); break;
       default: n.state = 'wander';
     }
     if (n.holdup && n.state !== 'holdup') { ped.handsUp = false; n.holdup = null; n.keep = false; }   // (scared off some other way: the hands come down)
@@ -337,6 +343,7 @@ function pickWaypoint(world, ped) {
     const x = ped.x + Math.cos(ang) * dist, y = ped.y + Math.sin(ang) * dist;
     const t = world.map.tileAtPx(x, y);
     if (!WALK_TILES.has(t)) continue;
+    if (t === T.FLOOR && nightclubs.shutAt(world, x, y)) continue;   // (not into a club that's shut or shutting: nightclubs.js)
     if (!pref.has(t) && rng() < 0.6) continue;
     if (!crossesRoadOk(world, ped.x, ped.y, x, y)) continue;
     if (world.map.rayTiles(ped.x, ped.y, x, y) < 1) continue;
@@ -416,6 +423,7 @@ export function onAttacked(world, ped, attacker) {
   const n = ped.npc;
   if (n.state === 'crawl') { n.fx = attacker.x; n.fy = attacker.y; return; } // still dragging themselves away - from you, now
   if (n.club) { bikers.clubAttacked(world, ped, attacker); return; }   // (a biker club member: the whole club fights back - bikers.js, task #366)
+  if (n.bouncer !== undefined && n.bouncer !== null && n.state !== 'limp') { nightclubs.bouncerHurt(world, ped, attacker); return; }   // (a nightclub's bouncer: they all come for you - nightclubs.js, task #432)
   if (n.desk) { // staff behind a counter: a desk cop fights back, everyone else runs
     n.desk = null; n.keep = false;
     if (n.role === 'cop') { ped.weapon = 'pistol'; startFight(world, ped, attacker, 30); } else flee(world, ped, attacker.x, attacker.y, 10);
@@ -576,6 +584,45 @@ function holdup(world, ped, now) {
   n.holdup = null; ped.handsUp = false; n.keep = false;
   flee(world, ped, by ? by.x : ped.x, by ? by.y : ped.y - 1, 8 + rng() * 4);
   return NO_INPUT;
+}
+
+// Going home (a club at the end of the night, a dancer who's had enough, the line breaking up: nightclubs.js): out of the
+// door of the building they're in (footWay), on a little way along the pavement away from it, and off like anyone else
+// (wander, no longer kept). Whatever they were doing there stops: the desk or post, the dance.
+export function leaveBuilding(world, ped, from = null, secs = 40) {
+  const n = ped.npc;
+  n.desk = null; n.guard = null; n.dancer = false; n.target = 0;
+  n.state = 'leave'; n.until = world.time + secs; n.out = null;
+  if (from) { n.fx = from.x; n.fy = from.y; } else { n.fx = undefined; n.fy = undefined; }
+  if (ped.gt) { ped.gt = null; ped.appVer = (ped.appVer || 0) + 1; }
+}
+const LEAVE_WALK = [110, 230];   // px on from the door
+const LEAVE_TURN = [0.3, -0.4, 0.9, -1.0, 1.45, -1.5, 1.9, -2.0];   // (which way: about straight on first, then along the street)
+function leaveStep(world, ped, now) {
+  const n = ped.npc, m = world.map;
+  const wi = walkInAt(m, ped.x, ped.y);
+  if (wi) {   // still inside: out through the door
+    if (now > n.until + 20) { n.state = 'wander'; n.keep = false; return NO_INPUT; }   // (stuck in there: give up - the clean-up takes them)
+    const wp = footWay(world, ped, wi.x, wi.outY + (wi.outY - wi.inY));
+    n.fx = wi.x; n.fy = wi.inY; n.out = null;
+    return seek(ped, wp.x, wp.y, false);
+  }
+  if (!n.out) {   // outside: somewhere a little way on, away from where they came out - straight on, else off to one side
+    const away = n.fx !== undefined ? Math.atan2(ped.y - n.fy, ped.x - n.fx) : rng() * Math.PI * 2, side = rng() < 0.5 ? 1 : -1;
+    const d0 = LEAVE_WALK[0] + rng() * (LEAVE_WALK[1] - LEAVE_WALK[0]);
+    for (const d of [d0, LEAVE_WALK[0], 70]) for (const off of LEAVE_TURN) {
+      if (n.out) break;
+      const a = away + off * side, x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d, t = m.tileAtPx(x, y);
+      if (WALK_TILES.has(t) && t !== T.FLOOR && m.los(ped.x, ped.y, x, y)) n.out = { x, y };
+    }
+    if (!n.out) n.out = { x: ped.x, y: ped.y };
+  }
+  if (now > n.until || Math.hypot(n.out.x - ped.x, n.out.y - ped.y) < 12) {
+    n.state = 'wander'; n.keep = false; n.until = 0; n.out = null;
+    if (n.fx !== undefined) n.awayFrom = Math.atan2(ped.y - n.fy, ped.x - n.fx);
+    return NO_INPUT;
+  }
+  return seek(ped, n.out.x, n.out.y, false);
 }
 
 function aligned(p) { return p.profile.gang === 'syndicate' || (p.profile.criminalExp >= 200 && !p.badge); }

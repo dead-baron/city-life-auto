@@ -5031,3 +5031,33 @@ Four more originals, each matched to its reference's tempo, key, groove and weig
 - *Porch Light* (Boat style): C major. A slow sway over picked nylon guitar, a glockenspiel tune, warm pads and no harsh highs. For gardening.
 - *First Sprouts* (Spring style): 119 BPM in A. A quiet start that builds, a whistled tune, strummed guitar, chimes, a bouncy bass and a breakdown. For farming and the garden shops.
 Ride of the Valkyries (the helicopter radio) waits on the score. It's public domain, so it will use Wagner's real theme, but the scores online are images; the owner was asked for a MIDI file or a photo of the sheet music.
+
+## 2026-10-09 · Nightclubs wind down after sunrise; a line outside and bouncers at the door (task #432)
+The owner: "NPCs dancing at a night club won't leave the club when morning comes. At some point after sunrise the dance club should wind down and all the NPCs should walk out." And: "Nightclubs should have bouncers outside when the club is open that will attack you or any NPC that you or an NPC attacks anyone in the night club while it's active. That also includes anyone standing in line for the night club. Any nightclub patron is protected by the bouncer who fights with their fists but is strong like a brute."
+- **Why they stayed:** the dancers (`interiors.js clubbers`) were only cleared by day when nobody could see them, so with you in the club or across the street they danced on into the morning. The shutter followed the clock, and so did the music.
+- **The clubs now have a state** (`server/systems/nightclubs.js`, which replaces `clubbers`):
+  - **Closed** all day.
+  - **Open** from dusk: the shutter goes up and the music comes on.
+  - **Closing** from the end of the night (half an hour after sunrise): the music stops and the dancers stop dancing and walk out of the door and off along the street. The line breaks up and goes, and so does anyone who wandered in off the street. The shutter comes down once the floor is empty (`CLUB_CLOSE_MAX_S` at the latest; anyone still inside out of sight goes), and the bouncers go home.
+  - The music follows the club, not the shutter: a `club` event and the welcome's `clubs` list (`client/sound/places.js`).
+  - Nobody wanders into a club that's shut or shutting (`npc.js pickWaypoint`).
+- **Open, with a player near:**
+  - People dance on the floor, in the dance pose (`gt 'dance'`).
+  - A line of up to five waits along the front, on the side with room (the velvet rope's side on the `club` lots). People walk up to it from out of sight.
+  - Now and then the bouncer lets the next one in: they walk in at the door and dance, and the rest step up. Once the floor is full (`CLUB_DANCERS`), now and then someone heads home.
+  - People leaving go out through the door and on along the pavement (`npc.js leaveBuilding`, the new `leave` state). Someone walking to a spot inside (a dancer from the line) goes in by the door (the desk walk uses `footWay`).
+- **The bouncers** (role `bouncer`): one or two either side of the door (the big clubs two). They step out of the door to their posts, dressed big and all in black (`npclooks.js RECIPES.bouncer`).
+  - Built like brutes with fists only: `BOUNCER_HP` 280, punches `BOUNCER_STR` 1.7. Drilled, so they keep their feet like the police and the gangs do (`reactions.js`).
+  - Hurt a patron and both come for you, player or NPC (`combat.js damage` → `nightclubs.onHurt`). A patron is anyone dancing, anyone in the line or standing in it, and anyone inside the club, players too. Hurting a bouncer does the same (`npc.js onAttacked` → `bouncerHurt`).
+  - They chase out to `BOUNCER_CHASE_PX` from the door, then walk back to their posts (stepping round what's in the way). They fight for up to `BOUNCER_FIGHT_S`.
+  - They don't react to the police at work, to someone hitting back at whoever hit them first, or to a traffic accident.
+  - A bouncer only ever hits whoever he's after (`combat.js melee`): two of them on one person used to land punches on each other and on the people in the line, which started brawls.
+- **Tests:** `test/nightclubs.test.js` (7):
+  - at night, the dancers, the line and the bouncers;
+  - after sunrise the music stops, the dancers walk out through the door (none vanish), the line goes, the shutter comes down and they all move off;
+  - punch someone in the line and the bouncers come for you with heavy fists, hit nobody else, and let you go past their reach;
+  - an NPC attacker, a player inside, hitting back, the police;
+  - hit a bouncer and both come;
+  - the line moves;
+  - all of them gone once nobody's near, and back after.
+  A run over every club on the map showed each shut 3-6 s after the end of the night, nobody left inside or vanished.

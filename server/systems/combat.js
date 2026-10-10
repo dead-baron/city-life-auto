@@ -18,6 +18,7 @@ import * as npc from './npc.js';
 import * as wildlife from './wildlife.js';
 import * as reactions from './reactions.js';
 import * as wanderer from './wanderer.js';
+import * as nightclubs from './nightclubs.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -86,8 +87,12 @@ function melee(world, ped, w, aim) {
   ped.attackAnimUntil = now + 0.3;
   ped.swingSide = (ped.swingSide || 0) ^ 1;
   let best = null, bestD = Infinity;
+  // a nightclub's bouncer picks his punches: only ever whoever he's after - never his partner or a patron in the way
+  // (nightclubs.js, task #432)
+  const only = ped.npc && ped.npc.role === 'bouncer' ? ped.npc.target || -1 : 0;
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
     if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level
+    if (only && o.id !== only) continue;
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 4) continue;
@@ -350,6 +355,7 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (ped.hp < ped.maxHp * 0.3 && cause !== 'nonlethal') ped.bleeding = true;
   if (ped.fishing && ped.player) { ped.fishing = null; }
   if (!ped.wild && !(attacker && attacker.wild)) law.onDamage(world, attacker, ped, amount, cause); // (an animal: no assault - either way round)
+  if (attacker && attacker !== ped && world.nightclubs) nightclubs.onHurt(world, ped, attacker, cause);   // (a club's patron: its bouncers come for whoever did it - task #432)
   if (ped.player) ped.player.meDirty = true;
   if (cause === 'nonlethal' && ped.hp < 1) ped.hp = 1;
   if (ped.hp <= 0) { kill(world, ped, attacker, cause, dir); return true; }

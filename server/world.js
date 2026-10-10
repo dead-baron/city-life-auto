@@ -30,6 +30,7 @@ import * as station from './systems/station.js';
 import * as interiors from './systems/interiors.js';
 import * as dealer from './systems/dealer.js';
 import * as gates from './systems/gates.js';
+import * as nightclubs from './systems/nightclubs.js';
 import * as boats from './systems/boats.js';
 import * as gang from './systems/gang.js';
 import * as races from './systems/races.js';
@@ -67,6 +68,7 @@ const SYSTEMS = [
   ['rides', rides.update],          // the Ferris wheel, balloon flights: carrying the riders, setting them down
   ['places', places.update],        // things to do at the places: stripping the boneyard's planes for parts
   ['underground', underground.update], // the sewers and the cave: police who followed you down, bats, the den bear, falling rocks, mining
+  ['nightclubs', nightclubs.update], // the clubs open at dusk, wind down after sunrise; dancers, the line, the bouncers (task #432)
   ['gates', gates.update],          // sliding gates (motor pools, Syndicate compound)
   ['station', station.update],
   ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking

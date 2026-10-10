@@ -85,6 +85,21 @@ export const RECIPES = {
       L.outfit.jewel = item(r() < 0.7 ? 'Gold chain' : 'Chain and watch'); L.outfit.bag = null;
       if (r() < 0.6) L.extras.tattoos |= 1 | (r() < 0.4 ? 4 : 0);
     } },
+  // a nightclub's bouncers (nightclubs.js, task #432): big (now and then a woman) and all in black - a tee or a polo, a
+  // bomber or a leather jacket, black trousers and boots - the hair cropped, now and then shades or a chain
+  bouncer: { styles: W('nightclub:1'), fem: 0.1, age: [1, 3, 3, 1, 0, 0], shade: 0, pool: 12,
+    fix(L, r) {
+      L.body.build = 4;
+      L.outfit.set = null;
+      L.outfit.top = item(r() < 0.6 ? 'Plain tee' : 'Polo shirt', 'black');
+      L.outfit.jacket = r() < 0.55 ? item(r() < 0.6 ? 'Bomber jacket' : 'Leather jacket', 'black') : null;
+      L.outfit.bottoms = item(r() < 0.5 ? 'Black jeans' : 'Suit trousers', 'black');
+      L.outfit.shoes = item(r() < 0.6 ? 'Combat boots' : 'Work boots', 'black');
+      L.outfit.hat = null; L.outfit.bag = null;
+      L.outfit.glasses = r() < 0.35 ? item('Sunglasses') : null;
+      L.outfit.jewel = r() < 0.3 ? item('Silver chain') : null;
+      L.hair.style = L.body.base === 'f' ? pick(r, [HS.Ponytail, HS['High bun'], HS['Buzz cut']]) : pick(r, [HS.Bald, HS['Buzz cut'], HS['Crew cut'], HS.Fade]);
+    } },
 };
 function workwear(L, r) {
   L.outfit.set = null; L.outfit.jacket = null;

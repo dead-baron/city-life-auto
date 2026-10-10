@@ -1,6 +1,6 @@
 // The places with a sound of their own (shared/map.js walk-ins: a building's walkIn.units, each a POI kind):
 // - a nightclub, open after dark: its four-on-the-floor heard through the walls outside (the bass, muffled, from
-//   its door) and loud and clear inside;
+//   its door) and loud and clear inside - until the server winds it down after sunrise (S.clubLive);
 // - some shops play light music inside, the bank and the hospital an elevator-style tune in the lobby; the old
 //   ma-and-pa shops (bait and tackle, hardware, the pawn shop, the fish market) play none, but a little brass bell
 //   over the door rings when anyone goes in or out;
@@ -64,7 +64,10 @@ export class Places {
     for (const c of this.clubs) {
       const d = Math.hypot(c.x - L.x, c.y - L.y);
       if (d >= cd) continue;
-      const open = c.gate !== undefined && S.gateOpen && S.gateOpen[c.gate] !== undefined ? !!S.gateOpen[c.gate] : !!(F.clock && F.clock.isNight);
+      // its music: on while the server says the club's open (S.clubLive: the 'club' event, the welcome's list - nightclubs.js);
+      // it stops at the end of the night even while the shutter's still up for the last of them walking out. (A server
+      // from before that: by the shutter, else the clock.)
+      const open = c.gate !== undefined && S.clubLive ? !!S.clubLive[c.gate] : c.gate !== undefined && S.gateOpen && S.gateOpen[c.gate] !== undefined ? !!S.gateOpen[c.gate] : !!(F.clock && F.clock.isNight);
       if (open) { club = c; cd = d; }
     }
     if (club && scene === 'game') {

@@ -22,8 +22,8 @@ const LIE = { face: 'face', slide: 'back', roll: 'side' };   // how a body comes
 // on the side, slumping back to the knees then onto the back
 const BLADE_DEATHS = ['knees', 'spin', 'slump', 'knees', 'spin'];
 const speedOf = (p) => Math.hypot(p.vx, p.vy);
-// how easily someone goes over: police, guards and gang heavies are drilled and keep their feet more; brutes too
-const steady = (ped) => (ped.npc && (ped.npc.role === 'cop' || ped.npc.role === 'railguard' || ped.npc.role === 'gang') ? 0.55 : 1) / Math.sqrt(ped.build ? ped.build.poise : 1);
+// how easily someone goes over: police, guards, gang heavies and the clubs' bouncers are drilled and keep their feet more; brutes too
+const steady = (ped) => (ped.npc && (ped.npc.role === 'cop' || ped.npc.role === 'railguard' || ped.npc.role === 'gang' || ped.npc.role === 'bouncer') ? 0.55 : 1) / Math.sqrt(ped.build ? ped.build.poise : 1);
 
 // A moment's stagger: shoved a step along the hit and thrown back on the heels (or forward, hit from behind).
 export function stagger(world, ped, a, push, secs) {

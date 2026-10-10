@@ -86,6 +86,7 @@ const S = {
   bayOpen: {}, bayAnim: {}, // paint-shop shutters
   garageOpen: {}, garageAnim: {}, // home garage doors
   gateOpen: {}, gateAnim: {}, // police motor pool gates
+  clubLive: null,             // the nightclubs whose music is on, by gate index (server nightclubs.js: the 'club' event; null: a server from before)
   forageGone: new Set(),      // foraging spots picked bare (map.forage indices; server/systems/foraging.js)
   xing: [], xingAnim: [], // level crossings: { d: gates down, b: [arm broken, arm broken] }
 };
@@ -224,6 +225,7 @@ function onText(m) {
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
+      S.clubLive = m.clubs ? Object.fromEntries(m.clubs.map((i) => [i, true])) : null;
       S.forageGone = new Set(m.forage || []);
       S.map.props.forEach((p, i) => { if (p.lit0 !== undefined && !!p.lit !== p.lit0) setFire(i, p.lit0, false); });
       for (const [i, lit] of m.fires || []) setFire(i, lit, false);
@@ -771,6 +773,7 @@ function onEvent(ev) {
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
+    case 'club': (S.clubLive ||= {})[ev.i] = !!ev.on; break;   // a club's music on at dusk, off at the end of the night (server nightclubs.js)
     case 'forage': if (ev.up) S.forageGone.delete(ev.i); else S.forageGone.add(ev.i); break;
     case 'xing': S.xing[ev.i] = { d: ev.d, b: ev.b }; break;
     case 'tt': S.tt = { l: ev.l, at: performance.now() / 1000 }; break; // station clocks

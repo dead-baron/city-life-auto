@@ -124,6 +124,7 @@ export const EVENT_SOUNDS = {
   trainhorn: (ev, A) => A.at(ev.s === 2 ? 'trainhorn' : 'trainhornshort', ev.x, ev.y),
   xing: (ev, A) => { const c = A.S.map && A.S.map.rail && A.S.map.rail.crossings && A.S.map.rail.crossings[ev.i]; if (c) A.at('gatearm', c.x, c.y, 0.6); },
   tt: null,                                      // (the station clocks' timetable)
+  club: null,                                    // (a club's music on or off: sound/places.js plays it)
   // ---- doors and gates ----
   door: (ev, A) => A.at(near(A.S, ev.x, ev.y, K.VEH, 70) ? 'cardoor' : 'housedoor', ev.x, ev.y),
   garagedoor: (ev, A) => { const h = A.S.map && A.S.map.homes && A.S.map.homes[ev.home]; const d = h && (h.garageDoor || h.garage); if (d) A.at('rollerdoor', d.x, d.y); },
