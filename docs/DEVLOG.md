@@ -5689,8 +5689,8 @@ and turkey, AN3 small game, AN8 quail): the rows are the game's own bake (actors
   - The birds' legs reach the ground and are deep enough across the line of sight that the character view's steep
     look no longer skips them (the turkey stood on floating feet).
 - **The quail of AN8** (`client/art2/birds.js`):
-  - The cock is plumper, blue-grey, with the black face in its white border, a chestnut cap, the comma of a topknot
-    (curling forward, bobbing as he walks) and the scaled belly.
+  - The cock is plumper, blue-grey with a grey back, his dark head held high, the black face in its white border, a
+    chestnut cap, the comma of a topknot (curling forward, bobbing as he walks) and the scaled belly.
   - The hen (`quail:f`, new) is plain brown and scaled with a smaller topknot. A covey's two adults spawn one after
     the other, so the client draws the odd id as the hen (`client/art2/game/host.js`): one cock and one hen a covey.
   - The cock stands up plump, his breast high (a tilted egg), the head high on the neck.
