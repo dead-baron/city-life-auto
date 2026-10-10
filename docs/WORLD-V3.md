@@ -924,6 +924,127 @@ region should only need the part of an island inside it and a margin.
    the systems that search the whole network (`ferries.js`, `transit.js`, streetlife's Dijkstra) on the skeleton's
    coarse graph for long trips.
 
+### 4.7 Stage 1, step 1: island builds (2026-10-10)
+
+Nothing in the live world moved: `WORLD_VERSION` stays 9 and the world's hash is `8217a4dcfe71` before and after (the
+art hash changes once: `shared/map.js` is in the chunk bake's code). Dry Creek has no island build: part 5 splits it
+between the valley and the desert and rebuilds it, so Metro City's east edge is a designed shore.
+
+**What was built**
+- **`generateCity(seed, { island })`** builds one of part 2's pieces alone, in today's frame (placed by its offset
+  afterwards, as 4.6's spike). The builder is `shared/world3-islands.js` (`islandOpts`): importing it registers it with
+  `map.js` (`setIslandBuilds`), so none of it is in the page's code (the page stays at 714 of its 720 KB). An island
+  build is:
+  - **its land** - `shared/world3.js` `ISLAND_BUILDS` and `islandMask`: a land point on each of its landmasses
+    (Metro City and Pelican Key, Cedar Isle, ...), or every landmass lying wholly inside its `from` rectangle (Paradise
+    Cay, Lighthouse Rock); Metro City ends at its cut, x = 1045 (`cutX`); where pieces share a landmass today (Westport,
+    its airport and Highland Woods; Northshore and Granite Peaks) a tile is the piece's whose nearest district seed is
+    one of its districts (map.js's district painting without the wobble). The rest of today's land is sea.
+  - **its zones**: a piece cut from a landmass that `ISLAND_AT` names by a point it no longer has (the airport, Highland
+    Woods, Granite Peaks) keeps the landmass's zone (`opts.islandAt`), so its districts and ground come out as today's.
+  - **its planned businesses**: those whose spot or district seed is on its land (a district without seeds is where
+    map.js's `seedOf` puts it: the Arts District's rectangle, else Metro City). One with no lot left on the island is
+    skipped and listed (`m.islandBuild.noRoom`), where the live world would throw.
+  - **its own roads**: the other islands' (`islandRoads`' rings and grids, `countrysideRoads`' station roads, laid from
+    data over what is now sea) are left out; a road that runs from the island to another landmass (a bridge, a
+    causeway) is left out and listed with where it ran on the island (`m.islandBuild.leftOut`: the skeleton's, step 4);
+    a road over a seam onto land of its own landmass that another piece takes is the island's, kept whole
+    (`m.islandBuild.overSeam`: the Westport Beltway round the airport, Dry Creek Station Road).
+  - a road that comes from an island not being built starts at this one's shore (`ownShore`: Northshore's two avenues,
+    which today run on from the bridges from Metro City).
+  - an island with no hospital or police station has no spawn points (the world's are elsewhere).
+- **Every build starts clean**: `ISLANDS`' boxes are put back as declared at the start of each `buildCity` (terrain sets
+  the boxes of the islands it has; a build of today's world sets them all, so it is unchanged). Island builds in one
+  process come out the same in any order: Metro City built first and again after the eleven others is identical
+  (canonical hash).
+- **`tools/world3-islands.mjs`** (`node --expose-gc tools/world3-islands.mjs [--island metro,cedar] [--twice]
+  [--keep-links] [--margin 24] [--json]`, heavy: under `flock`): builds today's world (its hash must still be the
+  stamped one), then each island, and compares it with today's on the island's own land away from its seams - more
+  than 24 tiles from where it was cut from a shared landmass and from where a road left out ran on it: the tiles, the
+  district, zone, reserve, road rank and sea distance layers, the road edges (kind, ends, level), the buildings (kind
+  and lot), the POIs (kind and place; names are numbered world-wide), the props; and the tiles that differ by distance
+  from a seam (up to 24 tiles, 25 to 64 - the sea distance field's reach - and beyond). `--keep-links` keeps the
+  bridges as laid today, to tell what leaving them out costs.
+- **`test/world3.test.js`**: Coral Cay built alone (the cheapest island with streets, lots, POIs and nature: 1.2-1.5 s,
+  the test about 8 s with today's world to compare with) is today's - every tile, district, zone, road edge, building
+  and POI, props 99% or more (1,124 of 1,129: a few are drawn from the shared random stream) - and the same built twice.
+
+**What it measured** (node 22 on the shared 2-core machine; today's whole world 4.3 s and 73 MB kept in the same run;
+"away" is the island's land more than 24 tiles from its seams; matches counted there):
+
+| Island | Build | Kept | Land tiles | Away | Tiles as today's | Road edges | Buildings | POIs (kind, place) | Props | Roads left out |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Metro City (+ Southbank, Pelican Key) | 2.0 s | 44 MB | 187,926 | 165,139 | 98.3% | 365 of 377 | 268 of 292 | 138 of 189 | 3,665 of 3,761 | 7 |
+| Westport | 2.3 s | 38 MB | 153,740 | 131,747 | 97.8% | 245 of 248 | 203 of 220 | 99 of 126 | 3,376 of 4,110 | 3 |
+| Westport International | 1.5 s | 33 MB | 50,701 | 41,709 | 100.0% | 9 of 11 | 5 of 5 | 4 of 6 | 306 of 312 | 2 |
+| Cedar Isle | 2.2 s | 46 MB | 183,162 | 179,950 | 99.1% | 232 of 234 | 126 of 129 | 114 of 124 | 5,391 of 5,905 | 3 |
+| Northshore, North Point, The Bluffs | 1.4 s | 38 MB | 71,485 | 63,505 | 97.1% | 83 of 97 | 50 of 65 | 26 of 48 | 1,761 of 2,165 | 2 |
+| Highland Woods | 1.7 s | 30 MB | 44,865 | 29,435 | 95.2% | 5 of 5 | 3 of 5 | 3 of 5 | 747 of 1,241 | 1 |
+| Granite Peaks | 1.6 s | 35 MB | 66,482 | 49,874 | 99.1% | 8 of 8 | 6 of 7 | 5 of 9 | 3,476 of 3,664 | 1 |
+| Gull Harbor | 1.6 s | 34 MB | 15,398 | 14,707 | 98.7% | 13 of 13 | 5 of 9 | 0 of 7 | 509 of 516 | 1 |
+| Coral Cay | 1.2 s | 23 MB | 13,369 | all | 100% | 4 of 4 | 5 of 5 | 4 of 4 | 1,124 of 1,129 | 0 |
+| Paradise Cay | 1.5 s | 23 MB | 1,276 | all | 100% | - | - | - | - | 0 |
+| Lighthouse Rock | 1.2 s | 23 MB | 2,298 | all | 100% | - | 1 of 1 | 1 of 1 | 192 of 192 | 0 |
+| Smuggler's Rock | 1.2 s | 23 MB | 1,782 | all | 100% | - | 1 of 1 | 1 of 1 | 62 of 66 | 0 |
+
+"Kept" is the heap and typed arrays after the build (noisy by a few MB: the collector's timing); about 30 MB of it is
+the whole map's grids whatever is built, which is also why the smallest island takes 1.2 s - the passes over the whole
+grid (4.6 item 7) are the floor of every build, and the island's own work only adds to it (Metro City's 188,000 tiles
+add 0.8 s). The district, zone, river and deck layers are today's on every island's land away from its seams.
+
+**Metro City at its designed east shore** (cut at x = 1045). Left out: the Bay, North, Harbor and Cedar bridges, Pelican
+Way (to Westport) and the West Hills and Granite Peaks station roads; kept over the seam: Dry Creek Station Road. Of the
+island's land, the tiles that differ from today's:
+- within 24 tiles of the cut or of a road left out: 8,147 of 22,787 - the Eastern Parkway and the streets that end on it,
+  the County Road and the Farm Road into Southside, the bridges' feet (4.6 item 4);
+- 25 to 64 tiles away: 1,028 of 34,794 - the sea distance field reaches 64 tiles (it differs on 13,431 tiles away from
+  the seams), and the waterfront strips and beaches it decides move with the new shore;
+- further: 1,754 of 130,345 (1.3%) - the lots the planned businesses and the world-wide shops took (The Yards, Old
+  Town, Pelican Key, Northgate, Midtown, The Pink Mile, Southside, Neon Strip): of the 51 POIs that differ, 17 are ATMs
+  (spaced world-wide), the rest clubs, corner stores, clothes shops, banks and the like drawn or placed world-wide
+  (4.6 item 5).
+
+Keeping the bridges as today (`--keep-links`): Metro City 98.5% of its tiles, Westport 99.5% (Pelican Way and the Strait
+Bridge feed its streets), Granite Peaks 99.6%, Cedar Isle 99.0% - what leaving them out costs, until the skeleton lays
+them (step 4).
+
+**What still can't be built on its own** (and why)
+1. **Northshore's avenues came from Metro City** (fixed): "the two bridges from Metro City run straight on up through
+   town as its avenues" (`islands.js` `islandRoads`: the North Bridge at x = 958 and the Harbor Bridge at x = 1018, each
+   one line from Metro City's north shore to y = 118), laid only where `metroNorthEnd` finds Metro City's shore. Built
+   alone, Northshore had neither avenue (never laid, so not in the left-out list) and came out 87.3% (61 of 94 road
+   edges, 32 of 66 lots) - not the bridges' doing (87.6% with them kept) nor its cut from Granite Peaks (88.5% with
+   Granite Peaks joined on); with Metro City built as well, 94.1%. Now an island build answers `ctx.ownShore(x, y)`
+   (`islands.js` asks it only when Metro City's shore isn't there) and the avenues start at Northshore's own shore:
+   97.1% of its tiles, 83 of 97 road edges, 50 of 65 lots. What still differs is near its seams (3,039 of the 7,980
+   tiles within 24 tiles of them) and the businesses (item 3). The general form of this - cut a road that leaves the
+   island at its shore, its run on the island the island's and the rest the skeleton's - is the next step.
+2. **The random stream**, likely, also gives Highland Woods' wild ground other trees (747 of 1,241 props, the same with
+   the bridges kept; `buildWilds` draws from it) and some of Cedar Isle's (5,391 of 5,905). Westport's props are mostly
+   the bridges' doing (4,089 of 4,260 with them kept).
+3. **The planned businesses are placed world-wide.** Built alone, Gull Harbor has no lot for two of its own: Harbor
+   General Store rightly (today it has none there either: `placeSpecials`' last pass, "anywhere at all", puts it in the
+   Neon Strip), but The Salty Gull Cafe's lot goes to the fish market, which today stands further south; built with
+   Metro City as well, both are where they are today. Which lot a business takes depends on the ones placed before it
+   anywhere in the world, so an island's businesses come out as today's only once the fallbacks stay on their own
+   island (each island's list placed on its own, and a business with no lot on its island told, as the island build
+   does now). Metro City's 51 POIs that differ are mostly this and the ATMs.
+4. **The railway is laid whole** in every build (14,127 points, 12 stations - Coral Cay's build has all twelve, none on
+   it): clipping it to an island needs the rail code to take open runs instead of one loop (`reserveRail`,
+   `stationIndex` and `buildRailway` index it modulo its length). It is the skeleton's (step 4).
+5. **World-wide ids and numbering** (4.6 item 5): ATMs, homes' numbers, the delivery firms' names.
+6. **The grids are the whole map's** (4.6 item 7): every build costs at least 1.2 s and 23 MB.
+
+**Next steps, in order** (4.6's, updated)
+1. **Island builds**: done (this section). Left: cut a road at the island's shore instead of leaving a bridge out whole
+   or keeping a road over a seam whole (the Westport Beltway runs on over the sea where the airport was) - the general
+   form of `ownShore` (item 1 above).
+2. **Grids sized to the island** (4.6 step 2): now measured as the floor of every island build.
+3. **Island-local ids, names and random streams** (4.6 step 3; one `WORLD_VERSION` bump).
+4. **The skeleton** takes the bridges each build lists (`m.islandBuild.leftOut`: Bay, North, Harbor, Cedar, Strait
+   bridges, Pelican Way, the Northern Causeway, the station roads) and the railway, clipped per island and region.
+5. and 6. as 4.6.
+
 ## Part 5 - The owner's answers and markup (2026-10-10, 12:01)
 
 The owner marked up the draft layout (`docs/world-v3-markup-2026-10-10.png`: 2520 x 2016 px over the 5040 x 4032

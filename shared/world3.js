@@ -132,3 +132,76 @@ export function cutRegion(layer, srcW, srcH, p, ri, fill = 0, keep = null, Out =
   }
   return out;
 }
+
+// --- Island builds (docs/WORLD-V3.md 4.7): generateCity(seed, { island }) builds one of PLACEMENTS' pieces alone, in
+// today's frame (placed by its offset afterwards), with the rest of today's land left as sea. What makes a piece's land:
+// `at` - a land point on each of its landmasses (4-connected, as map.js labels land; none: every landmass lying wholly
+// inside its `from` rectangle); `cutX` - where it ends on a landmass it shares by a straight cut (Metro City: x = 1045,
+// where Dry Creek's fields begin, today's zone line; in v3 a designed shore); `districts` - on a landmass it shares with
+// other pieces, the tiles whose nearest district seed (SEEDS + ISLAND_SEEDS, as map.js paints districts, without the
+// wobble) is one of these. Dry Creek isn't one: in v3 it is split between the valley and the desert and rebuilt.
+export const ISLAND_BUILDS = {
+  metro: { at: [[800, 500], [600, 360]], cutX: 1045 },
+  westport: { at: [[300, 500]], districts: [23, 24, 25, 26, 28, 30] },
+  airport: { at: [[300, 500]], districts: [27] },
+  cedar: { at: [[620, 1000]] },
+  northshore: { at: [[800, 150]], districts: [31, 32, 34] },
+  highland: { at: [[300, 500]], districts: [29] },
+  granite: { at: [[800, 150]], districts: [33] },
+  gull: { at: [[120, 1020]] },
+  coral: { at: [[1120, 1070]] },
+  paradise: {},
+  lighthouse: {},
+  smuggler: { at: [[1230, 978]] },
+};
+
+// The land of one island build, from today's land (a W x H byte grid, 1 = land, the scene islands already raised):
+// 1 on the tiles the build keeps. `seeds` are the district seeds [district, x, y]. Integer arithmetic only.
+export function islandMask(land, W, H, key, seeds) {
+  const B = ISLAND_BUILDS[key], P = PLACEMENTS[key];
+  if (!B || !P) throw new Error(`no island build '${key}'`);
+  const N = W * H, keep = new Uint8Array(N), seen = new Uint8Array(N), st = new Int32Array(N);
+  const cut = B.cutX ?? W;
+  // one landmass from a tile, west of the cut: its tiles (marked in `seen`) and its bounding box
+  const flood = (s0) => {
+    const tiles = []; let sp = 0, x0 = W, y0 = H, x1 = 0, y1 = 0;
+    seen[s0] = 1; st[sp++] = s0;
+    while (sp) {
+      const j = st[--sp], x = j % W, y = (j / W) | 0;
+      tiles.push(j);
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      const go = (k, kx) => { if (kx < cut && land[k] && !seen[k]) { seen[k] = 1; st[sp++] = k; } };
+      if (x > 0) go(j - 1, x - 1);
+      if (x < W - 1) go(j + 1, x + 1);
+      if (y > 0) go(j - W, x);
+      if (y < H - 1) go(j + W, x);
+    }
+    return { tiles, box: [x0, y0, x1 + 1, y1 + 1] };
+  };
+  const masses = [];
+  if (B.at) for (const [x, y] of B.at) { const i = y * W + x; if (land[i] && !seen[i] && x < cut) masses.push(flood(i)); }
+  else {
+    const [fx0, fy0, fx1, fy1] = P.from;
+    for (let y = Math.max(0, fy0); y < Math.min(H, fy1); y++) for (let x = Math.max(0, fx0); x < Math.min(W, fx1); x++) {
+      const i = y * W + x;
+      if (!land[i] || seen[i]) continue;
+      const f = flood(i), [a, b, c, d] = f.box;
+      if (a >= fx0 && b >= fy0 && c <= fx1 && d <= fy1) masses.push(f);
+    }
+  }
+  for (const f of masses) {
+    if (!B.districts) { for (const i of f.tiles) keep[i] = 1; continue; }
+    // shared with other pieces: the tiles nearest one of this piece's district seeds (of the seeds on this landmass)
+    const on = new Uint8Array(N);
+    for (const i of f.tiles) on[i] = 1;
+    const sd = seeds.filter(([, x, y]) => x >= 0 && y >= 0 && x < W && y < H && on[y * W + x]);
+    const mine = sd.map(([d]) => B.districts.includes(d));
+    for (const i of f.tiles) {
+      const x = i % W, y = (i / W) | 0;
+      let best = -1, bd = Infinity;
+      for (let k = 0; k < sd.length; k++) { const dx = sd[k][1] - x, dy = sd[k][2] - y, dd = dx * dx + dy * dy; if (dd < bd) { bd = dd; best = k; } }
+      if (best >= 0 && mine[best]) keep[i] = 1;
+    }
+  }
+  return keep;
+}

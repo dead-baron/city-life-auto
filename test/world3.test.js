@@ -341,3 +341,31 @@ test('wherever a line is over water it is on a bridge or in a tunnel; every inte
     assert.ok(on.length >= 2, `${ic.name}: ${on.map((h) => h.name)}`);
   }
 });
+
+// --- island builds (docs/WORLD-V3.md 4.7): generateCity(seed, { island }) builds one piece of part 2's table alone.
+// Coral Cay is the cheapest that has everything (streets, buildings, POIs, nature): about 1.5 s alone, plus today's
+// world to compare with (in a child process, as the spike: tools/world3-islands.mjs).
+const ISLANDS_TOOL = fileURLToPath(new URL('../tools/world3-islands.mjs', import.meta.url));
+const runIslands = (...args) => new Promise((res, rej) => execFile(process.execPath, ['--expose-gc', ISLANDS_TOOL, '--json', ...args], { maxBuffer: 1 << 22, timeout: 900000 }, (e, out) => (e ? rej(e) : res(JSON.parse(out)))));
+
+test('an island built alone (Coral Cay) is today\'s on its own land; built again it is the same; today\'s world still the stamped one', { timeout: 900000 }, async () => {
+  const r = await runIslands('--island', 'coral', '--twice');
+  assert.equal(r.today.hash, r.today.stamped, 'generateCity(1337) is no longer the stamped world');
+  const c = r.islands.coral;
+  assert.equal(c.error, null, c.error);
+  assert.equal(r.twice.same, true, 'two builds of the island differ');
+  // all of it: an island with no seam and no bridge (nothing left out), so all its land is "away from its seams"
+  assert.ok(c.landTiles > 12000, `land ${c.landTiles}`);
+  assert.equal(c.awayTiles, c.landTiles);
+  assert.deepEqual(c.leftOut, []);
+  // Its tiles, districts, streets, lots and places are its own (measured 2026-10-10: every one as today's). The props
+  // came out 1,124 of 1,129: a few are drawn from the world's one random stream (4.6 item 6) - 99% is the floor.
+  assert.ok(c.tilesSame / c.awayTiles >= 0.995, `tiles the same: ${c.tilesSame} of ${c.awayTiles}`);
+  assert.equal(c.layers.dist, 0); assert.equal(c.layers.zone, 0);
+  assert.equal(c.roads.same, c.roads.today, JSON.stringify(c.roads)); assert.equal(c.roads.island, c.roads.today);
+  assert.ok(c.roads.today >= 4);
+  assert.equal(c.buildings.same, c.buildings.today, JSON.stringify(c.buildings)); assert.ok(c.buildings.today >= 5);
+  assert.equal(c.pois.same, c.pois.today, JSON.stringify(c.pois)); assert.ok(c.pois.today >= 4);
+  assert.ok(c.props.same / c.props.today >= 0.99, JSON.stringify(c.props));
+  assert.deepEqual(c.regions, ['r3-6', 'r3-7']);
+});

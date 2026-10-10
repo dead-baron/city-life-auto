@@ -57,8 +57,9 @@ export const ISLANDS = {
   S: { name: 'Cedar Isle', box: [270, 784, 991, 1158], zone: Z.ISLE },
   G: { name: 'Gull Isles', box: [40, 939, 1197, 1142], zone: Z.GULL, boatOnly: true },
 };
+const ISLAND_BOX0 = Object.fromEntries(Object.entries(ISLANDS).map(([k, I]) => [k, I.box.slice()]));   // (as declared: buildCity starts from them)
 // Which land component is which part of the world: a land point on each.
-const ISLAND_AT = [[[300, 500], Z.WEST], [[800, 150], Z.NORTH], [[620, 1000], Z.ISLE], [[120, 1020], Z.GULL], [[1120, 1070], Z.GULL], [[600, 360], Z.KEY], [[1230, 978], Z.ROCK]];
+export const ISLAND_AT = [[[300, 500], Z.WEST], [[800, 150], Z.NORTH], [[620, 1000], Z.ISLE], [[120, 1020], Z.GULL], [[1120, 1070], Z.GULL], [[600, 360], Z.KEY], [[1230, 978], Z.ROCK]];
 
 export const PED_BLOCK = new Uint8Array(16);
 export const CAR_BLOCK = new Uint8Array(16);
@@ -485,10 +486,15 @@ export function waterKind(map, tx, ty) {
 // checks mapSignature on joining), so it's built with deterministic trigonometry: the JavaScript engines' own Math.sin
 // & co. differ in the last bit (Safari - every browser on an iPhone or iPad - against Chrome and Node), enough to move
 // a tile or a prop (shared/dmath.js).
-// (opts: World v3's spike only - tools/world3-spike.mjs; the live world never passes it, and without it the world is
+// (opts: World v3's only - { island: 'metro' } builds one of shared/world3.js PLACEMENTS' pieces alone, once
+// shared/world3-islands.js is imported (it registers the builder: none of it is in the page's code); the spike,
+// tools/world3-spike.mjs, passes its hooks itself. The live world never passes it, and without it the world is
 // today's to the bit: test/world3.test.js)
+let islandBuilds = null;
+export function setIslandBuilds(f) { islandBuilds = f; }
 export function generateCity(seed = 1337, opts = null) {
-  return withDeterministicMath(() => buildCity(seed, opts));
+  if (opts && opts.island && !islandBuilds) throw new Error('island builds: import shared/world3-islands.js first');
+  return withDeterministicMath(() => buildCity(seed, opts && opts.island ? islandBuilds(opts.island, opts) : opts));
 }
 // The world as plain data (what a worker sends or the browser's cache keeps: a structured clone keeps no methods
 // and no functions) - and back. client/worldgen.js builds the city off the page's thread and keeps it.
@@ -506,6 +512,7 @@ export function cityFromData(o) {
 let OPTS = null;   // (World v3's spike: what generateCity was asked to build; null for the live world)
 function buildCity(seed, opts = null) {
   OPTS = opts;
+  for (const k in ISLANDS) ISLANDS[k].box = ISLAND_BOX0[k].slice();   // (each build starts clean: terrain sets the boxes of the islands it has)
   const m = new CityMap(seed);
   const rand = mulberry32(seed);
   terrain(m, opts);
@@ -656,8 +663,8 @@ function buildCity(seed, opts = null) {
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');
   const pd = m.pois.find((p) => p.kind === 'police');
   m.hospitals = m.pois.filter((p) => p.kind === 'hospital').map((p) => ({ id: p.id, name: p.label, x: p.x, y: p.y + 44 }));
-  m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 };
-  m.spawns.police = { x: pd.x, y: pd.y + 44 };
+  if (hosp || !OPTS?.island) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 };   // (an island build may have neither: the world's are elsewhere)
+  if (pd || !OPTS?.island) m.spawns.police = { x: pd.x, y: pd.y + 44 };
   m.spawns.default = m.spawns.hospital;
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
   m.softEdge = true; // (from here on the sea runs on past the edge: tileAt)
@@ -793,7 +800,7 @@ function terrain(m, opts = null) {
   };
   m.yRiver = yRiver;
   // zones
-  const compZone = new Map(ISLAND_AT.map(([[x, y], z]) => [compAt(x, y), z]));
+  const compZone = new Map((OPTS?.islandAt ? ISLAND_AT.concat(OPTS.islandAt) : ISLAND_AT).map(([[x, y], z]) => [compAt(x, y), z]));   // (an island build: its pieces of a landmass keep the landmass's zone)
   for (let i = 0; i < N; i++) {
     if (!land[i]) continue;
     const c = lab[i], x = i % W, y = (i / W) | 0;
@@ -1053,6 +1060,7 @@ function layoutRoads(m, rand) {
     m, lines, rand, Z, isLand, zoneOf, seaD,
     lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; },
     metroWestEnd: metro.westEnd, metroNorthEnd: metro.northEnd, metroSouthEnd: metro.southEnd,
+    ownShore: OPTS?.ownShore,   // (World v3's island builds only: where a road from another island meets this one's shore)
   };
   m.islandRings = islandRoads(ctx);
   stationAccess(m, lines, isLand, seaD);
@@ -1641,6 +1649,7 @@ function placeSpecials(m, rows, seed) {
     const rand = own.get(sp);
     if (placeSpecial(m, rows, rand, sp, [5]) || placeSpecial(m, rows, rand, sp, [5], 0.75) || placeSpecial(m, rows, rand, sp, [2]) || placeSpecial(m, rows, rand, sp, [0, 2], 0.75)
       || placeSpecial(m, rows, rand, sp, [3, 4]) || placeSpecial(m, rows, rand, sp, [0, 1, 2, 3, 4], 0.6)) continue;
+    if (OPTS?.island) { m.islandBuild.noRoom.push(sp.names[0]); continue; }   // (an island build: no lot for it on this island - today it takes one on another)
     throw new Error(`city generator: no room for ${sp.prefab} (${sp.names[0]})`);
   }
 }

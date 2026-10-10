@@ -6271,3 +6271,22 @@ went to the owner at 12:58, and the skeleton now has it (`docs/WORLD-V3.md` part
   highways, arterials, main line, subways, ferries, stations, towns) and `tools/world-v3-skeleton.py`.
 - **Tests:** `test/world3.test.js` passes 15/15. The water check counts only the pieces still placed whole and treats
   the canal as water.
+## 2026-10-10 · World v3, stage 1, step 1: island builds
+
+The owner's answers of today (docs/WORLD-V3.md part 5: "The full 5 x 4 km now", Dry Creek "split between the valley and
+the desert, rebuilt to blend") make Metro City's east edge a designed shore, so the first step of the engine plan
+(4.6's "Next steps") is to build each of today's islands on its own. `generateCity(seed, { island: 'metro' })` builds
+one piece of part 2's table alone - its land (Metro City cut at x = 1045, Westport, its airport and Highland Woods told
+apart by their districts' seeds), its zones, its own planned businesses and its own roads; the bridges to other
+islands are left out and listed for the skeleton - while the live world is today's to the bit (its hash `8217a4dcfe71`
+before and after; `WORLD_VERSION` stays 9). `tools/world3-islands.mjs` builds all twelve and compares each with today's
+world on its own land away from its seams: Coral Cay, Paradise Cay, Lighthouse Rock, Smuggler's Rock and the airport
+island come out as today's, Cedar Isle and Granite Peaks 99.1% of their tiles, Metro City 98.3%, Westport 97.8%,
+Northshore 97.1% (its two avenues, today the bridges from Metro City run on through town, now start at its own shore
+when it is built alone), Highland Woods 95.2%; each build takes 1.2-2.3 s (today's whole world 4.3 s), the smallest no less
+than 1.2 s - the whole map's grids are the floor. The findings, a table per island and what's next are in
+docs/WORLD-V3.md 4.7. The island builder is `shared/world3-islands.js`, which registers itself with `map.js` when
+imported, so none of it is in the page's code. Files: `shared/world3.js` (`ISLAND_BUILDS`, `islandMask`),
+`shared/world3-islands.js`, `shared/map.js` (`setIslandBuilds`, `ISLAND_AT` exported, each build starts from the
+declared island boxes, the island-only branches), `tools/world3-islands.mjs`. Tests: `test/world3.test.js` builds Coral
+Cay alone and checks it against today's (every tile, road, lot and POI; 99% of the props), and twice the same.
