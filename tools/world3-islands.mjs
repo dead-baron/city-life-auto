@@ -22,13 +22,16 @@ const { canonicalHash } = await import(pathToFileURL(join(ROOT, 'tools/stamp-ver
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
 const JSON_OUT = process.argv.includes('--json'), TWICE = process.argv.includes('--twice');
+// --keep-links: the roads to other islands (the bridges, a road over a cut) kept as laid today, to tell what leaving
+// them out changes from what the island's absent neighbours do
+const KEEP_LINKS = process.argv.includes('--keep-links');
 const MARGIN = +arg('--margin', 24), FAR = Math.max(MARGIN, 64);
 const ISLES = (arg('--island', '') || Object.keys(W3.ISLAND_BUILDS).join(',')).split(',').filter(Boolean);
 for (const k of ISLES) if (!W3.ISLAND_BUILDS[k]) throw new Error(`no island build '${k}' (${Object.keys(W3.ISLAND_BUILDS).join(', ')})`);
 
 const gc = globalThis.gc || (() => {});
 function build(opts) {
-  gc(); const u0 = process.memoryUsage(), h0 = u0.heapUsed + u0.arrayBuffers, t0 = performance.now();
+  gc(); gc(); const u0 = process.memoryUsage(), h0 = u0.heapUsed + u0.arrayBuffers, t0 = performance.now();
   let m = null, error = null;
   try { m = generateCity(1337, opts); } catch (e) { error = (e && e.stack ? e.stack : String(e)).split('\n').slice(0, 6).join('\n'); }
   const ms = performance.now() - t0;
@@ -103,6 +106,8 @@ function compare(key, S) {
   const prSet = (m) => { const s = new Set(); for (const p of m.props) if (awayPx(p.x, p.y)) s.add(`${p.t}|${Math.round(p.x)},${Math.round(p.y)}`); return s; };
   r.props = cmp(prSet(S), prSet(T0));
   r.leftOut = leftOut.map((l) => `${l.name || '(unnamed)'} (${l.kind})`);
+  r.overSeam = S.islandBuild ? S.islandBuild.overSeam : [];
+  r.noRoom = S.islandBuild ? S.islandBuild.noRoom : [];
   r.otherLines = S.islandBuild ? S.islandBuild.otherLines : 0;
   r.rail = { points: S.rail ? S.rail.pts.length : 0, stations: (S.rail?.stations || []).length, stationsOnIsland: (S.rail?.stations || []).filter((s) => { const i = tileIdx(s.x, s.y); return i >= 0 && own[i]; }).length };
   r.regions = W3.placedRegions(W3.PLACEMENTS[key]).map(W3.regionKey);
@@ -111,7 +116,7 @@ function compare(key, S) {
 
 let firstHash = null;
 for (const key of ISLES) {
-  const b = build({ island: key });
+  const b = build({ island: key, keepLinks: KEEP_LINKS });
   const r = { ms: b.ms, keptMB: b.keptMB, error: b.error };
   if (b.m) {
     Object.assign(r, compare(key, b.m));
@@ -119,7 +124,7 @@ for (const key of ISLES) {
   }
   out.islands[key] = r;
 }
-if (TWICE && firstHash) { const b = build({ island: ISLES[0] }); out.twice = { island: ISLES[0], same: !!b.m && canonicalHash(cityData(b.m)) === firstHash }; }
+if (TWICE && firstHash) { const b = build({ island: ISLES[0], keepLinks: KEEP_LINKS }); out.twice = { island: ISLES[0], same: !!b.m && canonicalHash(cityData(b.m)) === firstHash }; }
 
 if (JSON_OUT) console.log(JSON.stringify(out));
 else {
@@ -132,5 +137,5 @@ else {
     if (r.error) { console.log(`| ${k} | ${r.ms} ms | - | error: ${r.error.split('\n')[0]} |`); continue; }
     console.log(`| ${k} | ${(r.ms / 1000).toFixed(1)} s | ${r.keptMB} MB | ${r.landTiles} | ${r.awayTiles} | ${pc(r.tilesSame, r.awayTiles)} | ${r.roads.same}/${r.roads.today} (+${r.roads.island - r.roads.same}) | ${r.buildings.same}/${r.buildings.today} | ${r.pois.same}/${r.pois.today} | ${r.props.same}/${r.props.today} | ${r.leftOut.length} |`);
   }
-  for (const [k, r] of Object.entries(out.islands)) if (!r.error) console.log(`${k}: left out ${r.leftOut.join(', ') || 'nothing'}; layers differing (away): ${JSON.stringify(r.layers)}; all own land: roads ${r.roadsAll.same}/${r.roadsAll.today}; POIs missing ${JSON.stringify(r.pois.missingByKind)}; rail ${JSON.stringify(r.rail)}; regions ${r.regions.join(' ')}`);
+  for (const [k, r] of Object.entries(out.islands)) if (!r.error) console.log(`${k}: left out ${r.leftOut.join(', ') || 'nothing'}; kept over a seam: ${r.overSeam.join(', ') || 'nothing'}; no lot on the island for: ${r.noRoom.join(', ') || 'none'}; tiles differing by distance from a seam ${JSON.stringify(r.bands)}; layers differing (away): ${JSON.stringify(r.layers)}; all own land: roads ${r.roadsAll.same}/${r.roadsAll.today}; POIs missing ${JSON.stringify(r.pois.missingByKind)}; rail ${JSON.stringify(r.rail)}; regions ${r.regions.join(' ')}`);
 }

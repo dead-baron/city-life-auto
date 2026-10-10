@@ -17,9 +17,11 @@ import { ARTS } from './metro.js';
 import { setIslandBuilds, ISLAND_AT } from './map.js';
 import { islandMask } from './world3.js';
 
-export function islandOpts(key) {
+// (asked = generateCity's opts: { island, keepLinks } - keepLinks keeps the roads to other islands, the bridges, as
+// laid today: to measure what leaving them out changes)
+export function islandOpts(key, asked = {}) {
   const seeds = SEEDS.concat(ISLAND_SEEDS);
-  let today = null;
+  let today = null, mass = null;
   const tileOf = (x, y) => { const tx = Math.floor(x), ty = Math.floor(y); return tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H ? ty * MAP_W + tx : -1; };
   // (a planned business's home: its spot, its district's first seed, or where map.js seedOf puts it - the Arts
   // District's rectangle, Metro City for a district without seeds)
@@ -46,21 +48,36 @@ export function islandOpts(key) {
         while (sp) { const j = st[--sp]; for (const k of near(j, j % W)) if (k >= 0 && k < N && keep[k] && !done[k]) { done[k] = 1; st[sp++] = k; } }
         if (lab[i] >= 0) o.islandAt.push([[i % W, (i / W) | 0], ISLAND_AT[lab[i]][1]]);
       }
+      // today's landmasses the build's land is part of: the land beyond its seams (Dry Creek's fields for Metro City,
+      // the airport's and Highland Woods' for Westport) - a road over a seam is the island's, one to another landmass
+      // is a bridge
+      mass = new Uint8Array(N);
+      for (let i = 0; i < N; i++) {
+        if (!keep[i] || mass[i]) continue;
+        let sp = 0; mass[i] = 1; st[sp++] = i;
+        while (sp) { const j = st[--sp]; for (const k of near(j, j % W)) if (k >= 0 && k < N && land[k] && !mass[k]) { mass[k] = 1; st[sp++] = k; } }
+      }
       for (let i = 0; i < N; i++) if (!keep[i]) land[i] = 0;
     },
     special(sp, at, m) { const h = home(sp), i = h ? tileOf(h[0], h[1]) : -1; return !h || (i >= 0 && !!m.land[i]); },
     lines(lines, m) {
-      const leftOut = [];
+      const leftOut = [], overSeam = [];
       let others = 0;
       for (let k = lines.length; k--;) {
-        let mine = false, theirs = false;
+        let mine = false, seam = false, theirs = false;
         const on = [];
-        for (const p of lines[k].pts) { const i = tileOf(p.x / TILE, p.y / TILE); if (i < 0) continue; if (m.land[i]) { mine = true; on.push(i % MAP_W, (i / MAP_W) | 0); } else if (today[i]) theirs = true; }
-        if (mine && !theirs) continue;
+        for (const p of lines[k].pts) {
+          const i = tileOf(p.x / TILE, p.y / TILE);
+          if (i < 0) continue;
+          if (m.land[i]) { mine = true; on.push(i % MAP_W, (i / MAP_W) | 0); } else if (today[i]) { if (mass[i]) seam = true; else theirs = true; }
+        }
+        // (its own, or over a seam onto land of its landmass another piece takes - kept whole, as today: it ends at
+        // the designed shore later; or a bridge to another landmass - left out unless asked to keep it)
+        if (mine && (!theirs || asked.keepLinks)) { if (seam) overSeam.push(lines[k].name || lines[k].kind); continue; }
         if (mine) leftOut.push({ name: lines[k].name || '', kind: lines[k].kind, on }); else others++;
         lines.splice(k, 1);
       }
-      m.islandBuild = { island: key, leftOut: leftOut.reverse(), otherLines: others, noRoom: [] };
+      m.islandBuild = { island: key, leftOut: leftOut.reverse(), overSeam: overSeam.reverse(), otherLines: others, noRoom: [] };
     },
   };
   return o;

@@ -492,7 +492,7 @@ let islandBuilds = null;
 export function setIslandBuilds(f) { islandBuilds = f; }
 export function generateCity(seed = 1337, opts = null) {
   if (opts && opts.island && !islandBuilds) throw new Error('island builds: import shared/world3-islands.js first');
-  return withDeterministicMath(() => buildCity(seed, opts && opts.island ? islandBuilds(opts.island) : opts));
+  return withDeterministicMath(() => buildCity(seed, opts && opts.island ? islandBuilds(opts.island, opts) : opts));
 }
 // The world as plain data (what a worker sends or the browser's cache keeps: a structured clone keeps no methods
 // and no functions) - and back. client/worldgen.js builds the city off the page's thread and keeps it.
