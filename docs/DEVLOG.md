@@ -6225,3 +6225,49 @@ car driving in at one mouth and out of the other; a closed mouth stopping a car 
 tunnel's cover and mouths; the same stopping distance in the tunnel rain or shine; what's hidden from a viewer
 outside and inside, which tunnel's hill fades and how fast.
 Played in both renderers (noon outside, noon and night inside).
+## 2026-10-10 · World v3's skeleton as data, and the map picture drawn from it
+
+The owner marked up the World v3 draft layout ("I want to make sure the highway systems loop around in a logical way
+so its easy to connect throughout the world through the highways and there are long stretches of highway to travel
+on"; "I want the main train system to loop around the entire world ... should be scenic the entire way") and the
+rulings of WORLD-V3.md part 5 turned it into a plan. Now that plan is data: `shared/world3-skeleton.js` holds the coast
+and the islands (Westport's new container port on its west shore), the biome areas with a raised North Ridge along the
+north edge, the river and the lakes, the eight highways (three loops and more, the Granite Peaks, Highland, Valley and
+North highways meeting at Kestrel Pass, closed tunnel mouths where they run off the map), 25 arterials (Granite Peaks
+thinned to three, roadless areas kept in the forest and the eastern desert, the west sea road a causeway hopping four
+new islets to Gull Harbor), the main line as a graph of double-track segments with its three services (the Grand Loop,
+the Bay Loop, the Harbor Line), the two subway lines, the ferries, 33 stations, the towns and landmarks. Each line is
+its control points, turned on arcs of its kind's radius (highways 250 m, the main line 300 m, subways 120 m, arterials
+50 m), with tunnel and bridge stretches between control points. `skeletonCrossings()` works out every place two lines
+cross and what is built there by rule (an interchange, an overpass, a bridge, a gated level crossing, an
+intersection, or nothing where one is in a tunnel), and `skeletonSummary()` adds it up: 19.8 km of highway, 31.2 km of
+arterials, 16.1 km of main line, 4.6 km of subway, 22 tunnels and 26 bridges, 58 crossings. The new
+`docs/world-v3-layout-v2.png` is drawn from the data (`tools/world3-skeleton.mjs` writes it as JSON,
+`tools/world-v3-skeleton.py` draws it in the draft's style, or over the owner's markup to check the tracing). Nothing
+live imports it yet. What was decided on the way, for the owner to look at, is in WORLD-V3.md part 6.
+`shared/world3-skeleton.js`, `tools/world3-skeleton.mjs`, `tools/world-v3-skeleton.py`, `docs/world-v3-layout-v2.png`,
+`docs/WORLD-V3.md` part 6. Tests: test/world3.test.js (plain data, the same every time, no engine-dependent maths; no
+highway dead ends, one network with at least three loops, nothing at grade; the main line connected, every station on
+its line, every service joined up; every town near a road; every curve within its radius; every crossing classified;
+nothing over water but on a bridge or in a tunnel).
+
+## 2026-10-10 · World v3: the gulf
+
+The owner, over three messages at 12:44-12:52, asked for the urban islands a little bigger and much closer together.
+Westport joins the mainland, so Metro City/Southbank and Cedar Isle become islands in the gulf it encloses. The
+airport is tucked away, and Northshore is "less dense". The owner also asked for "plenty of bridges ... so entry and
+exit points can't just be camped" and "some walking bridges", with room for boats and the walk-on ferry. Sketch 2
+went to the owner at 12:58, and the skeleton now has it (`docs/WORLD-V3.md` part 7, `docs/world-v3-layout-v2.png`).
+- **The places:** today's places scaled by 1.15 (about 1.3x the area) and built new at that size.
+  - Westport is on the mainland, with Port Westport's quay on the new West Channel.
+  - The airport is a small island in a cove under Westport.
+  - Metro City + Southbank is split by a 55 m canal with six bridges.
+  - Cedar Isle is 200-260 m east of Metro City, and Toll Point's headland 250-280 m beyond it.
+  - Northshore runs on along the coast as beach towns, with the Coast Highway behind them.
+- **The crossings:** seven ways on and off the islands to the mainland (bridges, a lift bridge and the Harbor Tunnel),
+  two to four across each channel, and five footbridges. None is longer than about 410 m. The main line and the
+  subways cross beside the highways or under the channels.
+- **Files:** `shared/world3-skeleton.js` (MAINLAND, ISLANDS with `picture`, PIECES, CANAL, `inCanal`, the gulf's
+  highways, arterials, main line, subways, ferries, stations, towns) and `tools/world-v3-skeleton.py`.
+- **Tests:** `test/world3.test.js` passes 15/15. The water check counts only the pieces still placed whole and treats
+  the canal as water.
