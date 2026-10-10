@@ -2,7 +2,10 @@
 // their icons on the map (pick a category's name for its places, nearest first - picking one sets your waypoint),
 // your waypoint, the transit legend, zoom, Set Waypoint (where the cross is, on a pad), your homes and who's online.
 // Built from the shared map data, so new places show up by themselves. client/worldmap.js draws the map itself.
-import { districtAt } from '../shared/tutorial.js';
+import { DISTRICTS } from '../shared/map.js';
+import { TILE, MAP_W } from '../shared/constants.js';
+// the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
+const districtAt = (map, x, y) => { const d = map.dist[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)]; return DISTRICTS[d] ? DISTRICTS[d].name : null; };
 import { iconImg } from './pixicons.js';
 
 const $ = (id) => document.getElementById(id);

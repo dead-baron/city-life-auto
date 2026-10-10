@@ -5793,3 +5793,10 @@ FX, rare and beautiful" (FX2: at night, rare, in natural areas and parks, someti
     places, the same on a night and different the next; not in main.js's static imports.
   - These pass as before: `test/campfires.test.js`, `test/hunting.test.js`, `test/nature.test.js`,
     `test/dmath.test.js`.
+
+## 2026-10-10 · The tour's data leaves the page too
+
+After the fireflies, the rest spots and the animals came in, the page's code stood at exactly its 720 KB budget. The
+paused tour's data (`shared/tutorial.js`, 20 KB gzipped) was still in the page only because the phone's place list and
+the map's waypoint list used its three-line `districtAt`; both now have that line themselves, so the tour's data comes
+only with the tour. The page is 700 KB with 86 files. Tests: the full suite.
