@@ -5400,14 +5400,14 @@ The owner made a track for the title screen ("CLA Main Screen": made with a text
   - **The turns:** every fourth bar turns D♭ to C, with a fill, a break, or the drums dropping out at the loop's seam.
   - **The bass:** a sub bass on F under it all.
 - **How it sounds:**
-  - **The riff:** a buzzy, vocoder-like synth. Two sawtooths a few cents apart scoop up into each note, through two vowel formants that move with the notes. It's dark in the intro and opens up once the drums are in, with a little fuzz.
+  - **The riff:** a buzzy, vocoder-like synth. Two sawtooths a few cents apart scoop up into each note, through three vowel formants that move with the notes. It's dark in the intro and opens up once the drums are in, with a little fuzz.
   - **The drums:** a dusty boom-bap kit. Kick on 1 and 3, snare on 2 and 4, hats on the off-beats, ghost notes dragging half a 16th late. Pushed into a saturation, part of it crunched to six bits.
   - **The tape:** hiss, a slow wow in the pitch (a wavering delay: about ±15 cents), the top rolled off at 10.5 kHz.
 - **The new bits of the music player:**
   - A song can be a score (events per step: notes, lengths, accents, a lag behind the grid) instead of patterns.
   - It can have a tape chain. Its hiss and wavers run only while the song plays.
   - The engine has a fuller sawtooth (`saw48`).
-- **Checked against the owner's track:** the bench renders a song as the game plays it (`python3 tools/sound/bench.py --render title --seconds 106 --wav title.wav`). The loop's energy band by band, 0-14 kHz, comes within about 2 dB of the owner's below 2 kHz and 4-8 dB under it at 2-6 kHz. In the game it's a little louder than the old title tune (the bench, 10 s: -32.7 against -34.9 dBA).
+- **Checked against the owner's track:** the bench renders a song as the game plays it (`python3 tools/sound/bench.py --render title --seconds 106 --wav title.wav`). The loop's energy band by band, 0-14 kHz, comes within about 1 dB of the owner's (the intro alone is darker at 4-6 kHz). In the game it's a little louder than the old title tune (the bench, 10 s: -32.7 against -34.9 dBA).
 - **Tests:** `test/titlesong.test.js` (5):
   - the form, the length and the riff, bar by bar;
   - the turns, the bass with them, and the riff opening up with the drums;
