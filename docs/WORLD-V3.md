@@ -983,3 +983,111 @@ frame, so 2 tiles a pixel) and answered part 2's questions.
    - Line 1 (pink): Northshore, under the bay by the Bay Bridge, Metro City, the airport, a sea viaduct, then a loop
      under Cedar Isle.
    - Line 2 (yellow): a loop under Westport, over the harbour, under Metro City, then Southbank.
+
+---
+
+## Part 6 - The skeleton, v1 (2026-10-10)
+
+The owner's markup and the rulings of part 5, turned into the plan the region generators will build from:
+`shared/world3-skeleton.js` (plain data and small pure functions; nothing live imports it yet). The picture
+`docs/world-v3-layout-v2.png` is drawn from that data, not by hand: `node tools/world3-skeleton.mjs skel.json` writes it
+out as JSON (the lines with their paths, tunnels and bridges, the crossings, the summary) and
+`python3 tools/world-v3-skeleton.py skel.json <grids dir> docs/world-v3-layout-v2.png` draws it in the draft's style
+(the grids as for `tools/world-v3-layout.py`; `--over docs/world-v3-markup-2026-10-10.png` draws the lines over the
+owner's markup instead, which is how the tracing was checked).
+
+**What's in it** (frame tiles, 1 tile = 1 m, integers):
+- **The land and water:** the mainland polygon (the draft's, approved), the biome areas in paint order (Highland Woods
+  is the mainland's own ground; Granite Peaks, Willow Valley, Red Rock Desert, the new **North Ridge** along the north
+  edge, Sandpiper Coast, Egret Coast, Northshore), the islands (today's by their `PLACEMENTS` in `shared/world3.js`,
+  Prison Island, the six islets, and four new **Egret Rocks** for the west sea road), **Port Westport** (new fill on
+  Westport's west shore facing the west channel, quays and cranes; Westport Freight moves there), the Long Reach, Kestrel
+  Creek and Silver Thread Creek, Kestrel Lake and Red Rock Reservoir.
+- **Lines** - `HIGHWAYS` (8), `ARTERIALS` (25), `MAIN_LINE` (6 segments between 4 junctions) with `SERVICES` (3),
+  `SUBWAYS` (2 lines and their 2 loops), `FERRIES` (6). A line is its control points - for the long lines the points
+  where the straights would meet (a road designer's points of intersection) - and the path runs straight between them
+  and turns each corner on a circular arc of its kind's design radius: highways 250 m, the main line 300 m, subways
+  120 m, arterials 50 m. `tunnels` and `bridges` are stretches given as control-point index pairs `[i, j]` (from where
+  the path passes point i to where it passes point j), so a tunnel mouth is a control point and editing a point keeps
+  the stretch; `stretchRanges()` gives them as distances along the path.
+- **Points:** `STATIONS` (18 main line, 8 on subway line 1, 7 on line 2), `TOWNS` (14), `LANDMARKS` (15),
+  `INTERCHANGES` (10), `CLOSURES` (the three closed tunnel mouths at the map edge), `MAIN_JUNCTIONS` (4).
+- **Functions:** `linePath()` (the path, the distance at each control point, each corner's radius), `skeletonLines()`,
+  `skeletonCrossings()`, `skeletonSummary()`, `skeletonData()` (all of it as JSON), `nearestOnPath()`, `minRadius()`.
+  Only `+ - * /` and `Math.sqrt`: the same in every engine (the test checks the source).
+
+**The network**
+- **Highways** (ruling 1): Coast Highway (Redwood Junction - Westport Junction - Strait Interchange - Northshore - Dry
+  Creek - Sandpiper - the east portal), Granite Peaks Highway (Redwood Junction, the Redwood Tunnel, the Peaks Tunnel,
+  across the peaks to the Gorge Junction), Highland Highway (Westport Junction - Timber Bend - the Gorge Bridge - the
+  Gorge Junction - Kestrel Pass), Valley Highway (Northshore - Kestrel Pass - the north portal), North Highway (Kestrel
+  Pass, twice under the North Ridge, to the North Mesa Interchange), Desert Highway (Dry Creek - Lucky Mesa - North Mesa
+  - the north portal), the Bay Ring (the Strait Bridge, round Westport, the Harbor Bridge, Metro City, the Cedar
+  Bridge, Cedar Isle, the East Toll Bridge, Sandpiper), the Bay Bridge (Metro City - Northshore). As a graph of
+  interchanges and closures: 13 nodes, 17 stretches, one network, **5 independent loops** (west, middle, north-east and
+  the Bay Ring's two). **Kestrel Pass Interchange** is ruling 1's one interchange near the top middle (Highland, Valley,
+  North).
+- **The main line** (ruling 4), double track everywhere: Coast West (Westport Junction - Northshore Junction), Coast
+  East (Northshore Junction - the swing bridge - Dry Creek - Route 9 Junction), The Mountains and the Desert (Route 9
+  Junction - Copper Gulch - Lucky Mesa - along the north edge under the ridge - Red Rock - under the Long Reach - across
+  Willow Valley - the Gorge - the Peaks Tunnel - round the mountain's foot - Timber Bend - Westport Junction), the Bay
+  Bridge Line (Northshore - the Bay Bridge's rail deck - Old Town - today's tunnel under the core - Metro Junction), the
+  Harbor Line segment (Metro Junction - the Harbor Bridge - Westport Center - West Hills - the Strait Bridge - Westport
+  Junction), the Cedar Line (Metro Junction - The Yards - the Cedar Bridge - Cedar Falls - the East Toll Bridge -
+  Sandpiper Bay - a tunnel - Route 9 Junction). The services, each both ways: the **Grand Loop** (Coast West, Coast
+  East, the Mountains and the Desert: 11 stops), the **Bay Loop** (the Bay Bridge Line, the Cedar Line, Coast East back:
+  8 stops), the **Harbor Line** (Westport, Metro City, Northshore: 6 stops). Northshore is the hub: its station is at the
+  junction and all three stop there.
+- **Subways** (ruling 5): Line 1 from Northshore (underground), beside the Bay Bridge on a viaduct, under Metro City
+  (Northgate, Downtown, Southside), a viaduct to the airport, under it, the sea viaduct to Cedar Isle and the loop under
+  it (Cedar Falls, Falls Center, Lake District). Line 2: the loop under Westport (Westport Center, Lakeview, Old
+  Quarter), over the harbour (Stadium District), under Metro City (Civic Center, Midtown), out to Southbank.
+
+**The numbers** (`skeletonSummary()`): highways 19.8 km, arterials 31.3 km, main line 16.1 km of route (32 km of
+track), subways 4.6 km, ferries 9.1 km. Tunnels: 7 on highways (2.2 km), 1 on an arterial (0.24 km), 6 on the main line
+(1.8 km), 8 subway stretches underground (2.9 km). Bridges: 7 highway (2.5 km), 8 arterial (2.5 km, 5 of them the
+causeway's hops), 6 main line (1.5 km), 5 subway viaducts (1.8 km). Stations: 33. Crossings worked out from the data:
+20 bridges (a highway over the rail, or a road over the rail in a town), 16 overpasses, 10 gated level crossings, 7
+interchanges (at towns and at Kestrel Pass), 4 intersections, 1 flyover (the Cedar Line over subway line 1), and 28
+places where two lines cross but one is in a tunnel there (nothing built). Junctions where lines end on others: 11
+interchanges, 17 intersections, 6 rail junctions.
+
+**Decided here - for the owner to look at**
+1. **The Gorge Junction.** The Granite Peaks Highway ends on the Highland Highway at the Gorge (a fork), and the two
+   run on together the last 550 m to Kestrel Pass - the owner's lines meet at the Gorge and go on as one.
+2. **Two interchanges by Westport**, as drawn: Westport Junction (the Highland Highway) and the Strait Interchange (the
+   Bay Ring), 240 m apart on the Coast Highway.
+3. **Roadless areas:** the owner's wiggly forest loop west of Timber Bend and the loop through the north of the Egret
+   Coast are left out (ruling 2: big roadless areas in the forest), as are the farm crosses at the top of the valley
+   (county roads, not arterials) and a road from Copper Gulch north to Lucky Mesa (the eastern desert between Route 9
+   and the Desert Highway stays empty but for the Mine, Canyon and Hollow roads). Added from the markup: the Mesa Road
+   (north of the reservoir, Kestrel Road to Lucky Mesa) and the Mine Road's run west to Willow Crossing.
+4. **Granite Peaks' three:** the Summit Road (along the top, with a 240 m tunnel), the Falls Pass Road (from the
+   Summit Road down past Silver Thread Falls to Timber Bend - my reading of the owner's lines there) and the Lookout
+   Road (to a new Granite Lookout).
+5. **Subway line 1 beside the Bay Bridge** is a viaduct: ruling 5's text says "under the bay by the Bay Bridge", but
+   the markup draws that stretch solid, and solid means a viaduct. Moving stretch `[1, 3]` from `bridges` to `tunnels`
+   makes it a tunnel.
+6. **The main line in the islands** runs in today's tunnel under Metro City's core (no room for a double track at
+   grade; the markup's line there is under the other colours), and its curves there are 200 m (the Bay Ring's, on
+   today's ring roads, 120 m); everywhere else 300 m. **The Grand Loop crosses the Long Reach in a tunnel** (dotted on
+   the markup), so boats pass over it.
+7. **Curves that needed room:** the owner's subway loops are drawn 100 to 200 m across; at about 110 m radius they come
+   out a little bigger (about 230 m squares with round corners). Timber Bend's station is at the town's south edge,
+   where the main line's 300 m curve passes. The tests hold every line to within 20% of its radius.
+8. **Port Westport** is a 90 x 280 m strip on the west channel, which is about 200 m wide there; if the port
+   wants more, the Egret arm's coast could move west.
+9. **The west sea road** is a causeway hopping four Egret Rocks to Gull Harbor (`mayBeTunnel: true` marks it, drawn
+   with a blue core on the picture); the car ferry stays.
+
+**Tests** (`test/world3.test.js`, about a second): the skeleton is plain data in integer tiles and builds the same
+every time with no engine-dependent maths; no highway dead-ends (every end at an interchange on another highway or a
+closed tunnel mouth at the edge, which is in a tunnel), one highway network with at least three independent loops,
+nothing at grade on a highway; the main line one network, every station on its line, each service's segments joined
+end to end into a loop and every stop on its route, every main-line station served; every town within 120 m of an
+arterial or a highway; every curve within its kind's radius, measured on the paths; every crossing found from the
+data, classified by the rules and none where a line is in a tunnel.
+
+**Next:** the region generators read their region's share of it (the roads and rails entering at the positions fixed
+here); the skeleton's hash joins the join check (part 4.3, item 5); the train, coach and ferry timetables run on these
+lines.

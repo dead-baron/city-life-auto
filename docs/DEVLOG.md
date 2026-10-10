@@ -6182,3 +6182,28 @@ the 40 seconds the scene allows, then gave up and drove off. The way round on fo
 the corner and in at the door) was only worked out for walks longer than 90 px; now it's worked out whenever the
 straight line is blocked, however short. 200 runs since: none failed. The test's worlds are seeded now as well, so
 the passers-by and the traffic are the same each run. `server/systems/ems.js`; `test/ems.test.js`.
+
+## 2026-10-10 · World v3's skeleton as data, and the map picture drawn from it
+
+The owner marked up the World v3 draft layout ("I want to make sure the highway systems loop around in a logical way
+so its easy to connect throughout the world through the highways and there are long stretches of highway to travel
+on"; "I want the main train system to loop around the entire world ... should be scenic the entire way") and the
+rulings of WORLD-V3.md part 5 turned it into a plan. Now that plan is data: `shared/world3-skeleton.js` holds the coast
+and the islands (Westport's new container port on its west shore), the biome areas with a raised North Ridge along the
+north edge, the river and the lakes, the eight highways (three loops and more, the Granite Peaks, Highland, Valley and
+North highways meeting at Kestrel Pass, closed tunnel mouths where they run off the map), 25 arterials (Granite Peaks
+thinned to three, roadless areas kept in the forest and the eastern desert, the west sea road a causeway hopping four
+new islets to Gull Harbor), the main line as a graph of double-track segments with its three services (the Grand Loop,
+the Bay Loop, the Harbor Line), the two subway lines, the ferries, 33 stations, the towns and landmarks. Each line is
+its control points, turned on arcs of its kind's radius (highways 250 m, the main line 300 m, subways 120 m, arterials
+50 m), with tunnel and bridge stretches between control points. `skeletonCrossings()` works out every place two lines
+cross and what is built there by rule (an interchange, an overpass, a bridge, a gated level crossing, an
+intersection, or nothing where one is in a tunnel), and `skeletonSummary()` adds it up: 19.8 km of highway, 31.3 km of
+arterials, 16.1 km of main line, 4.6 km of subway, 22 tunnels and 26 bridges, 58 crossings. The new
+`docs/world-v3-layout-v2.png` is drawn from the data (`tools/world3-skeleton.mjs` writes it as JSON,
+`tools/world-v3-skeleton.py` draws it in the draft's style, or over the owner's markup to check the tracing). Nothing
+live imports it yet. What was decided on the way, for the owner to look at, is in WORLD-V3.md part 6.
+`shared/world3-skeleton.js`, `tools/world3-skeleton.mjs`, `tools/world-v3-skeleton.py`, `docs/world-v3-layout-v2.png`,
+`docs/WORLD-V3.md` part 6. Tests: test/world3.test.js (plain data, the same every time, no engine-dependent maths; no
+highway dead ends, one network with at least three loops, nothing at grade; the main line connected, every station on
+its line, every service joined up; every town near a road; every curve within its radius; every crossing classified).

@@ -427,7 +427,7 @@ const nearTown = (x, y, d) => TOWNS.some((t) => (t.at[0] - x) ** 2 + (t.at[1] - 
 // interchange where they meet at a named one, else a flyover; highway x arterial an overpass (an interchange at a
 // town); highway x rail a bridge; arterial x rail a level crossing (a bridge in towns); arterial x arterial an
 // intersection; rail x rail a flyover. Nothing where either is in a tunnel there. Where a line ends on another (a road
-// joining a road, a branch line at its junction) that's a junction, not a crossing - listed as `meets`.
+// joining a road, a branch line at its junction) that's a junction, not a crossing - gathered into `junctions` (nodes).
 // Subways are grade-separated wherever they're out of their tunnels (a viaduct passes over); ferries cross nothing.
 const RAIL = { main: 1, sub: 1 };
 export function crossingKind(ka, kb, x, y) {
