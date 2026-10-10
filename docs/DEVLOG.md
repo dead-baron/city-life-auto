@@ -6380,5 +6380,10 @@ Tests:
   fists and each weapon; the page and the classic body know it.
 - `test/bowling.test.js` (+1): a ball return per pair of lanes, the settees, each solid; walking at a settee you stop
   short.
+- Two tests adjusted for NPCs that guard:
+  - `test/blades.test.js`: the finisher's victim keeps the guard down. Its roll of 0 would otherwise raise it.
+  - `test/brawls.test.js`: "stopped fighting once the police were on it" now counts only the knockdowns after the
+    officers got out. A knockdown during the fight before they arrived isn't the police's.
 - These pass as before: `test/nightclubs.test.js`, `test/crime.test.js`, `test/witnesses.test.js`, `test/art2.test.js`,
-  `test/dmath.test.js`, the rest of the files above.
+  `test/dmath.test.js`, `test/perf.test.js`, `test/streetlife.test.js`, `test/police.test.js`, `test/arrests.test.js`,
+  `test/gameplay.test.js` and the rest of the files above.
