@@ -110,3 +110,23 @@ test('time per look: the game\'s figure, a creator thumbnail and the preview\'s 
   assert.ok(thumb < 0.08, `a creator thumbnail: ${thumb.toFixed(4)} yardsticks`);
   assert.ok(bust < 0.5, `the preview's close-up: ${bust.toFixed(4)} yardsticks`);
 });
+
+test('the eye colour shows at the game\'s size: the eye\'s pixel takes the colour, still standing out from the skin (task #429)', async () => {
+  const { packGBuf, downsample2 } = await import('../client/art2/gbuf.js');
+  const base = JSON.parse(JSON.stringify(LK.STARTERS[0].look)); base.outfit.hat = null; base.outfit.glasses = null;
+  const head = (eye) => {
+    const L = JSON.parse(JSON.stringify(base)); L.face.eyeColor = eye;
+    const D = downsample2(packGBuf(person(LK.lookArt(L, {}), 0, 'idle', 0, { tight: true }))), out = [];
+    for (let y = 0; y < Math.floor(D.h / 3); y++) for (let x = 0; x < D.w; x++) { const i = (y * D.w + x) * 4; if (D.p0[i + 3]) out.push([D.p0[i], D.p0[i + 1], D.p0[i + 2]]); }
+    return out;   // (the top third, the head: its art pixels' colours)
+  };
+  const idx = (name) => LK.EYE_COLORS.findIndex((c) => c[1] === name);
+  const blue = (c) => c[2] > c[0] + 60 && c[2] > c[1] + 30, green = (c) => c[1] > c[0] + 25 && c[1] > c[2] + 25;
+  assert.ok(head(idx('Blue')).filter(blue).length >= 1, 'blue eyes: a blue pixel in the face');
+  assert.equal(head(idx('Dark brown')).filter(blue).length, 0, 'dark brown eyes: none');
+  assert.ok(head(idx('Green')).filter(green).length >= 1, 'green eyes: a green pixel in the face');
+  assert.ok(head(idx('Light blue')).filter(blue).length >= 1, 'light blue eyes too');
+  // every colour gives the eye its own pixel colour: eight colours, eight different eyes (the face otherwise the same)
+  const eyeOf = (eye) => { const want = LK.EYE_COLORS[eye][0], w = [1, 3, 5].map((i) => parseInt(want.slice(i, i + 2), 16)); return head(eye).reduce((a, c) => (Math.hypot(c[0] - w[0], c[1] - w[1], c[2] - w[2]) < Math.hypot(a[0] - w[0], a[1] - w[1], a[2] - w[2]) ? c : a)).join(); };
+  assert.equal(new Set(LK.EYE_COLORS.map((_, i) => eyeOf(i))).size, LK.EYE_COLORS.length);
+});

@@ -5318,3 +5318,29 @@ A new **Explosions** section in the debug menu (`client/devcats.js`; `server/dev
 **Tests:** `test/explosions.test.js`:
 - only in dev mode; small, medium, big and ultra go off ahead of you at the game's own sizes;
 - the car, the tanker and the explosives truck burn a few steps away and then go up; the row of cars and the crowd are placed round the tanker.
+
+## 2026-10-10 · The death screen never covers the scene; hide its choices to watch (task #403)
+The owner (a reminder): "The death menu shouldn't cover the screen, and you can back out of its buttons (call for help, call an ambulance, select spawn) to see the scene without them."
+- **The scene first.** For the first few seconds (`DEATH_REVEAL_S`) there is only the title (DOWN or WASTED) over where it happened, the camera pulling back, red at the edges round it (U11). The dark band across the middle of the screen is gone.
+- **Then a compact panel docked at the bottom** (U11): how you went down, the countdown, Call for help, the ambulance, cancel the request, and where to wake up. That last is one spot at a time with arrows beside it, instead of a row of buttons. Everything else stays in view.
+- **Hide it to watch.** Esc, B on a pad, or the panel's ▾ hide button folds it to a slim bar with the countdown and how to bring the choices back; the same control, or a tap on the bar, opens it again. While it's down, the touch controls and the job line are hidden. LB now cancels a help request on a pad, since B hides the panel.
+- **Out of the page's first load:** the death screen is `client/deathscreen.js`, fetched a few seconds into the game (not with the page), so it's there the first time you go down. The page's code is 0.4 KB smaller.
+- **Tests:** `test/campfire-ui.test.js`: the scene first, then the choices; back folds them and opens them again, and does nothing before they're up; it all resets when you're alive again; the countdown runs on between the server's updates.
+
+## 2026-10-10 · By a campfire: the prompt fades, then the HUD, for the scene (task #375)
+The owner: "the ACT popup (put out the fire / get up) stays up too long. Fade it after a few seconds. Sit long enough and the UI fades for a nice scene."
+- Sitting by a fire, the prompt fades after 4 s of not touching anything (`CALM_PROMPT_S`), and after 20 s the whole HUD fades too (`CALM_HUD_S`, `shared/rules.js`): the radar, the money, the buttons, the touch controls.
+- Anything you press, move or touch brings it all back at once (`input.activeAt`, `hud.js` `calm`). On a phone the first touch only wakes the screen, so it can't press a button you couldn't see (putting the fire out, say).
+- **Tests:** `test/campfire-ui.test.js`: nothing fades when you're not sitting; the prompt first, then the HUD; anything you do brings them back.
+
+## 2026-10-10 · Fewer campfire embers; a crackle sends a few more now and then (task #390)
+The owner: "embers too intense. A few embers floating up; now and then a bigger crackle sends more - subtle, not constant; cozy and natural."
+- The cause: every loud crackle the ambience played (two or three a second) flared the fire with about 13 embers, a burst of flame and a flash: over 20 embers a second, all the time.
+- **Now** (`client/render/campfx.js` `EMBERS`): each fire lets about one ember a second drift slowly up (0.6 on Low). A loud crackle flares it only now and then: never sooner than 4-9 s after the last flare. A flare sends 3-6 embers, one lick of flame and a smaller, shorter flash. A fire you can't hear flares on its own about once every 15 s.
+- **Tests:** `test/campfire-ui.test.js`: about one ember a second at rest; crackling all the time it still flares only every few seconds, under 3.5 embers a second (it was over 20); fewer on Low.
+
+## 2026-10-10 · The eye colour shows on the character (task #429)
+The owner: "choosing an eye colour in the creator doesn't visibly change the character. Deliver it in the SNES style or remove the option."
+- At the game's size an eye is one art pixel. It was 42% the chosen colour and 58% a dark base, so every colour came out as nearly the same dark dot, in the game and in the creator (which shows the game's own sprite).
+- Now the eye's pixel takes the colour (80% of it), darkened only as far as it needs to stand out from the skin round it (`client/art2/people.js` `face`). Blue, green, grey, light blue and amber eyes read as their colours; dark brown stays dark. The creator's close-up renders already drew a coloured iris.
+- **Tests:** `test/peoplelook.test.js`: blue eyes give a blue pixel in the face and dark brown none; green a green one; light blue too; all eight colours give eight different eye pixels.

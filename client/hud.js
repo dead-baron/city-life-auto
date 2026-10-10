@@ -7,10 +7,15 @@ import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/map.js';
 import { weaponIcon } from './render/peds.js';
-import { DEATH_REVEAL_S } from '../shared/rules.js';
 import { iconURL } from './pixicons.js';
+import { CALM_PROMPT_S, CALM_HUD_S } from '../shared/rules.js';
 
 const $ = (id) => document.getElementById(id);
+// what's faded by a campfire (#375), from when you sat down and last did anything (ms): { prompt, hud }
+export function calmState(sitAt, activeAt, now) {
+  const idle = sitAt ? (now - Math.max(sitAt, activeAt || 0)) / 1000 : 0;
+  return { prompt: idle > CALM_PROMPT_S, hud: idle > CALM_HUD_S };
+}
 const thumbs = new Map();
 function weaponThumb(i) { if (!thumbs.has(i)) thumbs.set(i, weaponIcon(i).toDataURL()); return thumbs.get(i); }
 const WEAPON_BY_ID = WEAPONS;
@@ -30,6 +35,9 @@ export class HUD {
     // tapping (or clicking) anywhere off the menu panel backs out of it too - no hunting for the ✕
     $('menu').addEventListener('pointerdown', (e) => { if (this.menuOpen && !e.target.closest('.panel')) { e.preventDefault(); this.closeMenu(); } });
     this.lastStars = 0;
+    this.dp = { at: 0, fold: false };   // (the death screen's: client/deathscreen.js)
+    // (the HUD faded by a campfire: the first touch only wakes it, so it can't press a button you couldn't see)
+    addEventListener('touchstart', (e) => { if (this.calmH) { this.calm(true, input.activeAt = performance.now()); e.preventDefault(); e.stopPropagation(); } }, { passive: false, capture: true });
   }
 
   setMe(me) {
@@ -213,61 +221,28 @@ export class HUD {
       $('j-bail').disabled = !cu.can;
       $('j-note').textContent = cu.can ? 'From your bank, then your cash.' : `You don't have $${cu.bail} - wait it out.`;
     } else jl.classList.add('hidden');
-    // death
-    const d = $('death');
-    if (me.dead) {
-      d.classList.remove('hidden');
-      // first the scene where it happened, the camera pulling back (main.js), then the choices (the user, 2026-10-08)
-      const nowMs = performance.now();
-      this.deadSince ||= nowMs;
-      this.deathRevealed = nowMs - this.deadSince >= DEATH_REVEAL_S * 1000;
-      d.classList.toggle('reveal', this.deathRevealed);
-      $('d-cause').textContent = me.deathCause || '';
-      const opts = me.spawnOpts || [];
-      const chosen = opts.find((o) => o.id === me.spawnChoice);
-      const dn = me.down;
-      $('d-title').textContent = dn && !dn.finished ? 'DOWN' : 'WASTED';
-      const left = Math.ceil(me.respawnIn);
-      $('d-timer').textContent = me.respawnIn > 0 ? (dn && !dn.finished
-        ? `${dn.help ? 'Waiting for help' : 'You can still be revived'} · waking up${chosen ? ' at ' + chosen.label : ''} in ${left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : left + 's'}`
-        : `Waking up${chosen ? ' at ' + chosen.label : ''} in ${left}...`) : '';
-      // downed: call for help (again: re-alert), the ambulance, give up and wake up now
-      const hb = $('d-help');
-      const pad = input.device === 'gamepad', kb = input.device === 'keyboard';
-      const k = (key, padBtn) => (kb ? ` <i>${key}</i>` : pad ? ` <i>${padBtn}</i>` : '');
-      const amb = dn && dn.amb ? ['ambx', `🚑 Cancel ambulance${k('J', 'Y')}`, 'amb on'] : ['amb', `🚑 Call an ambulance $${dn ? dn.fee : ''}${dn && dn.ambUsed ? ' (used)' : ''}${k('J', 'Y')}`, dn && dn.canAmb ? 'amb' : 'amb off'];
-      const btns = !dn || dn.finished ? [] : !dn.help
-        ? [['help', `<b class="medic">✚</b> Call for help${k('H', 'X')}`, 'help'], amb]
-        : [['help', `<b class="medic">✚</b> Call again${k('H', 'X')}`, 'help'], amb,
-          ['cancel', `✕ Cancel request${k('C', 'B')}`, 'cancel']];
-      const hsig = btns.map((b) => b[1] + b[2]).join('|');
-      if (hb.dataset.sig !== hsig) {
-        hb.dataset.sig = hsig; hb.innerHTML = '';
-        for (const [a, html, cls] of btns) {
-          const b = document.createElement('button');
-          b.className = 'help-btn ' + cls; b.innerHTML = html; b.dataset.a = a;
-          b.disabled = cls.endsWith('off');
-          b.onclick = () => this.onDown?.(a);
-          hb.appendChild(b);
-        }
-        if (dn && !dn.finished && !dn.canAmb && !dn.amb && !dn.ambUsed) { const n = document.createElement('small'); n.textContent = `(an ambulance needs $${dn.fee} in the bank)`; hb.appendChild(n); }
-      }
-      const box = $('d-spawn');
-      const sig = opts.map((o) => o.id).join() + '|' + me.spawnChoice + '|' + input.device;
-      if (box.dataset.sig !== sig) {
-        box.dataset.sig = sig;
-        box.innerHTML = opts.length ? '<div class="d-lbl">Wake up at:</div>' : '';
-        for (const o of opts) {
-          const b = document.createElement('button');
-          b.className = 'spawn-opt' + (o.id === me.spawnChoice ? ' on' : '');
-          b.textContent = (o.kind === 'home' ? '⌂ ' : '✚ ') + o.label;
-          b.onclick = () => { box.querySelectorAll('.spawn-opt').forEach((x) => x.classList.remove('on')); b.classList.add('on'); this.onRespawn?.(o.id); };
-          box.appendChild(b);
-        }
-      }
-    } else { d.classList.add('hidden'); d.classList.remove('reveal'); this.deadSince = 0; this.deathRevealed = false; }
+    this.deathScreen(me);
     void prev;
   }
+
+  // the death screen (task #403): client/deathscreen.js, fetched a few seconds into the game (not with the page), so it's
+  // there the first time you go down
+  deathScreen(me) {
+    if (this.DS) { this.DS.draw(this, me); return; }
+    this.dsSoon ||= setTimeout(() => this.loadDS(), 6000);
+    if (me.dead) this.loadDS();
+  }
+  loadDS() { this.dsLoad ||= import('./deathscreen.js').then((m) => { this.DS = m; if (this.me) m.draw(this, this.me); }).catch(() => { this.dsLoad = null; }); }
+  // sitting by a campfire (task #375): its prompt fades after CALM_PROMPT_S still, the HUD after CALM_HUD_S; anything
+  // pressed, moved or touched brings them back at once (a touch then only wakes the screen)
+  calm(sitting, now) {
+    if (!sitting) this.sitAt = 0; else this.sitAt ||= now;
+    const { prompt: p, hud: h } = calmState(this.sitAt, input.activeAt, now);
+    if (p !== !!this.calmP) { this.calmP = p; $('helpbox').classList.toggle('calm', p); }
+    if (h !== !!this.calmH) { this.calmH = h; document.body.classList.toggle('calm', h); }
+  }
+  deathBack() { return !!this.DS && this.DS.back(this); }   // (Esc / B: the choices folded away to watch, and back)
+  stepSpawn(s) { if (this.DS) this.DS.step(this, s); }
 
   // the clock in the HUD's top-right column, and on the minimap's plate (a phone held upright: the sun or the moon, the
   // time, a rain cloud when it rains) - written only when the minute or the weather changes

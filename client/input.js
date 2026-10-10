@@ -24,6 +24,7 @@ let walkToggle = false;
 
 export const input = {
   device: 'keyboard', // 'keyboard' | 'gamepad' | 'touch' - drives button glyphs and help text
+  activeAt: 0,
   usingTouch: false, usingPad: false, menuNav: 0, menuSelect: false, menuBack: false, padStart: false,
   onDevice: null,
 };
@@ -80,6 +81,7 @@ export function detectDevice() {
 
 export function initInput(canvas, hooks) {
   addEventListener('keydown', (e) => {
+    input.activeAt = performance.now();   // (anything pressed, moved or touched: the HUD's calm by a campfire)
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     if (typeof e.key === 'string' && e.key.startsWith('Gamepad')) { e.preventDefault(); return; } // Xbox Edge mirrors the pad as keys
     const k = e.code;
@@ -93,7 +95,7 @@ export function initInput(canvas, hooks) {
   });
   addEventListener('keyup', (e) => { keys.delete(e.code); hooks.onKeyUp?.(e.code); });
   addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.rdown = false; });
-  canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.movedAt = performance.now(); if (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents) setDevice('keyboard', 'mouse'); });
+  canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.movedAt = input.activeAt = performance.now(); if (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents) setDevice('keyboard', 'mouse'); });
   canvas.addEventListener('mousedown', (e) => {
     if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
     if (e.button === 0) { mouse.down = true; mouse.clicked = true; }
@@ -109,7 +111,7 @@ export function initInput(canvas, hooks) {
 
 // ---- touch: floating left stick, fixed aim stick with a fire ring, contextual buttons ----------
 function initTouch(hooks) {
-  addEventListener('touchstart', () => setDevice('touch'), { passive: true, capture: true });
+  addEventListener('touchstart', () => { input.activeAt = performance.now(); setDevice('touch'); }, { passive: true, capture: true });
   const zone = document.getElementById('zone-l');
   const stickL = document.getElementById('stick-l');
   floatingStick(zone, stickL, (x, y) => { touch.lx = x; touch.ly = y; });
@@ -339,6 +341,7 @@ export function sample(view) {
   // when that bumper is let go (each -1 LB, 1 RB or 0)
   const bump = p ? bumpers.step(p.lb, p.rb, performance.now()) : { tap: 0, hold: 0, release: 0 };
   input.wheelHold = bump.hold; input.wheelRelease = bump.release; input.wheelHeld = p ? bumpers.held : 0;
+  input.padLB = bump.tap < 0 || bump.hold < 0;   // (LB pressed, a tap or held: the death screen's cancel)
   input.padAxes = p ? { lx: p.lx, ly: p.ly, rx: p.rx, ry: p.ry, lt: p.lt, rt: p.rt } : null; // the raw sticks and triggers (the city map zooms and pans with them)
   input.padX = !!(p && p.xEdge); input.padY = !!(p && p.yEdge); input.padRight = !!(p && p.dRightEdge); input.padView = !!(p && p.back); input.padViewEdge = !!(p && p.viewEdge);
   if (p) {
@@ -397,6 +400,7 @@ export function sample(view) {
   }
   const ml = Math.hypot(mx, my);
   if (ml > 1 && !(bits & IN.TANK)) { mx /= ml; my /= ml; } // tank: steer and gas are independent axes
+  if (bits || mx || my) input.activeAt = performance.now();
   return { bits, mx, my, aim };
 }
 
