@@ -92,6 +92,50 @@ test('the railway: one huge loop through every main island - subway under the co
   assert.ok(w.trains.some((t) => t.mail >= 0), 'a mail train');
 });
 
+test('the trains never run through a building or a lot: nothing built stands across the line where it runs at grade (task #419)', () => {
+  const m = makeWorld().map, r = m.rail, W = m.w;
+  // every tile a train's body passes over at grade (its full width, 76 px), and where
+  const band = new Map();
+  for (let i = 0; i < r.pts.length; i++) {
+    const p = r.pts[i], q = r.pts[(i + 1) % r.pts.length];
+    if (p.under) continue;
+    const a = Math.atan2(q.y - p.y, q.x - p.x), nx = -Math.sin(a), ny = Math.cos(a);
+    for (let off = -38; off <= 38; off += 4) band.set(Math.floor((p.y + ny * off) / 32) * W + Math.floor((p.x + nx * off) / 32), p);
+  }
+  assert.ok(band.size > 5000, `the line at grade (${band.size} tiles)`);
+  const where = (k) => `tile ${k % W},${Math.floor(k / W)} (${m.districtAt((k % W) * 32, Math.floor(k / W) * 32).name})`;
+  // no building, no wall, no paved lot under it
+  for (const k of band.keys()) {
+    assert.ok(m.bld[k] < 0, `the line runs through ${m.buildings[m.bld[k]] && m.buildings[m.bld[k]].name} at ${where(k)}`);
+    assert.ok(![T.BUILDING, T.WALL, T.LOT, T.FLOOR, T.COUNTER].includes(m.tiles[k]), `the line runs over a ${Object.keys(T).find((n) => T[n] === m.tiles[k])} tile at ${where(k)}`);
+  }
+  // and no lot anywhere across it: the buildings and their painted lots, the police motor pools and the gates, garages
+  // and bays, the stations' car parks, the sites out in the country, the venues and the farm fields (tile rects)
+  const rects = [
+    ...m.buildings.filter((b) => !b.gone).map((b) => ['building ' + b.name, b.tx, b.ty, b.tw, b.th]),
+    ...m.prefabs.filter((p) => p.tw).map((p) => ['the lot of a ' + p.key, p.tx, p.ty, p.tw, p.th]),
+    ...(m.motorPools || []).map((p) => ['a police motor pool', p.tx, p.ty, p.tw, p.th]),
+    ...m.gates.filter((g) => g.rect).map((g) => ['a gated yard', g.rect.tx, g.rect.ty, g.rect.tw, g.rect.th]),
+    ...[...(m.garages || []), ...(m.bays || [])].map((g) => ['a garage', g.tx, g.ty, g.tw, g.th]),
+    ...(m.stationLots || []).map((l) => [`${l.name} station's car park`, l.x, l.y, l.w, l.h]),
+    ...(m.countrySites || []).map((c) => [c.name, c.x, c.y, c.w, c.h]),
+    ...m.venues.map((v) => [v.name, Math.floor(v.rect.x / 32), Math.floor(v.rect.y / 32), Math.ceil(v.rect.w / 32), Math.ceil(v.rect.h / 32)]),
+    ...m.fields.map((f) => ['a farm field', Math.floor(f.x / 32), Math.floor(f.y / 32), Math.ceil(f.w / 32), Math.ceil(f.h / 32)]),
+  ];
+  assert.ok(rects.length > 1000 && (m.motorPools || []).length >= 5, `${rects.length} lots, ${(m.motorPools || []).length} motor pools`);
+  for (const [name, x0, y0, w, h] of rects) for (let ty = y0; ty < y0 + h; ty++) for (let tx = x0; tx < x0 + w; tx++) {
+    assert.ok(!band.has(ty * W + tx), `the line runs through ${name} at ${where(ty * W + tx)}`);
+  }
+  // nor a car parked across it (the parking spots, the dealer's and the homes' bays: a car's length round each)
+  const spots = [...m.parking, ...(m.dealerLots || []).flatMap((d) => d.slots), ...m.homes.filter((h) => h.garage).map((h) => h.garage)];
+  for (const s of spots) for (const [dx, dy] of [[0, 0], [-36, 0], [36, 0], [0, -36], [0, 36]]) {
+    const k = Math.floor((s.y + dy) / 32) * W + Math.floor((s.x + dx) / 32);
+    assert.ok(!band.has(k), `a parking spot on the line at ${where(k)}`);
+  }
+  // every police station keeps its motor pool
+  for (const st of m.pois.filter((q) => q.kind === 'police')) assert.ok(st.pool !== undefined && m.motorPools[st.pool].station === st.id, `${st.label} has its motor pool`);
+});
+
 test('trains run the loop and stop at every station for the dwell time', () => {
   const w = makeWorld();
   const t = w.trains[1];
