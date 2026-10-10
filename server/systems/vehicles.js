@@ -33,10 +33,11 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
     return;
   }
   if (v.dead) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead: it rolls to a stop)
+  const pvx = v.vx, pvy = v.vy;   // (the way it was going: the end that hit the wall)
   const impact = vehStep(v, v.input, dt, world.map, v.def, env);
   if (impact > 160) {
     const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);
-    crashDamage(world, v, dmg, null, impact);
+    crashDamage(world, v, dmg, null, impact, zoneFrom(v, pvx, pvy));
     world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: Math.min(1, impact / 500) });
     if (v.def.kind === 'bike' && impact > 280) bikeCrash(world, v, impact);
     if (impact > 330) cargo.knockOff(world, v, impact);
@@ -162,8 +163,9 @@ function resolveVehicleHit(world, a, b, hit) {
     const dmg = (impact - 90) * 0.18;
     const da = driverOf(world, a), db = driverOf(world, b);
     const aFaster = speedOf(a) >= speedOf(b);
-    crashDamage(world, a, dmg / Math.sqrt(ma), db, impact);
-    crashDamage(world, b, dmg / Math.sqrt(mb), da, impact);
+    // (each dented on the side the other hit it: hit.n points from b to a - task #402)
+    crashDamage(world, a, dmg / Math.sqrt(ma), db, impact, zoneFrom(a, -hit.nx, -hit.ny));
+    crashDamage(world, b, dmg / Math.sqrt(mb), da, impact, zoneFrom(b, hit.nx, hit.ny));
     world.emit((a.x + b.x) / 2, (a.y + b.y) / 2, { e: 'crash', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, p: Math.min(1, impact / 500) });
     const attacker = aFaster ? da : db, victimV = aFaster ? b : a;
     if (attacker && impact > 180) law.vehicleRam(world, attacker, victimV, impact);
@@ -222,30 +224,93 @@ export function toughOf(def) { return def.kind === 'bike' ? VEHICLE_TOUGH.bike :
 // Damage. raw: already scaled (trains, rockets). boom: if this takes the last of its health it explodes on the
 // spot (a rocket, a blast, a crash hard enough); otherwise running out of health kills the engine (killEngine).
 // A vehicle already dying: a blast or a rocket sets it off at once, gunfire brings the end sooner.
-export function damageVehicle(world, v, amount, attackerPed, raw = false, boom = false) {
+// zone (shared/vehicles.js VZ): the side it was hit on, for the dents the clients draw there (task #402).
+export function damageVehicle(world, v, amount, attackerPed, raw = false, boom = false, zone = 0) {
   if (v.wreckAt || amount <= 0 || v.ferry) return;   // (the ferries can't be hurt: ferries.js)
   const dmg = raw ? amount : amount / toughOf(v.def);
   if (attackerPed) v.lastAttacker = attackerPed.id;
+  if (zone) noteHit(v, zone, dmg);
   if (v.dead) {
     if (boom) explode(world, v, attackerPed);
     else if (!v.chain) v.deadBoomAt = Math.max(world.time + 0.5, v.deadBoomAt - dmg / 25);   // (set off in a chain reaction: it goes up in its turn - explosions.js)
     return;
   }
   v.hp -= dmg;
-  if (v.hp > 0) return;
+  if (v.hp > 0) { shedParts(world, v); return; }
   v.hp = 0;
   if (boom || v.def.pedal) explode(world, v, attackerPed); // (a bicycle just buckles)
   else killEngine(world, v, attackerPed);
 }
 // A crash: a hard one (closing speed over CRASH_BOOM_IMPACT) blows a motorcycle up on the spot, and anything else
 // that was already badly damaged (or that it finishes off); the rest is ordinary damage.
-function crashDamage(world, v, dmg, attackerPed, impact) {
+function crashDamage(world, v, dmg, attackerPed, impact, zone = 0) {
   if (v.wreckAt) return;
   if (v.hardHitAt !== world.time || impact > v.hardHit) { v.hardHit = impact; v.hardHitAt = world.time; }   // (custody.js: a bad crash can throw a prisoner out)
   const hard = impact > CRASH_BOOM_IMPACT && !v.def.pedal && v.def.kind !== 'boat';
+  if (zone) noteHit(v, zone, dmg);
   if (hard && (v.def.kind === 'bike' || v.dead || v.hp < v.def.hp * CRASH_BOOM_HP)) { explode(world, v, attackerPed); return; }
   damageVehicle(world, v, dmg, attackerPed, false, hard);
 }
+
+// ---- damage you can see (task #402; the owner: "dents and parts falling off as it worsens") ----
+// Where it's been hit (v.dz: the VZ sides; v.zh: how hard on each - front, back, left, right), how many bullets it's
+// taken (v.holes), the parts gone or hanging (v.off: VPART) - the clients draw it all from vehDamageWord. As it gets
+// worse parts come off ('vpart' events: the clients throw them and leave them lying): at CRUMPLED (below 35%, smoking)
+// the bumper at the end that took the most; once the engine's dead the bonnet (if the front was hit) - and a door's
+// left hanging on the side that took the most, a front wheel buckled.
+const ZONE_I = { [VZ.F]: 0, [VZ.B]: 1, [VZ.L]: 2, [VZ.R]: 3 };
+export function noteHit(v, zone, amt) {
+  if (!(zone in ZONE_I)) return;
+  v.dz = (v.dz || 0) | zone;
+  (v.zh ||= [0, 0, 0, 0])[ZONE_I[zone]] += Math.max(0.01, amt);
+}
+// the side of v a world point is on (VZ), or of the way something came at it (dx, dy: a direction, unit box)
+export const zoneAt = (v, x, y) => hitZone(v.x, v.y, v.a, v.def.L / 2, v.def.W / 2, x, y);
+export const zoneFrom = (v, dx, dy) => hitZone(v.x, v.y, v.a, 1, 1, v.x + dx, v.y + dy);
+export function shedParts(world, v) {
+  const st = damageStage(v.hp / v.def.hp, !!v.dead, !!v.wreckAt);
+  if (st <= (v.dst || 0)) return;
+  v.dst = st;
+  if (v.def.kind !== 'car' || v.wreckAt) return;   // (bikes and boats: no bumpers or doors to lose; a wreck's pieces are the explosion's)
+  const zh = v.zh || [0, 0, 0, 0];
+  if (st >= VDMG.CRUMPLED && !(v.off & (VPART.BUMPER_F | VPART.BUMPER_B))) shed(world, v, zh[1] > zh[0] ? VPART.BUMPER_B : VPART.BUMPER_F);
+  if (st >= VDMG.HANGING) {
+    if (!(v.off & VPART.BONNET) && zh[0] >= zh[1]) shed(world, v, VPART.BONNET);
+    v.off = (v.off || 0) | (zh[3] > zh[2] ? VPART.DOOR_R : VPART.DOOR_L) | VPART.WHEEL;
+  }
+}
+// a part coming off: thrown clear of the body the way it faces (the clients draw it falling and leave it lying)
+const PART_AT = { [VPART.BUMPER_F]: [0.5, 0, 1, 0], [VPART.BUMPER_B]: [-0.5, 0, -1, 0], [VPART.BONNET]: [0.3, 0, 0.6, 0.8] };
+function shed(world, v, part) {
+  v.off = (v.off || 0) | part;
+  const [fx, fy, ox, oy] = PART_AT[part], c = Math.cos(v.a), s = Math.sin(v.a), side = world.rand() < 0.5 ? -1 : 1;
+  const lx = fx * v.def.L, ly = fy * v.def.W, x = v.x + c * lx - s * ly, y = v.y + s * lx + c * ly;
+  const ux = ox, uy = oy * side, sp = 60 + world.rand() * 50;
+  world.emit(x, y, { e: 'vpart', id: v.id, m: v.def.i, k: part, x: Math.round(x), y: Math.round(y), a: +v.a.toFixed(2), vx: Math.round(v.vx * 0.6 + (c * ux - s * uy) * sp), vy: Math.round(v.vy * 0.6 + (s * ux + c * uy) * sp) });
+}
+// the word on the wire (net.js: a vehicle record's parent field; shared/vehicles.js packVehDamage)
+export function vehDamageWord(world, v) {
+  return packVehDamage({ stage: damageStage(v.hp / v.def.hp, !!v.dead, !!v.wreckAt), zones: v.dz || 0, holes: Math.min(7, Math.ceil((v.holes || 0) / 2)), off: v.off || 0, cut: v.cutQ || 0 });
+}
+// Cut in two by the plasma blade (combat.js; rules.js PLASMA_CUT) at lx along it (from its middle, + toward the nose):
+// the engine dies, everyone tumbles out, the halves slide apart with glowing edges (the clients, from the cut on the
+// wire and the 'vcut' event), it catches at once and explodes PLASMA_CUT.boomS later.
+export function cutVehicle(world, v, attackerPed, lx) {
+  if (v.wreckAt || v.cutQ || v.ferry) return false;
+  const hl = v.def.L / 2, x = Math.max(-hl * 0.4, Math.min(hl * 0.4, lx));
+  v.cutQ = Math.max(1, Math.min(255, 1 + Math.round((x + hl) / v.def.L * 254)));
+  v.cutAt = world.time;
+  v.hp = 0;
+  if (!v.dead) killEngine(world, v, attackerPed);
+  for (const sid of [...v.seats]) { const ped = sid && world.get(sid); if (ped) ejectPed(world, ped, true); }
+  v.deadFireAt = world.time + 0.25; v.deadBoomAt = world.time + PLASMA_CUT.boomS;
+  v.vx *= 0.3; v.vy *= 0.3; v.av = 0;
+  v.input = { throttle: 0, steer: 0, hb: true };
+  world.emit(v.x, v.y, { e: 'vcut', id: v.id, x: Math.round(v.x), y: Math.round(v.y), a: +v.a.toFixed(2), c: v.cutQ });
+  return true;
+}
+// plasma blade hits a vehicle can take before it's cut in two (rules.js PLASMA_CUT)
+export const plasmaCuts = (def) => (def.kind === 'bike' ? PLASMA_CUT.bike : def.kind === 'boat' ? PLASMA_CUT.boat : def.mass >= 2.4 ? PLASMA_CUT.heavy : PLASMA_CUT.car);
 // Out of health: the engine dies and it rolls to a stop, smoking; it catches fire after DEAD_FIRE_S and blows up
 // after DEAD_BOOM_S. Whoever's inside is told to get out; NPCs at the wheel bail and run.
 export function killEngine(world, v, attackerPed) {
@@ -254,6 +319,7 @@ export function killEngine(world, v, attackerPed) {
   v.deadAt = world.time; v.deadFireAt = world.time + DEAD_FIRE_S; v.deadBoomAt = world.time + DEAD_BOOM_S;
   if (attackerPed) v.lastAttacker = attackerPed.id;
   world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: 0.3 });
+  shedParts(world, v);   // (the bonnet off, a door hanging: task #402)
   for (const sid of [...v.seats]) {
     const ped = sid && world.get(sid);
     if (!ped) continue;
@@ -291,7 +357,8 @@ export function explode(world, v, attackerPed) {
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
-import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S } from '../../shared/rules.js';
+import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT } from '../../shared/rules.js';
+import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shared/vehicles.js';
 import * as ferries from './ferries.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {

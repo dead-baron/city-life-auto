@@ -43,9 +43,9 @@ export const hazeSprite = () => sprites()[3];
 
 // the pieces a car blows apart into, drawn small in its paint, scorched: one strip of six per paint
 // (door, hood, wheel, panel, trunk, bumper), cached by paint
-const PIECE_RECT = { d: [0, 16, 10], h: [16, 18, 14], w: [34, 10, 10], p: [44, 14, 8], t: [58, 14, 10], b: [72, 20, 5] };
+export const PIECE_RECT = { d: [0, 16, 10], h: [16, 18, 14], w: [34, 10, 10], p: [44, 14, 8], t: [58, 14, 10], b: [72, 20, 5] };
 const strips = new Map();
-function pieceStrip(paint) {
+export function pieceStrip(paint) {
   let c = strips.get(paint);
   if (c) return c;
   c = document.createElement('canvas'); c.width = 92; c.height = 14;
@@ -148,10 +148,19 @@ export class Booms {
       const [sx, w, h] = PIECE_RECT[p.c] || PIECE_RECT.p, a = a0 + p.a, k = p.c === 'w' ? 1 : 1.2;
       fx.chunk(img, sx, 0, w, h, w * k, h * k, ev.x + Math.cos(a) * def.L * 0.2, ev.y + Math.sin(a) * def.W * 0.2, Math.cos(a) * p.sp, Math.sin(a) * p.sp, p.vz, p.va, 6 + (p.vz % 5));
       const c = fx.chunks[(fx.ci + fx.chunks.length - 1) % fx.chunks.length], b = this.burners[this.bu];
+      c.vp = { k: p.c, paint };   // (what it is: art v2 draws it - host.js _particles)
       this.bu = (this.bu + 1) % this.burners.length;
       b.c = c; b.until = now + 3 + (p.sp % 4); b.acc = 0;
     });
   }
+
+  // a vehicle cut in two, a part off one, the classic view's damage on a car (task #402): render/vehdmg.js, loaded with
+  // the first (the cut's halves slide apart from e.cutAt)
+  vdmg(ev, now) {
+    if (ev && ev.e === 'vcut') { const e = this.S.ents.get(ev.id); if (e) e.cutAt = now; }
+    (this.vdP ||= import('./vehdmg.js').then((m) => (this.vd = m)).catch((e) => { console.warn('[vehdmg]', e); return null; })).then((m) => m && m.vdmg(this, ev, now));
+  }
+  vdmgDraw(g, v, def) { if (this.vd) this.vd.classic(g, v, def); else this.vdmg(null, 0); }
 
   // render/wheels.js: loaded with the first explosion, not with the page
   _wheels() {

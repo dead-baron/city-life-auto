@@ -551,3 +551,17 @@ export const STREET_EVERY_S = 300;        // something like this happens about t
 export const STREET_RACE_COPS = 0.45;     // a street race a patrol car happens on (the police go after the racers)
 export const ARMORED_ESCORT = 0.4;        // an armored truck with a squad car escorting it
 export const ARMORED_UNLOCK_S = 3;        // hold ACT this long at the back of a stopped armored truck to get it open
+
+// Vehicle damage (task #402; the owner: "weapons damage vehicles (strong ones significantly); lightsabers destroy a
+// vehicle in a few hits"). What a weapon does to a vehicle, as a multiple of what it does to a person (then divided by
+// the vehicle's toughness, VEHICLE_TOUGH): a pistol plinks, a rifle or a shotgun blast tears into it - a sedan takes
+// about 10 rifle rounds or 5 shotgun blasts to kill its engine; a sledgehammer dents it, fists barely scuff it.
+export const VEHICLE_WEAPON = {
+  fists: 0.1, bat: 0.5, knife: 0.15, crowbar: 0.7, sledge: 1.2, baton: 0.25, heavyflash: 0.35, sword: 0.4, katana: 0.45, huntknife: 0.15,
+  pistol: 0.6, service: 0.6, spistol: 0.55, revolver: 0.9, smg: 0.5, passault: 0.9, rifle: 1.5, prifle: 1.5, varmint: 1.1, huntrifle: 1.6, psniper: 1.6,
+  shotgun: 1.4, pshotgun: 1.4,
+};
+export const VEHICLE_WEAPON_DEFAULT = 0.6;
+// The plasma blade cuts a vehicle in two: this many hits by kind (a heavy truck or a bus: heavy) and it's sliced through
+// - the halves slide apart (slide px each, over slideS) with glowing edges, the engine dead, and it explodes boomS later.
+export const PLASMA_CUT = { car: 3, heavy: 5, bike: 1, boat: 3, slide: 14, slideS: 0.7, boomS: 1.8 };
