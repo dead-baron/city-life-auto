@@ -806,7 +806,7 @@ export function vehicleModel(type, o = {}) {
   const [L, W] = VEHICLE_DIMS[type] || VEHICLE_DIMS.sedan;
   if (!VEHICLE_DIMS[type]) return vehicleModel('sedan', o);
   const tall = VEHICLE_TALL[type] || 36;
-  const m = new Vox(L, W, tall + (type === 'policeboat' ? 16 : 11));
+  let m = new Vox(L, W, tall + (type === 'policeboat' ? 16 : 11));   // (let: a door hanging open widens it - hangDoors)
   m.anchors = { head: [], tail: [], rev: [], brake: [], siren: [], fire: [], seat: null, exhaust: null, wake: null, bed: null };
   // variant bits: rack (roof rails / ladder rack / basket), box (roof box on a rack), rusty, twoTone, sunroof
   const v = (o.variant | 0) & 7, V = { rack: !!(v & 1), box: (v & 3) === 3, rusty: v >= 6, twoTone: v === 4 || v === 5, sunroof: v === 2 };
@@ -1328,7 +1328,10 @@ export function vehicleModel(type, o = {}) {
     deco(m, M.rust, 0, 0, 0, L, W, 14, (x, y, z, vv, side) => vv === M.body && side !== 'z' && vnoiseLite(x, y, z) > 0.78);
   }
   if (o.bloody) deco(m, M.blood, L * 0.8, 0, 0, L, W, m.h, (x, y, z, vv) => vv !== M.glass && vv !== M.tyre && vnoiseLite(x * 1.6, y * 1.6, z * 1.6) > 0.55);
-  if (o.damage) applyDamage(m, M, o.damage, type);
+  if (o.damage) {
+    applyDamage(m, M, o.damage, type);
+    if ((o.damage.off & 12) && (o.damage.stage | 0) >= 4 && !PEDAL.has(type) && !MOTO.has(type) && type !== 'bike' && VEHICLE_DIMS[type][1] >= 40) m = hangDoors(m, M, o.damage.off);
+  }
   if (o.state && o.state !== 'clean') applyState(m, M, o.state, type);
   if (o.half) cutHalf(m, o.half, o.cut | 0, !!o.cool);
   m.smooth = 2;
@@ -1510,18 +1513,7 @@ function applyDamage(m, M, D, type) {
       set(x, y, z, 0); set(x, y, z - 1, engine); if (z > 7) set(x, y, z - 2, engine);
     }
   }
-  // 7. a door hanging (the front door on that side sagging open: its skin dropped at the back edge, the doorway dark)
-  for (const [bit, side] of [[4, -1], [8, 1]]) {
-    if (!(off & bit) || small) continue;
-    const x0 = Math.floor(L * 0.42), x1 = Math.floor(L * 0.62), belt = m.look && m.look.belt ? m.look.belt : 18;
-    for (let x = x0; x < x1; x++) {
-      const sag = Math.round(((x1 - x) / (x1 - x0)) * 4);
-      for (let j = 0; j < 3; j++) {
-        const y = side < 0 ? j : W - 1 - j;
-        for (let z = 4; z <= belt + 1; z++) { const v = at(x, y, z); if (solid(v) && j < 2) { set(x, y, z, 0); if (j === 0 && z - sag >= 1) set(x, y, z - sag, v === M.glass ? v : scrape(v)); } else if (solid(v) && j === 2) set(x, y, z, M.dark); }
-      }
-    }
-  }
+  // 7. a door hanging open: hangDoors, below (it widens the model)
   // 8. a buckled front wheel (on the side the door hangs, or the left): leaning in at the top, down a voxel
   if ((off & 32) && !small) {
     const right = !!(off & 8), keep = [];
@@ -1553,6 +1545,44 @@ function applyDamage(m, M, D, type) {
     }
   }
   m.prepared = false;
+}
+
+// A front door hanging open (task #402: off 4 the left, 8 the right): swung out on its front hinge, the doorway dark
+// behind it. The model is widened to make room - both sides alike, so its middle (the sprite's anchor) stays put - in
+// place (its materials' shading reads the model they were made for).
+function hangDoors(m, M, off) {
+  const L = m.w, W = m.d, H = m.h, P = 12, c = Math.cos(0.62), s = Math.sin(0.62), W2 = W + 2 * P;
+  const nv = new Uint8Array(L * W2 * H);
+  for (let z = 0; z < H; z++) for (let y = 0; y < W; y++) { const a = (z * W + y) * L; nv.set(m.v.subarray(a, a + L), (z * W2 + y + P) * L); }
+  m.v = nv; m.d = W2; m.prepared = false;
+  const n = m;
+  const x0 = Math.floor(L * 0.42), x1 = Math.floor(L * 0.62), zTop = Math.round(H * 0.62);
+  for (const [bit, side] of [[4, -1], [8, 1]]) {
+    if (!(off & bit)) continue;
+    const door = [];   // t (from the hinge), j (in from the skin), z, material, the skin's y
+    for (let x = x0; x <= x1; x++) for (let z = 3; z < zTop; z++) {
+      let y0 = -1;
+      for (let k = 0; k < W2 / 2; k++) { const y = side < 0 ? k : W2 - 1 - k; if (n.v[n.idx(x, y, z)]) { y0 = y; break; } }
+      if (y0 < 0) continue;
+      for (let j = 0; j < 2; j++) {
+        const i = n.idx(x, y0 - side * j, z), v = n.v[i];
+        if (!v || v === M.tyre || v === M.rim) continue;
+        door.push(x1 - x, j, z, v, y0);
+        n.v[i] = 0;
+      }
+      const yi = y0 - side * 2;
+      if (yi >= 0 && yi < W2 && n.v[n.idx(x, yi, z)]) n.v[n.idx(x, yi, z)] = M.dark;   // (the doorway)
+    }
+    for (let k = 0; k < door.length; k += 5) {
+      const t = door[k], j = door[k + 1], z = door[k + 2], v = door[k + 3], y0 = door[k + 4];
+      for (const dt of [0, 0.5]) {
+        const x = Math.round(x1 - (t + dt) * c), y = Math.round(y0 + side * (t + dt) * s - side * j);
+        if (x >= 0 && x < L && y >= 0 && y < W2) n.v[n.idx(x, y, z)] = v;
+      }
+    }
+  }
+  n.prepared = false;
+  return n;
 }
 
 // One half of a vehicle cut in two by the plasma blade (task #402): cut 1..255 along it from the tail; half 'a' the rear,

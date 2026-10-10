@@ -164,6 +164,11 @@ test('art v2 draws the damage into the model from the word: a few looks per stag
   const clean = vehicleModel('sedan', { paint: '#2f6f73', dry: true });
   const crumpled = vehicleModel('sedan', { paint: '#2f6f73', dry: true, damage: { stage: 3, zones: VZ.F, holes: 0, off: VPART.BUMPER_F } });
   assert.ok(count(crumpled) < count(clean) * 0.97, 'the front crumpled in, the bumper gone');
+  const hung = vehicleModel('sedan', { paint: '#2f6f73', dry: true, damage: { stage: 4, zones: VZ.L, holes: 0, off: VPART.DOOR_L } });
+  assert.ok(hung.d > clean.d && hung.w === clean.w, 'a door swung open: the model widened (both sides) to hold it');
+  let out = 0;
+  for (let z = 0; z < hung.h; z++) for (let y = 0; y < (hung.d - clean.d) / 2; y++) for (let x = 0; x < hung.w; x++) if (hung.v[hung.idx(x, y, z)]) out++;
+  assert.ok(out > 40, `the door sticks out on the left (${out} voxels)`);
   const a = vehicleModel('sedan', { paint: '#2f6f73', dry: true, half: 'a', cut: 128 }), b = vehicleModel('sedan', { paint: '#2f6f73', dry: true, half: 'b', cut: 128 });
   assert.ok(Math.abs(count(a) + count(b) - count(clean)) < count(clean) * 0.01, 'two halves make the car');
   let glowing = 0;
