@@ -1,8 +1,8 @@
-// The music studio's mastering (client/sound/studio/): the loudness meter, the limiter and the warmth stage that
+// The music studio's mastering (tools/music/): the loudness meter, the limiter and the warmth stage that
 // replaced the hard saturation which made round 2's songs come out distorted.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SR, lufs, limit, truePeak, warm, warmChannels } from '../client/sound/studio/dsp.js';
+import { SR, lufs, limit, truePeak, warm, warmChannels } from '../tools/music/dsp.js';
 
 const sine = (amp, f, secs) => { const n = Math.round(SR * secs), x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = amp * Math.sin(2 * Math.PI * f * i / SR); return x; };
 

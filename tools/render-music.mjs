@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-// Render a studio song (client/sound/studio/songs/<id>.js) to a WAV for listening to drafts:
+// Render a studio song (tools/music/songs/<id>.js) to a WAV for listening to drafts:
 //   node tools/render-music.mjs <id> [out.wav]
 // 16-bit stereo at the SNES's 32 kHz. Prints the length, where each section starts, the peak and the render time.
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { renderSong } from '../client/sound/studio/render.js';
+import { renderSong } from './music/render.js';
 
 const id = process.argv[2];
 if (!id) { console.error('usage: node tools/render-music.mjs <song id> [out.wav]'); process.exit(1); }
-const file = id.endsWith('.js') ? path.resolve(id) : path.resolve(path.dirname(new URL(import.meta.url).pathname), '../client/sound/studio/songs', `${id}.js`);
+const file = id.endsWith('.js') ? path.resolve(id) : path.resolve(path.dirname(new URL(import.meta.url).pathname), 'music/songs', `${id}.js`);
 const song = (await import(pathToFileURL(file).href)).default;
 const out = process.argv[3] || `${path.basename(id, '.js')}.wav`;
 const r = renderSong(song);

@@ -5267,3 +5267,14 @@ The fixes:
 **Tests:** `test/sound.test.js`:
 - a straight hard start, and passing through the low speeds, are silent; a burnout, a slide (some, then full) screech; never without the server's flag; a boat has no burnout; the level stays a few dB over the engine;
 - the surf's level stays in the mix.
+
+## 2026-10-10 · Music paused; the studio moves out of the game's files
+The owner, after hearing the re-mastered round 2: "I don't think the music is right yet that we've created. Let's pause on creating music right now and let's keep the old music that was in the build before for now and I will work on coming up with the right music for the game and we'll revisit it."
+
+- **The game's music doesn't change.** The studio's drafts (rounds 1 and 2, sixteen songs) were never played in the game. The game keeps its own step-sequenced music (`client/sound/music.js`: the title, the club, the shops, the lobbies). The one change to it tonight was the crackle fix (task #434): the club's kick turned down, the same song.
+- **The studio moves to `tools/music/`** (the engine: `dsp.js`, `voices.js`, `drums.js`, `score.js`, `render.js`; the drafts in `songs/`). Under `client/` it was in the build's file list, so every new player's browser fetched its ~200 KB in the background for the offline copy, and fetched it again whenever a draft changed. `tools/render-music.mjs` still renders any draft (`node tools/render-music.mjs porch-light`, the same samples as before the move), and `test/studio.test.js` still checks its mastering.
+- **On hold until the owner comes back to the music:**
+  - radio stations (#443);
+  - hospital and home music (#404);
+  - the menus' music (#372);
+  - Ride of the Valkyries (the owner's MIDI is kept outside the repo).
