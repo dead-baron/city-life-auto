@@ -11,7 +11,7 @@
 //   Now and then a burning wheel rolls away (task #412: render/wheels.js, loaded with the first explosion).
 // Everything is pooled (the particles in render/fx.js, the glow blobs, rings, columns and flights here: fixed
 // arrays, nothing made per frame) and thinned on Low ('Fewer particles': fx.thin).
-import { boomPlan, blastSize } from '../../shared/explosions.js';
+import { boomPlan } from '../../shared/explosions.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { VEHICLE_BY_INDEX, PAINTS } from '../../shared/vehicles.js';
 import { DECK_LIFT } from '../../shared/levels.js';
@@ -66,9 +66,9 @@ function pieceStrip(paint) {
 export class Booms {
   constructor(S) {
     this.S = S;
-    this.blobs = Array.from({ length: 96 }, () => ({ on: false, x: 0, y: 0, vx: 0, vy: 0, s: 0, s1: 0, t: 0, life: 1, spr: 0, a: 1, rise: 0 }));
-    this.rings = Array.from({ length: 8 }, () => ({ on: false, x: 0, y: 0, r: 0, t: 0, life: 0.5 }));
-    this.cols = Array.from({ length: 8 }, () => ({ on: false, x: 0, y: 0, t: 0, dur: 0, acc: 0, pacc: 0, big: 1 }));
+    this.blobs = Array.from({ length: 128 }, () => ({ on: false, x: 0, y: 0, vx: 0, vy: 0, s: 0, s1: 0, t: 0, life: 1, spr: 0, a: 1, rise: 0 }));
+    this.rings = Array.from({ length: 12 }, () => ({ on: false, x: 0, y: 0, r: 0, t: 0, life: 0.5 }));
+    this.cols = Array.from({ length: 12 }, () => ({ on: false, x: 0, y: 0, t: 0, dur: 0, acc: 0, pacc: 0, big: 1 }));
     this.flights = Array.from({ length: 6 }, () => ({ on: false, id: 0, t0: 0, T: 1, h: 0, spin: 0, flip: 0, acc: 0 }));
     this.burners = Array.from({ length: 24 }, () => ({ c: null, until: 0, acc: 0 }));
     this.bumps = Array.from({ length: 8 }, () => ({ id: 0, t0: -9 }));
@@ -88,9 +88,9 @@ export class Booms {
   explode(ev, now, near) {
     const S = this.S, fx = S.fx, def = ev.m !== undefined ? VEHICLE_BY_INDEX[ev.m] : null;
     const R = mulberry32((ev.s || 1) ^ 0x2c1b3c6d), lo = !!fx.thin, n = lo ? 0.5 : 1;
-    const r = ev.r || 100, big = def ? blastSize(def).big : r > 100 ? 1 : 0, x = ev.x, y = ev.y;
-    const plan = def && ev.s ? boomPlan(ev.s, def) : null;
-    const scale = r / 110;
+    const r = ev.r || 100, big = ev.b ?? (r > 100 ? 1 : 0), x = ev.x, y = ev.y;   // (b: shared/explosions.js blastSize)
+    const plan = def && ev.s ? boomPlan(ev.s, def, big) : null;
+    const scale = Math.min(3, r / 110);
     // 1. the white-hot flash: the renderer's lights (a white burst, then the fire's glow), a flash over the screen
     S.flashes.push({ x, y, t: 0.16, r: r * 5 });
     S.flashes.push({ x, y, t: 0.9 + big * 0.3, r: r * 3.2, kind: 'boom' });
@@ -136,6 +136,8 @@ export class Booms {
     // 9. the shake, falling off with distance (bigger blasts reach further)
     const d = Math.hypot(x - S.cam.x, y - S.cam.y), k = Math.max(0, 1 - d / (900 + r * 5));
     S.cam.shake = Math.max(S.cam.shake, (12 + big * 8) * k * k);
+    // a huge one: more on top (render/bigboom.js)
+    if (big > 2) this._wheels().then((w) => w && w.huge.add(ev, big, now));
   }
 
   _pieces(ev, plan, def, now) {
@@ -153,7 +155,7 @@ export class Booms {
 
   // render/wheels.js: loaded with the first explosion, not with the page
   _wheels() {
-    return this.wheelsP ||= import('./wheels.js').then((m) => (this.wheels = new m.Wheels(this.S))).catch((e) => { console.warn('[wheels]', e); return null; });
+    return this.wheelsP ||= import('./wheels.js').then((m) => (this.wheels = new m.Wheels(this.S, this))).catch((e) => { console.warn('[wheels]', e); return null; });
   }
   // (the classic view's world pass; art v2: in draw)
   drawWheels(g, F) { if (this.wheels) this.wheels.draw(g, F); }

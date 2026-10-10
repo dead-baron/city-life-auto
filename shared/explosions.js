@@ -5,16 +5,18 @@
 // shockwave, sparks and embers, the smoke column, debris, the scorch, the shake - and the pieces the plan names.
 // Pure integer and arithmetic work only (no trig at load, no Math.random): identical in every engine.
 import { mulberry32 } from './rng.js';
+import { TANKER_BLAST as TB, EXPLOSIVES_BLAST as EB } from './rules.js';
 
 // the pieces a car can blow apart into (the event names them by these letters)
 export const PIECES = { d: 'door', h: 'hood', w: 'wheel', p: 'panel', t: 'trunk', b: 'bumper' };
 
-// How big a vehicle's blast is: r the blast's reach (px), dmg at the heart, big 0 a motorbike .. 3 a fuel tanker
-// (the tanker goes up like a bomb).
-export function blastSize(def) {
+// How big a vehicle's blast is: r the blast's reach (px), dmg at the heart, big 0 a motorbike .. 3 a fuel tanker;
+// n crates of explosives aboard: 3, or 4 when it outreaches a tanker (rules.js)
+export function blastSize(def, n = 0) {
+  if (def && def.id === 'tanker') return { r: TB.r, dmg: TB.dmg, big: 3 };
+  if (n > 0) { const r = Math.min(EB.max, EB.r + EB.per * (n - 1)); return { r, dmg: Math.round(EB.dmg * r / EB.r), big: r > TB.r ? 4 : 3 }; }
   if (!def) return { r: 110, dmg: 70, big: 1 };
   if (def.kind === 'bike') return { r: 72, dmg: 60, big: 0 };
-  if (def.id === 'tanker') return { r: 270, dmg: 120, big: 3 };
   if (def.mass >= 2.4) return { r: 165, dmg: 85, big: 2 };
   return { r: 120, dmg: 72, big: 1 };
 }
@@ -25,17 +27,16 @@ export function blastSize(def) {
 // pieces [{ c (a PIECES letter), a (the throw's direction, radians from the car's heading), sp (px/s), vz (px/s
 // up), va (spin, rad/s) }]; launch { a (direction from the heading), d (how far it lands, px), h (peak height, px),
 // t (time in the air, s), spin (turns about its axis), flip (1: it rolls over) }. (A burning wheel: wheelpath.js)
-export function boomPlan(seed, def) {
+export function boomPlan(seed, def, big = blastSize(def).big) {
   const R = mulberry32((seed >>> 0) ^ 0x5bd1e995);
-  const { big } = blastSize(def);
   const r = R();
   let k = '';
   if (big === 0) k = r < 0.55 ? 'pieces' : '';
-  else if (big === 3) k = 'pieces';
+  else if (big > 2) k = 'pieces';
   else if (big === 2) k = r < 0.16 ? 'launch' : r < 0.62 ? 'pieces' : '';
   else k = r < 0.34 ? 'launch' : r < 0.72 ? 'pieces' : '';
   const pool = big === 0 ? 'wpw' : 'ddhwwwwpptb';
-  const n = k === 'pieces' ? (big === 0 ? 2 : big === 3 ? 8 : 5 + Math.floor(R() * 3)) : k === 'launch' ? 1 + Math.floor(R() * 2) : Math.floor(R() * 2);
+  const n = k === 'pieces' ? (big === 0 ? 2 : big > 2 ? 8 : 5 + Math.floor(R() * 3)) : k === 'launch' ? 1 + Math.floor(R() * 2) : Math.floor(R() * 2);
   const pieces = [], wheels = wheelCount(def);
   for (let i = 0; i < n; i++) {
     let c = pool[Math.floor(R() * pool.length)];
@@ -61,7 +62,7 @@ export function boomPlan(seed, def) {
       flip: R() < 0.45 ? 1 : 0,
     };
   }
-  return { k, pieces, launch };
+  return { k, pieces, launch, big };
 }
 
 // the event's short list of the pieces ('ddhw...'): the clients rebuild the throws from the seed

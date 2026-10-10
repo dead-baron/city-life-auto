@@ -6,7 +6,7 @@ import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS, stepWeapon } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP } from '../../shared/rules.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -19,6 +19,7 @@ import * as wildlife from './wildlife.js';
 import * as reactions from './reactions.js';
 import * as wanderer from './wanderer.js';
 import * as nightclubs from './nightclubs.js';
+import * as explosions from './explosions.js';   // (chain reactions: task #398)
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -393,32 +394,45 @@ function causeText(cause) {
   return ({ train: 'Hit by a train.', vehicle: 'Flattened by traffic.', crash: 'Wiped out at speed.', explosion: 'Caught in an explosion.', bail: 'Bailed out too fast.' })[cause] || 'You flatlined.';
 }
 
-export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = false, z = null) {
+// L: the blast's link of a chain (explosions.js: what it sets off goes up a beat later, as the next link); big: its
+// size (shared/explosions.js blastSize) - a huge one (3, 4) throws people and shoves vehicles harder (BLAST_FLING)
+export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = false, z = null, L = explosions.newLink(), big = 1) {
   if (z === null || z < 0.3) props.blastBreak(world, x, y, r * 0.8);
-  for (const e of world.query(x, y, r)) {
+  const k = big > 2 ? BLAST_FLING : 1, vs = [];
+  if (big > 2) L.c.hot = true;
+  for (const e of world.query(x, y, r + 90)) {   // (+90: a long vehicle whose near end is in it)
     if (z !== null && !sameLevel(e.lz, z)) continue; // up on the deck vs down in the street
     const d = Math.hypot(e.x - x, e.y - y);
     const f = 1 - d / r;
-    if (f <= 0) continue;
+    if (f <= 0 && e.kind !== K.VEH) continue;
     if (e.kind === K.PED && !e.vehId && !(e.blastSafeUntil > world.time)) {
       // thrown through the air - the dead too (reactions.js)
       const a = Math.atan2(e.y - y, e.x - x);
-      if (e.dead || hurtable(world, e)) reactions.blasted(world, e, a, f);
+      if (e.dead || hurtable(world, e)) reactions.blasted(world, e, a, f, k);
       if (!e.dead) damage(world, e, dmg * f + 10, attacker, 'explosion', a);
     } else if (e.kind === K.VEH && e.id !== excludeVehId && !e.wreckAt) {
-      const a = Math.atan2(e.y - y, e.x - x);
+      // fn: how close its near end is (whether it goes up, and when: explosions.js); f, its middle: how hard it's hit
+      const fn = Math.max(f, 1 - explosions.bodyDist(e, x, y) / r);
+      if (fn <= 0) continue;
+      const a = Math.atan2(e.y - y, e.x - x), fm = Math.max(0, f);
       e.blastAt = world.time;   // (custody.js: a blast bursts a police car's doors open)
-      e.vx += Math.cos(a) * 220 * f / e.def.mass; e.vy += Math.sin(a) * 220 * f / e.def.mass;
+      e.vx += Math.cos(a) * 220 * k * fm / e.def.mass; e.vy += Math.sin(a) * 220 * k * fm / e.def.mass;
       // a rocket landing on / next to a vehicle destroys it outright (armored ones take two)
       if (rocket && f > 0.25) {
         const armored = ARMORED_VEHICLES.includes(e.def.id);
         vehicles.damageVehicle(world, e, armored ? e.def.hp / ARMORED_ROCKETS + 1 : e.hp + 1, attacker, true, true);
-      } else vehicles.damageVehicle(world, e, dmg * 1.6 * f, attacker, false, f > 0.5); // (a blast close by finishes it off on the spot)
-    } else if (e.kind === K.CRATE && e.state === 'ground') {
+      } else vs.push([fn, fm, e]);
+    } else if (e.kind === K.CRATE) {
+      explosions.blastCrate(world, e, f, L, attacker);   // (a crate of explosives goes up too)
+      if (e.state !== 'ground') continue;
       const a = Math.atan2(e.y - y, e.x - x);
       e.vx += Math.cos(a) * 200 * f; e.vy += Math.sin(a) * 200 * f; e.vz = 160 * f;
     }
   }
+  // the vehicles it hurts, or sets off as the next links of its chain (explosions.js) - the nearest first, so they go up
+  // in turn outward
+  vs.sort((p, q) => q[0] - p[0]);
+  for (const [fn, f, e] of vs) explosions.blastVehicle(world, e, fn, dmg * 1.6 * f, attacker, L, big);
   // people close by run; further out, some get their phones out and film it (npc.js spectacle)
   if (z === null || z < 0.3) { npc.panic(world, x, y, r * 2.2); npc.spectacle(world, x, y, { r: r * 2.2 + 520, near: r * 2.2, chance: 1.3, secs: 12 }); }
 }

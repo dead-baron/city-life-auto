@@ -35,6 +35,11 @@ export const DEV_SECTIONS = [
     ['🎨 Paint shop', 'near', { k: 'paint' }], ['🚘 Car dealer', 'near', { k: 'dealer' }], ['🔑 Rentals', 'near', { k: 'rental' }],
     ['⛽ Filling station', 'near', { k: 'gasstation' }], ['⚓ Marina', 'near', { k: 'marina' }],
   ] },
+  { id: 'boom', title: '💥 Explosions', items: [
+    ['💥 Small blast ahead', 'blast', { k: 'small' }], ['💥 Medium blast ahead', 'blast', { k: 'medium' }], ['💥 Big blast ahead', 'blast', { k: 'big' }],
+    ['💥 Ultra blast ahead', 'blast', { k: 'ultra' }], ['🚗 A car goes up', 'blast', { k: 'car' }], ['🛢 A tanker goes up', 'blast', { k: 'tanker' }],
+    ['🧨 An explosives truck goes up', 'blast', { k: 'truck' }], ['🔗 A tanker by a row of cars', 'blast', { k: 'row' }], ['🧍 A crowd round a tanker', 'blast', { k: 'crowd' }],
+  ] },
   { id: 'bikes', title: '🚲 Bicycles', items: [
     ['🚲 Commuter bike', 'car', { m: 'bicycle' }], ['🏖 Beach cruiser', 'car', { m: 'cruiser' }], ['🚵 Mountain bike', 'car', { m: 'mtb' }],
     ['🚴 Road bike', 'car', { m: 'roadbike' }], ['🛞 BMX', 'car', { m: 'bmx' }], ['📦 Cargo bike (two crates)', 'car', { m: 'cargobike' }],
