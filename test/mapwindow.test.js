@@ -183,7 +183,7 @@ test('the art v2 ground bake of a chunk inside the window: the same bytes as fro
 const PAUSED = new Set(['shared/tutorial.js', 'client/tutorial.js']);   // (the tour is paused: CLAUDE.md)
 const WHOLE_FRAME = {
   'shared/constants.js': 'the world\'s frame is defined here (MAP_W x MAP_H tiles, WORLD_W x WORLD_H px)',
-  'shared/map.js': 'tileAt: the open sea past the world\'s edge',
+  'shared/mapcore.js': 'tileAt: the open sea past the world\'s edge',
   'shared/underground.js': 'the underground lies under the whole world: its regions and physics map are the frame\'s',
   'server/systems/ferries.js': 'the server plans the ferries over the whole world it holds: its grids are the frame\'s',
   'server/artcdn.js': 'the art CDN\'s chunk grid spans the world',
@@ -231,7 +231,7 @@ test('the guard: the generator builds in the map\'s frame (m.w, m.h), naming MAP
   const bad = [], used = new Set();
   for (const f of GENERATOR_FILES) {
     let src = readFileSync(join(ROOT, f), 'utf8');
-    if (f === 'shared/map.js') src = src.slice(src.indexOf('// The generator (from here to mapSignature)'), src.indexOf('export function mapSignature'));
+    if (f === 'shared/map.js') src = src.slice(src.indexOf('// The generator (from here to the end'));   // (the map's runtime, before it, is shared/mapcore.js)
     src.split('\n').forEach((line, i) => {
       const code = line.replace(/\/\/.*$/, '');   // (comments may name them)
       if (!/\bMAP_[WH]\b/.test(code) || /^\s*import\b/.test(code)) return;

@@ -10,7 +10,7 @@
 import { mulberry32 } from './rng.js';
 import { dsin, dcos, datan2 } from './dmath.js';
 import { T } from './constants.js';
-import { CAR_BLOCK, WATER_T } from './map.js';
+import { CAR_BLOCK, WATER_T } from './mapcore.js';
 import { boomPlan, blastSize, wheelCount } from './explosions.js';
 
 // a wheel's radius and tyre width (world px)

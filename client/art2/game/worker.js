@@ -83,7 +83,7 @@ function pack(g, transfer, under = null, run = 0) {
 
 // The modules start loading as soon as the worker does (the pool is made while the page builds the city), so they
 // are in by the time the world arrives.
-const MODS = Promise.all([loadProviders(), loadActors(), import('../../../shared/map.js').catch((e) => { P.errors.map = String((e && e.message) || e); return null; })]);
+const MODS = Promise.all([loadProviders(), loadActors(), import('../../../shared/mapcore.js').catch((e) => { P.errors.map = String((e && e.message) || e); return null; })]);
 MODS.catch(() => {});
 let ready = null, worldIn = null, KEEP = null, PHONE = false;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));

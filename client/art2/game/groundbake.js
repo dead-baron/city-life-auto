@@ -47,8 +47,8 @@ import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, v
 import { edgeCovers } from '../../../shared/covers.js';
 import { seaPx, stillPx, WP, WATER } from '../water.js';
 import { T, TILE } from '../../../shared/constants.js';
-import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/map.js';
-import { Z } from '../../../shared/citylayout.js';
+import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/mapcore.js';
+import { Z } from '../../../shared/layoutcore.js';
 import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roads.js';
 
 export const CHUNK = 768;

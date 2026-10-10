@@ -10,7 +10,7 @@
 //   - caches (fields named _...) left behind: they're worked out again for the window when asked.
 // Outside the rectangle tileAt answers T.WALL (nothing moves into land the window doesn't hold), past the world's edge
 // the open sea as before.
-import { CityMap, cityFromData } from './map.js';
+import { CityMap, cityFromData } from './mapcore.js';
 
 const TILE_KEYED = new Set(['solidProps', 'flow']);
 

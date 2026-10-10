@@ -5,7 +5,7 @@
 // Tiny on purpose (no art imports): the page's main code reads it for the steam (not with the art v2 renderer, which
 // main.js only loads once the city is in), and the sewers under the city come up through some of these covers
 // (shared/underground.js, on the server too). It lived in client/render/ until the sewers.
-import { DISTRICTS } from './map.js';
+import { DISTRICTS } from './mapcore.js';
 import { TILE } from './constants.js';
 
 export const URBAN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown', 'arts']);

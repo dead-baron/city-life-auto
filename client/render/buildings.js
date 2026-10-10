@@ -8,7 +8,7 @@
 // drawn in the depth-sorted pass with people and vehicles, so anyone north of a building is
 // hidden behind it; the local player's own building turns see-through when it hides them.
 import { TILE, CHUNK_PX } from '../../shared/constants.js';
-import { DISTRICTS } from '../../shared/map.js';
+import { DISTRICTS } from '../../shared/mapcore.js';
 import { hash2, mulberry32 } from '../../shared/rng.js';
 import { atlas } from './sprites.js';
 import { drawRoof, drawHandGlow } from './tiles.js';

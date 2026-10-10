@@ -11,7 +11,7 @@
 // engine scales it to the chunk (setChunkFallback). The index of what reaches each chunk is built once per map.
 import { CHUNK, DECK_Z } from './chunkbake.js';
 import { T, TILE, MAP_W, MAP_H } from '../../../shared/constants.js';
-import { DISTRICTS } from '../../../shared/map.js';
+import { DISTRICTS } from '../../../shared/mapcore.js';
 
 export const STANDIN_PX = CHUNK / 4;
 const S4 = CHUNK / STANDIN_PX;

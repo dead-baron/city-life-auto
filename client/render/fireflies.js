@@ -12,7 +12,7 @@
 //   cells' answers are kept for the night, none on Low (main.js never loads this module there), fewer on Medium,
 //   none in the rain, underground or indoors.
 import { hash2 } from '../../shared/rng.js';
-import { DISTRICTS } from '../../shared/map.js';
+import { DISTRICTS } from '../../shared/mapcore.js';
 import { T, TILE } from '../../shared/constants.js';
 
 export const FLIES = {

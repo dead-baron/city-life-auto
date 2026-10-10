@@ -5,7 +5,7 @@
 // statics; the alleys have their own (shared/alleys.js).
 //   streetGrit(M) -> [{ k, x, y, v }]   worked out once per map; deterministic (hashed from positions)
 import { TILE, T } from '../../shared/constants.js';
-import { DISTRICTS } from '../../shared/map.js';
+import { DISTRICTS } from '../../shared/mapcore.js';
 import { pointAt } from '../../shared/geom.js';
 import { gritOf } from '../../shared/alleys.js';
 import { hash } from './gbuf.js';

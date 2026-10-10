@@ -40,121 +40,20 @@ import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 import { buildCellBlocks, barsRay } from './cells.js';
 import { buildBowlingAlley } from './bowling.js';
 import { buildCinema } from './cinema.js';
-const EDGE_T = Math.ceil(EDGE_OUT / TILE) + 2;   // tiles of open sea past the map's edge (border.js), then the wall
+import {
+  ISLANDS, PED_BLOCK, CAR_BLOCK, BOAT_BLOCK, SWIM_BLOCK, CAR_SPAWN_BLOCK, WATER_T, SURFACE, DISTRICTS,
+  WILD_STYLES, WILD_DISTRICTS, CityMap, isSwimming, inHotSpring, nearestLand, isTurf, waterKind, cityData,
+  cityFromData, terrainAt, RAIL_GAUGE, TRAIN_CARS, CONSIST, CAR_GAP, TRAIN_LEN, COACH_SEATS, COACH_STAND, CAB_OX,
+  LOCO_SEATS, LOCO_STAND, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, railAt, BREAKABLE, HEAVY_PROPS, SEA_ISLES,
+  wildBiome, mapSignature, WATER_D
+} from './mapcore.js';
+export * from './mapcore.js';   // (the map's runtime: shared/mapcore.js - the page imports it from there, never this module)
 
 export { Z };
 
-// Islands / parts of the world shown in the tour and on the map. box: tile rect [x0, y0, x1, y1)
-// (filled in by the generator from the zone map); zone: the map.zone value.
-export const ISLANDS = {
-  D: { name: 'Metro City', box: [559, 251, 1045, 745], zone: Z.CITY },
-  R: { name: 'Southbank', box: [770, 655, 1045, 900], zone: Z.SOUTH },
-  F: { name: 'Dry Creek', box: [1045, 251, 1296, 958], zone: Z.EAST },
-  P: { name: 'Pelican Key', box: [542, 305, 682, 403], zone: Z.KEY },
-  C: { name: "Smuggler's Rock", box: [1205, 953, 1259, 1004], zone: Z.ROCK, boatOnly: true, gang: 'syndicate' },
-  W: { name: 'Westport', box: [31, 71, 497, 917], zone: Z.WEST },
-  N: { name: 'Northshore', box: [459, 17, 1207, 287], zone: Z.NORTH },
-  S: { name: 'Cedar Isle', box: [270, 784, 991, 1158], zone: Z.ISLE },
-  G: { name: 'Gull Isles', box: [40, 939, 1197, 1142], zone: Z.GULL, boatOnly: true },
-};
 const ISLAND_BOX0 = Object.fromEntries(Object.entries(ISLANDS).map(([k, I]) => [k, I.box.slice()]));   // (as declared: buildCity starts from them)
 // Which land component is which part of the world: a land point on each.
 export const ISLAND_AT = [[[300, 500], Z.WEST], [[800, 150], Z.NORTH], [[620, 1000], Z.ISLE], [[120, 1020], Z.GULL], [[1120, 1070], Z.GULL], [[600, 360], Z.KEY], [[1230, 978], Z.ROCK]];
-
-export const PED_BLOCK = new Uint8Array(16);
-export const CAR_BLOCK = new Uint8Array(16);
-export const BOAT_BLOCK = new Uint8Array(16).fill(1);
-// PED_BLOCK: where people can't *walk* (NPC pathing, spawns, exits). Players can still swim
-// (SWIM_BLOCK). Cars can drive onto docks and off the edge into water (they sink); spawns use
-// CAR_SPAWN_BLOCK so nothing is ever placed in the water.
-export const SWIM_BLOCK = new Uint8Array(16);
-export const CAR_SPAWN_BLOCK = new Uint8Array(16);
-export const WATER_T = new Uint8Array(16);
-WATER_T[T.WATER] = 1; WATER_T[T.DEEP] = 1;
-for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP, T.COUNTER]) PED_BLOCK[t] = 1;
-for (const t of [T.WALL, T.BUILDING, T.COUNTER]) SWIM_BLOCK[t] = 1;
-for (const t of [T.WALL, T.BUILDING, T.FLOOR, T.COUNTER]) CAR_BLOCK[t] = 1;
-for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP, T.FLOOR, T.COUNTER]) CAR_SPAWN_BLOCK[t] = 1;
-BOAT_BLOCK[T.WATER] = 0; BOAT_BLOCK[T.DEEP] = 0; BOAT_BLOCK[T.BRIDGE] = 0;
-
-// Surface handling multipliers: [speedMul, gripMul, isAsphalt]
-export const SURFACE = [];
-SURFACE[T.WALL] = [1, 1, 0];
-SURFACE[T.GRASS] = [0.6, 0.7, 0];
-SURFACE[T.SIDEWALK] = [0.95, 0.95, 1];
-SURFACE[T.ROAD] = [1, 1, 1];
-SURFACE[T.PLAZA] = [0.95, 0.95, 1];
-SURFACE[T.BUILDING] = [1, 1, 0];
-SURFACE[T.WATER] = [0.3, 0.35, 0]; // a car that drove off the edge wallows and sinks
-SURFACE[T.DEEP] = [0.3, 0.35, 0];
-SURFACE[T.SAND] = [0.5, 0.6, 0];
-SURFACE[T.DOCK] = [0.9, 0.9, 0];
-SURFACE[T.DIRT] = [0.85, 0.8, 0];
-SURFACE[T.FLOOR] = [1, 1, 0];
-SURFACE[T.COUNTER] = [1, 1, 0];
-SURFACE[T.FIELD] = [0.5, 0.65, 0];
-SURFACE[T.BRIDGE] = [1, 1, 1];
-SURFACE[T.LOT] = [1, 1, 1];
-
-// ---------------------------------------------------------------------------
-// Districts. tier: wealth (lux, mid, low, rough, red, neon, suburb, rural, industrial, wild) -
-// it drives pedestrians, police presence, litter and graffiti. walk / plaza / road: ground
-// textures; ground: default tile inside blocks; isl: the part of the world shown under the name.
-export const DISTRICTS = [
-  { id: 0, name: 'Pine Hills', isl: 'Southbank', style: 'houses', tier: 'suburb', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 1, name: 'Midtown', isl: 'Metro City', style: 'commercial', tier: 'mid', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 2, name: 'Northgate', isl: 'Metro City', style: 'apartments', tier: 'mid', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 3, name: 'The Yards', isl: 'Metro City', style: 'industrial', tier: 'rough', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: true },
-  { id: 4, name: 'Downtown', isl: 'Metro City', style: 'towers', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 5, name: 'Civic Center', isl: 'Metro City', style: 'civic', tier: 'mid', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 6, name: 'Southside', isl: 'Southbank', style: 'southside', tier: 'rough', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: true },
-  { id: 7, name: 'Neon Strip', isl: 'Metro City', style: 'nightlife', tier: 'neon', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 8, name: 'Harbor', isl: 'Metro City', style: 'harbor', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
-  { id: 9, name: 'Dry Creek', isl: 'Dry Creek', style: 'rural', tier: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 10, name: 'Sunset Beach', isl: 'Metro City', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
-  { id: 11, name: 'Ironworks', isl: 'Metro City', style: 'factory', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
-  { id: 12, name: 'Greenfield Park', isl: 'Metro City', style: 'park', tier: 'mid', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 13, name: 'Liberty Bay', isl: '', style: 'water', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.WATER, turf: false },
-  { id: 14, name: 'Pelican Key', isl: 'Pelican Key', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
-  { id: 15, name: "Smuggler's Rock", isl: "Smuggler's Rock", style: 'rocky', tier: 'rough', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: true },
-  { id: 16, name: 'Bayside Heights', isl: 'Metro City', style: 'luxury', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 17, name: 'The Pink Mile', isl: 'Metro City', style: 'redlight', tier: 'red', walk: 'brick', plaza: 'brick', road: 'asphalt_worn', ground: T.PLAZA, turf: false },
-  { id: 18, name: 'Old Town', isl: 'Metro City', style: 'oldtown', tier: 'low', walk: 'brick', plaza: 'brick', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 19, name: 'Lighthouse Rock', isl: '', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 20, name: 'The Islets', isl: '', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 21, name: 'The Islets', isl: '', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 22, name: 'Gull Isles', isl: 'Gull Isles', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 23, name: 'Westport Center', isl: 'Westport', style: 'towers', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 24, name: 'Lakeview', isl: 'Westport', style: 'luxury', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 25, name: 'Stadium District', isl: 'Westport', style: 'commercial', tier: 'mid', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 26, name: 'Port Westport', isl: 'Westport', style: 'harbor', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: true },
-  { id: 27, name: 'Westport International', isl: 'Westport', style: 'airport', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.LOT, turf: false },
-  { id: 28, name: 'West Hills', isl: 'Westport', style: 'houses', tier: 'suburb', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 29, name: 'Highland Woods', isl: 'Westport', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 30, name: 'Old Quarter', isl: 'Westport', style: 'oldtown', tier: 'low', walk: 'brick', plaza: 'brick', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 31, name: 'Northshore', isl: 'Northshore', style: 'commercial', tier: 'mid', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 32, name: 'North Point', isl: 'Northshore', style: 'apartments', tier: 'mid', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 33, name: 'Granite Peaks', isl: 'Northshore', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 34, name: 'The Bluffs', isl: 'Northshore', style: 'luxury', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 35, name: 'Cedar Falls', isl: 'Cedar Isle', style: 'houses', tier: 'suburb', walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 36, name: 'Falls Center', isl: 'Cedar Isle', style: 'commercial', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 37, name: 'Lake District', isl: 'Cedar Isle', style: 'luxury', tier: 'lux', walk: 'slate', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
-  { id: 38, name: 'Cedar Farms', isl: 'Cedar Isle', style: 'rural', tier: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 39, name: 'South Port', isl: 'Cedar Isle', style: 'harbor', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
-  { id: 40, name: 'Cedar Hills', isl: 'Cedar Isle', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 41, name: 'Dry Creek Desert', isl: 'Dry Creek', style: 'desert', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false },
-  { id: 42, name: 'Dry Creek Airstrip', isl: 'Dry Creek', style: 'airport', tier: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
-  { id: 43, name: 'Gull Harbor', isl: 'Gull Isles', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
-  { id: 44, name: 'Coral Cay', isl: 'Gull Isles', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
-  { id: 45, name: 'Paradise Cay', isl: '', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.SAND, turf: false },
-  // where Bayside Heights' crescents used to wheel round a green: galleries, studios, cafes and lofts in painted brick
-  // between the Civic Center and the bay, the Metro Museum of Art and The Playhouse among them
-  { id: 46, name: 'Arts District', isl: 'Metro City', style: 'arts', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
-];
-const WATER_D = 13;
-// Districts nobody builds in: woods, hills, mountains, farmland, desert, airfields.
-export const WILD_STYLES = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
-export const WILD_DISTRICTS = new Set(DISTRICTS.filter((d) => WILD_STYLES.has(d.style)).map((d) => d.id));
 
 // Subdivision + fill parameters per style. gen: generic prefab weights.
 const STYLE = {
@@ -300,197 +199,6 @@ const GENERIC_NAMES = {
 export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse']);
 
 // ---------------------------------------------------------------------------
-export class CityMap {
-  constructor(seed, w = MAP_W, h = MAP_H) {
-    this.seed = seed >>> 0;
-    // its extent in world tiles: x0, y0 (0: on the prototype), w, h - the frame it's built in; a window: shared/mapwindow.js
-    this.w = w; this.h = h;
-    const N = this.w * this.h;
-    this.tiles = new Uint8Array(N);
-    this.dist = new Uint8Array(N).fill(WATER_D);
-    this.zone = new Uint8Array(N);
-    this.river = new Uint8Array(N);       // 1 = river water (fishing, bridges)
-    this.reserve = new Uint8Array(N);     // bit flags: 1 highway band, 2 railway, 4 waterfront strip, 8 under a ramp, 16 kept open (Pelican Key beach),
-                                           // 32 a designed nature place (naturesites.js), 64 jungle floor (Coral Cay)
-    this.deck = new Uint8Array(N);        // 1 = under the elevated highway
-    this.lvl0Block = new Uint8Array(N);   // 1 = solid at ground level (a ramp's embankment)
-    this.roadAxis = new Uint8Array(N);    // bit1 vertical-ish road, bit2 horizontal-ish, 3 = junction box
-    this.roadRank = new Uint8Array(N);    // 1 = an alley's asphalt, 2 = any other road's (a street wins where they meet), 3 = a highway's at grade (no lot fronts it)
-    this.bld = new Int16Array(N).fill(-1);
-    this.buildings = [];
-    this.prefabs = [];
-    this.roads = [];
-    this.blocks = [];
-    this.pois = [];
-    this.homes = [];
-    this.props = [];
-    this.solidProps = new Map(); // tile index -> [{x,y,r,pi,off}]
-    this.propSolid = new Map();  // prop index -> its solid entry (toggled when the prop is smashed)
-    this.parking = [];
-    this.stalls = [];
-    this.marina = [];
-    this.gates = []; // sliding gates (police motor pools, the Syndicate compound)
-    this.venues = []; // mini-game venues: soccer pitch, beach volleyball courts
-    this.dropSites = [];
-    this.cameras = [];
-    this.nodes = [];
-    this.edges = [];
-    this.lamps = [];
-    this.brickWalls = [];                            // brick walls along the street between buildings: { tx, ty, tw }
-    this.fields = [];
-    this.roofs = [];
-    this.hospitals = [];
-    this.spawns = {};
-    this.pillars = [];
-  }
-  // a tile's index in the layers: idx === row(ty) + col(tx) (a loop along a row takes row(ty) once; never step with i++)
-  idx(tx, ty) { return (ty - this.y0) * this.w + (tx - this.x0); }
-  row(ty) { return (ty - this.y0) * this.w; }
-  col(tx) { return tx - this.x0; }
-  inside(tx, ty) { return tx >= this.x0 && ty >= this.y0 && tx < this.x0 + this.w && ty < this.y0 + this.h; }
-  // Past the world's edge: open sea for a way (softEdge, set once the world is built: border.js slows you there and
-  // stops you at its end), then a wall. While the world is being built, a wall right at the edge, as it always was.
-  // Outside a window, inside the world: a wall.
-  tileAt(tx, ty) {
-    if (!this.inside(tx, ty)) return this.softEdge && (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) && tx >= -EDGE_T && ty >= -EDGE_T && tx < MAP_W + EDGE_T && ty < MAP_H + EDGE_T ? T.DEEP : T.WALL;   // (the world's frame)
-    return this.tiles[this.idx(tx, ty)];
-  }
-  tileAtPx(x, y) { return this.tileAt(Math.floor(x / TILE), Math.floor(y / TILE)); }
-  set(tx, ty, t) { if (this.inside(tx, ty)) this.tiles[this.idx(tx, ty)] = t; }
-  fill(tx, ty, w, h, t) { for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) this.set(x, y, t); }
-  setDist(tx, ty, w, h, d) {
-    const x1 = Math.min(this.x0 + this.w, tx + w);
-    for (let y = Math.max(this.y0, ty); y < Math.min(this.y0 + this.h, ty + h); y++) { const r = this.row(y); for (let x = Math.max(this.x0, tx); x < x1; x++) this.dist[r + this.col(x)] = d; }
-  }
-  districtAt(x, y) {
-    const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (!this.inside(tx, ty)) return DISTRICTS[WATER_D];
-    return DISTRICTS[this.dist[this.idx(tx, ty)]];
-  }
-  zoneAt(x, y) {
-    const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (!this.inside(tx, ty)) return Z.SEA;
-    return this.zone[this.idx(tx, ty)];
-  }
-  // Which island / part of the world a point is in (ISLANDS key) or null at sea.
-  islandAt(x, y) {
-    const z = this.zoneAt(x, y);
-    for (const [k, I] of Object.entries(ISLANDS)) if (I.zone === z) return k;
-    return null;
-  }
-  buildingAtPx(x, y) {
-    const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (!this.inside(tx, ty)) return null;
-    const b = this.bld[this.idx(tx, ty)];
-    return b >= 0 ? this.buildings[b] : null;
-  }
-  addSolidProp(x, y, r) {
-    const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    const k = this.idx(tx, ty);
-    let arr = this.solidProps.get(k);
-    if (!arr) { arr = []; this.solidProps.set(k, arr); }
-    const e = { x, y, r, pi: -1, off: false };
-    arr.push(e);
-    return e;
-  }
-  // Line of sight across tiles (buildings block sight; a cell's bars don't).
-  los(x1, y1, x2, y2) { return this.rayTiles(x1, y1, x2, y2, true) >= 1; }
-  // Ray to first blocking tile; returns distance fraction t in [0,1] (1 = no hit). A bullet (not sight) stops on the
-  // bars of a police station's cells too (shared/cells.js).
-  rayTiles(x1, y1, x2, y2, sight = false) {
-    const d = Math.hypot(x2 - x1, y2 - y1);
-    if (d < 1) return 1;
-    const tb = !sight && this.cellBlocks ? barsRay(this, x1, y1, x2, y2) : 1;
-    const steps = Math.ceil(d / 8);
-    const cv = sight ? this.cover : null, c0 = cv ? coverAtPx(this, x1, y1) : 0;   // (sight doesn't cross a tunnel's roof: shared/tunnels.js)
-    for (let i = 1; i <= steps && i / steps <= tb; i++) {
-      const t = i / steps, px = x1 + (x2 - x1) * t, py = y1 + (y2 - y1) * t;
-      const tt = this.tileAtPx(px, py);
-      if (tt === T.BUILDING || tt === T.WALL || (cv && coverAtPx(this, px, py) !== c0)) return Math.max(0, (i - 1) / steps);
-    }
-    return tb;
-  }
-  isWater(x, y) { const t = this.tileAtPx(x, y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; }
-  isWalkable(x, y) { return !PED_BLOCK[this.tileAtPx(x, y)]; }
-  // Nearest ground-level junction (the highway deck and its merges excluded unless asked).
-  nearestNode(x, y, anyLevel = false) {
-    let best = null, bd = Infinity;
-    for (const n of this.nodes) {
-      if (!anyLevel && n.lvl !== 0) continue;
-      const d = (n.x - x) ** 2 + (n.y - y) ** 2;
-      if (d < bd) { bd = d; best = n; }
-    }
-    return best;
-  }
-  poiNear(x, y, kind = null) {
-    let best = null, bd = Infinity;
-    for (const p of this.pois) {
-      if (kind && p.kind !== kind) continue;
-      const d = (p.x - x) ** 2 + (p.y - y) ** 2;
-      if (d <= p.r * p.r && d < bd) { bd = d; best = p; }
-    }
-    return best;
-  }
-  poisOf(kind) { return this.pois.filter((p) => p.kind === kind); }
-}
-// (on the prototype: the whole map's data - the world hash, the kept city - has no new fields; a window has its own)
-CityMap.prototype.x0 = 0;
-CityMap.prototype.y0 = 0;
-
-// Swimming: in open water, or under a bridge deck having swum in. Up on the highway deck you
-// are never swimming, whatever is below.
-export function isSwimming(map, ped) {
-  if ((ped.lz || 0) > 0.35) return false;
-  const t = map.tileAtPx(ped.x, ped.y);
-  return WATER_T[t] === 1 || (t === T.BRIDGE && !!ped.under);
-}
-
-// Soaking: swimming in one of the hot springs' pools (map.springs ellipses, Granite Hot Springs).
-export function inHotSpring(map, ped) {
-  const sp = map.springs;
-  if (!sp || ped.vehId) return false;
-  for (const s of sp) {
-    const dx = (ped.x - s.x) / s.rx, dy = (ped.y - s.y) / s.ry;
-    if (dx * dx + dy * dy <= 1) return isSwimming(map, ped);
-  }
-  return false;
-}
-
-// Nearest walkable land to a point (for swimmers heading ashore), ring search in tiles.
-export function nearestLand(map, x, y, maxTiles = 24, skip = null) {
-  const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
-  for (let r = 0; r <= maxTiles; r++) {
-    let best = null, bd = Infinity;
-    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-      const t = map.tileAt(cx + dx, cy + dy);
-      if (PED_BLOCK[t] || t === T.BRIDGE || t === T.DOCK) continue; // a pier stands up out of the water: swim for real shore
-      if (skip && skip.has(map.idx(cx + dx, cy + dy))) continue; // tried that bit of shore: couldn't get up there
-      const px = (cx + dx + 0.5) * TILE, py = (cy + dy + 0.5) * TILE, d = (px - x) ** 2 + (py - y) ** 2;
-      if (d < bd) { bd = d; best = { x: px, y: py }; }
-    }
-    if (best) return best;
-  }
-  return null;
-}
-
-// Syndicate gang territory: The Yards, Southside and Smuggler's Rock (whole districts).
-export function isTurf(map, x, y) {
-  if (!map) return false;
-  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-  if (!map.inside(tx, ty)) return false;
-  return !!DISTRICTS[map.dist[map.idx(tx, ty)]].turf;
-}
-
-// Fishing water: 'river', 'deep' sea or 'shore' shallows.
-export function waterKind(map, tx, ty) {
-  if (!map.inside(tx, ty)) return 'deep';   // (out past the map's edge)
-  const i = map.idx(tx, ty);
-  if (map.river[i]) return 'river';
-  return map.tiles[i] === T.DEEP ? 'deep' : 'shore';
-}
-
-// ---------------------------------------------------------------------------
 // The world from its seed. The server and every client build it and must get the same map to the bit (the client
 // checks mapSignature on joining), so it's built with deterministic trigonometry: the JavaScript engines' own Math.sin
 // & co. differ in the last bit (Safari - every browser on an iPhone or iPad - against Chrome and Node), enough to move
@@ -507,21 +215,8 @@ export function generateCity(seed = 1337, opts = null) {
   if (opts && 'frame' in opts) { const { frame: _f, ...rest } = opts; opts = Object.keys(rest).length ? rest : null; }
   return withDeterministicMath(() => buildCity(seed, opts && opts.island ? islandBuilds(opts.island, opts) : opts, frame));
 }
-// The world as plain data (what a worker sends or the browser's cache keeps: a structured clone keeps no methods
-// and no functions) - and back. client/worldgen.js builds the city off the page's thread and keeps it.
-export function cityData(m) {
-  const o = {};
-  for (const k of Object.keys(m)) if (typeof m[k] !== 'function') o[k] = m[k];
-  return o;
-}
-export function cityFromData(o) {
-  Object.setPrototypeOf(o, CityMap.prototype);
-  // (what the nature sites hang on it, which a clone drops: the wild biome at a tile)
-  if (o.terrainCls && !o.terrainCls.at) Object.defineProperty(o.terrainCls, 'at', { value: (tx, ty) => wildBiome(o.dist[o.idx(tx, ty)], terrainAt(o.terrainCls.cls, o.terrainCls.cw, tx, ty)), enumerable: false });
-  return o;
-}
 // ---------------------------------------------------------------------------
-// The generator (from here to mapSignature) builds the map's frame, m.w x m.h from 0, 0: a tile's index is
+// The generator (from here to the end; mapSignature: shared/mapcore.js) builds the map's frame, m.w x m.h from 0, 0: a tile's index is
 // `y * m.w + x`. Code that reads a built map goes through its idx / inside.
 let OPTS = null;   // (World v3's spike: what generateCity was asked to build; null for the live world)
 function buildCity(seed, opts = null, frame = null) {
@@ -706,18 +401,6 @@ function decodeTerrain() {
     for (const m of row.matchAll(/([A-Z])([0-9a-z]+)/g)) { const n = parseInt(m[2], 36); cls.fill(code[m[1]], y * cw + x, y * cw + x + n); x += n; }
   });
   return { cls, cw, ch };
-}
-
-// The wild terrain class at a tile: the 4x4-tile cells of the map concept, sampled through a
-// wobble of smooth and fine noise so the patches of desert, rock and forest get ragged, natural
-// edges instead of square blocks.
-export function terrainAt(cls, cw, x, y) {
-  const n1 = Math.sin(x * 0.11 + Math.sin(y * 0.07) * 2) + Math.sin(y * 0.13 + Math.sin(x * 0.05) * 2);
-  const n2 = Math.sin(x * 0.09 - y * 0.05 + 1.7) + Math.cos(y * 0.1 + x * 0.04);
-  const jx = x + n1 * 3.2 + (hash2(x, y, 11) - 0.5) * 3, jy = y + n2 * 3.2 + (hash2(x, y, 13) - 0.5) * 3;
-  const cx = Math.max(0, Math.min(cw - 1, Math.floor(jx / TERRAIN_CELL))), ch = Math.floor(cls.length / cw);
-  const cy = Math.max(0, Math.min(ch - 1, Math.floor(jy / TERRAIN_CELL)));
-  return cls[cy * cw + cx];
 }
 
 // Chamfer distance (in quarter tiles, capped at 255) to the tiles where src is set.
@@ -3160,27 +2843,6 @@ function volleyCourt(m, name, x, y, w, h, margin = 1) {
 // and Cedar Falls, and over the strait back to West Hills. Every road it meets is a level
 // crossing with gates; the stations are open-air platforms beside the track. Trains follow
 // `rail.pts` by arc length; stations and crossings are positions along it.
-export const RAIL_GAUGE = 52;         // px between the outer rails' ties (track bed width ~2 tiles)
-// Rolling stock (wire index = position here). Coaches: seat rows either side of the aisle, doors
-// in the middle; the mail car carries the strongbox at its back end. The front car ('loco') is a
-// cab car: the driver's cab in the nose, closed off by a bulkhead, and seats behind it like a coach.
-export const TRAIN_CARS = [
-  { kind: 'loco', name: 'Front car', L: 196, W: 76 },
-  { kind: 'coach', name: 'Passenger coach', L: 212, W: 76 },
-  { kind: 'mail', name: 'Mail car', L: 188, W: 76 },
-];
-// What a train is made of (by kind; every third train swaps its last coach for the mail car).
-export const CONSIST = ['loco', 'coach', 'coach']; // short enough to stand between two streets at a station
-export const CAR_GAP = 10;               // px between coupled cars
-export const TRAIN_LEN = CONSIST.reduce((a, k) => a + TRAIN_CARS.find((c) => c.kind === k).L, 0) + CAR_GAP * (CONSIST.length - 1);
-export const COACH_SEATS = [-84, -60, -36, 36, 60, 84].flatMap((ox) => [[ox, -23], [ox, 23]]);
-export const COACH_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-48, 0], [48, 0], [72, 0]];
-export const CAB_OX = 50;                                 // the front car's cab bulkhead (riders stay behind it)
-export const LOCO_SEATS = [-84, -60, -36, 36].flatMap((ox) => [[ox, -23], [ox, 23]]);
-export const LOCO_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-48, 0], [22, 0]];
-export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towards the back of the mail car)
-export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards stand
-export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre
 const RAIL_ROUTE = [ // [tx, ty, 'sub'] corners of the one big loop (rounded); between two 'sub' corners it's a subway tunnel
   [302, 620], [302, 240], [362, 165], [482, 143], [545, 141], [560, 212], [640, 212], [800, 212], [880, 216], [975, 216],
   [975, 432], [1094, 440], [1094, 765], [885, 765], [885, 647, 'sub'], [885, 487, 'sub'], [705, 487, 'sub'], [705, 612, 'sub'], [705, 917],
@@ -3496,18 +3158,6 @@ function clearPropsOnRail(m, pts) {
     for (const e of kept) if (e.pi >= 0) { e.pi = remap.get(e.pi); m.propSolid.set(e.pi, e); }
     if (kept.length) m.solidProps.set(k, kept); else m.solidProps.delete(k);
   }
-}
-
-// Position + heading at arc length s along the loop (wraps).
-export function railAt(rail, s) {
-  const pts = rail.pts, L = rail.len;
-  s = ((s % L) + L) % L;
-  let lo = 0, hi = pts.length - 1;
-  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid].s <= s) lo = mid; else hi = mid - 1; }
-  const a = pts[lo], b = pts[(lo + 1) % pts.length];
-  const segLen = (lo + 1 < pts.length ? b.s : L) - a.s || 1;
-  const t = Math.min(1, (s - a.s) / segLen);
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x), under: !!(a.under && b.under), i: lo };
 }
 
 // ---- out on the water ------------------------------------------------------------------------
@@ -4029,19 +3679,6 @@ function addProp(m, t, x, y, solidR = 0, extra = null) {
   return p;
 }
 
-// Street furniture vehicles can smash through. Heavy items slow the car more; everything not
-// listed (fountains, dumpsters, ATMs, market stalls, flat beds) stays put.
-export const BREAKABLE = new Set([
-  'tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c',
-  'hydrant', 'hydrant_y', 'trashcan', 'bench_a', 'bench_b', 'bench_m', 'pbench', 'planter_sq', 'planter_g', 'planter_fl', 'potted',
-  'news_a', 'news_b', 'news_c', 'mailbox', 'vend_a', 'vend_cola', 'vend_c', 'bikerack', 'cone', 'barrier', 'drum', 'pallet', 'pallet_b',
-  'pallet_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'foodcart', 'foodcart_b', 'tires', 'bags', 'spool',
-  'lumber', 'planks', 'flowers_a', 'flowers_big', 'pipes', 'wheelbarrow', 'sandbags', 'cart', 'produce_a', 'produce_b', 'cactus', 'sigpole',
-  'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'bollard', 'crates', 'acunit', 'trashpile', 'atm', 'billboard',
-  'tent', 'picnic', 'upole', 'dspeaker', 'scope',
-]);
-export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole', 'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'acunit', 'billboard', 'upole']);
-
 // Point every lamp's arm at the nearest road so the head hangs over the street.
 function aimLamps(m) {
   for (const l of m.lamps) {
@@ -4467,12 +4104,6 @@ function buildAirports(m) {
 // Wild ground everywhere that isn't built: woods on green land, scrub in the desert, palms on beaches, and a
 // few big rock outcrops. Kept sparse so the prop list stays light.
 const WILD_CLEAR = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.FIELD, T.LOT, T.WALL]);
-// The terrain class a wild district really grows: the little sea islands (Lighthouse Rock, the Islets) are never
-// desert (grassland where the terrain says dry), and Granite Peaks is mountain where it says dry.
-export const SEA_ISLES = new Set([19, 20]);
-// (Highland Woods is old-growth redwood forest throughout: its meadow, rock and desert patches are forest too -
-// only the water and the beaches keep their own)
-export const wildBiome = (d, c) => (d === 29 ? (c === 0 || c === 5 ? c : 2) : c === 3 ? (SEA_ISLES.has(d) ? 1 : d === 33 ? 4 : c) : c);
 const seaIsle = wildBiome;
 // The open grass in town (the suburbs, the luxury hills, the beach towns, old town): groves of mature trees with
 // lawns between, three tiles clear of every road, building, pavement and lot; the species by district (statics.js
@@ -5087,18 +4718,4 @@ function buildCameras(m, rand) {
     }
     close(L);
   }
-}
-
-// A fingerprint of the generated world (tiles, props, solid furniture, gates, homes, the railway).
-// The server sends its own in the welcome; a browser still running the previous build after an
-// update gets a different one and reloads, instead of walking into walls only the server can see.
-export function mapSignature(m) {
-  if (m._sig) return m._sig;
-  let h = 0x811c9dc5;
-  const mix = (v) => { h ^= v & 0xff; h = Math.imul(h, 0x01000193) >>> 0; };
-  for (let i = 0; i < m.tiles.length; i += 3) mix(m.tiles[i]);
-  for (const n of [m.props.length, m.pois.length, m.homes.length, (m.gates || []).length, m.rail ? m.rail.pts.length : 0, m.edges.length]) { mix(n); mix(n >> 8); mix(n >> 16); }
-  for (const [, arr] of m.solidProps) for (const e of arr) { mix(e.x | 0); mix(e.y | 0); mix(e.r | 0); }
-  m._sig = h.toString(36);
-  return m._sig;
 }

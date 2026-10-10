@@ -61,7 +61,7 @@ import { SCENE_MASKS } from '../../../shared/interior-art.js';
 import { groundPixel } from '../ground.js';
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
-import { DISTRICTS, terrainAt, railAt, SEA_ISLES, wildBiome } from '../../../shared/map.js';
+import { DISTRICTS, terrainAt, railAt, SEA_ISLES, wildBiome } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
 import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
 

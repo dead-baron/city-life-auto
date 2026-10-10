@@ -8,7 +8,7 @@
 import { TILE } from '../shared/constants.js';
 import { PACK_TIERS } from '../shared/items.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
-import { mapSignature } from '../shared/map.js';
+import { mapSignature } from '../shared/mapcore.js';
 import { MAP_FRAME, districtCentroids, iconSkip, packIcon } from './hud.js';
 import { MAP_CATS, KIND_ICON, MAJOR_KINDS } from './mapwaypoints.js';
 import { drawIcon } from './pixicons.js';

@@ -22,6 +22,25 @@ test('budgets: the code each part of the page loads, and the title screen\'s ass
   assert.ok(!closure(['client/main.js']).some((f) => f.startsWith('client/art2/game/')), 'main.js loads the art v2 renderer lazily');
 });
 
+// The generator stays out of the page (2026-10-10): the page gets its city from the server or the browser's copy and
+// imports the map's runtime (shared/mapcore.js, layoutcore.js, worldmask-dims.js); the generator's modules load only
+// where a city is built (client/worldgen.js, main.js loadGenerator, the practice worker, the server, the tools).
+const GENERATOR = ['shared/map.js', 'shared/naturesites.js', 'shared/worldmask.js', 'shared/countryside.js', 'shared/islands.js', 'shared/metro.js',
+  'shared/citylayout.js', 'shared/world3-islands.js', 'shared/world3-land.js', 'shared/world3-skeleton.js'];
+test('the page, the renderer and the bake workers load the map\'s runtime, never the generator', () => {
+  const parts = {
+    'the page': closure(['client/boot.js', 'client/main.js']),
+    'the renderer': closure(['client/art2/game/host.js', 'client/art2/game/engine.js', 'client/art2/game/lightgame.js', 'client/art2/game/actors.js', 'client/art2/game/peds.js']),
+    'a bake worker': closure(['client/art2/game/worker.js'], { dynamic: true }),
+  };
+  for (const [what, files] of Object.entries(parts)) {
+    assert.ok(files.includes('shared/mapcore.js'), `${what} reads the map through shared/mapcore.js`);
+    for (const f of GENERATOR) assert.ok(!files.includes(f), `${f} (the city's generator) is in ${what}'s code: import the map's runtime (shared/mapcore.js, layoutcore.js) instead, or load the generator dynamically where the city is built`);
+  }
+  // the city worker still builds the city when the server can't serve it
+  assert.ok(closure(['client/worldgen.js'], { dynamic: true }).includes('shared/map.js'), 'client/worldgen.js loads the generator when it must build');
+});
+
 test('budgets: building the city and baking chunks, as multiples of a CPU yardstick; what the city and a kept chunk weigh', async () => {
   const cpu = await cpuReport();
   const over = overBudget({ page: { files: 0, kb: 0 }, city: { files: 0, kb: 0 }, renderer: { files: 0, kb: 0 }, bake: { files: 0, kb: 0 } }, { kb: 0 }, cpu);
