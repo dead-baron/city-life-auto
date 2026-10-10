@@ -135,6 +135,9 @@ test('NPC groups bowl on the other lanes while someone is near, and go when nobo
   const { p } = joinPlayer(w);
   teleport(w, p.ped, A.counter.x, A.counter.y);
   run(w, 2);
+  assert.ok(!(w.bowl && w.bowl.lanes.some((l) => l.game && l.game.npc)), 'none in a world without NPCs (the server\'s NPC budget)');
+  w.npcBudget = 200;
+  run(w, 2);
   const npcLanes = w.bowl.lanes.filter((l) => l.game && l.game.npc);
   assert.ok(npcLanes.length >= 2, 'groups on the lanes');
   run(w, 14);

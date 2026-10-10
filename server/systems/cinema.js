@@ -118,7 +118,8 @@ export function update(world) {
   let near = Infinity;
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) near = Math.min(near, Math.hypot(p.ped.x - C.counter.x, p.ped.y - C.counter.y));
   if (near > CINE.FAR_PX) { S.rooms.forEach((R, ri) => { if (R.npcs.length) emptyRoom(world, ri); }); return; }
-  if (near <= CINE.NEAR_PX) S.rooms.forEach((R, ri) => fillRoom(world, ri));
+  // (within the server's NPC budget like everyone else: none in a world without NPCs, as in most tests)
+  if (near <= CINE.NEAR_PX && world.npcBudget > 0 && world.npcCount < world.npcBudget * 0.85) S.rooms.forEach((R, ri) => fillRoom(world, ri));
 }
 
 // for the HUD ('me') and client/cinema.js: the film you're watching and how far in it is; inside the cinema but not in

@@ -512,9 +512,10 @@ function arrive(world, v, ai, body, crew, now) {
   const back = backOf(world, v);
   if (b && world.map.isWalkable(back.x, back.y)) { b.x = back.x; b.y = back.y; world.place(b); }
   stretcher(world.get(ai.porter), 'stretcher');
-  // a walk with things in the way (out in the wilds: trees, rocks, a stream): the way round them on foot (offroad.js)
+  // a walk with things in the way (out in the wilds: trees, rocks, a stream; a wall between the kerb and someone lying
+  // inside a shop, however near): the way round them on foot (offroad.js)
   ai.walk = Math.hypot(body.x - a.x, body.y - a.y); ai.foot = null;
-  if (ai.walk > 90 && !clearWalk(world.map, a.x, a.y, body.x, body.y)) {
+  if (!clearWalk(world.map, a.x, a.y, body.x, body.y)) {
     const P = groundPath(world, a, body, { van: false });
     if (P && P.pts.length > 1) { ai.foot = P.pts; ai.walk = P.len + P.d; }
   }

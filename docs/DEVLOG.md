@@ -6160,6 +6160,25 @@ dents and parts falling off as it worsens, not a repetitive grey speckle overlay
 
 The full suite caught two server events from the vehicle damage work with no sound: a part coming off a battered car
 (`vpart`: a bumper or door clangs down with a scrape, a wheel thumps) and a car cut in two (`vcut`: the plasma blade's
-sear and hum through the metal, the shell's clang). `client/sound/events.js`. Tests: test/sound.test.js. (The street
-fight test in test/brawls.test.js failed once under the full suite's load and passes on its own, six runs out of six:
-it's timing-sensitive, noted for a look.)
+sear and hum through the metal, the shell's clang). `client/sound/events.js`. Tests: test/sound.test.js.
+
+## 2026-10-10 · The cinema's and the bowling alley's NPCs keep within the NPC budget
+
+The full suite's street-fight test (test/brawls.test.js: the police take in whoever started it) failed from the
+cinema's merge on. Its Downtown pavement is within 900 px of the Grand Theatre's counter, and the cinema seated its
+audience even in a world with no NPCs (the tests' `npcBudget: 0`, the server's limit on NPCs), which changed the
+scene and the order of the random numbers: the one who started the fight ended up waiting for help instead of being
+taken in. Every other system that brings NPCs in keeps within the budget; now the cinema's audience and the bowling
+alley's NPC groups do too (only while the server is under 85% of it, as the people going about their lives).
+`server/systems/cinema.js`, `server/systems/bowling.js`. Tests: test/cinema.test.js and test/bowling.test.js check that
+there are none without a budget and that they come with one; test/brawls.test.js passes again.
+
+## 2026-10-10 · Paramedics find the door to someone lying in a shop, however near the kerb
+
+The stretcher test (test/ems.test.js) failed now and then in the full suite. Run 150 times over, about one run in
+twenty went wrong the same way: the patient lay inside the café by its side wall, the ambulance pulled up on the
+street just outside, and with the patient under 90 px away the crew walked straight at them - into the wall - for
+the 40 seconds the scene allows, then gave up and drove off. The way round on foot (offroad.js's path, out round
+the corner and in at the door) was only worked out for walks longer than 90 px; now it's worked out whenever the
+straight line is blocked, however short. 200 runs since: none failed. The test's worlds are seeded now as well, so
+the passers-by and the traffic are the same each run. `server/systems/ems.js`; `test/ems.test.js`.

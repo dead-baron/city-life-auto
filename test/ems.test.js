@@ -13,6 +13,7 @@ import * as revive from '../server/systems/revive.js';
 import * as ems from '../server/systems/ems.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import { kerbFor } from '../server/systems/kerbdrive.js';
+import { mulberry32 } from '../shared/rng.js';
 
 const WET = (t) => t === T.WATER || t === T.DEEP;
 // the places to go down in (px)
@@ -46,7 +47,7 @@ function places(m) {
 test('a paid ambulance gets to you wherever you are: downtown, in a shop, a park, the coast, an island, the wilds - never into the water', () => {
   const m = makeWorld().map;
   for (const [where, x, y] of places(m)) {
-    const w = makeWorld({ npcBudget: 30 });
+    const w = makeWorld({ npcBudget: 30, rand: mulberry32(where.length) });   // (seeded: the passers-by and the traffic the same each run)
     const a = joinPlayer(w, { cash: 0, bank: 1000 });
     teleport(w, a.p.ped, x, y);
     combat.kill(w, a.p.ped, null, 'melee', 0);
@@ -71,7 +72,7 @@ test('a paid ambulance gets to you wherever you are: downtown, in a shop, a park
 });
 
 test('the stretcher: out of the back, treat, onto the stretcher, wheeled to the ambulance, loaded and driven off', () => {
-  const w = makeWorld({ npcBudget: 30 });
+  const w = makeWorld({ npcBudget: 30, rand: mulberry32(73) });   // (seeded, as above)
   const a = joinPlayer(w, { cash: 0, bank: 0 });
   const cafe = w.map.pois.find((q) => q.kind === 'coffee' && w.map.zoneAt(q.x, q.y) === Z.CITY);
   teleport(w, a.p.ped, cafe.x, cafe.y + 40);

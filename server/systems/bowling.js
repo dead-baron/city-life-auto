@@ -277,7 +277,8 @@ export function update(world) {
   let near = Infinity;
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) near = Math.min(near, Math.hypot(p.ped.x - A.counter.x, p.ped.y - A.counter.y));
   if (near > FAR_PX) { S.lanes.forEach((ln, li) => { if (ln.game && ln.game.npc) endNpcGame(world, li); }); return; }
-  if (near > NEAR_PX) return;
+  // (within the server's NPC budget like everyone else: none in a world without NPCs, as in most tests)
+  if (near > NEAR_PX || !(world.npcBudget > 0) || world.npcCount >= world.npcBudget * 0.85) return;
   let n = S.lanes.filter((ln) => ln.game && ln.game.npc).length;
   for (const li of [0, 2, 4, 6, 1, 3, 5, 7]) {
     if (n >= NPC_LANES) break;

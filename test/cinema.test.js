@@ -98,6 +98,9 @@ test('getting up or walking out ends the film for you; a few NPCs watch while yo
   p.profile.inventory.filmTicket = 2;
   teleport(w, p.ped, R.seats[3].x, R.seats[3].y + 6);
   run(w, 1.5);
+  assert.equal(w.cine.rooms.reduce((n, r) => n + r.npcs.length, 0), 0, 'no audience in a world without NPCs (the server\'s NPC budget)');
+  w.npcBudget = 200;   // (a world with NPCs: the last test in this file)
+  run(w, 1.5);
   const npcs = w.cine.rooms.reduce((n, r) => n + r.npcs.length, 0);
   assert.ok(npcs >= 4, `an audience (${npcs})`);
   const shows = players.buildMe(w, p).cine;
