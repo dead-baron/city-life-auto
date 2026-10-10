@@ -49,7 +49,7 @@ import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
 import { WEAPONS, BLADE_COLORS, hexRgb } from '../../../shared/items.js';
-import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES } from './liveart.js';   // (the moving parts of the static world: flags in the wind)
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape } from './liveart.js';   // (flags in the wind, umbrellas' canopies)
 const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand, _lights)
 
 export { DECK_Z };
@@ -1175,11 +1175,13 @@ export class World2 {
     o.under = 0;
     this.n.drawn++;
     if (f & PF.UMBRELLA) {
-      const uk = this._genUmbrella(p.id % Math.max(1, (api.UMBRELLA_COLORS || []).length));
+      // (the canopy: their own look, liveart.js umbrellaStyle; its rim drop px below the shaft's top - or, the
+      // umbrella not in hand, centred over them at that height)
+      const ui = umbrellaStyle(p.id), uk = this._conv(`gumb|${ui}`, () => umbrellaSprite(ui), true), U = umbrellaShape(ui), drop = U.drop;
       if (uk) {
         o.flash = 0; o.xray = false;
-        if (umb) { const t = Pd.umbrellaTop(d8, this._umbT || (this._umbT = [0, 0, 0])); E.drawSprite(uk, p.rx + hx + t[0], p.ry + hy + t[1], z0 + t[2], o); }  // on the shaft in the hand
-        else E.drawSprite(uk, p.rx, p.ry, z0 + 44, o);
+        if (umb) { const t = Pd.umbrellaTop(d8, this._umbT || (this._umbT = [0, 0, 0]), U.k); E.drawSprite(uk, p.rx + hx + t[0], p.ry + hy + t[1], z0 + t[2] - drop, o); }  // on the shaft in the hand
+        else E.drawSprite(uk, p.rx, p.ry, z0 + 44 - drop, o);
       }
     }
   }
@@ -1204,31 +1206,6 @@ export class World2 {
     if (n < 2 || n > 8) return;
     for (let i = 0; i < n; i++) this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, i, wpn, bo), [A2, ppose, d8, i, wpn, bo], prio);
   }
-  // an open umbrella: a shallow dome of 8 panels in its colour, scalloped between the rib tips, darker ribs and rim, the
-  // tip on top (sampled at quarter pixels, keeping the highest point per pixel, so the near slope has no gaps)
-  _genUmbrella(i) {
-    return this._conv(`gumb|${i}`, () => {
-      const cols = this.api.UMBRELLA_COLORS || ['#c8262b'], base = rgbOf(cols[i] || cols[0]);
-      const R = 13, H = 6, w = R * 2 + 1, h = R * 2 + H + 3, ax = R, ay = R + H + 1, PAN = Math.PI / 4;
-      const G = gbuf(w, h, ax, ay);
-      for (let Y = -R; Y <= R; Y += 0.25) for (let X = -R; X <= R; X += 0.25) {
-        const a = Math.atan2(Y, X) + Math.PI, f = (a / PAN) % 1, edge = R * (0.93 + 0.07 * Math.abs(Math.cos(f * Math.PI)));   // scallops: the rim dips between rib tips
-        const r = Math.hypot(X, Y);
-        if (r > edge) continue;
-        const r2 = (r * r) / (R * R), Z = H * (1 - r2), sx = Math.floor(X + ax + 0.5), sy = Math.floor(Y - Z + ay + 0.5), zz = Math.round(Z) + 1;
-        if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
-        const ii = sy * w + sx;
-        if (G.col[ii * 4 + 3] && G.z[ii] >= zz) continue;
-        const rib = Math.min(f, 1 - f) * r < 0.45 && r > 2, rim = r > edge - 1.3, panel = Math.floor(a / PAN) & 1;
-        const k = rib ? 0.62 : rim ? 0.66 : panel ? 0.86 : 1;
-        const nx = 2 * H * X / (R * R), ny = 2 * H * Y / (R * R), nl = Math.hypot(nx, ny, 1);
-        put(G, sx, sy, [base[0] * k, base[1] * k, base[2] * k], zz, [128 + nx / nl * 127, 128 + ny / nl * 127, 128 + 127 / nl, 255]);
-      }
-      put(G, ax, ay - H - 2, [40, 40, 44], H + 3); put(G, ax, ay - H - 1, [40, 40, 44], H + 2); // the tip
-      return G;
-    }, true);
-  }
-
   // ---- animals, vehicles, trains, small things ------------------------------------------------------------------
   _pet(p, now) {
     const A = this.A, E = this.E;

@@ -16,6 +16,8 @@
        &cabs=T       the Ferris wheel's gondolas where they are at loop time T (shared/rides.js; the wheel bakes without)
        &balloon=r,t,pal  a balloon flight on route r (balloonRoutes) t seconds after lift-off, in palette pal
        &slide=k,t[,k,t...]  someone on Splash Canyon's slide k t seconds after boarding (slideRider; drawn as host.js _slider)
+       &umbrellas=1  a crowd round the camera under open umbrellas, every look (liveart.js UMBRELLAS) in a row, walking
+                     and standing at four headings, the canopy on the shaft as host.js _ped puts it
        &live=1       the live parts on the baked chunks as the game's host draws them: the signal lenses lit at the clock
                      (shared/signals.js), the flags in the wind given by &wind (liveart.js)
      window.render(t, windT) draws another frame at that clock (returns when done); window.ready once baked. -->
@@ -69,6 +71,18 @@ if (q.get('cabs') !== null) {
 if (q.get('balloon')) {
   const [r, t, pal] = q.get('balloon').split(',').map(Number), route = balloonRoutes(M)[r || 0];
   if (route) { const at = balloonAt(route, t, 100); sprites.push([sprite(Act.rideKey('balloon', pal || 0), () => Act.rideSprite('balloon', pal || 0)), at.x, at.y, at.z, at.z > 24]); if (lightK) lights.push({ x: at.x, y: at.y, z: at.z + 46, r: 150, col: [1, 0.55, 0.2], k: 1.6 }); }
+}
+if (q.get('umbrellas')) {
+  const Pd = await import('../../client/art2/game/peds.js'), { makeAppearance } = await import('../../server/entities.js'), LA = await import('../../client/art2/game/liveart.js');
+  let seed = 5; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647), ARS = ['casual', 'office', 'socialite', 'student', 'senior', 'athlete'];
+  const n = LA.UMBRELLAS.length, cols = 8, t = [0, 0, 0];
+  for (let i = 0; i < n; i++) for (let k = 0; k < cols; k++) {
+    const ar = ARS[(i + k) % ARS.length], app = Pd.adaptApp(makeAppearance(rnd, ar), ar), d8 = [0, 2, 4, 6][k % 4], pose = k < 4 ? 'idle' : 'walk1', fr = k < 4 ? 0 : 1;
+    const x = camX + (k - (cols - 1) / 2) * 46, y = camY + (i - (n - 1) / 2) * 40;
+    sprites.push([sprite('umbp:' + i + ':' + k + ':' + Pd.pedKey(app, pose, d8, fr, 'umbrella'), () => Pd.pedSprite(app, pose, d8, fr, 'umbrella')), x, y, 0, false]);
+    Pd.umbrellaTop(d8, t, LA.umbrellaShape(i).k);
+    sprites.push([sprite('gumb|' + i, () => LA.umbrellaSprite(i)), x + t[0], y + t[1], t[2] - LA.umbrellaShape(i).drop, false]);
+  }
 }
 if (q.get('slide')) {
   const Pd = await import('../../client/art2/game/peds.js'), { makeAppearance } = await import('../../server/entities.js'), { dir8 } = await import('../../client/render/chars.js');

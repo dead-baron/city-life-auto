@@ -93,19 +93,97 @@ export function flagSprite(kind, li, di, fr) {
   return A.G;
 }
 
+// ---- umbrellas ----------------------------------------------------------------------------------------------------
+// The canopy over someone holding an open umbrella in the rain (task #433, the owner: "Umbrellas are a little small
+// right now we should make them a bit bigger and held lower down over the NPC a bit more so it looks like it's
+// covering them from the rain. We should add more variety in the umbrellas."). The host draws it on the shaft in
+// their hand (game/peds.js umbrellaTop: the shaft's top, people.js's hold), its rim drop px below that: the crown a
+// few px over the shaft's top and every head, the rim down at the shoulders. 34 px across (it was 26, its rim at the
+// top of the head). Its look is the person's own, always the same one: umbrellaStyle(their entity id).
+// A style: c the canopy, c2 its second colour; p the pattern - 'panels' (every other panel in c2), 'rainbow', 'dots'
+// (polka dots of c2), 'rim' (a band of c2 round the edge); clear: a bubble of clear plastic, deeper and down round
+// the head, you see them through it: its rim tinted c2, light caught on it, a glint of the plastic here and there;
+// w how common.
+const RAINBOW = [[214, 52, 52], [236, 132, 40], [236, 206, 52], [64, 168, 72], [44, 170, 196], [52, 92, 196], [120, 64, 180], [210, 70, 150]];
+export const UMBRELLAS = [
+  { c: '#24262c', w: 10 },                              // black: the most common
+  { c: '#2a3a6a', w: 6 },                               // navy
+  { c: '#c8262b', w: 5 },                               // red
+  { c: '#2f6e46', w: 4 },                               // bottle green
+  { c: '#e8b923', w: 3 },                               // yellow
+  { c: '#6a3aa8', w: 3 },                               // purple
+  { c: '#e0709e', w: 3 },                               // pink
+  { c: '#8a6a4a', w: 3 },                               // tan
+  { c: '#c8262b', c2: '#f0ece4', p: 'panels', w: 3 },   // red and white
+  { c: '#2f5fc8', c2: '#f0ece4', p: 'panels', w: 3 },   // blue and white, a golf umbrella
+  { c: '#24262c', c2: '#e8b923', p: 'panels', w: 2 },   // black and yellow
+  { p: 'rainbow', w: 2 },
+  { c: '#24262c', c2: '#f0ece4', p: 'dots', w: 3 },     // black with white polka dots
+  { c: '#e0709e', c2: '#fff6fa', p: 'dots', w: 2 },     // pink with white dots
+  { c: '#2a3a6a', c2: '#e8b923', p: 'rim', w: 2 },      // navy with a yellow border
+  { c: '#2f6e46', c2: '#f0ece4', p: 'rim', w: 2 },      // green with a white border
+  { clear: true, c2: '#f2f4f6', w: 3 },                 // clear bubbles: a white rim
+  { clear: true, c2: '#f08ab8', w: 2 },                 // ...a pink one
+];
+const UMB_SUM = UMBRELLAS.reduce((s, u) => s + u.w, 0);
+// the person's umbrella: a hash of their id (the server's, the same for everyone watching) - theirs for as long as
+// they're about, whatever the frame
+export function umbrellaStyle(id) {
+  let h = Math.imul((id | 0) ^ 0x2c1b3c6d, 0x297a2d39) >>> 0;
+  h = (Math.imul(h ^ (h >>> 15), 0x85ebca6b) >>> 0) % UMB_SUM;
+  for (let i = 0; i < UMBRELLAS.length; i++) { h -= UMBRELLAS[i].w; if (h < 0) return i; }
+  return 0;
+}
+// a canopy's shape: R its radius, H its crown over its rim, e how its dome falls away (higher: flatter on top, steeper
+// at the edge), drop how far its rim hangs below the shaft's top (the crown is H - drop over it), k how far out toward
+// the shaft its middle sits from over the head (peds.js umbrellaTop: held a little in, over them)
+export const UMB_SHAPE = { R: 17, H: 10.5, e: 2.6, drop: 6.5, k: 0.55 }, BUBBLE_SHAPE = { R: 16, H: 12, e: 3, drop: 7.5, k: 0.45 };
+export const umbrellaShape = (i) => ((UMBRELLAS[i] || UMBRELLAS[0]).clear ? BUBBLE_SHAPE : UMB_SHAPE);
+const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+// The canopy in art pixels, anchored at its middle on its rim's plane (heights over that): eight panels, the rim dipping
+// between the ribs' tips, darker ribs and edge, the tip on top; shaded by the dome's slope (the light does the rest).
+export function umbrellaSprite(i) {
+  const st = UMBRELLAS[i] || UMBRELLAS[0], S = umbrellaShape(i), R = S.R, H = S.H, PAN = Math.PI / 4;
+  const A = artBuf(2 * R + 4, 2 * R + H + 6, R + 2, R + H + 3), c = rgb(st.c || '#24262c'), c2 = rgb(st.c2 || '#f0ece4'), n = [0, 0, 1];
+  const film = [200, 222, 236], see = (px, py) => !(px & 3) && !((py + (px >> 2)) & 3);   // (a clear bubble's plastic: a glint on one art pixel in sixteen)
+  for (let Y = -R; Y <= R; Y += 0.4) for (let X = -R; X <= R; X += 0.4) {
+    const r = Math.hypot(X, Y), a = Math.atan2(Y, X) + Math.PI, f = (a / PAN) % 1, edge = R * (0.93 + 0.07 * Math.abs(Math.cos(f * Math.PI)));
+    if (r > edge) continue;
+    const q = Math.pow(r / R, S.e), Z = H * (1 - q), g = r > 1e-3 ? H * S.e * q / r / r : 0, nx = g * X, ny = g * Y, nl = Math.hypot(nx, ny, 1);
+    n[0] = nx / nl; n[1] = ny / nl; n[2] = 1 / nl;
+    // (a rib: within 1 px of the line out to a rib's tip - a whole art pixel wide)
+    const rib = Math.min(f, 1 - f) * PAN * r < 1 && r > 3, rim = r > edge - 1.6, panel = Math.floor(a / PAN) & 1;
+    if (st.clear) {
+      if (rim) A.dot(X, Y, Z, c2, 1, n, 0);
+      else if ((Math.abs(r - R * 0.6) < 0.8 && X + Y < -R * 0.45) || (Math.abs(r - R * 0.78) < 0.7 && X > R * 0.3 && Y < -R * 0.3)) A.dot(X, Y, Z, [255, 255, 255], 1, n, 0);   // (light caught on the plastic)
+      else A.dot(X, Y, Z, film, 1, n, 0, null, see);
+      continue;
+    }
+    let col = c;
+    if (st.p === 'panels' && panel) col = c2;
+    else if (st.p === 'rainbow') col = RAINBOW[Math.floor(a / PAN) % 8];
+    else if (st.p === 'dots' && !rib) { const row = Math.round(Y / 7), dx = X - (Math.round((X - (row & 1) * 3.5) / 7) * 7 + (row & 1) * 3.5); if (Math.hypot(dx, Y - row * 7) < 1.7) col = c2; }
+    else if (st.p === 'rim' && r > 0.72 * R) col = c2;
+    A.dot(X, Y, Z, col, rib ? 0.62 : rim ? 0.66 : panel && st.p !== 'panels' && st.p !== 'rainbow' ? 0.86 : 1, n, 0);
+  }
+  A.dot(0, 0, H + 1, [40, 40, 44], 1, [0, 0, 1], 0); A.dot(0, 0.1, H + 2.5, [40, 40, 44], 1, [0, 0, 1], 0);   // the tip
+  return A.G;
+}
+
 // A sprite drawn in art pixels: w, h, ax, ay in world px (the anchor on the art grid); dot(x, y, z, colour, shade,
-// normal, flag, emissive) puts the point at ground offset (x, y), height z where it shows - the nearest the camera
-// wins its art pixel (the furthest south and up, as the depth test has it).
+// normal, flag, emissive, keep) puts the point at ground offset (x, y), height z (0 up) where it shows - the nearest
+// the camera wins its art pixel (the furthest south and up, as the depth test has it); keep(px, py): only on the art
+// pixels it likes (a dither).
 function artBuf(w, h, ax, ay) {
   const P = ART_PX, G = new GBuf(Math.ceil(w / P) + 1, Math.ceil(h / P) + 1), depth = new Float32Array(G.w * G.h).fill(-1e9), c3 = [0, 0, 0];
   G.ap = P; G.ax = Math.round(ax / P); G.ay = Math.round(ay / P);
   const X0 = G.ax * P, Y0 = G.ay * P;
   return {
     G,
-    dot(x, y, z, c, k, n, flag, e = null) {
-      if (z < 0.5) return;
+    dot(x, y, z, c, k, n, flag, e = null, keep = null) {
+      if (z < 0) return;
       const px = Math.floor((X0 + x) / P), py = Math.floor((Y0 + y - z) / P), j = py * G.w + px;
-      if (!G.inside(px, py) || depth[j] > y + z) return;
+      if (!G.inside(px, py) || depth[j] > y + z || (keep && !keep(px, py))) return;
       depth[j] = y + z;
       c3[0] = c[0] * k; c3[1] = c[1] * k; c3[2] = c[2] * k;
       G.put(px, py, c3, n, z, e, flag);

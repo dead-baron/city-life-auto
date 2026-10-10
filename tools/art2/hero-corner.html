@@ -19,6 +19,7 @@ import { blendPresets, sunKeep } from '../../client/art2/game/lightgame.js';
 import { bakeChunk, loadProviders, SpriteCache, CHUNK } from '../../client/art2/game/chunkbake.js';
 import * as A from '../../client/art2/game/actors.js';
 import * as Pd from '../../client/art2/game/peds.js';
+import * as LA from '../../client/art2/game/liveart.js';
 import { randomPerson } from '../../client/art2/peoplepresets.js';
 import { cone } from '../../client/art2/props-transit.js';
 import { F_NOCAST } from '../../client/art2/gbuf.js';
@@ -120,7 +121,7 @@ if (!SC.incident) {
     [look(19, 'commuter', { top: { kind: 'hoodie', color: 'green' } }), 'idle', 5, 1, 360, -86],
   ];
   PETS = [['golden', 'walk', 6, 1, 506, -160]];
-  if (SC.umbrellas) { PEOPLE[3][6] = { umbrella: 1 }; PEOPLE[8][6] = { umbrella: 3 }; PEOPLE[4][6] = { umbrella: 0 }; }
+  if (SC.umbrellas) { PEOPLE[3][6] = { umbrella: 1 }; PEOPLE[8][6] = { umbrella: 12 }; PEOPLE[4][6] = { umbrella: 16 }; PEOPLE[2][6] = { umbrella: 9 }; }
 } else {
   CARS = [
     [8, 1, 12, -9, 0.3, { lights: true, siren: 1 }],          // the police car across the junction, lights going
@@ -164,25 +165,8 @@ function put(G, x, y, rgb, z, n, flag = 0, e = 0) {
 }
 const SIG_RGB = [[255, 59, 59], [255, 194, 61], [61, 220, 132]], SIG01 = SIG_RGB.map((c) => c.map((v) => v / 255)), FACE_N = [128, 196, 230, 255];
 const lens = (i) => up(`glamp|${i}`, () => { const G = gbuf(3, 4, 1, 3); for (let y = 0; y < 4; y++) for (let x = 0; x < 3; x++) put(G, x, y, SIG_RGB[i], 4 - y, FACE_N, F_NOCAST, 255); return G; });
-// (host.js _genUmbrella: a shallow dome of 8 panels)
-const UMB = ['#2f5fc8', '#c8262b', '#2b2b33', '#2f9a5a'];
-const umbrella = (ci) => up(`gumb|${ci}`, () => {
-  const base = [1, 3, 5].map((k) => parseInt(UMB[ci].slice(k, k + 2), 16));
-  const R = 13, Hh = 6, w = R * 2 + 1, h = R * 2 + Hh + 3, ax = R, ay = R + Hh + 1, G = gbuf(w, h, ax, ay);
-  for (let Y = -R; Y <= R; Y++) for (let X = -R; X <= R; X++) {
-    const r2 = (X * X + Y * Y) / (R * R);
-    if (r2 > 1) continue;
-    const Z = Math.round(Hh * (1 - r2)), sx = X + ax, sy = Y - Z + ay, zz = Z + 1;
-    if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
-    const ii = sy * w + sx;
-    if (G.col[ii * 4 + 3] && G.z[ii] >= zz) continue;
-    const k = r2 > 0.82 ? 0.62 : Math.floor((Math.atan2(Y, X) + Math.PI) / (Math.PI / 4)) & 1 ? 0.84 : 1;
-    const nx = 2 * Hh * X / (R * R), ny = 2 * Hh * Y / (R * R), nl = Math.hypot(nx, ny, 1);
-    put(G, sx, sy, [base[0] * k, base[1] * k, base[2] * k], zz, [128 + nx / nl * 127, 128 + ny / nl * 127, 128 + 127 / nl, 255]);
-  }
-  put(G, ax, ay - Hh - 2, [40, 40, 44], Hh + 3, [128, 128, 255, 255]); put(G, ax, ay - Hh - 1, [40, 40, 44], Hh + 2, [128, 128, 255, 255]);
-  return G;
-});
+// (host.js _ped: the canopy of an open umbrella in a look of its own, liveart.js)
+const umbrella = (i) => up(`gumb|${i}`, () => LA.umbrellaSprite(i));
 
 // ---- one frame -------------------------------------------------------------------------------------------------
 const C = { head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], white: [0.92, 0.94, 1] };
@@ -243,9 +227,10 @@ function frame(t) {
   }
   // people (a cop's flashlight after dark), umbrellas in the rain, pets
   for (const [app, pose, d8, fr, dx, dy, ex] of PEOPLE) {
-    const x = J.x + dx, y = J.y + dy, key = up(Pd.pedKey(app, pose, d8, fr, 0), () => Pd.pedSprite(app, pose, d8, fr, 0));
+    const ui = ex && ex.umbrella !== undefined ? ex.umbrella : -1, w = ui >= 0 ? 'umbrella' : 0;   // (an open umbrella: held up, the canopy on the shaft as host.js _ped draws it)
+    const x = J.x + dx, y = J.y + dy, key = up(Pd.pedKey(app, pose, d8, fr, w), () => Pd.pedSprite(app, pose, d8, fr, w));
     if (key) eng.drawSprite(key, x, y, 0, o);
-    if (ex && ex.umbrella !== undefined) { const uk = umbrella(ex.umbrella); if (uk) eng.drawSprite(uk, x, y, 44, o); }
+    if (ui >= 0) { const uk = umbrella(ui), S = LA.umbrellaShape(ui), t = Pd.umbrellaTop(d8, [0, 0, 0], S.k); if (uk) eng.drawSprite(uk, x + t[0], y + t[1], t[2] - S.drop, o); }
     if (night > 0.35 && app.top && app.top.kind === 'uniform' && app.hat && app.hat.kind === 'police') {
       const a = [Math.PI / 2, Math.PI * 3 / 4, Math.PI, -Math.PI * 3 / 4, -Math.PI / 2, -Math.PI / 4, 0, Math.PI / 4][d8];
       light(x + Math.cos(a) * 8, y + Math.sin(a) * 8, 30, 200, C.white, 1.6 * night, [a, 0.32, 200]);
