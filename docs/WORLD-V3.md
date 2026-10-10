@@ -38,7 +38,7 @@ Status marks used throughout:
 | Size | 1312 x 1200 tiles (1.57 km²) | **5040 x 4032 tiles (5.04 x 4.03 km, 20.3 km², 13x today)** |
 | Regions | - (one whole world) | 10 x 8 regions of 504 x 504 tiles (21 x 21 net chunks of 24) |
 | Layout | islands in an open sea, joined by long bridges | a bay with the city's islands in it, the mainland round three sides, the open sea to the south |
-| Land | ~0.9 km² | ~13 km² (mainland ~11, islands ~2) |
+| Land | 0.96 km² (measured: tiles that aren't water) | ~12 km² in the plan: the islands keep their 0.62 km², the mainland is ~11.7 km² (of which today's Highland Woods, Granite Peaks, Northshore and Dry Creek are 0.34 km²) |
 
 Why 5040 x 4032: it is about 5 x 4 km, a whole number of net chunks (210 x 168 of `CHUNK_TILES` 24) and of regions (10 x 8 of
 504). The bay is about 2.4 km across; the mainland is a band about 1.8 km deep along the north with arms down the west
@@ -211,8 +211,8 @@ N1-A..E, D15-A/B, NT1-A, NT1-E, SC3-A..C, HU1-HU7)
 - Activities: hunting, felling (WD1-WD3), foraging, fishing (creeks, the coast), camping, the coast drive, surfing coves.
 
 **R3 Egret Coast** (the west arm, about 0.7 x 1 km; marsh and dunes; N7, NK1-D, NK1-O, E3e)
-- New: **Egret Point** fishing village at the arm's tip (piers, a fish market, the Gull Harbor car ferry's mainland
-  pier), **Egret Point Light**, a salt marsh with boardwalks (NK1-O), dunes with board ramps down to the beach (EL1), duck
+- New: **Egret Point** fishing village at the arm's tip (piers, a fish market, the fishing fleet, a charter boat to
+  the outer islands), **Egret Point Light**, a salt marsh with boardwalks (NK1-O), dunes with board ramps down to the beach (EL1), duck
   blinds, the Westport Raceway's new spot (open flat ground).
 - Roads: the Redwood Coast Road's south end; marsh boardwalks and dirt tracks.
 - Activities: duck and goose hunting, fishing, crabbing, birding, beachcombing, the raceway.
@@ -356,10 +356,10 @@ Northgate - Downtown - Neon Strip - The Yards - Pine Hills - Southside (new). Mo
 
 **Ferries** (`server/systems/ferries.js` finds its routes from the map, so they follow the islands):
 - Gull Harbor Ferry (car ferry), Coral Cay, Paradise Cay and Lighthouse Rock water buses - exist, re-routed from the new
-  piers (Egret Point, Port Westport, South Port).
-- **Bay Ferry** (new): the walk-on commuter loop - Metro City Harbor, Westport, Northshore pier, South Port (FE1).
+  piers: Gull Harbor's car ferry from Port Westport, the cays' water bus from Cedar Isle, Lighthouse Rock's from Westport.
+- **Bay Ferry** (new): the walk-on commuter loop - Metro City Harbor, Westport, Northshore pier, Cedar Isle (FE1).
 - **River Water Bus** (new): Old Town quay - up the river channel - Willow Crossing - Kestrel Lake.
-- **Prison Boat** (new): the police dock at South Port - Prison Island (custody only).
+- **Prison Boat** (new): a police dock on Cedar Isle's east end - Prison Island (custody only).
 
 **Buses** (`server/systems/transit.js`: lines worked out from the bus shelters, one per town zone): Metro Loop,
 Southside, Westport, Northshore, Cedar Isle, East (Dry Creek), Key and Gull lines - exist, follow their towns. New:
@@ -461,8 +461,11 @@ Things for the owner to decide:
    moves to the valley and Cedar Isle becomes the beach and golf island.
 3. **Dry Creek moves whole** to be the border where farms meet desert. Or it splits: its farms into the valley, its
    desert and airstrip into the Red Rock Desert.
-4. **The size**: 5 x 4 km is 13 times today's area, mostly wild land. The regions can start smaller (the mainland only as
-   deep as the lake: about 5 x 3 km) and grow north later, since regions are generated on their own (part 4).
+4. **The size**: 5 x 4 km is 13 times today's area, and the plan has about 12 times today's land - some 11.7 km² of new
+   mainland against today's 0.96 km² in all, most of it wild (forest, farms, desert) with a handful of towns. The regions
+   can start smaller (the mainland only as deep as the lake: about 5 x 3 km) and grow north later, since regions are
+   generated on their own (part 4); the new land fills region by region, each as designed as today's (nature places,
+   country sites, towns), not scattered.
 5. **Names**: Lucky Mesa, Copper Gulch, Dusty Hollow, Timber Bend, Willow Crossing, Sandpiper Bay, Egret Point, Silver
    Thread Falls - all invented; change any.
 
@@ -681,8 +684,8 @@ Four in-game screenshots of travel between the towns, the game camera: 1. an int
   as one loop, countryside sites searching for open ground, the bus lines and ferry routes found by search).
 - **client/worldgen.js and worldcache.js** build and keep the whole city as one IndexedDB entry keyed by the world hash.
 - **The art v2 chunk baker** (`client/art2/game/chunkbake.js`, `groundbake.js`, `chunkstore.js`) bakes chunks from the
-  whole map; the chunks are already the right unit, but the baker's tables are sized by the world (groundbake's per-tile
-  arrays) and it reads neighbours freely.
+  whole map; the chunks are already the right unit, but it reads the world's tiles by `ty * MAP_W + tx` with the world's
+  bounds (and the neighbours freely, a dozen tiles round a chunk), so it needs a region window with a margin instead.
 - **The map pictures** (`assets/map/`, `tools/build-worldmap2.mjs`): one picture of the whole world, tiled 5 x 5.
 - **The server's world** (`server/world.js`): one map, one road network (`shared/roads.js`: nodes, edges, lanes), systems
   that scan the whole world or search the whole network (traffic, buses, ferries (`ferries.js` floods the whole grid for

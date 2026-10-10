@@ -5680,7 +5680,7 @@ A planning wave, no gameplay changes. `docs/WORLD-V3.md`:
   `tools/world-v3-layout.py`: today's islands are cut out of today's world map picture district by district (from the
   generated district grid) and moved whole into the bay; the new land, the skeleton and the labels are plain shapes. The
   offsets are listed, and five decisions for the owner.
-- **Part 3**: twenty concept prompts in the prompt pack's style, each with the images to attach (the world redrawn from
+- **Part 3**: twenty-one concept prompts in the prompt pack's style, each with the images to attach (the world redrawn from
   the plan, each new region at WR2's zoom, the bay and its bridges, four kinds of bridge, the river by boat, the casino
   city by day and its old downtown, interchanges, the railway and the mine yard, small towns, more region borders,
   Prison Island, the open sea, the big map, travel between regions).
