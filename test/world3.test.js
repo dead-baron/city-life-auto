@@ -174,3 +174,149 @@ function SPIKE_BASELINE(r) {
 // (measured 2026-10-10: 95.3% of the island's land tiles, 95.7% of its road edges, 79.8% of its buildings, 49.8% of its
 // POIs - by kind, place and name - came out as today's)
 const SPIKE_FLOOR = { tiles: 0.95, roads: 0.95, buildings: 0.78, pois: 0.48 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The skeleton (shared/world3-skeleton.js, WORLD-V3.md part 6): the owner's marked-up layout as data.
+import { readFileSync } from 'node:fs';
+import * as SKEL from '../shared/world3-skeleton.js';
+
+const { RADIUS, HIGHWAYS, ARTERIALS, MAIN_LINE, MAIN_JUNCTIONS, SERVICES, SUBWAYS, STATIONS, TOWNS, INTERCHANGES, CLOSURES } = SKEL;
+const skLines = SKEL.skeletonLines();
+const skLine = (name) => skLines.find((l) => l.name === name);
+const near = (a, b, d) => Math.abs(a[0] - b[0]) <= d && Math.abs(a[1] - b[1]) <= d;
+
+test('the skeleton is plain data, integer frame tiles, built the same every time, with no engine-dependent maths', () => {
+  const a = JSON.stringify(SKEL.skeletonData()), b = JSON.stringify(SKEL.skeletonData());
+  assert.equal(a, b);
+  for (const k of ['MAINLAND', 'BIOMES', 'ISLANDS', 'HIGHWAYS', 'ARTERIALS', 'MAIN_LINE', 'SUBWAYS', 'FERRIES', 'STATIONS', 'TOWNS', 'LANDMARKS', 'INTERCHANGES', 'CLOSURES', 'SERVICES', 'LAKES', 'RIVER']) {
+    assert.deepEqual(JSON.parse(JSON.stringify(SKEL[k])), SKEL[k], `${k} is plain data`);
+  }
+  const ints = (pts, what) => { for (const p of pts) assert.ok(Number.isInteger(p[0]) && Number.isInteger(p[1]), `${what}: ${p}`); };
+  for (const L of skLines) {
+    ints(L.line.pts, L.name);
+    assert.ok(L.line.pts.length >= 2, L.name);
+    for (const [i, j] of [...(L.line.tunnels || []), ...(L.line.bridges || [])]) assert.ok(i >= 0 && i < j && j < L.line.pts.length, `${L.name}: stretch ${i}-${j}`);
+  }
+  ints(SKEL.MAINLAND, 'the mainland');
+  for (const s of STATIONS) ints([s.at], s.name);
+  // CLAUDE.md: no Math.random, no transcendental Math (Safari's differ), `**` only to square
+  const src = readFileSync(new URL('../shared/world3-skeleton.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /Math\.(random|sin|cos|tan|asin|acos|atan|atan2|exp|log|pow|hypot|cbrt)\b/);
+  assert.doesNotMatch(src, /\*\*(?!\s*2\b)/);
+});
+
+test('the highways: no dead ends, one connected network with at least three independent loops, nothing at grade', () => {
+  const nodes = [...INTERCHANGES.map((i) => ({ name: i.name, at: i.at })), ...CLOSURES.map((c) => ({ name: c.name, at: c.at, closure: true }))];
+  for (const c of CLOSURES) {
+    assert.ok(c.at[0] === 0 || c.at[1] === 0 || c.at[0] === 5040 || c.at[1] === 4032, `${c.name} is at the map edge`);
+    const L = skLine(c.line);
+    assert.ok(inRangesEnd(L, c.at), `${c.name}: the highway ends in its tunnel`);
+  }
+  // every end of every highway is at an interchange on another highway, or at a closed tunnel mouth
+  for (const h of HIGHWAYS) {
+    for (const end of [h.pts[0], h.pts[h.pts.length - 1]]) {
+      const n = nodes.find((o) => near(o.at, end, 20));
+      assert.ok(n, `${h.name}: its end ${end} is at an interchange or a closure`);
+      if (!n.closure) assert.ok(HIGHWAYS.some((o) => o !== h && SKEL.nearestOnPath(skLine(o.name).path, end[0], end[1]).d <= 20), `${h.name}: ${n.name} is on another highway`);
+    }
+  }
+  // the graph: interchanges and closures as nodes, the highways' stretches between them as edges
+  const id = new Map(nodes.map((n, i) => [n.name, i]));
+  const parent = nodes.map((_, i) => i), find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  let edges = 0;
+  for (const h of HIGHWAYS) {
+    const path = skLine(h.name).path;
+    const on = nodes.map((n) => ({ n, hit: SKEL.nearestOnPath(path, n.at[0], n.at[1]) })).filter((o) => o.hit.d <= 20).sort((p, q) => p.hit.s - q.hit.s);
+    assert.ok(on.length >= 2, `${h.name} joins the network at two places at least`);
+    for (let k = 1; k < on.length; k++) { edges++; parent[find(id.get(on[k - 1].n.name))] = find(id.get(on[k].n.name)); }
+  }
+  const comps = new Set(nodes.map((_, i) => find(i))).size;
+  assert.equal(comps, 1, 'one connected highway network');
+  const loops = edges - nodes.length + comps;
+  assert.ok(loops >= 3, `independent loops: ${loops}`);
+  // grade separation: a highway crosses nothing at grade (ruling 1)
+  const { crossings } = SKEL.skeletonCrossings(skLines);
+  for (const c of crossings) if (c.ka === 'hwy' || c.kb === 'hwy') assert.ok(['interchange', 'flyover', 'overpass', 'bridge'].includes(c.kind), `${c.a} x ${c.b}: ${c.kind}`);
+});
+function inRangesEnd(L, at) {
+  const n = SKEL.nearestOnPath(L.path, at[0], at[1]);
+  return n.d <= 2 && SKEL.inRanges(L.tunnels, n.s, 1);
+}
+
+test('the main line: one connected double-track network, every station on its line, every service joined up end to end', () => {
+  const J = new Map(MAIN_JUNCTIONS.map((j) => [j.name, j.at]));
+  const parent = new Map([...J.keys()].map((k) => [k, k])), find = (k) => (parent.get(k) === k ? k : find(parent.get(k)));
+  for (const seg of MAIN_LINE) {
+    assert.ok(J.has(seg.from) && J.has(seg.to), seg.name);
+    assert.deepEqual(seg.pts[0], J.get(seg.from), `${seg.name} starts at ${seg.from}`);
+    assert.deepEqual(seg.pts[seg.pts.length - 1], J.get(seg.to), `${seg.name} ends at ${seg.to}`);
+    parent.set(find(seg.from), find(seg.to));
+  }
+  assert.equal(new Set([...J.keys()].map(find)).size, 1, 'the main line is one network');
+  for (const st of STATIONS) {
+    const on = skLines.filter((L) => (st.line === 'main' ? L.kind === 'main' : L.kind === 'sub' && L.name.startsWith(st.line)));
+    assert.ok(on.length, `${st.name}: its line ${st.line} exists`);
+    const d = Math.min(...on.map((L) => SKEL.nearestOnPath(L.path, st.at[0], st.at[1]).d));
+    assert.ok(d <= 25, `${st.name} (${st.line}) is on its line: ${d.toFixed(1)} tiles off`);
+  }
+  assert.deepEqual(SERVICES.map((s) => s.name), ['Grand Loop', 'Bay Loop', 'Harbor Line']);
+  const segBy = new Map(MAIN_LINE.map((s) => [s.name, s]));
+  for (const sv of SERVICES) {
+    const ends = sv.run.map(([name, dir]) => { const s = segBy.get(name); assert.ok(s, `${sv.name}: ${name}`); return dir > 0 ? [s.from, s.to] : [s.to, s.from]; });
+    for (let k = 0; k < ends.length; k++) assert.equal(ends[k][1], ends[(k + 1) % ends.length][0], `${sv.name}: ${sv.run[k][0]} joins ${sv.run[(k + 1) % ends.length][0]}`);
+    for (const stop of sv.stops) {
+      const st = STATIONS.find((s) => s.line === 'main' && s.name === stop);
+      assert.ok(st, `${sv.name}: ${stop} is a main-line station`);
+      const d = Math.min(...sv.run.map(([name]) => SKEL.nearestOnPath(skLine(name).path, st.at[0], st.at[1]).d));
+      assert.ok(d <= 25, `${sv.name} passes ${stop}`);
+    }
+  }
+  // every main-line station is served by a service
+  for (const st of STATIONS.filter((s) => s.line === 'main')) assert.ok(SERVICES.some((sv) => sv.stops.includes(st.name)), `${st.name} has a service`);
+});
+
+test('every town is within reach of an arterial or a highway', () => {
+  const roads = skLines.filter((L) => L.kind === 'hwy' || L.kind === 'art');
+  for (const t of TOWNS) {
+    const d = Math.min(...roads.map((L) => SKEL.nearestOnPath(L.path, t.at[0], t.at[1]).d));
+    assert.ok(d <= 120, `${t.name}: ${Math.round(d)} tiles from the nearest arterial or highway`);
+  }
+});
+
+test('the curves keep to their kind\'s radius (highways 250, the main line 300, subways 120, arterials 50), measured on the paths', () => {
+  for (const L of skLines) {
+    if (L.kind === 'ferry') continue;
+    if (L.line.r) assert.ok(L.line.existing || L.line.urban, `${L.name}: only lines on today's ground (the islands) have their own radius`);
+    const want = L.line.r || RADIUS[L.kind], got = SKEL.minRadius(L.path);
+    assert.ok(got.r >= want * 0.8, `${L.name}: a curve of radius ${Math.round(got.r)} at ${got.at} (wants about ${want})`);
+  }
+  // and the paths keep to the frame
+  for (const L of skLines) for (const [x, y] of L.path.pts) assert.ok(x >= 0 && y >= 0 && x <= 5040 && y <= 4032, `${L.name} at ${x},${y}`);
+});
+
+test('every crossing is found from the data and classified by the rules; none where a line is in a tunnel', () => {
+  const { crossings, tunnelled, junctions } = SKEL.skeletonCrossings(skLines);
+  assert.ok(crossings.length > 30 && junctions.length > 10, `${crossings.length} crossings, ${junctions.length} junctions`);
+  const KINDS = new Set(['interchange', 'flyover', 'overpass', 'bridge', 'level crossing', 'intersection']);
+  for (const c of crossings) {
+    assert.ok(KINDS.has(c.kind), `${c.a} x ${c.b}: ${c.kind}`);
+    assert.equal(c.kind, SKEL.crossingKind(c.ka, c.kb, c.x, c.y));
+    const pair = [c.ka, c.kb].sort().join('-');
+    if (pair === 'art-main') assert.ok(c.kind === 'level crossing' || c.kind === 'bridge');
+    if (pair === 'hwy-main' || pair === 'hwy-sub') assert.equal(c.kind, 'bridge');
+    if (pair === 'art-art') assert.equal(c.kind, 'intersection');
+    for (const [name, at] of [[c.a, c], [c.b, c]]) {
+      const L = skLine(name), n = SKEL.nearestOnPath(L.path, at.x, at.y);
+      assert.ok(!SKEL.inRanges(L.tunnels, n.s), `${c.a} x ${c.b}: ${name} is in a tunnel there`);
+    }
+  }
+  for (const c of tunnelled) {
+    const inT = [c.a, c.b].some((name) => { const L = skLine(name), n = SKEL.nearestOnPath(L.path, c.x, c.y); return SKEL.inRanges(L.tunnels, n.s, 6); });
+    assert.ok(inT, `${c.a} x ${c.b} is left out because one of them is in a tunnel`);
+  }
+  for (const j of junctions) assert.ok(['interchange', 'intersection', 'junction'].includes(j.kind) && j.lines.length >= 2);
+  // the summary adds up
+  const sm = SKEL.skeletonSummary(skLines);
+  assert.ok(sm.km.hwy > 15 && sm.km.main > 12 && sm.km.art > 20 && sm.km.sub > 3, JSON.stringify(sm.km));
+  assert.equal(Object.values(sm.stations).reduce((a, b) => a + b, 0), STATIONS.length);
+});
