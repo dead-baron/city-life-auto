@@ -651,7 +651,7 @@ function buildCity(seed, opts = null) {
   buildCameras(m, rand);
   pruneRestSpots(m);   // (a rest spot something was built near after all goes: naturesites.js)
   lateTiles(m);
-  buildTunnels(m, spurTunnels(m));   // (the roads under the ground: m.cover, m.tunnels - shared/tunnels.js)
+  buildTunnels(m, OPTS ? (OPTS.tunnels ? OPTS.tunnels(m) : []) : spurTunnels(m));   // (the roads under the ground: m.cover, m.tunnels - shared/tunnels.js; World v3 hands in its own: opts.tunnels(m) -> specs)
 
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');
   const pd = m.pois.find((p) => p.kind === 'police');

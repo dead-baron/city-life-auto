@@ -129,3 +129,16 @@ test('what the client hides: a viewer outside sees nothing under the hill; insid
   for (let i = 0; i < 60; i++) k = stepFade(k, 0, 1 / 60);
   assert.equal(k, 0, 'and back over you once you leave');
 });
+
+test('the railway can go under the ground too: a rail tunnel\'s cover and mouths', () => {
+  const m = new CityMap(9);
+  for (let ty = 20; ty < 30; ty++) for (let tx = 2; tx < 80; tx++) m.tiles[ty * MAP_W + tx] = T.DIRT;
+  m.rail = { pts: [{ x: 4 * TILE, y: 25 * TILE }, { x: 40 * TILE, y: 25 * TILE }, { x: 78 * TILE, y: 25 * TILE }] };
+  const [t] = buildTunnels(m, [{ edge: 'rail', s0: 20 * TILE, s1: 60 * TILE }]);
+  assert.equal(t.kind, 'rail');
+  assert.equal(t.hw, 40, 'a track bed\'s width');
+  assert.equal(underCover(m, 40 * TILE, 25 * TILE), t.id + 1);
+  assert.equal(underCover(m, 10 * TILE, 25 * TILE), 0);
+  assert.ok(Math.abs(t.mouths[0].x - 24 * TILE) < 1 && t.mouths[0].ox === -1 && Math.abs(t.mouths[1].x - 64 * TILE) < 1 && t.mouths[1].ox === 1, "the mouths 20 and 60 tiles along the line");
+  assert.ok(!m.los(40 * TILE, 25 * TILE, 40 * TILE, 33 * TILE), 'a train in it is out of sight of the hillside');
+});
