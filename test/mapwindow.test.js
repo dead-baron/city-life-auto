@@ -221,13 +221,12 @@ test('the guard: no `* MAP_W` index arithmetic and no MAP_W / MAP_H bounds check
   for (const f of Object.keys(WHOLE_FRAME)) assert.ok(used.has(f), `${f} is on the whole-frame list but no longer needs it`);
 });
 
-// The generator builds in the map's frame: its passes name the world's constants only for what is today's frame by
-// nature - each use listed here with its reason (a line that names MAP_W or MAP_H and isn't listed fails).
+// The generator builds in the map's frame: its passes name the world's constants only where they mean the world's
+// whole frame - each use listed here as [file, the code, its reason] (a line that names MAP_W or MAP_H and isn't listed
+// fails). None today: the concept picture, today's frame by nature, is read at its own size (worldmask.js MASK_W x
+// MASK_H: its land's RLE rows and terrain cells go in the top-left of the build's frame, the open sea beyond).
 const GENERATOR_FILES = ['shared/map.js', 'shared/naturesites.js', 'shared/countryside.js', 'shared/world3-islands.js'];
-const GENERATOR_FRAME = [
-  ['shared/map.js', 'pw = Math.min(MAP_W, W), ph = Math.min(MAP_H, m.h)', 'decodeLand: the concept picture\'s RLE rows are today\'s frame by nature (its land goes in the top-left of the build\'s frame, sea beyond)'],
-  ['shared/map.js', 'Math.floor(MAP_W / TERRAIN_CELL), ch = Math.floor(MAP_H / TERRAIN_CELL)', 'decodeTerrain: the concept picture\'s terrain cells are today\'s frame by nature (terrainAt clamps to them)'],
-];
+const GENERATOR_FRAME = [];
 test('the guard: the generator builds in the map\'s frame (m.w, m.h), naming MAP_W / MAP_H only where it means today\'s frame by nature', () => {
   const bad = [], used = new Set();
   for (const f of GENERATOR_FILES) {

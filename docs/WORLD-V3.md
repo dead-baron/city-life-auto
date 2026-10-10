@@ -1391,12 +1391,12 @@ For the window (the next steps):
 What was built (docs/DEVLOG.md has the details):
 - **The frame is a parameter of the build:** `new CityMap(seed, w = MAP_W, h = MAP_H)` and
   `generateCity(seed, { frame: { w, h } })` (without it, today's frame; the frame alone is not an island build, and the
-  island builds take one too). The concept picture (its land's RLE rows, its terrain cells) is today's frame by nature:
-  its land goes in the frame's top-left, the open sea beyond.
+  island builds take one too). The concept picture (its land's RLE rows, its terrain cells) is today's frame by nature,
+  read at its own size (worldmask.js `MASK_W` x `MASK_H`): its land goes in the frame's top-left, the open sea beyond.
 - **Every pass builds in the map's frame:** map.js from "The generator" on, naturesites.js, countryside.js and
   world3-islands.js index `y * m.w + x` and bound by `m.w` / `m.h` (the map's origin is 0, 0 while it's built), the
   typed arrays sized from the frame. `test/mapwindow.test.js`'s guard now covers the generator's files: no `MAP_W` /
-  `MAP_H` in its passes but the concept picture's two uses, listed with the reason.
+  `MAP_H` in its passes (a whole-frame use would go on its list, with the reason; there are none).
 - **Today's world is unchanged to the bit:** every per-tile layer, every list, the map signature, the world hash.
 
 **A bigger frame** (today's + 240 tiles each way, `test/mapwindow.test.js`): inside today's extent nothing differs -

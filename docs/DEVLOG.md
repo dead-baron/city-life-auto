@@ -6494,8 +6494,9 @@ but the generator itself still built the constant frame `MAP_W` x `MAP_H` and in
   arrays are sized from the frame. The other passes (citylayout, islands, roads, alleys, metro, levels, tunnels,
   signals, the bowling alley, the cinema, the cells) already used the map's extent.
 - **What keeps today's frame, by nature:** the concept picture - its land's RLE rows (`decodeLand`) and its terrain
-  cells (`decodeTerrain`; `terrainAt` clamps to them). Its land goes in the top-left of the build's frame, the open
-  sea beyond.
+  cells (`decodeTerrain`; `terrainAt` clamps to them), read at its own size (worldmask.js `MASK_W` x `MASK_H`, not
+  `MAP_W` x `MAP_H`: it stays the picture's when the world's frame grows). Its land goes in the top-left of the build's
+  frame, the open sea beyond. So the generator names no world constant at all now.
 - **Today's world is the same to the bit:** every per-tile layer, every list's JSON and the map signature (`dytn7k`),
   compared with a reference taken before the change after every step; the world hash is unchanged (`6b6e16fdef9f`).
   The art hash changes (the bake's code imports the generator), so kept chunks are baked again once.
@@ -6509,10 +6510,14 @@ but the generator itself still built the constant frame `MAP_W` x `MAP_H` and in
   memory, layers and sea points): 5040 x 4032 builds in 9.6-10.3 s (today's 4.4 s) at a peak RSS of 630-680 MB
   (today's 300 MB); its 17 per-tile layers are 407 MB; `seaPoints` and `offshore` are 190,000 points each, which the
   server's boats and jobs scan whole - a spatial index before the v3 world runs (docs/WORLD-V3.md 8.2).
-- **The page's code:** +137 bytes gzipped (comments trimmed to keep it within its 720 KB budget, which it is at).
+- **The page's code:** about +110 bytes gzipped (comments trimmed): the page is at 720.41 KB of its 720 KB budget
+  (the check rounds: 96 bytes to spare). The page loads the whole generator (map.js's build passes, naturesites.js,
+  countryside.js) only because its queries live in the same module as the generator - moving the generator out of the
+  page's static imports (the city worker already imports it only when the server can't serve the city) would free a
+  lot of the page's budget.
 - **Files:** `shared/map.js`, `shared/naturesites.js`, `shared/countryside.js`, `shared/world3-islands.js`,
   `shared/world3.js` (a comment), `tools/world-frame.mjs`, `test/mapwindow.test.js`, docs/WORLD-V3.md (8.2).
 - **Tests:** `test/mapwindow.test.js` (11): a frame 240 tiles bigger each way builds today's world in its top-left to
-  the bit, the open sea beyond; the guard now covers the generator's files (no `MAP_W` / `MAP_H` in its passes but the
-  concept picture's two uses, listed with the reason; the old exemption of the generator's files is gone, and
-  constants.js is on the whole-frame list). Ran: dmath, worldbuild, world, world3, regions, mapwindow, perf - pass.
+  the bit, the open sea beyond; the guard now covers the generator's files (a line of its passes that names `MAP_W` /
+  `MAP_H` fails unless it's on the generator's whole-frame list with its reason - empty today; the old exemption of
+  the generator's files is gone, and constants.js is on the readers' whole-frame list). Ran: dmath, worldbuild, world, world3, regions, mapwindow, perf - pass.

@@ -19,7 +19,7 @@ import { mulberry32, hash2 } from './rng.js';
 import { propGrid } from './propgrid.js';
 import { withDeterministicMath } from './dmath.js';
 import { PREFABS } from './prefab-data.js';
-import { LAND, TERRAIN, TERRAIN_CELL } from './worldmask.js';
+import { LAND, TERRAIN, TERRAIN_CELL, MASK_W, MASK_H } from './worldmask.js';
 import { buildNetwork, stampEdge, stampLine, edgeZ, ROAD_KINDS, sidewalkPx, laneOffset } from './roads.js';
 import { measure, pointAt, rounded, project, cubic, quad, segX } from './geom.js';
 import {
@@ -688,7 +688,7 @@ function buildCity(seed, opts = null, frame = null) {
 // Terrain: land and sea from the world map, shallows, beaches, wild ground; distances to the
 // sea and to the river; which part of the world each tile belongs to.
 function decodeLand(m) {
-  const W = m.w, pw = Math.min(MAP_W, W), ph = Math.min(MAP_H, m.h);
+  const W = m.w, pw = Math.min(MASK_W, W), ph = Math.min(MASK_H, m.h);
   const land = new Uint8Array(W * m.h);
   LAND.split('|').forEach((row, y) => {
     if (y >= ph) return;
@@ -698,7 +698,7 @@ function decodeLand(m) {
   return land;
 }
 function decodeTerrain() {
-  const cw = Math.floor(MAP_W / TERRAIN_CELL), ch = Math.floor(MAP_H / TERRAIN_CELL);
+  const cw = Math.floor(MASK_W / TERRAIN_CELL), ch = Math.floor(MASK_H / TERRAIN_CELL);
   const cls = new Uint8Array(cw * ch);
   const code = { W: 0, G: 1, F: 2, D: 3, R: 4, S: 5 };
   TERRAIN.split('|').forEach((row, y) => {
