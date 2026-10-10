@@ -27,6 +27,7 @@ import * as places from './places.js';
 import * as rides from './rides.js';
 import * as golf from './golf.js';
 import * as hoops from './hoops.js';
+import * as bowling from './bowling.js';
 import * as homes from './homes.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
@@ -427,7 +428,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (wasDropping && !ped.dropping) world.emit(ped.x, ped.y, isSwimming(world.map, ped) ? { e: 'splash', x: ped.x, y: ped.y, n: 16 } : { e: 'thud', x: ped.x, y: ped.y });
   if (tumbling) tumbleImpact(world, ped, v0, dt, fr);
   if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
-  const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt);   // (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
+  const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || bowling.input(world, p, ped, inp, pressed, dt);   // (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   if ((inp.bits & IN.FIRE) && !kicked && !swung && !guard) {   // (guarding: no striking)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
@@ -604,6 +605,8 @@ export function findInteraction(world, p) {
   if (tee) return tee;
   const hoop = hoops.interaction(world, p);
   if (hoop) return hoop;
+  const lane = bowling.interaction(world, p);
+  if (lane) return lane;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);
@@ -729,7 +732,7 @@ export function buildMe(world, p) {
     blade: prof.blade | 0,   // the plasma blade's colour (shared/items.js BLADE_COLORS; looks.js setBlade)
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
+    prompt: p.prompt, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
@@ -743,7 +746,7 @@ export function buildMe(world, p) {
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
-    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p),
+    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), bowl: bowling.meInfo(world, p),
     arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,
   };
 }

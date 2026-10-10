@@ -59,6 +59,7 @@ import * as golf from './systems/golf.js';
 import * as hoops from './systems/hoops.js';
 import * as bikers from './systems/bikers.js';
 import * as streetlife from './systems/streetlife.js';
+import * as bowling from './systems/bowling.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -122,6 +123,7 @@ const SYSTEMS = [
   ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
+  ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
 ];
 
 export class World {

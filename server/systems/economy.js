@@ -28,6 +28,7 @@ const rng = mulberry32(77);
 export function poiLabel(world, p, poi) {
   switch (poi.kind) {
     case 'delivery': case 'evidence': case 'reception': case 'paint': case 'ride': case 'race': return null;   // (a ride's boarding point: server/systems/rides.js; a race's start: races.js)
+    case 'bowling': return null;   // (Pinwheel Lanes' shoe counter: server/systems/bowling.js)
     case 'gang': return gang.isMember(p) ? 'Syndicate HQ (members)' : 'Syndicate HQ (join the gang)';
     case 'smuggler': return "Smuggler's Den";
     case 'charter': return 'Charter desk (deep-sea fishing)';
