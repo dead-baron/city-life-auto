@@ -121,3 +121,18 @@ test('spots fill round a player out of sight, and empty when nobody is near', ()
     for (const i of ids) { const e = w.get(i); assert.ok(!e || e.removed || !e.npc.act, 'gone when nobody is near'); }
   } finally { w.npcBudget = 0; }
 });
+
+test('the debug menu takes you to each kind, filled, a little way off', async () => {
+  const { command } = await import('../server/dev.js');
+  const { DEV_SECTIONS } = await import('../client/devcats.js');
+  clear();
+  const { p } = joinPlayer(w);
+  const kinds = DEV_SECTIONS.flatMap((sec) => sec.items).filter(([, c]) => c === 'act').map(([, , x]) => x.k);
+  assert.equal(kinds.length, 7);
+  for (const k of kinds) {
+    command(w, p, 'act', { k });
+    const g = [...w.acts.values()].find((q) => q.k === k && Math.hypot(q.x - p.ped.x, q.y - p.ped.y) < 340);
+    assert.ok(g && g.ids.length, `${k}: there, with its people`);
+    assert.ok(!PED_BLOCK[m.tileAtPx(p.ped.x, p.ped.y)], `${k}: you on open ground`);
+  }
+});

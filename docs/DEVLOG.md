@@ -6018,12 +6018,15 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
   brush dabbing it), the blue cooler with its white lid, the chess board with a few pieces still standing, the yellow
   sponge and the bucket of suds, the crate of tomatoes.
 - **Already about** (personas.js): the joggers (laps of a park or the beach) and the dog walker with three dogs.
+- **Debug menu:** a new last category, 🎣 People going about: each kind (anglers, chess, a picnic, a painter, washing the
+  car, neighbours chatting, pickers) - the nearest spot filled, you a little way off it (the dev `act` command, msg.k;
+  a car parked in the driveway first for the car wash).
 - **Left for part 2:** the pickup game at the courts, pool in the bars, hunters with a dog at forest edges, miners at
   the quarries and the mine (a pickaxe to draw); a fence for the neighbours to chat over; the classic renderer's poses
   and props for these.
 - **Fixed on the way:** `client/art2/game/host.js` didn't parse (the dance moves' comment, put mid-line, swallowed the
   rest of the line with its closing braces), so the art v2 renderer failed to load; the comment is at the line's end now.
-- **Tests:** `test/activities.test.js` (5 new): the spots found on the map (on open ground, the anglers facing the
+- **Tests:** `test/activities.test.js` (6 new; the last: the debug menu's buttons, each kind filled where you land): the spots found on the map (on open ground, the anglers facing the
   water, chess in town); a spot filled, posed, props on the wire, holding its spot; the car washed only with a car in
   the driveway, beside it and facing it, the neighbours face to face, the pickers kneeling in the field with their
   crate; a gunfight scattering them and them going back to it; filling round a player out of sight, a sensible number,

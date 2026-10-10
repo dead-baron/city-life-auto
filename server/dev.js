@@ -29,6 +29,7 @@ import * as streetlife from './systems/streetlife.js';
 import * as wildlife from './systems/wildlife.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
+import * as activities from './systems/activities.js';
 import * as looks from './systems/looks.js';
 import { SPECIES } from '../shared/fauna.js';
 import { undergroundOf } from '../shared/underground.js';
@@ -48,7 +49,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -451,6 +452,18 @@ export function command(world, p, c, msg) {
       const q = personas.PERSONAS[k] ? personas.spawnPersona(world, npc.spawnNpc, k, x, y) : null;
       if (q) q.npc.keep = true;
       world.notify(p, q ? `[dev] ${k} nearby.` : `[dev] No ${k} here (${Object.keys(personas.PERSONAS).join(', ')}).`, q ? 'info' : 'warn');
+      break;
+    }
+    case 'act': {   // people going about their lives (activities.js): the nearest spot of msg.k, filled, you a little way off it
+      if (!ped || ped.dead || ped.vehId) break;
+      const k = String(msg.k || 'chess').slice(0, 16);
+      let best = null, bd = Infinity;
+      for (const s of activities.spotsOf(world.map).list) { if (s.k !== k) continue; const d = Math.hypot(s.x - ped.x, s.y - ped.y); if (d > 200 && d < bd && !(world.acts && world.acts.has(s.id))) { bd = d; best = s; } }
+      if (!best) { world.notify(p, `[dev] No ${k} spot (anglers, chess, picnic, painter, carwash, chat, pickers).`, 'warn'); break; }
+      if (best.k === 'carwash' && !world.query(best.x, best.y, 24, K.VEH).length) world.spawnVehicle('sedan', best.x, best.y, best.a, { parked: true });
+      const at = standAt(world, best.x, best.y + 120, 200) || standAt(world, best.x, best.y, 320);
+      if (at) { if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y); ped.sub = false; ped.ug = 0; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = ped.vy = 0; p.teleportAt = world.time; }
+      world.notify(p, activities.fill(world, best, { seen: true }) ? `[dev] ${k} here.` : `[dev] Couldn't fill the ${k} spot just now.`, 'info');
       break;
     }
     case 'wanderer': { // the hooded stranger who sells the plasma blade, a few steps away
