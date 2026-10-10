@@ -547,6 +547,7 @@ function execute(world, p, poi, opt) {
       } else {
         if (!pay(p, 300)) return 'Not enough money.';
         v.hp = v.def.hp; v.burnUntil = 0; v.flat = false; v.dead = false; v.deadBoomAt = 0; v.deadFireAt = 0;
+        v.dz = 0; v.zh = null; v.holes = 0; v.off = 0; v.dst = 0; v.plasmaHits = 0;   // (the dents beaten out, the holes filled, new parts: task #402)
         world.notify(p, 'Body work done (and new tyres).', 'good');
       }
       return null;
