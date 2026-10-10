@@ -33,6 +33,7 @@ import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
 import { countrysideRoads, buildCountryside, buildPowerLines, runwayLights } from './countryside.js';
 import { buildNatureSites, REDWOOD_TRUNK, setFlow, inBluffsGarden } from './naturesites.js';
+import { pruneRestSpots } from './restspots.js';
 import { mushroomAtFoot } from './foraging.js';
 import { EDGE_OUT } from './border.js';
 import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
@@ -638,6 +639,7 @@ function buildCity(seed) {
   aimLamps(m);
   m.levels = buildLevels(m);
   buildCameras(m, rand);
+  pruneRestSpots(m);   // (a rest spot something was built near after all goes: restspots.js)
   lateTiles(m);
 
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');

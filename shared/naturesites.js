@@ -14,6 +14,7 @@
 import { T, TILE, MAP_W, MAP_H } from './constants.js';
 import { propGrid } from './propgrid.js';
 import { hash2 } from './rng.js';
+import { buildRestSpots } from './restspots.js';
 
 // the giant redwoods' trunks (solid radius, px) by size - Highland Woods' groves (map.js redwoodGroves) and the
 // ones placed by hand here; the art is client/art2/redwoods.js (statics.js SPECIES giantL ... redwood2)
@@ -157,6 +158,7 @@ function buildSites(m, H) {
   coralRainforest(m, H);
   beaverPonds(m, H);
   huntingCamps(m, H);
+  buildRestSpots(m, H, paint, reserveRound);   // (the campfire rest spots out in the wilds: restspots.js)
 }
 
 // ---- Cedar Hills Golf Club (Cedar Hills, on the south island's west shore; original) ---------------------------
@@ -3018,8 +3020,9 @@ function gnawedTrees(m, H, px, py, n) {
 // a road or a track - a canvas wall tent or a log cabin, a fire, hides stretched on racks, a woodpile, a sign, the
 // counter, a pickup or two parked up.
 const HUNT_PLACES = [
-  { kind: 'huntcamp', name: 'Ridge Trail Hunting Camp', road: 'Ridge Trail', sign: 'HUNTING CAMP', tents: 2 },          // goats on the cliffs, lions, grizzlies
-  { kind: 'huntcamp', name: 'Canyon Track Hunting Camp', road: 'Canyon Track', sign: 'HUNTING CAMP', tents: 2 },        // coyotes, bobcats, quail
+  { kind: 'huntcamp', name: 'Ridge Trail Hunting Camp', road: 'Ridge Trail', tents: 2 },          // goats on the cliffs, lions, grizzlies
+  { kind: 'huntcamp', name: 'Canyon Track Hunting Camp', road: 'Canyon Track', tents: 2 },        // coyotes, bobcats, quail
+  // (the camps have no sign: the owner, "remove the hunting camp signs at campsites")
   { kind: 'trapper', name: "Heron Marsh Trapper's Cabin", near: 'Heron Marsh', sign: 'TRAPPER', cabin: true },         // beaver, otter, ducks and geese, moose
   { kind: 'trapper', name: "Redwood Creek Trapper's Cabin", pond: 'Redwood Creek', sign: 'TRAPPER', cabin: true },     // the redwoods' beaver pond
   { kind: 'butcher', name: 'Cedar Farms Game Butcher', road: 'Section Road', sign: 'GAME BUTCHER', cabin: true },      // pheasant, turkey, boar
@@ -3068,7 +3071,7 @@ function huntingCamps(m, H) {
     for (let k = 0; k < (P.kind === 'butcher' ? 1 : 2); k++) H.addProp(m, 'hiderack', X - 110 + k * 46, Y + 40, 6, { v: (k + P.name.length) % 3 });
     H.addProp(m, 'lantern', X - 20, Y + 30, 0);
     if (P.kind === 'butcher') H.addProp(m, 'cooler', X + 80, Y + 20, 0, { v: 1 });
-    H.addProp(m, 'textsign', X + 120, Y + 60, 0, { text: P.sign, bg: '#4a3020', fg: [244, 226, 180], z: 30 });
+    if (P.sign) H.addProp(m, 'textsign', X + 120, Y + 60, 0, { text: P.sign, bg: '#4a3020', fg: [244, 226, 180], z: 30 });
     addCounter(m, P.kind, P.name, X, Y + 30);
     for (const o of [-1, 1]) m.parking.push({ x: X + 150, y: Y - 10 + o * 46, a: Math.PI / 2, drive: true });
     (m.landmarks ||= []).push({ name: P.name, type: P.kind, x: X - 170, y: Y - 130, w: 340, h: 260 });
