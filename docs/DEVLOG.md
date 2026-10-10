@@ -5679,7 +5679,8 @@ and turkey, AN3 small game, AN8 quail): the rows are the game's own bake (actors
   - The deer: warmer brown, a white rump patch and throat, a dark nose, heavier antlers. The elk: paler, with the dark
     neck, head and shins of AN1 and a heavier rack.
   - A stalking cougar (or anything crouched) bends its legs instead of shortening them.
-  - The boar: darker, a bristle crest over the shoulders, grizzled.
+  - The boar: darker, a bigger head, a bristle crest over the shoulders, grizzled.
+  - The bears: leaner and a little taller, so the legs show under the body as in AN2 and AN4.
   - The coyote: grizzled along the back, a pale throat.
   - The rabbit: bigger haunches, and its run is a hop, up off the ground.
   - The wild ones' heads are true to life, not the pets' big-headed look (the rabbit keeps its big head).
