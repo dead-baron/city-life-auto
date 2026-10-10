@@ -5,10 +5,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport, players } from './helpers.js';
-import { WEAPONS, deflectChance } from '../shared/items.js';
+import { WEAPONS } from '../shared/items.js';
 import { GUARD, PLASMA_DEFLECT } from '../shared/rules.js';
 import { IN } from '../shared/input.js';
 import * as combat from '../server/systems/combat.js';
+const { deflectChance } = combat;
 
 const evs = (w, e) => w.events.filter((q) => q.ev.e === e).map((q) => q.ev);
 // a defender at a quiet spot holding `id`, facing east, and an attacker `gap` px east of them (or west: behind)

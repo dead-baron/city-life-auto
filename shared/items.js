@@ -1,4 +1,4 @@
-import { PLASMA_DEFLECT, REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS } from './rules.js';
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS } from './rules.js';
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -43,9 +43,7 @@ export const WEAPONS = {
   // chance to stun. (Index 31, the top of the wire's five bits: net.js extra.)
   heavyflash: { i: 31, name: 'Heavy Flashlight', type: 'melee', dmg: 21, range: 32, arc: 1.3, cd: 0.55, stunChance: 0.3, light: true },
   // ---- end lights to carry ----
-  // the fire bow (the owner's notes, 2026-10-10: the Hunting Bow shoots plain arrows; the flaming ones are this bow's):
-  // a black recurve whose arrows burn - they hurt more, set a vehicle burning and light a campfire they land by
-  // (combat.js stepArrow, rules.js FIRE_ARROW). They burn up: none are left lying to pick up. The lodge keeps one.
+  // the fire bow: its arrows burn (combat.js stepArrow, rules.js FIRE_ARROW)
   firebow:  { i: 30, name: 'Emberfang Bow',   type: 'bow', dmg: 62, range: 560, speed: 900, spread: 0.012, cd: 0.3, mag: 1, reload: 0.85, quiet: true, fire: true, ammoName: 'fire arrows', starter: 8 },
 };
 export const WEAPON_BY_INDEX = [];
@@ -57,14 +55,6 @@ for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i]
 const cycleKey = (id) => (id === 'plasma' ? 1e3 : WEAPONS[id].i);
 export function weaponOrder(ids) { return ids.filter((id) => WEAPONS[id]).sort((a, b) => cycleKey(a) - cycleKey(b)); }
 // the weapon dir (1 next, -1 back) steps from cur to, among ids (null if none)
-// The plasma blade turning a bullet or an arrow aside (combat.js): the chance, for one coming at you off degrees round
-// from where you face (0 head on, PI from behind), guarding or just holding it (rules.js PLASMA_DEFLECT).
-export function deflectChance(off, guarding) {
-  const o = Math.abs(off), D = PLASMA_DEFLECT;
-  if (!guarding) return o <= D.idleArc ? WEAPONS.plasma.deflect : 0;
-  if (o <= D.frontArc) return D.front;
-  return o >= D.sideArc ? 0 : D.front + (D.side - D.front) * (o - D.frontArc) / (D.sideArc - D.frontArc);
-}
 export function stepWeapon(ids, cur, dir) {
   const o = weaponOrder(ids), n = o.length, i = o.indexOf(cur);
   if (!n) return null;

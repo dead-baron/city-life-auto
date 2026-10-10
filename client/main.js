@@ -712,8 +712,8 @@ function onEvent(ev) {
       break;
     }
     case 'sizzle': fx.sparks(ev.x, ev.y, 7); fx.smoke(ev.x, ev.y, false); fx.ring(ev.x, ev.y, 14, bladeFx(ev.id).rgba, 0.25); sfx('sear', distVol(ev.x, ev.y)); break;   // (id: the one with the blade)
-    case 'deflect': { const c = bladeFx(ev.id).rgba; fx.sparks(ev.x, ev.y, 9); for (let k = 0; k < 3; k++) fx.slash(ev.x, ev.y, ev.a + k * 2.1, 13 + k, c, 0.14 + k * 0.05, 2, true); if (ev.g != null) fx.tracer(ev.x, ev.y, ev.x + Math.cos(ev.g) * 110, ev.y + Math.sin(ev.g) * 110); sfx('zing', distVol(ev.x, ev.y)); break; }   // (a whirl of the blade; g: the bullet glancing off)
-    case 'block': fx.sparks(ev.x + Math.cos(ev.a) * 9, ev.y + Math.sin(ev.a) * 9, ev.w ? 6 : 1); fx.slash(ev.x, ev.y, ev.a, 12, ev.w === 28 ? bladeFx(ev.id).rgba : 'rgba(255,255,255,', 0.14, 2, ev.w === 28); sfx('hit', distVol(ev.x, ev.y) * 0.6); break;   // (a guard: combat.js blocked)
+    case 'deflect': { const c = bladeFx(ev.id).rgba; fx.sparks(ev.x, ev.y, 9); for (let k = 0; k < 3; k++) fx.slash(ev.x, ev.y, ev.a + k * 2.1, 13 + k, c, 0.14 + k * 0.05, 2, true); if (ev.g != null) fx.tracer(ev.x, ev.y, ev.x + Math.cos(ev.g) * 110, ev.y + Math.sin(ev.g) * 110); sfx('zing', distVol(ev.x, ev.y)); break; }
+    case 'block': fx.sparks(ev.x + Math.cos(ev.a) * 9, ev.y + Math.sin(ev.a) * 9, ev.w ? 6 : 1); fx.slash(ev.x, ev.y, ev.a, 12, ev.w === 28 ? bladeFx(ev.id).rgba : 'rgba(255,255,255,', 0.14, 2, ev.w === 28); sfx('hit', distVol(ev.x, ev.y) * 0.6); break;
     case 'react': { // a hit: the stagger (and the hit flash) - a shove on the heels, or forward from behind
       const e = S.ents.get(ev.id);
       if (e) { e.reactAt = S.loopClock; e.reactD = ev.d; e.reactA = ev.a; e.hitAt = S.loopClock; e.hitA = ev.a; e.barUntil = S.loopClock + 4; }
@@ -850,7 +850,7 @@ function onEvent(ev) {
     // the hunt (combat.js arrows, wildlife.js): a bow loosed, an arrow striking home or into the ground, an animal's
     // roar as it charges, its swipe landing, birds bursting up
     case 'loose': sfx('twang', distVol(ev.x, ev.y)); break;
-    case 'arrowhit': sfx('thwack', distVol(ev.x, ev.y)); if (ev.f) for (let k = 0; k < 6; k++) fx.fire(ev.x, ev.y); break;   // (f: a fire arrow)
+    case 'arrowhit': sfx('thwack', distVol(ev.x, ev.y)); if (ev.f) for (let k = 0; k < 6; k++) fx.fire(ev.x, ev.y); break;
     case 'arrowstick': sfx('thwack', distVol(ev.x, ev.y) * 0.5); if (ev.wall) fx.sparks(ev.x, ev.y, 2); if (ev.f) for (let k = 0; k < 6; k++) fx.fire(ev.x, ev.y); break;
     case 'roar': sfx(ev.k === 'cougar' || ev.k === 'bobcat' ? 'screech' : ev.k === 'goose' ? 'honk' : 'growl', distVol(ev.x, ev.y)); if (distVol(ev.x, ev.y) > 0.75 && (ev.k === 'grizzly' || ev.k === 'moose')) S.cam.shake = Math.max(S.cam.shake, 3); break;
     case 'maul': { const t = S.ents.get(ev.t); if (t) { t.hitAt = S.loopClock; t.hitA = ev.a; t.barUntil = S.loopClock + 4; } sfx('hit', distVol(ev.x, ev.y) * 1.4); if (ev.t === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 8); break; }
@@ -2834,7 +2834,7 @@ function tickVisuals(F) {
     S.wx.steam(view, fx, dt, now, sky);
   }
   if (F.rain || S.wx.wet > 0.2) tyreSpray(F.vehs, dt);
-  // rockets trail fire and smoke, a fire bow's arrows burn at the tip (a hunting bow's arrow: nothing); smashed hydrants gush
+  // rockets trail fire and smoke, fire arrows (30) burn, hunting arrows (24) don't; smashed hydrants gush
   for (const pr of F.projs) { const w = pr.d && pr.d.w; if (w === 24) continue; if (w === 30) { fx.fire(pr.rx + Math.cos(pr.ra) * 8, pr.ry + Math.sin(pr.ra) * 8); continue; } fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
   S.geysers = S.geysers.filter((gy) => gy.until > F.nowMs);
   for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
@@ -3025,7 +3025,7 @@ function drawWorldV1(F) {
   if (!sub) coverWalkIns(view);
   for (const pr of projs) {
     g.save(); g.translate(pr.rx, pr.ry); g.rotate(pr.ra);
-    if (pr.d && (pr.d.w === 24 || pr.d.w === 30)) { const f = pr.d.w === 30; g.fillStyle = f ? '#3a2a22' : '#c8a46c'; g.fillRect(-11, -1, 22, 2); g.fillStyle = f ? '#ffb040' : '#d8dde2'; g.fillRect(10, -2, 3, 4); g.fillStyle = f ? '#1c1c20' : '#c84a32'; g.fillRect(-11, -3, 5, 6); }   // an arrow (a fire bow's: black, the head glowing)
+    if (pr.d && (pr.d.w === 24 || pr.d.w === 30)) { const f = pr.d.w === 30; g.fillStyle = f ? '#3a2a22' : '#c8a46c'; g.fillRect(-11, -1, 22, 2); g.fillStyle = f ? '#ffb040' : '#d8dde2'; g.fillRect(10, -2, 3, 4); g.fillStyle = f ? '#1c1c20' : '#c84a32'; g.fillRect(-11, -3, 5, 6); }   // an arrow (30: a fire arrow)
     else { g.fillStyle = '#4a5a2a'; g.fillRect(-8, -3, 16, 6); g.fillStyle = '#c8262b'; g.fillRect(6, -3, 3, 6); }
     g.restore();
   }

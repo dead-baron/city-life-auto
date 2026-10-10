@@ -5452,7 +5452,7 @@ What changed:
   - From behind the guard is no help, and a knife in the back still kills.
   - Guarding you move at 55% and can't strike. You're shown with your weapon held up (the aim pose: every ped flag bit is taken).
   - Guns, tools and the bows ignore the guard bit, so the right button still just aims a gun.
-- **The plasma blade's deflection** (`combat.js deflects`, `shared/items.js deflectChance`, `rules.js PLASMA_DEFLECT`):
+- **The plasma blade's deflection** (`combat.js deflects` and `deflectChance`, `rules.js PLASMA_DEFLECT`):
   - Guarding with it turns aside 90% of bullets and arrows coming from within 60 degrees of where you face. That falls to 30% at 110 degrees, and none are turned from further round (behind you).
   - Not guarding, it still turns 35% of those from in front between swings, as before.
   - A deflection whirls the blade round: the swing pose and three arcs in the blade's colour, with sparks. The bullet glances off: the `deflect` event's `g` is the angle the client draws its tracer away along.
@@ -5467,6 +5467,8 @@ What changed:
   - `test/blocking.test.js` (4): each guard weapon blocking from in front, nothing from behind, the guard from input (slower, no striking, not with a gun), and the deflection odds by angle, with 120 shots.
   - `test/firebow.test.js` (3): the two bows, the shop and the client's trail, fire arrows hurting and burning away, and a car set burning and a campfire lit.
   - The existing blade, hunting, gamepad, sound and lights tests still pass.
+- **The page's code** (`test/perf.test.js`): this adds about 1.4 KB gzipped to what the page loads (the input, the touch toggle, the guard and deflection effects, the fire bow's tables). The page is at its 720 KB budget, not over it; the comments in the shared files were kept short to fit.
+- **The in-game help** (Pause → Controls) and the controls tables (`shared/controls.js`: `steer`, `block`) say the same.
 - **Not done yet:**
   - NPCs don't guard.
   - The guard has no pose of its own: it borrows the aim pose, as every ped flag bit is taken.

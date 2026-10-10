@@ -5,8 +5,8 @@ import * as revive from './revive.js';
 import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
-import { WEAPONS, stepWeapon, deflectChance } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW } from '../../shared/rules.js';
+import { WEAPONS, stepWeapon } from '../../shared/items.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -174,6 +174,15 @@ function blocked(world, t, ped, w, dir) {
   const left = w.dmg * (ped.build ? ped.build.str : 1) * (1 - (gw.guard || 0));
   if (left > 0.5) damage(world, t, left, ped, w.nonLethal ? 'nonlethal' : 'melee', dir);
   return true;
+}
+// The plasma blade's chance of turning aside a bullet or an arrow coming at you off rad round from where you face (0
+// head on, PI from behind), guarding with it or just holding it (rules.js PLASMA_DEFLECT): guarding, most from in front
+// (within about 60 degrees), fewer from the side, none from behind; not guarding, now and then from in front.
+export function deflectChance(off, guarding) {
+  const o = Math.abs(off), D = PLASMA_DEFLECT;
+  if (!guarding) return o <= D.idleArc ? WEAPONS.plasma.deflect : 0;
+  if (o <= D.frontArc) return D.front;
+  return o >= D.sideArc ? 0 : D.front + (D.side - D.front) * (o - D.frontArc) / (D.sideArc - D.frontArc);
 }
 // The plasma blade meeting a bullet or an arrow flying along a (rules.js PLASMA_DEFLECT): whether it's turned aside -
 // the blade whirls round to it (the swing pose), sparks, and it glances off (the 'deflect' event; g: the way it goes).
