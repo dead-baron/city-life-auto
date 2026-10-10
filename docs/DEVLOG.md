@@ -5800,3 +5800,39 @@ After the fireflies, the rest spots and the animals came in, the page's code sto
 paused tour's data (`shared/tutorial.js`, 20 KB gzipped) was still in the page only because the phone's place list and
 the map's waypoint list used its three-line `districtAt`; both now have that line themselves, so the tour's data comes
 only with the tour. The page is 700 KB with 86 files. Tests: the full suite.
+
+## 2026-10-10 · World v3, stage 1's first spike: the region frame, and Metro City built alone
+
+The owner likes the direction of the World v3 plan (`docs/WORLD-V3.md`) but hasn't approved the layout yet, so nothing in
+the live world moves: `WORLD_VERSION` stays 9, and the world's hash is `b3725c822e36` before and after. This is the engine
+work needed whatever the final layout is - stage 1's first spike, written up in `docs/WORLD-V3.md` 4.6.
+- **The frame and its regions** (`shared/world3.js`, which nothing live imports yet): 5040 x 4032 tiles, 10 x 8 regions
+  of 504 x 504 tiles (21 x 21 net chunks each, so a chunk is always in one region); a region's index, bounds and key, the
+  region of a tile or a chunk, a tile's index inside its region, the regions a rectangle touches and the 3 x 3 window;
+  a seed per region (integer mixing only, the same in every engine); part 2's island placements; and `cutRegion`, which
+  cuts one region's grid out of a map built in today's frame and places it by its offset.
+- **Metro City built alone** (`tools/world3-spike.mjs`; `generateCity(seed, opts)`, where `opts` is the spike's only):
+  Metro City with Southbank and Pelican Key, every other island made sea and the landmass cut where Dry Creek begins,
+  then placed in its v3 rectangle (regions r4-4, r5-4, r4-5, r5-5) and compared with today's world. It builds in 2-3.6 s
+  against today's 4.5-5.4 s and keeps 46 MB against 68 MB (the grids are still the whole map's).
+  - What came out the same: 95.3% of its land tiles, 396 of its 414 road edges and 80% of its buildings. With Dry Creek
+    left joined on, 99.3% of the tiles and every one of its streets.
+  - What stops an island building on its own: the planned businesses are world-wide (the build threw at Cedar Isle's
+    hardware store), the other islands' roads, bridges and the railway are laid from data whether their land is there or
+    not, and the seam with Dry Creek. Ids, names and the ATMs are numbered and spaced world-wide, the order-dependent
+    passes share one random stream, the grids are `MAP_W x MAP_H`, the coordinates are today's, and a build leaves
+    module state behind.
+  - The next steps are listed in order: island builds, grids sized to the island, island-local ids and random streams
+    (one `WORLD_VERSION` bump), the skeleton, then the client's worker and cache and the server.
+- **The art hash changes** (`shared/map.js` is part of the chunk bake's code), so browsers bake their chunks again once.
+
+Files: `shared/world3.js` (new), `shared/map.js` (the `opts` parameter), `tools/world3-spike.mjs` (new),
+`docs/WORLD-V3.md` (4.6).
+- **Tests:**
+  - `test/world3.test.js` (7 new). The frame's sizes; region index, bounds and `regionAt` round trips; every chunk in one
+    region; rectangles and the window clipped to the frame; region seeds distinct, pinned and well mixed; every
+    placement inside the frame, and `cutRegion` putting each value at its tile plus the offset.
+  - Two of the seven run the spike. Today's world is still the stamped one, two spike builds are identical, and Metro
+    City lands in its four regions with at least the measured share the same as today's. With Dry Creek joined on, its
+    roads are exactly today's and its distance fields are the same.
+  - `test/dmath.test.js` passes as before.

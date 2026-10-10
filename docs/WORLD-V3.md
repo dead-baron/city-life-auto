@@ -772,7 +772,7 @@ Each stage bumps `WORLD_VERSION` (homes and garages from the old world are relea
   (land, districts, roads, the railway, blocks, nature, countryside, transit). Which steps can run on one island's
   rectangle as they are, which read the whole world (the land labelling, the sea and river distance fields, the
   railway, the countryside's search for open ground, the bus and ferry searches), and what each needs from the skeleton
-  instead. A spike: generate Metro City alone in its rectangle and compare it tile for tile with today's.
+  instead. A spike: generate Metro City alone in its rectangle and compare it tile for tile with today's (done: 4.6).
 - **What a sleeping region keeps on the server** (parked and abandoned vehicles, loot on the ground, damaged props, fires,
   wanted players hiding there) and how it wakes (traffic and pedestrians spawned out of sight, animals by habitat).
 - **Region seams**: roads, rivers and the railway cross region borders at points the skeleton fixes; buildings, props
@@ -786,3 +786,120 @@ Each stage bumps `WORLD_VERSION` (homes and garages from the old world are relea
   skeleton drawn live for regions not built yet.
 - **Save data**: homes, garages and stashes are stored by world position; with `WORLD_VERSION` bumped they are released
   as World v2 does - or moved by their island's offset (part 2's table), which would keep players' homes.
+
+### 4.6 Stage 1's first spike: the region frame, and Metro City built alone (2026-10-10)
+
+Nothing in the live world moved: `WORLD_VERSION` stays 9 and the world's hash is `b3725c822e36` before and after
+(`node tools/stamp-version.mjs`). The art hash changes (`shared/map.js` is in the chunk bake's code), so browsers bake
+their chunks again once.
+
+**What was built**
+- **`shared/world3.js`** (nothing live imports it): the frame - 5040 x 4032 tiles, 10 x 8 regions of 504 x 504 tiles
+  (`REGION_TILES`), each 21 x 21 net chunks of 24 (the art v2 bake chunk is the same 768 px, so a chunk is always in one
+  region); `regionIndex`, `regionXY`, `regionKey` ('r3-5'), `regionAt(tx, ty)`, `regionBounds`, `localIndex` (a tile's
+  index in its region's own grids, as `ty * MAP_W + tx` is today), `chunkRegion`, `regionsInRect`, `regionsAround` (the
+  3 x 3 window); `regionSeed(worldSeed, region)` (integer mixing only, the same in every engine, all 80 distinct);
+  `PLACEMENTS` (part 2's offsets for the thirteen pieces), `placedRect`, `placedRegions`, `toFrame` / `fromFrame`; and
+  `cutRegion` - one region's grid of a per-tile layer, cut from a map built in today's frame and placed by an offset.
+- **`generateCity(seed, opts)`**: `opts` is the spike's only - `opts.land(land)` masks the land before anything else
+  reads it, `opts.special(sp, home, m)` says whether a planned business is this build's. Left out (the server, the
+  client, the stamp), the world is today's to the bit: `test/world3.test.js` checks `generateCity(1337)` against the
+  stamped hash.
+- **`tools/world3-spike.mjs`** (`node --expose-gc tools/world3-spike.mjs [--twice] [--with-drycreek]`, heavy - under
+  `flock`): builds Metro City with Southbank and Pelican Key alone (every other island's land made sea, the landmass cut
+  at x = 1045 where Dry Creek's fields begin), builds today's world, compares them on the island's own land, and places
+  the island in the frame (+1591, +1729: tiles 2133..2636 x 2030..2676, the four regions r4-4, r5-4, r4-5, r5-5).
+
+**What it measured** (node 22 on the 2-core machine, under `flock`; today's whole build took 4.5-5.4 s in the same runs,
+less loaded than 4.2's 10.1 s; Metro City's land is 187,926 tiles, about a fifth of the world's):
+
+| | Metro City alone, cut at x = 1045 | Metro City with Dry Creek still joined on |
+|---|---|---|
+| Build time | 2.0-3.6 s (buildCity 2.9 s sampled; today 4.9 s) | 4.0 s |
+| Kept after the build (JS heap + typed arrays) | 46 MB (30 MB of it the whole map's grids; today 68 MB) | 50 MB |
+| Land tiles as today's | 179,180 of 187,926 (95.3%) | 186,547 (99.3%) |
+| Road edges as today's (kind, ends, level) | 396 of 414; 63 new (edges split differently at the cut) | 414 of 414, none new |
+| Buildings (kind and lot) | 280 of 351 (79.8%) | 337 of 351 (96%) |
+| POIs (kind, place and name) | 110 of 221 (145 by kind and place) | 140 of 221 |
+| Props | 4,029 of 4,330 | 4,277 of 4,330 |
+| `dist`, `zone`, `river`, `deck`, `distRiver` | the same | the same |
+| `distSea` | 27,416 tiles differ (the new coast) | the same |
+| `bld` (the building index on each tile) | 31,744 tiles differ | 31,515 differ |
+
+Two builds of the spike are identical (canonical hash), and every island tile lands in the frame where the offset says.
+
+Where the time goes (the CPU profiler, inclusive time per pass of `buildCity`): Metro City alone - `layoutRoads` 601 ms,
+`terrain` 388, `repairRoads` 201, `rasterRoads` 145, `buildNatureSites` 141, `reserveRail` 122, `buildStreetProps` 120;
+today's whole world - `layoutRoads` 802, `buildNatureSites` 680, `terrain` 571, `repairRoads` 422, `findBlocks` 213,
+`rasterRoads` 190. A fifth of the land costs about 60% of the time: the passes over the whole grid don't shrink with the
+island (`terrain`'s land decoding, labelling and three distance fields over 1.57 M tiles; the ring's distance field in
+`layoutRoads`; the network repair; the railway, laid whole).
+
+**What can't build one island on its own yet** (each found by the spike):
+1. **The planned businesses are world-wide.** `placeSpecials` threw (`no room for strip (Falls Hardware)`): with Cedar Isle
+   gone its hardware store had nowhere to go - and before throwing it falls back to "anywhere at all", so another
+   island's business would have taken a Metro City lot. `seedOf` only looks in `SEEDS` (the central island's), so
+   every other island's district has (800, 500), in Metro City, for its home. The spike's `opts.special` builds a business only where its district's
+   seeds (`SEEDS` + `ISLAND_SEEDS`) or its planned spot are on the build's land.
+2. **The other islands' roads are laid from data, land or not.** `islandRoads` still laid the Westport Beltway, the
+   Northshore, Bluffs and Cedar Isle loops, the Bay, Strait, Harbor, North and Cedar bridges, the Northern Causeway and
+   the six country stations' roads, over open sea: 31 edges run off the island. They belong to the skeleton or to their
+   own island's build.
+3. **The railway is one loop** (`RAIL_ROUTE`, 14,127 points, 12 stations), laid whole whatever land is there: the
+   skeleton's, clipped per region.
+4. **The seam with Dry Creek.** Metro City and Dry Creek are one landmass; the cut changes about 7,400 tiles in Old Town,
+   Southside, Bayside Heights and The Yards: the Eastern Parkway (every street of the grid ends on it), the County Road
+   and the Farm Road into Southside go, and the coast distance changes along the cut (waterfront strips, beaches). With
+   the landmass whole, every one of Metro City's streets comes out as today's. In v3 the cut is a designed shore (part
+   2, "The seams"), so the island is meant to change there.
+5. **World-wide ids and numbering.** `bld` stores each building's index in `m.buildings`: with the other islands'
+   buildings missing every index shifts, so 31,515 tiles differ under the same buildings. POI ids, prop, node and edge
+   indices are the same kind of thing. Names are numbered world-wide ("Old Town Apt #13" became "#1") or drawn in build
+   order (a delivery firm's name), and the ATMs are spaced over the whole world (`ATM_SPACING`): 39 homes and 16 ATMs
+   differ by name or place even with the landmass whole.
+6. **One random stream for the order-dependent passes.** `rand = mulberry32(seed)` is drawn by `layoutRoads` (Pine Hills'
+   cul-de-sacs), `islandRoads`, `claimEstates`, `estateHouse`, the mansion, `buildWaterfronts`, `buildFarm`,
+   `buildEstates`, `buildOutposts`, `buildGullIsles`, `buildWilds`, `buildOffshore` and `buildCameras` in build order:
+   one island fewer shifts every later draw. Most block-level work already has seeds of its own by position
+   (`mulberry32(seed ^ (b.x * 97 + b.y * 13))`, each planned business its own) - region-friendly, as long as an island
+   is built in its own coordinates.
+7. **The grids are the whole map's.** `CityMap`'s per-tile layers are `MAP_W x MAP_H` whatever is built (30 MB of typed
+   arrays for Metro City alone); `MAP_W`/`MAP_H` appear 250 times in `map.js`, 176 in `naturesites.js`, 12 in
+   `countryside.js`, and `map.js` allocates about 30 whole-map typed arrays along the way (distance fields, labels, the
+   ring).
+8. **The coordinates are today's.** The generators place everything in today's tiles: the river's trace, Pine Hills'
+   collectors, the county roads, `RAIL_ROUTE`, `SEEDS`, `ISLAND_SEEDS`, `LAKES`, `PARKS`, `AIRPORTS`, the countryside's
+   `SITES`, `metro.js`'s plan. So an island is built in its own (today's) frame and placed by its offset, as the spike
+   does - cheap, and the generators don't change. Building it at its v3 position would mean moving every one of those
+   numbers, and the position seeds of item 6 with them (every block would come out different).
+9. **Module state.** A build leaves state behind for the next in the same process (`ISLANDS`' boxes, `turfMap`, the
+   spike's `OPTS`); a worker building regions one after another must start each build clean (the spike runs its builds
+   in a fresh process, the spike first).
+
+**The region size.** 504 stays right: a whole number of net and bake chunks, a 3 x 3 window about today's whole map, one
+region's byte layer 254 KB. One thing for the layout: Metro City is exactly 504 tiles wide (542..1045), so with its x
+offset on a region column (2016 or 2520 instead of 2133) it would sit in one column of regions instead of two (it is
+647 tall, so two rows either way). Where islands fit, aligning them to region columns halves the regions each touches.
+
+**Next steps, in order**
+1. **Island builds** (stage 1, no change to the world): `generateCity(seed, { island })` naming a piece of part 2's
+   table - the spike's land mask and businesses filter, plus the other islands' roads, bridges and rail left out
+   (`islandRoads`, `countrysideRoads` and the railway by island). Proof: every island's build matches today's on its own
+   land away from its seams; Metro City with Dry Creek is the first (its streets already 100%).
+2. **Grids sized to the island** (`shared/map.js`, `naturesites.js`, `countryside.js`): `CityMap` with an origin and a
+   size (the island's rectangle and a margin), its own index function in place of `y * MAP_W + x`, the whole-map passes
+   (`terrain`'s distance fields and labels, the ring's distance field) run on the rectangle. Mechanical but big (about
+   440 uses). For Metro City the per-tile layers drop from 30 MB to about 5 MB and `terrain` to about a fifth.
+3. **Island-local ids, names and random streams**: `bld` and the POI, prop and edge ids per island; names numbered per
+   district; the ATM spacing per island; a stream per island (`regionSeed`-style) for the passes of item 6. This changes
+   today's world: one `WORLD_VERSION` bump, best taken with stage 1's first live step.
+4. **The skeleton module** (stage 2) takes what crosses between islands: the bridges, the island highways' links, the
+   railway, the ferry routes, each clipped into the regions it crosses with fixed border points.
+5. **`client/worldgen.js` and `worldcache.js`**: the worker builds the islands that touch the 3 x 3 window, cuts their
+   regions (`cutRegion`), keeps each region in IndexedDB under the world hash and its `regionKey`, and drops what is two
+   regions away. The chunk baker (`chunkbake.js`, `groundbake.js`) reads a region window by `localIndex` with a margin
+   (about 12 tiles) instead of `ty * MAP_W + tx`.
+6. **The server** (`server/world.js`, `server/index.js`, `server/artbake.js`): the islands near players built and kept,
+   `mapSignature` per region (the join check), the lane graph per region stitched at the skeleton's border points, and
+   the systems that search the whole network (`ferries.js`, `transit.js`, streetlife's Dijkstra) on the skeleton's
+   coarse graph for long trips.

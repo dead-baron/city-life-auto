@@ -3,7 +3,7 @@
 // compare it tile for tile, road for road, lot for lot and POI for POI with today's world. Measures the time and the
 // memory one island's build takes. Runs the spike first (a fresh process: generateCity keeps a little module state),
 // then today's world, whose hash must still be the stamped one (version.json `world`).
-//   node --expose-gc tools/world3-spike.mjs [--json] [--twice]
+//   node --expose-gc tools/world3-spike.mjs [--json] [--twice] [--with-drycreek] [--spike-only]
 // (heavy: two or three world builds - run it under `flock /tmp/cla-heavy.lock`)
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -21,7 +21,9 @@ const { canonicalHash } = await import(pathToFileURL(join(ROOT, 'tools/stamp-ver
 const JSON_OUT = process.argv.includes('--json'), TWICE = process.argv.includes('--twice');
 const P = W3.PLACEMENTS.metro;
 const KEEP_ZONES = new Set([Z.CITY, Z.SOUTH, Z.KEY]);
-const CUT_X = 1045;   // where Metro City's land runs on into Dry Creek's fields today (map.js terrain: x >= 1045 is Z.EAST)
+// where Metro City's land runs on into Dry Creek's fields today (map.js terrain: x >= 1045 is Z.EAST); --with-drycreek
+// keeps the whole landmass (Dry Creek too), to tell what the cut changes from what the other islands' absence does
+const CUT_X = process.argv.includes('--with-drycreek') ? MAP_W : 1045;
 
 // The land mask: Metro City's landmass west of the cut (with Southbank across its river) and Pelican Key; every other
 // island becomes sea. 4-connected, as map.js components() labels land.

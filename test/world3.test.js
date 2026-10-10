@@ -123,10 +123,10 @@ test('the placements: every island\'s v3 rectangle inside the frame; the offset 
 
 // --- the spike (heavy: three world builds in a child process; `flock /tmp/cla-heavy.lock node --test test/world3.test.js`)
 const SPIKE = fileURLToPath(new URL('../tools/world3-spike.mjs', import.meta.url));
-const runSpike = () => new Promise((res, rej) => execFile(process.execPath, ['--expose-gc', SPIKE, '--json', '--twice'], { maxBuffer: 1 << 22, timeout: 900000 }, (e, out) => (e ? rej(e) : res(JSON.parse(out)))));
+const runSpike = (...args) => new Promise((res, rej) => execFile(process.execPath, ['--expose-gc', SPIKE, '--json', ...args], { maxBuffer: 1 << 22, timeout: 900000 }, (e, out) => (e ? rej(e) : res(JSON.parse(out)))));
 
 test('the spike: Metro City generated alone, placed in its v3 rectangle; today\'s world still the stamped one', { timeout: 900000 }, async () => {
-  const r = await runSpike();
+  const r = await runSpike('--twice');
   // today's world: the generator's new parameter, left out, changes nothing (the stamp in version.json is the live world)
   assert.equal(r.today.error, null);
   assert.equal(r.today.hash, r.today.stamped, 'generateCity(1337) is no longer the stamped world');
@@ -136,6 +136,19 @@ test('the spike: Metro City generated alone, placed in its v3 rectangle; today\'
   assert.equal(r.frame.frameOk, true);
   assert.deepEqual(r.frame.regions, ['r4-4', 'r5-4', 'r4-5', 'r5-5']);
   SPIKE_BASELINE(r);
+});
+test('the spike without the seam: with Dry Creek still joined on, Metro City\'s streets are today\'s exactly', { timeout: 900000 }, async () => {
+  // what is left once the cut at x = 1045 is taken away is what the other islands' absence does (world-wide ids and
+  // numbering, the shared random stream): the streets don't depend on it at all
+  const r = await runSpike('--with-drycreek');
+  assert.equal(r.spike.error, null, r.spike.error);
+  assert.equal(r.today.hash, r.today.stamped);
+  assert.equal(r.roads.same, r.roads.today, JSON.stringify(r.roads));
+  assert.equal(r.roads.onlySpike, 0);
+  for (const k of ['dist', 'zone', 'river', 'deck', 'lvl0Block', 'distSea', 'distRiver']) assert.deepEqual(r.tiles.layers[k], { land: 0, water: 0 }, k);
+  assert.ok(r.frame.same / r.frame.islandTiles >= 0.99, `tiles the same: ${r.frame.same} of ${r.frame.islandTiles}`);
+  assert.ok(r.buildings.same / r.buildings.today >= 0.95, JSON.stringify(r.buildings));
+  assert.ok(r.props.same / r.props.today >= 0.98, JSON.stringify(r.props));
 });
 // What the spike measured (docs/WORLD-V3.md 4.6): kept as a floor, so the work towards generating an island alone
 // only ever brings it closer to today's.
