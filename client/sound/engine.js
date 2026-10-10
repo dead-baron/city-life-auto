@@ -102,6 +102,7 @@ export class SoundEngine {
       saw8: wave((k) => 1 / k, 8),              // a darker sawtooth: engines, brass (and every 'sawtooth')
       sq9: wave((k) => (k % 2 ? 1 / k : 0), 9), // a square with its top cut off (every 'square': no fizz)
       buzz: wave((k) => (k % 2 ? 1 / k : 0.6 / k), 14),   // a motorbike's rasp
+      saw48: wave((k) => 1 / k, 48),            // a full sawtooth: the title's vocoder riff (its formants and its fizz need the harmonics)
       reed: wave((k) => (k === 1 ? 0.6 : k === 2 ? 1 : k === 3 ? 0.7 : k === 5 ? 0.3 : 0.05 / k), 10),
     };
   }

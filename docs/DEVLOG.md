@@ -5384,3 +5384,32 @@ The owner: "In NPC street fights, whoever started it (or both if equal) count as
   - the police breaking a fight up with tackles and taking the starter in;
   - an officer on foot running down a purse snatcher (the purse dropped);
   - an officer whose unit is done running one down, the car waiting.
+
+## 2026-10-10 · The title screen plays the owner's own track, rebuilt in the game's engine
+The owner made a track for the title screen ("CLA Main Screen": made with a text-to-music model, then cut to loop in their own editor) and asked for it to be recreated in the engine, as our own: "Lets try recreating it to make it our own if that works so its in our own engine."
+- **Measured from the MP3** by a script in a scratch folder (numpy and scipy):
+  - the tempo and length: 92 BPM, exactly 20 bars (52.17 s);
+  - the drums: the beat grid and the drums separated from the rest, the bars averaged;
+  - the notes: the bass and the riff from their harmonics;
+  - the form: the second eight bars are a copy of the first.
+
+  The MP3 isn't in the repository.
+- **What it plays** (`client/sound/music.js`: `TITLE_FORM`, `TITLE_RIFF`, `titleScore`):
+  - **The form:** F minor. Four bars of the riff alone, then eight with the drums, twice.
+  - **The riff:** F, A♭, G (a rest, F, A♭, F, then G-A♭-F twice).
+  - **The turns:** every fourth bar turns D♭ to C, with a fill, a break, or the drums dropping out at the loop's seam.
+  - **The bass:** a sub bass on F under it all.
+- **How it sounds:**
+  - **The riff:** a buzzy, vocoder-like synth. Two sawtooths a few cents apart scoop up into each note, through two vowel formants that move with the notes. It's dark in the intro and opens up once the drums are in, with a little fuzz.
+  - **The drums:** a dusty boom-bap kit. Kick on 1 and 3, snare on 2 and 4, hats on the off-beats, ghost notes dragging half a 16th late. Pushed into a saturation, part of it crunched to six bits.
+  - **The tape:** hiss, a slow wow in the pitch (a wavering delay: about ±15 cents), the top rolled off at 10.5 kHz.
+- **The new bits of the music player:**
+  - A song can be a score (events per step: notes, lengths, accents, a lag behind the grid) instead of patterns.
+  - It can have a tape chain. Its hiss and wavers run only while the song plays.
+  - The engine has a fuller sawtooth (`saw48`).
+- **Checked against the owner's track:** the bench renders a song as the game plays it (`python3 tools/sound/bench.py --render title --seconds 106 --wav title.wav`). The loop's energy band by band, 0-14 kHz, comes within about 2 dB of the owner's below 2 kHz and 4-8 dB under it at 2-6 kHz. In the game it's a little louder than the old title tune (the bench, 10 s: -32.7 against -34.9 dBA).
+- **Tests:** `test/titlesong.test.js` (5):
+  - the form, the length and the riff, bar by bar;
+  - the turns, the bass with them, and the riff opening up with the drums;
+  - the drums, the fills and the pickups;
+  - the tape stopping with the song and starting fresh, on a stand-in AudioContext.

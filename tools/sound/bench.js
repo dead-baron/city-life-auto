@@ -15,7 +15,7 @@ import { SoundEngine } from '../../client/sound/engine.js';
 import { Ambience } from '../../client/sound/ambience.js';
 import { Music } from '../../client/sound/music.js';
 import { INSTR } from '../../client/sound/instruments.js';
-import { SOUND_DEFAULTS } from '../../client/sound/mixer.js';
+import { SOUND_DEFAULTS, createMixer } from '../../client/sound/mixer.js';
 import { T, VF, PF } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { WEAPONS } from '../../shared/items.js';
@@ -448,4 +448,24 @@ export async function runTyres() {
   return out;
 }
 
-window.bench = { runScene, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive, runTyres };
+// ---- a song as the game plays it, for listening (bench.py --render): through the real mixer at the default settings,
+// as 16-bit stereo PCM in base64 ----
+export async function renderSong({ song = 'title', seconds = 60, level = 0.7 } = {}) {
+  const ctx = new OfflineAudioContext(2, SR * seconds, SR);
+  const E = new SoundEngine(ctx, createMixer(ctx, SOUND_DEFAULTS), { voices: 1 });
+  const M = new Music(E);
+  M.set(song, level);
+  const step = 0.1;
+  for (let t = step; t < seconds - 0.05; t += step) ctx.suspend(Math.round(t / Q) * Q).then(() => { M.set(song, level); M.tick(); E.reap(ctx.currentTime); ctx.resume(); });
+  M.tick();
+  const buf = await ctx.startRendering();
+  const L = buf.getChannelData(0), Rc = buf.getChannelData(1), n = L.length, pcm = new Int16Array(n * 2);
+  const q = (x) => Math.max(-32768, Math.min(32767, Math.round(x * 32767)));
+  for (let i = 0; i < n; i++) { pcm[2 * i] = q(L[i]); pcm[2 * i + 1] = q(Rc[i]); }
+  const u8 = new Uint8Array(pcm.buffer);
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return { sr: SR, b64: btoa(s) };
+}
+
+window.bench = { renderSong, runScene, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive, runTyres };

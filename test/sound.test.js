@@ -165,6 +165,7 @@ test('every vehicle has an engine class, every song is whole, and the sound stay
   for (const id of Object.keys(VEHICLES)) assert.ok(ENGINE_CLASS[id], `${id}: its engine`);
   for (const [name, s] of Object.entries(SONGS)) {
     if (s.lead) assert.equal(s.lead.notes.length, s.steps * s.bars, `${name}: a note per step`);
+    if (s.score) assert.equal(s.score.length, s.steps * s.bars, `${name}: a step of its score for every step`);
     for (const pat of Object.values(s.drums || {})) assert.equal(s.steps % pat.length, 0, `${name}: drum bars`);
   }
   const page = closure(['client/main.js']);
