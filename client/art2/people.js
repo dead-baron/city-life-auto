@@ -1937,8 +1937,8 @@ CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
 // people at their activities (server activities.js, task #423): easel (a street painter's, in front: the brush up to the
 // canvas), cooler (an angler's, on the deck at their side), chess (the board on the table in front of a seated player)
-CARRY.push('easel', 'cooler', 'chess');
-Object.assign(ACC_HANDS, { easel: 1 });
+CARRY.push('easel', 'cooler', 'chess', 'sponge', 'crate');
+Object.assign(ACC_HANDS, { easel: 1, sponge: 1 });   // (sponge: washing the car, the bucket at their feet; crate: a picker's)
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
 const M365 = { metal: MAT('#a4a8b0', 0.5), rubber: MAT('#26262a'), blanket: MAT('#6a7a9a'), tartan: MAT('#8a2a34'), wood: MAT('#d0903e', 0.4), deck: MAT('#2a9aa8', 0.3), lead: MAT('#c8262b'), dark: MAT('#1c1c22', 0.4), wheel: MAT('#f2c21b'), bag: MAT('#3a5a3a') };
 const GAITS2 = {
@@ -2005,6 +2005,7 @@ function accHands2(D, P, S, acc) {
   if (acc === 'guitar') { P.hL = vadd(S.chest, mv(S.SP, [-8.6, 6.4, -2.2])); P.hR = vadd(S.chest, mv(S.SP, [2.2, 7.0, -6.6 + P.breath * 2])); P.elL = [-1, -0.4, -0.5]; P.elR = [1, -0.6, -0.4]; return true; }
   if (acc === 'call') { P.hR = vadd(S.neck, mv(S.SP, [4.4, 1.6, 5.6])); P.elR = [1, -0.2, -1]; P.headYaw += 0.15; return true; }
   if (acc === 'map') { P.hR = vadd(S.chest, mv(S.SP, [4.4, 7.4, -1.6])); P.hL = vadd(S.chest, mv(S.SP, [-4.4, 7.4, -1.6])); P.elR = [1, -0.5, -0.5]; P.elL = [-1, -0.5, -0.5]; P.headPitch += 0.3; return true; }
+  if (acc === 'sponge') { P.hR = [2.0 + P.breath * 5, 13.4, 23 + P.breath * 3]; P.elR = [1, -0.3, -0.4]; P.lean = 0.16; return true; }   // (wiping the car's side)
   if (acc === 'easel') { P.hR = [2.6 + P.breath * 3, 12.2, 31 + P.breath * 4]; P.elR = [1, -0.4, -0.5]; P.hL = vadd(S.shL, [-2.6, 4.4, -r * 0.62]); P.elL = [-1, -0.3, -0.5]; P.headPitch += 0.08; return true; }   // (a dab of the brush, the palette low in the other hand)
   return false;
 }
@@ -2020,7 +2021,7 @@ function figure365(B, C, E, D, P, S, acc) {
     B(vadd(a, [0, 1.4, -3.9]), S.PF, [0.75, 3.6, 0.6], GR.ACC, 'blade', M365.dark);
     for (const y of [-1.4, 1.4, 4.2]) E(vadd(a, [0, y, -4.7]), I, [0.6, 0.8, 0.8], GR.ACC, 'wheel', M365.wheel);
   }
-  if (ACT_PROPS[acc]) { ACT_PROPS[acc](B, C, E); return; }   // (at an activity: whatever the pose)
+  if (ACT_PROPS[acc]) { ACT_PROPS[acc](B, C, E, S); return; }   // (at an activity: whatever the pose)
   if (!P.acc || !acc || P.item !== null) return;
   if (STRETCHERS.has(acc)) { stretcherFigure(B, C, E, acc); return; }   // (the paramedics' stretcher, at the end)
   const hR = S.haR;
@@ -2055,6 +2056,14 @@ const ACT_PROPS = {
   },
   cooler(B) {   // a blue cooler with a white lid on the deck beside them
     B([-10.5, -1.5, 3.2], I3, [3.6, 2.3, 3.0], GR.ACC, 'cooler', MAT('#2f68c8', 0.3)); B([-10.5, -1.5, 6.6], I3, [3.8, 2.5, 0.5], GR.ACC, 'lid', MAT('#f0f0ec', 0.3));
+  },
+  sponge(B, C, E, S) {   // the yellow sponge in hand, a bucket of suds at their feet
+    E(vadd(S.haR, [0, 1.6, 0.4]), I3, [2.2, 1.6, 1.5], GR.ACC, 'sponge', MAT('#f2d23a'));
+    C([-8.5, -1, 0.4], [-8.5, -1, 6.4], 2.8, 3.2, GR.ACC, 'bucket', MAT('#3a7ad0', 0.4)); E([-8.5, -1, 6.6], I3, [2.9, 2.9, 0.7], GR.ACC, 'suds', MAT('#f4f6fa'));
+  },
+  crate(B, C, E) {   // a wooden crate of tomatoes by the picker
+    B([-9.5, 4, 3.4], I3, [4.0, 3.0, 3.2], GR.ACC, 'crate', (Q) => cloth(Math.abs(Q.l2) > 0.7 || Math.abs(Q.l0) > 0.85 ? '#a8743c' : '#8a5a2c'));
+    for (const [x, y] of [[-11, 3], [-9, 5], [-8, 2.6], [-10.4, 5.4]]) E([x, y, 7], I3, [1.2, 1.2, 1.0], GR.ACC, 'fruit', MAT('#d8382a', 0.4));
   },
   chess(B, C) {   // the board on the table between the players, a few pieces still standing
     B([0, 15, 19.4], I3, [4.2, 4.2, 0.35], GR.ACC, 'chessb', (Q) => cloth(Math.abs(Q.l0) > 0.9 || Math.abs(Q.l1) > 0.9 ? '#5a3a22' : (Math.floor((Q.l0 + 1) * 4) + Math.floor((Q.l1 + 1) * 4)) & 1 ? '#efe2c4' : '#3a2a20'));

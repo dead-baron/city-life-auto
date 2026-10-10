@@ -20,7 +20,7 @@ const open = (x, y) => { const t = m.tileAtPx(x, y); return !PED_BLOCK[t] && t !
 
 test('activity spots are found on the map by rules: piers, tables, blankets, landmarks', () => {
   for (const k of ['anglers', 'chess', 'picnic', 'painter']) assert.ok(of(k).length >= 2, `some ${k} spots (${of(k).length})`);
-  for (const s of S.list) assert.ok(open(s.x, s.y), `${s.k} at ${Math.round(s.x)},${Math.round(s.y)}: on open ground`);
+  for (const s of S.list) if (s.k !== 'carwash') assert.ok(open(s.x, s.y), `${s.k} at ${Math.round(s.x)},${Math.round(s.y)}: on open ground`);   // (a car wash's spot is the car's)
   for (const s of of('anglers')) {   // the water right beside them, the way they face
     const t = m.tileAtPx(s.x + Math.cos(s.a) * 60, s.y + Math.sin(s.a) * 60), t2 = m.tileAtPx(s.x + Math.cos(s.a) * 24, s.y + Math.sin(s.a) * 24), t3 = m.tileAtPx(s.x + Math.cos(s.a) * 40, s.y + Math.sin(s.a) * 40);
     assert.ok([t, t2, t3].some((q) => q === T.WATER || q === T.DEEP), 'anglers face the water');
@@ -58,6 +58,29 @@ test('a spot fills with people doing the activity: placed, posed, their props on
     assert.ok(!e.removed && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) < 6, `${g.k}: holding the spot`);
   }
   assert.ok(Math.abs(a.a - 0) < 0.01 && a.gt === 'sit', 'still sat at the board');
+});
+
+test('the car washed in the driveway (when one is parked there), neighbours chatting, pickers in the fields', () => {
+  clear();
+  for (const k of ['carwash', 'chat', 'pickers']) assert.ok(of(k).length >= 2, `some ${k} spots (${of(k).length})`);
+  const cw = of('carwash').find((s) => !w.query(s.x, s.y, 60, K.VEH).length);
+  assert.equal(fill(w, cw, { seen: true }), null, 'no car, no car washing');
+  const v = w.spawnVehicle('sedan', cw.x, cw.y, cw.a, { parked: true });
+  const g = fill(w, cw, { seen: true });
+  assert.ok(g, 'a car in the driveway: someone washing it');
+  const [e] = people(g);
+  assert.equal(e.pp, 'sponge');
+  const d = Math.hypot(e.x - v.x, e.y - v.y);
+  assert.ok(d > v.def.W / 2 && d < v.def.W / 2 + 16, `beside the car (${d.toFixed(1)})`);
+  assert.ok(Math.cos(Math.atan2(v.y - e.y, v.x - e.x) - e.a) > 0.99, 'facing it');
+  const ct = fill(w, of('chat')[0], { seen: true }), [n1, n2] = people(ct);
+  assert.ok(Math.cos(n1.a - n2.a) < -0.99, 'face to face');
+  assert.ok(Math.cos(Math.atan2(n2.y - n1.y, n2.x - n1.x) - n1.a) > 0.99, 'looking at each other');
+  const pk = fill(w, of('pickers')[0], { seen: true });
+  assert.ok(people(pk).every((e) => e.gt === 'kneel'), 'down at the plants');
+  assert.equal(people(pk)[0].pp, 'crate');
+  assert.equal(m.tileAtPx(pk.x, pk.y), T.FIELD, 'in the field');
+  w.remove(v);
 });
 
 test('a gunfight scatters them; it over, they go back to it', () => {

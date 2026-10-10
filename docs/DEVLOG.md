@@ -5997,25 +5997,35 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
     tables), one or two standing by to watch, now and then glancing about;
   - **picnics:** two or three sat on a picnic blanket (out in the country, two round a picnic table);
   - **a street painter:** at an easel a little way off a fountain, a statue, the gazebo, a map board or the big wheel,
-    painting it.
+    painting it;
+  - **washing the car** in a home's driveway (the driveways' parking spots), when a car's parked there (`traffic.js`
+    parks them): beside it, facing it, a sponge going round, a bucket of suds at their feet;
+  - **neighbours chatting** on the front yards between two houses next door (between their driveways), face to face,
+    now and then a look away;
+  - **pickers** down the rows of a farm's field, kneeling at the plants, a crate of tomatoes by them.
 - **Filled near players, out of sight:** within 1100 px of someone, never closer than 380, never where anyone can see
   the people pop up (`inAnyView`), at most 4 groups round a player; each spot is on by a day/night chance when someone
-  comes near (no chess, picnics or painting at night), else it rests a few minutes. **Emptied** when nobody's within
+  comes near (no chess, picnics, painting, car washing or picking at night; none of those in the rain either), else it
+  rests a few minutes. **Emptied** when nobody's within
   1600 px and nobody can see it (and the density manager's usual far clean-up applies to them too). Cheap: they stand
   (sit) still and loop a pose; the fill/empty pass runs once a second.
 - **Like anyone else:** they're townsfolk (`npc.js`): a gunfight scatters them, a fight they stop to watch; away from
   their spot the pose and the prop are put down (nobody sits in mid air); once it's over they walk back to it and take
   it up again, or, far off by then (over 420 px), go on their way.
-- **Poses and props on the wire:** the descriptor's `gt` (`sit`, `sitlow`; `kneel` ready) and `pp` (`easel`, `cooler`,
-  `chess`). The art v2 renderer: `client/art2/game/peds.js` `personaPose` holds the activity's pose while they stand
+- **Poses and props on the wire:** the descriptor's `gt` (`sit`, `sitlow`, `kneel`) and `pp` (`easel`, `cooler`,
+  `chess`, `sponge`, `crate`). The art v2 renderer: `client/art2/game/peds.js` `personaPose` holds the activity's pose while they stand
   about; `client/art2/people.js` draws the easel (three legs, the ledge, a canvas with a painting of sky and grass, the
-  brush dabbing it), the blue cooler with its white lid, and the chess board with a few pieces still standing.
+  brush dabbing it), the blue cooler with its white lid, the chess board with a few pieces still standing, the yellow
+  sponge and the bucket of suds, the crate of tomatoes.
 - **Already about** (personas.js): the joggers (laps of a park or the beach) and the dog walker with three dogs.
-- **Left for part 2:** car washing in the homes' driveways (needs a parked car spawned with them), neighbours chatting
-  over a fence, the pickup game at the courts, pool in the bars, hunters with a dog at forest edges, miners at the quarries
-  and the mine, pickers in the farms' fields; the classic renderer's poses for these.
+- **Left for part 2:** the pickup game at the courts, pool in the bars, hunters with a dog at forest edges, miners at
+  the quarries and the mine (a pickaxe to draw); a fence for the neighbours to chat over; the classic renderer's poses
+  and props for these.
 - **Fixed on the way:** `client/art2/game/host.js` didn't parse (the dance moves' comment, put mid-line, swallowed the
   rest of the line with its closing braces), so the art v2 renderer failed to load; the comment is at the line's end now.
-- **Tests:** `test/activities.test.js` (4 new): the spots found on the map (on open ground, the anglers facing the
-  water, chess in town); a spot filled, posed, props on the wire, holding its spot; a gunfight scattering them and
-  them going back to it; filling round a player out of sight, a sensible number, gone when nobody's near.
+- **Tests:** `test/activities.test.js` (5 new): the spots found on the map (on open ground, the anglers facing the
+  water, chess in town); a spot filled, posed, props on the wire, holding its spot; the car washed only with a car in
+  the driveway, beside it and facing it, the neighbours face to face, the pickers kneeling in the field with their
+  crate; a gunfight scattering them and them going back to it; filling round a player out of sight, a sensible number,
+  gone when nobody's near. These pass as before: `test/npcpeople.test.js`, `test/view.test.js`,
+  `test/reactions.test.js`, `test/art2.test.js` (which failed on main: the host.js fix).

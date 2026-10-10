@@ -6,13 +6,16 @@
 //             standing by to watch
 //   picnic    two or three sat on a picnic blanket (out in the country: round a picnic table)
 //   painter   a street painter at an easel, painting the fountain (the statue, the gazebo, the big wheel) from a little way off
+//   carwash   washing the car parked in a home's driveway: a sponge, a bucket (when a car's parked there: traffic.js)
+//   chat      neighbours chatting between two homes next door to each other
+//   pickers   two picking down the rows of a farm's field, a crate of produce by them
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
 // player at most), and emptied when nobody's near any more. They stand (sit) and loop a pose: the descriptor's gt (the
 // client's personaPose: 'sit', 'sitlow') and prop (pp: 'easel', 'cooler', 'chess': client/art2/people.js), the anglers'
 // rods (the fishing bit). They're townsfolk like any other (npc.js): a gunfight sends them running, a fight they stop to
 // watch; once it's over they go back to what they were doing, or, far off by then, go on their way like anyone.
 // The joggers and the dog walkers are the street personalities (personas.js), out where they belong.
-import { K, T, TILE } from '../../shared/constants.js';
+import { K, T, TILE, WEATHER } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { inAnyView } from '../view.js';
@@ -35,6 +38,9 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   chess: { day: 0.7, night: 0 },
   picnic: { day: 0.65, night: 0 },
   painter: { day: 0.6, night: 0 },
+  carwash: { day: 0.35, night: 0 },
+  chat: { day: 0.4, night: 0.1 },
+  pickers: { day: 0.8, night: 0 },
 };
 const ANCHOR = { pierrail: 'anglers', pier: 'anglers', fishtable: 'anglers', rods: 'anglers', picnic: 'chess', cafetable: 'chess', blanket: 'picnic', fountain: 'painter', statue: 'painter', gazebo: 'painter', mapboard: 'painter', ferris: 'painter' };
 
@@ -86,6 +92,23 @@ export function spotsOf(map) {
     list.push({ k, x: s.x, y: s.y, a: s.a, wild });
     taken.push({ x: s.x, y: s.y });
   }
+  // washing the car in the driveway (a home's driveway parking spot: when a car's parked there)
+  (map.parking || []).forEach((p, i) => { if (p.drive && clear(p.x, p.y, 60)) { list.push({ k: 'carwash', x: p.x, y: p.y, a: p.a || 0, pi: i, wild: false }); taken.push({ x: p.x, y: p.y }); } });
+  // neighbours chatting, on the front yards between two houses next door to each other (between their driveways)
+  const drives = (map.parking || []).filter((p) => p.drive);
+  for (let i = 1; i < drives.length; i++) {
+    const h0 = drives[i - 1], h1 = drives[i], d = Math.hypot(h1.x - h0.x, h1.y - h0.y);
+    if (d < 90 || d > 340) continue;
+    const x = (h0.x + h1.x) / 2, y = (h0.y + h1.y) / 2, a = Math.atan2(h1.y - h0.y, h1.x - h0.x);
+    if (!walkable(map, x - Math.cos(a) * 11, y - Math.sin(a) * 11) || !walkable(map, x + Math.cos(a) * 11, y + Math.sin(a) * 11) || !clear(x, y, 120)) continue;
+    list.push({ k: 'chat', x, y, a, wild: false }); taken.push({ x, y });
+  }
+  // picking in the farms' fields
+  for (const f of map.fields || []) {
+    const x = f.x + f.w / 2, y = f.y + f.h / 2;
+    if (!walkable(map, x - 22, y) || !walkable(map, x + 22, y) || !clear(x, y, 200)) continue;
+    list.push({ k: 'pickers', x, y, a: Math.PI / 2, wild: true }); taken.push({ x, y });
+  }
   const cells = new Map();
   list.forEach((s, i) => {
     s.id = i;
@@ -128,8 +151,22 @@ function members(s) {
     }
   } else if (s.k === 'painter') {
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'busker', pp: 'easel' });
+  } else if (s.k === 'carwash') {   // beside the car (its .car: carAt), facing it, sponge in hand, the bucket by them
+    const v = s.car, a = v ? v.a : s.a, side = s.side || 1, off = ((v && v.def.W) || 44) / 2 + 9, x = (v ? v.x : s.x) - Math.sin(a) * off * side, y = (v ? v.y : s.y) + Math.cos(a) * off * side;
+    out.push({ x, y, a: Math.atan2((v ? v.y : s.y) - y, (v ? v.x : s.x) - x), arche: 'casual', pp: 'sponge' });
+  } else if (s.k === 'chat') {      // face to face, a word over the fence
+    out.push({ x: s.x - c * 11, y: s.y - sn * 11, a: s.a, arche: rng() < 0.4 ? 'senior' : 'casual', chat: true });
+    out.push({ x: s.x + c * 11, y: s.y + sn * 11, a: s.a + Math.PI, arche: rng() < 0.4 ? 'senior' : 'casual', chat: true });
+  } else if (s.k === 'pickers') {   // down along the rows, picking into a crate
+    out.push({ x: s.x - 22, y: s.y, a: s.a, arche: 'farmer', gt: 'kneel', pp: 'crate' });
+    out.push({ x: s.x + 22, y: s.y + 6, a: s.a, arche: 'farmer', gt: 'kneel' });
   }
   return out;
+}
+// the car parked in the driveway (no one in it), or null
+function carAt(world, s) {
+  for (const v of world.query(s.x, s.y, 24, K.VEH)) if (!v.removed && v.def && v.def.kind === 'car' && !(v.seats || []).some(Boolean) && Math.hypot(v.vx || 0, v.vy || 0) < 1) return v;
+  return null;
 }
 
 // dress an NPC from a persona look (personas.js LOOKS) or keep the archetype's own
@@ -146,7 +183,15 @@ function dressAs(world, ped, look) {
 export function fill(world, s, opts = {}) {
   const A = (world.acts ||= new Map());
   if (A.has(s.id)) return null;
+  if (s.k === 'carwash') {   // only with a car parked there; on the side with room to stand
+    const v = carAt(world, s);
+    if (!v) return null;
+    const off = (v.def.W || 44) / 2 + 9, ok = (k) => walkable(world.map, v.x - Math.sin(v.a) * off * k, v.y + Math.cos(v.a) * off * k) || world.map.tileAtPx(v.x - Math.sin(v.a) * off * k, v.y + Math.cos(v.a) * off * k) === T.ROAD;
+    s.car = v; s.side = ok(1) ? 1 : ok(-1) ? -1 : 0;
+    if (!s.side) { s.car = null; return null; }
+  }
   const ms = members(s);
+  s.car = null;
   for (const m of ms) {
     if (!opts.seen && inAnyView(world, m.x, m.y, 64)) return null;
     if (world.query(m.x, m.y, 10, K.PED).some((e) => !e.dead)) return null;
@@ -157,7 +202,7 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null };
+    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
@@ -187,6 +232,9 @@ export function steer(world, ped, now) {
   if (a.watch) {   // watching the game: on the board, now and then a glance about
     if (now >= (n.lookAt || 0)) { n.lookAt = now + 2 + rng() * 4; n.glance = rng() < 0.3 ? (rng() - 0.5) * 1.6 : 0; }
     ped.a = Math.atan2(a.watch.y - ped.y, a.watch.x - ped.x) + (n.glance || 0);
+  } else if (a.chat) {   // talking: now and then a look away, a nod
+    if (now >= (n.lookAt || 0)) { n.lookAt = now + 2 + rng() * 5; n.glance = rng() < 0.25 ? (rng() - 0.5) * 1.2 : 0; }
+    ped.a = a.a + (n.glance || 0);
   } else ped.a = a.a;
   return { inp: NO_INPUT, factor: 0.55 };
 }
@@ -217,7 +265,7 @@ function fillRound(world) {
     (world.actRest ||= new Map()).set(id, now + (g.ids.length ? 30 : 240));   // (emptied by a scare: a good while before it's on again)
   }
   if (!(world.npcBudget > 0) || world.npcCount >= world.npcBudget * 0.85) return;
-  const night = !!(world.clock && world.clock.isNight), rest = (world.actRest ||= new Map());
+  const night = !!(world.clock && world.clock.isNight), rest = (world.actRest ||= new Map()), rain = world.weather === WEATHER.RAIN;
   for (const a of anchors) {
     if (a.ug || a.hidden) continue;
     let have = 0;
@@ -227,8 +275,10 @@ function fillRound(world) {
       if (A.has(s.id) || now < (rest.get(s.id) || 0)) continue;
       if (anchors.some((b) => Math.hypot(b.x - s.x, b.y - s.y) < GAP)) continue;
       const P = KINDS[s.k];
+      if (rain && (s.k === 'carwash' || s.k === 'picnic' || s.k === 'painter' || s.k === 'chess')) continue;
       if (rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + 120 + rng() * 180); continue; }   // (not today: try again later)
-      if (fill(world, s) && ++have >= ACT_MAX) break;
+      if (!fill(world, s)) { rest.set(s.id, now + 15); continue; }   // (in sight just now, no car in the driveway: a little later)
+      if (++have >= ACT_MAX) break;
     }
   }
 }
