@@ -406,10 +406,11 @@ function fixedStep() {
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
-  if (!spec && !inOverlay && input.padCall && S.playing && !S.hud.menuOpen && !S.bigmap) callCruiser();
-  if (!spec && !inOverlay && input.padPhone && S.playing && !S.hud.menuOpen && !S.bigmap) openPhone();
+  const padUI = !spec && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
+  if (up && input.padCall) callCruiser();
+  if (up && input.padPhone) openPhone();
   // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
-  if (!spec && !inOverlay && input.padRight && S.playing && !S.hud.menuOpen && !S.bigmap) toggleBag();
+  if (padUI && input.padRight) toggleBag();
   if (!spec && input.padView && !S.padViewHeld && canWheel() && !wheel.open && !wwheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
   if (wheel.open && S.padWheel && input.padAxes) wheel.point(input.padAxes.rx * 100, input.padAxes.ry * 100);
   if (!input.padView && S.padViewHeld && wheel.open && S.padWheel) { S.padWheel = false; wheel.release(performance.now() - (S.wheelAt || 0) < 250); }
@@ -1278,13 +1279,14 @@ initInput(canvas, {
     if (topOverlay() === 'creator' && S.creator && S.creator.key(k)) return;
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
     const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
+    if (deathUp && k === 'Escape' && !S.hud.menuOpen && S.hud.deathBack()) return;   // (folds them away to watch, and back)
     if (deathUp && !(S.hud && S.hud.deathRevealed)) { if (['KeyH', 'KeyJ', 'KeyC', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) return; }
     else if (deathUp && S.me.down && !S.me.down.finished) {
       if (k === 'KeyH') { downAct('help'); return; }
       if (k === 'KeyJ') { downAct(S.me.down.amb ? 'ambx' : 'amb'); return; }
       if (k === 'KeyC' && S.me.down.help) { downAct('cancel'); return; }
     }
-    if (deathUp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { cycleDeathChoice(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
+    if (deathUp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { S.hud.stepSpawn(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
     if (k === 'Escape' && topOverlay() === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
     if (topOverlay() === 'bigmap' && S.hud) { // zoom the city map: + / - (and C to find yourself)
@@ -1346,28 +1348,19 @@ function payBail() {
 }
 $('j-bail').onclick = () => payBail();
 
-function cycleDeathChoice(step) {
-  const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];
-  if (!btns.length) return;
-  const cur = Math.max(0, btns.findIndex((b) => b.classList.contains('on')));
-  const i = (cur + step + btns.length) % btns.length;
-  S.deathFocus = i; btns[i].click();
-}
-// Death screen with a controller: D-pad / stick picks where to wake up, A confirms.
+// Death screen with a pad: B folds the choices away and back; while they show X calls for help (again), Y the
+// ambulance (or cancels it), LB cancels the request, the D-pad / stick picks where to wake up
 function deathPad() {
-  // downed: X calls for help (again), Y the ambulance (or cancels it), B cancels the request (back to the countdown) -
-  // once the choices are showing
+  if (input.menuBack && S.hud.deathBack()) return;
   if (!(S.hud && S.hud.deathRevealed)) return;
   const dn = S.me && S.me.down;
   if (dn && !dn.finished) {
     if (input.padX) downAct('help');
     if (input.padY) downAct(dn.amb ? 'ambx' : 'amb');
-    if (input.menuBack && dn.help) downAct('cancel');
+    if (input.padLB && dn.help) downAct('cancel');
   }
-  const btns = [...document.querySelectorAll('#d-spawn .spawn-opt')];
-  if (!btns.length) return;
   const step = input.menuNav || input.menuLR;
-  if (step) cycleDeathChoice(step); // moving the highlight picks it
+  if (step) S.hud.stepSpawn(step);
 }
 
 // ---- the bag + quick wheel ----------------------------------------------------------------------
@@ -3137,6 +3130,7 @@ function drawOverlays(F, v2) {
     else { S.distCand = dist.name; S.distCandAt = performance.now(); }
   }
   S.hud.setClock(S.loopTime, S.weather);
+  { const mp = S.ents.get(S.myPedId); S.hud.calm(!!(S.playing && mp && mp.d && mp.d.st && S.me && !S.me.dead), performance.now()); }   // (#375)
   // the GPS route to your waypoint along the roads, on the radar and the map (client/route.js; worked out again only
   // when you stray from it or the waypoint changes)
   if (S.router) S.hud.route = S.waypoint && S.playing && S.me && !S.me.dead ? S.router.update(sp, S.waypoint, S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) : null;

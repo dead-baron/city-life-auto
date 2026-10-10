@@ -63,6 +63,9 @@ body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 
 /* GTA help box (context prompt) */
 /* (to the right of the minimap, which sits top-left on every device) */
+#hud, #touch, #helpbox { transition: opacity .2s; }
+#helpbox.calm { opacity: 0; transition: opacity 1.5s; }
+body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
 #helpbox { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 14px; max-width: min(380px, 44vw); background: rgba(0,0,0,.8); border-radius: 3px; padding: 10px 14px; font-size: 18px; font-weight: 600; line-height: 1.35; display: flex; align-items: center; gap: 10px; animation: hin .18s ease-out; }
 @keyframes hin { from { opacity: 0; transform: translateY(-6px); } }
 #toasts { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 76px; width: min(380px, 44vw); display: flex; flex-direction: column; gap: 5px; z-index: 7; }   /* (over the district's title card, z 6: its letters ran through the notes; under the robbery and train bars) */
@@ -160,16 +163,11 @@ body.kbm #b-fs { display: none; }
 .srow input { width: 22px; height: 22px; accent-color: var(--accent); }
 .sbtn { display: block; width: calc(100% - 32px); margin: 12px 16px 16px; padding: 10px; font-size: 17px; font-weight: 700; background: #2b2f45; color: #fff; border: 1px solid rgba(255,255,255,.25); cursor: pointer; }
 
-/* ---- WASTED ---- */
-#death { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(transparent 30%, rgba(0,0,0,.55) 42%, rgba(0,0,0,.55) 58%, transparent 70%); z-index: 15; pointer-events: auto; text-align: center; }
-#death h1 { font-family: var(--display); font-weight: normal; font-size: 112px; color: #c8161e; margin: 0; letter-spacing: 4px; text-shadow: var(--outline), 0 0 30px rgba(0,0,0,.8); animation: wasted .9s ease-out; }
+/* ---- WASTED / DOWN: the title over the scene, then the choices docked at the bottom (the UI v2 rules below) ---- */
+#death { position: absolute; inset: 0; z-index: 15; pointer-events: none; }
+#death h1 { position: absolute; left: 0; right: 0; top: 15%; text-align: center; font-family: var(--display); font-weight: normal; font-size: 112px; color: #c8161e; margin: 0; letter-spacing: 4px; text-shadow: var(--outline), 0 0 30px rgba(0,0,0,.8); animation: wasted .9s ease-out; }
 @keyframes wasted { from { transform: scale(1.6); opacity: 0; } }
-#death p { font-size: 20px; font-weight: 700; text-shadow: var(--outline-s); margin: 6px 0; }
-#d-spawn { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 640px; margin: 10px auto 0; }
-#d-spawn .d-lbl { width: 100%; font-size: 16px; font-weight: 700; color: #fff; text-shadow: var(--outline-s); }
-.spawn-opt { font-size: 16px; font-weight: 700; color: #fff; background: rgba(0,0,0,.75); border: 2px solid rgba(255,255,255,.25); padding: 9px 16px; cursor: pointer; }
-.spawn-opt:hover { border-color: #fff; }
-.spawn-opt.on { background: #f2f2f2; color: #111; border-color: #fff; }
+body.dead #touch, body.dead #job { display: none !important; }   /* (nothing to press while down but the panel; the scene stays clear) */
 
 
 #dev { position: absolute; right: 10px; top: 200px; background: rgba(0,0,0,.85); border-top: 4px solid var(--warn); padding: 8px; z-index: 12; width: 190px; max-height: 70vh; overflow-y: auto; }
@@ -358,7 +356,6 @@ body.portrait.touch #zone-l { top: 50%; width: 50%; }
 }
 body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
 
-#d-spawn .spawn-opt.pfocus { outline: 3px solid #fff; outline-offset: 3px; transform: scale(1.06); }
 
 /* ---- phone ---- */
 #phone { position: absolute; inset: 0; z-index: 41; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: flex-end; padding-right: max(24px, env(safe-area-inset-right)); }
@@ -481,15 +478,16 @@ body.portrait #phone { justify-content: center; padding: 0; }
 #dev .dev-tp-row button { display: inline-block; width: auto; margin: 0; padding: 4px 8px; font-size: 12px; }
 
 /* downed: call for help / ambulance / give up */
-#d-help { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin: 10px 0 4px; }
-#d-help .help-btn { font: 700 17px Rubik, sans-serif; color: #fff; background: rgba(0,0,0,.78); border: 2px solid rgba(255,255,255,.3); padding: 10px 18px; border-radius: 10px; cursor: pointer; touch-action: manipulation; }
+#d-help { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#d-help:empty { display: none; }
+#d-help .help-btn { font: 700 15px Rubik, sans-serif; color: #fff; background: rgba(0,0,0,.78); border: 2px solid rgba(255,255,255,.3); padding: 7px 12px; border-radius: 8px; cursor: pointer; touch-action: manipulation; }
 #d-help .help-btn.help { border-color: #ff4d6d; background: rgba(120,10,30,.85); }
 #d-help .help-btn.amb.on { border-color: #fff; background: rgba(30,60,120,.9); }
 #d-help .help-btn:disabled { opacity: .45; cursor: default; }
-#d-help .help-btn i { font-style: normal; font-size: 12px; opacity: .75; margin-left: 6px; border: 1px solid rgba(255,255,255,.5); border-radius: 4px; padding: 0 4px; }
-#d-help .medic { display: inline-block; background: #fff; color: #e0182d; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; font-size: 18px; margin-right: 4px; }
-#d-help small { flex-basis: 100%; color: #ccc; font-size: 13px; }
-#d-help .help-btn:active { transform: scale(.95); }
+#d-panel i { font-style: normal; font-size: 11px; opacity: .8; margin-left: 5px; border: 1px solid rgba(255,255,255,.5); border-radius: 4px; padding: 0 4px; }
+#d-help .medic { display: inline-block; background: #fff; color: #e0182d; border-radius: 50%; width: 18px; height: 18px; line-height: 18px; font-size: 15px; text-align: center; margin-right: 3px; }
+#d-help small { flex-basis: 100%; color: #c9d0e4; font-size: 12px; }
+#d-help .help-btn:active, .d-step:active { transform: scale(.95); }
 
 /* the bag (inventory) */
 #inv .panel { width: min(620px, 94vw); max-height: 88vh; overflow-y: auto; }
@@ -822,17 +820,41 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 .touch .toast { font-size: 11px; line-height: 1.25; padding: 4px 7px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .touch #toasts { gap: 3px; }
 
-/* down / wasted (the concepts' plates) */
-#death h1 { font-family: var(--pixel); font-weight: 700; font-size: 96px; letter-spacing: 8px; color: #e8202a; text-shadow: 0 6px 0 #070b16, 4px 0 0 #070b16, -4px 0 0 #070b16, 0 -4px 0 #070b16, 0 0 30px rgba(0,0,0,.8); }
-#death p { font-family: var(--pixel); font-weight: 400; font-size: 17px; }
+/* down / wasted (U11, task #403): red at the edges round the scene; the title alone first, then a compact panel docked at
+   the bottom (hud.js adds .reveal), folded to a slim bar by Esc / B / its hide button (.fold) - a tap on the bar opens it */
+#death::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 46%, transparent 52%, rgba(140,8,18,.42) 100%); }
+#death h1 { font-family: var(--pixel); font-weight: 700; font-size: 96px; letter-spacing: 8px; color: #e8202a; text-shadow: 0 6px 0 #070b16, 4px 0 0 #070b16, -4px 0 0 #070b16, 0 -4px 0 #070b16, 0 0 30px rgba(0,0,0,.8); transition: opacity .5s ease; }
 .touch #death h1 { font-size: 60px; }
-#d-help .help-btn { font: 700 15px var(--pixel); background: linear-gradient(180deg, rgba(21,34,63,.95), rgba(13,22,45,.95)); border: 2px solid rgba(226,189,87,.7); border-radius: 6px; box-shadow: 0 0 0 2px #070b16; }
+#death.reveal h1 { opacity: 0; }
+#d-panel { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); width: max-content; max-width: min(980px, calc(100vw - 24px)); box-sizing: border-box; transform: translate(-50%, 14px); opacity: 0;
+  padding: 7px 12px 9px; background: var(--panel-bg); border: 2px solid var(--rim); border-radius: 8px; box-shadow: 0 0 0 2px var(--ink), 0 8px 24px rgba(0,0,0,.5);
+  color: var(--cream); font: 15px var(--pixel); transition: opacity .5s ease, transform .5s ease; }
+#death.reveal #d-panel { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+/* (the head: the tag, how you went down - the first to give way when it's narrow, gone on touch - the countdown, hide) */
+#d-head { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+#d-tag { flex: none; font: 700 18px var(--pixel); letter-spacing: 3px; color: #ff4a52; text-shadow: 0 2px 0 var(--ink); }
+#d-cause, #d-timer { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#d-cause { flex: 0 100 auto; color: #c9d0e4; font-size: 13px; }
+#d-timer { flex: 0 1 auto; font-size: 14px; color: #fff; }
+.touch #d-cause { display: none; }
+#d-hide { flex: none; margin-left: auto; font: 13px var(--pixel); color: var(--cream); background: #0b1226; border: 1px solid rgba(226,189,87,.6); border-radius: 5px; padding: 3px 8px; cursor: pointer; touch-action: manipulation; }
+#d-hide:hover { border-color: var(--rim); }
+#d-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 7px; }
+#d-help .help-btn { font: 700 14px var(--pixel); background: linear-gradient(180deg, rgba(21,34,63,.95), rgba(13,22,45,.95)); border: 2px solid rgba(226,189,87,.7); border-radius: 6px; box-shadow: 0 0 0 2px #070b16; }
 #d-help .help-btn.help { border-color: #ff6b7d; background: linear-gradient(180deg, rgba(120,20,40,.95), rgba(80,10,26,.95)); }
 #d-help .help-btn.amb.on { border-color: #fff; }
-#d-spawn .d-lbl { font: 700 14px var(--pixel); letter-spacing: 2px; color: var(--cream); }
-.spawn-opt { font: 15px var(--pixel); color: var(--cream); background: linear-gradient(180deg, rgba(21,34,63,.95), rgba(13,22,45,.95)); border: 2px solid rgba(226,189,87,.45); border-radius: 6px; box-shadow: 0 0 0 2px #070b16; }
-.spawn-opt:hover { border-color: var(--rim); }
-.spawn-opt.on { background: linear-gradient(90deg, rgba(226,189,87,.35), rgba(226,189,87,.12)); color: #fff; border-color: var(--rim); }
+#d-spawn { display: flex; align-items: center; gap: 6px; }
+#d-spawn .d-lbl { font: 700 13px var(--pixel); letter-spacing: 1px; color: #c9d0e4; }
+.d-step { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; font-size: 12px; color: var(--cream); background: #0b1226; border: 2px solid rgba(226,189,87,.6); border-radius: 6px; cursor: pointer; touch-action: manipulation; }
+.d-step:hover { border-color: var(--rim); }
+.d-pick { text-align: center; font: 700 14px var(--pixel); color: #fff; padding: 5px 10px; background: linear-gradient(90deg, rgba(226,189,87,.32), rgba(226,189,87,.1)); border: 2px solid var(--rim); border-radius: 6px; white-space: nowrap; max-width: 44vw; overflow: hidden; text-overflow: ellipsis; }
+.d-pick small { font-weight: 400; font-size: 11px; color: #e6d9ae; }
+#d-fold { display: none; }
+#death.fold #d-panel { padding: 5px 12px; cursor: pointer; }
+#death.fold #d-cause, #death.fold #d-hide, #death.fold #d-acts { display: none; }
+#death.fold #d-tag { font-size: 15px; }
+#death.fold #d-fold { display: inline; flex: none; color: var(--rim); font-size: 13px; }
+.touch #d-panel { font-size: 13px; padding: 6px 10px 8px; } .touch #d-help .help-btn { font-size: 13px; padding: 5px 9px; } .touch #d-timer { font-size: 13px; } .touch #d-acts { margin-top: 5px; }
 
 /* arrested (server custody.js): the custody banner and the jail screen over the cell */
 #trainbar.custody { border-color: #ff6a6a; color: #ff9a9a; top: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 58px); } #trainbar.custody span { color: #ffd6d6; }
@@ -849,14 +871,6 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #jail small { display: block; opacity: .75; font-size: 12px; }
 @media (min-aspect-ratio: 6/5) { #jail { left: max(16px, 3vw, env(safe-area-inset-left)); top: 50%; transform: translateY(-50%); width: min(360px, 38vw); } }
 
-/* the death screen (2026-10-08): first the scene where it happened, the camera pulling back, just the title over it;
-   after DEATH_REVEAL_S the band darkens and the choices fade in (hud.js adds .reveal) */
-#death { background: none; }
-#death::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .7s ease;
-  background: linear-gradient(transparent 26%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.55) 66%, transparent 80%); }
-#death.reveal::before { opacity: 1; }
-#death #d-timer, #death #d-help, #death #d-spawn { opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .6s ease, transform .6s ease; }
-#death.reveal #d-timer, #death.reveal #d-help, #death.reveal #d-spawn { opacity: 1; transform: none; pointer-events: auto; }
 #trainbar.custody.brk { border-color: #ffd36b; color: #ffd36b; animation: brk-pulse 1.2s ease-in-out infinite; }
 /* fighting an officer off (server struggle.js): the meter fills orange to white as you mash */
 #trainbar.custody.fight { border-color: #ff8a3b; color: #ffb36b; animation: brk-pulse .6s ease-in-out infinite; } #trainbar.fight #tb-fill { background: linear-gradient(90deg, #ff5a2b, #ffd36b 70%, #fff); transition: width .1s; } #trainbar.fight .rob-bar { width: 140px; height: 10px; }

@@ -187,6 +187,8 @@ export const FIRE_REACH = 46;           // stand this close to light it or sit d
 export const FIRE_HEAL = 2;             // health per second while sitting by a lit fire...
 export const FIRE_AFTER_HIT_S = 5;      // ...once you've been out of the fight this long
 export const FIRE_BURN_S = 900;         // how long a change lasts
+export const CALM_PROMPT_S = 4;         // sitting by a fire this long without touching anything: its prompt fades...
+export const CALM_HUD_S = 20;           // ...and this long, the whole HUD, for the scene (task #375)
 
 // Wine (the winery, the golf club bar): health comes back this many times faster for WINE_S
 export const WINE_S = 120;

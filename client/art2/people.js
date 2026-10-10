@@ -1749,8 +1749,11 @@ function face(fig, P, A, D, w, h, AX, AY) {
   let eyes = [-1, 1].map((s) => { const a = azE(s); return { s, p: at(s * Math.sin(a), Math.cos(a) * 0.99, 0.12) }; }).filter((e) => e.p.fc > 0.28 && onHead(e.p.x, e.p.y));
   if (eyes.length === 2 && eyes[0].p.bx === eyes[1].p.bx) eyes = [eyes[0].p.fc > eyes[1].p.fc ? eyes[0] : eyes[1]];   // (one pixel wide: the nearer eye)
   const glasses = A.glasses, F = A.face || {}, mk = A.makeup || null, fm = A.fmask ? A.fmask.k : null;
-  const iris = F.eyeColor ? hexRgb(F.eyeColor) : null;
-  const eyeC = iris ? iris.map((v, i) => Math.round(v * 0.42 + EYE[i] * 0.58)) : EYE;
+  // (#429: the eye's one pixel takes the iris's colour - it was mostly the dark base, and every colour looked the same -
+  // darkened only as far as it takes to stand out from the skin round it)
+  const iris = F.eyeColor ? hexRgb(F.eyeColor) : null, far = (q) => Math.hypot(q[0] - skin[0][0], q[1] - skin[0][1], q[2] - skin[0][2]) >= 60;
+  let eyeC = EYE;
+  if (iris) for (let k = 0.8; k > 0.25; k -= 0.1) { eyeC = iris.map((v, i) => Math.round(EYE[i] + (v - EYE[i]) * k)); if (far(eyeC)) break; }
   const lit = (cc, k) => cc.map((v) => Math.min(255, Math.round(v + (255 - v) * k)));
   const cx0 = at(0, 1, 0).x, outOf = (e) => (e.p.x < cx0 ? -1 : 1);   // (the side of the face an eye is on)
   if (glasses && eyes.length) {
