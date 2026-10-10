@@ -5690,3 +5690,50 @@ A planning wave, no gameplay changes. `docs/WORLD-V3.md`:
   running the regions near players, per-region signatures).
 
 Files: `docs/WORLD-V3.md`, `docs/world-v3-layout.png`, `tools/world-v3-layout.py`. Tests: none touched (docs and a tool).
+## 2026-10-10 · The wild animals closer to their concepts (task #391)
+
+The owner: "improve animal art to match the wildlife concepts and give them better animations" (AN1-AN8, HU1-HU7;
+AN8 the quail). Before/after sheets under each concept, in `docs/art-v2/compare/` (AN1 deer and elk, AN2 boar, bear
+and turkey, AN3 small game, AN8 quail): the rows are the game's own bake (actors.js), 1 art px per world px, shown x2.
+- **Jointed legs and real gaits** (`client/art2/animals.js`, the wild ones carry `jl`): deer, elk, moose, mountain
+  goats, boar, both bears, the cougar and bobcat, coyote, both foxes, the raccoon and the rabbit.
+  - A knee bends forward on the forelegs and a hock points back on the hind legs (a two-bone reach to the foot).
+  - The feet step through a stance (planted, sliding back under the body) and a swing (lifted, carried forward).
+  - The walk is a four-beat walk: hind, fore, hind, fore.
+  - The run is a gallop (a rabbit's hop): the forelegs together, the hind legs together, stretched out, then
+    gathered under the body, a foot on the ground in every frame.
+  - The legs are the coat colour, not the pale belly, with darker shins and dark hooves.
+  - Still 4 frames a cycle: the bake costs about what it did (the walk, run and idle of nine kinds at eight headings,
+    864 sprites: 5.6 s before, 5.8 s after on the shared test machine).
+  - The pets keep their straight-legged rig.
+- **Coats and shapes:**
+  - The deer: warmer brown, a white rump patch and throat, a dark nose, slender legs, and a rack that reads from the
+    side (the beams sweep back, up and forward, the tines straight up). The elk: paler, with the dark neck, head and
+    shins of AN1 and a heavier rack.
+  - A stalking cougar (or anything crouched) bends its legs instead of shortening them.
+  - The boar: darker, a bigger head, a bristle crest over the shoulders, grizzled.
+  - The bears: leaner and a little taller, so the legs show under the body as in AN2 and AN4.
+  - The coyote: grizzled along the back, a pale throat.
+  - The rabbit: bigger haunches, and its run is a hop, up off the ground.
+  - The wild ones' heads are true to life, not the pets' big-headed look (the rabbit keeps its big head).
+  - The turkey is bigger, as in AN2.
+  - The drake mallard has his black stern.
+  - The birds' legs reach the ground and are deep enough across the line of sight that the character view's steep
+    look no longer skips them (the turkey stood on floating feet).
+- **The quail of AN8** (`client/art2/birds.js`):
+  - The cock is plumper, blue-grey with a grey back, his dark head held high, the black face in its white border, a
+    chestnut cap, the comma of a topknot (curling forward, bobbing as he walks) and the scaled belly.
+  - The hen (`quail:f`, new) is plain brown and scaled with a smaller topknot. A covey's two adults spawn one after
+    the other, so the client draws the odd id as the hen (`client/art2/game/host.js` `petKind`): one cock and one hen
+    a covey. The mallards' pairs the same way: the drake with his green head, the hen (`duck:f`, new) mottled brown
+    with an orange bill (AN5).
+  - The cock stands up plump, his breast high (a tilted egg), the head high on the neck.
+  - The flush (all the small birds: quail, mallards, pheasants): the wings come up over the back and down below the
+    body, drawn as plates at any angle in two flat tones, so a steep wing reads as a wing.
+- **Tests:** `test/wildart.test.js` (3 new):
+  - every species draws walking, running, head down, alert and dead, and its walk and run cycles move;
+  - the jointed legs keep a foot on the ground through the walk and the gallop, and the gallop stretches and gathers;
+  - a covey's cock, hen and chicks are drawn apart (the cock bluer, the chicks small), the mallard's hen has no green
+    head, and the flush raises the wings.
+  - `test/art2.test.js`, `test/perf.test.js` and `test/wildlife.test.js` pass as before.
+  - `node tools/perf.mjs --quick`: within budget (bake 952 of 1000 KB).
