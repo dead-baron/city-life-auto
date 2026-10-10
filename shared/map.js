@@ -481,8 +481,10 @@ export function waterKind(map, tx, ty) {
 // checks mapSignature on joining), so it's built with deterministic trigonometry: the JavaScript engines' own Math.sin
 // & co. differ in the last bit (Safari - every browser on an iPhone or iPad - against Chrome and Node), enough to move
 // a tile or a prop (shared/dmath.js).
-export function generateCity(seed = 1337) {
-  return withDeterministicMath(() => buildCity(seed));
+// (opts: World v3's spike only - tools/world3-spike.mjs; the live world never passes it, and without it the world is
+// today's to the bit: test/world3.test.js)
+export function generateCity(seed = 1337, opts = null) {
+  return withDeterministicMath(() => buildCity(seed, opts));
 }
 // The world as plain data (what a worker sends or the browser's cache keeps: a structured clone keeps no methods
 // and no functions) - and back. client/worldgen.js builds the city off the page's thread and keeps it.
@@ -497,10 +499,12 @@ export function cityFromData(o) {
   if (o.terrainCls && !o.terrainCls.at) Object.defineProperty(o.terrainCls, 'at', { value: (tx, ty) => wildBiome(o.dist[ty * MAP_W + tx], terrainAt(o.terrainCls.cls, o.terrainCls.cw, tx, ty)), enumerable: false });
   return o;
 }
-function buildCity(seed) {
+let OPTS = null;   // (World v3's spike: what generateCity was asked to build; null for the live world)
+function buildCity(seed, opts = null) {
+  OPTS = opts;
   const m = new CityMap(seed);
   const rand = mulberry32(seed);
-  terrain(m);
+  terrain(m, opts);
   paintDistricts(m);
   turfMap = m.dist;
   const lines = layoutRoads(m, rand);
@@ -741,10 +745,11 @@ function components(land) {
   return { lab, comps };
 }
 
-function terrain(m) {
+function terrain(m, opts = null) {
   const W = MAP_W, N = W * MAP_H;
   const land = decodeLand();
   raiseSceneIslands(m, land);
+  if (opts && opts.land) opts.land(land);   // (World v3's spike: one island's land alone, the rest sea)
   m.land = land;
   const { lab, comps } = components(land);
   const compAt = (x, y) => lab[y * W + x];
@@ -1614,7 +1619,7 @@ function rowFits(row, pf, iv) {
 }
 
 function placeSpecials(m, rows, seed) {
-  const order = SPECIALS.map((s, i) => ({ ...s, i })).sort((a, b) => (b.at ? 1 : 0) - (a.at ? 1 : 0) || PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);   // (one planned for a spot goes first)
+  const order = SPECIALS.map((s, i) => ({ ...s, i })).filter((s) => !OPTS?.special || OPTS.special(s, s.at || seedOf(s.d).map((v) => v / TILE), m)).sort((a, b) => (b.at ? 1 : 0) - (a.at ? 1 : 0) || PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);   // (one planned for a spot goes first)
   // each draws from a generator of its own, so reworking one district's streets doesn't send every business in the
   // city somewhere new (one that picked differently used to change the numbers all the rest got)
   const own = new Map(order.map((sp) => [sp, mulberry32(seed ^ Math.imul(sp.i + 1, 0x9e3779b1))]));
