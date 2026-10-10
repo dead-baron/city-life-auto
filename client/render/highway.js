@@ -4,7 +4,7 @@
 // drawn on top. Concrete girder faces on the side facing the camera, parapets, lane markings,
 // the median barrier, pillars, and the deck's shadow on the ground below.
 import { DECK_LIFT, BARRIER_PIECE } from '../../shared/levels.js';
-import { edgeZ, laneOffset } from '../../shared/roads.js';
+import { edgeZ, laneOffset } from '../../shared/roadcore.js';
 import { pointAt } from '../../shared/geom.js';
 import { pattern } from './roads.js';
 

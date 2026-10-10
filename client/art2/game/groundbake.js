@@ -49,7 +49,7 @@ import { seaPx, stillPx, WP, WATER } from '../water.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/mapcore.js';
 import { Z } from '../../../shared/layoutcore.js';
-import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roads.js';
+import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roadcore.js';
 
 export const CHUNK = 768;
 const PAD = 48, WN = CHUNK + PAD * 2, WA = WN * WN, TP = 4, TN = WN / TILE + TP * 2 + 1;

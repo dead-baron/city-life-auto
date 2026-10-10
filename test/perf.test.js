@@ -23,10 +23,10 @@ test('budgets: the code each part of the page loads, and the title screen\'s ass
 });
 
 // The generator stays out of the page (2026-10-10): the page gets its city from the server or the browser's copy and
-// imports the map's runtime (shared/mapcore.js, layoutcore.js, worldmask-dims.js); the generator's modules load only
-// where a city is built (client/worldgen.js, main.js loadGenerator, the practice worker, the server, the tools).
+// imports the map's runtime (shared/mapcore.js, roadcore.js, layoutcore.js, worldmask-dims.js); the generator's modules
+// load only where a city is built (client/worldgen.js, main.js loadGenerator, the practice worker, the server, the tools).
 const GENERATOR = ['shared/map.js', 'shared/naturesites.js', 'shared/worldmask.js', 'shared/countryside.js', 'shared/islands.js', 'shared/metro.js',
-  'shared/citylayout.js', 'shared/world3-islands.js', 'shared/world3-land.js', 'shared/world3-skeleton.js'];
+  'shared/citylayout.js', 'shared/roads.js', 'shared/world3-islands.js', 'shared/world3-land.js', 'shared/world3-skeleton.js'];
 test('the page, the renderer and the bake workers load the map\'s runtime, never the generator', () => {
   const parts = {
     'the page': closure(['client/boot.js', 'client/main.js']),

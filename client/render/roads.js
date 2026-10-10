@@ -5,7 +5,7 @@
 import { TILE, T } from '../../shared/constants.js';
 import { DISTRICTS } from '../../shared/mapcore.js';
 import { GROUND_TEX } from '../../shared/prefab-data.js';
-import { laneOffset, zebraCrossings } from '../../shared/roads.js';
+import { laneOffset, zebraCrossings } from '../../shared/roadcore.js';
 import { offset, measure, pointAt } from '../../shared/geom.js';
 import { atlas } from './sprites.js';
 
