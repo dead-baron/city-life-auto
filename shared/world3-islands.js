@@ -72,6 +72,7 @@ export function islandOpts(key, asked = {}) {
       else if (L.water[i] === 5) m.river[i] = 1;   // (WATER3.CANAL)
     }
     own = land;
+    o.ownRiver = true;   // (the canal is the river: map.js's trace of today's river would mark the bay's water)
     o.zones = (mm) => { for (let i = 0; i < N; i++) if (land[i]) mm.zone[i] = L.zone[i]; };
     o.dists = (mm) => { for (let i = 0; i < N; i++) if (land[i]) mm.dist[i] = L.dist[i]; };
   };

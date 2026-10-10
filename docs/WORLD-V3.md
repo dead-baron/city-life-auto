@@ -1583,7 +1583,8 @@ tools/world3-place.mjs` in the v3 frame). Metro City + Southbank (with Pelican K
 | props | 4,070 of 4,403 (92.4%: Pelican Key's palms and shrubs, the odd lamp) |
 
 What still differs is Pelican Key's beach end and what is spaced or drawn world-wide (4.6 item 5: the ATMs, the
-shared random stream). The build takes 3.8-4.1 s in the 2500 x 2800 frame (the island build alone 2.1-2.3 s).
+shared random stream). The build takes 3.8-4.1 s in the 2500 x 2800 frame and 8.1 s in the v3 frame (5040 x 4032,
+the same numbers); the island build alone 2.1-2.3 s.
 
 **Step B - scale 1.15 on the gulf's land** (`node --expose-gc tools/world3-place.mjs --land`: today's world, the land,
 the island in today's frame, then the place in the v3 frame - 9.0 s for the place). It builds:
@@ -1621,20 +1622,44 @@ the island in today's frame, then the place in the v3 frame - 9.0 s for the plac
 - Left out (other landmasses' roads, the skeleton's): the North Bridge, the Harbor Bridge, the West Hills and Dry Creek
   station roads.
 
+**The picture:** `docs/world-v3-metro.png` (`node --expose-gc tools/world3-place-map.mjs`, heavy: about 3.5 minutes).
+On the left, today's Metro City cut from the world map's own tiles. On the right, the place built in the v3 frame and
+baked chunk by chunk with the game's chunk bake, lit and shrunk as `tools/build-worldmap2.mjs` does (1/16: a pixel is
+half a tile). The bake works on a v3-frame map as it is (it reads the map through its own index); 537 chunks, the
+open sea baked once.
+
+What looks right: the Metro Ring 1.15x larger round the core, Broadway's diagonal, Greenfield Park with its pond, the
+avenues, the Harbor, Pine Hills' drives, Southside's grid, the new east shore built up, and the canal splitting off
+Southbank, crossed by Bridge and Northbridge Avenues.
+
+What looks wrong:
+- **Today's river traced on the gulf's land** (fixed after the first picture): the generator's trace of today's
+  river, placed, found the bay's water west of the canal's mouth and made it river - a stepped band of shallow water
+  across the bay. On the v3 land the canal is the river (`ownRiver`), and the trace is skipped.
+- **The railway runs over the sea:** its loop is laid whole (4.7 item 4). It shows as the thin line east of the
+  island and runs off south-west into the bay. The skeleton's main line replaces it.
+- **Cedar Avenue's bridge runs out to nowhere:** today it leads to Cedar Isle. In v3 Cedar Isle is east of Metro City,
+  so the placed bridge ends in the sea south-west of the Harbor. It isn't left out because no other land is under it.
+  The roads off a place need the skeleton's crossings (item 3 below), and a road that ends over the sea should be
+  cut at the shore.
+- **The new east shore is ruler-straight:** the polygon's east side, with one long strip of blocks along it. Bayside
+  Heights and Southside run on to it with a parkway down its length. It wants the coast's wobble (8.3 item 5) and
+  some depth.
+- **Only two crossings over the canal**, both on its west half: the skeleton's six canal bridges, two of them
+  footbridges, are still to come (item 3).
+
 **What's left** (next steps, in order):
-1. **The picture** (step 4 of the brief, not done): `docs/world-v3-metro.png` - the chunk bake (tools/build-worldmap2.mjs's
-   look) over the place's rectangle of the built v3 map, next to today's Metro City. The bake's chunk grid is a
-   whole-frame use (8.2), so it needs checking at the v3 frame first.
-2. **Inside metro.js at scale 1.15:** the street plan runs in today's coordinates and is placed after, so its pitches
+1. **Inside metro.js at scale 1.15:** the street plan runs in today's coordinates and is placed after, so its pitches
    scale with the place (more blocks, as the numbers show, but each a little bigger, x1.15). The right form: the plan's
    anchors (the avenues, Broadway, `AREAS`, `THROUGH`, the hero corner) placed, its patterns not, its hashes on `LX` /
    `LY`. The same for `islands.js`' roads and the countryside's when their places are built.
-3. **The canal's bridges:** the skeleton's six (ARTERIALS/footbridges over the canal), laid as lines on the place.
-4. **The sources not placed yet** (grep found them; the Metro City build doesn't reach them): Dry Creek's farm
+2. **The canal's bridges:** the skeleton's six (its arterials and footbridges over the canal), laid as lines on the
+   place; and the roads that run off the place over the sea (Cedar Avenue's bridge, the railway) cut at the shore.
+3. **The sources not placed yet** (grep found them; the Metro City build doesn't reach them): Dry Creek's farm
    (`FARM_FIELDS`, the barn, the drop site, the farmhouses), the Gull Isles' harbours (`buildGullIsles`), the airports
    (`AIRPORTS`), `ISLAND_ESTATES`, `FARM_STANDS`, `VILLAGES`, `naturesites.js`' sites, `countryside.js`' `SITES`, the
    scene islands, the offshore sampling grid. Each place's build will need its own: grep the generator for today's
    coordinates. The Step A test of each place is the check.
-5. **For the skeleton's roads to join the places:** each place's `leftOut` (its bridges and station roads) is where the
+4. **For the skeleton's roads to join the places:** each place's `leftOut` (its bridges and station roads) is where the
    skeleton's arterials meet it; the skeleton's lines are laid in the v3 frame, so they go into a placed build's
    `lines` as they are (no placement).

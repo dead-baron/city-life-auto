@@ -801,7 +801,7 @@ function terrain(m, opts = null) {
   const riverMid = new Map();
   let prev = PY(690);
   const rx0 = Math.ceil(PX(772)), rx1 = PX(1016), ry0 = Math.ceil(PY(560)), ry1 = PY(760);
-  for (let x = rx0; x <= rx1; x++) {
+  for (let x = rx0; x <= rx1 && !OPTS?.ownRiver; x++) {   // (World v3's land brings its own: the canal)
     let best = null;
     for (let y = ry0; y < ry1; y++) {
       if (land[y * W + x]) continue;
