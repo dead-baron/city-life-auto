@@ -200,3 +200,21 @@ test('a pickup game at the courts: the ball dribbled, shot at the rim, bounced o
   const gc = fill(w, of('chat')[0], { seen: true });
   assert.equal(people(gc)[0].pp, 'fence'); assert.equal(_descriptor(people(gc)[0]).pp, 'fence');
 });
+
+test('the classic view draws every activity prop and the pool cue (render/actprops.js, loaded with the first of them)', async () => {
+  const { draw } = await import('../client/render/actprops.js');
+  const calls = [];
+  const g = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => calls.push([k, ...a])), set: (o, k, v) => { o[k] = v; return true; } });
+  const pps = ['easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle', 'fence', 'cueup'];
+  for (const pp of [...pps, null]) {
+    calls.length = 0;
+    draw(g, { id: 7, rx: 500, ry: 300, ra: 0.6, d: pp ? { pp } : { gt: 'cue' } }, 12.3);
+    assert.ok(calls.some(([k]) => k === 'fillRect' || k === 'stroke'), `${pp || 'the cue'}: drawn`);
+    for (const [, ...a] of calls) for (const v of a) assert.ok(typeof v !== 'number' || Number.isFinite(v), `${pp || 'the cue'}: finite`);
+  }
+  // every pp the server sends is drawn; the page loads it lazily (not in main.js's import graph)
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../server/systems/activities.js', import.meta.url), 'utf8');
+  for (const m of src.matchAll(/pp: '(\w+)'/g)) assert.ok(pps.includes(m[1]), `the server's ${m[1]}: drawn in the classic view`);
+  assert.ok(!/^import .*actprops/m.test(readFileSync(new URL('../client/main.js', import.meta.url), 'utf8')), 'not with the page');
+});

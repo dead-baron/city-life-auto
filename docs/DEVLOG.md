@@ -6502,10 +6502,16 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
   the cue drawn back and through: 4 frames) with the cue and its blue chalked tip; `cueup` (the cue stood beside him,
   in hand); the `fence`. `client/art2/game/peds.js`: `cue` in `ACT_POSES`, `fence` / `cueup` in `PROP_CARRY`.
 - **Debug menu:** 🏀 A pickup game at the courts, 🎱 Pool at the Rusty Spur (the dev `act` command's kinds `hoops`, `pool`).
-- **Not done yet (left):** the classic renderer's poses and props for the activities (part 1's and these: it draws
-  none), the animals' missing poses (AN7, AN5, AN2, AN4).
-- **Tests:** `test/activities.test.js` (1 new, 8 in all): a pickup game on each half court, two to four round the key
+- **The classic view** (`client/render/actprops.js`, new, loaded with the first person at an activity - main.js
+  `drawUpright` has only the hook): every activity's prop, part 1's and these - the easel with its painting, the cooler,
+  the chess board on the table, the sponge going round and the bucket, the crate of tomatoes, the hunter's slung rifle,
+  the garden fence, the cue stood up - and the pool player's cue, drawn back and through. The poses: sat at the board,
+  on the blanket, kneeling in the rows and bent over the pool table are drawn low, as the classic view draws a kneel
+  (and sitting by a campfire). The page's code: +~150 bytes gzipped (the hook, the debug menu's two buttons) - it's at
+  737,758 of the 737,791 bytes that still round to its 720 KB.
+- **Tests:** `test/activities.test.js` (2 new, 9 in all): a pickup game on each half court, two to four round the key
   facing the rim, the ball sent as the hoops ball, shots up over the rim (each in or off it, the 'hoop' event), the ball
   going round them; the Rusty Spur's table found with floor round it, the turns taken (both bent over the cue at the
-  table in a minute), the waiting one's cue up, watchers; the neighbours' fence on the wire; the debug menu's 11 kinds.
-  `test/art2.test.js`, `test/sound.test.js`, `test/npcpeople.test.js` pass as before.
+  table in a minute), the waiting one's cue up, watchers; the neighbours' fence on the wire; the debug menu's 11 kinds;
+  the classic view draws every prop the server sends (and the cue), lazily. `test/art2.test.js`, `test/sound.test.js`,
+  `test/npcpeople.test.js` pass as before.
