@@ -1008,9 +1008,12 @@ them (step 4).
 
 **What still can't be built on its own** (and why)
 1. **Northshore** comes out 87.3% (61 of its 94 road edges, 32 of 66 lots): its streets themselves differ, and not
-   because of what is left out (with the bridges kept it is 87.6%) or the cut from Granite Peaks (5,136 of its differing
-   tiles are more than 64 tiles from it). The likeliest cause is 4.6 item 6, the one random stream: its grid is drawn
-   after the draws for the islands built before it. To be confirmed; step 3 fixes it either way.
+   because of what is left out (with the bridges kept it is 87.6%) or its cut from Granite Peaks (5,136 of its
+   differing tiles are more than 64 tiles from it; built with Granite Peaks still joined on, no better: 88.5% of the
+   tiles of its districts, 71 of 109 road edges). Built with Metro City (bridges kept), its streets come back: 93 of
+   104 road edges, 94.1% of its tiles. So Northshore's streets depend on Metro City being built - something in the road
+   layout's whole-world passes (the network repair, which joins and prunes the network as a whole, or the shared random
+   stream, 4.6 item 6): to be found next (a scratch experiment, not in the tool yet).
 2. **The random stream**, likely, also gives Highland Woods' wild ground other trees (747 of 1,241 props, the same with
    the bridges kept; `buildWilds` draws from it) and some of Cedar Isle's (5,391 of 5,905). Westport's props are mostly
    the bridges' doing (4,089 of 4,260 with them kept).
