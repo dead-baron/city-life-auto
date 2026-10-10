@@ -35,7 +35,7 @@ export const SONGS = {
   club: { bpm: 124, steps: 16, bars: 8, echo: 0.15,
     chords: ['Am', 'Am', 'F', 'G', 'Am', 'Am', 'F', 'Em'], bassPat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 2], bassInst: 'clubbass',
     stabPat: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], stabVol: 0.03,
-    drums: { kick: 'x...x...x...x...', clap: '....x.......x...', hat: '..x...x...x...x.', tick: '.x.x.x.x.x.x.x.x' }, drumVol: 1 },
+    drums: { kick: 'x...x...x...x...', clap: '....x.......x...', hat: '..x...x...x...x.', tick: '.x.x.x.x.x.x.x.x' }, drumVol: 0.62 },   // (the kick ran the club over full scale inside: tools/sound/bench.py songs)
   // a shop: F major, a light bossa - electric piano on the off-beats, a soft bass, a shaker
   shop: { bpm: 100, steps: 8, bars: 8, swing: 0.06, echo: 0.2,
     chords: ['Fmaj7', 'Em7', 'Dm7', 'Cmaj7', 'Fmaj7', 'Em7', 'Dm7', 'G7'], bassPat: [1, 0, 0, 2, 0, 1, 0, 0], compPat: [0, 0, 1, 0, 0, 1, 0, 1],
@@ -119,7 +119,9 @@ export class Music {
         else if (t - p.quietAt > 4) { try { p.lvl.disconnect(); } catch { /* gone */ } p.on = false; continue; }
       } else p.quietAt = 0;
       if (p.nextT < t - 0.5) p.nextT = t + 0.05;   // (the tab was asleep: start again from now, not catch up)
-      while (p.nextT < t + 0.3) { this.step(p, p.step, p.nextT); p.step = (p.step + 1) % (p.S.steps * p.S.bars); p.nextT += 60 / p.S.bpm / (p.S.steps / 4); }
+      // (a note that's already late - the page stalled longer than the look-ahead - is skipped, not started in the past:
+      // its envelope would jump instead of ramping, and that jump is a click)
+      while (p.nextT < t + 0.3) { if (p.nextT > t + 0.012) this.step(p, p.step, p.nextT); p.step = (p.step + 1) % (p.S.steps * p.S.bars); p.nextT += 60 / p.S.bpm / (p.S.steps / 4); }
     }
   }
   step(p, i, t0) {

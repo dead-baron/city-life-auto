@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { T } from '../shared/constants.js';
-import { SOUND_DEFAULTS, soundPrefs, setSoundPref, busGains, COMP } from '../client/sound/mixer.js';
+import { SOUND_DEFAULTS, soundPrefs, setSoundPref, busGains, COMP, softClipCurve, CLIP_KNEE, CLIP_CEIL } from '../client/sound/mixer.js';
 import { SURFACES, STEP, surfaceOf, surfaceAt, woodsOf, woodsAt } from '../client/sound/surface.js';
 import { VoicePool, spatial, RateLimit, PRI, Budget, BUDGET } from '../client/sound/pool.js';
 import { TRIM_DB } from '../client/sound/levels.js';
@@ -255,6 +255,31 @@ test('the buses leave headroom and the master\'s compressor is gentle', () => {
   assert.ok(COMP.release >= 0.15 && COMP.release <= 0.4, `release ${COMP.release}`);
   assert.ok(COMP.knee >= 0 && COMP.knee <= 12);
   assert.ok(COMP.makeupDb >= 0 && COMP.makeupDb <= 6, 'the compressor\'s own make-up gain, taken back off after it');
+});
+
+test('the soft ceiling before the speakers: untouched below its knee, rounded off above it, never past a ceiling a little under full scale (task #434)', () => {
+  const n = 2049, range = 4, c = softClipCurve(n, range), at = (i) => (i / (n - 1)) * 2 * range - range;
+  assert.equal(c.length, n);
+  assert.ok(CLIP_KNEE >= 0.6 && CLIP_KNEE <= 0.85, `knee ${CLIP_KNEE}`);
+  assert.ok(CLIP_CEIL > CLIP_KNEE + 0.1 && CLIP_CEIL < 1, `ceiling ${CLIP_CEIL}, a little under full scale`);
+  for (let i = 0; i < n; i++) {
+    const x = at(i);
+    if (Math.abs(x) <= CLIP_KNEE) assert.ok(Math.abs(c[i] - x) < 1e-6, `${x.toFixed(3)} passes as itself`);
+    assert.ok(Math.abs(c[i]) <= CLIP_CEIL + 1e-6, `${x.toFixed(3)} stays under the ceiling (${c[i]})`);
+    assert.ok(Math.sign(c[i]) === Math.sign(x) || c[i] === 0, 'keeps its sign');
+    if (i) assert.ok(c[i] >= c[i - 1], `rises all the way (${at(i - 1).toFixed(3)} to ${x.toFixed(3)})`);
+  }
+  assert.ok(Math.abs(c[(n - 1) / 2]) < 1e-9, 'silence stays silence');
+  // just past the knee the slope is still 1 (no corner to hear); a peak twice full scale comes out close under it
+  const step = (2 * range) / (n - 1), k = Math.ceil(((CLIP_KNEE + range) / (2 * range)) * (n - 1)) + 1;
+  assert.ok(Math.abs((c[k + 1] - c[k]) / step - 1) < 0.05, 'smooth at the knee');
+  const two = Math.round(((2 + range) / (2 * range)) * (n - 1));
+  assert.ok(c[two] > CLIP_CEIL - 0.02 && c[two] <= CLIP_CEIL, `twice full scale reads ${c[two].toFixed(3)}`);
+  // the curve is drawn over +-range and the signal goes in at 1/range, so the shaper's output is the signal itself
+  const src = readFileSync(join(ROOT, 'client/sound/mixer.js'), 'utf8');
+  assert.match(src, /const pre = gain\(0\.25, ceil\)/, 'into the shaper at a quarter, for a curve drawn over +-4');
+  assert.match(src, /ceil\.connect\(ctx\.destination\)/, 'the ceiling is the last stage');
+  assert.ok(SONGS.club.drumVol <= 0.7, 'the club\'s kick no longer runs the music over full scale inside');
 });
 
 test('an event\'s sound that was dropped lets the old sound play instead; one that started (or was out of earshot) keeps it quiet', () => {

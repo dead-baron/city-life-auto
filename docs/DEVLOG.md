@@ -5214,3 +5214,18 @@ The owner: "Vehicle explosions are looking great, let's sometimes have a burning
 
 ## 2026-10-09 · The observatory's star view loads when you look through the telescope
 Merging the world-visuals and gameplay batches put the page's first load at 721 KB, 1 KB over its 720 KB budget. The night sky through the Granite Peak Observatory's eyepiece (`client/stargaze.js`, 4 KB gzipped) now loads the first time the server says you're looking, instead of with every page. The page is back at 717 KB and the budget is unchanged.
+
+## 2026-10-09 · Crackle in a busy club: late notes skipped, the club's kick turned down, a soft ceiling before the speakers (task #434)
+The report: crackling and popping after a while in a nightclub, with rain starting and traffic outside. The bench (`python3 tools/sound/bench.py`) found two causes and no broken sound:
+- **The mix ran over full scale.** The busy street scene peaks around -5 dBFS, but the club's own song inside peaked at +1.4 dBFS with the sliders at full, mostly its kick. Rain and traffic on top pushed it further over, and the master compressor is too slow for the first few milliseconds of a kick. The speaker clips hard, and that is the crackle.
+- **Late notes clicked.** When the page stalls for longer than the music's 0.3 s look-ahead, the sequencer used to start the notes it had missed in the past. Their envelopes jumped instead of ramping, and each jump is a click.
+
+The fixes:
+- **A soft ceiling** is now the last stage (`client/sound/mixer.js`, a wave shaper after the master compressor's make-up). Sound up to 0.72 of full scale passes untouched. Above that, peaks are rounded off towards a ceiling of 0.95 and never pass it, so a pile-up of loud sounds saturates gently instead of clipping. The ceiling sits a little under full scale because the shaper's 2x oversampling filter can ring a touch past the curve.
+- **Late notes are skipped** (`client/sound/music.js`): a note due less than 12 ms ahead is left out rather than started late. The tune carries on in time.
+- **The club's drums are turned down** from 1 to 0.62. Inside, the club song now peaks at -2.7 dBFS (was +1.4); its feel is unchanged.
+
+**Tests:** `test/sound.test.js` checks the ceiling's curve:
+- untouched below the knee, smooth at it, rising all the way and never past the ceiling;
+- a peak twice full scale comes out just under the ceiling;
+- the wiring puts the ceiling last, and the club's drums stay down.

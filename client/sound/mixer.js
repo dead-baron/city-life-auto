@@ -50,12 +50,32 @@ export function busGains(p) {
 // doesn't turn everything up.
 export const COMP = Object.freeze({ threshold: -10, knee: 8, ratio: 2.5, attack: 0.01, release: 0.25, makeupDb: 2.2 });
 
+// The last stage before the speakers: a soft ceiling (task #434, the crackle in a club in the rain with traffic
+// outside). Untouched up to CLIP_KNEE; above it each peak is rounded off towards full scale and never past it, so a
+// pile-up of loud sounds - the club's kick inside with everything else on top, the sliders at full - saturates
+// gently instead of clipping hard at the speaker, which is what crackles and pops. The compressor is too slow for
+// the first few milliseconds of a kick. The ceiling sits a little under full scale: the shaper's oversampling filter
+// can ring a touch past the curve on a peak it rounded off.
+export const CLIP_KNEE = 0.72, CLIP_CEIL = 0.95;
+export function softClipCurve(n = 2049, range = 4) {
+  const c = new Float32Array(n), k = CLIP_KNEE, w = CLIP_CEIL - k;
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 * range - range, a = Math.abs(x);
+    c[i] = Math.sign(x) * (a <= k ? a : k + w * Math.tanh((a - k) / w));
+  }
+  return c;
+}
+
 // The bus graph on a running AudioContext.
 export function createMixer(ctx, prefs) {
   const gain = (v, to) => { const g = ctx.createGain(); g.gain.value = v; if (to) g.connect(to); return g; };
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = COMP.threshold; comp.knee.value = COMP.knee; comp.ratio.value = COMP.ratio; comp.attack.value = COMP.attack; comp.release.value = COMP.release;
-  const post = gain(Math.pow(10, -COMP.makeupDb / 20), ctx.destination);
+  // (the soft ceiling: a wave shaper reads its curve over an input of -1..1, so the signal goes in at a quarter and
+  // the curve is drawn over +-4 - the curve's output is the signal itself, ceiling and all)
+  const ceil = ctx.createWaveShaper(); ceil.curve = softClipCurve(); ceil.oversample = '2x';
+  const pre = gain(0.25, ceil); ceil.connect(ctx.destination);
+  const post = gain(Math.pow(10, -COMP.makeupDb / 20), pre);
   comp.connect(post);
   const master = gain(0, comp);
   const sfx = gain(1, master), amb = gain(1, master), mus = gain(1, master);
@@ -66,7 +86,7 @@ export function createMixer(ctx, prefs) {
   delay.delayTime.value = 0.21; dark.type = 'lowpass'; dark.frequency.value = 2400;
   echo.connect(delay); delay.connect(dark); dark.connect(fb); fb.connect(delay);
   const echoOut = gain(0.5, sfx); dark.connect(echoOut);
-  const mix = { ctx, master, comp, post, sfx, amb, ambIn: ambLp, ambLp, mus, echo, prefs: soundPrefs({ sound: prefs }) };
+  const mix = { ctx, master, comp, post, ceil, sfx, amb, ambIn: ambLp, ambLp, mus, echo, prefs: soundPrefs({ sound: prefs }) };
   mix.apply = (p) => {
     mix.prefs = soundPrefs({ sound: p });
     const g = busGains(mix.prefs), t = ctx.currentTime;
