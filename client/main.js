@@ -3,7 +3,7 @@
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS, DAY_LOOP_S } from '../shared/constants.js';
 import { generateCity, cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
-import { coverHides } from '../shared/tunnels.js';
+import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
@@ -3096,7 +3096,7 @@ function drawWorldV1(F) {
     S.light.applyGlows(g, DPR);
     mark('glows');
   }
-  if (rain && !sub) drawRain(dt, sky);
+  if (rain && !sub && !underCover(S.map, sp.x, sp.y)) drawRain(dt, sky);   // (none in a tunnel)
   mark('rain');
   if (!sub) S.light.post(g, DPR, now, gfx.tiltShift === true);
   mark('post');
@@ -3112,7 +3112,7 @@ function drawOverlays(F, v2) {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, canvas.width, canvas.height);
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    if (F.rain) drawRain(F.dt, F.sky);
+    if (F.rain && !underCover(S.map, sp.x, sp.y)) drawRain(F.dt, F.sky);   // (none in a tunnel)
     g.setTransform(...S.worldTf);
     drawAtmMarks(F.view, now);
     drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
