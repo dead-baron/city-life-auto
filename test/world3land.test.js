@@ -75,7 +75,8 @@ test('each gulf island: its land is its polygon, its districts the picture\'s in
     const landT = tiles.filter((i) => land[i]);
     const inland = tiles.filter((i) => !land[i] && water[i] !== WATER3.CANAL);
     assert.equal(inland.length, 0, `${I.key}: all its polygon is land (or the canal)`);
-    // the districts: the picture's ids only, shares within 0.08 of today's (the new shore and the canal move a little)
+    // the districts: the picture's ids only, shares within 6 points of today's (the new shore and the canal move a
+    // little: Metro City's largest is Bayside Heights, +4.8, which runs on to the new east shore)
     const ids = I.picture.ids, cnt = new Map(), was = new Map();
     for (const i of landT) cnt.set(dist[i], (cnt.get(dist[i]) || 0) + 1);
     for (const d of cnt.keys()) assert.ok(ids.includes(d), `${I.key}: district ${d} is not one of its picture's`);
@@ -87,8 +88,11 @@ test('each gulf island: its land is its polygon, its districts the picture\'s in
     }
     for (const d of ids) {
       const a = (cnt.get(d) || 0) / landT.length, b = (was.get(d) || 0) / wasN;
-      assert.ok(Math.abs(a - b) < 0.08, `${I.key}: district ${d} is ${(a * 100).toFixed(1)}% of the island, ${(b * 100).toFixed(1)}% today`);
+      assert.ok(Math.abs(a - b) < 0.06, `${I.key}: district ${d} is ${(a * 100).toFixed(1)}% of the island, ${(b * 100).toFixed(1)}% today`);
     }
+    // and today's land at the picture's scale (squared): Metro City 10% more for its new east shore
+    const k = landT.length / (wasN * I.picture.scale * I.picture.scale);
+    assert.ok(k > 0.9 && k < 1.12, `${I.key}: ${landT.length} tiles of land, today's ${wasN} at the scale ${I.picture.scale} (x ${k.toFixed(2)})`);
   }
 });
 

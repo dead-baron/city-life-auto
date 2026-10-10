@@ -1343,7 +1343,8 @@ never runs the generator: it fetches the regions round the player and keeps them
    in the headless page against 5.7 s built), building only when it can't get them. Next: the window (CityMap as a
    window, the worker fetching the 3 x 3 regions round the player and moving them), the per-region signatures.
 2. The skeleton (done: parts 6 and 7). Then the generator at the v3 frame, building today's places at their gulf
-   positions and sizes: an offline build.
+   positions and sizes: an offline build. **First step done (2026-10-10, 8.2):** the skeleton's land and water as
+   per-tile layers (land, water, biome, terrain, district, zone) at the v3 frame, in about a second.
 3. The new land, area by area, on the skeleton: highways, the main line, tunnels, the biomes.
 4. Transit on the skeleton (timetables), and the multi-zoom map.
 
@@ -1385,3 +1386,100 @@ For the window (the next steps):
 - POIs are cut into regions today; the phone's apps and the big map list places world-wide, so a small global list
   (name, kind, position) belongs in the index.
 - The join check is still the whole map's signature; per-region signatures come with the window (part 8 item 5).
+
+### 8.2 Stage 2, step 1: the land of the v3 frame (2026-10-10)
+
+The first piece of stage 2 ("the generator at the v3 frame, building today's places at their gulf positions and
+sizes"): the skeleton's polygons and lines turned into the per-tile layers a build of the v3 frame starts from.
+`shared/world3-land.js` `buildLand3(today)` -> `{ w: 5040, h: 4032, layers, districts, zones }`, where `today` is a
+built city of today's world (`generateCity(1337)`). Nothing live imports it. The picture: `node tools/world3-land.mjs`
+draws `docs/world-v3-land.png` (1 px = 2 m, 2520 x 2016: the water's shades, the biomes' ground, today's places in their
+district colours with darker borders, the skeleton's lines over it) and prints the numbers below. It agrees with
+`docs/world-v3-layout-v2.png`.
+
+**The layers** (one byte per tile each, row-major, 20.3 M tiles):
+
+| Layer | What it holds |
+|---|---|
+| `land` | 1 on land, 0 on water. The land is the mainland polygon, the gulf's islands' polygons, today's small islands and islets copied from `today` whole, Port Westport's rectangle, less the inland water. |
+| `water` | `WATER3`: 0 land, 1 sea (shallow), 2 deep sea, 3 lake, 4 river (the Long Reach, 70 m), 5 canal (55 m, boatable), 6 stream (Kestrel Creek 26 m, Silver Thread Creek 18 m). The sea is shallow within 3 m of land and deep beyond: today's rule (`map.js`: chamfer `toLand <= 12` quarter tiles). |
+| `biome` | 1-8: `BIOMES` in paint order (a later one wins), on the mainland only; 0 on the islands and the water. |
+| `terrain` | `TERRAIN3`: today's wild classes (0 water, 1 grass, 2 forest, 3 desert, 4 rock, 5 sand) and three new ones (6 farm, 7 marsh, 8 scrub). Each biome has its ground (`BIOME3`), and beaches (sand) along the sea as wide as its `beach`: Sandpiper Coast 40 m, Northshore 30 m, Egret Coast 24 m (dunes), Highland Woods 10 m, none elsewhere. Today's places take their class from today's tile (sand, dirt, else grass). |
+| `dist` | The district. On a gulf island or piece: today's district at the point the picture's transform takes the tile back to (`from + (tile - at) / scale`), only the picture's ids and only on land there. On an island, tiles the picture leaves empty (today's coast differs from the new one; Metro City's new east shore) take the nearest that has one (a flood). Today's small islands and islets: today's tiles, moved. Port Westport: 26. Elsewhere the biome's district (below). The sea: 13 (Liberty Bay, today's). |
+| `zone` | Today's zone where today's places are (Metro City 1, Southbank 2, Pelican Key 5, Westport and the airport 7, Northshore 8, Cedar Isle 9, Gull Harbor and Coral Cay 10, ...); new zones 11-18 for the mainland regions and Prison Island; Northshore's beach towns stay in 8. |
+
+**The new districts** (`DISTRICTS3`, shaped as `shared/map.js` `DISTRICTS` entries, ids after today's 0-46) and zones
+(`ZONES3`, after today's 0-10):
+
+| id | District | style | tier | zone | ground | km² |
+|---|---|---|---|---|---|---|
+| 47 | Highland Woods | wild | wild | 11 | forest | 3.10 |
+| 48 | Granite Peaks | wild | wild | 12 | rock | 1.40 |
+| 49 | Willow Valley | rural | rural | 13 | farm | 2.12 |
+| 50 | Red Rock Desert | desert | wild | 14 | desert | 2.72 |
+| 51 | North Ridge | rocky | wild | 15 | scrub | 0.20 |
+| 52 | Sandpiper Coast | beach | mid | 16 | grass, beaches | 0.53 |
+| 53 | Egret Coast | wild | wild | 17 | marsh, dunes | 0.34 |
+| 54 | Northshore Beaches | beach | mid | 8 | grass, beaches | 0.34 |
+| 55 | Prison Island | rocky | rough | 18 | grass | 0.11 |
+| 56 | Egret Rocks | rocky | wild | 17 | rock | 0.03 |
+
+**The numbers** (this machine, node 22, two shared cores):
+- `buildLand3` takes **0.93 s** (scanline fills, two chamfer passes, the islands' floods); the layers are 122 MB
+  (6 x 20.3 MB), the process grows by about 130 MB. Today's world, built first, takes 4.4-4.7 s.
+- The frame is 20.32 km²: **11.48 km² land**; deep sea 8.49, shallows 0.06, lakes 0.14, the Long Reach 0.10, the canal
+  0.02, streams 0.04.
+- Biomes (land): Highland Woods 3.31 km² (Westport's districts on it), Red Rock Desert 2.72, Willow Valley 2.12, Granite
+  Peaks 1.40, Sandpiper Coast 0.53, Northshore 0.41, Egret Coast 0.34, North Ridge 0.20.
+- Ground: forest 3.01, desert 2.74, farm 1.91, grass 1.70, rock 1.44, marsh 0.30, scrub 0.19, sand 0.18 km².
+- Today's places at their gulf size: Metro City + Southbank 0.28 km² (15 districts), Cedar Isle 0.24, Westport 0.18
+  and Port Westport 0.03, the airport 0.02, Northshore 0.07 in today's three districts plus 0.34 of beach towns.
+
+**Checks** (`test/world3land.test.js`, about 8 s: today's world is built once, the land twice):
+- built twice it is the same (a hash of every layer); the new districts and zones are numbered after today's;
+- the canal splits Metro City + Southbank into two landmasses (a flood from Downtown doesn't reach Southbank, neither
+  reaches the mainland, Cedar Isle, Pelican Key or Westport, the two hold over 99% of the island's land), and it is
+  canal all along its line inside the island;
+- each gulf island's land is its polygon (the tiles within 2% of its area; all land but the canal) and today's land at
+  the picture's scale squared (Metro City 1.10x for its new east shore, the others 0.99-1.02x); its districts are only
+  its picture's, each within 6 points of its share of today's (the largest: Metro City's Bayside Heights, +4.8, which
+  runs on to the new east shore; Cedar Isle's within 0.2);
+- the lakes, the Long Reach and the streams are water along their lines, the Long Reach about 70 m across; the sea is
+  deep out in the gulf and at sea, shallow at the port's quay;
+- every station, town and landmark is on land, in its biome (the skeleton's polygons) or its place's districts; on
+  water on purpose: Silver Thread Falls (on its creek);
+- every highway and arterial is on land but along its bridges (the Harbor Tunnel goes under the channel; streams get
+  culverts);
+- the frame's edges: land along the north (but Kestrel Creek's mouth), the mainland's west and east sides as drawn, the
+  open sea along the south.
+
+**The skeleton, fixed** (the checks found these; `shared/world3-skeleton.js`, and the picture redrawn):
+- **Four arterials crossed the Long Reach with no bridge:** the Shore Road at the river's mouth, Valley Road North,
+  Valley Road and the Lake Road. Each has a control point on either bank now, and a bridge between them. The Lake Road,
+  Willow Road and Kestrel Road met at [2940, 790], inside the river: the junction moves 35 m east, to [2975, 790] on the
+  east bank, and the Lake Road bridges the river to it. Arterial bridges: 22 -> 26.
+- **Three subway stations were in the channels** once the gulf brought the islands closer. They move along their lines
+  onto land: Arts District (line 1) from mid-channel to Metro City's east shore, [2453, 2355]; Stadium District (line 2)
+  into the Stadium District, [1629, 2214]; Civic Center (line 2) onto Metro City's west shore, [2035, 2237]. At the new
+  size these two Metro City stations stand in Bayside Heights and Northgate: **for the owner**, rename them or move them
+  (and their lines) to the districts they name.
+- **Two landmarks were in the water:** Sandpiper Point Light, about 20 m off its point (now [4440, 2700]); Lookout Hill, inside
+  Kestrel Lake at the creek's outlet (now [2600, 410], above the lake's north shore).
+- The mainland's east side is drawn at x = 5039 (the frame's last tile): the fill reads it as the frame's edge.
+
+**What the generator needs next** (to build on these layers at the v3 frame):
+1. **The frame as a parameter** (H15's work): `generateCity` builds `FRAME_W x FRAME_H` and takes these layers in place
+   of today's decoded `LAND` and `TERRAIN` strings, the river mask, the lakes, the deep-water rule and the seed-painted
+   districts and zones. Its whole-map passes (the chamfers, the labels) cost 13x today's at the v3 frame.
+2. **The districts:** `DISTRICTS3` joins `DISTRICTS` (map.js), with `STYLE` entries for the new ones (wild, rural,
+   desert, rocky exist; the beach towns use `beach`). The zone lists that steer building (`BUILT_ZONES`, the wild
+   zones) take zones 11-18: Northshore's beach towns and the Sandpiper Coast are built, the rest is wild.
+3. **Today's places at their new size:** the city passes (blocks, streets, buildings) run inside each island's and
+   piece's land, by its districts from this layer, at today's densities: the 1.15 scale gives more blocks, not bigger
+   ones. The tiles the picture left empty (Metro City's east shore) need their own blocks.
+4. **The skeleton's lines on the land:** the highways, arterials, the main line and the subways laid along their paths,
+   bridges where they cross water, tunnels where marked; the stations at their points.
+5. **The ground's edges:** biome borders and coasts are polygon-straight at 4 m; a wobble (as `terrainAt` does,
+   with `dsin`) would make them ragged. The shallows are today's 3 m: a v3 decision whether boats want more.
+6. **Per region:** a region's share of these layers (`cutRegion` / `regionpack.js`) is what a region build reads; the
+   server holds the 122 MB whole.

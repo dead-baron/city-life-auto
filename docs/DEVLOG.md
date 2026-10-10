@@ -6476,3 +6476,39 @@ changes; a browser's first load after a world change gets its city from the serv
   the server (the files with their headers, the 404s and why, older folders deleted), the worker's choice (kept,
   served, built, and built after a 404, a bad file, a network error, another seed, a timeout, no DecompressionStream), the
   load report's "downloaded from the server".
+
+## 2026-10-10 · World v3, stage 2, step 1: the land of the v3 frame
+
+The owner's gulf (12:50): "a little bit bigger and get them closer and still tuck the airport away". The skeleton
+(docs/WORLD-V3.md parts 6 and 7) has the gulf's land and water as polygons and lines; this turns it into the per-tile
+layers a build of the 5040 x 4032 frame starts from - the first piece of stage 2, "the generator at the v3 frame,
+building today's places at their gulf positions and sizes" (WORLD-V3.md 8.2). Nothing in the game changes; nothing live
+imports it.
+- **`shared/world3-land.js`** `buildLand3(today)` -> `{ w, h, layers: { land, water, biome, terrain, dist, zone } }`
+  from a built city of today's world:
+  - **land and water:** the mainland, the islands and Port Westport filled by scanline (not a point-in-polygon test per
+    tile); the lakes, the Long Reach (70 m), the streams and the canal (55 m) cut out as their kinds of water; the sea
+    shallow within 3 m of land and deep beyond (today's rule);
+  - **biome and terrain:** `BIOMES` painted in order, each with its ground (forest, rock, farm, desert, scrub, marsh,
+    grass) and beaches along the sea as wide as the biome has them (Sandpiper 40 m, Northshore 30, Egret 24 - its
+    dunes - and the woods 10);
+  - **district and zone:** the gulf's places through their pictures (today's district at `from + (tile - at) / scale`,
+    only the picture's ids, only on the place's land; on an island the gaps - Metro City's new east shore - flooded
+    from the nearest), today's small islands and islets copied whole, Port Westport (26), and ten new districts (47-56:
+    a district per biome, Prison Island, the Egret Rocks) in eight new zones (11-18), shaped as `DISTRICTS` entries.
+  - Deterministic (integer tiles, + - * / and floor/ceil only); 0.93 s, 122 MB of layers.
+- **`tools/world3-land.mjs`** draws it to `docs/world-v3-land.png` (1 px = 2 m, the skeleton's lines over it) and prints
+  the numbers (WORLD-V3.md 8.2): 11.48 km² of land in the 20.32 km² frame; Metro City + Southbank 0.28 km², Cedar Isle
+  0.24, Westport 0.18 - part 7's sizes.
+- **The skeleton, fixed** (`shared/world3-skeleton.js`; its picture redrawn): four arterials crossed the Long Reach with
+  no bridge (Shore Road, Valley Road North, Valley Road, Lake Road - now bridged, and the Lake / Willow / Kestrel Road
+  junction moved out of the river onto its east bank); three subway stations stood in the channels after the gulf
+  moved the islands (Arts District, Stadium District, Civic Center - moved along their lines onto land; two now stand
+  in other districts, for the owner to rename or move); Sandpiper Point Light and Lookout Hill were in the water (moved
+  ashore). Arterial bridges: 22 -> 26.
+- **Tests:** `test/world3land.test.js` (7, about 8 s; today's world built once): the same twice (a hash); the canal splits
+  Metro City + Southbank into two landmasses joined to nothing; each gulf island's land is its polygon and its districts
+  the picture's in about today's proportions; the lakes, river, streams and canal are water, the sea deep offshore; every
+  station, town and landmark on land of its biome or district (Silver Thread Falls on its creek on purpose); every
+  highway and arterial on land but along its bridges; the frame's edges. `test/world3.test.js` (the skeleton's) passes
+  with the fixes.
