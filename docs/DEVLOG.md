@@ -6024,7 +6024,9 @@ dents and parts falling off as it worsens, not a repetitive grey speckle overlay
 - **The classic view and the effects** (`client/render/vehdmg.js`, loaded with the first damaged vehicle or event, not
   with the page): the damage drawn on the car in its place (scrapes, dents, a crumpled end, a cracked windscreen, the
   bumper and bonnet gone, a door hanging off the side, holes, the cut as a glowing line); the cut's molten sparks and
-  drips; the parts that come off thrown and left lying, in the car's paint (`render/boom.js`'s piece strip).
+  drips; the parts that come off thrown and left lying, in the car's paint (`render/boom.js`'s piece strip). Art v2
+  draws them too - and an explosion's pieces, which it didn't before - as small flat sprites in the car's paint
+  (`client/art2/game/liveart.js` `partSprite`, from the pooled pieces tagged with what they are: `host.js` `_particles`).
 - **Debug menu:** a new last section, 🚗 Vehicle damage (server/dev.js `vdmg`): a car a little way off scuffed, dented,
   crumpled (front or back), its engine dead, shot up or cut in two; a pickup and a van at their worst.
 - **Body work** at the garage (`economy.js`) beats the dents out, fills the holes and fits new parts.
