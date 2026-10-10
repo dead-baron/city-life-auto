@@ -152,8 +152,9 @@ export function animalModel(kind, o = {}) {
       const dx = fx, dz = fz - top, d = Math.max(0.5, Math.min(L2 * 1.995, Math.hypot(dx, dz))), th = Math.atan2(dz, dx), al = Math.acos(Math.min(1, d / (2 * L2)));
       const kx = lx + Math.cos(th + (back ? -al : al)) * L2, kz = top + Math.sin(th + (back ? -al : al)) * L2;
       const seg = (x0s, z0s, x1s, z1s, r0, r1, mt) => { const n = Math.ceil(Math.hypot(x1s - x0s, z1s - z0s) * 2) + 1; for (let k = 0; k <= n; k++) { const t = k / n, x = x0s + (x1s - x0s) * t, z = z0s + (z1s - z0s) * t, r = r0 + (r1 - r0) * t; m.box(x - r, ly - r, Math.max(0, z - 0.5), x + r, ly + r, Math.max(0, z) + 0.6, mt); } };
-      seg(lx, top + legR, kx, kz, legR * (back ? 1.6 : 1.3) * (A.bear ? 0.8 : 1), legR * 0.85, base);   // (the thigh, the forearm)
-      seg(kx, kz, lx + fx, fz + 0.6, legR * 0.8, legR * 0.7, lower);                // (the cannon, the shin)
+      const sl = A.hoof && !A.hump ? 0.82 : 1;   // (a deer's, an elk's, a boar's slender legs)
+      seg(lx, top + legR, kx, kz, legR * (back ? 1.6 : 1.3) * (A.bear ? 0.8 : 1) * sl, legR * 0.85 * sl, base);   // (the thigh, the forearm)
+      seg(kx, kz, lx + fx, fz + 0.6, legR * 0.8 * sl, legR * 0.7 * sl, lower);                // (the cannon, the shin)
       m.box(lx + fx - legR * 0.8, ly - legR * 0.8, fz, lx + fx + legR + 0.6, ly + legR * 0.8, fz + 1.2, hoof);   // (a hoof or a paw)
       return;
     }
@@ -207,7 +208,11 @@ export function animalModel(kind, o = {}) {
   if (A.horns === 'black' || A.horns === 'nub') for (const s of [-1, 1]) for (let k = 0; k < (A.horns === 'nub' ? 1.2 : 6); k += 0.4) m.ell(hx - k * 0.75 - (k > 3 ? (k - 3) * 0.4 : 0), cy + s * HD * 0.35, hz + HD * 0.7 + k * 0.85, 0.65, 0.6, 0.55, A.legend ? R('#e8d8a8') : R('#2a262c'));   // a mountain goat's black daggers, curving back
   else if (A.horns) for (const s of [-1, 1]) for (let k = 0; k < 4; k += 0.5) m.ell(hx - (A.horns === 'back' ? k * 0.8 : 0), cy + s * (HD * 0.4 + (A.horns === 'short' ? k * 0.5 : 0)), hz + HD * 0.7 + k * 0.6, 0.7, 0.7, 0.6, R('#d8ccb0'));
   const tine = A.legend ? R('#ecdcae') : R('#c8b48a');
-  if (A.antlers === 1) for (const s of [-1, 1]) for (let k = 0; k < 8; k += 0.5) { const tn = k > 3 && Math.round(k) % 2 === 0 ? 1.5 : 0; m.ell(hx - k * 0.3 - tn, cy + s * (HD * 0.5 + k * 0.5), hz + HD * 0.6 + k, 0.75, 0.7, 0.7, tine); }
+  if (A.antlers === 1) for (const s of [-1, 1]) for (let u = 0; u <= 1; u += 0.04) {   // (the beams sweep back, up and forward in a C, the tines straight up off them: a rack that reads from the side as in AN1)
+    const x = hx - 5 * Math.sin(Math.PI * u) + 3 * u, y = cy + s * (HD * 0.5 + u * 4), z = hz + HD * 0.6 + u * 9.5;
+    m.ell(x, y, z, 0.75, 1.25, 0.7, tine);   // (deep across the line of sight, or the character view's steep look skips it)
+    if (Math.abs(u - 0.36) < 0.02 || Math.abs(u - 0.6) < 0.02 || Math.abs(u - 0.84) < 0.02) for (let t = 0; t < 3.5; t += 0.5) m.ell(x - 0.2, y, z + t, 0.6, 1.1, 0.6, tine);
+  }
   if (A.antlers === 2) for (const s of [-1, 1]) {   // an elk's rack: long beams sweeping back, the tines forward
     for (let k = 0; k <= 17; k += 0.5) {
       const x = hx - k * 0.62 - (k > 9 ? (k - 9) * 0.6 : 0), y = cy + s * (HD * 0.45 + k * 0.5), z = hz + HD * 0.55 + k * 1.1;
