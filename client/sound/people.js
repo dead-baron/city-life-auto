@@ -6,7 +6,7 @@ import { PF } from '../../shared/constants.js';
 import { surfaceAt, woodsAt } from './surface.js';
 
 const R = Math.random;
-const NEAR = 520, MAX_STEPS = 8;
+const NEAR = 520, MAX_STEPS = 8, PICK_T = { t: 1 };
 
 export class People {
   constructor(E) {
@@ -25,6 +25,13 @@ export class People {
       const rolling = !!(f & PF.ROLL);
       if (rolling && !p.sndRoll && Math.abs(p.rx - L.x) < NEAR && Math.abs(p.ry - L.y) < NEAR) E.play('roll', p.rx, p.ry, p.id === S.myPedId ? 1 : 0.7);
       p.sndRoll = rolling;
+      // a miner's pickaxe on the rock (server activities.js, the descriptor's ch 5): the clink as the swing strikes - the
+      // swing's last frame, as art v2 draws it (host.js: Math.floor(now * 6 + id) % 4)
+      if (p.d && p.d.ch === 5 && !p.d.pl) {
+        const k = Math.floor(F.now * 6 + p.id) % 4;
+        if (k === 3 && p.sndPick !== 3 && Math.abs(p.rx - L.x) < NEAR * 1.5 && Math.abs(p.ry - L.y) < NEAR * 1.5) E.play('pickaxe', p.rx, p.ry, 0.75, PICK_T);
+        p.sndPick = k;
+      }
       if (f & (PF.INVEH | PF.DEAD | PF.DOWN) || rolling || n >= MAX_STEPS) continue;
       if (!((prev < 4 && ph >= 4) || ph < prev)) continue;   // (a foot comes down twice a cycle)
       const spd = p.as || 0;

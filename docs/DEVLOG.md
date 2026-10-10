@@ -6476,3 +6476,36 @@ changes; a browser's first load after a world change gets its city from the serv
   the server (the files with their headers, the 404s and why, older folders deleted), the worker's choice (kept,
   served, built, and built after a 404, a bad file, a network error, another seed, a timeout, no DecompressionStream), the
   load report's "downloaded from the server".
+## 2026-10-10 · People going about their lives (task #423, part 2): a pickup game, pool, the fence, the clink
+
+The owner: "populate the world with NPCs doing things - hunting, fishing, mining, farming, playing pool or games - so it
+feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-about.png`); part 1's "left for part 2".
+
+- **A pickup game at the courts** (`server/systems/activities.js` `stepPickup`): a spot on each half court of North
+  Point Courts (`shared/hoops.js` `courtHoops`), two to four people round the key, facing the rim. The ball is a real
+  ball (`K.BALL`, ballKind `pickup`, sent as the hoops ball, `t` 3 - so both renderers draw it as they draw yours): one
+  dribbles it (bouncing at his side), shoots - an arc up over the rim, in or off it (the 'hoop' event: the swish or the
+  rim's clang) - and the rebound comes down and bounces on to the next one; the shooter moves to a new spot round the key
+  each time (shooting around). Scared off, the ball lies where it fell; off in the rain like the picnics; the ball goes
+  when the group is emptied. Day 0.75, night 0.2, one game round a player.
+- **Pool at the Rusty Spur** (`poolTable`: the bar room's table where `client/art2/game/statics.js` `roadhouseRoom` draws
+  it - there's no pool mini-game and no other pool table in the world, the town bars' tables are only in their window
+  art): two take turns - the one shooting goes round the table to the shot (the long sides, the ends) and bends over
+  his cue (the descriptor's `gt` `cue`), the other waits at the end of the table, his cue stood up (`pp` `cueup`); a miss
+  passes the turn (most of the time), a watcher or two stand by. More often at night (0.9) than by day (0.5).
+- **The neighbours' fence:** the first of the two chatting has `pp` `fence`: a short run of white garden fence between
+  them, drawn with him (two posts, two rails, pointed pickets: waist high) - no world change.
+- **The miners' clink** (`client/sound/people.js`): a miner's pickaxe (the descriptor's `ch` 5, not a player's) clinks
+  on the rock (the 'pickaxe' sound) as the swing strikes - the swing's last frame, timed as art v2 draws it
+  (`host.js`: `floor(now * 6 + id) % 4`), heard within ~780 px.
+- **Art v2** (`client/art2/people.js`): the `cue` pose (bent low over the table, feet apart, the bridge hand on the felt,
+  the cue drawn back and through: 4 frames) with the cue and its blue chalked tip; `cueup` (the cue stood beside him,
+  in hand); the `fence`. `client/art2/game/peds.js`: `cue` in `ACT_POSES`, `fence` / `cueup` in `PROP_CARRY`.
+- **Debug menu:** 🏀 A pickup game at the courts, 🎱 Pool at the Rusty Spur (the dev `act` command's kinds `hoops`, `pool`).
+- **Not done yet (left):** the classic renderer's poses and props for the activities (part 1's and these: it draws
+  none), the animals' missing poses (AN7, AN5, AN2, AN4).
+- **Tests:** `test/activities.test.js` (1 new, 8 in all): a pickup game on each half court, two to four round the key
+  facing the rim, the ball sent as the hoops ball, shots up over the rim (each in or off it, the 'hoop' event), the ball
+  going round them; the Rusty Spur's table found with floor round it, the turns taken (both bent over the cue at the
+  table in a minute), the waiting one's cue up, watchers; the neighbours' fence on the wire; the debug menu's 11 kinds.
+  `test/art2.test.js`, `test/sound.test.js`, `test/npcpeople.test.js` pass as before.
