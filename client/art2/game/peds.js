@@ -266,13 +266,14 @@ function recolorBlade(G, bc) {
   return G;
 }
 // Where the canopy goes over someone holding an open umbrella (people.js 'umbrella': the right hand in front of the
-// shoulder, the shaft straight up) at sprite heading dir8: out = [dx, dy, z], world px from the feet - draw the canopy
-// at (x + dx, y + dy) and height z so it lands on the shaft's top in the figure's own (35 degree) projection.
+// shoulder, the shaft straight up) at sprite heading dir8: out = [dx, dy, z], world px from the feet - the shaft's top
+// in the figure's own (35 degree) projection, z its height; k < 1: that far out toward the shaft from over their head
+// (the canopy's middle: it hangs over them, round the shaft's top - game/liveart.js umbrellaShape, task #433).
 const UMB_CA = Math.cos(35 * Math.PI / 180), UMB_SA = Math.sin(35 * Math.PI / 180);
-export function umbrellaTop(dir8, out = [0, 0, 0]) {
+export function umbrellaTop(dir8, out = [0, 0, 0], k = 1) {
   const th = Math.PI / 2 + (dir8 | 0) * Math.PI / 4, s = Math.sin(th), c = Math.cos(th), [hx, hy] = UMBRELLA_HAND;
   const X = -s * hx + c * hy, Y = c * hx + s * hy, top = (UMBRELLA_HAND[2] + UMBRELLA_LEN) * UMB_CA;
-  out[0] = X; out[1] = Y * UMB_SA - 2; out[2] = top - 2;
+  out[0] = X * k; out[1] = Y * k * UMB_SA - 2; out[2] = top;
   return out;
 }
 export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {

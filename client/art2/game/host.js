@@ -13,8 +13,8 @@
 //   fades    whole buildings round the player ease to transparent (the engine shows the street under
 //            them), so nothing standing in front of you hides you or what is near you
 //   live     what moves on the static world: the lit lens of every signal head (the chunk bakes bring the
-//            heads, chunkbake.signalLenses), level crossing barrier arms and flashers, sliding gates,
-//            spike strips (as decals)
+//            heads, chunkbake.signalLenses), flags in the wind and fountains' water (liveart.js), level
+//            crossing barrier arms and flashers, sliding gates, spike strips (as decals)
 //   lights   the chunks' static lights (lamps keep v1's warm-up and flicker, windows and neon follow
 //            the dark) and the moving ones (headlight and flashlight cones, tail and brake lights,
 //            sirens, lit trains, muzzle flashes, explosions, fire, camp fires, signal heads, a light to
@@ -49,6 +49,7 @@ import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
 import { WEAPONS, BLADE_COLORS, hexRgb } from '../../../shared/items.js';
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S } from './liveart.js';   // (flags in the wind, umbrellas' canopies, fountains' water)
 const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand, _lights)
 
 export { DECK_Z };
@@ -1174,11 +1175,13 @@ export class World2 {
     o.under = 0;
     this.n.drawn++;
     if (f & PF.UMBRELLA) {
-      const uk = this._genUmbrella(p.id % Math.max(1, (api.UMBRELLA_COLORS || []).length));
+      // (the canopy: their own look, liveart.js umbrellaStyle; its rim drop px below the shaft's top - or, the
+      // umbrella not in hand, centred over them at that height)
+      const ui = umbrellaStyle(p.id), uk = this._conv(`gumb|${ui}`, () => umbrellaSprite(ui), true), U = umbrellaShape(ui), drop = U.drop;
       if (uk) {
         o.flash = 0; o.xray = false;
-        if (umb) { const t = Pd.umbrellaTop(d8, this._umbT || (this._umbT = [0, 0, 0])); E.drawSprite(uk, p.rx + hx + t[0], p.ry + hy + t[1], z0 + t[2], o); }  // on the shaft in the hand
-        else E.drawSprite(uk, p.rx, p.ry, z0 + 44, o);
+        if (umb) { const t = Pd.umbrellaTop(d8, this._umbT || (this._umbT = [0, 0, 0]), U.k); E.drawSprite(uk, p.rx + hx + t[0], p.ry + hy + t[1], z0 + t[2] - drop, o); }  // on the shaft in the hand
+        else E.drawSprite(uk, p.rx, p.ry, z0 + 44 - drop, o);
       }
     }
   }
@@ -1203,31 +1206,6 @@ export class World2 {
     if (n < 2 || n > 8) return;
     for (let i = 0; i < n; i++) this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, i, wpn, bo), [A2, ppose, d8, i, wpn, bo], prio);
   }
-  // an open umbrella: a shallow dome of 8 panels in its colour, scalloped between the rib tips, darker ribs and rim, the
-  // tip on top (sampled at quarter pixels, keeping the highest point per pixel, so the near slope has no gaps)
-  _genUmbrella(i) {
-    return this._conv(`gumb|${i}`, () => {
-      const cols = this.api.UMBRELLA_COLORS || ['#c8262b'], base = rgbOf(cols[i] || cols[0]);
-      const R = 13, H = 6, w = R * 2 + 1, h = R * 2 + H + 3, ax = R, ay = R + H + 1, PAN = Math.PI / 4;
-      const G = gbuf(w, h, ax, ay);
-      for (let Y = -R; Y <= R; Y += 0.25) for (let X = -R; X <= R; X += 0.25) {
-        const a = Math.atan2(Y, X) + Math.PI, f = (a / PAN) % 1, edge = R * (0.93 + 0.07 * Math.abs(Math.cos(f * Math.PI)));   // scallops: the rim dips between rib tips
-        const r = Math.hypot(X, Y);
-        if (r > edge) continue;
-        const r2 = (r * r) / (R * R), Z = H * (1 - r2), sx = Math.floor(X + ax + 0.5), sy = Math.floor(Y - Z + ay + 0.5), zz = Math.round(Z) + 1;
-        if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
-        const ii = sy * w + sx;
-        if (G.col[ii * 4 + 3] && G.z[ii] >= zz) continue;
-        const rib = Math.min(f, 1 - f) * r < 0.45 && r > 2, rim = r > edge - 1.3, panel = Math.floor(a / PAN) & 1;
-        const k = rib ? 0.62 : rim ? 0.66 : panel ? 0.86 : 1;
-        const nx = 2 * H * X / (R * R), ny = 2 * H * Y / (R * R), nl = Math.hypot(nx, ny, 1);
-        put(G, sx, sy, [base[0] * k, base[1] * k, base[2] * k], zz, [128 + nx / nl * 127, 128 + ny / nl * 127, 128 + 127 / nl, 255]);
-      }
-      put(G, ax, ay - H - 2, [40, 40, 44], H + 3); put(G, ax, ay - H - 1, [40, 40, 44], H + 2); // the tip
-      return G;
-    }, true);
-  }
-
   // ---- animals, vehicles, trains, small things ------------------------------------------------------------------
   _pet(p, now) {
     const A = this.A, E = this.E;
@@ -1613,22 +1591,27 @@ export class World2 {
     const x0 = this.vx0 - 120, x1 = this.vx1 + 120, y0 = this.vy0 - 40, y1 = this.vy1 + 160;
     o.alpha = 1; o.flash = 0; o.xray = false; o.flipX = false; o.tint = null; o.shadow = false;
     const heads = this.liveHeads; heads.length = 0; this.nfL = 0;
+    this._flagStep(F);
     for (const [k, st] of this.chunkState) {
       const lv = st.live;
-      if (!lv || !lv.heads.length) continue;
+      if (!lv) continue;
       const cx = k % 1000, cy = Math.floor(k / 1000);
       if ((cx + 1) * CHUNK < x0 || cx * CHUNK > x1 || (cy + 1) * CHUNK < y0 || cy * CHUNK > y1) continue;
       for (const h of lv.heads) {
         if (h.x < x0 || h.x > x1 || h.y < y0 || h.y > y1) continue;
-        const pr = h.pi >= 0 ? M.props[h.pi] : null, n = M.nodes[h.node];
-        if ((pr && pr.broken) || !n) continue;
+        const pr = h.pi >= 0 ? M.props[h.pi] : null, p2 = h.pi2 >= 0 ? M.props[h.pi2] : null, n = M.nodes[h.node];   // (pi2: a span wire's other pole)
+        if ((pr && pr.broken) || (p2 && p2.broken) || !n) continue;
         const s = signalFor(n, h.edge, S.loopTime), i = s === 'R' ? 0 : s === 'Y' ? 1 : 2;
         heads.push(h, i);
         if (h.ny < 0.25) continue;
         const c = h.L[i], key = this._genLamp(i);
+        o.shadow = false;
         if (key) E.drawSprite(key, c[0], c[1], c[2] - 2, o);
       }
+      if (lv.flags) for (const fl of lv.flags) if (fl[1] > x0 && fl[1] < x1 && fl[2] > y0 && fl[2] < y1) this._flag(fl);
+      if (lv.fnt) for (const fn of lv.fnt) if (fn[0] > x0 && fn[0] < x1 && fn[1] > y0 && fn[1] < y1) this._fountain(fn);
     }
+    o.shadow = false;
     // level crossings (v1's arm pivots, beside the statics' crossbuck posts)
     const xs = (M.rail && M.rail.crossings) || [];
     for (let i = 0; i < xs.length; i++) {
@@ -1676,6 +1659,43 @@ export class World2 {
         if (key) E.drawDecal(key, s.x, s.y, s.a || 0, 1, this._gz(s.x, s.y));
       }
     }
+  }
+  // Flags in the wind (task #426: liveart.js; the chunks' live.flags, [kind, x, y, z0] of every bare flagpole): the
+  // cloth stands out as far as the wind where it is says (limp and hanging in calm air), streams the way it blows,
+  // and flaps - or in calm air sways - at the wind's pace, each flag a little out of step with the others. The
+  // flap's phase is summed frame by frame (never the clock times the wind now, which races when the wind changes:
+  // task #388); with Settings' wind sway off the cloth holds still. Frames are made as needed, the last one shown
+  // meanwhile.
+  _flagStep(F) {
+    const P = (this.flagP ||= {}), dt = Math.min(0.1, Math.max(0, F.dt || 0));
+    flagPose(wind.strength, P);
+    this.flagPh = ((this.flagPh || 0) + dt * P.hz) % 1;
+    this.flagDi = ((Math.round(wind.dir / TAU * FLAG_DIRS) % FLAG_DIRS) + FLAG_DIRS) % FLAG_DIRS;
+    this.fntT = ((this.fntT || 0) + dt / FOUNTAIN_S) % 1;   // (the fountains' loop: _fountain)
+  }
+  _flag(fl) {
+    const [kind, x, y, z0] = fl, E = this.E, o = this.opts;
+    const li = Math.round(flagPose(flagWind(wind, x, y), this.flagQ || (this.flagQ = {})).lift * (FLAG_LIFTS - 1)), di = this.flagDi;
+    const fr = this.gfx.wind === false ? 0 : Math.floor((this.flagPh + (((Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663)) >>> 0) / 4294967296)) * FLAG_FRAMES) % FLAG_FRAMES;
+    let key = this._conv(`gflag|${kind}|${li}|${di}|${fr}`, () => flagSprite(kind, li, di, fr), true);
+    if (!key) key = fl._k && E.hasSprite(fl._k) ? fl._k : null;
+    if (!key) return;
+    fl._k = key;
+    o.shadow = true;
+    E.drawSprite(key, x, y, z0 || 0, o);
+  }
+  // A fountain's water (task #417: liveart.js fountainSprite; the chunks' live.fnt, [x, y, z0] of every fountain): its
+  // jet rising and falling, the drops falling into the bowl and the basin, the ripples and the glints - a frame of the
+  // loop a frame, each fountain at its own moment in it, made as needed (the last one shown meanwhile).
+  _fountain(fn) {
+    const [x, y, z0] = fn, E = this.E, o = this.opts;
+    const fr = Math.floor((this.fntT + (((Math.imul(x | 0, 2654435761) ^ Math.imul(y | 0, 40503)) >>> 0) / 4294967296)) * FOUNTAIN_FRAMES) % FOUNTAIN_FRAMES;
+    let key = this._conv(`gfnt|${fr}`, () => fountainSprite(fr), true);
+    if (!key) key = fn._k && E.hasSprite(fn._k) ? fn._k : null;
+    if (!key) return;
+    fn._k = key;
+    o.shadow = false;
+    E.drawSprite(key, x, y, z0 || 0, o);
   }
   _fLight(x, y, z, r, col, k) {
     let L = this.fLights[this.nfL];
@@ -2069,9 +2089,11 @@ export class World2 {
     const p = this.map.props[i];
     if (!p) return;
     if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: [[i, p.broken ? { a: p.broken.a || 0, ...(p.broken.f ? { f: 1 } : null) } : null]], ...(p.t === 'campfire' ? { lit: [[i, p.lit ? 1 : 0]] } : null) });
-    // its screen footprint: standing up to ~320 px above its ground point, debris round it
-    for (let cy = Math.floor((p.y - 320) / CHUNK); cy <= Math.floor((p.y + 40) / CHUNK); cy++)
-      for (let cx = Math.floor((p.x - 120) / CHUNK); cx <= Math.floor((p.x + 120) / CHUNK); cx++) { const k = cy * 1000 + cx; this.ver.set(k, (this.ver.get(k) || 0) + 1); }
+    // its screen footprint: standing up to ~320 px above its ground point, debris round it (a signal pole: what it
+    // holds up too - a mast arm, a span wire's wires and heads across the street)
+    const r = p.t === 'sigpole' ? 300 : 120;
+    for (let cy = Math.floor((p.y - 320) / CHUNK); cy <= Math.floor((p.y + (r > 120 ? r : 40)) / CHUNK); cy++)
+      for (let cx = Math.floor((p.x - r) / CHUNK); cx <= Math.floor((p.x + r) / CHUNK); cx++) { const k = cy * 1000 + cx; this.ver.set(k, (this.ver.get(k) || 0) + 1); }
   }
   // A highway barrier smashed through or put back (main.js 'barrier' / 'barrierfix'): the workers learn it and the
   // chunks the pieces show in are baked again - the deck drawn open there, with its broken stubs (statics.js makeDeck)

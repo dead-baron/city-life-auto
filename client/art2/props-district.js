@@ -4,7 +4,7 @@
 // Every maker returns a Vox, built along +x (render at heading PI/2 to run it north-south).
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
-import { F_GLASS, F_NOCAST, F_LEAF, F_WATER, F_THIN, hash } from './gbuf.js';
+import { F_GLASS, F_NOCAST, F_LEAF, F_WATER, F_THIN, F_GROUND, hash } from './gbuf.js';
 
 const R = (h, n = 6, k) => ramp(h, n, k);
 
@@ -205,11 +205,14 @@ export function luggageCart() {
 }
 
 // ---- water --------------------------------------------------------------------------------------------
-// a round fountain: stone basin, water, a central pedestal and bowl, and a spray (it glows a little)
-export function fountain(r = 30, tiers = 2) {
+// a round fountain: stone basin, water, a central pedestal and bowl, and a spray (it glows a little); sprays false: the
+// stone and the still water only, for the game, whose water moves (game/liveart.js fountainSprite): deeper, and lying
+// flat like a pond's (F_GROUND: the light rolls little waves over it, glints on them and mirrors the column in it)
+export function fountain(r = 30, tiers = 2, sprays = true) {
   const D = r * 2 + 2, m = new Vox(D, D, 56);
   const st = m.mat({ ramp: R('#cfc6b4'), k: 3 }), rim = m.mat({ ramp: R('#ddd6c8'), k: 4 });
-  const wat = m.mat({ ramp: R('#3aa8c8'), k: 3, flag: F_WATER, shade: (x, y) => (hash(Math.round(x / 2), Math.round(y / 2), 5) > 0.8 ? 1.5 : 0) });
+  const wat = sprays ? m.mat({ ramp: R('#3aa8c8'), k: 3, flag: F_WATER, shade: (x, y) => (hash(Math.round(x / 2), Math.round(y / 2), 5) > 0.8 ? 1.5 : 0) })
+    : m.mat({ ramp: R('#1f6f9a'), k: 1, flag: F_WATER | F_GROUND });
   const spray = m.mat({ ramp: R('#e8f6f8'), k: 4, emi: [200, 240, 255, 50], flag: F_NOCAST });
   const c = r + 1;
   m.fill((x, y, z) => { const d = Math.hypot(x - c, y - c); if (d > r) return -1; if (d > r - 4) return z < 9 ? (z >= 7 ? rim : st) : -1; return z < 6 ? wat : -1; }, 0, 0, 0, D, D, 10);
@@ -217,7 +220,7 @@ export function fountain(r = 30, tiers = 2) {
   m.fill((x, y, z) => { const d = Math.hypot(x - c, y - c); return d < 12 - (z - 24) * 0.3 && d > (z > 26 ? 9 : 0) ? rim : d < 9 && z < 27 ? wat : -1; }, 0, 0, 24, D, D, 28);
   if (tiers > 1) { m.cyl('z', c, c, 0, 2.5, 28, 38, st); m.fill((x, y, z) => (Math.hypot(x - c, y - c) < 6 ? rim : -1), 0, 0, 38, D, D, 40); }
   // the spray: a plume up the middle and arcs falling into the bowls
-  m.fill((x, y, z) => { const d = Math.hypot(x - c, y - c); const top = tiers > 1 ? 54 : 44; if (d < 1.6 - (z - 40) * 0.02 && z > (tiers > 1 ? 40 : 28) && z < top) return spray; if (Math.abs(d - (8 + (top - z) * 0.18)) < 0.8 && z > 26 && z < top - 6 && hash(Math.round(x), Math.round(y), 3) > 0.45) return spray; return -1; });
+  if (sprays) m.fill((x, y, z) => { const d = Math.hypot(x - c, y - c); const top = tiers > 1 ? 54 : 44; if (d < 1.6 - (z - 40) * 0.02 && z > (tiers > 1 ? 40 : 28) && z < top) return spray; if (Math.abs(d - (8 + (top - z) * 0.18)) < 0.8 && z > 26 && z < top - 6 && hash(Math.round(x), Math.round(y), 3) > 0.45) return spray; return -1; });
   m.smooth = 1;
   return m;
 }

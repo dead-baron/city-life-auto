@@ -423,11 +423,12 @@ export function golfCart(col = '#f0eee8') {
   m.box(1, 6, 9, 6, 13, 20, bag); for (let k = 0; k < 3; k++) m.box(2 + k * 1.5, 7 + k * 2, 20, 3 + k * 1.5, 8 + k * 2, 24, club);
   return m;
 }
-// a golf pin: a thin white pole in the cup with a small red flag
-export function golfPin() {
+// a golf pin: a thin white pole in the cup with a small red flag (flag false: the pin alone - the game's flag is drawn
+// live, in the wind: game/liveart.js)
+export function golfPin(flag = true) {
   const m = new Vox(14, 4, 36), p = m.mat({ ramp: R('#f2f0ea'), k: 3, flag: F_NOCAST }), f = m.mat({ ramp: R('#d8342e'), k: 3, flag: F_NOCAST }), cup = m.mat({ ramp: R('#1a1a1a'), k: 1 });
   m.box(1, 1, 0, 3, 3, 0.6, cup); m.box(1.5, 1.5, 0, 2.5, 2.5, 34, p);
-  m.fill((x, y, z) => { const fx = x - 2.5, fz = 33 - z + Math.sin(fx * 0.5) * 0.6; return fx >= 0 && fx < 10 && fz >= 0 && fz < 7 - fx * 0.25 ? f : -1; }, 2, 1, 24, 14, 3, 34);
+  if (flag) m.fill((x, y, z) => { const fx = x - 2.5, fz = 33 - z + Math.sin(fx * 0.5) * 0.6; return fx >= 0 && fx < 10 && fz >= 0 && fz < 7 - fx * 0.25 ? f : -1; }, 2, 1, 24, 14, 3, 34);
   return m;
 }
 // a Ferris wheel (the wheel in the x-z plane, facing +y): a white double rim on spokes round a hub, two A-frame

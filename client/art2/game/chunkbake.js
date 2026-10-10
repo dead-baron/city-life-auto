@@ -11,7 +11,8 @@
 //             Y (= world Y - Z) [cy*768, cy*768+768)
 //     lights  the static light sources anchored in the chunk (statics.staticLights)
 //     live    what the host animates on top, from the items anchored in the chunk: heads (signal heads
-//             with their lens positions, see signalLenses), xing (level crossing posts)
+//             with their lens positions, see signalLenses), xing (level crossing posts), flags ([kind, x, y,
+//             z0] of a bare flagpole: its flag flies live, liveart.js), fnt ([x, y, z0] of a fountain: its water)
 //     gh      ground heights under world positions (see below), for standing moving things on kerbs and
 //             bridge decks
 //   The ground comes from groundbake.bakeGround (flat colours by tile type while that module is missing,
@@ -227,7 +228,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
   const t1 = now();
   let items = [], lights = [], n = 0, made = 0, staticErr = null, under = null, bid = null;
   const local = new Map(), blds = [];      // building index -> local number; [b, x0, y0, x1, y1, base] per number
-  const live = { heads: [], xing: [] };
+  const live = { heads: [], xing: [], flags: [], fnt: [] };
   if (P.statics) {
     try { items = P.statics.staticItems(M, cx, cy, opt) || []; } catch (e) { staticErr = String((e && e.stack) || e); items = []; }
     // painter's order under the depth test: north to south, then west to east (ties go to the later one).
@@ -262,8 +263,10 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
     }
     for (const it of items) { // (once per item: the chunk its anchor is in)
       if (it.x < ox || it.x >= ox + CHUNK || it.y < oy || it.y >= oy + CHUNK) continue;
-      if (it.heads) for (let i = 0; i < it.heads.length; i++) live.heads.push(signalLenses(it, it.heads[i], i));
+      if (it.heads) for (const h of it.heads) live.heads.push(signalLenses(it, h));
       if (it.xing) live.xing.push(it.xing);
+      if (it.flag) live.flags.push(it.flag);
+      if (it.fnt) live.fnt.push(it.fnt);
     }
     if (typeof P.statics.staticLights === 'function') {
       try { lights = P.statics.staticLights(M, cx, cy, opt) || []; } catch (e) { staticErr = staticErr || String((e && e.message) || e); lights = []; }
@@ -276,27 +279,23 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
   return { g: G, under, blds, lights, gh, live, n, items: items.length, made, ms: { ground: t1 - t0, statics: t2 - t1 }, errors: groundErr || staticErr ? { ground: groundErr, statics: staticErr } : null };
 }
 
-// A signal head of a statics item as the host lights it: { x, y, z, node, edge, pi (the signal's prop, -1
-// none), nx, ny (the way its lenses face), L: [red, amber, green] lens centres [x, y, z] on the lit face }.
-// The lens layout follows the statics' models (statics.js signalModel / makeSpan): a mast-arm head's
-// lenses stack 7 px apart round the head's z on the model's +y face (rotated by the item's heading), 5 px
-// out from the arm line; a span-wire head's sit in a row 8 px apart on its +x face (the head drawn at its
-// angle + PI), 4 px below the head's z. A head that brings its own `lenses` ([[x, y, z] x 3]) is taken as is.
-export function signalLenses(it, h, i) {
+// A signal head of a statics item as the host lights it: { x, y, z, node, edge, pi, pi2 (the props holding it up:
+// the signal's pole, a span wire's two poles; -1 none), nx, ny (the way its lenses face), L: [red, amber, green]
+// lens centres [x, y, z] on the lit face }. The lens layout follows the statics' models (statics.js signalModel): a
+// mast-arm head's lenses stack 7 px apart round the head's z on the model's +y face (rotated by the item's
+// heading), 5 px out from the arm line. A head that brings its own `lenses` ([[x, y, z] x 3], nx, ny) is taken as
+// is (a span wire's: statics.js spanItem).
+export function signalLenses(it, h) {
   const r = it.recipe || {}, z = h.z || 0;
   let nx, ny, L;
   if (h.lenses) { L = h.lenses; nx = h.nx ?? 0; ny = h.ny ?? 1; }
-  else if (r.t === 'span') {
-    const a = (r.heads && r.heads[i] ? r.heads[i][2] : 0) + Math.PI, c = Math.cos(a), s = Math.sin(a);
-    nx = c; ny = s;
-    L = [0, 1, 2].map((k) => { const v = 8 * k - 8; return [h.x + c * 4 - s * v, h.y + s * 4 + c * v, z - 4]; });
-  } else {
+  else {
     const hd = r.hd || 0;
     nx = -Math.sin(hd); ny = Math.cos(hd);
     const x = h.x + nx * 5, y = h.y + ny * 5;
     L = [[x, y, z + 7], [x, y, z], [x, y, z - 7]];
   }
-  return { x: h.x, y: h.y, z, node: h.node, edge: h.edge, pi: it.pi ?? -1, nx, ny, L };
+  return { x: h.x, y: h.y, z, node: h.node, edge: h.edge, pi: h.pi ?? it.pi ?? -1, pi2: h.pi2 ?? -1, nx, ny, L };
 }
 
 // The ground height (world px) under world (X, Y): what moving things standing there are raised by.
