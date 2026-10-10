@@ -6667,3 +6667,53 @@ districts) live in the same modules as the build code, and a module loads whole.
 city from the server (or the browser's copy) and the city worker loads the generator only when it must build, so the
 page needs none of it. Splitting the runtime part of those modules from the build part takes the generator out of the
 page's code: about 150-190 KB off the 720. That split is the next wave's first job; the budget comes back down after it.
+
+## 2026-10-10 · The generator leaves the page: the map's runtime in `shared/mapcore.js`
+
+The ask (the entry above: "the page loads the whole city generator though it never runs it"): since this afternoon the
+page gets its city from the server or the browser's copy, and the city worker loads the generator only when it must
+build - but the page's own static imports still pulled the generator in, because the map's runtime (CityMap, the tile
+tables, DISTRICTS, the queries, mapSignature, cityFromData) lived in the same modules as the build code, and a module
+loads whole. Now the modules are split, the code moved as it was (nothing about the world changes):
+- **`shared/mapcore.js` (new): the map's runtime**, from `shared/map.js`: `CityMap` and its methods (with `EDGE_T`),
+  `ISLANDS`, the tile tables (`PED_BLOCK`, `CAR_BLOCK`, `BOAT_BLOCK`, `SWIM_BLOCK`, `CAR_SPAWN_BLOCK`, `WATER_T`),
+  `SURFACE`, `DISTRICTS` (and `WATER_D`, now exported: the generator uses it too), `WILD_STYLES`, `WILD_DISTRICTS`, the
+  queries `isSwimming`, `inHotSpring`, `nearestLand`, `isTurf`, `waterKind`, `cityData` / `cityFromData`,
+  `terrainAt`, the railway's rolling stock (`RAIL_GAUGE` .. `CROSSING_ARM`: `TRAIN_CARS`, `CONSIST`, `TRAIN_LEN`, the
+  seats, `MAIL_BOX`...), `railAt`, `BREAKABLE` / `HEAVY_PROPS`, `SEA_ISLES` / `wildBiome`, `mapSignature`.
+  `shared/map.js` keeps the generator, imports these back and re-exports them all (`export * from './mapcore.js'`), so
+  the server, the tools and the tests that import from map.js work unchanged.
+- **`shared/layoutcore.js` (new):** the zones `Z` and the contour tracer `contours` from `shared/citylayout.js` (which
+  re-exports them): the shore's lines (`client/render/shore.js`) and the ground bake read them.
+- **`shared/worldmask-dims.js` (new):** the concept picture's size and terrain cell (`MASK_W`, `MASK_H`,
+  `TERRAIN_CELL`), which `terrainAt` reads - without the picture (`worldmask.js`, 31 KB gzipped, re-exports them;
+  `tools/build-worldmask.py` writes both files).
+- **The importers:** every client file that read the map (`main.js`, `devtp.js`, `hud.js`, `mapwaypoints.js`,
+  `phone.js`, `worldmap.js`, `render/buildings.js`, `fireflies.js`, `flora/index.js`, `roads.js`, `shore.js`,
+  `tiles.js`, `trains.js`, `art2/streetgrit.js`, `art2/game/groundbake.js`, `host.js`, `standin.js`, `statics.js`, and
+  the bake worker's dynamic import in `art2/game/worker.js`) and the shared runtime modules (`alleys.js`, `covers.js`,
+  `physics.js`, `smash.js`, `wheelpath.js`, `mapwindow.js`) import `mapcore.js` / `layoutcore.js` instead.
+- **When the page builds the city itself** (`?cityonpage`, no worker, the worker failing, a kept or downloaded city that
+  isn't the server's), `client/main.js` loads the generator first (`loadGenerator`): the welcome and what follows wait
+  for it (`holdForGenerator`, as they wait for the worker's city), then `setupWorld` builds with it. The paused tour's
+  `openTutorial` loads it the same way when there's no city yet. The practice worker and `client/worldgen.js` import
+  the generator themselves, as before.
+- **The numbers** (`node tools/perf.mjs`, gzipped): the page 89 files, 721 KB -> **80 files, 466 KB**; a bake worker
+  79 files, 989 KB -> **69 files, 733 KB**; the renderer 25, 361 -> 26, 362 (`shared/foraging.js` counts with the
+  renderer now: it was in the page through the generator); the city worker (with the generator it loads when it must
+  build) 28, 328 -> 31, 330 (the same code in three more files).
+- **The budgets** (`tools/perf.mjs`): the page 722 -> **490 KB**, 89 -> 84 files (about 1.05x what it measures); a bake
+  worker 1000 -> **770 KB**, 80 -> 73 files; the city worker 330 -> 335 KB and 28 -> 32 files - a raise, because the
+  split puts the same code in three more files (330 KB measured, at its old budget, before anyone adds anything).
+- **The world, bit-identical:** before and after, a hash of every per-tile layer, the JSON of every list,
+  `mapSignature` (dytn7k) and the islands' boxes came out the same; version.json's `world` stays 6b6e16fdef9f. The art
+  hash changes once (the bake's code imports the runtime now): browsers re-bake their kept chunks once - and from now on
+  a change to the generator's code alone no longer counts as an art change (the world's hash still does).
+- **Tests:** `test/perf.test.js` - a guard: no generator module (`map.js`, `naturesites.js`, `worldmask.js`,
+  `countryside.js`, `islands.js`, `metro.js`, `citylayout.js`, the World v3 builders) in the page's, the renderer's or a
+  bake worker's code, each reads the map through `mapcore.js`, and the city worker still loads the generator; the
+  budgets, the world and art hashes pass. `test/mapwindow.test.js`: the whole-frame list names `mapcore.js` for
+  `tileAt`, and the generator's guard reads map.js from the generator's comment to the end. `test/dmath.test.js`
+  passes (the new modules compute nothing with Math.sin & co. as they load). Two headless playtests, 0 page errors: the
+  page got its city from the worker (signature dytn7k, no generator module fetched by the page), and with
+  `?cityonpage` the page loaded the generator and built the same city (dytn7k).
