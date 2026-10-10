@@ -4,7 +4,7 @@
 // the kickbacks too; never random) and the score card (ten frames, strikes and spares, the tenth's bonus balls).
 // Numbers in px; one tile is a metre. A lane is drawn and measured from the bowler's side: u across the lane (+ to
 // the bowler's right), v down it from the foul line toward the pins.
-import { TILE, MAP_W } from './constants.js';
+import { TILE } from './constants.js';
 
 export const BOWL = {
   LANES: 8, PITCH: 44,          // eight lanes side by side, 44 px apart (capping 2 + gutter 5 + bed 30 + gutter 5 + capping 2)
@@ -243,6 +243,6 @@ export function buildBowlingAlley(m, { T, DISTRICTS }) {
   b.walkIn = { south, units: [unit], x0, x1, y0, y1 };
   b.business = 'bowling';
   m.walkIns.push(b.id);
-  const d = m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
+  const d = m.dist[m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))];
   m.bowling = { b: b.id, poi: p.id, name: p.label, district: DISTRICTS[d] ? DISTRICTS[d].name : '', south, lanes: alleyLanes(b.walkIn), counter: { x: p.x, y: p.y } };
 }

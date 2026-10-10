@@ -108,8 +108,8 @@ export function wayTo(m, a, b, avoid = null) {
   if (BOAT_BLOCK[m.tileAt(ax, ay)] || BOAT_BLOCK[m.tileAt(bx, by)]) return null;
   let mg = MARGIN, x0, y0, w, h;
   for (;;) {
-    x0 = Math.max(0, Math.min(ax, bx) - mg); y0 = Math.max(0, Math.min(ay, by) - mg);
-    w = Math.min(W - 1, Math.max(ax, bx) + mg) - x0 + 1; h = Math.min(H - 1, Math.max(ay, by) + mg) - y0 + 1;
+    x0 = Math.max(m.x0, Math.min(ax, bx) - mg); y0 = Math.max(m.y0, Math.min(ay, by) - mg);
+    w = Math.min(m.x0 + W - 1, Math.max(ax, bx) + mg) - x0 + 1; h = Math.min(m.y0 + H - 1, Math.max(ay, by) + mg) - y0 + 1;
     if (w * h <= MAX_CELLS) break;
     if ((mg -= 4) < 2) return null;
   }
@@ -131,7 +131,7 @@ export function wayTo(m, a, b, avoid = null) {
     const R = p.r + HULL;
     for (let dy = -R; dy <= R; dy += 8) for (let dx = -R; dx <= R; dx += 8) if (dx * dx + dy * dy <= R * R) mark(p.x + dx, p.y + dy);
   }
-  const wet = (tx, ty) => tx >= 0 && ty >= 0 && tx < W && ty < H && !BOAT_BLOCK[m.tiles[ty * W + tx]] && !(tx >= x0 && ty >= y0 && tx < x0 + w && ty < y0 + h && blk[cell(tx, ty)]);
+  const wet = (tx, ty) => m.inside(tx, ty) && !BOAT_BLOCK[m.tiles[m.idx(tx, ty)]] && !(tx >= x0 && ty >= y0 && tx < x0 + w && ty < y0 + h && blk[cell(tx, ty)]);
   const shore = (tx, ty) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !wet(tx + dx, ty + dy)) return true; return false; };
   const hcost = (tx, ty) => { const dx = Math.abs(tx - bx), dy = Math.abs(ty - by); return (dx + dy - 0.586 * Math.min(dx, dy)) * 1.2; };   // (a little greedy)
   let n = 0;

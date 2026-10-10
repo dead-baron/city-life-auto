@@ -75,7 +75,7 @@ function vnoise(x, y, cell, s) {
 // A region: a box of cells in tiles (x0, y0, w, h), everything ROCK until carved.
 function region(x0, y0, x1, y1) {
   x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
-  x1 = Math.min(MAP_W - 1, Math.ceil(x1)); y1 = Math.min(MAP_H - 1, Math.ceil(y1));
+  x1 = Math.min(MAP_W - 1, Math.ceil(x1)); y1 = Math.min(MAP_H - 1, Math.ceil(y1));   // (MAP_W, MAP_H: the world's whole frame - the underground lies under all of it)
   const w = Math.max(1, x1 - x0 + 1), h = Math.max(1, y1 - y0 + 1);
   return { x0, y0, w, h, c: new Uint8Array(w * h) };
 }
@@ -402,7 +402,9 @@ function physMap(L) {
     return T.WALL;
   };
   return {
-    w: MAP_W, h: MAP_H, ug: true, solidProps: new Map(), levels: null, lvl0Block: null,
+    // (the underground's physics map spans the world's whole frame: MAP_W x MAP_H, origin 0, 0)
+    x0: 0, y0: 0, w: MAP_W, h: MAP_H, ug: true, solidProps: new Map(), levels: null, lvl0Block: null,
+    idx: (tx, ty) => ty * MAP_W + tx, row: (ty) => ty * MAP_W, col: (tx) => tx, inside: (tx, ty) => tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H,
     tileAt, tileAtPx: (x, y) => tileAt(Math.floor(x / TILE), Math.floor(y / TILE)),
   };
 }

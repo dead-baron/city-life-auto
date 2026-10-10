@@ -2771,7 +2771,7 @@ function prepFrame(dt) {
   {
     // keep the camera over the world: the sea runs on past the map's edge as far as you can go (shared/border.js),
     // so it follows you out there; never past where nothing can go
-    const WW = MAP_W * TILE, WH = MAP_H * TILE;
+    const WW = MAP_W * TILE, WH = MAP_H * TILE;   // (the world's whole frame, as below: its edge, its chunk grid)
     S.cam.x = Math.max(-EDGE_OUT, Math.min(WW + EDGE_OUT, S.cam.x));
     S.cam.y = Math.max(-EDGE_OUT, Math.min(WH + EDGE_OUT, S.cam.y));
   }

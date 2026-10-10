@@ -438,8 +438,8 @@ function standOk(world, v, x, y, a, others) {
   for (const e of others) if (gapTo(e.x, e.y, x, y, a, hl, hw) < CLEAR) return false;
   for (const [lx, ly] of [[0, 0], [hl, 0], [-hl, 0], [hl, hw], [hl, -hw], [-hl, hw], [-hl, -hw], [0, hw], [0, -hw]]) {
     const px = x + c * lx - s * ly, py = y + s * lx + c * ly, tx = Math.floor(px / 32), ty = Math.floor(py / 32), t = m.tileAt(tx, ty);
-    if (CAR_BLOCK[t] || WATER_T[t] || (m.lvl0Block && tx >= 0 && ty >= 0 && tx < m.w && ty < m.h && m.lvl0Block[ty * m.w + tx] === 1)) return false;
-    const props = m.solidProps.get(ty * m.w + tx);
+    if (CAR_BLOCK[t] || WATER_T[t] || (m.lvl0Block && m.inside(tx, ty) && m.lvl0Block[m.idx(tx, ty)] === 1)) return false;
+    const props = m.solidProps.get(m.idx(tx, ty));
     if (props) for (const p of props) if (!p.off && circleVsObb(p.x, p.y, p.r, x, y, a, hl, hw)) return false;
   }
   // (a car going by is no reason not to stop there: one standing there is)

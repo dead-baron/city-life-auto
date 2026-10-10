@@ -25,7 +25,7 @@ export function breakGrid(map) {
   const g = new Map();
   map.props.forEach((p, i) => {
     if (!BREAKABLE.has(p.t)) return;
-    const k = Math.floor(p.y / TILE) * map.w + Math.floor(p.x / TILE);
+    const k = map.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE));
     (g.get(k) || g.set(k, []).get(k)).push(i);
   });
   map.breakGrid = g;
@@ -51,7 +51,7 @@ export function smashProps(map, s, def, isBroken, onBreak) {
   const t0x = Math.floor((bb.minX - 16) / TILE), t1x = Math.floor((bb.maxX + 16) / TILE);
   const t0y = Math.floor((bb.minY - 16) / TILE), t1y = Math.floor((bb.maxY + 16) / TILE);
   for (let ty = t0y; ty <= t1y; ty++) for (let tx = t0x; tx <= t1x; tx++) {
-    const list = g.get(ty * map.w + tx);
+    const list = g.get(map.idx(tx, ty));
     if (!list) continue;
     for (const i of list) {
       if (isBroken(i)) continue;

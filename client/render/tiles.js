@@ -2,7 +2,7 @@
 // (LRU-cached) using textures and building lots cut from the concept art: asphalt, worn
 // asphalt, concrete/brick/slate sidewalks, water; building prefabs; road markings, curbs,
 // crosswalks, parking stalls and low street props.
-import { T, TILE, CHUNK_PX, MAP_W, MAP_H } from '../../shared/constants.js';
+import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
 import { hash2, mulberry32 } from '../../shared/rng.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
@@ -91,7 +91,7 @@ export class GroundCache {
     const F = flora() && flora().m === m ? flora() : null;
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
       const tx = tx0 + i, ty = ty0 + j;
-      if (tx >= MAP_W || ty >= MAP_H) { g.fillStyle = '#0b0d14'; g.fillRect(i * TILE, j * TILE, TILE, TILE); continue; }
+      if (!m.inside(tx, ty)) { g.fillStyle = '#0b0d14'; g.fillRect(i * TILE, j * TILE, TILE, TILE); continue; }
       drawTile(g, m, tx, ty, i * TILE, j * TILE);
     }
     if (F) F.paintGround(g, cx, cy); // procedural grass and tilled fields (render/flora)
@@ -452,7 +452,7 @@ function speckle(g, x, y, base, tx, ty, n, alpha, size = 2) {
 
 function drawTile(g, m, tx, ty, x, y) {
   const t = m.tileAt(tx, ty);
-  const d = DISTRICTS[m.dist[ty * MAP_W + tx]];
+  const d = DISTRICTS[m.dist[m.idx(tx, ty)]];
   switch (t) {
     case T.ROAD: {
       tex(g, 'asphalt', tx, ty, x, y) || (g.fillStyle = '#3a3b40', g.fillRect(x, y, TILE, TILE)); // wear is scattered over it (roads.js)

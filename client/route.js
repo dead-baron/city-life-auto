@@ -7,11 +7,12 @@
 //   route: { pts: [{x, y}] from you to the waypoint, len (px) }
 // update() works the route out again when the waypoint or the way of travel changes, when you've strayed off it,
 // and otherwise every few seconds - never more often than every 400 ms.
+import { MAP_W } from '../shared/constants.js';
 const SEG_CELL = 1024;
 
 export function createRouter(map) {
   // the roads' segments in a coarse grid, for the nearest-road search
-  const cells = new Map(), cols = Math.ceil((map.w * 32) / SEG_CELL) + 1;
+  const cells = new Map(), cols = Math.ceil((MAP_W * 32) / SEG_CELL) + 1;   // (the world's whole frame: the road list is the world's)
   for (const e of map.edges || []) {
     for (let i = 1; i < e.pts.length; i++) {
       const a = e.pts[i - 1], b = e.pts[i];

@@ -14,19 +14,20 @@
 // out of sight of everyone outside it and the other way round; two people in the same tunnel see each other.
 // The client draws the hill over the bore, the portals and, for the tunnel you're in, its inside (client/tunnels.js).
 // Made while the city is built (generateCity, deterministic: plain arithmetic, nothing at load time).
-import { T, TILE, MAP_W, MAP_H } from './constants.js';
+import { T, TILE } from './constants.js';
 
 export const TUNNEL_WALL = 40;    // px of rock either side of the bore (its walls)
 export const BARRIER_DEPTH = 40;  // px of the bore a closed mouth's barrier takes, just inside the mouth
 
-// the cover byte under a world point: the tunnel's id + 1, or 0 (no cover layer: 0)
-export function coverAtPx(cover, x, y) {
+// the cover byte under a world point of map m: the tunnel's id + 1, or 0 (no cover layer: 0)
+export function coverAtPx(m, x, y) {
+  const cover = m && m.cover;
   if (!cover) return 0;
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-  return tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H ? 0 : cover[ty * MAP_W + tx];
+  return !m.inside(tx, ty) ? 0 : cover[m.idx(tx, ty)];
 }
 // Is (x, y) under cover - in a tunnel? Its id + 1, or 0.
-export function underCover(m, x, y) { return coverAtPx(m && m.cover, x, y); }
+export function underCover(m, x, y) { return coverAtPx(m, x, y); }
 // the tunnel at (x, y), or null
 export function tunnelAt(m, x, y) { const c = underCover(m, x, y); return c && m.tunnels ? m.tunnels[c - 1] || null : null; }
 // The tunnel mouth nearest a point: { tunnel, mouth, d } or null.
@@ -68,7 +69,7 @@ function pathOf(m, spec) { return spec.edge === 'rail' ? m.rail && m.rail.pts : 
 // the road's by default), closed ('a': the mouth at s0, 'b': the one at s1) }]. Sets m.cover and m.tunnels (also when
 // there are none, so every map has them). Returns m.tunnels.
 export function buildTunnels(m, specs) {
-  m.cover = new Uint8Array(MAP_W * MAP_H);
+  m.cover = new Uint8Array(m.w * m.h);
   m.tunnels = [];
   for (const spec of specs || []) addTunnel(m, spec);
   return m.tunnels;
@@ -76,7 +77,7 @@ export function buildTunnels(m, specs) {
 export function addTunnel(m, spec) {
   const raw = pathOf(m, spec);
   if (!raw || raw.length < 2 || m.tunnels.length >= 255) return null;
-  if (!m.cover) m.cover = new Uint8Array(MAP_W * MAP_H);
+  if (!m.cover) m.cover = new Uint8Array(m.w * m.h);
   const P = arcs(raw), L = P[P.length - 1].s;
   const s0 = Math.max(0, Math.min(spec.s0, spec.s1)), s1 = Math.min(L, Math.max(spec.s0, spec.s1));
   if (s1 - s0 < 64) return null;
@@ -90,8 +91,8 @@ export function addTunnel(m, spec) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of S) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
   const pad = hw + TUNNEL_WALL + TILE;
-  const tx0 = Math.max(0, Math.floor((x0 - pad) / TILE)), ty0 = Math.max(0, Math.floor((y0 - pad) / TILE));
-  const tx1 = Math.min(MAP_W - 1, Math.floor((x1 + pad) / TILE)), ty1 = Math.min(MAP_H - 1, Math.floor((y1 + pad) / TILE));
+  const tx0 = Math.max(m.x0, Math.floor((x0 - pad) / TILE)), ty0 = Math.max(m.y0, Math.floor((y0 - pad) / TILE));
+  const tx1 = Math.min(m.x0 + m.w - 1, Math.floor((x1 + pad) / TILE)), ty1 = Math.min(m.y0 + m.h - 1, Math.floor((y1 + pad) / TILE));
   const closed = spec.closed === 'a' || spec.closed === 'b' ? spec.closed : null;
   const walls = [];
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
@@ -107,7 +108,7 @@ export function addTunnel(m, spec) {
       if (d < bd) { bd = d; bs = a.s + (b.s - a.s) * f; inside = !past; }
     }
     if (!inside) continue;
-    const i = ty * MAP_W + tx;
+    const i = m.idx(tx, ty);
     if (bd <= hw) {
       if (!m.cover[i]) m.cover[i] = mark;
       // a closed mouth: the barrier across the bore just inside it
@@ -134,7 +135,7 @@ export function spurTunnels(m) {
   if (!cls) return [];
   const mtn = (x, y) => {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    return tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H && m.dist[ty * MAP_W + tx] === PEAKS && cls(tx, ty) === MOUNTAIN;
+    return m.inside(tx, ty) && m.dist[m.idx(tx, ty)] === PEAKS && cls(tx, ty) === MOUNTAIN;
   };
   let best = null;
   for (const e of m.edges || []) {

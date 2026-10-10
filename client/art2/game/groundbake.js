@@ -46,7 +46,7 @@ import { MAT, ramp } from '../palette.js';
 import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, vnc, worley, shadeStep as sd } from '../ground.js';
 import { edgeCovers } from '../../../shared/covers.js';
 import { seaPx, stillPx, WP, WATER } from '../water.js';
-import { T, TILE, MAP_W, MAP_H } from '../../../shared/constants.js';
+import { T, TILE } from '../../../shared/constants.js';
 import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/map.js';
 import { Z } from '../../../shared/citylayout.js';
 import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roads.js';
@@ -166,8 +166,8 @@ export function* groundSteps(M, cx, cy, opt = {}) {
 // report their tiles' 3.
 export function groundHeight(M, x, y, deckZ = 6) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return 0;
-  const t = M.tiles[ty * MAP_W + tx];
+  if (!M.inside(tx, ty)) return 0;
+  const t = M.tiles[M.idx(tx, ty)];
   return t === T.SIDEWALK || t === T.PLAZA ? 3 : t === T.DOCK ? 4 : t === T.BRIDGE ? deckZ : 0;
 }
 
@@ -215,10 +215,10 @@ function tileFacts(C) {
   const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
   const tracks = (M.tracks || []).filter((r) => r.bb[2] >= TX0 * TILE - 64 && r.bb[0] <= (TX0 + TN) * TILE + 64 && r.bb[3] >= TY0 * TILE - 64 && r.bb[1] <= (TY0 + TN) * TILE + 64);   // dirt tracks off-road (Red Rock Canyon)
   const onTrack = (X, Y) => tracks.some((r) => { if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
-  for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
-    const tx = TX0 + i, ty = TY0 + j, k = j * TN + i;
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
-    const g = ty * MAP_W + tx, t = M.tiles[g];
+  for (let j = 0; j < TN; j++) { const ty = TY0 + j, row = M.row(ty), rowIn = ty >= M.y0 && ty < M.y0 + M.h; for (let i = 0; i < TN; i++) {
+    const tx = TX0 + i, k = j * TN + i;
+    if (!rowIn || tx < M.x0 || tx >= M.x0 + M.w) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
+    const g = row + M.col(tx), t = M.tiles[g];
     b.tt[k] = t; b.td[k] = M.dist[g]; b.tz[k] = M.zone[g]; b.tdeck[k] = M.deck[g]; b.tres[k] = M.reserve[g]; b.tbld[k] = M.bld[g];
     b.tb[k] = M.land[g] ? wildBiome(M.dist[g], terrainAt(cls, cw, tx, ty)) : 0;
     b.tw[k] = t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK ? 1 : 0;
@@ -288,7 +288,7 @@ function tileFacts(C) {
     else if (t === T.COUNTER) m = M_.COUNTER;
     else m = M_.FOUND;
     b.tm[k] = m;
-  }
+  } }
   // blurred wetness (rounds the coast's tile steps), deep-water fraction, sandy shores
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const k = j * TN + i;
@@ -334,10 +334,10 @@ function tileFacts(C) {
 // true when a run of this tile type through (tx, ty) is longer along x than along y
 function runAxis(M, tx, ty, t) {
   let h = 0, v = 0;
-  for (let d = 1; d < 12 && M.tiles[ty * MAP_W + tx + d] === t; d++) h++;
-  for (let d = 1; d < 12 && M.tiles[ty * MAP_W + tx - d] === t; d++) h++;
-  for (let d = 1; d < 12 && M.tiles[(ty + d) * MAP_W + tx] === t; d++) v++;
-  for (let d = 1; d < 12 && M.tiles[(ty - d) * MAP_W + tx] === t; d++) v++;
+  for (let d = 1; d < 12 && M.tiles[M.idx(tx + d, ty)] === t; d++) h++;
+  for (let d = 1; d < 12 && M.tiles[M.idx(tx - d, ty)] === t; d++) h++;
+  for (let d = 1; d < 12 && M.tiles[M.idx(tx, ty + d)] === t; d++) v++;
+  for (let d = 1; d < 12 && M.tiles[M.idx(tx, ty - d)] === t; d++) v++;
   return h >= v;
 }
 // the pavement of a district: concrete slabs (cracked where poor), stone in rich districts, cobbles in the old town,
@@ -354,8 +354,8 @@ const PROBE = Array.from({ length: 16 }, (_, k) => [Math.cos(k * Math.PI / 8), M
 function landDist(M, tx, ty) {
   for (let r = 1; r <= 18; r++) for (const [dx, dy] of PROBE) {
     const x = Math.round(tx + dx * r), y = Math.round(ty + dy * r);
-    if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) continue;
-    const t = M.tiles[y * MAP_W + x];
+    if (!M.inside(x, y)) continue;
+    const t = M.tiles[M.idx(x, y)];
     if (t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE) return r;
   }
   return 18;
@@ -383,7 +383,7 @@ function edgeInfo(M, e) {
     let s0 = -1;
     for (let s = 0; s <= L + 8; s += 8) {
       const p = pointOn(P, Math.min(s, L)), tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
-      const t = tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H ? M.tiles[ty * MAP_W + tx] : T.DEEP;
+      const t = M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : T.DEEP;
       const w = s <= L && (t === T.BRIDGE || t === T.WATER || t === T.DEEP);
       if (w && s0 < 0) s0 = s;
       if (!w && s0 >= 0) { wet.push([Math.max(0, s0 - 26), Math.min(L, s + 18)]); s0 = -1; }
@@ -463,7 +463,7 @@ function lots(C) {
     for (let py = Math.max(0, Math.floor(y0 - WY0)); py <= Math.min(WN - 1, Math.ceil(y1 - WY0)); py++)
       for (let px = Math.max(0, Math.floor(x0 - WX0)); px <= Math.min(WN - 1, Math.ceil(x1 - WX0)); px++) { const i = py * WN + px; if (!test || test(i, WX0 + px, WY0 + py)) b.ex[i] |= bit; }
   };
-  const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H ? T.WALL : M.tiles[ty * MAP_W + tx]; };
+  const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return !M.inside(tx, ty) ? T.WALL : M.tiles[M.idx(tx, ty)]; };
   for (const h of M.homes || []) {
     const g = h.garage;
     if (!g || /apart|apt/.test(h.kind) || !near(g.x, g.y, 400)) continue;
@@ -800,7 +800,7 @@ function surf(C, G) {
     for (let x = 0; x < CHUNK; x++) {
       const dd = b.dist[r + x], m = b.mat[r + x], gi = y * CHUNK + x;
       if (m === M_.RIVER && flow && (fl[gi] & F_WATER) && (fl[gi] & F_GROUND)) {
-        const f = flow.get(Math.floor((C.Y0 + y) / TILE) * MAP_W + Math.floor((C.X0 + x) / TILE));
+        const f = flow.get(C.M.idx(Math.floor((C.X0 + x) / TILE), Math.floor((C.Y0 + y) / TILE)));
         if (f !== undefined) { col[gi * 4 + 3] = 239 + f; continue; }
       }
       if (dd >= 470) continue;
@@ -1077,7 +1077,7 @@ function crossings(C, G) {
   const xs = zebraCrossings(M);
   for (const xc of xs.values()) {
     if (Math.abs(xc.x - C.X0 - CHUNK / 2) > CHUNK / 2 + xc.hw + 40 || Math.abs(xc.y - C.Y0 - CHUNK / 2) > CHUNK / 2 + xc.hw + 40) continue;
-    const HL = 24, HW = xc.hw + 3, ti = Math.floor(xc.y / TILE) * MAP_W + Math.floor(xc.x / TILE), lux = (DISTRICTS[M.dist[ti]] || DISTRICTS[1]).tier === 'lux';
+    const HL = 24, HW = xc.hw + 3, ti = M.idx(Math.floor(xc.x / TILE), Math.floor(xc.y / TILE)), lux = (DISTRICTS[M.dist[ti]] || DISTRICTS[1]).tier === 'lux';
     rect(C, xc.x, xc.y, Math.cos(xc.a), Math.sin(xc.a), HL, HW, (gi, u, w, gx, gy, i) => {
       const m = b.mat[i];
       if (m !== M_.ROAD && m !== M_.ROADOLD) return;

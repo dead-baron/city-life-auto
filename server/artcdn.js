@@ -23,7 +23,7 @@ import { cpus } from 'node:os';
 import { MAP_W, MAP_H, TILE } from '../shared/constants.js';
 
 const CHUNK = 768;                                // (client/art2/game/chunkbake.js CHUNK: the art's chunks, not the net's)
-const CX = Math.ceil((MAP_W * TILE) / CHUNK), CY = Math.ceil((MAP_H * TILE) / CHUNK);
+const CX = Math.ceil((MAP_W * TILE) / CHUNK), CY = Math.ceil((MAP_H * TILE) / CHUNK);   // (the world's whole frame: the art CDN's chunk grid)
 const ASK_MAX = 400;                              // chunks asked for and waiting, at most (the oldest go)
 const FOCUS_R = 4;                                // chunks round each player baked first after the asks (a 9 x 9 square)
 const FOCUS_Q_MS = 10 * 60000;                    // a quality pages asked for in the last ten minutes is baked round players too

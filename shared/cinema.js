@@ -3,7 +3,7 @@
 // stepped rows of red seats facing a big screen on the back wall. Buy a ticket (and popcorn) at the counter, walk into a
 // screen, sit in a seat and watch a short invented film (server/systems/cinema.js; drawn by client/cinema.js). Shared and
 // deterministic: the layout, the films and their running time. Numbers in px; one tile is a metre.
-import { TILE, MAP_W } from './constants.js';
+import { TILE } from './constants.js';
 
 export const CINE = {
   NAME: 'The Grand Theatre',
@@ -86,6 +86,6 @@ export function buildCinema(m, { T, DISTRICTS }) {
   b.walkIn = { south, units: [unit], x0, x1, y0, y1 };
   b.business = 'cinema';
   m.walkIns.push(b.id);
-  const d = m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
+  const d = m.dist[m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))];
   m.cinema = { b: b.id, poi: p.id, name: p.label, district: DISTRICTS[d] ? DISTRICTS[d].name : '', south, counter: { x: p.x, y: p.y }, rooms: L.rooms, cc: L.cc, wallRow: L.wallRow, counterRow: L.counterRow, ca: L.ca, cb: L.cb };
 }

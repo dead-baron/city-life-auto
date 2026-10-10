@@ -123,7 +123,7 @@ export function wheelPath(roll, def, x0, y0, a0, map, out = null) {
       else y = ny;
       const tx = Math.floor(x / 32), ty = Math.floor(y / 32);
       for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-        const arr = map.solidProps && map.solidProps.get((ty + oy) * map.w + tx + ox);
+        const arr = map.solidProps && map.solidProps.get(map.idx(tx + ox, ty + oy));
         if (arr) for (const p of arr) {
           if (p.off) continue;
           const ex = x - p.x, ey = y - p.y, d2 = ex * ex + ey * ey, R2 = p.r + rr;

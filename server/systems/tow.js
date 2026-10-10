@@ -191,7 +191,7 @@ function stripOk(world, v, x, y, ux, uy, off, a, b, w) {
   for (let t = a; t <= b; t += 16) for (const o of [-w / 2 + 4, 0, w / 2 - 4]) {
     const px = x + ux * t + nx * (off + o), py = y + uy * t + ny * (off + o), tl = m.tileAtPx(px, py);
     if (tl !== T.ROAD && tl !== T.BRIDGE) return false;
-    const arr = m.solidProps.get(Math.floor(py / 32) * m.w + Math.floor(px / 32));
+    const arr = m.solidProps.get(m.idx(Math.floor(px / 32), Math.floor(py / 32)));
     if (arr) for (const p of arr) if (!p.off && Math.hypot(p.x - px, p.y - py) < p.r + 6) return false;
   }
   const cx = x + ux * (a + b) / 2 + nx * off, cy = y + uy * (a + b) / 2 + ny * off, hl = (b - a) / 2;

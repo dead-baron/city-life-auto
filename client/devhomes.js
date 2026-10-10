@@ -15,11 +15,11 @@ let land = null;   // the land as a little picture (one pixel per 4 tiles), draw
 
 function landOf(map) {
   if (land && land.map === map) return land.cv;
-  const s = 4, w = Math.ceil(MAP_W / s), h = Math.ceil(MAP_H / s), cv = document.createElement('canvas');
+  const s = 4, w = Math.ceil(MAP_W / s), h = Math.ceil(MAP_H / s), cv = document.createElement('canvas');   // (the world's whole frame: the picture is the world's)
   cv.width = w; cv.height = h;
   const g = cv.getContext('2d'), img = g.createImageData(w, h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const t = map.tiles[(y * s) * MAP_W + x * s], o = (y * w + x) * 4;
+    const t = map.inside(x * s, y * s) ? map.tiles[map.idx(x * s, y * s)] : T.DEEP, o = (y * w + x) * 4;
     const c = t === T.WATER || t === T.DEEP ? [11, 24, 48] : t === T.ROAD || t === T.BRIDGE ? [70, 72, 80] : t === T.BUILDING || t === T.WALL ? [52, 54, 62] : [34, 58, 38];
     img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
   }

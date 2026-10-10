@@ -68,7 +68,7 @@ function line(g, pts) {
   for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
 }
 
-const distAt = (m, x, y) => DISTRICTS[m.dist[Math.min(m.h - 1, Math.max(0, Math.floor(y / TILE))) * m.w + Math.min(m.w - 1, Math.max(0, Math.floor(x / TILE)))]];
+const distAt = (m, x, y) => DISTRICTS[m.dist[m.idx(Math.min(m.x0 + m.w - 1, Math.max(m.x0, Math.floor(x / TILE))), Math.min(m.y0 + m.h - 1, Math.max(m.y0, Math.floor(y / TILE))))]];
 
 // The stretches of a road that are out over water (with a little run onto each bank), as
 // polylines - where it gets a bridge deck.

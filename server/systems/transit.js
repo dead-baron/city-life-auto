@@ -16,7 +16,7 @@
 // waits there, interact boards it, free (a passenger seat; the camera rides along). Get off with the vehicle key
 // while it waits at a stop (on the move you bail out, as from any vehicle). A bus that is taken or wrecked leaves its
 // line; a new one comes into service a minute later, out of sight.
-import { K, T, MAP_W, MAP_H } from '../../shared/constants.js';
+import { K, T } from '../../shared/constants.js';
 import { lanePath, exitsFrom, nearestEdge } from '../../shared/roads.js';
 import { project, pointAt } from '../../shared/geom.js';
 import { BUS_DWELL_S, TAXI_FLAG, TAXI_PER_KM, TAXI_WAIT_S, TAXI_REFUSE_STARS } from '../../shared/rules.js';
@@ -83,8 +83,8 @@ function terminalStop(world, R, ok = () => true) {
     let wet = 0;
     for (let i = 0; i <= n; i++) {
       const tx = Math.floor((x0 + ((x1 - x0) * i) / n) / 32), ty = Math.floor((y0 + ((y1 - y0) * i) / n) / 32);
-      if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
-      const t = m.tiles[ty * MAP_W + tx];
+      if (!m.inside(tx, ty)) return false;
+      const t = m.tiles[m.idx(tx, ty)];
       if ((t === T.WATER || t === T.DEEP) && (wet += 24) > 320) return false;
     }
     return true;

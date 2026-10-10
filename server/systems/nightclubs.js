@@ -61,7 +61,7 @@ function standable(m, x, y) {
   if (!STAND.has(m.tileAtPx(x, y))) return false;
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-    const arr = m.solidProps.get((ty + oy) * m.w + tx + ox);
+    const arr = m.solidProps.get(m.idx(tx + ox, ty + oy));
     if (arr) for (const p of arr) if (!p.off && Math.hypot(p.x - x, p.y - y) < p.r + 12) return false;
   }
   return true;

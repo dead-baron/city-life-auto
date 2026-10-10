@@ -1,7 +1,7 @@
 // Pedestrian AI (GDD §10): demographic spawning around players, sidewalk wandering,
 // reflex dive-roll evasion, fight-or-flight temperaments, syndicate gangs in turf,
 // passed-out boozers, rain umbrellas, and the Snatch-and-Grab street event (§12).
-import { K, T, WEATHER, TILE, MAP_W, MAP_H } from '../../shared/constants.js';
+import { K, T, WEATHER, TILE } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { pedStep } from '../../shared/physics.js';
 import { isTurf, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js';
@@ -82,8 +82,8 @@ export function seek(ped, tx, ty, run = false, speedScale = 1) {
 const DOOR_OFF = 1.6 * TILE;
 export function walkInAt(m, x, y) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H || !m.bld) return null;
-  const b = m.buildings[m.bld[ty * MAP_W + tx]], wi = b && b.walkIn;
+  if (!m.inside(tx, ty) || !m.bld) return null;
+  const b = m.buildings[m.bld[m.idx(tx, ty)]], wi = b && b.walkIn;
   if (!wi || tx < wi.x0 || tx > wi.x1 || ty < wi.y0 - 1 || ty > wi.y1 + 1) return null;   // (the floor, and the doorway)
   let u = null, bd = Infinity;
   for (const q of wi.units) { const d = tx < q.x0 ? q.x0 - tx : tx > q.x1 ? tx - q.x1 : 0; if (d < bd) { bd = d; u = q; } }
@@ -178,7 +178,7 @@ export function update(world, dt) {
     if (isSwimming(world.map, ped)) {
       if (!n.shore || now > (n.shoreAt || 0)) {
         // no headway in the last couple of seconds (a sea wall, a moored boat): try another bit of shore
-        if (n.shore && n.swimFrom && Math.hypot(ped.x - n.swimFrom.x, ped.y - n.swimFrom.y) < 12) (n.badShore ||= new Set()).add(Math.floor(n.shore.y / 32) * world.map.w + Math.floor(n.shore.x / 32));
+        if (n.shore && n.swimFrom && Math.hypot(ped.x - n.swimFrom.x, ped.y - n.swimFrom.y) < 12) (n.badShore ||= new Set()).add(world.map.idx(Math.floor(n.shore.x / 32), Math.floor(n.shore.y / 32)));
         n.swimFrom = { x: ped.x, y: ped.y };
         n.shore = nearestLand(world.map, ped.x, ped.y, 24, n.badShore);
         n.shoreAt = now + 2;
@@ -486,7 +486,7 @@ export function onGunfire(world, x, y, shooter, radius = 360) {
     const n = e.npc;
     if (n.role === 'gang') {
       if (gangwar.isCopPed(shooter) && n.state !== 'fight') { gangwar.provoke(world, shooter, e.x, e.y, 'shots fired near them'); continue; }
-      if (isTurf(e.x, e.y) && shooter && shooter.player && !aligned(shooter.player)) startFight(world, e, shooter, 25);
+      if (isTurf(world.map, e.x, e.y) && shooter && shooter.player && !aligned(shooter.player)) startFight(world, e, shooter, 25);
       continue;
     }
     if (n.role !== 'civ' || n.state === 'fight' || n.state === 'passed') continue;
@@ -693,7 +693,7 @@ function manageDensity(world) {
       let tooClose = false;
       for (const b of anchors) if ((b.x - x) ** 2 + (b.y - y) ** 2 < 400 * 400) { tooClose = true; break; }
       if (tooClose || inAnyView(world, x, y, 64)) continue; // just off screen: they walk into view
-      if (style && !isTurf(x, y)) { if (spawnCountry(world, x, y, style, night)) break; continue; }
+      if (style && !isTurf(world.map, x, y)) { if (spawnCountry(world, x, y, style, night)) break; continue; }
       spawnByDemographic(world, x, y, night);
       break;
     }
@@ -732,7 +732,7 @@ function spawnCountry(world, x, y, style, night) {
 }
 
 function spawnByDemographic(world, x, y, night) {
-  if (isTurf(x, y) && rng() < (night ? 0.75 : 0.45)) {
+  if (isTurf(world.map, x, y) && rng() < (night ? 0.75 : 0.45)) {
     const g = spawnNpc(world, 'syndicate', x, y, 'gang');
     return g;
   }

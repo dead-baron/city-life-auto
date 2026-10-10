@@ -15,7 +15,7 @@ import { DISTRICTS } from '../../../shared/map.js';
 
 export const STANDIN_PX = CHUNK / 4;
 const S4 = CHUNK / STANDIN_PX;
-const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK);
+const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK);   // (the world's whole frame: the art's chunk grid)
 // the ground by tile type, in the new ground's colours
 export const GROUND_RGB = {
   [T.WALL]: [70, 66, 72], [T.GRASS]: [84, 118, 56], [T.SIDEWALK]: [170, 164, 152], [T.ROAD]: [66, 68, 76], [T.PLAZA]: [178, 160, 138],
@@ -57,7 +57,7 @@ function index(M) {
   }
   for (const b of M.buildings || []) {
     if (!b || !b.tw) continue;
-    const i = Math.min(MAP_H - 1, b.ty) * MAP_W + Math.min(MAP_W - 1, b.tx), d = DISTRICTS[M.dist ? M.dist[i] : 0], st = STYLE[d && d.style] || STYLE_DEF;
+    const i = M.dist ? M.idx(Math.max(M.x0, Math.min(M.x0 + M.w - 1, b.tx)), Math.max(M.y0, Math.min(M.y0 + M.h - 1, b.ty))) : 0, d = DISTRICTS[M.dist ? M.dist[i] : 0], st = STYLE[d && d.style] || STYLE_DEF;
     const h = hash(b.tx, b.ty), H = Math.round(st[0] + st[1] * h), v = 0.92 + hash(b.ty, b.tx) * 0.16;
     const o = { x0: b.tx * TILE, y0: b.ty * TILE, x1: (b.tx + b.tw) * TILE, y1: (b.ty + b.th) * TILE, H, roof: rgb(st[2], v), roofHi: rgb(st[2], v * 1.18), roofLo: rgb(st[2], v * 0.72), wall: rgb(st[3], v), band: rgb(st[3], v * 0.8) };
     put(I.blds, o.x0, o.y0 - H, o.x1, o.y1, o);

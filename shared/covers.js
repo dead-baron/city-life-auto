@@ -6,7 +6,7 @@
 // main.js only loads once the city is in), and the sewers under the city come up through some of these covers
 // (shared/underground.js, on the server too). It lived in client/render/ until the sewers.
 import { DISTRICTS } from './map.js';
-import { TILE, MAP_W, MAP_H } from './constants.js';
+import { TILE } from './constants.js';
 
 export const URBAN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown', 'arts']);
 const NO_COVERS = new Set(['dirt', 'rural', 'hwy']);
@@ -26,8 +26,8 @@ function pointOn(P, s) {
 }
 export function urbanAt(M, x, y) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H || !M.dist) return false;
-  const d = DISTRICTS[M.dist[ty * MAP_W + tx]];
+  if (!M.inside(tx, ty) || !M.dist) return false;
+  const d = DISTRICTS[M.dist[M.idx(tx, ty)]];
   return !!(d && URBAN.has(d.style));
 }
 // The covers along one road: [{ x, y }] (world px, the cover's centre), worked out once per edge and seed. Every 300-500

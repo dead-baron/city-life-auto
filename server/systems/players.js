@@ -180,7 +180,7 @@ function standable(world, pos) {
   const m = world.map;
   for (const [dx, dy] of [[0, 0], [12, 0], [-12, 0], [0, 12], [0, -12]]) if (PED_BLOCK[m.tileAtPx(pos.x + dx, pos.y + dy)]) return false;
   const tx = Math.floor(pos.x / TILE), ty = Math.floor(pos.y / TILE);
-  for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) for (const e of m.solidProps.get((ty + oy) * m.w + tx + ox) || []) if (!e.off && Math.hypot(e.x - pos.x, e.y - pos.y) < e.r + 10) return false;
+  for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) for (const e of m.solidProps.get(m.idx(tx + ox, ty + oy)) || []) if (!e.off && Math.hypot(e.x - pos.x, e.y - pos.y) < e.r + 10) return false;
   return true;
 }
 
@@ -197,7 +197,7 @@ export function savePos(p, ped) {
 function validSpawn(world, pos) {
   if (!pos || typeof pos.x !== 'number') return false;
   const t = world.map.tileAtPx(pos.x, pos.y);
-  return !PED_BLOCK[t] && pos.x > 0 && pos.y > 0 && pos.x < world.map.w * TILE && pos.y < world.map.h * TILE;
+  return !PED_BLOCK[t] && pos.x > world.map.x0 * TILE && pos.y > world.map.y0 * TILE && pos.x < (world.map.x0 + world.map.w) * TILE && pos.y < (world.map.y0 + world.map.h) * TILE;
 }
 
 export function spawnPlayerPed(world, p, useSaved, deathPos = null) {

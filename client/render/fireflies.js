@@ -13,7 +13,7 @@
 //   none in the rain, underground or indoors.
 import { hash2 } from '../../shared/rng.js';
 import { DISTRICTS } from '../../shared/map.js';
-import { T, TILE, MAP_W, MAP_H } from '../../shared/constants.js';
+import { T, TILE } from '../../shared/constants.js';
 
 export const FLIES = {
   cell: 12,             // tiles per grid cell (384 px)
@@ -49,7 +49,7 @@ export class Fireflies {
     const rest = new Set((M.restSpots || []).map((s) => `${s.x},${s.y}`));
     for (const p of M.props) {
       if (!p || p.t !== 'campfire') continue;
-      const i = Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE), d = DISTRICTS[M.dist[i]];
+      const i = M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE)), d = DISTRICTS[M.dist[i]];
       if (d && NATURE.has(d.style)) this.camps.push([p.x, p.y, rest.has(`${p.x},${p.y}`) ? 1 : 0]);
     }
     return this.camps;
@@ -58,8 +58,8 @@ export class Fireflies {
   gladeAt(M, cx, cy, n) {
     if (hash2(cx + n * 7919, cy - n * 104729, 931) >= FLIES.chance) return null;
     const C = FLIES.cell, tx = cx * C + Math.floor(hash2(cx, cy + n, 932) * C), ty = cy * C + Math.floor(hash2(cx + n, cy, 933) * C);
-    if (tx < 2 || ty < 2 || tx >= MAP_W - 2 || ty >= MAP_H - 2) return null;
-    const i = ty * MAP_W + tx, d = DISTRICTS[M.dist[i]];
+    if (!M.inside(tx - 2, ty - 2) || !M.inside(tx + 2, ty + 2)) return null;
+    const i = M.idx(tx, ty), d = DISTRICTS[M.dist[i]];
     if (M.tiles[i] !== T.GRASS || !d || !NATURE.has(d.style)) return null;
     const h = hash2(cx, cy, 934 + n);
     return { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, r: 60 + h * 50, n: FLIES.per[0] + Math.floor(h * (FLIES.per[1] - FLIES.per[0] + 1)), ring: 0, key: `${cx},${cy}` };

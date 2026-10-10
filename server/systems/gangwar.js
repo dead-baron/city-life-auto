@@ -114,7 +114,7 @@ export function startShootout(world, nearPlayer = null) {
   const spots = turfSpots(world);
   let p = nearPlayer, spot = null;
   for (const q of nearPlayer ? [nearPlayer] : cands) {
-    const s = spots.find((h) => Math.hypot(h.x - q.ped.x, h.y - q.ped.y) < 2400) || (isTurf(q.ped.x, q.ped.y) ? { x: q.ped.x, y: q.ped.y } : null);
+    const s = spots.find((h) => Math.hypot(h.x - q.ped.x, h.y - q.ped.y) < 2400) || (isTurf(world.map, q.ped.x, q.ped.y) ? { x: q.ped.x, y: q.ped.y } : null);
     if (s) { p = q; spot = s; break; }
   }
   if (!p || !spot) return null;
