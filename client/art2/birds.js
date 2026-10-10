@@ -26,6 +26,12 @@ export const BIRDS = {
   duck: { len: 12, w: 7, h: 6, leg: 2.4, neck: 3.4, head: 2.6, bill: 2.4, flat: 1, tail: 'short', body: '#a8a8a4', back: '#7a705e', belly: '#d8d4cc', breast: '#7a3e2a', head: '#2a6a3e', ring: '#f2f0ea', billC: '#e0c040', feet: '#e08a2a', stern: '#26242a' },
   goose: { len: 18, w: 9, h: 8, leg: 4, neck: 9, head: 2.8, bill: 2.6, flat: 1, tail: 'short', body: '#8a7a68', back: '#6e6050', belly: '#e8e2d8', breast: '#b8ae9e', head: '#1e1c20', neckC: '#1e1c20', chin: '#f2f0ea', billC: '#26242a', feet: '#26242a' },
 };
+// the hens drawn apart (':f'): the quail's plain brown hen with a smaller topknot (AN8), the mallard's mottled brown
+// duck with her orange bill (AN5)
+const HEN = {
+  quail: { body: '#6a5a4a', back: '#5e4c3e', breast: '#7a6a58', belly: '#ccb48e', head: '#6a5a4a', face: null, stripe: null, crown: null, plume: 0.65, scales: '#4e4036' },
+  duck: { body: '#8a6c4c', back: '#6e563e', breast: '#8a6c4c', belly: '#a88a66', head: '#7a5e44', ring: null, stern: null, billC: '#d0863a', scales: '#4e3a2a' },
+};
 const CHICK = { quail: ['#c8a878', '#8a6a48'], pheasant: ['#c8a070', '#8a6a48'], turkey: ['#b89868', '#7a5a3a'], duck: ['#e8d060', '#6a5a38'], goose: ['#c8c070', '#8a8048'] };
 
 function variant(kind) {
@@ -35,7 +41,7 @@ function variant(kind) {
     const [c, d] = CHICK[base] || CHICK.quail, k = base === 'goose' || base === 'turkey' ? 0.42 : 0.5;
     return { ...B, len: B.len * k, w: B.w * k * 1.1, h: B.h * k * 1.15, leg: B.leg * k, neck: B.neck * k * 0.7, head: B.head * k * 1.45, bill: B.bill * k, tail: 'none', body: c, back: d, belly: c, breast: c, head: c, neckC: null, ring: null, chin: null, wattle: null, plume: 0, bars: null, face: null, stripe: null, crown: null, scales: null, stern: null, fluffy: 1 };
   }
-  if (v === 'f') return { ...B, body: '#6a5a4a', back: '#5e4c3e', breast: '#7a6a58', belly: '#ccb48e', head: '#6a5a4a', face: null, stripe: null, crown: null, plume: 0.65, scales: '#4e4036' };   // a hen
+  if (v === 'f') return HEN[base] ? { ...B, ...HEN[base] } : B;   // a hen
   if (v === 'L') return { ...B, body: '#f6f4f0', back: '#ecebe6', belly: '#ffffff', breast: '#f8f6f2', head: '#f8f6f2', neckC: B.neckC ? '#f4f2ee' : null, ring: null, chin: null, wattle: B.wattle ? '#e8c8c0' : null, face: null, stripe: null, crown: null, scales: null, stern: null, bars: '#e4e2dc', billC: '#e8d8a0', feet: '#d8c8a8', legend: 1 };
   return B;
 }

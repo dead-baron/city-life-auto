@@ -46,6 +46,10 @@ test('the jointed legs of the wild ones keep a foot on the ground through the wa
 test('a covey of quail: the cock with his black face and topknot, the plain brown hen, the chicks', () => {
   assert.equal(animalKind('pet:quail:f'), 'quail:f');
   assert.equal(animalKind('pet:deer:f'), 'deer', 'only the birds have hens drawn apart');
+  // the mallard's hen too: mottled brown, not the drake's green head
+  const drake = animalSprite('pet:duck', 'swim', 6, 0), duck = animalSprite('pet:duck:f', 'swim', 6, 0);
+  const green = (g) => { let n = 0; for (let i = 0; i < g.col.length; i += 4) if (g.col[i + 3] && g.col[i + 1] > g.col[i] + 30 && g.col[i + 1] > g.col[i + 2] + 10) n++; return n; };
+  assert.ok(green(drake) >= 3 && green(duck) === 0, `the drake's green head, the hen's brown one (${green(drake)}, ${green(duck)})`);
   const cock = animalSprite('pet:quail', 'idle', 6, 0), hen = animalSprite('pet:quail:f', 'idle', 6, 0), chick = animalSprite('pet:quail:y', 'idle', 6, 0);
   assert.ok(!same(cock, hen), 'the hen is drawn apart from the cock');
   assert.ok(pixels(chick) < pixels(hen) * 0.6, 'the chicks are small');

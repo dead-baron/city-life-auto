@@ -79,9 +79,10 @@ const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55
 // reared, charging, stalking low, bedded down, head down feeding, head up and alert; else by its speed. Dead: on its
 // side (a bird with a wing out).
 const BEARS = new Set(['blackbear', 'grizzly']);
-// the art kind of an animal ('pet:<kind>' on the wire): a covey's two adult quail spawn one after the other, so the odd
-// id is drawn as the plain brown hen (birds.js 'quail:f') and the even one as the cock
-const petKind = (p) => { const k = p.d.ar.slice(4); return k === 'quail' && (p.id & 1) ? 'quail:f' : k; };
+// the art kind of an animal ('pet:<kind>' on the wire): a covey's two adult quail (a pair of mallards) spawn one after
+// the other, so the odd id is drawn as the hen (birds.js ':f') and the even one as the cock (the drake)
+const HENS = new Set(['quail', 'duck']);
+const petKind = (p) => { const k = p.d.ar.slice(4); return HENS.has(k) && (p.id & 1) ? `${k}:f` : k; };
 function wildPose(p, S2, base, sp) {
   if (p.flags & PF.DEAD) return 'dead';
   if (p.flags & PF.DOWN) return 'lie';

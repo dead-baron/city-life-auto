@@ -5693,12 +5693,16 @@ and turkey, AN3 small game, AN8 quail): the rows are the game's own bake (actors
   - The cock is plumper, blue-grey with a grey back, his dark head held high, the black face in its white border, a
     chestnut cap, the comma of a topknot (curling forward, bobbing as he walks) and the scaled belly.
   - The hen (`quail:f`, new) is plain brown and scaled with a smaller topknot. A covey's two adults spawn one after
-    the other, so the client draws the odd id as the hen (`client/art2/game/host.js`): one cock and one hen a covey.
+    the other, so the client draws the odd id as the hen (`client/art2/game/host.js` `petKind`): one cock and one hen
+    a covey. The mallards' pairs the same way: the drake with his green head, the hen (`duck:f`, new) mottled brown
+    with an orange bill (AN5).
   - The cock stands up plump, his breast high (a tilted egg), the head high on the neck.
   - The flush (all the small birds: quail, mallards, pheasants): the wings come up over the back and down below the
     body, drawn as plates at any angle in two flat tones, so a steep wing reads as a wing.
 - **Tests:** `test/wildart.test.js` (3 new):
   - every species draws walking, running, head down, alert and dead, and its walk and run cycles move;
   - the jointed legs keep a foot on the ground through the walk and the gallop, and the gallop stretches and gathers;
-  - a covey's cock, hen and chicks are drawn apart (the cock bluer, the chicks small), and the flush raises the wings.
+  - a covey's cock, hen and chicks are drawn apart (the cock bluer, the chicks small), the mallard's hen has no green
+    head, and the flush raises the wings.
+  - `test/art2.test.js`, `test/perf.test.js` and `test/wildlife.test.js` pass as before.
   - `node tools/perf.mjs --quick`: within budget (bake 952 of 1000 KB).
