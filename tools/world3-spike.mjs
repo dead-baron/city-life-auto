@@ -70,6 +70,10 @@ const onLand = (m, x, y) => { const tx = Math.floor(x), ty = Math.floor(y); retu
 const ALL_SEEDS = SEEDS.concat(ISLAND_SEEDS);
 const homeOf = (sp) => { if (sp.at) return sp.at; const s = ALL_SEEDS.filter((q) => q[0] === sp.d); return s.length ? [s[0][1], s[0][2]] : null; };
 const OPTS = { land: metroLand, special: (sp, at, m) => { const h = homeOf(sp); return !h || onLand(m, h[0], h[1]); } };
+// --own-roads: the roads laid wholly over what is now sea (the other islands' ring roads, station roads...) left out -
+// a stand-in for laying only this island's roads (a bridge that starts on the island stays: the skeleton's, later)
+let dropped = 0;
+if (process.argv.includes('--own-roads')) OPTS.lines = (lines, m) => { for (let i = lines.length; i--;) if (lines[i].pts.every((p) => !onLand(m, p.x / TILE, p.y / TILE))) { lines.splice(i, 1); dropped++; } };
 const spike = build(OPTS);
 if (process.argv.includes('--spike-only')) { console.log(JSON.stringify({ ms: spike.ms, heapMB: spike.heapMB, typedMB: spike.typedMB, error: spike.error })); process.exit(0); }
 const spike2 = TWICE && spike.m ? build(OPTS) : null;
@@ -124,6 +128,10 @@ if (S) {
   const tE = eSet(T0), sE = eSet(S);
   for (const k of tE) if (!sE.has(k)) { const kind = k.split('|')[0]; kinds[kind] = (kinds[kind] || 0) + 1; }
   out.roads.missingByKind = kinds;
+  // the spike's edges with an end off the island (roads laid for islands that aren't there), and the lines dropped
+  out.roads.offIsland = S.edges.filter((e) => !inIsle(e.pts[0].x, e.pts[0].y) || !inIsle(e.pts[e.pts.length - 1].x, e.pts[e.pts.length - 1].y)).length;
+  out.roads.edgesAll = S.edges.length;
+  out.roads.droppedLines = dropped;
   // lots (buildings) and POIs on the island
   const bSet = (m) => new Set(m.buildings.filter((b) => isle(b.ty * MAP_W + b.tx)).map((b) => `${b.kind}|${b.tx},${b.ty},${b.tw},${b.th}`));
   out.buildings = cmp(bSet(S), bSet(T0));

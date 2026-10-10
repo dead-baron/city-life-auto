@@ -137,10 +137,11 @@ test('the spike: Metro City generated alone, placed in its v3 rectangle; today\'
   assert.deepEqual(r.frame.regions, ['r4-4', 'r5-4', 'r4-5', 'r5-5']);
   SPIKE_BASELINE(r);
 });
-test('the spike without the seam: with Dry Creek still joined on, Metro City\'s streets are today\'s exactly', { timeout: 900000 }, async () => {
+test('the spike without the seam: with Dry Creek still joined on (and only its own roads laid), Metro City\'s streets are today\'s exactly', { timeout: 900000 }, async () => {
   // what is left once the cut at x = 1045 is taken away is what the other islands' absence does (world-wide ids and
   // numbering, the shared random stream): the streets don't depend on it at all
-  const r = await runSpike('--with-drycreek');
+  const r = await runSpike('--with-drycreek', '--own-roads');
+  assert.ok(r.roads.droppedLines > 0);   // (and the other islands' own roads, laid over what is now sea, left out: nothing changes)
   assert.equal(r.spike.error, null, r.spike.error);
   assert.equal(r.today.hash, r.today.stamped);
   assert.equal(r.roads.same, r.roads.today, JSON.stringify(r.roads));

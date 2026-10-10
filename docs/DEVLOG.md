@@ -5817,7 +5817,8 @@ work needed whatever the final layout is - stage 1's first spike, written up in 
   against today's 4.5-5.4 s and keeps 46 MB against 68 MB (the grids are still the whole map's).
   - What came out the same: 95.3% of its land tiles, 396 of its 414 road edges and 80% of its buildings. With Dry Creek
     left joined on, 99.3% of the tiles and every one of its streets. Cedar Isle alone (`--island cedar`, an island with
-    no seam): 98.8% of its tiles and 237 of its 243 road edges.
+    no seam): 98.8% of its tiles and 237 of its 243 road edges. Leaving out the other islands' roads laid over what is
+    now sea (`--own-roads`) changes nothing on Metro City.
   - What stops an island building on its own: the planned businesses are world-wide (the build threw at Cedar Isle's
     hardware store), the other islands' roads, bridges and the railway are laid from data whether their land is there or
     not, and the seam with Dry Creek. Ids, names and the ATMs are numbered and spaced world-wide, the order-dependent
@@ -5834,6 +5835,6 @@ Files: `shared/world3.js` (new), `shared/map.js` (the `opts` parameter), `tools/
     region; rectangles and the window clipped to the frame; region seeds distinct, pinned and well mixed; every
     placement inside the frame, and `cutRegion` putting each value at its tile plus the offset.
   - Two of the seven run the spike. Today's world is still the stamped one, two spike builds are identical, and Metro
-    City lands in its four regions with at least the measured share the same as today's. With Dry Creek joined on, its
-    roads are exactly today's and its distance fields are the same.
+    City lands in its four regions with at least the measured share the same as today's. With Dry Creek joined on (and
+    the other islands' roads left out), its roads are exactly today's and its distance fields are the same.
   - `test/dmath.test.js` passes as before.

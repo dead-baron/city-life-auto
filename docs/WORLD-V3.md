@@ -802,13 +802,14 @@ their chunks again once.
   `PLACEMENTS` (part 2's offsets for the thirteen pieces), `placedRect`, `placedRegions`, `toFrame` / `fromFrame`; and
   `cutRegion` - one region's grid of a per-tile layer, cut from a map built in today's frame and placed by an offset.
 - **`generateCity(seed, opts)`**: `opts` is the spike's only - `opts.land(land)` masks the land before anything else
-  reads it, `opts.special(sp, home, m)` says whether a planned business is this build's. Left out (the server, the
-  client, the stamp), the world is today's to the bit: `test/world3.test.js` checks `generateCity(1337)` against the
-  stamped hash.
-- **`tools/world3-spike.mjs`** (`node --expose-gc tools/world3-spike.mjs [--twice] [--with-drycreek]`, heavy - under
-  `flock`): builds Metro City with Southbank and Pelican Key alone (every other island's land made sea, the landmass cut
-  at x = 1045 where Dry Creek's fields begin), builds today's world, compares them on the island's own land, and places
-  the island in the frame (+1591, +1729: tiles 2133..2636 x 2030..2676, the four regions r4-4, r5-4, r4-5, r5-5).
+  reads it, `opts.special(sp, home, m)` says whether a planned business is this build's, `opts.lines(lines, m)` may
+  take road lines out before the network is built. Left out (the server, the client, the stamp), the world is today's
+  to the bit: `test/world3.test.js` checks `generateCity(1337)` against the stamped hash.
+- **`tools/world3-spike.mjs`** (`node --expose-gc tools/world3-spike.mjs [--twice] [--with-drycreek] [--own-roads]
+  [--island metro|cedar]`, heavy - under `flock`): builds Metro City with Southbank and Pelican Key alone (every other
+  island's land made sea, the landmass cut at x = 1045 where Dry Creek's fields begin), builds today's world, compares
+  them on the island's own land, and places the island in the frame (+1591, +1729: tiles 2133..2636 x 2030..2676, the
+  four regions r4-4, r5-4, r4-5, r5-5).
 
 **What it measured** (node 22 on the 2-core machine, under `flock`; today's whole build took 4.5-5.4 s in the same runs,
 less loaded than 4.2's 10.1 s; Metro City's land is 187,926 tiles, about a fifth of the world's):
@@ -849,7 +850,10 @@ island (`terrain`'s land decoding, labelling and three distance fields over 1.57
 2. **The other islands' roads are laid from data, land or not.** `islandRoads` still laid the Westport Beltway, the
    Northshore, Bluffs and Cedar Isle loops, the Bay, Strait, Harbor, North and Cedar bridges, the Northern Causeway and
    the six country stations' roads, over open sea: 31 edges run off the island. They belong to the skeleton or to their
-   own island's build.
+   own island's build. Leaving out the lines laid wholly over what is now sea (`--own-roads`, the spike's
+   `opts.lines`: 10 lines) changes nothing on Metro City - its tiles, streets, buildings and POIs come out exactly as
+   without it - so laying only an island's own roads costs nothing; 8 edges still run off it, the bridges that start on
+   it (the skeleton's).
 3. **The railway is one loop** (`RAIL_ROUTE`, 14,127 points, 12 stations), laid whole whatever land is there: the
    skeleton's, clipped per region.
 4. **The seam with Dry Creek.** Metro City and Dry Creek are one landmass; the cut changes about 7,400 tiles in Old Town,

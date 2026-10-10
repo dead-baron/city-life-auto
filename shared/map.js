@@ -508,6 +508,7 @@ function buildCity(seed, opts = null) {
   paintDistricts(m);
   turfMap = m.dist;
   const lines = layoutRoads(m, rand);
+  if (OPTS?.lines) OPTS.lines(lines, m);   // (World v3's spike: the roads of the islands not being built left out)
   const net = repairRoads(m, lines, seed);
   m.net = net; m.nodes = net.nodes; m.edges = net.edges; m.roads = net.edges;
   for (const n of m.nodes) if (n.light && m.zone[Math.floor(n.y / TILE) * MAP_W + Math.floor(n.x / TILE)] === Z.GULL) n.light = false;   // (no traffic lights in the island villages)
