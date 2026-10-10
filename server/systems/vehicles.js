@@ -107,8 +107,7 @@ export function update(world, dt) {
       if ((a.def.kind === 'boat') !== (b.def.kind === 'boat') || !sameLevel(a.lz, b.lz)) continue;
       const sb = Math.abs(b.vx) + Math.abs(b.vy);
       if (sb >= 2 && b.id < a.id) continue; // pair handled once when both move
-      let hit = null;
-      for (const p of bodyBoxes(a)) { for (const q of bodyBoxes(b)) if ((hit = obbVsObb(p.x, p.y, a.a, p.hl, a.def.W / 2, q.x, q.y, b.a, q.hl, b.def.W / 2))) break; if (hit) break; }   // (a car cut in two: a box per half)
+      const hit = a.cutQ || b.cutQ ? halvesHit(a, b) : obbVsObb(a.x, a.y, a.a, a.def.L / 2, a.def.W / 2, b.x, b.y, b.a, b.def.L / 2, b.def.W / 2);   // (a car cut in two: a box per half)
       if (!hit) continue;
       resolveVehicleHit(world, a, b, hit);
     }
@@ -122,7 +121,8 @@ export function update(world, dt) {
     for (const ped of near) {
       if (ped.vehId || ped.dead || ped.onTrain || ped.hoodOf || !sameLevel(ped.lz, v.lz)) continue;
       let h = null;
-      for (const p of bodyBoxes(v)) if ((h = circleVsObb(ped.x, ped.y, ped.r, p.x, p.y, v.a, p.hl, v.def.W / 2))) break;
+      if (!v.cutQ) h = circleVsObb(ped.x, ped.y, ped.r, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
+      else for (const q of bodyBoxes(v)) if ((h = circleVsObb(ped.x, ped.y, ped.r, q.x, q.y, v.a, q.hl, v.def.W / 2))) break;
       if (!h) continue;
       const vn = (v.vx - ped.vx) * h.nx + (v.vy - ped.vy) * h.ny;
       if (spd > 120 && vn > 120 && ped.rollT <= 0 && world.time > (ped.hitImmuneUntil || 0)) {
@@ -316,10 +316,14 @@ export function cutVehicle(world, v, attackerPed, lx) {
 // back), so there's a gap between them. -> [{ x, y, hl }] (half lengths; the half width is its own)
 export function bodyBoxes(v) {
   const hl = v.def.L / 2;
-  if (!v.cutQ) { const b = (v._box ||= [{ x: 0, y: 0, hl: 0 }])[0]; b.x = v.x; b.y = v.y; b.hl = hl; return v._box; }
+  if (!v.cutQ) return [{ x: v.x, y: v.y, hl }];
   const cx = (v.cutQ - 1) / 254 * v.def.L - hl, sl = PLASMA_CUT.slide, c = Math.cos(v.a), s = Math.sin(v.a);
   const ma = (cx - hl) / 2 - sl, mb = (cx + hl) / 2 + sl;
   return [{ x: v.x + c * ma, y: v.y + s * ma, hl: (cx + hl) / 2 }, { x: v.x + c * mb, y: v.y + s * mb, hl: (hl - cx) / 2 }];
+}
+function halvesHit(a, b) {
+  for (const p of bodyBoxes(a)) for (const q of bodyBoxes(b)) { const hit = obbVsObb(p.x, p.y, a.a, p.hl, a.def.W / 2, q.x, q.y, b.a, q.hl, b.def.W / 2); if (hit) return hit; }
+  return null;
 }
 // plasma blade hits a vehicle can take before it's cut in two (rules.js PLASMA_CUT)
 export const plasmaCuts = (def) => (def.kind === 'bike' ? PLASMA_CUT.bike : def.kind === 'boat' ? PLASMA_CUT.boat : def.mass >= 2.4 ? PLASMA_CUT.heavy : PLASMA_CUT.car);
