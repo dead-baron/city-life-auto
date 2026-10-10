@@ -48,7 +48,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'vdmg'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -386,6 +386,19 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'blast': { const err = blastTest(world, p, String(msg.k || '').slice(0, 12)); if (err) world.notify(p, err, 'warn'); break; }   // the Explosions test (task #382, above)
+    case 'vdmg': { // vehicle damage you can see (task #402): a car (msg.m, a sedan) a little way off, damaged to msg.s - 1 scuffed, 2 dented,
+      // 3 crumpled, 4 the engine dead (a door hanging), 'shot' shot up, 'cut' cut in two by a plasma blade - hit at msg.z (VZ: 1 front, 2 back, 4 left, 8 right)
+      if (!ped) break;
+      const model = VEHICLES[msg.m] ? msg.m : 'sedan', sp = clearSpot(world, ped, VEHICLES[model]);
+      const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
+      const z = [1, 2, 4, 8].includes(msg.z) ? msg.z : 1, hp = v.def.hp, s = msg.s;
+      if (s === 'cut') { vehicles.noteHit(v, 4, 1); vehicles.cutVehicle(world, v, ped, 0); break; }
+      if (s === 'shot') { v.holes = 12; vehicles.damageVehicle(world, v, hp * 0.45, ped, true, false, 4); vehicles.damageVehicle(world, v, 1, ped, true, false, 8); break; }
+      const left = { 1: 0.75, 2: 0.5, 3: 0.25 }[s];
+      if (left) vehicles.damageVehicle(world, v, hp * (1 - left), ped, true, false, z);
+      else { vehicles.damageVehicle(world, v, hp * 0.7, ped, true, false, z); vehicles.damageVehicle(world, v, hp, ped, true, false, z === 1 ? 4 : z); v.deadFireAt = world.time + 6; v.deadBoomAt = world.time + 30; }
+      break;
+    }
     case 'guns': // every weapon in the game with ammo (the police's and the hunters' too), med kits, and every tool / bit of equipment
       for (const [id, w] of Object.entries(WEAPONS)) {
         if (id === 'fists' || w.type === 'deploy') continue;

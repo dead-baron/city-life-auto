@@ -170,3 +170,25 @@ test('art v2 draws the damage into the model from the word: a few looks per stag
   for (let i = 0; i < a.v.length; i++) if (a.v[i] && a.mats[a.v[i]].emi) glowing++;
   assert.ok(glowing > 50, 'the cut face glows');
 });
+
+test('the debug menu shows each damage look: a car damaged to a stage a little way off, shot up, or cut in two', async () => {
+  const dev = await import('../server/dev.js');
+  const { w, p } = scene();
+  const mine = () => [...w.entities.values()].filter((e) => e.kind === K.VEH && Math.hypot(e.x - p.ped.x, e.y - p.ped.y) < 400);
+  dev.command(w, p, 'vdmg', { s: 3, z: 2 });
+  let v = mine().pop();
+  assert.ok(v, 'a car spawned');
+  let d = unpackVehDamage(net._fields(w, v)[2]);
+  assert.equal(d.stage, VDMG.CRUMPLED);
+  assert.equal(d.zones, VZ.B);
+  assert.ok(d.off & VPART.BUMPER_B);
+  w.remove(v);
+  dev.command(w, p, 'vdmg', { s: 'cut' });
+  v = mine().pop();
+  d = unpackVehDamage(net._fields(w, v)[2]);
+  assert.ok(d.cut > 0 && d.stage === VDMG.HANGING);
+  w.remove(v);
+  dev.command(w, p, 'vdmg', { s: 'shot' });
+  v = mine().pop();
+  assert.ok(unpackVehDamage(net._fields(w, v)[2]).holes >= 5);
+});

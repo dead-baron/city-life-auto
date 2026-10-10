@@ -109,4 +109,10 @@ export const DEV_SECTIONS = [
   ] },
   // a night out (IN14: server/systems/bowling.js)
   { id: 'nightout', title: '🎳 Bowling & cinema', items: [['🎳 Pinwheel Lanes (bowling alley, at the shoe counter)', 'near', { k: 'bowling' }]] },
+  // vehicle damage you can see (task #402: server/dev.js 'vdmg')
+  { id: 'vdmg', title: '🚗 Vehicle damage', items: [
+    ['🚗 Scuffed (front)', 'vdmg', { s: 1 }], ['🚗 Dented (front)', 'vdmg', { s: 2 }], ['🚗 Crumpled (front, bumper off)', 'vdmg', { s: 3 }],
+    ['🚗 Rear-ended (crumpled back)', 'vdmg', { s: 3, z: 2 }], ['🚗 Engine dead (door hanging, then fire)', 'vdmg', { s: 4 }], ['🔫 Shot up', 'vdmg', { s: 'shot' }],
+    ['🗡 Cut in two (plasma blade)', 'vdmg', { s: 'cut' }], ['🛻 Pickup at its worst', 'vdmg', { s: 4, m: 'pickup' }], ['🚐 Van at its worst', 'vdmg', { s: 4, m: 'van' }],
+  ] },
 ];
