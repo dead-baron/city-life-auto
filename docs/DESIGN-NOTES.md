@@ -342,6 +342,24 @@ CF2 and FX2 are in the prompt pack):**
   - The eye patch has one strap that goes round the head and ties to the patch, like a real one. Not two straps off one
     side.
 
+## From the owner's notes (2026-10-10, 02:11): interiors, the subway and the sewers (concepts IN1-IN7, SU5, SU6, SW1, SW2)
+- **Hospitals: the lobby, nothing behind it.** "Right now I wasn't planning on having the player go back to the back
+  rooms of the hospitals, mostly just stay in the lobby near the front desk." IN1 is a style target for the lobby
+  (front desk, waiting rows, the pharmacy window, the ER doors); its wards and treatment rooms stay behind closed doors.
+- **Police stations: a front desk, the cells, and the armory onto the motor pool.** "I just imagined it being a front
+  desk and a police cell personally, maybe one additional armory room that connects to the parking lot so when you
+  become a police officer you can pick out your gear/weapons and then be put in the gated lot to pick out a vehicle and
+  drive off." That is the station as built (the desk's sign-up, the armory, its back door to the gated motor pool, the
+  cell block behind the desk). IN2's side offices are "maybe okay, so there's things to do if you join the police
+  force": not planned for now.
+- **The subway: one level down, mostly one track.** SU5 shows a ticket hall between the street and the platform: "I just
+  imagined you'd go down one level to get to the subway". SU6's two tracks: "could be cool if we have the inner city
+  subways run by each other in places or have them run with the main train track loop in places but for the most part I
+  imagine it would be a single track in a lot of places." For the urban subway line (#281): single track, with stretches
+  where two lines (or a line and the main loop) run side by side.
+- **The sewers:** SW1 and SW2 are the look for the sewers as built (#357): arched brick tunnels, a junction with a
+  culvert spilling in, the ladders under the manholes, the outfall into the river, someone camped down there.
+
 ## Sharks [W2 stage 5]
 - Extremely rare anywhere in the sea; likeliest round the prison island (still rare).
 - Fins are seen now and then: sharks hunting near the surface.
