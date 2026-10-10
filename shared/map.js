@@ -28,6 +28,7 @@ import {
 } from './citylayout.js';
 import { metroRoads, HERO, ARTS, MUSEUM_SQUARE } from './metro.js';
 import { buildLevels } from './levels.js';
+import { buildTunnels, spurTunnels, coverAtPx } from './tunnels.js';
 import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS, SCENE_SPOTS, SCENE_ISLANDS } from './islands.js';
 import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
@@ -393,10 +394,11 @@ export class CityMap {
     if (d < 1) return 1;
     const tb = !sight && this.cellBlocks ? barsRay(this, x1, y1, x2, y2) : 1;
     const steps = Math.ceil(d / 8);
+    const cv = sight ? this.cover : null, c0 = cv ? coverAtPx(cv, x1, y1) : 0;   // (sight doesn't cross a tunnel's roof: shared/tunnels.js)
     for (let i = 1; i <= steps && i / steps <= tb; i++) {
-      const t = i / steps;
-      const tt = this.tileAtPx(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t);
-      if (tt === T.BUILDING || tt === T.WALL) return Math.max(0, (i - 1) / steps);
+      const t = i / steps, px = x1 + (x2 - x1) * t, py = y1 + (y2 - y1) * t;
+      const tt = this.tileAtPx(px, py);
+      if (tt === T.BUILDING || tt === T.WALL || (cv && coverAtPx(cv, px, py) !== c0)) return Math.max(0, (i - 1) / steps);
     }
     return tb;
   }
@@ -649,6 +651,7 @@ function buildCity(seed, opts = null) {
   buildCameras(m, rand);
   pruneRestSpots(m);   // (a rest spot something was built near after all goes: naturesites.js)
   lateTiles(m);
+  buildTunnels(m, OPTS ? (OPTS.tunnels ? OPTS.tunnels(m) : []) : spurTunnels(m));   // (the roads under the ground: m.cover, m.tunnels - shared/tunnels.js; World v3 hands in its own: opts.tunnels(m) -> specs)
 
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');
   const pd = m.pois.find((p) => p.kind === 'police');

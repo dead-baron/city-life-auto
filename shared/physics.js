@@ -9,6 +9,7 @@ import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
 import { edgeBrake } from './border.js';
 import { dropsOf, DROP_SPEED } from './ledges.js';
 import { ugMapOf } from './underground.js';
+import { coverAtPx } from './tunnels.js';
 // Down the sewers or in the cave (e.ug: shared/underground.js) people and boats move through the underground's own map.
 const mapOf = (s, map) => (s.ug && !map.ug ? ugMapOf(map) || map : map);
 
@@ -205,7 +206,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   const surfSpeed = rough === 1 ? surf[0] : clamp(1 - (1 - surf[0]) * rough, 0.25, 1);
   let gripMul = rough === 1 ? surf[1] : clamp(1 - (1 - surf[1]) * rough, 0.3, 1), brakeMul = 1;
   if (s.flat) gripMul *= 0.55; // tyres shredded by a spike strip
-  if (env.rain) {
+  if (env.rain && !coverAtPx(map.cover, s.x, s.y)) {   // (in a tunnel the road is dry: shared/tunnels.js)
     if (isBoat) gripMul *= 0.8;
     else if (surf[2]) { gripMul *= 0.65; brakeMul = 0.5; } // GDD: friction -35%, braking distance doubled
   }

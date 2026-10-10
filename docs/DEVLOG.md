@@ -6182,3 +6182,46 @@ the 40 seconds the scene allows, then gave up and drove off. The way round on fo
 the corner and in at the door) was only worked out for walks longer than 90 px; now it's worked out whenever the
 straight line is blocked, however short. 200 runs since: none failed. The test's worlds are seeded now as well, so
 the passers-by and the traffic are the same each run. `server/systems/ems.js`; `test/ems.test.js`.
+
+## 2026-10-10 · Tunnels: roads under the ground (one through the Granite Peaks today)
+
+The owner, marking up World v3: "When I have a dotted line I am picturing a tunnel happening there, you'll see that a
+lot in the mountains and around the map", and of the highways that run off the map: "Other than parts where the
+highway goes off the map (which I guess we'll have a closed tunnel or something to stop people from driving off that
+area for now)". Tunnels are now part of the engine, ready for World v3's dotted stretches (docs/WORLD-V3.md part 5),
+and today's world has a real one.
+
+- **What a tunnel is:** a stretch of a road (or the railway) at ground level with ground over it. Modelled on the
+  highway deck: one byte a tile, `m.cover` (the tunnel's id + 1 over its bore), and `m.tunnels` - each with its two
+  mouths (where, which way is out, closed or not), the line it carries, its length, its centre line. The bore's sides
+  are rock (wall tiles a tile or so thick): you only get in and out through a mouth. `buildTunnels(m, specs)` makes
+  them from road edges (or `'rail'`) and stretches along them; `underCover(m, x, y)`, `tunnelAt`, `nearestMouth`,
+  `coverHides` are the small API. A **closed mouth** (`closed: 'a' | 'b'`) has a "ROAD CLOSED" barrier just inside it:
+  wall tiles across the bore, so no car gets past - what the highways running off the map in v3 end in.
+- **Sight:** `CityMap.los` doesn't cross a tunnel's roof, so the police, witnesses and the traffic cameras (everything
+  that asks the map) can't see into a tunnel from outside, nor out of it from inside; two people in the same tunnel
+  see each other. Vehicles drive through as on any road - a dry one in the rain (shared/physics.js: no wet-road grip
+  or braking under cover).
+- **Drawing** (both renderers: the overlay, in world space): from outside, the hill over the bore - a granite ridge
+  with scrub and boulders - and the portals at both mouths (a concrete headwall, the dark opening, a lit lamp either
+  side; the red-and-white barrier and its sign at a closed one). Anything under the hill is left out of the frame for
+  a viewer outside (main.js, `coverHides`), so cars and people driving in disappear under it. Inside, the hill over
+  your tunnel fades away in about 0.3 s, as a walk-in's roof does, and the tunnel shows: its walls, the dark rock
+  beyond them, the lane markings, a row of lights along the ceiling with the dark between them, and the headlights of
+  the cars in there lighting the road ahead. The art is in `client/tunnels.js`, loaded the first time a tunnel is
+  near (the page's code budget is full: main.js only gains the loader and the hiding).
+- **Today's tunnel:** the country road from the coast highway up into the Granite Peaks (east of the peaks' middle)
+  runs through a spur of the mountain: the longest stretch of a road in the peaks with mountain on both sides becomes
+  a tunnel, about 1 km long, its mouths a couple of tiles into the rock (`spurTunnels`). The world changes only
+  there (rock along the bore's sides); no homes move.
+- **For World v3:** `generateCity(seed, opts)` takes `opts.tunnels(m)` - the v3 build hands in its dotted stretches
+  as specs (`{ edge, s0, s1, closed }`, `edge: 'rail'` for the main line); the v3 spike gets no Granite Peaks one.
+
+`shared/tunnels.js` (new), `shared/map.js` (the build, `los`), `shared/physics.js`, `client/tunnels.js` (new),
+`client/main.js`.
+Tests: `test/tunnels.test.js` - the cover layer and the list for today's tunnel, rock beside the bore and road
+through it; sight blocked between inside and outside (both ways, and across the hill) and not between two inside; a
+car driving in at one mouth and out of the other; a closed mouth stopping a car on a small synthetic map; a rail
+tunnel's cover and mouths; the same stopping distance in the tunnel rain or shine; what's hidden from a viewer
+outside and inside, which tunnel's hill fades and how fast.
+Played in both renderers (noon outside, noon and night inside).
