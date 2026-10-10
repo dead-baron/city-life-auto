@@ -2,9 +2,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport, straightRoad } from './helpers.js';
-import { K } from '../shared/constants.js';
+import { K, T } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
-import { boomPlan, blastSize, PIECES, pieceCodes } from '../shared/explosions.js';
+import { boomPlan, blastSize, PIECES, pieceCodes, wheelCount } from '../shared/explosions.js';
+import { wheelPlan, wheelPath, WHEEL_F, WHEEL_DT, WHEEL_MAX, WF } from '../shared/wheelpath.js';
+import { CAR_BLOCK } from '../shared/map.js';
 import { RUNOVER_LEFT } from '../shared/rules.js';
 
 const vehicles = await import('../server/systems/vehicles.js');
@@ -67,6 +69,96 @@ test('a vehicle explosion\'s event carries the seed and the pieces; launched, th
     w.seen.length = 0;
   }
   assert.ok(launched >= 2 && apart >= 1, `launched ${launched}, blown apart ${apart}`);
+});
+
+// ---- the burning wheel (task #412) ----
+// a wheel's path as frames: x, y, z, h, lean, spin, what happened
+function frames(P) {
+  const out = [];
+  for (let i = 0; i < P.n; i++) { const j = i * WHEEL_F; out.push({ x: P.f[j], y: P.f[j + 1], z: P.f[j + 2], h: P.f[j + 3], lean: P.f[j + 4], spin: P.f[j + 5], fl: P.f[j + 6] }); }
+  return out;
+}
+// a made-up map: road everywhere but where `at` says otherwise
+const flatMap = (at = () => T.ROAD) => ({ w: 4000, tileAtPx: at, solidProps: new Map() });
+
+test('now and then a burning wheel comes off and rolls away: not every explosion, never off a boat, never more wheels than it has', () => {
+  for (const id of ['sedan', 'bus', 'tanker', 'bike', 'trike']) {
+    const def = VEHICLES[id];
+    let rolls = 0;
+    for (let s = 1; s <= 600; s++) {
+      const pl = boomPlan(s, def), roll = wheelPlan(s, def, pl), thrown = pl.pieces.filter((p) => p.c === 'w').length;
+      assert.ok(thrown + (roll ? 1 : 0) <= wheelCount(def), `${id} (seed ${s}): no more wheels off it than it has`);
+      if (roll) { rolls++; assert.ok(roll.sp > 0 && roll.vz > 0 && roll.drag > 0 && roll.burn > 0); }
+    }
+    assert.ok(rolls > 600 * 0.08 && rolls < 600 * 0.6, `${id}: now and then (${rolls} of 600)`);
+  }
+  // a motorbike that threw both its wheels has none left to roll
+  let both = 0;
+  for (let s = 1; s <= 3000; s++) { const pl = boomPlan(s, VEHICLES.bike); if (pl.pieces.filter((p) => p.c === 'w').length === 2) { both++; assert.equal(wheelPlan(s, VEHICLES.bike, pl), null, `seed ${s}`); } }
+  assert.ok(both > 10, `some threw both (${both})`);
+  // a boat, a jet ski: no wheels at all
+  for (const id of ['speedboat', 'dinghy', 'jetski', 'policeboat']) {
+    assert.equal(wheelCount(VEHICLES[id]), 0);
+    for (let s = 1; s <= 400; s++) { assert.equal(wheelPlan(s, VEHICLES[id]), null, `${id}: no wheel`); assert.ok(!pieceCodes(boomPlan(s, VEHICLES[id])).includes('w'), `${id}: none blown off it either`); }
+  }
+  // the same seed, the same wheel
+  for (const s of [3, 77, 12345]) assert.deepEqual(wheelPlan(s, VEHICLES.sedan), wheelPlan(s, VEHICLES.sedan));
+});
+
+test('the explosion says when a wheel rolls (on the ground only), and every client rolls it the same way: flung off, it bounces, rolls away slowing, and comes to rest flat a while later', () => {
+  const { w, road } = scene();
+  let seen = 0, up = false;
+  for (let i = 0; i < 300 && (seen < 3 || !up); i++) {
+    const car = w.spawnVehicle('sedan', road.x + 300 + (i % 8) * 150, road.y, 0, { npcOwned: false });
+    if (seen >= 3) car.lz = 1;   // (up on the highway: never - it would roll along the ground under it)
+    vehicles.explode(w, car, null);
+    const ev = lastEvent(w, 'explode'), roll = wheelPlan(ev.s, car.def);
+    w.remove(car); w.seen.length = 0;
+    if (car.lz) { if (roll) { assert.ok(!ev.wh, 'not up on the highway'); up = true; } continue; }
+    assert.equal(!!ev.wh, !!roll, 'the event says so when its seed has a wheel come off');
+    if (!ev.wh) continue;
+    seen++;
+    // every client works it out from the event and the map: the same frames
+    const P = wheelPath(roll, car.def, ev.x, ev.y, ev.a, w.map), Q = wheelPath(roll, car.def, ev.x, ev.y, ev.a, w.map);
+    assert.deepEqual([...P.f.subarray(0, P.n * WHEEL_F)], [...Q.f.subarray(0, Q.n * WHEEL_F)], 'the same path every time');
+    const fr = frames(P), last = fr[fr.length - 1];
+    assert.ok(Math.hypot(fr[0].x - ev.x, fr[0].y - ev.y) < car.def.L / 2 + 4, 'off the car');
+    assert.ok(Math.max(...fr.slice(0, 30).map((q) => q.z)) > 15, 'flung up');
+    assert.ok(fr.some((q) => q.fl === WF.BOUNCE), 'it bounces');
+    let len = 0;
+    for (let k = 1; k < fr.length; k++) len += Math.hypot(fr[k].x - fr[k - 1].x, fr[k].y - fr[k - 1].y);
+    assert.ok(len > 150, `rolls away (${len | 0} px)`);
+    assert.ok(fr.every((q) => !CAR_BLOCK[w.map.tileAtPx(q.x, q.y)]), 'never into a wall');
+    // rolling on the ground it slows down: its last second before it goes over slower than its first on the ground
+    const ground = fr.map((q, k) => (k && q.z === 0 && fr[k - 1].z === 0 && Math.abs(q.lean) < 1 ? Math.hypot(q.x - fr[k - 1].x, q.y - fr[k - 1].y) / WHEEL_DT : -1)).filter((v) => v >= 0);
+    if (ground.length > 40 && !P.sunk) {
+      const avg = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+      assert.ok(avg(ground.slice(-30)) < avg(ground.slice(0, 30)), `slowing (${avg(ground.slice(0, 30)) | 0} px/s, then ${avg(ground.slice(-30)) | 0})`);
+    }
+    // at rest a while later: flat on its side on the ground (or sunk)
+    assert.ok(P.n < WHEEL_MAX && P.n * WHEEL_DT > 1.5, `stops after a while (${(P.n * WHEEL_DT).toFixed(1)} s)`);
+    if (!P.sunk) assert.ok(last.z === 0 && Math.abs(Math.abs(last.lean) - Math.PI / 2) < 0.01, 'lying flat');
+  }
+  assert.ok(seen >= 3 && up, `wheels seen rolling: ${seen}`);
+});
+
+test('a burning wheel glances off a wall and rolls back; into the water it sinks', () => {
+  const def = VEHICLES.sedan, roll = { fr: 1, sd: 1, a: 0, sp: 300, vz: 120, drag: 40, curl: 0.1, burn: 10 };
+  // a building from x 400 on: thrown at it from x 200
+  const walled = flatMap((x) => (x >= 400 ? T.BUILDING : T.ROAD));
+  const P = frames(wheelPath(roll, def, 200, 500, 0, walled));
+  const knock = P.findIndex((q) => q.fl === WF.KNOCK);
+  assert.ok(knock > 0, 'it knocks into the wall');
+  assert.ok(P.every((q) => q.x < 400), 'never through it');
+  assert.ok(P[P.length - 1].x < P[knock].x - 20, `and rolls back off it (${P[knock].x | 0} -> ${P[P.length - 1].x | 0})`);
+  // the harbour from x 400 on
+  const wet = wheelPath(roll, def, 200, 500, 0, flatMap((x) => (x >= 400 ? T.WATER : T.ROAD)));
+  const W = frames(wet);
+  assert.ok(wet.sunk && W[W.length - 1].fl === WF.SUNK && W[W.length - 1].x >= 400, 'into the water: it sinks there');
+  // on grass it doesn't get as far as on the road
+  const onRoad = frames(wheelPath({ ...roll, a: 0 }, def, 200, 500, 0, flatMap()));
+  const onGrass = frames(wheelPath({ ...roll, a: 0 }, def, 200, 500, 0, flatMap(() => T.GRASS)));
+  assert.ok(onGrass[onGrass.length - 1].x - 200 < (onRoad[onRoad.length - 1].x - 200) * 0.7, 'grass slows it more');
 });
 
 test('a launched wreck landing on a car sets it off (a chain reaction)', () => {

@@ -45,7 +45,7 @@ import { courtHoops, idealPower, shotWindow } from '../shared/hoops.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
 import { ANIMAL_ART } from '../shared/animal-art.js';
-import { APOSE } from '../shared/fauna.js';   // (a pet home with its owner: APOSE.happy - server pets.js)
+import { APOSE } from '../shared/fauna.js';
 import { BuildingLayer } from './render/buildings.js';
 import { Highway, liftOf, levelKey } from './render/highway.js';
 import { underDeck } from '../shared/levels.js';
@@ -87,7 +87,7 @@ const S = {
   bayOpen: {}, bayAnim: {}, // paint-shop shutters
   garageOpen: {}, garageAnim: {}, // home garage doors
   gateOpen: {}, gateAnim: {}, // police motor pool gates
-  clubLive: null,             // the nightclubs whose music is on, by gate index (server nightclubs.js: the 'club' event; null: a server from before)
+  clubLive: null,             // nightclubs with the music on, by gate (the 'club' event)
   forageGone: new Set(),      // foraging spots picked bare (map.forage indices; server/systems/foraging.js)
   xing: [], xingAnim: [], // level crossings: { d: gates down, b: [arm broken, arm broken] }
 };
@@ -774,7 +774,7 @@ function onEvent(ev) {
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
-    case 'club': (S.clubLive ||= {})[ev.i] = !!ev.on; break;   // a club's music on at dusk, off at the end of the night (server nightclubs.js)
+    case 'club': (S.clubLive ||= {})[ev.i] = !!ev.on; break;
     case 'forage': if (ev.up) S.forageGone.delete(ev.i); else S.forageGone.add(ev.i); break;
     case 'xing': S.xing[ev.i] = { d: ev.d, b: ev.b }; break;
     case 'tt': S.tt = { l: ev.l, at: performance.now() / 1000 }; break; // station clocks
@@ -3051,6 +3051,7 @@ function drawWorldV1(F) {
   }
   if (S.flora && !sub) S.flora.leavesFrame(g, view, dt, false);
   fx.drawParticles(g);
+  if (!sub) S.boom.drawWheels(g, F);   // (burning wheels)
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (sub) drawSubwayLights(F.myCar, z, dt);
@@ -3829,9 +3830,8 @@ function drawVehicleEnt(v, now, dt) {
   void dt;
 }
 
-// A vehicle's turn on the canvas - and up on a tow truck's wheel lift (its extra byte: bits 0-1 the end up, 1 nose 2 tail;
-// bit 2 still being winched up - server tow.js) its body tilted: that end raised up the screen, the other end on the ground
-const TOW_TILT_V1 = 0.11;   // (px up for every px along it: as art v2 draws it, actors.js TOW_TILT)
+// a vehicle's turn on the canvas; on a tow truck's lift (its extra byte: server/net.js) tilted, the hooked end up
+const TOW_TILT_V1 = 0.11;   // (as art v2: actors.js TOW_TILT)
 function vehTurn(g, v, def) {
   const tw = (v.extra | 0) & 3;
   if (!tw) { g.rotate(v.ra); return; }
@@ -3868,7 +3868,7 @@ function drawAnimal(p, now) {
   g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 4, 13, 6, 0, 0, 6.28); g.fill();
   if (!art || !atlas.animals) { g.fillStyle = '#a0703a'; g.beginPath(); g.ellipse(p.rx, p.ry, 12, 7, p.ra, 0, 6.28); g.fill(); g.restore(); return; }
   const f = art.f;
-  // home with its owner (server pets.js: APOSE.happy): no sitting - quick little hops up at them, a bounce in its stride
+  // back with its owner (APOSE.happy): no sitting, little hops
   const happy = (p.extra & 31) === APOSE.happy && !(p.flags & (PF.DEAD | PF.DOWN));
   const hk = (now * 2.4 + p.id * 0.37) % 1, hop = happy && hk < 0.55 ? Math.sin(Math.PI * hk / 0.55) * (sp > 12 ? 2.5 : 7) : 0;
   const r = !f ? art.r : sp > 70 ? f.run[Math.floor(now * 14 + p.id) % 4] : sp > 12 ? f.walk[Math.floor(now * 8 + p.id) % 4] : happy ? f.walk[Math.floor(now * 10 + p.id) % 4] : now - p.stillSince > 1.2 ? f.sit : f.idle;

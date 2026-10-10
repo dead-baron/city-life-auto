@@ -5115,3 +5115,36 @@ The owner: "Tow trucks should back up to a vehicle that needs towing if possible
   - no room (a van stopped just ahead): no plan and no backing up; it's hooked the old way.
   - The two tests from before still pass.
   - The tests now run with no traffic, buses or ferries (`quiet`): a car going by could ram a parked car off the road, which made the player's-car test flaky. A seeded run of the file over fourteen `Math.random` seeds passes.
+
+## 2026-10-09 · Now and then a burning wheel comes off an explosion and rolls away down the street (task #412)
+The owner: "Vehicle explosions are looking great, let's sometimes have a burning wheel bounce down the street and roll off occasionally (doesn't have to be every wheel that comes off a car)."
+- **When** (`shared/wheelpath.js wheelPlan`):
+  - It happens to roughly a third of car explosions: 42% of those that blow apart, 30% of the launches and 18% of those that burn where they stand. A motorbike's are rarer.
+  - It's one of the wheels still on the vehicle. Boats and the jet ski have none (`shared/explosions.js wheelCount`).
+  - A motorbike that threw both wheels as debris has none left to roll.
+  - The debris itself no longer throws more wheels than the vehicle has. A car could throw five, and a speedboat could throw wheels; those are panels now.
+  - It comes from its own stream of the explosion's seed, so the pieces and the flight are drawn as before.
+  - Which wheel it is: front or back, left or right (a motorbike's are on its line). The plan also sets how hard it's thrown out from that side, how it slows, which way it curls and how long it burns.
+- **Server-light:**
+  - The server adds one flag to the `explode` event (`wh`) and does nothing else for the wheel (`server/systems/explosions.js`).
+  - There's no wheel up on the highway or on a ferry's deck: it would roll along the ground underneath.
+  - Every client works out the same roll from the seed and the map (`wheelPath`). It uses fixed steps and only + - * /, `sqrt` and dmath's trig, so every engine gets the same bits and everyone sees the same wheel go the same way.
+- **The roll** (`wheelPath`, 30 frames a second, up to 12 s):
+  - It's flung off from its corner, tumbling, and its face turns to the way it's going.
+  - It bounces a few times, then rolls, slowing (2.6× faster on grass, dirt and sand).
+  - It hops at a kerb and glances off walls, buildings, posts and trees, rolling back off a wall.
+  - It curls round more and more as it slows, wobbling more, then falls flat on its side the way it curled.
+  - Into the water, it sinks.
+  - Across 3,000 seeds on the long test street: it travelled a median 600 px over about 5 s, and never entered a wall.
+- **Drawn** (`client/render/wheels.js`, loaded with the first explosion and not with the page; `render/boom.js` hands it the events):
+  - It's played back between frames as a short cylinder: the far face, the tread, then the near face with a charred rim, the hub and four lugs going round as it rolls. It can be upright, leaning or flat, and is lifted off its shadow in the air.
+  - While it burns: flames and thick black smoke off it, a glow round it, and burning bits and embers dropping off it as it rolls. It leaves a streak of burnt rubber behind it on the road.
+  - Where it bounces: a puff and a flare. Where it knocks into something: sparks. Into the water: a splash and steam.
+  - Lying flat, it burns down to a wisp of smoke (at least 3 s, about 9-15 s after the blast) and leaves a burnt patch.
+  - Both renderers draw it: art v2 on its overlay, the classic view in its world pass. The fire is the pooled particles and decals, and there are four wheel slots with their frame buffers kept. Low quality halves the particles.
+- **Page size:** the page code was already at its budget, so the wheel lives in the lazily loaded module, and some comments added today in page-loaded files were shortened. The page is at 720.3 KB, which rounds to the 720 KB budget.
+- **Dev:** `{ t: 'dev', c: 'boom', wh: 1 }` blows up a car that throws a wheel.
+- **Tests:** `test/explosions.test.js` (3 more):
+  - now and then, not every time. Across 600 seeds each for a car, a bus, a tanker, a motorbike and the trike: never more wheels off it than it has. A motorbike that threw both has none left, boats have none, and the same seed gives the same wheel;
+  - a real explosion's `wh` matches its seed's plan, and never up on the highway. Its path is the same every time; it's flung up, bounces, rolls away (over 150 px), slows and stops a while later, lying flat; it never enters a wall;
+  - on a made-up street: it glances off a wall and rolls back, never through it; into the water it sinks; on grass it doesn't get as far.
