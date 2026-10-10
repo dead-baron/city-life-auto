@@ -1,6 +1,6 @@
 // Player sessions: join/leave (30-second Ghost State), input application, context
 // interactions, death + respawn, persistence sync and HUD prompts.
-import { PF, FACTION, TILE } from '../../shared/constants.js';
+import { PF, FACTION, TILE, K } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
 import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
@@ -226,6 +226,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
   if (lz && pos === prof.pos) ped.lz = lz;
   ped.player = p;
   ped.weapon = 'fists';
+  ped.blade = prof.blade | 0;   // the plasma blade's colour (looks.js setBlade; net.js descriptor bc)
   for (const id of Object.keys(prof.weapons)) {
     const w = WEAPONS[id];
     if (w && w.mag) ped.mag[id] = Math.min(w.mag, prof.weapons[id] || 0);
@@ -276,6 +277,28 @@ function finalizeLogout(world, p, dropLoot) {
   world.players.delete(p.pid);
   law.onPlayerGone(world, p);
   rentals.onPlayerGone(world, p);
+}
+
+// Start fresh (task #413: Settings under Repair install, or the debug menu, pressed twice): this player's character and
+// everything that's theirs are gone for good - their body leaves the world at once (no ghost, nothing dropped), their
+// homes go back on the market, their car out in the street goes (with someone else in it, it's nobody's now: theirs to
+// drive off in), the bounties on their head are called off (the placers' money back in their banks: it lived on this
+// profile) and the saved profile is deleted; a login with the same token after this is a brand-new character. Only ever
+// the caller's own account: session.js passes the session's player, never a pid from the message.
+export function wipeAccount(world, p) {
+  if (p.devMode) devmode.exit(world, p, true);
+  struggle.onLeave(world, p); custody.onLeave(world, p);   // (the officers on them let go, as when anyone logs off)
+  revive.clearDown(world, p);
+  bounties.onWipe(world, p);
+  p.conn = null; p.ghostUntil = 0;
+  if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
+  for (const [id, pid] of [...world.homeOwner]) if (pid === p.pid) world.homeOwner.delete(id);
+  for (const v of [...world.entities.values()]) {
+    if (v.kind !== K.VEH || v.owner !== p.pid) continue;
+    if (!v.seats.some((s) => s)) world.remove(v);
+    else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; }   // (its owner tag goes for everyone: net.js descriptor o)
+  }
+  store.remove(p.pid);
 }
 
 export function queueInput(p, inp) {
@@ -690,6 +713,7 @@ export function buildMe(world, p) {
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
+    blade: prof.blade | 0,   // the plasma blade's colour (shared/items.js BLADE_COLORS; looks.js setBlade)
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),

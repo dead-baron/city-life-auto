@@ -89,7 +89,17 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'unstuck') { unstuck.request(world, player); return; }
       if (msg.t === 'surrender') { const err = unstuck.surrender(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }
-      if (msg.t === 'look') { const r = looks.handle(world, player, msg); if (r) conn.sendJSON(r); return; } // the character creator
+      if (msg.t === 'look') { const r = looks.handle(world, player, msg); if (r) conn.sendJSON(r); return; } // the character creator (and the blade's colour)
+      // Start fresh (task #413): this session's own character deleted for good - never anyone else's (no pid is read from
+      // the message); the page forgets its token and comes back as a new player
+      if (msg.t === 'wipe') {
+        const p = player;
+        player = null;
+        players.wipeAccount(world, p);
+        conn.sendJSON({ t: 'wiped' });
+        conn.close(4005, 'wiped');
+        return;
+      }
       if (msg.t === 'plist') { conn.sendJSON(devmode.playerList(world, player)); return; } // who's online (options / map)
       if (msg.t === 'devmode') { if (msg.leave) devmode.exit(world, player); else if (!player.devMode) devmode.tryPassword(world, player, msg.pw); return; }
       if (msg.t === 'dev' && (opts.dev || player.devMode)) { dev.command(world, player, String(msg.c || ''), msg); }

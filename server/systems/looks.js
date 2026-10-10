@@ -14,6 +14,7 @@
 // (the starting look, "Make it yours") is free, and whatever they leave it wearing is theirs.
 import { decodeLook, encodeLook, validLook, lookToApp, lookFromOutfit, starterFor, randomLook, SLOTS, PIECES } from '../../shared/look.js';
 import * as W from '../../shared/wardrobe.js';
+import { BLADE_COLORS } from '../../shared/items.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import { applyDisguise, payFrom } from './economy.js';
@@ -197,11 +198,24 @@ function cut(world, p, msg) {
   return shopState(world, p);
 }
 
+// The plasma blade's colour (task #411: Settings, or the bag; shared/items.js BLADE_COLORS): a cosmetic like the look,
+// kept with the character and shown to everyone (net.js: the ped's descriptor bc). { a: 'blade', c: index } - anything but
+// a colour on the list is ignored. Allowed any time (blue until you pick another, whether you have the blade yet or not).
+export function setBlade(world, p, c) {
+  if (!Number.isInteger(c) || c < 0 || c >= BLADE_COLORS.length) return false;
+  if (c) p.profile.blade = c; else delete p.profile.blade;
+  store.touch();
+  if (p.ped && (p.ped.blade || 0) !== c) { p.ped.blade = c; p.ped.appVer = (p.ped.appVer || 0) + 1; }
+  p.meDirty = true;
+  return true;
+}
+
 export function handle(world, p, msg) {
   const prof = p.profile;
   ensureLook(prof);
   const a = String(msg.a || 'get');
   if (a === 'get') return stateMsg(p, world);
+  if (a === 'blade') { setBlade(world, p, msg.c); return null; }   // (the me message carries it back)
   if (a === 'buy') return buy(world, p, msg);
   if (a === 'cut') return cut(world, p, msg);
   if (a === 'set') {

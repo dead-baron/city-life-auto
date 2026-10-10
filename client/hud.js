@@ -188,12 +188,12 @@ export class HUD {
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;
     $('w-name').textContent = w.name;
     const ow = me.weapons.find((x) => x.id === me.weapon);
-    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? 'tap: next · hold: pick' : `${keyName('nextw')} to switch`) : '');
-    const wi = $('w-icon');
-    if (wi.dataset.w !== String(w.i)) { wi.dataset.w = String(w.i); wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i)); }
+    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? 'tap: next · hold: pick' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
+    const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
+    if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     // the touch WPN button shows what's in your hands (tap: the next one, hold: the picker)
     const bwi = $('b-wpn')?.querySelector('.wi');
-    if (bwi && bwi.dataset.w !== String(w.i)) { bwi.dataset.w = String(w.i); bwi.innerHTML = ''; bwi.appendChild(weaponIcon(w.i)); }
+    if (bwi && bwi.dataset.w !== wk) { bwi.dataset.w = wk; bwi.innerHTML = ''; bwi.appendChild(weaponIcon(w.i, me.blade)); }
     document.body.classList.toggle('multi-wpn', me.weapons.length > 1 && !me.dead);
     document.body.classList.toggle('armed', w.type !== 'melee' && w.type !== 'tool');
     const inv = Object.entries(me.inv).filter(([k]) => ITEMS[k]).map(([k, n]) => `${ITEMS[k].name} x${n}`);

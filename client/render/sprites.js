@@ -340,13 +340,13 @@ const pedCache = new Map();
 const PSIZE = 48;    // world px box (24 art px x 2)
 const PS = 4;        // cache canvas px per art px (2 per world px)
 
-export function pedSprite(app, pose, frameN, weapon) {
-  const key = `${appKey(app)}|${pose}|${frameN}|${weapon}`;
+export function pedSprite(app, pose, frameN, weapon, bc = 0) {   // (bc: the plasma blade's colour, shared/items.js BLADE_COLORS)
+  const key = `${appKey(app)}|${pose}|${frameN}|${weapon}${bc ? '|' + bc : ''}`;
   let cv = pedCache.get(key);
   if (cv) return cv;
   cv = document.createElement('canvas');
   cv.width = cv.height = CHAR_GRID * PS;
-  paintCharacter(cv, PS, app, pose, frameN, weapon);
+  paintCharacter(cv, PS, app, pose, frameN, weapon, bc);
   capSet(pedCache, key, cv, LOW_MEM ? 200 : 3000);
   return cv;
 }

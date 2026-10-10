@@ -9,12 +9,12 @@ import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js'
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
-import { WEAPONS, WEAPON_BY_INDEX } from '../shared/items.js';
+import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb } from '../shared/items.js';
 import { edgeInfo, EDGE_SLOW, EDGE_OUT } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { buildTeleport } from './devtp.js';
-import { createInventory, createWheel, createWeaponPicker } from './inventory.js';
+import { createInventory, createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
 import { createSpectator, SPEC_LAYERS, SCHEMATIC_KEY } from './spectator.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
@@ -252,8 +252,8 @@ function onText(m) {
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
-      bag.refresh(); wheel.refresh(); wpick.refresh();
-      if (m.dead) { wheel.close(); wpick.close(); if (topOverlay() === 'inv') closeOverlay('inv'); }
+      bag.refresh(); wheel.refresh(); wpick.refresh(); wwheel.refresh();
+      if (m.dead) { wheel.close(); wpick.close(); wwheel.close(); if (topOverlay() === 'inv') closeOverlay('inv'); }
       if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); if (S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('dev'); } }
       { const g = document.getElementById('dev-god'); if (g) g.classList.toggle('on', !!m.god); }
       break;
@@ -271,6 +271,7 @@ function onText(m) {
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
+    case 'wiped': freshDone(); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     default: break;
   }
 }
@@ -406,11 +407,14 @@ function fixedStep() {
   if (!spec && !inOverlay && input.padPhone && S.playing && !S.hud.menuOpen && !S.bigmap) openPhone();
   // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
   if (!spec && !inOverlay && input.padRight && S.playing && !S.hud.menuOpen && !S.bigmap) toggleBag();
-  if (!spec && input.padView && !S.padViewHeld && canWheel() && !wheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
+  if (!spec && input.padView && !S.padViewHeld && canWheel() && !wheel.open && !wwheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
   if (wheel.open && S.padWheel && input.padAxes) wheel.point(input.padAxes.rx * 100, input.padAxes.ry * 100);
   if (!input.padView && S.padViewHeld && wheel.open && S.padWheel) { S.padWheel = false; wheel.release(performance.now() - (S.wheelAt || 0) < 250); }
   S.padViewHeld = input.padView;
-  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || wpick.open || spec;
+  // the weapon wheel (hold RB or LB; a tap just takes out the next / previous one: input.js): point a stick, let go
+  if (!spec && input.wheelHold && canWheel() && !wheel.open && !wpick.open) wwheel.show();
+  if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
+  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || wpick.open || wwheel.open || spec;
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
   if (S.menuWasUp && !menuUp) S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
@@ -637,10 +641,13 @@ function smashFx(p, i, a) {
 }
 
 function distVol(x, y) { const d = Math.hypot(x - S.cam.x, y - S.cam.y); return Math.max(0, 1 - d / 1100); }
-// The plasma blade through the air: its hum, and a blue arc round the one swinging it, as far as it reaches
+// The plasma blade through the air: its hum, and an arc round the one swinging it, as far as it reaches - in the blade's
+// colour (blue, or what its owner picked: the descriptor's bc, shared/items.js BLADE_COLORS)
 const PLASMA_I = WEAPONS.plasma.i;
+const BLADE_FX = BLADE_COLORS.map((b, i) => { const [r, g, bl] = bladeRgb(b.c).map((v) => Math.round(v + (255 - v) * 0.3)); return { rgba: i ? `rgba(${r},${g},${bl},` : 'rgba(120,190,255,', light: bladeRgb(b.c), core: bladeRgb(b.core) }; });
+const bladeFx = (id) => { const e = id ? S.ents.get(id) : null; return BLADE_FX[(e && e.d && e.d.bc) | 0] || BLADE_FX[0]; };
 function plasmaSwing(a) {
-  S.fx.slash(a.rx, a.ry, a.ra || 0, 34, 'rgba(120,190,255,', 0.2, 4, true);
+  S.fx.slash(a.rx, a.ry, a.ra || 0, 34, (BLADE_FX[(a.d && a.d.bc) | 0] || BLADE_FX[0]).rgba, 0.2, 4, true);
   sfx('hum', distVol(a.rx, a.ry));
 }
 
@@ -700,8 +707,8 @@ function onEvent(ev) {
       else if (near > 0.85) S.cam.shake = Math.max(S.cam.shake, 3);
       break;
     }
-    case 'sizzle': fx.sparks(ev.x, ev.y, 7); fx.smoke(ev.x, ev.y, false); fx.ring(ev.x, ev.y, 14, 'rgba(120,190,255,', 0.25); sfx('sear', distVol(ev.x, ev.y)); break;
-    case 'deflect': fx.sparks(ev.x, ev.y, 6); fx.slash(ev.x, ev.y, ev.a, 13, 'rgba(140,200,255,', 0.16, 2, true); sfx('zing', distVol(ev.x, ev.y)); break;
+    case 'sizzle': fx.sparks(ev.x, ev.y, 7); fx.smoke(ev.x, ev.y, false); fx.ring(ev.x, ev.y, 14, bladeFx(ev.id).rgba, 0.25); sfx('sear', distVol(ev.x, ev.y)); break;   // (id: the one with the blade)
+    case 'deflect': fx.sparks(ev.x, ev.y, 6); fx.slash(ev.x, ev.y, ev.a, 13, bladeFx(ev.id).rgba, 0.16, 2, true); sfx('zing', distVol(ev.x, ev.y)); break;
     case 'react': { // a hit: the stagger (and the hit flash) - a shove on the heels, or forward from behind
       const e = S.ents.get(ev.id);
       if (e) { e.reactAt = S.loopClock; e.reactD = ev.d; e.reactA = ev.a; e.hitAt = S.loopClock; e.hitA = ev.a; e.barUntil = S.loopClock + 4; }
@@ -1181,6 +1188,10 @@ function setupDev() {
     if (S.devOpenSec === sec.id) { body.classList.remove('hidden'); head.classList.add('open'); }
   }
   if (S.devMode) add('⏏ Leave dev mode (keep my progress)', 'dev-leave', () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); });
+  // erase this character and go through the first-time flow again (task #413: press twice; also in Settings)
+  const fb = add('⟲ Start fresh: erase my character…', 'dev-fresh'), fm = document.createElement('p');
+  fm.className = 'dev-none'; cmds.appendChild(fm);
+  fb.onclick = () => freshPress(fb, (t) => { fm.textContent = t; });
   renderDevPlayers();
   box.classList.add('hidden');
   $('dev-btn').classList.remove('hidden');
@@ -1360,6 +1371,8 @@ const bag = createInventory({ el: $('inv'), send: (o) => send(o), me: () => S.me
 const wheel = createWheel({ el: $('wheel'), send: (o) => send(o), me: () => S.me });
 // the weapon picker (touch: hold WPN or the weapon box): every weapon you carry, tap one to take it out
 const wpick = createWeaponPicker({ el: $('wpick'), send: (o) => send(o), me: () => S.me });
+// the weapon wheel (a pad: hold RB or LB, point a stick, let go): every weapon you carry round a circle
+const wwheel = createWeaponWheel({ el: $('wwheel'), send: (o) => send(o), me: () => S.me });
 function openWeaponPick() { if (wpick.open) { wpick.close(); return; } if (canWheel() && S.me.weapons && S.me.weapons.length > 1) { if (wheel.open) wheel.close(); wpick.show(); } }
 function canWheel() { return S.playing && S.me && !S.me.dead && !(S.spec && S.spec.on) && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
 function toggleBag() {
@@ -1815,6 +1828,40 @@ async function repairInstall() {
   u.searchParams.set('fresh', Date.now().toString(36));
   location.replace(u.href);
 }
+// ---- Start fresh (task #413): Settings (under Repair install) and the debug menu, pressed twice - the first press arms
+// it, with a warning, for a few seconds; the second asks the server to delete this character for good (only ever your own:
+// server players.js wipeAccount), then this browser forgets everything it kept for the game (the cla.* keys - never
+// another game's on the same site; the kept city and art stay, they're only caches) and reloads as a brand-new player:
+// the title, the graphics choice, the character creator.
+const FRESH_ARM_MS = 5000;
+function freshPress(b, say) {
+  if (!(performance.now() - Number(b.dataset.armed || -1e9) < FRESH_ARM_MS)) {
+    b.dataset.label ||= b.textContent; b.dataset.armed = String(performance.now()); b.classList.add('armed');
+    b.textContent = '⚠ Press again to erase your character for good';
+    say('This deletes your character for good: your money and bank, homes, cars, clothes, weapons, record - everything. It can\'t be undone. Press again within 5 seconds to go ahead.');
+    clearTimeout(b.freshT); b.freshT = setTimeout(() => { freshDisarm(b); say(''); }, FRESH_ARM_MS);
+    return;
+  }
+  freshDisarm(b);
+  if (S.practice) { say('Start fresh erases your online character: reload the page to leave offline practice first.'); return; }
+  if (!S.welcomed || !S.ws) { say('Not connected to the city right now - try again once it says Signed in.'); return; }
+  say('Erasing your character...');
+  S.wipeSay = say;
+  send({ t: 'wipe' });
+  clearTimeout(S.wipeT); S.wipeT = setTimeout(() => { if (S.wipeSay) { S.wipeSay = null; say('The city didn\'t answer - nothing was erased. Try again.'); } }, 8000);
+}
+function freshDisarm(b) { delete b.dataset.armed; b.classList.remove('armed'); if (b.dataset.label) b.textContent = b.dataset.label; clearTimeout(b.freshT); }
+// the server erased the character ({ t: 'wiped' }): no reconnecting with the old token - forget it all and start over
+function freshDone() {
+  S.wipeSay = null; clearTimeout(S.wipeT);
+  const ws = S.ws; S.ws = null; S.token = null; S.welcomed = false;
+  try { if (ws) ws.close(); } catch { /* closing */ }
+  for (const k of ['localStorage', 'sessionStorage']) {
+    try { const st = window[k]; for (const key of Object.keys(st)) if (key.startsWith('cla.')) st.removeItem(key); } catch { /* storage blocked */ }
+  }
+  location.replace(location.pathname + location.search);
+}
+$('s-fresh').onclick = () => freshPress($('s-fresh'), (t) => { $('s-fresh-msg').textContent = t; });
 $('t-install').onclick = openInstall;
 $('s-install').onclick = openInstall;
 $('i-go').onclick = nativeInstall;
@@ -1959,6 +2006,7 @@ function syncSettings() {
   $('s-paddrive').value = settings.padDrive || 'triggers';
   $('s-edgefire').checked = settings.touchEdgeFire;
   $('s-padfire').checked = settings.padStickFire;
+  $('s-blade').value = String((S.me && S.me.blade) | 0); $('s-blade').disabled = !S.welcomed;   // (kept with your character: the server's)
   $('s-vibrate').checked = settings.vibrate;
   $('s-autofs').checked = settings.autoFullscreen !== false;
   syncGfxPanel();
@@ -2094,6 +2142,9 @@ $('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettin
 $('s-paddrive').onchange = (e) => { settings.padDrive = e.target.value; saveSettings(); };
 $('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; saveSettings(); };
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
+// the plasma blade's colour (task #411): kept with your character, so it's the server's to keep (server looks.js setBlade)
+$('s-blade').innerHTML = BLADE_COLORS.map((b, i) => `<option value="${i}">${b.name}${i ? '' : ' (its own)'}</option>`).join('');
+$('s-blade').onchange = (e) => { if (S.welcomed) send({ t: 'look', a: 'blade', c: Number(e.target.value) }); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
 $('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.target.checked; saveSettings(); if (!diag.on && diag.el) { diag.el.remove(); diag.el = null; } };
@@ -3924,7 +3975,7 @@ function drawPed(p, now) {
   }
   // diving, tumbling or thrown through the air: the drawn body, tucked up and turning over
   const tuck = !swimming ? lyingSprite(p.d.app, pose === 'dead' ? 1 : 0) : null;
-  const spr = tuck ? null : pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra);
+  const spr = tuck ? null : pedSprite(p.d.app, pose === 'move' ? 'move' + lvl : pose, fr, p.extra, p.extra === PLASMA_I ? p.d.bc | 0 : 0);
   g.save();
   if (swimming) g.globalAlpha = f & PF.DEAD ? 0.5 : 0.72; // body under the surface, head above
   let lift = 0, spin = 0, grow = 1;
@@ -4497,12 +4548,12 @@ function collectLights(sky, view, vehs, peds, dt) {
     if (c.d.c === 0) { const x = c.rx + Math.cos(c.ra) * def.L / 2, y = c.ry + Math.sin(c.ra) * def.L / 2; L.cone(x, y, c.ra, 460, 100, LIGHT.head, 1); L.beam(x, y, c.ra, 380, 70, LIGHT.head, 0.08 * haze); }
   }
   carriedLights(L, peds, night, haze);
-  // the plasma blade gives off its own blue light in the hand
+  // the plasma blade gives off its own light in the hand (blue, or the colour its owner picked)
   for (const p of peds) {
     if (p.extra !== PLASMA_I || (p.flags & (PF.INVEH | PF.DEAD)) || p.blink === 3) continue;
-    const x = p.rx + Math.cos(p.ra) * 10, y = p.ry - 12 + Math.sin(p.ra) * 10;
-    L.add(x, y, 90, LIGHT.blue, 0.3 + 0.6 * night);
-    L.glow(x, y, 20, LIGHT.cyan, 0.25 + 0.3 * night);
+    const x = p.rx + Math.cos(p.ra) * 10, y = p.ry - 12 + Math.sin(p.ra) * 10, bc = (p.d && p.d.bc) | 0;
+    L.add(x, y, 90, bc ? BLADE_FX[bc].light : LIGHT.blue, 0.3 + 0.6 * night);
+    L.glow(x, y, 20, bc ? BLADE_FX[bc].core : LIGHT.cyan, 0.25 + 0.3 * night);
   }
   if (night > 0.35) {
     const sp = selfPos();

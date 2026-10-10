@@ -9,6 +9,7 @@
 // idle (breathing), walk 8, run 8, punch 2x4, melee swing 2x4, aim, carry, fish, dive
 // roll 4, knocked down / stunned and dead. Results are cached per appearance+pose+frame.
 
+import { bladeColor } from '../../shared/items.js';
 const G = 24;              // art grid
 const SKINS = ['#f1c9a5', '#e0ac7e', '#c68953', '#a86b3c', '#7d4a26', '#4f2f1a'];
 const OUTLINE = '#120d16';
@@ -61,8 +62,8 @@ class Px {
   }
 }
 
-// ---- weapons in art pixels (held in a hand at hx,hy pointing along ang) --------------
-function weapon(P, w, hx, hy, ang) {
+// ---- weapons in art pixels (held in a hand at hx,hy pointing along ang; bc: the plasma blade's colour) --------------
+function weapon(P, w, hx, hy, ang, bc = 0) {
   const L = (len, c, wid = 1) => P.line(hx, hy, ang, len, c, wid);
   switch (w) {
     case 1: L(9, '#b8864a', 2); P.line(hx, hy, ang, 2, '#5a3a1a', 2); break;                // bat
@@ -97,7 +98,7 @@ function weapon(P, w, hx, hy, ang) {
       for (let k = 1; k <= 13; k++) { const b = (k * k) / 110; P.p(hx + Math.cos(ang) * k + Math.sin(ang) * b, hy + Math.sin(ang) * k - Math.cos(ang) * b, k > 11 ? '#f2f4f6' : '#cfd5dc'); P.p(hx + Math.cos(ang) * k + Math.sin(ang) * (b - 1), hy + Math.sin(ang) * k - Math.cos(ang) * (b - 1), '#9aa2ac'); }
       break;
     }
-    case 28: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 4, '#9aa0aa', 2); P.p(hx, hy, '#2a2c32'); L(13, '#3c86ff', 2); P.line(hx + Math.cos(ang), hy + Math.sin(ang), ang, 11, '#d8ecff'); break;   // plasma blade (steel hilt, a blue blade with a white-hot core)
+    case 28: { const B = bladeColor(bc); P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 4, '#9aa0aa', 2); P.p(hx, hy, '#2a2c32'); L(13, B.c, 2); P.line(hx + Math.cos(ang), hy + Math.sin(ang), ang, 11, B.core); break; }   // plasma blade (steel hilt, a blade in its colour - blue unless picked - with a white-hot core)
     case 31: L(8, '#24242a', 2); P.line(hx + Math.cos(ang) * 6, hy + Math.sin(ang) * 6, ang, 2, '#9aa0aa', 3); P.p(hx + Math.cos(ang) * 8, hy + Math.sin(ang) * 8, '#fff2c0'); break;   // the heavy flashlight (lights to carry #359)
     default: break;
   }
@@ -217,7 +218,7 @@ function lyingBody(P, a, fr, dead) {
 
 // ---- pose composer ------------------------------------------------------------------
 // pose: idle walk run punch swing aim carry fish roll down dead
-function paint(P, a, pose, fr, w) {
+function paint(P, a, pose, fr, w, bc = 0) {
   if (pose === 'dead' || pose === 'down') { lyingBody(P, a, fr, pose === 'dead'); return; }
   if (pose === 'roll') {
     const ang = (fr & 3) * Math.PI / 2;
@@ -251,7 +252,7 @@ function paint(P, a, pose, fr, w) {
     const hx = 15 + Math.cos(ang) * 1.5, hy = 12 + Math.sin(ang) * 3;
     arm(P, a, -1, 3, 3); arm(P, a, 1, 3, -3);
     P.r(hx, hy - 1, 2, 2, SKINS[a.s ?? 1]);
-    weapon(P, w, hx + 1, hy, ang);
+    weapon(P, w, hx + 1, hy, ang, bc);
     if (f === 2) P.line(hx + Math.cos(ang - 0.5 * dir) * 9, hy + Math.sin(ang - 0.5 * dir) * 9, ang + 1.4 * dir, 3, 'rgba(255,255,255,0.7)');
   } else if (pose === 'aim' || pose === 'carry' || pose === 'fish') {
     torso(P, a);
@@ -259,7 +260,7 @@ function paint(P, a, pose, fr, w) {
     const l = arm(P, a, -1, reach, pose === 'aim' ? 4 : 1);
     arm(P, a, 1, reach, pose === 'aim' ? -4 : -1);
     hands = { hx: l.hx, hy: 12 };
-    if (pose === 'aim' && w) weapon(P, w, hands.hx, 11.5, 0);
+    if (pose === 'aim' && w) weapon(P, w, hands.hx, 11.5, 0, bc);
     if (pose === 'fish') weapon(P, 13, hands.hx, 11.5, -0.35);
   } else {
     torso(P, a);
@@ -268,7 +269,7 @@ function paint(P, a, pose, fr, w) {
     const r = arm(P, a, 1, 1 - armSw, 0);
     // holstered / held melee weapon hangs from the right hand
     if (w > 0 && w <= 6) weapon(P, w, r.hx - 1, r.hy + 1, 0.5);
-    else if (((w >= 7 && w <= 12) || w >= 14) && lvl < 3) weapon(P, w, r.hx - 1, r.hy + 1, 0.15);
+    else if (((w >= 7 && w <= 12) || w >= 14) && lvl < 3) weapon(P, w, r.hx - 1, r.hy + 1, 0.15, bc);
     if (a.b === 1) { P.r(r.hx - 3, r.hy + 1.5, 4, 3, '#3a2414'); P.r(r.hx - 2, r.hy + 1.5, 2, 1, '#6b4a2a'); }   // briefcase
   }
   head(P, a);
@@ -278,10 +279,10 @@ function paint(P, a, pose, fr, w) {
 const art = typeof document !== 'undefined' ? document.createElement('canvas') : null;
 if (art) { art.width = G; art.height = G; }
 
-export function paintCharacter(out, scale, app, pose, fr, weapon) {
+export function paintCharacter(out, scale, app, pose, fr, weapon, bc = 0) {
   const g = art.getContext('2d', { willReadFrequently: true });
   g.clearRect(0, 0, G, G);
-  paint(new Px(g), app || {}, pose, fr | 0, weapon | 0);
+  paint(new Px(g), app || {}, pose, fr | 0, weapon | 0, bc | 0);
   // 1px dark outline around every opaque pixel (concept-sheet style)
   const img = g.getImageData(0, 0, G, G);
   const d = img.data;
@@ -305,10 +306,19 @@ export function paintCharacter(out, scale, app, pose, fr, weapon) {
 
 export const CHAR_GRID = G;
 
-// HUD weapon icon: the same pixel weapon the characters hold, drawn large with an outline.
+// HUD weapon icon: the same pixel weapon the characters hold, drawn large with an outline (the plasma blade in your
+// colour, bc). Each call gets its own copy: the HUD's weapon box, the touch WPN button, the bag, the tray and the pad's
+// weapon wheel can all show the same weapon at once (one shared canvas was moved from one to the next).
 const iconCache = new Map();
-export function weaponIcon(wIndex) {
-  if (iconCache.has(wIndex)) return iconCache.get(wIndex);
+export function weaponIcon(wIndex, bc = 0) {
+  const src = iconMaster(wIndex | 0, wIndex === 28 ? bc | 0 : 0), out = document.createElement('canvas');
+  out.width = src.width; out.height = src.height;
+  out.getContext('2d').drawImage(src, 0, 0);
+  return out;
+}
+function iconMaster(wIndex, bc) {
+  const key = wIndex * 16 + bc;
+  if (iconCache.has(key)) return iconCache.get(key);
   const g = art.getContext('2d', { willReadFrequently: true });
   g.clearRect(0, 0, G, G);
   const P = new Px(g);
@@ -316,7 +326,7 @@ export function weaponIcon(wIndex) {
     P.blob(12, 12, 4.5, 3.6, '#e0ac7e');
     for (let k = 0; k < 4; k++) P.r(13 + (k & 1), 9 + k * 1.6, 3, 1, '#a8774c');
     P.r(8, 13, 4, 2, '#c68953');
-  } else weapon(P, wIndex, (wIndex >= 9 && wIndex <= 12) || wIndex >= 15 ? 5 : 7, 12, 0);
+  } else weapon(P, wIndex, (wIndex >= 9 && wIndex <= 12) || wIndex >= 15 ? 5 : 7, 12, 0, bc);
   const img = g.getImageData(0, 0, G, G), d = img.data;
   const solid = (x, y) => x >= 0 && y >= 0 && x < G && y < G && d[(y * G + x) * 4 + 3] > 40;
   const edge = [];
@@ -328,6 +338,6 @@ export function weaponIcon(wIndex) {
   const o = out.getContext('2d');
   o.imageSmoothingEnabled = false;
   o.drawImage(art, 0, 6, G, 12, 0, 0, 96, 48);
-  iconCache.set(wIndex, out);
+  iconCache.set(key, out);
   return out;
 }

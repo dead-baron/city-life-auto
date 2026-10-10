@@ -37,6 +37,7 @@ export class MemoryStore {
   constructor() { this.profiles = new Map(); this.dirty = false; }
   get(pid) { return this.profiles.get(pid) || null; }
   create(pid) { const p = defaultProfile(pid); this.profiles.set(pid, p); return p; }
+  remove(pid) { this.dirty = true; return this.profiles.delete(pid); }   // (Start fresh: players.js wipeAccount)
   touch() { this.dirty = true; }
   async flush() { this.dirty = false; }
   flushSync() { this.dirty = false; }
@@ -49,6 +50,7 @@ export function useStore(s) { impl = s; }
 export const store = {
   get: (pid) => impl.get(pid),
   create: (pid) => impl.create(pid),
+  remove: (pid) => impl.remove(pid),
   touch: () => impl.touch(),
   flush: () => impl.flush(),
   flushSync: () => impl.flushSync(),

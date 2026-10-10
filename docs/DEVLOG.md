@@ -4949,3 +4949,50 @@ The owner: "The rock cliffs (the columns one) will also sway in the wind like ve
   - a plant on a rock leans the same on a 20, 70 or 150 px rock, never more than the grass tips, and less than half as far as a crown that high in a breeze, a strong wind and a gale (in a breeze not at all);
   - on the rocks the world puts down (the basalt cliff wall, a falls over basalt, a mossy boulder, the quarry's granite cliff, a sea stack, a sea arch, an outcrop), nothing sways but the plants on the rock, and on the cliff wall, the falls and the boulder nothing at all.
   - It fails without the change (the cliff wall's moss).
+
+## 2026-10-09 · The gamepad: RT fires, a bumper tapped is the next weapon and held is a weapon wheel, and LB from your fists is the plasma blade (tasks #301, #411)
+The owner: "Right now on gamepad you auto fire when you pull the right joystick in a direction all the way, let's disable that by default for gamepad and controllers, let's make you manually fire with the right trigger." And: "Holding right bumper down on a gamepad should load up your full weapon inventory so you can select that way. Same with left bumper. But pressing left or right bumper cycles through them." And: "Let's make the lightsaber (plasma sword) be the first weapon that comes up if you have it when you have fists equipped but press left bumper once. It should be easy to get to."
+- **Firing** (`shared/input.js padFires`, `client/input.js`): the right stick only aims. RT fires on foot and from a passenger seat. At the wheel RT is the gas, so a drive-by is R3: click the stick you aim with (on foot R3 still reloads). Before, pushing the stick all the way out always fired at the wheel, and on foot too with the Settings option on. A pad moving down Settings could tick that box unseen (left or right on a checkbox row sets it).
+- **The option** stays in Settings as "pushing the right stick all the way also fires", now covering drive-bys too. Everyone starts this build with it off, once (`padFireV`); switched on again, it stays on.
+- **The bumpers** (`shared/input.js createTapHold`): a tap of RB takes out the next weapon, LB the previous one (on letting go). Hold either 0.3 s (`WHEEL_HOLD_MS`) and the weapon wheel opens; letting go of that bumper takes out the weapon picked. While one bumper is down the other is ignored.
+- **The weapon wheel** (`client/inventory.js createWeaponWheel`, `#wwheel`):
+  - Everything you carry round a circle, the first at the top and on clockwise, in the order the bumpers step through. The weapon in your hands is picked to start with; the one picked is named in the middle with its ammo.
+  - The right stick points straight away. The left stick points once it has been back in the middle since the wheel opened, so the stick you were walking with doesn't pick by accident. With both out, the one pushed further wins. The pick stays when the sticks go back to the middle (`wheelPicker`).
+  - The ring grows with what you carry and the slots shrink to fit round it (the debug menu's every weapon is 30), each icon trimmed to its pixels to fill its slot. While it's open you stand still, as with the quick-item wheel (hold View).
+- **The plasma blade one press away** (`shared/items.js weaponOrder / stepWeapon`, `server/systems/combat.js cycleWeapon`): weapons step in the table's order with the plasma blade last. One step back from your fists (a tap of LB, or the mouse wheel back) is the blade, if you have it. Every weapon is still reached both ways. The touch picker (hold WPN) and the wheel list them in that order.
+- **Hints:** on a pad the HUD's weapon box says "RB / LB: tap or hold". The Controls page, `shared/controls.js` (`prevw`, `wpnwheel`, `drivefire`) and the README's controls tables say how.
+- **Tests:** `test/gamepad.test.js` (6): padFires (RT fires; the full stick only aims unless the option's on; RT at the wheel is the gas and R3 fires the drive-by); the tap / hold timing; the wheel's slots and how each stick picks; the order, and LB from fists; through the server (PREVW from fists is the blade, NEXTW steps on, no blade: round to the last); the controls tables and the README.
+- **Checked end to end** in headless Chromium with a simulated Xbox pad against a local server:
+  - taps of both bumpers;
+  - both bumpers' wheels, picking with either stick;
+  - the full stick not firing, and RT firing.
+
+## 2026-10-09 · The plasma blade in a colour of your own (task #411)
+The owner: "Let's have it come in a lot of different colors, you can have the blue color pop up for now but there should be an option to change its color."
+- **The colours** (`shared/items.js BLADE_COLORS`): blue (its own, the default), red, green, purple, yellow, orange, cyan, pink and white. Each has a blade colour and a white-hot core.
+- **Picking one:** Settings → Plasma blade colour, or the swatches under the blade in the bag. It's the server's to keep (`{ t: 'look', a: 'blade', c }`, `server/systems/looks.js setBlade`): it checks the colour and keeps it with the character (`profile.blade`, `me.blade`), whether you have the blade yet or not.
+- **Everyone sees it:** the ped's descriptor carries it (`bc`, left out for blue: `server/net.js`) and goes out again when it changes.
+  - The classic renderer draws the blade in it (`client/render/peds.js`, `sprites.js`).
+  - Art v2 recolours the blade's glowing pixels in the sprite, under a sprite key of its own (`client/art2/game/peds.js recolorBlade`). That's done there rather than in `client/art2/items.js` so no browser's baked chunks are thrown away.
+  - In both renderers the light in the hand is in it too, and so are the arc of a swing, the sear where it cuts (the 'sizzle' event now says whose blade it was) and the flash of a bullet turned aside.
+  - Your weapon box, the touch WPN button, the bag, the picker and the wheel show the blade in your colour.
+- **Tests:** `test/bladecolor.test.js` (5): the colours, blue first; the server keeps it, ignores anything off the list, sends it to everyone, and it lasts through a respawn; through a session it's only ever the sender's own; the sear says whose blade it was; both renderers, the light and the arcs follow it.
+- **Checked end to end** with two browsers: Settings and the bag set it, the other player sees it, and back to blue clears it. In art v2 outdoors the blade is drawn red and green with its white core. Art v2's recolour also checked in Node: every glowing pixel of the blade takes the colour, and the blue sprite is untouched.
+
+## 2026-10-09 · Start fresh: erase your character and begin again as a new player (task #413)
+The owner: "Let's have an option in debug that lets you clear your character entirely and start from scratch from the main menu, lets you go through the first time user flow from the very beginning. Should have to press this option twice so people don't accidentally hit it but it will clear you entirely. Maybe make this an option under the repair install mode, or if you hit repair install it will ask if you want to start fresh."
+- **Where:** "⟲ Start fresh (erase my character)" in Settings, right under Repair install (in the game and on the title screen), and in the debug menu.
+- **Pressed twice:** the first press arms it for 5 seconds. The button turns red and pulses, and a warning says what goes (money and bank, homes, cars, clothes, weapons, record) and that it can't be undone. A second press within the 5 seconds erases; otherwise it disarms. It isn't offered in offline practice (nothing there is saved) or while not connected.
+- **On the server** (`server/session.js` 'wipe', `server/systems/players.js wipeAccount`): only ever the sender's own character; the message carries no pid.
+  - The body leaves the world at once (no ghost, nothing dropped), and the homes go back on the market.
+  - Your car out in the street goes. With someone else in it, it's nobody's car now and theirs to drive off in.
+  - The bounties on your head are called off. The money held for them lived on your profile, so each placer gets theirs back in the bank and the hunters on the contract are told (`bounties.js onWipe`).
+  - The profile is deleted from the store (`remove`, in both stores), so the next save leaves it out. The server answers `wiped` and closes the connection.
+- **In the browser** (`client/main.js freshPress / freshDone`): the page forgets everything it kept for the game and reloads. That's every `cla.*` key (the token, the settings, the tour) and nothing of another game on the same site; the kept city and art stay, as they're only caches. You come back as a new guest: the title, the graphics choice on Play, then the character creator. A tab that still had the old token gets a brand-new character too.
+- **Settings over the pause menu:** Settings opened from the pause menu was drawn under it (the same z-index, earlier in the page), so a mouse or a finger couldn't use it, only a pad's focus. It's drawn over it now (`#settings` z-index 41).
+- **Tests:** `test/startfresh.test.js` (5): the body, homes, car and profile are gone and nobody else is touched (a message naming someone else is ignored); the bounties are called off, with the placer paid back and the hunter told, and an owned car someone is driving is left to them; a login afterwards is a brand-new account, even with the old token; both stores forget the profile; two presses, the warning, only the `cla.*` keys.
+- **Checked end to end** in headless Chromium:
+  - armed, then disarmed after 5 s;
+  - erased through pause → Options → Start fresh;
+  - back on the title as a new guest, then the graphics choice and the creator;
+  - the old profile gone from profiles.json.

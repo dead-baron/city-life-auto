@@ -8,7 +8,10 @@
 // point at one (mouse, right stick, or your finger) and let go to use it. A quick tap uses the slot
 // you used last. On touch, tapping ITEMS opens the wheel and a tap on a slot uses it.
 // The client only asks; the server checks you have the item and applies it.
-import { WEAPONS, ITEMS } from '../shared/items.js';
+// Weapon wheel (a pad: hold RB or LB): everything you carry round a circle in the order the bumpers step through it;
+// point a stick at one and let go of the bumper to take it out.
+import { WEAPONS, ITEMS, weaponOrder, BLADE_COLORS } from '../shared/items.js';
+import { wheelPicker } from '../shared/input.js';
 import { weaponIcon } from './render/peds.js';
 import { keyName } from './glyphs.js';
 
@@ -62,12 +65,13 @@ export function createInventory({ el, send, me, onClose }) {
       if (!def) continue;
       const b = document.createElement('button');
       b.className = 'inv-weapon' + (m.weapon === w.id ? ' on' : '');
-      b.appendChild(weaponIcon(def.i));
+      b.appendChild(weaponIcon(def.i, m.blade));
       const t = document.createElement('span');
       t.innerHTML = `${def.name}<small>${def.mag ? `${w.mag} | ${Math.max(0, w.ammo - w.mag)}` : m.weapon === w.id ? 'equipped' : ''}</small>`;
       b.appendChild(t);
       b.onclick = () => send({ t: 'weapon', id: w.id });
       ws.appendChild(b);
+      if (w.id === 'plasma') ws.appendChild(bladeSwatches(m.blade | 0, send));   // (its colour: the server keeps it, everyone sees it)
     }
     // usable items: use now, or pin to a slot
     const is = section(body, 'Items');
@@ -115,6 +119,19 @@ function section(body, title) {
   const h = document.createElement('h3'); h.textContent = title; body.appendChild(h);
   const box = document.createElement('div'); box.className = 'inv-sec'; body.appendChild(box);
   return box;
+}
+// the plasma blade's colours, a swatch each (task #411; also in Settings): { t: 'look', a: 'blade', c } - the server
+// checks it and keeps it with the character
+function bladeSwatches(cur, send) {
+  const row = document.createElement('div'); row.className = 'inv-blade';
+  row.innerHTML = '<small>Blade colour</small>';
+  BLADE_COLORS.forEach((bc, i) => {
+    const s = document.createElement('button');
+    s.className = 'sw' + (i === cur ? ' on' : ''); s.title = bc.name; s.style.background = `radial-gradient(circle, ${bc.core} 0 30%, ${bc.c} 60%)`;
+    s.onclick = () => send({ t: 'look', a: 'blade', c: i });
+    row.appendChild(s);
+  });
+  return row;
 }
 function describe(id) {
   const it = ITEMS[id];
@@ -192,8 +209,8 @@ export function createWeaponPicker({ el, send, me }) {
   function render() {
     const m = me();
     if (!open || !m) return;
-    const ws = (m.weapons || []).slice().sort((a, b) => (WEAPONS[a.id]?.i ?? 99) - (WEAPONS[b.id]?.i ?? 99));
-    const s = m.weapon + '|' + ws.map((w) => `${w.id}:${w.mag}:${w.ammo}`).join(',');
+    const by = new Map((m.weapons || []).map((w) => [w.id, w])), ws = weaponOrder([...by.keys()]).map((id) => by.get(id));   // (the order WPN steps through them)
+    const s = m.weapon + '|' + (m.blade | 0) + '|' + ws.map((w) => `${w.id}:${w.mag}:${w.ammo}`).join(',');
     if (s === sig) return;
     sig = s;
     el.innerHTML = '';
@@ -205,7 +222,7 @@ export function createWeaponPicker({ el, send, me }) {
       if (!def) continue;
       const b = document.createElement('button');
       b.className = 'wp-w' + (m.weapon === w.id ? ' on' : '');
-      b.appendChild(weaponIcon(def.i));
+      b.appendChild(weaponIcon(def.i, m.blade));
       const t = document.createElement('span');
       t.innerHTML = `${def.name}<small>${def.mag ? `${w.mag} | ${Math.max(0, w.ammo - w.mag)}` : m.weapon === w.id ? 'in your hands' : ''}</small>`;
       b.appendChild(t);
@@ -232,6 +249,79 @@ export function createWeaponPicker({ el, send, me }) {
     get open() { return open; },
     show() { open = true; sig = ''; el.classList.remove('hidden'); render(); },
     toggle() { if (open) close(); else this.show(); },
+    close,
+    refresh() { if (open) render(); },
+  };
+}
+
+// A weapon's icon cut down to its own pixels (render/peds.js weaponIcon keeps the art's whole box round it) and scaled
+// to fit w x h, kept per weapon, colour and size: the wheel draws a slot's icon again whenever the pick moves. A canvas
+// sits in one place at a time, and each slot of the wheel shows a different weapon.
+const fitted = new Map();
+function fittedIcon(wi, bc, w, h) {
+  const key = `${wi}|${bc | 0}|${w}x${h}`;
+  let c = fitted.get(key);
+  if (c) return c;
+  const src = weaponIcon(wi, bc), W = src.width, H = src.height, d = src.getContext('2d').getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return src;
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, k = Math.min(w / bw, h / bh, 2.5);
+  c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(bw * k)); c.height = Math.max(1, Math.round(bh * k));
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.drawImage(src, x0, y0, bw, bh, 0, 0, c.width, c.height);
+  if (fitted.size > 200) fitted.clear();
+  fitted.set(key, c);
+  return c;
+}
+
+// ---- the weapon wheel (a pad: hold RB or LB) --------------------------------------------------------------------------
+// Every weapon you carry round a circle, in the order the bumpers step through them (the first at the top, clockwise:
+// the plasma blade, last, just left of your fists); the one in your hands is picked to start with. point(sticks) moves
+// the pick (shared/input.js wheelPicker), pick() takes it out and closes.
+export function createWeaponWheel({ el, send, me }) {
+  let open = false, ids = [], sel = -1, cur = -1, pointer = null, shown = '';
+  function render() {
+    const m = me();
+    if (!open || !m) return;
+    const key = `${sel}|${m.weapon}|${m.blade | 0}|${ids.join(',')}`;
+    if (key === shown) return;
+    shown = key;
+    el.innerHTML = '';
+    // the ring grows with what you carry, up to the screen's size, and the slots shrink to fit round it (the debug menu's
+    // every weapon is 30 of them); each weapon fills its slot (no names round the ring: the one picked is named inside)
+    const n = ids.length, R = Math.min(Math.max(90, n * 12), Math.min(innerWidth, innerHeight) * 0.42);
+    const sw = Math.round(Math.max(30, Math.min(64, (2 * Math.PI * R) / n - 6))), sh = Math.round(sw * 0.66);
+    el.style.background = `radial-gradient(circle at 50% 50%, rgba(0,0,0,.5) 0, rgba(0,0,0,.38) ${Math.round(R + sw * 0.6)}px, transparent ${Math.round(R + sw * 1.6)}px)`;
+    ids.forEach((id, i) => {
+      const def = WEAPONS[id], a = (i / n) * Math.PI * 2, b = document.createElement('div');
+      b.className = 'ww-s' + (i === sel ? ' on' : '') + (id === m.weapon ? ' cur' : '');
+      b.style.width = sw + 'px'; b.style.height = sh + 'px'; b.style.margin = `${-sh >> 1}px 0 0 ${-sw >> 1}px`;
+      b.style.transform = `translate(${Math.round(Math.sin(a) * R)}px, ${Math.round(-Math.cos(a) * R)}px)${i === sel ? ' scale(1.2)' : ''}`;
+      b.appendChild(fittedIcon(def.i, m.blade, sw - 10, sh - 8));
+      el.appendChild(b);
+    });
+    const def = WEAPONS[ids[sel]], w = def && (m.weapons || []).find((q) => q.id === def.id);
+    const mid = document.createElement('div'); mid.className = 'ww-mid';
+    mid.innerHTML = def ? `${def.name}<small>${def.mag && w ? `${w.mag} | ${Math.max(0, w.ammo - w.mag)}` : def.id === m.weapon ? 'in your hands' : ''}</small>` : '';
+    el.appendChild(mid);
+  }
+  function close() { open = false; shown = ''; el.classList.add('hidden'); }
+  return {
+    get open() { return open; },
+    show() {
+      const m = me();
+      ids = weaponOrder((m && m.weapons || []).map((w) => w.id));
+      if (ids.length < 2) return false;
+      cur = sel = Math.max(0, ids.indexOf(m.weapon));
+      pointer = wheelPicker(ids.length, sel);
+      open = true; shown = ''; el.classList.remove('hidden'); render();
+      return true;
+    },
+    point(a) { if (!open || !a) return; const s = pointer(a.lx, a.ly, a.rx, a.ry); if (s !== sel) { sel = s; render(); } },
+    pick() { if (!open) return; if (sel >= 0 && sel !== cur && ids[sel]) send({ t: 'weapon', id: ids[sel] }); close(); },
     close,
     refresh() { if (open) render(); },
   };
