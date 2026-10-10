@@ -4,20 +4,23 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
-import { DAY_PART_S, K } from '../shared/constants.js';
+import { DAY_PART_S, DAY_LOOP_S, K } from '../shared/constants.js';
 import { CLUB_DANCERS, CLUB_CLOSE_MAX_S, BOUNCER_HP, BOUNCER_STR, BOUNCER_CHASE_PX, PLAYER_GRIT } from '../shared/rules.js';
 import * as nightclubs from '../server/systems/nightclubs.js';
 import * as combat from '../server/systems/combat.js';
 import { mulberry32 } from '../shared/rng.js';
 
 // a club with room for a line of three and two bouncers, the night on, a player near (but not looking at its door, so
-// everyone's there at once) - run till they are
+// everyone's there at once) - run till they are. (Dancing, task #394: at the peak of the night - half past midnight - and
+// one of the hot clubs, so the line's out the door)
+const PEAK_T =DAY_PART_S + 0.45 * (DAY_LOOP_S - DAY_PART_S);
 function openClub(seed = 1) {
   nightclubs.setRng(mulberry32(seed));
   const w = makeWorld();
-  w.loopTime = DAY_PART_S + 20;
+  w.loopTime = PEAK_T;
   const c = nightclubs.clubs(w).find((q) => q.line.length >= 3 && q.posts.length === 2);
   assert.ok(c, 'a club with a line and two bouncers');
+  c.hot = true;
   const a = joinPlayer(w);
   teleport(w, a.p.ped, c.door.x, c.door.y + c.s * 700);   // (near, out of sight of the door)
   run(w, 3);
@@ -172,7 +175,7 @@ test('hit a bouncer and both come for you', () => {
 test('the line moves: the bouncer lets the next one in - they walk in at the door and dance - and the rest step up', () => {
   const { w, c } = openClub(6);
   const first = w.get(c.queue[0]), second = w.get(c.queue[1]);
-  assert.ok(c.dancers.length < CLUB_DANCERS, 'room on the floor');
+  assert.ok(c.dancers.length < nightclubs.floorCap(w, c), 'room on the floor');
   let inAt = -1, byDoor = Infinity;
   for (let t = 0; t < 60 * 20 && inAt < 0; t++) {
     w.step();

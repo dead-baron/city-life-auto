@@ -57,6 +57,7 @@ import * as stops from './stops.js';
 import * as cells from './cells.js';
 import * as devmode from '../devmode.js';
 import * as underground from './underground.js';
+import * as dance from './dance.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -377,6 +378,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     if ((pressed & (IN.ACTION | IN.VEHICLE)) && !ped.ride) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
     return;
   }
+  dance.input(world, p, ped, inp, pressed);   // the dance button; walking off, a punch, a car: the dance stops (task #394)
   ped.aimAngle = inp.aim;
   if (inp.bits & IN.AIMING) ped.aimUntil = world.time + 0.3;
   if (pressed & IN.NEXTW) combat.cycleWeapon(world, ped, 1);

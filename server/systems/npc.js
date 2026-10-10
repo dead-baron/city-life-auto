@@ -153,7 +153,11 @@ export function update(world, dt) {
     if (n.desk) { // shop / desk staff stay behind their counter (one walking to it from outside - a club's dancer from the line - goes in by the door)
       const dd = Math.hypot(ped.x - n.desk.x, ped.y - n.desk.y);
       if (dd > 6) { const wp = footWay(world, ped, n.desk.x, n.desk.y); pedStep(ped, seek(ped, wp.x, wp.y, false), dt, world.map, walkMods(world, ped, 0.5)); }
-      else { ped.vx = 0; ped.vy = 0; ped.a = n.dancer ? n.desk.a + Math.sin(now * 3 + ped.id) * 1.3 : n.desk.a + Math.sin(now * 0.4 + ped.id) * 0.25; }
+      else {
+        ped.vx = 0; ped.vy = 0;
+        const mate = n.dancer && n.partner ? world.get(n.partner) : null;   // (a couple face each other; a dance move faces the floor's middle - nightclubs.js)
+        ped.a = mate ? Math.atan2(mate.y - ped.y, mate.x - ped.x) : n.dancer ? n.desk.a + (ped.dm !== undefined && ped.dm !== null ? Math.sin(now * 0.5 + ped.id) * 0.3 : Math.sin(now * 3 + ped.id) * 1.3) : n.desk.a + Math.sin(now * 0.4 + ped.id) * 0.25;
+      }
       continue;
     }
     if (n.role === 'driver') { n.role = 'civ'; n.state = 'wander'; } // a driver left on foot (car gone) walks off
@@ -614,7 +618,7 @@ export function leaveBuilding(world, ped, from = null, secs = 40) {
   n.desk = null; n.guard = null; n.dancer = false; n.target = 0;
   n.state = 'leave'; n.until = world.time + secs; n.out = null;
   if (from) { n.fx = from.x; n.fy = from.y; } else { n.fx = undefined; n.fy = undefined; }
-  if (ped.gt) { ped.gt = null; ped.appVer = (ped.appVer || 0) + 1; }
+  if (ped.gt) { ped.gt = null; ped.dm = undefined; ped.appVer = (ped.appVer || 0) + 1; }
 }
 const LEAVE_WALK = [110, 230];   // px on from the door
 const LEAVE_TURN = [0.3, -0.4, 0.9, -1.0, 1.45, -1.5, 1.9, -2.0];   // (which way: about straight on first, then along the street)

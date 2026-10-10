@@ -26,6 +26,15 @@ import { hash, cutGBuf } from '../gbuf.js';
 import { WEAPON_BY_INDEX, bladeColor, hexRgb } from '../../../shared/items.js';
 import { decodeLook, lookArt } from '../../../shared/lookcore.js';   // (the core alone: shared/look.js adds what only the creator and the server use)
 import { CLUBS } from '../../../shared/clubs.js';
+import { DANCE_MOVES, danceFrame, danceDir } from '../../../shared/dance.js';
+import '../dances.js';   // (the dance moves' poses: registered in people.js's POSES, out of the chunk bake's reach)
+
+// Dancing (task #394): the descriptor's dm (shared/dance.js) -> people.js's pose for the move; the frame each moment and
+// the heading it's drawn at (the spin goes round) - host.js
+export const DANCE_POSE = DANCE_MOVES.map((m) => 'd' + m);
+const DANCE_SET = new Set(DANCE_POSE);
+export const isDance = (pose) => DANCE_SET.has(pose);
+export { danceFrame, danceDir };
 
 export const PED_POSES = { ...POSES, move0: 6, move1: 6, move2: 6, move3: 6 };
 export { SEATS };
@@ -307,6 +316,7 @@ export function personaPose(d, pose) {
   if (d.sb && pose === 'idle') return 'sitx';
   const g = d.gt;
   if (!g) return pose;
+  if (g === 'dance' && d.dm !== undefined && pose === 'idle') return DANCE_POSE[d.dm] || g;   // (a move: dancing, task #394)
   if (g === 'dance' || g === 'lean') return pose === 'idle' ? g : pose;
   if (pose === 'walk0' || pose === 'walk1' || ((g === 'skate' || g === 'blade') && pose.startsWith('walk'))) return g;
   return pose;

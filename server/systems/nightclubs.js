@@ -20,11 +20,17 @@
 // BOUNCER_CHASE_PX from their door, then back to their posts. Not for the police at work, nor for someone only hitting
 // back at whoever hit them first, nor for a traffic accident.
 // Everything here but the clubs' state exists only while a player is near, as the shop staff do (interiors.js).
+// Dancing (task #394, "nightclubs full of dancing NPCs instead of idling; lines out the door at the most popular
+// nightclubs"): each dancer has a move (shared/dance.js, the descriptor's dm) and changes it now and then; two pair up
+// for a slow dance or the salsa now and then; at the peak the floor jumps at the drop. The floor fills through the night,
+// the most at the popular clubs (floorCap); the hot clubs (the top third) keep a line out the door at the peak (lineWant).
 import { K, T, TILE } from '../../shared/constants.js';
 import { mulberry32 } from '../../shared/rng.js';
 import {
   CLUB_CLOSE_MAX_S, CLUB_DANCERS, CLUB_LINE, CLUB_ADMIT_S, BOUNCER_HP, BOUNCER_STR, BOUNCER_FIGHT_S, BOUNCER_CHASE_PX,
+  CLUB_DANCERS_MAX, CLUB_PEAK_H, CLUB_MOVE_S, CLUB_COUPLE_P, CLUB_DROP_S,
 } from '../../shared/rules.js';
+import { DANCE_SOLO, DANCE_COUPLES, DANCE_JUMP, COUPLE_PX } from '../../shared/dance.js';
 import { ARCHETYPES, BUILDS } from '../entities.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, despawnNpc, startFight, walkInAt, leaveBuilding } from './npc.js';
@@ -84,11 +90,38 @@ function layout(world, b, u, i, poi) {
   // the dance floor: between the bar and the doors
   const front = wi.south ? wi.y1 : wi.y0, fy0 = (u.counterRow + s * 2) * TILE, fy1 = (front - s) * TILE;
   const floor = { x0: (u.x0 + 0.5) * TILE, x1: (u.x1 + 0.5) * TILE, y0: Math.min(fy0, fy1), y1: Math.min(fy0, fy1) + Math.max(8, Math.abs(fy1 - fy0)) };
+  // how popular it is (0..1: the bigger rooms and a roll of the dice; clubs() marks the top third hot) and how many the
+  // floor holds (about one to every 22 x 22 px)
+  const pop = Math.min(1, 0.55 * (((Math.imul(b.id * 16 + i + 1, 0x9e3779b1) >>> 0) % 1000) / 1000) + 0.45 * Math.min(1, (u.x1 - u.x0 + 1) / 12));
+  const room = Math.max(4, Math.floor((floor.x1 - floor.x0) * (floor.y1 - floor.y0) / 480));
   return {
-    key: b.id * 16 + i, b, u, gate: poi.gate, poi: poi.id, s, floor, posts, line,
+    key: b.id * 16 + i, b, u, gate: poi.gate, poi: poi.id, s, floor, posts, line, pop, room, hot: false,
     door: { x: doorX, y: wallY + s * 20, wallY, inY: wallY - s * 2.1 * TILE, outY: wallY + s * 24 },
-    state: 'closed', since: 0, dancers: [], queue: [], bouncers: [], lostAt: -1e9, nextAdmit: 0,
+    state: 'closed', since: 0, dancers: [], queue: [], bouncers: [], lostAt: -1e9, nextAdmit: 0, nextDrop: 0, dropUntil: 0,
   };
+}
+
+// ---- the night's crowd (task #394) ----------------------------------------------------------------------------------------
+// How busy the clubs are (0.3 .. 1) at the clock's minutes: 1 through the peak (CLUB_PEAK_H), down to 0.3 three hours either side
+export function busyness(minutes) {
+  let h = minutes / 60; if (h >= 12) h -= 24;   // (hours from midnight: the evening negative)
+  const [a, b] = [CLUB_PEAK_H[0] - 24, CLUB_PEAK_H[1]];
+  const off = h < a ? a - h : h > b ? h - b : 0;
+  return Math.max(0.3, 1 - off * 0.7 / 3);
+}
+export const isPeak = (world) => busyness(world.clock.minutes) >= 1;
+// How many on this club's floor now: more through the night, more at the popular ones (the quietest at its peak:
+// CLUB_DANCERS; the busiest: CLUB_DANCERS_MAX), as many as the floor holds
+export function floorCap(world, c) {
+  const busy = busyness(world.clock.minutes), want = 3 + (CLUB_DANCERS - 3 + (CLUB_DANCERS_MAX - CLUB_DANCERS) * c.pop) * busy;
+  return Math.max(3, Math.min(c.room, Math.round(want)));
+}
+// How long its line is: a hot club's the length of the rope at the peak; a quiet one's a couple at most; nobody before the
+// crowd turns up - but one waiting whenever the floor has room (the bouncer lets them in)
+function lineWant(world, c) {
+  const busy = busyness(world.clock.minutes), k = Math.max(0, (busy - 0.55) / 0.45);
+  const want = Math.round(c.line.length * k * (c.hot ? 1 : 0.4));
+  return Math.min(c.line.length, Math.max(want, c.dancers.length < floorCap(world, c) ? 1 : 0));
 }
 
 export function clubs(world) {
@@ -106,6 +139,9 @@ export function clubs(world) {
       st.list.push(c); st.byGate.set(c.gate, c); st.byUnit.set(u, c);
     });
   }
+  // the hot ones: the most popular third
+  const ranked = [...st.list].sort((a, q) => q.pop - a.pop || a.key - q.key);
+  ranked.slice(0, Math.ceil(ranked.length / 3)).forEach((c) => { c.hot = true; });
   return st.list;
 }
 export const clubByKey = (world, key) => clubs(world).find((c) => c.key === key) || null;
@@ -217,11 +253,14 @@ function manage(world, c) {
     const post = c.posts.find((q) => !c.bouncers.some((id) => world.get(id).npc.post === q));
     if (post) addBouncer(world, c, post);
   }
-  // people on the floor: a few straight away while nobody's in there to see them turn up (the line brings the rest)
+  // people on the floor: most of them straight away while nobody's in there to see them turn up (the line brings the rest)
+  const cap = floorCap(world, c);
   const watched = [...world.players.values()].some((p) => p.ped && !p.ped.dead && clubAt(world, p.ped.x, p.ped.y) === c);
-  if (!watched) while (c.dancers.length < CLUB_DANCERS - 2) c.dancers.push(addDancer(world, c, null).id);
-  // the line, filled from the back: people walking up from out of sight where the spot is in view
-  for (let k = c.queue.length; k < c.line.length; k++) { const e = addToLine(world, c, k); if (!e) break; c.queue.push(e.id); }
+  if (!watched) while (c.dancers.length < cap - 2) c.dancers.push(addDancer(world, c, null).id);
+  // the line, filled from the back: people walking up from out of sight where the spot is in view (as long as the night
+  // and the club's name call for: lineWant)
+  for (let k = c.queue.length, want = lineWant(world, c); k < want; k++) { const e = addToLine(world, c, k); if (!e) break; c.queue.push(e.id); }
+  dancing(world, c);
   for (const id of c.queue) {   // (someone who never got to their spot - a long way round: put there while nobody's looking)
     const e = world.get(id), n = e.npc, spot = n.guard;
     if (!spot || now - n.lineAt < ARRIVE_S || Math.hypot(e.x - spot.x, e.y - spot.y) < 16) continue;
@@ -231,29 +270,87 @@ function manage(world, c) {
   // the door: the next one in when there's room on the floor; once it's full, now and then someone heads home
   if (now >= c.nextAdmit) {
     c.nextAdmit = now + CLUB_ADMIT_S[0] + rng() * (CLUB_ADMIT_S[1] - CLUB_ADMIT_S[0]);
-    if (c.dancers.length >= CLUB_DANCERS) {
+    if (c.dancers.length >= cap) {
       const on = c.dancers.map((id) => world.get(id)).filter((e) => Math.hypot(e.x - e.npc.desk.x, e.y - e.npc.desk.y) < 8);
-      if (on.length) { const e = on[Math.floor(rng() * on.length)]; leaveBuilding(world, e, c.door); c.dancers = c.dancers.filter((id) => id !== e.id); }
+      if (on.length) { const e = on[Math.floor(rng() * on.length)]; unpair(world, e); leaveBuilding(world, e, c.door); c.dancers = c.dancers.filter((id) => id !== e.id); }
     }
     const head = c.queue.length ? world.get(c.queue[0]) : null;
-    if (head && c.dancers.length < CLUB_DANCERS && Math.hypot(head.x - c.line[0].x, head.y - c.line[0].y) < 16) admit(world, c, head);
+    if (head && c.dancers.length < cap && Math.hypot(head.x - c.line[0].x, head.y - c.line[0].y) < 16) admit(world, c, head);
   }
 }
 
-// a spot on the dance floor
-function floorSpot(c) {
-  const F = c.floor;
-  return { x: F.x0 + rng() * (F.x1 - F.x0), y: F.y0 + rng() * (F.y1 - F.y0), a: rng() * 6.28 };
+// a spot on the dance floor, a little way from everyone else's if there's one, facing the middle of the floor (task #394:
+// the crowd faces the same way - the sprites for few headings)
+function floorSpot(world, c) {
+  const F = c.floor, cx = (F.x0 + F.x1) / 2, cy = (F.y0 + F.y1) / 2;
+  const taken = c.dancers.map((id) => world.get(id)).filter((e) => e && e.npc && e.npc.desk).map((e) => e.npc.desk);
+  let best = null, bd = -1;
+  for (let t = 0; t < 8; t++) {
+    const x = F.x0 + rng() * (F.x1 - F.x0), y = F.y0 + rng() * (F.y1 - F.y0);
+    let d = 1e9; for (const q of taken) d = Math.min(d, Math.hypot(q.x - x, q.y - y));
+    if (d > bd) { bd = d; best = { x, y }; }
+    if (d > 26) break;
+  }
+  const away = Math.hypot(cx - best.x, cy - best.y);
+  best.a = away > 12 ? Math.atan2(cy - best.y, cx - best.x) : (c.s > 0 ? -Math.PI / 2 : Math.PI / 2);   // (in the middle: toward the bar)
+  return best;
 }
 // someone dancing (desk: they keep to their spot, swaying - npc.js; gt 'dance': the dance pose): spawned on the floor, or
 // (ped given) someone from the line, who walks in through the door to their spot (npc.js: a desk out of sight goes by it)
 function addDancer(world, c, ped) {
-  const spot = floorSpot(c);
+  const spot = floorSpot(world, c);
   if (!ped) ped = spawnNpc(world, ['casual', 'hustler', 'socialite', 'casual'][Math.floor(rng() * 4)], spot.x, spot.y, 'civ');
   const n = ped.npc;
-  n.desk = spot; n.keep = true; n.dancer = true; n.clubKey = c.key; n.guard = null; n.clubQueue = null;
-  ped.gt = 'dance'; ped.appVer = (ped.appVer || 0) + 1;
+  n.desk = spot; n.keep = true; n.dancer = true; n.clubKey = c.key; n.guard = null; n.clubQueue = null; n.partner = 0;
+  setMove(world, ped, c.dropUntil > world.time ? DANCE_JUMP : soloMove());   // (and a move of their own: task #394)
   return ped;
+}
+
+// ---- dancing (task #394, shared/dance.js): each dancer has a move (the descriptor's dm) and changes it now and then; now and
+// then two pair up face to face for a slow dance or the salsa; at the peak the whole floor jumps now and then (the drop)
+const soloMove = () => DANCE_SOLO[Math.floor(rng() * DANCE_SOLO.length)];
+function setMove(world, e, dm) {
+  e.gt = 'dance'; e.dm = dm; e.appVer = (e.appVer || 0) + 1;
+  e.npc.danceNext = world.time + CLUB_MOVE_S[0] + rng() * (CLUB_MOVE_S[1] - CLUB_MOVE_S[0]);
+}
+const onSpot = (e) => !!(e && e.npc && e.npc.desk && Math.hypot(e.x - e.npc.desk.x, e.y - e.npc.desk.y) < 8);
+// a couple splits up (one leaving, a new move): the other dances on their own
+function unpair(world, e) {
+  const n = e.npc, q = n && n.partner ? world.get(n.partner) : null;
+  if (n) n.partner = 0;
+  if (q && q.npc && q.npc.partner === e.id) { q.npc.partner = 0; if (alive(q) && q.npc.dancer) setMove(world, q, soloMove()); }
+}
+// two dancers pair up: the lead stays where they are, the partner comes over to face them
+function pair(world, c, lead, mate) {
+  const [dl, df] = DANCE_COUPLES[Math.floor(rng() * DANCE_COUPLES.length)], F = c.floor, a = lead.npc.desk.a;
+  const x = Math.max(F.x0, Math.min(F.x1, lead.npc.desk.x + Math.cos(a) * COUPLE_PX)), y = Math.max(F.y0, Math.min(F.y1, lead.npc.desk.y + Math.sin(a) * COUPLE_PX));
+  lead.npc.desk = { x: lead.npc.desk.x, y: lead.npc.desk.y, a: Math.atan2(y - lead.npc.desk.y, x - lead.npc.desk.x) };
+  mate.npc.desk = { x, y, a: lead.npc.desk.a + Math.PI };
+  lead.npc.partner = mate.id; mate.npc.partner = lead.id;
+  setMove(world, lead, dl); setMove(world, mate, df);
+  mate.npc.danceNext = lead.npc.danceNext + 60;   // (the lead says when it's over)
+}
+function dancing(world, c) {
+  const now = world.time, list = c.dancers.map((id) => world.get(id)).filter((e) => alive(e) && e.npc && e.npc.dancer);
+  // the drop: at the peak, now and then everyone on their own jumps for a while
+  if (isPeak(world) && now >= c.nextDrop) {
+    if (c.nextDrop) { c.dropUntil = now + CLUB_DROP_S[0]; for (const e of list) if (!e.npc.partner) setMove(world, e, DANCE_JUMP); }
+    c.nextDrop = now + CLUB_DROP_S[1][0] + rng() * (CLUB_DROP_S[1][1] - CLUB_DROP_S[1][0]);
+  }
+  if (c.dropUntil && now >= c.dropUntil) { c.dropUntil = 0; for (const e of list) if (e.dm === DANCE_JUMP) setMove(world, e, soloMove()); }
+  if (c.dropUntil) return;
+  for (const e of list) {
+    const n = e.npc;
+    if (n.partner && !(alive(world.get(n.partner)) && world.get(n.partner).npc && world.get(n.partner).npc.partner === e.id)) { n.partner = 0; setMove(world, e, soloMove()); continue; }
+    if (now < (n.danceNext || 0) || !onSpot(e)) continue;
+    if (n.partner) { unpair(world, e); setMove(world, e, soloMove()); continue; }   // (the song's over)
+    if (rng() < CLUB_COUPLE_P) {
+      const mate = list.find((q) => q !== e && !q.npc.partner && onSpot(q) && Math.hypot(q.x - e.x, q.y - e.y) < 90);
+      if (mate) { pair(world, c, e, mate); continue; }
+    }
+    let dm = soloMove(); if (dm === e.dm) dm = soloMove();
+    setMove(world, e, dm);
+  }
 }
 // the front of the line goes in; everyone behind steps up a place
 function admit(world, c, head) {

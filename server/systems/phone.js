@@ -15,6 +15,7 @@ import * as police from './police.js';
 import * as bounties from './bounties.js';
 import * as transit from './transit.js';
 import * as ferries from './ferries.js';
+import * as dance from './dance.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -181,6 +182,7 @@ export function handle(world, p, msg) {
   if (a === 'out') { phoneOut(world, p, !!msg.on); return null; }   // the phone in your hand while its menu is open
   if (a === 'transit') return { ...transit.transitInfo(world, p), ferries: ferries.ferryInfo(world) };   // the Transit app and the lines on the map
   if (a === 'taxi') return transit.taxiPhone(world, p, msg);    // call a taxi / cancel it / where you want to go
+  if (a === 'dance') { phoneOut(world, p, false); dance.next(world, p); return null; }   // the Dance button: dance (the next move each press, dance.js)
   if (a === 'cancel') {
     if (!p.job) return { ...boardFor(world, p), err: 'You have no job.' };
     jobs.failJob(world, p, 'Job cancelled.');

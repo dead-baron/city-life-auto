@@ -442,6 +442,13 @@ export const CLUB_CLOSE_MAX_S = 45;        // the shutter comes down at the late
 export const CLUB_DANCERS = 6;             // people on the dance floor at most (while a player is near)
 export const CLUB_LINE = 5;                // people waiting in line outside, at most
 export const CLUB_ADMIT_S = [14, 26];      // the bouncer lets the next one in about this often (once it's full, one heads home)
+// ...the dancing (task #394): the floor fills up through the night - more at the busiest clubs - to its peak (PEAK_H: from
+// 23:00 to half past two), when the hot clubs (the top third) keep a line out the door and now and then the whole floor jumps
+export const CLUB_DANCERS_MAX = 16;        // on the floor at the busiest club at its peak (CLUB_DANCERS at the quietest's)
+export const CLUB_PEAK_H = [23, 2.5];      // the peak of the night (clock hours)
+export const CLUB_MOVE_S = [8, 22];        // a dancer changes moves about this often
+export const CLUB_COUPLE_P = 0.25;         // ...and then pairs up with someone for a slow dance or the salsa this often
+export const CLUB_DROP_S = [10, [40, 80]]; // at the peak the floor jumps this long, about this often
 // ...and its bouncers, one or two at the door: hurt a patron (dancing, in the line, inside) or one of them and they come
 // for you - with their fists, but built like brutes
 export const BOUNCER_HP = 280;             // a bouncer's health (a brute's build)

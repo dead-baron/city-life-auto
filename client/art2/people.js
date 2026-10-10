@@ -2155,3 +2155,7 @@ GAITS2.thump = (D, P, f) => {   // a fist on the wall in front: raised, then on 
   };
 };
 // ==== end of the cells ==================================================================================================
+
+// More poses from outside (they register in POSES and here): the dance moves, client/art2/dances.js (task #394) - kept out
+// of the chunk bake's reach (only game/peds.js imports them), so a change to a dance doesn't throw away the baked chunks
+export { GAITS2 as MORE_POSES };

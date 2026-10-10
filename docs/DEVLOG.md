@@ -5841,3 +5841,47 @@ Files: `shared/world3.js` (new), `shared/map.js` (the `opts` parameter), `tools/
     City lands in its four regions with at least the measured share the same as today's. With Dry Creek joined on (and
     the other islands' roads left out), its roads are exactly today's and its distance fields are the same.
   - `test/dmath.test.js` passes as before.
+## 2026-10-10 · Dancing: the moves, packed club floors, the line out the door, and your own dance (task #394)
+
+The owner: "dancing animations for NPCs and the player; nightclubs full of dancing NPCs instead of idling; lines out the
+door at the most popular nightclubs." Concepts DN1 (the moves) and IN15 (a packed floor at 1 a.m., the queue at the rope,
+closing at sunrise).
+
+- **The moves** (`shared/dance.js`: the list both sides share; the descriptor carries `gt: 'dance'` and `dm`, the move):
+  a loose two-step, the bounce, an arm up with a fist pump, the disco point, the spin, the robot, a slow sway with the
+  eyes closed; the couples' slow dance and salsa (a lead and a partner, face to face `COUPLE_PX` apart); jumping in the
+  crowd. Four frames each, on a clock (`danceFrame`: the couples and the jumping crowd on the beat together, everyone
+  else a little off it); the spin turns the figure round with the frames (`danceDir`: front, side, back, side), so it
+  needs no frames of its own.
+- **Art v2** (`client/art2/dances.js`): the twelve moves as poses of the people builder, registered in `people.js`'s
+  `POSES` through its new `MORE_POSES` export. Only the live characters import them (`game/peds.js`), so they are out of
+  the chunk bake's reach: changing a dance later doesn't throw away every browser's baked chunks (this change does, once,
+  for the one-line export). The sprites are made on demand and kept like every other pose (about 7 ms each); the
+  dancers face the middle of the floor (or their partner), so a club needs only a few headings of each.
+  `host.js` picks the frame and the spin's heading. **Classic renderer:** a dancer there bounces with the arms out on
+  the beat (`client/main.js` drawUpright).
+- **The clubs** (`server/systems/nightclubs.js`, on #432's floor, line and bouncers):
+  - Each dancer has a move, and changes it every 8-22 s (`CLUB_MOVE_S`). Now and then (`CLUB_COUPLE_P`) two on the floor
+    pair up: the lead keeps their spot, the partner comes over to face them, both dance the slow dance or the salsa
+    until the lead's song is over. At the peak, every 40-80 s, the drop: everyone on their own jumps for 10 s
+    (`CLUB_DROP_S`).
+  - The night fills up (`busyness`: 1 from 23:00 to 02:30, `CLUB_PEAK_H`, down to 0.3 three hours either side). Each
+    club has a popularity (its size and a roll); the top third are hot. The floor holds `floorCap`: from 3 early on to
+    `CLUB_DANCERS` at the quietest club's peak and `CLUB_DANCERS_MAX` (16) at the busiest's, as many as the floor has
+    room for. Past the peak the floor thins (one heads home each time the bouncer looks round) until closing empties it
+    as before.
+  - The line: a hot club's is the rope's length at the peak; a quiet club's two at most; before the crowd turns up,
+    one waiting whenever there's room on the floor (the bouncer lets them in).
+  - Dancers face the middle of the floor, swaying a little (no more spinning on the spot: fewer headings to draw);
+    a couple face each other (`npc.js`).
+- **Your dance** (`server/systems/dance.js`): G, L3 (click the left stick) or the phone's **Dance** button
+  (`IN.DANCE`, the input's last free bit). Each press the next move (`DANCE_PLAYER`: the two-step, the bounce, the fist
+  pump, the disco point, the spin, the robot, the sway, jumping), then you stop. Walking off, a dive, a punch, the guard,
+  throwing, the action button, a car, going down: you stop. Everyone sees it (the descriptor, sent again on `appVer`).
+  `shared/controls.js` has `dance` on every device; the README's controls table has the row.
+- Budgets (`node tools/perf.mjs`): all within. The page 701 KB of 720; the renderer 350 of 363 KB; the bake worker
+  76 files of 76 (it draws the live characters too: `dances.js` and `shared/dance.js` are its two new files).
+- Tests: `test/dance.test.js` (the poses exist, each frame different, the clock and the spin; the floor and the line
+  through the night and at the hot clubs; the dancers' moves, a couple face to face, the drop; the player's button over
+  the wire, the descriptor, the phone's button, what stops it). `test/nightclubs.test.js` now opens its club at the
+  peak, as a hot one (the full line it checks is a hot club's at the peak now).
