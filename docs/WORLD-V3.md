@@ -923,3 +923,63 @@ region should only need the part of an island inside it and a margin.
    `mapSignature` per region (the join check), the lane graph per region stitched at the skeleton's border points, and
    the systems that search the whole network (`ferries.js`, `transit.js`, streetlife's Dijkstra) on the skeleton's
    coarse graph for long trips.
+
+## Part 5 - The owner's answers and markup (2026-10-10, 12:01)
+
+The owner marked up the draft layout (`docs/world-v3-markup-2026-10-10.png`: 2520 x 2016 px over the 5040 x 4032
+frame, so 2 tiles a pixel) and answered part 2's questions.
+
+**The owner's answers**
+- **The layout:** yes. "I want to make sure the highway systems loop around in a logical way so its easy to connect
+  throughout the world through the highways and there are long stretches of highway to travel on."
+- **The markup's colours:**
+  - orange: highways;
+  - white: arterial roads;
+  - green: the main train line;
+  - pink: inner-city subway line 1;
+  - yellow: subway line 2.
+
+  A dotted stretch of any of them is a tunnel, or underground. Smaller roads (county roads, streets, dirt roads,
+  paths) branch off the arterials and aren't drawn.
+- **The map's edges:** a highway that runs off the map ends at a closed tunnel for now.
+- **Trains:** "I want the main train system to loop around the entire world and cover a large stretch. Maybe the main
+  train has two tracks in areas so you can catch it going either way... should be scenic the entire way". More tunnels
+  are welcome.
+- **The rest:**
+  - Westport's port faces the west channel, as in WR3.
+  - Dry Creek is split between the valley and the desert, rebuilt to blend.
+  - The full 5 x 4 km now.
+  - The names are fine.
+  - Westport Freight moves: now to another warehouse in Port Westport, in v3 to the new port.
+
+**The rulings** (put to the owner at 12:10; they stand unless the owner says otherwise)
+1. **Highways:** all of the owner's, making three loops:
+   - the Coast Highway;
+   - the North Highway: from the Highland Hwy junction along the north edge, in a tunnel under a raised North
+     Ridge, to the Desert Hwy north of Lucky Mesa;
+   - the Granite Peaks Highway: the Coast Highway north from Highland Woods, by tunnels into the peaks and across
+     them to the Gorge.
+
+   The Granite Peaks Highway, the North Highway, the Highland Hwy and the Valley Hwy meet at one interchange near the
+   top middle. The highways running off the map (Valley Hwy north, Desert Hwy north, Coast Highway east) end at a
+   closed tunnel mouth. Highways cross nothing at grade: interchanges with highways and towns, bridges over or under
+   everything else.
+2. **Arterials:** all of the owner's, with two changes:
+   - Granite Peaks is thinned to three: the scenic road along the top with its tunnel, a pass down by Silver Thread
+     Falls to Timber Bend, and the lookout road.
+   - Big roadless areas are kept in the forest and the eastern desert.
+
+   Arterials cross the main line at gated level crossings (on bridges in towns) and each other at intersections.
+3. **The west sea road:** the white dotted road round the Egret Coast to Gull Harbor is an island-hopping causeway
+   (low bridges from islet to islet), not an undersea tunnel. The owner is to confirm. The Gull Harbor car ferry to
+   Westport stays.
+4. **The main line:**
+   - double track everywhere, one track each way;
+   - junctions guarded by signals;
+   - three services, each both ways: the Grand Loop (mountains, valley, desert), the Bay Loop (Northshore, Metro
+     City, Cedar Isle, Sandpiper) and the Harbor Line (Westport, Metro City, Northshore);
+   - tunnels where dotted, and wherever the line meets a mountain or a mesa.
+5. **Subways:** underground where dotted, on bridges and viaducts where solid.
+   - Line 1 (pink): Northshore, under the bay by the Bay Bridge, Metro City, the airport, a sea viaduct, then a loop
+     under Cedar Isle.
+   - Line 2 (yellow): a loop under Westport, over the harbour, under Metro City, then Southbank.
