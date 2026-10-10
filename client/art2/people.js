@@ -1891,7 +1891,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck'].includes(pn)) kind = null;
+  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump'].includes(pn)) kind = null;
   if (pn === 'hood') kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
@@ -2073,3 +2073,82 @@ function stretcherFigure(B, C, E, acc) {
   E([0, STR_Y1 - 3.4, STR_Z + 4.0], I, [2.5, 1.7, 2.0], GR.ACC, 'hair', MST.hair);
 }
 // ==== end of the paramedics' stretcher ================================================================================
+
+// ==== The arrest (task #376, server/systems/custody.js) ================================================================
+// escortR / escortL: an officer walking a cuffed prisoner to the police car, a hand on their arm (the prisoner at their right
+// / left: the descriptor's es), the other arm swinging with the walk
+Object.assign(POSES, { escortR: 6, escortL: 6 });
+function escortPose(D, P, f, s) {
+  gait(D, P, 0, f / 6, true); P.acc = false; P.headYaw = s * 0.12;
+  const k = s > 0 ? 'R' : 'L', sw = P.hands;
+  P.hands = (S) => { sw(S); P['h' + k] = vadd(S['sh' + k], mv(S.SP, [s * 3.4, 2.2, -D.reach * 0.84])); P['el' + k] = [s * 0.7, -1, -0.2]; P['open' + k] = 0; };
+}
+GAITS2.escortR = (D, P, f) => escortPose(D, P, f, 1);
+GAITS2.escortL = (D, P, f) => escortPose(D, P, f, -1);
+// ==== end of the arrest =================================================================================================
+
+// ==== The cells (task #379, server/systems/cells.js) ===================================================================
+// sitx: sitting on a cell's bench or its toilet (and any bench: the descriptor's sb), six ways of sitting a while -
+//   0 casually, hands on the thighs; 1 slouched back against the wall, hands in the lap; 2 hunched over, elbows on the
+//   knees, hands hanging between them; 3 the head in the hands; 4 leaning back on the hands, looking up; 5 bored, the chin
+//   on a fist - two frames each (a breath, a glance). The client holds each way a while (game/peds.js sitFrame).
+// bars: both hands on the bars, straight out in front at the chest - 0 looking out, 1 leaning in with the head down,
+//   2 / 3 looking along the corridor one way and the other
+// bang: rattling the bars (0 thrown back, 1 slammed in); thump: a fist on the wall (0 raised, 1 on it), the other hand flat
+Object.assign(POSES, { sitx: 12, bars: 4, bang: 2, thump: 2 });
+function sitBase(D, P) {
+  const seat = SEATS.sit / CA;
+  P.acc = false; P.pel = [0, -0.6, seat + 3.7];
+  P.fL = [-D.hipX - 0.9, 7.8, D.ank]; P.fR = [D.hipX + 0.9, 7.6, D.ank]; P.kneeL = P.kneeR = [0, 1, 0.8];
+  return seat;
+}
+GAITS2.sitx = (D, P, f) => {
+  const seat = sitBase(D, P), v = Math.floor(f / 2) % 6, k = f & 1;
+  P.breath = k * 0.35;
+  if (v === 0) {   // casually: upright, the hands resting on the thighs, a glance aside
+    P.lean = -0.04; P.headPitch = 0.02; P.headYaw = k ? 0.3 : 0;
+    P.hands = () => { P.hL = [-4.6, 6.4, seat + 6.4]; P.hR = [4.6, 6.4, seat + 6.4]; P.elL = [-1, -0.4, -0.3]; P.elR = [1, -0.4, -0.3]; };
+  } else if (v === 1) {   // slouched back against the wall, slid down a little, the hands in the lap, the chin down
+    P.lean = -0.26; P.pel = [0, 1.0, seat + 3.0]; P.headPitch = 0.3 + k * 0.06; P.headYaw = -0.12;
+    P.fL = [-D.hipX - 1.4, 10.4, D.ank]; P.fR = [D.hipX + 1.2, 9.6, D.ank];
+    P.hands = () => { P.hL = [-2.0, 7.4, seat + 4.4]; P.hR = [2.2, 7.0, seat + 4.6]; P.elL = [-1, -0.4, -0.3]; P.elR = [1, -0.4, -0.3]; };
+  } else if (v === 2) {   // hunched over, the elbows on the knees, the hands hanging between them, the head down
+    P.lean = 0.62 + k * 0.03; P.headPitch = 0.42;
+    P.hands = () => { P.hL = [-1.2, 10.6, seat + 2.4]; P.hR = [1.2, 10.8, seat + 2.6]; P.elL = [-0.6, 0.2, -1]; P.elR = [0.6, 0.2, -1]; };
+  } else if (v === 3) {   // the head in the hands
+    P.lean = 0.7 + k * 0.03; P.headPitch = 0.6;
+    P.hands = (S) => { P.hL = vadd(S.head, mv(S.HD, [-2.3, 2.6, -1.2])); P.hR = vadd(S.head, mv(S.HD, [2.3, 2.6, -1.2])); P.elL = [-0.4, 0.3, -1]; P.elR = [0.4, 0.3, -1]; P.openL = P.openR = 1; };
+  } else if (v === 4) {   // leaning back on the hands, looking up at the ceiling
+    P.lean = -0.16; P.headPitch = -0.6; P.headYaw = k ? -0.2 : 0.1;
+    P.hands = () => { P.hL = [-6.8, -1.6, seat + 1.6]; P.hR = [6.8, -1.4, seat + 1.6]; P.elL = [-1, -0.6, 0]; P.elR = [1, -0.6, 0]; P.openL = P.openR = 1; };
+  } else {   // bored: leaning on a knee, the chin on a fist, the other hand on the thigh
+    P.lean = 0.34; P.tilt = 0.08; P.headPitch = 0.14; P.headYaw = k ? 0.18 : 0.05;
+    P.hands = (S) => { P.hR = vadd(S.head, mv(S.HD, [0.8, 2.0, -3.4])); P.elR = [0.5, 0.4, -1]; P.hL = [-4.6, 6.6, seat + 6.0]; P.elL = [-1, -0.4, -0.3]; };
+  }
+};
+GAITS2.bars = (D, P, f) => {
+  const v = f & 3;
+  P.acc = false;
+  P.fL = [-D.hipX - 0.8, 0.8, D.ank]; P.fR = [D.hipX + 0.8, -0.4, D.ank];
+  P.lean = v === 1 ? 0.16 : 0.03; P.headPitch = v === 1 ? 0.32 : -0.04; P.headYaw = v === 2 ? 0.55 : v === 3 ? -0.55 : 0; P.breath = v ? 0 : 0.2;
+  P.hands = (S) => {   // gripping the bars in front of the shoulders, at the top of the chest: the arms straight out
+    const z = (S.shL[2] + S.shR[2]) / 2 - 0.8, y = D.reach * 0.9;
+    P.hL = [-D.shX - 2.4, y, z]; P.hR = [D.shX + 2.4, y, z];   // (two bars a little wider than the shoulders)
+    P.elL = [-0.3, 0, -1]; P.elR = [0.3, 0, -1]; P.openL = P.openR = 0;
+  };
+};
+GAITS2.bang = (D, P, f) => {   // the hands stay on the bars: the body thrown back, then slammed in
+  GAITS2.bars(D, P, 0);
+  P.lean = f ? 0.22 : -0.14; P.headPitch = f ? 0.12 : -0.14; P.breath = 0;
+  P.pel = [P.pel[0], P.pel[1] + (f ? 1.0 : -1.2), P.pel[2] - (f ? 0.4 : 0)];
+};
+GAITS2.thump = (D, P, f) => {   // a fist on the wall in front: raised, then on it; the other hand flat on the wall
+  P.acc = false;
+  P.fL = [-D.hipX - 0.6, 2.6, D.ank]; P.fR = [D.hipX + 0.8, -2.4, D.ank];
+  P.lean = f ? 0.14 : 0.02; P.twist = f ? -0.12 : 0.18; P.headPitch = f ? 0.12 : 0;
+  P.hands = (S) => {
+    P.hL = [-D.shX + 1.0, D.reach * 0.62, S.shL[2] - 1.0]; P.elL = [-1, -0.2, -0.6]; P.openL = 1;
+    P.hR = f ? [D.shX - 1.6, D.reach * 0.66, S.shR[2] + 0.6] : vadd(S.shR, [1.4, 3.2, 6.4]); P.elR = [1, -0.4, -0.4]; P.openR = 0;
+  };
+};
+// ==== end of the cells ==================================================================================================

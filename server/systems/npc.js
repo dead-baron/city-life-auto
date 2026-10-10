@@ -196,6 +196,7 @@ export function update(world, dt) {
         break;
       }
       case 'fight': inp = fight(world, ped, now); factor = 1; break;
+      case 'watch': inp = watch(world, ped, now); break;
       case 'limp': inp = limp(world, ped, now); factor = LIMP_SPEED; break;
       case 'crawl': inp = crawl(world, ped, now); factor = CRAWL_SPEED; break;
       case 'mug': inp = mugRun(world, ped, now); factor = 1; break;
@@ -384,6 +385,7 @@ function fight(world, ped, now) {
   const n = ped.npc;
   const t = world.get(n.target);
   if (!t || t.dead || now > n.until || Math.hypot(t.x - ped.x, t.y - ped.y) > 650) { n.state = 'wander'; n.target = 0; return NO_INPUT; }
+  if (heldByPolice(t)) { backOff(world, ped, t); return NO_INPUT; }   // (the police have them: task #428)
   const d = Math.hypot(t.x - ped.x, t.y - ped.y);
   const aim = Math.atan2(t.y - ped.y, t.x - ped.x);
   if (t.vehId) {
@@ -528,7 +530,24 @@ export function onDeath(world, ped, attacker) {
 
 export function startFight(world, ped, target, secs) {
   if (target.npc && target.npc.role === ped.npc.role && ped.npc.role === 'gang') return;
+  if (heldByPolice(target)) return;   // (the police have them: no fight starts - task #428)
   ped.npc.state = 'fight'; ped.npc.target = target.id; ped.npc.until = world.time + secs;
+}
+// Someone the police have hold of (the owner's note, task #428): an officer on them going for the cuffs (struggle.js), or
+// cuffed and being taken in (custody.js). Whoever was fighting them lets it go, and nobody starts on them - a car can
+// still run them over, and the like; it's the people coming at them that stop.
+export const heldByPolice = (e) => !!e && (!!e.cuffed || !!(e.player && (e.player.struggle || e.player.custody)));
+// ...so whoever was fighting them stands back and watches a few seconds, then goes on their way
+function backOff(world, ped, t) {
+  const n = ped.npc;
+  n.state = 'watch'; n.target = t.id; n.fx = t.x; n.fy = t.y; n.until = world.time + 3 + rng() * 4;
+}
+function watch(world, ped, now) {
+  const n = ped.npc, t = n.target ? world.get(n.target) : null;
+  if (t && !t.dead && !t.removed) { n.fx = t.x; n.fy = t.y; }
+  ped.a = Math.atan2(n.fy - ped.y, n.fx - ped.x);
+  if (now > n.until) { n.state = 'wander'; n.target = 0; n.until = 0; n.awayFrom = ped.a + Math.PI; }
+  return NO_INPUT;
 }
 function flee(world, ped, fx, fy, secs) {
   const n = ped.npc;

@@ -28,6 +28,8 @@ export const ARREST_REWARD_PER_STAR = 150;
 // walk out now, or wait it out. Killing the officer holding them, or the car being blown up, wrecked in a bad crash or
 // taken off the police, sets them free - still wanted, and wanted more for escaping.
 export const HOLD_S = 4;               // held face down this long before they're walked to a car
+export const ESCORT_WALK_PX = 700;     // the officer who cuffed them walks them to their own car if it's this close and the way
+                                       //   there is clear on foot (task #376); further, a car is brought over or sent
 export const ESCORT_PX = 650;          // a police car this close with a seat free takes them in; else one is sent
 export const TRANSPORT_WAIT_S = 45;    // ...and if none has them in the back in this long, they're taken in anyway
 export const RIDE_MAX_S = 150;         // a ride to the station that takes longer than this (stuck, lost) gets there anyway
@@ -40,6 +42,9 @@ export const BAIL_PER_STAR = 100;      // ...or out now for this much a star (fr
 export const CELL_CAP = 4;             // people a cell takes (a prisoner goes to the cell with the fewest in it - shared/cells.js)
 export const CELL_WALK_S = 45;         // the walk from the police car to the cell: stuck longer than this, they're put in it
 export const INMATE_S = 240;           // an NPC crook the police arrest sits this long in the nearest station's cells
+export const CELL_SHARE = 0.6;         // booked into a cell block where someone's doing time (an NPC, a cell with room), you're put
+                                       //   in with them this often (task #380) - else the cell with the fewest in it
+export const CELL_REGULARS = 2;        // ...and a block you're booked into has at least this many NPCs doing time (sleeping it off)
 export const GUARD_PX = 420;           // a player officer who leaves their prisoner further away than this loses them
 export const BREAKOUT_IMPACT = 380;    // a crash at least this hard (closing speed, px/s) can throw the prisoner out
 export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in themselves earns this much more again
@@ -92,6 +97,19 @@ export const STRUGGLE_STUNNED = 0.7;   // still twitching from a taser or the pe
 export const STRUGGLE_GRACE_S = 2.5;   // broke free: no tackle or grab lands on you for this long
 export const STRUGGLE_KNOCK_S = [0, 3.2, 2.8, 1.8, 1.2, 1];   // the officer you threw off is down this long, by your stars (a second one 60%)
 export const STRUGGLE_NPC_FREE = 0.3;  // an NPC crook the police take down shakes them off this often (x their build's strength)
+// Making a break for it from the cuffs (server/systems/custody.js breakAway; the owner's note, task #377): cuffed and held on
+// the ground, or walked to the police car, the action button tries to get away - no fighting. A try works this often by your
+// stars, times your strength (health, as in the struggle), less against SWAT, agents and soldiers (STRUGGLE_KIND), and less
+// each time it fails (they're ready for it), a try every BREAK_RETRY_S. Away, the officer stumbles back, or goes over
+// backwards or rolls, down BREAK_KNOCK_S by your stars; those who come after you can trip, on the face or in a roll, dazed
+// a moment. Simulated (test/arrests.test.js: four tries, full health, a cop): away 85% of the time at 1 star, 78% at 2,
+// 45% at 3, 9% at 4, 5% at 5 (with the struggle before it, 4-5 stars stay nearly hopeless).
+export const BREAK_CHANCE = [0, 0.6, 0.45, 0.18, 0.04, 0.015];   // by stars: a try works this often...
+export const BREAK_FAIL_K = 0.7;                                   // ...this much less for every try that failed
+export const BREAK_RETRY_S = 2.5;                                  // a try at most this often
+export const BREAK_KNOCK_S = [0, 1.8, 1.5, 1.1, 0.8, 0.6];        // the officer you broke away from: down (or staggered) this long
+export const BREAK_TRIP_SHARE = [0, 0.5, 0.4, 0.25, 0.1, 0.05];   // the share of the officers coming after you who trip...
+export const BREAK_DAZE_S = 1;                                     // ...on their face or in a roll, down and dazed this long
 export const RESPAWN_SECONDS = 18;           // down: you wake up this long after going down, whatever you press (unless help or an ambulance is on the way)
 export const DEATH_REVEAL_S = 3;             // down: the camera pulls back over where it happened for this long before the choices come up
 // Downed, revives and the paid ambulance

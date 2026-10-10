@@ -738,6 +738,7 @@ function onEvent(ev) {
       break;
     }
     case 'fling': { const e = S.ents.get(ev.id); if (e) { e.flingAt = S.loopClock; e.flingDur = ev.d; e.flingK = ev.k; e.flingLanded = false; } break; }
+    case 'bang': { const e = S.ents.get(ev.id); if (e) { e.bangAt = S.loopClock; e.bangK = ev.k; } break; }   // (fight in a cell: the bars rattled, a fist on the wall - server cells.js; the clang or thud: sound/events.js)
     case 'knockdown': {
       fx.ring(ev.x, ev.y, 30, 'rgba(255,230,120,', 0.4);
       fx.floatText(ev.x, ev.y - 26, ev.k === 'R' ? 'TRIPPED!' : 'KNOCKDOWN!', '#ffd36b');
@@ -2465,7 +2466,10 @@ function interp(e, rt) {
   e.rx = x; e.ry = y; e.ra = a;
 }
 
-const SWING_TIME = 0.3;
+const SWING_TIME = 0.3, BANG_S = 0.42;
+// One of n ways, held a while and then another (in a cell: at the bars - looking out, the head down, along the corridor):
+// each person on their own clock, `span` seconds or a little more each
+function heldWay(id, now, span, n) { const s = Math.floor((now + id * 2.3) / (span + (id % 5))); return ((Math.imul(s + 1, 0x9e3779b1) >>> 9) + id) % n; }
 // the FISHING bit on these means kneeling (a medic at someone hurt, an officer holding someone down), not fishing
 const KNEELERS = new Set(['medic', 'cop', 'swat', 'agent', 'soldier']);
 function pedPose(e) {
@@ -2476,9 +2480,11 @@ function pedPose(e) {
   if (f & PF.ROLL) return 'roll';
   if (f & PF.FISHING) return e.d && KNEELERS.has(e.d.ar) ? 'kneel' : 'fish';
   if (e.d && e.d.cf) return 'cuffed';   // (hands cuffed behind the back: server custody.js)
+  if (e.d && e.d.es) return e.d.es === 2 ? 'escortL' : 'escortR';   // (an officer walking a prisoner to the car, a hand on their arm: custody.js)
   if (f & PF.CARRY) return 'carry';
   if (e.d && e.d.st && !(f & PF.MOVING)) return 'sitlow';   // sitting by a campfire (server campfires.js)
-  if (e.d && e.d.hb && !(f & PF.MOVING)) return 'handsup';  // in a cell, hands on the bars (server cells.js)
+  if (e.bangAt !== undefined && S.loopClock - e.bangAt < BANG_S && !(f & PF.MOVING)) return e.bangK === 2 ? 'thump' : 'bang';   // (fight in a cell: rattling the bars, a fist on the wall)
+  if (e.d && e.d.hb && !(f & PF.MOVING)) return 'bars';   // in a cell, both hands on the bars, the arms straight out (server cells.js)
   if (e.pickAt !== undefined && S.loopClock - e.pickAt < 0.42) return 'swing';   // mining: the pickaxe coming down on the rock (server underground.js 'pick')
   const w = WEAPON_BY_INDEX[e.extra];
   const meleeW = w && w.type === 'melee';
@@ -3852,9 +3858,10 @@ function pedLook(p, now) {
   if (stag) pose = 'stagger';
   else if (pose === 'move' && (f & PF.BLEED) && !(f & PF.SPRINT) && (p.as || 0) < 175) pose = 'limp';
   else if (pose === 'aim' && (p.as || 0) > 14) pose = 'aimw';   // walking while aiming: the legs stride, the gun stays up
-  let fr = pose === 'move' || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'cuffed' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1
+  let fr = pose === 'move' || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'cuffed' || pose === 'escortR' || pose === 'escortL' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1
     : pose === 'stagger' ? (Math.cos((p.reactA || 0) - (p.ra || 0)) > 0.2 ? 2 : 0) + (rT > p.reactD * 0.45 ? 1 : 0)
-      : pose === 'crawl' ? Math.floor(now * 3.2 + p.id) % 4 : (pose === 'downF' || pose === 'downB') && tL > 0.55 ? 1 : pose === 'sitlow' ? Math.floor(now * 0.22 + p.id * 0.37) % 2 : 0;
+      : pose === 'crawl' ? Math.floor(now * 3.2 + p.id) % 4 : (pose === 'downF' || pose === 'downB') && tL > 0.55 ? 1 : pose === 'sitlow' ? Math.floor(now * 0.22 + p.id * 0.37) % 2
+        : pose === 'bars' ? heldWay(p.id, now, 6, 4) : pose === 'bang' || pose === 'thump' ? (now - p.bangAt < 0.14 ? 0 : 1) : 0;
   if (pose === 'punch' || pose === 'swing') fr = Math.min(3, Math.floor(((now - p.swingAt) / SWING_TIME) * 4)) + (p.swingSide ? 4 : 0);
   if (seqFr >= 0) fr = seqFr;
   if (pose === 'downF' && p.d && p.d.cf) fr = 0;   // (held flat, not pushing up)
@@ -3960,7 +3967,7 @@ function drawPed(p, now) {
 }
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
-const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup']);
+const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump']);
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
 const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
@@ -3970,7 +3977,7 @@ const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', 
 const DEATH_SEQ = { knees: [[0.22, 'stagger', 0], [0.95, 'kneel', 1]], stab: [[0.3, 'stagger', 2], [0.85, 'kneel', 1]], slump: [[0.35, 'stagger', 0], [0.6, 'stagger', 1]], spin: [[0.55, 'stagger', 0]], slash: [[0.4, 'stagger', 0]] };
 const DEATH_TURN = { spin: [4.4, 0.55], slash: [2.2, 0.4] };
 // the old renderer's sprites for the poses it doesn't have (the subway view)
-const V1_POSE = { stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down' };
+const V1_POSE = { stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;

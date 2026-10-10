@@ -120,12 +120,13 @@ export class HUD {
       // arrested (server custody.js): held on the ground, a car coming, walked to it, the ride to the station
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry'); tb.style.borderColor = '';
       $('tb-where').textContent = 'IN CUSTODY';
-      // (the car stuck or not coming: the action button makes a break for it - custody.js offerBreak)
+      // (the action button makes a break for it: on the ground or walked to the car, a try - custody.js breakOut; the car
+      // stuck or not coming, it always works - offerBreak, and the bar pulses)
       const brk = cu.brk ? ` · make a break for it [${input.device === 'gamepad' ? 'B' : input.device === 'touch' ? 'ACT' : 'E'}]` : '';
-      $('tb-next').textContent = (cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.brk ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
+      $('tb-next').textContent = (cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.stuck ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
         : cu.s === 'escort' ? 'Being walked to the police car' : cu.s === 'walkin' ? `Walked into ${cu.at || 'the station'} - to the cells`
-          : cu.brk ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
-      tb.classList.toggle('brk', !!cu.brk);
+          : cu.stuck ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
+      tb.classList.toggle('brk', !!cu.stuck);
       $('tb-crack').classList.add('hidden');
     } else if (tr && !me.dead) {
       // the mail guards' warning: at the door ('door'), then the seconds left to get out (0: they're shooting)

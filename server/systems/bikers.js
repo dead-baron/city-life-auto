@@ -22,7 +22,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { ARCHETYPES } from '../entities.js';
 import { inAnyView } from '../view.js';
 import { store } from '../store.js';
-import { spawnNpc, despawnNpc, startFight } from './npc.js';
+import { spawnNpc, despawnNpc, startFight, heldByPolice } from './npc.js';
 import { planRoute, driveToward } from './traffic.js';
 import * as vehicles from './vehicles.js';
 import * as events from './events.js';
@@ -327,7 +327,7 @@ function grudges(world, st, R) {
     const c = st.clubs.find((q) => q.id === g.club);
     if (!c || c.mode === 'chase' || c.mode === 'mount') continue;
     const fighting = c.members.some((mid) => { const m = world.get(mid); return alive(m) && m.npc.state === 'fight' && m.npc.target === id && Math.hypot(m.x - t.x, m.y - t.y) < 500; });
-    if (t.vehId && !fighting && Math.hypot(t.x - R.x, t.y - R.y) < 6000) startChase(world, st, c, t);
+    if (t.vehId && !fighting && !heldByPolice(t) && Math.hypot(t.x - R.x, t.y - R.y) < 6000) startChase(world, st, c, t);   // (not after the police car taking them in: task #428)
   }
 }
 export function startChase(world, st, c, target) {
@@ -344,7 +344,7 @@ function chase(world, st, R, c, riders) {
   const t = world.get(c.target), now = world.time;
   // stragglers still running to their bikes hop on when they get there
   c.members.forEach((id, k) => { const m = world.get(id), v = world.get(c.bikes[k]); if (alive(m) && !m.vehId && v && !v.seats[0] && !v.wreckAt && m.npc.state !== 'fight' && Math.hypot(m.x - v.x, m.y - v.y) < v.def.L / 2 + 26) mount(world, m, v); });
-  const over = !alive(t) || now - c.since > 150 || Math.hypot(t.x - R.x, t.y - R.y) > 9000;
+  const over = !alive(t) || now - c.since > 150 || Math.hypot(t.x - R.x, t.y - R.y) > 9000 || heldByPolice(t);   // (the police have them: task #428)
   if (over) { rideHome(world, R, c); return; }
   const tv = t.vehId ? world.get(t.vehId) : null, tsp = tv ? Math.hypot(tv.vx, tv.vy) : 0;
   // on foot beside him while he sits there: dragged off it (the gang fight itself never pulls a driver out: npc.js)

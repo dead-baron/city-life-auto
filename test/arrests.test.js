@@ -5,16 +5,20 @@
 // a shop's door after you and out through it to the car.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
 import { STAR_HEAT, K } from '../shared/constants.js';
-import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS } from '../shared/rules.js';
+import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS, ESCORT_WALK_PX, BREAK_RETRY_S, BREAK_KNOCK_S, BREAK_DAZE_S, STRUGGLE_GRACE_S } from '../shared/rules.js';
+import { mulberry32 } from '../shared/rng.js';
+import { IN } from '../shared/input.js';
+import { PED_BLOCK } from '../shared/map.js';
 import * as players from '../server/systems/players.js';
 import * as law from '../server/systems/law.js';
 import * as custody from '../server/systems/custody.js';
 import * as combat from '../server/systems/combat.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as homes from '../server/systems/homes.js';
-import { spawnNpc, footWay, walkInAt } from '../server/systems/npc.js';
+import { spawnNpc, footWay, walkInAt, startFight } from '../server/systems/npc.js';
+import * as struggle from '../server/systems/struggle.js';
 import { _descriptor } from '../server/net.js';
 import { cellBlockAt } from '../shared/cells.js';
 
@@ -72,6 +76,262 @@ test('arrested by the police: held down, walked to the car, driven to the statio
   assert.equal(prof.bank, bank - BAIL_PER_STAR * stars, 'from the bank');
   assert.ok(!p.custody && !p.ped.hidden, 'free');
   assert.ok(!walkInAt(w.map, p.ped.x, p.ped.y) && Math.hypot(p.ped.x - st.outside.x, p.ped.y - st.outside.y) < 120, 'outside the station\'s front door');
+});
+
+// A police unit whose officers got out and ran after the suspect on foot: the car left empty back along the road.
+function footUnit(w, p, carX, carY, crewN = 2) {
+  const v = w.spawnVehicle('police', carX, carY, Math.atan2(p.ped.y - carY, p.ped.x - carX), {});
+  v.despawnable = false;
+  const crew = [];
+  for (let i = 0; i < crewN; i++) { const c = spawnNpc(w, 'cop', p.ped.x + 18 + i * 40, p.ped.y + (i ? 24 : 0), 'cop'); c.npc.unit = v.id; c.weapon = 'baton'; c.npc.tactic = 'tackle'; crew.push(c); }
+  v.ai = { kind: 'police', target: p.pid, mode: 'foot', route: null, routeAt: 0, force: 'police', footAt: w.time };
+  (w.police ??= new Set()).add(v.id);
+  return { v, crew };
+}
+
+test('cuffed on the ground a way from the car the officers left (task #378): one of them runs back for it, it comes, and in you go', () => {
+  const w = makeWorld(), told = listen(w);
+  const road = straightRoad(w.map, 1400);
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, road.x + 300, road.y);
+  wanted(w, p, 1);
+  // the officers chased them on foot: the car empty back along the road, too far to walk them to (task #376)
+  const { v, crew } = footUnit(w, p, road.x + 300 + ESCORT_WALK_PX + 250, road.y);
+  p.ped.downUntil = w.time + 3;
+  law.arrest(w, crew[0], p.ped);
+  assert.ok(p.custody && p.custody.stage === 'held');
+  let came = null;
+  const done = until(w, () => {
+    if (p.custody && p.custody.stage === 'escort' && came === null) came = Math.hypot(v.x - p.ped.x, v.y - p.ped.y);
+    return p.custody && p.custody.stage === 'ride';
+  }, HOLD_S + 30);
+  assert.ok(done, `in the back of a car within half a minute (stage ${p.custody && p.custody.stage}, the car ${Math.round(Math.hypot(v.x - p.ped.x, v.y - p.ped.y))} px off)`);
+  assert.equal(p.ped.vehId, v.id, 'the unit\'s own car');
+  assert.ok(p.ped.seat > 0, 'in the back');
+  assert.ok(came !== null && came < 300, `it was driven over to them (${Math.round(came)} px off when they were walked to it)`);
+  const drv = w.get(v.seats[0]);
+  assert.ok(drv && drv.npc && drv.npc.role === 'cop', 'an officer at the wheel');
+  assert.ok(!told(p, /isn't coming/), 'no waiting for a car that never comes');
+  // nobody to bring it (the officer holding them is the only one left): another car is sent, and takes them in
+  const w2 = makeWorld();
+  const { p: q } = joinPlayer(w2);
+  teleport(w2, q.ped, road.x + 300, road.y);
+  wanted(w2, q, 2);
+  const lone = footUnit(w2, q, road.x + 1000, road.y, 1);
+  q.ped.downUntil = w2.time + 3;
+  law.arrest(w2, lone.crew[0], q.ped);
+  run(w2, HOLD_S + 0.2);
+  assert.equal(q.custody.stage, 'fetch');
+  assert.ok(q.custody.car && q.custody.car !== lone.v.id, 'not the empty car: another one sent');
+  assert.ok(until(w2, () => q.custody && q.custody.stage === 'ride', 50), 'in the back of the car sent');
+  assert.ok(w2.get(q.ped.vehId).def.police && q.ped.seat > 0);
+});
+
+test('the officer who cuffed you walks you to their own car close by, you cuffed at their side, and puts you in the back (task #376)', () => {
+  const w = makeWorld(), told = listen(w);
+  const road = straightRoad(w.map, 1400);
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, road.x + 300, road.y);
+  wanted(w, p, 1);
+  // their car 420 px back along the road, empty (both officers chased on foot)
+  const { v, crew } = footUnit(w, p, road.x + 720, road.y);
+  const parked = { x: v.x, y: v.y };
+  p.ped.downUntil = w.time + 3;
+  law.arrest(w, crew[0], p.ped);
+  run(w, HOLD_S + 0.1);
+  assert.equal(p.custody.stage, 'escort', 'straight to the walk: no waiting for a car');
+  assert.equal(p.custody.car, v.id, 'to their own car');
+  assert.equal(p.custody.holder, crew[0].id, 'the officer who cuffed them walks them');
+  assert.ok(told(p, /walks you to their car/), 'told');
+  let beside = 0, n = 0, far = 0;
+  const done = until(w, () => {
+    if (p.custody.stage === 'escort' && p.custody.picked) {
+      const e = crew[0], d = Math.hypot(e.x - p.ped.x, e.y - p.ped.y);
+      assert.ok(p.ped.cuffed && w.time >= p.ped.downUntil, 'up on their feet, cuffed');
+      assert.ok(_descriptor(e).es, 'everyone sees the officer\'s hand on their arm');
+      if (Math.hypot(e.vx, e.vy) > 30) {
+        n++;
+        const ux = Math.cos(e.a), uy = Math.sin(e.a), dx = p.ped.x - e.x, dy = p.ped.y - e.y;
+        if (Math.abs(dx * -uy + dy * ux) > 8 && Math.abs(dx * ux + dy * uy) < 12) beside++;
+      }
+      far = Math.max(far, d);
+    }
+    return p.custody.stage === 'ride';
+  }, 20);
+  assert.ok(done, `in the back of the car within 20 s of the walk (stage ${p.custody.stage})`);
+  assert.equal(p.ped.vehId, v.id);
+  assert.ok(p.ped.seat > 0, 'in the back');
+  assert.ok(n > 20 && beside / n > 0.7, `walked at the officer's side (${beside} of ${n} steps)`);
+  assert.ok(far < 40, `never more than a step from the officer (${Math.round(far)} px)`);
+  assert.ok(Math.hypot(parked.x - v.x, parked.y - v.y) < 30, 'the car waited where it was parked');
+  assert.equal(_descriptor(crew[0]).es, undefined, 'and let go once they\'re in');
+  // their car too far to walk to: it's brought over (task #378's test drives it)
+  const w2 = makeWorld();
+  const { p: q } = joinPlayer(w2);
+  teleport(w2, q.ped, road.x + 300, road.y);
+  wanted(w2, q, 1);
+  const far2 = footUnit(w2, q, road.x + 300 + ESCORT_WALK_PX + 300, road.y);
+  q.ped.downUntil = w2.time + 3;
+  law.arrest(w2, far2.crew[0], q.ped);
+  run(w2, HOLD_S + 0.1);
+  assert.equal(q.custody.stage, 'fetch', 'too far to walk: the car comes');
+  assert.equal(q.custody.car, far2.v.id, 'their own car, brought over');
+  // a building between them and the car: no walking through it - the car comes
+  const w3 = makeWorld();
+  const { p: r } = joinPlayer(w3);
+  const pair = blockedPair(w3);
+  assert.ok(pair, 'a spot with a building between it and a road close by');
+  teleport(w3, r.ped, pair.a.x, pair.a.y);
+  wanted(w3, r, 1);
+  const behind = footUnit(w3, r, pair.b.x, pair.b.y);
+  r.ped.downUntil = w3.time + 3;
+  law.arrest(w3, behind.crew[0], r.ped);
+  run(w3, HOLD_S + 0.1);
+  assert.equal(r.custody.stage, 'fetch', 'no clear way on foot: the car comes round');
+});
+// a street corner, and a spot in walking range of it with a building (or water) in between
+function blockedPair(w) {
+  const m = w.map, nodes = m.nodes.filter((q) => q.lvl === 0 && Math.hypot(q.x - 26000, q.y - 17000) < 3000);
+  for (const n of nodes) {
+    const a = { x: n.x + 32, y: n.y + 32 };
+    if (PED_BLOCK[m.tileAtPx(a.x, a.y)] || walkInAt(m, a.x, a.y)) continue;
+    for (let k = 0; k < 16; k++) for (let d = 300; d <= ESCORT_WALK_PX - 150; d += 50) {
+      const b = { x: a.x + Math.cos(k * Math.PI / 8) * d, y: a.y + Math.sin(k * Math.PI / 8) * d };
+      if (PED_BLOCK[m.tileAtPx(b.x, b.y)] || walkInAt(m, b.x, b.y)) continue;
+      let blocked = 0;
+      for (let i = 1; i < 40; i++) if (PED_BLOCK[m.tileAtPx(a.x + (b.x - a.x) * i / 40, a.y + (b.y - a.y) * i / 40)]) blocked++;
+      if (blocked >= 4) return { a, b };
+    }
+  }
+  return null;
+}
+
+test('NPCs fighting you back off while the police have you pinned or cuffed, and none starts on you (task #428)', () => {
+  const w = makeWorld();
+  const road = straightRoad(w.map, 1400);
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, road.x + 400, road.y);
+  wanted(w, p, 1);
+  // a brawler with their fists and a gang member with a pistol, both after them
+  const brawler = spawnNpc(w, 'thug', p.ped.x - 70, p.ped.y, 'civ');
+  const shooter = spawnNpc(w, 'syndicate', p.ped.x + 170, p.ped.y + 30, 'gang');
+  shooter.weapon = 'pistol';
+  startFight(w, brawler, p.ped, 60); startFight(w, shooter, p.ped, 60);
+  assert.equal(brawler.npc.state, 'fight');
+  // an officer takes them down and gets on them, going for the cuffs
+  const { crew } = footUnit(w, p, road.x + 1100, road.y, 1);
+  teleport(w, crew[0], p.ped.x + 16, p.ped.y);
+  p.ped.downUntil = w.time + 2.5;
+  assert.ok(struggle.grab(w, crew[0], p.ped), 'pinned: a struggle');
+  const hp = p.ped.hp;
+  run(w, 0.2);
+  assert.ok(brawler.npc.state !== 'fight' && shooter.npc.state !== 'fight', `they let it go (${brawler.npc.state}, ${shooter.npc.state})`);
+  const d0 = Math.hypot(brawler.x - p.ped.x, brawler.y - p.ped.y);
+  assert.ok(until(w, () => !!p.custody, 6), 'cuffed (not fighting back)');
+  run(w, 3);
+  assert.equal(p.ped.hp, hp, 'nobody beat them while they were held, nor once they were cuffed');
+  assert.ok(Math.hypot(brawler.x - p.ped.x, brawler.y - p.ped.y) > Math.min(d0, 40) - 8, 'the brawler stood back');
+  // a fight doesn't start on someone cuffed
+  startFight(w, brawler, p.ped, 30);
+  assert.notEqual(brawler.npc.state, 'fight', 'no new fight with someone in cuffs');
+  // free again (the officer down), they're fair game: nothing holds anyone back
+  p.custody = null; p.ped.cuffed = false;
+  startFight(w, brawler, p.ped, 30);
+  assert.equal(brawler.npc.state, 'fight');
+});
+
+// ---- making a break for it from the cuffs (task #377) -----------------------------------------------------------------
+// the share of arrests broken out of with up to four tries (about what the ground and the walk to the car give you)
+function breakOdds(w, p, { stars = 1, hp = 100, who = 'cop', n = 240 }) {
+  let away = 0;
+  for (let k = 0; k < n; k++) {
+    p.ped.hp = hp; p.ped.maxHp = Math.max(100, hp); p.ped.downUntil = w.time + 2.5; p.ped.graceUntil = 0;
+    p.heat = STAR_HEAT[stars] + 2; p.wanted = stars;
+    const cop = spawnNpc(w, who, p.ped.x + 16, p.ped.y, 'cop');
+    law.arrest(w, cop, p.ped);
+    for (let i = 0; i < 4 && p.custody; i++) { w.time = Math.max(w.time, p.custody.tryAt || 0); custody.breakOut(w, p); }
+    if (!p.custody) away++;
+    p.custody = null; p.ped.cuffed = false; p.ped.downUntil = 0;
+    w.remove(cop);
+  }
+  return away / n;
+}
+
+test('making a break for it on the ground in cuffs (task #377): no fighting, a try by your stars - easy at 1-2, hardly ever at 4-5', () => {
+  const w = makeWorld({ rand: mulberry32(37) });
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
+  const share = {};
+  for (const s of [1, 2, 3, 4, 5]) share[s] = breakOdds(w, p, { stars: s });
+  const said = [1, 2, 3, 4, 5].map((s) => `${s}: ${Math.round(share[s] * 100)}%`).join(', ');
+  if (process.env.DBG) console.log(`break for it, by stars: ${said}`);
+  assert.ok(share[1] >= 0.7, `1 star: a good chance (${said})`);
+  assert.ok(share[2] >= 0.55 && share[2] <= share[1], `2 stars: a good chance (${said})`);
+  assert.ok(share[3] >= 0.2 && share[3] <= 0.55, `3 stars: a fair one (${said})`);
+  assert.ok(share[4] <= 0.16, `4 stars: rarely (${said})`);
+  assert.ok(share[5] <= 0.07, `5 stars: hardly ever (${said})`);
+  // worn down, or SWAT holding you: less
+  const half = breakOdds(w, p, { stars: 1, hp: 40 }), swat = breakOdds(w, p, { stars: 3, who: 'swat' });
+  assert.ok(half < share[1] - 0.1, `hurt: ${Math.round(half * 100)}% (full health ${Math.round(share[1] * 100)}%)`);
+  assert.ok(swat < share[3], `SWAT holding you at 3 stars: ${Math.round(swat * 100)}% (a cop ${Math.round(share[3] * 100)}%)`);
+  // a try that fails: held, the next only after a moment
+  p.heat = STAR_HEAT[4] + 2; p.wanted = 4; p.ped.downUntil = w.time + 2.5;
+  const cop = spawnNpc(w, 'cop', p.ped.x + 16, p.ped.y, 'cop');
+  law.arrest(w, cop, p.ped);
+  const r0 = w.rand;
+  w.rand = () => 0.999;
+  assert.ok(custody.canBreak(p, w) && /break for it/i.test(players.findInteraction(w, p).label), 'on the action button, on the ground');
+  custody.breakOut(w, p);
+  w.rand = r0;
+  assert.ok(p.custody && p.ped.cuffed, 'held fast');
+  assert.ok(!custody.canBreak(p, w) && players.buildMe(w, p).custody.brk === 0, 'no second try straight away');
+  w.time += BREAK_RETRY_S;
+  assert.ok(custody.canBreak(p, w), 'another try in a moment');
+});
+
+test('breaking away: the officer stumbles back, goes over backwards or rolls; you are up and off with a grace; those who chase you can trip, dazed (task #377)', () => {
+  const w = makeWorld({ rand: mulberry32(38) });
+  const road = straightRoad(w.map, 1400);
+  const knocks = [], emit = w.emit.bind(w);
+  w.emit = (x, y, ev) => { if (ev.e === 'knockdown' || ev.e === 'react' || ev.e === 'breakfree') knocks.push(ev); return emit(x, y, ev); };
+  const kinds = new Set();
+  for (let k = 0; k < 12; k++) {
+    const { p } = joinPlayer(w);
+    teleport(w, p.ped, road.x + 500, road.y);
+    wanted(w, p, 1);
+    const { crew } = footUnit(w, p, road.x + 1300, road.y);
+    teleport(w, crew[1], p.ped.x + 60, p.ped.y + 20);
+    p.ped.downUntil = w.time + 3;
+    law.arrest(w, crew[0], p.ped);
+    const heat = p.heat, t0 = w.time;
+    knocks.length = 0;
+    const r0 = w.rand, rolls = [0, k / 12, 0];   // (the try works; how the officer goes; the partner trips)
+    let i = 0;
+    w.rand = () => rolls[Math.min(i++, rolls.length - 1)];
+    custody.breakOut(w, p);
+    w.rand = r0;
+    assert.ok(!p.custody && !p.ped.cuffed, 'broke away, out of the cuffs');
+    assert.ok(w.time >= p.ped.downUntil && p.ped.graceUntil - w.time > STRUGGLE_GRACE_S - 0.1, 'up, and a grace from the next tackle');
+    assert.ok(p.heat > heat, 'wanted more for escaping');
+    assert.ok(knocks.some((e) => e.e === 'breakfree'), 'the shove and the whoosh');
+    const h = crew[0], ev = knocks.find((e) => e.id === h.id);
+    assert.ok(ev, 'the officer reels');
+    if (ev.e === 'react') { kinds.add('stumble'); assert.ok(h.staggerUntil > w.time && w.time >= h.downUntil, 'stumbles back, on their feet'); }
+    else { kinds.add(ev.k); assert.ok(['B', 'R'].includes(ev.k) && Math.abs(h.downUntil - t0 - BREAK_KNOCK_S[1]) < 0.01, `over backwards or a roll (${ev.k})`); }
+    // run for it: the partner coming after them trips
+    let trip = null;
+    for (let j = 0; j < 60 && !trip; j++) {
+      p.inputQ.push({ seq: p.ack + 1, bits: IN.SPRINT, mx: -1, my: 0, aim: Math.PI });
+      w.step();
+      trip = knocks.find((e) => e.e === 'knockdown' && e.id === crew[1].id);
+    }
+    assert.ok(trip && (trip.k === 'F' || trip.k === 'R'), 'the officer chasing them trips - on the face or in a roll');
+    assert.ok(crew[1].downUntil > w.time && crew[1].stunUntil > w.time && crew[1].downUntil - w.time <= BREAK_DAZE_S + 0.01, 'down and dazed a moment');
+    assert.ok(!p.struggle && !p.custody, 'not taken down again meanwhile');
+    for (const e of [...crew, p.ped]) w.remove(e);
+    players.leave(w, p);
+  }
+  assert.ok(kinds.has('stumble') && kinds.has('B') && kinds.has('R'), `stumbles, falls backwards and rolls (${[...kinds]})`);
 });
 
 test('the cell: wait it out, no bail money, no walking out; surrendering goes straight there', async () => {
@@ -233,8 +493,8 @@ test('the car stuck or going round in circles: make a break for it, or they get 
   assert.equal(p.custody.stage, 'fetch');
   const v = w.get(p.custody.car);
   if (v) { v.ai.prisoner = null; v.ai = null; w.police.delete(v.id); v.x += 3000; }   // (gone off somewhere, stuck)
-  assert.ok(!custody.canBreak(p), 'not straight away');
-  assert.ok(until(w, () => custody.canBreak(p), CUSTODY_WAIT_BREAK_S + 2), 'offered after a while');
+  assert.ok(!p.custody.brk, 'not straight away');
+  assert.ok(until(w, () => p.custody.brk, CUSTODY_WAIT_BREAK_S + 2), 'offered after a while');
   assert.ok(told(p, /make a break for it/i));
   const act = players.findInteraction(w, p);
   assert.ok(act && /break for it/i.test(act.label), 'on the action button');
