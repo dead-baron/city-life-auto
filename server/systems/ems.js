@@ -12,21 +12,30 @@
 // its patient and over to one side, CLEAR px off them and everyone else lying there (parkSpot), it has stopped before
 // the doors open, and it never drives over anyone on its way in or out (lyingInWay: it slows to stop short of them,
 // goes round them where there's room - skirt - or, at the patient's scene, pulls up there and the paramedics walk).
+//
+// Out in the wilds (task #409): when the street it can get to is far from the patient, the ambulance leaves the road
+// there and drives on over the open ground toward them (offroad.js groundPath: fields, grass, tracks and sand, round
+// trees, rocks and water - at most OFF_MAX of it), pulling up PARK_NEAR short of them, or as near as it can get, or
+// where it gets stuck. The crew go the rest on foot along a way round what's in between (running when it's far), and
+// their time on foot grows with the walk, within a limit (walkS). Someone down in the water gets the rescue boat
+// instead (rescue.js).
 import { K } from '../../shared/constants.js';
 import { pedStep, vehForwardSpeed } from '../../shared/physics.js';
 import { circleVsObb, obbVsObb } from '../../shared/math.js';
-import { CAR_BLOCK, WATER_T } from '../../shared/map.js';
+import { CAR_BLOCK, WATER_T, nearestLand } from '../../shared/map.js';
 import { sameLevel } from '../../shared/levels.js';
 import { pointAt, project } from '../../shared/geom.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc, seek, footWay, sidestep } from './npc.js';
 import { inAnyView } from '../view.js';
 import { kerbFor, planTo, follow, halt, exitNode, sinceProgress, waterGuard } from './kerbdrive.js';
+import { groundPath, clearWalk } from './offroad.js';
 import { trimBehind } from './custody.js';
 import { planRoute } from './traffic.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
 import * as revive from './revive.js';
+import * as rescue from './rescue.js';
 
 const HARD_DESPAWN = 45;
 const REVIVE_TIME = 3;
@@ -36,7 +45,14 @@ const CLEAR = 34;         // px from the middle of anyone lying on the ground to
 const SCENE_R = 220;      // someone lying this near the patient is part of the scene: in the way, it pulls up short of them
 const PARK_PLAN = 560;    // the spot to pull up on is chosen this near the kerb (px), and looked at again every second
 const PARK_BACK = 300;    // ...at most this far back from alongside the patient
+const OFF_MIN = 260;      // pulled up this far from the patient or more: on over the open ground toward them...
+const OFF_MAX = 3200;     // ...at most this much of it (px of the way)...
+const PARK_NEAR = 100;    // ...to stop this far short of them
+const OFF_SPEED = 240;    // px/s over the rough
+const WALK_PACE = 110;    // px/s on foot, for the crew's time limits; the extra time a long walk gets is capped at
+const WALK_CAP = 45;      // this many seconds of walking
 const rng = mulberry32(112);
+const walkS = (ai) => Math.min(WALK_CAP, (ai.walk || 0) / WALK_PACE);   // (seconds of the crew's walk, for their time limits)
 
 export function update(world, dt) {
   const now = world.time;
@@ -54,7 +70,7 @@ export function update(world, dt) {
   for (const vid of [...world.ambulances]) {
     const v = world.get(vid);
     if (!v) { world.ambulances.delete(vid); continue; }
-    runAmbulance(world, v, dt, now);
+    if (v.rescue) rescue.run(world, v, dt, now); else runAmbulance(world, v, dt, now);
   }
 }
 
@@ -86,6 +102,13 @@ function dispatch(world, now) {
     let watched = false;
     for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - b.x, p.ped.y - b.y) < 1400) { watched = true; break; }
     if (!watched) continue;
+    // in the water: the rescue boat if a dock is near enough (rescue.js) - a crew on foot only reaches someone by the edge
+    if (rescue.inWater(world.map, b)) {
+      if (now - (b.rescueTry || -99) < 8) continue;
+      b.rescueTry = now;
+      if (rescue.dispatch(world, b, null)) return;
+      if (!nearestLand(world.map, b.x, b.y, 2)) continue;
+    }
     const k = b.emsKerb && Math.abs(b.emsKerb.bx - b.x) < 8 && Math.abs(b.emsKerb.by - b.y) < 8 ? b.emsKerb : (b.emsKerb = { ...kerbFor(world, b.x, b.y), bx: b.x, by: b.y });   // (once per body)
     const cands = starts(world, k, 650, 1300, 620);
     if (!cands.length) continue;
@@ -114,6 +137,8 @@ export function launch(world, b, n, k, now, paid = null) {   // (exported for th
 export function dispatchPaid(world, ped, pid) {
   world.ambulances ??= new Set();
   const now = world.time;
+  // down in the water: the rescue boat (rescue.js); failing that an ambulance only for someone by the edge (a pool)
+  if (rescue.inWater(world.map, ped)) { const boat = rescue.dispatch(world, ped, pid); if (boat || !nearestLand(world.map, ped.x, ped.y, 2)) return boat; }
   const k = kerbFor(world, ped.x, ped.y);
   if (world.map.zoneAt(k.x, k.y) !== world.map.zoneAt(ped.x, ped.y)) return null;   // (no road on their island: no ambulance can get there)
   for (const [lo, hi] of [[650, 1400], [500, 2200], [400, 3200]]) {
@@ -127,6 +152,7 @@ export function dispatchPaid(world, ped, pid) {
 export function recall(world, vehId) {
   const v = world.get(vehId);
   if (!v || !v.ai) return;
+  if (v.ai.kind === 'rescue') { rescue.recall(world, v); return; }
   v.ai.paid = null;
   v.ai.body = 0;
   if (v.ai.mode === 'drive') { v.ai.mode = 'leave'; return; }
@@ -141,12 +167,31 @@ function stretcher(c, kind) {
   c.pp = pp; c.gt = kind ? 'push' : undefined;
   c.appVer = (c.appVer || 0) + 1;   // (net.js sends the descriptor again)
 }
-// a medic on foot heading for (x, y): through a shop's door when it's in the way, round what they bump into
-function walkTo(world, c, x, y, dt, run) {
-  const wp = footWay(world, c, x, y);
+// a medic on foot heading for (x, y): through a shop's door when it's in the way, along the way round what's between
+// out in the wilds (tr: arrive's ai.foot), round what they bump into
+function walkTo(world, c, x, y, dt, run, tr = null) {
+  const wp = (tr && trailWay(world, c, tr, x, y)) || footWay(world, c, x, y);
   const inp = seek(c, wp.x, wp.y, run);
   if (Math.hypot(x - c.x, y - c.y) < 6) { inp.mx = 0; inp.my = 0; }
   pedStep(c, sidestep(world, c, inp, dt), dt, world.map, players.pedMods(world, c));
+}
+// where to head along a way on foot for (x, y) at its one end or the other: straight there when that's clear, else the
+// farthest point on along it toward (x, y) in a clear line from the trail point nearest them (looked at four times a second)
+function trailWay(world, c, tr, x, y) {
+  const now = world.time, w = c.trW;
+  if (w && now < w.until && w.x === x && w.y === y) return w.p;
+  let p = null;
+  if (!clearWalk(world.map, c.x, c.y, x, y)) {
+    const e = tr[tr.length - 1], s = (e.x - x) ** 2 + (e.y - y) ** 2 < (tr[0].x - x) ** 2 + (tr[0].y - y) ** 2 ? 1 : -1;
+    let i0 = 0, bd = Infinity;
+    for (let i = 0; i < tr.length; i++) { const d = (tr[i].x - c.x) ** 2 + (tr[i].y - c.y) ** 2; if (d < bd) { bd = d; i0 = i; } }
+    let j = i0;
+    for (let k = i0 + s; k >= 0 && k < tr.length && clearWalk(world.map, c.x, c.y, tr[k].x, tr[k].y); k += s) j = k;
+    if (j === i0 && bd < 16 * 16) j = Math.max(0, Math.min(tr.length - 1, i0 + s));
+    p = tr[j];
+  }
+  c.trW = { until: now + 0.25, x, y, p };
+  return p;
 }
 // close enough, or as close as they can get (a counter, a wall, a parked car between): stopped making progress nearby
 function reached(c, x, y, r, dt, near = 140) {
@@ -165,6 +210,7 @@ function runAmbulance(world, v, dt, now) {
     // a player hijacked the ambulance: medics give up and walk away
     for (const id of ai.crew) { const c = world.get(id); if (c && c.npc) { stretcher(c, null); c.npc.role = 'civ'; c.npc.state = 'flee'; c.npc.fx = v.x; c.npc.fy = v.y; c.npc.until = now + 6; } }
     const b = world.get(ai.body); if (b && b.emsAssigned === v.id) b.emsAssigned = 0;
+    if (ai.paid) revive.helpLost(world, ai.paid, v.id);   // (the one who called it can call another)
     world.ambulances.delete(v.id);
     v.ai = null; v.despawnable = true; v.beaconOn = false;
     return;
@@ -180,14 +226,14 @@ function runAmbulance(world, v, dt, now) {
     for (const c of crew) {
       if (c.vehId) continue;
       allIn = false;
-      walkTo(world, c, v.x, v.y, dt, true);
+      walkTo(world, c, v.x, v.y, dt, true, ai.foot);
       if (Math.hypot(v.x - c.x, v.y - c.y) < v.def.L / 2 + 26) {
         stretcher(c, null);
         const seat = v.seats.findIndex((s) => !s);
         if (seat >= 0) { v.seats[seat] = c.id; c.vehId = v.id; c.seat = seat; c.vx = 0; c.vy = 0; } else despawnNpc(world, c);
       }
     }
-    if (allIn || now - ai.boardAt > 20) {
+    if (allIn || now - ai.boardAt > 20 + 1.2 * walkS(ai)) {
       for (const c of crew) if (!c.vehId) despawnNpc(world, c);   // (one who couldn't get back to it: gone once out of sight with it)
       if (!v.seats[0]) { const i = v.seats.findIndex((s) => s); if (i > 0) { v.seats[0] = v.seats[i]; v.seats[i] = 0; world.get(v.seats[0]).seat = 0; } }
       ai.mode = 'leave'; v.beaconOn = false;
@@ -222,6 +268,15 @@ function drive(world, v, ai, body, crew, now) {
     if (Math.abs(vehForwardSpeed(v)) < 8 || now - ai.stopping > 3) arrive(world, v, ai, body, crew, now);
     return;
   }
+  if (ai.off) {
+    // over the open ground toward them: pull up PARK_NEAR short, or short of whoever's lying in the way, or where it
+    // stops getting nearer, or at the end of the way it found (as near as it could get)
+    holdClock(world, ai, body, now);
+    const lim = clearWay(world, v, ai, body), db = Math.hypot(body.x - v.x, body.y - v.y);
+    const stuck = sinceProgress(world, v, body.x, body.y) > 4 || now - ai.off.at > ai.off.len / 60 + 12;
+    if (db < PARK_NEAR || (ai.atScene && ai.atScene.d < 24) || stuck || follow(world, v, Math.min(OFF_SPEED, lim), 30)) { ai.off = null; ai.stopping = now; halt(v); ai.ctl = null; }
+    return;
+  }
   const k = ai.kerb, dk = Math.hypot(k.x - v.x, k.y - v.y), db = Math.hypot(body.x - v.x, body.y - v.y);
   // the spot to pull up on, once it's near (and again whenever it's no longer clear: someone else went down there)
   if (dk < PARK_PLAN && (ai.park === undefined || (now - (ai.parkAt || 0) > 1 && (!ai.park || !standOk(world, v, ai.park.x, ai.park.y, ai.park.a, lyingNear(world, v, ai.park.x, ai.park.y)))))) {
@@ -242,9 +297,40 @@ function drive(world, v, ai, body, crew, now) {
     if (ai.replans < 2) { ai.replans++; ai.route = planTo(world, v, k); ai.bestD = undefined; if (ai.park) aimAt(ai, ai.park, k); }
     else there = true;
   }
-  if (there) { ai.stopping = now; halt(v); ai.ctl = null; return; }
-  if (follow(world, v, Math.min(dk < 500 ? 260 : 480, lim), P ? 20 : 34) && P) { ai.stopping = now; ai.ctl = null; }
-  if (now - ai.since > (ai.paid ? 150 : 40)) ai.mode = 'leave';
+  let pulled = there || (follow(world, v, Math.min(dk < 500 ? 260 : 480, lim), P ? 20 : 34) && !!P);
+  if (pulled && !ai.offAt && db > OFF_MIN && dk < 400 && offRoad(world, v, ai, body, now)) pulled = false;   // (far from the street: on over the open ground)
+  if (pulled) { ai.stopping = now; halt(v); ai.ctl = null; return; }
+  if (now - ai.since > (ai.paid ? 150 : 40) + (ai.offAt ? 40 : 0)) ai.mode = 'leave';
+}
+
+// At the street nearest a patient far off the road: a way over the open ground toward them for the ambulance (offroad.js)
+// - worth it when it ends a good way nearer them than here. It ends PARK_NEAR short of them (or as near as it gets).
+function offRoad(world, v, ai, body, now) {
+  ai.offAt = now;
+  const P = groundPath(world, v, body, { van: true });
+  if (!P || P.pts.length < 2) return false;
+  const pts = P.pts;
+  // cut where it first comes within PARK_NEAR (and a little) of them, and no more than OFF_MAX along
+  let len = 0, out = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], L = Math.hypot(b.x - a.x, b.y - a.y);
+    let cut = -1;
+    for (let t = 8; t <= L && cut < 0; t += 8) { const x = a.x + (b.x - a.x) * t / L, y = a.y + (b.y - a.y) * t / L; if (Math.hypot(body.x - x, body.y - y) < PARK_NEAR + 10 || len + t > OFF_MAX) cut = t; }
+    if (cut >= 0) { out.push({ x: a.x + (b.x - a.x) * cut / L, y: a.y + (b.y - a.y) * cut / L }); len += cut; break; }
+    out.push(b); len += L;
+  }
+  const e = out[out.length - 1];
+  if (out.length < 2 || Math.hypot(body.x - e.x, body.y - e.y) > Math.hypot(body.x - v.x, body.y - v.y) - 150) return false;   // (no real gain)
+  out.shift();
+  out[out.length - 1].final = true;
+  ai.route = out; ai.bestD = undefined; ai.off = { at: now, len };
+  return true;
+}
+
+// The one who called them doesn't wake up at a hospital while they're nearly there or at work on them (task #409)
+function holdClock(world, ai, body, now) {
+  const p = ai.paid && body && body.player;
+  if (p && revive.isDowned(body) && p.respawnAt < now + 3) { p.respawnAt = now + 3; p.meDirty = true; }
 }
 
 // ---- keeping clear of anyone lying on the ground (task #435) ----------------------------------------------------------
@@ -417,13 +503,19 @@ function arrive(world, v, ai, body, crew, now) {
   halt(v);
   v.sirenOn = false; v.beaconOn = true;   // (lights on while they work)
   ai.mode = 'scene'; ai.step = 'out'; ai.stepAt = now; ai.sceneAt = now;
-  for (const c of crew) { vehicles.ejectPed(world, c, true, body); c.emsD = undefined; c.emsStuck = 0; }   // (out on the patient's side of the van)
+  for (const c of crew) { vehicles.ejectPed(world, c, true, body); c.emsD = undefined; c.emsStuck = 0; c.trW = null; }   // (out on the patient's side of the van)
   const [a, b] = crew;
   ai.treater = a.id; ai.porter = (b || a).id;
   // the stretcher out of the back
   const back = backOf(world, v);
   if (b && world.map.isWalkable(back.x, back.y)) { b.x = back.x; b.y = back.y; world.place(b); }
   stretcher(world.get(ai.porter), 'stretcher');
+  // a walk with things in the way (out in the wilds: trees, rocks, a stream): the way round them on foot (offroad.js)
+  ai.walk = Math.hypot(body.x - a.x, body.y - a.y); ai.foot = null;
+  if (ai.walk > 90 && !clearWalk(world.map, a.x, a.y, body.x, body.y)) {
+    const P = groundPath(world, a, body, { van: false });
+    if (P && P.pts.length > 1) { ai.foot = P.pts; ai.walk = P.len + P.d; }
+  }
 }
 function backOf(world, v) {
   const c = Math.cos(v.a), s = Math.sin(v.a), r = v.def.L / 2 + 20;
@@ -435,20 +527,22 @@ function scene(world, v, ai, body, crew, dt, now) {
   halt(v); v.beaconOn = true; waterGuard(world, v);
   const T = live(world, ai.treater) || crew[0], P = live(world, ai.porter) || crew[crew.length - 1];
   const patientOk = body && body.dead && !body.removed && (!ai.paid || revive.isDowned(body)) && !body.npc?.onStretcher;
-  if (now - ai.sceneAt > SCENE_MAX) ai.step = 'back';
+  if (now - ai.sceneAt > SCENE_MAX + 2.5 * walkS(ai)) ai.step = 'back';
   if ((ai.step === 'out' || ai.step === 'treat') && !patientOk) { ai.step = 'back'; ai.stepAt = now; }
   if (ai.step === 'out' || ai.step === 'treat') {
-    // the treating medic runs to them and kneels; the other wheels the stretcher up beside them
+    // the treating medic runs to them and kneels; the other wheels the stretcher up beside them (running too, a way off)
+    holdClock(world, ai, body, now);
     let atBody = false;
     if (reached(T, body.x, body.y, 26, dt)) { atBody = true; T.vx = 0; T.vy = 0; T.kneelUntil = now + 0.5; T.a = Math.atan2(body.y - T.y, body.x - T.x); }
-    else walkTo(world, T, body.x + (T.x < body.x ? -12 : 12), body.y, dt, true);
+    else walkTo(world, T, body.x + (T.x < body.x ? -12 : 12), body.y, dt, true, ai.foot);
     if (P !== T) {
-      if (Math.hypot(body.x - P.x, body.y - P.y) > 52 && !(P.emsStuck > 1.5)) walkTo(world, P, body.x, body.y, dt, false);
+      const dp = Math.hypot(body.x - P.x, body.y - P.y);
+      if (dp > 52 && !(P.emsStuck > 1.5)) walkTo(world, P, body.x, body.y, dt, dp > 240, ai.foot);
       else { P.vx = 0; P.vy = 0; P.a = Math.atan2(body.y - P.y, body.x - P.x); }
       reached(P, body.x, body.y, 52, dt);
     }
     if (atBody && ai.step === 'out') { ai.step = 'treat'; ai.stepAt = now; body.reviving = now; world.emit(body.x, body.y, { e: 'revive', x: body.x, y: body.y, id: body.id }); }
-    if (ai.step === 'out' && now - ai.stepAt > 40) { ai.step = 'back'; ai.stepAt = now; }   // (can't get to them at all)
+    if (ai.step === 'out' && now - ai.stepAt > Math.max(40, 20 + 1.6 * walkS(ai))) { ai.step = 'back'; ai.stepAt = now; }   // (can't get to them at all)
     if (ai.step === 'treat' && now - body.reviving >= REVIVE_TIME) {
       body.reviving = 0;
       if (body.player) {
@@ -477,11 +571,11 @@ function scene(world, v, ai, body, crew, dt, now) {
   if (ai.step === 'back') {
     // wheeled round to the back doors; the other walks with it
     const bk = backOf(world, v);
-    const there = reached(P, bk.x, bk.y, 18, dt, 200) || now - ai.stepAt > 30;
-    if (!there) walkTo(world, P, bk.x, bk.y, dt, false); else { P.vx = 0; P.vy = 0; P.a = v.a; }
+    const there = reached(P, bk.x, bk.y, 18, dt, 200) || now - ai.stepAt > 30 + 1.5 * walkS(ai);
+    if (!there) walkTo(world, P, bk.x, bk.y, dt, false, ai.foot); else { P.vx = 0; P.vy = 0; P.a = v.a; }
     if (T !== P) {
       const side = { x: bk.x + Math.cos(v.a + Math.PI / 2) * 22, y: bk.y + Math.sin(v.a + Math.PI / 2) * 22 };
-      if (Math.hypot(side.x - T.x, side.y - T.y) > 10) walkTo(world, T, side.x, side.y, dt, false); else { T.vx = 0; T.vy = 0; }
+      if (Math.hypot(side.x - T.x, side.y - T.y) > 10) walkTo(world, T, side.x, side.y, dt, false, ai.foot); else { T.vx = 0; T.vy = 0; }
     }
     if (there) { ai.step = 'load'; ai.stepAt = now; }
     return;
