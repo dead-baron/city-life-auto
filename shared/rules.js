@@ -408,6 +408,19 @@ export const PET_OWNER_PX = [1600, 2800];  // how far from the pet its owner is 
 export const PET_REWARD = 220;             // the owner's thank-you (cash) for bringing it home...
 export const PET_SAMARITAN = 8;            // ...and the Samaritan points
 
+// Nightclubs (server/systems/nightclubs.js, task #432): open from dusk; at the end of the night the music stops, the
+// dancers walk out and the line breaks up, and the shutter comes down once the floor's empty
+export const CLUB_CLOSE_MAX_S = 45;        // the shutter comes down at the latest this long after the music stops
+export const CLUB_DANCERS = 6;             // people on the dance floor at most (while a player is near)
+export const CLUB_LINE = 5;                // people waiting in line outside, at most
+export const CLUB_ADMIT_S = [14, 26];      // the bouncer lets the next one in about this often (once it's full, one heads home)
+// ...and its bouncers, one or two at the door: hurt a patron (dancing, in the line, inside) or one of them and they come
+// for you - with their fists, but built like brutes
+export const BOUNCER_HP = 280;             // a bouncer's health (a brute's build)
+export const BOUNCER_STR = 1.7;            // the weight of his punches: x the fists' damage and shove (a brute's is 1.6)
+export const BOUNCER_FIGHT_S = 30;         // they're after whoever did it this long...
+export const BOUNCER_CHASE_PX = 560;       // ...but go no further than this from their door
+
 // Little happenings round the players (server/systems/happenings.js): a street fight, someone collapsing, a dropped wallet
 export const HAPPEN_EVERY_S = 150;         // roughly how often one happens somewhere near someone in town
 export const FIGHT_BREAKUP_SAMARITAN = 4;  // breaking up a street fight

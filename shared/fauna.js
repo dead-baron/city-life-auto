@@ -221,10 +221,10 @@ export const GRADE_NAME = ['', 'Poor', '', 'Perfect'];
 export const HABITATS = ['redwood', 'forest', 'meadow', 'scrub', 'desert', 'mountain', 'cliff', 'farm', 'water', 'river', 'creek', 'lake', 'pond', 'marsh', 'kelp', 'beaver', 'park'];
 
 // What the client draws an animal doing (the snapshot's extra byte, bits 0-4; bit 7: in the water). 0: work it out
-// from the speed (stand / walk / trot / run).
+// from the speed (stand / walk / trot / run). happy: a lost pet back with its owner (server/systems/pets.js).
 export const APOSE = {
   auto: 0, graze: 1, alert: 2, stalk: 3, charge: 4, rear: 5, swim: 6, gnaw: 7, rest: 8, drink: 9, call: 10, attack: 11,
-  fly: 12, climb: 13, float: 14, dive: 15, peck: 16, sit: 17, warn: 18, eat: 19, flinch: 20,
+  fly: 12, climb: 13, float: 14, dive: 15, peck: 16, sit: 17, warn: 18, eat: 19, flinch: 20, happy: 21,
 };
 
 // What raw meat becomes over a campfire (hunting.js), one for one - see shared/items.js for what each gives (the

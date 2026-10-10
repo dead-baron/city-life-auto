@@ -5094,3 +5094,120 @@ The owner: "Fountains that are in the city should be animated and have procedura
   - every fountain in the city is baked as its stone and still water with its live water where it stands; nothing over the dish and no spray in the bake; flat water in the basin and the bowl; the previews' fountain keeps its spray;
   - every frame: the jet stands as high as the loop says, rising and falling 8 px over the loop; drops falling into the bowl and over its lip; ripples on the basin and nothing outside it; a few glints at most, coming and going; the outer ring of ripples grows from frame to frame;
   - the loop comes round without a jump; a frame made again is the same; under 400 pixels a frame, casting no shadow.
+
+## 2026-10-09 · Nightclubs wind down after sunrise; a line outside and bouncers at the door (task #432)
+The owner: "NPCs dancing at a night club won't leave the club when morning comes. At some point after sunrise the dance club should wind down and all the NPCs should walk out." And: "Nightclubs should have bouncers outside when the club is open that will attack you or any NPC that you or an NPC attacks anyone in the night club while it's active. That also includes anyone standing in line for the night club. Any nightclub patron is protected by the bouncer who fights with their fists but is strong like a brute."
+- **Why they stayed:** the dancers (`interiors.js clubbers`) were only cleared by day when nobody could see them, so with you in the club or across the street they danced on into the morning. The shutter followed the clock, and so did the music.
+- **The clubs now have a state** (`server/systems/nightclubs.js`, which replaces `clubbers`):
+  - **Closed** all day.
+  - **Open** from dusk: the shutter goes up and the music comes on.
+  - **Closing** from the end of the night (half an hour after sunrise): the music stops and the dancers stop dancing and walk out of the door and off along the street. The line breaks up and goes, and so does anyone who wandered in off the street. The shutter comes down once the floor is empty (`CLUB_CLOSE_MAX_S` at the latest; anyone still inside out of sight goes), and the bouncers go home.
+  - The music follows the club, not the shutter: a `club` event and the welcome's `clubs` list (`client/sound/places.js`).
+  - Nobody wanders into a club that's shut or shutting (`npc.js pickWaypoint`).
+- **Open, with a player near:**
+  - People dance on the floor, in the dance pose (`gt 'dance'`).
+  - A line of up to five waits along the front, on the side with room (the velvet rope's side on the `club` lots). People walk up to it from out of sight.
+  - Now and then the bouncer lets the next one in: they walk in at the door and dance, and the rest step up. Once the floor is full (`CLUB_DANCERS`), now and then someone heads home.
+  - People leaving go out through the door and on along the pavement (`npc.js leaveBuilding`, the new `leave` state). Someone walking to a spot inside (a dancer from the line) goes in by the door (the desk walk uses `footWay`).
+- **The bouncers** (role `bouncer`): one or two either side of the door (the big clubs two). They step out of the door to their posts, dressed big and all in black (`npclooks.js RECIPES.bouncer`).
+  - Built like brutes with fists only: `BOUNCER_HP` 280, punches `BOUNCER_STR` 1.7. Drilled, so they keep their feet like the police and the gangs do (`reactions.js`).
+  - Hurt a patron and both come for you, player or NPC (`combat.js damage` → `nightclubs.onHurt`). A patron is anyone dancing, anyone in the line or standing in it, and anyone inside the club, players too. Hurting a bouncer does the same (`npc.js onAttacked` → `bouncerHurt`).
+  - They chase out to `BOUNCER_CHASE_PX` from the door, then walk back to their posts (stepping round what's in the way). They fight for up to `BOUNCER_FIGHT_S`.
+  - They don't react to the police at work, to someone hitting back at whoever hit them first, or to a traffic accident.
+  - A bouncer only ever hits whoever he's after (`combat.js melee`): two of them on one person used to land punches on each other and on the people in the line, which started brawls.
+- **Tests:** `test/nightclubs.test.js` (7):
+  - at night, the dancers, the line and the bouncers;
+  - after sunrise the music stops, the dancers walk out through the door (none vanish), the line goes, the shutter comes down and they all move off;
+  - punch someone in the line and the bouncers come for you with heavy fists, hit nobody else, and let you go past their reach;
+  - an NPC attacker, a player inside, hitting back, the police;
+  - hit a bouncer and both come;
+  - the line moves;
+  - all of them gone once nobody's near, and back after.
+  A run over every club on the map showed each shut 3-6 s after the end of the night, nobody left inside or vanished.
+
+## 2026-10-09 · A lost pet handed back runs to its owner, celebrates and goes home with them (task #427)
+The owner: "When you find a lost pet and return it to its owner the pet shouldn't disappear as soon as you do that, the pet should run up to the owner and be excited, wag its tail, or run around the owner, and then the pet should follow the owner until they despawn off screen later or walk off."
+- **Why it vanished:** handing it back removed it on the spot (`pets.js giveBack` → `remove`).
+- **Now** (`server/systems/pets.js` `reunite` / `homeStep`): you get the same reward. The pet comes off your collar and off the radar (it's no longer a lost pet), and:
+  - it dashes over to its owner;
+  - it races round them (one and a half laps), then hops up at them in front, its tail going, while the owner stands and turns to watch it;
+  - then the owner heads off, away from you, as an ordinary passer-by. The pet trots at their heel, and if a corner holds it up out of sight, it catches up.
+  - **Gone the usual way:** the owner is cleared once nobody's near (`npc.js manageDensity`), and the pet goes with them as soon as nobody can see it. A pet out of sight with its owner for a couple of minutes has gone home too. If the owner is gone before it reaches them, it goes once out of sight.
+- **On the wire:** a pet's extra byte carries its mood. `APOSE.happy` (`shared/fauna.js`, beside the wild animals' poses) is set while it greets them (`server/net.js`).
+- **Drawn** in both renderers:
+  - **Art v2** (`client/art2/game/host.js _pet`): it never sits while happy. Standing, the idle pose's wag runs four times as fast and it hops (a quick bounce with a beat between, its shadow left on the ground). Racing round them, there's a bounce in its stride.
+  - **Classic** (`client/main.js drawAnimal`): a quick wiggle and the same hops.
+- **Tests:** `test/pets.test.js` (3):
+  - handed back, it stays, isn't lost and goes off the radar, and is happy on the wire; it reaches the owner, goes round them more than once and bounces in front while they stand; then it's calm, the owner walks off and it keeps within a few steps of them;
+  - nobody near: the owner is cleared and the pet with them;
+  - an owner gone first: the pet goes once out of sight.
+  `test/world.test.js`'s lost-pet test now expects it home with its owner rather than gone.
+
+## 2026-10-09 · Tow trucks back up to the car, touch it with their tail and tow it away tilted (task #414)
+The owner: "Tow trucks should back up to a vehicle that needs towing if possible so it touches the vehicle with the back of its truck and then pulls it up and tows it away from there."
+- **Before:** the truck drove to a kerb point just ahead of the car and the car was winched round onto the hook from wherever it stood. Coming up behind it, the truck often waited there until the stall timer let it hook from where it was.
+- **Now** (`server/systems/tow.js`):
+  - **The plan** (`backPlan`, worked out when the truck is sent):
+    - It finds the car's lane and the end of the car that's ahead in it: its nose, or its tail if the wreck has spun round.
+    - It picks where the truck stops: 160 px ahead of that end, or 120 or 90 if the street ends sooner. That strip has to be road all the way, with nothing solid, no vehicle and nobody in it.
+    - It picks a side to pass on, the road's middle first. That side also has to be clear.
+  - **Getting there:**
+    - The truck comes from the end of the street the lane comes from (`send`), so it arrives along the lane behind the car.
+    - It swings out and passes the car with a gap. It doesn't brake for the car it came for (`kerbdrive.js follow`, `ignore`).
+    - It cuts back onto the car's line well before the stop, so it pulls in straight.
+  - **Reversing** (`backStep`, a new `back` mode):
+    - The reversing lights come on.
+    - The truck steers its tail onto the line out from the car's end. It works like a Stanley controller run backwards.
+    - It slows as the gap closes and stops when its tail touches the car (3 px).
+    - In a run over eight placements and headings, it stopped lined up within 0.06 rad and 2 px every time.
+  - **Hooking up:** the truck works the winch, and the car comes up onto the wheel lift by the end the truck touched (`v.towEnd`). It rides behind the truck either nose first, the same way round, or tail first, the other way round.
+  - **The old way as a fallback:** the truck pulls up ahead and winches the car round, as before, if:
+    - there's no room: the street ends just ahead, or a wall or vehicle is in the way;
+    - the car is in a junction or across the lane;
+    - the car is moved while the truck is coming;
+    - the truck is held up for 9 s getting round it.
+    If there was no room when it was sent, the truck looks again now and then on the way.
+  - **A truck held up for good:** the truck could stop mid-turn, nose-on to a car with someone sitting in it, and wait there until it gave up. Now, each time it replans, it first backs off a little: `traffic.js` reversing swings its nose round.
+- **Tilted on the hook, in both renderers:**
+  - **On the wire** (`server/net.js`): the vehicle's extra byte, 0 until now, says which end is up (1 nose, 2 tail), plus 4 while it is still being winched up.
+  - **Art v2** (`client/art2/game/actors.js`): `renderCompact` takes `opt.lift`, a shear along the body. Each voxel is raised by its distance from the end left on the ground, and the faces tilt with it. The car is drawn with that end up (`TOW_TILT`, 0.11 px a px; half that while being winched), keyed in the sprite cache (`vehicleKey` `|T±1/2`). `host.js` gets the tow state from the extra byte and asks for new sprites when it changes.
+  - **Classic view** (`client/main.js vehTurn`): the same shear in the canvas transform.
+- **Tests:** `test/tow.test.js` (5):
+  - a wreck: drive, back, hook, leave. It's seen reversing; at the hook-up its tail touches the car (≤ 4 px), with the car behind it and lined up. The car rides nose to the truck, the same way round, and the wire shows its nose up, winched first;
+  - a wreck facing the wrong way: the truck backs onto its tail, and the car rides away backwards, tail up, on the wire;
+  - no room (a van stopped just ahead): no plan and no backing up; it's hooked the old way.
+  - The two tests from before still pass.
+  - The tests now run with no traffic, buses or ferries (`quiet`): a car going by could ram a parked car off the road, which made the player's-car test flaky. A seeded run of the file over fourteen `Math.random` seeds passes.
+
+## 2026-10-09 · Now and then a burning wheel comes off an explosion and rolls away down the street (task #412)
+The owner: "Vehicle explosions are looking great, let's sometimes have a burning wheel bounce down the street and roll off occasionally (doesn't have to be every wheel that comes off a car)."
+- **When** (`shared/wheelpath.js wheelPlan`):
+  - It happens to roughly a third of car explosions: 42% of those that blow apart, 30% of the launches and 18% of those that burn where they stand. A motorbike's are rarer.
+  - It's one of the wheels still on the vehicle. Boats and the jet ski have none (`shared/explosions.js wheelCount`).
+  - A motorbike that threw both wheels as debris has none left to roll.
+  - The debris itself no longer throws more wheels than the vehicle has. A car could throw five, and a speedboat could throw wheels; those are panels now.
+  - It comes from its own stream of the explosion's seed, so the pieces and the flight are drawn as before.
+  - Which wheel it is: front or back, left or right (a motorbike's are on its line). The plan also sets how hard it's thrown out from that side, how it slows, which way it curls and how long it burns.
+- **Server-light:**
+  - The server adds one flag to the `explode` event (`wh`) and does nothing else for the wheel (`server/systems/explosions.js`).
+  - There's no wheel up on the highway or on a ferry's deck: it would roll along the ground underneath.
+  - Every client works out the same roll from the seed and the map (`wheelPath`). It uses fixed steps and only + - * /, `sqrt` and dmath's trig, so every engine gets the same bits and everyone sees the same wheel go the same way.
+- **The roll** (`wheelPath`, 30 frames a second, up to 12 s):
+  - It's flung off from its corner, tumbling, and its face turns to the way it's going.
+  - It bounces a few times, then rolls, slowing (2.6× faster on grass, dirt and sand).
+  - It hops at a kerb and glances off walls, buildings, posts and trees, rolling back off a wall.
+  - It curls round more and more as it slows, wobbling more, then falls flat on its side the way it curled.
+  - Into the water, it sinks.
+  - Across 3,000 seeds on the long test street: it travelled a median 600 px over about 5 s, and never entered a wall.
+- **Drawn** (`client/render/wheels.js`, loaded with the first explosion and not with the page; `render/boom.js` hands it the events):
+  - It's played back between frames as a short cylinder: the far face, the tread, then the near face with a charred rim, the hub and four lugs going round as it rolls. It can be upright, leaning or flat, and is lifted off its shadow in the air.
+  - While it burns: flames and thick black smoke off it, a glow round it, and burning bits and embers dropping off it as it rolls. It leaves a streak of burnt rubber behind it on the road.
+  - Where it bounces: a puff and a flare. Where it knocks into something: sparks. Into the water: a splash and steam.
+  - Lying flat, it burns down to a wisp of smoke (at least 3 s, about 9-15 s after the blast) and leaves a burnt patch.
+  - Both renderers draw it: art v2 on its overlay, the classic view in its world pass. The fire is the pooled particles and decals, and there are four wheel slots with their frame buffers kept. Low quality halves the particles.
+- **Page size:** the page code was already at its budget, so the wheel lives in the lazily loaded module, and some comments added today in page-loaded files were shortened. The page is at 720.3 KB, which rounds to the 720 KB budget.
+- **Dev:** `{ t: 'dev', c: 'boom', wh: 1 }` blows up a car that throws a wheel.
+- **Tests:** `test/explosions.test.js` (3 more):
+  - now and then, not every time. Across 600 seeds each for a car, a bus, a tanker, a motorbike and the trike: never more wheels off it than it has. A motorbike that threw both has none left, boats have none, and the same seed gives the same wheel;
+  - a real explosion's `wh` matches its seed's plan, and never up on the highway. Its path is the same every time; it's flung up, bounces, rolls away (over 150 px), slows and stops a while later, lying flat; it never enters a wall;
+  - on a made-up street: it glances off a wall and rolls back, never through it; into the water it sinks; on grass it doesn't get as far.

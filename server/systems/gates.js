@@ -2,6 +2,7 @@
 // Rock (gang members only). A gate opens for anyone allowed who comes up to it on foot or at the
 // wheel, lets anyone already inside back out, and never closes on someone in the gateway.
 import { K } from '../../shared/constants.js';
+import { shutterUp } from './nightclubs.js';
 
 const TILE = 32;
 const CLOSE_AFTER_S = 1.2;
@@ -28,7 +29,7 @@ export function update(world) {
     const rel = (x, y) => (g.vertical ? { along: y - g.y, depth: x - g.x } : { along: x - g.x, depth: y - g.y });
     const near = (x, y, reach) => { const r = rel(x, y); return Math.abs(r.along) < g.w / 2 + 60 && Math.abs(r.depth) < reach; };
     let want = false;
-    if (g.rule === 'night' && world.clock.isNight) want = true; // the clubs are open all night
+    if (g.rule === 'night' && shutterUp(world, i)) want = true; // the clubs are open all night, and till the last of them are out in the morning (nightclubs.js)
     for (const p of world.players.values()) {
       const ped = p.ped;
       if (!ped || ped.dead || ped.hidden) continue;

@@ -72,6 +72,8 @@ const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // people flat on the ground (main.js pedLook)
 const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
+// a happy pet's hops (px up): quick little bounces, a beat between them, each pet in its own time
+const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55 ? Math.sin(Math.PI * k / 0.55) * 7 : 0; };
 // A wild animal's pose (actors.js ANIMAL_FRAMES) from what the server says it's doing (shared/fauna.js APOSE, the
 // snapshot's extra byte) and how fast it's going: flying, swimming (a sea otter floats on its back), up a trunk,
 // reared, charging, stalking low, bedded down, head down feeding, head up and alert; else by its speed. Dead: on its
@@ -1212,11 +1214,13 @@ export class World2 {
     if (!A || !A.animalKey) return;
     const kind = p.d.ar.slice(4), base = kind.split(':')[0], sp = p.as || 0, still = now - (p.stillSince ?? now) > 1.2;
     const S2 = SPECIES[base];
+    // a pet home with its owner (server pets.js: APOSE.happy): never sitting still - the tail going fast, hopping
+    const happy = !S2 && ((p.extra || 0) & 31) === APOSE.happy && !(p.flags & (PF.DEAD | PF.DOWN));
     // a wild animal: what it's doing comes from the server (fauna.js APOSE in the extra byte; bit 7 in the water);
     // a pet or a farm animal: standing still a while it sits, or puts its head down and grazes (now and then looking
     // up); down or dead: lying on its side
     const pose = S2 ? wildPose(p, S2, base, sp)
-      : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still ? 'idle'
+      : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still || happy ? 'idle'
         : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
     // cut in two by the plasma blade: the carcass in two halves, the cut edges seared (actors.js 'cutA' / 'cutB')
@@ -1230,7 +1234,7 @@ export class World2 {
         return;
       }
     }
-    const rate = pose === 'run' ? 14 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? 3 : pose === 'swim' ? 2.5 : 1.5;
+    const rate = pose === 'run' ? 14 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? (happy ? 12 : 3) : pose === 'swim' ? 2.5 : 1.5;   // (happy: the tail wagging nineteen to the dozen)
     const fr = pose === 'dead' || (pose === 'lie' && p.flags & PF.DEAD) ? 0 : Math.floor(now * rate + p.id) % n;
     let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null;
@@ -1238,9 +1242,11 @@ export class World2 {
     if (!sk) return;
     p._v2k = sk;
     const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
-    // up in the air (a bird in flight: its shadow on the ground below), or up a trunk (a squirrel)
-    const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : 0;
-    o.air = pose === 'fly';
+    // up in the air (a bird in flight: its shadow on the ground below), up a trunk (a squirrel), or a happy pet's hops
+    // (up at its owner standing, a bounce in its stride racing round them: its shadow stays on the ground)
+    const hop = happy ? (pose === 'idle' ? petHop(now, p.id) : pose === 'run' || pose === 'walk' ? petHop(now * 1.6, p.id) * 0.35 : 0) : 0;
+    const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : hop;
+    o.air = pose === 'fly' || hop > 0.5;
     if (p.hitAt !== undefined && now - p.hitAt < 0.12) o.flash = 0.6;   // (hit: a white flash, like people)
     E.drawSprite(sk, p.rx, p.ry, this._z0(p, false) + up, o); this.n.drawn++;
     o.air = false;
@@ -1254,11 +1260,13 @@ export class World2 {
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
     const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase);
+    if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
     let use = this._spr('actors', 'vehicle', A.vehicleKey(v.d, st, hi, N), [v.d, st, hi, N]);
     if (!use && v._v2k && E.hasSprite(v._v2k)) use = v._v2k;
     if (!use) use = this._near((h) => A.vehicleKey(v.d, st, h, N), hi, N);
-    if (v._hi !== hi || v._hn !== N || v._hf !== f) {
-      v._hi = hi; v._hn = N; v._hf = f;
+    const fx = f + ((v.extra | 0) & 7) * 65536;   // (the flags and the tow state)
+    if (v._hi !== hi || v._hn !== N || v._hf !== fx) {
+      v._hi = hi; v._hn = N; v._hf = fx;
       for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; this._ask('actors', 'vehicle', A.vehicleKey(v.d, st, h, N), [v.d, st, h, N], me ? -2 : 1); }
       if (f & (VF.SIREN | VF.BEACON)) { const s2 = A.vehState(f, 3 - phase); this._ask('actors', 'vehicle', A.vehicleKey(v.d, s2, hi, N), [v.d, s2, hi, N], me ? -2 : 0); }
     }

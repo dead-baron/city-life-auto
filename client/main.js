@@ -45,6 +45,7 @@ import { courtHoops, idealPower, shotWindow } from '../shared/hoops.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
 import { ANIMAL_ART } from '../shared/animal-art.js';
+import { APOSE } from '../shared/fauna.js';
 import { BuildingLayer } from './render/buildings.js';
 import { Highway, liftOf, levelKey } from './render/highway.js';
 import { underDeck } from '../shared/levels.js';
@@ -86,6 +87,7 @@ const S = {
   bayOpen: {}, bayAnim: {}, // paint-shop shutters
   garageOpen: {}, garageAnim: {}, // home garage doors
   gateOpen: {}, gateAnim: {}, // police motor pool gates
+  clubLive: null,             // nightclubs with the music on, by gate (the 'club' event)
   forageGone: new Set(),      // foraging spots picked bare (map.forage indices; server/systems/foraging.js)
   xing: [], xingAnim: [], // level crossings: { d: gates down, b: [arm broken, arm broken] }
 };
@@ -224,6 +226,7 @@ function onText(m) {
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
       S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
+      S.clubLive = m.clubs ? Object.fromEntries(m.clubs.map((i) => [i, true])) : null;
       S.forageGone = new Set(m.forage || []);
       S.map.props.forEach((p, i) => { if (p.lit0 !== undefined && !!p.lit !== p.lit0) setFire(i, p.lit0, false); });
       for (const [i, lit] of m.fires || []) setFire(i, lit, false);
@@ -771,6 +774,7 @@ function onEvent(ev) {
     case 'garagedoor': S.garageOpen[ev.home] = performance.now() + 2600; break;
     case 'baydoor': S.bayOpen[ev.i] = ev.open; sfx('door', 0.8); break;
     case 'gate': setGate(ev.i, ev.open); break;
+    case 'club': (S.clubLive ||= {})[ev.i] = !!ev.on; break;
     case 'forage': if (ev.up) S.forageGone.delete(ev.i); else S.forageGone.add(ev.i); break;
     case 'xing': S.xing[ev.i] = { d: ev.d, b: ev.b }; break;
     case 'tt': S.tt = { l: ev.l, at: performance.now() / 1000 }; break; // station clocks
@@ -3047,6 +3051,7 @@ function drawWorldV1(F) {
   }
   if (S.flora && !sub) S.flora.leavesFrame(g, view, dt, false);
   fx.drawParticles(g);
+  if (!sub) S.boom.drawWheels(g, F);   // (burning wheels)
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (sub) drawSubwayLights(F.myCar, z, dt);
@@ -3787,13 +3792,13 @@ function drawVehicleEnt(v, now, dt) {
     const side = vehicleSide(v.d, def, !!(f & VF.WRECK));
     const sw = side.width / 2, sh = side.height / 2;
     for (let k = 0; k < lift; k += 1.5) {
-      g.save(); g.translate(-Math.sin(v.ra) * leanPx * (k / lift), -k); g.rotate(v.ra);
+      g.save(); g.translate(-Math.sin(v.ra) * leanPx * (k / lift), -k); vehTurn(g, v, def);
       g.drawImage(side, -sw / 2, -sh / 2, sw, sh);
       g.restore();
     }
   }
   g.translate(-Math.sin(v.ra) * leanPx + Math.cos(v.ra) * dip, -lift + Math.sin(v.ra) * dip);
-  g.rotate(v.ra);
+  vehTurn(g, v, def);
   if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }
@@ -3825,6 +3830,15 @@ function drawVehicleEnt(v, now, dt) {
   void dt;
 }
 
+// a vehicle's turn on the canvas; on a tow truck's lift (its extra byte: server/net.js) tilted, the hooked end up
+const TOW_TILT_V1 = 0.11;   // (as art v2: actors.js TOW_TILT)
+function vehTurn(g, v, def) {
+  const tw = (v.extra | 0) & 3;
+  if (!tw) { g.rotate(v.ra); return; }
+  const k = TOW_TILT_V1 * (v.extra & 4 ? 0.5 : 1), kk = tw === 2 ? -k : k, c = Math.cos(v.ra), s = Math.sin(v.ra);
+  g.transform(c, s - kk, -s, c, 0, -k * def.L / 2);
+}
+
 // how high a vehicle's body stands (world px of visible side wall)
 const LIFT = { bus: 12, flatbed: 9, swat: 10, armored: 10, ambulance: 9, van: 9, pickup: 8, sports: 5, bike: 3, policebike: 3 };
 function vehLift(def) { return def.kind === 'boat' ? 3 : LIFT[def.id] ?? 7; }
@@ -3854,15 +3868,18 @@ function drawAnimal(p, now) {
   g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 4, 13, 6, 0, 0, 6.28); g.fill();
   if (!art || !atlas.animals) { g.fillStyle = '#a0703a'; g.beginPath(); g.ellipse(p.rx, p.ry, 12, 7, p.ra, 0, 6.28); g.fill(); g.restore(); return; }
   const f = art.f;
-  const r = !f ? art.r : sp > 70 ? f.run[Math.floor(now * 14 + p.id) % 4] : sp > 12 ? f.walk[Math.floor(now * 8 + p.id) % 4] : now - p.stillSince > 1.2 ? f.sit : f.idle;
+  // back with its owner (APOSE.happy): no sitting, little hops
+  const happy = (p.extra & 31) === APOSE.happy && !(p.flags & (PF.DEAD | PF.DOWN));
+  const hk = (now * 2.4 + p.id * 0.37) % 1, hop = happy && hk < 0.55 ? Math.sin(Math.PI * hk / 0.55) * (sp > 12 ? 2.5 : 7) : 0;
+  const r = !f ? art.r : sp > 70 ? f.run[Math.floor(now * 14 + p.id) % 4] : sp > 12 ? f.walk[Math.floor(now * 8 + p.id) % 4] : happy ? f.walk[Math.floor(now * 10 + p.id) % 4] : now - p.stillSince > 1.2 ? f.sit : f.idle;
   const [sx, sy, sw, sh] = r, pad = art.pad || 0;
   g.imageSmoothingEnabled = false;
   if (art.view === 'top') {
-    g.translate(p.rx, p.ry); g.rotate(p.ra);
+    g.translate(p.rx, p.ry - hop); g.rotate(p.ra);
     const k = 0.9; g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -sh * k / 2, sw * k, sh * k);
   } else {
     const k = 0.75, flip = Math.cos(p.ra) < -0.2;
-    g.translate(p.rx, p.ry + 4); if (flip) g.scale(-1, 1);
+    g.translate(p.rx, p.ry + 4 - hop); if (flip) g.scale(-1, 1);
     g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -(sh - pad) * k, sw * k, sh * k);
   }
   g.imageSmoothingEnabled = true;
@@ -3933,7 +3950,7 @@ function pedVisual(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
   if (p.smokeUntil && now < p.smokeUntil && Math.random() < 0.05) S.fx.smoke(p.rx + (Math.random() - 0.5) * 12, p.ry + (Math.random() - 0.5) * 6, false);   // (cut in two by the plasma blade: the seared halves smoke a while)
-  if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { if ((p.as || 0) > 12 || p.stillSince === undefined) p.stillSince = now; return; }
+  if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { if ((p.as || 0) > 12 || p.stillSince === undefined || (p.extra & 31) === APOSE.happy) p.stillSince = now; return; }   // (happy: it doesn't sit)
   if (p.blink === 3) return; // inside a home
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }

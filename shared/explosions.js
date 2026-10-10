@@ -24,7 +24,7 @@ export function blastSize(def) {
 // (it blows apart: doors, the hood, wheels and panels fly off and the chassis is left a blackened shell);
 // pieces [{ c (a PIECES letter), a (the throw's direction, radians from the car's heading), sp (px/s), vz (px/s
 // up), va (spin, rad/s) }]; launch { a (direction from the heading), d (how far it lands, px), h (peak height, px),
-// t (time in the air, s), spin (turns about its axis), flip (1: it rolls over) }.
+// t (time in the air, s), spin (turns about its axis), flip (1: it rolls over) }. (A burning wheel: wheelpath.js)
 export function boomPlan(seed, def) {
   const R = mulberry32((seed >>> 0) ^ 0x5bd1e995);
   const { big } = blastSize(def);
@@ -36,9 +36,10 @@ export function boomPlan(seed, def) {
   else k = r < 0.34 ? 'launch' : r < 0.72 ? 'pieces' : '';
   const pool = big === 0 ? 'wpw' : 'ddhwwwwpptb';
   const n = k === 'pieces' ? (big === 0 ? 2 : big === 3 ? 8 : 5 + Math.floor(R() * 3)) : k === 'launch' ? 1 + Math.floor(R() * 2) : Math.floor(R() * 2);
-  const pieces = [];
+  const pieces = [], wheels = wheelCount(def);
   for (let i = 0; i < n; i++) {
-    const c = pool[Math.floor(R() * pool.length)];
+    let c = pool[Math.floor(R() * pool.length)];
+    if (c === 'w' && pieces.filter((p) => p.c === 'w').length >= wheels) c = 'p';   // (no more wheels than it has)
     const heavy = c === 'w' || c === 'h';
     pieces.push({
       c,
@@ -65,3 +66,10 @@ export function boomPlan(seed, def) {
 
 // the event's short list of the pieces ('ddhw...'): the clients rebuild the throws from the seed
 export const pieceCodes = (plan) => plan.pieces.map((p) => p.c).join('');
+
+// how many wheels it has (a bicycle buckles, it doesn't blow up)
+export function wheelCount(def) {
+  if (!def || def.kind === 'boat' || def.pedal) return 0;
+  if (def.kind === 'bike') return def.stable ? 3 : 2;
+  return def.mass >= 2.4 ? 6 : 4;
+}

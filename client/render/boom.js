@@ -8,6 +8,7 @@
 //   sparks and burning embers flung out; a thick smoke column that rises and drifts on the wind for a long while;
 //   debris - rubble and, when it blows apart, its doors, hood, wheels and panels in its own paint, scorched, that
 //   tumble, bounce and burn out; a scorch on the ground; and a shake that falls off with distance.
+//   Now and then a burning wheel rolls away (task #412: render/wheels.js, loaded with the first explosion).
 // Everything is pooled (the particles in render/fx.js, the glow blobs, rings, columns and flights here: fixed
 // arrays, nothing made per frame) and thinned on Low ('Fewer particles': fx.thin).
 import { boomPlan, blastSize } from '../../shared/explosions.js';
@@ -72,6 +73,7 @@ export class Booms {
     this.burners = Array.from({ length: 24 }, () => ({ c: null, until: 0, acc: 0 }));
     this.bumps = Array.from({ length: 8 }, () => ({ id: 0, t0: -9 }));
     this.riders = Array.from({ length: 8 }, () => ({ on: false, id: 0, t0: 0 }));
+    this.wheels = null; this.wheelsP = null;   // (render/wheels.js, once loaded)
     this.flash = { t: 0, k: 0 };
     this.bi = 0; this.bu = 0; this.bp = 0;
   }
@@ -121,6 +123,8 @@ export class Booms {
     // 6. debris: rubble and grit; a vehicle blown apart throws its own pieces (from the seed: everyone sees the same)
     for (let i = 0; i < 12 * scale; i++) { const a = R() * TAU, sp = 80 + R() * 260; fx.spawn(9, x, y, Math.cos(a) * sp, Math.sin(a) * sp, 1.3 + R() * 0.8, 3 + R() * 3, R() < 0.5 ? '#3c3a38' : '#5e554c', 0, 140 + R() * 300); }
     if (plan && plan.pieces.length) this._pieces(ev, plan, def, now);
+    // a burning wheel rolling away (ev.wh: render/wheels.js)
+    if (def) { const W = this._wheels(); if (ev.wh && S.map && !S.ugLayer) W.then((w) => w && w.spawn(ev, def, now)); }
     // 7. the scorch it leaves (a big blast: blotches round it too)
     fx.decal(3, x, y, R() * TAU, r * 0.5, '#111', now, 0.8);
     for (let i = 0; i < big; i++) { const a = R() * TAU, d = r * (0.35 + R() * 0.3); fx.decal(3, x + Math.cos(a) * d, y + Math.sin(a) * d, R() * TAU, r * 0.22, '#111', now, 0.65); }
@@ -146,6 +150,13 @@ export class Booms {
       b.c = c; b.until = now + 3 + (p.sp % 4); b.acc = 0;
     });
   }
+
+  // render/wheels.js: loaded with the first explosion, not with the page
+  _wheels() {
+    return this.wheelsP ||= import('./wheels.js').then((m) => (this.wheels = new m.Wheels(this.S))).catch((e) => { console.warn('[wheels]', e); return null; });
+  }
+  // (the classic view's world pass; art v2: in draw)
+  drawWheels(g, F) { if (this.wheels) this.wheels.draw(g, F); }
 
   // a wreck blown up into the air slams down (the 'wreckland' event): dust, sparks, a flare of fire, a jolt
   land(ev, now) {
@@ -217,6 +228,7 @@ export class Booms {
       for (; c.acc >= 1; c.acc--) fx.spawn(2, c.x + (Math.random() - 0.5) * 16, c.y + (Math.random() - 0.5) * 10, wx + (Math.random() - 0.5) * 12, wy - 34 - Math.random() * 26, 3.5 + Math.random() * 2.5, 9 + Math.random() * 4, 'rgba(34,32,30,', 7);
       for (; c.pacc >= 1; c.pacc--) this._blob(c.x + (Math.random() - 0.5) * 18, c.y - 10, wx * 1.2 + (Math.random() - 0.5) * 10, wy - 30 - Math.random() * 18, 18, 70 + c.big * 30 + Math.random() * 30, 5 + Math.random() * 3, 2, 0.34 * (0.4 + 0.6 * fade), 0);
     }
+    if (this.wheels) this.wheels.tick(now, dt, lo);
     for (const b of this.burners) {
       const c = b.c;
       if (!c || !c.on || now > b.until) { b.c = null; continue; }
@@ -245,6 +257,7 @@ export class Booms {
   // then the flash over the screen (screen transform)
   draw(g, F, W, H, DPR) {
     const spr = sprites(), night = F.sky ? F.sky.night || 0 : 0;
+    if (this.wheels) this.wheels.draw(g, F);
     g.save();
     // smoke under the fire
     for (const b of this.blobs) {

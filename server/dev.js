@@ -236,11 +236,12 @@ export function command(world, p, c, msg) {
       v.lz = ped.lz || 0; // up on the highway with you
       break;
     }
-    case 'boom': { // a vehicle (msg.m, a sedan) blown up a little way off: msg.k 'launch' | 'pieces' | 'plain' picks how (task #363)
+    case 'boom': { // a vehicle (msg.m, a sedan) blown up a little way off: msg.k 'launch' | 'pieces' | 'plain' picks how (task #363); msg.wh: a burning wheel comes off (task #412)
       if (!ped) break;
       const model = VEHICLES[msg.m] ? msg.m : 'sedan', sp = clearSpot(world, ped, VEHICLES[model]);
       const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
       if (msg.k) v.boomKind = msg.k === 'plain' ? '' : String(msg.k);
+      if (msg.wh) v.boomWheel = true;
       vehicles.explode(world, v, null);
       break;
     }

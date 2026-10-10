@@ -7,6 +7,7 @@
 import { K } from '../../shared/constants.js';
 import { CAR_BLOCK } from '../../shared/map.js';
 import { blastSize, boomPlan, pieceCodes } from '../../shared/explosions.js';
+import { wheelPlan } from '../../shared/wheelpath.js';
 import { obbVsObb } from '../../shared/math.js';
 import * as combat from './combat.js';
 import * as vehicles from './vehicles.js';
@@ -16,9 +17,13 @@ export function newSeed(world) { return 1 + Math.floor(world.rand() * 2147483646
 // The explosion's event (and the wreck's flight when the plan launches it); the blast itself is vehicles.explode's.
 export function vehicleBoom(world, v, attackerPed) {
   let seed = newSeed(world);
-  if (v.boomKind !== undefined) for (let i = 0; i < 300 && boomPlan(seed, v.def).k !== v.boomKind; i++) seed = newSeed(world);   // (dev.js 'boom': a chosen kind)
+  const want = (sd) => { const pl = boomPlan(sd, v.def); return (v.boomKind === undefined || pl.k === v.boomKind) && (!v.boomWheel || !!wheelPlan(sd, v.def, pl)); };
+  if (v.boomKind !== undefined || v.boomWheel) for (let i = 0; i < 300 && !want(seed); i++) seed = newSeed(world);   // (dev.js 'boom': a chosen kind, a wheel coming off)
   const size = blastSize(v.def), plan = boomPlan(seed, v.def);
   const ev = { e: 'explode', x: Math.round(v.x), y: Math.round(v.y), r: size.r, s: seed, id: v.id, m: v.def.i, a: +v.a.toFixed(2), k: plan.k, pc: pieceCodes(plan) };
+  // now and then a burning wheel comes off and rolls away (task #412, shared/wheelpath.js): the clients roll it from the
+  // seed - said here only where it can (down on the ground: not up on the highway or a ferry's deck)
+  if (!v.onDeck && !v.ferry && !((v.lz || 0) > 0.3) && wheelPlan(seed, v.def, plan)) ev.wh = 1;
   if (plan.launch && v.def.kind !== 'boat' && !v.onDeck && !(v.lz > 0.3)) {
     const land = launch(world, v, plan.launch, attackerPed);
     ev.lx = land.x; ev.ly = land.y;
