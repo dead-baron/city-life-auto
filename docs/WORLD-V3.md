@@ -1282,3 +1282,54 @@ none can be camped. The airport's two bridges and the Port Bridge come on top.
 - **The tools:** `tools/world-v3-skeleton.py` draws the gulf's places from their pictures at their new size and draws
   the canal and the footbridges. scratchpad/urban/gulfland.py traced the land: today's pieces scaled, the neck, the
   hook, Toll Point, the West Channel and the cove.
+
+## Part 8 - The engine route: the server builds the world, the client fetches its window (2026-10-10)
+
+**The decision:** the server builds the whole world once per world version and cuts it into region files. The client
+never runs the generator: it fetches the regions round the player and keeps them.
+
+**Why** (the alternative, part 4.3's "every client builds its own regions", measured against what 4.6 and 4.7 found):
+- **Cost on a phone:** today's whole build is 4-10 s on this machine and more on a phone. At 13x the area, a phone
+  building even the 3 x 3 window round the player is 15-20 s (4.6), and more for city regions.
+- **Effort:** building regions independently needs the generator rewritten: the whole-map passes (terrain's distance
+  fields and labels, the ring), the one random stream, world-wide ids and names, businesses placed world-wide (4.6
+  items 1-9). That is a long and risky job for every one of today's 5,000+ lines of `map.js`.
+- **The server can afford it:** it has the memory (the Oracle VPS) to build the v3 world as today's clients build
+  today's: the same deterministic `generateCity`, at the v3 frame. Its build is an offline job per world version.
+- **Downloads:** the first time, a client downloads a few MB (9 regions round the player); after that it reads them
+  back from IndexedDB. That is faster than today's build in the worker, so today's world served this way already
+  loads quicker.
+- **It extends what exists:** the client already takes the city as plain data (`cityData`/`cityFromData`, the worker
+  and `worldcache.js`), and the server already serves baked art (`server/artcdn.js`).
+
+**What it needs**
+1. **CityMap as a window** onto the world: an origin and a size (`x0`, `y0`, `w`, `h`) and its own index in place of
+   `ty * MAP_W + tx`, with every query in world tiles.
+   - Today's world is the window (0, 0, MAP_W, MAP_H), so nothing changes until a window is smaller.
+   - About 190 lines in `shared/map.js`, 150 in `naturesites.js` (generator code: it can keep the frame), 110 in the
+     client, 54 in the server.
+2. **The region file:**
+   - Per region, the per-tile layers the client reads (tiles, dist, zone, river, deck, cover, lvl0Block, roadAxis,
+     roadRank, bld), packed and compressed.
+   - The lists that fall in the region with a margin: props, POIs, buildings, road edges, walk-ins, signs, venues.
+   - A global index loaded once: districts, POIs, homes, stations, the road graph the phone's GPS needs, and the
+     skeleton.
+3. **Serving them:** the game server serves the region files as `artcdn.js` serves chunks, keyed by the world hash
+   and cached for good.
+4. **The client's worker** fetches and assembles the 3 x 3 window. As the player crosses a region border it moves the
+   window, keeping the regions the old and new windows share and dropping the far ones. The renderer and the chunk
+   baker read the window.
+5. **The join check:** the world hash and each region's signature are checked against what was read from the cache.
+6. **The server** keeps the whole world in memory: about 300-600 MB at v3. Its systems already run near players;
+   whole-world scans per tick move to spatial indexes.
+
+**Stages** (4.4 revised; each goes live):
+1. Today's world served as regions: the client fetches instead of building, so first loads get faster. This proves
+   the route with nothing new to look at.
+2. The skeleton (done: parts 6 and 7). Then the generator at the v3 frame, building today's places at their gulf
+   positions and sizes: an offline build.
+3. The new land, area by area, on the skeleton: highways, the main line, tunnels, the biomes.
+4. Transit on the skeleton (timetables), and the multi-zoom map.
+
+The determinism rules in CLAUDE.md stay: the server's build, the tests and the tools rely on them. Clients no longer
+build the world from code, but the region files are still checked against the server's signatures.
