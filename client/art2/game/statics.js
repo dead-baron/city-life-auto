@@ -946,11 +946,14 @@ function specOf(c, b, A, s, D) {
         spec.windows = [];
         spec.plaques = [{ text: clean(named || 'FIRE STATION', 16), x: 10, v: 64, sx: 1, bg: '#a8282c', fg: [250, 240, 230], lit: true }];
       } else {
-        spec.doors = [{ x: Math.round(w / 2 - 25), w: 50, kind: 'door', open: true, h: 48 }];
-        spec.windows = winXs(w, [[w / 2 - 25, w / 2 + 25]], 30);
+        // (a walk-in's glass doors where its doorway really is - shared/map.js buildInteriors; else in the middle)
+        const wk = s.walk && s.doorX !== undefined, dx0 = wk ? clamp(s.doorX - 3, 6, w - 60) : Math.round(w / 2 - 25), dw0 = wk ? (s.doorW || 56) + 6 : 50;
+        const blind = !!b.walkIn && !wk;   // (a walk-in drawn in sections: only the one with the doorway has doors)
+        spec.doors = blind ? [] : [{ x: dx0, w: dw0, kind: 'door', open: true, h: 48 }];
+        spec.windows = winXs(w, blind ? [] : [[dx0, dx0 + dw0]], 30);
         const txt = A === 'hospital' ? 'HOSPITAL' : A === 'police' ? 'POLICE' : clean(named || 'SCHOOL', 18);
         spec.plaques = [{ text: txt, x: Math.max(4, Math.round(w / 2 - textWidth(txt, { sx: 2, gap: 1 }) / 2) - 5), v: 66, sx: 2, bg: A === 'police' ? '#1d3a8a' : A === 'school' ? '#2a4a3a' : null, fg: A === 'hospital' ? [60, 54, 48] : [250, 250, 240], lit: A !== 'hospital' }];
-        if (A === 'hospital') { spec.plaques.push({ text: 'EMERGENCY', x: Math.round(w / 2 - 25), v: 52, sx: 1, bg: '#c8343a', fg: [250, 246, 240], lit: true }); spec.cross = { x: 14, v: 80, s: 22 }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }
+        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', x: Math.round(dx0 + dw0 / 2 - 25), v: 52, sx: 1, bg: '#c8343a', fg: [250, 246, 240], lit: true }); spec.cross = { x: 14, v: 80, s: 22 }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }
         if (A === 'police') lights.push([w / 2, 14, 60, 120, [0.4, 0.6, 1], 1, 'sign']);
       }
       lights.push([w / 2, 12, 34, 110, [1, 0.9, 0.75], 1, 'window']); upperLights(fl, 0.4);
@@ -2675,6 +2678,16 @@ function addLots(c, I) {
     }
     if (key === 'tower1' || key === 'tower2' || key === 'hotel' || key === 'bank' || key === 'bank2' || key === 'police' || key === 'police2' || key === 'police3') {
       if (/police/.test(key)) put(I, vitem('flagp', 'flagpole', [110, null], x0 + 30, y0 + h - 14, 0, [3, 4], { flag: ['stars', x0 + 30, y0 + h - 14, 0] }));   // (the bare pole: its flag flies live, in the wind - liveart.js)
+      if (/police/.test(key) && front >= 24) {   // (IN2-B: planters and a cast-iron lamp either side of the glass doors)
+        const b = M.buildings.find((q) => q.prefab === pi && q.walkIn), u = b && b.walkIn.south ? b.walkIn.units[0] : null;
+        if (u) {
+          const dx = (u.door.tx + (u.door.w || 2) / 2) * TILE, dy = (u.door.ty + 1) * TILE;
+          for (const sd of [-1, 1]) {
+            put(I, vitem('plt:1', 'planter', [true], dx + sd * 54, dy + 10, 0));
+            put(I, vitem('lp:cast:1', 'lampPost', ['cast', 1], dx + sd * 86, dy + 12)); lightAt(I, dx + sd * 86, dy + 14, 76, 150, LAMP_LIGHT.cast, 2.4, 'lamp');
+          }
+        }
+      }
       if (key === 'hotel') { put(I, vitem('hcan:h', 'canopy', [96, 34, 46, 1], x0 + w / 2, by1 + 20, 0)); lightAt(I, x0 + w / 2, by1 + 20, 42, 140, [1, 0.85, 0.6], 1.6, 'lamp'); }
     }
   });

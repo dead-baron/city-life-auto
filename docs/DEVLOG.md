@@ -5572,6 +5572,13 @@ Art only: the server's layouts (the doorways, the counter rows, the cells, the w
   stairwell with ball-topped newels at the mouth, the steps going down into the dark with a lit nosing on each, the white
   tiled wall with its green band, the warm-lit landing at the foot (the platform below), and along the back a green frame
   with two globe lamps and the lit sign with the train symbol. Lights at the globes, the sign and the stair foot.
+- **The fronts**: a hospital's or police station's glass doors are drawn where its walk-in doorway really is (they were
+  always in the middle of the section, often yards from the way in), and a walk-in drawn in sections has doors only in the
+  section with the doorway (no second EMERGENCY door); the police station gets a planter and a cast-iron lamp either side
+  of its doors.
+- **The platform seen from the sewers** (`client/underground/view.js`, the slot behind the service door's grille): white
+  floor tile with the green band at its back, the yellow tactile edge with its studs, the track on dark ballast; the train's
+  cars silver with warm-lit windows, a blue stripe and their doors.
 - **The classic renderer**: the HQ armory screen's painting is now the B take's armory cage (`assets/interiors.webp`, its
   rect unchanged). The hospital's and the police lobby's floor paintings are left as they were: the B takes have people
   painted into them, who would stand about as statues under the live staff.
