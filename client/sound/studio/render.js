@@ -4,7 +4,7 @@
 // stage, a gentle glue compressor, the SNES's soft top end, and a matched loudness so no song jumps out of another.
 // Deterministic: the same song renders the same samples every time.
 
-import { SR, TAU, rng, hashStr, mtof, SVF, Biquad, soft, mixInto, clamp } from './dsp.js';
+import { SR, TAU, rng, hashStr, mtof, SVF, Biquad, soft, mixInto, clamp, compress, room } from './dsp.js';
 import { VOICES, PRESETS } from './voices.js';
 import { DRUMS, KIT } from './drums.js';
 import * as S from './score.js';
@@ -64,25 +64,29 @@ function chorus(mono, depth = 0.5, rate = 0.5) {
 export function renderSong(song, opt = {}) {
   const t0 = Date.now();
   const bpb = song.beatsPerBar || 4, spb = 60 / song.bpm;
-  const sw = song.swing || 0, unit = song.swingUnit || 1, s8 = 0.5 + sw / 6;
-  const warp = (b) => { if (!sw) return b; const u = b / unit, base = Math.floor(u), f = u - base; return (base + (f < 0.5 ? f * (s8 / 0.5) : s8 + (f - 0.5) * ((1 - s8) / 0.5))) * unit; };
-  const secOf = (b) => warp(b) * spb;
+  // the time map: each section at its own tempo and swing (a song can change gear part way through)
   const placed = [];
-  let beat = 0;
+  let tSec = 0;
   for (const name of song.form) {
     const sec = song.sections[name];
     if (!sec) throw new Error(`${song.id}: no section "${name}"`);
-    placed.push({ name, sec, start: beat });
-    beat += sec.bars * bpb;
+    const bpm = sec.bpm || song.bpm, sw = sec.swing ?? song.swing ?? 0, unit = sec.swingUnit || song.swingUnit || 1;
+    placed.push({ name, sec, startSec: tSec, spb: 60 / bpm, sw, unit, s8: 0.5 + sw / 6 });
+    tSec += sec.bars * bpb * 60 / bpm;
   }
-  const endSec = secOf(beat), n = Math.ceil((endSec + (song.tail ?? 3.5)) * SR);
+  const warp = (p, b) => { if (!p.sw) return b; const u = b / p.unit, base = Math.floor(u), f = u - base; return (base + (f < 0.5 ? f * (p.s8 / 0.5) : p.s8 + (f - 0.5) * ((1 - p.s8) / 0.5))) * p.unit; };
+  const secIn = (p, b) => p.startSec + warp(p, b) * p.spb;   // (beat b of placed section p, in seconds)
+  void spb;
+  const endSec = tSec, n = Math.ceil((endSec + (song.tail ?? 3.5)) * SR);
   const L = new Float32Array(n), Rch = new Float32Array(n), eL = new Float32Array(n), eR = new Float32Array(n);
   const R = rng(hashStr(song.id || 'song'));
   const stats = {}, levels = {};
   // (a part's level before the master, over the stretches it plays: for balancing a mix)
   const rmsDb = (a, b, g = 1) => { let s2 = 0, k = 0; for (let i = 0; i < n; i += 4) { const v = b ? (Math.abs(a[i]) + Math.abs(b[i])) / 2 : Math.abs(a[i]) * g; if (v > 1e-4) { s2 += v * v; k++; } } return k ? +(10 * Math.log10(s2 / k)).toFixed(1) : -99; };
 
-  for (const [tname, tr] of Object.entries(song.tracks)) {
+  const kicks = [];   // (when each kick lands, in seconds: for the parts that duck under it)
+  const order = Object.entries(song.tracks).sort((a, b) => (b[1].kit ? 1 : 0) - (a[1].kit ? 1 : 0));   // (drums first)
+  for (const [tname, tr] of order) {
     const human = tr.human ?? 0.004;
     if (tr.kit) {
       // ---- a drum kit: each hit placed where the kit sits ----
@@ -96,22 +100,25 @@ export function renderSong(song, opt = {}) {
         ev.forEach((e, k) => {
           const fn = DRUMS[e.name];
           if (!fn) throw new Error(`${song.id}/${p.name}/${tname}: no drum "${e.name}"`);
-          const at = Math.max(0, Math.round((secOf(p.start + e.t) + (R() - 0.5) * 2 * human) * SR));
+          const at = Math.max(0, Math.round((secIn(p, e.t) + (R() - 0.5) * 2 * human) * SR));
           const vel = clamp(e.v + (R() - 0.5) * 0.1, 0.05, 1);
           let x = fn(vel, R, e.note != null ? mtof(e.note) : undefined);
           { let pk = 1e-9; for (let i = 0; i < x.length; i++) pk = Math.max(pk, Math.abs(x[i])); const g = 1 / pk; for (let i = 0; i < x.length; i++) x[i] *= g; }   // (every hit at full scale: the kit's levels set the balance)
           if (e.name === 'ohat') {   // (choked by the next closed hat or pedal)
             const nx = ev.slice(k + 1).find((q) => q.name === 'hat' || q.name === 'pedal');
-            if (nx) { const cut = Math.round((secOf(p.start + nx.t) - secOf(p.start + e.t)) * SR); if (cut < x.length) { x = x.slice(0, cut + 160); for (let i = 0; i < 160; i++) x[cut + i] *= 1 - i / 160; } }
+            if (nx) { const cut = Math.round((secIn(p, nx.t) - secIn(p, e.t)) * SR); if (cut < x.length) { x = x.slice(0, cut + 160); for (let i = 0; i < 160; i++) x[cut + i] *= 1 - i / 160; } }
           }
           const [pan, lvl] = KIT[e.name] || [0, 0.5];
           mixInto(dL, dR, x, at, lvl * vel * vel * vol * (tr.vol ?? 1) * (tr.mix?.[e.name] ?? 1), clamp(pan * (tr.width ?? 1), -1, 1));
+          if (e.name.startsWith('kick')) kicks.push(at / SR);
           hits++;
         });
       }
       if (tr.crunch) { for (const ch of [dL, dR]) for (let i = 0; i < n; i++) ch[i] = soft(Math.round(ch[i] * tr.crunch) / tr.crunch, 0.5); }
       if (tr.lp) { const a = new Biquad('lp', tr.lp, 0.7), b = new Biquad('lp', tr.lp, 0.7); a.apply(dL); b.apply(dR); }
       if (tr.drive) for (const ch of [dL, dR]) for (let i = 0; i < n; i++) ch[i] = soft(ch[i], tr.drive);
+      if (tr.room) room(dL, dR, tr.room, tr.roomSize || 1);
+      if (tr.comp) compress([dL, dR], tr.comp);
       const send = tr.echo || 0;
       for (let i = 0; i < n; i++) { L[i] += dL[i]; Rch[i] += dR[i]; if (send) { eL[i] += dL[i] * send; eR[i] += dR[i] * send; } }
       stats[tname] = hits;
@@ -129,7 +136,7 @@ export function renderSong(song, opt = {}) {
       ev.sort((a, b) => a.t - b.t);
       let prevF = 0, prevSlide = false;
       for (const e of ev) {
-        const ts = secOf(p.start + e.t) + (e.dt || 0) + (R() - 0.5) * 2 * human, te = secOf(p.start + e.t + e.d);
+        const ts = secIn(p, e.t) + (e.dt || 0) + (R() - 0.5) * 2 * human, te = secIn(p, e.t + e.d);
         const dur = Math.max(0.03, (te - ts) * (e.stac ? 0.45 : (tr.gate ?? 1)));
         for (const m of e.m) {
           const f = mtof(m + 12 * (tr.oct || 0));
@@ -148,6 +155,17 @@ export function renderSong(song, opt = {}) {
     if (tr.lp) new Biquad('lp', tr.lp, 0.7).apply(bus);
     for (const q of tr.eq || []) new Biquad(q.type || 'peak', q.f, q.q || 1, q.g).apply(bus);
     if (tr.drive) for (let i = 0; i < n; i++) bus[i] = soft(bus[i], tr.drive);
+    if (tr.comp) compress([bus], tr.comp);
+    if (tr.duck && kicks.length) {   // (pumping under the kick: down at each one, back up over duckRel s)
+      const ks = kicks.slice().sort((a, b) => a - b), rel = tr.duckRel || 0.18;
+      let k = 0;
+      for (let i = 0; i < n; i++) {
+        const t = i / SR;
+        while (k + 1 < ks.length && ks[k + 1] <= t) k++;
+        const since = t - ks[k];
+        if (since >= 0) bus[i] *= 1 - tr.duck * Math.exp(-since / rel) * Math.min(1, since / 0.004 + 0.3);
+      }
+    }
     const vol = tr.vol ?? 0.5, send = tr.echo || 0;
     if (tr.chorus) {
       const [cl, cr] = chorus(bus, tr.chorus, tr.chorusRate || 0.5);
@@ -198,8 +216,10 @@ export function renderSong(song, opt = {}) {
     if (Lf.hiss) { const h = new SVF(4000, 0.5); for (let i = 0; i < n; i++) { h.run(R() * 2 - 1); const z = h.hp * Lf.hiss; L[i] += z; Rch[i] += z * 0.9; } }
   }
 
-  // ---- master: glue compression, the SNES's soft top, matched loudness, a soft ceiling ----
+  // ---- master: weight and tape warmth, glue compression, the SNES's soft top, matched loudness, a soft ceiling ----
   const M = song.master || {};
+  if (M.low) { new Biquad('low', 100, 0.7, M.low).apply(L); new Biquad('low', 100, 0.7, M.low).apply(Rch); }
+  if (M.tape) { let pk = 1e-9; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(Rch[i])); const g = 0.9 / pk; for (const ch of [L, Rch]) for (let i = 0; i < n; i++) ch[i] = soft(ch[i] * g, M.tape) / g; }
   {
     const ratio = M.ratio ?? 2.2, at = Math.exp(-1 / (0.012 * SR)), rl = Math.exp(-1 / (0.16 * SR));
     let env = 0;
@@ -235,6 +255,6 @@ export function renderSong(song, opt = {}) {
   for (let i = Math.max(0, end - fade); i < end; i++) { const g = (end - i) / fade; L[i] *= g; Rch[i] *= g; }
   return {
     L: L.subarray(0, end), R: Rch.subarray(0, end), sr: SR, seconds: end / SR, peak, ms: Date.now() - t0, stats, levels,
-    sections: placed.map((p) => ({ name: p.name, at: +secOf(p.start).toFixed(3) })), loopAt: song.loop != null ? secOf(placed[song.loop].start) : null, endAt: endSec,
+    sections: placed.map((p) => ({ name: p.name, at: +p.startSec.toFixed(3) })), loopAt: song.loop != null ? placed[song.loop].startSec : null, endAt: endSec,
   };
 }

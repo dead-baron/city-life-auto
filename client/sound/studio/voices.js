@@ -281,6 +281,20 @@ export const PRESETS = {
   fuzzBass: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'pulse', duty: 0.4, det: 9 }, { w: 'sine', oct: -1, lvl: 0.7 }], env: [0.006, 0.4, 0.85, 0.08], cut: 700, q: 1.4, fenv: 1.2, fdec: 0.15, drive: 2.2 },
   // voices
   vocoder: { voice: 'vocal', env: [0.04, 0.3, 0.9, 0.2], vib: [4.8, 0.12, 0.3], morph: 0.4 },
+  // ---- round 2: thicker and warmer (the owner: "thick", "edgy", "less nasally") ----
+  fatBass: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'saw', det: 7 }, { w: 'sine', lvl: 0.9 }, { w: 'sine', oct: -1, lvl: 0.35 }], env: [0.004, 0.35, 0.8, 0.07], cut: 650, q: 1.2, fenv: 1.4, fdec: 0.12, keyTrack: 0.4, velCut: 0.6, drive: 0.9, glide: 0.04 },
+  buzzBass: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'pulse', duty: 0.32, det: 11 }, { w: 'saw', det: -8 }, { w: 'sine', oct: -1, lvl: 0.9 }], env: [0.006, 0.5, 0.9, 0.1], cut: 1300, q: 1.6, fenv: 0.8, fdec: 0.2, keyTrack: 0.3, drive: 2.6, lp2: 3200, glide: 0.05 },
+  pickBass: { voice: 'synth', waves: [{ w: 'saw', lvl: 0.8 }, { w: 'pulse', duty: 0.45, lvl: 0.4 }, { w: 'sine' }], env: [0.003, 0.45, 0.55, 0.06], cut: 900, q: 1.3, fenv: 1.8, fdec: 0.06, keyTrack: 0.5, velCut: 1, drive: 1.2, lp2: 3000 },
+  warmLead: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'saw', det: 11, lvl: 0.8 }, { w: 'tri', oct: -1, lvl: 0.35 }], env: [0.012, 0.4, 0.8, 0.18], cut: 2100, q: 1.3, fenv: 0.9, fdec: 0.25, keyTrack: 0.5, vib: [5.2, 0.12, 0.3], glide: 0.06, drive: 0.35, lp2: 5000 },
+  hazeLead: { voice: 'synth', waves: [{ w: 'tri' }, { w: 'saw', det: 23, lvl: 0.45 }, { w: 'pulse', duty: 0.4, det: -17, lvl: 0.3 }], env: [0.02, 0.5, 0.75, 0.25], cut: 2400, q: 1.1, vib: [3.6, 0.22, 0.05], glide: 0.08, drive: 0.6, lp2: 4500 },
+  stab: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'saw', det: 13 }, { w: 'saw', det: -12 }], env: [0.003, 0.18, 0.25, 0.08], cut: 900, q: 1.5, fenv: 2.4, fdec: 0.07, keyTrack: 0.3, drive: 0.5 },
+  brassFat: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'saw', det: 9 }, { w: 'saw', det: -10 }], uni: 2, uniDet: 8, uniDelay: 0.014, env: [0.02, 0.3, 0.85, 0.1], cut: 950, q: 0.75, fenv: 1.6, fatk: 0.035, fdec: 0.25, keyTrack: 0.55, velCut: 1, vib: [5.4, 0.08, 0.32], scoop: [-0.7, 0.05], drive: 0.6, lp2: 4800, breath: 0.015 },
+  bonesFat: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'saw', det: 8 }, { w: 'tri', lvl: 0.6 }], uni: 2, uniDet: 7, uniDelay: 0.016, env: [0.03, 0.3, 0.85, 0.12], cut: 600, q: 0.75, fenv: 1.4, fatk: 0.05, fdec: 0.3, keyTrack: 0.6, velCut: 0.9, scoop: [-0.9, 0.07], glide: 0.08, drive: 0.5, lp2: 3500 },
+  tenorSax: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'tri', lvl: 0.5 }, { w: 'pulse', duty: 0.4, lvl: 0.25 }], env: [0.018, 0.3, 0.9, 0.08], cut: 1500, q: 1.2, fenv: 0.9, fatk: 0.03, fdec: 0.22, keyTrack: 0.6, velCut: 1.1, vib: [5, 0.12, 0.25], scoop: [-1.1, 0.07], glide: 0.035, breath: 0.035, drive: 1.1, lp2: 3600 },
+  pluckSynth: { voice: 'synth', waves: [{ w: 'saw' }, { w: 'tri', lvl: 0.7 }, { w: 'saw', det: 9, lvl: 0.5 }], env: [0.002, 0.28, 0.0, 0.12], cut: 900, q: 1.4, fenv: 2.6, fdec: 0.09, keyTrack: 0.5, velCut: 0.8, drive: 0.3 },
+  vocoLead: { voice: 'vocal', env: [0.03, 0.3, 0.9, 0.2], vib: [4.4, 0.1, 0.25], morph: 0.25, hiss: 0.02, gain: 1.3 },
+  dustyKeys: { voice: 'fm', ratio: 1, index: 1.1, idxDec: 0.6, idxSus: 0.3, ratio2: 7, index2: 0.3, idx2Dec: 0.03, env: [0.003, 1.4, 0.15, 0.25], det: 7, trem: [5, 0.18], gain: 1.6 },
+  grimeOrgan: { voice: 'organ', bars: [[0.5, 0.5], [1, 1], [1.5, 0.6], [2, 0.7], [3, 0.3]], click: 0.15, drive: 1.6, gain: 1.4 },
   // flutes
   flute: { voice: 'flute', vib: [5, 0.13, 0.28], air: 0.05, chiff: 0.3 },
   whistle: { voice: 'flute', harm: [1, 0.06, 0.02], vib: [5.6, 0.2, 0.15], air: 0.025, chiff: 0.12, env: [0.025, 0.3, 0.9, 0.08] },

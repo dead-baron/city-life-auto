@@ -93,3 +93,31 @@ export function mixInto(L, R, buf, at, gain, pan) {
   const n = Math.min(buf.length, L.length - at);
   for (let i = Math.max(0, -at); i < n; i++) { L[at + i] += buf[i] * gl; R[at + i] += buf[i] * gr; }
 }
+
+// A compressor for a part's channel (or two channels, linked): the level is followed with an attack and a release
+// (s); over the threshold (dB under full scale, relative to the part's own loudest stretch when rel is set) it is
+// turned down by the ratio; makeup brings the lot back up. Thickens drums and holds a bass steady.
+export function compress(chs, o = {}) {
+  const n = chs[0].length, at = Math.exp(-1 / ((o.att ?? 0.005) * SR)), rl = Math.exp(-1 / ((o.rel ?? 0.12) * SR)), ratio = o.ratio ?? 4;
+  let peak = 1e-9;
+  for (const c of chs) for (let i = 0; i < n; i++) { const a = Math.abs(c[i]); if (a > peak) peak = a; }
+  const thr = peak * Math.pow(10, (o.thr ?? -12) / 20), mk = Math.pow(10, (o.makeup ?? 0) / 20);
+  let env = 0;
+  for (let i = 0; i < n; i++) {
+    let lvl = 0;
+    for (const c of chs) { const a = Math.abs(c[i]); if (a > lvl) lvl = a; }
+    env = lvl > env ? at * env + (1 - at) * lvl : rl * env + (1 - rl) * lvl;
+    const g = (env > thr ? Math.pow(env / thr, 1 / ratio - 1) : 1) * mk;
+    for (const c of chs) c[i] *= g;
+  }
+}
+
+// Short early reflections (a small room) added to a pair of channels: depth 0-1
+export function room(L, R, depth = 0.3, size = 1) {
+  const taps = [[0.0113, 0.55, 1], [0.0171, 0.45, -1], [0.0237, 0.38, 1], [0.0313, 0.3, -1], [0.0419, 0.22, 1], [0.0547, 0.15, -1]];
+  const n = L.length, sL = L.slice(), sR = R.slice();
+  for (const [dt, g, side] of taps) {
+    const d = Math.round(dt * size * SR), gl = g * depth * (side > 0 ? 1 : 0.7), gr = g * depth * (side > 0 ? 0.7 : 1);
+    for (let i = d; i < n; i++) { L[i] += sR[i - d] * gl; R[i] += sL[i - d] * gr; }
+  }
+}

@@ -44,7 +44,50 @@ function noiseHit(n, R, att, dec, filt) {
 }
 function add(a, b, g = 1) { const n = Math.min(a.length, b.length); for (let i = 0; i < n; i++) a[i] += b[i] * g; return a; }
 
+// a heavy kick: a sub thump falling fast from a knock, with a click on top, saturated (hip-hop, funk, rock)
+function kickFat(v, R, len = 0.55, low = 50, punch = 1) {
+  const n = buf(len).length, o = new Float32Array(n);
+  let ph = R(), ph2 = R();
+  const hp = new SVF(2500, 0.7);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR, f = low + 130 * Math.exp(-t / 0.026);
+    ph += f / SR; ph2 += (170 + 60 * Math.exp(-t / 0.01)) / SR;
+    let x = Math.sin(TAU * ph) * Math.exp(-t / (len * 0.55)) + Math.sin(TAU * ph2) * Math.exp(-t / 0.028) * 0.45 * punch;
+    hp.run(R() * 2 - 1); x += hp.hp * Math.exp(-t / 0.0025) * 0.5 * punch;
+    o[i] = soft(x * 1.6, 0.7);
+  }
+  return o;
+}
+// a fat snare: two drum-head tones, a crack and a long rattle of the wires, a little saturated
+function snareFat(v, R, len = 0.42, tail = 0.17) {
+  const n = buf(len).length, o = new Float32Array(n);
+  let p1 = R(), p2 = R();
+  const hp = new SVF(800, 0.7), lp = new SVF(8500, 0.7), bp = new SVF(2600, 2);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    p1 += (190 + 40 * Math.exp(-t / 0.01)) / SR; p2 += 330 / SR;
+    const body = (Math.sin(TAU * p1) * 0.8 + Math.sin(TAU * p2) * 0.35) * Math.exp(-t / 0.075);
+    const z = R() * 2 - 1;
+    hp.run(z); lp.run(hp.hp); bp.run(z);
+    const wires = lp.lp * Math.exp(-t / (tail * (0.8 + 0.4 * v)));
+    const crack = bp.bp * Math.exp(-t / 0.008) * 1.2;
+    o[i] = soft((body * 0.9 + wires * 1.1 + crack) * 1.3, 0.5);
+  }
+  return o;
+}
+function crushed(x, bits = 6, hold = 2) { const q = Math.pow(2, bits - 1); for (let i = 0; i < x.length; i++) x[i] = Math.round(x[i] * q) / q; for (let i = 0; i < x.length; i++) if (i % hold) x[i] = x[i - (i % hold)]; return x; }
+
 export const DRUMS = {
+  kickFat: (v, R) => kickFat(v, R),
+  kickBoom: (v, R) => kickFat(v, R, 0.9, 42, 0.8),
+  kickTight: (v, R) => kickFat(v, R, 0.32, 58, 1.2),
+  kickDust: (v, R) => crushed(kickFat(v, R, 0.5, 48), 7, 2),
+  snareFat: (v, R) => snareFat(v, R),
+  snareTight: (v, R) => snareFat(v, R, 0.25, 0.09),
+  snareDust: (v, R) => crushed(snareFat(v, R, 0.4, 0.15), 6, 2),
+  clapFat: (v, R) => { const o = DRUMS.clap(v, R), s2 = snareFat(v, R, 0.3, 0.1); for (let i = 0; i < o.length && i < s2.length; i++) o[i] = o[i] * 1.2 + s2[i] * 0.35; return o; },
+  hatDust: (v, R) => { const n = buf(0.07).length, o = noiseHit(n, R, 0.001, 0.016 + 0.012 * v, [8000, 0.6, 'hp']); return crushed(o, 7, 2); },
+  ohatDust: (v, R) => { const n = buf(0.4).length, o = noiseHit(n, R, 0.002, 0.13, [7000, 0.6, 'hp']); return crushed(o, 7, 2); },
   kick: (v, R) => { const n = buf(0.38).length, o = tone(n, 155, 50, 0.032, 0.2, R); add(o, noiseHit(240, R, 0, 0.003, [3000, 0.7, 'hp']), 0.5 * v); for (let i = 0; i < n; i++) o[i] = soft(o[i] * 1.2, 0.3); return o; },
   kick808: (v, R) => { const n = buf(0.9).length, o = tone(n, 120, 44, 0.05, 0.5, R); for (let i = 0; i < n; i++) o[i] = soft(o[i] * 1.4, 0.6); return o; },
   kickSoft: (v, R) => tone(buf(0.3).length, 110, 52, 0.025, 0.16, R),
@@ -80,6 +123,8 @@ export const DRUMS = {
 
 // where each sits in the stereo picture (the drummer's view, a little narrow, as SNES mixes were) and how loud
 export const KIT = {
+  kickFat: [0, 1], kickBoom: [0, 1], kickTight: [0, 0.95], kickDust: [0, 1], snareFat: [0.04, 0.85], snareTight: [0.04, 0.8], snareDust: [0.04, 0.85], clapFat: [0.04, 0.7],
+  hatDust: [0.28, 0.34], ohatDust: [0.28, 0.3],
   kick: [0, 0.95], kick808: [0, 0.95], kickSoft: [0, 0.8], snare: [0.05, 0.62], snareLo: [0.05, 0.62], clap: [0.05, 0.5], rim: [0.1, 0.38], brush: [0.05, 0.3], snap: [-0.15, 0.35],
   hat: [0.3, 0.26], ohat: [0.3, 0.24], pedal: [0.3, 0.2], ride: [-0.35, 0.24], rideBell: [-0.35, 0.22], crash: [-0.25, 0.3],
   tomH: [0.2, 0.55], tomM: [-0.05, 0.55], tomL: [-0.25, 0.6],

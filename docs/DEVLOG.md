@@ -4996,3 +4996,21 @@ The owner: "Let's have an option in debug that lets you clear your character ent
   - erased through pause → Options → Start fresh;
   - back on the title as a new guest, then the graphics choice and the creator;
   - the old profile gone from profiles.json.
+
+## 2026-10-09 · Music round 2, batch 1: thicker, edgier, matched to the references (task #443)
+The owner, after round 1: "a little more edgy and with a good beat to it, something thick and makes you nod your head to it, catchy and drives, less nasally instrumental stuff". They want each reference track recreated as an original, as close to its tone, beat and pacing as we can get. The three round-1 songs stay as fallbacks. "As close as we can" here means the same tempo, key, groove, weight, sound, structure and energy, with tunes, riffs and hooks of our own.
+- **The engine:**
+  - **Drums:** a heavier kick (a sub thump from a knock, with a click, saturated) in fat, boom, tight and dusty versions; a fat snare (two drum-head tones, a crack and the wires), also in tight and dusty versions; dusty hats.
+  - **Kit channels:** a small room (early reflections) and a compressor.
+  - **Basses:** thick (detuned saws plus sub), buzzing (Tobacco-style, driven hard) and picked-and-overdriven.
+  - **Leads and keys:** a warm detuned lead, a warbly haze lead, a plucked synth for arpeggios, stabs, a dusty electric piano and a gritty organ.
+  - **Brass and sax:** a fat brass section and trombones with less honk (saws through a low-resonance filter, a little drive), and a tenor sax with body instead of a nasal formant.
+  - **Mixing:** parts can pump under the kick (`duck`), and every part can have a compressor (`comp`).
+  - **Master:** low-end weight (`low`) and tape warmth (`tape`).
+  - **Tempo:** sections can change tempo and swing (`bpm`, `swing` per section), which Rescue Run's two parts need.
+- **The songs** (`client/sound/studio/songs/`):
+  - *Grease Fire* (TV All Greasy style: 88 BPM, F minor, a triplet lilt, a buzzing bass riff, warped tape);
+  - *Double Scoop* (2 Thick Scoops style: 63 BPM felt at 126, B minor, a shuffled half-time crunch, vocoder-like voices);
+  - *Rescue Run* (Ping Island style: 96 then 123 BPM, A major then A minor, a pulsing bass, arpeggios, congas on a machine beat);
+  - *Smash and Grab* (Tank! style: 142 BPM, C blues, Latin swing, a wall of brass, a tenor sax solo).
+  The same analysis as for the references puts each on its target's tempo and key, its brightness within about 10%, and the same shuffle or straightness. Rescue Run even reads with the same two tempos.
