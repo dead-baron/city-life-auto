@@ -15,6 +15,7 @@
 //     AN5, at the water: 'drink' (the forelegs splayed, the head right down to the water) | 'wade' (standing or walking
 //     in the shallows: the legs under the water to the knees)
 //     AN2: 'swipe' (a bear rocked back off its forefeet, a forepaw raised (phase < 0.5) and raking forward)
+//     AN4: 'pounce' (a cat's leap: off the ground, stretched out, the forepaws reaching (phase < 0.5) or about to land)
 //     kind may carry a variant: 'deer:y' the young (smaller, a fawn's spots, no antlers), 'deer:L' the legendary
 //     pure white one (it glows faintly)
 //   renderUpright(vox, heading, { fy = 0.38, dither }) -> GBuf (anchor at the model centre on the ground)
@@ -97,7 +98,7 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'hit') return flinch(animalModel(kind, { ...o, pose: 'alert', phase: 0 }), A, 0.2);              // (AN7: the flinch)
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
   if (pose0 === 'wade' || pose0 === 'wadedrink') return waterline(animalModel(kind, { ...o, pose: pose0 === 'wade' ? 'stand' : 'drink', wl: A.h * 0.3 }), A, 0.3);   // (AN5: in the shallows; drinking there)
-  const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, down = pose === 'down', lie = pose === 'lie' || down, alert = pose === 'alert', stalk = pose === 'stalk', limp = pose === 'limp', swipe = pose === 'swipeleg';
+  const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, down = pose === 'down', lie = pose === 'lie' || down, alert = pose === 'alert', stalk = pose === 'stalk', limp = pose === 'limp', swipe = pose === 'swipeleg', pounce = pose === 'pounce';
   const hk = A.len <= 30 && (!A.jl || A.len < 14) ? 1.2 : 1;            // pets get the chunky big-headed look of A1 (the wild ones true to life, but for a rabbit)
   const L = Math.ceil(A.len * 1.7 + 10 + (A.antlers ? 8 : 0) + (TAIL_ROOM[A.tail] || 0)), W = Math.ceil(A.w * 2.3 + 12 + (A.antlers >= 2 ? 22 : 0)), Hh = Math.ceil(A.h * 2.2 + 12 + (A.antlers >= 2 ? 16 : 0));
   const m = new Vox(L, W, Hh);
@@ -111,7 +112,7 @@ export function animalModel(kind, o = {}) {
   const bob = run ? Math.abs(Math.sin(phase * Math.PI * 2)) * 1.5 * (A.hop || 1) : Math.abs(Math.sin(phase * Math.PI * 2)) * 0.5;   // (a rabbit's hop: up off the ground)
   const sit = pose === 'sit', drink = pose === 'drink', graze = pose === 'graze' || drink;
   const x0 = 5 + (A.tail === 'long' || A.tail === 'feather' ? 4 : 2) + (TAIL_ROOM[A.tail] || 0), x1 = x0 + A.len;          // rump .. chest
-  const bz = lie ? bodyR * 1.05 + 0.3 : (sit ? A.h * 0.7 : stalk ? (A.h - bodyR) * 0.72 : A.h - bodyR) + bob;
+  const bz = lie ? bodyR * 1.05 + 0.3 : (sit ? A.h * 0.7 : stalk ? (A.h - bodyR) * 0.72 : A.h - bodyR) + bob + (pounce ? A.h * 0.45 : 0);   // (pounce: in the air)
   void legLen;
   // coat pattern
   const coat = (x, y, z) => {
@@ -156,9 +157,10 @@ export function animalModel(kind, o = {}) {
   legs.forEach(([lx, ly, a], i) => {
     const back = i >= 2;
     if (jl) {
-      const top = bz - bodyR * 0.3, L2 = Math.max(top, (A.h - bodyR) * 0.92 - bodyR * 0.3) * (back ? 1.07 : 1.015) / 2;   // (crouched in a stalk: the legs bend)
+      const top = bz - bodyR * 0.3, L2 = Math.max(top - (pounce ? A.h * 0.45 : 0), (A.h - bodyR) * 0.92 - bodyR * 0.3) * (back ? 1.07 : 1.015) / 2;   // (crouched in a stalk: the legs bend)
       let fx = back ? -0.6 : 0.6, fz = 0;
       if (moving) { const p = (((phase + OFF[i]) % 1) + 1) % 1; if (p < D) fx = stride * (0.5 - p / D); else { const u = (p - D) / (1 - D); fx = stride * (u - 0.5); fz = Math.sin(u * Math.PI) * lift; } }
+      if (pounce) { const reach = phase < 0.5; fx = back ? -stride * (reach ? 1.0 : 0.55) : stride * (reach ? 1.05 : 0.6); fz = back ? A.h * (reach ? 0.42 : 0.3) : A.h * (reach ? 0.6 : 0.3); }   // (AN4: stretched out, then gathering to land)
       if (swipe && i === 1) { const up = phase < 0.5; fx = stride * (up ? 0.25 : 1.15); fz = A.h * (up ? 0.62 : 0.4); }   // (AN2: the paw up, then raking forward)
       if (drink && !back) fx = stride * (i === 0 ? 0.62 : -0.28);   // (AN5: drinking, the forelegs splayed)
       if (limp && i === 1) { fx = stride * 0.12; fz = A.h * 0.22 + Math.sin(phase * Math.PI * 2) * 0.6; }   // (AN7: the hurt foreleg held up, dangling)

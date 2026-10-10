@@ -6515,7 +6515,7 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
   table in a minute), the waiting one's cue up, watchers; the neighbours' fence on the wire; the debug menu's 11 kinds;
   the classic view draws every prop the server sends (and the cue), lazily. `test/art2.test.js`, `test/sound.test.js`,
   `test/npcpeople.test.js` pass as before.
-## 2026-10-10 · The animals' missing poses (task #391, part 2): hit, wounded and down (AN7), at the water (AN5), the strut and the swipe (AN2)
+## 2026-10-10 · The animals' missing poses (task #391, part 2): hit, wounded and down (AN7), at the water (AN5), the strut and the swipe (AN2), the cats' pounce (AN4)
 
 The owner: "improve animal art to match the wildlife concepts and give them better animations" (AN1-AN8); the last
 animals entry did the coats, shapes and gaits - these are the poses the concepts show that the game didn't draw.
@@ -6548,15 +6548,23 @@ animals entry did the coats, shapes and gaits - these are the poses the concepts
     strut;
   - **the swipe** (`swipe`, 2 frames): a bear at you (`APOSE.attack`, close) rocks back off its forefeet, a forepaw up,
     then raking forward (until now it reared right up); charging in, it runs.
+- **AN4, the predators:** a cougar or a bobcat stalking that stops is **crouched to spring** (`crouch`: the stalk's
+  low body, the legs still, the tail twitching - the stalk's legs used to keep walking on the spot); at you, it
+  **pounces** (`pounce`, 2 frames: off the ground stretched out, the forepaws reaching, then gathering to land - it
+  charged in the gallop). The moose in the shallows of AN4 is AN5's wading. Already drawn: the walks and runs, the
+  grizzly's rear, the black bear up a trunk (`climb`).
+- **The quail at game scale** (AN8): 19 x 19 px from the side, 12 x 16 from the front - about a rabbit's size, a
+  little over a duck's (twice life size beside a person): left as it is.
 - **Before/after sheets** `docs/art-v2/compare/AN7_hit-wounded-down.png` (deer, black bear; elk and boar after),
-  `docs/art-v2/compare/AN5_waters-edge.png` (deer, moose, black bear; elk, boar, coyote, grizzly after) and
-  `docs/art-v2/compare/AN2_strut-swipe.png` (the AN2 sheet of the coats is `AN2_boar-bear-turkey.png`), the concept at
-  half size on top, the game's own bake below.
-- **Left:** AN4 (the moose, the goats, the predators), the quail's size at game scale; AN5's beaver diving (the tail
-  up) and the otter with a fish.
-- **Tests:** `test/wildart.test.js` (3 new, 6 in all): every species draws the new poses; the flinch lifts the
+  `docs/art-v2/compare/AN5_waters-edge.png` (deer, moose, black bear; elk, boar, coyote, grizzly after),
+  `docs/art-v2/compare/AN2_strut-swipe.png` (the AN2 sheet of the coats is `AN2_boar-bear-turkey.png`) and
+  `docs/art-v2/compare/AN4_moose-goats-predators.png` (the cougar, the bobcat, the moose), the concept at half size on
+  top, the game's own bake below.
+- **Left:** AN4's mountain goat leaping between rocks and the fox's mouse-pounce (no server state for either); AN5's
+  beaver diving (the tail up), the otter with a fish, the sea otters' clam and holding hands.
+- **Tests:** `test/wildart.test.js` (4 new, 7 in all): every species draws the new poses; the flinch lifts the
   forefeet (standing, they're down), the limp's right forefoot never touches the ground (walking, it does), bedded down
   the head is lower than lying up, knocked down isn't the dead pose; drinking splays the forelegs wider than grazing,
   wading stands taller than swimming and shorter than standing, drinking in the shallows keeps the head; the tom's fan
-  up (from the front far wider and taller than standing), the bears' swipe up off the forefeet, the paw up then forward.
-  `test/wildlife.test.js` passes as before.
+  up (from the front far wider and taller than standing), the bears' swipe up off the forefeet, the paw up then forward;
+  the cats' pounce off the ground and stretched out longer than standing. `test/wildlife.test.js` passes as before.

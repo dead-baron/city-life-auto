@@ -79,7 +79,7 @@ const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55
 // snapshot's extra byte) and how fast it's going: flying, swimming (a sea otter floats on its back), up a trunk,
 // reared, charging, stalking low, bedded down, head down feeding, head up and alert; else by its speed. Dead: on its
 // side (a bird with a wing out).
-const BEARS = new Set(['blackbear', 'grizzly']);
+const BEARS = new Set(['blackbear', 'grizzly']), CATS = new Set(['cougar', 'bobcat']);
 // the art kind of an animal ('pet:<kind>' on the wire): a covey's two adult quail (a pair of mallards) spawn one after
 // the other, so the odd id is drawn as the hen (birds.js ':f') and the even one as the cock (the drake)
 const HENS = new Set(['quail', 'duck']);
@@ -95,10 +95,11 @@ function wildPose(p, S2, base, sp, now, M) {
   switch (ap) {
     case APOSE.climb: return 'climb';
     case APOSE.attack: if (BEARS.has(base)) return sp > 30 ? 'run' : 'swipe';   // (AN2: at you, a forepaw raking)
+      if (CATS.has(base) && sp > 30) return 'pounce';   // (AN4: a cat springs)
     // falls through
     case APOSE.rear: return BEARS.has(base) ? 'rear' : sp > 30 ? 'run' : 'alert';
     case APOSE.charge: return 'run';
-    case APOSE.stalk: return sp > 6 ? 'stalk' : 'stalk';
+    case APOSE.stalk: return sp > 6 ? 'stalk' : 'crouch';   // (AN4: still, crouched to spring, the tail twitching)
     case APOSE.rest: return S2.bird ? 'idle' : p.hp < 0.5 ? 'down' : 'lie';   // (badly hurt: bedded down wounded, the head on the ground - AN7)
     case APOSE.sit: return S2.bird ? 'idle' : 'sit';
     case APOSE.drink: if (sp <= 12 && !S2.bird) return 'drink';   // (AN5: the forelegs splayed, the head down to the water)

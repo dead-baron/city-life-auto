@@ -110,3 +110,14 @@ test("the turkey's strut and the bear's swipe (AN2)", () => {
     void b;
   }
 });
+
+test("the cats' pounce and crouch (AN4)", () => {
+  for (const kind of Object.keys(SPECIES)) for (const pose of ['pounce', 'crouch']) for (let f = 0; f < ANIMAL_FRAMES[pose]; f++) assert.ok(pixels(animalSprite(`pet:${kind}`, pose, 6, f)) > 12, `${kind} ${pose} ${f} draws`);
+  const ground = (m) => { let n = 0; for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y, 0)) n++; return n; };
+  const reach = (m) => { let lo = 1e9, hi = -1; for (let z = 0; z < m.h; z++) for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return hi - lo; };
+  for (const kind of ['cougar', 'bobcat']) {
+    const p = animalModel(kind, { pose: 'pounce', phase: 0 });
+    assert.equal(ground(p), 0, `${kind}: the pounce, off the ground`);
+    assert.ok(reach(p) > reach(animalModel(kind, { pose: 'stand' })), `${kind}: stretched out, longer than standing`);
+  }
+});
