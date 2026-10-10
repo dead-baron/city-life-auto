@@ -17,6 +17,7 @@ import { World } from './world.js';
 import * as players from './systems/players.js';
 import { readBuild, watchBuild } from './build.js';
 import { createArtCdn } from './artcdn.js';
+import { cutWorld, createWorldCdn } from './worldcdn.js';
 import { generateCity } from '../shared/map.js';
 import { ferryRoutes } from './systems/ferries.js';
 import { TICK_MS } from '../shared/constants.js';
@@ -31,6 +32,9 @@ const STATIC_ROOTS = ['client/', 'shared/', 'assets/', 'server/'];
 
 useStore(new FileStore());
 const map = generateCity(config.seed);
+// the city as region files for the pages (server/worldcdn.js): cut now, as generated - the World changes the map once it runs
+let worldCut = null;
+try { worldCut = cutWorld(map, { seed: config.seed >>> 0 }); } catch (e) { console.error('[world] could not cut the city into region files:', e); }
 // the build we run (version.json): players coming back from an older one start fresh (CLA_FRESH_ON_UPDATE)
 const BUILD_FILE = join(config.root, 'version.json');
 const bootBuild = readBuild(BUILD_FILE);
@@ -41,6 +45,10 @@ console.log(`[server] build ${bootBuild ? bootBuild.v : '(no version.json)'} · 
 // the art from the server: the world's chunks baked here and downloaded by the pages (server/artcdn.js)
 let artCdn = null;
 try { artCdn = createArtCdn({ map, root: config.root, dataDir: config.dataDir, seed: config.seed, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[art] not serving chunks:', e); }
+// the city from the server: the region files gzipped and written in the background, then served (server/worldcdn.js)
+let worldCdn = null;
+if (worldCut) { try { worldCdn = createWorldCdn({ cut: worldCut, root: config.root, dataDir: config.dataDir, seed: config.seed, delayMs: 3000, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[world] not serving the city:', e); } }
+worldCut = null;
 // Client-only updates arrive without a restart (deploy/auto-update.sh pulls them): look at version.json
 // every 20 s and tell every page about a new build, so they reload into it (client/update.js).
 watchBuild(BUILD_FILE, 20000, (b) => {
@@ -58,6 +66,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
   // (baked chunks: many small requests a second while moving - counted in the monthly data, not the per-address rate)
+  if (worldCdn && path.startsWith('/world/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (worldCdn.handle(path + (url.search || ''), req, res)) return; }
   if (artCdn && path.startsWith('/art/')) { if (limits && limits.state() === 'over') { res.writeHead(503); res.end(); return; } if (artCdn.handle(path + (url.search || ''), req, res)) return; }
   if (limits && path !== '/health') {
     const why = limits.checkHttp(clientIp(req, config.trustProxy));
@@ -142,6 +151,7 @@ function statsSnapshot() {
     systemMs: world.profile(),
     traffic: limits ? limits.summary() : null,
     art: artCdn ? artCdn.summary() : null,
+    world: worldCdn ? worldCdn.summary() : null,
   };
 }
 

@@ -1338,7 +1338,10 @@ never runs the generator: it fetches the regions round the player and keeps them
 
 **Stages** (4.4 revised; each goes live):
 1. Today's world served as regions: the client fetches instead of building, so first loads get faster. This proves
-   the route with nothing new to look at.
+   the route with nothing new to look at. **First step done (2026-10-10, 8.1):** the server cuts today's world into
+   3 x 3 region files and an index (2.04 MB gzipped) and the page's city worker downloads and assembles them (0.5-1.4 s
+   in the headless page against 5.7 s built), building only when it can't get them. Next: the window (CityMap as a
+   window, the worker fetching the 3 x 3 regions round the player and moving them), the per-region signatures.
 2. The skeleton (done: parts 6 and 7). Then the generator at the v3 frame, building today's places at their gulf
    positions and sizes: an offline build.
 3. The new land, area by area, on the skeleton: highways, the main line, tunnels, the biomes.
@@ -1346,3 +1349,39 @@ never runs the generator: it fetches the regions round the player and keeps them
 
 The determinism rules in CLAUDE.md stay: the server's build, the tests and the tools rely on them. Clients no longer
 build the world from code, but the region files are still checked against the server's signatures.
+
+### 8.1 Stage 1, step 1: today's world served as region files (done, 2026-10-10)
+
+What was built (docs/DEVLOG.md has the details):
+- **The format** (`shared/regionpack.js`): `packRegions(city, { frame })` -> `{ index, regions: [{ key, bytes }] }` and
+  `assembleCity(index, regions)` -> the plain city (`cityData`'s fields, less `compLab` and `ringD`, which only the
+  generator reads). Regions are `REGION_TILES` squares over the frame (today 3 x 3; a 5040 x 4032 frame splits 10 x 8,
+  tested). Per region: every per-tile layer cut to its rectangle (copied row by row through the map's own width and
+  origin, so a window map works unchanged) and the items of the positional lists with their world-wide indices. The
+  index: the frame, every scalar, the lists that stay whole, propSolid's keys, and the paths of what JSON can't hold
+  (objects reached from two places, Maps and Sets, undefined / NaN / -0, typed arrays inside lists).
+- **Serving** (`server/worldcdn.js`): cut as the city is built (before the World runs and changes it), gzipped and
+  written in the background, `GET /world/<world hash>/<seed>/index.bin | r<x>-<y>.bin` (`?v=` the files' format),
+  immutable caching, a 404 that says why (`x-world-miss`).
+- **The client** (`client/worldgen.js`): kept city -> served (index and regions in parallel, 15 s) -> built (the
+  generator imported only then); the signature checked against the server's as for a kept city.
+
+Measured (this machine, node 22, two shared cores):
+
+| | |
+|---|---|
+| Today's world, gzipped (level 9) | **2.04 MB** in 10 files (32.8 MB raw): index 0.68 MB; regions 0.05-0.28 MB |
+| What dominates | the index's whole lists (the road graph, the railway's 14,127 points, the levels, the leftovers) and the regions' lists (props, solidProps); the per-tile layers are only 0.34 MB of it |
+| The cut on the server | 350-360 ms at start (775 ms in a cold script), then gzip 760 ms on libuv's threads and the writing 2-7 ms |
+| Assembling | 270 ms in node |
+| The city in the headless page | **0.5-1.4 s served** (download, unzip, assemble in the worker) against **5.7 s built** |
+
+For the window (the next steps):
+- A region's lists are cut by where each item is; a shared object lives where it is first reached, so with only some
+  regions loaded a reference into a missing region can't be pointed at again - the window will need each region's
+  shared objects kept in it (or copied), and items that straddle a border drawn by both.
+- The index holds the whole road graph and railway (0.68 MB today): at v3 it would be several MB, so the railway's
+  points and the levels' segments should move into the regions, and the phone's GPS keep a coarse graph.
+- POIs are cut into regions today; the phone's apps and the big map list places world-wide, so a small global list
+  (name, kind, position) belongs in the index.
+- The join check is still the whole map's signature; per-region signatures come with the window (part 8 item 5).

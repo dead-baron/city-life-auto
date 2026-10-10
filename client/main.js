@@ -225,7 +225,7 @@ function onText(m) {
       document.body.classList.toggle('practice', !!m.practice);
       if (S.spec && S.spec.on) { if (S.map.seed !== (m.seed >>> 0)) exitSpectate(); else send({ t: 'dev', c: 'spectate', on: true }); } // back in after a reconnect
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
-      if (m.sig && S.mapFrom === 'cache' && m.sig !== mapSignature(S.map)) { console.warn('[city] the kept city is not the server\'s: building it again'); forgetCity(); setupWorld(m.seed, true); }
+      if (m.sig && (S.mapFrom === 'cache' || S.mapFrom === 'served') && m.sig !== mapSignature(S.map)) { console.warn(`[city] the ${S.mapFrom === 'served' ? 'downloaded' : 'kept'} city is not the server's: building it again`); forgetCity(); setupWorld(m.seed, true); }
       S.updating = noteServerBuild(m.build, m.built); // the server runs a newer build: this page reloads into it (client/update.js)
       if (m.sig && m.sig !== mapSignature(S.map)) {
         // the server runs a newer world than this page: reload into it (client/update.js does the rest) - unless both
@@ -940,7 +940,7 @@ function setupWorld(seed, here = false) {
   if (!here && job && job.map && job.seed === (seed >>> 0)) {
     // built (or read back from this browser's copy) by client/worldgen.js while the page loaded
     S.map = job.map; job.map = null; job.taken = true; S.mapFrom = job.from;
-    if (S.mapFrom === 'cache') { delete S.map._sig; mapSignature(S.map); }   // (its fingerprint worked out from what was read)
+    if (S.mapFrom === 'cache' || S.mapFrom === 'served') { delete S.map._sig; mapSignature(S.map); }   // (its fingerprint worked out from what was read or downloaded: server/worldcdn.js)
     loadSpan('city', job.ms);
   } else {
     S.map = generateCity(seed); S.mapFrom = 'page';

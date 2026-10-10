@@ -8,8 +8,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BUDGET, codeReport, assetReport, cpuReport, closure, overBudget } from '../tools/perf.mjs';
-import { worldHash, artHash, canonicalHash, codeHash, ART_SKIP, ART_ROOTS } from '../tools/stamp-version.mjs';
-import { generateCity, cityData, cityFromData, CityMap, mapSignature } from '../shared/map.js';
+import { worldHash, artHash, codeHash, ART_SKIP, ART_ROOTS } from '../tools/stamp-version.mjs';
+import { generateCity, cityData, cityFromData, CityMap } from '../shared/map.js';
+import { assertSameCity } from './samecity.js';
 
 const say = (list) => list.map(([w, v, b, a]) => `${w}: ${v} (budget ${b}) - ${a}`).join('\n');
 
@@ -34,25 +35,7 @@ test('the city a browser keeps is the city: a structured clone of cityData, made
   const m = CITY();
   const back = cityFromData(structuredClone(cityData(m)));
   assert.ok(back instanceof CityMap, 'a CityMap again (its methods back)');
-  // every field a clone can carry comes back the same (shallow types and sizes here; the bits: the signature below)
-  for (const k of Object.keys(m)) {
-    const a = m[k], b = back[k];
-    if (typeof a === 'function') { assert.equal(b, undefined, `${k}: a function only generation uses (cityData leaves it out)`); continue; }
-    assert.equal(typeof b, typeof a, `${k}: same kind of value`);
-    if (a && typeof a === 'object') {
-      assert.equal(Object.getPrototypeOf(b) === Object.getPrototypeOf(a) || (ArrayBuffer.isView(a) && b.constructor === a.constructor), true, `${k}: the same kind of object (a class instance in the city doesn't survive a clone - make it plain data or restore it in cityFromData)`);
-      if (Array.isArray(a) || ArrayBuffer.isView(a)) assert.equal(b.length, a.length, `${k}: same length`);
-      if (a instanceof Map || a instanceof Set) assert.equal(b.size, a.size, `${k}: same size`);
-    } else assert.ok(Object.is(a, b), `${k}: same value`);
-  }
-  // what the nature sites hang on the city survives (the wild biome lookup the server's wildlife uses)
-  assert.equal(typeof back.terrainCls.at, 'function');
-  for (const [tx, ty] of [[100, 100], [700, 900], [1200, 300]]) assert.equal(back.terrainCls.at(tx, ty), m.terrainCls.at(tx, ty));
-  // every value, however deep, the same (a canonical hash of each); and the signature worked out again from the clone's
-  // own data is the server's
-  assert.equal(canonicalHash(cityData(back)), canonicalHash(cityData(m)), 'the same world, value for value');
-  delete back._sig;
-  assert.equal(mapSignature(back), mapSignature(m), 'the same signature');
+  assertSameCity(m, back);   // (test/samecity.js: every field, every value, the signature)
 });
 
 test('version.json knows the world and the art (run node tools/stamp-version.mjs after changing either)', async () => {
