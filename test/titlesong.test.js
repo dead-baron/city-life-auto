@@ -87,6 +87,7 @@ function fakeCtx() {
     createBiquadFilter: () => node({ type: 'lowpass', frequency: param(350), Q: param(1), gain: param(0) }),
     createDelay: () => node({ delayTime: param(0) }),
     createWaveShaper: () => node({ curve: null, oversample: 'none' }),
+    createDynamicsCompressor: () => node({ threshold: param(-24), knee: param(30), ratio: param(12), attack: param(0.003), release: param(0.25) }),
     createStereoPanner: () => node({ pan: param(0) }),
     createOscillator: () => src({ type: 'sine', frequency: param(440), detune: param(0), setPeriodicWave() {} }),
     createBufferSource: () => src({ buffer: null, loop: false, playbackRate: param(1) }),
