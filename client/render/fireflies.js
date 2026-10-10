@@ -76,7 +76,7 @@ export class Fireflies {
     }
     for (const [x, y, rest] of this.campsOf(M)) {
       if (x < v.x0 - 200 || x > v.x1 + 200 || y < v.y0 - 200 || y > v.y1 + 200) continue;
-      if (hash2(Math.round(x) + n * 31, Math.round(y), 935) >= (rest ? 0.7 : FLIES.campChance)) continue;
+      if (hash2(Math.round(x) + n * 31, Math.round(y), 935) >= (rest ? 0.7 : FLIES.campChance) && !this.S.fliesForce) continue;
       const k = `f${x},${y}`;
       let gl = this.cells.get(k);
       if (!gl) { gl = { x, y, r: 120, n: 4, ring: 70, key: k }; this.cells.set(k, gl); }
@@ -111,9 +111,9 @@ export class Fireflies {
     const cap = !gfx || !gfx.particles ? 0 : gfx.lighting >= 2 ? FLIES.max.high : FLIES.max.medium;
     let k = Math.max(0, Math.min(1, (night - FLIES.nightMin) / 0.3)) * Math.max(0, 1 - (S.rainK || 0) * 2.5);
     if (F.sub || F.insideB || !M || !M.dist) k = 0;
-    const n = S.day || 0;
+    const n = (S.day || 0) - ((S.loopTime || 0) < 120 ? 1 : 0);   // (the night: the day counts on at 06:00, while it's still dark)
     if (n !== this.night) { this.night = n; this.cells.clear(); }
-    const on = k > 0 && cap > 0 && hash2(n, 17, 930) < FLIES.nights;
+    const on = k > 0 && cap > 0 && (hash2(n, 17, 930) < FLIES.nights || S.fliesForce);   // (S.fliesForce: a playtest's)
     this.t += dt;
     if (this.t - this.scanAt > FLIES.rescan) {
       this.scanAt = this.t;

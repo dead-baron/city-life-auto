@@ -25,7 +25,7 @@ test('fireflies: at a rest spot on a night they are out, a few blinking and drif
   // a night they are out, and out at this spot
   let n = 0;
   for (; n < 400; n++) if (hash2(n, 17, 930) < FLIES.nights && hash2(Math.round(spot.x) + n * 31, Math.round(spot.y), 935) < 0.7) break;
-  const S = { map: m, day: n, rainK: 0 }, ff = new Fireflies(S), g = fakeG();
+  const S = { map: m, day: n, rainK: 0, loopTime: 600 }, ff = new Fireflies(S), g = fakeG();
   const F = { view: viewAt(spot.x, spot.y), sky: { night: 1 }, gfx: HIGH };
   run(ff, g, F, 8);
   assert.ok(ff.live.length > 0, 'fireflies round the fire');
@@ -45,11 +45,11 @@ test('fireflies: at a rest spot on a night they are out, a few blinking and drif
   run(ff, g, F, 3);
   assert.ok(ff.live.length > 0 && ff.pool.length < before, 'reused');
   // Medium: fewer; Low: none at all; rain: none
-  const ffM = new Fireflies({ map: m, day: n, rainK: 0 }); run(ffM, fakeG(), { ...F, gfx: MED }, 4);
+  const ffM = new Fireflies({ map: m, day: n, rainK: 0, loopTime: 600 }); run(ffM, fakeG(), { ...F, gfx: MED }, 4);
   assert.ok(ffM.live.filter((f) => f.out < 0).length <= FLIES.max.medium, 'fewer on Medium');
-  const ffL = new Fireflies({ map: m, day: n, rainK: 0 }), gL = fakeG(); run(ffL, gL, { ...F, gfx: LOW }, 4);
+  const ffL = new Fireflies({ map: m, day: n, rainK: 0, loopTime: 600 }), gL = fakeG(); run(ffL, gL, { ...F, gfx: LOW }, 4);
   assert.equal(ffL.live.length + gL.draws, 0, 'none on Low');
-  const ffR = new Fireflies({ map: m, day: n, rainK: 1 }), gR = fakeG(); run(ffR, gR, F, 4);
+  const ffR = new Fireflies({ map: m, day: n, rainK: 1, loopTime: 600 }), gR = fakeG(); run(ffR, gR, F, 4);
   assert.equal(gR.draws, 0, 'none in the rain');
 });
 
