@@ -532,3 +532,9 @@ export const MINE_REACH = 44;              // px: face a vein this close to work
 export const VEIN_REGROW_S = 300;          // a worked-out vein grows back (somewhere near) after this long
 export const PICK_PRICES = { pickStone: 30, pickIron: 95, pickSteel: 280, pickDiamond: 1250 };
 export const ASSAY_PAYS = 1.3;             // the quarry's assay office pays this much over what a pawn shop does
+// The streets coming alive (server/systems/streetlife.js, the owner 2026-10-10): now and then, near someone out in town,
+// a street race (at night), a police chase or an armored truck's run - one at a time, never the same twice running
+export const STREET_EVERY_S = 300;        // something like this happens about this often (randomised a little)
+export const STREET_RACE_COPS = 0.45;     // a street race a patrol car happens on (the police go after the racers)
+export const ARMORED_ESCORT = 0.4;        // an armored truck with a squad car escorting it
+export const ARMORED_UNLOCK_S = 3;        // hold ACT this long at the back of a stopped armored truck to get it open

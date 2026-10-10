@@ -69,6 +69,7 @@ export const DEV_SECTIONS = [
   { id: 'fun', title: '🎉 Events & sport', items: [
     ['🐶 Lost pet nearby', 'pet'], ['🏁 Water race start (craft waiting)', 'near', { k: 'race' }], ['🏐 Pitch or court', 'near', { k: 'venue' }],
     ['🎬 Drive-in', 'near', { k: 'drivein' }], ['🏎 Raceway', 'near', { k: 'raceway' }], ['🪩 Club', 'near', { k: 'club' }],
+    ['🏁 Street race nearby', 'street', { k: 'race' }], ['🚓 Police chase nearby', 'street', { k: 'chase' }], ['🚚 Armored truck nearby', 'street', { k: 'armored' }],
   ] },
   { id: 'shops', title: '🏪 Shops & services', items: [
     ['🏥 Hospital', 'near', { k: 'hospital' }], ['💊 Pharmacy', 'near', { k: 'pharmacy' }], ['👕 Clothing', 'near', { k: 'clothing' }],
