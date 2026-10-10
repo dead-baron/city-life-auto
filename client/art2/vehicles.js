@@ -1541,8 +1541,7 @@ function applyDamage(m, M, D, type) {
         const y = z1 === 4 ? j : W - 1 - j, v = at(x, y, z);
         if (!v) continue;
         if (!solid(v)) break;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const w = at(x + dx, y, z + dz); if (solid(w)) set(x + dx, y, z + dz, scrape(w)); }
-        set(x, y, z, hole);
+        for (let dx = -1; dx <= 2; dx++) for (let dz = -1; dz <= 2; dz++) { const w = at(x + dx, y, z + dz); if (solid(w)) set(x + dx, y, z + dz, dx >= 0 && dx <= 1 && dz >= 0 && dz <= 1 ? hole : scrape(w)); }   // (2x2: it still shows drawn at 2 px a voxel)
         break;
       }
     } else {
@@ -1550,8 +1549,7 @@ function applyDamage(m, M, D, type) {
       if (!v) continue;
       if (m.mats[v].flag & F_GLASS) { set(x, y, z, crack); continue; }
       if (!solid(v)) continue;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const w = at(x + dx, y + dy, z); if (solid(w)) set(x + dx, y + dy, z, scrape(w)); }
-      set(x, y, z, hole);
+      for (let dx = -1; dx <= 2; dx++) for (let dy = -1; dy <= 2; dy++) { const w = at(x + dx, y + dy, z); if (solid(w)) set(x + dx, y + dy, z, dx >= 0 && dx <= 1 && dy >= 0 && dy <= 1 ? hole : scrape(w)); }
     }
   }
   m.prepared = false;
