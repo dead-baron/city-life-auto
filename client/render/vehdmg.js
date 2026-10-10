@@ -27,6 +27,7 @@ export function vdmg(boom, ev, now) {
     S.flashes.push({ x: cx, y: cy, t: 0.35, r: 180, kind: 'boom' });
     return;
   }
+  if (ev.e === 'arrowdrop') { arrowDrop(fx, ev); return; }
   if (ev.e === 'vpart') {
     const e = S.ents.get(ev.id), p = PIECE_RECT[PART_PIECE[ev.k] || 'p'], paint = PAINTS[((((e && e.d && e.d.p) | 0) % PAINTS.length) + PAINTS.length) % PAINTS.length] || '#777';
     const [sx, w, h] = p;
@@ -34,6 +35,28 @@ export function vdmg(boom, ev, now) {
     fx.chunks[(fx.ci + fx.chunks.length - 1) % fx.chunks.length].vp = { k: PART_PIECE[ev.k] || 'p', paint };   // (art v2 draws it from this: host.js _particles)
     fx.sparks(ev.x, ev.y, 6);
   }
+}
+
+// A deflected arrow drops (server combat.js arrowDrop): thrown down from where the blade turned it (sx, sy) to where it
+// comes to rest (x, y) - a pooled chunk that tumbles, lies a few seconds and fades (render/fx.js). The classic view draws
+// it from its picture; art v2 from the arrow's own sprite (vp.k 'arrow': host.js _particles). A fire arrow flares where
+// it lands and burns away, charred, as one coming down anywhere else does.
+let ARROW_IMG = null;
+function arrowImg() {
+  if (ARROW_IMG || typeof document === 'undefined') return ARROW_IMG;
+  const c = document.createElement('canvas'); c.width = 26; c.height = 12;
+  const g = c.getContext('2d');
+  [['#c8a46c', '#d8dde2', '#c84a32'], ['#2a201c', '#3a3430', '#1c1c20']].forEach(([shaft, head, fl], i) => {
+    const y = i * 6; g.fillStyle = shaft; g.fillRect(2, y + 2, 21, 2); g.fillStyle = head; g.fillRect(22, y + 1, 3, 4); g.fillStyle = fl; g.fillRect(0, y, 5, 6);
+  });
+  return (ARROW_IMG = c);
+}
+function arrowDrop(fx, ev) {
+  const sx = ev.sx ?? ev.x, sy = ev.sy ?? ev.y, f = ev.f ? 1 : 0;
+  fx.chunk(arrowImg(), 0, f * 6, 26, 6, 22, 5, sx, sy, (ev.x - sx) * 2.3, (ev.y - sy) * 2.3, 120, (Math.random() - 0.5) * 16, f ? 1 : 4);
+  const c = fx.chunks[(fx.ci + fx.chunks.length - 1) % fx.chunks.length];
+  c.a = ev.a || 0; c.vp = { k: 'arrow', f };
+  if (f) { for (let k = 0; k < 5; k++) fx.fire(ev.x, ev.y); fx.smoke(ev.x, ev.y, false); }
 }
 
 // The classic view: the damage drawn over the car in its own frame (+x its nose, +y its right side), from its word.

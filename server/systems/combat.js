@@ -233,10 +233,20 @@ function deflects(world, t, a) {
   const c = deflectChance(angleDiff(t.a || 0, a + Math.PI), g);
   if (!(c > 0) || world.rand() >= c) return false;
   const back = a + Math.PI, glance = back + (world.rand() - 0.5) * 2.4;
-  world.emit(t.x, t.y, { e: 'deflect', x: t.x, y: t.y, a: +back.toFixed(2), g: +glance.toFixed(2), id: t.id });
+  const ev = { e: 'deflect', x: t.x, y: t.y, a: +back.toFixed(2), g: +glance.toFixed(2), id: t.id };
+  world.emit(t.x, t.y, ev);
   t.attackAnimUntil = Math.max(t.attackAnimUntil || 0, world.time + 0.16);
   t.swingSide = (t.swingSide || 0) ^ 1;
-  return true;
+  return ev;   // (truthy: turned aside - ev.g the way it glanced)
+}
+// A deflected arrow drops: knocked out of the air, it falls a step or two off the blade, the way it glanced, and lies
+// there a few seconds, fading (the 'arrowdrop' event: sx, sy where it was turned; x, y where it comes to rest - the
+// clients throw it down: render/vehdmg.js, both renderers). Nobody can pick it up. A fire arrow does what it does
+// coming down anywhere else: it flares where it lands, lights a campfire it falls by, and burns away.
+function arrowDrop(world, t, w, g) {
+  const d = 16 + world.rand() * 20, x = t.x + Math.cos(g) * d, y = t.y + Math.sin(g) * d;
+  world.emit(x, y, { e: 'arrowdrop', x: Math.round(x), y: Math.round(y), sx: Math.round(t.x), sy: Math.round(t.y), a: +g.toFixed(2), f: w.fire ? 1 : 0 });
+  if (w.fire) { const cf = campfires.fireNear(world, x, y, FIRE_ARROW.lightPx); if (cf) campfires.setLit(world, cf.i, true); }
 }
 
 // A bow: the arrow flies (stepArrow), the string twangs - nobody but someone right beside you hears it, and the
@@ -261,7 +271,8 @@ function stepArrow(world, p, dt, owner) {
   const w = WEAPONS[p.weapon], a = Math.atan2(p.vy, p.vx);
   if (hit.kind === K.PED && hit.id !== p.owner) {
     const t = hit;
-    if (deflects(world, t, a)) { world.remove(p); return; }   // (the plasma blade: turned aside, it falls away)
+    const dv = deflects(world, t, a);
+    if (dv) { arrowDrop(world, t, w, dv.g); world.remove(p); return; }   // (the plasma blade: turned aside, it drops)
     world.emit(t.x, t.y, { e: 'blood', x: t.x, y: t.y, a, n: 7, g: 1 });
     world.emit(t.x, t.y, { e: 'arrowhit', x: t.x, y: t.y, a: +a.toFixed(2), id: t.id, f: w.fire ? 1 : 0 });
     const mult = t.wild ? (w.wild || 1) : t.player || !(owner && owner.player) ? 1 : NPC_GUN_MULT / (t.grit || 1);

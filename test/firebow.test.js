@@ -104,3 +104,42 @@ test('fire arrows set a vehicle burning and light a campfire they land by', () =
   assert.ok(evs(w2, 'arrowstick').some((e) => e.f === 1), 'it comes down burning');
   assert.ok(campfires.isLit(w2, i), 'the campfire catches');
 });
+
+test('a deflected arrow drops: it falls a step off the blade and lies a while (both renderers); a fire arrow flares and burns away', async () => {
+  for (const id of ['bow', 'firebow']) {
+    const { w, p } = archer(id);
+    const v = joinPlayer(w).p.ped;   // (someone guarding with the plasma blade, facing the archer)
+    teleport(w, v, p.ped.x + 150, p.ped.y);
+    v.hp = v.maxHp = 1000; v.protectUntil = 0; v.weapon = 'plasma'; v.player.profile.weapons.plasma = 1;
+    w.rand = () => 0.5;
+    combat.tryAttack(w, p.ped, 0);
+    for (let i = 0; i < 12; i++) { v.a = Math.PI; v.guardUntil = w.time + 1; w.step(); }
+    const dr = evs(w, 'arrowdrop')[0];
+    assert.ok(evs(w, 'deflect').length && dr, `${id}: turned aside, it drops`);
+    assert.equal(v.hp, 1000, 'unhurt');
+    assert.ok(!evs(w, 'arrowhit').length && !evs(w, 'arrowstick').length);
+    const d = Math.hypot(dr.x - v.x, dr.y - v.y);
+    assert.ok(d > 8 && d < 45, `near where it was turned (${d | 0} px)`);
+    assert.equal(Math.hypot(dr.sx - v.x, dr.sy - v.y) < 2, true, '(from the blade)');
+    assert.equal(dr.f, id === 'firebow' ? 1 : 0);
+    assert.ok(!(w.arrows || []).length, 'not one to pick up');
+  }
+  // the clients: a pooled chunk thrown down to where it rests, tagged for art v2; a fire arrow flares and goes sooner
+  const { vdmg } = await import('../client/render/vehdmg.js');
+  for (const f of [0, 1]) {
+    const calls = [], fires = [];
+    const fx = { chunks: [{}, {}, {}], ci: 0, chunk(...a) { calls.push(a); const o = this.chunks[this.ci]; this.ci = (this.ci + 1) % 3; o.on = true; o.vp = null; o.rest = a[13]; }, fire: (x, y) => fires.push([x, y]), smoke() {}, sparks() {} };
+    vdmg({ S: { fx, ents: new Map() } }, { e: 'arrowdrop', x: 130, y: 100, sx: 100, sy: 100, a: 0.3, f });
+    assert.equal(calls.length, 1, 'one chunk');
+    const [, , , , , , , x, y, vx, vy] = calls[0];
+    assert.deepEqual([x, y], [100, 100], 'thrown from the blade');
+    assert.ok(vx > 0 && Math.abs(vy) < 1e-9, 'toward where it rests');
+    assert.equal(fx.chunks[0].vp.k, 'arrow', '(art v2 draws it: host.js _particles)');
+    assert.ok(Math.abs(fx.chunks[0].a - 0.3) < 1e-9, 'lying the way it glanced');
+    assert.equal(fires.length > 0, !!f, f ? 'a fire arrow flares where it lands' : 'a plain one just drops');
+    assert.ok(f ? fx.chunks[0].rest < 2 : fx.chunks[0].rest >= 3, 'lies a few seconds (a fire arrow burns away sooner)');
+  }
+  const host = src('client/art2/game/host.js');
+  assert.ok(/_arrowDrop\(c, o\)/.test(host) && /c\.vp\.k === 'arrow'/.test(host), 'art v2 draws a dropped arrow');
+  assert.ok(/case 'arrowdrop'/.test(src('client/main.js')), 'the classic page hands it on');
+});

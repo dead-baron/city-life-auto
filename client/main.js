@@ -737,7 +737,7 @@ function onEvent(ev) {
     case 'crash': fx.sparks(ev.x, ev.y, 4 + Math.round(ev.p * 8)); sfx('crash', distVol(ev.x, ev.y) * (0.4 + ev.p)); if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, ev.p * 6); break;
     case 'explode': S.boom.explode(ev, now, distVol(ev.x, ev.y)); sfx('explode', distVol(ev.x, ev.y)); break;   // (render/boom.js: the layered blast from its seed)
     case 'wreckland': S.boom.land(ev, now); break;   // a wreck blown up into the air comes down
-    case 'vcut': case 'vpart': S.boom.vdmg(ev, now); break;   // (a vehicle cut in two, a part off it: render/vehdmg.js)
+    case 'vcut': case 'vpart': case 'arrowdrop': S.boom.vdmg(ev, now); break;   // (a vehicle cut in two, a part off it: render/vehdmg.js)
     case 'runover': {   // under a car (server carhits.js): lying face down or on the back a few seconds; the car jolts
       const e = S.ents.get(ev.id);
       if (e) { e.runAt = now; e.runK = ev.k; e.runD = ev.d; }

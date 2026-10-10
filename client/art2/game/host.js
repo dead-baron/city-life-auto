@@ -69,6 +69,7 @@ const LOWMEM_CHUNKS = 10;
 const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
 const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown', 'arts']);
 const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
+const CHAR_TINT = [0.32, 0.27, 0.25]; // a fire arrow burnt out (a deflected one dropped: _arrowDrop)
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // people flat on the ground (main.js pedLook)
 const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
@@ -1822,12 +1823,25 @@ export class World2 {
     // render/vehdmg.js a part that came off, render/boom.js an explosion's pieces - task #402), turned in eighths
     for (const c of fx.chunks) {
       if (!c.on || !c.vp || c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
+      if (c.vp.k === 'arrow') { this._arrowDrop(c, o); continue; }   // (a deflected arrow: render/vehdmg.js)
       const r = ((Math.round(c.a / (Math.PI / 4)) % 8) + 8) % 8, vp = c.vp, key = this._conv(`vpart|${vp.k}|${vp.paint}|${r}`, () => partSprite(vp.k, vp.paint, r), true);
       if (!key) continue;
       o.alpha = c.life > c.rest ? Math.max(0, 1 - (c.life - c.rest) / 1.5) : 1;
       E.drawSprite(key, c.x, c.y, Math.max(0, (c.z || 0) * 0.5), o);
     }
     this._blown(F, o);
+  }
+  // a deflected arrow dropping and lying where it fell, fading (render/vehdmg.js arrowDrop): the plain arrow's own
+  // sprite (a fire arrow's flame is out by then - it burns away charred, a little darker)
+  _arrowDrop(c, o) {
+    const A = this.A;
+    if (!A || !A.projKey) return;
+    const N = 32, hi = quant(c.a, N), key = this._spr('actors', 'proj', A.projKey(24, hi, N), [24, hi, N]);
+    if (!key) return;
+    o.alpha = c.life > c.rest ? Math.max(0, 1 - (c.life - c.rest) / 1.5) : 1;
+    o.tint = c.vp.f ? CHAR_TINT : null;
+    this.E.drawSprite(key, c.x, c.y, Math.max(0, (c.z || 0) * 0.5) - 12, o);
+    o.tint = null;
   }
   // What the wind carries, only in windy spells and gales (render/flora/wind.js: rare) - otherwise you see the
   // wind in the plants: leaves where trees grow (woods, parks, gardens, the country), now and then a sheet of
