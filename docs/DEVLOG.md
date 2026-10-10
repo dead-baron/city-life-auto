@@ -6290,3 +6290,51 @@ imported, so none of it is in the page's code. Files: `shared/world3.js` (`ISLAN
 `shared/world3-islands.js`, `shared/map.js` (`setIslandBuilds`, `ISLAND_AT` exported, each build starts from the
 declared island boxes, the island-only branches), `tools/world3-islands.mjs`. Tests: `test/world3.test.js` builds Coral
 Cay alone and checks it against today's (every tile, road, lot and POI; 99% of the props), and twice the same.
+## 2026-10-10 · World v3, stage 1: today's city served as region files
+
+The owner, on the gulf (12:50): "Please help me make sure I don't scale up the city too much". A 5 x 4 km world can't be
+built on a phone (docs/WORLD-V3.md part 8: the server builds the world, the client fetches its window), so this is the
+engine piece that lets it work there, and today's world is the first thing served this way. Nothing in the game
+changes; a browser's first load after a world change gets its city from the server instead of building it.
+- **The files** (`shared/regionpack.js`): the server cuts the city it built into world3.js's regions (504-tile
+  squares: today 3 x 3, the right and bottom ones partial; v3's frame 10 x 8 - the frame is a parameter) and an index.
+  A region file holds every per-tile layer cut to its rectangle and the items of the lists with a position (props,
+  solidProps, POIs, buildings, prefabs, roofs, blocks, lamps, parking, signals, cameras, pillars, ...) with their
+  world-wide indices; the index holds the frame, every scalar (a window's x0 / y0 would travel without code changes),
+  the lists that stay whole (the road graph, homes, rail, districts' data, ...), and what JSON can't hold: objects
+  reached from two places (an edge in roads, edges and net; a gate's solid entries; a lamp that is also a prop) written
+  once and pointed at again, Maps and Sets, undefined / NaN / -0, typed arrays inside lists. propSolid travels as its
+  keys and is rebuilt from solidProps the way the generator keeps it; terrainCls.at is hung on again by cityFromData.
+  Left out: `compLab` and `ringD`, per-tile layers only the generator reads (the test fails if client code reads them).
+  A file is a small container (a JSON header, then the typed arrays 8-aligned), gzipped by the server.
+- **The sizes** (gzip level 9): 2.04 MB for the whole of today's world (32.8 MB raw): the index 0.68 MB (the road graph,
+  the railway's 14,000 points, the levels and the leftovers - all whole), the regions 0.05-0.28 MB each. Per-tile layers
+  are only 0.34 MB of it (distSea 114 KB, tiles 78 KB); the lists are the rest (props and solidProps the most).
+- **The server** (`server/worldcdn.js`, wired in `server/index.js` beside the art CDN): the cut is taken as soon as the
+  city is built, before the World runs (the running world changes the map: smashed props, gates and cell doors toggle
+  solid entries, smash.js adds a grid) - 350 ms here; 3 s after start it gzips the files in the background (770 ms, on
+  libuv's threads) and writes them to `<dataDir>/world/<world hash>-<seed>/` (older builds' folders deleted). It serves
+  `GET /world/<world>/<seed>/index.bin` and `r<x>-<y>.bin` cached for good (the URL has the world's hash), with CORS, the
+  bytes counted towards the monthly limit and a 503 over it; a 404 says why in `x-world-miss` (hash, seed, packing,
+  file). `/stats` has a `world` line.
+- **The browser:** `client/boot.js` tells the city worker the game server's address (`client/config.js serverUrl`, as
+  main.js connects; not offline, not with `?worldcdn=0`). `client/worldgen.js`: the kept city if there is one, else the
+  index and the nine regions fetched in parallel (15 s for all of it), unzipped with DecompressionStream and assembled
+  (`{ from: 'served' }`), kept in `worldcache.js` as a built one is; anything wrong (no server, a 404, a bad or missing
+  file, too slow, no DecompressionStream, another seed) and it builds as before. The generator is imported only then,
+  so a served city loads 5 small modules (16 KB) instead of the generator's 300 KB. `main.js` checks a served city's
+  signature against the server's as it does a kept one's (a mismatch: forgotten and built again); the load report
+  says "downloaded from the server" (`server/perfreports.js`). `?cityonpage`, practice mode and offline are unchanged.
+- **Measured:** in the headless page (software rendering, two shared cores) the city came in 0.5-1.4 s served against
+  5.7 s built, the page then played with no errors; assembling takes 270 ms in node.
+- **The perf budget** `city` (tools/perf.mjs): it now measures the city worker with what it imports dynamically (the
+  generator, loaded only when the server can't serve the city) - the worst case, as before. Raised from 26 files /
+  320 KB to 28 / 330 KB for the region reader (`shared/regionpack.js`, `shared/world3.js`); a served city loads 16 KB.
+- **Files:** `shared/regionpack.js`, `server/worldcdn.js`, `server/index.js`, `client/worldgen.js`, `client/boot.js`,
+  `client/main.js`, `server/perfreports.js`, `tools/perf.mjs`; `test/samecity.js` (the comparison "the city a browser
+  keeps is the city" used, now shared with `test/perf.test.js`).
+- **Tests:** `test/regions.test.js` (5): the round trip on the real city (every field and value, shared objects
+  included, and the signature), the split (each region's rectangle of every layer, each item in the region its position
+  says, every item once by its world index), a v3-sized frame splitting 10 x 8 with a window map's origin travelling,
+  the server (the files with their headers, the 404s and why, older folders deleted), the worker's choice (kept,
+  served, built, and built after a 404, a bad file, a network error, another seed, a timeout, no DecompressionStream).
