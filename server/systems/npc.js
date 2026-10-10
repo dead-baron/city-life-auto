@@ -21,7 +21,7 @@ import * as wildlife from './wildlife.js';
 import { inAnyView } from '../view.js';
 import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
-import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP } from '../../shared/rules.js';
+import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
@@ -157,11 +157,13 @@ export function update(world, dt) {
       continue;
     }
     if (n.role === 'driver') { n.role = 'civ'; n.state = 'wander'; } // a driver left on foot (car gone) walks off
-    if (n.role === 'cop' && !n.war && !n.shootout) {
+    if (n.role === 'cop' && !n.war && !n.shootout && !n.stop && !n.pursue) {
       const u = n.unit ? world.get(n.unit) : null;
       if (!u || u.removed) { n.unit = 0; n.beat = true; } // lost their unit: walk the beat instead of freezing
     }
-    if ((n.role === 'cop' && !n.beat) || n.role === 'medic') continue; // other systems drive these
+    // other systems drive these (a word with someone: stops.js; after a crook: police.js; someone held down or cuffed:
+    // struggle.js, custody.js)
+    if ((n.role === 'cop' && (!n.beat || n.stop || n.pursue || holding(world, ped))) || n.role === 'medic') continue;
     if (now < ped.downUntil || now < ped.stunUntil) continue;
     if (n.state === 'passed') { ped.vx = 0; ped.vy = 0; continue; }
     // critically hurt: no more fighting - limp away from the trouble, bleeding; the worst hurt may crawl
@@ -417,10 +419,27 @@ function fight(world, ped, now) {
   return inp;
 }
 
+// An officer on someone, going for the cuffs (struggle.js), or holding someone cuffed (custody.js): those move them. (An
+// officer walking a beat who makes an arrest - a word gone wrong, a chase: stops.js, police.js pursue - isn't left to
+// wander off from their prisoner.)
+export function holding(world, c) {
+  const t = c.pinning ? world.get(c.pinning) : null;
+  if (t && t.player && t.player.struggle && t.player.struggle.by.includes(c.id)) return true;
+  for (const p of world.players.values()) if (p.custody && p.custody.holder === c.id) return true;
+  return false;
+}
+
 // ---- event hooks -----------------------------------------------------------
+// Started a fight (task #395): a criminal until `until` - hitting them is no crime, killing them still is (law.js
+// brawling), and the police take them in (police.js)
+export function markBrawl(world, ped, until) { if (ped && ped.npc) ped.npc.brawl = Math.max(ped.npc.brawl || 0, until); }
+
 export function onAttacked(world, ped, attacker) {
   if (!ped.npc || ped.dead || !attacker || attacker === ped) return;
   const n = ped.npc;
+  // a passer-by who lays into someone who never hit them started it (a street fight's are marked by happenings.js)
+  const a = attacker.npc;
+  if (a && a.role === 'civ' && !a.happening && !a.exCop && !a.desk && n.role !== 'cop' && !(world.time - (attacker.aggressors.get(ped.id) ?? -99) < 60)) markBrawl(world, attacker, world.time + BRAWL_AFTER_S);
   if (n.state === 'crawl') { n.fx = attacker.x; n.fy = attacker.y; return; } // still dragging themselves away - from you, now
   if (n.club) { bikers.clubAttacked(world, ped, attacker); return; }   // (a biker club member: the whole club fights back - bikers.js, task #366)
   if (n.bouncer !== undefined && n.bouncer !== null && n.state !== 'limp') { nightclubs.bouncerHurt(world, ped, attacker); return; }   // (a nightclub's bouncer: they all come for you - nightclubs.js, task #432)
@@ -545,8 +564,9 @@ export function startFight(world, ped, target, secs) {
 // cuffed and being taken in (custody.js). Whoever was fighting them lets it go, and nobody starts on them - a car can
 // still run them over, and the like; it's the people coming at them that stop.
 export const heldByPolice = (e) => !!e && (!!e.cuffed || !!(e.player && (e.player.struggle || e.player.custody)));
-// ...so whoever was fighting them stands back and watches a few seconds, then goes on their way
-function backOff(world, ped, t) {
+// ...so whoever was fighting them stands back and watches a few seconds, then goes on their way (the police breaking up
+// a street fight too: police.js)
+export function backOff(world, ped, t) {
   const n = ped.npc;
   n.state = 'watch'; n.target = t.id; n.fx = t.x; n.fy = t.y; n.until = world.time + 3 + rng() * 4;
 }
@@ -557,7 +577,7 @@ function watch(world, ped, now) {
   if (now > n.until) { n.state = 'wander'; n.target = 0; n.until = 0; n.awayFrom = ped.a + Math.PI; }
   return NO_INPUT;
 }
-function flee(world, ped, fx, fy, secs) {
+export function flee(world, ped, fx, fy, secs) {
   const n = ped.npc;
   n.state = 'flee'; n.fx = fx; n.fy = fy; n.until = world.time + secs;
 }

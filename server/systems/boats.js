@@ -118,7 +118,7 @@ function quarry(world, v) {
   let best = null, bd = 1100;
   for (const p of world.players.values()) {
     const ped = p.ped;
-    if (!ped || ped.dead || ped.hidden || p.wanted <= 0) continue;
+    if (!ped || ped.dead || ped.hidden || p.wanted <= 0 || (p.wanted === 1 && p.soft)) continue;   // (not a star from small crimes: stops.js)
     const pv = ped.vehId ? world.get(ped.vehId) : null;
     const x = pv ? pv.x : ped.x, y = pv ? pv.y : ped.y;
     if (!water(world, x, y) && !(pv && pv.def.kind === 'boat')) continue;

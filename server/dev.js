@@ -278,6 +278,7 @@ export function command(world, p, c, msg) {
     case 'hot': if (ped) { hotmoney.add(world, p, 1000, ped.x, ped.y); world.notify(p, '[dev] +$1,000 hot money in the robbery bag, stolen right here', 'info'); } break;
     case 'wanted': {
       if (!ped) break;
+      if (msg.soft) { law.clearWanted(world, p); law.smallStar(world, p, 'punch', ped.x, ped.y, 'witness'); break; }   // (1 star from small crimes: an officer comes for a word - stops.js)
       const s = Math.max(1, Math.min(5, Number(msg.n) || 2));
       law.addHeat(world, p, STAR_HEAT[s] - p.heat + 1, ped.x, ped.y);
       break;
@@ -318,7 +319,7 @@ export function command(world, p, c, msg) {
     case 'shootout': world.notify(p, gangwar.startShootout(world, p) ? '[dev] Shootout started nearby.' : '[dev] No gang turf near you - go toward The Yards or Southside.', 'info'); break;
     case 'die': if (ped && !ped.dead) combat.damage(world, ped, 99999, null, 'crash', 0); break;
     case 'snatch': npc.snatchEvent(world, p); world.notify(p, '[dev] A mugger is on the way to a nearby pedestrian.', 'info'); break;
-    case 'happen': world.notify(p, happenings.startNow(world, String(msg.k || 'fight'), p) ? `[dev] Started: ${msg.k}.` : '[dev] Nobody about to start it with - try a busier street.', 'info'); break;
+    case 'happen': world.notify(p, happenings.startNow(world, String(msg.k || 'fight'), p, { cops: msg.cops ? true : undefined }) ? `[dev] Started: ${msg.k}.` : '[dev] Nobody about to start it with - try a busier street.', 'info'); break;
     case 'pet': pets.spawnLost(world, p); world.notify(p, '[dev] A pet ran off nearby.', 'info'); break;
     case 'samaritan': prof.samaritan += 50; world.notify(p, '[dev] +50 Samaritan', 'info'); break;
     case 'car': {

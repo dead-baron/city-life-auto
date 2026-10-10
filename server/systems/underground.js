@@ -108,7 +108,7 @@ export function goDown(world, p, mh) {
   world.emit(mh.x, mh.y, { e: 'manhole', x: mh.x, y: mh.y, down: 1 });
   // who saw you go: officers on foot up here, close, with a clear view - they climb down after you
   let seen = 0;
-  if (p.wanted > 0) {
+  if (p.wanted > 0 && !(p.wanted === 1 && p.soft)) {   // (a star from small crimes: nobody climbs down after you for that - stops.js)
     for (const e of world.query(ped.x, ped.y, POLICE_FOLLOW_R, K.PED)) {
       if (!isCop(e) || e.dead || e.sub || e.vehId || seen >= 3) continue;
       if (!world.map.los(e.x, e.y, ped.x, ped.y)) continue;
@@ -233,7 +233,7 @@ function copsStep(world, dt) {
     let t = null, td = 900;
     for (const p of world.players.values()) {
       const q = p.ped;
-      if (!q || q.dead || !q.ug || q.ug !== e.ug || !(p.wanted > 0)) continue;
+      if (!q || q.dead || !q.ug || q.ug !== e.ug || !(p.wanted > 0) || (p.wanted === 1 && p.soft)) continue;
       const d = Math.hypot(q.x - e.x, q.y - e.y);
       if (d < td && ugLos(L, e.x, e.y, q.x, q.y)) { td = d; t = q; }
     }

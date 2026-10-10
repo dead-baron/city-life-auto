@@ -52,6 +52,7 @@ import * as lights from './lights.js';
 import * as revive from './revive.js';
 import * as custody from './custody.js';
 import * as struggle from './struggle.js';
+import * as stops from './stops.js';
 import * as cells from './cells.js';
 import * as devmode from '../devmode.js';
 import * as underground from './underground.js';
@@ -526,6 +527,8 @@ export function findInteraction(world, p) {
     const load = custody.interaction(world, p);
     if (load) return load;
   }
+  const word = stops.interaction(world, p);   // an officer come for a word (1 star from small crimes: stops.js)
+  if (word) return word;
   if (p.badge) {
     const target = law.arrestTarget(world, p);
     if (target) return { label: target.dead ? 'Book the suspect\'s body' : `Cuff ${target.name || 'suspect'}`, run: () => law.arrest(world, ped, target) };
