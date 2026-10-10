@@ -574,3 +574,8 @@ export const CLUB_FIGHT = { near: 64, r: 260, backS: [3, 5], film: 0.6, filmS: [
 // fight x their temperament's odds; otherwise drives off in a panic (and as the victim most likely calls it in).
 export const VANDAL_HEAT = 8;
 export const VEH_CRIME = { repeatS: 5, fight: 1, stopPx: 120 };
+// An NPC fighting with fists or a melee weapon raises a guard now and then as someone swings at them (server combat.js
+// npcGuard; blocked as a player's guard is: GUARD, the weapon's guard): this chance by what they hold, times
+// temper[0] + temper[1] x their temperament (npc.fight, 0-1); held holdS, not again for coolS. Everyone's guard is shown
+// for t s by the 'guard' event (a player's again every showS while held; t 0 when it drops).
+export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana: 0.4, plasma: 0.45 }, temper: [0.5, 0.8], holdS: 0.7, coolS: 1.4, showS: 0.4 };

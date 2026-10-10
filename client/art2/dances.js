@@ -128,3 +128,28 @@ Object.assign(GAITS2, {
   },
 });
 // ==== end of dancing ====================================================================================================
+
+// ==== The guard (blocking: server combat.js - a player's held guard, an NPC's raised now and then; main.js pedPose) ====
+// Its own pose, no longer the aim's: knees bent, feet apart, the head down behind it. Fists: both up in front of the
+// face, the elbows in. A bat, a sword, the katana or the plasma blade: held across in front of the face in both hands,
+// the blade up and out to the far side - what a blow meets. (Here, out of the chunk bake's reach, like the dances.)
+const vn = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+function holdItem(P, kind, axis, down) {   // (people.js setItem, two-handed)
+  axis = vn(axis);
+  const d = down[0] * axis[0] + down[1] * axis[1] + down[2] * axis[2];
+  P.item = { kind, axis, vdir: vn([down[0] - axis[0] * d, down[1] - axis[1] * d, down[2] - axis[2] * d]), two: true };
+}
+Object.assign(POSES, { guard: 1 });
+Object.assign(GAITS2, {
+  guard(D, P, f, kind) {
+    P.acc = false; P.lean = 0.14; P.twist = -0.14; P.headPitch = 0.2; P.splay = 0.25;
+    P.fL = [-D.hipX - 1.2, 4.8, D.ank]; P.fR = [D.hipX + 1.4, -4.4, D.ank]; P.pel[2] -= 1.6;
+    P.kneeL = [-0.4, 1, 0]; P.kneeR = [0.4, 1, 0];
+    P.hands = (S) => {
+      P.elR = [0.7, -0.2, -1]; P.elL = [-0.7, -0.2, -1];
+      if (!kind) { P.hR = vadd(S.shR, [-2.2, 4.4, 4.8]); P.hL = vadd(S.shL, [2.4, 4.8, 5.4]); return; }
+      P.hR = vadd(S.shR, [-1.4, 5.8, 3.8]);
+      holdItem(P, kind, [-0.85, 0.2, 0.5], [0, 1, 0]);
+    };
+  },
+});

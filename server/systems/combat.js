@@ -6,7 +6,7 @@ import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS, stepWeapon } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT } from '../../shared/rules.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT, NPC_GUARD } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -36,6 +36,7 @@ export function tryAttack(world, ped, aim) {
   if (ped.dead || now < ped.nextAttack || now < ped.reloadUntil || now < ped.stunUntil || now < ped.downUntil) return false;
   if (ped.hidden || now < (ped.protectUntil || 0) || ped.cellSafe) return false; // spawn / step-out protection, a police station's cell block (cells.js): no fighting
   if (ped.rollT > 0) return false;
+  if (now < (ped.guardUntil || 0)) return false;   // (guarding: no striking - a player's guard, an NPC's: npcGuard)
   if (!ped.vehId && isSwimming(world.map, ped)) return false; // can't fight while swimming
   const w = WEAPONS[ped.weapon] || WEAPONS.fists;
   if (w.type === 'tool') return false;
@@ -104,6 +105,7 @@ function melee(world, ped, w, aim) {
   world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
   if (!best) { meleeVehicle(world, ped, w, aim); return true; }   // (nobody in reach: a vehicle's body in the swing - task #402)
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
+  npcGuard(world, best);   // (someone fighting back with fists or a blade: now and then the guard goes up)
   if (blocked(world, best, ped, w, dir)) return true;
   if (!best.wild && !ped.wild) npc.spectacle(world, best.x, best.y, { r: 300, near: 60, chance: 0.35, secs: 7 });   // (a fight: a few phones come out)
   const was = { speed: Math.hypot(best.vx, best.vy), heading: Math.atan2(best.vy, best.vx) }; // (for the reaction: running into it?)
@@ -201,6 +203,21 @@ export function meleeVehicle(world, ped, w, aim) {
 
 // Guarding (players.js: the guard held with fists, a bat, a sword, the katana or the plasma blade; rules.js GUARD).
 export const guarding = (world, t) => world.time < (t.guardUntil || 0) && !t.dead && !t.vehId;
+// An NPC in a fight, with fists or a melee weapon that guards, as someone swings at them: now and then (rules.js NPC_GUARD,
+// by the weapon and their temperament) the guard goes up - the player's rules from there (blocked: from in front only).
+// Shown to everyone by the 'guard' event (t: how long - the clients' guard pose, main.js pedPose).
+export function npcGuard(world, t) {
+  const n = t.npc, now = world.time;
+  if (!n || n.state !== 'fight' || t.dead || t.vehId || guarding(world, t) || now < (n.guardNext || 0)) return false;
+  if (now < (t.downUntil || 0) || now < (t.stunUntil || 0) || t.rollT > 0 || t.carrying) return false;
+  const gw = WEAPONS[t.weapon] || WEAPONS.fists, c = NPC_GUARD.chance[gw.id];
+  if (!c || !gw.guard) return false;
+  n.guardNext = now + NPC_GUARD.coolS;
+  if (world.rand() >= c * (NPC_GUARD.temper[0] + NPC_GUARD.temper[1] * Math.max(0, Math.min(1, n.fight ?? 0.5)))) return false;
+  t.guardUntil = now + NPC_GUARD.holdS;
+  world.emit(t.x, t.y, { e: 'guard', id: t.id, t: NPC_GUARD.holdS });
+  return true;
+}
 // A blow at someone guarding, from in front of them: blocked - a clash (the 'block' event), the attacker's blow bounces
 // off and their combo is broken, the guard rocks back a step, and only what the guard doesn't stop gets through (no
 // stagger, no bleeding, no knockdown). From behind or the side the guard is no help.
