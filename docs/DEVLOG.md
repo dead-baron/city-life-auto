@@ -6004,7 +6004,10 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
     now and then a look away;
   - **pickers** down the rows of a farm's field, kneeling at the plants, a crate of tomatoes by them;
   - **miners** swinging pickaxes at a quarry's rock face (the pit's back wall; one at the old mine's adit) - the felling
-    swing with a new pickaxe (`client/art2/items.js`; the descriptor's `ch` 5, `server/net.js`).
+    swing with a new pickaxe (`client/art2/items.js`; the descriptor's `ch` 5, `server/net.js`);
+  - **a hunter** in a blaze-orange vest and cap, his rifle slung on his back (not in his hands), walking the edge of the
+    woods by a hunting camp and back along a clear line (no trunks or rocks in the way), stopping to look about, his dog
+    trotting out ahead (the walked dogs' trot, `personas.js`).
 - **Filled near players, out of sight:** within 1100 px of someone, never closer than 380, never where anyone can see
   the people pop up (`inAnyView`), at most 4 groups round a player; each spot is on by a day/night chance when someone
   comes near (no chess, picnics, painting, car washing or picking at night; none of those in the rain either), else it
@@ -6021,16 +6024,18 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
   sponge and the bucket of suds, the crate of tomatoes.
 - **Already about** (personas.js): the joggers (laps of a park or the beach) and the dog walker with three dogs.
 - **Debug menu:** a new last category, 🎣 People going about: each kind (anglers, chess, a picnic, a painter, washing the
-  car, neighbours chatting, pickers, miners) - the nearest spot filled, you a little way off it (the dev `act` command, msg.k;
+  car, neighbours chatting, pickers, miners, a hunter) - the nearest spot filled, you a little way off it (the dev `act` command, msg.k;
   a car parked in the driveway first for the car wash).
-- **Left for part 2:** the pickup game at the courts, pool in the bars, hunters with a dog at forest edges; a fence for
-  the neighbours to chat over; the miners' clink; the classic renderer's poses and props for these (it draws no persona
+- **Rained off, the car gone:** when it rains the chess players, the picnic, the painter and the car washer go on their
+  way (nobody starts those in the rain); the car washer goes when the car's driven off.
+- **Left for part 2:** the pickup game at the courts, pool in the bars; a fence for the neighbours to chat over; the miners' clink; the classic renderer's poses and props for these (it draws no persona
   walks or props either).
 - **Fixed on the way:** `client/art2/game/host.js` didn't parse (the dance moves' comment, put mid-line, swallowed the
   rest of the line with its closing braces), so the art v2 renderer failed to load; the comment is at the line's end now.
-- **Tests:** `test/activities.test.js` (6 new; the last: the debug menu's buttons, each kind filled where you land): the spots found on the map (on open ground, the anglers facing the
+- **Tests:** `test/activities.test.js` (7 new; the last: the debug menu's buttons, each kind filled where you land): the spots found on the map (on open ground, the anglers facing the
   water, chess in town); a spot filled, posed, props on the wire, holding its spot; the car washed only with a car in
   the driveway, beside it and facing it, the neighbours face to face, the pickers kneeling in the field with their
-  crate, the miners' pickaxes on the wire; a gunfight scattering them and them going back to it; filling round a player out of sight, a sensible number,
+  crate, the miners' pickaxes on the wire, the car washer off when the car's gone; the hunter walking with his dog, the
+  rifle slung, not in hand; a gunfight scattering them and them going back to it; filling round a player out of sight, a sensible number,
   gone when nobody's near. These pass as before: `test/npcpeople.test.js`, `test/view.test.js`,
   `test/reactions.test.js`, `test/art2.test.js` (which failed on main: the host.js fix).

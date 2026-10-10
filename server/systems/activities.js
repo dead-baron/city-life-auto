@@ -9,6 +9,8 @@
 //   carwash   washing the car parked in a home's driveway: a sponge, a bucket (when a car's parked there: traffic.js)
 //   chat      neighbours chatting between two homes next door to each other
 //   pickers   two picking down the rows of a farm's field, a crate of produce by them
+//   hunter    a hunter in blaze orange, a rifle slung on his back, walking the woods' edge by a hunting camp, his dog
+//             out ahead
 //   miners    swinging pickaxes at a quarry's rock face (one at the old mine's adit): the felling swing (net.js ch 5)
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
 // player at most), and emptied when nobody's near any more. They stand (sit) and loop a pose: the descriptor's gt (the
@@ -22,6 +24,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { inAnyView } from '../view.js';
 import { dress } from './npclooks.js';
 import { LOOKS } from './personas.js';
+import { item } from '../../shared/look.js';
 import { wildStyle } from './wildlife.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { BUILDS } from '../entities.js';
@@ -43,11 +46,33 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   chat: { day: 0.4, night: 0.1 },
   pickers: { day: 0.8, night: 0 },
   miners: { day: 0.8, night: 0.2 },
+  hunter: { day: 0.7, night: 0 },
+};
+// a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
+const pk = (r, a) => a[Math.floor(r() * a.length) % a.length];
+const MY_LOOKS = {
+  hunter: { styles: [['outdoors', 1]], fem: 0.2, age: [1, 3, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 6,
+    fix(L, r) {
+      L.outfit.set = null; L.outfit.jacket = null; L.outfit.top = item('Hi-vis vest', 'orange', 'black');
+      L.outfit.bottoms = item('Cargo pants', pk(r, ['olive', 'khaki', 'charcoal'])); L.outfit.shoes = item('Hiking boots', pk(r, ['brown', 'tan']));
+      L.outfit.hat = item(r() < 0.6 ? 'Trucker cap' : 'Beanie', 'orange'); L.outfit.glasses = null; L.outfit.jewel = null; L.outfit.bag = null;
+    } },
 };
 const ANCHOR = { pierrail: 'anglers', pier: 'anglers', fishtable: 'anglers', rods: 'anglers', picnic: 'chess', cafetable: 'chess', blanket: 'picnic', fountain: 'painter', statue: 'painter', gazebo: 'painter', mapboard: 'painter', ferris: 'painter' };
 
 const walkable = (map, x, y) => { const t = map.tileAtPx(x, y); return !PED_BLOCK[t] && t !== T.ROAD && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP; };
 const hsh = (x, y, s = 0) => { let h = (Math.floor(x) * 374761393 + Math.floor(y) * 668265263 + s * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+// no tree trunk, rock or post (the map's solid props) within pad of (x, y); a clear walk from one point to another
+function freeAt(map, x, y, pad = 10) {
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  for (let j = ty - 1; j <= ty + 1; j++) for (let i = tx - 1; i <= tx + 1; i++) for (const q of (map.solidProps && map.solidProps.get(j * map.w + i)) || []) if (!q.off && Math.hypot(q.x - x, q.y - y) < q.r + pad) return false;
+  return true;
+}
+function clearWalk(map, x0, y0, x1, y1) {
+  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 14);
+  for (let k = 0; k <= n; k++) { const x = x0 + (x1 - x0) * k / n, y = y0 + (y1 - y0) * k / n; if (!walkable(map, x, y) || !freeAt(map, x, y, 12)) return false; }
+  return true;
+}
 // which way the water is from a spot on the pier (radians), or null when there's none in reach
 function waterward(map, x, y) {
   for (const r of [24, 40, 60]) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, t = map.tileAtPx(x + Math.cos(a) * r, y + Math.sin(a) * r); if (t === T.WATER || t === T.DEEP) return a; }
@@ -125,6 +150,17 @@ export function spotsOf(map) {
       if (walkable(map, x, y) && clear(x, y, 140)) { list.push({ k: 'miners', x, y, a: Math.atan2(-dy, -dx), wild: true, single: true }); taken.push({ x, y }); break; }
     }
   }
+  // a hunter and his dog along the woods by a hunting camp
+  for (const n of map.natureSites || []) {
+    if (n.kind !== 'huntcamp') continue;
+    for (let i = 0; i < 40; i++) {
+      const a = hsh(n.x, n.y, i + 90) * Math.PI * 2, d = 150 + hsh(n.x, n.y, i + 95) * 160, x = n.x + Math.cos(a) * d, y = n.y + Math.sin(a) * d;
+      const x2 = x - Math.sin(a) * 150, y2 = y + Math.cos(a) * 150;
+      if (!clearWalk(map, x, y, x2, y2) || !clear(x, y, 200)) continue;
+      list.push({ k: 'hunter', x, y, a: Math.atan2(y2 - y, x2 - x), x2, y2, wild: true }); taken.push({ x, y });
+      break;
+    }
+  }
   const cells = new Map();
   list.forEach((s, i) => {
     s.id = i;
@@ -176,6 +212,8 @@ function members(s) {
   } else if (s.k === 'miners') {    // swinging a pickaxe at the rock face (a second along the face, at a quarry)
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'construction', chop: true });
     if (!s.single) out.push({ x: s.x - Math.sin(s.a) * 34, y: s.y + Math.cos(s.a) * 34, a: s.a, arche: 'construction', chop: true });
+  } else if (s.k === 'hunter') {    // walking the edge of the woods and back, stopping to look about, the dog out ahead
+    out.push({ x: s.x, y: s.y, a: s.a, arche: 'hiker', look: 'hunter', pp: 'rifle', patrol: [{ x: s.x, y: s.y }, { x: s.x2, y: s.y2 }], dog: true });
   } else if (s.k === 'pickers') {   // down along the rows, picking into a crate
     out.push({ x: s.x - 22, y: s.y, a: s.a, arche: 'farmer', gt: 'kneel', pp: 'crate' });
     out.push({ x: s.x + 22, y: s.y + 6, a: s.a, arche: 'farmer', gt: 'kneel' });
@@ -190,8 +228,9 @@ function carAt(world, s) {
 
 // dress an NPC from a persona look (personas.js LOOKS) or keep the archetype's own
 function dressAs(world, ped, look) {
-  if (!look || !LOOKS[look]) return;
-  const g = dress(world, 'p:' + look, ped.x, ped.y, !!(world.clock && world.clock.isNight), rng, LOOKS[look]);
+  const rec = look && (MY_LOOKS[look] || LOOKS[look]);
+  if (!rec) return;
+  const g = dress(world, (MY_LOOKS[look] ? 'a:' : 'p:') + look, ped.x, ped.y, !!(world.clock && world.clock.isNight), rng, rec);
   if (!g) return;
   const old = ped.build, nb = BUILDS[g.bi] || old;
   ped.app = g.app; ped.app.bd = g.bi; ped.appVer = (ped.appVer || 0) + 1;
@@ -221,10 +260,15 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop };
+    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: 1 };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
+    if (m.dog) {   // the dog, out ahead of him (personas.js update: a walked dog's trot - here off the lead)
+      const dog = world.spawnPed(m.x + 24, m.y, { hp: 40, archetype: 'pet:' + pk(rng, ['dog_spaniel', 'dog_golden', 'dog_black']), name: 'a dog', a: m.a, app: { bd: 1 } });
+      dog.pet = { walked: ped.id, kind: 'dog', name: 'a dog', i: 1 };
+      g.ids.push(dog.id);
+    }
   }
   A.set(s.id, g);
   return g;
@@ -240,11 +284,23 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
+const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;
   const d = Math.hypot(a.x - ped.x, a.y - ped.y);
-  if (d > 420) { pose(ped, false); n.act = null; n.state = 'wander'; n.until = 0; return null; }   // (far off after a scare: on their way)
+  // far off after a scare, rained off (the picnic packs up, the painter folds the easel), the car driven away: on their way
+  if (a.patrol) {   // the hunter: along the edge to the far end, a look about, and back
+    if (d > 420 && Math.hypot(a.patrol[1].x - ped.x, a.patrol[1].y - ped.y) > 420) { pose(ped, false); n.act = null; n.state = 'wander'; return null; }
+    pose(ped, true);
+    if (now < (n.holdTo || 0)) { ped.vx = ped.vy = 0; if (now >= (n.lookAt || 0)) { n.lookAt = now + 1.5 + rng() * 2; ped.a += (rng() - 0.5) * 1.6; } return { inp: NO_INPUT, factor: 0.55 }; }
+    const t = a.patrol[a.leg % 2];
+    if (Math.hypot(t.x - ped.x, t.y - ped.y) < 8) { a.leg++; n.holdTo = now + 3 + rng() * 5; return { inp: NO_INPUT, factor: 0.55 }; }
+    if (n.state !== 'idle') { n.state = 'idle'; n.until = now + 9999; }
+    return { inp: seekTo(ped, t.x, t.y, 0.8), factor: 0.4 };
+  }
+  const off = d > 420 || (RAIN_OFF.has(a.k) && world.weather === WEATHER.RAIN) || (a.k === 'carwash' && now >= (n.carAt || 0) && !(n.carAt = now + 1, world.query(a.x, a.y, 48, K.VEH).some((v) => !v.removed && v.def && v.def.kind === 'car')));
+  if (off) { pose(ped, false); n.act = null; n.state = 'wander'; n.until = 0; return null; }
   if (d > 5) { if (ped.gt || ped.pp || ped.fishing || ped.chop) pose(ped, false); return { inp: seekTo(ped, a.x, a.y, 0.9), factor: 0.55 }; }   // back to it
   ped.vx = ped.vy = 0;
   if (n.state !== 'idle') { n.state = 'idle'; n.until = now + 9999; }
@@ -267,7 +323,7 @@ export function update(world) {
   // nobody sits in mid air
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
-    if (e && e.npc && e.npc.act && (e.gt || e.pp || e.fishing || e.chop) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
+    if (e && e.npc && e.npc.act && !e.npc.act.patrol && (e.gt || e.pp || e.fishing || e.chop) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
   }
   if (world.tick % 20 === 13) fillRound(world);
 }
@@ -277,10 +333,10 @@ function fillRound(world) {
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) anchors.push(p.ped);
   // empty the groups nobody's near (or whose people are all gone)
   for (const [id, g] of A) {
-    g.ids = g.ids.filter((i) => { const e = world.get(i); return e && !e.removed && !e.dead && e.npc && e.npc.act; });
+    g.ids = g.ids.filter((i) => { const e = world.get(i); return e && !e.removed && !e.dead && ((e.npc && e.npc.act) || (e.pet && e.pet.walked)); });
     const near = anchors.some((p) => Math.hypot(p.x - g.x, p.y - g.y) < ACT_DROP) || inAnyView(world, g.x, g.y, 64);
     if (g.ids.length && near) continue;
-    if (!near) for (const i of g.ids) { const e = world.get(i); if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.fishing = null; e.chop = null; e.appVer = (e.appVer || 0) + 1; } }
+    if (!near) for (const i of g.ids) { const e = world.get(i); if (e && e.pet) { if (!inAnyView(world, e.x, e.y, 32)) world.remove(e); } else if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.fishing = null; e.chop = null; e.appVer = (e.appVer || 0) + 1; } }
     A.delete(id);
     (world.actRest ||= new Map()).set(id, now + (g.ids.length ? 30 : 240));   // (emptied by a scare: a good while before it's on again)
   }

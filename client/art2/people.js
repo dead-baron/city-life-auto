@@ -1937,7 +1937,7 @@ CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
 // people at their activities (server activities.js, task #423): easel (a street painter's, in front: the brush up to the
 // canvas), cooler (an angler's, on the deck at their side), chess (the board on the table in front of a seated player)
-CARRY.push('easel', 'cooler', 'chess', 'sponge', 'crate');
+CARRY.push('easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle');
 Object.assign(ACC_HANDS, { easel: 1, sponge: 1 });   // (sponge: washing the car, the bucket at their feet; crate: a picker's)
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
 const M365 = { metal: MAT('#a4a8b0', 0.5), rubber: MAT('#26262a'), blanket: MAT('#6a7a9a'), tartan: MAT('#8a2a34'), wood: MAT('#d0903e', 0.4), deck: MAT('#2a9aa8', 0.3), lead: MAT('#c8262b'), dark: MAT('#1c1c22', 0.4), wheel: MAT('#f2c21b'), bag: MAT('#3a5a3a') };
@@ -2060,6 +2060,10 @@ const ACT_PROPS = {
   sponge(B, C, E, S) {   // the yellow sponge in hand, a bucket of suds at their feet
     E(vadd(S.haR, [0, 1.6, 0.4]), I3, [2.2, 1.6, 1.5], GR.ACC, 'sponge', MAT('#f2d23a'));
     C([-8.5, -1, 0.4], [-8.5, -1, 6.4], 2.8, 3.2, GR.ACC, 'bucket', MAT('#3a7ad0', 0.4)); E([-8.5, -1, 6.6], I3, [2.9, 2.9, 0.7], GR.ACC, 'suds', MAT('#f4f6fa'));
+  },
+  rifle(B, C) {   // a hunter's rifle slung across his back, the muzzle up over the right shoulder, on its sling
+    C([-4.8, -4.8, 21], [3.6, -4.6, 38.5], 1.0, 0.75, GR.ACC, 'stock', M365.wood); C([2.6, -4.7, 36.5], [5.6, -4.6, 44.5], 0.55, 0.48, GR.ACC, 'barrel', M365.dark);
+    B([-0.4, -4.4, 29.6], I3, [0.9, 0.7, 1.6], GR.ACC, 'action', M365.dark);
   },
   crate(B, C, E) {   // a wooden crate of tomatoes by the picker
     B([-9.5, 4, 3.4], I3, [4.0, 3.0, 3.2], GR.ACC, 'crate', (Q) => cloth(Math.abs(Q.l2) > 0.7 || Math.abs(Q.l0) > 0.85 ? '#a8743c' : '#8a5a2c'));

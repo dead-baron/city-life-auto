@@ -83,7 +83,29 @@ test('the car washed in the driveway (when one is parked there), neighbours chat
   assert.ok(of('miners').length >= 2, `some miners' spots (${of('miners').length})`);
   const mn = fill(w, of('miners')[0], { seen: true });
   for (const e of people(mn)) { assert.equal(e.chop && e.chop.tool, 'pickaxe', 'a pickaxe swung'); assert.equal(_descriptor(e).ch, 5, 'the swing on the wire'); }
-  w.remove(v);
+  w.remove(v);   // (the car gone - driven off: the sponge goes away, and so do they)
+  run(w, 1.5);
+  assert.ok(!e.npc.act && !e.pp, 'no car to wash: on their way');
+  w.weather = 1;   // (rain: the picnic packs up, the chess players go)
+  run(w, 0.5);
+  w.weather = 0;
+  assert.ok(people(ct).every((q) => q.npc.act), 'the neighbours chat on in the rain');
+});
+
+test('a hunter in blaze orange walks the woods by a hunting camp, his dog out ahead', () => {
+  clear();
+  const hs = of('hunter');
+  assert.ok(hs.length >= 1, `a hunter's woods (${hs.length})`);
+  const hg = fill(w, hs[0], { seen: true }), hunter = people(hg).find((q) => q.npc), dog = people(hg).find((q) => q.pet);
+  assert.ok(hunter && dog && dog.pet.walked === hunter.id, 'a hunter and his dog');
+  assert.equal(hunter.pp, 'rifle', 'the rifle slung on his back');
+  assert.equal(hunter.weapon, 'fists', '...not in his hands');
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, hunter.x, hunter.y + 800);
+  const h0 = { x: hunter.x, y: hunter.y };
+  run(w, 3);
+  assert.ok(!hunter.removed && Math.hypot(hunter.x - h0.x, hunter.y - h0.y) > 30 && hunter.npc.act, 'he walks the edge of the woods');
+  assert.ok(Math.hypot(dog.x - hunter.x, dog.y - hunter.y) < 60, 'the dog with him');
 });
 
 test('a gunfight scatters them; it over, they go back to it', () => {
@@ -131,7 +153,7 @@ test('the debug menu takes you to each kind, filled, a little way off', async ()
   clear();
   const { p } = joinPlayer(w);
   const kinds = DEV_SECTIONS.flatMap((sec) => sec.items).filter(([, c]) => c === 'act').map(([, , x]) => x.k);
-  assert.equal(kinds.length, 8);
+  assert.equal(kinds.length, 9);
   for (const k of kinds) {
     command(w, p, 'act', { k });
     const g = [...w.acts.values()].find((q) => q.k === k && Math.hypot(q.x - p.ped.x, q.y - p.ped.y) < 340);
