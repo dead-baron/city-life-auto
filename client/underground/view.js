@@ -282,7 +282,7 @@ class UgView {
         g.fillStyle = '#8d959c'; g.fillRect(-150, -26, 300, 52); g.fillStyle = '#6a737c'; g.fillRect(-150, -26, 300, 4); g.fillRect(-150, 22, 300, 4);   // (SU5-B: silver cars, warm-lit windows, doors)
         g.fillStyle = '#2f5aa8'; g.fillRect(-150, -16, 300, 2);
         g.fillStyle = '#f0c878'; for (let x = -130; x < 140; x += 40) g.fillRect(x, -24, 22, 7);
-        g.fillStyle = '#5a636c'; for (let x = -146; x < 150; x += 74) g.fillRect(x, -26, 12, 7);
+        g.fillStyle = '#ffe2a0'; for (const x of [-105, -25, 55]) g.fillRect(x, -26, 12, 6);   // (the doors open, warm light in them)
         g.restore();
       }
       g.strokeStyle = 'rgba(160,170,180,.5)'; g.lineWidth = 1;
