@@ -58,6 +58,7 @@ function band(g, P, o, w, style) {
 function drawHill(g, t, a) {
   const P = pts(t), W = 2 * (t.hw + TUNNEL_WALL) + 48;
   g.globalAlpha = a; g.lineCap = 'butt'; g.lineJoin = 'round';
+  g.save(); g.translate(10, 14); band(g, P, 0, W + 10, 'rgba(0,0,0,0.28)'); g.restore();   // its shadow on the ground
   band(g, P, 0, W + 10, '#3b372f');
   band(g, P, 0, W, '#6f6858');
   band(g, P, -W * 0.12, W * 0.55, '#827a66');
@@ -77,11 +78,12 @@ function drawInside(g, t, k, F, map) {
   const P = pts(t), R = TUNNEL_WALL + 30;
   g.globalAlpha = k; g.lineCap = 'butt'; g.lineJoin = 'round';
   for (const s of [-1, 1]) {
+    for (let j = 0; j < 3; j++) band(g, P, s * (t.hw + 6 + R + 60 + j * 120), 121, `rgba(4,5,8,${0.5 - j * 0.15})`);   // the ground over you, dark
     band(g, P, s * (t.hw + 6 + R / 2), R, '#0d0d10');            // the rock beyond, in the dark
     band(g, P, s * (t.hw + 6), 12, '#55534f');                    // the tunnel's wall
     band(g, P, s * (t.hw + 1), 2, '#8a877f');                     // its foot, catching the light
   }
-  band(g, P, 0, 2 * t.hw, 'rgba(6,8,14,0.55)');                   // the dark between the lights
+  band(g, P, 0, 2 * t.hw, 'rgba(6,8,14,0.45)');                   // the dark between the lights
   if (t.kind === 'road') { g.setLineDash([26, 22]); band(g, P, 0, 3, 'rgba(232,201,90,0.85)'); g.setLineDash([]); }
   // the lights along the ceiling, and the headlights of whatever's driving through
   g.globalCompositeOperation = 'lighter';

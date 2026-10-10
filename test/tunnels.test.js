@@ -9,7 +9,7 @@ import { buildTunnels, underCover, tunnelAt, nearestMouth, coverHides, TUNNEL_WA
 import { vehStep } from '../shared/physics.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { T, TILE, MAP_W, DT } from '../shared/constants.js';
-import { fadeTarget, hiddenFor } from '../client/tunnels.js';
+import { fadeTarget, hiddenFor, stepFade } from '../client/tunnels.js';
 
 const linePt = (t, k) => ({ x: t.line[2 * k], y: t.line[2 * k + 1] });
 const tileAt = (m, x, y) => m.tiles[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)];
@@ -120,4 +120,12 @@ test('what the client hides: a viewer outside sees nothing under the hill; insid
   // the hill over the tunnel fades away only for the one you're in
   assert.equal(fadeTarget(m, in1, t), 1);
   assert.equal(fadeTarget(m, out, t), 0);
+  // smoothly, in about 0.3 s (as a walk-in's roof)
+  let k = 0;
+  for (let i = 0; i < 3; i++) k = stepFade(k, 1, 1 / 60);
+  assert.ok(k > 0 && k < 0.5, 'not at once: ' + k);
+  for (let i = 3; i < 18; i++) k = stepFade(k, 1, 1 / 60);
+  assert.ok(k > 0.9, 'all but open after 0.3 s: ' + k);
+  for (let i = 0; i < 60; i++) k = stepFade(k, 0, 1 / 60);
+  assert.equal(k, 0, 'and back over you once you leave');
 });
