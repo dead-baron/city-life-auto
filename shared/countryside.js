@@ -7,7 +7,7 @@
 //
 // Tiles unless a name says px. No randomness of its own: hash2 only, so the rest of the city never
 // shifts because of anything here.
-import { TILE, MAP_W, MAP_H, T } from './constants.js';
+import { TILE, T } from './constants.js';
 import { hash2 } from './rng.js';
 import { rounded, measure, pointAt, segX } from './geom.js';
 
@@ -50,7 +50,7 @@ const ACCESS_TO = {
 // ctx: { m, lines, isLand, lake, seaD, wildAt(tx, ty), avoid: [[x, y, w, h] tiles] }
 export function countrysideRoads(ctx) {
   const { m, lines } = ctx;
-  const W = MAP_W, H = MAP_H;
+  const W = m.w, H = m.h;
   m.countrySites = [];
   // "can't build here": not wild land, water, lakes, rivers, the shore, the railway, and a few
   // tiles round every road line already laid out
@@ -208,7 +208,7 @@ export function buildCountryside(m, H) {
 }
 
 const px = (t) => (t + 0.5) * TILE;
-const fill = (m, x, y, w, h, t) => { for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H) m.set(tx, ty, t); };
+const fill = (m, x, y, w, h, t) => { for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (tx >= 0 && ty >= 0 && tx < m.w && ty < m.h) m.set(tx, ty, t); };
 const hs = (s, k, salt) => hash2(s.x * 31 + k, s.y * 17 + k * 7, salt);
 // the lot's own way in: the bottom middle down to where its access road starts
 const gateway = (m, s, t, wd = 3) => fill(m, s.x + (s.w >> 1) - (wd >> 1), s.y + s.h - 3, wd, 4, t);
@@ -219,7 +219,7 @@ const treesRound = (m, s, H, skip) => {
     let tx, ty;
     if (t < s.w) { tx = s.x + t; ty = s.y; } else if (t < s.w + s.h) { tx = s.x + s.w - 1; ty = s.y + t - s.w; } else if (t < 2 * s.w + s.h) { tx = s.x + s.w - 1 - (t - s.w - s.h); ty = s.y + s.h - 1; } else { tx = s.x; ty = s.y + s.h - 1 - (t - 2 * s.w - s.h); }
     if (skip && skip(tx, ty)) continue;
-    if (m.tiles[ty * MAP_W + tx] !== T.GRASS && m.tiles[ty * MAP_W + tx] !== T.DIRT) continue;
+    if (m.tiles[ty * m.w + tx] !== T.GRASS && m.tiles[ty * m.w + tx] !== T.DIRT) continue;
     const h = hs(s, k, 4);
     H.addProp(m, h < 0.5 ? 'tree_a' : h < 0.8 ? 'tree_b' : 'shrub_a', px(tx), px(ty), h < 0.8 ? 12 : 0);
   }
@@ -251,7 +251,7 @@ const BUILD = {
       H.addProp(m, 'picnic', (pxx + 0.9) * TILE, (py + 2.6) * TILE, 8);
     }
     treesRound(m, s, H, (tx, ty) => ty >= s.y + s.h - 4);
-    for (let n = 0; n < 6; n++) { const tx = x0 + 3 + Math.floor(hs(s, n, 12) * (x1 - x0 - 5)), ty = y0 + 5 + Math.floor(hs(s, n, 13) * 2); if (m.tiles[ty * MAP_W + tx] === T.GRASS) H.addProp(m, hs(s, n, 14) < 0.6 ? 'tree_b' : 'bush_c', px(tx), px(ty), 10); }
+    for (let n = 0; n < 6; n++) { const tx = x0 + 3 + Math.floor(hs(s, n, 12) * (x1 - x0 - 5)), ty = y0 + 5 + Math.floor(hs(s, n, 13) * 2); if (m.tiles[ty * m.w + tx] === T.GRASS) H.addProp(m, hs(s, n, 14) < 0.6 ? 'tree_b' : 'bush_c', px(tx), px(ty), 10); }
   },
 
   // a forecourt along the road: a quick stop, a diner and a filling station side by side
@@ -471,9 +471,9 @@ const BUILD = {
 // Wooden poles along the country roads, each wired to the one before it (render draws the sagging
 // wires between their tops). wildAt(tx, ty): open country, not town.
 export function buildPowerLines(m, H, wildAt) {
-  const W = MAP_W;
+  const W = m.w;
   const okGround = (tx, ty) => {
-    if (tx < 1 || ty < 1 || tx >= W - 1 || ty >= MAP_H - 1) return false;
+    if (tx < 1 || ty < 1 || tx >= W - 1 || ty >= m.h - 1) return false;
     const i = ty * W + tx, t = m.tiles[i];
     if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND && t !== T.FIELD) return false;
     if (m.reserve[i] & (32 | 16 | 2) || m.deck[i] || !wildAt(tx, ty)) return false;
@@ -505,7 +505,7 @@ export function buildPowerLines(m, H, wildAt) {
   const styleAt = (x, y) => { const d = m.dist[Math.floor(y / TILE) * W + Math.floor(x / TILE)]; return H.distStyle ? H.distStyle[d] : ''; };
   const okWalk = (x, y) => {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (tx < 2 || ty < 2 || tx >= W - 2 || ty >= MAP_H - 2) return false;
+    if (tx < 2 || ty < 2 || tx >= W - 2 || ty >= m.h - 2) return false;
     const i = ty * W + tx;
     if (m.tiles[i] !== T.SIDEWALK || m.reserve[i] || m.deck[i]) return false;
     for (const L of m.lamps) if (Math.abs(L.x - x) < 40 && Math.abs(L.y - y) < 40) return false;   // (clear of the street lamps)

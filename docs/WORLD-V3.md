@@ -1313,9 +1313,8 @@ never runs the generator: it fetches the regions round the player and keeps them
      bakes - indexes it through them (the DEVLOG has the list; `test/mapwindow.test.js` guards it). `shared/mapwindow.js`
      `windowOf` cuts a window from a whole map, and a window answers every query, the physics and the ground bake
      inside it as the whole map does. The world hash and the map signature are unchanged.
-   - **What's left:** the generator still builds the whole frame with `MAP_W` / `MAP_H` (map.js's build passes,
-     naturesites.js, countryside.js, world3*.js - the frame becomes a parameter when the server builds the v3 frame);
-     the lists (props, POIs, buildings, roads, solid props' list views) are still whole in a window - splitting them
+   - **What's left:** (the generator builds in a frame of its own now: `generateCity(seed, { frame: { w, h } })`,
+     done 2026-10-10, 8.2); the lists (props, POIs, buildings, roads, solid props' list views) are still whole in a window - splitting them
      is the region file's job (item 2); the client's moving window (item 4) - today the client still holds the whole
      map. Whole-frame uses kept on purpose: the art's chunk grid, the camera's bounds and the border sea, the map
      pictures, the router's grid, the underground, the server's ferry routes (it holds the whole world).
@@ -1343,7 +1342,8 @@ never runs the generator: it fetches the regions round the player and keeps them
    in the headless page against 5.7 s built), building only when it can't get them. Next: the window (CityMap as a
    window, the worker fetching the 3 x 3 regions round the player and moving them), the per-region signatures.
 2. The skeleton (done: parts 6 and 7). Then the generator at the v3 frame, building today's places at their gulf
-   positions and sizes: an offline build.
+   positions and sizes: an offline build. **The frame is a parameter (done, 2026-10-10, 8.2):** today's world builds
+   in the v3 frame in 10 s and 0.7 GB; next, the v3 land in it.
 3. The new land, area by area, on the skeleton: highways, the main line, tunnels, the biomes.
 4. Transit on the skeleton (timetables), and the multi-zoom map.
 
@@ -1385,3 +1385,44 @@ For the window (the next steps):
 - POIs are cut into regions today; the phone's apps and the big map list places world-wide, so a small global list
   (name, kind, position) belongs in the index.
 - The join check is still the whole map's signature; per-region signatures come with the window (part 8 item 5).
+
+### 8.2 The generator's frame (done, 2026-10-10)
+
+What was built (docs/DEVLOG.md has the details):
+- **The frame is a parameter of the build:** `new CityMap(seed, w = MAP_W, h = MAP_H)` and
+  `generateCity(seed, { frame: { w, h } })` (without it, today's frame; the frame alone is not an island build, and the
+  island builds take one too). The concept picture (its land's RLE rows, its terrain cells) is today's frame by nature,
+  read at its own size (worldmask.js `MASK_W` x `MASK_H`): its land goes in the frame's top-left, the open sea beyond.
+- **Every pass builds in the map's frame:** map.js from "The generator" on, naturesites.js, countryside.js and
+  world3-islands.js index `y * m.w + x` and bound by `m.w` / `m.h` (the map's origin is 0, 0 while it's built), the
+  typed arrays sized from the frame. `test/mapwindow.test.js`'s guard now covers the generator's files: no `MAP_W` /
+  `MAP_H` in its passes (a whole-frame use would go on its list, with the reason; there are none).
+- **Today's world is unchanged to the bit:** every per-tile layer, every list, the map signature, the world hash.
+
+**A bigger frame** (today's + 240 tiles each way, `test/mapwindow.test.js`): inside today's extent nothing differs -
+every layer to the bit, every list (the ones keyed by a tile's index - the solid props, the river's flow, the
+leftovers, `noTree` - the same re-keyed by x, y); beyond it, the open sea (deep water, no zone, no land). Why nothing
+changes near the old edges: the concept picture is sea all round its edge, so the sea's distance fields (to the sea,
+the river, the shallows' distance to land) find their nearest sea inside it already (and they're capped at 64 tiles);
+the landmasses, zones and island boxes are the same; no road ran to the edge; and the sea's sampling is a fixed grid
+with no random draws (every 10 tiles from 4: none of its points was within its 3-tile look of the old edges). What grows with the frame: the sea's sample points (`seaPoints`, `offshore`: buildOffshore samples the
+frame's sea every 10 tiles), and the map signature (it samples the frame's tiles).
+
+Measured (`node tools/world-frame.mjs [W H]`, this machine, node 22, two shared cores, under the heavy lock):
+
+| frame | build | peak RSS | per-tile layers (17) | seaPoints / offshore |
+|---|---|---|---|---|
+| today's, 1312 x 1200 | 4.4 s | 300 MB | 32 MB | 5,432 / 3,524 |
+| today's + 240, 1552 x 1440 | 4.9 s | 300 MB | 45 MB | 12,032 / 10,124 |
+| **v3, 5040 x 4032** | **9.6-10.3 s** | **630-680 MB** | **407 MB** | **192,824 / 190,916** |
+
+The build's time hardly grows with the frame: most of it is the city, which is the same; the whole-frame passes (the
+terrain's distance fields and labels, the districts, the blocks' flood, the wilds' grids) add about 5 s at v3.
+
+For the next steps:
+- `seaPoints` and `offshore` at v3 are 190,000 points each, and the server scans them whole (server/systems/boats.js,
+  jobs.js): they need a spatial index (or a coarser sampling far out at sea) before the v3 world runs.
+- The runtime's whole-frame uses (mapwindow.test.js's list) still mean today's frame: tileAt's soft edge and the border
+  (border.js), the camera's bounds, the art's chunk grid, the underground, the ferry planner. With the v3 world they
+  follow the built map's frame.
+- The region files (8.1) at the v3 frame: 10 x 8 regions (tested); the index's whole lists need the changes 8.1 lists.
