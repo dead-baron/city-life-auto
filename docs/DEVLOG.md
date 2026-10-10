@@ -5666,7 +5666,8 @@ all development, usually off a trail, sometimes by a view, sometimes in the midd
 "more scenic campfire spots for players to find and relax at" (concepts CF2-A, CF2-B); and "occasional lightning-bug
 FX, rare and beautiful" (FX2: at night, rare, in natural areas and parks, sometimes at campfires).
 
-- **Rest spots** (`shared/restspots.js`, called at the end of the nature sites in `shared/naturesites.js`):
+- **Rest spots** (`shared/naturesites.js` `restSpots`, the last of the nature sites; kept in that file, not a module
+  of their own, so the page's code stays within its 720 KB):
   - Placed by rules, not coordinates, so they hold up when the land is rebuilt. A jittered grid of candidates over the
     wild, rocky, desert and (only far out) rural districts. A candidate needs open ground with room for a clearing. It
     must be far from anything built: paved ground, buildings, lots, fields, docks, the designed places, their camps,
@@ -5676,7 +5677,7 @@ FX, rare and beautiful" (FX2: at night, rare, in natural areas and parks, someti
     - **view**: over water. Lakes and rivers count double; the sea below a bluff counts too.
     - **wild**: the middle of nowhere, 1750 px or more from anything.
   - Selection: the best of each kind (up to 7 / 12 / 5), at least 1500 px apart and 1000 px from any other campfire,
-    at most 5 to a district. Today's world gets 18: 6 views, 9 off trails and 3 in the middle of nowhere.
+    at most 5 to a district. Today's world gets 17: 6 views, 8 off trails and 3 in the middle of nowhere.
   - Each spot is a dirt clearing with:
     - a campfire (a ring of stones). About a third are still burning, as if someone just moved on.
     - one or two seat logs.
@@ -5684,8 +5685,9 @@ FX, rare and beautiful" (FX2: at night, rare, in natural areas and parks, someti
   - The wild trees keep off them (reserve bit 32). The fires are ordinary campfire props, so they work like every other
     one: light it, sit and heal, the calm HUD, the embers and the haze.
   - `m.restSpots` lists them.
-  - Once the whole world is built (`shared/map.js`), a spot that something was built near afterwards (a den on a rocky
-    islet) is taken away again: its props become painted placeholders, and `m.restSpots` keeps the rest.
+  - Once the whole world is built (`shared/map.js` calls `pruneRestSpots`), a spot that something was built near
+    afterwards (a den on a rocky islet) is taken away again: its props become painted placeholders, and `m.restSpots`
+    keeps the rest.
 - **No hunting camp signs:** the two hunting camps lose their "HUNTING CAMP" board. The outfitters, the tents and the
   fire stay. The trappers and the game butcher keep their signs.
 - **Fireflies** (`client/render/fireflies.js`; client-only):
