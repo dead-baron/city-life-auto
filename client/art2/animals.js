@@ -46,7 +46,7 @@ export const ANIMALS = {
   raccoon: { len: 18, h: 9, w: 9, coat: '#7a7678', mask: '#26242a', ears: 'cat', tail: 'ringed', snout: 2.5, head: 4, jl: 1, lower: '#3a383c' },
   coyote: { len: 26, h: 17, w: 8, coat: '#a8885a', belly: '#e8dcc0', ears: 'up', tail: 'bushy', snout: 5, head: 4.6, jl: 1, lower: '#c0a070', throat: '#ece2cc', tips: '#6a5a46' },
   // the wilds (shared/fauna.js): deer and their kin, the predators, the water's edge, small game
-  elk: { len: 44, h: 32, w: 13, coat: '#b08458', belly: '#6a4a30', mane: '#4e3424', pattern: 'rump', patch: '#e2cea4', ears: 'up', tail: 'stub', snout: 6, head: 6, neck: 13, antlers: 2, jl: 1, lower: '#4a3222', hoof: 1 },
+  elk: { len: 44, h: 32, w: 13, coat: '#b08458', belly: '#6a4a30', mane: '#4e3424', neckC: '#6a4a32', pattern: 'rump', patch: '#e2cea4', ears: 'up', tail: 'stub', snout: 6, head: 6, neck: 13, antlers: 2, jl: 1, lower: '#4a3222', hoof: 1 },
   moose: { len: 50, h: 40, w: 15, coat: '#3e2c22', socks: '#a8988a', ears: 'side', tail: 'stub', snout: 9, head: 7, neck: 10, antlers: 3, hump: 1.4, bell: 1, droop: 1, jl: 1, lower: '#a8988a', hoof: 1 },
   mtgoat: { len: 28, h: 23, w: 11, coat: '#f2eee6', ears: 'side', tail: 'stub', snout: 4.5, head: 4.4, neck: 6, horns: 'black', beard: 1, fluffy: 1, hump: 0.8, socks: '#2a262c', jl: 1, lower: '#ece6da', hoof: 1 },
   boar: { len: 32, h: 19, w: 12, coat: '#4a3a2e', mane: '#241c18', ears: 'up', tail: 'thin', snout: 7, head: 6.4, nose: '#6a5a52', tusks: 1, jl: 1, lower: '#2e2420', hoof: 1, tips: '#6e5a48' },
@@ -72,7 +72,7 @@ function youngOf(A, base) {
 }
 // the legend of a kind: pure white, pale gold antlers and horns, a faint glow
 function legendOf(A) {
-  return { ...A, coat: '#f6f4f0', belly: '#ffffff', patch: A.pattern === 'spots' || A.pattern === 'rump' || A.pattern === 'flank' ? '#e6e4e0' : '#f6f4f0', patch2: null, mane: A.mane ? '#eceae4' : null, socks: null, face: A.face ? '#ffffff' : null, mask: A.mask ? '#d8d6d2' : null, muzzle: A.muzzle ? '#e8e2d8' : null, tips: null, tailTip: A.tailTip ? '#ffffff' : null, nose: A.nose ? '#d8c8c8' : null, lower: A.lower ? '#e8e6e2' : null, throat: A.throat ? '#ffffff' : null, legend: 1 };
+  return { ...A, coat: '#f6f4f0', belly: '#ffffff', patch: A.pattern === 'spots' || A.pattern === 'rump' || A.pattern === 'flank' ? '#e6e4e0' : '#f6f4f0', patch2: null, mane: A.mane ? '#eceae4' : null, socks: null, face: A.face ? '#ffffff' : null, mask: A.mask ? '#d8d6d2' : null, muzzle: A.muzzle ? '#e8e2d8' : null, tips: null, tailTip: A.tailTip ? '#ffffff' : null, nose: A.nose ? '#d8c8c8' : null, lower: A.lower ? '#e8e6e2' : null, throat: A.throat ? '#ffffff' : null, neckC: A.neckC ? '#eeece8' : null, legend: 1 };
 }
 
 // extra room behind the rump for the long tails (so they stay inside the model)
@@ -146,7 +146,7 @@ export function animalModel(kind, o = {}) {
   legs.forEach(([lx, ly, a], i) => {
     const back = i >= 2;
     if (jl) {
-      const top = bz - bodyR * 0.3, L2 = top * (back ? 1.07 : 1.015) / 2;
+      const top = bz - bodyR * 0.3, L2 = Math.max(top, (A.h - bodyR) * 0.92 - bodyR * 0.3) * (back ? 1.07 : 1.015) / 2;   // (crouched in a stalk: the legs bend)
       let fx = back ? -0.6 : 0.6, fz = 0;
       if (moving) { const p = (((phase + OFF[i]) % 1) + 1) % 1; if (p < D) fx = stride * (0.5 - p / D); else { const u = (p - D) / (1 - D); fx = stride * (u - 0.5); fz = Math.sin(u * Math.PI) * lift; } }
       const dx = fx, dz = fz - top, d = Math.max(0.5, Math.min(L2 * 1.995, Math.hypot(dx, dz))), th = Math.atan2(dz, dx), al = Math.acos(Math.min(1, d / (2 * L2)));
@@ -176,10 +176,11 @@ export function animalModel(kind, o = {}) {
   const neck = A.neck || A.head * 0.9;
   const HD = A.head * hk;
   const hx = x1 + (graze ? 2 : stalk ? neck * 0.55 : neck * 0.35), hz = graze ? HD + 1 : stalk ? bz + bodyR * 0.2 + neck * 0.3 : bz + bodyR * 0.4 + neck * (lie ? 0.55 : alert ? 0.95 : 0.75) + (sit ? 2 : 0) + (alert ? 1.5 : 0);
-  for (let s = 0; s <= 1; s += 0.08) { const x = x1 - 2 + (hx - x1 + 2) * s, z = bz + (hz - bz) * s; m.ell(x, cy, z, HD * 0.65, HD * 0.62, HD * 0.7, coat(x, cy, z + 2)); }
+  const neckC = A.neckC ? R(A.neckC) : null;   // (an elk's dark neck and head)
+  for (let s = 0; s <= 1; s += 0.08) { const x = x1 - 2 + (hx - x1 + 2) * s, z = bz + (hz - bz) * s; m.ell(x, cy, z, HD * 0.65, HD * 0.62, HD * 0.7, neckC && s > 0.15 ? neckC : coat(x, cy, z + 2)); }
   if (A.mane && !A.tusks) for (let s = 0; s <= 1; s += 0.05) { const x = x1 - 4 + (hx - x1) * s, z = bz + bodyR + (hz - bz - 2) * s; m.box(x - 1.5, cy - 1, z, x + 1, cy + 1, z + 2.5, R(A.mane)); }
   if (A.throat && !lie) { const x = x1 - 2 + (hx - x1 + 2) * 0.8 + HD * 0.25, z = bz + (hz - bz) * 0.8 - HD * 0.2; m.ell(x, cy, z, HD * 0.5, HD * 0.55, HD * 0.5, R(A.throat)); }   // a deer's white throat
-  m.ell(hx + 1, cy, hz, HD, HD * (hk > 1 ? 1.02 : 0.9), HD * 0.9, A.mask ? base : coat(hx, cy, hz + 4));
+  m.ell(hx + 1, cy, hz, HD, HD * (hk > 1 ? 1.02 : 0.9), HD * 0.9, A.mask ? base : neckC || coat(hx, cy, hz + 4));
   if (A.face) m.ell(hx + 1.5, cy, hz, HD * 0.85, HD * 0.8, HD * 0.85, face);
   if (A.mask) m.box(hx + 1, cy - HD * 0.9, hz, hx + HD, cy + HD * 0.9, hz + 2, face);
   // snout and nose (a moose's long drooping one; a bear's paler muzzle)

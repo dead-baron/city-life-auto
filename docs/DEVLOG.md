@@ -5676,8 +5676,9 @@ and turkey, AN3 small game, AN8 quail): the rows are the game's own bake (actors
     864 sprites: 5.6 s before, 5.8 s after on the shared test machine).
   - The pets keep their straight-legged rig.
 - **Coats and shapes:**
-  - The deer: warmer brown, a white rump patch and throat, a dark nose, heavier antlers. The elk: paler, the dark
-    shins of AN1, a heavier rack.
+  - The deer: warmer brown, a white rump patch and throat, a dark nose, heavier antlers. The elk: paler, with the dark
+    neck, head and shins of AN1 and a heavier rack.
+  - A stalking cougar (or anything crouched) bends its legs instead of shortening them.
   - The boar: darker, a bristle crest over the shoulders, grizzled.
   - The coyote: grizzled along the back, a pale throat.
   - The rabbit: bigger haunches, and its run is a hop, up off the ground.
