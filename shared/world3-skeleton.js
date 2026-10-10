@@ -214,14 +214,15 @@ export const ARTERIALS = [
   { name: 'Gorge Road', pts: [[1170, 1070], [1460, 1090], [1480, 900], [1560, 830], [1860, 830], [1960, 920], [2040, 1000]] },
   { name: 'Woods Road', pts: [[1170, 1070], [1490, 1130], [1490, 1240], [1380, 1320], [1080, 1400], [960, 1500], [940, 1700], [940, 1850]] },
   // the bay's north shore
-  { name: 'Shore Road', pts: [[940, 1850], [1250, 1890], [1700, 1870], [2050, 1835], [2400, 1830], [2800, 1835], [3240, 1830], [3432, 1810]] },   // Northshore's waterfront boulevard
+  { name: 'Shore Road', pts: [[940, 1850], [1250, 1890], [1700, 1870], [2050, 1835], [2400, 1830], [2800, 1835], [3240, 1830], [3315, 1822], [3415, 1812], [3432, 1810]],
+    bridges: [[7, 8]] },   // Northshore's waterfront boulevard; over the Long Reach's mouth
   // Willow Valley
-  { name: 'Valley Road North', pts: [[2040, 1000], [2800, 1000], [3220, 1010], [3330, 1110], [3390, 1270]] },
-  { name: 'Valley Road', pts: [[1940, 1760], [1930, 1260], [2800, 1250], [3390, 1270]] },
+  { name: 'Valley Road North', pts: [[2040, 1000], [2800, 1000], [3090, 1007], [3220, 1010], [3330, 1110], [3390, 1270]], bridges: [[2, 3]] },   // over the Long Reach
+  { name: 'Valley Road', pts: [[1940, 1760], [1930, 1260], [2800, 1250], [3255, 1265], [3360, 1269], [3390, 1270]], bridges: [[3, 4]] },   // over the Long Reach
   { name: 'County Road 7', pts: [[2712, 790], [2712, 1250], [2740, 1600], [2760, 1830]] },
-  { name: 'Willow Road', pts: [[3432, 1810], [3420, 1500], [3390, 1270], [3330, 1110], [3160, 940], [2940, 790]] },
-  { name: 'Lake Road', pts: [[2350, 700], [2460, 800], [2712, 790], [2940, 790]] },
-  { name: 'Kestrel Road', pts: [[2940, 790], [3060, 560], [3090, 300], [3100, 150]] },
+  { name: 'Willow Road', pts: [[3432, 1810], [3420, 1500], [3390, 1270], [3330, 1110], [3160, 940], [2975, 790]] },
+  { name: 'Lake Road', pts: [[2350, 700], [2460, 800], [2712, 790], [2820, 790], [2975, 790]], bridges: [[3, 4]] },   // over the Long Reach to the east bank
+  { name: 'Kestrel Road', pts: [[2975, 790], [3060, 560], [3090, 300], [3100, 150]] },
   // the Red Rock Desert
   { name: 'Route 9', pts: [[3720, 1600], [3880, 1480], [4100, 1560], [4500, 1640], [4880, 1640], [4910, 1300], [4900, 900], [4960, 720], [4920, 470], [4720, 390], [4600, 400]] },
   { name: 'Mine Road', pts: [[3390, 1270], [3560, 1240], [3720, 1190], [4100, 1210], [4400, 1210], [4690, 1180]] },
@@ -355,7 +356,7 @@ export const STATIONS = [
   { name: 'Northshore', line: 'Subway Line 1', at: [2360, 1730] },
   { name: 'Northgate', line: 'Subway Line 1', at: [2370, 2120] },
   { name: 'Downtown', line: 'Subway Line 1', at: [2345, 2208] },
-  { name: 'Arts District', line: 'Subway Line 1', at: [2600, 2370] },
+  { name: 'Arts District', line: 'Subway Line 1', at: [2453, 2355] },
   { name: 'Cedar Falls', line: 'Subway Line 1', at: [2950, 2380] },
   { name: 'Falls Center', line: 'Subway Line 1', at: [3090, 2275] },
   { name: 'Lake District', line: 'Subway Line 1', at: [3230, 2400] },
@@ -364,8 +365,8 @@ export const STATIONS = [
   { name: 'Old Quarter', line: 'Subway Line 2', at: [1447, 2330] },
   { name: 'Westport Center', line: 'Subway Line 2', at: [1510, 2260] },
   { name: 'Lakeview', line: 'Subway Line 2', at: [1380, 2000] },
-  { name: 'Stadium District', line: 'Subway Line 2', at: [1690, 2190] },
-  { name: 'Civic Center', line: 'Subway Line 2', at: [1950, 2190] },
+  { name: 'Stadium District', line: 'Subway Line 2', at: [1629, 2214] },
+  { name: 'Civic Center', line: 'Subway Line 2', at: [2035, 2237] },
   { name: 'Midtown', line: 'Subway Line 2', at: [2165, 2380] },
   { name: 'Southbank', line: 'Subway Line 2', at: [2225, 2555] },
   { name: 'Southside', line: 'Subway Line 2', at: [2315, 2660] },
@@ -384,8 +385,8 @@ export const TOWNS = [
 ];
 export const LANDMARKS = [
   { name: 'North Cape Light', kind: 'light', at: [300, 900] }, { name: 'Egret Point Light', kind: 'light', at: [905, 3010] },
-  { name: 'Sandpiper Point Light', kind: 'light', at: [4440, 2730] }, { name: 'Silver Thread Falls', kind: 'falls', at: [1110, 690] },
-  { name: 'Lookout Hill', kind: 'lookout', at: [2560, 445] }, { name: 'Granite Lookout', kind: 'lookout', at: [820, 440] },
+  { name: 'Sandpiper Point Light', kind: 'light', at: [4440, 2700] }, { name: 'Silver Thread Falls', kind: 'falls', at: [1110, 690] },
+  { name: 'Lookout Hill', kind: 'lookout', at: [2600, 410] }, { name: 'Granite Lookout', kind: 'lookout', at: [820, 440] },
   { name: 'Copper Gulch Mine', kind: 'mine', at: [4690, 1180] }, { name: 'Red Rock Dam', kind: 'dam', at: [4130, 610] },
   { name: 'Granite Peaks', kind: 'peak', at: [760, 140] }, { name: 'Redwood campgrounds', kind: 'camp', at: [900, 1500] },
   { name: 'Lakeside campground', kind: 'camp', at: [2050, 520] }, { name: 'Mesa camp', kind: 'camp', at: [4800, 1700] },
