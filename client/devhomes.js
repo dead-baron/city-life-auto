@@ -9,6 +9,7 @@ import { MAP_FRAME } from './hud.js';
 // (the town's kinds first; the estates - farmhouses, cottages, beach houses... - after, whatever kinds the map has)
 const KINDS = [['mansion', 'Mansions', '#ff7de9'], ['house', 'Houses', '#f2c21b'], ['apartment', 'Apartments', '#7de0ff'], ['shack', 'Shacks', '#c8a070']];
 const ESTATE_COL = '#9dff7d';
+const PLURAL = { beach: 'Beach houses', cottage: 'Creekside cottages', farmhouse: 'Farmhouses' };   // (shared/map.js ESTATE_TYPES)
 const colOf = (k) => (KINDS.find((q) => q[0] === k) || [0, 0, ESTATE_COL])[2];
 let land = null;   // the land as a little picture (one pixel per 4 tiles), drawn once per map
 
@@ -72,7 +73,7 @@ export function showHomes(map, go) {
   cv.onclick = (e) => { const q = pick(e); if (q) go(q.i); };
   // the list, kind by kind (by name within each)
   const others = [...new Set(homes.map((q) => q.h.kind))].filter((k) => !KINDS.some((q) => q[0] === k)).sort();
-  for (const [kind, title] of [...KINDS, ...others.map((k) => [k, `${k[0].toUpperCase()}${k.slice(1)}s`])]) {
+  for (const [kind, title] of [...KINDS, ...others.map((k) => [k, PLURAL[k] || `${k[0].toUpperCase()}${k.slice(1)}s`])]) {
     const of = homes.filter((q) => q.h.kind === kind).sort((a, b) => a.h.name.localeCompare(b.h.name, 'en', { numeric: true }));
     if (!of.length) continue;
     const g = document.createElement('div'); g.className = 'dev-tp-group'; g.textContent = `${title} (${of.length})`;
