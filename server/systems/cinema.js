@@ -121,12 +121,16 @@ export function update(world) {
   if (near <= CINE.NEAR_PX) S.rooms.forEach((R, ri) => fillRoom(world, ri));
 }
 
-// for the HUD ('me') and client/cinema.js: the film you're watching and how far in it is
+// for the HUD ('me') and client/cinema.js: the film you're watching and how far in it is; inside the cinema but not in
+// a seat (room -1), what's on in each screen for its audience
 export function meInfo(world, p) {
-  const c = p.cine;
-  if (!c) return null;
-  const R = st(world).rooms[c.room];
-  return { room: c.room, seat: c.seat, film: c.film, at: Math.round((world.time - R.t0) * 10) / 10, len: CINE.FILM_S };
+  const c = p.cine, C = cin(world);
+  if (!C) return null;
+  const at = (R) => Math.round((world.time - R.t0) * 10) / 10;
+  if (c) return { room: c.room, seat: c.seat, film: c.film, at: at(st(world).rooms[c.room]), len: CINE.FILM_S };
+  const ped = p.ped, b = world.map.buildings[C.b], T = 32;
+  if (!ped || ped.x < b.tx * T || ped.x >= (b.tx + b.tw) * T || ped.y < b.ty * T || ped.y >= (b.ty + b.th) * T) return null;
+  return { room: -1, len: CINE.FILM_S, shows: st(world).rooms.map((R) => (R.film >= 0 && world.time < R.t0 + CINE.FILM_S ? [R.film, at(R)] : null)) };
 }
 // the HUD tracker (the job slot)
 export function targetFor(world, p) {

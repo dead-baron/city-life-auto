@@ -100,6 +100,8 @@ test('getting up or walking out ends the film for you; a few NPCs watch while yo
   run(w, 1.5);
   const npcs = w.cine.rooms.reduce((n, r) => n + r.npcs.length, 0);
   assert.ok(npcs >= 4, `an audience (${npcs})`);
+  const shows = players.buildMe(w, p).cine;
+  assert.ok(shows && shows.room === -1 && shows.shows.some((x) => x && FILMS[x[0]]), `what the audience is watching (${JSON.stringify(shows)})`);
   players.findInteraction(w, p).run();
   assert.ok(p.cine, 'watching');
   players.findInteraction(w, p).run();

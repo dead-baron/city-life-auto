@@ -3099,7 +3099,7 @@ function cinemaRoom(u, r, px0_) {
   }
   // the corridor's walls and the wall across the rooms' fronts (the corridor's mouth open)
   const ya = Math.min(...K.rooms.map((R) => R.y0)), yb = Math.max(...K.rooms.map((R) => R.y1));
-  for (const x of [K.cc - TILE, K.cc + TILE]) slab(x + 4, x + TILE - 4, ya, d > 0 ? yb - TILE : yb, 22, wallC, wallC);
+  for (const x of [K.cc - TILE, K.cc + TILE]) slab(x + 4, x + TILE - 4, d > 0 ? ya : ya + TILE, d > 0 ? yb - TILE : yb, 22, wallC, wallC);   // (the rooms' doors in the walkway row)
   slab(u.x0, K.cc, K.wall + 6, K.wall + TILE - 2, 30, wallC, wallC);
   slab(K.cc + TILE, u.x1, K.wall + 6, K.wall + TILE - 2, 30, wallC, wallC);
   // the poster wall on its lobby side: invented films as plain shapes in lit frames

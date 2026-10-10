@@ -1,33 +1,34 @@
 // The Grand Theatre as this page sees it (loaded lazily near the cinema: main.js drawCinema). Inside a screen room the
-// room is dark; in your seat, the film you're watching plays on the screen - invented films drawn as plain shapes of
-// coloured light, cutting from shot to shot (the title first, THE END last) - and its light falls on the seats. The
-// server decides everything (server/systems/cinema.js); this only keeps the film's clock between 'me' updates.
+// room is dark and the film on (the one you're watching in your seat, else the audience's) plays on the screen -
+// invented films drawn as plain shapes of coloured light, cutting from shot to shot (the title first, THE END last) -
+// and its light falls on the seats. The server decides everything (server/systems/cinema.js: the 'me' payload's cine);
+// this only keeps each film's clock between 'me' updates.
 import { FILMS } from '../shared/cinema.js';
 
 const TAU = Math.PI * 2;
 
 export class CinemaView {
-  constructor(S) { this.S = S; this.clock = null; }
+  constructor(S) { this.S = S; this.clocks = []; }
   draw(g, F, ctx) {
     const S = this.S, C = S.map.cinema, b = ctx.walkInAt(F.sp.x, F.sp.y);
-    if (!C || !b || b.id !== C.b) { this.clock = null; return; }
+    if (!C || !b || b.id !== C.b) { this.clocks = []; return; }
     const now = performance.now() / 1000, me = S.me && S.me.cine;
-    if (me) {
-      const at = now - (this.clock ? this.clock.t0 : 0);
-      if (!this.clock || this.clock.film !== me.film || this.clock.room !== me.room || Math.abs(at - me.at) > 2) this.clock = { film: me.film, room: me.room, t0: now - me.at };
-    } else this.clock = null;
     for (const R of C.rooms) {
+      // what's on in this room (yours in your seat, else what the room's audience is watching), its clock kept here
+      const show = me ? (me.room >= 0 ? (me.room === R.i ? [me.film, me.at] : null) : me.shows && me.shows[R.i]) : null;
+      let k = this.clocks[R.i];
+      if (!show) k = null;
+      else if (!k || k.film !== show[0] || Math.abs(now - k.t0 - show[1]) > 2) k = { film: show[0], t0: now - show[1] };
+      this.clocks[R.i] = k;
       const inRoom = F.sp.x >= R.x0 && F.sp.x < R.x1 && F.sp.y >= R.y0 - 8 && F.sp.y < R.y1 + 8;
-      const watching = me && me.room === R.i && this.clock;
-      if (!inRoom && !watching) continue;
+      if (!inRoom && !(me && me.room === R.i)) continue;
       const sx = R.screen.x0, sw = R.screen.x1 - R.screen.x0, sh = R.screen.h, sy = R.backEdge - R.screen.lift - sh;
       g.save();
       // the dark (the house lights down while a film plays)
-      g.fillStyle = watching ? 'rgba(4,4,12,.6)' : 'rgba(6,6,14,.38)';
+      g.fillStyle = k ? 'rgba(4,4,12,.6)' : 'rgba(6,6,14,.38)';
       g.fillRect(R.x0, sy - 6, R.x1 - R.x0, R.y1 - sy + 6);
-      if (watching) {
-        const t = now - this.clock.t0, f = FILMS[me.film] || FILMS[0];
-        const light = film(g, sx, sy, sw, sh, t, f, me.len || 75);
+      if (k) {
+        const light = film(g, sx, sy, sw, sh, now - k.t0, FILMS[k.film] || FILMS[0], (me && me.len) || 75);
         // the screen's light on the audience: a soft fan from the screen over the seats
         const gr = g.createLinearGradient(0, R.backEdge - R.screen.lift, 0, R.y1);
         gr.addColorStop(0, rgba(light, 0.4)); gr.addColorStop(1, rgba(light, 0));

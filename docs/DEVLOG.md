@@ -6012,7 +6012,8 @@ and the poster wall, a corridor to two screens, the screen rooms with rows of re
   - **The audience:** while a player is within 900 px, four NPCs sit in each room; they leave when nobody is within
     1300 px, or if they're hurt.
 - **The client** (`client/cinema.js`, loaded lazily the first time you come within 1600 px; main.js only has the hook):
-  inside a screen room the room is dark; in your seat, the film plays on the screen - plain shapes of coloured light
+  inside a screen room the room is dark and the film that's on plays on the screen (yours in your seat, else the one the
+  audience is watching: the 'me' payload's `cine` has what's on in each screen while you're inside) - plain shapes of coloured light
   (a car racing along a neon waterfront, a lighthouse's sweeping beam over the waves, a rider with a lasso of light by a
   ringed planet, two figures leaning in at a diner booth), the title card first and THE END last, cutting every 6 s -
   and the screen's light falls over the seats in the film's colour.
