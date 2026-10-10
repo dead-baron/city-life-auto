@@ -950,6 +950,8 @@ between the valley and the desert and rebuilds it, so Metro City's east edge is 
     causeway) is left out and listed with where it ran on the island (`m.islandBuild.leftOut`: the skeleton's, step 4);
     a road over a seam onto land of its own landmass that another piece takes is the island's, kept whole
     (`m.islandBuild.overSeam`: the Westport Beltway round the airport, Dry Creek Station Road).
+  - a road that comes from an island not being built starts at this one's shore (`ownShore`: Northshore's two avenues,
+    which today run on from the bridges from Metro City).
   - an island with no hospital or police station has no spawn points (the world's are elsewhere).
 - **Every build starts clean**: `ISLANDS`' boxes are put back as declared at the start of each `buildCity` (terrain sets
   the boxes of the islands it has; a build of today's world sets them all, so it is unchanged). Island builds in one
@@ -976,7 +978,7 @@ between the valley and the desert and rebuilds it, so Metro City's east edge is 
 | Westport | 2.3 s | 38 MB | 153,740 | 131,747 | 97.8% | 245 of 248 | 203 of 220 | 99 of 126 | 3,376 of 4,110 | 3 |
 | Westport International | 1.5 s | 33 MB | 50,701 | 41,709 | 100.0% | 9 of 11 | 5 of 5 | 4 of 6 | 306 of 312 | 2 |
 | Cedar Isle | 2.2 s | 46 MB | 183,162 | 179,950 | 99.1% | 232 of 234 | 126 of 129 | 114 of 124 | 5,391 of 5,905 | 3 |
-| Northshore, North Point, The Bluffs | 1.6 s | 23 MB | 71,485 | 62,938 | 87.3% | 61 of 94 | 32 of 66 | 14 of 48 | 1,533 of 2,158 | 2 |
+| Northshore, North Point, The Bluffs | 1.4 s | 38 MB | 71,485 | 63,505 | 97.1% | 83 of 97 | 50 of 65 | 26 of 48 | 1,761 of 2,165 | 2 |
 | Highland Woods | 1.7 s | 30 MB | 44,865 | 29,435 | 95.2% | 5 of 5 | 3 of 5 | 3 of 5 | 747 of 1,241 | 1 |
 | Granite Peaks | 1.6 s | 35 MB | 66,482 | 49,874 | 99.1% | 8 of 8 | 6 of 7 | 5 of 9 | 3,476 of 3,664 | 1 |
 | Gull Harbor | 1.6 s | 34 MB | 15,398 | 14,707 | 98.7% | 13 of 13 | 5 of 9 | 0 of 7 | 509 of 516 | 1 |
@@ -1007,17 +1009,16 @@ Bridge feed its streets), Granite Peaks 99.6%, Cedar Isle 99.0% - what leaving t
 them (step 4).
 
 **What still can't be built on its own** (and why)
-1. **Northshore** comes out 87.3% (61 of its 94 road edges, 32 of 66 lots): its streets themselves differ, and not
-   because of what is left out (with the bridges kept it is 87.6%) or its cut from Granite Peaks (5,136 of its
-   differing tiles are more than 64 tiles from it; built with Granite Peaks still joined on, no better: 88.5% of the
-   tiles of its districts, 71 of 109 road edges). Built with Metro City (bridges kept), its streets come back: 93 of
-   104 road edges, 94.1% of its tiles. The cause: "the two bridges from Metro City run straight on up through town as
-   its avenues" (`islands.js` `islandRoads`: the North Bridge at x = 958 and the Harbor Bridge at x = 1018, each one
-   line from Metro City's north shore to y = 118), and they are laid only where `metroNorthEnd` finds Metro City's
-   shore - built alone, Northshore has neither avenue (they aren't in the left-out list: never laid), and its grid and
-   lots come out round their absence. The fix, in the island build (no change to the live world): answer
-   `metroNorthEnd` from today's land, and cut a road that leaves the island at its shore - its run on the island is
-   the island's (here Northshore's two avenues), the rest the skeleton's bridge - instead of leaving it out whole.
+1. **Northshore's avenues came from Metro City** (fixed): "the two bridges from Metro City run straight on up through
+   town as its avenues" (`islands.js` `islandRoads`: the North Bridge at x = 958 and the Harbor Bridge at x = 1018, each
+   one line from Metro City's north shore to y = 118), laid only where `metroNorthEnd` finds Metro City's shore. Built
+   alone, Northshore had neither avenue (never laid, so not in the left-out list) and came out 87.3% (61 of 94 road
+   edges, 32 of 66 lots) - not the bridges' doing (87.6% with them kept) nor its cut from Granite Peaks (88.5% with
+   Granite Peaks joined on); with Metro City built as well, 94.1%. Now an island build answers `ctx.ownShore(x, y)`
+   (`islands.js` asks it only when Metro City's shore isn't there) and the avenues start at Northshore's own shore:
+   97.1% of its tiles, 83 of 97 road edges, 50 of 65 lots. What still differs is near its seams (3,039 of the 7,980
+   tiles within 24 tiles of them) and the businesses (item 3). The general form of this - cut a road that leaves the
+   island at its shore, its run on the island the island's and the rest the skeleton's - is the next step.
 2. **The random stream**, likely, also gives Highland Woods' wild ground other trees (747 of 1,241 props, the same with
    the bridges kept; `buildWilds` draws from it) and some of Cedar Isle's (5,391 of 5,905). Westport's props are mostly
    the bridges' doing (4,089 of 4,260 with them kept).
@@ -1036,8 +1037,8 @@ them (step 4).
 
 **Next steps, in order** (4.6's, updated)
 1. **Island builds**: done (this section). Left: cut a road at the island's shore instead of leaving a bridge out whole
-   or keeping a road over a seam whole (the Westport Beltway runs on over the sea where the airport was), and answer
-   `metroNorthEnd` from today's land, which brings back Northshore's two avenues (item 1 above).
+   or keeping a road over a seam whole (the Westport Beltway runs on over the sea where the airport was) - the general
+   form of `ownShore` (item 1 above).
 2. **Grids sized to the island** (4.6 step 2): now measured as the floor of every island build.
 3. **Island-local ids, names and random streams** (4.6 step 3; one `WORLD_VERSION` bump).
 4. **The skeleton** takes the bridges each build lists (`m.islandBuild.leftOut`: Bay, North, Harbor, Cedar, Strait

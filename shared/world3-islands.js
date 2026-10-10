@@ -26,10 +26,20 @@ export function islandOpts(key, asked = {}) {
   // (a planned business's home: its spot, its district's first seed, or where map.js seedOf puts it - the Arts
   // District's rectangle, Metro City for a district without seeds)
   const home = (sp) => { if (sp.at) return sp.at; const s = seeds.find((q) => q[0] === sp.d); return s ? [s[1], s[2]] : sp.d === 46 ? [(ARTS.x0 + ARTS.x1) >> 1, (ARTS.y0 + ARTS.y1) >> 1] : [800, 500]; };
+  let own = null;
   const o = {
     island: key,
     islandAt: [],
+    // a road that comes from another island (Northshore's two avenues, the bridges from Metro City run on through town:
+    // islands.js) starts at this island's shore when that island isn't built: from (x, y0) down its land to the shore
+    ownShore(x, y0) {
+      let y = y0;
+      if (!own || !own[y * MAP_W + x]) return null;
+      while (y + 1 < MAP_H && own[(y + 1) * MAP_W + x]) y++;
+      return { x: x * TILE, y: y * TILE };
+    },
     land(land) {
+      own = land;
       today = land.slice();
       const keep = islandMask(land, MAP_W, MAP_H, key, seeds);
       const W = MAP_W, N = W * MAP_H, lab = new Int8Array(N).fill(-1), st = new Int32Array(N);

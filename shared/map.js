@@ -1057,6 +1057,7 @@ function layoutRoads(m, rand) {
     m, lines, rand, Z, isLand, zoneOf, seaD,
     lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; },
     metroWestEnd: metro.westEnd, metroNorthEnd: metro.northEnd, metroSouthEnd: metro.southEnd,
+    ownShore: OPTS?.ownShore,   // (World v3's island builds only: where a road from another island meets this one's shore)
   };
   m.islandRings = islandRoads(ctx);
   stationAccess(m, lines, isLand, seaD);

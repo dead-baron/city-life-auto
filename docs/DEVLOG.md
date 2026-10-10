@@ -6194,7 +6194,8 @@ islands are left out and listed for the skeleton - while the live world is today
 before and after; `WORLD_VERSION` stays 9). `tools/world3-islands.mjs` builds all twelve and compares each with today's
 world on its own land away from its seams: Coral Cay, Paradise Cay, Lighthouse Rock, Smuggler's Rock and the airport
 island come out as today's, Cedar Isle and Granite Peaks 99.1% of their tiles, Metro City 98.3%, Westport 97.8%,
-Highland Woods 95.2%, Northshore 87.3%; each build takes 1.2-2.3 s (today's whole world 4.3 s), the smallest no less
+Northshore 97.1% (its two avenues, today the bridges from Metro City run on through town, now start at its own shore
+when it is built alone), Highland Woods 95.2%; each build takes 1.2-2.3 s (today's whole world 4.3 s), the smallest no less
 than 1.2 s - the whole map's grids are the floor. The findings, a table per island and what's next are in
 docs/WORLD-V3.md 4.7. The island builder is `shared/world3-islands.js`, which registers itself with `map.js` when
 imported, so none of it is in the page's code. Files: `shared/world3.js` (`ISLAND_BUILDS`, `islandMask`),

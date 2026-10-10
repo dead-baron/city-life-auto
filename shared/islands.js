@@ -148,7 +148,7 @@ export function islandRoads(ctx) {
   const N = RINGS.north;
   // the two bridges from Metro City run straight on up through town as its avenues
   for (const [x, kind, name] of [[958, 'ave', 'North Bridge'], [1018, 'art', 'Harbor Bridge']]) {
-    const end = ctx.metroNorthEnd(x);
+    const end = ctx.metroNorthEnd(x) || (ctx.ownShore && ctx.ownShore(x, 118));   // (World v3's island build of Northshore alone: its avenue from its own shore)
     if (!end) continue;
     const top = P(x, 118);
     lines.push({ pts: [{ x: end.x, y: end.y }, top], kind, lvl: 0, name });
