@@ -6688,14 +6688,14 @@ What it does (docs/WORLD-V3.md 8.4 has the numbers):
   end and the world-wide ATMs differ).
 - **Step B (1.15 on `buildLand3`'s land:** the polygon, the canal as river water, the land layer's districts and
   zones): it builds in 9 s in the v3 frame. 1.30x the land, every district with ground, streets and buildings, every
-  kind of POI, 484 road edges in 3 pieces (today's 451), 467 buildings (316). Two avenue bridges cross the canal; the
+  kind of POI, 485 road edges in 3 pieces (today's 451), 467 buildings (316). Two avenue bridges cross the canal; the
   skeleton's six canal bridges aren't laid yet.
 - **The picture:** `docs/world-v3-metro.png` (`tools/world3-place-map.mjs`): today's Metro City from the world map
   beside the place in the v3 frame, baked with the game's chunk bake as the world map is. What looks wrong: the
   railway's loop runs over the sea, Cedar Avenue's bridge runs out to nowhere (its Cedar Isle is elsewhere now), the
-  new east shore is ruler-straight, and only two avenues cross the canal. Fixed after the first picture: today's
-  river, traced on the gulf's land, had made a band of the bay west of the canal river water. On the v3 land the
-  canal is the river, and the trace is skipped.
+  new east shore is ruler-straight, only two avenues cross the canal, and the canal's west end shows as a band of
+  river water against the open sea: it eats a thin strip of the polygon's land there whole. Today's river trace is
+  skipped on the v3 land (the canal is the river there).
 - **Not done yet:** the street plan placed from inside `metro.js` (at 1.15 its pitches scale with the place), the
   canal's six bridges, the roads off the place cut at the shore.
 - The live world is unchanged: the world hash stays `6b6e16fdef9f`. The page's code grows 1.5 KB gzipped (the
