@@ -242,6 +242,7 @@ export async function runScene({ mobile = true, seconds = 30, silent = false, kr
     // a horn from 20 to 21.5 s, a drift (the tyres) from 22 to 24 s, on whichever car is nearest
     const near = cars.reduce((a, c) => (Math.abs(c.ry - CY) < Math.abs(a.ry - CY) ? c : a), cars[0]);
     for (const c of cars) c.flags = VF.DRIVER | (c === near && t >= 20 && t < 21.5 ? VF.HORN : 0) | (c === near && t >= 22 && t < 24 ? VF.DRIFT : 0);
+    for (const c of cars) c.ra = (c.vy > 0 ? Math.PI / 2 : -Math.PI / 2) + (c.flags & VF.DRIFT ? 0.7 : 0);   // (the drift: sliding sideways)
     if (sys && sys.veh.voices) { for (const v of sys.veh.voices) { if (v.hornN) seen.horn = true; if (v.tyreN) seen.tyres = true; if (v.sirN) seen.siren = true; } }
     if (t >= 6 && t < 16.5) { if (!vehs.includes(cop)) vehs.push(cop); cop.ry = CY - 2200 + (t - 6) * 420; } else if (vehs.includes(cop)) vehs.splice(vehs.indexOf(cop), 1);
     // the rain: heavy, then easing off from 18 s (the crickets come back under 0.3)
@@ -402,4 +403,49 @@ export async function runInstruments({ names = Object.keys(INSTR), raw = false }
   }
   return res;
 }
-window.bench = { runScene, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive };
+// ---- your own car: 2 s driving straight, a hard start from a stop, a slide sideways, a burnout: the effects bus in each (#373) ----
+export async function runTyres() {
+  const parts = [['cruise', 2], ['launch', 2], ['slide', 2], ['burnout', 2]], seconds = parts.reduce((s, p) => s + p[1], 0);
+  const ctx = new OfflineAudioContext(4, SR * seconds, SR);
+  const si = window.setInterval; let pulseFn = null;
+  window.setInterval = (fn) => { pulseFn = fn; return 0; };
+  let sys;
+  try { sys = createSound(ctx, { ...SOUND_DEFAULTS }, { mobile: true, timer: false }); } finally { window.setInterval = si; }
+  const mg = ctx.createChannelMerger(4), sp = ctx.createChannelSplitter(2);
+  sys.mix.sfx.connect(sp); sp.connect(mg, 0, 2); sp.connect(mg, 1, 3); mg.connect(ctx.destination);
+  const map = sceneMap();
+  const car = { id: 500, rx: CX + 300, ry: CY, ra: -Math.PI / 2, d: { m: VEHICLES.sedan.i }, flags: VF.DRIVER };
+  const me = { id: 1, kind: 1, rx: car.rx, ry: car.ry, phase: 0, as: 0, flags: 0, d: {} };
+  const S = { map, ents: new Map([[1, me]]), myPedId: 1, me: { cash: 0, wanted: 0, dead: false, reloading: false, weapon: 0 }, rainK: 0, cam: { x: car.rx, y: car.ry }, pred: { kind: 'veh' }, ctrlId: 500, gateOpen: {}, xing: null, loopClock: 0 };
+  const F = { vehs: [car], peds: [me], cars: [], clock: { dark: 0, isNight: false }, sub: 0, ug: 0 };
+  sys.pulse();
+  const FRAME = Q * 13;
+  let spd = 0;
+  const frame = (t) => {
+    const dt = FRAME;
+    let at = 0, part = parts[0][0];
+    for (const [name, len] of parts) { if (t < at + len) { part = name; break; } at += len; }
+    let drift = false, ra = -Math.PI / 2;
+    if (part === 'cruise') spd = 300;
+    else if (part === 'launch') { spd = t - at < 0.3 ? 0 : Math.min(300, (t - at - 0.3) * 260); drift = spd < 140 && spd > 5; }
+    else if (part === 'slide') { spd = 300; ra = -Math.PI / 2 + 0.75; drift = true; }
+    else { spd = 0; drift = true; }
+    car.ry -= spd * dt; car.ra = ra;
+    car.flags = VF.DRIVER | (drift ? VF.DRIFT : 0);
+    me.rx = car.rx; me.ry = car.ry; S.cam.x = car.rx; S.cam.y = car.ry; S.loopClock = t;
+    sys.frame(F, S);
+    if (Math.round(t / FRAME) % 3 === 0) { if (pulseFn) pulseFn(); else sys.pulse(); }
+  };
+  for (let i = 1; i * FRAME < seconds - 0.05; i++) { const t = i * FRAME; ctx.suspend(t).then(() => { frame(ctx.currentTime); ctx.resume(); }); }
+  const buf = await ctx.startRendering();
+  const out = {};
+  let at = 0;
+  for (const [name, len] of parts) {
+    const a = Math.round((at + 0.4) * SR), b = Math.round((at + len) * SR);   // (from 0.4 s in: past the change)
+    out[name] = measure([buf.getChannelData(2).slice(a, b), buf.getChannelData(3).slice(a, b)]);
+    at += len;
+  }
+  return out;
+}
+
+window.bench = { runScene, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive, runTyres };

@@ -14,6 +14,9 @@ const R = Math.random, rr = (a, b) => a + R() * (b - a);
 const URBAN = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT, T.BUILDING, T.WALL, T.BRIDGE]);
 const GREEN = new Set([T.GRASS, T.FIELD, T.DIRT]);
 const WILD = { wild: 1, rural: 0.7, desert: 0.9, rocky: 0.8, park: 0.5, water: 0.6 };
+// the surf's level on the waterline: a crash peaks near the town's and the rain's beds (tools/sound/bench.py beds), not
+// 15 dB over them (#397)
+export const SURF_LEVEL = 0.32;
 
 export class Ambience {
   constructor(E) {
@@ -35,7 +38,8 @@ export class Ambience {
       wind: bed('pink', [flt('bandpass', 600, 0.8)]),
       leaves: bed('pink', [flt('highpass', 1500), flt('bandpass', 3200, 0.4)]),
       sea: bed('brown', [flt('lowpass', 520, 0.5)]),
-      surf: bed('white', [flt('bandpass', 900, 0.3), gain(0.2)]),
+      // (the surf: the hiss of the wash taken off with a low-pass - #397, it was the loudest thing on the waterline)
+      surf: bed('white', [flt('bandpass', 800, 0.35), flt('lowpass', 2200, 0.6), gain(0.2)]),
       // (rain: soft pink noise, not a white hiss - the white one was some 20 dB louder than the city round it: the owner
       // found it overpowering, 2026-10-09)
       rain: bed('pink', [flt('highpass', 450), flt('lowpass', 4200)]),
@@ -45,7 +49,7 @@ export class Ambience {
       flow: bed('pink', [flt('bandpass', 720, 0.7), flt('lowpass', 2400)]),
       cave: bed('brown', [flt('lowpass', 130, 0.9)]),
     };
-    this.surfEnv = this.beds.surf.chain[1];   // (the wave crashes: its own envelope, under the shore's level)
+    this.surfEnv = this.beds.surf.chain[2];   // (the wave crashes: its own envelope, under the shore's level)
     this.windF = this.beds.wind.chain[0];
     this.gust = 0.7; this.swellPh = R() * 6.28;
     this.next = { ugdrip: 0, rat: 0, flap: 0, scan: 0, bird: 0, cricket: 0, owl: rr(20, 60), dog: rr(20, 60), siren: rr(40, 120), horn: rr(8, 30), gull: rr(5, 15), drop: 0, crackle: 0, surf: 0 };
@@ -144,7 +148,7 @@ export class Ambience {
       wind: open * roof * (0.05 + 0.26 * k.wild * (1 - k.urban) + 0.1 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust,
       leaves: open * roof * k.green * Math.min(1, k.wild * 1.6) * 0.35 * this.gust * this.gust,
       sea: open * roof * Math.pow(k.water, 0.8) * 0.5 * swell,
-      surf: open * roof * k.shore * 0.8,
+      surf: open * roof * k.shore * SURF_LEVEL,
       rain: (sub ? 0 : rain * (inside ? 0.09 : 0.22) * (0.85 + 0.15 * this.gust)),   // (heard through the roof indoors; it swells a little with the gusts)
       sub: sub && !F.ug ? 0.6 : 0,
       flow: F.ug === 1 ? 0.3 : 0,
@@ -165,7 +169,7 @@ export class Ambience {
     if (k.shore > 0.1 && t >= this.next.surf) {
       this.next.surf = t + rr(4.5, 9);
       const e = this.surfEnv.gain;
-      e.cancelScheduledValues(t); e.setTargetAtTime(rr(0.7, 1), t, 0.35); e.setTargetAtTime(0.15, t + rr(1, 1.6), 1.4);
+      e.cancelScheduledValues(t); e.setTargetAtTime(rr(0.55, 0.85), t, 0.4); e.setTargetAtTime(0.15, t + rr(1, 1.6), 1.4);
     }
     // indoors the ambience is heard through the walls
     setp(this.E.mix.ambLp.frequency, inside ? 700 : F.ug ? 3200 : sub ? 1500 : 18000, t, 0.4);

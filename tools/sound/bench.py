@@ -3,7 +3,7 @@
 the real client/sound/ modules on an OfflineAudioContext (tools/sound/bench.js). Prints the report and writes it as
 JSON.
 
-  python3 tools/sound/bench.py [--out report.json] [--only scene,beds,songs,instruments] [--runs 2]
+  python3 tools/sound/bench.py [--out report.json] [--only scene,beds,songs,instruments,tyres] [--runs 2]
   python3 tools/sound/bench.py --live       the live path: client/audio.js started by a click, a few seconds of play
   python3 tools/sound/bench.py --levels     measure every instrument's own loudness (before its trim) and write
                                             client/sound/levels.js and test/fixtures/sound-levels.json
@@ -97,6 +97,8 @@ def main():
                 rep['songs'] = pg.evaluate('window.bench.runSongs()')
             if 'instruments' in only:
                 rep['instruments'] = pg.evaluate('window.bench.runInstruments()')
+            if 'tyres' in only:
+                rep['tyres'] = pg.evaluate('window.bench.runTyres()')
             b.close()
     finally:
         srv.shutdown()
@@ -131,6 +133,8 @@ def report(rep):
         print(f"   events: {e['n']}, heard {e['heard']}, silent {e['silent']} {e['silentKinds']}")
     if rep.get('beds'):
         print('== beds at gain 1 (dBA rms):', {k: v['rmsA'] for k, v in rep['beds'].items()})
+    if rep.get('tyres'):
+        print('== your car, the effects bus (dBA rms; loudest 400 ms):', {k: (v['rmsA'], v['max400']) for k, v in rep['tyres'].items()})
     if rep.get('songs'):
         for k, v in rep['songs'].items():
             print(f"== song {k}: rms {v['rmsA']} dBA, peak {v['peak']}, loudest 400ms {v['max400']}, {v['nodesPerSec']} nodes/s, {v['wallMs']} ms")

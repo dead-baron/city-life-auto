@@ -50,6 +50,16 @@ export const ENGINE_CLASS = {
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);
+// the tyres' screech: its level at full slide (tools/sound/bench.py tyres: a few dB over your own engine); how hard it
+// screeches, 0-1, from what the server says (sliding: VF.DRIFT) and what it looks like here - going sideways at speed, or
+// spinning on the spot with the engine on for half a second (a burnout). A hard start in a straight line, also VF.DRIFT
+// (it passes through the low speeds in a moment), is silent.
+export const TYRE_LEVEL = 0.08;
+export function screech(st, p) {
+  if (!(st.flags & VF.DRIFT) || (p.pedal && st.spd < 60)) return 0;
+  if (st.spd < 40) return st.on && !p.boat && !p.pedal && st.burnT > 0.5 ? 0.75 : 0;
+  return Math.max(0, Math.min(1, (st.side - 60) / 200)) * Math.min(1, st.spd / 160);
+}
 const RANGE = 1000, EAR = RANGE * RANGE;
 
 export class VehicleSounds {
@@ -101,7 +111,7 @@ export class VehicleSounds {
     const E = this.E;
     for (const s of part.src) { try { s.stop(when); } catch { /* stopped */ } }
     for (const x of part.all) E.trash.push(x, when + 0.05);
-    if (part.nf && this.noise) { try { this.noise.disconnect(part.nf); } catch { /* gone */ } }
+    if (this.noise) for (const x of part.fed || (part.nf ? [part.nf] : [])) { try { this.noise.disconnect(x); } catch { /* gone */ } }
   }
   release(v, t) {   // the voice fades out and its nodes go
     if (!v.n) return;
@@ -129,13 +139,31 @@ export class VehicleSounds {
     v.hornN = { g, scale: hn.length > 2 ? 0.05 : 0.07, src, all: [...src, hf, g] };
     return v.hornN;
   }
-  // the tyres: a squeal (or a boat's spray, a bike's gravel) from the shared noise (made while it drifts)
-  tyres(v) {
+  // the tyres (#373: it was a band of noise - a whoosh): rubber screeching on the road - two pitched tones, a little
+  // apart and out of tune, their pitch juddering with the rubber's stick-slip and their level chattering, through a band
+  // that gives them their bite, over a hiss of smoke. A boat's spray, a bike's skid: a band of the noise. Made while it
+  // slides (params(): sideways, or spinning on the spot - not a hard start in a straight line).
+  tyres(v, road) {
     if (v.tyreN) return v.tyreN;
-    const nf = this.bq('bandpass', 1700, 7), g = this.g(0);
-    this.noiseSrc().connect(nf); nf.connect(g); g.connect(v.n.lp);
-    v.tyreN = { nf, g, src: [], all: [nf, g], at: 0 };
-    return v.tyreN;
+    const g = this.g(0), noise = this.noiseSrc(), T = { g, src: [], all: [g], fed: [], at: 0 };
+    if (road) {
+      const a = this.osc('pulse25'), b = this.osc('soft'), am = this.g(0.6), bite = this.bq('bandpass', 1400, 0.8);
+      const jl = this.bq('lowpass', 26, 0.7), jg = this.g(1600), cl = this.bq('lowpass', 13, 0.7), cg = this.g(16);
+      const hiss = this.bq('bandpass', 3200, 1.4), hg = this.g(0.3);
+      noise.connect(jl); jl.connect(jg); jg.connect(a.frequency); jg.connect(b.frequency);   // (the judder: about +-40 Hz)
+      noise.connect(cl); cl.connect(cg); cg.connect(am.gain);                                 // (the chatter)
+      noise.connect(hiss); hiss.connect(hg); hg.connect(g);                                    // (the smoke)
+      a.connect(am); b.connect(am); am.connect(bite); bite.connect(g);
+      a.start(); b.start();
+      Object.assign(T, { a, b, hg });
+      T.src.push(a, b); T.fed.push(jl, cl, hiss); T.all.push(a, b, am, bite, jl, jg, cl, cg, hiss, hg);
+    } else {
+      const nf = this.bq('bandpass', 1700, 7);
+      noise.connect(nf); nf.connect(g);
+      T.nf = nf; T.fed.push(nf); T.all.push(nf);
+    }
+    g.connect(v.n.lp);
+    return (v.tyreN = T);
   }
 
   update(F, S, dt) {
@@ -150,12 +178,17 @@ export class VehicleSounds {
       let st = this.states.get(v.id);
       if (d2 > EAR && v.id !== mine) { if (st) st.seen = 0; continue; }
       if (!st) { st = { x: v.rx, y: v.ry, spd: 0, prev: 0, thr: 0, rpm: 0, d: Math.sqrt(d2), dop: 1, on: v.id === mine || engineOn(v), horn: false, bellAt: 0, fastAt: -9, seen: t, voice: null, cls: ENGINE_CLASS[def.id] || 'sedan', def, tune: 0.95 + 0.1 * ((Math.imul(v.id, 2654435761) >>> 0) / 4294967296) }; this.states.set(v.id, st); }   // (tune: each one a little its own)
-      let mv = Math.hypot(v.rx - st.x, v.ry - st.y);
-      if (mv > 300) mv = 0;   // (a teleport)
+      let mx = v.rx - st.x, my = v.ry - st.y, mv = Math.hypot(mx, my);
+      if (mv > 300) { mv = 0; mx = 0; my = 0; }   // (a teleport)
       st.x = v.rx; st.y = v.ry;
-      const k = 1 - Math.exp(-6 * dt);
+      const k = 1 - Math.exp(-6 * dt), idt = 1 / Math.max(dt, 1e-3);
       st.prev = st.spd;
-      st.spd += (mv / Math.max(dt, 1e-3) - st.spd) * k;
+      st.spd += (mv * idt - st.spd) * k;
+      // how fast it's going sideways (to the way it faces): a slide - the tyres screech
+      st.vx = (st.vx || 0) + (mx * idt - (st.vx || 0)) * k; st.vy = (st.vy || 0) + (my * idt - (st.vy || 0)) * k;
+      const ra = v.ra ?? Math.atan2(st.vy, st.vx);
+      st.side = Math.abs(-Math.sin(ra) * st.vx + Math.cos(ra) * st.vy);
+      st.burnT = (v.flags & VF.DRIFT) && st.spd < 40 ? (st.burnT || 0) + dt : 0;   // (how long it's been spinning on the spot)
       const acc = (st.spd - st.prev) / Math.max(dt, 1e-3);
       const on = v.id === mine || engineOn(v) || (!!def.ferry && !(v.flags & (VF.WRECK | VF.DEAD)));   // (the ferries run their timetable with nobody at the wheel)
       if (on && !st.on && Math.sqrt(d2) < 700 && st.cls !== 'pedal' && !P[st.cls].boat && st.spd < 30) E.play('enginestart', v.rx, v.ry, 0.7, v.id === mine ? MINE : null);
@@ -268,12 +301,19 @@ export class VehicleSounds {
         const H = v.hornN;
         if (!H.off) { H.off = t; setp(H.g.gain, 0, t, 0.03); } else if (t - H.off > 0.3) { this.letGo(H, t); v.hornN = null; }
       }
-      // the tyres
-      const drift = (st.flags & VF.DRIFT) && st.spd > 60;
-      if (drift) {
-        const Ty = this.tyres(v), q = p.boat ? [2600, 0.6] : p.pedal ? [800, 1] : [1700 + 500 * Math.sin(t * 6.3 + v.veh), 7];
-        setp(Ty.nf.frequency, q[0], t, 0.03); setp(Ty.nf.Q, q[1], t, 0.05);
-        setp(Ty.g.gain, (p.boat ? 0.25 : p.pedal ? 0.2 : 0.5) * Math.min(1, st.spd / 260), t, 0.04);
+      // the tyres: a screech sliding sideways or spinning on the spot (a burnout), nothing on a hard start
+      const sc = screech(st, p);
+      if (sc > 0) {
+        const road = !p.boat && !p.pedal, Ty = this.tyres(v, road);
+        if (road) {
+          const f = (st.spd < 40 ? 640 : 760 + 380 * Math.min(1, st.side / 420)) * dop;
+          setp(Ty.a.frequency, f, t, 0.05); setp(Ty.b.frequency, f * 1.47, t, 0.05);
+          setp(Ty.hg.gain, st.spd < 40 ? 0.45 : 0.3, t, 0.1);   // (more smoke in a burnout)
+          setp(Ty.g.gain, sc * TYRE_LEVEL * (st.mine ? 1 : 0.8), t, 0.04);
+        } else {
+          setp(Ty.nf.frequency, p.boat ? 2600 : 800, t, 0.03); setp(Ty.nf.Q, p.boat ? 0.6 : 1, t, 0.05);
+          setp(Ty.g.gain, (p.boat ? 0.25 : 0.2) * sc, t, 0.04);
+        }
         Ty.at = t;
       } else if (v.tyreN) {
         setp(v.tyreN.g.gain, 0, t, 0.06);

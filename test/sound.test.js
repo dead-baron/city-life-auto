@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { T } from '../shared/constants.js';
+import { T, VF } from '../shared/constants.js';
 import { SOUND_DEFAULTS, soundPrefs, setSoundPref, busGains, COMP, softClipCurve, CLIP_KNEE, CLIP_CEIL } from '../client/sound/mixer.js';
 import { SURFACES, STEP, surfaceOf, surfaceAt, woodsOf, woodsAt } from '../client/sound/surface.js';
 import { VoicePool, spatial, RateLimit, PRI, Budget, BUDGET } from '../client/sound/pool.js';
@@ -15,7 +15,8 @@ import { eventHeard, VOICES } from '../client/sound/index.js';
 import { EVENT_SOUNDS, gunSound, meleeHit, propSound } from '../client/sound/events.js';
 import { INSTR, LEGACY } from '../client/sound/instruments.js';
 import { SONGS } from '../client/sound/music.js';
-import { ENGINE_CLASS } from '../client/sound/vehicles.js';
+import { ENGINE_CLASS, screech, TYRE_LEVEL } from '../client/sound/vehicles.js';
+import { SURF_LEVEL } from '../client/sound/ambience.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { WEAPONS } from '../shared/items.js';
 import { closure } from '../tools/perf.mjs';
@@ -303,4 +304,22 @@ test('the noise loops have no seam: the sample after the last is the one that wo
   const s = loopSeam(d, X);
   assert.equal(s.length, n);
   assert.ok(Math.abs(s[0] - s[n - 1]) <= step * 1.01, `the seam ${Math.abs(s[0] - s[n - 1]).toFixed(4)} is no bigger than a step (${step.toFixed(4)})`);
+});
+
+test('the tyres screech sliding sideways or in a burnout, never on a hard start in a straight line (#373)', () => {
+  const car = {}, D = VF.DRIFT, st = (o) => ({ flags: D, spd: 0, side: 0, on: true, burnT: 0, ...o });
+  assert.equal(screech(st({ spd: 120, side: 8 }), car), 0, 'a full-throttle start: the server flags it, but it goes straight - silent');
+  assert.equal(screech(st({ spd: 20, burnT: 0.2 }), car), 0, 'passing through the low speeds on a start: silent');
+  assert.ok(screech(st({ spd: 5, burnT: 0.8 }), car) > 0.5, 'spinning on the spot for a while: a burnout screeches');
+  assert.equal(screech(st({ spd: 5, burnT: 0.8, on: false }), car), 0, 'not with the engine off');
+  assert.equal(screech(st({ spd: 300, side: 260 }), car), 1, 'a hard slide sideways: full');
+  const mid = screech(st({ spd: 300, side: 120 }), car);
+  assert.ok(mid > 0 && mid < 1, `a little sideways: some (${mid.toFixed(2)})`);
+  assert.equal(screech(st({ flags: 0, spd: 300, side: 300 }), car), 0, 'not without the server saying it slides');
+  assert.equal(screech(st({ spd: 5, burnT: 2 }), { boat: 1 }), 0, 'a boat has no burnout');
+  assert.ok(TYRE_LEVEL > 0 && TYRE_LEVEL <= 0.12, 'a few dB over your own engine, not over everything (tools/sound/bench.py tyres)');
+});
+
+test('the surf on the waterline sits in the mix, not over it (#397)', () => {
+  assert.ok(SURF_LEVEL > 0.1 && SURF_LEVEL <= 0.4, `the surf's level ${SURF_LEVEL} (was 0.8: the loudest thing on the shore)`);
 });

@@ -5251,3 +5251,19 @@ The fixes:
 - the meter reads a 1 kHz tone within half a dB of the standard, and weighs a 30 Hz tone well under it;
 - the limiter holds every peak, including those between samples, under the ceiling; it leaves the quiet stretch before untouched, recovers after, and its gain never jumps;
 - `warm()` leaves quiet sound alone, only rounds off peaks, never folds back, and does the same at any level.
+
+## 2026-10-10 · Tyres screech only when you slide or burn out; the surf sits in the mix (tasks #373, #397)
+**The tyres (#373).** The owner heard the tyre sound as "a wind whoosh, not burning rubber", and heard it far too often. Both were true:
+- **The sound.** It was a band of white noise, which is a whoosh. It's now a screech (`client/sound/vehicles.js` `tyres()`): two pitched tones a little apart and out of tune, around 760-1140 Hz (rising with how fast it slides sideways; 640 in a burnout). Their pitch judders by about ±40 Hz with the rubber's stick-slip and their level chatters, both from slow noise. They pass through a band at 1.4 kHz that gives them their bite, over a hiss of tyre smoke (more of it in a burnout). Boats' spray and bikes' skids keep their band of noise.
+- **When it plays.** The server flags `VF.DRIFT` for slides and burnouts, but also for every full-throttle start from below 140 px/s, and with a keyboard every start is full throttle. Each voice now tracks the vehicle's velocity and how much of it is sideways to the way it faces, and `screech()` decides. Sliding sideways (over 60 px/s) screeches, up to full at 260. Spinning on the spot with the engine on screeches once it has lasted half a second (a burnout). A hard start in a straight line is silent, and so is anything without the server's flag.
+- **The level.** `TYRE_LEVEL` puts a full slide about 8 dB over your own cruising engine; a burnout is about 4 dB over. Measured by a new bench mode, `python3 tools/sound/bench.py --only tyres` (your car cruising, launching, sliding, then a burnout). The busy-scene bench's drift now slides sideways.
+- Its nodes (2 oscillators, 4 filters, 5 gains) exist only while it screeches. `letGo()` now unplugs every node fed from the shared noise, not just one.
+
+**The surf (#397).** On the waterline a wave's crash peaked around -14.5 dBA. That's 15 dB over the town's and the rain's beds, so it was the loudest thing there.
+- The surf is now 0.32 of what it was at 0.8 (`SURF_LEVEL`), and a crash rises to 0.55-0.85 of its envelope instead of 0.7-1.
+- A low-pass at 2.2 kHz takes the hiss off the wash.
+- A crash now peaks around -25.7 dBA, in with the city (-33) and heavy rain (-28). The sea's swell under it is unchanged.
+
+**Tests:** `test/sound.test.js`:
+- a straight hard start, and passing through the low speeds, are silent; a burnout, a slide (some, then full) screech; never without the server's flag; a boat has no burnout; the level stays a few dB over the engine;
+- the surf's level stays in the mix.
