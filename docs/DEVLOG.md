@@ -5564,9 +5564,10 @@ Art only: the server's layouts (the doorways, the counter rows, the cells, the w
 - **A big walk-in drawn in sections** (the art splits a long building) used to show a wall down the middle and a break in
   its counter at each seam: each section now knows which of the building's walls it has (`ew`, `ee`) and the full extent of
   its unit (`fx0`, `fx1`), so the room is one open space with one counter (every walk-in kind, not just these two).
-- **The hospital's ambulance bay** (`client/art2/props-road.js` `erCanopy`, in place of a fuel-station canopy): a white
-  canopy on four posts with hazard-striped feet, a red fascia with the red cross on a white panel, a red cross on its roof,
-  lights under it, hazard-striped kerbs and yellow bollards.
+- **The hospital's ambulance bay** (`client/art2/props-road.js` `erCanopy`, in place of a fuel-station canopy over the
+  middle of the front): a white canopy on four posts with hazard-striped feet, a red fascia with the red cross on a white
+  panel, a red cross on its roof, lights under it, hazard-striped kerbs and yellow bollards - beside the glass doors, at the
+  end of the front away from them. Walked in, the hospital's front wall (cut low) is glass between steel mullions.
 - **The subway's street entrance** (`subwayKiosk`, on the kiosk's real footprint from `shared/map.js` SUBWAY_ART, mirrored for
   the mirrored kiosks; it replaces a 70 x 44 box that didn't cover the stairwell): dark green iron railings round the
   stairwell with ball-topped newels at the mouth, the steps going down into the dark with a lit nosing on each, the white

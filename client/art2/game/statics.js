@@ -2642,7 +2642,11 @@ function addLots(c, I) {
       return;
     }
     if (key === 'church') { for (const dx of [24, w - 24]) put(I, fitem(`f:cypress:${dx > w / 2 ? 1 : 0}:1.2`, 'cypress', 1000 + (dx > w / 2 ? 1 : 0) * 37 + 49, x0 + dx, y0 + h - 30, 1.2)); fenceLine(I, 'iron', x0 + 8, y0 + h - 6, x0 + w / 2 - 30, y0 + h - 6); fenceLine(I, 'iron', x0 + w / 2 + 30, y0 + h - 6, x0 + w - 8, y0 + h - 6); return; }
-    if (key === 'hospital') { put(I, vitem('hcan:er', 'erCanopy', [1], x0 + w / 2, by1 + 30, 0)); lightAt(I, x0 + w / 2, by1 + 34, 46, 130, [1, 0.92, 0.82], 1.4, 'lamp'); return; }   // (IN1-B: the ambulance bay's canopy)
+    if (key === 'hospital') {   // (IN1-B: the ambulance bay's canopy - beside the glass doors, at the end away from them)
+      const hb = M.buildings.find((q) => q.prefab === pi && q.walkIn), hu = hb && hb.walkIn.south ? hb.walkIn.units[0] : null;
+      const hdx = hu ? (hu.door.tx + (hu.door.w || 2) / 2) * TILE : null, ex = hdx === null || w < 360 ? x0 + w / 2 : hdx > x0 + w / 2 ? x0 + 96 : x0 + w - 96;
+      put(I, vitem('hcan:er', 'erCanopy', [1], ex, by1 + 30, 0)); lightAt(I, ex, by1 + 34, 46, 130, [1, 0.92, 0.82], 1.4, 'lamp'); return;
+    }
     if (key === 'pool') {
       const pw = w - 5 * TILE - 40, ph = h - 70;
       if (pw > 60) { put(I, { key: `pool:${pw}:${ph}:0`, recipe: { t: 'flat', k: 'pool', w: pw, h: ph, s: 0 }, x: x0 + 5 * TILE + 20 + pw / 2, y: y0 + 30 + ph / 2, ext: [pw / 2 + 2, ph / 2 + 4, pw / 2 + 2, ph / 2 + 2] }); for (let k = 0; k < 4; k++) put(I, vitem('loung', 'lounger', ['#f0eee8'], x0 + 5 * TILE + 40 + k * 44, y0 + h - 18, 0)); }
@@ -2945,8 +2949,9 @@ function makeCut(r) {
   for (let i = 1; i < r.units.length; i++) { const x = r.units[i].x0 - 4; capRun(x, x + 8, r.inY0, r.inY1); }
   for (let x = r.ew === false ? 0 : 32; x < (r.ee === false ? w : w - 32); x++) {
     if (r.units.some((u) => x >= u.dx && x < u.dx + u.dw)) continue;
-    for (let Y = r.inY1; Y < d; Y++) px(x, Y, CUT, CAP[2], [0, 0, 1]);
-    for (let v = 0; v < CUT; v++) px(x, d, v, wallAt(x + 800, v), [0, 1, 0]);
+    const glass = r.units.some((u) => u.kind === 'hospital' && x >= u.x0 && x < u.x1), mul = (x - 32) % 40 < 2;   // (IN1-B: the hospital's glass front)
+    for (let Y = r.inY1; Y < d; Y++) px(x, Y, CUT, glass ? (mul || Y === r.inY1 || Y === d - 1 ? [112, 120, 130] : [150, 186, 204]) : CAP[2], [0, 0, 1]);
+    for (let v = 0; v < CUT; v++) px(x, d, v, glass ? (mul || v < 3 || v > CUT - 3 ? [96, 104, 114] : [128 + v * 3, 172 + v * 2, 196]) : wallAt(x + 800, v), [0, 1, 0]);
   }
   // counters, back shelves with goods, a clerk's till
   for (const u of r.units) {
