@@ -196,6 +196,22 @@ test('attacked, it stops and the guards get out and fight; the attacker is wante
   assert.ok(p.wanted > 0, 'police heat');
 });
 
+test('an escorted armored truck: the squad car follows it, and turns on whoever attacks it', () => {
+  const { w, p, ev, van } = armored(37);
+  const [x, y] = localToWorld(van.x, van.y, van.a, -220, 0);
+  const esc = police.escortUnit(w, x, y, van.a, van);
+  ev.escort = esc.id;
+  assert.ok(!esc.sirenOn && esc.ai.escort === van.id, 'quietly, behind it');
+  run(w, 6);
+  assert.equal(esc.ai.escort, van.id, 'still with it');
+  assert.ok(!esc.sirenOn);
+  teleport(w, p.ped, van.x + 200, van.y);
+  van.hp -= 120; van.lastAttacker = p.ped.id;
+  run(w, 1);
+  assert.equal(esc.ai.target, p.pid, 'after the attacker');
+  assert.ok(esc.sirenOn);
+});
+
 test('the back of a stopped armored truck: hold ACT a few seconds and the crates fall out - the alarm, the guards, the police', () => {
   const { w, p, ev, van } = armored(29);
   run(w, 1);

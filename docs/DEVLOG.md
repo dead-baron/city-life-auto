@@ -5442,13 +5442,13 @@ The owner's notes: "Occasional NPC car races happening in the streets at night .
   - It delivers and drives off, or it's robbed, blown up or out of time.
 - **Driving with somewhere to be** (`traffic.js`): a driver with a goal takes the shortest way by road (`streetlife.js` distField: a Dijkstra over the junctions, one-ways honoured, kept for the last few goals). A reckless driver goes flat out (no faster than its vehicle can), runs the lights and doesn't pull over for sirens, but still brakes for what's in front of it. Event vehicles aren't cleared away while their event runs.
 - **Debug menu** (Events & sport): Street race nearby, Police chase nearby, Armored truck nearby (dev command `street`, k: race / chase / armored; a race at any hour).
-- **Tests:** `test/streetlife.test.js` (11):
+- **Tests:** `test/streetlife.test.js` (12):
   - the three kinds on the radar;
   - a race: the pack, fast and on the roads, to its finish, then ordinary traffic;
   - a patrol that happens on a race goes after a racer, who runs; any police car that sees a racer gives chase;
   - a chase stopped: the driver dragged out, cuffed and taken in; a chase lost: an escape;
   - an armored truck: its guards, its load, a far-off bank, delivered;
-  - blown up: every crate out of the back; attacked: the guards out fighting and police heat;
+  - blown up: every crate out of the back; attacked: the guards out fighting and police heat; an escort that turns on the attacker;
   - the back doors: let go too soon and nothing; held, the crates fall out of the back, heat, the guards;
   - the scheduler: one at a time, not the last kind, no race by day.
 - **Not done yet:** no special sounds of their own (the cars' engines and the sirens are the usual ones); the guards wear the police uniform (there's no security-guard look yet); the escort only follows - it doesn't block traffic for the truck.

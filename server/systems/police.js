@@ -470,7 +470,7 @@ function runCarUnit(world, v, crew, dt) {
   }
   for (const c of crew) {
     if (c.vehId || struggle.pinning(world, c)) continue;
-    if (inCar) {
+    if (inCar && k.vehId === t.id) {   // (still in it: the other officer may just have had them out)
       const door = doorOf(t, c);
       if (Math.hypot(door.x - c.x, door.y - c.y) < 30 || Math.hypot(t.x - c.x, t.y - c.y) < t.def.L / 2 + 8) pullOut(world, c, k, t);
       else if (now >= c.downUntil && now >= c.stunUntil) pedStep(c, sidestep(world, c, seek(c, door.x, door.y, true), dt), dt, world.map, copMods(world, c));
@@ -498,9 +498,8 @@ export function escortUnit(world, x, y, a, van) {
 // the truck's been hit: after whoever did it (a player wanted for it: the usual chase)
 export function escortTurns(world, v, attacker) {
   const p = attacker && attacker.player;
-  if (!v || !v.ai || !v.ai.escort) return;
-  v.ai.escort = 0;
-  if (p) { v.ai.target = p.pid; v.sirenOn = true; }
+  if (!v || !v.ai || !v.ai.escort || !p) return;   // (an NPC's doing: the guards see to it, the escort stays with the truck)
+  v.ai.escort = 0; v.ai.target = p.pid; v.sirenOn = true;
 }
 function runEscort(world, v, crew, dt) {
   const ai = v.ai, now = world.time, van = world.get(ai.escort);
