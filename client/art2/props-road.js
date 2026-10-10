@@ -230,3 +230,58 @@ export function wallLamp(on = 0, h = 46) {
   m.ell(4, 9, h - 3, 3.6, 3.2, 2.4, sh); m.box(2, 8, h - 6, 6, 11, h - 4, bulb);
   return m;
 }
+// a subway stop's street entrance, built to SU5-B (the owner's pick, 2026-10-10) on the kiosk's real footprint
+// (shared/map.js SUBWAY_ART: 128 x 95, the stair mouth on the left, the pit [10, 43]-[114, 81] going down to the right;
+// flip mirrors it): green iron railings round the stairwell with ball-topped newels at the mouth, the steps going down
+// into the dark with a lit nosing on each, the tiled walls (white, a green band) and the warm-lit landing at the foot -
+// the platform below - and along the back a green frame with two globe lamps and a lit sign with the train symbol
+export function subwayKiosk(on = 1, flip = 0) {
+  const W = 128, Dd = 96, m = new Vox(W, Dd, 64);
+  const ir = m.mat({ ramp: R('#173628'), k: 2, flag: F_THIN }), irL = m.mat({ ramp: R('#1f4434'), k: 2 });
+  const steps = [];
+  for (let i = 0; i < 9; i++) { const t = Math.sqrt(i / 8), c = [Math.round(132 - 122 * t), Math.round(126 - 117 * t), Math.round(118 - 108 * t)]; steps.push(m.mat({ ramp: R('#' + c.map((v) => v.toString(16).padStart(2, '0')).join('')), k: 3 })); }
+  const nose = m.mat({ ramp: R('#d8c890'), k: 3, emi: [255, 214, 140, 30 + on * 60] }), tileW = m.mat({ ramp: R('#e4e6e0'), k: 3, shade: (x, y) => (Math.round(x) % 6 === 0 ? -0.8 : 0) });
+  const band = m.mat({ ramp: R('#2e7a5a'), k: 3 }), cap = m.mat({ ramp: R('#8e8a82'), k: 3 });
+  const land = m.mat({ ramp: R('#d8c49a', 5, 3), k: 3, emi: [255, 210, 140, 40 + on * 90], shade: (x, y) => (Math.round(x) % 6 === 0 || Math.round(y) % 6 === 0 ? -0.8 : 0) });
+  const globe = m.mat({ ramp: R('#fff2c8', 5, 3), k: 4, emi: [255, 226, 160, 80 + on * 175], flag: F_NOCAST });
+  const signBg = m.mat({ ramp: R('#162036'), k: 3, emi: [60, 90, 160, 20 + on * 60] }), signW = m.mat({ ramp: R('#f4f8ff', 5, 3), k: 4, emi: [200, 230, 255, 120 + on * 135], flag: F_NOCAST });
+  // the stairwell: a concrete lip, the tiled walls (seen as the strip just inside each lip), the steps, the landing
+  const [px0, py0, px1, py1] = [10, 43, 114, 81];
+  m.box(px0 - 2, py0 - 3, 0, px1 + 3, py0, 2, cap); m.box(px0 - 2, py1, 0, px1 + 3, py1 + 3, 2, cap); m.box(px1, py0, 0, px1 + 3, py1, 2, cap);
+  m.box(px0, py0, 0, px1, py0 + 4, 1, tileW); m.box(px0, py0 + 4, 0, px1, py0 + 6, 1, band);
+  for (let x = px0; x < px1 - 14; x++) { const s = Math.floor((x - px0) / 7), k = Math.min(8, Math.floor(s * 8 / 13)); m.box(x, py0 + 6, 0, x + 1, py1 - 2, 1, (x - px0) % 7 === 0 ? (k < 5 ? nose : steps[Math.min(8, k + 1)]) : steps[k]); }
+  m.box(px1 - 14, py0 + 6, 0, px1, py1 - 2, 1, land); m.box(px0, py1 - 2, 0, px1, py1, 1, band);
+  // railings: posts every 6 px, a top rail and a middle rail, both long sides and the far end; newels with balls at the mouth
+  for (const y of [36, 87]) { m.box(4, y, 20, 124, y + 2, 23, irL); m.box(4, y, 10, 124, y + 1, 11, ir); for (let x = 4; x < 124; x += 6) m.box(x, y, 0, x + 1, y + 1, 21, ir); }
+  m.box(121, 36, 20, 124, 89, 23, irL); for (let y = 36; y < 89; y += 6) m.box(121, y, 0, 122, y + 1, 21, ir);
+  for (const y of [35, 86]) { m.box(3, y, 0, 7, y + 4, 26, irL); m.ell(5, y + 2, 28, 2.6, 2.6, 2.6, irL); }
+  // the back: a green frame with the lit sign (its face toward the street) and a globe lamp at either end
+  m.box(4, 14, 0, 124, 18, 4, cap);
+  for (const x of [8, 120]) { m.box(x - 2, 14, 0, x + 2, 18, 50, ir); m.box(x - 3, 13, 0, x + 3, 19, 6, irL); m.ell(x, 16, 54, 4.5, 4.5, 4.5, globe); m.box(x - 2, 14, 48, x + 2, 18, 50, irL); }
+  m.box(10, 14, 44, 118, 18, 46, ir); m.box(10, 14, 22, 118, 18, 24, ir);
+  m.box(36, 13, 24, 92, 19, 44, signBg);
+  m.fill((x, y, z) => { const dx = x - 64, dz = z - 34, r = Math.hypot(dx, dz * 1.1); if (r > 8.5 && r < 10) return signW; if (Math.abs(dx) < 5 && dz > -4 && dz < 5 && !(dz > 0 && dz < 3 && Math.abs(dx) < 4 && Math.abs(dx) > 0.6)) return signW; if (dz > -7 && dz < -4.5 && (Math.abs(dx + 3) < 1 || Math.abs(dx - 3) < 1)) return signW; return -1; }, 50, 18, 22, 78, 19, 46);
+  for (let x = 38; x < 90; x += 4) if (x < 52 || x > 76) m.box(x, 18, 32, x + 2, 19, 36, signW);   // (the sign's lettering, a lit line either side)
+  if (flip) for (let z = 0; z < m.h; z++) for (let y = 0; y < Dd; y++) { const b = (z * Dd + y) * W; for (let x = 0; x < W / 2; x++) { const t = m.v[b + x]; m.v[b + x] = m.v[b + W - 1 - x]; m.v[b + W - 1 - x] = t; } }
+  return m;
+}
+// a hospital's ambulance bay, built to IN1-B: a flat white canopy on four posts over the drop-off, a red fascia along its
+// front with the red cross on a white panel, lights under it, hazard-striped kerbs either side and yellow bollards
+export function erCanopy(on = 1) {
+  const W = 120, Dd = 62, m = new Vox(W, Dd, 60);
+  const post = m.mat({ ramp: R('#c8ccd2'), k: 3 }), roof = m.mat({ ramp: R('#e8e8e4'), k: 3, shade: (x) => (Math.round(x) % 10 === 0 ? -0.5 : 0) });
+  const red = m.mat({ ramp: R('#c4302e'), k: 3 }), wht = m.mat({ ramp: R('#f6f4ee', 5, 3), k: 4, emi: [255, 250, 240, 30 + on * 90] }), crs = m.mat({ ramp: R('#d8302c', 5, 3), k: 4, emi: [255, 60, 50, 40 + on * 120] });
+  const haz = m.mat({ ramp: R('#e8c030'), k: 3, shade: (x, y) => ((Math.floor(x / 4) + Math.floor(y / 4)) % 2 ? -3 : 0) }), boll = m.mat({ ramp: R('#e8c030'), k: 3 });
+  const lamp = m.mat({ ramp: R('#fff6e0', 5, 3), k: 4, emi: [255, 246, 220, 60 + on * 160], flag: F_NOCAST });
+  for (const x of [6, W - 10]) for (const y of [8, Dd - 10]) { m.box(x, y, 0, x + 4, y + 4, 46, post); m.box(x - 1, y - 1, 0, x + 5, y + 5, 6, haz); }
+  const rim = m.mat({ ramp: R('#b8bcc0'), k: 3 });
+  m.box(0, 0, 46, W, Dd - 4, 50, roof); m.box(0, 0, 48, W, 2, 51, rim); m.box(0, 0, 48, 2, Dd - 4, 51, rim); m.box(W - 2, 0, 48, W, Dd - 4, 51, rim);
+  m.box(W / 2 - 3, Dd / 2 - 13, 50, W / 2 + 3, Dd / 2 + 7, 51, red); m.box(W / 2 - 10, Dd / 2 - 6, 50, W / 2 + 10, Dd / 2, 51, red);   // (the cross on its roof)
+  m.box(0, Dd - 5, 40, W, Dd - 2, 52, red);
+  m.box(W / 2 - 9, Dd - 2, 39, W / 2 + 9, Dd - 1, 53, wht);
+  m.box(W / 2 - 2, Dd - 1, 40, W / 2 + 2, Dd, 52, crs); m.box(W / 2 - 6, Dd - 1, 44, W / 2 + 6, Dd, 48, crs);
+  for (let x = 20; x < W - 16; x += 26) m.box(x, Dd / 2 - 2, 44, x + 12, Dd / 2 + 2, 46, lamp);
+  for (const x of [0, W - 4]) m.box(x, 0, 0, x + 4, Dd, 3, haz);
+  for (const x of [2, W - 6]) m.cyl('z', x + 2, Dd + 0 - 3, 0, 1.8, 0, 12, boll);
+  return m;
+}

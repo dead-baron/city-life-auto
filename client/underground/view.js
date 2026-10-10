@@ -262,16 +262,27 @@ class UgView {
       // a slot of tunnel beyond the door: the rails, a platform edge, the grille between
       g.save();
       g.translate(d.tx, d.ty); g.rotate(d.a);
+      // (SU5-B, 2026-10-10: the platform beyond in white tile with its green band and fluorescent strips, the yellow
+      // tactile edge, the track on dark ballast)
       g.fillStyle = '#0b0b0c'; g.fillRect(-260, -46, 520, 92);
+      g.fillStyle = '#1a1816'; g.fillRect(-260, -24, 520, 70);
       g.fillStyle = '#3a3026'; for (let x = -256; x < 256; x += 18) g.fillRect(x, -22, 8, 44);
       g.fillStyle = '#9aa0a8'; g.fillRect(-260, -14, 520, 3); g.fillRect(-260, 11, 520, 3);
-      g.fillStyle = '#c9b23a'; g.fillRect(-260, -46, 520, 4);
+      g.fillStyle = '#2e7a5a'; g.fillRect(-260, -46, 520, 3);
+      g.fillStyle = '#d6d8d2'; g.fillRect(-260, -43, 520, 11);
+      g.fillStyle = '#bcc0ba'; for (let x = -256; x < 260; x += 12) g.fillRect(x, -43, 1, 11);
+      g.fillStyle = '#e2b432'; g.fillRect(-260, -32, 520, 5);
+      g.fillStyle = '#b08a20'; for (let x = -258; x < 260; x += 4) g.fillRect(x, -31, 1, 1), g.fillRect(x + 2, -29, 1, 1);
+      g.fillStyle = '#4a4640'; g.fillRect(-260, -27, 520, 3);
       g.restore();
       // the train, when one is in (its cars are sent to whoever is near the line: the subway's own level)
       for (const c of F.cars || []) {
         if (Math.hypot(c.rx - d.tx, c.ry - d.ty) > 600) continue;
         g.save(); g.translate(c.rx, c.ry); g.rotate(c.ra);
-        g.fillStyle = '#5d6a75'; g.fillRect(-150, -26, 300, 52); g.fillStyle = '#e8d890'; for (let x = -130; x < 140; x += 40) g.fillRect(x, -24, 22, 6);
+        g.fillStyle = '#8d959c'; g.fillRect(-150, -26, 300, 52); g.fillStyle = '#6a737c'; g.fillRect(-150, -26, 300, 4); g.fillRect(-150, 22, 300, 4);   // (SU5-B: silver cars, warm-lit windows, doors)
+        g.fillStyle = '#2f5aa8'; g.fillRect(-150, -16, 300, 2);
+        g.fillStyle = '#f0c878'; for (let x = -130; x < 140; x += 40) g.fillRect(x, -24, 22, 7);
+        g.fillStyle = '#ffe2a0'; for (const x of [-105, -25, 55]) g.fillRect(x, -26, 12, 6);   // (the doors open, warm light in them)
         g.restore();
       }
       g.strokeStyle = 'rgba(160,170,180,.5)'; g.lineWidth = 1;
