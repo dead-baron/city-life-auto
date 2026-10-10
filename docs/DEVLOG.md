@@ -5658,3 +5658,58 @@ hospital, the police station and the subway entrances were rebuilt to the owner'
 off-road 4x4 joined. The budget is now 1000 KB (and 76 files): the art grows with every concept the owner sends, and
 the workers fetch this code once, after the page, so it never delays getting into the city. The page itself stays at
 717 of 720 KB. Tests: test/perf.test.js.
+
+## 2026-10-10 · Rest spots in the wilds, fireflies, and no hunting camp signs (tasks #341, #342, #396)
+
+The owner: "remove the hunting camp signs at campsites; add little campfire spots far out in the wilderness away from
+all development, usually off a trail, sometimes by a view, sometimes in the middle of nowhere, beautiful ambience";
+"more scenic campfire spots for players to find and relax at" (concepts CF2-A, CF2-B); and "occasional lightning-bug
+FX, rare and beautiful" (FX2: at night, rare, in natural areas and parks, sometimes at campfires).
+
+- **Rest spots** (`shared/restspots.js`, called at the end of the nature sites in `shared/naturesites.js`):
+  - Placed by rules, not coordinates, so they hold up when the land is rebuilt. A jittered grid of candidates over the
+    wild, rocky, desert and (only far out) rural districts. A candidate needs open ground with room for a clearing. It
+    must be far from anything built: paved ground, buildings, lots, fields, docks, the designed places, their camps,
+    the counters and the parking.
+  - Three kinds:
+    - **trail**: 3-8 strides off a hiking trail, a dirt road or a track. A footpath runs in to the fire.
+    - **view**: over water. Lakes and rivers count double; the sea below a bluff counts too.
+    - **wild**: the middle of nowhere, 1750 px or more from anything.
+  - Selection: the best of each kind (up to 7 / 12 / 5), at least 1500 px apart and 1000 px from any other campfire,
+    at most 5 to a district. Today's world gets 18: 6 views, 9 off trails and 3 in the middle of nowhere.
+  - Each spot is a dirt clearing with:
+    - a campfire (a ring of stones). About a third are still burning, as if someone just moved on.
+    - one or two seat logs.
+    - rocks and flowers round the edge (desert scrub in the desert).
+  - The wild trees keep off them (reserve bit 32). The fires are ordinary campfire props, so they work like every other
+    one: light it, sit and heal, the calm HUD, the embers and the haze.
+  - `m.restSpots` lists them.
+  - Once the whole world is built (`shared/map.js`), a spot that something was built near afterwards (a den on a rocky
+    islet) is taken away again: its props become painted placeholders, and `m.restSpots` keeps the rest.
+- **No hunting camp signs:** the two hunting camps lose their "HUNTING CAMP" board. The outfitters, the tents and the
+  fire stay. The trappers and the game butcher keep their signs.
+- **Fireflies** (`client/render/fireflies.js`; client-only):
+  - Loading: lazily, the first night (`client/main.js`), never on Low.
+  - Placement:
+    - Fireflies come out on about two nights in three.
+    - On those nights, roughly one 12-tile cell of open grass in a hundred (wild, rural, park or rocky ground) holds a
+      glade of 3-6.
+    - A campfire out in the green often has some round it, a rest spot's most of all (70%).
+    - It is a hash of the place and the day: the same for everyone that night, a different scatter the next.
+  - Motion: each fly drifts lazily round its spot, rising and settling, and blinks every few seconds out of step with
+    the rest: an eight-step glow up and down (FX2's eight frames), drawn additive as a soft yellow-green glow with a
+    bright core.
+  - Cost:
+    - a small pool (at most 14 alive on High and Ultra, 8 on Medium), nearest glades first. A fly that goes away
+      fades out and goes back to the pool.
+    - each grid cell's answer is kept for the night.
+    - none by day, in the rain, underground or indoors.
+- **Tests:**
+  - `test/restspots.test.js` (3 new): every kind of spot, each a dirt clearing with a fire, a seat log and rocks, out
+    in the wilds, clear of buildings and anything paved, trail spots near a trail, view spots over water, spaced
+    apart; a rest spot's fire lights, and sitting there heals; the hunting camps have no sign and are still there.
+  - `test/fireflies.test.js` (3 new): fireflies round a rest spot on a night they're out, under the cap, blinking;
+    gone by day and back in the pool, reused; fewer on Medium, none on Low or in the rain; rare and only in natural
+    places, the same on a night and different the next; not in main.js's static imports.
+  - These pass as before: `test/campfires.test.js`, `test/hunting.test.js`, `test/nature.test.js`,
+    `test/dmath.test.js`.
