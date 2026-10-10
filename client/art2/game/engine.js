@@ -80,7 +80,7 @@
 //   precision, so pass camX/camY as the player's position rounded to that grid (+ the smooth look-ahead) to keep
 //   the player steady.
 //   Decals on decks need z0. Lights are world px; static lights from chunks must be added each frame.
-import { F_GROUND, F_LEAF, packGBuf, octEncode, OCT_MID, downsample2, downsampleUnder, ART_PX, CHUNK_RUN } from '../gbuf.js';
+import { F_GROUND, F_LEAF, F_WET, packGBuf, octEncode, OCT_MID, downsample2, downsampleUnder, ART_PX, CHUNK_RUN } from '../gbuf.js';
 import { LightGame, LIGHT_TIERS, MAX_LIGHTS, LIGHT_FLOATS, PRESETS_GAME, PRESET_DEFAULTS, blendPresets, glProgram, glTex, glFbo, TRI_VS, GLSL_COMMON } from './lightgame.js';
 import { canopyReach } from './canopy.js';
 export { PRESETS_GAME, PRESET_DEFAULTS, blendPresets, LIGHT_TIERS, ART_PX };
@@ -174,13 +174,32 @@ function wn(gx, gy, c) {
 const sst = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 // swayAt: the same wind in JS (the tests): at world point (x, y), with the wind W [strength, gustiness, dx, dy], the
 // gust patches' travel G (wind.js gd) and the flutter clock ft -> { g: the gust there 0..1, pw: the wind's push, pi:
-// the idle sway } (STATIC_FS leans a leaf by (pw + pi) x how high it stands)
+// the idle sway } (STATIC_FS leans a leaf by (pw + pi) x how high it stands: leanOf)
 export function swayAt(x, y, W, G, ft) {
   const s = W[0], g = sst(0.42, 0.78, wn((x - G[0]) / 512, (y - G[1]) / 512, 0)) * sst(0.3, 0.72, wn((x - G[2]) / 256, (y - G[3]) / 256, 1));
   const tp = wn(x / 230, y / 230, 2), tq = sst(0.2, 0.8, wn(x / 230, y / 230, 3)), cp = wn(x / 26 + 61.5, y / 26 + 61.5, 2), am = 0.4 + 1.2 * tq, f = (k) => 2 * Math.PI * k / 256;
   const pw = s * ((1 - W[1]) * 0.6 + W[1] * g * 1.4) * W[2] * (0.7 + 0.45 * am);
   const pi = ((Math.sin(ft * f(37) + tp * 12.6) * (1 - tq) + Math.sin(ft * f(59) + tp * 8.4 + 1.7) * tq) * 0.3 * am + Math.sin(ft * f(29) + tp * 6.3 + cp * 6.28) * 0.12 + Math.sin(ft * f(131) + cp * 25.1) * 0.06) * (0.6 + s);
   return { g, pw, pi };
+}
+// What leans in the wind, and how far (gbuf.js "What sways"): only foliage (F_LEAF) - never rock, wood or anything
+// else. leanAmp: how far a leaf texel at height h (flags f) leans for a push of 1, in world px. Ground cover - grass
+// and crops - and the plants growing on rock (F_ROCKLEAF) lean by their tips, at most the ground cover's TIP_AMP, and
+// take a little of the idle sway (LOW_IDLE): a tuft on a cliff top sways as one on the ground does, whatever the
+// height of the rock under it (task #425: it swung like the top of a tree that tall). Foliage on the ground leans
+// more the higher it stands, so a crown sways over its trunk. leanOf: the whole art pixels a leaf texel leans (at
+// most R). STATIC_FS's ampOf and leanOf are these, in GLSL, from the same numbers.
+const LOW_SWAY = F_GROUND | F_WET;   // (foliage with either: ground cover, the plants on rock)
+const SW = { tipH: 7, tipAmp: 1.6, crown0: 10, crownH: 70, crownMax: 1.4, crownAmp: 2.2, lowIdle: 0.4 };
+const glf = (v) => (Number.isInteger(v) ? v.toFixed(1) : String(v));
+export function leanAmp(h, f) {
+  if (!(f & F_LEAF)) return 0;
+  return f & LOW_SWAY ? Math.min(1, Math.max(0, h / SW.tipH)) * SW.tipAmp : Math.min(SW.crownMax, Math.max(0, (h - SW.crown0) / SW.crownH)) * SW.crownAmp;
+}
+export function leanOf(pw, pi, h, f, R, ap = ART_PX) {
+  if (!(f & F_LEAF)) return 0;
+  const k = f & LOW_SWAY ? SW.lowIdle : 1, v = Math.round((pw + pi * k) * leanAmp(h, f) / ap);   // (GLSL round: halves away from 0 - the same but at exact halves)
+  return Math.max(-R, Math.min(R, v));
 }
 const STATIC_FS = (AP) => HDR + `
 #define AP ${AP}
@@ -194,11 +213,11 @@ vec4 wn(vec2 g){ vec2 i = floor(g), f = g - i; return textureLod(tN, (i + 0.5 + 
 float gustAt(vec2 w){
   return smoothstep(0.42, 0.78, wn((w - uGust.xy) / 512.0).r) * smoothstep(0.3, 0.72, wn((w - uGust.zw) / 256.0).g);
 }
-// how far a leaf texel at height h leans for a push of 1 (texels): grass and crops at their tips, foliage
-// more the higher it stands
-float ampOf(float h, int f){ return (f & ${F_GROUND}) != 0 ? clamp(h / 7.0, 0.0, 1.0) * 1.6 : clamp((h - 10.0) / 70.0, 0.0, 1.4) * 2.2; }
+// how far a leaf texel at height h leans for a push of 1 (world px): ground cover and the plants on rock at their
+// tips, foliage more the higher it stands (leanAmp, leanOf)
+float ampOf(float h, int f){ return (f & ${LOW_SWAY}) != 0 ? clamp(h / ${glf(SW.tipH)}, 0.0, 1.0) * ${glf(SW.tipAmp)} : clamp((h - ${glf(SW.crown0)}) / ${glf(SW.crownH)}, 0.0, ${glf(SW.crownMax)}) * ${glf(SW.crownAmp)}; }
 int leanOf(float pw, float pi, float h, int f, int R){
-  float k = (f & ${F_GROUND}) != 0 ? 0.4 : 1.0;
+  float k = (f & ${LOW_SWAY}) != 0 ? ${glf(SW.lowIdle)} : 1.0;
   return clamp(int(round((pw + pi * k) * ampOf(h, f) / float(AP))), -R, R);
 }
 void main(){

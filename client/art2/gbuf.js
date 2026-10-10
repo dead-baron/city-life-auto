@@ -13,6 +13,18 @@ export const F_GROUND = 1, F_WATER = 2, F_NOCAST = 4, F_WET = 8, F_CHAR = 16, F_
 // down to its foot; a thin pixel only blocks the sun for rays that pass just behind it (lightgame.js THIN_D), so
 // a post casts its own shape along the ground from its base.
 export const F_THIN = F_CHAR;
+// What sways in the wind (engine.js STATIC_FS) is foliage, F_LEAF, and nothing else - never rock (task #425: the
+// columnar basalt cliffs swayed like the vegetation):
+//   - a tree's or a plant's foliage on the ground (F_LEAF): it leans more the higher it stands, so a crown sways
+//     over its trunk;
+//   - ground cover, grass and crops (F_GROUND | F_LEAF): by its tips;
+//   - F_ROCKLEAF: a plant growing on rock - a tuft on a ledge or a cliff top, a vine or kelp hanging off its lip, the
+//     grass on a sea arch. It sways as a plant on its own patch of ground does, not by how high the rock under it
+//     stands (a tuft on a cliff top swung like the top of a tree that tall, over the rock round it). F_WET: rain
+//     wets it like the ground; not F_GROUND, so the light doesn't take it for the ground (only these have the two
+//     without it);
+//   - moss and lichen on rock and stone are its crust - the rock's colour, not a plant that moves: no F_LEAF.
+export const F_ROCKLEAF = F_LEAF | F_WET;
 
 // One half of a sprite cut through (the plasma blade's kill): the pixels on one side ('a' or 'b') of the line through
 // their middle across their long axis, moved gap/2 px away from the other half, the cut edge glowing (a seared

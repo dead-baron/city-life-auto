@@ -25,7 +25,7 @@
 //   stoneBridge, roadBridge, footbridge, culvert, steppingStone, canoe
 // A bridge deck stands faceH above the water: place it with deckAt() so its deck lands on the road and its
 // face hangs down over the river (the river reads as running below the road).
-import { GBuf, F_GROUND, F_WATER, F_WET, F_NOCAST, F_LEAF, hash, vnoise, bayer, step, norm } from './gbuf.js';
+import { GBuf, F_GROUND, F_WATER, F_WET, F_NOCAST, hash, vnoise, bayer, step, norm } from './gbuf.js';
 import { MAT, ramp } from './palette.js';
 import { Vox } from './voxel.js';
 import { person } from './people.js';
@@ -450,7 +450,7 @@ export function fallModel(o = {}) {
     if (kind === 'weir') return (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5;
     return basaltShade(x, y, z, seed);
   } });
-  const moss = m.mat({ ramp: MOSS, k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
+  const moss = m.mat({ ramp: MOSS, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
   const wtop = m.mat({ ramp: WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 });
   const sheet = m.mat({ ramp: WATER.fall, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => {
     const col = Math.round(x), h = hash(col, 3, seed), u = (Hh - z) / (7 + h * 7) + frame.v / frames * (2 + Math.floor(h * 2)) * -1;
@@ -557,10 +557,12 @@ export function waterfallFrames(o = {}, n = 4) { const m = fallModel({ ...o, fra
 
 // ---- bridges and river works ----------------------------------------------------------------------------
 // a length of columnar basalt cliff (len along x, `depth` deep, h tall) with mossy tops and a ragged foot
+// (the moss on the columns' tops is the rock's crust: it holds still in the wind with the rock - gbuf.js "What sways";
+// task #425)
 export function cliffWall(len = 120, h = 60, depth = 40, seed = 1) {
   const m = new Vox(len, depth, h + 8);
   const rock = m.mat({ ramp: BASALT, k: 4, shade: (x, y, z) => basaltShade(x, y, z, seed) });
-  const moss = m.mat({ ramp: MOSS, k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
+  const moss = m.mat({ ramp: MOSS, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
   for (let y = 0; y < depth; y++) for (let x = 0; x < len; x++) {
     const c = cellPt(x + 0.5, y + 0.5, 11, seed + 7), top = Math.round(h + (c[1] - 0.5) * 20 - (y > depth - 18 ? (y - depth + 18) * 1.6 * c[1] : 0));
     const front = depth - 3 - c[1] * 14 + (vnoise(x, 1, 13, seed) - 0.5) * 6;
@@ -584,7 +586,7 @@ export function stoneBridge(len = 260, roadW = 96, faceH = 26, arches = 2, o = {
   const st = m.mat({ ramp: STONE, k: 3, shade: (x, y, z) => blocks(x, z) + (z < 5 ? -0.5 : 0) });
   const ring = m.mat({ ramp: R('#a89c8a', 7, 3, { dark: 0.58, light: 0.5 }), k: 3, shade: (x, y, z) => (hash(Math.round(Math.atan2(z, x) * 20), 1, seed) - 0.5) * 0.8 });
   const cope = m.mat({ ramp: R('#b4aa9a', 6, 3), k: 3, shade: (x) => (Math.round(x) % 14 === 0 ? -1 : 0) });
-  const moss = m.mat({ ramp: MOSS, k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.5 });
+  const moss = m.mat({ ramp: MOSS, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.5 });
   const deck = deckMats(m, d, par);
   // o.under: the arches' openings shut with the dark under the bridge and a line of water at its foot, on the face
   // (for a river drawn at the road's level, where nothing shows through the arch)
@@ -649,7 +651,7 @@ export function culvert(len = 180, roadW = 96, faceH = 26, r = 15, o = {}) {
   const cc = m.mat({ ramp: CONC, k: 3, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z / 3), 7) - 0.5) * 0.6 + (z < 6 ? -0.6 : 0) + (Math.round(z) % 9 === 0 ? -0.4 : 0) });
   const dark = m.mat({ ramp: R('#2a2e34', 5, 2), k: 1 }), lip = m.mat({ ramp: CONC, k: 4 });
   const wat = m.mat({ ramp: WATER.fall, k: 2, flag: F_WATER | F_NOCAST, shade: (x, y) => (hash(Math.round(x), Math.round(y), 2) - 0.5) * 1.6 });
-  const rail = m.mat({ ramp: MAT.metal, k: 3 }), moss = m.mat({ ramp: MOSS, k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.5 });
+  const rail = m.mat({ ramp: MAT.metal, k: 3 }), moss = m.mat({ ramp: MOSS, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.5 });
   const deck = deckMats(m, d, par), cx = len / 2;
   m.fill((x, y, z) => {
     if (y >= d) { // the headwall and wings in front of the road

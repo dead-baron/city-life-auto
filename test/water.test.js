@@ -3,8 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
-import { K, T } from '../shared/constants.js';
-import { ISLANDS } from '../shared/map.js';
+import { K, T, TILE } from '../shared/constants.js';
+import { ISLANDS, PED_BLOCK, isSwimming } from '../shared/map.js';
+import { pointAt } from '../shared/geom.js';
 import { GANG_JOIN_FEE, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, POACH_PAY } from '../shared/rules.js';
 import { OFFSHORE_FISH } from '../shared/items.js';
 import * as economy from '../server/systems/economy.js';
@@ -243,4 +244,61 @@ test('waterfront homes: a private pier and boathouse; moor a boat there and take
   assert.ok(!w.get(v.id), 'in the boathouse');
   assert.equal(p.ped.vehId, 0);
   assert.equal(w.map.tileAtPx(p.ped.x, p.ped.y), T.DOCK, 'you step off onto the pier');
+});
+
+// A bridge is two layers on one tile (map.js T.BRIDGE): the deck, reached from the road, and the water under it,
+// reached by swimming in (ped.under). A boat is always down on the water.
+test('out of a boat under a bridge: into the water under the deck, swimming - never up on it (task #381)', () => {
+  const w = makeWorld();
+  const m = w.map;
+  const { p } = joinPlayer(w);
+  const ped = p.ped;
+  const dryNear = (x, y, r) => {
+    for (let ty = Math.floor((y - r) / TILE); ty <= Math.floor((y + r) / TILE); ty++) for (let tx = Math.floor((x - r) / TILE); tx <= Math.floor((x + r) / TILE); tx++) {
+      const t = m.tileAt(tx, ty);
+      if (!PED_BLOCK[t] && t !== T.BRIDGE) return true;
+    }
+    return false;
+  };
+  let tried = 0, swam = 0, mid = null;
+  for (const e of m.edges) {
+    if (e.lvl !== 0 || !e.bridge) continue;
+    for (let s = 40; s < e.len - 40; s += 120) {
+      const q = pointAt(e.pts, s);
+      if (m.tileAtPx(q.x, q.y) !== T.BRIDGE) continue;
+      const boat = w.spawnVehicle('dinghy', q.x, q.y, Math.atan2(q.ty, q.tx), { npcOwned: false });
+      board(w, p, boat);
+      ped.under = false;   // (aboard from a pier)
+      vehicles.exitVehicle(w, ped);
+      tried++;
+      const t = m.tileAtPx(ped.x, ped.y);
+      assert.equal(ped.vehId, 0);
+      assert.equal(ped.lz || 0, 0, 'at the water\'s level');
+      assert.ok(t !== T.BRIDGE || isSwimming(m, ped), `out of a boat under the bridge at (${Math.round(q.x)}, ${Math.round(q.y)}): up on its deck`);
+      if (isSwimming(m, ped)) swam++;
+      if (!mid && t === T.BRIDGE && !dryNear(q.x, q.y, 200)) mid = q;
+      w.remove(boat);
+    }
+  }
+  assert.ok(tried > 40 && swam > tried / 2, `boats under the bridges: ${tried}, out into the water ${swam}`);
+  assert.ok(mid, 'a bridge with open water all round');
+  // mid-span: over the side, swimming under the deck, and still down there a second later
+  const boat = w.spawnVehicle('dinghy', mid.x, mid.y, Math.atan2(mid.ty, mid.tx), { npcOwned: false });
+  board(w, p, boat);
+  ped.under = false;
+  run(w, 0.2);
+  vehicles.exitVehicle(w, ped);
+  run(w, 1);
+  assert.equal(ped.vehId, 0);
+  assert.ok(isSwimming(m, ped), 'swimming under the bridge');
+  assert.equal(ped.lz || 0, 0);
+  // and out of a car on that bridge you're up on its deck, whatever you were doing before
+  const car = w.spawnVehicle('sedan', mid.x, mid.y, Math.atan2(mid.ty, mid.tx), { npcOwned: false });
+  const q = joinPlayer(w).p;
+  board(w, q, car);
+  q.ped.under = true;   // (swam under here earlier)
+  vehicles.exitVehicle(w, q.ped);
+  run(w, 0.5);
+  assert.equal(m.tileAtPx(q.ped.x, q.ped.y), T.BRIDGE, 'stepped out onto the deck');
+  assert.ok(!isSwimming(m, q.ped), 'out of a car on a bridge: on the deck, not in the water');
 });

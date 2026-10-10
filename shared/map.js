@@ -2821,31 +2821,53 @@ function buildPaintShops(m) {
 // plain building. Cruisers and police motorcycles wait inside; the sliding gate on the street
 // side opens only for officers. Officers who sign up walk out of the armory into the lot.
 export const POOL_MODELS = ['police', 'police', 'police', 'policebike', 'policebike'];
+// The railway's ground (reserveRail: the track bed and a train's width either side of it, the platforms): a motor pool
+// - its lot and the apron out to its road - never takes any of it. (One was carved out of the yard beside a station
+// with the line beside it, and the trains ran through its lot: task #419.)
+const onRailway = (m, tx, ty) => tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H && (m.reserve[ty * MAP_W + tx] & 2) !== 0;
+function railwayIn(m, x0, y0, w, h) {
+  for (let ty = y0; ty < y0 + h; ty++) for (let tx = x0; tx < x0 + w; tx++) if (onRailway(m, tx, ty)) return true;
+  return false;
+}
+// The apron a motor pool's gate opens onto (buildMotorPools: out from the gate row gy, across the lot's width inside
+// its corner posts, to the road at its middle or 9 tiles) is clear of the railway.
+function apronClear(m, x0, w, gy, south, isRoad) {
+  for (let k = 1; k <= 9; k++) {
+    const yy = south ? gy + k : gy - k;
+    if (isRoad(x0 + Math.floor(w / 2), yy)) return true;
+    if (railwayIn(m, x0 + 1, yy, w - 2, 1)) return false;
+  }
+  return true;
+}
+// The nearest plain building at most maxGap tiles from the station sb that a motor pool fits in, with a road on its
+// north or south side for the gate: { b, south } or null.
+function poolBuilding(m, sb, maxGap, isRoad) {
+  const used = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
+  let best = null, bd = Infinity;
+  for (const b of m.buildings) {
+    if (b.gone || b.prefab !== -1 || b.kind !== 'roof' || used.has(b.id) || b.tw < 8 || b.tw > 20 || b.th < 7 || (b.th < 12 && b.tw < 14)) continue; // (room for the cars)
+    const gapX = Math.max(0, b.tx - (sb.tx + sb.tw), sb.tx - (b.tx + b.tw));
+    const gapY = Math.max(0, b.ty - (sb.ty + sb.th), sb.ty - (b.ty + b.th));
+    if (gapX > maxGap || gapY > maxGap || railwayIn(m, b.tx, b.ty, b.tw, b.th)) continue;
+    // the gate goes on the short side that faces a road
+    const south = [1, 2, 3, 4, 5, 6].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty + b.th - 1 + k)) && apronClear(m, b.tx, b.tw, b.ty + b.th - 1, true, isRoad); // (across a wide pavement)
+    const north = [1, 2, 3, 4, 5, 6].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty - k)) && apronClear(m, b.tx, b.tw, b.ty, false, isRoad);
+    if (!south && !north) continue;
+    const d = Math.hypot(b.tx + b.tw / 2 - (sb.tx + sb.tw / 2), b.ty + b.th / 2 - (sb.ty + sb.th / 2));
+    if (d < bd) { bd = d; best = { b, south }; }
+  }
+  return best;
+}
 function buildMotorPools(m) {
   m.motorPools = [];
   const isRoad = (tx, ty) => { const t = m.tileAt(tx, ty); return t === T.ROAD || t === T.BRIDGE; };
   for (const st of m.pois.filter((q) => q.kind === 'police')) {
     const sb = m.buildings[st.b];
     if (!sb) continue;
-    const used = new Set(m.pois.map((q) => q.b).filter((b) => b !== undefined));
-    let best = null, bd = Infinity;
-    for (const b of m.buildings) {
-      if (b.gone || b.prefab !== -1 || b.kind !== 'roof' || used.has(b.id) || b.tw < 8 || b.tw > 20 || b.th < 7 || (b.th < 12 && b.tw < 14)) continue; // (room for the cars)
-      const gapX = Math.max(0, b.tx - (sb.tx + sb.tw), sb.tx - (b.tx + b.tw));
-      const gapY = Math.max(0, b.ty - (sb.ty + sb.th), sb.ty - (b.ty + b.th));
-      if (gapX > 3 || gapY > 3) continue;
-      // the gate goes on the short side that faces a road
-      const south = [1, 2, 3, 4, 5, 6].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty + b.th - 1 + k)); // (across a wide pavement)
-      const north = [1, 2, 3, 4, 5, 6].some((k) => isRoad(b.tx + Math.floor(b.tw / 2), b.ty - k));
-      if (!south && !north) continue;
-      const d = Math.hypot(b.tx + b.tw / 2 - (sb.tx + sb.tw / 2), b.ty + b.th / 2 - (sb.ty + sb.th / 2));
-      if (d < bd) { bd = d; best = { b, south }; }
-    }
-    if (!best) {
-      // no plain building next door: take the yard beside the station instead
-      best = carvePoolLot(m, sb);
-      if (!best) continue;
-    }
+    // a plain building next door; else the yard beside the station; else (no room beside it - the railway along its
+    // back) a plain building across the street
+    const best = poolBuilding(m, sb, 3, isRoad) || carvePoolLot(m, sb) || poolBuilding(m, sb, 16, isRoad);
+    if (!best) continue;
     const { b, south } = best;
     if (b.roof >= 0 && m.roofs[b.roof]) m.roofs[b.roof].gone = true;
     b.kind = 'motorpool'; b.name = 'Motor Pool'; b.roof = -1;
@@ -2909,13 +2931,14 @@ function carvePoolLot(m, sb) {
     spots.push([sb.tx + dx, sb.ty + sb.th + dy - 4, w, h]);
     spots.push([sb.tx + dx, sb.ty - dy - h + 4, w, h]);
   }
+  const isRoad = (tx, ty) => { const t = m.tileAt(tx, ty); return t === T.ROAD || t === T.BRIDGE; };   // (the apron's road: buildMotorPools)
   for (const [x0, y0, w, h] of spots) {
     {
-      let ok = true;
+      let ok = !railwayIn(m, x0, y0, w, h);
       for (let ty = y0; ty < y0 + h && ok; ty++) for (let tx = x0; tx < x0 + w; tx++) { const t = m.tileAt(tx, ty); if (t === T.ROAD || t === T.BRIDGE || t === T.WATER || t === T.DEEP || keep(m.bld[ty * MAP_W + tx])) ok = false; }
       if (!ok) continue;
-      const south = [1, 2, 3, 4, 5, 6, 7, 8, 9].some((k) => { const t = m.tileAt(x0 + 4, y0 + h - 1 + k); return t === T.ROAD; }); // (across a forecourt and a wide pavement)
-      const north = [1, 2, 3, 4, 5, 6, 7, 8, 9].some((k) => { const t = m.tileAt(x0 + 4, y0 - k); return t === T.ROAD; });
+      const south = [1, 2, 3, 4, 5, 6, 7, 8, 9].some((k) => { const t = m.tileAt(x0 + 4, y0 + h - 1 + k); return t === T.ROAD; }) && apronClear(m, x0, w, y0 + h - 1, true, isRoad); // (across a forecourt and a wide pavement)
+      const north = [1, 2, 3, 4, 5, 6, 7, 8, 9].some((k) => { const t = m.tileAt(x0 + 4, y0 - k); return t === T.ROAD; }) && apronClear(m, x0, w, y0, false, isRoad);
       if (!south && !north) continue;
       clearArea(m, x0, y0, w, h);
       const bid = m.buildings.length;

@@ -19,7 +19,7 @@
 //   veg:    { kind: 'grass'|'shrub'|'flowers'|'dry', density, band, inner }   tufts on ledges and tops
 //   hang:   { kind: 'moss'|'vine'|'kelp', amount }   growth hanging down the faces from their lips
 // Sprites: boulder, outcrop, rockSprite, stalagmite, crystals (emissive), seaStack.
-import { GBuf, F_GROUND, F_WATER, F_WET, F_LEAF, F_NOCAST, hash, vnoise, bayer } from './gbuf.js';
+import { GBuf, F_GROUND, F_WATER, F_WET, F_LEAF, F_ROCKLEAF, F_NOCAST, hash, vnoise, bayer } from './gbuf.js';
 import { ramp } from './palette.js';
 import { distSq } from './scene.js';
 import { groundPixel } from './ground.js';
@@ -327,7 +327,7 @@ export class Terrain {
         const L = (hash(X >> 1, Y, op.seed + 51) * 0.6 + 0.4) * (h0 - h1) * (hg.kind === 'kelp' ? 0.85 : 0.45) * (0.4 + (cov - (1 - (hg.amount ?? 0.4))) * 3);
         if (v < L && hash(X, z, op.seed + 52) > 0.12) {
           const R = hg.kind === 'kelp' ? KELP : hg.kind === 'vine' ? VINE : MOSS, t = 0.6 - v / Math.max(1, L) * 0.35 + (hash(X, z >> 1, op.seed) - 0.5) * 0.35 + ((X + (z >> 2)) % 3 === 0 ? -0.15 : 0);
-          G.put(X, s, pickR(R, clamp(t), X, s), nz3(ox * 0.6, oy * 0.6, 0.7), z, null, F_LEAF);
+          G.put(X, s, pickR(R, clamp(t), X, s), nz3(ox * 0.6, oy * 0.6, 0.7), z, null, R === MOSS ? 0 : F_ROCKLEAF);   // (vines and kelp sway as plants on rock; moss is the rock's crust: gbuf.js)
           return;
         }
       }
@@ -499,8 +499,9 @@ function rockFace(T, op, X, Y, z, h0, h1) {
 }
 
 // ---- tufts on ledges -----------------------------------------------------------------------------------
+// (plants on the rock: F_ROCKLEAF - they sway as on their own patch of ground, not by the rock's height: gbuf.js)
 function tuft(G, x, sy, h, kind, r, v) {
-  const put = (px, py, c, up, n = [0, 0.3, 0.95]) => { if (!G.inside(px, py)) return; G.put(px, py, c, n, h + up, null, F_LEAF); };
+  const put = (px, py, c, up, n = [0, 0.3, 0.95]) => { if (!G.inside(px, py)) return; G.put(px, py, c, n, h + up, null, F_ROCKLEAF); };
   if (kind === 'shrub' || kind === 'sage' || kind === 'flowers' && r < 0.3) {
     const rad = 1 + Math.floor(r * (v.size ?? 3)), R = kind === 'shrub' ? SHRUB : kind === 'sage' ? (r > 0.5 ? SAGEV : DRY) : LEAF;
     for (let dy = -rad * 2; dy <= 1; dy++) for (let dx = -rad - 1; dx <= rad + 1; dx++) {

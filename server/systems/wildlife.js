@@ -25,9 +25,11 @@
 // leave a blood trail you can follow; the dangerous ones may turn and come at you. Every hit is noted for the
 // grade of the hide (fauna.js gradeOf; hunting.js). The farms' livestock (cows, sheep, horses, goats, pigs) just
 // graze round the farms and lumber off.
-import { K, T, TILE, MAP_W } from '../../shared/constants.js';
-import { PED_BLOCK, WATER_T, DISTRICTS, wildBiome } from '../../shared/map.js';
+import { K, T, TILE, MAP_W, PED_RADIUS } from '../../shared/constants.js';
+import { PED_BLOCK, SWIM_BLOCK, WATER_T, DISTRICTS, wildBiome } from '../../shared/map.js';
 import { pedStep, PED } from '../../shared/physics.js';
+import { circleVsObb } from '../../shared/math.js';
+import { sameLevel } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { SPECIES, YOUNG_SCALE, APOSE, huntClass, gradeOf } from '../../shared/fauna.js';
 import { inAnyView } from '../view.js';
@@ -582,9 +584,10 @@ function think(world, a, S, now, ph) {
     if (w.aware > 0.45 || th.s > 0.6) { flee(world, a, th.x, th.y, now, 3.5); alarmGroup(world, a, th.x, th.y, now); }
     return;
   }
-  // defensive / aggressive: hold the ground, warn, bluff, charge
+  // defensive / aggressive: hold the ground, warn, bluff, charge (not someone it found it can't get at: it stares)
   const warnAt = (S.warnAt || 120) * (w.withYoung ? 1.35 : 1), mad = temper === 'aggressive' || w.withYoung || w.hurtBy;
-  if (th.ped && d < warnAt * (mad ? 1 : 0.7)) {
+  if (th.ped && !canReach(w, th.id, now)) { if (w.state !== 'flee' && w.state !== 'alert') { setState(w, 'alert', now, 2); face(a, th.x, th.y); } }
+  else if (th.ped && d < warnAt * (mad ? 1 : 0.7)) {
     if (w.state !== 'warn' && w.bluffs < 2) { w.warnOf = th.id; setState(w, 'warn', now, 1.4 + rng()); face(a, th.x, th.y); return; }
     if (rng() < (S.charges || 0.3) * (mad ? 1.3 : 0.8)) { charge(world, a, th.id, now, w.bluffs < 1 && !mad && rng() < 0.5); return; }
     flee(world, a, th.x, th.y, now, 2.5); alarmGroup(world, a, th.x, th.y, now);
@@ -604,7 +607,7 @@ function preyCheck(world, a, S, ph, now) {
   let best = null, bd = 760;
   for (const p of world.players.values()) {
     const q = p.ped;
-    if (!q || q.dead || q.vehId || q.hidden || q.sub || !wildStyle(world.map, q.x, q.y)) continue;
+    if (!q || q.dead || q.vehId || q.hidden || q.sub || !wildStyle(world.map, q.x, q.y) || !canReach(w, q.id, now)) continue;
     const d = Math.hypot(q.x - a.x, q.y - a.y);
     if (d > bd) continue;
     let crowd = false;
@@ -650,7 +653,7 @@ function step(world, a, dt, now, ph) {
     }
   }
   if (now >= w.think) { w.think = now + 0.22 + rng() * 0.08; think(world, a, S, now, ph); }
-  let mx = 0, my = 0, speed = S.walk, pose = APOSE.auto, swim = !!S.swims;
+  let mx = 0, my = 0, speed = S.walk, pose = APOSE.auto, swim = !!S.swims, goal = Infinity;   // (goal: how far off where it's going is)
   const limp = a.hp < a.maxHp * 0.5 && !w.young ? 0.65 : 1;
   switch (w.state) {
     case 'flee': case 'scatter': case 'trotoff': {
@@ -659,7 +662,7 @@ function step(world, a, dt, now, ph) {
         setState(w, 'idle', now, 2 + rng() * 4); w.hx = a.x; w.hy = a.y; w.aware *= 0.5; break;   // settles where it ran to
       }
       if (now < (w.startle || 0)) { pose = APOSE.alert; face(a, w.fx, w.fy); break; }   // (the start: head up, a look)
-      let ang = fleeAngle(map, a, w, swim && w.kind !== 'deer', now) + (w.bias || 0);
+      let ang = fleeAngle(world, a, w, swim && w.kind !== 'deer', now) + (w.bias || 0);
       if (S.zig && w.state === 'flee') ang += Math.sin(now * 7 + a.id) * 0.7;   // a rabbit jinks
       mx = Math.cos(ang); my = Math.sin(ang);
       speed = (w.state === 'trotoff' ? S.trot : S.run) * limp * (w.young ? 0.85 : 1);
@@ -669,7 +672,7 @@ function step(world, a, dt, now, ph) {
       const mom = w.mother ? world.get(w.mother) : herdLead(world, a);
       if (!mom || mom === a || now > w.until) { setState(w, 'idle', now, 2); break; }
       const dx = mom.x - a.x, dy = mom.y - a.y, d = Math.hypot(dx, dy);
-      if (d > 26) { mx = dx / d; my = dy / d; speed = S.trot; } else setState(w, 'idle', now, 2);
+      if (d > 26) { mx = dx / d; my = dy / d; speed = S.trot; goal = d; } else setState(w, 'idle', now, 2);
       if (!w.young && rng() < 0.02) pose = APOSE.call;
       break;
     }
@@ -678,7 +681,7 @@ function step(world, a, dt, now, ph) {
       const q = world.get(w.tid);
       if (!q || now > w.until) { setState(w, 'idle', now, 2); break; }
       const dx = q.x - a.x, dy = q.y - a.y, d = Math.hypot(dx, dy);
-      if (d > 300) { mx = dx / d; my = dy / d; speed = S.walk * 1.2; } else { pose = APOSE.alert; face(a, q.x, q.y); }
+      if (d > 300) { mx = dx / d; my = dy / d; speed = S.walk * 1.2; goal = d; } else { pose = APOSE.alert; face(a, q.x, q.y); }
       break;
     }
     case 'warn': {   // stands its ground: rears, huffs, hisses, stamps
@@ -689,6 +692,7 @@ function step(world, a, dt, now, ph) {
         const d = q ? Math.hypot(q.x - a.x, q.y - a.y) : 999;
         // backed off: it settles; still coming on: it charges (or turns away)
         if (!q || q.dead || d > (S.warnAt || 120) * 1.15) { setState(w, 'alert', now, 3); w.bluffs = Math.max(0, w.bluffs - 1); }
+        else if (!canReach(w, q.id, now)) setState(w, 'alert', now, 2);   // (across a fence from it: it stares)
         else if (rng() < (S.charges || 0.3) + (w.withYoung ? 0.25 : 0)) charge(world, a, q.id, now, w.bluffs < 1 && rng() < 0.55);
         else { flee(world, a, q.x, q.y, now, 2.5); }
       }
@@ -700,7 +704,7 @@ function step(world, a, dt, now, ph) {
       const dx = q.x - a.x, dy = q.y - a.y, d = Math.hypot(dx, dy);
       pose = APOSE.charge;
       if (w.bluff && d < 70) { setState(w, 'warn', now, 1.5); w.warnOf = q.id; break; }   // a bluff: it pulls up short
-      mx = dx / d; my = dy / d; speed = S.run * limp;
+      mx = dx / d; my = dy / d; speed = S.run * limp; goal = d;
       if (d < (a.r || 12) + 20) { setState(w, 'attack', now, 2.5 + rng() * 2); w.attackOf = q.id; }
       break;
     }
@@ -713,7 +717,7 @@ function step(world, a, dt, now, ph) {
       }
       const dx = q.x - a.x, dy = q.y - a.y, d = Math.hypot(dx, dy);
       face(a, q.x, q.y); pose = APOSE.attack;
-      if (d > (a.r || 12) + 30) { mx = dx / d; my = dy / d; speed = S.run * 0.8; }
+      if (d > (a.r || 12) + 30) { mx = dx / d; my = dy / d; speed = S.run * 0.8; goal = d; }
       else if (now >= w.nextBite) bite(world, a, q, S, now);
       break;
     }
@@ -727,14 +731,14 @@ function step(world, a, dt, now, ph) {
       const watched = Math.cos(Math.atan2(-dy, -dx) - q.a) > 0.5 && d < 520;   // in front of them
       face(a, q.x, q.y);
       if (watched && d < 380) { pose = APOSE.alert; if (d < 200 && rng() < 0.012) { flee(world, a, q.x, q.y, now, 3); w.nextPrey = now + 120; } }   // seen: freeze (and maybe slip away)
-      else if (d > 130) { mx = dx / d; my = dy / d; speed = (S.stalk || S.walk * 0.7) * (d > 420 ? 1.8 : 1); pose = APOSE.stalk; }
+      else if (d > 130) { mx = dx / d; my = dy / d; speed = (S.stalk || S.walk * 0.7) * (d > 420 ? 1.8 : 1); pose = APOSE.stalk; goal = d; }
       else { charge(world, a, q.id, now, false); }
       break;
     }
     case 'towater': {
       const dx = w.wx - a.x, dy = w.wy - a.y, d = Math.hypot(dx, dy);
       if (d < 10 || wet(map, a.x, a.y) || now > w.until) { divesFrom(world, a, now); break; }
-      mx = dx / d; my = dy / d; speed = S.run;
+      mx = dx / d; my = dy / d; speed = S.run; goal = d;
       break;
     }
     case 'dive': {   // under the water: gone from sight, moving away under the surface; comes up again later
@@ -760,17 +764,24 @@ function step(world, a, dt, now, ph) {
     }
     case 'totree': {   // a squirrel up a tree: on the trunk, round the far side
       const tr = w.tree;
-      if (!tr) { setState(w, 'idle', now, 2); break; }
+      if (!tr || now > w.until) { setState(w, 'idle', now, 2); break; }
+      // (up it once it's at the trunk: its body - PED_RADIUS to the trunk's solid circle - never gets nearer than that;
+      // it used to run at the bark for good, task #422)
       const dx = tr.x - a.x, dy = tr.y - a.y, d = Math.hypot(dx, dy);
-      if (d > tr.r + 6) { mx = dx / d; my = dy / d; speed = S.run; }
-      else { setState(w, 'climb', now, 8 + rng() * 8); a.x = tr.x + (rng() - 0.5) * 6; a.y = tr.y + 2; a.vx = a.vy = 0; world.place(a); }
+      if (d > tr.r + PED_RADIUS + 5) { mx = dx / d; my = dy / d; speed = S.run; }
+      else { setState(w, 'climb', now, 8 + rng() * 8); a.x = tr.x + (rng() - 0.5) * 6; a.y = tr.y + 2; a.vx = a.vy = 0; w.sp = 0; w.pose = APOSE.climb; world.place(a); return; }
       break;
     }
-    case 'climb': pose = APOSE.climb; if (now > w.until && w.aware < 0.5) { setState(w, 'idle', now, 2); a.y += tr0(w) + 10; } break;
+    case 'climb': {   // up the trunk - off the ground, where nothing pushes it about - until it's sure it's safe
+      pose = APOSE.climb;
+      if (now > w.until && w.aware < 0.5) { setState(w, 'idle', now, 2); a.y += tr0(w) + 10; break; }
+      a.vx = a.vy = 0; w.sp = 0; w.pose = pose; world.place(a);
+      return;
+    }
     case 'walk': {
       const dx = w.wx - a.x, dy = w.wy - a.y, d = Math.hypot(dx, dy);
-      if (d < 8 || now > w.until) { setState(w, 'idle', now, 2 + rng() * 6); w.act = activityPose(w, S, map, a); break; }
-      mx = dx / d; my = dy / d; speed = w.slow ? S.walk * 0.7 : S.walk;
+      if (d < 8 || now > w.until) { setState(w, 'idle', now, 2 + rng() * 6); w.act = w.drink && d < 8 ? APOSE.drink : activityPose(w, S, map, a); break; }
+      mx = dx / d; my = dy / d; speed = w.slow ? S.walk * 0.7 : S.walk; goal = d;
       break;
     }
     case 'work': {   // a beaver at its pond: off to a tree on the bank to gnaw, back to the dam with a branch, into the lodge
@@ -794,14 +805,17 @@ function step(world, a, dt, now, ph) {
         if (now < w.scanUntil) pose = APOSE.alert;
       }
       if (now > w.until) wander(world, a, S, now, ph);
-      // the young and the flock keep near their leader
+      // the young and the flock keep near their leader (not while a fence or a wall is in the way: herdOff, giveUp)
       const lead = w.mother ? world.get(w.mother) : (!w.lead && w.herd ? herdLead(world, a) : null);
-      if (lead && lead !== a && !lead.dead) {
+      if (lead && lead !== a && !lead.dead && now >= (w.herdOff || 0)) {
         const dx = lead.x - a.x, dy = lead.y - a.y, d = Math.hypot(dx, dy), keep = w.young ? 34 : 90;
-        if (d > keep) { mx = dx / d; my = dy / d; speed = d > keep * 3 ? S.trot : S.walk; pose = APOSE.auto; }
+        if (d > keep) { mx = dx / d; my = dy / d; speed = d > keep * 3 ? S.trot : S.walk; pose = APOSE.auto; goal = d - keep * 0.5; }
       }
     }
   }
+  // round whatever's in its way - or, boxed in, it gives up what it was doing (task #422). (Not up a tree or to a beaver's
+  // tree on the bank: there it's the trunk it's going for. Under the water it keeps to the water: dive.)
+  if ((mx || my) && w.state !== 'totree' && w.state !== 'work' && w.state !== 'dive') [mx, my] = wayRound(world, a, w, mx, my, swim, goal, now);
   if (S.swims === 'float' && wet(map, a.x, a.y) && pose === APOSE.auto && Math.hypot(mx, my) < 0.1) pose = APOSE.float;
   w.pose = pose;
   const mv = moveLike(a, w, S.size, S.run, mx, my, speed, dt, now);
@@ -830,35 +844,144 @@ function moveLike(a, w, size, run, mx, my, speed, dt, now) {
   return sp > 0.5 ? [Math.cos(hd), Math.sin(hd), sp] : [0, 0, 0];
 }
 const wrapA = (x) => { while (x > Math.PI) x -= Math.PI * 2; while (x < -Math.PI) x += Math.PI * 2; return x; };
-// Going nowhere for half a second while it means to move (a trunk, a fence, a corner, the water's edge): that way
-// is blocked for a while (fleeAngle takes another) and a walk somewhere is given up for somewhere else.
+// Going nowhere for half a second while it means to move (whatever wayRound didn't see coming: a corner, another
+// animal, a car that pulled up): it gives that up (giveUp). (From an amble too: the farm animals walk at under 30 px/s,
+// and a cow that walked into its pasture's fence used to lean on it until it got bored - task #422.)
 function unstick(world, a, w, now) {
   const P = w.prog || (w.prog = { x: a.x, y: a.y, t: now, exp: 0 });
-  if ((w.sp || 0) > 30) {
+  if ((w.sp || 0) > 12) {
     P.exp += (w.sp || 0) * (now - (P.last ?? now));
     if (now - P.t > 0.5) {
-      if (Math.hypot(a.x - P.x, a.y - P.y) < P.exp * 0.3) {
-        w.blockA = w.hd; w.blockUntil = now + 1.5; w.fhAt = 0; w.stuck = (w.stuck || 0) + 1;
-        if (w.state === 'walk' || w.state === 'regroup' || w.state === 'follow' || w.state === 'work') setState(w, 'idle', now, 0.4 + rng() * 0.8);
-      } else w.stuck = 0;
+      if (Math.hypot(a.x - P.x, a.y - P.y) < P.exp * 0.3) giveUp(world, a, w, now);
+      else w.stuck = 0;
       P.x = a.x; P.y = a.y; P.t = now; P.exp = 0;
     }
   } else { P.x = a.x; P.y = a.y; P.t = now; P.exp = 0; }
   P.last = now;
 }
-// Which way to run: open ground (the tiles and the trunks and rocks along the way, ~200 px out) mostly away from the
-// threat, holding its line (no dithering), not back into a way it just found blocked, and not straight back past the
-// threat while it's close. Cornered - no way open away from it (a pocket of rocks, a fence corner, the shore) - it
-// takes the way out, past the threat at an angle if it must, and keeps to it until it's out. Re-chosen four times a
-// second (cornered: once it has had time to get out).
+// Blocked where it means to go (wayRound: boxed in, no nearer for going round, or right up against what's between it
+// and where it's going; unstick: going nowhere), it gives that up instead of pushing on into the wall (task #422):
+// that way is kept off for a while (fleeAngle takes another); a walk ends there (it picks somewhere it can get to
+// next: wander); a charge, an attack or a stalk on someone it can't get at is given up, and it won't come at them again
+// for UNREACH_S (it stares across at them instead); keeping up with its herd or its mother, it stays where it is a
+// while.
+const UNREACH_S = 8;
+const canReach = (w, id, now) => !(id && w.unreach === id && now < (w.unreachUntil || 0));
+function giveUp(world, a, w, now) {
+  w.blockA = w.hd ?? a.a; w.blockUntil = now + 1.5; w.fhAt = 0; w.stuck = (w.stuck || 0) + 1;
+  switch (w.state) {
+    case 'walk': case 'regroup': case 'follow': case 'work': case 'towater': case 'totree':
+      setState(w, 'idle', now, 0.4 + rng() * 0.8); break;
+    case 'charge': case 'attack': case 'stalk': {
+      w.unreach = w.state === 'charge' ? w.chargeOf : w.state === 'attack' ? w.attackOf : w.stalkOf;
+      w.unreachUntil = now + UNREACH_S;
+      if (w.state === 'stalk') { w.stalkOf = 0; w.nextPrey = now + 45; }
+      setState(w, 'alert', now, 1.5 + rng());
+      break;
+    }
+    case 'idle': w.herdOff = now + 4 + rng() * 4; break;
+    default: break;   // (running away: fleeAngle keeps off that way)
+  }
+}
+// A walk that has come right up against what's between it and where it was going (the water's edge it came down to
+// drink at): that's as near as it gets - it's there.
+function arrive(world, a, w, now) {
+  const S = SPECIES[w.kind];
+  setState(w, 'idle', now, S ? 2 + rng() * 6 : 3 + rng() * 9);
+  if (S) w.act = w.drink ? APOSE.drink : activityPose(w, S, world.map, a);
+}
+
+// ---- getting round things (task #422) ---------------------------------------------------------------------------
+// What's in an animal's way: the tiles it can't cross (walls and cliffs, buildings, the water for one that doesn't
+// swim, a highway's embankment: physics.js), the fences, trunks and rocks (solid props), and the vehicles standing
+// still (parked, a wreck; one on the move gets out of the way). Its body is as wide as physics.js makes everyone
+// (PED_RADIUS) - or its own size if that's bigger (what the cars push it by: vehicles.js).
+const bodyR = (a) => Math.max(PED_RADIUS, a.r || 10);
+function solidAt(map, x, y, block) {
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), lb = map.lvl0Block;
+  return !!block[map.tileAt(tx, ty)] || (!!lb && tx >= 0 && ty >= 0 && tx < map.w && ty < map.h && lb[ty * map.w + tx] === 1);
+}
+function propAt(map, x, y, r, minR = 0) {
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const arr = map.solidProps.get((ty + j) * MAP_W + tx + i);
+    if (arr) for (const p of arr) if (!p.off && p.r >= minR && Math.hypot(p.x - x, p.y - y) < p.r + r) return true;
+  }
+  return false;
+}
+// the vehicles standing still within reach of it (null: none)
+function parkedNear(world, a, reach) {
+  let out = null;
+  for (const v of world.query(a.x, a.y, reach + 130, K.VEH)) if (!v.removed && !v.fly && Math.abs(v.vx) + Math.abs(v.vy) < 40 && sameLevel(a.lz, v.lz)) (out ||= []).push(v);
+  return out;
+}
+const carAt = (cars, x, y, r) => { if (cars) for (const v of cars) if (circleVsObb(x, y, r, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2)) return true; return false; };
+// How far its body can go along heading t before it touches any of that (px, in 8 px steps up to max): the tiles under
+// its nose and either flank, and the props and cars round its middle.
+function clearRun(map, a, t, swims, max, cars = null) {
+  const c = Math.cos(t), s = Math.sin(t), R = bodyR(a), f = R - 2, block = swims ? SWIM_BLOCK : PED_BLOCK;
+  for (let d = 8; d <= max + 0.1; d += 8) {
+    const x = a.x + c * d, y = a.y + s * d;
+    if (solidAt(map, x + c * f, y + s * f, block) || solidAt(map, x - s * f, y + c * f, block) || solidAt(map, x + s * f, y - c * f, block)
+      || propAt(map, x, y, R - 1) || carAt(cars, x, y, R - 1)) return d - 8;
+  }
+  return max;
+}
+// Round what's in its way: blocked within `look` px, it turns along the obstacle - a wall, a fence, a building, a
+// trunk, a parked car - the first time toward whichever side is nearer where it means to go, then keeping to that
+// side until it's round (no dithering at a flat wall: the other side only if this one is shut). Boxed in every way it
+// could take (up to ~140 degrees off either side): null.
+function detour(map, a, w, ang, swims, look, now, cars) {
+  if (clearRun(map, a, ang, swims, look, cars) >= look) { if (now > (w.sideUntil || 0)) w.side = 0; return ang; }
+  // (no side yet: the smaller turn, either way; a side taken: that side first, the other only if it's shut)
+  for (let n = 0; n < 16; n++) {
+    const k = w.side ? 1 + (n & 7) : 1 + (n >> 1), sd = w.side ? (n < 8 ? w.side : -w.side) : (n & 1 ? -1 : 1), t = ang + sd * k * 0.3;
+    if (clearRun(map, a, t, swims, look, cars) >= look) { w.side = sd; w.sideUntil = now + 1.2; return t; }
+  }
+  return null;
+}
+// Its way (mx, my) toward somewhere `goal` px off (Infinity: just a heading - running away) round what's in it.
+// Walking somewhere and right up against what's between it and the spot (the water's edge it came down to drink at),
+// it's there (arrive). Boxed in, or going round for 3 s without getting any nearer (a fence too long to go round - its
+// herd on the far side of it, someone it was charging over a wall), it gives up what it was doing (giveUp) and stops.
+// Returns [mx, my].
+function wayRound(world, a, w, mx, my, swims, goal, now) {
+  const ml = Math.hypot(mx, my);
+  if (ml < 0.05) return [mx, my];
+  const look = Math.min(goal, 24 + Math.min(40, (w.sp || 0) * 0.15));
+  if (look < 6) return [mx, my];
+  const map = world.map, cars = parkedNear(world, a, look + 40), ang = Math.atan2(my, mx);
+  if (w.state === 'walk') {
+    const run = clearRun(map, a, ang, swims, look, cars);
+    if (run < look && goal - run <= bodyR(a) + 8) { w.slideAt = 0; arrive(world, a, w, now); return [0, 0]; }   // (as near as it gets)
+  }
+  const t = detour(map, a, w, ang, swims, look, now, cars);
+  if (t !== null && t !== ang && goal < Infinity) {
+    if (!w.slideAt || goal < w.slideBest - 20) { w.slideAt = now; w.slideBest = goal; }
+    else if (now - w.slideAt > 3) { w.slideAt = 0; giveUp(world, a, w, now); return [0, 0]; }
+  } else w.slideAt = 0;
+  if (t === null) { giveUp(world, a, w, now); return [0, 0]; }
+  return [Math.cos(t) * ml, Math.sin(t) * ml];
+}
+// a straight walk from where it is to (x, y), with nothing in the way and room for it there
+function openTo(world, a, x, y, swims) {
+  const d = Math.hypot(x - a.x, y - a.y);
+  return d < 12 || clearRun(world.map, a, Math.atan2(y - a.y, x - a.x), swims, d - 4, parkedNear(world, a, d)) >= d - 4;
+}
+// Which way to run: open ground (the tiles, the trunks and rocks and the cars standing along the way, ~200 px out)
+// mostly away from the threat, holding its line (no dithering), not back into a way it just found blocked, and not
+// straight back past the threat while it's close. Cornered - no way open away from it (a pocket of rocks, a fence
+// corner, the shore) - it takes the way out, past the threat at an angle if it must, and keeps to it until it's out.
+// Re-chosen four times a second (cornered: once it has had time to get out).
 const FLEE_CLEAR = new Float32Array(16);
-function fleeAngle(map, a, w, swims, now) {
+function fleeAngle(world, a, w, swims, now) {
   if (w.fh !== undefined && now < (w.fhAt || 0)) return w.fh;
+  const map = world.map, cars = parkedNear(world, a, 200);
   const away = Math.atan2(a.y - w.fy, a.x - w.fx), dTh = Math.hypot(a.x - w.fx, a.y - w.fy);
   let openAway = 0;
   for (let k = 0; k < 16; k++) {
     const t = away + (k / 16) * Math.PI * 2;
-    FLEE_CLEAR[k] = clearAlong(map, a, t, swims, 200);
+    FLEE_CLEAR[k] = clearAlong(map, a, t, swims, 200, cars);
     if (Math.cos(t - away) > 0.3) openAway = Math.max(openAway, FLEE_CLEAR[k]);
   }
   const cornered = openAway < 100;
@@ -880,16 +1003,11 @@ function fleeAngle(map, a, w, swims, now) {
   return best;
 }
 // how far it can go along heading t before something stops it (px, in 20 px steps up to max)
-function clearAlong(map, a, t, swims, max) {
-  const c = Math.cos(t), s = Math.sin(t), r = (a.r || 10) + 3;
+function clearAlong(map, a, t, swims, max, cars = null) {
+  const c = Math.cos(t), s = Math.sin(t), r = (a.r || 10) + 3, block = swims ? SWIM_BLOCK : PED_BLOCK;
   for (let d = 20; d <= max; d += 20) {
-    const x = a.x + c * d, y = a.y + s * d, tt = map.tileAtPx(x, y);
-    if (tt === T.WALL || tt === T.BUILDING || (!swims && WATER_T[tt])) return d - 20;
-    const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-      const arr = map.solidProps.get((ty + j) * MAP_W + tx + i);
-      if (arr) for (const p of arr) if (!p.off && p.r >= 5 && Math.hypot(p.x - x, p.y - y) < p.r + r) return d - 20;
-    }
+    const x = a.x + c * d, y = a.y + s * d;
+    if (solidAt(map, x, y, block) || propAt(map, x, y, r, 5) || carAt(cars, x, y, r)) return d - 20;
   }
   return max;
 }
@@ -924,8 +1042,17 @@ function wander(world, a, S, now, ph) {
     const bp = (map.beaverPonds || []).find((b) => Math.hypot(b.x - a.x, b.y - a.y) < 400);
     if (bp) { const tgt = rng() < 0.5 && bp.trees && bp.trees.length ? bp.trees[Math.floor(rng() * bp.trees.length)] : rng() < 0.5 ? bp.dam : bp.lodge; if (tgt) { w.wx = tgt.x + (rng() - 0.5) * 16; w.wy = tgt.y + (rng() - 0.5) * 16; setState(w, 'work', now, 10 + rng() * 8); return; } }
   }
-  // thirsty: down to the water
-  if (!S.swims && rng() < 0.12) { const t = waterDir(map, a.x, a.y, 260); if (t) { w.wx = t[0] - Math.cos(Math.atan2(t[1] - a.y, t[0] - a.x)) * 26; w.wy = t[1] - Math.sin(Math.atan2(t[1] - a.y, t[0] - a.x)) * 26; w.state = 'walk'; w.until = now + 10; w.act = APOSE.drink; return; } }
+  // thirsty: down to the water's edge - the shore that way, its nose at the water (it used to make for a spot out in the
+  // water, and wade into the edge of it until it gave up and drank where it stood: task #422)
+  if (!S.swims && rng() < 0.12) {
+    const t = waterDir(map, a.x, a.y, 260);
+    if (t) {
+      const ang = Math.atan2(t[1] - a.y, t[0] - a.x), c = Math.cos(ang), s = Math.sin(ang), nose = bodyR(a) + 4;
+      let d = 0;
+      while (d < 300 && !wet(map, a.x + c * (d + nose), a.y + s * (d + nose))) d += 6;
+      if (d < 300 && openTo(world, a, a.x + c * d, a.y + s * d, false)) { w.wx = a.x + c * d; w.wy = a.y + s * d; w.state = 'walk'; w.until = now + 10; w.act = APOSE.drink; w.drink = true; return; }
+    }
+  }
   for (let k = 0; k < 8; k++) {
     const ang = rng() * 6.28, r = 40 + rng() * 170;
     let tx = a.x + Math.cos(ang) * r, ty = a.y + Math.sin(ang) * r;
@@ -933,7 +1060,8 @@ function wander(world, a, S, now, ph) {
     const okT = S.swims === 'float' ? wet(map, tx, ty) : S.swims ? (wet(map, tx, ty) || ground(map, tx, ty)) : ground(map, tx, ty);
     if (!okT) continue;
     if (map.tileAtPx((a.x + tx) / 2, (a.y + ty) / 2) === T.ROAD && rng() < 0.85) continue;
-    w.wx = tx; w.wy = ty; w.state = 'walk'; w.until = now + 9; w.slow = rng() < 0.5;
+    if (!openTo(world, a, tx, ty, !!S.swims)) continue;   // (not the far side of a fence or a wall: task #422)
+    w.wx = tx; w.wy = ty; w.state = 'walk'; w.until = now + 9; w.slow = rng() < 0.5; w.drink = false;
     return;
   }
   w.until = now + 2;
@@ -951,25 +1079,27 @@ function stepLivestock(world, a, dt, now) {
     }
     for (const s of world.shotLog) if (now - s.t < 1.2 && Math.hypot(s.x - a.x, s.y - a.y) < 560) { w.state = 'flee'; w.fx = s.x; w.fy = s.y; w.until = now + 3; w.startle = 0; break; }
   }
-  let mx = 0, my = 0, speed = L.walk;
+  let mx = 0, my = 0, speed = L.walk, goal = Infinity;
   if (w.state === 'flee') {
     if (now > w.until) { w.state = 'idle'; w.until = now + 2 + rng() * 5; w.hx = a.x; w.hy = a.y; }
     else if (now < (w.startle || 0)) face(a, w.fx, w.fy);   // (a start: the head comes up)
-    else { const ang = fleeAngle(map, a, w, false, now); mx = Math.cos(ang); my = Math.sin(ang); speed = L.run; }
+    else { const ang = fleeAngle(world, a, w, false, now); mx = Math.cos(ang); my = Math.sin(ang); speed = L.run; }
   } else if (w.state === 'walk') {
     const dx = w.wx - a.x, dy = w.wy - a.y, d = Math.hypot(dx, dy);
-    if (d < 8 || now > w.until) { w.state = 'idle'; w.until = now + 3 + rng() * 9; } else { mx = dx / d; my = dy / d; }
+    if (d < 8 || now > w.until) { w.state = 'idle'; w.until = now + 3 + rng() * 9; } else { mx = dx / d; my = dy / d; goal = d; }
   } else if (now > w.until) {
     for (let k = 0; k < 8; k++) {
       const ang = rng() * 6.28, r = 40 + rng() * 140;
       let tx = a.x + Math.cos(ang) * r, ty = a.y + Math.sin(ang) * r;
       if (Math.hypot(tx - w.hx, ty - w.hy) > LEASH) { tx = a.x + (w.hx - a.x) * 0.4; ty = a.y + (w.hy - a.y) * 0.4; }
       if (!ground(map, tx, ty) || map.tileAtPx((a.x + tx) / 2, (a.y + ty) / 2) === T.ROAD) continue;
+      if (!openTo(world, a, tx, ty, false)) continue;   // (not through the pasture's fence: task #422)
       w.wx = tx; w.wy = ty; w.state = 'walk'; w.until = now + 8;
       break;
     }
     if (w.state !== 'walk') w.until = now + 2;
   }
+  if (mx || my) [mx, my] = wayRound(world, a, w, mx, my, false, goal, now);   // (round what's in its way: task #422)
   w.pose = w.state === 'idle' && L.graze ? APOSE.graze : w.state === 'flee' && now < (w.startle || 0) ? APOSE.alert : APOSE.auto;
   const mv = moveLike(a, w, w.kind === 'cow' || w.kind === 'horse' ? 'large' : 'medium', L.run, mx, my, speed, dt, now);
   const mods = players.pedMods(world, a);
@@ -1012,7 +1142,7 @@ export function onHurt(world, a, attacker) {
   if (!S) { w.state = 'flee'; w.fx = sx; w.fy = sy; w.until = now + 3; alarmGroup(world, a, sx, sy, now); return; }
   // the dangerous ones may turn on you
   const turn = attacker && attacker.kind === K.PED && !attacker.vehId && (S.hurtCharge || ((S.temper === 'defensive' || S.temper === 'aggressive' || w.predator) ? (S.charges || 0.3) : S.size === 'large' ? (S.charges || 0) * 0.5 : 0));
-  if (turn && rng() < turn && a.hp > a.maxHp * 0.25 && w.state !== 'fly' && w.state !== 'dive') { w.hurtBy = attacker.id; charge(world, a, attacker.id, now, false); alarmGroup(world, a, sx, sy, now); return; }
+  if (turn && rng() < turn && a.hp > a.maxHp * 0.25 && w.state !== 'fly' && w.state !== 'dive' && canReach(w, attacker.id, now)) { w.hurtBy = attacker.id; charge(world, a, attacker.id, now, false); alarmGroup(world, a, sx, sy, now); return; }
   flee(world, a, sx, sy, now, 3.5, true);
   alarmGroup(world, a, sx, sy, now);
   if (a.hp < a.maxHp * 0.5) a.limpUntil = now + 999;   // (the limp: the client's blood trail and a slower run)

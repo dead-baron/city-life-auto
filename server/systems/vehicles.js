@@ -1,5 +1,5 @@
 // Vehicle physics, seats (multi-passenger binding), collisions, ped strikes, wrecks.
-import { K, VF, WEATHER } from '../../shared/constants.js';
+import { K, T, VF, WEATHER } from '../../shared/constants.js';
 import { ugMapOf } from '../../shared/underground.js';
 import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
@@ -465,19 +465,24 @@ function sideSpot(v, ped) {
 }
 
 // toward: a place they're heading for (a crew going to someone hurt): out on the side nearest it, so the vehicle
-// isn't standing between them and it
+// isn't standing between them and it.
+// A bridge tile is two layers (map.js T.BRIDGE): the deck up top and the water under it. A boat is down on the water,
+// so from a boat a bridge is no place to step out onto (task #381: it put you up on the deck from under it) - only
+// dry ground or a pier is; failing that it's over the side into the water (ejectPed: under the deck, swimming).
 function findExitSpot(world, v, ped, maxR, toward = null) {
   const hw = v.def.W / 2 + 16, hl = v.def.L / 2 + 16;
   if ((v.lz || 0) > 0.3) return null; // up on the deck: step out beside it (the barriers keep you on)
   const cands = [[0, -hw], [0, hw], [-hl, 0], [hl, 0], [-hl / 2, -hw], [-hl / 2, hw]].map(([lx, ly]) => localToWorld(v.x, v.y, v.a, lx, ly));
   const M = v.ug ? ugMapOf(world.map) || world.map : world.map;   // (the cave's boat: its own rock and banks - shared/underground.js)
+  const boat = v.def.kind === 'boat';
+  const open = (x, y) => { const t = M.tileAtPx(x, y); return !PED_BLOCK[t] && !(boat && t === T.BRIDGE); };
   if (toward) cands.sort((a, b) => Math.hypot(a[0] - toward.x, a[1] - toward.y) - Math.hypot(b[0] - toward.x, b[1] - toward.y));
-  for (const [x, y] of cands) if (!PED_BLOCK[M.tileAtPx(x, y)]) return { x, y };
+  for (const [x, y] of cands) if (open(x, y)) return { x, y };
   for (let r = 48; r <= maxR; r += 16) {
     for (let k = 0; k < 16; k++) {
       const ang = (k / 16) * Math.PI * 2;
       const x = v.x + Math.cos(ang) * r, y = v.y + Math.sin(ang) * r;
-      if (!PED_BLOCK[M.tileAtPx(x, y)]) return { x, y };
+      if (open(x, y)) return { x, y };
     }
   }
   return null;
@@ -491,6 +496,9 @@ export function ejectPed(world, ped, force, toward = null) {
     // nowhere dry nearby (out on the water): over the side, into the water beside the vehicle
     const spot = findExitSpot(world, v, ped, v.def.kind === 'boat' ? 150 : force ? 400 : 150, toward) || sideSpot(v, ped);
     ped.x = spot.x; ped.y = spot.y; ped.lz = v.lz || 0;
+    // which layer of a bridge you're on (physics.js ped.under): out of a boat it's the water's - under a bridge, in the
+    // water beneath the deck, swimming (task #381); out of anything else on a bridge, its deck
+    ped.under = v.def.kind === 'boat';
     if (ped.lz > 0.3) levelStep(world.map, ped, 11);
     ped.a = v.a;
     if (ped.player) { ped.player.meDirty = true; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }

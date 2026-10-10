@@ -4882,3 +4882,70 @@ The owner wants the game's music designed together. They write notes and send re
   Measured with the same analysis as the references, each lands on its target's tempo, key and balance.
 - **Rendering** (`tools/render-music.mjs <song>`): writes a WAV in about 5-12 s.
 - **Not in the game yet.** The studio isn't loaded anywhere, so startup code and budgets are unchanged. Next: render songs in a worker the first time they're needed, play them as one source per speaker, and run radio stations synced by the server (station, song, start time).
+
+## 2026-10-09 · Out of a boat under a bridge you're in the water, not up on the deck (task #381)
+The owner: "Getting out of a boat under a bridge puts you on the bridge deck above."
+- **What it was:** a bridge is two layers on one tile (`T.BRIDGE`): the deck, reached from the road, and the water under it, reached by swimming in (`ped.under`, `shared/physics.js`). Getting out of a vehicle looks for a spot beside it that people can walk on (`server/systems/vehicles.js findExitSpot`). A bridge tile counts, because it's the deck. So out of a boat under a bridge you were put on the deck beside you, with nothing saying you were down in the water. Within 150 px of a bridge it was the same: the nearest "dry" spot was its deck.
+- **Now:** from a boat, a bridge tile is no place to step out onto; only dry ground or a pier is. A boat at the bank under a bridge's end still puts you ashore. With none in reach, it's over the side ("Over the side - swim for it!"). Anyone out of a boat is at the water's level (`ejectPed` sets `under`), so under a bridge you're swimming beneath the deck and swim out from under it. Out of a car or a bike on a bridge you're on its deck, as before, even if you'd swum under it earlier.
+- **Tests:** `test/water.test.js` (1 new): a boat stopped every 120 px along every road bridge (213 places), and you get out. You're never up on a deck and always at the water's level: in the water under the deck at 162, ashore near a bridge's end at the rest. Mid-span with open water all round, it's over the side, and you're still swimming under the bridge a second later. Out of a car on that bridge, you're on the deck, not in the water. It fails without the change (onto the deck at the first bridge).
+
+## 2026-10-09 · Ambulances never drive over anyone lying on the ground, and pull up short of the patient and to one side (task #435)
+The owner: "Ambulances will still drive over an NPC or player that is hurt on the ground. They should park a bit away (not too far), just far enough away that they don't keep parking on top of downed NPCs or downed players."
+- **What it was** (`server/systems/ems.js`):
+  - The crew got out the moment the ambulance was near enough (its middle within 150 px of the patient), while it was still doing about 145 px/s. A vehicle nobody's driving coasts (`vehicles.js`), so it rolled on another 120 px or so with the doors open, towards the patient it had been driving at, and onto them.
+  - It drove for the kerb nearest the patient. For someone lying in the road, that's where they lie.
+  - Nothing it drove past counted anyone on the ground: the AI drivers' look-ahead skips bodies (`traffic.js obstacleSpeed`). It drove over anyone in its way, and waited in a queue behind another ambulance on top of a casualty.
+- **It stops, then the doors open:** it pulls up on the brakes with the driver at the wheel, and the paramedics get out once it's standing.
+- **Where it pulls up** (`parkSpot`): on the patient's street, facing the way it came.
+  - Alongside them with the nose level with them where the road's wide enough; otherwise in line and short of them.
+  - Always 34 px (`CLEAR`, half a body and a bit) off them and anyone else lying there, and off parked cars, posts, walls and water.
+  - Never off the end of the street, never behind where it is (no turning back), and at most 300 px further back.
+  - Looked at again every second on the way in: someone else going down there moves it.
+- **On the way in and out** (`lyingInWay`): it looks along its route, and the way it's moving (the start of a turn, backing up), for anyone lying on the ground it would come within 34 px of, and slows to stop short of them.
+  - Someone at the patient's scene (within 220 px of them): it pulls up short of them, and the paramedics walk.
+  - Anyone else: it goes round them on the side that's clear, if there's room (`skirt`). Otherwise it stops, and after a while pulls up where it is and they walk, as before.
+- **Going round something stopped** (`reroute.js stripClear`, any siren or bus): a strip with someone lying in it isn't clear. An ambulance went round a stopped car and over the casualty beside it.
+- **Tests:** `test/ems.test.js` (1 new): on a wide avenue, the patient lies in a lane, someone else is down just past them, and someone lies right on the ambulance's route on its way in.
+  - Every tick it stays more than 10 px from anyone lying there; the nearest it came was 38 px.
+  - It goes round the one on its way, and has stopped (0 px/s) when the doors open: 46 px from the patient, short of them and 76 px to one side.
+  - The paramedics treat them and load them, and it drives off past the other one.
+  - It fails without the change (it drove over the one on its way in). The paid-ambulance and stretcher tests pass as before.
+
+## 2026-10-09 · Animals go round walls and fences, or give up and go another way - they don't push into them (task #422)
+The owner: "Animals still get stuck trying to run through walls so we should add some better intelligence to them so they don't just infinitely try to break through a wall or fence or something."
+- **What it was** (`server/systems/wildlife.js`): an animal headed straight for wherever it was going, and only noticed it was stuck once it had gone nowhere for half a second (`unstick`). That gave up a walk, and kept a running animal off that way for a moment. But:
+  - nothing else was given up: a fawn or a herd animal whose leader was over a fence, a bear charging someone across a wall, a predator stalking them, leaned on it for as long as that lasted (a fawn by a wall from its mother: 10 s and counting);
+  - the farm animals amble at under 30 px/s, too slow for it to notice: a cow that walked into its pasture's fence leaned on it until the walk timed out (8 s), then often picked another spot past the fence;
+  - the spots it picked to walk to could be on the far side of a fence or a wall, and a walk down to drink made for a spot out in the water;
+  - a squirrel bolting up a tree could never get close enough to the trunk to climb it (its body stops a trunk's width plus its own off the middle), so it ran at the bark for good.
+  Measured with every animal round four pastures, and in the Granite Peaks, Highland Woods, Cedar Farms and Dry Creek Desert, for a minute each: 256 s of running on the spot in all (cows at the pasture fences, squirrels at the trees, a fawn at a fence).
+- **It looks where it's going** (`wayRound`): before each step it checks the way ahead for its body: the tiles it can't cross (walls, cliffs, buildings, water for those that don't swim, highway embankments), fences, trunks and rocks, and vehicles standing still. Blocked, it turns along the obstacle, the first time toward the side nearer where it's going, then keeping to that side until it's round (no dithering at a flat wall).
+- **It gives up instead of pushing** (`giveUp`): boxed in, or going round for 3 s without getting any nearer (a fence too long to go round), it stops.
+  - A walk is given up for somewhere it can get to.
+  - A fawn or a herd animal waits a few seconds before trying for its leader again.
+  - A charge, an attack or a stalk on someone it can't get at is given up, and it doesn't come at them again for 8 s: it stares across at them instead.
+- **Where it walks to** is somewhere it can walk to in a straight line (`openTo`). A walk down to drink ends at the water's edge, where it drinks (`arrive`).
+- **Running away**, it counts the cars standing about and the embankments when it picks its way (`fleeAngle`), and goes round them.
+- A slow amble that goes nowhere is noticed too (`unstick`: from 12 px/s, was 30). A squirrel climbs once it's at the trunk, and stays on it while it's up there.
+- Measured the same way after: 1.2 s of running on the spot in all, 0.2 s at most at a time.
+- **Tests:** `test/wildmoves.test.js` (1 new): a stone wall and a pasture fence in the woods, and up against them a deer walking somewhere on the far side, a fawn whose mother is on the far side, a grizzly charging someone on the far side, a deer bolting with the wall right behind it, and a cow ambling at the fence; also a squirrel bolting up a tree and a deer going down to drink at a pond. None of them pushes for more than half a second at a time or gets through. The walk and the charge are given up, the bolting deer gets away along the wall, the squirrel gets up the tree and stays on it, and the deer drinks at the water's edge. It fails without the change (the fawn leaned on the wall for 9.9 s).
+
+## 2026-10-09 · No train runs through a police station's motor pool: nothing built stands across the line (task #419)
+The owner: "I think there is a police station that has a train running through their parking lot (unless it's going under it) but just want to make sure trains go underground instead of into buildings or buildings are moved out of the way."
+- **What it was** (`shared/map.js buildMotorPools`): the Southbank Precinct in Pine Hills stands right below the railway, with no plain building next door to turn into its motor pool. The fallback carves a lot out of the yard beside the station (`carvePoolLot`), and that didn't look at the railway's ground (`reserveRail`): it took a 12 x 12 lot straight across the line. The trains ran through its walls and over its lot, where the cruisers park. The track bed doesn't overwrite walls or buildings, and the railway's layout test only checked the tile under the centre line for a building.
+- **Now:** a motor pool never takes any of the railway's ground: not its lot, and not the apron out to its road (`railwayIn`, `apronClear`). With no room beside the station, a plain building across the street becomes the motor pool (`poolBuilding`). The Southbank Precinct's is now the building across the street east of the station, gated onto the road south of it. The other four stations' motor pools are as they were.
+- Checked the whole line for anything else in a train's way: no other building, wall, lot, motor pool, garage, car park, country site, venue, farm field or parking spot anywhere along it. Homes and places keep their ids and spots, so it's not a new world version; the world's hash changes (browsers build the city again), and the world map's picture is baked again for it (`tools/build-worldmap2.mjs`).
+- **Tests:** `test/trains.test.js` (1 new): every tile a train's body passes over at grade (76 px wide) is clear of buildings, walls and lot paving, and of every lot on the map (the buildings' footprints and painted lots, the motor pools and gated yards, garages, the stations' car parks, the country sites, the venues, the farm fields); no parking spot is within a car's length of it; and every police station has its motor pool. It fails without the change (the motor pool's wall at 932,766 in Pine Hills).
+
+## 2026-10-09 · The rocks hold still in the wind; the plants on them sway as on their own patch of ground (task #425, the rocks)
+The owner: "The rock cliffs (the columns one) will also sway in the wind like vegetation but the rocks shouldn't sway, the vegetation that is on them can still sway or react though, so vegetation on top of rocks should behave independently."
+- **What it was:** what sways is decided texel by texel (`client/art2/game/engine.js` STATIC_FS). Foliage (`F_LEAF`) leans with the wind, further the higher it stands, so a tree's crown sways over its trunk.
+  - The columnar basalt cliffs (the gorge by the Willow River falls, the cliffs under the coast road above the beach: `water.js cliffWall`) have moss on every column's top, scattered pixel by pixel - a fifth of the cliff - and it was flagged as foliage 70-90 px up. It leaned like the top of a tree that tall, over the rock round it, with the rock's pixels filling in behind it, so the whole face of the columns shimmered in the wind: in a strong wind 166 of a cliff's pixels moved every frame.
+  - The plants on the other rocks (grass and flowers on a cliff top or a ledge, vines and kelp hanging off a lip, the grass on the sea arch) leaned by the rock's height too: a tuft on top of a 150 px sea stack swung like the top of a 150 px tree.
+- **Moss and lichen on rock and stone are its crust:** not foliage, so they hold still with it (the basalt cliffs and the falls over them, the stone bridges, a culvert, boulders, a stone lantern).
+- **The plants growing on rock** are flagged as such (`gbuf.js F_ROCKLEAF`) and sway as ground cover does: by the grass tips' amount, whatever the height of the rock under them (`engine.js leanAmp`, `leanOf`, the shader's own numbers). In a breeze they stand still; in a gust they lean as the grass round the rock's foot does. Trees and the plants on the ground sway as before.
+- **Tests:** `test/wind.test.js` (1 new):
+  - rock, stone and the ground never lean, at any height; a crown leans more the higher it stands;
+  - a plant on a rock leans the same on a 20, 70 or 150 px rock, never more than the grass tips, and less than half as far as a crown that high in a breeze, a strong wind and a gale (in a breeze not at all);
+  - on the rocks the world puts down (the basalt cliff wall, a falls over basalt, a mossy boulder, the quarry's granite cliff, a sea stack, a sea arch, an outcrop), nothing sways but the plants on the rock, and on the cliff wall, the falls and the boulder nothing at all.
+  - It fails without the change (the cliff wall's moss).
