@@ -5650,3 +5650,11 @@ passengers riding in it." The concept: `docs/art-v2/targets/RS1_rescue-wilds-wat
     revive you, and you don't wake up at a hospital meanwhile.
   - the open boats' seats are inside their hulls; only a back seat has the wire bit.
   - The ambulance tests (`test/ems.test.js`) and the revive tests pass as before.
+
+## 2026-10-10 · The bake budget grows with the art
+
+The chunk bakers' code (a bake worker and everything it draws with) reached 951 KB of its 950 KB budget once the
+hospital, the police station and the subway entrances were rebuilt to the owner's B takes and the rescue boat and the
+off-road 4x4 joined. The budget is now 1000 KB (and 76 files): the art grows with every concept the owner sends, and
+the workers fetch this code once, after the page, so it never delays getting into the city. The page itself stays at
+717 of 720 KB. Tests: test/perf.test.js.
