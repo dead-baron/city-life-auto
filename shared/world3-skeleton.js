@@ -179,6 +179,7 @@ export const ARTERIALS = [
 // ---------------------------------------------------------------------------------------------------------------------
 // The main line (green; ruling 4): double track everywhere (one track each way), junctions guarded by signals. A graph
 // of segments between junctions; three services run over it, each both ways.
+export const MAIN_LINE_TRACKS = 2;   // everywhere, one each way; every junction is guarded by signals
 export const MAIN_JUNCTIONS = [
   { name: 'Westport Junction', at: [1640, 1700] },
   { name: 'Northshore Junction', at: [2440, 1700] },
@@ -548,7 +549,7 @@ export function skeletonData() {
   const cx = skeletonCrossings(lines);
   const round = (pts) => pts.map(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10]);
   return {
-    frame: [5040, 4032], radius: RADIUS, mainland: MAINLAND, biomes: BIOMES, islands: ISLANDS, port: PORT_WESTPORT,
+    frame: [5040, 4032], radius: RADIUS, mainTracks: MAIN_LINE_TRACKS, mainland: MAINLAND, biomes: BIOMES, islands: ISLANDS, port: PORT_WESTPORT,
     river: RIVER, streams: STREAMS, lakes: LAKES, interchanges: INTERCHANGES, closures: CLOSURES,
     junctions: MAIN_JUNCTIONS, services: SERVICES, stations: STATIONS, towns: TOWNS, landmarks: LANDMARKS,
     lines: lines.map((L) => ({ kind: L.kind, name: L.name, ctrl: L.line.pts, path: round(L.path.pts), length: Math.round(L.path.length),
