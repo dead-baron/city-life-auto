@@ -38,7 +38,7 @@ export function regionBounds(ri) {
   const { rx, ry } = regionXY(ri);
   return [rx * REGION_TILES, ry * REGION_TILES, (rx + 1) * REGION_TILES, (ry + 1) * REGION_TILES];
 }
-// A tile's index inside its region's own grids (REGION_TILES square), the way `ty * MAP_W + tx` indexes today's map.
+// A tile's index inside its region's own grids (REGION_TILES square), the way `ty * m.w + tx` indexes a whole map.
 export function localIndex(ri, tx, ty) {
   const { rx, ry } = regionXY(ri);
   return (ty - ry * REGION_TILES) * REGION_TILES + (tx - rx * REGION_TILES);

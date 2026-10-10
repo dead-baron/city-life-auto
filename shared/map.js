@@ -783,7 +783,7 @@ function terrain(m, opts = null) {
   const W = m.w, H = m.h, N = W * H;
   const land = decodeLand(m);
   raiseSceneIslands(m, land);
-  if (opts && opts.land) opts.land(land);   // (World v3's spike: one island's land alone, the rest sea)
+  if (opts && opts.land) opts.land(land, m);   // (World v3's spike: one island's land alone, the rest sea)
   m.land = land;
   const { lab, comps } = components(m, land);
   const compAt = (x, y) => lab[y * W + x];

@@ -36,6 +36,51 @@ test('today\'s map is the whole window: origin 0, 0, the world\'s size, the inde
   assert.ok(!('x0' in d) && !('y0' in d), 'no new fields in the city as data');
 });
 
+// A bigger frame (World v3's server builds 5040 x 4032: docs/WORLD-V3.md part 8): today's land in its top-left, the
+// open sea beyond - and inside today's extent, today's world to the bit (the lists keyed by a tile's index re-keyed by
+// its x, y; the sea's sample points go on over the new sea). (It runs before the tests below: they leave runtime caches
+// on the map's objects.)
+test('the generator\'s frame: a bigger one builds today\'s world in its top-left, the open sea beyond', () => {
+  const F = generateCity(1337, { frame: { w: MAP_W + 240, h: MAP_H + 240 } });
+  assert.deepEqual([F.x0, F.y0, F.w, F.h], [0, 0, MAP_W + 240, MAP_H + 240]);
+  let layers = 0;
+  for (const k of Object.keys(M)) {
+    const a = M[k], b = F[k];
+    if (!ArrayBuffer.isView(a) || a.length !== MAP_W * MAP_H) continue;
+    assert.equal(b.length, F.w * F.h, `${k}: the frame's size`);
+    const n = a.BYTES_PER_ELEMENT;
+    for (let ty = 0; ty < MAP_H; ty++) {
+      const A = Buffer.from(a.buffer, a.byteOffset + M.row(ty) * n, MAP_W * n), B = Buffer.from(b.buffer, b.byteOffset + F.row(ty) * n, MAP_W * n);
+      if (!A.equals(B)) assert.fail(`${k}: row ${ty} differs inside today's extent`);
+    }
+    layers++;
+  }
+  assert.ok(layers >= 15, `${layers} per-tile layers`);
+  for (let ty = 0; ty < F.h; ty++) {
+    const r = F.row(ty);
+    for (let tx = ty < MAP_H ? MAP_W : 0; tx < F.w; tx++) if (F.tiles[r + tx] !== T.DEEP || F.zone[r + tx] || F.land[r + tx]) assert.fail(`${tx},${ty}: not the open sea`);
+  }
+  // the lists
+  const xy = (m, i) => `${i % m.w},${(i / m.w) | 0}`;
+  const KEYED = { solidProps: 1, flow: 1, leftover: 1, noTree: 1 };   // (keyed by a tile's index in the frame)
+  const inToday = (p) => p.x < MAP_W * TILE && p.y < MAP_H * TILE;
+  const ser = (v) => { const seen = new WeakSet(); return JSON.stringify(v, (key, x) => { if (x && typeof x === 'object') { if (seen.has(x)) return '[seen]'; seen.add(x); if (x instanceof Map) return [...x]; if (x instanceof Set) return [...x]; if (ArrayBuffer.isView(x)) return Buffer.from(x.buffer, x.byteOffset, x.byteLength).toString('base64'); } return x; }); };
+  const norm = (m, k) => {
+    const v = m[k];
+    if (KEYED[k]) return v instanceof Map ? [...v].map(([i, x]) => [xy(m, i), x]) : [...v].map((i) => xy(m, i));
+    if (k === 'seaPoints' || k === 'offshore') return v.filter(inToday);
+    return v;
+  };
+  let lists = 0;
+  for (const k of Object.keys(M)) {
+    if (['w', 'h', '_sig'].includes(k) || typeof M[k] === 'function' || (ArrayBuffer.isView(M[k]) && M[k].length === MAP_W * MAP_H)) continue;
+    if (ser(norm(M, k)) !== ser(norm(F, k))) assert.fail(`${k} differs`);
+    lists++;
+  }
+  assert.ok(lists > 40, `${lists} lists and scalars`);
+  assert.ok(F.seaPoints.length > M.seaPoints.length && F.offshore.length > M.offshore.length, 'the sea\'s points go on over the new sea');
+});
+
 test('a window holds its rectangle: layers cut, lists whole, a wall outside it, the open sea past the world\'s edge', () => {
   assert.deepEqual([MID.x0, MID.y0, MID.w, MID.h], [CX - 300, CY - 250, 600, 500]);
   assert.equal(MID.tiles.length, 600 * 500);
@@ -132,11 +177,12 @@ test('the art v2 ground bake of a chunk inside the window: the same bytes as fro
   }
 });
 
-// The guard: code that reads the map goes through m.idx / m.inside, never the world's constants. What may keep them:
-// the generator (it builds the world's whole frame), and code that means the whole frame - each with its reason.
-const GENERATOR = new Set(['shared/naturesites.js', 'shared/countryside.js', 'shared/world3.js', 'shared/world3-islands.js', 'shared/world3-skeleton.js', 'shared/constants.js']);
+// The guard: code that reads the map goes through m.idx / m.inside, and the generator builds in the map's own frame
+// (m.w x m.h: generateCity's opts.frame), never the world's constants. What may keep them: code that means the world's
+// whole frame - each with its reason.
 const PAUSED = new Set(['shared/tutorial.js', 'client/tutorial.js']);   // (the tour is paused: CLAUDE.md)
 const WHOLE_FRAME = {
+  'shared/constants.js': 'the world\'s frame is defined here (MAP_W x MAP_H tiles, WORLD_W x WORLD_H px)',
   'shared/map.js': 'tileAt: the open sea past the world\'s edge',
   'shared/underground.js': 'the underground lies under the whole world: its regions and physics map are the frame\'s',
   'server/systems/ferries.js': 'the server plans the ferries over the whole world it holds: its grids are the frame\'s',
@@ -163,9 +209,8 @@ function jsFiles(dir) {
 test('the guard: no `* MAP_W` index arithmetic and no MAP_W / MAP_H bounds checks in the code that reads the map', () => {
   const bad = [], used = new Set();
   for (const f of [...jsFiles('server'), ...jsFiles('client'), ...jsFiles('shared')]) {
-    if (GENERATOR.has(f) || PAUSED.has(f)) continue;
-    let src = readFileSync(join(ROOT, f), 'utf8');
-    if (f === 'shared/map.js') src = src.slice(0, src.indexOf('// The generator (from here to mapSignature)'));   // (the generator keeps the frame for now)
+    if (PAUSED.has(f)) continue;
+    const src = readFileSync(join(ROOT, f), 'utf8');
     src.split('\n').forEach((line, i) => {
       if (!INDEX.test(line) && !BOUNDS.test(line)) return;
       if (WHOLE_FRAME[f]) { used.add(f); return; }
@@ -174,4 +219,28 @@ test('the guard: no `* MAP_W` index arithmetic and no MAP_W / MAP_H bounds check
   }
   assert.deepEqual(bad, [], 'index the map through m.idx / m.inside (or add the whole-frame use, with its reason)');
   for (const f of Object.keys(WHOLE_FRAME)) assert.ok(used.has(f), `${f} is on the whole-frame list but no longer needs it`);
+});
+
+// The generator builds in the map's frame: its passes name the world's constants only for what is today's frame by
+// nature - each use listed here with its reason (a line that names MAP_W or MAP_H and isn't listed fails).
+const GENERATOR_FILES = ['shared/map.js', 'shared/naturesites.js', 'shared/countryside.js', 'shared/world3-islands.js'];
+const GENERATOR_FRAME = [
+  ['shared/map.js', 'pw = Math.min(MAP_W, W), ph = Math.min(MAP_H, m.h)', 'decodeLand: the concept picture\'s RLE rows are today\'s frame by nature (its land goes in the top-left of the build\'s frame, sea beyond)'],
+  ['shared/map.js', 'Math.floor(MAP_W / TERRAIN_CELL), ch = Math.floor(MAP_H / TERRAIN_CELL)', 'decodeTerrain: the concept picture\'s terrain cells are today\'s frame by nature (terrainAt clamps to them)'],
+];
+test('the guard: the generator builds in the map\'s frame (m.w, m.h), naming MAP_W / MAP_H only where it means today\'s frame by nature', () => {
+  const bad = [], used = new Set();
+  for (const f of GENERATOR_FILES) {
+    let src = readFileSync(join(ROOT, f), 'utf8');
+    if (f === 'shared/map.js') src = src.slice(src.indexOf('// The generator (from here to mapSignature)'), src.indexOf('export function mapSignature'));
+    src.split('\n').forEach((line, i) => {
+      const code = line.replace(/\/\/.*$/, '');   // (comments may name them)
+      if (!/\bMAP_[WH]\b/.test(code) || /^\s*import\b/.test(code)) return;
+      const ok = GENERATOR_FRAME.find(([file, what]) => file === f && code.includes(what));
+      if (ok) { used.add(ok[1]); return; }
+      bad.push(`${f}: ${line.trim().slice(0, 120)}`);
+    });
+  }
+  assert.deepEqual(bad, [], 'build in the map\'s frame: m.w, m.h (or list the use, with its reason)');
+  for (const [, what] of GENERATOR_FRAME) assert.ok(used.has(what), `${what}: on the list but no longer used`);
 });
