@@ -109,7 +109,7 @@ test('renting a lane: pay at the counter, pick up a ball, roll; the card fills, 
   assert.ok(/Bowling, lane/.test(me.job.text), 'the HUD tracker');
   // a friend joins the lane
   const { p: q } = joinPlayer(w, { cash: 50 });
-  const spot2 = lanePt(L, 10, -24);
+  const spot2 = lanePt(L, 10, -8);   // (up by the foul line: the counter's front is on the nearest lanes' approaches)
   teleport(w, q.ped, spot2.x, spot2.y);
   act = players.findInteraction(w, q);
   assert.ok(/Join this lane/.test(act.label), act.label);

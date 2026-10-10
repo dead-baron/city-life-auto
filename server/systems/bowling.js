@@ -41,15 +41,14 @@ export function interaction(world, p) {
     if (!mine.ball) return { label: 'Pick up a ball', run: () => { mine.ball = true; p.meDirty = true; world.notify(p, 'Stand where you want to let go and face down the lane. Action: a little hook. Hold attack and let go to roll - the meter sets the power.', 'info'); } };
     return { label: `Hook: ${HOOKS[mine.hook]} - change`, run: () => { mine.hook = (mine.hook + 1) % 3; p.meDirty = true; } };
   }
+  // (the counter first: its front is on the nearest lanes' approaches)
+  const c = A.counter, atCounter = Math.hypot(ped.x - c.x, ped.y - c.y) < 32;
+  if (atCounter && !mine) return { label: `Rent a lane and shoes - $${BOWL.FEE}`, run: () => { const e = rent(world, p); if (e) world.notify(p, e, 'bad'); } };
   if (li >= 0 && !mine) {
     const G = S.lanes[li].game;
     if (G && !G.npc && G.bowlers.length < MAX_BOWLERS) return { label: `Join this lane's game - $${BOWL.FEE}`, run: () => { const e = join(world, p, li); if (e) world.notify(p, e, 'bad'); } };
   }
-  const c = A.counter;
-  if (Math.hypot(ped.x - c.x, ped.y - c.y) < 44) {
-    if (!mine) return { label: `Rent a lane and shoes - $${BOWL.FEE}`, run: () => { const e = rent(world, p); if (e) world.notify(p, e, 'bad'); } };
-    return { label: 'Hand your shoes back (end your game)', run: () => leave(world, p, true) };
-  }
+  if (atCounter) return { label: 'Hand your shoes back (end your game)', run: () => leave(world, p, true) };
   return null;
 }
 
