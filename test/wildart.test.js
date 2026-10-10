@@ -125,4 +125,8 @@ test("the cats' pounce and crouch (AN4)", () => {
     assert.ok(pixels(animalSprite(`pet:${kind}`, 'dive', 2, 0)) > 12, `${kind} dives`);
     assert.ok(animalModel(kind, { pose: 'dive' }).h > animalModel(kind, { pose: 'swim' }).h, `${kind}: the tail up as it goes under`);
   }
+  // AN5: an otter sat up on the bank with a fish in its jaws (the silver of the fish: in the eating pose, not sitting)
+  const silver = (m) => { let n = 0; for (let z = 0; z < m.h; z++) for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) n++; return n; };
+  assert.ok(silver(animalModel('otter', { pose: 'eatfish' })) > silver(animalModel('otter', { pose: 'sit' })), 'the otter: a fish in its jaws');
+  assert.ok(pixels(animalSprite('pet:otter', 'eatfish', 0, 1)) > 12);
 });

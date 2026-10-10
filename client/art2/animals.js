@@ -15,6 +15,7 @@
 //     AN5, at the water: 'drink' (the forelegs splayed, the head right down to the water) | 'wade' (standing or walking
 //     in the shallows: the legs under the water to the knees)
 //     AN2: 'swipe' (a bear rocked back off its forefeet, a forepaw raised (phase < 0.5) and raking forward)
+//     'eatfish' (AN5: an otter sat up on the bank, a fish crosswise in its jaws)
 //     'dive' (AN5: a swimmer going under, nose first - the rump and the tail up out of the water)
 //     AN4: 'pounce' (a cat's leap: off the ground, stretched out, the forepaws reaching (phase < 0.5) or about to land)
 //     kind may carry a variant: 'deer:y' the young (smaller, a fawn's spots, no antlers), 'deer:L' the legendary
@@ -112,7 +113,7 @@ export function animalModel(kind, o = {}) {
   const face = A.face ? R(A.face) : A.mask ? R(A.mask) : base;
   const cy = W / 2, bodyR = A.w / 2 * (A.len <= 30 ? 1.15 : 1), legLen = A.h - bodyR * 1.1;
   const bob = run ? Math.abs(Math.sin(phase * Math.PI * 2)) * 1.5 * (A.hop || 1) : Math.abs(Math.sin(phase * Math.PI * 2)) * 0.5;   // (a rabbit's hop: up off the ground)
-  const sit = pose === 'sit', drink = pose === 'drink', graze = pose === 'graze' || drink;
+  const eatfish = pose === 'eatfish', sit = pose === 'sit' || eatfish, drink = pose === 'drink', graze = pose === 'graze' || drink;
   const x0 = 5 + (A.tail === 'long' || A.tail === 'feather' ? 4 : 2) + (TAIL_ROOM[A.tail] || 0), x1 = x0 + A.len;          // rump .. chest
   const bz = lie ? bodyR * 1.05 + 0.3 : (sit ? A.h * 0.7 : stalk ? (A.h - bodyR) * 0.72 : A.h - bodyR) + bob + (pounce ? A.h * 0.45 : 0);   // (pounce: in the air)
   void legLen;
@@ -205,6 +206,11 @@ export function animalModel(kind, o = {}) {
   const sx = hx + HD * 0.7, sz = hz - HD * 0.25 - (A.droop ? 1.6 : 0);
   m.ell(sx + A.snout * 0.5, cy, sz, A.snout * 0.7 + 1, HD * (A.droop ? 0.62 : 0.5), HD * (A.droop ? 0.55 : 0.42), A.muzzle ? R(A.muzzle) : A.mask ? R('#d8d4d0') : A.belly && !A.cat && !A.legend ? belly : coat(sx, cy, sz));
   m.box(sx + A.snout + 0.5, cy - 1, sz, sx + A.snout + 1.8, cy + 1, sz + 1.5, nose);
+  if (eatfish) {   // (AN5: the fish crosswise in its jaws, silver, the tail fin out to one side, a bite gone - wag: the chewing)
+    const fx = sx + A.snout * 0.55, fz = sz - HD * 0.35 - (o.wag || 0) * 0.6;
+    m.ell(fx, cy + 1, fz, 1.7, 4.8, 1.6, R('#dce6ee')); m.ell(fx, cy + 1, fz + 0.9, 1.2, 4.4, 0.7, R('#5a7a8c'));
+    m.box(fx - 1, cy + 5.4, fz - 1.8, fx + 1, cy + 6.8, fz + 1.8, R('#5a7a8c'));
+  }
   if (A.tusks) for (const s of [-1, 1]) for (let k = 0; k < 2.6; k += 0.4) m.box(sx + A.snout * 0.55 - k * 0.3, cy + s * 1.6, sz + k * 0.7 - 0.6, sx + A.snout * 0.55 - k * 0.3 + 0.9, cy + s * 1.6 + 0.9, sz + k * 0.7 + 0.3, R('#f0ead8'));   // a boar's tusks
   if (A.buck) m.box(sx + A.snout + 0.2, cy - 0.8, sz - HD * 0.45, sx + A.snout + 1.2, cy + 0.8, sz - HD * 0.1, R('#e08a2a'));   // a beaver's orange teeth
   if (A.bell) m.ell(hx - 0.5, cy, hz - HD * 0.95, 1.1, 0.9, 2.6, coat(hx, cy, hz));   // a moose's bell

@@ -105,7 +105,9 @@ function wildPose(p, S2, base, sp, now, M) {
     case APOSE.sit: return S2.bird ? 'idle' : 'sit';
     case APOSE.drink: if (sp <= 12 && !S2.bird) return 'drink';   // (AN5: the forelegs splayed, the head down to the water)
     // falls through
-    case APOSE.graze: case APOSE.gnaw: case APOSE.eat: case APOSE.peck: return sp > 12 ? 'walk' : S2.bird ? 'peck' : 'graze';
+    case APOSE.eat: if (sp <= 12 && S2.diet === 'fish') return 'eatfish';   // (AN5: an otter on the bank with its catch)
+    // falls through
+    case APOSE.graze: case APOSE.gnaw: case APOSE.peck: return sp > 12 ? 'walk' : S2.bird ? 'peck' : 'graze';
     case APOSE.call: if (base === 'turkey' && sp <= 12) return 'strut';   // (AN2: a tom's display, the fan up)
     // falls through
     case APOSE.alert: case APOSE.warn: case APOSE.flinch: return sp > 12 ? 'walk' : 'alert';
