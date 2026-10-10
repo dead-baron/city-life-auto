@@ -107,4 +107,6 @@ export const DEV_SECTIONS = [
     ['🚤 Go down in the water (the rescue boat comes)', 'rescue', { at: 'water' }], ['🚑 Go down out in the wilds (off-road ambulance)', 'rescue', { at: 'wild' }],
     ['🛥 Boats with people aboard (riders in open boats)', 'rescue', { at: 'crew' }], ['🚤 Rescue boat', 'car', { m: 'rescueboat' }],
   ] },
+  // a night out (IN14: server/systems/bowling.js)
+  { id: 'nightout', title: '🎳 Bowling & cinema', items: [['🎳 Pinwheel Lanes (bowling alley, at the shoe counter)', 'near', { k: 'bowling' }]] },
 ];

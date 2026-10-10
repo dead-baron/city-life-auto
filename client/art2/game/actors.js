@@ -565,10 +565,11 @@ function arrowModel() {
 // balls: a painted sphere (t 0 soccer, 1 volleyball, 2 a golf ball: small, white, dimpled), spin 0..3 turns the
 // pattern as it rolls; anchor = the ground contact, z from 0 at the bottom to the top of the ball
 const ICO = (() => { const p = (1 + Math.sqrt(5)) / 2, v = []; for (const a of [-1, 1]) for (const b of [-p, p]) { v.push(norm([0, a, b]), norm([a, b, 0]), norm([b, 0, a])); } return v; })();
-export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(3, t | 0))}|${((spin % 4) + 4) % 4}`;
+export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(4, t | 0))}|${((spin % 4) + 4) % 4}`;
 export function ballSprite(t = 0, spin = 0) {
   if ((t | 0) === 2) return golfBall();
   if ((t | 0) === 3) return basketball(spin);
+  if ((t | 0) === 4) return bowlingBall(spin);
   const r = 5.5, S = 15, G = new GBuf(S, S), cx = 7.5, cyy = S - 1.5 - r, rot = (((spin % 4) + 4) % 4) * Math.PI / 4 + 0.3;
   G.ax = 7; G.ay = S - 2;
   const W = RP('#ecebe6', 5, 2), K = RP('#2a2a30', 5, 2), Y = RP('#e8c84a', 5, 2), B = RP('#2f56b0', 5, 2), L = norm([-0.55, -0.62, 0.56]);
@@ -591,6 +592,25 @@ export function ballSprite(t = 0, spin = 0) {
   return G;
 }
 
+// a bowling ball (Pinwheel Lanes): deep blue with a swirl, glossy, its three finger holes turning with the spin
+function bowlingBall(spin = 0) {
+  const r = 3.7, S = 10, G = new GBuf(S, S), cx = 5, cyy = S - 1 - r, rot = (((spin % 4) + 4) % 4) * Math.PI / 2 + 0.4;
+  G.ax = 5; G.ay = S - 1;
+  const C = RP('#2846a8', 5, 2), SW = RP('#7a3cc0', 5, 2), HOLE = RP('#0c1020', 3, 1), L = norm([-0.55, -0.62, 0.56]), cr = Math.cos(rot), sr = Math.sin(rot);
+  const holes = [[0.42, 0.62], [0.62, 0.38], [0.18, 0.2]];
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = (x + 0.5 - cx) / r, v = (y + 0.5 - cyy) / r, q = u * u + v * v;
+    if (q > 1) continue;
+    const w = Math.sqrt(1 - q), n = norm([u, (v + w) * 0.7071, (w - v) * 0.7071]);
+    const pu = n[0] * cr - n[1] * sr, pv = n[0] * sr + n[1] * cr, lit = n[0] * L[0] + n[1] * L[1] + n[2] * L[2];
+    let R = Math.sin(pu * 5 + pv * 3) > 0.55 ? SW : C, tt = 0.45 + lit * 0.4;
+    if (n[2] > 0.3 && holes.some(([a, b]) => Math.hypot(pu - a + 0.4, pv - b + 0.4) < 0.17)) { R = HOLE; tt = 0.3; }
+    if (lit > 0.82 && q < 0.45) tt += 0.4;
+    G.put(x, y, R[Math.max(0, Math.min(R.length - 1, Math.round(tt * (R.length - 1) + bayer(x, y) * 0.3)))], n, r + n[2] * r, null, 0);
+  }
+  G.outline(0.45, false);
+  return G;
+}
 // a basketball: orange, its black seams turning with the spin
 function basketball(spin = 0) {
   const r = 4.6, S = 12, G = new GBuf(S, S), cx = 6, cyy = S - 1 - r, rot = (((spin % 4) + 4) % 4) * Math.PI / 4;

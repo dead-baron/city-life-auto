@@ -37,7 +37,7 @@ function descriptor(e) {
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: bagWireTier(e), val: e.value };
     case K.PROJ: return { id: e.id, k: K.PROJ, w: WEAPONS[e.weapon]?.i ?? 12 };
-    case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'hoop' ? 3 : e.ballKind === 'golf' ? 2 : e.ballKind === 'volley' ? 1 : 0 };
+    case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'bowl' ? 4 : e.ballKind === 'hoop' ? 3 : e.ballKind === 'golf' ? 2 : e.ballKind === 'volley' ? 1 : 0 };
     case K.TRAIN: return { id: e.id, k: K.TRAIN, c: e.carType, tr: e.train, n: e.car };
     default: return null;
   }

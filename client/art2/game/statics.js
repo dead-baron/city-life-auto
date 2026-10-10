@@ -2916,7 +2916,9 @@ function cutRecipe(c, b, s, spec) {
     if (ux1 < ux0) continue;
     const blk = u.cells !== undefined && c.M.cellBlocks ? c.M.cellBlocks[u.cells] : null, ox = s.tx * TILE, oy = s.ty * TILE;   // (a police station's cells: shared/cells.js)
     const cells = blk ? { bars: blk.bars.map((q) => [q[0] - ox, q[1] - oy, q[2] - ox, q[3] - oy]), cells: blk.cells.map((q) => ({ door: [q.door.x - ox, q.door.y - oy], bench: [q.bench.x - ox, q.bench.y - oy], toilet: [q.toilet.x - ox, q.toilet.y - oy] })), dir: blk.south ? 1 : -1, back: (blk.south ? blk.y0 : blk.y1) - oy } : null;
-    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells });
+    const bw = u.kind === 'bowling' && c.M.bowling ? c.M.bowling : null;   // (Pinwheel Lanes: shared/bowling.js lays the lanes out)
+    const bowl = bw ? { lanes: bw.lanes.map((L) => ({ ax: L.ax - ox, foul: L.foulY - oy, back: L.backEdge - oy, dir: L.dir, len: L.len })), ca: (u.x1 - 3 - s.tx) * TILE, cb: (u.x1 - s.tx) * TILE } : null;
+    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl });
   }
   // a wing with no room you walk into (a hospital's wards): its floor all across, walls cut low round it
   const inY0 = Math.max(32, Math.min(Dd - 64, (wi.y0 - s.ty) * TILE)), inY1 = Math.max(inY0 + 32, Math.min(Dd - 32, (wi.y1 - s.ty + 1) * TILE));
@@ -2932,6 +2934,7 @@ function makeCut(r) {
   const px = (x, Y, z, c, n, f = 0) => zw(G, x, gy(Y, z), c, n, z, f);
   // floor (a wing's all across it)
   for (const u of r.units) {
+    if (u.bowl) { bowlingFloor(u, r, px); continue; }
     const fk = FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind];
     for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
@@ -2956,6 +2959,7 @@ function makeCut(r) {
   // counters, back shelves with goods, a clerk's till
   for (const u of r.units) {
     if (LOBBY[u.kind]) { lobbyRoom(u, r, px); if (u.cells) cellRoom(u.cells, px); continue; }   // (IN1-B hospital / IN2-B police: their own desk and dressing)
+    if (u.bowl) { bowlingRoom(u, r, px); continue; }   // (IN14: the lanes, the scoreboards, the ball returns, the settees, the shoe counter)
     const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' || u.kind === 'roadhouse' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : u.kind === 'roadhouse' ? ramp('#4a3020', 5, 2) : ramp('#a8aab0', 5, 2);
     const ca = u.x0 > u.fx0 ? u.x0 : u.x0 + 6, cb = u.x1 < u.fx1 ? u.x1 : u.x1 - (u.fx1 - u.fx0 > 128 ? 34 : 6);   // (the counter runs on across a section's open side)
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = ca; x < cb; x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
@@ -2968,6 +2972,90 @@ function makeCut(r) {
   }
   return G;
 }
+// ---- Pinwheel Lanes (IN14; shared/bowling.js): eight maple lanes with their gutters and capping, the pin decks and the
+// dark pits along the back wall, the arrows and dots, the foul line and the approach; the rest a navy carpet with
+// coloured flecks. Pins and balls move: client/bowling.js draws them.
+const bowlRGB = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function bowlingFloor(u, r, px) {
+  const hexRGB = bowlRGB, B = u.bowl, maple = ['#e4ba7c', '#dcb070', '#e8c288', '#d4a666'].map(hexRGB), deck = ['#f0d09a', '#ecc890'].map(hexRGB), app = ['#ead0a0', '#e2c490'].map(hexRGB);
+  const gut = hexRGB('#34363e'), gutLip = hexRGB('#5a5c66'), cap = hexRGB('#cfd0d6'), pit = hexRGB('#0c0c10'), foul = hexRGB('#8a1c1c'), arrow = hexRGB('#5a3418');
+  const C0 = hexRGB('#1e2a52'), C1 = hexRGB('#25335f'), FL = [[230, 80, 120], [80, 200, 230], [240, 200, 80]].map((c) => c);
+  for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) {
+    let c = null;
+    for (const L of B.lanes) {
+      if (x < L.ax || x >= L.ax + 44) continue;
+      const lx = x - L.ax, v = (L.foul - Y) * L.dir;   // (down the lane from the foul line)
+      const end = (L.foul - L.back) * L.dir;
+      if (v >= 0 && v < end) {
+        if (lx < 2 || lx >= 42) c = cap;
+        else if (lx < 7 || lx >= 37) c = lx === 2 || lx === 41 ? gutLip : gut;
+        else if (v > end - 10) c = pit;
+        else if (v > L.len - 8) c = deck[lx & 1];
+        else c = maple[(lx + ((v >> 5) & 1)) & 3];
+        if (c !== cap && c !== gut && c !== gutLip && c !== pit) {
+          const b = lx - 7;
+          if (b % 5 === 2 && b > 1 && b < 29 && Math.abs(v - (L.len * 0.3 + 10 - Math.abs(b - 15) * 0.7)) < 2) c = arrow;   // (the arrows, a chevron)
+          if (Math.abs(v - 14) < 1 && b % 5 === 2 && b > 1 && b < 29) c = arrow;   // (the dots)
+        }
+        if (v < 1.5 && lx >= 7 && lx < 37) c = foul;
+      } else if (v < 0 && v >= -2 * TILE) {
+        c = lx < 2 || lx >= 42 ? cap : app[(lx >> 1) & 1];
+        if (v > -1.5) c = foul;
+        if ((v === -20 || v === -36) && lx % 5 === 2 && lx > 6 && lx < 38) c = arrow;   // (the approach dots)
+      }
+    }
+    if (!c) { const h = hash(x >> 1, Y >> 1, 1410); c = h > 0.985 ? FL[(h * 1000 | 0) % 3] : ((x >> 3) + (Y >> 3)) & 1 ? C0 : C1; }
+    px(x, Y, 0, c, [0, 0, 1], F_GROUND);
+  }
+}
+function bowlingRoom(u, r, px0_) {
+  const px = (x, Y, z, c, n) => px0_(Math.round(x), Math.round(Y), z, c, n);
+  const B = u.bowl, slab = (x0, x1, Y0, Y1, z, top, side) => {
+    x0 = Math.round(x0); x1 = Math.round(x1); Y0 = Math.round(Y0); Y1 = Math.round(Y1);
+    for (let Y = Y0; Y < Y1; Y++) for (let x = x0; x < x1; x++) px(x, Y, z, top[Y === Y0 || x === x0 || x === x1 - 1 ? 4 : 2], [0, 0, 1]);
+    for (let x = x0; x < x1; x++) for (let v = 0; v < z; v++) px(x, Y1, v, side[v > z - 3 ? 3 : 1], [0, 1, 0]);
+  };
+  const metal = ramp('#4a4c56', 5, 2), wood = ramp('#6a4630', 6, 3), red = ramp('#b02a2a', 5, 2), counterTop = ramp('#2a2c38', 5, 2), screen = ramp('#1a2448', 5, 2);
+  const BALLC = [[200, 40, 40], [40, 150, 70], [40, 80, 200], [130, 60, 190], [230, 160, 40]];
+  B.lanes.forEach((L, i) => {
+    // the masking unit and the scoreboard over each lane, on the back wall: a dark panel, the screen lit with the frames
+    const Yw = Math.min(L.back, L.back + L.dir) + 1;
+    for (let x = L.ax + 3; x < L.ax + 41; x++) for (let v = 26; v < 52; v++) {
+      const sx = x - L.ax - 3, sv = v - 26, edge = sx === 0 || sx === 37 || sv === 0 || sv === 25;
+      const lit = !edge && sv > 3 && sv < 22 && sx > 2 && sx < 35;
+      const bar = lit && (sv % 6 < 3) && ((sx + i * 3) % 11 < 7);
+      px(x, Yw, v, edge ? [20, 20, 26] : bar ? [[90, 200, 255], [255, 120, 80], [120, 255, 140], [255, 220, 90]][(i + (sv / 6 | 0)) & 3] : lit ? screen[1] : [34, 36, 44], [0, 1, 0]);
+    }
+    for (let x = L.ax + 7; x < L.ax + 37; x++) for (let v = 0; v < 12; v++) px(x, Yw, v, [16, 16, 20], [0, 1, 0]);   // (the dark pit's mouth)
+    // a ball return between each pair of lanes, at the back of the approach, a few balls on it
+    if (i % 2 === 1) {
+      const xm = (L.dir > 0 ? L.ax : L.ax + 44) - 4, Ya = L.foul + L.dir * 34, Yb = L.foul + L.dir * 58;
+      slab(xm, xm + 8, Math.min(Ya, Yb), Math.max(Ya, Yb), 9, metal, metal);
+      for (let k = 0; k < 3; k++) { const c = BALLC[(i + k) % BALLC.length], by = Math.min(Ya, Yb) + 4 + k * 6; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx * dx + dy * dy <= 5) px(xm + 4 + dx, by + dy, 11 + (dx * dx + dy * dy < 2 ? 1 : 0), dx < 0 && dy < 0 ? c.map((q) => Math.min(255, q + 60)) : c, [0, 0, 1]); }
+    }
+  });
+  // the settees behind the approach (the west half, clear of the door), little tables between
+  const L0 = B.lanes[0], dir = L0.dir, Ys = L0.foul + dir * (2 * TILE + 6);
+  const xs0 = u.x0 + 8, xs1 = Math.min(u.dx - 12, u.x1 - 8);
+  for (let x = xs0; x + 34 <= xs1; x += 46) {
+    slab(x, x + 34, Math.min(Ys, Ys + dir * 10), Math.max(Ys, Ys + dir * 10), 10, red, red);
+    slab(x, x + 34, Math.min(Ys + dir * 10, Ys + dir * 14), Math.max(Ys + dir * 10, Ys + dir * 14), 18, red, red);
+    if (x + 44 <= xs1) slab(x + 36, x + 44, Math.min(Ys, Ys + dir * 8), Math.max(Ys, Ys + dir * 8), 14, wood, wood);
+  }
+  // the shoe counter by the door: a dark top, a wood front, shoes in pairs on it; the cubbies behind on the side wall
+  const cy = u.cy;
+  slab(B.ca + 2, B.cb - 2, cy + 6, cy + 26, 22, counterTop, wood);
+  for (let k = 0; k < 4; k++) { const c = [[200, 40, 40], [40, 80, 200], [230, 230, 230], [40, 150, 70]][k], x = B.ca + 10 + k * 18; for (const o of [0, 4]) for (let dy = 0; dy < 6; dy++) for (let dx = 0; dx < 3; dx++) px(x + o + dx, cy + 12 + dy, 23, dy === 0 ? [240, 240, 240] : c, [0, 0, 1]); }
+  // the arcade machines along the front, west of the door: tall cabinets, their screens and marquees lit
+  const Ya = r.inY1 - 14;
+  for (let k = 0; k < 2; k++) {
+    const x = u.x0 + 10 + k * 22;
+    if (x + 16 > u.dx - 8) break;
+    slab(x, x + 16, Ya - 8, Ya, 34, metal, [[30, 20, 60], [40, 26, 80], [50, 34, 96], [60, 40, 110], [70, 46, 130]]);
+    for (let xx = x + 2; xx < x + 14; xx++) for (let v = 18; v < 30; v++) px(xx, Ya, v, v > 26 ? [255, 90, 200] : [[60, 220, 255], [120, 255, 140], [255, 220, 90]][((xx >> 2) + (v >> 2) + k) % 3], [0, 1, 0]);
+  }
+}
+
 // ---- a police station's cells (task #362; shared/cells.js lays them out): bare concrete floors, steel bars along the front
 // and between the cells (rails top and middle), a door frame with its lock box in each front, a steel bench along the back
 // wall and a steel toilet in the corner

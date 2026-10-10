@@ -448,7 +448,7 @@ function fixedStep() {
   if (S.pending.length > 60) S.pending.shift();
   if (S.pred) { S.pred.prev = { ...S.pred.s }; stepPred(dq); }
   // predict our own melee swing so punches animate the instant you click
-  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near) && !S.me.hoops && !S.me.fight) {   // (by your golf ball it's a swing of the club; held down by an officer, the struggle's grunts instead)
+  if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near) && !S.me.hoops && !(S.me.bowl && S.me.bowl.ball) && !S.me.fight) {   // (by your golf ball it's a swing of the club; held down by an officer, the struggle's grunts instead)
     const w = WEAPONS[S.me.weapon];
     if (w && w.type === 'melee' && S.loopClock >= (S.localSwingReady || 0)) {
       const e = S.ents.get(S.ctrlId);
@@ -800,6 +800,7 @@ function onEvent(ev) {
     case 'golfcup': sfx('golfcup', distVol(ev.x, ev.y)); break;
     case 'golfsplash': sfx('splash', distVol(ev.x, ev.y)); break;
     case 'hoop': sfx(ev.in ? (ev.sw ? 'swish' : 'hoopin') : 'clank', distVol(ev.x, ev.y)); break;   // (shooting hoops: server/systems/hoops.js)
+    case 'bowl': case 'bowlset': case 'bowlx': if (ev.e === 'bowl' && ev.n) sfx('clank', distVol(ev.x, ev.y)); if (S.bowlView) S.bowlView.event(ev); break;   // (Pinwheel Lanes: server/systems/bowling.js; drawn by client/bowling.js)
     case 'ride': rideOn(ev); if (ev.k === 'balloon') { const L = balloonSite(S.map); if (L) sfx('burner', distVol(L.launch.x, L.launch.y)); } break;   // a ride under way: the wheel's cab you're in, a balloon going up
     case 'rideend': if (S.rides) S.rides.delete(ev.id); break;
     case 'bells': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y), v = Math.max(0, 1 - d / 2600); for (let k = 0; k < (ev.n || 3); k++) setTimeout(() => sfx('churchbell', v * (k % 2 ? 0.85 : 1)), k * 1150); break; }   // (the mission's bells carry a long way)
@@ -3111,6 +3112,7 @@ function drawOverlays(F, v2) {
     else if (gfx.particles && F.sky && F.sky.night > 0.3 && !S.fliesAsk) { S.fliesAsk = 1; import('./render/fireflies.js').then((m) => { S.flies = new m.Fireflies(S); }).catch((e) => console.warn('[fireflies]', e)); }
   }
   g.setTransform(...S.worldTf);
+  drawBowling(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
     const ta = touchAimState();
@@ -3372,6 +3374,12 @@ function drawBays(view) {
 // Soccer ball / volleyball: shadow on the ground, the ball lifted by its height.
 function drawBall(b) {
   const z = (b.extra || 0) * 2;
+  if (b.d.t === 4) { // a bowling ball (Pinwheel Lanes): small and glossy
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + 0.5, b.ry + 0.6, 3.8, 1.8, 0, 0, 6.28); g.fill();
+    g.fillStyle = '#23409a'; g.beginPath(); g.arc(b.rx, b.ry - 3.4, 3.6, 0, 6.28); g.fill(); g.strokeStyle = '#0c1430'; g.lineWidth = 0.6; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.arc(b.rx - 1.2, b.ry - 4.6, 0.9, 0, 6.28); g.fill();
+    return;
+  }
   if (b.d.t === 3) { // a basketball
     g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 1, 4.6, 2.6, 0, 0, 6.28); g.fill();
     g.fillStyle = '#e0702a'; g.beginPath(); g.arc(b.rx, b.ry - z - 4.6, 4.6, 0, 6.28); g.fill(); g.strokeStyle = '#1e1a18'; g.lineWidth = 1; g.stroke();
@@ -3620,8 +3628,8 @@ function drawStationClocks(view, now) {
 // lingers on screen a moment (S.golfShown). Each new shot starts aimed at the flag (the server takes your aim from
 // the last input, so a pad or touch player who doesn't touch the aim stick hits straight at the pin).
 function golfSwingStep(inp) {
-  const G = S.me && S.me.golf, Hh = S.me && S.me.hoops;
-  if (!(G && G.near) && !(Hh && Hh.ready)) { if (S.golfHold >= 0) S.golfHold = -1; return; }
+  const G = S.me && S.me.golf, Hh = S.me && S.me.hoops, Bw = S.me && S.me.bowl;
+  if (!(G && G.near) && !(Hh && Hh.ready) && !(Bw && Bw.ball && Bw.mine && !Bw.rolling)) { if (S.golfHold >= 0) S.golfHold = -1; return; }
   if (!G) { if (inp.bits & IN.FIRE) S.golfHold = S.golfHold >= 0 ? S.golfHold + DT : 0; else if (S.golfHold >= 0) { S.golfShown = { p: swingMeter(S.golfHold), until: performance.now() + 900 }; S.golfHold = -1; } return; }
   const key = `${G.ball}:${G.s}`;
   if (S.golfAimFor !== key && G.pin) {
@@ -3635,6 +3643,13 @@ function golfSwingStep(inp) {
 function golfAimNow() {
   if (input.device === 'keyboard') { const sp = worldToScreen(selfPos()), m = mouseScreen(); if (sp && m) return Math.atan2(m.y - sp.y, m.x - sp.x); }
   return S.lastAim || 0;
+}
+// Pinwheel Lanes (client/bowling.js, loaded near the alley): the pins on the lanes, your power meter and the score card
+function drawBowling(F) {
+  const A = S.map && S.map.bowling;
+  if (!A || !F.sp) return;
+  if (S.bowlView) { S.bowlView.draw(g, F, { walkInAt, DPR, W, H }); g.setTransform(...S.worldTf); }
+  else if (!S.bowlAsk && Math.hypot(F.sp.x - A.counter.x, F.sp.y - A.counter.y) < 1600) { S.bowlAsk = 1; import('./bowling.js').then((m) => { S.bowlView = new m.BowlingView(S); }).catch((e) => console.warn('[bowling]', e)); }
 }
 // shooting hoops: the meter beside you, with the band that drops it in from where you stand
 function drawHoops(g, z) {

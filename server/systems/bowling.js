@@ -181,7 +181,11 @@ function settle(world, li, G, R) {
 function afterSettle(world, li, G) {
   const nx = G.next || { frameDone: true, reset: true };
   G.settleAt = 0; G.next = null;
-  if (nx.reset || nx.frameDone) G.up = ALL_PINS;
+  if (nx.reset || nx.frameDone) {
+    G.up = ALL_PINS;
+    const L = alley(world).lanes[li], head = lanePt(L, 0, L.len);
+    world.emit(head.x, head.y, { e: 'bowlset', lane: li, x: head.x, y: head.y, up: ALL_PINS });   // (the pinsetter sets a new rack)
+  }
   if (!nx.frameDone) return;
   // the next bowler who isn't done; nobody left: the game's over
   for (let k = 1; k <= G.bowlers.length; k++) {
