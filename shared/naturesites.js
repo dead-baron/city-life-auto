@@ -3178,7 +3178,7 @@ function restSpot(m, H, c, trail) {
     add('boulder', Math.round(X + Math.cos(a) * r), Math.round(Y + Math.sin(a) * r * 0.85), Math.round(s * 0.45), { s });
   }
   for (let k = 0; k < nF; k++) {
-    const a = h(27 + k) * Math.PI * 2, r = 80 + h(33 + k) * 40;
+    const a = h(27 + k) * Math.PI * 2, r = 106 + h(33 + k) * 34;   // (past the seat logs' ends)
     add(c.desert ? (k % 2 ? 'bush_a' : 'shrub_b') : k % 3 === 2 ? 'shrub_a' : 'flowers_a', Math.round(X + Math.cos(a) * r), Math.round(Y + Math.sin(a) * r * 0.85), 0);
   }
   return lit;
