@@ -308,7 +308,9 @@ export function sitFrame(d, id, now) {
 
 // ---- the city's people (server personas.js): a persona's walk (the descriptor's gt) and prop (pp), a seat on a bench (sb)
 const STRIDES = new Set(['hunch', 'strut', 'skate', 'blade', 'push']);
-const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', map: 'map', stretcher: 'stretcher', stretcherPt: 'stretcherPt' };   // (stretcher: the paramedics', ems.js)
+const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', map: 'map', stretcher: 'stretcher', stretcherPt: 'stretcherPt' , easel: 'easel', cooler: 'cooler', chess: 'chess' };   // (easel, cooler, chess: people at their activities - server activities.js)   // (stretcher: the paramedics', ems.js)
+// people at their activities (server activities.js): sat at a chess board (on a bench's height), on a picnic blanket
+const ACT_POSES = { sit: 'sit', sitlow: 'sitlow', kneel: 'kneel' };
 // the same look with the prop in hand (keyed apart: art2Key)
 export function withProp(A, pp) { return PROP_CARRY[pp] ? { ...A, pp, carry: PROP_CARRY[pp] } : A; }
 // the pose a persona walks or stands in, for the pose the game picked (running for their life: the plain run)
@@ -318,6 +320,7 @@ export function personaPose(d, pose) {
   if (!g) return pose;
   if (g === 'dance' && d.dm !== undefined && pose === 'idle') return DANCE_POSE[d.dm] || g;   // (a move: dancing, task #394)
   if (g === 'dance' || g === 'lean') return pose === 'idle' ? g : pose;
+  if (ACT_POSES[g]) return pose === 'idle' ? ACT_POSES[g] : pose;   // (at an activity, held while they stay: server activities.js)
   if (pose === 'walk0' || pose === 'walk1' || ((g === 'skate' || g === 'blade') && pose.startsWith('walk'))) return g;
   return pose;
 }

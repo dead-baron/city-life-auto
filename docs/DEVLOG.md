@@ -5984,3 +5984,38 @@ With the bowling alley (`shared/bowling.js`, built with the world, so the bake r
 (`shared/dance.js`) in, a bake worker loads 77 files against a budget of 76 (its code, 969 KB, is within its 1000).
 The file budget is now 80: each new kind of place the world builds brings its module, and the workers fetch them once,
 after the page. Tests: test/perf.test.js.
+
+## 2026-10-10 · People going about their lives (task #423, part 1)
+
+The owner: "populate the world with NPCs doing things - hunting, fishing, mining, farming, playing pool or games - so it
+feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-about.png`).
+
+- **Activity spots, by rules from the map** (`server/systems/activities.js` `spotsOf`, once per map, by 1024 px cell):
+  - **anglers:** two at a pier's rail (the pier rails, piers, the bait shack's table and rod racks), facing the water,
+    rods out (the fishing bit, as the fisherman persona), a cooler at one's feet;
+  - **chess:** two sat facing each other over a board at a table in town (the parks' picnic tables, the plazas' cafe
+    tables), one or two standing by to watch, now and then glancing about;
+  - **picnics:** two or three sat on a picnic blanket (out in the country, two round a picnic table);
+  - **a street painter:** at an easel a little way off a fountain, a statue, the gazebo, a map board or the big wheel,
+    painting it.
+- **Filled near players, out of sight:** within 1100 px of someone, never closer than 380, never where anyone can see
+  the people pop up (`inAnyView`), at most 4 groups round a player; each spot is on by a day/night chance when someone
+  comes near (no chess, picnics or painting at night), else it rests a few minutes. **Emptied** when nobody's within
+  1600 px and nobody can see it (and the density manager's usual far clean-up applies to them too). Cheap: they stand
+  (sit) still and loop a pose; the fill/empty pass runs once a second.
+- **Like anyone else:** they're townsfolk (`npc.js`): a gunfight scatters them, a fight they stop to watch; away from
+  their spot the pose and the prop are put down (nobody sits in mid air); once it's over they walk back to it and take
+  it up again, or, far off by then (over 420 px), go on their way.
+- **Poses and props on the wire:** the descriptor's `gt` (`sit`, `sitlow`; `kneel` ready) and `pp` (`easel`, `cooler`,
+  `chess`). The art v2 renderer: `client/art2/game/peds.js` `personaPose` holds the activity's pose while they stand
+  about; `client/art2/people.js` draws the easel (three legs, the ledge, a canvas with a painting of sky and grass, the
+  brush dabbing it), the blue cooler with its white lid, and the chess board with a few pieces still standing.
+- **Already about** (personas.js): the joggers (laps of a park or the beach) and the dog walker with three dogs.
+- **Left for part 2:** car washing in the homes' driveways (needs a parked car spawned with them), neighbours chatting
+  over a fence, the pickup game at the courts, pool in the bars, hunters with a dog at forest edges, miners at the quarries
+  and the mine, pickers in the farms' fields; the classic renderer's poses for these.
+- **Fixed on the way:** `client/art2/game/host.js` didn't parse (the dance moves' comment, put mid-line, swallowed the
+  rest of the line with its closing braces), so the art v2 renderer failed to load; the comment is at the line's end now.
+- **Tests:** `test/activities.test.js` (4 new): the spots found on the map (on open ground, the anglers facing the
+  water, chess in town); a spot filled, posed, props on the wire, holding its spot; a gunfight scattering them and
+  them going back to it; filling round a player out of sight, a sensible number, gone when nobody's near.
