@@ -262,7 +262,9 @@ export function buildLand3(today) {
       if (i >= W) go(i - W);
       if (i < N - W) go(i + W);
     }
-    for (let y = by0; y < by1; y++) for (let x = bx0; x < bx1; x++) { const i = y * W + x; if (dist[i] === PEND) { dist[i] = pic.ids[0]; zone[i] = 0; terrain[i] = TERRAIN3.GRASS; } }
+    // (a piece of the island the picture never reaches - none today - takes its first district and its zone)
+    const z0 = queue.length ? zone[queue[0]] : Z.CITY;
+    for (let y = by0; y < by1; y++) for (let x = bx0; x < bx1; x++) { const i = y * W + x; if (dist[i] === PEND) { dist[i] = pic.ids[0]; zone[i] = z0; terrain[i] = TERRAIN3.GRASS; } }
   }
 
   // 3. Today's small islands placed whole (shared/world3.js PLACEMENTS: frame tile = today's tile + offset; the land
