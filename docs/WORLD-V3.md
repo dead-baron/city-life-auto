@@ -856,7 +856,8 @@ island (`terrain`'s land decoding, labelling and three distance fields over 1.57
    without it - so laying only an island's own roads costs nothing; 8 edges still run off it, the bridges that start on
    it (the skeleton's).
 3. **The railway is one loop** (`RAIL_ROUTE`, 14,127 points, 12 stations), laid whole whatever land is there: the
-   skeleton's, clipped per region.
+   skeleton's, clipped per region. The Metro Ring, on the other hand, is Metro City's own (`ringLine`): it came out as
+   today's in every run (its distance field `ringD` is a whole-map grid, item 7).
 4. **The seam with Dry Creek.** Metro City and Dry Creek are one landmass; the cut changes about 7,400 tiles in Old Town,
    Southside, Bayside Heights and The Yards: the Eastern Parkway (every street of the grid ends on it), the County Road
    and the Farm Road into Southside go, and the coast distance changes along the cut (waterfront strips, beaches). With
