@@ -79,6 +79,9 @@ const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55
 // reared, charging, stalking low, bedded down, head down feeding, head up and alert; else by its speed. Dead: on its
 // side (a bird with a wing out).
 const BEARS = new Set(['blackbear', 'grizzly']);
+// the art kind of an animal ('pet:<kind>' on the wire): a covey's two adult quail spawn one after the other, so the odd
+// id is drawn as the plain brown hen (birds.js 'quail:f') and the even one as the cock
+const petKind = (p) => { const k = p.d.ar.slice(4); return k === 'quail' && (p.id & 1) ? 'quail:f' : k; };
 function wildPose(p, S2, base, sp) {
   if (p.flags & PF.DEAD) return 'dead';
   if (p.flags & PF.DOWN) return 'lie';
@@ -1212,7 +1215,7 @@ export class World2 {
   _pet(p, now) {
     const A = this.A, E = this.E;
     if (!A || !A.animalKey) return;
-    const kind0 = p.d.ar.slice(4), kind = kind0 === 'quail' && (p.id & 1) ? 'quail:f' : kind0, base = kind.split(':')[0], sp = p.as || 0, still = now - (p.stillSince ?? now) > 1.2;   // (a covey's two adults come one after the other: one the cock, one the hen)
+    const kind = petKind(p), base = kind.split(':')[0], sp = p.as || 0, still = now - (p.stillSince ?? now) > 1.2;
     const S2 = SPECIES[base];
     // a pet home with its owner (server pets.js: APOSE.happy): never sitting still - the tail going fast, hopping
     const happy = !S2 && ((p.extra || 0) & 31) === APOSE.happy && !(p.flags & (PF.DEAD | PF.DOWN));
@@ -1543,7 +1546,7 @@ export class World2 {
         if ((e.flags & PF.INVEH) || e.blink === 3) continue;
         if (e.d.ar && e.d.ar.startsWith('pet:')) {
           if (!A || !A.animalKey) continue;
-          const kind = e.d.ar.slice(4), d8 = dir8(e.ra), pose = (e.as || 0) > 12 ? 'walk' : 'idle';
+          const kind = petKind(e), d8 = dir8(e.ra), pose = (e.as || 0) > 12 ? 'walk' : 'idle';
           if (this._ask('actors', 'animal', A.animalKey(kind, pose, d8, 0), [kind, pose, d8, 0], prio)) budget--;
           continue;
         }
