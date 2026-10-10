@@ -5574,6 +5574,11 @@ passengers riding in it." The concept: `docs/art-v2/targets/RS1_rescue-wilds-wat
   - Their time limits (getting there, the scene, back to the van, boarding) grow with the walk, up to 45 s of walking.
   - Your respawn clock is held while they're on their way in or at work on you.
   - A hijacked ambulance frees you to call another (as a wrecked one did).
+  - **The off-road ambulance** (RS1) goes to anyone more than 400 px from the street: `shared/vehicles.js` `rescue4x4`.
+    - It's a white and orange 4x4 with the light bar, a roof rack with kit boxes, a push bar and a spare wheel.
+    - It's in both renderers: art v2's is the SUV body in the livery; the classic sprite matches from above.
+    - It takes rough ground better than the van (`rough` 0.55), with the ambulance's siren and stretcher.
+    - Like the ambulance, it can't be garaged.
 - **Its look:**
   - Art v2 voxel RIB (`client/art2/vehicles.js` `rescueBoat`): fat orange tubes with a grey rubbing strake and white
     reflective patches, a dark deep-V hull, a grey non-slip deck, the centre console with its windscreen, two jockey
@@ -5597,7 +5602,7 @@ passengers riding in it." The concept: `docs/art-v2/targets/RS1_rescue-wilds-wat
   - down in the water, the rescue boat comes. It pulls you aboard, revives you for the fee and sets you ashore on dry
     land, and it is never on land.
   - a player who takes it puts the crew over the side and frees the caller to call another.
-  - 750-1100 px off the road in the wilds, the ambulance leaves the road and gets nearer than the road. The crew revive
-    you, and you don't wake up at a hospital meanwhile.
+  - 750-1100 px off the road in the wilds, the 4x4 comes, leaves the road and gets nearer than the road. The crew
+    revive you, and you don't wake up at a hospital meanwhile.
   - the open boats' seats are inside their hulls; only a back seat has the wire bit.
   - The ambulance tests (`test/ems.test.js`) and the revive tests pass as before.

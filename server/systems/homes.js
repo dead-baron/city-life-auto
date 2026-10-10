@@ -185,7 +185,7 @@ export function vehicleInteraction(world, p) {
     if (Math.hypot(v.vx, v.vy) > 60) return { label: 'Slow down to moor in your boathouse', run: () => {} };
     return { label: `Moor ${v.def.name} in your boathouse`, run: () => storeVehicle(world, p, v, h) };
   }
-  if (v.def.police || v.model === 'ambulance' || v.model === 'swat') return null;
+  if (v.def.police || v.model === 'ambulance' || v.model === 'rescue4x4' || v.model === 'rescueboat' || v.model === 'swat') return null;
   const h = nearOwnGarage(world, p, v.x, v.y);
   if (!h) return null;
   if (Math.hypot(v.vx, v.vy) > 60) return { label: 'Slow down to park in your garage', run: () => {} };

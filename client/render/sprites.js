@@ -138,6 +138,7 @@ function procVehicle(def, paint) {
   g.fillStyle = '#111'; rr(g, 0, 0, L, W, 6); g.fill();
   if (def.id === 'bus') paint = '#f2c21b';
   if (def.id === 'armored') paint = '#d8dbe0';
+  if (def.id === 'rescue4x4') paint = '#ecebe4';   // (RS1: white and orange - its livery below)
   if (def.pedal) { // two wheels (fat, knobby or thin), the frame between, handlebars across the front; the cargo bike's box
     g.clearRect(-2, -2, L + 4, W + 4);
     const cy = W / 2, P = PEDAL_LOOK[def.id] || PEDAL_LOOK.bicycle, t = P.tyre, d = P.wheel;
@@ -212,6 +213,13 @@ function procVehicle(def, paint) {
     g.fillStyle = '#1b2333'; rr(g, L * 0.58, 5, L * 0.14, W - 10, 3); g.fill();
     g.fillStyle = shade(paint.startsWith('#') ? paint : '#888888', 15); rr(g, L * 0.3, 6, L * 0.28, W - 12, 3); g.fill();
     g.fillStyle = '#1b2333'; rr(g, L * 0.2, 6, L * 0.1, W - 12, 2); g.fill();
+  }
+  if (def.id === 'rescue4x4') { // orange panels along the sides, the roof rack and its kit, the light bar
+    g.fillStyle = '#e8601e'; for (let k = 8; k < L - 14; k += 14) { g.fillRect(k, 1.5, 8, 3); g.fillRect(k, W - 4.5, 8, 3); }
+    g.fillRect(L - 12, W / 2 - 6, 9, 12);
+    g.fillStyle = '#2a2d35'; g.fillRect(L * 0.18, 7, L * 0.42, 1); g.fillRect(L * 0.18, W - 8, L * 0.42, 1);
+    g.fillStyle = '#5e6e3e'; g.fillRect(L * 0.22, W / 2 - 8, 12, 7); g.fillStyle = '#c8302c'; g.fillRect(L * 0.4, W / 2 + 1, 11, 7);
+    g.fillStyle = '#e83a30'; g.fillRect(L * 0.66, 8, 4, W / 2 - 8); g.fillStyle = '#3a6ae8'; g.fillRect(L * 0.66, W / 2, 4, W / 2 - 8);
   }
   g.fillStyle = '#ffe9a0'; g.fillRect(L - 3, 5, 2, 6); g.fillRect(L - 3, W - 11, 2, 6);
   g.fillStyle = '#c8262b'; g.fillRect(1, 4, 2, 6); g.fillRect(1, W - 10, 2, 6);

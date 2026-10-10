@@ -89,6 +89,7 @@ test('far out in the wilds the ambulance drives on over the open ground and its 
   revive.callAmbulance(w, a.p);
   assert.ok(a.p.amb && !a.p.amb.boat, 'an ambulance is on its way');
   const vid = a.p.amb.vehId;
+  assert.equal(w.get(vid).def.id, 'rescue4x4', 'the off-road ambulance: the 4x4');
   let up = false, off = false, nearest = Infinity, hospital = false;
   for (let t = 0; t < 150 * 20 && !up; t++) {
     w.step();

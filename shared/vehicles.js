@@ -28,6 +28,9 @@ export const VEHICLES = {
   // the search-and-rescue boat (server/systems/rescue.js): an orange and white rigid inflatable out of the nearest dock to
   // someone down in the water, lights and siren like an ambulance; two crew in orange up at the console, the rescued aft
   rescueboat: { i: 45, name: 'Rescue Boat',    kind: 'boat', L: 96,  W: 48, max: 620, accel: 340, brake: 300, rev: 130, turn: 2.3, grip: 2.8, drift: 1.2, mass: 1.5, hp: 420, seats: 4, slots: [[-34, 0]], siren: true, crew: [[-6, 6], [-6, -6], [-28, 7], [-28, -7]] },
+  // the off-road ambulance (ems.js: sent to someone down far from any road - RS1): a white and orange 4x4 with a light
+  // bar and a roof rack, the stretcher in the back like the ambulance's
+  rescue4x4: { i: 46, name: 'Rescue 4x4',     kind: 'car',  L: 104, W: 50, max: 600, accel: 330, brake: 660, rev: 170, turn: 2.5, grip: 8.6, drift: 2.3, mass: 1.8, hp: 420, seats: 4, slots: [[-28, -11], [-28, 11]], siren: true, rough: 0.55 },
   policebike: { i: 15, name: 'Police Motorcycle', kind: 'bike', L: 50, W: 20, max: 780, accel: 570, brake: 820, rev: 80, turn: 3.6, grip: 10.5, drift: 3.0, mass: 0.45, hp: 130, seats: 1, slots: [[-19, 0]], police: true, art: 'bike', moto: 'tourer' },
   // work trucks (traffic on the highways and in the industrial districts)
   boxtruck:  { i: 18, name: 'Box Truck',        kind: 'car',  L: 150, W: 58, max: 450, accel: 200, brake: 540, rev: 130, turn: 1.9, grip: 7.4, drift: 2.4, mass: 2.8, hp: 420, seats: 2, slots: [[-20, 0]], price: 11000 },

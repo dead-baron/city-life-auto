@@ -118,7 +118,9 @@ function dispatch(world, now) {
 }
 
 export function launch(world, b, n, k, now, paid = null) {   // (exported for the tests: an ambulance from a chosen junction)
-  const v = world.spawnVehicle('ambulance', n.x, n.y, Math.atan2(k.y - n.y, k.x - n.x), {});   // (in the middle of the junction: on the road)
+  // (far from the road - where it'll go on over the open ground: the off-road ambulance, a 4x4)
+  const model = Math.hypot(k.x - b.x, k.y - b.y) > OFF_MIN + 140 ? 'rescue4x4' : 'ambulance';
+  const v = world.spawnVehicle(model, n.x, n.y, Math.atan2(k.y - n.y, k.x - n.x), {});   // (in the middle of the junction: on the road)
   v.despawnable = false; v.sirenOn = false; v.npcOwned = true;
   const driver = spawnNpc(world, 'medic', v.x, v.y, 'medic');
   driver.vehId = v.id; driver.seat = 0; v.seats[0] = driver.id;

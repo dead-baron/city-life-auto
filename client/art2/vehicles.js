@@ -46,6 +46,8 @@ export const VEHICLE_DIMS = {
   tractor: [84, 54], combine: [150, 120], plane: [104, 130], excavator: [130, 60],
   // the search-and-rescue boat (server/systems/rescue.js; RS1): an orange rigid inflatable
   rescueboat: [96, 48],
+  // the off-road ambulance (ems.js; RS1): a white and orange 4x4
+  rescue4x4: [104, 50],
 };
 // height of the body (roof) in world px
 export const VEHICLE_TALL = {
@@ -56,10 +58,10 @@ export const VEHICLE_TALL = {
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
   fbi: 42, army: 52,
   vtwin: 25, tourer: 31, chopper: 35, bobber: 24, caferacer: 25, dirtbike: 28, scooter: 25, trike: 28, ratbike: 26, bagger: 29,
-  rescueboat: 30,
+  rescueboat: 30, rescue4x4: 46,
 };
 const DEFAULT_PAINT = {
-  rescueboat: '#e8601e',
+  rescueboat: '#e8601e', rescue4x4: '#ecebe4',
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
@@ -816,8 +818,8 @@ export function vehicleModel(type, o = {}) {
   const lit = o.lights || 0;
   const A = m.anchors;
   switch (type) {
-    case 'compact': case 'sedan': case 'taxi': case 'police': case 'sports': case 'suv': case 'limo': case 'fbi': {
-      const s = { ...CAR[type] };
+    case 'compact': case 'sedan': case 'taxi': case 'police': case 'sports': case 'suv': case 'limo': case 'fbi': case 'rescue4x4': {
+      const s = { ...CAR[type === 'rescue4x4' ? 'suv' : type] };
       if (type === 'police') { s.roofMat = M.white; s.bumper = M.trim; }
       if (type === 'compact' && V.twoTone) s.roofMat = M.white;                     // two-tone roof
       if (type === 'sedan' && V.twoTone) s.roofMat = M.black;                       // vinyl top
@@ -858,6 +860,21 @@ export function vehicleModel(type, o = {}) {
           const xa = s2 ? x0 + 0.5 : x1 - 0.5;
           A.siren.push([xa, b.cy - 5.5, z0 + 1, 0], [xa, b.cy + 5.5, z0 + 1, 1]);
         }
+      }
+      if (type === 'rescue4x4') {
+        // RS1: white, orange panels along the sides and over the bonnet, the light bar at the front of the roof, a roof
+        // rack with kit boxes, a push bar, a spare wheel on the tailgate
+        const or = m.mat({ ramp: R('#e8601e'), k: 3 });
+        deco(m, or, b.wx[0] + b.wr + 1, 0, b.z0 + 3, b.wx[1] - b.wr - 1, W, b.belt - 2, (x, y, z, vv, side) => side === 'y' && vv === M.body && Math.floor((x + z * 0.6) / 9) % 3 !== 0);
+        deco(m, or, L * 0.84, b.cy - 7, 0, L, b.cy + 7, m.h, (x, y, z, vv, side) => side === 'z' && vv === M.body);
+        lightbar(m, M, L * s.cab[1] - 9, L * s.cab[1] - 4, s.roof, { wide: true });
+        for (const y of [b.cy - b.hw0 + 5, b.cy + b.hw0 - 6]) m.box(L * 0.18, y, s.roof, L * s.cab[1] - 11, y + 1, s.roof + 3, M.trim);
+        for (const x of [L * 0.2, L * 0.5]) m.box(x, b.cy - b.hw0 + 5, s.roof + 2, x + 1, b.cy + b.hw0 - 5, s.roof + 3, M.trim);
+        m.box(L * 0.22, b.cy - 9, s.roof + 3, L * 0.36, b.cy - 1, s.roof + 8, m.mat({ ramp: R('#5e6e3e'), k: 3 }));
+        m.box(L * 0.38, b.cy + 1, s.roof + 3, L * 0.5, b.cy + 9, s.roof + 7, M.stripeRed);
+        m.box(L - 3, 6, 6, L, W - 6, 14, M.trim); m.box(L - 2, 4, 5, L, 7, 16, M.trim); m.box(L - 2, W - 7, 5, L, W - 4, 16, M.trim);
+        m.cyl('x', 0, b.cy, 18, 7, 0, 3, M.tyre, 3, M.rim);
+        A.seat = [L * 0.56, b.cy - W * 0.18, b.belt + 2];
       }
       if (type === 'police' || type === 'taxi') A.seat = [L * 0.56, b.cy - W * 0.18, b.belt + 2];
       break;
