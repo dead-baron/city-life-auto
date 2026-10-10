@@ -145,3 +145,23 @@ test('NPC groups bowl on the other lanes while someone is near, and go when nobo
   teleport(w, p.ped, A.counter.x + 4000, A.counter.y); run(w, 2);
   assert.ok(!w.bowl.lanes.some((l) => l.game && l.game.npc), 'gone when nobody is near');
 });
+
+test("Pinwheel Lanes' settees, little tables and ball returns are solid: nobody walks through them", async () => {
+  const { alleyFurniture } = await import('../shared/bowling.js');
+  const w = makeWorld(), m = w.map, A = m.bowling, unit = m.buildings[A.b].walkIn.units[0];
+  const boxes = alleyFurniture(A.lanes, unit);
+  assert.equal(boxes.filter((q) => q[2] - q[0] === 8 && q[3] - q[1] === 24).length, BOWL.LANES / 2, 'a ball return between each pair of lanes');
+  assert.ok(boxes.some((q) => q[2] - q[0] === 34), 'settees');
+  const solidAt = (x, y) => [...(m.solidProps.get(Math.floor(y / TILE) * m.w + Math.floor(x / TILE)) || [])].some((e) => !e.off && Math.hypot(e.x - x, e.y - y) <= e.r + 0.01);
+  for (const [x0, y0, x1, y1] of boxes) assert.ok(solidAt((x0 + x1) / 2, (y0 + y1) / 2), `solid at ${x0},${y0}`);
+  // walking at a settee from the approach: stopped short of it
+  const { p } = joinPlayer(w);
+  const [x0, y0, x1, y1] = boxes.find((q) => q[2] - q[0] === 34), cx = (x0 + x1) / 2, dir = A.lanes[0].dir;
+  const from = dir > 0 ? y0 - 30 : y1 + 30;
+  teleport(w, p.ped, cx, from);
+  let seq = 0;
+  for (let i = 0; i < 30; i++) { players.queueInput(p, { seq: p.ack + 1 + (seq++ % 3), bits: 0, mx: 0, my: dir, aim: 0 }); w.step(); }
+  const inside = p.ped.y > y0 - 2 && p.ped.y < y1 + 2 && Math.abs(p.ped.x - cx) < 17;
+  assert.ok(Math.abs(p.ped.y - from) > 8, 'walked up to it');
+  assert.ok(!inside, `stopped at the settee (${p.ped.x.toFixed(0)}, ${p.ped.y.toFixed(0)} vs ${y0}..${y1})`);
+});

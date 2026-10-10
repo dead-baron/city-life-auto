@@ -292,3 +292,24 @@ test('the plasma blade cutting a car with someone in it is an assault on them; a
   assert.equal(law.vehicleDamaged(w, p.ped, car2), false, 'once every few seconds');
   assert.ok(p.wanted >= 1);
 });
+
+test('a car cut in two collides as two halves: a box each, slid apart, a gap between them', () => {
+  const { w, p, road } = scene();
+  const car = w.spawnVehicle('sedan', road.x + 400, road.y, 0, { npcOwned: false });
+  const one = vehicles.bodyBoxes(car);
+  assert.equal(one.length, 1); assert.equal(one[0].hl, car.def.L / 2);
+  vehicles.cutVehicle(w, car, p.ped, 0);   // (through the middle)
+  const [a, b] = vehicles.bodyBoxes(car);
+  assert.ok(a && b, 'two boxes');
+  assert.ok(Math.abs(a.hl + b.hl - car.def.L / 2) < 1e-6, 'the halves make the car');
+  assert.ok(Math.abs((b.x - b.hl) - (a.x + a.hl) - 2 * PLASMA_CUT.slide) < 1e-6, 'slid apart: the gap');
+  // someone standing in the gap isn't pushed out; someone at the back end of the slid half is
+  const gapPed = joinPlayer(w).p.ped, endPed = joinPlayer(w).p.ped;
+  teleport(w, gapPed, car.x, car.y + 2); gapPed.r = Math.min(gapPed.r, PLASMA_CUT.slide - 2);
+  teleport(w, endPed, car.x - car.def.L / 2 - PLASMA_CUT.slide + 4, car.y);
+  const g0 = { x: gapPed.x, y: gapPed.y }, e0 = { x: endPed.x, y: endPed.y };
+  car.vx = car.vy = 0;
+  w.step();
+  assert.ok(Math.hypot(gapPed.x - g0.x, gapPed.y - g0.y) < 1, 'in the gap: free');
+  assert.ok(Math.hypot(endPed.x - e0.x, endPed.y - e0.y) > 2, 'against the slid half: pushed out');
+});

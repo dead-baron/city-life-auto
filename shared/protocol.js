@@ -8,10 +8,7 @@ export const MSG_SNAPSHOT = 2;
 
 export const CTRL = { NONE: 0, PED: 1, DRIVER: 2, PASSENGER: 3, RIDER: 4 }; // RIDER: on a train (no prediction; camera follows your ped)
 
-// ---- Client -> server input (13 bytes) -------------------------------------
-// The action bits are 32 wide: the low word at 5, the high word (bits 16-31) at 11. An older page sends the first 11
-// bytes alone - its high word reads as 0 - and an older server reads the first 11 and ignores the rest, so both meet
-// for the minutes after a deploy. (A snapshot's prevBits stays the low word: only those reach the prediction.)
+// ---- Client -> server input (13 bytes: the bits' high word at 11; an old page's 11 read as 0) -------------
 export const INPUT_BYTES = 13;
 export function encodeInput(seq, bits, mxq, myq, aimq) {
   const buf = new ArrayBuffer(INPUT_BYTES);

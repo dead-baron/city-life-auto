@@ -565,17 +565,10 @@ export const VEHICLE_WEAPON_DEFAULT = 0.6;
 // The plasma blade cuts a vehicle in two: this many hits by kind (a heavy truck or a bus: heavy) and it's sliced through
 // - the halves slide apart (slide px each, over slideS) with glowing edges, the engine dead, and it explodes boomS later.
 export const PLASMA_CUT = { car: 3, heavy: 5, bike: 1, boat: 3, slide: 14, slideS: 0.7, boomS: 1.8 };
-// A fight on a club's dance floor (server nightclubs.js dancerHurt): a dancer who's hurt stops; the dancers within near px
-// step back out of it (for backS), those within r px get their phones out at film x their usual chance (for filmS)
+// a fight on a club's floor (server nightclubs.js dancerHurt)
 export const CLUB_FIGHT = { near: 64, r: 260, backS: [3, 5], film: 0.6, filmS: [5, 9] };
-// Damaging someone else's vehicle with a weapon where it's seen (server law.js vehicleDamaged: a swing, the plasma blade, a
-// bullet, an arrow): vandalism when it's empty (a small crime, this much heat), an assault on whoever's in it. One count
-// per vehicle (or person) every repeatS. Its NPC driver: going slower than stopPx/s, fights back - out of the car - at
-// fight x their temperament's odds; otherwise drives off in a panic (and as the victim most likely calls it in).
+// a weapon damaging someone else's vehicle (server law.js vehicleDamaged, npc.js onVehicleHit)
 export const VANDAL_HEAT = 8;
 export const VEH_CRIME = { repeatS: 5, fight: 1, stopPx: 120 };
-// An NPC fighting with fists or a melee weapon raises a guard now and then as someone swings at them (server combat.js
-// npcGuard; blocked as a player's guard is: GUARD, the weapon's guard): this chance by what they hold, times
-// temper[0] + temper[1] x their temperament (npc.fight, 0-1); held holdS, not again for coolS. Everyone's guard is shown
-// for t s by the 'guard' event (a player's again every showS while held; t 0 when it drops).
+// an NPC's guard, and showing anyone's (server combat.js npcGuard, players.js)
 export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana: 0.4, plasma: 0.45 }, temper: [0.5, 0.8], holdS: 0.7, coolS: 1.4, showS: 0.4 };

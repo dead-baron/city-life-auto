@@ -245,4 +245,23 @@ export function buildBowlingAlley(m, { T, DISTRICTS }) {
   m.walkIns.push(b.id);
   const d = m.dist[Math.floor(p.y / TILE) * MAP_W + Math.floor(p.x / TILE)];
   m.bowling = { b: b.id, poi: p.id, name: p.label, district: DISTRICTS[d] ? DISTRICTS[d].name : '', south, lanes: alleyLanes(b.walkIn), counter: { x: p.x, y: p.y } };
+  for (const q of alleyFurniture(m.bowling.lanes, unit)) solidBox(m, q);
+}
+// The furniture you can't walk through, as art v2 draws it (client/art2/game/statics.js bowlingRoom): a ball return between
+// each pair of lanes at the back of the approach, the settees behind the approach (the west half, clear of the door) and
+// the little tables between them. -> boxes [x0, y0, x1, y1] in world px; solid: a row of circles each (map solidProps), so
+// the player's prediction and the server agree.
+export function alleyFurniture(lanes, unit) {
+  const out = [], L0 = lanes[0], dir = L0.dir, box = (x0, x1, ya, yb) => out.push([x0, Math.min(ya, yb), x1, Math.max(ya, yb)]);
+  lanes.forEach((L, i) => { if (i % 2 === 1) { const xm = (L.dir > 0 ? L.ax : L.ax + BOWL.PITCH) - 4; box(xm, xm + 8, L.foulY + L.dir * 34, L.foulY + L.dir * 58); } });
+  const Ys = L0.foulY + dir * (2 * TILE + 6), xs0 = unit.x0 * TILE + 8, xs1 = Math.min(unit.door.tx * TILE - 12, (unit.x1 + 1) * TILE - 8);
+  for (let x = xs0; x + 34 <= xs1; x += 46) {
+    box(x, x + 34, Ys, Ys + dir * 14);
+    if (x + 44 <= xs1) box(x + 36, x + 44, Ys, Ys + dir * 8);
+  }
+  return out;
+}
+function solidBox(m, [x0, y0, x1, y1]) {
+  const w = x1 - x0, h = y1 - y0, r = Math.min(w, h) / 2, along = w >= h, len = along ? w : h, n = Math.max(1, Math.ceil((len - 2 * r) / r) + 1);
+  for (let k = 0; k < n; k++) { const t = n === 1 ? len / 2 : r + (len - 2 * r) * k / (n - 1); m.addSolidProp(along ? x0 + t : x0 + w / 2, along ? y0 + h / 2 : y0 + t, r); }
 }
