@@ -5023,3 +5023,11 @@ Five more originals, each matched to its reference's tempo, key, groove and weig
 - *Sugar Haze* (Drippy Eye style): 87 BPM in A-flat with a slight shuffle, dripping synths, a sung vocoder-like lead.
 - *Sunburnt Tape* (When the Sun Grows style): 97 BPM in G, a floating keyboard intro, then a lo-fi turntable beat and distorted swells.
 The engine gained power chords for the distorted guitars (`comp` with `power: true`).
+
+## 2026-10-09 · Music round 2, batch 3: the brass-band march, the clockwork shop tune, two garden songs (task #443)
+Four more originals, each matched to its reference's tempo, key, groove and weight (`client/sound/studio/songs/`):
+- *Jester's Parade* (Disenchantment style): 121 BPM, F-sharp minor leaning on A major. Tuba oom-pah, syncopated trumpets, trombone slides, a marching beat and a stop-time break. An alternative main-menu theme.
+- *Clockwork Kitty* (Cats on Mars style): 136 BPM in G, straight eighths. Mostly percussion and clockwork ticks, with a rubbery bass and a toy-piano tune. For the quirkier shops.
+- *Porch Light* (Boat style): C major. A slow sway over picked nylon guitar, a glockenspiel tune, warm pads and no harsh highs. For gardening.
+- *First Sprouts* (Spring style): 119 BPM in A. A quiet start that builds, a whistled tune, strummed guitar, chimes, a bouncy bass and a breakdown. For farming and the garden shops.
+Ride of the Valkyries (the helicopter radio) waits on the score. It's public domain, so it will use Wagner's real theme, but the scores online are images; the owner was asked for a MIDI file or a photo of the sheet music.
