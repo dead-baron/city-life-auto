@@ -139,6 +139,7 @@ test('spots fill round a player out of sight, and empty when nobody is near', ()
       assert.ok(Math.hypot(g.x - p.ped.x, g.y - p.ped.y) > 300, 'not right on top of them');
     }
     assert.ok(mine().length <= 4, 'a sensible number');
+    for (const k of ['carwash', 'chat']) assert.ok(mine().filter((g) => g.k === k).length <= 1, `not every ${k} at once`);
     const ids = mine().flatMap((g) => g.ids);
     teleport(w, p.ped, s.x + ACT_DROP * 3, s.y + ACT_DROP * 3);
     while (!open(p.ped.x, p.ped.y)) teleport(w, p.ped, p.ped.x + 64, p.ped.y);

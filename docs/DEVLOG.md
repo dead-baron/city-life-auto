@@ -6011,7 +6011,9 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
 - **Filled near players, out of sight:** within 1100 px of someone, never closer than 380, never where anyone can see
   the people pop up (`inAnyView`), at most 4 groups round a player; each spot is on by a day/night chance when someone
   comes near (no chess, picnics, painting, car washing or picking at night; none of those in the rain either), else it
-  rests a few minutes. **Emptied** when nobody's within
+  rests a few minutes; two groups of a kind round a player at most (one car being washed, one chat over the fence -
+  there are 209 driveways). On the starting map: 14 painters' spots, 37 picnics, 12 chess tables, 11 anglers' rails,
+  209 driveways, 6 neighbours' yards, 12 fields, 3 rock faces, 2 hunters' woods (found in ~50 ms, once). **Emptied** when nobody's within
   1600 px and nobody can see it (and the density manager's usual far clean-up applies to them too). Cheap: they stand
   (sit) still and loop a pose; the fill/empty pass runs once a second.
 - **Like anyone else:** they're townsfolk (`npc.js`): a gunfight scatters them, a fight they stop to watch; away from
