@@ -187,12 +187,14 @@ export function meleeVehicle(world, ped, w, aim) {
     if (hit.plasmaHits >= vehicles.plasmaCuts(hit.def)) {
       const c = Math.cos(hit.a), s = Math.sin(hit.a);
       vehicles.noteHit(hit, zone, 1);
+      law.vehicleDamaged(world, ped, hit);   // (someone else's: a crime when it's seen)
       vehicles.cutVehicle(world, hit, ped, (hx - hit.x) * c + (hy - hit.y) * s);
       if (hit.ai) npc.onVehicleHit(world, hit, ped);
       return hit;
     }
   }
   vehicles.damageVehicle(world, hit, w.dmg * (ped.build ? ped.build.str : 1) * vehWeapon(w), ped, false, false, zone);
+  law.vehicleDamaged(world, ped, hit);
   if (hit.ai) npc.onVehicleHit(world, hit, ped);
   return hit;
 }
@@ -275,6 +277,7 @@ function stepArrow(world, p, dt, owner) {
     world.emit(nx, ny, { e: 'spark', x: nx, y: ny });
     if (w.fire) { hit.burnUntil = Math.max(hit.burnUntil || 0, world.time + FIRE_ARROW.vehBurnS); world.emit(nx, ny, { e: 'arrowstick', x: Math.round(nx), y: Math.round(ny), a: +a.toFixed(2), wall: 1, f: 1 }); }   // (it catches: flames on it a while)
     vehicles.damageVehicle(world, hit, w.fire ? FIRE_ARROW.veh : 4, owner, false, false, vehicles.zoneAt(hit, nx, ny));
+    if (owner) { law.vehicleDamaged(world, owner, hit); if (hit.ai) npc.onVehicleHit(world, hit, owner); }
     world.remove(p);
     return;
   }
@@ -403,6 +406,7 @@ function hitscan(world, ped, w, a, acc) {
     vehicles.damageVehicle(world, hit, w.dmg * vehWeapon(w), ped, false, false, vehicles.zoneAt(hit, hx, hy));
     // exposed riders on bikes take hits too
     if (hit.def.kind === 'bike' && hit.seats[0]) { const rider = world.get(hit.seats[0]); if (rider) damage(world, rider, w.dmg * 0.5, ped, 'gun', a); }
+    law.vehicleDamaged(world, ped, hit);   // (shots fired is a crime already: hitting someone else's vehicle is one more)
     if (hit.ai) npc.onVehicleHit(world, hit, ped);
     return true;
   }

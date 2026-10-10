@@ -22,7 +22,7 @@ import { inAnyView } from '../view.js';
 import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
 import * as activities from './activities.js';
-import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S } from '../../shared/rules.js';
+import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
@@ -476,7 +476,18 @@ export function onCarjacked(world, driver, jacker) {
 export function onVehicleHit(world, v, attacker) {
   if (!v.ai) return;
   v.ai.panicUntil = world.time + 10; // drive frantic and panicked
-  void attacker;
+  // someone damaging the car with a weapon (combat.js: law.vehicleDamaged has made it a crime): its driver, by temperament,
+  // stops and gets out to fight them - or drives off in a panic (and, the victim, most likely calls it in: law.witnesses)
+  const drv = v.seats[0] ? world.get(v.seats[0]) : null, n = drv && drv.npc;
+  if (!n || drv.dead || !attacker || attacker === drv || attacker.kind !== K.PED || attacker.vehId === v.id) return;
+  if (n.role === 'cop' || n.role === 'medic' || n.role === 'railguard' || world.time - (n.vandalAt ?? -99) < 8) return;
+  n.vandalAt = world.time;
+  if (Math.hypot(v.vx, v.vy) < VEH_CRIME.stopPx && rng() < (n.fight || 0) * VEH_CRIME.fight) {
+    v.ai = null; v.input = { throttle: 0, steer: 0, hb: true };
+    vehicles.ejectPed(world, drv, false);
+    n.role = 'civ';
+    startFight(world, drv, attacker, 16);
+  }
 }
 
 export function onGunfire(world, x, y, shooter, radius = 360) {

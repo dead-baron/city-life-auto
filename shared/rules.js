@@ -568,3 +568,9 @@ export const PLASMA_CUT = { car: 3, heavy: 5, bike: 1, boat: 3, slide: 14, slide
 // A fight on a club's dance floor (server nightclubs.js dancerHurt): a dancer who's hurt stops; the dancers within near px
 // step back out of it (for backS), those within r px get their phones out at film x their usual chance (for filmS)
 export const CLUB_FIGHT = { near: 64, r: 260, backS: [3, 5], film: 0.6, filmS: [5, 9] };
+// Damaging someone else's vehicle with a weapon where it's seen (server law.js vehicleDamaged: a swing, the plasma blade, a
+// bullet, an arrow): vandalism when it's empty (a small crime, this much heat), an assault on whoever's in it. One count
+// per vehicle (or person) every repeatS. Its NPC driver: going slower than stopPx/s, fights back - out of the car - at
+// fight x their temperament's odds; otherwise drives off in a panic (and as the victim most likely calls it in).
+export const VANDAL_HEAT = 8;
+export const VEH_CRIME = { repeatS: 5, fight: 1, stopPx: 120 };
