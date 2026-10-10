@@ -4910,3 +4910,22 @@ The owner: "Ambulances will still drive over an NPC or player that is hurt on th
   - It goes round the one on its way, and has stopped (0 px/s) when the doors open: 46 px from the patient, short of them and 76 px to one side.
   - The paramedics treat them and load them, and it drives off past the other one.
   - It fails without the change (it drove over the one on its way in). The paid-ambulance and stretcher tests pass as before.
+
+## 2026-10-09 · Animals go round walls and fences, or give up and go another way - they don't push into them (task #422)
+The owner: "Animals still get stuck trying to run through walls so we should add some better intelligence to them so they don't just infinitely try to break through a wall or fence or something."
+- **What it was** (`server/systems/wildlife.js`): an animal headed straight for wherever it was going, and only noticed it was stuck once it had gone nowhere for half a second (`unstick`). That gave up a walk, and kept a running animal off that way for a moment. But:
+  - nothing else was given up: a fawn or a herd animal whose leader was over a fence, a bear charging someone across a wall, a predator stalking them, leaned on it for as long as that lasted (a fawn by a wall from its mother: 10 s and counting);
+  - the farm animals amble at under 30 px/s, too slow for it to notice: a cow that walked into its pasture's fence leaned on it until the walk timed out (8 s), then often picked another spot past the fence;
+  - the spots it picked to walk to could be on the far side of a fence or a wall, and a walk down to drink made for a spot out in the water;
+  - a squirrel bolting up a tree could never get close enough to the trunk to climb it (its body stops a trunk's width plus its own off the middle), so it ran at the bark for good.
+  Measured with every animal round four pastures, and in the Granite Peaks, Highland Woods, Cedar Farms and Dry Creek Desert, for a minute each: 256 s of running on the spot in all (cows at the pasture fences, squirrels at the trees, a fawn at a fence).
+- **It looks where it's going** (`wayRound`): before each step it checks the way ahead for its body: the tiles it can't cross (walls, cliffs, buildings, water for those that don't swim, highway embankments), fences, trunks and rocks, and vehicles standing still. Blocked, it turns along the obstacle, the first time toward the side nearer where it's going, then keeping to that side until it's round (no dithering at a flat wall).
+- **It gives up instead of pushing** (`giveUp`): boxed in, or going round for 3 s without getting any nearer (a fence too long to go round), it stops.
+  - A walk is given up for somewhere it can get to.
+  - A fawn or a herd animal waits a few seconds before trying for its leader again.
+  - A charge, an attack or a stalk on someone it can't get at is given up, and it doesn't come at them again for 8 s: it stares across at them instead.
+- **Where it walks to** is somewhere it can walk to in a straight line (`openTo`). A walk down to drink ends at the water's edge, where it drinks (`arrive`).
+- **Running away**, it counts the cars standing about and the embankments when it picks its way (`fleeAngle`), and goes round them.
+- A slow amble that goes nowhere is noticed too (`unstick`: from 12 px/s, was 30). A squirrel climbs once it's at the trunk, and stays on it while it's up there.
+- Measured the same way after: 1.2 s of running on the spot in all, 0.2 s at most at a time.
+- **Tests:** `test/wildmoves.test.js` (1 new): a stone wall and a pasture fence in the woods, and up against them a deer walking somewhere on the far side, a fawn whose mother is on the far side, a grizzly charging someone on the far side, a deer bolting with the wall right behind it, and a cow ambling at the fence; also a squirrel bolting up a tree and a deer going down to drink at a pond. None of them pushes for more than half a second at a time or gets through. The walk and the charge are given up, the bolting deer gets away along the wall, the squirrel gets up the tree and stays on it, and the deer drinks at the water's edge. It fails without the change (the fawn leaned on the wall for 9.9 s).
