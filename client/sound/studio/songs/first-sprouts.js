@@ -20,7 +20,7 @@ export default {
   form: ['intro', 'A', 'B', 'A2', 'rest', 'A3', 'outro'],
   loop: 1,
   echo: { beats: 0.75, fb: 0.28, mix: 0.16, lp: 3000, pingpong: 0.5 },
-  master: { low: 1, tape: 0.2, ratio: 1.8, thrRel: 7, loudness: -15 },
+  master: { low: 1, tape: 0.2, ratio: 1.8, thrRel: 7, lufs: -16 },
   tracks: {
     flute: { inst: 'whistle', vol: 0.36, pan: 0.05, echo: 0.25 },
     chimes: { inst: 'toyPiano', vol: 0.18, pan: 0.45, echo: 0.35 },

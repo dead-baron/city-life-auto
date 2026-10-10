@@ -19,13 +19,13 @@ export default {
   form: ['A', 'B', 'A2', 'tick', 'A3', 'end'],
   loop: 0,
   echo: { beats: 0.5, fb: 0.3, mix: 0.16, lp: 3200, pingpong: 0.7 },
-  master: { low: 1.5, tape: 0.4, ratio: 2.6, loudness: -13 },
+  master: { low: 1.5, tape: 0.3, ratio: 2.2, lufs: -14.5 },
   tracks: {
     toy: { inst: 'toyPiano', vol: 0.34, pan: 0.2, echo: 0.3 },
     bop: { inst: 'squareLead', set: { cut: 2200, vib: [5.5, 0.08, 0.2] }, vol: 0.24, pan: -0.2, echo: 0.25 },
     marimba: { inst: 'marimba', vol: 0.34, pan: -0.35, echo: 0.2 },
     bass: { inst: 'rubberBass', vol: 0.42, comp: { thr: -8, ratio: 3 } },
-    drums: { kit: true, vol: 1.5, comp: { thr: -14, ratio: 3.5, att: 0.002, rel: 0.07, makeup: 1.5 }, room: 0.2, width: 2, mix: { hat: 1.6, block: 1.4, clave: 1.4, rim: 1.3, kickTight: 0.6 } },
+    drums: { kit: true, vol: 1.5, comp: { thr: -10, ratio: 2.5, att: 0.005, rel: 0.07, makeup: 1 }, room: 0.2, width: 2, mix: { hat: 1.6, block: 1.4, clave: 1.4, rim: 1.3, kickTight: 0.6 } },
   },
   sections: {
     A: {

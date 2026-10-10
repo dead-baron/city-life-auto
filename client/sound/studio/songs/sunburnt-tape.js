@@ -19,14 +19,14 @@ export default {
   form: ['float', 'A', 'B', 'dip', 'A2', 'B2', 'outro'],
   loop: 1,
   echo: { beats: 0.75, fb: 0.42, mix: 0.24, lp: 2200, pingpong: 0.4 },
-  lofi: { wow: 0.0032, flutter: 0.0005, drive: 0.7, hiss: 0.004, lp: 5400 },
-  master: { low: 2, tape: 0.7, ratio: 3.5, thrRel: 2, loudness: -12 },
+  lofi: { wow: 0.0032, flutter: 0.0005, drive: 0.45, hiss: 0.0022, lp: 5400 },
+  master: { low: 2, tape: 0.45, ratio: 2.2, thrRel: 5, lufs: -14, hp: 45 },
   tracks: {
     keys: { inst: 'warbleKeys', vol: 0.3, pan: -0.1, echo: 0.35, chorus: 0.4 },
     lead: { inst: 'hazeLead', vol: 0.3, pan: 0.15, echo: 0.3 },
-    swell: { inst: 'analogPad', set: { env: [0.9, 1, 0.9, 0.8], drive: 1.4, cut: 1600 }, vol: 0.15, chorus: 0.5, duck: 0.3 },
-    bass: { inst: 'fatBass', set: { cut: 800 }, vol: 0.62, comp: { thr: -8, ratio: 3 } },
-    drums: { kit: true, vol: 0.9, comp: { thr: -15, ratio: 4.5, att: 0.003, rel: 0.09, makeup: 2.5 }, room: 0.2, drive: 0.4, width: 0.8 },
+    swell: { inst: 'analogPad', set: { env: [0.9, 1, 0.9, 0.8], drive: 0.5, cut: 1600 }, vol: 0.15, chorus: 0.5, duck: 0.3 },
+    bass: { inst: 'fatBass', set: { cut: 800 }, vol: 0.62, hp: 40, comp: { thr: -8, ratio: 3 } },
+    drums: { kit: true, vol: 0.9, hp: 38, comp: { thr: -10, ratio: 2.8, att: 0.007, rel: 0.09, makeup: 1.2 }, room: 0.2, drive: 0.4, width: 0.8 },
   },
   sections: {
     float: {
@@ -39,7 +39,7 @@ export default {
       bars: 8, chords: A_CH,
       keys: { gen: 'comp', pattern: 'x..x..x...x..x..', lo: 55, hi: 74, size: 4, gate: 0.6 },
       lead: A_TUNE,
-      bass: { gen: 'bass', pattern: 'R..R..5.R.R..8..', lo: 31 },
+      bass: { gen: 'bass', pattern: 'R..R..5.R.R..8..', lo: 36 },
       drums: { ...TURNTABLE, crash: only(8, { 0: 'X' }) },
     },
     B: {
@@ -47,14 +47,14 @@ export default {
       keys: { gen: 'comp', pattern: 'x..x..x...x..x..', lo: 55, hi: 74, size: 4, gate: 0.6 },
       lead: B_TUNE,
       swell: { gen: 'pad', lo: 52, hi: 74, size: 4 },
-      bass: { gen: 'bass', pattern: 'R..R..5.R.R..8..', lo: 31 },
+      bass: { gen: 'bass', pattern: 'R..R..5.R.R..8..', lo: 36 },
       drums: { ...TURNTABLE, ohatDust: '..............x.' },
     },
     dip: {
       bars: 6, chords: 'Em9 | Cmaj7 | Am7 | D7 | Em9 | D7',
       keys: { gen: 'arp', pattern: '0...2...1...3...', lo: 59 },
       swell: { gen: 'pad', lo: 52, hi: 74, size: 4, vol: 1.2 },
-      bass: { gen: 'bass', pattern: 'R-------R-------', lo: 31, vol: 0.8 },
+      bass: { gen: 'bass', pattern: 'R-------R-------', lo: 36, vol: 0.8 },
       drums: { hatDust: 'x.x.x.x.x.x.x.x.', snareDust: only(6, { 5: '........x.x.XXXX' }) },
     },
     A2: {
@@ -62,7 +62,7 @@ export default {
       keys: { gen: 'comp', pattern: 'x..x..x...x..x..', lo: 55, hi: 74, size: 4, gate: 0.6 },
       lead: A_TUNE,
       swell: { gen: 'pad', lo: 52, hi: 74, size: 4, vol: 0.8 },
-      bass: { gen: 'bass', pattern: 'R..R..5.R.R..8..', lo: 31 },
+      bass: { gen: 'bass', pattern: 'R..R..5.R.R..8..', lo: 36 },
       drums: { ...TURNTABLE, crash: only(8, { 0: 'X' }) },
     },
     B2: {
@@ -70,7 +70,7 @@ export default {
       keys: { gen: 'comp', pattern: 'x..x..x...x..x..', lo: 55, hi: 74, size: 4, gate: 0.6 },
       lead: B_TUNE,
       swell: { gen: 'pad', lo: 52, hi: 74, size: 4 },
-      bass: { gen: 'bass', pattern: 'R..R..5.R.R..8..', lo: 31 },
+      bass: { gen: 'bass', pattern: 'R..R..5.R.R..8..', lo: 36 },
       drums: { ...TURNTABLE, ohatDust: '..............x.' },
     },
     outro: {
@@ -78,7 +78,7 @@ export default {
       keys: { gen: 'arp', pattern: '0...2...1...3...|0...2...1...3...|0...2...1...3...|0...............', lo: 59 },
       swell: { gen: 'pad', lo: 52, hi: 74, size: 4 },
       lead: 'B4/4 D5/4 F#5/4. E5/8 | D5/2 B4/4 A4/4 | G4/4 B4/4 E5/4. D5/8 | B4/1 |',
-      bass: { gen: 'bass', pattern: 'R-------R-------|R-------R-------|R-------R-------|R---------------', lo: 31, vol: 0.8 },
+      bass: { gen: 'bass', pattern: 'R-------R-------|R-------R-------|R-------R-------|R---------------', lo: 36, vol: 0.8 },
       drums: { hatDust: only(4, { 0: 'xxXxxxXxxxXxxxXx', 1: 'xxXxxxXxxxXxxxXx' }), kickDust: only(4, { 0: 'X.......X.x.....', 1: 'X.......X.x.....' }), snareDust: only(4, { 0: '....X.......X...', 1: '....X.......X...' }) },
     },
   },

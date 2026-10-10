@@ -23,7 +23,7 @@ export default {
   form: ['intro', 'A', 'A2', 'B', 'calm', 'B2', 'end'],
   loop: 1,
   echo: { beats: 0.75, fb: 0.32, mix: 0.24, lp: 3000, pingpong: 0.8, spread: 1.5 },
-  master: { low: 2.5, tape: 0.4, ratio: 2.6, loudness: -12.5 },
+  master: { low: 2.5, tape: 0.4, ratio: 2.2, lufs: -14 },
   tracks: {
     bass: { inst: 'fatBass', vol: 0.8, comp: { thr: -10, ratio: 3 } },
     arp: { inst: 'pluckSynth', vol: 0.3, echo: 0.45, chorus: 0.8 },
@@ -31,7 +31,7 @@ export default {
     brass: { inst: 'brassFat', vol: 0.34, pan: -0.45, echo: 0.15 },
     guitar: { inst: 'steelGuitar', vol: 0.3, pan: 0.65, hp: 140, echo: 0.1 },
     pad: { inst: 'analogPad', vol: 0.11, chorus: 0.7, echo: 0.2, duck: 0.3 },
-    drums: { kit: true, vol: 0.85, comp: { thr: -14, ratio: 4, att: 0.003, rel: 0.08, makeup: 2 }, room: 0.25, width: 2 },
+    drums: { kit: true, vol: 0.85, comp: { thr: -10, ratio: 2.5, att: 0.008, rel: 0.08, makeup: 1 }, room: 0.25, width: 2 },
     perc: { kit: true, vol: 1.3, width: 2.6, echo: 0.08 },
   },
   sections: {

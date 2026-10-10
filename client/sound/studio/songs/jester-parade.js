@@ -20,13 +20,13 @@ export default {
   form: ['fanfare', 'A', 'B', 'A2', 'coda'],
   loop: 1,
   echo: { beats: 0.5, fb: 0.2, mix: 0.1, lp: 3500 },
-  master: { low: 1, tape: 0.5, ratio: 2.6, loudness: -12.5 },
+  master: { low: 1, tape: 0.35, ratio: 2.2, lufs: -14 },
   tracks: {
     trumpets: { inst: 'brassFat', set: { cut: 1350, lp2: 7000, velCut: 1.3 }, vol: 0.42, pan: 0.25, echo: 0.12 },
     bones: { inst: 'bonesFat', set: { glide: 0.12 }, vol: 0.38, pan: -0.25, echo: 0.1 },
     horns: { inst: 'tenorSax', vol: 0.28, pan: -0.45, echo: 0.1 },
-    tuba: { inst: 'tuba', set: { drive: 0.9, cut: 700 }, vol: 0.5, hp: 95 },
-    drums: { kit: true, vol: 0.6, comp: { thr: -14, ratio: 3.5, att: 0.003, rel: 0.08, makeup: 1.5 }, room: 0.4, width: 1.6, hp: 90, mix: { kickSoft: 0.5 } },
+    tuba: { inst: 'tuba', set: { drive: 0.45, cut: 700 }, vol: 0.5, hp: 95 },
+    drums: { kit: true, vol: 0.6, comp: { thr: -10, ratio: 2.5, att: 0.008, rel: 0.08, makeup: 1 }, room: 0.4, width: 1.6, hp: 90, mix: { kickSoft: 0.5 } },
   },
   sections: {
     fanfare: {

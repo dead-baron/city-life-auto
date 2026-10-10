@@ -24,6 +24,6 @@ for (let i = 0; i < n; i++) {
 }
 writeFileSync(out, data);
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-console.log(`${song.title || id}: ${mmss(r.seconds)} (${r.seconds.toFixed(1)} s), peak ${r.peak.toFixed(3)}, rendered in ${(r.ms / 1000).toFixed(1)} s -> ${out}`);
+console.log(`${song.title || id}: ${mmss(r.seconds)} (${r.seconds.toFixed(1)} s), ${r.lufs} LUFS, peak ${(20 * Math.log10(r.peak)).toFixed(1)} dBFS, limited ${r.limited} dB, rendered in ${(r.ms / 1000).toFixed(1)} s -> ${out}`);
 console.log('sections: ' + r.sections.map((s) => `${s.name}@${mmss(s.at)}`).join(' '));
 console.log('parts (notes, dB while playing): ' + Object.entries(r.stats).map(([k, v]) => `${k} ${v} ${r.levels[k]}`).join(', '));

@@ -18,7 +18,7 @@ export default {
   form: ['intro', 'A', 'A2', 'B', 'A3', 'outro'],
   loop: 1,
   echo: { beats: 1.5, fb: 0.32, mix: 0.18, lp: 2200, pingpong: 0.5 },
-  master: { low: 2.5, tape: 0.3, ratio: 2, loudness: -15, top: 8500 },
+  master: { low: 2.5, tape: 0.25, ratio: 1.8, lufs: -16, top: 8500 },
   tracks: {
     guitar: { inst: 'nylonGuitar', set: { bright: 0.35 }, vol: 0.55, pan: -0.3, hp: 80, echo: 0.12, eq: [{ f: 220, g: 2, q: 0.8 }] },
     glock: { inst: 'glock', vol: 0.3, pan: 0.3, echo: 0.35, lp: 4000 },

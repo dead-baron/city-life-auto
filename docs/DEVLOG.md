@@ -5229,3 +5229,25 @@ The fixes:
 - untouched below the knee, smooth at it, rising all the way and never past the ceiling;
 - a peak twice full scale comes out just under the ceiling;
 - the wiring puts the ceiling last, and the club's drums stay down.
+
+## 2026-10-10 · Music: round 2's songs re-mastered clean (they came out distorted and too loud)
+The owner heard round 2's thirteen songs as "blown out, over-distorted". Measured, they were: 3-5 dB over streaming loudness (-9 to -11 LUFS), and the loudest had only 5-6 dB between their average level and their peaks. The references sit at 9-20 dB.
+
+The causes, all in the studio's finishing stages (`client/sound/studio/`):
+- **Saturation on the whole mix.** The lo-fi and tape stages ran the full mix through `soft()`, an instrument fuzz that pushes everything under full scale up towards it. Quiet sound came up as much as 4 times, on a mix whose level was never set, so everything was ground flat.
+- **A heavy drum squeeze.** Drum buses were compressed by 10 dB and more.
+- **Buzzy basses.** Bass and organ presets had fuzz drives close to a square wave.
+- **Too much deep sub.** 40-60% of the energy sat under 60 Hz (the references have 2-10%). That fed the distortion and makes small speakers crackle.
+
+The fixes:
+- **`warm()`** replaces `soft()` for parts and the mix. Quiet sound passes untouched; only the tops of peaks are rounded off (2.4 dB at most). It works on a signal first set to peak at full scale, so a drive amount means the same at any level. `soft()` stays as the instruments' own fuzz, with its comment corrected.
+- **Matched loudness, clean limiting.** A real loudness meter (`lufs()`: BS.1770 K-weighting and gating, as the streaming services measure) brings every song to -14 LUFS, or the song's own `master.lufs` (-16 for the two garden songs). A look-ahead limiter (`limit()`) then holds peaks, including those between samples, at -1.5 dBFS. It never limits more than 3 dB: a song that would need more comes out a little quieter instead. The old fixed 0.82 soft ceiling is gone.
+- **Less sub, more bass.** A 4th-order low cut under the music (34 Hz, or the song's `master.hp`). The master's "weight" is now a broad lift round 100 Hz instead of a shelf that boosted the sub. Shorter kick tails, quieter sub-octaves in the bass presets, and the hazy songs' bass lines moved up into the bass register. Kit tracks now honour `hp`.
+- **Gentler settings per song.** Glue compression of ratio 2-2.4 over a threshold 4.5-6 dB above the mix (was up to 4 at 2 dB). Drum buses at -10 dB, ratio 2.5-3, attacks of 5-8 ms so the hits punch through. Bass and organ drives roughly halved.
+
+**Result:** the thirteen songs measure -13.4 to -16 LUFS, true peaks at -1 dBTP or lower, and 12-13.5 dB between loudness and peak. No clipping, before or after MP3 encoding. The round-1 songs were clean before; they now go through the same mastering at the same loudness. `tools/render-music.mjs` prints each song's LUFS, peak and limiting.
+
+**Tests:** `test/studio.test.js`:
+- the meter reads a 1 kHz tone within half a dB of the standard, and weighs a 30 Hz tone well under it;
+- the limiter holds every peak, including those between samples, under the ceiling; it leaves the quiet stretch before untouched, recovers after, and its gain never jumps;
+- `warm()` leaves quiet sound alone, only rounds off peaks, never folds back, and does the same at any level.

@@ -22,14 +22,14 @@ export default {
   form: ['intro', 'A', 'B', 'drop', 'A2', 'outro'],
   loop: 1,
   echo: { beats: 0.375, fb: 0.4, mix: 0.2, lp: 2000, pingpong: 0.7 },
-  lofi: { wow: 0.0035, flutter: 0.0006, drive: 1, hiss: 0.006, lp: 6800, bits: 11 },
-  master: { low: 3, tape: 0.8, ratio: 4, thrRel: 2, loudness: -11.5, top: 9500 },
+  lofi: { wow: 0.0035, flutter: 0.0006, drive: 0.5, hiss: 0.003, lp: 6800, bits: 12 },
+  master: { low: 3, tape: 0.5, ratio: 2.4, thrRel: 4.5, lufs: -14, top: 9500 },
   tracks: {
-    bass: { inst: 'fatBass', set: { drive: 1.8, cut: 900 }, oct: 1, vol: 0.8, comp: { thr: -9, ratio: 4 } },
+    bass: { inst: 'fatBass', set: { drive: 0.6, cut: 900 }, oct: 1, vol: 0.8, hp: 45, comp: { thr: -9, ratio: 3 } },
     melt: { inst: 'hazeLead', set: { vib: [3.2, 0.3, 0.02], fall: [-2, 0.12], lp2: 3200 }, vol: 0.28, echo: 0.35, chorus: 0.9 },
     voco: { inst: 'vocoLead', vol: 0.24, echo: 0.3, chorus: 0.95, chorusRate: 0.3 },
-    stab: { inst: 'stab', set: { drive: 1.2 }, vol: 0.2, pan: 0.65, echo: 0.25, duck: 0.3 },
-    drums: { kit: true, vol: 1, comp: { thr: -16, ratio: 5, att: 0.003, rel: 0.09, makeup: 3 }, room: 0.4, drive: 0.6, width: 2.4 },
+    stab: { inst: 'stab', set: { drive: 0.45 }, vol: 0.2, pan: 0.65, echo: 0.25, duck: 0.3 },
+    drums: { kit: true, vol: 1, comp: { thr: -10, ratio: 3, att: 0.007, rel: 0.09, makeup: 1.5 }, room: 0.4, drive: 0.5, width: 2.4 },
   },
   sections: {
     intro: {

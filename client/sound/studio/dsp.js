@@ -84,8 +84,69 @@ export function envADSR(nOn, a, d, s, r) {
   return out;
 }
 
-// A gentle saturator: unity at low level, rounding off toward +-1
+// An instrument's own drive (a fuzz in the voice, before its envelope): full scale stays full scale, but everything
+// under it is pushed up towards it - by about 1 + 4 x drive at low level - so it is strong: 0.3 is a growl, 1 a fuzz,
+// 2 and over close to a square wave. For a part or the whole mix use warm(), which leaves quiet sound alone.
 export function soft(x, drive = 1) { if (drive <= 0) return x; const k = 1 + drive * 4; return Math.tanh(x * k) / Math.tanh(k); }
+
+// Warmth for a part or the whole mix (task: round 2's songs came out distorted when soft() did this job): unity for
+// quiet sound, only the peaks rounded off - by 2.4 dB at full scale with amt 1, about 1 dB with 0.4. Works on a signal
+// set to peak at 1: see warmChannels.
+export function warm(x, amt = 0.5) { const a = amt < 0 ? 0 : amt > 1 ? 1 : amt; return x + a * (Math.tanh(x) - x); }
+export function peakOf(chs) { let pk = 1e-9; for (const c of chs) for (let i = 0; i < c.length; i++) { const a = Math.abs(c[i]); if (a > pk) pk = a; } return pk; }
+export function warmChannels(chs, amt) {
+  if (!(amt > 0)) return;
+  const g = 1 / peakOf(chs);
+  for (const c of chs) for (let i = 0; i < c.length; i++) c[i] = warm(c[i] * g, amt) / g;
+}
+
+// Loudness as people hear it (ITU-R BS.1770, as streaming services measure it): K-weighted, in 400 ms blocks every
+// 100 ms, gated (silence and the quiet stretches more than 10 LU under the rest don't count). In LUFS.
+export function lufs(L, R) {
+  const kw = (x) => { const y = Float32Array.from(x); new Biquad('high', 1681.97, 0.7072, 4).apply(y); new Biquad('hp', 38.135, 0.5003).apply(y); return y; };
+  const a = kw(L), b = kw(R), n = a.length, blk = Math.round(0.4 * SR), hop = Math.round(0.1 * SR), ps = new Float64Array(n + 1), z = [];
+  for (let i = 0; i < n; i++) ps[i + 1] = ps[i] + a[i] * a[i] + b[i] * b[i];
+  for (let i = 0; i + blk <= n; i += hop) z.push((ps[i + blk] - ps[i]) / blk);
+  const ld = (m) => -0.691 + 10 * Math.log10(m || 1e-12), mean = (v) => v.reduce((s, m) => s + m, 0) / v.length;
+  const gated = z.filter((m) => ld(m) > -70);
+  if (!gated.length) return -70;
+  const rel = ld(mean(gated)) - 10, kept = gated.filter((m) => ld(m) > rel);
+  return ld(mean(kept));
+}
+
+// The peak at a sample, counting the one between it and the next (a cubic guess): what a player's converter or an
+// MP3 decoder will see.
+const peakNear = (x, i) => {
+  const a = x[i - 1] ?? x[i], b = x[i], c = x[i + 1] ?? b, d = x[i + 2] ?? c;
+  return Math.max(Math.abs(b), Math.abs((9 * (b + c) - a - d) / 16));
+};
+export function truePeak(L, R) { let pk = 0; for (let i = 0; i < L.length; i++) pk = Math.max(pk, peakNear(L, i), peakNear(R, i)); return pk; }
+
+// A look-ahead limiter for the master: the gain comes down smoothly over `look` s before a peak, so nothing passes the
+// ceiling (between samples too), and comes back up over `rel` s. Clean - no clipping, no saturation. Returns the most
+// it turned the song down, in dB.
+export function limit(L, R, ceil, o = {}) {
+  const n = L.length, look = Math.max(1, Math.round((o.look ?? 0.004) * SR)), rc = Math.exp(-1 / ((o.rel ?? 0.12) * SR));
+  const need = new Float32Array(n);
+  for (let i = 0; i < n; i++) need[i] = Math.min(1, ceil / Math.max(1e-9, peakNear(L, i), peakNear(R, i)));
+  // the smallest gain needed over the next `look` samples (a running minimum), then averaged over `look` samples so it
+  // ramps down in time and is all the way down when the peak arrives
+  const m = new Float32Array(n), dq = new Int32Array(n);
+  let head = 0, tail = 0;
+  for (let j = 0; j < n + look - 1; j++) {
+    if (j < n) { while (tail > head && need[dq[tail - 1]] >= need[j]) tail--; dq[tail++] = j; }
+    const i = j - look + 1;
+    if (i >= 0) { while (dq[head] < i) head++; m[i] = need[dq[head]]; }
+  }
+  let acc = 0, g = 1, lo = 1;
+  for (let i = 0; i < n; i++) {
+    acc += m[i]; if (i >= look) acc -= m[i - look];
+    const want = acc / Math.min(look, i + 1);
+    g = want < g ? want : want + (g - want) * rc;
+    L[i] *= g; R[i] *= g; if (g < lo) lo = g;
+  }
+  return -20 * Math.log10(lo);
+}
 
 // Mix a mono buffer into a stereo pair at a start sample, with gain and equal-power pan (-1 left .. 1 right)
 export function mixInto(L, R, buf, at, gain, pan) {

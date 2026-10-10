@@ -44,7 +44,7 @@ function noiseHit(n, R, att, dec, filt) {
 }
 function add(a, b, g = 1) { const n = Math.min(a.length, b.length); for (let i = 0; i < n; i++) a[i] += b[i] * g; return a; }
 
-// a heavy kick: a sub thump falling fast from a knock, with a click on top, saturated (hip-hop, funk, rock)
+// a heavy kick: a low thump falling fast from a knock, with a click on top, a little saturated (hip-hop, funk, rock)
 function kickFat(v, R, len = 0.55, low = 50, punch = 1) {
   const n = buf(len).length, o = new Float32Array(n);
   let ph = R(), ph2 = R();
@@ -52,9 +52,9 @@ function kickFat(v, R, len = 0.55, low = 50, punch = 1) {
   for (let i = 0; i < n; i++) {
     const t = i / SR, f = low + 130 * Math.exp(-t / 0.026);
     ph += f / SR; ph2 += (170 + 60 * Math.exp(-t / 0.01)) / SR;
-    let x = Math.sin(TAU * ph) * Math.exp(-t / (len * 0.55)) + Math.sin(TAU * ph2) * Math.exp(-t / 0.028) * 0.45 * punch;
+    let x = Math.sin(TAU * ph) * Math.exp(-t / (len * 0.42)) + Math.sin(TAU * ph2) * Math.exp(-t / 0.028) * 0.45 * punch;
     hp.run(R() * 2 - 1); x += hp.hp * Math.exp(-t / 0.0025) * 0.5 * punch;
-    o[i] = soft(x * 1.6, 0.7);
+    o[i] = soft(x * 1.3, 0.4);
   }
   return o;
 }

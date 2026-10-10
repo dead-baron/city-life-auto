@@ -1,10 +1,11 @@
 // A song to sound: lays its sections end to end, turns each part into notes (score.js), plays every note through its
 // instrument (voices.js, drums.js) into the part's own channel, runs the channel's effects (EQ, drive, chorus), pans
 // it, sends some to the song's one echo (the SNES's signature space), and masters the lot: an optional tape-lo-fi
-// stage, a gentle glue compressor, the SNES's soft top end, and a matched loudness so no song jumps out of another.
+// stage, a little tape warmth, a gentle glue compressor, the SNES's soft top end, and a matched loudness (LUFS, with a
+// clean limiter) so no song jumps out of another.
 // Deterministic: the same song renders the same samples every time.
 
-import { SR, TAU, rng, hashStr, mtof, SVF, Biquad, soft, mixInto, clamp, compress, room } from './dsp.js';
+import { SR, TAU, rng, hashStr, mtof, SVF, Biquad, warm, warmChannels, peakOf, lufs, truePeak, limit, mixInto, clamp, compress, room } from './dsp.js';
 import { VOICES, PRESETS } from './voices.js';
 import { DRUMS, KIT } from './drums.js';
 import * as S from './score.js';
@@ -114,9 +115,13 @@ export function renderSong(song, opt = {}) {
           hits++;
         });
       }
-      if (tr.crunch) { for (const ch of [dL, dR]) for (let i = 0; i < n; i++) ch[i] = soft(Math.round(ch[i] * tr.crunch) / tr.crunch, 0.5); }
+      if (tr.crunch) {   // (fewer levels, like a sampler's few bits, counted from the kit's own loudest hit)
+        const g = 1 / peakOf([dL, dR]);
+        for (const ch of [dL, dR]) for (let i = 0; i < n; i++) ch[i] = warm(Math.round(ch[i] * g * tr.crunch) / tr.crunch, 0.5) / g;
+      }
       if (tr.lp) { const a = new Biquad('lp', tr.lp, 0.7), b = new Biquad('lp', tr.lp, 0.7); a.apply(dL); b.apply(dR); }
-      if (tr.drive) for (const ch of [dL, dR]) for (let i = 0; i < n; i++) ch[i] = soft(ch[i], tr.drive);
+      if (tr.hp) { const a = new Biquad('hp', tr.hp, 0.7), b = new Biquad('hp', tr.hp, 0.7); a.apply(dL); b.apply(dR); }
+      if (tr.drive) warmChannels([dL, dR], tr.drive);
       if (tr.room) room(dL, dR, tr.room, tr.roomSize || 1);
       if (tr.comp) compress([dL, dR], tr.comp);
       const send = tr.echo || 0;
@@ -154,7 +159,7 @@ export function renderSong(song, opt = {}) {
     if (tr.hp) new Biquad('hp', tr.hp, 0.7).apply(bus);
     if (tr.lp) new Biquad('lp', tr.lp, 0.7).apply(bus);
     for (const q of tr.eq || []) new Biquad(q.type || 'peak', q.f, q.q || 1, q.g).apply(bus);
-    if (tr.drive) for (let i = 0; i < n; i++) bus[i] = soft(bus[i], tr.drive);
+    if (tr.drive) warmChannels([bus], tr.drive);
     if (tr.comp) compress([bus], tr.comp);
     if (tr.duck && kicks.length) {   // (pumping under the kick: down at each one, back up over duckRel s)
       const ks = kicks.slice().sort((a, b) => a - b), rel = tr.duckRel || 0.18;
@@ -197,7 +202,10 @@ export function renderSong(song, opt = {}) {
     }
   }
 
-  // ---- tape lo-fi (wow and flutter, saturation, hiss, a duller top, fewer bits) ----
+  // ---- the mix set to peak at full scale first, so the stages below work the same however loud the parts added up ----
+  { const g = 1 / peakOf([L, Rch]); for (const ch of [L, Rch]) for (let i = 0; i < n; i++) ch[i] *= g; }
+
+  // ---- tape lo-fi (wow and flutter, a little saturation, hiss, a duller top, fewer bits) ----
   if (song.lofi) {
     const Lf = song.lofi;
     if (Lf.wow || Lf.flutter) {
@@ -210,22 +218,24 @@ export function renderSong(song, opt = {}) {
         L[i] = sL[k] * (1 - f) + sL[k + 1] * f; Rch[i] = sR[k] * (1 - f) + sR[k + 1] * f;
       }
     }
-    if (Lf.drive) for (const ch of [L, Rch]) for (let i = 0; i < n; i++) ch[i] = soft(ch[i], Lf.drive);
+    if (Lf.drive) warmChannels([L, Rch], Lf.drive);
     if (Lf.lp) { new Biquad('lp', Lf.lp, 0.6).apply(L); new Biquad('lp', Lf.lp, 0.6).apply(Rch); }
     if (Lf.bits) { const q = Math.pow(2, Lf.bits - 1); for (const ch of [L, Rch]) for (let i = 0; i < n; i++) ch[i] = Math.round(ch[i] * q) / q; }
     if (Lf.hiss) { const h = new SVF(4000, 0.5); for (let i = 0; i < n; i++) { h.run(R() * 2 - 1); const z = h.hp * Lf.hiss; L[i] += z; Rch[i] += z * 0.9; } }
   }
 
-  // ---- master: weight and tape warmth, glue compression, the SNES's soft top, matched loudness, a soft ceiling ----
+  // ---- master: weight and tape warmth, gentle glue, the SNES's soft top, then a matched loudness ----
   const M = song.master || {};
-  if (M.low) { new Biquad('low', 100, 0.7, M.low).apply(L); new Biquad('low', 100, 0.7, M.low).apply(Rch); }
-  if (M.tape) { let pk = 1e-9; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(Rch[i])); const g = 0.9 / pk; for (const ch of [L, Rch]) for (let i = 0; i < n; i++) ch[i] = soft(ch[i] * g, M.tape) / g; }
+  // (weight: a broad lift round 100 Hz, the bass and the body of the kick - not the deep sub under it, which only
+  // eats headroom and makes small speakers distort)
+  if (M.low) { new Biquad('peak', 100, 0.9, M.low).apply(L); new Biquad('peak', 100, 0.9, M.low).apply(Rch); }
+  if (M.tape) warmChannels([L, Rch], M.tape);
   {
-    const ratio = M.ratio ?? 2.2, at = Math.exp(-1 / (0.012 * SR)), rl = Math.exp(-1 / (0.16 * SR));
+    const ratio = M.ratio ?? 2, at = Math.exp(-1 / (0.012 * SR)), rl = Math.exp(-1 / (0.16 * SR));
     let env = 0;
     // (the threshold sits a few dB over the mix's own level, so every song is glued the same however loud it came out)
     let ss = 0; for (let i = 0; i < n; i++) ss += L[i] * L[i] + Rch[i] * Rch[i];
-    const rms0 = Math.sqrt(ss / (2 * n)) || 1e-6, rel = rms0 * Math.pow(10, (M.thrRel ?? 5) / 20);
+    const rms0 = Math.sqrt(ss / (2 * n)) || 1e-6, rel = rms0 * Math.pow(10, (M.thrRel ?? 6) / 20);
     for (let i = 0; i < n; i++) {
       const lvl = Math.max(Math.abs(L[i]), Math.abs(Rch[i]));
       env = lvl > env ? at * env + (1 - at) * lvl : rl * env + (1 - rl) * lvl;
@@ -233,28 +243,22 @@ export function renderSong(song, opt = {}) {
       L[i] *= g; Rch[i] *= g;
     }
   }
-  for (const ch of [L, Rch]) { new Biquad('lp', M.top ?? 11500, 0.6).apply(ch); new Biquad('hp', 28, 0.7).apply(ch); }
-  // loudness: the loud parts (the top 40% of half-second blocks) brought to the target
-  const blk = Math.round(0.5 * SR), lv = [];
-  for (let i = 0; i + blk <= n; i += blk) { let s2 = 0; for (let k = i; k < i + blk; k++) s2 += L[k] * L[k] + Rch[k] * Rch[k]; lv.push(Math.sqrt(s2 / (2 * blk))); }
-  lv.sort((a, b) => b - a);
-  const loud = lv.slice(0, Math.max(1, Math.round(lv.length * 0.4)));
-  const rmsLoud = Math.sqrt(loud.reduce((s2, x) => s2 + x * x, 0) / loud.length) || 1e-6;
-  const gain = Math.pow(10, (M.loudness ?? -14) / 20) / rmsLoud;
-  let peak = 0;
-  for (const ch of [L, Rch]) for (let i = 0; i < n; i++) {
-    let x = ch[i] * gain;
-    const ax = Math.abs(x);
-    if (ax > 0.82) x = Math.sign(x) * (0.82 + 0.16 * Math.tanh((ax - 0.82) / 0.16));
-    ch[i] = x; if (Math.abs(x) > peak) peak = Math.abs(x);
-  }
+  for (const ch of [L, Rch]) { new Biquad('lp', M.top ?? 11500, 0.6).apply(ch); new Biquad('hp', M.hp ?? 34, 0.54).apply(ch); new Biquad('hp', M.hp ?? 34, 1.31).apply(ch); }   // (a steep cut under the music: 4th order)
+  // loudness: brought to the target as people hear it (LUFS, -14 like the streaming services unless the song says),
+  // then a clean look-ahead limiter holds the peaks at -1.5 dBFS so nothing clips, in the file or in an MP3 made of it.
+  // Never more than maxGr dB of limiting: a song that would need more comes out a little quieter instead.
+  const target = M.lufs ?? -14, ceil = Math.pow(10, -1.5 / 20), maxGr = M.maxGr ?? 3;
+  const tp0 = truePeak(L, Rch), gain = Math.min(Math.pow(10, (target - lufs(L, Rch)) / 20), ceil * Math.pow(10, maxGr / 20) / tp0);
+  for (const ch of [L, Rch]) for (let i = 0; i < n; i++) ch[i] *= gain;
+  const gr = limit(L, Rch, ceil);
+  const loud = lufs(L, Rch), peak = truePeak(L, Rch);
   // trim the silence after the last sound, with a short fade
   let last = n - 1;
   while (last > 0 && Math.abs(L[last]) < 3e-4 && Math.abs(Rch[last]) < 3e-4) last--;
   const end = Math.min(n, last + Math.round(0.25 * SR)), fade = Math.round(0.2 * SR);
   for (let i = Math.max(0, end - fade); i < end; i++) { const g = (end - i) / fade; L[i] *= g; Rch[i] *= g; }
   return {
-    L: L.subarray(0, end), R: Rch.subarray(0, end), sr: SR, seconds: end / SR, peak, ms: Date.now() - t0, stats, levels,
+    L: L.subarray(0, end), R: Rch.subarray(0, end), sr: SR, seconds: end / SR, peak, lufs: +loud.toFixed(1), limited: +gr.toFixed(1), ms: Date.now() - t0, stats, levels,
     sections: placed.map((p) => ({ name: p.name, at: +p.startSec.toFixed(3) })), loopAt: song.loop != null ? placed[song.loop].startSec : null, endAt: endSec,
   };
 }

@@ -19,15 +19,15 @@ export default {
   form: ['intro', 'A', 'B', 'A2', 'B2', 'outro'],
   loop: 1,
   echo: { beats: 0.75, fb: 0.28, mix: 0.14, lp: 2600 },
-  lofi: { wow: 0.0014, flutter: 0.0002, drive: 0.6, hiss: 0.002, lp: 5200 },
-  master: { low: 2.5, tape: 0.7, ratio: 3.5, thrRel: 2, loudness: -11.5, top: 8000 },
+  lofi: { wow: 0.0014, flutter: 0.0002, drive: 0.35, hiss: 0.0012, lp: 5200 },
+  master: { low: 2.5, tape: 0.45, ratio: 2.2, thrRel: 5, lufs: -14, top: 8000 },
   tracks: {
     lead: { inst: 'hazeLead', set: { vib: [4.6, 0.12, 0.1], cut: 2000 }, vol: 0.34, pan: 0.05, echo: 0.2 },
     voco: { inst: 'vocoLead', vol: 0.24, pan: -0.1, echo: 0.25 },
     keys: { inst: 'warbleKeys', vol: 0.22, pan: 0.15, duck: 0.25 },
-    bass: { inst: 'fatBass', set: { cut: 900 }, vol: 0.6, comp: { thr: -8, ratio: 3 } },
+    bass: { inst: 'fatBass', set: { cut: 900 }, vol: 0.6, hp: 45, comp: { thr: -8, ratio: 3 } },
     pad: { inst: 'analogPad', vol: 0.12, chorus: 0.4, duck: 0.35 },
-    drums: { kit: true, vol: 0.9, comp: { thr: -14, ratio: 4, att: 0.003, rel: 0.08, makeup: 2 }, room: 0.15, width: 0.8 },
+    drums: { kit: true, vol: 0.9, comp: { thr: -10, ratio: 2.5, att: 0.008, rel: 0.08, makeup: 1 }, room: 0.15, width: 0.8 },
   },
   sections: {
     intro: {

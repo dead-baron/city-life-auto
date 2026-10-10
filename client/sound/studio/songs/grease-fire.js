@@ -21,15 +21,15 @@ export default {
   form: ['intro', 'A', 'B', 'A2', 'drop', 'B2', 'outro'],
   loop: 1,
   echo: { beats: 0.75, fb: 0.35, mix: 0.18, lp: 2200, pingpong: 0.3 },
-  lofi: { wow: 0.0022, flutter: 0.0003, drive: 0.5, hiss: 0.0035, lp: 7800 },
-  master: { low: 3, tape: 0.6, loudness: -12, ratio: 3, thrRel: 3, top: 10000 },
+  lofi: { wow: 0.0022, flutter: 0.0003, drive: 0.4, hiss: 0.002, lp: 7800 },
+  master: { low: 3, tape: 0.5, lufs: -14, ratio: 2.2, thrRel: 5, top: 10000 },
   tracks: {
-    bass: { inst: 'buzzBass', set: { cut: 800, lp2: 1900, drive: 2.1, waves: [{ w: 'saw' }, { w: 'pulse', duty: 0.32, det: 11 }, { w: 'saw', det: -8 }, { w: 'sine', lvl: 1.2 }, { w: 'sine', oct: -1, lvl: 1.5 }] }, vol: 0.8, comp: { thr: -10, ratio: 3 } },
+    bass: { inst: 'buzzBass', set: { cut: 800, lp2: 1900, drive: 0.7, waves: [{ w: 'saw' }, { w: 'pulse', duty: 0.32, det: 11 }, { w: 'saw', det: -8 }, { w: 'sine', lvl: 1.2 }, { w: 'sine', oct: -1, lvl: 0.5 }] }, vol: 0.8, comp: { thr: -10, ratio: 3 } },
     hook: { inst: 'hazeLead', vol: 0.3, pan: 0.12, echo: 0.3, chorus: 0.25 },
     voco: { inst: 'vocoLead', vol: 0.26, pan: -0.15, echo: 0.35, chorus: 0.4 },
     melt: { inst: 'analogPad', set: { vib: [0.35, 0.25, 0], cut: 1100 }, vol: 0.11, chorus: 0.7, echo: 0.2, duck: 0.35 },
     keys: { inst: 'dustyKeys', vol: 0.14, pan: 0.35, echo: 0.25, duck: 0.25 },
-    drums: { kit: true, vol: 1, comp: { thr: -14, ratio: 4, att: 0.004, rel: 0.1, makeup: 2 }, room: 0.25, drive: 0.4 },
+    drums: { kit: true, vol: 1, comp: { thr: -10, ratio: 2.5, att: 0.008, rel: 0.1, makeup: 1 }, room: 0.25, drive: 0.4 },
   },
   sections: {
     intro: {

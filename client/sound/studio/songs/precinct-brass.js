@@ -21,14 +21,14 @@ export default {
   form: ['blast', 'A', 'B', 'A2', 'break', 'B2', 'end'],
   loop: 1,
   echo: { beats: 0.5, fb: 0.2, mix: 0.1, lp: 3500 },
-  master: { low: 2, tape: 0.5, ratio: 2.8, loudness: -12 },
+  master: { low: 2, tape: 0.4, ratio: 2.2, lufs: -14, hp: 42 },
   tracks: {
     horns: { inst: 'brassFat', set: { cut: 1650, lp2: 8500, velCut: 1.4 }, vol: 0.44, pan: 0.25, echo: 0.12 },
     saxes: { inst: 'tenorSax', vol: 0.32, pan: -0.3, echo: 0.12 },
-    bass: { inst: 'pickBass', vol: 0.62, comp: { thr: -8, ratio: 3 } },
+    bass: { inst: 'pickBass', vol: 0.62, hp: 42, comp: { thr: -8, ratio: 3 } },
     guitar: { inst: 'crunchGuitar', vol: 0.3, pan: -0.6, hp: 120 },
     organ: { inst: 'grimeOrgan', vol: 0.12, pan: 0.6, duck: 0.2 },
-    drums: { kit: true, vol: 0.55, comp: { thr: -14, ratio: 4, att: 0.003, rel: 0.08, makeup: 2 }, room: 0.35, width: 1.8 },
+    drums: { kit: true, vol: 0.55, comp: { thr: -10, ratio: 2.5, att: 0.008, rel: 0.08, makeup: 1 }, room: 0.35, width: 1.8 },
   },
   sections: {
     blast: {

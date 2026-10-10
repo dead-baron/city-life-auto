@@ -35,14 +35,14 @@ export default {
   swing: 0.32,
   form: ['intro', 'A', 'A2', 'B', 'solo', 'shout', 'A3', 'end'],
   echo: { beats: 0.5, fb: 0.2, mix: 0.12, lp: 3200, pingpong: 0.6 },
-  master: { low: 2, tape: 0.5, ratio: 2.6, loudness: -12.5 },
+  master: { low: 2, tape: 0.4, ratio: 2.2, lufs: -14 },
   tracks: {
     trumpets: { inst: 'brassFat', set: { cut: 1250, lp2: 6500, velCut: 1.3 }, vol: 0.42, pan: 0.32, echo: 0.18 },
     saxes: { inst: 'tenorSax', oct: 0, vol: 0.34, pan: -0.32, echo: 0.18 },
     bones: { inst: 'bonesFat', vol: 0.4, pan: -0.1, echo: 0.12 },
     bass: { inst: 'upright', vol: 0.62, hp: 38, comp: { thr: -8, ratio: 3 } },
-    sub: { inst: 'fatBass', set: { cut: 260, fenv: 0.6, drive: 0.4 }, vol: 0.14, hp: 45 },
-    drums: { kit: true, vol: 0.9, comp: { thr: -14, ratio: 3.5, att: 0.003, rel: 0.08, makeup: 1.5 }, room: 0.3, width: 1.8, mix: { kickTight: 0.7 } },
+    sub: { inst: 'fatBass', set: { cut: 260, fenv: 0.6, drive: 0.3 }, vol: 0.14, hp: 45 },
+    drums: { kit: true, vol: 0.9, comp: { thr: -10, ratio: 2.5, att: 0.008, rel: 0.08, makeup: 1 }, room: 0.3, width: 1.8, mix: { kickTight: 0.7 } },
     perc: { kit: true, vol: 1.5, width: 2.6, echo: 0.06 },
   },
   sections: {

@@ -20,22 +20,22 @@ export default {
   form: ['intro', 'A', 'A2', 'B', 'A3', 'outro'],
   loop: 1,
   echo: { beats: 0.75, fb: 0.38, mix: 0.2, lp: 2400, pingpong: 0.5 },
-  lofi: { wow: 0.0028, flutter: 0.0004, drive: 0.7, hiss: 0.003, lp: 5600 },
-  master: { low: 2.5, tape: 0.7, ratio: 3.2, thrRel: 2.5, loudness: -12 },
+  lofi: { wow: 0.0028, flutter: 0.0004, drive: 0.4, hiss: 0.0018, lp: 5600 },
+  master: { low: 2.5, tape: 0.45, ratio: 2.2, thrRel: 5, lufs: -14, hp: 45 },
   tracks: {
     voco: { inst: 'vocoLead', vol: 0.24, echo: 0.3, chorus: 0.5 },
     lead: { inst: 'hazeLead', vol: 0.28, pan: 0.2, echo: 0.3 },
     drip: { inst: 'warbleKeys', vol: 0.22, pan: -0.35, echo: 0.4 },
-    bass: { inst: 'fatBass', set: { cut: 750, glide: 0.08 }, vol: 0.66, comp: { thr: -8, ratio: 3 } },
+    bass: { inst: 'fatBass', set: { cut: 750, glide: 0.08 }, vol: 0.66, hp: 40, comp: { thr: -8, ratio: 3 } },
     pad: { inst: 'analogPad', set: { vib: [0.4, 0.18, 0] }, vol: 0.13, chorus: 0.7, duck: 0.3 },
-    drums: { kit: true, vol: 0.9, comp: { thr: -14, ratio: 4, att: 0.003, rel: 0.1, makeup: 2 }, room: 0.2, drive: 0.3 },
+    drums: { kit: true, vol: 0.9, hp: 38, comp: { thr: -10, ratio: 2.5, att: 0.008, rel: 0.1, makeup: 1 }, room: 0.2, drive: 0.3 },
   },
   sections: {
     intro: {
       bars: 4, chords: 'Abmaj7 | Fm7 | Dbmaj7 | Eb6',
       pad: { gen: 'pad', lo: 51, hi: 72, size: 4 },
       drip: DRIP,
-      bass: { gen: 'bass', pattern: 'R-------R-------', lo: 32, vol: 0.8 },
+      bass: { gen: 'bass', pattern: 'R-------R-------', lo: 36, vol: 0.8 },
       drums: { kickFat: only(4, { 3: 'X.......X.x.X.X.' }) },
     },
     A: {
@@ -43,7 +43,7 @@ export default {
       lead: A_TUNE,
       drip: DRIP,
       pad: { gen: 'pad', lo: 51, hi: 72, size: 4, vol: 0.8 },
-      bass: { gen: 'bass', pattern: 'R..R..5.R..8..5.', lo: 32 },
+      bass: { gen: 'bass', pattern: 'R..R..5.R..8..5.', lo: 36 },
       drums: BEAT,
     },
     A2: {
@@ -52,7 +52,7 @@ export default {
       lead: { line: A_TUNE, vol: 0.6 },
       drip: DRIP,
       pad: { gen: 'pad', lo: 51, hi: 72, size: 4, vol: 0.8 },
-      bass: { gen: 'bass', pattern: 'R..R..5.R..8..5.', lo: 32 },
+      bass: { gen: 'bass', pattern: 'R..R..5.R..8..5.', lo: 36 },
       drums: { ...BEAT, hatDust: 'x.x.x.x.x.x.x.x.' },
     },
     B: {
@@ -61,7 +61,7 @@ export default {
       lead: B_TUNE,
       drip: { ...DRIP, pattern: '0.2.4.6.5.4.2.1.' },
       pad: { gen: 'pad', lo: 51, hi: 72, size: 4 },
-      bass: { gen: 'bass', pattern: 'R..R..5.R..8..5.', lo: 32 },
+      bass: { gen: 'bass', pattern: 'R..R..5.R..8..5.', lo: 36 },
       drums: { ...BEAT, hatDust: 'x.x.x.x.x.x.x.x.', ohatDust: '......x.......x.', crash: only(8, { 0: 'X' }) },
     },
     A3: {
@@ -70,7 +70,7 @@ export default {
       lead: A_TUNE,
       drip: DRIP,
       pad: { gen: 'pad', lo: 51, hi: 72, size: 4, vol: 0.8 },
-      bass: { gen: 'bass', pattern: 'R..R..5.R..8..5.', lo: 32 },
+      bass: { gen: 'bass', pattern: 'R..R..5.R..8..5.', lo: 36 },
       drums: { ...BEAT, hatDust: 'x.x.x.x.x.x.x.x.' },
     },
     outro: {
@@ -78,7 +78,7 @@ export default {
       voco: 'C4/1:a | Eb4/1:o | F4/1:a | Eb4/1:oo |',
       drip: { ...DRIP, vol: 0.7 },
       pad: { gen: 'pad', lo: 51, hi: 72, size: 4 },
-      bass: { gen: 'bass', pattern: 'R-------R-------|R-------R-------|R-------R-------|R---------------', lo: 32, vol: 0.8 },
+      bass: { gen: 'bass', pattern: 'R-------R-------|R-------R-------|R-------R-------|R---------------', lo: 36, vol: 0.8 },
       drums: { kickFat: only(4, { 0: 'X.x.....X.x.x...', 1: 'X.x.....X.x.x...' }), snareFat: only(4, { 0: '....X.......X...', 1: '....X.......X...' }) },
     },
   },
