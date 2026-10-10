@@ -153,7 +153,7 @@ export function collideCircle(s, r, map, block) {
           }
         }
       }
-      const props = map.solidProps.get(map.idx(tx, ty));
+      const props = map.solidProps.size ? map.solidProps.get(map.idx(tx, ty)) : null;   // (none at all: a bare test map)
       if (props) for (const p of props) {
         if (p.off) continue;
         const dx = s.x - p.x, dy = s.y - p.y, rr = r + p.r;
@@ -371,7 +371,7 @@ export function collideVehicleTiles(s, def, map, block) {
         const hit = obbVsAabb(s.x, s.y, s.a, hl, hw, tx * TILE, ty * TILE, TILE, TILE);
         if (hit && (!best || hit.depth > best.depth)) best = hit;
       }
-      const props = map.solidProps.get(map.idx(tx, ty));
+      const props = map.solidProps.size ? map.solidProps.get(map.idx(tx, ty)) : null;   // (none at all: a bare test map)
       if (props) for (const p of props) {
         if (p.off || (p.brk && Math.abs(s.vx) + Math.abs(s.vy) > SMASH_SPEED)) continue; // smashes through (server breaks it)
         const h = circleVsObb(p.x, p.y, p.r, s.x, s.y, s.a, hl, hw);

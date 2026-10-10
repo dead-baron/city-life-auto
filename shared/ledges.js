@@ -27,23 +27,23 @@ function fallsOf(m) {
 }
 
 function build(m) {
-  const W = m.w, H = m.h, set = new Set(), tile = (tx, ty) => (!m.inside(tx, ty) ? T.WALL : m.tiles[m.idx(tx, ty)]);
+  const set = new Set(), tile = (tx, ty) => (!m.inside(tx, ty) ? T.WALL : m.tiles[m.idx(tx, ty)]);
   for (const f of fallsOf(m)) {
     const fx = Math.floor(f.x / TILE), fy = Math.floor(f.y / TILE), half = Math.ceil(f.w / 2 / TILE);
     // the cliff band: solid rock near the falls, flooded out to the band's ends (within reach)
-    const band = new Set(), stack = [];
-    for (let ty = fy - 3; ty <= fy + 2; ty++) for (let tx = fx - half - 2; tx <= fx + half + 2; tx++) if (tile(tx, ty) === T.WALL) { const i = m.idx(tx, ty); if (!band.has(i)) { band.add(i); stack.push(tx, ty); } }
+    const band = new Map(), stack = [];   // (index -> its tile [tx, ty])
+    for (let ty = fy - 3; ty <= fy + 2; ty++) for (let tx = fx - half - 2; tx <= fx + half + 2; tx++) if (tile(tx, ty) === T.WALL) { const i = m.idx(tx, ty); if (!band.has(i)) { band.set(i, [tx, ty]); stack.push(tx, ty); } }
     while (stack.length) {
       const ty = stack.pop(), tx = stack.pop();   // (the stack holds tiles as (tx, ty): an index is the map's, not decoded)
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         const x = tx + dx, y = ty + dy, j = m.idx(x, y);
-        if ((dx || dy) && Math.abs(x - fx) <= half + 16 && y >= fy - 6 && y <= fy + 4 && !band.has(j) && tile(x, y) === T.WALL) { band.add(j); stack.push(x, y); }
+        if ((dx || dy) && Math.abs(x - fx) <= half + 16 && y >= fy - 6 && y <= fy + 4 && !band.has(j) && tile(x, y) === T.WALL) { band.set(j, [x, y]); stack.push(x, y); }
       }
     }
     // each column of it: a short run of rock with open ground above and below drops
     let r0 = 1e9, r1 = -1e9;
     const cols = new Map();
-    for (const i of band) { const tx = i % W, ty = (i / W) | 0; const c = cols.get(tx); if (!c) cols.set(tx, [ty, ty]); else { c[0] = Math.min(c[0], ty); c[1] = Math.max(c[1], ty); } }
+    for (const [tx, ty] of band.values()) { const c = cols.get(tx); if (!c) cols.set(tx, [ty, ty]); else { c[0] = Math.min(c[0], ty); c[1] = Math.max(c[1], ty); } }
     for (const [tx, [a, b]] of cols) {
       if (b - a > 3 || !OPEN(tile(tx, a - 1)) || !OPEN(tile(tx, b + 1))) continue;
       let solid = true;
