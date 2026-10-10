@@ -6655,3 +6655,15 @@ animals entry did the coats, shapes and gaits - these are the poses the concepts
   the cats' pounce off the ground and stretched out longer than standing; a beaver or an otter going under, its tail up
   (taller than swimming), the otter with a fish in its jaws. `test/wildlife.test.js`, `test/art2.test.js`, `test/perf.test.js` pass
   as before.
+
+## 2026-10-10 · The page's code budget: 720 -> 722 KB (until the generator leaves the page)
+
+Merging wave 9 (the generator's frame, people going about part 2, the animals' poses) put the page's code at 721 KB
+against its 720 KB budget (`node tools/perf.mjs`): each helper's own run had come in just under, each adding about
+120 bytes gzipped. The budget goes to 722 KB for now. The reason it's tight, and the way back: the page still loads
+the whole city generator - most of `shared/map.js` (102 KB gzipped), `shared/naturesites.js` (83 KB), the build parts
+of `countryside.js`, `citylayout.js` and `islands.js` - because the map's queries (CityMap, the tile tables, the
+districts) live in the same modules as the build code, and a module loads whole. Since this afternoon the page gets its
+city from the server (or the browser's copy) and the city worker loads the generator only when it must build, so the
+page needs none of it. Splitting the runtime part of those modules from the build part takes the generator out of the
+page's code: about 150-190 KB off the 720. That split is the next wave's first job; the budget comes back down after it.
