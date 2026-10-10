@@ -5,6 +5,8 @@
 // Everyone sees it: the descriptor's gt 'dance' and dm (server/net.js), sent again when appVer changes.
 import { IN } from '../../shared/input.js';
 import { DANCE_PLAYER, DANCE_NAMES } from '../../shared/dance.js';
+import * as nightclubs from './nightclubs.js';
+import { flee } from './npc.js';
 
 const STOP_BITS = IN.FIRE | IN.DIVE | IN.VEHICLE | IN.THROW | IN.ACTION | IN.BLOCK;
 
@@ -38,5 +40,21 @@ export function next(world, p) {
 export function input(world, p, ped, inp, pressed) {
   if (pressed & IN.DANCE) { next(world, p); return; }
   if (!ped.dancing) return;
-  if (Math.hypot(inp.mx || 0, inp.my || 0) > 0.25 || (inp.bits & STOP_BITS) || !free(ped)) stop(ped);
+  if (Math.hypot(inp.mx || 0, inp.my || 0) > 0.25 || (inp.bits & STOP_BITS) || !free(ped) || floored(world, ped)) stop(ped);
+}
+// knocked down, stunned or sent tumbling (a tackle, a blast, a shove) - with or without a scratch
+const floored = (world, ped) => world.time < (ped.downUntil || 0) || world.time < (ped.stunUntil || 0) || world.time < (ped.tumbleUntil || 0);
+
+// Hurt while dancing (combat.damage: hit, shot, cut, burned, run over, fallen): the dance stops. Yours; or an NPC's - a
+// club's dancer leaves the floor and the dancers round them react to the fight (nightclubs.js dancerHurt), someone
+// dancing in the street stops for good (personas.js danceOff). npc.js onAttacked then has them flee or fight by
+// temperament; hurt by nothing they can blame (a fire, a fall), they just get away from it.
+export function hurt(world, ped, attacker) {
+  if (ped.player) return stop(ped);
+  const n = ped.npc;
+  if (!n) return false;
+  if (n.dancer) nightclubs.dancerHurt(world, ped, attacker);
+  else { n.danceOff = true; if (ped.gt === 'dance') { ped.gt = null; ped.dm = undefined; ped.appVer = (ped.appVer || 0) + 1; } }
+  if (!attacker || attacker === ped) flee(world, ped, ped.x - Math.cos(ped.a || 0) * 20, ped.y - Math.sin(ped.a || 0) * 20, 4);
+  return true;
 }

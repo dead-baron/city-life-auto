@@ -507,7 +507,7 @@ export function onGunfire(world, x, y, shooter, radius = 360) {
 // when it's over, or run like anyone else if trouble comes their way (a shot near them, a hit: the state changes and the
 // phone goes away).
 const FILM_CHANCE = { casual: 0.45, socialite: 0.55, athlete: 0.3, hustler: 0.4, executive: 0.22, construction: 0.32, sweeper: 0.2, senior: 0.1, drunk: 0.35 };
-const filmChance = (ped) => FILM_CHANCE[ped.npc.archetype] ?? 0.25;
+export const filmChance = (ped) => FILM_CHANCE[ped.npc.archetype] ?? 0.25;
 // a blast or the like: the people close by run (further out, some film it: spectacle)
 export function panic(world, x, y, radius) {
   for (const e of world.query(x, y, radius, K.PED)) {
@@ -526,7 +526,7 @@ export function spectacle(world, x, y, { r = 480, near = 120, chance = 1, secs =
     if (rng() < filmChance(e) * chance) startFilming(world, e, x, y, secs * (0.7 + rng() * 0.6));
   }
 }
-function startFilming(world, ped, x, y, secs) {
+export function startFilming(world, ped, x, y, secs) {
   const n = ped.npc;
   n.state = 'film'; n.fx = x; n.fy = y; n.until = world.time + secs; n.filmedAt = world.time;
   n.photo = rng() < 0.35; n.nextFlash = world.time + 0.5 + rng() * 0.8;

@@ -9,7 +9,7 @@ import { IN } from '../shared/input.js';
 import { encodeInput, decodeInput } from '../shared/protocol.js';
 import { KB, PAD, TOUCH, ACTIONS, KEY_ACTION } from '../shared/controls.js';
 import { DANCE_MOVES, DANCE_SOLO, DANCE_COUPLES, DANCE_JUMP, DANCE_PLAYER, COUPLE_PX, danceFrame, danceDir } from '../shared/dance.js';
-import { CLUB_DANCERS, CLUB_DANCERS_MAX } from '../shared/rules.js';
+import { CLUB_DANCERS, CLUB_DANCERS_MAX, CLUB_FIGHT } from '../shared/rules.js';
 import { POSES } from '../client/art2/people.js';
 import { pedSprite, personaPose, DANCE_POSE, isDance } from '../client/art2/game/peds.js';
 import * as nightclubs from '../server/systems/nightclubs.js';
@@ -142,4 +142,58 @@ test("the player's dance button over the wire: start, the next move each press, 
   assert.equal(ped.gt, 'dance'); assert.equal(ped.dm, DANCE_PLAYER[0]);
   send(IN.FIRE); send(0);
   assert.ok(!ped.dancing, 'a punch stops it');
+});
+
+test('hurt while dancing - hit, shot, burned, run over, knocked down - the dance stops (the player)', async () => {
+  const combat = await import('../server/systems/combat.js');
+  const { spawnNpc } = await import('../server/systems/npc.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const ped = p.ped;
+  const thug = spawnNpc(w, 'casual', ped.x + 30, ped.y, 'civ');
+  let seq = 0;
+  const send = (bits) => { players.queueInput(p, { seq: p.ack + 1 + (seq++ % 3), bits, mx: 0, my: 0, aim: 0 }); w.step(); };
+  for (const [what, hurt] of [
+    ['a punch', () => combat.damage(w, ped, 4, thug, 'melee', 0)],
+    ['a shot', () => combat.damage(w, ped, 6, thug, 'gun', 0)],
+    ['burned', () => combat.damage(w, ped, 3, null, 'fire', 0)],
+    ['run over', () => combat.damage(w, ped, 8, thug, 'vehicle', 0)],
+    ['knocked down', () => { ped.downUntil = w.time + 1.5; send(0); }],
+  ]) {
+    ped.hp = ped.maxHp; ped.downUntil = 0; ped.bleeding = false;
+    send(0); send(IN.DANCE); send(0);
+    assert.equal(ped.gt, 'dance', `dancing before ${what}`);
+    hurt();
+    assert.ok(!ped.dancing && ped.gt !== 'dance', `${what} stops the dance`);
+  }
+});
+
+test("a dancer hurt on a club's floor stops and flees or fights; the floor round them reacts to the fight", async () => {
+  const combat = await import('../server/systems/combat.js');
+  const { w, c, a } = peakClub(11);
+  const D = () => c.dancers.map((id) => w.get(id)).filter((e) => e && !e.dead);
+  for (const fight of [0, 1]) {
+    const list = D();
+    const v = list.find((e) => list.some((o) => o !== e && Math.hypot(o.x - e.x, o.y - e.y) < CLUB_FIGHT.near));
+    assert.ok(v, 'two dancers close together');
+    const near = list.filter((o) => o !== v && Math.hypot(o.x - v.x, o.y - v.y) < CLUB_FIGHT.near);
+    const far = list.filter((o) => Math.hypot(o.x - v.x, o.y - v.y) > CLUB_FIGHT.r);
+    const rest = list.filter((o) => o !== v && !near.includes(o));
+    v.npc.fight = fight;
+    teleport(w, a.p.ped, v.x + 20, v.y);
+    combat.damage(w, v, 3, a.p.ped, 'melee', 0);
+    assert.ok(v.gt !== 'dance' && !v.npc.dancer && !v.npc.desk, 'the hurt dancer stops and leaves their spot');
+    assert.ok(!c.dancers.includes(v.id), '...off the floor');
+    assert.equal(v.npc.state, fight ? 'fight' : 'flee', `by temperament: ${fight ? 'fights back' : 'runs'}`);
+    for (const o of near) assert.ok(o.gt !== 'dance' && o.npc.state === 'flee', 'the nearest step back out of it');
+    for (const o of far) assert.equal(o.gt, 'dance', 'the far side of the floor dances on');
+    assert.ok(rest.length < 2 || rest.some((o) => o.gt === 'dance'), 'most of the floor dances on');
+    run(w, 1);
+  }
+  // someone dancing in the street (a persona) stops for good
+  const { spawnNpc } = await import('../server/systems/npc.js');
+  const s = spawnNpc(w, 'casual', a.p.ped.x + 40, a.p.ped.y, 'civ');
+  s.gt = 'dance'; s.npc.persona = 'dancer'; s.npc.spot = { x: s.x, y: s.y };
+  combat.damage(w, s, 2, null, 'fire', 0);
+  assert.ok(s.gt !== 'dance' && s.npc.danceOff && s.npc.state === 'flee', 'burned: stops and gets away from it');
 });

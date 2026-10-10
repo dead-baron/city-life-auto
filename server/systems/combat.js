@@ -21,6 +21,7 @@ import * as wanderer from './wanderer.js';
 import * as nightclubs from './nightclubs.js';
 import * as explosions from './explosions.js';   // (chain reactions: task #398)
 import * as campfires from './campfires.js';
+import * as dance from './dance.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -433,6 +434,7 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
     }
   }
   ped.hp -= amount;
+  if (ped.dancing || ped.gt === 'dance') dance.hurt(world, ped, attacker);   // (hurt: the dance stops - yours or an NPC's)
   ped.lastHitAt = now;
   ped.lastCombatAt = now;
   if (attacker) { ped.lastHitBy = attacker.id; attacker.lastCombatAt = now; }

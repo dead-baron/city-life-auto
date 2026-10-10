@@ -385,7 +385,7 @@ export function steer(world, ped, now) {
     if (Math.hypot(p.x - ped.x, p.y - ped.y) < 18) n.lap++;
     return { inp: seekTo(ped, p.x, p.y), factor: 0.7 };   // (a jog, ~90 px/s: the client's jogging stride)
   }
-  if (P.dance) {   // dancing on the spot, now and then a shuffle along
+  if (P.dance && !n.danceOff) {   // dancing on the spot, now and then a shuffle along (danceOff: hurt - dance.js hurt)
     if (now >= (n.moveAt || 0)) { n.moveAt = now + 6 + rng() * 10; const s = spotNear(world, n.spot.x, n.spot.y, 0, 50); if (s) { n.wx = s.x; n.wy = s.y; } }
     if (Math.hypot(n.wx - ped.x, n.wy - ped.y) > 8) return { inp: seekTo(ped, n.wx, n.wy, 0.6), factor: 0.4 };
     ped.a += Math.sin(now * 1.7 + ped.id) * 0.02;

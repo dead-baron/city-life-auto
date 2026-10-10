@@ -565,3 +565,6 @@ export const VEHICLE_WEAPON_DEFAULT = 0.6;
 // The plasma blade cuts a vehicle in two: this many hits by kind (a heavy truck or a bus: heavy) and it's sliced through
 // - the halves slide apart (slide px each, over slideS) with glowing edges, the engine dead, and it explodes boomS later.
 export const PLASMA_CUT = { car: 3, heavy: 5, bike: 1, boat: 3, slide: 14, slideS: 0.7, boomS: 1.8 };
+// A fight on a club's dance floor (server nightclubs.js dancerHurt): a dancer who's hurt stops; the dancers within near px
+// step back out of it (for backS), those within r px get their phones out at film x their usual chance (for filmS)
+export const CLUB_FIGHT = { near: 64, r: 260, backS: [3, 5], film: 0.6, filmS: [5, 9] };
