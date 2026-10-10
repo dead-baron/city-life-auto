@@ -31,7 +31,20 @@ import { iconImg } from './pixicons.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
-import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
+// The city tour is paused (TUTORIAL_ON below): its code (client/tutorial.js) is fetched only if it's switched back on,
+// so the page doesn't carry it. Until it's here, nothing of it runs (and the tour counts as seen).
+let TUT = null;
+const loadTutorial = () => import('./tutorial.js').then((m) => (TUT = m));
+const startTutorial = (o) => { loadTutorial().then((m) => m.startTutorial(o)); };
+const stopTutorial = () => { if (TUT) TUT.stopTutorial(); };
+const tutorialActive = () => !!TUT && TUT.tutorialActive();
+const tutorialNext = () => { if (TUT) TUT.tutorialNext(); };
+const tutorialPrev = () => { if (TUT) TUT.tutorialPrev(); };
+const tutorialTogglePause = () => { if (TUT) TUT.tutorialTogglePause(); };
+const tutorialKey = (k) => !!TUT && TUT.tutorialKey(k);
+const tutorialSeen = () => !TUT || TUT.tutorialSeen();
+const tutorialSeenOld = () => !!TUT && TUT.tutorialSeenOld();
+const markTutorialSeen = () => { if (TUT) TUT.markTutorialSeen(); };
 import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild } from './update.js';
@@ -1605,6 +1618,7 @@ function checkWaypoint() {
 // ---- tutorial: guided tour over the live city map ---------------------------------------------
 // Paused (user, 2026-10-06): the tour is not offered and not kept in sync with the game until it is redesigned.
 const TUTORIAL_ON = false;
+if (TUTORIAL_ON) loadTutorial();   // (back on: fetched at once, ready by the time Play is pressed)
 let tutMap = null;
 // `then` runs once the tour is finished or skipped (first play: tour first, then into the city)
 function openTutorial(chapter, then) {

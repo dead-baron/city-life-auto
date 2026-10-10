@@ -5539,3 +5539,12 @@ The owner: "While we're in testing mode we should have a debug character creator
   - the debug wardrobe wears it free, with the hair, and the cap and the glasses go into the wardrobe;
   - saved by name, a look with a new jacket is kept and the jacket is yours, while you still wear the first;
   - a session not in dev mode gets nothing from the same message.
+
+## 2026-10-10 · The paused tour leaves the page
+
+The morning's merges (car driving, the fire toggle and blocking, street life, the debug homes and wardrobe) took the
+page's code to 721 KB of its 720 KB budget. The city tour is paused (TUTORIAL_ON in `client/main.js`), yet its client
+(`client/tutorial.js`, 5.7 KB gzipped) was loaded by every player. `main.js` now imports it only if the tour is switched
+back on (fetched at startup then, ready by the time Play is pressed); until then its calls do nothing and the tour
+counts as seen. The page is 715 KB again, with room for the next merges. `shared/tutorial.js` stays in the page: the
+phone and the map waypoints use its `districtAt`. Tests: the full suite.
