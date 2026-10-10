@@ -5658,3 +5658,35 @@ hospital, the police station and the subway entrances were rebuilt to the owner'
 off-road 4x4 joined. The budget is now 1000 KB (and 76 files): the art grows with every concept the owner sends, and
 the workers fetch this code once, after the page, so it never delays getting into the city. The page itself stays at
 717 of 720 KB. Tests: test/perf.test.js.
+
+## 2026-10-10 · World v3: the inventory, the layout, the prompts and the engine plan
+
+The owner (07:35): "Can you list out every area and district and biome and everything we need included in the world?
+Can you give me some prompts to use and what references to include to make this work? ... I like how the islands
+connect better than how we have our current world ... Can we take a lot of the districts and layout we have now that
+looks good and keep the work we've done blending things together but rebuild the entire highway and trains and ferry
+systems and subways and major arterial roads and connect them similarly to this new world map?" The decision: keep
+every district, its blends and the generators; rebuild the skeleton to concept WR3 (the city's islands in a bay, the
+mainland round it, the river channel, bridges to every island, the railway along the coast); about 5 x 4 km.
+
+A planning wave, no gameplay changes. `docs/WORLD-V3.md`:
+- **Part 1, the inventory**: every island, all 47 of today's districts and where each goes, the new towns, today's
+  parks, lakes, nature places, country sites, POIs and venues (counted from the generator), the seven new mainland
+  regions (Granite Peaks, Highland Woods, the Egret Coast, Northshore, Willow Valley, the Red Rock Desert with the casino
+  city Lucky Mesa and the Copper Gulch mine, the Sandpiper Coast) and what each holds, the biomes with their plants and
+  wildlife, the transport skeleton (four highways and the Bay Ring, the bridges, two railway lines, the subway, the
+  ferries, the buses, the river channel) and the systems tied to places - each marked exists / moves / new / rebuilt.
+- **Part 2, the layout**: `docs/world-v3-layout.png` (5040 x 4032 tiles at 1 px per 2 m, a 1 km grid), drawn by
+  `tools/world-v3-layout.py`: today's islands are cut out of today's world map picture district by district (from the
+  generated district grid) and moved whole into the bay; the new land, the skeleton and the labels are plain shapes. The
+  offsets are listed, and five decisions for the owner.
+- **Part 3**: twenty concept prompts in the prompt pack's style, each with the images to attach (the world redrawn from
+  the plan, each new region at WR2's zoom, the bay and its bridges, four kinds of bridge, the river by boat, the casino
+  city by day and its old downtown, interchanges, the railway and the mine yard, small towns, more region borders,
+  Prison Island, the open sea, the big map, travel between regions).
+- **Part 4, the engine plan**: what assumes the world is small and whole, today's costs (measured: `generateCity` 10.1 s,
+  54.5x the CPU yardstick; 44.8 MB of heap, 31.5 MB of it typed arrays - 13x that is not possible), and the region design
+  in stages (a global skeleton module, regions generated on their own, the client keeping 3 x 3 regions, the server
+  running the regions near players, per-region signatures).
+
+Files: `docs/WORLD-V3.md`, `docs/world-v3-layout.png`, `tools/world-v3-layout.py`. Tests: none touched (docs and a tool).
