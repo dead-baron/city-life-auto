@@ -88,9 +88,9 @@ export function alleyVentsIn(m, x0, y0, x1, y1) {
 
 function helpers(m) {
   const W = m.w, H = m.h, tiles = m.tiles, rank = m.roadRank;
-  const tile = (tx, ty) => (tx < 0 || ty < 0 || tx >= W || ty >= H ? T.WALL : tiles[ty * W + tx]);
-  const isAlley = (tx, ty) => tx >= 0 && ty >= 0 && tx < W && ty < H && (tiles[ty * W + tx] === T.ROAD) && rank[ty * W + tx] === 1 && !(m.deck && m.deck[ty * W + tx]);
-  const distAt = (x, y) => { const tx = Math.min(W - 1, Math.max(0, Math.floor(x / TILE))), ty = Math.min(H - 1, Math.max(0, Math.floor(y / TILE))); return DISTRICTS[m.dist[ty * W + tx]]; };
+  const tile = (tx, ty) => (!m.inside(tx, ty) ? T.WALL : tiles[m.idx(tx, ty)]);
+  const isAlley = (tx, ty) => m.inside(tx, ty) && (tiles[m.idx(tx, ty)] === T.ROAD) && rank[m.idx(tx, ty)] === 1 && !(m.deck && m.deck[m.idx(tx, ty)]);
+  const distAt = (x, y) => { const tx = Math.min(m.x0 + W - 1, Math.max(m.x0, Math.floor(x / TILE))), ty = Math.min(m.y0 + H - 1, Math.max(m.y0, Math.floor(y / TILE))); return DISTRICTS[m.dist[m.idx(tx, ty)]]; };
   // the doors: every POI (shop and walk-in doors, homes...) on a coarse grid
   const doors = new Map(), dk = (x, y) => (Math.floor(y / 128) + 64) * 4096 + Math.floor(x / 128) + 64;
   const addDoor = (x, y) => { const k = dk(x, y); let l = doors.get(k); if (!l) doors.set(k, (l = [])); l.push(x, y); };
@@ -105,7 +105,7 @@ function helpers(m) {
   };
   const nearSolid = (x, y, r) => {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) for (const e of (m.solidProps && m.solidProps.get((ty + dy) * W + tx + dx)) || []) if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) < (r + e.r) * (r + e.r)) return true;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) for (const e of (m.solidProps && m.solidProps.get(m.idx(tx + dx, ty + dy))) || []) if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) < (r + e.r) * (r + e.r)) return true;
     return false;
   };
   return { W, H, tile, isAlley, distAt, nearDoor, nearSolid };

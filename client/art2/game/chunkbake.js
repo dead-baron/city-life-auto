@@ -34,7 +34,7 @@
 // Providers are optional modules loaded at run time (loadProviders): a missing or broken one is
 // reported, not fatal. Pure and worker-safe (no DOM, no WebGL).
 import { GBuf, hash, F_GROUND, F_WATER, F_WET, F_LEAF } from '../gbuf.js';
-import { T, MAP_W, MAP_H, TILE } from '../../../shared/constants.js';
+import { T, TILE } from '../../../shared/constants.js';
 
 export const CHUNK = 768;
 export const DECK_Z = 88;           // height of the elevated highway deck (lz = 1); shared/levels.js DECK_LIFT
@@ -87,10 +87,9 @@ export function flatGround(M, cx, cy, opt = {}) {
   G.nrm.fill(255);
   for (let i = 0; i < CHUNK * CHUNK; i++) { G.nrm[i * 4] = 128; G.nrm[i * 4 + 1] = 128; }
   for (let y = 0; y < CHUNK; y++) {
-    const ty = Math.min(MAP_H - 1, ((oy + y) / TILE) | 0);
+    const ty = tiles ? Math.max(M.y0, Math.min(M.y0 + M.h - 1, ((oy + y) / TILE) | 0)) : 0, row = tiles ? M.row(ty) : 0;
     for (let x = 0; x < CHUNK; x++) {
-      const tx = Math.min(MAP_W - 1, ((ox + x) / TILE) | 0);
-      const t = tiles ? tiles[ty * MAP_W + tx] : T.GRASS;
+      const t = tiles ? tiles[row + M.col(Math.max(M.x0, Math.min(M.x0 + M.w - 1, ((ox + x) / TILE) | 0)))] : T.GRASS;
       const i = y * CHUNK + x, j = i * 4, water = t === T.WATER || t === T.DEEP;
       if (src) { G.col[j] = src[j]; G.col[j + 1] = src[j + 1]; G.col[j + 2] = src[j + 2]; }
       else {

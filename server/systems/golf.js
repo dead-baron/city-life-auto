@@ -110,7 +110,7 @@ function segPoint(x0, y0, x1, y1, px, py) {
 function bounceOffProps(map, b, pin) {
   const tx = Math.floor(b.x / TILE), ty = Math.floor(b.y / TILE);
   for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-    for (const e of map.solidProps.get((ty + oy) * map.w + tx + ox) || []) {
+    for (const e of map.solidProps.get(map.idx(tx + ox, ty + oy)) || []) {
       if (e.off || e.r < 4 || Math.hypot(e.x - pin.x, e.y - pin.y) < 10) continue;
       const dx = b.x - e.x, dy = b.y - e.y, d = Math.hypot(dx, dy);
       if (d >= e.r + 2 || d < 0.01) continue;

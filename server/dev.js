@@ -577,7 +577,7 @@ function devRescue(world, p, ped, at) {
     // the open country (grass, dirt, fields, sand) 400-900 px from the nearest road, nearest you (within 9000 px)
     const WILDS = new Set([Z.WILD, Z.WEST, Z.NORTH]), OPEN = new Set([T.GRASS, T.DIRT, T.FIELD, T.SAND]);
     let best = 9000;
-    for (let ty = 0; ty < m.h; ty += 6) for (let tx = 0; tx < m.w; tx += 6) {
+    for (let ty = m.y0; ty < m.y0 + m.h; ty += 6) for (let tx = m.x0; tx < m.x0 + m.w; tx += 6) {
       const x = tx * 32 + 16, y = ty * 32 + 16, dd = Math.hypot(x - ped.x, y - ped.y);
       if (dd >= best || !WILDS.has(m.zoneAt(x, y)) || !OPEN.has(m.tileAtPx(x, y)) || !m.isWalkable(x, y) || m.isWater(x, y)) continue;
       const k = kerbFor(world, x, y), d = Math.hypot(k.x - x, k.y - y);

@@ -95,7 +95,7 @@ export function surfaceZ(m, x, y, z = 1) {
 // Is this ground tile under the deck (for spawning, drawing order)?
 export function underDeck(m, x, y) {
   const tx = Math.floor(x / 32), ty = Math.floor(y / 32);
-  return tx >= 0 && ty >= 0 && tx < m.w && ty < m.h && !!m.deck[ty * m.w + tx];
+  return m.inside(tx, ty) && !!m.deck[m.idx(tx, ty)];
 }
 
 // After moving: work out z and keep things on the deck inside its barriers. r: half width of

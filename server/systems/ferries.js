@@ -53,6 +53,9 @@ const SLIP = new Set([T.ROAD, T.LOT, T.PLAZA]);   // a car ferry can lie at a st
 // ---- the routes ----------------------------------------------------------------------------------------------------
 // the land masses (4-connected land tiles) and, for every water tile, how far it is from land (tiles, at most 60: the
 // most tiles across or down to the nearest land tile - never more than the real distance)
+// (The world's whole frame: the server holds the whole world (docs/WORLD-V3.md part 8, item 6) and plans the ferries'
+// routes over all of it, so these grids - the land masses, the distance to land, the A* cells - are the frame's, indexed
+// y * MAP_W + x, and the map they read is the whole one (m.w === MAP_W). A window map would need them cut to its extent.)
 function geography(m) {
   const N = MAP_W * MAP_H, comp = new Int32Array(N).fill(-1), sizes = [];
   for (let i = 0; i < N; i++) {

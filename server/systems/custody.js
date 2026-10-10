@@ -308,7 +308,7 @@ function propNear(m, x, y, r) {
   if (!m.solidProps) return false;
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-    const a = m.solidProps.get((ty + j) * m.w + tx + i);
+    const a = m.solidProps.get(m.idx(tx + i, ty + j));
     if (a) for (const e of a) if (!e.off && Math.hypot(e.x - x, e.y - y) < e.r + r) return true;
   }
   return false;

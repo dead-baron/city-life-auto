@@ -3,7 +3,7 @@
 // lit interior when you're riding), level-crossing gates, the platform clocks and the "train in -
 // board here" glow are drawn live. Procedural canvas drawing, except the subway entrance kiosks
 // (cut from the concept art, in the sprite atlas).
-import { T, TILE, CHUNK_PX, MAP_W } from '../../shared/constants.js';
+import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
 import { TRAIN_CARS, COACH_SEATS, LOCO_SEATS, CAB_OX, MAIL_BOX, CROSSING_ARM, railAt } from '../../shared/map.js';
 import { atlas } from './sprites.js';
 
@@ -24,7 +24,7 @@ export function railIndex(map, key) {
   return out;
 }
 
-const roadAt = (m, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), t = m.tileAt(tx, ty); return t === T.ROAD || (t === T.BRIDGE && !!m.roadAxis[ty * MAP_W + tx]); };
+const roadAt = (m, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), t = m.tileAt(tx, ty); return t === T.ROAD || (t === T.BRIDGE && !!m.roadAxis[m.idx(tx, ty)]); };
 const wetAt = (m, x, y) => { const t = m.tileAtPx(x, y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; };
 
 export function drawRailChunk(g, m, idx) {

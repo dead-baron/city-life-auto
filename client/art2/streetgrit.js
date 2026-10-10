@@ -20,9 +20,9 @@ export function streetGrit(M) {
   if (out) return out;
   out = [];
   const W = M.w, H = M.h;
-  const distAt = (x, y) => { const tx = Math.min(W - 1, Math.max(0, Math.floor(x / TILE))), ty = Math.min(H - 1, Math.max(0, Math.floor(y / TILE))); return DISTRICTS[M.dist[ty * W + tx]]; };
-  const deck = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= W || ty >= H || (M.deck && M.deck[ty * W + tx]); };
-  const tile = (x, y) => M.tiles[Math.min(H - 1, Math.max(0, Math.floor(y / TILE))) * W + Math.min(W - 1, Math.max(0, Math.floor(x / TILE)))];
+  const distAt = (x, y) => { const tx = Math.min(M.x0 + W - 1, Math.max(M.x0, Math.floor(x / TILE))), ty = Math.min(M.y0 + H - 1, Math.max(M.y0, Math.floor(y / TILE))); return DISTRICTS[M.dist[M.idx(tx, ty)]]; };
+  const deck = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return !M.inside(tx, ty) || (M.deck && M.deck[M.idx(tx, ty)]); };
+  const tile = (x, y) => M.tiles[M.idx(Math.min(M.x0 + W - 1, Math.max(M.x0, Math.floor(x / TILE))), Math.min(M.y0 + H - 1, Math.max(M.y0, Math.floor(y / TILE))))];
   const onRoad = (p) => { const t = tile(p[0], p[1]); return t === T.ROAD || t === T.BRIDGE; };
   const push = (k, p, v) => { if (k === 'weeds' ? tile(p[0], p[1]) === T.SIDEWALK : onRoad(p)) out.push({ k, x: p[0], y: p[1], v }); };
   (M.edges || []).forEach((e, ei) => {

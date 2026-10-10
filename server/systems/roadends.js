@@ -294,7 +294,7 @@ export function clearance(world, v, dir, steer, open, look = LOOK) {
       }
       const tx = Math.floor(px / 32), ty = Math.floor(py / 32);
       for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-        const arr = m.solidProps.get((ty + oy) * m.w + tx + ox);
+        const arr = m.solidProps.get(m.idx(tx + ox, ty + oy));
         if (arr) for (const p of arr) if (!p.off && Math.hypot(p.x - px, p.y - py) < p.r + 1) return hit(s, false, 'solid', px, py);
       }
       for (const e of near) {

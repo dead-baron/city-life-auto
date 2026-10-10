@@ -6,6 +6,7 @@
 - Docs: add a `docs/DEVLOG.md` entry for each feature; keep the README controls table current.
 - Performance budgets (`test/perf.test.js`, `node tools/perf.mjs` for the report): the code each part of the page loads, building the city and baking chunks (as multiples of a CPU yardstick), what the city and a kept chunk weigh. Keep startup code lazy (main.js must not import the art v2 renderer statically). Raising a budget is a decision: say why in the DEVLOG.
 - Browsers keep the city and baked chunks (IndexedDB; `client/worldcache.js`, `client/art2/game/chunkstore.js`) under version.json's `world` / `art` hashes - stamping computes them, so stamp after any change to the world or the art (the perf test checks).
+- The map is a window onto the world (World v3, docs/WORLD-V3.md part 8): code that reads a built map indexes its per-tile layers through `m.idx(tx, ty)` / `m.inside(tx, ty)` (`m.row(ty) + m.col(tx)` along a row) and bounds loops by `m.x0`, `m.y0`, `m.w`, `m.h` - never `ty * MAP_W + tx` or `MAP_W` / `MAP_H` (only the generator and whole-frame uses keep them; `test/mapwindow.test.js` checks).
 - The world must come out bit-identical in every JS engine (the client checks the map signature on joining; Safari's `Math.sin` & co. differ from V8's): `generateCity` runs under `withDeterministicMath` (`shared/dmath.js`). In shared code, nothing computed while a module loads may use those Math functions (use `dsin` etc.), `**` only squares, never `Math.random`. `test/dmath.test.js` checks.
 
 ## The tutorial is paused (user, 2026-10-06)

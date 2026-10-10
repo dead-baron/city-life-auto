@@ -1308,6 +1308,19 @@ never runs the generator: it fetches the regions round the player and keeps them
    - Today's world is the window (0, 0, MAP_W, MAP_H), so nothing changes until a window is smaller.
    - About 190 lines in `shared/map.js`, 150 in `naturesites.js` (generator code: it can keep the frame), 110 in the
      client, 54 in the server.
+   - **Done for the runtime (2026-10-10):** CityMap has `x0`, `y0`, `w`, `h`, `idx`, `row` / `col` and `inside`, and
+     every reader of a built map - the shared queries, the server's systems, the client's renderers and the art v2
+     bakes - indexes it through them (the DEVLOG has the list; `test/mapwindow.test.js` guards it). `shared/mapwindow.js`
+     `windowOf` cuts a window from a whole map, and a window answers every query, the physics and the ground bake
+     inside it as the whole map does. The world hash and the map signature are unchanged.
+   - **What's left:** the generator still builds the whole frame with `MAP_W` / `MAP_H` (map.js's build passes,
+     naturesites.js, countryside.js, world3*.js - the frame becomes a parameter when the server builds the v3 frame);
+     the lists (props, POIs, buildings, roads, solid props' list views) are still whole in a window - splitting them
+     is the region file's job (item 2); the client's moving window (item 4) - today the client still holds the whole
+     map. Whole-frame uses kept on purpose: the art's chunk grid, the camera's bounds and the border sea, the map
+     pictures, the router's grid, the underground, the server's ferry routes (it holds the whole world).
+     Near a window's edge the queries that look round a point (a flood, a ray, the bake's margin) see a wall where the
+     whole map has land: the client's window must hold a margin round what it draws and simulates.
 2. **The region file:**
    - Per region, the per-tile layers the client reads (tiles, dist, zone, river, deck, cover, lvl0Block, roadAxis,
      roadRank, bld), packed and compressed.

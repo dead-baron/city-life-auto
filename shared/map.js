@@ -303,8 +303,9 @@ export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse']);
 export class CityMap {
   constructor(seed) {
     this.seed = seed >>> 0;
+    // its extent in world tiles: x0, y0 (0: on the prototype), w, h - the whole frame here; a window: shared/mapwindow.js
     this.w = MAP_W; this.h = MAP_H;
-    const N = MAP_W * MAP_H;
+    const N = this.w * this.h;
     this.tiles = new Uint8Array(N);
     this.dist = new Uint8Array(N).fill(WATER_D);
     this.zone = new Uint8Array(N);
@@ -342,28 +343,34 @@ export class CityMap {
     this.spawns = {};
     this.pillars = [];
   }
-  idx(tx, ty) { return ty * MAP_W + tx; }
-  // Past the map's edge: open sea for a way (softEdge, set once the world is built: border.js slows you there and
+  // a tile's index in the layers: idx === row(ty) + col(tx) (a loop along a row takes row(ty) once; never step with i++)
+  idx(tx, ty) { return (ty - this.y0) * this.w + (tx - this.x0); }
+  row(ty) { return (ty - this.y0) * this.w; }
+  col(tx) { return tx - this.x0; }
+  inside(tx, ty) { return tx >= this.x0 && ty >= this.y0 && tx < this.x0 + this.w && ty < this.y0 + this.h; }
+  // Past the world's edge: open sea for a way (softEdge, set once the world is built: border.js slows you there and
   // stops you at its end), then a wall. While the world is being built, a wall right at the edge, as it always was.
+  // Outside a window, inside the world: a wall.
   tileAt(tx, ty) {
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return this.softEdge && tx >= -EDGE_T && ty >= -EDGE_T && tx < MAP_W + EDGE_T && ty < MAP_H + EDGE_T ? T.DEEP : T.WALL;
-    return this.tiles[ty * MAP_W + tx];
+    if (!this.inside(tx, ty)) return this.softEdge && (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) && tx >= -EDGE_T && ty >= -EDGE_T && tx < MAP_W + EDGE_T && ty < MAP_H + EDGE_T ? T.DEEP : T.WALL;   // (the world's frame)
+    return this.tiles[this.idx(tx, ty)];
   }
   tileAtPx(x, y) { return this.tileAt(Math.floor(x / TILE), Math.floor(y / TILE)); }
-  set(tx, ty, t) { if (tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H) this.tiles[ty * MAP_W + tx] = t; }
+  set(tx, ty, t) { if (this.inside(tx, ty)) this.tiles[this.idx(tx, ty)] = t; }
   fill(tx, ty, w, h, t) { for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) this.set(x, y, t); }
   setDist(tx, ty, w, h, d) {
-    for (let y = Math.max(0, ty); y < Math.min(MAP_H, ty + h); y++) for (let x = Math.max(0, tx); x < Math.min(MAP_W, tx + w); x++) this.dist[y * MAP_W + x] = d;
+    const x1 = Math.min(this.x0 + this.w, tx + w);
+    for (let y = Math.max(this.y0, ty); y < Math.min(this.y0 + this.h, ty + h); y++) { const r = this.row(y); for (let x = Math.max(this.x0, tx); x < x1; x++) this.dist[r + this.col(x)] = d; }
   }
   districtAt(x, y) {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return DISTRICTS[WATER_D];
-    return DISTRICTS[this.dist[ty * MAP_W + tx]];
+    if (!this.inside(tx, ty)) return DISTRICTS[WATER_D];
+    return DISTRICTS[this.dist[this.idx(tx, ty)]];
   }
   zoneAt(x, y) {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return Z.SEA;
-    return this.zone[ty * MAP_W + tx];
+    if (!this.inside(tx, ty)) return Z.SEA;
+    return this.zone[this.idx(tx, ty)];
   }
   // Which island / part of the world a point is in (ISLANDS key) or null at sea.
   islandAt(x, y) {
@@ -373,13 +380,13 @@ export class CityMap {
   }
   buildingAtPx(x, y) {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return null;
-    const b = this.bld[ty * MAP_W + tx];
+    if (!this.inside(tx, ty)) return null;
+    const b = this.bld[this.idx(tx, ty)];
     return b >= 0 ? this.buildings[b] : null;
   }
   addSolidProp(x, y, r) {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    const k = ty * MAP_W + tx;
+    const k = this.idx(tx, ty);
     let arr = this.solidProps.get(k);
     if (!arr) { arr = []; this.solidProps.set(k, arr); }
     const e = { x, y, r, pi: -1, off: false };
@@ -395,11 +402,11 @@ export class CityMap {
     if (d < 1) return 1;
     const tb = !sight && this.cellBlocks ? barsRay(this, x1, y1, x2, y2) : 1;
     const steps = Math.ceil(d / 8);
-    const cv = sight ? this.cover : null, c0 = cv ? coverAtPx(cv, x1, y1) : 0;   // (sight doesn't cross a tunnel's roof: shared/tunnels.js)
+    const cv = sight ? this.cover : null, c0 = cv ? coverAtPx(this, x1, y1) : 0;   // (sight doesn't cross a tunnel's roof: shared/tunnels.js)
     for (let i = 1; i <= steps && i / steps <= tb; i++) {
       const t = i / steps, px = x1 + (x2 - x1) * t, py = y1 + (y2 - y1) * t;
       const tt = this.tileAtPx(px, py);
-      if (tt === T.BUILDING || tt === T.WALL || (cv && coverAtPx(cv, px, py) !== c0)) return Math.max(0, (i - 1) / steps);
+      if (tt === T.BUILDING || tt === T.WALL || (cv && coverAtPx(this, px, py) !== c0)) return Math.max(0, (i - 1) / steps);
     }
     return tb;
   }
@@ -426,6 +433,9 @@ export class CityMap {
   }
   poisOf(kind) { return this.pois.filter((p) => p.kind === kind); }
 }
+// (on the prototype: the whole map's data - the world hash, the kept city - has no new fields; a window has its own)
+CityMap.prototype.x0 = 0;
+CityMap.prototype.y0 = 0;
 
 // Swimming: in open water, or under a bridge deck having swum in. Up on the highway deck you
 // are never swimming, whatever is below.
@@ -455,7 +465,7 @@ export function nearestLand(map, x, y, maxTiles = 24, skip = null) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
       const t = map.tileAt(cx + dx, cy + dy);
       if (PED_BLOCK[t] || t === T.BRIDGE || t === T.DOCK) continue; // a pier stands up out of the water: swim for real shore
-      if (skip && skip.has((cy + dy) * MAP_W + cx + dx)) continue; // tried that bit of shore: couldn't get up there
+      if (skip && skip.has(map.idx(cx + dx, cy + dy))) continue; // tried that bit of shore: couldn't get up there
       const px = (cx + dx + 0.5) * TILE, py = (cy + dy + 0.5) * TILE, d = (px - x) ** 2 + (py - y) ** 2;
       if (d < bd) { bd = d; best = { x: px, y: py }; }
     }
@@ -465,18 +475,17 @@ export function nearestLand(map, x, y, maxTiles = 24, skip = null) {
 }
 
 // Syndicate gang territory: The Yards, Southside and Smuggler's Rock (whole districts).
-let turfMap = null;
-export function isTurf(x, y) {
-  if (!turfMap) return false;
+export function isTurf(map, x, y) {
+  if (!map) return false;
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
-  return !!DISTRICTS[turfMap[ty * MAP_W + tx]].turf;
+  if (!map.inside(tx, ty)) return false;
+  return !!DISTRICTS[map.dist[map.idx(tx, ty)]].turf;
 }
 
 // Fishing water: 'river', 'deep' sea or 'shore' shallows.
 export function waterKind(map, tx, ty) {
-  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return 'deep';   // (out past the map's edge)
-  const i = ty * MAP_W + tx;
+  if (!map.inside(tx, ty)) return 'deep';   // (out past the map's edge)
+  const i = map.idx(tx, ty);
   if (map.river[i]) return 'river';
   return map.tiles[i] === T.DEEP ? 'deep' : 'shore';
 }
@@ -506,9 +515,12 @@ export function cityData(m) {
 export function cityFromData(o) {
   Object.setPrototypeOf(o, CityMap.prototype);
   // (what the nature sites hang on it, which a clone drops: the wild biome at a tile)
-  if (o.terrainCls && !o.terrainCls.at) Object.defineProperty(o.terrainCls, 'at', { value: (tx, ty) => wildBiome(o.dist[ty * MAP_W + tx], terrainAt(o.terrainCls.cls, o.terrainCls.cw, tx, ty)), enumerable: false });
+  if (o.terrainCls && !o.terrainCls.at) Object.defineProperty(o.terrainCls, 'at', { value: (tx, ty) => wildBiome(o.dist[o.idx(tx, ty)], terrainAt(o.terrainCls.cls, o.terrainCls.cw, tx, ty)), enumerable: false });
   return o;
 }
+// ---------------------------------------------------------------------------
+// The generator (from here to mapSignature) builds the whole frame: it keeps `y * MAP_W + x` for now. Code that
+// reads a built map goes through its idx / inside.
 let OPTS = null;   // (World v3's spike: what generateCity was asked to build; null for the live world)
 function buildCity(seed, opts = null) {
   OPTS = opts;
@@ -517,7 +529,6 @@ function buildCity(seed, opts = null) {
   const rand = mulberry32(seed);
   terrain(m, opts);
   paintDistricts(m);
-  turfMap = m.dist;
   const lines = layoutRoads(m, rand);
   if (OPTS?.lines) OPTS.lines(lines, m);   // (World v3's spike: the roads of the islands not being built left out)
   const net = repairRoads(m, lines, seed);

@@ -18,7 +18,7 @@ const up = (s) => (s.lz || 0) > GROUND_Z;
 const blockedAt = (map, tx, ty, block) => {
   if (block[map.tileAt(tx, ty)]) return true;
   const lb = map.lvl0Block;
-  return !!lb && tx >= 0 && ty >= 0 && tx < map.w && ty < map.h && lb[ty * map.w + tx] === 1;
+  return !!lb && map.inside(tx, ty) && lb[map.idx(tx, ty)] === 1;
 };
 
 export const PED = {
@@ -115,7 +115,7 @@ export function pedStep(s, inp, dt, map, mods) {
   if (s.stamina > smax) s.stamina = smax;
   // a drop (a waterfall's lip, the cliff it goes over: ledges.js): you go down it, fast, whatever you're pressing
   const drops = up(s) ? null : dropsOf(map);
-  if (drops && drops.size && drops.has(Math.floor(s.y / TILE) * map.w + Math.floor(s.x / TILE))) {
+  if (drops && drops.size && drops.has(map.idx(Math.floor(s.x / TILE), Math.floor(s.y / TILE)))) {
     if (s.vy < DROP_SPEED) s.vy = DROP_SPEED;
     s.vx *= Math.exp(-6 * dt); s.rollT = 0;
     s.dropping = true;
@@ -134,7 +134,7 @@ export function collideCircle(s, r, map, block) {
     const ty0 = Math.floor((s.y - r) / TILE), ty1 = Math.floor((s.y + r) / TILE);
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
       // a drop (ledges.js) is open from above and the side and solid from below: nobody climbs up a waterfall or its cliff
-      const drop = anyDrops && tx >= 0 && ty >= 0 && tx < map.w && drops.has(ty * map.w + tx);
+      const drop = anyDrops && map.inside(tx, ty) && drops.has(map.idx(tx, ty));
       if (drop ? s.y > ty * TILE + TILE - 1 : blockedAt(map, tx, ty, block)) {
         const qx = clamp(s.x, tx * TILE, tx * TILE + TILE), qy = clamp(s.y, ty * TILE, ty * TILE + TILE);
         let dx = s.x - qx, dy = s.y - qy;
@@ -153,7 +153,7 @@ export function collideCircle(s, r, map, block) {
           }
         }
       }
-      const props = map.solidProps.get(ty * map.w + tx);
+      const props = map.solidProps.size ? map.solidProps.get(map.idx(tx, ty)) : null;   // (none at all: a bare test map)
       if (props) for (const p of props) {
         if (p.off) continue;
         const dx = s.x - p.x, dy = s.y - p.y, rr = r + p.r;
@@ -206,7 +206,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   const surfSpeed = rough === 1 ? surf[0] : clamp(1 - (1 - surf[0]) * rough, 0.25, 1);
   let gripMul = rough === 1 ? surf[1] : clamp(1 - (1 - surf[1]) * rough, 0.3, 1), brakeMul = 1;
   if (s.flat) gripMul *= 0.55; // tyres shredded by a spike strip
-  if (env.rain && !coverAtPx(map.cover, s.x, s.y)) {   // (in a tunnel the road is dry: shared/tunnels.js)
+  if (env.rain && !coverAtPx(map, s.x, s.y)) {   // (in a tunnel the road is dry: shared/tunnels.js)
     if (isBoat) gripMul *= 0.8;
     else if (surf[2]) { gripMul *= 0.65; brakeMul = 0.5; } // GDD: friction -35%, braking distance doubled
   }
@@ -371,7 +371,7 @@ export function collideVehicleTiles(s, def, map, block) {
         const hit = obbVsAabb(s.x, s.y, s.a, hl, hw, tx * TILE, ty * TILE, TILE, TILE);
         if (hit && (!best || hit.depth > best.depth)) best = hit;
       }
-      const props = map.solidProps.get(ty * map.w + tx);
+      const props = map.solidProps.size ? map.solidProps.get(map.idx(tx, ty)) : null;   // (none at all: a bare test map)
       if (props) for (const p of props) {
         if (p.off || (p.brk && Math.abs(s.vx) + Math.abs(s.vy) > SMASH_SPEED)) continue; // smashes through (server breaks it)
         const h = circleVsObb(p.x, p.y, p.r, s.x, s.y, s.a, hl, hw);

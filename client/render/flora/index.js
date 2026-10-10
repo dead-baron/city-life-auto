@@ -9,7 +9,7 @@
 //             golden-hour glow, legs hidden in tall wheat
 // The tiles and props are the server's; this only decides how they look. Placement comes from
 // hashes of world position, so it's the same for everyone and the same every visit.
-import { T, TILE, CHUNK_PX, MAP_W, MAP_H } from '../../../shared/constants.js';
+import { T, TILE, CHUNK_PX } from '../../../shared/constants.js';
 import { DISTRICTS, WILD_STYLES, terrainAt } from '../../../shared/map.js';
 import { PROP_SIZES } from '../../../shared/prefab-data.js';
 import { hash2 } from '../../../shared/rng.js';
@@ -53,7 +53,7 @@ export class Flora {
     this.m = map;
     inst = this;
     this.mode = 'static'; this.density = 1; this.windOn = true; this.trampleOn = false; this.sss = false;
-    this.biome = new Uint8Array(MAP_W * MAP_H).fill(255);  // per tile: GKINDS index, 254 none (lazily)
+    this.biome = new Uint8Array(map.w * map.h).fill(255);  // per tile of the map (map.idx): GKINDS index, 254 none (lazily)
     this.cropOf = new Map();                               // field index -> crop kind
     this.sheets = new Map();                               // 'g:lawn' / 'c:wheat' -> sheet
     this.sprites = new Map();                              // 'oak:2' -> tree / bush sprite
@@ -80,8 +80,8 @@ export class Flora {
   // ---- what grows where -----------------------------------------------------------------------------
   exclusion() {
     if (this.excl) return this.excl;
-    const m = this.m, X = new Uint8Array(MAP_W * MAP_H);
-    const mark = (tx, ty, tw, th) => { for (let y = Math.max(0, ty); y < Math.min(MAP_H, ty + th); y++) for (let x = Math.max(0, tx); x < Math.min(MAP_W, tx + tw); x++) X[y * MAP_W + x] = 1; };
+    const m = this.m, X = new Uint8Array(m.w * m.h);
+    const mark = (tx, ty, tw, th) => { for (let y = Math.max(m.y0, ty); y < Math.min(m.y0 + m.h, ty + th); y++) { const r = m.row(y); for (let x = Math.max(m.x0, tx); x < Math.min(m.x0 + m.w, tx + tw); x++) X[r + m.col(x)] = 1; } };
     for (const p of m.prefabs || []) if (p.tw) mark(p.tx, p.ty, p.tw, p.th);                      // painted lots have their own gardens
     for (const a of m.handArt || []) mark(Math.floor(a.x / TILE), Math.floor(a.y / TILE), Math.ceil(a.w / TILE), Math.ceil(a.h / TILE));
     for (const a of m.paintings || []) mark(Math.floor(a.x / TILE), Math.floor(a.y / TILE), Math.ceil(a.w / TILE), Math.ceil(a.h / TILE));
@@ -90,7 +90,7 @@ export class Flora {
     return (this.excl = X);
   }
   biomeAt(tx, ty) {
-    const i = ty * MAP_W + tx;
+    const i = this.m.idx(tx, ty);
     let b = this.biome[i];
     if (b !== 255) return b;
     const m = this.m, t = m.tiles[i];
@@ -111,8 +111,8 @@ export class Flora {
   groundKind(tx, ty) { const b = this.biomeAt(tx, ty); return b < 7 ? GKINDS[b] : null; }
   // the ground art for a tile: grass kinds, bare earth, tilled field, or null (not ours)
   tileKind(tx, ty) {
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return null;
-    const i = ty * MAP_W + tx, t = this.m.tiles[i];
+    if (!this.m.inside(tx, ty)) return null;
+    const i = this.m.idx(tx, ty), t = this.m.tiles[i];
     if (this.exclusion()[i]) return null;
     if (t === T.FIELD) return 'field';
     if (t === T.DIRT) return 'earth';
@@ -144,8 +144,8 @@ export class Flora {
     const m = this.m;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const x = tx + dx, y = ty + dy;
-      if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) continue;
-      const t = m.tiles[y * MAP_W + x];
+      if (!m.inside(x, y)) continue;
+      const t = m.tiles[m.idx(x, y)];
       if (t === T.WATER || t === T.DEEP) return true;
     }
     return false;
@@ -160,8 +160,8 @@ export class Flora {
     const dens = this.density;
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const tx = cx * N + i, ty = cy * N + j;
-      if (tx >= MAP_W || ty >= MAP_H) continue;
-      const ti = ty * MAP_W + tx, t = m.tiles[ti];
+      if (!m.inside(tx, ty)) continue;
+      const ti = m.idx(tx, ty), t = m.tiles[ti];
       if (t === T.FIELD) {
         if (this.exclusion()[ti]) continue;
         const ck = CKINDS.indexOf(this.cropAt(tx * TILE + 16, ty * TILE + 16));
@@ -236,7 +236,7 @@ export class Flora {
     const N = CHUNK_PX / TILE;
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const tx = cx * N + i, ty = cy * N + j;
-      if (tx >= MAP_W || ty >= MAP_H) continue;
+      if (!this.m.inside(tx, ty)) continue;
       const kind = this.tileKind(tx, ty);
       if (!kind) continue;
       let mixed = false;
@@ -431,7 +431,7 @@ export class Flora {
     const t = p.t, h = hash2(p.x | 0, p.y | 0, 51);
     if (t === 'tree_a' || t === 'tree_b') {
       const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
-      const b = this.biomeAt(Math.max(0, Math.min(MAP_W - 1, tx)), Math.max(0, Math.min(MAP_H - 1, ty)));
+      const m = this.m, b = this.biomeAt(Math.max(m.x0, Math.min(m.x0 + m.w - 1, tx)), Math.max(m.y0, Math.min(m.y0 + m.h - 1, ty)));
       if (b === 4) return t === 'tree_b' ? 'pine' : h < 0.5 ? 'oak' : 'pine';      // forest
       if (b === 5) return 'olive';                                               // dry country
       if (t === 'tree_a') return h < 0.7 ? 'oak' : 'maple';

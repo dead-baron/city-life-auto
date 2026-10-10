@@ -451,7 +451,7 @@ function steerTraffic(world, v, t) {
       if (up) return false;
       const k0x = Math.floor(x / 32), k0y = Math.floor(y / 32);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const arr = world.map.solidProps.get((k0y + dy) * world.map.w + k0x + dx);
+        const arr = world.map.solidProps.get(world.map.idx(k0x + dx, k0y + dy));
         if (arr) for (const sp of arr) if (!sp.off && Math.hypot(sp.x - x, sp.y - y) < sp.r + 10) return true;
       }
       return false;

@@ -25,7 +25,7 @@
 // leave a blood trail you can follow; the dangerous ones may turn and come at you. Every hit is noted for the
 // grade of the hide (fauna.js gradeOf; hunting.js). The farms' livestock (cows, sheep, horses, goats, pigs) just
 // graze round the farms and lumber off.
-import { K, T, TILE, MAP_W, PED_RADIUS } from '../../shared/constants.js';
+import { K, T, TILE, PED_RADIUS } from '../../shared/constants.js';
 import { PED_BLOCK, SWIM_BLOCK, WATER_T, DISTRICTS, wildBiome } from '../../shared/map.js';
 import { pedStep, PED } from '../../shared/physics.js';
 import { circleVsObb } from '../../shared/math.js';
@@ -104,7 +104,7 @@ export function placeNear(map, x, y, r) {
 // ---- habitat ----------------------------------------------------------------------------------------------------
 // The habitat tags at a point (fauna.js HABITATS) - an object tag -> 1. On fresh water: river / creek / lake / pond
 // / marsh; at sea: sea (and kelp off the rocky coves); on land: what the ground is, and what water and rock are near.
-const at = (map, tx, ty) => (tx < 0 || ty < 0 || tx >= MAP_W || ty >= map.h ? -1 : ty * MAP_W + tx);
+const at = (map, tx, ty) => (!map.inside(tx, ty) ? -1 : map.idx(tx, ty));
 export function habitatAt(map, x, y) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), i = at(map, tx, ty);
   const tags = {};
@@ -146,7 +146,7 @@ function narrow(map, tx, ty) { let n = 0; for (let k = -4; k <= 4; k++) { const 
 function marshy(map, tx, ty) { return (map.natureSites || []).some((q) => q.kind === 'marsh' && Math.hypot(q.x - tx * TILE, q.y - ty * TILE) < 900); }
 function kelpAt(map, x, y) {
   if (!map._kelp) Object.defineProperty(map, '_kelp', { value: (map.natureSites || []).filter((q) => KELP_SITES.includes(q.kind)).map((q) => ({ x: q.x, y: q.y })), enumerable: false, configurable: true });
-  return map._kelp.some((q) => Math.hypot(q.x - x, q.y - y) < 1100) && (map.distSea[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)] | 0) === 0;
+  return map._kelp.some((q) => Math.hypot(q.x - x, q.y - y) < 1100) && (map.distSea[map.idx(Math.floor(x / TILE), Math.floor(y / TILE))] | 0) === 0;
 }
 function beaverAt(map, x, y) { return (map.beaverPonds || []).some((b) => Math.hypot(b.x - x, b.y - y) < (b.r || 260)); }
 
@@ -515,7 +515,7 @@ function treeNear(map, x, y, r) {
   let best = null, bd = r;
   const tx0 = Math.floor((x - r) / TILE), tx1 = Math.floor((x + r) / TILE), ty0 = Math.floor((y - r) / TILE), ty1 = Math.floor((y + r) / TILE);
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-    const arr = map.solidProps.get(ty * MAP_W + tx);
+    const arr = map.solidProps.get(map.idx(tx, ty));
     if (!arr) continue;
     for (const p of arr) { if (p.off || p.r < 9) continue; const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = { x: p.x, y: p.y, r: p.r }; } }
   }
@@ -899,12 +899,12 @@ function arrive(world, a, w, now) {
 const bodyR = (a) => Math.max(PED_RADIUS, a.r || 10);
 function solidAt(map, x, y, block) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), lb = map.lvl0Block;
-  return !!block[map.tileAt(tx, ty)] || (!!lb && tx >= 0 && ty >= 0 && tx < map.w && ty < map.h && lb[ty * map.w + tx] === 1);
+  return !!block[map.tileAt(tx, ty)] || (!!lb && map.inside(tx, ty) && lb[map.idx(tx, ty)] === 1);
 }
 function propAt(map, x, y, r, minR = 0) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-    const arr = map.solidProps.get((ty + j) * MAP_W + tx + i);
+    const arr = map.solidProps.get(map.idx(tx + i, ty + j));
     if (arr) for (const p of arr) if (!p.off && p.r >= minR && Math.hypot(p.x - x, p.y - y) < p.r + r) return true;
   }
   return false;

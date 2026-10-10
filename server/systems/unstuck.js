@@ -4,7 +4,7 @@
 //  * Surrender: give up on the spot. A wanted player turns themself in (straight to the cells at the nearest station:
 //    fined, contraband taken, bail or wait - custody.js); anyone else collapses and wakes up like any death.
 // Either way nothing is gained over playing it out.
-import { K, T, MAP_W, MAP_H } from '../../shared/constants.js';
+import { K, T } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { UNSTUCK_S, UNSTUCK_CALM_S } from '../../shared/rules.js';
 import * as law from './law.js';
@@ -47,7 +47,7 @@ export function openSpot(map, x, y, maxR = SEARCH_PX, here = false) {
     for (const [dx, dy] of [[0, 0], [16, 0], [-16, 0], [0, 16], [0, -16], [24, 24], [-24, 24], [24, -24], [-24, -24]]) if (!free(px + dx, py + dy)) return false;
     const tx = Math.floor(px / 32), ty = Math.floor(py / 32);
     for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-      for (const e of map.solidProps.get((ty + oy) * map.w + tx + ox) || []) if (!e.off && Math.hypot(e.x - px, e.y - py) < e.r + 20) return false;
+      for (const e of map.solidProps.get(map.idx(tx + ox, ty + oy)) || []) if (!e.off && Math.hypot(e.x - px, e.y - py) < e.r + 20) return false;
     }
     return true;
   };
@@ -73,26 +73,25 @@ const STREET = new Set([T.ROAD, T.SIDEWALK, T.BRIDGE]);
 const POCKET_LIMIT = 2500; // tiles: more open ground than this is never a trap
 function gateTiles(map) {
   const out = new Set();
-  for (const gt of map.gates || []) for (const e of gt.props) if (!e.off) out.add(Math.floor(e.y / 32) * MAP_W + Math.floor(e.x / 32));
+  for (const gt of map.gates || []) for (const e of gt.props) if (!e.off) out.add(map.idx(Math.floor(e.x / 32), Math.floor(e.y / 32)));
   return out;
 }
 export function canWalkOut(map, x, y) {
   const tx0 = Math.floor(x / 32), ty0 = Math.floor(y / 32);
-  if (tx0 < 0 || ty0 < 0 || tx0 >= MAP_W || ty0 >= MAP_H) return false;
+  if (!map.inside(tx0, ty0)) return false;
   const gates = gateTiles(map);
-  const seen = new Set([ty0 * MAP_W + tx0]);
-  const q = [ty0 * MAP_W + tx0];
-  for (let h = 0; h < q.length; h++) {
-    const i = q[h], t = map.tiles[i];
+  const seen = new Set([map.idx(tx0, ty0)]);
+  const q = [tx0, ty0];   // (tiles as (tx, ty) pairs: an index is the map's, never decoded)
+  for (let h = 0; h < q.length; h += 2) {
+    const tx = q[h], ty = q[h + 1], t = map.tiles[map.idx(tx, ty)];
     if (STREET.has(t) || t === T.WATER || t === T.DEEP || seen.size > POCKET_LIMIT) return true;
-    const tx = i % MAP_W, ty = (i - tx) / MAP_W;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = tx + dx, ny = ty + dy;
-      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
-      const j = ny * MAP_W + nx;
+      if (!map.inside(nx, ny)) continue;
+      const j = map.idx(nx, ny);
       if (seen.has(j) || PED_BLOCK[map.tiles[j]] || gates.has(j)) continue;
       seen.add(j);
-      q.push(j);
+      q.push(nx, ny);
     }
   }
   return false; // a closed pocket
@@ -100,14 +99,14 @@ export function canWalkOut(map, x, y) {
 // The nearest open ground you can walk away from: the closest street-connected tile (searching
 // outward through walls), then a clear spot on it.
 export function escapeSpot(map, x, y) {
-  const tx0 = Math.max(0, Math.min(MAP_W - 1, Math.floor(x / 32))), ty0 = Math.max(0, Math.min(MAP_H - 1, Math.floor(y / 32)));
+  const tx0 = Math.max(map.x0, Math.min(map.x0 + map.w - 1, Math.floor(x / 32))), ty0 = Math.max(map.y0, Math.min(map.y0 + map.h - 1, Math.floor(y / 32)));
   for (let r = 1; r < 80; r++) {
     const ring = [];
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
       const tx = tx0 + dx, ty = ty0 + dy;
-      if (tx < 1 || ty < 1 || tx >= MAP_W - 1 || ty >= MAP_H - 1) continue;
-      const t = map.tiles[ty * MAP_W + tx];
+      if (!map.inside(tx - 1, ty - 1) || !map.inside(tx + 1, ty + 1)) continue;   // (a tile in from the edge)
+      const t = map.tiles[map.idx(tx, ty)];
       if (t === T.SIDEWALK || t === T.PLAZA) ring.push([tx, ty, dx * dx + dy * dy]);
     }
     ring.sort((a, b) => a[2] - b[2]);

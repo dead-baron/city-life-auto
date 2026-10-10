@@ -54,7 +54,7 @@ const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand
 
 export { DECK_Z };
 const TAU = Math.PI * 2;
-const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK);
+const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK);   // (the world's whole frame: the art's chunk grid)
 // per quality tier (Low/Xbox, Medium, High, Ultra): chunk cache, lights, vehicle headings, uploads a frame
 // syncMs: how long a frame may spend making sprites on this thread (people and small things)
 // results: bakes back from the workers that may wait for an upload (2.3 MB each), so the road ahead keeps baking while
@@ -1003,9 +1003,9 @@ export class World2 {
       let n = 0, g = 0;
       for (let j = -3; j <= 3; j++) for (let i = -4; i <= 4; i++) {
         const tx = Math.floor((this.camX + i * 90) / TILE), ty = Math.floor((this.camY + j * 80) / TILE);
-        if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) continue;
+        if (!M.inside(tx, ty)) continue;
         n++;
-        const k = ty * MAP_W + tx, t = M.tiles[k];
+        const k = M.idx(tx, ty), t = M.tiles[k];
         if (t === TT.GRASS || t === TT.FIELD || t === TT.DIRT) g += TOWN.has((DISTRICTS[M.dist[k]] || {}).style) ? 0.35 : 1;
       }
       this.natT = n ? Math.min(1, (g / n) * 1.4) : 0;
@@ -1867,8 +1867,8 @@ export class World2 {
   // a third as often), -1 nothing (water, sand, desert, bare ground)
   _blownKind(x, y) {
     const M = this.map, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return -1;
-    const i = ty * MAP_W + tx, t = M.tiles[i], st = (DISTRICTS[M.dist[i]] || {}).style;
+    if (!M.inside(tx, ty)) return -1;
+    const i = M.idx(tx, ty), t = M.tiles[i], st = (DISTRICTS[M.dist[i]] || {}).style;
     if (t === TT.WATER || t === TT.DEEP || t === TT.SAND || st === 'desert' || st === 'beach') return -1;
     if (TOWN.has(st)) return Math.random() < 0.33 ? (Math.random() < 0.3 ? 3 : 2) : -1;
     return t === TT.GRASS ? (Math.random() < 0.25 ? 1 : 0) : -1;

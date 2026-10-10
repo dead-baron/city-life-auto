@@ -167,7 +167,7 @@ function stripClear(world, v, b, a, off, pavement) {
         if (!(pavement ? PAVED.has(tt) : tt === T.ROAD || tt === T.BRIDGE)) return false;
         const k0x = Math.floor(x / 32), k0y = Math.floor(y / 32);
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-          const arr = m.solidProps.get((k0y + dy) * m.w + k0x + dx);
+          const arr = m.solidProps.get(m.idx(k0x + dx, k0y + dy));
           if (arr) for (const sp of arr) if (!sp.off && Math.hypot(sp.x - x, sp.y - y) < sp.r + 8) return false;
         }
       }

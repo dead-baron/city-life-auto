@@ -65,7 +65,7 @@ const hsh = (x, y, s = 0) => { let h = (Math.floor(x) * 374761393 + Math.floor(y
 // no tree trunk, rock or post (the map's solid props) within pad of (x, y); a clear walk from one point to another
 function freeAt(map, x, y, pad = 10) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
-  for (let j = ty - 1; j <= ty + 1; j++) for (let i = tx - 1; i <= tx + 1; i++) for (const q of (map.solidProps && map.solidProps.get(j * map.w + i)) || []) if (!q.off && Math.hypot(q.x - x, q.y - y) < q.r + pad) return false;
+  for (let j = ty - 1; j <= ty + 1; j++) for (let i = tx - 1; i <= tx + 1; i++) for (const q of (map.solidProps && map.solidProps.get(map.idx(i, j))) || []) if (!q.off && Math.hypot(q.x - x, q.y - y) < q.r + pad) return false;
   return true;
 }
 function clearWalk(map, x0, y0, x1, y1) {

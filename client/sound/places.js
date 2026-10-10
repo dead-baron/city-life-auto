@@ -20,7 +20,7 @@ export function unitAt(map, x, y) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   const t = map.tileAt(tx, ty);
   if (t !== T.FLOOR && t !== T.COUNTER) return null;
-  const b = map.buildings[map.bld[ty * map.w + tx]];
+  const b = map.buildings[map.bld[map.idx(tx, ty)]];
   if (!b || !b.walkIn) return null;
   const us = b.walkIn.units;
   for (let i = 0; i < us.length; i++) if (tx >= us[i].x0 - 0 && tx <= us[i].x1) return { b, u: us[i], i };

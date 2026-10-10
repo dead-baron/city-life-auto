@@ -6,7 +6,7 @@
 // All of it is client-side decoration: deterministic where it's tied to the map (puddle and vent
 // sites, fog banks), pooled where it moves.
 import { wind } from './flora/wind.js';
-import { T, TILE, MAP_W, MAP_H, CHUNK_PX } from '../../shared/constants.js';
+import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
 import { hash } from './atmos.js';
 import { freeCanvas } from '../platform.js';
 import { coversIn, coverSeed } from '../../shared/covers.js';   // (the street's manhole covers: the ones the ground draws)
@@ -194,8 +194,8 @@ export class Weather {
     const m = this.map;
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const tx = cx * N + i, ty = cy * N + j;
-      if (tx >= MAP_W || ty >= MAP_H) continue;
-      const t = m.tiles[ty * MAP_W + tx];
+      if (!m.inside(tx, ty)) continue;
+      const t = m.tiles[m.idx(tx, ty)];
       const d = PUDDLE_DENS[t];
       if (!d) continue;
       const h = hash(tx, ty, 91);
@@ -364,12 +364,12 @@ export class Weather {
   _mask() {
     if (this.fogMask) return this.fogMask;
     // 1 px per 4 tiles: thick over and beside water, fading inland; some coasts foggier than others
-    const m = this.map, S = 4, w = Math.ceil(MAP_W / S), h = Math.ceil(MAP_H / S);
+    const m = this.map, S = 4, w = Math.ceil(m.w / S), h = Math.ceil(m.h / S);   // (the map's extent: pixel (0, 0) is its tile (x0, y0))
     const c = document.createElement('canvas'); c.width = w; c.height = h;
     const g = c.getContext('2d');
     const img = g.createImageData(w, h);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const tx = Math.min(MAP_W - 1, x * S + 2), ty = Math.min(MAP_H - 1, y * S + 2), i = ty * MAP_W + tx;
+      const tx = m.x0 + Math.min(m.w - 1, x * S + 2), ty = m.y0 + Math.min(m.h - 1, y * S + 2), i = m.idx(tx, ty);
       const ds = m.distSea ? m.distSea[i] / 4 : 99, dr = m.distRiver ? m.distRiver[i] / 4 : 99;
       const wet = !m.land[i] || m.lake[i] ? 1 : Math.max(0, 1 - Math.min(ds, dr * 1.4) / 46);
       const region = 0.55 + 0.45 * hash(Math.floor(tx / 90), Math.floor(ty / 90), 71);
@@ -405,7 +405,7 @@ export class Weather {
     const mask = this._mask();
     fg.globalCompositeOperation = 'destination-in';
     fg.globalAlpha = 1;
-    const mw = 4 * TILE, sx = vx0 / mw, sy = vy0 / mw, sw = W / z / mw, sh = H / z / mw;
+    const mw = 4 * TILE, sx = (vx0 - this.map.x0 * TILE) / mw, sy = (vy0 - this.map.y0 * TILE) / mw, sw = W / z / mw, sh = H / z / mw;
     fg.imageSmoothingEnabled = true;
     fg.drawImage(mask, sx, sy, sw, sh, 0, 0, fw, fh);
     if (fog.spread > 0.3 && fog.k > 0.2) { // a thick morning: a thin veil over the whole city too
@@ -530,15 +530,16 @@ export class Weather {
     const s = sky.sky;
     g.save();
     g.globalCompositeOperation = 'screen';
-    const tx0 = Math.max(0, Math.floor(view.x0 / TILE)), tx1 = Math.min(MAP_W - 1, Math.floor(view.x1 / TILE));
-    const ty0 = Math.max(0, Math.floor(view.y0 / TILE)), ty1 = Math.min(MAP_H - 1, Math.floor(view.y1 / TILE));
+    const tx0 = Math.max(m.x0, Math.floor(view.x0 / TILE)), tx1 = Math.min(m.x0 + m.w - 1, Math.floor(view.x1 / TILE));
+    const ty0 = Math.max(m.y0, Math.floor(view.y0 / TILE)), ty1 = Math.min(m.y0 + m.h - 1, Math.floor(view.y1 / TILE));
     for (let ty = ty0; ty <= ty1; ty++) {
+      const row = m.row(ty);
       // a band of light rippling across the water, brighter toward the top of the screen (the far side)
       const band = 0.75 + 0.25 * Math.sin(ty * 0.35 + t * 0.8);
       g.fillStyle = `rgba(${s[0] | 0},${s[1] | 0},${s[2] | 0},${(a * band).toFixed(3)})`;
       let run = -1;
       for (let tx = tx0; tx <= tx1 + 1; tx++) {
-        const w = tx <= tx1 && (m.tiles[ty * MAP_W + tx] === T.WATER || m.tiles[ty * MAP_W + tx] === T.DEEP);
+        const w = tx <= tx1 && (m.tiles[row + m.col(tx)] === T.WATER || m.tiles[row + m.col(tx)] === T.DEEP);
         if (w && run < 0) run = tx;
         else if (!w && run >= 0) { g.fillRect(run * TILE, ty * TILE, (tx - run) * TILE, TILE); run = -1; }
       }

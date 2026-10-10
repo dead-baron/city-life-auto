@@ -13,7 +13,7 @@
 import { T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
 import { teleportPlaces } from './devtp.js';
 
-const WORLD_W = MAP_W * TILE, WORLD_H = MAP_H * TILE;
+const WORLD_W = MAP_W * TILE, WORLD_H = MAP_H * TILE;   // (the world's whole frame: the spectator's camera and picture span it)
 export const SPEC_LAYERS = [
   ['labels', 'Names (districts, streets, places)'], ['grid', 'Tile grid'], ['schematic', 'Schematic: flat shapes'],
 ];
@@ -50,18 +50,22 @@ export function createSpectator({ map, players, mobile }) {
   // the schematic: one pixel per tile, buildings coloured by what they are (built once)
   function buildSchematic() {
     const cv = document.createElement('canvas');
-    cv.width = MAP_W; cv.height = MAP_H;
+    cv.width = MAP_W; cv.height = MAP_H;   // (the world's whole frame: the picture is the world's, the map paints its part)
     const g = cv.getContext('2d');
     const img = g.createImageData(MAP_W, MAP_H);
     const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
     const tc = {};
     for (const [t, c] of Object.entries(TILE_COL)) tc[t] = hex(c);
     const bc = map.buildings.map((b) => hex(buildingCol(b)));
-    for (let i = 0; i < MAP_W * MAP_H; i++) {
-      const t = map.tiles[i];
-      const b = map.bld[i];
-      const col = (t === T.BUILDING || t === T.FLOOR || t === T.COUNTER) && b >= 0 && bc[b] ? bc[b] : tc[t] || [20, 24, 32];
-      img.data[i * 4] = col[0]; img.data[i * 4 + 1] = col[1]; img.data[i * 4 + 2] = col[2]; img.data[i * 4 + 3] = 255;
+    for (let ty = map.y0; ty < map.y0 + map.h; ty++) {
+      const row = map.row(ty);
+      for (let tx = map.x0; tx < map.x0 + map.w; tx++) {
+        const i = row + map.col(tx), t = map.tiles[i];
+        const b = map.bld[i];
+        const col = (t === T.BUILDING || t === T.FLOOR || t === T.COUNTER) && b >= 0 && bc[b] ? bc[b] : tc[t] || [20, 24, 32];
+        const p = (ty * cv.width + tx) * 4;   // (the picture's pixel)
+        img.data[p] = col[0]; img.data[p + 1] = col[1]; img.data[p + 2] = col[2]; img.data[p + 3] = 255;
+      }
     }
     g.putImageData(img, 0, 0);
     return cv;
@@ -120,8 +124,8 @@ export function createSpectator({ map, players, mobile }) {
   }
   // the tile rectangle on screen (so a drawing can be matched back to the map)
   function viewTiles(W, H) {
-    const x0 = Math.max(0, Math.floor((S.x - W / 2 / S.z) / TILE)), y0 = Math.max(0, Math.floor((S.y - H / 2 / S.z) / TILE));
-    const x1 = Math.min(MAP_W, Math.ceil((S.x + W / 2 / S.z) / TILE)), y1 = Math.min(MAP_H, Math.ceil((S.y + H / 2 / S.z) / TILE));
+    const x0 = Math.max(map.x0, Math.floor((S.x - W / 2 / S.z) / TILE)), y0 = Math.max(map.y0, Math.floor((S.y - H / 2 / S.z) / TILE));
+    const x1 = Math.min(map.x0 + map.w, Math.ceil((S.x + W / 2 / S.z) / TILE)), y1 = Math.min(map.y0 + map.h, Math.ceil((S.y + H / 2 / S.z) / TILE));
     return { x0, y0, x1, y1 };
   }
 

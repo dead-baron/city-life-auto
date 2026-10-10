@@ -6290,3 +6290,43 @@ imported, so none of it is in the page's code. Files: `shared/world3.js` (`ISLAN
 `shared/world3-islands.js`, `shared/map.js` (`setIslandBuilds`, `ISLAND_AT` exported, each build starts from the
 declared island boxes, the island-only branches), `tools/world3-islands.mjs`. Tests: `test/world3.test.js` builds Coral
 Cay alone and checks it against today's (every tile, road, lot and POI; 99% of the props), and twice the same.
+## 2026-10-10 · World v3, part 8 item 1: CityMap as a window onto the world
+
+The owner's 5 x 4 km world can't live whole on a phone: at 5040 x 4032 tiles every per-tile layer is 20 MB, about
+400 MB for today's set (docs/WORLD-V3.md 4.1). Part 8 (the engine route) has the server build the world and the
+client keep only the land round the player, a 3 x 3 window of 504-tile regions; its first need is a CityMap that is
+a window. Until now every reader of the city's per-tile layers indexed them as `ty * MAP_W + tx` and bounds-checked
+against `MAP_W` / `MAP_H`, so a map could only ever be the whole world.
+
+- **CityMap's extent is its own** (`shared/map.js`): `x0`, `y0` (on the prototype: 0, so today's map carries no new
+  fields - the city as data, the browser's kept city and the world hash are unchanged), `w`, `h`; `idx(tx, ty)` (the
+  window's index), `row(ty)` and `col(tx)` (`idx === row + col`, so a loop along a row takes `row(ty)` once) and
+  `inside(tx, ty)`. tileAt, set, fill, setDist, districtAt, zoneAt, buildingAtPx, addSolidProp and the rest use them;
+  outside a window's rectangle tileAt answers a wall (nothing moves into land the window doesn't hold), past the
+  world's edge the open sea as before.
+- **Every runtime reader goes through the map:** map.js's queries (`isTurf(map, x, y)` takes the map now - its
+  module-level `turfMap` is gone; `waterKind`, `nearestLand`), `coverAtPx(m, x, y)` takes the map (tunnels.js), and
+  covers, underground (its physics map has idx / inside), cinema, bowling, levels, physics, ledges, smash, wheelpath,
+  alleys; the server's systems (unstuck, offroad, rescue, wildlife, npc, ems, players, phone, the props and traffic
+  lookups, ...); the client's art v2 bakes (groundbake, chunkbake, standin, statics, streetgrit), flora, shore,
+  weather (its fog mask is the map's extent), tiles, fireflies, trains, roads, hud, phone, the spectator, devtp,
+  devhomes, mapwaypoints, the sound. Flood fills and searches keep tiles as (tx, ty), never a decoded index.
+- **What keeps the world's frame**, with a comment saying so: the generator (it builds the whole frame; map.js marks
+  the boundary, naturesites.js, countryside.js and world3*.js are untouched - the frame as a parameter is a later
+  step); the art's chunk grid (artcdn.js, host.js, standin.js); the camera's bounds, the border sea and the ground
+  chunks' grid (main.js); the map pictures (hud, spectator, devtp, devhomes: the world's, the map paints its part);
+  the router's grid over the world's road list (route.js); the underground (it lies under the whole world); the
+  server's ferry routes (planned over the whole world the server holds).
+- **The proof:** `shared/mapwindow.js` `windowOf(map, x0, y0, w, h)` cuts a window from a whole map: every per-tile
+  layer cut to the rectangle, the tile-keyed maps (solid props, river flow) keyed by the window's index, the lists
+  kept whole (splitting them is the region files' work). `test/mapwindow.test.js`: today's map is the whole window;
+  a 600 x 500 window round Metro City's centre and one in the world's south-east corner answer every tile query as
+  the whole map (tileAt, districtAt, zoneAt, islandAt, buildingAtPx, isWater, isWalkable, waterKind, isTurf, covers,
+  tunnels, the deck and its levels), rays and sight, the way ashore, a car and a person driven and walked for 4 s
+  from a dozen streets (the same to the bit), and the art v2 ground bake of two chunks gives the same bytes; and a
+  guard: no `* MAP_W` index arithmetic and no `MAP_W` / `MAP_H` bounds checks left in server/, client/ and the shared
+  runtime files, except the whole-frame list, each with its reason.
+- **The rule for new code:** index the map through `m.idx(tx, ty)` / `m.inside(tx, ty)` (and `m.row(ty) + m.col(tx)`
+  in a loop along a row), bound loops by `m.x0 .. m.x0 + m.w` and `m.y0 .. m.y0 + m.h`, never `MAP_W` / `MAP_H`.
+- Today's world is the whole window, so nothing changes in play: the map signature and the world hash
+  (`5a3a1b7301e7`) are the same. The art hash changes (the bake's code changed), so kept chunks are baked again once.

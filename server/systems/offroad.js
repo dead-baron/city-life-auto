@@ -28,12 +28,12 @@ function propMask(m) {
   if (k) return k;
   k = new Uint8Array(m.w * m.h);
   for (const ps of m.solidProps.values()) for (const p of ps) {
-    const R = p.r + VAN_R, x0 = Math.max(0, Math.floor((p.x - R) / TILE)), x1 = Math.min(m.w - 1, Math.floor((p.x + R) / TILE));
-    const y0 = Math.max(0, Math.floor((p.y - R) / TILE)), y1 = Math.min(m.h - 1, Math.floor((p.y + R) / TILE));
+    const R = p.r + VAN_R, x0 = Math.max(m.x0, Math.floor((p.x - R) / TILE)), x1 = Math.min(m.x0 + m.w - 1, Math.floor((p.x + R) / TILE));
+    const y0 = Math.max(m.y0, Math.floor((p.y - R) / TILE)), y1 = Math.min(m.y0 + m.h - 1, Math.floor((p.y + R) / TILE));
     for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
       const d2 = ((tx + 0.5) * TILE - p.x) ** 2 + ((ty + 0.5) * TILE - p.y) ** 2;
-      if (d2 < R * R) k[ty * m.w + tx] |= 1;
-      if (d2 < (p.r + FOOT_R) ** 2) k[ty * m.w + tx] |= 2;
+      if (d2 < R * R) k[m.idx(tx, ty)] |= 1;
+      if (d2 < (p.r + FOOT_R) ** 2) k[m.idx(tx, ty)] |= 2;
     }
   }
   NEAR.set(m, k);
@@ -42,14 +42,14 @@ function propMask(m) {
 
 // can a person stand on tile (tx, ty)? can an ambulance's middle pass over it?
 function footOk(m, tx, ty, near, drops) {
-  if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return false;
-  const i = ty * m.w + tx;
+  if (!m.inside(tx, ty)) return false;
+  const i = m.idx(tx, ty);
   return !PED_BLOCK[m.tiles[i]] && !(m.lvl0Block && m.lvl0Block[i] === 1) && !(near[i] & 2) && !(drops && drops.has(i));
 }
 function vanOk(m, tx, ty, near, drops) {
-  if (tx < 1 || ty < 1 || tx >= m.w - 1 || ty >= m.h - 1 || near[ty * m.w + tx] & 1) return false;
+  if (!m.inside(tx - 1, ty - 1) || !m.inside(tx + 1, ty + 1) || near[m.idx(tx, ty)] & 1) return false;
   for (let y = ty - 1; y <= ty + 1; y++) for (let x = tx - 1; x <= tx + 1; x++) {
-    const i = y * m.w + x, t = m.tiles[i];
+    const i = m.idx(x, y), t = m.tiles[i];
     if (CAR_BLOCK[t] || WATER_T[t] || (m.lvl0Block && m.lvl0Block[i] === 1) || (drops && drops.has(i))) return false;
   }
   return true;
@@ -73,8 +73,8 @@ export function groundPath(world, a, b, opts = {}) {
   const ax = Math.floor(a.x / TILE), ay = Math.floor(a.y / TILE), bx = Math.floor(b.x / TILE), by = Math.floor(b.y / TILE);
   let mg = MARGIN, x0, y0, w, h;
   for (;;) {
-    x0 = Math.max(0, Math.min(ax, bx) - mg); y0 = Math.max(0, Math.min(ay, by) - mg);
-    w = Math.min(m.w - 1, Math.max(ax, bx) + mg) - x0 + 1; h = Math.min(m.h - 1, Math.max(ay, by) + mg) - y0 + 1;
+    x0 = Math.max(m.x0, Math.min(ax, bx) - mg); y0 = Math.max(m.y0, Math.min(ay, by) - mg);
+    w = Math.min(m.x0 + m.w - 1, Math.max(ax, bx) + mg) - x0 + 1; h = Math.min(m.y0 + m.h - 1, Math.max(ay, by) + mg) - y0 + 1;
     if (w * h <= MAX_CELLS) break;
     if ((mg -= 4) < 2) return null;
   }

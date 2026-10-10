@@ -488,14 +488,14 @@ let centroids = null;
 export function districtCentroids(map) {
   if (centroids) return centroids;
   const acc = new Map();
-  for (let ty = 0; ty < MAP_H; ty += 3) for (let tx = 0; tx < MAP_W; tx += 3) {
-    const d = map.dist[ty * MAP_W + tx];
+  for (let ty = Math.ceil(map.y0 / 3) * 3; ty < map.y0 + map.h; ty += 3) for (let tx = Math.ceil(map.x0 / 3) * 3; tx < map.x0 + map.w; tx += 3) {
+    const d = map.dist[map.idx(tx, ty)];
     if (d === 13) continue;
     const a = acc.get(d) || acc.set(d, [0, 0, 0]).get(d);
     a[0] += tx; a[1] += ty; a[2]++;
   }
   // a district scattered over many islets has its middle out at sea: no label for it
-  centroids = [...acc].filter(([d, [x, y, n]]) => map.dist[Math.round(y / n) * MAP_W + Math.round(x / n)] === d || DISTRICTS[d].tier !== 'wild')
+  centroids = [...acc].filter(([d, [x, y, n]]) => (map.inside(Math.round(x / n), Math.round(y / n)) && map.dist[map.idx(Math.round(x / n), Math.round(y / n))] === d) || DISTRICTS[d].tier !== 'wild')
     .map(([d, [x, y, n]]) => ({ name: DISTRICTS[d].name, turf: DISTRICTS[d].turf, x: (x / n + 0.5) * TILE, y: (y / n + 0.5) * TILE }));
   return centroids;
 }
@@ -527,7 +527,7 @@ export function iconSkip(map) {
 
 function buildMinimap(map) {
   const c = document.createElement('canvas');
-  c.width = MAP_W; c.height = MAP_H;
+  c.width = MAP_W; c.height = MAP_H;   // (the world's picture: the map paints its part)
   const g = c.getContext('2d');
   const img = g.createImageData(MAP_W, MAP_H);
   const col = {
@@ -535,9 +535,12 @@ function buildMinimap(map) {
     [T.GRASS]: [50, 105, 45], [T.BUILDING]: [190, 160, 120], [T.WATER]: [35, 85, 165], [T.DEEP]: [25, 60, 130], [T.SAND]: [215, 195, 140],
     [T.DOCK]: [140, 95, 55], [T.DIRT]: [140, 105, 65], [T.FIELD]: [125, 155, 45], [T.WALL]: [0, 0, 0],
   };
-  for (let i = 0; i < MAP_W * MAP_H; i++) {
-    const c3 = col[map.tiles[i]] || [0, 0, 0];
-    img.data[i * 4] = c3[0]; img.data[i * 4 + 1] = c3[1]; img.data[i * 4 + 2] = c3[2]; img.data[i * 4 + 3] = 255;
+  for (let ty = map.y0; ty < map.y0 + map.h; ty++) {
+    const row = map.row(ty);
+    for (let tx = map.x0; tx < map.x0 + map.w; tx++) {
+      const c3 = col[map.tiles[row + map.col(tx)]] || [0, 0, 0], i = (ty * c.width + tx) * 4;
+      img.data[i] = c3[0]; img.data[i + 1] = c3[1]; img.data[i + 2] = c3[2]; img.data[i + 3] = 255;
+    }
   }
   g.putImageData(img, 0, 0);
   // the railway: a dark line round the loop with cross-ties, a dot at every station

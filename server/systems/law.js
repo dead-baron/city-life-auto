@@ -1,7 +1,7 @@
 // Law & tri-faction systems: witness network (GDD §6), legal immunity matrix (§7),
 // heat/wanted stars with the 3-second flare and expanding search circle, peak-wanted
 // disguise memory (§4B), enforcer badge + demotion (§4C), bounties and arrests.
-import { K, FACTION, STAR_HEAT, starsForHeat, TILE, MAP_W } from '../../shared/constants.js';
+import { K, FACTION, STAR_HEAT, starsForHeat, TILE } from '../../shared/constants.js';
 import * as revive from './revive.js';
 import { angleDiff } from '../../shared/math.js';
 import { isTurf } from '../../shared/map.js';
@@ -63,7 +63,7 @@ export function sightFactor(map, x, y, onFoot = true) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   let n = 0;
   for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
-    const a = map.solidProps.get((ty + j) * MAP_W + tx + i);
+    const a = map.solidProps.get(map.idx(tx + i, ty + j));
     if (a) for (const e of a) if (!e.off) n++;
   }
   return WILD_SIGHT * (1 - COVER_SIGHT * Math.min(1, n / 6));
@@ -319,7 +319,7 @@ function immune(world, perp, victim) {
   const firstStrike = perp.aggressors.get(victim.id);
   if (firstStrike !== undefined && now - firstStrike < 60) return 'self-defense';
   if (isFlagged(world, victim)) return 'flagged';
-  if (victim.npc && victim.npc.role === 'gang' && isTurf(victim.x, victim.y)) return 'turf';
+  if (victim.npc && victim.npc.role === 'gang' && isTurf(world.map, victim.x, victim.y)) return 'turf';
   return false;
 }
 

@@ -4,7 +4,7 @@
 // (sand, a concrete seawall promenade, or a grassy bank) fills the land side, then the edge
 // itself - a coping-stone seawall in town, wet sand on beaches, a muddy lip on wild banks.
 // Live on top: surf rolling up the beaches and water lapping at the seawalls.
-import { T, TILE, MAP_W, MAP_H, CHUNK_PX } from '../../shared/constants.js';
+import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { contours } from '../../shared/citylayout.js';
 import { chaikin, offset, simplify } from '../../shared/geom.js';
@@ -17,10 +17,10 @@ const wetT = (t) => t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.D
 export class Shores {
   constructor(m) {
     this.m = m;
-    const W = MAP_W, H = MAP_H;
+    const W = m.w, H = m.h, ox = m.x0 * TILE, oy = m.y0 * TILE;   // (the grid is the map's: its (0, 0) is tile (x0, y0))
     // land = 1, water = 0, softened a little so the traced line rounds off single-tile steps
     const raw = new Float32Array(W * H);
-    for (let i = 0; i < W * H; i++) raw[i] = wetT(m.tiles[i]) ? 0 : 1;
+    for (let y = 0; y < H; y++) { const r = m.row(m.y0 + y); for (let x = 0; x < W; x++) raw[y * W + x] = wetT(m.tiles[r + m.col(m.x0 + x)]) ? 0 : 1; }
     const f = new Float32Array(W * H);
     for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
       const i = y * W + x;
@@ -30,6 +30,7 @@ export class Shores {
     this.pieces = [];
     this.grid = new Map();
     for (const ln of lines) {
+      if (ox || oy) for (const p of ln) { p.x += ox; p.y += oy; }
       const sm = chaikin(simplify(ln, 4), 2);
       for (let k = 0; k < sm.length - 1; k += PIECE) {
         const pts = sm.slice(k, Math.min(sm.length, k + PIECE + 1));
@@ -57,10 +58,10 @@ export class Shores {
       else if (t === T.GRASS || t === T.FIELD || t === T.DIRT) green++;
       else if (!wetT(t)) {
         built++;
-        if (!walk) { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); const d = DISTRICTS[m.dist[ty * MAP_W + tx]]; walk = d && d.walk; }
+        if (!walk) { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); const d = DISTRICTS[m.dist[m.idx(tx, ty)]]; walk = d && d.walk; }
       }
     }
-    const zone = m.zone ? m.zone[Math.floor(pts[mid].y / TILE) * MAP_W + Math.floor(pts[mid].x / TILE)] : 0;
+    const zone = m.zone ? m.zone[m.idx(Math.floor(pts[mid].x / TILE), Math.floor(pts[mid].y / TILE))] : 0;
     const town = zone === 1 || zone === 2; // Metro City and Southbank: seawalls wherever it isn't beach
     const kind = sand >= green && sand >= built && sand > 0 ? 'beach' : town ? 'wall' : green >= built ? 'bank' : 'wall';
     const pc = {

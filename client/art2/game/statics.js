@@ -210,13 +210,13 @@ function voxSprite(m, hd = 0, pv = null) {
 // ================================================================================================
 function ctxOf(M) {
   const W = M.w, H = M.h;
-  const tile = (tx, ty) => (tx < 0 || ty < 0 || tx >= W || ty >= H ? T.WALL : M.tiles[ty * W + tx]);
+  const tile = (tx, ty) => (!M.inside(tx, ty) ? T.WALL : M.tiles[M.idx(tx, ty)]);
   const at = (x, y) => tile(Math.floor(x / TILE), Math.floor(y / TILE));
-  const di = (x, y) => { const tx = clamp(Math.floor(x / TILE), 0, W - 1), ty = clamp(Math.floor(y / TILE), 0, H - 1); return M.dist[ty * W + tx]; };
+  const di = (x, y) => { const tx = clamp(Math.floor(x / TILE), M.x0, M.x0 + W - 1), ty = clamp(Math.floor(y / TILE), M.y0, M.y0 + H - 1); return M.dist[M.idx(tx, ty)]; };
   const dist = (x, y) => DISTRICTS[di(x, y)] || DISTRICTS[13];
-  const zone = (x, y) => { const tx = clamp(Math.floor(x / TILE), 0, W - 1), ty = clamp(Math.floor(y / TILE), 0, H - 1); return M.zone[ty * W + tx]; };
+  const zone = (x, y) => { const tx = clamp(Math.floor(x / TILE), M.x0, M.x0 + W - 1), ty = clamp(Math.floor(y / TILE), M.y0, M.y0 + H - 1); return M.zone[M.idx(tx, ty)]; };
   const biome = (x, y) => (M.terrainCls ? wildBiome(di(x, y), terrainAt(M.terrainCls.cls, M.terrainCls.cw, Math.floor(x / TILE), Math.floor(y / TILE))) : 1);
-  const deckAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < W && ty < H && M.deck && M.deck[ty * W + tx]; };
+  const deckAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) && M.deck && M.deck[M.idx(tx, ty)]; };
   // direction (radians) from (x, y) to the nearest road tile within r tiles along the axes, or null
   const roadDir = (x, y, r = 3) => {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
@@ -1607,7 +1607,7 @@ function plantFor(c, p) {
   const di = c.di(p.x, p.y), tile = c.at(p.x, p.y), wild = WILDS.has(st);
   // the terrain classes only mean something out of town: in the city the district decides
   const desert = st === 'desert' || di === 41 || (wild && bio === 3 && !SEA_ISLES.has(di)), mountain = di === 33 || (wild && bio === 4), sand = tile === T.SAND || (wild && bio === 5), forest = wild && bio === 2;
-  const coastal = st === 'beach' || di === 14 || di === 43 || di === 44 || di === 45 || (c.M.distSea && c.M.distSea[Math.floor(p.y / TILE) * c.W + Math.floor(p.x / TILE)] < 24);
+  const coastal = st === 'beach' || di === 14 || di === 43 || di === 44 || di === 45 || (c.M.distSea && c.M.distSea[c.M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] < 24);
   const paved = tile === T.SIDEWALK || tile === T.PLAZA;
   if (t === 'tree_a' || t === 'tree_b') {
     if (desert) return [pick(['mesquite', 'paloVerde', 'joshua', 'joshua', 'deadSnag', 'mesquite'], u), 1.15];
@@ -1625,11 +1625,11 @@ function plantFor(c, p) {
     if (mountain) return g === 3 ? ['aspen', 1.3] : g === 2 ? [pick(['larch', 'whitePine'], u), 1.4] : [pick(['mtnPine', 'mtnFir', 'whitePine', 'mtnFir', 'mtnPine'], u), 1.4];
     if (sand || (coastal && wild)) return [pick(['coconut', 'leaning', 'coastCypress'], u), 1.25];
     if (wild) {
-      const wet = c.M.distRiver && c.M.distRiver[Math.floor(p.y / TILE) * c.W + Math.floor(p.x / TILE)] < 20;
+      const wet = c.M.distRiver && c.M.distRiver[c.M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] < 20;
       if (wet && g >= 2) return [pick(['willow', 'willow', 'birch'], u), 1.35];
       return g === 0 ? [pick(['pondPine', 'cedar'], u), 1.4] : g === 3 ? [pick(['birch', 'aspen', 'apple'], u), 1.3] : [pick(['oak', 'maple', 'oak', 'apple'], u), 1.35 + u2 * 0.25];
     }
-    if (st === 'park') return [pick(c.M.lake && c.M.lake[Math.floor(p.y / TILE) * c.W + Math.floor(p.x / TILE)] ? ['willow'] : ['oak', 'maple', 'oak', 'willow', 'cherry', 'mapleAutumn', 'redMaple'], u), 1.4 + u2 * 0.2];
+    if (st === 'park') return [pick(c.M.lake && c.M.lake[c.M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] ? ['willow'] : ['oak', 'maple', 'oak', 'willow', 'cherry', 'mapleAutumn', 'redMaple'], u), 1.4 + u2 * 0.2];
     if (st === 'beach' || coastal) return [pick(['coconut', 'royal', 'leaning', 'fanSkirt'], u), 1.25];
     if (st === 'luxury') return [t === 'tree_a' ? pick(['royal', 'royal', 'cypress', 'olive', 'magnolia'], u) : pick(['magnolia', 'flowerTree', 'cypress', 'olive'], u), 1.3];
     if (st === 'oldtown') return [pick(['cherry', 'olive', 'cypress', 'magnolia', 'flowerTree', 'street'], u), 1.3];
@@ -2466,7 +2466,7 @@ function addSetPieces(c, I) {
     put(I, { key: `bh:${bh.home}`, recipe: { t: 'b', spec, kit: [] }, x: bh.tx * TILE, y: (bh.ty + bh.th) * TILE, ext: [2, bh.th * TILE + 120, bh.tw * TILE + 2, 4] });
   }
   for (const gq of M.garages || []) {
-    if (M.bld[gq.ty * c.W + gq.tx] >= 0) continue;
+    if (M.bld[M.idx(gq.tx, gq.ty)] >= 0) continue;
     const spec = { w: gq.tw * TILE, d: gq.th * TILE, seed: 400 + gq.home, glowOnly: true, night: NIGHT, style: 'stucco', wallColor: '#e2d4bc', pitch: 'hip', roof: 'tile', slope: 0.45, blank: !gq.south, doors: gq.south ? [{ x: 10, w: gq.tw * TILE - 20, kind: 'garage' }] : [] };
     put(I, { key: `gar:${gq.home}`, recipe: { t: 'b', spec, kit: [] }, x: gq.tx * TILE, y: (gq.ty + gq.th) * TILE, ext: [2, gq.th * TILE + 120, gq.tw * TILE + 2, 4] });
   }
@@ -2778,10 +2778,10 @@ function addGreenery(c, I) {
   // tiles next to a map prop (rocks, set pieces, furniture; not the trees and plants - ferns grow under trees):
   // the ground cover leaves room round them
   const taken = new Uint8Array(W * H);
-  for (const p of M.props) { if (!p || PLANTS.has(p.t)) continue; const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = tx + dx, y = ty + dy; if (x >= 0 && y >= 0 && x < W && y < H) taken[y * W + x] = 1; } }
+  for (const p of M.props) { if (!p || PLANTS.has(p.t)) continue; const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) taken[M.idx(x, y)] = 1; } }
   I.taken = taken;
-  for (let ty = 1; ty < H - 1; ty += 2) for (let tx = 1; tx < W - 1; tx += 2) {
-    const i = ty * W + tx;
+  for (let ty = (M.y0 + 1) | 1; ty < M.y0 + H - 1; ty += 2) for (let tx = (M.x0 + 1) | 1; tx < M.x0 + W - 1; tx += 2) {   // (odd tiles, as on the whole map)
+    const i = M.idx(tx, ty);
     if (M.tiles[i] !== T.GRASS || taken[i] || (M.reserve && M.reserve[i])) continue;
     if ((DISTRICTS[M.dist[i]] || {}).style !== 'park') continue;
     const h = hash(tx, ty, 7001);
@@ -2833,7 +2833,7 @@ const TOWN_COVER = {
 const pickW = (list, u) => { let t = 0; for (const e of list) t += e[1]; let a = u * t; for (const e of list) { a -= e[1]; if (a < 0) return e[0]; } return list[list.length - 1][0]; };
 // what a wild tile grows, or null: [species, scale]
 function coverAt(c, tx, ty, x, y) {
-  const M = c.M, i = ty * c.W + tx, t = M.tiles[i];
+  const M = c.M, i = M.idx(tx, ty), t = M.tiles[i];
   if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) return null;
   if (M.reserve[i] & 64) {   // the jungle floor (Coral Cay): dense big leaves, a few gaps
     const h = hash(tx, ty, 7121);
@@ -2856,7 +2856,7 @@ function coverAt(c, tx, ty, x, y) {
   const bio = c.biome(x, y), h = hash(tx, ty, 7101), h2 = vnoise(x, y, 70, 7103) * 0.75 + hash(tx, ty, 7103) * 0.25; // (h2: clumps of one plant)
   const pa = vnoise(x, y, 170, 7105), pb = vnoise(x, y, 90, 7107);   // patches: big drifts, smaller clumps
   // water's edge: reeds and cattails in clumps along lakes and rivers (not the sea)
-  const nearFresh = (M.distRiver && M.distRiver[i] > 0 && M.distRiver[i] <= 8) || (M.lake && (M.lake[i - 1] || M.lake[i + 1] || M.lake[i - c.W] || M.lake[i + c.W]));
+  const nearFresh = (M.distRiver && M.distRiver[i] > 0 && M.distRiver[i] <= 8) || (M.lake && (M.lake[M.idx(tx - 1, ty)] || M.lake[M.idx(tx + 1, ty)] || M.lake[M.idx(tx, ty - 1)] || M.lake[M.idx(tx, ty + 1)]));
   if (nearFresh && t !== T.SAND) return pb > 0.42 && h < 0.75 ? [pickW(NAT_SP.shore, h2), 1] : null;
   if (t === T.SAND || bio === 5) {
     const back = M.distSea ? M.distSea[i] : 99;   // (quarter tiles) dune grass only behind the wet sand
@@ -2888,10 +2888,10 @@ function coverAt(c, tx, ty, x, y) {
 // leaves) to a plant's height below it, a plant's half width either side
 function coverItems(c, I, cx, cy) {
   const out = [], W = c.W, H = c.H, taken = I.taken;
-  const tx0 = Math.max(1, Math.floor((cx * CH - 80) / TILE)), tx1 = Math.min(W - 2, Math.floor(((cx + 1) * CH + 80) / TILE));
-  const ty0 = Math.max(1, Math.floor((cy * CH - 40) / TILE)), ty1 = Math.min(H - 2, Math.floor(((cy + 1) * CH + 110) / TILE));
+  const tx0 = Math.max(c.M.x0 + 1, Math.floor((cx * CH - 80) / TILE)), tx1 = Math.min(c.M.x0 + W - 2, Math.floor(((cx + 1) * CH + 80) / TILE));
+  const ty0 = Math.max(c.M.y0 + 1, Math.floor((cy * CH - 40) / TILE)), ty1 = Math.min(c.M.y0 + H - 2, Math.floor(((cy + 1) * CH + 110) / TILE));
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-    const i = ty * W + tx;
+    const i = c.M.idx(tx, ty);
     const res = c.M.reserve ? c.M.reserve[i] : 0, lush = res & 128;   // (128: a river's lush banks - reeds right to the water)
     if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16)) continue;
     const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)

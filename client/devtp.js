@@ -11,7 +11,7 @@ const OPEN = new Set([T.LOT, T.GRASS, T.SAND, T.DIRT, T.DOCK, T.FIELD]);
 let cache = null;
 
 function zoneName(map, x, y) {
-  const z = map.zone[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)];
+  const z = map.zone[map.idx(Math.floor(x / TILE), Math.floor(y / TILE))];
   for (const I of Object.values(ISLANDS)) if (I.zone === z) return I.name;
   return 'Outer islands & the wild';
 }
@@ -22,8 +22,8 @@ function spotNear(map, x, y, ok) {
   const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
   for (let r = 0; r < 160 && !best; r += 4) {
     for (let ty = cy - r; ty <= cy + r; ty++) for (let tx = cx - r; tx <= cx + r; tx++) {
-      if (Math.max(Math.abs(tx - cx), Math.abs(ty - cy)) < r - 4 || tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) continue;
-      const i = ty * MAP_W + tx, t = map.tiles[i];
+      if (Math.max(Math.abs(tx - cx), Math.abs(ty - cy)) < r - 4 || !map.inside(tx, ty)) continue;
+      const i = map.idx(tx, ty), t = map.tiles[i];
       if (!ok(i) || map.deck[i] || !(PAVED.has(t) || OPEN.has(t))) continue;
       const d = Math.hypot(tx - cx, ty - cy) + (PAVED.has(t) ? 0 : 12);
       if (d < bd) { bd = d; best = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }; }
@@ -36,10 +36,10 @@ export function teleportPlaces(map) {
   if (cache && cache.map === map) return cache.list;
   // district centroids (sampled every 3rd tile), merging districts that share a name
   const acc = new Map();
-  for (let ty = 0; ty < MAP_H; ty += 3) for (let tx = 0; tx < MAP_W; tx += 3) {
-    const t = map.tiles[ty * MAP_W + tx];
+  for (let ty = Math.ceil(map.y0 / 3) * 3; ty < map.y0 + map.h; ty += 3) for (let tx = Math.ceil(map.x0 / 3) * 3; tx < map.x0 + map.w; tx += 3) {
+    const t = map.tiles[map.idx(tx, ty)];
     if (t === T.WATER || t === T.DEEP) continue;
-    const d = map.dist[ty * MAP_W + tx];
+    const d = map.dist[map.idx(tx, ty)];
     const name = DISTRICTS[d] && DISTRICTS[d].name;
     if (!name) continue;
     const a = acc.get(name) || acc.set(name, { ids: new Set(), x: 0, y: 0, n: 0 }).get(name);
@@ -84,7 +84,8 @@ export function buildTeleport(box, map, go) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.fillStyle = '#0b1830'; g.fillRect(0, 0, w, h);
     const sc = w / (fx1 - fx0);
-    if (img) { const kx = img.width / (MAP_W * TILE), ky = img.height / (MAP_H * TILE); g.drawImage(img, fx0 * kx, fy0 * ky, (fx1 - fx0) * kx, (fy1 - fy0) * ky, 0, 0, w, h); }
+    if (img) { const kx = img.width / (MAP_W * TILE), ky = img.height / (MAP_H * TILE);   // (the world map picture: the whole frame)
+      g.drawImage(img, fx0 * kx, fy0 * ky, (fx1 - fx0) * kx, (fy1 - fy0) * ky, 0, 0, w, h); }
     g.font = '600 9px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
     for (const p of list) {
       const x = (p.x - fx0) * sc, y = (p.y - fy0) * sc, hot = p === hover;

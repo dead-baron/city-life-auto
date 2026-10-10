@@ -853,7 +853,7 @@ function runUnit(world, v, dt) {
         }
       } else inp = after(t.x, t.y);
       // gangs open fire on cops in their turf
-      if (isTurf(c.x, c.y) && world.tick % 40 === c.id % 40) {
+      if (isTurf(world.map, c.x, c.y) && world.tick % 40 === c.id % 40) {
         for (const g of world.query(c.x, c.y, 420, K.PED)) if (g.npc && g.npc.role === 'gang' && !g.dead) startFight(world, g, c, 20);
       }
     }

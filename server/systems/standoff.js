@@ -16,7 +16,7 @@
 //   world.standoffs: pid -> { key, pid, u (the walk-in unit), b (its building), bid, wi (its door: npc.js walkInAt), door,
 //     since, outAt (the first crew out), spots [{x, y}] (round the building), taken (vid -> spot), posts [[{x, y}, ...]]
 //     (the way to each post round the walls), postTaken (cop id -> post), cover (vid -> cop id), inPlace, goIn, hotAt }
-import { TILE, MAP_W } from '../../shared/constants.js';
+import { TILE } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { pedStep } from '../../shared/physics.js';
 import { IN } from '../../shared/input.js';
@@ -161,7 +161,7 @@ function postsFor(world, so) {
   const cy = (yF + yB) / 2, cx = (x0 + x1) / 2;
   const fl = { x: x0, y: yF }, fr = { x: x1, y: yF }, ml = { x: x0, y: cy }, mr = { x: x1, y: cy }, bl = { x: x0, y: yB }, br = { x: x1, y: yB }, bm = { x: cx, y: yB };
   const ok = (q) => {
-    const tx = Math.floor(q.x / TILE), ty = Math.floor(q.y / TILE), id = m.bld ? m.bld[ty * MAP_W + tx] : -1;
+    const tx = Math.floor(q.x / TILE), ty = Math.floor(q.y / TILE), id = m.bld ? m.bld[m.idx(tx, ty)] : -1;
     return !PED_BLOCK[m.tileAtPx(q.x, q.y)] && !(id >= 0 && id !== so.bid);
   };
   return [[fl], [fr], [fl, ml], [fr, mr], [fl, ml, bl], [fr, mr, br], [fl, ml, bl, bm]].filter((path) => path.every(ok));

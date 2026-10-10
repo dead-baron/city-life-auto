@@ -55,7 +55,7 @@ export function blastBreak(world, x, y, r) {
   const g = grid(world.map);
   const t0x = Math.floor((x - r) / TILE), t1x = Math.floor((x + r) / TILE), t0y = Math.floor((y - r) / TILE), t1y = Math.floor((y + r) / TILE);
   for (let ty = t0y; ty <= t1y; ty++) for (let tx = t0x; tx <= t1x; tx++) {
-    for (const i of g.get(ty * world.map.w + tx) || []) {
+    for (const i of g.get(world.map.idx(tx, ty)) || []) {
       const p = world.map.props[i];
       if (Math.hypot(p.x - x, p.y - y) < r) breakProp(world, i, p.x - x, p.y - y);
     }

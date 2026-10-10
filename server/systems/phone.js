@@ -37,7 +37,7 @@ function districtCentre(map, di) {
 }
 function districtCentre0(map, di) {
   let sx = 0, sy = 0, n = 0;
-  for (let ty = 0; ty < map.h; ty += 3) for (let tx = 0; tx < map.w; tx += 3) if (map.dist[ty * map.w + tx] === di && !PED_BLOCK[map.tileAt(tx, ty)]) { sx += tx; sy += ty; n++; }
+  for (let ty = map.y0; ty < map.y0 + map.h; ty += 3) { const r = map.row(ty); for (let tx = map.x0; tx < map.x0 + map.w; tx += 3) if (map.dist[r + map.col(tx)] === di && !PED_BLOCK[map.tileAt(tx, ty)]) { sx += tx; sy += ty; n++; } }
   return n ? { x: (sx / n + 0.5) * 32, y: (sy / n + 0.5) * 32 } : null;
 }
 
