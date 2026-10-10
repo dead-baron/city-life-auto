@@ -5885,3 +5885,95 @@ closing at sunrise).
   through the night and at the hot clubs; the dancers' moves, a couple face to face, the drop; the player's button over
   the wire, the descriptor, the phone's button, what stops it). `test/nightclubs.test.js` now opens its club at the
   peak, as a hot one (the full line it checks is a hot club's at the peak now).
+## 2026-10-10 · Pinwheel Lanes: a bowling alley (IN14)
+
+The owner, on the IN14 concept (a cinema and a bowling alley side by side): "I see a bowling alley concept you asked for
+and I think thats a great idea." Bowling first; the cinema is still to come.
+
+- **The alley** (`shared/bowling.js` `buildBowlingAlley`, called by `shared/map.js` right after the walk-ins are built):
+  - Placed by a rule, not coordinates: the biggest plain warehouse with a single storefront and room for eight lanes
+    (14 x 12 tiles or more). Today that is the old Westport Freight warehouse in Northshore, which becomes
+    **Pinwheel Lanes** (its sign and its delivery door with it).
+  - A walk-in (the roof fades as you go in) with one unit, the shoe counter's: a clerk behind it, by the door.
+  - Inside, from the back wall: eight lanes side by side (44 px apart: capping, gutter, a 30 px maple bed, gutter,
+    capping), the pin decks 42 px out from the wall over the dark pits, the foul line 7 tiles from the wall, then
+    two tiles of approach, the settees and the arcade machines, the counter on the right as you come in.
+  - The lanes and decks are counter tiles (they block people, not sight): nobody walks down a lane.
+  - `m.bowling` holds the lanes (`alleyLanes`), the counter and the district.
+- **The game** (`server/systems/bowling.js`):
+  - **Rent a lane** at the shoe counter: $10 (`BOWL.FEE`) for the lane and shoes. You get the free lane nearest the
+    counter; if every lane is busy, an NPC group gives theirs up.
+  - **On your lane's approach**, the action button picks up a ball, then cycles a little hook (none, left, right).
+  - **Aim:**
+    - where you stand across the approach is where the ball sets off;
+    - the way you face is the angle (up to 0.2 radians off straight);
+    - hold attack and let go: the meter swings like golf's and sets the power (speed 130 to 420 px/s).
+  - **The roll** (`rollBall`): straight along its angle, and the hook bites over the back 45% of the lane (more on a
+    slow ball, which has longer to grip). Off the edge of the bed, it drops into the gutter and takes nothing.
+  - **The pins** (`knockPins`), worked out from the line and the speed, never random:
+    - The ball meets a pin when their centres come within a ball and a pin's radius. The pin flies off along the line
+      from the ball's centre through its own, further the faster and the fuller the hit. The ball is pushed off that
+      line and loses a little speed.
+    - A flying pin takes any standing pin it passes close to (a toppling pin reaches out past its belly). It sends
+      that pin on along their line and goes on itself with less. Pins bounce once off the kickbacks at the sides.
+    - The result:
+      - into the pocket (between the 1 and the 3) at a good speed, coming back in: a strike;
+      - head-on and slow: splits and leaves;
+      - a thin hit on one side: the far side stands;
+      - a spare can be picked up along the right line.
+  - **The score card** (`scoreCard`, `nextBall`, `totalScore`):
+    - ten frames: a strike counts the next two balls, a spare the next one;
+    - the tenth frame's bonus balls;
+    - the marks (X, /, -) and the running totals once a frame can be counted.
+  - **Taking turns:** the pinsetter clears or sets a new rack 1.6 s after each ball. When a bowler's frame is done, the
+    next bowler who isn't finished is up.
+  - **Others on your lane:** anyone can join on its approach ($10, up to four bowlers) and takes their turn. At the
+    end, everyone's told the final scores, and your best game is kept (`profile.bowlBest`).
+  - Walk out of the building, go down or leave the game, and your shoes go back. The others bowl on.
+  - **NPC groups:** while a player is within 1100 px, up to three groups of two bowl on lanes nobody has rented. They
+    step up, aim at the pocket more or less (a little hook most of the time), roll every 4-8 s, and go again when
+    their game is done. They leave when nobody is within 1500 px, or if one of them is hurt.
+  - The HUD tracker shows the lane, the frame and your score.
+- **The client** (`client/bowling.js`, loaded lazily the first time you come within 1600 px of the alley; main.js only
+  has the hook):
+  - the pins on each lane while you're inside: standing, then knocked flying (the server's flights) and lying until
+    the sweep, the new rack set; "STRIKE!" over the deck;
+  - with a ball in your hands, on your turn: the line the ball would take from where you stand and the way you face
+    (with the hook), and the power meter while you hold;
+  - your lane's score card at the bottom of the screen, over the tracker: each bowler's ten frames, the marks and the running score, the
+    frame you're on, the total.
+  - The bowling ball is a ball entity (type 4): a glossy blue ball with its finger holes in art v2, a small blue ball in
+    the classic renderer.
+- **The art** (art v2, `client/art2/game/statics.js` `bowlingFloor` / `bowlingRoom`, drawn in the cut-away interior):
+  - the maple lanes with their boards, the arrows (a chevron) and the dots, the lighter pin decks, the pits, the foul
+    lines, the approaches with their dots;
+  - the gutters and the capping;
+  - a scoreboard screen over each lane on the back wall above the pit's mouth;
+  - a ball return between each pair of lanes with balls on it in five colours;
+  - red settees and little tables behind the approach;
+  - the shoe counter with shoes in pairs on it;
+  - two arcade cabinets by the door, their screens and marquees lit;
+  - a navy carpet with coloured flecks.
+  The classic renderer draws it plainly (`client/render/tiles.js` `bowlingArt`).
+- **Sound:** the pins' clatter (louder the more go down), a gutter ball's thump, a strike's chime
+  (`client/sound/events.js`); light music inside (`client/sound/places.js`).
+- **Finding it:** 🎳 on the radar (`client/hud.js`), in the phone's place finder under days out (`client/phone.js`)
+  and in the map's waypoints under activities (`client/mapwaypoints.js`).
+- **Debug menu:** a new last category, 🎳 Bowling & cinema: Pinwheel Lanes (to the shoe counter, the dev `near`
+  command with `bowling`).
+- **README:** the controls table has a row for bowling (E, hold attack).
+- **The world changed** (the warehouse's inside): `node tools/stamp-version.mjs`, and the world map's picture rebaked
+  (`tools/build-worldmap2.mjs`).
+- **Tests:** `test/bowling.test.js` (5 new):
+  - the score card: a perfect game is 300, a gutter game 0, all spares 150, a mixed card's totals and marks, the
+    tenth frame's bonus balls, a strike waiting for its two balls;
+  - the pins from the line and speed: deterministic, the pocket strikes, head-on and slow leaves pins, a thin hit leaves
+    the far side, a spare taken along the right line, a gutter ball, the hook bending the line, power as speed;
+  - the alley on the map: a walk-in with eight lanes inside the building, the lanes off limits, the approaches and the
+    counter's front on the floor;
+  - renting and playing: the counter's prompt, paying, picking up a ball, rolling with the attack button, the card
+    filling, the HUD tracker, a friend joining the lane and taking the next turn, walking out ending your game;
+  - the NPC groups: on the lanes while someone's near, bowling, gone when nobody is.
+  - These pass as before: `test/golf.test.js` (hoops and golf share the input path), `test/business.test.js`,
+    `test/world.test.js`, `test/worldbuild.test.js`, `test/robbery.test.js`, `test/dmath.test.js`,
+    `test/art2.test.js`, `test/sound.test.js`, `test/perf.test.js`, `test/worldmap.test.js`.

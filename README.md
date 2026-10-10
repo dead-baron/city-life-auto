@@ -50,6 +50,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
 | Golf: aim, then hold and let go at the top of the meter (by your ball; each shot starts aimed at the flag) | Mouse · hold left click | Right stick · hold RT | Aim stick · hold FIRE |
 | Shoot hoops (North Point Courts: E for a ball, then hold and let go in the meter's green band) | E · hold left click | B · hold RT | ACT · hold FIRE |
+| Bowl (Pinwheel Lanes: rent a lane at the shoe counter, E on your lane's approach for a ball and again to pick a hook; stand and face where you want it, then hold and let go - the meter is the power) | E · hold left click | B · hold RT | ACT · hold FIRE |
 | Fish over the side (still boat, far out at sea) | E | B | ACT |
 | Under the ground: climb down a manhole over the sewers (stand on the cover) or go into the cave through the Old Granite Mine's adit · climb a ladder up / through the service door into a subway station / walk out of the cave · switch on a flashlight (it's dark down there) | E · E · L | B · B · D-pad up | ACT · ACT · 🔦 |
 | Mine an ore vein (face it with a pickaxe good enough for its ore, stand still while the ring fills; the quarry's assay office buys ore best) | E | B | ACT |

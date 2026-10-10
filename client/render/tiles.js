@@ -891,6 +891,29 @@ function cellsArt(g, k, ox, oy) {
   for (const c of k.cells) { g.fillStyle = '#1e2026'; g.fillRect(c.door.x - 18 - ox, c.door.y - oy - 3, 3, 6); g.fillRect(c.door.x + 15 - ox, c.door.y - oy - 3, 3, 6); g.fillStyle = '#b8a860'; g.fillRect(c.door.x + 9 - ox, c.door.y - oy - 3, 5, 6); }
 }
 
+// Pinwheel Lanes, plainly: a navy carpet, eight maple lanes with gutters and capping, the dark pits and the scoreboards
+// along the back, the foul lines, the approaches, the settees and the shoe counter by the door (pins and balls: client/bowling.js)
+function bowlingArt(g, A, b, u, ox, oy) {
+  const wi = b.walkIn;
+  g.fillStyle = '#22305c'; g.fillRect((wi.x0 - b.tx) * TILE, (wi.y0 - b.ty) * TILE, (wi.x1 - wi.x0 + 1) * TILE, (wi.y1 - wi.y0 + 1) * TILE);
+  for (const L of A.lanes) {
+    const x = L.ax - ox, ya = Math.min(L.backEdge, L.foulY + L.dir * 2 * TILE) - oy, yb = Math.max(L.backEdge, L.foulY + L.dir * 2 * TILE) - oy;
+    g.fillStyle = '#cfd0d6'; g.fillRect(x, ya, 44, yb - ya);
+    g.fillStyle = '#34363e'; g.fillRect(x + 2, Math.min(L.backEdge, L.foulY) - oy, 40, Math.abs(L.foulY - L.backEdge));
+    g.fillStyle = '#e2b878'; g.fillRect(x + 7, ya, 30, yb - ya);
+    g.fillStyle = '#0c0c10'; g.fillRect(x + 2, Math.min(L.backEdge, L.backEdge + L.dir * 10) - oy, 40, 10);
+    g.fillStyle = '#8a1c1c'; g.fillRect(x + 2, L.foulY - oy - 1, 40, 2);
+    g.fillStyle = '#1a2448'; g.fillRect(x + 4, Math.min(L.backEdge, L.backEdge + L.dir * 6) - oy - (L.dir > 0 ? 0 : 0), 36, 4);
+    g.fillStyle = '#5a3418'; for (let k = 0; k < 5; k++) g.fillRect(x + 9 + k * 6, L.foulY - oy - L.dir * (L.len * 0.3 + 10 - Math.abs(k - 2) * 4), 2, 3);
+  }
+  const L0 = A.lanes[0], ys = L0.foulY + L0.dir * (2 * TILE + 6) - oy, dxp = u.door.tx * TILE - ox;
+  g.fillStyle = '#b02a2a';
+  for (let x = (u.x0 - b.tx) * TILE + 8; x + 34 <= dxp - 12; x += 46) g.fillRect(x, Math.min(ys, ys + L0.dir * 14), 34, 14);
+  const cy = u.counterRow * TILE - oy, ca = (u.x1 - 3 - b.tx) * TILE, cb = (u.x1 - b.tx) * TILE;
+  g.fillStyle = '#2a2c38'; g.fillRect(ca + 2, cy + 4, cb - ca - 4, TILE - 8);
+  g.fillStyle = '#6a4630'; g.fillRect(ca + 2, cy + TILE - 8, cb - ca - 4, 4);
+}
+
 export function interiorArt(m, b) {
   let cv = artCache.get(b.id);
   const ver = atlas.interiors ? 2 : 1; // rebuilt once the interior paintings arrive
@@ -909,6 +932,7 @@ export function interiorArt(m, b) {
     } else { g.fillStyle = '#3a3a42'; g.fillRect(x, y, TILE, TILE); g.fillStyle = '#4c4c56'; g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4); }
   }
   for (const u of b.walkIn.units) {
+    if (u.kind === 'bowling' && m.bowling) { bowlingArt(g, m.bowling, b, u, ox, oy); continue; }   // (Pinwheel Lanes: shared/bowling.js)
     const dc = DECOR[u.kind] || ['#888', '#666'];
     const x0 = u.x0 * TILE - ox, x1 = (u.x1 + 1) * TILE - ox, cy = u.counterRow * TILE - oy;
     // counter: wood top, front panel, a till
