@@ -61,6 +61,7 @@ import { SCENE_MASKS } from '../../../shared/interior-art.js';
 import { groundPixel } from '../ground.js';
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
+import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner, the fast-food place, the restaurant)
 import { DISTRICTS, terrainAt, railAt, SEA_ISLES, wildBiome } from '../../../shared/map.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
 import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
@@ -952,7 +953,7 @@ function specOf(c, b, A, s, D) {
         spec.doors = blind ? [] : [{ x: dx0, w: dw0, kind: 'door', open: true, h: 48 }];
         spec.windows = winXs(w, blind ? [] : [[dx0, dx0 + dw0]], 30);
         const txt = A === 'hospital' ? 'HOSPITAL' : A === 'police' ? 'POLICE' : clean(named || 'SCHOOL', 18);
-        spec.plaques = [{ text: txt, x: Math.max(4, Math.round(w / 2 - textWidth(txt, { sx: 2, gap: 1 }) / 2) - 5), v: 66, sx: 2, bg: A === 'police' ? '#1d3a8a' : A === 'school' ? '#2a4a3a' : null, fg: A === 'hospital' ? [60, 54, 48] : [250, 250, 240], lit: A !== 'hospital' }];
+        spec.plaques = blind ? [] : [{ text: txt, x: Math.max(4, Math.round(w / 2 - textWidth(txt, { sx: 2, gap: 1 }) / 2) - 5), v: 66, sx: 2, bg: A === 'police' ? '#1d3a8a' : A === 'school' ? '#2a4a3a' : null, fg: A === 'hospital' ? [60, 54, 48] : [250, 250, 240], lit: A !== 'hospital' }];   // (one name plaque: on the section with the doors, not on each)
         if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', x: Math.round(dx0 + dw0 / 2 - 25), v: 52, sx: 1, bg: '#c8343a', fg: [250, 246, 240], lit: true }); spec.cross = { x: 14, v: 80, s: 22 }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }
         if (A === 'police') lights.push([w / 2, 14, 60, 120, [0.4, 0.6, 1], 1, 'sign']);
       }
@@ -2644,7 +2645,11 @@ function addLots(c, I) {
     if (key === 'church') { for (const dx of [24, w - 24]) put(I, fitem(`f:cypress:${dx > w / 2 ? 1 : 0}:1.2`, 'cypress', 1000 + (dx > w / 2 ? 1 : 0) * 37 + 49, x0 + dx, y0 + h - 30, 1.2)); fenceLine(I, 'iron', x0 + 8, y0 + h - 6, x0 + w / 2 - 30, y0 + h - 6); fenceLine(I, 'iron', x0 + w / 2 + 30, y0 + h - 6, x0 + w - 8, y0 + h - 6); return; }
     if (key === 'hospital') {   // (IN1-B: the ambulance bay's canopy - beside the glass doors, at the end away from them)
       const hb = M.buildings.find((q) => q.prefab === pi && q.walkIn), hu = hb && hb.walkIn.south ? hb.walkIn.units[0] : null;
-      const hdx = hu ? (hu.door.tx + (hu.door.w || 2) / 2) * TILE : null, ex = hdx === null || w < 360 ? x0 + w / 2 : hdx > x0 + w / 2 ? x0 + 96 : x0 + w - 96;
+      const hdx = hu ? (hu.door.tx + (hu.door.w || 2) / 2) * TILE : null;
+      let ex = hdx === null || w < 360 ? x0 + w / 2 : hdx > x0 + w / 2 ? x0 + 96 : x0 + w - 96;
+      // (clear of the street lamps along the front: moved in along it, away from the doors, until none stands under it)
+      const lampUnder = (e) => M.props.some((p) => p && (p.t === 'lamp' || /^(tree|palm)/.test(p.t)) && Math.abs(p.x - e) < 70 && p.y > by1 - 6 && p.y < by1 + 68);
+      if (lampUnder(ex)) for (let k = 1, dir = ex < x0 + w / 2 ? 1 : -1; k <= 30; k++) { const e2 = ex + dir * k * 8; if (!lampUnder(e2) && (hdx === null || Math.abs(e2 - hdx) > 100)) { ex = e2; break; } }
       put(I, vitem('hcan:er', 'erCanopy', [1], ex, by1 + 30, 0)); lightAt(I, ex, by1 + 34, 46, 130, [1, 0.92, 0.82], 1.4, 'lamp'); return;
     }
     if (key === 'pool') {
@@ -2920,7 +2925,8 @@ function cutRecipe(c, b, s, spec) {
     const bowl = bw ? { lanes: bw.lanes.map((L) => ({ ax: L.ax - ox, foul: L.foulY - oy, back: L.backEdge - oy, dir: L.dir, len: L.len })), ca: (u.x1 - 3 - s.tx) * TILE, cb: (u.x1 - s.tx) * TILE } : null;
     const cm = u.kind === 'cinema' && c.M.cinema ? c.M.cinema : null;   // (The Grand Theatre: shared/cinema.js lays the screens out)
     const cine = cm ? { rooms: cm.rooms.map((R) => ({ x0: R.x0 - ox, x1: R.x1 - ox, y0: R.y0 - oy, y1: R.y1 - oy, back: R.backEdge - oy, dir: R.dir, seats: R.seats.map((q) => [q.x - ox, q.y - oy, q.row]), sx0: R.screen.x0 - ox, sx1: R.screen.x1 - ox, sh: R.screen.h, lift: R.screen.lift })), cc: (cm.cc - s.tx) * TILE, wall: (cm.wallRow - s.ty) * TILE, ca: (cm.ca - s.tx) * TILE, cb: (cm.cb + 1 - s.tx) * TILE, dir: cm.south ? 1 : -1 } : null;
-    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine });
+    const fl = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null, food = fl ? { L: fl, ox, oy } : null;   // (IN8: a food place's fit-out, shared/foodrooms.js)
+    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine, food });
   }
   // a wing with no room you walk into (a hospital's wards): its floor all across, walls cut low round it
   const inY0 = Math.max(32, Math.min(Dd - 64, (wi.y0 - s.ty) * TILE)), inY1 = Math.max(inY0 + 32, Math.min(Dd - 32, (wi.y1 - s.ty + 1) * TILE));
@@ -2938,14 +2944,14 @@ function makeCut(r) {
   for (const u of r.units) {
     if (u.bowl) { bowlingFloor(u, r, px); continue; }
     if (u.cine) { cinemaFloor(u, r, px); continue; }
-    const fk = FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind];
-    for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
+    const fk = FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind], fo = u.food ? FOOD_FLOOR[u.food.L.style] : null;
+    for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, fo ? fo(x, Y, u.food) : lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
   if (r.wing) for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = 0; x < w; x++) px(x, Y, 0, groundPixel(r.wing, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   // the back wall: full height, its face toward the camera, its top a cap
   for (let x = 0; x < w; x++) {
-    const lu = r.units.find((u) => LOBBY[u.kind] && x >= u.x0 && x < u.x1);   // (IN1-B / IN2-B: the lobby's own wall)
-    for (let v = 0; v < H; v++) px(x, r.inY0, v, lu ? LOBBY[lu.kind].wall(x, v) : wallAt(x, v), [0, 1, 0]);
+    const lu = r.units.find((u) => (LOBBY[u.kind] || u.food) && x >= u.x0 && x < u.x1);   // (IN1-B / IN2-B: the lobby's own wall; IN8: a food place's)
+    for (let v = 0; v < H; v++) px(x, r.inY0, v, lu ? (lu.food ? FOOD_WALL[lu.food.L.style](x, v) : LOBBY[lu.kind].wall(x, v)) : wallAt(x, v), [0, 1, 0]);
     for (let Y = 0; Y < r.inY0; Y++) px(x, Y, H, CAP[Y === 0 ? 4 : 2], [0, 0, 1]);
   }
   // side walls and unit dividers cut low (caps), the front wall cut low with the doorways open
@@ -2964,6 +2970,7 @@ function makeCut(r) {
     if (LOBBY[u.kind]) { lobbyRoom(u, r, px); if (u.cells) cellRoom(u.cells, px); continue; }   // (IN1-B hospital / IN2-B police: their own desk and dressing)
     if (u.bowl) { bowlingRoom(u, r, px); continue; }   // (IN14: the lanes, the scoreboards, the ball returns, the settees, the shoe counter)
     if (u.cine) { cinemaRoom(u, r, px); continue; }   // (IN14: the screens, the seats, the poster wall, the popcorn counter)
+    if (u.food) { foodRoom(u, r, px); continue; }   // (IN8: the diner's booths and stools, the fast-food queue, the restaurant's tables)
     const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' || u.kind === 'roadhouse' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : u.kind === 'roadhouse' ? ramp('#4a3020', 5, 2) : ramp('#a8aab0', 5, 2);
     const ca = u.x0 > u.fx0 ? u.x0 : u.x0 + 6, cb = u.x1 < u.fx1 ? u.x1 : u.x1 - (u.fx1 - u.fx0 > 128 ? 34 : 6);   // (the counter runs on across a section's open side)
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = ca; x < cb; x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
@@ -3287,6 +3294,115 @@ function lobbyRoom(u, r, px0_) {
   }
   cooler(X0 + 12, fy - 80); plant(X0 + 22, fy - 32, 1.3); plant(X1u - 22, fy - 32, 1.3); plant(dc - 34, fy - 30, 1); plant(dc + 34, fy - 30, 1);
   mat(dc, fy - 44, 44, 16);
+}
+// ---- the food places (IN8, the owner's concept: docs/art-v2/targets/IN8_diner-fast-food-restaurant.png), laid out by
+// shared/foodrooms.js: the diner's checker floor, red booths along the side wall, the stools along the counter, the
+// jukebox; the fast-food place's queue lane up to the till, the drinks machine, small tables; the restaurant's dark
+// planks, tables with cloths and candles, the host stand inside the door and the runner to it. Behind the counter of
+// each: quarry tile, the kitchen line along the back wall (the grill, the fryers, the stove) and above it the menu boards
+// (plain shapes) or the pass with plates under the heat lamps.
+const FOOD_FLOOR = {
+  diner: (x, Y, F) => (Y + F.oy < F.L.cy ? quarry(x + F.ox, Y + F.oy) : ((((x + F.ox) / 12) | 0) + (((Y + F.oy) / 12) | 0)) & 1 ? [44, 44, 50] : [230, 228, 220]),
+  fastfood: (x, Y, F) => { const wx = x + F.ox, wy = Y + F.oy; if (wy < F.L.cy) return quarry(wx, wy); if ((wx & 15) === 0 || (wy & 15) === 0) return [200, 192, 176]; const b = (hash(wx >> 4, wy >> 4, 88) * 8) | 0; return [232 + b, 226 + b, 210 + b]; },
+  restaurant: (x, Y, F) => {
+    const wx = x + F.ox, wy = Y + F.oy, L = F.L;
+    if (wy < L.cy) return quarry(wx, wy);
+    if (L.host && Math.abs(wx - L.dc) < 14 && wy > L.host.y0 && wy < L.Yb) return Math.abs(wx - L.dc) > 11 ? [196, 150, 70] : [140, 32, 38];   // (the runner from the door)
+    const pl = (wy / 8) | 0, seam = (wx + pl * 37) % 64 === 0, n = (hash(pl, (wx + pl * 37) >> 6, 89) * 14) | 0;
+    return wy % 8 === 0 || seam ? [62, 40, 28] : [96 + n, 62 + (n >> 1), 42];
+  },
+};
+function quarry(x, y) { return (x & 15) === 0 || (y & 15) === 0 ? [112, 60, 50] : [158 + ((hash(x >> 4, y >> 4, 87) * 10) | 0), 74, 58]; }
+const FOOD_WALL = {
+  diner: (x, v) => (v < 3 ? [60, 50, 46] : v < 18 ? (v % 6 === 0 ? [150, 30, 34] : [196, 44, 48]) : v < 20 || (v > 43 && v < 46) ? [214, 218, 224] : [238, 228, 206]),
+  fastfood: (x, v) => (v < 3 ? [70, 60, 56] : v < 21 ? ((((x / 6) | 0) + ((v / 6) | 0)) & 1 ? [214, 44, 40] : [244, 240, 232]) : v > 29 && v < 34 ? [244, 196, 40] : [242, 238, 230]),
+  restaurant: (x, v) => (v < 3 ? [40, 28, 20] : v < 24 ? (x % 16 === 0 || v === 3 || v === 23 ? [70, 44, 30] : [100, 64, 42]) : v < 26 ? [176, 136, 70] : (x % 6 === 0 ? [40, 66, 54] : [48, 78, 62])),
+};
+function foodRoom(u, r, px0_) {
+  const px = (x, Y, z, c, n) => px0_(Math.round(x), Math.round(Y), z, c, n);
+  const slab = (x0, x1, Y0, Y1, z, top, side, z0 = 0) => {
+    x0 = Math.round(x0); x1 = Math.round(x1); Y0 = Math.round(Y0); Y1 = Math.round(Y1);
+    for (let Y = Y0; Y < Y1; Y++) for (let x = x0; x < x1; x++) px(x, Y, z, top[Y === Y0 || x === x0 || x === x1 - 1 ? 4 : 2], [0, 0, 1]);
+    for (let x = x0; x < x1; x++) for (let v = z0; v < z; v++) px(x, Y1, v, side[v > z - 3 ? 3 : 1 + ((x - x0) % 6 === 0 ? 0 : 1)], [0, 1, 0]);
+  };
+  const onWall = (x0, x1, v0, v1, f) => { for (let x = Math.round(x0); x < Math.round(x1); x++) for (let v = v0; v < v1; v++) { const c = f(x - Math.round(x0), v - v0, x1 - x0, v1 - v0); if (c) px(x, r.inY0, v, c, [0, 1, 0]); } };
+  const dot = (x, Y, z, c, s = 2) => { for (let dy = 0; dy < s; dy++) for (let dx = 0; dx < s; dx++) px(x + dx, Y + dy, z, c, [0, 0, 1]); };
+  const plant = (x, Y, big = 1) => {
+    slab(x - 5 * big, x + 5 * big, Y - 4, Y + 4, 9, ramp('#b0603c', 5, 2), ramp('#9a5030', 5, 2));
+    for (let k = 0; k < 120 * big; k++) { const a = hash(k, x, 81) * 6.283, d = Math.sqrt(hash(k, Y, 82)) * 8 * big, z = 9 + hash(k, 3, 83) * 14 * big * (1 - d / (10 * big)); px(x + Math.cos(a) * d, Y - 2 + Math.sin(a) * d * 0.6, Math.round(z), [[52, 120, 58], [78, 156, 70], [40, 96, 48], [100, 176, 84]][k & 3], [Math.cos(a) * 0.5, -0.4, 0.75]); }
+  };
+  const F = u.food, L = F.L, st = L.style, X = (wx) => wx - F.ox, Yl = (wy) => wy - F.oy, cy = u.cy;
+  const STEEL = ramp('#b8bcc2', 5, 3), DARK = ramp('#34363c', 5, 2), RED = ramp('#c43a3c', 5, 2), CHROME = ramp('#d4d8de', 5, 3), WOOD = ramp('#5a3a26', 6, 3), CLOTH = ramp('#f2f0ea', 5, 3);
+  // the kitchen along the back wall: a steel line, and on it the grill (diner), the fryers (fast food), the stove (restaurant)
+  const kx0 = Math.max(u.x0 + 4, X(L.X0) + 4), kx1 = Math.min(u.x1 - 4, X(L.X1) - 4), ky = r.inY0;
+  if (Yl(L.cy) - ky >= 24) {
+    slab(kx0, kx1, ky, ky + 10, 22, STEEL, STEEL);
+    const gx = X(L.X0) + 10;
+    if (st === 'diner') { for (let x = gx; x < gx + 30; x++) for (let Y = ky + 2; Y < ky + 9; Y++) px(x, Y, 23, (x + Y) % 5 === 0 ? [236, 120, 40] : [50, 48, 50], [0, 0, 1]); for (const k of [0, 1, 2]) dot(gx + 4 + k * 9, ky + 4, 24, [200, 150, 90], 3); }
+    else if (st === 'fastfood') { for (const k of [0, 1]) { const x = gx + k * 16; slab(x, x + 13, ky + 1, ky + 9, 23, DARK, DARK, 22); for (let xx = x + 2; xx < x + 11; xx++) for (let Y = ky + 2; Y < ky + 8; Y++) px(xx, Y, 24, (xx + Y) & 1 ? [228, 186, 70] : [196, 150, 50], [0, 0, 1]); } }
+    else { for (const k of [0, 1, 2, 3]) { const x = gx + (k & 1) * 12, Y = ky + 1 + (k >> 1) * 4; dot(x, Y, 23, [30, 30, 34], 4); } slab(gx + 2, gx + 9, ky + 2, ky + 6, 30, ramp('#8a8e96', 5, 3), ramp('#6a6e76', 5, 2), 23); }
+    // the pass / the menu boards on the wall above
+    if (st === 'fastfood') {
+      const n = Math.max(1, Math.min(3, Math.floor((kx1 - kx0) / 46))), bw = Math.floor((kx1 - kx0 - 6 * (n + 1)) / n);
+      for (let i = 0; i < n; i++) { const x0 = kx0 + 6 + i * (bw + 6); onWall(x0, x0 + bw, 38, 60, (x, v, w, h) => (x < 1 || x >= w - 1 || v < 1 || v >= h - 1 ? [30, 30, 34] : v > h - 8 && x % 9 < 5 ? [244, 200, 60] : v > 6 && v < 13 && x % 14 > 2 && x % 14 < 12 ? [[226, 150, 60], [210, 60, 50], [240, 220, 120]][((x / 14) | 0) % 3] : v > 2 && v < 5 && x % 10 < 7 ? [236, 232, 220] : [46, 44, 52])); }
+    } else {
+      onWall(kx0 + 40, kx1 - 4, 34, 37, () => [176, 180, 188]);
+      for (let x = kx0 + 46; x < kx1 - 10; x += 14) { onWall(x, x + 6, 44, 46, () => [255, 170, 80]); dot(x + 1, ky + 3, 37, [244, 242, 236], 3); }
+      if (st === 'diner') onWall(kx0 + 6, kx0 + 30, 40, 58, (x, v, w, h) => (x < 1 || x >= w - 1 || v < 1 || v >= h - 1 ? [60, 40, 30] : v % 4 === 1 && x > 2 && x < w - 3 && (x % 8 < 5) ? [240, 236, 220] : [40, 44, 40]));   // (the specials board)
+      else onWall(kx0 + 6, kx0 + 28, 36, 52, (x, v, w, h) => (x < 2 || x >= w - 2 || v < 2 || v >= h - 2 ? [190, 150, 70] : v < h / 2 ? [90, 130, 160] : [70, 110, 70]));   // (a picture in a gold frame)
+    }
+  }
+  // the counter: the diner's white top over a red front with a chrome strip; fast food's white over red with a yellow
+  // band; the restaurant's dark wood with a brass rail
+  const ca = u.x0 > u.fx0 ? u.x0 : u.x0 + 6, cb = u.x1 < u.fx1 ? u.x1 : u.x1 - (u.fx1 - u.fx0 > 128 ? 34 : 6);
+  const TOP = st === 'restaurant' ? ramp('#6a4630', 5, 3) : ramp('#eeece4', 5, 3);
+  for (let x = ca; x < cb; x++) {
+    for (let Y = cy + 6; Y < cy + 26; Y++) px(x, Y, 22, TOP[Y === cy + 6 || Y === cy + 25 ? 4 : 2], [0, 0, 1]);
+    for (let v = 0; v < 22; v++) {
+      const c = v < 2 ? [40, 32, 28] : st === 'diner' ? (v > 18 || v === 9 || v === 10 ? CHROME[3] : (x - ca) % 20 === 0 ? RED[1] : RED[2]) : st === 'fastfood' ? (v > 19 ? CHROME[2] : v > 13 && v < 17 ? [244, 196, 40] : RED[2]) : (v === 4 ? [200, 160, 80] : v > 19 ? WOOD[4] : (x - ca) % 24 === 0 ? WOOD[1] : WOOD[2 + (v > 10 ? 1 : 0)]);
+      px(x, cy + 26, v, c, [0, 1, 0]);
+    }
+  }
+  const tx = X(L.tillX);
+  slab(tx - 6, tx + 6, cy + 9, cy + 16, 29, DARK, ramp('#4a4e58', 5, 2), 22); dot(tx - 3, cy + 10, 30, [120, 220, 140], 3);   // (the till)
+  if (st === 'diner') { const px1 = Math.min(cb - 24, tx + 26); slab(px1, px1 + 18, cy + 9, cy + 20, 32, ramp('#d8eef4', 5, 3), ramp('#c0dae2', 5, 3), 22); for (const k of [0, 1, 2]) dot(px1 + 3 + k * 5, cy + 13, 26, [214, 150, 80], 3); }   // (the pie case)
+  else if (st === 'fastfood') { for (const k of [-1, 1]) { const x = tx + k * 22; if (x > ca + 8 && x < cb - 16) slab(x, x + 14, cy + 10, cy + 20, 23, ramp('#c8343a', 5, 2), ramp('#a82a30', 5, 2), 22); } }   // (the trays)
+  else for (let x = ca + 10; x < cb - 10; x += 22) dot(x, cy + 12, 23, [244, 242, 236], 4);   // (plates at the pass)
+  // the floor
+  for (const B of L.booths) {   // a red booth: two high-backed benches either side of a white-topped table, the sauces on it
+    const x0 = X(B.x0), x1 = X(B.x1), y0 = Yl(B.y0), y1 = Yl(B.y1);
+    slab(x0, x1, y0, y0 + 4, 22, RED, RED); slab(x0, x1, y0 + 4, y0 + 10, 11, RED, RED);
+    slab(x0 + 2, x1 - 2, y0 + 11, y1 - 11, 17, ramp('#eceae2', 5, 3), CHROME);
+    dot(x0 + 6, y0 + 15, 18, [200, 40, 40]); dot(x0 + 10, y0 + 15, 18, [236, 200, 50]);
+    slab(x0, x1, y1 - 10, y1 - 4, 11, RED, RED); slab(x0, x1, y1 - 4, y1, 22, RED, RED);
+  }
+  for (const S of L.stools) { const x = X(S.x), Y = Yl(S.y); for (let v = 0; v < 12; v++) px(x, Y + 2, v, CHROME[2], [1, 0, 0]); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) px(x + dx, Y + dy, 13, dx + dy < -2 ? [230, 90, 90] : RED[2], [0, 0, 1]); }
+  if (L.jukebox) { const J = L.jukebox, x0 = X(J.x0), x1 = X(J.x1); slab(x0, x1, Yl(J.y0), Yl(J.y1), 30, WOOD, WOOD); for (let x = x0 + 3; x < x1 - 3; x++) for (let v = 8; v < 26; v++) px(x, Yl(J.y1), v, [[255, 120, 60], [255, 210, 80], [90, 200, 255], [255, 90, 200]][((v >> 2) + (x >> 3)) & 3], [0, 1, 0]); }
+  if (L.queue) {   // chrome posts with a belt between them, either side of the lane up to the till
+    const Q = L.queue;
+    for (const qx of [Q.x0, Q.x1]) {
+      for (let y = Q.y0; y <= Q.y1; y += 16) for (let v = 0; v < 15; v++) px(X(qx), Yl(y), v, CHROME[v > 12 ? 4 : 2], [1, 0, 0]);
+      for (let y = Q.y0; y <= Q.y1; y++) for (const v of [11, 12]) px(X(qx), Yl(y), v, [30, 60, 150], [0, 0, 1]);
+    }
+  }
+  if (L.drinks) { const D2 = L.drinks, x0 = X(D2.x0), x1 = X(D2.x1); slab(x0, x1, Yl(D2.y0), Yl(D2.y1), 30, ramp('#d8dce2', 5, 3), ramp('#2a2c34', 5, 2)); for (let x = x0 + 2; x < x1 - 2; x++) for (let v = 12; v < 27; v++) px(x, Yl(D2.y1), v, v < 16 ? (x % 4 === 0 ? [200, 200, 210] : [40, 40, 46]) : [[200, 40, 50], [60, 150, 220], [240, 190, 40], [80, 180, 90]][((x - x0) / 4 | 0) & 3], [0, 1, 0]); }
+  for (const T2 of L.tables) {
+    const x0 = X(T2.x0), x1 = X(T2.x1), y0 = Yl(T2.y0), y1 = Yl(T2.y1);
+    if (T2.cloth) {   // a white cloth to the floor, a candle and two plates; dark wood chairs either side
+      for (const [cx, k] of [[x0 - 9, -1], [x1 + 2, 1]]) { slab(cx, cx + 7, y0 + 6, y1 - 6, 9, WOOD, WOOD); slab(k < 0 ? cx : cx + 5, k < 0 ? cx + 2 : cx + 7, y0 + 5, y1 - 5, 19, WOOD, WOOD, 9); }
+      slab(x0, x1, y0, y1, 17, CLOTH, CLOTH);
+      dot((x0 + x1) / 2 - 1, (y0 + y1) / 2 - 1, 19, [255, 214, 120]); dot(x0 + 3, (y0 + y1) / 2 - 2, 18, [250, 250, 246], 4); dot(x1 - 7, (y0 + y1) / 2 - 2, 18, [250, 250, 246], 4);
+    } else {          // a small table, a red chair and a yellow one
+      for (const [cx, c] of [[x0 - 9, '#c8343a'], [x1 + 2, '#e8b830']]) { const R2 = ramp(c, 5, 2); slab(cx, cx + 7, y0 + 3, y1 - 3, 9, R2, R2); slab(cx < x0 ? cx : cx + 5, cx < x0 ? cx + 2 : cx + 7, y0 + 2, y1 - 2, 17, R2, R2, 9); }
+      slab(x0, x1, y0, y1, 15, ramp('#f0ece0', 5, 3), CHROME);
+      dot(x0 + 4, y0 + 5, 16, [200, 50, 40], 3); dot(x1 - 7, y0 + 7, 16, [236, 200, 60], 3);
+    }
+  }
+  if (L.host) { const H2 = L.host, x0 = X(H2.x0), x1 = X(H2.x1); slab(x0, x1, Yl(H2.y0), Yl(H2.y1), 26, WOOD, WOOD); dot(x0 + 4, Yl(H2.y0) + 2, 27, [240, 236, 220], 4); dot(x1 - 3, Yl(H2.y0) + 1, 31, [255, 200, 100], 2); }
+  if (st === 'restaurant') { plant(X(L.X0) + 12, Yl(L.Yb) - 12, 1); plant(X(L.X1) - 12, Yl(L.Yb) - 12, 1); }
+  else if (st === 'fastfood' && L.Yb - L.Ya > 90) plant(L.side < 0 ? X(L.X1) - 12 : X(L.X0) + 12, Yl(L.Yb) - 12, 0.9);
+  // the mat inside the door
+  for (let Y = Yl(L.Yb) - 12; Y < Yl(L.Yb); Y++) for (let x = X(L.dc) - 16; x < X(L.dc) + 16; x++) px(x, Y, 1, (x + Y) % 3 ? [58, 52, 50] : [70, 62, 58], [0, 0, 1]);
 }
 // ---- the Rusty Spur's bar room (MC4, task #366): along the floor in front of the bar, left to right - the booths by the
 // wall, the jukebox, the pool table, the arm-wrestling table with its two stools, and the card room behind a low partition

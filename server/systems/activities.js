@@ -33,6 +33,7 @@ import { wildStyle } from './wildlife.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { BUILDS } from '../entities.js';
 import { courtHoops } from '../../shared/hoops.js';
+import { foodLayout, foodSeats } from '../../shared/foodrooms.js';
 
 let rng = mulberry32(42300);
 export function setRng(r) { rng = r; }
@@ -54,6 +55,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   hunter: { day: 0.7, night: 0 },
   hoops: { day: 0.75, night: 0.2, cap: 1 },
   pool: { day: 0.5, night: 0.9, cap: 1 },
+  diners: { day: 0.85, night: 0.6, cap: 2 },   // (IN8: eating at a food place's tables, the cook at the line)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
 const pk = (r, a) => a[Math.floor(r() * a.length) % a.length];
@@ -63,6 +65,12 @@ const MY_LOOKS = {
       L.outfit.set = null; L.outfit.jacket = null; L.outfit.top = item('Hi-vis vest', 'orange', 'black');
       L.outfit.bottoms = item('Cargo pants', pk(r, ['olive', 'khaki', 'charcoal'])); L.outfit.shoes = item('Hiking boots', pk(r, ['brown', 'tan']));
       L.outfit.hat = item(r() < 0.6 ? 'Trucker cap' : 'Beanie', 'orange'); L.outfit.glasses = null; L.outfit.jewel = null; L.outfit.bag = null;
+    } },
+  cook: { styles: [['casual', 1]], fem: 0.4, age: [1, 3, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 6,   // (IN8: whites and an apron at the kitchen line)
+    fix(L, r) {
+      L.outfit.set = null; L.outfit.top = item('Plain tee', 'white'); L.outfit.jacket = item('Apron', 'white', 'cream');
+      L.outfit.bottoms = item('Chinos', pk(r, ['black', 'charcoal'])); L.outfit.shoes = item('Sneakers', 'black');
+      L.outfit.hat = null; L.outfit.glasses = null; L.outfit.jewel = null; L.outfit.bag = null;
     } },
 };
 const ANCHOR = { pierrail: 'anglers', pier: 'anglers', fishtable: 'anglers', rods: 'anglers', picnic: 'chess', cafetable: 'chess', blanket: 'picnic', fountain: 'painter', statue: 'painter', gazebo: 'painter', mapboard: 'painter', ferris: 'painter' };
@@ -177,6 +185,13 @@ export function spotsOf(map) {
   // pool at the Rusty Spur (its bar room's table: where client/art2/game/statics.js roadhouseRoom draws it)
   const pt = poolTable(map);
   if (pt) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }
+  // eating at the food places' tables (booths), the cook at the kitchen line (IN8: shared/foodrooms.js lays them out, as the art draws them)
+  for (const b of map.buildings || []) if (b && b.walkIn) for (const u of b.walkIn.units) {
+    const L = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null;
+    if (!L || !foodSeats(L).length) continue;
+    const x = (L.X0 + L.X1) / 2, y = (L.Ya + L.Yb) / 2;
+    list.push({ k: 'diners', x, y, a: 0, food: L, wild: false }); taken.push({ x, y });
+  }
   const cells = new Map();
   list.forEach((s, i) => {
     s.id = i;
@@ -247,6 +262,11 @@ function members(s) {
   } else if (s.k === 'hoops') {     // two to four round the key, facing the rim (shooting around: hoopSpot)
     const n = 2 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) { const q = hoopSpot(s, i, n); out.push({ x: q.x, y: q.y, a: q.a, arche: rng() < 0.6 ? 'athlete' : 'casual', hoop: i }); }
+  } else if (s.k === 'diners') {    // one to three tables taken, one or two sat at each over their food; the cook at the line
+    const L = s.food, groups = foodSeats(L), order = groups.map((g, i) => [rng(), i]).sort((p, q) => p[0] - q[0]);
+    const n = Math.min(groups.length, 1 + Math.floor(rng() * 2) + (groups.length > 3 ? 1 : 0));
+    for (let k = 0; k < n; k++) { const seats = groups[order[k][1]], two = rng() < 0.65 ? 2 : 1; for (let j = 0; j < two; j++) { const q = seats[j]; out.push({ x: q.x, y: q.y, a: q.a, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sit' }); } }
+    if (L.cook) out.push({ x: L.cook.x, y: L.cook.y, a: L.cook.a, arche: 'casual', look: 'cook' });
   } else if (s.k === 'pool') {      // the one shooting bent over the table, the other waiting at its end, cue up; watchers
     const T = s.table;
     out.push({ ...poolSpot(T, 0), arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 0, gt: 'cue' });
