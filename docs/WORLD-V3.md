@@ -1091,3 +1091,73 @@ data, classified by the rules and none where a line is in a tunnel; wherever a l
 **Next:** the region generators read their region's share of it (the roads and rails entering at the positions fixed
 here); the skeleton's hash joins the join check (part 4.3, item 5); the train, coach and ferry timetables run on these
 lines.
+
+## Part 7 - The gulf (the owner, 2026-10-10, 12:44-12:52)
+
+**The owner's words**
+- **12:44:** "making the urban city islands like metro city and Southbank much larger (with a narrower yet still
+  boatable waterway that splits the large island up in two ... lots of bridges connecting between the two islands)
+  ... cedar Isle and West point are much bigger and closer to metrocity ... keeping metrocity the largest most dense
+  urban area and the heart of the city ... making the islands closer together so there aren't huge stretches of
+  bridges everywhere over the water, and making the Westport airport smaller nestled right off of the Westport island
+  kind of tucked in but still it's own much smaller island with a few bridges ... plenty of bridges that lead off
+  these urban islands onto the mainland as well so entry and exit points can't just be camped by players ... Some
+  walking bridges too ... the space between the islands and the mainland create enough space for a good waterway for
+  boats to travel through and even the walk-on ferry".
+- **12:50:** "We can make northshore less dense and the islands not way way bigger, we can also make them a little bit
+  bigger and get them closer and still tuck the airport away ... Please help me make sure I don't scale up the city
+  too much".
+- **12:52:** "Maybe Westport actually stretches in and connects to the mainland but metrocity/southpoint and cedar Isle
+  are islands off the bay/large Gulf area created when Westport becomes attached to the mainland".
+
+The plan was sent to the owner as "World v3 gulf - sketch 2" (12:58) and is now the skeleton
+(`docs/world-v3-layout-v2.png`).
+
+**What the gulf is**
+- **Size:** today's places scaled by 1.15, about 1.3x the area: Westport 0.20 km², Cedar Isle 0.24 km². Metro City
+  + Southbank is 0.28 km², with a designed east shore where today's map cuts it straight at Dry Creek. These places
+  are built new at that size, not moved whole. In `ISLANDS`/`PIECES`, `picture` says where today's look comes from,
+  and `poly` is the land.
+- **Westport** is joined to the mainland and forms the gulf's west shore.
+  - Port Westport is new ground: a straight quay with cranes on the West Channel, a narrow inlet up Westport's west
+    side. Westport Freight moves here.
+  - The Egret Coast is the arm beyond the inlet. The Port Bridge (a lift bridge) crosses it.
+- **The airport** is a small island (0.65 of today's size) in a cove under Westport, inside a hook of Westport's
+  land. Airport Road and Runway Road (150-160 m) reach it, and subway line 2 crosses on a viaduct.
+- **Metro City + Southbank** is one island with a 55 m canal (`CANAL`) through it, running from today's inlet between
+  The Yards and Pine Hills across to the east shore. Metro City is north of it and Southbank south. Six bridges
+  cross the canal, two of them footbridges. Pelican Key sits off Southbank's tip with a footbridge.
+- **Cedar Isle** is 200-260 m east of Metro City.
+- **Toll Point** is a headland of the Sandpiper Coast, 250-280 m from Cedar Isle.
+- **Northshore** keeps today's density and runs on along the coast as beach towns. The Coast Highway moves behind
+  them and crosses the Long Reach upriver, so the waterfront is beaches and the Shore Road.
+
+**The water** is 200-260 m between the islands and 200-370 m from them to the mainland: room for boats, the walk-on
+ferry loop (the Bay Ferry: Metro City's harbour, Westport, Northshore's pier, Cedar Isle, Southbank) and the Long
+Reach's boats.
+
+**The crossings** (none longer than about 410 m):
+
+| Between | Crossings |
+|---|---|
+| Westport and Metro City | the Harbor Bridge (Bay Ring and the main line), Union Bridge (280 m), the Harbor Footbridge (250 m), subway line 2 under the channel |
+| Northshore and Metro City | the Bay Bridge (highway, main line and subway line 1's viaduct side by side), the Northshore Lift Bridge (305 m, it lifts for tall boats), the Harbor Tunnel (402 m, under the channel) |
+| Metro City and Cedar Isle | the Cedar Bridge (Bay Ring and the main line), Eastgate Bridge (290 m), the Southbank Walk (a 280 m footbridge), subway line 1 under the channel |
+| Cedar Isle and the mainland | the East Toll Bridge (Bay Ring and the main line) to Toll Point, Toll Point Bridge (361 m), Cedar North Bridge (410 m, high: the Long Reach's boats pass under) |
+
+Seven ways on and off the islands to the mainland, besides the Westport ones (which are on the mainland now), so
+none can be camped. The airport's two bridges and the Port Bridge come on top.
+
+**What this changes in the plan**
+- `shared/world3.js` PLACEMENTS for Metro City, Westport, the airport, Cedar Isle and Northshore no longer place the
+  v3 world. They stay for the island builds of 4.7, which build today's pieces alone: the land masks, the businesses
+  filter and the seams carry over to building these places at their new size. The test of "nothing over water but
+  on a bridge or in a tunnel" counts only the pieces still placed whole.
+- **The skeleton's totals now:**
+  - highways 19.5 km, arterials 34.9 km, main line 15.5 km, subways 4.4 km;
+  - tunnels: 7 highway, 2 arterial, 6 main line, 5 subway;
+  - bridges: 6 highway, 22 arterial, 6 main line, 2 subway;
+  - 35 stations.
+- **The tools:** `tools/world-v3-skeleton.py` draws the gulf's places from their pictures at their new size and draws
+  the canal and the footbridges. scratchpad/urban/gulfland.py traced the land: today's pieces scaled, the neck, the
+  hook, Toll Point, the West Channel and the cove.

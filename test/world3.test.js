@@ -322,10 +322,13 @@ test('every crossing is found from the data and classified by the rules; none wh
 });
 
 test('wherever a line is over water it is on a bridge or in a tunnel; every interchange joins two highways at least', () => {
-  const rects = Object.values(PLACEMENTS).map(placedRect), port = SKEL.PORT_WESTPORT.rect;
+  // (the gulf's places are built new at their new size - their land is the islands' polygons and the mainland - so only
+  // the pieces still placed whole count their rectangles)
+  const placed = new Set(SKEL.ISLANDS.filter((i) => i.placement).map((i) => i.placement));
+  const rects = Object.entries(PLACEMENTS).filter(([k]) => placed.has(k)).map(([, p]) => placedRect(p)), port = SKEL.PORT_WESTPORT.rect;
   const land = (x, y) => SKEL.inPoly(SKEL.MAINLAND, x, y) || rects.some(([a, b, c, d]) => x >= a && x < c && y >= b && y < d)
     || SKEL.ISLANDS.some((i) => i.poly && SKEL.inPoly(i.poly, x, y)) || (x >= port[0] && x < port[2] && y >= port[1] && y < port[3]);
-  const wet = (x, y) => !land(x, y) || SKEL.LAKES.some((l) => SKEL.inPoly(l.poly, x, y));
+  const wet = (x, y) => !land(x, y) || SKEL.LAKES.some((l) => SKEL.inPoly(l.poly, x, y)) || SKEL.inCanal(x, y);
   for (const L of skLines) {
     if (L.kind === 'ferry') continue;
     for (let s = 0; s <= L.path.length; s += 10) {

@@ -155,8 +155,8 @@ if not OVER:
         if b['key'] == 'desert':
             for (cx, cy, rx, ry) in [(3900, 300, 160, 70), (4150, 1000, 140, 60), (4800, 900, 170, 80), (4400, 1500, 200, 70), (4900, 1700, 120, 60), (3950, 650, 90, 50)]:
                 poly([(cx - rx, cy), (cx - rx * .6, cy - ry), (cx + rx * .7, cy - ry), (cx + rx, cy), (cx + rx * .6, cy + ry * .5), (cx - rx * .7, cy + ry * .5)], C['mesa'], it=2)
-    for seg in [[(330, 1180), (290, 1420), (360, 1640)], [(4060, 2470), (4220, 2620), (4380, 2720)], [(4700, 2560), (4880, 2420), (5040, 2330)],
-                [(590, 2780), (700, 2960), (840, 3010)], [(1260, 2060), (1170, 2240)]]:
+    for seg in [[(330, 1180), (290, 1420), (360, 1640)], [(3880, 2600), (4060, 2620), (4220, 2650), (4380, 2720)], [(4700, 2560), (4880, 2420), (5040, 2330)],
+                [(589, 2778), (702, 2961), (791, 2992), (901, 3040)], [(1800, 1872), (2150, 1858), (2650, 1852), (3150, 1868)]]:   # beaches (Northshore's along the gulf)
         stroke(smooth(seg, False, 2), C['coast'], 26)
     stroke(smooth([tuple(p) for p in SK['river']['pts']], False, 3), C['river'], SK['river']['width'] * S)
     for st in SK['streams']:
@@ -166,9 +166,6 @@ if not OVER:
 
     # today's islands, cut out of today's world map picture by district and placed (shared/world3.js PLACEMENTS)
     MOVES = [
-        ({1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 16, 17, 18, 46, 0, 14}, None, (1591, 1729), None),
-        ({23, 24, 25, 26, 28, 30}, None, (1400, 1800), None), ({27}, None, (1950, 2140), None),
-        ({35, 36, 37, 38, 39, 40}, None, (2580, 2066), None), ({31, 32, 34}, None, (1510, 1560), None),
         ({29}, None, (300, 1000), None), ({33}, None, (600, 150), None), ({9, 41, 42}, None, (2555, 649), None),
         ({43}, None, None, (960, 3120)), ({44}, None, None, (1560, 3420)), ({45}, (460, 655, 525, 705), None, (1330, 3330)),
         ({19}, (270, 38, 345, 100), None, (200, 1680)), ({15}, None, None, (3560, 3290)),
@@ -205,10 +202,32 @@ if not OVER:
             m = m.resize((w, h), Image.LANCZOS).filter(ImageFilter.MaxFilter(3))
             img.paste((24, 30, 30), (int((x0 + dx) * S), int((y0 + dy) * S)), m.filter(ImageFilter.MaxFilter(5)))
             img.paste(crop, (int((x0 + dx) * S), int((y0 + dy) * S)), m)
+        # the gulf's places at their new size (the skeleton's `picture`: today's districts, top-left in the frame, the
+        # scale): the islands' land first, then today's look over it, then the canal through Metro City
+        for isl in SK['islands']:
+            if 'picture' in isl:
+                poly(isl['poly'], (124, 118, 108), it=1)
+        for pc in [i for i in SK['islands'] if 'picture' in i] + SK.get('pieces', []):
+            pic = pc['picture']; ids = set(pic['ids']); k = pic['scale']
+            x0, y0, x1, y1 = pic['from']
+            mask = Image.new('L', (x1 - x0, y1 - y0), 0); mp = mask.load()
+            for y in range(y0, y1):
+                row = y * MAP_W
+                for x in range(x0, x1):
+                    if dist[row + x] in ids and tiles[row + x] not in WATER:
+                        mp[x - x0, y - y0] = 255
+            crop = ov.crop((x0 - OV_X0, y0 - OV_Y0, x1 - OV_X0, y1 - OV_Y0))
+            w, h = max(1, int((x1 - x0) * k * S)), max(1, int((y1 - y0) * k * S))
+            crop = crop.resize((w, h), Image.LANCZOS); m = mask.resize((w, h), Image.LANCZOS).filter(ImageFilter.MaxFilter(3))
+            at = (int(pic['at'][0] * S), int(pic['at'][1] * S))
+            img.paste((24, 30, 30), at, m.filter(ImageFilter.MaxFilter(5)))
+            img.paste(crop, at, m)
         d = ImageDraw.Draw(img, 'RGBA')
     for isl in SK['islands']:
-        if 'poly' in isl:
+        if 'poly' in isl and 'picture' not in isl:   # (the gulf's islands are drawn above, with their pictures)
             poly(isl['poly'], (110, 106, 96) if isl['key'] == 'prison' else (120, 130, 100), it=2)
+    if SK.get('canal'):
+        stroke(smooth([tuple(p) for p in SK['canal']['pts']], False, 2), C['sea'], SK['canal']['width'] * S)
     x0, y0, x1, y1 = SK['port']['rect']
     d.rectangle([x0 * S, y0 * S, x1 * S, y1 * S], fill=(120, 120, 128), outline=(30, 30, 36), width=2)
     for k in range(y0 + 30, y1 - 10, 60):   # the cranes along the west quay
@@ -220,6 +239,10 @@ by = lambda kind: [l for l in lines if l['kind'] == kind]
 for l in by('ferry'):
     dashed(l['path'], C['ferry'], 3, on=5, off=7)
 for l in by('art'):
+    if l.get('foot'):
+        for kind, pts in split(l):
+            stroke(pts, C['ink'], 9 * S); stroke(pts, (255, 214, 110), 5 * S)
+        continue
     for kind, pts in split(l):
         if kind == 'tunnel':
             dashed(pts, C['art'], 5, on=5, off=6)
@@ -297,9 +320,10 @@ if not OVER:
     for x, y, name, size in [
         (900, 380, 'GRANITE PEAKS', 34), (760, 1300, 'HIGHLAND WOODS', 34), (2800, 1150, 'WILLOW VALLEY', 34),
         (4330, 1440, 'RED ROCK DESERT', 34), (4600, 2060, 'SANDPIPER COAST', 24), (720, 2450, 'EGRET COAST', 22),
-        (3000, 1620, 'NORTHSHORE', 24), (3150, 60, 'NORTH RIDGE', 22), (3250, 2280, 'THE BAY', 30), (2300, 3900, 'THE OPEN SEA', 26),
-        (2900, 2470, 'METRO CITY', 20), (1660, 2520, 'WESTPORT', 18), (3240, 3230, 'CEDAR ISLE', 18), (4330, 3090, 'Prison Island', 16),
-        (1040, 3330, 'Gull Harbor', 15), (1300, 2300, 'Port Westport', 14),
+        (3000, 1620, 'NORTHSHORE', 24), (3150, 60, 'NORTH RIDGE', 22), (2950, 2960, 'THE GULF', 30), (2300, 3900, 'THE OPEN SEA', 26),
+        (2150, 2240, 'METRO CITY', 20), (2290, 2700, 'SOUTHBANK', 15), (1430, 2120, 'WESTPORT', 18), (3080, 2580, 'CEDAR ISLE', 18),
+        (4330, 3090, 'Prison Island', 16), (1040, 3330, 'Gull Harbor', 15), (1225, 2440, 'Port Westport', 13), (2370, 2990, 'Pelican Key', 12),
+        (2270, 2560, 'the canal', 11),
     ]:
         label(x, y, name, size, True)
     names = {}
@@ -321,10 +345,10 @@ for k in range(0, H3 + 1, 1000):
         label(20, k - 30, f'{k // 1000} km', 12, anchor='lm')
 if not OVER:
     sm = SK['summary']
-    LX, LY = 2980, 3446
-    d.rectangle([LX * S, LY * S, (LX + 2040) * S, (LY + 580) * S], fill=(16, 22, 34, 230), outline=(220, 220, 230), width=2)
-    label(LX + 40, LY + 44, 'City Life Auto - World v3 skeleton v1 (drawn from shared/world3-skeleton.js)', 19, True, anchor='lm')
-    label(LX + 40, LY + 88, '5.04 x 4.03 km, grid lines every 1 km. The owner\'s markup of 2026-10-10 and the rulings (WORLD-V3.md part 5)', 12, anchor='lm')
+    LX, LY = 2980, 3390
+    d.rectangle([LX * S, LY * S, (LX + 2040) * S, (LY + 636) * S], fill=(16, 22, 34, 230), outline=(220, 220, 230), width=2)
+    label(LX + 40, LY + 44, 'City Life Auto - World v3 skeleton v2: the gulf (drawn from shared/world3-skeleton.js)', 19, True, anchor='lm')
+    label(LX + 40, LY + 88, '5.04 x 4.03 km, grid lines every 1 km. The owner\'s markup of 2026-10-10, the rulings (WORLD-V3.md part 5), the gulf (part 7)', 12, anchor='lm')
     tk = lambda k: sm['tunnels'].get(k, {'count': 0, 'km': 0})
     bk = lambda k: sm['bridges'].get(k, {'count': 0, 'km': 0})
     label(LX + 40, LY + 120, f"highways {sm['km']['hwy']} km, arterials {sm['km']['art']} km, main line {sm['km']['main']} km (double track), subways {sm['km']['sub']} km", 12, anchor='lm')
@@ -350,9 +374,11 @@ if not OVER:
             stroke([a, b], C['bridge'], 8); stroke([a, b], C['sub2'], 5); dashed([(LX + 180, y), b], C['sub2'], 5, on=6, off=5)
         elif kind == 'ferry':
             dashed([a, b], C['ferry'], 3, on=5, off=7)
+        elif kind == 'foot':
+            stroke([a, b], C['ink'], 9 * S); stroke([a, b], (255, 214, 110), 5 * S)
     for kind, text in [('hwy', 'Highway (white casing: on a bridge)'), ('hwyt', 'Highway in a tunnel'), ('art', 'Arterial road'),
                        ('artb', 'West Sea Road causeway (could be a tunnel)'), ('main', 'Main line, double track'), ('maint', 'Main line in a tunnel'),
-                       ('sub1', 'Subway line 1: viaduct, then underground'), ('sub2', 'Subway line 2: viaduct, then underground'), ('ferry', 'Ferry')]:
+                       ('sub1', 'Subway line 1: viaduct, then underground'), ('sub2', 'Subway line 2: viaduct, then underground'), ('ferry', 'Ferry'), ('foot', 'Footbridge')]:
         sample(kind, ys)
         label(LX + 330, ys, text, 12, anchor='lm')
         ys += 42

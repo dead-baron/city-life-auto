@@ -6208,3 +6208,24 @@ live imports it yet. What was decided on the way, for the owner to look at, is i
 highway dead ends, one network with at least three loops, nothing at grade; the main line connected, every station on
 its line, every service joined up; every town near a road; every curve within its radius; every crossing classified;
 nothing over water but on a bridge or in a tunnel).
+
+## 2026-10-10 · World v3: the gulf
+
+The owner, over three messages at 12:44-12:52, asked for the urban islands a little bigger and much closer together.
+Westport joins the mainland, so Metro City/Southbank and Cedar Isle become islands in the gulf it encloses. The
+airport is tucked away, and Northshore is "less dense". The owner also asked for "plenty of bridges ... so entry and
+exit points can't just be camped" and "some walking bridges", with room for boats and the walk-on ferry. Sketch 2
+went to the owner at 12:58, and the skeleton now has it (`docs/WORLD-V3.md` part 7, `docs/world-v3-layout-v2.png`).
+- **The places:** today's places scaled by 1.15 (about 1.3x the area) and built new at that size.
+  - Westport is on the mainland, with Port Westport's quay on the new West Channel.
+  - The airport is a small island in a cove under Westport.
+  - Metro City + Southbank is split by a 55 m canal with six bridges.
+  - Cedar Isle is 200-260 m east of Metro City, and Toll Point's headland 250-280 m beyond it.
+  - Northshore runs on along the coast as beach towns, with the Coast Highway behind them.
+- **The crossings:** seven ways on and off the islands to the mainland (bridges, a lift bridge and the Harbor Tunnel),
+  two to four across each channel, and five footbridges. None is longer than about 410 m. The main line and the
+  subways cross beside the highways or under the channels.
+- **Files:** `shared/world3-skeleton.js` (MAINLAND, ISLANDS with `picture`, PIECES, CANAL, `inCanal`, the gulf's
+  highways, arterials, main line, subways, ferries, stations, towns) and `tools/world-v3-skeleton.py`.
+- **Tests:** `test/world3.test.js` passes 15/15. The water check counts only the pieces still placed whole and treats
+  the canal as water.

@@ -26,14 +26,24 @@ export const RADIUS = { hwy: 250, art: 50, main: 300, sub: 120, ferry: 60 };
 // ---------------------------------------------------------------------------------------------------------------------
 // The land and the water
 
-// The mainland round three sides of the bay (the draft layout's, which the owner approved): north, with an arm down the
-// west (Highland Woods, the Egret Coast) and one down the east (the Sandpiper Coast).
+// The mainland round three sides of the gulf: north, with an arm down the west (Highland Woods, Westport - joined on, the
+// owner 12:52: "Westport actually stretches in and connects to the mainland" - and the Egret Coast beyond the West
+// Channel) and one down the east (the Sandpiper Coast, with Toll Point's headland reaching out towards Cedar Isle).
+// Traced from the land drawn at 1 tile and simplified to within 4 tiles (scratchpad/urban/gulfland.py).
 export const MAINLAND = [
-  [0, 0], [5040, 0], [5040, 2330], [4880, 2420], [4700, 2560], [4520, 2700], [4380, 2720], [4220, 2620], [4060, 2470],
-  [3930, 2280], [3820, 2080], [3640, 1930], [3440, 1890], [3420, 1880], [3330, 1878], [3150, 1868], [2900, 1855],
-  [2650, 1852], [2400, 1848], [2150, 1858], [1900, 1880], [1640, 1915], [1420, 1960], [1260, 2060], [1170, 2240],
-  [1120, 2480], [1060, 2720], [960, 2900], [840, 3010], [700, 2960], [590, 2780], [520, 2560], [470, 2330],
-  [400, 2120], [330, 1900], [360, 1640], [290, 1420], [330, 1180], [250, 980], [130, 820], [0, 760],
+  [0, 0], [0, 760], [131, 821], [250, 980], [330, 1179], [290, 1417], [360, 1639], [330, 1901],
+  [470, 2329], [520, 2561], [589, 2778], [702, 2961], [791, 2992], [901, 3040], [979, 3001], [1039, 2902],
+  [1080, 2692], [1099, 2407], [1110, 2049], [1189, 2050], [1189, 2400], [1327, 2407], [1343, 2386], [1379, 2385],
+  [1388, 2401], [1409, 2418], [1415, 2435], [1440, 2449], [1446, 2467], [1474, 2478], [1484, 2497], [1505, 2512],
+  [1513, 2533], [1528, 2547], [1515, 2574], [1562, 2626], [1599, 2700], [1566, 2790], [1461, 2839], [1339, 2831],
+  [1284, 2816], [1270, 2845], [1330, 2878], [1481, 2885], [1615, 2825], [1665, 2699], [1640, 2600], [1574, 2547],
+  [1586, 2527], [1573, 2509], [1575, 2471], [1601, 2450], [1614, 2411], [1627, 2404], [1629, 2386], [1642, 2377],
+  [1663, 2345], [1659, 2322], [1670, 2309], [1664, 2293], [1650, 2285], [1650, 2272], [1676, 2246], [1674, 2224],
+  [1681, 2221], [1681, 2205], [1667, 2203], [1663, 2180], [1644, 2175], [1637, 2167], [1637, 2154], [1650, 2143],
+  [1649, 2127], [1664, 2113], [1664, 2011], [1655, 1993], [1700, 1990], [1746, 1889], [1760, 1889], [1762, 1899],
+  [1906, 1879], [2145, 1858], [2388, 1848], [2858, 1854], [3421, 1880], [3443, 1891], [3602, 1922], [3690, 1990],
+  [3750, 2110], [3760, 2302], [3735, 2431], [3760, 2520], [3880, 2600], [4062, 2620], [4217, 2649], [4379, 2720],
+  [4520, 2700], [4881, 2419], [5039, 2330], [5039, 0],
 ];
 
 // The biome areas, painted in this order over the mainland (a later one wins): Highland Woods is the mainland's own
@@ -46,18 +56,61 @@ export const BIOMES = [
   { key: 'desert', name: 'Red Rock Desert', ground: 'canyons, mesas, the casino city', poly: [[3480, 0], [5040, 0], [5040, 2200], [4700, 2160], [4300, 2050], [3980, 1900], [3800, 1700], [3700, 1350], [3700, 900], [3640, 520], [3500, 260]] },
   { key: 'ridge', name: 'North Ridge', ground: 'a raised ridge of rock and scrub along the north edge', poly: [[2180, 0], [4200, 0], [4150, 70], [3900, 110], [3500, 120], [3100, 110], [2700, 100], [2400, 90]] },
   { key: 'sandpiper', name: 'Sandpiper Coast', ground: 'beaches, surf', poly: [[3820, 2080], [3980, 1900], [4300, 2050], [4700, 2160], [5040, 2200], [5040, 2330], [4880, 2420], [4700, 2560], [4520, 2700], [4380, 2720], [4220, 2620], [4060, 2470], [3930, 2280]] },
-  { key: 'egret', name: 'Egret Coast', ground: 'marsh and dunes', poly: [[470, 2330], [560, 2250], [760, 2300], [900, 2500], [1000, 2700], [960, 2900], [840, 3010], [700, 2960], [590, 2780], [520, 2560]] },
-  { key: 'northshore', name: 'Northshore', ground: 'towns on the bay', poly: [[1950, 1880], [2000, 1640], [2300, 1560], [2700, 1560], [3050, 1640], [3250, 1760], [3330, 1878], [2650, 1852], [2150, 1858]] },
+  { key: 'egret', name: 'Egret Coast', ground: 'marsh and dunes', poly: [[470, 2330], [560, 2250], [760, 2300], [960, 2400], [1095, 2400], [1080, 2700], [1040, 2900], [979, 3001], [901, 3040], [791, 2992], [702, 2961], [589, 2778], [520, 2561]] },
+  // Northshore (the owner, 12:50: "less dense"): today's town at today's density, run on along the coast as beach towns
+  // between the Coast Highway (moved behind them) and the water
+  { key: 'northshore', name: 'Northshore', ground: 'beach towns along the gulf', poly: [[1760, 1890], [1760, 1600], [2000, 1590], [2700, 1585], [3050, 1600], [3300, 1640], [3330, 1878], [3150, 1868], [2900, 1855], [2650, 1852], [2400, 1848], [2150, 1858], [1900, 1872]] },
 ];
 
-// Today's islands, placed whole (shared/world3.js PLACEMENTS: frame tile = today's tile + offset), and the new ones.
-// Westport's new container port is fill on its WEST shore, facing the west channel (the owner, part 5); Westport
-// Freight moves there.
+// The islands. The gulf's (the owner, 12:44-12:52: "a little bit bigger and get them closer and still tuck the airport
+// away"): today's places scaled by 1.15 (about 1.3x the area; Metro City also gets a designed east shore where today's
+// map cuts it straight at Dry Creek), 200-260 m from their neighbours - to be built new at that size, not moved whole:
+// `poly` is the land, `picture` where today's look comes from (today's districts, top-left in the frame, the scale).
+// The rest are today's, placed whole (shared/world3.js PLACEMENTS: frame tile = today's tile + offset), and new ones.
 export const ISLANDS = [
-  { key: 'metro', name: 'Metro City + Southbank + Pelican Key', placement: 'metro' },
-  { key: 'westport', name: 'Westport', placement: 'westport' },
-  { key: 'airport', name: 'Westport International', placement: 'airport' },
-  { key: 'cedar', name: 'Cedar Isle', placement: 'cedar' },
+  { key: 'metro', name: 'Metro City + Southbank', canal: true, picture: { ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 17, 18, 46], at: [1850, 2050], scale: 1.15, from: [559, 301, 1045, 947] },
+    poly: [
+    [1895, 2237], [1893, 2258], [1865, 2293], [1859, 2330], [1850, 2336], [1850, 2366], [1902, 2410], [1922, 2414],
+    [1936, 2441], [1937, 2482], [1959, 2496], [1966, 2511], [1981, 2515], [1982, 2544], [1988, 2549], [2018, 2555],
+    [2067, 2552], [2088, 2536], [2105, 2501], [2129, 2484], [2162, 2490], [2179, 2478], [2200, 2479], [2218, 2465],
+    [2275, 2457], [2299, 2402], [2334, 2374], [2337, 2362], [2378, 2365], [2378, 2374], [2366, 2382], [2362, 2393],
+    [2314, 2398], [2305, 2416], [2299, 2458], [2285, 2477], [2248, 2476], [2223, 2482], [2204, 2499], [2179, 2496],
+    [2165, 2504], [2129, 2505], [2102, 2557], [2101, 2579], [2120, 2608], [2143, 2616], [2169, 2636], [2246, 2640],
+    [2290, 2669], [2297, 2686], [2325, 2690], [2328, 2703], [2339, 2707], [2338, 2719], [2345, 2728], [2377, 2724],
+    [2387, 2734], [2379, 2761], [2388, 2772], [2390, 2800], [2406, 2800], [2426, 2780], [2452, 2662], [2492, 2384],
+    [2480, 2229], [2451, 2113], [2410, 2065], [2408, 2050], [2392, 2050], [2362, 2073], [2300, 2074], [2278, 2081],
+    [2255, 2101], [2242, 2103], [2229, 2124], [2195, 2131], [2180, 2141], [2138, 2136], [2115, 2154], [2095, 2160],
+    [2082, 2191], [2071, 2198], [2011, 2188], [1974, 2217], [1936, 2229], [1912, 2223],
+  ] },
+  { key: 'cedar', name: 'Cedar Isle', picture: { ids: [35, 36, 37, 38, 40], at: [2670, 2210], scale: 1.15, from: [270, 784, 991, 1158] },
+    poly: [
+    [2670, 2483], [2670, 2504], [2678, 2508], [2680, 2518], [2701, 2523], [2708, 2532], [2709, 2569], [2736, 2588],
+    [2761, 2588], [2779, 2571], [2798, 2579], [2851, 2579], [2855, 2563], [2868, 2561], [2872, 2590], [2884, 2598],
+    [2891, 2592], [2892, 2570], [2908, 2571], [2929, 2558], [2933, 2544], [2955, 2545], [2969, 2527], [2988, 2526],
+    [2997, 2511], [3016, 2507], [3017, 2540], [3024, 2548], [3045, 2554], [3089, 2607], [3106, 2611], [3115, 2622],
+    [3166, 2614], [3202, 2634], [3216, 2632], [3252, 2603], [3274, 2601], [3304, 2603], [3341, 2621], [3357, 2611],
+    [3369, 2611], [3395, 2623], [3401, 2639], [3421, 2639], [3427, 2621], [3446, 2605], [3449, 2589], [3476, 2584],
+    [3487, 2563], [3498, 2558], [3498, 2537], [3482, 2529], [3476, 2514], [3482, 2487], [3466, 2459], [3474, 2415],
+    [3483, 2409], [3483, 2399], [3456, 2396], [3447, 2386], [3443, 2362], [3409, 2348], [3385, 2320], [3339, 2312],
+    [3320, 2286], [3276, 2286], [3247, 2263], [3238, 2266], [3235, 2278], [3221, 2281], [3197, 2268], [3196, 2245],
+    [3174, 2232], [3132, 2231], [3107, 2238], [3088, 2228], [3067, 2234], [3048, 2227], [3033, 2210], [3011, 2210],
+    [2991, 2235], [2960, 2240], [2941, 2234], [2918, 2239], [2902, 2253], [2882, 2250], [2849, 2264], [2835, 2287],
+    [2817, 2293], [2796, 2319], [2770, 2324], [2761, 2309], [2746, 2311], [2748, 2336], [2729, 2351], [2730, 2374],
+    [2703, 2397], [2688, 2432], [2690, 2450], [2677, 2464], [2676, 2481],
+  ] },
+  { key: 'airport', name: 'Westport International (tucked into the cove under Westport)', picture: { ids: [27], at: [1250, 2480], scale: 0.65, from: [68, 614, 390, 917] },
+    poly: [
+    [1272, 2487], [1270, 2497], [1250, 2512], [1250, 2519], [1260, 2520], [1250, 2538], [1281, 2543], [1281, 2580],
+    [1273, 2584], [1280, 2597], [1273, 2604], [1286, 2606], [1292, 2622], [1305, 2629], [1312, 2621], [1333, 2621],
+    [1337, 2638], [1377, 2636], [1378, 2676], [1386, 2676], [1407, 2624], [1423, 2610], [1458, 2597], [1458, 2586],
+    [1433, 2566], [1411, 2534], [1398, 2531], [1390, 2516], [1376, 2508], [1358, 2480], [1335, 2480], [1327, 2494],
+  ] },
+  { key: 'pelican', name: 'Pelican Key', picture: { ids: [14], at: [2300, 2860], scale: 1.0, from: [542, 305, 682, 403] },
+    poly: [
+    [2439, 2891], [2401, 2872], [2397, 2860], [2374, 2860], [2365, 2868], [2346, 2866], [2322, 2884], [2315, 2907],
+    [2300, 2917], [2300, 2937], [2312, 2957], [2339, 2957], [2340, 2952], [2354, 2952], [2355, 2957], [2423, 2957],
+    [2428, 2920], [2439, 2913],
+  ] },
   { key: 'gull', name: 'Gull Harbor', placement: 'gull' },
   { key: 'coral', name: 'Coral Cay', placement: 'coral' },
   { key: 'paradise', name: 'Paradise Cay', placement: 'paradise' },
@@ -74,7 +127,17 @@ export const ISLANDS = [
   { key: 'egret3', name: 'Egret Rocks', poly: [[430, 2920], [510, 2910], [530, 2990], [470, 3020], [420, 2980]] },
   { key: 'egret4', name: 'Egret Rocks', poly: [[590, 3150], [670, 3140], [690, 3220], [630, 3250], [580, 3210]] },
 ];
-export const PORT_WESTPORT = { name: 'Port Westport (the container port)', rect: [1360, 2150, 1450, 2430], faces: 'west', note: 'quays and cranes on the west channel; Westport Freight moves here' };
+export const PORT_WESTPORT = { name: 'Port Westport (the container port)', rect: [1189, 2056, 1262, 2400], faces: 'west', note: 'new ground: a straight quay with cranes on the West Channel; Westport Freight moves here' };
+// Today's places that are on the mainland now (Westport is joined on; Northshore was always there): where their look
+// comes from, as the islands' `picture`.
+export const PIECES = [
+  { key: 'westport', name: 'Westport', onMainland: true, picture: { ids: [23, 24, 25, 28, 30], at: [1150, 1950], scale: 1.15, from: [34, 237, 497, 778] } },
+  { key: 'northshore', name: 'Northshore', onMainland: true, picture: { ids: [31, 32, 34], at: [2000, 1600], scale: 1.0, from: [748, 29, 1207, 279] } },
+];
+// The canal through Metro City + Southbank (the owner: "a narrower yet still boatable waterway that splits the large
+// island up in two, not necessarily splitting the districts up perfectly, but there are lots of bridges"): from
+// today's inlet between The Yards and Pine Hills on across to the east shore. Metro City north of it, Southbank south.
+export const CANAL = { name: 'The Canal', width: 55, pts: [[2050, 2610], [2095, 2535], [2180, 2490], [2280, 2455], [2380, 2470], [2470, 2500], [2530, 2510]] };
 
 // The river channel, the Long Reach: navigable from the bay's north-east corner up to Kestrel Lake (50-80 m wide).
 export const RIVER = { name: 'The Long Reach', width: 70, pts: [[3375, 1890], [3360, 1700], [3300, 1500], [3320, 1300], [3250, 1110], [3120, 960], [2960, 840], [2800, 720]] };
@@ -92,40 +155,42 @@ export const LAKES = [
 // Three loops and more: the west (Coast - Granite Peaks - Highland), the middle (Highland - Valley - Coast), the
 // big north-east one (Valley - North - Desert - Coast), and the Bay Ring's two through the islands.
 export const HIGHWAYS = [
-  { name: 'Coast Highway', pts: [[520, 1150], [760, 1420], [1080, 1640], [1410, 1745], [1650, 1768], [2460, 1768], [3300, 1788], [3440, 1794], [3620, 1810], [3800, 1900], [4150, 2200], [4450, 2330], [4800, 2320], [4940, 2288], [5040, 2262]],
-    bridges: [[6, 7]], tunnels: [[13, 14]] },  // the River Lift Bridge over the channel mouth (it lifts for boats); east: a closed tunnel mouth
+  // behind Northshore's beach towns (the gulf: the waterfront is beaches, not highway), over the Long Reach upriver
+  { name: 'Coast Highway', pts: [[520, 1150], [760, 1420], [1080, 1640], [1410, 1745], [1650, 1700], [1950, 1590], [2300, 1570], [2700, 1570], [3050, 1580], [3260, 1600], [3400, 1640], [3620, 1810], [3800, 1900], [4150, 2200], [4450, 2330], [4800, 2320], [4940, 2288], [5040, 2262]],
+    bridges: [[9, 10]], tunnels: [[16, 17]] },  // the Long Reach Bridge; east: a closed tunnel mouth
   { name: 'Granite Peaks Highway', pts: [[520, 1150], [430, 960], [355, 700], [330, 520], [380, 400], [520, 320], [760, 304], [1000, 300], [1240, 262], [1440, 330], [1610, 460]],
     tunnels: [[1, 2], [4, 6]] },   // the Redwood Tunnel, then the Peaks Tunnel into the mountains
   { name: 'Highland Highway', pts: [[1410, 1745], [1230, 1450], [1160, 1180], [1230, 900], [1430, 640], [1610, 460], [1820, 350], [2110, 290]],
     bridges: [[3, 4]] },   // the Gorge Bridge
-  { name: 'Valley Highway', pts: [[2460, 1768], [2440, 1350], [2300, 760], [2160, 400], [2110, 290], [2160, 90], [2190, 0]],
+  { name: 'Valley Highway', pts: [[2300, 1570], [2440, 1350], [2300, 760], [2160, 400], [2110, 290], [2160, 90], [2190, 0]],
     tunnels: [[5, 6]] },   // north: into the North Ridge to a closed tunnel mouth at the map edge
   { name: 'North Highway', pts: [[2110, 290], [2400, 170], [2800, 112], [3200, 150], [3560, 140], [3800, 170], [4100, 180], [4380, 90], [4560, 90], [4632, 170]],
     tunnels: [[1, 3], [5, 6]] },   // under the North Ridge (ruling 1), twice
   { name: 'Desert Highway', pts: [[3620, 1810], [3720, 1600], [3790, 1230], [3880, 900], [4080, 720], [4440, 560], [4600, 400], [4632, 170], [4640, 0]],
     tunnels: [[7, 8]] },   // north: a closed tunnel mouth at the map edge
-  // The Bay Ring: from the Coast Highway at the Strait Interchange over the Strait Bridge, round Westport on today's
-  // Westport Beltway, over the Harbor Bridge to Metro City's ring, then over the Cedar Bridge to Cedar Isle and the East
-  // Toll Bridge to the Sandpiper interchange. In the islands it runs on today's ring roads, so its curves there are
-  // today's (r 120).
+  // The Bay Ring (the gulf): from the Coast Highway at the Westport Interchange south through Westport (on the mainland
+  // now) to the Harbor Bridge, across Metro City on its ring, over the Cedar Bridge, across Cedar Isle and over the East
+  // Toll Bridge to Toll Point and the Sandpiper interchange. Bridges of 200-260 m now, not a kilometre.
   { name: 'Bay Ring', r: 120, existing: true,
-    pts: [[1650, 1768], [1665, 2045], [1720, 2200], [1800, 2290], [2000, 2300], [2240, 2290], [2300, 2370], [2445, 2378], [2560, 2540], [2900, 2900], [3040, 2925], [3400, 2925], [3500, 2960], [3990, 2600], [4150, 2470], [4150, 2200]],
-    bridges: [[0, 1], [3, 5], [8, 9], [12, 14]] },   // Strait Bridge, Harbor Bridge, Cedar Bridge, East Toll Bridge
-  { name: 'Bay Bridge', r: 120, existing: true, pts: [[2445, 2378], [2450, 2150], [2450, 2040], [2460, 1768]],
-    bridges: [[2, 3]] },
+    pts: [[1650, 1700], [1600, 1950], [1590, 2150], [1600, 2300], [1900, 2300], [2290, 2300], [2460, 2390], [2780, 2400], [3100, 2420], [3460, 2405], [3770, 2405], [3990, 2350], [4150, 2200]],
+    bridges: [[3, 4], [6, 7], [9, 10]] },   // the Harbor Bridge, the Cedar Bridge, the East Toll Bridge
+  // the Bay Bridge: from the Northshore Interchange over the north channel to Metro City's ring; the main line and
+  // subway line 1 cross beside it
+  { name: 'Bay Bridge', r: 120, existing: true, pts: [[2300, 1570], [2410, 1835], [2410, 2090], [2290, 2300]],
+    bridges: [[1, 2]] },
 ];
 // Where highways meet (the interchanges; every highway end is at one of these or at a map-edge closure).
 export const INTERCHANGES = [
   { name: 'Redwood Junction', at: [520, 1150], kind: 'fork', note: 'the Coast Highway runs on into the Granite Peaks Highway' },
   { name: 'Westport Junction', at: [1410, 1745], kind: 'trumpet' },
-  { name: 'Strait Interchange', at: [1650, 1768], kind: 'trumpet' },
-  { name: 'Northshore Interchange', at: [2460, 1768], kind: 'cloverleaf' },
+  { name: 'Westport Interchange', at: [1650, 1700], kind: 'trumpet', note: 'the Bay Ring south through Westport' },
+  { name: 'Northshore Interchange', at: [2300, 1570], kind: 'cloverleaf', note: 'the Coast and Valley highways and the Bay Bridge' },
   { name: 'Dry Creek Interchange', at: [3620, 1810], kind: 'trumpet' },
   { name: 'Sandpiper Interchange', at: [4150, 2200], kind: 'trumpet' },
   { name: 'Gorge Junction', at: [1610, 460], kind: 'fork', note: 'the Granite Peaks Highway joins the Highland Highway' },
   { name: 'Kestrel Pass Interchange', at: [2110, 290], kind: 'four-level stack', note: 'Highland, Valley, North (and by the Gorge Junction the Granite Peaks Highway): ruling 1\'s one interchange near the top middle' },
   { name: 'North Mesa Interchange', at: [4632, 170], kind: 'trumpet' },
-  { name: 'Metro Ring Interchange', at: [2445, 2378], kind: 'ramps', note: "the Bay Bridge onto today's Metro Ring" },
+  { name: 'Metro Ring Interchange', at: [2290, 2300], kind: 'ramps', note: "the Bay Bridge onto Metro City's ring" },
 ];
 // The highways that run off the map end at a closed tunnel mouth (the owner, part 5): the world can grow there later.
 export const CLOSURES = [
@@ -149,7 +214,7 @@ export const ARTERIALS = [
   { name: 'Gorge Road', pts: [[1170, 1070], [1460, 1090], [1480, 900], [1560, 830], [1860, 830], [1960, 920], [2040, 1000]] },
   { name: 'Woods Road', pts: [[1170, 1070], [1490, 1130], [1490, 1240], [1380, 1320], [1080, 1400], [960, 1500], [940, 1700], [940, 1850]] },
   // the bay's north shore
-  { name: 'Shore Road', pts: [[940, 1850], [1070, 1990], [1320, 1950], [1640, 1880], [2050, 1840], [2120, 1800], [2380, 1790], [2420, 1650], [2580, 1640], [2630, 1800], [2780, 1840], [3240, 1805], [3432, 1810]] },
+  { name: 'Shore Road', pts: [[940, 1850], [1250, 1890], [1700, 1870], [2050, 1835], [2400, 1830], [2800, 1835], [3240, 1830], [3432, 1810]] },   // Northshore's waterfront boulevard
   // Willow Valley
   { name: 'Valley Road North', pts: [[2040, 1000], [2800, 1000], [3220, 1010], [3330, 1110], [3390, 1270]] },
   { name: 'Valley Road', pts: [[1940, 1760], [1930, 1260], [2800, 1250], [3390, 1270]] },
@@ -170,10 +235,30 @@ export const ARTERIALS = [
   // islet, not an undersea tunnel; `mayBeTunnel` - the owner may yet prefer one)
   { name: 'West Sea Road', mayBeTunnel: true, pts: [[440, 1800], [350, 1822], [190, 1990], [190, 2220], [300, 2560], [480, 2960], [640, 3200], [820, 3260], [990, 3170]],
     bridges: [[1, 3], [3, 4], [4, 5], [5, 6], [6, 8]] },
-  // the bridges between the islands that aren't on the Bay Ring
-  { name: 'Old Town Bridge', pts: [[2640, 1850], [2600, 1930], [2560, 2010]], bridges: [[0, 2]] },
-  { name: 'Pelican Way', pts: [[2190, 2120], [2250, 2140]], bridges: [[0, 1]] },
-  { name: 'Airport Causeway', pts: [[2330, 2470], [2200, 2790]], bridges: [[0, 1]] },
+  // The gulf's crossings (the owner: "plenty of bridges that lead off these urban islands onto the mainland as well so
+  // entry and exit points can't just be camped by players ... Some walking bridges too"): besides the Bay Ring's and the
+  // Bay Bridge, three more to the mainland (a lift bridge, the Harbor Tunnel, Cedar North Bridge and Toll Point Bridge),
+  // two more across each channel between the islands, footbridges, the canal's six, the airport's two.
+  { name: 'Union Bridge', pts: [[1640, 2240], [1920, 2240]], bridges: [[0, 1]] },                 // Westport - Metro City
+  { name: 'Harbor Footbridge', foot: true, pts: [[1630, 2360], [1880, 2360]], bridges: [[0, 1]] },
+  { name: 'Northshore Lift Bridge', lift: true, pts: [[2200, 1835], [2200, 2140]], bridges: [[0, 1]] },   // it lifts for tall boats
+  { name: 'Harbor Tunnel', pts: [[2470, 2200], [2600, 1820]], tunnels: [[0, 1]] },               // under the north channel
+  { name: 'Eastgate Bridge', pts: [[2470, 2340], [2760, 2350]], bridges: [[0, 1]] },              // Metro City - Cedar Isle
+  { name: 'Southbank Walk', foot: true, pts: [[2450, 2570], [2730, 2570]], bridges: [[0, 1]] },   // Southbank - Cedar Isle
+  { name: 'Cedar North Bridge', pts: [[3060, 1840], [3060, 2250]], bridges: [[0, 1]] },            // high: the boats for the Long Reach pass under
+  { name: 'Toll Point Bridge', pts: [[3480, 2540], [3840, 2560]], bridges: [[0, 1]] },
+  { name: 'Port Bridge', lift: true, pts: [[1090, 2300], [1215, 2300]], bridges: [[0, 1]] },     // over the West Channel to the Egret Coast
+  { name: 'Airport Road', pts: [[1400, 2410], [1400, 2560]], bridges: [[0, 1]] },
+  { name: 'Runway Road', pts: [[1330, 2380], [1330, 2540]], bridges: [[0, 1]] },
+  { name: 'Westport Avenue', pts: [[1215, 2300], [1420, 2200], [1640, 2240]] },                  // Port Westport - Union Bridge, across town
+  { name: 'Southbank Avenue', pts: [[2120, 2575], [2300, 2620], [2450, 2570]] },
+  { name: 'Pelican Walk', foot: true, pts: [[2420, 2770], [2370, 2890]], bridges: [[0, 1]] },
+  { name: 'Canal Bridge 1', pts: [[2123, 2464], [2169, 2552]], bridges: [[0, 1]] },
+  { name: 'Canal Footbridge 2', foot: true, pts: [[2208, 2427], [2242, 2521]], bridges: [[0, 1]] },
+  { name: 'Canal Bridge 3', pts: [[2302, 2408], [2288, 2507]], bridges: [[0, 1]] },
+  { name: 'Canal Bridge 4', pts: [[2362, 2417], [2348, 2516]], bridges: [[0, 1]] },
+  { name: 'Canal Footbridge 5', foot: true, pts: [[2441, 2438], [2409, 2532]], bridges: [[0, 1]] },
+  { name: 'Canal Bridge 6', pts: [[2484, 2452], [2468, 2550]], bridges: [[0, 1]] },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -196,14 +281,15 @@ export const MAIN_LINE = [
     pts: [[3950, 1420], [4300, 1220], [4620, 1100], [4700, 800], [4600, 560], [4760, 250], [4560, 40], [4200, 70], [3800, 130], [3700, 560], [3560, 860], [3300, 960], [3120, 1030], [2400, 1030], [1700, 1060], [1640, 650], [1500, 500], [1100, 480], [780, 600], [560, 780], [580, 1000], [760, 1180], [1260, 1060], [1320, 1560], [1640, 1700]],
     // under the North Ridge, under the Long Reach (boats pass over), through the peaks, round the mountain's foot
     tunnels: [[7, 8], [11, 12], [16, 17], [18, 19]] },
-  // in the islands the main line runs through today's ground: its curves there are tighter (r 200)
+  // in the gulf the main line crosses beside the highways (the Bay Bridge, the Harbor Bridge, the Cedar and East Toll
+  // bridges) and under Metro City's core; its curves there are tighter (r 200)
   { name: 'Bay Bridge Line', from: 'Northshore Junction', to: 'Metro Junction', r: 200, urban: true,
-    pts: [[2440, 1700], [2456, 1845], [2490, 2030], [2545, 2220], [2250, 2330]], bridges: [[1, 2]], tunnels: [[3, 4]] },   // the Bay Bridge's rail deck; today's tunnel under the core
+    pts: [[2440, 1700], [2440, 1830], [2420, 2100], [2250, 2330]], bridges: [[1, 2]], tunnels: [[2, 3]] },   // beside the Bay Bridge; the tunnel under the core
   { name: 'Harbor Line', from: 'Metro Junction', to: 'Westport Junction', r: 200, urban: true,
-    pts: [[2250, 2330], [2050, 2340], [1840, 2340], [1700, 2320], [1680, 2100], [1650, 1900], [1640, 1700]], bridges: [[0, 2], [4, 5]] },   // the Harbor Bridge, the Strait Bridge
+    pts: [[2250, 2330], [1930, 2318], [1520, 2318], [1540, 1950], [1640, 1700]], bridges: [[1, 2]] },   // beside the Harbor Bridge
   { name: 'Cedar Line', from: 'Metro Junction', to: 'Route 9 Junction', r: 200, urban: true,
-    pts: [[2250, 2330], [2260, 2440], [2440, 2520], [2620, 2600], [2900, 2920], [3020, 2976], [3560, 2990], [3720, 2880], [3960, 2680], [4150, 2480], [4160, 2100], [4100, 1820], [3990, 1600], [3950, 1420]],
-    bridges: [[3, 4], [6, 9]], tunnels: [[10, 11]] },
+    pts: [[2250, 2330], [2310, 2353], [2390, 2384], [2460, 2412], [2780, 2420], [3100, 2440], [3460, 2425], [3770, 2425], [3990, 2350], [4150, 2200], [4160, 2100], [4100, 1820], [3990, 1600], [3950, 1420]],
+    bridges: [[1, 2], [3, 4], [6, 7]], tunnels: [[10, 11]] },   // over Metro City's lagoon, the Cedar Bridge, the East Toll Bridge
 ];
 // The services, each both ways (ruling 4): its route as [segment, direction] (+1 from -> to, -1 back), and its stops.
 export const SERVICES = [
@@ -215,33 +301,34 @@ export const SERVICES = [
     stops: ['Northshore', 'Old Town', 'Metro Central', 'The Yards', 'Cedar Falls', 'Sandpiper Bay', 'Route 9', 'Dry Creek'] },
   { name: 'Harbor Line', note: 'Westport, Metro City, Northshore',
     run: [['Harbor Line', -1], ['Bay Bridge Line', -1], ['Coast West', -1]],
-    stops: ['Westport Junction', 'West Hills', 'Westport Center', 'Metro Central', 'Old Town', 'Northshore'] },
+    stops: ['Westport Junction', 'Lakeview', 'Westport Center', 'Metro Central', 'Old Town', 'Northshore'] },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The subways (ruling 5): underground where the markup is dotted, on bridges and viaducts where it is solid.
 export const SUBWAYS = [
-  { name: 'Subway Line 1', color: 'pink', note: 'Northshore, beside the Bay Bridge, under Metro City, the airport, a sea viaduct, a loop under Cedar Isle',
-    pts: [[2360, 1730], [2520, 1736], [2530, 1900], [2545, 2090], [2400, 2140], [2380, 2300], [2330, 2420], [2180, 2740], [2240, 2850], [2480, 2950], [2860, 3040], [3000, 3030]],
-    tunnels: [[0, 1], [3, 6], [7, 8], [10, 11]], bridges: [[1, 3], [6, 7], [8, 10]] },
+  { name: 'Subway Line 1', color: 'pink', note: 'Northshore, a viaduct beside the Bay Bridge, under Metro City, under the channel to Cedar Isle, a loop under it',
+    pts: [[2360, 1730], [2380, 1835], [2380, 2085], [2330, 2260], [2470, 2370], [2750, 2370], [2950, 2380]],
+    tunnels: [[0, 1], [2, 6]], bridges: [[1, 2]] },
   { name: 'Subway Line 1 (Cedar Isle loop)', color: 'pink', loopOf: 'Subway Line 1',
-    pts: [[3000, 3030], [3000, 2920], [3220, 2920], [3220, 3140], [3000, 3140], [3000, 3030]], tunnels: [[0, 5]] },
-  { name: 'Subway Line 2', color: 'yellow', note: 'a loop under Westport, over the harbour, under Metro City, Southbank',
-    pts: [[1715, 2170], [1900, 2150], [2000, 2165], [2120, 2250], [2200, 2240], [2460, 2236], [2490, 2480], [2640, 2440]],
-    tunnels: [[0, 1], [4, 6]], bridges: [[1, 4], [6, 7]] },
+    pts: [[2950, 2380], [2950, 2275], [3230, 2275], [3230, 2525], [2950, 2525], [2950, 2380]], tunnels: [[0, 5]] },
+  { name: 'Subway Line 2', color: 'yellow', note: 'the airport over its strait, a loop under Westport, under the channel and Metro City, under the canal to Southbank',
+    pts: [[1340, 2560], [1385, 2400], [1510, 2260], [1690, 2190], [1950, 2190], [2130, 2290], [2200, 2470], [2250, 2640], [2380, 2680]],
+    tunnels: [[1, 8]], bridges: [[0, 1]] },
   { name: 'Subway Line 2 (Westport loop)', color: 'yellow', loopOf: 'Subway Line 2',
-    pts: [[1715, 2170], [1830, 2170], [1830, 2400], [1600, 2400], [1600, 2170], [1715, 2170]], tunnels: [[0, 5]] },
+    pts: [[1510, 2260], [1510, 2000], [1250, 2000], [1250, 2260], [1510, 2260]], tunnels: [[0, 4]] },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Ferries (the draft's; ferries.js finds its routes from the piers, so these are where the piers go).
 export const FERRIES = [
-  { name: 'Bay Ferry', pts: [[2190, 2360], [2000, 2420], [1900, 2400], [1950, 2100], [2150, 1950], [2330, 1880], [2700, 1950], [2800, 2300], [3000, 2700], [3060, 2880]] },
+  // the walk-on loop round the gulf's channels: Metro City's harbour, Westport, Northshore's pier, Cedar Isle, Southbank
+  { name: 'Bay Ferry', pts: [[1840, 2440], [1700, 2200], [1790, 1990], [2150, 1910], [2600, 1930], [2620, 2150], [2600, 2480], [2580, 2740], [2240, 2800], [2000, 2700], [1840, 2440]] },
   { name: 'River Water Bus', pts: [[2620, 2000], [2900, 1950], [3360, 1900], [3355, 1700], [3300, 1500], [3310, 1300], [3240, 1110], [3110, 960], [2950, 840], [2800, 720], [2700, 600]] },
-  { name: 'Gull Harbor Car Ferry', pts: [[1450, 2560], [1300, 2800], [1180, 3000], [1060, 3140]] },
-  { name: 'Cay Water Bus', pts: [[3000, 3220], [2400, 3420], [1720, 3480], [1390, 3360]] },
-  { name: 'Lighthouse Water Bus', pts: [[1440, 2480], [1100, 2300], [700, 2000], [300, 1760]] },
-  { name: 'Prison Boat', pts: [[3480, 3150], [3800, 3250], [4150, 3300]] },
+  { name: 'Gull Harbor Car Ferry', pts: [[1150, 2350], [1150, 2700], [1100, 2950], [1060, 3140]] },   // from Port Westport down the West Channel
+  { name: 'Cay Water Bus', pts: [[3000, 2700], [2400, 3420], [1720, 3480], [1390, 3360]] },
+  { name: 'Lighthouse Water Bus', pts: [[1150, 2250], [1140, 2800], [1000, 3080], [700, 3100], [350, 2700], [180, 2200], [300, 1760]] },
+  { name: 'Prison Boat', pts: [[3480, 2700], [3800, 3250], [4150, 3300]] },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -258,34 +345,37 @@ export const STATIONS = [
   { name: 'Gorge', line: 'main', at: [1680, 863] },
   { name: 'Granite Peaks', line: 'main', at: [1240, 487] },
   { name: 'Timber Bend', line: 'main', at: [1177, 1185] },
-  { name: 'Old Town', line: 'main', at: [2501, 2110] },
-  { name: 'Metro Central', line: 'main', at: [2314, 2306] },
-  { name: 'West Hills', line: 'main', at: [1685, 2160] },
-  { name: 'Westport Center', line: 'main', at: [1792, 2329] },
-  { name: 'The Yards', line: 'main', at: [2350, 2480] },
-  { name: 'Cedar Falls', line: 'main', at: [3100, 2978] },
-  { name: 'Sandpiper Bay', line: 'main', at: [4151, 2420] },
-  { name: 'Northshore', line: 'Subway Line 1', at: [2400, 1732] },
-  { name: 'Northgate', line: 'Subway Line 1', at: [2524, 2069] },
-  { name: 'Downtown', line: 'Subway Line 1', at: [2393, 2200] },
-  { name: 'Southside', line: 'Subway Line 1', at: [2339, 2399] },
-  { name: 'Airport', line: 'Subway Line 1', at: [2200, 2770] },
-  { name: 'Cedar Falls', line: 'Subway Line 1', at: [3110, 2920] },
-  { name: 'Falls Center', line: 'Subway Line 1', at: [3220, 3030] },
-  { name: 'Lake District', line: 'Subway Line 1', at: [3110, 3140] },
-  { name: 'Westport Center', line: 'Subway Line 2', at: [1715, 2170] },
-  { name: 'Lakeview', line: 'Subway Line 2', at: [1830, 2285] },
-  { name: 'Old Quarter', line: 'Subway Line 2', at: [1600, 2285] },
-  { name: 'Stadium District', line: 'Subway Line 2', at: [1880, 2152] },
-  { name: 'Civic Center', line: 'Subway Line 2', at: [2300, 2238] },
-  { name: 'Midtown', line: 'Subway Line 2', at: [2471, 2329] },
-  { name: 'Southbank', line: 'Subway Line 2', at: [2610, 2447] },
+  { name: 'Old Town', line: 'main', at: [2386, 2146] },
+  { name: 'Metro Central', line: 'main', at: [2250, 2330] },
+  { name: 'Lakeview', line: 'main', at: [1560, 1900] },
+  { name: 'Westport Center', line: 'main', at: [1534, 2060] },
+  { name: 'The Yards', line: 'main', at: [2376, 2379] },
+  { name: 'Cedar Falls', line: 'main', at: [3100, 2440] },
+  { name: 'Sandpiper Bay', line: 'main', at: [4070, 2275] },
+  { name: 'Northshore', line: 'Subway Line 1', at: [2360, 1730] },
+  { name: 'Northgate', line: 'Subway Line 1', at: [2370, 2120] },
+  { name: 'Downtown', line: 'Subway Line 1', at: [2345, 2208] },
+  { name: 'Arts District', line: 'Subway Line 1', at: [2600, 2370] },
+  { name: 'Cedar Falls', line: 'Subway Line 1', at: [2950, 2380] },
+  { name: 'Falls Center', line: 'Subway Line 1', at: [3090, 2275] },
+  { name: 'Lake District', line: 'Subway Line 1', at: [3230, 2400] },
+  { name: 'Cedar Hills', line: 'Subway Line 1', at: [3090, 2525] },
+  { name: 'Airport', line: 'Subway Line 2', at: [1340, 2560] },
+  { name: 'Old Quarter', line: 'Subway Line 2', at: [1447, 2330] },
+  { name: 'Westport Center', line: 'Subway Line 2', at: [1510, 2260] },
+  { name: 'Lakeview', line: 'Subway Line 2', at: [1380, 2000] },
+  { name: 'Stadium District', line: 'Subway Line 2', at: [1690, 2190] },
+  { name: 'Civic Center', line: 'Subway Line 2', at: [1950, 2190] },
+  { name: 'Midtown', line: 'Subway Line 2', at: [2165, 2380] },
+  { name: 'Southbank', line: 'Subway Line 2', at: [2225, 2555] },
+  { name: 'Southside', line: 'Subway Line 2', at: [2315, 2660] },
 ];
 
 // Towns (points; today's places where they went, and the new ones) and landmarks.
 export const TOWNS = [
-  { name: 'Metro City', at: [2400, 2250], today: true }, { name: 'Westport', at: [1700, 2300], today: true },
-  { name: 'Northshore', at: [2400, 1760], today: true }, { name: 'Cedar Falls', at: [3150, 3000], today: true },
+  { name: 'Metro City', at: [2150, 2300], today: true }, { name: 'Westport', at: [1420, 2200], today: true },
+  { name: 'Northshore', at: [2300, 1720], today: true }, { name: 'Cedar Falls', at: [3150, 2450], today: true },
+  { name: 'Southbank', at: [2300, 2620], today: true },
   { name: 'Dry Creek', at: [3700, 1620], today: true }, { name: 'Gull Harbor', at: [1040, 3200], today: true },
   { name: 'Timber Bend', at: [1170, 1060] }, { name: 'Willow Crossing', at: [3360, 1290] },
   { name: 'Lucky Mesa', at: [4600, 420] }, { name: 'Copper Gulch', at: [4560, 1230] },
@@ -293,13 +383,13 @@ export const TOWNS = [
   { name: 'Route 9', at: [3800, 1520] }, { name: 'Egret Point', at: [850, 2700] },
 ];
 export const LANDMARKS = [
-  { name: 'North Cape Light', kind: 'light', at: [300, 900] }, { name: 'Egret Point Light', kind: 'light', at: [850, 3000] },
+  { name: 'North Cape Light', kind: 'light', at: [300, 900] }, { name: 'Egret Point Light', kind: 'light', at: [905, 3010] },
   { name: 'Sandpiper Point Light', kind: 'light', at: [4440, 2730] }, { name: 'Silver Thread Falls', kind: 'falls', at: [1110, 690] },
   { name: 'Lookout Hill', kind: 'lookout', at: [2560, 445] }, { name: 'Granite Lookout', kind: 'lookout', at: [820, 440] },
   { name: 'Copper Gulch Mine', kind: 'mine', at: [4690, 1180] }, { name: 'Red Rock Dam', kind: 'dam', at: [4130, 610] },
   { name: 'Granite Peaks', kind: 'peak', at: [760, 140] }, { name: 'Redwood campgrounds', kind: 'camp', at: [900, 1500] },
   { name: 'Lakeside campground', kind: 'camp', at: [2050, 520] }, { name: 'Mesa camp', kind: 'camp', at: [4800, 1700] },
-  { name: 'Toll plaza and marina', kind: 'place', at: [4000, 2580] }, { name: 'Westport International', kind: 'airport', at: [2175, 2880] },
+  { name: 'Toll plaza and marina (Toll Point)', kind: 'place', at: [3820, 2470] }, { name: 'Westport International', kind: 'airport', at: [1350, 2580] },
   { name: 'Prison', kind: 'prison', at: [4330, 3300] },
 ];
 
@@ -410,6 +500,13 @@ export function skeletonLines() {
   for (const l of SUBWAYS) add('sub', l);
   for (const l of FERRIES) add('ferry', l);
   return out;
+}
+
+// In the canal (its path, its width): water a line must bridge or tunnel.
+let canalPath = null;
+export function inCanal(x, y) {
+  canalPath ||= linePath(CANAL, 60);
+  return nearestOnPath(canalPath, x, y).d < CANAL.width / 2;
 }
 
 // Point in polygon (even-odd).
@@ -549,12 +646,12 @@ export function skeletonData() {
   const cx = skeletonCrossings(lines);
   const round = (pts) => pts.map(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10]);
   return {
-    frame: [5040, 4032], radius: RADIUS, mainTracks: MAIN_LINE_TRACKS, mainland: MAINLAND, biomes: BIOMES, islands: ISLANDS, port: PORT_WESTPORT,
+    frame: [5040, 4032], radius: RADIUS, mainTracks: MAIN_LINE_TRACKS, mainland: MAINLAND, biomes: BIOMES, islands: ISLANDS, port: PORT_WESTPORT, pieces: PIECES, canal: CANAL,
     river: RIVER, streams: STREAMS, lakes: LAKES, interchanges: INTERCHANGES, closures: CLOSURES,
     junctions: MAIN_JUNCTIONS, services: SERVICES, stations: STATIONS, towns: TOWNS, landmarks: LANDMARKS,
     lines: lines.map((L) => ({ kind: L.kind, name: L.name, ctrl: L.line.pts, path: round(L.path.pts), length: Math.round(L.path.length),
       tunnels: L.tunnels.map(([a, b]) => [Math.round(a), Math.round(b)]), bridges: L.bridges.map(([a, b]) => [Math.round(a), Math.round(b)]),
-      minRadius: Math.round(minRadius(L.path).r), mayBeTunnel: !!L.line.mayBeTunnel, color: L.line.color || null })),
+      minRadius: Math.round(minRadius(L.path).r), mayBeTunnel: !!L.line.mayBeTunnel, color: L.line.color || null, foot: !!L.line.foot, lift: !!L.line.lift })),
     crossings: cx.crossings, tunnelled: cx.tunnelled, junctionNodes: cx.junctions, summary: skeletonSummary(lines, cx),
   };
 }
