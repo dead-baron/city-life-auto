@@ -5856,7 +5856,7 @@ and I think thats a great idea." Bowling first; the cinema is still to come.
     the sweep, the new rack set; "STRIKE!" over the deck;
   - with a ball in your hands, on your turn: the line the ball would take from where you stand and the way you face
     (with the hook), and the power meter while you hold;
-  - your lane's score card at the top of the screen: each bowler's ten frames, the marks and the running score, the
+  - your lane's score card at the bottom of the screen, over the tracker: each bowler's ten frames, the marks and the running score, the
     frame you're on, the total.
   - The bowling ball is a ball entity (type 4): a glossy blue ball with its finger holes in art v2, a small blue ball in
     the classic renderer.

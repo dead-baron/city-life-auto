@@ -1,7 +1,7 @@
 // Pinwheel Lanes as this page sees it (loaded lazily near the alley: main.js drawBowling). The pins on each lane - up,
 // knocked flying when a 'bowl' event says so, swept and set again on 'bowlset' - drawn while you're inside (the roof
 // is over them otherwise); with a ball in your hands, the line it would take from where you stand and the power meter;
-// your lane's score card at the top of the screen. The server decides everything (server/systems/bowling.js).
+// your lane's score card at the bottom of the screen. The server decides everything (server/systems/bowling.js).
 import { BOWL, ALL_PINS, PINS, rollBall, scoreCard, totalScore, lanePt } from '../shared/bowling.js';
 import { swingMeter } from '../shared/golf.js';
 
@@ -80,12 +80,12 @@ export class BowlingView {
     }
     g.restore();
   }
-  // your lane's score card: each bowler's ten frames, the marks and the running score, whose turn it is
+  // your lane's score card (at the bottom, over the HUD's tracker): each bowler's ten frames, the marks and the running score, whose turn it is
   drawCard(g, ctx, me, A) {
     const rows = me.card || [];
     if (!rows.length) return;
     const DPR = ctx.DPR, W = ctx.W, fw = Math.min(30, Math.floor((Math.min(W - 24, 470) - 96) / 10.5)), nameW = 64;
-    const cw = nameW + fw * 10.5 + 34, x0 = Math.round((W - cw) / 2), y0 = 54, rh = 28;
+    const cw = nameW + fw * 10.5 + 34, x0 = Math.round((W - cw) / 2), rh = 28, y0 = Math.round(ctx.H - 84 - rows.length * rh);   // (at the bottom, over the tracker: the top is the HUD's and the pins')
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
     g.save();
     g.fillStyle = 'rgba(14,16,30,.86)'; g.fillRect(x0 - 6, y0 - 18, cw + 12, rows.length * rh + 26);
