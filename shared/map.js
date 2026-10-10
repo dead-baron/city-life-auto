@@ -504,7 +504,7 @@ export function setIslandBuilds(f) { islandBuilds = f; }
 export function generateCity(seed = 1337, opts = null) {
   if (opts && opts.island && !islandBuilds) throw new Error('island builds: import shared/world3-islands.js first');
   const frame = opts && opts.frame;   // ({ w, h }: World v3's server)
-  if (frame) { const { frame: _f, ...rest } = opts; opts = Object.keys(rest).length ? rest : null; }
+  if (opts && 'frame' in opts) { const { frame: _f, ...rest } = opts; opts = Object.keys(rest).length ? rest : null; }
   return withDeterministicMath(() => buildCity(seed, opts && opts.island ? islandBuilds(opts.island, opts) : opts, frame));
 }
 // The world as plain data (what a worker sends or the browser's cache keeps: a structured clone keeps no methods
