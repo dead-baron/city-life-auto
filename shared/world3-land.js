@@ -65,9 +65,46 @@ export const ISLET_SOURCES = {
   islet1: [510, 605, 575, 670], islet2: [40, 842, 95, 908], islet3: [722, 313, 776, 367],
   islet4: [40, 379, 90, 427], islet5: [803, 278, 845, 322], islet6: [1230, 1078, 1276, 1126],
 };
-// How the lines are sampled into paths: the canal as the skeleton's inCanal() does, the river and the streams with
-// gentle bends.
-const RIVER_R = 150, STREAM_R = 80, CANAL_R = 60;
+// The shapes are smoothed as the skeleton's picture draws them (tools/world-v3-skeleton.py `smooth`: Chaikin's corner
+// cutting, this many rounds), so the land agrees with docs/world-v3-layout-v2.png; the canal is the skeleton's own
+// (inCanal: its path at radius 60).
+export const SMOOTH = { mainland: 4, biome: 3, lake: 3, gulf: 1, isle: 2, river: 3 };
+const CANAL_R = 60;
+
+// Chaikin's corner cutting (the picture's `smooth`): each round puts two points at 1/4 and 3/4 of every edge; an open
+// line keeps its ends.
+export function chaikin(pts, closed, it) {
+  for (let r = 0; r < it; r++) {
+    const out = [], n = pts.length;
+    for (let i = 0; i < (closed ? n : n - 1); i++) {
+      const a = pts[i], b = pts[(i + 1) % n];
+      out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+    }
+    pts = closed ? out : [pts[0], ...out, pts[n - 1]];
+  }
+  return pts;
+}
+// A polygon smoothed, but its stretches along the frame's edges kept straight (the world's edge is not a coast): the
+// chains between its vertices on the edge are smoothed as open lines.
+export function smoothPoly(poly, it, W = FRAME_W, H = FRAME_H) {
+  const onEdge = (p) => p[0] <= 0 || p[1] <= 0 || p[0] >= W - 1 || p[1] >= H - 1;
+  const n = poly.length, k0 = poly.findIndex(onEdge);
+  if (k0 < 0) return chaikin(poly, true, it);
+  const out = [];
+  let chain = [poly[k0]];
+  for (let s = 1; s <= n; s++) {
+    const p = poly[(k0 + s) % n];
+    chain.push(p);
+    if (onEdge(p)) { const c = chain.length > 2 ? chaikin(chain, false, it) : chain; out.push(...c.slice(0, -1)); chain = [p]; }
+  }
+  return out;
+}
+// A line smoothed as the picture draws it, as a path ({ pts, s, length }, like linePath's) for pointAt / nearestOnPath.
+export function smoothPath(line, it = SMOOTH.river) {
+  const pts = chaikin(line.pts, false, it), s = [0];
+  for (let j = 1; j < pts.length; j++) { const dx = pts[j][0] - pts[j - 1][0], dy = pts[j][1] - pts[j - 1][1]; s.push(s[j - 1] + Math.sqrt(dx * dx + dy * dy)); }
+  return { pts, s, length: s[s.length - 1] };
+}
 
 // A polygon vertex on the frame's last tile is on its edge (the mainland's east side is drawn at x = 5039).
 const snap = (v, n) => (v >= n - 1 ? n : v);
@@ -161,8 +198,9 @@ export function buildLand3(today) {
 
   // 1. The mainland and its biomes (painted in order, a later one winning), each biome's district, zone and ground.
   const main = new Uint8Array(N);
-  scanPoly(MAINLAND, W, H, (y, a, b) => main.fill(1, y * W + a, y * W + b));
-  BIOMES.forEach((B, k) => scanPoly(B.poly, W, H, (y, a, b) => { for (let i = y * W + a, e = y * W + b; i < e; i++) if (main[i]) biome[i] = k + 1; }));
+  const mainland = smoothPoly(MAINLAND, SMOOTH.mainland);
+  scanPoly(mainland, W, H, (y, a, b) => main.fill(1, y * W + a, y * W + b));
+  BIOMES.forEach((B, k) => scanPoly(B.poly === MAINLAND ? mainland : smoothPoly(B.poly, SMOOTH.biome), W, H, (y, a, b) => { for (let i = y * W + a, e = y * W + b; i < e; i++) if (main[i]) biome[i] = k + 1; }));
   const byBiome = BIOMES.map((B) => BIOME3[B.key]);
   for (let i = 0; i < N; i++) {
     if (!main[i]) continue;
@@ -198,12 +236,12 @@ export function buildLand3(today) {
     if (!I.poly) continue;
     if (!I.picture) {
       const own = I.key === 'prison' ? { d: 55, z: 18, c: TERRAIN3.GRASS } : { d: 56, z: 17, c: TERRAIN3.ROCK };
-      scanPoly(I.poly, W, H, (y, a, b) => { for (let i = y * W + a, e = y * W + b; i < e; i++) { land[i] = 1; biome[i] = 0; dist[i] = own.d; zone[i] = own.z; terrain[i] = own.c; } });
+      scanPoly(smoothPoly(I.poly, SMOOTH.isle), W, H, (y, a, b) => { for (let i = y * W + a, e = y * W + b; i < e; i++) { land[i] = 1; biome[i] = 0; dist[i] = own.d; zone[i] = own.z; terrain[i] = own.c; } });
       continue;
     }
     const pic = I.picture, queue = [];
     let bx0 = W, by0 = H, bx1 = 0, by1 = 0;
-    scanPoly(I.poly, W, H, (y, a, b) => {
+    scanPoly(smoothPoly(I.poly, SMOOTH.gulf), W, H, (y, a, b) => {
       if (a < bx0) bx0 = a; if (b > bx1) bx1 = b; if (y < by0) by0 = y; if (y + 1 > by1) by1 = y + 1;
       for (let x = a; x < b; x++) {
         const i = y * W + x, si = picture(pic, x, y);
@@ -264,9 +302,9 @@ export function buildLand3(today) {
   // 5. The inland water, cut out of the land (the district and zone under it stay): the lakes, the Long Reach, the
   // streams, the canal through Metro City + Southbank.
   const cut = (kind) => (i) => { if (land[i]) { land[i] = 0; water[i] = kind; terrain[i] = TERRAIN3.WATER; } };
-  for (const L of LAKES) { const f = cut(WATER3.LAKE); scanPoly(L.poly, W, H, (y, a, b) => { for (let i = y * W + a, e = y * W + b; i < e; i++) f(i); }); }
-  stampPath(linePath(RIVER, RIVER_R).pts, RIVER.width / 2, W, H, cut(WATER3.RIVER));
-  for (const S of STREAMS) stampPath(linePath(S, STREAM_R).pts, S.width / 2, W, H, cut(WATER3.STREAM));
+  for (const L of LAKES) { const f = cut(WATER3.LAKE); scanPoly(smoothPoly(L.poly, SMOOTH.lake), W, H, (y, a, b) => { for (let i = y * W + a, e = y * W + b; i < e; i++) f(i); }); }
+  stampPath(smoothPath(RIVER).pts, RIVER.width / 2, W, H, cut(WATER3.RIVER));
+  for (const S of STREAMS) stampPath(smoothPath(S).pts, S.width / 2, W, H, cut(WATER3.STREAM));
   stampPath(linePath(CANAL, CANAL_R).pts, CANAL.width / 2, W, H, cut(WATER3.CANAL));
 
   // 6. The sea: everything else, shallow near land and deep beyond (today's rule), in today's sea district.

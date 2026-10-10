@@ -6487,7 +6487,7 @@ imports it.
 - **`shared/world3-land.js`** `buildLand3(today)` -> `{ w, h, layers: { land, water, biome, terrain, dist, zone } }`
   from a built city of today's world:
   - **land and water:** the mainland, the islands and Port Westport filled by scanline (not a point-in-polygon test per
-    tile); the lakes, the Long Reach (70 m), the streams and the canal (55 m) cut out as their kinds of water; the sea
+    tile), their shapes smoothed as the skeleton's picture draws them (so the two agree); the lakes, the Long Reach (70 m), the streams and the canal (55 m) cut out as their kinds of water; the sea
     shallow within 3 m of land and deep beyond (today's rule);
   - **biome and terrain:** `BIOMES` painted in order, each with its ground (forest, rock, farm, desert, scrub, marsh,
     grass) and beaches along the sea as wide as the biome has them (Sandpiper 40 m, Northshore 30, Egret 24 - its
@@ -6496,9 +6496,9 @@ imports it.
     only the picture's ids, only on the place's land; on an island the gaps - Metro City's new east shore - flooded
     from the nearest), today's small islands and islets copied whole, Port Westport (26), and ten new districts (47-56:
     a district per biome, Prison Island, the Egret Rocks) in eight new zones (11-18), shaped as `DISTRICTS` entries.
-  - Deterministic (integer tiles, + - * / and floor/ceil only); 0.93 s, 122 MB of layers.
+  - Deterministic (integer tiles, + - * / and floor/ceil only); about a second, 122 MB of layers.
 - **`tools/world3-land.mjs`** draws it to `docs/world-v3-land.png` (1 px = 2 m, the skeleton's lines over it) and prints
-  the numbers (WORLD-V3.md 8.2): 11.48 km² of land in the 20.32 km² frame; Metro City + Southbank 0.28 km², Cedar Isle
+  the numbers (WORLD-V3.md 8.2): 11.47 km² of land in the 20.32 km² frame; Metro City + Southbank 0.28 km², Cedar Isle
   0.24, Westport 0.18 - part 7's sizes.
 - **The skeleton, fixed** (`shared/world3-skeleton.js`; its picture redrawn): four arterials crossed the Long Reach with
   no bridge (Shore Road, Valley Road North, Valley Road, Lake Road - now bridged, and the Lake / Willow / Kestrel Road

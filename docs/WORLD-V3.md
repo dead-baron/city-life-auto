@@ -1395,7 +1395,11 @@ sizes"): the skeleton's polygons and lines turned into the per-tile layers a bui
 built city of today's world (`generateCity(1337)`). Nothing live imports it. The picture: `node tools/world3-land.mjs`
 draws `docs/world-v3-land.png` (1 px = 2 m, 2520 x 2016: the water's shades, the biomes' ground, today's places in their
 district colours with darker borders, the skeleton's lines over it) and prints the numbers below. It agrees with
-`docs/world-v3-layout-v2.png`.
+`docs/world-v3-layout-v2.png`: the shapes are smoothed as that picture draws them (Chaikin's corner cutting, its
+`smooth`: the mainland 4 rounds, the biomes and lakes 3, Prison Island and the Egret Rocks 2, the gulf's islands 1,
+the river and the streams 3; stretches along the frame's edges kept straight), and the canal is the skeleton's own
+path (`inCanal`, radius 60). Polygons are filled by scanline (the tiles whose centres are inside), lines stamped as
+capsules of their width.
 
 **The layers** (one byte per tile each, row-major, 20.3 M tiles):
 
@@ -1413,27 +1417,27 @@ district colours with darker borders, the skeleton's lines over it) and prints t
 
 | id | District | style | tier | zone | ground | km² |
 |---|---|---|---|---|---|---|
-| 47 | Highland Woods | wild | wild | 11 | forest | 3.10 |
+| 47 | Highland Woods | wild | wild | 11 | forest | 3.15 |
 | 48 | Granite Peaks | wild | wild | 12 | rock | 1.40 |
-| 49 | Willow Valley | rural | rural | 13 | farm | 2.12 |
+| 49 | Willow Valley | rural | rural | 13 | farm | 2.10 |
 | 50 | Red Rock Desert | desert | wild | 14 | desert | 2.72 |
-| 51 | North Ridge | rocky | wild | 15 | scrub | 0.20 |
-| 52 | Sandpiper Coast | beach | mid | 16 | grass, beaches | 0.53 |
-| 53 | Egret Coast | wild | wild | 17 | marsh, dunes | 0.34 |
-| 54 | Northshore Beaches | beach | mid | 8 | grass, beaches | 0.34 |
-| 55 | Prison Island | rocky | rough | 18 | grass | 0.11 |
+| 51 | North Ridge | rocky | wild | 15 | scrub | 0.19 |
+| 52 | Sandpiper Coast | beach | mid | 16 | grass, beaches | 0.52 |
+| 53 | Egret Coast | wild | wild | 17 | marsh, dunes | 0.33 |
+| 54 | Northshore Beaches | beach | mid | 8 | grass, beaches | 0.33 |
+| 55 | Prison Island | rocky | rough | 18 | grass | 0.10 |
 | 56 | Egret Rocks | rocky | wild | 17 | rock | 0.03 |
 
 **The numbers** (this machine, node 22, two shared cores):
-- `buildLand3` takes **0.93 s** (scanline fills, two chamfer passes, the islands' floods); the layers are 122 MB
-  (6 x 20.3 MB), the process grows by about 130 MB. Today's world, built first, takes 4.4-4.7 s.
-- The frame is 20.32 km²: **11.48 km² land**; deep sea 8.49, shallows 0.06, lakes 0.14, the Long Reach 0.10, the canal
+- `buildLand3` takes **0.93-0.97 s** (scanline fills, two chamfer passes, the islands' floods); the layers are 122 MB
+  (6 x 20.3 MB), the process grows by 115-130 MB. Today's world, built first, takes 4.2-4.7 s.
+- The frame is 20.32 km²: **11.47 km² land**; deep sea 8.50, shallows 0.06, lakes 0.13, the Long Reach 0.10, the canal
   0.02, streams 0.04.
-- Biomes (land): Highland Woods 3.31 km² (Westport's districts on it), Red Rock Desert 2.72, Willow Valley 2.12, Granite
-  Peaks 1.40, Sandpiper Coast 0.53, Northshore 0.41, Egret Coast 0.34, North Ridge 0.20.
-- Ground: forest 3.01, desert 2.74, farm 1.91, grass 1.70, rock 1.44, marsh 0.30, scrub 0.19, sand 0.18 km².
+- Biomes (land): Highland Woods 3.37 km² (Westport's districts on it), Red Rock Desert 2.72, Willow Valley 2.10, Granite
+  Peaks 1.40, Sandpiper Coast 0.52, Northshore 0.40, Egret Coast 0.33, North Ridge 0.19.
+- Ground: forest 3.06, desert 2.73, farm 1.89, grass 1.68, rock 1.43, marsh 0.30, scrub 0.19, sand 0.18 km².
 - Today's places at their gulf size: Metro City + Southbank 0.28 km² (15 districts), Cedar Isle 0.24, Westport 0.18
-  and Port Westport 0.03, the airport 0.02, Northshore 0.07 in today's three districts plus 0.34 of beach towns.
+  and Port Westport 0.03, the airport 0.02, Northshore 0.07 in today's three districts plus 0.33 of beach towns.
 
 **Checks** (`test/world3land.test.js`, about 8 s: today's world is built once, the land twice):
 - built twice it is the same (a hash of every layer); the new districts and zones are numbered after today's;
@@ -1441,13 +1445,14 @@ district colours with darker borders, the skeleton's lines over it) and prints t
   reaches the mainland, Cedar Isle, Pelican Key or Westport, the two hold over 99% of the island's land), and it is
   canal all along its line inside the island;
 - each gulf island's land is its polygon (the tiles within 2% of its area; all land but the canal) and today's land at
-  the picture's scale squared (Metro City 1.10x for its new east shore, the others 0.99-1.02x); its districts are only
+  the picture's scale squared (Metro City 1.09x for its new east shore, the others 0.99-1.01x); its districts are only
   its picture's, each within 6 points of its share of today's (the largest: Metro City's Bayside Heights, +4.8, which
   runs on to the new east shore; Cedar Isle's within 0.2);
 - the lakes, the Long Reach and the streams are water along their lines, the Long Reach about 70 m across; the sea is
   deep out in the gulf and at sea, shallow at the port's quay;
-- every station, town and landmark is on land, in its biome (the skeleton's polygons) or its place's districts; on
-  water on purpose: Silver Thread Falls (on its creek);
+- every station, town and landmark is on land, in its biome (the skeleton's polygons, smoothed) or its place's
+  districts; on water on purpose: Silver Thread Falls (on its creek); a stream may run through a town and under its
+  station (Silver Thread Creek through Timber Bend, as the skeleton's picture draws it: a culvert);
 - every highway and arterial is on land but along its bridges (the Harbor Tunnel goes under the channel; streams get
   culverts);
 - the frame's edges: land along the north (but Kestrel Creek's mouth), the mainland's west and east sides as drawn, the

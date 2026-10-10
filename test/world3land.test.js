@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { generateCity } from '../shared/map.js';
-import { buildLand3, scanPoly, WATER3, BIOME3, DISTRICTS3, ZONES3 } from '../shared/world3-land.js';
+import { buildLand3, scanPoly, smoothPoly, smoothPath, SMOOTH, WATER3, BIOME3, DISTRICTS3, ZONES3 } from '../shared/world3-land.js';
 import {
   MAINLAND, BIOMES, ISLANDS, PIECES, CANAL, RIVER, LAKES, STREAMS, STATIONS, TOWNS, LANDMARKS, PORT_WESTPORT,
   linePath, pointAt, skeletonLines, inPoly,
@@ -53,7 +53,7 @@ test('the canal splits Metro City + Southbank into two landmasses, joined to not
     assert.equal(A.seen[idx(x, y)] || B.seen[idx(x, y)], 0, `${what} is not joined to the island`);
   }
   // all but specks of the island's land is one of the two
-  const tiles = polyTiles(metro.poly).filter((i) => land[i]);
+  const tiles = polyTiles(smoothPoly(metro.poly, SMOOTH.gulf)).filter((i) => land[i]);
   const inTwo = tiles.filter((i) => A.seen[i] || B.seen[i]).length;
   assert.ok(inTwo / tiles.length > 0.99, `${inTwo} of ${tiles.length} land tiles in the two halves`);
   // the canal is water along its line inside the island, 55 m wide
@@ -70,8 +70,9 @@ test('the canal splits Metro City + Southbank into two landmasses, joined to not
 test('each gulf island: its land is its polygon, its districts the picture\'s in about today\'s proportions', () => {
   const W0 = today.w, H0 = today.h;
   for (const I of ISLANDS.filter((I) => I.picture)) {
-    const tiles = polyTiles(I.poly), area = shoelace(I.poly);
-    assert.ok(Math.abs(tiles.length - area) / area < 0.02, `${I.key}: ${tiles.length} tiles vs the polygon's ${area}`);
+    const shape = smoothPoly(I.poly, SMOOTH.gulf), tiles = polyTiles(shape), area = shoelace(shape), raw = shoelace(I.poly);
+    assert.ok(Math.abs(tiles.length - area) / area < 0.01, `${I.key}: ${tiles.length} tiles vs the (smoothed) polygon's ${area}`);
+    assert.ok(Math.abs(tiles.length - raw) / raw < 0.03, `${I.key}: ${tiles.length} tiles vs the skeleton's polygon's ${raw}`);
     const landT = tiles.filter((i) => land[i]);
     const inland = tiles.filter((i) => !land[i] && water[i] !== WATER3.CANAL);
     assert.equal(inland.length, 0, `${I.key}: all its polygon is land (or the canal)`);
@@ -98,11 +99,11 @@ test('each gulf island: its land is its polygon, its districts the picture\'s in
 
 test('the lakes, the Long Reach, the streams and the canal are water; the sea is deep away from the shore', () => {
   for (const lk of LAKES) {
-    const t = polyTiles(lk.poly);
+    const t = polyTiles(smoothPoly(lk.poly, SMOOTH.lake));
     assert.ok(t.length > 1000 && t.every((i) => water[i] === WATER3.LAKE), lk.name);
   }
-  for (const [line, kind, r] of [[RIVER, WATER3.RIVER, 150], ...STREAMS.map((s) => [s, WATER3.STREAM, 80])]) {
-    const p = linePath(line, r);
+  for (const [line, kind] of [[RIVER, WATER3.RIVER], ...STREAMS.map((s) => [s, WATER3.STREAM])]) {
+    const p = smoothPath(line);
     for (let s = 0; s <= p.length; s += 8) {
       const [x, y] = pointAt(p, s), w = water[idx(Math.min(W - 1, x), Math.min(H - 1, y))];
       assert.ok(w !== WATER3.LAND, `${line.name} at ${Math.round(x)},${Math.round(y)} is water`);
@@ -127,16 +128,19 @@ test('every station, town and landmark is on land, in its biome or its place\'s 
     for (const p of list) {
       const [x, y] = p.at, i = idx(x, y), name = `${what} ${p.name} (${p.line || p.kind || ''}) at ${x},${y}`;
       if (ON_WATER.has(p.name)) continue;
-      if (!land[i]) { bad.push(`${name}: on water (kind ${water[i]})`); continue; }
+      // (a stream may run through a town and under its station: Silver Thread Creek through Timber Bend, as the
+      // skeleton's picture draws it - a culvert, as under the roads)
+      if (!land[i] && water[i] !== WATER3.STREAM) { bad.push(`${name}: on water (kind ${water[i]})`); continue; }
       const isl = ISLANDS.find((I) => I.poly && inPoly(I.poly, x, y));
       const placed = ISLANDS.find((I) => I.placement && (() => { const [a, b, c, d] = placedRect(PLACEMENTS[I.placement]); return x >= a && y >= b && x < c && y < d; })());
       if (isl?.picture) { if (!isl.picture.ids.includes(dist[i])) bad.push(`${name}: district ${dist[i]}, not ${isl.name}'s`); continue; }
       if (isl) { if (dist[i] !== (isl.key === 'prison' ? 55 : 56)) bad.push(`${name}: district ${dist[i]} on ${isl.name}`); continue; }
       if (placed) continue;   // (today's island, copied whole: on land is all)
       if (x >= PORT_WESTPORT.rect[0] && y >= PORT_WESTPORT.rect[1] && x < PORT_WESTPORT.rect[2] && y < PORT_WESTPORT.rect[3]) continue;
-      if (!inPoly(MAINLAND, x, y)) { bad.push(`${name}: off the skeleton's land`); continue; }
+      // the biome the skeleton's polygons give, smoothed as its picture draws them (and the land does)
+      if (!inPoly(smoothPoly(MAINLAND, SMOOTH.mainland), x, y)) { bad.push(`${name}: off the skeleton's land`); continue; }
       let k = -1;
-      BIOMES.forEach((B, j) => { if (inPoly(B.poly, x, y)) k = j; });
+      BIOMES.forEach((B, j) => { if (inPoly(B.poly === MAINLAND ? smoothPoly(MAINLAND, SMOOTH.mainland) : smoothPoly(B.poly, SMOOTH.biome), x + 0.5, y + 0.5)) k = j; });   // (the tile's centre, as the fill)
       if (biome[i] !== k + 1) { bad.push(`${name}: biome ${biome[i]}, the skeleton's ${BIOMES[k]?.key}`); continue; }
       const P = piece(x, y);
       if (dist[i] < 47 && !(P && P.picture.ids.includes(dist[i]))) bad.push(`${name}: district ${dist[i]}`);
