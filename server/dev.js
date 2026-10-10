@@ -28,6 +28,7 @@ import * as happenings from './systems/happenings.js';
 import * as wildlife from './systems/wildlife.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
+import * as looks from './systems/looks.js';
 import { SPECIES } from '../shared/fauna.js';
 import { undergroundOf } from '../shared/underground.js';
 import * as underground from './systems/underground.js';
@@ -42,7 +43,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'home'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'home', 'wardrobe'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -288,6 +289,7 @@ export function command(world, p, c, msg) {
     case 'clockhold': world.clockHold = !world.clockHold; world.notify(p, world.clockHold ? '[dev] Clock frozen at this time of day.' : '[dev] Clock running again.', 'info'); break;
     case 'near': { const err = near(world, p, msg.k); if (err) world.notify(p, err, 'warn'); break; }
     case 'home': { const err = devHome(world, p, msg); if (err) world.notify(p, err, 'warn'); break; }   // the debug homes: nearest, next, previous, any
+    case 'wardrobe': if (p.conn) p.conn.sendJSON(looks.devWardrobe(world, p, msg)); else looks.devWardrobe(world, p, msg); break;   // the debug wardrobe: wear (or, n: save) a look, its pieces yours
     case 'ug': {   // straight down: the nearest manhole into the sewers, or (k: 'cave') in through the mine's adit
       if (!ped || ped.dead || ped.vehId) break;
       const L = undergroundOf(world.map);

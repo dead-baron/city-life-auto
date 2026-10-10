@@ -5425,3 +5425,44 @@ The owner made the title music themselves (a YuE2 instrumental workflow in Comfy
   In the game page (headless), the track loads as Opus and plays on the title screen.
 - **What the owner sends from now on:** the FLAC master is all that's needed. The Opus, MP3 and ABC exports aren't: the game's files are cut and encoded from the master, and the ABC is the generator's planning sketch, not a transcription.
 - **Parked:** the engine rebuild of the owner's earlier track (branch `title-track`).
+
+## 2026-10-10 · Bus lines are full loops: no dead ends, no U-turns; every mainland ferry terminal has a stop
+The owner: "Looks like southside bus route is getting jammed up because it turns into a deadend street and the buses get stuck there. Lets rethink the route so that the buses go in a full loop." And: "Lets make sure buses are hitting the ferry terminals on the mainlands too so players can take a bus and get off at a ferry terminal if they want."
+- **What the Southside Line did.** Its two Dock Avenue shelters face each other across the avenue (one on each kerb). A one-way loop calling at both had to run down Dock Avenue and back again, and the old planner also ran it up and down Northbridge Avenue: out and back along the same streets, which looks just like a bus turning into a dead end. Nothing stopped a line from using a dead-end street or a U-turn either.
+- **The rules now** (`server/systems/transit.js`):
+  - A bus uses only through streets (`busRoad`): never a road that leads only to a road's end (`roadends.js` `deadWays`: the dead ends and the roads that lead only to them), never a cul-de-sac. Its routes take no U-turns, so a bus never has to turn round anywhere.
+  - A line's stops are tried in its tour's order, the reverse, and (up to 5 stops) every order. The loop kept runs along the fewest streets twice, then is the shortest. A leg pays extra to run along a street the line already uses.
+  - Two shelters facing each other across a street, a block or less apart: the line may call at just one of them if that makes its loop a loop. Standing at the other, the stop's note says "the bus stops across the street" (`L.across`).
+  - The Southside Line is now one loop that runs along no street twice. Its stops are the Coral Cay ferry, Southside 1 and Southside 2. The Westport and Cedar Isle lines use no street twice either; the Metro Loop still runs along three blocks of Bay Avenue twice, but never down a dead end.
+- **The ferry terminals.** Each mainland pier gets a stop named for its ferry ("Coral Cay Ferry", "Paradise Cay Ferry", "Lighthouse Rock Ferry", "Gull Harbor Ferry"), on the line of the town nearest it. The stop is at the kerb of the nearest through street, over land (not across the water to another island), on the pier's side. You wait on the pavement beside it (there's no shelter there).
+  - Coral Cay's stop is 9 m from its pier and Paradise Cay's 29 m.
+  - Lighthouse Rock's is 143 m away. The track down to that pier is a dead end; the stop is on the Westport Beltway.
+  - Gull Harbor's is 217 m away. That pier is at the end of Harbor Road, a long dead-end road down the airport peninsula, so the stop is where the nearest through street comes closest. **For the owner:** a bus could only reach that pier if there were a turning loop at its end. That's a world change, so it isn't done here.
+- **Tests:** `test/transit.test.js` (3 new):
+  - every line: each step starts where the last ended and the loop closes. No step is down a dead-end road or a cul-de-sac, into a road's end, the wrong way down a one-way street, or a U-turn. Every turn is one a driver can take, and every stop is on its step. The Southside Line runs along no street twice.
+  - every mainland ferry terminal has a stop on a line, named for its ferry. Coral Cay's and Paradise Cay's stops are right by their piers.
+  - the shelter across the street says where the bus stops.
+
+## 2026-10-10 · Debug homes: the nearest, the next, the previous, and every home on a map and a list
+The owner: "Lets add a debug option to go to more homes, maybe a 'nearest' home option but also a 'next home' or 'previous home' or maybe a map you can open up and see all the homes available so that we can test them out."
+- **The debug menu's Homes section:** Nearest home, Next home, Previous home, and "Every home (map, list)". All of them take you to the door, on open ground. The dev command is `home` (`server/dev.js` `devHome`).
+  - **Next and previous** go through the homes in the map's order, on from the last home you went to (from the nearest at first), and wrap round.
+  - **The toast** says which home it is: its name, its kind, its price, whether it's yours or someone's, and its number of how many.
+- **Every home** (`client/devhomes.js`, loaded only when it's pressed) opens under the buttons. It has a little map of the land with a dot per home, coloured by kind; hover a dot for its name, tap it to go there. Below the map is a list by kind: mansions, houses, apartments, shacks, then the estates (beach houses, cottages, farmhouses...). Each button has the name and the price. Press it again to close it.
+- **Tests:** `test/homes.test.js` (1 new): a home by its number is at its door on open ground. Next and previous step through the homes and wrap round both ways. The nearest is the nearest door. No such home: you stay put.
+
+## 2026-10-10 · The debug wardrobe: every piece and option in the creator, saved into your wardrobe (task #336)
+The owner: "While we're in testing mode we should have a debug character creator screen that lets you choose any current outfit asset and customization option in the game and let you save it there, anything you save from that will be added to your inventory. This will just be for testing, not for full release."
+- **Debug menu → 👗 Debug wardrobe** opens the character creator as the **DEBUG WARDROBE** (`client/creator.js`, mode `dev`).
+  - Every piece in the catalogue is on offer with nothing padlocked, the police's issued kit too (uniforms, caps, the vest, dress gloves).
+  - Every body, face, hair, facial hair and extras option can be changed; the "change at the mirror / at a barber" locks are off.
+  - **Done** wears the look. **Save** (the Saved tab) keeps it under a name. Applying a saved look wears it.
+  - Each time, the look's pieces go into your wardrobe, free.
+- **On the server** it's the dev command `wardrobe` (`server/systems/looks.js` `devWardrobe`). The session takes `dev` messages only on a dev server or from a player in Dev Debug Mode, so a normal player can't use it even with a hand-made message.
+  - With a name (`n`), the look is saved (up to the usual 12); otherwise it's worn.
+  - It doesn't count as a disguise (your wanted level doesn't drop): it's a debug tool.
+- **Tests:** `test/wardrobe.test.js` (1 new):
+  - the normal creator refuses a look with an issued cap, glasses you don't own and a new hairstyle;
+  - the debug wardrobe wears it free, with the hair, and the cap and the glasses go into the wardrobe;
+  - saved by name, a look with a new jacket is kept and the jacket is yours, while you still wear the first;
+  - a session not in dev mode gets nothing from the same message.

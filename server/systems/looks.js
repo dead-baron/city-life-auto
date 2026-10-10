@@ -210,6 +210,38 @@ export function setBlade(world, p, c) {
   return true;
 }
 
+// The debug wardrobe (task #336; the owner, 2026-10-10: "a debug character creator screen that lets you choose any current
+// outfit asset and customization option in the game and let you save it there, anything you save from that will be
+// added to your inventory. This will just be for testing, not for full release"): the creator opened from the debug menu
+// (client/creator.js mode 'dev') offers every piece, the police's issued kit too, and every hair, face and body option,
+// with nothing locked; it sends the look here through the dev command 'wardrobe' (server/dev.js - only ever in dev mode:
+// session.js lets 'dev' messages through only then). The look's pieces go into your wardrobe and you wear it, body, face
+// and hair and all; with a name (n) it's kept among your saved looks as well. Returns the looks state for the creator.
+export function devWardrobe(world, p, msg) {
+  const prof = p.profile;
+  ensureLook(prof);
+  const L = decodeLook(String(msg.look || ''));
+  if (!L) { world.notify(p, '[dev] That look didn\'t come through.', 'warn'); return stateMsg(p, world); }
+  const had = prof.wardrobe.length;
+  grant(prof, L);
+  const added = prof.wardrobe.length - had, code = encodeLook(L);
+  if (msg.n !== undefined) {
+    const n = cleanName(msg.n);
+    if (!n) { world.notify(p, 'Give the look a name.', 'warn'); return stateMsg(p, world); }
+    const i = prof.looks.findIndex((s) => s.n.toLowerCase() === n.toLowerCase());
+    if (i >= 0) prof.looks[i] = { n, c: code };
+    else if (prof.looks.length >= SAVED_LOOKS) { world.notify(p, `You can keep ${SAVED_LOOKS} looks: delete one first.`, 'warn'); store.touch(); return stateMsg(p, world); }
+    else prof.looks.push({ n, c: code });
+    world.notify(p, `[dev] Look saved: ${n}.${added ? ` ${added} piece${added > 1 ? 's' : ''} added to your wardrobe.` : ''}`, 'good');
+  } else {
+    if (code !== prof.look) wear(world, p, code);
+    world.notify(p, `[dev] Wearing it.${added ? ` ${added} piece${added > 1 ? 's' : ''} added to your wardrobe.` : ''}`, 'good');
+  }
+  prof.lookPicked = true;
+  store.touch();
+  return stateMsg(p, world);
+}
+
 export function handle(world, p, msg) {
   const prof = p.profile;
   ensureLook(prof);
