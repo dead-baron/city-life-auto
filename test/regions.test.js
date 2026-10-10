@@ -189,3 +189,9 @@ test("the city worker: the kept city, else the server's region files, else built
   } finally { console.warn = warn; }
   assert.equal(built, 8);
 });
+
+test('the load report says the city was downloaded from the server', async () => {
+  const { reportLine, cleanReport } = await import('../server/perfreports.js');
+  const r = cleanReport({ kind: 'phone', ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 7 Pro) Chrome/128.0.0.0 Mobile', preset: 'low', w: 892, h: 412, dpr: 2, scale: 1, at: { city: 1000, screen: 3000 }, ms: { city: 500 }, city: 'served', fps: 58, p50: 16, p95: 20 });
+  assert.match(reportLine(r), /city 1\.0 \(downloaded from the server, 0\.5 s\)/);
+});

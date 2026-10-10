@@ -6333,8 +6333,9 @@ changes; a browser's first load after a world change gets its city from the serv
 - **Files:** `shared/regionpack.js`, `server/worldcdn.js`, `server/index.js`, `client/worldgen.js`, `client/boot.js`,
   `client/main.js`, `server/perfreports.js`, `tools/perf.mjs`; `test/samecity.js` (the comparison "the city a browser
   keeps is the city" used, now shared with `test/perf.test.js`).
-- **Tests:** `test/regions.test.js` (5): the round trip on the real city (every field and value, shared objects
+- **Tests:** `test/regions.test.js` (6): the round trip on the real city (every field and value, shared objects
   included, and the signature), the split (each region's rectangle of every layer, each item in the region its position
   says, every item once by its world index), a v3-sized frame splitting 10 x 8 with a window map's origin travelling,
   the server (the files with their headers, the 404s and why, older folders deleted), the worker's choice (kept,
-  served, built, and built after a 404, a bad file, a network error, another seed, a timeout, no DecompressionStream).
+  served, built, and built after a 404, a bad file, a network error, another seed, a timeout, no DecompressionStream), the
+  load report's "downloaded from the server".
