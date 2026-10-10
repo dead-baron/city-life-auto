@@ -109,9 +109,9 @@ export const HIGHWAYS = [
   // Toll Bridge to the Sandpiper interchange. In the islands it runs on today's ring roads, so its curves there are
   // today's (r 120).
   { name: 'Bay Ring', r: 120, existing: true,
-    pts: [[1650, 1768], [1660, 2000], [1720, 2200], [1800, 2290], [2000, 2300], [2240, 2290], [2300, 2370], [2445, 2378], [2560, 2540], [2900, 2900], [3040, 2925], [3400, 2925], [3500, 2960], [3990, 2600], [4150, 2470], [4150, 2200]],
-    bridges: [[0, 1], [3, 5], [8, 9], [12, 13]] },   // Strait Bridge, Harbor Bridge, Cedar Bridge, East Toll Bridge
-  { name: 'Bay Bridge', r: 120, existing: true, pts: [[2445, 2378], [2450, 2150], [2450, 2000], [2460, 1768]],
+    pts: [[1650, 1768], [1665, 2045], [1720, 2200], [1800, 2290], [2000, 2300], [2240, 2290], [2300, 2370], [2445, 2378], [2560, 2540], [2900, 2900], [3040, 2925], [3400, 2925], [3500, 2960], [3990, 2600], [4150, 2470], [4150, 2200]],
+    bridges: [[0, 1], [3, 5], [8, 9], [12, 14]] },   // Strait Bridge, Harbor Bridge, Cedar Bridge, East Toll Bridge
+  { name: 'Bay Bridge', r: 120, existing: true, pts: [[2445, 2378], [2450, 2150], [2450, 2040], [2460, 1768]],
     bridges: [[2, 3]] },
 ];
 // Where highways meet (the interchanges; every highway end is at one of these or at a map-edge closure).
@@ -149,7 +149,7 @@ export const ARTERIALS = [
   { name: 'Gorge Road', pts: [[1170, 1070], [1460, 1090], [1480, 900], [1560, 830], [1860, 830], [1960, 920], [2040, 1000]] },
   { name: 'Woods Road', pts: [[1170, 1070], [1490, 1130], [1490, 1240], [1380, 1320], [1080, 1400], [960, 1500], [940, 1700], [940, 1850]] },
   // the bay's north shore
-  { name: 'Shore Road', pts: [[940, 1850], [1070, 1990], [1320, 1985], [1640, 1915], [2050, 1870], [2120, 1800], [2380, 1790], [2420, 1650], [2580, 1640], [2630, 1800], [2780, 1840], [3240, 1805], [3432, 1810]] },
+  { name: 'Shore Road', pts: [[940, 1850], [1070, 1990], [1320, 1950], [1640, 1880], [2050, 1840], [2120, 1800], [2380, 1790], [2420, 1650], [2580, 1640], [2630, 1800], [2780, 1840], [3240, 1805], [3432, 1810]] },
   // Willow Valley
   { name: 'Valley Road North', pts: [[2040, 1000], [2800, 1000], [3220, 1010], [3330, 1110], [3390, 1270]] },
   { name: 'Valley Road', pts: [[1940, 1760], [1930, 1260], [2800, 1250], [3390, 1270]] },
@@ -161,14 +161,14 @@ export const ARTERIALS = [
   { name: 'Route 9', pts: [[3720, 1600], [3880, 1480], [4100, 1560], [4500, 1640], [4880, 1640], [4910, 1300], [4900, 900], [4960, 720], [4920, 470], [4720, 390], [4600, 400]] },
   { name: 'Mine Road', pts: [[3390, 1270], [3560, 1240], [3720, 1190], [4100, 1210], [4400, 1210], [4690, 1180]] },
   { name: 'Mesa Road', pts: [[3088, 430], [3400, 400], [3640, 360], [3840, 450], [4120, 340], [4360, 380], [4600, 400]] },
-  { name: 'Canyon Road', pts: [[3990, 820], [4080, 660], [4150, 560]] },
+  { name: 'Canyon Road', pts: [[3990, 820], [4060, 700], [4130, 630]] },   // up to Red Rock Dam
   { name: 'Hollow Road', pts: [[4100, 1210], [4200, 1040]] },
   // the Sandpiper Coast
   { name: 'Sandpiper Drive', pts: [[4440, 1640], [4450, 1920], [4100, 1920], [3930, 2100], [3950, 2250], [4260, 2500], [4480, 2580], [4800, 2460], [5000, 2330]] },
   { name: 'Dune Road', pts: [[4260, 2500], [4300, 2240], [4520, 2120], [4800, 2200], [5000, 2330]] },
   // the Egret Coast: the west sea road, an island-hopping causeway to Gull Harbor (ruling 3: low bridges from islet to
   // islet, not an undersea tunnel; `mayBeTunnel` - the owner may yet prefer one)
-  { name: 'West Sea Road', mayBeTunnel: true, pts: [[440, 1800], [320, 1830], [190, 1990], [190, 2220], [300, 2560], [480, 2960], [640, 3200], [820, 3260], [990, 3170]],
+  { name: 'West Sea Road', mayBeTunnel: true, pts: [[440, 1800], [350, 1822], [190, 1990], [190, 2220], [300, 2560], [480, 2960], [640, 3200], [820, 3260], [990, 3170]],
     bridges: [[1, 3], [3, 4], [4, 5], [5, 6], [6, 8]] },
   // the bridges between the islands that aren't on the Bay Ring
   { name: 'Old Town Bridge', pts: [[2640, 1850], [2600, 1930], [2560, 2010]], bridges: [[0, 2]] },
@@ -197,12 +197,12 @@ export const MAIN_LINE = [
     tunnels: [[7, 8], [11, 12], [16, 17], [18, 19]] },
   // in the islands the main line runs through today's ground: its curves there are tighter (r 200)
   { name: 'Bay Bridge Line', from: 'Northshore Junction', to: 'Metro Junction', r: 200, urban: true,
-    pts: [[2440, 1700], [2460, 1880], [2490, 2030], [2545, 2220], [2250, 2330]], bridges: [[1, 2]], tunnels: [[3, 4]] },   // the Bay Bridge's rail deck; today's tunnel under the core
+    pts: [[2440, 1700], [2456, 1845], [2490, 2030], [2545, 2220], [2250, 2330]], bridges: [[1, 2]], tunnels: [[3, 4]] },   // the Bay Bridge's rail deck; today's tunnel under the core
   { name: 'Harbor Line', from: 'Metro Junction', to: 'Westport Junction', r: 200, urban: true,
     pts: [[2250, 2330], [2050, 2340], [1840, 2340], [1700, 2320], [1680, 2100], [1650, 1900], [1640, 1700]], bridges: [[0, 2], [4, 5]] },   // the Harbor Bridge, the Strait Bridge
   { name: 'Cedar Line', from: 'Metro Junction', to: 'Route 9 Junction', r: 200, urban: true,
     pts: [[2250, 2330], [2260, 2440], [2440, 2520], [2620, 2600], [2900, 2920], [3020, 2976], [3560, 2990], [3720, 2880], [3960, 2680], [4150, 2480], [4160, 2100], [4100, 1820], [3990, 1600], [3950, 1420]],
-    bridges: [[3, 4], [6, 7]], tunnels: [[10, 11]] },
+    bridges: [[3, 4], [6, 9]], tunnels: [[10, 11]] },
 ];
 // The services, each both ways (ruling 4): its route as [segment, direction] (+1 from -> to, -1 back), and its stops.
 export const SERVICES = [

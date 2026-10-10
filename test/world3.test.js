@@ -320,3 +320,21 @@ test('every crossing is found from the data and classified by the rules; none wh
   assert.ok(sm.km.hwy > 15 && sm.km.main > 12 && sm.km.art > 20 && sm.km.sub > 3, JSON.stringify(sm.km));
   assert.equal(Object.values(sm.stations).reduce((a, b) => a + b, 0), STATIONS.length);
 });
+
+test('wherever a line is over water it is on a bridge or in a tunnel; every interchange joins two highways at least', () => {
+  const rects = Object.values(PLACEMENTS).map(placedRect), port = SKEL.PORT_WESTPORT.rect;
+  const land = (x, y) => SKEL.inPoly(SKEL.MAINLAND, x, y) || rects.some(([a, b, c, d]) => x >= a && x < c && y >= b && y < d)
+    || SKEL.ISLANDS.some((i) => i.poly && SKEL.inPoly(i.poly, x, y)) || (x >= port[0] && x < port[2] && y >= port[1] && y < port[3]);
+  const wet = (x, y) => !land(x, y) || SKEL.LAKES.some((l) => SKEL.inPoly(l.poly, x, y));
+  for (const L of skLines) {
+    if (L.kind === 'ferry') continue;
+    for (let s = 0; s <= L.path.length; s += 10) {
+      const [x, y] = SKEL.pointAt(L.path, s);
+      if (wet(x, y)) assert.ok(SKEL.inRanges(L.bridges, s, 2) || SKEL.inRanges(L.tunnels, s, 2), `${L.name} is in the water at ${Math.round(x)},${Math.round(y)}`);
+    }
+  }
+  for (const ic of INTERCHANGES) {
+    const on = HIGHWAYS.filter((h) => SKEL.nearestOnPath(skLine(h.name).path, ic.at[0], ic.at[1]).d <= 20);
+    assert.ok(on.length >= 2, `${ic.name}: ${on.map((h) => h.name)}`);
+  }
+});

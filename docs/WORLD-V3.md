@@ -1043,10 +1043,10 @@ owner's markup instead, which is how the tracing was checked).
   it (Cedar Falls, Falls Center, Lake District). Line 2: the loop under Westport (Westport Center, Lakeview, Old
   Quarter), over the harbour (Stadium District), under Metro City (Civic Center, Midtown), out to Southbank.
 
-**The numbers** (`skeletonSummary()`): highways 19.8 km, arterials 31.3 km, main line 16.1 km of route (32 km of
+**The numbers** (`skeletonSummary()`): highways 19.8 km, arterials 31.2 km, main line 16.1 km of route (32 km of
 track), subways 4.6 km, ferries 9.1 km. Tunnels: 7 on highways (2.2 km), 1 on an arterial (0.24 km), 6 on the main line
-(1.8 km), 8 subway stretches underground (2.9 km). Bridges: 7 highway (2.5 km), 8 arterial (2.5 km, 5 of them the
-causeway's hops), 6 main line (1.5 km), 5 subway viaducts (1.8 km). Stations: 33. Crossings worked out from the data:
+(1.8 km), 8 subway stretches underground (2.9 km). Bridges: 7 highway (2.8 km), 8 arterial (2.5 km, 5 of them the
+causeway's hops), 6 main line (2.1 km), 5 subway viaducts (1.8 km). Stations: 33. Crossings worked out from the data:
 20 bridges (a highway over the rail, or a road over the rail in a town), 16 overpasses, 10 gated level crossings, 7
 interchanges (at towns and at Kestrel Pass), 4 intersections, 1 flyover (the Cedar Line over subway line 1), and 28
 places where two lines cross but one is in a tunnel there (nothing built). Junctions where lines end on others: 11
@@ -1086,7 +1086,7 @@ closed tunnel mouth at the edge, which is in a tunnel), one highway network with
 nothing at grade on a highway; the main line one network, every station on its line, each service's segments joined
 end to end into a loop and every stop on its route, every main-line station served; every town within 120 m of an
 arterial or a highway; every curve within its kind's radius, measured on the paths; every crossing found from the
-data, classified by the rules and none where a line is in a tunnel.
+data, classified by the rules and none where a line is in a tunnel; wherever a line is over water (off the mainland, the islands and the port, or in a lake) it is on a bridge or in a tunnel; every interchange joins two highways.
 
 **Next:** the region generators read their region's share of it (the roads and rails entering at the positions fixed
 here); the skeleton's hash joins the join check (part 4.3, item 5); the train, coach and ferry timetables run on these

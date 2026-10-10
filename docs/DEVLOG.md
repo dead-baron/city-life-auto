@@ -6198,7 +6198,7 @@ the Bay Loop, the Harbor Line), the two subway lines, the ferries, 33 stations, 
 its control points, turned on arcs of its kind's radius (highways 250 m, the main line 300 m, subways 120 m, arterials
 50 m), with tunnel and bridge stretches between control points. `skeletonCrossings()` works out every place two lines
 cross and what is built there by rule (an interchange, an overpass, a bridge, a gated level crossing, an
-intersection, or nothing where one is in a tunnel), and `skeletonSummary()` adds it up: 19.8 km of highway, 31.3 km of
+intersection, or nothing where one is in a tunnel), and `skeletonSummary()` adds it up: 19.8 km of highway, 31.2 km of
 arterials, 16.1 km of main line, 4.6 km of subway, 22 tunnels and 26 bridges, 58 crossings. The new
 `docs/world-v3-layout-v2.png` is drawn from the data (`tools/world3-skeleton.mjs` writes it as JSON,
 `tools/world-v3-skeleton.py` draws it in the draft's style, or over the owner's markup to check the tracing). Nothing
@@ -6206,4 +6206,5 @@ live imports it yet. What was decided on the way, for the owner to look at, is i
 `shared/world3-skeleton.js`, `tools/world3-skeleton.mjs`, `tools/world-v3-skeleton.py`, `docs/world-v3-layout-v2.png`,
 `docs/WORLD-V3.md` part 6. Tests: test/world3.test.js (plain data, the same every time, no engine-dependent maths; no
 highway dead ends, one network with at least three loops, nothing at grade; the main line connected, every station on
-its line, every service joined up; every town near a road; every curve within its radius; every crossing classified).
+its line, every service joined up; every town near a road; every curve within its radius; every crossing classified;
+nothing over water but on a bridge or in a tunnel).
