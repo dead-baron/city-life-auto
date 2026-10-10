@@ -90,7 +90,7 @@ export const DEV_SECTIONS = [
     ['🏕 Hunting Lodge', 'near', { k: 'lodge' }], ['⛺ Hunting camp', 'near', { k: 'huntcamp' }], ['🪵 Trapper\'s cabin', 'near', { k: 'trapper' }],
     ['🥩 Game butcher', 'near', { k: 'butcher' }], ['🦫 Beaver pond', 'near', { k: 'beaver' }],
   ] },
-  { id: 'homes', title: '🏠 Homes', items: [['🏠 Nearest home', 'near', { k: 'home' }]] },
+  { id: 'homes', title: '🏠 Homes', items: [['🏠 Nearest home', 'home', { op: 'near' }], ['⏭ Next home', 'home', { op: 'next' }], ['⏮ Previous home', 'home', { op: 'prev' }], ['🗺 Every home (map, list)…', '@homes']] },
   { id: 'nature', title: '🌲 Nature & landmarks', items: [
     ['🌿 Next nature place', 'near', { k: 'nature' }], ['⛺ Campground', 'near', { k: 'camp' }], ['🔥 Campfire (light it, sit by it)', 'near', { k: 'campfire' }], ['💧 Waterfall', 'near', { k: 'falls' }],
     ['🌴 Canyon oasis', 'near', { k: 'oasis' }], ['🦀 Tidepools', 'near', { k: 'tidepools' }], ['🔥 Bonfire beach', 'near', { k: 'bonfire' }],

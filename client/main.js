@@ -1119,6 +1119,7 @@ function devLocal(c, extra) {
   else if (c === '@storm') { if (S.wx) S.wx.stormForce = extra ? extra.mood : null; }   // (while it rains: render/lightning.js stormSpell's moods)
   else if (c === '@fog') S.fogForce = extra ? { k: extra.k, spread: extra.spread } : null;
   else if (c === '@bio') S.bioForce = extra ? [extra.k, 0.5] : null;   // (the sea's sparkle whatever the night: art2 host.js)
+  else if (c === '@homes' && S.map) import('./devhomes.js').then((m) => m.showHomes(S.map, (id) => { send({ t: 'dev', c: 'home', op: 'go', id }); closeOverlay('dev'); }));   // (every home: client/devhomes.js)
 }
 // Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team
 // and friends are testing; if the server asks for one after all, its prompt opens).
@@ -1178,7 +1179,7 @@ function setupDev() {
     for (const [label, c, extra] of sec.items) {
       const b = document.createElement('button'); b.textContent = label;
       if (c === 'god') { b.id = 'dev-god'; b.classList.toggle('on', !!(S.me && S.me.god)); }
-      const goes = c === 'near' || c === 'train';
+      const goes = c === 'near' || c === 'train' || c === 'home';
       devPress(b, label, () => { if (c[0] === '@') devLocal(c, extra); else send({ t: 'dev', c, ...(extra || {}) }); if (goes) closeOverlay('dev'); });
       body.appendChild(b);
     }

@@ -42,7 +42,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'home'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -97,6 +97,37 @@ export function near(world, p, k) {
     if (wat) { const v = world.spawnVehicle(best.craft, wat.x, wat.y, Math.atan2(best.y - wat.y, best.x - wat.x), { npcOwned: false }); v.issuedTo = p.pid; }
   }
   world.notify(p, `[dev] At ${best.name}.`, 'info');
+  return null;
+}
+
+// Debug homes (the owner, 2026-10-10: "a debug option to go to more homes, maybe a 'nearest' home option but also a 'next
+// home' or 'previous home' or maybe a map you can open up and see all the homes available so that we can test them
+// out"). msg.op: 'near' (the nearest home's door - the next nearest if you're at one), 'next' / 'prev' (the homes in
+// the map's order, on from the last one you went to), 'go' (home msg.id: the list and the map in the debug menu,
+// client/devhomes.js). At the door, on open ground. Returns an error or null.
+export function devHome(world, p, msg) {
+  const ped = p.ped, H = world.map.homes || [];
+  if (!ped || ped.dead) return '[dev] Not while you\'re down.';
+  if (ped.vehId) return '[dev] Get out of the vehicle first.';
+  if (ped.hidden) return '[dev] Step outside first.';   // (inside a home: homes.js)
+  if (!H.length) return '[dev] There are no homes on this map.';
+  const op = String(msg.op || 'near');
+  let i = -1;
+  if (op === 'go') i = Math.floor(Number(msg.id));
+  else if ((op === 'next' || op === 'prev') && Number.isInteger(p.devHome)) i = (p.devHome + (op === 'next' ? 1 : H.length - 1)) % H.length;
+  else {   // the nearest (also where next / previous start from)
+    let bd = Infinity;
+    H.forEach((h, k) => { const d = Math.hypot(h.x - ped.x, h.y - ped.y); if (d > 120 && d < bd) { bd = d; i = k; } });
+  }
+  const h = H[i];
+  if (!h) return `[dev] No home #${msg.id}.`;
+  const at = standAt(world, h.x, h.y + 24);
+  if (!at) return `[dev] Couldn't find open ground by ${h.name}.`;
+  if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
+  ped.sub = false; ped.ug = 0; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
+  p.devHome = i;
+  const owner = world.homeOwner && world.homeOwner.get(h.id);
+  world.notify(p, `[dev] At ${h.name} (${h.kind}, $${(h.price || 0).toLocaleString('en-US')}${owner ? owner === p.pid ? ', yours' : ', owned' : ''}) - home ${i + 1} of ${H.length}.`, 'info');
   return null;
 }
 
@@ -256,6 +287,7 @@ export function command(world, p, c, msg) {
       world.notify(p, world.weatherHold ? '[dev] Weather held: no change until you let it go.' : '[dev] Weather back to normal.', 'info'); break;
     case 'clockhold': world.clockHold = !world.clockHold; world.notify(p, world.clockHold ? '[dev] Clock frozen at this time of day.' : '[dev] Clock running again.', 'info'); break;
     case 'near': { const err = near(world, p, msg.k); if (err) world.notify(p, err, 'warn'); break; }
+    case 'home': { const err = devHome(world, p, msg); if (err) world.notify(p, err, 'warn'); break; }   // the debug homes: nearest, next, previous, any
     case 'ug': {   // straight down: the nearest manhole into the sewers, or (k: 'cave') in through the mine's adit
       if (!ped || ped.dead || ped.vehId) break;
       const L = undergroundOf(world.map);

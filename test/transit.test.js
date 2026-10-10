@@ -7,6 +7,9 @@ import * as transit from '../server/systems/transit.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import { findInteraction } from '../server/systems/players.js';
 import { BUS_DWELL_S } from '../shared/rules.js';
+import { deadWays } from '../server/systems/roadends.js';
+import { exitsFrom } from '../shared/roads.js';
+import { ferryRoutes } from '../server/systems/ferries.js';
 
 test('bus lines: loops through each town zone\'s shelters, joined end to end along the streets', () => {
   const world = makeWorld();
@@ -25,6 +28,73 @@ test('bus lines: loops through each town zone\'s shelters, joined end to end alo
     assert.deepEqual(on, L.stops.map((_, k) => k), `${L.name}: stops on its steps`);
     for (const s of L.stops) assert.ok(s.name, 'every stop has a name');
   }
+});
+
+// The owner, 2026-10-10: "southside bus route is getting jammed up because it turns into a deadend street and the buses
+// get stuck there. Lets rethink the route so that the buses go in a full loop."
+test('every bus line is a closed loop on through streets: never a dead end, a cul-de-sac or a U-turn', () => {
+  const world = makeWorld();
+  const net = world.map.net, dead = deadWays(net);
+  const lines = transit.busLines(world);
+  assert.ok(lines.length >= 4, `${lines.length} lines`);
+  for (const L of lines) {
+    const n = L.steps.length;
+    assert.ok(n >= 4, `${L.name}: ${n} steps`);
+    L.steps.forEach((st, i) => {
+      const e = net.edges[st.edge], nx = L.steps[(i + 1) % n];
+      assert.ok(st.from === e.a || st.from === e.b, `${L.name}: step ${i} enters its street from one of its ends`);
+      const to = e.a === st.from ? e.b : e.a;
+      // the legs join up, and the last step comes round to the first (the loop closes)
+      assert.equal(nx.from, to, `${L.name}: step ${(i + 1) % n} doesn't start where step ${i} ends`);
+      assert.ok(!dead.has(st.edge * 2) && !dead.has(st.edge * 2 + 1), `${L.name}: step ${i} is down a street that leads only to a road's end (${e.name})`);
+      assert.ok(!e.culdesac, `${L.name}: step ${i} is a cul-de-sac (${e.name})`);
+      assert.ok(net.nodes[to].edges.length > 1, `${L.name}: step ${i} runs into a road's end`);
+      assert.ok(!e.oneway || st.from === e.a, `${L.name}: step ${i} the wrong way down a one-way street`);
+      assert.notEqual(nx.edge, st.edge, `${L.name}: a U-turn after step ${i} (${e.name})`);
+      assert.ok(exitsFrom(net, net.nodes[to], st.edge).some((x) => x.edge === nx.edge), `${L.name}: step ${i} to ${(i + 1) % n} isn't a turn a driver can take`);
+      assert.ok(transit.busRoad(net, e), `${L.name}: step ${i} isn't a through street a bus may use (${e.kind} ${e.name})`);
+    });
+    // every stop on the step it's on, at the kerb a bus pulls up at (its stretch, the way it runs)
+    L.steps.forEach((st) => { for (const k of st.stops) { assert.equal(L.stops[k].edge, st.edge); assert.equal(L.stops[k].from, st.from); } });
+  }
+  // Southside (the owner's): a full loop, round and back to the start along no street twice
+  const S = lines.find((L) => L.name === 'Southside Line');
+  assert.ok(S, 'the Southside Line runs');
+  const seen = new Set();
+  for (const st of S.steps) { assert.ok(!seen.has(st.edge), `Southside Line: along ${net.edges[st.edge].name} twice`); seen.add(st.edge); }
+});
+
+// The owner, 2026-10-10: "Lets make sure buses are hitting the ferry terminals on the mainlands too so players can take a
+// bus and get off at a ferry terminal if they want."
+test('every mainland ferry terminal has a stop on a bus line, named for its ferry', () => {
+  const world = makeWorld();
+  const routes = ferryRoutes(world), lines = transit.busLines(world);
+  assert.ok(routes.length >= 4);
+  for (const R of routes) {
+    const L = lines.find((q) => q.stops.some((s) => s.ferry === R.id));
+    assert.ok(L, `${R.name}: no bus line calls at its mainland pier`);
+    const s = L.stops.find((q) => q.ferry === R.id), pier = R.ends[0];
+    assert.equal(s.name, `${R.island} Ferry`);
+    assert.ok(Math.hypot(s.x - pier.sx, s.y - pier.sy) < 9000, `${R.name}: its stop is ${Math.round(Math.hypot(s.x - pier.sx, s.y - pier.sy) / 32)} m from the pier`);
+    assert.ok(L.steps.some((st) => st.stops.includes(L.stops.indexOf(s))), 'on the line\'s loop');
+  }
+  // the ones with a street by the pier: a stop right there
+  for (const name of ['Coral Cay', 'Paradise Cay']) {
+    const R = routes.find((q) => q.island === name), s = lines.flatMap((L) => L.stops).find((q) => q.ferry === R.id);
+    assert.ok(Math.hypot(s.sx - R.ends[0].sx, s.sy - R.ends[0].sy) < 1200, `${name}: by the pier`);
+  }
+});
+
+test('a shelter the line passes across the street from: told where the bus stops', () => {
+  const world = makeWorld({ transit: true });
+  const { p } = joinPlayer(world);
+  const L = transit.busLines(world).find((q) => q.across && q.across.length);
+  if (!L) return;   // (no facing shelters on this map)
+  const a = L.across[0];
+  teleport(world, p.ped, a.sx, a.sy);
+  run(world, 1);
+  const note = transit.stopNote(world, p);
+  assert.match(note.label, /across the street/);
 });
 
 test('buses run their lines, calling at every stop in turn', () => {

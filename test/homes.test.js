@@ -258,3 +258,39 @@ test('tackle shops: rods and bait; chosen bait is used up on a catch; fish sell 
   economy.handleMenu(w, p, shop.id, `s:${fish}`);
   assert.ok(prof.bank > bank, 'sold to the bank');
 });
+
+// The owner, 2026-10-10: "a debug option to go to more homes, maybe a 'nearest' home option but also a 'next home' or
+// 'previous home' or maybe a map you can open up and see all the homes available" (server/dev.js devHome)
+test('debug homes: any home by its number, the next and the previous (round the list), the nearest - at its door', async () => {
+  const dev = await import('../server/dev.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const H = w.map.homes, at = (i) => Math.hypot(p.ped.x - H[i].x, p.ped.y - H[i].y);
+  assert.ok(H.length > 10);
+  dev.command(w, p, 'home', { op: 'go', id: 5 });
+  assert.equal(p.devHome, 5);
+  assert.ok(at(5) < 360, `at ${H[5].name}'s door (${Math.round(at(5))} px)`);
+  assert.equal(PED_BLOCK[w.map.tileAtPx(p.ped.x, p.ped.y)], 0, 'on open ground');
+  dev.command(w, p, 'home', { op: 'next' });
+  assert.equal(p.devHome, 6);
+  assert.ok(at(6) < 360);
+  dev.command(w, p, 'home', { op: 'prev' });
+  dev.command(w, p, 'home', { op: 'prev' });
+  assert.equal(p.devHome, 4);
+  dev.command(w, p, 'home', { op: 'go', id: 0 });
+  dev.command(w, p, 'home', { op: 'prev' });
+  assert.equal(p.devHome, H.length - 1, 'round from the first to the last');
+  dev.command(w, p, 'home', { op: 'next' });
+  assert.equal(p.devHome, 0);
+  // the nearest: from a spot in town, the nearest home's door (not the one you're standing at)
+  teleport(w, p.ped, H[20].x + 500, H[20].y + 260);
+  let want = -1, bd = Infinity;
+  H.forEach((h, k) => { const d = Math.hypot(h.x - p.ped.x, h.y - p.ped.y); if (d > 120 && d < bd) { bd = d; want = k; } });
+  dev.command(w, p, 'home', { op: 'near' });
+  assert.equal(p.devHome, want);
+  assert.ok(at(want) < 360);
+  // no such home: you stay put
+  const x = p.ped.x;
+  dev.command(w, p, 'home', { op: 'go', id: H.length + 5 });
+  assert.equal(p.ped.x, x);
+});
