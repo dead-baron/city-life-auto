@@ -68,7 +68,7 @@ test('buying a ticket and popcorn at the counter, sitting down in a screen, watc
   assert.equal(p.profile.inventory.filmTicket || 0, 0, 'the ticket torn');
   run(w, 2);
   const me = players.buildMe(w, p);
-  assert.ok(me.cine && FILMS[me.cine.film] && me.cine.at > 1, `the film on (${JSON.stringify(me.cine)})`);
+  assert.ok(me.cine && FILMS[me.cine.film] && me.cine.at > 1 && me.cine.at < 4, `the film on, from the start (${JSON.stringify(me.cine)})`);
   assert.ok(/Screen 1/.test(me.job.text), `the HUD tracker (${me.job.text})`);
   assert.ok(/Get up/.test(players.findInteraction(w, p).label), 'get up');
   p.ped.hp = Math.max(1, p.ped.maxHp - 20);

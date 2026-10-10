@@ -23,14 +23,14 @@ export class CinemaView {
       const sx = R.screen.x0, sw = R.screen.x1 - R.screen.x0, sh = R.screen.h, sy = R.backEdge - R.screen.lift - sh;
       g.save();
       // the dark (the house lights down while a film plays)
-      g.fillStyle = watching ? 'rgba(4,4,12,.74)' : 'rgba(6,6,14,.42)';
+      g.fillStyle = watching ? 'rgba(4,4,12,.6)' : 'rgba(6,6,14,.38)';
       g.fillRect(R.x0, sy - 6, R.x1 - R.x0, R.y1 - sy + 6);
       if (watching) {
         const t = now - this.clock.t0, f = FILMS[me.film] || FILMS[0];
         const light = film(g, sx, sy, sw, sh, t, f, me.len || 75);
         // the screen's light on the audience: a soft fan from the screen over the seats
         const gr = g.createLinearGradient(0, R.backEdge - R.screen.lift, 0, R.y1);
-        gr.addColorStop(0, rgba(light, 0.34)); gr.addColorStop(1, rgba(light, 0));
+        gr.addColorStop(0, rgba(light, 0.4)); gr.addColorStop(1, rgba(light, 0));
         g.globalCompositeOperation = 'lighter';
         g.fillStyle = gr;
         g.beginPath(); g.moveTo(sx, R.backEdge - R.screen.lift); g.lineTo(sx + sw, R.backEdge - R.screen.lift); g.lineTo(R.x1, R.y1); g.lineTo(R.x0, R.y1); g.closePath(); g.fill();

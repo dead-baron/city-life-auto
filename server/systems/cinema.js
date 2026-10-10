@@ -53,6 +53,8 @@ export function sit(world, p, ri, s) {
   if (s < 0) return 'Every seat is taken.';
   inv.filmTicket--;
   if (inv.filmTicket <= 0) delete inv.filmTicket;
+  // (the first player in the room gets the film from the start; the NPCs don't mind)
+  if (![...world.players.values()].some((o) => o !== p && o.cine && o.cine.room === ri)) { const Sr = st(world).rooms[ri]; Sr.film = filmFor(ri, Sr.k++); Sr.t0 = world.time; }
   const q = R.seats[s], S = showing(world, ri);
   ped.x = q.x; ped.y = q.y; ped.a = q.a; ped.vx = 0; ped.vy = 0;
   if (world.place) world.place(ped);
