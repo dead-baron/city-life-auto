@@ -173,7 +173,12 @@ function stripClear(world, v, b, a, off, pavement) {
       }
       if (lat) continue;
       for (const q of world.query(x, y, 40, K.VEH)) if (q !== v && q !== b && sameLevel(q.lz, v.lz)) return false;
-      if (t <= to) for (const q of world.query(x, y, 26, K.PED)) if (!q.dead && !q.vehId && sameLevel(q.lz, v.lz)) return false;
+      // nobody standing in it, and nobody lying anywhere under the car's width (a body, a downed player - task #435:
+      // an ambulance went round a stopped car and over the casualty beside it)
+      if (t <= to) for (const q of world.query(x, y, v.def.W / 2 + 22, K.PED)) {
+        if (q.vehId || !sameLevel(q.lz, v.lz)) continue;
+        if (q.dead ? !q.wild : Math.hypot(q.x - x, q.y - y) < 26) return false;
+      }
     }
   }
   return true;

@@ -4888,3 +4888,25 @@ The owner: "Getting out of a boat under a bridge puts you on the bridge deck abo
 - **What it was:** a bridge is two layers on one tile (`T.BRIDGE`): the deck, reached from the road, and the water under it, reached by swimming in (`ped.under`, `shared/physics.js`). Getting out of a vehicle looks for a spot beside it that people can walk on (`server/systems/vehicles.js findExitSpot`). A bridge tile counts, because it's the deck. So out of a boat under a bridge you were put on the deck beside you, with nothing saying you were down in the water. Within 150 px of a bridge it was the same: the nearest "dry" spot was its deck.
 - **Now:** from a boat, a bridge tile is no place to step out onto; only dry ground or a pier is. A boat at the bank under a bridge's end still puts you ashore. With none in reach, it's over the side ("Over the side - swim for it!"). Anyone out of a boat is at the water's level (`ejectPed` sets `under`), so under a bridge you're swimming beneath the deck and swim out from under it. Out of a car or a bike on a bridge you're on its deck, as before, even if you'd swum under it earlier.
 - **Tests:** `test/water.test.js` (1 new): a boat stopped every 120 px along every road bridge (213 places), and you get out. You're never up on a deck and always at the water's level: in the water under the deck at 162, ashore near a bridge's end at the rest. Mid-span with open water all round, it's over the side, and you're still swimming under the bridge a second later. Out of a car on that bridge, you're on the deck, not in the water. It fails without the change (onto the deck at the first bridge).
+
+## 2026-10-09 · Ambulances never drive over anyone lying on the ground, and pull up short of the patient and to one side (task #435)
+The owner: "Ambulances will still drive over an NPC or player that is hurt on the ground. They should park a bit away (not too far), just far enough away that they don't keep parking on top of downed NPCs or downed players."
+- **What it was** (`server/systems/ems.js`):
+  - The crew got out the moment the ambulance was near enough (its middle within 150 px of the patient), while it was still doing about 145 px/s. A vehicle nobody's driving coasts (`vehicles.js`), so it rolled on another 120 px or so with the doors open, towards the patient it had been driving at, and onto them.
+  - It drove for the kerb nearest the patient. For someone lying in the road, that's where they lie.
+  - Nothing it drove past counted anyone on the ground: the AI drivers' look-ahead skips bodies (`traffic.js obstacleSpeed`). It drove over anyone in its way, and waited in a queue behind another ambulance on top of a casualty.
+- **It stops, then the doors open:** it pulls up on the brakes with the driver at the wheel, and the paramedics get out once it's standing.
+- **Where it pulls up** (`parkSpot`): on the patient's street, facing the way it came.
+  - Alongside them with the nose level with them where the road's wide enough; otherwise in line and short of them.
+  - Always 34 px (`CLEAR`, half a body and a bit) off them and anyone else lying there, and off parked cars, posts, walls and water.
+  - Never off the end of the street, never behind where it is (no turning back), and at most 300 px further back.
+  - Looked at again every second on the way in: someone else going down there moves it.
+- **On the way in and out** (`lyingInWay`): it looks along its route, and the way it's moving (the start of a turn, backing up), for anyone lying on the ground it would come within 34 px of, and slows to stop short of them.
+  - Someone at the patient's scene (within 220 px of them): it pulls up short of them, and the paramedics walk.
+  - Anyone else: it goes round them on the side that's clear, if there's room (`skirt`). Otherwise it stops, and after a while pulls up where it is and they walk, as before.
+- **Going round something stopped** (`reroute.js stripClear`, any siren or bus): a strip with someone lying in it isn't clear. An ambulance went round a stopped car and over the casualty beside it.
+- **Tests:** `test/ems.test.js` (1 new): on a wide avenue, the patient lies in a lane, someone else is down just past them, and someone lies right on the ambulance's route on its way in.
+  - Every tick it stays more than 10 px from anyone lying there; the nearest it came was 38 px.
+  - It goes round the one on its way, and has stopped (0 px/s) when the doors open: 46 px from the patient, short of them and 76 px to one side.
+  - The paramedics treat them and load them, and it drives off past the other one.
+  - It fails without the change (it drove over the one on its way in). The paid-ambulance and stretcher tests pass as before.

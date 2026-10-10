@@ -7,7 +7,17 @@
 //
 // The stretcher is drawn as the pushing medic's prop (the descriptor's pp: 'stretcher', or 'stretcherPt' with the
 // patient lying on it - client/art2/people.js), pushed with the 'push' walk (gt).
-import { pedStep } from '../../shared/physics.js';
+//
+// Anyone lying on the ground - a body, a downed player - is kept clear of (task #435): the ambulance pulls up short of
+// its patient and over to one side, CLEAR px off them and everyone else lying there (parkSpot), it has stopped before
+// the doors open, and it never drives over anyone on its way in or out (lyingInWay: it slows to stop short of them,
+// goes round them where there's room - skirt - or, at the patient's scene, pulls up there and the paramedics walk).
+import { K } from '../../shared/constants.js';
+import { pedStep, vehForwardSpeed } from '../../shared/physics.js';
+import { circleVsObb, obbVsObb } from '../../shared/math.js';
+import { CAR_BLOCK, WATER_T } from '../../shared/map.js';
+import { sameLevel } from '../../shared/levels.js';
+import { pointAt, project } from '../../shared/geom.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc, seek, footWay, sidestep } from './npc.js';
 import { inAnyView } from '../view.js';
@@ -22,6 +32,10 @@ const HARD_DESPAWN = 45;
 const REVIVE_TIME = 3;
 const LIFT_S = 1.4;       // lifting the patient onto the stretcher
 const SCENE_MAX = 70;     // the whole scene, out of the ambulance and back in (s): whatever happens, they go after this
+const CLEAR = 34;         // px from the middle of anyone lying on the ground to an ambulance, always (half a body and a bit)
+const SCENE_R = 220;      // someone lying this near the patient is part of the scene: in the way, it pulls up short of them
+const PARK_PLAN = 560;    // the spot to pull up on is chosen this near the kerb (px), and looked at again every second
+const PARK_BACK = 300;    // ...at most this far back from alongside the patient
 const rng = mulberry32(112);
 
 export function update(world, dt) {
@@ -80,7 +94,7 @@ function dispatch(world, now) {
   }
 }
 
-function launch(world, b, n, k, now, paid = null) {
+export function launch(world, b, n, k, now, paid = null) {   // (exported for the tests: an ambulance from a chosen junction)
   const v = world.spawnVehicle('ambulance', n.x, n.y, Math.atan2(k.y - n.y, k.x - n.x), {});   // (in the middle of the junction: on the road)
   v.despawnable = false; v.sirenOn = false; v.npcOwned = true;
   const driver = spawnNpc(world, 'medic', v.x, v.y, 'medic');
@@ -91,7 +105,7 @@ function launch(world, b, n, k, now, paid = null) {
   v.ai.route = planTo(world, v, k);
   if (v.ai.route.length > 1) v.a = Math.atan2(v.ai.route[1].y - v.y, v.ai.route[1].x - v.x);
   b.emsAssigned = v.id;
-  world.ambulances.add(v.id);
+  (world.ambulances ??= new Set()).add(v.id);
   return v;
 }
 
@@ -188,29 +202,215 @@ function runAmbulance(world, v, dt, now) {
   if (!ai.exit) {
     const n = exitNode(world, v, ai.badExit);
     ai.exit = n ? { x: n.x, y: n.y, id: n.id } : { x: v.x + Math.cos(v.a) * 1500, y: v.y + Math.sin(v.a) * 1500, id: -1 };
-    ai.route = trimBehind(planRoute(world, v.x, v.y, ai.exit.x, ai.exit.y), v); ai.bestD = undefined;
+    ai.route = trimBehind(planRoute(world, v.x, v.y, ai.exit.x, ai.exit.y), v); ai.bestD = undefined; ai.skirted = 0;
   }
   if (!v.seats[0]) { halt(v); return; }
-  if (follow(world, v, 300)) ai.exit = null;   // (there: somewhere else)
+  const way = clearWay(world, v, ai, null);
+  if (follow(world, v, Math.min(300, way))) ai.exit = null;   // (there: somewhere else)
   else if (sinceProgress(world, v, ai.exit.x, ai.exit.y) > 8) { ai.badExit = ai.exit.id; ai.exit = null; }   // (stuck: another way out)
 }
 
-// To the kerb nearest the patient, siren on; it pulls up there, or as near as it can get.
+// To the kerb nearest the patient, siren on; it pulls up there - short of them and over to one side, clear of everyone
+// lying there (parkSpot) - or as near as it can get. It has stopped before anyone gets out.
 function drive(world, v, ai, body, crew, now) {
   v.sirenOn = true;
   if (!body || !body.dead || (ai.paid && !revive.isDowned(body))) { ai.mode = 'leave'; return; } // revived / finished / woke up elsewhere
+  if (ai.stopping) {
+    // pulling up: on the brakes with the driver still at the wheel (a van nobody's driving rolls on: vehicles.js), and
+    // the doors open once it's standing
+    halt(v); ai.ctl = null; waterGuard(world, v);
+    if (Math.abs(vehForwardSpeed(v)) < 8 || now - ai.stopping > 3) arrive(world, v, ai, body, crew, now);
+    return;
+  }
   const k = ai.kerb, dk = Math.hypot(k.x - v.x, k.y - v.y), db = Math.hypot(body.x - v.x, body.y - v.y);
-  const stalled = sinceProgress(world, v, k.x, k.y);
-  // there; or the patient's lying in the road just ahead; or it can't get any nearer
-  let there = dk < 40 || db < 95 + v.def.L / 2 || (stalled > 5 && dk < 300);
+  // the spot to pull up on, once it's near (and again whenever it's no longer clear: someone else went down there)
+  if (dk < PARK_PLAN && (ai.park === undefined || (now - (ai.parkAt || 0) > 1 && (!ai.park || !standOk(world, v, ai.park.x, ai.park.y, ai.park.a, lyingNear(world, v, ai.park.x, ai.park.y)))))) {
+    ai.parkAt = now;
+    ai.park = parkSpot(world, v, k, body, ai.route);
+    if (ai.park) aimAt(ai, ai.park, k);
+  }
+  const P = ai.park, dp = P ? Math.hypot(P.x - v.x, P.y - v.y) : dk;
+  const stalled = sinceProgress(world, v, P ? P.x : k.x, P ? P.y : k.y);
+  const lim = clearWay(world, v, ai, body);
+  let level = false;   // (level with the spot, or past it: pulling over to it went wide)
+  if (P && dp < 90) { const pr = project(k.e.pts, v); level = !!pr && P.sg * (pr.s - P.s) > -4; }
+  // there (at the spot, or level with it); or someone at the patient's scene is lying just ahead (pull up short of them:
+  // they walk the rest); or it can't get any nearer
+  let there = dp < 22 || level || (!P && db < 95 + v.def.L / 2) || (ai.atScene && ai.atScene.d < 24) || (stalled > 5 && dk < 300);
   if (!there && stalled > 8) {
     // no nearer for a while further out: a new plan from here (twice), then pull up where it is and walk
-    if (ai.replans < 2) { ai.replans++; ai.route = planTo(world, v, k); ai.bestD = undefined; }
+    if (ai.replans < 2) { ai.replans++; ai.route = planTo(world, v, k); ai.bestD = undefined; if (ai.park) aimAt(ai, ai.park, k); }
     else there = true;
   }
-  if (there) { arrive(world, v, ai, body, crew, now); return; }
-  follow(world, v, dk < 500 ? 260 : 480);
+  if (there) { ai.stopping = now; halt(v); ai.ctl = null; return; }
+  if (follow(world, v, Math.min(dk < 500 ? 260 : 480, lim), P ? 20 : 34) && P) { ai.stopping = now; ai.ctl = null; }
   if (now - ai.since > (ai.paid ? 150 : 40)) ai.mode = 'leave';
+}
+
+// ---- keeping clear of anyone lying on the ground (task #435) ----------------------------------------------------------
+const lyingDown = (e, v) => e.kind === K.PED && e.dead && !e.removed && !e.vehId && !e.wild && !e.onTrain && sameLevel(e.lz, v.lz);
+function lyingNear(world, v, x, y, r = 260) {
+  const out = [];
+  for (const e of world.query(x, y, r, K.PED)) if (lyingDown(e, v)) out.push(e);
+  return out;
+}
+// how far (x, y) is from the outline of a vehicle standing at (vx, vy) facing a (0 inside it)
+function gapTo(x, y, vx, vy, a, hl, hw) {
+  const c = Math.cos(a), s = Math.sin(a), dx = x - vx, dy = y - vy;
+  return Math.hypot(Math.max(0, Math.abs(dx * c + dy * s) - hl), Math.max(0, Math.abs(-dx * s + dy * c) - hw));
+}
+
+// The first person lying on the ground it would come within CLEAR px of, driving on from here: first the way it's
+// moving now (the start of a turn, backing up), then along its route. { e, d, i, x, y, a }: d how far its middle can go
+// before then, i the route point it's making for there (-1 on the first stretch), (x, y, a) where it is then and which
+// way it faces - or null. Only someone it would get nearer to counts: not someone beside it as it drives past, nor
+// someone it's over already (who went down beside it - it drives off them).
+function lyingInWay(world, v, route, look) {
+  const hl = v.def.L / 2, hw = v.def.W / 2, fwd = vehForwardSpeed(v);
+  const near = lyingNear(world, v, v.x, v.y, look + hl + CLEAR);
+  if (!near.length) return null;
+  const g0 = near.map((e) => gapTo(e.x, e.y, v.x, v.y, v.a, hl, hw));
+  const hit = (x, y, a) => { for (let j = 0; j < near.length; j++) { const g = gapTo(near[j].x, near[j].y, x, y, a, hl, hw); if (g < CLEAR && g < g0[j] - 1) return near[j]; } return null; };
+  let best = null;
+  // where it's going right now: straight on (or back) as far as it takes to stop, and a little more
+  if (Math.abs(fwd) > 5) {
+    const sg = Math.sign(fwd), c = Math.cos(v.a) * sg, s = Math.sin(v.a) * sg, far = fwd * fwd / 1100 + 24;
+    for (let t = 8; t <= far; t += 8) { const e = hit(v.x + c * t, v.y + s * t, v.a); if (e) { best = { e, d: t - 8, i: -1, x: v.x + c * t, y: v.y + s * t, a: v.a }; break; } }
+  }
+  // and along the route
+  if (route && route.length) {
+    let px = v.x, py = v.y, d = 0, found = false;
+    for (let i = 0; i < route.length && i < 12 && d < look && !found && (!best || d < best.d); i++) {
+      const q = route[i], L = Math.hypot(q.x - px, q.y - py);
+      if (L < 1) continue;
+      const a = Math.atan2(q.y - py, q.x - px);
+      for (let t = Math.min(12, L); ; t = Math.min(t + 12, L)) {
+        const x = px + (q.x - px) * t / L, y = py + (q.y - py) * t / L, e = hit(x, y, a);
+        if (e) { found = true; if (!best || d + t - 12 < best.d) best = { e, d: Math.max(0, d + t - 12), i, x, y, a }; break; }
+        if (t >= L || d + t >= look) break;
+      }
+      d += L; px = q.x; py = q.y;
+    }
+  }
+  return best;
+}
+
+// The speed it may drive at not to come within CLEAR px of whoever's lying in its way (w: lyingInWay; Infinity for nobody).
+const capFor = (w) => { if (!w) return Infinity; const d = Math.max(0, w.d - 4); return Math.min(d * 1.8, Math.sqrt(600 * d)); };
+// How fast it may go on: someone lying at the patient's scene (body: the patient; null on the way out) is noted
+// (ai.atScene: it pulls up short of them); someone elsewhere it goes round where there's room (skirt), once each.
+function clearWay(world, v, ai, body) {
+  const look = v.def.L / 2 + CLEAR + 60 + Math.max(0, vehForwardSpeed(v)) * 0.9;
+  const w = lyingInWay(world, v, ai.route, look);
+  ai.atScene = null;
+  if (!w) return Infinity;
+  if (w.i < 0 && vehForwardSpeed(v) < -5) ai.reverseUntil = 0;   // (backing out of a corner: not over them)
+  if (body && (w.e === body || Math.hypot(w.e.x - body.x, w.e.y - body.y) < SCENE_R)) ai.atScene = w;
+  else if (w.d > 70 && w.i >= 0 && ai.skirted !== w.e.id && skirt(world, v, ai, w)) { ai.skirted = w.e.id; return Math.min(170, capFor(lyingInWay(world, v, ai.route, look))); }
+  return capFor(w);
+}
+
+// Round someone lying in its way who isn't at its patient's scene: the route goes over to the side of them that's
+// clear - a half-width and CLEAR px off them - from well short of them to past them, on ground it can drive on with
+// nothing and nobody in the way. True if it's going round.
+function skirt(world, v, ai, w) {
+  const hl = v.def.L / 2, hw = v.def.W / 2, e = w.e, r = ai.route;
+  const c = Math.cos(w.a), s = Math.sin(w.a);
+  const bl = -(e.x - w.x) * s + (e.y - w.y) * c, ba = (e.x - w.x) * c + (e.y - w.y) * s;   // them, across and along from where it'd stop
+  const va = (v.x - w.x) * c + (v.y - w.y) * s;                                           // where it is now, along
+  const a0 = Math.max(va + 60, ba - hl - CLEAR - 90), a1 = ba + hl + CLEAR + 30;
+  const others = lyingNear(world, v, e.x, e.y, 420);
+  for (const side of bl > 0 ? [-1, 1] : [1, -1]) {
+    const off = bl + side * (hw + CLEAR + 8);
+    const pts = [];
+    let ok = true;
+    for (let t = a0; t <= a1 + 0.1 && ok; t += 40) {
+      const x = w.x + c * t - s * off, y = w.y + s * t + c * off;
+      if (!standOk(world, v, x, y, w.a, others)) ok = false;
+      pts.push({ x, y });
+    }
+    if (!ok || !pts.length) continue;
+    // the route's own points over that stretch (they'd pull it back over them) go
+    for (let i = r.length - 2; i >= 0; i--) {
+      const q = r[i], qa = (q.x - w.x) * c + (q.y - w.y) * s, ql = -(q.x - w.x) * s + (q.y - w.y) * c;
+      if (qa > va && qa < a1 + 30 && Math.abs(ql - bl) < hw + CLEAR + 40) r.splice(i, 1);
+    }
+    let at = 0;
+    while (at < r.length - 1 && (r[at].x - w.x) * c + (r[at].y - w.y) * s < a0) at++;
+    r.splice(at, 0, ...pts);
+    return true;
+  }
+  return false;
+}
+
+// Can it stand at (x, y) facing a: on ground it can drive on, nothing solid there (a wall, a post, the water, another
+// vehicle), and CLEAR px off everyone lying near (others)?
+function standOk(world, v, x, y, a, others) {
+  const m = world.map, hl = v.def.L / 2, hw = v.def.W / 2, c = Math.cos(a), s = Math.sin(a);
+  for (const e of others) if (gapTo(e.x, e.y, x, y, a, hl, hw) < CLEAR) return false;
+  for (const [lx, ly] of [[0, 0], [hl, 0], [-hl, 0], [hl, hw], [hl, -hw], [-hl, hw], [-hl, -hw], [0, hw], [0, -hw]]) {
+    const px = x + c * lx - s * ly, py = y + s * lx + c * ly, tx = Math.floor(px / 32), ty = Math.floor(py / 32), t = m.tileAt(tx, ty);
+    if (CAR_BLOCK[t] || WATER_T[t] || (m.lvl0Block && tx >= 0 && ty >= 0 && tx < m.w && ty < m.h && m.lvl0Block[ty * m.w + tx] === 1)) return false;
+    const props = m.solidProps.get(ty * m.w + tx);
+    if (props) for (const p of props) if (!p.off && circleVsObb(p.x, p.y, p.r, x, y, a, hl, hw)) return false;
+  }
+  // (a car going by is no reason not to stop there: one standing there is)
+  for (const q of world.query(x, y, hl + 80, K.VEH)) if (q !== v && !q.removed && sameLevel(q.lz, v.lz) && Math.hypot(q.vx, q.vy) < 40 && obbVsObb(x, y, a, hl + 4, hw + 4, q.x, q.y, q.a, q.def.L / 2, q.def.W / 2)) return false;
+  return true;
+}
+
+// Where to pull up for the patient, on the kerb's street facing the way it's coming: short of them and over to one side
+// where the road's wide enough (alongside them, the nose level with them), else in line and CLEAR px short of them -
+// never within CLEAR px of anyone lying there, nor on a parked car, a post, a wall or the water. The nearer the patient
+// and the kerb spot the better; no further back than PARK_BACK, not off the end of the street, and never behind where
+// it is now (no turning back). Null when nowhere will do: it drives for the kerb and pulls up short of whoever's in its
+// way. { x, y, a, s, sg }: s where along the street, sg +1 if it faces the way the street runs.
+function parkSpot(world, v, k, body, route) {
+  const e = k.e;
+  if (!e || !e.pts || e.pts.length < 2 || e.pts[e.pts.length - 1].s === undefined) return null;
+  const hl = v.def.L / 2, hw = v.def.W / 2, room = Math.max(0, (e.hw || 24) - 20), band = (e.hw || 24) + 60;
+  const bp = project(e.pts, body), vp = project(e.pts, v);
+  if (!bp || !vp) return null;
+  // the way it's coming along the street: from the end its route comes onto it by (the first point of the route on the
+  // street, well away from the kerb spot), or from where it is on it
+  let sg = 0;
+  if (route) for (const q of route) {
+    if (q.final) break;
+    const pr = project(e.pts, q);
+    if (pr && pr.d < band && Math.abs(pr.s - k.s) > 60) { sg = pr.s < k.s ? 1 : -1; break; }
+  }
+  if (!sg) sg = vp.s < k.s - 1 ? 1 : vp.s > k.s + 1 ? -1 : (Math.cos(v.a) * pointAt(e.pts, k.s).tx + Math.sin(v.a) * pointAt(e.pts, k.s).ty >= 0 ? 1 : -1);
+  const at = (s) => { const p = pointAt(e.pts, s); return { x: p.x, y: p.y, tx: p.tx * sg, ty: p.ty * sg }; };   // facing the way it's coming
+  const across = (p, x, y) => (x - p.x) * -p.ty + (y - p.y) * p.tx;
+  const b0 = at(bp.s), bl = across(b0, body.x, body.y), kl = across(at(k.s), k.x, k.y);
+  const onIt = vp.d < band;   // (already on the street: nowhere behind it)
+  const others = lyingNear(world, v, body.x, body.y, PARK_BACK + 260);
+  let best = null;
+  for (let l = -room; l <= room + 0.1; l += 8) {
+    const beside = Math.abs(l - bl) >= hw + CLEAR;
+    // its middle `a` along from the patient (minus: short of them)
+    for (let a = (beside ? 8 : -CLEAR) - hl; a >= -hl - PARK_BACK; a -= 16) {
+      const s = bp.s + sg * a;
+      if (s < hl * 0.6 || s > e.len - hl * 0.6) break;     // (off the end of the street)
+      if (onIt && sg * (s - vp.s) < 20) break;              // (behind it)
+      const p = at(s), x = p.x - p.ty * l, y = p.y + p.tx * l, ang = Math.atan2(p.ty, p.tx);
+      if (!standOk(world, v, x, y, ang, others)) continue;
+      const score = -(a + hl) + Math.abs(l - kl) * 0.5;
+      if (!best || score < best.score) best = { x, y, a: ang, s, sg, score };
+      break;   // (further back along this line is only worse)
+    }
+  }
+  return best;
+}
+// The route ends at the spot: its last points along the street past it (and just short of it, room to pull over) go.
+function aimAt(ai, P, k) {
+  const r = ai.route || (ai.route = []), e = k.e, hw = (e && e.hw) || 40;
+  if (r.length && r[r.length - 1].final) r.pop();
+  while (r.length && e) {
+    const pr = project(e.pts, r[r.length - 1]);
+    if (pr && pr.d < hw + 60 && P.sg * (pr.s - P.s) > -160) r.pop(); else break;
+  }
+  r.push({ x: P.x, y: P.y, final: true });
 }
 
 function arrive(world, v, ai, body, crew, now) {

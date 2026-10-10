@@ -4,12 +4,13 @@
 // away).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
-import { T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
+import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
+import { T, TILE, MAP_W, MAP_H, K } from '../shared/constants.js';
 import { Z } from '../shared/citylayout.js';
 import { PARK } from '../shared/citylayout.js';
 import * as combat from '../server/systems/combat.js';
 import * as revive from '../server/systems/revive.js';
+import * as ems from '../server/systems/ems.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import { kerbFor } from '../server/systems/kerbdrive.js';
 
@@ -99,4 +100,64 @@ test('the stretcher: out of the back, treat, onto the stretcher, wheeled to the 
   assert.ok(lit, 'the lights flashing while they worked');
   assert.ok(npc.removed || !w.get(npc.id), 'the patient was taken away');
   assert.ok(!w.get(amb.id), 'and the ambulance drove off and was gone');
+});
+
+// how far (x, y) is from a vehicle's outline (0: under it)
+function gap(v, x, y) {
+  const c = Math.cos(v.a), s = Math.sin(v.a), dx = x - v.x, dy = y - v.y;
+  return Math.hypot(Math.max(0, Math.abs(dx * c + dy * s) - v.def.L / 2), Math.max(0, Math.abs(-dx * s + dy * c) - v.def.W / 2));
+}
+test('an ambulance never drives over anyone lying on the ground: round them on its way in and out, and it pulls up short of its patient and to one side, stopped before the doors open (task #435)', () => {
+  const w = makeWorld();   // (no traffic or passers-by: just the ambulance and the people lying in the road)
+  const m = w.map;
+  const road = straightRoad(m, 2400);
+  // a block of a wide avenue: the ambulance comes from the junction at its west end
+  const ends = m.nodes.filter((n) => n.lvl === 0 && Math.abs(n.y - road.y) < 12 && n.x > road.x + 200 && n.x < road.x + road.len - 200).sort((a, b) => a.x - b.x);
+  let from = null, to = null;
+  for (let i = 0; i + 1 < ends.length && !from; i++) if (ends[i + 1].x - ends[i].x > 1000) { from = ends[i]; to = ends[i + 1]; }
+  assert.ok(from, 'a block over 1000 px long');
+  const x0 = from.x + 700, y0 = road.y;
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, x0, y0 - road.hw - 140);   // watching from the pavement
+  const down = (x, y) => { const n = spawnNpc(w, 'executive', x, y, 'civ'); combat.kill(w, n, null, 'melee', 0); n.vx = 0; n.vy = 0; return n; };
+  const patient = down(x0, y0 + 36);            // lying in a lane
+  const amb = ems.launch(w, patient, from, kerbFor(w, patient.x, patient.y), w.time);
+  // someone else down at the scene, just past the patient; and someone lying in the road on its way in, right on its
+  // route (where it crosses x0 - 380)
+  const scene = down(x0 + 80, y0 - 30);
+  let way = null;
+  for (let i = 0, a = amb; i < amb.ai.route.length && !way; a = amb.ai.route[i++]) {
+    const b = amb.ai.route[i], X = x0 - 380;
+    if ((a.x - X) * (b.x - X) <= 0 && a.x !== b.x) way = { x: X, y: a.y + (b.y - a.y) * (X - a.x) / (b.x - a.x) };
+  }
+  assert.ok(way && Math.abs(way.y - y0) < road.hw, 'its route on the way in');
+  const onTheWay = down(way.x, way.y);
+  for (const b of [scene, onTheWay]) b.emsAssigned = amb.id;   // (no other ambulance for them: just this one)
+  const lying = [patient, scene, onTheWay];
+  let out = null, steps = [], closest = Infinity, passed = false;
+  for (let t = 0; t < 80 * 20; t++) {
+    w.step();
+    if (!w.get(amb.id) || !amb.ai) break;
+    const st = amb.ai.mode + (amb.ai.mode === 'scene' ? ':' + amb.ai.step : '');
+    if (steps[steps.length - 1] !== st) steps.push(st);
+    for (const b of lying) if (!b.removed && b.dead) {
+      const g = gap(amb, b.x, b.y);
+      closest = Math.min(closest, g);
+      assert.ok(g >= 10, `${st}: the ambulance is over someone lying in the road (${g.toFixed(1)} px from them)`);
+    }
+    if (amb.x > onTheWay.x + 100) passed = true;
+    if (!out && amb.ai.mode === 'scene') {
+      // the doors open: where it pulled up, and how
+      const c = Math.cos(amb.a), s = Math.sin(amb.a), dx = patient.x - amb.x, dy = patient.y - amb.y;
+      out = { speed: Math.hypot(amb.vx, amb.vy), g: gap(amb, patient.x, patient.y), lx: dx * c + dy * s, ly: -dx * s + dy * c };
+    }
+    if (amb.ai.mode === 'leave' && steps.length && t > 0 && w.time - amb.ai.since > 0 && Math.hypot(amb.x - x0, amb.y - y0) > 900) break;
+  }
+  assert.ok(steps.includes('scene:treat') && steps.includes('leave'), `the scene ran through and it left: ${steps}`);
+  assert.ok(passed, 'it went round the one lying on its way in (and on to the patient)');
+  assert.ok(out.speed < 10, `stopped before the doors opened (${out.speed.toFixed(0)} px/s)`);
+  assert.ok(out.g >= 24 && out.g <= 200, `pulled up a little way off the patient, not too far: ${out.g.toFixed(0)} px`);
+  assert.ok(out.lx > 0, 'short of them (it never drove past them)');
+  assert.ok(Math.abs(out.ly) > amb.def.W / 2 + 10, `and over to one side of them (${out.ly.toFixed(0)} px across)`);
+  assert.ok(closest >= 10, 'never over anyone');
 });
