@@ -57,6 +57,7 @@ export function createPhone(ctx) {
           <button class="ph-app" data-go="feed"><b>📰</b>City feed</button>
           <button class="ph-app bty" data-go="bounties"><b>💀</b>Bounties</button>
           <button class="ph-app" data-go="transit"><b>🚌</b>Transit</button>
+          <button class="ph-app" data-act="dance"><b>💃</b>Dance</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
         </div>
         ${wp ? `<div class="ph-card">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</div>` : ''}
@@ -113,6 +114,7 @@ export function createPhone(ctx) {
       ctx.toast(`Waypoint: the ${R.name} at ${name}`, 'info');
       ctx.close();
     };
+    for (const b of el.querySelectorAll('[data-act="dance"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'dance' }); ctx.close(); };   // (dance where you stand: the next move each time - server dance.js; G / L3 too)
     for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call' }); };
     for (const b of el.querySelectorAll('[data-act="taxicancel"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'cancel' }); };
     for (const b of el.querySelectorAll('[data-rail]')) b.onclick = () => {

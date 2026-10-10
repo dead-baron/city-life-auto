@@ -335,6 +335,7 @@ export function sample(view) {
   if (k('KeyR')) bits |= IN.RELOAD;
   if (k('KeyH')) bits |= IN.HORN;
   if (k('KeyL')) bits |= IN.LIGHT; // flashlight on / off
+  if (k('KeyG')) bits |= IN.DANCE; // dance (the next move each press: server dance.js)
   if (pressedOnce.has('Tab')) bits |= IN.NEXTW;
   if (mouse.wheel > 0) bits |= IN.NEXTW;
   if (mouse.wheel < 0) bits |= IN.PREVW;
@@ -390,6 +391,7 @@ export function sample(view) {
     if (bump.tap > 0) bits |= IN.NEXTW;
     if (p.r3Edge && !driving) bits |= IN.RELOAD; // (at the wheel R3 is the drive-by's trigger; an empty gun reloads itself)
     if (p.up) bits |= view.inVehicle ? IN.HORN : IN.LIGHT; // D-pad up: horn / siren in a vehicle, the flashlight on foot
+    if (p.l3 && !view.inVehicle) bits |= IN.DANCE; // L3 (click the left stick): dance
     if (view.inVehicle) { if (!driving && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
     else if (p.lt > 0.4) bits |= IN.BLOCK;
     else if (Math.hypot(p.lx, p.ly) > FULL_STICK) bits |= IN.SPRINT;  // no run button on a pad: the stick all the way out sprints
