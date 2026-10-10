@@ -154,7 +154,7 @@ test('the debug menu takes you to each kind, filled, a little way off', async ()
   clear();
   const { p } = joinPlayer(w);
   const kinds = DEV_SECTIONS.flatMap((sec) => sec.items).filter(([, c]) => c === 'act').map(([, , x]) => x.k);
-  assert.equal(kinds.length, 11);
+  assert.equal(kinds.length, 12);
   for (const k of kinds) {
     command(w, p, 'act', { k });
     const g = [...w.acts.values()].find((q) => q.k === k && Math.hypot(q.x - p.ped.x, q.y - p.ped.y) < 340);
