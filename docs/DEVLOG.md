@@ -5562,7 +5562,11 @@ passengers riding in it." The concept: `docs/art-v2/targets/RS1_rescue-wilds-wat
     with room for the hull. Lights and siren on the way out.
   - It comes in lined up and stops alongside you. The crew member on your side kneels and pulls you in (3 s). A player is
     back up aboard on half health and pays the ambulance's fee only then. Then it runs you back to the dock and sets
-    you ashore. You can go over the side sooner. Anyone else is taken away.
+    you ashore. You can go over the side sooner.
+  - Anyone else (an NPC drowned near a dock while someone's about) is brought in and laid ashore by the dock. An ambulance
+    comes for them there as for anyone lying on land. With no back seat free, or stuck far out, they're taken away.
+  - Turning back with someone aboard, by the shore (or nosed into it), it backs round toward the way home. Stuck, it
+    plans a new way to its berth (twice) before it gives up and puts them over the side.
   - Then it goes back to its berth, lights off, and is gone once nobody's watching.
   - It holds your respawn clock while it's nearly there or pulling you in.
   - If a player takes it, the crew go over the side, and whoever called it can call another.
@@ -5599,9 +5603,10 @@ passengers riding in it." The concept: `docs/art-v2/targets/RS1_rescue-wilds-wat
   - go down out in the wilds, 400-900 px off the road;
   - boats with people aboard (a speedboat, a dinghy and the rescue boat, crewed);
   - the rescue boat to drive.
-- **Tests:** `test/rescue.test.js` (4 new):
+- **Tests:** `test/rescue.test.js` (5 new):
   - down in the water, the rescue boat comes. It pulls you aboard, revives you for the fee and sets you ashore on dry
-    land, and it is never on land.
+    land at its dock, and it is never on land.
+  - someone drowned near a dock is brought aboard, laid ashore by the dock, and an ambulance comes for them.
   - a player who takes it puts the crew over the side and frees the caller to call another.
   - 750-1100 px off the road in the wilds, the 4x4 comes, leaves the road and gets nearer than the road. The crew
     revive you, and you don't wake up at a hospital meanwhile.

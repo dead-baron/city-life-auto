@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport } from './helpers.js';
 import { K } from '../shared/constants.js';
 import { Z } from '../shared/citylayout.js';
-import { BOAT_BLOCK } from '../shared/map.js';
+import { BOAT_BLOCK, nearestLand } from '../shared/map.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import * as combat from '../server/systems/combat.js';
 import * as revive from '../server/systems/revive.js';
@@ -31,11 +31,11 @@ test('down in the water: the rescue boat comes out from a dock, pulls you aboard
   const boat = w.get(a.p.amb.vehId);
   assert.equal(boat.def.id, 'rescueboat');
   assert.ok(boat.sirenOn, 'siren on the way out');
-  let up = false, aboard = false, ashore = false, onLand = 0, modes = new Set(), t = 0;
+  let up = false, aboard = false, ashore = false, onLand = 0, modes = new Set(), t = 0, land = null;
   for (; t < 150 * 20 && !ashore; t++) {
     w.step();
     const v = w.get(boat.id);
-    if (v && v.ai) modes.add(v.ai.mode);
+    if (v && v.ai) { modes.add(v.ai.mode); land = v.ai.dock.land; }
     if (v && BOAT_BLOCK[m.tileAtPx(v.x, v.y)]) onLand++;
     if (!a.p.ped.dead) up = true;
     if (a.p.ped.vehId === boat.id) aboard = true;
@@ -45,10 +45,34 @@ test('down in the water: the rescue boat comes out from a dock, pulls you aboard
   assert.ok(aboard, 'aboard the rescue boat');
   assert.ok(ashore, `set ashore within 150 s (${[...modes]}, ${(t / 20).toFixed(0)} s)`);
   assert.ok(!rescue.inWater(m, a.p.ped), 'on dry land, not dropped in the water');
+  assert.ok(Math.hypot(a.p.ped.x - land.x, a.p.ped.y - land.y) < 200, 'at the dock it came from');
   assert.equal(onLand, 0, 'the boat never ran up onto the land');
   assert.equal(a.p.profile.bank, 1000 - 200, 'the ambulance\'s fee');
   assert.ok(modes.has('pull') && modes.has('ashore'), `out, pull, ashore (${[...modes]})`);
   assert.equal(a.p.amb, null, 'the call is done');
+});
+
+test('someone drowned near a dock: the rescue boat brings them in and lays them ashore, and an ambulance comes for them', () => {
+  const w = makeWorld({ npcBudget: 0 });
+  const a = joinPlayer(w, { cash: 0, bank: 0 });
+  const m = w.map, dock = m.marina.find((b) => !b.gang) || m.rentals[0].spots[0];
+  const at = rescue.waterSpot(w, dock.x, dock.y);
+  const shore = nearestLand(m, at.x, at.y, 40);
+  teleport(w, a.p.ped, shore.x, shore.y);   // (watching from the shore)
+  const b = spawnNpc(w, 'casual', at.x, at.y, 'civ');
+  combat.kill(w, b, null, 'melee', 0);
+  assert.ok(w.bodies.has(b) && rescue.inWater(m, b), 'a body in the water');
+  let boat = null, aboard = false, landed = false, amb = null;
+  for (let t = 0; t < 180 * 20 && !amb; t++) {
+    w.step();
+    for (const id of w.ambulances || []) { const v = w.get(id); if (!v) continue; if (v.rescue && !boat) boat = v; if (!v.rescue && v.ai && v.ai.body === b.id) amb = v; }
+    if (b.vehId && boat && b.vehId === boat.id) aboard = true;
+    if (aboard && !b.vehId && !b.removed && !rescue.inWater(m, b) && w.bodies.has(b)) landed = true;
+  }
+  assert.ok(boat, 'the rescue boat went for them');
+  assert.ok(aboard, 'brought aboard');
+  assert.ok(landed, 'laid ashore by the dock');
+  assert.ok(amb, 'an ambulance came for them there');
 });
 
 test('a player who takes the rescue boat: its crew go over the side, and whoever called it can call another', () => {

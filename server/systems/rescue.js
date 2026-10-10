@@ -6,7 +6,8 @@
 // slows, and stops alongside them with them off its side (stopBeside); the crew member on that side leans over and pulls
 // them in (PULL_S, as long as the paramedics take to treat someone). A player who called it comes round aboard on half
 // health - revive.js charges the ambulance's fee - and is run back to the dock and set ashore there (they can go over the
-// side sooner); anyone else is taken away. Then back to its berth, and gone once nobody's watching.
+// side sooner); anyone else is brought in and laid ashore by the dock, where an ambulance comes for them as for anyone
+// lying on land. Then back to its berth, and gone once nobody's watching.
 // ems.js sends it and runs it with the ambulances (world.ambulances, v.rescue). A player can take it like any boat: the
 // crew go over the side and swim for it, and whoever called it can call another.
 //   inWater(map, e)                 down in the water, where only a boat gets to them
@@ -315,10 +316,29 @@ function pull(world, v, ai, b, crew, now) {
       return;
     }
   } else {
+    // anyone else is brought in to the dock and laid on the pier, where an ambulance comes for them as for anyone lying
+    // on land (ems.js; ashore, landBody) - with no back seat free, taken away
     world.bodies.delete(b);
+    const s = v.seats.findIndex((q, k) => k > 1 && !q);
+    if (s > 0) {
+      b.vehId = v.id; b.seat = s; v.seats[s] = b.id; b.vx = 0; b.vy = 0;
+      ai.rider = b.id; ai.mode = 'ashore'; ai.shoreAt = now; ai.bestD = undefined; ai.replans = 0;
+      ai.way = rest(ai.back);
+      return;
+    }
     if (b.npc) despawnNpc(world, b); else world.remove(b);
   }
   goHome(world, v, ai);
+}
+// a body brought in, laid on the ground ashore by the dock: one to fetch like anyone lying there (ems.js dispatch) -
+// or, the boat stuck far from the dock, taken away
+function landBody(world, v, b, ai, now) {
+  v.seats[b.seat] = 0; b.vehId = 0; b.seat = undefined;
+  const at = ai.dock.land;
+  if (Math.hypot(at.x - v.x, at.y - v.y) > 400) { if (b.npc) despawnNpc(world, b); else world.remove(b); return; }
+  b.x = at.x; b.y = at.y; world.place(b);
+  b.deadAt = now - 3; b.emsAssigned = 0; b.rescueTry = now;
+  world.bodies.add(b);
 }
 
 // Back to the dock with the one it pulled out, and set them ashore there - or, stuck on the way, wherever it is (over
@@ -328,10 +348,17 @@ function ashore(world, v, ai, now) {
   const r = world.get(ai.rider);
   if (!r || r.removed || r.vehId !== v.id) { goHome(world, v, ai); return; }   // (got out on the way)
   const left = sail(v, ai.way, TOP * 0.8);
-  const stuck = progress(world, ai, left) > 8 || now - ai.shoreAt > 120;
+  let stuck = progress(world, ai, left) > 8 || now - ai.shoreAt > 120;
+  // no nearer for a while (turning round by the shore): a new way from here to its berth (twice) before it gives up
+  if (stuck && left > 30 && ai.replans < 2 && now - ai.shoreAt <= 120) {
+    const to = ai.berth, w2 = wayTo(world.map, v, to, stillBoats(world, v.x, v.y, Math.hypot(to.x - v.x, to.y - v.y) / 2 + 300, v));
+    ai.replans++; ai.bestD = undefined;
+    if (w2) { ai.way = rest(w2); return; }
+  }
   if (left > 30 && !stuck) return;
   halt(v);
   if (Math.abs(vehForwardSpeed(v)) > 30 && !stuck) return;
+  if (r.dead) { landBody(world, v, r, ai, now); goHome(world, v, ai); return; }
   vehicles.ejectPed(world, r, false, ai.dock.land);
   if (r.player) world.notify(r.player, inWater(world.map, r) ? 'The rescue boat can\'t get you any nearer - swim for it.' : `You're ashore at ${ai.from}.`, 'good');
   goHome(world, v, ai);
@@ -354,8 +381,11 @@ function home(world, v, ai, now) {
   if (left < 30 || progress(world, ai, left) > 10) halt(v);
 }
 
-// Taken by a player: the crew go over the side and swim for it (npc.js), and whoever called it can call another.
+// Taken by a player: the crew go over the side and swim for it (npc.js), and whoever called it can call another (a
+// body it was bringing in is taken away).
 function taken(world, v, ai) {
+  const r = world.get(ai.rider);
+  if (r && r.dead && r.vehId === v.id) { v.seats[r.seat] = 0; r.vehId = 0; if (r.npc) despawnNpc(world, r); else world.remove(r); }
   for (const id of ai.crew) { const c = world.get(id); if (c && c.npc) { if (c.vehId === v.id) vehicles.ejectPed(world, c, true); c.npc.role = 'civ'; c.npc.state = 'wander'; } }
   const b = world.get(ai.body); if (b && b.emsAssigned === v.id) b.emsAssigned = 0;
   if (ai.paid) revive.helpLost(world, ai.paid, v.id);
@@ -423,6 +453,14 @@ function sail(v, way, top, slow = 0) {
 }
 function steer(v, tx, ty, speed) {
   const fwd = vehForwardSpeed(v), diff = angleDiff(v.a, Math.atan2(ty - v.y, tx - v.x));
+  // the way on well round to one side or behind it and it's (nearly) stopped - just pulled someone in, or nosed into
+  // the shore: it backs round toward it for a moment (up to 1.5 s: v.backN, ticks)
+  if (!(v.backN > 0) && ((Math.abs(diff) > 1.1 && Math.abs(fwd) < 20) || (Math.abs(diff) > 2 && fwd < 60))) v.backN = 30;
+  if (v.backN > 0) {
+    v.backN--;
+    if (Math.abs(diff) > 0.5) { v.input = { throttle: -0.7, steer: -Math.sign(diff), hb: false }; return; }
+    v.backN = 0;
+  }
   const sp = Math.abs(diff) > 1.1 ? Math.min(speed, 150) : speed;
   v.input = { throttle: clamp((sp - fwd) / 90, -1, 1), steer: clamp(diff * 2.4 - (v.av || 0) * 0.15, -1, 1), hb: false };
 }
