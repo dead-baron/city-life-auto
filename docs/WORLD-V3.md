@@ -165,7 +165,7 @@ Wind Farm and the Westport Raceway fit the new mainland better (the raceway went
 needs a spot on the Egret Coast or in the valley).
 
 **Points of interest and venues** in today's world (`m.pois`, `m.venues`; counted from `generateCity`, see 4.2):
-606 points of interest in 51 kinds: 166 homes, 109 ATMs, 108 delivery drops, 35 convenience stores, 21 clothing
+606 points of interest in 52 kinds: 166 homes, 109 ATMs, 108 delivery drops, 35 convenience stores, 21 clothing
 stores, 13 clubs, 12 rail stations, 11 gun shops, 11 vending spots, 9 banks, 8 coffee shops, 8 tackle shops, 7 hospitals
 (and their receptions), 7 paint shops, 7 rentals, 5 police stations (and their evidence rooms), 5 barbers, 5 gas stations,
 3 pharmacies, 3 snack bars, 3 rides, 3 race starts, 2 fish markets, 2 gang hideouts, 2 farms, 2 airports, 2 markets, 2
@@ -745,7 +745,28 @@ about the size of today's whole map, so the client's working set stays about wha
 3. **Today's islands re-placed** in the bay (generated in their rectangles), the Bay Ring, the bridges, the Bay Line and
    the subway, the ferries re-routed. The mainland is plain land with the new highways.
 4. **The regions one by one**: Northshore and Willow Valley with the river channel and the lake; Highland Woods and
-   Granite Peaks; the Red Rock Desert with Lucky Mesa; the Sandpiper and Heron coasts; Prison Island and the outer sea.
+   Granite Peaks; the Red Rock Desert with Lucky Mesa; the Sandpiper and Egret coasts; Prison Island and the outer sea.
 5. **Transit and the map**: the Coast Line, intercity coaches, the river water bus, the multi-zoom map.
 
 Each stage bumps `WORLD_VERSION` (homes and garages from the old world are released, as World v2 does).
+
+### 4.5 For the next wave (not worked out yet)
+
+- **How a region is generated from today's generators**: `buildCity` runs its steps over the whole map in one order
+  (land, districts, roads, the railway, blocks, nature, countryside, transit). Which steps can run on one island's
+  rectangle as they are, which read the whole world (the land labelling, the sea and river distance fields, the
+  railway, the countryside's search for open ground, the bus and ferry searches), and what each needs from the skeleton
+  instead. A spike: generate Metro City alone in its rectangle and compare it tile for tile with today's.
+- **What a sleeping region keeps on the server** (parked and abandoned vehicles, loot on the ground, damaged props, fires,
+  wanted players hiding there) and how it wakes (traffic and pedestrians spawned out of sight, animals by habitat).
+- **Region seams**: roads, rivers and the railway cross region borders at points the skeleton fixes; buildings, props
+  and nature places must not straddle a border (or belong to one region and be drawn by both).
+- **The cost per region**: the measured 10.1 s for today's 1.57 km² is about 1.6 s per 504 m region if the cost is
+  linear in area (the wild regions cheaper, the city regions dearer). The first 3 x 3 window (2.3 km²) would then cost
+  about 1.5x today's whole build, and each region border the player crosses another row of three (about 5 s), so the
+  worker must build ahead of the player (the next row as they approach a border) and keep what it built; the generator
+  itself has to get faster per km² as well (a target for the perf budgets).
+- **The big map** (U7, MP1): a picture per region per zoom, built offline by `tools/build-worldmap2.mjs`, and the
+  skeleton drawn live for regions not built yet.
+- **Save data**: homes, garages and stashes are stored by world position; with `WORLD_VERSION` bumped they are released
+  as World v2 does - or moved by their island's offset (part 2's table), which would keep players' homes.
