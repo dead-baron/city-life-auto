@@ -243,3 +243,52 @@ test('the fitting room\'s complete outfits: whole, each in its own colours, and 
     assert.equal(V.outfit.jacket ? V.outfit.jacket.id : 0, o.jacket ? o.jacket.id : 0, 'the outfit\'s own jacket, or none');
   }
 });
+
+// The debug wardrobe (task #336; the owner, 2026-10-10: "a debug character creator screen that lets you choose any
+// current outfit asset and customization option in the game and let you save it there, anything you save from that will
+// be added to your inventory"): the creator in dev mode sends the look as the dev command 'wardrobe' (looks.devWardrobe)
+test('debug wardrobe: any piece (the issued kit too) and any hair, worn or saved by name, its pieces yours; only in dev mode', async () => {
+  const dev = await import('../server/dev.js');
+  const { createSession } = await import('../server/session.js');
+  const { fakeConn } = await import('./helpers.js');
+  const w = makeWorld();
+  const a = picked(w, { cash: 0, bank: 0 });
+  const prof = a.p.profile, L = LK.decodeLook(prof.look), base = L.body.base;
+  const cap = LK.PIECES.find((P) => P && P.slot === 'hat' && P.d.issued && LK.fits(P, base));
+  const specs = LK.PIECES.filter((P) => P && P.slot === 'glasses' && P.price > 0 && LK.fits(P, base) && !W.owns(prof.wardrobe, P.i)).sort((x, y) => y.price - x.price)[0];
+  assert.ok(cap && specs, 'an issued cap and glasses you don\'t own');
+  const style = LK.HAIR_STYLES.findIndex((s, i) => i !== L.hair.style && s[1].includes(base));
+  L.outfit.hat = { id: cap.i, c: cap.c, t: cap.t, p: 0 };
+  L.outfit.glasses = { id: specs.i, c: specs.c, t: specs.t, p: 0 };
+  L.hair.style = style;
+  const code = LK.encodeLook(LK.validLook(L));
+  // the normal creator won't: you don't own them, and the hair's done at a barber
+  set(a, code);
+  assert.notEqual(prof.look, code);
+  // the debug wardrobe: worn, free, and the pieces are yours
+  run(w, 1.1);
+  dev.command(w, a.p, 'wardrobe', { look: code });
+  assert.equal(prof.look, code, 'wearing it');
+  assert.equal(LK.decodeLook(prof.look).hair.style, style, 'the new hair too');
+  assert.ok(prof.wardrobe.includes(cap.i) && prof.wardrobe.includes(specs.i), 'the cap and the glasses in the wardrobe');
+  assert.equal(prof.cash + prof.bank, 0, 'free');
+  assert.equal(a.p.ped.app.lk, code, 'everyone sees it');
+  // saved by name: kept among the saved looks, its pieces yours, what you wear unchanged
+  const jacket = LK.PIECES.filter((P) => P && P.slot === 'jacket' && P.price > 0 && LK.fits(P, base) && !W.owns(prof.wardrobe, P.i))[0];
+  const L2 = LK.decodeLook(code);
+  L2.outfit.jacket = { id: jacket.i, c: jacket.c, t: jacket.t, p: 0 };
+  const code2 = LK.encodeLook(LK.validLook(L2));
+  dev.command(w, a.p, 'wardrobe', { look: code2, n: 'Test fit' });
+  assert.ok(prof.looks.some((s) => s.n === 'Test fit' && s.c === code2), 'saved');
+  assert.ok(prof.wardrobe.includes(jacket.i), 'the jacket in the wardrobe');
+  assert.equal(prof.look, code, 'still wearing the first');
+  // not without dev mode (the session drops 'dev' messages)
+  const r = joinPlayer(w, { cash: 0 });
+  const conn = fakeConn();
+  const s = createSession(w, conn, { dev: false, maxPlayers: 10, login: () => ({ profile: r.prof, token: 't' }) });
+  s.onMessage(JSON.stringify({ t: 'hello', token: null }), false);
+  const own0 = (r.prof.wardrobe || []).slice();
+  s.onMessage(JSON.stringify({ t: 'dev', c: 'wardrobe', look: code }), false);
+  assert.ok(!(r.prof.wardrobe || []).includes(cap.i), 'no issued cap for a player not in dev mode');
+  assert.deepEqual(r.prof.wardrobe || [], own0);
+});

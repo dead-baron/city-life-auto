@@ -16,7 +16,7 @@
 // waits there, interact boards it, free (a passenger seat; the camera rides along). Get off with the vehicle key
 // while it waits at a stop (on the move you bail out, as from any vehicle). A bus that is taken or wrecked leaves its
 // line; a new one comes into service a minute later, out of sight.
-import { K } from '../../shared/constants.js';
+import { K, T, MAP_W, MAP_H } from '../../shared/constants.js';
 import { lanePath, exitsFrom, nearestEdge } from '../../shared/roads.js';
 import { project, pointAt } from '../../shared/geom.js';
 import { BUS_DWELL_S, TAXI_FLAG, TAXI_PER_KM, TAXI_WAIT_S, TAXI_REFUSE_STARS } from '../../shared/rules.js';
@@ -27,8 +27,18 @@ import { payFrom } from './economy.js';
 import { ejectPed } from './vehicles.js';
 import * as traffic from './traffic.js';
 import { isBlocked } from './reroute.js';
+import { deadWays } from './roadends.js';
+import { ferryRoutes } from './ferries.js';
 
 export const BUS_ROADS = new Set(['ave', 'art', 'blvd', 'st', 'front', 'minor', 'drive']);
+// A street a bus may use (the owner, 2026-10-10: "southside bus route is getting jammed up because it turns into a
+// deadend street and the buses get stuck there. Lets rethink the route so that the buses go in a full loop"): a through
+// street of the town at ground level - never one that leads only to a road's end (roadends.js deadWays: the dead ends
+// and the roads that lead only to them) nor a cul-de-sac, and the routes take no U-turns, so a bus never has to turn
+// round anywhere.
+export const busRoad = (net, e) => e.lvl === 0 && BUS_ROADS.has(e.kind) && !e.culdesac && !deadWays(net).has(e.id * 2) && !deadWays(net).has(e.id * 2 + 1);
+const REUSE = 2500;         // px: what a leg pays to run along a street the line already uses (a loop, not out and back)
+const TERMINAL_REACH = 12000;   // px: a ferry terminal's stop is on the nearest through street this near its pier (on land)
 // line names and liveries (PAINTS index) by the zone they serve (shared/citylayout.js Z)
 const ZONE_LINE = {
   1: ['Metro Loop', 0], 2: ['Southside Line', 5], 7: ['Westport Line', 1], 8: ['Northshore Line', 6], 9: ['Cedar Isle Line', 9],
@@ -44,7 +54,7 @@ const DOOR_REACH = 90;      // board from this near the bus's side
 // A stop on the street network: the shelter's prop, the edge it stands beside, the end the bus enters that edge from
 // (so the stop is at its kerb), and how far along the kerb lane it is (s).
 function stopOf(net, p, pi) {
-  const ne = nearestEdge(net, p.x, p.y, (e) => e.lvl === 0 && BUS_ROADS.has(e.kind));
+  const ne = nearestEdge(net, p.x, p.y, (e) => busRoad(net, e));
   if (!ne || ne.d > ne.e.hw + 90) return null;   // (on the pavement beside it)
   const e = ne.e, t = pointAt(e.pts, ne.s);
   const right = t.tx * (p.y - ne.y) - t.ty * (p.x - ne.x) > 0;   // (screen y down: the right of a→b, where its kerb lane runs)
@@ -59,18 +69,64 @@ function stopOf(net, p, pi) {
   return { pi, x: Math.round(q.x), y: Math.round(q.y), sx: p.x, sy: p.y, edge: e.id, from, s, name: '' };
 }
 
+// A mainland ferry terminal's stop (the owner, 2026-10-10: "make sure buses are hitting the ferry terminals on the
+// mainlands too so players can take a bus and get off at a ferry terminal"): at the kerb of the nearest through street to
+// the pier - over land, not across the water - on the pier's side where the street is two-way; where you wait for the bus
+// is the pavement beside it (there's no shelter). The street right by a pier can be a road's end (Harbor Road, down to
+// the Gull Harbor ferry): then the stop is where the nearest through street comes closest.
+function terminalStop(world, R, ok = () => true) {
+  const m = world.map, net = m.net, end = R.ends[0];
+  const px = end.sx - end.ox * 48, py = end.sy - end.oy * 48;   // (the pier's landward end)
+  // (a creek or the corner of a cove on the way is fine; a channel to another island isn't)
+  const dry = (x0, y0, x1, y1) => {
+    const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 24);
+    let wet = 0;
+    for (let i = 0; i <= n; i++) {
+      const tx = Math.floor((x0 + ((x1 - x0) * i) / n) / 32), ty = Math.floor((y0 + ((y1 - y0) * i) / n) / 32);
+      if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
+      const t = m.tiles[ty * MAP_W + tx];
+      if ((t === T.WATER || t === T.DEEP) && (wet += 24) > 320) return false;
+    }
+    return true;
+  };
+  const cands = [];
+  for (const e of net.edges) {
+    if (!busRoad(net, e)) continue;
+    const pr = project(e.pts, { x: px, y: py });
+    if (pr && pr.d < TERMINAL_REACH) cands.push([pr.d, e, pr]);
+  }
+  cands.sort((a, b) => a[0] - b[0]);
+  for (const [, e, pr] of cands.slice(0, 40)) {
+    if (!dry(px, py, pr.x, pr.y)) continue;
+    const t = pointAt(e.pts, pr.s);
+    const right = e.oneway || t.tx * (py - pr.y) - t.ty * (px - pr.x) > 0;
+    const from = right ? e.a : e.b;
+    const lp = lanePath(net, e, from, 0), L = lp[lp.length - 1].s;
+    if (L < STOP_IN + 60) continue;
+    const at = project(lp, { x: px, y: py }), s = Math.min(Math.max(at ? at.s : L / 2, STOP_IN), L - 60);
+    const q = pointAt(lp, s);
+    // (where to wait: the pavement on the bus's right, within reach of its doors)
+    const st = { pi: -1, x: Math.round(q.x), y: Math.round(q.y), sx: Math.round(q.x - q.ty * 70), sy: Math.round(q.y + q.tx * 70), edge: e.id, from, s, name: `${R.island} Ferry`, ferry: R.id };
+    if (ok(st)) return st;   // (a street the line can get to and back from)
+  }
+  return null;
+}
+
 // The quickest way along the roads (those ok() allows) from A to B ({ edge, from, s }: on the kerb lane, going A's way
 // to B's): a list of steps [{ edge, from }] from A's edge to B's, or null. B behind A on the same stretch: the way
-// round the block.
-const BUS_OK = (e) => e.lvl === 0 && BUS_ROADS.has(e.kind);
+// round the block. A bus's way (no ok given) keeps to busRoad and never turns round (no U-turns), and pays REUSE for
+// each street in `used` (the streets its line already runs along: a loop rather than out and back).
 const TAXI_OK = (e) => e.kind !== 'alley';
-function route(net, A, B, ok = BUS_OK) {
+function route(net, A, B, ok = null, used = null) {
+  const bus = !ok;
+  if (bus) ok = (e) => busRoad(net, e);
   if (A.edge === B.edge && A.from === B.from && B.s > A.s + 60) return [{ edge: A.edge, from: A.from }];
   const key = (e, f) => e * 2 + (net.edges[e].a === f ? 0 : 1);
   const dist = new Map(), prev = new Map(), open = [];
   const relax = (k, d, pk) => { if (d < (dist.get(k) ?? Infinity)) { dist.set(k, d); prev.set(k, pk); open.push([d, k]); } };
+  const cost = (x) => 30 + Math.abs(x.turn) * 40 + (used && used.has(x.edge) ? REUSE : 0);
   const e0 = net.edges[A.edge], to0 = e0.a === A.from ? e0.b : e0.a;
-  for (const x of exitsFrom(net, net.nodes[to0], A.edge)) if (ok(net.edges[x.edge])) relax(key(x.edge, to0), e0.len - A.s + 30 + Math.abs(x.turn) * 40, -1);
+  for (const x of exitsFrom(net, net.nodes[to0], A.edge)) if (ok(net.edges[x.edge]) && !(bus && x.edge === A.edge)) relax(key(x.edge, to0), e0.len - A.s + cost(x), -1);
   const goal = key(B.edge, B.from);
   let found = false;
   while (open.length) {
@@ -81,7 +137,7 @@ function route(net, A, B, ok = BUS_OK) {
     if (k === goal) { found = true; break; }
     if (d > 160000) break;
     const eid = k >> 1, e = net.edges[eid], from = (k & 1) ? e.b : e.a, to = from === e.a ? e.b : e.a;
-    for (const x of exitsFrom(net, net.nodes[to], eid)) if (ok(net.edges[x.edge])) relax(key(x.edge, to), d + e.len + 30 + Math.abs(x.turn) * 40, k);
+    for (const x of exitsFrom(net, net.nodes[to], eid)) if (ok(net.edges[x.edge]) && !(bus && x.edge === eid)) relax(key(x.edge, to), d + e.len + cost(x), k);
   }
   if (!found) return null;
   const out = [];
@@ -114,8 +170,19 @@ function tour(stops) {
   return order;
 }
 
-// Every bus line, worked out once per map: [{ id, name, paint, zone, stops: [stop], steps: [{ edge, from, stops: [k] }], len }]
-// (a step's stops in the order the bus comes to them)
+// The orders to try a line's stops in: the tour either way round, and for up to 5 stops every order (the first fixed)
+function orders(order) {
+  const out = [order, [order[0], ...order.slice(1).reverse()]];
+  if (order.length <= 5) {
+    const perm = (rest) => (rest.length <= 1 ? [rest] : rest.flatMap((x, i) => perm([...rest.slice(0, i), ...rest.slice(i + 1)]).map((p) => [x, ...p])));
+    for (const p of perm(order.slice(1))) out.push([order[0], ...p]);
+  }
+  return out;
+}
+
+// Every bus line, worked out once per map: [{ id, name, paint, zone, stops: [stop], steps: [{ edge, from, stops: [k] }], len,
+// across: [{ sx, sy, k }] }] (a step's stops in the order the bus comes to them; a stop's ferry: the ferry route whose
+// mainland terminal it serves; across: a shelter the line passes across the street from, and the stop it calls at there)
 export function busLines(world) {
   const m = world.map;
   if (m._busLines) return m._busLines;
@@ -133,12 +200,24 @@ export function busLines(world) {
     if (!byZone.has(z)) byZone.set(z, []);
     byZone.get(z).push(st);
   });
+  // each mainland ferry terminal on the line of the town nearest it
+  for (const R of ferryRoutes(world)) {
+    const end = R.ends[0];
+    let bz = -1, bd = Infinity;
+    for (const [z, all] of byZone) { if (all.length < MIN_STOPS) continue; for (const s of all) { const d = Math.hypot(s.x - end.sx, s.y - end.sy); if (d < bd) { bd = d; bz = z; } } }
+    if (bz < 0) continue;
+    const ref = byZone.get(bz)[0];
+    const st = terminalStop(world, R, (q) => !!route(net, ref, q) && !!route(net, q, ref));
+    if (!st) continue;
+    byZone.get(bz).push(st);
+  }
   for (const [z, all] of [...byZone].sort((a, b) => a[0] - b[0])) {
     if (all.length < MIN_STOPS) continue;
-    // too many stops for one loop: keep a spread of them (farthest-point picking from the westmost)
+    // too many stops for one loop: keep a spread of them (farthest-point picking from the westmost and the terminals)
     let stops = all;
     if (stops.length > MAX_STOPS) {
       const pick = [stops.reduce((a, b) => (b.x < a.x ? b : a))];
+      for (const s of stops) if (s.ferry !== undefined && !pick.includes(s)) pick.push(s);
       while (pick.length < MAX_STOPS) {
         let best = null, bd = -1;
         for (const s of stops) { if (pick.includes(s)) continue; let dd = Infinity; for (const q of pick) dd = Math.min(dd, Math.hypot(s.x - q.x, s.y - q.y)); if (dd > bd) { bd = dd; best = s; } }
@@ -146,18 +225,30 @@ export function busLines(world) {
       }
       stops = pick;
     }
-    // the loop: legs between consecutive stops along the streets (a stop that can't be reached is left out)
-    let order = tour(stops).map((i) => stops[i]);
-    for (let tries = 0; tries < 4 && order.length >= MIN_STOPS; tries++) {
-      const legs = [];
-      let bad = -1;
-      for (let i = 0; i < order.length; i++) { const r = route(net, order[i], order[(i + 1) % order.length]); if (!r) { bad = (i + 1) % order.length; break; } legs.push(r); }
-      if (bad >= 0) { order = order.filter((_, i) => i !== bad); continue; }
+    // Two shelters facing each other across a street (one each side, a block or less apart: Southside's on Dock Avenue)
+    // make a one-way loop run along that street both ways. The line may call at just one of them if that makes its loop
+    // a loop; the other shelter's people are told the bus stops across the street (L.across).
+    const sets = [{ stops, drop: null }];
+    for (const a of stops) for (const b of stops) {
+      if (a === b || a.ferry !== undefined || b.ferry !== undefined || stops.length - 1 < MIN_STOPS) continue;
+      const ea = net.edges[a.edge], eb = net.edges[b.edge];
+      if (!ea.name || ea.name !== eb.name || Math.hypot(a.x - b.x, a.y - b.y) > 1300) continue;
+      const ta = pointAt(lanePath(net, ea, a.from, 0), a.s), tb = pointAt(lanePath(net, eb, b.from, 0), b.s);
+      if (ta.tx * tb.tx + ta.ty * tb.ty > -0.7) continue;   // (not facing: the same way)
+      sets.push({ stops: stops.filter((s) => s !== b), drop: { stop: b, for: a } });
+    }
+    let pick = null;
+    for (const S of sets) {
+      const lp = loopFor(net, S.stops);
+      if (lp && (!pick || lp.score + (S.drop ? REUSE * 3 : 0) < pick.score)) pick = { ...lp, score: lp.score + (S.drop ? REUSE * 3 : 0), drop: S.drop };
+    }
+    if (pick) {
+      const { legs, order } = pick;
       // the steps end to end (each leg starts on the step the one before ended on; the last ends where the first began)
       const steps = [];
       for (const leg of legs) leg.forEach((st, j) => { if (j === 0 && steps.length) return; steps.push({ edge: st.edge, from: st.from, stops: [] }); });
       steps.pop();
-      if (steps.length < 2) break;
+      if (steps.length < 2) continue;
       // each stop on the step its own leg starts from (the last leg one step long: its stop is on the first step, the
       // loop come round)
       let at = 0;
@@ -169,14 +260,47 @@ export function busLines(world) {
       const names = order.map((s) => s.name), seen = new Map();
       names.forEach((n) => seen.set(n, (seen.get(n) || 0) + 1));
       const count = new Map();
-      lines.push({
+      const L = {
         id: lines.length, name, paint, zone: z, steps, len: Math.round(len),
         stops: order.map((s) => { const n = seen.get(s.name) > 1 ? `${s.name} ${(count.set(s.name, (count.get(s.name) || 0) + 1)).get(s.name)}` : s.name; return { ...s, name: n }; }),
-      });
-      break;
+        // (a shelter it doesn't call at, across the street from one it does: where you wait, and that stop)
+        across: pick.drop && order.includes(pick.drop.for) ? [{ sx: pick.drop.stop.sx, sy: pick.drop.stop.sy, k: order.indexOf(pick.drop.for) }] : [],
+      };
+      lines.push(L);
     }
   }
   return lines;
+}
+
+// The loop through a set of stops: legs between consecutive stops along the streets (a stop that can't be reached is
+// left out). The stops are visited in the order of a short tour, either way round (and, for a few stops, in every
+// order): the loop kept is the one that runs along the fewest streets twice (a loop, not out and back), then the
+// shortest. { legs, order, score } or null.
+function loopFor(net, stops) {
+  let order = tour(stops).map((i) => stops[i]);
+  for (let tries = 0; tries < 4 && order.length >= MIN_STOPS; tries++) {
+    let best = null, bad = -1;
+    for (const ord of orders(order)) {
+      const ls = [], used = new Map();
+      let fail = -1;
+      for (let i = 0; i < ord.length; i++) {
+        const r = route(net, ord[i], ord[(i + 1) % ord.length], null, used);
+        if (!r) { fail = order.indexOf(ord[(i + 1) % ord.length]); break; }
+        ls.push(r);
+        // (each leg starts on the step the last one ended on, and the last ends on the first's: counted once)
+        r.forEach((st, j) => { if ((j || !i) && !(i === ord.length - 1 && j === r.length - 1)) used.set(st.edge, (used.get(st.edge) || 0) + 1); });
+      }
+      if (fail >= 0) { if (bad < 0) bad = fail; continue; }
+      let len = 0, twice = 0;
+      for (const r of ls) r.forEach((st, j) => { if (j) len += net.edges[st.edge].len; });
+      for (const n of used.values()) if (n > 1) twice += n - 1;
+      const score = len + twice * REUSE * 4;
+      if (!best || score < best.score) best = { legs: ls, order: ord, score };
+    }
+    if (best) return best;
+    order = order.filter((_, i) => i !== Math.max(0, bad));
+  }
+  return null;
 }
 
 // A line's route as a polyline for the map (every ~120 px along its streets), and the stops' order along it
@@ -383,7 +507,10 @@ export function boardBus(world, p, v) {
 // the stop nearest a player on foot (within reach of its shelter): { L, k } or null
 function stopNear(world, ped) {
   let best = null, bd = STOP_REACH;
-  for (const L of busLines(world)) L.stops.forEach((s, k) => { const d = Math.hypot(s.sx - ped.x, s.sy - ped.y); if (d < bd) { bd = d; best = { L, k }; } });
+  for (const L of busLines(world)) {
+    L.stops.forEach((s, k) => { const d = Math.hypot(s.sx - ped.x, s.sy - ped.y); if (d < bd) { bd = d; best = { L, k }; } });
+    for (const a of L.across || []) { const d = Math.hypot(a.sx - ped.x, a.sy - ped.y); if (d < bd) { bd = d; best = { L, k: a.k, across: true }; } }
+  }
   return best;
 }
 
@@ -405,6 +532,7 @@ export function stopNote(world, p) {
   const at = stopNear(world, ped);
   if (!at) return null;
   const eta = stopEta(world, at.L, at.k);
+  if (at.across) return { label: `Bus stop · ${at.L.name} · the bus stops across the street`, passive: true, run: () => {} };
   return { label: `Bus stop · ${at.L.name}${eta === null ? '' : eta < 20 ? ' · the bus is nearly here' : ` · next bus about ${eta < 90 ? `${eta}s` : `${Math.round(eta / 60)} min`}`}`, passive: true, run: () => {} };
 }
 
@@ -711,3 +839,4 @@ export function taxiInfo(world, p) {
   const T = v.taxi;
   return { st: T.st, x: Math.round(v.x), y: Math.round(v.y), eta: T.st === 'pickup' ? Math.round(T.left / 200) : 0, wait: T.st === 'wait' ? Math.max(0, Math.round(T.until - world.time)) : 0, to: T.dest ? T.dest.label || 'your waypoint' : '', m: Math.round(T.left / 32), fare: fareOf(T.meter), est: fareOf(T.meter + T.left) };
 }
+export { terminalStop as _terminalStop };   // (tests: test/transit.test.js)

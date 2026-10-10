@@ -91,7 +91,7 @@ export const DEV_SECTIONS = [
     ['🏕 Hunting Lodge', 'near', { k: 'lodge' }], ['⛺ Hunting camp', 'near', { k: 'huntcamp' }], ['🪵 Trapper\'s cabin', 'near', { k: 'trapper' }],
     ['🥩 Game butcher', 'near', { k: 'butcher' }], ['🦫 Beaver pond', 'near', { k: 'beaver' }],
   ] },
-  { id: 'homes', title: '🏠 Homes', items: [['🏠 Nearest home', 'near', { k: 'home' }]] },
+  { id: 'homes', title: '🏠 Homes', items: [['🏠 Nearest home', 'home', { op: 'near' }], ['⏭ Next home', 'home', { op: 'next' }], ['⏮ Previous home', 'home', { op: 'prev' }], ['🗺 Every home (map, list)…', '@homes']] },
   { id: 'nature', title: '🌲 Nature & landmarks', items: [
     ['🌿 Next nature place', 'near', { k: 'nature' }], ['⛺ Campground', 'near', { k: 'camp' }], ['🔥 Campfire (light it, sit by it)', 'near', { k: 'campfire' }], ['💧 Waterfall', 'near', { k: 'falls' }],
     ['🌴 Canyon oasis', 'near', { k: 'oasis' }], ['🦀 Tidepools', 'near', { k: 'tidepools' }], ['🔥 Bonfire beach', 'near', { k: 'bonfire' }],
@@ -101,4 +101,5 @@ export const DEV_SECTIONS = [
     ['⛽ Roadside stop', 'near', { k: 'stop' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }], ['🌳 Lakeview Park', 'near', { k: 'park' }],
     ['🛶 Pine Lake camp', 'near', { k: 'lakecamp' }], ['🏊 Stadium Lido (pool)', 'near', { k: 'pool' }], ['🏞 Cedar Creek', 'near', { k: 'towncreek' }], ['⚓ Wreck Island', 'near', { k: 'wreck' }], ['🌿 Bluffs Maze Garden', 'near', { k: 'maze' }], ['♨ Granite Hot Springs', 'near', { k: 'springs' }], ['🌊 Splash Canyon Water Park', 'near', { k: 'waterpark' }], ['🪵 Driftwood Point', 'near', { k: 'coastfalls' }], ['🏀 North Point Courts', 'near', { k: 'courts' }], ['🎣 Westport Pier', 'near', { k: 'pier' }], ['🍇 Willow River Vineyard', 'near', { k: 'vineyard' }], ['⛳ Cedar Hills Golf Club', 'near', { k: 'golf' }], ['🍎 Willow River Orchard', 'near', { k: 'orchard' }], ['🦭 Seal Islets', 'near', { k: 'seals' }], ['🎈 Dry Creek Balloon Field', 'near', { k: 'balloons' }], ['⛪ Old Mission Ruins', 'near', { k: 'mission' }], ['🌿 Fern Gorge', 'near', { k: 'gorge' }], ['🗿 The Sentinel Stones', 'near', { k: 'stones' }], ['🧺 Old Town Market', 'near', { k: 'market' }], ['✈ Dry Creek Boneyard', 'near', { k: 'boneyard' }], ['💜 Cedar Point Lavender', 'near', { k: 'lavender' }],
   ] },
+  { id: 'wardrobe', title: '👗 Debug wardrobe', items: [['👗 Every piece and option (saving adds them to my wardrobe)…', '@wardrobe']] },
 ];
