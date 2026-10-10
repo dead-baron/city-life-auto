@@ -5977,3 +5977,10 @@ and I think thats a great idea." Bowling first; the cinema is still to come.
   - These pass as before: `test/golf.test.js` (hoops and golf share the input path), `test/business.test.js`,
     `test/world.test.js`, `test/worldbuild.test.js`, `test/robbery.test.js`, `test/dmath.test.js`,
     `test/art2.test.js`, `test/sound.test.js`, `test/perf.test.js`, `test/worldmap.test.js`.
+
+## 2026-10-10 · The bake workers may load a few more files
+
+With the bowling alley (`shared/bowling.js`, built with the world, so the bake reads it) and the dance moves
+(`shared/dance.js`) in, a bake worker loads 77 files against a budget of 76 (its code, 969 KB, is within its 1000).
+The file budget is now 80: each new kind of place the world builds brings its module, and the workers fetch them once,
+after the page. Tests: test/perf.test.js.
