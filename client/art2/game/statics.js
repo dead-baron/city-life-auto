@@ -2918,7 +2918,9 @@ function cutRecipe(c, b, s, spec) {
     const cells = blk ? { bars: blk.bars.map((q) => [q[0] - ox, q[1] - oy, q[2] - ox, q[3] - oy]), cells: blk.cells.map((q) => ({ door: [q.door.x - ox, q.door.y - oy], bench: [q.bench.x - ox, q.bench.y - oy], toilet: [q.toilet.x - ox, q.toilet.y - oy] })), dir: blk.south ? 1 : -1, back: (blk.south ? blk.y0 : blk.y1) - oy } : null;
     const bw = u.kind === 'bowling' && c.M.bowling ? c.M.bowling : null;   // (Pinwheel Lanes: shared/bowling.js lays the lanes out)
     const bowl = bw ? { lanes: bw.lanes.map((L) => ({ ax: L.ax - ox, foul: L.foulY - oy, back: L.backEdge - oy, dir: L.dir, len: L.len })), ca: (u.x1 - 3 - s.tx) * TILE, cb: (u.x1 - s.tx) * TILE } : null;
-    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl });
+    const cm = u.kind === 'cinema' && c.M.cinema ? c.M.cinema : null;   // (The Grand Theatre: shared/cinema.js lays the screens out)
+    const cine = cm ? { rooms: cm.rooms.map((R) => ({ x0: R.x0 - ox, x1: R.x1 - ox, y0: R.y0 - oy, y1: R.y1 - oy, back: R.backEdge - oy, dir: R.dir, seats: R.seats.map((q) => [q.x - ox, q.y - oy, q.row]), sx0: R.screen.x0 - ox, sx1: R.screen.x1 - ox, sh: R.screen.h, lift: R.screen.lift })), cc: (cm.cc - s.tx) * TILE, wall: (cm.wallRow - s.ty) * TILE, ca: (cm.ca - s.tx) * TILE, cb: (cm.cb + 1 - s.tx) * TILE, dir: cm.south ? 1 : -1 } : null;
+    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine });
   }
   // a wing with no room you walk into (a hospital's wards): its floor all across, walls cut low round it
   const inY0 = Math.max(32, Math.min(Dd - 64, (wi.y0 - s.ty) * TILE)), inY1 = Math.max(inY0 + 32, Math.min(Dd - 32, (wi.y1 - s.ty + 1) * TILE));
@@ -2935,6 +2937,7 @@ function makeCut(r) {
   // floor (a wing's all across it)
   for (const u of r.units) {
     if (u.bowl) { bowlingFloor(u, r, px); continue; }
+    if (u.cine) { cinemaFloor(u, r, px); continue; }
     const fk = FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind];
     for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
@@ -2960,6 +2963,7 @@ function makeCut(r) {
   for (const u of r.units) {
     if (LOBBY[u.kind]) { lobbyRoom(u, r, px); if (u.cells) cellRoom(u.cells, px); continue; }   // (IN1-B hospital / IN2-B police: their own desk and dressing)
     if (u.bowl) { bowlingRoom(u, r, px); continue; }   // (IN14: the lanes, the scoreboards, the ball returns, the settees, the shoe counter)
+    if (u.cine) { cinemaRoom(u, r, px); continue; }   // (IN14: the screens, the seats, the poster wall, the popcorn counter)
     const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' || u.kind === 'roadhouse' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : u.kind === 'roadhouse' ? ramp('#4a3020', 5, 2) : ramp('#a8aab0', 5, 2);
     const ca = u.x0 > u.fx0 ? u.x0 : u.x0 + 6, cb = u.x1 < u.fx1 ? u.x1 : u.x1 - (u.fx1 - u.fx0 > 128 ? 34 : 6);   // (the counter runs on across a section's open side)
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = ca; x < cb; x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
@@ -3056,6 +3060,64 @@ function bowlingRoom(u, r, px0_) {
   }
 }
 
+// ---- The Grand Theatre (IN14; shared/cinema.js): the screen rooms' dark carpet, the lobby and the corridor's red one with
+// gold flecks; the screens on the back wall between curtains, the stepped rows of red seats, the walls between with the
+// poster wall on the lobby side, the popcorn and ticket counter. The film and the dark: client/cinema.js.
+function cinemaFloor(u, r, px) {
+  const K = u.cine, RED = [[120, 22, 34], [104, 18, 30]], GOLD = [214, 168, 72], DK = [[34, 30, 40], [40, 34, 46]];
+  for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) {
+    const R = K.rooms.find((q) => x >= q.x0 && x < q.x1 && Y >= q.y0 && Y < q.y1);
+    let c;
+    if (R) { const step = Math.floor(((Y - R.back) * R.dir) / TILE); c = DK[(step + ((x >> 2) & 1)) & 1]; }
+    else { const h = hash(x >> 2, Y >> 2, 1414); c = h > 0.97 || ((x + Y) % 24 === 0 && (x - Y) % 24 === 0) ? GOLD : RED[((x >> 3) + (Y >> 3)) & 1]; }
+    px(x, Y, 0, c, [0, 0, 1], F_GROUND);
+  }
+}
+function cinemaRoom(u, r, px0_) {
+  const px = (x, Y, z, c, n) => px0_(Math.round(x), Math.round(Y), z, c, n);
+  const K = u.cine, slab = (x0, x1, Ya, Yb, z, top, side) => {
+    const Y0 = Math.round(Math.min(Ya, Yb)), Y1 = Math.round(Math.max(Ya, Yb));
+    for (let Y = Y0; Y < Y1; Y++) for (let x = Math.round(x0); x < Math.round(x1); x++) px(x, Y, z, top[Y === Y0 || x === Math.round(x0) || x === Math.round(x1) - 1 ? 4 : 2], [0, 0, 1]);
+    for (let x = Math.round(x0); x < Math.round(x1); x++) for (let v = 0; v < z; v++) px(x, Y1, v, side[v > z - 3 ? 3 : 1], [0, 1, 0]);
+  };
+  const seat = ramp('#b8222e', 5, 2), wallC = ramp('#5a2a30', 5, 2), riser = ramp('#2a2430', 5, 2), wood = ramp('#5a3624', 6, 3), top = ramp('#2a2228', 5, 2), curtain = ramp('#7a1420', 5, 2);
+  const d = K.dir;
+  for (const R of K.rooms) {
+    // the screen on the back wall, curtains either side
+    const Yw = Math.min(R.back, R.back + d) + 1;
+    for (let x = R.sx0 - 6; x < R.sx1 + 6; x++) for (let v = R.lift - 3; v < R.lift + R.sh + 3; v++) {
+      const inS = x >= R.sx0 && x < R.sx1 && v >= R.lift && v < R.lift + R.sh;
+      px(x, Yw, v, inS ? [176 + ((v >> 3) & 1) * 6, 184, 196] : x < R.sx0 || x >= R.sx1 ? curtain[1 + ((x >> 1) & 1)] : [18, 16, 22], [0, 1, 0]);
+    }
+    // the stepped rows: a riser under each, a red seat with its back to the room's door
+    for (const [sx, sy, row] of R.seats) {
+      const z = 3 + row * 3;
+      slab(sx - 7, sx + 7, sy - d * 4, sy + d * 2, z, riser, riser);
+      slab(sx - 6, sx + 6, sy - d * 3, sy + d * 2, z + 5, seat, seat);
+      slab(sx - 6, sx + 6, sy + d * 2, sy + d * 5, z + 12, seat, seat);
+    }
+  }
+  // the corridor's walls and the wall across the rooms' fronts (the corridor's mouth open)
+  const ya = Math.min(...K.rooms.map((R) => R.y0)), yb = Math.max(...K.rooms.map((R) => R.y1));
+  for (const x of [K.cc - TILE, K.cc + TILE]) slab(x + 4, x + TILE - 4, ya, d > 0 ? yb - TILE : yb, 22, wallC, wallC);
+  slab(u.x0, K.cc, K.wall + 6, K.wall + TILE - 2, 30, wallC, wallC);
+  slab(K.cc + TILE, u.x1, K.wall + 6, K.wall + TILE - 2, 30, wallC, wallC);
+  // the poster wall on its lobby side: invented films as plain shapes in lit frames
+  const PO = [['#1a1440', '#ff4ab0', '#5ad8ff'], ['#14243a', '#ffd27a', '#e8f0ff'], ['#120a20', '#ff8a3a', '#a0ffd0'], ['#3a1428', '#ff7a8a', '#ffe4c0'], ['#202428', '#e8e2d0', '#c03030']].map((q) => q.map(bowlRGB));
+  const Yf = K.wall + TILE - 2;
+  for (let k = 0, x = u.x0 + 8; x + 18 <= K.cc - 4; k++, x += 28) {
+    const [bg, a, b] = PO[k % PO.length];
+    for (let xx = 0; xx < 18; xx++) for (let v = 4; v < 28; v++) {
+      const fx = xx - 9, fv = v - 15, frame = xx < 1 || xx > 16 || v < 5 || v > 26;
+      px(x + xx, Yf + 1, v, frame ? [214, 178, 90] : (k % 2 ? fx * fx + (fv - 2) * (fv - 2) < 22 : Math.abs(fx) < 5 - Math.abs(fv - 3) / 2) ? a : v > 22 && xx > 3 && xx < 14 ? b : bg, [0, 1, 0]);
+    }
+  }
+  // the counter: a dark top, a wood front; the popcorn machine glowing gold on it, the till
+  const cy = u.cy;
+  slab(K.ca + 2, K.cb - 2, cy + 6, cy + 26, 22, top, wood);
+  slab(K.ca + 8, K.ca + 26, cy + 8, cy + 18, 40, ramp('#c8b060', 5, 2), [[150, 120, 40], [255, 226, 120], [250, 216, 100], [240, 200, 80], [255, 240, 170]]);
+  slab(K.cb - 24, K.cb - 12, cy + 10, cy + 18, 28, ramp('#3a3c44', 5, 2), ramp('#3a3c44', 5, 2));
+}
 // ---- a police station's cells (task #362; shared/cells.js lays them out): bare concrete floors, steel bars along the front
 // and between the cells (rails top and middle), a door frame with its lock box in each front, a steel bench along the back
 // wall and a steel toilet in the corner

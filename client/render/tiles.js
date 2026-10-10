@@ -914,6 +914,23 @@ function bowlingArt(g, A, b, u, ox, oy) {
   g.fillStyle = '#6a4630'; g.fillRect(ca + 2, cy + TILE - 8, cb - ca - 4, 4);
 }
 
+// The Grand Theatre, plainly: the red carpet, the screen rooms dark with their rows of red seats and the screen on the
+// back wall, the poster wall, the popcorn counter (the film and the dark: client/cinema.js)
+function cinemaArt(g, C, b, ox, oy) {
+  const wi = b.walkIn;
+  g.fillStyle = '#6e1622'; g.fillRect((wi.x0 - b.tx) * TILE, (wi.y0 - b.ty) * TILE, (wi.x1 - wi.x0 + 1) * TILE, (wi.y1 - wi.y0 + 1) * TILE);
+  for (const R of C.rooms) {
+    g.fillStyle = '#26222c'; g.fillRect(R.x0 - ox, R.y0 - oy, R.x1 - R.x0, R.y1 - R.y0);
+    g.fillStyle = '#c8ccd8'; g.fillRect(R.screen.x0 - ox, Math.min(R.backEdge, R.backEdge + R.dir * 5) - oy, R.screen.x1 - R.screen.x0, 5);
+    g.fillStyle = '#b8222e'; for (const q of R.seats) g.fillRect(q.x - 6 - ox, q.y - 4 - oy, 12, 8);
+  }
+  const PO = ['#ff4ab0', '#ffd27a', '#ff8a3a', '#ff7a8a', '#e8e2d0'];
+  for (let k = 0, x = (wi.x0 - b.tx) * TILE + 8; x + 18 <= C.cc * TILE - ox - 4; k++, x += 28) { g.fillStyle = '#d6b25a'; g.fillRect(x, (C.wallRow + (C.south ? 1 : 0)) * TILE - oy - 6, 18, 6); g.fillStyle = PO[k % PO.length]; g.fillRect(x + 2, (C.wallRow + (C.south ? 1 : 0)) * TILE - oy - 5, 14, 4); }
+  const cy = C.counterRow * TILE - oy, ca = C.ca * TILE - ox, cb = (C.cb + 1) * TILE - ox;
+  g.fillStyle = '#2a2228'; g.fillRect(ca + 2, cy + 4, cb - ca - 4, TILE - 8);
+  g.fillStyle = '#f0d070'; g.fillRect(ca + 8, cy + 6, 16, 12);
+}
+
 export function interiorArt(m, b) {
   let cv = artCache.get(b.id);
   const ver = atlas.interiors ? 2 : 1; // rebuilt once the interior paintings arrive
@@ -933,6 +950,7 @@ export function interiorArt(m, b) {
   }
   for (const u of b.walkIn.units) {
     if (u.kind === 'bowling' && m.bowling) { bowlingArt(g, m.bowling, b, u, ox, oy); continue; }   // (Pinwheel Lanes: shared/bowling.js)
+    if (u.kind === 'cinema' && m.cinema) { cinemaArt(g, m.cinema, b, ox, oy); continue; }   // (The Grand Theatre: shared/cinema.js)
     const dc = DECOR[u.kind] || ['#888', '#666'];
     const x0 = u.x0 * TILE - ox, x1 = (u.x1 + 1) * TILE - ox, cy = u.counterRow * TILE - oy;
     // counter: wood top, front panel, a till

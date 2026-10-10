@@ -8,7 +8,7 @@
 // And it tells the rest whether you're indoors (ambience and distant sounds come through the walls).
 import { T, TILE, PF } from '../../shared/constants.js';
 
-export const SONG_FOR = { clothing: 'shop', sports: 'shop', coffee: 'shop', convenience: 'shop', grocery: 'shop', pharmacy: 'shop', gasstation: 'shop', bank: 'lobby', hospital: 'lobby', courthouse: 'lobby', bowling: 'shop' };
+export const SONG_FOR = { clothing: 'shop', sports: 'shop', coffee: 'shop', convenience: 'shop', grocery: 'shop', pharmacy: 'shop', gasstation: 'shop', bank: 'lobby', hospital: 'lobby', courthouse: 'lobby', bowling: 'shop', cinema: 'lobby' };
 export const BELL_SHOPS = new Set(['tackle', 'hardware', 'pawn', 'fishmarket']);
 const QUIET_SOME = new Set(['convenience', 'gasstation', 'grocery']);   // (only some of these have the radio on)
 const CLUB_HEAR = 820;

@@ -5984,3 +5984,53 @@ With the bowling alley (`shared/bowling.js`, built with the world, so the bake r
 (`shared/dance.js`) in, a bake worker loads 77 files against a budget of 76 (its code, 969 KB, is within its 1000).
 The file budget is now 80: each new kind of place the world builds brings its module, and the workers fetch them once,
 after the page. Tests: test/perf.test.js.
+
+## 2026-10-10 · The Grand Theatre: a cinema (IN14)
+
+The cinema half of the IN14 concept (the bowling alley beside it is Pinwheel Lanes): the lobby with the popcorn counter
+and the poster wall, a corridor to two screens, the screen rooms with rows of red seats in the dark and a bright screen.
+
+- **The cinema** (`shared/cinema.js` `buildCinema`, called by `shared/map.js` right after the bowling alley):
+  - Found by its name, not coordinates: the building whose storefront is **The Grand Theatre** (Downtown) becomes a
+    walk-in (the roof fades as you go in) with one unit, the counter's: a clerk behind it.
+  - Inside, from the back wall: two screen rooms either side of a corridor up the middle, each with its screen on the
+    back wall, three stepped rows of red seats facing it and a walkway behind them with the room's door off the
+    corridor; then the wall across the rooms' fronts (the poster wall on its lobby side, the corridor's mouth open), and
+    the lobby by the door with the ticket and popcorn counter on the right as you come in.
+  - The walls are wall tiles (nobody walks through them); the seats are on the floor.
+  - `m.cinema` holds the rooms (their seats, screens and doors), the counter and the district.
+- **Going to the pictures** (`server/systems/cinema.js`):
+  - **The counter** is a shop (`shared/items.js` `SHOPS.cinema`): a Film Ticket ($12) and Popcorn ($5; eaten like any
+    food, for a little health).
+  - **Sit down** by a seat in a screen with the action button (with a ticket - it's torn): the film starts, or you join
+    the one that's on. You sit (the bench pose), facing the screen; the HUD tracker shows the screen, the film and the
+    time left.
+  - **The films** are invented (`FILMS` in `shared/cinema.js`): Neon Harbor, The Last Lighthouse, Gravity Rodeo,
+    Moonlight Diner, 75 seconds each; each screen runs its own in turn.
+  - **It ends** when the film does (the lights come up), when you press the action button again ("Get up"), walk off
+    the seat, go down or get in a car.
+  - **The audience:** while a player is within 900 px, four NPCs sit in each room; they leave when nobody is within
+    1300 px, or if they're hurt.
+- **The client** (`client/cinema.js`, loaded lazily the first time you come within 1600 px; main.js only has the hook):
+  inside a screen room the room is dark; in your seat, the film plays on the screen - plain shapes of coloured light
+  (a car racing along a neon waterfront, a lighthouse's sweeping beam over the waves, a rider with a lasso of light by a
+  ringed planet, two figures leaning in at a diner booth), the title card first and THE END last, cutting every 6 s -
+  and the screen's light falls over the seats in the film's colour.
+- **The art** (art v2, `client/art2/game/statics.js` `cinemaFloor` / `cinemaRoom`, in the cut-away interior): the
+  lobby's and corridor's red carpet with gold flecks, the screen rooms' dark carpet stepping up row by row, the screens
+  between red curtains, the red seats on their risers, the walls, the poster wall (invented films as plain shapes in
+  gold frames), the counter with the popcorn machine glowing gold and the till. The classic renderer draws it plainly
+  (`client/render/tiles.js` `cinemaArt`).
+- **Finding it:** 🎬 on the radar (`client/hud.js`), in the phone's place finder under days out (`client/phone.js`) and in
+  the map's waypoints under activities (`client/mapwaypoints.js`). Lobby music inside (`client/sound/places.js`).
+- **Debug menu:** 🎳 Bowling & cinema has The Grand Theatre (to the ticket counter: the dev `near` command with `cinema`,
+  which finds the cinema by its place kind).
+- **README:** the controls table has a row for the pictures (E).
+- **The world changed** (the theatre's inside): `node tools/stamp-version.mjs`, and the world map's picture rebaked
+  (`tools/build-worldmap2.mjs`).
+- **Tests:** `test/cinema.test.js` (3 new):
+  - the cinema on the map: a walk-in where The Grand Theatre was, two screens with their seats inside the building,
+    every seat reachable from the counter through the corridor and the room's door, the walls between;
+  - buying a ticket and popcorn, sitting down (the ticket torn, sitting, the film on, the HUD tracker), eating the
+    popcorn, no seat without a ticket, the film running to its end;
+  - getting up, walking out, the NPC audience while you're near and gone when nobody is.
