@@ -16,6 +16,7 @@ import { IN } from '../../shared/input.js';
 import { store } from '../store.js';
 import * as events from './events.js';
 import * as ems from './ems.js';
+import { inWater } from './rescue.js';
 import { sync as syncBounty } from './bounties.js';
 
 const REACH = 48;      // stand this close to a downed player to work on them
@@ -76,24 +77,34 @@ export function cancelHelp(world, p) {
 export function callAmbulance(world, p) {
   const ped = p.ped, now = world.time;
   if (!isDowned(ped)) return;
-  if (p.amb) { world.notify(p, 'An ambulance is already on its way.', 'info'); return; }
+  if (p.amb) { world.notify(p, `${p.amb.boat ? 'A rescue boat' : 'An ambulance'} is already on its way.`, 'info'); return; }
   if (p.ambUsed) { world.notify(p, 'You can only call one ambulance each time you go down.', 'warn'); return; }
   if (p.profile.bank < AMBULANCE_FEE) { world.notify(p, `An ambulance costs $${AMBULANCE_FEE} from your bank - you only have $${p.profile.bank} banked.`, 'bad'); return; }
   const v = ems.dispatchPaid(world, ped, p.pid);
-  if (!v) { world.notify(p, 'No ambulance can reach you from here right now.', 'bad'); return; }
+  if (!v) { world.notify(p, inWater(world.map, ped) ? 'No rescue boat can reach you out here.' : 'No ambulance can reach you from here right now.', 'bad'); return; }
   if (!p.downHelp) callHelp(world, p);   // (an ambulance on its way is a call for help too: anyone near can still get to you first)
-  p.amb = { vehId: v.id };
+  const boat = v.def.kind === 'boat';   // (down in the water: the rescue boat - rescue.js)
+  p.amb = { vehId: v.id, boat };
   p.ambUsed = true;
   p.respawnAt = now + HELP_S; // the clock starts again while it drives over
-  world.notify(p, `🚑 Ambulance on its way (watch for it on your map). $${AMBULANCE_FEE} comes from your bank only if they revive you.`, 'good');
+  world.notify(p, boat ? `🚤 A rescue boat is on its way from ${v.ai.from} (watch for it on your map). $${AMBULANCE_FEE} comes from your bank only if they get you out.`
+    : `🚑 Ambulance on its way (watch for it on your map). $${AMBULANCE_FEE} comes from your bank only if they revive you.`, 'good');
   p.meDirty = true;
+}
+
+// The ambulance (or rescue boat) p (a pid) called is no more use - wrecked, taken, gone: free to call another.
+export function helpLost(world, pid, vehId) {
+  const p = typeof pid === 'object' ? pid : world.players.get(pid);
+  if (!p || !p.amb || (vehId && p.amb.vehId !== vehId)) return;
+  world.notify(p, `The ${p.amb.boat ? 'rescue boat' : 'ambulance'} didn't make it - you can call another.`, 'warn');
+  p.amb = null; p.ambUsed = false; p.meDirty = true;
 }
 
 export function cancelAmbulance(world, p, quiet = false) {
   if (!p.amb) return;
   ems.recall(world, p.amb.vehId);
+  if (!quiet) world.notify(p, `${p.amb.boat ? 'Rescue boat' : 'Ambulance'} cancelled - no charge.`, 'info');
   p.amb = null;
-  if (!quiet) world.notify(p, 'Ambulance cancelled - no charge.', 'info');
   p.meDirty = true;
 }
 
@@ -128,7 +139,8 @@ export function finish(world, ped, by, how = 'finished') {
 }
 
 // ---- reviving ------------------------------------------------------------------------------------
-// opts: { by (ped), kit (Revive Kit: full health), ambulance (paramedics: half health, fee) }
+// opts: { by (ped), kit (Revive Kit: full health), ambulance (paramedics: half health, fee), boat (the rescue boat's crew
+// pulled them out of the water: as the paramedics) }
 export function revive(world, ped, opts = {}) {
   const p = ped.player, now = world.time;
   if (!isDowned(ped)) return false;
@@ -148,7 +160,8 @@ export function revive(world, ped, opts = {}) {
   if (p.downWanted) { p.heat = p.downWanted.heat; p.wanted = p.downWanted.wanted; p.cityBounty = p.downWanted.city || 0; p.downWanted = null; syncBounty(world, p); }
   world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
   const by = opts.by && opts.by.player;
-  world.notify(p, opts.ambulance ? `Paramedics got you back on your feet. $${AMBULANCE_FEE} from your bank. Your things are in your backpack beside you.`
+  world.notify(p, opts.boat ? `The rescue crew pulled you out of the water and patched you up. $${AMBULANCE_FEE} from your bank. They'll set you ashore - your things are in your backpack where you went down.`
+    : opts.ambulance ? `Paramedics got you back on your feet. $${AMBULANCE_FEE} from your bank. Your things are in your backpack beside you.`
     : opts.kit ? `${by ? by.name : 'Someone'} revived you with a Revive Kit. Your things are in your backpack beside you.`
       : `${by ? by.name : 'Someone'} got you back on your feet - you're hurt and bleeding: take it slow for a few seconds. Your things are in your backpack beside you.`, 'good');
   if (by) {
@@ -250,7 +263,7 @@ export function update(world, dt) {
       else ped.hp = Math.min(ped.maxHp * 0.5, ped.hp + (ped.maxHp * (0.5 - REVIVE_LOW_HP) / REVIVE_LOW_HP_SPAN) * dt);
     }
     // downed: the ambulance gone (wrecked, hijacked...) - free to call another
-    if (p.amb && !world.get(p.amb.vehId)) { p.amb = null; p.ambUsed = false; world.notify(p, 'The ambulance didn\'t make it - you can call another.', 'warn'); p.meDirty = true; }
+    if (p.amb && !world.get(p.amb.vehId)) helpLost(world, p);
   }
 }
 const REVIVE_LOW_HP_SPAN = REVIVE_LIMP_S;
@@ -263,5 +276,6 @@ export function downState(world, p) {
   return {
     help: !!p.downHelp, finished: !!p.finished, amb: v ? { x: Math.round(v.x), y: Math.round(v.y) } : null, ambUsed: !!p.ambUsed,
     canAmb: !p.amb && !p.ambUsed && p.profile.bank >= AMBULANCE_FEE, fee: AMBULANCE_FEE,
+    ...(inWater(world.map, ped) ? { wet: 1 } : null),   // (down in the water: the call brings the rescue boat - task #409)
   };
 }

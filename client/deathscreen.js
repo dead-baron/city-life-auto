@@ -74,7 +74,8 @@ export function draw(H, me) {
   }
   // downed: call for help (again: re-alert), the ambulance, give up the request (back to the countdown)
   const hb = $('d-help');
-  const amb = dn && dn.amb ? ['ambx', `🚑 Cancel ambulance${k('J', 'Y')}`, 'amb on'] : ['amb', `🚑 Call an ambulance $${dn ? dn.fee : ''}${dn && dn.ambUsed ? ' (used)' : ''}${k('J', 'Y')}`, dn && dn.canAmb ? 'amb' : 'amb off'];
+  const wet = dn && dn.wet, aw = wet ? 'rescue boat' : 'ambulance', ai = wet ? '🚤' : '🚑';   // (down in the water: the rescue boat comes)
+  const amb = dn && dn.amb ? ['ambx', `${ai} Cancel ${aw}${k('J', 'Y')}`, 'amb on'] : ['amb', `${ai} Call ${wet ? 'a' : 'an'} ${aw} $${dn ? dn.fee : ''}${dn && dn.ambUsed ? ' (used)' : ''}${k('J', 'Y')}`, dn && dn.canAmb ? 'amb' : 'amb off'];
   const btns = !down ? [] : !dn.help
     ? [['help', `<b class="medic">✚</b> Call for help${k('H', 'X')}`, 'help'], amb]
     : [['help', `<b class="medic">✚</b> Call again${k('H', 'X')}`, 'help'], amb, ['cancel', `✕ Cancel request${k('C', 'LB')}`, 'cancel']];
@@ -88,7 +89,7 @@ export function draw(H, me) {
       b.onclick = () => H.onDown?.(a);
       hb.appendChild(b);
     }
-    if (down && !dn.canAmb && !dn.amb && !dn.ambUsed) { const n = document.createElement('small'); n.textContent = `(an ambulance needs $${dn.fee} in the bank)`; hb.appendChild(n); }
+    if (down && !dn.canAmb && !dn.amb && !dn.ambUsed) { const n = document.createElement('small'); n.textContent = `(${wet ? 'a' : 'an'} ${aw} needs $${dn.fee} in the bank)`; hb.appendChild(n); }
   }
   // where to wake up: one spot at a time, stepped with the arrows by it (or the keys, the D-pad)
   const box = $('d-spawn'), sig = opts.map((o) => o.id).join() + '|' + (chosen && chosen.id) + '|' + input.device;

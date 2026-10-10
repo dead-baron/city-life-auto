@@ -44,6 +44,10 @@ export const VEHICLE_DIMS = {
   fbi: [104, 50], army: [120, 58],
   // country and works scenery
   tractor: [84, 54], combine: [150, 120], plane: [104, 130], excavator: [130, 60],
+  // the search-and-rescue boat (server/systems/rescue.js; RS1): an orange rigid inflatable
+  rescueboat: [96, 48],
+  // the off-road ambulance (ems.js; RS1): a white and orange 4x4
+  rescue4x4: [104, 50],
 };
 // height of the body (roof) in world px
 export const VEHICLE_TALL = {
@@ -54,8 +58,10 @@ export const VEHICLE_TALL = {
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
   fbi: 42, army: 52,
   vtwin: 25, tourer: 31, chopper: 35, bobber: 24, caferacer: 25, dirtbike: 28, scooter: 25, trike: 28, ratbike: 26, bagger: 29,
+  rescueboat: 30, rescue4x4: 46,
 };
 const DEFAULT_PAINT = {
+  rescueboat: '#e8601e', rescue4x4: '#ecebe4',
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
@@ -743,6 +749,59 @@ export function carPaint(hex) {
   return '#' + [f(h / 360 + 1 / 3), f(h / 360), f(h / 360 - 1 / 3)].map((v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0')).join('');
 }
 
+// The search-and-rescue boat (RS1): a rigid inflatable - a dark deep-V hull inside a fat orange tube collar (a grey
+// rubbing strake, white reflective patches), a grey non-slip deck, a centre console with its little windscreen and two
+// jockey seats behind it, an A-frame arch over the stern with the light bar on top and a life ring hung on it, twin
+// outboards. The paint is the tubes' colour. A.crew: the four places people stand or sit aboard (shared/vehicles.js
+// rescueboat.crew), so the renderer can stand riders there.
+function rescueBoat(m, M, A, L, W) {
+  const cy = W / 2, r = 6.5, zc = 9, xb = L * 0.58, ax = L - 1 - r * 0.6 - xb, Rb = W / 2 - r;
+  const deckM = m.mat({ ramp: R('#4a4c52'), k: 2, shade: (x, y) => (((x | 0) + (y | 0)) % 3 === 0 ? -0.6 : 0) });
+  const hullM = m.mat({ ramp: R('#3a3c44'), k: 2 }), strake = m.mat({ ramp: R('#5a5c62'), k: 2 });
+  const tape = m.mat({ ramp: ramp('#f2f2ee', 6, 3, { light: 0.7 }), k: 3 });
+  // the tube collar: round in section, its centreline down each side and in to a point at the bow (a gentle ogive)
+  const half = (x) => (x <= xb ? Rb : Rb * Math.max(0, 1 - ((x - xb) / ax) ** 1.8));
+  const line = [];
+  for (let k = 0; k <= 24; k++) { const x = xb + (ax * k) / 24; line.push([x, half(x)]); }
+  const toLine = (x, yy) => {
+    let best = x <= xb ? Math.abs(yy - Rb) : 1e9;
+    for (let k = 1; k < line.length; k++) {
+      const [x0, y0] = line[k - 1], [x1, y1] = line[k], dx = x1 - x0, dy = y1 - y0, t = Math.max(0, Math.min(1, ((x - x0) * dx + (yy - y0) * dy) / (dx * dx + dy * dy)));
+      best = Math.min(best, Math.hypot(x - x0 - dx * t, yy - y0 - dy * t));
+    }
+    return best;
+  };
+  m.fill((x, y, z) => {
+    if (x < 2) return -1;
+    const dp = toLine(x, Math.abs(y - cy)), dz = z - zc;
+    if (dp * dp + dz * dz > r * r) return -1;
+    if (Math.abs(dz + 1.5) < 0.8) return strake;
+    if (dz > 0 && dz < 2.5 && x < xb && Math.floor(x / 14) % 2 === 1) return tape;
+    return M.body;
+  }, 0, 0, 2, L, W, zc + r + 1);
+  // the hull under it: a deep V, in to the bow
+  m.fill((x, y, z) => (Math.abs(y - cy) <= (half(Math.min(x + 4, L)) + 1) * (0.35 + 0.65 * (z / 6)) ? hullM : -1), 1, 0, 0, L - 3, W, 6);
+  // the deck inside the tubes
+  m.fill((x, y) => (Math.abs(y - cy) < half(x) ? deckM : -1), 2, 0, 5, L - 4, W, 7);
+  // the console, its windscreen, and the jockey seats behind it
+  const c0 = Math.round(L * 0.5), c1 = Math.round(L * 0.62);
+  m.box(c0, cy - 7, 7, c1, cy + 7, 18, M.dark);
+  m.box(c1 - 2, cy - 6, 18, c1, cy + 6, 23, M.glass);
+  m.box(c0 + 2, cy - 5, 18, c1 - 3, cy + 5, 19, M.trim);
+  for (const y of [cy - 9, cy + 2]) { m.box(L * 0.36, y, 7, L * 0.45, y + 7, 12, M.seat); m.box(L * 0.36, y, 12, L * 0.38, y + 7, 16, M.seat); }
+  // the A-frame over the stern: two legs, the cross bar, the light bar on top, a life ring hung on it, an aerial
+  for (const y of [cy - 15, cy + 14]) m.box(12, y, 7, 14, y + 1, 29, M.chrome);
+  m.box(12, cy - 15, 27, 14, cy + 15, 29, M.chrome);
+  lightbar(m, M, 11, 15, 29);
+  const ring = m.mat({ ramp: R('#ef6a1a'), k: 3 });
+  m.cyl('x', 0, cy, 21, 4.5, 14, 15, ring, 2.5, 0);
+  m.box(13, cy + 9, 29, 14, cy + 10, 40, M.trim);
+  // twin outboards on the transom
+  for (const y of [cy - 9, cy + 2]) { m.box(0, y, 2, 5, y + 7, 17, M.dark); m.box(0, y, 15, 6, y + 7, 19, M.trim); }
+  A.head.push([L - 3, cy, zc + 3]); A.tail.push([2, cy - 12, zc + 3], [2, cy + 12, zc + 3]); A.wake = [0, cy]; A.fire.push([L * 0.4, cy, 10]);
+  A.seat = [L * 0.42, cy - 6, 12];
+}
+
 export function vehicleModel(type, o = {}) {
   const [L, W] = VEHICLE_DIMS[type] || VEHICLE_DIMS.sedan;
   if (!VEHICLE_DIMS[type]) return vehicleModel('sedan', o);
@@ -759,8 +818,8 @@ export function vehicleModel(type, o = {}) {
   const lit = o.lights || 0;
   const A = m.anchors;
   switch (type) {
-    case 'compact': case 'sedan': case 'taxi': case 'police': case 'sports': case 'suv': case 'limo': case 'fbi': {
-      const s = { ...CAR[type] };
+    case 'compact': case 'sedan': case 'taxi': case 'police': case 'sports': case 'suv': case 'limo': case 'fbi': case 'rescue4x4': {
+      const s = { ...CAR[type === 'rescue4x4' ? 'suv' : type] };
       if (type === 'police') { s.roofMat = M.white; s.bumper = M.trim; }
       if (type === 'compact' && V.twoTone) s.roofMat = M.white;                     // two-tone roof
       if (type === 'sedan' && V.twoTone) s.roofMat = M.black;                       // vinyl top
@@ -801,6 +860,21 @@ export function vehicleModel(type, o = {}) {
           const xa = s2 ? x0 + 0.5 : x1 - 0.5;
           A.siren.push([xa, b.cy - 5.5, z0 + 1, 0], [xa, b.cy + 5.5, z0 + 1, 1]);
         }
+      }
+      if (type === 'rescue4x4') {
+        // RS1: white, orange panels along the sides and over the bonnet, the light bar at the front of the roof, a roof
+        // rack with kit boxes, a push bar, a spare wheel on the tailgate
+        const or = m.mat({ ramp: R('#e8601e'), k: 3 });
+        deco(m, or, b.wx[0] + b.wr + 1, 0, b.z0 + 3, b.wx[1] - b.wr - 1, W, b.belt - 2, (x, y, z, vv, side) => side === 'y' && vv === M.body && Math.floor((x + z * 0.6) / 9) % 3 !== 0);
+        deco(m, or, L * 0.84, b.cy - 7, 0, L, b.cy + 7, m.h, (x, y, z, vv, side) => side === 'z' && vv === M.body);
+        lightbar(m, M, L * s.cab[1] - 9, L * s.cab[1] - 4, s.roof, { wide: true });
+        for (const y of [b.cy - b.hw0 + 5, b.cy + b.hw0 - 6]) m.box(L * 0.18, y, s.roof, L * s.cab[1] - 11, y + 1, s.roof + 3, M.trim);
+        for (const x of [L * 0.2, L * 0.5]) m.box(x, b.cy - b.hw0 + 5, s.roof + 2, x + 1, b.cy + b.hw0 - 5, s.roof + 3, M.trim);
+        m.box(L * 0.22, b.cy - 9, s.roof + 3, L * 0.36, b.cy - 1, s.roof + 8, m.mat({ ramp: R('#5e6e3e'), k: 3 }));
+        m.box(L * 0.38, b.cy + 1, s.roof + 3, L * 0.5, b.cy + 9, s.roof + 7, M.stripeRed);
+        m.box(L - 3, 6, 6, L, W - 6, 14, M.trim); m.box(L - 2, 4, 5, L, 7, 16, M.trim); m.box(L - 2, W - 7, 5, L, W - 4, 16, M.trim);
+        m.cyl('x', 0, b.cy, 18, 7, 0, 3, M.tyre, 3, M.rim);
+        A.seat = [L * 0.56, b.cy - W * 0.18, b.belt + 2];
       }
       if (type === 'police' || type === 'taxi') A.seat = [L * 0.56, b.cy - W * 0.18, b.belt + 2];
       break;
@@ -1088,6 +1162,7 @@ export function vehicleModel(type, o = {}) {
       if (!A.seat) A.seat = [L * 0.4, cy, hz];
       break;
     }
+    case 'rescueboat': rescueBoat(m, M, A, L, W); break;
     // ---- scenery models (not driven in the game) ----
     case 'foodtruck': {
       const y0 = 2, y1 = W - 8;

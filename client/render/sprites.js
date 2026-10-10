@@ -138,6 +138,7 @@ function procVehicle(def, paint) {
   g.fillStyle = '#111'; rr(g, 0, 0, L, W, 6); g.fill();
   if (def.id === 'bus') paint = '#f2c21b';
   if (def.id === 'armored') paint = '#d8dbe0';
+  if (def.id === 'rescue4x4') paint = '#ecebe4';   // (RS1: white and orange - its livery below)
   if (def.pedal) { // two wheels (fat, knobby or thin), the frame between, handlebars across the front; the cargo bike's box
     g.clearRect(-2, -2, L + 4, W + 4);
     const cy = W / 2, P = PEDAL_LOOK[def.id] || PEDAL_LOOK.bicycle, t = P.tyre, d = P.wheel;
@@ -156,6 +157,23 @@ function procVehicle(def, paint) {
     g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(4, W / 2 - 1, L - 18, 2);
     g.fillStyle = '#1b1d22'; rr(g, 8, W / 2 - 4, 16, 8, 3); g.fill();
     g.fillStyle = '#333'; g.fillRect(L - 18, 3, 2, W - 6);
+    return cv;
+  }
+  if (def.id === 'rescueboat') { // RS1: an orange rigid inflatable - the tube collar round a grey deck, the console, the arch, two outboards
+    g.clearRect(-2, -2, L + 4, W + 4);
+    const cy = W / 2, hull = (inset) => { g.beginPath(); g.moveTo(3 + inset, inset); g.lineTo(L * 0.66, inset); g.bezierCurveTo(L - inset * 0.5, inset, L - inset * 0.3, cy, L - inset * 0.3, cy); g.bezierCurveTo(L - inset * 0.3, cy, L - inset * 0.5, W - inset, L * 0.66, W - inset); g.lineTo(3 + inset, W - inset); g.quadraticCurveTo(inset, W - inset, inset, W - inset - 4); g.lineTo(inset, inset + 4); g.quadraticCurveTo(inset, inset, 3 + inset, inset); g.closePath(); };
+    g.fillStyle = '#e8601e'; hull(1); g.fill();
+    g.strokeStyle = '#a8400f'; g.lineWidth = 1; hull(1.5); g.stroke();
+    g.fillStyle = '#f2f2ee'; for (let k = 16; k < L * 0.62; k += 26) { g.fillRect(k, 2, 7, 3); g.fillRect(k, W - 5, 7, 3); }   // reflective patches
+    g.strokeStyle = '#5a5c62'; hull(9); g.stroke();
+    g.fillStyle = '#4a4c52'; hull(10); g.fill();                                                          // the deck
+    g.fillStyle = '#2c2e36'; rr(g, L * 0.5, cy - 7, L * 0.12, 14, 2); g.fill();                         // the console
+    g.fillStyle = '#22324a'; g.fillRect(L * 0.62 - 2, cy - 6, 2, 12);                                    // its windscreen
+    g.fillStyle = '#4a3a36'; g.fillRect(L * 0.36, cy - 9, 8, 7); g.fillRect(L * 0.36, cy + 2, 8, 7);    // jockey seats
+    g.fillStyle = '#c9ccd2'; g.fillRect(12, cy - 15, 2, 30);                                             // the arch
+    g.fillStyle = '#e83a30'; g.fillRect(11, cy - 8, 4, 7); g.fillStyle = '#3a6ae8'; g.fillRect(11, cy + 1, 4, 7);   // its light bar
+    g.fillStyle = '#ef6a1a'; g.beginPath(); g.arc(17, cy + 11, 3.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#4a4c52'; g.beginPath(); g.arc(17, cy + 11, 1.6, 0, Math.PI * 2); g.fill();   // life ring
+    g.fillStyle = '#2c2e36'; rr(g, -1, cy - 10, 7, 8, 2); g.fill(); rr(g, -1, cy + 2, 7, 8, 2); g.fill();   // twin outboards
     return cv;
   }
   if (def.id === 'flatbed') {
@@ -195,6 +213,13 @@ function procVehicle(def, paint) {
     g.fillStyle = '#1b2333'; rr(g, L * 0.58, 5, L * 0.14, W - 10, 3); g.fill();
     g.fillStyle = shade(paint.startsWith('#') ? paint : '#888888', 15); rr(g, L * 0.3, 6, L * 0.28, W - 12, 3); g.fill();
     g.fillStyle = '#1b2333'; rr(g, L * 0.2, 6, L * 0.1, W - 12, 2); g.fill();
+  }
+  if (def.id === 'rescue4x4') { // orange panels along the sides, the roof rack and its kit, the light bar
+    g.fillStyle = '#e8601e'; for (let k = 8; k < L - 14; k += 14) { g.fillRect(k, 1.5, 8, 3); g.fillRect(k, W - 4.5, 8, 3); }
+    g.fillRect(L - 12, W / 2 - 6, 9, 12);
+    g.fillStyle = '#2a2d35'; g.fillRect(L * 0.18, 7, L * 0.42, 1); g.fillRect(L * 0.18, W - 8, L * 0.42, 1);
+    g.fillStyle = '#5e6e3e'; g.fillRect(L * 0.22, W / 2 - 8, 12, 7); g.fillStyle = '#c8302c'; g.fillRect(L * 0.4, W / 2 + 1, 11, 7);
+    g.fillStyle = '#e83a30'; g.fillRect(L * 0.66, 8, 4, W / 2 - 8); g.fillStyle = '#3a6ae8'; g.fillRect(L * 0.66, W / 2, 4, W / 2 - 8);
   }
   g.fillStyle = '#ffe9a0'; g.fillRect(L - 3, 5, 2, 6); g.fillRect(L - 3, W - 11, 2, 6);
   g.fillStyle = '#c8262b'; g.fillRect(1, 4, 2, 6); g.fillRect(1, W - 10, 2, 6);

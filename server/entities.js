@@ -42,6 +42,10 @@ export const ARCHETYPES = {
     look: () => ({ t: 3, tc: '#4f5a36', tc2: '#3c4529', l: '#4f5a36', sh: '#2a2418', ht: 5, htc: '#4f5a36', b: 0 }) },
   medic:        { reflex: 0.6, fight: 0.0, speed: 1.15, hp: 120, cash: [0, 0], item: null, day: 0, night: 0,
     look: () => ({ t: 6, tc: '#e8e8e8', tc2: '#2350c8', l: '#1d2a5a', sh: '#111', ht: 1, htc: '#2350c8', b: 0 }) },
+  // the rescue boat's crew (rescue.js; RS1): orange life jackets with reflective tape, dark dry-suit trousers, red
+  // helmets with visors
+  rescue:       { reflex: 0.6, fight: 0.0, speed: 1.1, hp: 120, cash: [0, 0], item: null, day: 0, night: 0,
+    look: () => ({ t: 3, tc: '#ef5a1a', tc2: '#f2f2ee', l: '#24262c', sh: '#1a1a1e', ht: 5, htc: '#d8302a', b: 0 }) },
   // out in the open country (npc.js spawnCountry - never in town): backpacks and boots, flannel and jeans
   hiker:        { reflex: 0.6, fight: 0.4, speed: 1.05, hp: 105, cash: [10, 60], item: ['wallet', 0.2], day: 0, night: 0,
     look: (r) => ({ t: 0, tc: pickA(r, ['#c8582a', '#2e6a3a', '#2a5a8a', '#d8a030', '#8a2a3a']), tc2: '#ddd', l: pickA(r, ['#8a7a52', '#5a5a48', '#4a4a40']), sh: '#6b4a2a', ht: r() < 0.6 ? pickA(r, [1, 3]) : 0, htc: pickA(r, ['#6a5a3a', '#2e5a38', '#c8582a', '#d8c088']), b: 0 }) },
@@ -70,7 +74,7 @@ export const BUILDS = [
 const BUILD_WEIGHTS = {
   senior: [8, 2, 0, 0], drunk: [5, 4, 1, 0], socialite: [5, 4, 1, 0], executive: [4, 5, 1, 0], sweeper: [2, 6, 2, 0],
   casual: [2, 6, 2, 0.6], athlete: [0, 4, 5, 1], construction: [0, 3, 5, 2], hustler: [1, 4, 4, 1], mugger: [1, 5, 3, 1],
-  syndicate: [0, 3, 5, 3], cop: [0, 4, 5, 1], swat: [0, 2, 5, 3], agent: [0, 5, 4, 1], soldier: [0, 2, 5, 3], medic: [1, 6, 2, 0],
+  syndicate: [0, 3, 5, 3], cop: [0, 4, 5, 1], swat: [0, 2, 5, 3], agent: [0, 5, 4, 1], soldier: [0, 2, 5, 3], medic: [1, 6, 2, 0], rescue: [0, 5, 4, 0],
   hiker: [0, 5, 4, 0.5], camper: [1, 6, 2, 0.5], farmer: [0, 4, 5, 1], nomad: [1, 5, 3, 0.5],
 };
 export function rollBuild(r, archetype) {

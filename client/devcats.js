@@ -102,4 +102,9 @@ export const DEV_SECTIONS = [
     ['🛶 Pine Lake camp', 'near', { k: 'lakecamp' }], ['🏊 Stadium Lido (pool)', 'near', { k: 'pool' }], ['🏞 Cedar Creek', 'near', { k: 'towncreek' }], ['⚓ Wreck Island', 'near', { k: 'wreck' }], ['🌿 Bluffs Maze Garden', 'near', { k: 'maze' }], ['♨ Granite Hot Springs', 'near', { k: 'springs' }], ['🌊 Splash Canyon Water Park', 'near', { k: 'waterpark' }], ['🪵 Driftwood Point', 'near', { k: 'coastfalls' }], ['🏀 North Point Courts', 'near', { k: 'courts' }], ['🎣 Westport Pier', 'near', { k: 'pier' }], ['🍇 Willow River Vineyard', 'near', { k: 'vineyard' }], ['⛳ Cedar Hills Golf Club', 'near', { k: 'golf' }], ['🍎 Willow River Orchard', 'near', { k: 'orchard' }], ['🦭 Seal Islets', 'near', { k: 'seals' }], ['🎈 Dry Creek Balloon Field', 'near', { k: 'balloons' }], ['⛪ Old Mission Ruins', 'near', { k: 'mission' }], ['🌿 Fern Gorge', 'near', { k: 'gorge' }], ['🗿 The Sentinel Stones', 'near', { k: 'stones' }], ['🧺 Old Town Market', 'near', { k: 'market' }], ['✈ Dry Creek Boneyard', 'near', { k: 'boneyard' }], ['💜 Cedar Point Lavender', 'near', { k: 'lavender' }],
   ] },
   { id: 'wardrobe', title: '👗 Debug wardrobe', items: [['👗 Every piece and option (saving adds them to my wardrobe)…', '@wardrobe']] },
+  // rescue anywhere (tasks #409, #420: server/dev.js devRescue)
+  { id: 'rescue', title: '🛟 Rescue (water & wilds)', items: [
+    ['🚤 Go down in the water (the rescue boat comes)', 'rescue', { at: 'water' }], ['🚑 Go down out in the wilds (off-road ambulance)', 'rescue', { at: 'wild' }],
+    ['🛥 Boats with people aboard (riders in open boats)', 'rescue', { at: 'crew' }], ['🚤 Rescue boat', 'car', { m: 'rescueboat' }],
+  ] },
 ];

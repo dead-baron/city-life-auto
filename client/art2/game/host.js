@@ -1303,15 +1303,18 @@ export class World2 {
     E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
     o.under = 0;
     this.n.drawn++;
-    // riders on bikes and jet skis sit in the open
+    // riders on bikes and jet skis sit in the open; in an open boat at its seats (def.crew: the driver's, the one beside
+    // it, then the back seats in turn - task #420), a rescue crew member kneeling at the side to pull someone in
     const Pd = this.Pd;
-    if ((def.kind === 'bike' || def.id === 'jetski') && Pd && Pd.pedKey) {
-      const seats = def.kind === 'bike' ? api.SEAT_BIKE : api.SEAT_JETSKI, myPed = this.S.myPedId;
+    if ((def.kind === 'bike' || def.crew) && Pd && Pd.pedKey) {
+      const seats = def.kind === 'bike' ? api.SEAT_BIKE : def.crew, myPed = this.S.myPedId;
+      let nb = 0;
       for (const p of this.S.ents.values()) {
         if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
-        const pass = (p.flags & PF.PASSENGER) !== 0, seat = !pass && def.seat !== undefined ? [def.seat, 0] : seats[pass ? 1 : 0];   // (a bicycle: where its saddle is)
+        const pass = (p.flags & PF.PASSENGER) !== 0, seat = !pass && def.seat !== undefined ? [def.seat, 0] : seats[p.back ? Math.min(seats.length - 1, 2 + nb++) : pass ? 1 : 0];   // (a bicycle: where its saddle is)
         const c = Math.cos(v.ra), s = Math.sin(v.ra), x = v.rx + c * seat[0] - s * seat[1], y = v.ry + s * seat[0] + c * seat[1];
-        const d8 = dir8(v.ra), pose = def.pedal ? 'pedal' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
+        const kneel = def.kind === 'boat' && api.pedPose(p) === 'kneel';
+        const d8 = dir8(kneel ? p.ra ?? v.ra : v.ra), pose = def.pedal ? 'pedal' : kneel ? 'kneel' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
         const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : 0, wpn = p.extra | 0;
         const was = this.sprPrio;
         if (p.id === myPed) this.sprPrio = -3;
