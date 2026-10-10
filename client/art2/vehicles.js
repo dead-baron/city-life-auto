@@ -753,33 +753,34 @@ export function carPaint(hex) {
 // outboards. The paint is the tubes' colour. A.crew: the four places people stand or sit aboard (shared/vehicles.js
 // rescueboat.crew), so the renderer can stand riders there.
 function rescueBoat(m, M, A, L, W) {
-  const cy = W / 2, r = 6.5, zc = 9, xb = L - W / 2, ax = L - 1 - r - xb, Rb = W / 2 - r;
+  const cy = W / 2, r = 6.5, zc = 9, xb = L * 0.58, ax = L - 1 - r * 0.6 - xb, Rb = W / 2 - r;
   const deckM = m.mat({ ramp: R('#4a4c52'), k: 2, shade: (x, y) => (((x | 0) + (y | 0)) % 3 === 0 ? -0.6 : 0) });
   const hullM = m.mat({ ramp: R('#3a3c44'), k: 2 }), strake = m.mat({ ramp: R('#5a5c62'), k: 2 });
   const tape = m.mat({ ramp: ramp('#f2f2ee', 6, 3, { light: 0.7 }), k: 3 });
-  // the tube collar: round in section, its centreline down each side and round the bow
+  // the tube collar: round in section, its centreline down each side and in to a point at the bow (a gentle ogive)
+  const half = (x) => (x <= xb ? Rb : Rb * Math.max(0, 1 - ((x - xb) / ax) ** 1.8));
+  const line = [];
+  for (let k = 0; k <= 24; k++) { const x = xb + (ax * k) / 24; line.push([x, half(x)]); }
+  const toLine = (x, yy) => {
+    let best = x <= xb ? Math.abs(yy - Rb) : 1e9;
+    for (let k = 1; k < line.length; k++) {
+      const [x0, y0] = line[k - 1], [x1, y1] = line[k], dx = x1 - x0, dy = y1 - y0, t = Math.max(0, Math.min(1, ((x - x0) * dx + (yy - y0) * dy) / (dx * dx + dy * dy)));
+      best = Math.min(best, Math.hypot(x - x0 - dx * t, yy - y0 - dy * t));
+    }
+    return best;
+  };
   m.fill((x, y, z) => {
     if (x < 2) return -1;
-    let dp;
-    if (x <= xb) dp = Math.abs(Math.abs(y - cy) - Rb);
-    else { const q = Math.hypot((x - xb) / ax, (y - cy) / Rb); dp = Math.abs(q - 1) * Math.min(ax, Rb); }
-    const dz = z - zc;
+    const dp = toLine(x, Math.abs(y - cy)), dz = z - zc;
     if (dp * dp + dz * dz > r * r) return -1;
     if (Math.abs(dz + 1.5) < 0.8) return strake;
     if (dz > 0 && dz < 2.5 && x < xb && Math.floor(x / 14) % 2 === 1) return tape;
     return M.body;
   }, 0, 0, 2, L, W, zc + r + 1);
-  // the hull under it: a deep V, tapering at the bow
-  m.fill((x, y, z) => {
-    const t = x / L, bow = t > 0.7 ? (t - 0.7) / 0.3 : 0;
-    const half = (W / 2 - 7) * (1 - bow * bow * 0.9) * (0.35 + 0.65 * (z / 6));
-    return Math.abs(y - cy) <= half ? hullM : -1;
-  }, 1, 0, 0, L - 3, W, 6);
+  // the hull under it: a deep V, in to the bow
+  m.fill((x, y, z) => (Math.abs(y - cy) <= (half(Math.min(x + 4, L)) + 1) * (0.35 + 0.65 * (z / 6)) ? hullM : -1), 1, 0, 0, L - 3, W, 6);
   // the deck inside the tubes
-  m.fill((x, y) => {
-    if (x <= xb) return Math.abs(y - cy) < Rb ? deckM : -1;
-    return Math.hypot((x - xb) / ax, (y - cy) / Rb) < 1 ? deckM : -1;
-  }, 2, 0, 5, L - 4, W, 7);
+  m.fill((x, y) => (Math.abs(y - cy) < half(x) ? deckM : -1), 2, 0, 5, L - 4, W, 7);
   // the console, its windscreen, and the jockey seats behind it
   const c0 = Math.round(L * 0.5), c1 = Math.round(L * 0.62);
   m.box(c0, cy - 7, 7, c1, cy + 7, 18, M.dark);
