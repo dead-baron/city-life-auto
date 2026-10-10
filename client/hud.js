@@ -488,7 +488,7 @@ let centroids = null;
 export function districtCentroids(map) {
   if (centroids) return centroids;
   const acc = new Map();
-  for (let ty = Math.ceil(map.y0 / 3) * 3; ty < map.y0 + map.h; ty += 3) for (let tx = Math.ceil(map.x0 / 3) * 3; tx < map.x0 + map.w; tx += 3) {   // (every third tile of the world's grid)
+  for (let ty = Math.ceil(map.y0 / 3) * 3; ty < map.y0 + map.h; ty += 3) for (let tx = Math.ceil(map.x0 / 3) * 3; tx < map.x0 + map.w; tx += 3) {
     const d = map.dist[map.idx(tx, ty)];
     if (d === 13) continue;
     const a = acc.get(d) || acc.set(d, [0, 0, 0]).get(d);
@@ -527,7 +527,7 @@ export function iconSkip(map) {
 
 function buildMinimap(map) {
   const c = document.createElement('canvas');
-  c.width = MAP_W; c.height = MAP_H;   // (the world's whole frame: the picture is the world's, the map paints its part)
+  c.width = MAP_W; c.height = MAP_H;   // (the world's picture: the map paints its part)
   const g = c.getContext('2d');
   const img = g.createImageData(MAP_W, MAP_H);
   const col = {
@@ -538,7 +538,7 @@ function buildMinimap(map) {
   for (let ty = map.y0; ty < map.y0 + map.h; ty++) {
     const row = map.row(ty);
     for (let tx = map.x0; tx < map.x0 + map.w; tx++) {
-      const c3 = col[map.tiles[row + map.col(tx)]] || [0, 0, 0], i = (ty * c.width + tx) * 4;   // (i: the picture's pixel)
+      const c3 = col[map.tiles[row + map.col(tx)]] || [0, 0, 0], i = (ty * c.width + tx) * 4;
       img.data[i] = c3[0]; img.data[i + 1] = c3[1]; img.data[i + 2] = c3[2]; img.data[i + 3] = 255;
     }
   }

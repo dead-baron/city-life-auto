@@ -303,9 +303,7 @@ export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse']);
 export class CityMap {
   constructor(seed) {
     this.seed = seed >>> 0;
-    // The map's extent in world tiles: x0, y0 (on the prototype: 0) and w, h. The generator builds the world's whole
-    // frame (MAP_W x MAP_H); a window cut from it (shared/mapwindow.js) holds a rectangle of it. Every query takes world
-    // tiles and indexes the per-tile layers through idx / inside (World v3, docs/WORLD-V3.md part 8).
+    // its extent in world tiles: x0, y0 (0: on the prototype), w, h - the whole frame here; a window: shared/mapwindow.js
     this.w = MAP_W; this.h = MAP_H;
     const N = this.w * this.h;
     this.tiles = new Uint8Array(N);
@@ -345,17 +343,16 @@ export class CityMap {
     this.spawns = {};
     this.pillars = [];
   }
-  // A tile's index in the per-tile layers: idx(tx, ty) === row(ty) + col(tx), so a loop along a row takes row(ty) once
-  // (never step from one tile to the next with i++: the window may later be laid out differently, as a ring of regions).
+  // a tile's index in the layers: idx === row(ty) + col(tx) (a loop along a row takes row(ty) once; never step with i++)
   idx(tx, ty) { return (ty - this.y0) * this.w + (tx - this.x0); }
   row(ty) { return (ty - this.y0) * this.w; }
   col(tx) { return tx - this.x0; }
   inside(tx, ty) { return tx >= this.x0 && ty >= this.y0 && tx < this.x0 + this.w && ty < this.y0 + this.h; }
   // Past the world's edge: open sea for a way (softEdge, set once the world is built: border.js slows you there and
   // stops you at its end), then a wall. While the world is being built, a wall right at the edge, as it always was.
-  // Outside a window's rectangle but inside the world: a wall (nothing moves into land the window doesn't hold).
+  // Outside a window, inside the world: a wall.
   tileAt(tx, ty) {
-    if (!this.inside(tx, ty)) return this.softEdge && (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) && tx >= -EDGE_T && ty >= -EDGE_T && tx < MAP_W + EDGE_T && ty < MAP_H + EDGE_T ? T.DEEP : T.WALL;   // (MAP_W, MAP_H: the world's whole frame)
+    if (!this.inside(tx, ty)) return this.softEdge && (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) && tx >= -EDGE_T && ty >= -EDGE_T && tx < MAP_W + EDGE_T && ty < MAP_H + EDGE_T ? T.DEEP : T.WALL;   // (the world's frame)
     return this.tiles[this.idx(tx, ty)];
   }
   tileAtPx(x, y) { return this.tileAt(Math.floor(x / TILE), Math.floor(y / TILE)); }
@@ -436,8 +433,7 @@ export class CityMap {
   }
   poisOf(kind) { return this.pois.filter((p) => p.kind === kind); }
 }
-// (the origin lives on the prototype, so today's whole map carries no fields of its own for it: cityData, the world
-// hash and the browser's kept city stay as they were; a window has its own)
+// (on the prototype: the whole map's data - the world hash, the kept city - has no new fields; a window has its own)
 CityMap.prototype.x0 = 0;
 CityMap.prototype.y0 = 0;
 
@@ -523,9 +519,8 @@ export function cityFromData(o) {
   return o;
 }
 // ---------------------------------------------------------------------------
-// The generator (from here to mapSignature): it builds the world's whole frame, so it indexes the layers as
-// `y * MAP_W + x` with the frame's bounds for now (making the frame a parameter is a later step). Code that reads a
-// built map - above, and everywhere outside generateCity - goes through the map's own idx / inside.
+// The generator (from here to mapSignature) builds the whole frame: it keeps `y * MAP_W + x` for now. Code that
+// reads a built map goes through its idx / inside.
 let OPTS = null;   // (World v3's spike: what generateCity was asked to build; null for the live world)
 function buildCity(seed, opts = null) {
   OPTS = opts;
