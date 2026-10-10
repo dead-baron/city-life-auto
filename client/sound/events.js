@@ -71,6 +71,9 @@ export const EVENT_SOUNDS = {
   sizzle: at('sear'),
   deflect: at('zing'),
   block: (ev, A) => A.at(ev.w === 28 ? 'zing' : ev.w ? 'clank' : 'punch', ev.x, ev.y, 0.8),   // (a guard taking a blow: combat.js blocked)
+  guard: null,   // (the guard pose raised or let down: re-sent while it's held, heard only when it takes a blow - 'block')
+  // a deflected arrow landing (combat.js): the shaft clattering down; a fire arrow's flame hissing out
+  arrowdrop: (ev, A) => { A.at('impact_wood', ev.x, ev.y, 0.35); if (ev.f) A.at('sear', ev.x, ev.y, 0.3); },
   spark: (ev, A) => A.at('ricochet', ev.x, ev.y, 0.6),
   knockdown: at('knockdown', 1.1),
   // fighting off an officer (server struggle.js): grunts and a scuffle on the ground as you heave, a shove and a whoosh as
