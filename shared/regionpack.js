@@ -217,8 +217,10 @@ function pasteLayer(a, win, rect, src) {
   }
 }
 
-const at = (o, p, n = p.length) => { for (let i = 0; i < n; i++) o = o[p[i]]; return o; };
-const put = (o, p, v) => { at(o, p, p.length - 1)[p[p.length - 1]] = v; };
+// (a path is the files' word: one through an object's prototype is a bad file, never followed)
+const step = (k) => { if (k === '__proto__' || k === 'constructor' || k === 'prototype') throw new Error('a bad index'); return k; };
+const at = (o, p, n = p.length) => { for (let i = 0; i < n; i++) o = o[step(p[i])]; return o; };
+const put = (o, p, v) => { at(o, p, p.length - 1)[step(p[p.length - 1])] = v; };
 
 // the plain city again (the fields of cityData(generateCity(seed)) less OMIT, in its order) from the index and the
 // region files (raw, unzipped). Throws on a bad file.
@@ -236,7 +238,7 @@ export function assembleCity(indexBytes, regionBytes) {
     for (const f of Object.keys(R.lists)) {
       const { i, d } = R.lists[f], idx = rb[i], arr = root[f];
       if (!arr || idx.length !== d.length) throw new Error('a bad region file');
-      for (let j = 0; j < idx.length; j++) arr[idx[j]] = d[j];
+      for (let j = 0; j < idx.length; j++) { if (idx[j] < 0 || idx[j] >= arr.length) throw new Error('a bad region file'); arr[idx[j]] = d[j]; }
     }
   }
   if (got.size !== X.regions.length) throw new Error('a region missing');
