@@ -157,7 +157,10 @@ export function genComp(chords, pattern, bars, bpb, o) {
   let prev = null;
   st.forEach((s, k) => {
     if (!(s.ch in VEL)) return;
-    const c = chordAt(chords, s.t), v = voice(c, o.lo ?? 55, o.hi ?? 76, prev, o.size); prev = v;
+    const c = chordAt(chords, s.t);
+    let v;
+    if (o.power) { let r = o.lo ?? 40; while (r % 12 !== c.root) r++; v = [r, r + 7, r + 12]; }   // (a power chord: root, fifth, octave)
+    else { v = voice(c, o.lo ?? 55, o.hi ?? 76, prev, o.size); prev = v; }
     out.push({ t: s.t, d: lengthOf(st, k) * (o.gate ?? 0.85), m: v, v: VEL[s.ch] });
   });
   return out;

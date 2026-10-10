@@ -5014,3 +5014,12 @@ The owner, after round 1: "a little more edgy and with a good beat to it, someth
   - *Rescue Run* (Ping Island style: 96 then 123 BPM, A major then A minor, a pulsing bass, arpeggios, congas on a machine beat);
   - *Smash and Grab* (Tank! style: 142 BPM, C blues, Latin swing, a wall of brass, a tenor sax solo).
   The same analysis as for the references puts each on its target's tempo and key, its brightness within about 10%, and the same shuffle or straightness. Rescue Run even reads with the same two tempos.
+
+## 2026-10-09 · Music round 2, batch 2: cop radio, skate, hospital lobby, two hazy synth-pop songs (task #443)
+Five more originals, each matched to its reference's tempo, key, groove and weight (`client/sound/studio/songs/`):
+- *Badge and Brass* (Brooklyn Nine-Nine style): 108 BPM, E bluesy minor-major, a brass blast, a riff, a rock beat, an overdriven bass, a big final hit. It loops for the Precinct station.
+- *Kickflip* (Superman style): ska-punk in D at 196 BPM, clean off-beat chops into power chords, the bass on every beat, a brass tune. For the Skate station and skate shops.
+- *Waiting Room Disco* (Rollerdisco style): 112 BPM in C, a punchy electronic beat, warm low mids, detuned synths, squashed and nearly mono. For hospital lobbies.
+- *Sugar Haze* (Drippy Eye style): 87 BPM in A-flat with a slight shuffle, dripping synths, a sung vocoder-like lead.
+- *Sunburnt Tape* (When the Sun Grows style): 97 BPM in G, a floating keyboard intro, then a lo-fi turntable beat and distorted swells.
+The engine gained power chords for the distorted guitars (`comp` with `power: true`).
