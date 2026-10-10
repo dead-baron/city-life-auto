@@ -5,7 +5,7 @@
 // dead tree) and simple water: a waterfall curtain with its splash and a small cascade.
 // Voxel models (voxel.js) unless noted; sprites are GBufs anchored at their foot (.ax, .ay).
 import { Vox } from './voxel.js';
-import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_GLASS, F_GROUND, F_THIN, hash, bayer, vnoise } from './gbuf.js';
+import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_ROCKLEAF, F_GLASS, F_GROUND, F_THIN, hash, bayer, vnoise } from './gbuf.js';
 import { MAT, ramp } from './palette.js';
 
 const R = (c, n = 6, k) => ramp(c, n, k);
@@ -525,7 +525,7 @@ export function shipwreck(L = 220, W = 64, Hh = 40, heel = 0.38) {
 export function seaArch(w = 150, d = 56, h = 96, seed = 3) {
   const m = new Vox(w, d, h + 6);
   const rock = m.mat({ ramp: R('#6a6260'), k: 3, shade: (x, y, z) => (Math.round(z + hash(Math.round(x / 9), 1, seed) * 3) % 7 === 0 ? -0.9 : 0) + (hash(Math.round(x / 3), Math.round(z / 2) + Math.round(y / 3), seed) - 0.5) * 0.7 });
-  const wet = m.mat({ ramp: R('#3e3a3a'), k: 2 }), barn = m.mat({ ramp: R('#cfc8b8'), k: 3 }), grass = m.mat({ ramp: R('#6a8a3a'), k: 3, flag: F_LEAF }), pink = m.mat({ ramp: R('#e890b0'), k: 3, flag: F_LEAF });
+  const wet = m.mat({ ramp: R('#3e3a3a'), k: 2 }), barn = m.mat({ ramp: R('#cfc8b8'), k: 3 }), grass = m.mat({ ramp: R('#6a8a3a'), k: 3, flag: F_ROCKLEAF }), pink = m.mat({ ramp: R('#e890b0'), k: 3, flag: F_ROCKLEAF });   // (plants on the rock: gbuf.js)
   const cy = d / 2, open0 = w * 0.3, open1 = w * 0.7, archTop = h * 0.62;
   m.fill((x, y, z) => {
     const n = hash(Math.round(x / 4), Math.round(z / 4), seed + 1), n2 = hash(Math.round(x / 9), Math.round(y / 6), seed + 2);

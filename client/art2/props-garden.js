@@ -94,7 +94,7 @@ export function gardenStatue() {
 export function stoneLantern(on = 0.5) {
   const m = new Vox(22, 22, 44), c = 11;
   const st = m.mat({ ramp: R('#a6a296', 7, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(y / 2) + Math.round(z / 2) * 7, 9) - 0.5) * 0.9 });
-  const ms = m.mat({ ramp: F.FOL('#5e8a2c'), k: 3, flag: F_LEAF, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.2 });
+  const ms = m.mat({ ramp: F.FOL('#5e8a2c'), k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.2 });   // (moss: the stone's crust, holds still - gbuf.js)
   const fire = m.mat({ ramp: R('#f8c070', 5, 2), k: 3, emi: on ? [255, 190, 100, 255 * on] : null, flag: F_NOCAST });
   m.cyl('z', c, c, 0, 8, 0, 3, st); m.cyl('z', c, c, 0, 3.4, 3, 16, st); m.box(c - 7, c - 7, 16, c + 7, c + 7, 19, st);
   m.box(c - 5, c - 5, 19, c + 5, c + 5, 28, st);

@@ -813,7 +813,7 @@ export function rock(seed = 1, size = 20, o = {}) {
   const nz = (x, y, z, sc, k) => hash(Math.round(x / sc), Math.round(y / sc) + Math.round(z / sc) * 57, seed + k);
   const vn = (x, y) => { const fx = x / 4.5, fy = y / 4.5, ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy, a = hash(ix, iy, seed + 21), b = hash(ix + 1, iy, seed + 21), c = hash(ix, iy + 1, seed + 21), d = hash(ix + 1, iy + 1, seed + 21); return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty; };
   const st = m.mat({ ramp: RR(o.color || '#868890', 7, 3, { dark: 0.6, light: 0.45, shift: 0.18 }), k: 3, shade: (x, y, z) => (nz(x, y, z, 3, 1) - 0.5) * 1.4 + (nz(x, y, z, 1, 2) > 0.85 ? 0.6 : 0) });
-  const ms = m.mat({ ramp: FOL('#557f26'), k: 3, flag: F_LEAF, shade: (x, y, z) => (nz(x, y, z, 1, 3) > 0.75 ? 1 : 0) - (nz(x, y, z, 1, 4) < 0.2 ? 0.8 : 0) });
+  const ms = m.mat({ ramp: FOL('#557f26'), k: 3, shade: (x, y, z) => (nz(x, y, z, 1, 3) > 0.75 ? 1 : 0) - (nz(x, y, z, 1, 4) < 0.2 ? 0.8 : 0) });   // (moss: the rock's crust, holds still - gbuf.js)
   const lc = m.mat({ ramp: RR('#c0c83a', 6, 3, { light: 0.4 }), k: 3, shade: (x, y, z) => (nz(x, y, z, 1, 5) - 0.5) * 1.2 });
   const sn = m.mat({ ramp: SNOW, k: 4, shade: (x, y, z) => (nz(x, y, z, 1, 6) > 0.8 ? -0.8 : 0.3) });
   m.fill((x, y, z) => {

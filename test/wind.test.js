@@ -1,10 +1,11 @@
 // The wind (client/render/flora/wind.js) and what moves with it in art v2: the redwood canopy's dappled light
-// (lightgame.js canopyCover, wind.air - task #388).
+// (lightgame.js canopyCover, wind.air - task #388), and what sways - foliage, never the rock it grows on (task #425).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Wind, AIR_P, FLUT_P } from '../client/render/flora/wind.js';
 import { CAN_N } from '../client/art2/game/lightgame.js';
-import { swayAt } from '../client/art2/game/engine.js';
+import { swayAt, leanAmp, leanOf } from '../client/art2/game/engine.js';
+import { F_LEAF, F_GROUND, F_WET, F_NOCAST, F_ROCKLEAF } from '../client/art2/gbuf.js';
 import { DAY_LOOP_S } from '../shared/constants.js';
 
 // the shortest way from a to b on a ring of size P
@@ -186,5 +187,57 @@ test('the gusts\' travel and the flutter clock move smoothly, whatever the wind 
     const c = v.sway(x, y, 1, 0.3);
     v.gd.splice(0, 4, G[0] + AIR_P, G[1] - AIR_P, G[2] - AIR_P, G[3] + AIR_P);
     assert.ok(Math.abs(v.sway(x, y, 1, 0.3) - c) < 1e-6, 'the classic renderer\'s gusts at the wrap');
+  }
+});
+
+test('what sways: foliage only - never rock; the plants on a rock as on their own patch of ground, not as a tree as tall as the rock (task #425)', async () => {
+  // the rule (engine.js leanAmp / leanOf: STATIC_FS's ampOf / leanOf in JS)
+  for (const h of [0, 20, 70, 150]) for (const f of [0, F_GROUND | F_WET, F_WET, F_NOCAST]) assert.equal(leanAmp(h, f), 0, `rock, stone, the ground (flags ${f}, ${h} px up): never`);
+  const crown = [30, 70, 150].map((h) => leanAmp(h, F_LEAF)), onRock = [20, 70, 150].map((h) => leanAmp(h, F_ROCKLEAF)), tips = leanAmp(7, F_GROUND | F_WET | F_LEAF);
+  assert.ok(crown[0] > 0 && crown[0] < crown[1] && crown[1] <= crown[2], `a crown sways more the higher it stands (${crown.map((a) => a.toFixed(2))})`);
+  assert.ok(onRock.every((a) => a === onRock[0]) && onRock[0] > 0 && onRock[0] <= tips, `a plant on a rock sways the same whatever the rock's height, as grass tips do at most (${onRock.map((a) => a.toFixed(2))}; tips ${tips})`);
+  assert.ok(onRock[1] < crown[1] && onRock[2] < crown[2], 'and never as a crown that high');
+  // a breeze, a strong wind and a gale over a tuft on top of a 150 px sea stack, at 400 points and moments: it leans no
+  // further than the grass tips round its foot, and in all less than half as far as a crown as high (it used to swing
+  // as that crown did, over the rock round it); in a breeze it stands still
+  const G = [700, 300, 1400, 900];
+  for (const [W, what] of [[[0.35, 0.4, 0.7, 0.7], 'a breeze'], [[0.6, 0.5, 0.8, 0.6], 'a strong wind'], [[1, 0.9, 1, 0.2], 'a gale']]) {
+    let rock = 0, crown = 0;
+    for (let k = 0; k < 400; k++) {
+      const x = 20000 + (k % 20) * 37, y = 9000 + Math.floor(k / 20) * 29, S = swayAt(x, y, W, G, k * 0.61);
+      const r = Math.abs(leanOf(S.pw, S.pi, 156, F_ROCKLEAF, 2)), g = Math.abs(leanOf(S.pw, S.pi, 7, F_GROUND | F_WET | F_LEAF, 2));
+      assert.ok(r <= g, `${what}: no further than the grass`);
+      assert.equal(leanOf(S.pw, S.pi, 156, 0, 2), 0, `${what}: the rock itself, never`);
+      rock += r; crown += Math.abs(leanOf(S.pw, S.pi, 156, F_LEAF, 2));
+    }
+    assert.ok(crown > 100 && rock < crown * 0.5, `${what}: a crown 156 px up leans ${crown} art px in all, a tuft on a rock that high ${rock}`);
+    if (what === 'a breeze') assert.equal(rock, 0, 'in a breeze the tuft on the rock stands still');
+  }
+  // the art: on the rocks, cliffs and columns the world puts down, everything that sways is a plant on the rock (the
+  // grass and flowers on its top and ledges, vines and kelp off its lip) - and the columnar basalt cliffs (the gorges,
+  // the cliffs over the beach) and the falls over it hold still, moss and all: their moss is the rock's crust
+  const { makeStatic } = await import('../client/art2/game/statics.js');
+  for (const [name, r, plants] of [
+    ['the basalt cliff wall', { t: 'v', m: 'cliffWall', a: [192, 70, 56, 3], hd: 0 }, false],
+    ['a falls over the basalt', { t: 'fall', kind: 'cliff', w: 28, drop: 66, seed: 11, mist: 0.7 }, false],
+    ['a mossy boulder', { t: 'rock', s: 4, size: 24, style: 'granite', moss: 1 }, false],
+    ["the quarry's granite cliff", { t: 'cliff', w: 300, d: 120, h: 90, s: 2 }, true],
+    ['a sea stack', { t: 'stack', s: 3, r: 26, h: 150 }, true],
+    ['a sea arch', { t: 'v', m: 'seaArch', a: [150, 56, 96, 3], hd: 0 }, true],
+    ['an outcrop', { t: 'outcrop', s: 3, w: 120, d: 80, h: 50 }, true],
+  ]) {
+    const S = makeStatic(r);
+    let solid = 0, leafy = 0, other = 0;
+    for (let i = 0; i < S.w * S.h; i++) {
+      if (!S.col[i * 4 + 3]) continue;
+      solid++;
+      const f = S.flag[i];
+      if (!(f & F_LEAF)) continue;
+      leafy++;
+      if ((f & F_ROCKLEAF) !== F_ROCKLEAF || (f & F_GROUND)) other++;
+    }
+    assert.equal(other, 0, `${name}: nothing on it sways but as a plant on the rock (${other} px)`);
+    if (plants) assert.ok(leafy > 0 && leafy < solid * 0.5, `${name}: the plants on it still sway (${leafy} of ${solid} px)`);
+    else assert.equal(leafy, 0, `${name}: holds still, moss and all`);
   }
 });
