@@ -483,7 +483,7 @@ export function onVehicleHit(world, v, attacker) {
   if (n.role === 'cop' || n.role === 'medic' || n.role === 'railguard' || world.time - (n.vandalAt ?? -99) < 8) return;
   n.vandalAt = world.time;
   if (Math.hypot(v.vx, v.vy) < VEH_CRIME.stopPx && rng() < (n.fight || 0) * VEH_CRIME.fight) {
-    v.ai = null; v.input = { throttle: 0, steer: 0, hb: true };
+    v.ai = null; v.despawnable = true; v.input = { throttle: 0, steer: 0, hb: true };   // (left in the road: cleared like any abandoned car)
     vehicles.ejectPed(world, drv, false);
     n.role = 'civ';
     startFight(world, drv, attacker, 16);
