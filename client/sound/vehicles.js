@@ -42,13 +42,13 @@ const P = {
 export const ENGINE_CLASS = {
   compact: 'small', sedan: 'sedan', taxi: 'sedan', sports: 'sports', pickup: 'muscle', flatbed: 'truck', van: 'van', bus: 'bus',
   police: 'police', swat: 'truck', ambulance: 'van', armored: 'truck', bike: 'sportbike', policebike: 'moto', fbi: 'police', army: 'truck',
-  speedboat: 'outboard', policeboat: 'outboard', dinghy: 'dinghy', jetski: 'jetski', ferry: 'ship', waterbus: 'ship',
+  speedboat: 'outboard', policeboat: 'outboard', rescueboat: 'outboard', dinghy: 'dinghy', jetski: 'jetski', ferry: 'ship', waterbus: 'ship',
   boxtruck: 'truck', dumptruck: 'truck', mixer: 'truck', tanker: 'truck', garbage: 'truck', firetruck: 'truck', towtruck: 'truck',
   bicycle: 'pedal', cruiser: 'pedal', mtb: 'pedal', roadbike: 'pedal', bmx: 'pedal', cargobike: 'pedal',
   vtwin: 'vtwin', tourer: 'vtwin', chopper: 'vtwin', bobber: 'vtwin', bagger: 'vtwin', trike: 'vtwin', ratbike: 'vtwin',
   caferacer: 'thumper', dirtbike: 'twostroke', scooter: 'scooter',
 };
-export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', firetruck: 'fire' };
+export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', rescueboat: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);
 // the tyres' screech: its level at full slide (tools/sound/bench.py tyres: a few dB over your own engine); how hard it
 // screeches, 0-1, from what the server says (sliding: VF.DRIFT) and what it looks like here - going sideways at speed, or
