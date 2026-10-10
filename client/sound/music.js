@@ -69,7 +69,8 @@ const FORMANT = { 5: [700, 1060, 2450], 8: [900, 1380, 2750], 7: [810, 1230, 260
 // the riff's fuzz (a soft saturation) and the drums' crunch (six bits, softly clipped), as wave-shaper curves
 function curve(fn, n = 1025) { const c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = fn((i / (n - 1)) * 2 - 1); return c; }
 const FUZZ = curve((x) => Math.tanh(1.6 * x) / Math.tanh(1.6));
-const CRUSH = curve((x) => Math.tanh(1.3 * Math.round(x * 32) / 32) / Math.tanh(1.3), 2049);
+const CRUSH = curve((x) => Math.tanh(1.5 * Math.round(x * 16) / 16) / Math.tanh(1.5), 2049);   // (five bits)
+const CRUSH4 = curve((x) => Math.tanh(1.8 * Math.round(x * 8) / 8) / Math.tanh(1.8), 2049);   // (four: the drums)
 
 // ---- the other songs: notes as MIDI numbers per step (0 a rest, _ hold the last), drums as pattern strings per bar ----
 const CH = {   // root (bass octave) and the chord's tones (an octave up)
@@ -82,7 +83,7 @@ export const SONGS = {
   // and its tape - the hiss's level, the wow's wavers [Hz, seconds the delay swings], where the top is rolled off, how
   // hard the drums are pushed into the saturation, and the share of them crunched
   title: { bpm: 92, steps: 16, bars: TITLE_FORM.length, echo: 0.14, gain: 2.4, drumVol: 0.8, score: titleScore(),
-    fx: { hiss: 0.01, wow: [[0.55, 0.0022], [0.21, 0.0016], [6.5, 0.00007]], top: 9500, drive: 3, crunch: 0.3 } },
+    fx: { hiss: 0.01, wow: [[0.55, 0.0022], [0.21, 0.0016], [6.5, 0.00007]], top: 9500, drive: 5, crunch: 0.65, grit: 0.35 } },
   // the club: A minor, four on the floor, an off-beat bass, open hats, a stab now and then
   club: { bpm: 124, steps: 16, bars: 8, echo: 0.15,
     chords: ['Am', 'Am', 'F', 'G', 'Am', 'Am', 'F', 'Em'], bassPat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 2], bassInst: 'clubbass',
@@ -150,10 +151,10 @@ function voxNote(E, out, t, f, dur, v, open) {
 // the title's dusty kit: a short, punchy kick with a click, a noisy snare with a little body, ghost notes, hats
 function dusty(E, out, kind, t, v) {
   switch (kind) {
-    case 'kick': E.tone(out, t, 165, 0.3, v * 0.5, { type: 'sine', f2: 50, glide: 0.07, a: 0.002 }); E.tone(out, t, 117, 0.07, v * 0.16, { type: 'triangle', f2: 70, a: 0.001 }); E.noise(out, t, 0.016, v * 0.1, { ft: 'bandpass', f: 2600, q: 0.9 }); break;
-    case 'snare': E.tone(out, t, 220, 0.08, v * 0.13, { type: 'triangle', f2: 165, glide: 0.05 }); E.noise(out, t, 0.17, v * 0.6, { ft: 'bandpass', f: 4300, q: 0.55 }); E.noise(out, t, 0.12, v * 0.25, { ft: 'bandpass', f: 2800, q: 0.9 }); E.noise(out, t, 0.06, v * 0.2, { ft: 'highpass', f: 7600 }); break;
+    case 'kick': E.tone(out, t, 150, 0.42, v * 0.7, { type: 'sine', f2: 45, glide: 0.08, a: 0.002 }); E.tone(out, t, 55, 0.3, v * 0.3, { type: 'sine', a: 0.004 }); E.tone(out, t, 117, 0.08, v * 0.22, { type: 'triangle', f2: 70, a: 0.001 }); E.noise(out, t, 0.018, v * 0.14, { ft: 'bandpass', f: 2600, q: 0.9 }); break;
+    case 'snare': E.tone(out, t, 220, 0.12, v * 0.22, { type: 'triangle', f2: 160, glide: 0.06 }); E.noise(out, t, 0.14, v * 0.3, { ft: 'bandpass', f: 1800, q: 0.8 }); E.noise(out, t, 0.22, v * 0.6, { ft: 'bandpass', f: 4300, q: 0.55 }); E.noise(out, t, 0.12, v * 0.25, { ft: 'bandpass', f: 2800, q: 0.9 }); E.noise(out, t, 0.06, v * 0.2, { ft: 'highpass', f: 7600 }); break;
     case 'ghost': E.noise(out, t, 0.06, v * 0.2, { ft: 'bandpass', f: 3600, q: 0.8 }); E.tone(out, t, 210, 0.045, v * 0.08, { type: 'triangle', f2: 170 }); break;
-    case 'hat': E.noise(out, t, 0.1, v * 0.22, { ft: 'highpass', f: 5500, color: 'white' }); break;
+    case 'hat': E.noise(out, t, 0.15, v * 0.2, { ft: 'highpass', f: 3800, color: 'white' }); break;
     case 'tick': E.noise(out, t, 0.025, v * 0.08, { ft: 'highpass', f: 8500 }); break;
     case 'crash': E.noise(out, t, 1.2, v * 0.15, { ft: 'highpass', f: 4200, color: 'white' }); E.noise(out, t, 0.5, v * 0.1, { ft: 'bandpass', f: 6500, q: 0.7 }); break;
     default: break;
@@ -188,15 +189,20 @@ export class Music {
     const shaper = (cv) => { const n = c.createWaveShaper(); n.curve = cv; return n; };
     const wow = c.createDelay(0.05), top = krate(c.createBiquadFilter());
     wow.delayTime.value = 0.012; top.type = 'lowpass'; top.frequency.value = X.top; top.Q.value = 0.5;
-    p.inp.connect(wow); wow.connect(top); top.connect(p.lp);
-    const vox = gain(1), fA = bp(700, 3.5), fB = bp(1150, 5), fC = bp(2600, 5), gA = gain(0.25), gB = gain(0.5), gC = gain(0.4), drive = gain(4), fuzz = shaper(FUZZ);
+    // (heavier, grittier: the whole song squeezed by a compressor that lets the drums pump it, and a share of it through
+    // the five-bit crunch - as the owner put it, "crunchy" and "heavy")
+    const glue = c.createDynamicsCompressor(), grit = shaper(CRUSH);
+    glue.threshold.value = -20; glue.knee.value = 6; glue.ratio.value = 3.5; glue.attack.value = 0.004; glue.release.value = 0.15;
+    p.inp.connect(gain(1 - X.grit, glue)); p.inp.connect(gain(2, grit)); grit.connect(gain(X.grit / 2, glue));
+    glue.connect(gain(0.6, wow)); wow.connect(top); top.connect(p.lp);
+    const vox = gain(1), fA = bp(700, 3.5), fB = bp(1150, 5), fC = bp(2600, 5), gA = gain(0.25), gB = gain(0.5), gC = gain(0.4), drive = gain(7), fuzz = shaper(FUZZ);
     const low = krate(c.createBiquadFilter()), body = gain(0.6, drive);
     low.type = 'lowpass'; low.frequency.value = 900; low.Q.value = 0.7;   // (the note's body: its fundamental and first few harmonics)
     vox.connect(low); low.connect(body);
     for (const [f, g] of [[fA, gA], [fB, gB], [fC, gC]]) { vox.connect(f); f.connect(g); g.connect(drive); }
-    drive.connect(fuzz); fuzz.connect(gain(0.4, p.inp));
+    drive.connect(fuzz); fuzz.connect(gain(0.34, p.inp));
     // (the drums squashed a little first - a saturation that rounds off the hits' peaks, as a tape pushed hard does)
-    const drums = gain(1), sat = shaper(FUZZ), crush = shaper(CRUSH), mix = gain(1);
+    const drums = gain(1), sat = shaper(FUZZ), crush = shaper(CRUSH4), mix = gain(1);
     drums.connect(gain(X.drive, sat)); sat.connect(gain(1 / X.drive, mix));
     mix.connect(gain(1 - X.crunch, p.inp)); mix.connect(gain(2.5, crush)); crush.connect(gain(X.crunch / 2.5, p.inp));
     p.fx = { wow, top, vox, body, fA, fB, fC, gA, gB, gC, drums, src: [] };
@@ -267,14 +273,15 @@ export class Music {
   event(p, ev, t, sd) {
     const E = this.E, F = p.fx, hum = 0.88 + R() * 0.24;
     switch (ev.p) {
-      case 'open': p.open = ev.o; if (F) { setp(F.body.gain, ev.o ? 0.22 : 0.6, t, 0.25); setp(F.gA.gain, ev.o ? 1.5 : 0.25, t, 0.25); setp(F.gB.gain, ev.o ? 2.2 : 0.5, t, 0.25); setp(F.gC.gain, ev.o ? 1.6 : 0.4, t, 0.25); } break;
+      case 'open': p.open = ev.o; if (F) { setp(F.body.gain, ev.o ? 0.22 : 0.6, t, 0.25); setp(F.gA.gain, ev.o ? 1.5 : 0.25, t, 0.25); setp(F.gB.gain, ev.o ? 1.6 : 0.5, t, 0.25); setp(F.gC.gain, ev.o ? 1.1 : 0.4, t, 0.25); } break;
       case 'vox': {
         const at = t + 0.016, fm = FORMANT[ev.n[0] % 12] || FORMANT[5];   // (the riff a hair behind the beat: lazy)
         if (F) { F.fA.frequency.setTargetAtTime(fm[0], at, 0.03); F.fB.frequency.setTargetAtTime(fm[1], at, 0.03); F.fC.frequency.setTargetAtTime(fm[2], at, 0.03); }
         ev.n.forEach((m, k) => voxNote(E, F ? F.vox : p.inp, at, hz(m), ev.len * sd * 0.94, 0.05 * ev.v * hum * (k ? 0.5 : 1), p.open));
+        if (p.open) E.noise(p.inp, at, 0.035, 0.025 * ev.v * hum, { ft: 'bandpass', f: 4500, q: 0.9 });   // (a hiss of a consonant on each note, as a vocoder's voice has, once it's talking)
         break;
       }
-      case 'sub': E.tone(p.inp, t, hz(ev.n[0]), ev.len * sd * 0.92, 0.25 * ev.v * hum, { wave: 'soft', a: 0.01 }); break;
+      case 'sub': E.tone(p.inp, t, hz(ev.n[0]), ev.len * sd * 0.92, 0.32 * ev.v * hum, { wave: 'soft', a: 0.01 }); break;
       default: dusty(E, F ? F.drums : p.inp, ev.p, t, ev.v * hum * (p.S.drumVol || 1)); break;
     }
   }

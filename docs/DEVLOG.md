@@ -5400,9 +5400,14 @@ The owner made a track for the title screen ("CLA Main Screen": made with a text
   - **The turns:** every fourth bar turns D♭ to C, with a fill, a break, or the drums dropping out at the loop's seam.
   - **The bass:** a sub bass on F under it all.
 - **How it sounds:**
-  - **The riff:** a buzzy, vocoder-like synth. Two sawtooths a few cents apart scoop up into each note, through three vowel formants that move with the notes. It's dark in the intro and opens up once the drums are in, with a little fuzz.
-  - **The drums:** a dusty boom-bap kit. Kick on 1 and 3, snare on 2 and 4, hats on the off-beats, ghost notes dragging half a 16th late. Pushed into a saturation, part of it crunched to six bits.
-  - **The tape:** hiss, a slow wow in the pitch (a wavering delay: about ±15 cents), the top rolled off at 10.5 kHz.
+  - **The riff:** a buzzy, vocoder-like synth. Two sawtooths a few cents apart scoop up into each note, through three vowel formants that move with the notes. It's dark in the intro and opens up once the drums are in, fuzzed, with a breath of a consonant on each note.
+  - **The drums:** a dusty boom-bap kit, pushed into a saturation and mostly crunched to four bits:
+    - a fat kick with a sub under it, on 1 and 3;
+    - a snare with body, on 2 and 4;
+    - wide hats on the off-beats;
+    - ghost notes dragging half a 16th late.
+  - **The tape:** a compressor the drums pump, a share of the lot through five-bit grit, hiss, and a slow wow in the pitch (a wavering delay: about ±15 cents). The top is rolled off at 9.5 kHz.
+  - **The owner, on the first takes:** "similar but not as crunchy and heavy as I was aiming for". Take 3's crest factor (peak to average) is 13 dB against take 2's 20 and the owner's 15.
 - **The new bits of the music player:**
   - A song can be a score (events per step: notes, lengths, accents, a lag behind the grid) instead of patterns.
   - It can have a tape chain. Its hiss and wavers run only while the song plays.
