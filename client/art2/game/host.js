@@ -49,7 +49,7 @@ import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
 import { WEAPONS, BLADE_COLORS, hexRgb } from '../../../shared/items.js';
-import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S } from './liveart.js';   // (flags in the wind, umbrellas' canopies, fountains' water)
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S, partSprite } from './liveart.js';   // (flags in the wind, umbrellas' canopies, fountains' water)
 const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand, _lights)
 
 export { DECK_Z };
@@ -1817,6 +1817,15 @@ export class World2 {
       if (!key) continue;
       o.alpha = (p.type === 2 ? Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1 : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2)) * (p.veil ?? 1);
       E.drawSprite(key, p.x, p.y, Math.max(0, p.z * (p.type === 8 ? 0.5 : 0.3)), o); // (v1's heights)
+    }
+    // pieces off vehicles, tumbling and then lying where they fell (render/fx.js chunks tagged with what they are:
+    // render/vehdmg.js a part that came off, render/boom.js an explosion's pieces - task #402), turned in eighths
+    for (const c of fx.chunks) {
+      if (!c.on || !c.vp || c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
+      const r = ((Math.round(c.a / (Math.PI / 4)) % 8) + 8) % 8, vp = c.vp, key = this._conv(`vpart|${vp.k}|${vp.paint}|${r}`, () => partSprite(vp.k, vp.paint, r), true);
+      if (!key) continue;
+      o.alpha = c.life > c.rest ? Math.max(0, 1 - (c.life - c.rest) / 1.5) : 1;
+      E.drawSprite(key, c.x, c.y, Math.max(0, (c.z || 0) * 0.5), o);
     }
     this._blown(F, o);
   }

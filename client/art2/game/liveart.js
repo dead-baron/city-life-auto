@@ -250,3 +250,20 @@ function artBuf(w, h, ax, ay) {
     },
   };
 }
+
+// A piece off a vehicle, tumbling or lying where it fell (task #402: render/vehdmg.js a part that came off, render/boom.js
+// an explosion's): k 'b' a bumper, 'h' the bonnet, 'd' a door, 'w' a wheel, 'p' a panel, 't' the boot lid; paint
+// '#rrggbb'; turned r eighths of a turn. Flat, in its paint, the edges darker; a door with its window, a wheel its hub.
+const PART_SIZE = { b: [20, 5], h: [18, 14], d: [16, 10], w: [10, 10], p: [14, 8], t: [14, 10] };
+export function partSprite(k, paint, r) {
+  const [L, W] = PART_SIZE[k] || PART_SIZE.p, R = Math.ceil(Math.hypot(L, W) / 2) + 2, A = artBuf(2 * R, 2 * R + 6, R, R + 3);
+  const a = (r | 0) * Math.PI / 4, c = Math.cos(a), s = Math.sin(a), n = [0, 0, 1];
+  const body = k === 'b' ? [107, 107, 104] : /^#[0-9a-f]{6}$/i.test(paint || '') ? rgb(paint) : [120, 120, 120], tyre = [26, 26, 28], hub = [138, 138, 134], glass = [28, 42, 51];
+  for (let y = -W / 2; y < W / 2; y += 0.5) for (let x = -L / 2; x < L / 2; x += 0.5) {
+    const X = x * c - y * s, Y = x * s + y * c;
+    if (k === 'w') { const rr = Math.hypot(x, y); if (rr <= 5) A.dot(X, Y, 3, rr < 2 ? hub : tyre, 1, n, 0); continue; }
+    const edge = Math.abs(x) > L / 2 - 1 || Math.abs(y) > W / 2 - 1, win = k === 'd' && y < -W / 2 + 4 && Math.abs(x) < L / 2 - 2;
+    A.dot(X, Y, 1.5, win ? glass : body, edge ? 0.68 : 1, n, 0);
+  }
+  return A.G;
+}

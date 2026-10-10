@@ -148,6 +148,7 @@ export class Booms {
       const [sx, w, h] = PIECE_RECT[p.c] || PIECE_RECT.p, a = a0 + p.a, k = p.c === 'w' ? 1 : 1.2;
       fx.chunk(img, sx, 0, w, h, w * k, h * k, ev.x + Math.cos(a) * def.L * 0.2, ev.y + Math.sin(a) * def.W * 0.2, Math.cos(a) * p.sp, Math.sin(a) * p.sp, p.vz, p.va, 6 + (p.vz % 5));
       const c = fx.chunks[(fx.ci + fx.chunks.length - 1) % fx.chunks.length], b = this.burners[this.bu];
+      c.vp = { k: p.c, paint };   // (what it is: art v2 draws it - host.js _particles)
       this.bu = (this.bu + 1) % this.burners.length;
       b.c = c; b.until = now + 3 + (p.sp % 4); b.acc = 0;
     });

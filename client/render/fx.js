@@ -132,7 +132,7 @@ export class FX {
   chunk(img, sx, sy, sw, sh, w, h, x, y, vx, vy, vz, va, rest = 6) {
     const o = this.chunks[this.ci]; this.ci = (this.ci + 1) % this.chunks.length;
     o.on = true; o.img = img; o.sx = sx; o.sy = sy; o.sw = sw; o.sh = sh; o.w = w; o.h = h;
-    o.x = x; o.y = y; o.z = 2; o.vx = vx; o.vy = vy; o.vz = vz; o.a = 0; o.va = va; o.life = 0; o.rest = rest;
+    o.x = x; o.y = y; o.z = 2; o.vx = vx; o.vy = vy; o.vz = vz; o.a = 0; o.va = va; o.life = 0; o.rest = rest; o.vp = null;   // (vp: a vehicle's piece, for art v2 - render/vehdmg.js)
   }
   // bits that flutter down (paper, leaves, mail) and then lie where they land as litter
   flutter(x, y, n, colors, rand = Math.random, spread = 160, lift = 160) {

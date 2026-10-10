@@ -31,6 +31,7 @@ export function vdmg(boom, ev, now) {
     const e = S.ents.get(ev.id), p = PIECE_RECT[PART_PIECE[ev.k] || 'p'], paint = PAINTS[((((e && e.d && e.d.p) | 0) % PAINTS.length) + PAINTS.length) % PAINTS.length] || '#777';
     const [sx, w, h] = p;
     fx.chunk(pieceStrip(paint), sx, 0, w, h, w * 1.3, h * 1.3, ev.x, ev.y, ev.vx || 0, ev.vy || 0, 90 + Math.random() * 60, (Math.random() - 0.5) * 9, 24);
+    fx.chunks[(fx.ci + fx.chunks.length - 1) % fx.chunks.length].vp = { k: PART_PIECE[ev.k] || 'p', paint };   // (art v2 draws it from this: host.js _particles)
     fx.sparks(ev.x, ev.y, 6);
   }
 }
