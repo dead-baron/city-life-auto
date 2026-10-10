@@ -64,6 +64,33 @@ export function titleScore(form = TITLE_FORM) {
   }
   return sc;
 }
+// ---- the menu, take two: the owner's second main-screen track ("CLA Main Screen", 2026-10-10, made with their YuE2
+// instrumental workflow), rebuilt in the engine ----
+// D minor, a two-bar loop - D minor, then A7 - eight times round (16 bars), at 86.5 BPM. The owner's ABC plan gave the
+// chords and the motif (F on 1 and 3, then E); the FLAC gave the rest: the keys stab the chord (D minor on 1 and 3;
+// A7 on 1 and the and of 2, its G on the and of 3), a nasal lead sings the top note, a rubbery bass slides into D,
+// then A and down to its G, over a dusty boom-bap kit (kick on 1 and the ands of 3 and 4, snare on 2 and 4, a few
+// hats). The recording sits about a fifth of a semitone sharp: so does this.
+export function menuScore(bars = 16) {
+  const S = 16, sc = Array.from({ length: bars * S }, () => []);
+  const at = (b, s, ev) => sc[b * S + s].push(ev);
+  const D2 = 38, G2 = 43, A2 = 45;
+  const DM = [62, 65, 69, 74, 77], A7 = [57, 61, 64, 73, 76];   // (D4 F4 A4 D5 F5 / A3 C#4 E4 C#5 E5)
+  for (let b = 0; b < bars; b++) {
+    if (b % 2 === 0) {
+      at(b, 0, { p: 'keys', n: DM, len: 6, v: 1 }); at(b, 8, { p: 'keys', n: DM, len: 6, v: 0.85 });
+      at(b, 0, { p: 'lead', n: [77], len: 4, v: 1 }); at(b, 8, { p: 'lead', n: [77], len: 4, v: 0.9 });
+      at(b, 0, { p: 'rbass', n: [D2], len: 7, v: 1 }); at(b, 10, { p: 'rbass', n: [D2], len: 3, v: 0.85 }); at(b, 14, { p: 'rbass', n: [D2], len: 2, v: 0.7 });
+      for (const [s, k, v] of [[0, 'kick', 1], [2, 'hat', 0.9], [4, 'snare', 1], [4, 'kick', 0.55], [6, 'hat', 0.8], [8, 'hat', 1], [10, 'kick', 0.95], [12, 'snare', 0.95], [14, 'kick', 0.7]]) at(b, s, { p: k, v });
+    } else {
+      at(b, 0, { p: 'keys', n: A7, len: 5, v: 1 }); at(b, 6, { p: 'keys', n: A7, len: 5, v: 0.8 }); at(b, 10, { p: 'keys', n: [67, 79], len: 4, v: 0.6 });
+      at(b, 0, { p: 'lead', n: [76], len: 2, v: 1 });
+      at(b, 0, { p: 'rbass', n: [A2], len: 5, v: 1 }); at(b, 6, { p: 'rbass', n: [G2], len: 8, v: 0.9 });
+      for (const [s, k, v] of [[0, 'kick', 1], [2, 'hat', 1], [4, 'snare', 1], [6, 'kick', 1], [8, 'hat', 0.9], [10, 'kick', 0.85], [12, 'snare', 0.95], [14, 'kick', 0.65]]) at(b, s, { p: k, v });
+    }
+  }
+  return sc;
+}
 // the riff's three formants for each note (by pitch class): the synth "says" something a little different on each
 const FORMANT = { 5: [700, 1060, 2450], 8: [900, 1380, 2750], 7: [810, 1230, 2600], 1: [860, 1300, 2700], 0: [770, 1170, 2550] };
 // the riff's fuzz (a soft saturation) and the drums' crunch (six bits, softly clipped), as wave-shaper curves
@@ -84,6 +111,9 @@ export const SONGS = {
   // hard the drums are pushed into the saturation, and the share of them crunched
   title: { bpm: 92, steps: 16, bars: TITLE_FORM.length, echo: 0.14, gain: 2.4, drumVol: 0.8, score: titleScore(),
     fx: { hiss: 0.01, wow: [[0.55, 0.0022], [0.21, 0.0016], [6.5, 0.00007]], top: 9500, drive: 5, crunch: 0.65, grit: 0.35 } },
+  // the menu's second track (above): its tuning (cents sharp, as the recording is), its echo and a gentler tape
+  menu: { bpm: 86.5, steps: 16, bars: 16, tune: 22, echo: 0.25, gain: 2.4, drumVol: 0.7, kick: 66, hats: 0.35, score: menuScore(),
+    fx: { hiss: 0.004, wow: [[0.5, 0.0012], [0.19, 0.0009], [6, 0.00005]], top: 7500, drive: 3, crunch: 0.2, grit: 0.12, glue: [-14, 2] } },
   // the club: A minor, four on the floor, an off-beat bass, open hats, a stab now and then
   club: { bpm: 124, steps: 16, bars: 8, echo: 0.15,
     chords: ['Am', 'Am', 'F', 'G', 'Am', 'Am', 'F', 'Em'], bassPat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 2], bassInst: 'clubbass',
@@ -149,12 +179,12 @@ function voxNote(E, out, t, f, dur, v, open) {
   E.note(lp, t + dur + 0.1); E.note(g, t + dur + 0.1);
 }
 // the title's dusty kit: a short, punchy kick with a click, a noisy snare with a little body, ghost notes, hats
-function dusty(E, out, kind, t, v) {
+function dusty(E, out, kind, t, v, low = 45, hats = 1) {
   switch (kind) {
-    case 'kick': E.tone(out, t, 150, 0.42, v * 0.7, { type: 'sine', f2: 45, glide: 0.08, a: 0.002 }); E.tone(out, t, 55, 0.3, v * 0.3, { type: 'sine', a: 0.004 }); E.tone(out, t, 117, 0.08, v * 0.22, { type: 'triangle', f2: 70, a: 0.001 }); E.noise(out, t, 0.018, v * 0.14, { ft: 'bandpass', f: 2600, q: 0.9 }); break;
+    case 'kick': E.tone(out, t, 150, 0.42, v * 0.7, { type: 'sine', f2: low, glide: 0.08, a: 0.002 }); if (low < 50) E.tone(out, t, 55, 0.3, v * 0.3, { type: 'sine', a: 0.004 }); E.tone(out, t, 117, 0.08, v * 0.22, { type: 'triangle', f2: 70, a: 0.001 }); E.noise(out, t, 0.018, v * 0.14, { ft: 'bandpass', f: 2600, q: 0.9 }); break;
     case 'snare': E.tone(out, t, 220, 0.12, v * 0.22, { type: 'triangle', f2: 160, glide: 0.06 }); E.noise(out, t, 0.14, v * 0.3, { ft: 'bandpass', f: 1800, q: 0.8 }); E.noise(out, t, 0.22, v * 0.6, { ft: 'bandpass', f: 4300, q: 0.55 }); E.noise(out, t, 0.12, v * 0.25, { ft: 'bandpass', f: 2800, q: 0.9 }); E.noise(out, t, 0.06, v * 0.2, { ft: 'highpass', f: 7600 }); break;
     case 'ghost': E.noise(out, t, 0.06, v * 0.2, { ft: 'bandpass', f: 3600, q: 0.8 }); E.tone(out, t, 210, 0.045, v * 0.08, { type: 'triangle', f2: 170 }); break;
-    case 'hat': E.noise(out, t, 0.15, v * 0.2, { ft: 'highpass', f: 3800, color: 'white' }); break;
+    case 'hat': E.noise(out, t, 0.15, v * 0.2 * hats, { ft: 'highpass', f: 3800, color: 'white' }); break;
     case 'tick': E.noise(out, t, 0.025, v * 0.08, { ft: 'highpass', f: 8500 }); break;
     case 'crash': E.noise(out, t, 1.2, v * 0.15, { ft: 'highpass', f: 4200, color: 'white' }); E.noise(out, t, 0.5, v * 0.1, { ft: 'bandpass', f: 6500, q: 0.7 }); break;
     default: break;
@@ -192,7 +222,7 @@ export class Music {
     // (heavier, grittier: the whole song squeezed by a compressor that lets the drums pump it, and a share of it through
     // the five-bit crunch - as the owner put it, "crunchy" and "heavy")
     const glue = c.createDynamicsCompressor(), grit = shaper(CRUSH);
-    glue.threshold.value = -20; glue.knee.value = 6; glue.ratio.value = 3.5; glue.attack.value = 0.004; glue.release.value = 0.15;
+    glue.threshold.value = X.glue ? X.glue[0] : -20; glue.knee.value = 6; glue.ratio.value = X.glue ? X.glue[1] : 3.5; glue.attack.value = 0.004; glue.release.value = 0.15;
     p.inp.connect(gain(1 - X.grit, glue)); p.inp.connect(gain(2, grit)); grit.connect(gain(X.grit / 2, glue));
     glue.connect(gain(0.6, wow)); wow.connect(top); top.connect(p.lp);
     const vox = gain(1), fA = bp(700, 3.5), fB = bp(1150, 5), fC = bp(2600, 5), gA = gain(0.25), gB = gain(0.5), gC = gain(0.4), drive = gain(7), fuzz = shaper(FUZZ);
@@ -271,7 +301,7 @@ export class Music {
   // a scored song's event at t (sd: a step's length): the riff's notes (and the formants moving to the vowel it
   // "says" on that note), the bass, the drums; 'open' turns the formants up once the drums are in
   event(p, ev, t, sd) {
-    const E = this.E, F = p.fx, hum = 0.88 + R() * 0.24;
+    const E = this.E, F = p.fx, hum = 0.88 + R() * 0.24, tn = (p.S.tune || 0) / 100;
     switch (ev.p) {
       case 'open': p.open = ev.o; if (F) { setp(F.body.gain, ev.o ? 0.22 : 0.6, t, 0.25); setp(F.gA.gain, ev.o ? 1.5 : 0.25, t, 0.25); setp(F.gB.gain, ev.o ? 1.6 : 0.5, t, 0.25); setp(F.gC.gain, ev.o ? 1.1 : 0.4, t, 0.25); } break;
       case 'vox': {
@@ -282,7 +312,12 @@ export class Music {
         break;
       }
       case 'sub': E.tone(p.inp, t, hz(ev.n[0]), ev.len * sd * 0.92, 0.32 * ev.v * hum, { wave: 'soft', a: 0.01 }); break;
-      default: dusty(E, F ? F.drums : p.inp, ev.p, t, ev.v * hum * (p.S.drumVol || 1)); break;
+      // (the menu's: detuned keys plucked through a low-pass; a nasal lead - a thin pulse through a resonant filter, a
+      // little vibrato; a rubbery bass that slides up into each note)
+      case 'keys': for (const m of ev.n) for (const d of [-9, 9]) E.tone(p.inp, t, hz(m + tn), ev.len * sd, 0.1 * ev.v * hum, { wave: 'saw8', det: d, lp: 1000, q: 1.2, a: 0.004 }); break;
+      case 'lead': E.tone(p.inp, t + 0.01, hz(ev.n[0] + tn), ev.len * sd * 0.95, 0.16 * ev.v * hum, { wave: 'pulse12', lp: 1000, q: 3, a: 0.012, hold: ev.len * sd * 0.5, vib: ev.len > 2 ? 12 : 0 }); break;
+      case 'rbass': { const f = hz(ev.n[0] + tn); E.tone(p.inp, t, f * 0.94, ev.len * sd * 0.95, 0.13 * ev.v * hum, { wave: 'soft', f2: f, glide: 0.06, a: 0.006, hold: ev.len * sd * 0.4 }); break; }
+      default: dusty(E, F ? F.drums : p.inp, ev.p, t, ev.v * hum * (p.S.drumVol || 1), p.S.kick || 45, p.S.hats ?? 1); break;
     }
   }
   silence() { for (const name in this.players) this.set(name, 0); }
