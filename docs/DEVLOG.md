@@ -6155,3 +6155,11 @@ dents and parts falling off as it worsens, not a repetitive grey speckle overlay
   destroys it; art v2: a look per stage keyed and cached, the crumpled
   model, a door swung out past the body, two halves that make the car with a glowing face; the debug menu's looks. These pass as before: `test/explosions.test.js`,
   `test/core.test.js`, `test/tow.test.js`, `test/reactions.test.js`, `test/art2.test.js`.
+
+## 2026-10-10 · The car-damage events get their sounds
+
+The full suite caught two server events from the vehicle damage work with no sound: a part coming off a battered car
+(`vpart`: a bumper or door clangs down with a scrape, a wheel thumps) and a car cut in two (`vcut`: the plasma blade's
+sear and hum through the metal, the shell's clang). `client/sound/events.js`. Tests: test/sound.test.js. (The street
+fight test in test/brawls.test.js failed once under the full suite's load and passes on its own, six runs out of six:
+it's timing-sensitive, noted for a look.)

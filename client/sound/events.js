@@ -97,6 +97,10 @@ export const EVENT_SOUNDS = {
     if ((ev.r || 0) >= 160) { A.at('explosion', ev.x, ev.y, 0.7, { r: ev.r * 1.3 }); A.at('rubble', ev.x, ev.y, 1); }
     if (ev.k === 'pieces' || ev.k === 'launch') { A.at('clang', ev.x, ev.y, 0.9); A.at('glass', ev.x, ev.y, 0.8); }
   },
+  // a part coming off a battered car (task #402: vehicles.js): a bumper or a door clanging down, a wheel's thump
+  vpart: (ev, A) => { if (ev.k === 'wheel') A.at('thud', ev.x, ev.y, 0.8); else { A.at('clang', ev.x, ev.y, 0.6); A.at('scrape', ev.x, ev.y, 0.4); } },
+  // a car cut in two by a plasma blade: the blade's sear through the metal, the shell parting
+  vcut: (ev, A) => { A.at('sear', ev.x, ev.y, 1); A.at('hum', ev.x, ev.y, 1.2); A.at('clang', ev.x, ev.y, 0.7); },
   wreckland: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: 1 }); A.at('rubble', ev.x, ev.y, 0.8); A.at('clang', ev.x, ev.y, 0.7); },   // a wreck blown up into the air slams down
   runover: (ev, A) => { A.at('bonk', ev.x, ev.y, 1); A.at('bodyfall', ev.x, ev.y, 0.9); A.at('crash', ev.x, ev.y, 0.5, { p: 0.2 }); },   // a body under a car (task #361)
   hood: (ev, A) => { A.at('thud', ev.x, ev.y, 1); A.at('bonk', ev.x, ev.y, 0.8); A.at('clank', ev.x, ev.y, 0.6); },   // a thud up onto the hood
