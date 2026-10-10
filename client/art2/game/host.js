@@ -84,9 +84,10 @@ const BEARS = new Set(['blackbear', 'grizzly']);
 // the other, so the odd id is drawn as the hen (birds.js ':f') and the even one as the cock (the drake)
 const HENS = new Set(['quail', 'duck']);
 const petKind = (p) => { const k = p.d.ar.slice(4); return HENS.has(k) && (p.id & 1) ? `${k}:f` : k; };
-function wildPose(p, S2, base, sp) {
+function wildPose(p, S2, base, sp, now) {
   if (p.flags & PF.DEAD) return 'dead';
-  if (p.flags & PF.DOWN) return 'lie';
+  if (p.flags & PF.DOWN) return 'fall';   // (knocked off its feet: on its side, the legs going - AN7)
+  if (p.hitAt !== undefined && now - p.hitAt < 0.3 && !S2.bird) return 'hit';   // (the flinch as the hit lands - AN7)
   const ap = (p.extra || 0) & 31;
   if (ap === APOSE.fly) return 'fly';
   if (p.swim) return base === 'seaotter' && (ap === APOSE.float || sp < 25) ? 'float' : 'swim';
@@ -95,11 +96,11 @@ function wildPose(p, S2, base, sp) {
     case APOSE.rear: case APOSE.attack: return BEARS.has(base) ? 'rear' : sp > 30 ? 'run' : 'alert';
     case APOSE.charge: return 'run';
     case APOSE.stalk: return sp > 6 ? 'stalk' : 'stalk';
-    case APOSE.rest: return S2.bird ? 'idle' : 'lie';
+    case APOSE.rest: return S2.bird ? 'idle' : p.hp < 0.5 ? 'down' : 'lie';   // (badly hurt: bedded down wounded, the head on the ground - AN7)
     case APOSE.sit: return S2.bird ? 'idle' : 'sit';
     case APOSE.graze: case APOSE.gnaw: case APOSE.drink: case APOSE.eat: case APOSE.peck: return sp > 12 ? 'walk' : S2.bird ? 'peck' : 'graze';
     case APOSE.alert: case APOSE.warn: case APOSE.call: case APOSE.flinch: return sp > 12 ? 'walk' : 'alert';
-    default: return sp > 70 ? 'run' : sp > 12 ? 'walk' : 'idle';
+    default: return sp > 12 && p.hp < 0.5 && !S2.bird ? 'limp' : sp > 70 ? 'run' : sp > 12 ? 'walk' : 'idle';   // (badly hurt: limping on a foreleg held up - AN7; server: the limp)
   }
 }
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
@@ -1225,7 +1226,7 @@ export class World2 {
     // a wild animal: what it's doing comes from the server (fauna.js APOSE in the extra byte; bit 7 in the water);
     // a pet or a farm animal: standing still a while it sits, or puts its head down and grazes (now and then looking
     // up); down or dead: lying on its side
-    const pose = S2 ? wildPose(p, S2, base, sp)
+    const pose = S2 ? wildPose(p, S2, base, sp, now)
       : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still || happy ? 'idle'
         : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
@@ -1240,7 +1241,7 @@ export class World2 {
         return;
       }
     }
-    const rate = pose === 'run' ? 14 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? (happy ? 12 : 3) : pose === 'swim' ? 2.5 : 1.5;   // (happy: the tail wagging nineteen to the dozen)
+    const rate = pose === 'run' ? 14 : pose === 'limp' ? 6 + sp / 20 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? (happy ? 12 : 3) : pose === 'swim' ? 2.5 : 1.5;   // (happy: the tail wagging nineteen to the dozen)
     const fr = pose === 'dead' || (pose === 'lie' && p.flags & PF.DEAD) ? 0 : Math.floor(now * rate + p.id) % n;
     let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null;

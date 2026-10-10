@@ -6515,3 +6515,26 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
   table in a minute), the waiting one's cue up, watchers; the neighbours' fence on the wire; the debug menu's 11 kinds;
   the classic view draws every prop the server sends (and the cue), lazily. `test/art2.test.js`, `test/sound.test.js`,
   `test/npcpeople.test.js` pass as before.
+## 2026-10-10 · The animals' missing poses (task #391, part 2): hit, wounded and down (AN7)
+
+The owner: "improve animal art to match the wildlife concepts and give them better animations" (AN1-AN8); the last
+animals entry did the coats, shapes and gaits - these are the poses the concepts show that the game didn't draw.
+- **AN7, hit, wounded and down** (`client/art2/animals.js`, the art v2 renderer; no server change - what the client
+  already knows: the hit's 'react' event, the share of health, the down flag, the resting pose):
+  - **the flinch** (`hit`): as a hit lands (0.3 s from it) the animal rocks back onto its hind feet, the forehand up off
+    the ground and the head up (`flinch`: the model turned nose-up round the hind feet, its whole length kept);
+  - **walking wounded** (`limp`, 4 frames): under half its health it moves (the server already slows it to 0.65)
+    on three legs - the right foreleg held up, dangling, the head hung low; the cycle a little slower than a walk;
+  - **bedded down wounded** (`down`, 2 frames): resting under half its health (the server's `hurtRest`), it lies with
+    its legs folded under and its head stretched out on the ground (lying up, the head stays up);
+  - **knocked off its feet** (`fall`): the down flag (a gore, a car) now draws it on its side with the legs going (it
+    was the resting lie).
+  - The birds keep theirs (the turkey: the alert for the hit, the walk for the limp, the bird's down pose for down).
+  - `client/art2/game/actors.js` (`ANIMAL_FRAMES`: hit 1, limp 4, down 2, fall 2), `client/art2/game/host.js` `wildPose`.
+- **Before/after sheet** `docs/art-v2/compare/AN7_hit-wounded-down.png` (deer, black bear; elk and boar after), the
+  concept at half size on top, the game's own bake below.
+- **Left:** AN5 (drinking at the water's edge, wading, swimming), AN2 (the turkey's strut, the bear's swipe), AN4, the
+  quail's size at game scale.
+- **Tests:** `test/wildart.test.js` (1 new, 4 in all): every species draws the four poses; the flinch lifts the
+  forefeet (standing, they're down), the limp's right forefoot never touches the ground (walking, it does), bedded down
+  the head is lower than lying up, knocked down isn't the dead pose.

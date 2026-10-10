@@ -9,6 +9,9 @@
 //     pose: 'stand' | 'sit' | 'graze' (head down) | 'lie' (on the belly) | 'alert' (head up high) | 'stalk' (low,
 //     creeping) | 'rear' (up on the hind legs: a bear) | 'swim' (only the head and back above the water) | 'float'
 //     (a sea otter on its back) | 'climb' (a squirrel on a trunk, head up) | 'dead' (on its side, legs out)
+//     AN7, hit and hurt: 'hit' (the flinch: reared back off the forelegs, head up) | 'limp' (wounded: the walk with a
+//     foreleg held up off the ground, the head low) | 'down' (bedded down wounded: legs folded under, the head down on
+//     the ground) | 'fall' (knocked off its feet: on its side, the legs going)
 //     kind may carry a variant: 'deer:y' the young (smaller, a fawn's spots, no antlers), 'deer:L' the legendary
 //     pure white one (it glows faintly)
 //   renderUpright(vox, heading, { fy = 0.38, dither }) -> GBuf (anchor at the model centre on the ground)
@@ -86,8 +89,10 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'float') return floatModel(A);
   if (pose0 === 'rear' || pose0 === 'climb') return pitchUp(animalModel(kind, { ...o, pose: pose0 === 'rear' ? 'stand' : 'alert', phase: 0 }), A, pose0 === 'rear' ? 1.15 : 1.45, pose0 === 'rear');
   if (pose0 === 'dead') return onSide(animalModel(kind, { ...o, pose: 'stand', phase: 0.12 }), A);
+  if (pose0 === 'fall') return onSide(animalModel(kind, { ...o, pose: 'stand', gait: 'run', phase: o.phase || 0 }), A);   // (AN7: the legs going as it hits the ground)
+  if (pose0 === 'hit') return flinch(animalModel(kind, { ...o, pose: 'alert', phase: 0 }), A, 0.2);              // (AN7: the flinch)
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
-  const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, lie = pose === 'lie', alert = pose === 'alert', stalk = pose === 'stalk';
+  const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, down = pose === 'down', lie = pose === 'lie' || down, alert = pose === 'alert', stalk = pose === 'stalk', limp = pose === 'limp';
   const hk = A.len <= 30 && (!A.jl || A.len < 14) ? 1.2 : 1;            // pets get the chunky big-headed look of A1 (the wild ones true to life, but for a rabbit)
   const L = Math.ceil(A.len * 1.7 + 10 + (A.antlers ? 8 : 0) + (TAIL_ROOM[A.tail] || 0)), W = Math.ceil(A.w * 2.3 + 12 + (A.antlers >= 2 ? 22 : 0)), Hh = Math.ceil(A.h * 2.2 + 12 + (A.antlers >= 2 ? 16 : 0));
   const m = new Vox(L, W, Hh);
@@ -149,6 +154,7 @@ export function animalModel(kind, o = {}) {
       const top = bz - bodyR * 0.3, L2 = Math.max(top, (A.h - bodyR) * 0.92 - bodyR * 0.3) * (back ? 1.07 : 1.015) / 2;   // (crouched in a stalk: the legs bend)
       let fx = back ? -0.6 : 0.6, fz = 0;
       if (moving) { const p = (((phase + OFF[i]) % 1) + 1) % 1; if (p < D) fx = stride * (0.5 - p / D); else { const u = (p - D) / (1 - D); fx = stride * (u - 0.5); fz = Math.sin(u * Math.PI) * lift; } }
+      if (limp && i === 1) { fx = stride * 0.12; fz = A.h * 0.22 + Math.sin(phase * Math.PI * 2) * 0.6; }   // (AN7: the hurt foreleg held up, dangling)
       const dx = fx, dz = fz - top, d = Math.max(0.5, Math.min(L2 * 1.995, Math.hypot(dx, dz))), th = Math.atan2(dz, dx), al = Math.acos(Math.min(1, d / (2 * L2)));
       const kx = lx + Math.cos(th + (back ? -al : al)) * L2, kz = top + Math.sin(th + (back ? -al : al)) * L2;
       const seg = (x0s, z0s, x1s, z1s, r0, r1, mt) => { const n = Math.ceil(Math.hypot(x1s - x0s, z1s - z0s) * 2) + 1; for (let k = 0; k <= n; k++) { const t = k / n, x = x0s + (x1s - x0s) * t, z = z0s + (z1s - z0s) * t, r = r0 + (r1 - r0) * t; m.box(x - r, ly - r, Math.max(0, z - 0.5), x + r, ly + r, Math.max(0, z) + 0.6, mt); } };
@@ -176,7 +182,7 @@ export function animalModel(kind, o = {}) {
   // neck and head
   const neck = A.neck || A.head * 0.9;
   const HD = A.head * hk;
-  const hx = x1 + (graze ? 2 : stalk ? neck * 0.55 : neck * 0.35), hz = graze ? HD + 1 : stalk ? bz + bodyR * 0.2 + neck * 0.3 : bz + bodyR * 0.4 + neck * (lie ? 0.55 : alert ? 0.95 : 0.75) + (sit ? 2 : 0) + (alert ? 1.5 : 0);
+  const hx = x1 + (graze ? 2 : stalk ? neck * 0.55 : down ? neck * 0.75 : neck * 0.35), hz = graze ? HD + 1 : down ? HD * 0.85 : stalk ? bz + bodyR * 0.2 + neck * 0.3 : bz + bodyR * 0.4 + neck * (lie ? 0.55 : alert ? 0.95 : limp ? 0.3 : 0.75) + (sit ? 2 : 0) + (alert ? 1.5 : 0);   // (down: the head stretched out on the ground; limp: hung low)
   const neckC = A.neckC ? R(A.neckC) : null;   // (an elk's dark neck and head)
   for (let s = 0; s <= 1; s += 0.08) { const x = x1 - 2 + (hx - x1 + 2) * s, z = bz + (hz - bz) * s; m.ell(x, cy, z, HD * 0.65, HD * 0.62, HD * 0.7, neckC && s > 0.15 ? neckC : coat(x, cy, z + 2)); }
   if (A.mane && !A.tusks) for (let s = 0; s <= 1; s += 0.05) { const x = x1 - 4 + (hx - x1) * s, z = bz + bodyR + (hz - bz - 2) * s; m.box(x - 1.5, cy - 1, z, x + 1, cy + 1, z + 2.5, R(A.mane)); }
@@ -281,6 +287,15 @@ function pitchUp(m, A, ang, keepLegs) {
     if (z >= (keepLegs ? pz * 0.75 : 0) && x >= 0 && x < m.w && z < m.h && m.get(Math.floor(x), Math.floor(Y), Math.floor(z))) return [x, Y, z];
     if (keepLegs && Z < pz && X < px + 5 && X >= 0 && X < m.w) return [X, Y, Z];   // the hind legs, planted
     return null;
+  });
+}
+// hit (AN7): the flinch - rocked back onto the hind feet, the forehand up off the ground, the head up (round the hind
+// feet, nose up by ang; the full length kept)
+function flinch(m, A, ang) {
+  const px = 5 + (A.tail === 'long' || A.tail === 'feather' ? 4 : 2) + (TAIL_ROOM[A.tail] || 0) + 3, c = Math.cos(ang), s = Math.sin(ang);
+  return remap(m, m.w, m.d, Math.ceil(m.h + (m.w - px) * s + 2), (X, Y, Z) => {
+    const dx = X - px, x = px + dx * c + Z * s, z = -dx * s + Z * c;
+    return x >= 0 && x < m.w && z >= 0 && z < m.h ? [x, Y, z] : null;
   });
 }
 // dead: rolled onto its side, the legs out stiff

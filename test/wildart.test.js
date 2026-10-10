@@ -61,3 +61,24 @@ test('a covey of quail: the cock with his black face and topknot, the plain brow
   const top = (m) => { for (let z = m.h - 1; z >= 0; z--) for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) return z; return -1; };
   assert.ok(top(fl[0]) - top(fl[2]) >= 3, 'the flush: the wings up over the back, then down');
 });
+
+test('hit, wounded and down (AN7): the flinch, the limp on a foreleg held up, bedded down wounded, knocked off its feet', () => {
+  for (const kind of Object.keys(SPECIES)) for (const pose of ['hit', 'limp', 'down', 'fall']) {
+    for (let f = 0; f < ANIMAL_FRAMES[pose]; f++) assert.ok(pixels(animalSprite(`pet:${kind}`, pose, 6, f)) > 12, `${kind} ${pose} ${f} draws`);
+  }
+  const front = (m, z1) => { let n = 0; for (let z = 0; z <= z1; z++) for (let y = 0; y < m.d; y++) for (let x = Math.ceil(m.w * 0.5); x < m.w; x++) if (m.get(x, y, z)) n++; return n; };
+  const frontRight = (m) => { let n = 0; for (let y = Math.ceil(m.d / 2) + 1; y < m.d; y++) for (let x = Math.ceil(m.w * 0.5); x < m.w; x++) if (m.get(x, y, 0)) n++; return n; };
+  const top = (m) => { for (let z = m.h - 1; z >= 0; z--) for (let y = 0; y < m.d; y++) for (let x = Math.ceil(m.w * 0.6); x < m.w; x++) if (m.get(x, y, z)) return z; return -1; };
+  for (const kind of ['deer', 'elk', 'boar', 'blackbear', 'coyote']) {
+    // the flinch: rocked back, the forelegs up off the ground
+    assert.equal(front(animalModel(kind, { pose: 'hit' }), 0), 0, `${kind}: the flinch lifts the forehand`);
+    assert.ok(front(animalModel(kind, { pose: 'alert' }), 0) > 0, `${kind}: standing, the forefeet on the ground`);
+    // the limp: the right foreleg never comes down; walking, it does
+    const limp = [0, 1, 2, 3].map((f) => frontRight(animalModel(kind, { pose: 'limp', phase: f / 4 })));
+    const walk = [0, 1, 2, 3].map((f) => frontRight(animalModel(kind, { phase: f / 4 })));
+    assert.ok(limp.every((n) => n === 0) && walk.some((n) => n > 0), `${kind}: the hurt foreleg held up (${limp} / ${walk})`);
+    // bedded down wounded: lower than lying up, the head on the ground; knocked off its feet: not the dead pose
+    assert.ok(top(animalModel(kind, { pose: 'down' })) < top(animalModel(kind, { pose: 'lie' })), `${kind}: down, the head low`);
+    assert.ok(!same(animalSprite(`pet:${kind}`, 'fall', 6, 1), animalSprite(`pet:${kind}`, 'dead', 6, 0)), `${kind}: knocked down, the legs going`);
+  }
+});
