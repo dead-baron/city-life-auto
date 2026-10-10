@@ -149,7 +149,7 @@ Object.assign(GAITS2, {
       P.elR = [0.7, -0.2, -1]; P.elL = [-0.7, -0.2, -1];
       if (!kind) { P.hR = vadd(S.shR, [-2.2, 4.4, 4.8]); P.hL = vadd(S.shL, [2.4, 4.8, 5.4]); return; }
       P.hR = vadd(S.shR, [-1.4, 5.8, 3.8]);
-      holdItem(P, kind, [-0.85, 0.2, 0.5], [0, 1, 0]);
+      holdItem(P, kind, [-0.72, 0.18, 0.68], [0, 1, 0]);
     };
   },
 });
