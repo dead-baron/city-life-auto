@@ -137,5 +137,6 @@ export function targetFor(world, p) {
   const c = p.cine, C = cin(world);
   if (!c || !C) return null;
   const R = st(world).rooms[c.room], left = Math.max(0, Math.round(R.t0 + CINE.FILM_S - world.time)), Rm = C.rooms[c.room];
-  return { text: `Screen ${c.room + 1}: "${FILMS[c.film].title}" · ${left}s left`, x: (Rm.screen.x0 + Rm.screen.x1) / 2, y: Rm.backEdge, stage: 'cinema' };
+  // (the marker over the walkway behind your row, not over the screen)
+  return { text: `Screen ${c.room + 1}: "${FILMS[c.film].title}" · ${left}s left`, x: c.x, y: Rm.dir > 0 ? Rm.y1 + 22 : Rm.y0 + 22, stage: 'cinema' };
 }
