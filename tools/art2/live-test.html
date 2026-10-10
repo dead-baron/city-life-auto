@@ -19,7 +19,7 @@
        &umbrellas=1  a crowd round the camera under open umbrellas, every look (liveart.js UMBRELLAS) in a row, walking
                      and standing at four headings, the canopy on the shaft as host.js _ped puts it
        &live=1       the live parts on the baked chunks as the game's host draws them: the signal lenses lit at the clock
-                     (shared/signals.js), the flags in the wind given by &wind (liveart.js)
+                     (shared/signals.js), the flags in the wind given by &wind, the fountains' water at the clock (liveart.js)
      window.render(t, windT) draws another frame at that clock (returns when done); window.ready once baked. -->
 <canvas id="cv"></canvas><div id="hud"></div>
 <script type="module">
@@ -28,7 +28,7 @@ import { bakeChunk, loadProviders, SpriteCache, CHUNK } from '../../client/art2/
 import { generateCity } from '../../shared/map.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../shared/rides.js';
 import * as Act from '../../client/art2/game/actors.js';
-import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES } from '../../client/art2/game/liveart.js';
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S } from '../../client/art2/game/liveart.js';
 import { signalFor } from '../../shared/signals.js';
 import { canopyGrid } from '../../client/art2/game/canopy.js';
 const q = new URLSearchParams(location.search);
@@ -118,6 +118,12 @@ window.render = (t, windT = t) => {
     for (const lv of lives) for (const [kind, x, y, z0] of lv.flags || []) {
       const li = Math.round(flagPose(flagWind(wd, x, y)).lift * (FLAG_LIFTS - 1)), fr = Math.floor((windT * hz + ((Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663)) >>> 0) / 4294967296) * FLAG_FRAMES) % FLAG_FRAMES;
       eng.drawSprite(sprite(`gflag|${kind}|${li}|${di}|${fr}`, () => flagSprite(kind, li, di, fr)), x, y, z0 || 0, o);
+    }
+    // (host.js _fountain: each fountain's water at its moment of the loop, the clock t)
+    o.shadow = false;
+    for (const lv of lives) for (const [x, y, z0] of lv.fnt || []) {
+      const fr = Math.floor((t / FOUNTAIN_S + ((Math.imul(x | 0, 2654435761) ^ Math.imul(y | 0, 40503)) >>> 0) / 4294967296) * FOUNTAIN_FRAMES) % FOUNTAIN_FRAMES;
+      eng.drawSprite(sprite('gfnt|' + fr, () => fountainSprite(fr)), x, y, z0 || 0, o);
     }
   }
   for (const L of lights) eng.addLight({ x: L.x, y: L.y, z: L.z || 0, r: L.r, col: L.col, k: L.k * lightK });

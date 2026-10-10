@@ -3,10 +3,13 @@
 //   flags      the cloth of a flag in the shared wind (task #426): the police stations' flags, the golf course's pins.
 //              flagPose: how far it stands out and how fast it flaps for the wind's strength; flagCloth: where its
 //              cloth is; flagSprite: one frame of it. The pole is baked with the chunk; the cloth is drawn on it.
+//   fountains  the water of a fountain (task #417): fountainSprite, one frame of its loop. The stone and the still
+//              water are baked with the chunk; the jet, the falling drops, the ripples and the glints are drawn on it.
+// And the umbrellas people carry (task #433: umbrellaStyle, umbrellaSprite; the host puts them on the shaft).
 // Pure code (no DOM, no clock): the host keys, uploads and times what these make; the tests run them in node.
 // Drawn at the art's own pixel (ART_PX world px; G.ap), not made at full size and shrunk: a flag's stripes or a ripple
 // a pixel of art wide stay whole and crisp, whichever way the cloth turns.
-import { GBuf, F_THIN, ART_PX } from '../gbuf.js';
+import { GBuf, F_THIN, F_NOCAST, ART_PX } from '../gbuf.js';
 import { AIR_P } from '../../render/flora/wind.js';
 
 const TAU = Math.PI * 2;
@@ -167,6 +170,63 @@ export function umbrellaSprite(i) {
     A.dot(X, Y, Z, col, rib ? 0.62 : rim ? 0.66 : panel && st.p !== 'panels' && st.p !== 'rainbow' ? 0.86 : 1, n, 0);
   }
   A.dot(0, 0, H + 1, [40, 40, 44], 1, [0, 0, 1], 0); A.dot(0, 0.1, H + 2.5, [40, 40, 44], 1, [0, 0, 1], 0);   // the tip
+  return A.G;
+}
+
+// ---- fountains ----------------------------------------------------------------------------------------------------
+// The water of the city's fountains (task #417, the owner: "Fountains that are in the city should be animated and have
+// procedural water effects to them."), drawn live over the stone (props-district.js fountain(30, 2): a round basin, a
+// pedestal with a bowl, a column with a dish on top - baked without its spray, statics.js): a jet out of the dish
+// that rises and falls, its crown breaking into arcs of drops falling into the bowl, the bowl brimming over in a
+// ring of falling drops that splash into the basin, rings of ripples spreading out over the basin from there, ripples
+// in the bowl, and the light glinting on the basin here and there. A loop of FOUNTAIN_FRAMES frames over FOUNTAIN_S
+// seconds, the same frames for every fountain (each its own moment in the loop): the host picks one a frame. The
+// spray glows a little after dark (as the baked spray did).
+export const FOUNTAIN_FRAMES = 24, FOUNTAIN_S = 3;
+export const FOUNTAIN = { water: 5, basin: 26, bowl: 9, bowlZ: 26, lip: 11.5, lipZ: 28, dishZ: 40 };   // (the stone's water and rims, from fountain(30, 2))
+const h3 = (a, b, c) => { let h = Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(c | 0, 2147483587); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+// how high the jet stands over the dish at t (0..1 of the loop): it rises and falls once a loop
+export const jetTop = (t) => FOUNTAIN.dishZ + 12 + 4 * Math.sin(t * TAU);
+export function fountainSprite(fr) {
+  const F = FOUNTAIN, t = fr / FOUNTAIN_FRAMES, top = jetTop(t), A = artBuf(72, 140, 36, 100);
+  const CAM = [0, 0.55, 0.835], UP = [0, 0, 1], GLOW = [190, 236, 255, 34], W = [240, 249, 255], SPRAY = [200, 232, 247], DROP = [170, 220, 240], RIP = [136, 210, 232], RIP2 = [104, 192, 222];
+  // the jet: a column out of the dish, white at its heart, the water climbing it in pulses (gaps rising up it)
+  for (let z = F.dishZ; z <= top; z += 0.5) {
+    if (h3((((Math.floor(z / 2.5) - fr) % FOUNTAIN_FRAMES) + FOUNTAIN_FRAMES) % FOUNTAIN_FRAMES, 7, 1) > 0.84 && z < top - 2) continue;   // (a gap a frame further up each frame: round the loop without a jump)
+    for (const x of [-1.5, -0.5, 0.5, 1.5]) A.dot(x, 0.6, z, Math.abs(x) < 1 ? W : SPRAY, 1, CAM, F_NOCAST, GLOW);
+  }
+  // its crown: water breaking over the top
+  for (let k = 0; k < 10; k++) { const a = (k / 10 + t) * TAU, r = 1 + 2 * h3(k, fr, 3); A.dot(Math.cos(a) * r, Math.sin(a) * r * 0.7 + 0.6, top + 0.5 + h3(k, fr, 4) * 1.5, W, 1, CAM, F_NOCAST, GLOW); }
+  // arcs of drops from the crown into the bowl, running down them twice a loop
+  for (let j = 0; j < 12; j++) {
+    const a = (j + 0.5) / 12 * TAU, c = Math.cos(a), s = Math.sin(a), off = h3(j, 1, 5);
+    for (let m = 0; m < 4; m++) {
+      const p = (m / 4 + 2 * t + off) % 1, r = 1.5 + (F.bowl - 2) * p, z = top - (top - F.bowlZ - 1) * p * p;
+      A.dot(c * r, s * r, z, m === 0 ? W : DROP, 1, CAM, F_NOCAST, GLOW);
+    }
+  }
+  // the bowl brimming over: a ring of drops falling from its lip into the basin, and their splashes
+  for (let j = 0; j < 28; j++) {
+    const a = (j + 0.25) / 28 * TAU, c = Math.cos(a), s = Math.sin(a), off = h3(j, 2, 6);
+    for (let m = 0; m < 3; m++) {
+      const p = (m / 3 + 2 * t + off) % 1, r = F.lip + 0.3 + 1.8 * p, z = F.lipZ - (F.lipZ - F.water - 1) * p * p;
+      A.dot(c * r, s * r, z, DROP, 1, CAM, F_NOCAST, GLOW);
+    }
+    if (h3(j, fr, 7) > 0.45) A.dot(c * (F.lip + 2.4), s * (F.lip + 2.4), F.water + 1.5, W, 1, CAM, F_NOCAST, GLOW);
+  }
+  // ripples spreading over the basin from there, broken up and fading as they go; and in the bowl from the arcs
+  for (let k = 0; k < 2; k++) {
+    const q = (2 * t + k / 2) % 1, rr = F.lip + 3 + (F.basin - F.lip - 4) * q, n = Math.ceil(rr * TAU / 1.6);
+    for (let i = 0; i < n; i++) if (h3(i, k, Math.floor(rr)) > 0.25 + 0.55 * q) { const a = i / n * TAU; A.dot(Math.cos(a) * rr, Math.sin(a) * rr, F.water + 0.5, q < 0.5 ? RIP : RIP2, 1, UP, F_NOCAST); }
+  }
+  { const q = (2 * t + 0.3) % 1, rr = 2.5 + (F.bowl - 3.5) * q, n = Math.ceil(rr * TAU / 1.6); for (let i = 0; i < n; i++) if (h3(i, 9, Math.floor(rr * 2)) > 0.35 + 0.4 * q) { const a = i / n * TAU; A.dot(Math.cos(a) * rr, Math.sin(a) * rr, F.bowlZ + 0.5, RIP, 1, UP, F_NOCAST); } }
+  // the light glinting on the basin: a spot here and there, a few frames each (lit as the day is: bright in the sun,
+  // faint at night)
+  for (let k = 0; k < 14; k++) {
+    if ((t + h3(k, 3, 8)) % 1 > 0.13) continue;
+    const a = h3(k, 4, 8) * TAU, r = F.lip + 4 + (F.basin - F.lip - 6) * h3(k, 5, 8);
+    A.dot(Math.cos(a) * r, Math.sin(a) * r, F.water + 0.6, [255, 255, 255], 1, UP, F_NOCAST);
+  }
   return A.G;
 }
 

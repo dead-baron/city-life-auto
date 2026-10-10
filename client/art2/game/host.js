@@ -13,8 +13,8 @@
 //   fades    whole buildings round the player ease to transparent (the engine shows the street under
 //            them), so nothing standing in front of you hides you or what is near you
 //   live     what moves on the static world: the lit lens of every signal head (the chunk bakes bring the
-//            heads, chunkbake.signalLenses), flags in the wind (liveart.js), level crossing barrier arms and
-//            flashers, sliding gates, spike strips (as decals)
+//            heads, chunkbake.signalLenses), flags in the wind and fountains' water (liveart.js), level
+//            crossing barrier arms and flashers, sliding gates, spike strips (as decals)
 //   lights   the chunks' static lights (lamps keep v1's warm-up and flicker, windows and neon follow
 //            the dark) and the moving ones (headlight and flashlight cones, tail and brake lights,
 //            sirens, lit trains, muzzle flashes, explosions, fire, camp fires, signal heads, a light to
@@ -49,7 +49,7 @@ import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
 import { WEAPONS, BLADE_COLORS, hexRgb } from '../../../shared/items.js';
-import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape } from './liveart.js';   // (flags in the wind, umbrellas' canopies)
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S } from './liveart.js';   // (flags in the wind, umbrellas' canopies, fountains' water)
 const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand, _lights)
 
 export { DECK_Z };
@@ -1609,6 +1609,7 @@ export class World2 {
         if (key) E.drawSprite(key, c[0], c[1], c[2] - 2, o);
       }
       if (lv.flags) for (const fl of lv.flags) if (fl[1] > x0 && fl[1] < x1 && fl[2] > y0 && fl[2] < y1) this._flag(fl);
+      if (lv.fnt) for (const fn of lv.fnt) if (fn[0] > x0 && fn[0] < x1 && fn[1] > y0 && fn[1] < y1) this._fountain(fn);
     }
     o.shadow = false;
     // level crossings (v1's arm pivots, beside the statics' crossbuck posts)
@@ -1666,10 +1667,11 @@ export class World2 {
   // task #388); with Settings' wind sway off the cloth holds still. Frames are made as needed, the last one shown
   // meanwhile.
   _flagStep(F) {
-    const P = (this.flagP ||= {});
+    const P = (this.flagP ||= {}), dt = Math.min(0.1, Math.max(0, F.dt || 0));
     flagPose(wind.strength, P);
-    this.flagPh = ((this.flagPh || 0) + Math.min(0.1, Math.max(0, F.dt || 0)) * P.hz) % 1;
+    this.flagPh = ((this.flagPh || 0) + dt * P.hz) % 1;
     this.flagDi = ((Math.round(wind.dir / TAU * FLAG_DIRS) % FLAG_DIRS) + FLAG_DIRS) % FLAG_DIRS;
+    this.fntT = ((this.fntT || 0) + dt / FOUNTAIN_S) % 1;   // (the fountains' loop: _fountain)
   }
   _flag(fl) {
     const [kind, x, y, z0] = fl, E = this.E, o = this.opts;
@@ -1680,6 +1682,19 @@ export class World2 {
     if (!key) return;
     fl._k = key;
     o.shadow = true;
+    E.drawSprite(key, x, y, z0 || 0, o);
+  }
+  // A fountain's water (task #417: liveart.js fountainSprite; the chunks' live.fnt, [x, y, z0] of every fountain): its
+  // jet rising and falling, the drops falling into the bowl and the basin, the ripples and the glints - a frame of the
+  // loop a frame, each fountain at its own moment in it, made as needed (the last one shown meanwhile).
+  _fountain(fn) {
+    const [x, y, z0] = fn, E = this.E, o = this.opts;
+    const fr = Math.floor((this.fntT + (((Math.imul(x | 0, 2654435761) ^ Math.imul(y | 0, 40503)) >>> 0) / 4294967296)) * FOUNTAIN_FRAMES) % FOUNTAIN_FRAMES;
+    let key = this._conv(`gfnt|${fr}`, () => fountainSprite(fr), true);
+    if (!key) key = fn._k && E.hasSprite(fn._k) ? fn._k : null;
+    if (!key) return;
+    fn._k = key;
+    o.shadow = false;
     E.drawSprite(key, x, y, z0 || 0, o);
   }
   _fLight(x, y, z, r, col, k) {

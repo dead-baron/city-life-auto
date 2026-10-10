@@ -1237,7 +1237,7 @@ function voxModel(m, a) {
     case 'busShelter': return D.busShelter(a[0], a[1]); case 'phoneBooth': return K.phoneBooth(a[0]); case 'atmWall': return K.atmWall(a[0]); case 'vending': return K.vendingMachine(a[0], a[1]);
     case 'mailbox': return D.mailbox(a[0]); case 'wheelieBin': return D.wheelieBin(a[0]); case 'tires': return D.tires(a[0] || 3); case 'trashBags': return trashBags(a[0] || 3, a[1] || 1);
     case 'pallets': return pallets(a[0] || 1, a[1] || 1); case 'oilDrum': return D.oilDrum(a[0], a[1]); case 'cableSpool': return K.cableSpool(); case 'bikeRack': return X.bikeRack(a[0] || 3);
-    case 'cone': return X.cone(); case 'planterBox': return D.planterBox(a[0], a[1], a[2] ?? true); case 'fountain': return D.fountain(a[0], a[1]); case 'flowerBed': return P.flowerBed(a[0]);
+    case 'cone': return X.cone(); case 'planterBox': return D.planterBox(a[0], a[1], a[2] ?? true); case 'fountain': return D.fountain(a[0], a[1], a[2] ?? true); case 'flowerBed': return P.flowerBed(a[0]);
     case 'powerPole': return D.powerPole(a[0], a[1]); case 'tent': return U.tent(a[0]); case 'domeTent': return K.domeTent(a[0], a[1]); case 'campfire': return U.campfire(a[0]);
     case 'burnBarrel': return BK.burnBarrel(a[0] ?? 1); case 'skullSign': return BK.skullSign(a[0] ?? 1);
     case 'picnic': return U.picnicTable(); case 'pumpJack': return U.pumpJack(a[0]); case 'turbine': return U.windTurbine(a[0], a[1], a[2]); case 'flare': return U.flareStack(a[0]);
@@ -1767,7 +1767,7 @@ function propItems(c, p, pi, I) {
     case 'pipes': V(`pip:${seed % 2}`, 'pipes', [seed % 2], qa(u * PI, 2)); return;
     case 'lumber': case 'planks': V(`lum:${t}:${seed % 3}`, 'lumber', [seed % 3, t === 'planks' ? 1 : 0], qa(u * PI, 2)); return;
     case 'pumpjack': V(`pj:${Math.floor((p.ph || 0) * 4)}`, 'pumpJack', [Math.floor((p.ph || 0) * 4) / 4]); return;
-    case 'fountain': V('fnt', 'fountain', [30, 2]); return;
+    case 'fountain': V('fnt:0', 'fountain', [30, 2, false], 0, null, { fnt: [x, y, p.lift || 0] }); return;   // (the stone and still water: its water moves live - liveart.js)
     case 'cone': V('cone', 'cone', []); return;
     case 'turbine': V(`trb:${Math.floor((p.ph || 0) * 6)}`, 'turbine', [230, 70, (p.ph || 0) * TAU]); lightAt(I, x, y, 236, 60, [1, 0.15, 0.1], 1.2, 'sign', 1); return;
     case 'vend_cola': V('vend', 'vending', ['#c8242a', 1]); lightAt(I, x, y + 6, 30, 60, [1, 0.6, 0.55], 0.9, 'sign'); return;
