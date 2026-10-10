@@ -6,7 +6,7 @@
 // the longer green, 10 s to the cross street's 8. A junction with roads from three directions gives each its turn
 // (8 s: 5 green, 2.5 yellow, 0.5 all red). n.phase (0..23, from the junction's place) staggers the junctions' cycles.
 // (Kept apart from shared/roads.js: the chunk bake doesn't read signals, so changing their timing leaves the baked art
-// as it is. roads.js's own signalFor is the older timing, with a short yellow; nothing uses it now.)
+// as it is. roads.js's own signalFor, the older timing with a short yellow that nothing used, is gone.)
 export const SIGNAL_CYCLE = 24;          // s
 const GREEN = [10, 8], YELLOW = 2.5, CLEAR = 0.5; // a two-way junction: the main road 10 s green, the cross street 8
 const SLOT = 8, SLOT_G = 5, SLOT_Y = 2.5;         // a three-way one: each its 8 s turn

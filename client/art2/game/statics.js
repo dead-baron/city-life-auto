@@ -228,8 +228,8 @@ function ctxOf(M) {
   const pk = (x, y) => Math.round(x) + ',' + Math.round(y), sigPole = new Map(), armed = new Set();
   M.props.forEach((p, i) => { if (p && p.t === 'sigpole') sigPole.set(pk(p.x, p.y), i); });
   for (const sg of M.signals || []) if (!sg.wire && sigPole.has(pk(sg.x, sg.y))) armed.add(sigPole.get(pk(sg.x, sg.y)));
-  const poleOf = (sg) => sigPole.get(pk(sg.x, sg.y));
-  return { M, W, H, tile, at, di, dist, zone, biome, deckAt, roadDir, armed, poleOf };
+  const poleOf = (sg) => sigPole.get(pk(sg.x, sg.y)), poleAt = (x, y) => sigPole.get(pk(x, y)) ?? -1;
+  return { M, W, H, tile, at, di, dist, zone, biome, deckAt, roadDir, armed, poleOf, poleAt };
 }
 
 // ================================================================================================
@@ -289,6 +289,7 @@ export function staticItems(M, cx, cy, opt = {}) {
   for (const it of props ? list.concat(props) : list) {
     let o = it;
     if (it.pi !== undefined && M.props[it.pi] && M.props[it.pi].broken) o = brokenVariant(it, M.props[it.pi]);
+    else if (it.wp && it.wp.some(([a, b]) => (M.props[a] && M.props[a].broken) || (M.props[b] && M.props[b].broken))) o = spanBroken(it, M);   // (a span wire's pole knocked over)
     else if (it.deck && M.levels && M.levels.broken && M.levels.broken.size) o = deckBroken(it, M.levels);
     else if (opt.cutaway !== undefined && opt.cutaway !== null && it.b === opt.cutaway && it.cut) o = it.cut();
     if (!o) continue;
@@ -1254,7 +1255,7 @@ function voxModel(m, a) {
     case 'trough': return U.trough(); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
     case 'dome': return obsDome(a[0] || 90); case 'marquee': return marquee(); case 'speaker': return speakerPost(); case 'portal': return portal(a[0] || 100); case 'wheelStop': return wheelStop();
     case 'gravel': return gravelPile(a[0] || 1); case 'rubble': return rubblePile(a[0] || 1); case 'trashPile': return trashPile(a[0] || 1); case 'pipes': return pipeStack(a[0] || 1); case 'lumber': return lumberStack(a[0] || 1, a[1] || 0);
-    case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
+    case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'spanPole': return spanPole(); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
     case 'creekRail': return creekRail(a[0] || 200);
     case 'roadSign': return U.roadSign(a[0] || 'arrow'); case 'fingerPost': return U.fingerPost(); case 'stand': return RD.produceStand(40);
@@ -1326,7 +1327,7 @@ function vdim(m, a) {
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
     case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'seaArch': return [a[0] || 150, a[1] || 56, (a[2] || 96) + 6]; case 'shipwreck': return [(a[0] || 220) + 8, (a[1] || 64) + 30, (a[2] || 40) + 40]; case 'driftwood': return [a[0] || 50, 16, 10];
     case 'mapBoard': return [40, 12, 50]; case 'lantern': return [12, 12, 40];
-    case 'lumber': return [60, 24, 18]; case 'crates': return [32, 28, 30]; case 'cctv': return [22, 8, (a[0] || 64) + 2]; case 'signal': return [(a[0] || 70) + 10, 14, 92]; case 'bbframe': return [a[0] || 132, 10, (a[1] || 54) + (a[2] || 36) + 6]; case 'cabbages': return [(a[0] || 3) * 18, (a[1] || 3) * 18, 14]; case 'cornRow': return [120, 60, 36]; case 'wheatRow': return [120, 50, 22]; case 'ropeLine': return [a[0] || 60, 6, 20]; case 'silo': return [44, 44, (a[0] || 90) + 22]; case 'craneTower': return [(a[1] || 120) + 40, 30, (a[0] || 200) + 16];
+    case 'lumber': return [60, 24, 18]; case 'crates': return [32, 28, 30]; case 'cctv': return [22, 8, (a[0] || 64) + 2]; case 'signal': return [(a[0] || 70) + 10, 14, 92]; case 'spanPole': return [8, 8, SPAN_Z + 6]; case 'bbframe': return [a[0] || 132, 10, (a[1] || 54) + (a[2] || 36) + 6]; case 'cabbages': return [(a[0] || 3) * 18, (a[1] || 3) * 18, 14]; case 'cornRow': return [120, 60, 36]; case 'wheatRow': return [120, 50, 22]; case 'ropeLine': return [a[0] || 60, 6, 20]; case 'silo': return [44, 44, (a[0] || 90) + 22]; case 'craneTower': return [(a[1] || 120) + 40, 30, (a[0] || 200) + 16];
     default: return [24, 24, 24];
   }
 }
@@ -1725,7 +1726,7 @@ function propItems(c, p, pi, I) {
       lightAt(I, x + Math.cos(a) * (arm + 4), y + Math.sin(a) * (arm + 4), 90, 220, LAMP_LIGHT[style], 3.6, 'lamp');
       return;
     }
-    case 'sigpole': if (!c.armed.has(pi)) V(`sgp:${qa(p.a || 0, 16).toFixed(2)}`, 'signal', [60, [48]], qa(p.a || 0, 16), [6, 7]); return;
+    case 'sigpole': if (p.span) V('spp', 'spanPole', []); else if (!c.armed.has(pi)) V(`sgp:${qa(p.a || 0, 16).toFixed(2)}`, 'signal', [60, [48]], qa(p.a || 0, 16), [6, 7]); return;   // (span: a span wire's pole, task #431)
     case 'hydrant': V('hyd', 'hydrant', []); return;
     case 'trashcan': V(`bin:${seed & 1}`, seed & 1 ? 'bin' : 'wireBin', [true]); return;
     case 'dump_g': case 'dump_b': case 'dump_o': { const col = { dump_g: '#2f6a54', dump_b: '#2f4a7a', dump_o: '#b8682a' }[t], hd = c.roadDir(x, y) !== null ? qa(c.roadDir(x, y) - PI / 2, 4) : 0; V(`dmp:${t}:${hd.toFixed(2)}`, 'dumpster', [col], hd); return; }
@@ -2020,35 +2021,65 @@ function addSignals(c, I) {
     put(I, vitem(`sg:${Lq}:${hd.toFixed(3)}:${ds.join(',')}`, 'signal', [Lq, ds], sg.x, sg.y, hd, [6, 7], { pi: c.poleOf(sg), heads }));
   }
 }
-// a span-wire junction: poles (or wall brackets) at the corners, wires to the hub, heads hanging off it
+// A span-wire junction (shared/map.js spanSignal; task #431): the wires straight across the streets, pole top to pole
+// top, and the heads hanging from them over the incoming lanes, their lenses to the traffic coming in. The poles are
+// props ('sigpole' with span: spanPole, drawn as street furniture); one knocked over takes its wires and their heads
+// down (spanBroken). The heads carry their lenses' places for the host's lit lamps (chunkbake.js signalLenses) and
+// their wire's two poles (pi, pi2: no lit lamp once either is down).
+const SPAN_Z = 84, SPAN_SAG = 3, SPAN_HEAD = 30, SPAN_LENS = [19, 12, 5];   // the wires' height at a pole and their sag; a head's height to the top of its hanger; its lenses' middles (red, amber, green)
+const spanZ = (w, dx, dy) => { const ex = w[2] - w[0], ey = w[3] - w[1], t = clamp(((dx - w[0]) * ex + (dy - w[1]) * ey) / (ex * ex + ey * ey || 1), 0, 1); return Math.round(SPAN_Z - SPAN_SAG * 4 * t * (1 - t)); };
 function spanItem(c, I, sg) {
-  const corners = (sg.corners || []).map((q) => [Math.round(q.x - sg.x), Math.round(q.y - sg.y), q.wall ? 1 : 0]);
-  const heads = (sg.heads || []).map((h) => [Math.round(h.x - sg.x), Math.round(h.y - sg.y), +qa(h.a || 0, 8).toFixed(3)]);
-  let r = 30; for (const [dx, dy] of corners) r = Math.max(r, Math.abs(dx) + 12, Math.abs(dy) + 12);
-  put(I, { key: `span:${sg.node}:${sg.x | 0}`, recipe: { t: 'span', corners, heads }, x: sg.x, y: sg.y, ext: [r, r + 100, r, r + 10], heads: (sg.heads || []).map((h) => ({ x: h.x, y: h.y, z: 66, node: sg.node, edge: h.edge })) });
+  const P = sg.poles || [], X = Math.round(sg.x), Y = Math.round(sg.y), recipe = { t: 'span', wires: [], heads: [] }, heads = [];
+  const wp = (sg.wires || []).map(([a, b]) => { recipe.wires.push([P[a][0] - X, P[a][1] - Y, P[b][0] - X, P[b][1] - Y]); return [c.poleAt(P[a][0], P[a][1]), c.poleAt(P[b][0], P[b][1])]; });
+  for (const h of sg.heads || []) {
+    const dx = h.x - X, dy = h.y - Y, a = +qa(h.a || 0, 16).toFixed(3), nx = Math.cos(a), ny = Math.sin(a), z = spanZ(recipe.wires[h.w], dx, dy) - SPAN_HEAD;
+    recipe.heads.push([dx, dy, a, h.w]);
+    heads.push({ x: h.x, y: h.y, z: z + SPAN_LENS[1], node: sg.node, edge: h.edge, pi: wp[h.w][0], pi2: wp[h.w][1], nx, ny, lenses: SPAN_LENS.map((lz) => [h.x + nx * 5, h.y + ny * 5, z + lz]) });
+  }
+  const [x0, y0, x1, y1] = spanBox(recipe.wires);
+  put(I, { key: `span:${sg.node}:${X}`, recipe, x: X, y: Y, ext: [10 - x0, SPAN_Z + 14 - y0, x1 + 10, y1 + 10], heads, wp });
 }
+function spanBox(wires) { let x0 = 0, y0 = 0, x1 = 0, y1 = 0; for (const w of wires) { x0 = Math.min(x0, w[0], w[2]); x1 = Math.max(x1, w[0], w[2]); y0 = Math.min(y0, w[1], w[3]); y1 = Math.max(y1, w[1], w[3]); } return [x0, y0, x1, y1]; }
+// the junction with a pole down: the wires still up between standing poles (none: nothing)
+function spanBroken(it, M) {
+  const up = (i) => !(M.props[i] && M.props[i].broken), keep = it.wp.map(([a, b]) => up(a) && up(b)), to = [];
+  if (!keep.some(Boolean)) return null;
+  const wires = it.recipe.wires.filter((w, k) => keep[k] && to.push([k, to.length]));
+  const at = new Map(to), heads = [], live = [];
+  it.recipe.heads.forEach((h, j) => { if (keep[h[3]]) { heads.push([h[0], h[1], h[2], at.get(h[3])]); live.push(it.heads[j]); } });
+  return { ...it, key: `${it.key}:${keep.map(Number).join('')}`, recipe: { t: 'span', wires, heads }, heads: live };
+}
+// a span pole: a dark steel post with a base flange and a cap, the wires tied on just under it
+function spanPole() { const m = new Vox(8, 8, SPAN_Z + 6), p = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN }); m.cyl('z', 4, 4, 0, 3, 0, 5, p); m.cyl('z', 4, 4, 0, 2, 5, SPAN_Z + 3, p); m.cyl('z', 4, 4, 0, 2.6, SPAN_Z + 3, SPAN_Z + 5, p); return m; }
+// a head hanging from a span wire (the mast arms' heads' housing, backplate and lenses: signalModel), its lenses
+// facing a; anchor: under its middle, the hanger's top SPAN_HEAD up
+const spanHead = (a) => memo('sph:' + a, () => {
+  const m = new Vox(9, 9, SPAN_HEAD + 1), box = m.mat({ ramp: ramp('#2c2c30', 6, 3), k: 2, flag: F_THIN }), back = m.mat({ ramp: ramp('#d8b030', 6, 3), k: 3, flag: F_THIN });
+  m.box(1, 1, 1, 8, 8, 23, box); m.box(0, 0, 0, 9, 1, 24, back); m.box(4, 4, 23, 6, 6, SPAN_HEAD + 1, box);
+  ['#7a2a26', '#7a6420', '#246a3a'].forEach((q, i) => m.box(3, 8, SPAN_LENS[i] - 2, 6, 9, SPAN_LENS[i] + 2, m.mat({ ramp: ramp(q, 5, 2), k: 1, flag: F_NOCAST })));
+  return voxSprite(m, a - PI / 2);
+});
 function makeSpan(r) {
-  const pole = memo('spanpole', () => { const m = new Vox(8, 8, 90), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.cyl('z', 4, 4, 0, 2.6, 0, 4, p); m.cyl('z', 4, 4, 0, 1.7, 4, 88, p); return voxSprite(m); });
-  const head = (a) => memo('spanhead:' + a, () => { const m = new Vox(8, 26, 14), b = m.mat({ ramp: ramp('#2c2c30', 6, 3), k: 2 }), y = m.mat({ ramp: ramp('#d8b030', 6, 3), k: 3 }), L = ['#7a2a26', '#7a6420', '#246a3a'].map((q) => m.mat({ ramp: ramp(q, 5, 2), k: 1, flag: F_NOCAST })); m.box(0, 0, 0, 8, 26, 12, b); m.box(0, 0, 12, 8, 26, 13, y); for (let i = 0; i < 3; i++) m.box(7, 3 + i * 8, 3, 8, 7 + i * 8, 9, L[i]); return voxSprite(m, a + PI); });
-  const parts = [];
-  for (const [dx, dy, wall] of r.corners) if (!wall) parts.push([pole, dx, dy, 0]);
-  for (const [dx, dy, a] of r.heads) parts.push([head(a), dx, dy, 56]);
-  const G = grow(parts.length ? group(parts) : EMPTY, 6, 10, 6, 6);
-  // wires: corner tops (z 84, a wall bracket at 70) to the hub (z 76), and the heads' drop lines
-  for (const [dx, dy, wall] of r.corners) wireLine(G, dx, dy, wall ? 70 : 84, 0, 0, 76, 4, [27, 29, 34]);
-  for (const [dx, dy] of r.heads) wireLine(G, 0, 0, 76, dx, dy, 70, 1, [27, 29, 34]);
+  const [x0, y0, x1, y1] = spanBox(r.wires), G = new GBuf(x1 - x0 + 24, y1 - y0 + SPAN_Z + 24);
+  G.ax = 12 - x0; G.ay = SPAN_Z + 12 - y0;
+  for (const [dx, dy, a, w] of r.heads) zPut(G, spanHead(a), G.ax + dx, G.ay + dy, spanZ(r.wires[w], dx, dy) - SPAN_HEAD);
+  for (const w of r.wires) wireLine(G, w[0], w[1], SPAN_Z, w[2], w[3], SPAN_Z, SPAN_SAG, [30, 32, 38], true);
   return G;
 }
-// a sagging wire between two points (ground offsets from G's anchor, heights z0 and z1)
-function wireLine(G, x0, y0, z0, x1, y1, z1, sag, col) {
+// a sagging wire between two points (ground offsets from G's anchor, heights z0 and z1); grid: a whole art pixel
+// tall, on the art grid's rows (G drawn at an even row: chunkbake.js), so it comes through the bake's 2 x 2 pick
+// solid instead of in dashes
+function wireLine(G, x0, y0, z0, x1, y1, z1, sag, col, grid = false) {
   const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0 - (z1 - z0)) * 1.4) + 2;
   for (let i = 0; i <= n; i++) {
     const t = i / n, X = x0 + (x1 - x0) * t, Y = y0 + (y1 - y0) * t, Z = z0 + (z1 - z0) * t - sag * 4 * t * (1 - t);
-    const px = Math.round(G.ax + X), py = Math.round(G.ay + Y - Z);
-    if (!G.inside(px, py)) continue;
-    const k = py * G.w + px;
-    if (G.col[k * 4 + 3] && G.z[k] > Z + 2) continue;
-    G.put(px, py, col, [0, 0.3, 0.95], Z, null, F_NOCAST);
+    for (let j = 0; j <= (grid ? 1 : 0); j++) {
+      const px = Math.round(G.ax + X), py = (grid ? Math.round(G.ay + Y - Z) & ~1 : Math.round(G.ay + Y - Z)) + j;
+      if (!G.inside(px, py)) continue;
+      const k = py * G.w + px;
+      if (G.col[k * 4 + 3] && G.z[k] > Z + 2) continue;
+      G.put(px, py, col, [0, 0.3, 0.95], Z, null, F_NOCAST);
+    }
   }
 }
 // a utility pole and the four wires back to the previous pole in the line

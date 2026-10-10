@@ -343,22 +343,7 @@ const SIGNAL_GAP = 3.5 * TILE; // px of road between the stop lines of two signa
 
 const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 
-// ---------------------------------------------------------------------------------------------
-// Signals
-
-// State of the signal facing traffic that arrives at node n along edge edgeId: 'G' | 'Y' | 'R'.
-export function signalFor(n, edgeId, tSec) {
-  if (!n.light) return 'G';
-  const g = n.group[edgeId] ?? 0;
-  const t = ((tSec + n.phase) % LIGHT_CYCLE + LIGHT_CYCLE) % LIGHT_CYCLE;
-  if (n.phases === 3) {
-    const slot = Math.floor(t / 8), u = t - slot * 8;
-    if (slot !== g) return 'R';
-    return u < 6 ? 'G' : u < 7.5 ? 'Y' : 'R';
-  }
-  if (g === 0) return t < 9 ? 'G' : t < 11 ? 'Y' : 'R';
-  return t < 12 ? 'R' : t < 21 ? 'G' : t < 23 ? 'Y' : 'R';
-}
+// (Signals' timing: shared/signals.js signalFor.)
 
 // ---------------------------------------------------------------------------------------------
 // Lanes

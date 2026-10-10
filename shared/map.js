@@ -4748,14 +4748,21 @@ function dressAlleys(m) {
 
 // ---- traffic signals ---------------------------------------------------------------------------
 // Every signalled ground-level junction gets its lights one of two ways. At a small crossing of
-// side streets downtown, where buildings stand right at the corners, heads hang from span wires
-// tied to those walls. Everywhere else - avenues, boulevards, the highway junctions - each approach
+// side streets downtown, heads hang from span wires: a pole at each corner, a wire straight across
+// each street (spanSignal). Everywhere else - avenues, boulevards, the highway junctions - each approach
 // has a mast-arm pole on its kerb with an arm reaching right across the incoming lanes and a head
 // over every lane, so a wide road is covered end to end. A pole is street furniture: hit it hard
 // enough and it goes over.
 const SPAN_WIRE_STYLES = new Set(['towers', 'commercial', 'nightlife', 'oldtown', 'redlight', 'civic', 'apartments', 'arts']);
 const SPAN_WIRE_ROADS = new Set(['st', 'minor', 'drive', 'front']);
 const POLE_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.GRASS, T.LOT, T.DIRT, T.SAND]);
+// the middles of an approach's incoming lanes (px to the right of the road's centre line, for the traffic coming
+// in), at most five: a head over each
+const laneOffs = (e) => {
+  const inner = e.oneway ? -e.hw : e.median / 2, lanes = Math.max(1, e.nl), lw = (e.hw - inner) / lanes, o = []; // incoming lanes run from inner out to the kerb
+  for (let i = 0; i < Math.min(lanes, 5); i++) o.push(inner + lw * (lanes <= 5 ? i + 0.5 : (i + 0.5) * (lanes / 5)));
+  return o;
+};
 
 // Where the pole for one approach stands and where its heads hang - one over the middle of each
 // incoming lane (the same geometry the renderer uses). The pole stands on the first open kerb spot
@@ -4766,14 +4773,7 @@ export function signalArm(m, n, id) {
   const rx = oy, ry = -ox; // right-hand side for traffic arriving (heading -o)
   const back = (n.trim[id] || n.half || 60) + 14;
   const bx = n.x + ox * back, by = n.y + oy * back;
-  const inner = e.oneway ? -e.hw : e.median / 2; // incoming lanes run from here out to the kerb
-  const lanes = Math.max(1, e.nl);
-  const lw = (e.hw - inner) / lanes;
-  const heads = [];
-  for (let i = 0; i < Math.min(lanes, 5); i++) {
-    const off = inner + lw * (lanes <= 5 ? i + 0.5 : (i + 0.5) * (lanes / 5));
-    heads.push({ x: bx + rx * off, y: by + ry * off });
-  }
+  const heads = laneOffs(e).map((off) => ({ x: bx + rx * off, y: by + ry * off }));
   heads.reverse(); // nearest the pole first
   const tip = heads[heads.length - 1];
   for (const extra of [12, 22, 32, 44, 60]) {
@@ -4915,6 +4915,49 @@ function dropProps(m, drop) {
   }
 }
 
+// Span wires (the owner, #431: no heads hanging in the middle of the junction from nothing - "straight across the
+// street they hang from a wire but still attach to poles"): a pole on the pavement at each corner between
+// neighbouring streets, just behind the middle of the kerb's quarter round (as art v2's ground bake rounds it:
+// groundbake.js fillets) - on the straight side of a T, one at each street's mouth - and a wire straight across
+// every street with traffic coming in, from the pole on its right to the pole on its left, over its stop line. A
+// head hangs from the wire over each incoming lane, its lenses to that traffic. null when a pole has nowhere to
+// stand (a wall or water at the kerb): mast arms instead.
+//   { node, wire: true, x, y, poles: [[x, y]], wires: [[right pole, left pole]], heads: [{ edge, x, y, a, w }] }
+//   (a head's a: the way its lenses face, w: its wire; the poles are 'sigpole' props with span: 1)
+function spanSignal(m, n, ins) {
+  const ids = n.edges.slice().sort((p, q) => n.dirs[p] - n.dirs[q]), k = ids.length, all = [], side = {};
+  // a pole from the kerb point (x, y) out along (dx, dy): on the first open pavement 14-44 px out (the tiles are coarser
+  // than the kerb the art draws)
+  const pole = (x, y, dx, dy) => { for (const d of [14, 22, 32, 44]) { const px = x + dx * d, py = y + dy * d; if (POLE_GROUND.has(m.tileAtPx(px, py)) && !onSubwayPlaza(m, px, py)) return all.push([Math.round(px), Math.round(py)]) - 1; } return -1; };
+  const mouth = (e, s) => { const a = n.dirs[e.id], c = Math.cos(a), sn = Math.sin(a), b = (n.trim[e.id] || n.half || 60) + 14; return pole(n.x + c * b - sn * e.hw * s, n.y + sn * b + c * e.hw * s, -sn * s, c * s); };
+  for (let i = 0; i < k; i++) {
+    const a = m.edges[ids[i]], b = m.edges[ids[(i + 1) % k]], a1 = n.dirs[a.id], a2 = n.dirs[b.id], th = a2 - a1 + (i === k - 1 ? Math.PI * 2 : 0);
+    let pa, pb;
+    if (th >= 0.35 && th <= 2.75) {
+      // where the kerbs facing each other meet, then in along the bisector to the middle of the quarter round
+      const u1x = Math.cos(a1), u1y = Math.sin(a1), u2x = Math.cos(a2), u2y = Math.sin(a2);
+      const p1x = n.x - u1y * a.hw, p1y = n.y + u1x * a.hw, p2x = n.x + u2y * b.hw, p2y = n.y - u2x * b.hw;
+      const t = ((p2x - p1x) * u2y - (p2y - p1y) * u2x) / (u1x * u2y - u1y * u2x);
+      const bl = Math.hypot(u1x + u2x, u1y + u2y), bx = (u1x + u2x) / bl, by = (u1y + u2y) / bl, r = Math.min(44, 46 * Math.tan(th / 2)), d = r / Math.sin(th / 2) - r;
+      pa = pb = pole(p1x + u1x * t + bx * d, p1y + u1y * t + by * d, bx, by);
+    } else { pa = mouth(a, 1); pb = mouth(b, -1); }
+    (side[a.id] ||= [-1, -1])[1] = pa; (side[b.id] ||= [-1, -1])[0] = pb;
+  }
+  const poles = [], at = new Map(), wires = [], heads = [];
+  const use = (i) => { if (!at.has(i)) at.set(i, poles.push(all[i]) - 1); return at.get(i); };
+  for (const id of ins) {
+    const [ri, li] = side[id];
+    if (ri < 0 || li < 0) return null;
+    const A = all[ri], B = all[li], a = n.dirs[id], rx = Math.sin(a), ry = -Math.cos(a);   // (right-hand side for the traffic coming in)
+    const oa = (A[0] - n.x) * rx + (A[1] - n.y) * ry, ob = (B[0] - n.x) * rx + (B[1] - n.y) * ry, w = wires.push([use(ri), use(li)]) - 1;
+    for (const off of laneOffs(m.edges[id])) {
+      const t = Math.max(0.05, Math.min(0.95, (oa - off) / (oa - ob)));
+      heads.push({ edge: id, x: Math.round(A[0] + (B[0] - A[0]) * t), y: Math.round(A[1] + (B[1] - A[1]) * t), a: +a.toFixed(3), w });
+    }
+  }
+  return { node: n.id, wire: true, x: n.x, y: n.y, poles, wires, heads };
+}
+
 function buildSignals(m) {
   m.signals = [];
   for (const n of m.nodes) {
@@ -4923,32 +4966,23 @@ function buildSignals(m) {
     if (!ins.length) continue;
     const st = DISTRICTS[m.districtAt(n.x, n.y).id].style;
     const small = n.edges.every((id) => SPAN_WIRE_ROADS.has(m.edges[id].kind));
-    let corners = null;
     if (small && SPAN_WIRE_STYLES.has(st) && !n.hero) {   // (the hero corner has its signals on mast arms, as the art targets)
-      // corners: between each pair of neighbouring streets, out past the junction box (and across the
-      // pavement: a wide one puts the walls further back)
+      // a small crossing hemmed in by buildings (a wall just behind two corners or more, past the pavement: a wide
+      // one puts the walls further back): span wires
       const dirs = n.edges.map((id) => n.dirs[id]).sort((a, b) => a - b);
       const reach = Math.min(160, Math.max(...n.edges.map((id) => n.trim[id] || n.half || 60)) * 1.15 + 34);
       const far = 3 * TILE + Math.max(0, ...n.edges.map((id) => (m.edges[id].walk || 64) - 64)) * 1.5 + (st === 'towers' || st === 'civic' ? 3 * TILE : 0); // (past a tower's forecourt)
-      corners = [];
+      let walls = 0;
       for (let k = 0; k < dirs.length; k++) {
-        const a0 = dirs[k], a1 = dirs[(k + 1) % dirs.length] + (k + 1 === dirs.length ? Math.PI * 2 : 0);
-        const mid = (a0 + a1) / 2;
-        // tie off on a building wall just behind the corner
-        for (let r = 0; r <= far; r += 8) {
-          const qx = n.x + Math.cos(mid) * (reach + r), qy = n.y + Math.sin(mid) * (reach + r);
-          if (m.tileAtPx(qx, qy) === T.BUILDING) { corners.push({ x: qx - Math.cos(mid) * 4, y: qy - Math.sin(mid) * 4, wall: true }); break; }
-        }
+        const mid = (dirs[k] + dirs[(k + 1) % dirs.length] + (k + 1 === dirs.length ? Math.PI * 2 : 0)) / 2;
+        for (let r = 0; r <= far; r += 8) if (m.tileAtPx(n.x + Math.cos(mid) * (reach + r), n.y + Math.sin(mid) * (reach + r)) === T.BUILDING) { walls++; break; }
       }
-      if (corners.length < 2) corners = null; // nothing to hang wires from: poles instead
-    }
-    if (corners) {
-      const heads = ins.map((id) => {
-        const oa = n.dirs[id];
-        return { edge: id, x: n.x + Math.cos(oa) * 20, y: n.y + Math.sin(oa) * 20, a: oa };
-      });
-      m.signals.push({ node: n.id, wire: true, x: n.x, y: n.y, corners, heads });
-      continue;
+      const sp = walls >= 2 && spanSignal(m, n, ins);
+      if (sp) {
+        for (const [x, y] of sp.poles) addProp(m, 'sigpole', x, y, 4, { span: 1 });
+        m.signals.push(sp);
+        continue;
+      }
     }
     for (const id of ins) {
       const arm = signalArm(m, n, id);

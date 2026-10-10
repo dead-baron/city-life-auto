@@ -5031,3 +5031,23 @@ Four more originals, each matched to its reference's tempo, key, groove and weig
 - *Porch Light* (Boat style): C major. A slow sway over picked nylon guitar, a glockenspiel tune, warm pads and no harsh highs. For gardening.
 - *First Sprouts* (Spring style): 119 BPM in A. A quiet start that builds, a whistled tune, strummed guitar, chimes, a bouncy bass and a breakdown. For farming and the garden shops.
 Ride of the Valkyries (the helicopter radio) waits on the score. It's public domain, so it will use Wagner's real theme, but the scores online are images; the owner was asked for a MIDI file or a photo of the sheet music.
+
+## 2026-10-09 · Traffic lights hang from wires strung between poles, not in the middle of the junction (task #431)
+The owner: "The hanging traffic lights don't look very good, let's remove the ones that hang in the middle of the intersection ... Maybe just straight across the street they hang from a wire but still attach to poles, not just a traffic light hanging in the middle of the intersection not attached to anything."
+- **What it was** (`shared/map.js buildSignals`): at twelve small crossings of side streets with buildings close round the corners (Midtown, the Neon Strip, the Civic Center, Old Town, the Old Quarter, Westport, the Stadium District, Northshore, Falls Center), the lights were span wires: a wire from a bracket on the wall behind each corner to a hub over the middle of the crossing, and a head for each way in hanging off the hub, 20 px from the middle. From the camera the wall brackets didn't show and the thin wires hardly did (1 px, broken up by the bake's 2 x 2 art pixels), so it looked like a cluster of lights floating in the middle of the junction.
+- **Now** (`spanSignal`): a pole on the pavement at each corner, just behind the middle of the kerb's quarter round (where the ground bake rounds it), and on the straight side of a T one at each street's mouth. A wire runs straight across each street that has traffic coming in, from the pole on its right to the pole on its left, over the stop line. A head hangs from the wire over each incoming lane (a one-way street's two lanes: two heads), its lenses to the traffic it stops. The same twelve crossings; every other junction keeps its mast arms.
+- **Art v2** (`client/art2/game/statics.js`):
+  - The poles are street furniture (`sigpole` props with `span`: a dark steel post with a flange and a cap), solid and breakable like the mast arms' poles.
+  - The wires are a whole art pixel thick and on the art grid, so they come through the bake solid.
+  - The heads are the mast arms' heads (housing, yellow backplate, red over amber over green) on a short hanger from the wire.
+  - A pole knocked over takes its wires and their heads down (`spanBroken`); the host doesn't light a head whose wire has lost a pole (the head's `pi2`), and rebakes as far as the wire reaches (`host.js propChanged`).
+  - The lit lens shows the junction's phase for the lanes under it (`signalFor`, the call the traffic makes), on the face toward that traffic.
+- **The classic renderer** (`client/main.js drawSpanWire`) draws the same poles, wires and heads from above. The old `signalFor` in `shared/roads.js`, which nothing used, is gone: it pays for the new code in the page's budget (720 KB; the page is at 719.8).
+- **The world changed** (new props, the signals' data): browsers build the city again, and the world map's picture is baked again for it (`tools/build-worldmap2.mjs`). It's not a new world version (homes and places are as they were).
+- **Checked in the browser** (the game at 23:42 and 12:14 on the Neon Strip's crossing at 26352,19152; tools/art2/live-test.html at noon and golden hour): before, four heads clustered in the middle of the crossing with the wires hard to see. Now a pole stands at each corner, a wire runs across each street, the heads hang over the stop lines, and the one facing the camera shows its lit lens.
+- **Tests:** `test/signals.test.js` (new):
+  - every head in the city is on its pole's arm, or on a wire whose two poles stand beyond the kerbs either side of its street (on the pavement, solid and breakable); out at the stop line, over an incoming lane, facing the traffic coming in;
+  - every way into a signalled junction has a head over each of its lanes;
+  - art v2 draws each wire all the way across, pole top to pole top, the heads hanging from it with nothing between; the lit lenses face their traffic, red over amber over green; a two-phase junction never shows green both ways;
+  - a pole knocked over takes its wires and their heads down, and they're back with it.
+  - `test/roads.test.js`: span wires hang between poles. Both fail without the change (the heads 20 px from the middle, no poles).

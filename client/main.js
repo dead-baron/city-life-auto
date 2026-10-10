@@ -4250,25 +4250,16 @@ function drawTollGantry(c, alert, nowMs) {
   }
 }
 
-// Span-wire signals: cables from the corners (building walls or slim posts) meet over the middle
-// of the junction, and a head hangs off the hub facing each approach.
+// Span-wire signals (shared/map.js spanSignal): a cable straight across each street from corner pole to corner
+// pole, a head hanging from it over each incoming lane, facing the traffic coming in.
 function drawSpanWire(sg, n) {
-  const hub = { x: sg.x, y: sg.y };
-  for (const c of sg.corners) {
-    // cable (with its shadow on the road), sagging a touch toward the hub
-    const mx = (c.x + hub.x) / 2 + 3, my = (c.y + hub.y) / 2 + 6;
-    g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(c.x + 6, c.y + 8); g.quadraticCurveTo(mx + 6, my + 8, hub.x + 6, hub.y + 8); g.stroke();
-    g.strokeStyle = '#1b1d22'; g.lineWidth = 1.6;
-    g.beginPath(); g.moveTo(c.x, c.y); g.quadraticCurveTo(mx, my, hub.x, hub.y); g.stroke();
-    if (c.wall) { g.fillStyle = '#3a3d44'; g.fillRect(c.x - 3, c.y - 3, 6, 6); }
-    else { g.fillStyle = '#30343e'; g.beginPath(); g.arc(c.x, c.y, 3.5, 0, 6.28); g.fill(); g.fillStyle = '#5a606c'; g.beginPath(); g.arc(c.x - 1, c.y - 1, 1.4, 0, 6.28); g.fill(); }
+  for (const [a, b] of sg.wires) for (const [d, c, w] of [[6, 'rgba(0,0,0,.22)', 2], [0, '#1b1d22', 1.6]]) {   // (its shadow on the road, then the cable)
+    g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.moveTo(sg.poles[a][0] + d, sg.poles[a][1] + d * 1.3); g.lineTo(sg.poles[b][0] + d, sg.poles[b][1] + d * 1.3); g.stroke();
   }
-  g.fillStyle = '#22252b'; g.beginPath(); g.arc(hub.x, hub.y, 4, 0, 6.28); g.fill();
+  for (const [x, y] of sg.poles) { g.fillStyle = '#30343e'; g.beginPath(); g.arc(x, y, 3.5, 0, 6.28); g.fill(); }
   for (const h of sg.heads) {
     const st = signalFor(n, h.edge, S.loopTime);
-    g.strokeStyle = '#1b1d22'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(hub.x, hub.y); g.lineTo(h.x, h.y); g.stroke();
-    // a vertical-ish box hanging off the hub, its lit lamp facing the drivers coming in
+    // a box hanging from the cable, its lit lamp facing the drivers coming in
     g.save(); g.translate(h.x, h.y); g.rotate(h.a + Math.PI / 2);
     g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-10, -3, 24, 10);
     g.fillStyle = '#14161b'; g.fillRect(-12, -5, 24, 10);

@@ -1620,8 +1620,8 @@ export class World2 {
       if ((cx + 1) * CHUNK < x0 || cx * CHUNK > x1 || (cy + 1) * CHUNK < y0 || cy * CHUNK > y1) continue;
       for (const h of lv.heads) {
         if (h.x < x0 || h.x > x1 || h.y < y0 || h.y > y1) continue;
-        const pr = h.pi >= 0 ? M.props[h.pi] : null, n = M.nodes[h.node];
-        if ((pr && pr.broken) || !n) continue;
+        const pr = h.pi >= 0 ? M.props[h.pi] : null, p2 = h.pi2 >= 0 ? M.props[h.pi2] : null, n = M.nodes[h.node];   // (pi2: a span wire's other pole)
+        if ((pr && pr.broken) || (p2 && p2.broken) || !n) continue;
         const s = signalFor(n, h.edge, S.loopTime), i = s === 'R' ? 0 : s === 'Y' ? 1 : 2;
         heads.push(h, i);
         if (h.ny < 0.25) continue;
@@ -2069,9 +2069,11 @@ export class World2 {
     const p = this.map.props[i];
     if (!p) return;
     if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: [[i, p.broken ? { a: p.broken.a || 0, ...(p.broken.f ? { f: 1 } : null) } : null]], ...(p.t === 'campfire' ? { lit: [[i, p.lit ? 1 : 0]] } : null) });
-    // its screen footprint: standing up to ~320 px above its ground point, debris round it
-    for (let cy = Math.floor((p.y - 320) / CHUNK); cy <= Math.floor((p.y + 40) / CHUNK); cy++)
-      for (let cx = Math.floor((p.x - 120) / CHUNK); cx <= Math.floor((p.x + 120) / CHUNK); cx++) { const k = cy * 1000 + cx; this.ver.set(k, (this.ver.get(k) || 0) + 1); }
+    // its screen footprint: standing up to ~320 px above its ground point, debris round it (a signal pole: what it
+    // holds up too - a mast arm, a span wire's wires and heads across the street)
+    const r = p.t === 'sigpole' ? 300 : 120;
+    for (let cy = Math.floor((p.y - 320) / CHUNK); cy <= Math.floor((p.y + (r > 120 ? r : 40)) / CHUNK); cy++)
+      for (let cx = Math.floor((p.x - r) / CHUNK); cx <= Math.floor((p.x + r) / CHUNK); cx++) { const k = cy * 1000 + cx; this.ver.set(k, (this.ver.get(k) || 0) + 1); }
   }
   // A highway barrier smashed through or put back (main.js 'barrier' / 'barrierfix'): the workers learn it and the
   // chunks the pieces show in are baked again - the deck drawn open there, with its broken stubs (statics.js makeDeck)

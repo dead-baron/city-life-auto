@@ -119,7 +119,7 @@ test('roads hang together: no stray dead ends, one-ways never trap you', () => {
   for (const e of m.edges) if (e.kind === 'dirt') for (const id of [e.a, e.b]) for (const o of m.nodes[id].edges) assert.ok(ROAD_RANK[m.edges[o].kind] <= 4, `a dirt track runs straight into a ${m.edges[o].kind}`);
 });
 
-test('intersections: zebra crossings never overlap; span wires only at small walled crossings, mast arms span every lane elsewhere', async () => {
+test('intersections: zebra crossings never overlap; span wires on poles only at small walled crossings, mast arms span every lane elsewhere', async () => {
   const { zebraCrossings } = await import('../shared/roads.js');
   const w = makeWorld();
   const m = w.map;
@@ -141,7 +141,8 @@ test('intersections: zebra crossings never overlap; span wires only at small wal
   assert.ok(wires.length >= 6 && poles.length > 100, `span wires ${wires.length}, poles ${poles.length}`);
   const small = new Set(['st', 'minor', 'drive', 'front']);
   for (const s of wires) {
-    assert.ok(s.corners.length >= 2 && s.corners.every((c) => c.wall), 'span wires are tied to building walls');
+    // (task #431: on poles at the corners, not tied to the walls with the heads in the middle - test/signals.test.js)
+    assert.ok(s.poles.length >= 3 && s.poles.every(([x, y]) => m.props.some((p) => p.t === 'sigpole' && p.span && Math.round(p.x) === x && Math.round(p.y) === y)), 'span wires hang between poles');
     assert.ok(m.nodes[s.node].edges.every((id) => small.has(m.edges[id].kind)), 'span wires only over side streets');
   }
   // on a wide road the arm reaches across every incoming lane, a head over each
