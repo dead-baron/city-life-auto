@@ -15,6 +15,9 @@ export const EVENT_KINDS = {
   wallet: { color: '#9be15d', label: 'Lost wallet', hint: 'It\'s on the ground behind them' },
   walletret: { color: '#3ddc84', label: 'Wallet\'s owner', hint: 'Give it back' },
   bikethief: { color: '#ff5a2a', label: 'Bike thief', hint: 'A club bike stolen - knock him off it' },   // (bikers.js, task #366)
+  streetrace: { color: '#ff2fd0', label: 'Street race', hint: 'Racers flat out - get out of the way' },      // (streetlife.js)
+  copchase: { color: '#4d8dff', label: 'Police chase', hint: 'A getaway car with the police behind it' },
+  armored: { color: '#e6c34a', label: 'Armored truck', hint: 'Valuables on the move - guarded' },
 };
 export const EVENT_RANGE = 1300;    // events further away than this aren't popped up on screen (the phone's city feed has them all)
 export const FEED_MAX = 40;         // the city feed keeps this many recent items

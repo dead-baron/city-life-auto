@@ -31,6 +31,7 @@ import * as homes from './homes.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
 import * as happenings from './happenings.js';
+import * as streetlife from './streetlife.js';
 import * as personas from './personas.js';
 import * as unstuck from './unstuck.js';
 import * as station from './station.js';
@@ -558,6 +559,8 @@ export function findInteraction(world, p) {
 
   const hap = happenings.interaction(world, p);   // a street fight to break up, someone to help up, a wallet to give back
   if (hap) return hap;
+  const vault = streetlife.interaction(world, p);   // the back of a stopped armored truck: hold to unlock it (streetlife.js)
+  if (vault) return vault;
 
   const busk = personas.interaction(world, p);   // a coin for the busker (personas.js)
   if (busk) return busk;

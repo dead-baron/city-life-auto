@@ -58,6 +58,7 @@ import * as underground from './systems/underground.js';
 import * as golf from './systems/golf.js';
 import * as hoops from './systems/hoops.js';
 import * as bikers from './systems/bikers.js';
+import * as streetlife from './systems/streetlife.js';
 import * as net from './net.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
@@ -120,6 +121,7 @@ const SYSTEMS = [
   ['economy', economy.update],      // auto-heal at ER reception
   ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
+  ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
 ];
 
 export class World {

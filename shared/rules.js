@@ -538,3 +538,9 @@ export const ASSAY_PAYS = 1.3;             // the quarry's assay office pays thi
 export const GUARD = { speed: 0.55, arc: 1.31 };
 export const PLASMA_DEFLECT = { front: 0.9, frontArc: 1.05, side: 0.3, sideArc: 1.92, idleArc: 1.21 };
 export const FIRE_ARROW = { burn: 18, veh: 14, vehBurnS: 3, lightPx: 48 };
+// The streets coming alive (server/systems/streetlife.js, the owner 2026-10-10): now and then, near someone out in town,
+// a street race (at night), a police chase or an armored truck's run - one at a time, never the same twice running
+export const STREET_EVERY_S = 300;        // something like this happens about this often (randomised a little)
+export const STREET_RACE_COPS = 0.45;     // a street race a patrol car happens on (the police go after the racers)
+export const ARMORED_ESCORT = 0.4;        // an armored truck with a squad car escorting it
+export const ARMORED_UNLOCK_S = 3;        // hold ACT this long at the back of a stopped armored truck to get it open

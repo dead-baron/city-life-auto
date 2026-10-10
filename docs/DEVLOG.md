@@ -5473,3 +5473,29 @@ What changed:
   - NPCs don't guard.
   - The guard has no pose of its own: it borrows the aim pose, as every ped flag bit is taken.
   - The block on touch is the aim stick (no separate button).
+## 2026-10-10 · The streets come alive: street races at night, police chases, armored trucks (and task #242)
+The owner's notes: "Occasional NPC car races happening in the streets at night ... you just want to get out of the way. If cops see it they will chase after the street racers." "Occasional NPC cop cars chasing after criminal NPC vehicles just for more world building." "Cops should chase down an NPC if they see them committing a crime the same way they would chase down a player." (task #242) And: "armored truck NPCs that sometimes show up ... if it gets blown up then it will drop the goods out the back. Or you can sneak up to the back of it and unlock it ... It has armed guards or police officers."
+- **How often** (`server/systems/streetlife.js`, `shared/rules.js` STREET_EVERY_S): about every five minutes, near someone out in town (not in the wilds, inside or underground), one of these starts: never two at once, never the same kind twice running, a race only at night. Each shows on the radar and the world map in its own colour, in the phone's city feed (start and outcome), and the players near get a line about it.
+- **A street race**: 3-5 sports cars and sport bikes line up on a street out of sight, two abreast, and go flat out along the real streets, through the lights, never pulling over (traffic.js: a driver with `ai.reckless` and `ai.goal`). The course runs past the player first, then on to a finish line a few blocks beyond. Over the line they scatter into ordinary traffic and are cleared away once out of sight; the feed says who won.
+  - **The police**: now and then a patrol happens on it (STREET_RACE_COPS); and any police car or officer that sees a racer gives chase. The racer they're after runs for it.
+- **A police chase**: a getaway car flat out with a squad car on its tail, sirens on, coming past the player. It ends:
+  - in an **arrest**: once it's stopped (crashed, boxed in, slowed right in front of them) the crew get out, drag the driver out and cuff them (into the cells, like any NPC crook);
+  - or an **escape**: the squad car loses it (out of sight a while) and it drives off.
+- **The police after NPC drivers** (task #242; `police.js` runCarUnit): one squad car per crook, at most three after NPC drivers at once. Officers on foot already ran down muggers and brawlers they saw (task #395); now a free police car (or an officer, who calls it in) that sees a racer or a getaway car goes after it the same way.
+- **An armored truck**: the IronVault van sets off from near the player for a bank (a pawn shop or the airport if there's none) 2,600-7,500 px off on the same land, at a steady pace, by the shortest way by road. Two armed guards in the cab, half the time a third in the back; sometimes (ARMORED_ESCORT) a squad car escorting it. It carries 3-5 crates of valuables: steel and iron, now and then carbon-gold.
+  - **Attacked** (by a player, or a real beating from anyone): it stops, the guards get out and fight whoever did it, the escort turns on them, and it's armed robbery (the guards radio it in: police heat). Once it's quiet a while the guards get back in and it drives on.
+  - **Blown up**: the crates spill out of the back onto the road.
+  - **The back doors**: stand at the back of it while it's stopped (at the lights, boxed in) and hold ACT for ARMORED_UNLOCK_S (3 s). The crates tumble out of the back, the alarm goes off, the guards come for you and it's armed robbery. Let go or let it drive off and the lock holds.
+  - It delivers and drives off, or it's robbed, blown up or out of time.
+- **Driving with somewhere to be** (`traffic.js`): a driver with a goal takes the shortest way by road (`streetlife.js` distField: a Dijkstra over the junctions, one-ways honoured, kept for the last few goals). A reckless driver goes flat out (no faster than its vehicle can), runs the lights and doesn't pull over for sirens, but still brakes for what's in front of it. Event vehicles aren't cleared away while their event runs.
+- **Debug menu** (Events & sport): Street race nearby, Police chase nearby, Armored truck nearby (dev command `street`, k: race / chase / armored; a race at any hour).
+- **Tests:** `test/streetlife.test.js` (12):
+  - the three kinds on the radar;
+  - a race: the pack, fast and on the roads, to its finish, then ordinary traffic;
+  - a patrol that happens on a race goes after a racer, who runs; any police car that sees a racer gives chase;
+  - a chase stopped: the driver dragged out, cuffed and taken in; a chase lost: an escape;
+  - an armored truck: its guards, its load, a far-off bank, delivered;
+  - blown up: every crate out of the back; attacked: the guards out fighting and police heat; an escort that turns on the attacker;
+  - the back doors: let go too soon and nothing; held, the crates fall out of the back, heat, the guards;
+  - the scheduler: one at a time, not the last kind, no race by day.
+- **Not done yet:** no special sounds of their own (the cars' engines and the sirens are the usual ones); the guards wear the police uniform (there's no security-guard look yet); the escort only follows - it doesn't block traffic for the truck.

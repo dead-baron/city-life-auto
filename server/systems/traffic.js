@@ -53,7 +53,7 @@ function nearestAnchor(world, x, y) {
 // wandered far from every player drift back toward the action. A cyclist never takes the highway or a ramp up, and a road
 // bike keeps off the dirt tracks when there's another way.
 const NO_BIKES = new Set(['hwy', 'ramp']);
-function chooseExit(world, n, inEdge, def = null) {
+function chooseExit(world, n, inEdge, def = null, goal = null) {
   const net = world.map.net;
   let opts = exitsFrom(net, n, inEdge);
   if (def && (def.pedal || def.moto === 'scooter')) {   // (nor a 50cc scooter)
@@ -72,6 +72,18 @@ function chooseExit(world, n, inEdge, def = null) {
   if (streets.length) opts = streets;
   const open = opts.filter((o) => !isBlocked(world, o.edge));   // (not down a road remembered as blocked: reroute.js)
   if (open.length) opts = open;
+  // a driver with somewhere to be (streetlife.js: a street race's finish line, a getaway, an armored truck's run): the
+  // shortest way there by road (goal.dist: how far each junction is from it), else the way that ends nearest it - back
+  // the way it came only when there's no other
+  if (goal) {
+    let best = null, bd = Infinity;
+    for (const o of opts) {
+      const m = net.nodes[o.to], left = goal.dist ? goal.dist[o.to] : Infinity;
+      const dd = (Number.isFinite(left) ? (left + net.edges[o.edge].len) ** 2 : 1e14 + (m.x - goal.x) ** 2 + (m.y - goal.y) ** 2) + (o.edge === inEdge ? 1e16 : 0);
+      if (dd < bd) { bd = dd; best = o; }
+    }
+    if (best) return best;
+  }
   const near = nearestAnchor(world, n.x, n.y);
   if (near && near.d > 900 && rng() < 0.7) {
     let best = null, bd = Infinity;
@@ -92,7 +104,7 @@ function chooseExit(world, n, inEdge, def = null) {
 // Backed out of a road's end to junction n (roadends.js): on by one of the other roads from there - its waypoints set,
 // the way chosen as if it had driven out of the road's end (inEdge). Null if there's no other way.
 export function leaveBy(world, v, n, inEdge) {
-  const ai = v.ai, nx = chooseExit(world, world.map.net.nodes[n], inEdge, v.def);
+  const ai = v.ai, nx = chooseExit(world, world.map.net.nodes[n], inEdge, v.def, v.ai.goal);
   if (!nx || nx.edge === inEdge) return null;
   delete ai.route;
   enterEdge(world, v, nx.edge, n, 0, 0);
@@ -129,7 +141,7 @@ export function enterEdge(world, v, edgeId, from, lane, s0 = 0) {
   const e = net.edges[edgeId];
   const to = e.a === from ? e.b : e.a;
   ai.edge = edgeId; ai.from = from;
-  ai.next = chooseExit(world, net.nodes[to], edgeId, v.def);
+  ai.next = chooseExit(world, net.nodes[to], edgeId, v.def, ai.goal);
   // heading up the deck for an off-ramp from the inside lane: over to the outer lane on the way (the ramp's
   // deceleration lane peels off it)
   let lp;
@@ -168,7 +180,7 @@ function crossJunction(world, v) {
   const ai = v.ai;
   const e = net.edges[ai.edge];
   const to = e.a === ai.from ? e.b : e.a;
-  const nx = ai.next || chooseExit(world, net.nodes[to], ai.edge, v.def);
+  const nx = ai.next || chooseExit(world, net.nodes[to], ai.edge, v.def, ai.goal);
   if (!nx) { v.ai = null; v.despawnable = true; return; }
   const ne = net.edges[nx.edge];
   // a vehicle on a route (a bus's line, a taxi's way) takes its next step; past the end of a route it's traffic again
@@ -389,19 +401,21 @@ function steerTraffic(world, v, t) {
     if (ai.turn) { stepTurn(world, v); return; }   // (at a road's end: turning round)
     wp = ai.pts[0];
   }
-  let desired = panic ? 520 : Math.min(ai.kindSpeed || 250, v.model === 'bus' ? 220 : 999);
+  // (reckless: a street racer, a getaway driver - flat out, through the lights, never pulling over: streetlife.js)
+  const reckless = ai.reckless && !panic ? ai.reckless : 0;
+  let desired = panic ? 520 : reckless ? Math.min(v.def.max * 0.92, reckless) : Math.min(ai.kindSpeed || 250, v.model === 'bus' ? 220 : 999);
   if (v.bus || v.taxi) desired = Math.min(desired, haltCap(world, v));   // (pulling up at a stop, or waiting there - shaken or not)
   if (v.def.pedal) desired = Math.min(desired, v.def.max * (panic ? 0.95 : 0.78));   // a cyclist pedals along at their own pace
   // slow for bends: how sharply the path ahead turns
   const ahead = ai.pts[Math.min(ai.pts.length - 1, 2)];
   if (ahead) {
     const bend = Math.abs(angleDiff(v.a, Math.atan2(ahead.y - v.y, ahead.x - v.x)));
-    if (bend > 0.35) desired = Math.min(desired, Math.max(120, 420 - bend * 300));
+    if (bend > 0.35) desired = Math.min(desired, reckless ? Math.max(170, 560 - bend * 280) : Math.max(120, 420 - bend * 300));
   }
   const stopIdx = ai.pts.findIndex((p) => p.stop);
   const stop = stopIdx >= 0 ? ai.pts[stopIdx] : null;
   let holding = false;
-  if (stop && !panic) {
+  if (stop && !panic && !reckless) {
     const n = net.nodes[stop.node];
     const ds = Math.hypot(stop.x - v.x, stop.y - v.y);
     // where it stops, nose first: behind the painted stop line at a signal (it's STOP_LINE px back from where the
@@ -426,7 +440,7 @@ function steerTraffic(world, v, t) {
       else if (ds < v.def.L / 2 + 50 && roadGivesOut(world, v)) { ai.pts.splice(0, stopIdx + 1); crossJunction(world, v); if (ai.turn) stepTurn(world, v); return; }
     }
   }
-  if (!panic && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
+  if (!panic && !reckless && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
   if (!panic && ai.yieldUntil && now < ai.yieldUntil) {
     // an emergency vehicle with its siren on is coming: ease over toward the curb and slow
     // right down. Only ever onto empty road - never up onto the pavement or into people.
@@ -623,6 +637,7 @@ function manage(world) {
     if (v.kind !== K.VEH) continue;
     if (v.seats.some((s) => s && world.get(s)?.player)) continue;
     if (v.owner && !v.wreckAt) continue;
+    if (v.onEvent && !v.wreckAt) continue;   // (a street racer, a getaway car, an armored truck: streetlife.js lets it go when it's done)
     if (v.towedBy) continue;   // (on a tow truck's hook: tow.js takes it away)
     const isTraffic = v.ai && v.ai.kind === 'traffic';
     const range = isTraffic ? 1800 : 1900;
